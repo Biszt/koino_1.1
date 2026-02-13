@@ -1,0 +1,183 @@
+/* frontend/css/components/regisztralas-form.css */
+
+/* ===== REGISZTRÁCIÓS KÁRTYA KONTÉNER ===== */
+/* A kártya ami tartalmazza a regisztrációs formot */
+
+.regisztracio-card {
+  /* Méretezés */
+  width: 100%;                              /* Mobil: teljes szélesség */
+  max-width: 32rem;                         /* Maximum szélesség (512px - szélesebb mint bejelentkezés) */
+  margin: var(--spacing-lg) auto;           /* Középre igazítás és felső/alsó margó */
+  padding: var(--spacing-lg);               /* Belső térköz (24px) */
+  
+  /* Megjelenés */
+  background-color: var(--color-surface);   /* Fehér háttér */
+  border-radius: var(--radius-lg);          /* Lekerekített sarkok (12px) */
+  box-shadow: var(--shadow-lg);             /* Nagy árnyék (emelt megjelenés) */
+  
+  /* Animáció betöltéskor */
+  animation: slideIn var(--transition-normal); /* Csúszás animáció (300ms) */
+}
+
+/* Slide-in animáció definíciója */
+@keyframes slideIn {
+  from {
+    opacity: 0;                             /* Kezdetben láthatatlan */
+    transform: translateX(-20px);           /* Balról csúszik be */
+  }
+  to {
+    opacity: 1;                             /* Végül teljesen látható */
+    transform: translateX(0);               /* Eredeti pozícióban */
+  }
+}
+
+
+/* ===== REGISZTRÁCIÓS FORM FEJLÉC ===== */
+/* Címsor a form tetején */
+
+.regisztracio-header {
+  margin-bottom: var(--spacing-xl);         /* Térköz a form előtt (32px) */
+  text-align: center;                       /* Szöveg középre igazítása */
+}
+
+/* Főcím stílusa */
+.regisztracio-header h1 {
+  font-size: var(--font-size-2xl);          /* Nagy betűméret (24px mobil) */
+  font-weight: var(--font-weight-bold);     /* Kövér betű (700) */
+  color: var(--color-text);                 /* Sötét szöveg szín */
+  margin-bottom: var(--spacing-sm);         /* Térköz az alcím előtt (8px) */
+}
+
+/* Alcím/leírás stílusa */
+.regisztracio-header p {
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+}
+
+
+/* ===== REGISZTRÁCIÓS FORM ===== */
+/* A form elem alapbeállításai */
+
+.regisztracio-form {
+  display: flex;                            /* Flexbox konténer */
+  flex-direction: column;                   /* Elemek egymás alá rendezése */
+  gap: var(--spacing-md);                   /* Térköz az elemek között (16px - kisebb mint bejelentkezésnél) */
+}
+
+
+/* ===== LOKÁCIÓ MEZŐK CSOPORTOSÍTÁSA ===== */
+/* Ország, Régió, Település mezők vizuális csoportosítása */
+
+.lokacio-group {
+  padding: var(--spacing-md);               /* Belső térköz (16px) */
+  background-color: var(--color-background-alt); /* Halvány szürke háttér */
+  border-radius: var(--radius-md);          /* Lekerekített sarkok (8px) */
+  border: 1px dashed var(--color-border);   /* Szaggatott szegély (vizuális elkülönítés) */
+}
+
+/* Lokáció csoport címe */
+.lokacio-group-title {
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  font-weight: var(--font-weight-semibold); /* Félkövér (600) */
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+  margin-bottom: var(--spacing-sm);         /* Térköz a mezők előtt (8px) */
+  text-transform: uppercase;                /* Nagybetűs szöveg */
+  letter-spacing: 0.05em;                   /* Betűköz növelése */
+}
+
+
+/* ===== AUTOCOMPLETE JAVASLATOK ===== */
+/* Datalist és autocomplete javaslatok stílusa */
+
+datalist {
+  display: none;                            /* A datalist maga rejtett (böngésző natívan kezeli) */
+}
+
+/* Input mező autocomplete-tel */
+.form-control[list] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;             /* Nem ismétlődik a kép */
+  background-position: right 1rem center;   /* Jobbra igazítva középen */
+  background-size: 1rem;                    /* Ikon mérete (16px) */
+  padding-right: 3rem;                      /* Extra padding jobbra az ikon miatt */
+}
+
+
+/* ===== JELSZÓ ERŐSSÉG JELZŐ ===== */
+/* Jelszó erősség vizuális jelzése (később implementálható) */
+
+.password-strength {
+  display: flex;                            /* Flexbox konténer */
+  gap: var(--spacing-xs);                   /* Kis térköz az oszlopok között (4px) */
+  margin-top: var(--spacing-sm);            /* Térköz az input felett (8px) */
+}
+
+/* Jelszó erősség oszlop */
+.password-strength-bar {
+  flex: 1;                                  /* Egyenlő szélesség */
+  height: 0.25rem;                          /* Magasság (4px) */
+  background-color: var(--color-border);    /* Világosszürke alapértelmezett */
+  border-radius: var(--radius-full);        /* Teljes lekerekítés */
+  transition: background-color var(--transition-fast); /* Színátmenet (150ms) */
+}
+
+/* Gyenge jelszó */
+.password-strength-bar.weak {
+  background-color: var(--color-error);     /* Piros szín */
+}
+
+/* Közepes jelszó */
+.password-strength-bar.medium {
+  background-color: var(--color-warning);   /* Narancs szín */
+}
+
+/* Erős jelszó */
+.password-strength-bar.strong {
+  background-color: var(--color-success);   /* Zöld szín */
+}
+
+
+/* ===== TELJES SZÉLESSÉGŰ GOMB ===== */
+/* Submit gomb teljes szélességben (mobil nézetben) */
+
+.btn-full-width {
+  width: 100%;                              /* Teljes szélesség */
+  margin-top: var(--spacing-md);            /* Extra térköz felül (16px) */
+}
+
+
+/* ===== RESZPONZÍV BEÁLLÍTÁSOK ===== */
+
+/* Tablet méret felett (768px-től) */
+@media (min-width: 768px) {
+  .regisztracio-card {
+    padding: var(--spacing-2xl);            /* Nagyobb belső térköz (48px) */
+    margin: var(--spacing-2xl) auto;        /* Nagyobb külső margó */
+  }
+  
+  .regisztracio-header h1 {
+    font-size: var(--font-size-3xl);        /* Nagyobb cím (32px) */
+  }
+  
+  .regisztracio-form {
+    gap: var(--spacing-lg);                 /* Nagyobb térköz az elemek között (24px) */
+  }
+  
+  /* Grid layout két oszlopos elrendezéshez (opcionális) */
+  .form-row {
+    display: grid;                          /* Grid konténer */
+    grid-template-columns: 1fr 1fr;         /* Két egyenlő oszlop */
+    gap: var(--spacing-md);                 /* Térköz az oszlopok között (16px) */
+  }
+}
+
+/* Desktop méret felett (1024px-től) */
+@media (min-width: 1024px) {
+  .regisztracio-card {
+    max-width: 36rem;                       /* Még szélesebb (576px) */
+  }
+  
+  .btn-full-width {
+    margin-top: var(--spacing-xl);          /* Nagyobb térköz felül (32px) */
+  }
+}

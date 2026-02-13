@@ -1,0 +1,154 @@
+/* frontend/css/base/variables.css */
+
+/* ===== CSS CUSTOM PROPERTIES (VÁLTOZÓK) ===== */
+/* Ezek a változók az egész alkalmazásban használhatók */
+/* A :root pszeudo-osztály a HTML legfelső szintjére vonatkozik */
+:root {
+  
+  /* ===== SZÍNPALETTA ===== */
+  
+  /* --- Elsődleges Színek (Erdőzöld) --- */
+  --color-primary: #4a7c59;          /* Elsődleges szín (erdőzöld) - gombok, linkek */
+  --color-primary-light: #5e917a;    /* Világosabb erdőzöld (hover effektekhez) */
+  --color-primary-dark: #3b6347;     /* Sötétebb erdőzöld (active állapot) */
+  --color-primary-bg: rgba(74, 124, 89, 0.1); /* Erdőzöld háttér alacsony átlátszósággal */
+  
+  /* --- Másodlagos Színek (Mohazöld) --- */
+  --color-secondary: #8a9a7b;        /* Másodlagos szín (mohazöld) - kiegészítő elemek */
+  --color-secondary-light: #a0ae93;  /* Világosabb mohazöld */
+  --color-secondary-dark: #768568;   /* Sötétebb mohazöld */
+  --color-secondary-bg: rgba(138, 154, 123, 0.1); /* Mohazöld háttér alacsony átlátszósággal */
+  
+  /* --- Kiemelő Szín (Világos Fahéj) --- */
+  --color-accent: #d9b391;           /* Kiemelő szín (világos fahéj) - akcentusok */
+  --color-accent-light: #e6c9af;     /* Világosabb fahéj */
+  --color-accent-dark: #caa27f;      /* Sötétebb fahéj */
+  --color-accent-bg: rgba(217, 179, 145, 0.1); /* Világos fahéj háttér alacsony átlátszósággal */
+  
+  /* --- Háttér Színek --- */
+  --color-background: #f5f5f0;       /* Fő háttérszín (homokszín) */
+  --color-background-alt: #ffffff;   /* Alternatív háttérszín (fehér) */
+  --color-surface: #ffffff;          /* Felületek színe (kártyák, formok) */
+  
+  /* --- Szöveg Színek --- */
+  --color-text: #333333;             /* Fő szöveg szín (sötétszürke, nem tiszta fekete) */
+  --color-text-light: #666666;       /* Világosabb szöveg (mellékszöveg, placeholder) */
+  --color-text-lighter: #999999;     /* Még világosabb (letiltott állapot) */
+  
+  /* --- Állapot Színek --- */
+  --color-success: #4a7c59;          /* Sikeres művelet (erdőzöld) */
+  --color-error: #c85a54;            /* Hibaüzenet (terrakotta vörös) */
+  --color-warning: #c85a54;          /* Figyelmeztetés (terrakotta vörös) */
+  --color-info: #4a7c59;             /* Információs üzenet (erdőzöld) */
+  
+  /* --- Szegély Színek --- */
+  --color-border: #e0e0e0;           /* Alapértelmezett szegély szín (világosszürke) */
+  --color-border-focus: #4a7c59;     /* Fókuszált mező szegély színe (erdőzöld) */
+  
+  /* --- Egyéb Segédszínek --- */
+  --color-overlay: rgba(0, 0, 0, 0.5); /* Átfedés szín (modal háttér) */
+  --color-shadow: rgba(0, 0, 0, 0.1);  /* Árnyék szín */
+  
+  
+  /* ===== TÉRKÖZÖK (SPACING SCALE) ===== */
+  /* 8px alapú spacing rendszer a konzisztens térközökért */
+  
+  --spacing-xs: 0.25rem;   /* 4px - extra kicsi térköz */
+  --spacing-sm: 0.5rem;    /* 8px - kicsi térköz */
+  --spacing-md: 1rem;      /* 16px - közepes térköz */
+  --spacing-lg: 1.5rem;    /* 24px - nagy térköz */
+  --spacing-xl: 2rem;      /* 32px - extra nagy térköz */
+  --spacing-2xl: 3rem;     /* 48px - dupla extra nagy */
+  --spacing-3xl: 4rem;     /* 64px - tripla extra nagy */
+  
+  
+  /* ===== BETŰMÉRETEK ===== */
+  
+  --font-size-xs: 0.75rem;   /* 12px - nagyon kicsi szöveg */
+  --font-size-sm: 0.875rem;  /* 14px - kicsi szöveg */
+  --font-size-base: 1rem;    /* 16px - alapértelmezett szövegméret */
+  --font-size-lg: 1.125rem;  /* 18px - nagyobb szöveg */
+  --font-size-xl: 1.25rem;   /* 20px - nagy szöveg */
+  --font-size-2xl: 1.5rem;   /* 24px - címsor */
+  --font-size-3xl: 2rem;     /* 32px - nagy címsor */
+  
+  
+  /* ===== BETŰCSALÁD ===== */
+  
+  --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+                 'Helvetica Neue', Arial, sans-serif; /* Roboto betű (konzisztencia a régi verzióval) */
+  
+  
+  /* ===== BETŰ SÚLY (FONT WEIGHT) ===== */
+  
+  --font-weight-light: 300;    /* Vékony betűvastagság */
+  --font-weight-normal: 400;   /* Normál betűvastagság */
+  --font-weight-medium: 500;   /* Közepes betűvastagság */
+  --font-weight-semibold: 600; /* Félkövér */
+  --font-weight-bold: 700;     /* Kövér */
+  
+  
+  /* ===== BORDER RADIUS (LEKEREKÍTÉSEK) ===== */
+  
+  --radius-sm: 0.25rem;   /* 4px - kicsi lekerekítés */
+  --radius-md: 0.5rem;    /* 8px - közepes lekerekítés */
+  --radius-lg: 0.75rem;   /* 12px - nagy lekerekítés */
+  --radius-xl: 1rem;      /* 16px - extra nagy lekerekítés */
+  --radius-full: 9999px;  /* Teljes lekerekítés (kör) */
+  
+  
+  /* ===== ÁRNYÉKOK (SHADOWS) ===== */
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);     /* Kicsi árnyék */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);   /* Közepes árnyék */
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1); /* Nagy árnyék */
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1); /* Extra nagy árnyék */
+  
+  
+  /* ===== ÁTMENETEK (TRANSITIONS) ===== */
+  
+  --transition-fast: 150ms ease-in-out;    /* Gyors átmenet (hover effektek) */
+  --transition-normal: 300ms ease-in-out;  /* Normál átmenet (legtöbb animáció) */
+  --transition-slow: 500ms ease-in-out;    /* Lassú átmenet (komplex animációk) */
+  
+  
+  /* ===== BREAKPOINT-OK (csak referencia, nem használható közvetlenül CSS-ben) ===== */
+  /* Ezek a breakpoint-ok a media query-kben használandók */
+  /* Mobil-first megközelítés: min-width media query-ket használunk */
+  
+  /* --breakpoint-sm: 640px;   Kicsi tablet */
+  /* --breakpoint-md: 768px;   Tablet */
+  /* --breakpoint-lg: 1024px;  Desktop */
+  /* --breakpoint-xl: 1280px;  Nagy Desktop */
+  
+  
+  /* ===== KONTÉNER SZÉLESSÉGEK ===== */
+  
+  --container-mobile: 100%;       /* Mobil: teljes szélesség */
+  --container-tablet: 640px;      /* Tablet: max szélesség */
+  --container-desktop: 1024px;    /* Desktop: max szélesség */
+  --container-padding: 1rem;      /* Konténer oldalsó padding (16px) */
+  
+  
+  /* ===== FORM MEZŐK (INPUTS) ===== */
+  
+  --input-height: 3rem;              /* Input mező magasság (48px - touch friendly!) */
+  --input-padding: 0.75rem 1rem;    /* Input belső térköz */
+  --input-border-width: 1px;         /* Input keret vastagsága */
+  
+  
+  /* ===== GOMBOK ===== */
+  
+  --button-height: 3rem;             /* Gomb magasság (48px - touch friendly!) */
+  --button-padding: 0.75rem 1.5rem; /* Gomb belső térköz */
+  --button-min-width: 8rem;          /* Gomb minimum szélesség (128px) */
+  
+  
+  /* ===== Z-INDEX RÉTEGEK ===== */
+  /* Meghatározzuk az elemek egymáshoz viszonyított mélységét */
+  
+  --z-index-dropdown: 1000;   /* Legördülő menük */
+  --z-index-modal: 2000;      /* Modal ablakok */
+  --z-index-toast: 3000;      /* Toast üzenetek */
+  --z-index-tooltip: 4000;    /* Tooltip elemek */
+}

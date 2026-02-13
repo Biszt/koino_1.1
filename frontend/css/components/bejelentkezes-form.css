@@ -1,0 +1,281 @@
+/* frontend/css/components/bejelentkezes-form.css */
+
+/* ===== BEJELENTKEZÉSI KÁRTYA KONTÉNER ===== */
+/* A kártya ami tartalmazza a bejelentkezési formot */
+
+.bejelentkezes-card {
+  /* Méretezés */
+  width: 100%;                              /* Mobil: teljes szélesség */
+  max-width: 28rem;                         /* Maximum szélesség (448px) */
+  margin: 0 auto;                           /* Középre igazítás vízszintesen */
+  padding: var(--spacing-lg);               /* Belső térköz (24px) */
+  
+  /* Megjelenés */
+  background-color: var(--color-surface);   /* Fehér háttér */
+  border-radius: var(--radius-lg);          /* Lekerekített sarkok (12px) */
+  box-shadow: var(--shadow-lg);             /* Nagy árnyék (emelt megjelenés) */
+  
+  /* Animáció betöltéskor */
+  animation: fadeIn var(--transition-normal); /* Fade-in animáció (300ms) */
+}
+
+/* Fade-in animáció definíciója */
+@keyframes fadeIn {
+  from {
+    opacity: 0;                             /* Kezdetben láthatatlan */
+    transform: translateY(-10px);           /* Fentről csúszik be */
+  }
+  to {
+    opacity: 1;                             /* Végül teljesen látható */
+    transform: translateY(0);               /* Eredeti pozícióban */
+  }
+}
+
+
+/* ===== BEJELENTKEZÉSI FORM FEJLÉC ===== */
+/* Címsor a form tetején */
+
+.bejelentkezes-header {
+  margin-bottom: var(--spacing-xl);         /* Térköz a form előtt (32px) */
+  text-align: center;                       /* Szöveg középre igazítása */
+}
+
+/* Főcím stílusa */
+.bejelentkezes-header h1 {
+  font-size: var(--font-size-3xl);          /* Nagy betűméret (32px) */
+  font-weight: var(--font-weight-bold);     /* Kövér betű (700) */
+  color: var(--color-text);                 /* Sötét szöveg szín */
+  margin-bottom: var(--spacing-sm);         /* Térköz az alcím előtt (8px) */
+}
+
+/* Alcím/leírás stílusa (ha van) */
+.bejelentkezes-header p {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+}
+
+
+/* ===== BEJELENTKEZÉSI FORM ===== */
+/* A form elem alapbeállításai */
+
+.bejelentkezes-form {
+  display: flex;                            /* Flexbox konténer */
+  flex-direction: column;                   /* Elemek egymás alá rendezése */
+  gap: var(--spacing-lg);                   /* Térköz az elemek között (24px) */
+}
+
+
+/* ===== FORM CSOPORT (MEZŐ KONTÉNER) ===== */
+/* Minden input mező és hibaüzenet konténere */
+
+.form-group {
+  display: flex;                            /* Flexbox konténer */
+  flex-direction: column;                   /* Elemek egymás alá rendezése */
+  gap: var(--spacing-sm);                   /* Kis térköz input és hibaüzenet között (8px) */
+}
+
+
+/* ===== INPUT MEZŐK ALAPSTÍLUSOK ===== */
+/* Minden input, textarea és select mező */
+
+.form-control {
+  /* Méretezés */
+  width: 100%;                              /* Teljes szélesség */
+  min-height: var(--input-height);          /* Minimum magasság (48px - touch friendly!) */
+  padding: var(--input-padding);            /* Belső térköz (12px 16px) */
+  
+  /* Tipográfia */
+  font-family: var(--font-family);          /* Betűcsalád */
+  font-size: var(--font-size-base);         /* Betűméret (16px - FONTOS: iOS zoom megakadályozásához!) */
+  color: var(--color-text);                 /* Szöveg szín */
+  
+  /* Megjelenés */
+  background-color: var(--color-background); /* Fehér háttér */
+  border: var(--input-border-width) solid var(--color-border); /* Világos szürke szegély */
+  border-radius: var(--radius-md);          /* Lekerekített sarkok (8px) */
+  
+  /* Animáció */
+  transition: all var(--transition-fast);   /* Sima átmenet (150ms) */
+  
+  /* Egyéb */
+  outline: none;                            /* Alapértelmezett böngésző outline eltávolítása */
+}
+
+/* Input mező placeholder szöveg stílusa */
+.form-control::placeholder {
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+  opacity: 1;                               /* Teljes átlátszatlanság (Firefox fix) */
+}
+
+/* Input mező fókusz állapot */
+.form-control:focus {
+  border-color: var(--color-border-focus);  /* Kék szegély fókuszkor */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* Kék árnyék (fókusz jelzés) */
+}
+
+/* Input mező hiba állapot */
+.form-control.error {
+  border-color: var(--color-error);         /* Piros szegély hiba esetén */
+}
+
+/* Input mező hiba állapot fókuszkor */
+.form-control.error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); /* Piros árnyék */
+}
+
+/* Input mező letiltott állapot */
+.form-control:disabled {
+  background-color: var(--color-background-alt); /* Világosszürke háttér */
+  color: var(--color-text-lighter);         /* Halványabb szöveg */
+  cursor: not-allowed;                      /* Tiltott kurzor */
+}
+
+
+/* ===== HIBAÜZENETEK ===== */
+/* Validációs hibaüzenetek megjelenítése */
+
+.error-message {
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  color: var(--color-error);                /* Piros szöveg */
+  min-height: 1.25rem;                      /* Minimum magasság (layout shift megelőzése) */
+  display: block;                           /* Block elem */
+  line-height: 1.25;                        /* Sormagasság */
+}
+
+/* Hibaüzenet elrejtése amikor üres */
+.error-message:empty {
+  display: none;                            /* Nem látható amikor nincs tartalom */
+}
+
+
+/* ===== ÁLTALÁNOS HIBAÜZENET ===== */
+/* Form szintű hibaüzenet (pl. szerver hiba) */
+
+.general-error {
+  padding: var(--spacing-md);               /* Belső térköz (16px) */
+  background-color: rgba(239, 68, 68, 0.1); /* Halvány piros háttér */
+  border: var(--input-border-width) solid var(--color-error); /* Piros szegély */
+  border-radius: var(--radius-md);          /* Lekerekített sarkok (8px) */
+  color: var(--color-error);                /* Piros szöveg */
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  text-align: center;                       /* Középre igazított szöveg */
+  display: none;                            /* Alapból rejtett */
+}
+
+/* Általános hibaüzenet látható állapot (amikor van tartalom) */
+.general-error:not(:empty) {
+  display: block;                           /* Láthatóvá válik */
+}
+
+
+/* ===== SIKERES ÜZENET ===== */
+/* Sikeres művelet üzenete (pl. sikeres bejelentkezés) */
+
+.success-message {
+  padding: var(--spacing-md);               /* Belső térköz (16px) */
+  background-color: rgba(16, 185, 129, 0.1); /* Halvány zöld háttér */
+  border: var(--input-border-width) solid var(--color-success); /* Zöld szegély */
+  border-radius: var(--radius-md);          /* Lekerekített sarkok (8px) */
+  color: var(--color-success);              /* Zöld szöveg */
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  text-align: center;                       /* Középre igazított szöveg */
+  display: none;                            /* Alapból rejtett */
+}
+
+/* Sikeres üzenet látható állapot */
+.success-message:not(:empty) {
+  display: block;                           /* Láthatóvá válik */
+}
+
+
+/* ===== FORM LÁBLÉC ===== */
+/* Alul lévő linkek (pl. "Regisztráció" link) */
+
+.login-footer {
+  margin-top: var(--spacing-lg);            /* Térköz a form után (24px) */
+  text-align: center;                       /* Középre igazított szöveg */
+  padding-top: var(--spacing-lg);           /* Felső padding (24px) */
+  border-top: 1px solid var(--color-border); /* Felső szegély (elválasztó vonal) */
+}
+
+/* Link stílusa a láblécben */
+.login-footer a {
+  color: var(--color-primary);              /* Elsődleges szín (kék) */
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  font-weight: var(--font-weight-medium);   /* Közepes betűvastagság (500) */
+  transition: color var(--transition-fast); /* Színátmenet (150ms) */
+}
+
+/* Link hover állapot */
+.login-footer a:hover {
+  color: var(--color-primary-dark);         /* Sötétebb kék rámutatáskor */
+  text-decoration: underline;               /* Aláhúzás megjelenítése */
+}
+
+
+/* ===== EMLÉKEZZ RÁM CHECKBOX ===== */
+/* "Emlékezz rám" checkbox és címke konténere */
+
+.remember-me {
+  display: flex;                            /* Flexbox konténer */
+  align-items: center;                      /* Függőlegesen középre igazítás */
+  gap: var(--spacing-sm);                   /* Térköz checkbox és címke között (8px) */
+}
+
+/* Checkbox stílusa */
+.remember-me input[type="checkbox"] {
+  width: 1.25rem;                           /* Szélesség (20px) */
+  height: 1.25rem;                          /* Magasság (20px) */
+  cursor: pointer;                          /* Mutató kurzor */
+  accent-color: var(--color-primary);       /* Elsődleges szín (kék) */
+}
+
+/* Checkbox címke stílusa */
+.remember-me label {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  color: var(--color-text);                 /* Szöveg szín */
+  cursor: pointer;                          /* Mutató kurzor */
+  user-select: none;                        /* Szöveg kijelölés tiltása */
+}
+
+
+/* ===== ELFELEJTETT JELSZÓ LINK ===== */
+/* "Elfelejtett jelszó?" link */
+
+.forgot-password {
+  text-align: right;                        /* Jobbra igazított szöveg */
+  margin-top: calc(var(--spacing-md) * -1); /* Negatív margó (feljebb tolás) */
+}
+
+/* Link stílusa */
+.forgot-password a {
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+  transition: color var(--transition-fast); /* Színátmenet (150ms) */
+}
+
+/* Link hover állapot */
+.forgot-password a:hover {
+  color: var(--color-primary);              /* Elsődleges szín rámutatáskor */
+}
+
+
+/* ===== RESZPONZÍV BEÁLLÍTÁSOK ===== */
+
+/* Tablet méret felett (768px-től) */
+@media (min-width: 768px) {
+  .bejelentkezes-card {
+    padding: var(--spacing-2xl);            /* Nagyobb belső térköz (48px) */
+  }
+  
+  .bejelentkezes-header h1 {
+    font-size: var(--font-size-3xl);        /* Még nagyobb cím (48px) */
+  }
+}
+
+/* Desktop méret felett (1024px-től) */
+@media (min-width: 1024px) {
+  .bejelentkezes-form {
+    gap: var(--spacing-xl);                 /* Nagyobb térköz az elemek között (32px) */
+  }
+}

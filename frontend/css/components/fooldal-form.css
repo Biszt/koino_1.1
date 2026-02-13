@@ -1,0 +1,270 @@
+/* frontend/css/components/fooldal-form.css */
+
+/* ===== FŐOLDAL KONTÉNER ===== */
+/* A teljes főoldal wrapper konténere */
+
+.fooldal-container {
+  /* Méretezés */
+  width: 100%;                              /* Teljes szélesség */
+  min-height: 100vh;                        /* Minimum teljes viewport magasság */
+  
+  /* Layout */
+  display: flex;                            /* Flexbox konténer */
+  flex-direction: column;                   /* Függőleges elrendezés */
+  
+  /* Megjelenés */
+  background-color: var(--color-background-alt); /* Világosszürke háttér */
+}
+
+
+/* ===== FŐOLDAL FEJLÉC ===== */
+/* Felső navigációs sáv */
+
+.fooldal-header {
+  /* Méretezés */
+  width: 100%;                              /* Teljes szélesség */
+  padding: var(--spacing-md) var(--container-padding); /* Belső térköz (16px) */
+  
+  /* Layout */
+  display: flex;                            /* Flexbox konténer */
+  justify-content: space-between;           /* Elemek szélekre igazítása */
+  align-items: center;                      /* Függőlegesen középre igazítás */
+  
+  /* Megjelenés */
+  background-color: var(--color-surface);   /* Fehér háttér */
+  border-bottom: 1px solid var(--color-border); /* Alsó szegély (elválasztó vonal) */
+  box-shadow: var(--shadow-sm);             /* Kis árnyék (emelt megjelenés) */
+  
+  /* Pozícionálás */
+  position: sticky;                         /* Sticky pozíció (görgetéskor ragad) */
+  top: 0;                                   /* Felső szélen marad */
+  z-index: var(--z-index-dropdown);         /* Z-index (más elemek fölé kerül) */
+}
+
+/* Embernév megjelenítése a fejlécben */
+.fooldal-header #emberNev {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  font-weight: var(--font-weight-semibold); /* Félkövér (600) */
+  color: var(--color-text);                 /* Sötét szöveg szín */
+  
+  /* Szöveg levágása ha túl hosszú (mobil nézetben) */
+  max-width: 200px;                         /* Maximum szélesség */
+  overflow: hidden;                         /* Túlcsordulás elrejtése */
+  text-overflow: ellipsis;                  /* Három pont (...) a végén */
+  white-space: nowrap;                      /* Egysoros szöveg */
+}
+
+
+/* ===== KIJELENTKEZÉS GOMB ===== */
+/* Kijelentkezés gomb a fejlécben */
+
+.kijelentkezes-gomb {
+  /* Méretezés */
+  min-height: 2.5rem;                       /* Kisebb magasság mint a fő gombok (40px) */
+  padding: 0.5rem 1rem;                     /* Kisebb belső térköz (8px 16px) */
+  
+  /* Tipográfia */
+  font-size: var(--font-size-sm);           /* Kisebb betűméret (14px) */
+  font-weight: var(--font-weight-medium);   /* Közepes betűvastagság (500) */
+  
+  /* Megjelenés */
+  background-color: transparent;            /* Átlátszó háttér */
+  color: var(--color-error);                /* Piros szöveg (figyelemfelhívás) */
+  border: 1px solid var(--color-error);     /* Piros szegély */
+  border-radius: var(--radius-md);          /* Lekerekített sarkok (8px) */
+  cursor: pointer;                          /* Mutató kurzor */
+  
+  /* Animáció */
+  transition: all var(--transition-fast);   /* Sima átmenet (150ms) */
+  
+  /* Egyéb */
+  white-space: nowrap;                      /* Egysoros szöveg */
+}
+
+/* Kijelentkezés gomb hover állapot */
+.kijelentkezes-gomb:hover {
+  background-color: var(--color-error);     /* Piros háttér rámutatáskor */
+  color: #ffffff;                           /* Fehér szöveg rámutatáskor */
+  transform: translateY(-1px);              /* Enyhe felfelé mozgatás */
+  box-shadow: var(--shadow-md);             /* Árnyék hozzáadása */
+}
+
+/* Kijelentkezés gomb aktív állapot */
+.kijelentkezes-gomb:active {
+  transform: translateY(0);                 /* Visszamozgatás eredeti pozícióba */
+  box-shadow: var(--shadow-sm);             /* Kisebb árnyék */
+}
+
+
+/* ===== FŐOLDAL TARTALOM ===== */
+/* A fő tartalom területe */
+
+.fooldal-tartalom {
+  /* Méretezés */
+  flex: 1;                                  /* Rugalmas méret (kitölti a maradék helyet) */
+  width: 100%;                              /* Teljes szélesség */
+  max-width: var(--container-desktop);      /* Maximum szélesség (1024px) */
+  margin: 0 auto;                           /* Középre igazítás */
+  padding: var(--spacing-lg) var(--container-padding); /* Belső térköz */
+  
+  /* Layout */
+  display: flex;                            /* Flexbox konténer */
+  flex-direction: column;                   /* Függőleges elrendezés */
+  gap: var(--spacing-lg);                   /* Térköz a tartalmi elemek között (24px) */
+}
+
+
+/* ===== ÜDVÖZLŐ SZEKCIÓ ===== */
+/* Üdvözlő üzenet a embernak */
+
+.welcome-section {
+  padding: var(--spacing-xl);               /* Belső térköz (32px) */
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  /* Gradient háttér (kék → lila) */
+  border-radius: var(--radius-lg);          /* Lekerekített sarkok (12px) */
+  color: #ffffff;                           /* Fehér szöveg */
+  text-align: center;                       /* Középre igazított szöveg */
+  box-shadow: var(--shadow-md);             /* Közepes árnyék */
+}
+
+/* Üdvözlő címsor */
+.welcome-section h2 {
+  font-size: var(--font-size-2xl);          /* Nagy betűméret (24px) */
+  font-weight: var(--font-weight-bold);     /* Kövér betű (700) */
+  margin-bottom: var(--spacing-sm);         /* Térköz alul (8px) */
+}
+
+/* Üdvözlő leírás */
+.welcome-section p {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  opacity: 0.9;                             /* Enyhe átlátszóság */
+}
+
+
+/* ===== KÁRTYA KOMPONENS ===== */
+/* Általános kártya komponens (posztok, értesítések stb.) */
+
+.card {
+  /* Megjelenés */
+  background-color: var(--color-surface);   /* Fehér háttér */
+  border-radius: var(--radius-lg);          /* Lekerekített sarkok (12px) */
+  padding: var(--spacing-lg);               /* Belső térköz (24px) */
+  box-shadow: var(--shadow-sm);             /* Kis árnyék */
+  
+  /* Animáció */
+  transition: all var(--transition-fast);   /* Sima átmenet (150ms) */
+}
+
+/* Kártya hover állapot */
+.card:hover {
+  box-shadow: var(--shadow-md);             /* Nagyobb árnyék rámutatáskor */
+  transform: translateY(-2px);              /* Enyhe felfelé mozgatás */
+}
+
+/* Kártya cím */
+.card-title {
+  font-size: var(--font-size-lg);           /* Nagyobb betűméret (18px) */
+  font-weight: var(--font-weight-semibold); /* Félkövér (600) */
+  color: var(--color-text);                 /* Sötét szöveg szín */
+  margin-bottom: var(--spacing-sm);         /* Térköz alul (8px) */
+}
+
+/* Kártya tartalom */
+.card-content {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  color: var(--color-text);                 /* Szöveg szín */
+  line-height: 1.6;                         /* Sormagasság az olvashatóságért */
+}
+
+/* Kártya lábléc */
+.card-footer {
+  margin-top: var(--spacing-md);            /* Térköz felül (16px) */
+  padding-top: var(--spacing-md);           /* Belső térköz felül (16px) */
+  border-top: 1px solid var(--color-border); /* Felső szegély (elválasztó vonal) */
+  
+  /* Layout */
+  display: flex;                            /* Flexbox konténer */
+  justify-content: space-between;           /* Elemek szélekre igazítása */
+  align-items: center;                      /* Függőlegesen középre igazítás */
+}
+
+
+/* ===== ÜRES ÁLLAPOT ===== */
+/* Amikor még nincs tartalom */
+
+.empty-state {
+  padding: var(--spacing-3xl) var(--spacing-xl); /* Nagy belső térköz */
+  text-align: center;                       /* Középre igazított szöveg */
+  color: var(--color-text-light);           /* Világosabb szöveg szín */
+}
+
+/* Üres állapot ikon */
+.empty-state-icon {
+  font-size: 4rem;                          /* Nagy ikon méret (64px) */
+  margin-bottom: var(--spacing-lg);         /* Térköz alul (24px) */
+  opacity: 0.5;                             /* Félig átlátszó */
+}
+
+/* Üres állapot cím */
+.empty-state h3 {
+  font-size: var(--font-size-xl);           /* Nagy betűméret (20px) */
+  font-weight: var(--font-weight-semibold); /* Félkövér (600) */
+  margin-bottom: var(--spacing-sm);         /* Térköz alul (8px) */
+  color: var(--color-text);                 /* Sötét szöveg szín */
+}
+
+/* Üres állapot leírás */
+.empty-state p {
+  font-size: var(--font-size-base);         /* Normál betűméret (16px) */
+  margin-bottom: var(--spacing-lg);         /* Térköz alul (24px) */
+}
+
+
+/* ===== RESZPONZÍV BEÁLLÍTÁSOK ===== */
+
+/* Tablet méret felett (768px-től) */
+@media (min-width: 768px) {
+  .fooldal-header {
+    padding: var(--spacing-lg) var(--spacing-xl); /* Nagyobb belső térköz */
+  }
+  
+  .fooldal-header #emberNev {
+    font-size: var(--font-size-lg);         /* Nagyobb betűméret (18px) */
+    max-width: none;                        /* Nincs szélesség limit */
+  }
+  
+  .kijelentkezes-gomb {
+    min-height: 3rem;                       /* Nagyobb magasság (48px) */
+    padding: 0.75rem 1.5rem;                /* Nagyobb belső térköz */
+    font-size: var(--font-size-base);       /* Normál betűméret (16px) */
+  }
+  
+  .fooldal-tartalom {
+    padding: var(--spacing-2xl) var(--spacing-xl); /* Nagyobb belső térköz */
+  }
+  
+  .welcome-section h2 {
+    font-size: var(--font-size-3xl);        /* Nagyobb betűméret (32px) */
+  }
+}
+
+/* Desktop méret felett (1024px-től) */
+@media (min-width: 1024px) {
+  .fooldal-tartalom {
+    padding: var(--spacing-3xl) var(--spacing-2xl); /* Még nagyobb belső térköz */
+  }
+  
+  /* Grid layout a kártyákhoz (opcionális) */
+  .cards-grid {
+    display: grid;                          /* Grid konténer */
+    grid-template-columns: repeat(2, 1fr);  /* Két egyenlő oszlop */
+    gap: var(--spacing-lg);                 /* Térköz a kártyák között (24px) */
+  }
+}
+
+/* Nagy Desktop méret felett (1280px-től) */
+@media (min-width: 1280px) {
+  .cards-grid {
+    grid-template-columns: repeat(3, 1fr);  /* Három egyenlő oszlop */
+  }
+}

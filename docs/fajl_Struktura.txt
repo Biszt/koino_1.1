@@ -1,0 +1,53 @@
+koino_1.1/
+  
+  backend/
+    controllers/
+      emberController.js
+      lokacioController.js
+    models/
+      ember.js
+    repositories/
+      emberRepository.js
+      lokacioRepository.js
+    routes/
+      emberRoutes.js
+      lokacioRoutes.js
+    services/
+      emberService.js
+      lokacioService.js
+    utils/
+      jelszoHelper.js
+    server.js
+    .dockerignore
+    .env
+    Dockerfile
+    package-lock.json
+    
+  frontend/
+    css/
+      components/
+        bejelentkezes-form.css
+        regisztralas-form.css
+        buttons.css
+        fooldal-form.css
+      base/
+        variables.css
+      main.css
+    js/
+      components/
+        bejelentkezesForm.js
+        regisztralasForm.js
+        fooldalForm.js
+      utils/
+        apiHelper.js
+        authHelper.js
+      main.js
+    templates/
+      bejelentkezes.html
+      fooldal.html
+      regisztracio.html
+    index.html
+  .gitignore
+  docker-compose.dev.yml
+  package-lock.json
+  

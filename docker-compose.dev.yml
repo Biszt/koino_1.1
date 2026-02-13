@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: koino-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/koino  # ← Ez marad 27017 (belső hálózat)
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./frontend:/frontend
+    depends_on:
+      - mongodb
+    networks:
+      - koino-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: koino-mongodb-dev
+    ports:
+      - "27018:27017"  
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - koino-network
+
+volumes:
+  mongodb-data:
+
+networks:
+  koino-network:
+    driver: bridge

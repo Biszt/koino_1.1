@@ -1,0 +1,29 @@
+# ===== DOCKER IGNORE FÁJL =====
+# Ezeket a fájlokat/mappákat NEM másoljuk be a Docker konténerbe
+
+# ----- NODE MODULES -----
+# A node_modules mappát nem másoljuk, mert a Dockerfile-ban telepítjük
+node_modules
+
+# ----- NPM CACHE ÉS LOG FÁJLOK -----
+npm-debug.log
+npm-debug.log.*
+.npm
+
+# ----- KÖRNYEZETI VÁLTOZÓK -----
+# A .env fájlt nem másoljuk biztonsági okokból
+# A környezeti változókat a docker-compose.yml-ben adjuk meg
+.env
+.env.local
+.env.*.local
+
+# ----- GIT FÁJLOK -----
+.git
+.gitignore
+
+# ----- EGYÉB -----
+# Ideiglenes fájlok, build eredmények
+*.log
+.DS_Store
+coverage
+.nyc_output
