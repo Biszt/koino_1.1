@@ -64,7 +64,6 @@ szuloId: {
 },
 
 // ----- SZÜLŐ TÍPUSA ----- 
-// ÚJ MEZŐ: Meghatározza, milyen típusú entitás a szülő
 szuloTipus: {
   type: String,                                           // Szöveges típus
   enum: ['Tartalom', 'Javaslat', 'Egyezmeny'],           // Engedélyezett értékek
@@ -81,6 +80,7 @@ szuloTipus: {
       }
       return true;
     },
+    
     message: 'A szuloId és szuloTipus mezők konzisztenciája sérült. Ha van szuloId, akkor szuloTipus is kötelező, és fordítva.'
   }
 },

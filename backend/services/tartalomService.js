@@ -188,11 +188,13 @@ class TartalomService {
       cim: tisztitottCim,
       szoveg: tisztitottSzoveg,
       tartalomTipusId: adatok.tartalomTipusId || null,
-      kategoriaIds: validaltKategoriaIds, // MÓDOSÍTVA: kategoriaId → kategoriaIds (tömb)
+      kategoriaIds: validaltKategoriaIds,
       szuloId: adatok.szuloId || null,
+      szuloTipus: adatok.szuloTipus || null,  
       letrehozo: emberId,
       statusz: statusz,
     };
+
 
     // ===== 8. LÉPÉS - REPOSITORY HÍVÁS - MENTÉS ADATBÁZISBA =====
 
