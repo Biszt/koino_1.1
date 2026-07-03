@@ -11,7 +11,7 @@ const ertesitesiBeallitasService = require('../services/ertesitesiBeallitasServi
 // Ezt "upsert" műveletnek nevezzük
 const beallitasLetrehozasVagyFrissites = async (req, res) => {
   console.log('ertesitesiBeallitasController.beallitasLetrehozasVagyFrissites - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
     body: req.body,
   });
 
@@ -19,7 +19,7 @@ const beallitasLetrehozasVagyFrissites = async (req, res) => {
     const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszob, kikapcsolva } = req.body;
 
     const beallitas = await ertesitesiBeallitasService.beallitasLetrehozasVagyFrissites(
-      req.eEmber._id,
+      req.user.id,
       { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszob, kikapcsolva }
     );
 
@@ -51,12 +51,12 @@ const beallitasLetrehozasVagyFrissites = async (req, res) => {
 // Pl. a beállítások kezelő oldalhoz
 const sajatBeallitasokLekereses = async (req, res) => {
   console.log('ertesitesiBeallitasController.sajatBeallitasokLekereses - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
   });
 
   try {
     const beallitasok = await ertesitesiBeallitasService.sajatBeallitasokLekereses(
-      req.eEmber._id
+      req.user.id
     );
 
     console.log('ertesitesiBeallitasController.sajatBeallitasokLekereses - VEGE', {
@@ -84,14 +84,14 @@ const sajatBeallitasokLekereses = async (req, res) => {
 // Akkor kell, amikor egy entitás oldalán meg kell mutatni, hogy mi az aktuális beállítás
 const entitasBeallitasLekereses = async (req, res) => {
   console.log('ertesitesiBeallitasController.entitasBeallitasLekereses - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
     entitasId: req.params.entitasId,
     entitasTipus: req.params.entitasTipus,
   });
 
   try {
     const beallitas = await ertesitesiBeallitasService.entitasBeallitasLekereses(
-      req.eEmber._id,
+      req.user.id,
       req.params.entitasId,
       req.params.entitasTipus
     );
@@ -120,11 +120,11 @@ const entitasBeallitasLekereses = async (req, res) => {
 const beallitasTorles = async (req, res) => {
   console.log('ertesitesiBeallitasController.beallitasTorles - KEZDET', {
     beallitasId: req.params.id,
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
   });
 
   try {
-    await ertesitesiBeallitasService.beallitasTorles(req.params.id, req.eEmber._id);
+    await ertesitesiBeallitasService.beallitasTorles(req.params.id, req.user.id);
 
     console.log('ertesitesiBeallitasController.beallitasTorles - VEGE', { torolt: true });
 

@@ -1,5 +1,7 @@
 // frontend/js/components/szovegSzerkeszto/blokkok/SzovegBlokk.js
 
+import { sanitizeRichText } from '../../../utils/sanitizeHelper.js';
+
 class SzovegBlokk {
 
   // =============================================
@@ -57,8 +59,9 @@ class SzovegBlokk {
     elem.setAttribute('data-placeholder', 'Írj valamit...');
 
     // Előre betöltött tartalom beállítása (szerkesztés módban)
+    // sanitizeRichText szűri az engedélyezetlen tageket/attribútumokat (XSS védelem)
     if (this.blokk.tartalom) {
-      elem.innerHTML = this.blokk.tartalom;
+      elem.innerHTML = sanitizeRichText(this.blokk.tartalom);
     }
 
     // Igazítás alkalmazása a tárolt blokk adatból —

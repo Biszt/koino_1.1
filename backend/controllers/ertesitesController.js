@@ -9,7 +9,7 @@ const ertesitesService = require('../services/ertesitesService');
 // A bejelentkezett eEmber saját értesítéseit kéri le
 const postafiokLekereses = async (req, res) => {
   console.log('ertesitesController.postafiokLekereses - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
     query: req.query,
   });
 
@@ -20,7 +20,7 @@ const postafiokLekereses = async (req, res) => {
     const lapMeret = parseInt(req.query.lapMeret) || 20;
 
     const eredmeny = await ertesitesService.postafiokLekereses(
-      req.eEmber._id,
+      req.user.id,
       lap,
       lapMeret
     );
@@ -49,11 +49,11 @@ const postafiokLekereses = async (req, res) => {
 // Csak az olvasatlan értesítések számát adja vissza (badge frissítéshez)
 const olvasatlanokSzama = async (req, res) => {
   console.log('ertesitesController.olvasatlanokSzama - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
   });
 
   try {
-    const eredmeny = await ertesitesService.olvasatlanokSzamaLekereses(req.eEmber._id);
+    const eredmeny = await ertesitesService.olvasatlanokSzamaLekereses(req.user.id);
 
     console.log('ertesitesController.olvasatlanokSzama - VEGE', { eredmeny });
 
@@ -78,13 +78,13 @@ const olvasatlanokSzama = async (req, res) => {
 const megjelolOlvasottnak = async (req, res) => {
   console.log('ertesitesController.megjelolOlvasottnak - KEZDET', {
     ertesitesId: req.params.id,
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
   });
 
   try {
     const frissitett = await ertesitesService.ertesitesMegjelolOlvasottnak(
       req.params.id,
-      req.eEmber._id
+      req.user.id
     );
 
     console.log('ertesitesController.megjelolOlvasottnak - VEGE', { frissitett });
@@ -118,11 +118,11 @@ const megjelolOlvasottnak = async (req, res) => {
 // Az összes olvasatlan értesítés olvasottnak jelölése egyszerre
 const mindetOlvasottnak = async (req, res) => {
   console.log('ertesitesController.mindetOlvasottnak - KEZDET', {
-    eEmberId: req.eEmber._id,
+    eEmberId: req.user.id,
   });
 
   try {
-    const eredmeny = await ertesitesService.mindetOlvasottnak(req.eEmber._id);
+    const eredmeny = await ertesitesService.mindetOlvasottnak(req.user.id);
 
     console.log('ertesitesController.mindetOlvasottnak - VEGE', {
       modositottDarab: eredmeny.modifiedCount,

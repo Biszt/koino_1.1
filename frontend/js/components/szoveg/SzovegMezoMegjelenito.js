@@ -108,7 +108,7 @@ class SzovegMezoMegjelenito {
       // Megjelenítő módban: a méretválasztó gombok és törlő gomb nem szükségesek.
       // A KepBlokk maga kezeli a megjelenítést, csak a törlő gomb szűrendő ki.
       case 'kep': {
-        const kepBlokk = new window.KepBlokk(blokk, {});
+        const kepBlokk = new KepBlokk(blokk, {});
         domElem = kepBlokk.letrehozas();
         // Törlő gomb eltávolítása (csak szerkesztő módban kell)
         const kepTorloGomb = domElem.querySelector('.blokk-torlo-gomb');
@@ -123,7 +123,7 @@ class SzovegMezoMegjelenito {
       // A FajlBlokk.letrehozas() wrapper + letöltési link + törlő gombbal tér vissza.
       // Megjelenítő módban: törlő gomb eltávolítva.
       case 'fajl': {
-        const fajlBlokk = new window.FajlBlokk(blokk, {});
+        const fajlBlokk = new FajlBlokk(blokk, {});
         domElem = fajlBlokk.letrehozas();
         // Törlő gomb eltávolítása
         const fajlTorloGomb = domElem.querySelector('.blokk-torlo-gomb');
@@ -135,7 +135,7 @@ class SzovegMezoMegjelenito {
       // A LinkBlokk.letrehozas() wrapper + link + törlő gombbal tér vissza.
       // Megjelenítő módban: törlő gomb eltávolítva.
       case 'link': {
-        const linkBlokk = new window.LinkBlokk(blokk, {});
+        const linkBlokk = new LinkBlokk(blokk, {});
         domElem = linkBlokk.letrehozas();
         // Törlő gomb eltávolítása
         const linkTorloGomb = domElem.querySelector('.blokk-torlo-gomb');
@@ -148,7 +148,7 @@ class SzovegMezoMegjelenito {
       // erre az esetre lett tervezve: csak a koppintható hivatkozást adja vissza,
       // törlő gomb és wrapper nélkül.
       case 'entitasHivatkozas': {
-        const hivatkozasBlokk = new window.EntitasHivatkozasBlokk(blokk, {
+        const hivatkozasBlokk = new EntitasHivatkozasBlokk(blokk, {
           // onKoppintas: a SzovegMezoMegjelenito onEntitasKivalasztas
           // callbackjét hívja, ami a kártyákon keresztül a Pakli.js-be ér
           onKoppintas: (entitasId, entitasTipus) => {

@@ -20,17 +20,18 @@ class eEmberController {
       // Regisztrációs adatok kiolvasása a kérés body-jából
       const adatok = req.body;
 
-      // Service hívás – validáció, mentés
-      const ujeEmber = await eEmberService.regisztracio(adatok);
+      // Service hívás – validáció, mentés, JWT generálás
+      const eredmeny = await eEmberService.regisztracio(adatok);
 
       // 201 Created – sikeres regisztráció
       res.status(201).json({
         success: true,
         message: 'Regisztráció sikeres',
-        eember:  ujeEmber
+        eember:  eredmeny.eember,
+        token:   eredmeny.token
       });
 
-      console.log('eEmberController.regisztracio - VÉGE (siker)', { id: ujeEmber._id });
+      console.log('eEmberController.regisztracio - VÉGE (siker)', { id: eredmeny.eember._id });
 
     } catch (error) {
       console.error('eEmberController.regisztracio - VÉGE (hiba)', { hiba: error.message });

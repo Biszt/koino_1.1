@@ -63,8 +63,17 @@ class eEmberService {
     const valasz = ujeEmber.toObject(); // Mongoose dokumentum -> plain objektum
     delete valasz.jelszo;               // Jelszó mező törlése
 
+    // === 7. LÉPÉS: JWT TOKEN GENERÁLÁSA ===
+    // A bejelentkezéssel megegyező payload, hogy regisztráció után rögtön be legyen jelentkezve
+    const payload = {
+      id:        valasz._id,
+      email:     valasz.email,
+      eemberNev: valasz.eemberNev
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
     console.log('eEmberService.regisztracio - VÉGE', { id: valasz._id });
-    return valasz;
+    return { eember: valasz, token };
   }
 
   // ===== BEJELENTKEZÉS =====

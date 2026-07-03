@@ -144,6 +144,38 @@ class JavaslatIdozitesService {
 
       return frissitettJavaslat; // Visszaadjuk a frissített javaslatot
     } // Töredék csoportos ág vége
+
+    // Önálló (nem töredékelt) javaslat esetén a saját létrehozási idő és döntési idő alapján számolunk
+    console.log('hatalybaLepesiIdoBeallitasa - Önálló javaslat időzítése', { // Log az önálló ág elején
+      javaslatId: javaslat._id, // Aktuális javaslat azonosító
+      dontesiIdo: javaslat.dontesiIdo, // Saját döntési idő
+      letrehozva: javaslat.letrehozva // Saját létrehozási idő
+    }); // Önálló ág log vége
+
+    if (typeof javaslat.dontesiIdo !== 'number' || Number.isNaN(javaslat.dontesiIdo)) { // Érvényes döntési idő ellenőrzése
+      throw new Error('A javaslatnak nincs érvényes dontesiIdo értéke'); // Hiba dobása érvénytelen döntési időnél
+    }
+
+    const sajatHozzaadandoMs = javaslat.dontesiIdo * 1000; // A döntési időt milliszekundumba alakítjuk
+    const sajatHatalybaLepesIdeje = new Date(javaslat.letrehozva.getTime() + sajatHozzaadandoMs); // Kiszámoljuk a hatályba lépési időt
+
+    console.log('hatalybaLepesiIdoBeallitasa >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.updateHatalybaLepesIdeje (önálló)', { // Frissítés előtti log
+      javaslatId: javaslat._id, // Frissítendő javaslat azonosítója
+      sajatHatalybaLepesIdeje: sajatHatalybaLepesIdeje // Beállítandó időpont
+    }); // Frissítés előtti log vége
+
+    const frissitettOnalloJavaslat = await JavaslatRepository.updateHatalybaLepesIdeje( // Frissítjük a javaslat hatályba lépési idejét
+      javaslat._id, // A javaslat azonosítója
+      sajatHatalybaLepesIdeje // A kiszámolt időpont
+    ); // Frissítés vége
+
+    console.log('("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< hatalybaLepesiIdoBeallitasa', { // Záró log az önálló ághoz
+      javaslatId: javaslatId, // Eredeti javaslat azonosító
+      mod: 'onallo', // Jelöljük, hogy az önálló ág futott
+      hatalybaLepesIdeje: frissitettOnalloJavaslat.hatalybaLepesIdeje // Végleges hatályba lépési idő
+    }); // Záró log vége
+
+    return frissitettOnalloJavaslat; // Visszaadjuk a frissített javaslatot
   }
    
 

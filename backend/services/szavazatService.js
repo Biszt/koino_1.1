@@ -249,11 +249,11 @@ async szavazatTorlese(eemberId, javaslatId) {
   if (!isToredek) {
 
     // 3a. SZAVAZAT LÉTEZÉSÉNEK ELLENŐRZÉSE
-    console.log('szavazatTorlese - SzavazatRepository.findByeemberAndJavaslat', {
+    console.log('szavazatTorlese - SzavazatRepository.findByeEmberAndJavaslat', {
       eemberId,
       javaslatId,
     });
-    const szavazat = await SzavazatRepository.findByeemberAndJavaslat(eemberId, javaslatId);
+    const szavazat = await SzavazatRepository.findByeEmberAndJavaslat(eemberId, javaslatId);
 
     // Ha nincs szavazat, nincs mit visszavonni
     if (!szavazat) throw new Error('Nem található szavazat ezen a javaslaton');
@@ -297,7 +297,7 @@ async szavazatTorlese(eemberId, javaslatId) {
     // Megnézzük, van-e az eembernek szavazata ezen a töredéken
     console.log('szavazatTorlese - Szavazat keresése töredéken', { toredekId: toredek._id });
 
-    const szavazat = await SzavazatRepository.findByeemberAndJavaslat(
+    const szavazat = await SzavazatRepository.findByeEmberAndJavaslat(
       eemberId,
       toredek._id.toString() // A töredékjavaslat ID-ja
     );

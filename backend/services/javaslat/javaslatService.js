@@ -88,7 +88,8 @@ class JavaslatService {
     } // Típus megléte rendben
 
     // 1.2 - Indoklás ellenőrzése
-    if (!javaslatAdatok.indoklas || !javaslatAdatok.indoklas.trim) { // Ha nincs indoklás vagy nincs trim
+    // Az indoklás a SzovegSzerkeszto komponensből érkező JSON blokk-tömb, nem sima string
+    if (!Array.isArray(javaslatAdatok.indoklas) || javaslatAdatok.indoklas.length === 0) { // Ha nincs tömb vagy üres
       // Ha nincs indoklás megadva, hiba
       throw new Error('Az indoklás megadása kötelező'); // Hiba dobása
     } // Indoklás megléte rendben

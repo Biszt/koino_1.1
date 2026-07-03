@@ -7,7 +7,7 @@ const router = express.Router();
 const ertesitesController = require('../controllers/ertesitesController');
 
 // A hitelesítési middleware importálása
-// Ez ellenőrzi, hogy az eEmber be van-e jelentkezve, és beállítja a req.eEmber objektumot
+// Ez ellenőrzi, hogy az eEmber be van-e jelentkezve, és beállítja a req.user objektumot
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Minden értesítési végpont csak bejelentkezett eEmbereknek érhető el

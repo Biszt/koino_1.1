@@ -17,8 +17,8 @@ const egyezmenySchema = new mongoose.Schema({
   javaslatId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Javaslat',                        // Referencia a Javaslat modellre
-    required: true,                         // Kötelező mező
-    index: true                             // Index a gyors kereséshez
+    required: true                          // Kötelező mező
+    // Index: lásd egyezmenySchema.index({ javaslatId: 1 }) lejjebb
   },
 
   // Melyik tartalom alatt van ez az egyezmény
@@ -26,8 +26,8 @@ const egyezmenySchema = new mongoose.Schema({
   szuloId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Tartalom',                        // Referencia a Tartalom modellre
-    required: true,                         // Kötelező: minden egyezménynek van tárhely tartalma
-    index: true                             // Gyors kereséshez indexelve
+    required: true                          // Kötelező: minden egyezménynek van tárhely tartalma
+    // Index: lásd egyezmenySchema.index({ szuloId: 1 }) lejjebb
   },
 
   // ----- SZÜLŐ TÍPUSA -----
@@ -97,8 +97,8 @@ const egyezmenySchema = new mongoose.Schema({
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'eEmber',                          // Referencia a eEmber modellre
-    required: true,                         // Kötelező mező
-    index: true                             // Index a gyors kereséshez létrehozó szerint
+    required: true                          // Kötelező mező
+    // Index: lásd egyezmenySchema.index({ letrehozo: 1 }) lejjebb
   },
 
   // ----- VÉGREHAJTÁS IDŐPONTJA -----

@@ -52,7 +52,7 @@ class JavaslatCronJob {
         // 2. LÉPÉS: Hatályba lépendő javaslatok lekérése
         // 3. LÉPÉS: Végrehajtás ellenőrzése
         // Mindez EGY metódusban történik
-       JavaslatIdozitesService.tomegesVegrehajtasEllenorzes();
+        await JavaslatIdozitesService.tomegesVegrehajtasEllenorzes();
 
         console.log('✓ Javaslat végrehajtás ellenőrzés befejezve\n');
 

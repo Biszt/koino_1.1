@@ -57,31 +57,25 @@ async javaslatLetrehozasa(req, res) {
     }
     
     // 5. LÉPÉS - Service hívás (3 paraméterrel!)
+    // A service töredékekre bontja a javaslatot: { toredekCsoportId, javaslatok: [...] }
     const eredmeny = await JavaslatService.javaslatLetrehozas(
       javaslatAdatok,    // 1. paraméter
       eemberId,     // 2. paraméter
       kezdoTudatpont     // 3. paraméter ← VISSZATÉVE!
     );
-    
+
     console.log("eredmeny", eredmeny);
-    
-    // 6. LÉPÉS - Azonnali végrehajtás ellenőrzése (VISSZATÉVE!)
-    if (!eredmeny) {
-      return res.status(201).json({
-        success: true,
-        message: 'Javaslat sikeresen létrehozva és azonnal végrehajtva',
-        javaslat: null,
-        vegrehajtva: true
-      });
-    }
-    
-    console.log('5. SERVICE hívás UTÁN - Javaslat ID:', eredmeny._id);
-    
-    // 7. LÉPÉS - Sikeres válasz
+    console.log('5. SERVICE hívás UTÁN - Töredékek száma:', eredmeny.javaslatok.length);
+
+    // 6. LÉPÉS - Sikeres válasz
+    // A "javaslat" mező az első töredéket adja vissza a régi (egy-dokumentumos) kliens-oldali
+    // logika kompatibilitása miatt, a teljes csoport a "javaslatok" tömbben érhető el
     res.status(201).json({
       success: true,
       message: 'Javaslat sikeresen létrehozva',
-      javaslat: eredmeny
+      javaslat: eredmeny.javaslatok[0],
+      toredekCsoportId: eredmeny.toredekCsoportId,
+      javaslatok: eredmeny.javaslatok
     });
     
   } catch (error) {

@@ -7,6 +7,7 @@ import JavaslatModal from '../modals/JavaslatModal.js';
 import FajlBlokk from '../szovegSzerkeszto/blokkok/FajlBlokk.js';
 import LinkBlokk from '../szovegSzerkeszto/blokkok/LinkBlokk.js';
 import EntitasHivatkozasBlokk from '../szovegSzerkeszto/blokkok/EntitasHivatkozasBlokk.js';
+import { sanitizeRichText } from '../../utils/sanitizeHelper.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -210,7 +211,8 @@ class TartalomKartya extends Kartya {
 
         // Tartalom – innerHTML-t használunk, mert a szerkesztő
         // HTML formázott tartalmat tárol (pl. <strong>, <em>)
-        szovegElem.innerHTML = blokk.tartalom;
+        // sanitizeRichText szűri az engedélyezetlen tageket/attribútumokat (XSS védelem)
+        szovegElem.innerHTML = sanitizeRichText(blokk.tartalom);
 
         szulo.appendChild(szovegElem);
         break;

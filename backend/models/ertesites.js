@@ -25,7 +25,7 @@ const ertesitesSchema = new mongoose.Schema(
     // Az eEmber azonosítója, akinek ez az értesítés szól
     eEmberId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'E_Ember',
+      ref: 'eEmber',
       required: [true, 'Az eEmber azonosítója kötelező'],
     },
 

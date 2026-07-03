@@ -19,8 +19,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'Tartalom', // Referencia a Tartalom modellre
     required: true, // Kötelező mező
-    unique: true, // Egy tartalomhoz csak egy hisztogram
-    index: true // Indexelve a gyors kereséshez
+    unique: true // Egy tartalomhoz csak egy hisztogram - ez már önmagában egyedi indexet is létrehoz
   },
 
   // ----- ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB HISZTOGRAM -----
@@ -137,9 +136,8 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
 // ===================================
 // INDEXEK LÉTREHOZÁSA
 // ===================================
-
-// TartalomId unique index - egy tartalomhoz csak egy hisztogram
-tartalomErtekHisztogramSchema.index({ tartalomId: 1 }, { unique: true });
+// A tartalomId egyedi indexét a mező unique: true beállítása már létrehozza,
+// külön schema.index() hívás itt nem szükséges (duplikált indexet eredményezne)
 
 // ===================================
 // HELPER METÓDUSOK

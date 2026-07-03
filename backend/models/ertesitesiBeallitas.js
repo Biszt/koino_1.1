@@ -26,7 +26,7 @@ const ertesitesiBeallitasSchema = new mongoose.Schema(
     // Az eEmber azonosítója, akinek a beállítása ez
     eEmberId: {
       type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-      ref: 'E_Ember',                        // Hivatkozás az E_Ember kollekcióra
+      ref: 'eEmber',                        // Hivatkozás az eEmber kollekcióra
       required: [true, 'Az eEmber azonosítója kötelező'], // Kötelező mező, hibaüzenettel
     },
 

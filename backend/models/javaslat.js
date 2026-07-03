@@ -70,8 +70,8 @@ const javaslatSchema = new mongoose.Schema({
   szuloId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Tartalom',                        // Referencia a Tartalom modellre
-    required: true,                         // KÖTELEZŐ mező - minden javaslat tartalom alatt van
-    index: true                             // Index a gyors kereséshez
+    required: true                          // KÖTELEZŐ mező - minden javaslat tartalom alatt van
+    // Index: lásd javaslatSchema.index({ szuloId: 1 }) lejjebb
   },
 
   // ----- SZÜLŐ TÍPUSA -----
@@ -92,8 +92,8 @@ const javaslatSchema = new mongoose.Schema({
       // Egyesítésnél NEM kötelező, mert az új entitás még nem létezik
       return this.javaslatTipus !== 'Egyesites';
     },
-    default: null,   // Alapértelmezett null egyesítésnél
-    index: true      // Index a gyors kereséshez
+    default: null   // Alapértelmezett null egyesítésnél
+    // Index: lásd javaslatSchema.index({ egyezmenyTarhelyId: 1 }) lejjebb
   },
 
   // ----- TÖREDÉK JAVASLAT METAADATOK -----

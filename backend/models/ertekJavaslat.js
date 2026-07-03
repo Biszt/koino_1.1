@@ -17,8 +17,8 @@ const ertekJavaslatSchema = new mongoose.Schema({
   tartalomId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'Tartalom', // Referencia a Tartalom modellre
-    required: true, // Kötelező mező
-    index: true // Indexelve a gyors kereséshez
+    required: true // Kötelező mező
+    // Index: lásd ertekJavaslatSchema.index({ tartalomId: 1 }) lejjebb
   },
 
   // ----- EMBER AZONOSÍTÓ -----
@@ -26,8 +26,8 @@ const ertekJavaslatSchema = new mongoose.Schema({
   eemberId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber', // Referencia a eEmber modellre
-    required: true, // Kötelező mező
-    index: true // Indexelve a gyors kereséshez
+    required: true // Kötelező mező
+    // Index: lásd ertekJavaslatSchema.index({ eemberId: 1 }) lejjebb
   },
 
   // -----ÉRTÉK ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB-----
