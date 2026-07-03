@@ -21,20 +21,27 @@ class TartalomRepository {
     return mentettTartalom;
   }
 
-  // ----- TARTALOM KERESÉSE ID ALAPJÁN -----
-  // Egy tartalom lekérdezése ID alapján
-  // @param {string} id - A tartalom MongoDB ObjectId-ja
-  // @returns {Promise<Object|null>} A tartalom objektum vagy null ha nem található
-  async findById(id) {
-    // Tartalom lekérése kapcsolódó adatokkal (populate)
-    const tartalom = await Tartalom.findById(id)
-      .populate('tartalomTipusId', 'name shapeId') // Tartalom típus adatok betöltése
-      .populate('letrehozo', 'emberNev') // Létrehozó adatok betöltése
-      .populate('kategoriaIds', 'nev szin') // MÓDOSÍTVA: kategoriaIds tömb betöltése (többes szám!)
-      .populate('szuloId', 'cim tartalomTipusId'); // Szülő tartalom adatok betöltése
-    
-    return tartalom;
-  }
+
+// ----- TARTALOM KERESÉSE ID ALAPJÁN -----
+// Egy tartalom lekérdezése ID alapján
+// FONTOS: szándékosan NEM populate-elünk kategoriaIds-t!
+// A pakliService maga kéri le a kategória adatokat külön hívással,
+// ezért itt sima ObjectId-kre van szüksége, nem teljes objektumokra.
+// @param {string} id - A tartalom MongoDB ObjectId-ja
+// @returns {Promise} A tartalom objektum vagy null ha nem található
+async findById(id) {
+  console.log('tartalomRepository.findById - KEZDÉS', { id });
+
+  // kategoriaIds és tartalomTipusId szándékosan NEM populate-elve
+  // a pakliService közvetlenül az ID-kkal dolgozik
+  const tartalom = await Tartalom.findById(id)
+    .populate('letrehozo', 'eemberNev')           // Létrehozó adatok betöltése
+    .populate('szuloId', 'cim tartalomTipusId')   // Szülő tartalom adatok betöltése
+    .lean();                                       // Sima JS objektum (nem Mongoose doc)
+
+  console.log('tartalomRepository.findById - VÉGE', { id: tartalom?._id });
+  return tartalom;
+}
 
   // ----- TARTALMAK LISTÁZÁSA SZŰRŐKKEL -----
   // Tartalmak lekérdezése különböző szűrési feltételekkel
@@ -87,7 +94,7 @@ class TartalomRepository {
     const tartalmak = await Tartalom.find(query)
       .sort({ letrehozva: -1 }) // Legújabbak előre rendezés
       .populate('tartalomTipusId', 'name shapeId') // Tartalom típus adatok
-      .populate('letrehozo', 'emberNev') // Létrehozó adatok
+      .populate('letrehozo', 'eemberNev') // Létrehozó adatok
       .populate('kategoriaIds', 'nev szin'); // MÓDOSÍTVA: kategoriaIds tömb (többes szám!)
     
     return tartalmak;
@@ -109,7 +116,7 @@ class TartalomRepository {
       }
     )
     .populate('tartalomTipusId', 'name shapeId')
-    .populate('letrehozo', 'emberNev')
+    .populate('letrehozo', 'eemberNev')
     .populate('kategoriaIds', 'nev szin'); // MÓDOSÍTVA: kategoriaIds tömb (többes szám!)
     
     return frissitettTartalom;
@@ -181,7 +188,7 @@ async findBySzuloId(szuloId, szuloTipus = null, statusz = 'Lathato') {
   
   // Tartalmak lekérése kapcsolt adatokkal
   const tartalmak = await Tartalom.find(query)
-    .populate('letrehozo', 'emberNev email')     // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev email')     // Létrehozó adatok
     .populate('tartalomTipusId')                       // Tartalom típus adatok
     .populate('kategoriaIds')                          // Kategóriák adatai
     .sort({ letrehozva: -1 });                        // Legújabbak előre
@@ -285,6 +292,19 @@ async removeTartalomTipusFromAll(tartalomTipusId) {
   return result;
 }
 
+  // ----- ÖSSZES TARTALOM SZÁMLÁLÁSA -----
+  // A platformon lévő összes tartalom számának lekérése
+  // Használat: Főoldal statisztika sávhoz
+  // @returns {Promise<number>} tartalmak száma
+  async countAll() {
+    console.log('tartalomRepository.countAll - KEZDÉS');
+
+    // MongoDB countDocuments – szűrés nélkül minden dokumentumot megszámlál
+    const szam = await Tartalom.countDocuments();
+
+    console.log('tartalomRepository.countAll - VÉGE', { szam });
+    return szam;
+  }
 
 }
 

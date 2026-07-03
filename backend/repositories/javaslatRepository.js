@@ -40,7 +40,7 @@ class JavaslatRepository {
   async findById(id) {
     // Javaslat lekérése kapcsolódó adatokkal (populate)
     const javaslat = await Javaslat.findById(id)
-      .populate('letrehozo', 'emberNev email'); // Létrehozó adatok betöltése
+      .populate('letrehozo', 'eemberNev email'); // Létrehozó adatok betöltése
     
     return javaslat;
   }
@@ -90,7 +90,7 @@ class JavaslatRepository {
     // Javaslatok lekérése kapcsolódó adatokkal
     const javaslatok = await Javaslat.find(query)
       .sort({ letrehozva: -1 })                     // Legújabbak előre rendezés
-      .populate('letrehozo', 'emberNev email'); // Létrehozó adatok
+      .populate('letrehozo', 'eemberNev email'); // Létrehozó adatok
     
     return javaslatok;
   }
@@ -114,7 +114,7 @@ class JavaslatRepository {
         runValidators: true   // Mongoose validációk futtatása
       }
     )
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return frissitettJavaslat;
   }
@@ -142,7 +142,7 @@ class JavaslatRepository {
         runValidators: true
       }
     )
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return frissitettJavaslat;
   }
@@ -172,7 +172,7 @@ class JavaslatRepository {
         runValidators: false // Számított értékeknél nem kell validáció
       }
     )
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return frissitettJavaslat;
   }
@@ -200,7 +200,7 @@ class JavaslatRepository {
         runValidators: false
       }
     )
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return frissitettJavaslat;
   }
@@ -274,7 +274,7 @@ class JavaslatRepository {
       'erintettEntitasok.entitasTipus': entitasTipus
     })
     .sort({ letrehozva: -1 })
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return javaslatok;
   }
@@ -297,7 +297,7 @@ class JavaslatRepository {
       statusz: { $in: ['Aktiv', 'Elfogadva'] } // Aktiv vagy Elfogadva
     })
     .sort({ letrehozva: -1 })
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return javaslatok;
   }
@@ -320,7 +320,7 @@ class JavaslatRepository {
       hatalybaLepesIdeje : { $lte: most } // <= most
     })
     .sort({ hatalybaLepesIdeje : 1 }) // Legrégebbiek először
-    .populate('letrehozo', 'emberNev email');
+    .populate('letrehozo', 'eemberNev email');
     
     return javaslatok;
   }
@@ -348,7 +348,7 @@ class JavaslatRepository {
     // Keresés
     const javaslatok = await Javaslat.find(query)
       .sort({ letrehozva: -1 })
-      .populate('letrehozo', 'emberNev email');
+      .populate('letrehozo', 'eemberNev email');
     
     return javaslatok;
   }
@@ -357,16 +357,16 @@ class JavaslatRepository {
   // ----- EMBER JAVASLATAI -----
   // ===================================
   /**
-   * Egy ember által létrehozott javaslatok lekérése
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * Egy eember által létrehozott javaslatok lekérése
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {number} limit - Maximum ennyi javaslat (opcionális)
    * @returns {Promise<Array>} Javaslatok tömb
    */
-  async findByLetrehozo(emberId, limit = null) {
+  async findByLetrehozo(eemberId, limit = null) {
     // Query
-    let query = Javaslat.find({ letrehozo: emberId })
+    let query = Javaslat.find({ letrehozo: eemberId })
       .sort({ letrehozva: -1 })
-      .populate('letrehozo', 'emberNev email');
+      .populate('letrehozo', 'eemberNev email');
     
     // Ha van limit, alkalmazzuk
     if (limit) {
@@ -459,7 +459,7 @@ async findBySzuloId(szuloId, statusz = null) {
   
   // Javaslatok lekérése kapcsolt adatokkal
   const javaslatok = await Javaslat.find(query)
-    .populate('letrehozo', 'emberNev email')    // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev email')    // Létrehozó adatok
     .sort({ letrehozva: -1 });                       // Legújabbak előre
   
   // Log metódus vége
@@ -505,6 +505,37 @@ async updateSzuloId(javaslatId, ujSzuloId, ujSzuloTipus) {
   });
   
   return frissitettJavaslat;
+}
+
+// ----- TÖREDÉKCSOPORT JAVASLATOK LEKÉRÉSE -----
+// Egy töredékcsoport összes aktív javaslatának lekérése
+// param: string toredekCsoportId - A töredékcsoport azonosítója
+// returns: Promise<Array> - Az aktív töredékjavaslatok tömbje
+async findByToredekCsoportId(toredekCsoportId) {
+  // Log a metódus elejére az értékekkel
+  console.log('findByToredekCsoportId - KEZDÉS', { toredekCsoportId });
+
+  // Validáció - a töredékcsoport azonosítója kötelező
+  if (!toredekCsoportId) {
+    throw new Error('A töredékcsoport azonosítója kötelező');
+  }
+
+  // Lekérdezzük az összes Aktiv státuszú töredékjavaslatot ebből a csoportból
+  const toredekek = await Javaslat
+    .find({
+      toredekCsoportId: toredekCsoportId, // Csak ebből a csoportból
+      statusz: 'Aktiv',                   // Csak aktív javaslatok
+    })
+    .populate('letrehozo', 'eemberNev email') // Létrehozó adatainak betöltése
+    .lean(); // Egyszerű JavaScript objektumként adjuk vissza (gyorsabb)
+
+  // Log a metódus végére az eredménnyel
+  console.log('findByToredekCsoportId - VÉGE', {
+    toredekCsoportId,
+    talaltak: toredekek.length, // Hány töredéket találtunk
+  });
+
+  return toredekek; // Visszaadjuk a töredékek tömbjét
 }
 
 

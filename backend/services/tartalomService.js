@@ -34,14 +34,14 @@ class TartalomService {
    * @param {number} adatok.reszveteliAranyKuszob - Részvételi arány küszöb (0-100)
    * @param {number} adatok.minimumDontesiIdo - Minimum döntési idő másodpercben (0-31536000)
    * @param {number} adatok.maximumDontesiIdo - Maximum döntési idő másodpercben (0-315360000)
-   * @param {string} emberId - A létrehozó ember ID-ja
+   * @param {string} eemberId - A létrehozó eember ID-ja
    * @param {number} kezdoTudatpont - Kezdő tudatpont mennyiség (minimum 1)
    * @returns {Promise} A létrehozott tartalom
    */
-  async tartalomLetrehozasa(adatok, emberId, kezdoTudatpont) {
+  async tartalomLetrehozasa(adatok, eemberId, kezdoTudatpont) {
     console.log("=================================== tartalomLetrehozasa: ", {
       adatok: adatok,
-      emberId: emberId,
+      eemberId: eemberId,
       kezdoTudatpont: kezdoTudatpont
     });
     console.log("adatok.kategoriaIds: ", adatok.kategoriaIds);
@@ -51,8 +51,8 @@ class TartalomService {
       throw new Error('A cím megadása kötelező');
     }
     
-    if (!emberId) {
-      throw new Error('A létrehozó ember azonosítása szükséges');
+    if (!eemberId) {
+      throw new Error('A létrehozó eember azonosítása szükséges');
     }
 
     // ===== 2. LÉPÉS - INICIALIS TUDATPONT VALIDÁLÁSA =====
@@ -135,8 +135,8 @@ class TartalomService {
     // ===== 3. LÉPÉS - CÍM TISZTÍTÁSA (trim) =====
     const tisztitottCim = adatok.cim.trim();
 
-    // ===== 4. LÉPÉS - SZÖVEG TISZTÍTÁSA (trim) HA VAN =====
-    const tisztitottSzoveg = adatok.szoveg ? adatok.szoveg.trim() : '';
+    // ===== 4. LÉPÉS - SZÖVEG KEZELÉSE HA VAN =====
+   const tisztitottSzoveg = adatok.szoveg !== undefined ? adatok.szoveg : null;
 
     // ===== 5. LÉPÉS - STÁTUSZ VALIDÁLÁS =====
     const megengedettStatuszok = ['Lathato', 'Lathatatlan', 'Takart'];
@@ -186,12 +186,12 @@ class TartalomService {
     // ===== 7. LÉPÉS - TARTALOM OBJEKTUM ÖSSZEÁLLÍTÁSA =====
     const tartalomAdatok = {
       cim: tisztitottCim,
-      szoveg: tisztitottSzoveg,
+      szoveg: tisztitottSzoveg,           // null vagy JSON tömb a szövegszerkesztőtől
       tartalomTipusId: adatok.tartalomTipusId || null,
       kategoriaIds: validaltKategoriaIds,
       szuloId: adatok.szuloId || null,
-      szuloTipus: adatok.szuloTipus || null,  
-      letrehozo: emberId,
+      szuloTipus: adatok.szuloTipus || null,
+      letrehozo: eemberId,
       statusz: statusz,
     };
 
@@ -209,7 +209,7 @@ class TartalomService {
 
       console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese",);
       await TudatpontService.tudatpontHozzarendelese(
-        emberId,           // Ki adja a tudatpontot
+        eemberId,           // Ki adja a tudatpontot
         ujTartalom._id,          // Melyik entitásra (az új tartalom ID-ja)
         'Tartalom',              // Entitás típusa
         kezdoTudatpont           // Mennyi tudatpontot
@@ -233,7 +233,7 @@ class TartalomService {
 
       console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> ErtekJavaslatRepository.create", {
         tartalomId: ujTartalom._id,
-        emberId: emberId,
+        eemberId: eemberId,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
         minimumDontesiIdo: minimumDontesiIdo,
@@ -241,7 +241,7 @@ class TartalomService {
       });
       await ErtekJavaslatRepository.create({
         tartalomId: ujTartalom._id,
-        emberId: emberId,
+        eemberId: eemberId,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
         minimumDontesiIdo: minimumDontesiIdo,
@@ -293,13 +293,13 @@ class TartalomService {
   /**
    * Egy tartalom lekérése jogosultság ellenőrzéssel
    * @param {string} id - A tartalom ID-ja
-   * @param {string} emberId - A lekérést végző ember ID-ja
+   * @param {string} eemberId - A lekérést végző eember ID-ja
    * @returns {Promise} A tartalom objektum
    */
-  async tartalomLekerese(id, emberId) {
+  async tartalomLekerese(id, eemberId) {
     console.log("=================================== tartalomLekerese:: ", {
       id: id,
-      emberId: emberId
+      eemberId: eemberId
     });
 
     // 1. LÉPÉS - ID validálás
@@ -323,8 +323,8 @@ class TartalomService {
     // 4. LÉPÉS - Jogosultság ellenőrzése státusz alapján
     // Ha nem "Lathato", csak a saját tartalmát láthatja
     if (tartalom.statusz !== 'Lathato') {
-      // Ellenőrizzük, hogy a ember a tartalom létrehozója-e
-      if (!emberId || tartalom.letrehozo._id.toString() !== emberId.toString()) {
+      // Ellenőrizzük, hogy a eember a tartalom létrehozója-e
+      if (!eemberId || tartalom.letrehozo._id.toString() !== eemberId.toString()) {
         throw new Error('Nincs jogosultságod megtekinteni ezt a tartalmat');
       }
     }
@@ -342,13 +342,13 @@ class TartalomService {
   /**
    * Tartalmak listázása szűrőkkel
    * @param {Object} szurok - Szűrési feltételek
-   * @param {string} emberId - A lekérést végző ember ID-ja
+   * @param {string} eemberId - A lekérést végző eember ID-ja
    * @returns {Promise} Tartalmak tömb
    */
-  async tartalomListazasa(szurok = {}, emberId) {
+  async tartalomListazasa(szurok = {}, eemberId) {
     console.log("===================================  tartalomListazasa:: ", {
       szurok: szurok,
-      emberId: emberId
+      eemberId: eemberId
     });
 
     // 1. LÉPÉS - Státusz kezelés
@@ -376,7 +376,7 @@ class TartalomService {
       }
       
       // Ha nem látható, csak a saját tartalmát
-      if (emberId && tartalom.letrehozo._id.toString() === emberId.toString()) {
+      if (eemberId && tartalom.letrehozo._id.toString() === eemberId.toString()) {
 
         console.log("<<<<<<<<<<<<<<<<<< tartalomListazasa", "true");
         return true;
@@ -400,14 +400,14 @@ class TartalomService {
    * Egy tartalom módosítása validációval és jogosultság ellenőrzéssel
    * @param {string} id - A tartalom ID-ja
    * @param {Object} frissitesek - A frissítendő mezők
-   * @param {string} emberId - A módosítást végző ember ID-ja
+   * @param {string} eemberId - A módosítást végző eember ID-ja
    * @returns {Promise} A frissített tartalom
    */
-  async tartalomModositasa(id, frissitesek, emberId) {
+  async tartalomModositasa(id, frissitesek, eemberId) {
     console.log("=================================== tartalomModositasa:: ", {
       id: id,
       frissitesek: frissitesek,
-      emberId: emberId
+      eemberId: eemberId
     });
 
     // 1. LÉPÉS - Tartalom létezésének ellenőrzése
@@ -424,7 +424,7 @@ class TartalomService {
 
     // 2. LÉPÉS - Jogosultság ellenőrzése
     // Csak a létrehozó módosíthatja a saját tartalmát
-    if (tartalom.letrehozo._id.toString() !== emberId.toString()) {
+    if (tartalom.letrehozo._id.toString() !== eemberId.toString()) {
       throw new Error('Nincs jogosultságod módosítani ezt a tartalmat');
     }
 
@@ -450,9 +450,8 @@ class TartalomService {
       tisztitottFrissitesek.cim = tisztitottCim;
     }
 
-    // 5. LÉPÉS - Szöveg tisztítása (ha van)
+    // 5. LÉPÉS - SZÖVEG KEZELÉSE (ha változik)
     if (tisztitottFrissitesek.szoveg !== undefined) {
-      tisztitottFrissitesek.szoveg = tisztitottFrissitesek.szoveg.trim();
     }
 
     // 6. LÉPÉS - Státusz validálás (ha változik)
@@ -519,26 +518,26 @@ class TartalomService {
   /**
    * Tartalom részletes adatainak lekérése tudatpont allokációval együtt
    * @param {string} id - A tartalom ID-ja
-   * @param {string} emberId - A lekérést végző ember ID-ja
+   * @param {string} eemberId - A lekérést végző eember ID-ja
    * @returns {Promise} Tartalom + tudatpont adatok
    */
-  async tartalomReszleteinekLekerese(id, emberId) {
+  async tartalomReszleteinekLekerese(id, eemberId) {
     console.log("=================================== tartalomReszleteinekLekerese: ", {
       id: id,
-      emberId: emberId
+      eemberId: eemberId
     });
 
     // 1. LÉPÉS - Tartalom alapadatainak lekérése (jogosultság ellenőrzéssel)
 
     console.log("tartalomReszleteinekLekerese >>>>>>>>>>>>>>>>>>> this.tartalomLekerese");
     
-    const tartalom = await this.tartalomLekerese(id, emberId);
+    const tartalom = await this.tartalomLekerese(id, eemberId);
 
     // 2. LÉPÉS - Tudatpont allokáció lekérése
     const tudatpontAdatok = await TudatpontService.entitasAllokaciLekerese(
       id,
       'Tartalom',
-      emberId
+      eemberId
     );
 
     // 3. LÉPÉS - Összesített objektum visszaadása
@@ -562,7 +561,7 @@ class TartalomService {
   // Törlés csak automatikusan történik:
   //
   // AUTOMATIKUS Torles - Tudatpont nullázás
-  // - Ha minden ember, vagy egy egyezmény visszavonja a tudatpontjait
+  // - Ha minden eember, vagy egy egyezmény visszavonja a tudatpontjait
   // - És az osszesPont 0-ra csökken
   // - Automatikusan meghívódik: tudatpontService.js → entitasTorlese0PontNal()
   // - Az entitás törlése: tartalomRepository.deleteById()

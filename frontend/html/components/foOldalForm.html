@@ -1,0 +1,80 @@
+<!-- frontend/html/components/foOldalForm.html -->
+
+<!-- A main.js tölti be ezt a fájlt közvetlenül az #app div-be.
+     A fooldal-oldal wrapper osztály korábban a pages/foOldal.html-ben
+     volt – most itt van, mivel a pages/ réteg megszűnt. -->
+
+<div class="fooldal-oldal">
+
+  <!-- ===== MODAL KONTÉNER =====
+       A Modal.js rendereli ide a modalt, ha megnyitják -->
+  <div id="modal-kontener"></div>
+
+  <!-- ===== TARTALOM TERÜLET =====
+       Ide kerülnek majd a kártya stócok –
+       a kártya logika külön komponensben lesz megvalósítva -->
+  <main class="fooldal-tartalom" id="fooldal-tartalom" role="main">
+    <!-- A kártya stócokat a kártya komponens rendereli ide -->
+  </main>
+
+  <!-- ===== ALSÓ SÁV =====
+       Fix pozíció: mindig a képernyő alján látható.
+       Bal oldalt a hamburger menü, jobb oldalt a statisztika infók. -->
+  <div class="also-sav" role="navigation" aria-label="Főoldal navigáció és statisztika">
+
+    <!-- HAMBURGER MENÜ KONTÉNER –
+         A HamburgerMenu.js rendereli ide a gombot, overlayt és panelt -->
+    <div id="hamburger-menu-kontener"></div>
+
+    <!-- INFÓK SÁVA – statisztika adatok, foOldal.js tölti fel az API válasz alapján -->
+    <div class="also-sav__infok" aria-label="Platform statisztika">
+
+      <!-- PLATFORM NÉV – állandó, nem változik -->
+      <span class="also-sav__info-elem also-sav__info-elem--nev" aria-label="Platform neve">
+        koino
+      </span>
+
+      <!-- ELVÁLASZTÓ PONT -->
+      <span class="also-sav__elvalaszto" aria-hidden="true">·</span>
+
+      <!-- EEMBERNÉV – foOldal.js írja bele az API válasz alapján -->
+      <span
+        class="also-sav__info-elem also-sav__info-elem--betoltes"
+        id="info-eembernev"
+        aria-label="Bejelentkezett eember neve"
+      >...</span>
+
+      <!-- ELVÁLASZTÓ PONT -->
+      <span class="also-sav__elvalaszto" aria-hidden="true">·</span>
+
+      <!-- TUDATPONTOK – foOldal.js írja bele -->
+      <span
+        class="also-sav__info-elem also-sav__info-elem--betoltes"
+        id="info-tudatpont"
+        aria-label="Saját tudatpontok egyenlege"
+      >...</span>
+
+      <!-- ELVÁLASZTÓ PONT -->
+      <span class="also-sav__elvalaszto" aria-hidden="true">·</span>
+
+      <!-- EEMBEREK SZÁMA – foOldal.js írja bele -->
+      <span
+        class="also-sav__info-elem also-sav__info-elem--betoltes"
+        id="info-eemberek-szama"
+        aria-label="Platformon regisztrált eemberek száma"
+      >...</span>
+
+      <!-- ELVÁLASZTÓ PONT -->
+      <span class="also-sav__elvalaszto" aria-hidden="true">·</span>
+
+      <!-- TARTALMAK SZÁMA – foOldal.js írja bele -->
+      <span
+        class="also-sav__info-elem also-sav__info-elem--betoltes"
+        id="info-tartalmak-szama"
+        aria-label="Platformon lévő tartalmak száma"
+      >...</span>
+
+    </div>
+  </div>
+
+</div>

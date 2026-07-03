@@ -11,43 +11,40 @@ const mongoose = require('mongoose');
 // =====================================================
 // A Schema meghatározza az egyezmény adatszerkezetét és validációs szabályokat
 const egyezmenySchema = new mongoose.Schema({
-  
+
   // ----- JAVASLAT REFERENCIA -----
   // Az eredeti javaslat, amely végrehajtásra került
   javaslatId: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Javaslat', // Referencia a Javaslat modellre
-    required: true, // Kötelező mező
-    index: true // Index a gyors kereséshez
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'Javaslat',                        // Referencia a Javaslat modellre
+    required: true,                         // Kötelező mező
+    index: true                             // Index a gyors kereséshez
   },
 
   // Melyik tartalom alatt van ez az egyezmény
   // A javaslat egyezmenyTarhelyId mezőjéből származik
   szuloId: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Tartalom',                      // Referencia a Tartalom modellre
-    required: true,                       // Kötelező: minden egyezménynek van tárhely tartalma
-    index: true                           // Gyors kereséshez indexelve
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'Tartalom',                        // Referencia a Tartalom modellre
+    required: true,                         // Kötelező: minden egyezménynek van tárhely tartalma
+    index: true                             // Gyors kereséshez indexelve
   },
 
-
-  // ----- SZÜLŐ TÍPUSA ----- MÓDOSÍTOTT ⭐
+  // ----- SZÜLŐ TÍPUSA -----
   // Ha van szuloId, akkor Tartalom
   szuloTipus: {
-    type: String,              // Szöveges típus
-    default: 'Tartalom',       // Alapértelmezett: Tartalom
-    enum: ['Tartalom']         // Tartalom az egyetlen engedélyezett érték
+    type: String,               // Szöveges típus
+    default: 'Tartalom',        // Alapértelmezett: Tartalom
+    enum: ['Tartalom']          // Tartalom az egyetlen engedélyezett érték
   },
-
-
 
   // ----- JAVASLAT TÍPUSA (SNAPSHOT) -----
   // A javaslat típusa végrehajtáskor
   javaslatTipus: {
-    type: String, // Szöveges típus
-    required: true, // Kötelező mező
-    enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'], // Engedélyezett értékek
-    trim: true // Levágja a felesleges szóközöket
+    type: String,                                                          // Szöveges típus
+    required: true,                                                        // Kötelező mező
+    enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'],   // Engedélyezett értékek
+    trim: true                                                             // Levágja a felesleges szóközöket
   },
 
   // ----- ÉRINTETT ENTITÁSOK (SNAPSHOT) -----
@@ -57,26 +54,26 @@ const egyezmenySchema = new mongoose.Schema({
       {
         // Entitás MongoDB ObjectId-ja
         entitasId: {
-          type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-          required: true // Kötelező mező
+          type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+          required: true                           // Kötelező mező
         },
         // Entitás típusa (melyik model/kollekció)
         entitasTipus: {
-          type: String, // Szöveges típus
-          required: true, // Kötelező mező
-          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'], // Engedélyezett típusok
+          type: String,                                        // Szöveges típus
+          required: true,                                      // Kötelező mező
+          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],   // Engedélyezett típusok
           trim: true
         },
         // Művelet típusa ezen az entitáson
         muvelet: {
-          type: String, // Szöveges típus
-          required: true, // Kötelező mező
-          enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'], // Engedélyezett műveletek
+          type: String,                                                  // Szöveges típus
+          required: true,                                                // Kötelező mező
+          enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'],     // Engedélyezett műveletek
           trim: true
         }
       }
     ],
-    required: true, // Kötelező mező
+    required: true,   // Kötelező mező
     validate: {
       validator: function(value) {
         return value && value.length > 0; // Legalább 1 entitás kell
@@ -86,91 +83,91 @@ const egyezmenySchema = new mongoose.Schema({
   },
 
   // ----- INDOKLÁS (SNAPSHOT) -----
-  // A javaslat indoklása végrehajtáskor
+  // A javaslat gazdag szöveges indoklása végrehajtáskor
+  // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
+  // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
-    type: String, // Szöveges típus
-    required: true, // Kötelező mező
-    trim: true, // Levágja a felesleges szóközöket
-    minlength: 10, // Minimum hossz
-    maxlength: 2000 // Maximum hossz
+    type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
+    required: true,                     // Kötelező mező
+    default: null                       // Alapértelmezett: null
   },
 
   // ----- LÉTREHOZÓ EMBER -----
   // Az eredeti javaslat létrehozója
   letrehozo: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
-    required: true, // Kötelező mező
-    index: true // Index a gyors kereséshez létrehozó szerint
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'eEmber',                          // Referencia a eEmber modellre
+    required: true,                         // Kötelező mező
+    index: true                             // Index a gyors kereséshez létrehozó szerint
   },
 
   // ----- VÉGREHAJTÁS IDŐPONTJA -----
   // Mikor lett végrehajtva a javaslat és létrehozva az egyezmény
   vegrehajtva: {
-    type: Date, // Dátum típus
-    required: true, // Kötelező mező
-    default: Date.now, // Alapértelmezett: jelenlegi időpont
-    index: true // Index az időrendi kereséshez
+    type: Date,         // Dátum típus
+    required: true,     // Kötelező mező
+    default: Date.now,  // Alapértelmezett: jelenlegi időpont
+    index: true         // Index az időrendi kereséshez
   },
 
   // ----- VÉGREHAJTÁSI EREDMÉNY -----
   // A végrehajtás kimenetele (részletes eredmény objektum)
   vegrehajatasEredmeny: {
-    type: Object, // Objektum típus - flexibilis struktúra
+    type: Object,   // Objektum típus - flexibilis struktúra
     required: true, // Kötelező mező
-    default: {} // Alapértelmezett: üres objektum
+    default: {}     // Alapértelmezett: üres objektum
   },
 
   // ----- SZAVAZÁSI SNAPSHOT ADATOK -----
   // Támogatók száma végrehajtáskor
   tamogatokSzama: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // Ellenzők száma végrehajtáskor
   ellenzokSzama: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // Tartózkodók száma végrehajtáskor
   tartozkodokSzama: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // Részvételi arány % végrehajtáskor
   reszveteliArany: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    max: 100, // Maximum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    max: 100,       // Maximum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // Támogatottsági arány % végrehajtáskor
   tamogatotsagiArany: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    max: 100, // Maximum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    max: 100,       // Maximum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // Bizonyossági mutató végrehajtáskor
   bizonyossagiMutato: {
-    type: Number, // Számérték típus
+    type: Number,   // Számérték típus
     required: true, // Kötelező mező
-    min: 0, // Minimum érték
-    max: 100, // Maximum érték
-    default: 0 // Alapértelmezett: 0
+    min: 0,         // Minimum érték
+    max: 100,       // Maximum érték
+    default: 0      // Alapértelmezett: 0
   },
 
   // ----- EGYESÍTÉS SPECIFIKUS ADATOK (SNAPSHOT) -----
@@ -178,8 +175,8 @@ const egyezmenySchema = new mongoose.Schema({
   egyesitesAdatok: {
     // Az új entitás típusa, ami létrejött az egyesítésből
     ujEntitasTipus: {
-      type: String, // Szöveges típus
-      enum: ['Tartalom', 'Kategoria', 'TartalomTipus'], // Engedélyezett típusok
+      type: String,                                        // Szöveges típus
+      enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],   // Engedélyezett típusok
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
@@ -187,15 +184,16 @@ const egyezmenySchema = new mongoose.Schema({
     },
     // Az új entitás ObjectId-ja
     ujEntitasId: {
-      type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+      type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
       }
     },
     // Az új entitás adatai (snapshot)
+    // Object típus: befogadja a szövegszerkesztő JSON tömbjét is
     ujEntitasAdatok: {
-      type: Object, // Objektum típus
+      type: Object,   // Objektum típus - Mixed-ként viselkedik, bármit elfogad
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
@@ -203,16 +201,17 @@ const egyezmenySchema = new mongoose.Schema({
     },
     // Forrás entitások ID-i, amelyek egyesültek
     forrasEntitasok: {
-      type: [mongoose.Schema.Types.ObjectId], // MongoDB ObjectId tömb
-      default: [] // Alapértelmezett: üres tömb
+      type: [mongoose.Schema.Types.ObjectId],   // MongoDB ObjectId tömb
+      default: []                               // Alapértelmezett: üres tömb
     }
   },
 
   // ----- MÓDOSÍTÁS SPECIFIKUS ADATOK (SNAPSHOT) -----
   // Csak "Modositas" típusú javaslat esetén van kitöltve
+  // Object típus: befogadja a szövegszerkesztő JSON tömbjét is (pl. szoveg mező módosításakor)
   modositasAdatok: {
-    type: Object, // Objektum típus - flexibilis struktúra
-    default: {} // Alapértelmezett: üres objektum
+    type: Object,   // Objektum típus - flexibilis struktúra
+    default: {}     // Alapértelmezett: üres objektum
   }
 
 }, {
@@ -228,7 +227,7 @@ const egyezmenySchema = new mongoose.Schema({
 // Javaslat ID indexelése - gyors keresés javaslat alapján
 egyezmenySchema.index({ javaslatId: 1 });
 
-// Létrehozó indexelése - gyors keresés ember alapján
+// Létrehozó indexelése - gyors keresés eember alapján
 egyezmenySchema.index({ letrehozo: 1 });
 
 // Végrehajtás dátuma indexelése - időrendi rendezés
@@ -241,9 +240,9 @@ egyezmenySchema.index({ javaslatTipus: 1 });
 egyezmenySchema.index({ letrehozo: 1, vegrehajtva: -1 });
 
 // Compound index: gyors keresés érintett entitás alapján
-egyezmenySchema.index({ 
-  'erintettEntitasok.entitasId': 1, 
-  'erintettEntitasok.entitasTipus': 1 
+egyezmenySchema.index({
+  'erintettEntitasok.entitasId': 1,
+  'erintettEntitasok.entitasTipus': 1
 });
 
 // szuloId indexelése
@@ -253,13 +252,6 @@ egyezmenySchema.index({ szuloId: 1 });
 // Compound index: szuloId + vegrehajtva
 // Gyors keresés: "Egy tartalom legújabb egyezményei"
 egyezmenySchema.index({ szuloId: 1, vegrehajtva: -1 });
-
-// Érintett entitások indexelése
-// Gyors keresés: "Egy entitáshoz tartozó egyezmények"
-egyezmenySchema.index({ 
-  'erintettEntitasok.entitasId': 1, 
-  'erintettEntitasok.entitasTipus': 1 
-});
 
 // =====================================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

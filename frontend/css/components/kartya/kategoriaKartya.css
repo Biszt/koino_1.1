@@ -1,0 +1,94 @@
+/* frontend/css/components/kartya/kategoriaKartya.css */
+
+
+/* ---------------------------------------- */
+/* NÉV                                      */
+/* ---------------------------------------- */
+
+
+/* Kategória neve – a fejléc fő szöveges eleme */
+.kategoria-kartya__nev {
+  flex: 1;                              /* Kitölti a maradék helyet */
+  font-size: var(--text-sm);            /* Kompakt, de olvasható */
+  font-weight: 600;                     /* Kiemelkedik a többi elemtől */
+  color: var(--color-text);             /* Elsődleges szövegszín */
+  white-space: nowrap;                  /* Egy sorban marad */
+  overflow: hidden;                     /* Túl hosszú név ne lógjon ki */
+  text-overflow: ellipsis;              /* "..." jelzi a csonkítást */
+  min-width: 0;                         /* Flex csonkításhoz szükséges */
+}
+
+
+/* ---------------------------------------- */
+/* TUDATPONT SOR                            */
+/* ---------------------------------------- */
+
+
+/* Saját és hierarchikus tudatpont konténere – egymás mellett */
+.kategoria-kartya__tudatpont-sor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);                  /* Kis rés a két érték között */
+  flex-shrink: 0;                       /* Nem zsugorodik el */
+}
+
+
+/* Mindkét tudatpont elem közös stílusa */
+.kategoria-kartya__tudatpont {
+  font-size: var(--text-xs);            /* Kompakt – másodlagos adat */
+  font-weight: 500;
+  white-space: nowrap;                  /* Egy sorban marad */
+}
+
+
+/* Saját tudatpont – kevésbé hangsúlyos */
+.kategoria-kartya__tudatpont--sajat {
+  color: var(--color-text-muted);       /* Muted szín – nem elsődleges info */
+}
+
+
+/* Hierarchikus tudatpont – erősebb, ez mutatja az ág erejét */
+.kategoria-kartya__tudatpont--hierarchikus {
+  color: var(--color-primary);          /* Erdőzöld – a hierarchia ereje */
+  font-weight: 600;
+}
+
+
+/* ---------------------------------------- */
+/* IKON (feltöltött kép VAGY emoji)         */
+/* ---------------------------------------- */
+
+
+/* Emoji ikon – a fejléc jobb szélén, a tudatpont sor után */
+.kategoria-kartya__ikon {
+  font-size: var(--text-base);          /* Természetes emoji méret */
+  flex-shrink: 0;                       /* Nem zsugorodik el */
+  cursor: default;                      /* Nem kattintható önmagában */
+  margin-left: var(--space-2);          /* Kis rés a tudatpont sortól */
+}
+
+
+/* Feltöltött képfájl ikon – ugyanott, jobb szélén */
+.kategoria-kartya__ikon-kep {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;                  /* Arányok megőrzése */
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);      /* Enyhe lekerekítés */
+  margin-left: var(--space-2);          /* Kis rés a tudatpont sortól */
+}
+
+
+/* ---------------------------------------- */
+/* BODY – LEÍRÁS                            */
+/* ---------------------------------------- */
+
+
+/* A kiválasztott kártya leírás szövege */
+.kategoria-kartya__leiras {
+  font-size: var(--text-sm);            /* Olvasható, kompakt */
+  color: var(--color-text-muted);       /* Muted – kiegészítő információ */
+  line-height: 1.6;                     /* Kényelmes sorköz */
+  max-width: 72ch;                      /* Olvashatóság – ne legyen túl széles sor */
+  white-space: pre-wrap;                /* Sortörések megmaradnak */
+}

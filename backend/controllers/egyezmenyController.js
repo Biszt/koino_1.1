@@ -129,11 +129,11 @@ class EgyezmenyController {
       // 1. LÉPÉS - Egyezmény ID kiolvasása URL paraméterből
       const egyezmenyId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ból (opcionális)
-      const emberId = req.user?.id || null;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ból (opcionális)
+      const eemberId = req.user?.id || null;
 
       console.log('Egyezmény ID:', egyezmenyId);
-      console.log('Ember ID:', emberId || 'vendég');
+      console.log('eEmber ID:', eemberId || 'vendég');
 
       // 3. LÉPÉS - Service hívás - egyezmény alapadatok
       const egyezmeny = await EgyezmenyService.egyezmenyLekerese(egyezmenyId);
@@ -143,7 +143,7 @@ class EgyezmenyController {
       const tudatpontAdatok = await TudatpontService.entitasAllokaciLekerese(
         egyezmenyId,
         'Egyezmeny',
-        emberId
+        eemberId
       );
 
       // 5. LÉPÉS - Összesített válasz küldése
@@ -235,7 +235,7 @@ class EgyezmenyController {
   // Az egyezmények NEM törölhetők direkt API híváson keresztül.
   // Törlés csak automatikusan történik:
   // 1. AUTOMATIKUS Törlés - Tudatpont nullázás
-  //    - Ha minden ember visszavonja a tudatpontjait (pontok → 0)
+  //    - Ha minden eember visszavonja a tudatpontjait (pontok → 0)
   //    - És az osszesPont 0-ra csökken
   //    - Automatikusan törlődik (tudatpontService.js kezeli)
 

@@ -116,10 +116,10 @@ class JavaslatSzamitasService {
      console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>> TudatpontService.tobbEntitasEgyesitettHozzajaruloinakLekerese", {
       erintettEntitasok: javaslat.erintettEntitasok
      });
-    const entitasTudatpontTulajdonosokEmberek = await TudatpontService.tobbEntitasEgyesitettHozzajaruloinakLekerese(
+    const entitasTudatpontTulajdonosokeEmberek = await TudatpontService.tobbEntitasEgyesitettHozzajaruloinakLekerese(
       javaslat.erintettEntitasok
     );
-    const entitasokTudatpontTulajdonosokSzama = entitasTudatpontTulajdonosokEmberek.length;
+    const entitasokTudatpontTulajdonosokSzama = entitasTudatpontTulajdonosokeEmberek.length;
 
     console.log("entitasokTudatpontTulajdonosokSzama:::::::::::::::::::::", entitasokTudatpontTulajdonosokSzama);
     
@@ -166,8 +166,10 @@ class JavaslatSzamitasService {
     
     
 
-    // 9. LÉPÉS - DÖNTÉSI IDEJE SZÁMÍTÁSA (ÚJ KÉPLET - DINAMIKUS HATÁROKKAL)
-    // Érintett tartalmak átlag értékeinek lekérése
+    // 9. LÉPÉS - DÖNTÉSI IDő SZÁMÍTÁSA 
+    // Érintett tartalmak átlag értékeinek lekérése 
+    // (Az átag számítás lehet hogy nem jó, mivel megsértheti a tartalmak köszöb értékit.
+    //  Jobb lenne, ha csak az időt átlagólnánk, de a javaslat elfogadási küszöb és a részvételi arány küszöbnek tartalmakra lebontva is teljesűlniük kellene)
     console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>>>>>>>>>>> erintettTartalmakAtlagErtekeinekLekerese", {
       erintettEntitasok: javaslat.erintettEntitasok
     });

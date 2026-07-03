@@ -52,25 +52,7 @@ class JavaslatCronJob {
         // 2. LÉPÉS: Hatályba lépendő javaslatok lekérése
         // 3. LÉPÉS: Végrehajtás ellenőrzése
         // Mindez EGY metódusban történik
-        const eredmeny = await JavaslatIdozitesService.tomegesVegrehajtasEllenorzes();
-
-        // === EREDMÉNY KIÍRÁSA ===
-        if (eredmeny.osszesen === 0) {
-          console.log('✓ Nincs végrehajtandó javaslat');
-        } else {
-          console.log(`📊 Statisztika:`);
-          console.log(`   - Összesen ellenőrizve: ${eredmeny.osszesen}`);
-          console.log(`   - Elfogadva (végrehajtva): ${eredmeny.elfogadva || 0}`);
-          console.log(`   - Elvetve: ${eredmeny.elvetve || 0}`);
-          
-          // Hibák kiírása (ha van)
-          if (eredmeny.hibak && eredmeny.hibak.length > 0) {
-            console.log(`   - Hibák száma: ${eredmeny.hibak.length}`);
-            eredmeny.hibak.forEach(hiba => {
-              console.error(`     ❌ Javaslat ${hiba.javaslatId}: ${hiba.hiba}`);
-            });
-          }
-        }
+       JavaslatIdozitesService.tomegesVegrehajtasEllenorzes();
 
         console.log('✓ Javaslat végrehajtás ellenőrzés befejezve\n');
 

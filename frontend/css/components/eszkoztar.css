@@ -1,0 +1,580 @@
+/* frontend/css/components/eszkoztar.css */
+
+
+/* =============================================
+   ESZKÖZTÁR - FŐ KONTÉNER
+   ============================================= */
+/* A három sávot összefogó külső konténer.
+   A szoveg-szerkeszto közvetlen gyereke. */
+.eszkoztar {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-offset);
+}
+
+
+/* =============================================
+   SÁVOK - KÖZÖS ALAP
+   ============================================= */
+/* Minden sáv (felső, középső, alsó) közös stílusa */
+.eszkoztar-sav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-2);
+    min-height: 48px; /* Mobilos érintési terület minimum */
+}
+
+
+/* Sávok közötti elválasztó vonal */
+.eszkoztar-sav + .eszkoztar-sav {
+    border-top: 1px solid var(--color-divider);
+}
+
+
+/* =============================================
+   FELSŐ SÁV — BLOKK TÍPUSOK
+   ============================================= */
+/* A típusgombok sávja kicsit hangsúlyosabb hátteret kap,
+   hogy vizuálisan elkülönüljön a többi sávtól */
+.eszkoztar-sav--tipusok {
+    background: var(--color-surface-offset-2);
+    gap: var(--space-1);
+}
+
+
+/* =============================================
+   KÖZÉPSŐ SÁV — KÖZÖS ESZKÖZÖK
+   ============================================= */
+.eszkoztar-sav--kozos {
+    background: var(--color-surface-offset);
+}
+
+
+/* =============================================
+   ALSÓ SÁV — TÍPUSFÜGGŐ ESZKÖZÖK
+   ============================================= */
+/* Ez a sáv dinamikusan változik — ha üres (nincs aktív panel),
+   elrejti magát, hogy ne foglaljon helyet */
+.eszkoztar-sav--tipusfuggo {
+    background: var(--color-surface);
+    min-height: 0; /* Felülírjuk az alap min-height-ot */
+}
+
+
+/* Ha van látható panel benne, visszakapja a min-height-ot */
+.eszkoztar-sav--tipusfuggo:has(.eszkoztar-panel[style*="flex"]) {
+    min-height: 48px;
+}
+
+
+/* =============================================
+   PANEL — TÍPUSFÜGGŐ ESZKÖZÖK KONTÉNERE
+   ============================================= */
+/* Minden típushoz tartozó eszközök csomagja.
+   A JS display:none / display:flex között vált. */
+.eszkoztar-panel {
+    display: flex; /* alapból a JS állítja none-ra */
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    width: 100%;
+}
+
+
+/* =============================================
+   ELVÁLASZTÓ
+   ============================================= */
+/* Vizuális elválasztó a csoportok között egy sávon belül */
+.eszkoztar-elvalaszto {
+    width: 1px;
+    min-height: 20px;
+    align-self: stretch;
+    background: var(--color-divider);
+    margin: var(--space-1) var(--space-1);
+    flex-shrink: 0;
+}
+
+
+/* =============================================
+   GOMBOK — KÖZÖS ALAP STÍLUS
+   ============================================= */
+/* Minden eszköztár gomb közös alapja */
+.eszkoztar-gomb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;  /* Mobilos érintési terület minimum */
+    min-height: 44px; /* Mobilos érintési terület minimum */
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition:
+        background var(--transition-interactive),
+        color var(--transition-interactive),
+        border-color var(--transition-interactive),
+        opacity var(--transition-interactive);
+}
+
+
+/* Gomb - hover állapot */
+.eszkoztar-gomb:hover:not(:disabled) {
+    background: var(--color-surface-dynamic);
+    color: var(--color-text);
+}
+
+
+/* Gomb - lenyomott állapot */
+.eszkoztar-gomb:active:not(:disabled) {
+    background: var(--color-surface-offset-2);
+}
+
+
+/* =============================================
+   GOMB VARIÁCIÓK
+   ============================================= */
+
+
+/* --- Típusgomb (felső sáv) ---
+   Kicsit szélesebb, hogy a felirat elférjen */
+.eszkoztar-gomb--tipus {
+    min-width: 72px;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full); /* Pill alakú */
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+
+
+/* --- Közös eszköz gomb (középső sáv) ---
+   Négyzetes, tömör ikongomb */
+.eszkoztar-gomb--kozos {
+    min-width: 44px;
+    font-size: var(--text-base);
+}
+
+
+/* --- Toggle gomb (alsó sáv, pl. félkövér, dőlt) ---
+   Be/ki kapcsolható, aktív állapottal */
+.eszkoztar-gomb--toggle {
+    min-width: 44px;
+}
+
+
+/* --- Méret gomb (alsó sáv) ---
+   Kisebb, szövegméret-mutató gomb */
+.eszkoztar-gomb--meret {
+    min-width: 44px;
+    padding: var(--space-1) var(--space-3);
+}
+
+
+/* =============================================
+   GOMB ÁLLAPOTOK
+   ============================================= */
+
+
+/* Aktív / bekapcsolt állapot — minden gomb típusnál egységes */
+.eszkoztar-gomb--aktiv {
+    background: var(--color-primary-highlight);
+    color: var(--color-primary);
+    border-color: var(--color-primary-highlight);
+}
+
+
+/* Aktív gomb hover — kicsit sötétebb kiemelés */
+.eszkoztar-gomb--aktiv:hover:not(:disabled) {
+    background: var(--color-primary-highlight);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+
+/* Tiltott állapot — halvány, nem kattintható */
+.eszkoztar-gomb--tiltott,
+.eszkoztar-gomb:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+
+/* =============================================
+   IGAZÍTÁS CSOPORT — ALSÓ SÁV
+   ============================================= */
+/* A három igazítás gomb (balra, középre, jobbra) egymás mellé kerül.
+   A div alapból block display-t kap, ezért explicit flex kell. */
+.eszkoztar-igazitas-csoport {
+    display: flex;
+    flex-direction: row; /* Gombok vízszintesen, egymás mellett */
+    align-items: center;
+    gap: var(--space-1);
+}
+
+
+/* =============================================
+   INPUT MEZŐ — ALSÓ SÁV
+   ============================================= */
+/* A típusfüggő panelekben megjelenő szöveges inputok wrapper-e */
+.eszkoztar-input-wrapper {
+    display: flex;
+    align-items: center;
+    flex: 1;           /* Kitölti a rendelkezésre álló helyet */
+    min-width: 120px;  /* Ne legyen túl szűk */
+    max-width: 280px;  /* Ne nyújtódjön túl szélesre */
+}
+
+
+/* Maga az input mező */
+.eszkoztar-input {
+    width: 100%;
+    height: 36px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    outline: none;
+    transition:
+        border-color var(--transition-interactive),
+        background var(--transition-interactive);
+}
+
+
+/* Input - fókuszban */
+.eszkoztar-input:focus {
+    border-color: var(--color-primary);
+    background: var(--color-surface-2);
+}
+
+
+/* Input - placeholder szöveg */
+.eszkoztar-input::placeholder {
+    color: var(--color-text-faint);
+}
+
+
+/* =============================================
+   SELECT MEZŐ — ALSÓ SÁV
+   ============================================= */
+/* A betűméret legördülő wrapper-e */
+.eszkoztar-select-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+
+/* A legördülő mező stílusa — az eszkoztar-input-hoz igazítva */
+.eszkoztar-select {
+    height: 36px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    cursor: pointer;
+    outline: none;
+    transition:
+        border-color var(--transition-interactive),
+        background var(--transition-interactive);
+}
+
+
+/* Select - fókuszban */
+.eszkoztar-select:focus {
+    border-color: var(--color-primary);
+}
+
+
+/* =============================================
+   SZÍN ESZKÖZ CSOPORT — ALSÓ SÁV
+   ============================================= */
+/* A szín gomb és törlő gomb közös wrapper-e.
+   Egységként kezeljük őket, szorosan egymás mellett. */
+.eszkoztar-szin-csoport {
+    display: flex;
+    align-items: center;
+    gap: 0; /* Nincs gap — a két gomb közvetlenül egymás mellett van */
+}
+
+
+/* A szín gomb és a rejtett input közös wrapper-e.
+   position: relative kell, hogy az input pontosan a gomb fölé essen. */
+.eszkoztar-szin-gomb-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+
+/* A szín gomb egyedi stílusa —
+   az eszkoztar-gomb alapra épül, de rugalmasabb szélességű */
+.eszkoztar-gomb--szin {
+    flex-direction: column; /* Betű és csík egymás alatt */
+    gap: 2px;
+    min-width: 36px;
+    padding: var(--space-1);
+}
+
+
+/* Az "A" betű a szín gombon */
+.eszkoztar-szin-gomb__betu {
+    font-size: var(--text-base);
+    font-weight: 700;
+    font-family: var(--font-body);
+    line-height: 1;
+    color: inherit;
+}
+
+
+/* A szín csík a gomb alján —
+   ez mutatja az aktuálisan kiválasztott színt */
+.eszkoztar-szin-gomb__csik {
+    display: block;
+    width: 20px;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--color-divider); /* Alap: semleges szürke = inaktív */
+    transition: background var(--transition-interactive);
+}
+
+
+/* A rejtett natív color picker input.
+   Teljesen láthatatlan, de a gomb felett helyezkedik el,
+   hogy a böngésző color picker megnyíljon koppintásra. */
+.eszkoztar-szin-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    padding: 0;
+    border: none;
+    pointer-events: none;
+}
+
+
+/* A törlő gomb — alapból rejtett (JS állítja display:flex-re) */
+.eszkoztar-gomb--szin-torlo {
+    min-width: 24px;
+    min-height: 24px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-surface-offset-2);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    align-self: flex-start;
+    margin-top: var(--space-1);
+    margin-left: 2px;
+}
+
+
+/* Törlő gomb hover */
+.eszkoztar-gomb--szin-torlo:hover:not(:disabled) {
+    background: var(--color-error-highlight);
+    color: var(--color-error);
+    border-color: var(--color-error-highlight);
+}
+
+
+/* =============================================
+   CUSTOM SZÍN PICKER PANEL
+   ============================================= */
+/* DOM-alapú color picker — nem OS ablak, ezért nem veszi el a fókuszt */
+.eszkoztar-szin-picker-panel {
+    position: absolute;
+    top: calc(100% + var(--space-1));
+    left: 0;
+    z-index: 100;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 224px;
+}
+
+
+/* Gyors szín gombok sora */
+.eszkoztar-szin-picker__gyors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+
+/* Egy gyors szín gomb */
+.eszkoztar-szin-picker__gyors-gomb {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition:
+        transform var(--transition-interactive),
+        border-color var(--transition-interactive);
+}
+
+
+/* Gyors szín gomb - hover */
+.eszkoztar-szin-picker__gyors-gomb:hover {
+    transform: scale(1.2);
+    border-color: var(--color-text-muted);
+}
+
+
+/* Hue csúszka wrapper */
+.eszkoztar-szin-picker__csuszka-wrapper {
+    padding: var(--space-1) 0;
+}
+
+
+/* Hue csúszka — szivárvány gradienssel */
+.eszkoztar-szin-picker__hue-csuszka {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 12px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(
+        to right,
+        hsl(0,100%,50%), hsl(30,100%,50%), hsl(60,100%,50%),
+        hsl(90,100%,50%), hsl(120,100%,50%), hsl(150,100%,50%),
+        hsl(180,100%,50%), hsl(210,100%,50%), hsl(240,100%,50%),
+        hsl(270,100%,50%), hsl(300,100%,50%), hsl(330,100%,50%),
+        hsl(360,100%,50%)
+    );
+    outline: none;
+    cursor: pointer;
+}
+
+
+/* Csúszka thumb — WebKit */
+.eszkoztar-szin-picker__hue-csuszka::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    background: white;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+
+/* Csúszka thumb — Firefox */
+.eszkoztar-szin-picker__hue-csuszka::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    background: white;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+}
+
+
+/* Hex sor: előnézet + input + OK gomb */
+.eszkoztar-szin-picker__hex-sor {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+
+/* Szín előnézet négyzet */
+.eszkoztar-szin-picker__elonet {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+
+/* Hex input mező — az eszkoztar-input stílusát örökli, de rövidebb */
+.eszkoztar-szin-picker__hex-input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-sm);
+}
+
+
+/* OK / Alkalmazás gomb */
+.eszkoztar-szin-picker__alkalmazas-gomb {
+    flex-shrink: 0;
+    height: 36px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-interactive);
+}
+
+.eszkoztar-szin-picker__alkalmazas-gomb:hover {
+    background: var(--color-primary-hover);
+}
+
+
+/* =============================================
+   RESZPONZÍV — MOBILON
+   ============================================= */
+@media (max-width: 480px) {
+
+    /* Mobilon a sávok kicsit tömörebb paddingot kapnak */
+    .eszkoztar-sav {
+        padding: var(--space-1) var(--space-2);
+        gap: var(--space-1);
+    }
+
+    /* Mobilon a gombok minimálisan nagyobbak */
+    .eszkoztar-gomb {
+        min-width: 48px;
+        min-height: 48px;
+    }
+
+    /* Típusgombok mobilon teljes sort kapnak */
+    .eszkoztar-sav--tipusok {
+        gap: var(--space-1);
+    }
+
+    /* Input mobilon teljes szélességű */
+    .eszkoztar-input-wrapper {
+        max-width: 100%;
+        flex: 1;
+    }
+
+    /* Mobilon a szín törlő gomb kicsit nagyobb érintési területet kap */
+    .eszkoztar-gomb--szin-torlo {
+        min-width: 32px;
+        min-height: 32px;
+        width: 32px;
+        height: 32px;
+    }
+}

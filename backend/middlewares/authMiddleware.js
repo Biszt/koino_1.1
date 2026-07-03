@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 // AUTH MIDDLEWARE - JWT TOKEN ELLENŐRZÉS
 // Ez a middleware ellenőrzi, hogy érvényes JWT token van-e a kérésben
-// Ha igen, a ember adatait hozzáadja a req.user objektumhoz
+// Ha igen, a eember adatait hozzáadja a req.user objektumhoz
 
 /**
  * JWT token ellenőrző middleware
@@ -43,11 +43,11 @@ const authMiddleware = (req, res, next) => {
         // A JWT_SECRET-tel ellenőrizzük, hogy érvényes-e a token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // 6. LÉPÉS - Ember adatok hozzáadása a request-hez
+        // 6. LÉPÉS - eEmber adatok hozzáadása a request-hez
         // Így a következő middleware-ek és controllerek hozzáférhetnek
         req.user = {
             id: decoded.id,
-            emberNev: decoded.emberNev,
+            eemberNev: decoded.eemberNev,
             email: decoded.email,
             tudatpontok: decoded.tudatpontok
         };
@@ -104,7 +104,7 @@ const optionalAuthMiddleware = (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = {
                 id: decoded.id,
-                emberNev: decoded.emberNev,
+                eemberNev: decoded.eemberNev,
                 email: decoded.email,
                 tudatpontok: decoded.tudatpontok
             };

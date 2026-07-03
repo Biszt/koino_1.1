@@ -1,137 +1,147 @@
 // frontend/js/utils/authHelper.js
 
-// ===== AUTH HELPER OSZTÁLY =====
-// JWT token kezelésére szolgáló segédfüggvények gyűjteménye
-class AuthHelper {
-  
-  // ----- TOKEN MENTÉSE -----
-  /**
-   * JWT token mentése localStorage-ba
-   * @param {string} token - A JWT token amit menteni szeretnénk
-   */
-  static mentToken(token) {
-    // Token mentése a localStorage-ba 'authToken' kulcs alatt
-    localStorage.setItem('authToken', token);
-    console.log('Token sikeresen elmentve');
+// ===== KOINO – Auth Helper =====
+// JWT token és eemberi adatok kezelése.
+// TÁROLÁSI STRATÉGIA:
+//   - Token: memória (gyors elérés) + localStorage (oldalfrissítés túlélése)
+//   - Eember adatok: memória (oldalfrissítéskor az API-ból újratöltjük)
+// MIÉRT localStorage a tokennek?
+//   Az eredeti sandbox-korlátozás már nem érvényes a valódi szerveren.
+//   A localStorage-ban tárolt token lehetővé teszi, hogy oldalfrissítés
+//   után ne kelljen újra bejelentkezni.
+
+// Modul szintű változók – az alkalmazás életciklusa alatt élnek
+let token = null;
+let eember = null;
+
+// A localStorage kulcsa – ha változtatni kell, csak itt kell módosítani
+const TOKEN_KULCS = 'koino_token';
+
+// ===== JWT TOKEN MENTÉSE =====
+// Memóriába ÉS localStorage-ba menti a tokent.
+// @param {string} ujToken – A szerver által visszaadott JWT token
+function tokenMentese(ujToken) {
+  console.log('authHelper.tokenMentese - KEZDÉS', { tokenHossz: ujToken?.length ?? 0 });
+
+  // Memóriába mentés (gyors elérés az alkalmazás futása közben)
+  token = ujToken;
+
+  // localStorage-ba mentés (oldalfrissítés után is megmarad)
+  if (ujToken) {
+    localStorage.setItem(TOKEN_KULCS, ujToken);
+  } else {
+    localStorage.removeItem(TOKEN_KULCS);
   }
-  
-  // ----- TOKEN LEKÉRÉSE -----
-  /**
-   * JWT token lekérése localStorage-ból
-   * @returns {string|null} A tárolt token vagy null ha nincs
-   */
-  static getToken() {
-    // Token lekérése a localStorage-ból
-    return localStorage.getItem('authToken');
-  }
-  
-  // ----- TOKEN TorlesE -----
-  /**
-   * JWT token törlése localStorage-ból (kijelentkezés)
-   */
-  static torolToken() {
-    // Token törlése a localStorage-ból
-    localStorage.removeItem('authToken');
-    console.log('Token sikeresen törölve');
-  }
-  
-  // ----- BEJELENTKEZVE VAN-E -----
-  /**
-   * Ellenőrzi hogy a ember be van-e jelentkezve
-   * @returns {boolean} true ha van token, false ha nincs
-   */
-  static bejelentkezveVan() {
-    // Token lekérése
-    const token = this.getToken();
-    
-    // Ha van token, akkor be van jelentkezve
-    return token !== null && token !== '';
-  }
-  
-  // ----- TOKEN DEKÓDOLÁSA -----
-  /**
-   * JWT token payload részének dekódolása (Base64)
-   * Figyelem: Ez NEM validálja a token-t, csak dekódolja!
-   * @returns {Object|null} A dekódolt token adatok vagy null
-   */
-  static dekodolToken() {
-    // Token lekérése
-    const token = this.getToken();
-    
-    // Ha nincs token, return null
-    if (!token) {
-      return null;
-    }
-    
-    try {
-      // JWT token 3 részből áll: header.payload.signature
-      // Minket a payload érdekel (középső rész)
-      const payload = token.split('.')[1];
-      
-      // Base64 dekódolás
-      const dekodolt = atob(payload);
-      
-      // JSON parse - objektummá alakítás
-      return JSON.parse(dekodolt);
-    } catch (error) {
-      // Ha hiba van a dekódolás során
-      console.error('Token dekódolási hiba:', error);
-      return null;
+
+  console.log('authHelper.tokenMentese - VÉGE', { tokenMentve: !!token });
+}
+
+// ===== JWT TOKEN LEKÉRÉSE =====
+// Először memóriából próbál olvasni.
+// Ha ott nincs (pl. oldalfrissítés után), localStorage-ból tölti vissza.
+// @returns {string|null}
+function tokenLekerese() {
+  console.log('authHelper.tokenLekerese - KEZDÉS');
+
+  // Ha a memóriában nincs token, megpróbáljuk visszatölteni localStorage-ból
+  if (!token) {
+    const mentettToken = localStorage.getItem(TOKEN_KULCS);
+    if (mentettToken) {
+      // Visszatöltés a memóriába (a következő hívásnál már memóriából jön)
+      token = mentettToken;
+      console.log('authHelper.tokenLekerese - token visszatöltve localStorage-ból');
     }
   }
-  
-  // ----- TOKEN LEJÁRT-E -----
-  /**
-   * Ellenőrzi hogy a token lejárt-e
-   * @returns {boolean} true ha lejárt, false ha még érvényes
-   */
-  static tokenLejart() {
-    // Token dekódolása
-    const dekodolt = this.dekodolToken();
-    
-    // Ha nincs dekódolt token, akkor lejártnak tekintjük
-    if (!dekodolt) {
-      return true;
-    }
-    
-    // Token-ben lévő lejárati idő (exp = expiration, másodpercben)
-    const exp = dekodolt.exp;
-    
-    // Ha nincs lejárati idő, akkor lejártnak tekintjük
-    if (!exp) {
-      return true;
-    }
-    
-    // Jelenlegi idő másodpercben
-    const most = Math.floor(Date.now() / 1000);
-    
-    // Ha a lejárati idő kisebb mint a mostani idő -> lejárt
-    return exp < most;
+
+  console.log('authHelper.tokenLekerese - VÉGE', { vanToken: !!token });
+  return token;
+}
+
+// ===== TOKEN ÉS EEMBER TÖRLÉSE =====
+// Kijelentkezéskor: memóriából ÉS localStorage-ból is törli a tokent.
+function tokenTorlese() {
+  console.log('authHelper.tokenTorlese - KEZDÉS');
+
+  // Memória törlése
+  token = null;
+  eember = null;
+
+  // localStorage törlése
+  localStorage.removeItem(TOKEN_KULCS);
+
+  console.log('authHelper.tokenTorlese - VÉGE', { tokenTorolt: true });
+}
+
+// ===== EEMBER ADATOK MENTÉSE =====
+// Csak memóriába menti – oldalfrissítéskor az API-ból töltjük újra.
+// @param {object} eemberAdatok – A szerver által visszaadott eember objektum
+function eemberMentese(eemberAdatok) {
+  console.log('authHelper.eemberMentese - KEZDÉS', { eemberNev: eemberAdatok?.eemberNev });
+  eember = eemberAdatok;
+  console.log('authHelper.eemberMentese - VÉGE', { eemberMentve: !!eember });
+}
+
+// ===== EEMBER ADATOK LEKÉRÉSE =====
+// @returns {object|null}
+function eemberLekerese() {
+  console.log('authHelper.eemberLekerese - KEZDÉS/VÉGE', { vanEember: !!eember });
+  return eember;
+}
+
+// ===== BE VAN JELENTKEZVE? =====
+// Ellenőrzi, hogy van-e érvényes token (memóriában VAGY localStorage-ban).
+// @returns {boolean}
+function beVanJelentkezve() {
+  console.log('authHelper.beVanJelentkezve - KEZDÉS');
+
+  // tokenLekerese() automatikusan megnézi a localStorage-t is, ha kell
+  const aktualisToken = tokenLekerese();
+
+  console.log('authHelper.beVanJelentkezve - VÉGE', { bejelentkezve: !!aktualisToken });
+  return aktualisToken !== null;
+}
+
+// ===== AKTÍV ENTITÁS MENTÉSE =====
+// Elmenti a legutóbb kiválasztott entitás azonosítóját és típusát localStorage-ba,
+// hogy oldalfrissítés után vissza lehessen tölteni.
+// @param {string} entitasId   – az entitás azonosítója
+// @param {string} entitasTipus – pl. 'Tartalom', 'Kategoria'
+function aktivEntitasMentese(entitasId, entitasTipus) {
+  console.log('authHelper.aktivEntitasMentese - KEZDÉS', { entitasId, entitasTipus });
+
+  if (entitasId && entitasTipus) {
+    localStorage.setItem('koino_aktiv_entitas_id',     entitasId.toString());
+    localStorage.setItem('koino_aktiv_entitas_tipus',  entitasTipus);
+  } else {
+    localStorage.removeItem('koino_aktiv_entitas_id');
+    localStorage.removeItem('koino_aktiv_entitas_tipus');
   }
-  
-  // ----- EMBER ADATOK LEKÉRÉSE -----
-  /**
-   * A bejelentkezett ember adatainak lekérése a token-ből
-   * @returns {Object|null} Ember adatok vagy null
-   */
-  static getFelhasznaloAdatok() {
-    // Token dekódolása
-    const dekodolt = this.dekodolToken();
-    
-    // Ha nincs dekódolt token
-    if (!dekodolt) {
-      return null;
-    }
-    
-    // Ember adatok visszaadása (amit a backend a token-be tett)
-    return {
-      id: dekodolt.id,
-      email: dekodolt.email,
-      emberNev: dekodolt.emberNev
-    };
-  }
+
+  console.log('authHelper.aktivEntitasMentese - VÉGE', { mentve: !!(entitasId && entitasTipus) });
+}
+
+// ===== AKTÍV ENTITÁS LEKÉRÉSE =====
+// Visszaadja a localStorage-ban tárolt entitás azonosítóját és típusát,
+// vagy null értékeket, ha nincs mentett adat.
+// @returns {{ entitasId: string|null, entitasTipus: string|null }}
+function aktivEntitasLekerese() {
+  console.log('authHelper.aktivEntitasLekerese - KEZDÉS');
+
+  const entitasId    = localStorage.getItem('koino_aktiv_entitas_id')    ?? null;
+  const entitasTipus = localStorage.getItem('koino_aktiv_entitas_tipus') ?? null;
+
+  console.log('authHelper.aktivEntitasLekerese - VÉGE', { entitasId, entitasTipus });
+  return { entitasId, entitasTipus };
 }
 
 // ===== EXPORTÁLÁS =====
-// Hogy más fájlokból is használható legyen
-export default AuthHelper;
+export {
+  tokenMentese,
+  tokenLekerese,
+  tokenTorlese,
+  eemberMentese,
+  eemberLekerese,
+  beVanJelentkezve,
+  aktivEntitasMentese,   
+  aktivEntitasLekerese, 
+};

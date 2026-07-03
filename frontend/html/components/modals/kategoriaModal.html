@@ -1,0 +1,99 @@
+<!-- frontend/html/components/modals/kategoriaModal.html -->
+
+<!-- A KategoriaModal.js tölti be ezt a template-et fetch()-csel.
+     A Modal alap struktúrája (overlay, panel, fejléc) a modal.html-ben van –
+     ez csak a modal törzsének tartalmát, a formot adja meg. -->
+
+<form class="k-modal-form" id="kategoria-modal-form" novalidate>
+
+  <!-- ── NÉV ── -->
+  <!-- Kötelező mező – KategoriaModal.validalas() ellenőrzi -->
+  <div class="k-modal-mezo">
+    <input
+      type="text"
+      id="kategoria-nev"
+      name="nev"
+      class="k-modal-input"
+      placeholder="Kategória neve *"
+      maxlength="100"
+      autocomplete="off"
+      aria-label="Kategória neve – kötelező"
+    />
+  </div>
+
+  <!-- ── LEÍRÁS ── -->
+  <!-- Opcionális szöveges leírás -->
+  <div class="k-modal-mezo">
+    <textarea
+      id="kategoria-leiras"
+      name="leiras"
+      class="k-modal-textarea"
+      placeholder="Leírás (opcionális)"
+      rows="3"
+      aria-label="Leírás"
+    ></textarea>
+  </div>
+
+  <!-- ── IKON FELTÖLTÉS ── -->
+  <!-- Kötelező fájl mező – KategoriaModal.validalas() ellenőrzi -->
+  <!-- accept: csak képfájlokat enged, a Multer is csak ezeket fogadja el -->
+  <div class="k-modal-mezo">
+
+    <!-- Fájlválasztó input – vizuálisan elrejtve, a gomb aktiválja -->
+    <input
+      type="file"
+      id="kategoria-ikon-input"
+      name="ikon"
+      class="k-modal-fajl-input"
+      accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+      aria-label="Ikon képfájl feltöltése – kötelező"
+    />
+
+    <!-- Egyedi stílusú fájlválasztó gomb – rákattintva megnyitja az input-ot -->
+    <button
+      type="button"
+      class="k-modal-fajl-gomb"
+      id="kategoria-ikon-gomb"
+      aria-label="Ikon fájl kiválasztása"
+    >
+      🌿 Ikon kiválasztása
+    </button>
+
+    <!-- Kiválasztott fájl neve – JS írja ki ide, alapból üres -->
+    <span
+      class="k-modal-fajl-nev"
+      id="kategoria-ikon-nev"
+      aria-live="polite"
+    >Nincs kiválasztott fájl</span>
+
+  </div>
+
+  <!-- ── IKON ELŐNÉZET ── -->
+  <!-- Alapból rejtett – JS mutatja meg fájlválasztás után -->
+  <div class="k-modal-mezo k-modal-elonezet-kontener" id="kategoria-ikon-elokezet" hidden>
+    <img
+      id="kategoria-ikon-elonezet-kep"
+      class="k-modal-elokezet-kep"
+      src=""
+      alt="Ikon előnézet"
+      width="64"
+      height="64"
+    />
+  </div>
+
+  <!-- ── KEZDŐ TUDATPONT ── -->
+  <!-- Alapból rejtett – KategoriaModal.init() mutatja meg, ha mód = 'letrehozas' -->
+  <div class="k-modal-mezo" id="kategoria-kezdo-tudatpont-mezo" hidden>
+    <input
+      type="number"
+      id="kategoria-kezdo-tudatpont"
+      name="kezdoTudatpont"
+      class="k-modal-input"
+      min="1"
+      value="1"
+      placeholder="Kezdő tudatpont (min. 1) *"
+      aria-label="Kezdő tudatpont – kötelező"
+    />
+  </div>
+
+</form>

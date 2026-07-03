@@ -1,7 +1,7 @@
 // backend/repositories/lokacioRepository.js
 
 // ===== EMBER MODEL IMPORTÁLÁSA =====
-const Ember = require('../models/ember');
+const eEmber = require('../models/eember');
 
 // ===== LOKÁCIÓ REPOSITORY OSZTÁLY =====
 // Ez a réteg felelős a lokáció adatok lekérdezéséért
@@ -18,7 +18,7 @@ class LokacioRepository {
     const regex = new RegExp(`^${keresesiSzoveg}`, 'i');
     
     // MongoDB aggregáció: distinct országnevek, amik illeszkednek
-    const orszagok = await Ember.distinct('lokacio.orszag', {
+    const orszagok = await eEmber.distinct('lokacio.orszag', {
       'lokacio.orszag': regex
     });
     
@@ -37,7 +37,7 @@ class LokacioRepository {
     const regex = new RegExp(`^${keresesiSzoveg}`, 'i');
     
     // MongoDB aggregáció: distinct régiónevek, amik illeszkednek
-    const regiok = await Ember.distinct('lokacio.regio', {
+    const regiok = await eEmber.distinct('lokacio.regio', {
       'lokacio.regio': regex
     });
     
@@ -56,7 +56,7 @@ class LokacioRepository {
     const regex = new RegExp(`^${keresesiSzoveg}`, 'i');
     
     // MongoDB aggregáció: distinct településnevek, amik illeszkednek
-    const telepulesek = await Ember.distinct('lokacio.telepules', {
+    const telepulesek = await eEmber.distinct('lokacio.telepules', {
       'lokacio.telepules': regex
     });
     

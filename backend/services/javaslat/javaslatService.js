@@ -29,241 +29,381 @@ const TudatpontService = require('../tudatpontService');
 // Felelősség: CRUD műveletek + orchestration (más service-ek hívása)
 class JavaslatService {
 
-  /**
-   /**
- * ----- JAVASLAT LÉTREHOZÁSA -----
- * MÓDOSÍTVA: Szülő tartalom kötelező validáció + minden régi validáció visszatéve
- * Új javaslat létrehozása a rendszerben
- * @param {Object} javaslatAdatok - A javaslat adatai
- * @param {string} emberId - A létrehozó ember ID-ja
- * @param {number} kezdoTudatpont - Kezdeti tudatpont befektetés (legalább 1)
- * @returns {Promise<Object>} A létrehozott javaslat
- * @throws {Error} Ha validációs hiba van
- */
-async javaslatLetrehozasa(javaslatAdatok, emberId, kezdoTudatpont) {
-  // Log metódus kezdete
-  console.log('javaslatLetrehozasa - KEZDÉS', { 
-    javaslatAdatok, 
-    emberId,
-    kezdoTudatpont
-  });
-  
-  // ===== 1. LÉPÉS - KÖTELEZŐ ALAPPARAMÉTEREK VALIDÁLÁSA =====
-  
-  // 1.1 - Javaslat típus
-  if (!javaslatAdatok.javaslatTipus || !javaslatAdatok.javaslatTipus.trim()) {
-    throw new Error('A javaslat típusa kötelező');
-  }
-  
-  // 1.2 - Indoklás
-  if (!javaslatAdatok.indoklas || !javaslatAdatok.indoklas.trim()) {
-    throw new Error('Az indoklás megadása kötelező');
-  }
-  
-  // 1.3 - Érintett entitások
-  if (!javaslatAdatok.erintettEntitasok || javaslatAdatok.erintettEntitasok.length === 0) {
-    throw new Error('Legalább egy érintett entitás megadása kötelező');
-  }
-  
-  // 1.4 - Ember ID
-  if (!emberId) {
-    throw new Error('A létrehozó ember azonosítója szükséges');
-  }
-  
-  // 1.5 - Kezdő tudatpont (ÚJ - VISSZATÉVE!)
-  if (!kezdoTudatpont || kezdoTudatpont < 1) {
-    throw new Error('Az inicializációs tudatpont legalább 1 kell legyen');
-  }
-  
-  if (typeof kezdoTudatpont !== 'number' || isNaN(kezdoTudatpont)) {
-    throw new Error('A kezdő tudatpont értéknek számnak kell lennie');
-  }
-  
-  if (!Number.isInteger(kezdoTudatpont)) {
-    throw new Error('A kezdő tudatpont értéknek egész számnak kell lennie');
-  }
-  
-  // 2. LÉPÉS - SZÜLŐ VALIDÁLÁSA 
-  // A javaslat létrehozáshoz kötelező egy szülő tartalom megadása
-  if (!javaslatAdatok.szuloId) {
-    throw new Error('A javaslat létrehozáshoz szülő tartalom megadása kötelező');
-  }
+ // Tudatpont felosztása töredék javaslatok között
+  // Minden töredék legalább 1 pontot kap, a maradékot az elejétől kezdve szétosztjuk
+  elosztottTudatpontokKiszamitasa(toredekDarab, osszesKezdoTudatpont) {
+    // Log metódus eleje magyar kommenttel
+    console.log('elosztottTudatpontokKiszamitasa - KEZDÉS', {
+      toredekDarab,
+      osszesKezdoTudatpont
+    }); // Ide loggoljuk a bemenő értékeket
 
-  // Szülő tartalom létezésének ellenőrzése
-  console.log('javaslatLetrehozasa - TartalomRepository.findById', {
-    szuloId: javaslatAdatok.szuloId
-  });
-  const szuloTartalom = await TartalomRepository.findById(javaslatAdatok.szuloId);
-  
-  if (!szuloTartalom) {
-    throw new Error('A megadott szülő tartalom nem található');
-  }
-  
-  console.log('javaslatLetrehozasa - Szülő tartalom validálva', {
-    szuloId: szuloTartalom.id,
-    szuloCim: szuloTartalom.cim
-  });
+    // Ellenőrzés: legalább annyi tudatpont kell, ahány töredék van
+    if (osszesKezdoTudatpont < toredekDarab) {
+      // Ha kevesebb a pont, mint a töredékek száma, az üzleti szabály sérül
+      throw new Error('A kezdő tudatpont értéknek legalább a töredékek számával egyenlőnek kell lennie');
+    } // Hiba dobása, hogy legyen egyértelmű, mi a gond
 
-  // 2.A LÉPÉS - EGYEZMÉNY TÁRHELY VALIDÁLÁSA
-  // MÓDOSÍTVA: Speciális "eeeeeeeeeeeeeeeeeeee0001" érték támogatása egyesítésnél
-  if (javaslatAdatok.egyezmenyTarhelyId) {
-    // Speciális érték: az új entitás lesz az egyezmény tárhelye
-    if (javaslatAdatok.egyezmenyTarhelyId === 'eeeeeeeeeeeeeeeeeeee0001') {
-      // Ellenőrizzük, hogy csak Egyesites típusnál használható
-      if (javaslatAdatok.javaslatTipus !== 'Egyesites') {
-        throw new Error('Az "eeeeeeeeeeeeeeeeeeee0001" egyezmény tárhely csak Egyesites típusú javaslat esetén használható');
-      }
-      console.log('javaslatLetrehozasa - Egyezmény tárhely: eeeeeeeeeeeeeeeeeeee0001 - az új entitás lesz az egyezmény tárhelye');
-    } else {
-      // Normál validáció - létező Tartalom keresése
-      console.log('javaslatLetrehozasa - TartalomRepository.findById', {
-        egyezmenyTarhelyId: javaslatAdatok.egyezmenyTarhelyId
-      });
-      const egyezmenyTarhely = await TartalomRepository.findById(javaslatAdatok.egyezmenyTarhelyId);
-      if (!egyezmenyTarhely) {
-        throw new Error('A megadott egyezmény tárhely tartalom nem található');
-      }
-      console.log('javaslatLetrehozasa - Egyezmény tárhely validálva', {
-        egyezmenyTarhelyId: egyezmenyTarhely.id,
-        egyezmenyTarhelyCim: egyezmenyTarhely.cim
-      });
-    }
-  } else {
-    console.log('javaslatLetrehozasa - Nincs egyezmény tárhely megadva - null lesz az egyezmény szuloId-je');
-  }
+    // Alapértelmezett kiosztás: minden töredék kap 1 pontot
+    const elosztas = new Array(toredekDarab).fill(1); // Létrehozunk egy tömböt, amiben minden elem 1
+
+    // Maradék pontok kiszámítása
+    let maradek = osszesKezdoTudatpont - toredekDarab; // Ennyit kell még szétosztani
+
+    // A maradék pontokat körkörösen elosztjuk az első töredékektől kezdve
+    let index = 0; // Kezdő index a tömbben
+    while (maradek > 0) {
+      elosztas[index] += 1; // Az aktuális töredékhez adunk +1 pontot
+      maradek -= 1; // Csökkentjük a maradék pontokat
+      index = (index + 1) % toredekDarab; // A következő indexre lépünk, körkörösen
+    } // Addig fut, amíg a maradék pontok el nem fogynak
+
+    // Log metódus vége az eredménnyel
+    console.log('elosztottTudatpontokKiszamitasa - VÉGE', {
+      elosztas
+    }); // Ide loggoljuk a kiszámolt felosztást
+
+    // Visszaadjuk a töredékenkénti pont kiosztást
+    return elosztas; // A hívó kód tömbként kapja meg az értékeket
+  } 
 
 
-  
-  // ===== 3. LÉPÉS - EMBER VALIDÁLÁSA =====
-  // Ember létezésének ellenőrzése
-  console.log('javaslatLetrehozasa - TudatpontRepository.findEmberById', { 
-    emberId 
-  });
-  
-  const ember = await TudatpontRepository.findEmberById(emberId);
-  if (!ember) {
-    throw new Error('Ember nem található');
-  }
-  
-  // ===== 4. LÉPÉS - ÉRINTETT ENTITÁSOK VALIDÁLÁSA =====
-  // Érintett entitások létezésének ellenőrzése
-  console.log('javaslatLetrehozasa - Érintett entitások validálása', { 
-    count: javaslatAdatok.erintettEntitasok.length 
-  });
-  
-  for (const entitas of javaslatAdatok.erintettEntitasok) {
-    let entitasLetezik = false;
-    
-    if (entitas.entitasTipus === 'Tartalom') {
-      const tartalom = await TartalomRepository.findById(entitas.entitasId);
-      entitasLetezik = !!tartalom;
-    } else if (entitas.entitasTipus === 'Kategoria') {
-      const kategoria = await KategoriaRepository.findById(entitas.entitasId);
-      entitasLetezik = !!kategoria;
-    } else if (entitas.entitasTipus === 'TartalomTipus') {
-      const tartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId);
-      entitasLetezik = !!tartalomTipus;
-    }
-    
-    if (!entitasLetezik) {
-      throw new Error(`Érintett entitás (${entitas.entitasTipus}) nem található: ${entitas.entitasId}`);
-    }
-  }
-  
-  // ===== 5. LÉPÉS - SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE =====
-  console.log('javaslatLetrehozasa - JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese');
-  
-  const jogosultsag = await JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese(
-    emberId,
-    javaslatAdatok.erintettEntitasok
-  );
-  
-  if (!jogosultsag.jogosult) {
-    throw new Error(`Nincs szavazási jogosultságod. Hiányzó tudatpont ezen entitáson: ${jogosultsag.hianyzoEntitas}`);
-  }
-  
-  console.log('javaslatLetrehozasa - Szavazási jogosultság OK');
-  
-  // ===== 6. LÉPÉS - JAVASLAT OBJEKTUM ÖSSZEÁLLÍTÁSA =====
+   // ----- JAVASLAT LÉTREHOZÁSA -----
+  // Töredék javaslatok létrehozása egy logikai javaslatból
+  // Minden érintett tartalomhoz külön töredék javaslat jön létre
+  async javaslatLetrehozas(javaslatAdatok, eEmberId, kezdoTudatpont) { // Aszinkron metódus a javaslatok létrehozására
 
-  // Egyezmény tárhely érték meghatározása
-  let egyezmenyTarhelyIdErtek = javaslatAdatok.egyezmenyTarhelyId || null;
+    // Log metódus kezdete
+    console.log('javaslatLetrehozas - KEZDÉS', { // Kiírjuk a metódus indulását
+      javaslatAdatok, // Logoljuk a bemenő javaslat adatokat
+      eEmberId,        // Logoljuk az eEmber azonosítót
+      kezdoTudatpont  // Logoljuk a kezdő tudatpont értéket
+    }); // Log üzenet vége
 
-  const ujJavaslatAdatok = {
-    javaslatTipus: javaslatAdatok.javaslatTipus.trim(),
-    erintettEntitasok: javaslatAdatok.erintettEntitasok,
-    letrehozo: emberId,
-    indoklas: javaslatAdatok.indoklas.trim(),
-    szuloId: javaslatAdatok.szuloId,
-    szuloTipus: 'Tartalom',
-    egyezmenyTarhelyId: egyezmenyTarhelyIdErtek, 
-    statusz: 'Aktiv',
-    letrehozva: new Date()
-  };
+    // 1. LÉPÉS - KÖTELEZŐ ALAPPARAMÉTEREK VALIDÁLÁSA
+    // 1.1 - Javaslat típus ellenőrzése
+    if (!javaslatAdatok.javaslatTipus || !javaslatAdatok.javaslatTipus.trim) { // Ha nincs javaslatTipus vagy nincs trim függvény
+      // Ha nincs javaslat típus, hiba
+      throw new Error('A javaslat típusa kötelezõ'); // Hiba dobása egyértelmű üzenettel
+    } // Típus megléte rendben
 
-  // Egyesítés specifikus adatok hozzáadása (ha Egyesites típus)
-  if (javaslatAdatok.javaslatTipus === 'Egyesites') {
-    if (!javaslatAdatok.egyesitesAdatok) {
-      throw new Error('Egyesítés típusnál az egyesitesAdatok megadása kötelező');
-    }
-    ujJavaslatAdatok.egyesitesAdatok = javaslatAdatok.egyesitesAdatok;
-  }
+    // 1.2 - Indoklás ellenőrzése
+    if (!javaslatAdatok.indoklas || !javaslatAdatok.indoklas.trim) { // Ha nincs indoklás vagy nincs trim
+      // Ha nincs indoklás megadva, hiba
+      throw new Error('Az indoklás megadása kötelező'); // Hiba dobása
+    } // Indoklás megléte rendben
 
-  
-  // ===== 7. LÉPÉS - JAVASLAT MENTÉSE =====
-  console.log('javaslatLetrehozasa - JavaslatRepository.create');
-  
-  const ujJavaslat = await JavaslatRepository.create(ujJavaslatAdatok);
-  
-  // ===== 8. LÉPÉS - TUDATPONT HOZZÁRENDELÉS ===== (VISSZATÉVE!)
-  console.log('javaslatLetrehozasa - TudatpontService.tudatpontHozzarendelese', {
-    emberId,
-    javaslatId: ujJavaslat._id,
-    kezdoTudatpont
-  });
-  
-  await TudatpontService.tudatpontHozzarendelese(
-    emberId,
-    ujJavaslat._id,
-    'Javaslat',
-    kezdoTudatpont
-  );
-  
-  // ===== 9. LÉPÉS - AUTOMATIKUS TÁMOGATÓ SZAVAZAT ===== (VISSZATÉVE!)
-  console.log('javaslatLetrehozasa - SzavazatService.szavazatLeadasa', {
-    emberId,
-    javaslatId: ujJavaslat._id,
-    szavazatTipus: 'Tamogat'
-  });
-  
-  await SzavazatService.szavazatLeadasa(
-    emberId,
-    ujJavaslat._id,
-    'Tamogat'
-  );
-  
-  // ===== 10. LÉPÉS - SZÁMÍTÁSOK FRISSÍTÉSE =====
-  console.log('javaslatLetrehozasa - JavaslatSzamitasService.szamitottErtekekFrissitese');
-  
-  await JavaslatSzamitasService.szamitottErtekekFrissitese(ujJavaslat._id);
-  
-  // ===== 11. LÉPÉS - HATÁLYBA LÉPÉSI IDŐ BEÁLLÍTÁSA ===== (VISSZATÉVE!)
-  console.log('javaslatLetrehozasa - JavaslatIdozitesService.hatalybaLepesiIdoBeallitasa');
-  
-  await JavaslatIdozitesService.hatalybaLepesiIdoBeallitasa(ujJavaslat._id);
-  
-  // ===== 12. LÉPÉS - FRISSÍTETT JAVASLAT LEKÉRÉSE =====
-  console.log('javaslatLetrehozasa - JavaslatRepository.findById');
-  
-  const frissitettJavaslat = await JavaslatRepository.findById(ujJavaslat._id);
-  
-  // Log metódus vége
-  console.log('javaslatLetrehozasa - VÉGE', { 
-    javaslatId: frissitettJavaslat._id 
-  });
-  
-  return frissitettJavaslat;
-}
+    // 1.3 - Érintett entitások ellenőrzése
+    if (!javaslatAdatok.erintettEntitasok || javaslatAdatok.erintettEntitasok.length === 0) { // Ha nincs tömb vagy a hossza 0
+      // Ha nincs egyetlen érintett entitás sem, hiba
+      throw new Error('Legalább egy érintett entitás megadása kötelező'); // Hiba dobása
+    } // Van legalább 1 érintett entitás
+
+    // 1.4 - E_Ember ID ellenőrzése
+    if (!eEmberId) { // Ha nincs eEmberId megadva
+      // Ha nincs eEmber azonosító, hiba
+      throw new Error('A létrehozó eEmber azonosítója szükséges'); // Hiba dobása
+    } // eeEmber ID rendben
+
+    // 1.5 - Kezdő tudatpont ellenőrzése
+    if (!kezdoTudatpont || kezdoTudatpont < 1) { // Ha nincs vagy kisebb, mint 1
+      // Ha nincs vagy kisebb mint 1, hiba
+      throw new Error('Az inicializációs tudatpont legalább 1 kell legyen'); // Hiba dobása
+    } // Kezdő tudatpont alap szinten rendben
+
+    if (typeof kezdoTudatpont !== 'number' || isNaN(kezdoTudatpont)) { // Ha nem szám típusú vagy NaN
+      // Ha nem szám típus, hiba
+      throw new Error('A kezdő tudatpont értéknek számnak kell lennie'); // Hiba dobása
+    } // Típus szám
+
+    if (!Number.isInteger(kezdoTudatpont)) { // Ha nem egész szám
+      // Ha nem egész szám, hiba
+      throw new Error('A kezdő tudatpont értéknek egész számnak kell lennie'); // Hiba dobása
+    } // Egész szám rendben
+
+    // 2. LÉPÉS - "SZÜLŐ" TARTALOM VALIDÁLÁSA
+    // A jelenlegi logika szerint legalább egy szülő tartalom kell a javaslathoz
+    if (!javaslatAdatok.szuloId) { // Ha nincs szuloId megadva
+      // Ha nincs szülő tartalom ID, hiba
+      throw new Error('A javaslat létrehozásához szülő tartalom megadása kötelező'); // Hiba dobása
+    } // Szülő ID megadva
+
+    // Szülő tartalom létezésének ellenőrzése
+    console.log('javaslatLetrehozas - TartalomRepository.findById (szülő)', { // Logoljuk a szülő tartalom lekérését
+      szuloId: javaslatAdatok.szuloId // Megadjuk a szülő azonosítót
+    }); // Log üzenet vége
+
+    const szuloTartalom = await TartalomRepository.findById(javaslatAdatok.szuloId); // Lekérjük a szülő tartalmat az adatbázisból
+
+    if (!szuloTartalom) { // Ha nincs ilyen tartalom
+      // Ha nincs ilyen tartalom, hiba
+      throw new Error('A megadott szülő tartalom nem található'); // Hiba dobása
+    } // Szülő tartalom létezik
+
+    console.log('javaslatLetrehozas - Szülő tartalom validálva', { // Logoljuk, hogy a szülő rendben van
+      szuloId: szuloTartalom.id,   // A megtalált szülő azonosítója
+      szuloCim: szuloTartalom.cim  // A megtalált szülő címe
+    }); // Log üzenet vége
+
+    // 2.A LÉPÉS - EGYEZMÉNY TÁRHELY VALIDÁLÁSA
+    if (javaslatAdatok.egyezmenyTarhelyId) { // Ha van egyezmény tárhely ID megadva
+      // Ha van egyezmény tárhely ID megadva, vizsgáljuk meg
+      if (javaslatAdatok.egyezmenyTarhelyId === 'eeeeeeeeeeeeeeeeeeee0001') { // Ha speciális placeholder érték
+        // Speciális érték: az új entitás lesz az egyezmény tárhelye
+        if (javaslatAdatok.javaslatTipus !== 'Egyesites') { // Ha nem Egyesites típus
+          // Ha nem Egyesítés típus, hiba
+          throw new Error('Az eeeeeeeeeeeeeeeeeeee0001 egyezmény tárhely csak Egyesítés típusú javaslat esetén használható'); // Hiba dobása
+        } // Egyesítés típus rendben a placeholderhez
+
+        console.log('javaslatLetrehozas - Egyezmény tárhely eeeee...0001 - új entitás lesz az egyezmény tárhelye'); // Log üzenet a speciális esetről
+      } else { // Ha nem speciális érték
+        // Normál egyezmény tárhely validálása
+        console.log('javaslatLetrehozas - TartalomRepository.findById (egyezmény tárhely)', { // Logoljuk a lekérést
+          egyezmenyTarhelyId: javaslatAdatok.egyezmenyTarhelyId // Megadjuk az egyezmény tárhely azonosítót
+        }); // Log üzenet vége
+
+        const egyezmenyTarhely = await TartalomRepository.findById(javaslatAdatok.egyezmenyTarhelyId); // Lekérjük az egyezmény tárhely tartalmat
+
+        if (!egyezmenyTarhely) { // Ha nem található
+          // Ha nincs ilyen tartalom, hiba
+          throw new Error('A megadott egyezmény tárhely tartalom nem található'); // Hiba dobása
+        } // Egyezmény tárhely létezik
+
+        console.log('javaslatLetrehozas - Egyezmény tárhely validálva', { // Logoljuk az érvényes egyezmény tárhelyet
+          egyezmenyTarhelyId: egyezmenyTarhely.id,   // Egyezmény tárhely azonosítója
+          egyezmenyTarhelyCim: egyezmenyTarhely.cim  // Egyezmény tárhely címe
+        }); // Log üzenet vége
+      } // Normál egyezmény tárhely ág vége
+    } else { // Ha nincs egyezmény tárhely megadva
+      // Nincs egyezmény tárhely megadva, null lesz
+      console.log('javaslatLetrehozas - Nincs egyezmény tárhely megadva - null lesz az egyezmény szuloId-je'); // Log üzenet
+    } // Egyezmény tárhely kezelése vége
+
+    // 3. LÉPÉS - eEmber VALIDÁLÁSA
+    console.log('javaslatLetrehozas - TudatpontRepository.findeEmberById', { // Logoljuk az eEmber lekérését
+      eEmberId // Átadjuk az eEmber azonosítót
+    }); // Log üzenet vége
+
+    const eEmber = await TudatpontRepository.findeEmberById(eEmberId); // Lekérjük az eEmbert a tudatpont repository-ból
+
+    if (!eEmber) { // Ha nincs ilyen eEmber
+      // Ha nincs ilyen eEmber, hiba
+      throw new Error('eeEmber nem található'); // Hiba dobása
+    } // eeEmber létezik
+
+    // 4. LÉPÉS - ÉRINTETT ENTITÁSOK VALIDÁLÁSA
+    console.log('javaslatLetrehozas - Érintett entitások validálása', { // Logoljuk az érintett entitások számát
+      count: javaslatAdatok.erintettEntitasok.length // Megadjuk a darabszámot
+    }); // Log üzenet vége
+
+    for (const entitas of javaslatAdatok.erintettEntitasok) { // Végigmegyünk minden érintett entitáson
+      let entitasLetezik = false; // Kezdetben úgy vesszük, hogy nem létezik
+
+      if (entitas.entitasTipus === 'Tartalom') { // Ha az entitás típusa Tartalom
+        // Ha az entitás típusa Tartalom, tartalom repository-t használunk
+        const tartalom = await TartalomRepository.findById(entitas.entitasId); // Lekérjük a tartalmat
+        entitasLetezik = !!tartalom; // Boolean értékké alakítjuk
+      } else if (entitas.entitasTipus === 'Kategoria') { // Ha Kategoria típus
+        // Ha kategória, kategória repository-t használunk
+        const kategoria = await KategoriaRepository.findById(entitas.entitasId); // Lekérjük a kategóriát
+        entitasLetezik = !!kategoria; // Boolean értékké alakítjuk
+      } else if (entitas.entitasTipus === 'TartalomTipus') { // Ha TartalomTipus típus
+        // Ha tartalom típus, tartalom típus repository-t használunk
+        const tartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId); // Lekérjük a tartalom típust
+        entitasLetezik = !!tartalomTipus; // Boolean értékké alakítjuk
+      } // Más típusokra most nem számítunk
+
+      if (!entitasLetezik) { // Ha az entitás nem létezik
+        // Ha az entitás nem létezik, hiba
+        throw new Error(`Érintett entitás ${entitas.entitasTipus} nem található: ${entitas.entitasId}`); // Hiba dobása részletes üzenettel
+      } // Entitás létezik
+    } // Minden érintett entitást validáltunk
+
+    // 5. LÉPÉS - TÖREDÉK LOGIKA ELŐKÉSZÍTÉSE
+    const toredekDarab = javaslatAdatok.erintettEntitasok.length; // Ennyi töredék jön létre
+    console.log('javaslatLetrehozas - Töredék darab', { // Logoljuk a töredékek számát
+      toredekDarab // Átadjuk a darabszámot
+    }); // Log üzenet vége
+
+    // Tudatpont felosztása a töredékek között
+    const elosztottTudatpontok = this.elosztottTudatpontokKiszamitasa( // Meghívjuk a segédfüggvényt
+      toredekDarab,         // Ennyi töredékre osztjuk
+      kezdoTudatpont        // Ezt a kezdő pont mennyiséget
+    ); // Kiszámoljuk töredékenként a pontokat
+
+    // Közös töredék csoport azonosító generálása
+    const toredekCsoportId = new (require('mongoose')).Types.ObjectId(); // Új ObjectId generálása a csoportra
+
+    console.log('javaslatLetrehozas - Töredék csoport azonosító', { // Logoljuk a csoport azonosítót
+      toredekCsoportId // Átadjuk az ID-t
+    }); // Log üzenet vége
+
+    // 6. LÉPÉS - SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE A TELJES LOGIKAI JAVASLATRA
+    console.log('javaslatLetrehozas - JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese', { // Logoljuk a jogosultság ellenőrzését
+      eEmberId,                                      // eeEmber azonosító
+      erintettEntitasok: javaslatAdatok.erintettEntitasok // Az összes érintett entitás
+    }); // Log üzenet vége
+
+    const jogosultsag = await JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese( // Meghívjuk a jogosultság szolgáltatást
+      eEmberId,                          // eeEmber azonosító
+      javaslatAdatok.erintettEntitasok  // Összes érintett entitás
+    ); // Hívás vége
+
+    if (!jogosultsag.jogosult) { // Ha nincs jogosultság
+      // Ha nincs jogosultság, hiba
+      throw new Error( // Hibát dobunk részletes üzenettel
+        `Nincs szavazási jogosultságod. Hiányzó tudatpont ezen entitáson: ${jogosultsag.hianyzoEntitas}` // Üzenet a hiányzó entitásról
+      ); // Hiba dobása vége
+    } // Jogosultság rendben
+
+    console.log('javaslatLetrehozas - Szavazási jogosultság OK'); // Log üzenet, hogy jogosultság rendben
+
+    // 7. LÉPÉS - TÖREDÉK JAVASLATOK LÉTREHOZÁSA
+    const letrehozottJavaslatok = []; // Itt gyűjtjük a létrehozott javaslatokat
+
+    // Végigmegyünk az érintett entitásokon, és mindenhez külön töredék javaslatot hozunk létre
+    for (let index = 0; index < javaslatAdatok.erintettEntitasok.length; index++) { // For ciklus az entitásokhoz
+      // Aktuális töredék indexe
+      const entitas = javaslatAdatok.erintettEntitasok[index]; // Aktuális érintett entitás
+      const toredekSorszam = index + 1; // 1-alapú sorszám
+
+      // Szülő ID az adott tartalom lesz, ha entitás típusa Tartalom
+      // További egyszerűsítés: csak Tartalomra engedünk javaslatot tenni
+      if (entitas.entitasTipus !== 'Tartalom') { // Ha az entitás típusa nem Tartalom
+        // Ha nem tartalom, hibát dobunk, mert az új logikában csak tartalom lehet
+        throw new Error('A töredék javaslatok jelenleg csak Tartalom típusú entitásra engedélyezettek'); // Hiba dobása
+      } // Csak tartalom típus engedett
+
+      const szuloIdToredek = entitas.entitasId; // A töredék szülője az érintett tartalom
+
+      // Egyezmény tárhely érték meghatározása
+      const egyezmenyTarhelyIdErtek = javaslatAdatok.egyezmenyTarhelyId || null; // Ha nincs megadva, null
+
+      // Aktuális töredék javaslat típusa az adott entitás művelete alapján
+      const toredekJavaslatTipus = entitas.muvelet; // A töredék tényleges típusa az adott művelet
+
+      // Log a töredék típus meghatározásának elején
+      console.log('javaslatLetrehozas - Töredék javaslat típus meghatározása - KEZDÉS', { // Kezdő log
+        entitas,             // Logoljuk az entitást
+        toredekJavaslatTipus // Logoljuk a kiszámolt töredék típust
+      }); // Log üzenet vége
+
+      // Biztonsági validáció: a műveletnek léteznie kell
+      if (!toredekJavaslatTipus) { // Ha nincs művelet megadva
+        // Ha nincs művelet, hiba
+        throw new Error('A töredék javaslat típusának meghatározásához az entitas.muvelet kötelező'); // Hibát dobunk
+      } // A művelet megléte rendben
+
+      // Log a töredék típus meghatározásának végén
+      console.log('javaslatLetrehozas - Töredék javaslat típus meghatározása - VÉGE', { // Záró log
+        toredekJavaslatTipus // Logoljuk a végleges típust
+      }); // Log üzenet vége
+
+      // Új töredék javaslat adatainak összeállítása
+      const ujJavaslatAdatok = {
+        javaslatTipus: toredekJavaslatTipus,
+        erintettEntitasok: [entitas],
+        letrehozo: eEmberId,
+        indoklas: javaslatAdatok.indoklas,
+        szuloId: szuloIdToredek,
+        szuloTipus: 'Tartalom',
+        egyezmenyTarhelyId: egyezmenyTarhelyIdErtek,
+        statusz: 'Aktiv',
+        letrehozva: new Date(),
+        toredekCsoportId,
+        toredekSorszam,
+        toredekDarab
+      };
+
+      // Ha a töredék típusa Egyesites, akkor át kell másolni az egyesítés adatait
+      if (toredekJavaslatTipus === 'Egyesites') { // Csak Egyesites típusú töredéknél fut le
+        // Ha Egyesítés típus, ellenőrizzük, hogy vannak-e egyesítés adatok
+        if (!javaslatAdatok.egyesitesAdatok) { // Ha hiányoznak az egyesítés adatok
+          // Ha hiányoznak, hiba
+          throw new Error('Egyesites típusú töredéknél az egyesitesAdatok megadása kötelező'); // Hiba dobása
+        } // Egyesítés adatok megvannak
+
+        ujJavaslatAdatok.egyesitesAdatok = javaslatAdatok.egyesitesAdatok; // Átmásoljuk az adatokat az új töredékbe
+      } // Egyesítés specifikus ág vége
+
+      // Log a töredék objektum összeállításának végén
+      console.log('javaslatLetrehozas - Töredék javaslat adatok összeállítása - VÉGE', { // Logoljuk az elkészült töredék adatokat
+        ujJavaslatAdatok // Átadjuk az objektumot
+      }); // Log üzenet vége
+
+      // 7.1 - JAVASLAT MENTÉSE
+      console.log('javaslatLetrehozas - JavaslatRepository.create (töredék)', { // Logoljuk a mentés előtti állapotot
+        ujJavaslatAdatok // Létrehozandó töredék adatai
+      }); // Log üzenet vége
+
+      const ujJavaslat = await JavaslatRepository.create(ujJavaslatAdatok); // Létrehozzuk az új töredék javaslatot az adatbázisban
+
+      // 7.2 - TUDATPONT HOZZÁRENDELÉS (töredék szintű pont)
+      const toredekKezdoPont = elosztottTudatpontok[index]; // A töredékhez tartozó kezdő pont
+
+      console.log('javaslatLetrehozas - TudatpontService.tudatpontHozzarendelese (töredék)', { // Logoljuk a tudatpont hozzárendelést
+        eEmberId,             // eeEmber azonosító
+        javaslatId: ujJavaslat.id, // Frissen létrehozott javaslat azonosítója
+        toredekKezdoPont     // A töredékhez kiosztott pont
+      }); // Log üzenet vége
+
+      await TudatpontService.tudatpontHozzarendelese( // Meghívjuk a tudatpont szolgáltatást
+        eEmberId,          // eeEmber azonosító
+        ujJavaslat.id,    // Javaslat azonosító
+        'Javaslat',       // Entitás típus: Javaslat
+        toredekKezdoPont  // Hozzárendelt pont
+      ); // Tudatpont hozzárendelése a töredék javaslathoz
+
+      // 7.3 - AUTOMATIKUS TÁMOGATÓ SZAVAZAT (a létrehozótól)
+      console.log('javaslatLetrehozas - SzavazatService.szavazatLeadasa (töredék)', { // Logoljuk a szavazat leadását
+        eEmberId,           // eeEmber azonosító
+        javaslatId: ujJavaslat.id // Javaslat azonosító
+      }); // Log üzenet vége
+
+      await SzavazatService.szavazatLeadasa( // Automatikus szavazat leadása
+        eEmberId,          // eeEmber azonosító
+        ujJavaslat.id,    // Javaslat azonosító
+        'Tamogat'         // Szavazat típusa: Tamogat
+      ); // Automatikus támogató szavazat
+
+      // 7.4 - SZÁMÍTOTT ÉRTÉKEK FRISSÍTÉSE
+      console.log('javaslatLetrehozas - JavaslatSzamitasService.szamitottErtekekFrissitese (töredék)', { // Logoljuk a számítás hívását
+        javaslatId: ujJavaslat.id // Javaslat azonosító
+      }); // Log üzenet vége
+
+      await JavaslatSzamitasService.szamitottErtekekFrissitese(ujJavaslat.id); // Számított értékek frissítése
+
+      // 7.5 - HATÁLYBA LÉPÉSI IDŐ BEÁLLÍTÁSA
+      console.log('javaslatLetrehozas - JavaslatIdozitesService.hatalybaLepesiIdoBeallitasa (töredék)', { // Logoljuk az időzítés beállítását
+        javaslatId: ujJavaslat.id // Javaslat azonosító
+      }); // Log üzenet vége
+
+      await JavaslatIdozitesService.hatalybaLepesiIdoBeallitasa(ujJavaslat.id); // HI beállítása
+
+      // 7.6 - FRISSÍTETT TÖREDÉK LEKÉRÉSE ÉS GYŰJTÉSE
+      console.log('javaslatLetrehozas - JavaslatRepository.findById (töredék)', { // Logoljuk a lekérést
+        javaslatId: ujJavaslat.id // Az új javaslat azonosítója
+      }); // Log üzenet vége
+
+      const frissitettToredek = await JavaslatRepository.findById(ujJavaslat.id); // Lekérjük a frissített javaslatot
+
+      letrehozottJavaslatok.push(frissitettToredek); // Hozzáadjuk a listához
+    } // Töredékek létrehozásának ciklusa vége
+
+    // 8. LÉPÉS - EREDMÉNY VISSZAADÁSA
+    console.log('javaslatLetrehozas - VÉGE', { // Logoljuk az összegzést
+      toredekCsoportId,                                      // Közös csoport azonosító
+      letrehozottJavaslatokSzama: letrehozottJavaslatok.length // Létrehozott töredékek száma
+    }); // Log üzenet vége
+
+    // Visszaadjuk a létrehozott töredék javaslatok listáját
+    return { // Összetett eredmény visszaadása
+      toredekCsoportId,            // Közös csoport azonosító
+      javaslatok: letrehozottJavaslatok // Tömb a töredék javaslatokkal
+    }; // A controller majd eldönti, mit mutat a frontendnek
+  } // javaslatLetrehozas metódus vége
+
+
 
 
 
@@ -344,16 +484,16 @@ async javaslatLetrehozasa(javaslatAdatok, emberId, kezdoTudatpont) {
   // ===================================
 
   /**
-   * Javaslat részletes adatainak lekérése a ember szavazatával együtt
+   * Javaslat részletes adatainak lekérése a eEmber szavazatával együtt
    * ÚJ: Ha az értékek elavultak, frissíti őket
    * @param {string} id - A javaslat ID-ja
-   * @param {string} emberId - A ember ID-ja
-   * @returns {Promise<Object>} { javaslat, emberSzavazat, szavazasiJogosultsag }
+   * @param {string} eEmberId - A eEmber ID-ja
+   * @returns {Promise<Object>} { javaslat, eeEmberSzavazat, szavazasiJogosultsag }
    */
-  async javaslatReszleteinekLekerese(id, emberId) {
+  async javaslatReszleteinekLekerese(id, eEmberId) {
     console.log('=================================== javaslatReszleteinekLekerese: ', { 
       id: id, 
-      emberId: emberId 
+      eEmber: eEmberId 
     });
 
     // === 1. LÉPÉS: JAVASLAT ALAPADATAINAK LEKÉRÉSE ===
@@ -381,20 +521,20 @@ async javaslatLetrehozasa(javaslatAdatok, emberId, kezdoTudatpont) {
       console.log('✅ Javaslat értékei frissítve');
     }
 
-    // === 2. LÉPÉS: EMBER SZAVAZATÁNAK LEKÉRÉSE (HA VAN) ===
-    let emberSzavazat = null;
-    if (emberId) {
-      emberSzavazat = await SzavazatRepository.findByEmberAndJavaslat(
-        emberId,
+    // === 2. LÉPÉS: eEmber SZAVAZATÁNAK LEKÉRÉSE (HA VAN) ===
+    let eeEmberSzavazat = null;
+    if (eEmberId) {
+      eeEmberSzavazat = await SzavazatRepository.findByeEmberAndJavaslat(
+        eEmberId,
         id
       );
     }
 
     // === 3. LÉPÉS: SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE ===
     let szavazasiJogosultsag = false;
-    if (emberId) {
+    if (eEmberId) {
       const jogosultsag = await JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese(
-        emberId,
+        eEmberId,
         javaslat.erintettEntitasok
       );
       szavazasiJogosultsag = jogosultsag.jogosult;
@@ -403,13 +543,13 @@ async javaslatLetrehozasa(javaslatAdatok, emberId, kezdoTudatpont) {
     // === 4. LÉPÉS: ÖSSZESÍTETT OBJEKTUM VISSZAADÁSA ===
     console.log('<<<<<<<<<<<<<<<<<<<<<<<<<< javaslatReszleteinekLekerese=====Eredmény:', {
       javaslat: javaslat,
-      emberSzavazat: emberSzavazat,
+      eeEmberSzavazat: eeEmberSzavazat,
       szavazasiJogosultsag: szavazasiJogosultsag
     });
 
     return {
       javaslat: javaslat,
-      emberSzavazat: emberSzavazat,
+      eeEmberSzavazat: eeEmberSzavazat,
       szavazasiJogosultsag: szavazasiJogosultsag
     };
   }

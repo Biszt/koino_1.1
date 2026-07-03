@@ -16,9 +16,9 @@ const szavazatSchema = new mongoose.Schema({
   // ----- EMBER AZONOSÍTÓ -----
   // ===================================
   // Ki adta le ezt a szavazatot
-  emberId: {
+  eemberId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eEmber', // Referencia a eEmber modellre
     required: true // Kötelező mező
   },
 
@@ -33,7 +33,7 @@ const szavazatSchema = new mongoose.Schema({
   },
 
   // ----- SZAVAZAT TÍPUSA -----
-  // A ember támogatja, ellenzi, vagy tartózkodik a javaslatot
+  // A eember támogatja, ellenzi, vagy tartózkodik a javaslatot
   szavazatTipus: { 
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező
@@ -54,7 +54,7 @@ const szavazatSchema = new mongoose.Schema({
   // ----- Modositas DÁTUMA -----
   // ===================================
   // Mikor módosította utoljára a szavazatát
-  // A ember bármikor meggondolhatja magát és átszavazhat
+  // A eember bármikor meggondolhatja magát és átszavazhat
   modositva: {
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
@@ -67,12 +67,12 @@ const szavazatSchema = new mongoose.Schema({
 // ===================================
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Egyedi index: ember + javaslat kombináció
-// Ez biztosítja, hogy egy ember csak EGYSZER szavazhat egy javaslatra
+// Egyedi index: eember + javaslat kombináció
+// Ez biztosítja, hogy egy eember csak EGYSZER szavazhat egy javaslatra
 // Azonban MÓDOSÍTHATJA a szavazatát bármikor (UPDATE művelettel)
 szavazatSchema.index(
   { 
-    emberId: 1, 
+    eemberId: 1, 
     javaslatId: 1 
   }, 
   { 
@@ -84,9 +84,9 @@ szavazatSchema.index(
 // Szükséges: egy javaslat összes szavazatának gyors lekéréséhez
 szavazatSchema.index({ javaslatId: 1 });
 
-// Ember indexelése - gyors szűrés ember szerint
-// Szükséges: egy ember összes szavazatának lekéréséhez
-szavazatSchema.index({ emberId: 1 });
+// eEmber indexelése - gyors szűrés eember szerint
+// Szükséges: egy eember összes szavazatának lekéréséhez
+szavazatSchema.index({ eemberId: 1 });
 
 // Szavazat típus indexelése - gyors szűrés szavazat típus szerint
 // Szükséges: gyors számlálás (hány Tamogat, hány Ellenez)
@@ -149,17 +149,17 @@ szavazatSchema.statics.tartozkodokSzama = async function(javaslatId) {
 
 // ----- SZAVAZAT KERESÉSE VAGY LÉTREHOZÁSA -----
 /**
- * Megkeresi a ember szavazatát egy javaslaton, vagy létrehozza ha nem létezik
- * @param {ObjectId} emberId - Ember azonosítója
+ * Megkeresi a eember szavazatát egy javaslaton, vagy létrehozza ha nem létezik
+ * @param {ObjectId} eemberId - eEmber azonosítója
  * @param {ObjectId} javaslatId - Javaslat azonosítója
  * @param {String} szavazatTipus - 'Tamogat' vagy 'Ellenez'
  * @returns {Promise<Object>} A szavazat objektum
  */
-szavazatSchema.statics.keresVagyLetrehoz = async function(emberId, javaslatId, szavazatTipus) {
+szavazatSchema.statics.keresVagyLetrehoz = async function(eemberId, javaslatId, szavazatTipus) {
   
   // Keresés: létezik-e már szavazat?
   let szavazat = await this.findOne({
-    emberId: emberId,
+    eemberId: eemberId,
     javaslatId: javaslatId
   });
   
@@ -175,7 +175,7 @@ szavazatSchema.statics.keresVagyLetrehoz = async function(emberId, javaslatId, s
   // Ha nem létezik: létrehozás
   else {
     szavazat = await this.create({
-      emberId: emberId,
+      eemberId: eemberId,
       javaslatId: javaslatId,
       szavazatTipus: szavazatTipus
     });
@@ -233,20 +233,20 @@ szavazatSchema.statics.osszesSzavazoSzama = async function(javaslatId) {
 
 // ----- SZAVAZÓK LISTÁJA -----
 /**
- * Lekéri egy javaslat összes szavazóját (ember ID-k)
+ * Lekéri egy javaslat összes szavazóját (eember ID-k)
  * @param {ObjectId} javaslatId - Javaslat azonosítója
- * @returns {Promise<Array>} Ember ID-k tömbje
+ * @returns {Promise<Array>} eEmber ID-k tömbje
  */
 szavazatSchema.statics.szavazokListaja = async function(javaslatId) {
   
   const szavazatok = await this.find({ javaslatId: javaslatId })
-    .select('emberId') // Csak a ember ID-t kérjük le
+    .select('eemberId') // Csak a eember ID-t kérjük le
     .lean(); // Plain JavaScript objektum (gyorsabb)
   
-  // Ember ID-k kinyerése
-  const emberIds = szavazatok.map(sz => sz.emberId);
+  // eEmber ID-k kinyerése
+  const eemberIds = szavazatok.map(sz => sz.eemberId);
   
-  return emberIds;
+  return eemberIds;
 };
 
 // ===================================

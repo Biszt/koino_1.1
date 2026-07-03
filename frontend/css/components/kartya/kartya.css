@@ -1,0 +1,349 @@
+/* frontend/css/components/kartya/kartya.css */
+
+/* ---------------------------------------- */
+/* KÁRTYA MÉRET – CSS változók */
+/* ---------------------------------------- */
+
+/* Fix kártyaméret változók – mobilra optimalizálva.
+A szélesség és magasság egy helyen van definiálva,
+hogy könnyű legyen módosítani. */
+:root {
+  --kartya-szelesseg: min(90vw, 400px);
+  --kartya-fix-magassag: calc(var(--kartya-szelesseg) * 1.574);
+}
+
+/* ---------------------------------------- */
+/* ALAP KÁRTYA */
+/* ---------------------------------------- */
+
+/* Külső kártya wrapper – nincs overflow és border-radius,
+hogy a segéd lap szabad maradjon a kártya fölött.
+Fix szélesség minden kártyán érvényes,
+hogy a pakli konzisztens maradjon. */
+/* Külső kártya wrapper */
+.pakli-kartya {
+  width: var(--kartya-szelesseg);
+  position: relative;
+  cursor: pointer;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg); /* ← ez hiányzik */
+  transition: background-color var(--transition-base);
+}
+
+/* Belső wrapper – ez kapja a border, border-radius, overflow értékeket.
+Azért van elkülönítve, hogy a segéd lap szögletes sarkait
+ne vágja le a lekerekített kártya overflow: hidden-je. */
+.pakli-kartya__belso {
+  background-color: var(--color-surface);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative; /* z-index érvényesítéséhez szükséges */
+  z-index: 2; /* segéd lap (z-index: 1) alá kerül */
+  transition: background-color var(--transition-base);
+}
+
+/* Nem kiválasztott kártya hover állapot */
+.pakli-kartya:hover .pakli-kartya__belso {
+  background-color: var(--color-surface-2);
+}
+
+/* Koppintás visszajelzés mobilon */
+.pakli-kartya:active .pakli-kartya__belso {
+  background-color: var(--color-surface-offset);
+}
+
+/* ---------------------------------------- */
+/* KIVÁLASZTOTT KÁRTYA */
+/* ---------------------------------------- */
+
+/* Kiválasztott kártya – fix magasság bekapcsol, vizuálisan nem tér el az alap kártyától.
+A szélesség az alap .pakli-kartya-ról öröklődik. */
+.pakli-kartya--kivalasztott .pakli-kartya__belso {
+  cursor: default;                           /* nem mutat pointer kurzort */
+  height: var(--kartya-fix-magassag);        /* fix teljes kártyamagasság */
+  display: flex;
+  flex-direction: column;                    /* fejléc + body függőleges rendezése */
+}
+
+/* Kiválasztott kártya hover állapota nem változik */
+.pakli-kartya--kivalasztott:hover .pakli-kartya__belso {
+  background-color: var(--color-surface);    /* alap háttér marad, nem vált surface-2-re */
+}
+
+/* Kibővített body esetén a belső wrapper fix magassága feloldódik –
+a :has() detektálja, hogy a body kibővített állapotban van,
+és engedi a kártyát a tartalom méretéhez igazodni */
+.pakli-kartya--kivalasztott:has(.pakli-kartya__body--kibovitett) .pakli-kartya__belso {
+  height: auto; /* fix magasság feloldása – tartalom szabja meg */
+  overflow: visible; /* ne vágja le a kibővült body-t */
+}
+
+/* ---------------------------------------- */
+/* SZÜLŐ-KAPCSOLAT JELZÉSE */
+/* ---------------------------------------- */
+
+/* GYEREK KÁRTYA: közvetlenül a saját szülője felett áll a pakliban.
+Alsó sarkok szögletesek, alsó border eltűnik – vizuálisan "összeolvad" a szülővel. */
+.pakli-kartya--szulo-alatta .pakli-kartya__belso {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+}
+
+/* SZÜLŐ KÁRTYA segéd lap: egy vékony, szögletes sáv a kártya tetején,
+amely kitölti a lekerekített sarok által hagyott rést – azt a hatást keltve,
+mintha a felette lévő lap "becsúszna" a szülő kártya mögé.
+Azért különálló HTML elem és nem ::before, mert a .pakli-kartya__belso
+overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
+.pakli-kartya__segedelap {
+  display: none; /* alapból rejtett – csak szülő kapcsolatnál látható */
+}
+
+.pakli-kartya--gyerek-felette .pakli-kartya__segedelap {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--radius-lg);
+  background-color: var(--color-surface);
+  border-left: 3px solid var(--color-border);
+  border-right: 3px solid var(--color-border);
+  border-top: none;
+  border-bottom: none;
+  border-radius: 0;
+  z-index: 1; /* a __belso (z-index: 2) fölé kerül */
+}
+
+/* ---------------------------------------- */
+/* FEJLÉC */
+/* ---------------------------------------- */
+
+/* Fejléc – minden kártyán megjelenik */
+.pakli-kartya__fejlec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px; /* érintési célterület minimum */
+  flex-shrink: 0; /* fejléc ne zsugorodjon, ha a body nő */
+}
+
+/* Hamburger kontener – bal oldalt, fix szélesség */
+/* CSS változók a hamburger gomb megjelenéséhez –
+color-mix() segítségével a zöld alapszínből számítjuk,
+így a gomb automatikusan követi a téma változásait */
+.pakli-kartya__hamburger-kontener {
+  flex-shrink: 0;
+  --hamburger-gomb-hatter: color-mix(in srgb, #ffffff 10%, var(--color-primary));
+  --hamburger-gomb-keret: var(--color-primary-hover);
+  --hamburger-gomb-hatter-hover: color-mix(in srgb, #ffffff 18%, var(--color-primary));
+  --hamburger-gomb-hatter-aktiv: color-mix(in srgb, #ffffff 25%, var(--color-primary));
+}
+
+/* Fejléc tartalom – típus-specifikus elemek helye, kitölti a maradék helyet */
+.pakli-kartya__fejlec-tartalom {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Cím – a kártya neve a fejlécben */
+.pakli-kartya__cim {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* hosszú cím levágása ...-val */
+  flex: 1;
+}
+
+/* Kiválasztott kártya cime erősebb */
+.pakli-kartya--kivalasztott .pakli-kartya__cim {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Hamburger gomb – minden kártyán egyformán aktív */
+/* Minimum 44x44px érintési célterület */
+.pakli-kartya__hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px; /* flex konténerben ne zsugorodjon */
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.pakli-kartya__hamburger:hover {
+  background-color: color-mix(in srgb, transparent 92%, var(--color-text));
+  color: var(--color-text);
+}
+
+.pakli-kartya__hamburger:active {
+  background-color: color-mix(in srgb, transparent 86%, var(--color-text));
+}
+
+/* ---------------------------------------- */
+/* BODY */
+/* ---------------------------------------- */
+
+/* Body – csak a kiválasztott kártyán jelenik meg.
+flex: 1 kitölti a maradék helyet a fix kártyán belül.
+overflow: hidden gondoskodik a csonkításról.
+position: relative szükséges a kibővítő gomb és a gradiens maszk
+abszolút pozicionálásához. */
+.pakli-kartya__body {
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1; /* maradék helyet tölti ki a fix kártyán belül */
+  overflow: hidden; /* csonkítás: ami nem fér el, láthatatlan */
+  position: relative; /* kibővítő gomb és ::after ehhez képest pozicionálódik */
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); /* animált magasságváltás */
+}
+
+/* Fejléc és body közötti elválasztó vonal – csak kiválasztott kártyán */
+.pakli-kartya--kivalasztott .pakli-kartya__body {
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-3);
+}
+
+/* hidden attribútummal elrejtett body – felülbírálás szükséges */
+.pakli-kartya__body[hidden] {
+  display: none;
+}
+
+/* Kibővített body – overflow engedélyezve, magasság szabad */
+.pakli-kartya__body--kibovitett {
+  overflow: visible; /* kibővített állapotban látható a teljes tartalom */
+  flex: none; /* ne töltse ki a fix magasságot, tartalom szabja meg */
+}
+
+/* Gradiens maszk a body alján – vizuálisan jelzi, hogy több tartalom van.
+A szöveg fokozatosan elhalványul, a kibővítő gomb erre a sávra ül rá.
+Csak zárt állapotban aktív – kibővítve eltűnik. */
+.pakli-kartya--kivalasztott .pakli-kartya__body:not(.pakli-kartya__body--kibovitett)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px; /* elég magas, hogy a gomb kényelmesen beleférjen */
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-surface-2) 80%
+  );
+  pointer-events: none; /* kattintást nem blokkol – az alatta lévő tartalom elérhető marad */
+}
+
+/* ---------------------------------------- */
+/* SZÖVEGES TARTALOM */
+/* ---------------------------------------- */
+
+/* Szöveges tartalom */
+.pakli-kartya__szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  line-height: 1.6;
+  max-width: 72ch;
+}
+
+/* ---------------------------------------- */
+/* ADATOK SOR */
+/* ---------------------------------------- */
+
+/* Adatok sor – ikonok és számok a kiválasztott kártyán */
+.pakli-kartya__adatok {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.pakli-kartya__adat-elem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------- */
+/* KIBŐVÍTŐ / ÖSSZEZÁRÓ GOMB */
+/* ---------------------------------------- */
+
+/* A gomb a body jobb alsó sarkában lebeg, abszolút pozícióval.
+A gradiens maszk (::after) fölé kerül z-index-szel.
+Alapból „..." felirattal jelenik meg, kibővítve „∧" jellel. */
+.pakli-kartya__kibovito-gomb {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-3);
+  background: none;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: color var(--transition-base);
+}
+
+/* Kibővítő gomb hover állapota */
+.pakli-kartya__kibovito-gomb:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Kibővített állapotban a gomb a body aljára kerül, nincs lebegő pozíció */
+.pakli-kartya__body--kibovitett .pakli-kartya__kibovito-gomb {
+  position: static; /* kibővítve normál folyamba kerül */
+  align-self: flex-end; /* jobb oldalra igazítva marad */
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+  z-index: auto; /* kibővítve nincs szükség z-index-re */
+}
+
+/* ---------------------------------------- */
+/* CSÖKKENTETT MOZGÁS */
+/* ---------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pakli-kartya,
+  .pakli-kartya__body {
+    transition: none;
+  }
+}

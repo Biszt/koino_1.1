@@ -1,0 +1,228 @@
+/* frontend/css/components/modals/tartalomModal.css */
+
+
+
+/* ===== TARTALOM MODAL FORM ===== */
+/* Mezők egymás alá rendeződnek – gap és struktúra azonos a regisztrációs formmal */
+.t-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5); /* Azonos a .regisztracio-form gap-jével */
+  width: 100%;
+}
+
+
+
+/* ===== FORM MEZŐ CSOPORT ===== */
+/* Azonos a .form-mezo szabállyal – input egysége */
+.t-modal-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2); /* Azonos a .form-mezo gap-jével */
+  position: relative;  /* Chip lista pozicionáláshoz */
+  width: 100%;
+}
+
+
+
+/* ===== ALAP INPUT STÍLUS ===== */
+/* Teljesen azonos a .form-mezo__bemenet szabályaival */
+.t-modal-input,
+.t-modal-textarea,
+.t-modal-select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+
+
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+
+
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+
+
+  /* Megjelenés egységesítése */
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+
+/* Placeholder szöveg – azonos a .form-mezo__bemenet::placeholder szabállyal */
+.t-modal-input::placeholder,
+.t-modal-textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+
+
+/* Hover állapot – azonos a .form-mezo__bemenet:hover szabállyal */
+.t-modal-input:hover,
+.t-modal-textarea:hover,
+.t-modal-select:hover {
+  border-color: var(--color-text-muted);
+}
+
+
+
+/* Fókusz állapot – azonos a .form-mezo__bemenet:focus szabállyal */
+.t-modal-input:focus,
+.t-modal-textarea:focus,
+.t-modal-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+
+
+/* ===== TEXTAREA SPECIFIKUS ===== */
+/* Csak függőlegesen legyen átméretezhető */
+.t-modal-textarea {
+  resize: vertical;
+  min-height: 88px; /* 4 sor ~ */
+  line-height: 1.6;
+}
+
+
+
+/* ===== SELECT SPECIFIKUS ===== */
+/* Nyíl ikon hozzáadása CSS-sel – natív nyíl el van rejtve */
+.t-modal-select {
+  cursor: pointer;
+  padding-right: var(--space-8); /* Hely a nyílnak */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b6358' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+}
+
+
+
+/* Letiltott select – ha 3 kategória már kiválasztva */
+.t-modal-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--color-surface-offset);
+}
+
+
+
+/* ===== SZÖVEGSZERKESZTŐ KONTÉNER ===== */
+/* Keretet ad a SzovegSzerkeszto komponensnek a modalon belül.
+   A szerkesztő belső stílusait a szovegSzerkeszto.css kezeli. */
+.t-modal-szoveg-szerkeszto-kontener {
+  /* Minimális magasság, hogy üres állapotban is legyen kattintható terület */
+  min-height: 120px;
+  /* A form többi inputjával egységes megjelenés */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-2);
+  /* Belső tartalom ne lógjon ki */
+  overflow: hidden;
+  /* Fókuszban lévő szerkesztő vizuálisan jelzett legyen –
+     a SzovegSzerkeszto belső inputjai kezelik a :focus-t,
+     de a konténer is reagálhat, ha fókusz van benne */
+  transition: border-color var(--transition-interactive);
+}
+
+/* Ha a konténeren belül bármely elem fókuszban van,
+   a keret kiemelkedik – azonos a többi input fókusz stílusával */
+.t-modal-szoveg-szerkeszto-kontener:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+
+
+/* ===== KATEGÓRIA CHIP KONTÉNER ===== */
+/* A kiválasztott kategóriák chipjeit tartja */
+.t-modal-kategoria-chipek {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+
+
+/* Üres chip konténer ne foglaljon helyet */
+.t-modal-kategoria-chipek:empty {
+  display: none;
+}
+
+
+
+/* ===== KATEGÓRIA CHIP ===== */
+/* Egy kiválasztott kategória vizuális megjelenítése */
+.t-modal-kategoria-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+
+
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+
+
+  background-color: var(--color-primary-highlight);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-full); /* Pill alak */
+
+
+  font-size: var(--text-xs);
+  color: var(--color-primary-active);
+  font-weight: 500;
+}
+
+
+
+/* Chip névszöveg */
+.t-modal-chip-nev {
+  line-height: 1;
+  white-space: nowrap; /* Ne törjön el */
+}
+
+
+
+/* Chip törlő gomb (✕) */
+.t-modal-chip-torlo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+
+
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+
+
+  transition: background var(--transition-fast),
+              color       var(--transition-fast);
+}
+
+
+
+/* Chip törlő gomb hover állapota */
+.t-modal-chip-torlo:hover {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+
+
+/* Chip törlő gomb koppintás visszajelzés */
+.t-modal-chip-torlo:active {
+  transform: scale(0.90);
+}

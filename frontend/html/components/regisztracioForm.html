@@ -1,0 +1,179 @@
+<!-- frontend/html/components/regisztracioForm.html -->
+
+<!-- A main.js tölti be ezt a fájlt közvetlenül az #app div-be.
+     A regisztracio-oldal wrapper osztály korábban a pages/regisztracio.html-ben
+     volt – most itt van, mivel a pages/ réteg megszűnt. -->
+
+<div class="regisztracio-oldal">
+
+  <div class="regisztracio-kartya">
+
+    <h1 class="regisztracio-kartya__cim">Regisztráció</h1>
+
+    <!-- Általános hibaüzenet – RegisztracioForm.js tölti fel szerver hiba esetén -->
+    <div
+      class="regisztracio-form__altalanos-hiba"
+      id="reg-altalanos-hiba"
+      role="alert"
+      aria-live="polite"
+    ></div>
+
+    <form class="regisztracio-form" id="regisztracio-form" novalidate>
+
+      <!-- EEMBERNÉV – 3–30 karakter -->
+      <div class="form-mezo" id="mezo-eemberNev">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="eemberNev"
+          name="eemberNev"
+          placeholder="Eembernév"
+          autocomplete="username"
+          autocapitalize="none"
+          minlength="3"
+          maxlength="30"
+          aria-label="Eembernév"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-eemberNev">
+          A felhasználónév 3–30 karakter hosszú lehet.
+        </span>
+      </div>
+
+      <!-- TELJES NÉV -->
+      <div class="form-mezo" id="mezo-nev">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="nev"
+          name="nev"
+          placeholder="Teljes név"
+          autocomplete="name"
+          aria-label="Teljes név"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-nev">
+          Kérjük, add meg a valódi nevedet.
+        </span>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="form-mezo" id="mezo-email">
+        <input
+          class="form-mezo__bemenet"
+          type="email"
+          id="email"
+          name="email"
+          placeholder="Email cím"
+          autocomplete="email"
+          autocapitalize="none"
+          aria-label="Email cím"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-email">
+          Kérjük, adj meg egy érvényes email címet.
+        </span>
+      </div>
+
+      <!-- JELSZÓ -->
+      <div class="form-mezo" id="mezo-jelszo">
+        <input
+          class="form-mezo__bemenet"
+          type="password"
+          id="jelszo"
+          name="jelszo"
+          placeholder="Jelszó"
+          autocomplete="new-password"
+          minlength="6"
+          aria-label="Jelszó"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-jelszo">
+          A jelszónak legalább 6 karakter hosszúnak kell lennie.
+        </span>
+      </div>
+
+      <!-- JELSZÓ MEGERŐSÍTÉSE -->
+      <div class="form-mezo" id="mezo-jelszoMegerosites">
+        <input
+          class="form-mezo__bemenet"
+          type="password"
+          id="jelszoMegerosites"
+          name="jelszoMegerosites"
+          placeholder="Jelszó megerősítése"
+          autocomplete="new-password"
+          aria-label="Jelszó megerősítése"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-jelszoMegerosites">
+          A két jelszó nem egyezik meg.
+        </span>
+      </div>
+
+      <!-- ORSZÁG – lokacioHelper autocomplete kezeli -->
+      <div class="form-mezo" id="mezo-orszag">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="orszag"
+          name="orszag"
+          placeholder="Ország"
+          autocomplete="country-name"
+          aria-label="Ország"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-orszag">
+          Kérjük, add meg az országodat.
+        </span>
+      </div>
+
+      <!-- RÉGIÓ / MEGYE – lokacioHelper autocomplete kezeli -->
+      <div class="form-mezo" id="mezo-regio">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="regio"
+          name="regio"
+          placeholder="Régió / Megye"
+          autocomplete="address-level1"
+          aria-label="Régió vagy megye"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-regio">
+          Kérjük, add meg a régiódat vagy megyédet.
+        </span>
+      </div>
+
+      <!-- TELEPÜLÉS – lokacioHelper autocomplete kezeli -->
+      <div class="form-mezo" id="mezo-telepules">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="telepules"
+          name="telepules"
+          placeholder="Település"
+          autocomplete="address-level2"
+          aria-label="Település"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-telepules">
+          Kérjük, add meg a településedet.
+        </span>
+      </div>
+
+      <!-- KÜLDÉS GOMB -->
+      <button type="submit" class="btn-regisztracio" id="btn-regisztracio">
+        Regisztráció
+      </button>
+
+    </form>
+
+    <!-- LÁBLÉC LINK – bejelentkezés oldalra -->
+    <p class="regisztracio-lab">
+      Már van fiókod?
+      <a href="bejelentkezes" id="bejelentkezes-link">Bejelentkezés</a>
+    </p>
+
+  </div>
+
+</div>

@@ -15,175 +15,350 @@ const JavaslatJogosultsagService = require('./javaslat/javaslatJogosultsagServic
 // Ez a réteg tartalmazza a szavazat üzleti logikát
 class SzavazatService {
 
-  // ===================================
   // SZAVAZAT LEADÁSA
-  // ===================================
-  /**
-   * Szavazat leadása vagy módosítása egy javaslatra
-   * @param {string} emberId - A szavazó ember ID-ja
-   * @param {string} javaslatId - A javaslat ID-ja
-   * @param {string} szavazatTipus - 'Tamogat' vagy 'Ellenez' vagy 'Tartozkodik'
-   * @returns {Promise} A szavazat és frissített javaslat adatok
-   */
-  async szavazatLeadasa(emberId, javaslatId, szavazatTipus) {
 
-    console.log("===================================szavazatLeadasa:: ", {
-      emberId: emberId,
-      javaslatId: javaslatId,
-      szavazatTipus: szavazatTipus
-    });
-    
-    // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA
-    if (!emberId) {
-      throw new Error('A ember azonosítója kötelező');
-    }
+// Szavazat leadása vagy módosítása egy javaslatra.
+// Ha a javaslat töredékjavaslat, akkor az összes olyan töredékre is leadja a szavazatot,
+// ahol az eembernek van tudatpontja az érintett entitáson.
+// param: string eemberId    - A szavazó eember ID-ja
+// param: string javaslatId  - A javaslat ID-ja
+// param: string szavazatTipus - 'Tamogat' | 'Ellenez' | 'Tartozkodik'
+// returns: Promise<Object> - Szavazat és eredmény adatok
+async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
+  // Log a metódus elejére az értékekkel
+  console.log('szavazatLeadasa - KEZDÉS', { eemberId, javaslatId, szavazatTipus });
 
-    if (!javaslatId) {
-      throw new Error('A javaslat azonosítója kötelező');
-    }
+  // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA
+  if (!eemberId) throw new Error('A eember azonosítója kötelező');
+  if (!javaslatId) throw new Error('A javaslat azonosítója kötelező');
+  if (!szavazatTipus) throw new Error('A szavazat típusa kötelező');
 
-    if (!szavazatTipus) {
-      throw new Error('A szavazat típusa kötelező');
-    }
+  // Szavazat típus validálása - csak engedélyezett értékek fogadhatók
+  const megengedettTipusok = ['Tamogat', 'Ellenez', 'Tartozkodik'];
+  if (!megengedettTipusok.includes(szavazatTipus)) {
+    throw new Error(`Érvénytelen szavazat típus. Megengedett értékek: ${megengedettTipusok.join(', ')}`);
+  }
 
-    // Szavazat típus validálása
-    const megengedettTipusok = ['Tamogat', 'Ellenez', 'Tartozkodik'];
-    if (!megengedettTipusok.includes(szavazatTipus)) {
-      throw new Error(`Érvénytelen szavazat típus. Megengedett értékek: ${megengedettTipusok.join(', ')}`);
-    }
+  // 2. LÉPÉS - JAVASLAT LÉTEZÉSÉNEK ÉS STÁTUSZÁNAK ELLENŐRZÉSE
+  console.log('szavazatLeadasa - JavaslatRepository.findById', { javaslatId });
+  const javaslat = await JavaslatRepository.findById(javaslatId);
 
-    // 2. LÉPÉS - JAVASLAT LÉTEZÉSÉNEK ÉS STÁTUSZÁNAK ELLENŐRZÉSE
-    const javaslat = await JavaslatRepository.findById(javaslatId);
-    if (!javaslat) {
-      throw new Error('A javaslat nem található');
-    }
+  // Ha nincs ilyen javaslat, hibát dobunk
+  if (!javaslat) throw new Error('A javaslat nem található');
 
-    // Csak Aktiv javaslatokra lehet szavazni
-    if (javaslat.statusz !== 'Aktiv') {
-      throw new Error('Csak Aktiv státuszú javaslatokra lehet szavazni');
-    }
+  // Csak Aktiv státuszú javaslatokra lehet szavazni
+  if (javaslat.statusz !== 'Aktiv') {
+    throw new Error('Csak Aktiv státuszú javaslatokra lehet szavazni');
+  }
 
-    // 3. LÉPÉS - SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE
-    // ⭐ ÚJ SERVICE HASZNÁLATA
+  // 3. LÉPÉS - TÖREDÉKJAVASLAT VIZSGÁLATA
+  // Ha a javaslaton van toredekCsoportId, töredékjavaslat → speciális logika kell
+  const isToredek = !!javaslat.toredekCsoportId;
+  console.log('szavazatLeadasa - Töredék vizsgálat', {
+    javaslatId,
+    isToredek,
+    toredekCsoportId: javaslat.toredekCsoportId ?? null, // null ha nem töredék
+  });
+
+  // -----------------------------------------------------------------------
+  // NEM TÖREDÉK ÁG - az eredeti, változatlan logika fut le
+  // -----------------------------------------------------------------------
+  if (!isToredek) {
+
+    // 3a. SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE
     const jogosultsag = await JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese(
-      emberId,
-      javaslat.erintettEntitasok
+      eemberId,
+      javaslat.erintettEntitasok // Az érintett entitások tömbje
     );
 
+    // Ha nincs jogosultság, hibaüzenettel jelezzük, melyik entitáson hiányzik a pont
     if (!jogosultsag.jogosult) {
-      throw new Error(`Nincs szavazási jogosultságod. Hiányzó tudatpont ezen entitáson: ${jogosultsag.hianyzoEntitas}`);
+      throw new Error(
+        `Nincs szavazási jogosultságod. Hiányzó tudatpont ezen entitáson: ${jogosultsag.hianyzoEntitas}`
+      );
     }
 
-      // A szavazatLeadasa metódusban:
-
-   // === 4. LÉPÉS: SZAVAZAT MENTÉSE VAGY FRISSÍTÉSE ===
+    // 3b. SZAVAZAT MENTÉSE VAGY FRISSÍTÉSE
     // Ha már létezik szavazat, frissíti; ha nem, létrehozza
     const szavazat = await SzavazatRepository.createOrUpdate(
-      emberId,
+      eemberId,
       javaslatId,
-      szavazatTipus  
+      szavazatTipus
     );
+    console.log('szavazatLeadasa - Szavazat mentve (nem töredék)', { szavazat });
 
-    console.log('Szavazat mentve:', szavazat);
-
-    // === 5. LÉPÉS: JAVASLAT MEGJELÖLÉSE ELAVULTKÉNT ===
-    // A javaslat értékei megváltoztak (új szavazat), ezért elavulttá válik
-    // A cron job fogja frissíteni percenként
+    // 3c. JAVASLAT MEGJELÖLÉSE ELAVULTKÉNT
+    // A cron job fogja frissíteni a számított értékeket
     await JavaslatRepository.updateById(javaslatId, { ertekekElavultak: true });
-    console.log('Javaslat megjelölve elavultként:', javaslatId);
+    console.log('szavazatLeadasa - Javaslat megjelölve elavultként (nem töredék)', { javaslatId });
 
-    // === 6. LÉPÉS: EREDMÉNY VISSZAADÁSA ===
+    // 3d. EREDMÉNY VISSZAADÁSA
     const eredmeny = {
       siker: true,
       szavazat: szavazat,
-      uzenet: 'Szavazat sikeresen leadva. Az értékek frissítése 1 percen belül megtörténik.'
+      uzenet: 'Szavazat sikeresen leadva. Az értékek frissítése 1 percen belül megtörténik.',
+      isToredek: false, // Jelezzük, hogy nem töredékes szavazás volt
     };
-
-    console.log('szavazatLeadasa=============Eredmény: ', eredmeny);
+    console.log('szavazatLeadasa - VÉGE (nem töredék)', { eredmeny });
     return eredmeny;
   }
 
+  // -----------------------------------------------------------------------
+  // TÖREDÉK ÁG - az összes jogosult töredékre leadja a szavazatot
+  // -----------------------------------------------------------------------
 
-  // ===================================
-// SZAVAZAT TÖRLÉSE
-// ===================================
-/**
- * Szavazat visszavonása egy javaslatról
- * @param {string} emberId - A ember ID-ja
- * @param {string} javaslatId - A javaslat ID-ja
- * @returns {Promise} A művelet eredménye
- */
-async szavazatTorlese(emberId, javaslatId) {
-
-  console.log("=================================== szavazatTorlese:: ", {
-    emberId: emberId,
-    javaslatId: javaslatId
+  // 4. LÉPÉS - CSOPORT ÖSSZES AKTÍV TÖREDÉKÉNEK LEKÉRÉSE
+  console.log('szavazatLeadasa - JavaslatRepository.findByToredekCsoportId', {
+    toredekCsoportId: javaslat.toredekCsoportId,
   });
+  const osszesTöredek = await JavaslatRepository.findByToredekCsoportId(
+    javaslat.toredekCsoportId
+  );
+  console.log('szavazatLeadasa - Összes töredék szám', { db: osszesTöredek.length });
+
+  // 5. LÉPÉS - JOGOSULT TÖREDÉKEK KISZŰRÉSE
+  // Csak azokra a töredékekre szavazunk, ahol az eembernek van tudatpontja az érintett entitáson
+  const jogosultToredekek = []; // Ide gyűjtjük az elfogadottakat
+  const atugrottToredekek = []; // Ide gyűjtjük az átugrott (nem jogosult) töredékeket
+
+  for (const toredek of osszesTöredek) {
+    // Minden töredéknél ellenőrizzük a jogosultságot
+    console.log('szavazatLeadasa - Jogosultság ellenőrzés töredékre', {
+      toredekId: toredek._id,
+      toredekSorszam: toredek.toredekSorszam,
+    });
+
+    const jogosultsag = await JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese(
+      eemberId,
+      toredek.erintettEntitasok // Az adott töredék érintett entitása
+    );
+
+    if (jogosultsag.jogosult) {
+      // Van tudatpontja ezen a töredéken → szavazásra jogosult
+      jogosultToredekek.push(toredek);
+      console.log('szavazatLeadasa - Töredék JOGOSULT', { toredekId: toredek._id });
+    } else {
+      // Nincs tudatpontja → kihagyjuk, de rögzítjük
+      atugrottToredekek.push({
+        javaslatId: toredek._id,
+        toredekSorszam: toredek.toredekSorszam,
+        ok: `Nincs tudatpont ezen entitáson: ${jogosultsag.hianyzoEntitas}`,
+      });
+      console.log('szavazatLeadasa - Töredék ÁTUGORVA (nincs tudatpont)', {
+        toredekId: toredek._id,
+        hianyzoEntitas: jogosultsag.hianyzoEntitas,
+      });
+    }
+  }
+
+  // 6. LÉPÉS - ELLENŐRZÉS: VAN-E EGYÁLTALÁN JOGOSULT TÖREDÉK?
+  // Ha egyetlen töredékre sem jogosult, hibát dobunk
+  if (jogosultToredekek.length === 0) {
+    throw new Error(
+      'Nincs szavazási jogosultságod egyetlen töredékre sem ebből a töredékcsoportból.'
+    );
+  }
+
+  // 7. LÉPÉS - SZAVAZAT LEADÁSA MINDEN JOGOSULT TÖREDÉKRE (egységesen ugyanolyan típussal)
+  const toredekSzavazatok = []; // Az eredményeket ide gyűjtjük
+
+  for (const toredek of jogosultToredekek) {
+    console.log('szavazatLeadasa - Szavazat leadása töredékre', {
+      toredekId: toredek._id,
+      szavazatTipus,
+    });
+
+    // Szavazat mentése vagy felülírása (ha korábban más típusú szavazatot adott le, az felülíródik)
+    const szavazat = await SzavazatRepository.createOrUpdate(
+      eemberId,
+      toredek._id.toString(), // A töredékjavaslat ID-ja
+      szavazatTipus           // Egységesen ugyanolyan szavazat minden töredékre
+    );
+
+    // Töredékjavaslat megjelölése elavultként, hogy a cron job frissítse
+    await JavaslatRepository.updateById(toredek._id.toString(), { ertekekElavultak: true });
+
+    // Eredmény rögzítése
+    toredekSzavazatok.push({
+      javaslatId: toredek._id,
+      toredekSorszam: toredek.toredekSorszam, // Töredék sorszáma (tájékoztatáshoz)
+      szavazatTipus: szavazatTipus,
+      siker: true,
+    });
+
+    console.log('szavazatLeadasa - Töredék szavazat elmentve', { toredekId: toredek._id });
+  }
+
+  // 8. LÉPÉS - EREDMÉNY VISSZAADÁSA
+  const eredmeny = {
+    siker: true,
+    uzenet: `Szavazat sikeresen leadva ${jogosultToredekek.length} töredékre. Az értékek frissítése 1 percen belül megtörténik.`,
+    isToredek: true,                        // Jelezzük, hogy töredékes szavazás volt
+    toredekSzavazatok: toredekSzavazatok,   // Melyek töredékekre sikerült szavazni
+    atugrottToredekek: atugrottToredekek,   // Melyek lettek kihagyva (nem volt jogosultság)
+  };
+
+  console.log('szavazatLeadasa - VÉGE (töredék)', {
+    jogosultDb: jogosultToredekek.length,
+    atugrottDb: atugrottToredekek.length,
+  });
+
+  return eredmeny;
+}
+
+
+  // SZAVAZAT TÖRLÉSE
   
-  // === 1. LÉPÉS: PARAMÉTEREK VALIDÁLÁSA ===
-  if (!emberId) {
-    throw new Error('A ember azonosítója kötelező');
-  }
+// Szavazat visszavonása egy javaslatról.
+// Ha a javaslat töredékjavaslat, akkor az összes töredékről visszavonja a szavazatot,
+// ahol az eembernek van leadott szavazata.
+// param: string eemberId   - A eember ID-ja
+// param: string javaslatId - A javaslat ID-ja
+// returns: Promise<Object> - A művelet eredménye
+async szavazatTorlese(eemberId, javaslatId) {
+  // Log a metódus elejére az értékekkel
+  console.log('szavazatTorlese - KEZDÉS', { eemberId, javaslatId });
 
-  if (!javaslatId) {
-    throw new Error('A javaslat azonosítója kötelező');
-  }
+  // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA
+  if (!eemberId) throw new Error('A eember azonosítója kötelező');
+  if (!javaslatId) throw new Error('A javaslat azonosítója kötelező');
 
-  // === 2. LÉPÉS: JAVASLAT STÁTUSZÁNAK ELLENŐRZÉSE ===
-
-  console.log("szavazatTorlese >>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.findById", {
-    javaslatId: javaslatId
-  });
+  // 2. LÉPÉS - JAVASLAT STÁTUSZÁNAK ELLENŐRZÉSE
+  console.log('szavazatTorlese - JavaslatRepository.findById', { javaslatId });
   const javaslat = await JavaslatRepository.findById(javaslatId);
-  if (!javaslat) {
-    throw new Error('A javaslat nem található');
-  }
 
-  // Csak Aktiv javaslatról lehet visszavonni szavazatot
+  // Ha nincs ilyen javaslat, hibát dobunk
+  if (!javaslat) throw new Error('A javaslat nem található');
+
+  // Csak Aktiv státuszú javaslatról lehet visszavonni szavazatot
   if (javaslat.statusz !== 'Aktiv') {
     throw new Error('Csak Aktiv státuszú javaslatról vonható vissza a szavazat');
   }
 
-  // === 3. LÉPÉS: SZAVAZAT LÉTEZÉSÉNEK ELLENŐRZÉSE ===
-
-  console.log("szavazatTorlese >>>>>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByEmberAndJavaslat", {
-    emberId: emberId,
-    javaslatId: javaslatId
+  // 3. LÉPÉS - TÖREDÉKJAVASLAT VIZSGÁLATA
+  const isToredek = !!javaslat.toredekCsoportId;
+  console.log('szavazatTorlese - Töredék vizsgálat', {
+    javaslatId,
+    isToredek,
+    toredekCsoportId: javaslat.toredekCsoportId ?? null,
   });
-  const szavazat = await SzavazatRepository.findByEmberAndJavaslat(
-    emberId,
-    javaslatId
-  );
 
-  if (!szavazat) {
-    throw new Error('Nem található szavazat ezen a javaslaton');
+  // -----------------------------------------------------------------------
+  // NEM TÖREDÉK ÁG - az eredeti, változatlan logika fut le
+  // -----------------------------------------------------------------------
+  if (!isToredek) {
+
+    // 3a. SZAVAZAT LÉTEZÉSÉNEK ELLENŐRZÉSE
+    console.log('szavazatTorlese - SzavazatRepository.findByeemberAndJavaslat', {
+      eemberId,
+      javaslatId,
+    });
+    const szavazat = await SzavazatRepository.findByeemberAndJavaslat(eemberId, javaslatId);
+
+    // Ha nincs szavazat, nincs mit visszavonni
+    if (!szavazat) throw new Error('Nem található szavazat ezen a javaslaton');
+
+    // 3b. SZAVAZAT TÖRLÉSE
+    console.log('szavazatTorlese - SzavazatRepository.deleteSzavazat', { eemberId, javaslatId });
+    await SzavazatRepository.deleteSzavazat(eemberId, javaslatId);
+
+    // 3c. ELAVULT JELZŐ BEÁLLÍTÁSA - cron job frissíti majd
+    await JavaslatRepository.updateById(javaslatId, { ertekekElavultak: true });
+    console.log('szavazatTorlese - Javaslat megjelölve elavultként (nem töredék)', { javaslatId });
+
+    // 3d. EREDMÉNY VISSZAADÁSA
+    const eredmeny = {
+      siker: true,
+      uzenet: 'Szavazat sikeresen visszavonva.',
+      isToredek: false,
+    };
+    console.log('szavazatTorlese - VÉGE (nem töredék)', { eredmeny });
+    return eredmeny;
   }
 
-  // === 4. LÉPÉS: SZAVAZAT TÖRLÉSE ===
+  // -----------------------------------------------------------------------
+  // TÖREDÉK ÁG - visszavonja a szavazatot minden töredékről, ahol van
+  // -----------------------------------------------------------------------
 
-  console.log("szavazatTorlese >>>>>>>>>>>>>>>>>>>>>>> SzavazatRepository.deleteSzavazat", {
-    emberId: emberId,
-    javaslatId: javaslatId
+  // 4. LÉPÉS - CSOPORT ÖSSZES AKTÍV TÖREDÉKÉNEK LEKÉRÉSE
+  console.log('szavazatTorlese - JavaslatRepository.findByToredekCsoportId', {
+    toredekCsoportId: javaslat.toredekCsoportId,
   });
-  await SzavazatRepository.deleteSzavazat(emberId, javaslatId);
+  const osszesTöredek = await JavaslatRepository.findByToredekCsoportId(
+    javaslat.toredekCsoportId
+  );
+  console.log('szavazatTorlese - Összes töredék szám', { db: osszesTöredek.length });
 
-  // === 5. LÉPÉS: ELAVULT JELZŐ BEÁLLÍTÁSA ===
-  // A javaslat értékei elavultak lettek → cron job frissíti majd
+  // 5. LÉPÉS - SZAVAZAT TÖRLÉSE MINDEN TÖREDÉKRŐL, AHOL VAN LEADOTT SZAVAZAT
+  const toroltSzavazatok = [];   // Ide gyűjtjük a sikeresen törölteket
+  const kihagyttToredekek = [];  // Ide gyűjtjük, ahol nem volt szavazat
 
-  console.log("szavazatTorlese >>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.updateElavult", {
-    javaslatId: javaslatId
-  });
-  await JavaslatRepository.updateElavult(javaslatId, true);
+  for (const toredek of osszesTöredek) {
+    // Megnézzük, van-e az eembernek szavazata ezen a töredéken
+    console.log('szavazatTorlese - Szavazat keresése töredéken', { toredekId: toredek._id });
 
-  console.log("<<<<<<<<<<<<<<<<<<<<<< szavazatTorlese=====Eredmény", {
+    const szavazat = await SzavazatRepository.findByeemberAndJavaslat(
+      eemberId,
+      toredek._id.toString() // A töredékjavaslat ID-ja
+    );
+
+    if (szavazat) {
+      // Van szavazata → töröljük
+      await SzavazatRepository.deleteSzavazat(
+        eemberId,
+        toredek._id.toString()
+      );
+
+      // Töredék megjelölése elavultként, hogy a cron job frissítse
+      await JavaslatRepository.updateById(
+        toredek._id.toString(),
+        { ertekekElavultak: true }
+      );
+
+      // Törölt szavazat rögzítése
+      toroltSzavazatok.push({
+        javaslatId: toredek._id,
+        toredekSorszam: toredek.toredekSorszam,
+      });
+
+      console.log('szavazatTorlese - Töredék szavazat törölve', { toredekId: toredek._id });
+    } else {
+      // Nincs szavazat ezen a töredéken → kihagyjuk (nem hiba, csak jelezzük)
+      kihagyttToredekek.push({
+        javaslatId: toredek._id,
+        toredekSorszam: toredek.toredekSorszam,
+        ok: 'Ezen a töredéken nem volt leadott szavazat',
+      });
+
+      console.log('szavazatTorlese - Töredéken nincs szavazat, kihagyva', {
+        toredekId: toredek._id,
+      });
+    }
+  }
+
+  // 6. LÉPÉS - ELLENŐRZÉS: TÖRÖLTÜNK-E EGYÁLTALÁN VALAMIT?
+  // Ha egyetlen töredéken sem volt szavazat, azt jelezzük
+  if (toroltSzavazatok.length === 0) {
+    throw new Error(
+      'Nem található visszavonható szavazat egyetlen töredéken sem ebből a töredékcsoportból.'
+    );
+  }
+
+  // 7. LÉPÉS - EREDMÉNY VISSZAADÁSA
+  const eredmeny = {
     siker: true,
-    uzenet: 'Szavazat sikeresen visszavonva'
-  });    
-  
-  return {
-    siker: true,
-    uzenet: 'Szavazat sikeresen visszavonva'
+    uzenet: `Szavazat sikeresen visszavonva ${toroltSzavazatok.length} töredékről.`,
+    isToredek: true,                       // Töredékes visszavonás volt
+    toroltSzavazatok: toroltSzavazatok,    // Melyek töredékekről sikerült visszavonni
+    kihagyttToredekek: kihagyttToredekek,  // Melyek lettek kihagyva (nem volt szavazat)
   };
+
+  console.log('szavazatTorlese - VÉGE (töredék)', {
+    toroltDb: toroltSzavazatok.length,
+    kihagyttDb: kihagyttToredekek.length,
+  });
+
+  return eredmeny;
 }
 
 
@@ -191,21 +366,21 @@ async szavazatTorlese(emberId, javaslatId) {
   // EMBER SZAVAZATÁNAK LEKÉRÉSE
   // ===================================
   /**
-   * Egy ember szavazatának lekérése egy javaslaton
-   * @param {string} emberId - A ember ID-ja
+   * Egy eember szavazatának lekérése egy javaslaton
+   * @param {string} eemberId - A eember ID-ja
    * @param {string} javaslatId - A javaslat ID-ja
    * @returns {Promise} A szavazat vagy null
    */
-  async emberSzavazatanakLekerese(emberId, javaslatId) {
+  async eemberSzavazatanakLekerese(eemberId, javaslatId) {
 
-    console.log("=================================== emberSzavazatanakLekerese:: ", {
-      emberId: emberId,
+    console.log("=================================== eemberSzavazatanakLekerese:: ", {
+      eemberId: eemberId,
       javaslatId: javaslatId
     });
     
     // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA
-    if (!emberId) {
-      throw new Error('A ember azonosítója kötelező');
+    if (!eemberId) {
+      throw new Error('A eember azonosítója kötelező');
     }
 
     if (!javaslatId) {
@@ -214,17 +389,17 @@ async szavazatTorlese(emberId, javaslatId) {
 
     // 2. LÉPÉS - SZAVAZAT LEKÉRÉSE
 
-    console.log("emberSzavazatanakLekerese >>>>>>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByEmberAndJavaslat", {
-      emberId: emberId,
+    console.log("eemberSzavazatanakLekerese >>>>>>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByeEmberAndJavaslat", {
+      eemberId: eemberId,
       javaslatId: javaslatId
     });
     
-    const szavazat = await SzavazatRepository.findByEmberAndJavaslat(
-      emberId,
+    const szavazat = await SzavazatRepository.findByeEmberAndJavaslat(
+      eemberId,
       javaslatId
     );
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<< emberSzavazatanakLekerese====szavazat: ", {
+    console.log("<<<<<<<<<<<<<<<<<<<<<< eemberSzavazatanakLekerese====szavazat: ", {
       szavazat: szavazat
     });    
 
@@ -278,36 +453,36 @@ async szavazatTorlese(emberId, javaslatId) {
   // EMBER ÖSSZES SZAVAZATÁNAK LEKÉRÉSE
   // ===================================
   /**
-   * Egy ember összes szavazatának lekérése
-   * @param {string} emberId - A ember ID-ja
+   * Egy eember összes szavazatának lekérése
+   * @param {string} eemberId - A eember ID-ja
    * @param {number} limit - Maximum ennyi szavazat (opcionális)
    * @returns {Promise} Szavazatok tömb
    */
-  async emberSzavazatainakLekerese(emberId, limit = null) {
+  async eemberSzavazatainakLekerese(eemberId, limit = null) {
 
-    console.log("=================================== emberSzavazatainakLekerese:: ", {
-      emberId: emberId,
+    console.log("=================================== eemberSzavazatainakLekerese:: ", {
+      eemberId: eemberId,
       limit: limit
     });
     
     // 1. LÉPÉS - PARAMÉTER VALIDÁLÁSA
-    if (!emberId) {
-      throw new Error('A ember azonosítója kötelező');
+    if (!eemberId) {
+      throw new Error('A eember azonosítója kötelező');
     }
 
     // 2. LÉPÉS - SZAVAZATOK LEKÉRÉSE
 
-    console.log("emberSzavazatainakLekerese >>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByEmberId", {
-      emberId: emberId,
+    console.log("eemberSzavazatainakLekerese >>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByeEmberId", {
+      eemberId: eemberId,
       limit: limit
     });
     
-    const szavazatok = await SzavazatRepository.findByEmberId(
-      emberId,
+    const szavazatok = await SzavazatRepository.findByeEmberId(
+      eemberId,
       limit
     );
 
-    console.log("<<<<<<<<<<<<<<<<<< emberSzavazatainakLekerese====szavazatok", {
+    console.log("<<<<<<<<<<<<<<<<<< eemberSzavazatainakLekerese====szavazatok", {
       szavazatok: szavazatok
     });    
 

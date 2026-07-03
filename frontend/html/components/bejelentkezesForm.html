@@ -1,0 +1,72 @@
+<!-- frontend/html/components/bejelentkezesForm.html -->
+
+<!-- A main.js tölti be ezt a fájlt közvetlenül az #app div-be.
+     A bejelentkezes-oldal wrapper osztály korábban a pages/bejelentkezes.html-ben
+     volt – most itt van, mivel a pages/ réteg megszűnt. -->
+
+<div class="bejelentkezes-oldal">
+
+  <div class="bejelentkezes-kartya">
+
+    <h1 class="bejelentkezes-kartya__cim">Bejelentkezés</h1>
+
+    <!-- Általános hibaüzenet – BejelentkezesForm.js tölti fel szerver hiba esetén -->
+    <div
+      class="bejelentkezes-form__altalanos-hiba"
+      id="bej-altalanos-hiba"
+      role="alert"
+      aria-live="polite"
+    ></div>
+
+    <form class="bejelentkezes-form" id="bejelentkezes-form" novalidate>
+
+      <!-- AZONOSÍTÓ – eemberNev VAGY email, a backend dönti el -->
+      <div class="form-mezo" id="mezo-azonosito">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="azonosito"
+          name="azonosito"
+          placeholder="Eembernév vagy email"
+          autocomplete="username"
+          autocapitalize="none"
+          aria-label="Eembernév vagy email"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-azonosito">
+          Kérjük, add meg a eembernevedet vagy email címedet.
+        </span>
+      </div>
+
+      <!-- JELSZÓ -->
+      <div class="form-mezo" id="mezo-jelszo">
+        <input
+          class="form-mezo__bemenet"
+          type="password"
+          id="jelszo"
+          name="jelszo"
+          placeholder="Jelszó"
+          autocomplete="current-password"
+          aria-label="Jelszó"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-jelszo">
+          Kérjük, add meg a jelszavadat.
+        </span>
+      </div>
+
+      <!-- KÜLDÉS GOMB -->
+      <button type="submit" class="btn-bejelentkezes" id="btn-bejelentkezes">
+        Bejelentkezés
+      </button>
+
+      <!-- REGISZTRÁCIÓ LINK – a kártyán belül -->
+      <a href="regisztracio" id="regisztracio-link" class="btn-masodlagos">
+        Regisztráció
+      </a>
+
+    </form>
+
+  </div>
+
+</div>

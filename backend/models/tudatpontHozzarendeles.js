@@ -5,15 +5,15 @@
 const mongoose = require('mongoose');
 
 // ===== TUDATPONT HOZZÁRENDELÉS SÉMA DEFINIÁLÁSA =====
-// Ez a séma tárolja minden egyes ember-entitás pár tudatpont hozzárendelését
-// Minden dokumentum egy ember hozzájárulását reprezentálja egy adott entitásra
+// Ez a séma tárolja minden egyes eember-entitás pár tudatpont hozzárendelését
+// Minden dokumentum egy eember hozzájárulását reprezentálja egy adott entitásra
 const tudatpontHozzarendelesSchema = new mongoose.Schema({
 
   // ----- EMBER AZONOSÍTÓ -----
   // Ki rendelte hozzá a tudatpontokat
-  emberId: { 
+  eemberId: { 
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                     // Referencia a Ember modellre
+    ref: 'eEmber',                     // Referencia a eEmber modellre
     required: true,                         // Kötelező mező
     index: true                             // Indexelve gyors kereséshez
   },
@@ -36,7 +36,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   },
 
   // ----- TUDATPONTOK MENNYISÉGE -----
-  // Hány tudatpontot rendelt hozzá a ember erre az entitásra
+  // Hány tudatpontot rendelt hozzá a eember erre az entitásra
   // 0 érték = visszavonta a hozzárendelést
   tudatPontok: { 
     type: Number,                          // Szám típus
@@ -64,11 +64,11 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
 // ===== INDEXEK LÉTREHOZÁSA =====
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Compound unique index - egy ember-entitás pár csak egyszer fordulhat elő
-// Ez biztosítja, hogy egy ember egy entitásra csak egyszer adhat pontot
+// Compound unique index - egy eember-entitás pár csak egyszer fordulhat elő
+// Ez biztosítja, hogy egy eember egy entitásra csak egyszer adhat pontot
 // (de azt módosíthatja)
 tudatpontHozzarendelesSchema.index(
-  { emberId: 1, entitasId: 1, entitasTipus: 1 }, 
+  { eemberId: 1, entitasId: 1, entitasTipus: 1 }, 
   { unique: true }
 );
 
@@ -79,17 +79,17 @@ tudatpontHozzarendelesSchema.index({
   entitasTipus: 1 
 });
 
-// Ember történet index - ember hozzájárulásainak időrendben
-// Használat: "Mire adott pontokat ez a ember?" (legfrissebb először)
+// eEmber történet index - eember hozzájárulásainak időrendben
+// Használat: "Mire adott pontokat ez a eember?" (legfrissebb először)
 tudatpontHozzarendelesSchema.index({ 
-  emberId: 1, 
+  eemberId: 1, 
   frissitve: -1 
 });
 
-// Ember + tudatpontok index - szűrés nem 0 értékekre
-// Használat: "Milyen entitásokon van aktív tudatpontja a embernak?"
+// eEmber + tudatpontok index - szűrés nem 0 értékekre
+// Használat: "Milyen entitásokon van aktív tudatpontja a eembernak?"
 tudatpontHozzarendelesSchema.index({ 
-  emberId: 1, 
+  eemberId: 1, 
   tudatPontok: 1 
 });
 

@@ -1,3 +1,100 @@
+// backend/models/eember.js
+
+// ===== MONGOOSE IMPORTÁLÁSA =====
+// Mongoose: MongoDB adatbázis kezelésére szolgáló library
+const mongoose = require('mongoose');
+
+// ===== EMBER SÉMA DEFINIÁLÁSA =====
+// A Schema meghatározza az adatszerkezetet és validációs szabályokat
+const eemberSchema = new mongoose.Schema({
+
+  // ----- EMBERNÉV MEZŐ -----
+  eemberNev: { 
+    type: String,           // Szöveges típus
+    required: true,         // Kötelező mező 
+    unique: true,           // Egyedi érték 
+    trim: true,             // Levágja a felesleges szóközöket elejéről és végéről
+    minlength: 3,           // Minimum 3 karakter hosszú
+    maxlength: 30           // Maximum 30 karakter hosszú
+  },
+
+  // ----- EMAIL MEZŐ -----
+  email: { 
+    type: String,           // Szöveges típus
+    required: true,         // Kötelező mező 
+    unique: true,           // Egyedi érték 
+    trim: true,             // Levágja a felesleges szóközöket
+    lowercase: true         // Automatikusan kisbetűssé alakítja
+  },
+
+  // ----- JELSZÓ MEZŐ -----
+  jelszo: { 
+    type: String,           // Szöveges típus
+    required: true,         // Kötelező mező 
+    minlength: 6            // Minimum 6 karakter hosszú 
+  },
+
+  // ----- NÉV MEZŐ -----
+  // A eember valódi neve 
+  nev: { 
+    type: String,           // Szöveges típus
+    required: true,         // Kötelező mező
+    trim: true              // Levágja a felesleges szóközöket
+  },
+  
+  // ----- LOKÁCIÓ BEÁGYAZOTT OBJEKTUM -----
+  // Földrajzi elhelyezkedés tárolása (3 szintű: ország/régió/település)
+  lokacio: {
+    orszag: {               // Ország mező
+      type: String,         // Szöveges típus
+      required: true        // Kötelező mező
+    },
+    regio: {                // Régió/megye mező
+      type: String,         // Szöveges típus
+      required: true        // Kötelező mező
+    },
+    telepules: {            // Település/város mező
+      type: String,         // Szöveges típus
+      required: true        // Kötelező mező
+    }
+  },
+
+  // ----- TUDATPONTOK -----
+  // A eember tudatpontjainak száma
+  // Regisztrációkor minden eember 10.000 tudatpontot kap
+  tudatpontok: {
+    type: Number,           // Szám típus
+    default: 10000,         // Alapértelmezett érték: 10.000 tudatpont
+    min: 0                  // Minimum érték: nem lehet negatív
+  },
+
+  // ----- LÉTREHOZÁS DÁTUMA -----
+  // Amikor a eember regisztrált
+  letrehozva: { 
+    type: Date,             // Dátum típus
+    default: Date.now       // Alapértelmezett: jelenlegi időpont
+  },
+
+  // ----- UTOLSÓ BEJELENTKEZÉS -----
+  // Amikor a eember utoljára bejelentkezett
+  utolsoBejelentkezes: { 
+    type: Date,             // Dátum típus
+    default: null           // Alapértelmezett: null (még nem jelentkezett be)
+  }
+
+}); 
+
+// ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
+// A model a séma alapján létrehozott adatbázis kollekció
+// 'eember' = model neve, eemberSchema = séma definíció
+const eember = mongoose.model('eember', eemberSchema);
+
+// Model exportálása, hogy más fájlokban is használható legyen
+module.exports = eember;
+
+
+
+
 // backend/models/egyezmeny.js
 
 // =====================================================
@@ -21,25 +118,24 @@ const egyezmenySchema = new mongoose.Schema({
     index: true // Index a gyors kereséshez
   },
 
-  // ----- SZÜLŐ TARTALOM AZONOSÍTÓ ----- MÓDOSÍTOTT ⭐
   // Melyik tartalom alatt van ez az egyezmény
   // A javaslat egyezmenyTarhelyId mezőjéből származik
-  // Ha null, akkor főszintű egyezmény (nincs szülő tartalma)
   szuloId: {
-    type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Tartalom',                       // Referencia a Tartalom modellre
-    required: false,                       // lehet null 
-    default: null,                         // Alapértelmezett: null
-    index: true                            // Index a gyors kereséshez
+    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+    ref: 'Tartalom',                      // Referencia a Tartalom modellre
+    required: true,                       // Kötelező: minden egyezménynek van tárhely tartalma
+    index: true                           // Gyors kereséshez indexelve
   },
 
+
   // ----- SZÜLŐ TÍPUSA ----- MÓDOSÍTOTT ⭐
-  // Ha van szuloId, akkor Tartalom, ha nincs, akkor null
+  // Ha van szuloId, akkor Tartalom
   szuloTipus: {
-    type: String,                          // Szöveges típus
-    default: null,                         //  Alapértelmezett null ⭐
-    enum: ['Tartalom', null]               //  Tartalom vagy null ⭐
+    type: String,              // Szöveges típus
+    default: 'Tartalom',       // Alapértelmezett: Tartalom
+    enum: ['Tartalom']         // Tartalom az egyetlen engedélyezett érték
   },
+
 
 
   // ----- JAVASLAT TÍPUSA (SNAPSHOT) -----
@@ -100,7 +196,7 @@ const egyezmenySchema = new mongoose.Schema({
   // Az eredeti javaslat létrehozója
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eember', // Referencia a eember modellre
     required: true, // Kötelező mező
     index: true // Index a gyors kereséshez létrehozó szerint
   },
@@ -229,7 +325,7 @@ const egyezmenySchema = new mongoose.Schema({
 // Javaslat ID indexelése - gyors keresés javaslat alapján
 egyezmenySchema.index({ javaslatId: 1 });
 
-// Létrehozó indexelése - gyors keresés ember alapján
+// Létrehozó indexelése - gyors keresés eember alapján
 egyezmenySchema.index({ letrehozo: 1 });
 
 // Végrehajtás dátuma indexelése - időrendi rendezés
@@ -286,7 +382,7 @@ const mongoose = require('mongoose');
 // ===================================
 // ÉRTÉK ERTEK JAVASLAT SÉMA DEFINÍCIÓJA
 // ===================================
-// Egyéni emberi érték javaslatok tárolása egy tartalom küszöbértékeihez
+// Egyéni eemberi érték javaslatok tárolása egy tartalom küszöbértékeihez
 const ertekJavaslatSchema = new mongoose.Schema({
 
   // ----- TARTALOM AZONOSÍTÓ -----
@@ -300,15 +396,15 @@ const ertekJavaslatSchema = new mongoose.Schema({
 
   // ----- EMBER AZONOSÍTÓ -----
   // Ki adta ezt az érték javaslatot
-  emberId: {
+  eemberId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eember', // Referencia a eember modellre
     required: true, // Kötelező mező
     index: true // Indexelve a gyors kereséshez
   },
 
   // -----ÉRTÉK ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB-----
-  // Ember által javasolt érték (51-100)
+  // eember által javasolt érték (51-100)
   javaslatElfogadasiKuszob: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -321,7 +417,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- RÉSZVÉTELI ARÁNY KÜSZÖB ERTEK JAVASLAT -----
-  // Ember által javasolt érték (0-100)
+  // eember által javasolt érték (0-100)
   reszveteliAranyKuszob: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -334,7 +430,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MINIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
-  // Ember által javasolt alsó határ másodpercben (0-31536000)
+  // eember által javasolt alsó határ másodpercben (0-31536000)
   minimumDontesiIdo: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -347,7 +443,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MAXIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
-  // Ember által javasolt felső határ másodpercben (0-315360000)
+  // eember által javasolt felső határ másodpercben (0-315360000)
   maximumDontesiIdo: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -368,7 +464,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MÓDOSÍTÁS DÁTUMA -----
-  // Amikor a ember utoljára módosította az érték javaslatát
+  // Amikor a eember utoljára módosította az érték javaslatát
   modositva: {
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
@@ -379,18 +475,18 @@ const ertekJavaslatSchema = new mongoose.Schema({
 // INDEXEK LÉTREHOZÁSA
 // ===================================
 
-// Compound index - egy ember csak egyszer javasolhat egy tartalomhoz
+// Compound index - egy eember csak egyszer javasolhat egy tartalomhoz
 // Ez biztosítja, hogy ne legyen duplikált rekord
 ertekJavaslatSchema.index(
-  { tartalomId: 1, emberId: 1 },
+  { tartalomId: 1, eemberId: 1 },
   { unique: true } // Egyedi constraint
 );
 
 // TartalomId index - gyors lekérdezés egy tartalom összes érték javaslatához
 ertekJavaslatSchema.index({ tartalomId: 1 });
 
-// EmberId index - gyors lekérdezés egy ember összes érték javaslatához
-ertekJavaslatSchema.index({ emberId: 1 });
+// eemberId index - gyors lekérdezés egy eember összes érték javaslatához
+ertekJavaslatSchema.index({ eemberId: 1 });
 
 // ===================================
 // PRE-SAVE HOOK
@@ -419,99 +515,300 @@ module.exports = ErtekJavaslat;
 
 
 
-// backend/models/ember.js
 
-// ===== MONGOOSE IMPORTÁLÁSA =====
-// Mongoose: MongoDB adatbázis kezelésére szolgáló library
+// backend/models/Ertesites.js
+
+// A mongoose könyvtár importálása, ami a MongoDB-vel való kommunikációt kezeli
 const mongoose = require('mongoose');
 
-// ===== EMBER SÉMA DEFINIÁLÁSA =====
-// A Schema meghatározza az adatszerkezetet és validációs szabályokat
-const emberSchema = new mongoose.Schema({
+// Az engedélyezett értesítési típusok – ugyanaz a lista, mint az ErtesitesiBeallitas modellben
+// Fontos, hogy ez a két lista mindig szinkronban legyen egymással
+const ERTESITES_TIPUSOK = [
+  'ujJavaslat',          // Új javaslat érkezett az entitásra
+  'javaslatElfogadas',   // Javaslat végrehajtódott
+  'javaslatElvetve',     // Javaslat nem lépett hatályba
+  'szavazatErkezett',    // Valaki szavazott egy javaslatra
+  'szavazasiHatarido',   // Szavazási határidő közeleg
+  'tudatpontValtozas',   // Tudatpont elmozdulás történt az entitáson
+  'ujGyerekEntitas',     // Új gyerek entitás jött létre az entitás alatt
+];
 
-  // ----- EMBERNÉV MEZŐ -----
-  emberNev: { 
-    type: String,           // Szöveges típus
-    required: true,         // Kötelező mező 
-    unique: true,           // Egyedi érték 
-    trim: true,             // Levágja a felesleges szóközöket elejéről és végéről
-    minlength: 3,           // Minimum 3 karakter hosszú
-    maxlength: 30           // Maximum 30 karakter hosszú
-  },
+// Az engedélyezett entitás típusok – szintén azonos az ErtesitesiBeallitas modellel
+const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'];
 
-  // ----- EMAIL MEZŐ -----
-  email: { 
-    type: String,           // Szöveges típus
-    required: true,         // Kötelező mező 
-    unique: true,           // Egyedi érték 
-    trim: true,             // Levágja a felesleges szóközöket
-    lowercase: true         // Automatikusan kisbetűssé alakítja
-  },
-
-  // ----- JELSZÓ MEZŐ -----
-  jelszo: { 
-    type: String,           // Szöveges típus
-    required: true,         // Kötelező mező 
-    minlength: 6            // Minimum 6 karakter hosszú 
-  },
-
-  // ----- NÉV MEZŐ -----
-  // A ember valódi neve 
-  nev: { 
-    type: String,           // Szöveges típus
-    required: true,         // Kötelező mező
-    trim: true              // Levágja a felesleges szóközöket
-  },
-  
-  // ----- LOKÁCIÓ BEÁGYAZOTT OBJEKTUM -----
-  // Földrajzi elhelyezkedés tárolása (3 szintű: ország/régió/település)
-  lokacio: {
-    orszag: {               // Ország mező
-      type: String,         // Szöveges típus
-      required: true        // Kötelező mező
+// Az Ertesites séma definiálása
+// Minden rekord egy konkrét, már kiküldött értesítést jelent egy adott eembernek
+const ertesitesSchema = new mongoose.Schema(
+  {
+    // Az eember azonosítója, akinek ez az értesítés szól
+    eemberId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'E_Ember',
+      required: [true, 'Az eember azonosítója kötelező'],
     },
-    regio: {                // Régió/megye mező
-      type: String,         // Szöveges típus
-      required: true        // Kötelező mező
+
+    // Az értesítés típusa – megmondja, mi történt
+    tipus: {
+      type: String,
+      enum: {
+        values: ERTESITES_TIPUSOK,
+        message: 'Érvénytelen értesítési típus: {VALUE}',
+      },
+      required: [true, 'Az értesítés típusa kötelező'],
     },
-    telepules: {            // Település/város mező
-      type: String,         // Szöveges típus
-      required: true        // Kötelező mező
-    }
+
+    // Annak az entitásnak az azonosítója, amelyen az esemény történt
+    entitasId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'Az entitás azonosítója kötelező'],
+      // Nincs 'ref', mert különböző típusú entitásokra mutathat
+    },
+
+    // Az entitás típusa – megmondja, melyik kollekcióban keressük az entitasId-t
+    entitasTipus: {
+      type: String,
+      enum: {
+        values: ENTITAS_TIPUSOK,
+        message: 'Érvénytelen entitás típus: {VALUE}',
+      },
+      required: [true, 'Az entitás típusa kötelező'],
+    },
+
+    // Esemény-specifikus adatok szabad formátumban
+    // Pl. ujJavaslat esetén: { javaslatId: ObjectId, javaslatTipus: 'modositas' }
+    // Pl. tudatpontValtozas esetén: { regiErtek: 5, ujErtek: 8, valtozas: 3 }
+    // Pl. javaslatElfogadas esetén: { javaslatId: ObjectId }
+    // Mixed típus: bármilyen objektumot tárolhat, nincs séma-kötöttsége
+    adatok: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}, // Alapból üres objektum
+    },
+
+    // Olvasott állapot – false: olvasatlan (piros pont), true: már látta az eember
+    olvasva: {
+      type: Boolean,
+      default: false, // Minden új értesítés olvasatlanként jön létre
+    },
+
+    // Az olvasás időpontja – null amíg nem olvasta el
+    olvasvaIdopont: {
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    // timestamps: true automatikusan kezeli a createdAt és updatedAt mezőket
+    // createdAt = az értesítés kiküldésének időpontja
+    timestamps: true,
+  }
+);
+
+// INDEX 1: Egy eember olvasatlan értesítéseinek gyors lekéréséhez
+// Ez a leggyakoribb lekérdezés: "hány olvasatlan értesítésem van?"
+ertesitesSchema.index({ eemberId: 1, olvasva: 1 });
+
+// INDEX 2: Egy eember összes értesítése időrendben (postafiók nézet)
+// A -1 a createdAt-nél csökkenő sorrendet jelent (legújabb elöl)
+ertesitesSchema.index({ eemberId: 1, createdAt: -1 });
+
+// INDEX 3: Egy konkrét entitáshoz kapcsolódó összes értesítés lekéréséhez
+// Pl. ha törölni kell egy entitást, és az összes kapcsolódó értesítést is törölni kell
+ertesitesSchema.index({ entitasId: 1, entitasTipus: 1 });
+
+// A modell exportálása
+// Az első paraméter ('Ertesites') lesz a MongoDB kollekció neve (kisbetűsítve: ertesites)
+module.exports = mongoose.model('Ertesites', ertesitesSchema);
+
+
+
+
+
+// backend/models/ertesitesiBeallitas.js
+
+// A mongoose könyvtár importálása, ami a MongoDB-vel való kommunikációt kezeli
+const mongoose = require('mongoose');
+
+// Az engedélyezett értesítési típusok listája
+// Ezeket konstansként tároljuk, hogy a kódban ne kelljen "kézzel" beírni a stringeket
+const ERTESITES_TIPUSOK = [
+  'ujJavaslat',          // Új javaslat érkezett az entitásra
+  'javaslatElfogadas',   // Javaslat végrehajtódott 
+  'javaslatElvetve',     // Javaslat nem lépett hatályba 
+  'szavazatErkezett',    // Valaki szavazott egy javaslatra, amelyen az eembernek joga van szavazni
+  'szavazasiHatarido',   // Szavazási határidő közeleg (pl. 24 órán belül lejár)
+  'tudatpontValtozas',   // Tudatpont elmozdulás történt az entitáson
+  'ujGyerekEntitas',     // Új gyerek entitás jött létre az entitás alatt
+];
+
+// Az engedélyezett entitás típusok listája
+// Ezek azok az entitástípusok, amelyeken értesítési beállítást lehet elhelyezni
+const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny' ];
+
+// Az ErtesitesiBeallitas séma definiálása
+// Ez írja le, hogy egy adatbázis rekord milyen mezőkből áll
+const ertesitesiBeallitasSchema = new mongoose.Schema(
+  {
+    // Az eember azonosítója, akinek a beállítása ez
+    eemberId: {
+      type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+      ref: 'E_Ember',                        // Hivatkozás az E_Ember kollekcióra
+      required: [true, 'Az eember azonosítója kötelező'], // Kötelező mező, hibaüzenettel
+    },
+
+    // Annak az entitásnak az azonosítója, amelyre a beállítás vonatkozik
+    entitasId: {
+      type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+      required: [true, 'Az entitás azonosítója kötelező'], // Kötelező mező
+      // Nincs 'ref', mert különböző típusú entitásokra mutathat (Tartalom, Kategoria stb.)
+    },
+
+    // Az entitás típusa – ez mondja meg, melyik kollekcióban kell keresni az entitasId-t
+    entitasTipus: {
+      type: String,
+      enum: {
+        values: ENTITAS_TIPUSOK,
+        message: 'Érvénytelen entitás típus: {VALUE}', // Hibaüzenet érvénytelen értéknél
+      },
+      required: [true, 'Az entitás típusa kötelező'],
+    },
+
+    // A bekapcsolt értesítési típusok tömbje
+    // Pl.: ['ujJavaslat', 'javaslatElfogadas'] – csak ezekről kap értesítést
+    ertesitesTipusok: {
+      type: [String],
+      enum: {
+        values: ERTESITES_TIPUSOK,
+        message: 'Érvénytelen értesítési típus: {VALUE}',
+      },
+      default: [], // Alapból üres tömb – opt-in rendszer: semmit sem kap, amíg be nem kapcsolja
+    },
+
+    // Tudatpont küszöbérték – ennyi pont elmozdulástól értesít a 'tudatpontValtozas' esemény
+    // Ha null, akkor minden tudatpont-változásnál értesít (ha a típus be van kapcsolva)
+    tudatpontKuszob: {
+      type: Number,
+      min: [1, 'A küszöbérték legalább 1 pont kell legyen'], // Minimum 1 pont
+      default: null, // Alapból nincs küszöb beállítva
+    },
+
+    // Ha true, akkor ezen az entitáson (és leszármazottain) teljesen kikapcsol az értesítés
+    // Ez lehetővé teszi, hogy egy ágat teljes csendbe lehessen állítani
+    kikapcsolva: {
+      type: Boolean,
+      default: false, // Alapból nem kikapcsolt
+    },
+  },
+  {
+    // timestamps: true automatikusan hozzáadja a 'createdAt' és 'updatedAt' mezőket
+    // Ezek pontosan megfelelnek a 'letrehozva' és 'frissitve' fogalmainknak
+    timestamps: true,
+  }
+);
+
+// EGYEDI INDEX: egy eembernek csak egy beállítása lehet egy adott entitáson
+// Ez adatbázis szinten védi meg a duplikációt
+// unique: true biztosítja, hogy nem lehet két azonos (eemberId + entitasId + entitasTipus) kombináció
+ertesitesiBeallitasSchema.index(
+  { eemberId: 1, entitasId: 1, entitasTipus: 1 },
+  { unique: true }
+);
+
+// LEKÉRDEZŐ INDEX: egy entitás összes beállításának gyors lekéréséhez
+// Pl. amikor egy esemény történik, és tudni kell, kik figyelik ezt az entitást
+ertesitesiBeallitasSchema.index({ entitasId: 1, entitasTipus: 1 });
+
+// A modell exportálása, hogy más fájlokból is importálható legyen
+// Az első paraméter ('ErtesitesiBeallitas') lesz a MongoDB kollekció neve (kisbetűsítve: ertesitesibeallitas)
+module.exports = mongoose.model('ErtesitesiBeallitas', ertesitesiBeallitasSchema);
+
+
+
+
+
+// backend/models/hierarchikusTudatpontAllokacio.js
+
+// MONGOOSE IMPORTÁLÁSA
+// Mongoose - MongoDB adatbázis kezelésre szolgáló library
+const mongoose = require('mongoose');
+
+// HIERARCHIKUS TUDATPONT ALLOKÁCIÓ SÉMA DEFINÍCIÓJA
+// Ez a séma tárolja az entitások összesített (saját + leszármazottak) tudatpontjait
+const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
+  // ----- ENTITÁS AZONOSÍTÓ -----
+  // Melyik entitásra vonatkozik ez a hierarchikus allokáció
+  entitasId: {
+    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+    required: true, // Kötelező mező
+    index: true // Indexelve a gyors kereséshez
   },
 
-  // ----- TUDATPONTOK -----
-  // A ember tudatpontjainak száma
-  // Regisztrációkor minden ember 10.000 tudatpontot kap
-  tudatpontok: {
-    type: Number,           // Szám típus
-    default: 10000,         // Alapértelmezett érték: 10.000 tudatpont
-    min: 0                  // Minimum érték: nem lehet negatív
+  // ----- ENTITÁS TÍPUSA -----
+  // Milyen típusú entitás ez (Tartalom, Kategória, stb.)
+  entitasTipus: {
+    type: String, // Szöveges típus
+    required: true, // Kötelező mező
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'], // Engedélyezett típusok
+    trim: true // Levágja a felesleges szóközöket
+  },
+
+  // ----- HIERARCHIKUS ÖSSZPONTSZÁM -----
+  // Az entitás saját tudatpontjai + minden leszármazottjának tudatpontjai
+  // Cache-elt érték - real-time frissül minden tudatpont változásnál
+  hierarchikusOsszesPont: {
+    type: Number, // Számérték típus
+    required: true, // Kötelező mező
+    default: 0, // Alapértelmezett érték 0
+    min: 0 // Nem lehet negatív
   },
 
   // ----- LÉTREHOZÁS DÁTUMA -----
-  // Amikor a ember regisztrált
-  letrehozva: { 
-    type: Date,             // Dátum típus
-    default: Date.now       // Alapértelmezett: jelenlegi időpont
+  // Amikor először létrejött ez a rekord
+  letrehozva: {
+    type: Date, // Dátum típus
+    default: Date.now // Alapértelmezett: jelenlegi időpont
   },
 
-  // ----- UTOLSÓ BEJELENTKEZÉS -----
-  // Amikor a ember utoljára bejelentkezett
-  utolsoBejelentkezes: { 
-    type: Date,             // Dátum típus
-    default: null           // Alapértelmezett: null (még nem jelentkezett be)
+  // ----- FRISSÍTÉS DÁTUMA -----
+  // Amikor utoljára frissítettük ezt a rekordot
+  frissitve: {
+    type: Date, // Dátum típus
+    default: Date.now // Alapértelmezett: jelenlegi időpont
   }
+});
 
-}); 
+// INDEXEK LÉTREHOZÁSA
+// Compound unique index - egy entitáshoz csak egy hierarchikus allokáció tartozhat
+// Ez biztosítja, hogy ne legyen duplikáció
+hierarchikusTudatpontAllokaciSchema.index(
+  { entitasId: 1, entitasTipus: 1 }, 
+  { unique: true } // Egyedi constraint
+);
 
-// ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
+// EntitasTipus index - gyors szűrés típus szerint
+hierarchikusTudatpontAllokaciSchema.index({ entitasTipus: 1 });
+
+// HierarchikusOsszesPont index - gyors rendezés pont szerint
+hierarchikusTudatpontAllokaciSchema.index({ hierarchikusOsszesPont: -1 }); // Csökkenő sorrend
+
+// PRE-SAVE MIDDLEWARE
+// Automatikusan frissíti a frissitve mezőt mentés előtt
+hierarchikusTudatpontAllokaciSchema.pre('save', function(next) {
+  // Frissítjük a módosítás dátumát
+  this.frissitve = new Date();
+  // Továbblépés a mentéshez
+  next();
+});
+
+// MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA
 // A model a séma alapján létrehozott adatbázis kollekció
-// 'Ember' = model neve, emberSchema = séma definíció
-const Ember = mongoose.model('Ember', emberSchema);
+const HierarchikusTudatpontAllokacio = mongoose.model(
+  'HierarchikusTudatpontAllokacio', 
+  hierarchikusTudatpontAllokaciSchema
+);
 
 // Model exportálása, hogy más fájlokban is használható legyen
-module.exports = Ember;
+module.exports = HierarchikusTudatpontAllokacio;
+
 
 
 
@@ -599,15 +896,41 @@ const javaslatSchema = new mongoose.Schema({
     enum: ['Tartalom']                     // Csak 'Tartalom' engedélyezett
   },
 
-  // ----- EGYEZMÉNY TÁRHELY AZONOSÍTÓ ----- 
-  // Ahol az egyezmény tárolódni fog végrehajtás után
-  // KÖTELEZŐ mező - a embernak meg kell adnia
+  // ----- EGYEZMÉNY TÁRHELY AZONOSÍTÓ -----
+  // MÓDOSÍTOTT: Egyesítésnél null lehet, mert az új entitás még nem létezik
+  // A végrehajtás után frissül a tényleges új entitás ID-jával
   egyezmenyTarhelyId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Tartalom',                      // Referencia a Tartalom modellre
-    required: true,                       // KÖTELEZŐ mező 
-    index: true                           // Index a gyors kereséshez
+    ref: 'Tartalom', // Referencia a Tartalom modellre
+    required: function() {
+      // Egyesítésnél NEM kötelező, mert az új entitás még nem létezik
+      return this.javaslatTipus !== 'Egyesites';
+    },
+    default: null, // Alapértelmezett null egyesítésnél
+    index: true // Index a gyors kereséshez
   },
+
+  // ----- TÖREDÉK JAVASLAT METAADATOK -----
+  toredekCsoportId: {
+    type: mongoose.Schema.Types.ObjectId, // Töredék csoport azonosító
+    required: false,                      // Csak akkor van értéke, ha töredék javaslat
+    default: null                         // Alapértelmezett: nincs csoport
+  }, // Egy logikai javaslat összes töredéke ugyanazt az értéket kapja
+
+  toredekSorszam: {
+    type: Number,         // A töredék pozíciója: 1, 2, ..., N
+    required: false,      // Nem kötelező – régi javaslatoknál hiányozhat
+    default: null,        // Ha nincs beállítva, null lesz
+    min: 1                // Legalább 1 a sorszám
+  }, // Pl. 1/6 esetén ez az 1-es lesz
+
+  toredekDarab: {
+    type: Number,         // Hány töredék tartozik a csoportba összesen
+    required: false,      // Nem kötelező – régi javaslatoknál hiányozhat
+    default: null,        // Ha nincs csoport, akkor null
+    min: 1                // Legalább 1 (egy elemű csoport is lehet elvileg)
+  }, // Pl. 1/6 esetén ez a 6-os lesz
+
 
   // ===================================
   // ----- Egyesites SPECIÁLIS ADATOK -----
@@ -640,11 +963,11 @@ const javaslatSchema = new mongoose.Schema({
   },
 
   // ===================================
-  // ----- LÉTREHOZÓ EMBER -----
+  // ----- LÉTREHOZÓ ee_eember -----
   // ===================================
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eember', // Referencia a eember modellre
     required: true // Kötelező mező
   },
 
@@ -712,7 +1035,7 @@ const javaslatSchema = new mongoose.Schema({
   // Cache-elve vannak a gyorsabb lekérdezéshez
 
   // Érintett entitásokon lévő tudatpont tulajdonosok száma 
-  // Egyesített halmaz - egyedi emberek
+  // Egyesített halmaz - egyedi ee_emberek
   entitasokTudatpontTulajdonosokSzama: {
     type: Number, // Számérték típus
     default: 0 // Alapértelmezett: 0
@@ -797,7 +1120,7 @@ const javaslatSchema = new mongoose.Schema({
 // Státusz indexelése - gyors szűrés státusz szerint (pl. Aktiv javaslatok)
 javaslatSchema.index({ statusz: 1 });
 
-// Létrehozó indexelése - gyors keresés ember javaslatai alapján
+// Létrehozó indexelése - gyors keresés ee_eember javaslatai alapján
 javaslatSchema.index({ letrehozo: 1 });
 
 // Hatályba lépés ideje indexelése - Cron job-hoz szükséges
@@ -830,6 +1153,12 @@ javaslatSchema.index({ szuloId: 1, letrehozva: -1 });
 // Gyors keresés: Melyik javaslatok egyezményei kerülnek egy adott tartalomba
 javaslatSchema.index({ egyezmenyTarhelyId: 1 });
 
+//  TÖREDÉK CSOPORT INDEX 
+javaslatSchema.index({ toredekCsoportId: 1, // Töredék csoport szerinti gyors keresés
+  statusz: 1           // Gyakori, hogy csak Aktiv / Elfogadva kell
+});
+
+
 
 // ===================================
 // MONGOOSE MIDDLEWARE-EK
@@ -837,55 +1166,68 @@ javaslatSchema.index({ egyezmenyTarhelyId: 1 });
 
 // ----- PRE SAVE MIDDLEWARE -----
 // Futtatás előtt: javaslat mentése
-javaslatSchema.pre('save', function(next) {
-  
+javaslatSchema.pre('save', function(next) { // Mentés előtti middleware kezdete
+
+  // Log a pre-save elején
+  console.log('javaslatSchema.preSave - KEZDÉS', { // Kezdő log üzenet
+    javaslatTipus: this.javaslatTipus,                   // Aktuális javaslat típusa
+    erintettEntitasokSzama: this.erintettEntitasok?.length, // Érintett entitások száma
+    toredekCsoportId: this.toredekCsoportId             // Töredék csoport azonosító (ha van)
+  }); // Log üzenet vége
+
   // ÚJ VALIDÁCIÓ - Szülő kötelező ellenőrzése
-  if (!this.szuloId) {
-    return next(new Error('A javaslat létrehozásához szülő tartalom megadása kötelező'));
-  }
-  
+  if (!this.szuloId) { // Ha nincs szülő azonosító
+    // Ha nincs szülő, hibát dobunk
+    return next(new Error('A javaslat létrehozásához szülő tartalom megadása kötelező')); // Hiba visszaadása
+  } // Szülő ellenőrzés vége
+
   // MEGLÉVŐ VALIDÁCIÓ - Egyesites típus validálása
-  if (this.javaslatTipus === 'Egyesites') {
-    // Ellenőrzés: legalább 2 érintett entitás kell
-    if (this.erintettEntitasok.length < 2) {
-      return next(new Error('Egyesites típushoz legalább 2 érintett entitás szükséges'));
-    }
-    
-    // Ellenőrzés: minden érintett entitás azonos típusú legyen
-    const elsoTipus = this.erintettEntitasok[0].entitasTipus;
-    const osszesAzonosTipus = this.erintettEntitasok.every(
-      (entitas) => entitas.entitasTipus === elsoTipus
-    );
-    
-    if (!osszesAzonosTipus) {
-      return next(new Error('Egyesites esetén minden érintett entitásnak azonos típusúnak kell lennie'));
-    }
-    
+  if (this.javaslatTipus === 'Egyesites') { // Csak Egyesites típusnál fusson le
+
+    // Ellenőrzés: legalább 1 érintett entitás kell
+    if (!this.erintettEntitasok || this.erintettEntitasok.length < 1) { // Ha nincs entitás vagy üres tömb
+      // Ha nincs elég entitás, hiba
+      return next(new Error('Egyesites típushoz legalább 1 érintett entitás szükséges')); // Hiba visszaadása
+    } // Darabszám ellenőrzés vége
+
     // Ellenőrzés: egyesitesAdatok kitöltöttség
-    if (!this.egyesitesAdatok || !this.egyesitesAdatok.ujEntitasAdatok) {
-      return next(new Error('Egyesites esetén az egyesitesAdatok megadása kötelező'));
-    }
-  }
-  
+    if (!this.egyesitesAdatok || !this.egyesitesAdatok.ujEntitasAdatok) { // Ha hiányzik az egyesitesAdatok vagy annak ujEntitasAdatok mezője
+      // Ha hiányzik az adat, hiba
+      return next(new Error('Egyesites esetén az egyesitesAdatok megadása kötelező')); // Hiba visszaadása
+    } // Egyesítés adatok ellenőrzés vége
+
+  } // Egyesites validáció blokkjának vége
+
   // MEGLÉVŐ VALIDÁCIÓ - Csomag típus validálása
-  if (this.javaslatTipus === 'Csomag') {
+  if (this.javaslatTipus === 'Csomag') { // Csak Csomag típusnál fusson le
+
     // Ellenőrzés: legalább 2 művelet kell
-    if (this.erintettEntitasok.length < 2) {
-      return next(new Error('Csomag típushoz legalább 2 művelet szükséges'));
-    }
-    
-    // Ellenőrzés: ne legyen Egyesites művelet (az külön Egyesites típus)
-    const vanEgyesites = this.erintettEntitasok.some(
-      (entitas) => entitas.muvelet === 'Egyesites'
-    );
-    
-    if (vanEgyesites) {
-      return next(new Error('Csomag típusban nem lehet Egyesites művelet, használd az Egyesites típust'));
-    }
-  }
-  
-  next(); // Folytatás a mentéssel
-});
+    if (!this.erintettEntitasok || this.erintettEntitasok.length < 2) { // Ha nincs elég érintett entitás
+      // Ha kevesebb, mint 2 művelet, hiba
+      return next(new Error('Csomag típushoz legalább 2 művelet szükséges')); // Hiba visszaadása
+    } // Minimum darabszám ellenőrzése vége
+
+    // Ellenőrzés: ne legyen Egyesites művelet
+    const vanEgyesites = this.erintettEntitasok.some( // Megnézzük, van-e olyan entitás, aminek a művelete Egyesites
+      (entitas) => entitas.muvelet === 'Egyesites'    // Feltétel: muvelet === 'Egyesites'
+    ); // some hívás vége
+
+    if (vanEgyesites) { // Ha találtunk Egyesites műveletet
+      // Ha van Egyesites művelet, hiba
+      return next(new Error('Csomag típusban nem lehet Egyesites művelet, használd az Egyesites típust')); // Hiba visszaadása
+    } // Egyesites művelet tiltás vége
+
+  } // Csomag validáció blokkjának vége
+
+  // Log a pre-save végén
+  console.log('javaslatSchema.preSave - VÉGE', { // Záró log üzenet
+    javaslatTipus: this.javaslatTipus, // Javaslat típusa a végén
+    sikeresValidacio: true             // Jelöljük, hogy a validáció sikeres volt
+  }); // Log üzenet vége
+
+  next(); // Folytatás a mentéssel, ha minden rendben volt
+}); // pre('save') middleware vége
+
 
 
 // ===================================
@@ -896,7 +1238,6 @@ const Javaslat = mongoose.model('Javaslat', javaslatSchema);
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = Javaslat;
-
 
 
 
@@ -947,7 +1288,7 @@ const kategoriaSchema = new mongoose.Schema({
   // Ki hozta létre ezt a kategóriát
   letrehozo: { 
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                     // Referencia a Ember modellre
+    ref: 'eember',                     // Referencia a eember modellre
     required: true                          // Kötelező mező
   },
 
@@ -963,7 +1304,7 @@ const kategoriaSchema = new mongoose.Schema({
 // ===== INDEXEK LÉTREHOZÁSA =====
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Létrehozó indexelése - gyors keresés ember kategóriái alapján
+// Létrehozó indexelése - gyors keresés eember kategóriái alapján
 kategoriaSchema.index({ letrehozo: 1 });
 
 // Létrehozás dátuma indexelése - gyors időrendi rendezés
@@ -976,6 +1317,7 @@ const Kategoria = mongoose.model('Kategoria', kategoriaSchema);
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = Kategoria;
+
 
 
 
@@ -998,9 +1340,9 @@ const szavazatSchema = new mongoose.Schema({
   // ----- EMBER AZONOSÍTÓ -----
   // ===================================
   // Ki adta le ezt a szavazatot
-  emberId: {
+  eemberId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eember', // Referencia a eember modellre
     required: true // Kötelező mező
   },
 
@@ -1015,7 +1357,7 @@ const szavazatSchema = new mongoose.Schema({
   },
 
   // ----- SZAVAZAT TÍPUSA -----
-  // A ember támogatja, ellenzi, vagy tartózkodik a javaslatot
+  // A eember támogatja, ellenzi, vagy tartózkodik a javaslatot
   szavazatTipus: { 
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező
@@ -1036,7 +1378,7 @@ const szavazatSchema = new mongoose.Schema({
   // ----- Modositas DÁTUMA -----
   // ===================================
   // Mikor módosította utoljára a szavazatát
-  // A ember bármikor meggondolhatja magát és átszavazhat
+  // A eember bármikor meggondolhatja magát és átszavazhat
   modositva: {
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
@@ -1049,12 +1391,12 @@ const szavazatSchema = new mongoose.Schema({
 // ===================================
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Egyedi index: ember + javaslat kombináció
-// Ez biztosítja, hogy egy ember csak EGYSZER szavazhat egy javaslatra
+// Egyedi index: eember + javaslat kombináció
+// Ez biztosítja, hogy egy eember csak EGYSZER szavazhat egy javaslatra
 // Azonban MÓDOSÍTHATJA a szavazatát bármikor (UPDATE művelettel)
 szavazatSchema.index(
   { 
-    emberId: 1, 
+    eemberId: 1, 
     javaslatId: 1 
   }, 
   { 
@@ -1066,9 +1408,9 @@ szavazatSchema.index(
 // Szükséges: egy javaslat összes szavazatának gyors lekéréséhez
 szavazatSchema.index({ javaslatId: 1 });
 
-// Ember indexelése - gyors szűrés ember szerint
-// Szükséges: egy ember összes szavazatának lekéréséhez
-szavazatSchema.index({ emberId: 1 });
+// eember indexelése - gyors szűrés eember szerint
+// Szükséges: egy eember összes szavazatának lekéréséhez
+szavazatSchema.index({ eemberId: 1 });
 
 // Szavazat típus indexelése - gyors szűrés szavazat típus szerint
 // Szükséges: gyors számlálás (hány Tamogat, hány Ellenez)
@@ -1131,17 +1473,17 @@ szavazatSchema.statics.tartozkodokSzama = async function(javaslatId) {
 
 // ----- SZAVAZAT KERESÉSE VAGY LÉTREHOZÁSA -----
 /**
- * Megkeresi a ember szavazatát egy javaslaton, vagy létrehozza ha nem létezik
- * @param {ObjectId} emberId - Ember azonosítója
+ * Megkeresi a eember szavazatát egy javaslaton, vagy létrehozza ha nem létezik
+ * @param {ObjectId} eemberId - eember azonosítója
  * @param {ObjectId} javaslatId - Javaslat azonosítója
  * @param {String} szavazatTipus - 'Tamogat' vagy 'Ellenez'
  * @returns {Promise<Object>} A szavazat objektum
  */
-szavazatSchema.statics.keresVagyLetrehoz = async function(emberId, javaslatId, szavazatTipus) {
+szavazatSchema.statics.keresVagyLetrehoz = async function(eemberId, javaslatId, szavazatTipus) {
   
   // Keresés: létezik-e már szavazat?
   let szavazat = await this.findOne({
-    emberId: emberId,
+    eemberId: eemberId,
     javaslatId: javaslatId
   });
   
@@ -1157,7 +1499,7 @@ szavazatSchema.statics.keresVagyLetrehoz = async function(emberId, javaslatId, s
   // Ha nem létezik: létrehozás
   else {
     szavazat = await this.create({
-      emberId: emberId,
+      eemberId: eemberId,
       javaslatId: javaslatId,
       szavazatTipus: szavazatTipus
     });
@@ -1215,20 +1557,20 @@ szavazatSchema.statics.osszesSzavazoSzama = async function(javaslatId) {
 
 // ----- SZAVAZÓK LISTÁJA -----
 /**
- * Lekéri egy javaslat összes szavazóját (ember ID-k)
+ * Lekéri egy javaslat összes szavazóját (eember ID-k)
  * @param {ObjectId} javaslatId - Javaslat azonosítója
- * @returns {Promise<Array>} Ember ID-k tömbje
+ * @returns {Promise<Array>} eember ID-k tömbje
  */
 szavazatSchema.statics.szavazokListaja = async function(javaslatId) {
   
   const szavazatok = await this.find({ javaslatId: javaslatId })
-    .select('emberId') // Csak a ember ID-t kérjük le
+    .select('eemberId') // Csak a eember ID-t kérjük le
     .lean(); // Plain JavaScript objektum (gyorsabb)
   
-  // Ember ID-k kinyerése
-  const emberIds = szavazatok.map(sz => sz.emberId);
+  // eember ID-k kinyerése
+  const eemberIds = szavazatok.map(sz => sz.eemberId);
   
-  return emberIds;
+  return eemberIds;
 };
 
 // ===================================
@@ -1239,6 +1581,7 @@ const Szavazat = mongoose.model('Szavazat', szavazatSchema);
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = Szavazat;
+
 
 
 
@@ -1309,7 +1652,6 @@ szuloId: {
 },
 
 // ----- SZÜLŐ TÍPUSA ----- 
-// ÚJ MEZŐ: Meghatározza, milyen típusú entitás a szülő
 szuloTipus: {
   type: String,                                           // Szöveges típus
   enum: ['Tartalom', 'Javaslat', 'Egyezmeny'],           // Engedélyezett értékek
@@ -1326,6 +1668,7 @@ szuloTipus: {
       }
       return true;
     },
+    
     message: 'A szuloId és szuloTipus mezők konzisztenciája sérült. Ha van szuloId, akkor szuloTipus is kötelező, és fordítva.'
   }
 },
@@ -1335,7 +1678,7 @@ szuloTipus: {
   // Ki hozta létre ezt a tartalmat
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                    // Referencia a Ember modellre
+    ref: 'eember',                    // Referencia a eember modellre
     required: true                         // Kötelező mező
   },
 
@@ -1371,7 +1714,7 @@ tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
 // Gyors keresés: "Egy tartalom alatti látható tartalmak"
 tartalomSchema.index({ szuloId: 1, statusz: 1 });
 
-// Létrehozó indexelése - gyors keresés ember tartalmai alapján
+// Létrehozó indexelése - gyors keresés eember tartalmai alapján
 tartalomSchema.index({ letrehozo: 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
@@ -1402,7 +1745,7 @@ const mongoose = require('mongoose');
 // ===================================
 // TARTALOM ÉRTÉK HISZTOGRAM SÉMA DEFINÍCIÓJA
 // ===================================
-// Aggregált adatok tárolása - hány ember javasol adott értéket
+// Aggregált adatok tárolása - hány eember javasol adott értéket
 // Ez egy cache réteg, ami gyorsítja a medián számítást
 const tartalomErtekHisztogramSchema = new mongoose.Schema({
 
@@ -1417,8 +1760,8 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol 51, 52, ..., 100-ot
-  // Kulcs: a százalék érték (string), érték: emberek száma (number)
+  // Bucket-ek: hány eember javasol 51, 52, ..., 100-ot
+  // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   javaslatElfogadasiKuszobHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -1434,8 +1777,8 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- RÉSZVÉTELI ARÁNY KÜSZÖB HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol 0, 1, ..., 100-ot
-  // Kulcs: a százalék érték (string), érték: emberek száma (number)
+  // Bucket-ek: hány eember javasol 0, 1, ..., 100-ot
+  // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   reszveteliAranyKuszobHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -1451,9 +1794,9 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- MINIMUM DÖNTÉSI IDŐ HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol adott alsó határ értékeket
+  // Bucket-ek: hány eember javasol adott alsó határ értékeket
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
-  // Kulcs: bucket kulcs (string), érték: emberek száma (number)
+  // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   minimumDontesiIdoHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -1461,9 +1804,9 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- MAXIMUM DÖNTÉSI IDŐ HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol adott felső határ értékeket
+  // Bucket-ek: hány eember javasol adott felső határ értékeket
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
-  // Kulcs: bucket kulcs (string), érték: emberek száma (number)
+  // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   maximumDontesiIdoHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -1512,7 +1855,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- ÖSSZ ÉRTÉK JAVASLATOK SZÁMA -----
-  // Hány ember adott összesen érték javaslatot
+  // Hány eember adott összesen érték javaslatot
   osszesErtekJavaslat: {
     type: Number, // Szám típus
     default: 0, // Alapértelmezett: 0
@@ -1555,7 +1898,7 @@ tartalomErtekHisztogramSchema.methods.getBucket = function(hisztogramNev, ertek)
  * Segédmetódus egy adott bucket értékének módosításához
  * @param {string} hisztogramNev - 'javaslatElfogadasiKuszobHisztogram' vagy 'reszveteliAranyKuszobHisztogram' stb.
  * @param {string} ertek - a százalék/érték (string)
- * @param {number} darabszam - hány ember (number)
+ * @param {number} darabszam - hány eember (number)
  */
 tartalomErtekHisztogramSchema.methods.setBucket = function(hisztogramNev, ertek, darabszam) {
   const hisztogram = this[hisztogramNev]; // Map lekérése
@@ -1597,6 +1940,7 @@ const TartalomErtekHisztogram = mongoose.model('TartalomErtekHisztogram', tartal
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = TartalomErtekHisztogram;
+
 
 
 
@@ -1645,7 +1989,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // Ki hozta létre ezt a tartalom típust
   letrehozo: { 
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                     // Referencia a Ember modellre
+    ref: 'eember',                     // Referencia a eember modellre
     required: true                          // Kötelező mező
   },
 
@@ -1664,7 +2008,7 @@ const tartalomTipusSchema = new mongoose.Schema({
 // Név indexelése - gyors név szerinti keresés és egyediség ellenőrzés
 tartalomTipusSchema.index({ nev: 1 });
 
-// Létrehozó indexelése - gyors keresés ember típusai alapján
+// Létrehozó indexelése - gyors keresés eember típusai alapján
 tartalomTipusSchema.index({ letrehozo: 1 });
 
 // Létrehozás dátuma indexelése - időrendi rendezéshez
@@ -1677,6 +2021,7 @@ const TartalomTipus = mongoose.model('TartalomTipus', tartalomTipusSchema);
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = TartalomTipus;
+
 
 
 
@@ -1720,7 +2065,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   },
 
   // ----- HOZZÁJÁRULÓK SZÁMA -----
-  // Hány ember adott tudatpontot erre az entitásra
+  // Hány eember adott tudatpontot erre az entitásra
   hozzajarulokSzama: { 
     type: Number,                          // Szám típus
     required: true,                        // Kötelező mező
@@ -1790,15 +2135,15 @@ module.exports = TudatpontAllokacio;
 const mongoose = require('mongoose');
 
 // ===== TUDATPONT HOZZÁRENDELÉS SÉMA DEFINIÁLÁSA =====
-// Ez a séma tárolja minden egyes ember-entitás pár tudatpont hozzárendelését
-// Minden dokumentum egy ember hozzájárulását reprezentálja egy adott entitásra
+// Ez a séma tárolja minden egyes eember-entitás pár tudatpont hozzárendelését
+// Minden dokumentum egy eember hozzájárulását reprezentálja egy adott entitásra
 const tudatpontHozzarendelesSchema = new mongoose.Schema({
 
   // ----- EMBER AZONOSÍTÓ -----
   // Ki rendelte hozzá a tudatpontokat
-  emberId: { 
+  eemberId: { 
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                     // Referencia a Ember modellre
+    ref: 'eember',                     // Referencia a eember modellre
     required: true,                         // Kötelező mező
     index: true                             // Indexelve gyors kereséshez
   },
@@ -1821,7 +2166,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   },
 
   // ----- TUDATPONTOK MENNYISÉGE -----
-  // Hány tudatpontot rendelt hozzá a ember erre az entitásra
+  // Hány tudatpontot rendelt hozzá a eember erre az entitásra
   // 0 érték = visszavonta a hozzárendelést
   tudatPontok: { 
     type: Number,                          // Szám típus
@@ -1849,11 +2194,11 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
 // ===== INDEXEK LÉTREHOZÁSA =====
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Compound unique index - egy ember-entitás pár csak egyszer fordulhat elő
-// Ez biztosítja, hogy egy ember egy entitásra csak egyszer adhat pontot
+// Compound unique index - egy eember-entitás pár csak egyszer fordulhat elő
+// Ez biztosítja, hogy egy eember egy entitásra csak egyszer adhat pontot
 // (de azt módosíthatja)
 tudatpontHozzarendelesSchema.index(
-  { emberId: 1, entitasId: 1, entitasTipus: 1 }, 
+  { eemberId: 1, entitasId: 1, entitasTipus: 1 }, 
   { unique: true }
 );
 
@@ -1864,17 +2209,17 @@ tudatpontHozzarendelesSchema.index({
   entitasTipus: 1 
 });
 
-// Ember történet index - ember hozzájárulásainak időrendben
-// Használat: "Mire adott pontokat ez a ember?" (legfrissebb először)
+// eember történet index - eember hozzájárulásainak időrendben
+// Használat: "Mire adott pontokat ez a eember?" (legfrissebb először)
 tudatpontHozzarendelesSchema.index({ 
-  emberId: 1, 
+  eemberId: 1, 
   frissitve: -1 
 });
 
-// Ember + tudatpontok index - szűrés nem 0 értékekre
-// Használat: "Milyen entitásokon van aktív tudatpontja a embernak?"
+// eember + tudatpontok index - szűrés nem 0 értékekre
+// Használat: "Milyen entitásokon van aktív tudatpontja a eembernak?"
 tudatpontHozzarendelesSchema.index({ 
-  emberId: 1, 
+  eemberId: 1, 
   tudatPontok: 1 
 });
 

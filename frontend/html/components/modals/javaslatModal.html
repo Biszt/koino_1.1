@@ -1,0 +1,116 @@
+<!-- frontend/html/components/modals/javaslatModal.html -->
+
+<!-- ===== JAVASLAT MODAL TARTALOM ===== -->
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel. -->
+<!-- A három lépés egyszerre van a DOM-ban, de csak az aktív látható. -->
+<div class="javaslat-modal">
+
+  <!-- ===== 1. LÉPÉS: TÍPUS VÁLASZTÓ ===== -->
+  <!-- Alapból látható, a többi lépés rejtve van. -->
+  <div class="javaslat-modal__lepes javaslat-modal__lepes--tipus-valaszto" data-lepes="1">
+
+    <p class="javaslat-modal__bevezeto">
+      Milyen változtatást szeretnél javasolni?
+    </p>
+
+    <!-- Típus gombok — mindegyik data-tipus attribútumot kap, a JS ezzel azonosítja -->
+    <div class="javaslat-modal__tipus-gombok">
+
+      <button class="javaslat-modal__tipus-gomb" type="button" data-tipus="Torles">
+        <span class="javaslat-modal__tipus-gomb-ikon" aria-hidden="true">🗑️</span>
+        <span class="javaslat-modal__tipus-gomb-felirat">Törlés</span>
+        <span class="javaslat-modal__tipus-gomb-leiras">Az entitás eltávolítása</span>
+      </button>
+
+      <button class="javaslat-modal__tipus-gomb" type="button" data-tipus="Modositas">
+        <span class="javaslat-modal__tipus-gomb-ikon" aria-hidden="true">✏️</span>
+        <span class="javaslat-modal__tipus-gomb-felirat">Módosítás</span>
+        <span class="javaslat-modal__tipus-gomb-leiras">Adatok megváltoztatása</span>
+      </button>
+
+      <button class="javaslat-modal__tipus-gomb" type="button" data-tipus="Athelyezes">
+        <span class="javaslat-modal__tipus-gomb-ikon" aria-hidden="true">📂</span>
+        <span class="javaslat-modal__tipus-gomb-felirat">Áthelyezés</span>
+        <span class="javaslat-modal__tipus-gomb-leiras">Más szülő alá mozgatás</span>
+      </button>
+
+      <button class="javaslat-modal__tipus-gomb" type="button" data-tipus="Egyesites">
+        <span class="javaslat-modal__tipus-gomb-ikon" aria-hidden="true">🔀</span>
+        <span class="javaslat-modal__tipus-gomb-felirat">Egyesítés</span>
+        <span class="javaslat-modal__tipus-gomb-leiras">Több entitás összevonása</span>
+      </button>
+
+      <button class="javaslat-modal__tipus-gomb" type="button" data-tipus="Csomag">
+        <span class="javaslat-modal__tipus-gomb-ikon" aria-hidden="true">📦</span>
+        <span class="javaslat-modal__tipus-gomb-felirat">Csomag</span>
+        <span class="javaslat-modal__tipus-gomb-leiras">Több művelet egyszerre</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ===== 2. LÉPÉS: TÍPUS-SPECIFIKUS FORM ===== -->
+  <!-- Alapból rejtve. A JS tölti fel tartalommal a kiválasztott típus alapján. -->
+  <div class="javaslat-modal__lepes javaslat-modal__lepes--rejtett" data-lepes="2">
+
+    <!-- Vissza gomb az 1. lépéshez -->
+    <button class="javaslat-modal__vissza-gomb" type="button" id="javaslat-vissza-gomb">
+      ← Vissza
+    </button>
+
+    <!-- A típus-specifikus form tartalma JS-ben épül ide -->
+    <div class="javaslat-modal__forma-kontener" id="javaslat-forma-kontener">
+      <!-- JS tölti fel -->
+    </div>
+
+  </div>
+
+  <!-- ===== 3. LÉPÉS: INDOKLÁS ===== -->
+  <!-- Alapból rejtve. Minden típusnál azonos. -->
+  <div class="javaslat-modal__lepes javaslat-modal__lepes--rejtett" data-lepes="3">
+
+    <!-- Vissza gomb a 2. lépéshez -->
+    <button class="javaslat-modal__vissza-gomb" type="button" id="javaslat-indoklas-vissza-gomb">
+      ← Vissza
+    </button>
+
+    <!-- Indoklás szövegmező -->
+    <div class="javaslat-modal__mezo-csoport">
+      <label class="javaslat-modal__cimke" for="javaslat-indoklas">
+        Indoklás <span class="javaslat-modal__kotelezo" aria-hidden="true">*</span>
+      </label>
+      <textarea
+        class="javaslat-modal__textarea"
+        id="javaslat-indoklas"
+        name="indoklas"
+        rows="4"
+        minlength="10"
+        maxlength="2000"
+        placeholder="Miért szükséges ez a változtatás? (min. 10 karakter)"
+        required
+      ></textarea>
+      <!-- Karakterszámláló — JS frissíti -->
+      <span class="javaslat-modal__szamlalo" id="javaslat-indoklas-szamlalo" aria-live="polite">
+        0 / 2000
+      </span>
+    </div>
+
+    <!-- Kezdő tudatpont mező -->
+    <div class="javaslat-modal__mezo-csoport">
+      <label class="javaslat-modal__cimke" for="javaslat-kezdo-tudatpont">
+        Kezdő tudatpont <span class="javaslat-modal__kotelezo" aria-hidden="true">*</span>
+      </label>
+      <input
+        class="javaslat-modal__input"
+        type="number"
+        id="javaslat-kezdo-tudatpont"
+        name="kezdoTudatpont"
+        min="1"
+        placeholder="Min. 1"
+        required
+      />
+    </div>
+
+  </div>
+
+</div>

@@ -33,18 +33,18 @@ class SzavazatRepository {
   // ----- SZAVAZAT KERESÉSE -----
   // ===================================
   /**
-   * Egy szavazat lekérdezése ember és javaslat alapján
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * Egy szavazat lekérdezése eember és javaslat alapján
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
    * @returns {Promise<Object|null>} A szavazat objektum vagy null ha nem található
    */
-  async findByEmberAndJavaslat(emberId, javaslatId) {
+  async findByeEmberAndJavaslat(eemberId, javaslatId) {
     // Keresés: egyedi index alapján (gyors!)
     const szavazat = await Szavazat.findOne({
-      emberId: emberId,
+      eemberId: eemberId,
       javaslatId: javaslatId
     })
-    .populate('emberId', 'emberNev email'); // Ember adatok
+    .populate('eemberId', 'eemberNev email'); // eEmber adatok
     
     return szavazat;
   }
@@ -61,7 +61,7 @@ class SzavazatRepository {
     // Keresés: összes szavazat a javaslatra
     const szavazatok = await Szavazat.find({ javaslatId: javaslatId })
       .sort({ letrehozva: -1 }) // Legújabbak előre
-      .populate('emberId', 'emberNev email'); // Ember adatok
+      .populate('eemberId', 'eemberNev email'); // eEmber adatok
     
     return szavazatok;
   }
@@ -70,14 +70,14 @@ class SzavazatRepository {
   // ----- EMBER ÖSSZES SZAVAZATA -----
   // ===================================
   /**
-   * Egy ember összes szavazatának lekérése
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * Egy eember összes szavazatának lekérése
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {number} limit - Maximum ennyi szavazat (opcionális)
    * @returns {Promise<Array>} Szavazatok tömb
    */
-  async findByEmberId(emberId, limit = null) {
+  async findByeEmberId(eemberId, limit = null) {
     // Query építése
-    let query = Szavazat.find({ emberId: emberId })
+    let query = Szavazat.find({ eemberId: eemberId })
       .sort({ modositva: -1 }) // Utoljára módosítottak előre
       .populate('javaslatId'); // Javaslat adatok
     
@@ -97,15 +97,15 @@ class SzavazatRepository {
   /**
    * Szavazat létrehozása vagy frissítése (ha már létezik)
    * Használja a model static metódust
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
    * @param {string} szavazatTipus - 'Tamogat' vagy 'Ellenez'
    * @returns {Promise<Object>} A szavazat objektum
    */
-  async createOrUpdate(emberId, javaslatId, szavazatTipus) {
+  async createOrUpdate(eemberId, javaslatId, szavazatTipus) {
     // Model static metódus használata
     const szavazat = await Szavazat.keresVagyLetrehoz(
-      emberId,
+      eemberId,
       javaslatId,
       szavazatTipus
     );
@@ -118,16 +118,16 @@ class SzavazatRepository {
   // ===================================
   /**
    * Egy létező szavazat módosítása
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
    * @param {string} ujSzavazatTipus - Az új szavazat típus
    * @returns {Promise<Object|null>} A frissített szavazat vagy null
    */
-  async updateSzavazat(emberId, javaslatId, ujSzavazatTipus) {
+  async updateSzavazat(eemberId, javaslatId, ujSzavazatTipus) {
     // Szavazat frissítése
     const frissitettSzavazat = await Szavazat.findOneAndUpdate(
       {
-        emberId: emberId,
+        eemberId: eemberId,
         javaslatId: javaslatId
       },
       {
@@ -141,7 +141,7 @@ class SzavazatRepository {
         runValidators: true
       }
     )
-    .populate('emberId', 'emberNev email');
+    .populate('eemberId', 'eemberNev email');
     
     return frissitettSzavazat;
   }
@@ -151,14 +151,14 @@ class SzavazatRepository {
   // ===================================
   /**
    * Egy szavazat törlése
-   * @param {string} emberId - A ember MongoDB ObjectId-ja
+   * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
    * @returns {Promise<Object|null>} A törölt szavazat vagy null
    */
-  async deleteSzavazat(emberId, javaslatId) {
+  async deleteSzavazat(eemberId, javaslatId) {
     // Szavazat törlése
     const toroltSzavazat = await Szavazat.findOneAndDelete({
-      emberId: emberId,
+      eemberId: eemberId,
       javaslatId: javaslatId
     });
     
@@ -228,15 +228,15 @@ async countTartozkodok(javaslatId) {
   // ----- SZAVAZÓK LISTÁJA -----
   // ===================================
   /**
-   * Egy javaslat szavazóinak listája (ember ID-k)
+   * Egy javaslat szavazóinak listája (eember ID-k)
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
-   * @returns {Promise<Array>} Ember ID-k tömbje
+   * @returns {Promise<Array>} eEmber ID-k tömbje
    */
   async getSzavazokListaja(javaslatId) {
     // Model static metódus használata
-    const emberIds = await Szavazat.szavazokListaja(javaslatId);
+    const eemberIds = await Szavazat.szavazokListaja(javaslatId);
     
-    return emberIds;
+    return eemberIds;
   }
 
   // ===================================

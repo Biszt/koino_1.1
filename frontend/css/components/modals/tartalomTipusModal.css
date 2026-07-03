@@ -1,0 +1,158 @@
+/* frontend/css/components/modal/tartalomTipusModal.css */
+
+
+/* ===== TARTALOM TÍPUS MODAL FORM ===== */
+/* Mezők egymás alá rendeződnek – azonos a kategoriaModal.css struktúrájával */
+.tt-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+
+/* ===== FORM MEZŐ CSOPORT ===== */
+.tt-modal-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+  width: 100%;
+}
+
+
+/* ===== ALAP INPUT STÍLUS ===== */
+.tt-modal-input,
+.tt-modal-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+/* Placeholder szöveg */
+.tt-modal-input::placeholder,
+.tt-modal-textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+
+/* Hover állapot */
+.tt-modal-input:hover,
+.tt-modal-textarea:hover {
+  border-color: var(--color-text-muted);
+}
+
+
+/* Fókusz állapot */
+.tt-modal-input:focus,
+.tt-modal-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+
+/* ===== TEXTAREA SPECIFIKUS ===== */
+.tt-modal-textarea {
+  resize: vertical;
+  min-height: 72px; /* 3 sor ~ */
+  line-height: 1.6;
+}
+
+
+/* ===== FÁJLFELTÖLTŐ INPUT ===== */
+/* A natív input vizuálisan rejtve, de akadálymentesen elérhető –
+   a tt-modal-fajl-gomb gomb aktiválja JS-ből (click()) */
+.tt-modal-fajl-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+
+/* ===== FÁJLVÁLASZTÓ GOMB ===== */
+.tt-modal-fajl-gomb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  padding: var(--space-3) var(--space-4);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-primary);
+
+  background-color: var(--color-primary-highlight);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  transition: background-color var(--transition-fast),
+              color             var(--transition-fast),
+              border-color      var(--transition-fast);
+}
+
+
+/* Fájlválasztó gomb hover */
+.tt-modal-fajl-gomb:hover {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+
+/* Fájlválasztó gomb koppintás visszajelzés */
+.tt-modal-fajl-gomb:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+
+/* ===== KIVÁLASZTOTT FÁJL NEVE ===== */
+.tt-modal-fajl-nev {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+
+/* ===== IKON ELŐNÉZET KONTÉNER ===== */
+.tt-modal-elonezet-kontener {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+
+  background-color: var(--color-surface-offset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+
+/* ===== IKON ELŐNÉZET KÉP ===== */
+.tt-modal-elokezet-kep {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-2);
+}

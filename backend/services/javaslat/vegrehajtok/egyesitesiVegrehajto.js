@@ -15,10 +15,10 @@ const TartalomTipusService = require('../../tartalomTipusService');
 // ===== EGYESÍTÉSI VÉGREHAJTÓ OSZTÁLY =====
 // Ez az osztály felelős az egyesítési javaslatok végrehajtásáért
 // Felelősség:
-// - Emberek tudatpontjainak összesítése (forrás entitásokról)
+// - eEmberek tudatpontjainak összesítése (forrás entitásokról)
 // - Forrás entitások kiürítése (pontok visszaosztása)
 // - Új entitás létrehozása (Service használatával - kezdő tudatpont kezelés)
-// - Többi ember tudatpontjainak hozzárendelése (új entitásra)
+// - Többi eember tudatpontjainak hozzárendelése (új entitásra)
 // - Gyerekek átállítása (CSAK Tartalom entitásoknál!)
 class EgyesitesiVegrehajto {
 
@@ -26,9 +26,9 @@ class EgyesitesiVegrehajto {
   // Egyesítési javaslat végrehajtása
   // ✅ HELYES SORREND:
   // 1. Összesítés (ki mennyi pontot AD az új entitásra) - CSAK LEKÉRDEZÉS!
-  // 2. Forrás entitások kiürítése (emberek visszakapják a pontjaikat)
+  // 2. Forrás entitások kiürítése (eemberek visszakapják a pontjaikat)
   // 3. Új entitás létrehozása (létrehozó pontjaival)
-  // 4. Többi ember pontjainak hozzárendelése (most már van nekik pont!)
+  // 4. Többi eember pontjainak hozzárendelése (most már van nekik pont!)
   // 5. Gyerekek átállítása (ha Tartalom)
   // @param {Object} javaslat - A javaslat objektum
   // @returns {Promise<Object>} Végrehajtás eredménye
@@ -51,13 +51,13 @@ class EgyesitesiVegrehajto {
  
     console.log(' TUDATPONTOK ÖSSZESÍTÉSE ');
     
-    // Map struktúra: (emberId -> összesített pontok)
+    // Map struktúra: (eemberId -> összesített pontok)
     const osszesitettHozzajarulasok = new Map();
 
     // Minden forrás entitásról gyűjtjük a hozzárendeléseket
     for (const entitas of javaslat.erintettEntitasok) {
       // Hozzárendelések lekérése az entitásról
-      // Ez az összes embert visszaadja, aki tudatpontot adott erre az entitásra
+      // Ez az összes eembert visszaadja, aki tudatpontot adott erre az entitásra
       console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesekByEntitasNyers: ", {
         entutaId: entitas.entitasId,
         entitasTipus: entitas.entitasTipus
@@ -70,17 +70,17 @@ class EgyesitesiVegrehajto {
         0        // Skip 0 - elejétől
       );
 
-      // Minden hozzárendelést összegzünk embernként
+      // Minden hozzárendelést összegzünk eembernként
       for (const hozzarendeles of hozzarendelesek) {
         // ✅ Most már tiszta ObjectId (nem populated objektum)
-        const emberIdStr = hozzarendeles.emberId.toString();
-        const jelenlegi = osszesitettHozzajarulasok.get(emberIdStr) || 0;
-        osszesitettHozzajarulasok.set(emberIdStr, jelenlegi + hozzarendeles.tudatPontok);
+        const eemberIdStr = hozzarendeles.eemberId.toString();
+        const jelenlegi = osszesitettHozzajarulasok.get(eemberIdStr) || 0;
+        osszesitettHozzajarulasok.set(eemberIdStr, jelenlegi + hozzarendeles.tudatPontok);
         // ✅ Csak ÖSSZEADJUK, még nem módosítunk semmit!
       }
     }
 
-    console.log(`Összesített tudatpontok ${osszesitettHozzajarulasok.size} embertól`);
+    console.log(`Összesített tudatpontok ${osszesitettHozzajarulasok.size} eembertól`);
 
     // ----- 3. LÉPÉS - LÉTREHOZÓ TUDATPONTJAINAK MEGHATÁROZÁSA -----
     const letrehozoId = javaslat.letrehozo._id.toString();
@@ -90,18 +90,18 @@ class EgyesitesiVegrehajto {
     osszesitettHozzajarulasok.delete(letrehozoId);
 
     console.log(`Létrehozó (${letrehozoId}) pontjai: ${letrehozoPontjai}`);
-    console.log(`Többi ember: ${osszesitettHozzajarulasok.size} fő`);
+    console.log(`Többi eember: ${osszesitettHozzajarulasok.size} fő`);
 
     // ----- 4. LÉPÉS - FORRÁS ENTITÁSOK KIÜRÍTÉSE (PONTOK VISSZAOSZTÁSA) -----
     // ✅ Most már tudjuk az összesítést, kiüríthetjük a forrásokat
-    // A emberek visszakapják a pontjaikat → aztán hozzá tudják rendelni az új entitásra
+    // A eemberek visszakapják a pontjaikat → aztán hozzá tudják rendelni az új entitásra
     console.log('=== FORRÁS ENTITÁSOK KIÜRÍTÉSE ===');
     
     const visszaosztasiEredmenyek = [];
 
     for (const entitas of javaslat.erintettEntitasok) {
-      // Tudatpontok visszaosztása embereknak (0 pontra állítás)
-      // Ez a tudatpontHozzarendelese(..., 0) függvényt használja minden embernál
+      // Tudatpontok visszaosztása eembereknak (0 pontra állítás)
+      // Ez a tudatpontHozzarendelese(..., 0) függvényt használja minden eembernál
       console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>> TudatpontService.tudatpontokVisszaosztasa:");
       
       const visszaosztasEredmeny = await TudatpontService.tudatpontokVisszaosztasa(
@@ -113,10 +113,10 @@ class EgyesitesiVegrehajto {
         entitasId: entitas.entitasId,
         entitasTipus: entitas.entitasTipus,
         visszaosztottPontok: visszaosztasEredmeny.visszaosztottPontok,
-        emberekSzama: visszaosztasEredmeny.emberekSzama
+        eemberekSzama: visszaosztasEredmeny.eemberekSzama
       });
 
-      console.log(`Visszaosztva: ${visszaosztasEredmeny.visszaosztottPontok} pont ${visszaosztasEredmeny.emberekSzama} embertól (${entitas.entitasTipus})`);
+      console.log(`Visszaosztva: ${visszaosztasEredmeny.visszaosztottPontok} pont ${visszaosztasEredmeny.eemberekSzama} eembertól (${entitas.entitasTipus})`);
     }
 
     // ----- 5. LÉPÉS - ÚJ ENTITÁS LÉTREHOZÁSA SERVICE-SZEL -----
@@ -177,13 +177,13 @@ class EgyesitesiVegrehajto {
       if (egyezmenyTarhelyIdStr === 'eeeeeeeeeeeeeeeeeeee0001') {
         console.log('vegrehajtas >>> Placeholder egyezmenyTarhelyId észlelve, frissítés az új entitás ID-jára');
         console.log('vegrehajtas >>> JavaslatRepository.updateById', {
-          javaslatId: javaslat._id,
+          javaslatId: javaslat.id,
           egyezmenyTarhelyId: ujEntitas._id
         });
         
         // Frissítjük a javaslat egyezmenyTarhelyId mezőjét az új entitás ID-jára
         const JavaslatRepository = require('../../../repositories/javaslatRepository');
-        await JavaslatRepository.updateById(javaslat._id, {
+        await JavaslatRepository.updateById(javaslat.id, {
           egyezmenyTarhelyId: ujEntitas._id
         });
         
@@ -203,44 +203,44 @@ class EgyesitesiVegrehajto {
     console.log(' TÖBBI EMBER PONTJAINAK HOZZÁRENDELÉSE ');
     
     let hozzarendeltOsszesPont = letrehozoPontjai;  // Létrehozó pontjai már hozzá vannak rendelve
-    let sikeresEmberekSzama = 1;  // Létrehozó már sikeres
+    let sikereseEmberekSzama = 1;  // Létrehozó már sikeres
     const hozzarendelesiHibak = [];
 
-    for (const [emberIdStr, pontok] of osszesitettHozzajarulasok) {
+    for (const [eemberIdStr, pontok] of osszesitettHozzajarulasok) {
       try {
-        // Tudatpont hozzárendelése a többi embertól az új entitásra
+        // Tudatpont hozzárendelése a többi eembertól az új entitásra
         // Annyi pontot rendelünk hozzá, amennyit a forrás entitásokon összesen volt (2. lépés)
         console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese");
 
         await TudatpontService.tudatpontHozzarendelese(
-          emberIdStr,                    // Ki adja a tudatpontot
+          eemberIdStr,                    // Ki adja a tudatpontot
           ujEntitas._id,                       // Melyik entitásra (új egyesített entitás)
           egyesitesAdatok.ujEntitasTipus,      // Entitás típusa
           pontok                               // Mennyi tudatpontot (összesített érték)
         );
 
         hozzarendeltOsszesPont += pontok;
-        sikeresEmberekSzama++;
+        sikereseEmberekSzama++;
 
-        console.log(`${pontok} pont hozzárendelve embertól: ${emberIdStr}`);
+        console.log(`${pontok} pont hozzárendelve eembertól: ${eemberIdStr}`);
 
       } catch (error) {
-        // Ha egy embernál hiba van
+        // Ha egy eembernál hiba van
         // (pl. közben elköltötte a pontjait - bár nem kellene megtörténnie)
         // Folytatjuk a többiekkel, de logoljuk
-        console.error(`Hiba a tudatpont hozzárendelésnél (${emberIdStr}):`, error.message);
+        console.error(`Hiba a tudatpont hozzárendelésnél (${eemberIdStr}):`, error.message);
         hozzarendelesiHibak.push({
-          emberId: emberIdStr,
+          eemberId: eemberIdStr,
           pontok: pontok,
           hiba: error.message
         });
       }
     }
 
-    console.log(`Tudatpontok hozzárendelve: ${hozzarendeltOsszesPont} pont ${sikeresEmberekSzama} embertól`);
+    console.log(`Tudatpontok hozzárendelve: ${hozzarendeltOsszesPont} pont ${sikereseEmberekSzama} eembertól`);
 
     if (hozzarendelesiHibak.length > 0) {
-      console.warn(`${hozzarendelesiHibak.length} embernál nem sikerült a hozzárendelés`);
+      console.warn(`${hozzarendelesiHibak.length} eembernál nem sikerült a hozzárendelés`);
     }
 
     // ----- 7. LÉPÉS - GYEREKEK ÁTÁLLÍTÁSA (CSAK TARTALOM ENTITÁSOKNÁL!) -----
@@ -282,7 +282,7 @@ class EgyesitesiVegrehajto {
         tipus: egyesitesAdatok.ujEntitasTipus
       },
       osszesitettTudatpontok: hozzarendeltOsszesPont,
-      sikeresEmberekSzama: sikeresEmberekSzama,
+      sikereseEmberekSzama: sikereseEmberekSzama,
       hozzarendelesiHibakSzama: hozzarendelesiHibak.length,
       atallitottGyerekek: atallitottGyerekek
     });
@@ -294,7 +294,7 @@ class EgyesitesiVegrehajto {
         tipus: egyesitesAdatok.ujEntitasTipus
       },
       osszesitettTudatpontok: hozzarendeltOsszesPont,
-      emberekSzama: sikeresEmberekSzama,
+      eemberekSzama: sikereseEmberekSzama,
       hozzarendelesiHibak: hozzarendelesiHibak,
       atallitottGyerekek: atallitottGyerekek,
       visszaosztasiEredmenyek: visszaosztasiEredmenyek

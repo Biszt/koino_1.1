@@ -16,10 +16,15 @@ const router = express.Router();
 const kategoriaController = require('../controllers/kategoriaController');
 
 // ===================================
-// MIDDLEWARE IMPORTÁLÁSA
+// MIDDLEWARE IMPORTÁLÁSOK
 // ===================================
-// Destrukturálással importáljuk, mert objektumként van exportálva
+// Auth middleware: ellenőrzi, hogy be van-e jelentkezve az eember
 const { authMiddleware } = require('../middlewares/authMiddleware');
+
+// VÁLTOZÁS: Upload middleware bekötése
+// ikonFeltoltes: a Multer single() példánya, ami a 'ikon' nevű form mezőt kezeli
+// Ez fut le ELŐBB, mint a controller – elmenti a fájlt, és req.file-ba teszi az adatait
+const { ikonFeltoltes } = require('../middlewares/uploadMiddleware');
 
 // ===================================
 // ÚTVONALAK DEFINIÁLÁSA
@@ -27,17 +32,19 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // -------------------------------------
 // KOLLEKCIÓ SZINTŰ ÚTVONALAK
-// (útvonalak, amelyek az összes kategóriára vonatkoznak)
 // -------------------------------------
 
 // Új kategória létrehozása
 // POST /api/kategoria
-// VÉDETT - csak bejelentkezett emberek
-router.post('/', authMiddleware, kategoriaController.kategoriaLetrehozasa);
+// VÉDETT - csak bejelentkezett eemberek
+// VÁLTOZÁS: ikonFeltoltes middleware hozzáadva – lefut az authMiddleware után,
+// a controller előtt; a feltöltött fájl adatait req.file-ba helyezi
+router.post('/', authMiddleware, ikonFeltoltes, kategoriaController.kategoriaLetrehozasa);
 
 // Kategóriák listázása szűrőkkel
 // GET /api/kategoria
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
+// Nem változott: listázáshoz nem kell fájlfeltöltés
 router.get('/', authMiddleware, kategoriaController.kategoriakListazasa);
 
 // -------------------------------------
@@ -47,7 +54,8 @@ router.get('/', authMiddleware, kategoriaController.kategoriakListazasa);
 
 // Kategória részletes adatainak lekérése tudatpont adatokkal
 // GET /api/kategoria/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
+// Nem változott: lekéréshez nem kell fájlfeltöltés
 router.get('/:id/reszletek', authMiddleware, kategoriaController.kategoriaReszleteinekLekerese);
 
 // -------------------------------------
@@ -57,23 +65,27 @@ router.get('/:id/reszletek', authMiddleware, kategoriaController.kategoriaReszle
 
 // Egy kategória lekérése ID alapján
 // GET /api/kategoria/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
+// Nem változott: lekéréshez nem kell fájlfeltöltés
 router.get('/:id', authMiddleware, kategoriaController.kategoriaLekerese);
 
 // Kategória módosítása ID alapján
 // PATCH /api/kategoria/:id
-// VÉDETT - csak bejelentkezett emberek
-router.patch('/:id', authMiddleware, kategoriaController.kategoriaModositasa);
+// VÉDETT - csak bejelentkezett eemberek
+// VÁLTOZÁS: ikonFeltoltes middleware hozzáadva – ha az eember új ikont tölt fel
+// módosításkor, azt is kezeli; ha nem küld fájlt, req.file undefined lesz,
+// amit a controller majd kezelni fog
+router.patch('/:id', authMiddleware, ikonFeltoltes, kategoriaController.kategoriaModositasa);
 
 // ===================================
 // Torles ENDPOINT NINCS!
 // ===================================
 // A kategóriák NEM törölhetők direkt DELETE kéréssel.
-// 
+//
 // Törlés csak automatikusan történik a következő esetekben:
-// 
+//
 // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 //

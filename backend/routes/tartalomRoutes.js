@@ -32,12 +32,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Új tartalom létrehozása
 // POST /api/tartalom
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, tartalomController.tartalomLetrehozasa);
 
 // Tartalmak listázása szűrőkkel
 // GET /api/tartalom
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/', authMiddleware, tartalomController.tartalomokListazasa);
 
 // -------------------------------------
@@ -47,7 +47,7 @@ router.get('/', authMiddleware, tartalomController.tartalomokListazasa);
 
 // Tartalom részletes adatainak lekérése tudatpont adatokkal
 // GET /api/tartalom/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, tartalomController.tartalomReszleteinekLekerese);
 
 // -------------------------------------
@@ -57,12 +57,12 @@ router.get('/:id/reszletek', authMiddleware, tartalomController.tartalomReszlete
 
 // Egy tartalom lekérése ID alapján
 // GET /api/tartalom/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id', authMiddleware, tartalomController.tartalomLekerese);
 
 // Tartalom módosítása ID alapján
 // PATCH /api/tartalom/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
 
 // ===================================
@@ -73,7 +73,7 @@ router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
 // Törlés csak automatikusan történik a következő esetekben:
 // 
 // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 //

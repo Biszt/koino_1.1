@@ -32,7 +32,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Új javaslat létrehozása
 // POST /api/javaslat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, JavaslatController.javaslatLetrehozasa);
 
 // Javaslatok listázása szűrőkkel
@@ -47,7 +47,7 @@ router.get('/', JavaslatController.javaslatokListazasa);
 
 // Javaslat részletes adatainak lekérése
 // GET /api/javaslat/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, JavaslatController.javaslatReszleteinekLekerese);
 
 // Javaslat szavazatainak listázása
@@ -62,13 +62,13 @@ router.get('/:id/statisztika', JavaslatController.szavazatokStatisztikaja);
 
 // Szavazat leadása egy javaslatra
 // POST /api/szavazat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId, szavazatTipus }
 router.post('/szavazat', authMiddleware, JavaslatController.szavazatLeadasa);
 
 // Szavazat visszavonása
 // DELETE /api/szavazat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId }
 router.delete('/szavazat', authMiddleware, JavaslatController.szavazatVisszavonasa);
 

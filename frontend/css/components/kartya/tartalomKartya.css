@@ -1,0 +1,90 @@
+/* frontend/css/components/kartya/tartalomKartya.css */
+
+/* ---------------------------------------- */
+/* CÍM                                      */
+/* ---------------------------------------- */
+
+/* Tartalom cím – a fejléc legfontosabb eleme, kitölti a rendelkezésre álló helyet */
+.tartalom-kartya__cim {
+  flex: 1;                              /* Kitölti a maradék helyet az ikonok előtt */
+  font-size: var(--text-sm);            /* Kompakt, de olvasható */
+  font-weight: 600;                     /* Kiemelkedik a többi elemtől */
+  color: var(--color-text);             /* Elsődleges szövegszín */
+  white-space: nowrap;                  /* Egy sorban marad */
+  overflow: hidden;                     /* Túl hosszú cím ne lógjon ki */
+  text-overflow: ellipsis;              /* "..." jelzi a csonkítást */
+  min-width: 0;                         /* Flex csonkításhoz szükséges */
+}
+
+/* ---------------------------------------- */
+/* TÍPUS ÉS KATEGÓRIA IKONOK                */
+/* ---------------------------------------- */
+
+/* TartalomTípus ikon – a cím után, jobb oldalon */
+.tartalom-kartya__tipus-ikon {
+  font-size: var(--text-base);          /* Természetes emoji méret */
+  flex-shrink: 0;                       /* Nem zsugorodik el */
+  cursor: default;                      /* Nem kattintható önmagában */
+}
+
+/* Kategória ikonok konténere – egymás mellett, rés nélkül */
+.tartalom-kartya__kategoriak {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);                  /* Minimális rés az ikonok között */
+  flex-shrink: 0;                       /* A konténer nem zsugorodik */
+}
+
+/* Egyetlen kategória ikon */
+.tartalom-kartya__kategoria-ikon {
+  font-size: var(--text-sm);            /* Kicsit kisebb mint a típus ikon */
+  cursor: default;
+}
+
+/* ---------------------------------------- */
+/* TUDATPONT SOR                            */
+/* ---------------------------------------- */
+
+/* Saját és hierarchikus tudatpont konténere – jobb szélen, egymás mellett */
+.tartalom-kartya__tudatpont-sor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);                  /* Kis rés a két érték között */
+  flex-shrink: 0;                       /* Nem zsugorodik el kis képernyőn sem */
+  margin-left: auto;                    /* Jobbra tolja az egész sort */
+}
+
+/* Mindkét tudatpont elem közös stílusa */
+.tartalom-kartya__tudatpont {
+  font-size: var(--text-xs);            /* Kompakt – másodlagos adat */
+  font-weight: 500;
+  white-space: nowrap;                  /* Egy sorban marad */
+}
+
+/* Saját tudatpont – kevésbé hangsúlyos */
+.tartalom-kartya__tudatpont--sajat {
+  color: var(--color-text-muted);       /* Muted szín – nem elsődleges info */
+}
+
+/* Hierarchikus tudatpont – erősebb, ez mutatja az ág erejét */
+.tartalom-kartya__tudatpont--hierarchikus {
+  color: var(--color-primary);          /* Erdőzöld – a hierarchia ereje */
+  font-weight: 600;
+}
+
+/* ---------------------------------------- */
+/* BODY – SZÖVEG                            */
+/* ---------------------------------------- */
+
+/* A kiválasztott kártya szöveg tartalma */
+.tartalom-kartya__szoveg {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+  max-width: 72ch;
+  white-space: pre-wrap;   /* megmarad – sortörések megtartása */
+  overflow-wrap: break-word; /* ← hozzáadás: hosszú szavak törése */
+  word-break: break-word;    /* ← hozzáadás: szóhatár nélküli törés */
+  width: 100%;               /* ← hozzáadás: flex gyerekként kitölti a szélességet */
+  min-width: 0;              /* ← hozzáadás: flex min-width: auto felülírása */
+}

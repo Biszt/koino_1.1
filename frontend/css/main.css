@@ -1,78 +1,47 @@
 /* frontend/css/main.css */
 
-/* ===== ALAPOK IMPORTÁLÁSA ===== */
-/* A változókat mindig elsőként töltjük be, mert minden más függ tőle */
-@import url('base/variables.css');
 
-/* ===== KOMPONENSEK IMPORTÁLÁSA ===== */
-/* Gombok először, mert minden form használja */
-@import url('components/buttons.css');
+/* ===== ALAP STÍLUSOK ===== */
+@import './base/variables.css';
+@import './base/base.css';
 
-/* Form komponensek */
-@import url('components/bejelentkezes-form.css');
-@import url('components/regisztralas-form.css');
-@import url('components/fooldal-form.css');
 
-/* ===== GLOBÁLIS ALAPBEÁLLÍTÁSOK ===== */
-/* Box-sizing: minden elem mérete a border-ig számítódik */
-*,
-*::before,
-*::after {
-  box-sizing: border-box; /* Border és padding is a szélességbe számít */
-  margin: 0;              /* Alapértelmezett margó eltávolítása */
-  padding: 0;             /* Alapértelmezett padding eltávolítása */
-}
+/* ===== KOMPONENS STÍLUSOK ===== */
+@import './components/regisztracioForm.css';
+@import './components/bejelentkezesForm.css';
+@import './components/foOldal.css';
+@import './components/hamburgerMenu.css';
+@import './components/pakli.css';
+@import './components/szovegSzerkeszto.css';
+@import './components/eszkoztar.css';
 
-/* HTML elem: alapvető betűméret beállítása (minden rem-hez ez az alap) */
-html {
-  font-size: 16px;        /* 1rem = 16px - ez a hivatkozási alap */
-  -webkit-font-smoothing: antialiased;    /* Simább betűk renderelése Webkit böngészőkben */
-  -moz-osx-font-smoothing: grayscale;     /* Simább betűk renderelése Firefox-ban */
-}
 
-/* Body elem: oldal alapvető stílusai */
-body {
-  font-family: var(--font-family);        /* Betűcsalád a változókból */
-  font-size: var(--font-size-base);       /* Alap betűméret a változókból */
-  line-height: 1.5;                       /* Sormagasság az olvashatóságért */
-  color: var(--color-text);               /* Szöveg szín a változókból */
-  background-color: var(--color-background); /* Háttérszín a változókból */
-  min-height: 100vh;                      /* Minimum teljes viewport magasság */
-  overflow-x: hidden;                     /* Vízszintes görgetés tiltása */
-}
+/* ── KÁRTYA STÍLUSOK ── */
+/* Az alap kártya váz stílusa – minden típus-specifikus CSS erre épül */
+@import './components/kartya/kartya.css';
+/* Típus-specifikus kártya stílusok */
+@import './components/kartya/tartalomKartya.css';
+@import './components/kartya/kategoriaKartya.css';
+@import './components/kartya/tartalomTipusKartya.css';
+@import './components/kartya/javaslatKartya.css';
+@import './components/kartya/egyezmenyKartya.css';
 
-/* Képek: reszponzív viselkedés alapértelmezetten */
-img {
-  max-width: 100%;        /* Soha ne lógjon ki a konténerből */
-  height: auto;           /* Magasság automatikus arányosan */
-  display: block;         /* Block elem (nincs alulról felesleges hely) */
-}
 
-/* Linkek: alapértelmezett stílusok felülírása */
-a {
-  color: var(--color-primary);     /* Link szín a változókból */
-  text-decoration: none;           /* Aláhúzás eltávolítása */
-  transition: color var(--transition-normal); /* Sima színátmenet */
-}
+/* ── SZÖVEG MEZŐ MEGJELENÍTŐ ── */
+/* A kártyák body-jában lévő csak olvasható blokk renderelő stílusa.
+   A szovegSzerkeszto.css UTÁN kell importálni, mert a blokk
+   osztályait felülírja megjelenítő módra (.szoveg-mezo-megjelenito kontextusson belül). */
+@import './components/szoveg/szovegMezoMegjelenito.css';
 
-/* Link hover állapot */
-a:hover {
-  color: var(--color-primary-dark); /* Sötétebb árnyalat rámutatáskor */
-}
 
-/* Input mezők: alapértelmezett böngésző stílusok felülírása */
-input,
-textarea,
-select {
-  font-family: inherit;   /* Betűcsalád örökítése a body-tól */
-  font-size: inherit;     /* Betűméret örökítése a body-tól */
-  line-height: inherit;   /* Sormagasság örökítése a body-tól */
-}
+/* ── MODAL STÍLUSOK ── */
+/* Az alap modal váz stílusa – minden specifikus modal erre épül */
+@import './components/modals/modal.css';
 
-/* Gombok: alapértelmezett böngésző stílusok eltávolítása */
-button {
-  font-family: inherit;   /* Betűcsalád örökítése */
-  cursor: pointer;        /* Mutató kurzor hover esetén */
-  border: none;           /* Alapértelmezett keret eltávolítása */
-  background: none;       /* Alapértelmezett háttér eltávolítása */
-}
+
+/* ── MODAL SPECIFIKUS STÍLUSOK ── */
+/* A modal/ almappa: minden specifikus modal form stílusa ide kerül */
+@import './components/modals/tartalomModal.css';
+@import './components/modals/kategoriaModal.css';
+@import './components/modals/tartalomTipusModal.css';
+@import './components/modals/javaslatModal.css';

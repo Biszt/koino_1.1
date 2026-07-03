@@ -19,7 +19,7 @@ class ErtekJavaslatController {
   // ----- EMBERI ÉRTÉK JAVASLAT MENTÉSE -----
   /**
    * POST /api/ertekJavaslat
-   * Ember javaslatot ad vagy módosít egy tartalom küszöbértékeihez
+   * eEmber javaslatot ad vagy módosít egy tartalom küszöbértékeihez
    * 
    * Body:
    * {
@@ -38,16 +38,16 @@ class ErtekJavaslatController {
       console.log('ertekJavaslatLetrehozasaVagyModositasa endpoint hívás');
       
       // 1. LÉPÉS - EMBER AZONOSÍTÁSA
-      // A ember ID-t az auth middleware-ből kapjuk (req.user)
-      const emberId = req.user?.id;
+      // A eember ID-t az auth middleware-ből kapjuk (req.user)
+      const eemberId = req.user?.id;
       
-      if (!emberId) {
+      if (!eemberId) {
         return res.status(401).json({ 
           message: 'Authentikáció szükséges' 
         });
       }
       
-      console.log('Ember ID:', emberId);
+      console.log('eEmber ID:', eemberId);
       
       // 2. LÉPÉS - KÉRÉS ADATAINAK KIOLVASÁSA
       const { 
@@ -125,7 +125,7 @@ class ErtekJavaslatController {
       // 5. LÉPÉS - SERVICE HÍVÁS
       // A service végzi el a tudatpont ellenőrzést, validációt és mentést
       const eredmeny = await ertekSzamitasService.ertekJavaslatLetrehozasaVagyModositasa(
-        emberId,
+        eemberId,
         tartalomId,
         javaslatElfogadasiKuszob,
         reszveteliAranyKuszob,
@@ -251,7 +251,7 @@ class ErtekJavaslatController {
   // ----- EMBER JAVASLATÁNAK LEKÉRÉSE -----
   /**
    * GET /api/ertekJavaslat/sajat/:tartalomId
-   * A bejelentkezett ember saját javaslatának lekérése egy tartalomhoz
+   * A bejelentkezett eember saját javaslatának lekérése egy tartalomhoz
    * 
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
@@ -261,15 +261,15 @@ class ErtekJavaslatController {
       console.log('sajatErtekJavaslatLekerese endpoint hívás');
       
       // 1. LÉPÉS - EMBER AZONOSÍTÁSA
-      const emberId = req.user?.id;
+      const eemberId = req.user?.id;
       
-      if (!emberId) {
+      if (!eemberId) {
         return res.status(401).json({ 
           message: 'Authentikáció szükséges' 
         });
       }
       
-      console.log('Ember ID:', emberId);
+      console.log('eEmber ID:', eemberId);
       
       // 2. LÉPÉS - TARTALOM ID KIOLVASÁSA
       const { tartalomId } = req.params;
@@ -284,8 +284,8 @@ class ErtekJavaslatController {
       }
       
       // 4. LÉPÉS - SERVICE HÍVÁS
-      const ertekJavaslat = await ertekSzamitasService.emberErtekJavaslatanakLekerese(
-        emberId,
+      const ertekJavaslat = await ertekSzamitasService.eemberErtekJavaslatanakLekerese(
+        eemberId,
         tartalomId
       );
       
@@ -334,7 +334,7 @@ class ErtekJavaslatController {
   // ----- TARTALOM + AKTUÁLIS ÉRTÉKEK + EMBER ÉRTÉK JAVASLATA -----
   /**
    * GET /api/ertekJavaslat/reszletek/:tartalomId
-   * Egy tartalom aktuális értékei + a ember saját javaslata (ha van)
+   * Egy tartalom aktuális értékei + a eember saját javaslata (ha van)
    * 
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
@@ -344,9 +344,9 @@ class ErtekJavaslatController {
       console.log('tartalomErtekReszletei endpoint hívás');
       
       // 1. LÉPÉS - EMBER AZONOSÍTÁSA (opcionális)
-      const emberId = req.user?.id || null; 
+      const eemberId = req.user?.id || null; 
       
-      console.log('Ember ID:', emberId || 'vendég');
+      console.log('eEmber ID:', eemberId || 'vendég');
       
       // 2. LÉPÉS - TARTALOM ID KIOLVASÁSA
       const { tartalomId } = req.params;
@@ -364,11 +364,11 @@ class ErtekJavaslatController {
       const aktualisErtekek = await ertekSzamitasService.aktulisErtekekLekerese(tartalomId);
       
       // 5. LÉPÉS - EMBER JAVASLATÁNAK LEKÉRÉSE (ha be van jelentkezve)
-      let emberJavaslat = null;
+      let eemberJavaslat = null;
       
-      if (emberId) {
-        emberJavaslat = await ertekSzamitasService.emberErtekJavaslatanakLekerese(
-          emberId,
+      if (eemberId) {
+        eemberJavaslat = await ertekSzamitasService.eemberErtekJavaslatanakLekerese(
+          eemberId,
           tartalomId
         );
       }
@@ -386,13 +386,13 @@ class ErtekJavaslatController {
           osszesJavaslat: aktualisErtekek.osszesJavaslat,
           utolsoFrissites: aktualisErtekek.utolsoFrissites
         },
-        emberJavaslat: emberJavaslat ? {
-          javaslatElfogadasiKuszob: emberJavaslat.javaslatElfogadasiKuszob,
-          reszveteliAranyKuszob: emberJavaslat.reszveteliAranyKuszob,
-          minimumDontesiIdo: emberJavaslat.minimumDontesiIdo,
-          maximumDontesiIdo: emberJavaslat.maximumDontesiIdo,
-          letrehozva: emberJavaslat.letrehozva,
-          modositva: emberJavaslat.modositva
+        eemberJavaslat: eemberJavaslat ? {
+          javaslatElfogadasiKuszob: eemberJavaslat.javaslatElfogadasiKuszob,
+          reszveteliAranyKuszob: eemberJavaslat.reszveteliAranyKuszob,
+          minimumDontesiIdo: eemberJavaslat.minimumDontesiIdo,
+          maximumDontesiIdo: eemberJavaslat.maximumDontesiIdo,
+          letrehozva: eemberJavaslat.letrehozva,
+          modositva: eemberJavaslat.modositva
         } : null
       });
       

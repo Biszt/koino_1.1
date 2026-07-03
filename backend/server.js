@@ -6,36 +6,36 @@ console.info('server.js indítása...');
 // SZÜKSÉGES KÖNYVTÁRAK IMPORTÁLÁSA
 // ===================================
 
-const express = require('express'); // Web szerver keretrendszer
-const mongoose = require('mongoose'); // MongoDB kapcsolat
-const cors = require('cors'); // Cross-Origin Resource Sharing
-const path = require('path'); // Útvonal kezelés
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
 
-// Környezeti változók betöltése .env fájlból
 require('dotenv').config();
 
 // ===================================
 // ÚTVONALAK IMPORTÁLÁSA
 // ===================================
 
-// Ember útvonalak importálása
-const emberRoutes = require('./routes/emberRoutes');
-// Lokáció útvonalak importálása
+const eemberRoutes = require('./routes/eemberRoutes');
 const lokacioRoutes = require('./routes/lokacioRoutes');
-// Tartalom routes importálása
 const tartalomRoutes = require('./routes/tartalomRoutes');
-// Tudatpont routes importálása
 const tudatpontRoutes = require('./routes/tudatpontRoutes');
-// Kategória routes importálása
 const kategoriaRoutes = require('./routes/kategoriaRoutes');
-// Tartalom Típus routes importálása
 const tartalomTipusRoutes = require('./routes/tartalomTipusRoutes');
-// Javaslat routes importálása
 const javaslatRoutes = require('./routes/javaslatRoutes');
-// Érték Javaslat routes importálása
 const ertekJavaslatRoutes = require('./routes/ertekJavaslatRoutes');
-// Egyezmény routes importálása
 const egyezmenyRoutes = require('./routes/egyezmenyRoutes');
+
+// ÚJ – Értesítési rendszer routes importálása
+const ertesitesRoutes = require('./routes/ertesitesRoutes');
+const ertesitesiBeallitasRoutes = require('./routes/ertesitesiBeallitasRoutes');
+// Platform statisztika route importálása
+const platformStatisztikaRoutes = require('./routes/platformStatisztikaRoutes');
+// ÚJ – Pakli route importálása
+const pakliRoutes = require('./routes/pakliRoutes');
+
+const feltoltesRoutes = require('./routes/feltoltesRoutes');
 
 // ===================================
 // EXPRESS ALKALMAZÁS LÉTREHOZÁSA
@@ -47,76 +47,99 @@ const app = express();
 // MIDDLEWARE-EK BEÁLLÍTÁSA
 // ===================================
 
-// CORS engedélyezése (frontend-backend kommunikációhoz)
 app.use(cors());
-
-// JSON adatok feldolgozása a kérésekből
 app.use(express.json());
 
-// Statikus fájlok kiszolgálása (frontend)
-app.use(express.static('frontend'));
+// Diagnosztika: kiírjuk az elérési utakat, hogy lássuk hol keres a szerver
+// __dirname = a server.js fájl mappája (pl. /app/backend)
+// process.cwd() = a futtatás helye (pl. /app)
+console.log('__dirname:', __dirname);
+console.log('process.cwd():', process.cwd());
+
+// A projekt gyökér meghatározása:
+// server.js helye: koino_1.1/backend/server.js
+// frontend helye: koino_1.1/frontend/index.html
+// Tehát a gyökér: __dirname + '..' = koino_1.1/
+const PROJEKT_GYOKER = path.resolve(__dirname, '..');
+
+// Diagnosztika: kiírjuk a kiszámított gyökér útvonalat
+console.log('PROJEKT_GYOKER:', PROJEKT_GYOKER);
+console.log('Frontend útvonal:', path.join(PROJEKT_GYOKER, 'frontend'));
+console.log('index.html útvonal:', path.join(PROJEKT_GYOKER, 'frontend', 'index.html'));
+
+// Statikus fájlok kiszolgálása a frontend mappából
+// pl. koino_1.1/frontend/css/main.css → http://localhost:3000/css/main.css
+app.use(express.static(path.join(PROJEKT_GYOKER, 'frontend')));
+
+// Feltöltött fájlok kiszolgálása – böngészőben futtatható kiterjesztések
+// letöltésként kezelve (Content-Type felülírással)
+app.use('/uploads', (req, res, next) => {
+  const kiszolgalasKentToltendo = ['.js', '.html', '.htm', '.svg', '.ts', '.mjs'];
+  const kiterjesztes = path.extname(req.path).toLowerCase();
+
+  if (kiszolgalasKentToltendo.includes(kiterjesztes)) {
+    // Böngésző nem futtatja, csak letölti
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment');
+  }
+
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // ===================================
 // ÚTVONALAK REGISZTRÁLÁSA
 // ===================================
 
-// Minden /api előtaggal kezdődik
-
-// /api/ember... útvonalak kezelése
-app.use('/api', emberRoutes);
-
-// /api/lokacio... útvonalak kezelése
+app.use('/api', eemberRoutes);
 app.use('/api', lokacioRoutes);
-
-// /api/tartalom... útvonalak kezelése
 app.use('/api/tartalom', tartalomRoutes);
-
-// /api/tudatpont... útvonalak kezelése
 app.use('/api/tudatpont', tudatpontRoutes);
-
-// /api/kategoria... útvonalak kezelése
 app.use('/api/kategoria', kategoriaRoutes);
-
-// /api/tartalomTipus... útvonalak kezelése
 app.use('/api/tartalomTipus', tartalomTipusRoutes);
-
-// /api/javaslat... útvonalak kezelése
 app.use('/api/javaslat', javaslatRoutes);
-
-// /api/ertekJavaslat... útvonalak kezelése 
 app.use('/api', ertekJavaslatRoutes);
+app.use('/api/egyezmeny', egyezmenyRoutes);
 
-// /api/egyezmeny... útvonalak kezelése
-app.use('/api/egyezmeny', egyezmenyRoutes); 
+// Értesítési rendszer route-ok regisztrálása
+app.use('/api/ertesitesek', ertesitesRoutes);
+app.use('/api/ertesitesi-beallitasok', ertesitesiBeallitasRoutes);
+// Platform statisztika route regisztrálása
+app.use('/api', platformStatisztikaRoutes);
+// ÚJ – Pakli route regisztrálása
+app.use('/api/pakli', pakliRoutes);
+// Feltöltés route regisztrálása
+app.use('/api/feltoltes', feltoltesRoutes);
 
 // ===================================
 // GYÖKÉR ÚTVONAL
 // ===================================
 
-// Gyökér útvonal - index.html kiszolgálása
 app.get('/', (req, res) => {
-  res.sendFile('frontend/index.html');
+// Az index.html abszolút elérési útja
+const celFajl = path.join(PROJEKT_GYOKER, 'frontend', 'index.html');
+
+// Diagnosztika: kiírjuk melyik fájlt próbáljuk kiszolgálni
+console.log('index.html kiszolgálása:', celFajl);
+
+res.sendFile(celFajl);
 });
 
 // ===================================
 // MONGODB KAPCSOLAT ÉS SZERVER INDÍTÁSA
 // ===================================
 
-mongoose.connect(process.env.MONGODB_URI) // .env-ben tárolt DB kapcsolat
-  .then(() => {
-    console.log('MongoDB kapcsolat sikeres'); // Sikeres DB kapcsolat
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => {
+console.log('MongoDB kapcsolat sikeres');
 
-    // Javaslat időzítés indítása (percenkénti frissítés és végrehajtás)
-    const javaslatCronJob = require('./jobs/javaslatCronJob');
-    javaslatCronJob.start();
-    
-    // Sikeres DB kapcsolat után: szerver indítása 3000-es porton
-    app.listen(3000, () => {
-      console.log('Szerver fut a 3000-es porton');
-      console.log('Elérhető: http://localhost:3000');
-    });
-  })
-  .catch((err) => {
-    // DB kapcsolat hiba esetén: hibaüzenet
-    console.error('Database connection error:', err);
-  });
+const javaslatCronJob = require('./jobs/javaslatCronJob');
+javaslatCronJob.start();
+
+app.listen(3000, () => {
+console.log('Szerver fut a 3000-es porton');
+console.log('Elérhető: http://localhost:3000');
+});
+})
+.catch((err) => {
+console.error('Database connection error:', err);
+});

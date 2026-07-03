@@ -87,7 +87,7 @@ router.get(
 // Törlés csak automatikusan történik a következő esetben:
 // 
 // 1. AUTOMATIKUS Törlés - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 

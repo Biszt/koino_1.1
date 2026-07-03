@@ -1,0 +1,203 @@
+/* frontend/css/components/modal/javaslatModal.css */
+
+/* ===== JAVASLAT MODAL ALAP KONTÉNER ===== */
+.javaslat-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ===== LÉPÉS ALAP ===== */
+/* Minden lépés ugyanezt az alap stílust kapja */
+.javaslat-modal__lepes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Rejtett lépés — JS cseréli le ezt az osztályt */
+.javaslat-modal__lepes--rejtett {
+  display: none;
+}
+
+/* ===== 1. LÉPÉS: TÍPUS VÁLASZTÓ ===== */
+
+/* Bevezető szöveg */
+.javaslat-modal__bevezeto {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+/* Típus gombok konténere — függőleges lista mobilon */
+.javaslat-modal__tipus-gombok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Egyedi típus gomb */
+.javaslat-modal__tipus-gomb {
+  display: grid;
+  /* Ikon | Felirat+Leírás | → nyíl helye */
+  grid-template-columns: 2rem 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-interactive),
+              border-color var(--transition-interactive),
+              box-shadow var(--transition-interactive);
+  /* Minimális érintési felület mobilon */
+  min-height: 44px;
+}
+
+.javaslat-modal__tipus-gomb:hover {
+  background: var(--color-surface-offset);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.javaslat-modal__tipus-gomb:active {
+  background: var(--color-primary-highlight);
+}
+
+/* Ikon — mindkét sorban középre igazítva */
+.javaslat-modal__tipus-gomb-ikon {
+  grid-row: 1 / 3;
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Felirat — félkövér, fő szöveg */
+.javaslat-modal__tipus-gomb-felirat {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+/* Leírás — kisebb, halványabb, második sor */
+.javaslat-modal__tipus-gomb-leiras {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* ===== 2. ÉS 3. LÉPÉS: VISSZA GOMB ===== */
+.javaslat-modal__vissza-gomb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-interactive);
+  /* Érintési felület */
+  min-height: 44px;
+}
+
+.javaslat-modal__vissza-gomb:hover {
+  color: var(--color-primary);
+}
+
+/* ===== 2. LÉPÉS: FORMA KONTÉNER ===== */
+/* A JS-ben épülő tartalom helye — nem kap külön stílust,
+   a benne lévő elemek a mezo-csoport osztályt kapják */
+.javaslat-modal__forma-kontener {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ===== 3. LÉPÉS: MEZŐK (indoklás + tudatpont) ===== */
+
+/* Mező csoport — label + input/textarea + segédszöveg egyben */
+.javaslat-modal__mezo-csoport {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Cimke */
+.javaslat-modal__cimke {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Kötelező csillag */
+.javaslat-modal__kotelezo {
+  color: var(--color-error);
+  margin-left: var(--space-1);
+}
+
+/* Szövegmező (indoklás) */
+.javaslat-modal__textarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color var(--transition-interactive),
+              box-shadow var(--transition-interactive);
+}
+
+.javaslat-modal__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+.javaslat-modal__textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+/* Karakterszámláló */
+.javaslat-modal__szamlalo {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* Figyelmeztetés, ha közel van a limithez — JS adja hozzá */
+.javaslat-modal__szamlalo--figyelem {
+  color: var(--color-warning);
+}
+
+/* Input (kezdő tudatpont) */
+.javaslat-modal__input {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  transition: border-color var(--transition-interactive),
+              box-shadow var(--transition-interactive);
+}
+
+.javaslat-modal__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+.javaslat-modal__input::placeholder {
+  color: var(--color-text-faint);
+}

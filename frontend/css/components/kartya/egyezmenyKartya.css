@@ -1,0 +1,85 @@
+/* frontend/css/components/kartya/egyezmenyKartya.css */
+
+/* ---------------------------------------- */
+/* JELZŐ IKON                               */
+/* ---------------------------------------- */
+
+/* 🤝 ikon – az egyezmény vizuális azonosítója a fejlécben */
+.egyezmeny-kartya__jelzo {
+  font-size: var(--text-base);          /* Természetes emoji méret */
+  flex-shrink: 0;                       /* Nem zsugorodik el */
+  cursor: default;                      /* Nem kattintható */
+}
+
+/* ---------------------------------------- */
+/* TÍPUS                                    */
+/* ---------------------------------------- */
+
+/* A lezárt javaslat típusának pillanatképe – fő szöveges elem */
+.egyezmeny-kartya__tipus {
+  flex: 1;                              /* Kitölti a maradék helyet */
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);       /* Muted – az egyezmény archivált, nem aktív */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;                         /* Flex csonkításhoz szükséges */
+}
+
+/* ---------------------------------------- */
+/* MUTATÓK SOR                              */
+/* ---------------------------------------- */
+
+/* Végrehajtáskori mutatók konténere – kompakt, jobb szélen */
+.egyezmeny-kartya__mutatok-sor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;                    /* Jobbra tolja */
+}
+
+/* Egyetlen mutató elem – alap stílus */
+.egyezmeny-kartya__mutato {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Támogatottsági arány – zöld, ez a legfontosabb végrehajtáskori érték */
+.egyezmeny-kartya__mutato--tamogatottsagi {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* Bizonyossági mutató – primary erdőzöld */
+.egyezmeny-kartya__mutato--bizonyossagi {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ---------------------------------------- */
+/* BODY – RÉSZVÉTELI ARÁNY RÉSZLET          */
+/* ---------------------------------------- */
+
+/* Részvételi arány sor konténere a body-ban */
+.egyezmeny-kartya__reszletek-sor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);                  /* Kis rés a cimke és az érték között */
+}
+
+/* Részvételi arány cimkéje */
+.egyezmeny-kartya__reszlet-cimke {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Részvételi arány értéke */
+.egyezmeny-kartya__reszlet-ertek {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  font-weight: 600;
+}

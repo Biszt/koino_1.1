@@ -1,0 +1,31 @@
+<!-- frontend/templates/kartya.html -->
+<div class="pakli-kartya" aria-selected="false">
+
+  <!-- Segéd lap: a szülő kártya lekerekített sarkát "tölti ki" felülről.
+       Csak akkor látható, ha a kártyán rajta van a pakli-kartya--gyerek-felette osztály.
+       Azért van a belső wrapperen kívül, hogy a border-radius ne hasson rá. -->
+  <div class="pakli-kartya__segedelap" aria-hidden="true"></div>
+
+  <!-- Belső wrapper: ez kapja az overflow: hidden + border-radius értékeket,
+       hogy a fejléc és body tartalom szépen le legyen kerekítve,
+       de a segéd lap érintetlen maradjon. -->
+  <div class="pakli-kartya__belso">
+
+    <!-- Fejléc: minden kártyán megjelenik -->
+    <div class="pakli-kartya__fejlec">
+      <div class="pakli-kartya__hamburger-kontener">
+        <!-- HamburgerMenu.js tölti fel -->
+      </div>
+      <div class="pakli-kartya__fejlec-tartalom">
+        <!-- típus-specifikus fejléc tartalom – leszármazott osztályok töltik fel -->
+      </div>
+    </div>
+
+    <!-- Body: csak kiválasztott kártyán jelenik meg, hidden attribútummal indul -->
+    <div class="pakli-kartya__body" hidden>
+      <!-- típus-specifikus body tartalom – leszármazott osztályok töltik fel -->
+    </div>
+
+  </div><!-- /.pakli-kartya__belso -->
+
+</div><!-- /.pakli-kartya -->

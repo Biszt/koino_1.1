@@ -22,10 +22,10 @@ const JavaslatController = {
  */
 async javaslatLetrehozasa(req, res) {
   try {
-    // 1. LÉPÉS - Ember ID
-    const emberId = req.user?.id;
+    // 1. LÉPÉS - eEmber ID
+    const eemberId = req.user?.id;
     
-    if (!emberId) {
+    if (!eemberId) {
       return res.status(401).json({
         success: false,
         message: 'Bejelentkezés szükséges'
@@ -57,9 +57,9 @@ async javaslatLetrehozasa(req, res) {
     }
     
     // 5. LÉPÉS - Service hívás (3 paraméterrel!)
-    const eredmeny = await JavaslatService.javaslatLetrehozasa(
+    const eredmeny = await JavaslatService.javaslatLetrehozas(
       javaslatAdatok,    // 1. paraméter
-      emberId,     // 2. paraméter
+      eemberId,     // 2. paraméter
       kezdoTudatpont     // 3. paraméter ← VISSZATÉVE!
     );
     
@@ -225,10 +225,10 @@ async javaslatLetrehozasa(req, res) {
       // 1. LÉPÉS - Javaslat ID kiolvasása URL paraméterből
       const javaslatId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      const emberId = req.user?.id;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id;
 
-      if (!emberId) {
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
@@ -236,7 +236,7 @@ async javaslatLetrehozasa(req, res) {
       }
 
       // 3. LÉPÉS - Service hívás - részletes adatok lekérése
-      const reszletek = await JavaslatService.javaslatReszleteinekLekerese(javaslatId, emberId);
+      const reszletek = await JavaslatService.javaslatReszleteinekLekerese(javaslatId, eemberId);
 
       // 4. LÉPÉS - Sikeres válasz küldése
       // 200 OK - Sikeres lekérés
@@ -275,9 +275,9 @@ async javaslatLetrehozasa(req, res) {
  */
 async szavazatLeadasa(req, res) {
   try {
-    // 1. LÉPÉS - Ember ID kiolvassa JWT middleware-ből
-    const emberId = req.user?.id;
-    if (!emberId) {
+    // 1. LÉPÉS - eEmber ID kiolvassa JWT middleware-ből
+    const eemberId = req.user?.id;
+    if (!eemberId) {
       return res.status(401).json({
         success: false,
         message: 'Bejelentkezés szükséges'
@@ -304,7 +304,7 @@ async szavazatLeadasa(req, res) {
 
     // 4. LÉPÉS - Service hívás - szavazat leadása
     const eredmeny = await SzavazatService.szavazatLeadasa(
-      emberId,
+      eemberId,
       javaslatId,
       szavazatTipus
     );
@@ -366,9 +366,9 @@ async szavazatLeadasa(req, res) {
  */
 async szavazatVisszavonasa(req, res) {
   try {
-    // 1. LÉPÉS - Ember ID kiolvassa JWT middleware-ből
-    const emberId = req.user?.id;
-    if (!emberId) {
+    // 1. LÉPÉS - eEmber ID kiolvassa JWT middleware-ből
+    const eemberId = req.user?.id;
+    if (!eemberId) {
       return res.status(401).json({
         success: false,
         message: 'Bejelentkezés szükséges'
@@ -388,7 +388,7 @@ async szavazatVisszavonasa(req, res) {
 
     // 4. LÉPÉS - Service hívás - szavazat törlése
     const eredmeny = await SzavazatService.szavazatTorlese(
-      emberId,
+      eemberId,
       javaslatId
     );
 

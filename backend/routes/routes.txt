@@ -1,3 +1,131 @@
+// backend/routes/eemberRoutes.js
+
+// Express Router importálása - ez kezeli az útvonalakat
+const express = require('express');
+
+// Router példány létrehozása - ez egy mini Express alkalmazás
+const router = express.Router();
+
+// Controller importálása - ez fogja kezelni az üzleti logikát
+const eemberController = require('../controllers/eemberController');
+
+// ===== ÚTVONALAK DEFINIÁLÁSA =====
+
+// eEmber regisztráció
+// POST kérés: /api/eember/regisztracio
+router.post('/eember/regisztracio', eemberController.regisztracio);
+
+// eEmber bejelentkezés
+// POST kérés: /api/eember/bejelentkezes
+router.post('/eember/bejelentkezes', eemberController.bejelentkezes);
+
+// Router exportálása - ezt importálja a server.js
+module.exports = router;
+
+
+
+
+// backend/routes/egyezmenyRoutes.js
+
+// =====================================================
+// EXPRESS ROUTER IMPORTÁLÁSA
+// =====================================================
+const express = require('express');
+
+// =====================================================
+// ROUTER PÉLDÁNY LÉTREHOZÁSA
+// =====================================================
+const router = express.Router();
+
+// =====================================================
+// CONTROLLER IMPORTÁLÁSA
+// =====================================================
+const egyezmenyController = require('../controllers/egyezmenyController');
+
+// =====================================================
+// MIDDLEWARE IMPORTÁLÁSA
+// =====================================================
+// Destrukturálással importáljuk, mert objektumként van exportálva
+const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/authMiddleware');
+
+// =====================================================
+// ÚTVONALAK DEFINIÁLÁSA
+// =====================================================
+
+// -------------------------------------
+// KOLLEKCIÓ SZINTŰ ÚTVONALAK
+// Útvonalak, amelyek az összes egyezményre vonatkoznak
+// -------------------------------------
+
+/**
+ * Egyezmények listázása szűrőkkel
+ * GET /api/egyezmeny?javaslatTipus=Torles&limit=20&skip=0
+ * NYILVÁNOS - mindenki elérheti
+ */
+router.get(
+  '/',
+  (req, res) => egyezmenyController.egyezmenyekListazasa(req, res)
+);
+
+// -------------------------------------
+// SPECIFIKUS ERŐFORRÁS ÚTVONALAK
+// Részletesebb, többszegmensű útvonalak előbb!
+// -------------------------------------
+
+/**
+ * Javaslat egyezményének lekérése
+ * GET /api/egyezmeny/javaslat/:javaslatId
+ * NYILVÁNOS - mindenki elérheti
+ */
+router.get(
+  '/javaslat/:javaslatId',
+  (req, res) => egyezmenyController.javaslatEgyezmenye(req, res)
+);
+
+/**
+ * Egyezmény részletes adatainak lekérése tudatpont adatokkal
+ * GET /api/egyezmeny/:id/reszletek
+ * RÉSZBEN VÉDETT - opcionális authentikáció
+ * Ha be van jelentkezve, megkapja a saját tudatpont hozzájárulását is
+ */
+router.get(
+  '/:id/reszletek',
+  optionalAuthMiddleware, // Opcionális auth - vendégként is elérhető
+  (req, res) => egyezmenyController.egyezmenyReszleteinekLekerese(req, res)
+);
+
+// -------------------------------------
+// ÁLTALÁNOS ERŐFORRÁS ÚTVONALAK
+// Egyszegmensű dinamikus útvonalak később!
+// -------------------------------------
+
+/**
+ * Egy egyezmény lekérése ID alapján
+ * GET /api/egyezmeny/:id
+ * NYILVÁNOS - mindenki elérheti
+ */
+router.get(
+  '/:id',
+  (req, res) => egyezmenyController.egyezmenyLekerese(req, res)
+);
+
+// MEGJEGYZÉS: TÖRLÉS ENDPOINT NINCS!
+// Az egyezmények NEM törölhetők direkt DELETE kéréssel.
+// Törlés csak automatikusan történik a következő esetben:
+// 
+// 1. AUTOMATIKUS Törlés - Tudatpont nullázás
+//    - Ha minden eember visszavonja a tudatpontjait
+//    - És az osszesPont 0-ra csökken
+//    - Automatikusan törlődik (tudatpontService.js kezeli)
+
+// =====================================================
+// ROUTER EXPORTÁLÁSA
+// =====================================================
+module.exports = router;
+
+
+
+
 // backend/routes/ertekJavaslatRoutes.js
 
 // ===== EXPRESS ROUTER IMPORTÁLÁSA =====
@@ -15,14 +143,14 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // ===== ÚTVONALAK DEFINIÁLÁSA =====
 
-// ----- JAVASLAT LÉTREHOZÁSA VAGY MÓDOSÍTÁSA -----
+// -----ÉRTÉK JAVASLAT LÉTREHOZÁSA VAGY MÓDOSÍTÁSA -----
 // POST /api/ertekJavaslat
 // Védett endpoint - authentikáció szükséges
 // Body: { tartalomId, javaslatElfogadasiKuszob, reszveteliAranyKuszob }
 router.post(
   '/ertekJavaslat',
   authMiddleware,  // Authentikáció kötelező
-  ertekJavaslatController.javaslatLetrehozasaVagyModositasa
+  ertekJavaslatController.ertekJavaslatLetrehozasaVagyModositasa
 );
 
 // ----- AKTUÁLIS ÉRTÉKEK LEKÉRÉSE -----
@@ -33,19 +161,19 @@ router.get(
   ertekJavaslatController.aktualisErtekekLekerese
 );
 
-// ----- SAJÁT JAVASLAT LEKÉRÉSE -----
+// ----- SAJÁT ÉRTÉK JAVASLAT LEKÉRÉSE -----
 // GET /api/ertekJavaslat/sajat/:tartalomId
 // Védett endpoint - authentikáció szükséges
 router.get(
   '/ertekJavaslat/sajat/:tartalomId',
   authMiddleware,  // Authentikáció kötelező
-  ertekJavaslatController.sajatJavaslatLekerese
+  ertekJavaslatController.sajatErtekJavaslatLekerese
 );
 
 // ----- TARTALOM RÉSZLETES ÉRTÉKEI -----
 // GET /api/ertekJavaslat/reszletek/:tartalomId
 // Részben védett endpoint - authentikáció opcionális (vendégként is elérhető)
-// Ha be van jelentkezve, megkapja a saját javaslatát is
+// Ha be van jelentkezve, megkapja a saját érték javaslatát is
 router.get(
   '/ertekJavaslat/reszletek/:tartalomId',
   (req, res, next) => {
@@ -68,29 +196,79 @@ module.exports = router;
 
 
 
-// backend/routes/emberRoutes.js
 
-// Express Router importálása - ez kezeli az útvonalakat
+// backend/routes/ertesitesiBeallitasRoutes.js
+
 const express = require('express');
-
-// Router példány létrehozása - ez egy mini Express alkalmazás
 const router = express.Router();
 
-// Controller importálása - ez fogja kezelni az üzleti logikát
-const emberController = require('../controllers/emberController');
+const ertesitesiBeallitasController = require('../controllers/ertesitesiBeallitasController');
+const { authMiddleware } = require('../middlewares/authMiddleware');
 
-// ===== ÚTVONALAK DEFINIÁLÁSA =====
+// PUT /api/ertesitesi-beallitasok
+// Beállítás létrehozása vagy frissítése (upsert)
+// PUT-ot használunk POST helyett, mert ez egy "helyettesítő" művelet:
+// ha létezik → frissít, ha nem → létrehoz
+router.put('/', authMiddleware, ertesitesiBeallitasController.beallitasLetrehozasVagyFrissites);
 
-// Ember regisztráció
-// POST kérés: /api/ember/regisztracio
-router.post('/ember/regisztracio', emberController.regisztracio);
+// GET /api/ertesitesi-beallitasok
+// Az összes saját beállítás lekérése
+router.get('/', authMiddleware, ertesitesiBeallitasController.sajatBeallitasokLekereses);
 
-// Ember bejelentkezés
-// POST kérés: /api/ember/bejelentkezes
-router.post('/ember/bejelentkezes', emberController.bejelentkezes);
+// GET /api/ertesitesi-beallitasok/entitas/:entitasTipus/:entitasId
+// Egy konkrét entitáson lévő beállítás lekérése
+// Az entitasTipus az URL-ben van, mert az entitasId önmagában nem egyedi
+// (pl. egy Tartalom és egy Kategoria is lehet ugyanolyan ObjectId-vel)
+router.get(
+  '/entitas/:entitasTipus/:entitasId',
+  authMiddleware,
+  ertesitesiBeallitasController.entitasBeallitasLekereses
+);
 
-// Router exportálása - ezt importálja a server.js
+// DELETE /api/ertesitesi-beallitasok/:id
+// Egy beállítás törlése
+router.delete('/:id', authMiddleware, ertesitesiBeallitasController.beallitasTorles);
+
 module.exports = router;
+
+
+
+// backend/routes/ertesitesRoutes.js
+
+const express = require('express');
+const router = express.Router();
+
+// A controller importálása
+const ertesitesController = require('../controllers/ertesitesController');
+
+// A hitelesítési middleware importálása
+// Ez ellenőrzi, hogy az eEmber be van-e jelentkezve, és beállítja a req.eEmber objektumot
+const { authMiddleware } = require('../middlewares/authMiddleware');
+
+// Minden értesítési végpont csak bejelentkezett eEmbereknek érhető el
+// A authMiddleware middleware minden route elé kerül
+
+// GET /api/ertesitesek
+// A bejelentkezett eEmber postafiókja – lapozható lista
+router.get('/', authMiddleware, ertesitesController.postafiokLekereses);
+
+// GET /api/ertesitesek/olvasatlan-szam
+// Csak az olvasatlan értesítések száma (badge frissítéshez)
+// Fontos: ezt a route-ot a /:id előtt kell definiálni,
+// különben az Express az 'olvasatlan-szam' szöveget id-ként értelmezné
+router.get('/olvasatlan-szam', authMiddleware, ertesitesController.olvasatlanokSzama);
+
+// PATCH /api/ertesitesek/mind-olvasott
+// Az összes olvasatlan értesítés olvasottnak jelölése
+// Szintén a /:id előtt kell lennie
+router.patch('/mind-olvasott', authMiddleware, ertesitesController.mindetOlvasottnak);
+
+// PATCH /api/ertesitesek/:id/olvasott
+// Egy konkrét értesítés olvasottnak jelölése
+router.patch('/:id/olvasott', authMiddleware, ertesitesController.megjelolOlvasottnak);
+
+module.exports = router;
+
 
 
 // backend/routes/javaslatRoutes.js
@@ -127,7 +305,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Új javaslat létrehozása
 // POST /api/javaslat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, JavaslatController.javaslatLetrehozasa);
 
 // Javaslatok listázása szűrőkkel
@@ -142,7 +320,7 @@ router.get('/', JavaslatController.javaslatokListazasa);
 
 // Javaslat részletes adatainak lekérése
 // GET /api/javaslat/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, JavaslatController.javaslatReszleteinekLekerese);
 
 // Javaslat szavazatainak listázása
@@ -157,13 +335,13 @@ router.get('/:id/statisztika', JavaslatController.szavazatokStatisztikaja);
 
 // Szavazat leadása egy javaslatra
 // POST /api/szavazat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId, szavazatTipus }
 router.post('/szavazat', authMiddleware, JavaslatController.szavazatLeadasa);
 
 // Szavazat visszavonása
 // DELETE /api/szavazat
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId }
 router.delete('/szavazat', authMiddleware, JavaslatController.szavazatVisszavonasa);
 
@@ -181,6 +359,7 @@ router.get('/:id', JavaslatController.javaslatLekerese);
 // ROUTER EXPORTÁLÁSA
 // ===================================
 module.exports = router;
+
 
 
 
@@ -218,12 +397,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Új kategória létrehozása
 // POST /api/kategoria
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, kategoriaController.kategoriaLetrehozasa);
 
 // Kategóriák listázása szűrőkkel
 // GET /api/kategoria
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/', authMiddleware, kategoriaController.kategoriakListazasa);
 
 // -------------------------------------
@@ -233,7 +412,7 @@ router.get('/', authMiddleware, kategoriaController.kategoriakListazasa);
 
 // Kategória részletes adatainak lekérése tudatpont adatokkal
 // GET /api/kategoria/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, kategoriaController.kategoriaReszleteinekLekerese);
 
 // -------------------------------------
@@ -243,12 +422,12 @@ router.get('/:id/reszletek', authMiddleware, kategoriaController.kategoriaReszle
 
 // Egy kategória lekérése ID alapján
 // GET /api/kategoria/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id', authMiddleware, kategoriaController.kategoriaLekerese);
 
 // Kategória módosítása ID alapján
 // PATCH /api/kategoria/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.patch('/:id', authMiddleware, kategoriaController.kategoriaModositasa);
 
 // ===================================
@@ -259,7 +438,7 @@ router.patch('/:id', authMiddleware, kategoriaController.kategoriaModositasa);
 // Törlés csak automatikusan történik a következő esetekben:
 // 
 // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 //
@@ -273,6 +452,8 @@ router.patch('/:id', authMiddleware, kategoriaController.kategoriaModositasa);
 // ROUTER EXPORTÁLÁSA
 // ===================================
 module.exports = router;
+
+
 
 
 // backend/routes/lokacioRoutes.js
@@ -302,6 +483,8 @@ router.get('/lokacio/telepules', lokacioController.getTelepulesJavaslatok);
 
 // ===== ROUTER EXPORTÁLÁSA =====
 module.exports = router;
+
+
 
 
 // backend/routes/tartalomRoutes.js
@@ -338,12 +521,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // Új tartalom létrehozása
 // POST /api/tartalom
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, tartalomController.tartalomLetrehozasa);
 
 // Tartalmak listázása szűrőkkel
 // GET /api/tartalom
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/', authMiddleware, tartalomController.tartalomokListazasa);
 
 // -------------------------------------
@@ -353,7 +536,7 @@ router.get('/', authMiddleware, tartalomController.tartalomokListazasa);
 
 // Tartalom részletes adatainak lekérése tudatpont adatokkal
 // GET /api/tartalom/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, tartalomController.tartalomReszleteinekLekerese);
 
 // -------------------------------------
@@ -363,12 +546,12 @@ router.get('/:id/reszletek', authMiddleware, tartalomController.tartalomReszlete
 
 // Egy tartalom lekérése ID alapján
 // GET /api/tartalom/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id', authMiddleware, tartalomController.tartalomLekerese);
 
 // Tartalom módosítása ID alapján
 // PATCH /api/tartalom/:id
-// VÉDETT - csak bejelentkezett emberek
+// VÉDETT - csak bejelentkezett eemberek
 router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
 
 // ===================================
@@ -379,7 +562,7 @@ router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
 // Törlés csak automatikusan történik a következő esetekben:
 // 
 // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 //
@@ -393,6 +576,8 @@ router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
 // ROUTER EXPORTÁLÁSA
 // ===================================
 module.exports = router;
+
+
 
 
 // backend/routes/tartalomTipusRoutes.js
@@ -428,13 +613,13 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // -------------------------------------
 
 // Új tartalom típus létrehozása
-// POST /api/tartalomtipus
-// VÉDETT - csak bejelentkezett emberek
+// POST /api/tartalomTipus
+// VÉDETT - csak bejelentkezett eemberek
 router.post('/', authMiddleware, tartalomTipusController.tartalomTipusLetrehozasa);
 
 // Tartalom típusok listázása szűrőkkel
-// GET /api/tartalomtipus
-// VÉDETT - csak bejelentkezett emberek
+// GET /api/tartalomTipus
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/', authMiddleware, tartalomTipusController.tartalomTipusokListazasa);
 
 // -------------------------------------
@@ -443,8 +628,8 @@ router.get('/', authMiddleware, tartalomTipusController.tartalomTipusokListazasa
 // -------------------------------------
 
 // Tartalom típus részletes adatainak lekérése tudatpont adatokkal
-// GET /api/tartalomtipus/:id/reszletek
-// VÉDETT - csak bejelentkezett emberek
+// GET /api/tartalomTipus/:id/reszletek
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, tartalomTipusController.tartalomTipusReszleteinekLekerese);
 
 // -------------------------------------
@@ -453,13 +638,13 @@ router.get('/:id/reszletek', authMiddleware, tartalomTipusController.tartalomTip
 // -------------------------------------
 
 // Egy tartalom típus lekérése ID alapján
-// GET /api/tartalomtipus/:id
-// VÉDETT - csak bejelentkezett emberek
+// GET /api/tartalomTipus/:id
+// VÉDETT - csak bejelentkezett eemberek
 router.get('/:id', authMiddleware, tartalomTipusController.tartalomTipusLekerese);
 
 // Tartalom típus módosítása ID alapján
-// PATCH /api/tartalomtipus/:id
-// VÉDETT - csak bejelentkezett emberek
+// PATCH /api/tartalomTipus/:id
+// VÉDETT - csak bejelentkezett eemberek
 router.patch('/:id', authMiddleware, tartalomTipusController.tartalomTipusModositasa);
 
 // ===================================
@@ -470,7 +655,7 @@ router.patch('/:id', authMiddleware, tartalomTipusController.tartalomTipusModosi
 // Törlés csak automatikusan történik a következő esetekben:
 // 
 // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-//    - Ha minden ember visszavonja a tudatpontjait
+//    - Ha minden eember visszavonja a tudatpontjait
 //    - És az osszesPont 0-ra csökken
 //    - Automatikusan törlődik (tudatpontService.js kezeli)
 //
@@ -486,6 +671,8 @@ router.patch('/:id', authMiddleware, tartalomTipusController.tartalomTipusModosi
 module.exports = router;
 
 
+
+
 // backend/routes/tudatpontRoutes.js
 
 // ===== IMPORTOK =====
@@ -496,7 +683,7 @@ const router = express.Router();
 const TudatpontController = require('../controllers/tudatpontController');
 
 // Middleware importálása (authentikáció)
-// Az authMiddleware ellenőrzi a JWT token-t és req.user-be teszi a ember adatait
+// Az authMiddleware ellenőrzi a JWT token-t és req.user-be teszi a eember adatait
 const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/authMiddleware');
 // ✅ JAVÍTVA: Destrukturálás használata
 
@@ -509,7 +696,7 @@ const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/authM
 // ----- TUDATPONTOK HOZZÁRENDELÉSE ENTITÁSHOZ -----
 // Endpoint: POST /api/tudatpont/hozzarendeles
 // Body: { entitasId, entitasTipus, pontok }
-// Védett: Csak bejelentkezett emberek érhetik el
+// Védett: Csak bejelentkezett eemberek érhetik el
 router.post(
   '/hozzarendeles',
   authMiddleware,  // ✅ Most már function
@@ -538,21 +725,21 @@ router.get(
 // ----- EMBER ÖSSZES HOZZÁRENDELÉSÉNEK LEKÉRÉSE -----
 // Endpoint: GET /api/tudatpont/hozzarendelesek?limit=20&skip=0
 // Query paraméterek: limit (max 100), skip (lapozás)
-// Védett: Csak bejelentkezett emberek (saját hozzárendelések)
+// Védett: Csak bejelentkezett eemberek (saját hozzárendelések)
 router.get(
   '/hozzarendelesek',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberHozzarendeleseinekLekerese(req, res)
+  (req, res) => TudatpontController.eemberHozzarendeleseinekLekerese(req, res)
 );
 
 // ----- EMBER AKTÍV HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
 // Endpoint: GET /api/tudatpont/aktiv-hozzarendelesek?limit=20&skip=0
 // Query paraméterek: limit (max 100), skip (lapozás)
-// Védett: Csak bejelentkezett emberek (saját aktív hozzárendelések)
+// Védett: Csak bejelentkezett eemberek (saját aktív hozzárendelések)
 router.get(
   '/aktiv-hozzarendelesek',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberAktivHozzarendeleseinekLekerese(req, res)
+  (req, res) => TudatpontController.eemberAktivHozzarendeleseinekLekerese(req, res)
 );
 
 // ============================================================
@@ -592,20 +779,13 @@ router.post(
 // ----- EMBER JOGOSULTSÁGÁNAK ELLENŐRZÉSE -----
 // Endpoint: GET /api/tudatpont/jogosultsag/:entitasTipus/:entitasId
 // URL paraméterek: entitasTipus, entitasId
-// Védett: Csak bejelentkezett emberek
+// Védett: Csak bejelentkezett eemberek
 // Használat: szavazási jogosultság ellenőrzéséhez (javaslat rendszer)
 router.get(
   '/jogosultsag/:entitasTipus/:entitasId',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberJogosultsagEllenorzes(req, res)
+  (req, res) => TudatpontController.eemberJogosultsagEllenorzes(req, res)
 );
 
 // ===== ROUTER EXPORTÁLÁSA =====
 module.exports = router;
-
-
-
-
-
-
-

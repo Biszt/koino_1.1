@@ -1,25 +1,33 @@
-<!-- frontend/index.html -->
-
 <!DOCTYPE html>
+<!-- frontend/index.html -->
 <html lang="hu">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koino</title>
-    <!-- CSS fájl betöltése -->
-    <link rel="stylesheet" href="css/main.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Koino – Kollektív intelligencia online platform" />
+  <title>koino</title>
+
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link
+    href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,600,700&f[]=general-sans@400,500,600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./css/main.css" />
 </head>
 <body>
-    <!-- Bejelentkezés konténer -->
-    <div id="bejelentkezesContainer" style="display: none;"></div>
-    
-    <!-- Regisztráció konténer -->
-    <div id="regisztralasContainer" style="display: none;"></div>
-    
-    <!-- Főoldal konténer -->
-    <div id="fooldalContainer" style="display: none;"></div>
-    
-    <!-- JavaScript fájl betöltése (type="module" az ES6 importokhoz) -->
-    <script type="module" src="js/main.js"></script>
+
+  <!-- A main.js ide tölti be az aktuális oldalt -->
+  <div id="app"></div>
+
+  <!-- Sikeres bejelentkezés utáni átmeneti nézet.
+       Alapból rejtve – main.js jeleníti meg.
+       TODO: Fooldal.js elkészülte után cserélődik le. -->
+  <div id="udvozlo-nezet" hidden>
+    <p id="udvozlo-szoveg"></p>
+  </div>
+
+  <!-- type="module": ES6 import/export engedélyezése -->
+  <script type="module" src="./js/main.js"></script>
+
 </body>
 </html>

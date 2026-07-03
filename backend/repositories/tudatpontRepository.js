@@ -3,7 +3,7 @@
 // ===== MODELLEK IMPORTÁLÁSA =====
 const TudatpontAllokacio = require('../models/tudatpontAllokacio');
 const TudatpontHozzarendeles = require('../models/tudatpontHozzarendeles');
-const Ember = require('../models/ember');
+const eEmber = require('../models/eember');
 
 // ===== TUDATPONT REPOSITORY OSZTÁLY =====
 // Ez a réteg felelős a tudatpont adatok adatbázis műveleteiért
@@ -125,15 +125,15 @@ class TudatpontRepository {
   // ============================================================
 
   // ----- HOZZÁRENDELÉS KERESÉSE -----
-  // Egy ember hozzárendelésének keresése egy entitáson
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // Egy eember hozzárendelésének keresése egy entitáson
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {string} entitasId - Az entitás MongoDB ObjectId-ja
   // @param {string} entitasTipus - Az entitás típusa
   // @returns {Promise<Object|null>} A hozzárendelés objektum vagy null
-  async findHozzarendelesByEmberEsEntitas(emberId, entitasId, entitasTipus) {
+  async findHozzarendelesByeEmberEsEntitas(eemberId, entitasId, entitasTipus) {
     // MongoDB findOne művelet - compound keresés
     const hozzarendeles = await TudatpontHozzarendeles.findOne({
-      emberId: emberId,
+      eemberId: eemberId,
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
@@ -143,16 +143,16 @@ class TudatpontRepository {
 
   // ----- HOZZÁRENDELÉS LÉTREHOZÁSA VAGY FRISSÍTÉSE -----
   // Upsert művelet - ha létezik frissíti, ha nem létrehozza
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {string} entitasId - Az entitás MongoDB ObjectId-ja
   // @param {string} entitasTipus - Az entitás típusa
   // @param {number} tudatPontok - A hozzárendelendő tudatpontok száma
   // @returns {Promise<Object>} A létrehozott/frissített hozzárendelés
-  async upsertHozzarendeles(emberId, entitasId, entitasTipus, tudatPontok) {
+  async upsertHozzarendeles(eemberId, entitasId, entitasTipus, tudatPontok) {
     // MongoDB findOneAndUpdate upsert móddal
     const hozzarendeles = await TudatpontHozzarendeles.findOneAndUpdate(
       { 
-        emberId: emberId,
+        eemberId: eemberId,
         entitasId: entitasId,
         entitasTipus: entitasTipus
       },
@@ -173,15 +173,15 @@ class TudatpontRepository {
   }
 
   // ----- EMBER HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
-  // Egy ember összes hozzárendelésének lekérdezése
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // Egy eember összes hozzárendelésének lekérdezése
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {number} limit - Maximum ennyi hozzárendelés (alapértelmezett: 50)
   // @param {number} skip - Ennyi hozzárendelés kihagyása (lapozás)
   // @returns {Promise<Array>} Hozzárendelések tömbje
-  async findHozzarendelesekByEmber(emberId, limit = 50, skip = 0) {
+  async findHozzarendelesekByeEmber(eemberId, limit = 50, skip = 0) {
     // Hozzárendelések lekérése csökkenő időrend szerint (legfrissebb előre)
     const hozzarendelesek = await TudatpontHozzarendeles.find({
-      emberId: emberId
+      eemberId: eemberId
     })
     .sort({ frissitve: -1 })                               // Csökkenő időrend
     .limit(limit)                                          // Maximum ennyi rekord
@@ -192,14 +192,14 @@ class TudatpontRepository {
 
   // ----- AKTÍV HOZZÁRENDELÉSEK LEKÉRÉSE EMBERHOZ -----
   // Csak azok a hozzárendelések, ahol tudatPontok > 0
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {number} limit - Maximum ennyi hozzárendelés
   // @param {number} skip - Ennyi hozzárendelés kihagyása (lapozás)
   // @returns {Promise<Array>} Aktív hozzárendelések tömbje
-  async findAktivHozzarendelesekByEmber(emberId, limit = 50, skip = 0) {
+  async findAktivHozzarendelesekByeEmber(eemberId, limit = 50, skip = 0) {
     // Hozzárendelések lekérése szűréssel: csak ahol tudatPontok > 0
     const hozzarendelesek = await TudatpontHozzarendeles.find({
-      emberId: emberId,
+      eemberId: eemberId,
       tudatPontok: { $gt: 0 }                              // Greater than 0
     })
     .sort({ frissitve: -1 })                               // Csökkenő időrend
@@ -213,12 +213,12 @@ class TudatpontRepository {
 
   // ----- HOZZÁRENDELÉSEK LEKÉRÉSE ENTITÁSHOZ (POPULATE-TAL) -----
   // Entitáshoz tartozó tudatpont hozzárendelések lekérése
-  // ✅ POPULATE-TAL - embernevek betöltése (frontend megjelenítéshez)
+  // ✅ POPULATE-TAL - eembernevek betöltése (frontend megjelenítéshez)
   // @param {string} entitasId - Az entitás azonosítója
   // @param {string} entitasTipus - Az entitás típusa (Tartalom, Kategoria, TartalomTipus, Javaslat)
   // @param {number} limit - Maximum ennyi dokumentumot ad vissza
   // @param {number} skip - Ennyi dokumentumot ugorjon át (lapozáshoz)
-  // @returns {Promise<Array>} Hozzárendelések listája (embernevekkel)
+  // @returns {Promise<Array>} Hozzárendelések listája (eembernevekkel)
   async findHozzarendelesekByEntitas(entitasId, entitasTipus, limit = 100, skip = 0) {
     // Hozzárendelések lekérése tudatpontok szerint csökkenő sorrendben
     const hozzarendelesek = await TudatpontHozzarendeles.find({
@@ -229,7 +229,7 @@ class TudatpontRepository {
     .sort({ tudatPontok: -1 })                             // Legtöbb pont először
     .limit(limit)                                          // Maximum ennyi dokumentum
     .skip(skip)                                            // Lapozás (ennyi dokumentumot ugrik át)
-    .populate('emberId', 'emberNev');          // ✅ Embernév betöltése (frontend számára)
+    .populate('eemberId', 'eemberNev');          // ✅ eEmbernév betöltése (frontend számára)
     
     return hozzarendelesek;
   }
@@ -253,21 +253,21 @@ class TudatpontRepository {
     .sort({ tudatPontok: -1 })                             // Legtöbb pont először
     .limit(limit)                                          // Maximum ennyi dokumentum
     .skip(skip);                                           // Lapozás (ennyi dokumentumot ugrik át)
-    // ✅ NINCS .populate() - emberId tiszta ObjectId marad (backend logikához)
+    // ✅ NINCS .populate() - eemberId tiszta ObjectId marad (backend logikához)
     
     return hozzarendelesek;
   }
 
   // ----- HOZZÁRENDELÉS TÖRLÉSE -----
   // Egy hozzárendelés törlése
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {string} entitasId - Az entitás MongoDB ObjectId-ja
   // @param {string} entitasTipus - Az entitás típusa
   // @returns {Promise<Object|null>} A törölt hozzárendelés vagy null
-  async deleteHozzarendeles(emberId, entitasId, entitasTipus) {
+  async deleteHozzarendeles(eemberId, entitasId, entitasTipus) {
     // Hozzárendelés törlése
     const toroltHozzarendeles = await TudatpontHozzarendeles.findOneAndDelete({
-      emberId: emberId,
+      eemberId: eemberId,
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
@@ -295,23 +295,23 @@ class TudatpontRepository {
   // ============================================================
 
   // ----- EMBER KERESÉSE ID ALAPJÁN -----
-  // Ember keresése MongoDB ObjectId alapján
+  // eEmber keresése MongoDB ObjectId alapján
   // @param {string} id - MongoDB ObjectId (_id mező)
-  // @returns {Promise<Object|null>} Ember dokumentum vagy null
-  async findEmberById(id) {
+  // @returns {Promise<Object|null>} eEmber dokumentum vagy null
+  async findeEmberById(id) {
     // MongoDB findById művelet
-    return await Ember.findById(id);
+    return await eEmber.findById(id);
   }
 
   // ----- EMBER TUDATPONT EGYENLEGÉNEK FRISSÍTÉSE -----
-  // Ember tudatpont egyenlegének módosítása
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // eEmber tudatpont egyenlegének módosítása
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {number} ujEgyenleg - Az új tudatpont egyenleg
-  // @returns {Promise<Object|null>} Frissített ember
-  async updateEmberTudatpontok(emberId, ujEgyenleg) {
-    // Ember frissítése - csak a tudatpontok mező módosítása
-    const frissitettEmber = await Ember.findByIdAndUpdate(
-      emberId,                                       // A ember ID-ja
+  // @returns {Promise<Object|null>} Frissített eember
+  async updateeEmberTudatpontok(eemberId, ujEgyenleg) {
+    // eEmber frissítése - csak a tudatpontok mező módosítása
+    const frissitetteEmber = await eEmber.findByIdAndUpdate(
+      eemberId,                                       // A eember ID-ja
       { tudatpontok: ujEgyenleg },                         // Új egyenleg beállítása
       { 
         new: true,                                         // Frissített dokumentumot ad vissza
@@ -319,18 +319,18 @@ class TudatpontRepository {
       }
     );
     
-    return frissitettEmber;
+    return frissitetteEmber;
   }
 
   // ----- EMBER TUDATPONT EGYENLEGÉNEK INKREMENTÁLÁSA -----
-  // Ember tudatpont egyenlegének növelése/csökkentése atomi művelettel
-  // @param {string} emberId - A ember MongoDB ObjectId-ja
+  // eEmber tudatpont egyenlegének növelése/csökkentése atomi művelettel
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
   // @param {number} mennyiseg - Mennyivel változzon az egyenleg (lehet negatív is)
-  // @returns {Promise<Object|null>} Frissített ember
-  async incrementEmberTudatpontok(emberId, mennyiseg) {
+  // @returns {Promise<Object|null>} Frissített eember
+  async incrementeEmberTudatpontok(eemberId, mennyiseg) {
     // MongoDB $inc operátor - atomi inkrementálás (thread-safe)
-    const frissitettEmber = await Ember.findByIdAndUpdate(
-      emberId,
+    const frissitetteEmber = await eEmber.findByIdAndUpdate(
+      eemberId,
       { $inc: { tudatpontok: mennyiseg } },                // Hozzáadás/levonás
       { 
         new: true,                                         // Frissített dokumentumot ad vissza
@@ -338,7 +338,7 @@ class TudatpontRepository {
       }
     );
     
-    return frissitettEmber;
+    return frissitetteEmber;
   }
 
 }

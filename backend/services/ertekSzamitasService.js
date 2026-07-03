@@ -24,7 +24,7 @@ class ErtekJavaslatSzamitasService {
    * Medián érték kiszámítása egy hisztogramból
    * A medián a középső érték egy sorba rendezett listában
    * Algoritmus:
-   * 1. Bucket-eken végighaladva összegezzük a emberek számát
+   * 1. Bucket-eken végighaladva összegezzük a eemberek számát
    * 2. Amikor elérjük a középső pozíciót (osszesErtekJavaslat / 2), az a medián
    * 3. Ha páros az elemszám, a két középső elem átlaga
    * @param {Map} hisztogram - A hisztogram Map objektum (kulcs: érték, érték: darabszám)
@@ -352,7 +352,7 @@ class ErtekJavaslatSzamitasService {
 
     // Időhisztogramok üresek maradnak (dinamikus bucket-ek)
 
-    // 2. LÉPÉS - Létrehozó érték javaslatának beállítása (1 ember)
+    // 2. LÉPÉS - Létrehozó érték javaslatának beállítása (1 eember)
     ertekJavaslatElfogadasiMap.set(javaslatElfogadasiKuszob.toString(), 1);
     reszveteliAranyMap.set(reszveteliAranyKuszob.toString(), 1);
     
@@ -405,14 +405,14 @@ class ErtekJavaslatSzamitasService {
 
   // ----- HISZTOGRAM FRISSÍTÉSE ÉRTÉK JAVASLAT ALAPJÁN -----
   /**
-   * Hisztogram frissítése amikor egy ember érték javaslatot ad vagy módosít
+   * Hisztogram frissítése amikor egy eember érték javaslatot ad vagy módosít
    * Folyamat:
    * 1. Ha van régi érték javaslat, csökkentjük a régi bucket-eket
    * 2. Növeljük az új bucket-eket
    * 3. Újraszámoljuk a mediánokat
    * 4. Frissítjük a hisztogramot
    * @param {string} tartalomId - Tartalom ID
-   * @param {Object|null} regiErtekJavaslat - A ember korábbi érték javaslata (ha van)
+   * @param {Object|null} regiErtekJavaslat - A eember korábbi érték javaslata (ha van)
    * @param {Object} ujErtekJavaslat - Az új érték javaslat értékei
    * @returns {Promise<Object>} Frissített hisztogram
    */
@@ -611,9 +611,9 @@ class ErtekJavaslatSzamitasService {
 
   // ----- EMBERI ÉRTÉK JAVASLAT KEZELÉSE -----
   /**
-   * Ember érték javaslatának létrehozása vagy módosítása
-   * Ellenőrzi, hogy a embernak van-e legalább 1 tudatpontja a tartalmon
-   * @param {string} emberId - Ember ID
+   * eEmber érték javaslatának létrehozása vagy módosítása
+   * Ellenőrzi, hogy a eembernak van-e legalább 1 tudatpontja a tartalmon
+   * @param {string} eemberId - eEmber ID
    * @param {string} tartalomId - Tartalom ID
    * @param {number} javaslatElfogadasiKuszob - Javasolt érték (51-100)
    * @param {number} reszveteliAranyKuszob - Javasolt érték (0-100)
@@ -622,7 +622,7 @@ class ErtekJavaslatSzamitasService {
    * @returns {Promise<Object>} { érték javaslat, hisztogram }
    */
   async ertekJavaslatLetrehozasaVagyModositasa(
-    emberId, 
+    eemberId, 
     tartalomId, 
     javaslatElfogadasiKuszob, 
     reszveteliAranyKuszob,
@@ -630,7 +630,7 @@ class ErtekJavaslatSzamitasService {
     maximumDontesiIdo
   ) {
     console.log("=================================== ertekJavaslatLetrehozasaVagyModositasa:", { 
-      emberId, 
+      eemberId, 
       tartalomId, 
       javaslatElfogadasiKuszob, 
       reszveteliAranyKuszob,
@@ -640,14 +640,14 @@ class ErtekJavaslatSzamitasService {
 
     // 1. LÉPÉS - TUDATPONT ELLENŐRZÉS
 
-    console.log("ertekJavaslatLetrehozasaVagyModositasa >>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByEmberEsEntitas", {
-      emberId: emberId,
+    console.log("ertekJavaslatLetrehozasaVagyModositasa >>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByeEmberEsEntitas", {
+      eemberId: eemberId,
       tartalomId: tartalomId,
       tipus: 'Tartalom'
     });
     
-    const hozzarendeles = await TudatpontRepository.findHozzarendelesByEmberEsEntitas(
-      emberId,
+    const hozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+      eemberId,
       tartalomId,
       'Tartalom'
     );
@@ -683,12 +683,12 @@ class ErtekJavaslatSzamitasService {
 
     // 3. LÉPÉS - RÉGI ÉRTÉK JAVASLAT KERESÉSE
 
-    console.log("ertekJavaslatLetrehozasaVagyModositasa >>>>>>>>>>>>>>>>>>>>>>> ErtekJavaslatRepository.findByEmberAndTartalom", {
-      emberId: emberId,
+    console.log("ertekJavaslatLetrehozasaVagyModositasa >>>>>>>>>>>>>>>>>>>>>>> ErtekJavaslatRepository.findByeEmberAndTartalom", {
+      eemberId: eemberId,
       tartalomId: tartalomId
     });
-    const regiErtekJavaslat = await ErtekJavaslatRepository.findByEmberAndTartalom(
-      emberId,
+    const regiErtekJavaslat = await ErtekJavaslatRepository.findByeEmberAndTartalom(
+      eemberId,
       tartalomId
     );
     console.log("Régi érték javaslat:", regiErtekJavaslat ? "van" : "nincs");
@@ -696,11 +696,11 @@ class ErtekJavaslatSzamitasService {
     // 4. LÉPÉS - ÉRTÉK JAVASLAT MENTÉSE
 
     console.log("ertekJavaslatLetrehozasaVagyModositasa >>>>>>>>>>>>>>>>>>>>>>> ErtekJavaslatRepository.createOrUpdate", {
-      emberId: emberId,
+      eemberId: eemberId,
       tartalomId: tartalomId
     });
     const ertekJavaslat = await ErtekJavaslatRepository.createOrUpdate(
-      emberId,
+      eemberId,
       tartalomId,
       {
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
@@ -708,7 +708,7 @@ class ErtekJavaslatSzamitasService {
         minimumDontesiIdo: minimumDontesiIdo,
         maximumDontesiIdo: maximumDontesiIdo,
         tartalomId: tartalomId,
-        emberId: emberId
+        eemberId: eemberId
       }
     );
     console.log("Érték javaslat mentve:", ertekJavaslat.id);
@@ -799,25 +799,25 @@ class ErtekJavaslatSzamitasService {
 
   // ----- EMBER ÉRTÉK JAVASLATÁNAK LEKÉRÉSE -----
   /**
-   * Egy ember érték javaslatának lekérése egy tartalomhoz
-   * @param {string} emberId - Ember ID
+   * Egy eember érték javaslatának lekérése egy tartalomhoz
+   * @param {string} eemberId - eEmber ID
    * @param {string} tartalomId - Tartalom ID
    * @returns {Promise<Object|null>} Érték javaslat vagy null
    */
-  async emberErtekJavaslatanakLekerese(emberId, tartalomId) {
-    console.log("=================================== emberErtekJavaslatanakLekerese:", { emberId, tartalomId });
+  async eemberErtekJavaslatanakLekerese(eemberId, tartalomId) {
+    console.log("=================================== eemberErtekJavaslatanakLekerese:", { eemberId, tartalomId });
     
-    console.log("emberErtekJavaslatanakLekerese >>>>>>>>>>>>>>>>>>>>>>> ErtekJavaslatRepository.findByEmberAndTartalom", {
-      emberId: emberId,
+    console.log("eemberErtekJavaslatanakLekerese >>>>>>>>>>>>>>>>>>>>>>> ErtekJavaslatRepository.findByeEmberAndTartalom", {
+      eemberId: eemberId,
       tartalomId: tartalomId
     });
     
-    const ertekJavaslat = await ErtekJavaslatRepository.findByEmberAndTartalom(
-      emberId,
+    const ertekJavaslat = await ErtekJavaslatRepository.findByeEmberAndTartalom(
+      eemberId,
       tartalomId
     );
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< emberErtekJavaslatanakLekerese====Erdmény:", {
+    console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< eemberErtekJavaslatanakLekerese====Erdmény:", {
       ertekJavaslat: ertekJavaslat
     });
     

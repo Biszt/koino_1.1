@@ -1,0 +1,132 @@
+/* frontend/css/components/szoveg/szovegMezoMegjelenito.css */
+
+
+/* =============================================
+   SZÖVEG MEZŐ MEGJELENÍTŐ - FŐ KONTÉNER
+   =============================================
+   A kártya body-jában lévő, csak olvasható
+   blokk megjelenítő wrapper eleme.
+   Nincs keret, nincs eszköztár – tisztán
+   a tartalom jelenik meg a kártya stílusán belül.
+   ============================================= */
+.szoveg-mezo-megjelenito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+
+/* =============================================
+   SZÖVEGES BLOKK – MEGJELENÍTŐ MÓD
+   =============================================
+   A SzovegBlokk.letrehozas() által generált
+   contenteditable div kerül megjelenítő módba.
+   contentEditable="false" be van állítva JS-ből,
+   de a vizuális stílusát itt definiáljuk:
+   nincs border, nincs fókusz gyűrű, nincs háttér.
+   ============================================= */
+.szoveg-mezo-megjelenito .szoveg-blokk {
+  /* Szerkesztő módban border és háttér volt fókuszkor – itt soha nem kell */
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+  /* Placeholder nem jelenik meg – soha nincs üres blokk megjelenítő módban */
+  pointer-events: none;
+}
+
+.szoveg-mezo-megjelenito .szoveg-blokk:focus {
+  border-color: transparent;
+  background: transparent;
+  outline: none;
+}
+
+
+/* =============================================
+   KÉP BLOKK – MEGJELENÍTŐ MÓD
+   =============================================
+   A méretválasztó és törlő gomb JS-ből van
+   eltávolítva, de ha mégis bent maradna, elrejtjük.
+   A kép konténer szegélye finomabb, mint szerkesztő módban.
+   ============================================= */
+.szoveg-mezo-megjelenito .kep-blokk {
+  /* Szerkesztő módban erősebb keret volt – megjelenítőn finomabb */
+  border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: transparent;
+  padding: var(--space-1);
+}
+
+/* Törlő gomb és méretválasztó biztonsági elrejtése */
+.szoveg-mezo-megjelenito .kep-blokk .blokk-torlo-gomb,
+.szoveg-mezo-megjelenito .kep-blokk .kep-blokk__meret-valaszto {
+  display: none;
+}
+
+
+/* =============================================
+   FÁJL BLOKK – MEGJELENÍTŐ MÓD
+   =============================================
+   A link stílus megmarad, de a törlő gomb
+   biztonsági elrejtése itt is megvan.
+   ============================================= */
+.szoveg-mezo-megjelenito .fajl-blokk {
+  /* Megjelenítő módban kisebb padding – kártyán belül kompaktabb */
+  padding: var(--space-2) var(--space-3);
+}
+
+.szoveg-mezo-megjelenito .fajl-blokk .blokk-torlo-gomb {
+  display: none;
+}
+
+
+/* =============================================
+   LINK BLOKK – MEGJELENÍTŐ MÓD
+   =============================================
+   Változatlan – a link stílusát a szövegszerkesztő CSS-ből
+   örökli, megjelenítő módban teljesen megfelelő.
+   Törlő gomb biztonsági elrejtése.
+   ============================================= */
+.szoveg-mezo-megjelenito .link-blokk + .blokk-torlo-gomb {
+  display: none;
+}
+
+
+/* =============================================
+   ENTITÁS HIVATKOZÁS BLOKK – MEGJELENÍTŐ MÓD
+   =============================================
+   A letrehozasMegjelenitesMod() már törlő gomb
+   nélkül adja vissza az elemet, de ha wrapper
+   is kerülne bele, a törlő gombot elrejtjük.
+   A koppintható hivatkozás pointer-events: auto
+   marad – ez az egyetlen interaktív elem a megjelenítőn.
+   ============================================= */
+.szoveg-mezo-megjelenito .entitas-hivatkozas-blokk {
+  /* Szerkesztő módban a wrapper-rel együtt jelent meg –
+     megjelenítő módban önállóan áll, kissé kompaktabb */
+  pointer-events: auto; /* koppintható marad a kártyán */
+}
+
+.szoveg-mezo-megjelenito .entitas-hivatkozas-blokk + .blokk-torlo-gomb {
+  display: none;
+}
+
+/* Koppintás vizuális visszajelzése mobilon */
+.szoveg-mezo-megjelenito .entitas-hivatkozas-blokk--tapintva {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary);
+}
+
+
+/* =============================================
+   RESZPONZÍV
+   =============================================
+   Mobilon a kép max-height kisebb, hogy ne
+   foglalja el az egész kártyát.
+   ============================================= */
+@media (max-width: 480px) {
+  .szoveg-mezo-megjelenito .kep-blokk__kep {
+    max-height: 180px;
+  }
+}

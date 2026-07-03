@@ -56,7 +56,7 @@ class TorlesiVegrehajto {
         entitasTipus: entitas.entitasTipus,
         torolve: visszaosztasEredmeny.entitasTorolve,
         visszaosztottPontok: visszaosztasEredmeny.visszaosztottPontok,
-        emberekSzama: visszaosztasEredmeny.emberekSzama
+        eemberekSzama: visszaosztasEredmeny.eemberekSzama
       });
     }
 

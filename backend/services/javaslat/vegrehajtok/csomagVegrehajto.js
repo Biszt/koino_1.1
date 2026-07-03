@@ -25,7 +25,7 @@ class CsomagVegrehajto {
   async vegrehajtas(javaslat) {
     // Log metódus kezdete értékekkel
     console.log('csomagVegrehajto.vegrehajtas - KEZDÉS', {
-      javaslatId: javaslat.id,
+      javaslatId: javaslat._id,
       erintettEntitasokSzama: javaslat.erintettEntitasok?.length || 0
     });
 
@@ -82,7 +82,7 @@ class CsomagVegrehajto {
             muvelet: 'Torles',
             torolve: toroltEntitas.torolve,
             visszaosztottPontok: toroltEntitas.visszaosztottPontok,
-            emberekSzama: toroltEntitas.emberekSzama
+            eeEmberekSzama: toroltEntitas.eeEmberekSzama
           });
           
           // Statisztika frissítése - ha sikeresen törölve lett

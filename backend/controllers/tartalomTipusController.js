@@ -24,25 +24,52 @@ class TartalomTipusController {
    */
   async tartalomTipusLetrehozasa(req, res) {
     try {
-      // 1. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      // Az authMiddleware már beállította a req.user objektumot
-      const emberId = req.user?.id;
-      
-      if (!emberId) {
+      console.log('=================================== tartalomTipusLetrehozasa (controller):: ');
+
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id;
+
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
         });
       }
 
-      // 2. LÉPÉS - Adatok kiolvasása request body-ból
-      // Frontend küldi: nev, leiras, ikon, kezdoTudatpont
-      const adatok = req.body;
+      // 2. LÉPÉS - IKON FÁJL ELLENŐRZÉSE
+      // VÁLTOZÁS: korábban az ikon szövegként érkezett req.body-ból,
+      // most a Multer middleware a feltöltött fájl adatait req.file-ba teszi.
+      // Ha nem töltött fel fájlt az eember, req.file undefined lesz.
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Az ikon fájl feltöltése kötelező'
+        });
+      }
 
-      // 3. LÉPÉS - Inicialis tudatpont validálása
-      // Kötelező paraméter, legalább 1 tudatpont szükséges
-      const kezdoTudatpont = adatok.kezdoTudatpont;
-      
+      console.log('tartalomTipusLetrehozasa - req.file: ', {
+        originalname: req.file.originalname, // Eredeti fájlnév (pl. 'tartalom-ikon.png')
+        filename:     req.file.filename,     // Szerveren tárolt egyedi fájlnév
+        path:         req.file.path,         // Teljes fájlútvonal (pl. 'uploads/icons/ikon-123.png')
+        size:         req.file.size          // Fájlméret byte-ban
+      });
+
+      // 3. LÉPÉS - ADATOK ÖSSZEÁLLÍTÁSA
+      // Teljes URL-t építünk az ikon elérési útjaként, amit a böngésző közvetlenül használhat
+      // req.protocol: "http" vagy "https"
+      // req.get('host'): "localhost:3000"
+      // req.file.filename: "ikon-1778191022759-408.png"
+      // Eredmény: "http://localhost:3000/uploads/icons/ikon-1778191022759-408.png"
+      const adatok = {
+        ...req.body,
+        ikon: `${req.protocol}://${req.get('host')}/uploads/icons/${req.file.filename}`
+      };
+
+      // 4. LÉPÉS - Inicialis tudatpont validálása
+      // VÁLTOZÁS: parseInt() szükséges, mert a multipart/form-data
+      // minden mezőt szövegként küld – a Service viszont számot vár
+      const kezdoTudatpont = parseInt(adatok.kezdoTudatpont);
+
       if (!kezdoTudatpont) {
         return res.status(400).json({
           success: false,
@@ -50,16 +77,22 @@ class TartalomTipusController {
         });
       }
 
-      // 4. LÉPÉS - Service hívás - üzleti logika végrehajtása
-      // Service validál, tisztít, ment adatbázisba ÉS hozzárendel tudatpontot
+      console.log('tartalomTipusLetrehozasa >>>>>>>>>>>> TartalomTipusService.tartalomTipusLetrehozasa', {
+        adatok:         adatok,
+        eemberId:       eemberId,
+        kezdoTudatpont: kezdoTudatpont
+      });
+
+      // 5. LÉPÉS - Service hívás - üzleti logika végrehajtása
       const ujTartalomTipus = await TartalomTipusService.tartalomTipusLetrehozasa(
-        adatok, 
-        emberId, 
+        adatok,
+        eemberId,
         kezdoTudatpont
       );
 
-      // 5. LÉPÉS - Sikeres válasz küldése
+      // 6. LÉPÉS - Sikeres válasz küldése
       // 201 Created - új erőforrás sikeresen létrehozva
+      console.log('<<<<<<<<<<<<<<<<<< tartalomTipusLetrehozasa (controller) - siker');
       res.status(201).json({
         success: true,
         message: 'Tartalom típus sikeresen létrehozva',
@@ -67,10 +100,8 @@ class TartalomTipusController {
       });
 
     } catch (error) {
-      // HIBAKEZELÉS - Ha bármi hiba történik
       console.error('Tartalom típus létrehozása hiba:', error);
-      
-      // 400 Bad Request - Kliens oldali hiba (validációs hiba)
+
       res.status(400).json({
         success: false,
         message: error.message
@@ -89,24 +120,25 @@ class TartalomTipusController {
    */
   async tartalomTipusLekerese(req, res) {
     try {
+      console.log('=================================== tartalomTipusLekerese (controller):: ');
+
       // 1. LÉPÉS - Tartalom típus ID kiolvasása URL paraméterből
       const tartalomTipusId = req.params.id;
 
-      // 2. LÉPÉS - Service hívás - tartalom típus lekérése
+      // 2. LÉPÉS - Service hívás
+      console.log('tartalomTipusLekerese >>>>>>>>>>>> TartalomTipusService.tartalomTipusLekerese');
       const tartalomTipus = await TartalomTipusService.tartalomTipusLekerese(tartalomTipusId);
 
-      // 3. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres lekérés
+      // 3. LÉPÉS - Sikeres válasz
+      console.log('<<<<<<<<<<<<<<<<<< tartalomTipusLekerese (controller) - siker');
       res.status(200).json({
         success: true,
         tartalomTipus: tartalomTipus
       });
 
     } catch (error) {
-      // HIBAKEZELÉS
       console.error('Tartalom típus lekérése hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom típus
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -114,7 +146,6 @@ class TartalomTipusController {
         });
       }
 
-      // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a tartalom típus lekérése során'
@@ -134,39 +165,32 @@ class TartalomTipusController {
    */
   async tartalomTipusokListazasa(req, res) {
     try {
-      console.log('===== TARTALOM TÍPUSOK LISTÁZÁSA KEZDŐDIK =====');
-      
+      console.log('=================================== tartalomTipusokListazasa (controller):: ');
+
       // 1. LÉPÉS - Szűrők kiolvasása query paraméterekből
       const szurok = {
         letrehozo: req.query.letrehozo,
-        nev: req.query.nev
+        nev:       req.query.nev
       };
-      console.log('1. Szűrők:', JSON.stringify(szurok, null, 2));
-      
-      // 2. LÉPÉS - Service hívás - tartalom típusok lekérése szűrőkkel
-      console.log('2. Service hívás ELŐTT...');
+
+      console.log('tartalomTipusokListazasa >>>>>>>>>>>> TartalomTipusService.tartalomTipusListazasa', {
+        szurok: szurok
+      });
+
+      // 2. LÉPÉS - Service hívás
       const tartalomTipusok = await TartalomTipusService.tartalomTipusListazasa(szurok);
-      console.log('2. Service hívás UTÁN - Tartalom típusok száma:', tartalomTipusok.length);
-      
-      // 3. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres lekérés
+
+      // 3. LÉPÉS - Sikeres válasz
+      console.log('<<<<<<<<<<<<<<<<<< tartalomTipusokListazasa (controller) - siker, db: ', tartalomTipusok.length);
       res.status(200).json({
         success: true,
-        count: tartalomTipusok.length,
+        count:         tartalomTipusok.length,
         tartalomTipusok: tartalomTipusok
       });
-      
-      console.log('===== TARTALOM TÍPUSOK LISTÁZÁSA VÉGE - SIKER =====');
-      
+
     } catch (error) {
-      // HIBAKEZELÉS
-      console.error('===== HIBA TÖRTÉNT =====');
-      console.error('Hiba típusa:', error.name);
-      console.error('Hiba üzenete:', error.message);
-      console.error('Teljes stack trace:', error.stack);
-      console.error('========================');
-      
-      // 500 Internal Server Error
+      console.error('Tartalom típusok listázása hiba:', error);
+
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a tartalom típusok lekérése során'
@@ -175,7 +199,7 @@ class TartalomTipusController {
   }
 
   // =====================================
-  // ----- TARTALOM TÍPUS ModositasA -----
+  // ----- TARTALOM TÍPUS MÓDOSÍTÁSA -----
   // =====================================
   /**
    * Egy tartalom típus módosítása
@@ -185,66 +209,73 @@ class TartalomTipusController {
    */
   async tartalomTipusModositasa(req, res) {
     try {
+      console.log('=================================== tartalomTipusModositasa (controller):: ');
+
       // 1. LÉPÉS - Tartalom típus ID kiolvasása URL paraméterből
       const tartalomTipusId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      const emberId = req.user?.id;
-      
-      if (!emberId) {
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id;
+
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
         });
       }
 
-      // 3. LÉPÉS - Frissítendő adatok kiolvasása request body-ból
-      const frissitesek = req.body;
+      // 3. LÉPÉS - FRISSÍTÉSEK ÖSSZEÁLLÍTÁSA
+      // req.body tartalmazza: nev, leiras (szövegmezők)
+      // Ha az eember új ikont töltött fel, teljes URL-ként mentjük el.
+      // Ha NEM töltött fel új ikont, az ikon mező NEM kerül a frissítésekbe,
+      // tehát a régi ikon megmarad az adatbázisban.
+      const frissitesek = { ...req.body };
 
-      // 4. LÉPÉS - Service hívás - módosítás jogosultság ellenőrzéssel
+      if (req.file) {
+        // Új ikon érkezett: teljes URL-ként mentjük
+        frissitesek.ikon = `${req.protocol}://${req.get('host')}/uploads/icons/${req.file.filename}`;
+        console.log('tartalomTipusModositasa - új ikon feltöltve: ', { ikon: frissitesek.ikon });
+      } else {
+        // Nem töltöttek fel új ikont: az ikon mező nem változik
+        console.log('tartalomTipusModositasa - nem töltöttek fel új ikont, ikon változatlan marad');
+      }
+
+      console.log('tartalomTipusModositasa >>>>>>>>>>>> TartalomTipusService.tartalomTipusModositasa', {
+        tartalomTipusId: tartalomTipusId,
+        frissitesek:     frissitesek,
+        eemberId:        eemberId
+      });
+
+      // 4. LÉPÉS - Service hívás
       const frissitettTartalomTipus = await TartalomTipusService.tartalomTipusModositasa(
         tartalomTipusId,
         frissitesek,
-        emberId
+        eemberId
       );
 
-      // 5. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres módosítás
+      // 5. LÉPÉS - Sikeres válasz
+      console.log('<<<<<<<<<<<<<<<<<< tartalomTipusModositasa (controller) - siker');
       res.status(200).json({
         success: true,
-        message: 'Tartalom típus sikeresen módosítva',
+        message:       'Tartalom típus sikeresen módosítva',
         tartalomTipus: frissitettTartalomTipus
       });
 
     } catch (error) {
-      // HIBAKEZELÉS
       console.error('Tartalom típus módosítása hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom típus
       if (error.message.includes('nem található')) {
-        return res.status(404).json({
-          success: false,
-          message: error.message
-        });
+        return res.status(404).json({ success: false, message: error.message });
       }
 
-      // 403 Forbidden - Ha nincs jogosultság
       if (error.message.includes('jogosultság')) {
-        return res.status(403).json({
-          success: false,
-          message: error.message
-        });
+        return res.status(403).json({ success: false, message: error.message });
       }
 
-      // 400 Bad Request - Validációs hiba
       if (error.message.includes('kötelező') || error.message.includes('létezik') || error.message.includes('üres')) {
-        return res.status(400).json({
-          success: false,
-          message: error.message
-        });
+        return res.status(400).json({ success: false, message: error.message });
       }
 
-      // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a tartalom típus módosítása során'
@@ -263,37 +294,38 @@ class TartalomTipusController {
    */
   async tartalomTipusReszleteinekLekerese(req, res) {
     try {
+      console.log('=================================== tartalomTipusReszleteinekLekerese (controller):: ');
+
       // 1. LÉPÉS - Tartalom típus ID kiolvasása URL paraméterből
       const tartalomTipusId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      const emberId = req.user?.id;
-      
-      if (!emberId) {
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id;
+
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
         });
       }
 
-      // 3. LÉPÉS - Service hívás - részletes adatok lekérése
+      // 3. LÉPÉS - Service hívás
+      console.log('tartalomTipusReszleteinekLekerese >>>>>>>>>>>> TartalomTipusService.tartalomTipusReszleteinekLekerese');
       const reszletek = await TartalomTipusService.tartalomTipusReszleteinekLekerese(
         tartalomTipusId,
-        emberId
+        eemberId
       );
 
-      // 4. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres lekérés
+      // 4. LÉPÉS - Sikeres válasz
+      console.log('<<<<<<<<<<<<<<<<<< tartalomTipusReszleteinekLekerese (controller) - siker');
       res.status(200).json({
         success: true,
         data: reszletek
       });
 
     } catch (error) {
-      // HIBAKEZELÉS
       console.error('Tartalom típus részleteinek lekérése hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom típus
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -301,7 +333,6 @@ class TartalomTipusController {
         });
       }
 
-      // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a tartalom típus részleteinek lekérése során'
@@ -312,13 +343,13 @@ class TartalomTipusController {
   // =====================================
   // ===== Torles METÓDUS NINCS! =====
   // =====================================
-  // 
+  //
   // A tartalom típusok NEM törölhetők direkt API híváson keresztül.
-  // 
+  //
   // Törlés csak automatikusan történik:
-  // 
+  //
   // 1. AUTOMATIKUS Torles - Tudatpont nullázás
-  //    - Ha minden ember visszavonja a tudatpontjait (pontok: 0)
+  //    - Ha minden eember visszavonja a tudatpontjait (pontok: 0)
   //    - És az osszesPont 0-ra csökken
   //    - Automatikusan törlődik (tudatpontService.js → entitasTorlese0PontNal)
   //

@@ -20,15 +20,15 @@ class TudatpontService {
    * Tudatpontok hozzárendelése egy entitáshoz (tartalom/kategória/típus/javaslat/egyezmény)
    * Transaction használatával biztosítja a konzisztenciát
    * MÓDOSÍTVA: Hierarchikus tudatpont frissítés hozzáadva
-   * @param {string} emberId - A ember azonosítója
+   * @param {string} eemberId - A eember azonosítója
    * @param {string} entitasId - Az entitás azonosítója
    * @param {string} entitasTipus - Az entitás típusa
    * @param {number} ujPontok - Az új tudatpont érték (nem különbség!)
    * @returns {Promise<Object>} A művelet eredménye
    */
-  async tudatpontHozzarendelese(emberId, entitasId, entitasTipus, ujPontok) {
+  async tudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok) {
     console.log('tudatpontHozzarendelese', {
-      emberId: emberId,
+      eemberId: eemberId,
       entitasId: entitasId,
       entitasTipus: entitasTipus,
       ujPontok: ujPontok
@@ -37,7 +37,7 @@ class TudatpontService {
     // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA (MINDEN ELLENŐRZÉS EGY HELYEN)
     
     // 1.A - Null/undefined ellenőrzés
-    if (!emberId || !entitasId || !entitasTipus) {
+    if (!eemberId || !entitasId || !entitasTipus) {
       throw new Error('Hiányzó kötelező paraméterek');
     }
 
@@ -105,19 +105,19 @@ class TudatpontService {
 
     try {
       // 3. LÉPÉS - EMBER LEKÉRÉSE ÉS VALIDÁLÁSA
-      console.log('tudatpontHozzarendelese - TudatpontRepository.findEmberById', { emberId: emberId });
-      const ember = await TudatpontRepository.findEmberById(emberId);
+      console.log('tudatpontHozzarendelese - TudatpontRepository.findeEmberById', { eemberId: eemberId });
+      const eember = await TudatpontRepository.findeEmberById(eemberId);
 
-      if (!ember) {
-        throw new Error('Ember nem található');
+      if (!eember) {
+        throw new Error('eEmber nem található');
       }
 
       // 4. LÉPÉS - RÉGI HOZZÁRENDELÉS LEKÉRÉSE (HA VAN)
-      console.log('tudatpontHozzarendelese - TudatpontRepository.findHozzarendelesByEmberEsEntitas', {
-        emberId: emberId
+      console.log('tudatpontHozzarendelese - TudatpontRepository.findHozzarendelesByeEmberEsEntitas', {
+        eemberId: eemberId
       });
-      const regiHozzarendeles = await TudatpontRepository.findHozzarendelesByEmberEsEntitas(
-        emberId,
+      const regiHozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+        eemberId,
         entitasId,
         entitasTipus
       );
@@ -127,39 +127,39 @@ class TudatpontService {
 
       // 5. LÉPÉS - KÜLÖNBSÉG KISZÁMÍTÁSA
       // Különbség = új érték - régi érték
-      // Pozitív → növelés (ember több pontot ad)
-      // Negatív → csökkentés (ember visszavon pontokat)
+      // Pozitív → növelés (eember több pontot ad)
+      // Negatív → csökkentés (eember visszavon pontokat)
       // Nulla → nincs változás
       const kulonbseg = ujPontok - regiPontok;
 
       // 6. LÉPÉS - ELLENŐRZÉS: VAN-E ELÉG TUDATPONT?
       // Csak akkor kell ellenőrizni, ha növelés történik (kulonbseg > 0)
-      if (kulonbseg > 0 && ember.tudatpontok < kulonbseg) {
+      if (kulonbseg > 0 && eember.tudatpontok < kulonbseg) {
         throw new Error('Nincs elég tudatpont a művelet végrehajtásához');
       }
 
       // 7. LÉPÉS - EMBER EGYENLEGÉNEK MÓDOSÍTÁSA
-      // Ha kulonbseg > 0: levonás (ember ad pontot)
-      // Ha kulonbseg < 0: visszaadás (ember visszavon pontot)
+      // Ha kulonbseg > 0: levonás (eember ad pontot)
+      // Ha kulonbseg < 0: visszaadás (eember visszavon pontot)
       // Ha kulonbseg = 0: nincs változás
       if (kulonbseg !== 0) {
-        const ujEgyenleg = ember.tudatpontok - kulonbseg;
-        console.log('tudatpontHozzarendelese - TudatpontRepository.updateEmberTudatpontok', {
-          emberId: emberId,
+        const ujEgyenleg = eember.tudatpontok - kulonbseg;
+        console.log('tudatpontHozzarendelese - TudatpontRepository.updateeEmberTudatpontok', {
+          eemberId: eemberId,
           ujEgyenleg: ujEgyenleg
         });
-        await TudatpontRepository.updateEmberTudatpontok(emberId, ujEgyenleg);
+        await TudatpontRepository.updateeEmberTudatpontok(eemberId, ujEgyenleg);
       }
 
       // 8. LÉPÉS - HOZZÁRENDELÉS FRISSÍTÉSE/LÉTREHOZÁSA
       // Upsert: ha létezik frissíti, ha nem létrehozza
       console.log('tudatpontHozzarendelese - TudatpontRepository.upsertHozzarendeles', {
-        emberId: emberId,
+        eemberId: eemberId,
         entitasId: entitasId,
         entitasTipus: entitasTipus,
         ujPontok: ujPontok
       });
-      await TudatpontRepository.upsertHozzarendeles(emberId, entitasId, entitasTipus, ujPontok);
+      await TudatpontRepository.upsertHozzarendeles(eemberId, entitasId, entitasTipus, ujPontok);
 
           // 9. LÉPÉS - ALLOKÁCIÓ FRISSÍTÉSE
         // Az allokáció mezőit frissíteni kell a különbség alapján
@@ -184,7 +184,7 @@ class TudatpontService {
           );
           
           // ✅ HIERARCHIKUS FRISSÍTÉS (előbb!)
-          await this.hierarchikusFrissitesVegrehajtas(emberId, entitasId, entitasTipus, kulonbseg);
+          await this.hierarchikusFrissitesVegrehajtas(eemberId, entitasId, entitasTipus, kulonbseg);
           
         } else if (visszavont) {
           // VISSZAVONÁS: osszesPont csökken, hozzajarulokSzama is csökken
@@ -200,7 +200,7 @@ class TudatpontService {
           );
           
           // ✅ HIERARCHIKUS FRISSÍTÉS (előbb!)
-          await this.hierarchikusFrissitesVegrehajtas(emberId, entitasId, entitasTipus, kulonbseg);
+          await this.hierarchikusFrissitesVegrehajtas(eemberId, entitasId, entitasTipus, kulonbseg);
           
           // ✅ TÖRLÉS ELLENŐRZÉS (utána!)
           // Entitás törlésének ellenőrzése transaction-ön belül!
@@ -221,7 +221,7 @@ class TudatpontService {
           );
           
           // ✅ HIERARCHIKUS FRISSÍTÉS (előbb!)
-          await this.hierarchikusFrissitesVegrehajtas(emberId, entitasId, entitasTipus, kulonbseg);
+          await this.hierarchikusFrissitesVegrehajtas(eemberId, entitasId, entitasTipus, kulonbseg);
         }
 
 
@@ -232,7 +232,7 @@ class TudatpontService {
       // 11. LÉPÉS - EREDMÉNY VISSZAADÁSA
       console.log('tudatpontHozzarendelese - EREDMÉNY', {
         siker: true,
-        ujEmberEgyenleg: ember.tudatpontok - kulonbseg,
+        ujeEmberEgyenleg: eember.tudatpontok - kulonbseg,
         ujPontok: ujPontok,
         regiPontok: regiPontok,
         kulonbseg: kulonbseg
@@ -240,7 +240,7 @@ class TudatpontService {
 
       return {
         siker: true,
-        ujEmberEgyenleg: ember.tudatpontok - kulonbseg,
+        ujeEmberEgyenleg: eember.tudatpontok - kulonbseg,
         ujPontok: ujPontok,
         regiPontok: regiPontok,
         kulonbseg: kulonbseg
@@ -259,333 +259,336 @@ class TudatpontService {
     }
   }
 
-    /**
+
+  /**
    * ----- HIERARCHIKUS FRISSÍTÉS VÉGREHAJTÁSA -----
    * Segédfüggvény a hierarchikus tudatpont frissítéshez
    * A különbség propagálása felfelé a szülő láncon
-   * 
-   * @param {string} emberId - Az ember azonosítója
+   * @param {string} eemberId - Az eember azonosítója
    * @param {string} entitasId - Az entitás azonosítója
    * @param {string} entitasTipus - Az entitás típusa
    * @param {number} kulonbseg - A tudatpont különbség
    * @returns {Promise<void>}
    */
-  async hierarchikusFrissitesVegrehajtas(emberId, entitasId, entitasTipus, kulonbseg) {
-    // Log metódus kezdete
-    console.log('tudatpontHozzarendelese - HIERARCHIKUS FRISSÍTÉS KEZDÉS', { kulonbseg });
-    
+  async hierarchikusFrissitesVegrehajtas(eemberId, entitasId, entitasTipus, kulonbseg) {
+    console.log('hierarchikusFrissitesVegrehajtas - KEZDÉS', { entitasId, entitasTipus, kulonbseg });
+
     // Csak akkor frissítünk, ha van változás
-    if (kulonbseg !== 0) {
-      // 1. LÉPÉS - Aktuális entitás hierarchikus pontjának frissítése
-      console.log('tudatpontHozzarendelese - HierarchikusRepository.incrementHierarchikusPont (saját)', 
-        { entitasId, entitasTipus, kulonbseg });
+    if (kulonbseg === 0) {
+      console.log('hierarchikusFrissitesVegrehajtas - Nincs változás (kulonbseg=0), SKIP');
+      return;
+    }
+
+    // 1. LÉPÉS - Saját entitás szülő adatainak lekérése
+    // VÁLTOZÁS: szükség van a szuloId/szuloTipus-ra, hogy az upsert esetén
+    // az új HierarchikusTudatpontAllokacio rekordba bekerüljön a szülő adat
+    console.log('hierarchikusFrissitesVegrehajtas - this.getSzuloEntitas (saját)', {
+      entitasId, entitasTipus
+    });
+
+    const sajatSzulo = await this.getSzuloEntitas(entitasId, entitasTipus);
+    const sajatSzuloId = sajatSzulo?.szuloId || null;
+    const sajatSzuloTipus = sajatSzulo?.szuloTipus || null;
+
+    // 2. LÉPÉS - Saját entitás hierarchikus rekordjának létrehozása vagy frissítése
+    // VÁLTOZÁS: incrementHierarchikusPont helyett kétlépéses logika:
+    //   - Ha már létezik a rekord → csak incrementálunk (gyorsabb, atomi)
+    //   - Ha még nem létezik → createOrUpdate()-tel hozzuk létre szuloId-val együtt
+    console.log('hierarchikusFrissitesVegrehajtas - HierarchikusTudatpontAllokaciRepository.existsByEntitas', {
+      entitasId, entitasTipus
+    });
+
+    const letezik = await HierarchikusTudatpontAllokaciRepository.existsByEntitas(
+      entitasId,
+      entitasTipus
+    );
+
+    if (letezik) {
+      // Már létezik → egyszerű increment (szuloId már benne van a rekordban)
+      console.log('hierarchikusFrissitesVegrehajtas - HierarchikusTudatpontAllokaciRepository.incrementHierarchikusPont (saját, létező)', {
+        entitasId, entitasTipus, kulonbseg
+      });
+
       await HierarchikusTudatpontAllokaciRepository.incrementHierarchikusPont(
         entitasId,
         entitasTipus,
         kulonbseg
       );
-      
-      // 2. LÉPÉS - Felfelé lépdelés a szülő láncon
-      let aktualisEntitas = { entitasId, entitasTipus };
-      
-      while (true) {
-        // Szülő lekérése
-        console.log('tudatpontHozzarendelese - this.getSzuloEntitas', 
-          { entitasId: aktualisEntitas.entitasId, entitasTipus: aktualisEntitas.entitasTipus });
-        const szulo = await this.getSzuloEntitas(
-          aktualisEntitas.entitasId,
-          aktualisEntitas.entitasTipus
-        );
-        
-        // Ha nincs szülő, elértük a gyökeret, megállunk
-        if (!szulo || !szulo.szuloId) {
-          console.log('tudatpontHozzarendelese - Elértük a gyökeret, STOP');
-          break;
-        }
-        
-        // Szülő hierarchikus pontjának frissítése
-        console.log('tudatpontHozzarendelese - HierarchikusRepository.incrementHierarchikusPont (szülő)', 
-          { szuloId: szulo.szuloId, szuloTipus: szulo.szuloTipus, kulonbseg });
-        await HierarchikusTudatpontAllokaciRepository.incrementHierarchikusPont(
-          szulo.szuloId,
-          szulo.szuloTipus,
-          kulonbseg
-        );
-        
-        // Lépés a következő szintre (szülő -> nagyszülő)
-        aktualisEntitas = { entitasId: szulo.szuloId, entitasTipus: szulo.szuloTipus };
-      }
+    } else {
+      // Még nem létezik → createOrUpdate szuloId-val együtt (upsert)
+      // FONTOS: az első pont értéke maga a kulonbseg (nincs előző érték)
+      console.log('hierarchikusFrissitesVegrehajtas - HierarchikusTudatpontAllokaciRepository.createOrUpdate (saját, ÚJ)', {
+        entitasId, entitasTipus, kulonbseg, sajatSzuloId, sajatSzuloTipus
+      });
+
+      await HierarchikusTudatpontAllokaciRepository.createOrUpdate(
+        entitasId,
+        entitasTipus,
+        kulonbseg,       // Első érték = maga a különbség
+        sajatSzuloId,    // Szülő ID mentése az új rekordba
+        sajatSzuloTipus  // Szülő típus mentése az új rekordba
+      );
     }
-    
-    // Log metódus vége
-    console.log('tudatpontHozzarendelese - HIERARCHIKUS FRISSÍTÉS VÉGE');
+
+    // 3. LÉPÉS - Felfelé lépdelés a szülő láncon
+    // Minden ősnek növeljük/csökkentjük a hierarchikus pontját
+    let aktualisEntitas = { entitasId, entitasTipus };
+
+    while (true) {
+      // Szülő lekérése az aktuális entitáshoz
+      console.log('hierarchikusFrissitesVegrehajtas - this.getSzuloEntitas', {
+        entitasId: aktualisEntitas.entitasId,
+        entitasTipus: aktualisEntitas.entitasTipus
+      });
+
+      const szulo = await this.getSzuloEntitas(
+        aktualisEntitas.entitasId,
+        aktualisEntitas.entitasTipus
+      );
+
+      // Ha nincs szülő, elértük a gyökeret, megállunk
+      if (!szulo || !szulo.szuloId) {
+        console.log('hierarchikusFrissitesVegrehajtas - Elértük a gyökeret, STOP');
+        break;
+      }
+
+      // Szülő hierarchikus pontjának frissítése
+      // A szülőnél már biztosan létezik a rekord (ő is kapott pontot korábban),
+      // ezért itt elég az increment
+      console.log('hierarchikusFrissitesVegrehajtas - HierarchikusTudatpontAllokaciRepository.incrementHierarchikusPont (szülő)', {
+        szuloId: szulo.szuloId, szuloTipus: szulo.szuloTipus, kulonbseg
+      });
+
+      await HierarchikusTudatpontAllokaciRepository.incrementHierarchikusPont(
+        szulo.szuloId,
+        szulo.szuloTipus,
+        kulonbseg
+      );
+
+      // Lépés a következő szintre (szülő → nagyszülő)
+      aktualisEntitas = { entitasId: szulo.szuloId, entitasTipus: szulo.szuloTipus };
+    }
+
+    console.log('hierarchikusFrissitesVegrehajtas - VÉGE', { entitasId, entitasTipus });
   }
 
 
-  /**
- * ----- ENTITÁS TÖRLÉSÉNEK ELLENŐRZÉSE -----
- * MÓDOSÍTVA: Törlési kaszkád logika - gyerekek "feljebb lépnek"
- * Ellenőrzi az allokációt, és ha 0 pont van rajta, törli az entitást
- * Törlés előtt a gyermek entitások megkapják a törölt entitás szülőjét
- * Használat: tudatpontHozzarendelése visszavonás esetén (transaction-ön belül)
- * @param {string} entitasId - Az entitás azonosítója
- * @param {string} entitasTipus - Az entitás típusa
- * @param {Object} session - MongoDB session (transaction-höz)
- * @returns {Promise<void>}
- */
-async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
-  // Log metódus kezdete
-  console.log('entitasTorleseEllenorzese - KEZDÉS', { 
-    entitasId, 
-    entitasTipus 
-  });
-  
-  // 1. LÉPÉS - Allokáció lekérése
-  console.log('entitasTorleseEllenorzese - TudatpontRepository.findAllokaciByEntitas', { 
-    entitasId, 
-    entitasTipus 
-  });
-  
-  const allokacio = await TudatpontRepository.findAllokaciByEntitas(
-    entitasId, 
-    entitasTipus
-  );
-  
-  // 2. LÉPÉS - Ellenőrzés: Van-e allokáció ÉS 0 pont van-e rajta?
-  // Ha nincs allokáció VAGY 0 pont van rajta → TÖRLÉS
-  if (!allokacio || allokacio.osszesPont > 0) {
-    console.log('entitasTorleseEllenorzese - Entitás NEM törlendő', { 
-      allokacio: allokacio?.osszesPont || 0 
+    // ============================================================================
+  // MÓDOSÍTOTT: entitasTorleseEllenorzese
+  // ÚJ: Gyerekek HierarchikusTudatpontAllokacio rekordjában is frissítjük a szuloId-t
+  // ============================================================================
+  async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
+    console.log('entitasTorleseEllenorzese - KEZDÉS', { entitasId, entitasTipus });
+
+    // 1. LÉPÉS - Allokáció lekérése
+    console.log('entitasTorleseEllenorzese - TudatpontRepository.findAllokaciByEntitas', {
+      entitasId, entitasTipus
     });
-    return; // Nincs törlés
+
+    const allokacio = await TudatpontRepository.findAllokaciByEntitas(entitasId, entitasTipus);
+
+    // 2. LÉPÉS - Ellenőrzés: 0 pont van-e rajta?
+    if (!allokacio || allokacio.osszesPont > 0) {
+      console.log('entitasTorleseEllenorzese - Entitás NEM törlendő', {
+        allokacio: allokacio?.osszesPont || 0
+      });
+      return;
+    }
+
+    console.log('entitasTorleseEllenorzese - Entitás törlendő (0 tudatpont)', { entitasId, entitasTipus });
+
+    // 3. LÉPÉS - Törölt entitás szülőjének lekérése (kaszkádhoz)
+    let toroltEntitasSzuloId = null;
+    let toroltEntitasSzuloTipus = null;
+
+    if (entitasTipus === 'Tartalom') {
+      const tartalom = await TartalomRepository.findById(entitasId);
+      toroltEntitasSzuloId = tartalom?.szuloId || null;
+      toroltEntitasSzuloTipus = tartalom?.szuloTipus || null;
+    } else if (entitasTipus === 'Javaslat') {
+      const javaslat = await JavaslatRepository.findById(entitasId);
+      toroltEntitasSzuloId = javaslat?.szuloId || null;
+      toroltEntitasSzuloTipus = javaslat?.szuloTipus || null;
+    } else if (entitasTipus === 'Egyezmeny') {
+      const egyezmeny = await EgyezmenyRepository.findById(entitasId);
+      toroltEntitasSzuloId = egyezmeny?.szuloId || null;
+      toroltEntitasSzuloTipus = egyezmeny?.szuloTipus || null;
+    }
+
+    console.log('entitasTorleseEllenorzese - Törölt entitás szülője', {
+      toroltEntitasSzuloId, toroltEntitasSzuloTipus
+    });
+
+    // 4. LÉPÉS - Gyerekek lekérése és frissítése (KASZKÁD)
+    // MINDEN GYEREKNÉL: frissítjük az entitás szuloId-ját ÉS a hierarchikus allokáció szuloId-ját
+
+    // 4.A - Tartalom gyerekek
+    console.log('entitasTorleseEllenorzese - TartalomRepository.findBySzuloId', { szuloId: entitasId });
+    const tartalomGyerekek = await TartalomRepository.findBySzuloId(entitasId);
+    console.log('entitasTorleseEllenorzese - Tartalom gyerekek', { count: tartalomGyerekek.length });
+
+    for (const gyerek of tartalomGyerekek) {
+      // Entitás szuloId frissítése
+      console.log('entitasTorleseEllenorzese - TartalomRepository.updateSzuloId', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await TartalomRepository.updateSzuloId(
+        gyerek._id,
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      // VÁLTOZÁS: Hierarchikus allokáció szuloId frissítése is!
+      // Indok: a hierarchikusFrissitesService.js a HierarchikusTudatpontAllokacio.szuloId
+      // alapján navigál felfelé, tehát ennek is aktuálisnak kell lennie
+      console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.updateSzuloId (Tartalom gyerek)', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await HierarchikusTudatpontAllokaciRepository.updateSzuloId(
+        gyerek._id,
+        'Tartalom',
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      console.log('entitasTorleseEllenorzese - Tartalom gyerek frissítve', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId
+      });
+    }
+
+    // 4.B - Javaslat gyerekek
+    console.log('entitasTorleseEllenorzese - JavaslatRepository.findBySzuloId', { szuloId: entitasId });
+    const javaslatGyerekek = await JavaslatRepository.findBySzuloId(entitasId);
+    console.log('entitasTorleseEllenorzese - Javaslat gyerekek', { count: javaslatGyerekek.length });
+
+    for (const gyerek of javaslatGyerekek) {
+      console.log('entitasTorleseEllenorzese - JavaslatRepository.updateSzuloId', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await JavaslatRepository.updateSzuloId(
+        gyerek._id,
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      // VÁLTOZÁS: Hierarchikus allokáció szuloId frissítése
+      console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.updateSzuloId (Javaslat gyerek)', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await HierarchikusTudatpontAllokaciRepository.updateSzuloId(
+        gyerek._id,
+        'Javaslat',
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      console.log('entitasTorleseEllenorzese - Javaslat gyerek frissítve', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId
+      });
+    }
+
+    // 4.C - Egyezmény gyerekek
+    console.log('entitasTorleseEllenorzese - EgyezmenyRepository.findBySzuloId', { szuloId: entitasId });
+    const egyezmenyGyerekek = await EgyezmenyRepository.findBySzuloId(entitasId);
+    console.log('entitasTorleseEllenorzese - Egyezmény gyerekek', { count: egyezmenyGyerekek.length });
+
+    for (const gyerek of egyezmenyGyerekek) {
+      console.log('entitasTorleseEllenorzese - EgyezmenyRepository.updateSzuloId', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await EgyezmenyRepository.updateSzuloId(
+        gyerek._id,
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      // VÁLTOZÁS: Hierarchikus allokáció szuloId frissítése
+      console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.updateSzuloId (Egyezmeny gyerek)', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
+      });
+      await HierarchikusTudatpontAllokaciRepository.updateSzuloId(
+        gyerek._id,
+        'Egyezmeny',
+        toroltEntitasSzuloId,
+        toroltEntitasSzuloTipus
+      );
+
+      console.log('entitasTorleseEllenorzese - Egyezmeny gyerek frissítve', {
+        gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId
+      });
+    }
+
+    // 5. LÉPÉS - SPECIÁLIS ESET: Kategória törlése
+    if (entitasTipus === 'Kategoria') {
+      console.log('entitasTorleseEllenorzese - Kategória törlése - Tartalmak tisztítása', {
+        kategoriaId: entitasId
+      });
+      console.log('entitasTorleseEllenorzese - TartalomRepository.removeCategoriaFromAll');
+      await TartalomRepository.removeCategoriaFromAll(entitasId);
+      console.log('entitasTorleseEllenorzese - Kategória eltávolítva minden tartalom kategoriaIds tömbjéből');
+    }
+
+    // 6. LÉPÉS - SPECIÁLIS ESET: TartalomTípus törlése
+    if (entitasTipus === 'TartalomTipus') {
+      console.log('entitasTorleseEllenorzese - TartalomTípus törlése - Tartalmak tisztítása', {
+        tartalomTipusId: entitasId
+      });
+      console.log('entitasTorleseEllenorzese - TartalomRepository.removeTartalomTipusFromAll');
+      await TartalomRepository.removeTartalomTipusFromAll(entitasId);
+      console.log('entitasTorleseEllenorzese - TartalomTípus eltávolítva minden tartalomból');
+    }
+
+    // 7. LÉPÉS - Entitás törlése típus szerint
+    if (entitasTipus === 'Tartalom') {
+      console.log('entitasTorleseEllenorzese - TartalomRepository.deleteById', { entitasId });
+      await TartalomRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - Tartalom törölve', { entitasId });
+
+    } else if (entitasTipus === 'Kategoria') {
+      console.log('entitasTorleseEllenorzese - KategoriaRepository.deleteById', { entitasId });
+      await KategoriaRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - Kategória törölve', { entitasId });
+
+    } else if (entitasTipus === 'TartalomTipus') {
+      console.log('entitasTorleseEllenorzese - TartalomTipusRepository.deleteById', { entitasId });
+      await TartalomTipusRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - TartalomTípus törölve', { entitasId });
+
+    } else if (entitasTipus === 'Javaslat') {
+      console.log('entitasTorleseEllenorzese - JavaslatRepository.deleteById', { entitasId });
+      await JavaslatRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - Javaslat törölve', { entitasId });
+
+    } else if (entitasTipus === 'Egyezmeny') {
+      console.log('entitasTorleseEllenorzese - EgyezmenyRepository.deleteById', { entitasId });
+      await EgyezmenyRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - Egyezmény törölve', { entitasId });
+
+    } else {
+      console.warn('entitasTorleseEllenorzese - Ismeretlen entitás típus', { entitasTipus });
+      return;
+    }
+
+    // 8. LÉPÉS - Allokáció törlése
+    if (allokacio) {
+      console.log('entitasTorleseEllenorzese - TudatpontRepository.deleteAllokaciByEntitas', {
+        entitasId, entitasTipus
+      });
+      await TudatpontRepository.deleteAllokaciByEntitas(entitasId, entitasTipus);
+      console.log('entitasTorleseEllenorzese - Allokáció törölve', { entitasTipus, entitasId });
+    }
+
+    // 9. LÉPÉS - Hierarchikus allokáció törlése
+    console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.deleteByEntitas', {
+      entitasId, entitasTipus
+    });
+    await HierarchikusTudatpontAllokaciRepository.deleteByEntitas(entitasId, entitasTipus);
+    console.log('entitasTorleseEllenorzese - Hierarchikus allokáció törölve', {
+      entitasTipus, entitasId
+    });
+
+    console.log('entitasTorleseEllenorzese - VÉGE', { entitasId, entitasTipus });
   }
-  
-  console.log('entitasTorleseEllenorzese - Entitás törlendő (0 tudatpont)', { 
-    entitasId, 
-    entitasTipus 
-  });
-  
-  // 3. LÉPÉS - Törölt entitás szülőjének lekérése (kaszkádhoz)
-  let toroltEntitasSzuloId = null;
-  let toroltEntitasSzuloTipus = null;
-  
-  if (entitasTipus === 'Tartalom') {
-    const tartalom = await TartalomRepository.findById(entitasId);
-    toroltEntitasSzuloId = tartalom?.szuloId || null;
-    toroltEntitasSzuloTipus = tartalom?.szuloTipus || null;
-  } else if (entitasTipus === 'Javaslat') {
-    const javaslat = await JavaslatRepository.findById(entitasId);
-    toroltEntitasSzuloId = javaslat?.szuloId || null;
-    toroltEntitasSzuloTipus = javaslat?.szuloTipus || null;
-  } else if (entitasTipus === 'Egyezmeny') {
-    const egyezmeny = await EgyezmenyRepository.findById(entitasId);
-    toroltEntitasSzuloId = egyezmeny?.szuloId || null;
-    toroltEntitasSzuloTipus = egyezmeny?.szuloTipus || null;
-  }
-  
-  console.log('entitasTorleseEllenorzese - Törölt entitás szülője', { 
-    toroltEntitasSzuloId, 
-    toroltEntitasSzuloTipus 
-  });
-  
-  // 4. LÉPÉS - Gyerekek lekérése és frissítése (KASZKÁD)
-  
-  // 4.A - Tartalom gyerekek
-  console.log('entitasTorleseEllenorzese - TartalomRepository.findBySzuloId', { 
-    szuloId: entitasId 
-  });
-  
-  const tartalomGyerekek = await TartalomRepository.findBySzuloId(entitasId);
-  console.log('entitasTorleseEllenorzese - Tartalom gyerekek', { 
-    count: tartalomGyerekek.length 
-  });
-  
-  for (const gyerek of tartalomGyerekek) {
-    console.log('entitasTorleseEllenorzese - TartalomRepository.updateSzuloId', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId,
-      ujSzuloTipus: toroltEntitasSzuloTipus
-    });
-    
-    await TartalomRepository.updateSzuloId(
-      gyerek._id, 
-      toroltEntitasSzuloId, 
-      toroltEntitasSzuloTipus
-    );
-    
-    console.log('entitasTorleseEllenorzese - Tartalom gyerek frissítve', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId 
-    });
-  }
-  
-  // 4.B - Javaslat gyerekek
-  console.log('entitasTorleseEllenorzese - JavaslatRepository.findBySzuloId', { 
-    szuloId: entitasId 
-  });
-  
-  const javaslatGyerekek = await JavaslatRepository.findBySzuloId(entitasId);
-  console.log('entitasTorleseEllenorzese - Javaslat gyerekek', { 
-    count: javaslatGyerekek.length 
-  });
-  
-  for (const gyerek of javaslatGyerekek) {
-    console.log('entitasTorleseEllenorzese - JavaslatRepository.updateSzuloId', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId,
-      ujSzuloTipus: toroltEntitasSzuloTipus
-    });
-    
-    await JavaslatRepository.updateSzuloId(
-      gyerek._id, 
-      toroltEntitasSzuloId, 
-      toroltEntitasSzuloTipus
-    );
-    
-    console.log('entitasTorleseEllenorzese - Javaslat gyerek frissítve', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId 
-    });
-  }
-  
-  // 4.C - Egyezmény gyerekek
-  console.log('entitasTorleseEllenorzese - EgyezmenyRepository.findBySzuloId', { 
-    szuloId: entitasId 
-  });
-  
-  const egyezmenyGyerekek = await EgyezmenyRepository.findBySzuloId(entitasId);
-  console.log('entitasTorleseEllenorzese - Egyezmény gyerekek', { 
-    count: egyezmenyGyerekek.length 
-  });
-  
-  for (const gyerek of egyezmenyGyerekek) {
-    console.log('entitasTorleseEllenorzese - EgyezmenyRepository.updateSzuloId', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId,
-      ujSzuloTipus: toroltEntitasSzuloTipus
-    });
-    
-    await EgyezmenyRepository.updateSzuloId(
-      gyerek._id, 
-      toroltEntitasSzuloId, 
-      toroltEntitasSzuloTipus
-    );
-    
-    console.log('entitasTorleseEllenorzese - Egyezmény gyerek frissítve', { 
-      gyerekId: gyerek._id, 
-      ujSzuloId: toroltEntitasSzuloId 
-    });
-  }
-  
-  // 5. LÉPÉS - SPECIÁLIS ESET: Kategória törlése
-  if (entitasTipus === 'Kategoria') {
-    // Tartalmak kategoriaIds tömbjéből eltávolítjuk a törölt kategóriát
-    console.log('entitasTorleseEllenorzese - Kategória törlése - Tartalmak tisztítása', { 
-      kategoriaId: entitasId 
-    });
-    
-    console.log('entitasTorleseEllenorzese - TartalomRepository.removeCategoriaFromAll');
-    
-    await TartalomRepository.removeCategoriaFromAll(entitasId);
-    
-    console.log('entitasTorleseEllenorzese - Kategória eltávolítva minden tartalom kategoriaIds tömbjéből');
-  }
-  
-  // 6. LÉPÉS - SPECIÁLIS ESET: TartalomTípus törlése
-  if (entitasTipus === 'TartalomTipus') {
-    // Tartalmak tartalomTipusId mezőjét null-ra állítjuk
-    console.log('entitasTorleseEllenorzese - TartalomTípus törlése - Tartalmak tisztítása', { 
-      tartalomTipusId: entitasId 
-    });
-    
-    console.log('entitasTorleseEllenorzese - TartalomRepository.removeTartalomTipusFromAll');
-    
-    await TartalomRepository.removeTartalomTipusFromAll(entitasId);
-    
-    console.log('entitasTorleseEllenorzese - TartalomTípus eltávolítva minden tartalomból');
-  }
-  
-  // 7. LÉPÉS - Entitás törlése típus szerint
-  if (entitasTipus === 'Tartalom') {
-    console.log('entitasTorleseEllenorzese - TartalomRepository.deleteById', { 
-      entitasId 
-    });
-    
-    await TartalomRepository.deleteById(entitasId);
-    console.log('entitasTorleseEllenorzese - Tartalom törölve', { entitasId });
-    
-  } else if (entitasTipus === 'Kategoria') {
-    console.log('entitasTorleseEllenorzese - KategoriaRepository.deleteById', { 
-      entitasId 
-    });
-    
-    await KategoriaRepository.deleteById(entitasId);
-    console.log('entitasTorleseEllenorzese - Kategória törölve', { entitasId });
-    
-  } else if (entitasTipus === 'TartalomTipus') {
-    console.log('entitasTorleseEllenorzese - TartalomTipusRepository.deleteById', { 
-      entitasId 
-    });
-    
-    await TartalomTipusRepository.deleteById(entitasId);
-    console.log('entitasTorleseEllenorzese - TartalomTípus törölve', { entitasId });
-    
-  } else if (entitasTipus === 'Javaslat') {
-    console.log('entitasTorleseEllenorzese - JavaslatRepository.deleteById', { 
-      entitasId 
-    });
-    
-    await JavaslatRepository.deleteById(entitasId);
-    console.log('entitasTorleseEllenorzese - Javaslat törölve', { entitasId });
-    
-  } else if (entitasTipus === 'Egyezmeny') {
-    console.log('entitasTorleseEllenorzese - EgyezmenyRepository.deleteById', { 
-      entitasId 
-    });
-    
-    await EgyezmenyRepository.deleteById(entitasId);
-    console.log('entitasTorleseEllenorzese - Egyezmény törölve', { entitasId });
-    
-  } else {
-    console.warn('entitasTorleseEllenorzese - Ismeretlen entitás típus', { 
-      entitasTipus 
-    });
-    return;
-  }
-  
-  // 8. LÉPÉS - Allokáció törlése (ha van)
-  if (allokacio) {
-    console.log('entitasTorleseEllenorzese - TudatpontRepository.deleteAllokaciByEntitas', { 
-      entitasId, 
-      entitasTipus 
-    });
-    
-    await TudatpontRepository.deleteAllokaciByEntitas(entitasId, entitasTipus);
-    console.log('entitasTorleseEllenorzese - Allokáció törölve', { 
-      entitasTipus, 
-      entitasId 
-    });
-  }
-  
-  // 9. LÉPÉS - Hierarchikus allokáció törlése
-  console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.deleteByEntitas', {
-    entitasId,
-    entitasTipus
-  });
-  
-  await HierarchikusTudatpontAllokaciRepository.deleteByEntitas(entitasId, entitasTipus);
-  
-  console.log('entitasTorleseEllenorzese - Hierarchikus allokáció törölve', {
-    entitasTipus,
-    entitasId
-  });
-  
-  // Log metódus vége
-  console.log('entitasTorleseEllenorzese - VÉGE', { 
-    entitasId, 
-    entitasTipus 
-  });
-}
 
 
 
@@ -597,14 +600,14 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
   // Entitáshoz tartozó tudatpont adatok lekérése
   // @param {string} entitasId - Az entitás azonosítója
   // @param {string} entitasTipus - Az entitás típusa
-  // @param {string|null} emberId - A ember azonosítója (opcionális)
+  // @param {string|null} eemberId - A eember azonosítója (opcionális)
   // @returns {Promise<Object>} A tudatpont adatok
-  async entitasAllokaciLekerese(entitasId, entitasTipus, emberId = null) {
+  async entitasAllokaciLekerese(entitasId, entitasTipus, eemberId = null) {
 
     console.log("=================================== entitasAllokaciLekerese:: ", {
       entitasId: entitasId,
       entitasTipus: entitasTipus,
-      emberId: emberId,
+      eemberId: eemberId,
     });
 
     // 1. LÉPÉS - Allokáció lekérése
@@ -621,28 +624,28 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
       return {
         osszesPont: 0,
         hozzajarulokSzama: 0,
-        felhasznaloHozzajarulas: 0
+        eemberHozzajarulas: 0
       };
     }
 
-    // 3. LÉPÉS - Ember hozzájárulásának meghatározása (ha kérték)
-    let felhasznaloHozzajarulas = 0;
+    // 3. LÉPÉS - eEmber hozzájárulásának meghatározása (ha kérték)
+    let eemberHozzajarulas = 0;
     
-    if (emberId) {
+    if (eemberId) {
 
-      console.log("entitasAllokaciLekerese >>>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByEmberEsEntitas", {
-        emberId: emberId,
+      console.log("entitasAllokaciLekerese >>>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByeEmberEsEntitas", {
+        eemberId: eemberId,
         entitasId: entitasId,
         entitasTipus: entitasTipus
       });
-      const hozzarendeles = await TudatpontRepository.findHozzarendelesByEmberEsEntitas(
-        emberId,
+      const hozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+        eemberId,
         entitasId,
         entitasTipus
       );
       
       if (hozzarendeles) {
-        felhasznaloHozzajarulas = hozzarendeles.tudatPontok;
+        eemberHozzajarulas = hozzarendeles.tudatPontok;
       }
     }
 
@@ -651,7 +654,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     console.log("<<<<<<<<<<<<<<<<<<<<<<<< entitasAllokaciLekerese====Eredmény: ", {
       osszesPont: allokacio.osszesPont,
       hozzajarulokSzama: allokacio.hozzajarulokSzama,
-      felhasznaloHozzajarulas: felhasznaloHozzajarulas,
+      eemberHozzajarulas: eemberHozzajarulas,
       letrehozva: allokacio.letrehozva,
       frissitve: allokacio.frissitve
     });
@@ -659,7 +662,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     return {
       osszesPont: allokacio.osszesPont,
       hozzajarulokSzama: allokacio.hozzajarulokSzama,
-      felhasznaloHozzajarulas: felhasznaloHozzajarulas,
+      eemberHozzajarulas: eemberHozzajarulas,
       letrehozva: allokacio.letrehozva,
       frissitve: allokacio.frissitve
     };
@@ -737,41 +740,41 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
   // ============================================================
 
   // ----- EMBER ÖSSZES HOZZÁRENDELÉSÉNEK LEKÉRÉSE -----
-  // Ember tudatpont hozzárendeléseinek lekérdezése (lapozással)
-  // @param {string} emberId - A ember azonosítója
+  // eEmber tudatpont hozzárendeléseinek lekérdezése (lapozással)
+  // @param {string} eemberId - A eember azonosítója
   // @param {number} limit - Maximum ennyi hozzárendelés (alapértelmezett: 20)
   // @param {number} skip - Ennyi hozzárendelés kihagyása (lapozás)
   // @returns {Promise<Array>} A hozzárendelések listája
-  async emberHozzarendeleseinekLekerese(emberId, limit = 20, skip = 0) {
+  async eemberHozzarendeleseinekLekerese(eemberId, limit = 20, skip = 0) {
 
-    console.log("=================================== emberHozzarendeleseinekLekerese:: ", {
-      emberId: emberId,
+    console.log("=================================== eemberHozzarendeleseinekLekerese:: ", {
+      eemberId: eemberId,
       limit: limit,
       skip: skip,
     });
     
     // 1. LÉPÉS - Paraméter validálás
-    if (!emberId) {
-      throw new Error('A ember azonosítója kötelező');
+    if (!eemberId) {
+      throw new Error('A eember azonosítója kötelező');
     }
 
     // 2. LÉPÉS - Hozzárendelések lekérdezése
 
-    console.log("emberHozzarendeleseinekLekerese >>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesekByEmber", {
-      emberId: emberId,
+    console.log("eemberHozzarendeleseinekLekerese >>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesekByeEmber", {
+      eemberId: eemberId,
       limit: limit,
       skip: skip
     });
     
-    const hozzarendelesek = await TudatpontRepository.findHozzarendelesekByEmber(
-      emberId,
+    const hozzarendelesek = await TudatpontRepository.findHozzarendelesekByeEmber(
+      eemberId,
       limit,
       skip
     );
 
     // 3. LÉPÉS - Hozzárendelések visszaadása
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<<<<<< emberHozzarendeleseinekLekerese====hozzarendelesek", {
+    console.log("<<<<<<<<<<<<<<<<<<<<<<<<<< eemberHozzarendeleseinekLekerese====hozzarendelesek", {
       hozzarendelesek: hozzarendelesek
     });
     
@@ -780,41 +783,41 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
 
   // ----- EMBER AKTÍV HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
   // Csak azok a hozzárendelések, ahol tudatPontok > 0
-  // @param {string} emberId - A ember azonosítója
+  // @param {string} eemberId - A eember azonosítója
   // @param {number} limit - Maximum ennyi hozzárendelés
   // @param {number} skip - Ennyi hozzárendelés kihagyása (lapozás)
   // @returns {Promise<Array>} Az aktív hozzárendelések listája
-  async emberAktivHozzarendeleseinekLekerese(emberId, limit = 20, skip = 0) {
+  async eemberAktivHozzarendeleseinekLekerese(eemberId, limit = 20, skip = 0) {
 
-    console.log("=================================== emberHozzarendeleseinekLekerese:: ", {
-      emberId: emberId,
+    console.log("=================================== eemberHozzarendeleseinekLekerese:: ", {
+      eemberId: eemberId,
       limit: limit,
       skip: skip,
     });
     
     
     // 1. LÉPÉS - Paraméter validálás
-    if (!emberId) {
-      throw new Error('A ember azonosítója kötelező');
+    if (!eemberId) {
+      throw new Error('A eember azonosítója kötelező');
     }
 
     // 2. LÉPÉS - Aktív hozzárendelések lekérdezése
 
-    console.log("emberHozzarendeleseinekLekerese >>>>>>>>>>>>>>>>>> TudatpontRepository.findAktivHozzarendelesekByEmber ", {
-      emberId: emberId,
+    console.log("eemberHozzarendeleseinekLekerese >>>>>>>>>>>>>>>>>> TudatpontRepository.findAktivHozzarendelesekByeEmber ", {
+      eemberId: eemberId,
       limit: limit,
       skip: skip,
     });
     
-    const hozzarendelesek = await TudatpontRepository.findAktivHozzarendelesekByEmber(
-      emberId,
+    const hozzarendelesek = await TudatpontRepository.findAktivHozzarendelesekByeEmber(
+      eemberId,
       limit,
       skip
     );
 
     // 3. LÉPÉS - Hozzárendelések visszaadása
 
-    console.log("<<<<<<<<<<<<<<<<<<<< emberAktivHozzarendeleseinekLekerese====hozzarendelesek: ", {
+    console.log("<<<<<<<<<<<<<<<<<<<< eemberAktivHozzarendeleseinekLekerese====hozzarendelesek: ", {
       hozzarendelesek: hozzarendelesek
     });
     
@@ -882,7 +885,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
   // - Tiszta ObjectId használat (nem populated objektum)
   // @param {string} entitasId - Az entitás azonosítója
   // @param {string} entitasTipus - Az entitás típusa
-  // @returns {Promise<Object>} { siker, visszaosztottPontok, emberekSzama }
+  // @returns {Promise<Object>} { siker, visszaosztottPontok, eemberekSzama }
   async tudatpontokVisszaosztasa(entitasId, entitasTipus) {
 
     console.log("=================================== tudatpontokVisszaosztasa: ", {
@@ -892,7 +895,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     
     // 1. LÉPÉS - Entitás összes hozzárendelésének lekérése
     // ✅ JAVÍTVA: Nyers metódus használata (populate NÉLKÜL)
-    // Így a emberId tiszta ObjectId lesz, nem populated objektum
+    // Így a eemberId tiszta ObjectId lesz, nem populated objektum
 
     console.log("tudatpontokVisszaosztasa >>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesekByEntitasNyers", {
       entitasId: entitasId,
@@ -912,40 +915,40 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
       console.log("<<<<<<<<<<<<<<<<<<<<<<< tudatpontokVisszaosztasa", {
         siker: true,
         visszaosztottPontok: 0,
-        emberekSzama: 0
+        eemberekSzama: 0
       });
       
       return {
         siker: true,
         visszaosztottPontok: 0,
-        emberekSzama: 0
+        eemberekSzama: 0
       };
     }
 
     // 3. LÉPÉS - Minden hozzájárulónak visszaadjuk a tudatpontjait
     // ✅ JAVÍTVA: A tudatpontHozzarendelese függvényt használjuk (ujPontok: 0)
     // Ez automatikusan:
-    // - Visszaadja a ember egyenlegébe a pontokat (kulonbseg = 0 - regiPontok)
+    // - Visszaadja a eember egyenlegébe a pontokat (kulonbseg = 0 - regiPontok)
     // - Frissíti/törli a hozzárendelést (0 pontra állítja)
     // - Frissíti/törli az allokációt (osszesPont csökkentése, hozzajarulokSzama csökkentése)
     let visszaosztottPontok = 0;
-    let emberekSzama = 0;
+    let eemberekSzama = 0;
 
     for (const hozzarendeles of hozzarendelesek) {
       // Tudatpont hozzárendelés 0 pontra állítása
-      // ✅ Most már a emberId tiszta ObjectId (nem populated objektum)
+      // ✅ Most már a eemberId tiszta ObjectId (nem populated objektum)
 
       console.log("tudatpontokVisszaosztasa >>>>>>>>>>>>>>>>>>>> this.tudatpontHozzarendelese",);
       await this.tudatpontHozzarendelese(
-        hozzarendeles.emberId.toString(),  // ✅ Tiszta ObjectId toString()-je
+        hozzarendeles.eemberId.toString(),  // ✅ Tiszta ObjectId toString()-je
         entitasId,
         entitasTipus,
-        0 // ✅ 0 pont = visszavonás (pontok visszaadása a embernak)
+        0 // ✅ 0 pont = visszavonás (pontok visszaadása a eembernak)
       );
 
       // Statisztika frissítése
       visszaosztottPontok += hozzarendeles.tudatPontok;
-      emberekSzama++;
+      eemberekSzama++;
     }
 
     // 4. LÉPÉS - Eredmény visszaadása
@@ -953,13 +956,13 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     console.log("<<<<<<<<<<<<<<<<<<<<<<< tudatpontokVisszaosztasa===Eredmény: ", {
       siker: true,
       visszaosztottPontok: visszaosztottPontok,
-      emberekSzama: emberekSzama
+      eemberekSzama: eemberekSzama
     });
     
     return {
       siker: true,
       visszaosztottPontok: visszaosztottPontok,
-      emberekSzama: emberekSzama
+      eemberekSzama: eemberekSzama
     };
   }
 
@@ -968,11 +971,11 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
   // ============================================================
 
   // ----- ENTITÁS TUDATPONT TULAJDONOSAINAK LEKÉRÉSE -----
-  // Egy entitás tudatpont tulajdonosainak ember ID-i
+  // Egy entitás tudatpont tulajdonosainak eember ID-i
   // Használat: SZTTSZ és JTTTSZ számításhoz (javaslat rendszer)
   // @param {string} entitasId - Az entitás azonosítója
   // @param {string} entitasTipus - Az entitás típusa
-  // @returns {Promise<Array>} Ember ID-k tömbje
+  // @returns {Promise<Array>} eEmber ID-k tömbje
   async entitasTudatpontTulajdonosainakLekerese(entitasId, entitasTipus) {
 
     console.log("=================================== entitasTudatpontTulajdonosainakLekerese:: ", {
@@ -994,32 +997,32 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
       0
     );
 
-    // 2. LÉPÉS - Ember ID-k kinyerése
-    const emberIds = hozzarendelesek.map(h => h.emberId.toString());
+    // 2. LÉPÉS - eEmber ID-k kinyerése
+    const eemberIds = hozzarendelesek.map(h => h.eemberId.toString());
 
-    // 3. LÉPÉS - Ember ID-k visszaadása
+    // 3. LÉPÉS - eEmber ID-k visszaadása
 
-    console.log("<<<<<<<<<<<<<<<<<<<< entitasTudatpontTulajdonosainakLekerese===emberIds: ", {
-      emberIds: emberIds
+    console.log("<<<<<<<<<<<<<<<<<<<< entitasTudatpontTulajdonosainakLekerese===eemberIds: ", {
+      eemberIds: eemberIds
     });
     
-    return emberIds;
+    return eemberIds;
   }
 
   // ----- TÖBB ENTITÁS EGYESÍTETT TUDATPONT TULAJDONOSAINAK LEKÉRÉSE -----
-  // Több entitás tudatpont tulajdonosainak egyesített halmaza (egyedi emberek)
+  // Több entitás tudatpont tulajdonosainak egyesített halmaza (egyedi eemberek)
   // Használat: entitasokTudatpontTulajdonosokSzama (SZTTSZ) számításhoz
   // @param {Array} entitasok - Entitások tömbje [{entitasId, entitasTipus}, ...]
-  // @returns {Promise<Array>} Egyedi ember ID-k tömbje
+  // @returns {Promise<Array>} Egyedi eember ID-k tömbje
   async tobbEntitasEgyesitettHozzajaruloinakLekerese(entitasok) {
 
     console.log("=================================== tobbEntitasEgyesitettTudatpontTulajdonosainakLekerese:: ", {
       entitasok: entitasok
     });
     
-    // 1. LÉPÉS - Egyedi emberek halmazának létrehozása
+    // 1. LÉPÉS - Egyedi eemberek halmazának létrehozása
     // Set adatstruktúra → automatikusan egyedi elemek (duplikációk kiszűrése)
-    const egyediFelhasznaloIds = new Set();
+    const egyediEemberIds = new Set();
 
     // 2. LÉPÉS - Minden entitás tudatpont tulajdonosainak lekérése
     for (const entitas of entitasok) {
@@ -1032,43 +1035,43 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
       );
 
       // Hozzáadás a halmazhoz (duplikációk automatikusan kiszűrődnek)
-      tulajdonosok.forEach(emberId => egyediFelhasznaloIds.add(emberId));
+      tulajdonosok.forEach(eemberId => egyediEemberIds.add(eemberId));
     }
 
-    console.log("<<<<<<<<<<<<<<<<<<<<< tobbEntitasEgyesitettHozzajaruloinakLekerese=====egyediFelhasznaloIds: ", {
-      egyediFelhasznaloIds: egyediFelhasznaloIds
+    console.log("<<<<<<<<<<<<<<<<<<<<< tobbEntitasEgyesitettHozzajaruloinakLekerese=====egyediEemberIds: ", {
+      egyediEemberIds: egyediEemberIds
     });
     
 
     // 3. LÉPÉS - Set → Array konverzió és visszaadás
-    return Array.from(egyediFelhasznaloIds);
+    return Array.from(egyediEemberIds);
   }
 
   // ----- EMBER HOZZÁJÁRULÁSA ENTITÁSON (JOGOSULTSÁG ELLENŐRZÉS) -----
-  // Ellenőrzi, hogy egy ember rendelkezik-e tudatponttal egy entitáson
+  // Ellenőrzi, hogy egy eember rendelkezik-e tudatponttal egy entitáson
   // Használat: szavazási jogosultság ellenőrzéshez (javaslat rendszer)
-  // @param {string} emberId - A ember azonosítója
+  // @param {string} eemberId - A eember azonosítója
   // @param {string} entitasId - Az entitás azonosítója
   // @param {string} entitasTipus - Az entitás típusa
   // @returns {Promise<Object>} {vanHozzajarulas: boolean, pontok: number}
-  async emberHozzajarulasaEntitason(emberId, entitasId, entitasTipus) {
+  async eemberHozzajarulasaEntitason(eemberId, entitasId, entitasTipus) {
 
-    console.log("=================================== emberHozzajarulasaEntitason:: ", {
-      emberId: emberId,
+    console.log("=================================== eemberHozzajarulasaEntitason:: ", {
+      eemberId: eemberId,
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
     
     // 1. LÉPÉS - Hozzárendelés lekérése
 
-    console.log("emberHozzajarulasaEntitason >>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByEmberEsEntitas", {
-      emberId: emberId,
+    console.log("eemberHozzajarulasaEntitason >>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByeEmberEsEntitas", {
+      eemberId: eemberId,
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
     
-    const hozzarendeles = await TudatpontRepository.findHozzarendelesByEmberEsEntitas(
-      emberId,
+    const hozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+      eemberId,
       entitasId,
       entitasTipus
     );
@@ -1077,7 +1080,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     if (hozzarendeles && hozzarendeles.tudatPontok > 0) {
       // Van hozzájárulás ÉS aktív (nem 0 pont)
 
-      console.log('<<<<<<<<<<<<<<< emberHozzajarulasaEntitason ==== Eredmény: ', {
+      console.log('<<<<<<<<<<<<<<< eemberHozzajarulasaEntitason ==== Eredmény: ', {
         vanHozzajarulas: true,
         pontok: hozzarendeles.tudatPontok
       });
@@ -1089,7 +1092,7 @@ async entitasTorleseEllenorzese(entitasId, entitasTipus, session) {
     } else {
       // Nincs hozzájárulás VAGY 0 pont
 
-      console.log('<<<<<<<<<<<<<<< emberHozzajarulasaEntitason ==== Eredmény: ', {
+      console.log('<<<<<<<<<<<<<<< eemberHozzajarulasaEntitason ==== Eredmény: ', {
         vanHozzajarulas: false,
         pontok: 0
       });

@@ -18,23 +18,23 @@ class JavaslatJogosultsagService {
   // SZAVAZÁSI JOGOSULTSÁG ELLENŐRZÉSE
   // ===================================
   /**
-   * Ellenőrzi, hogy a ember rendelkezik-e tudatponttal minden érintett entitáson
+   * Ellenőrzi, hogy a eember rendelkezik-e tudatponttal minden érintett entitáson
    * Ha mindenhol van tudatpontja, jogosult szavazni/javaslatot létrehozni
    * 
-   * @param {string} emberId - A ember ID-ja
+   * @param {string} eemberId - A eember ID-ja
    * @param {Array} erintettEntitasok - Érintett entitások tömbje
    * @returns {Promise<Object>} { jogosult: boolean, hianyzoEntitas: string|null }
    */
-  async szavazasiJogosultsagEllenorzese(emberId, erintettEntitasok) {
+  async szavazasiJogosultsagEllenorzese(eemberId, erintettEntitasok) {
 
     console.log("=================================== szavazasiJogosultsagEllenorzese:: ",{
-      emberId: emberId,
+      eemberId: eemberId,
       erintettEntitasok: erintettEntitasok
     });
     
     // === 1. LÉPÉS: VALIDÁLÁS ===
-    if (!emberId) {
-      throw new Error('A ember ID megadása kötelező');
+    if (!eemberId) {
+      throw new Error('A eember ID megadása kötelező');
     }
 
     if (!erintettEntitasok || erintettEntitasok.length === 0) {
@@ -46,14 +46,14 @@ class JavaslatJogosultsagService {
     for (const entitas of erintettEntitasok) {
 
       // Tudatpont hozzájárulás lekérése az entitáson
-      console.log(">>>>>>>>>>>>>>>>>>>>>> TudatpontService.emberHozzajarulasaEntitason: ", {
-        emberId: emberId,
+      console.log(">>>>>>>>>>>>>>>>>>>>>> TudatpontService.eemberHozzajarulasaEntitason: ", {
+        eemberId: eemberId,
         entitasId: entitas.entitasId,
         entitasTipus: entitas.entitasTipus
       });
       
-      const hozzajarulas = await TudatpontService.emberHozzajarulasaEntitason(
-        emberId,
+      const hozzajarulas = await TudatpontService.eemberHozzajarulasaEntitason(
+        eemberId,
         entitas.entitasId,
         entitas.entitasTipus
       );

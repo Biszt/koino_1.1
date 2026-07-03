@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // ===================================
 // TARTALOM ÉRTÉK HISZTOGRAM SÉMA DEFINÍCIÓJA
 // ===================================
-// Aggregált adatok tárolása - hány ember javasol adott értéket
+// Aggregált adatok tárolása - hány eember javasol adott értéket
 // Ez egy cache réteg, ami gyorsítja a medián számítást
 const tartalomErtekHisztogramSchema = new mongoose.Schema({
 
@@ -24,8 +24,8 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol 51, 52, ..., 100-ot
-  // Kulcs: a százalék érték (string), érték: emberek száma (number)
+  // Bucket-ek: hány eember javasol 51, 52, ..., 100-ot
+  // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   javaslatElfogadasiKuszobHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -41,8 +41,8 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- RÉSZVÉTELI ARÁNY KÜSZÖB HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol 0, 1, ..., 100-ot
-  // Kulcs: a százalék érték (string), érték: emberek száma (number)
+  // Bucket-ek: hány eember javasol 0, 1, ..., 100-ot
+  // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   reszveteliAranyKuszobHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -58,9 +58,9 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- MINIMUM DÖNTÉSI IDŐ HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol adott alsó határ értékeket
+  // Bucket-ek: hány eember javasol adott alsó határ értékeket
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
-  // Kulcs: bucket kulcs (string), érték: emberek száma (number)
+  // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   minimumDontesiIdoHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -68,9 +68,9 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- MAXIMUM DÖNTÉSI IDŐ HISZTOGRAM -----
-  // Bucket-ek: hány ember javasol adott felső határ értékeket
+  // Bucket-ek: hány eember javasol adott felső határ értékeket
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
-  // Kulcs: bucket kulcs (string), érték: emberek száma (number)
+  // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   maximumDontesiIdoHisztogram: {
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
@@ -119,7 +119,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   },
 
   // ----- ÖSSZ ÉRTÉK JAVASLATOK SZÁMA -----
-  // Hány ember adott összesen érték javaslatot
+  // Hány eember adott összesen érték javaslatot
   osszesErtekJavaslat: {
     type: Number, // Szám típus
     default: 0, // Alapértelmezett: 0
@@ -162,7 +162,7 @@ tartalomErtekHisztogramSchema.methods.getBucket = function(hisztogramNev, ertek)
  * Segédmetódus egy adott bucket értékének módosításához
  * @param {string} hisztogramNev - 'javaslatElfogadasiKuszobHisztogram' vagy 'reszveteliAranyKuszobHisztogram' stb.
  * @param {string} ertek - a százalék/érték (string)
- * @param {number} darabszam - hány ember (number)
+ * @param {number} darabszam - hány eember (number)
  */
 tartalomErtekHisztogramSchema.methods.setBucket = function(hisztogramNev, ertek, darabszam) {
   const hisztogram = this[hisztogramNev]; // Map lekérése

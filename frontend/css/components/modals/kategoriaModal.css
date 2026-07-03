@@ -1,0 +1,163 @@
+/* frontend/css/components/modal/kategoriaModal.css */
+
+
+/* ===== KATEGÓRIA MODAL FORM ===== */
+/* Mezők egymás alá rendeződnek – azonos a tartalomModal.css struktúrájával */
+.k-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+
+/* ===== FORM MEZŐ CSOPORT ===== */
+.k-modal-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+  width: 100%;
+}
+
+
+/* ===== ALAP INPUT STÍLUS ===== */
+/* Azonos a t-modal-input szabályokkal */
+.k-modal-input,
+.k-modal-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+/* Placeholder szöveg */
+.k-modal-input::placeholder,
+.k-modal-textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+
+/* Hover állapot */
+.k-modal-input:hover,
+.k-modal-textarea:hover {
+  border-color: var(--color-text-muted);
+}
+
+
+/* Fókusz állapot */
+.k-modal-input:focus,
+.k-modal-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-highlight);
+}
+
+
+/* ===== TEXTAREA SPECIFIKUS ===== */
+.k-modal-textarea {
+  resize: vertical;
+  min-height: 72px; /* 3 sor ~ */
+  line-height: 1.6;
+}
+
+
+/* ===== FÁJLFELTÖLTŐ INPUT ===== */
+/* A natív input vizuálisan rejtve, de akadálymentesen elérhető –
+   a k-modal-fajl-gomb gomb aktiválja JS-ből (click()) */
+.k-modal-fajl-input {
+  position: absolute;  /* Kivesszük a folyásból */
+  width: 1px;
+  height: 1px;
+  opacity: 0;          /* Láthatatlan */
+  overflow: hidden;
+  z-index: -1;         /* Mögé kerül minden más elemnek */
+}
+
+
+/* ===== FÁJLVÁLASZTÓ GOMB ===== */
+/* Egyedi stílusú gomb a natív input helyett */
+.k-modal-fajl-gomb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  padding: var(--space-3) var(--space-4);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-primary);
+
+  background-color: var(--color-primary-highlight);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  transition: background-color var(--transition-fast),
+              color             var(--transition-fast),
+              border-color      var(--transition-fast);
+}
+
+
+/* Fájlválasztó gomb hover */
+.k-modal-fajl-gomb:hover {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+
+/* Fájlválasztó gomb koppintás visszajelzés */
+.k-modal-fajl-gomb:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+
+/* ===== KIVÁLASZTOTT FÁJL NEVE ===== */
+/* A gomb mellett jelenik meg, JS írja ki */
+.k-modal-fajl-nev {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+
+  /* Túl hosszú fájlnevet levágja */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+
+/* ===== IKON ELŐNÉZET KONTÉNER ===== */
+/* Alapból hidden – JS mutatja meg fájlválasztás után */
+.k-modal-elonezet-kontener {
+  flex-direction: row;      /* Kép és esetleges felirat egymás mellett */
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+
+  background-color: var(--color-surface-offset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+
+/* ===== IKON ELŐNÉZET KÉP ===== */
+.k-modal-elokezet-kep {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;        /* Arányok megőrzése, kitöltés nélkül */
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-2); /* Átlátszó PNG háttere */
+}

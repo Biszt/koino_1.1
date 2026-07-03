@@ -37,7 +37,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   },
 
   // ----- HOZZÁJÁRULÓK SZÁMA -----
-  // Hány ember adott tudatpontot erre az entitásra
+  // Hány eember adott tudatpontot erre az entitásra
   hozzajarulokSzama: { 
     type: Number,                          // Szám típus
     required: true,                        // Kötelező mező

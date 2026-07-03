@@ -32,7 +32,7 @@ class TartalomTipusRepository {
   async findById(id) {
     // Tartalom típus lekérése kapcsolódó adatokkal (populate)
     const tartalomTipus = await TartalomTipus.findById(id)
-      .populate('letrehozo', 'emberNev'); // Létrehozó adatok betöltése
+      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok betöltése
     
     return tartalomTipus;
   }
@@ -65,7 +65,7 @@ class TartalomTipusRepository {
     // Tartalom típusok lekérése kapcsolódó adatokkal
     const tartalomTipusok = await TartalomTipus.find(query)
       .sort({ letrehozva: -1 })                 // Legújabbak előre rendezés
-      .populate('letrehozo', 'emberNev'); // Létrehozó adatok
+      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok
     
     return tartalomTipusok;
   }
@@ -105,7 +105,7 @@ class TartalomTipusRepository {
         runValidators: true   // Mongoose validációk futtatása
       }
     )
-    .populate('letrehozo', 'emberNev');
+    .populate('letrehozo', 'eemberNev');
     
     return frissitettTartalomTipus;
   }

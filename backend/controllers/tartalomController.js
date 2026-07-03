@@ -23,11 +23,11 @@ class TartalomController {
    */
   async tartalomLetrehozasa(req, res) {
     try {
-      // 1. LÉPÉS - Ember ID kiolvassa JWT middleware-ből
+      // 1. LÉPÉS - eEmber ID kiolvassa JWT middleware-ből
       // Az authMiddleware már beállította a req.user objektumot
-      const emberId = req.user?.id;
+      const eemberId = req.user?.id;
       
-      if (!emberId) {
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
@@ -66,7 +66,7 @@ class TartalomController {
       // Service ellenőrzi a szuloId + szuloTipus konzisztenciát
       const ujTartalom = await TartalomService.tartalomLetrehozasa(
         adatok,           // ← Tartalmazza: szuloId, szuloTipus
-        emberId,
+        eemberId,
         kezdoTudatpont
       );
       
@@ -105,11 +105,11 @@ class TartalomController {
       // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
       const tartalomId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből (opcionális)
-      const emberId = req.user?.id || null;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből (opcionális)
+      const eemberId = req.user?.id || null;
 
       // 3. LÉPÉS - Service hívás - tartalom lekérése jogosultság ellenőrzéssel
-      const tartalom = await TartalomService.tartalomLekerese(tartalomId, emberId);
+      const tartalom = await TartalomService.tartalomLekerese(tartalomId, eemberId);
 
       // 4. LÉPÉS - Sikeres válasz küldése
       // 200 OK - Sikeres lekérés
@@ -169,13 +169,13 @@ class TartalomController {
         };
         console.log('1. Szűrők:', JSON.stringify(szurok, null, 2));
         
-        // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből (opcionális)
-        const emberId = req.user?.id || null;
-        console.log('2. Ember ID:', emberId);
+        // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből (opcionális)
+        const eemberId = req.user?.id || null;
+        console.log('2. eEmber ID:', eemberId);
         
         // 3. LÉPÉS - Service hívás - tartalmak lekérése szűrőkkel
         console.log('3. Service hívás ELŐTT...');
-        const tartalmak = await TartalomService.tartalomListazasa(szurok, emberId);
+        const tartalmak = await TartalomService.tartalomListazasa(szurok, eemberId);
         console.log('3. Service hívás UTÁN - Tartalmak száma:', tartalmak.length);
         
         // 4. LÉPÉS - Sikeres válasz küldése
@@ -218,10 +218,10 @@ class TartalomController {
       // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
       const tartalomId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      const emberId = req.user?.id;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id;
       
-      if (!emberId) {
+      if (!eemberId) {
         return res.status(401).json({
           success: false,
           message: 'Bejelentkezés szükséges'
@@ -237,7 +237,7 @@ class TartalomController {
       const frissitettTartalom = await TartalomService.tartalomModositasa(
         tartalomId,
         frissitesek,
-        emberId
+        eemberId
       );
 
       // 5. LÉPÉS - Sikeres válasz küldése
@@ -301,13 +301,13 @@ class TartalomController {
       // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
       const tartalomId = req.params.id;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT middleware-ből
-      const emberId = req.user?.id || null;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
+      const eemberId = req.user?.id || null;
 
       // 3. LÉPÉS - Service hívás - részletes adatok lekérése
       const reszletek = await TartalomService.tartalomReszleteinekLekerese(
         tartalomId,
-        emberId
+        eemberId
       );
 
       // 4. LÉPÉS - Sikeres válasz küldése
@@ -354,7 +354,7 @@ class TartalomController {
   // Törlés csak automatikusan történik:
   // 
   //  AUTOMATIKUS Torles - Tudatpont nullázás
-  //    - Ha minden ember, vagy eggyezmény visszavonja a tudatpontjait (pontok: 0)
+  //    - Ha minden eember, vagy eggyezmény visszavonja a tudatpontjait (pontok: 0)
   //    - És az osszesPont 0-ra csökken
   //    - Automatikusan törlődik (tudatpontService.js → entitasTorlese0PontNal)
 }

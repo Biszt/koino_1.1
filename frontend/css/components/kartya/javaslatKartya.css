@@ -1,0 +1,148 @@
+/* frontend/css/components/kartya/javaslatKartya.css */
+
+/* ---------------------------------------- */
+/* TÍPUS                                    */
+/* ---------------------------------------- */
+
+/* Javaslat típus szöveg – a fejléc fő azonosítója */
+.javaslat-kartya__tipus {
+  flex: 1;                              /* Kitölti a maradék helyet */
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;                         /* Flex csonkításhoz szükséges */
+}
+
+/* ---------------------------------------- */
+/* STÁTUSZ BADGE                            */
+/* ---------------------------------------- */
+
+/* Státusz badge – alap stílus, a modifier adja a színt */
+.javaslat-kartya__statusz {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);    /* Pill forma */
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Aktív javaslat – zöld */
+.javaslat-kartya__statusz--aktiv {
+  background: var(--color-success-highlight);
+  color: var(--color-success);
+}
+
+/* Lezárt javaslat – muted szürke */
+.javaslat-kartya__statusz--lezart {
+  background: var(--color-surface-offset);
+  color: var(--color-text-muted);
+}
+
+/* Függőben lévő javaslat – narancs */
+.javaslat-kartya__statusz--fuggoben {
+  background: var(--color-warning-highlight);
+  color: var(--color-warning);
+}
+
+/* Elutasított javaslat – piros */
+.javaslat-kartya__statusz--elutasitott {
+  background: var(--color-error-highlight);
+  color: var(--color-error);
+}
+
+/* ---------------------------------------- */
+/* TÖREDÉK JELZÉS                           */
+/* ---------------------------------------- */
+
+/* Töredék sorszám / darab jelzés – pl. "2 / 6" */
+.javaslat-kartya__toredek {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-primary);          /* Erdőzöld – kiemelt, fontos info */
+  background: var(--color-primary-highlight);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);    /* Pill forma, mint a státusz badge */
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------- */
+/* MUTATÓK SOR                              */
+/* ---------------------------------------- */
+
+/* Mutatók konténere – összes mutató egymás mellett, tördeléssel */
+.javaslat-kartya__mutatok-sor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;                      /* Kis képernyőn több sorba tördelhet */
+  gap: var(--space-2);
+  width: 100%;                          /* Teljes szélességet foglalja el */
+  margin-top: var(--space-1);           /* Kis rés a cím/státusz sor alatt */
+}
+
+/* Egyetlen mutató elem – alap stílus */
+.javaslat-kartya__mutato {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);       /* Alap: muted szürke */
+  white-space: nowrap;
+}
+
+/* Támogatottsági arány – zöld */
+.javaslat-kartya__mutato--tamogatottsagi {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* Ellenzői arány – piros */
+.javaslat-kartya__mutato--ellenzoi {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+/* Részvételi arány – muted, nem kritikus info */
+.javaslat-kartya__mutato--reszveteli {
+  color: var(--color-text-muted);
+}
+
+/* Bizonyossági mutató – primary erdőzöld */
+.javaslat-kartya__mutato--bizonyossagi {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Döntési idő – muted, kiegészítő info */
+.javaslat-kartya__mutato--dontesi-ido {
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------- */
+/* BODY – TÖREDÉK RÉSZLETEK                 */
+/* ---------------------------------------- */
+
+/* Töredék csoport részletek konténere a body-ban */
+.javaslat-kartya__toredek-reszletek {
+  display: flex;
+  flex-direction: column;               /* Cimke felül, érték alul */
+  gap: var(--space-1);
+}
+
+/* Töredék csoport azonosító cimkéje */
+.javaslat-kartya__toredek-cimke {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Töredék csoport azonosító értéke */
+.javaslat-kartya__toredek-csoport-id {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  font-weight: 600;
+  font-family: monospace;               /* Azonosító – monospace jobban olvasható */
+  word-break: break-all;                /* Hosszú ID-k ne lógjanak ki */
+}

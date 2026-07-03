@@ -1,0 +1,37 @@
+<!-- frontend/html/components/hamburgerMenu.html -->
+
+<!-- A HamburgerMenu.js tölti be ezt a template-et fetch()-csel.
+     A menüpontokat (hamburger-menu-pont elemeket) a JS adja hozzá
+     dinamikusan, mivel azok kívülről kapott opciok tömbből épülnek fel. -->
+
+<!-- HAMBURGER GOMB – 3 csík / X animáció CSS-sel -->
+<button
+  class="hamburger-gomb"
+  type="button"
+  aria-label="Menü megnyitása"
+  aria-expanded="false"
+  aria-controls="hamburger-menu-panel"
+>
+  <!-- A 3 csík külön span-okban – CSS animálja X-re nyitáskor -->
+  <span class="hamburger-gomb__ikon" aria-hidden="true">
+    <span></span>
+    <span></span>
+    <span></span>
+  </span>
+</button>
+
+<!-- OVERLAY – félig átlátszó háttér, koppintásra bezárja a menüt -->
+<div class="hamburger-menu-overlay" aria-hidden="true"></div>
+
+<!-- MENÜ PANEL – a menüpontok helye, JS tölti fel az opciok alapján -->
+<div
+  id="hamburger-menu-panel"
+  class="hamburger-menu-panel"
+  role="dialog"
+  aria-label="Navigációs menü"
+  aria-hidden="true"
+  tabindex="-1"
+>
+  <!-- A menüpontokat a HamburgerMenu.js _pontokEpitese() metódusa
+       adja hozzá createElement()-tel, az opciok tömb alapján -->
+</div>

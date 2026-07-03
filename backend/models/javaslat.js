@@ -16,42 +16,43 @@ const javaslatSchema = new mongoose.Schema({
   // ----- JAVASLAT TÍPUSA -----
   // ===================================
   javaslatTipus: {
-    type: String, // Szöveges típus
-    required: true, // Kötelező mező
-    enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'], // Engedélyezett értékek
-    trim: true // Levágja a felesleges szóközöket
+    type: String,                                                          // Szöveges típus
+    required: true,                                                        // Kötelező mező
+    enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'],   // Engedélyezett értékek
+    trim: true                                                             // Levágja a felesleges szóközöket
   },
 
   // ===================================
   // ----- ÉRINTETT ENTITÁSOK (TÖMB) -----
   // ===================================
   // Egy vagy több entitás, amelyekre a javaslat vonatkozik
-  erintettEntitasok: { 
+  erintettEntitasok: {
     type: [
       {
         // Entitás MongoDB ObjectId-ja
-        entitasId: { 
+        entitasId: {
           type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-          required: true // Kötelező mező
+          required: true                         // Kötelező mező
         },
         // Entitás típusa (melyik model/kollekció)
-        entitasTipus: { 
-          type: String, // Szöveges típus
-          required: true, // Kötelező mező
-          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'], // Engedélyezett típusok
+        entitasTipus: {
+          type: String,                                          // Szöveges típus
+          required: true,                                        // Kötelező mező
+          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],     // Engedélyezett típusok
           trim: true
         },
         // Művelet típusa ezen az entitáson
         muvelet: {
-          type: String, // Szöveges típus
-          required: true, // Kötelező mező
-          enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'], // Engedélyezett műveletek
+          type: String,                                                    // Szöveges típus
+          required: true,                                                  // Kötelező mező
+          enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'],       // Engedélyezett műveletek
           trim: true
         },
         // Módosítási adatok (ha Modositas vagy Athelyezes művelet)
-        modositasAdatok: { 
-          type: Object, // Objektum típus
-          default: {} // Alapértelmezett: üres objektum
+        // Object típus: befogadja a szövegszerkesztő JSON tömbjét is (pl. szoveg mező)
+        modositasAdatok: {
+          type: Object,   // Objektum típus - Mixed-ként viselkedik, bármit elfogad
+          default: {}     // Alapértelmezett: üres objektum
         }
       }
     ],
@@ -64,62 +65,83 @@ const javaslatSchema = new mongoose.Schema({
     }
   },
 
-  // ----- SZÜLŐ TARTALOM AZONOSÍTÓ ----- 
+  // ----- SZÜLŐ TARTALOM AZONOSÍTÓ -----
   // Melyik tartalom alatt jött létre ez a javaslat (KÖTELEZŐ!)
   szuloId: {
-    type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Tartalom',                       // Referencia a Tartalom modellre
-    required: true,                        // KÖTELEZŐ mező - minden javaslat tartalom alatt van
-    index: true                            // Index a gyors kereséshez
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'Tartalom',                        // Referencia a Tartalom modellre
+    required: true,                         // KÖTELEZŐ mező - minden javaslat tartalom alatt van
+    index: true                             // Index a gyors kereséshez
   },
 
-  // ----- SZÜLŐ TÍPUSA ----- 
+  // ----- SZÜLŐ TÍPUSA -----
   // Fix érték: Javaslat mindig csak Tartalom alatt jöhet létre
   szuloTipus: {
-    type: String,                          // Szöveges típus
-    default: 'Tartalom',                   // Alapértelmezett: mindig 'Tartalom'
-    enum: ['Tartalom']                     // Csak 'Tartalom' engedélyezett
+    type: String,               // Szöveges típus
+    default: 'Tartalom',        // Alapértelmezett: mindig 'Tartalom'
+    enum: ['Tartalom']          // Csak 'Tartalom' engedélyezett
   },
 
   // ----- EGYEZMÉNY TÁRHELY AZONOSÍTÓ -----
   // MÓDOSÍTOTT: Egyesítésnél null lehet, mert az új entitás még nem létezik
   // A végrehajtás után frissül a tényleges új entitás ID-jával
   egyezmenyTarhelyId: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Tartalom', // Referencia a Tartalom modellre
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'Tartalom',                        // Referencia a Tartalom modellre
     required: function() {
       // Egyesítésnél NEM kötelező, mert az új entitás még nem létezik
       return this.javaslatTipus !== 'Egyesites';
     },
-    default: null, // Alapértelmezett null egyesítésnél
-    index: true // Index a gyors kereséshez
+    default: null,   // Alapértelmezett null egyesítésnél
+    index: true      // Index a gyors kereséshez
   },
 
+  // ----- TÖREDÉK JAVASLAT METAADATOK -----
+  toredekCsoportId: {
+    type: mongoose.Schema.Types.ObjectId,   // Töredék csoport azonosító
+    required: false,                        // Csak akkor van értéke, ha töredék javaslat
+    default: null                           // Alapértelmezett: nincs csoport
+  }, // Egy logikai javaslat összes töredéke ugyanazt az értéket kapja
+
+  toredekSorszam: {
+    type: Number,       // A töredék pozíciója: 1, 2, ..., N
+    required: false,    // Nem kötelező – régi javaslatoknál hiányozhat
+    default: null,      // Ha nincs beállítva, null lesz
+    min: 1              // Legalább 1 a sorszám
+  }, // Pl. 1/6 esetén ez az 1-es lesz
+
+  toredekDarab: {
+    type: Number,       // Hány töredék tartozik a csoportba összesen
+    required: false,    // Nem kötelező – régi javaslatoknál hiányozhat
+    default: null,      // Ha nincs csoport, akkor null
+    min: 1              // Legalább 1 (egy elemű csoport is lehet elvileg)
+  }, // Pl. 1/6 esetén ez a 6-os lesz
 
   // ===================================
   // ----- Egyesites SPECIÁLIS ADATOK -----
   // ===================================
   // Csak Egyesites típusú javaslat esetén használatos
-  egyesitesAdatok: { 
+  egyesitesAdatok: {
     // Az új entitás típusa (ami létrejön az egyesítésből)
     ujEntitasTipus: {
-      type: String, // Szöveges típus
-      enum: ['Tartalom', 'Kategoria', 'TartalomTipus'], // Engedélyezett típusok
+      type: String,                                          // Szöveges típus
+      enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],     // Engedélyezett típusok
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
       }
     },
     // Az új entitás adatai (mezők: nev, leiras, stb.)
-    ujEntitasAdatok: { 
-      type: Object, // Objektum típus
+    // Object típus: befogadja a szövegszerkesztő JSON tömbjét is
+    ujEntitasAdatok: {
+      type: Object,   // Objektum típus - Mixed-ként viselkedik, bármit elfogad
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
       }
     },
     // Forrás entitások ID-i (amelyek egyesülnek)
-    forrasEntitasok: [ // ✅ JAVÍTVA: camelCase (volt: forras_entitasok)
+    forrasEntitasok: [
       {
         type: mongoose.Schema.Types.ObjectId // MongoDB ObjectId típus
       }
@@ -127,24 +149,24 @@ const javaslatSchema = new mongoose.Schema({
   },
 
   // ===================================
-  // ----- LÉTREHOZÓ EMBER -----
+  // ----- LÉTREHOZÓ eEmber -----
   // ===================================
   letrehozo: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
-    required: true // Kötelező mező
+    type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
+    ref: 'eEmber',                          // Referencia a eEmber modellre
+    required: true                          // Kötelező mező
   },
 
   // ===================================
   // ----- INDOKLÁS -----
   // ===================================
-  // Miért szükséges ez a javaslat
+  // A javaslat gazdag szöveges indoklása - miért szükséges ez a javaslat
+  // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
+  // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
-    type: String, // Szöveges típus
-    required: true, // Kötelező mező
-    trim: true, // Levágja a felesleges szóközöket
-    minlength: [10, 'Az indoklás legalább 10 karakter hosszú legyen'], // Minimum hossz validáció
-    maxlength: [2000, 'Az indoklás maximum 2000 karakter lehet'] // Maximum hossz validáció
+    type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
+    required: true,                     // Kötelező mező
+    default: null                       // Alapértelmezett: null
   },
 
   // ===================================
@@ -152,45 +174,44 @@ const javaslatSchema = new mongoose.Schema({
   // ===================================
   // A javaslat jelenlegi állapota
   statusz: {
-    type: String, // Szöveges típus
-    enum: ['Aktiv', 'Elfogadva', 'Elvetve', 'Hiba'], // Engedélyezett értékek
-    default: 'Aktiv' // Alapértelmezett: Aktiv
+    type: String,                                         // Szöveges típus
+    enum: ['Aktiv', 'Elfogadva', 'Elvetve', 'Hiba'],     // Engedélyezett értékek
+    default: 'Aktiv'                                      // Alapértelmezett: Aktiv
   },
 
   // ===================================
   // ----- LÉTREHOZÁS DÁTUMA -----
   // ===================================
   letrehozva: {
-    type: Date, // Dátum típus
-    default: Date.now // Alapértelmezett: jelenlegi időpont
+    type: Date,         // Dátum típus
+    default: Date.now   // Alapértelmezett: jelenlegi időpont
   },
 
   // ===================================
   // ----- HATÁLYBA LÉPÉS IDEJE -----
   // ===================================
   // Mikor lép hatályba a javaslat (számított érték)
-  hatalybaLepesIdeje: { 
-    type: Date, // Dátum típus
-    default: null // Alapértelmezett: nincs beállítva
+  hatalybaLepesIdeje: {
+    type: Date,     // Dátum típus
+    default: null   // Alapértelmezett: nincs beállítva
   },
 
   // ===================================
   // ----- UTOLSÓ SZÁMÍTÁS IDŐPONTJA -----
   // ===================================
   // Mikor történt utoljára a BM, HI, stb. újraszámítása
-  utolsoSzamitas: { // ✅ JAVÍTVA: camelCase (volt: utolsoSzamitas)
-    type: Date, // Dátum típus
-    default: Date.now // Alapértelmezett: jelenlegi időpont
+  utolsoSzamitas: {
+    type: Date,         // Dátum típus
+    default: Date.now   // Alapértelmezett: jelenlegi időpont
   },
 
   // ----- ÉRTÉKEK ELAVULTAK JELZŐ -----
   // Jelzi, hogy a számított értékek elavultak-e (hisztogram vagy szavazat változás miatt)
   // A cron job vagy részletes lekérés fogja frissíteni
   ertekekElavultak: {
-    type: Boolean,      // Boolean típus
-    default: false      // Alapértelmezett: false (nem elavult)
+    type: Boolean,  // Boolean típus
+    default: false  // Alapértelmezett: false (nem elavult)
   },
-
 
   // ===================================
   // ----- SZÁMÍTOTT ÉRTÉKEK (CACHE) -----
@@ -198,80 +219,80 @@ const javaslatSchema = new mongoose.Schema({
   // Ezek az értékek minden szavazat után újraszámolódnak
   // Cache-elve vannak a gyorsabb lekérdezéshez
 
-  // Érintett entitásokon lévő tudatpont tulajdonosok száma 
-  // Egyesített halmaz - egyedi emberek
+  // Érintett entitásokon lévő tudatpont tulajdonosok száma
+  // Egyesített halmaz - egyedi eEmberek
   entitasokTudatpontTulajdonosokSzama: {
-    type: Number, // Számérték típus
-    default: 0 // Alapértelmezett: 0
+    type: Number,   // Számérték típus
+    default: 0      // Alapértelmezett: 0
   },
 
-  // Részvevő tudatpont tulajdonosok száma 
+  // Részvevő tudatpont tulajdonosok száma
   // Akik mind a javaslaton, mind valamelyik érintett entitáson is vannak
   resztvevoTudatpontTulajdonosokSzama: {
-    type: Number, // Számérték típus
-    default: 0 // Alapértelmezett: 0
+    type: Number,   // Számérték típus
+    default: 0      // Alapértelmezett: 0
   },
 
-  // Javaslat támogatóinak száma 
+  // Javaslat támogatóinak száma
   javaslatTamogatoinakSzama: {
-    type: Number, // Számérték típus
-    default: 0 // Alapértelmezett: 0
+    type: Number,   // Számérték típus
+    default: 0      // Alapértelmezett: 0
   },
 
-  // Javaslat ellenzőinek száma 
+  // Javaslat ellenzőinek száma
   javaslatEllenzoinekSzama: {
-    type: Number, // Számérték típus
-    default: 0 // Alapértelmezett: 0
+    type: Number,   // Számérték típus
+    default: 0      // Alapértelmezett: 0
   },
 
-  // JAVASLAT TARTÓZKODÓINAK SZÁMA 
+  // Javaslat tartózkodóinak száma
   javaslatTartozkodoinakSzama: {
-    type: Number,           // Szám típus
-    default: 0,             // Alapértelmezett: 0 tartózkodó
-    min: 0                  // Minimum érték: nem lehet negatív
+    type: Number,   // Szám típus
+    default: 0,     // Alapértelmezett: 0 tartózkodó
+    min: 0          // Minimum érték: nem lehet negatív
   },
 
   // Részvételi arány - százalékban (RA)
   // RA = resztvevoTudatpontTulajdonosokSzama / entitasokTudatpontTulajdonosokSzama * 100
   reszveteliArany: {
-    type: Number, // Számérték típus
-    default: 0, // Alapértelmezett: 0
-    min: 0, // Minimum érték: 0
-    max: 100 // Maximum érték: 100
+    type: Number,   // Számérték típus
+    default: 0,     // Alapértelmezett: 0
+    min: 0,         // Minimum érték: 0
+    max: 100        // Maximum érték: 100
   },
 
-  // Támogatottsági arány - százalékban 
+  // Támogatottsági arány - százalékban
   // TA = javaslatTamogatoinakSzama / resztvevoTudatpontTulajdonosokSzama * 100
   tamogatotsagiArany: {
-    type: Number, // Számérték típus
-    default: 0, // Alapértelmezett: 0
-    min: 0, // Minimum érték: 0
-    max: 100 // Maximum érték: 100
+    type: Number,   // Számérték típus
+    default: 0,     // Alapértelmezett: 0
+    min: 0,         // Minimum érték: 0
+    max: 100        // Maximum érték: 100
   },
 
-  // Ellenzői arány - százalékban 
+  // Ellenzői arány - százalékban
   // EA = javaslatEllenzoinekSzama / resztvevoTudatpontTulajdonosokSzama * 100
   ellenzoiArany: {
-    type: Number, // Számérték típus
-    default: 0, // Alapértelmezett: 0
-    min: 0, // Minimum érték: 0
-    max: 100 // Maximum érték: 100
+    type: Number,   // Számérték típus
+    default: 0,     // Alapértelmezett: 0
+    min: 0,         // Minimum érték: 0
+    max: 100        // Maximum érték: 100
   },
 
   // Bizonyossági mutató (BM)
   // BM = (((TA vagy EA - 50) * 2) + RA) / 2
   bizonyossagiMutato: {
-    type: Number, // Számérték típus
-    default: 0, // Alapértelmezett: 0
-    min: 0, // Minimum érték: 0
-    max: 100 // Maximum érték: 100
+    type: Number,   // Számérték típus
+    default: 0,     // Alapértelmezett: 0
+    min: 0,         // Minimum érték: 0
+    max: 100        // Maximum érték: 100
   },
 
   // Hatályba lépési idő másodpercben (HI)
   // HI = 31_536_000 * (1 - BM/100)^5
   dontesiIdo: {
-    type: Number, // Számérték típus (másodperc)
-    default: 31536000 // Alapértelmezett: 1 év (maximum)
+    type: Number,       // Számérték típus (másodperc)
+    default: 31536000   // Alapértelmezett: 1 év (maximum)
   }
 
 });
@@ -284,7 +305,7 @@ const javaslatSchema = new mongoose.Schema({
 // Státusz indexelése - gyors szűrés státusz szerint (pl. Aktiv javaslatok)
 javaslatSchema.index({ statusz: 1 });
 
-// Létrehozó indexelése - gyors keresés ember javaslatai alapján
+// Létrehozó indexelése - gyors keresés eEmber javaslatai alapján
 javaslatSchema.index({ letrehozo: 1 });
 
 // Hatályba lépés ideje indexelése - Cron job-hoz szükséges
@@ -294,8 +315,8 @@ javaslatSchema.index({ hatalybaLepesIdeje: 1 });
 // Érintett entitások indexelése - gyors keresés entitás szerint
 // Compound index: entitasId + entitasTipus
 javaslatSchema.index({
-  'erintettEntitasok.entitasId': 1, // ✅ JAVÍTVA: camelCase
-  'erintettEntitasok.entitasTipus': 1 // ✅ JAVÍTVA: camelCase
+  'erintettEntitasok.entitasId': 1,
+  'erintettEntitasok.entitasTipus': 1
 });
 
 // Létrehozás dátuma indexelése - legújabb javaslatok rendezéséhez
@@ -313,10 +334,15 @@ javaslatSchema.index({ szuloId: 1, statusz: 1 });
 // Gyors keresés: "Egy tartalom legújabb javaslatai"
 javaslatSchema.index({ szuloId: 1, letrehozva: -1 });
 
-// ÚJ INDEX - egyezmenyTarhelyId indexelése 
+// egyezmenyTarhelyId indexelése
 // Gyors keresés: Melyik javaslatok egyezményei kerülnek egy adott tartalomba
 javaslatSchema.index({ egyezmenyTarhelyId: 1 });
 
+// Töredék csoport index
+javaslatSchema.index({
+  toredekCsoportId: 1,   // Töredék csoport szerinti gyors keresés
+  statusz: 1             // Gyakori, hogy csak Aktiv / Elfogadva kell
+});
 
 // ===================================
 // MONGOOSE MIDDLEWARE-EK
@@ -324,56 +350,68 @@ javaslatSchema.index({ egyezmenyTarhelyId: 1 });
 
 // ----- PRE SAVE MIDDLEWARE -----
 // Futtatás előtt: javaslat mentése
-javaslatSchema.pre('save', function(next) {
-  
-  // ÚJ VALIDÁCIÓ - Szülő kötelező ellenőrzése
-  if (!this.szuloId) {
+javaslatSchema.pre('save', function(next) { // Mentés előtti middleware kezdete
+
+  // Log a pre-save elején
+  console.log('javaslatSchema.preSave - KEZDÉS', {
+    javaslatTipus: this.javaslatTipus,                        // Aktuális javaslat típusa
+    erintettEntitasokSzama: this.erintettEntitasok?.length,   // Érintett entitások száma
+    toredekCsoportId: this.toredekCsoportId                   // Töredék csoport azonosító (ha van)
+  });
+
+  // VALIDÁCIÓ - Szülő kötelező ellenőrzése
+  if (!this.szuloId) { // Ha nincs szülő azonosító
     return next(new Error('A javaslat létrehozásához szülő tartalom megadása kötelező'));
   }
-  
-  // MEGLÉVŐ VALIDÁCIÓ - Egyesites típus validálása
-  if (this.javaslatTipus === 'Egyesites') {
-    // Ellenőrzés: legalább 2 érintett entitás kell
-    if (this.erintettEntitasok.length < 2) {
-      return next(new Error('Egyesites típushoz legalább 2 érintett entitás szükséges'));
+
+  // VALIDÁCIÓ - Indoklás kötelező ellenőrzése
+  // MÓDOSÍTVA: String helyett Mixed, ezért manuálisan ellenőrizzük a meglétét
+  if (!this.indoklas) { // Ha nincs indoklás megadva
+    return next(new Error('Az indoklás megadása kötelező'));
+  }
+
+  // VALIDÁCIÓ - Egyesites típus validálása
+  if (this.javaslatTipus === 'Egyesites') { // Csak Egyesites típusnál fusson le
+
+    // Ellenőrzés: legalább 1 érintett entitás kell
+    if (!this.erintettEntitasok || this.erintettEntitasok.length < 1) {
+      return next(new Error('Egyesites típushoz legalább 1 érintett entitás szükséges'));
     }
-    
-    // Ellenőrzés: minden érintett entitás azonos típusú legyen
-    const elsoTipus = this.erintettEntitasok[0].entitasTipus;
-    const osszesAzonosTipus = this.erintettEntitasok.every(
-      (entitas) => entitas.entitasTipus === elsoTipus
-    );
-    
-    if (!osszesAzonosTipus) {
-      return next(new Error('Egyesites esetén minden érintett entitásnak azonos típusúnak kell lennie'));
-    }
-    
+
     // Ellenőrzés: egyesitesAdatok kitöltöttség
     if (!this.egyesitesAdatok || !this.egyesitesAdatok.ujEntitasAdatok) {
       return next(new Error('Egyesites esetén az egyesitesAdatok megadása kötelező'));
     }
-  }
-  
-  // MEGLÉVŐ VALIDÁCIÓ - Csomag típus validálása
-  if (this.javaslatTipus === 'Csomag') {
+
+  } // Egyesites validáció blokkjának vége
+
+  // VALIDÁCIÓ - Csomag típus validálása
+  if (this.javaslatTipus === 'Csomag') { // Csak Csomag típusnál fusson le
+
     // Ellenőrzés: legalább 2 művelet kell
-    if (this.erintettEntitasok.length < 2) {
+    if (!this.erintettEntitasok || this.erintettEntitasok.length < 2) {
       return next(new Error('Csomag típushoz legalább 2 művelet szükséges'));
     }
-    
-    // Ellenőrzés: ne legyen Egyesites művelet (az külön Egyesites típus)
+
+    // Ellenőrzés: ne legyen Egyesites művelet
     const vanEgyesites = this.erintettEntitasok.some(
       (entitas) => entitas.muvelet === 'Egyesites'
     );
-    
+
     if (vanEgyesites) {
       return next(new Error('Csomag típusban nem lehet Egyesites művelet, használd az Egyesites típust'));
     }
-  }
-  
-  next(); // Folytatás a mentéssel
-});
 
+  } // Csomag validáció blokkjának vége
+
+  // Log a pre-save végén
+  console.log('javaslatSchema.preSave - VÉGE', {
+    javaslatTipus: this.javaslatTipus,  // Javaslat típusa a végén
+    sikeresValidacio: true              // Jelöljük, hogy a validáció sikeres volt
+  });
+
+  next(); // Folytatás a mentéssel, ha minden rendben volt
+}); // pre('save') middleware vége
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

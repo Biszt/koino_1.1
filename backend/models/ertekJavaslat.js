@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // ===================================
 // ÉRTÉK ERTEK JAVASLAT SÉMA DEFINÍCIÓJA
 // ===================================
-// Egyéni emberi érték javaslatok tárolása egy tartalom küszöbértékeihez
+// Egyéni eemberi érték javaslatok tárolása egy tartalom küszöbértékeihez
 const ertekJavaslatSchema = new mongoose.Schema({
 
   // ----- TARTALOM AZONOSÍTÓ -----
@@ -23,15 +23,15 @@ const ertekJavaslatSchema = new mongoose.Schema({
 
   // ----- EMBER AZONOSÍTÓ -----
   // Ki adta ezt az érték javaslatot
-  emberId: {
+  eemberId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Ember', // Referencia a Ember modellre
+    ref: 'eEmber', // Referencia a eEmber modellre
     required: true, // Kötelező mező
     index: true // Indexelve a gyors kereséshez
   },
 
   // -----ÉRTÉK ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB-----
-  // Ember által javasolt érték (51-100)
+  // eEmber által javasolt érték (51-100)
   javaslatElfogadasiKuszob: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -44,7 +44,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- RÉSZVÉTELI ARÁNY KÜSZÖB ERTEK JAVASLAT -----
-  // Ember által javasolt érték (0-100)
+  // eEmber által javasolt érték (0-100)
   reszveteliAranyKuszob: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -57,7 +57,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MINIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
-  // Ember által javasolt alsó határ másodpercben (0-31536000)
+  // eEmber által javasolt alsó határ másodpercben (0-31536000)
   minimumDontesiIdo: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -70,7 +70,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MAXIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
-  // Ember által javasolt felső határ másodpercben (0-315360000)
+  // eEmber által javasolt felső határ másodpercben (0-315360000)
   maximumDontesiIdo: {
     type: Number, // Szám típus
     required: true, // Kötelező mező
@@ -91,7 +91,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   },
 
   // ----- MÓDOSÍTÁS DÁTUMA -----
-  // Amikor a ember utoljára módosította az érték javaslatát
+  // Amikor a eember utoljára módosította az érték javaslatát
   modositva: {
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
@@ -102,18 +102,18 @@ const ertekJavaslatSchema = new mongoose.Schema({
 // INDEXEK LÉTREHOZÁSA
 // ===================================
 
-// Compound index - egy ember csak egyszer javasolhat egy tartalomhoz
+// Compound index - egy eember csak egyszer javasolhat egy tartalomhoz
 // Ez biztosítja, hogy ne legyen duplikált rekord
 ertekJavaslatSchema.index(
-  { tartalomId: 1, emberId: 1 },
+  { tartalomId: 1, eemberId: 1 },
   { unique: true } // Egyedi constraint
 );
 
 // TartalomId index - gyors lekérdezés egy tartalom összes érték javaslatához
 ertekJavaslatSchema.index({ tartalomId: 1 });
 
-// EmberId index - gyors lekérdezés egy ember összes érték javaslatához
-ertekJavaslatSchema.index({ emberId: 1 });
+// eEmberId index - gyors lekérdezés egy eember összes érték javaslatához
+ertekJavaslatSchema.index({ eemberId: 1 });
 
 // ===================================
 // PRE-SAVE HOOK

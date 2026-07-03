@@ -1,83 +1,139 @@
 // backend/models/hierarchikusTudatpontAllokacio.js
 
 // MONGOOSE IMPORTÁLÁSA
-// Mongoose - MongoDB adatbázis kezelésre szolgáló library
 const mongoose = require('mongoose');
 
 // HIERARCHIKUS TUDATPONT ALLOKÁCIÓ SÉMA DEFINÍCIÓJA
-// Ez a séma tárolja az entitások összesített (saját + leszármazottak) tudatpontjait
 const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
+
   // ----- ENTITÁS AZONOSÍTÓ -----
-  // Melyik entitásra vonatkozik ez a hierarchikus allokáció
   entitasId: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    required: true, // Kötelező mező
-    index: true // Indexelve a gyors kereséshez
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    index: true
   },
 
   // ----- ENTITÁS TÍPUSA -----
-  // Milyen típusú entitás ez (Tartalom, Kategória, stb.)
   entitasTipus: {
-    type: String, // Szöveges típus
-    required: true, // Kötelező mező
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'], // Engedélyezett típusok
-    trim: true // Levágja a felesleges szóközöket
+    type: String,
+    required: true,
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],
+    trim: true
+  },
+
+  // ----- SZÜLŐ AZONOSÍTÓ -----
+  // Melyik entitás a közvetlen szülője ennek az entitásnak
+  // Null érték esetén ez egy gyökér entitás (nincs szülője)
+  szuloId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+
+  // ----- SZÜLŐ TÍPUSA -----
+  // Meghatározza, hogy a szuloId melyik kollekciára mutat
+  // Null, ha ez egy gyökér entitás
+  szuloTipus: {
+    type: String,
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny', null],
+    default: null
   },
 
   // ----- HIERARCHIKUS ÖSSZPONTSZÁM -----
-  // Az entitás saját tudatpontjai + minden leszármazottjának tudatpontjai
-  // Cache-elt érték - real-time frissül minden tudatpont változásnál
+  // Saját pont + összes leszármazott hierarchikus pontja
   hierarchikusOsszesPont: {
-    type: Number, // Számérték típus
-    required: true, // Kötelező mező
-    default: 0, // Alapértelmezett érték 0
-    min: 0 // Nem lehet negatív
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0
+  },
+
+  // ----- HIERARCHIKUS HOZZÁJÁRULÓK SZÁMA -----
+  // Egyedi eemberek száma, akik ebben az ágban hozzájárultak
+  // VÁLTOZÁS: ÚJ MEZŐ - hierarchikusFrissitesService számítja
+  hierarchikusHozzajarulokSzama: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+
+  // ----- HIERARCHIA SZINT -----
+  // 0 = levél entitás (nincs gyereke)
+  // 1 = egy szinttel feljebb (0. szint szülője)
+  // 2 = két szinttel feljebb, stb.
+  // VÁLTOZÁS: ÚJ MEZŐ - findElavultHierarchikusAllokaciok() szűr rá
+  hierarchiaSzint: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+
+  // ----- HIERARCHIKUS ADATOK ELAVULTAK-E -----
+  // true: a CRON job-nak újra kell számítania ezt az entitást
+  // false: az adatok frissek, nem kell újraszámítani
+  // VÁLTOZÁS: ÚJ MEZŐ - CRON job és frissítés logika használja
+  hierarchikusAdatokElavultak: {
+    type: Boolean,
+    default: true  // Alapból elavult - első létrehozáskor mindig számítsuk ki
+  },
+
+  // ----- HIERARCHIKUS ADATOK UTOLSÓ FRISSÍTÉSE -----
+  // Mikor számította utoljára a CRON job a hierarchikus adatokat
+  // VÁLTOZÁS: ÚJ MEZŐ - hierarchikusFrissitesService állítja be
+  hierarchikusAdatokUtolsoFrissites: {
+    type: Date,
+    default: null  // Null = még soha nem lett újraszámítva
   },
 
   // ----- LÉTREHOZÁS DÁTUMA -----
-  // Amikor először létrejött ez a rekord
   letrehozva: {
-    type: Date, // Dátum típus
-    default: Date.now // Alapértelmezett: jelenlegi időpont
+    type: Date,
+    default: Date.now
   },
 
   // ----- FRISSÍTÉS DÁTUMA -----
-  // Amikor utoljára frissítettük ezt a rekordot
   frissitve: {
-    type: Date, // Dátum típus
-    default: Date.now // Alapértelmezett: jelenlegi időpont
+    type: Date,
+    default: Date.now
   }
 });
 
-// INDEXEK LÉTREHOZÁSA
+// ===== INDEXEK =====
+
 // Compound unique index - egy entitáshoz csak egy hierarchikus allokáció tartozhat
-// Ez biztosítja, hogy ne legyen duplikáció
 hierarchikusTudatpontAllokaciSchema.index(
-  { entitasId: 1, entitasTipus: 1 }, 
-  { unique: true } // Egyedi constraint
+  { entitasId: 1, entitasTipus: 1 },
+  { unique: true }
 );
 
 // EntitasTipus index - gyors szűrés típus szerint
 hierarchikusTudatpontAllokaciSchema.index({ entitasTipus: 1 });
 
 // HierarchikusOsszesPont index - gyors rendezés pont szerint
-hierarchikusTudatpontAllokaciSchema.index({ hierarchikusOsszesPont: -1 }); // Csökkenő sorrend
+hierarchikusTudatpontAllokaciSchema.index({ hierarchikusOsszesPont: -1 });
 
-// PRE-SAVE MIDDLEWARE
-// Automatikusan frissíti a frissitve mezőt mentés előtt
+// SzuloId index - gyors keresés szülő alapján (kártyastóc összeállításhoz)
+hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1 });
+
+// SzuloId + hierarchikusOsszesPont compound index
+// Bogár logikához: adott szülő gyerekei pont szerint rendezve
+hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1, hierarchikusOsszesPont: -1 });
+
+// VÁLTOZÁS: ÚJ INDEX - CRON job lekérdezés gyorsításához
+// findElavultHierarchikusAllokaciok() erre a két mezőre szűr egyszerre
+hierarchikusTudatpontAllokaciSchema.index(
+  { hierarchiaSzint: 1, hierarchikusAdatokElavultak: 1 }
+);
+
+// ===== PRE-SAVE MIDDLEWARE =====
 hierarchikusTudatpontAllokaciSchema.pre('save', function(next) {
-  // Frissítjük a módosítás dátumát
   this.frissitve = new Date();
-  // Továbblépés a mentéshez
   next();
 });
 
-// MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA
-// A model a séma alapján létrehozott adatbázis kollekció
+// ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 const HierarchikusTudatpontAllokacio = mongoose.model(
-  'HierarchikusTudatpontAllokacio', 
+  'HierarchikusTudatpontAllokacio',
   hierarchikusTudatpontAllokaciSchema
 );
 
-// Model exportálása, hogy más fájlokban is használható legyen
 module.exports = HierarchikusTudatpontAllokacio;

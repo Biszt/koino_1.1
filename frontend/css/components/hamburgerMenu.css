@@ -1,0 +1,205 @@
+/* frontend/css/components/hamburgerMenu.css */
+
+/* ===== HAMBURGER GOMB ===== */
+/* A HamburgerMenu.js rendereli a konténerbe – nem a HTML tartalmazza */
+/* Minimum 44x44px érintési terület – mobil hozzáférhetőség */
+/* CSS változókkal: a szülő kontextus felülírhatja a színeket */
+.hamburger-gomb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Minimum érintési terület */
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+
+  /* Stílus – változók alapján, alapértelmezés: sötét háttérre (alsó sáv) */
+  background: var(--hamburger-gomb-hatter, rgba(255, 255, 255, 0.10));
+  border: 1px solid var(--hamburger-gomb-keret, rgba(255, 255, 255, 0.18));
+  border-radius: var(--radius-md);
+  color: var(--hamburger-gomb-szin, var(--color-text-inverse));
+  cursor: pointer;
+
+  /* Átmenet koppintáskor */
+  transition: background var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+/* Hover állapot (asztali gépen) */
+.hamburger-gomb:hover {
+  background: var(--hamburger-gomb-hatter-hover, rgba(255, 255, 255, 0.18));
+}
+
+/* Aktív állapot (koppintáskor visszajelzés) */
+.hamburger-gomb:active {
+  background: var(--hamburger-gomb-hatter-aktiv, rgba(255, 255, 255, 0.25));
+  transform: scale(0.95);
+}
+
+/* Aktív állapot (koppintáskor visszajelzés) */
+.hamburger-gomb:active {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95); /* Enyhe összenyomódás érzete */
+}
+
+/* ===== HAMBURGER IKON (három vonal) ===== */
+/* CSS-sel rajzolt három vonal – SVG nélkül */
+.hamburger-gomb__ikon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Vonalak közötti távolság */
+}
+
+/* Egy vonal */
+.hamburger-gomb__ikon span {
+  display: block;
+  width: 18px;  /* Vonalak szélessége */
+  height: 2px;  /* Vonalak vastagsága */
+  background-color: var(--color-text-inverse);
+  border-radius: var(--radius-full);
+
+  /* Animáció: 3 csík ↔ X váltás */
+  transition: transform var(--transition-fast),
+              opacity var(--transition-fast);
+}
+
+/* ===== X ANIMÁCIÓ – nyitott állapot ===== */
+/* .nyitott osztályt a HamburgerMenu.js adja hozzá/veszi el */
+
+/* Első vonal: átlósan le-jobbra */
+.hamburger-gomb.nyitott .hamburger-gomb__ikon span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+/* Középső vonal: eltűnik */
+.hamburger-gomb.nyitott .hamburger-gomb__ikon span:nth-child(2) {
+  opacity: 0;
+}
+
+/* Harmadik vonal: átlósan fel-jobbra */
+.hamburger-gomb.nyitott .hamburger-gomb__ikon span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* ===== HAMBURGER MENÜ OVERLAY ===== */
+/* A teljes képernyőt beborító félig átlátszó sötét réteg */
+/* Koppintásra bezárja a menüt */
+.hamburger-menu-overlay {
+  position: fixed; /* A teljes viewportot lefedi */
+  inset: 0;        /* top/right/bottom/left = 0 egyszerre */
+  z-index: 200;    /* Az alsó sáv (100) felett, a modal (300) alatt */
+
+  /* Félig átlátszó sötét háttér */
+  background-color: rgba(27, 22, 14, 0.55);
+
+  /* Kezdőállapot: láthatatlan */
+  opacity: 0;
+  pointer-events: none; /* Láthatatlan állapotban nem fogja el a kattintásokat */
+
+  /* Belépési animáció */
+  transition: opacity var(--transition-base);
+}
+
+/* Overlay látható állapota – amikor a menü nyitva van */
+.hamburger-menu-overlay.latható {
+  opacity: 1;
+  pointer-events: all; /* Látható állapotban koppintható */
+}
+
+/* ===== HAMBURGER MENÜ PANEL ===== */
+/* A tényleges menü doboz – mindig képernyő közepén, fix pozícióban */
+.hamburger-menu-panel {
+  position: fixed; /* Gombtól független, mindig középen */
+  top: 50%;        /* Függőleges középre igazítás */
+  left: 50%;       /* Vízszintes középre igazítás */
+  transform: translate(-50%, -50%) scale(0.96); /* Kezdőállapot: középre + kis zsugorítás */
+  z-index: 201;    /* Az overlay (200) felett */
+
+  /* Méret – mobilon szűkebb, asztali gépen max 340px */
+  width: clamp(260px, 80vw, 340px);
+
+  /* Erdőzöld háttér – a platform fő színe */
+  background-color: var(--color-primary);
+
+  /* Sarkok lekerekítve */
+  border-radius: var(--radius-xl);
+
+  /* Finom keret */
+  border: 1px solid var(--color-primary-active);
+
+  /* Mélységérzet */
+  box-shadow: var(--shadow-lg);
+
+  /* Belső tér – vízszintesen a menüpontok saját paddingja adja */
+  padding: var(--space-3) 0;
+
+  /* Kezdőállapot: láthatatlan + kicsit összenyomva */
+  opacity: 0;
+  pointer-events: none;
+
+  /* Belépési animáció */
+  transition: opacity var(--transition-base),
+              transform var(--transition-base);
+}
+
+/* Panel látható állapota – amikor a menü nyitva van */
+.hamburger-menu-panel.latható {
+  opacity: 1;
+  pointer-events: all;
+  transform: translate(-50%, -50%) scale(1); /* Eredeti méret */
+}
+
+/* ===== MENÜPONT ===== */
+/* Egy kattintható sor: ikon + felirat */
+.hamburger-menu-pont {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3); /* Ikon és felirat közötti rés */
+
+  width: 100%;                        /* Teljes szélesség – könnyebb koppintani */
+  padding: var(--space-3) var(--space-6); /* Belső tér */
+
+  /* Szöveg stílus */
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+
+  /* Gomb reset */
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  /* Hover átmenet */
+  transition: background var(--transition-fast);
+}
+
+/* Menüpont hover állapota */
+.hamburger-menu-pont:hover {
+  background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Menüpont aktív állapota (koppintáskor) */
+.hamburger-menu-pont:active {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ===== MENÜPONT IKON ===== */
+/* Az emoji karakter tartója – fix szélesség az igazításhoz */
+.hamburger-menu-pont__ikon {
+  font-size: 1.1rem;  /* Kissé nagyobb az emojiknak */
+  width: 22px;        /* Fix szélesség – ikonok vízszintesen igazodnak */
+  text-align: center;
+  flex-shrink: 0;     /* Nem zsugorodik el kis képernyőn sem */
+  line-height: 1;
+}
+
+/* ===== ELVÁLASZTÓ VONAL ===== */
+/* A csoportok közötti vékony vonal */
+.hamburger-menu-elvalaszto {
+  height: 1px;
+  margin: var(--space-2) var(--space-6); /* Oldalsó margó igazodik a menüpontokhoz */
+  background-color: rgba(255, 255, 255, 0.18);
+  border: none;
+}

@@ -21,9 +21,9 @@ class TudatpontController {
   async tudatpontHozzarendelese(req, res) {
     try {
       
-      // 1. LÉPÉS - Ember ID kiolvasása JWT token-ből
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT token-ből
       // Az authMiddleware már dekódolta a token-t és req.user-be helyezte
-      const emberId = req.user.id;
+      const eemberId = req.user.id;
 
       // 2. LÉPÉS - Adatok kiolvasása request body-ból
       // Frontend küldi: { entitasId, entitasTipus, pontok }
@@ -56,7 +56,7 @@ class TudatpontController {
       // 6. LÉPÉS - Service hívás - üzleti logika végrehajtása
       // Service validál, számol, ment adatbázisba (transaction-nel)
       const eredmeny = await TudatpontService.tudatpontHozzarendelese(
-        emberId,
+        eemberId,
         entitasId,
         entitasTipus,
         pontok
@@ -83,7 +83,7 @@ class TudatpontController {
         });
       }
 
-      // 404 Not Found - Ha nem található az entitás vagy ember
+      // 404 Not Found - Ha nem található az entitás vagy eember
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -115,9 +115,9 @@ class TudatpontController {
       // 1. LÉPÉS - Entitás azonosítók kiolvasása URL paraméterekből
       const { entitasTipus, entitasId } = req.params;
 
-      // 2. LÉPÉS - Ember ID kiolvasása JWT token-ből (opcionális)
-      // Ha be van jelentkezve, megkapjuk a ember hozzájárulását is
-      const emberId = req.user ? req.user.id : null;
+      // 2. LÉPÉS - eEmber ID kiolvasása JWT token-ből (opcionális)
+      // Ha be van jelentkezve, megkapjuk a eember hozzájárulását is
+      const eemberId = req.user ? req.user.id : null;
 
       // 3. LÉPÉS - Paraméterek validálása
       if (!entitasId || !entitasTipus) {
@@ -131,7 +131,7 @@ class TudatpontController {
       const allokacio = await TudatpontService.entitasAllokaciLekerese(
         entitasId,
         entitasTipus,
-        emberId
+        eemberId
       );
 
       // 5. LÉPÉS - Sikeres válasz küldése
@@ -159,16 +159,16 @@ class TudatpontController {
   // ============================================================
 
   // ----- BEJELENTKEZETT EMBER HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
-  // Bejelentkezett ember tudatpont hozzárendeléseinek lekérése (GET kérés)
+  // Bejelentkezett eember tudatpont hozzárendeléseinek lekérése (GET kérés)
   // Endpoint: GET /api/tudatpont/hozzarendelesek?limit=20&skip=0
   // Query paraméterek: limit, skip (lapozás)
   // @param {Object} req - Express request objektum
   // @param {Object} res - Express response objektum
-  async emberHozzarendeleseinekLekerese(req, res) {
+  async eemberHozzarendeleseinekLekerese(req, res) {
     try {
       
-      // 1. LÉPÉS - Ember ID kiolvasása JWT token-ből
-      const emberId = req.user.id;
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT token-ből
+      const eemberId = req.user.id;
 
       // 2. LÉPÉS - Lapozási paraméterek kiolvasása query-ből
       const limit = parseInt(req.query.limit) || 20;   // Alapértelmezett: 20
@@ -178,8 +178,8 @@ class TudatpontController {
       const validLimit = Math.min(limit, 100);
 
       // 4. LÉPÉS - Service hívás - hozzárendelések lekérése
-      const hozzarendelesek = await TudatpontService.emberHozzarendeleseinekLekerese(
-        emberId,
+      const hozzarendelesek = await TudatpontService.eemberHozzarendeleseinekLekerese(
+        eemberId,
         validLimit,
         skip
       );
@@ -210,11 +210,11 @@ class TudatpontController {
   // Endpoint: GET /api/tudatpont/aktiv-hozzarendelesek?limit=20&skip=0
   // @param {Object} req - Express request objektum
   // @param {Object} res - Express response objektum
-  async emberAktivHozzarendeleseinekLekerese(req, res) {
+  async eemberAktivHozzarendeleseinekLekerese(req, res) {
     try {
       
-      // 1. LÉPÉS - Ember ID kiolvasása JWT token-ből
-      const emberId = req.user.id;
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT token-ből
+      const eemberId = req.user.id;
 
       // 2. LÉPÉS - Lapozási paraméterek kiolvasása query-ből
       const limit = parseInt(req.query.limit) || 20;   // Alapértelmezett: 20
@@ -224,8 +224,8 @@ class TudatpontController {
       const validLimit = Math.min(limit, 100);
 
       // 4. LÉPÉS - Service hívás - aktív hozzárendelések lekérése
-      const hozzarendelesek = await TudatpontService.emberAktivHozzarendeleseinekLekerese(
-        emberId,
+      const hozzarendelesek = await TudatpontService.eemberAktivHozzarendeleseinekLekerese(
+        eemberId,
         validLimit,
         skip
       );
@@ -344,7 +344,7 @@ class TudatpontController {
       // 200 OK - Sikeres visszaosztás
       res.status(200).json({
         success: true,
-        message: `${eredmeny.visszaosztottPontok} tudatpont visszaosztva ${eredmeny.emberekSzama} embernak`,
+        message: `${eredmeny.visszaosztottPontok} tudatpont visszaosztva ${eredmeny.eemberekSzama} eembernak`,
         data: eredmeny
       });
 
@@ -366,16 +366,16 @@ class TudatpontController {
   // ============================================================
 
   // ----- EMBER HOZZÁJÁRULÁSÁNAK ELLENŐRZÉSE ENTITÁSON -----
-  // Ellenőrzi, hogy egy ember rendelkezik-e tudatponttal egy entitáson (GET kérés)
+  // Ellenőrzi, hogy egy eember rendelkezik-e tudatponttal egy entitáson (GET kérés)
   // Endpoint: GET /api/tudatpont/jogosultsag/:entitasTipus/:entitasId
   // Használat: szavazási jogosultság ellenőrzéséhez (javaslat rendszer)
   // @param {Object} req - Express request objektum
   // @param {Object} res - Express response objektum
-  async emberJogosultsagEllenorzes(req, res) {
+  async eemberJogosultsagEllenorzes(req, res) {
     try {
       
-      // 1. LÉPÉS - Ember ID kiolvasása JWT token-ből
-      const emberId = req.user.id;
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT token-ből
+      const eemberId = req.user.id;
 
       // 2. LÉPÉS - Entitás azonosítók kiolvasása URL paraméterekből
       const { entitasTipus, entitasId } = req.params;
@@ -389,8 +389,8 @@ class TudatpontController {
       }
 
       // 4. LÉPÉS - Service hívás - jogosultság ellenőrzése
-      const eredmeny = await TudatpontService.emberHozzajarulasaEntitason(
-        emberId,
+      const eredmeny = await TudatpontService.eemberHozzajarulasaEntitason(
+        eemberId,
         entitasId,
         entitasTipus
       );

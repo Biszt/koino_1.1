@@ -1,0 +1,99 @@
+<!-- frontend/html/components/modals/tartalomModal.html -->
+
+<!-- A TartalomModal.js tölti be ezt a template-et fetch()-csel.
+     A Modal alap struktúrája (overlay, panel, fejléc) a modal.html-ben van –
+     ez csak a modal törzsének tartalmát, a formot adja meg. -->
+
+<form class="t-modal-form" id="tartalom-modal-form" novalidate>
+
+  <!-- ── CÍM ── -->
+  <!-- Kötelező mező – TartalomModal._validalas() ellenőrzi -->
+  <div class="t-modal-mezo">
+    <input
+      type="text"
+      id="tartalom-cim"
+      name="cim"
+      class="t-modal-input"
+      placeholder="Cím *"
+      maxlength="200"
+      autocomplete="off"
+      aria-label="Cím – kötelező"
+    />
+  </div>
+
+  <!-- ── SZÖVEG (SzovegSzerkeszto) ── -->
+  <!-- A régi textarea helyett ez a div várja a SzovegSzerkeszto.js példányát.
+       A TartalomModal._szovegSzerkesztoLetrehozasa() getElementById('szoveg-szerkeszto-kontener')
+       segítségével keresi meg ezt az elemet, és ide építi be a szerkesztőt. -->
+  <div class="t-modal-mezo">
+    <div
+      id="szoveg-szerkeszto-kontener"
+      class="t-modal-szoveg-szerkeszto-kontener"
+      aria-label="Szöveg szerkesztő"
+    ></div>
+  </div>
+
+  <!-- ── TARTALOM TÍPUS ── -->
+  <!-- JS tölti fel a _tipusSelectFeltoltese() metódussal -->
+  <div class="t-modal-mezo">
+    <select
+      id="tartalom-tipus"
+      name="tartalomTipusId"
+      class="t-modal-select"
+      aria-label="Tartalom típus"
+    >
+      <option value="">Tartalom típus (opcionális)</option>
+    </select>
+  </div>
+
+  <!-- ── KATEGÓRIÁK (max 3) ── -->
+  <div class="t-modal-mezo">
+
+    <!-- Kiválasztott kategóriák chip-jei – JS adja hozzá dinamikusan -->
+    <div
+      class="t-modal-kategoria-chipek"
+      id="kategoria-chipek"
+      aria-label="Kiválasztott kategóriák"
+    ></div>
+
+    <!-- Kategória hozzáadó lenyíló – JS tölti fel a _kategoriaSelectFeltoltese()-vel -->
+    <select
+      id="tartalom-kategoria-valaszto"
+      class="t-modal-select"
+      aria-label="Kategória hozzáadása (max. 3)"
+    >
+      <option value="">Kategória hozzáadása (max. 3)</option>
+    </select>
+
+  </div>
+
+  <!-- ── STÁTUSZ ── -->
+  <div class="t-modal-mezo">
+    <select
+      id="tartalom-statusz"
+      name="statusz"
+      class="t-modal-select"
+      aria-label="Státusz"
+    >
+      <option value="Lathato">🌿 Látható</option>
+      <option value="Lathatatlan">🌑 Láthatatlan</option>
+      <option value="Takart">🍂 Takart</option>
+    </select>
+  </div>
+
+  <!-- ── KEZDŐ TUDATPONT ── -->
+  <!-- Alapból rejtett – TartalomModal.init() mutatja meg, ha mód = 'letrehozas' -->
+  <div class="t-modal-mezo" id="kezdo-tudatpont-mezo" hidden>
+    <input
+      type="number"
+      id="tartalom-kezdo-tudatpont"
+      name="kezdoTudatpont"
+      class="t-modal-input"
+      min="1"
+      value="1"
+      placeholder="Kezdő tudatpont (min. 1) *"
+      aria-label="Kezdő tudatpont – kötelező"
+    />
+  </div>
+
+</form>

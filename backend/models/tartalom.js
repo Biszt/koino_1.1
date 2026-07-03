@@ -8,106 +8,104 @@ const mongoose = require('mongoose');
 // A Schema meghatározza a tartalom adatszerkezetét és validációs szabályokat
 const tartalomSchema = new mongoose.Schema({
 
-  // ----- CÍM MEZŐ -----
-  // A tartalom címe (kötelező)
-  cim: {
-    type: String,           // Szöveges típus
-    required: true,         // Kötelező mező
-    trim: true              // Levágja a felesleges szóközöket elejéről és végéről
-  },
+// ----- CÍM MEZŐ -----
+// A tartalom címe (kötelező)
+cim: {
+    type: String,       // Szöveges típus
+    required: true,     // Kötelező mező
+    trim: true          // Levágja a felesleges szóközöket elejéről és végéről
+},
 
-  // ----- SZÖVEG MEZŐ -----
-  // A tartalom szöveges tartalma (opcionális)
-  szoveg: {
-    type: String,           // Szöveges típus
-    required: false,        // Nem kötelező mező
-    default: '',            // Alapértelmezett érték: üres string
-    trim: true              // Levágja a felesleges szóközöket
-  },
+// ----- SZÖVEG MEZŐ -----
+// A tartalom gazdag szöveges tartalma (opcionális)
+// MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
+// komponens egy JSON blokkokból álló tömböt tárol ide
+szoveg: {
+    type: mongoose.Schema.Types.Mixed, // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
+    required: false,                   // Nem kötelező mező
+    default: null                      // Alapértelmezett érték: null (üres string helyett)
+},
 
-  // ----- TARTALOM TÍPUS AZONOSÍTÓ -----
-  // Referencia a TartalomTipus modellre (pl. poszt, komment, stb.)
-  tartalomTipusId: {
-    type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'TartalomTipus',                   // Referencia a TartalomTipus modellre
-    required: false                         // Nem kötelező mező
-  },
+// ----- TARTALOM TÍPUS AZONOSÍTÓ -----
+// Referencia a TartalomTipus modellre (pl. poszt, komment, stb.)
+tartalomTipusId: {
+    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+    ref: 'TartalomTipus',                 // Referencia a TartalomTipus modellre
+    required: false                        // Nem kötelező mező
+},
 
-  // ----- KATEGÓRIA AZONOSÍTÓK (MAXIMUM 3) -----
-  // Tömb, amely maximum 3 kategória referenciát tárolhat
-  kategoriaIds: {
-    type: [{                               // ObjectId tömb típus
-      type: mongoose.Schema.Types.ObjectId, // Tömb elemek típusa: ObjectId
-      ref: 'Kategoria'                     // Referencia a Kategoria modellre
+// ----- KATEGÓRIA AZONOSÍTÓK (MAXIMUM 3) -----
+// Tömb, amely maximum 3 kategória referenciát tárolhat
+kategoriaIds: {
+    type: [{                                  // ObjectId tömb típus
+        type: mongoose.Schema.Types.ObjectId, // Tömb elemek típusa: ObjectId
+        ref: 'Kategoria'                      // Referencia a Kategoria modellre
     }],
-    default: [],                           // Alapértelmezett: üres tömb
-    validate: {                            // Egyéni validáció
-      validator: function(kategoriak) {
-        // 1. Maximum 3 kategória lehet
-        if (kategoriak.length > 3) {
-          return false;
-        }
-        
-        // 2. Ellenőrizzük, hogy nincsenek duplikációk
-        const egyediKategoriak = new Set(kategoriak.map(k => k.toString()));
-        return egyediKategoriak.size === kategoriak.length;
-      },
-      message: 'Maximum 3 különböző kategória rendelhető egy tartalomhoz.'
+    default: [],     // Alapértelmezett: üres tömb
+    validate: {      // Egyéni validáció
+        validator: function(kategoriak) {
+            // 1. Maximum 3 kategória lehet
+            if (kategoriak.length > 3) {
+                return false;
+            }
+            // 2. Ellenőrizzük, hogy nincsenek duplikációk
+            const egyediKategoriak = new Set(kategoriak.map(k => k.toString()));
+            return egyediKategoriak.size === kategoriak.length;
+        },
+        message: 'Maximum 3 különböző kategória rendelhető egy tartalomhoz.'
     }
-  },
+},
 
-  // ----- SZÜLŐ TARTALOM AZONOSÍTÓ ----- 
+// ----- SZÜLŐ TARTALOM AZONOSÍTÓ -----
 // MÓDOSÍTVA: Nem csak Tartalom lehet szülő, hanem Javaslat és Egyezmény is
 szuloId: {
-  type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus - bármilyen entitás lehet
-  default: null                          // Alapértelmezett: nincs szülő (főtartalom)
+    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus - bármilyen entitás lehet
+    default: null                          // Alapértelmezett: nincs szülő (főtartalom)
 },
 
-// ----- SZÜLŐ TÍPUSA ----- 
+// ----- SZÜLŐ TÍPUSA -----
 szuloTipus: {
-  type: String,                                           // Szöveges típus
-  enum: ['Tartalom', 'Javaslat', 'Egyezmeny'],           // Engedélyezett értékek
-  default: null,                                          // Alapértelmezett: nincs szülő típus
-  validate: {
-    validator: function(value) {
-      // Ha van szuloId, akkor szuloTipus kötelező
-      if (this.szuloId && !value) {
-        return false;
-      }
-      // Ha nincs szuloId, akkor szuloTipus nem lehet
-      if (!this.szuloId && value) {
-        return false;
-      }
-      return true;
-    },
-    
-    message: 'A szuloId és szuloTipus mezők konzisztenciája sérült. Ha van szuloId, akkor szuloTipus is kötelező, és fordítva.'
-  }
+    type: String,                                        // Szöveges típus
+    enum: ['Tartalom', 'Javaslat', 'Egyezmeny'],        // Engedélyezett értékek
+    default: null,                                       // Alapértelmezett: nincs szülő típus
+    validate: {
+        validator: function(value) {
+            // Ha van szuloId, akkor szuloTipus kötelező
+            if (this.szuloId && !value) {
+                return false;
+            }
+            // Ha nincs szuloId, akkor szuloTipus nem lehet
+            if (!this.szuloId && value) {
+                return false;
+            }
+            return true;
+        },
+        message: 'A szuloId és szuloTipus mezők konzisztenciája sérült. Ha van szuloId, akkor szuloTipus is kötelező, és fordítva.'
+    }
 },
 
-
-  // ----- LÉTREHOZÓ EMBER -----
-  // Ki hozta létre ezt a tartalmat
-  letrehozo: {
-    type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
-    ref: 'Ember',                    // Referencia a Ember modellre
+// ----- LÉTREHOZÓ EMBER -----
+// Ki hozta létre ezt a tartalmat
+letrehozo: {
+    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
+    ref: 'eEmber',                        // Referencia a eEmber modellre
     required: true                         // Kötelező mező
-  },
+},
 
-  // ----- STÁTUSZ MEZŐ -----
-  // A tartalom láthatósági állapota
-  statusz: {
-    type: String,                          // Szöveges típus
-    enum: ['Lathato', 'Lathatatlan', 'Takart'],  // Engedélyezett értékek
-    default: 'Lathato'                     // Alapértelmezett: látható
-  },
+// ----- STÁTUSZ MEZŐ -----
+// A tartalom láthatósági állapota
+statusz: {
+    type: String,                                  // Szöveges típus
+    enum: ['Lathato', 'Lathatatlan', 'Takart'],   // Engedélyezett értékek
+    default: 'Lathato'                             // Alapértelmezett: látható
+},
 
-  // ----- LÉTREHOZÁS DÁTUMA -----
-  // Amikor a tartalom létrejött
-  letrehozva: {
-    type: Date,                            // Dátum típus
-    default: Date.now                      // Alapértelmezett: jelenlegi időpont
-  }
+// ----- LÉTREHOZÁS DÁTUMA -----
+// Amikor a tartalom létrejött
+letrehozva: {
+    type: Date,         // Dátum típus
+    default: Date.now   // Alapértelmezett: jelenlegi időpont
+}
 
 });
 
@@ -126,7 +124,7 @@ tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
 // Gyors keresés: "Egy tartalom alatti látható tartalmak"
 tartalomSchema.index({ szuloId: 1, statusz: 1 });
 
-// Létrehozó indexelése - gyors keresés ember tartalmai alapján
+// Létrehozó indexelése - gyors keresés eember tartalmai alapján
 tartalomSchema.index({ letrehozo: 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)

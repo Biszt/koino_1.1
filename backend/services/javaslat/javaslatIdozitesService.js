@@ -76,43 +76,77 @@ class JavaslatIdozitesService {
    };
  }
 
- // === HATÁLYBA LÉPÉSI IDŐ BEÁLLÍTÁSA ===
- /**
-   * Hatályba lépési időpont kiszámítása és beállítása
-   * A létrehozás dátumához hozzáadja a HI-t (hatályba lépési idő)
-   * Automatikusan meghívja a végrehajtás ellenőrzést
-   * @param {string} javaslatId - A javaslat ID-ja
-   * @returns {Promise<Object>} A frissített javaslat
-   * @throws {Error} Ha a javaslat nem található
-   */
- async hatalybaLepesiIdoBeallitasa(javaslatId) {
-   console.log('("=================================== hatalybaLepesiIdoBeallitasa', { javaslatId: javaslatId });
+   // === HATÁLYBA LÉPÉSI IDŐ BEÁLLÍTÁSA === // Metódus fejléc komment
+  /** // JSDoc kezdete
+   * Hatályba lépési időpont kiszámítása és beállítása // Leírás
+   * Töredék csoport esetén közös hatályba lépési időt állít be minden töredékre // Leírás
+   * @param {string} javaslatId - A javaslat ID-ja // Paraméter leírás
+   * @returns {Promise<Object>} A frissített javaslat // Visszatérési érték leírás
+   * @throws {Error} Ha a javaslat nem található // Hibaleírás
+   */ // JSDoc vége
+  async hatalybaLepesiIdoBeallitasa(javaslatId) { // Metódus kezdete
+    console.log('("=================================== hatalybaLepesiIdoBeallitasa', { // Kezdő log
+      javaslatId: javaslatId // Javaslat azonosító logolása
+    }); // Kezdő log vége
 
-   // 1. LÉPÉS - JAVASLAT LEKÉRÉSE
-   const javaslat = await JavaslatRepository.findById(javaslatId);
-   if (!javaslat) {
-     throw new Error('A javaslat nem található');
-   }
+    const javaslat = await JavaslatRepository.findById(javaslatId); // Lekérjük a javaslatot az adatbázisból
 
-   console.log("javaslat:::::::::::::", javaslat);
+    if (!javaslat) { // Ellenőrizzük, hogy létezik-e a javaslat
+      throw new Error('A javaslat nem található'); // Hiba dobása, ha nincs ilyen javaslat
+    } // Létezés ellenőrzés vége
+
+    console.log('hatalybaLepesiIdoBeallitasa - Lekért javaslat', { // Részletes log a lekért javaslatról
+      javaslatId: javaslat._id, // Javaslat azonosító
+      toredekCsoportId: javaslat.toredekCsoportId || null, // Töredék csoport azonosító
+      dontesiIdo: javaslat.dontesiIdo, // Saját döntési idő
+      letrehozva: javaslat.letrehozva // Saját létrehozási idő
+    }); // Részletes log vége
+
+    if (javaslat.toredekCsoportId) { // Ha a javaslat töredék csoporthoz tartozik
+      console.log('hatalybaLepesiIdoBeallitasa - Töredék csoportos közös időzítés indul', { // Log a csoportos ág elején
+        javaslatId: javaslat._id, // Aktuális javaslat azonosító
+        toredekCsoportId: javaslat.toredekCsoportId // Töredék csoport azonosító
+      }); // Csoportos ág log vége
+
+      const kozosIdozitesiAdatok = await this.toredekCsoportKozosIdozitesiAdataiLekerese(javaslat.toredekCsoportId); // Lekérjük a csoport közös időzítési adatait
+
+      const hozzaadandoMs = kozosIdozitesiAdatok.atlagoltDontesiIdo * 1000; // A közös döntési időt milliszekundumba alakítjuk
+
+      const kozosHatalybaLepesIdeje = new Date(kozosIdozitesiAdatok.kozosLetrehozasIdeje.getTime() + hozzaadandoMs); // Kiszámoljuk a közös hatályba lépési időt
+
+      console.log('hatalybaLepesiIdoBeallitasa - Közös hatályba lépési idő számolva', { // Log a közös eredményről
+        toredekCsoportId: javaslat.toredekCsoportId, // Töredék csoport azonosító
+        atlagoltDontesiIdo: kozosIdozitesiAdatok.atlagoltDontesiIdo, // Átlagolt döntési idő
+        kozosLetrehozasIdeje: kozosIdozitesiAdatok.kozosLetrehozasIdeje, // Közös alapidő
+        kozosHatalybaLepesIdeje: kozosHatalybaLepesIdeje // Közös hatályba lépési idő
+      }); // Log vége
+
+      for (const toredekJavaslat of kozosIdozitesiAdatok.toredekJavaslatok) { // Végigmegyünk a teljes töredék csoporton
+        console.log('hatalybaLepesiIdoBeallitasa >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.updateHatalybaLepesIdeje', { // Frissítés előtti log
+          javaslatId: toredekJavaslat._id, // Frissítendő töredék azonosítója
+          kozosHatalybaLepesIdeje: kozosHatalybaLepesIdeje // Beállítandó közös idő
+        }); // Frissítés előtti log vége
+
+        await JavaslatRepository.updateHatalybaLepesIdeje( // Frissítjük az adott töredék hatályba lépési idejét
+          toredekJavaslat._id, // Az aktuális töredék azonosítója
+          kozosHatalybaLepesIdeje // Az egységes közös időpont
+        ); // Frissítés vége
+      } // Töredékcsoport frissítési ciklus vége
+
+      const frissitettJavaslat = await JavaslatRepository.findById(javaslatId); // Újra lekérjük az eredetileg kért javaslatot a friss adatokkal
+
+      console.log('("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< hatalybaLepesiIdoBeallitasa', { // Záró log a csoportos ághoz
+        javaslatId: javaslatId, // Eredeti javaslat azonosító
+        mod: 'toredekCsoportKozosIdozites', // Jelöljük, hogy csoportos ág futott
+        toredekCsoportId: javaslat.toredekCsoportId, // Töredék csoport azonosító
+        hatalybaLepesIdeje: frissitettJavaslat.hatalybaLepesIdeje // Végleges közös hatályba lépési idő
+      }); // Záró log vége
+
+      return frissitettJavaslat; // Visszaadjuk a frissített javaslatot
+    } // Töredék csoportos ág vége
+  }
    
 
-   // 2. LÉPÉS - HATÁLYBA LÉPÉSI IDŐPONT SZÁMÍTÁSA
-   // Képlet: létrehozva + dontesiIdo * 1000 (milliszekundumra váltás)
-   const letrehozvaTimestamp = javaslat.letrehozva.getTime();
-   const hozzaadandoMp = javaslat.dontesiIdo;
-   const hozzaadandoMs = hozzaadandoMp * 1000;
-   const hatalybaLepesIdeje = new Date(letrehozvaTimestamp + hozzaadandoMs);
-
-   // 3. LÉPÉS - REPOSITORY HÍVÁS - FRISSÍTÉS ADATBÁZISBAN
-   const frissitettJavaslat = await JavaslatRepository.updateHatalybaLepesIdeje(
-     javaslatId,
-     hatalybaLepesIdeje
-   );
-
-   console.log('("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< hatalybaLepesiIdoBeallitasa, frissitettJavaslat:', frissitettJavaslat);
-   return frissitettJavaslat;
- }
 
  // === JAVASLAT VÉGREHAJTÁS ELLENŐRZÉSE ===
    /**
@@ -235,6 +269,139 @@ class JavaslatIdozitesService {
   }
 }
 
+  // === TÖREDÉK CSOPORT VÉGREHAJTÁS ELLENŐRZÉSE ===
+  /**
+   * Töredék csoport végrehajtás ellenőrzése
+   * A csoport csak akkor elfogadott, ha MINDEN töredék teljesíti a saját küszöbeit
+   * @param {Array} javaslatok - Ugyanahhoz a toredekCsoportId-hoz tartozó javaslatok tömbje
+   * @returns {Promise<Object>} { elfogadva: boolean, ok: string, csoportId, javaslatok }
+   */
+  async toredekCsoportVegrehajtasEllenorzese(javaslatok) {
+    // Log metódus kezdete
+    console.log('=================================== toredekCsoportVegrehajtasEllenorzese', {
+      javaslatokDb: javaslatok.length,
+      toredekCsoportId: javaslatok[0]?.toredekCsoportId || null
+    }); // Itt logoljuk a csoport méretét és azonosítóját
+
+    // 1. LÉPÉS - ALAP ELLENŐRZÉSEK
+    if (!javaslatok || javaslatok.length === 0) {
+      // Ha üres tömb érkezik, az logikai hiba a hívó oldalon
+      throw new Error('toredekCsoportVegrehajtasEllenorzese: üres javaslat lista'); // Hiba dobása
+    } // Van legalább egy javaslat
+
+    // Közös csoport azonosító meghatározása
+    const toredekCsoportId = javaslatok[0].toredekCsoportId || null; // Első javaslat csoport ID-ja
+
+    // 2. LÉPÉS - MINDEN TÖREDÉK ELLENŐRZÉSE
+    let mindenElfogadva = true; // Kezdetben feltételezzük, hogy minden töredék teljesíti a küszöböt
+    const reszletesEredmenyek = []; // Ide gyűjtjük az egyes töredékek eredményét
+
+    for (const javaslat of javaslatok) {
+      // 2.1 - IDŐPONT ÉS STÁTUSZ ELLENŐRZÉSE TÖREDÉKRE
+      const most = new Date(); // Aktuális idő
+      const hatalybaLepett = javaslat.hatalybaLepesIdeje <= most; // Hatályba lépett-e
+      const aktiv = javaslat.statusz === 'Aktiv'; // Aktív-e a javaslat
+
+      console.log('Töredék időpont és státusz ellenőrzés:', {
+        javaslatId: javaslat._id,
+        hatalybaLepett,
+        aktiv,
+        hatalybaLepesIdeje: javaslat.hatalybaLepesIdeje,
+        mostaniIdo: most
+      }); // Logoljuk az állapotot
+
+      if (!hatalybaLepett || !aktiv) {
+        // Ha egy töredék még nem lépett hatályba vagy nem aktív, a csoport nem dönthető el
+        console.log('Töredék még nem léphet hatályba vagy nem aktív - csoport nem elfogadható', {
+          javaslatId: javaslat._id
+        }); // Log üzenet
+
+        mindenElfogadva = false; // A csoport nem teljes
+        reszletesEredmenyek.push({
+          javaslatId: javaslat._id,
+          elfogadva: false,
+          ok: 'Még nem lépett hatályba vagy nem aktív'
+        }); // Eredmény rögzítése
+
+        continue; // Továbblépünk a következő töredékre
+      } // Időpont és státusz rendben
+
+      // 2.2 - KÜSZÖBÉRTÉKEK LEKÉRÉSE TÖREDÉKRE
+      console.log('Töredék küszöbértékek lekérése:', {
+        javaslatId: javaslat._id,
+        erintettEntitasok: javaslat.erintettEntitasok
+      }); // Logoljuk a hívást
+
+      const kuszobok = await this.erintettTartalmakKuszobertekenekLekerese(
+        javaslat.erintettEntitasok
+      ); // Lekérjük a tartalmi küszöböket
+
+      // 2.3 - KÜSZÖB ELLENŐRZÉS TÖREDÉKRE
+      const kuszobTeljesul =
+        javaslat.tamogatotsagiArany >= kuszobok.aktualJavaslatElfogadasiKuszob &&
+        javaslat.reszveteliArany >= kuszobok.aktualReszveteliAranyKuszob; // Mindkét küszöbnek teljesülnie kell
+
+      console.log('Töredék küszöbök ellenőrzése:', {
+        javaslatId: javaslat._id,
+        tamogatotsagiArany: javaslat.tamogatotsagiArany,
+        aktualJavaslatElfogadasiKuszob: kuszobok.aktualJavaslatElfogadasiKuszob,
+        reszveteliArany: javaslat.reszveteliArany,
+        aktualReszveteliAranyKuszob: kuszobok.aktualReszveteliAranyKuszob,
+        kuszobTeljesul
+      }); // Logoljuk az ellenőrzés eredményét
+
+      if (!kuszobTeljesul) {
+        // Ha egy töredék nem teljesíti a küszöböket, az egész csoport elbukik
+        mindenElfogadva = false; // A csoport nem elfogadható
+      } // Csoport állapot frissítése
+
+      reszletesEredmenyek.push({
+        javaslatId: javaslat._id,
+        elfogadva: kuszobTeljesul,
+        ok: kuszobTeljesul
+          ? 'Küszöbök teljesülnek'
+          : 'Küszöbök nem teljesülnek'
+      }); // Eredmény rögzítése
+    } // Minden töredéken végigmentünk
+
+    // 3. LÉPÉS - STÁTUSZOK FRISSÍTÉSE CSOPORTSZINTEN
+    if (mindenElfogadva) {
+      // Ha minden töredék teljesítette a küszöböt, a csoport Elfogadva
+      console.log('Töredék csoport ELFOGADVA - minden töredék teljesítette a küszöböket', {
+        toredekCsoportId
+      }); // Log üzenet
+
+      // Minden töredék státuszának frissítése Elfogadva értékre
+      for (const javaslat of javaslatok) {
+        await JavaslatRepository.updateStatusz(javaslat._id, 'Elfogadva'); // Státusz frissítése
+      } // Minden töredéket Elfogadva-ra állítottunk
+
+      return {
+        elfogadva: true,
+        ok: 'Minden töredék teljesítette a küszöböket - csoport elfogadva',
+        toredekCsoportId,
+        reszletesEredmenyek
+      }; // Csoport elfogadva eredmény
+    } else {
+      // Ha bármelyik töredék elbukott, az egész csoport Elvetve
+      console.log('Töredék csoport ELVETVE - legalább egy töredék nem teljesítette a küszöböket', {
+        toredekCsoportId
+      }); // Log üzenet
+
+      // Minden töredék státuszának frissítése Elvetve értékre
+      for (const javaslat of javaslatok) {
+        await JavaslatRepository.updateStatusz(javaslat._id, 'Elvetve'); // Státusz frissítése
+      } // Minden töredéket Elvetve-re állítottunk
+
+      return {
+        elfogadva: false,
+        ok: 'Legalább egy töredék nem teljesítette a küszöböket - csoport elvetve',
+        toredekCsoportId,
+        reszletesEredmenyek
+      }; // Csoport elvetve eredmény
+    } // Csoport döntés ágak vége
+  } // toredekCsoportVegrehajtasEllenorzese metódus vége
+
 
  // === HATÁLYBA LÉPENDŐ JAVASLATOK LEKÉRÉSE ===
  /**
@@ -256,69 +423,221 @@ class JavaslatIdozitesService {
    return javaslatok;
  }
 
- // === TÖMEGES VÉGREHAJTÁS ELLENŐRZÉS ===
+   // === TÖREDÉK CSOPORT KÖZÖS IDŐZÍTÉSI ADATAINAK LEKÉRÉSE === // Új segédfüggvény fejléc komment
+  /** // JSDoc kezdete
+   * Töredék csoport közös időzítési adatainak lekérése // Leírás
+   * A csoport összes töredékének dontesiIdo értékét átlagolja // Leírás
+   * A csoport legkorábbi létrehozási idejét használja közös alapidőnek // Leírás
+   * @param {string|ObjectId} toredekCsoportId - Töredék csoport azonosító // Paraméter leírás
+   * @returns {Promise<Object>} Közös időzítési adatok // Visszatérési érték leírás
+   */ // JSDoc vége
+  async toredekCsoportKozosIdozitesiAdataiLekerese(toredekCsoportId) { // Új metódus kezdete
+    console.log('=================================== toredekCsoportKozosIdozitesiAdataiLekerese', { // Kezdő log
+      toredekCsoportId: toredekCsoportId // Bemeneti érték logolása
+    }); // Kezdő log vége
 
- /**
+    if (!toredekCsoportId) { // Ellenőrizzük, hogy van-e csoport azonosító
+      throw new Error('A töredék csoport azonosító megadása kötelező'); // Hiba dobása hiányzó azonosítónál
+    } // Csoport azonosító ellenőrzés vége
+
+    console.log('toredekCsoportKozosIdozitesiAdataiLekerese >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.findAll', { // Repository hívás előtti log
+      toredekCsoportId: toredekCsoportId // Szűrő logolása
+    }); // Repository hívás előtti log vége
+
+    const toredekJavaslatok = await JavaslatRepository.findAll({ // Lekérjük a teljes töredék csoportot
+      toredekCsoportId: toredekCsoportId // Töredék csoport szerinti szűrés
+    }); // Lekérdezés vége
+
+    if (!toredekJavaslatok || toredekJavaslatok.length === 0) { // Ellenőrizzük, hogy kaptunk-e töredékeket
+      throw new Error('A töredék csoport javaslatai nem találhatók'); // Hiba dobása, ha nincs találat
+    } // Találat ellenőrzés vége
+
+    const ervenyesDontesiIdok = toredekJavaslatok // Az összes töredékből kinyerjük az érvényes döntési időket
+      .map(javaslat => javaslat.dontesiIdo) // Képezünk egy tömböt csak a döntési időkből
+      .filter(dontesiIdo => typeof dontesiIdo === 'number' && !Number.isNaN(dontesiIdo)); // Csak a szám típusú döntési időket tartjuk meg
+
+    if (ervenyesDontesiIdok.length === 0) { // Ellenőrizzük, hogy maradt-e használható döntési idő
+      throw new Error('A töredék csoportban nincs érvényes dontesiIdo érték'); // Hiba dobása, ha nincs érvényes döntési idő
+    } // Érvényes döntési idő ellenőrzés vége
+
+    const dontesiIdokOsszege = ervenyesDontesiIdok.reduce((osszeg, aktualisErtek) => { // Összeadjuk a döntési időket
+      return osszeg + aktualisErtek; // Visszaadjuk a növelt összeget
+    }, 0); // Kezdőérték 0
+
+    const atlagoltDontesiIdo = Math.round((dontesiIdokOsszege / ervenyesDontesiIdok.length) * 100) / 100; // Kiszámoljuk a két tizedesre kerekített átlagot
+
+    const letrehozasIdopontok = toredekJavaslatok.map(javaslat => javaslat.letrehozva.getTime()); // Minden töredék létrehozási idejét timestampre alakítjuk
+
+    const legkorabbiLetrehozasTimestamp = Math.min(...letrehozasIdopontok); // Meghatározzuk a csoport legkorábbi létrehozási idejét
+
+    const kozosLetrehozasIdeje = new Date(legkorabbiLetrehozasTimestamp); // Dátum objektummá alakítjuk a közös kezdőidőt
+
+    console.log('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< toredekCsoportKozosIdozitesiAdataiLekerese', { // Záró log
+      toredekCsoportId: toredekCsoportId, // Csoport azonosító logolása
+      toredekDb: toredekJavaslatok.length, // Töredékek száma
+      ervenyesDontesiIdok: ervenyesDontesiIdok, // Felhasznált döntési idők
+      atlagoltDontesiIdo: atlagoltDontesiIdo, // Kiszámolt átlagolt döntési idő
+      kozosLetrehozasIdeje: kozosLetrehozasIdeje // Közös kezdőidő logolása
+    }); // Záró log vége
+
+    return { // Visszaadjuk a közös időzítési adatokat
+      toredekJavaslatok: toredekJavaslatok, // A csoport összes töredéke
+      atlagoltDontesiIdo: atlagoltDontesiIdo, // Közös átlagolt döntési idő
+      kozosLetrehozasIdeje: kozosLetrehozasIdeje // Közös alap létrehozási idő
+    }; // Visszatérési objektum vége
+  } // Metódus vége
+
+
+   // === TÖMEGES VÉGREHAJTÁS ELLENŐRZÉS ===
+
+  /**
    * Tömeges végrehajtás ellenőrzés - Cron job-hoz
    * Végignézi az összes hatályba lépendő javaslatot
-   * ÚJ: Előtte frissíti az elavult javaslatokat
+   * ÚJ: Töredék csoport szintű döntés - minden töredéknek teljesítenie kell a küszöböket
    * @returns {Promise<Object>} Végrehajtás statisztika
    */
- async tomegesVegrehajtasEllenorzes() {
-   console.log('=================================== tomegesVegrehajtasEllenorzes::');
+  async tomegesVegrehajtasEllenorzes() {
+    console.log('=================================== tomegesVegrehajtasEllenorzes::'); // Log metódus kezdete
 
-   // === 1. LÉPÉS: ELAVULT JAVASLATOK FRISSÍTÉSE ===
-   // Mielőtt ellenőrizzük a hatályba lépést, frissítjük az elavult javaslatokat
-   // Így biztosítjuk, hogy minden javaslat friss HI értékkel rendelkezik
-   console.log('Elavult javaslatok frissítése...');
-   
-   const JavaslatService = require('./javaslatService');  // Circular import elkerülése
+    // === 1. LÉPÉS: ELAVULT JAVASLATOK FRISSÍTÉSE ===
+    console.log('Elavult javaslatok frissítése...'); // Log üzenet
 
-   console.log("tomegesVegrehajtasEllenorzes >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatService.elavultJavaslatokFrissitese");
-   
-   const frissitesiEredmeny = await JavaslatService.elavultJavaslatokFrissitese();
-   
-   console.log('Frissítési eredmény:', frissitesiEredmeny);
+    const JavaslatService = require('./javaslatService'); // Circular import elkerülése
 
-   // === 2. LÉPÉS: HATÁLYBA LÉPENDŐ JAVASLATOK LEKÉRÉSE ===
+    console.log('tomegesVegrehajtasEllenorzes >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatService.elavultJavaslatokFrissitese'); // Log a hívás előtt
 
-   console.log("tomegesVegrehajtasEllenorzes >>>>>>>>>>>>>>>>>>>>>>>>>>> this.hatalybaLependoJavaslatokLekerese");
-   
-   const javaslatok = await this.hatalybaLependoJavaslatokLekerese();
+    const frissitesiEredmeny = await JavaslatService.elavultJavaslatokFrissitese(); // Elavult javaslatok frissítése
 
-   const eredmenyek = {
-     osszesen: javaslatok.length,
-     vegrehajtva: 0,
-     elvetve: 0,
-     hibak: []
-   };
+    console.log('Frissítési eredmény:', frissitesiEredmeny); // Log az eredményről
 
-   // === 3. LÉPÉS: MINDEN JAVASLATON ITERÁLÁS ===
-   // Minden javaslatot végigellenőrzünk
-   for (const javaslat of javaslatok) {
-     try {
-       // Végrehajtás ellenőrzése
-       const vegrehajtas = await this.javaslatVegrehajtasEllenorzese(javaslat._id);
+    // === 2. LÉPÉS: HATÁLYBA LÉPENDŐ JAVASLATOK LEKÉRÉSE ===
+    console.log('tomegesVegrehajtasEllenorzes >>>>>>>>>>>>>>>>>>>>>>>>>>> this.hatalybaLependoJavaslatokLekerese'); // Log a hívás előtt
 
-       if (vegrehajtas) {
-         eredmenyek.vegrehajtva++;
-       }
+    const javaslatok = await this.hatalybaLependoJavaslatokLekerese(); // Lekérjük a hatályba lépő javaslatokat
 
-     } catch (error) {
-       // Hiba esetén rögzítjük, de folytatjuk a többi javaslattal
-       eredmenyek.elvetve++;
-       eredmenyek.hibak.push({
-         javaslatId: javaslat._id,
-         hiba: error.message
-       });
-     }
-   }
+    // Statisztika objektum inicializálása
+    const eredmenyek = {
+      osszesen: javaslatok.length, // Összes hatályba lépő javaslat
+      csoportok: 0,               // Érintett töredék csoportok száma
+      egyediJavaslatok: 0,        // Olyan javaslatok, amik nem töredékek
+      vegrehajtva: 0,             // Végrehajtott javaslatok száma
+      elvetve: 0,                 // Elvetett javaslatok száma
+      hibak: []                   // Hibák listája
+    }; // Statisztika objektum
 
-   console.log('<<<<<<<<<<<<<<<<<<<<<<<< tomegesVegrehajtasEllenorzes=====Eredmény:', {
-     eredmenyek: eredmenyek
-   });
-   return eredmenyek;
- }
+    // === 3. LÉPÉS: JAVASLATOK CSOPORTOSÍTÁSA TÖREDÉK CSOPORT ALAPJÁN ===
+    const csoportokMap = new Map(); // Map a töredék csoportokhoz
+    const egyediJavaslatok = [];    // Tömb az olyan javaslatokhoz, amiknek nincs toredekCsoportId-juk
+
+    for (const javaslat of javaslatok) {
+      if (javaslat.toredekCsoportId) {
+        // Ha van töredék csoport ID, csoportba tesszük
+        const kulcs = javaslat.toredekCsoportId.toString(); // String kulcs a Map-hez
+
+        if (!csoportokMap.has(kulcs)) {
+          // Ha még nincs ilyen csoport, létrehozzuk
+          csoportokMap.set(kulcs, []); // Üres tömb inicializálása
+        } // Csoport inicializálása
+
+        csoportokMap.get(kulcs).push(javaslat); // Hozzáadjuk a javaslatot a csoporthoz
+      } else {
+        // Ha nincs töredék csoport ID, egyedi javaslatként kezeljük
+        egyediJavaslatok.push(javaslat); // Hozzáadjuk az egyedi javaslatokhoz
+      }
+    } // Csoportosítás vége
+
+    eredmenyek.csoportok = csoportokMap.size;      // Érintett töredék csoportok száma
+    eredmenyek.egyediJavaslatok = egyediJavaslatok.length; // Egyedi javaslatok száma
+
+    console.log('tomegesVegrehajtasEllenorzes - Csoportosítás eredménye:', {
+      csoportokSzama: eredmenyek.csoportok,
+      egyediJavaslatokSzama: eredmenyek.egyediJavaslatok
+    }); // Logoljuk az összegzést
+
+        // === 4. LÉPÉS: TÖREDÉK CSOPORTOK VÉGREHAJTÁS ELLENŐRZÉSE ===
+    for (const [kulcs, csoportJavaslatok] of csoportokMap.entries()) {
+      try {
+        // Csoportos ellenőrzés
+        const csoportEredmeny = await this.toredekCsoportVegrehajtasEllenorzese(
+          csoportJavaslatok
+        ); // Csoport ellenőrzése
+
+        if (csoportEredmeny.elfogadva) {
+          // ✅ CSOPORT ELFOGADOTT: minden töredék teljesítette a küszöböket
+          console.log('Töredék csoport végrehajtásra kerül:', {
+            toredekCsoportId: kulcs,
+            toradekDb: csoportJavaslatok.length
+          }); // Log üzenet
+
+          // EGYEDÜL ESZERRE hívjuk meg a végrehajtást a teljes csoport tömbbel
+          console.log('tomegesVegrehajtasEllenorzes >>>>>>>>>>>>>>>>>>>>>>>>>>> JavaslatVegrehajtasiService.javaslatVegrehajtasa (CSOPORT)'); // Log a hívás előtt
+
+          const vegrehajtasiEredmeny = await JavaslatVegrehajtasiService.javaslatVegrehajtasa(
+            csoportJavaslatok  // A teljes töredék javaslatok tömbje átadása!
+          ); // Végrehajtás hívása teljes csoportszinten
+
+          console.log('Csoport végrehajtás eredménye:', {
+            javaslatId: vegrehajtasiEredmeny.javaslatId,
+            egyezmenyId: vegrehajtasiEredmeny.egyezmeny?.id
+          }); // Logoljuk a végrehajtás eredményét
+
+          eredmenyek.vegrehajtva += csoportJavaslatok.length; // Statisztika frissítése
+        } else {
+          // ❌ CSOPORT ELVETVE: legalább egy töredék elbukott
+          console.log('Töredék csoport elvetve:', {
+            toredekCsoportId: kulcs,
+            toradekDb: csoportJavaslatok.length,
+            reszletesEredmenyek: csoportEredmeny.reszletesEredmenyek
+          }); // Log üzenet részletekkel
+
+          eredmenyek.elvetve += csoportJavaslatok.length; // Statisztika frissítése
+        }
+      } catch (error) {
+        // Hiba esetén rögzítjük, de folytatjuk a többi csoporttal
+        console.error('Hiba töredék csoport feldolgozása közben:', {
+          toredekCsoportId: kulcs,
+          hiba: error.message
+        }); // Hibát logoljuk
+
+        for (const javaslat of csoportJavaslatok) {
+          eredmenyek.elvetve++; // Minden érintett javaslatot elvetettnek tekintünk
+          eredmenyek.hibak.push({
+            javaslatId: javaslat._id,
+            hiba: error.message
+          }); // Hibát rögzítjük
+        }
+      }
+    } // Minden csoportot feldolgoztunk
+
+
+    // === 5. LÉPÉS: EGYEDI JAVASLATOK ELLENŐRZÉSE (NEM TÖREDÉKEK) ===
+    for (const javaslat of egyediJavaslatok) {
+      try {
+        // Eredeti egyedi ellenőrzés használata
+        const vegrehajtas = await this.javaslatVegrehajtasEllenorzese(javaslat._id); // Egyedi javaslat ellenőrzése
+
+        if (vegrehajtas && vegrehajtas.elfogadva) {
+          eredmenyek.vegrehajtva++; // Elfogadott javaslat
+        } else {
+          eredmenyek.elvetve++; // Elvetett javaslat
+        }
+      } catch (error) {
+        // Hiba esetén rögzítjük, de folytatjuk a többi javaslattal
+        eredmenyek.elvetve++; // Elvetettnek tekintjük
+        eredmenyek.hibak.push({
+          javaslatId: javaslat._id,
+          hiba: error.message
+        }); // Hibát rögzítjük
+      }
+    } // Egyedi javaslatok feldolgozása vége
+
+    console.log('<<<<<<<<<<<<<<<<<<<<<<<< tomegesVegrehajtasEllenorzes=====Eredmény:', {
+      eredmenyek
+    }); // Logoljuk az összesített eredményt
+
+    return eredmenyek; // Visszaadjuk a statisztikát
+  } // tomegesVegrehajtasEllenorzes metódus vége
+
 
 }
 

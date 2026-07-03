@@ -29,15 +29,15 @@ class ErtekJavaslatRepository {
 
   // ----- ÉRTÉK JAVASLAT KERESÉSE EMBER ÉS TARTALOM ALAPJÁN -----
   /**
-   * Egy ember érték javaslatának lekérése egy adott tartalomhoz
-   * @param {string} emberId - Ember ID
+   * Egy eember érték javaslatának lekérése egy adott tartalomhoz
+   * @param {string} eemberId - eEmber ID
    * @param {string} tartalomId - Tartalom ID
    * @returns {Promise<Object|null>}Érték javaslat dokumentum vagy null
    */
-  async findByEmberAndTartalom(emberId, tartalomId) {
+  async findByeEmberAndTartalom(eemberId, tartalomId) {
     // MongoDB findOne művelet - compound kulcs alapján
     return await ErtekJavaslat.findOne({
-      emberId: emberId,
+      eemberId: eemberId,
       tartalomId: tartalomId
     });
   }
@@ -66,13 +66,13 @@ class ErtekJavaslatRepository {
 
   // ----- ÖSSZES ÉRTÉK JAVASLAT LEKÉRÉSE EMBER ALAPJÁN -----
   /**
-   * Egy ember összes érték javaslatának lekérése
-   * @param {string} emberId - Ember ID
+   * Egy eember összes érték javaslatának lekérése
+   * @param {string} eemberId - eEmber ID
    * @returns {Promise<Array>} Érték javaslatok tömbje
    */
-  async findByEmber(emberId) {
-    // MongoDB find művelet - ember alapján
-    return await ErtekJavaslat.find({ emberId: emberId })
+  async findByeEmber(eemberId) {
+    // MongoDB find művelet - eember alapján
+    return await ErtekJavaslat.find({ eemberId: eemberId })
       .populate('tartalomId', 'cim');  // Tartalom címének betöltése (opcionális)
   }
 
@@ -111,16 +111,16 @@ class ErtekJavaslatRepository {
   // ----- ÉRTÉK JAVASLAT FRISSÍTÉSE VAGY LÉTREHOZÁSA -----
   /**
    *Érték javaslat frissítése, ha létezik, különben létrehozás
-   * @param {string} emberId - Ember ID
+   * @param {string} eemberId - eEmber ID
    * @param {string} tartalomId - Tartalom ID
    * @param {Object} adatok -Érték javaslat adatai
    * @returns {Promise<Object>} Létrehozott vagy frissített javaslat
    */
-  async createOrUpdate(emberId, tartalomId, adatok) {
+  async createOrUpdate(eemberId, tartalomId, adatok) {
     // MongoDB findOneAndUpdate művelet upsert opcióval
     return await ErtekJavaslat.findOneAndUpdate(
       { 
-        emberId: emberId,      // Keresési feltétel
+        eemberId: eemberId,      // Keresési feltétel
         tartalomId: tartalomId 
       },
       {
@@ -151,15 +151,15 @@ class ErtekJavaslatRepository {
 
   // ----- ÉRTÉK JAVASLAT TÖRLÉSE EMBER ÉS TARTALOM ALAPJÁN -----
   /**
-   * Egy ember érték javaslatának törlése egy adott tartalomhoz
-   * @param {string} emberId - Ember ID
+   * Egy eember érték javaslatának törlése egy adott tartalomhoz
+   * @param {string} eemberId - eEmber ID
    * @param {string} tartalomId - Tartalom ID
    * @returns {Promise<Object|null>} Törölt érték javaslat vagy null
    */
-  async deleteByEmberAndTartalom(emberId, tartalomId) {
+  async deleteByeEmberAndTartalom(eemberId, tartalomId) {
     // MongoDB findOneAndDelete művelet
     return await ErtekJavaslat.findOneAndDelete({
-      emberId: emberId,
+      eemberId: eemberId,
       tartalomId: tartalomId
     });
   }

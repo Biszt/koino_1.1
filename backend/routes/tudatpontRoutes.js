@@ -8,7 +8,7 @@ const router = express.Router();
 const TudatpontController = require('../controllers/tudatpontController');
 
 // Middleware importálása (authentikáció)
-// Az authMiddleware ellenőrzi a JWT token-t és req.user-be teszi a ember adatait
+// Az authMiddleware ellenőrzi a JWT token-t és req.user-be teszi a eember adatait
 const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/authMiddleware');
 // ✅ JAVÍTVA: Destrukturálás használata
 
@@ -21,7 +21,7 @@ const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/authM
 // ----- TUDATPONTOK HOZZÁRENDELÉSE ENTITÁSHOZ -----
 // Endpoint: POST /api/tudatpont/hozzarendeles
 // Body: { entitasId, entitasTipus, pontok }
-// Védett: Csak bejelentkezett emberek érhetik el
+// Védett: Csak bejelentkezett eemberek érhetik el
 router.post(
   '/hozzarendeles',
   authMiddleware,  // ✅ Most már function
@@ -50,21 +50,21 @@ router.get(
 // ----- EMBER ÖSSZES HOZZÁRENDELÉSÉNEK LEKÉRÉSE -----
 // Endpoint: GET /api/tudatpont/hozzarendelesek?limit=20&skip=0
 // Query paraméterek: limit (max 100), skip (lapozás)
-// Védett: Csak bejelentkezett emberek (saját hozzárendelések)
+// Védett: Csak bejelentkezett eemberek (saját hozzárendelések)
 router.get(
   '/hozzarendelesek',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberHozzarendeleseinekLekerese(req, res)
+  (req, res) => TudatpontController.eemberHozzarendeleseinekLekerese(req, res)
 );
 
 // ----- EMBER AKTÍV HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
 // Endpoint: GET /api/tudatpont/aktiv-hozzarendelesek?limit=20&skip=0
 // Query paraméterek: limit (max 100), skip (lapozás)
-// Védett: Csak bejelentkezett emberek (saját aktív hozzárendelések)
+// Védett: Csak bejelentkezett eemberek (saját aktív hozzárendelések)
 router.get(
   '/aktiv-hozzarendelesek',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberAktivHozzarendeleseinekLekerese(req, res)
+  (req, res) => TudatpontController.eemberAktivHozzarendeleseinekLekerese(req, res)
 );
 
 // ============================================================
@@ -104,12 +104,12 @@ router.post(
 // ----- EMBER JOGOSULTSÁGÁNAK ELLENŐRZÉSE -----
 // Endpoint: GET /api/tudatpont/jogosultsag/:entitasTipus/:entitasId
 // URL paraméterek: entitasTipus, entitasId
-// Védett: Csak bejelentkezett emberek
+// Védett: Csak bejelentkezett eemberek
 // Használat: szavazási jogosultság ellenőrzéséhez (javaslat rendszer)
 router.get(
   '/jogosultsag/:entitasTipus/:entitasId',
   authMiddleware,  // ✅ Kötelező auth
-  (req, res) => TudatpontController.emberJogosultsagEllenorzes(req, res)
+  (req, res) => TudatpontController.eemberJogosultsagEllenorzes(req, res)
 );
 
 // ===== ROUTER EXPORTÁLÁSA =====

@@ -1,0 +1,329 @@
+/* frontend/css/components/modal.css */
+
+/* ===== MODAL OVERLAY ===== */
+/* A teljes képernyőt beborító félig átlátszó sötét réteg */
+.modal-overlay {
+  position: fixed;       /* A teljes viewportot lefedi */
+  inset: 0;              /* top/right/bottom/left = 0 egyszerre */
+  z-index: 300;          /* A hamburger menü (200) felett */
+
+  /* Sötétbarna overlay – illeszkedik az erdő témához */
+  background-color: rgba(27, 22, 14, 0.70);
+
+  /* Kezdőállapot: láthatatlan */
+  opacity: 0;
+  pointer-events: none;  /* Láthatatlan állapotban nem fogja el a koppintásokat */
+
+  transition: opacity var(--transition-base);
+}
+
+/* Overlay látható állapota */
+.modal-overlay.latható {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ===== MODAL PANEL ===== */
+/* A tényleges modal doboz – képernyő közepén jelenik meg */
+.modal-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+
+  /* Kezdőállapot: kicsit fentebb + zsugorítva – belépési animációhoz */
+  transform: translate(-50%, -48%) scale(0.97);
+  z-index: 301;          /* Az overlay (300) felett */
+
+  /* Alap szélesség – a méret CSS osztályok felülírják */
+  width: clamp(300px, 90vw, 480px);
+
+  /* Maximális magasság – ne lógjon ki a képernyőből */
+  max-height: 85dvh;
+
+  /* Tartalom görgethetősége, ha a form hosszú */
+  overflow-y: auto;
+
+  /* Krémszín háttér – a platform surface színe */
+  background-color: var(--color-surface);
+
+  /* Lekerekített sarkok */
+  border-radius: var(--radius-xl);
+
+  /* Finom keret */
+  border: 1px solid var(--color-border);
+
+  /* Mélységérzet */
+  box-shadow: var(--shadow-lg);
+
+  /* Kezdőállapot: láthatatlan */
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity var(--transition-base),
+              transform var(--transition-base);
+}
+
+/* Panel látható állapota */
+.modal-panel.latható {
+  opacity: 1;
+  pointer-events: all;
+  transform: translate(-50%, -50%) scale(1); /* Tökéletes középre */
+}
+
+/* ===== MÉRET VARIÁNSOK ===== */
+/* A JS a meret beállítás alapján rakja rá a megfelelő osztályt */
+
+/* Szűk – megerősítő ablakokhoz, rövid üzenetekhez */
+.modal-panel--szuk {
+  width: clamp(280px, 85vw, 340px);
+}
+
+/* Alap – az alapértelmezett, formokhoz, listákhoz */
+.modal-panel--alap {
+  width: clamp(300px, 90vw, 480px);
+}
+
+/* Széles – tartalomModal, kategóriaModal, részletes formokhoz */
+.modal-panel--szeles {
+  width: clamp(300px, 92vw, 640px);
+}
+
+/* ===== BETÖLTÉSI ÁLLAPOT ===== */
+/* API hívás közben a panel enyhe halvány lesz */
+.modal-panel--betoltes {
+  opacity: 0.75;
+  /* Kurzorral jelezzük, hogy várni kell */
+  cursor: wait;
+}
+
+/* ===== MODAL FEJLÉC ===== */
+/* Cím és bezáró gomb sora */
+.modal-fejlec {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Cím bal oldalt, ✕ jobb oldalt */
+  gap: var(--space-4);
+
+  padding: var(--space-5) var(--space-6);
+
+  /* Elválasztó vonal a tartalom előtt */
+  border-bottom: 1px solid var(--color-divider);
+}
+
+/* Modal cím */
+.modal-cim {
+  font-family: var(--font-display); /* Zodiak – elegánsabb megjelenés */
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+/* ===== BEZÁRÓ GOMB ===== */
+/* A jobb felső sarokban lévő × gomb */
+.modal-bezaro-gomb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Minimum érintési terület – mobil hozzáférhetőség */
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+
+  background: var(--color-surface-offset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+  line-height: 1;
+
+  transition: background var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.modal-bezaro-gomb:hover {
+  background: var(--color-surface-offset-2);
+  color: var(--color-text);
+}
+
+.modal-bezaro-gomb:active {
+  background: var(--color-surface-dynamic);
+  transform: scale(0.94);
+}
+
+/* Letiltott állapot – betöltés közben */
+.modal-bezaro-gomb:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none; /* Aktív animáció ne fusson le disabled-en */
+}
+
+/* ===== HIBAÜZENET SÁV ===== */
+/* A fejléc alatt jelenik meg, ha van hiba – alapból rejtett */
+.modal-hiba {
+  /* Alapból nulla magasság – nem foglalja a helyet, ha nincs hiba */
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+
+  /* Szöveg és szín */
+  font-size: var(--text-sm);
+  color: var(--color-error);
+  background-color: var(--color-error-highlight);
+
+  /* Belső margó – majd csak látható állapotban érvényesül */
+  padding: 0 var(--space-6);
+
+  transition: max-height var(--transition-base),
+              opacity    var(--transition-base),
+              padding    var(--transition-base);
+}
+
+/* Hibaüzenet látható állapota */
+.modal-hiba--latható {
+  max-height: 80px;         /* Elegendő hely pár soros hibaüzenetnek */
+  opacity: 1;
+  padding: var(--space-3) var(--space-6); /* Belső tér csak látható állapotban */
+  border-bottom: 1px solid var(--color-error);
+}
+
+/* ===== MODAL TARTALOM ===== */
+/* Az átadott form vagy egyéb tartalom helye */
+.modal-tartalom {
+  padding: var(--space-6);
+}
+
+/* ===== MODAL LÁBLÉC ===== */
+/* Akció gombok sora az alján */
+.modal-lablec {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Gombok jobb oldalra igazítva */
+  gap: var(--space-3);
+  flex-wrap: wrap;           /* Kis képernyőn sorba törhetnek */
+
+  padding: var(--space-4) var(--space-6);
+
+  /* Elválasztó vonal a tartalom alatt */
+  border-top: 1px solid var(--color-divider);
+}
+
+/* ===== LÁBLÉC GOMBOK ===== */
+/* Minden lábléc gomb alap stílusa */
+.modal-gomb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+
+  /* Minimum érintési terület – mobil */
+  min-height: 40px;
+  padding: var(--space-2) var(--space-5);
+
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  transition: background var(--transition-fast),
+              color       var(--transition-fast),
+              border-color var(--transition-fast),
+              transform   var(--transition-fast);
+}
+
+/* Koppintás visszajelzés */
+.modal-gomb:active {
+  transform: scale(0.97);
+}
+
+/* Letiltott állapot – betöltés közben */
+.modal-gomb:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* -- Elsődleges gomb: zöld, hangsúlyos akció (pl. Mentés) -- */
+.modal-gomb--elsodleges {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary);
+}
+
+.modal-gomb--elsodleges:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+/* -- Másodlagos gomb: semleges, visszalépés (pl. Mégse) -- */
+.modal-gomb--masodlagos {
+  background-color: var(--color-surface-offset);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.modal-gomb--masodlagos:hover:not(:disabled) {
+  background-color: var(--color-surface-offset-2);
+  border-color: var(--color-border);
+}
+
+/* -- Veszélyes gomb: piros, visszafordíthatatlan akció (pl. Törlés, Igen) -- */
+.modal-gomb--veszelyes {
+  background-color: var(--color-error);
+  color: var(--color-text-inverse);
+  border-color: var(--color-error);
+}
+
+.modal-gomb--veszelyes:hover:not(:disabled) {
+  /* Sötétebb piros hover-re */
+  background-color: color-mix(in oklch, var(--color-error) 85%, black);
+  border-color:     color-mix(in oklch, var(--color-error) 85%, black);
+}
+
+/* ===== BETÖLTÉSI SPINNER ===== */
+/* Kis forgó kör a lábléc bal sarkában betöltés közben */
+.modal-spinner {
+  display: inline-block;
+
+  /* Méret */
+  width: 18px;
+  height: 18px;
+
+  /* Kör alak – a forgó szegély adja az animációt */
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);  /* Csak a felső szegély színes */
+  border-radius: var(--radius-full);
+
+  /* Forgás animáció */
+  animation: modalSpinnerForog 0.7s linear infinite;
+
+  /* A lábléc bal oldalán, a gomboktól elkülönítve */
+  margin-right: auto;
+}
+
+/* Spinner forgás keyframe */
+@keyframes modalSpinnerForog {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== MEGERŐSÍTŐ SZÖVEG ===== */
+/* A Modal.megerosites() által létrehozott ablak kérdéses szövege */
+.modal-megerosites-szoveg {
+  font-size: var(--text-base);
+  color: var(--color-text);
+  line-height: 1.6;
+  margin: 0;          /* A modal-tartalom padding elegendő */
+  max-width: 100%;    /* Ne lógjon ki */
+}
+
+/* ===== GÖRGETŐSÁV STÍLUS ===== */
+/* A modal panelen belüli görgetősáv finomítása */
+.modal-panel::-webkit-scrollbar        { width: 6px; }
+.modal-panel::-webkit-scrollbar-track  { background: var(--color-surface); }
+.modal-panel::-webkit-scrollbar-thumb  {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}

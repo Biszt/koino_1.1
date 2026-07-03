@@ -1,0 +1,94 @@
+/* frontend/css/components/foOldal.css */
+
+/* ===== FŐOLDAL ALSÓ SÁV ===== */
+/* Fix pozíció: mindig a képernyő alján marad, görgetéstől függetlenül */
+.also-sav {
+  position: fixed; /* Fix pozíció a viewporthoz képest */
+  bottom: 0;       /* Képernyő aljára rögzítve */
+  left: 0;         /* Teljes szélességű */
+  right: 0;        /* Teljes szélességű */
+  z-index: 100;    /* Minden tartalom felett, de hamburger menü (200) alatt */
+
+  /* Erdőzöld háttér – a platform fő színe */
+  background-color: var(--color-primary);
+
+  /* Belső elrendezés: hamburger bal oldalt, infók jobb oldalt */
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+
+  /* Belső tér – kompakt, de kényelmes mobilon */
+  padding: var(--space-3) var(--space-4);
+
+  /* Felső elválasztó vonal */
+  border-top: 1px solid var(--color-primary-active);
+
+  /* Gyenge árnyék felfelé – mélységérzet */
+  box-shadow: 0 -2px 12px rgba(43, 35, 24, 0.18);
+}
+
+/* ===== INFÓ SÁV ===== */
+/* A hamburger konténer melletti terület – tartalmazza az összes statisztikát */
+.also-sav__infok {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;          /* Kis képernyőn törhet */
+  gap: var(--space-2) var(--space-4);
+  flex: 1;                  /* Kitölti a maradék helyet */
+  overflow: hidden;         /* Túl hosszú szöveg ne lógjon ki */
+}
+
+/* ===== EGYEDI INFO ELEM ===== */
+/* Egy adat megjelenítője – pl. eember neve, tudatpont */
+.also-sav__info-elem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: var(--text-xs); /* Kis méret – nem tolakodó */
+  white-space: nowrap;       /* Ne törjön el egy elemen belül */
+  opacity: 0.92;             /* Enyhén visszafogott */
+}
+
+/* Platform neve – kissé kiemeltebb */
+.also-sav__info-elem--nev {
+  font-family: var(--font-display); /* Zodiak – elegánsabb megjelenés */
+  font-size: var(--text-sm);
+  opacity: 1;
+  letter-spacing: 0.01em;
+}
+
+/* ===== ELVÁLASZTÓ PONT ===== */
+/* A kis · pont az infó elemek között */
+.also-sav__elvalaszto {
+  color: var(--color-text-inverse);
+  opacity: 0.35;
+  font-size: var(--text-xs);
+  user-select: none; /* Ne lehessen véletlenül kijelölni */
+}
+
+/* ===== BETÖLTÉS ÁLLAPOT ===== */
+/* Amíg az API hívás fut, az elemek halványabbak és dőltek */
+.also-sav__info-elem--betoltes {
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* ===== NAGYON KIS KÉPERNYŐ ===== */
+/* 360px alatt a platform neve eltűnik – helyet ad a fontosabb adatoknak */
+@media (max-width: 360px) {
+  .also-sav__info-elem--nev {
+    display: none;
+  }
+}
+
+/* ===== FŐOLDAL TARTALOM TERÜLET ===== */
+/* Az alsó sáv magassága (~56px) miatt a tartalom ne csússzon alá */
+/* calc: alsó sáv tényleges magassága + egy kis légköz */
+.fooldal-tartalom {
+  padding-bottom: calc(var(--space-12) + var(--space-4));
+  min-height: 100dvh; /* ← teljes képernyőmagasság */
+  display: flex;      /* ← flex konténer legyen */
+  flex-direction: column;
+}

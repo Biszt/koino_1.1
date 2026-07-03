@@ -1,0 +1,582 @@
+/* frontend/css/components/szovegSzerkeszto.css */
+
+/* =============================================
+   SZÖVEGSZERKESZTŐ - FŐ KONTÉNER
+   A szerkesztő egész területét foglalja magában
+   ============================================= */
+.szoveg-szerkeszto {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+/* =============================================
+   BLOKKOK TERÜLETE
+   A szerkeszthető blokkok görgethető konténere
+   ============================================= */
+.szoveg-szerkeszto__terület {
+  flex: 1;
+  padding: var(--space-3);
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* =============================================
+   SZÖVEGES BLOKK
+   Egy gépelhető szöveges blokk
+   ============================================= */
+.szoveg-blokk {
+  width: 100%;
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: normal;
+  outline: none;
+  /* csak szóhatáron törhet, karakterenként soha */
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
+  transition:
+    border-color var(--transition-interactive),
+    background   var(--transition-interactive);
+}
+
+/* Szöveges blokk - fókuszban */
+.szoveg-blokk:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-2);
+}
+
+/* Szöveges blokk - üres állapot placeholder szövege */
+.szoveg-blokk:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+/* =============================================
+   KÉPBLOKK
+   Képet tartalmazó blokk konténere
+   ============================================= */
+.kep-blokk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-offset);
+}
+
+/* A kép maga */
+.kep-blokk__kep {
+  display: block;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  max-height: 300px;
+}
+
+/* Képméret variációk */
+.kep-blokk--kicsi   .kep-blokk__kep { width: 40%; }
+.kep-blokk--kozepes .kep-blokk__kep { width: 70%; }
+.kep-blokk--teljes  .kep-blokk__kep { width: 100%; }
+
+/* Méretválasztó gombok sora a kép alatt */
+.kep-blokk__meret-valaszto {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Méretválasztó gomb */
+.kep-blokk__meret-gomb {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition:
+    background     var(--transition-interactive),
+    color          var(--transition-interactive),
+    border-color   var(--transition-interactive);
+}
+
+.kep-blokk__meret-gomb:hover { background: var(--color-surface-dynamic); color: var(--color-text); }
+
+/* Méretválasztó gomb - kiválasztott */
+.kep-blokk__meret-gomb--aktiv {
+  background: var(--color-primary-highlight);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* =============================================
+   FÁJLBLOKK - WRAPPER
+   MÓDOSÍTÁS: display: block, hogy a belső .fajl-blokk
+   width/height: 100%-kal pontosan kitöltse a wrappert
+   ============================================= */
+.fajl-blokk-wrapper {
+  display: block;
+}
+
+/* =============================================
+   FÁJLBLOKK - FELTÖLTÖTT ÁLLAPOT
+   MÓDOSÍTÁS: width: 100%, height: 100%, box-sizing: border-box
+   hozzáadva, hogy méretezéskor kövesse a wrappert
+   ============================================= */
+.fajl-blokk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-offset);
+  text-decoration: none;
+  color: var(--color-text);
+  /* MÓDOSÍTÁS: kitölti a wrappert */
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  transition:
+    background     var(--transition-interactive),
+    border-color   var(--transition-interactive);
+}
+
+.fajl-blokk-wrapper.blokk--aktiv .fajl-blokk {
+  background: var(--color-surface-dynamic);
+  border-color: var(--color-primary);
+}
+
+.fajl-blokk__ikon     { font-size: var(--text-lg); flex-shrink: 0; color: var(--color-text-muted); }
+.fajl-blokk__info     { flex: 1; min-width: 0; }
+.fajl-blokk__nev      { font-size: var(--text-sm); font-weight: 500; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fajl-blokk__letoltes { font-size: var(--text-xs); color: var(--color-primary); flex-shrink: 0; }
+
+/* =============================================
+   FÁJLBLOKK - ÜRES ÁLLAPOT PLACEHOLDER
+   ============================================= */
+.fajl-blokk__placeholder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  transition:
+    border-color var(--transition-interactive),
+    color        var(--transition-interactive);
+}
+
+.fajl-blokk__placeholder-ikon   { font-size: 1.1em; flex-shrink: 0; }
+.fajl-blokk__placeholder-szoveg { flex: 1; }
+
+.fajl-blokk-wrapper.blokk--aktiv .fajl-blokk__placeholder {
+  border-style: solid;
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* =============================================
+   LINKBLOKK - WRAPPER
+   MÓDOSÍTÁS: display: block, hogy a belső .link-blokk
+   width/height: 100%-kal pontosan kitöltse a wrappert
+   ============================================= */
+.link-blokk-wrapper {
+  display: block;
+}
+
+/* =============================================
+   LINKBLOKK
+   MÓDOSÍTÁS: width: 100%, height: 100%, box-sizing: border-box
+   hozzáadva, hogy méretezéskor kövesse a wrappert
+   ============================================= */
+.link-blokk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-primary-highlight);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  min-width: 0;
+  /* MÓDOSÍTÁS: kitölti a wrappert */
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  transition:
+    background     var(--transition-interactive),
+    border-color   var(--transition-interactive);
+}
+
+.link-blokk:hover { background: var(--color-primary-highlight); border-color: var(--color-primary); }
+.link-blokk-wrapper.blokk--aktiv .link-blokk { background: var(--color-surface-dynamic); border-color: var(--color-primary); }
+
+.link-blokk__ikon    { flex-shrink: 0; }
+.link-blokk__felirat { flex: 1; min-width: 0; word-break: break-all; overflow-wrap: break-word; }
+
+/* =============================================
+   ENTITÁS-HIVATKOZÁS BLOKK - WRAPPER
+   MÓDOSÍTÁS: display: block, hogy a belső elem
+   width/height: 100%-kal pontosan kitöltse a wrappert
+   ============================================= */
+.entitas-hivatkozas-blokk-wrapper {
+  display: block;
+}
+
+/* =============================================
+   ENTITÁS-HIVATKOZÁS BLOKK
+   MÓDOSÍTÁS: width: 100%, height: 100%, box-sizing: border-box
+   hozzáadva, hogy méretezéskor kövesse a wrappert
+   ============================================= */
+.entitas-hivatkozas-blokk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-offset);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  min-width: 0;
+  /* MÓDOSÍTÁS: kitölti a wrappert */
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  transition:
+    background     var(--transition-interactive),
+    border-color   var(--transition-interactive),
+    color          var(--transition-interactive);
+}
+
+.entitas-hivatkozas-blokk-wrapper.blokk--aktiv .entitas-hivatkozas-blokk { background: var(--color-surface-dynamic); border-color: var(--color-primary); color: var(--color-primary); }
+.entitas-hivatkozas-blokk:hover                                           { background: var(--color-primary-highlight); border-color: var(--color-primary); color: var(--color-primary); }
+.entitas-hivatkozas-blokk:active                                          { background: var(--color-primary); color: var(--color-text-inverse); }
+
+.entitas-hivatkozas-blokk__ikon    { font-size: var(--text-xs); opacity: 0.7; flex-shrink: 0; }
+.entitas-hivatkozas-blokk__felirat { flex: 1; min-width: 0; word-break: break-word; overflow-wrap: break-word; }
+
+/* =============================================
+   FELTÖLTÉSI FOLYAMATJELZŐ
+   ============================================= */
+.feltoltes-folyamat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-offset);
+}
+
+.feltoltes-folyamat__szoveg  { font-size: var(--text-sm); color: var(--color-text-muted); flex: 1; }
+
+.feltoltes-folyamat__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: szerkeszto-forog 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes szerkeszto-forog {
+  to { transform: rotate(360deg); }
+}
+
+/* =============================================
+   BLOKK TÖRLŐ GOMB
+   ============================================= */
+.blokk-torlo-gomb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-offset-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-interactive),
+    color      var(--transition-interactive);
+}
+
+.blokk-torlo-gomb:hover { background: var(--color-error-highlight); color: var(--color-error); }
+
+/* =============================================
+   AKTÍV BLOKK — MINDEN BLOKKTÍPUSRA EGYSÉGESEN
+   ============================================= */
+.blokk-wrapper.blokk--aktiv { border-color: var(--color-primary); background: var(--color-surface-2); }
+
+/* =============================================
+   OLDAL NAVIGÁCIÓ - FŐ KONTÉNER
+   ============================================= */
+.oldal-navigacio {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 var(--space-3);
+  background: var(--color-surface-offset);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+}
+
+.oldal-navigacio::-webkit-scrollbar { display: none; }
+
+/* =============================================
+   OLDAL NAVIGÁCIÓ - FÜL GOMB
+   ============================================= */
+.oldal-navigacio__ful {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 44px;
+  transition:
+    color        var(--transition-interactive),
+    border-color var(--transition-interactive),
+    background   var(--transition-interactive);
+}
+
+.oldal-navigacio__ful:hover {
+  color: var(--color-text);
+  background: var(--color-surface-dynamic);
+}
+
+.oldal-navigacio__ful--aktiv {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: transparent;
+}
+
+.oldal-navigacio__ful--aktiv:hover {
+  color: var(--color-primary-hover);
+  background: var(--color-primary-highlight);
+}
+
+/* =============================================
+   OLDAL NAVIGÁCIÓ - FÜL FELIRAT
+   ============================================= */
+.oldal-navigacio__felirat {
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+
+.oldal-navigacio__felirat-input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-2);
+  height: 28px;
+  max-width: 120px;
+  outline: none;
+  transition: border-color var(--transition-interactive);
+}
+
+/* =============================================
+   OLDAL NAVIGÁCIÓ - + GOMB
+   ============================================= */
+.oldal-navigacio__plusz-gomb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  min-height: 44px;
+  min-width: 44px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--color-text-faint);
+  font-size: var(--text-lg);
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color      var(--transition-interactive),
+    background var(--transition-interactive);
+}
+
+.oldal-navigacio__plusz-gomb:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-dynamic);
+}
+
+.oldal-navigacio__plusz-gomb:active {
+  background: var(--color-primary-highlight);
+  color: var(--color-primary);
+}
+
+/* =============================================
+   OLDAL NAVIGÁCIÓ - BEVITELI PANEL
+   ============================================= */
+.oldal-navigacio__bevitel-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  background: var(--color-surface-2);
+  border-left: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.oldal-navigacio__bevitel-input {
+  height: 30px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  width: 110px;
+  outline: none;
+  transition:
+    border-color var(--transition-interactive),
+    background   var(--transition-interactive);
+}
+
+.oldal-navigacio__bevitel-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-2);
+}
+
+.oldal-navigacio__bevitel-ok {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background   var(--transition-interactive),
+    border-color var(--transition-interactive);
+}
+
+.oldal-navigacio__bevitel-ok:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.oldal-navigacio__bevitel-ok:active {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+
+/* =============================================
+   RESZPONZÍV - MOBILON KISEBB TERÜLET
+   ============================================= */
+@media (max-width: 480px) {
+
+  .szoveg-szerkeszto__terület {
+    padding: var(--space-2);
+    max-height: 300px;
+  }
+
+  .oldal-navigacio {
+    padding: 0 var(--space-2);
+  }
+
+  .oldal-navigacio__ful {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .oldal-navigacio__bevitel-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-3);
+  }
+
+  .oldal-navigacio__bevitel-input {
+    flex: 1;
+    width: auto;
+  }
+}
+
+/* =============================================
+   MÉRETEZÉSI MÓD
+   Méretezési módban lévő blokk vizuális jelzése.
+   ============================================= */
+.blokk--meretezesi-mod {
+  outline: 2px dashed var(--color-primary); /* szaggatott keret, jól látható */
+  outline-offset: 3px;                      /* ne fedje a tartalmat */
+  cursor: move;                             /* jelzi, hogy húzható */
+  user-select: none;                        /* húzás közben ne jelöljön szöveget */
+  -webkit-user-select: none;
+}
+
+/* Hover jelzés méretezési módban */
+.blokk--meretezesi-mod:hover {
+  outline-color: var(--color-primary-hover);
+}
+
+/* Aktív húzás közben — erősebb vizuális visszajelzés */
+.blokk--meretezesi-mod.blokk--meretezesi-huzas {
+  outline-style: solid;                     /* szaggatottból folytonos lesz */
+  outline-color: var(--color-primary-active);
+  cursor: move;
+}
