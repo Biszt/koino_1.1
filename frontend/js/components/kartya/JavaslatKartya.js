@@ -2,6 +2,7 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
+import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -213,28 +214,31 @@ class JavaslatKartya extends Kartya {
       entitasId: entitas?.entitasId
     });
 
+    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
+    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg.
+    // A korábbi „Törlés" pont a terv szerint törölve (a törlés javaslat útján történik).
     const opciok = [
       {
-        ikon:    '👁️',
-        felirat: 'Részletek megtekintése',
-        akcio: () => {
-          console.log('JavaslatKartya - részletek', { entitasId: entitas?.entitasId });
-        }
+        ikon:    '🚧',
+        felirat: 'Szavazat leadása',
+        akcio:   () => fejlesztesreVarMegjelenitese('Szavazat leadása')
       },
       {
-        ikon:    '✅',
-        felirat: 'Szavazás',
-        akcio: () => {
-          console.log('JavaslatKartya - szavazás', { entitasId: entitas?.entitasId });
-        }
+        ikon:    '🚧',
+        felirat: 'Új tartalom létrehozása ebből',
+        akcio:   () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
       },
       {
-        ikon:       '🗑️',
-        felirat:    'Törlés',
+        ikon:       '🚧',
+        felirat:    'Tudatpont módosítás',
         elvalaszto: true,
-        akcio: () => {
-          console.log('JavaslatKartya - törlés', { entitasId: entitas?.entitasId });
-        }
+        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpont módosítás')
+      },
+      {
+        ikon:       '🚧',
+        felirat:    'Részletes adatok',
+        elvalaszto: true,
+        akcio:      () => fejlesztesreVarMegjelenitese('Részletes adatok')
       }
     ];
 

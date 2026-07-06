@@ -14,6 +14,7 @@ import {
 
 import HamburgerMenu from './HamburgerMenu.js';
 import Modal from './modals/Modal.js';
+import fejlesztesreVarMegjelenitese from './FejlesztesreVar.js';
 import TartalomModal from './modals/TartalomModal.js';
 import KategoriaModal from './modals/KategoriaModal.js';
 import TartalomTipusModal from './modals/TartalomTipusModal.js';
@@ -119,11 +120,13 @@ init() {
   _hamburgerOpciokEpitese() {
     console.log('FoOldal._hamburgerOpciokEpitese - KEZDÉS');
 
+    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
+    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
       {
-        ikon:    '🔔',
+        ikon:    '🚧',
         felirat: 'Értesítések',
-        akcio:   () => this._modalMegnyitasa('Értesítések', '\n\nÉrtesítések hamarosan...\n\n')
+        akcio:   () => fejlesztesreVarMegjelenitese('Értesítések')
       },
       {
         ikon:    '✏️',
@@ -141,10 +144,15 @@ init() {
         akcio:   () => this._ujTartalomTipusModalMegnyitasa()
       },
       {
-        ikon:       '⚙️',
-        felirat:    'eember beállítások',
+        ikon:       '🚧',
+        felirat:    'Tudatpontok',
         elvalaszto: true,
-        akcio:      () => this._modalMegnyitasa('eember beállítások', '\nBeállítások hamarosan...\n\n')
+        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpontok')
+      },
+      {
+        ikon:    '🚧',
+        felirat: 'eember beállítások',
+        akcio:   () => fejlesztesreVarMegjelenitese('eember beállítások')
       },
       {
         ikon:    '🚪',

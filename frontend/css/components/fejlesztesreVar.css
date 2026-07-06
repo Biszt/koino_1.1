@@ -1,0 +1,24 @@
+/* frontend/css/components/fejlesztesreVar.css */
+
+/* ===== FEJLESZTÉSRE VÁR ÜZENET ===== */
+/* A FejlesztesreVar.js modal tartalmának stílusa */
+
+.fejlesztesre-var {
+  text-align: center;
+  padding: var(--space-2) 0;
+}
+
+/* A funkció neve – kiemelt, hogy látszódjon, mire kattintott az e-ember */
+.fejlesztesre-var__funkcio {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+
+/* A magyarázó szöveg – halványabb, másodlagos */
+.fejlesztesre-var__szoveg {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

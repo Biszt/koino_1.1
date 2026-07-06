@@ -5,6 +5,7 @@ import Kartya from './Kartya.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
+import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -201,10 +202,12 @@ class TartalomKartya extends Kartya {
       entitasId: entitas?.entitasId
     });
 
+    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
+    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
       {
         ikon:     '✏️',
-        felirat:  'Új tartalom létrehozása ebből ágaztatva',
+        felirat:  'Új tartalom létrehozása ebből',
         akcio:    () => this._ujTartalomLetrehozasa(entitas)
       },
       {
@@ -213,20 +216,21 @@ class TartalomKartya extends Kartya {
         akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:      '🌟',
+        ikon:      '🚧',
         felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:     () => {
-          console.log('TartalomKartya - tudatpont módosítás', { entitasId: entitas?.entitasId });
-        }
+        akcio:     () => fejlesztesreVarMegjelenitese('Tudatpont módosítás', this.modalKontenerAzon)
       },
       {
-        ikon:      'ℹ️',
+        ikon:      '🚧',
         felirat:   'Részletes adatok',
         elvalaszto: true,
-        akcio:     () => {
-          console.log('TartalomKartya - részletes adatok', { entitasId: entitas?.entitasId });
-        }
+        akcio:     () => fejlesztesreVarMegjelenitese('Részletes adatok', this.modalKontenerAzon)
+      },
+      {
+        ikon:     '🚧',
+        felirat:  'Küszöb érték javaslat',
+        akcio:    () => fejlesztesreVarMegjelenitese('Küszöb érték javaslat', this.modalKontenerAzon)
       },
     ];
 

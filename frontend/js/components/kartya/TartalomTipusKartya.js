@@ -3,6 +3,7 @@
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
+import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -176,19 +177,35 @@ class TartalomTipusKartya extends Kartya {
       entitasId: entitas?.entitasId
     });
 
+    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
+    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
+      {
+        ikon:     '🚧',
+        felirat:  'Új tartalom létrehozása ebből',
+        akcio:    () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből', this.modalKontenerAzon)
+      },
       {
         ikon:     '🌿',
         felirat:  'Javaslat létrehozása',
         akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:      '🌟',
+        ikon:      '🚧',
         felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:     () => {
-          console.log('TartalomTipusKartya - tudatpont módosítás', { entitasId: entitas?.entitasId });
-        }
+        akcio:     () => fejlesztesreVarMegjelenitese('Tudatpont módosítás', this.modalKontenerAzon)
+      },
+      {
+        ikon:      '🚧',
+        felirat:   'Részletes adatok',
+        elvalaszto: true,
+        akcio:     () => fejlesztesreVarMegjelenitese('Részletes adatok', this.modalKontenerAzon)
+      },
+      {
+        ikon:     '🚧',
+        felirat:  'Küszöb érték javaslat',
+        akcio:    () => fejlesztesreVarMegjelenitese('Küszöb érték javaslat', this.modalKontenerAzon)
       }
     ];
 

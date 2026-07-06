@@ -2,6 +2,7 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
+import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -173,20 +174,31 @@ class EgyezmenyKartya extends Kartya {
       entitasId: entitas?.entitasId
     });
 
+    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
+    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg.
+    // A korábbi „Előzmény megtekintése" pont a terv szerint törölve.
     const opciok = [
       {
-        ikon:    '👁️',
-        felirat: 'Részletek megtekintése',
-        akcio: () => {
-          console.log('EgyezmenyKartya - részletek', { entitasId: entitas?.entitasId });
-        }
+        ikon:    '🚧',
+        felirat: 'Új tartalom létrehozása ebből',
+        akcio:   () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
       },
       {
-        ikon:    '📜',
-        felirat: 'Előzmény megtekintése',
-        akcio: () => {
-          console.log('EgyezmenyKartya - előzmény', { entitasId: entitas?.entitasId });
-        }
+        ikon:    '🚧',
+        felirat: 'Javaslat létrehozása',
+        akcio:   () => fejlesztesreVarMegjelenitese('Javaslat létrehozása')
+      },
+      {
+        ikon:       '🚧',
+        felirat:    'Tudatpont módosítás',
+        elvalaszto: true,
+        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpont módosítás')
+      },
+      {
+        ikon:       '🚧',
+        felirat:    'Részletes adatok',
+        elvalaszto: true,
+        akcio:      () => fejlesztesreVarMegjelenitese('Részletes adatok')
       }
     ];
 

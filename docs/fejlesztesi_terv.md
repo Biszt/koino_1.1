@@ -62,6 +62,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
 | Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
+| Új kategória létrehozása ebből | 🚧 | ÚJ menüpont — az így létrehozott kategória ALKATEGÓRIA lesz; backend módosítás is kell hozzá (kategória-hierarchia) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | 🚧 | Csak console.log |
 | Részletes adatok | 🚧 | ÚJ menüpont |
@@ -82,9 +83,9 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 ### 0. fázis — A menüváz kiépítése (ez teszi „élővé" a tervet)
 
-- [ ] Közös `FejlesztesreVar` üzenet-komponens létrehozása (egységes modal/üzenet)
-- [ ] Minden menü igazítása a fenti hálózathoz: hiányzó pontok felvétele 🚧 akcióval, feliratok egységesítése („Szavazat leadása", „Részletes adatok"), törlendők eltávolítása
-- [ ] Ellenőrzés a dev környezetben
+- [x] Közös `FejlesztesreVar` üzenet-komponens létrehozása (egységes modal/üzenet) — `frontend/js/components/FejlesztesreVar.js` + CSS
+- [x] Minden menü igazítása a fenti hálózathoz: hiányzó pontok felvétele 🚧 ikonnal és akcióval, feliratok egységesítése („Szavazat leadása", „Részletes adatok"), törlendők eltávolítása (Javaslat „Törlés", Egyezmény „Előzmény megtekintése")
+- [x] Ellenőrzés a dev környezetben
 
 ### A funkciók fejlesztési sorrendje (javaslat — a döntés a tulajdonosé)
 
@@ -96,6 +97,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 6. [ ] **Értesítések** (főmenü) — backend kész, frontend nézet kell
 7. [ ] **Tudatpontok nézet** (főmenü) — saját tudatpontok áttekintése, átrendezése
 8. [ ] **eember beállítások** (főmenü)
+9. [ ] **Új kategória létrehozása ebből** (Kategória kártya) — alkategória létrehozása; backend módosítást is igényel (kategória-hierarchia)
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
