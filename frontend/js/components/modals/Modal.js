@@ -296,9 +296,10 @@ async _templateBetoltese(kontener) {
     const cimElem = this.panel?.querySelector('.modal-cim');
     if (cimElem) cimElem.textContent = ujCim;
 
-    // Tartalom frissítése a törzsben
+    // Tartalom frissítése a törzsben — null/undefined esetén a törzs
+    // változatlan marad (pl. lépésváltásnál csak a cím frissül)
     const tartalomDiv = this.panel?.querySelector('.modal-tartalom');
-    if (tartalomDiv) {
+    if (tartalomDiv && ujTartalom != null) {
       if (ujTartalom instanceof HTMLElement) {
         tartalomDiv.innerHTML = '';
         tartalomDiv.appendChild(ujTartalom);

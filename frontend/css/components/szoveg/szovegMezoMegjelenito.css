@@ -11,9 +11,59 @@
    ============================================= */
 .szoveg-mezo-megjelenito {
   display: flex;
-  flex-direction: column;
+  /* Sor-irányú, tördelő elrendezés — az átméretezett (keskenyebb) blokkok
+     egymás mellé kerülnek, ha elférnek; a szöveges blokkok width: 100%-a
+     miatt azok továbbra is önálló sort foglalnak */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-2);
   width: 100%;
+}
+
+
+/* =============================================
+   FÜLSÁV – TÖBB OLDALAS TARTALOM (csak olvasható)
+   =============================================
+   A szerkesztő oldal-navigációjának egyszerűsített
+   párja: nincs + gomb, csak az oldalak közti váltás.
+   ============================================= */
+.szoveg-mezo-megjelenito__fulsav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-1);
+}
+
+.szoveg-mezo-megjelenito__ful {
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-offset);
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    background   var(--transition-interactive),
+    color        var(--transition-interactive),
+    border-color var(--transition-interactive);
+}
+
+.szoveg-mezo-megjelenito__ful--aktiv {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  font-weight: 600;
 }
 
 

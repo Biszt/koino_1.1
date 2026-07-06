@@ -2,6 +2,7 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
+import JavaslatModal from '../modals/JavaslatModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -17,13 +18,19 @@ import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 class TartalomTipusKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  constructor(entitas, kivalasztott, onKivalasztas) {
+  // MÓDOSÍTVA: a TartalomKartya-val azonos paraméterezés,
+  // hogy a javaslat modal innen is elérhető legyen
+  constructor(entitas, kivalasztott, onKivalasztas, token, modalKontenerAzon, onUjratoltes, onHamburgerMegnyitas) {
     console.log('TartalomTipusKartya.constructor - KEZDÉS', {
       entitasId: entitas?.entitasId,
       nev:       entitas?.adatok?.nev
     });
 
-    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas));
+    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas), onHamburgerMegnyitas);
+
+    this.token             = token;
+    this.modalKontenerAzon = modalKontenerAzon;
+    this.onUjratoltes      = onUjratoltes;
 
     // =============================================
     // ÚJ - Megjelenítő példány referencia
@@ -114,15 +121,9 @@ class TartalomTipusKartya extends Kartya {
     const adatok = this.entitas.adatok ?? {};
 
     if (adatok.szovegMezo) {
-      // Legacy string → blokk tömb automatikus becsomagolás
-      const blokkok = Array.isArray(adatok.szovegMezo)
-        ? adatok.szovegMezo
-        : [{
-            id:       'legacy-blokk-1',
-            tipus:    'szoveg',
-            tartalom: adatok.szovegMezo,
-            formatas: { felkover: false, dolt: false, meret: 'kozepes' }
-          }];
+      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
+      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
+      const blokkok = adatok.szovegMezo;
 
       const szovegKontener = document.createElement('div');
       szovegKontener.className = 'tartalom-tipus-kartya__szoveg-kontener';
@@ -177,25 +178,16 @@ class TartalomTipusKartya extends Kartya {
 
     const opciok = [
       {
-        ikon:    '✏️',
-        felirat: 'Szerkesztés',
-        akcio: () => {
-          console.log('TartalomTipusKartya - szerkesztés', { entitasId: entitas?.entitasId });
-        }
+        ikon:     '🌿',
+        felirat:  'Javaslat létrehozása',
+        akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:    '🌿',
-        felirat: 'Gyerek tartalom típus hozzáadása',
-        akcio: () => {
-          console.log('TartalomTipusKartya - gyerek hozzáadása', { entitasId: entitas?.entitasId });
-        }
-      },
-      {
-        ikon:       '🗑️',
-        felirat:    'Törlés',
+        ikon:      '🌟',
+        felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio: () => {
-          console.log('TartalomTipusKartya - törlés', { entitasId: entitas?.entitasId });
+        akcio:     () => {
+          console.log('TartalomTipusKartya - tudatpont módosítás', { entitasId: entitas?.entitasId });
         }
       }
     ];
@@ -205,6 +197,42 @@ class TartalomTipusKartya extends Kartya {
     });
 
     return opciok;
+  }
+
+  // ----- JAVASLAT LÉTREHOZÁSA -----
+  // A TartalomKartya mintájára: a JavaslatModal-t nyitja meg.
+  // A javaslat szülő tartalma a tartalom típus szülője (a pakli
+  // hierarchiában felette álló tartalom) — a backend ellenőrzi.
+  async _javaslatLetrehozasa(entitas) {
+    console.log('TartalomTipusKartya._javaslatLetrehozasa - KEZDÉS', {
+      entitasId: entitas?.entitasId,
+      szuloId:   entitas?.szuloId
+    });
+
+    const javaslatModal = new JavaslatModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: 'TartalomTipus',
+        adatok:       entitas.adatok
+      },
+      szuloAdatok: {
+        szuloId:    entitas.szuloId,
+        szuloTipus: 'Tartalom'
+      },
+      onSiker: (ujJavaslat) => {
+        console.log('TartalomTipusKartya._javaslatLetrehozasa - onSiker', {
+          javaslatId: ujJavaslat?._id
+        });
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await javaslatModal.init();
+    javaslatModal.megnyitas();
+
+    console.log('TartalomTipusKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
   }
 }
 

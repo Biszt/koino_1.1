@@ -93,8 +93,8 @@ constructor(kontener, opciak = {}) {
     onUjBlokk:   () => this._ujSzovegesBlokkHozzaadasa(),
     onTorles:    () => this._aktivBlokkTorlese(),
     // delegálás a MozgatasiKezelo-re
-    onFel: () => this.mozgatasiKezelo?.mozgatas('fel'),
-    onLe:  () => this.mozgatasiKezelo?.mozgatas('le'),
+    onFel: () => this.mozgatasiKezelo?.blokkMozgatasa('fel'),
+    onLe:  () => this.mozgatasiKezelo?.blokkMozgatasa('le'),
     // delegálás a MeretezesKezelo-re
     onMeretez: () => {
       console.log('SzovegSzerkeszto - onMeretez');
@@ -217,13 +217,20 @@ constructor(kontener, opciak = {}) {
 
   // 8. MozgatasiKezelo példányosítása
   this.mozgatasiKezelo = new MozgatasiKezelo({
-    teruletElem:       this.teruletElem,
+    getTerületElem:    () => this.teruletElem,
     getBlokkLista:     () => this.blokkLista,
     getTortenetKezelo: () => this.tortenetKezelo,
-    getEszkoztar:      () => this.eszkoztar,
-    getKozosAllapot:   () => this._kozosAllapotOsszeallitasa(),
     blokkRenderelese:  (blokk) => this._blokkRenderelese(blokk),
-    valtozasJelzese:   () => this._valtozasJelzese(),
+    onValtozas:        () => this._valtozasJelzese(),
+    onAllapotValtozas: () => {
+      const aktivBlokk = this.blokkLista.getAktiv();
+      if (!aktivBlokk) return;
+      const kozosAllapot     = this._kozosAllapotOsszeallitasa();
+      const aktualisFormatas = aktivBlokk.tipus === 'szoveg'
+        ? this.szovegBlokkPeldanyok[aktivBlokk.id]?.getAktualisFormatas() ?? null
+        : null;
+      this.eszkoztar.allapotFrissites(aktivBlokk, kozosAllapot, aktualisFormatas);
+    },
   });
 
   // --- KEZDŐ ÁLLAPOT BEÁLLÍTÁSA ---

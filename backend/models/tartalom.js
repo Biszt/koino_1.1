@@ -70,12 +70,34 @@ szuloTipus: {
     default: null,                                       // Alapértelmezett: nincs szülő típus
     validate: {
         validator: function(value) {
+            // A szuloId értékének meghatározása a kontextustól függ:
+            // - dokumentum mentésekor (save/create) a this maga a dokumentum
+            // - findByIdAndUpdate + runValidators esetén a this a query,
+            //   ilyenkor az update objektumból kell kiolvasni a szuloId-t
+            let szuloIdErtek;
+
+            if (this && typeof this.getUpdate === 'function') {
+                // Update validátor: a query update objektumából olvasunk
+                const frissites = this.getUpdate() || {};
+                const setMezok = frissites.$set || frissites;
+
+                if (!('szuloId' in setMezok)) {
+                    // Ha az update nem tartalmazza a szuloId-t, a konzisztencia
+                    // itt nem ellenőrizhető megbízhatóan — engedjük tovább
+                    return true;
+                }
+                szuloIdErtek = setMezok.szuloId;
+            } else {
+                // Dokumentum validátor: közvetlenül a dokumentumból olvasunk
+                szuloIdErtek = this.szuloId;
+            }
+
             // Ha van szuloId, akkor szuloTipus kötelező
-            if (this.szuloId && !value) {
+            if (szuloIdErtek && !value) {
                 return false;
             }
             // Ha nincs szuloId, akkor szuloTipus nem lehet
-            if (!this.szuloId && value) {
+            if (!szuloIdErtek && value) {
                 return false;
             }
             return true;

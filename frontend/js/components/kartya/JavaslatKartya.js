@@ -138,15 +138,9 @@ class JavaslatKartya extends Kartya {
     // Az indoklás blokk tömb (kép, link, entitás hivatkozás is lehet benne),
     // ezért ugyanolyan renderelés kell, mint a többi kártya szöveg mezőjénél.
     if (adatok.szovegMezo) {
-      // Legacy string → blokk becsomagolás (régi indoklások kompatibilitása)
-      const blokkok = Array.isArray(adatok.szovegMezo)
-        ? adatok.szovegMezo
-        : [{
-            id:       'legacy-indoklas-1',
-            tipus:    'szoveg',
-            tartalom: adatok.szovegMezo,
-            formatas: { felkover: false, dolt: false, meret: 'kozepes' }
-          }];
+      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
+      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
+      const blokkok = adatok.szovegMezo;
 
       const indoklasKontener = document.createElement('div');
       indoklasKontener.className = 'javaslat-kartya__indoklas-kontener';

@@ -3,6 +3,7 @@
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import { API_ALAP_URL } from '../../utils/apiHelper.js';
+import JavaslatModal from '../modals/JavaslatModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -19,16 +20,26 @@ import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 class KategoriaKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  // @param {Object}   entitas       - A pakli kategória eleme a backend válaszából
-  // @param {boolean}  kivalasztott  - Igaz, ha ez a kiválasztott kártya
-  // @param {Function} onKivalasztas - Koppintás callback a Pakli.js-ből
-  constructor(entitas, kivalasztott, onKivalasztas) {
+  // MÓDOSÍTVA: a TartalomKartya-val azonos paraméterezés,
+  // hogy a javaslat modal innen is elérhető legyen
+  // @param {Object}   entitas           - A pakli kategória eleme a backend válaszából
+  // @param {boolean}  kivalasztott      - Igaz, ha ez a kiválasztott kártya
+  // @param {Function} onKivalasztas     - Koppintás callback a Pakli.js-ből
+  // @param {string}   token             - JWT token az API hívásokhoz
+  // @param {string}   modalKontenerAzon - A modal konténer elem ID-ja
+  // @param {Function} onUjratoltes      - Pakli újratöltés callback
+  // @param {Function} onHamburgerMegnyitas - Hamburger megnyitás callback
+  constructor(entitas, kivalasztott, onKivalasztas, token, modalKontenerAzon, onUjratoltes, onHamburgerMegnyitas) {
     console.log('KategoriaKartya.constructor - KEZDÉS', {
       entitasId: entitas?.entitasId,
       nev:       entitas?.adatok?.nev
     });
 
-    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas));
+    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas), onHamburgerMegnyitas);
+
+    this.token             = token;
+    this.modalKontenerAzon = modalKontenerAzon;
+    this.onUjratoltes      = onUjratoltes;
 
     // =============================================
     // ÚJ - Megjelenítő példány referencia
@@ -125,19 +136,9 @@ class KategoriaKartya extends Kartya {
 
     // --- LEÍRÁS ---
     if (adatok.szovegMezo) {
-      // =============================================
-      // ÚJ - Blokk tömb vagy legacy string kezelése
-      // =============================================
-      // Ha a szovegMezo már blokk tömb (array), azt adjuk a megjelenítőnek.
-      // Ha még régi sima string (migrált adat), automatikusan becsomagolja.
-      const blokkok = Array.isArray(adatok.szovegMezo)
-        ? adatok.szovegMezo
-        : [{
-            id:       'legacy-blokk-1',
-            tipus:    'szoveg',
-            tartalom: adatok.szovegMezo,
-            formatas: { felkover: false, dolt: false, meret: 'kozepes' }
-          }];
+      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
+      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
+      const blokkok = adatok.szovegMezo;
 
       // SzovegMezoMegjelenito konténere
       const szovegKontener = document.createElement('div');
@@ -200,25 +201,16 @@ class KategoriaKartya extends Kartya {
 
     const opciok = [
       {
-        ikon:    '✏️',
-        felirat: 'Szerkesztés',
-        akcio: () => {
-          console.log('KategoriaKartya - szerkesztés', { entitasId: entitas?.entitasId });
-        }
+        ikon:     '🌿',
+        felirat:  'Javaslat létrehozása',
+        akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:    '🌿',
-        felirat: 'Gyerek kategória hozzáadása',
-        akcio: () => {
-          console.log('KategoriaKartya - gyerek hozzáadása', { entitasId: entitas?.entitasId });
-        }
-      },
-      {
-        ikon:      '🗑️',
-        felirat:   'Törlés',
+        ikon:      '🌟',
+        felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio: () => {
-          console.log('KategoriaKartya - törlés', { entitasId: entitas?.entitasId });
+        akcio:     () => {
+          console.log('KategoriaKartya - tudatpont módosítás', { entitasId: entitas?.entitasId });
         }
       }
     ];
@@ -228,6 +220,42 @@ class KategoriaKartya extends Kartya {
     });
 
     return opciok;
+  }
+
+  // ----- JAVASLAT LÉTREHOZÁSA -----
+  // A TartalomKartya mintájára: a JavaslatModal-t nyitja meg.
+  // A javaslat szülő tartalma a kategória szülője (a pakli hierarchiában
+  // felette álló tartalom) — a backend ellenőrzi, hogy létező tartalom-e.
+  async _javaslatLetrehozasa(entitas) {
+    console.log('KategoriaKartya._javaslatLetrehozasa - KEZDÉS', {
+      entitasId: entitas?.entitasId,
+      szuloId:   entitas?.szuloId
+    });
+
+    const javaslatModal = new JavaslatModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: 'Kategoria',
+        adatok:       entitas.adatok
+      },
+      szuloAdatok: {
+        szuloId:    entitas.szuloId,
+        szuloTipus: 'Tartalom'
+      },
+      onSiker: (ujJavaslat) => {
+        console.log('KategoriaKartya._javaslatLetrehozasa - onSiker', {
+          javaslatId: ujJavaslat?._id
+        });
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await javaslatModal.init();
+    javaslatModal.megnyitas();
+
+    console.log('KategoriaKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
   }
 }
 

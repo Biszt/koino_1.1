@@ -355,8 +355,8 @@ kartyaPeldanyositasa(entitas, kivalasztottE, onKivalasztas, modalKontenerAzon, o
         entitas,
         kivalasztottE,
         onKivalasztas,
-        null,
-        null,
+        this.token,             // ← javaslat modal API hívásaihoz
+        modalKontenerAzon,      // ← javaslat modal konténere
         ujratoltesCb,           // ← központosított callback
         onHamburgerMegnyitas
       );
@@ -366,8 +366,8 @@ kartyaPeldanyositasa(entitas, kivalasztottE, onKivalasztas, modalKontenerAzon, o
         entitas,
         kivalasztottE,
         onKivalasztas,
-        null,
-        null,
+        this.token,             // ← javaslat modal API hívásaihoz
+        modalKontenerAzon,      // ← javaslat modal konténere
         ujratoltesCb,           // ← központosított callback
         onHamburgerMegnyitas
       );

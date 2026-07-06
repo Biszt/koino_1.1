@@ -22,20 +22,24 @@ const egyezmenySchema = new mongoose.Schema({
   },
 
   // Melyik tartalom alatt van ez az egyezmény
-  // A javaslat egyezmenyTarhelyId mezőjéből származik
+  // A javaslat egyezmenyTarhelyId mezőjéből származik.
+  // MÓDOSÍTVA: lehet null is — ha a tárhely entitást éppen a végrehajtott
+  // (Törlés) javaslat törölte és annak nem volt szülője, az egyezmény
+  // gyökér elemként jön létre (átveszi a törölt entitás helyét)
   szuloId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Tartalom',                        // Referencia a Tartalom modellre
-    required: true                          // Kötelező: minden egyezménynek van tárhely tartalma
+    required: false,                        // Gyökér egyezménynél null
+    default: null                           // Alapértelmezett: nincs szülő
     // Index: lásd egyezmenySchema.index({ szuloId: 1 }) lejjebb
   },
 
   // ----- SZÜLŐ TÍPUSA -----
-  // Ha van szuloId, akkor Tartalom
+  // Ha van szuloId, akkor Tartalom; gyökér egyezménynél null
   szuloTipus: {
     type: String,               // Szöveges típus
     default: 'Tartalom',        // Alapértelmezett: Tartalom
-    enum: ['Tartalom']          // Tartalom az egyetlen engedélyezett érték
+    enum: ['Tartalom', null]    // Tartalom vagy null (gyökér egyezmény)
   },
 
   // ----- JAVASLAT TÍPUSA (SNAPSHOT) -----

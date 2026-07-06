@@ -25,6 +25,9 @@ class FajlBlokk {
         this.onFokusz = callbacks.onFokusz || null;
         // Törlés callback — a SzovegSzerkeszto _blokkTorlese()-ét hívja
         this.onTorles = callbacks.onTorles || null;
+        // Megjelenítő mód — a kártyákon true: a kattintás ténylegesen letölt,
+        // szerkesztő módban false: a kattintás csak fókuszba helyezi a blokkot
+        this.megjelenitesMod = callbacks.megjelenitesMod || false;
 
         // DOM elem referencia
         this.elem = null;
@@ -168,10 +171,13 @@ fajlBeallitasa(url, nev) {
         linkElem.rel = 'noopener noreferrer';
 
         // Szerkesztő módban a kattintás NEM indít letöltést —
-        // a blokk fókuszba helyezése a wrapper click eseménye kezeli
-        linkElem.addEventListener('click', (e) => {
-            e.preventDefault();
-        });
+        // a blokk fókuszba helyezése a wrapper click eseménye kezeli.
+        // Megjelenítő módban (kártyán) a kattintás ténylegesen letölt.
+        if (!this.megjelenitesMod) {
+            linkElem.addEventListener('click', (e) => {
+                e.preventDefault();
+            });
+        }
 
         // Fájl ikon
         const ikonElem = document.createElement('span');

@@ -88,8 +88,17 @@ class JavaslatService {
     } // Típus megléte rendben
 
     // 1.2 - Indoklás ellenőrzése
-    // Az indoklás a SzovegSzerkeszto komponensből érkező JSON blokk-tömb, nem sima string
-    if (!Array.isArray(javaslatAdatok.indoklas) || javaslatAdatok.indoklas.length === 0) { // Ha nincs tömb vagy üres
+    // Az indoklás a SzovegSzerkeszto komponensből érkezik, két formátumban:
+    // 1. blokk-tömb (oldal navigáció nélkül)
+    // 2. több oldalas objektum: { oldalNavigacio: { fulek }, aktivFulId, blokkok: { fulId: [...] } }
+    const indoklas = javaslatAdatok.indoklas; // Kiemeljük az indoklást
+    const indoklasTombE = Array.isArray(indoklas) && indoklas.length > 0; // Blokk-tömb formátum ellenőrzése
+    const indoklasTobbOldalasE = !!indoklas && !Array.isArray(indoklas) // Több oldalas formátum ellenőrzése
+      && Array.isArray(indoklas.oldalNavigacio?.fulek)                  // Van fülek tömb
+      && indoklas.oldalNavigacio.fulek.length > 0                       // Legalább egy fül
+      && !!indoklas.blokkok && typeof indoklas.blokkok === 'object';    // Van blokkok objektum
+
+    if (!indoklasTombE && !indoklasTobbOldalasE) { // Ha egyik érvényes formátum sem
       // Ha nincs indoklás megadva, hiba
       throw new Error('Az indoklás megadása kötelező'); // Hiba dobása
     } // Indoklás megléte rendben
@@ -219,6 +228,91 @@ class JavaslatService {
         throw new Error(`Érintett entitás ${entitas.entitasTipus} nem található: ${entitas.entitasId}`); // Hiba dobása részletes üzenettel
       } // Entitás létezik
     } // Minden érintett entitást validáltunk
+
+    // 4.A LÉPÉS - ÁTHELYEZÉSI CÉLOK VALIDÁLÁSA
+    // Már a javaslat BEKÜLDÉSEKOR elutasítjuk az érvénytelen áthelyezést,
+    // hogy a hiba a modalban jelenjen meg, ne csak a végrehajtási eredményben.
+    // (A végrehajtó saját ellenőrzése ettől függetlenül megmarad, mert a
+    // hierarchia a szavazási idő alatt megváltozhat.)
+    for (const entitas of javaslatAdatok.erintettEntitasok) { // Végigmegyünk az érintett entitásokon
+      if (entitas.muvelet !== 'Athelyezes') continue; // Csak az áthelyezési műveleteket vizsgáljuk
+
+      const ujSzuloId = entitas.modositasAdatok?.ujSzuloId; // Az áthelyezés célja
+
+      // Cél megadása kötelező
+      if (!ujSzuloId) {
+        throw new Error('Áthelyezéshez az új szülő tartalom (ujSzuloId) megadása kötelező');
+      }
+
+      // Önmaga alá helyezés tiltása
+      if (ujSzuloId.toString() === entitas.entitasId.toString()) {
+        throw new Error('Az entitás nem helyezhető saját maga alá');
+      }
+
+      // A cél tartalomnak léteznie kell
+      const celTartalom = await TartalomRepository.findById(ujSzuloId);
+      if (!celTartalom) {
+        throw new Error('Az áthelyezés cél tartalma nem található');
+      }
+
+      // Leszármazott-ellenőrzés: a cél ős-láncán felfelé sétálva
+      // a mozgatott entitás nem szerepelhet — áthelyezéskor a
+      // leszármazottak együtt mozognak, ezért ez kört hozna létre
+      let vizsgaltSzuloId = celTartalom.szuloId ? celTartalom.szuloId.toString() : null;
+      let lepesVedelem = 0; // Végtelen ciklus elleni védelem
+      while (vizsgaltSzuloId && lepesVedelem < 100) {
+        lepesVedelem++;
+        if (vizsgaltSzuloId === entitas.entitasId.toString()) {
+          throw new Error('Az entitás nem helyezhető a saját leszármazottja alá, mert áthelyezéskor a leszármazottai együtt mozognak vele');
+        }
+        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+      }
+    } // Áthelyezési célok validálva
+
+    // 4.B LÉPÉS - EGYESÍTÉS ÚJ ENTITÁS SZÜLŐJÉNEK VALIDÁLÁSA
+    // Az új egyesített entitás szülője KÖTELEZŐ, és nem lehet egyesítésben
+    // érintett entitás, sem azok leszármazottja — a források a végrehajtáskor
+    // törlődnek, így az új entitás törölt entitás alá kerülne, a gyerek-
+    // átállítás pedig körkörös hierarchiát okozna.
+    if (javaslatAdatok.javaslatTipus === 'Egyesites') {
+      const ujSzuloId = javaslatAdatok.egyesitesAdatok?.ujEntitasAdatok?.szuloId;
+
+      // Az új entitás szülőjének megadása kötelező
+      if (!ujSzuloId) {
+        throw new Error('Egyesítésnél az új entitás szülő tartalmának megadása kötelező');
+      }
+
+      // Az érintett (egyesítendő) entitások azonosítói
+      const erintettIdk = new Set(
+        javaslatAdatok.erintettEntitasok.map(e => e.entitasId.toString())
+      );
+
+      // A szülő nem lehet egyesítésben érintett entitás
+      if (erintettIdk.has(ujSzuloId.toString())) {
+        throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás, mert az a végrehajtáskor törlődik');
+      }
+
+      // A szülő tartalomnak léteznie kell
+      const ujSzuloTartalom = await TartalomRepository.findById(ujSzuloId);
+      if (!ujSzuloTartalom) {
+        throw new Error('Az új entitás szülő tartalma nem található');
+      }
+
+      // Felmenő-lánc ellenőrzése: a szülő nem lehet érintett entitás
+      // leszármazottja sem — különben a végrehajtás után az új entitás
+      // a saját (átállított) gyereke alá kerülne
+      let vizsgaltSzuloId = ujSzuloTartalom.szuloId ? ujSzuloTartalom.szuloId.toString() : null;
+      let lepesVedelem = 0; // Végtelen ciklus elleni védelem
+      while (vizsgaltSzuloId && lepesVedelem < 100) {
+        lepesVedelem++;
+        if (erintettIdk.has(vizsgaltSzuloId)) {
+          throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás leszármazottja');
+        }
+        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+      }
+    } // Egyesítés szülő validálva
 
     // 5. LÉPÉS - TÖREDÉK LOGIKA ELŐKÉSZÍTÉSE
     const toredekDarab = javaslatAdatok.erintettEntitasok.length; // Ennyi töredék jön létre

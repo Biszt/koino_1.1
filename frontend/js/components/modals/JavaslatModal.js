@@ -4,6 +4,13 @@
 import Modal from './Modal.js';
 import { apiPost } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
+import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
+import IdEllenorzoMezo from '../IdEllenorzoMezo.js';
+
+// Speciális egyezmény tárhely érték Egyesítésnél:
+// azt jelzi a backendnek, hogy az egyesítésből létrejövő ÚJ entitás
+// lesz az egyezmény tárhelye (végrehajtás után a tényleges ID-ra cserélődik)
+const UJ_ENTITAS_TARHELY_PLACEHOLDER = 'eeeeeeeeeeeeeeeeeeee0001';
 
 // ===== JAVASLAT MODAL OSZTÁLY =====
 // Három lépésben működik:
@@ -36,6 +43,20 @@ class JavaslatModal {
     this.modositasSzovegSzerkeszto = null;
     // A 3. lépés indoklás mezőjéhez
     this.indoklasSzerkeszto = null;
+
+    // =============================================
+    // ÚJ - ID-ellenőrző mezők referenciái
+    // =============================================
+    // Áthelyezés: új szülő tartalom mezője
+    this.ujSzuloMezo = null;
+    // Egyesítés: forrás entitás mezők (dinamikus lista)
+    this.forrasMezok = [];
+    // Egyesítés: az új entitás szülő tartalmának mezője (KÖTELEZŐ)
+    this.egyesitesSzuloMezo = null;
+    // 3. lépés: opcionális egyezmény tárhely mező
+    this.egyezmenyTarhelyMezo = null;
+    // Csomag: tételek listája — { idMezo, muveletSelect, cimInput, celMezo, sorElem }
+    this.csomagTetelek = [];
 
     console.log('JavaslatModal.constructor - VÉGE', {
       entitasId: this.entitasAdatok?.entitasId,
@@ -77,7 +98,40 @@ class JavaslatModal {
     // mert a statikus HTML-ben van (nem JS építi fel)
     this._indoklasSzerkesztoLetrehozasa();
 
+    // =============================================
+    // ÚJ - Egyezmény tárhely mező inicializálása
+    // =============================================
+    // Opcionális ID-ellenőrző mező a 3. lépésben: hova kerüljön
+    // a javaslat elfogadása után létrejövő egyezmény
+    this._egyezmenyTarhelyMezoLetrehozasa();
+
     console.log('JavaslatModal.init - VÉGE');
+  }
+
+  // =============================================
+  // ÚJ - EGYEZMÉNY TÁRHELY MEZŐ LÉTREHOZÁSA
+  // =============================================
+  // A 3. lépés statikus HTML-jében lévő #egyezmeny-tarhely-kontener-be
+  // építi az opcionális ID-ellenőrző mezőt. Üresen hagyva a mentés
+  // az alapértelmezést használja (Egyesítés: új entitás placeholder,
+  // más típus: a javaslat szülő tartalma).
+  _egyezmenyTarhelyMezoLetrehozasa() {
+    console.log('JavaslatModal._egyezmenyTarhelyMezoLetrehozasa - KEZDÉS');
+
+    const kontener = document.getElementById('egyezmeny-tarhely-kontener');
+    if (!kontener) {
+      console.warn('JavaslatModal._egyezmenyTarhelyMezoLetrehozasa - kontener nem található');
+      return;
+    }
+
+    this.egyezmenyTarhelyMezo = new IdEllenorzoMezo(kontener, {
+      cimke:       'Egyezmény tárhely (opcionális)',
+      placeholder: 'Üresen hagyva az alapértelmezett tárhely lesz',
+      tipusok:     ['Tartalom'], // Az egyezmény tárhelye mindig tartalom
+      token:       this.token
+    });
+
+    console.log('JavaslatModal._egyezmenyTarhelyMezoLetrehozasa - VÉGE');
   }
 
   // =============================================
@@ -130,19 +184,24 @@ class JavaslatModal {
     }
 
     // Módosítás szöveg szerkesztőjébe betöltjük az aktuális szöveget
-    const meglevoSzoveg = this.entitasAdatok?.adatok?.szoveg ?? null;
+    // Tartalom entitásnál a mező neve szoveg, Kategória/TartalomTípusnál szovegMezo
+    const meglevoSzoveg = this.entitasAdatok?.adatok?.szoveg
+      ?? this.entitasAdatok?.adatok?.szovegMezo
+      ?? null;
 
+    // A SzovegSzerkeszto a blokk-tömböt ÉS a több oldalas formátumot is felismeri —
+    // csak a régi, sima string tartalmat kell blokkba csomagolni
     this.modositasSzovegSzerkeszto = new SzovegSzerkeszto(szovegKontener, {
       valtozasKezelo:       null,
       onEntitasKivalasztas: null, // Módosítás formában nem kell hivatkozás koppintás
-      kezdoBlokkok: Array.isArray(meglevoSzoveg)
-        ? meglevoSzoveg
-        : (meglevoSzoveg ? [{
+      kezdoBlokkok: typeof meglevoSzoveg === 'string'
+        ? [{
             id:       'migralt-blokk-1',
             tipus:    'szoveg',
             tartalom: meglevoSzoveg,
             formatas: { felkover: false, dolt: false, meret: 'kozepes' }
-          }] : [])
+          }]
+        : (meglevoSzoveg ?? [])
     });
 
     console.log('JavaslatModal._modositasSzovegSzerkesztoLetrehozasa - VÉGE');
@@ -151,7 +210,7 @@ class JavaslatModal {
   // =============================================
   // ÚJ - SZERKESZTŐK MEGSEMMISÍTÉSE
   // =============================================
-  // Modal bezárásakor hívjuk — mindkét szerkesztőt felszabadítja
+  // Modal bezárásakor hívjuk — minden szerkesztőt és ID-mezőt felszabadít
   _szerkesztokMegsemmisitese() {
     console.log('JavaslatModal._szerkesztokMegsemmisitese - KEZDÉS');
 
@@ -164,6 +223,30 @@ class JavaslatModal {
       this.indoklasSzerkeszto.destroy();
       this.indoklasSzerkeszto = null;
     }
+
+    if (this.ujSzuloMezo) {
+      this.ujSzuloMezo.destroy();
+      this.ujSzuloMezo = null;
+    }
+
+    if (this.egyesitesSzuloMezo) {
+      this.egyesitesSzuloMezo.destroy();
+      this.egyesitesSzuloMezo = null;
+    }
+
+    if (this.egyezmenyTarhelyMezo) {
+      this.egyezmenyTarhelyMezo.destroy();
+      this.egyezmenyTarhelyMezo = null;
+    }
+
+    this.forrasMezok.forEach(mezo => mezo.destroy());
+    this.forrasMezok = [];
+
+    this.csomagTetelek.forEach(tetel => {
+      tetel.idMezo?.destroy();
+      tetel.celMezo?.destroy();
+    });
+    this.csomagTetelek = [];
 
     console.log('JavaslatModal._szerkesztokMegsemmisitese - VÉGE');
   }
@@ -311,6 +394,22 @@ class JavaslatModal {
       return;
     }
 
+    // Típusváltáskor a korábbi típus-specifikus mezőket felszabadítjuk,
+    // hogy ne maradjanak árva példányok és időzítők
+    if (this.ujSzuloMezo) { this.ujSzuloMezo.destroy(); this.ujSzuloMezo = null; }
+    if (this.egyesitesSzuloMezo) { this.egyesitesSzuloMezo.destroy(); this.egyesitesSzuloMezo = null; }
+    this.forrasMezok.forEach(mezo => mezo.destroy());
+    this.forrasMezok = [];
+    this.csomagTetelek.forEach(tetel => {
+      tetel.idMezo?.destroy();
+      tetel.celMezo?.destroy();
+    });
+    this.csomagTetelek = [];
+    if (this.modositasSzovegSzerkeszto) {
+      this.modositasSzovegSzerkeszto.destroy();
+      this.modositasSzovegSzerkeszto = null;
+    }
+
     formaKontener.innerHTML = '';
 
     switch (tipus) {
@@ -358,17 +457,25 @@ class JavaslatModal {
   // =============================================
   _modositasFormaEpitese(kontener) {
     console.log('JavaslatModal._modositasFormaEpitese - KEZDÉS', {
-      entitasId: this.entitasAdatok?.entitasId
+      entitasId:    this.entitasAdatok?.entitasId,
+      entitasTipus: this.entitasAdatok?.entitasTipus
     });
 
     const adatok = this.entitasAdatok?.adatok ?? {};
 
-    // Cím mező – sima input marad (cím nem rich text)
+    // Az entitás típusától függ, mit hívnak a mezők:
+    // Tartalom → cim + szoveg; Kategória/TartalomTípus → nev + szovegMezo
+    const tartalomE = (this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom';
+
+    // Cím/név mező – sima input marad (nem rich text)
     const cimCsoport = this._mezoCsoportLetrehozasa(
       'javaslat-modositas-cim',
-      'Új cím',
+      tartalomE ? 'Új cím' : 'Új név',
       'input',
-      { placeholder: 'Tartalom új neve', ertek: adatok.cim ?? '' }
+      {
+        placeholder: tartalomE ? 'Tartalom új címe' : 'Új név',
+        ertek: (tartalomE ? adatok.cim : adatok.nev) ?? ''
+      }
     );
     kontener.appendChild(cimCsoport);
 
@@ -399,17 +506,25 @@ class JavaslatModal {
   }
 
   // ===== ÁTHELYEZÉS FORMA ÉPÍTÉSE =====
-  // Változatlan
+  // =============================================
+  // MÓDOSÍTVA - ID-ellenőrző mezővel
+  // =============================================
+  // A felhasználó beírja az új szülő ID-ját, a rendszer ellenőrzi
+  // a létezését és megjeleníti a címét
   _athelyezesFormaEpitese(kontener) {
     console.log('JavaslatModal._athelyezesFormaEpitese - KEZDÉS');
 
-    const szuloCsoport = this._mezoCsoportLetrehozasa(
-      'javaslat-athelyezes-uj-szulo-id',
-      'Új szülő azonosítója',
-      'input',
-      { placeholder: 'Az új szülő entitás ID-ja' }
-    );
-    kontener.appendChild(szuloCsoport);
+    const mezoKontener = document.createElement('div');
+    mezoKontener.className = 'javaslat-modal__mezo-csoport';
+    kontener.appendChild(mezoKontener);
+
+    // Áthelyezés célja csak Tartalom lehet (a backend végrehajtó korlátja)
+    this.ujSzuloMezo = new IdEllenorzoMezo(mezoKontener, {
+      cimke:       'Új szülő tartalom',
+      placeholder: 'Az új szülő tartalom ID-ja',
+      tipusok:     ['Tartalom'],
+      token:       this.token
+    });
 
     console.log('JavaslatModal._athelyezesFormaEpitese - VÉGE');
   }
@@ -455,28 +570,254 @@ class JavaslatModal {
     );
     kontener.appendChild(nevCsoport);
 
-    const forrasCsoport = this._mezoCsoportLetrehozasa(
-      'javaslat-egyesites-forras-id',
-      'Másik forrás entitás azonosítója',
-      'input',
-      { placeholder: 'A másik egyesítendő entitás ID-ja' }
-    );
-    kontener.appendChild(forrasCsoport);
+    // =============================================
+    // ÚJ - Az új entitás szülő tartalma (KÖTELEZŐ)
+    // =============================================
+    // Az egyesített entitás ez alá a tartalom alá kerül. Nem lehet
+    // egyesítésben érintett entitás vagy annak leszármazottja —
+    // ezt a backend a beküldéskor ÉS a végrehajtáskor is ellenőrzi.
+    const szuloMezoKontener = document.createElement('div');
+    szuloMezoKontener.className = 'javaslat-modal__mezo-csoport';
+    kontener.appendChild(szuloMezoKontener);
+
+    this.egyesitesSzuloMezo = new IdEllenorzoMezo(szuloMezoKontener, {
+      cimke:       'Az új entitás szülő tartalma *',
+      placeholder: 'A tartalom ID-ja, ami alá az új entitás kerül',
+      tipusok:     ['Tartalom'],
+      token:       this.token
+    });
+
+    // =============================================
+    // MÓDOSÍTVA - dinamikus forrás lista ID-ellenőrző mezőkkel
+    // =============================================
+    // A kártya entitása automatikusan az egyesítés része;
+    // ide a TOVÁBBI egyesítendő entitások kerülnek. A + gombbal
+    // tetszőleges számú forrás adható hozzá.
+    const forrasSzekcio = document.createElement('div');
+    forrasSzekcio.className = 'javaslat-modal__mezo-csoport';
+
+    const forrasCimke = document.createElement('label');
+    forrasCimke.className   = 'javaslat-modal__cimke';
+    forrasCimke.textContent = 'További egyesítendő entitások';
+    forrasSzekcio.appendChild(forrasCimke);
+
+    const forrasLista = document.createElement('div');
+    forrasLista.id = 'javaslat-egyesites-forras-lista';
+    forrasSzekcio.appendChild(forrasLista);
+
+    const forrasHozzaadGomb = document.createElement('button');
+    forrasHozzaadGomb.type        = 'button';
+    forrasHozzaadGomb.className   = 'javaslat-modal__masodlagos-gomb';
+    forrasHozzaadGomb.textContent = '+ Forrás entitás hozzáadása';
+    forrasHozzaadGomb.addEventListener('click', () => {
+      this._forrasMezoHozzaadasa(forrasLista);
+    });
+    forrasSzekcio.appendChild(forrasHozzaadGomb);
+
+    kontener.appendChild(forrasSzekcio);
+
+    // Egy forrás mező alapból látható — egyesítéshez legalább két entitás kell
+    this._forrasMezoHozzaadasa(forrasLista);
 
     console.log('JavaslatModal._egyesitesFormaEpitese - VÉGE');
   }
 
+  // =============================================
+  // ÚJ - FORRÁS MEZŐ HOZZÁADÁSA (Egyesítés)
+  // =============================================
+  // Egy új ID-ellenőrző mezőt fűz a forrás listához
+  // @param {HTMLElement} listaElem - A forrás mezők konténere
+  _forrasMezoHozzaadasa(listaElem) {
+    console.log('JavaslatModal._forrasMezoHozzaadasa - KEZDÉS', {
+      eddigiForrasok: this.forrasMezok.length
+    });
+
+    const mezoKontener = document.createElement('div');
+    mezoKontener.className = 'javaslat-modal__forras-mezo';
+    listaElem.appendChild(mezoKontener);
+
+    const mezo = new IdEllenorzoMezo(mezoKontener, {
+      cimke:       `${this.forrasMezok.length + 2}. egyesítendő entitás`,
+      placeholder: 'Az egyesítendő entitás ID-ja',
+      // Bármelyik entitás típus lehet forrás — a mező automatikusan felismeri
+      tipusok:     ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      token:       this.token
+    });
+
+    this.forrasMezok.push(mezo);
+
+    console.log('JavaslatModal._forrasMezoHozzaadasa - VÉGE');
+  }
+
   // ===== CSOMAG FORMA ÉPÍTÉSE =====
-  // Változatlan
+  // =============================================
+  // MÓDOSÍTVA - dinamikus művelet lista
+  // =============================================
+  // Több művelet egy javaslatban: minden tételhez egy entitás
+  // (ID-ellenőrzéssel), egy művelet típus és a művelethez tartozó mezők.
+  // A kártya saját entitása automatikusan az első tétel.
   _csomagFormaEpitese(kontener) {
     console.log('JavaslatModal._csomagFormaEpitese - KEZDÉS');
 
     const info = document.createElement('p');
     info.className   = 'javaslat-modal__info-szoveg';
-    info.textContent = 'A csomag javaslat összetett, több műveletet tartalmaz. Ez a funkció hamarosan elérhető lesz.';
+    info.textContent = 'A csomag több műveletet tartalmaz, amelyeket a közösség egyben fogad el vagy vet el. Adj hozzá tételeket, és válaszd ki mindegyikhez a műveletet.';
     kontener.appendChild(info);
 
+    const tetelLista = document.createElement('div');
+    tetelLista.id = 'javaslat-csomag-tetel-lista';
+    kontener.appendChild(tetelLista);
+
+    const tetelHozzaadGomb = document.createElement('button');
+    tetelHozzaadGomb.type        = 'button';
+    tetelHozzaadGomb.className   = 'javaslat-modal__masodlagos-gomb';
+    tetelHozzaadGomb.textContent = '+ Művelet hozzáadása';
+    tetelHozzaadGomb.addEventListener('click', () => {
+      this._csomagTetelHozzaadasa(tetelLista);
+    });
+    kontener.appendChild(tetelHozzaadGomb);
+
+    // Első tétel: a kártya saját entitása előtöltve
+    const elsoTetel = this._csomagTetelHozzaadasa(tetelLista);
+    if (this.entitasAdatok?.entitasId) {
+      elsoTetel.idMezo.setErtek(this.entitasAdatok.entitasId);
+    }
+
     console.log('JavaslatModal._csomagFormaEpitese - VÉGE');
+  }
+
+  // =============================================
+  // ÚJ - CSOMAG TÉTEL HOZZÁADÁSA
+  // =============================================
+  // Egy tétel: entitás ID-mező + művelet választó + műveletfüggő mezők
+  // (Módosítás: új cím/név; Áthelyezés: cél tartalom ID-mező)
+  // @param {HTMLElement} listaElem - A tételek konténere
+  // @returns {Object} A létrehozott tétel objektum
+  _csomagTetelHozzaadasa(listaElem) {
+    console.log('JavaslatModal._csomagTetelHozzaadasa - KEZDÉS', {
+      eddigiTetelek: this.csomagTetelek.length
+    });
+
+    const sorElem = document.createElement('div');
+    sorElem.className = 'javaslat-modal__csomag-tetel';
+    listaElem.appendChild(sorElem);
+
+    // --- Entitás ID mező ---
+    const idMezoKontener = document.createElement('div');
+    sorElem.appendChild(idMezoKontener);
+
+    const idMezo = new IdEllenorzoMezo(idMezoKontener, {
+      cimke:       `${this.csomagTetelek.length + 1}. tétel entitása`,
+      placeholder: 'Az érintett entitás ID-ja',
+      tipusok:     ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      token:       this.token
+    });
+
+    // --- Művelet választó ---
+    const muveletCimke = document.createElement('label');
+    muveletCimke.className   = 'javaslat-modal__cimke';
+    muveletCimke.textContent = 'Művelet';
+    sorElem.appendChild(muveletCimke);
+
+    const muveletSelect = document.createElement('select');
+    muveletSelect.className = 'javaslat-modal__select';
+    [
+      { ertek: 'Torles',     felirat: 'Törlés'     },
+      { ertek: 'Modositas',  felirat: 'Módosítás'  },
+      { ertek: 'Athelyezes', felirat: 'Áthelyezés' }
+    ].forEach(({ ertek, felirat }) => {
+      const option       = document.createElement('option');
+      option.value       = ertek;
+      option.textContent = felirat;
+      muveletSelect.appendChild(option);
+    });
+    sorElem.appendChild(muveletSelect);
+
+    // --- Műveletfüggő mezők konténere ---
+    const muveletMezokKontener = document.createElement('div');
+    sorElem.appendChild(muveletMezokKontener);
+
+    const tetel = {
+      sorElem,
+      idMezo,
+      muveletSelect,
+      cimInput: null, // Módosításnál: új cím/név input
+      celMezo:  null  // Áthelyezésnél: cél tartalom ID-mező
+    };
+
+    // Művelet váltásakor a műveletfüggő mezők újraépülnek
+    muveletSelect.addEventListener('change', () => {
+      this._csomagMuveletMezokEpitese(tetel, muveletMezokKontener);
+    });
+    // Kezdeti állapot: Törlés — nincs extra mező
+    this._csomagMuveletMezokEpitese(tetel, muveletMezokKontener);
+
+    // --- Tétel eltávolító gomb ---
+    const torloGomb = document.createElement('button');
+    torloGomb.type        = 'button';
+    torloGomb.className   = 'javaslat-modal__masodlagos-gomb';
+    torloGomb.textContent = '– Tétel eltávolítása';
+    torloGomb.addEventListener('click', () => {
+      tetel.idMezo?.destroy();
+      tetel.celMezo?.destroy();
+      sorElem.remove();
+      this.csomagTetelek = this.csomagTetelek.filter(t => t !== tetel);
+    });
+    sorElem.appendChild(torloGomb);
+
+    this.csomagTetelek.push(tetel);
+
+    console.log('JavaslatModal._csomagTetelHozzaadasa - VÉGE');
+    return tetel;
+  }
+
+  // =============================================
+  // ÚJ - CSOMAG TÉTEL MŰVELETFÜGGŐ MEZŐI
+  // =============================================
+  // A kiválasztott művelethez tartozó mezőket építi fel:
+  // Törlés: nincs mező; Módosítás: új cím/név; Áthelyezés: cél tartalom
+  // @param {Object} tetel - A tétel objektum
+  // @param {HTMLElement} kontener - A műveletfüggő mezők konténere
+  _csomagMuveletMezokEpitese(tetel, kontener) {
+    const muvelet = tetel.muveletSelect.value;
+    console.log('JavaslatModal._csomagMuveletMezokEpitese - KEZDÉS', { muvelet });
+
+    // Korábbi műveletfüggő mezők felszabadítása
+    if (tetel.celMezo) { tetel.celMezo.destroy(); tetel.celMezo = null; }
+    tetel.cimInput = null;
+    kontener.innerHTML = '';
+
+    if (muvelet === 'Modositas') {
+      // Új cím/név mező — a csomagban egyszerűsített módosítás:
+      // csak a cím/név változtatható (teljes szöveg módosításhoz
+      // önálló Módosítás javaslat használható)
+      const cimke = document.createElement('label');
+      cimke.className   = 'javaslat-modal__cimke';
+      cimke.textContent = 'Új cím / név';
+      kontener.appendChild(cimke);
+
+      const input = document.createElement('input');
+      input.type        = 'text';
+      input.className   = 'javaslat-modal__input';
+      input.placeholder = 'Az entitás új címe vagy neve';
+      kontener.appendChild(input);
+
+      tetel.cimInput = input;
+    }
+
+    if (muvelet === 'Athelyezes') {
+      const celKontener = document.createElement('div');
+      kontener.appendChild(celKontener);
+
+      tetel.celMezo = new IdEllenorzoMezo(celKontener, {
+        cimke:       'Új szülő tartalom',
+        placeholder: 'A cél tartalom ID-ja',
+        tipusok:     ['Tartalom'],
+        token:       this.token
+      });
+    }
+
+    console.log('JavaslatModal._csomagMuveletMezokEpitese - VÉGE', { muvelet });
   }
 
   // ===== MEZŐ CSOPORT LÉTREHOZÁSA =====
@@ -571,16 +912,73 @@ class JavaslatModal {
     // =============================================
     // ÚJ - Indoklás ellenőrzése a szerkesztőből
     // =============================================
-    // A szerkesztő tartalmát blokkokból nyerjük ki,
-    // és ellenőrizzük, hogy van-e érdemi szöveges tartalom
+    // A getTartalom() blokk-tömböt VAGY több oldalas objektumot ad vissza —
+    // mindkettőből kigyűjtjük a blokkokat és érdemi szöveget keresünk
     if (this.indoklasSzerkeszto) {
-      const blokkok  = this.indoklasSzerkeszto.getTartalom();
+      const blokkok = this._blokkokKinyerese(this.indoklasSzerkeszto.getTartalom());
       const vanSzoveg = blokkok.some(b =>
-        b.tipus === 'szoveg' && b.tartalom?.trim().length >= 10
+        b.tipus === 'szoveg' && b.tartalom?.replace(/<[^>]*>/g, '').trim().length >= 10
       );
       if (!vanSzoveg) {
         console.log('JavaslatModal._validalas - VÉGE: indoklás túl rövid');
         return 'Az indoklás legalább 10 karakter hosszú szöveges tartalmat igényel.';
+      }
+    }
+
+    // =============================================
+    // ÚJ - Típus-specifikus ellenőrzések
+    // =============================================
+    if (this.kivalasztottTipus === 'Athelyezes') {
+      const ujSzuloId = this.ujSzuloMezo?.getId();
+      if (!ujSzuloId) {
+        return 'Az áthelyezéshez érvényes, létező új szülő tartalmat kell megadni.';
+      }
+      if (ujSzuloId === this.entitasAdatok?.entitasId) {
+        return 'Az entitás nem helyezhető saját maga alá.';
+      }
+    }
+
+    if (this.kivalasztottTipus === 'Egyesites') {
+      const kontener = document.getElementById(this.kontenerAzonosito);
+      const ujTipus = kontener?.querySelector('#javaslat-egyesites-uj-tipus')?.value;
+      const ujNev   = kontener?.querySelector('#javaslat-egyesites-uj-nev')?.value?.trim();
+      if (!ujTipus) return 'Az egyesítéshez ki kell választani az új entitás típusát.';
+      if (!ujNev)   return 'Az egyesítéshez meg kell adni az új entitás nevét.';
+
+      const ervenyesForrasok = this.forrasMezok.filter(m => m.getId());
+      if (ervenyesForrasok.length === 0) {
+        return 'Az egyesítéshez legalább egy további, érvényes forrás entitást meg kell adni.';
+      }
+      const duplikalt = ervenyesForrasok.some(m => m.getId() === this.entitasAdatok?.entitasId);
+      if (duplikalt) {
+        return 'A kártya saját entitása automatikusan része az egyesítésnek — ne add meg forrásként is.';
+      }
+
+      // Az új entitás szülője kötelező, és nem lehet egyesítésben érintett entitás
+      // (a leszármazott-ellenőrzést a backend végzi)
+      const ujSzuloId = this.egyesitesSzuloMezo?.getId();
+      if (!ujSzuloId) {
+        return 'Az egyesítéshez érvényes, létező szülő tartalmat kell megadni az új entitásnak.';
+      }
+      if (ujSzuloId === this.entitasAdatok?.entitasId
+          || ervenyesForrasok.some(m => m.getId() === ujSzuloId)) {
+        return 'Az új entitás szülője nem lehet egyesítésben érintett entitás — az a végrehajtáskor törlődik.';
+      }
+    }
+
+    if (this.kivalasztottTipus === 'Csomag') {
+      const ervenyesTetelek = this.csomagTetelek.filter(t => t.idMezo?.getId());
+      if (ervenyesTetelek.length === 0) {
+        return 'A csomaghoz legalább egy érvényes entitású tételt meg kell adni.';
+      }
+      for (const tetel of ervenyesTetelek) {
+        const muvelet = tetel.muveletSelect.value;
+        if (muvelet === 'Modositas' && !tetel.cimInput?.value?.trim()) {
+          return 'A csomag módosítási tételéhez add meg az új címet/nevet.';
+        }
+        if (muvelet === 'Athelyezes' && !tetel.celMezo?.getId()) {
+          return 'A csomag áthelyezési tételéhez érvényes cél tartalmat kell megadni.';
+        }
       }
     }
 
@@ -597,6 +995,22 @@ class JavaslatModal {
     return null;
   }
 
+  // =============================================
+  // ÚJ - BLOKKOK KINYERÉSE BÁRMELY SZERKESZTŐ FORMÁTUMBÓL
+  // =============================================
+  // A SzovegSzerkeszto.getTartalom() blokk-tömböt (nincs oldal navigáció)
+  // vagy { oldalNavigacio, blokkok: { fulId: [...] } } objektumot ad vissza.
+  // Validáláshoz az összes blokkot egyetlen tömbbe gyűjtjük.
+  // @param {Array|Object} tartalom - A szerkesztő kimenete
+  // @returns {Array} Az összes blokk egy tömbben
+  _blokkokKinyerese(tartalom) {
+    if (Array.isArray(tartalom)) return tartalom;
+    if (tartalom && typeof tartalom === 'object' && tartalom.blokkok) {
+      return Object.values(tartalom.blokkok).flat();
+    }
+    return [];
+  }
+
   // ===== ADATOK ÖSSZEGYŰJTÉSE =====
   // =============================================
   // MÓDOSÍTVA - indoklás és módosítás szöveg szerkesztőkből
@@ -611,6 +1025,7 @@ class JavaslatModal {
     // =============================================
     // ÚJ - Indoklás lekérése a szerkesztőből
     // =============================================
+    // Blokk-tömb VAGY több oldalas objektum — a backend mindkettőt fogadja
     const indoklas = this.indoklasSzerkeszto
       ? this.indoklasSzerkeszto.getTartalom()
       : [];
@@ -619,20 +1034,26 @@ class JavaslatModal {
       kontener?.querySelector('#javaslat-kezdo-tudatpont')?.value
     );
 
+    // =============================================
+    // ÚJ - Egyezmény tárhely meghatározása
+    // =============================================
+    // 1. Ha a felhasználó megadott érvényes tárhelyet, azt használjuk
+    // 2. Egyesítésnél az alapértelmezés a placeholder: az új entitás lesz a tárhely
+    // 3. Más típusnál az alapértelmezés a javaslat szülő tartalma
+    let egyezmenyTarhelyId = this.egyezmenyTarhelyMezo?.getId() ?? null;
+    if (!egyezmenyTarhelyId) {
+      egyezmenyTarhelyId = this.kivalasztottTipus === 'Egyesites'
+        ? UJ_ENTITAS_TARHELY_PLACEHOLDER
+        : (this.szuloAdatok?.szuloId ?? null);
+    }
+
     const adatok = {
       javaslatTipus: this.kivalasztottTipus,
       szuloId:       this.szuloAdatok?.szuloId,
-      szuloTipus:    this.szuloAdatok?.szuloTipus ?? 'Tartalom',
-      indoklas,      // Blokkok tömbje, nem sima string
+      egyezmenyTarhelyId,
+      indoklas,      // Blokkok tömbje vagy több oldalas objektum, nem sima string
       kezdoTudatpont,
-      erintettEntitasok: [
-        {
-          entitasId:       this.entitasAdatok?.entitasId,
-          entitasTipus:    this.entitasAdatok?.entitasTipus ?? 'Tartalom',
-          muvelet:         this._muveletMeghatározása(this.kivalasztottTipus),
-          modositasAdatok: this._modositasAdatokOsszegyujtese()
-        }
-      ]
+      erintettEntitasok: this._erintettEntitasokOsszegyujtese()
     };
 
     if (this.kivalasztottTipus === 'Egyesites') {
@@ -640,12 +1061,115 @@ class JavaslatModal {
     }
 
     console.log('JavaslatModal._adatokOsszegyujtese - VÉGE', {
-      tipus:           adatok.javaslatTipus,
-      szuloId:         adatok.szuloId,
-      erintettekSzama: adatok.erintettEntitasok.length,
-      indoklasBlokkSzama: indoklas.length
+      tipus:              adatok.javaslatTipus,
+      szuloId:            adatok.szuloId,
+      egyezmenyTarhelyId: adatok.egyezmenyTarhelyId,
+      erintettekSzama:    adatok.erintettEntitasok.length
     });
     return adatok;
+  }
+
+  // =============================================
+  // ÚJ - ÉRINTETT ENTITÁSOK ÖSSZEGYŰJTÉSE TÍPUSONKÉNT
+  // =============================================
+  // A backend ezt a szerkezetet várja minden típusnál:
+  // [{ entitasId, entitasTipus, muvelet, modositasAdatok? }]
+  // - Törlés/Módosítás/Áthelyezés: a kártya entitása egyedül
+  // - Egyesítés: a kártya entitása + az összes érvényes forrás entitás
+  // - Csomag: a tétel lista, tételenkénti művelettel és adatokkal
+  // @returns {Array} Az érintett entitások tömbje
+  _erintettEntitasokOsszegyujtese() {
+    console.log('JavaslatModal._erintettEntitasokOsszegyujtese - KEZDÉS', {
+      tipus: this.kivalasztottTipus
+    });
+
+    const sajatEntitas = {
+      entitasId:    this.entitasAdatok?.entitasId,
+      entitasTipus: this.entitasAdatok?.entitasTipus ?? 'Tartalom'
+    };
+
+    let erintettek = [];
+
+    switch (this.kivalasztottTipus) {
+
+      case 'Torles':
+        erintettek = [{ ...sajatEntitas, muvelet: 'Torles' }];
+        break;
+
+      case 'Modositas':
+        erintettek = [{
+          ...sajatEntitas,
+          muvelet:         'Modositas',
+          modositasAdatok: this._modositasAdatokOsszegyujtese()
+        }];
+        break;
+
+      case 'Athelyezes':
+        erintettek = [{
+          ...sajatEntitas,
+          muvelet:         'Athelyezes',
+          modositasAdatok: { ujSzuloId: this.ujSzuloMezo?.getId() }
+        }];
+        break;
+
+      case 'Egyesites': {
+        // A kártya entitása + minden érvényes forrás, mind Egyesites művelettel
+        erintettek = [{ ...sajatEntitas, muvelet: 'Egyesites' }];
+        this.forrasMezok.forEach(mezo => {
+          const forras = mezo.getEntitas();
+          if (forras) {
+            erintettek.push({
+              entitasId:    forras.entitasId,
+              entitasTipus: forras.entitasTipus,
+              muvelet:      'Egyesites'
+            });
+          }
+        });
+        break;
+      }
+
+      case 'Csomag': {
+        // Minden érvényes tétel a saját műveletével és adataival
+        erintettek = this.csomagTetelek
+          .filter(tetel => tetel.idMezo?.getId())
+          .map(tetel => {
+            const entitas = tetel.idMezo.getEntitas();
+            const muvelet = tetel.muveletSelect.value;
+
+            const bejegyzes = {
+              entitasId:    entitas.entitasId,
+              entitasTipus: entitas.entitasTipus,
+              muvelet
+            };
+
+            if (muvelet === 'Modositas') {
+              // Tartalomnál cim, Kategória/TartalomTípusnál nev a mező neve
+              const ujCim = tetel.cimInput?.value?.trim();
+              bejegyzes.modositasAdatok = entitas.entitasTipus === 'Tartalom'
+                ? { cim: ujCim }
+                : { nev: ujCim };
+            }
+
+            if (muvelet === 'Athelyezes') {
+              bejegyzes.modositasAdatok = {
+                ujSzuloId:    tetel.celMezo?.getId(),
+                ujSzuloTipus: 'Tartalom'
+              };
+            }
+
+            return bejegyzes;
+          });
+        break;
+      }
+
+      default:
+        erintettek = [{ ...sajatEntitas, muvelet: this.kivalasztottTipus }];
+    }
+
+    console.log('JavaslatModal._erintettEntitasokOsszegyujtese - VÉGE', {
+      darab: erintettek.length
+    });
+    return erintettek;
   }
 
   // ===== MÓDOSÍTÁS ADATOK ÖSSZEGYŰJTÉSE =====
@@ -660,25 +1184,27 @@ class JavaslatModal {
     const kontener       = document.getElementById(this.kontenerAzonosito);
     const modositasAdatok = {};
 
-    if (this.kivalasztottTipus === 'Modositas') {
-      const ujCim = kontener?.querySelector('#javaslat-modositas-cim')?.value?.trim();
-      if (ujCim) modositasAdatok.cim = ujCim;
+    // Az entitás típusa dönti el a mezőneveket:
+    // Tartalom → cim + szoveg; Kategória/TartalomTípus → nev + szovegMezo
+    const tartalomE = (this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom';
 
-      // =============================================
-      // ÚJ - Szöveg lekérése a módosítás szerkesztőből
-      // =============================================
-      if (this.modositasSzovegSzerkeszto) {
-        const szovegBlokkok = this.modositasSzovegSzerkeszto.getTartalom();
-        // Csak akkor küldjük, ha van tartalom
-        if (szovegBlokkok.length > 0) {
-          modositasAdatok.szoveg = szovegBlokkok;
-        }
-      }
+    const ujCim = kontener?.querySelector('#javaslat-modositas-cim')?.value?.trim();
+    if (ujCim) {
+      if (tartalomE) modositasAdatok.cim = ujCim;
+      else           modositasAdatok.nev = ujCim;
     }
 
-    if (this.kivalasztottTipus === 'Athelyezes') {
-      const ujSzuloId = kontener?.querySelector('#javaslat-athelyezes-uj-szulo-id')?.value?.trim();
-      if (ujSzuloId) modositasAdatok.ujSzuloId = ujSzuloId;
+    // =============================================
+    // ÚJ - Szöveg lekérése a módosítás szerkesztőből
+    // =============================================
+    // Blokk-tömb vagy több oldalas objektum — mindkettőt nyersen küldjük
+    if (this.modositasSzovegSzerkeszto) {
+      const szoveg = this.modositasSzovegSzerkeszto.getTartalom();
+      const vanTartalom = this._blokkokKinyerese(szoveg).length > 0;
+      if (vanTartalom) {
+        if (tartalomE) modositasAdatok.szoveg     = szoveg;
+        else           modositasAdatok.szovegMezo = szoveg;
+      }
     }
 
     console.log('JavaslatModal._modositasAdatokOsszegyujtese - VÉGE', { modositasAdatok });
@@ -690,14 +1216,27 @@ class JavaslatModal {
   _egyesitesAdatokOsszegyujtese(kontener) {
     console.log('JavaslatModal._egyesitesAdatokOsszegyujtese - KEZDÉS');
 
-    const ujTipus  = kontener?.querySelector('#javaslat-egyesites-uj-tipus')?.value;
-    const ujNev    = kontener?.querySelector('#javaslat-egyesites-uj-nev')?.value?.trim();
-    const forrasId = kontener?.querySelector('#javaslat-egyesites-forras-id')?.value?.trim();
+    const ujTipus = kontener?.querySelector('#javaslat-egyesites-uj-tipus')?.value;
+    const ujNev   = kontener?.querySelector('#javaslat-egyesites-uj-nev')?.value?.trim();
+
+    // Az új entitás adatai — Tartalomnál cim, más típusnál nev a mező neve.
+    // Az új entitás a felhasználó által KÖTELEZŐEN megadott, ellenőrzött
+    // szülő tartalom alá kerül (nem lehet érintett entitás vagy annak
+    // leszármazottja — a backend kétszeresen ellenőrzi), látható státusszal.
+    const ujEntitasAdatok = ujTipus === 'Tartalom'
+      ? { cim: ujNev }
+      : { nev: ujNev };
+
+    const ujSzuloId = this.egyesitesSzuloMezo?.getId();
+    if (ujSzuloId) {
+      ujEntitasAdatok.szuloId    = ujSzuloId;
+      ujEntitasAdatok.szuloTipus = 'Tartalom';
+    }
+    ujEntitasAdatok.statusz = 'Lathato';
 
     const egyesitesAdatok = {
-      ujEntitasTipus:  ujTipus   || undefined,
-      ujEntitasAdatok: ujNev     ? { nev: ujNev } : undefined,
-      forrasEntitasok: forrasId  ? [forrasId]     : []
+      ujEntitasTipus: ujTipus,
+      ujEntitasAdatok
     };
 
     console.log('JavaslatModal._egyesitesAdatokOsszegyujtese - VÉGE', { egyesitesAdatok });

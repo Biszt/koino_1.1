@@ -46,6 +46,49 @@ class EgyesitesiVegrehajto {
       throw new Error('Az új entitás adatai hiányoznak');
     }
 
+    // ----- 1.A LÉPÉS - ÚJ ENTITÁS SZÜLŐJÉNEK ÚJRA-ELLENŐRZÉSE -----
+    // A javaslat beküldésekor ez már ellenőrzésre került, de a szavazási
+    // idő alatt a hierarchia megváltozhatott. Itt, MIELŐTT bármi
+    // visszafordíthatatlan (forrás törlés) történne, újra ellenőrizzük:
+    // az új entitás szülője létezik, nem érintett entitás, és nem is
+    // annak leszármazottja. Hiba esetén a végrehajtás tisztán meghiúsul.
+    {
+      const ujSzuloId = egyesitesAdatok.ujEntitasAdatok.szuloId;
+
+      if (!ujSzuloId) {
+        throw new Error('Egyesítésnél az új entitás szülő tartalmának megadása kötelező');
+      }
+
+      const erintettIdk = new Set(
+        javaslat.erintettEntitasok.map(e => e.entitasId.toString())
+      );
+
+      if (erintettIdk.has(ujSzuloId.toString())) {
+        throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás, mert az a végrehajtáskor törlődik');
+      }
+
+      const ujSzuloTartalom = await TartalomRepository.findById(ujSzuloId);
+      if (!ujSzuloTartalom) {
+        throw new Error('Az új entitás szülő tartalma nem található (időközben törölhették)');
+      }
+
+      // Felmenő-lánc bejárása: érintett entitás nem szerepelhet benne
+      let vizsgaltSzuloId = ujSzuloTartalom.szuloId ? ujSzuloTartalom.szuloId.toString() : null;
+      let lepesVedelem = 0; // Végtelen ciklus elleni védelem
+      while (vizsgaltSzuloId && lepesVedelem < 100) {
+        lepesVedelem++;
+        if (erintettIdk.has(vizsgaltSzuloId)) {
+          throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás leszármazottja');
+        }
+        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+      }
+
+      console.log('vegrehajtas - Új entitás szülő validálva (végrehajtáskori újra-ellenőrzés)', {
+        ujSzuloId
+      });
+    }
+
     // ----- 2. LÉPÉS - EMBEREK TUDATPONTJAINAK ÖSSZESÍTÉSE -----
     // ✅ ELŐSZÖR összesítjük, ki mennyi pontot fog kapni az új entitáson
  

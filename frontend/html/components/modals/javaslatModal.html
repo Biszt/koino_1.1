@@ -74,25 +74,13 @@
       ← Vissza
     </button>
 
-    <!-- Indoklás szövegmező -->
+    <!-- Indoklás — blokk alapú szövegszerkesztő (kép, link, hivatkozás, több oldal is lehet benne) -->
     <div class="javaslat-modal__mezo-csoport">
-      <label class="javaslat-modal__cimke" for="javaslat-indoklas">
+      <label class="javaslat-modal__cimke">
         Indoklás <span class="javaslat-modal__kotelezo" aria-hidden="true">*</span>
       </label>
-      <textarea
-        class="javaslat-modal__textarea"
-        id="javaslat-indoklas"
-        name="indoklas"
-        rows="4"
-        minlength="10"
-        maxlength="2000"
-        placeholder="Miért szükséges ez a változtatás? (min. 10 karakter)"
-        required
-      ></textarea>
-      <!-- Karakterszámláló — JS frissíti -->
-      <span class="javaslat-modal__szamlalo" id="javaslat-indoklas-szamlalo" aria-live="polite">
-        0 / 2000
-      </span>
+      <!-- A JavaslatModal ide építi a SzovegSzerkeszto példányt -->
+      <div id="indoklas-szerkeszto-kontener"></div>
     </div>
 
     <!-- Kezdő tudatpont mező -->
@@ -110,6 +98,11 @@
         required
       />
     </div>
+
+    <!-- Egyezmény tárhely (opcionális) — a JavaslatModal ide építi az ID-ellenőrző mezőt.
+         Üresen hagyva: Egyesítésnél az új entitás lesz a tárhely,
+         más típusnál a javaslat szülő tartalma. -->
+    <div class="javaslat-modal__mezo-csoport" id="egyezmeny-tarhely-kontener"></div>
 
   </div>
 

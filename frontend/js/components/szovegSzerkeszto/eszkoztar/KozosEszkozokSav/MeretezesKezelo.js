@@ -123,6 +123,31 @@ class MeretezesKezelo {
   }
 
   // =============================================
+  // PUBLIKUS - MEGSEMMISÍTÉS
+  // A SzovegSzerkeszto.destroy() hívja a szerkesztő bezárásakor.
+  // Mint a modTorlese(), de az onAllapotValtozas callback NÉLKÜL —
+  // destroy közben a többi modul (pl. TortenetKezelo) már nem él,
+  // ezért az eszköztár-frissítést nem szabad meghívni.
+  // =============================================
+  destroy() {
+    console.log('MeretezesKezelo.destroy - KEZDÉS', this.aktivBlokkId);
+
+    if (this.aktivBlokkId) {
+      const terület = this.getTerületElem?.();
+      const domElem = terület?.querySelector(`[data-blokk-id="${this.aktivBlokkId}"]`);
+      if (domElem) {
+        domElem.classList.remove('blokk--meretezesi-mod');
+        domElem.classList.remove('blokk--meretezesi-huzas');
+      }
+    }
+
+    this.esemenyekLeallitasa();
+    this.aktivBlokkId = null;
+
+    console.log('MeretezesKezelo.destroy - VÉGE');
+  }
+
+  // =============================================
   // PRIVÁT - SZÖVEG BLOKK MÉRETEZÉS INDÍTÁSA
   // Szabad x+y méretezés, minimum a tartalom természetes mérete:
   // - scrollWidth: a leghosszabb szó szélessége

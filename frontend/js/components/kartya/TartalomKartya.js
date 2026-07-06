@@ -4,10 +4,7 @@
 import Kartya from './Kartya.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
-import FajlBlokk from '../szovegSzerkeszto/blokkok/FajlBlokk.js';
-import LinkBlokk from '../szovegSzerkeszto/blokkok/LinkBlokk.js';
-import EntitasHivatkozasBlokk from '../szovegSzerkeszto/blokkok/EntitasHivatkozasBlokk.js';
-import { sanitizeRichText } from '../../utils/sanitizeHelper.js';
+import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -31,6 +28,9 @@ class TartalomKartya extends Kartya {
     this.token             = token;
     this.modalKontenerAzon = modalKontenerAzon;
     this.onUjratoltes      = onUjratoltes;
+
+    // SzovegMezoMegjelenito példány — a body feltöltésekor jön létre
+    this.szovegMezoMegjelenito = null;
 
     console.log('TartalomKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
@@ -129,10 +129,11 @@ class TartalomKartya extends Kartya {
 
   // ----- BODY FELTÖLTÉSE -----
   // =============================================
-  // MÓDOSÍTVA - rich text blokkok renderelése
+  // MÓDOSÍTVA - a közös SzovegMezoMegjelenito végzi a renderelést
   // =============================================
-  // A szöveg már nem sima string, hanem blokkok tömbje.
-  // Minden blokkot a típusa alapján renderelünk.
+  // A SzovegMezoMegjelenito minden mentett formátumot kezel:
+  // blokk tömb, több oldalas (fülekkel) tartalom és régi string is.
+  // Az elmentett blokk-méreteket a blokk osztályok állítják vissza.
   // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
     console.log('TartalomKartya._bodyFeltoltese - KEZDÉS', {
@@ -141,9 +142,6 @@ class TartalomKartya extends Kartya {
 
     const adatok = this.entitas.adatok ?? {};
 
-    // =============================================
-    // ÚJ - Blokkok tömbje vagy régi string formátum
-    // =============================================
     const szoveg = adatok.szoveg ?? adatok.szovegMezo ?? null;
 
     // Ha nincs szöveg adat, üres body marad
@@ -152,170 +150,48 @@ class TartalomKartya extends Kartya {
       return;
     }
 
-    // Ha a szöveg blokkok tömbje (új formátum), blokkokat renderelünk
-    if (Array.isArray(szoveg)) {
-      szoveg.forEach(blokk => this._blokkRenderelese(blokk, body));
+    // SzovegMezoMegjelenito konténere
+    const szovegKontener = document.createElement('div');
+    szovegKontener.className = 'tartalom-kartya__szoveg-kontener';
+    body.appendChild(szovegKontener);
 
-    // Ha sima string (régi formátum, migráció előtti rekordok), bekezdésként jelenítjük meg
-    } else if (typeof szoveg === 'string' && szoveg.trim()) {
-      const szovegElem = document.createElement('p');
-      szovegElem.className   = 'tartalom-kartya__szoveg';
-      szovegElem.textContent = szoveg;
-      body.appendChild(szovegElem);
-    }
+    // Megjelenítő példányosítása — a formátum felismerését és a blokkok
+    // renderelését (méretekkel, fülekkel együtt) a megjelenítő végzi
+    this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(szovegKontener, {
+      blokkok: szoveg,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('TartalomKartya - entitás hivatkozás koppintva', {
+          entitasId,
+          entitasTipus
+        });
+        // A Pakli.js window.aktivPakli-ban tárolja magát
+        if (window.aktivPakli) {
+          window.aktivPakli.entitasKivalasztasa(entitasId, entitasTipus);
+        }
+      }
+    });
 
     console.log('TartalomKartya._bodyFeltoltese - VÉGE', {
-      entitasId:    this.entitas?.entitasId,
-      blokkokSzama: Array.isArray(szoveg) ? szoveg.length : 1
+      entitasId: this.entitas?.entitasId
     });
   }
 
-  // =============================================
-  // ÚJ - BLOKK RENDERELÉSE TÍPUS ALAPJÁN
-  // =============================================
-  // Minden blokktípushoz a megfelelő megjelenítő elemet hozza létre.
-  // A szerkesztő osztályoktól függetlenül, csak megjelenítésre optimalizálva.
-  // @param {Object}      blokk - A renderelendő blokk adatobjektum
-  // @param {HTMLElement} szulo - A szülő DOM elem, ahová beillesztjük
-  _blokkRenderelese(blokk, szulo) {
-    console.log('TartalomKartya._blokkRenderelese - KEZDÉS', {
-      blokkId:   blokk?.id,
-      blokkTipus: blokk?.tipus
+  // ----- MEGSEMMISÍTÉS -----
+  // A Kartya.js destroy() metódusát bővíti – felszabadítja a megjelenítőt.
+  destroy() {
+    console.log('TartalomKartya.destroy - KEZDÉS', {
+      entitasId: this.entitas?.entitasId
     });
 
-    switch (blokk.tipus) {
-
-      // ------------------------------------------
-      // SZÖVEG BLOKK
-      // Formázás: félkövér, dőlt, méret CSS osztállyal
-      // ------------------------------------------
-      case 'szoveg': {
-        if (!blokk.tartalom?.trim()) break; // Üres blokkot nem renderelünk
-
-        const szovegElem = document.createElement('p');
-        szovegElem.className = 'tartalom-kartya__szoveg-blokk';
-
-        // Méret CSS osztály
-        const meret = blokk.formatas?.meret || 'kozepes';
-        szovegElem.classList.add(`tartalom-kartya__szoveg-blokk--${meret}`);
-
-        // Félkövér
-        if (blokk.formatas?.felkover) {
-          szovegElem.style.fontWeight = '700';
-        }
-
-        // Dőlt
-        if (blokk.formatas?.dolt) {
-          szovegElem.style.fontStyle = 'italic';
-        }
-
-        // Tartalom – innerHTML-t használunk, mert a szerkesztő
-        // HTML formázott tartalmat tárol (pl. <strong>, <em>)
-        // sanitizeRichText szűri az engedélyezetlen tageket/attribútumokat (XSS védelem)
-        szovegElem.innerHTML = sanitizeRichText(blokk.tartalom);
-
-        szulo.appendChild(szovegElem);
-        break;
-      }
-
-      // ------------------------------------------
-      // KÉP BLOKK
-      // Mobilon responsive, lazy load
-      // ------------------------------------------
-      case 'kep': {
-        if (!blokk.url) break;
-
-        const kepKontener = document.createElement('div');
-        kepKontener.className = 'tartalom-kartya__kep-kontener';
-
-        const kepElem = document.createElement('img');
-        kepElem.className        = 'tartalom-kartya__kep';
-        kepElem.src              = blokk.url;
-        kepElem.alt              = blokk.alt || '';
-        kepElem.loading          = 'lazy';   // Mobilon teljesítmény-optimalizáció
-        kepElem.decoding         = 'async';
-        // Méret CSS osztály a képen (kicsi/közepes/nagy)
-        const kepMeret = blokk.meret || 'kozepes';
-        kepElem.classList.add(`tartalom-kartya__kep--${kepMeret}`);
-
-        kepKontener.appendChild(kepElem);
-        szulo.appendChild(kepKontener);
-        break;
-      }
-
-      // ------------------------------------------
-      // FÁJL BLOKK
-      // Letölthető link mobilon is
-      // ------------------------------------------
-      case 'fajl': {
-        if (!blokk.url || !blokk.nev) break;
-
-        // FajlBlokk osztályt csak megjelenítés módban példányosítjuk
-        const fajlBlokk = new FajlBlokk(blokk, {}); // Törlő callback nélkül
-        const domElem   = fajlBlokk.letrehozas();
-
-        // Szerkesztő módban látható törlő gombot elrejtjük
-        const torloGomb = domElem.querySelector('.blokk-torlo-gomb');
-        if (torloGomb) torloGomb.style.display = 'none';
-
-        szulo.appendChild(domElem);
-        break;
-      }
-
-      // ------------------------------------------
-      // LINK BLOKK
-      // Külső URL megjelenítése
-      // ------------------------------------------
-      case 'link': {
-        if (!blokk.url) break;
-
-        const linkBlokk = new LinkBlokk(blokk, {}); // Törlő callback nélkül
-        const domElem   = linkBlokk.letrehozas();
-
-        // Törlő gomb elrejtése
-        const torloGomb = domElem.querySelector('.blokk-torlo-gomb');
-        if (torloGomb) torloGomb.style.display = 'none';
-
-        szulo.appendChild(domElem);
-        break;
-      }
-
-      // ------------------------------------------
-      // ENTITÁS HIVATKOZÁS BLOKK
-      // Koppintásra az adott entitás lesz kiválasztott
-      // ------------------------------------------
-      case 'entitasHivatkozas': {
-        if (!blokk.entitasId) break;
-
-        // EntitasHivatkozasBlokk megjelenítés módban példányosítva
-        // onKoppintas: a Pakli.js window.aktivPakli-ján keresztül vált
-        const entitasBlokk = new EntitasHivatkozasBlokk(blokk, {
-          onKoppintas: (entitasId, entitasTipus) => {
-            console.log('TartalomKartya - entitás hivatkozás koppintva', {
-              entitasId,
-              entitasTipus
-            });
-            // A Pakli.js window.aktivPakli-ban tárolja magát
-            if (window.aktivPakli) {
-              window.aktivPakli.entitasKivalasztasa(entitasId, entitasTipus);
-            }
-          }
-        });
-
-        // Megjelenítő módban törlő gomb nélkül
-        const domElem = entitasBlokk.letrehozasMegjelenitesMod();
-        szulo.appendChild(domElem);
-        break;
-      }
-
-      default:
-        console.warn('TartalomKartya._blokkRenderelese - Ismeretlen blokk típus:', blokk.tipus);
+    if (this.szovegMezoMegjelenito) {
+      this.szovegMezoMegjelenito.destroy();
+      this.szovegMezoMegjelenito = null;
     }
 
-    console.log('TartalomKartya._blokkRenderelese - VÉGE', {
-      blokkId:    blokk?.id,
-      blokkTipus: blokk?.tipus
-    });
+    // Szülő destroy() meghívása (eseményfigyelők eltávolítása stb.)
+    super.destroy?.();
+
+    console.log('TartalomKartya.destroy - VÉGE');
   }
 
   // ----- HAMBURGER MENÜ OPCIÓK -----

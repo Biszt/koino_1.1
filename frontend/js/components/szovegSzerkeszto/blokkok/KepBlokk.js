@@ -60,6 +60,16 @@ class KepBlokk {
     // Összerakjuk
     wrapper.appendChild(kepElem);
 
+    // Ha van elmentett méret (korábbi átméretezésből), azt alkalmazzuk —
+    // enélkül a blokk minden újrarenderelés (mozgatás, visszavonás) után
+    // elveszítené az átméretezett szélességét/magasságát
+    if (this.blokk.meretSzelesseg) {
+      wrapper.style.width = this.blokk.meretSzelesseg + 'px';
+    }
+    if (this.blokk.meretMagassag) {
+      wrapper.style.height = this.blokk.meretMagassag + 'px';
+    }
+
     this.elem = wrapper;
 
     console.log('KepBlokk.letrehozas - VÉGE', { blokkId: this.blokk.id });

@@ -24,7 +24,9 @@
   min-height: 120px;
   overflow-y: auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-2);
 }
 
@@ -77,6 +79,9 @@
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-md);
+  /* A blokk (átméretezve vagy sem) sosem lóghat túl a szerkesztő területén */
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--color-border);
   background: var(--color-surface-offset);
 }
@@ -84,9 +89,23 @@
 /* A kép maga */
 .kep-blokk__kep {
   display: block;
+  /* width/height: auto felülírja a HTML width/height attribútumokat,
+     így a kép doboza a tényleges (arányosan kicsinyített) mérethez igazodik,
+     az attribútumok pedig csak az arány előzetes jelzésére szolgálnak */
+  width: auto;
+  height: auto;
+  max-width: 100%;
   border-radius: var(--radius-sm);
   object-fit: contain;
   max-height: 300px;
+}
+
+/* Üres képblokk (típusváltás után, feltöltés előtt) — ne essen össze */
+.kep-blokk__kep[src=""],
+.kep-blokk__kep:not([src]) {
+  min-width: 200px;
+  min-height: 120px;
+  background: var(--color-surface);
 }
 
 /* Képméret variációk */

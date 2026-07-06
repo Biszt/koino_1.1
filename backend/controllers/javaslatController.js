@@ -99,7 +99,9 @@ async javaslatLetrehozasa(req, res) {
     
     // 400 Bad Request - Validációs és egyéb hibák
     if (error.message.includes('kötelező') ||
-        error.message.includes('létezik')) {
+        error.message.includes('létezik') ||
+        error.message.includes('nem helyezhető') ||
+        error.message.includes('nem lehet')) {
       return res.status(400).json({
         success: false,
         message: error.message

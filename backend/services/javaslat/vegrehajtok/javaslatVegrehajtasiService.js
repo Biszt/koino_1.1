@@ -88,9 +88,19 @@ throw new Error( // Hibát dobunk, mert inkonzisztens a töredékcsoport
 
 csoportJavaslatTipus = 'Egyesites'; // Az összevont csoport típusa: Egyesítés
 
-} else { // Ha az első töredék típusa nem Egyesítés, akkor Csomag csoportról van szó
+} else { // Ha az első töredék típusa nem Egyesítés
 
-csoportJavaslatTipus = 'Csomag'; // Az összevont csoport típusa: Csomag (vegyes műveletek)
+// JAVÍTVA: ha MINDEN töredék típusa azonos (pl. csak Modositas vagy csak Torles),
+// akkor az összevont csoport is azt a típust kapja — így az egyezmény
+// javaslatTipus mezője a valós típust tükrözi.
+// Csomag csak akkor lesz, ha a töredékek műveletei ténylegesen vegyesek.
+const mindAzonosTipusu = javaslatVagyToredekek.every( // Megvizsgáljuk, hogy minden töredék típusa azonos-e
+(toredek) => toredek.javaslatTipus === elsoJavaslatTipus // Feltétel: megegyezik az első töredék típusával
+); // every() hívás vége
+
+csoportJavaslatTipus = mindAzonosTipusu
+  ? elsoJavaslatTipus // Egységes csoport: a tényleges típus (Modositas / Torles / Athelyezes)
+  : 'Csomag';         // Vegyes műveletek: Csomag
 
 } // Töredékcsoport típus meghatározás vége
 
@@ -130,6 +140,11 @@ egyesitesAdatok: elso.egyesitesAdatok || null, // Az egyesítés adatait az els�
 modositasAdatok: elso.modositasAdatok || null, // A módosítás adatait kompatibilitás miatt átadjuk
 athelyezesAdatok: elso.athelyezesAdatok || null, // Az áthelyezés adatait kompatibilitás miatt átadjuk
 csomagAdatok: elso.csomagAdatok || null, // A csomag adatait kompatibilitás miatt átadjuk
+// JAVÍTVA: szavazási arány snapshotok átadása — enélkül az egyezménybe
+// 0 kerülne, és a javaslat törlése után az adat végleg elveszne
+reszveteliArany: elso.reszveteliArany ?? 0, // Részvételi arány snapshot az első töredékből
+tamogatotsagiArany: elso.tamogatotsagiArany ?? 0, // Támogatottsági arány snapshot
+bizonyossagiMutato: elso.bizonyossagiMutato ?? 0, // Bizonyossági mutató snapshot
 eredetiToredekJavaslatok: eredetiToredekek // Átadjuk az eredeti töredék javaslatokat is későbbi csoportos logikához
 }; // Az összevont javaslat objektum vége
 

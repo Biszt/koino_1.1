@@ -117,14 +117,9 @@ class EgyezmenyKartya extends Kartya {
     // Az egyezmény indoklása a lezárt javaslat szövegmezőjének pillanatképe,
     // ezért ugyanolyan blokk alapú renderelés kell, mint a JavaslatKártyánál.
     if (adatok.szovegMezo) {
-      const blokkok = Array.isArray(adatok.szovegMezo)
-        ? adatok.szovegMezo
-        : [{
-            id:       'legacy-indoklas-1',
-            tipus:    'szoveg',
-            tartalom: adatok.szovegMezo,
-            formatas: { felkover: false, dolt: false, meret: 'kozepes' }
-          }];
+      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
+      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
+      const blokkok = adatok.szovegMezo;
 
       const indoklasKontener = document.createElement('div');
       indoklasKontener.className = 'egyezmeny-kartya__indoklas-kontener';

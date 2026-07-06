@@ -334,7 +334,15 @@ class TudatpontService {
     // Minden ősnek növeljük/csökkentjük a hierarchikus pontját
     let aktualisEntitas = { entitasId, entitasTipus };
 
-    while (true) {
+    // VÉDELEM: körkörös szülő-hivatkozás (adathiba) esetén a lánc sosem
+    // érne véget — a bejárt entitásokat nyilvántartjuk, és korlátozzuk
+    // a lépések számát is
+    const bejartEntitasok = new Set([entitasId.toString()]);
+    let lepesVedelem = 0;
+
+    while (lepesVedelem < 100) {
+      lepesVedelem++;
+
       // Szülő lekérése az aktuális entitáshoz
       console.log('hierarchikusFrissitesVegrehajtas - this.getSzuloEntitas', {
         entitasId: aktualisEntitas.entitasId,
@@ -351,6 +359,17 @@ class TudatpontService {
         console.log('hierarchikusFrissitesVegrehajtas - Elértük a gyökeret, STOP');
         break;
       }
+
+      // VÉDELEM: ha a szülő már szerepelt a láncban (önmaga szülője,
+      // vagy hosszabb kör), az adat sérült — megállunk és hibát logolunk
+      if (bejartEntitasok.has(szulo.szuloId.toString())) {
+        console.error('hierarchikusFrissitesVegrehajtas - KÖRKÖRÖS SZÜLŐ-HIVATKOZÁS ÉSZLELVE, lánc megszakítva!', {
+          entitasId: aktualisEntitas.entitasId,
+          korkorosSzuloId: szulo.szuloId
+        });
+        break;
+      }
+      bejartEntitasok.add(szulo.szuloId.toString());
 
       // Szülő hierarchikus pontjának frissítése
       // A szülőnél már biztosan létezik a rekord (ő is kapott pontot korábban),
@@ -915,13 +934,15 @@ class TudatpontService {
       console.log("<<<<<<<<<<<<<<<<<<<<<<< tudatpontokVisszaosztasa", {
         siker: true,
         visszaosztottPontok: 0,
-        eemberekSzama: 0
+        eemberekSzama: 0,
+        entitasTorolve: false
       });
-      
+
       return {
         siker: true,
         visszaosztottPontok: 0,
-        eemberekSzama: 0
+        eemberekSzama: 0,
+        entitasTorolve: false // Nem történt visszaosztás, az entitás nem törlődött
       };
     }
 
@@ -951,18 +972,50 @@ class TudatpontService {
       eemberekSzama++;
     }
 
-    // 4. LÉPÉS - Eredmény visszaadása
+    // 4. LÉPÉS - ENTITÁS TÖRLÉS TÉNYÉNEK MEGÁLLAPÍTÁSA
+    // A tudatpontHozzarendelese (entitasTorleseEllenorzese) automatikusan
+    // törli az entitást, ha 0 tudatpont maradt rajta. Itt ellenőrizzük,
+    // hogy ez megtörtént-e — a hívók (pl. torlesiVegrehajto) az
+    // entitasTorolve mezőből tudják meg, és erre épül az egyezmény
+    // tárhely-átirányítása is törölt tárhely esetén.
+    let entitasTorolve = false;
+    try {
+      let entitas = null;
+      if (entitasTipus === 'Tartalom') {
+        entitas = await TartalomRepository.findById(entitasId);
+      } else if (entitasTipus === 'Kategoria') {
+        entitas = await KategoriaRepository.findById(entitasId);
+      } else if (entitasTipus === 'TartalomTipus') {
+        entitas = await TartalomTipusRepository.findById(entitasId);
+      } else if (entitasTipus === 'Javaslat') {
+        entitas = await JavaslatRepository.findById(entitasId);
+      } else if (entitasTipus === 'Egyezmeny') {
+        entitas = await EgyezmenyRepository.findById(entitasId);
+      }
+      entitasTorolve = !entitas; // Ha már nem található, törölve lett
+    } catch (hiba) {
+      // A lekérés hibája tipikusan a nem létező entitást jelzi
+      console.log("tudatpontokVisszaosztasa - entitás lekérés hiba (töröltnek tekintjük)", {
+        entitasId,
+        hiba: hiba.message
+      });
+      entitasTorolve = true;
+    }
+
+    // 5. LÉPÉS - Eredmény visszaadása
 
     console.log("<<<<<<<<<<<<<<<<<<<<<<< tudatpontokVisszaosztasa===Eredmény: ", {
       siker: true,
       visszaosztottPontok: visszaosztottPontok,
-      eemberekSzama: eemberekSzama
+      eemberekSzama: eemberekSzama,
+      entitasTorolve: entitasTorolve
     });
-    
+
     return {
       siker: true,
       visszaosztottPontok: visszaosztottPontok,
-      eemberekSzama: eemberekSzama
+      eemberekSzama: eemberekSzama,
+      entitasTorolve: entitasTorolve
     };
   }
 

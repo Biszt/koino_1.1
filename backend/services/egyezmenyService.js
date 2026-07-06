@@ -168,6 +168,45 @@ class EgyezmenyService {
     } // eeeee...0001 ág vége
 
 
+    // 4.A LÉPÉS - TÖRÖLT TÁRHELY KEZELÉSE
+    // Ha az egyezmény tárhelye éppen a most végrehajtott javaslat által
+    // TÖRÖLT entitás (tipikus Törlés eset: az egyezmény a törölt tartalom
+    // alatt jött volna létre), az egyezmény a törölt entitás EREDETI
+    // szülője alá kerül — átveszi a törölt entitás helyét a hierarchiában.
+    if (egyezmenySzuloId) { // Csak akkor vizsgáljuk, ha van kijelölt tárhely
+      // A törölt entitások összegyűjtése a végrehajtási eredményből:
+      // Torles típusnál a toroltEntitasok tömb, Csomagnál a csomagEredmenyek
+      const toroltEntitasok = [
+        ...(vegrehajatasEredmeny.toroltEntitasok || []),
+        ...((vegrehajatasEredmeny.csomagEredmenyek || []).filter(e => e.muvelet === 'Torles'))
+      ].filter(e => e.torolve); // Csak a ténylegesen törölt entitások
+
+      // LÁNCOLT ÁTIRÁNYÍTÁS: ha az eredeti szülő MAGA IS törölt entitás
+      // (pl. csomag javaslat több, egymásra épülő törléssel), addig lépünk
+      // felfelé az eredeti szülők láncán, amíg nem törölt szülőt találunk,
+      // vagy el nem fogy a lánc (ekkor az egyezmény gyökér lesz)
+      let lepesVedelem = 0; // Végtelen ciklus elleni védelem
+      while (egyezmenySzuloId && lepesVedelem < 100) {
+        lepesVedelem++;
+
+        const toroltTarhely = toroltEntitasok.find( // Törölve lett-e az aktuális tárhely-jelölt?
+          e => e.entitasId?.toString() === egyezmenySzuloId.toString()
+        );
+
+        if (!toroltTarhely) break; // Nem törölt entitás — ez lesz az egyezmény szülője
+
+        console.log('egyezmenyLetrehozasa - A tárhely entitás törölve lett, átirányítás az eredeti szülőre', {
+          toroltTarhelyId: egyezmenySzuloId, // A törölt tárhely azonosítója
+          eredetiSzuloId: toroltTarhely.eredetiSzuloId ?? null, // A törölt entitás eredeti szülője
+          eredetiSzuloTipus: toroltTarhely.eredetiSzuloTipus ?? null // Az eredeti szülő típusa
+        });
+
+        egyezmenySzuloId = toroltTarhely.eredetiSzuloId ?? null; // Továbblépés az eredeti szülőre
+        // Gyökér entitás törlésekor nincs szülő — az egyezmény lesz az új gyökér (szuloId: null)
+        egyezmenySzuloTipus = egyezmenySzuloId ? (toroltTarhely.eredetiSzuloTipus ?? 'Tartalom') : null;
+      }
+    }
+
     console.log('egyezmenyLetrehozasa - Egyezmény szülő meghatározva', { // Logoljuk a végleges egyezmény szülőt
       egyezmenySzuloId: egyezmenySzuloId, // A végleges szülő azonosítója
       egyezmenySzuloTipus: egyezmenySzuloTipus, // A végleges szülő típusa

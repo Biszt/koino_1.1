@@ -29,6 +29,10 @@ class LinkBlokk {
     // Törlés callback — a SzovegSzerkeszto _blokkTorlese()-ét hívja
     this.onTorles = callbacks.onTorles || null;
 
+    // Megjelenítő mód — a kártyákon true: a kattintás ténylegesen navigál,
+    // szerkesztő módban false: a kattintás csak fókuszba helyezi a blokkot
+    this.megjelenitesMod = callbacks.megjelenitesMod || false;
+
     // DOM elem referencia
     this.elem = null;
 
@@ -156,10 +160,13 @@ letrehozas() {
     linkElem.rel = 'noopener noreferrer';
 
     // Szerkesztő módban a kattintás NEM navigál —
-    // a blokk fókuszba helyezése a wrapper click eseménye kezeli
-    linkElem.addEventListener('click', (e) => {
-      e.preventDefault();
-    });
+    // a blokk fókuszba helyezése a wrapper click eseménye kezeli.
+    // Megjelenítő módban (kártyán) a link normálisan megnyílik.
+    if (!this.megjelenitesMod) {
+      linkElem.addEventListener('click', (e) => {
+        e.preventDefault();
+      });
+    }
 
     // Lánc ikon
     const ikonElem = document.createElement('span');

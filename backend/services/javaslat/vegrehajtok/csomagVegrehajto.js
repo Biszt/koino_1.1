@@ -82,7 +82,9 @@ class CsomagVegrehajto {
             muvelet: 'Torles',
             torolve: toroltEntitas.torolve,
             visszaosztottPontok: toroltEntitas.visszaosztottPontok,
-            eeEmberekSzama: toroltEntitas.eeEmberekSzama
+            eeEmberekSzama: toroltEntitas.eeEmberekSzama,
+            eredetiSzuloId: toroltEntitas.eredetiSzuloId ?? null,      // A törölt entitás eredeti szülője (egyezmény áthelyezéshez)
+            eredetiSzuloTipus: toroltEntitas.eredetiSzuloTipus ?? null // A törölt entitás eredeti szülő típusa
           });
           
           // Statisztika frissítése - ha sikeresen törölve lett

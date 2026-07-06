@@ -70,6 +70,16 @@ class SzovegBlokk {
       this._igazitasCssBeallitasa(this.blokk.formatas.igazitas);
     }
 
+    // Ha van elmentett méret (korábbi átméretezésből), azt alkalmazzuk —
+    // enélkül a blokk minden újrarenderelés (mozgatás, visszavonás) után
+    // elveszítené az átméretezett szélességét/magasságát
+    if (this.blokk.meretSzelesseg) {
+      elem.style.width = this.blokk.meretSzelesseg + 'px';
+    }
+    if (this.blokk.meretMagassag) {
+      elem.style.height = this.blokk.meretMagassag + 'px';
+    }
+
     // Eseményfigyelők bekötése
     this._esemenyekBekotese(elem);
 

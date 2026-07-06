@@ -29,6 +29,11 @@ class EntitasHivatkozasBlokk {
     this.onFokusz    = callbacks.onFokusz    || null;
     this.onKoppintas = callbacks.onKoppintas || null;
 
+    // Megjelenítő mód — a kártyákon true: a koppintás entitást vált,
+    // szerkesztő módban false: a kattintás csak fókuszba helyezi a blokkot
+    // (a letrehozasMegjelenitesMod() automatikusan true-ra állítja)
+    this.megjelenitesMod = callbacks.megjelenitesMod || false;
+
     // DOM elem referencia
     this.elem = null;
 
@@ -101,7 +106,23 @@ letrehozas() {
   letrehozasMegjelenitesMod() {
     console.log('EntitasHivatkozasBlokk.letrehozasMegjelenitesMod - KEZDÉS', { blokkId: this.blokk.id });
 
+    // Ez a metódus kizárólag a kártya-megjelenítéshez készül —
+    // a koppintás itt mindig aktív (entitást vált)
+    this.megjelenitesMod = true;
+
     const hivatkozasElem = this._hivatkozasElemLetrehozasa();
+
+    // Elmentett méretek visszaállítása — megjelenítő módban nincs wrapper,
+    // ezért közvetlenül a hivatkozás elemre kerülnek (mint a letrehozas()-ban)
+    if (this.blokk.meretSzelesseg) {
+      hivatkozasElem.style.width = this.blokk.meretSzelesseg + 'px';
+    }
+    if (this.blokk.meretMagassag) {
+      hivatkozasElem.style.height = this.blokk.meretMagassag + 'px';
+    }
+    if (this.blokk.meretFontSize) {
+      hivatkozasElem.style.fontSize = this.blokk.meretFontSize + 'px';
+    }
 
     console.log('EntitasHivatkozasBlokk.letrehozasMegjelenitesMod - VÉGE');
     return hivatkozasElem;
@@ -164,12 +185,17 @@ letrehozas() {
 
     const hivatkozasElem = document.createElement('span');
     hivatkozasElem.className = 'entitas-hivatkozas-blokk';
-    hivatkozasElem.setAttribute('role', 'button');
-    hivatkozasElem.setAttribute('tabindex', '0');
-    hivatkozasElem.setAttribute(
-      'aria-label',
-      `Ugrás ide: ${this.blokk.felirat || this.blokk.entitasId}`
-    );
+
+    // Interaktív (gomb) szerep csak megjelenítő módban —
+    // szerkesztő módban a wrapper kezeli a fókuszt, a hivatkozás passzív
+    if (this.megjelenitesMod) {
+      hivatkozasElem.setAttribute('role', 'button');
+      hivatkozasElem.setAttribute('tabindex', '0');
+      hivatkozasElem.setAttribute(
+        'aria-label',
+        `Ugrás ide: ${this.blokk.felirat || this.blokk.entitasId}`
+      );
+    }
 
     // Entitás típus ikon
     const ikonElem = document.createElement('span');
@@ -185,28 +211,33 @@ letrehozas() {
     hivatkozasElem.appendChild(ikonElem);
     hivatkozasElem.appendChild(feliratElem);
 
-    // Koppintás / kattintás esemény
-    hivatkozasElem.addEventListener('click', (e) => {
-      e.stopPropagation(); // ne aktiválja a wrapper click → focus láncot
-      this._koppintasKezeles();
-    });
-
-    // Billentyűzetes aktiválás (Enter és Space)
-    hivatkozasElem.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
+    // Aktiválás (entitásváltás) csak megjelenítő módban —
+    // szerkesztő módban a kattintás a wrapperig buborékol,
+    // ami csak fókuszba helyezi (kijelöli) a blokkot
+    if (this.megjelenitesMod) {
+      // Koppintás / kattintás esemény
+      hivatkozasElem.addEventListener('click', (e) => {
+        e.stopPropagation(); // ne aktiválja a wrapper click → focus láncot
         this._koppintasKezeles();
-      }
-    });
+      });
 
-    // Mobilos aktív vizuális visszajelzés
-    hivatkozasElem.addEventListener('touchstart', () => {
-      hivatkozasElem.classList.add('entitas-hivatkozas-blokk--tapintva');
-    }, { passive: true });
+      // Billentyűzetes aktiválás (Enter és Space)
+      hivatkozasElem.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this._koppintasKezeles();
+        }
+      });
 
-    hivatkozasElem.addEventListener('touchend', () => {
-      hivatkozasElem.classList.remove('entitas-hivatkozas-blokk--tapintva');
-    }, { passive: true });
+      // Mobilos aktív vizuális visszajelzés
+      hivatkozasElem.addEventListener('touchstart', () => {
+        hivatkozasElem.classList.add('entitas-hivatkozas-blokk--tapintva');
+      }, { passive: true });
+
+      hivatkozasElem.addEventListener('touchend', () => {
+        hivatkozasElem.classList.remove('entitas-hivatkozas-blokk--tapintva');
+      }, { passive: true });
+    }
 
     console.log('EntitasHivatkozasBlokk._hivatkozasElemLetrehozasa - VÉGE');
     return hivatkozasElem;
