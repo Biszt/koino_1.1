@@ -58,3 +58,12 @@ ES-modulok, komponens-osztályok. Belépés: `index.html` + `js/main.js`, nézet
 
 - Commit-üzenetek magyarul, a `main` branchre dolgozunk.
 - Módosítás után a Docker-es dev környezetben (http://localhost:3000) ellenőrizzük a működést.
+
+## Zárójeles jegyzetek konvenciója
+
+A fejlesztő a munka közben felmerülő mellékes ötleteit, kéréseit **zárójelben** írja le — `[ ... ]` (szögletes) vagy `{ ... }` (kapcsos) formában is. Ezeket **nem szabad azonnal megvalósítani**, de elveszíteni sem. A helyes kezelés:
+
+1. A jegyzetet **szó szerint felvezetni a [`docs/jegyzetek.md`](docs/jegyzetek.md) naplóba** (dátummal, felülre, 🆕 jellel).
+2. Röviden visszaigazolni, hogy fel lett jegyezve, majd **folytatni az aktuális feladatot**.
+3. Ha a jegyzet a folyó munkát közvetlenül érinti, előbb rákérdezni.
+4. Ha valódi feladattá válik, átvezetni a [`docs/fejlesztesi_terv.md`](docs/fejlesztesi_terv.md)-be, és a naplóban ✅-re állítani.

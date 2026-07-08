@@ -98,12 +98,14 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 7. [ ] **Tudatpontok nézet** (főmenü) — saját tudatpontok áttekintése, átrendezése
 8. [ ] **eember beállítások** (főmenü)
 9. [ ] **Új kategória létrehozása ebből** (Kategória kártya) — alkategória létrehozása; backend módosítást is igényel (kategória-hierarchia)
-10. [ ] **Jogosultság-függő menüpontok** — a kártya-menük már megnyitáskor jelezzék a jogosultságot: azok a menüpontok, amelyekhez tudatpont kell az entitáson (pl. szavazat leadása, javaslat létrehozása), csak akkor legyenek aktív opciók, ha az eembernek van tudatpontja az adott entitáson (egyébként inaktív/rejtett állapot)
+10. [x] **Jogosultság-függő menüpontok** — a kártya-menük megnyitáskor jelzik a jogosultságot: a tudatpontot igénylő menüpontok (Javaslat létrehozása, Szavazat leadása, valamint „Új tartalom/kategória létrehozása ebből") inaktívak (halvány + magyarázó tipp), ha az eembernek nincs tudatpontja az entitáson. Megvalósítás: a menüpont `tudatpontFuggo: true` jelölést kap; a `Kartya` alaposztály a menü megnyitásakor a `GET /api/tudatpont/entitas/:tipus/:id → eemberHozzajarulas` (eemberenkénti `tudatponthozzarendeles.tudatPontok`) alapján tiltja/engedi. A backend a védelmet külön kikényszeríti (javaslatService, szavazatService).
+    - **Nyitott finomság:** a szavazás backend-szabálya a javaslat *érintett entitásait* (`erintettEntitasok`) nézi, a frontend viszont egyszerűsítve a javaslat entitásán ellenőriz. A felmenő-szabály miatt ez általában egybeesik, de eltérhet — ha zavaró, a Javaslat kártyán az érintett tartalomra kell ellenőrizni (esetleg backend `szavazhat` jelzéssel).
+    - **Egyezmény** kártya „Javaslat létrehozása" pontja még 🚧 (nincs kész) — amikor megépül, ugyanígy `tudatpontFuggo` jelölést kap.
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
 - [ ] A backend hiányosságainak felmérése és listázása (külön feladat)
-- [ ] `docker-compose.dev.yml`: `NODEeNV` elírás javítása `NODE_ENV`-re
+- [x] `docker-compose.dev.yml`: `NODEeNV` elírás javítása `NODE_ENV`-re
 
 ---
 
