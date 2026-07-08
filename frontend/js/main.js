@@ -161,6 +161,19 @@ async function alkalmazasInditasa() {
   console.log('main.alkalmazasInditasa - VÉGE (bejelentkezés)');
 }
 
+// ===== SZÁM MEZŐK GÖRGETÉS ELLENI VÉDELME =====
+// A type="number" mezőkön a böngésző fókuszált állapotban az egérgörgővel
+// módosítja az értéket – ez gyakori véletlen elírás forrása volt (pl. a
+// tudatpont mennyiség). Globálisan kikapcsoljuk: ha egy FÓKUSZÁLT szám-mezőn
+// görgetnek, a görgetést nem engedjük az input értékére hatni (preventDefault).
+// A { passive: false } azért kell, hogy a preventDefault() érvényesüljön.
+document.addEventListener('wheel', (esemeny) => {
+  const elem = esemeny.target;
+  if (elem?.matches?.('input[type="number"]') && elem === document.activeElement) {
+    esemeny.preventDefault();
+  }
+}, { passive: false });
+
 // ===== INDÍTÁS =====
 // DOM betöltése után indul az alkalmazás
 document.addEventListener('DOMContentLoaded', alkalmazasInditasa);

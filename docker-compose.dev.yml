@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODEeNV=development
+      - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/koino  # ← Ez marad 27017 (belső hálózat)
     volumes:
       - ./backend:/app

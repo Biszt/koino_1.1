@@ -36,6 +36,21 @@ ul[role="list"], ol[role="list"] { list-style: none; }
 
 input, button, textarea, select { font: inherit; color: inherit; }
 
+/* --- SZÁM MEZŐK PÖRGETŐ NYILAINAK ELREJTÉSE --- */
+/* A type="number" mezők jobb szélén megjelenő felfelé/lefelé léptető nyilakat
+   mindenhol elrejtjük: gyakori volt velük a véletlen érték-módosítás.
+   A görgetéssel (egérgörgő) történő módosítást a main.js wheel-figyelője zárja ki. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+-webkit-appearance: none;
+appearance: none;
+margin: 0;
+}
+input[type="number"] {
+-moz-appearance: textfield;
+appearance: textfield;
+}
+
 h1, h2, h3, h4, h5, h6 {
 text-wrap: balance;
 line-height: 1.2;

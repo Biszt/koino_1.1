@@ -63,7 +63,16 @@ class SzavazatModal {
       cim:      'Szavazat leadása',
       tartalom: tartalomHtml,
       meret:    'szuk',
-      gombok:   [],
+      // A szavazás azonnal ment a gombra kattintva, ezért itt nincs „Mentés" –
+      // a „Rendben" csak lezárja a modalt (bezáráskor frissül a pakli, ha kellett).
+      gombok: [
+        {
+          felirat:   'Rendben',
+          tipus:     'elsodleges',
+          azonosito: 'szavazat-modal-rendben-gomb',
+          akcio:     () => this.modal.bezaras()
+        }
+      ],
       onBezaras: () => {
         // Ha a modal alatt változott a szavazat, frissítsük a paklit,
         // hogy a kártya a helyes állapotot mutassa (az arányokat a cron frissíti).
