@@ -2,9 +2,10 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
-import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 import SzavazatModal from '../modals/SzavazatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
+import ReszletekModal from '../modals/ReszletekModal.js';
+import TartalomModal from '../modals/TartalomModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -276,6 +277,64 @@ class JavaslatKartya extends Kartya {
     });
   }
 
+  // =============================================
+  // ÚJ - ÚJ TARTALOM LÉTREHOZÁSA EBBŐL ÁGAZTATVA
+  // =============================================
+  // A közös TartalomModal-t nyitja meg létrehozás módban, a javaslatot
+  // szülőként átadva (szuloId + szuloTipus: 'Javaslat').
+  async _ujTartalomLetrehozasa(entitas) {
+    console.log('JavaslatKartya._ujTartalomLetrehozasa - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tartalomModal = new TartalomModal(this.modalKontenerAzon, {
+      mod: 'letrehozas',
+      szuloAdatok: {
+        szuloId:    entitas.entitasId,
+        szuloTipus: 'Javaslat'
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tartalomModal.init();
+    tartalomModal.megnyitas();
+
+    console.log('JavaslatKartya._ujTartalomLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
+  // =============================================
+  // ÚJ - RÉSZLETES ADATOK
+  // =============================================
+  // Megnyitja a közös ReszletekModal-t erre a javaslatra.
+  // A modal maga kéri le a /reszletek adatokat és jeleníti meg őket.
+  async _reszletesAdatok(entitas) {
+    console.log('JavaslatKartya._reszletesAdatok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const reszletekModal = new ReszletekModal(this.modalKontenerAzon, {
+      entitas,
+      token: this.token,
+      // Ha az indoklásban entitás-hivatkozásra koppintanak, a paklit oda navigáljuk
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        if (typeof this.onKivalasztas === 'function') {
+          this.onKivalasztas(entitasId, entitasTipus);
+        }
+      }
+    });
+
+    await reszletekModal.init();
+    await reszletekModal.megnyitas();
+
+    console.log('JavaslatKartya._reszletesAdatok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // A „Szavazat leadása" pont már működik (SzavazatModal), a többi 🚧 még fejlesztésre vár.
   _hamburgerOpciok(entitas) {
@@ -297,9 +356,12 @@ class JavaslatKartya extends Kartya {
         akcio:          () => this._szavazatLeadasa(entitas)
       },
       {
-        ikon:    '🚧',
-        felirat: 'Új tartalom létrehozása ebből',
-        akcio:   () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
+        ikon:           '✏️',
+        felirat:        'Új tartalom létrehozása ebből',
+        // Ágaztatás ebből az entitásból → tudatpont kell rá
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._ujTartalomLetrehozasa(entitas)
       },
       {
         ikon:       '🌟',
@@ -308,10 +370,10 @@ class JavaslatKartya extends Kartya {
         akcio:      () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '🚧',
+        ikon:       '📄',
         felirat:    'Részletes adatok',
         elvalaszto: true,
-        akcio:      () => fejlesztesreVarMegjelenitese('Részletes adatok')
+        akcio:      () => this._reszletesAdatok(entitas)
       }
     ];
 

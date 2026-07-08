@@ -42,40 +42,40 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
 | Szavazat leadása | ✅ | SzavazatModal — támogat/ellenez/tartózkodik, korábbi szavazat kiemelve, visszavonás |
-| Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
+| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
-| Részletes adatok | 🚧 | Most „Részletek megtekintése" néven, csak console.log |
+| Részletes adatok | ✅ | Közös ReszletekModal (típus, státusz, érintett entitások, szavazás állása, saját szavazat) |
 | ~~Törlés~~ | ❌ | Nem része a tervnek (a törlés javaslat/szavazás útján történik) — a tulajdonos jóváhagyta a törlését |
 
 ### 4. Tartalomtípus kártya menü (`TartalomTipusKartya.js`)
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
+| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
-| Részletes adatok | 🚧 | ÚJ menüpont |
+| Részletes adatok | ✅ | Közös ReszletekModal (név, típus, létrehozó, tudatpont, leírás) |
 | Küszöb érték javaslat | 🚧 | ÚJ menüpont |
 
 ### 5. Kategória kártya menü (`KategoriaKartya.js`)
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
+| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
 | Új kategória létrehozása ebből | 🚧 | ÚJ menüpont — az így létrehozott kategória ALKATEGÓRIA lesz; backend módosítás is kell hozzá (kategória-hierarchia) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
-| Részletes adatok | 🚧 | ÚJ menüpont |
+| Részletes adatok | ✅ | Közös ReszletekModal (név, típus, létrehozó, tudatpont, leírás) |
 | Küszöb érték javaslat | 🚧 | ÚJ menüpont |
 
 ### 6. Egyezmény kártya menü (`EgyezmenyKartya.js`)
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
+| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
 | Javaslat létrehozása | 🚧 | ÚJ menüpont |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
-| Részletes adatok | 🚧 | Most „Részletek megtekintése" néven, csak console.log |
+| Részletes adatok | ✅ | Közös ReszletekModal (típus, létrehozó, érintett entitások, szavazás pillanatképe, tudatpont) |
 
 ---
 
@@ -91,8 +91,8 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 1. [x] **Szavazat leadása** (Javaslat kártya) — ez zárja be a döntéshozatali kört: javaslat → szavazás → egyezmény. SzavazatModal + `GET /api/javaslat/:id/sajat-szavazat` végpont; szavazás, módosítás, visszavonás.
 2. [x] **Tudatpont módosítás** (minden kártya) — közös `TudatpontModal` (standard modal-stílus), mind a négy kártyatípus használja. A meglévő `POST /api/tudatpont/hozzarendeles` végpontra épül. ÚJ felmenő-szabály: pont hozzárendelésekor a teljes szülőláncon kell legalább 1 pont; a backend kikényszeríti (`GET /api/tudatpont/hianyzo-felmenok/...` felmérés + `felmenoketAutomatikusan` flag), a frontend a megnyitáskor felméri és hozzájárulás után automatikusan kitölti a hiányzó felmenőket.
-3. [ ] **Részletes adatok** (minden kártya) — közös részletező nézet entitástípusonkénti tartalommal
-4. [ ] **Új tartalom létrehozása ebből** kiterjesztése (javaslat-, kategória-, tartalomtípus- és egyezmény-kártyára) — a TartalomKartya meglévő megoldása újrafelhasználható
+3. [x] **Részletes adatok** (minden kártya) — közös `ReszletekModal`, entitástípusonkénti nézettel (Tartalom, Kategória, Tartalomtípus, Javaslat, Egyezmény).
+4. [x] **Új tartalom létrehozása ebből** kiterjesztése (javaslat-, kategória-, tartalomtípus- és egyezmény-kártyára) — mind az öt kártyatípus a közös `TartalomModal`-t nyitja, az entitást szülőként átadva (`szuloTipus`). Backend: a Tartalom modell `szuloTipus` enumja bővítve — most már `Kategoria` és `TartalomTipus` is lehet szülő (a korábbi `['Tartalom','Javaslat','Egyezmeny']` mellett). A menüpont mindenhol `tudatpontFuggo`.
 5. [ ] **Küszöb érték javaslat** (tartalom-, kategória-, tartalomtípus-kártya) — backend útvonalak léteznek
 6. [ ] **Értesítések** (főmenü) — backend kész, frontend nézet kell
 7. [ ] **Tudatpontok nézet** (főmenü) — saját tudatpontok áttekintése, átrendezése

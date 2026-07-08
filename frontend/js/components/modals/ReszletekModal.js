@@ -19,6 +19,37 @@ const UTVONAL_TIPUSHOZ = {
   Egyezmeny:     'egyezmeny'
 };
 
+// Enum → emberi felirat térképek a Javaslat / Egyezmény nézethez.
+// A backend nyers enum-értékeket ad (pl. 'Modositas'); itt olvashatóra fordítjuk.
+const JAVASLAT_TIPUS_FELIRAT = {
+  Torles:     'Törlés',
+  Modositas:  'Módosítás',
+  Egyesites:  'Egyesítés',
+  Athelyezes: 'Áthelyezés',
+  Csomag:     'Csomag'
+};
+
+const STATUSZ_FELIRAT = {
+  Aktiv:     'Aktív',
+  Elfogadva: 'Elfogadva',
+  Elvetve:   'Elvetve',
+  Hiba:      'Hiba'
+};
+
+// A saját szavazat típusa (a Szavazat modellben: 'Tamogat' / 'Ellenez' / 'Tartozkodik').
+const SZAVAZAT_FELIRAT = {
+  Tamogat:     'Támogatod',
+  Ellenez:     'Ellenzed',
+  Tartozkodik: 'Tartózkodsz'
+};
+
+// Az érintett entitások típus-feliratai.
+const ENTITAS_TIPUS_FELIRAT = {
+  Tartalom:      'Tartalom',
+  Kategoria:     'Kategória',
+  TartalomTipus: 'Tartalomtípus'
+};
+
 // ===== RÉSZLETEK MODAL OSZTÁLY =====
 // Felelősség: egy entitás részletes (csak olvasható) adatainak megjelenítése.
 //  1. Megnyitáskor lekéri az entitás `/reszletek` adatait a backendről.
@@ -183,9 +214,18 @@ class ReszletekModal {
       return;
     }
 
-    // Egyelőre a Tartalom típus teljes; a többi fokozatosan bővül.
+    // A Tartalom, Kategória és Tartalomtípus típusok teljesek;
+    // a Javaslat és Egyezmény nézet fokozatosan bővül.
     if (this.entitasTipus === 'Tartalom') {
       this._renderTartalom(lista, data, ertekAdatok);
+    } else if (this.entitasTipus === 'Kategoria') {
+      this._renderKategoria(lista, data);
+    } else if (this.entitasTipus === 'TartalomTipus') {
+      this._renderTartalomTipus(lista, data);
+    } else if (this.entitasTipus === 'Javaslat') {
+      this._renderJavaslat(lista, data);
+    } else if (this.entitasTipus === 'Egyezmeny') {
+      this._renderEgyezmeny(lista, data);
     } else {
       this._hamarosanSor(lista, 'Ehhez a típushoz a részletes nézet hamarosan elérhető.');
     }
@@ -255,6 +295,161 @@ class ReszletekModal {
     // --- AZONOSÍTÓ ---
     this._szakaszCim(lista, 'Azonosító');
     this._sor(lista, 'Entitás ID', this.entitasId ?? '—', 'reszletek-modal__ertek--halvany');
+  }
+
+  // ===== KATEGÓRIA RÉSZLETEI =====
+  // A backend válasza: { kategoria, tudatpont }.
+  _renderKategoria(lista, data) {
+    const kategoria = data.kategoria ?? {};
+    const tudatpont = data.tudatpont ?? {};
+    this._renderNevesEntitas(lista, kategoria, tudatpont, 'Kategória');
+  }
+
+  // ===== TARTALOMTÍPUS RÉSZLETEI =====
+  // A backend válasza: { tartalomTipus, tudatpont }.
+  _renderTartalomTipus(lista, data) {
+    const tartalomTipus = data.tartalomTipus ?? {};
+    const tudatpont     = data.tudatpont     ?? {};
+    this._renderNevesEntitas(lista, tartalomTipus, tudatpont, 'Tartalomtípus');
+  }
+
+  // ===== KÖZÖS: NÉVVEL RENDELKEZŐ EGYSZERŰ ENTITÁS =====
+  // A Kategória és a Tartalomtípus szerkezete azonos (név, ikon, leírás,
+  // létrehozó, dátum, tudatpont), ezért közös metódus rendereli mindkettőt.
+  // @param {Object} entitasObj   - a backend kategoria / tartalomTipus objektuma
+  // @param {Object} tudatpont    - { eemberHozzajarulas, osszesPont, hozzajarulokSzama }
+  // @param {string} tipusFelirat - emberi típusnév a „Típus" sorba
+  _renderNevesEntitas(lista, entitasObj, tudatpont, tipusFelirat) {
+    // A nevet elsődlegesen a kártya adataiból vesszük (a /reszletek is adja).
+    const adatok = this.entitas?.adatok ?? {};
+
+    // --- ALAPADATOK ---
+    this._sor(lista, 'Név',        adatok.nev ?? entitasObj.nev ?? '—');
+    this._sor(lista, 'Típus',      tipusFelirat);
+    this._sor(lista, 'Létrehozó',  entitasObj.letrehozo?.eemberNev ?? '—');
+    this._sor(lista, 'Létrehozva', this._datumFelirat(entitasObj.letrehozva));
+
+    // --- TUDATPONT ---
+    this._szakaszCim(lista, 'Tudatpont');
+    this._sor(lista, 'Saját pontod',       this._szam(tudatpont.eemberHozzajarulas));
+    this._sor(lista, 'Összes (entitáson)', this._szam(tudatpont.osszesPont));
+    this._sorGombbal(
+      lista,
+      'Hozzájárulók',
+      this._szam(tudatpont.hozzajarulokSzama),
+      'részletek',
+      () => this._hozzajarulokReszletek()
+    );
+    this._sor(lista, 'Hierarchikus összes', this._szam(this.entitas?.hierarchikusOsszesPont));
+
+    // --- LEÍRÁS (rich text) ---
+    // A mező neve itt `leiras` (nem `szoveg`), a szakasz címe „Leírás”.
+    this._szovegSzakasz(lista, entitasObj.leiras, 'Leírás');
+
+    // --- AZONOSÍTÓ ---
+    this._szakaszCim(lista, 'Azonosító');
+    this._sor(lista, 'Entitás ID', this.entitasId ?? '—', 'reszletek-modal__ertek--halvany');
+  }
+
+  // ===== JAVASLAT RÉSZLETEI =====
+  // A backend válasza: { javaslat, eeEmberSzavazat, szavazasiJogosultsag }.
+  _renderJavaslat(lista, data) {
+    const javaslat      = data.javaslat        ?? {};
+    const sajatSzavazat = data.eeEmberSzavazat ?? null;
+
+    // --- ALAPADATOK ---
+    this._sor(lista, 'Javaslat típusa', JAVASLAT_TIPUS_FELIRAT[javaslat.javaslatTipus] ?? javaslat.javaslatTipus ?? '—');
+    this._sor(lista, 'Státusz',         STATUSZ_FELIRAT[javaslat.statusz] ?? javaslat.statusz ?? '—');
+    this._sor(lista, 'Létrehozó',       javaslat.letrehozo?.eemberNev ?? '—');
+    this._sor(lista, 'Létrehozva',      this._datumFelirat(javaslat.letrehozva));
+
+    // --- ÉRINTETT ENTITÁSOK ---
+    this._erintettEntitasokSzakasz(lista, javaslat.erintettEntitasok);
+
+    // --- SZAVAZÁS ÁLLÁSA ---
+    this._szakaszCim(lista, 'Szavazás állása');
+    this._sor(lista, 'Támogatók',            this._szam(javaslat.javaslatTamogatoinakSzama));
+    this._sor(lista, 'Ellenzők',             this._szam(javaslat.javaslatEllenzoinekSzama));
+    this._sor(lista, 'Tartózkodók',          this._szam(javaslat.javaslatTartozkodoinakSzama));
+    this._sor(lista, 'Részvételi arány',     this._szazalek(javaslat.reszveteliArany));
+    this._sor(lista, 'Támogatottsági arány', this._szazalek(javaslat.tamogatotsagiArany));
+    this._sor(lista, 'Bizonyossági mutató',  this._szazalek(javaslat.bizonyossagiMutato));
+    this._sor(lista, 'Döntési idő',          masodpercFelirat(javaslat.dontesiIdo));
+
+    // --- SAJÁT RÉSZVÉTEL ---
+    this._szakaszCim(lista, 'Saját részvételed');
+    this._sor(lista, 'Szavazatod',  SZAVAZAT_FELIRAT[sajatSzavazat?.szavazatTipus] ?? 'Még nem szavaztál');
+
+    // Az indoklás (rich text) szándékosan NEM jelenik meg itt: a kártya
+    // body-jában úgyis látszik, és összetett tartalom is lehet.
+
+    // --- AZONOSÍTÓ ---
+    this._szakaszCim(lista, 'Azonosító');
+    this._sor(lista, 'Entitás ID', this.entitasId ?? '—', 'reszletek-modal__ertek--halvany');
+  }
+
+  // ===== EGYEZMÉNY RÉSZLETEI =====
+  // A backend válasza: { egyezmeny, tudatpontok }.
+  // Az egyezmény a szavazási adatokat VÉGREHAJTÁSKORI pillanatképként tárolja.
+  _renderEgyezmeny(lista, data) {
+    const egyezmeny = data.egyezmeny   ?? {};
+    const tudatpont = data.tudatpontok ?? {};
+
+    // --- ALAPADATOK ---
+    this._sor(lista, 'Javaslat típusa', JAVASLAT_TIPUS_FELIRAT[egyezmeny.javaslatTipus] ?? egyezmeny.javaslatTipus ?? '—');
+    this._sor(lista, 'Létrehozó',       egyezmeny.letrehozo?.eemberNev ?? '—');
+    this._sor(lista, 'Végrehajtva',     this._datumFelirat(egyezmeny.vegrehajtva));
+
+    // --- ÉRINTETT ENTITÁSOK ---
+    this._erintettEntitasokSzakasz(lista, egyezmeny.erintettEntitasok);
+
+    // --- SZAVAZÁS (VÉGREHAJTÁSKORI PILLANATKÉP) ---
+    this._szakaszCim(lista, 'Szavazás (végrehajtáskor)');
+    this._sor(lista, 'Támogatók',            this._szam(egyezmeny.tamogatokSzama));
+    this._sor(lista, 'Ellenzők',             this._szam(egyezmeny.ellenzokSzama));
+    this._sor(lista, 'Tartózkodók',          this._szam(egyezmeny.tartozkodokSzama));
+    this._sor(lista, 'Részvételi arány',     this._szazalek(egyezmeny.reszveteliArany));
+    this._sor(lista, 'Támogatottsági arány', this._szazalek(egyezmeny.tamogatotsagiArany));
+    this._sor(lista, 'Bizonyossági mutató',  this._szazalek(egyezmeny.bizonyossagiMutato));
+
+    // --- TUDATPONT (AKTUÁLIS) ---
+    this._szakaszCim(lista, 'Tudatpont');
+    this._sor(lista, 'Saját pontod',       this._szam(tudatpont.eemberHozzajarulas));
+    this._sor(lista, 'Összes (entitáson)', this._szam(tudatpont.osszesPont));
+    this._sorGombbal(
+      lista,
+      'Hozzájárulók',
+      this._szam(tudatpont.hozzajarulokSzama),
+      'részletek',
+      () => this._hozzajarulokReszletek()
+    );
+    this._sor(lista, 'Hierarchikus összes', this._szam(this.entitas?.hierarchikusOsszesPont));
+
+    // Az indoklás (rich text) szándékosan NEM jelenik meg itt: a kártya
+    // body-jában úgyis látszik, és összetett tartalom is lehet.
+
+    // --- AZONOSÍTÓ ---
+    this._szakaszCim(lista, 'Azonosító');
+    this._sor(lista, 'Entitás ID', this.entitasId ?? '—', 'reszletek-modal__ertek--halvany');
+  }
+
+  // ===== SEGÉD: ÉRINTETT ENTITÁSOK SZAKASZ =====
+  // A Javaslat és az Egyezmény is tárol egy `erintettEntitasok` tömböt:
+  // [{ entitasId, entitasTipus, muvelet }]. Típus + művelet párként listázzuk.
+  _erintettEntitasokSzakasz(lista, erintettEntitasok) {
+    this._szakaszCim(lista, 'Érintett entitások');
+
+    const elemek = Array.isArray(erintettEntitasok) ? erintettEntitasok : [];
+    if (elemek.length === 0) {
+      this._sor(lista, '—', 'nincs adat');
+      return;
+    }
+
+    elemek.forEach((elem, index) => {
+      const tipus   = ENTITAS_TIPUS_FELIRAT[elem.entitasTipus] ?? elem.entitasTipus ?? '—';
+      const muvelet = JAVASLAT_TIPUS_FELIRAT[elem.muvelet]     ?? elem.muvelet      ?? '—';
+      this._sor(lista, `${index + 1}. ${tipus}`, muvelet);
+    });
   }
 
   // ===== SEGÉD: EGY SOR (címke + érték) =====
@@ -363,13 +558,14 @@ class ReszletekModal {
   }
 
   // ===== SEGÉD: SZÖVEG SZAKASZ (rich text blokk-renderelés) =====
-  _szovegSzakasz(lista, szoveg) {
+  // @param {string} cim - a szakasz címe (alap: „Szöveg”; a leírásokhoz „Leírás”)
+  _szovegSzakasz(lista, szoveg, cim = 'Szöveg') {
     // Üres szöveg esetén nem jelenítünk meg szakaszt
     const uresE = !szoveg
       || (Array.isArray(szoveg) && szoveg.length === 0);
     if (uresE) return;
 
-    this._szakaszCim(lista, 'Szöveg');
+    this._szakaszCim(lista, cim);
 
     const kontener = document.createElement('div');
     kontener.className = 'reszletek-modal__szoveg';

@@ -57,7 +57,9 @@ kategoriaIds: {
 },
 
 // ----- SZÜLŐ TARTALOM AZONOSÍTÓ -----
-// MÓDOSÍTVA: Nem csak Tartalom lehet szülő, hanem Javaslat és Egyezmény is
+// MÓDOSÍTVA: Bármelyik entitástípus lehet szülő – Tartalom, Javaslat, Egyezmény,
+// valamint Kategória és Tartalomtípus is (az „Új tartalom létrehozása ebből”
+// menüpont mind az öt kártyatípusról ágaztathat).
 szuloId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus - bármilyen entitás lehet
     default: null                          // Alapértelmezett: nincs szülő (főtartalom)
@@ -65,9 +67,9 @@ szuloId: {
 
 // ----- SZÜLŐ TÍPUSA -----
 szuloTipus: {
-    type: String,                                        // Szöveges típus
-    enum: ['Tartalom', 'Javaslat', 'Egyezmeny'],        // Engedélyezett értékek
-    default: null,                                       // Alapértelmezett: nincs szülő típus
+    type: String,                                                          // Szöveges típus
+    enum: ['Tartalom', 'Javaslat', 'Egyezmeny', 'Kategoria', 'TartalomTipus'], // Engedélyezett értékek
+    default: null,                                                         // Alapértelmezett: nincs szülő típus
     validate: {
         validator: function(value) {
             // A szuloId értékének meghatározása a kontextustól függ:
