@@ -49,3 +49,6 @@
 @import './components/modals/javaslatModal.css';
 @import './components/modals/szavazatModal.css';
 @import './components/modals/tudatpontModal.css';
+@import './components/modals/reszletekModal.css';
+@import './components/modals/hozzajarulokModal.css';
+@import './components/modals/ertekEloszlasModal.css';

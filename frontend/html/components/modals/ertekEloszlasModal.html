@@ -1,0 +1,19 @@
+<!-- frontend/html/components/modals/ertekEloszlasModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Egy küszöb érték-javaslatainak eloszlását mutatja (érték → hány javaslat).
+     A sorokat az ErtekEloszlasModal.js építi fel. -->
+<div class="ertek-eloszlas-modal">
+
+  <!-- Rövid összegzés (összes javaslat száma) -->
+  <p class="ertek-eloszlas-modal__osszegzes" id="ertek-eloszlas-osszegzes"></p>
+
+  <!-- Az eloszlás sorai: érték + sáv + darabszám -->
+  <ul class="ertek-eloszlas-modal__lista" id="ertek-eloszlas-lista"></ul>
+
+  <!-- Üres állapot -->
+  <p class="ertek-eloszlas-modal__ures" id="ertek-eloszlas-ures" hidden>
+    Ehhez a küszöbhöz még nincs érték javaslat.
+  </p>
+
+</div>

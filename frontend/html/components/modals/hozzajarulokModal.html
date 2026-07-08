@@ -1,0 +1,24 @@
+<!-- frontend/html/components/modals/hozzajarulokModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Az egyes hozzájárulókat (név + pont) a HozzajarulokModal.js építi fel,
+     hozzájárulási (pont szerint csökkenő) sorrendben, lapozva. -->
+<div class="hozzajarulok-modal">
+
+  <!-- A hozzájárulók listája – a JS tölti fel, szélesebb helyen két hasábban -->
+  <ul class="hozzajarulok-modal__lista" id="hozzajarulok-modal-lista"></ul>
+
+  <!-- Üres állapot – csak akkor látszik, ha egy hozzájáruló sincs -->
+  <p class="hozzajarulok-modal__ures" id="hozzajarulok-modal-ures" hidden>
+    Erre az entitásra még senki nem rendelt tudatpontot.
+  </p>
+
+  <!-- „Több betöltése" – csak akkor látszik, ha van még betöltendő -->
+  <button
+    type="button"
+    class="hozzajarulok-modal__tobb-gomb"
+    id="hozzajarulok-modal-tobb-gomb"
+    hidden
+  ></button>
+
+</div>

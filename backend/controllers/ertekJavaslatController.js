@@ -407,11 +407,47 @@ class ErtekJavaslatController {
         });
       } else {
         // Általános szerverhiba - 500 Internal Server Error
-        return res.status(500).json({ 
+        return res.status(500).json({
           message: 'Szerverhiba a részletek lekérésekor',
-          hiba: error.message 
+          hiba: error.message
         });
       }
+    }
+  }
+
+  // ===================================
+  // ÉRTÉK JAVASLATOK ELOSZLÁSA
+  // ===================================
+
+  // ----- TARTALOM ÉRTÉK-ELOSZLÁSA -----
+  /**
+   * GET /api/ertekJavaslat/eloszlas/:tartalomId
+   * Egy tartalom érték javaslatainak eloszlása mind a négy küszöbre
+   * (érték → hány javaslat). Nyilvános.
+   */
+  async ertekEloszlasLekerese(req, res) {
+    try {
+      console.log('ertekEloszlasLekerese endpoint hívás');
+
+      const { tartalomId } = req.params;
+      if (!tartalomId) {
+        return res.status(400).json({ message: 'A tartalom ID megadása kötelező' });
+      }
+
+      const eloszlas = await ertekSzamitasService.ertekEloszlasLekerese(tartalomId);
+
+      return res.status(200).json(eloszlas);
+
+    } catch (error) {
+      console.error('Érték-eloszlás lekérési hiba:', error.message);
+
+      if (error.message.includes('nem található')) {
+        return res.status(404).json({ message: error.message });
+      }
+      return res.status(500).json({
+        message: 'Szerverhiba az érték-eloszlás lekérésekor',
+        hiba: error.message
+      });
     }
   }
 

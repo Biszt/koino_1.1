@@ -33,6 +33,14 @@ router.get(
   ertekJavaslatController.aktualisErtekekLekerese
 );
 
+// ----- TARTALOM ÉRTÉK-ELOSZLÁSA -----
+// GET /api/ertekJavaslat/eloszlas/:tartalomId
+// Nyilvános endpoint - bárki lekérheti (érték → hány javaslat, mind a 4 küszöbre)
+router.get(
+  '/ertekJavaslat/eloszlas/:tartalomId',
+  ertekJavaslatController.ertekEloszlasLekerese
+);
+
 // ----- SAJÁT ÉRTÉK JAVASLAT LEKÉRÉSE -----
 // GET /api/ertekJavaslat/sajat/:tartalomId
 // Védett endpoint - authentikáció szükséges

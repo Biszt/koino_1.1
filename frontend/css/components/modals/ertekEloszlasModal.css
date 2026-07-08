@@ -1,0 +1,62 @@
+/* frontend/css/components/modals/ertekEloszlasModal.css */
+
+/* Egy küszöb érték-javaslatainak eloszlása (érték → hány javaslat),
+   vízszintes sávokkal szemléltetve. A standard modal-vázra épül. */
+
+/* ===== ÖSSZEGZÉS ===== */
+.ertek-eloszlas-modal__osszegzes {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ===== A LISTA ===== */
+.ertek-eloszlas-modal__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ===== EGY SOR: érték | sáv | darab ===== */
+.ertek-eloszlas-modal__elem {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.ertek-eloszlas-modal__ertek {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A sáv háttere és a kitöltése (arányos a darabszámmal) */
+.ertek-eloszlas-modal__sav {
+  height: 8px;
+  background: var(--color-primary-highlight);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.ertek-eloszlas-modal__sav-kitolt {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+
+.ertek-eloszlas-modal__darab {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ===== ÜRES ÁLLAPOT ===== */
+.ertek-eloszlas-modal__ures {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

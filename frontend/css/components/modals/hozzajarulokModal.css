@@ -1,0 +1,72 @@
+/* frontend/css/components/modals/hozzajarulokModal.css */
+
+/* A Hozzájárulók modal a standard modal-vázra épül (Modal.js).
+   Egy entitás tudatpont-hozzájárulóit listázza (név + pont), lapozással. */
+
+/* ===== A LISTA ===== */
+.hozzajarulok-modal__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Szélesebb helyen két hasábban (mobil alatt egy hasáb marad) */
+@media (min-width: 420px) {
+  .hozzajarulok-modal__lista {
+    columns: 2;
+    column-gap: var(--space-5);
+  }
+}
+
+/* ===== EGY HOZZÁJÁRULÓ SORA (név + pont) ===== */
+.hozzajarulok-modal__elem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  /* A hasábok ne vágják ketté egy sort */
+  break-inside: avoid;
+}
+
+.hozzajarulok-modal__nev {
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.hozzajarulok-modal__pont {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ===== „TÖBB BETÖLTÉSE" GOMB ===== */
+.hozzajarulok-modal__tobb-gomb {
+  margin-top: var(--space-4);
+  width: 100%;
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.hozzajarulok-modal__tobb-gomb:hover {
+  background: var(--color-primary-highlight);
+}
+
+.hozzajarulok-modal__tobb-gomb[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ===== ÜRES ÁLLAPOT ===== */
+.hozzajarulok-modal__ures {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-2) 0;
+}

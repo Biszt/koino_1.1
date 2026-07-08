@@ -824,6 +824,53 @@ class ErtekJavaslatSzamitasService {
 
     return ertekJavaslat;
   }
+
+  // ----- ÉRTÉK JAVASLATOK ELOSZLÁSA -----
+  /**
+   * Egy tartalom érték javaslatainak eloszlása mind a négy küszöbre.
+   * A NYERS javaslatokból számol (egzakt értékek), nem a bucketelt hisztogramból,
+   * így a döntési idők is pontos másodperc-értékként jelennek meg.
+   * @param {string} tartalomId - Tartalom ID
+   * @returns {Promise<Object>} { tartalomId, osszesJavaslat, eloszlasok: { mezo: [{ertek, darab}] } }
+   */
+  async ertekEloszlasLekerese(tartalomId) {
+    console.log("=================================== ertekEloszlasLekerese:", { tartalomId });
+
+    // 1. LÉPÉS - Az összes érték javaslat lekérése a tartalomhoz
+    const javaslatok = await ErtekJavaslatRepository.findByTartalom(tartalomId);
+
+    // 2. LÉPÉS - Eloszlás számolása mind a négy mezőre (érték → darabszám)
+    const mezok = [
+      'javaslatElfogadasiKuszob',
+      'reszveteliAranyKuszob',
+      'minimumDontesiIdo',
+      'maximumDontesiIdo'
+    ];
+
+    const eloszlasok = {};
+    for (const mezo of mezok) {
+      const szamlalo = new Map();
+      for (const javaslat of javaslatok) {
+        const ertek = javaslat[mezo];
+        if (ertek === undefined || ertek === null) continue;
+        szamlalo.set(ertek, (szamlalo.get(ertek) ?? 0) + 1);
+      }
+      // Érték szerint növekvő sorrendbe rendezett tömb
+      eloszlasok[mezo] = Array.from(szamlalo.entries())
+        .map(([ertek, darab]) => ({ ertek, darab }))
+        .sort((a, b) => a.ertek - b.ertek);
+    }
+
+    console.log("<<<<<<<<<<<<<<<<<<<<<<<<< ertekEloszlasLekerese", {
+      osszesJavaslat: javaslatok.length
+    });
+
+    return {
+      tartalomId,
+      osszesJavaslat: javaslatok.length,
+      eloszlasok
+    };
+  }
 }
 
 // ===================================

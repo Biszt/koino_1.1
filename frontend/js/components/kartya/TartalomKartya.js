@@ -5,6 +5,7 @@ import Kartya from './Kartya.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
+import ReszletekModal from '../modals/ReszletekModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
@@ -196,6 +197,33 @@ class TartalomKartya extends Kartya {
     console.log('TartalomKartya.destroy - VÉGE');
   }
 
+  // ----- RÉSZLETES ADATOK -----
+  // Megnyitja a közös ReszletekModal-t erre a tartalomra.
+  // A modal maga kéri le a /reszletek adatokat és jeleníti meg őket.
+  async _reszletesAdatok(entitas) {
+    console.log('TartalomKartya._reszletesAdatok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const reszletekModal = new ReszletekModal(this.modalKontenerAzon, {
+      entitas,
+      token: this.token,
+      // Ha a szövegben entitás-hivatkozásra koppintanak, a paklit oda navigáljuk
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        if (typeof this.onKivalasztas === 'function') {
+          this.onKivalasztas(entitasId, entitasTipus);
+        }
+      }
+    });
+
+    await reszletekModal.init();
+    await reszletekModal.megnyitas();
+
+    console.log('TartalomKartya._reszletesAdatok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // Változatlan
   _hamburgerOpciok(entitas) {
@@ -207,14 +235,21 @@ class TartalomKartya extends Kartya {
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
       {
-        ikon:     '✏️',
-        felirat:  'Új tartalom létrehozása ebből',
-        akcio:    () => this._ujTartalomLetrehozasa(entitas)
+        ikon:           '✏️',
+        felirat:        'Új tartalom létrehozása ebből',
+        // Ágaztatás: az új tartalom ebből az entitásból jön létre → tudatpont kell rá
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._ujTartalomLetrehozasa(entitas)
       },
       {
-        ikon:     '🌿',
-        felirat:  'Javaslat létrehozása',
-        akcio:    () => this._javaslatLetrehozasa(entitas)
+        ikon:           '🌿',
+        felirat:        'Javaslat létrehozása',
+        // Csak akkor aktív, ha az eembernek van tudatpontja az entitáson.
+        // A menü megnyitásakor ellenőrzi a Kartya alaposztály (backend hívás).
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._javaslatLetrehozasa(entitas)
       },
       {
         ikon:      '🌟',
@@ -223,10 +258,10 @@ class TartalomKartya extends Kartya {
         akcio:     () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:      '🚧',
-        felirat:   'Részletes adatok',
+        ikon:       '📄',
+        felirat:    'Részletes adatok',
         elvalaszto: true,
-        akcio:     () => fejlesztesreVarMegjelenitese('Részletes adatok', this.modalKontenerAzon)
+        akcio:      () => this._reszletesAdatok(entitas)
       },
       {
         ikon:     '🚧',

@@ -5,6 +5,14 @@
 // egyszerű fetch() – nem kell auth token, helyi fájl
 // (nincs import szükséges)
 
+// ===== NYITOTT MODÁLOK VERME =====
+// Modul-szintű verem: minden éppen nyitott Modal példány ide kerül a megnyitáskor,
+// és bezáráskor kikerül. Erre azért van szükség, mert BEÁGYAZOTT modálnál (pl. a
+// Részletek modal fölött a Hozzájárulók al-modal) minden példány SAJÁT ESC-figyelőt
+// tesz a document-re. ESC lenyomásakor így mindegyik figyelő lefutna, és MINDKÉT
+// modal bezáródna. A verem tetején lévő (legfelső) modal az „aktív" – csak az záródjon.
+const nyitottModalVerem = [];
+
 // ===== MODAL OSZTÁLY =====
 // Általános modal alap – minden specifikus modal erre épül.
 // A HTML váz betöltése: frontend/html/components/modals/modal.html
@@ -239,6 +247,12 @@ async _templateBetoltese(kontener) {
 
     this.nyitottE = true;
 
+    // Felvesszük a nyitott modálok vermének tetejére (ez lesz az „aktív" modal).
+    // Csak akkor, ha még nincs benne – kettős megnyitás ellen véd.
+    if (!nyitottModalVerem.includes(this)) {
+      nyitottModalVerem.push(this);
+    }
+
     // Gomb eseményfigyelők bekötése
     this._gombEsemenyekBekotese();
 
@@ -268,8 +282,22 @@ async _templateBetoltese(kontener) {
     // Állapot frissítése
     this.nyitottE = false;
 
+    // Kivesszük a nyitott modálok verméből (bárhol is van benne)
+    const veremIndex = nyitottModalVerem.indexOf(this);
+    if (veremIndex !== -1) {
+      nyitottModalVerem.splice(veremIndex, 1);
+    }
+
     // Betöltési állapot visszaállítása bezáráskor – biztonság kedvéért
     this.betoltesbenE = false;
+
+    // Akadálymentesség: ha a fókusz a panelen belül van (pl. a bezáró vagy egy
+    // lábléc gombon), ELŐBB elvesszük a fókuszt. Különben az aria-hidden="true"
+    // egy fókuszált elem ősére kerülne, amit a böngésző hibával blokkol
+    // (WAI-ARIA szabály: fókuszált elem nem rejthető el segítő technológia elől).
+    if (this.panel.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
 
     // Akadálymentesség: elrejtés képernyőolvasók elől
     this.panel.setAttribute('aria-hidden', 'true');
@@ -397,7 +425,11 @@ async _templateBetoltese(kontener) {
   // ESC lenyomásakor bezárja a modalt – de betöltés alatt nem.
   // @param {KeyboardEvent} esemeny
   _billentyuFigyelo(esemeny) {
-    if (esemeny.key === 'Escape' && this.nyitottE && !this.betoltesbenE) {
+    // Csak a verem TETEJÉN lévő (legfelső, aktív) modal reagáljon az ESC-re.
+    // Így beágyazott modálnál egy ESC csak a felső al-modalt zárja, a szülőt nem.
+    const legfelsoModal = nyitottModalVerem[nyitottModalVerem.length - 1];
+
+    if (esemeny.key === 'Escape' && this.nyitottE && !this.betoltesbenE && legfelsoModal === this) {
       console.log('Modal._billentyuFigyelo - ESC lenyomva, modal bezárása');
       this.bezaras();
     }
