@@ -341,7 +341,10 @@ async findTestverek(szuloId, kizartEntitasId, limit = 100) {
         szuloId:   szuloId,
         entitasId: { $ne: kizartEntitasId }
     })
-        .sort({ hierarchikusOsszesPont: -1 })
+        // Elsődleges rendezés: hierarchikus összpont CSÖKKENŐ.
+        // Döntetlennél (azonos pont) a KORÁBBAN létrehozott entitás kerül előrébb
+        // (letrehozva NÖVEKVŐ) – így a testvér-sorrend determinisztikus, nem ugrál.
+        .sort({ hierarchikusOsszesPont: -1, letrehozva: 1 })
         .limit(limit)
         .lean();
 

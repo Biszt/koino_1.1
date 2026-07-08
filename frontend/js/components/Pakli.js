@@ -542,20 +542,37 @@ async testverValtasa(irany) {
 
   const aktivPakli = this.allapot.paklikEsTestverek[kulcs]?.pakli ?? [];
   const aktivElem = aktivPakli.find(e => e.entitasId.toString() === kulcs);
-  const aktivPont = aktivElem?.hierarchikusOsszesPont ?? 0;
-
-  let celTestver = null;
-  if (irany === 'kovetkezo') {
-    celTestver = testverek.find(t => t.hierarchikusOsszesPont < aktivPont) ?? null;
-  } else {
-    const nagyobbak = testverek.filter(t => t.hierarchikusOsszesPont > aktivPont);
-    celTestver = nagyobbak.length > 0 ? nagyobbak[nagyobbak.length - 1] : null;
-  }
-
-  if (!celTestver) {
-    console.log('Pakli.testverValtasa - VÉGE: nincs cél testvér, elértük a sor végét');
+  if (!aktivElem) {
+    console.log('Pakli.testverValtasa - VÉGE: az aktív elem nem található a pakliban');
     return;
   }
+
+  // A teljes testvér-sorrend előállítása – az AKTÍV elemmel EGYÜTT –, hogy
+  // pozíció szerint (index ± 1) tudjunk lépni. A korábbi pont-összehasonlítás
+  // (< / >) az azonos pontú testvéreket teljesen átugrotta; ez a hiba ezzel szűnik meg.
+  // Rendezés: hierarchikus pont CSÖKKENŐ; döntetlennél letrehozva NÖVEKVŐ
+  // (régebbi entitás előrébb); végső, determinisztikus döntő az entitasId,
+  // hogy a sorrend soha ne „ugráljon".
+  const teljesSor = [aktivElem, ...testverek].sort((a, b) => {
+    const pontKulonbseg = (b.hierarchikusOsszesPont ?? 0) - (a.hierarchikusOsszesPont ?? 0);
+    if (pontKulonbseg !== 0) return pontKulonbseg;
+    const idoKulonbseg = new Date(a.letrehozva ?? 0) - new Date(b.letrehozva ?? 0);
+    if (idoKulonbseg !== 0) return idoKulonbseg;
+    return a.entitasId.toString().localeCompare(b.entitasId.toString());
+  });
+
+  // Az aktív elem helye a teljes sorban, majd lépés a kívánt irányba.
+  // 'kovetkezo' = lejjebb, alacsonyabb pont felé (index + 1);
+  // 'elozo'     = feljebb, magasabb pont felé (index - 1).
+  const aktivIndex = teljesSor.findIndex(e => e.entitasId.toString() === kulcs);
+  const celIndex   = irany === 'kovetkezo' ? aktivIndex + 1 : aktivIndex - 1;
+
+  if (celIndex < 0 || celIndex >= teljesSor.length) {
+    console.log('Pakli.testverValtasa - VÉGE: elértük a sor végét', { irany });
+    return;
+  }
+
+  const celTestver = teljesSor[celIndex];
 
   const celId = celTestver.entitasId.toString();
 

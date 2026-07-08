@@ -131,6 +131,7 @@ async testverekOsszegyujtese(szuloId, kivalasztottEntitasId, melysegiSzint) {
     entitasId:              allokacio.entitasId,
     entitasTipus:           allokacio.entitasTipus,
     hierarchikusOsszesPont: allokacio.hierarchikusOsszesPont,
+    letrehozva:             allokacio.letrehozva, // Döntetlen pontnál a testvér-sorrendhez
     melysegiSzint:          melysegiSzint,
     szuloId:                szuloId ?? null // A közös szülő azonosítója, null ha gyökér testvérek
   }));
@@ -175,6 +176,7 @@ async felmenokOsszegyujtese(entitasId, entitasTipus) {
       entitasId: aktualis.entitasId,
       entitasTipus: aktualis.entitasTipus,
       hierarchikusOsszesPont: aktualis.hierarchikusOsszesPont,
+      letrehozva: aktualis.letrehozva, // Az allokáció létrehozási ideje – döntetlen pontnál rendez
       szuloId: aktualis.szuloId ?? null // A szülő azonosítója, null ha gyökér
     });
     // Ha nincs szülő, elértük a gyökeret - megállunk
@@ -215,6 +217,7 @@ async leszarmazottakOsszegyujtese(entitasId, entitasTipus) {
       entitasId: aktualis.entitasId,
       entitasTipus: aktualis.entitasTipus,
       hierarchikusOsszesPont: aktualis.hierarchikusOsszesPont,
+      letrehozva: aktualis.letrehozva, // Az allokáció létrehozási ideje – döntetlen pontnál rendez
       szuloId: aktualis.szuloId ?? null // A szülő azonosítója, null ha gyökér
     });
     // Legerősebb gyerek keresése - ez a bogárlogika kulcsa
@@ -349,6 +352,7 @@ async egyElemAdatainakFeltoltese(elem) {
     entitasId: elem.entitasId,
     entitasTipus: elem.entitasTipus,
     hierarchikusOsszesPont: elem.hierarchikusOsszesPont,
+    letrehozva: elem.letrehozva ?? null, // Döntetlen pontnál a testvér-sorrendhez (Pakli.js)
     szuloId: elem.szuloId ?? null, // A szülő azonosítója, null ha gyökér
     sajatTudatpont,
     adatok
