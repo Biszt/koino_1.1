@@ -107,6 +107,14 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 ---
 
+## Stílus-irányelvek
+
+Az új modalok és menük stílusa a **standard vonalat** kövesse:
+- **Irányadó:** a tartalom (entitás) létrehozása modal (`TartalomModal`), a fő hamburger menü, és a kártyák hamburger menüi.
+- **Kivétel (szándékosan eltér):** a javaslat-típus választó menü és a `JavaslatModal` — ezt NE vegyük mintának új felületekhez.
+
+---
+
 ## Nyitott kérdések
 
 1. A menühálózat később bővül — a bővítéseket ebbe a dokumentumba vezetjük át.
