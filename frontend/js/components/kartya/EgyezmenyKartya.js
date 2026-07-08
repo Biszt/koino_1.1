@@ -187,9 +187,12 @@ class EgyezmenyKartya extends Kartya {
     // A korábbi „Előzmény megtekintése" pont a terv szerint törölve.
     const opciok = [
       {
-        ikon:    '🚧',
-        felirat: 'Új tartalom létrehozása ebből',
-        akcio:   () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
+        ikon:           '🚧',
+        felirat:        'Új tartalom létrehozása ebből',
+        // Ágaztatás ebből az entitásból → tudatpont kell rá
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
       },
       {
         ikon:    '🚧',

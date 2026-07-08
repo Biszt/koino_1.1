@@ -185,6 +185,20 @@
   background-color: rgba(255, 255, 255, 0.18);
 }
 
+/* ===== TILTOTT MENÜPONT ===== */
+/* Jogosultság hiánya (nincs tudatpont az entitáson) → halvány, nem kattintható.
+   A magyarázatot a title tipp adja (asztali gépen hoverre látszik). */
+.hamburger-menu-pont--tiltva {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Tiltott pontnál nincs hover/aktív visszajelzés – ne tűnjön kattinthatónak */
+.hamburger-menu-pont--tiltva:hover,
+.hamburger-menu-pont--tiltva:active {
+  background-color: transparent;
+}
+
 /* ===== MENÜPONT IKON ===== */
 /* Az emoji karakter tartója – fix szélesség az igazításhoz */
 .hamburger-menu-pont__ikon {

@@ -205,19 +205,29 @@ class KategoriaKartya extends Kartya {
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
       {
-        ikon:     '🚧',
-        felirat:  'Új tartalom létrehozása ebből',
-        akcio:    () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből', this.modalKontenerAzon)
+        ikon:           '🚧',
+        felirat:        'Új tartalom létrehozása ebből',
+        // Ágaztatás ebből az entitásból → tudatpont kell rá
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből', this.modalKontenerAzon)
       },
       {
-        ikon:     '🚧',
-        felirat:  'Új kategória létrehozása ebből',
-        akcio:    () => fejlesztesreVarMegjelenitese('Új kategória létrehozása ebből', this.modalKontenerAzon)
+        ikon:           '🚧',
+        felirat:        'Új kategória létrehozása ebből',
+        // Alkategória ebből a kategóriából → tudatpont kell rá
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => fejlesztesreVarMegjelenitese('Új kategória létrehozása ebből', this.modalKontenerAzon)
       },
       {
-        ikon:     '🌿',
-        felirat:  'Javaslat létrehozása',
-        akcio:    () => this._javaslatLetrehozasa(entitas)
+        ikon:           '🌿',
+        felirat:        'Javaslat létrehozása',
+        // Csak akkor aktív, ha az eembernek van tudatpontja az entitáson.
+        // A menü megnyitásakor ellenőrzi a Kartya alaposztály (backend hívás).
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._javaslatLetrehozasa(entitas)
       },
       {
         ikon:      '🌟',

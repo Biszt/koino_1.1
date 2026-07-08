@@ -2,6 +2,8 @@
 
 // --- IMPORTOK ---
 import HamburgerMenu from '../HamburgerMenu.js'; // Hamburger menü komponens
+import { apiGet } from '../../utils/apiHelper.js';        // Backend GET – tudatpont-ellenőrzéshez
+import { tokenLekerese } from '../../utils/authHelper.js'; // A bejelentkezett eember tokenje
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -84,6 +86,12 @@ async init() {
   this.hamburgerMenu = new HamburgerMenu(hamburgerKontener, opciok);
   await this.hamburgerMenu.init();
 
+  // Jogosultság: a menü MINDEN megnyitásakor frissítjük a tudatpont-függő
+  // menüpontokat (aktív/inaktív) a eember entitáson lévő pontja alapján.
+  // A HamburgerMenu a megnyitas()-ban hívja ezt a callbacket – így az esemény-
+  // sorrendtől függetlenül, megbízhatóan lefut (a gomb click-figyelője nem lenne az).
+  this.hamburgerMenu.onMegnyitas = () => this._tudatpontFuggoMenuFrissitese();
+
   // 6. LÉPÉS – Hamburger gomb megnyitás esemény bekötése
   // A hamburger gomb megnyitásakor – mielőtt a panel megjelenik –
   // értesítjük a Pakli.js-t, hogy csak CSS szinten váltsa ki a kiválasztott állapotot,
@@ -135,6 +143,41 @@ async init() {
 
   console.log('Kartya.init - VÉGE', { entitasId: this.entitas?.entitasId });
   return this.domElem;
+}
+
+// ----- TUDATPONT-FÜGGŐ MENÜPONTOK FRISSÍTÉSE (JOGOSULTSÁG) -----
+// A hamburger menü megnyitásakor fut. Lekérdezi, van-e a bejelentkezett
+// eembernek tudatpontja EZEN az entitáson, és a tudatpontFuggo menüpontokat
+// aszerint teszi aktívvá / inaktívvá. Ha nincs ilyen menüpont, nem hív backendet.
+// FONTOS: ez csak felületi jelzés – a tényleges védelmet a backend külön kikényszeríti.
+async _tudatpontFuggoMenuFrissitese() {
+  // Nincs jogosultsághoz kötött menüpont → nincs teendő, nincs felesleges hívás
+  if (!this.hamburgerMenu || !this.hamburgerMenu.vanTudatpontFuggoPont()) {
+    return;
+  }
+
+  const entitasTipus = this.entitas?.entitasTipus;
+  const entitasId    = this.entitas?.entitasId;
+  if (!entitasTipus || !entitasId) return;
+
+  console.log('Kartya._tudatpontFuggoMenuFrissitese - KEZDÉS', { entitasTipus, entitasId });
+
+  try {
+    const token  = tokenLekerese();
+    const valasz = await apiGet(`tudatpont/entitas/${entitasTipus}/${entitasId}`, token);
+
+    // eemberHozzajarulas = a bejelentkezett eember SAJÁT pontja az entitáson
+    // (a tudatponthozzarendeles.tudatPontok értéke), nem az entitás összpontja
+    const sajatPont = valasz?.data?.eemberHozzajarulas ?? 0;
+
+    // Nincs saját pont → a tudatpontFuggo menüpontok inaktívak
+    this.hamburgerMenu.tudatpontFuggoTiltasBeallitasa(sajatPont <= 0);
+
+    console.log('Kartya._tudatpontFuggoMenuFrissitese - VÉGE', { sajatPont });
+  } catch (hiba) {
+    // Hiba esetén NEM tiltunk (a backend úgyis véd) – a menü használható marad
+    console.error('Kartya._tudatpontFuggoMenuFrissitese - HIBA', hiba.message);
+  }
 }
 
 // ----- BODY FRISSÍTÉSE -----

@@ -45,6 +45,11 @@ class HamburgerMenu {
     // Nyitott állapot követése
     this.nyitottE = false;
 
+    // Opcionális callback: a menü megnyitásakor fut. A Kartya köti be, hogy a
+    // tudatpont-függő menüpontokat frissítse. Megbízhatóbb, mint a gomb saját
+    // click-figyelője, mert az esemény-sorrendtől független (a megnyitas() hívja).
+    this.onMegnyitas = null;
+
     console.log('HamburgerMenu.constructor - VÉGE');
   }
 
@@ -141,6 +146,16 @@ class HamburgerMenu {
       pont.type          = 'button';
       pont.dataset.index = index;
 
+      // Tudatpont-jogosultság: a tiltott pont halványan, „nem kattintható"
+      // állapotban jelenik meg. A tiltvaIndok tipp (title) magyarázza, miért.
+      // Nem a `disabled` attribútumot használjuk, hogy a title tipp működjön,
+      // és a kattintást mi magunk hagyjuk figyelmen kívül (lásd eseménykötés).
+      if (opcio.tiltva) {
+        pont.classList.add('hamburger-menu-pont--tiltva');
+        pont.setAttribute('aria-disabled', 'true');
+        if (opcio.tiltvaIndok) pont.title = opcio.tiltvaIndok;
+      }
+
       const ikonSpan = document.createElement('span');
       ikonSpan.className   = 'hamburger-menu-pont__ikon';
       ikonSpan.textContent = opcio.ikon;
@@ -170,6 +185,16 @@ class HamburgerMenu {
       pont.addEventListener('click', () => {
         const index = parseInt(pont.dataset.index, 10);
         const opcio = this.opciok[index];
+
+        // Tiltott (jogosultság hiánya miatt inaktív) pont: nem hívjuk az akciót,
+        // és a menü nyitva marad, hogy a felhasználó lássa a magyarázó tippet.
+        if (opcio?.tiltva) {
+          console.log('HamburgerMenu - tiltott menüpont kattintás (figyelmen kívül hagyva)', {
+            index,
+            felirat: opcio?.felirat
+          });
+          return;
+        }
 
         console.log('HamburgerMenu - menüpont kattintás', {
           index,
@@ -209,6 +234,12 @@ class HamburgerMenu {
 
     this.panel.setAttribute('aria-hidden', 'false');
     this.panel.focus();
+
+    // Megnyitás callback – pl. a tudatpont-függő menüpontok frissítése (jogosultság).
+    // A menü megjelenése után hívjuk, hogy a DOM már biztosan kész legyen.
+    if (typeof this.onMegnyitas === 'function') {
+      this.onMegnyitas();
+    }
 
     console.log('HamburgerMenu.megnyitas - VÉGE');
   }
@@ -252,6 +283,46 @@ class HamburgerMenu {
     }
 
     console.log('HamburgerMenu.valtas - VÉGE', { nyitottE: this.nyitottE });
+  }
+
+  // ===== VAN-E TUDATPONT-FÜGGŐ MENÜPONT =====
+  // Igaz, ha legalább egy opció tudatpontFuggo. A Kartya alaposztály ez alapján
+  // dönti el, kell-e egyáltalán jogosultság-ellenőrzést futtatni a menü megnyitásakor.
+  // @returns {boolean}
+  vanTudatpontFuggoPont() {
+    return this.opciok.some((opcio) => opcio?.tudatpontFuggo);
+  }
+
+  // ===== TUDATPONT-FÜGGŐ PONTOK TILTÁSÁNAK BEÁLLÍTÁSA =====
+  // A menü megnyitásakor hívja a Kartya alaposztály, miután lekérdezte, van-e
+  // az eembernek tudatpontja az entitáson. A tudatpontFuggo pontokat ez alapján
+  // teszi inaktívvá vagy aktívvá (halvány + nem kattintható + magyarázó tipp).
+  // @param {boolean} tiltva - true: nincs tudatpont → inaktív | false: aktív
+  tudatpontFuggoTiltasBeallitasa(tiltva) {
+    console.log('HamburgerMenu.tudatpontFuggoTiltasBeallitasa - KEZDÉS', { tiltva });
+
+    const kontener = this.kontenerElem ?? document.getElementById(this.kontenerAzonosito);
+    const pontElemek = kontener?.querySelectorAll('.hamburger-menu-pont');
+
+    pontElemek?.forEach((pontElem) => {
+      const index = parseInt(pontElem.dataset.index, 10);
+      const opcio = this.opciok[index];
+      if (!opcio?.tudatpontFuggo) return;
+
+      // Az opció tiltva mezőjét is állítjuk: a kattintás-kezelő ezt nézi
+      opcio.tiltva = tiltva;
+
+      pontElem.classList.toggle('hamburger-menu-pont--tiltva', tiltva);
+      pontElem.setAttribute('aria-disabled', tiltva ? 'true' : 'false');
+
+      if (tiltva && opcio.tiltvaIndok) {
+        pontElem.title = opcio.tiltvaIndok;
+      } else {
+        pontElem.removeAttribute('title');
+      }
+    });
+
+    console.log('HamburgerMenu.tudatpontFuggoTiltasBeallitasa - VÉGE', { tiltva });
   }
 }
 

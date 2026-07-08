@@ -288,9 +288,13 @@ class JavaslatKartya extends Kartya {
     // A korábbi „Törlés" pont a terv szerint törölve (a törlés javaslat útján történik).
     const opciok = [
       {
-        ikon:    '🗳️',
-        felirat: 'Szavazat leadása',
-        akcio:   () => this._szavazatLeadasa(entitas)
+        ikon:           '🗳️',
+        felirat:        'Szavazat leadása',
+        // Csak akkor aktív, ha az eembernek van tudatpontja az entitáson.
+        // A menü megnyitásakor ellenőrzi a Kartya alaposztály (backend hívás).
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._szavazatLeadasa(entitas)
       },
       {
         ikon:    '🚧',
