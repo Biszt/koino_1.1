@@ -1,0 +1,44 @@
+<!-- frontend/html/components/modals/szavazatModal.html -->
+
+<!-- ===== SZAVAZAT MODAL TARTALOM ===== -->
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel. -->
+<div class="szavazat-modal">
+
+  <!-- Bevezető szöveg -->
+  <p class="szavazat-modal__bevezeto">
+    Hogyan döntesz erről a javaslatról? A szavazatodat bármikor megváltoztathatod.
+  </p>
+
+  <!-- ===== SZAVAZÓ GOMBOK ===== -->
+  <!-- Mindegyik data-szavazat attribútumot kap, a JS ezzel azonosítja. -->
+  <!-- A korábbi szavazatot a JS emeli ki a --kivalasztott módosítóval. -->
+  <div class="szavazat-modal__gombok">
+
+    <button class="szavazat-modal__gomb szavazat-modal__gomb--tamogat" type="button" data-szavazat="Tamogat">
+      <span class="szavazat-modal__gomb-ikon" aria-hidden="true">✅</span>
+      <span class="szavazat-modal__gomb-felirat">Támogatom</span>
+    </button>
+
+    <button class="szavazat-modal__gomb szavazat-modal__gomb--ellenez" type="button" data-szavazat="Ellenez">
+      <span class="szavazat-modal__gomb-ikon" aria-hidden="true">❌</span>
+      <span class="szavazat-modal__gomb-felirat">Ellenzem</span>
+    </button>
+
+    <button class="szavazat-modal__gomb szavazat-modal__gomb--tartozkodik" type="button" data-szavazat="Tartozkodik">
+      <span class="szavazat-modal__gomb-ikon" aria-hidden="true">🤷</span>
+      <span class="szavazat-modal__gomb-felirat">Tartózkodom</span>
+    </button>
+
+  </div>
+
+  <!-- ===== SIKERÜZENET SÁV ===== -->
+  <!-- Alapból üres és rejtett; a JS tölti fel szavazás/visszavonás után. -->
+  <div class="szavazat-modal__uzenet" aria-live="polite" hidden></div>
+
+  <!-- ===== VISSZAVONÁS ===== -->
+  <!-- Csak akkor látható, ha az eembernek van leadott szavazata (JS kezeli). -->
+  <button class="szavazat-modal__visszavonas-gomb" type="button" hidden>
+    Szavazat visszavonása
+  </button>
+
+</div>

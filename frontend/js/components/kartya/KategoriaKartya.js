@@ -4,6 +4,7 @@
 import Kartya from './Kartya.js';
 import { API_ALAP_URL } from '../../utils/apiHelper.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
+import TudatpontModal from '../modals/TudatpontModal.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
@@ -219,10 +220,10 @@ class KategoriaKartya extends Kartya {
         akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:      '🚧',
+        ikon:      '🌟',
         felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:     () => fejlesztesreVarMegjelenitese('Tudatpont módosítás', this.modalKontenerAzon)
+        akcio:     () => this._tudatpontModositas(entitas)
       },
       {
         ikon:      '🚧',
@@ -276,6 +277,32 @@ class KategoriaKartya extends Kartya {
     javaslatModal.megnyitas();
 
     console.log('KategoriaKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
+  // ----- TUDATPONT MÓDOSÍTÁS -----
+  // Megnyitja a TudatpontModal-t erre a kategóriára.
+  async _tudatpontModositas(entitas) {
+    console.log('KategoriaKartya._tudatpontModositas - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: entitas.entitasTipus ?? 'Kategoria',
+        adatok:       entitas.adatok
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tudatpontModal.init();
+    await tudatpontModal.megnyitas();
+
+    console.log('KategoriaKartya._tudatpontModositas - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }

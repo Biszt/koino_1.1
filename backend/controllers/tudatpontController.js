@@ -26,8 +26,9 @@ class TudatpontController {
       const eemberId = req.user.id;
 
       // 2. LÉPÉS - Adatok kiolvasása request body-ból
-      // Frontend küldi: { entitasId, entitasTipus, pontok }
-      const { entitasId, entitasTipus, pontok } = req.body;
+      // Frontend küldi: { entitasId, entitasTipus, pontok, felmenoketAutomatikusan? }
+      // felmenoketAutomatikusan: ha true, a hiányzó felmenőkre 1-1 pontot tesz
+      const { entitasId, entitasTipus, pontok, felmenoketAutomatikusan } = req.body;
 
       // 3. LÉPÉS - Kötelező mezők validálása
       if (!entitasId || !entitasTipus || pontok === undefined) {
@@ -53,13 +54,15 @@ class TudatpontController {
         });
       }
 
-      // 6. LÉPÉS - Service hívás - üzleti logika végrehajtása
-      // Service validál, számol, ment adatbázisba (transaction-nel)
-      const eredmeny = await TudatpontService.tudatpontHozzarendelese(
+      // 6. LÉPÉS - Service hívás - felhasználói belépési pont (felmenő-ellenőrzéssel)
+      // A felmenő-szabályt itt kényszerítjük ki: ha hiányzik pont valamelyik
+      // felmenőn, és nincs felmenoketAutomatikusan flag, HIANYZO_FELMENOK hibát kapunk.
+      const eredmeny = await TudatpontService.felhasznaloTudatpontHozzarendelese(
         eemberId,
         entitasId,
         entitasTipus,
-        pontok
+        pontok,
+        felmenoketAutomatikusan === true
       );
 
       // 7. LÉPÉS - Sikeres válasz küldése
@@ -75,11 +78,22 @@ class TudatpontController {
       // Ha bármi hiba történik
       console.error('Hiba a tudatpontok hozzárendelése során:', error);
 
+      // 409 Conflict - Hiányzó tudatpont a felmenőkön
+      // A frontend ebből a listából ajánlja fel az automatikus kitöltést.
+      if (error.kod === 'HIANYZO_FELMENOK') {
+        return res.status(409).json({
+          success: false,
+          kod: 'HIANYZO_FELMENOK',
+          message: error.message,
+          hianyzoFelmenok: error.hianyzoFelmenok
+        });
+      }
+
       // 400 Bad Request - Kliens oldali hiba (pl. nincs elég tudatpont)
-      if (error.message === 'Nincs elég tudatpont a művelet végrehajtásához') {
+      if (error.message.includes('Nincs elég tudatpont')) {
         return res.status(400).json({
           success: false,
-          message: 'Nincs elég tudatpont a művelet végrehajtásához'
+          message: error.message
         });
       }
 
@@ -356,6 +370,58 @@ class TudatpontController {
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a tudatpontok visszaosztása során',
+        error: error.message
+      });
+    }
+  }
+
+  // ============================================================
+  // FELMENŐ-SZABÁLY FELMÉRÉSE (a tudatpont módosítás megnyitásakor)
+  // ============================================================
+
+  // ----- HIÁNYZÓ FELMENŐK FELMÉRÉSE -----
+  // Végigjárja az entitás szülőláncát, és visszaadja azokat a felmenőket,
+  // amelyeken a bejelentkezett eembernek nincs tudatpontja.
+  // Endpoint: GET /api/tudatpont/hianyzo-felmenok/:entitasTipus/:entitasId
+  // @param {Object} req - Express request objektum
+  // @param {Object} res - Express response objektum
+  async hianyzoFelmenokLekerese(req, res) {
+    try {
+      // 1. LÉPÉS - eEmber ID kiolvasása JWT token-ből
+      const eemberId = req.user.id;
+
+      // 2. LÉPÉS - Entitás azonosítók kiolvasása URL paraméterekből
+      const { entitasTipus, entitasId } = req.params;
+
+      // 3. LÉPÉS - Paraméterek validálása
+      if (!entitasId || !entitasTipus) {
+        return res.status(400).json({
+          success: false,
+          message: 'Hiányzó kötelező paraméterek: entitasId, entitasTipus'
+        });
+      }
+
+      // 4. LÉPÉS - Service hívás - felmenők felmérése
+      const eredmeny = await TudatpontService.hianyzoFelmenokFelmerese(
+        eemberId,
+        entitasId,
+        entitasTipus
+      );
+
+      // 5. LÉPÉS - Sikeres válasz küldése
+      res.status(200).json({
+        success: true,
+        data: eredmeny
+      });
+
+    } catch (error) {
+      // ===== HIBAKEZELÉS =====
+      console.error('Hiba a hiányzó felmenők felmérése során:', error);
+
+      // 500 Internal Server Error
+      res.status(500).json({
+        success: false,
+        message: 'Szerver hiba történt a felmenők felmérése során',
         error: error.message
       });
     }

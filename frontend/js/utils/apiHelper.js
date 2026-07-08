@@ -206,6 +206,26 @@ async function apiPatch(utvonal, adatok, token = null) {
 }
 
 // ===================================
+// DELETE KÉRÉS (JSON)
+// ===================================
+// Törléshez, ahol a törlendő elemet a request body azonosítja
+// (pl. szavazat visszavonása: { javaslatId }).
+// @param {string} utvonal - pl. 'javaslat/szavazat'
+// @param {Object} adatok  - A body-ban küldendő JS objektum
+// @param {string|null} token
+async function apiDelete(utvonal, adatok, token = null) {
+  // Metódus kezdő log
+  console.log('apiHelper.apiDelete - KEZDÉS', { utvonal });
+  const eredmeny = await apiKeres(utvonal, {
+    method: 'DELETE',
+    body: JSON.stringify(adatok),
+  }, token);
+  // Metódus vég log
+  console.log('apiHelper.apiDelete - VÉGE', { utvonal });
+  return eredmeny;
+}
+
+// ===================================
 // KÉP FELTÖLTÉS
 // ===================================
 // A FeltoltesKezelo.js hívja kép beszúrásakor.
@@ -242,4 +262,4 @@ async function fajlFeltoltes(fajl, token = null) {
 // EXPORTÁLÁS
 // ===================================
 // VÁLTOZÁS: apiPostFormData és apiPatchFormData hozzáadva az exporthoz
-export { apiPost, apiPostFormData, apiGet, apiPatch, apiPatchFormData, kepFeltoltes, fajlFeltoltes };
+export { apiPost, apiPostFormData, apiGet, apiPatch, apiPatchFormData, apiDelete, kepFeltoltes, fajlFeltoltes };

@@ -60,14 +60,20 @@ router.get('/:id/szavazatok', JavaslatController.javaslatSzavazatainakLekerese);
 // NYILVÁNOS - mindenki elérheti
 router.get('/:id/statisztika', JavaslatController.szavazatokStatisztikaja);
 
+// Saját szavazat lekérése egy javaslaton
+// GET /api/javaslat/:id/sajat-szavazat
+// VÉDETT - csak bejelentkezett eemberek
+// A bejelentkezett eember szavazatát adja vissza (vagy null-t, ha még nem szavazott)
+router.get('/:id/sajat-szavazat', authMiddleware, JavaslatController.sajatSzavazatLekerese);
+
 // Szavazat leadása egy javaslatra
-// POST /api/szavazat
+// POST /api/javaslat/szavazat
 // VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId, szavazatTipus }
 router.post('/szavazat', authMiddleware, JavaslatController.szavazatLeadasa);
 
 // Szavazat visszavonása
-// DELETE /api/szavazat
+// DELETE /api/javaslat/szavazat
 // VÉDETT - csak bejelentkezett eemberek
 // Body: { javaslatId }
 router.delete('/szavazat', authMiddleware, JavaslatController.szavazatVisszavonasa);

@@ -3,6 +3,7 @@
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
+import TudatpontModal from '../modals/TudatpontModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -18,13 +19,20 @@ import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 class EgyezmenyKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  constructor(entitas, kivalasztott, onKivalasztas) {
+  // MÓDOSÍTVA: a többi kártyával azonos paraméterezés,
+  // hogy a tudatpont modal innen is elérhető legyen (token + modal konténer)
+  constructor(entitas, kivalasztott, onKivalasztas, token, modalKontenerAzon, onUjratoltes, onHamburgerMegnyitas) {
     console.log('EgyezmenyKartya.constructor - KEZDÉS', {
       entitasId:     entitas?.entitasId,
       javaslatTipus: entitas?.adatok?.javaslatTipus
     });
 
-    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas));
+    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas), onHamburgerMegnyitas);
+
+    // A tudatpont modalhoz szükséges adatok
+    this.token             = token;
+    this.modalKontenerAzon = modalKontenerAzon;
+    this.onUjratoltes      = onUjratoltes;
 
     // =============================================
     // ÚJ - Megjelenítő példány referencia
@@ -189,10 +197,10 @@ class EgyezmenyKartya extends Kartya {
         akcio:   () => fejlesztesreVarMegjelenitese('Javaslat létrehozása')
       },
       {
-        ikon:       '🚧',
+        ikon:       '🌟',
         felirat:    'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpont módosítás')
+        akcio:      () => this._tudatpontModositas(entitas)
       },
       {
         ikon:       '🚧',
@@ -207,6 +215,32 @@ class EgyezmenyKartya extends Kartya {
     });
 
     return opciok;
+  }
+
+  // ----- TUDATPONT MÓDOSÍTÁS -----
+  // Megnyitja a TudatpontModal-t erre az egyezményre.
+  async _tudatpontModositas(entitas) {
+    console.log('EgyezmenyKartya._tudatpontModositas - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: entitas.entitasTipus ?? 'Egyezmeny',
+        adatok:       entitas.adatok
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tudatpontModal.init();
+    await tudatpontModal.megnyitas();
+
+    console.log('EgyezmenyKartya._tudatpontModositas - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
   }
 }
 

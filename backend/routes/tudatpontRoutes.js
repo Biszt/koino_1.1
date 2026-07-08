@@ -43,6 +43,17 @@ router.get(
   (req, res) => TudatpontController.entitasAllokaciLekerese(req, res)
 );
 
+// ----- HIÁNYZÓ FELMENŐK FELMÉRÉSE -----
+// Endpoint: GET /api/tudatpont/hianyzo-felmenok/:entitasTipus/:entitasId
+// URL paraméterek: entitasTipus, entitasId
+// Védett: Csak bejelentkezett eemberek (a saját felmenő-hiányaik)
+// A tudatpont módosítás megnyitásakor hívjuk: megmutatja, hány felmenőre kell még pont.
+router.get(
+  '/hianyzo-felmenok/:entitasTipus/:entitasId',
+  authMiddleware,
+  (req, res) => TudatpontController.hianyzoFelmenokLekerese(req, res)
+);
+
 // ============================================================
 // EMBER HOZZÁRENDELÉSEI
 // ============================================================

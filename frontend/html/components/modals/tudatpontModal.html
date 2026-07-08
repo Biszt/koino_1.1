@@ -1,0 +1,51 @@
+<!-- frontend/html/components/modals/tudatpontModal.html -->
+
+<!-- A TudatpontModal.js tölti be ezt a template-et fetch()-csel.
+     A Modal alap struktúrája (overlay, panel, fejléc, lábléc gombok) a modal.html-ben van –
+     ez csak a modal törzsének tartalmát adja meg. A standard modal-stílust követi
+     (t-modal-* osztályok), mint a TartalomModal. -->
+
+<form class="t-modal-form" id="tudatpont-modal-form" novalidate>
+
+  <!-- ── ENTITÁS MEGNEVEZÉSE ── -->
+  <!-- A JS tölti ki: melyik entitáson módosítunk tudatpontot -->
+  <p class="tudatpont-modal__entitas" id="tudatpont-entitas-nev"></p>
+
+  <!-- ── SAJÁT TUDATPONT ÉRTÉK ── -->
+  <div class="t-modal-mezo">
+    <label class="tudatpont-modal__cimke" for="tudatpont-ertek">
+      Tudatpontjaid ezen az entitáson
+    </label>
+    <input
+      type="number"
+      id="tudatpont-ertek"
+      name="ertek"
+      class="t-modal-input"
+      min="0"
+      value="0"
+      inputmode="numeric"
+      aria-label="Tudatpont érték"
+    />
+    <!-- Egyenleg tájékoztató – a JS tölti ki -->
+    <p class="tudatpont-modal__egyenleg" id="tudatpont-egyenleg"></p>
+  </div>
+
+  <!-- ── FELMENŐ FIGYELMEZTETÉS ── -->
+  <!-- Alapból rejtett. A JS mutatja meg, ha van olyan felmenő, amelyen
+       a eembernek nincs tudatpontja. -->
+  <div class="tudatpont-modal__felmeno" id="tudatpont-felmeno" hidden>
+
+    <p class="tudatpont-modal__felmeno-cim" id="tudatpont-felmeno-cim"></p>
+
+    <!-- A hiányzó felmenők listája – a JS tölti fel -->
+    <ul class="tudatpont-modal__felmeno-lista" id="tudatpont-felmeno-lista"></ul>
+
+    <!-- Kifejezett hozzájárulás az automatikus kitöltéshez -->
+    <label class="tudatpont-modal__felmeno-jovahagyas">
+      <input type="checkbox" id="tudatpont-felmeno-checkbox" />
+      <span id="tudatpont-felmeno-checkbox-felirat"></span>
+    </label>
+
+  </div>
+
+</form>

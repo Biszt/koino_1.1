@@ -3,6 +3,8 @@
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
+import SzavazatModal from '../modals/SzavazatModal.js';
+import TudatpontModal from '../modals/TudatpontModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -20,13 +22,20 @@ import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 class JavaslatKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  constructor(entitas, kivalasztott, onKivalasztas) {
+  // MÓDOSÍTVA: a többi kártyával azonos paraméterezés,
+  // hogy a szavazat modal innen is elérhető legyen (token + modal konténer)
+  constructor(entitas, kivalasztott, onKivalasztas, token, modalKontenerAzon, onUjratoltes, onHamburgerMegnyitas) {
     console.log('JavaslatKartya.constructor - KEZDÉS', {
       entitasId:     entitas?.entitasId,
       javaslatTipus: entitas?.adatok?.javaslatTipus
     });
 
-    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas));
+    super(entitas, kivalasztott, onKivalasztas, (entitas) => this._hamburgerOpciok(entitas), onHamburgerMegnyitas);
+
+    // A szavazat modalhoz szükséges adatok
+    this.token             = token;
+    this.modalKontenerAzon = modalKontenerAzon;
+    this.onUjratoltes      = onUjratoltes;
 
     // =============================================
     // ÚJ - Megjelenítő példány referencia
@@ -207,8 +216,68 @@ class JavaslatKartya extends Kartya {
     });
   }
 
+  // =============================================
+  // ÚJ - SZAVAZAT LEADÁSA
+  // =============================================
+  // Megnyitja a szavazat modalt erre a javaslatra. A modal maga kéri le
+  // a eember korábbi szavazatát, és kezeli a szavazás / visszavonás hívásokat.
+  // @param {Object} entitas - A javaslat entitása (entitasId-t innen vesszük)
+  async _szavazatLeadasa(entitas) {
+    console.log('JavaslatKartya._szavazatLeadasa - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const szavazatModal = new SzavazatModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId: entitas.entitasId,
+        adatok:    entitas.adatok
+      },
+      // Szavazás után frissítjük a paklit, hogy a kártya a helyes állapotot mutassa
+      // (az arányokat a cron frissíti kb. 1 percen belül)
+      onSiker: () => {
+        console.log('JavaslatKartya._szavazatLeadasa - onSiker: pakli újratöltése');
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await szavazatModal.init();
+    await szavazatModal.megnyitas();
+
+    console.log('JavaslatKartya._szavazatLeadasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
+  // =============================================
+  // ÚJ - TUDATPONT MÓDOSÍTÁS
+  // =============================================
+  // Megnyitja a TudatpontModal-t erre a javaslatra.
+  async _tudatpontModositas(entitas) {
+    console.log('JavaslatKartya._tudatpontModositas - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: entitas.entitasTipus ?? 'Javaslat',
+        adatok:       entitas.adatok
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tudatpontModal.init();
+    await tudatpontModal.megnyitas();
+
+    console.log('JavaslatKartya._tudatpontModositas - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
-  // Változatlan
+  // A „Szavazat leadása" pont már működik (SzavazatModal), a többi 🚧 még fejlesztésre vár.
   _hamburgerOpciok(entitas) {
     console.log('JavaslatKartya._hamburgerOpciok - KEZDÉS', {
       entitasId: entitas?.entitasId
@@ -219,9 +288,9 @@ class JavaslatKartya extends Kartya {
     // A korábbi „Törlés" pont a terv szerint törölve (a törlés javaslat útján történik).
     const opciok = [
       {
-        ikon:    '🚧',
+        ikon:    '🗳️',
         felirat: 'Szavazat leadása',
-        akcio:   () => fejlesztesreVarMegjelenitese('Szavazat leadása')
+        akcio:   () => this._szavazatLeadasa(entitas)
       },
       {
         ikon:    '🚧',
@@ -229,10 +298,10 @@ class JavaslatKartya extends Kartya {
         akcio:   () => fejlesztesreVarMegjelenitese('Új tartalom létrehozása ebből')
       },
       {
-        ikon:       '🚧',
+        ikon:       '🌟',
         felirat:    'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpont módosítás')
+        akcio:      () => this._tudatpontModositas(entitas)
       },
       {
         ikon:       '🚧',

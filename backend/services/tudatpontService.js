@@ -755,6 +755,211 @@ class TudatpontService {
 
 
   // ============================================================
+  // FELMENŐ-SZABÁLY (a tudatpont hozzárendeléshez)
+  // ============================================================
+  // Szabály: aki tudatpontot tesz egy entitásra, annak a teljes szülőláncán
+  // (a gyökérig, bármilyen típusú szülővel) legalább 1 tudatpontja kell legyen.
+  // Ha nincs, engedély után minden hiányzó felmenőre automatikusan 1-1 pont kerül.
+
+  // ----- ENTITÁS MEGJELENÍTŐ NEVÉNEK LEKÉRÉSE -----
+  /**
+   * Egy entitás emberi olvasható neve (Tartalom → cim, Kategória/TartalomTípus → nev).
+   * A felmérés ezzel tudja megnevezni a hiányzó felmenőket a felhasználónak.
+   * @param {string} entitasId
+   * @param {string} entitasTipus
+   * @returns {Promise<string>}
+   */
+  async getEntitasNev(entitasId, entitasTipus) {
+    console.log('getEntitasNev - KEZDÉS', { entitasId, entitasTipus });
+
+    let entitas = null;
+    if (entitasTipus === 'Tartalom') {
+      entitas = await TartalomRepository.findById(entitasId);
+    } else if (entitasTipus === 'Kategoria') {
+      entitas = await KategoriaRepository.findById(entitasId);
+    } else if (entitasTipus === 'TartalomTipus') {
+      entitas = await TartalomTipusRepository.findById(entitasId);
+    } else if (entitasTipus === 'Javaslat') {
+      entitas = await JavaslatRepository.findById(entitasId);
+    } else if (entitasTipus === 'Egyezmeny') {
+      entitas = await EgyezmenyRepository.findById(entitasId);
+    }
+
+    // Tartalomnál cim, Kategória/TartalomTípusnál nev; ha egyik sincs, semleges felirat
+    const nev = entitas?.cim ?? entitas?.nev ?? '(névtelen)';
+    console.log('getEntitasNev - VÉGE', { nev });
+    return nev;
+  }
+
+  // ----- HIÁNYZÓ FELMENŐK FELMÉRÉSE -----
+  /**
+   * Végigjárja egy entitás szülőláncát a gyökérig, és összegyűjti azokat a
+   * felmenőket, amelyeken a eembernek NINCS tudatpontja. A tudatpont módosítás
+   * megnyitásakor hívjuk, hogy előre lássuk, hány felmenőre kellene pont.
+   * @param {string} eemberId
+   * @param {string} entitasId
+   * @param {string} entitasTipus
+   * @returns {Promise<Object>} { felmenokSzama, hianyzoDb, hianyzoFelmenok, eemberEgyenleg, elegEgyenlegAFelmenokre }
+   */
+  async hianyzoFelmenokFelmerese(eemberId, entitasId, entitasTipus) {
+    console.log('hianyzoFelmenokFelmerese - KEZDÉS', { eemberId, entitasId, entitasTipus });
+
+    // 1. LÉPÉS - Paraméterek validálása
+    if (!eemberId || !entitasId || !entitasTipus) {
+      throw new Error('Hiányzó kötelező paraméterek');
+    }
+
+    // 2. LÉPÉS - Szülőlánc bejárása felfelé a gyökérig
+    const felmenok = [];         // a teljes lánc (tájékoztatáshoz)
+    const hianyzoFelmenok = [];  // csak amelyeken nincs a eembernek pontja
+
+    let aktualis = { entitasId, entitasTipus };
+
+    // VÉDELEM: körkörös szülő-hivatkozás (adathiba) esetén a lánc sosem érne
+    // véget — a bejárt entitásokat nyilvántartjuk, és a lépéseket is korlátozzuk
+    const bejart = new Set([entitasId.toString()]);
+    let vedelem = 0;
+
+    while (vedelem < 100) {
+      vedelem++;
+
+      const szulo = await this.getSzuloEntitas(aktualis.entitasId, aktualis.entitasTipus);
+
+      // Nincs szülő → elértük a gyökeret
+      if (!szulo || !szulo.szuloId) {
+        console.log('hianyzoFelmenokFelmerese - Elértük a gyökeret, STOP');
+        break;
+      }
+
+      // Körkörös hivatkozás → megszakítjuk
+      if (bejart.has(szulo.szuloId.toString())) {
+        console.error('hianyzoFelmenokFelmerese - KÖRKÖRÖS SZÜLŐ-HIVATKOZÁS, lánc megszakítva', {
+          korkorosSzuloId: szulo.szuloId
+        });
+        break;
+      }
+      bejart.add(szulo.szuloId.toString());
+
+      felmenok.push({ entitasId: szulo.szuloId.toString(), entitasTipus: szulo.szuloTipus });
+
+      // Van-e a eembernek pontja ezen a felmenőn?
+      const hozzajarulas = await this.eemberHozzajarulasaEntitason(
+        eemberId,
+        szulo.szuloId,
+        szulo.szuloTipus
+      );
+
+      if (!hozzajarulas.vanHozzajarulas) {
+        // Nincs pontja → hiányzó felmenő, névvel együtt gyűjtjük
+        const nev = await this.getEntitasNev(szulo.szuloId, szulo.szuloTipus);
+        hianyzoFelmenok.push({
+          entitasId: szulo.szuloId.toString(),
+          entitasTipus: szulo.szuloTipus,
+          nev
+        });
+      }
+
+      // Lépés a következő szintre (szülő → nagyszülő)
+      aktualis = { entitasId: szulo.szuloId, entitasTipus: szulo.szuloTipus };
+    }
+
+    // 3. LÉPÉS - eEmber egyenlegének lekérése (elég-e a hiányzó felmenőkre)
+    const eember = await TudatpontRepository.findeEmberById(eemberId);
+    const eemberEgyenleg = eember?.tudatpontok ?? 0;
+
+    const eredmeny = {
+      felmenokSzama: felmenok.length,
+      hianyzoDb: hianyzoFelmenok.length,
+      hianyzoFelmenok,
+      eemberEgyenleg,
+      // Minden hiányzó felmenőre 1 pont kell — van-e ennyi egyenleg
+      elegEgyenlegAFelmenokre: eemberEgyenleg >= hianyzoFelmenok.length
+    };
+
+    console.log('hianyzoFelmenokFelmerese - VÉGE', {
+      felmenokSzama: eredmeny.felmenokSzama,
+      hianyzoDb: eredmeny.hianyzoDb,
+      eemberEgyenleg: eredmeny.eemberEgyenleg
+    });
+    return eredmeny;
+  }
+
+  // ----- FELHASZNÁLÓI TUDATPONT HOZZÁRENDELÉS (FELMENŐ-ELLENŐRZÉSSEL) -----
+  /**
+   * A felhasználó által indított tudatpont hozzárendelés belépési pontja.
+   * Kikényszeríti a felmenő-szabályt, mielőtt a nyers hozzárendelést elvégzi.
+   * A belső/rendszer hívások (javaslat-végrehajtók, visszaosztás) továbbra is
+   * közvetlenül a tudatpontHozzarendelese-t használják, ellenőrzés nélkül.
+   * @param {string} eemberId
+   * @param {string} entitasId
+   * @param {string} entitasTipus
+   * @param {number} ujPontok - Az új abszolút tudatpont érték (nem különbség)
+   * @param {boolean} felmenoketAutomatikusan - Ha true, a hiányzó felmenőkre 1-1 pontot tesz
+   * @returns {Promise<Object>} A nyers hozzárendelés eredménye
+   */
+  async felhasznaloTudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan = false) {
+    console.log('felhasznaloTudatpontHozzarendelese - KEZDÉS', {
+      eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan
+    });
+
+    // 1. LÉPÉS - Alap validáció (a részletes ellenőrzést a nyers metódus is elvégzi)
+    if (!eemberId || !entitasId || !entitasTipus) {
+      throw new Error('Hiányzó kötelező paraméterek');
+    }
+    if (typeof ujPontok !== 'number' || isNaN(ujPontok)) {
+      throw new Error('A pontok értéknek számnak kell lennie');
+    }
+    if (ujPontok < 0) {
+      throw new Error('A tudatpontok nem lehetnek negatívak');
+    }
+
+    // 2. LÉPÉS - Felmenő-szabály (csak ha pontot TESZÜNK az entitásra)
+    // 0-ra állításnál (visszavonás) nincs felmenő-követelmény.
+    if (ujPontok > 0) {
+      const felmeres = await this.hianyzoFelmenokFelmerese(eemberId, entitasId, entitasTipus);
+
+      if (felmeres.hianyzoDb > 0) {
+        // 2.A - Ha a hívó nem kérte a felmenők automatikus kitöltését, elutasítjuk,
+        // és a hiányzó felmenők listáját visszaadjuk (a frontend ebből ajánlja fel a kitöltést)
+        if (!felmenoketAutomatikusan) {
+          const err = new Error('A tudatpont-hozzárendeléshez minden felmenőn legalább 1 tudatpont szükséges');
+          err.kod = 'HIANYZO_FELMENOK';
+          err.hianyzoFelmenok = felmeres.hianyzoFelmenok;
+          throw err;
+        }
+
+        // 2.B - Egyenleg-előellenőrzés: a hiányzó felmenőkre 1-1 pont + erre az
+        // entitásra a növekmény. Így nem fordulhat elő, hogy pár felmenő megkapja
+        // a pontot, de a fő művelet egyenleg híján elbukik (részleges állapot).
+        const regiPontok = (await this.eemberHozzajarulasaEntitason(eemberId, entitasId, entitasTipus)).pontok;
+        const foKoltseg = Math.max(0, ujPontok - regiPontok);
+        const felmenoKoltseg = felmeres.hianyzoDb; // 1 pont / hiányzó felmenő
+
+        if (felmeres.eemberEgyenleg < foKoltseg + felmenoKoltseg) {
+          throw new Error(
+            `Nincs elég tudatpontod: a felmenőkre ${felmenoKoltseg}, erre az entitásra ${foKoltseg} pont kellene, de csak ${felmeres.eemberEgyenleg} tudatpontod van.`
+          );
+        }
+
+        // 2.C - Hiányzó felmenők kitöltése: mindegyikre 1 pont
+        for (const felmeno of felmeres.hianyzoFelmenok) {
+          console.log('felhasznaloTudatpontHozzarendelese - Felmenő automatikus kitöltése', felmeno);
+          await this.tudatpontHozzarendelese(eemberId, felmeno.entitasId, felmeno.entitasTipus, 1);
+        }
+      }
+    }
+
+    // 3. LÉPÉS - Fő művelet: a kért entitásra a kért pont beállítása
+    const eredmeny = await this.tudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok);
+
+    console.log('felhasznaloTudatpontHozzarendelese - VÉGE', {
+      ujeEmberEgyenleg: eredmeny?.ujeEmberEgyenleg
+    });
+    return eredmeny;
+  }
+
+
+  // ============================================================
   // EMBER HOZZÁRENDELÉSEINEK LEKÉRDEZÉSE
   // ============================================================
 

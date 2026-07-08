@@ -4,6 +4,7 @@
 import Kartya from './Kartya.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
+import TudatpontModal from '../modals/TudatpontModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
@@ -216,10 +217,10 @@ class TartalomKartya extends Kartya {
         akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:      '🚧',
+        ikon:      '🌟',
         felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:     () => fejlesztesreVarMegjelenitese('Tudatpont módosítás', this.modalKontenerAzon)
+        akcio:     () => this._tudatpontModositas(entitas)
       },
       {
         ikon:      '🚧',
@@ -303,6 +304,33 @@ class TartalomKartya extends Kartya {
     javaslatModal.megnyitas();
 
     console.log('TartalomKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
+  // ----- TUDATPONT MÓDOSÍTÁS -----
+  // Megnyitja a TudatpontModal-t erre a tartalomra. A modal maga méri fel
+  // a felmenőket és kezeli a hozzárendelést.
+  async _tudatpontModositas(entitas) {
+    console.log('TartalomKartya._tudatpontModositas - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: entitas.entitasTipus ?? 'Tartalom',
+        adatok:       entitas.adatok
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tudatpontModal.init();
+    await tudatpontModal.megnyitas();
+
+    console.log('TartalomKartya._tudatpontModositas - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }

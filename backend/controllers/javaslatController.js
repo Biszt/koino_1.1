@@ -261,7 +261,62 @@ async javaslatLetrehozasa(req, res) {
     }
   },
 
-  
+
+  /**
+ * ----- SAJÁT SZAVAZAT LEKÉRÉSE -----
+ * A bejelentkezett eember szavazatának lekérése egy javaslaton
+ * GET /api/javaslat/:id/sajat-szavazat
+ * A szavazat modal megnyitásakor használjuk: így előre látszik, mire szavazott korábban.
+ * @param {Object} req - Express request objektum
+ * @param {Object} res - Express response objektum
+ */
+async sajatSzavazatLekerese(req, res) {
+  try {
+    // 1. LÉPÉS - eEmber ID kiolvasása a JWT middleware-ből
+    const eemberId = req.user?.id;
+    if (!eemberId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Bejelentkezés szükséges'
+      });
+    }
+
+    // 2. LÉPÉS - Javaslat ID kiolvasása az URL paraméterből
+    const javaslatId = req.params.id;
+
+    // 3. LÉPÉS - Service hívás - a eember szavazatának lekérése
+    const szavazat = await SzavazatService.eemberSzavazatanakLekerese(
+      eemberId,
+      javaslatId
+    );
+
+    // 4. LÉPÉS - Sikeres válasz
+    // A data null, ha a eember még nem szavazott ezen a javaslaton
+    res.status(200).json({
+      success: true,
+      data: szavazat
+    });
+
+  } catch (error) {
+    // HIBAKEZELÉS
+    console.error('Saját szavazat lekérése hiba:', error);
+
+    // 400 Bad Request - Validációs hiba (hiányzó azonosító)
+    if (error.message.includes('kötelező')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    // 500 Internal Server Error - Minden más hiba
+    res.status(500).json({
+      success: false,
+      message: 'Szerver hiba történt a saját szavazat lekérése során'
+    });
+  }
+},
+
   /**
  * ----- SZAVAZAT LEADÁSA -----
  * Szavazat leadása egy javaslatra

@@ -33,7 +33,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 |---|---|---|
 | Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal |
 | Javaslat létrehozása | ✅ | JavaslatModal |
-| Tudatpont módosítás | 🚧 | Csak console.log |
+| Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | 🚧 | Csak console.log |
 | Küszöb érték javaslat | 🚧 | ÚJ menüpont — backend oldalon az ertekJavaslat útvonalak léteznek |
 
@@ -41,9 +41,9 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Szavazat leadása | 🚧 | Most „Szavazás" néven, csak console.log; backend szavazatService létezik |
+| Szavazat leadása | ✅ | SzavazatModal — támogat/ellenez/tartózkodik, korábbi szavazat kiemelve, visszavonás |
 | Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
-| Tudatpont módosítás | 🚧 | ÚJ menüpont |
+| Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | 🚧 | Most „Részletek megtekintése" néven, csak console.log |
 | ~~Törlés~~ | ❌ | Nem része a tervnek (a törlés javaslat/szavazás útján történik) — a tulajdonos jóváhagyta a törlését |
 
@@ -53,7 +53,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 |---|---|---|
 | Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
 | Javaslat létrehozása | ✅ | |
-| Tudatpont módosítás | 🚧 | Csak console.log |
+| Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | 🚧 | ÚJ menüpont |
 | Küszöb érték javaslat | 🚧 | ÚJ menüpont |
 
@@ -64,7 +64,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
 | Új kategória létrehozása ebből | 🚧 | ÚJ menüpont — az így létrehozott kategória ALKATEGÓRIA lesz; backend módosítás is kell hozzá (kategória-hierarchia) |
 | Javaslat létrehozása | ✅ | |
-| Tudatpont módosítás | 🚧 | Csak console.log |
+| Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | 🚧 | ÚJ menüpont |
 | Küszöb érték javaslat | 🚧 | ÚJ menüpont |
 
@@ -74,7 +74,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 |---|---|---|
 | Új tartalom létrehozása ebből | 🚧 | ÚJ menüpont |
 | Javaslat létrehozása | 🚧 | ÚJ menüpont |
-| Tudatpont módosítás | 🚧 | ÚJ menüpont |
+| Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | 🚧 | Most „Részletek megtekintése" néven, csak console.log |
 
 ---
@@ -89,8 +89,8 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 ### A funkciók fejlesztési sorrendje (javaslat — a döntés a tulajdonosé)
 
-1. [ ] **Szavazat leadása** (Javaslat kártya) — ez zárja be a döntéshozatali kört: javaslat → szavazás → egyezmény. A backend (szavazatService) kész.
-2. [ ] **Tudatpont módosítás** (minden kártya) — a platform alapmechanikája; egy közös komponens, minden kártyatípus használja
+1. [x] **Szavazat leadása** (Javaslat kártya) — ez zárja be a döntéshozatali kört: javaslat → szavazás → egyezmény. SzavazatModal + `GET /api/javaslat/:id/sajat-szavazat` végpont; szavazás, módosítás, visszavonás.
+2. [x] **Tudatpont módosítás** (minden kártya) — közös `TudatpontModal` (standard modal-stílus), mind a négy kártyatípus használja. A meglévő `POST /api/tudatpont/hozzarendeles` végpontra épül. ÚJ felmenő-szabály: pont hozzárendelésekor a teljes szülőláncon kell legalább 1 pont; a backend kikényszeríti (`GET /api/tudatpont/hianyzo-felmenok/...` felmérés + `felmenoketAutomatikusan` flag), a frontend a megnyitáskor felméri és hozzájárulás után automatikusan kitölti a hiányzó felmenőket.
 3. [ ] **Részletes adatok** (minden kártya) — közös részletező nézet entitástípusonkénti tartalommal
 4. [ ] **Új tartalom létrehozása ebből** kiterjesztése (javaslat-, kategória-, tartalomtípus- és egyezmény-kártyára) — a TartalomKartya meglévő megoldása újrafelhasználható
 5. [ ] **Küszöb érték javaslat** (tartalom-, kategória-, tartalomtípus-kártya) — backend útvonalak léteznek
@@ -98,6 +98,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 7. [ ] **Tudatpontok nézet** (főmenü) — saját tudatpontok áttekintése, átrendezése
 8. [ ] **eember beállítások** (főmenü)
 9. [ ] **Új kategória létrehozása ebből** (Kategória kártya) — alkategória létrehozása; backend módosítást is igényel (kategória-hierarchia)
+10. [ ] **Jogosultság-függő menüpontok** — a kártya-menük már megnyitáskor jelezzék a jogosultságot: azok a menüpontok, amelyekhez tudatpont kell az entitáson (pl. szavazat leadása, javaslat létrehozása), csak akkor legyenek aktív opciók, ha az eembernek van tudatpontja az adott entitáson (egyébként inaktív/rejtett állapot)
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 

@@ -3,6 +3,7 @@
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
+import TudatpontModal from '../modals/TudatpontModal.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
@@ -191,10 +192,10 @@ class TartalomTipusKartya extends Kartya {
         akcio:    () => this._javaslatLetrehozasa(entitas)
       },
       {
-        ikon:      '🚧',
+        ikon:      '🌟',
         felirat:   'Tudatpont módosítás',
         elvalaszto: true,
-        akcio:     () => fejlesztesreVarMegjelenitese('Tudatpont módosítás', this.modalKontenerAzon)
+        akcio:     () => this._tudatpontModositas(entitas)
       },
       {
         ikon:      '🚧',
@@ -248,6 +249,32 @@ class TartalomTipusKartya extends Kartya {
     javaslatModal.megnyitas();
 
     console.log('TartalomTipusKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
+  // ----- TUDATPONT MÓDOSÍTÁS -----
+  // Megnyitja a TudatpontModal-t erre a tartalomtípusra.
+  async _tudatpontModositas(entitas) {
+    console.log('TartalomTipusKartya._tudatpontModositas - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: entitas.entitasTipus ?? 'TartalomTipus',
+        adatok:       entitas.adatok
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await tudatpontModal.init();
+    await tudatpontModal.megnyitas();
+
+    console.log('TartalomTipusKartya._tudatpontModositas - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }

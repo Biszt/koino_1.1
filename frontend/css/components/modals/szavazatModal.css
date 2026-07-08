@@ -1,0 +1,115 @@
+/* frontend/css/components/modals/szavazatModal.css */
+
+/* ===== SZAVAZAT MODAL ALAP KONTÉNER ===== */
+.szavazat-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Bevezető szöveg */
+.szavazat-modal__bevezeto {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ===== SZAVAZÓ GOMBOK ===== */
+
+/* Gombok konténere — függőleges lista */
+.szavazat-modal__gombok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Egyedi szavazó gomb — az idézőmintát követi (ikon | felirat) */
+.szavazat-modal__gomb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+  /* Minimális érintési felület mobilon */
+  min-height: 44px;
+}
+
+.szavazat-modal__gomb:hover {
+  background: var(--color-surface-offset);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.szavazat-modal__gomb:active {
+  background: var(--color-primary-highlight);
+}
+
+/* Ikon */
+.szavazat-modal__gomb-ikon {
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Felirat */
+.szavazat-modal__gomb-felirat {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ===== KIVÁLASZTOTT (jelenlegi) SZAVAZAT ===== */
+/* A eember korábbi szavazatát emeli ki — zöld keret és halvány zöld háttér. */
+.szavazat-modal__gomb--kivalasztott {
+  border-color: var(--color-primary);
+  background: var(--color-primary-highlight);
+}
+
+.szavazat-modal__gomb--kivalasztott .szavazat-modal__gomb-felirat {
+  color: var(--color-primary-active);
+}
+
+/* ===== SIKERÜZENET SÁV ===== */
+/* Szavazás / visszavonás utáni visszajelzés — zöld, elkülönül a hiba sávtól. */
+.szavazat-modal__uzenet {
+  font-size: var(--text-sm);
+  color: var(--color-primary-active);
+  background: var(--color-primary-highlight);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+/* A hidden attribútum rejtse el megbízhatóan (a flex felülírná) */
+.szavazat-modal__uzenet[hidden] {
+  display: none;
+}
+
+/* ===== VISSZAVONÁS GOMB ===== */
+.szavazat-modal__visszavonas-gomb {
+  align-self: flex-start;
+  font-size: var(--text-sm);
+  color: var(--color-error);
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  /* Érintési felület */
+  min-height: 44px;
+}
+
+.szavazat-modal__visszavonas-gomb:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.szavazat-modal__visszavonas-gomb[hidden] {
+  display: none;
+}
