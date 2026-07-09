@@ -19,17 +19,19 @@ class ErtekEloszlasModal {
 
   // ===== KONSTRUKTOR =====
   // @param {Object} beallitasok
-  // @param {string} beallitasok.tartalomId - a tartalom azonosítója
-  // @param {string} beallitasok.mezo       - melyik küszöb (pl. 'minimumDontesiIdo')
-  // @param {string} beallitasok.cimke      - emberi felirat (pl. 'Min. döntési idő')
-  // @param {string} beallitasok.formatum   - 'ido' | 'szazalek' | 'szam' (érték-formázás)
-  // @param {string} beallitasok.token      - JWT token (opcionális)
+  // @param {string} beallitasok.entitasId    - az entitás azonosítója
+  // @param {string} beallitasok.entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus'
+  // @param {string} beallitasok.mezo         - melyik küszöb (pl. 'minimumDontesiIdo')
+  // @param {string} beallitasok.cimke        - emberi felirat (pl. 'Min. döntési idő')
+  // @param {string} beallitasok.formatum     - 'ido' | 'szazalek' | 'szam' (érték-formázás)
+  // @param {string} beallitasok.token        - JWT token (opcionális)
   constructor(beallitasok = {}) {
     console.log('ErtekEloszlasModal.constructor - KEZDÉS', {
-      tartalomId: beallitasok?.tartalomId, mezo: beallitasok?.mezo
+      entitasId: beallitasok?.entitasId, entitasTipus: beallitasok?.entitasTipus, mezo: beallitasok?.mezo
     });
 
-    this.tartalomId = beallitasok.tartalomId ?? null;
+    this.entitasId    = beallitasok.entitasId    ?? null;
+    this.entitasTipus = beallitasok.entitasTipus ?? 'Tartalom';
     this.mezo       = beallitasok.mezo       ?? null;
     this.cimke      = beallitasok.cimke      ?? 'Eloszlás';
     this.formatum   = beallitasok.formatum   ?? 'szam';
@@ -112,12 +114,12 @@ class ErtekEloszlasModal {
   // ===== ADATOK BETÖLTÉSE =====
   async _adatokBetoltese() {
     console.log('ErtekEloszlasModal._adatokBetoltese - KEZDÉS', {
-      tartalomId: this.tartalomId, mezo: this.mezo
+      entitasId: this.entitasId, entitasTipus: this.entitasTipus, mezo: this.mezo
     });
 
     this.modal.betoltesBeallitasa(true);
     try {
-      const valasz = await apiGet(`ertekJavaslat/eloszlas/${this.tartalomId}`, this.token);
+      const valasz = await apiGet(`ertekJavaslat/eloszlas/${this.entitasTipus}/${this.entitasId}`, this.token);
       this.modal.betoltesBeallitasa(false);
 
       const eloszlas = valasz?.eloszlasok?.[this.mezo] ?? [];

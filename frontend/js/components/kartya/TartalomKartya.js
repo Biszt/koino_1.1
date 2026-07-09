@@ -6,8 +6,8 @@ import TartalomModal from '../modals/TartalomModal.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
+import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
-import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -224,6 +224,33 @@ class TartalomKartya extends Kartya {
     });
   }
 
+  // ----- KÜSZÖB ÉRTÉK JAVASLAT -----
+  // Megnyitja a közös ErtekJavaslatModal-t erre a tartalomra. A modal maga
+  // kéri le az aktuális + saját értékeket, és menti az érték javaslatot.
+  async _kuszobErtekJavaslat(entitas) {
+    console.log('TartalomKartya._kuszobErtekJavaslat - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertekJavaslatModal = new ErtekJavaslatModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Tartalom',
+      token:        this.token,
+      onSiker: () => {
+        // Az érték javaslat nem változtatja a kártya megjelenését, de ha a
+        // pakli frissítést vár, jelezzük (konzisztens a többi menüponttal).
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await ertekJavaslatModal.init();
+    await ertekJavaslatModal.megnyitas();
+
+    console.log('TartalomKartya._kuszobErtekJavaslat - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // Változatlan
   _hamburgerOpciok(entitas) {
@@ -231,8 +258,8 @@ class TartalomKartya extends Kartya {
       entitasId: entitas?.entitasId
     });
 
-    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
-    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
+    // A Tartalom kártya menüpontjai mind élő funkcióhoz vezetnek (nincs 🚧).
+    // A tudatpontFuggo pontok inaktívak, ha az e-embernek nincs pontja az entitáson.
     const opciok = [
       {
         ikon:           '✏️',
@@ -264,9 +291,13 @@ class TartalomKartya extends Kartya {
         akcio:      () => this._reszletesAdatok(entitas)
       },
       {
-        ikon:     '🚧',
-        felirat:  'Küszöb érték javaslat',
-        akcio:    () => fejlesztesreVarMegjelenitese('Küszöb érték javaslat', this.modalKontenerAzon)
+        ikon:           '⚖️',
+        felirat:        'Küszöb érték javaslat',
+        // Csak akkor aktív, ha az e-embernek van tudatpontja az entitáson
+        // (a backend is ezt követeli meg az érték javaslathoz).
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._kuszobErtekJavaslat(entitas)
       },
     ];
 

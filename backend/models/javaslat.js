@@ -65,35 +65,47 @@ const javaslatSchema = new mongoose.Schema({
     }
   },
 
-  // ----- SZÜLŐ TARTALOM AZONOSÍTÓ -----
-  // Melyik tartalom alatt jött létre ez a javaslat (KÖTELEZŐ!)
+  // ----- SZÜLŐ ENTITÁS AZONOSÍTÓ -----
+  // Melyik entitás alatt jött létre ez a javaslat. A javaslat MINDIG az
+  // érintett entitás gyereke (a service töredékenként állítja be), ezért
+  // kötelező. A szülő típusa polimorf: Tartalom / Kategoria / TartalomTipus.
   szuloId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
-    ref: 'Tartalom',                        // Referencia a Tartalom modellre
-    required: true                          // KÖTELEZŐ mező - minden javaslat tartalom alatt van
+    refPath: 'szuloTipus',                  // Polimorf referencia (a szuloTipus dönti el a modellt)
+    required: true                          // KÖTELEZŐ mező - a javaslat mindig az érintett entitás gyereke
     // Index: lásd javaslatSchema.index({ szuloId: 1 }) lejjebb
   },
 
   // ----- SZÜLŐ TÍPUSA -----
-  // Fix érték: Javaslat mindig csak Tartalom alatt jöhet létre
+  // Az érintett entitás típusa (a javaslat annak a gyereke).
   szuloTipus: {
-    type: String,               // Szöveges típus
-    default: 'Tartalom',        // Alapértelmezett: mindig 'Tartalom'
-    enum: ['Tartalom']          // Csak 'Tartalom' engedélyezett
+    type: String,                                     // Szöveges típus
+    default: 'Tartalom',                              // Alapértelmezett: Tartalom
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus']  // Az érték-rendszerrel azonos entitástípusok
   },
 
   // ----- EGYEZMÉNY TÁRHELY AZONOSÍTÓ -----
-  // MÓDOSÍTOTT: Egyesítésnél null lehet, mert az új entitás még nem létezik
-  // A végrehajtás után frissül a tényleges új entitás ID-jával
+  // Hol jön létre az EGYEZMÉNY, ha a javaslatot elfogadják (nem a javaslat
+  // helye!). Típusonként a service vezeti le (Törlés → érintett szülője,
+  // Módosítás/Áthelyezés → érintett entitás, Egyesítés → placeholder → új entitás).
+  // Egyesítésnél a placeholder id kerül ide, a valódira a végrehajtás frissíti.
   egyezmenyTarhelyId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
-    ref: 'Tartalom',                        // Referencia a Tartalom modellre
+    refPath: 'egyezmenyTarhelyTipus',       // Polimorf referencia
     required: function() {
       // Egyesítésnél NEM kötelező, mert az új entitás még nem létezik
       return this.javaslatTipus !== 'Egyesites';
     },
     default: null   // Alapértelmezett null egyesítésnél
     // Index: lásd javaslatSchema.index({ egyezmenyTarhelyId: 1 }) lejjebb
+  },
+
+  // ----- EGYEZMÉNY TÁRHELY TÍPUSA -----
+  // Az egyezmenyTarhelyId entitásának típusa (polimorf egyezmény-elhelyezéshez).
+  egyezmenyTarhelyTipus: {
+    type: String,
+    default: 'Tartalom',
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus']
   },
 
   // ----- TÖREDÉK JAVASLAT METAADATOK -----
@@ -359,10 +371,10 @@ javaslatSchema.pre('save', function(next) { // Mentés előtti middleware kezdet
     toredekCsoportId: this.toredekCsoportId                   // Töredék csoport azonosító (ha van)
   });
 
-  // VALIDÁCIÓ - Szülő kötelező ellenőrzése
-  if (!this.szuloId) { // Ha nincs szülő azonosító
-    return next(new Error('A javaslat létrehozásához szülő tartalom megadása kötelező'));
-  }
+  // A szülő (szuloId) kötelezőségét a séma `required: true` kényszeríti ki;
+  // a javaslatot a service mindig az érintett entitás gyerekeként hozza létre,
+  // ezért itt külön ellenőrzés nem kell (a régi, „szülő tartalom kötelező"
+  // üzenet félrevezető is volt, mert a szülő nem csak Tartalom lehet).
 
   // VALIDÁCIÓ - Indoklás kötelező ellenőrzése
   // MÓDOSÍTVA: String helyett Mixed, ezért manuálisan ellenőrizzük a meglétét

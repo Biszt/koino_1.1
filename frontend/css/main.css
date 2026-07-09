@@ -52,3 +52,7 @@
 @import './components/modals/reszletekModal.css';
 @import './components/modals/hozzajarulokModal.css';
 @import './components/modals/ertekEloszlasModal.css';
+/* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,
+   hogy azok felül tudják írni, ha kell */
+@import './components/modals/kuszobErtekMezok.css';
+@import './components/modals/ertekJavaslatModal.css';

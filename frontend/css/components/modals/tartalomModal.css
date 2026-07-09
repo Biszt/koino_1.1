@@ -226,3 +226,29 @@
 .t-modal-chip-torlo:active {
   transform: scale(0.90);
 }
+
+
+
+/* ===== KÜSZÖBÉRTÉK SZAKASZ (csak létrehozáskor) ===== */
+/* Elválasztó vonallal jelzett, önálló szakasz a form alján. A benne lévő
+   négy mezőt a kuszobErtekMezok.css stílusozza. */
+.t-modal-kuszob-szakasz {
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+/* A szakasz címe */
+.t-modal-kuszob-cim {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Rövid magyarázó szöveg a cím alatt */
+.t-modal-kuszob-magyarazat {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

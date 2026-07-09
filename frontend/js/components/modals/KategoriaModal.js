@@ -6,6 +6,16 @@
 import Modal from './Modal.js';
 import { apiPostFormData, apiPatchFormData } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
+import {
+  kuszobMezokHtml,
+  kuszobMezokKitoltese,
+  kuszobMezokOsszegyujtese,
+  kuszobMezokValidalasa,
+  KUSZOB_ALAPERTEKEK
+} from './kuszobErtekMezok.js';
+
+// A küszöbmezők egyedi id-előtagja ebben a modálban
+const KUSZOB_PREFIX = 'kat';
 
 // ===================================
 // KATEGÓRIA MODAL OSZTÁLY
@@ -89,6 +99,16 @@ class KategoriaModal {
     if (this.mod === 'letrehozas') {
       const kezdoMezo = document.getElementById('kategoria-kezdo-tudatpont-mezo');
       if (kezdoMezo) kezdoMezo.removeAttribute('hidden');
+
+      // Küszöbérték szakasz megjelenítése + mezők injektálása alapértékekkel
+      const kuszobSzakasz = document.getElementById('kategoria-kuszob-szakasz');
+      if (kuszobSzakasz) kuszobSzakasz.removeAttribute('hidden');
+
+      const kuszobKontener = document.getElementById('kategoria-kuszob-mezok-kontener');
+      if (kuszobKontener) {
+        kuszobKontener.innerHTML = kuszobMezokHtml(KUSZOB_PREFIX);
+        kuszobMezokKitoltese(KUSZOB_PREFIX, { ...KUSZOB_ALAPERTEKEK });
+      }
     }
 
     this.fajlFeltoltoEsemenyekBekotese();
@@ -306,6 +326,13 @@ class KategoriaModal {
         console.log('KategoriaModal.validalas - VÉGE hiba: érvénytelen tudatpont');
         return 'Legalább 1 kezdő tudatpontot meg kell adni.';
       }
+
+      // Küszöbértékek ellenőrzése (a közös segéddel)
+      const kuszobHiba = kuszobMezokValidalasa(kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
+      if (kuszobHiba) {
+        console.log('KategoriaModal.validalas - VÉGE hiba: küszöbérték', { kuszobHiba });
+        return kuszobHiba;
+      }
     }
 
     console.log('KategoriaModal.validalas - VÉGE sikeres');
@@ -345,6 +372,14 @@ class KategoriaModal {
     if (this.mod === 'letrehozas') {
       const kezdoTudatpont = document.getElementById('kategoria-kezdo-tudatpont')?.value;
       formData.append('kezdoTudatpont', kezdoTudatpont || '1');
+
+      // A négy küszöbérték hozzáfűzése (a backend kategoriaService ezekből
+      // hozza létre a létrehozó érték javaslatát és a kezdeti hisztogramot).
+      const kuszobErtekek = kuszobMezokOsszegyujtese(KUSZOB_PREFIX);
+      formData.append('javaslatElfogadasiKuszob', kuszobErtekek.javaslatElfogadasiKuszob);
+      formData.append('reszveteliAranyKuszob',    kuszobErtekek.reszveteliAranyKuszob);
+      formData.append('minimumDontesiIdo',        kuszobErtekek.minimumDontesiIdo);
+      formData.append('maximumDontesiIdo',        kuszobErtekek.maximumDontesiIdo);
     }
 
     console.log('KategoriaModal.formDataOsszeallit - VÉGE', {

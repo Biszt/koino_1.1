@@ -135,6 +135,7 @@ indoklas: elso.indoklas, // Az indoklást az első töredékből vesszük át
 szuloId: elso.szuloId, // A szülő azonosítót technikai okból az első töredékből vesszük át
 szuloTipus: elso.szuloTipus, // A szülő típusát az első töredékből vesszük át
 egyezmenyTarhelyId: elso.egyezmenyTarhelyId, // Az egyezmény tárhely azonosítót az első töredékből vesszük át
+egyezmenyTarhelyTipus: elso.egyezmenyTarhelyTipus, // Az egyezmény tárhely típusát is átadjuk (polimorf egyezmény-elhelyezés)
 toredekCsoportId: elso.toredekCsoportId || null, // A töredék csoport azonosítót is átadjuk
 egyesitesAdatok: elso.egyesitesAdatok || null, // Az egyesítés adatait az első töredékből vesszük át (minden töredékben ugyanaz van)
 modositasAdatok: elso.modositasAdatok || null, // A módosítás adatait kompatibilitás miatt átadjuk

@@ -81,6 +81,17 @@
     />
   </div>
 
+  <!-- ── KÜSZÖBÉRTÉKEK (döntéshozatal) ── -->
+  <!-- Alapból rejtett – TartalomTipusModal.init() mutatja meg, ha mód = 'letrehozas'.
+       A négy mezőt a kuszobErtekMezok.js segédmodul injektálja alapértékekkel. -->
+  <div class="tt-modal-mezo t-modal-kuszob-szakasz" id="tartalomTipus-kuszob-szakasz" hidden>
+    <p class="t-modal-kuszob-cim">Küszöbértékek (a döntéshozatalhoz)</p>
+    <p class="t-modal-kuszob-magyarazat">
+      Ezek a Te javaslataid – a tényleges küszöb az összes érték javaslat mediánja.
+    </p>
+    <div id="tartalomTipus-kuszob-mezok-kontener"></div>
+  </div>
+
   <!-- ── KEZDŐ TUDATPONT ── -->
   <!-- Alapból rejtett – TartalomTipusModal.init() mutatja meg, ha mód = 'letrehozas' -->
   <div class="tt-modal-mezo" id="tartalomTipus-kezdo-tudatpont-mezo" hidden>

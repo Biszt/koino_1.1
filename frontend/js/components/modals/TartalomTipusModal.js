@@ -6,6 +6,16 @@
 import Modal from './Modal.js';
 import { apiPostFormData, apiPatchFormData } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
+import {
+  kuszobMezokHtml,
+  kuszobMezokKitoltese,
+  kuszobMezokOsszegyujtese,
+  kuszobMezokValidalasa,
+  KUSZOB_ALAPERTEKEK
+} from './kuszobErtekMezok.js';
+
+// A küszöbmezők egyedi id-előtagja ebben a modálban
+const KUSZOB_PREFIX = 'tt';
 
 // ===================================
 // TARTALOM TÍPUS MODAL OSZTÁLY
@@ -89,6 +99,16 @@ class TartalomTipusModal {
     if (this.mod === 'letrehozas') {
       const kezdoMezo = document.getElementById('tartalomTipus-kezdo-tudatpont-mezo');
       if (kezdoMezo) kezdoMezo.removeAttribute('hidden');
+
+      // Küszöbérték szakasz megjelenítése + mezők injektálása alapértékekkel
+      const kuszobSzakasz = document.getElementById('tartalomTipus-kuszob-szakasz');
+      if (kuszobSzakasz) kuszobSzakasz.removeAttribute('hidden');
+
+      const kuszobKontener = document.getElementById('tartalomTipus-kuszob-mezok-kontener');
+      if (kuszobKontener) {
+        kuszobKontener.innerHTML = kuszobMezokHtml(KUSZOB_PREFIX);
+        kuszobMezokKitoltese(KUSZOB_PREFIX, { ...KUSZOB_ALAPERTEKEK });
+      }
     }
 
     this.fajlFeltoltoEsemenyekBekotese();
@@ -309,6 +329,13 @@ class TartalomTipusModal {
         console.log('TartalomTipusModal.validalas - VÉGE hiba: érvénytelen tudatpont');
         return 'Legalább 1 kezdő tudatpontot meg kell adni.';
       }
+
+      // Küszöbértékek ellenőrzése (a közös segéddel)
+      const kuszobHiba = kuszobMezokValidalasa(kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
+      if (kuszobHiba) {
+        console.log('TartalomTipusModal.validalas - VÉGE hiba: küszöbérték', { kuszobHiba });
+        return kuszobHiba;
+      }
     }
 
     console.log('TartalomTipusModal.validalas - VÉGE sikeres');
@@ -347,6 +374,14 @@ class TartalomTipusModal {
     if (this.mod === 'letrehozas') {
       const kezdoTudatpont = document.getElementById('tartalomTipus-kezdo-tudatpont')?.value;
       formData.append('kezdoTudatpont', kezdoTudatpont || '1');
+
+      // A négy küszöbérték hozzáfűzése (a backend tartalomTipusService ezekből
+      // hozza létre a létrehozó érték javaslatát és a kezdeti hisztogramot).
+      const kuszobErtekek = kuszobMezokOsszegyujtese(KUSZOB_PREFIX);
+      formData.append('javaslatElfogadasiKuszob', kuszobErtekek.javaslatElfogadasiKuszob);
+      formData.append('reszveteliAranyKuszob',    kuszobErtekek.reszveteliAranyKuszob);
+      formData.append('minimumDontesiIdo',        kuszobErtekek.minimumDontesiIdo);
+      formData.append('maximumDontesiIdo',        kuszobErtekek.maximumDontesiIdo);
     }
 
     console.log('TartalomTipusModal.formDataOsszeallit - VÉGE', {

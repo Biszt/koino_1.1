@@ -7,6 +7,7 @@ import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
@@ -250,6 +251,30 @@ class KategoriaKartya extends Kartya {
     });
   }
 
+  // ----- KÜSZÖB ÉRTÉK JAVASLAT -----
+  // Megnyitja a közös ErtekJavaslatModal-t erre a kategóriára.
+  async _kuszobErtekJavaslat(entitas) {
+    console.log('KategoriaKartya._kuszobErtekJavaslat - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertekJavaslatModal = new ErtekJavaslatModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Kategoria',
+      token:        this.token,
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await ertekJavaslatModal.init();
+    await ertekJavaslatModal.megnyitas();
+
+    console.log('KategoriaKartya._kuszobErtekJavaslat - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // Változatlan
   _hamburgerOpciok(entitas) {
@@ -298,9 +323,12 @@ class KategoriaKartya extends Kartya {
         akcio:      () => this._reszletesAdatok(entitas)
       },
       {
-        ikon:     '🚧',
-        felirat:  'Küszöb érték javaslat',
-        akcio:    () => fejlesztesreVarMegjelenitese('Küszöb érték javaslat', this.modalKontenerAzon)
+        ikon:           '⚖️',
+        felirat:        'Küszöb érték javaslat',
+        // Csak akkor aktív, ha az e-embernek van tudatpontja az entitáson.
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._kuszobErtekJavaslat(entitas)
       }
     ];
 

@@ -38,14 +38,9 @@ async javaslatLetrehozasa(req, res) {
     console.log("javaslatAdatok: ", javaslatAdatok);
     
     
-    // 3. LÉPÉS - szuloId validáció (ÚJ!)
-    if (!javaslatAdatok.szuloId) {
-      return res.status(400).json({
-        success: false,
-        message: 'A javaslat létrehozásához szülő tartalom megadása kötelező'
-      });
-    }
-    
+    // 3. LÉPÉS - A javaslat szülőjét NEM a frontend adja: a service töredékenként
+    // az érintett entitás alá helyezi. Ezért itt nincs szuloId-ellenőrzés.
+
     // 4. LÉPÉS - kezdoTudatpont validáció (VISSZATÉVE!)
     const kezdoTudatpont = javaslatAdatok.kezdoTudatpont;
     

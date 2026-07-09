@@ -28,18 +28,18 @@ const egyezmenySchema = new mongoose.Schema({
   // gyökér elemként jön létre (átveszi a törölt entitás helyét)
   szuloId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
-    ref: 'Tartalom',                        // Referencia a Tartalom modellre
+    refPath: 'szuloTipus',                  // Polimorf referencia (Tartalom/Kategoria/TartalomTipus)
     required: false,                        // Gyökér egyezménynél null
     default: null                           // Alapértelmezett: nincs szülő
     // Index: lásd egyezmenySchema.index({ szuloId: 1 }) lejjebb
   },
 
   // ----- SZÜLŐ TÍPUSA -----
-  // Ha van szuloId, akkor Tartalom; gyökér egyezménynél null
+  // Az egyezmény szülőjének típusa; gyökér egyezménynél null.
   szuloTipus: {
-    type: String,               // Szöveges típus
-    default: 'Tartalom',        // Alapértelmezett: Tartalom
-    enum: ['Tartalom', null]    // Tartalom vagy null (gyökér egyezmény)
+    type: String,                                           // Szöveges típus
+    default: 'Tartalom',                                    // Alapértelmezett: Tartalom
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', null]  // Polimorf, vagy null (gyökér egyezmény)
   },
 
   // ----- JAVASLAT TÍPUSA (SNAPSHOT) -----

@@ -27,18 +27,20 @@ class ErtekJavaslatRepository {
 
   // ===== KERESÉS =====
 
-  // ----- ÉRTÉK JAVASLAT KERESÉSE EMBER ÉS TARTALOM ALAPJÁN -----
+  // ----- ÉRTÉK JAVASLAT KERESÉSE EMBER ÉS ENTITÁS ALAPJÁN -----
   /**
-   * Egy eember érték javaslatának lekérése egy adott tartalomhoz
+   * Egy eember érték javaslatának lekérése egy adott entitáshoz
    * @param {string} eemberId - eEmber ID
-   * @param {string} tartalomId - Tartalom ID
+   * @param {string} entitasId - Entitás ID (tartalom/kategória/tartalomtípus)
+   * @param {string} entitasTipus - Entitás típusa ('Tartalom' | 'Kategoria' | 'TartalomTipus')
    * @returns {Promise<Object|null>}Érték javaslat dokumentum vagy null
    */
-  async findByeEmberAndTartalom(eemberId, tartalomId) {
+  async findByeEmberAndEntitas(eemberId, entitasId, entitasTipus) {
     // MongoDB findOne művelet - compound kulcs alapján
     return await ErtekJavaslat.findOne({
       eemberId: eemberId,
-      tartalomId: tartalomId
+      entitasId: entitasId,
+      entitasTipus: entitasTipus
     });
   }
 
@@ -53,15 +55,16 @@ class ErtekJavaslatRepository {
     return await ErtekJavaslat.findById(id);
   }
 
-  // ----- ÖSSZES ÉRTÉK JAVASLAT LEKÉRÉSE TARTALOM ALAPJÁN -----
+  // ----- ÖSSZES ÉRTÉK JAVASLAT LEKÉRÉSE ENTITÁS ALAPJÁN -----
   /**
-   * Egy tartalom összes érték javaslatának lekérése
-   * @param {string} tartalomId - Tartalom ID
+   * Egy entitás összes érték javaslatának lekérése
+   * @param {string} entitasId - Entitás ID
+   * @param {string} entitasTipus - Entitás típusa
    * @returns {Promise<Array>} érték Javaslatok tömbje
    */
-  async findByTartalom(tartalomId) {
-    // MongoDB find művelet - tartalom alapján
-    return await ErtekJavaslat.find({ tartalomId: tartalomId });
+  async findByEntitas(entitasId, entitasTipus) {
+    // MongoDB find művelet - entitás alapján
+    return await ErtekJavaslat.find({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
   // ----- ÖSSZES ÉRTÉK JAVASLAT LEKÉRÉSE EMBER ALAPJÁN -----
@@ -71,20 +74,20 @@ class ErtekJavaslatRepository {
    * @returns {Promise<Array>} Érték javaslatok tömbje
    */
   async findByeEmber(eemberId) {
-    // MongoDB find művelet - eember alapján
-    return await ErtekJavaslat.find({ eemberId: eemberId })
-      .populate('tartalomId', 'cim');  // Tartalom címének betöltése (opcionális)
+    // MongoDB find művelet - eember alapján (polimorf entitás, populate nélkül)
+    return await ErtekJavaslat.find({ eemberId: eemberId });
   }
 
-  // ----- ÉRTÉK JAVASLATOK SZÁMÁNAK LEKÉRÉSE TARTALOM ALAPJÁN -----
+  // ----- ÉRTÉK JAVASLATOK SZÁMÁNAK LEKÉRÉSE ENTITÁS ALAPJÁN -----
   /**
-   * Hány érték javaslat van egy adott tartalomhoz
-   * @param {string} tartalomId - Tartalom ID
+   * Hány érték javaslat van egy adott entitáshoz
+   * @param {string} entitasId - Entitás ID
+   * @param {string} entitasTipus - Entitás típusa
    * @returns {Promise<number>} Érték javaslatok száma
    */
-  async countByTartalom(tartalomId) {
+  async countByEntitas(entitasId, entitasTipus) {
     // MongoDB countDocuments művelet
-    return await ErtekJavaslat.countDocuments({ tartalomId: tartalomId });
+    return await ErtekJavaslat.countDocuments({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
   // ===== MÓDOSÍTÁS =====
@@ -112,16 +115,18 @@ class ErtekJavaslatRepository {
   /**
    *Érték javaslat frissítése, ha létezik, különben létrehozás
    * @param {string} eemberId - eEmber ID
-   * @param {string} tartalomId - Tartalom ID
+   * @param {string} entitasId - Entitás ID
+   * @param {string} entitasTipus - Entitás típusa
    * @param {Object} adatok -Érték javaslat adatai
    * @returns {Promise<Object>} Létrehozott vagy frissített javaslat
    */
-  async createOrUpdate(eemberId, tartalomId, adatok) {
+  async createOrUpdate(eemberId, entitasId, entitasTipus, adatok) {
     // MongoDB findOneAndUpdate művelet upsert opcióval
     return await ErtekJavaslat.findOneAndUpdate(
-      { 
+      {
         eemberId: eemberId,      // Keresési feltétel
-        tartalomId: tartalomId 
+        entitasId: entitasId,
+        entitasTipus: entitasTipus
       },
       {
         ...adatok,                         // Frissítendő/létrehozandó adatok
@@ -149,31 +154,34 @@ class ErtekJavaslatRepository {
     return await ErtekJavaslat.findByIdAndDelete(id);
   }
 
-  // ----- ÉRTÉK JAVASLAT TÖRLÉSE EMBER ÉS TARTALOM ALAPJÁN -----
+  // ----- ÉRTÉK JAVASLAT TÖRLÉSE EMBER ÉS ENTITÁS ALAPJÁN -----
   /**
-   * Egy eember érték javaslatának törlése egy adott tartalomhoz
+   * Egy eember érték javaslatának törlése egy adott entitáshoz
    * @param {string} eemberId - eEmber ID
-   * @param {string} tartalomId - Tartalom ID
+   * @param {string} entitasId - Entitás ID
+   * @param {string} entitasTipus - Entitás típusa
    * @returns {Promise<Object|null>} Törölt érték javaslat vagy null
    */
-  async deleteByeEmberAndTartalom(eemberId, tartalomId) {
+  async deleteByeEmberAndEntitas(eemberId, entitasId, entitasTipus) {
     // MongoDB findOneAndDelete művelet
     return await ErtekJavaslat.findOneAndDelete({
       eemberId: eemberId,
-      tartalomId: tartalomId
+      entitasId: entitasId,
+      entitasTipus: entitasTipus
     });
   }
 
-  // ----- ÖSSZES ÉRTÉK JAVASLAT TÖRLÉSE TARTALOM ALAPJÁN -----
+  // ----- ÖSSZES ÉRTÉK JAVASLAT TÖRLÉSE ENTITÁS ALAPJÁN -----
   /**
-   * Egy tartalom összes érték javaslatának törlése
-   * Használat: amikor a tartalmat törlik
-   * @param {string} tartalomId - Tartalom ID
+   * Egy entitás összes érték javaslatának törlése
+   * Használat: amikor az entitást törlik
+   * @param {string} entitasId - Entitás ID
+   * @param {string} entitasTipus - Entitás típusa
    * @returns {Promise<Object>} Törlési eredmény (deletedCount)
    */
-  async deleteByTartalom(tartalomId) {
+  async deleteByEntitas(entitasId, entitasTipus) {
     // MongoDB deleteMany művelet
-    return await ErtekJavaslat.deleteMany({ tartalomId: tartalomId });
+    return await ErtekJavaslat.deleteMany({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
 }

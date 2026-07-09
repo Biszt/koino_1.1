@@ -49,8 +49,8 @@ class JavaslatIdozitesService {
 
      console.log("erintettTartalmakKuszobertekenekLekerese >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
      
-     const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId);
-     
+     const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId, tartalom.entitasTipus);
+
      console.log('Tartalom értékei:', {
        tartalomId: tartalom.entitasId,
        javaslatElfogadasiKuszob: ertekek.javaslatElfogadasiKuszob,

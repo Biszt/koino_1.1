@@ -5,6 +5,9 @@
 // ===================================
 const KategoriaRepository = require('../repositories/kategoriaRepository');
 const TudatpontService = require('./tudatpontService');
+const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
+const ErtekSzamitasService = require('./ertekSzamitasService');
+const { kuszobertekekParse } = require('../utils/kuszobErtekParser');
 
 // ===================================
 // KATEGÓRIA SERVICE OSZTÁLY
@@ -127,6 +130,32 @@ class KategoriaService {
       // Ha a tudatpont hozzárendelés sikertelen, töröljük a kategóriát is
       await KategoriaRepository.deleteById(ujKategoria._id);
       throw new Error(`Kategória létrehozása sikertelen: ${error.message}`);
+    }
+
+    // ===== 10.5 LÉPÉS - KÜSZÖBÉRTÉKEK INICIALIZÁLÁSA =====
+    // A létrehozó automatikusan érték javaslatot ad az általa megadott (vagy
+    // alapértelmezett) küszöbértékekre, és létrejön a kezdeti hisztogram.
+    // Az értékek multipart mezőkből érkeznek (string), ezért parseInt kell.
+    const kuszobErtekek = kuszobertekekParse(adatok);
+    try {
+      await ErtekJavaslatRepository.create({
+        entitasId:    ujKategoria._id,
+        entitasTipus: 'Kategoria',
+        eemberId:     eemberId,
+        ...kuszobErtekek
+      });
+      await ErtekSzamitasService.hisztogramLetrehozasa(
+        ujKategoria._id,
+        'Kategoria',
+        kuszobErtekek.javaslatElfogadasiKuszob,
+        kuszobErtekek.reszveteliAranyKuszob,
+        kuszobErtekek.minimumDontesiIdo,
+        kuszobErtekek.maximumDontesiIdo
+      );
+      console.log('Kategória küszöbérték-hisztogram inicializálva');
+    } catch (error) {
+      // Nem kritikus: logoljuk, de nem döntjük meg a kategóriát
+      console.error('Kategória küszöbérték inicializálási hiba:', error.message);
     }
 
     // ===== 11. LÉPÉS - LÉTREHOZOTT KATEGÓRIA VISSZAADÁSA =====

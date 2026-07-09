@@ -178,12 +178,13 @@ class ReszletekModal {
     try {
       const valasz = await apiGet(`${utvonalTo}/${this.entitasId}/reszletek`, this.token);
 
-      // Tartalomnál a küszöb-medián értékeket is lekérjük (nem kritikus:
-      // ha nincs adat vagy hibázik, a küszöb szakasz egyszerűen kimarad).
+      // A küszöb-medián értékeket az érték-rendszer által támogatott mindhárom
+      // típusnál lekérjük (nem kritikus: ha nincs adat vagy hibázik, a küszöb
+      // szakasz egyszerűen kimarad – pl. ha az entitáshoz még nincs hisztogram).
       let ertekAdatok = null;
-      if (this.entitasTipus === 'Tartalom') {
+      if (['Tartalom', 'Kategoria', 'TartalomTipus'].includes(this.entitasTipus)) {
         try {
-          const ertekValasz = await apiGet(`ertekJavaslat/reszletek/${this.entitasId}`, this.token);
+          const ertekValasz = await apiGet(`ertekJavaslat/reszletek/${this.entitasTipus}/${this.entitasId}`, this.token);
           ertekAdatok = ertekValasz?.aktualisErtekek ?? null;
         } catch (ertekHiba) {
           console.warn('ReszletekModal - a küszöbértékek nem tölthetők', ertekHiba.message);
@@ -219,9 +220,9 @@ class ReszletekModal {
     if (this.entitasTipus === 'Tartalom') {
       this._renderTartalom(lista, data, ertekAdatok);
     } else if (this.entitasTipus === 'Kategoria') {
-      this._renderKategoria(lista, data);
+      this._renderKategoria(lista, data, ertekAdatok);
     } else if (this.entitasTipus === 'TartalomTipus') {
-      this._renderTartalomTipus(lista, data);
+      this._renderTartalomTipus(lista, data, ertekAdatok);
     } else if (this.entitasTipus === 'Javaslat') {
       this._renderJavaslat(lista, data);
     } else if (this.entitasTipus === 'Egyezmeny') {
@@ -263,31 +264,7 @@ class ReszletekModal {
     this._sor(lista, 'Hierarchikus összes', this._szam(this.entitas?.hierarchikusOsszesPont));
 
     // --- KÜSZÖBÉRTÉKEK (MEDIÁN) ---
-    // A négy küszöb aktuális (medián) értéke; mindegyik mellett „részletek"
-    // gomb, ami az érték-javaslatok eloszlását nyitja meg.
-    if (ertekAdatok) {
-      this._szakaszCim(lista, 'Küszöbértékek (medián)');
-      this._sorGombbal(
-        lista, 'Min. döntési idő',
-        masodpercFelirat(ertekAdatok.aktualMinimumDontesiIdo), 'részletek',
-        () => this._ertekEloszlas('minimumDontesiIdo', 'Min. döntési idő', 'ido')
-      );
-      this._sorGombbal(
-        lista, 'Max. döntési idő',
-        masodpercFelirat(ertekAdatok.aktualMaximumDontesiIdo), 'részletek',
-        () => this._ertekEloszlas('maximumDontesiIdo', 'Max. döntési idő', 'ido')
-      );
-      this._sorGombbal(
-        lista, 'Min. részvételi arány',
-        this._szazalek(ertekAdatok.reszveteliAranyKuszob), 'részletek',
-        () => this._ertekEloszlas('reszveteliAranyKuszob', 'Min. részvételi arány', 'szazalek')
-      );
-      this._sorGombbal(
-        lista, 'Min. támogatottsági arány',
-        this._szazalek(ertekAdatok.javaslatElfogadasiKuszob), 'részletek',
-        () => this._ertekEloszlas('javaslatElfogadasiKuszob', 'Min. támogatottsági arány', 'szazalek')
-      );
-    }
+    this._kuszobSzakasz(lista, ertekAdatok);
 
     // --- SZÖVEG (rich text) ---
     this._szovegSzakasz(lista, tartalom.szoveg);
@@ -299,18 +276,18 @@ class ReszletekModal {
 
   // ===== KATEGÓRIA RÉSZLETEI =====
   // A backend válasza: { kategoria, tudatpont }.
-  _renderKategoria(lista, data) {
+  _renderKategoria(lista, data, ertekAdatok = null) {
     const kategoria = data.kategoria ?? {};
     const tudatpont = data.tudatpont ?? {};
-    this._renderNevesEntitas(lista, kategoria, tudatpont, 'Kategória');
+    this._renderNevesEntitas(lista, kategoria, tudatpont, 'Kategória', ertekAdatok);
   }
 
   // ===== TARTALOMTÍPUS RÉSZLETEI =====
   // A backend válasza: { tartalomTipus, tudatpont }.
-  _renderTartalomTipus(lista, data) {
+  _renderTartalomTipus(lista, data, ertekAdatok = null) {
     const tartalomTipus = data.tartalomTipus ?? {};
     const tudatpont     = data.tudatpont     ?? {};
-    this._renderNevesEntitas(lista, tartalomTipus, tudatpont, 'Tartalomtípus');
+    this._renderNevesEntitas(lista, tartalomTipus, tudatpont, 'Tartalomtípus', ertekAdatok);
   }
 
   // ===== KÖZÖS: NÉVVEL RENDELKEZŐ EGYSZERŰ ENTITÁS =====
@@ -319,7 +296,7 @@ class ReszletekModal {
   // @param {Object} entitasObj   - a backend kategoria / tartalomTipus objektuma
   // @param {Object} tudatpont    - { eemberHozzajarulas, osszesPont, hozzajarulokSzama }
   // @param {string} tipusFelirat - emberi típusnév a „Típus" sorba
-  _renderNevesEntitas(lista, entitasObj, tudatpont, tipusFelirat) {
+  _renderNevesEntitas(lista, entitasObj, tudatpont, tipusFelirat, ertekAdatok = null) {
     // A nevet elsődlegesen a kártya adataiból vesszük (a /reszletek is adja).
     const adatok = this.entitas?.adatok ?? {};
 
@@ -341,6 +318,9 @@ class ReszletekModal {
       () => this._hozzajarulokReszletek()
     );
     this._sor(lista, 'Hierarchikus összes', this._szam(this.entitas?.hierarchikusOsszesPont));
+
+    // --- KÜSZÖBÉRTÉKEK (MEDIÁN) ---
+    this._kuszobSzakasz(lista, ertekAdatok);
 
     // --- LEÍRÁS (rich text) ---
     // A mező neve itt `leiras` (nem `szoveg`), a szakasz címe „Leírás”.
@@ -520,6 +500,36 @@ class ReszletekModal {
     console.log('ReszletekModal._hozzajarulokReszletek - VÉGE');
   }
 
+  // ===== KÜSZÖBÉRTÉK SZAKASZ (MEDIÁN) =====
+  // A négy küszöb aktuális (medián) értéke; mindegyik mellett „részletek" gomb,
+  // ami az érték-javaslatok eloszlását nyitja meg. Közös a Tartalom, Kategória
+  // és Tartalomtípus nézethez. Ha nincs ertekAdatok (pl. nincs hisztogram), kimarad.
+  _kuszobSzakasz(lista, ertekAdatok) {
+    if (!ertekAdatok) return;
+
+    this._szakaszCim(lista, 'Küszöbértékek (medián)');
+    this._sorGombbal(
+      lista, 'Min. döntési idő',
+      masodpercFelirat(ertekAdatok.aktualMinimumDontesiIdo), 'részletek',
+      () => this._ertekEloszlas('minimumDontesiIdo', 'Min. döntési idő', 'ido')
+    );
+    this._sorGombbal(
+      lista, 'Max. döntési idő',
+      masodpercFelirat(ertekAdatok.aktualMaximumDontesiIdo), 'részletek',
+      () => this._ertekEloszlas('maximumDontesiIdo', 'Max. döntési idő', 'ido')
+    );
+    this._sorGombbal(
+      lista, 'Min. részvételi arány',
+      this._szazalek(ertekAdatok.reszveteliAranyKuszob), 'részletek',
+      () => this._ertekEloszlas('reszveteliAranyKuszob', 'Min. részvételi arány', 'szazalek')
+    );
+    this._sorGombbal(
+      lista, 'Min. támogatottsági arány',
+      this._szazalek(ertekAdatok.javaslatElfogadasiKuszob), 'részletek',
+      () => this._ertekEloszlas('javaslatElfogadasiKuszob', 'Min. támogatottsági arány', 'szazalek')
+    );
+  }
+
   // ===== EGY KÜSZÖB ÉRTÉK-ELOSZLÁSA =====
   // Megnyitja az eloszlás al-modalt a megadott küszöbre (a Részletek modal felett).
   // @param {string} mezo     - a küszöb mezőneve (pl. 'minimumDontesiIdo')
@@ -529,7 +539,8 @@ class ReszletekModal {
     console.log('ReszletekModal._ertekEloszlas - KEZDÉS', { mezo, formatum });
 
     const eloszlasModal = new ErtekEloszlasModal({
-      tartalomId: this.entitasId,
+      entitasId:    this.entitasId,
+      entitasTipus: this.entitasTipus,
       mezo,
       cimke,
       formatum,

@@ -10,7 +10,19 @@ import { apiGet, apiPost, apiPatch } from '../../utils/apiHelper.js';
 // tokenLekerese: a JWT tokent az authHelper-ből olvassuk
 import { tokenLekerese } from '../../utils/authHelper.js';
 
-import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js'; 
+import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
+
+// Közös küszöbérték-mezők (támogatottsági %, részvételi %, min/max döntési idő)
+import {
+  kuszobMezokHtml,
+  kuszobMezokKitoltese,
+  kuszobMezokOsszegyujtese,
+  kuszobMezokValidalasa,
+  KUSZOB_ALAPERTEKEK
+} from './kuszobErtekMezok.js';
+
+// A küszöbmezők egyedi id-előtagja ebben a modálban (nem ütközik az ErtekJavaslatModal 'ej'-jével)
+const KUSZOB_PREFIX = 'uj';
 
 // ===== TARTALOM MODAL OSZTÁLY =====
 // Két módban működik:
@@ -99,6 +111,17 @@ class TartalomModal {
     if (this.mod === 'letrehozas') {
       const kezdoMezo = document.getElementById('kezdo-tudatpont-mezo');
       if (kezdoMezo) kezdoMezo.removeAttribute('hidden');
+
+      // Küszöbérték szakasz megjelenítése + a négy mező injektálása és
+      // kitöltése az alapértékekkel (csak létrehozáskor van értelme).
+      const kuszobSzakasz = document.getElementById('kuszob-mezok-szakasz');
+      if (kuszobSzakasz) kuszobSzakasz.removeAttribute('hidden');
+
+      const kuszobKontener = document.getElementById('kuszob-mezok-kontener');
+      if (kuszobKontener) {
+        kuszobKontener.innerHTML = kuszobMezokHtml(KUSZOB_PREFIX);
+        kuszobMezokKitoltese(KUSZOB_PREFIX, { ...KUSZOB_ALAPERTEKEK });
+      }
     }
 
     this._kategoriaValasztoBekotese();
@@ -450,6 +473,13 @@ class TartalomModal {
         console.log('TartalomModal._validalas - VÉGE (hiba: érvénytelen tudatpont)');
         return 'Legalább 1 kezdő tudatpontot meg kell adni.';
       }
+
+      // Küszöbértékek ellenőrzése (a közös segéddel, a backend szabályaival azonos)
+      const kuszobHiba = kuszobMezokValidalasa(kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
+      if (kuszobHiba) {
+        console.log('TartalomModal._validalas - VÉGE (hiba: küszöbérték)', { kuszobHiba });
+        return kuszobHiba;
+      }
     }
 
     console.log('TartalomModal._validalas - VÉGE (sikeres)');
@@ -492,6 +522,10 @@ class TartalomModal {
       adatok.kezdoTudatpont = parseInt(
         document.getElementById('tartalom-kezdo-tudatpont')?.value
       );
+
+      // A négy küszöbérték hozzáfűzése – a backend tartalomLetrehozasa ezekből
+      // hozza létre a létrehozó érték javaslatát és a kezdeti hisztogramot.
+      Object.assign(adatok, kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
     }
 
     console.log('TartalomModal._adatokOsszegyujtese - VÉGE', {

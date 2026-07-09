@@ -6,7 +6,7 @@ import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
-import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
+import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -228,14 +228,37 @@ class TartalomTipusKartya extends Kartya {
     });
   }
 
+  // ----- KÜSZÖB ÉRTÉK JAVASLAT -----
+  // Megnyitja a közös ErtekJavaslatModal-t erre a tartalomtípusra.
+  async _kuszobErtekJavaslat(entitas) {
+    console.log('TartalomTipusKartya._kuszobErtekJavaslat - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertekJavaslatModal = new ErtekJavaslatModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'TartalomTipus',
+      token:        this.token,
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await ertekJavaslatModal.init();
+    await ertekJavaslatModal.megnyitas();
+
+    console.log('TartalomTipusKartya._kuszobErtekJavaslat - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // Változatlan
   _hamburgerOpciok(entitas) {
     console.log('TartalomTipusKartya._hamburgerOpciok - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
-    // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
+    // A Tartalomtípus kártya menüpontjai élő funkcióhoz vezetnek (nincs 🚧).
     const opciok = [
       {
         ikon:           '✏️',
@@ -267,9 +290,12 @@ class TartalomTipusKartya extends Kartya {
         akcio:      () => this._reszletesAdatok(entitas)
       },
       {
-        ikon:     '🚧',
-        felirat:  'Küszöb érték javaslat',
-        akcio:    () => fejlesztesreVarMegjelenitese('Küszöb érték javaslat', this.modalKontenerAzon)
+        ikon:           '⚖️',
+        felirat:        'Küszöb érték javaslat',
+        // Csak akkor aktív, ha az e-embernek van tudatpontja az entitáson.
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._kuszobErtekJavaslat(entitas)
       }
     ];
 

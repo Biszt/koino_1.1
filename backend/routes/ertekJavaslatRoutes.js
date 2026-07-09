@@ -18,7 +18,8 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // -----ÉRTÉK JAVASLAT LÉTREHOZÁSA VAGY MÓDOSÍTÁSA -----
 // POST /api/ertekJavaslat
 // Védett endpoint - authentikáció szükséges
-// Body: { tartalomId, javaslatElfogadasiKuszob, reszveteliAranyKuszob }
+// Body: { entitasId, entitasTipus, javaslatElfogadasiKuszob, reszveteliAranyKuszob,
+//         minimumDontesiIdo, maximumDontesiIdo }
 router.post(
   '/ertekJavaslat',
   authMiddleware,  // Authentikáció kötelező
@@ -26,36 +27,36 @@ router.post(
 );
 
 // ----- AKTUÁLIS ÉRTÉKEK LEKÉRÉSE -----
-// GET /api/ertekJavaslat/aktualis/:tartalomId
+// GET /api/ertekJavaslat/aktualis/:entitasTipus/:entitasId
 // Nyilvános endpoint - bárki lekérheti
 router.get(
-  '/ertekJavaslat/aktualis/:tartalomId',
+  '/ertekJavaslat/aktualis/:entitasTipus/:entitasId',
   ertekJavaslatController.aktualisErtekekLekerese
 );
 
-// ----- TARTALOM ÉRTÉK-ELOSZLÁSA -----
-// GET /api/ertekJavaslat/eloszlas/:tartalomId
+// ----- ENTITÁS ÉRTÉK-ELOSZLÁSA -----
+// GET /api/ertekJavaslat/eloszlas/:entitasTipus/:entitasId
 // Nyilvános endpoint - bárki lekérheti (érték → hány javaslat, mind a 4 küszöbre)
 router.get(
-  '/ertekJavaslat/eloszlas/:tartalomId',
+  '/ertekJavaslat/eloszlas/:entitasTipus/:entitasId',
   ertekJavaslatController.ertekEloszlasLekerese
 );
 
 // ----- SAJÁT ÉRTÉK JAVASLAT LEKÉRÉSE -----
-// GET /api/ertekJavaslat/sajat/:tartalomId
+// GET /api/ertekJavaslat/sajat/:entitasTipus/:entitasId
 // Védett endpoint - authentikáció szükséges
 router.get(
-  '/ertekJavaslat/sajat/:tartalomId',
+  '/ertekJavaslat/sajat/:entitasTipus/:entitasId',
   authMiddleware,  // Authentikáció kötelező
   ertekJavaslatController.sajatErtekJavaslatLekerese
 );
 
-// ----- TARTALOM RÉSZLETES ÉRTÉKEI -----
-// GET /api/ertekJavaslat/reszletek/:tartalomId
+// ----- ENTITÁS RÉSZLETES ÉRTÉKEI -----
+// GET /api/ertekJavaslat/reszletek/:entitasTipus/:entitasId
 // Részben védett endpoint - authentikáció opcionális (vendégként is elérhető)
 // Ha be van jelentkezve, megkapja a saját érték javaslatát is
 router.get(
-  '/ertekJavaslat/reszletek/:tartalomId',
+  '/ertekJavaslat/reszletek/:entitasTipus/:entitasId',
   (req, res, next) => {
     // Opcionális authentikáció - ha van token, ellenőrizzük, ha nincs, folytatjuk
     const token = req.headers.authorization?.split(' ')[1];

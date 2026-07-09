@@ -5,6 +5,9 @@
 // ===================================
 const TartalomTipusRepository = require('../repositories/tartalomTipusRepository');
 const TudatpontService = require('./tudatpontService');
+const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
+const ErtekSzamitasService = require('./ertekSzamitasService');
+const { kuszobertekekParse } = require('../utils/kuszobErtekParser');
 
 // ===================================
 // TARTALOM TÍPUS SERVICE OSZTÁLY
@@ -136,6 +139,31 @@ class TartalomTipusService {
 
       await TartalomTipusRepository.deleteById(ujTartalomTipus._id);
       throw new Error(`Tartalom típus létrehozása sikertelen: ${error.message}`);
+    }
+
+    // ===== 10.5 LÉPÉS - KÜSZÖBÉRTÉKEK INICIALIZÁLÁSA =====
+    // A létrehozó automatikusan érték javaslatot ad az általa megadott (vagy
+    // alapértelmezett) küszöbértékekre, és létrejön a kezdeti hisztogram.
+    const kuszobErtekek = kuszobertekekParse(adatok);
+    try {
+      await ErtekJavaslatRepository.create({
+        entitasId:    ujTartalomTipus._id,
+        entitasTipus: 'TartalomTipus',
+        eemberId:     eemberId,
+        ...kuszobErtekek
+      });
+      await ErtekSzamitasService.hisztogramLetrehozasa(
+        ujTartalomTipus._id,
+        'TartalomTipus',
+        kuszobErtekek.javaslatElfogadasiKuszob,
+        kuszobErtekek.reszveteliAranyKuszob,
+        kuszobErtekek.minimumDontesiIdo,
+        kuszobErtekek.maximumDontesiIdo
+      );
+      console.log('Tartalomtípus küszöbérték-hisztogram inicializálva');
+    } catch (error) {
+      // Nem kritikus: logoljuk, de nem döntjük meg a tartalomtípust
+      console.error('Tartalomtípus küszöbérték inicializálási hiba:', error.message);
     }
 
     // ===== 11. LÉPÉS - LÉTREHOZOTT TARTALOM TÍPUS VISSZAADÁSA =====

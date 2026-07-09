@@ -129,7 +129,9 @@ class EgyezmenyService {
 
     // 4. LÉPÉS - EGYEZMÉNY SZÜLŐ ID MEGHATÁROZÁSA
     let egyezmenySzuloId = javaslat.egyezmenyTarhelyId || null; // Alapértelmezetten a javaslat egyezmény tárhelye lesz az egyezmény szülője
-    let egyezmenySzuloTipus = egyezmenySzuloId ? 'Tartalom' : null; // Ha van szülő ID, akkor a szülő típusa Tartalom lesz
+    // A szülő típusa a javaslat egyezmenyTarhelyTipus mezőjéből jön (polimorf:
+    // Tartalom/Kategoria/TartalomTipus); régi javaslatoknál a default 'Tartalom'.
+    let egyezmenySzuloTipus = egyezmenySzuloId ? (javaslat.egyezmenyTarhelyTipus || 'Tartalom') : null;
 
 
     if (javaslat.egyezmenyTarhelyId === 'eeeeeeeeeeeeeeeeeeee0001') { // Speciális placeholder eset kezelése

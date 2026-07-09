@@ -58,8 +58,8 @@ class JavaslatSzamitasService {
 
       console.log("erintettTartalmakAtlagErtekeinekLekerese >>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
       
-      const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId);
-      
+      const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId, tartalom.entitasTipus);
+
       console.log("Tartalom értékei:", {
         tartalomId: tartalom.entitasId,
         minimumDontesiIdo: ertekek.aktualMinimumDontesiIdo,

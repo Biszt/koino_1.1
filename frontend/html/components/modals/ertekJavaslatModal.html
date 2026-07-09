@@ -1,0 +1,20 @@
+<!-- frontend/html/components/modals/ertekJavaslatModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     A küszöbmezőket az ErtekJavaslatModal.js injektálja a
+     kuszobErtekMezok.js segédmodullal a #ertek-javaslat-mezok-kontener-be. -->
+<div class="ertek-javaslat-modal">
+
+  <!-- Bevezető magyarázat -->
+  <p class="ertek-javaslat-modal__bevezeto">
+    Itt javasolhatsz küszöbértékeket ehhez a tartalomhoz. A tényleges küszöb
+    az összes javaslat mediánja – az alábbi mezők a Te javaslatodat mutatják.
+  </p>
+
+  <!-- Aktuális (medián) értékek összegzése – a JS tölti fel megnyitáskor -->
+  <div class="ertek-javaslat-modal__aktualis" id="ertek-javaslat-aktualis" aria-live="polite"></div>
+
+  <!-- A négy küszöbmező helye – ide injektálja a JS a mezőket -->
+  <div id="ertek-javaslat-mezok-kontener"></div>
+
+</div>

@@ -7,18 +7,34 @@
 const mongoose = require('mongoose');
 
 // ===================================
-// ÉRTÉK ERTEK JAVASLAT SÉMA DEFINÍCIÓJA
+// TÁMOGATOTT ENTITÁSTÍPUSOK
 // ===================================
-// Egyéni eemberi érték javaslatok tárolása egy tartalom küszöbértékeihez
+// Az érték javaslat rendszer ezekre az entitásokra működik. Korábban CSAK
+// tartalomra volt kötve; mostantól kategóriára és tartalomtípusra is.
+const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+
+// ===================================
+// ÉRTÉK JAVASLAT SÉMA DEFINÍCIÓJA
+// ===================================
+// Egyéni eemberi érték javaslatok tárolása egy entitás küszöbértékeihez
 const ertekJavaslatSchema = new mongoose.Schema({
 
-  // ----- TARTALOM AZONOSÍTÓ -----
-  // Melyik tartalomhoz tartozik ez az érték javaslat
-  tartalomId: {
+  // ----- ENTITÁS AZONOSÍTÓ -----
+  // Melyik entitáshoz tartozik ez az érték javaslat (tartalom / kategória / tartalomtípus).
+  // A refPath miatt a populate a helyes modellt tölti be az entitasTipus alapján.
+  entitasId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Tartalom', // Referencia a Tartalom modellre
-    required: true // Kötelező mező
-    // Index: lásd ertekJavaslatSchema.index({ tartalomId: 1 }) lejjebb
+    refPath: 'entitasTipus',               // Polimorf referencia (az entitasTipus dönti el a modellt)
+    required: true                         // Kötelező mező
+  },
+
+  // ----- ENTITÁS TÍPUSA -----
+  // Meghatározza, melyik kollekcióra mutat az entitasId.
+  entitasTipus: {
+    type: String,             // Szöveges típus
+    enum: ENTITAS_TIPUSOK,    // Csak a támogatott típusok engedélyezettek
+    required: true,           // Kötelező mező
+    default: 'Tartalom'       // Visszafelé kompatibilis alapérték
   },
 
   // ----- EMBER AZONOSÍTÓ -----
@@ -27,7 +43,6 @@ const ertekJavaslatSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber', // Referencia a eEmber modellre
     required: true // Kötelező mező
-    // Index: lásd ertekJavaslatSchema.index({ eemberId: 1 }) lejjebb
   },
 
   // -----ÉRTÉK ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB-----
@@ -102,15 +117,15 @@ const ertekJavaslatSchema = new mongoose.Schema({
 // INDEXEK LÉTREHOZÁSA
 // ===================================
 
-// Compound index - egy eember csak egyszer javasolhat egy tartalomhoz
+// Compound index - egy eember csak egyszer javasolhat egy entitáshoz
 // Ez biztosítja, hogy ne legyen duplikált rekord
 ertekJavaslatSchema.index(
-  { tartalomId: 1, eemberId: 1 },
+  { entitasId: 1, entitasTipus: 1, eemberId: 1 },
   { unique: true } // Egyedi constraint
 );
 
-// TartalomId index - gyors lekérdezés egy tartalom összes érték javaslatához
-ertekJavaslatSchema.index({ tartalomId: 1 });
+// Entitás index - gyors lekérdezés egy entitás összes érték javaslatához
+ertekJavaslatSchema.index({ entitasId: 1, entitasTipus: 1 });
 
 // eEmberId index - gyors lekérdezés egy eember összes érték javaslatához
 ertekJavaslatSchema.index({ eemberId: 1 });
@@ -133,8 +148,10 @@ ertekJavaslatSchema.pre('save', function(next) {
 // ===================================
 
 // A model a séma alapján létrehozott adatbázis kollekció
-// 'ErtekJavaslat' = model neve, ertekJavaslatSchema = séma definíció
 const ErtekJavaslat = mongoose.model('ErtekJavaslat', ertekJavaslatSchema);
+
+// A támogatott típusokat is exportáljuk, hogy a service/controller hivatkozhasson rá
+ErtekJavaslat.ENTITAS_TIPUSOK = ENTITAS_TIPUSOK;
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = ErtekJavaslat;

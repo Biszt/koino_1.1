@@ -1,0 +1,75 @@
+/* frontend/css/components/modals/kuszobErtekMezok.css */
+
+/* A négy küszöbérték szerkeszthető mezőjének közös stílusa.
+   Használják: ErtekJavaslatModal és TartalomModal (a kuszobErtekMezok.js
+   segédmodul által generált mezők). */
+
+/* ===== A MEZŐK KONTÉNERE ===== */
+.kuszob-mezok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ===== EGY MEZŐ (címke + input + súgó) ===== */
+.kuszob-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* A mező címkéje */
+.kuszob-mezo__cimke {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Szám- és szöveges input */
+.kuszob-mezo__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.kuszob-mezo__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* ===== IDŐ MEZŐ: szám + egység egy sorban ===== */
+.kuszob-mezo__ido {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Az idő szám-inputja rugalmasan kitölti a helyet */
+.kuszob-mezo__input--ido {
+  flex: 1 1 auto;
+}
+
+/* Az egység-választó legördülő */
+.kuszob-mezo__select {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.kuszob-mezo__select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* ===== SÚGÓ SZÖVEG ===== */
+.kuszob-mezo__sugo {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

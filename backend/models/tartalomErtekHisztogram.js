@@ -7,19 +7,33 @@
 const mongoose = require('mongoose');
 
 // ===================================
-// TARTALOM ÉRTÉK HISZTOGRAM SÉMA DEFINÍCIÓJA
+// TÁMOGATOTT ENTITÁSTÍPUSOK
 // ===================================
-// Aggregált adatok tárolása - hány eember javasol adott értéket
-// Ez egy cache réteg, ami gyorsítja a medián számítást
+// A hisztogram (érték-rendszer) ezekre az entitásokra működik.
+const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+
+// ===================================
+// ENTITÁS ÉRTÉK HISZTOGRAM SÉMA DEFINÍCIÓJA
+// ===================================
+// Aggregált adatok tárolása - hány eember javasol adott értéket egy entitáshoz
+// (tartalom / kategória / tartalomtípus). Cache réteg a medián számításhoz.
 const tartalomErtekHisztogramSchema = new mongoose.Schema({
 
-  // ----- TARTALOM AZONOSÍTÓ -----
-  // Melyik tartalomhoz tartoznak ezek az aggregált adatok
-  tartalomId: {
+  // ----- ENTITÁS AZONOSÍTÓ -----
+  // Melyik entitáshoz tartoznak ezek az aggregált adatok
+  entitasId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'Tartalom', // Referencia a Tartalom modellre
-    required: true, // Kötelező mező
-    unique: true // Egy tartalomhoz csak egy hisztogram - ez már önmagában egyedi indexet is létrehoz
+    refPath: 'entitasTipus',               // Polimorf referencia
+    required: true                         // Kötelező mező
+  },
+
+  // ----- ENTITÁS TÍPUSA -----
+  // Meghatározza, melyik kollekcióra mutat az entitasId.
+  entitasTipus: {
+    type: String,
+    enum: ENTITAS_TIPUSOK,
+    required: true,
+    default: 'Tartalom'
   },
 
   // ----- ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB HISZTOGRAM -----
@@ -136,8 +150,12 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
 // ===================================
 // INDEXEK LÉTREHOZÁSA
 // ===================================
-// A tartalomId egyedi indexét a mező unique: true beállítása már létrehozza,
-// külön schema.index() hívás itt nem szükséges (duplikált indexet eredményezne)
+// Egy entitáshoz csak EGY hisztogram tartozhat → egyedi compound index az
+// (entitasId, entitasTipus) páron.
+tartalomErtekHisztogramSchema.index(
+  { entitasId: 1, entitasTipus: 1 },
+  { unique: true }
+);
 
 // ===================================
 // HELPER METÓDUSOK
@@ -199,6 +217,9 @@ tartalomErtekHisztogramSchema.methods.csokkentBucket = function(hisztogramNev, e
 // A model a séma alapján létrehozott adatbázis kollekció
 // 'TartalomErtekHisztogram' = model neve, tartalomErtekHisztogramSchema = séma definíció
 const TartalomErtekHisztogram = mongoose.model('TartalomErtekHisztogram', tartalomErtekHisztogramSchema);
+
+// A támogatott típusokat is exportáljuk
+TartalomErtekHisztogram.ENTITAS_TIPUSOK = ENTITAS_TIPUSOK;
 
 // Model exportálása, hogy más fájlokban is használható legyen
 module.exports = TartalomErtekHisztogram;

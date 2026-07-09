@@ -240,7 +240,8 @@ class TartalomService {
         maximumDontesiIdo: maximumDontesiIdo
       });
       await ErtekJavaslatRepository.create({
-        tartalomId: ujTartalom._id,
+        entitasId: ujTartalom._id,
+        entitasTipus: 'Tartalom',
         eemberId: eemberId,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
@@ -267,6 +268,7 @@ class TartalomService {
       });
       await ErtekSzamitasService.hisztogramLetrehozasa(
         ujTartalom._id,
+        'Tartalom',
         javaslatElfogadasiKuszob,
         reszveteliAranyKuszob,
         minimumDontesiIdo,

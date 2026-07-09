@@ -131,29 +131,10 @@ class JavaslatService {
       throw new Error('A kezdő tudatpont értéknek egész számnak kell lennie'); // Hiba dobása
     } // Egész szám rendben
 
-    // 2. LÉPÉS - "SZÜLŐ" TARTALOM VALIDÁLÁSA
-    // A jelenlegi logika szerint legalább egy szülő tartalom kell a javaslathoz
-    if (!javaslatAdatok.szuloId) { // Ha nincs szuloId megadva
-      // Ha nincs szülő tartalom ID, hiba
-      throw new Error('A javaslat létrehozásához szülő tartalom megadása kötelező'); // Hiba dobása
-    } // Szülő ID megadva
-
-    // Szülő tartalom létezésének ellenőrzése
-    console.log('javaslatLetrehozas - TartalomRepository.findById (szülő)', { // Logoljuk a szülő tartalom lekérését
-      szuloId: javaslatAdatok.szuloId // Megadjuk a szülő azonosítót
-    }); // Log üzenet vége
-
-    const szuloTartalom = await TartalomRepository.findById(javaslatAdatok.szuloId); // Lekérjük a szülő tartalmat az adatbázisból
-
-    if (!szuloTartalom) { // Ha nincs ilyen tartalom
-      // Ha nincs ilyen tartalom, hiba
-      throw new Error('A megadott szülő tartalom nem található'); // Hiba dobása
-    } // Szülő tartalom létezik
-
-    console.log('javaslatLetrehozas - Szülő tartalom validálva', { // Logoljuk, hogy a szülő rendben van
-      szuloId: szuloTartalom.id,   // A megtalált szülő azonosítója
-      szuloCim: szuloTartalom.cim  // A megtalált szülő címe
-    }); // Log üzenet vége
+    // 2. LÉPÉS - A JAVASLAT SZÜLŐJE
+    // A javaslat MINDIG az érintett entitás gyereke — a szülőt NEM a frontend
+    // adja, hanem a töredék-ciklus állítja be entitásonként (lásd lentebb).
+    // Ezért itt nincs külön szülő-validáció.
 
     // 2.A LÉPÉS - EGYEZMÉNY TÁRHELY VALIDÁLÁSA
     if (javaslatAdatok.egyezmenyTarhelyId) { // Ha van egyezmény tárhely ID megadva
@@ -362,20 +343,29 @@ class JavaslatService {
       const entitas = javaslatAdatok.erintettEntitasok[index]; // Aktuális érintett entitás
       const toredekSorszam = index + 1; // 1-alapú sorszám
 
-      // Szülő ID az adott tartalom lesz, ha entitás típusa Tartalom
-      // További egyszerűsítés: csak Tartalomra engedünk javaslatot tenni
-      if (entitas.entitasTipus !== 'Tartalom') { // Ha az entitás típusa nem Tartalom
-        // Ha nem tartalom, hibát dobunk, mert az új logikában csak tartalom lehet
-        throw new Error('A töredék javaslatok jelenleg csak Tartalom típusú entitásra engedélyezettek'); // Hiba dobása
-      } // Csak tartalom típus engedett
-
-      const szuloIdToredek = entitas.entitasId; // A töredék szülője az érintett tartalom
-
-      // Egyezmény tárhely érték meghatározása
-      const egyezmenyTarhelyIdErtek = javaslatAdatok.egyezmenyTarhelyId || null; // Ha nincs megadva, null
+      // A JAVASLAT SZÜLŐJE: mindig az érintett entitás maga (a javaslat annak
+      // a gyereke). Polimorf: lehet Tartalom, Kategória vagy Tartalomtípus.
+      const szuloIdToredek    = entitas.entitasId;    // A töredék szülője az érintett entitás
+      const szuloTipusToredek = entitas.entitasTipus; // ...és annak típusa
 
       // Aktuális töredék javaslat típusa az adott entitás művelete alapján
       const toredekJavaslatTipus = entitas.muvelet; // A töredék tényleges típusa az adott művelet
+
+      // AZ EGYEZMÉNY HELYE (ha elfogadják) — művelet szerint levezetve:
+      //  - Egyesítés → placeholder, amit a végrehajtó az ÚJ entitásra old fel
+      //  - Törlés    → az érintett entitás; a végrehajtó fallback az eredeti
+      //                szülőre irányítja (mert az entitás törlődik)
+      //  - Módosítás / Áthelyezés → az érintett entitás maga
+      const EGYESITES_PLACEHOLDER = 'eeeeeeeeeeeeeeeeeeee0001';
+      let egyezmenyTarhelyIdErtek;
+      let egyezmenyTarhelyTipusErtek;
+      if (toredekJavaslatTipus === 'Egyesites') {
+        egyezmenyTarhelyIdErtek    = EGYESITES_PLACEHOLDER;
+        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus || 'Tartalom';
+      } else {
+        egyezmenyTarhelyIdErtek    = entitas.entitasId;
+        egyezmenyTarhelyTipusErtek = entitas.entitasTipus;
+      }
 
       // Log a töredék típus meghatározásának elején
       console.log('javaslatLetrehozas - Töredék javaslat típus meghatározása - KEZDÉS', { // Kezdő log
@@ -401,8 +391,9 @@ class JavaslatService {
         letrehozo: eEmberId,
         indoklas: javaslatAdatok.indoklas,
         szuloId: szuloIdToredek,
-        szuloTipus: 'Tartalom',
+        szuloTipus: szuloTipusToredek,
         egyezmenyTarhelyId: egyezmenyTarhelyIdErtek,
+        egyezmenyTarhelyTipus: egyezmenyTarhelyTipusErtek,
         statusz: 'Aktiv',
         letrehozva: new Date(),
         toredekCsoportId,
