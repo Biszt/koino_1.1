@@ -23,7 +23,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 - **Fejlesztői környezet:** `docker-compose -f docker-compose.dev.yml up` — backend a 3000-es porton (a frontendet is ez szolgálja ki statikusan), MongoDB kívülről a 27018-as porton (konténeren belül 27017).
 - **Backend önállóan:** `cd backend`, majd `npm run dev` (nodemon) vagy `npm start`. A kapcsolatot a `backend/.env` `MONGODB_URI` változója adja.
 - A gyökér `package.json` üres — a valódi a `backend/package.json`.
-- Nincs automatizált teszt; API-teszteléshez Postman kollekció: `Koino1 API Tests.postman_collection.json`.
+- Nincs automatizált teszt; a tesztelés böngészős, referenciája a [`docs/teszt.md`](docs/teszt.md).
 
 ## Architektúra
 
@@ -58,6 +58,8 @@ ES-modulok, komponens-osztályok. Belépés: `index.html` + `js/main.js`, nézet
 
 - Commit-üzenetek magyarul, a `main` branchre dolgozunk.
 - Módosítás után a Docker-es dev környezetben (http://localhost:3000) ellenőrizzük a működést.
+- **Tesztelés előtt mindig nézd meg a [`docs/teszt.md`](docs/teszt.md)-t** — ez tartalmazza a környezet-indítást, az útvonalakat, a kötelező mezőket és a teszt-forgatókönyveket.
+- **Fejlesztés közben frissítsd a [`docs/teszt.md`](docs/teszt.md)-t is, ha kell** — ha egy útvonal, kötelező mező, érték-tartomány vagy teszt-forgatókönyv változik, vezesd át ide, hogy a teszt-referencia naprakész maradjon.
 
 ## Zárójeles jegyzetek konvenciója
 
