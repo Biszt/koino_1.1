@@ -49,7 +49,6 @@ async findById(id) {
   // @param {string} szurok.tartalomTipusId - Szűrés tartalom típus szerint
   // @param {string} szurok.szuloId - Szűrés szülő tartalom szerint
   // @param {string} szurok.kategoriaId - Szűrés kategória szerint (bármelyik a 3-ból)
-  // @param {string} szurok.statusz - Szűrés státusz szerint
   // @param {string} szurok.letrehozo - Szűrés létrehozó szerint
   // @returns {Promise<Array>} Tartalmak tömb
   async findAll(szurok = {}) {
@@ -78,11 +77,6 @@ async findById(id) {
       // Ha van megadott kategória ID, akkor keressük azokat a tartalmakat,
       // ahol a kategoriaIds tömb TARTALMAZZA ezt az ID-t
       query.kategoriaIds = szurok.kategoriaId;
-    }
-    
-    // Státusz szerinti szűrés
-    if (szurok.statusz) {
-      query.statusz = szurok.statusz;
     }
     
     // Létrehozó szerinti szűrés
@@ -162,15 +156,13 @@ async findById(id) {
  * Egy szülő entitás alatti tartalmak lekérése
  * @param {string} szuloId - Szülő entitás MongoDB ObjectId-ja
  * @param {string|null} szuloTipus - Szülő típusa (opcionális szűrés)
- * @param {string} statusz - Tartalom státusza (opcionális szűrés)
  * @returns {Promise<Array>} Tartalmak tömb
  */
-async findBySzuloId(szuloId, szuloTipus = null, statusz = 'Lathato') {
+async findBySzuloId(szuloId, szuloTipus = null) {
   // Log metódus kezdete
-  console.log('tartalomRepository.findBySzuloId - KEZDÉS', { 
-    szuloId, 
-    szuloTipus, 
-    statusz 
+  console.log('tartalomRepository.findBySzuloId - KEZDÉS', {
+    szuloId,
+    szuloTipus
   });
   
   // MongoDB query objektum építése
@@ -179,11 +171,6 @@ async findBySzuloId(szuloId, szuloTipus = null, statusz = 'Lathato') {
   // Ha megadták a szuloTipus-t, szűrünk rá
   if (szuloTipus) {
     query.szuloTipus = szuloTipus;
-  }
-  
-  // Státusz szűrés
-  if (statusz) {
-    query.statusz = statusz;
   }
   
   // Tartalmak lekérése kapcsolt adatokkal

@@ -16,8 +16,11 @@ const SZAVAZAT_FELIRATOK = {
 // ===== SZAVAZAT MODAL OSZTÁLY =====
 // Felelősség: egy javaslatra szavazás felülete.
 //  1. Megnyitáskor lekéri az eember korábbi szavazatát és kiemeli.
-//  2. A három gomb egyikére kattintva leadja / módosítja a szavazatot.
-//  3. Ha van leadott szavazat, felajánlja a visszavonását.
+//  2. A három gomb egyike CSAK helyben kiválaszt (nem küld a szervernek);
+//     a „Visszavonás" gomb helyben törli a kiválasztást.
+//  3. A tényleges szerverhívás (leadás / módosítás / visszavonás) csak a
+//     „Rendben" gombra történik meg, a kiválasztás alapján; sikeres mentés
+//     után a modal bezárul. Bezárás mentés nélkül (X / ESC) = nincs változás.
 // Használják: JavaslatKartya (hamburger menü „Szavazat leadása" pontja).
 class SzavazatModal {
 
@@ -40,11 +43,17 @@ class SzavazatModal {
     // A javaslat azonosítója, amire szavazunk
     this.javaslatId = this.entitasAdatok?.entitasId ?? null;
 
-    // A eember jelenlegi szavazata ('Tamogat' | 'Ellenez' | 'Tartozkodik' | null)
+    // A eember SZERVEREN tárolt (eredeti) szavazata a megnyitáskor
+    // ('Tamogat' | 'Ellenez' | 'Tartozkodik' | null)
     this.jelenlegiSzavazat = null;
 
-    // Igaz, ha a modal élettartama alatt bármit szavaztunk vagy visszavontunk —
-    // bezáráskor ez alapján töltjük-e újra a paklit
+    // A felületen éppen KIVÁLASZTOTT (még nem véglegesített) szavazat.
+    // A típus-gombok ezt állítják; a „Rendben" ezt küldi majd a szervernek.
+    // null = nincs kiválasztva / visszavonás szándéka.
+    this.kivalasztottTipus = null;
+
+    // Igaz, ha a modal élettartama alatt ténylegesen mentettünk (szerverhívás
+    // sikeres volt) — bezáráskor ez alapján töltjük-e újra a paklit
     this.valtozottE = false;
 
     this.modal = null;
@@ -63,14 +72,14 @@ class SzavazatModal {
       cim:      'Szavazat leadása',
       tartalom: tartalomHtml,
       meret:    'szuk',
-      // A szavazás azonnal ment a gombra kattintva, ezért itt nincs „Mentés" –
-      // a „Rendben" csak lezárja a modalt (bezáráskor frissül a pakli, ha kellett).
+      // A típus-gombok csak helyben választanak; a tényleges szerverhívás a
+      // „Rendben"-re történik (_megerosites), és sikeres mentés után zár.
       gombok: [
         {
           felirat:   'Rendben',
           tipus:     'elsodleges',
           azonosito: 'szavazat-modal-rendben-gomb',
-          akcio:     () => this.modal.bezaras()
+          akcio:     () => this._megerosites()
         }
       ],
       onBezaras: () => {
@@ -148,6 +157,9 @@ class SzavazatModal {
       const valasz = await apiGet(`javaslat/${this.javaslatId}/sajat-szavazat`, this.token);
       // A data null, ha még nem szavazott
       this.jelenlegiSzavazat = valasz?.data?.szavazatTipus ?? null;
+      // A kiválasztás az eredeti szavazatról indul (ezt emeljük ki), így a
+      // „Rendben" változatlan állapotnál nem küld feleslegesen a szervernek.
+      this.kivalasztottTipus = this.jelenlegiSzavazat;
       this._kivalasztottGombFrissitese();
 
       console.log('SzavazatModal._sajatSzavazatBetoltese - VÉGE', {
@@ -170,8 +182,11 @@ class SzavazatModal {
     gombok?.forEach((gomb) => {
       gomb.addEventListener('click', () => {
         const tipus = gomb.dataset.szavazat;
-        console.log('SzavazatModal - szavazó gomb kattintás', { tipus });
-        this._szavazas(tipus);
+        console.log('SzavazatModal - szavazó gomb kattintás (helyi kiválasztás)', { tipus });
+        // CSAK helyben választunk – a szerverhívás a „Rendben"-re történik
+        this.kivalasztottTipus = tipus;
+        this.modal.hibaTisztitasa();
+        this._kivalasztottGombFrissitese();
       });
     });
 
@@ -186,76 +201,67 @@ class SzavazatModal {
     const gomb     = kontener?.querySelector('.szavazat-modal__visszavonas-gomb');
 
     gomb?.addEventListener('click', () => {
-      console.log('SzavazatModal - visszavonás gomb kattintás');
-      this._visszavonas();
+      console.log('SzavazatModal - visszavonás gomb kattintás (helyi törlés)');
+      // CSAK helyben töröljük a kiválasztást (nincs szerverhívás). Ha volt
+      // eredeti szavazat, a „Rendben" ebből fog visszavonást (DELETE) csinálni.
+      this.kivalasztottTipus = null;
+      this.modal.hibaTisztitasa();
+      this._kivalasztottGombFrissitese();
     });
 
     console.log('SzavazatModal._visszavonasGombBekotese - VÉGE');
   }
 
-  // ===== SZAVAZÁS =====
-  // Leadja vagy módosítja a szavazatot a kiválasztott típussal.
-  // @param {string} tipus - 'Tamogat' | 'Ellenez' | 'Tartozkodik'
-  async _szavazas(tipus) {
-    console.log('SzavazatModal._szavazas - KEZDÉS', { tipus, javaslatId: this.javaslatId });
+  // ===== MEGERŐSÍTÉS (Rendben) =====
+  // A „Rendben" gombra fut. A kiválasztást (kivalasztottTipus) összeveti a
+  // szerveren tárolt eredeti szavazattal (jelenlegiSzavazat), és ez alapján:
+  //   - nincs változás  → nem hív szervert, csak zár,
+  //   - van kiválasztás → szavazat leadása / módosítása (POST),
+  //   - kiválasztás törölve, de volt eredeti → visszavonás (DELETE).
+  // Sikeres mentés után a modal bezárul (bezáráskor frissül a pakli).
+  async _megerosites() {
+    const pending = this.kivalasztottTipus;   // amit a felületen kiválasztott
+    const eredeti = this.jelenlegiSzavazat;   // amit a szerver tárol
+    console.log('SzavazatModal._megerosites - KEZDÉS', {
+      javaslatId: this.javaslatId, pending, eredeti
+    });
 
-    this.modal.hibaTisztitasa();
-    this.modal.betoltesBeallitasa(true);
-
-    try {
-      const eredmeny = await apiPost('javaslat/szavazat', {
-        javaslatId:   this.javaslatId,
-        szavazatTipus: tipus
-      }, this.token);
-
-      this.modal.betoltesBeallitasa(false);
-
-      // Állapot frissítése és a felület igazítása
-      this.jelenlegiSzavazat = tipus;
-      this.valtozottE        = true;
-      this._kivalasztottGombFrissitese();
-
-      // A backend részletes üzenete (benne az „1 percen belül frissül" jelzés,
-      // töredékjavaslatnál a hány töredékre ment el a szavazat)
-      const uzenet = eredmeny?.data?.uzenet ?? 'Szavazat sikeresen leadva.';
-      this._uzenetMegjelenitese(uzenet);
-
-      console.log('SzavazatModal._szavazas - VÉGE: sikeres', { tipus });
-
-    } catch (hiba) {
-      console.error('SzavazatModal._szavazas - HIBA', hiba.message);
-      this.modal.hibaBeallitasa(hiba.message ?? 'A szavazat leadása sikertelen.');
+    // Nincs változás → felesleges szerverhívás nélkül zárunk
+    if (pending === eredeti) {
+      console.log('SzavazatModal._megerosites - nincs változás, csak zárás');
+      this.modal.bezaras();
+      return;
     }
-  }
-
-  // ===== VISSZAVONÁS =====
-  // Visszavonja az eember szavazatát erről a javaslatról.
-  async _visszavonas() {
-    console.log('SzavazatModal._visszavonas - KEZDÉS', { javaslatId: this.javaslatId });
 
     this.modal.hibaTisztitasa();
     this.modal.betoltesBeallitasa(true);
 
     try {
-      const eredmeny = await apiDelete('javaslat/szavazat', {
-        javaslatId: this.javaslatId
-      }, this.token);
+      if (pending) {
+        // Szavazat leadása vagy módosítása a kiválasztott típussal
+        await apiPost('javaslat/szavazat', {
+          javaslatId:    this.javaslatId,
+          szavazatTipus: pending
+        }, this.token);
+      } else {
+        // pending null, de volt eredeti szavazat → visszavonás
+        await apiDelete('javaslat/szavazat', {
+          javaslatId: this.javaslatId
+        }, this.token);
+      }
 
+      // Sikeres mentés: állapot frissítése és zárás
+      this.jelenlegiSzavazat = pending;
+      this.valtozottE        = true;
       this.modal.betoltesBeallitasa(false);
 
-      // Állapot frissítése: nincs többé leadott szavazat
-      this.jelenlegiSzavazat = null;
-      this.valtozottE        = true;
-      this._kivalasztottGombFrissitese();
-
-      const uzenet = eredmeny?.message ?? 'Szavazat sikeresen visszavonva.';
-      this._uzenetMegjelenitese(uzenet);
-
-      console.log('SzavazatModal._visszavonas - VÉGE: sikeres');
+      console.log('SzavazatModal._megerosites - VÉGE: sikeres', { pending });
+      this.modal.bezaras();
 
     } catch (hiba) {
-      console.error('SzavazatModal._visszavonas - HIBA', hiba.message);
-      this.modal.hibaBeallitasa(hiba.message ?? 'A szavazat visszavonása sikertelen.');
+      console.error('SzavazatModal._megerosites - HIBA', hiba.message);
+      // A modal nyitva marad, hogy a felhasználó lássa a hibát és javíthasson
+      this.modal.hibaBeallitasa(hiba.message ?? 'A szavazat mentése sikertelen.');
     }
   }
 
@@ -264,43 +270,31 @@ class SzavazatModal {
   // megmutatja / elrejti a visszavonás gombot.
   _kivalasztottGombFrissitese() {
     console.log('SzavazatModal._kivalasztottGombFrissitese - KEZDÉS', {
+      kivalasztottTipus: this.kivalasztottTipus,
       jelenlegiSzavazat: this.jelenlegiSzavazat
     });
 
     const kontener = document.getElementById(this.kontenerAzonosito);
     if (!kontener) return;
 
-    // Minden gombról levesszük a kiemelést, majd a jelenlegire visszatesszük
+    // A kiemelés a HELYI kiválasztást (kivalasztottTipus) tükrözi, nem a
+    // szerveren tároltat – így a felhasználó látja, mit fog a „Rendben" menteni
     const gombok = kontener.querySelectorAll('.szavazat-modal__gomb');
     gombok.forEach((gomb) => {
-      const kivalasztott = gomb.dataset.szavazat === this.jelenlegiSzavazat;
+      const kivalasztott = gomb.dataset.szavazat === this.kivalasztottTipus;
       gomb.classList.toggle('szavazat-modal__gomb--kivalasztott', kivalasztott);
       gomb.setAttribute('aria-pressed', kivalasztott ? 'true' : 'false');
     });
 
-    // Visszavonás gomb csak akkor látszik, ha van leadott szavazat
+    // Visszavonás gomb csak akkor látszik, ha van SZERVEREN tárolt szavazat,
+    // amit vissza lehet vonni (a gomb helyben törli a kiválasztást, a tényleges
+    // visszavonás a „Rendben"-re történik)
     const visszavonasGomb = kontener.querySelector('.szavazat-modal__visszavonas-gomb');
     if (visszavonasGomb) {
       visszavonasGomb.hidden = !this.jelenlegiSzavazat;
     }
 
     console.log('SzavazatModal._kivalasztottGombFrissitese - VÉGE');
-  }
-
-  // ===== ÜZENET MEGJELENÍTÉSE =====
-  // Zöld sikerüzenetet mutat a gombok alatt (nem hiba — a Modal hiba sávjától külön).
-  // @param {string} szoveg
-  _uzenetMegjelenitese(szoveg) {
-    console.log('SzavazatModal._uzenetMegjelenitese - KEZDÉS', { szoveg });
-
-    const kontener  = document.getElementById(this.kontenerAzonosito);
-    const uzenetElem = kontener?.querySelector('.szavazat-modal__uzenet');
-    if (!uzenetElem) return;
-
-    uzenetElem.textContent = szoveg;
-    uzenetElem.hidden = false;
-
-    console.log('SzavazatModal._uzenetMegjelenitese - VÉGE');
   }
 }
 

@@ -8,6 +8,10 @@ const kategoriaRepository = require('../repositories/kategoriaRepository');
 const tartalomTipusRepository = require('../repositories/tartalomTipusRepository');
 const javaslatRepository = require('../repositories/javaslatRepository');
 const egyezmenyRepository = require('../repositories/egyezmenyRepository');
+// A szavazati jogosultság a backend SAJÁT szabályát használja (érintett entitások
+// tudatpontja), hogy a pakli által küldött `szavazhat` jelzés egyezzen a
+// szavazatService védelmével – egyetlen forrásból.
+const javaslatJogosultsagService = require('./javaslat/javaslatJogosultsagService');
 
 // --- PAKLI SERVICE OSZTÁLY ---
 class PakliService {
@@ -18,10 +22,11 @@ class PakliService {
 * Ha nincs megadva entitás, a legerősebb gyökértől indul.
 * @param {string|null} entitasId - A kiválasztott entitás azonosítója (opcionális)
 * @param {string|null} entitasTipus - A kiválasztott entitás típusa (opcionális)
+* @param {string|null} eemberId - A néző e-ember azonosítója (a szavazhat jelzéshez)
 * @returns {Promise} A kész pakli adatokkal feltöltve
 */
-async pakliotOsszeallitasa(entitasId = null, entitasTipus = null) {
-    console.log('pakliotOsszeallitasa - KEZDÉS', { entitasId, entitasTipus });
+async pakliotOsszeallitasa(entitasId = null, entitasTipus = null, eemberId = null) {
+    console.log('pakliotOsszeallitasa - KEZDÉS', { entitasId, entitasTipus, eemberId });
 
     // 1. LÉPÉS - KIINDULÁSI ENTITÁS MEGHATÁROZÁSA
     let kivalasztottEntitas = null;
@@ -73,7 +78,8 @@ async pakliotOsszeallitasa(entitasId = null, entitasTipus = null) {
     }));
 
     // 6. LÉPÉS - ADATOK FELTÖLTÉSE ENTITÁSTÍPUSONKÉNT
-    const feltoltottPakli = await this.pakliAdatokFeltoltese(listaaMelyseggelEgyutt);
+    // Az eemberId továbbadva, hogy a javaslat-elemek megkapják a szavazhat jelzést
+    const feltoltottPakli = await this.pakliAdatokFeltoltese(listaaMelyseggelEgyutt, eemberId);
 
     // 7. LÉPÉS - TESTVÉREK ÖSSZEGYŰJTÉSE
     // A felmenők listájának hossza megadja a kiválasztott entitás mélységi szintjét,
@@ -84,7 +90,8 @@ async pakliotOsszeallitasa(entitasId = null, entitasTipus = null) {
     const testverek = await this.testverekOsszegyujtese(
         kivalasztottEntitas.szuloId ?? null,
         kivalasztottEntitas.entitasId.toString(),
-        kivalasztottMelysegiSzint
+        kivalasztottMelysegiSzint,
+        eemberId
     );
 
     console.log('pakliotOsszeallitasa - VÉGE', {
@@ -113,10 +120,11 @@ async pakliotOsszeallitasa(entitasId = null, entitasTipus = null) {
 * @param {string|null} szuloId - A kiválasztott entitás szülőjének azonosítója (null ha gyökér)
 * @param {string} kivalasztottEntitasId - A kiválasztott entitás azonosítója
 * @param {number} melysegiSzint - A kiválasztott entitás mélységi szintje – a testvérek ugyanezen a szinten vannak
+* @param {string|null} eemberId - A néző e-ember azonosítója (a szavazhat jelzéshez)
 * @returns {Promise<Array>} A testvérek listája alap adatokkal feltöltve
 */
-async testverekOsszegyujtese(szuloId, kivalasztottEntitasId, melysegiSzint) {
-  console.log('testverekOsszegyujtese - KEZDÉS', { szuloId, kivalasztottEntitasId, melysegiSzint });
+async testverekOsszegyujtese(szuloId, kivalasztottEntitasId, melysegiSzint, eemberId = null) {
+  console.log('testverekOsszegyujtese - KEZDÉS', { szuloId, kivalasztottEntitasId, melysegiSzint, eemberId });
 
   // Testvérek lekérése – az aktuális entitás már az adatbázis szinten ki van zárva
   const testverAllokaciok = await hierarchikusAllokaciRepository.findTestverek(
@@ -138,7 +146,7 @@ async testverekOsszegyujtese(szuloId, kivalasztottEntitasId, melysegiSzint) {
 
   // Minden testvérre lefuttatjuk az egyElemAdatainakFeltoltese logikát – párhuzamosan
   const feltoltottTestverek = await Promise.all(
-    testverAlap.map(elem => this.egyElemAdatainakFeltoltese(elem))
+    testverAlap.map(elem => this.egyElemAdatainakFeltoltese(elem, eemberId))
   );
 
   console.log('testverekOsszegyujtese - VÉGE', {
@@ -240,14 +248,15 @@ async leszarmazottakOsszegyujtese(entitasId, entitasTipus) {
 * A pakli minden eleméhez lekérdezi az entitástípusnak megfelelő adatokat,
 * és a saját tudatpontot a TudatpontAllokacio kollekcióból.
 * @param {Array} pakliAlap - A mélységi szinttel ellátott pakli alap tömb
+* @param {string|null} eemberId - A néző e-ember azonosítója (a szavazhat jelzéshez)
 * @returns {Promise} A feltöltött pakli
 */
-async pakliAdatokFeltoltese(pakliAlap) {
-console.log('pakliAdatokFeltoltese - KEZDÉS', { elemszam: pakliAlap.length });
+async pakliAdatokFeltoltese(pakliAlap, eemberId = null) {
+console.log('pakliAdatokFeltoltese - KEZDÉS', { elemszam: pakliAlap.length, eemberId });
 
 // Minden elemet párhuzamosan dolgozunk fel - Promise.all
 const feltoltottPakli = await Promise.all(
-    pakliAlap.map(elem => this.egyElemAdatainakFeltoltese(elem))
+    pakliAlap.map(elem => this.egyElemAdatainakFeltoltese(elem, eemberId))
 );
 
 console.log('pakliAdatokFeltoltese - VÉGE', { feltoltottElemszam: feltoltottPakli.length });
@@ -258,12 +267,14 @@ return feltoltottPakli;
 /**
 * Egyetlen pakli elem adatait tölti fel entitástípus szerint.
 * @param {Object} elem - A pakli elem (entitasId, entitasTipus, hierarchikusOsszesPont, melysegiSzint, szuloId)
+* @param {string|null} eemberId - A néző e-ember azonosítója (a szavazhat jelzéshez)
 * @returns {Promise} A feltöltött pakli elem
 */
-async egyElemAdatainakFeltoltese(elem) {
+async egyElemAdatainakFeltoltese(elem, eemberId = null) {
   console.log('egyElemAdatainakFeltoltese - KEZDÉS', {
     entitasId: elem.entitasId,
-    entitasTipus: elem.entitasTipus
+    entitasTipus: elem.entitasTipus,
+    eemberId
   });
 
   // Saját tudatpont lekérése a TudatpontAllokacio kollekcióból
@@ -330,6 +341,27 @@ async egyElemAdatainakFeltoltese(elem) {
       dontesiIdo: javaslat?.dontesiIdo ?? null,
       toredekAdatok
     };
+
+    // ===== SZAVAZATI JOGOSULTSÁG (szavazhat) =====
+    // A backend SAJÁT szabályát futtatjuk: az e-embernek MINDEN érintett
+    // entitáson kell tudatpont (a javaslaton magán NEM szükséges). Így a
+    // „Szavazat leadása" menüpont pontosan akkor aktív a frontenden, amikor a
+    // szavazatService is engedné – egyetlen forrásból, nem duplikált logikából.
+    let szavazhat = false;
+    if (eemberId && Array.isArray(javaslat?.erintettEntitasok) && javaslat.erintettEntitasok.length > 0) {
+      try {
+        const jogosultsag = await javaslatJogosultsagService.szavazasiJogosultsagEllenorzese(
+          eemberId,
+          javaslat.erintettEntitasok
+        );
+        szavazhat = jogosultsag.jogosult;
+      } catch (hiba) {
+        // Hiba esetén NEM engedélyezünk – a backend úgyis kikényszeríti a szabályt
+        console.error('egyElemAdatainakFeltoltese - szavazhat számítás hiba', hiba.message);
+        szavazhat = false;
+      }
+    }
+    adatok.szavazhat = szavazhat;
   } else if (elem.entitasTipus === 'Egyezmeny') {
     const egyezmeny = await egyezmenyRepository.findById(elem.entitasId);
     adatok = {

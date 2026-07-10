@@ -29,7 +29,6 @@ class TartalomService {
    * @param {string} adatok.tartalomTipusId - Tartalom típus ID (kötelező)
    * @param {Array} adatok.kategoriaIds - Kategória ID-k tömbje (opcionális, maximum 3)
    * @param {string} adatok.szuloId - Szülő tartalom ID (opcionális)
-   * @param {string} adatok.statusz - Státusz (opcionális, alapértelmezett: 'Lathato')
    * @param {number} adatok.javaslatElfogadasiKuszob - Érték javaslat elfogadási küszöb (51-100)
    * @param {number} adatok.reszveteliAranyKuszob - Részvételi arány küszöb (0-100)
    * @param {number} adatok.minimumDontesiIdo - Minimum döntési idő másodpercben (0-31536000)
@@ -138,15 +137,7 @@ class TartalomService {
     // ===== 4. LÉPÉS - SZÖVEG KEZELÉSE HA VAN =====
    const tisztitottSzoveg = adatok.szoveg !== undefined ? adatok.szoveg : null;
 
-    // ===== 5. LÉPÉS - STÁTUSZ VALIDÁLÁS =====
-    const megengedettStatuszok = ['Lathato', 'Lathatatlan', 'Takart'];
-    const statusz = adatok.statusz; // Alapértelmezett: látható
-    
-    if (!megengedettStatuszok.includes(statusz)) {
-      throw new Error('Érvénytelen státusz. Megengedett értékek: Lathato, Lathatatlan, Takart');
-    }
-
-    // ===== 6. LÉPÉS - KATEGÓRIA ID-K VALIDÁLÁSA =====
+    // ===== 5. LÉPÉS - KATEGÓRIA ID-K VALIDÁLÁSA =====
     let validaltKategoriaIds = [];
     
     if (adatok.kategoriaIds && Array.isArray(adatok.kategoriaIds) && adatok.kategoriaIds.length > 0) {
@@ -192,7 +183,6 @@ class TartalomService {
       szuloId: adatok.szuloId || null,
       szuloTipus: adatok.szuloTipus || null,
       letrehozo: eemberId,
-      statusz: statusz,
     };
 
 
@@ -322,15 +312,6 @@ class TartalomService {
       throw new Error('A tartalom nem található');
     }
 
-    // 4. LÉPÉS - Jogosultság ellenőrzése státusz alapján
-    // Ha nem "Lathato", csak a saját tartalmát láthatja
-    if (tartalom.statusz !== 'Lathato') {
-      // Ellenőrizzük, hogy a eember a tartalom létrehozója-e
-      if (!eemberId || tartalom.letrehozo._id.toString() !== eemberId.toString()) {
-        throw new Error('Nincs jogosultságod megtekinteni ezt a tartalmat');
-      }
-    }
-
     console.log("<<<<<<<<<<<<<<<<< tartalomLekerese=====tartalom: ", {
       tartalom: tartalom
     });
@@ -353,13 +334,7 @@ class TartalomService {
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Státusz kezelés
-    // Ha nincs megadva státusz szűrő, alapértelmezetten csak a látható tartalmakat
-    if (!szurok.statusz) {
-      szurok.statusz = 'Lathato';
-    }
-
-    // 2. LÉPÉS - Repository hívás - tartalmak lekérése
+    // 1. LÉPÉS - Repository hívás - tartalmak lekérése
 
     console.log("tartalomListazasa >>>>>>>>>>>>>>>>> TartalomRepository.findAll", { 
       szurok: szurok
@@ -367,31 +342,11 @@ class TartalomService {
     
     const tartalmak = await TartalomRepository.findAll(szurok);
 
-    // 3. LÉPÉS - Jogosultság szűrés (csak látható vagy saját tartalmak)
-    const szurtTartalmak = tartalmak.filter(tartalom => {
-      // Ha látható, mindenki láthatja
-      if (tartalom.statusz === 'Lathato') {
-
-        console.log("<<<<<<<<<<<<<<<<<< tartalomListazasa", "true");
-        
-        return true;
-      }
-      
-      // Ha nem látható, csak a saját tartalmát
-      if (eemberId && tartalom.letrehozo._id.toString() === eemberId.toString()) {
-
-        console.log("<<<<<<<<<<<<<<<<<< tartalomListazasa", "true");
-        return true;
-      }
-
-      console.log("<<<<<<<<<<<<<<<<<< tartalomListazasa", "false");      
-      return false;
+    // 2. LÉPÉS - Visszaadás (nincs láthatóság-szűrés – minden tartalom látható)
+    console.log("<<<<<<<<<<<<<<<<<<<<< tartalomListazasa === tartalmak", {
+      tartalmakSzama: tartalmak.length
     });
-
-    console.log("<<<<<<<<<<<<<<<<<<<<<tartalomListazasa===szurtTartalmak: ", {
-      szurtTartalmak
-    });
-    return szurtTartalmak;
+    return tartalmak;
   }
 
   // =====================================
@@ -432,7 +387,7 @@ class TartalomService {
 
     // 3. LÉPÉS - Engedélyezett mezők szűrése
     // Csak bizonyos mezők módosíthatók
-    const megengedettMezok = ['cim', 'szoveg', 'statusz', 'kategoriaIds']; // MÓDOSÍTVA: + kategoriaIds
+    const megengedettMezok = ['cim', 'szoveg', 'kategoriaIds'];
     const tisztitottFrissitesek = {};
     
     for (const mezo of megengedettMezok) {
@@ -456,16 +411,7 @@ class TartalomService {
     if (tisztitottFrissitesek.szoveg !== undefined) {
     }
 
-    // 6. LÉPÉS - Státusz validálás (ha változik)
-    if (tisztitottFrissitesek.statusz) {
-      const megengedettStatuszok = ['Lathato', 'Lathatatlan', 'Takart'];
-      
-      if (!megengedettStatuszok.includes(tisztitottFrissitesek.statusz)) {
-        throw new Error('Érvénytelen státusz. Megengedett értékek: Lathato, Lathatatlan, Takart');
-      }
-    }
-
-    // 7. LÉPÉS - KATEGÓRIA ID-K VALIDÁLÁSA (ha változik) - ÚJ!
+    // 6. LÉPÉS - KATEGÓRIA ID-K VALIDÁLÁSA (ha változik) - ÚJ!
     if (tisztitottFrissitesek.kategoriaIds !== undefined) {
       let validaltKategoriaIds = [];
       

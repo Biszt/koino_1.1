@@ -345,16 +345,30 @@ class JavaslatKartya extends Kartya {
     // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg.
     // A korábbi „Törlés" pont a terv szerint törölve (a törlés javaslat útján történik).
+
+    // A szavazati jogosultságot a backend szabálya dönti el: az e-embernek az
+    // ÉRINTETT entitás(ok)on kell tudatpont – a javaslaton magán NEM. Ezt a pakli
+    // előre kiszámolja és `adatok.szavazhat`-ként küldi (lásd pakliService).
+    const adatok    = entitas.adatok ?? {};
+    const szavazhat = adatok.szavazhat === true;
+
+    // Csak AKTÍV javaslatra lehet szavazni – nem aktív státusznál
+    // (pl. Elfogadva/Elvetve) a szavazás opció teljesen kimarad a menüből
+    // (a backend úgyis elutasítaná). A státusz a kártya adataiból jön.
+    const aktivJavaslat = adatok.statusz === 'Aktiv';
+
     const opciok = [
-      {
-        ikon:           '🗳️',
-        felirat:        'Szavazat leadása',
-        // Csak akkor aktív, ha az eembernek van tudatpontja az entitáson.
-        // A menü megnyitásakor ellenőrzi a Kartya alaposztály (backend hívás).
-        tudatpontFuggo: true,
-        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => this._szavazatLeadasa(entitas)
-      },
+      // --- SZAVAZAT LEADÁSA (csak aktív javaslatnál kerül a menübe) ---
+      // FONTOS: NEM tudatpontFuggo – nem a javaslat entitásán ellenőrzünk,
+      // hanem a backend által számolt szavazhat jelzésen. Így a menüpont
+      // pontosan akkor aktív, amikor a szavazatService is engedné.
+      ...(aktivJavaslat ? [{
+        ikon:        '🗳️',
+        felirat:     'Szavazat leadása',
+        tiltva:      !szavazhat,
+        tiltvaIndok: 'Ehhez az érintett tartalmon kell tudatpont (a javaslaton magán nem szükséges).',
+        akcio:       () => this._szavazatLeadasa(entitas)
+      }] : []),
       {
         ikon:           '✏️',
         felirat:        'Új tartalom létrehozása ebből',

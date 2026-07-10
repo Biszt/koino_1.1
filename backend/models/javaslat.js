@@ -177,7 +177,7 @@ const javaslatSchema = new mongoose.Schema({
   // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
     type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
-    required: true,                     // Kötelező mező
+    required: false,                    // NEM kötelező – az indoklás megadása opcionális
     default: null                       // Alapértelmezett: null
   },
 
@@ -376,11 +376,9 @@ javaslatSchema.pre('save', function(next) { // Mentés előtti middleware kezdet
   // ezért itt külön ellenőrzés nem kell (a régi, „szülő tartalom kötelező"
   // üzenet félrevezető is volt, mert a szülő nem csak Tartalom lehet).
 
-  // VALIDÁCIÓ - Indoklás kötelező ellenőrzése
-  // MÓDOSÍTVA: String helyett Mixed, ezért manuálisan ellenőrizzük a meglétét
-  if (!this.indoklas) { // Ha nincs indoklás megadva
-    return next(new Error('Az indoklás megadása kötelező'));
-  }
+  // Az indoklás megadása OPCIONÁLIS (nincs kötelezőség és nincs minimum
+  // karakter-követelmény) – ezért itt nem ellenőrizzük a meglétét. Ha nincs
+  // megadva, a mező default null marad.
 
   // VALIDÁCIÓ - Egyesites típus validálása
   if (this.javaslatTipus === 'Egyesites') { // Csak Egyesites típusnál fusson le

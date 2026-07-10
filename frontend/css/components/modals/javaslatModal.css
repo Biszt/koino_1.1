@@ -142,6 +142,14 @@
   margin-left: var(--space-1);
 }
 
+/* Opcionális jelzés (halvány, tájékoztató) */
+.javaslat-modal__opcionalis {
+  color: var(--color-text-muted, var(--color-text-secondary, #888));
+  font-weight: 400;
+  font-size: var(--text-xs);
+  margin-left: var(--space-1);
+}
+
 /* Szövegmező (indoklás) */
 .javaslat-modal__textarea {
   width: 100%;

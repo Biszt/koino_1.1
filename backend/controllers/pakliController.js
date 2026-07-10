@@ -42,9 +42,13 @@ class PakliController {
             }
 
             // 4. LÉPÉS - SERVICE HÍVÁS
+            // A bejelentkezett e-ember azonosítóját is átadjuk (authMiddleware tölti
+            // a req.user-t) – ebből számol a service javaslat-elemenként `szavazhat`-ot.
+            const eemberId = req.user?.id ?? null;
             const eredmeny = await pakliService.pakliotOsszeallitasa(
                 entitasId ?? null,
-                entitasTipus ?? null
+                entitasTipus ?? null,
+                eemberId
             );
 
             // 5. LÉPÉS - SIKERES VÁLASZ

@@ -133,12 +133,25 @@
 /* =============================================
    LINK BLOKK – MEGJELENÍTŐ MÓD
    =============================================
-   Változatlan – a link stílusát a szövegszerkesztő CSS-ből
-   örökli, megjelenítő módban teljesen megfelelő.
+   A link stílusát a szövegszerkesztő CSS-ből örökli.
    Törlő gomb biztonsági elrejtése.
    ============================================= */
 .szoveg-mezo-megjelenito .link-blokk + .blokk-torlo-gomb {
   display: none;
+}
+
+/* =============================================
+   BLOKK-WRAPPER MAGASSÁG – MEGJELENÍTŐ MÓD (flexbox-javítás)
+   =============================================
+   A fő konténer (.szoveg-mezo-megjelenito) display: flex, ezért a blokk-
+   wrapperek FLEX-ELEMEK. A flex-elemek alapértelmezett `min-height: auto`
+   a szerkesztőben beállított (és inline height-ként visszaállított) magasságot
+   FELFÚJJA a tartalom min-content méretére – így a link-/fájlblokk a kártyán
+   mindig magasabb lett, mint a szerkesztőben (ott a wrapper sima block elem).
+   A `min-height: 0` visszaadja a beállított pontos magasságot. */
+.szoveg-mezo-megjelenito .link-blokk-wrapper,
+.szoveg-mezo-megjelenito .fajl-blokk-wrapper {
+  min-height: 0;
 }
 
 

@@ -43,7 +43,6 @@ class TartalomController {
       //   kategoriaIds: [ObjectId],
       //   szuloId: ObjectId,           // ← ÚJ
       //   szuloTipus: string,          // ← ÚJ ('Tartalom', 'Javaslat', 'Egyezmeny')
-      //   statusz: string,
       //   kezdoTudatpont: number
       // }
       const adatok = req.body;
@@ -152,7 +151,7 @@ class TartalomController {
   /**
    * Tartalmak listázása szűrőkkel
    * GET /api/tartalom
-   * Query paraméterek: tartalomTipusId, szuloId, kategoriaId, statusz
+   * Query paraméterek: tartalomTipusId, szuloId, kategoriaId
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
@@ -164,8 +163,7 @@ class TartalomController {
         const szurok = {
             tartalomTipusId: req.query.tartalomTipusId,
             szuloId: req.query.szuloId,
-            kategoriaId: req.query.kategoriaId, // EGY kategória ID szűréshez (bármelyik a 3 közül)
-            statusz: req.query.statusz
+            kategoriaId: req.query.kategoriaId // EGY kategória ID szűréshez (bármelyik a 3 közül)
         };
         console.log('1. Szűrők:', JSON.stringify(szurok, null, 2));
         

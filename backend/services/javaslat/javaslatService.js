@@ -87,21 +87,11 @@ class JavaslatService {
       throw new Error('A javaslat típusa kötelezõ'); // Hiba dobása egyértelmű üzenettel
     } // Típus megléte rendben
 
-    // 1.2 - Indoklás ellenőrzése
-    // Az indoklás a SzovegSzerkeszto komponensből érkezik, két formátumban:
-    // 1. blokk-tömb (oldal navigáció nélkül)
-    // 2. több oldalas objektum: { oldalNavigacio: { fulek }, aktivFulId, blokkok: { fulId: [...] } }
-    const indoklas = javaslatAdatok.indoklas; // Kiemeljük az indoklást
-    const indoklasTombE = Array.isArray(indoklas) && indoklas.length > 0; // Blokk-tömb formátum ellenőrzése
-    const indoklasTobbOldalasE = !!indoklas && !Array.isArray(indoklas) // Több oldalas formátum ellenőrzése
-      && Array.isArray(indoklas.oldalNavigacio?.fulek)                  // Van fülek tömb
-      && indoklas.oldalNavigacio.fulek.length > 0                       // Legalább egy fül
-      && !!indoklas.blokkok && typeof indoklas.blokkok === 'object';    // Van blokkok objektum
-
-    if (!indoklasTombE && !indoklasTobbOldalasE) { // Ha egyik érvényes formátum sem
-      // Ha nincs indoklás megadva, hiba
-      throw new Error('Az indoklás megadása kötelező'); // Hiba dobása
-    } // Indoklás megléte rendben
+    // 1.2 - Indoklás
+    // Az indoklás megadása OPCIONÁLIS – nincs kötelezőség és nincs minimum
+    // karakter-követelmény. Ha nincs érdemi tartalom, a javaslat így is
+    // létrehozható; az indoklas ilyenkor üres/null marad (a modellben nem
+    // kötelező mező). Ezért itt nincs indoklás-validáció.
 
     // 1.3 - Érintett entitások ellenőrzése
     if (!javaslatAdatok.erintettEntitasok || javaslatAdatok.erintettEntitasok.length === 0) { // Ha nincs tömb vagy a hossza 0

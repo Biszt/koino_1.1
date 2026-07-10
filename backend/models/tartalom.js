@@ -116,14 +116,6 @@ letrehozo: {
     required: true                         // Kötelező mező
 },
 
-// ----- STÁTUSZ MEZŐ -----
-// A tartalom láthatósági állapota
-statusz: {
-    type: String,                                  // Szöveges típus
-    enum: ['Lathato', 'Lathatatlan', 'Takart'],   // Engedélyezett értékek
-    default: 'Lathato'                             // Alapértelmezett: látható
-},
-
 // ----- LÉTREHOZÁS DÁTUMA -----
 // Amikor a tartalom létrejött
 letrehozva: {
@@ -145,17 +137,11 @@ tartalomSchema.index({ szuloId: 1 });
 // Gyors keresés: "Egy javaslat alatti összes tartalom"
 tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
 
-// Gyors keresés: "Egy tartalom alatti látható tartalmak"
-tartalomSchema.index({ szuloId: 1, statusz: 1 });
-
 // Létrehozó indexelése - gyors keresés eember tartalmai alapján
 tartalomSchema.index({ letrehozo: 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
 tartalomSchema.index({ kategoriaIds: 1 });
-
-// Státusz indexelése - gyors szűrés láthatóság szerint
-tartalomSchema.index({ statusz: 1 });
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

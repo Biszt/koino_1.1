@@ -429,12 +429,6 @@ class TartalomModal {
       tipusSelect.value = adatok.tartalomTipusId;
     }
 
-    // Státusz select – változatlan
-    const statuszSelect = document.getElementById('tartalom-statusz');
-    if (statuszSelect && adatok.statusz) {
-      statuszSelect.value = adatok.statusz;
-    }
-
     // Kategóriák – változatlan
     if (adatok.kategoriaIds && adatok.kategoriaIds.length > 0) {
       adatok.kategoriaIds.forEach(katId => {
@@ -495,7 +489,6 @@ class TartalomModal {
 
     const cim     = document.getElementById('tartalom-cim')?.value?.trim();
     const tipusId = document.getElementById('tartalom-tipus')?.value || null;
-    const statusz = document.getElementById('tartalom-statusz')?.value;
 
     // =============================================
     // ÚJ - Szöveg lekérése a SzovegSzerkesztőből
@@ -509,8 +502,7 @@ class TartalomModal {
       cim,
       szoveg,              // Már nem string, hanem blokkok tömbje
       tartalomTipusId: tipusId || undefined,
-      kategoriaIds:    [...this.kivalasztottKategoriaIds],
-      statusz
+      kategoriaIds:    [...this.kivalasztottKategoriaIds]
     };
 
     if (this.szuloAdatok?.szuloId) {
@@ -530,7 +522,6 @@ class TartalomModal {
 
     console.log('TartalomModal._adatokOsszegyujtese - VÉGE', {
       cim,
-      statusz,
       szovegBlokkokSzama: szoveg.length,
       kategoriaIdsSzama:  adatok.kategoriaIds.length
     });

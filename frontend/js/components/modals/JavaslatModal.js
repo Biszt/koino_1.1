@@ -910,20 +910,10 @@ class JavaslatModal {
     }
 
     // =============================================
-    // ÚJ - Indoklás ellenőrzése a szerkesztőből
+    // Indoklás – OPCIONÁLIS (nincs kötelezőség, nincs minimum karakter)
     // =============================================
-    // A getTartalom() blokk-tömböt VAGY több oldalas objektumot ad vissza —
-    // mindkettőből kigyűjtjük a blokkokat és érdemi szöveget keresünk
-    if (this.indoklasSzerkeszto) {
-      const blokkok = this._blokkokKinyerese(this.indoklasSzerkeszto.getTartalom());
-      const vanSzoveg = blokkok.some(b =>
-        b.tipus === 'szoveg' && b.tartalom?.replace(/<[^>]*>/g, '').trim().length >= 10
-      );
-      if (!vanSzoveg) {
-        console.log('JavaslatModal._validalas - VÉGE: indoklás túl rövid');
-        return 'Az indoklás legalább 10 karakter hosszú szöveges tartalmat igényel.';
-      }
-    }
+    // Az indoklás megadása nem kötelező, ezért itt NEM validáljuk. Amit a
+    // szerkesztő ad (üres blokk, rövid szöveg, vagy semmi), az mind elfogadott.
 
     // =============================================
     // ÚJ - Típus-specifikus ellenőrzések
@@ -1222,7 +1212,7 @@ class JavaslatModal {
     // Az új entitás adatai — Tartalomnál cim, más típusnál nev a mező neve.
     // Az új entitás a felhasználó által KÖTELEZŐEN megadott, ellenőrzött
     // szülő tartalom alá kerül (nem lehet érintett entitás vagy annak
-    // leszármazottja — a backend kétszeresen ellenőrzi), látható státusszal.
+    // leszármazottja — a backend kétszeresen ellenőrzi).
     const ujEntitasAdatok = ujTipus === 'Tartalom'
       ? { cim: ujNev }
       : { nev: ujNev };
@@ -1232,7 +1222,6 @@ class JavaslatModal {
       ujEntitasAdatok.szuloId    = ujSzuloId;
       ujEntitasAdatok.szuloTipus = 'Tartalom';
     }
-    ujEntitasAdatok.statusz = 'Lathato';
 
     const egyesitesAdatok = {
       ujEntitasTipus: ujTipus,

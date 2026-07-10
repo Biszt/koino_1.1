@@ -90,7 +90,6 @@ async function futtatas() {
     szoveg: 'Részletes leírás a klímaváltozás következményeiről és a lehetséges megoldásokról.',
     tartalomTipusId: '',    // Nem kötelező mező
     kategoriaIds: [],       // Üres tömb – nincs kategória
-    statusz: 'Lathato',
     javaslatElfogadasiKuszob: 81,
     reszveteliAranyKuszob: 31,
     minimumDontesiIdo: 10,

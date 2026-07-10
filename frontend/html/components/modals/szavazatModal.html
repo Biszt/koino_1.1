@@ -6,7 +6,8 @@
 
   <!-- Bevezető szöveg -->
   <p class="szavazat-modal__bevezeto">
-    Hogyan döntesz erről a javaslatról? A szavazatodat bármikor megváltoztathatod.
+    Hogyan döntesz erről a javaslatról? Válaszd ki, majd a <strong>Rendben</strong>
+    gombbal erősítsd meg. A szavazatodat később bármikor megváltoztathatod.
   </p>
 
   <!-- ===== SZAVAZÓ GOMBOK ===== -->
@@ -31,12 +32,9 @@
 
   </div>
 
-  <!-- ===== SIKERÜZENET SÁV ===== -->
-  <!-- Alapból üres és rejtett; a JS tölti fel szavazás/visszavonás után. -->
-  <div class="szavazat-modal__uzenet" aria-live="polite" hidden></div>
-
   <!-- ===== VISSZAVONÁS ===== -->
-  <!-- Csak akkor látható, ha az eembernek van leadott szavazata (JS kezeli). -->
+  <!-- Csak akkor látható, ha az eembernek van SZERVEREN tárolt szavazata (JS kezeli). -->
+  <!-- A gomb helyben törli a kiválasztást; a tényleges visszavonás a „Rendben"-re történik. -->
   <button class="szavazat-modal__visszavonas-gomb" type="button" hidden>
     Szavazat visszavonása
   </button>

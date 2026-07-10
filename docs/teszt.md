@@ -110,7 +110,7 @@ a `localStorage`-ba menti.
 |---|---|---|
 | `javaslatTipus` | ✅ | `Torles, Modositas, Egyesites, Athelyezes, Csomag` |
 | `erintettEntitasok[]` | ✅ | min. 1; elemenként `entitasId`, `entitasTipus` (`Tartalom/Kategoria/TartalomTipus`), `muvelet` |
-| `indoklas` | ✅ | szövegszerkesztő JSON |
+| `indoklas` | ❌ | szövegszerkesztő JSON; **opcionális** (nincs kötelezőség, nincs min. karakter) |
 | `kezdoTudatpont` | ✅ | a controller kötelezővé teszi (a javaslattevő induló pontja) |
 | `szuloId` | — | **NEM a frontend adja** — a service teszi az érintett entitás alá |
 
@@ -127,6 +127,10 @@ Az **új felmenő-szabály**: pont hozzárendelésekor a teljes szülőláncon k
 Body: `{ javaslatId, szavazatTipus }` — `szavazatTipus` ∈ `Tamogat, Ellenez, Tartozkodik`.
 Visszavonás: `DELETE /api/javaslat/szavazat`, body: `{ javaslatId }`.
 Feltétel: tudatpont az érintett entitáson.
+**UI (SzavazatModal):** a típus-gombok és a „Visszavonás" CSAK helyben választanak;
+a tényleges szerverhívás (leadás/módosítás/visszavonás) a **„Rendben"** gombra
+történik. Bezárás „Rendben" nélkül (X/ESC) = nincs változás. A „Szavazat leadása"
+menüpont csak **Aktiv** státuszú javaslatnál jelenik meg.
 
 ---
 
