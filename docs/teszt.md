@@ -237,6 +237,12 @@ Minden lépésnél párhuzamosan figyeljük:
 15. ⬜ Közben: korábbi szavazat **kiemelése**, **módosítása**, **visszavonása** működik; a kártyán a
     szavazás állása, **bizonyossági mutató** és **döntési idő** frissül.
 
+> **Modell A (szavazási arányok) — 2026-07-11:** a támogatottsági / ellenzői / tartózkodói arány
+> mostantól **tiszta szelet** (mindegyik = az adott szavazat-szám / összes szavazó × 100), és a három
+> együtt **mindig 100%**. A tartózkodás már **nem** „fél-támogatás": csökkenti a támogatottságot, így
+> sok tartózkodó mellett **nehezebb az elfogadás** (az elfogadási küszöb a tiszta támogató%-ot nézi).
+> A **bizonyossági mutató** értéke változatlan: `( |támogató% − ellenző%| + részvételi% ) / 2`.
+
 ### 7. A kör lezárása (cron, percenként)
 16. ⬜ **Elfogadás-ág:** figyeld a backend naplót (`⏰` + `Küszöbök ellenőrzése` + `Elfogadva`).
     - *Elvárt:* a javaslat `Elfogadva`, és **egyezmény jön létre** az érintett tartalomnál (Módosítás → érintett entitás).
@@ -263,7 +269,7 @@ docker exec koino-mongodb-dev mongosh koino --eval "db.ertekjavaslats.find().pre
 docker exec koino-mongodb-dev mongosh koino --eval "db.tartalomertekhisztograms.find().pretty()"
 
 # Javaslatok státusza, számított értékei, hatályba lépés
-docker exec koino-mongodb-dev mongosh koino --eval "db.javaslats.find({},{javaslatTipus:1,statusz:1,tamogatotsagiArany:1,reszveteliArany:1,bizonyossagiMutato:1,dontesiIdo:1,hatalybaLepesIdeje:1,szuloTipus:1,egyezmenyTarhelyTipus:1}).pretty()"
+docker exec koino-mongodb-dev mongosh koino --eval "db.javaslats.find({},{javaslatTipus:1,statusz:1,tamogatotsagiArany:1,ellenzoiArany:1,tartozkodoiArany:1,reszveteliArany:1,bizonyossagiMutato:1,dontesiIdo:1,hatalybaLepesIdeje:1,szuloTipus:1,egyezmenyTarhelyTipus:1}).pretty()"
 
 # Egyezmények (a lezárás után) + helyük  [kollekció: egyezmenies]
 docker exec koino-mongodb-dev mongosh koino --eval "db.egyezmenies.find().pretty()"

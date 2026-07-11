@@ -117,59 +117,123 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
 }
 
 /* ---------------------------------------- */
-/* FEJLÉC */
+/* FEJLÉC – három vízszintes sáv (elválasztó vonalak nélkül) */
 /* ---------------------------------------- */
 
-/* Fejléc – minden kártyán megjelenik */
+/* Egy sáv magassága. A fejléc három, vizuálisan egyenlő sávból áll:
+   felső = cím-terület, alsó kettő = hamburger (bal négyzet) + ikon-terület (jobb). */
+:root {
+  --fejlec-sav-magassag: 30px;
+}
+
+/* Fejléc – függőlegesen egymásra rakott sávok, elválasztó vonalak nélkül */
 .pakli-kartya__fejlec {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  min-height: 44px; /* érintési célterület minimum */
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3);
   flex-shrink: 0; /* fejléc ne zsugorodjon, ha a body nő */
 }
 
-/* Hamburger kontener – bal oldalt, fix szélesség */
-/* CSS változók a hamburger gomb megjelenéséhez –
-color-mix() segítségével a zöld alapszínből számítjuk,
-így a gomb automatikusan követi a téma változásait */
+/* Felső sáv: cím-terület – a cím KÖZÉPRE igazítva (minden kártyatípuson).
+   position: relative a jobbra kilógó státuszhoz. */
+.pakli-kartya__fejlec-cim {
+  min-height: var(--fejlec-sav-magassag);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  min-width: 0;
+  position: relative;
+}
+
+/* A cím szövege: prominens, egy sorban, túlnyúlásnál levágva. A státusz-konténert
+   KIZÁRJUK (:not), mert az saját megjelenésű badge. Magasabb specificitás (a __belso
+   ősön át), hogy a típus-specifikus cím-osztályok színét/vastagságát EGYSÉGESÍTSE.
+   A betűméretet a Kartya._cimBetumeretBeallitasa állítja dinamikusan (inline). */
+.pakli-kartya__belso .pakli-kartya__fejlec-cim > *:not(.pakli-kartya__cim-statusz) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Státusz + töredék a cím-sor JOBB szélén – a középre igazított címből kilógva,
+   így nem foglal helyet az ikon-területen. */
+.pakli-kartya__cim-statusz {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Alsó rész: bal négyzet (hamburger) + jobb oldali ikon-terület */
+.pakli-kartya__fejlec-also {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+/* Hamburger kontener – bal oldali négyzet, az alsó két sávot tölti ki.
+   A CSS változók a hamburger gomb megjelenését adják (color-mix a témából),
+   így a gomb automatikusan követi a téma változásait. */
 .pakli-kartya__hamburger-kontener {
   flex-shrink: 0;
+  width: calc(var(--fejlec-sav-magassag) * 2);
+  min-height: calc(var(--fejlec-sav-magassag) * 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   --hamburger-gomb-hatter: color-mix(in srgb, #ffffff 10%, var(--color-primary));
   --hamburger-gomb-keret: var(--color-primary-hover);
   --hamburger-gomb-hatter-hover: color-mix(in srgb, #ffffff 18%, var(--color-primary));
   --hamburger-gomb-hatter-aktiv: color-mix(in srgb, #ffffff 25%, var(--color-primary));
 }
 
-/* Fejléc tartalom – típus-specifikus elemek helye, kitölti a maradék helyet */
-.pakli-kartya__fejlec-tartalom {
+/* Ikon-terület – jobb oldal, a blokkok két sorban, JOBBRA igazítva */
+.pakli-kartya__fejlec-ikonok {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end; /* ikon+szám blokkok a jobb szélhez igazodnak */
+  gap: var(--space-1);
   overflow: hidden;
+}
+
+/* Egy sor az ikon-területen (1. = közös tudatpont, 2. = típus-specifikus).
+   A blokkok jobbra igazodnak; ha nem férnek el, tördelnek. */
+.pakli-kartya__ikon-sor {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  min-width: 0;
+  max-width: 100%;
 }
 
-/* Cím – a kártya neve a fejlécben */
-.pakli-kartya__cim {
+/* Egy ikon+szám blokk */
+.pakli-kartya__ikon-elem {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* hosszú cím levágása ...-val */
-  flex: 1;
 }
 
-/* Kiválasztott kártya cime erősebb */
-.pakli-kartya--kivalasztott .pakli-kartya__cim {
-  font-size: var(--text-base);
+/* A néző e-ember saját pontja – kiemelve */
+.pakli-kartya__ikon-elem--sajat {
+  color: var(--color-primary);
   font-weight: 600;
-  color: var(--color-text);
 }
 
 /* Hamburger gomb – minden kártyán egyformán aktív */

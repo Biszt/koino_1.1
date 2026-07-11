@@ -6,6 +6,8 @@ import SzavazatModal from '../modals/SzavazatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
+import { masodpercFelirat } from '../../utils/idoFormazo.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -48,58 +50,68 @@ class JavaslatKartya extends Kartya {
 
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan
-  _fejlecFeltoltese(fejlecTartalom) {
+  _fejlecFeltoltese(cimSav, masodikSor) {
     console.log('JavaslatKartya._fejlecFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
     const adatok = this.entitas.adatok ?? {};
+    // A második sorba (típus-specifikus) kerül a státusz badge, a töredék jelzés és a
+    // mutatók sora. A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
+    const fejlecTartalom = masodikSor;
 
-    // --- JAVASLAT TÍPUS ---
+    // --- MEGNEVEZÉS (a felső sávba) – pl. „Módosítási javaslat", csomagnál „Javaslat csomag" ---
     const tipusElem = document.createElement('span');
     tipusElem.className   = 'javaslat-kartya__tipus';
-    tipusElem.textContent = adatok.javaslatTipus ?? '(típus nélkül)';
-    fejlecTartalom.appendChild(tipusElem);
+    tipusElem.textContent = javaslatMegnevezes(adatok.javaslatTipus, 'javaslat');
+    cimSav.appendChild(tipusElem);
 
-    // --- STÁTUSZ BADGE ---
-    if (adatok.statusz) {
-      const statuszElem    = document.createElement('span');
-      const statuszModifier = adatok.statusz.toLowerCase().replace(/\s+/g, '-');
-      statuszElem.className = `javaslat-kartya__statusz javaslat-kartya__statusz--${statuszModifier}`;
-      statuszElem.textContent = adatok.statusz;
-      statuszElem.setAttribute('aria-label', `Státusz: ${adatok.statusz}`);
-      fejlecTartalom.appendChild(statuszElem);
-    }
+    // --- STÁTUSZ + TÖREDÉK (a CÍM-sorba, jobbra igazítva) ---
+    // A cím-sáv jobb szélére kerülnek, hogy ne foglaljanak helyet az ikon-területen.
+    if (adatok.statusz || adatok.toredekAdatok) {
+      const statuszKontener = document.createElement('div');
+      statuszKontener.className = 'pakli-kartya__cim-statusz';
 
-    // --- TÖREDÉK JELZÉS ---
-    if (adatok.toredekAdatok) {
-      const { toredekSorszam, toredekDarab } = adatok.toredekAdatok;
-      const toredekElem = document.createElement('span');
-      toredekElem.className   = 'javaslat-kartya__toredek';
-      toredekElem.textContent = `${toredekSorszam ?? '?'} / ${toredekDarab ?? '?'}`;
-      toredekElem.setAttribute('aria-label',
-        `Töredék javaslat: ${toredekSorszam}. rész, összesen ${toredekDarab}`
-      );
-      fejlecTartalom.appendChild(toredekElem);
+      if (adatok.statusz) {
+        const statuszElem     = document.createElement('span');
+        const statuszModifier = adatok.statusz.toLowerCase().replace(/\s+/g, '-');
+        statuszElem.className  = `javaslat-kartya__statusz javaslat-kartya__statusz--${statuszModifier}`;
+        statuszElem.textContent = adatok.statusz;
+        statuszElem.setAttribute('aria-label', `Státusz: ${adatok.statusz}`);
+        statuszKontener.appendChild(statuszElem);
+      }
+
+      if (adatok.toredekAdatok) {
+        const { toredekSorszam, toredekDarab } = adatok.toredekAdatok;
+        const toredekElem = document.createElement('span');
+        toredekElem.className   = 'javaslat-kartya__toredek';
+        toredekElem.textContent = `${toredekSorszam ?? '?'} / ${toredekDarab ?? '?'}`;
+        toredekElem.setAttribute('aria-label',
+          `Töredék javaslat: ${toredekSorszam}. rész, összesen ${toredekDarab}`
+        );
+        statuszKontener.appendChild(toredekElem);
+      }
+
+      cimSav.appendChild(statuszKontener);
     }
 
     // --- MUTATÓK SOR ---
     const mutatokSor = document.createElement('div');
     mutatokSor.className = 'javaslat-kartya__mutatok-sor';
 
+    // A négy szavazati arány (Modell A – együtt 100%) + a döntési idő.
+    // A bizonyossági mutató szándékosan NEM a fejlécen jelenik meg (a Részletek modálban igen).
     this._mutatoElemLetrehozasa(mutatokSor, '👥', adatok.reszveteliArany,    '%', 'Részvételi arány',      'javaslat-kartya__mutato--reszveteli');
     this._mutatoElemLetrehozasa(mutatokSor, '✅', adatok.tamogatotsagiArany, '%', 'Támogatottsági arány',  'javaslat-kartya__mutato--tamogatottsagi');
     this._mutatoElemLetrehozasa(mutatokSor, '❌', adatok.ellenzoiArany,      '%', 'Ellenzői arány',        'javaslat-kartya__mutato--ellenzoi');
-    this._mutatoElemLetrehozasa(mutatokSor, '🎯', adatok.bizonyossagiMutato, '',  'Bizonyossági mutató',   'javaslat-kartya__mutato--bizonyossagi');
+    this._mutatoElemLetrehozasa(mutatokSor, '➖', adatok.tartozkodoiArany,   '%', 'Tartózkodói arány',     'javaslat-kartya__mutato--tartozkodoi');
 
     if (adatok.dontesiIdo !== null && adatok.dontesiIdo !== undefined) {
-      const percElem = document.createElement('span');
-      percElem.className = 'javaslat-kartya__mutato javaslat-kartya__mutato--dontesi-ido';
-      percElem.setAttribute('aria-label', 'Döntési idő');
-      percElem.textContent = adatok.dontesiIdo >= 60
-        ? `⏱ ${Math.round(adatok.dontesiIdo / 60)} perc`
-        : `⏱ ${adatok.dontesiIdo} mp`;
-      mutatokSor.appendChild(percElem);
+      const idoElem = document.createElement('span');
+      idoElem.className = 'javaslat-kartya__mutato javaslat-kartya__mutato--dontesi-ido';
+      idoElem.setAttribute('aria-label', `Döntési idő: ${masodpercFelirat(adatok.dontesiIdo)}`);
+      idoElem.textContent = `⏱ ${masodpercFelirat(adatok.dontesiIdo)}`;
+      mutatokSor.appendChild(idoElem);
     }
 
     fejlecTartalom.appendChild(mutatokSor);
@@ -188,10 +200,13 @@ class JavaslatKartya extends Kartya {
       return;
     }
 
+    // A törtszázalékokat egészre kerekítjük a megjelenítéshez (a szám maradhat tört a modellben)
+    const megjelenitett = (typeof ertek === 'number') ? Math.round(ertek) : ertek;
+
     const mutatoElem = document.createElement('span');
     mutatoElem.className = `javaslat-kartya__mutato ${modifierCss}`;
-    mutatoElem.setAttribute('aria-label', `${ariaLabel}: ${ertek}${egyseg}`);
-    mutatoElem.textContent = `${ikon} ${ertek}${egyseg}`;
+    mutatoElem.setAttribute('aria-label', `${ariaLabel}: ${megjelenitett}${egyseg}`);
+    mutatoElem.textContent = `${ikon} ${megjelenitett}${egyseg}`;
     kontener.appendChild(mutatoElem);
 
     console.log('JavaslatKartya._mutatoElemLetrehozasa - VÉGE', { ariaLabel, ertek });

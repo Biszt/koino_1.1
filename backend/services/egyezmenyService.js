@@ -232,6 +232,8 @@ class EgyezmenyService {
       tartozkodokSzama: tartozkodokSzama, // Egyedi tartózkodók száma (deduplikálva)
       reszveteliArany: javaslat.reszveteliArany || 0, // Elmentjük a részvételi arány snapshotját
       tamogatotsagiArany: javaslat.tamogatotsagiArany || 0, // Elmentjük a támogatottsági arány snapshotját
+      ellenzoiArany: javaslat.ellenzoiArany || 0, // MODELL A – ellenzői arány snapshotja
+      tartozkodoiArany: javaslat.tartozkodoiArany || 0, // MODELL A – tartózkodói arány snapshotja
       bizonyossagiMutato: javaslat.bizonyossagiMutato || 0 // Elmentjük a bizonyossági mutató snapshotját
     }; // Az egyezmény adatok alapobjektumának vége
 

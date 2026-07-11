@@ -11,14 +11,26 @@
        de a segéd lap érintetlen maradjon. -->
   <div class="pakli-kartya__belso">
 
-    <!-- Fejléc: minden kártyán megjelenik -->
+    <!-- Fejléc: három vízszintes sáv (elválasztó vonalak nélkül).
+         Felső sáv = cím/név/megnevezés. Alsó két sáv = bal négyzet (hamburger)
+         + jobb oldali ikon-terület (ikon+szám blokkok két sorban, jobbra igazítva). -->
     <div class="pakli-kartya__fejlec">
-      <div class="pakli-kartya__hamburger-kontener">
-        <!-- HamburgerMenu.js tölti fel -->
+
+      <!-- Felső sáv: cím-terület – típus-specifikus szöveg, leszármazott tölti fel -->
+      <div class="pakli-kartya__fejlec-cim">
+        <!-- leszármazott osztály tölti fel -->
       </div>
-      <div class="pakli-kartya__fejlec-tartalom">
-        <!-- típus-specifikus fejléc tartalom – leszármazott osztályok töltik fel -->
+
+      <!-- Alsó rész: bal négyzet hamburger + jobb oldali ikon-terület -->
+      <div class="pakli-kartya__fejlec-also">
+        <div class="pakli-kartya__hamburger-kontener">
+          <!-- HamburgerMenu.js tölti fel -->
+        </div>
+        <div class="pakli-kartya__fejlec-ikonok">
+          <!-- típus-specifikus ikon+szám blokkok – leszármazott osztályok töltik fel -->
+        </div>
       </div>
+
     </div>
 
     <!-- Body: csak kiválasztott kártyán jelenik meg, hidden attribútummal indul -->

@@ -62,7 +62,7 @@ class ReszletekModal {
   // ===== KONSTRUKTOR =====
   // @param {string} kontenerAzonosito - a modal konténer div ID-ja
   // @param {Object} beallitasok
-  // @param {Object} beallitasok.entitas - a kártya entitása (entitasId, entitasTipus, adatok, sajatTudatpont, hierarchikusOsszesPont)
+  // @param {Object} beallitasok.entitas - a kártya entitása (entitasId, entitasTipus, adatok, entitasSajatTudatpont, hierarchikusOsszesPont)
   // @param {string} beallitasok.token   - JWT token (opcionális, különben a tárolt)
   // @param {Function} beallitasok.onEntitasKivalasztas - szöveg entitás-hivatkozás koppintásakor (entitasId, entitasTipus)
   constructor(kontenerAzonosito, beallitasok = {}) {

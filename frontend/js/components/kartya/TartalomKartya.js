@@ -40,18 +40,21 @@ class TartalomKartya extends Kartya {
 
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan – cím, típus ikon, kategória ikonok, tudatpontok
-  _fejlecFeltoltese(fejlecTartalom) {
+  _fejlecFeltoltese(cimSav, masodikSor) {
     console.log('TartalomKartya._fejlecFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
     const adatok = this.entitas.adatok ?? {};
+    // A második sorba (típus-specifikus) kerül a tartalomtípus- és a kategória-ikon.
+    // A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
+    const fejlecTartalom = masodikSor;
 
-    // --- CÍM ---
+    // --- CÍM (a felső sávba) ---
     const cimElem = document.createElement('span');
     cimElem.className   = 'tartalom-kartya__cim';
     cimElem.textContent = adatok.cim ?? '(cím nélkül)';
-    fejlecTartalom.appendChild(cimElem);
+    cimSav.appendChild(cimElem);
 
     // --- TARTALOM TÍPUS IKON ---
     if (adatok.tartalomTipus?.ikon) {
@@ -105,24 +108,6 @@ class TartalomKartya extends Kartya {
 
       fejlecTartalom.appendChild(kategoriaKontener);
     }
-
-    // --- TUDATPONT SOR ---
-    const tudatpontSor = document.createElement('div');
-    tudatpontSor.className = 'tartalom-kartya__tudatpont-sor';
-
-    const sajatTudatpontElem = document.createElement('span');
-    sajatTudatpontElem.className = 'tartalom-kartya__tudatpont tartalom-kartya__tudatpont--sajat';
-    sajatTudatpontElem.setAttribute('aria-label', 'Saját tudatpont');
-    sajatTudatpontElem.textContent = `🌿🌟: ${(this.entitas.sajatTudatpont ?? 0).toLocaleString()}`;
-    tudatpontSor.appendChild(sajatTudatpontElem);
-
-    const hierarchikusTudatpontElem = document.createElement('span');
-    hierarchikusTudatpontElem.className = 'tartalom-kartya__tudatpont tartalom-kartya__tudatpont--hierarchikus';
-    hierarchikusTudatpontElem.setAttribute('aria-label', 'Hierarchikus tudatpont');
-    hierarchikusTudatpontElem.textContent = `🌲🌟: ${(this.entitas.hierarchikusOsszesPont ?? 0).toLocaleString()}`;
-    tudatpontSor.appendChild(hierarchikusTudatpontElem);
-
-    fejlecTartalom.appendChild(tudatpontSor);
 
     console.log('TartalomKartya._fejlecFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,

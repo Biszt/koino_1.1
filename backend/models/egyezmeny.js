@@ -156,10 +156,27 @@ const egyezmenySchema = new mongoose.Schema({
     default: 0      // Alapértelmezett: 0
   },
 
-  // Támogatottsági arány % végrehajtáskor
+  // Támogatottsági arány % végrehajtáskor (MODELL A – tiszta szelet: támogatók/szavazók)
   tamogatotsagiArany: {
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
+    min: 0,         // Minimum érték
+    max: 100,       // Maximum érték
+    default: 0      // Alapértelmezett: 0
+  },
+
+  // Ellenzői arány % végrehajtáskor (MODELL A – tiszta szelet: ellenzők/szavazók)
+  ellenzoiArany: {
+    type: Number,   // Számérték típus
+    min: 0,         // Minimum érték
+    max: 100,       // Maximum érték
+    default: 0      // Alapértelmezett: 0
+  },
+
+  // Tartózkodói arány % végrehajtáskor (MODELL A – tiszta szelet: tartózkodók/szavazók)
+  // A támogatottsági + ellenzői + tartózkodói arány együtt 100%.
+  tartozkodoiArany: {
+    type: Number,   // Számérték típus
     min: 0,         // Minimum érték
     max: 100,       // Maximum érték
     default: 0      // Alapértelmezett: 0

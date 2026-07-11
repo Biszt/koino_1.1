@@ -87,36 +87,28 @@ class KategoriaKartya extends Kartya {
 
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan
-  _fejlecFeltoltese(fejlecTartalom) {
+  _fejlecFeltoltese(cimSav, masodikSor) {
     console.log('KategoriaKartya._fejlecFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
     const adatok = this.entitas.adatok ?? {};
+    // A második sorba (típus-specifikus) kerül az ikon (F4-ben: „hány tartalom használja").
+    // A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
+    const fejlecTartalom = masodikSor;
 
+    // --- NÉV (a felső sávba) ---
     const nevElem = document.createElement('span');
     nevElem.className   = 'kategoria-kartya__nev';
     nevElem.textContent = adatok.nev ?? '(név nélkül)';
-    fejlecTartalom.appendChild(nevElem);
-
-    const tudatpontSor = document.createElement('div');
-    tudatpontSor.className = 'kategoria-kartya__tudatpont-sor';
-
-    const sajatTudatpontElem = document.createElement('span');
-    sajatTudatpontElem.className = 'kategoria-kartya__tudatpont kategoria-kartya__tudatpont--sajat';
-    sajatTudatpontElem.setAttribute('aria-label', 'Saját tudatpont');
-    sajatTudatpontElem.textContent = `🌿 ${(this.entitas.sajatTudatpont ?? 0).toLocaleString()}`;
-    tudatpontSor.appendChild(sajatTudatpontElem);
-
-    const hierarchikusTudatpontElem = document.createElement('span');
-    hierarchikusTudatpontElem.className = 'kategoria-kartya__tudatpont kategoria-kartya__tudatpont--hierarchikus';
-    hierarchikusTudatpontElem.setAttribute('aria-label', 'Hierarchikus tudatpont');
-    hierarchikusTudatpontElem.textContent = `🌲 ${(this.entitas.hierarchikusOsszesPont ?? 0).toLocaleString()}`;
-    tudatpontSor.appendChild(hierarchikusTudatpontElem);
-
-    fejlecTartalom.appendChild(tudatpontSor);
+    cimSav.appendChild(nevElem);
 
     this._ikonMegjelenites(fejlecTartalom, adatok.ikon, 'kategoria-kartya');
+
+    // Hány tartalom használja ezt a kategóriát (2. sor)
+    fejlecTartalom.appendChild(
+      this._ikonElem('📄', adatok.hasznaloTartalmakSzama, 'Ezt a kategóriát használó tartalmak száma')
+    );
 
     console.log('KategoriaKartya._fejlecFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,

@@ -154,13 +154,21 @@ class JavaslatSzamitasService {
     // RA = (résztvevőTudatpontTulajdonosok / entitásokTudatpontTulajdonosok) * 100
     const reszveteliArany = (resztvevoTudatpontTulajdonosokSzama / entitasokTudatpontTulajdonosokSzama) * 100;
 
-    // 7. LÉPÉS - TÁMOGATOTTSÁGI ÉS ELLENZŐI ARÁNY SZÁMÍTÁSA
-    const tamogatotsagiArany = ((javaslatotTamogatok + (tartozkodok / 2)) / szavazok) * 100;
-    const ellenzoiArany = ((javaslatotEllenzok + (tartozkodok / 2)) / szavazok) * 100;
+    // 7. LÉPÉS - TÁMOGATOTTSÁGI / ELLENZŐI / TARTÓZKODÓI ARÁNY (MODELL A – TISZTA SZELETEK)
+    // A három arány a szavazók (T + E + tk) között oszlik el, és együtt MINDIG 100%-ot ad ki.
+    // A tartózkodás önálló szelet: NEM olvad bele a támogatottságba/ellenzésbe (a korábbi
+    // „fél-szétosztás” megszűnt), így a passzivitás csökkenti a támogatottságot.
+    const tamogatotsagiArany = szavazok > 0 ? (javaslatotTamogatok / szavazok) * 100 : 0;
+    const ellenzoiArany      = szavazok > 0 ? (javaslatotEllenzok  / szavazok) * 100 : 0;
+    const tartozkodoiArany   = szavazok > 0 ? (tartozkodok         / szavazok) * 100 : 0;
 
     // 8. LÉPÉS - BIZONYOSSÁGI MUTATÓ SZÁMÍTÁSA
-    const maxArany = Math.max(tamogatotsagiArany, ellenzoiArany);    
-    const bizonyossagiMutato = (((maxArany - 50) * 2) + reszveteliArany) / 2;
+    // Egyértelműség = a támogatottság és az ellenzés KÜLÖNBSÉGE (0 = döntetlen, 100 = egyöntetű).
+    // Ez a korábbi ((max(TA,EA) − 50) × 2) képlet pontos általánosítása – azonos értéket ad,
+    // mert a kivonásnál a tartózkodók fele-fele része kiesik. A BM ennek és a részvételi
+    // aránynak az átlaga (a képlet szerkezete változatlan).
+    const egyertelmuseg = Math.abs(tamogatotsagiArany - ellenzoiArany);
+    const bizonyossagiMutato = (egyertelmuseg + reszveteliArany) / 2;
 
     console.log("bizonyossagiMutato::::::::::::::::::::::::", bizonyossagiMutato);
     
@@ -202,6 +210,7 @@ class JavaslatSzamitasService {
       reszveteliArany: reszveteliArany,
       tamogatotsagiArany: tamogatotsagiArany,
       ellenzoiArany: ellenzoiArany,
+      tartozkodoiArany: tartozkodoiArany, // ÚJ – Modell A tiszta tartózkodói szelet (T+E+tk = 100%)
       bizonyossagiMutato: bizonyossagiMutato,
       dontesiIdo: dontesiIdo
     };

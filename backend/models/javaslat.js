@@ -291,8 +291,19 @@ const javaslatSchema = new mongoose.Schema({
     max: 100        // Maximum érték: 100
   },
 
+  // Tartózkodói arány - százalékban (MODELL A – tiszta szelet)
+  // TartA = javaslatTartozkodoinakSzama / resztvevoTudatpontTulajdonosokSzama * 100
+  // A támogatottsági + ellenzői + tartózkodói arány együtt MINDIG 100%.
+  tartozkodoiArany: {
+    type: Number,   // Számérték típus
+    default: 0,     // Alapértelmezett: 0
+    min: 0,         // Minimum érték: 0
+    max: 100        // Maximum érték: 100
+  },
+
   // Bizonyossági mutató (BM)
-  // BM = (((TA vagy EA - 50) * 2) + RA) / 2
+  // BM = ( | TA − EA | + RA ) / 2   – a tartózkodás csökkenti a TA és EA különbségét,
+  // így az egyértelműséget is (több tartózkodó → alacsonyabb bizonyosság → hosszabb döntési idő)
   bizonyossagiMutato: {
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0

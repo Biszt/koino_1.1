@@ -30,6 +30,23 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-07-11
+
+- 🆕 „[A saját tudatpont elnevezést, a kódban, eggyértelműsíteni e kell, hogya az
+  entitasSajatTudatpont, és az eemberSajatTudatpontEntitason, meglehessen
+  külömböztetni őket, eggyértelmüen]"
+  → Kontextus: a fejléc-átalakítás során mindkét fogalom megjelenik a kártyán
+  (az entitás saját összpontja ÉS a néző e-ember saját pontja az entitáson),
+  ezért a jelenlegi kétértelmű `sajatTudatpont` mezőnevet érdemes egyértelműsíteni.
+  A fejléc-munka közben tervezzük át a névhasználatot.
+
+- 🆕 „[A legfelső sórnak, dinamikus betümérettel kéne megjelenítenie a szöveget,
+  hogy a rövidebb cím nagyobb a hosszabb cím, bedig kisebb legyen. Ezt a karakter
+  limit, és a hely fügvényében kell kitalálni.}"
+  → Kontextus: a fejléc új felső sora (cím / név / javaslat-megnevezés) dinamikus
+  betűmérettel jelenne meg — rövid szöveg nagyobb, hosszú kisebb, a karakterszám
+  és a rendelkezésre álló hely függvényében. A fejléc alaplayoutja után finomítjuk.
+
 ### 2026-07-10
 
 - ✅ „[javaslat, létrhozásakkor, ne legyen, minimum karakter követelmény, sőt

@@ -108,10 +108,23 @@ async init() {
     // az addEventListener sorrendje garantálja, hogy ez előbb fut – a kiválasztás megelőzi a nyitást
   }
 
-  // 7. LÉPÉS – Fejléc tartalom feltöltése (leszármazott osztály felülírja)
-  const fejlecTartalom = this.domElem.querySelector('.pakli-kartya__fejlec-tartalom');
-  if (fejlecTartalom) {
-    this._fejlecFeltoltese(fejlecTartalom);
+  // 7. LÉPÉS – Fejléc feltöltése (leszármazott osztály felülírja)
+  // A háromsávos fejléc két slotot kínál a leszármazottnak:
+  //  - cimSav  = a felső sáv (cím / név / megnevezés)
+  //  - ikonSav = a jobb oldali ikon-terület (ikon+szám blokkok)
+  const cimSav  = this.domElem.querySelector('.pakli-kartya__fejlec-cim');
+  const ikonSav = this.domElem.querySelector('.pakli-kartya__fejlec-ikonok');
+  if (cimSav && ikonSav) {
+    // Az ikon-terület két sorból áll:
+    //  1. sor = közös tudatpont-sor (minden kártyán azonos) – a base építi
+    this._kozosTudatpontSorFeltoltese(ikonSav);
+    //  2. sor = típus-specifikus ikon+szám blokkok – a leszármazott tölti
+    const masodikSor = document.createElement('div');
+    masodikSor.className = 'pakli-kartya__ikon-sor pakli-kartya__ikon-sor--tipus';
+    ikonSav.appendChild(masodikSor);
+    this._fejlecFeltoltese(cimSav, masodikSor);
+    // A felső sor betűmérete a szöveg hosszához igazodik (rövid → nagyobb)
+    this._cimBetumeretBeallitasa(cimSav);
   }
 
   // 8. LÉPÉS – Body elem referenciájának eltárolása és feltöltése, ha kiválasztott
@@ -276,10 +289,109 @@ _kivalasztottAllapotBeallitasa() {
 
 // ----- FEJLÉC FELTÖLTÉSE -----
 // Alap implementáció: üres. Leszármazott osztályok felülírják.
-// @param {HTMLElement} fejlecTartalom - A .pakli-kartya__fejlec-tartalom elem
-_fejlecFeltoltese(fejlecTartalom) {
+// A cím-sávba a típus szerinti szöveg (cím/név/megnevezés), a második sorba a
+// típus-specifikus ikon+szám blokkok kerülnek. Az 1. (közös tudatpont) sort a
+// base már megépítette – a leszármazott CSAK a második sort tölti.
+// @param {HTMLElement} cimSav     - A .pakli-kartya__fejlec-cim elem (felső sáv)
+// @param {HTMLElement} masodikSor - Az ikon-terület 2. sora (típus-specifikus)
+_fejlecFeltoltese(cimSav, masodikSor) {
   console.log('Kartya._fejlecFeltoltese - KEZDÉS alap (felülírás szükséges)');
   console.log('Kartya._fejlecFeltoltese - VÉGE');
+}
+
+// ----- KÖZÖS TUDATPONT-SOR (az ikon-terület 1. sora, minden kártyán azonos) -----
+// Az entitás saját összpontja + a hierarchikus összpont + a hozzájárulók száma
+// MINDIG megjelenik; a néző e-ember saját pontja CSAK akkor, ha van neki (>0).
+// @param {HTMLElement} ikonSav - A .pakli-kartya__fejlec-ikonok elem
+_kozosTudatpontSorFeltoltese(ikonSav) {
+  const e = this.entitas ?? {};
+
+  const sor = document.createElement('div');
+  sor.className = 'pakli-kartya__ikon-sor pakli-kartya__ikon-sor--tudatpont';
+
+  // Entitás saját (közvetlen) összpontja
+  sor.appendChild(this._ikonElem('🌿', e.entitasSajatTudatpont, 'Entitás saját tudatpontja'));
+  // Hierarchikus összpont (a leszármazottakkal együtt)
+  sor.appendChild(this._ikonElem('🌲', e.hierarchikusOsszesPont, 'Hierarchikus tudatpont (leszármazottakkal)'));
+  // Hozzájárulók száma (hány e-ember tett rá közvetlen pontot)
+  sor.appendChild(this._ikonElem('👥', e.hozzajarulokSzama, 'Hozzájárulók száma'));
+
+  // A néző e-ember saját pontja – CSAK ha van neki (>0)
+  const sajat = e.eemberSajatTudatpontEntitason ?? 0;
+  if (sajat > 0) {
+    sor.appendChild(this._ikonElem('⭐', sajat, 'A te tudatpontod ezen az entitáson', 'pakli-kartya__ikon-elem--sajat'));
+  }
+
+  ikonSav.appendChild(sor);
+}
+
+// ----- EGY IKON+SZÁM BLOKK -----
+// Egységes ikon+szám elem az ikon-területhez (emoji + formázott érték).
+// @param {string} emoji - a jelölő emoji
+// @param {number} ertek - a megjelenítendő szám
+// @param {string} cimke - aria-label és tooltip
+// @param {string} extraOsztaly - opcionális kiegészítő CSS-osztály
+// @returns {HTMLElement}
+_ikonElem(emoji, ertek, cimke, extraOsztaly = '') {
+  const el = document.createElement('span');
+  el.className = `pakli-kartya__ikon-elem ${extraOsztaly}`.trim();
+  el.setAttribute('aria-label', cimke);
+  el.title = cimke;
+  el.textContent = `${emoji} ${Number(ertek ?? 0).toLocaleString('hu-HU')}`;
+  return el;
+}
+
+// ----- EGY SZÁZALÉK-BLOKK -----
+// Ikon+százalék elem az ikon-területhez: a törtszázalékot EGÉSZRE KEREKÍTI és
+// „%" jelet tesz utána. Hiányzó/érvénytelen értéknél „–".
+// @param {string} emoji - a jelölő emoji
+// @param {number} ertek - a százalék (0–100, lehet tört)
+// @param {string} cimke - aria-label és tooltip
+// @returns {HTMLElement}
+_szazalekElem(emoji, ertek, cimke) {
+  const van = (ertek !== null && ertek !== undefined && !Number.isNaN(Number(ertek)));
+  const szoveg = van ? `${Math.round(Number(ertek))}%` : '–';
+
+  const el = document.createElement('span');
+  el.className = 'pakli-kartya__ikon-elem';
+  el.setAttribute('aria-label', `${cimke}: ${szoveg}`);
+  el.title = cimke;
+  el.textContent = `${emoji} ${szoveg}`;
+  return el;
+}
+
+// ----- CÍM DINAMIKUS BETŰMÉRETE -----
+// A felső sáv (cím/név/megnevezés) betűméretét a szöveg HOSSZÁHOZ igazítja:
+// rövid szöveg nagyobb, hosszú szöveg kisebb betűvel jelenik meg, hogy egy sorban
+// elférjen. A karakterszám alapján lépcsőzetesen választ méretet (a kártyák
+// szélessége azonos, ezért a hossz a fő tényező; a túl hosszút a CSS ellipszise vágja).
+// Az inline betűméret felülírja a típus-specifikus cím-osztály méretét.
+// @param {HTMLElement} cimSav - A .pakli-kartya__fejlec-cim elem
+_cimBetumeretBeallitasa(cimSav) {
+  if (!cimSav) return;
+
+  // A státusz (ha van) NEM számít bele a hosszba és NEM méretezzük dinamikusan –
+  // csak a cím/név/megnevezés szövege.
+  const cimGyerekek = [...cimSav.children].filter(
+    (el) => !el.classList.contains('pakli-kartya__cim-statusz')
+  );
+
+  const hossz = cimGyerekek.reduce((ossz, el) => ossz + (el.textContent ?? '').trim().length, 0);
+
+  // Lépcsős betűméret a karakterszám függvényében (px)
+  let meret;
+  if      (hossz <= 12) meret = 20; // rövid cím – nagy
+  else if (hossz <= 18) meret = 18;
+  else if (hossz <= 26) meret = 16;
+  else if (hossz <= 36) meret = 14;
+  else                  meret = 13; // hosszú cím – kicsi
+
+  // Minden cím-gyerekre (pl. egyezménynél a 🤝 jelző + a szöveg is)
+  for (const gyerek of cimGyerekek) {
+    gyerek.style.fontSize = `${meret}px`;
+  }
+
+  console.log('Kartya._cimBetumeretBeallitasa - VÉGE', { hossz, meret });
 }
 
 // ----- BODY FELTÖLTÉSE -----

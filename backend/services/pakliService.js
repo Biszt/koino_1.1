@@ -2,7 +2,10 @@
 
 // --- IMPORTÁLÁSOK ---
 const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
-const tudatpontRepository = require('../repositories/tudatpontRepository');
+// A fejléc tudatpont-adatait (entitás saját összpont, hozzájárulók száma, a néző
+// e-ember saját pontja) a TudatpontService egyetlen metódusa adja – ugyanaz a
+// forrás, mint amit a tudatpont-modal és a jogosultság-ellenőrzés is használ.
+const tudatpontService = require('./tudatpontService');
 const tartalomRepository = require('../repositories/tartalomRepository');
 const kategoriaRepository = require('../repositories/kategoriaRepository');
 const tartalomTipusRepository = require('../repositories/tartalomTipusRepository');
@@ -246,7 +249,7 @@ async leszarmazottakOsszegyujtese(entitasId, entitasTipus) {
 // ----- PAKLI ADATOK FELTÖLTÉSE -----
 /**
 * A pakli minden eleméhez lekérdezi az entitástípusnak megfelelő adatokat,
-* és a saját tudatpontot a TudatpontAllokacio kollekcióból.
+* és az entitás saját (közvetlen) összpontját a TudatpontAllokacio kollekcióból.
 * @param {Array} pakliAlap - A mélységi szinttel ellátott pakli alap tömb
 * @param {string|null} eemberId - A néző e-ember azonosítója (a szavazhat jelzéshez)
 * @returns {Promise} A feltöltött pakli
@@ -277,12 +280,20 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     eemberId
   });
 
-  // Saját tudatpont lekérése a TudatpontAllokacio kollekcióból
-  const sajatAllokacio = await tudatpontRepository.findAllokaciByEntitas(
+  // Az entitás tudatpont-adatai EGY közös forrásból (TudatpontService):
+  //  - osszesPont         → az entitás saját (közvetlen) összpontja (a leszármazottak nélkül)
+  //  - hozzajarulokSzama  → hány e-ember tett rá közvetlen tudatpontot
+  //  - eemberHozzajarulas → a NÉZŐ e-ember saját pontja EZEN az entitáson (0, ha nincs eemberId vagy nincs pontja)
+  // Így a fejléc mindhárom tudatpont-adata ugyanabból a számításból jön, mint a
+  // tudatpont-modal és a jogosultság-ellenőrzés – nincs duplikált logika.
+  const entitasAllokacio = await tudatpontService.entitasAllokaciLekerese(
     elem.entitasId,
-    elem.entitasTipus
+    elem.entitasTipus,
+    eemberId
   );
-  const sajatTudatpont = sajatAllokacio?.osszesPont ?? 0;
+  const entitasSajatTudatpont         = entitasAllokacio?.osszesPont         ?? 0;
+  const hozzajarulokSzama             = entitasAllokacio?.hozzajarulokSzama  ?? 0;
+  const eemberSajatTudatpontEntitason = entitasAllokacio?.eemberHozzajarulas ?? 0;
 
   // Entitástípus-specifikus adatok lekérése
   let adatok;
@@ -312,15 +323,21 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     };
   } else if (elem.entitasTipus === 'Kategoria') {
     const kategoria = await kategoriaRepository.findById(elem.entitasId);
+    // Hány tartalom használja ezt a kategóriát – a fejléc 2. sorához
+    const hasznaloTartalmakSzama = await tartalomRepository.countByKategoriaId(elem.entitasId);
     adatok = {
       nev: kategoria?.nev ?? null,
-      ikon: kategoria?.ikon ?? null
+      ikon: kategoria?.ikon ?? null,
+      hasznaloTartalmakSzama
     };
   } else if (elem.entitasTipus === 'TartalomTipus') {
     const tartalomTipus = await tartalomTipusRepository.findById(elem.entitasId);
+    // Hány tartalom használja ezt a tartalomtípust – a fejléc 2. sorához
+    const hasznaloTartalmakSzama = await tartalomRepository.countByTartalomTipusId(elem.entitasId);
     adatok = {
       nev: tartalomTipus?.nev ?? null,
-      ikon: tartalomTipus?.ikon ?? null
+      ikon: tartalomTipus?.ikon ?? null,
+      hasznaloTartalmakSzama
     };
   } else if (elem.entitasTipus === 'Javaslat') {
     const javaslat = await javaslatRepository.findById(elem.entitasId);
@@ -337,6 +354,7 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
       reszveteliArany: javaslat?.reszveteliArany ?? null,
       tamogatotsagiArany: javaslat?.tamogatotsagiArany ?? null,
       ellenzoiArany: javaslat?.ellenzoiArany ?? null,
+      tartozkodoiArany: javaslat?.tartozkodoiArany ?? null, // MODELL A – tiszta tartózkodói szelet
       bizonyossagiMutato: javaslat?.bizonyossagiMutato ?? null,
       dontesiIdo: javaslat?.dontesiIdo ?? null,
       toredekAdatok
@@ -368,7 +386,10 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
       javaslatTipus: egyezmeny?.javaslatTipus ?? null,
       reszveteliArany: egyezmeny?.reszveteliArany ?? null,
       tamogatotsagiArany: egyezmeny?.tamogatotsagiArany ?? null,
-      bizonyossagiMutato: egyezmeny?.bizonyossagiMutato ?? null
+      ellenzoiArany: egyezmeny?.ellenzoiArany ?? null, // MODELL A – ellenzői arány snapshot
+      tartozkodoiArany: egyezmeny?.tartozkodoiArany ?? null, // MODELL A – tartózkodói arány snapshot
+      bizonyossagiMutato: egyezmeny?.bizonyossagiMutato ?? null,
+      dontesDatum: egyezmeny?.vegrehajtva ?? null // A döntés (végrehajtás) dátuma – a fejléc 2. sorához
     };
   } else {
     console.warn('egyElemAdatainakFeltoltese - Ismeretlen entitástípus', elem.entitasTipus);
@@ -376,7 +397,9 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
 
   console.log('egyElemAdatainakFeltoltese - VÉGE', {
     entitasId: elem.entitasId,
-    sajatTudatpont
+    entitasSajatTudatpont,
+    hozzajarulokSzama,
+    eemberSajatTudatpontEntitason
   });
 
   return {
@@ -386,7 +409,9 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     hierarchikusOsszesPont: elem.hierarchikusOsszesPont,
     letrehozva: elem.letrehozva ?? null, // Döntetlen pontnál a testvér-sorrendhez (Pakli.js)
     szuloId: elem.szuloId ?? null, // A szülő azonosítója, null ha gyökér
-    sajatTudatpont,
+    entitasSajatTudatpont, // Az entitás saját (közvetlen) összpontja – NEM a néző e-emberé
+    hozzajarulokSzama, // Hány e-ember tett rá közvetlen tudatpontot
+    eemberSajatTudatpontEntitason, // A néző e-ember saját pontja ezen az entitáson (0, ha nincs / nincs bejelentkezve)
     adatok
   };
 }

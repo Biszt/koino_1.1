@@ -139,6 +139,36 @@ async findById(id) {
     return gyermekekSzama;
   }
 
+  // ----- KATEGÓRIÁT HASZNÁLÓ TARTALMAK SZÁMLÁLÁSA -----
+  // Megszámolja, hány tartalom kategoriaIds tömbje tartalmazza ezt a kategóriát.
+  // Használat: a Kategória kártya fejlécén „hány tartalom használja" jelzés.
+  // @param {string} kategoriaId - A kategória MongoDB ObjectId-ja
+  // @returns {Promise<number>} A kategóriát használó tartalmak száma
+  async countByKategoriaId(kategoriaId) {
+    console.log('tartalomRepository.countByKategoriaId - KEZDÉS', { kategoriaId });
+
+    // A kategoriaIds tömbre illesztés: a countDocuments a tömböt tartalmazó
+    // dokumentumokat is megtalálja, ha a mező egy elemre illeszkedik.
+    const szam = await Tartalom.countDocuments({ kategoriaIds: kategoriaId });
+
+    console.log('tartalomRepository.countByKategoriaId - VÉGE', { kategoriaId, szam });
+    return szam;
+  }
+
+  // ----- TARTALOMTÍPUST HASZNÁLÓ TARTALMAK SZÁMLÁLÁSA -----
+  // Megszámolja, hány tartalomnak ez a tartalomTipusId-ja.
+  // Használat: a Tartalomtípus kártya fejlécén „hány tartalom használja" jelzés.
+  // @param {string} tartalomTipusId - A tartalomtípus MongoDB ObjectId-ja
+  // @returns {Promise<number>} A tartalomtípust használó tartalmak száma
+  async countByTartalomTipusId(tartalomTipusId) {
+    console.log('tartalomRepository.countByTartalomTipusId - KEZDÉS', { tartalomTipusId });
+
+    const szam = await Tartalom.countDocuments({ tartalomTipusId: tartalomTipusId });
+
+    console.log('tartalomRepository.countByTartalomTipusId - VÉGE', { tartalomTipusId, szam });
+    return szam;
+  }
+
   // ----- GYEREKEK LEKÉRÉSE SZÜLŐ ALAPJÁN -----
   // Egy tartalom gyermek tartalmainak lekérése
   // @param {string} szuloId - A szülő tartalom MongoDB ObjectId-ja

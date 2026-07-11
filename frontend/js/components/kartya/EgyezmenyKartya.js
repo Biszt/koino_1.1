@@ -6,6 +6,7 @@ import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -46,41 +47,50 @@ class EgyezmenyKartya extends Kartya {
 
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan
-  _fejlecFeltoltese(fejlecTartalom) {
+  _fejlecFeltoltese(cimSav, masodikSor) {
     console.log('EgyezmenyKartya._fejlecFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
     const adatok = this.entitas.adatok ?? {};
+    // A második sorba (típus-specifikus) kerül a mutatók sora.
+    // A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
+    const fejlecTartalom = masodikSor;
 
+    // --- JELZŐ + TÍPUS (a felső sávba) ---
     const jelzoElem = document.createElement('span');
     jelzoElem.className   = 'egyezmeny-kartya__jelzo';
     jelzoElem.textContent = '🤝';
     jelzoElem.setAttribute('aria-hidden', 'true');
-    fejlecTartalom.appendChild(jelzoElem);
+    cimSav.appendChild(jelzoElem);
 
+    // Megnevezés – pl. „Módosítási egyezmény", csomagnál „Egyezmény csomag"
     const tipusElem = document.createElement('span');
     tipusElem.className   = 'egyezmeny-kartya__tipus';
-    tipusElem.textContent = adatok.javaslatTipus ?? '(típus nélkül)';
-    fejlecTartalom.appendChild(tipusElem);
+    tipusElem.textContent = javaslatMegnevezes(adatok.javaslatTipus, 'egyezmény');
+    cimSav.appendChild(tipusElem);
 
+    // --- MUTATÓK (2. sor): a négy szavazati arány (Modell A – együtt 100%) + a döntés dátuma ---
     const mutatokSor = document.createElement('div');
     mutatokSor.className = 'egyezmeny-kartya__mutatok-sor';
 
-    if (adatok.tamogatotsagiArany !== null && adatok.tamogatotsagiArany !== undefined) {
-      const taElem = document.createElement('span');
-      taElem.className = 'egyezmeny-kartya__mutato egyezmeny-kartya__mutato--tamogatottsagi';
-      taElem.setAttribute('aria-label', `Támogatottsági arány: ${adatok.tamogatotsagiArany}%`);
-      taElem.textContent = `✅ ${adatok.tamogatotsagiArany}%`;
-      mutatokSor.appendChild(taElem);
-    }
+    mutatokSor.appendChild(this._szazalekElem('👥', adatok.reszveteliArany,    'Részvételi arány'));
+    mutatokSor.appendChild(this._szazalekElem('✅', adatok.tamogatotsagiArany, 'Támogatottsági arány'));
+    mutatokSor.appendChild(this._szazalekElem('❌', adatok.ellenzoiArany,      'Ellenzői arány'));
+    mutatokSor.appendChild(this._szazalekElem('➖', adatok.tartozkodoiArany,   'Tartózkodói arány'));
 
-    if (adatok.bizonyossagiMutato !== null && adatok.bizonyossagiMutato !== undefined) {
-      const bmElem = document.createElement('span');
-      bmElem.className = 'egyezmeny-kartya__mutato egyezmeny-kartya__mutato--bizonyossagi';
-      bmElem.setAttribute('aria-label', `Bizonyossági mutató: ${adatok.bizonyossagiMutato}`);
-      bmElem.textContent = `🎯 ${adatok.bizonyossagiMutato}`;
-      mutatokSor.appendChild(bmElem);
+    // Döntés (végrehajtás) dátuma – csak ha van érvényes érték
+    if (adatok.dontesDatum) {
+      const datum = new Date(adatok.dontesDatum);
+      if (!Number.isNaN(datum.getTime())) {
+        const datumSzoveg = datum.toLocaleDateString('hu-HU');
+        const datumElem = document.createElement('span');
+        datumElem.className = 'pakli-kartya__ikon-elem';
+        datumElem.setAttribute('aria-label', `Döntés dátuma: ${datumSzoveg}`);
+        datumElem.title = 'Döntés dátuma';
+        datumElem.textContent = `📅 ${datumSzoveg}`;
+        mutatokSor.appendChild(datumElem);
+      }
     }
 
     fejlecTartalom.appendChild(mutatokSor);
