@@ -10,9 +10,7 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* A tördelést/csonkítást a közös kartya.css cím-szabály kezeli (max. 3 sor) */
   min-width: 0;                         /* Flex csonkításhoz szükséges */
 }
 

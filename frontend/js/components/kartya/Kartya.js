@@ -37,6 +37,9 @@ constructor(entitas, kivalasztott, onKivalasztas, onHamburgerOpciok, onHamburger
   this.onHamburgerMegnyitas = onHamburgerMegnyitas;
   this.hamburgerMenu = null;
   this.domElem = null;
+  // A cím-sáv (felső sáv) DOM elem referenciája – a betűméret utólagos
+  // hozzáigazításához kell (a Pakli a DOM-ba illesztés után hívja)
+  this.cimSavElem = null;
   // A body DOM elem referenciája – bodyFrissitese() és kibővítés használja
   this.bodyElem = null;
   // A kibővítő gomb DOM elem referenciája – állapotváltáshoz kell
@@ -123,8 +126,18 @@ async init() {
     masodikSor.className = 'pakli-kartya__ikon-sor pakli-kartya__ikon-sor--tipus';
     ikonSav.appendChild(masodikSor);
     this._fejlecFeltoltese(cimSav, masodikSor);
-    // A felső sor betűmérete a szöveg hosszához igazodik (rövid → nagyobb)
-    this._cimBetumeretBeallitasa(cimSav);
+    // A cím-sáv referenciáját eltároljuk, hogy a Pakli a kártya DOM-ba illesztése
+    // UTÁN pontosan a rendelkezésre álló szélességhez tudja igazítani a betűméretet.
+    this.cimSavElem = cimSav;
+    // Dinamikus címméret CSAK a Tartalom kártyán (lásd _cimDinamikusMeretu). A többi
+    // kártyatípus címe FIX méretű (a CSS adja) – ott nem méretezünk.
+    if (this._cimDinamikusMeretu()) {
+      // Első, DURVA becslés a betűméretre: a kártya ekkor még NINCS a DOM-ban, így a
+      // tényleges szélesség nem mérhető – a karakterszám adja az azonnali, villódzás-
+      // mentes méretet. A pontos, mérésen alapuló hozzáigazítás a
+      // cimBetumeretHozzaigazitasa()-ben történik, amit a Pakli hív a beillesztés után.
+      this._cimBetumeretBecsles(cimSav);
+    }
   }
 
   // 8. LÉPÉS – Body elem referenciájának eltárolása és feltöltése, ha kiválasztott
@@ -309,18 +322,18 @@ _kozosTudatpontSorFeltoltese(ikonSav) {
   const sor = document.createElement('div');
   sor.className = 'pakli-kartya__ikon-sor pakli-kartya__ikon-sor--tudatpont';
 
-  // Entitás saját (közvetlen) összpontja
-  sor.appendChild(this._ikonElem('🌿', e.entitasSajatTudatpont, 'Entitás saját tudatpontja'));
-  // Hierarchikus összpont (a leszármazottakkal együtt)
-  sor.appendChild(this._ikonElem('🌲', e.hierarchikusOsszesPont, 'Hierarchikus tudatpont (leszármazottakkal)'));
+  // A tudatpont MINDIG 🌟-gal jelenik meg; a fajtát egy elő-ikon különbözteti meg.
+  // ELÖL a néző e-ember saját pontja az entitáson – 👤 (én/enyém) + 🌟 – CSAK ha van neki (>0)
+  const sajat = e.eemberSajatTudatpontEntitason ?? 0;
   // Hozzájárulók száma (hány e-ember tett rá közvetlen pontot)
   sor.appendChild(this._ikonElem('👥', e.hozzajarulokSzama, 'Hozzájárulók száma'));
-
-  // A néző e-ember saját pontja – CSAK ha van neki (>0)
-  const sajat = e.eemberSajatTudatpontEntitason ?? 0;
   if (sajat > 0) {
-    sor.appendChild(this._ikonElem('⭐', sajat, 'A te tudatpontod ezen az entitáson', 'pakli-kartya__ikon-elem--sajat'));
+    sor.appendChild(this._ikonElem('👤🌟', sajat, 'A te tudatpontod ezen az entitáson', 'pakli-kartya__ikon-elem--sajat'));
   }
+  // Entitás saját (közvetlen) tudatpontja – saját rajzolt levél-a-száron SVG-ikon + 🌟
+  sor.appendChild(this._sajatTudatpontChip(e.entitasSajatTudatpont, 'Entitás saját tudatpontja'));
+  // Ágazati (hierarchikus) tudatpont: az entitás saját + az összes leszármazottja – 🌿 + 🌟
+  sor.appendChild(this._ikonElem('🌿🌟', e.hierarchikusOsszesPont, 'Ágazati tudatpont (az entitás és összes leszármazottja)'));
 
   ikonSav.appendChild(sor);
 }
@@ -338,6 +351,52 @@ _ikonElem(emoji, ertek, cimke, extraOsztaly = '') {
   el.setAttribute('aria-label', cimke);
   el.title = cimke;
   el.textContent = `${emoji} ${Number(ertek ?? 0).toLocaleString('hu-HU')}`;
+  return el;
+}
+
+// ----- SAJÁT (RAJZOLT) LEVÉL-A-SZÁRON IKON -----
+// Kis inline SVG: zöld levél egy barna száron (a fejlesztő rajza alapján). Azért SVG
+// és nem emoji, mert a Unicode-ban nincs „egy levél egy száron" glyph. A méret 1em
+// (a chip betűméretéhez igazodik). aria-hidden – a chip span aria-label-je viszi a jelentést.
+// @returns {string} inline SVG markup
+_levelIkonSvg() {
+  return '<svg viewBox="0 0 24 24" width="1.05em" height="1.05em" aria-hidden="true" '
+    + 'style="flex-shrink:0; vertical-align:-0.15em">'
+    + '<path d="M15 22 L15 4" fill="none" stroke="#9c6633" stroke-width="2.2" stroke-linecap="round"/>'
+    + '<path d="M15 13 C12 6 6 3 2.5 5 C3 9 7.5 13 15 13 Z" fill="#37a24d"/>'
+    + '</svg>';
+}
+
+// ----- SAJÁT TUDATPONT CHIP (SVG-levél + 🌟 + érték) -----
+// Az entitás saját (közvetlen) tudatpontját mutatja a fejléc tudatpont-sorában.
+// Ugyanolyan chip, mint az _ikonElem, de emoji helyett a rajzolt levél-SVG-t használja.
+// @param {number} ertek - a megjelenítendő szám
+// @param {string} cimke - aria-label és tooltip
+// @returns {HTMLElement}
+_sajatTudatpontChip(ertek, cimke) {
+  const el = document.createElement('span');
+  el.className = 'pakli-kartya__ikon-elem';
+  el.setAttribute('aria-label', cimke);
+  el.title = cimke;
+  const szam = Number(ertek ?? 0).toLocaleString('hu-HU');
+  // levél-SVG + 🌟 tudatpont-jelző + érték (a szám sima szöveg, nem tartalmaz HTML-t)
+  el.innerHTML = `${this._levelIkonSvg()} 🌟 ${szam}`;
+  return el;
+}
+
+// ----- TÍPUS-ELŐTAG IKON (a 2. ikonsávban az egyedi ikon elé) -----
+// Kis emoji-jelző, ami megmondja, MILYEN entitás egyedi ikonja következik:
+// 📁 kategória, 🏷️ tartalomtípus. A hívó egy szoros „csoport" konténerbe teszi az
+// előtagot és az egyedi ikon(oka)t (pakli-kartya__tipus-ikon-csoport).
+// @param {string} emoji - a típus-jelző emoji
+// @param {string} cimke - a típus neve (aria-label + tooltip)
+// @returns {HTMLElement}
+_tipusElotag(emoji, cimke) {
+  const el = document.createElement('span');
+  el.className = 'pakli-kartya__tipus-elotag';
+  el.textContent = emoji;
+  el.setAttribute('aria-label', cimke);
+  el.title = cimke;
   return el;
 }
 
@@ -360,14 +419,25 @@ _szazalekElem(emoji, ertek, cimke) {
   return el;
 }
 
-// ----- CÍM DINAMIKUS BETŰMÉRETE -----
-// A felső sáv (cím/név/megnevezés) betűméretét a szöveg HOSSZÁHOZ igazítja:
-// rövid szöveg nagyobb, hosszú szöveg kisebb betűvel jelenik meg, hogy egy sorban
-// elférjen. A karakterszám alapján lépcsőzetesen választ méretet (a kártyák
-// szélessége azonos, ezért a hossz a fő tényező; a túl hosszút a CSS ellipszise vágja).
+// ----- DINAMIKUS CÍMMÉRET? (leszármazott felülírhatja) -----
+// Alapból NEM: a legtöbb kártyatípus címe FIX méretű (a CSS adja). Csak a
+// TartalomKartya írja felül igazra, mert a tartalom címe tetszőleges hosszú lehet,
+// ezért ott a betűméretet a szöveg hosszához / a rendelkezésre álló helyhez igazítjuk.
+// @returns {boolean}
+_cimDinamikusMeretu() {
+  return false;
+}
+
+// ----- CÍM BETŰMÉRET – ELSŐ BECSLÉS (KARAKTERSZÁM ALAPJÁN) -----
+// A felső sáv (cím/név/megnevezés) betűméretének DURVA, azonnali becslése a szöveg
+// HOSSZÁBÓL. Az init()-ben fut, amikor a kártya MÉG NINCS a DOM-ban, így a tényleges
+// szélesség nem mérhető – ez adja a villódzásmentes kezdőméretet. A pontos, valódi
+// szélességen alapuló beállítást a cimBetumeretHozzaigazitasa() végzi a beillesztés után.
+// A karakterszám alapján lépcsőzetesen választ méretet (a kártyák szélessége azonos,
+// ezért a hossz jó közelítés; a túl hosszút a CSS ellipszise vágja).
 // Az inline betűméret felülírja a típus-specifikus cím-osztály méretét.
 // @param {HTMLElement} cimSav - A .pakli-kartya__fejlec-cim elem
-_cimBetumeretBeallitasa(cimSav) {
+_cimBetumeretBecsles(cimSav) {
   if (!cimSav) return;
 
   // A státusz (ha van) NEM számít bele a hosszba és NEM méretezzük dinamikusan –
@@ -378,20 +448,114 @@ _cimBetumeretBeallitasa(cimSav) {
 
   const hossz = cimGyerekek.reduce((ossz, el) => ossz + (el.textContent ?? '').trim().length, 0);
 
-  // Lépcsős betűméret a karakterszám függvényében (px)
+  // Lépcsős betűméret a karakterszám függvényében (px). A tartomány a pontos
+  // hozzáigazításéval egyezik (MAX 24 – MIN 8).
   let meret;
-  if      (hossz <= 12) meret = 20; // rövid cím – nagy
-  else if (hossz <= 18) meret = 18;
+  if      (hossz <= 12) meret = 24; // rövid cím – nagy
+  else if (hossz <= 18) meret = 20;
   else if (hossz <= 26) meret = 16;
-  else if (hossz <= 36) meret = 14;
-  else                  meret = 13; // hosszú cím – kicsi
+  else if (hossz <= 36) meret = 12;
+  else                  meret = 9;  // hosszú cím – kicsi
 
   // Minden cím-gyerekre (pl. egyezménynél a 🤝 jelző + a szöveg is)
   for (const gyerek of cimGyerekek) {
     gyerek.style.fontSize = `${meret}px`;
   }
 
-  console.log('Kartya._cimBetumeretBeallitasa - VÉGE', { hossz, meret });
+  console.log('Kartya._cimBetumeretBecsles - VÉGE', { hossz, meret });
+}
+
+// ----- CÍM BETŰMÉRET – PONTOS HOZZÁIGAZÍTÁS (VALÓDI SZÉLESSÉGHEZ, MAX. 3 SOR) -----
+// A Pakli hívja, MIUTÁN a kártya bekerült a DOM-ba (requestAnimationFrame-ben).
+// Ekkor már van valódi szélessége a cím-sávnak, ezért pontosan meg tudjuk mérni,
+// elfér-e a szöveg, és a betűméretet a RENDELKEZÉSRE ÁLLÓ HELY függvényében állítjuk
+// be – nem csak a karakterszám becsléséből (lásd _cimBetumeretBecsles).
+//
+// A cím a CSS-ben LEGFELJEBB 3 SORBA tördel (line-clamp: 3), ezért a betűméretet úgy
+// választjuk, hogy a szöveg ~3 sorba elférjen: rövid cím nagy, hosszú cím kisebb, de
+// nem egyetlen sorra zsugorítjuk (mint korábban), hanem a 3-soros helyet használjuk.
+//
+// Módszer (EGYETLEN méréssel, ciklus nélkül):
+//  1. A cím-gyerekekre a MAX betűméretet állítjuk, és a MÉRÉS idejére IDEIGLENESEN
+//     egy sorba kényszerítjük (white-space: nowrap), hogy a szöveg TERMÉSZETES,
+//     tördeletlen szélességét kapjuk (a scrollWidth a teljes, nem vágott szélesség).
+//  2. Természetes szélesség = a gyerekek scrollWidth-jeinek összege + a rések (gap).
+//     A mérés után visszaengedjük a tördelést a megjelenítéshez.
+//  3. Elérhető szélesség = a cím-sáv clientWidth-je, a jobbra kilógó státusz-badge
+//     helyét és egy kis biztonsági rést levonva.
+//  4. Egy sorba MAX méretnél az elérhető szélesség fér; MAX_SOR sorba nagyjából
+//     MAX_SOR-szor annyi (a tördelés nem tökéletes, ezért egy kis tartalékkal). A
+//     szövegszélesség ~lineárisan skálázódik a betűmérettel, ezért:
+//       cél = MAX × (elérhető × MAX_SOR × kihasználtság) / természetes, [MIN, MAX] közé vágva.
+//     A maradékot (ha MIN-en sem fér 3 sorba) a CSS line-clamp ellipszise vágja.
+cimBetumeretHozzaigazitasa() {
+  // Csak a dinamikus című kártyán (Tartalom) méretezünk; a többi FIX (CSS) → kilépünk.
+  if (!this._cimDinamikusMeretu()) return;
+
+  const cimSav = this.cimSavElem;
+  if (!cimSav) return;
+
+  // A cím/név/megnevezés szöveg(ek); a státusz-badge KIZÁRVA (abszolút pozicionált,
+  // saját megjelenésű – nem méretezzük vele).
+  const cimGyerekek = [...cimSav.children].filter(
+    (el) => !el.classList.contains('pakli-kartya__cim-statusz')
+  );
+  if (cimGyerekek.length === 0) return;
+
+  const MIN_MERET        = 8;   // px – ez alatt a CSS ellipszise vágja a maradékot
+  const MAX_MERET        = 24;  // px – rövid cím maximális mérete
+  const MAX_SOR          = 3;   // legfeljebb ennyi sorba tördelhet (CSS line-clamp)
+  const SOR_KIHASZNALTSAG = 0.9; // a tördelés nem tökéletes (ragadt sorvégek) – kis tartalék
+
+  // 1. LÉPÉS – MAX méret + ideiglenes egy-soros mérés (a természetes szélességhez).
+  //    A megjelenítéskor a cím -webkit-box (line-clamp) – a méréshez viszont
+  //    inline-block + nowrap kell, hogy a scrollWidth a tiszta szövegszélességet adja.
+  for (const gyerek of cimGyerekek) {
+    gyerek.style.fontSize   = `${MAX_MERET}px`;
+    gyerek.style.display    = 'inline-block';
+    gyerek.style.whiteSpace = 'nowrap';
+  }
+
+  // 2. LÉPÉS – természetes (tördeletlen) szövegszélesség, majd a mérési stílusok
+  //    visszavonása (vissza a CSS szerinti -webkit-box tördelésre).
+  const resPx = parseFloat(getComputedStyle(cimSav).columnGap) || 0;
+  let termeszetesSzelesseg = 0;
+  for (const gyerek of cimGyerekek) {
+    termeszetesSzelesseg += gyerek.scrollWidth;
+  }
+  termeszetesSzelesseg += resPx * (cimGyerekek.length - 1);
+
+  for (const gyerek of cimGyerekek) {
+    gyerek.style.display    = '';
+    gyerek.style.whiteSpace = '';
+  }
+
+  if (termeszetesSzelesseg <= 0) return; // üres cím – nincs mit méretezni
+
+  // 3. LÉPÉS – elérhető szélesség (a státusz-badge helyét levonva)
+  const statusz         = cimSav.querySelector('.pakli-kartya__cim-statusz');
+  const statuszSzelesseg = statusz ? statusz.scrollWidth : 0;
+  const BIZTONSAGI_RES  = 4; // px – ne érjen pontosan a szélhez
+  const elerhetoSzelesseg = cimSav.clientWidth - statuszSzelesseg - BIZTONSAGI_RES;
+
+  if (elerhetoSzelesseg <= 0) return; // nincs értelmezhető hely – marad a MAX
+
+  // 4. LÉPÉS – cél betűméret: a szöveg ~MAX_SOR sorba tördelve is elférjen
+  const soronkentiKapacitas = elerhetoSzelesseg * MAX_SOR * SOR_KIHASZNALTSAG;
+  const arany  = soronkentiKapacitas / termeszetesSzelesseg;
+  let celMeret = Math.floor(MAX_MERET * arany);
+  celMeret     = Math.max(MIN_MERET, Math.min(MAX_MERET, celMeret));
+
+  for (const gyerek of cimGyerekek) {
+    gyerek.style.fontSize = `${celMeret}px`;
+  }
+
+  console.log('Kartya.cimBetumeretHozzaigazitasa - VÉGE', {
+    termeszetesSzelesseg,
+    elerhetoSzelesseg,
+    arany: Number(arany.toFixed(2)),
+    celMeret
+  });
 }
 
 // ----- BODY FELTÖLTÉSE -----

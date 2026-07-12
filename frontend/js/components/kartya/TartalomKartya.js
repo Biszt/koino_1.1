@@ -38,6 +38,14 @@ class TartalomKartya extends Kartya {
     console.log('TartalomKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
 
+  // ----- DINAMIKUS CÍMMÉRET -----
+  // A Tartalom címe tetszőleges hosszú lehet, ezért itt IGAZ: a betűméret a szöveg
+  // hosszához / a rendelkezésre álló helyhez igazodik (lásd Kartya cím-méretezés).
+  // A többi kártyatípus címe fix méretű marad.
+  _cimDinamikusMeretu() {
+    return true;
+  }
+
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan – cím, típus ikon, kategória ikonok, tudatpontok
   _fejlecFeltoltese(cimSav, masodikSor) {
@@ -56,9 +64,13 @@ class TartalomKartya extends Kartya {
     cimElem.textContent = adatok.cim ?? '(cím nélkül)';
     cimSav.appendChild(cimElem);
 
-    // --- TARTALOM TÍPUS IKON ---
+    // --- TARTALOM TÍPUS IKON (🏷️ típus-előtaggal) ---
     if (adatok.tartalomTipus?.ikon) {
       const ikonErtek = adatok.tartalomTipus.ikon;
+
+      const tipusCsoport = document.createElement('span');
+      tipusCsoport.className = 'pakli-kartya__tipus-ikon-csoport';
+      tipusCsoport.appendChild(this._tipusElotag('🏷️', 'Tartalom típus'));
 
       if (ikonErtek.startsWith('http://') || ikonErtek.startsWith('https://')) {
         const tipusIkonKep = document.createElement('img');
@@ -68,21 +80,25 @@ class TartalomKartya extends Kartya {
         tipusIkonKep.setAttribute('aria-hidden', 'true');
         tipusIkonKep.width  = 24;
         tipusIkonKep.height = 24;
-        fejlecTartalom.appendChild(tipusIkonKep);
+        tipusCsoport.appendChild(tipusIkonKep);
       } else {
         const tipusIkon = document.createElement('span');
         tipusIkon.className   = 'tartalom-kartya__tipus-ikon';
         tipusIkon.textContent = ikonErtek;
         tipusIkon.setAttribute('aria-label', adatok.tartalomTipus.nev ?? 'tartalom típus');
         tipusIkon.title = adatok.tartalomTipus.nev ?? '';
-        fejlecTartalom.appendChild(tipusIkon);
+        tipusCsoport.appendChild(tipusIkon);
       }
+
+      fejlecTartalom.appendChild(tipusCsoport);
     }
 
-    // --- KATEGÓRIA IKONOK ---
+    // --- KATEGÓRIA IKONOK (📁 típus-előtaggal) ---
     if (adatok.kategoriak?.length > 0) {
       const kategoriaKontener = document.createElement('div');
       kategoriaKontener.className = 'tartalom-kartya__kategoriak';
+      // 📁 előtag a kategória-ikonok elé (jelzi: ezek kategóriák)
+      kategoriaKontener.appendChild(this._tipusElotag('📁', 'Kategória'));
 
       adatok.kategoriak.forEach((kategoria) => {
         if (kategoria?.ikon) {
@@ -270,7 +286,7 @@ class TartalomKartya extends Kartya {
         akcio:     () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '📄',
+        ikon:       'ℹ️',
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)

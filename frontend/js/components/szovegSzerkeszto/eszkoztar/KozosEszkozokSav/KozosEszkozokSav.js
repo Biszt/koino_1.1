@@ -62,7 +62,7 @@ letrehozas() {
 
     // --- 2. CSOPORT: Blokk kezelés ---
     sav.appendChild(this._gombLetrehozasa('ujBlokk', '+',  'Új blokk hozzáadása', this.onUjBlokk));
-    sav.appendChild(this._gombLetrehozasa('torles',  '🗑', 'Blokk törlése',        this.onTorles));
+    sav.appendChild(this._gombLetrehozasa('torles',  '🗑️', 'Blokk törlése',        this.onTorles));
 
     // Elválasztó a 2. és 3. csoport között
     sav.appendChild(this._elvalasztoLetrehozasa());

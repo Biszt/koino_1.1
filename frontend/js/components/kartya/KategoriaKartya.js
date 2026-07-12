@@ -103,7 +103,12 @@ class KategoriaKartya extends Kartya {
     nevElem.textContent = adatok.nev ?? '(név nélkül)';
     cimSav.appendChild(nevElem);
 
-    this._ikonMegjelenites(fejlecTartalom, adatok.ikon, 'kategoria-kartya');
+    // A kategória saját ikonja 📁 típus-előtaggal (a 2. sorban)
+    const ikonCsoport = document.createElement('span');
+    ikonCsoport.className = 'pakli-kartya__tipus-ikon-csoport';
+    ikonCsoport.appendChild(this._tipusElotag('📁', 'Kategória'));
+    this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'kategoria-kartya');
+    fejlecTartalom.appendChild(ikonCsoport);
 
     // Hány tartalom használja ezt a kategóriát (2. sor)
     fejlecTartalom.appendChild(
@@ -309,7 +314,7 @@ class KategoriaKartya extends Kartya {
         akcio:     () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '📄',
+        ikon:       'ℹ️',
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)

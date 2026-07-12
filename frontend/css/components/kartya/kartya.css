@@ -134,35 +134,48 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
   flex-shrink: 0; /* fejléc ne zsugorodjon, ha a body nő */
 }
 
-/* Felső sáv: cím-terület – a cím KÖZÉPRE igazítva (minden kártyatípuson).
-   position: relative a jobbra kilógó státuszhoz. */
+/* Felső sáv: cím-terület – a cím BALRA igazítva (minden kártyatípuson).
+   position: relative a jobbra kilógó státuszhoz. A cím max. 3 sorba tördelhet,
+   ezért a sáv magassága a tartalommal nőhet (min-height az alsó korlát). */
 .pakli-kartya__fejlec-cim {
   min-height: var(--fejlec-sav-magassag);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-2);
   overflow: hidden;
   min-width: 0;
   position: relative;
 }
 
-/* A cím szövege: prominens, egy sorban, túlnyúlásnál levágva. A státusz-konténert
-   KIZÁRJUK (:not), mert az saját megjelenésű badge. Magasabb specificitás (a __belso
-   ősön át), hogy a típus-specifikus cím-osztályok színét/vastagságát EGYSÉGESÍTSE.
-   A betűméretet a Kartya._cimBetumeretBeallitasa állítja dinamikusan (inline). */
+/* A cím szövege: prominens, BALRA igazítva, LEGFELJEBB 3 SORBA tördelve; ami a
+   3. sor után sem fér el, azt a böngésző ellipszissel vágja (line-clamp). A státusz-
+   konténert KIZÁRJUK (:not), mert az saját megjelenésű badge. Magasabb specificitás
+   (a __belso ősön át), hogy a típus-specifikus cím-osztályok színét/vastagságát
+   EGYSÉGESÍTSE. Az itteni font-size (16px) a FIX méret – ezt a Kartya CSAK a Tartalom
+   kártyán írja felül dinamikusan (inline): előbb becslés (_cimBetumeretBecsles), majd
+   a DOM-ba illesztés után pontos hozzáigazítás (cimBetumeretHozzaigazitasa) úgy, hogy a
+   cím ~3 sorba elférjen. A többi kártyatípus címe ezt a 16px-et tartja. */
 .pakli-kartya__belso .pakli-kartya__fejlec-cim > *:not(.pakli-kartya__cim-statusz) {
-  white-space: nowrap;
+  /* A szélességet a per-kártya cím-osztály flex-értéke adja (flex: 1 a szövegen,
+     az Egyezmény 🤝 jelzője flex-shrink: 0) – ezért itt NEM állítjuk a flex-et. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;       /* legfeljebb 3 sor, utána ellipszis */
+  line-clamp: 3;               /* szabványos megfelelő (újabb böngészők) */
   overflow: hidden;
-  text-overflow: ellipsis;
   min-width: 0;
+  white-space: normal;         /* FONTOS: felülírja a per-kártya nowrap-et → tördel */
+  line-height: 1.2;            /* tömör sortávolság, hogy 3 sor is elférjen */
+  text-align: left;            /* balra igazítva (több sor esetén is) */
+  overflow-wrap: anywhere;     /* nagyon hosszú szó is törhet, ne lógjon ki */
   font-size: 16px;
   font-weight: 600;
   color: var(--color-text);
 }
 
-/* Státusz + töredék a cím-sor JOBB szélén – a középre igazított címből kilógva,
-   így nem foglal helyet az ikon-területen. */
+/* Státusz + töredék a cím-sor JOBB szélén, abszolút pozícióval (a cím fölött),
+   így nem foglal helyet a szövegnek. A cím betűméret-számítása levonja a szélességét. */
 .pakli-kartya__cim-statusz {
   position: absolute;
   right: 0;
@@ -234,6 +247,20 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
 .pakli-kartya__ikon-elem--sajat {
   color: var(--color-primary);
   font-weight: 600;
+}
+
+/* Típus-ikon csoport a 2. sorban: a típus-előtag (📁/🏷️) + az egyedi ikon(ok) szorosan */
+.pakli-kartya__tipus-ikon-csoport {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* A típus-előtag emoji – kicsit halványabb, mint maga az egyedi ikon */
+.pakli-kartya__tipus-elotag {
+  font-size: var(--text-xs);
+  opacity: 0.7;
 }
 
 /* Hamburger gomb – minden kártyán egyformán aktív */

@@ -10,9 +10,7 @@
   font-size: var(--text-sm);            /* Kompakt, de olvasható */
   font-weight: 600;                     /* Kiemelkedik a többi elemtől */
   color: var(--color-text);             /* Elsődleges szövegszín */
-  white-space: nowrap;                  /* Egy sorban marad */
-  overflow: hidden;                     /* Túl hosszú cím ne lógjon ki */
-  text-overflow: ellipsis;              /* "..." jelzi a csonkítást */
+  /* A tördelést/csonkítást a közös kartya.css cím-szabály kezeli (max. 3 sor) */
   min-width: 0;                         /* Flex csonkításhoz szükséges */
 }
 

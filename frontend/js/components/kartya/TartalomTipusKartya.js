@@ -92,7 +92,12 @@ class TartalomTipusKartya extends Kartya {
     nevElem.textContent = adatok.nev ?? '(név nélkül)';
     cimSav.appendChild(nevElem);
 
-    this._ikonMegjelenites(fejlecTartalom, adatok.ikon, 'tartalom-tipus-kartya');
+    // A tartalomtípus saját ikonja 🏷️ típus-előtaggal (a 2. sorban)
+    const ikonCsoport = document.createElement('span');
+    ikonCsoport.className = 'pakli-kartya__tipus-ikon-csoport';
+    ikonCsoport.appendChild(this._tipusElotag('🏷️', 'Tartalom típus'));
+    this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'tartalom-tipus-kartya');
+    fejlecTartalom.appendChild(ikonCsoport);
 
     // Hány tartalom használja ezt a tartalomtípust (2. sor)
     fejlecTartalom.appendChild(
@@ -276,7 +281,7 @@ class TartalomTipusKartya extends Kartya {
         akcio:     () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '📄',
+        ikon:       'ℹ️',
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)

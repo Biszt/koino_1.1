@@ -267,8 +267,21 @@ async paklitRendel() {
 
   kontener.appendChild(pakliWrapper);
 
-  // Görgetés: az újonnan renderelt pakli kiválasztott kártyája az alsó sáv tetejéhez igazodik.
-  requestAnimationFrame(() => this._kivalasztottKartyaGorgetese());
+  // A kártyák most már a DOM-ban vannak → itt van értelme a mérésen alapuló
+  // munkának. requestAnimationFrame: megvárjuk a következő festési kört, amikor a
+  // böngésző már kiszámolta a tényleges méreteket.
+  requestAnimationFrame(() => {
+    // 1. A cím betűméretének PONTOS hozzáigazítása a tényleges szélességhez
+    //    (az init()-beli karakterszám-becslést váltja fel). Lásd
+    //    Kartya.cimBetumeretHozzaigazitasa.
+    for (const kartya of this.kartyaPeldanyok) {
+      if (kartya && typeof kartya.cimBetumeretHozzaigazitasa === 'function') {
+        kartya.cimBetumeretHozzaigazitasa();
+      }
+    }
+    // 2. Görgetés: a kiválasztott kártya az alsó sáv tetejéhez igazodik.
+    this._kivalasztottKartyaGorgetese();
+  });
 
   console.log('Pakli.paklitRendel - VÉGE', { kartyakSzama: aktivPakli.length });
 }

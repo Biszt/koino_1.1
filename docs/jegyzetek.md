@@ -32,20 +32,53 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 ### 2026-07-11
 
-- 🆕 „[A saját tudatpont elnevezést, a kódban, eggyértelműsíteni e kell, hogya az
+- ✅ „[A saját tudatpont elnevezést, a kódban, eggyértelműsíteni e kell, hogya az
   entitasSajatTudatpont, és az eemberSajatTudatpontEntitason, meglehessen
   külömböztetni őket, eggyértelmüen]"
   → Kontextus: a fejléc-átalakítás során mindkét fogalom megjelenik a kártyán
   (az entitás saját összpontja ÉS a néző e-ember saját pontja az entitáson),
   ezért a jelenlegi kétértelmű `sajatTudatpont` mezőnevet érdemes egyértelműsíteni.
-  A fejléc-munka közben tervezzük át a névhasználatot.
+  → **Elvégezve (2026-07-12):** a kétértelműsítés már a fejléc-átalakítás (B1 lépés)
+  során megtörtént, most ellenőrizve és lezárva. A kódban KIZÁRÓLAG a két
+  egyértelmű név él: `entitasSajatTudatpont` (az entitás saját, közvetlen összpontja)
+  és `eemberSajatTudatpontEntitason` (a néző e-ember saját pontja az entitáson);
+  csupasz `sajatTudatpont` sehol nincs (`pakliService`, `Kartya._kozosTudatpontSorFeltoltese`,
+  `ReszletekModal`). Nem volt szükség további átnevezésre.
 
-- 🆕 „[A legfelső sórnak, dinamikus betümérettel kéne megjelenítenie a szöveget,
+- ✅ „[A legfelső sórnak, dinamikus betümérettel kéne megjelenítenie a szöveget,
   hogy a rövidebb cím nagyobb a hosszabb cím, bedig kisebb legyen. Ezt a karakter
   limit, és a hely fügvényében kell kitalálni.}"
   → Kontextus: a fejléc új felső sora (cím / név / javaslat-megnevezés) dinamikus
   betűmérettel jelenne meg — rövid szöveg nagyobb, hosszú kisebb, a karakterszám
-  és a rendelkezésre álló hely függvényében. A fejléc alaplayoutja után finomítjuk.
+  és a rendelkezésre álló hely függvényében.
+  → **Elvégezve (2026-07-12):** kétlépcsős megoldás. (1) `init()`-ben gyors
+  KARAKTERSZÁM-becslés (`Kartya._cimBetumeretBecsles`) – azonnali, villódzásmentes
+  méret, mert a kártya még nincs a DOM-ban, így a tényleges szélesség nem mérhető.
+  (2) A Pakli a kártya DOM-ba illesztése UTÁN (a `paklitRendel` `requestAnimationFrame`-jében)
+  meghívja a `Kartya.cimBetumeretHozzaigazitasa()`-t, ami a cím-sáv VALÓDI szélességét
+  méri és arányosan állítja a betűméretet (rövid → 24px, hosszú → arányosan kisebb,
+  min. 8px, a maradékot a CSS ellipszise vágja). Így a „karakter limit ÉS a hely
+  függvényében" is teljesül.
+  → **Kiegészítés (2026-07-12, Csaba kérése):** a cím már NEM egy sorra zsugorodik,
+  hanem LEGFELJEBB 3 SORBA tördel, és BALRA igazodik (nem középre). CSS: `-webkit-line-clamp: 3`
+  + `overflow-wrap: anywhere` + `text-align: left`; a cím-sáv `justify-content: flex-start`.
+  A méretezés a 3-soros helyhez arányosít (`MAX_SOR = 3`, kis `SOR_KIHASZNALTSAG` tartalékkal
+  a ragadt sorvégek miatt); a méréskor ideiglenesen `inline-block` + `nowrap` a tiszta
+  szövegszélességhez.
+  → **Javítás (2026-07-12):** első próbára MÉGSEM tördelt, mert MIND az 5 per-kártya
+  cím-osztály (`tartalom-kartya__cim`, `kategoria/tartalom-tipus __nev`, `javaslat/egyezmeny __tipus`)
+  saját `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`-t tartalmazott
+  (a régi egysoros dizájn maradványa), ami felülírta a tördelést. Megoldás: a közös
+  `kartya.css` cím-szabály explicit `white-space: normal`-t állít (magasabb specificitás →
+  győz), és kitakarítottam az elavult egysoros tulajdonságokat mind az 5 per-kártya CSS-ből
+  (a `flex: 1` és `min-width: 0` maradt a szélességhez/tördeléshez). Csaba megfigyelése
+  alapján a min. betűméretnél 3 sor is elfér.
+  → **Megszorítás (2026-07-12, Csaba kérése):** a DINAMIKUS méretezés CSAK a Tartalom
+  kártya címére vonatkozik; a többi kártyatípus (Kategória/Tartalomtípus/Javaslat/Egyezmény)
+  címe FIX 16px. Megvalósítás: base `Kartya._cimDinamikusMeretu()` → `false`, a
+  `TartalomKartya` felülírja `true`-ra; az `init()`-beli becslés és a
+  `cimBetumeretHozzaigazitasa()` csak akkor fut. A CSS közös cím-szabály 16px-e a fix méret.
+  (A max. 3 soros tördelés + balra igazítás MINDEN kártyán marad, csak a méretezés Tartalom-only.)
 
 ### 2026-07-10
 

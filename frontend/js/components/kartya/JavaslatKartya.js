@@ -102,7 +102,7 @@ class JavaslatKartya extends Kartya {
     // A négy szavazati arány (Modell A – együtt 100%) + a döntési idő.
     // A bizonyossági mutató szándékosan NEM a fejlécen jelenik meg (a Részletek modálban igen).
     this._mutatoElemLetrehozasa(mutatokSor, '👥', adatok.reszveteliArany,    '%', 'Részvételi arány',      'javaslat-kartya__mutato--reszveteli');
-    this._mutatoElemLetrehozasa(mutatokSor, '✅', adatok.tamogatotsagiArany, '%', 'Támogatottsági arány',  'javaslat-kartya__mutato--tamogatottsagi');
+    this._mutatoElemLetrehozasa(mutatokSor, '✔️', adatok.tamogatotsagiArany, '%', 'Támogatottsági arány',  'javaslat-kartya__mutato--tamogatottsagi');
     this._mutatoElemLetrehozasa(mutatokSor, '❌', adatok.ellenzoiArany,      '%', 'Ellenzői arány',        'javaslat-kartya__mutato--ellenzoi');
     this._mutatoElemLetrehozasa(mutatokSor, '➖', adatok.tartozkodoiArany,   '%', 'Tartózkodói arány',     'javaslat-kartya__mutato--tartozkodoi');
 
@@ -399,7 +399,7 @@ class JavaslatKartya extends Kartya {
         akcio:      () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '📄',
+        ikon:       'ℹ️',
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)

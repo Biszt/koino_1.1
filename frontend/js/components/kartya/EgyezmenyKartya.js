@@ -75,7 +75,7 @@ class EgyezmenyKartya extends Kartya {
     mutatokSor.className = 'egyezmeny-kartya__mutatok-sor';
 
     mutatokSor.appendChild(this._szazalekElem('👥', adatok.reszveteliArany,    'Részvételi arány'));
-    mutatokSor.appendChild(this._szazalekElem('✅', adatok.tamogatotsagiArany, 'Támogatottsági arány'));
+    mutatokSor.appendChild(this._szazalekElem('✔️', adatok.tamogatotsagiArany, 'Támogatottsági arány'));
     mutatokSor.appendChild(this._szazalekElem('❌', adatok.ellenzoiArany,      'Ellenzői arány'));
     mutatokSor.appendChild(this._szazalekElem('➖', adatok.tartozkodoiArany,   'Tartózkodói arány'));
 
@@ -272,7 +272,7 @@ class EgyezmenyKartya extends Kartya {
         akcio:      () => this._tudatpontModositas(entitas)
       },
       {
-        ikon:       '📄',
+        ikon:       'ℹ️',
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)
