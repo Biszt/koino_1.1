@@ -110,13 +110,13 @@ class JavaslatIdozitesService {
 
       const kozosIdozitesiAdatok = await this.toredekCsoportKozosIdozitesiAdataiLekerese(javaslat.toredekCsoportId); // Lekérjük a csoport közös időzítési adatait
 
-      const hozzaadandoMs = kozosIdozitesiAdatok.atlagoltDontesiIdo * 1000; // A közös döntési időt milliszekundumba alakítjuk
+      const hozzaadandoMs = kozosIdozitesiAdatok.kozosDontesiIdo * 1000; // A közös (MAX) döntési időt milliszekundumba alakítjuk
 
       const kozosHatalybaLepesIdeje = new Date(kozosIdozitesiAdatok.kozosLetrehozasIdeje.getTime() + hozzaadandoMs); // Kiszámoljuk a közös hatályba lépési időt
 
       console.log('hatalybaLepesiIdoBeallitasa - Közös hatályba lépési idő számolva', { // Log a közös eredményről
         toredekCsoportId: javaslat.toredekCsoportId, // Töredék csoport azonosító
-        atlagoltDontesiIdo: kozosIdozitesiAdatok.atlagoltDontesiIdo, // Átlagolt döntési idő
+        kozosDontesiIdo: kozosIdozitesiAdatok.kozosDontesiIdo, // Közös (MAX) döntési idő
         kozosLetrehozasIdeje: kozosIdozitesiAdatok.kozosLetrehozasIdeje, // Közös alapidő
         kozosHatalybaLepesIdeje: kozosHatalybaLepesIdeje // Közös hatályba lépési idő
       }); // Log vége
@@ -472,13 +472,14 @@ class JavaslatIdozitesService {
       throw new Error('A töredék csoport azonosító megadása kötelező'); // Hiba dobása hiányzó azonosítónál
     } // Csoport azonosító ellenőrzés vége
 
-    console.log('toredekCsoportKozosIdozitesiAdataiLekerese >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.findAll', { // Repository hívás előtti log
+    console.log('toredekCsoportKozosIdozitesiAdataiLekerese >>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.findByToredekCsoportId', { // Repository hívás előtti log
       toredekCsoportId: toredekCsoportId // Szűrő logolása
     }); // Repository hívás előtti log vége
 
-    const toredekJavaslatok = await JavaslatRepository.findAll({ // Lekérjük a teljes töredék csoportot
-      toredekCsoportId: toredekCsoportId // Töredék csoport szerinti szűrés
-    }); // Lekérdezés vége
+    // FONTOS: a findByToredekCsoportId a HELYES, csoportra szűrő lekérdezés.
+    // (A korábbi findAll({toredekCsoportId}) NEM szűrt — a findAll nem ismeri ezt a
+    //  kulcsot —, így a DB ÖSSZES javaslatán számolt; ez hibás közös időt adott.)
+    const toredekJavaslatok = await JavaslatRepository.findByToredekCsoportId(toredekCsoportId); // A csoport aktív töredékei
 
     if (!toredekJavaslatok || toredekJavaslatok.length === 0) { // Ellenőrizzük, hogy kaptunk-e töredékeket
       throw new Error('A töredék csoport javaslatai nem találhatók'); // Hiba dobása, ha nincs találat
@@ -492,11 +493,13 @@ class JavaslatIdozitesService {
       throw new Error('A töredék csoportban nincs érvényes dontesiIdo érték'); // Hiba dobása, ha nincs érvényes döntési idő
     } // Érvényes döntési idő ellenőrzés vége
 
-    const dontesiIdokOsszege = ervenyesDontesiIdok.reduce((osszeg, aktualisErtek) => { // Összeadjuk a döntési időket
-      return osszeg + aktualisErtek; // Visszaadjuk a növelt összeget
-    }, 0); // Kezdőérték 0
-
-    const atlagoltDontesiIdo = Math.round((dontesiIdokOsszege / ervenyesDontesiIdok.length) * 100) / 100; // Kiszámoljuk a két tizedesre kerekített átlagot
+    // EGYSÉGES DÖNTÉSI IDŐ = a töredékek döntési idejének MAXIMUMA.
+    // A leglassabb (legbizonytalanabb) töredék diktálja a csoport zárását: mivel
+    // ÉS-szabály szerint MINDEN töredéknek külön át kell mennie, a csoport ne
+    // záruljon, amíg a legkevésbé egyértelmű töredék is meg nem érik a döntésre.
+    // Ráadásul a maximum automatikusan tiszteletben tartja minden töredék saját
+    // minimum döntési idejét (a max ≥ minden egyes töredék dontesiIdo-ja ≥ annak minimuma).
+    const kozosDontesiIdo = Math.max(...ervenyesDontesiIdok); // A csoport egységes döntési ideje
 
     const letrehozasIdopontok = toredekJavaslatok.map(javaslat => javaslat.letrehozva.getTime()); // Minden töredék létrehozási idejét timestampre alakítjuk
 
@@ -508,13 +511,13 @@ class JavaslatIdozitesService {
       toredekCsoportId: toredekCsoportId, // Csoport azonosító logolása
       toredekDb: toredekJavaslatok.length, // Töredékek száma
       ervenyesDontesiIdok: ervenyesDontesiIdok, // Felhasznált döntési idők
-      atlagoltDontesiIdo: atlagoltDontesiIdo, // Kiszámolt átlagolt döntési idő
+      kozosDontesiIdo: kozosDontesiIdo, // Kiszámolt közös (MAX) döntési idő
       kozosLetrehozasIdeje: kozosLetrehozasIdeje // Közös kezdőidő logolása
     }); // Záró log vége
 
     return { // Visszaadjuk a közös időzítési adatokat
       toredekJavaslatok: toredekJavaslatok, // A csoport összes töredéke
-      atlagoltDontesiIdo: atlagoltDontesiIdo, // Közös átlagolt döntési idő
+      kozosDontesiIdo: kozosDontesiIdo, // Közös (MAX) döntési idő
       kozosLetrehozasIdeje: kozosLetrehozasIdeje // Közös alap létrehozási idő
     }; // Visszatérési objektum vége
   } // Metódus vége

@@ -348,6 +348,21 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
           toredekDarab: javaslat.toredekDarab
         }
       : null;
+
+    // ===== EGYSÉGES DÖNTÉSI IDŐ A TÖREDÉKCSOPORTBAN =====
+    // Töredékcsoportnál a kártyák a csoport KÖZÖS döntési idejét mutatják, ami a
+    // töredékek döntési idejének MAXIMUMA (megegyezik a záró logikával: a
+    // leglassabb töredék diktál). Így a csoport minden töredék-kártyáján ugyanaz a
+    // ⏱ jelenik meg, nem a per-töredék nyers érték. Egyedi javaslatnál marad a saját.
+    let kijelzendoDontesiIdo = javaslat?.dontesiIdo ?? null;
+    if (javaslat?.toredekCsoportId) {
+      const csoportToredekek = await javaslatRepository.findByToredekCsoportId(javaslat.toredekCsoportId);
+      const idok = (csoportToredekek ?? [])
+        .map(t => t.dontesiIdo)
+        .filter(x => typeof x === 'number' && !Number.isNaN(x));
+      if (idok.length > 0) kijelzendoDontesiIdo = Math.max(...idok);
+    }
+
     adatok = {
       javaslatTipus: javaslat?.javaslatTipus ?? null,
       statusz: javaslat?.statusz ?? null,
@@ -356,7 +371,7 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
       ellenzoiArany: javaslat?.ellenzoiArany ?? null,
       tartozkodoiArany: javaslat?.tartozkodoiArany ?? null, // MODELL A – tiszta tartózkodói szelet
       bizonyossagiMutato: javaslat?.bizonyossagiMutato ?? null,
-      dontesiIdo: javaslat?.dontesiIdo ?? null,
+      dontesiIdo: kijelzendoDontesiIdo, // Töredékcsoportnál a közös (MAX) döntési idő
       toredekAdatok
     };
 
