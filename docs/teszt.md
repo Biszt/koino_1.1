@@ -7,7 +7,7 @@
 > kelljen minden alkalommal a kódból kikeresni őket. A kódból kiolvasott adatokat
 > tükrözi — ha a kód változik, ezt is frissítsük.
 >
-> *Utolsó frissítés: 2026. 07. 09.*
+> *Utolsó frissítés: 2026. 07. 12.*
 
 ---
 
@@ -113,9 +113,16 @@ a `localStorage`-ba menti.
 | `indoklas` | ❌ | szövegszerkesztő JSON; **opcionális** (nincs kötelezőség, nincs min. karakter) |
 | `kezdoTudatpont` | ✅ | a controller kötelezővé teszi (a javaslattevő induló pontja) |
 | `szuloId` | — | **NEM a frontend adja** — a service teszi az érintett entitás alá |
+| `egyezmenyTarhelyId` (+`egyezmenyTarhelyTipus`) | Csomagnál ✅, egyébként ❌ | hova kerül az elfogadott javaslat **egyezménye**. **Csomagnál KÖTELEZŐ** (a létrehozó dönt); a service minden csomag-töredékre ezt írja. Más típusnál lehet **null** (a modell elfogadja), a service vezeti le (Módosítás/Áthelyezés → érintett entitás, Törlés → szülő, Egyesítés → új entitás) |
 
 > A javaslattevés feltétele, hogy az e-embernek **legyen tudatpontja az érintett
 > entitáson** (a menüpont `tudatpontFuggo`, backend is kikényszeríti).
+>
+> **Új (2026-07-12): cím-alapú kereső minden ID-mezőben.** A JavaslatModal ID-mezői
+> (áthelyezés cél, egyesítés forrás/szülő, csomag tétel-entitás/áthelyezés-cél, egyezmény
+> tárhely) most a közös `EntitasKeresoMezo`-t használják: a felhasználó **cím alapján
+> keres** és a legördülő találatból választ; a nyers 24-hex **ObjectId** beírása is működik
+> (fallback). A szövegszerkesztő entitás-hivatkozás panelje szintén kap cím-keresőt.
 
 ### 3.5. Tudatpont-hozzárendelés — `POST /api/tudatpont/hozzarendeles` (auth)
 Body: `{ entitasId, entitasTipus, pontok }`
@@ -131,6 +138,22 @@ Feltétel: tudatpont az érintett entitáson.
 a tényleges szerverhívás (leadás/módosítás/visszavonás) a **„Rendben"** gombra
 történik. Bezárás „Rendben" nélkül (X/ESC) = nincs változás. A „Szavazat leadása"
 menüpont csak **Aktiv** státuszú javaslatnál jelenik meg.
+
+### 3.7. Entitás-kereső (cím alapján) — `GET /api/kereses` (auth)
+
+A cím-alapú entitás-választó backendje (a JavaslatModal mezői és a szövegszerkesztő
+hivatkozás-panelje használja).
+
+**Query paraméterek:**
+| Paraméter | Kötelező | Megjegyzés |
+|---|---|---|
+| `q` | ✅ | keresőszöveg (cím/név-részlet, kis/nagybetű független, részleges egyezés) |
+| `tipusok` | ❌ | vesszős lista: `Tartalom,Kategoria,TartalomTipus` (alap: mind a három) |
+| `limit` | ❌ | típusonkénti max. találat, 1–50, alap 10 |
+
+**Válasz:** `{ success: true, talalatok: [{ entitasId, entitasTipus, cim }] }`.
+Csak a **cím-viselő** három típusra keres (Tartalom címe = `cim`, Kategória/Tartalomtípus = `nev`).
+Egyezmény/Javaslat típus a keresőben nincs — azok a nyers ID-fallbackkal érhetők el.
 
 ---
 
@@ -331,6 +354,26 @@ docker logs -f koino-backend
 23. ⬜ Javaslatra több e-emberrel **szavazás** (Támogat/Ellenez/Tartózkodik), korábbi szavazat kiemelése, **visszavonás**.
 24. ⬜ *Részletes adatok* modál minden kártyatípuson megnyílik és a helyes adatokat mutatja.
 
+### E) Cím-alapú kereső + csomag kötelező egyezmény-tárhely (ÚJ, 2026-07-12)
+25. ⬜ **Kereső — JavaslatModal:** indíts pl. *Áthelyezés* javaslatot; az „Új szülő tartalom"
+    mezőbe **cím-részletet** gépelve legördül a találati lista, kiválasztás után a mező **zöld
+    megerősítést** ad („✓ Tartalom: …"). Ellenőrizd a Network fülön: `GET /api/kereses?q=…`.
+26. ⬜ **Nyers ID fallback:** ugyanabba a mezőbe egy **24-hex ObjectId**-t beírva közvetlenül
+    feloldódik (nincs szükség keresésre).
+27. ⬜ **Csomag — kötelező tárhely:** *Csomag* javaslatnál a 3. lépésen az „Egyezmény tárhely"
+    felirat **`*`**-ot kap; **üresen** hagyva a beküldés **hibát** ad
+    („Csomag javaslatnál kötelező kiválasztani az egyezmény tárhelyét").
+28. ⬜ **Csomag — tényleges hatás:** válassz tárhelyet (cím-keresővel), állíts össze legalább
+    **2 vegyes műveletet**, küldd be. DB-ben minden csomag-töredék `egyezmenyTarhelyId`-je a
+    **választott** entitás (nem a tételek saját entitása):
+    ```bash
+    docker exec koino-mongodb-dev mongosh koino --eval "db.javaslats.find({toredekCsoportId:{$ne:null}},{javaslatTipus:1,egyezmenyTarhelyId:1,toredekCsoportId:1}).pretty()"
+    ```
+    Elfogadás után az **egyezmény a választott tárhelyen** jön létre.
+29. ⬜ **Szerkesztő hivatkozás-kereső:** egy szövegblokkban az entitás-hivatkozás panelen
+    cím-keresés → találat kiválasztása kitölti az ID-t és a típust → **Oké** beszúrja a
+    hivatkozást; a régi kézi ID + Oké út is működik.
+
 ---
 
 ## 6. Ismert megjegyzések / buktatók
@@ -344,6 +387,13 @@ docker logs -f koino-backend
 - **Nyitott finomság (terv 10. pont):** a szavazás backend-szabálya a javaslat
   *érintett entitásait* nézi, a frontend viszont a javaslat entitásán ellenőriz.
   A felmenő-szabály miatt általában egybeesnek, de eltérhet — érdemes fejben tartani.
+- **Töredékcsoport (Csomag/Egyesítés) döntése — ÉS-szabály + közös MAX döntési idő (2026-07-12):**
+  minden töredék a SAJÁT érintett entitásának tudatpont-táborával dől el (külön részvétel/küszöb);
+  a csoport csak akkor `Elfogadva`, ha MINDEN töredék teljesíti a saját küszöbét, különben az EGÉSZ
+  `Elvetve` (védi a kis táború entitást). A csoport **közös döntési ideje = a töredékek döntési
+  idejének MAXIMUMA** (a leglassabb töredék diktál); a kártyák a csoport minden töredékén ugyanezt
+  a ⏱-t mutatják. *(Ekkor javítva egy régi hiba is: a közös időzítés `findAll({toredekCsoportId})`-val
+  a DB összes javaslatán számolt — most `findByToredekCsoportId` szűr helyesen a csoportra.)*
 - **Egyezmény kártya „Javaslat létrehozása"** menüpont még 🚧 (nincs kész).
 - Régi (csak tartalom) érték-adatokat a polimorf átállásnál eldobtuk; a meglévő
   entitások az **első** érték javaslatnál kapják meg a hisztogramjukat.

@@ -309,6 +309,28 @@ async removeTartalomTipusFromAll(tartalomTipusId) {
   return result;
 }
 
+  // ----- TARTALMAK KERESÉSE CÍM ALAPJÁN -----
+  // A cím-alapú entitás-kereső backendje (GET /api/kereses).
+  // Kis/nagybetű független, részleges egyezés a `cim` mezőn.
+  // Csak a keresőnek szükséges könnyű mezőket adja vissza (nincs populate).
+  // @param {string} kifejezes - A keresett cím-részlet (regex-biztos, előre escape-elve)
+  // @param {number} limit - Maximum ennyi találat
+  // @returns {Promise<Array>} [{ _id, cim }]
+  async searchByCim(kifejezes, limit = 10) {
+    console.log('tartalomRepository.searchByCim - KEZDÉS', { kifejezes, limit });
+
+    const talalatok = await Tartalom.find(
+      { cim: { $regex: kifejezes, $options: 'i' } }, // Cím-részlet, kis/nagybetű függetlenül
+      { cim: 1 }                                     // Csak a cím (és az _id) kell
+    )
+      .sort({ letrehozva: -1 }) // Legújabbak előre
+      .limit(limit)
+      .lean();                  // Sima JS objektum
+
+    console.log('tartalomRepository.searchByCim - VÉGE', { talalatok: talalatok.length });
+    return talalatok;
+  }
+
   // ----- ÖSSZES TARTALOM SZÁMLÁLÁSA -----
   // A platformon lévő összes tartalom számának lekérése
   // Használat: Főoldal statisztika sávhoz

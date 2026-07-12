@@ -5,7 +5,7 @@ import Modal from './Modal.js';
 import { apiPost } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
-import IdEllenorzoMezo from '../IdEllenorzoMezo.js';
+import EntitasKeresoMezo from '../EntitasKeresoMezo.js';
 
 // Speciális egyezmény tárhely érték Egyesítésnél:
 // azt jelzi a backendnek, hogy az egyesítésből létrejövő ÚJ entitás
@@ -124,9 +124,9 @@ class JavaslatModal {
       return;
     }
 
-    this.egyezmenyTarhelyMezo = new IdEllenorzoMezo(kontener, {
-      cimke:       'Egyezmény tárhely (opcionális)',
-      placeholder: 'Üresen hagyva az alapértelmezett tárhely lesz',
+    this.egyezmenyTarhelyMezo = new EntitasKeresoMezo(kontener, {
+      cimke:       'Egyezmény tárhely (opcionális)', // A 3. lépésre lépéskor típusfüggően frissül (Csomagnál kötelező)
+      placeholder: 'Keress cím alapján a tárhelynek',
       tipusok:     ['Tartalom'], // Az egyezmény tárhelye mindig tartalom
       token:       this.token
     });
@@ -360,6 +360,19 @@ class JavaslatModal {
     };
     this.modal?.tartalomFrissitese(cimek[ujLepes], null);
 
+    // =============================================
+    // Egyezmény tárhely felirata típusfüggően (a 3. lépésre lépéskor)
+    // =============================================
+    // Csomagnál KÖTELEZŐ megadni, hova kerüljön az elfogadott csomag egyezménye
+    // (a létrehozó dönt, nincs automatikus levezetés). Minden más típusnál opcionális.
+    if (ujLepes === 3 && this.egyezmenyTarhelyMezo) {
+      if (this.kivalasztottTipus === 'Csomag') {
+        this.egyezmenyTarhelyMezo.cimkeFrissitese('Egyezmény tárhely * (ide kerül a csomag egyezménye)');
+      } else {
+        this.egyezmenyTarhelyMezo.cimkeFrissitese('Egyezmény tárhely (opcionális)');
+      }
+    }
+
     console.log('JavaslatModal._lepesValtasa - VÉGE', { aktivLepes: this.aktivLepes });
   }
 
@@ -519,7 +532,7 @@ class JavaslatModal {
     kontener.appendChild(mezoKontener);
 
     // Áthelyezés célja csak Tartalom lehet (a backend végrehajtó korlátja)
-    this.ujSzuloMezo = new IdEllenorzoMezo(mezoKontener, {
+    this.ujSzuloMezo = new EntitasKeresoMezo(mezoKontener, {
       cimke:       'Új szülő tartalom',
       placeholder: 'Az új szülő tartalom ID-ja',
       tipusok:     ['Tartalom'],
@@ -580,7 +593,7 @@ class JavaslatModal {
     szuloMezoKontener.className = 'javaslat-modal__mezo-csoport';
     kontener.appendChild(szuloMezoKontener);
 
-    this.egyesitesSzuloMezo = new IdEllenorzoMezo(szuloMezoKontener, {
+    this.egyesitesSzuloMezo = new EntitasKeresoMezo(szuloMezoKontener, {
       cimke:       'Az új entitás szülő tartalma *',
       placeholder: 'A tartalom ID-ja, ami alá az új entitás kerül',
       tipusok:     ['Tartalom'],
@@ -636,7 +649,7 @@ class JavaslatModal {
     mezoKontener.className = 'javaslat-modal__forras-mezo';
     listaElem.appendChild(mezoKontener);
 
-    const mezo = new IdEllenorzoMezo(mezoKontener, {
+    const mezo = new EntitasKeresoMezo(mezoKontener, {
       cimke:       `${this.forrasMezok.length + 2}. egyesítendő entitás`,
       placeholder: 'Az egyesítendő entitás ID-ja',
       // Bármelyik entitás típus lehet forrás — a mező automatikusan felismeri
@@ -706,7 +719,7 @@ class JavaslatModal {
     const idMezoKontener = document.createElement('div');
     sorElem.appendChild(idMezoKontener);
 
-    const idMezo = new IdEllenorzoMezo(idMezoKontener, {
+    const idMezo = new EntitasKeresoMezo(idMezoKontener, {
       cimke:       `${this.csomagTetelek.length + 1}. tétel entitása`,
       placeholder: 'Az érintett entitás ID-ja',
       tipusok:     ['Tartalom', 'Kategoria', 'TartalomTipus'],
@@ -809,7 +822,7 @@ class JavaslatModal {
       const celKontener = document.createElement('div');
       kontener.appendChild(celKontener);
 
-      tetel.celMezo = new IdEllenorzoMezo(celKontener, {
+      tetel.celMezo = new EntitasKeresoMezo(celKontener, {
         cimke:       'Új szülő tartalom',
         placeholder: 'A cél tartalom ID-ja',
         tipusok:     ['Tartalom'],
@@ -970,6 +983,12 @@ class JavaslatModal {
           return 'A csomag áthelyezési tételéhez érvényes cél tartalmat kell megadni.';
         }
       }
+
+      // Csomagnál KÖTELEZŐ az egyezmény tárhely: a létrehozó dönti el, hova kerül
+      // az elfogadott csomag egyezménye (nincs automatikus levezetés).
+      if (!this.egyezmenyTarhelyMezo?.getId()) {
+        return 'Csomag javaslatnál kötelező kiválasztani az egyezmény tárhelyét (keress cím alapján).';
+      }
     }
 
     const kontener       = document.getElementById(this.kontenerAzonosito);
@@ -1030,7 +1049,10 @@ class JavaslatModal {
     // 1. Ha a felhasználó megadott érvényes tárhelyet, azt használjuk
     // 2. Egyesítésnél az alapértelmezés a placeholder: az új entitás lesz a tárhely
     // 3. Más típusnál az alapértelmezés a javaslat szülő tartalma
-    let egyezmenyTarhelyId = this.egyezmenyTarhelyMezo?.getId() ?? null;
+    // A kiválasztott tárhely-entitás (id + típus) — a keresőből jön
+    const valasztottTarhely = this.egyezmenyTarhelyMezo?.getEntitas() ?? null;
+    let egyezmenyTarhelyId    = valasztottTarhely?.entitasId    ?? null;
+    let egyezmenyTarhelyTipus = valasztottTarhely?.entitasTipus ?? 'Tartalom';
     if (!egyezmenyTarhelyId) {
       egyezmenyTarhelyId = this.kivalasztottTipus === 'Egyesites'
         ? UJ_ENTITAS_TARHELY_PLACEHOLDER
@@ -1041,6 +1063,7 @@ class JavaslatModal {
       javaslatTipus: this.kivalasztottTipus,
       szuloId:       this.szuloAdatok?.szuloId,
       egyezmenyTarhelyId,
+      egyezmenyTarhelyTipus,   // A választott tárhely típusa (a backend csomagnál használja)
       indoklas,      // Blokkok tömbje vagy több oldalas objektum, nem sima string
       kezdoTudatpont,
       erintettEntitasok: this._erintettEntitasokOsszegyujtese()

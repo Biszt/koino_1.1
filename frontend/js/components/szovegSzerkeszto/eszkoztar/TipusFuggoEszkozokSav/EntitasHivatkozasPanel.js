@@ -1,5 +1,10 @@
 // frontend/js/components/szovegSzerkeszto/eszkoztar/tipusFuggoEszkozokSav/EntitasHivatkozasPanel.js
 
+// ===== IMPORTOK =====
+// Közös cím-alapú kereső (ugyanaz, amit a JavaslatModal mezői is használnak)
+import { entitasKereses, tipusFelirat } from '../../../../utils/entitasKeresoHelper.js';
+import { tokenLekerese } from '../../../../utils/authHelper.js';
+
 class EntitasHivatkozasPanel {
 
   // =============================================
@@ -25,6 +30,12 @@ class EntitasHivatkozasPanel {
     // Formátum: { eszkozNev: domElem }
     this.eszkozReferenciák = {};
 
+    // Kereső segéd-állapotok: debounce időzítő, lekérés sorszám (megkésett válasz eldobása),
+    // és a blur-elrejtés időzítője
+    this._keresIdozito = null;
+    this._keresSorszam = 0;
+    this._keresBlurIdozito = null;
+
     console.log('EntitasHivatkozasPanel.constructor - VÉGE');
   }
 
@@ -32,7 +43,7 @@ class EntitasHivatkozasPanel {
   // DOM ELEM LÉTREHOZÁSA
   // =============================================
   // Felépíti az entitás hivatkozás panel teljes DOM struktúráját:
-  // Típus legördülő + entitásId input + elválasztó + Oké gomb
+  // Típus legördülő + CÍM-KERESŐ + entitásId input + elválasztó + Oké gomb
   // + elválasztó + betűméret gombok
   // @returns {HTMLElement} A kész panel div eleme
   letrehozas() {
@@ -44,6 +55,12 @@ class EntitasHivatkozasPanel {
     // Típus legördülő létrehozása
     const tipusSelect = this._tipusSelectLetrehozasa();
     panel.appendChild(tipusSelect);
+
+    // CÍM-KERESŐ (elsődleges): a felhasználó a címre keres, és a találatból választ.
+    // A kiválasztás kitölti az ID inputot és a típus-selectet — az Oké gomb alkalmazza.
+    // A nyers ID + Oké út alább KIEGÉSZÍTŐként megmarad (pl. Egyezmény/Javaslat típushoz).
+    const kereso = this._keresoLetrehozasa();
+    panel.appendChild(kereso);
 
     // EntitásId input a közös segéddel
     const idInput = this.segedek.szovegesInputLetrehozasa(
@@ -278,6 +295,140 @@ _betumeretGombokatFrissit(aktivMeret) {
 
   console.log('EntitasHivatkozasPanel._betumeretGombokatFrissit - VÉGE', aktivMeret);
 }
+
+  // =============================================
+  // PRIVÁT - CÍM-KERESŐ LÉTREHOZÁSA
+  // =============================================
+  // Kereső input + legördülő találati lista. A találat kiválasztása kitölti az
+  // entitásId inputot és a típus-selectet; az alkalmazás a meglévő Oké gombbal történik.
+  // @returns {HTMLElement} A kereső wrapper eleme
+  _keresoLetrehozasa() {
+    console.log('EntitasHivatkozasPanel._keresoLetrehozasa - KEZDÉS');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'eszkoztar-input-wrapper eszkoztar-kereso-wrapper';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'eszkoztar-input';
+    input.placeholder = 'Keresés cím alapján...';
+    input.setAttribute('aria-label', 'Entitás keresése cím alapján');
+    input.autocomplete = 'off';
+
+    // Találati lista (kezdetben rejtett)
+    const talalatok = document.createElement('ul');
+    talalatok.className = 'eszkoztar-kereso-talalatok eszkoztar-kereso-talalatok--rejtett';
+
+    // Gépelésre: debounce, majd keresés
+    input.addEventListener('input', () => {
+      clearTimeout(this._keresIdozito);
+      this._keresIdozito = setTimeout(() => this._keresesFuttatasa(input.value), 350);
+    });
+
+    // A toolbar ne lopja el a fókuszt az inputról
+    input.addEventListener('mousedown', (e) => e.stopPropagation());
+
+    // Fókuszvesztéskor a listát kis késleltetéssel elrejtjük (hogy a kattintás lefusson)
+    input.addEventListener('blur', () => {
+      this._keresBlurIdozito = setTimeout(() => this._talalatokElrejtese(), 200);
+    });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(talalatok);
+
+    // Referenciák eltárolása
+    this.eszkozReferenciák['keresoInput']    = input;
+    this.eszkozReferenciák['keresoTalalatok'] = talalatok;
+
+    console.log('EntitasHivatkozasPanel._keresoLetrehozasa - VÉGE');
+    return wrapper;
+  }
+
+  // =============================================
+  // PRIVÁT - KERESÉS FUTTATÁSA
+  // =============================================
+  // A három cím-viselő típuson keres (Tartalom/Kategória/Tartalomtípus); a kiválasztás
+  // állítja a típus-selectet. Az Egyezmény/Javaslat típus a nyers ID úttal érhető el.
+  // @param {string} szoveg - A keresőmező tartalma
+  async _keresesFuttatasa(szoveg) {
+    const tisztitott = (szoveg ?? '').trim();
+    console.log('EntitasHivatkozasPanel._keresesFuttatasa - KEZDÉS', { tisztitott });
+
+    const talalatokElem = this.eszkozReferenciák['keresoTalalatok'];
+    if (!talalatokElem) return;
+
+    if (!tisztitott) {
+      this._talalatokElrejtese();
+      return;
+    }
+
+    // Sorszám a megkésett válasz eldobásához
+    const sorszam = ++this._keresSorszam;
+    const token = tokenLekerese();
+
+    const talalatok = await entitasKereses(
+      tisztitott,
+      ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      token
+    );
+    if (sorszam !== this._keresSorszam) return; // közben új keresés indult
+
+    talalatokElem.innerHTML = '';
+
+    if (talalatok.length === 0) {
+      const ures = document.createElement('li');
+      ures.className = 'eszkoztar-kereso-talalat eszkoztar-kereso-talalat--ures';
+      ures.textContent = 'Nincs találat';
+      talalatokElem.appendChild(ures);
+    } else {
+      talalatok.forEach((talalat) => {
+        const li = document.createElement('li');
+        li.className = 'eszkoztar-kereso-talalat';
+        li.textContent = `${talalat.cim} · ${tipusFelirat(talalat.entitasTipus)}`;
+        // mousedown: a blur ELŐTT fut, így a kiválasztás biztosan megtörténik
+        li.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          this._talalatKivalasztasa(talalat);
+        });
+        talalatokElem.appendChild(li);
+      });
+    }
+
+    talalatokElem.classList.remove('eszkoztar-kereso-talalatok--rejtett');
+    console.log('EntitasHivatkozasPanel._keresesFuttatasa - VÉGE', { talalatok: talalatok.length });
+  }
+
+  // =============================================
+  // PRIVÁT - TALÁLAT KIVÁLASZTÁSA
+  // =============================================
+  // Kitölti az entitásId inputot és a típus-selectet a találat alapján, majd
+  // elrejti a listát. Az alkalmazás az Oké gombbal történik (meglévő folyamat).
+  // @param {Object} talalat - { entitasId, entitasTipus, cim }
+  _talalatKivalasztasa(talalat) {
+    console.log('EntitasHivatkozasPanel._talalatKivalasztasa', talalat);
+
+    const idInput = this.eszkozReferenciák['entitasId'];
+    if (idInput) idInput.value = talalat.entitasId;
+
+    const selectElem = this.eszkozReferenciák['entitasTipus'];
+    if (selectElem) selectElem.value = talalat.entitasTipus;
+
+    // A kereső mezőbe a címet írjuk vissza (visszajelzés a választásról)
+    const keresoInput = this.eszkozReferenciák['keresoInput'];
+    if (keresoInput) keresoInput.value = talalat.cim;
+
+    this._talalatokElrejtese();
+  }
+
+  // =============================================
+  // PRIVÁT - TALÁLATI LISTA ELREJTÉSE
+  // =============================================
+  _talalatokElrejtese() {
+    const talalatokElem = this.eszkozReferenciák['keresoTalalatok'];
+    if (!talalatokElem) return;
+    talalatokElem.classList.add('eszkoztar-kereso-talalatok--rejtett');
+    talalatokElem.innerHTML = '';
+  }
 
 }
 

@@ -175,6 +175,30 @@ class KategoriaRepository {
     return toroltKategoria;
   }
 
+  // ----- KATEGÓRIÁK KERESÉSE NÉV ALAPJÁN (RÉSZLEGES) -----
+  /**
+   * A cím-alapú entitás-kereső backendje (GET /api/kereses).
+   * Kis/nagybetű független, RÉSZLEGES egyezés a `nev` mezőn (nem pontos, mint a findByNev).
+   * Csak a keresőnek szükséges könnyű mezőket adja vissza (nincs populate).
+   * @param {string} kifejezes - A keresett név-részlet (regex-biztos, előre escape-elve)
+   * @param {number} limit - Maximum ennyi találat
+   * @returns {Promise<Array>} [{ _id, nev }]
+   */
+  async searchByNev(kifejezes, limit = 10) {
+    console.log('kategoriaRepository.searchByNev - KEZDÉS', { kifejezes, limit });
+
+    const talalatok = await Kategoria.find(
+      { nev: { $regex: kifejezes, $options: 'i' } }, // Név-részlet, kis/nagybetű függetlenül
+      { nev: 1 }                                     // Csak a név (és az _id) kell
+    )
+      .sort({ letrehozva: -1 }) // Legújabbak előre
+      .limit(limit)
+      .lean();                  // Sima JS objektum
+
+    console.log('kategoriaRepository.searchByNev - VÉGE', { talalatok: talalatok.length });
+    return talalatok;
+  }
+
   // ----- KATEGÓRIÁK SZÁMLÁLÁSA -----
   /**
    * Összes kategória megszámlálása (opcionális szűrőkkel)

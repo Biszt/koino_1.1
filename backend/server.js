@@ -37,6 +37,9 @@ const pakliRoutes = require('./routes/pakliRoutes');
 
 const feltoltesRoutes = require('./routes/feltoltesRoutes');
 
+// ÚJ – Cím-alapú entitás-kereső route importálása
+const keresesRoutes = require('./routes/keresesRoutes');
+
 // ===================================
 // EXPRESS ALKALMAZÁS LÉTREHOZÁSA
 // ===================================
@@ -109,6 +112,8 @@ app.use('/api', platformStatisztikaRoutes);
 app.use('/api/pakli', pakliRoutes);
 // Feltöltés route regisztrálása
 app.use('/api/feltoltes', feltoltesRoutes);
+// ÚJ – Cím-alapú entitás-kereső route regisztrálása (GET /api/kereses)
+app.use('/api', keresesRoutes);
 
 // ===================================
 // GYÖKÉR ÚTVONAL

@@ -127,6 +127,14 @@ class JavaslatService {
     // Ezért itt nincs külön szülő-validáció.
 
     // 2.A LÉPÉS - EGYEZMÉNY TÁRHELY VALIDÁLÁSA
+    // CSOMAG-KÖTELEZŐSÉG: csomag javaslatnál a létrehozónak KÖTELEZŐ megadnia,
+    // hova kerüljön az elfogadott csomag egyezménye — nincs automatikus levezetés
+    // (nem az „első töredék" alá kerül!), a döntés a létrehozóé. Minden más típusnál
+    // az egyezmenyTarhelyId lehet null (a modell is elfogadja).
+    if (javaslatAdatok.javaslatTipus === 'Csomag' && !javaslatAdatok.egyezmenyTarhelyId) {
+      throw new Error('Csomag javaslatnál az egyezmény tárhely megadása kötelező');
+    }
+
     if (javaslatAdatok.egyezmenyTarhelyId) { // Ha van egyezmény tárhely ID megadva
       // Ha van egyezmény tárhely ID megadva, vizsgáljuk meg
       if (javaslatAdatok.egyezmenyTarhelyId === 'eeeeeeeeeeeeeeeeeeee0001') { // Ha speciális placeholder érték
@@ -346,12 +354,20 @@ class JavaslatService {
       //  - Törlés    → az érintett entitás; a végrehajtó fallback az eredeti
       //                szülőre irányítja (mert az entitás törlődik)
       //  - Módosítás / Áthelyezés → az érintett entitás maga
+      //  - CSOMAG    → a létrehozó által KÖTELEZŐEN választott közös tárhely
+      //                MINDEN töredékre (nem a töredék saját entitása!). Így az
+      //                elfogadáskor keletkező EGYETLEN csoport-egyezmény a választott
+      //                helyre kerül. A logikai javaslattípusra (javaslatAdatok.javaslatTipus)
+      //                szűrünk, mert a töredék saját típusa a per-tétel művelet.
       const EGYESITES_PLACEHOLDER = 'eeeeeeeeeeeeeeeeeeee0001';
       let egyezmenyTarhelyIdErtek;
       let egyezmenyTarhelyTipusErtek;
       if (toredekJavaslatTipus === 'Egyesites') {
         egyezmenyTarhelyIdErtek    = EGYESITES_PLACEHOLDER;
         egyezmenyTarhelyTipusErtek = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus || 'Tartalom';
+      } else if (javaslatAdatok.javaslatTipus === 'Csomag') {
+        egyezmenyTarhelyIdErtek    = javaslatAdatok.egyezmenyTarhelyId;
+        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyezmenyTarhelyTipus || 'Tartalom';
       } else {
         egyezmenyTarhelyIdErtek    = entitas.entitasId;
         egyezmenyTarhelyTipusErtek = entitas.entitasTipus;

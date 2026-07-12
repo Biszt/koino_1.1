@@ -92,11 +92,12 @@ const javaslatSchema = new mongoose.Schema({
   egyezmenyTarhelyId: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     refPath: 'egyezmenyTarhelyTipus',       // Polimorf referencia
-    required: function() {
-      // Egyesítésnél NEM kötelező, mert az új entitás még nem létezik
-      return this.javaslatTipus !== 'Egyesites';
-    },
-    default: null   // Alapértelmezett null egyesítésnél
+    // NULL IS MEGENGEDETT minden típusnál (required: false). A kötelezőséget NEM a
+    // séma dönti el: a Csomag javaslatnál a service (javaslatService) kényszeríti ki,
+    // hogy a létrehozó válasszon tárhelyet; minden más esetben az egyezmenyTarhelyId
+    // lehet null (pl. amikor nincs megadva, vagy a levezetés null-t ad).
+    required: false,
+    default: null   // Alapértelmezett: null
     // Index: lásd javaslatSchema.index({ egyezmenyTarhelyId: 1 }) lejjebb
   },
 
