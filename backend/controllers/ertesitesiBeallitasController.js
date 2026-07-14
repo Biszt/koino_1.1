@@ -16,11 +16,11 @@ const beallitasLetrehozasVagyFrissites = async (req, res) => {
   });
 
   try {
-    const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszob, kikapcsolva } = req.body;
+    const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, kikapcsolva } = req.body;
 
     const beallitas = await ertesitesiBeallitasService.beallitasLetrehozasVagyFrissites(
       req.user.id,
-      { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszob, kikapcsolva }
+      { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, kikapcsolva }
     );
 
     console.log('ertesitesiBeallitasController.beallitasLetrehozasVagyFrissites - VEGE', {
@@ -114,6 +114,92 @@ const entitasBeallitasLekereses = async (req, res) => {
 // --- METÓDUS VEGE: entitasBeallitasLekereses ---
 
 
+// --- METÓDUS KEZDETE: globalisLekereses ---
+// GET /api/ertesitesi-beallitasok/globalis
+// A bejelentkezett e-ember GLOBÁLIS (fő menüs) alapbeállítása.
+const globalisLekereses = async (req, res) => {
+  console.log('ertesitesiBeallitasController.globalisLekereses - KEZDET', {
+    eEmberId: req.user.id,
+  });
+
+  try {
+    const eredmeny = await ertesitesiBeallitasService.globalisBeallitasLekereses(req.user.id);
+
+    console.log('ertesitesiBeallitasController.globalisLekereses - VEGE', { eredmeny });
+
+    res.status(200).json({ siker: true, adatok: eredmeny });
+  } catch (hiba) {
+    console.error('ertesitesiBeallitasController.globalisLekereses - HIBA', { hiba });
+    res.status(500).json({ siker: false, uzenet: 'A globális beállítás lekérése sikertelen' });
+  }
+};
+// --- METÓDUS VEGE: globalisLekereses ---
+
+
+// --- METÓDUS KEZDETE: globalisMentese ---
+// PUT /api/ertesitesi-beallitasok/globalis
+// A bejelentkezett e-ember GLOBÁLIS alapbeállításának mentése.
+const globalisMentese = async (req, res) => {
+  console.log('ertesitesiBeallitasController.globalisMentese - KEZDET', {
+    eEmberId: req.user.id,
+    body: req.body,
+  });
+
+  try {
+    const { ertesitesTipusok, tudatpontKuszobok } = req.body;
+
+    const eredmeny = await ertesitesiBeallitasService.globalisBeallitasMentese(req.user.id, {
+      ertesitesTipusok,
+      tudatpontKuszobok,
+    });
+
+    console.log('ertesitesiBeallitasController.globalisMentese - VEGE', { eredmeny });
+
+    res.status(200).json({ siker: true, adatok: eredmeny });
+  } catch (hiba) {
+    console.error('ertesitesiBeallitasController.globalisMentese - HIBA', { hiba });
+    res.status(500).json({ siker: false, uzenet: 'A globális beállítás mentése sikertelen' });
+  }
+};
+// --- METÓDUS VEGE: globalisMentese ---
+
+
+// --- METÓDUS KEZDETE: ervenyesBeallitasLekereses ---
+// GET /api/ertesitesi-beallitasok/ervenyes/:entitasTipus/:entitasId
+// Az entitáson ÉPP ÉRVÉNYES (örökölt vagy saját) beállítás – a beállító ablak előkitöltéséhez.
+// A cascade a szülőkön felfelé megkeresi a legközelebbi beállítást; a válasz megmondja azt is,
+// hogy saját rekord-e vagy örökölt (forras + vanSajat).
+const ervenyesBeallitasLekereses = async (req, res) => {
+  console.log('ertesitesiBeallitasController.ervenyesBeallitasLekereses - KEZDET', {
+    eEmberId: req.user.id,
+    entitasId: req.params.entitasId,
+    entitasTipus: req.params.entitasTipus,
+  });
+
+  try {
+    const eredmeny = await ertesitesiBeallitasService.ervenyesBeallitasLekereses(
+      req.user.id,
+      req.params.entitasId,
+      req.params.entitasTipus
+    );
+
+    console.log('ertesitesiBeallitasController.ervenyesBeallitasLekereses - VEGE', { eredmeny });
+
+    res.status(200).json({
+      siker: true,
+      adatok: eredmeny,
+    });
+  } catch (hiba) {
+    console.error('ertesitesiBeallitasController.ervenyesBeallitasLekereses - HIBA', { hiba });
+    res.status(500).json({
+      siker: false,
+      uzenet: 'Az érvényes beállítás lekérése sikertelen',
+    });
+  }
+};
+// --- METÓDUS VEGE: ervenyesBeallitasLekereses ---
+
+
 // --- METÓDUS KEZDETE: beallitasTorles ---
 // DELETE /api/ertesitesi-beallitasok/:id
 // Egy beállítás törlése – csak a saját beállítást törölheti az eEmber
@@ -155,5 +241,8 @@ module.exports = {
   beallitasLetrehozasVagyFrissites,
   sajatBeallitasokLekereses,
   entitasBeallitasLekereses,
+  ervenyesBeallitasLekereses,
+  globalisLekereses,
+  globalisMentese,
   beallitasTorles,
 };

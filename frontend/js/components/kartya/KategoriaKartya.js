@@ -8,6 +8,7 @@ import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
+import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
@@ -272,6 +273,29 @@ class KategoriaKartya extends Kartya {
     });
   }
 
+  // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a kategóriára. A modal maga
+  // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
+  async _ertesitesiBeallitasok(entitas) {
+    console.log('KategoriaKartya._ertesitesiBeallitasok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Kategoria',
+      entitasCim:   entitas.adatok?.nev ?? '',
+      token:        this.token
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('KategoriaKartya._ertesitesiBeallitasok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // Változatlan
   _hamburgerOpciok(entitas) {
@@ -326,6 +350,13 @@ class KategoriaKartya extends Kartya {
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
         akcio:          () => this._kuszobErtekJavaslat(entitas)
+      },
+      {
+        ikon:       '🔔',
+        felirat:    'Értesítési beállítások',
+        elvalaszto: true,
+        // NEM tudatpontFuggo: bárki beállíthatja a SAJÁT értesítéseit ezen az ágon.
+        akcio:      () => this._ertesitesiBeallitasok(entitas)
       }
     ];
 

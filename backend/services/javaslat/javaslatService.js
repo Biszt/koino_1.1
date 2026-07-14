@@ -21,6 +21,41 @@ const SzavazatService = require('../szavazatService');
 // Tudatpont szolgáltatás importálása
 const TudatpontService = require('../tudatpontService');
 
+// Értesítés szolgáltatás – új javaslatkor értesítjük az érintett entitás(ok) figyelőit
+const ErtesitesService = require('../ertesitesService');
+
+
+// ===================================
+// SEGÉDFÜGGVÉNY: indoklasUres
+// ===================================
+// Igaz, ha az indoklás gyakorlatilag ÜRES (nincs érdemi tartalom). A szövegszerkesztő
+// blokk-tömböt VAGY több oldalas objektumot ad. Üres = nincs blokk, vagy csak üres
+// szöveges blokk(ok). Bármely nem-szöveg blokk (kép/fájl/link/entitás) → NEM üres.
+// (A javaslat indoklása KÖTELEZŐ, de nincs minimum karakterszám – csak nem lehet üres.)
+function indoklasUres(indoklas) {
+  let blokkok = [];
+  if (Array.isArray(indoklas)) {
+    blokkok = indoklas;
+  } else if (indoklas && typeof indoklas === 'object' && indoklas.blokkok) {
+    // Több oldalas: { blokkok: { fulId: [...] } } – összefűzzük az oldalakat
+    blokkok = Object.values(indoklas.blokkok).flat();
+  }
+
+  if (blokkok.length === 0) return true;
+
+  for (const blokk of blokkok) {
+    if (!blokk || typeof blokk !== 'object') continue;
+    // Bármi, ami nem szöveg (kép, fájl, link, entitás-hivatkozás) → tartalom van
+    if (blokk.tipus && blokk.tipus !== 'szoveg') return false;
+    // Szöveg blokk: HTML-tagek nélkül van-e nem-üres szöveg?
+    const nyers = (blokk.tartalom ?? blokk.szoveg ?? '').toString();
+    const csakSzoveg = nyers.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim();
+    if (csakSzoveg.length > 0) return false;
+  }
+
+  return true;
+}
+
 
 // ===================================
 // JAVASLAT SERVICE OSZTÁLY
@@ -87,11 +122,12 @@ class JavaslatService {
       throw new Error('A javaslat típusa kötelezõ'); // Hiba dobása egyértelmű üzenettel
     } // Típus megléte rendben
 
-    // 1.2 - Indoklás
-    // Az indoklás megadása OPCIONÁLIS – nincs kötelezőség és nincs minimum
-    // karakter-követelmény. Ha nincs érdemi tartalom, a javaslat így is
-    // létrehozható; az indoklas ilyenkor üres/null marad (a modellben nem
-    // kötelező mező). Ezért itt nincs indoklás-validáció.
+    // 1.2 - Indoklás – KÖTELEZŐ (de NINCS minimum karakterszám)
+    // Az indoklás megadása kötelező: nem lehet üres. Minimum hossz nincs – egyetlen
+    // karakter (vagy egy kép/link/hivatkozás blokk) is elég. Üres indoklásnál dobunk.
+    if (indoklasUres(javaslatAdatok.indoklas)) {
+      throw new Error('Az indoklás megadása kötelező');
+    }
 
     // 1.3 - Érintett entitások ellenőrzése
     if (!javaslatAdatok.erintettEntitasok || javaslatAdatok.erintettEntitasok.length === 0) { // Ha nincs tömb vagy a hossza 0
@@ -481,6 +517,31 @@ class JavaslatService {
 
       letrehozottJavaslatok.push(frissitettToredek); // Hozzáadjuk a listához
     } // Töredékek létrehozásának ciklusa vége
+
+    // 7.7 - ÉRTESÍTÉS: minden érintett entitás FIGYELŐINEK „új javaslat" (a létrehozót kihagyva).
+    // A címzetteket az ErtesitesService a beállítások alapján oldja fel (tudatponttól függetlenül).
+    // BEST-EFFORT: az értesítés-hiba NEM buktathatja meg a javaslat létrehozását (try/catch).
+    for (const toredek of letrehozottJavaslatok) { // Minden létrehozott töredékre
+      const erintett = toredek.erintettEntitasok?.[0]; // A töredék érintett entitása
+      if (!erintett) continue; // Biztonsági kihagyás, ha valamiért nincs
+      try {
+        await ErtesitesService.ertesitesKuldes( // Értesítés kiküldése
+          erintett.entitasId,     // Az entitás, amire a javaslat érkezett
+          erintett.entitasTipus,  // Annak típusa
+          'ujJavaslat',           // Eseménytípus
+          { // Esemény-specifikus adatok
+            javaslatId: toredek._id,          // A töredék javaslat azonosítója
+            javaslatTipus: toredek.javaslatTipus, // A töredék típusa (Modositas/Torles/…)
+            toredekCsoportId                  // A csoport azonosítója (csomagnál több töredék)
+          },
+          eEmberId // A cselekvő (javaslattevő) – őt NEM értesítjük magát
+        );
+      } catch (ertesitesHiba) { // Ha az értesítés-küldés hibázna
+        console.error('javaslatLetrehozas - ertesites kuldes HIBA (nem blokkolo)', { // Logoljuk, de nem dobjuk tovább
+          hiba: ertesitesHiba.message
+        });
+      }
+    }
 
     // 8. LÉPÉS - EREDMÉNY VISSZAADÁSA
     console.log('javaslatLetrehozas - VÉGE', { // Logoljuk az összegzést

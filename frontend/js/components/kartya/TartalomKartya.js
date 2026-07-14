@@ -7,6 +7,7 @@ import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
+import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
@@ -252,6 +253,30 @@ class TartalomKartya extends Kartya {
     });
   }
 
+  // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a tartalomra. A modal maga
+  // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
+  async _ertesitesiBeallitasok(entitas) {
+    console.log('TartalomKartya._ertesitesiBeallitasok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Tartalom',
+      entitasCim:   entitas.adatok?.cim ?? '',
+      token:        this.token
+      // onSiker nem kell: a beállítás nem változtatja a kártya megjelenését
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('TartalomKartya._ertesitesiBeallitasok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // Változatlan
   _hamburgerOpciok(entitas) {
@@ -299,6 +324,14 @@ class TartalomKartya extends Kartya {
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
         akcio:          () => this._kuszobErtekJavaslat(entitas)
+      },
+      {
+        ikon:       '🔔',
+        felirat:    'Értesítési beállítások',
+        elvalaszto: true,
+        // NEM tudatpontFuggo: bárki beállíthatja a SAJÁT értesítéseit ezen az ágon,
+        // tudatpont nélkül is.
+        akcio:      () => this._ertesitesiBeallitasok(entitas)
       },
     ];
 

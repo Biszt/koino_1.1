@@ -9,6 +9,7 @@ const TartalomTipusRepository = require('../repositories/tartalomTipusRepository
 const JavaslatRepository = require('../repositories/javaslatRepository');
 const EgyezmenyRepository = require('../repositories/egyezmenyRepository'); 
 const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
+const ErtesitesService = require('./ertesitesService'); // Tudatpont-változáskor értesítjük a figyelőket
 
 
 // ===== TUDATPONT SERVICE OSZTÁLY =====
@@ -229,6 +230,13 @@ class TudatpontService {
       // Ha idáig eljutottunk, minden művelet sikeres volt
       await session.commitTransaction();
 
+      // 10.B - ÉRTESÍTÉS: tudatpont-változás az entitáson (a mozgatót kihagyva).
+      // Csak ha VOLT változás. A transaction MÁR commitolt → best-effort, a küldés
+      // hibája nem érinti a művelet eredményét (a helper elnyeli a hibát).
+      if (kulonbseg !== 0) {
+        await this._tudatpontValtozasErtesites(eemberId, entitasId, entitasTipus, kulonbseg);
+      }
+
       // 11. LÉPÉS - EREDMÉNY VISSZAADÁSA
       console.log('tudatpontHozzarendelese - EREDMÉNY', {
         siker: true,
@@ -256,6 +264,39 @@ class TudatpontService {
       // SESSION LEZÁRÁSA
       // Mindenképpen lefut, hibával vagy anélkül
       session.endSession();
+    }
+  }
+
+
+  // ----- ÉRTESÍTÉS: TUDATPONT-VÁLTOZÁS -----
+  // Egy entitáson bekövetkezett pont-változásról értesíti a FIGYELŐket (a mozgatót
+  // kihagyva). BEST-EFFORT: a küldés hibája nem terjed tovább (a hívó után commitolt).
+  // Az `adatok` a küszöb-kiértékeléshez (tudatpontKuszobok, "VAGY" logika):
+  //   sajatValtozas / osszValtozas – a változás mértéke (közvetlen allokációnál mindkettő = kulonbseg),
+  //   sajatOssz    – az entitás ÚJ saját (közvetlen) összpontja,
+  //   osszOssz     – az entitás ÚJ hierarchikus összpontja (leszármazottakkal).
+  // @param {string} eemberId - a pontot mozgató e-ember (cselekvő)
+  // @param {string} entitasId, entitasTipus - az entitás, ahol a pont változott
+  // @param {number} kulonbseg - a változás előjeles mértéke
+  async _tudatpontValtozasErtesites(eemberId, entitasId, entitasTipus, kulonbseg) {
+    try {
+      const allok = await this.entitasAllokaciLekerese(entitasId, entitasTipus);
+      const hier = await HierarchikusTudatpontAllokaciRepository.findByEntitas(entitasId, entitasTipus);
+
+      await ErtesitesService.ertesitesKuldes(
+        entitasId,
+        entitasTipus,
+        'tudatpontValtozas',
+        {
+          sajatValtozas: kulonbseg,
+          osszValtozas: kulonbseg,
+          sajatOssz: allok?.osszesPont ?? 0,
+          osszOssz: hier?.hierarchikusOsszesPont ?? 0
+        },
+        eemberId // a pont mozgatóját NEM értesítjük magát
+      );
+    } catch (ertesitesHiba) {
+      console.error('_tudatpontValtozasErtesites - HIBA (nem blokkolo)', { hiba: ertesitesHiba.message });
     }
   }
 

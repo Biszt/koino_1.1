@@ -1,156 +1,125 @@
 // backend/services/ertesitesService.js
 
-// Repository-k importálása – a service csak ezeken keresztül kommunikál az adatbázissal
+// Repository importálása – a service csak ezen keresztül kommunikál az adatbázissal
 const ertesitesRepository = require('../repositories/ertesitesRepository');
-const ertesitesiBeallitasRepository = require('../repositories/ertesitesiBeallitasRepository');
 
-// A Tartalom modell importálása – a szülő lekéréséhez kell (cascade felfelé lépéshez)
-// Ha más entitástípusokon is van szülő, azokat is ide kell importálni
+// A beállítás-FELOLDÁS (cascade a szülőkön felfelé) az ertesitesiBeallitasService-ben lakik,
+// mert az a beállítások felelőse. Itt csak felhasználjuk a `beallitasKeresesCascade`-et,
+// hogy eldöntsük: egy adott eEmber az adott entitáson kap-e értesítést.
+const ertesitesiBeallitasService = require('./ertesitesiBeallitasService');
+
+// Entitás-modellek – a postafiók-megjelenítéshez az értesítésekhez feltöltjük a cím-viselő
+// entitások címét/nevét (a Javaslat/Egyezmény típusnak nincs címe → ott null marad).
 const Tartalom = require('../models/tartalom');
 const Kategoria = require('../models/kategoria');
 const TartalomTipus = require('../models/tartalomTipus');
-const Javaslat = require('../models/javaslat');
-const Egyezmeny = require('../models/egyezmeny');
 
-// --- SEGÉDFÜGGVÉNY: szuloKereses ---
-// Egy entitás szülőjét adja vissza (szuloId + szuloTipus formában)
-// Ha nincs szülő, null-t ad vissza – ez jelzi a cascade végét
-// Paraméterek: entitasId (ObjectId), entitasTipus (String)
-// Visszatérés: { szuloId, szuloTipus } vagy null
-const szuloKereses = async (entitasId, entitasTipus) => {
-  console.log('ertesitesService.szuloKereses - KEZDET', { entitasId, entitasTipus });
 
-  // A megfelelő modellből olvassuk ki a szülő adatokat
-  // Minden entitástípusnak lehet más mező neve a szülőre
-  let entitas = null;
-
-  if (entitasTipus === 'Tartalom') {
-    entitas = await Tartalom.findById(entitasId).select('szuloId szuloTipus');
-  } else if (entitasTipus === 'Kategoria') {
-    entitas = await Kategoria.findById(entitasId).select('szuloId szuloTipus');
-  } else if (entitasTipus === 'TartalomTipus') {
-    entitas = await TartalomTipus.findById(entitasId).select('szuloId szuloTipus');
-  } else if (entitasTipus === 'Javaslat') {
-    entitas = await Javaslat.findById(entitasId).select('szuloId szuloTipus');
-  } else if (entitasTipus === 'Egyezmeny') {
-    entitas = await Egyezmeny.findById(entitasId).select('szuloId szuloTipus');
+// ===== SEGÉDFÜGGVÉNY: entitasCimekFeltoltese =====
+// Az értesítésekhez feltölti az érintett entitás címét/nevét (`entitasCim`), típusonként
+// EGY csoportos lekérdezéssel (nincs N+1). A nem cím-viselő típusoknál `entitasCim: null`.
+const entitasCimekFeltoltese = async (ertesitesek) => {
+  const idkTipusonkent = { Tartalom: [], Kategoria: [], TartalomTipus: [] };
+  for (const e of ertesitesek) {
+    if (idkTipusonkent[e.entitasTipus]) idkTipusonkent[e.entitasTipus].push(e.entitasId);
   }
 
-  // Ha nem találja az entitást, vagy nincs szülője, a cascade megáll
-  if (!entitas || !entitas.szuloId) {
-    console.log('ertesitesService.szuloKereses - VEGE', { szulo: null });
-    return null;
-  }
+  const [tartalmak, kategoriak, tipusok] = await Promise.all([
+    idkTipusonkent.Tartalom.length ? Tartalom.find({ _id: { $in: idkTipusonkent.Tartalom } }).select('cim') : [],
+    idkTipusonkent.Kategoria.length ? Kategoria.find({ _id: { $in: idkTipusonkent.Kategoria } }).select('nev') : [],
+    idkTipusonkent.TartalomTipus.length ? TartalomTipus.find({ _id: { $in: idkTipusonkent.TartalomTipus } }).select('nev') : [],
+  ]);
 
-  const szulo = { szuloId: entitas.szuloId, szuloTipus: entitas.szuloTipus };
-  console.log('ertesitesService.szuloKereses - VEGE', { szulo });
-  return szulo;
+  const cimMap = new Map(); // `${tipus}:${id}` -> cím/név
+  for (const t of tartalmak) cimMap.set(`Tartalom:${t._id}`, t.cim);
+  for (const k of kategoriak) cimMap.set(`Kategoria:${k._id}`, k.nev);
+  for (const tt of tipusok) cimMap.set(`TartalomTipus:${tt._id}`, tt.nev);
+
+  return ertesitesek.map((e) => ({
+    ...(typeof e.toObject === 'function' ? e.toObject() : e),
+    entitasCim: cimMap.get(`${e.entitasTipus}:${e.entitasId}`) ?? null,
+  }));
 };
 
 
-// --- SEGÉDFÜGGVÉNY: beallitasKeresesCascade ---
-// Megkeresi egy eEmber értesítési beállítását egy entitásra – cascade módon
-// Ha az adott entitáson nincs beállítás, felfelé lép a szülőre, és így tovább
-// A ciklus addig fut, amíg el nem ér egy szülő nélküli entitáshoz (fa gyökere)
-// Paraméterek: eEmberId, entitasId, entitasTipus
-// Visszatérés: a megtalált beállítás dokumentum, vagy null ha sehol sincs
-const beallitasKeresesCascade = async (eEmberId, entitasId, entitasTipus) => {
-  console.log('ertesitesService.beallitasKeresesCascade - KEZDET', {
-    eEmberId,
-    entitasId,
-    entitasTipus,
-  });
+// ===== SEGÉDFÜGGVÉNY: tudatpontKuszobTeljesul =====
+// A tudatpontValtozas 4 küszöbét értékeli ki ("VAGY": bármelyik megadott feltétel elég).
+// Ha egyetlen küszöb sincs megadva → minden változásnál értesítünk.
+//   adatok: { sajatValtozas, osszValtozas, sajatOssz, osszOssz } – ezeket a tudatpont-esemény tölti fel.
+const tudatpontKuszobTeljesul = (kuszobok, adatok = {}) => {
+  const k = kuszobok || {};
+  const { sajatDirekt, sajatSzazalek, osszDirekt, osszSzazalek } = k;
 
-  // Az aktuális pozíció a fában – innen indulunk felfelé
-  let aktualisEntitasId = entitasId;
-  let aktualisEntitasTipus = entitasTipus;
-
-  while (true) {
-    // Van-e beállítás ezen a szinten?
-    const beallitas = await ertesitesiBeallitasRepository.keresByE_EmberEsEntitas(
-      eEmberId,
-      aktualisEntitasId,
-      aktualisEntitasTipus
-    );
-
-    if (beallitas) {
-      // Találtunk beállítást – ezt adjuk vissza
-      console.log('ertesitesService.beallitasKeresesCascade - VEGE', {
-        talalt: true,
-        beallitas,
-      });
-      return beallitas;
-    }
-
-    // Nincs beállítás ezen a szinten → lépünk a szülőre
-    const szulo = await szuloKereses(aktualisEntitasId, aktualisEntitasTipus);
-
-    if (!szulo) {
-      // Elértük a fa gyökerét, nincs több szülő → nincs beállítás sehol
-      console.log('ertesitesService.beallitasKeresesCascade - VEGE', { talalt: false });
-      return null;
-    }
-
-    // Felfelé lépünk
-    aktualisEntitasId = szulo.szuloId;
-    aktualisEntitasTipus = szulo.szuloTipus;
+  // Nincs egyetlen küszöb sem → mindig értesítünk
+  if (sajatDirekt == null && sajatSzazalek == null && osszDirekt == null && osszSzazalek == null) {
+    return true;
   }
+
+  const sajatValt = Math.abs(adatok.sajatValtozas || 0);
+  const osszValt  = Math.abs(adatok.osszValtozas || 0);
+  const sajatOssz = adatok.sajatOssz || 0;
+  const osszOssz  = adatok.osszOssz || 0;
+
+  // "VAGY" logika: bármelyik megadott küszöb teljesülése elég
+  if (sajatDirekt != null && sajatValt >= sajatDirekt) return true;
+  if (osszDirekt  != null && osszValt  >= osszDirekt) return true;
+  if (sajatSzazalek != null && sajatOssz > 0 && (sajatValt / sajatOssz) * 100 >= sajatSzazalek) return true;
+  if (osszSzazalek  != null && osszOssz  > 0 && (osszValt  / osszOssz)  * 100 >= osszSzazalek)  return true;
+  return false;
 };
 
 
 // --- METÓDUS KEZDETE: ertesitesKuldes ---
-// Ez a rendszer szíve: egy esemény alapján meghatározza ki kap értesítést és elküldi
+// Ez a rendszer szíve: egy esemény alapján KISZÁMOLJA a címzetteket (a beállítások alapján,
+// TUDATPONTTÓL FÜGGETLENÜL) és létrehozza az értesítéseket.
 // Paraméterek:
 //   entitasId    – melyik entitáson történt az esemény
 //   entitasTipus – az entitás típusa
 //   ertesitesTipus – milyen esemény történt (pl. 'ujJavaslat')
-//   adatok       – esemény-specifikus részletek (pl. javaslatId)
-//   erintettE_EmberIdkTombje – azok az eEmberek akiknek potenciálisan értesítés kell
-//                              (pl. a tudatpont tulajdonosok listája)
+//   adatok       – esemény-specifikus részletek (pl. { javaslatId }); tudatpontValtozas-nál
+//                  a küszöb-kiértékeléshez { sajatValtozas, osszValtozas, sajatOssz, osszOssz }
+//   cselekvoId   – aki kiváltotta az eseményt (őt NEM értesítjük magát); opcionális
 // Visszatérés: a létrehozott értesítések tömbje
 const ertesitesKuldes = async (
   entitasId,
   entitasTipus,
   ertesitesTipus,
   adatok = {},
-  erintettE_EmberIdkTombje = []
+  cselekvoId = null
 ) => {
   console.log('ertesitesService.ertesitesKuldes - KEZDET', {
     entitasId,
     entitasTipus,
     ertesitesTipus,
-    adatok,
-    erintettDarab: erintettE_EmberIdkTombje.length,
+    cselekvoId,
   });
+
+  // A címzettek feloldása a BEÁLLÍTÁSOK alapján (csomóponti/felmenő nearest-wins + globális),
+  // tudatponttól függetlenül. Visszatérés: [{ eEmberId, tudatpontKuszobok }].
+  const cimzettek = await ertesitesiBeallitasService.cimzettekFeloldasa(
+    entitasId,
+    entitasTipus,
+    ertesitesTipus
+  );
+
+  const cselekvoKulcs = cselekvoId ? cselekvoId.toString() : null;
 
   // Az értesítendő eEmberek adatait gyűjtjük össze
   const kuldendoErtesitesek = [];
 
-  // Minden érintett eEmberre megvizsgáljuk, hogy kap-e értesítést
-  for (const eEmberId of erintettE_EmberIdkTombje) {
+  for (const cimzett of cimzettek) {
+    // A cselekvőt nem értesítjük magát
+    if (cselekvoKulcs && cimzett.eEmberId === cselekvoKulcs) continue;
 
-    // Cascade keresés: van-e beállítás ezen az eEmberen erre az entitásra?
-    const beallitas = await beallitasKeresesCascade(eEmberId, entitasId, entitasTipus);
-
-    // Ha nincs beállítás sehol a fában → nem kap értesítést (opt-in rendszer)
-    if (!beallitas) continue;
-
-    // Ha ki van kapcsolva az értesítés ezen az ágon → nem kap értesítést
-    if (beallitas.kikapcsolva) continue;
-
-    // Ha ez a típusú értesítés nincs bekapcsolva → nem kap értesítést
-    if (!beallitas.ertesitesTipusok.includes(ertesitesTipus)) continue;
-
-    // Tudatpont változásnál ellenőrizzük a küszöbértéket
-    if (ertesitesTipus === 'tudatpontValtozas' && beallitas.tudatpontKuszob) {
-      const valtozasMerteke = Math.abs(adatok.valtozas || 0);
-      // Ha a változás kisebb a küszöbnél → nem kap értesítést
-      if (valtozasMerteke < beallitas.tudatpontKuszob) continue;
+    // tudatpontValtozas: a 4 küszöb kiértékelése (a többi típusnál nincs küszöb)
+    if (ertesitesTipus === 'tudatpontValtozas' &&
+        !tudatpontKuszobTeljesul(cimzett.tudatpontKuszobok, adatok)) {
+      continue;
     }
 
     // Minden feltétel teljesül → ez az eEmber kap értesítést
     kuldendoErtesitesek.push({
-      eEmberId,
+      eEmberId: cimzett.eEmberId,
       tipus: ertesitesTipus,
       entitasId,
       entitasTipus,
@@ -196,10 +165,13 @@ const postafiokLekereses = async (eEmberId, lap = 1, lapMeret = 20) => {
     lapMeret
   );
 
+  // Az entitás címének/nevének feltöltése a megjelenítéshez (típusonként 1 lekérdezés)
+  const ertesitesekCimmel = await entitasCimekFeltoltese(ertesitesek);
+
   // Kiszámítjuk az összes lap számát a frontend lapozójához
   const lapokSzama = Math.ceil(osszes / lapMeret);
 
-  const eredmeny = { ertesitesek, osszes, olvasatlan, lapokSzama };
+  const eredmeny = { ertesitesek: ertesitesekCimmel, osszes, olvasatlan, lapokSzama };
 
   console.log('ertesitesService.postafiokLekereses - VEGE', {
     visszaadottDarab: ertesitesek.length,

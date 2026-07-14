@@ -6,6 +6,7 @@ import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 
 // =============================================
@@ -276,6 +277,13 @@ class EgyezmenyKartya extends Kartya {
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)
+      },
+      {
+        ikon:       '🔔',
+        felirat:    'Értesítési beállítások',
+        elvalaszto: true,
+        // NEM tudatpontFuggo: bárki beállíthatja a SAJÁT értesítéseit ezen az ágon.
+        akcio:      () => this._ertesitesiBeallitasok(entitas)
       }
     ];
 
@@ -284,6 +292,29 @@ class EgyezmenyKartya extends Kartya {
     });
 
     return opciok;
+  }
+
+  // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre az egyezményre. A modal maga
+  // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
+  async _ertesitesiBeallitasok(entitas) {
+    console.log('EgyezmenyKartya._ertesitesiBeallitasok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Egyezmeny',
+      entitasCim:   javaslatMegnevezes(entitas.adatok?.javaslatTipus, 'egyezmény'),
+      token:        this.token
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('EgyezmenyKartya._ertesitesiBeallitasok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
   }
 
   // ----- TUDATPONT MÓDOSÍTÁS -----

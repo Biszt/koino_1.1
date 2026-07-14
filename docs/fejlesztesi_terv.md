@@ -114,6 +114,61 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
 - [ ] A backend hiányosságainak felmérése és listázása (külön feladat)
+
+- [x] 🟠 **Indoklás nélküli javaslat elfogadáskor végrehajtási hibára futott — JAVÍTVA (2026-07-14).**
+  Az `egyezmeny.indoklas` KÖTELEZŐ, de a javaslat `indoklas`-a 2026-07-10 óta opcionális volt, így
+  egy indoklás nélküli (API-ból null) javaslat elfogadáskor egyezmény-létrehozási hibát dobott.
+  **Megoldás (Csaba döntése): a javaslat `indoklas`-a ismét KÖTELEZŐ, de MINIMUM karakterszám nélkül.**
+  `javaslat` modell `indoklas.required: true`; `javaslatService` új `indoklasUres()` helper +
+  üres-indoklás dobás; frontend `JavaslatModal._indoklasUres` + `_validalas` ellenőrzés; a
+  `javaslatModal.html` felirat „(opcionális)" → „*". Curl-igazolt: üres/hiányzó/csak-üres-blokk →
+  „Az indoklás megadása kötelező"; kitöltött → siker. (A 2026-07-10-i „opcionális" jegyzet ezzel
+  visszafordítva.)
+
+#### Értesítés-rendszer átvizsgálása (2026-07-13)
+
+A 6. terv-pont (Értesítések frontend) előtt átnéztük a teljes backend értesítés-vertikumot
+(`ertesites*` + `ertesitesiBeallitas*`: modell / repository / service / controller / route).
+A **fogyasztói oldal** (tárolás, lekérés lapozva, olvasottság, beállítás-CRUD) tiszta, biztonságos
+(minden végpont `authMiddleware`-es, minden lekérés `req.user.id`-re szűkít) és kész — a
+frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
+
+- [ ] 🔴 **Az értesítések SOHA nem keletkeznek — a termelői oldal nincs bekötve.**
+  A `ertesitesService.ertesitesKuldes` kész és exportált, de sehonnan nincs meghívva (sem
+  javaslat-létrehozás, sem szavazás, sem tudatpont-változás, sem a javaslat-cron lezárás nem
+  hívja). A postafiók emiatt üres marad, amíg az eseményforrásokat be nem kötjük
+  (pl. `javaslatService` → `ertesitesKuldes(...)`, a 7 típushoz: `ujJavaslat`,
+  `javaslatElfogadas`, `javaslatElvetve`, `szavazatErkezett`, `szavazasiHatarido`,
+  `tudatpontValtozas`, `ujGyerekEntitas`). Ez a legnagyobb hiányzó darab.
+- [ ] 🟠 **Fájlnév kis/nagybetű-eltérés (Docker/Linux-veszély).**
+  `ertesitesiBeallitasRepository.js` így importál: `require('../models/ErtesitesiBeallitas')`,
+  de a tényleges fájl `ertesitesiBeallitas.js` (kis `e`). Windows / Docker Desktop bind-mount
+  alatt működik (case-insensitive FS), de valódi Linux-hoston vagy case-sensitive köteten
+  indításkor elszáll („module not found"). Egysoros javítás. (Ugyanígy ellenőrizni: a
+  `models/ertesites.js` fejléc-kommentje `Ertesites.js`-t ír, de a require-ök kisbetűsek — a
+  require-ök a mérvadók, azok jók.)
+- [ ] 🟡 **Feliratkozás/beállítás felület hiányzik (opt-in következménye).**
+  Alapból senki nincs semmire feliratkozva (`ertesitesTipusok: []`), és nincs alapértelmezett
+  feliratkozás; a `beallitasKeresesCascade` csak FELFELÉ keres beállítást a fában. Így éles
+  értesítésekhez kell egy feliratkozás-UI is (entitásonként vagy globálisan) — a beállítás-API
+  (`PUT/GET/DELETE /api/ertesitesi-beallitasok/...`) készen áll hozzá.
+- [ ] 🟡 **Takarító metódusok nincsenek bekötve (árva adatok).**
+  `ertesitesRepository.torolEntitasOsszes` / `torolE_EmberOsszes` és
+  `ertesitesiBeallitasRepository.torolE_EmberOsszes` léteznek, de senki nem hívja őket. Entitás
+  törlésekor (`torlesiVegrehajto`) és eember törlésekor a kapcsolódó értesítések/beállítások
+  árván maradnak a DB-ben.
+- [ ] 🟡 **Halott kód:** `ertesitesiBeallitasRepository.keresByEntitas` definiált és exportált,
+  de sehol sem hívott — egy korábbi, meg nem valósult kiküldési terv maradványa (a mostani
+  `ertesitesKuldes` nem ezt használja). Törölhető, vagy a jövőbeli kiküldés-optimalizációhoz
+  meghagyható.
+- [ ] 🟢 **Nincs egyedi értesítés-törlés a postafiókból.** A repo-ban van `torol`, de nincs hozzá
+  controller/route — az eember csak olvasottnak jelölhet, törölni nem tud. Termék-döntés kérdése.
+- [ ] 🟢 **Válaszboríték-eltérés (a frontendnek fontos).** Az értesítés-controllerek
+  `{ siker, adatok }` borítékba csomagolnak, míg pl. `eember/sajat-adatok` laposan ad vissza; a
+  frontendnek `valasz.adatok.ertesitesek`-ként kell olvasnia. Mellékesen: a hiba-válaszok `uzenet`
+  mezőt küldenek, de az `apiHelper` `message`/`error`-t keres, így a szerver hibaszövege nem jut ki
+  a frontendre (ez az egész projektre igaz, nem csak ide).
+
 - [x] `docker-compose.dev.yml`: `NODEeNV` elírás javítása `NODE_ENV`-re
 - [x] **Csomag egyezmény-tárhely kötelező + cím-alapú entitás-kereső** (2026. 07. 12.):
   - **Csomag tárhely:** a Csomag javaslatnál az egyezmény tárhelye mostantól **kötelező**, és a

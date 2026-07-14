@@ -150,6 +150,12 @@
   margin-left: var(--space-1);
 }
 
+/* Kötelező jelzés (piros csillag) */
+.javaslat-modal__kotelezo {
+  color: var(--color-veszely, #d64545);
+  margin-left: 2px;
+}
+
 /* Szövegmező (indoklás) */
 .javaslat-modal__textarea {
   width: 100%;

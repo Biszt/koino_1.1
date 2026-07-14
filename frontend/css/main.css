@@ -51,6 +51,8 @@
 @import './components/modals/tudatpontModal.css';
 @import './components/modals/reszletekModal.css';
 @import './components/modals/hozzajarulokModal.css';
+@import './components/modals/ertesitesiBeallitasModal.css';
+@import './components/modals/ertesitesekModal.css';
 @import './components/modals/ertekEloszlasModal.css';
 /* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,
    hogy azok felül tudják írni, ha kell */

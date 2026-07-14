@@ -58,12 +58,19 @@ const ertesitesiBeallitasSchema = new mongoose.Schema(
       default: [], // Alapból üres tömb – opt-in rendszer: semmit sem kap, amíg be nem kapcsolja
     },
 
-    // Tudatpont küszöbérték – ennyi pont elmozdulástól értesít a 'tudatpontValtozas' esemény
-    // Ha null, akkor minden tudatpont-változásnál értesít (ha a típus be van kapcsolva)
-    tudatpontKuszob: {
-      type: Number,
-      min: [1, 'A küszöbérték legalább 1 pont kell legyen'], // Minimum 1 pont
-      default: null, // Alapból nincs küszöb beállítva
+    // Tudatpont-változási küszöbök – ekkora elmozdulástól értesít a 'tudatpontValtozas'.
+    // NÉGY, egymástól független küszöb, "VAGY" logikával: bármelyik megadott (nem null)
+    // küszöb teljesülése aktivál; a null mezőt figyelmen kívül hagyjuk. Ha mind null →
+    // minden tudatpont-változásnál értesít (ha a típus be van kapcsolva).
+    //   BÁZIS:   saját  = az entitás közvetlen (saját) tudatpontja
+    //            ossz   = az entitás összes (hierarchikus, leszármazottakkal) tudatpontja
+    //   MÉRTÉK:  Direkt = pontszám (abszolút elmozdulás), Szazalek = a bázis %-ában
+    // (A tényleges kiértékelés az eseménybekötéskor készül; itt csak a beállítás tárolódik.)
+    tudatpontKuszobok: {
+      sajatDirekt:   { type: Number, min: [1, 'Legalább 1 pont'], default: null },
+      sajatSzazalek: { type: Number, min: [1, 'Legalább 1%'], max: [100, 'Legfeljebb 100%'], default: null },
+      osszDirekt:    { type: Number, min: [1, 'Legalább 1 pont'], default: null },
+      osszSzazalek:  { type: Number, min: [1, 'Legalább 1%'], max: [100, 'Legfeljebb 100%'], default: null },
     },
 
     // Ha true, akkor ezen az entitáson (és leszármazottain) teljesen kikapcsol az értesítés

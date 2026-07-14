@@ -6,6 +6,7 @@ import SzavazatModal from '../modals/SzavazatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 import { masodpercFelirat } from '../../utils/idoFormazo.js';
 
@@ -350,6 +351,29 @@ class JavaslatKartya extends Kartya {
     });
   }
 
+  // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a javaslatra. A modal maga
+  // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
+  async _ertesitesiBeallitasok(entitas) {
+    console.log('JavaslatKartya._ertesitesiBeallitasok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'Javaslat',
+      entitasCim:   javaslatMegnevezes(entitas.adatok?.javaslatTipus, 'javaslat'),
+      token:        this.token
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('JavaslatKartya._ertesitesiBeallitasok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- HAMBURGER MENÜ OPCIÓK -----
   // A „Szavazat leadása" pont már működik (SzavazatModal), a többi 🚧 még fejlesztésre vár.
   _hamburgerOpciok(entitas) {
@@ -403,6 +427,13 @@ class JavaslatKartya extends Kartya {
         felirat:    'Részletes adatok',
         elvalaszto: true,
         akcio:      () => this._reszletesAdatok(entitas)
+      },
+      {
+        ikon:       '🔔',
+        felirat:    'Értesítési beállítások',
+        elvalaszto: true,
+        // NEM tudatpontFuggo: bárki beállíthatja a SAJÁT értesítéseit ezen az ágon.
+        akcio:      () => this._ertesitesiBeallitasok(entitas)
       }
     ];
 

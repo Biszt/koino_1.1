@@ -178,8 +178,8 @@ const javaslatSchema = new mongoose.Schema({
   // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
     type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
-    required: false,                    // NEM kötelező – az indoklás megadása opcionális
-    default: null                       // Alapértelmezett: null
+    required: true,                     // KÖTELEZŐ – az indoklás megadása kötelező (de nincs min. karakter)
+    default: null                       // Alapértelmezett: null (a service üres indoklásnál előbb dob)
   },
 
   // ===================================

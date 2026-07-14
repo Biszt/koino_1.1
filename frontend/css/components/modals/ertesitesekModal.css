@@ -1,0 +1,100 @@
+/* frontend/css/components/modals/ertesitesekModal.css */
+
+/* A postafiók (Értesítések) modal a standard modal-vázra épül (Modal.js).
+   Az e-ember értesítéseit listázza lapozva. */
+
+/* ===== LISTA ===== */
+.ertesitesek-modal__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ===== ÜRES ÁLLAPOT ===== */
+.ertesitesek-modal__ures {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ===== EGY ÉRTESÍTÉS-SOR ===== */
+.ertesitesek-modal__elem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ertesitesek-modal__elem:hover {
+  background: var(--color-surface-offset);
+}
+
+/* Olvasatlan-jelző pont (bal oldalt); olvasott sornál rejtve */
+.ertesitesek-modal__pont {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.ertesitesek-modal__elem--olvasatlan .ertesitesek-modal__pont {
+  background: var(--color-accent, #37a24d);
+}
+
+/* Az olvasatlan sor kiemelése (kicsit erősebb szöveg) */
+.ertesitesek-modal__elem--olvasatlan .ertesitesek-modal__cim {
+  font-weight: 600;
+}
+
+.ertesitesek-modal__szoveg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ertesitesek-modal__cim {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.ertesitesek-modal__ido {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ===== „TOVÁBBIAK" ===== */
+.ertesitesek-modal__tovabbiak-sor {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.ertesitesek-modal__tovabbiak {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ertesitesek-modal__tovabbiak:hover {
+  background: var(--color-surface-offset);
+}

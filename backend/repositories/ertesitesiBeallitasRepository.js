@@ -1,7 +1,7 @@
 // backend/repositories/ertesitesiBeallitasRepository.js
 
 // Az ErtesitesiBeallitas modell importálása
-const ErtesitesiBeallitas = require('../models/ErtesitesiBeallitas');
+const ErtesitesiBeallitas = require('../models/ertesitesiBeallitas');
 
 // --- METÓDUS KEZDETE: letrehoz ---
 // Új értesítési beállítás létrehozása egy adott entitásra

@@ -88,6 +88,12 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
   kötelezőség a frontend `JavaslatModal._validalas`-ból (≥10 karakter),
   a `javaslatService`-ből (throw), a `javaslat` modellből (`required:false` +
   pre-hook check törölve); a template `*` helyett „(opcionális)".
+  → **VISSZAVONVA (2026-07-14, Csaba kérése):** az indoklás ismét KÖTELEZŐ, de
+  MINIMUM karakterszám NÉLKÜL (nem lehet üres, de 1 karakter is elég). Ok: az
+  `egyezmeny.indoklas` kötelező, így az opcionális javaslat-indoklás elfogadáskor
+  egyezmény-hibát okozott. `javaslat` modell `required:true`; `javaslatService`
+  `indoklasUres()` + dobás; `JavaslatModal._indoklasUres` + `_validalas`; template
+  „(opcionális)" → „*". Curl-igazolt.
 
 - ✅ „[szavazáskór a szavazat leadása, a servernek, ne a gombok
   megnyomásakkór, hanem a szavazási, modal rendben, gombjára kattíntva,

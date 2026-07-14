@@ -1,0 +1,23 @@
+<!-- frontend/html/components/modals/ertesitesiBeallitasModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     A 7 eseménytípus checkbox-sorát az ErtesitesiBeallitasModal.js injektálja
+     a #ertesites-beallitas-mezok konténerbe. -->
+<div class="ertesitesi-beallitas-modal">
+
+  <!-- Melyik entitásra vonatkozik (a JS tölti fel, ha kap címet) -->
+  <p class="ertesitesi-beallitas-modal__entitas" id="ertesites-beallitas-entitas"></p>
+
+  <!-- Bevezető magyarázat (globális módban a JS felülírja a szöveget) -->
+  <p class="ertesitesi-beallitas-modal__bevezeto" id="ertesites-beallitas-bevezeto">
+    Válaszd ki, mely eseményekről kérsz értesítést ebben az ágazatban. A beállítás a
+    lejjebb lévő csomópontokra is öröklődik, amíg ott felül nem írod.
+  </p>
+
+  <!-- Forrás-magyarázat: örökölt / saját / nincs (a JS tölti fel megnyitáskor) -->
+  <p class="ertesitesi-beallitas-modal__info" id="ertesites-beallitas-info" aria-live="polite"></p>
+
+  <!-- A 7 eseménytípus checkbox-sorának helye – ide injektálja a JS a sorokat -->
+  <div class="ertesitesi-beallitas-modal__mezok" id="ertesites-beallitas-mezok"></div>
+
+</div>

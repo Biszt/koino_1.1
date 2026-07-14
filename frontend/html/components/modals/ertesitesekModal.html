@@ -1,0 +1,17 @@
+<!-- frontend/html/components/modals/ertesitesekModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Az értesítés-sorokat az ErtesitesekModal.js injektálja a #ertesitesek-lista-ba. -->
+<div class="ertesitesek-modal">
+
+  <!-- Az értesítések listája – ide kerülnek a sorok (a JS tölti fel) -->
+  <div class="ertesitesek-modal__lista" id="ertesitesek-lista"></div>
+
+  <!-- Lapozás: a következő oldal hozzáfűzése (csak ha van több oldal) -->
+  <div class="ertesitesek-modal__tovabbiak-sor">
+    <button type="button" class="ertesitesek-modal__tovabbiak" id="ertesitesek-tovabbiak" style="display:none">
+      Továbbiak
+    </button>
+  </div>
+
+</div>

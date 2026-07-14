@@ -7,11 +7,42 @@ const JavaslatRepository = require('../../repositories/javaslatRepository');
 // Szolgáltatások importálása
 const JavaslatVegrehajtasiService = require('./vegrehajtok/javaslatVegrehajtasiService');
 const ErtekSzamitasService = require('../ertekSzamitasService'); // ÚJ IMPORT
+const ErtesitesService = require('../ertesitesService'); // Javaslat lezárásakor értesítjük a figyelőket
 
 // === JAVASLAT IDŐZÍTÉS SERVICE OSZTÁLY ===
 // Ez az osztály felelős a javaslatok időzítési logikájáért
 // Felelősség: Hatályba lépés, végrehajtás ellenőrzése
 class JavaslatIdozitesService {
+
+  // ----- ÉRTESÍTÉS: JAVASLAT LEZÁRÁSA (elfogadás / elvetés) -----
+  // Egy vagy több (töredék) javaslatra kiküldi a lezárás-értesítést az érintett
+  // entitás(ok) FIGYELŐINEK. Rendszer-esemény (cron) → nincs cselekvő. BEST-EFFORT:
+  // az értesítés-hiba nem akaszthatja meg a lezárási folyamatot.
+  // @param {Array} javaslatok    - a lezárt (töredék) javaslatok
+  // @param {string} tipus        - 'javaslatElfogadas' | 'javaslatElvetve'
+  // @param {string|null} egyezmenyId - elfogadásnál a keletkezett egyezmény azonosítója
+  async _lezarasErtesites(javaslatok, tipus, egyezmenyId = null) {
+    for (const jav of javaslatok) {
+      const erintett = jav.erintettEntitasok?.[0]; // A töredék érintett entitása
+      if (!erintett) continue; // Biztonsági kihagyás
+      try {
+        await ErtesitesService.ertesitesKuldes(
+          erintett.entitasId,
+          erintett.entitasTipus,
+          tipus,
+          {
+            javaslatId: jav._id,
+            javaslatTipus: jav.javaslatTipus,
+            egyezmenyId,
+            toredekCsoportId: jav.toredekCsoportId
+          },
+          null // rendszer-esemény (cron) – nincs cselekvő, akit kihagynánk
+        );
+      } catch (ertesitesHiba) {
+        console.error('_lezarasErtesites - ertesites HIBA (nem blokkolo)', { hiba: ertesitesHiba.message });
+      }
+    }
+  }
 
  // === SEGÉDFÜGGVÉNYEK ===
 
@@ -617,6 +648,9 @@ class JavaslatIdozitesService {
           }); // Logoljuk a végrehajtás eredményét
 
           eredmenyek.vegrehajtva += csoportJavaslatok.length; // Statisztika frissítése
+
+          // ÉRTESÍTÉS: a csoport ELFOGADVA → minden érintett entitás figyelőinek
+          await this._lezarasErtesites(csoportJavaslatok, 'javaslatElfogadas', vegrehajtasiEredmeny.egyezmeny?.id);
         } else {
           // ❌ CSOPORT ELVETVE: legalább egy töredék elbukott
           console.log('Töredék csoport elvetve:', {
@@ -626,6 +660,9 @@ class JavaslatIdozitesService {
           }); // Log üzenet részletekkel
 
           eredmenyek.elvetve += csoportJavaslatok.length; // Statisztika frissítése
+
+          // ÉRTESÍTÉS: a csoport ELVETVE → minden érintett entitás figyelőinek
+          await this._lezarasErtesites(csoportJavaslatok, 'javaslatElvetve');
         }
       } catch (error) {
         // Hiba esetén rögzítjük, de folytatjuk a többi csoporttal
@@ -653,8 +690,12 @@ class JavaslatIdozitesService {
 
         if (vegrehajtas && vegrehajtas.elfogadva) {
           eredmenyek.vegrehajtva++; // Elfogadott javaslat
+          // ÉRTESÍTÉS: egyedi javaslat ELFOGADVA
+          await this._lezarasErtesites([javaslat], 'javaslatElfogadas');
         } else {
           eredmenyek.elvetve++; // Elvetett javaslat
+          // ÉRTESÍTÉS: egyedi javaslat ELVETVE
+          await this._lezarasErtesites([javaslat], 'javaslatElvetve');
         }
       } catch (error) {
         // Hiba esetén rögzítjük, de folytatjuk a többi javaslattal

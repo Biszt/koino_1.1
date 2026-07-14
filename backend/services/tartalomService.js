@@ -9,6 +9,7 @@ const KategoriaRepository = require('../repositories/kategoriaRepository');
 const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
+const ErtesitesService = require('./ertesitesService'); // Új gyerek-tartalomkor értesítjük a szülő figyelőit
 
 // ===================================
 // TARTALOM SERVICE OSZTÁLY
@@ -269,6 +270,25 @@ class TartalomService {
     } catch (error) {
       // Ha nem sikerült, logoljuk de nem döntjük meg a tartalmat
       console.error('Hisztogram inicializálási hiba:', error.message);
+    }
+
+    // ===== 11.C - ÉRTESÍTÉS: ÚJ GYEREK ENTITÁS a szülőnek =====
+    // Ha az új tartalom SZÜLŐ alá jött létre, a szülő FIGYELŐit értesítjük (a létrehozót
+    // kihagyva). BEST-EFFORT: a küldés hibája nem érinti a létrehozást.
+    if (ujTartalom.szuloId && ujTartalom.szuloTipus) {
+      try {
+        await ErtesitesService.ertesitesKuldes(
+          ujTartalom.szuloId,
+          ujTartalom.szuloTipus,
+          'ujGyerekEntitas',
+          { gyerekId: ujTartalom._id, gyerekTipus: 'Tartalom' },
+          eemberId // a létrehozót NEM értesítjük magát
+        );
+      } catch (ertesitesHiba) {
+        console.error('tartalomLetrehozasa - ujGyerekEntitas ertesites HIBA (nem blokkolo)', {
+          hiba: ertesitesHiba.message
+        });
+      }
     }
 
     // ===== 12. LÉPÉS - LÉTREHOZOTT TARTALOM VISSZAADÁSA =====

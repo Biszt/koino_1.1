@@ -206,6 +206,26 @@ async function apiPatch(utvonal, adatok, token = null) {
 }
 
 // ===================================
+// PUT KÉRÉS (JSON)
+// ===================================
+// "Helyettesítő" művelethez (upsert): ha létezik → frissít, ha nem → létrehoz.
+// Pl. értesítési beállítás mentése (PUT /api/ertesitesi-beallitasok).
+// @param {string} utvonal
+// @param {Object} adatok
+// @param {string|null} token
+async function apiPut(utvonal, adatok, token = null) {
+  // Metódus kezdő log
+  console.log('apiHelper.apiPut - KEZDÉS', { utvonal });
+  const eredmeny = await apiKeres(utvonal, {
+    method: 'PUT',
+    body: JSON.stringify(adatok),
+  }, token);
+  // Metódus vég log
+  console.log('apiHelper.apiPut - VÉGE', { utvonal });
+  return eredmeny;
+}
+
+// ===================================
 // DELETE KÉRÉS (JSON)
 // ===================================
 // Törléshez, ahol a törlendő elemet a request body azonosítja
@@ -262,4 +282,4 @@ async function fajlFeltoltes(fajl, token = null) {
 // EXPORTÁLÁS
 // ===================================
 // VÁLTOZÁS: apiPostFormData és apiPatchFormData hozzáadva az exporthoz
-export { apiPost, apiPostFormData, apiGet, apiPatch, apiPatchFormData, apiDelete, kepFeltoltes, fajlFeltoltes };
+export { apiPost, apiPostFormData, apiGet, apiPut, apiPatch, apiPatchFormData, apiDelete, kepFeltoltes, fajlFeltoltes };

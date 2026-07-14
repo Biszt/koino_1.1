@@ -1,0 +1,162 @@
+/* frontend/css/components/modals/ertesitesiBeallitasModal.css */
+
+/* Az Értesítési beállítások modal a standard modal-vázra épül (Modal.js).
+   Egy entitáson (csomóponton) állítja be az e-ember, mely eseményekről kér
+   értesítést. A beállítás a szülőkön felfelé öröklődik. */
+
+/* ===== ENTITÁS CÍMKE (mely entitásra vonatkozik) ===== */
+.ertesitesi-beallitas-modal__entitas {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-1);
+}
+
+/* Ha nincs cím, ne foglaljon helyet */
+.ertesitesi-beallitas-modal__entitas:empty {
+  display: none;
+}
+
+/* ===== BEVEZETŐ MAGYARÁZAT ===== */
+.ertesitesi-beallitas-modal__bevezeto {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+/* ===== FORRÁS-MAGYARÁZAT (örökölt / saját / nincs) ===== */
+.ertesitesi-beallitas-modal__info {
+  background: var(--color-surface-offset);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.ertesitesi-beallitas-modal__info:empty {
+  display: none;
+}
+
+/* Saját (befixált) beállításnál kiemeljük a sávot */
+.ertesitesi-beallitas-modal__info[data-forras="sajat"] {
+  color: var(--color-text);
+}
+
+/* ===== EGY ESEMÉNYTÍPUS SORA ===== */
+.ertesitesi-beallitas-modal__mezok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ertesitesi-beallitas-modal__sor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.ertesitesi-beallitas-modal__sor:hover {
+  background: var(--color-surface-offset);
+}
+
+/* A pipa: kicsit nagyobb, akadálymentesen kattintható, a felső sorhoz igazítva */
+.ertesitesi-beallitas-modal__pipa {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-accent, #37a24d);
+}
+
+.ertesitesi-beallitas-modal__szoveg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ertesitesi-beallitas-modal__felirat {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ertesitesi-beallitas-modal__magyarazat {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ===== TUDATPONT-KÜSZÖB PANEL (a „Tudatpont-változás” alatt) ===== */
+.ertesitesi-beallitas-modal__kuszobok {
+  margin: var(--space-1) 0 var(--space-2) 2rem;   /* beljebb húzva, a sorhoz igazítva */
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--color-border, rgba(127, 127, 127, 0.3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Ha a „Tudatpont-változás” nincs bepipálva, a panel halvány és nem interaktív */
+.ertesitesi-beallitas-modal__kuszobok--tiltva {
+  opacity: 0.45;
+}
+
+.ertesitesi-beallitas-modal__kuszob-cim {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.ertesitesi-beallitas-modal__kuszob-sor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+/* A bázis felirata (Saját / Összes) fix szélességen, hogy a két sor egymás alá rendeződjön */
+.ertesitesi-beallitas-modal__kuszob-bazis {
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+  font-weight: 600;
+}
+
+.ertesitesi-beallitas-modal__kuszob-mezo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.ertesitesi-beallitas-modal__kuszob-vagy {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.ertesitesi-beallitas-modal__kuszob-input {
+  width: 4.5rem;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+}
+
+/* A szám-input pörgető nyilai elrejtve (a projekt máshol is így teszi) */
+.ertesitesi-beallitas-modal__kuszob-input::-webkit-outer-spin-button,
+.ertesitesi-beallitas-modal__kuszob-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ertesitesi-beallitas-modal__kuszob-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

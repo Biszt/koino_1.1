@@ -7,6 +7,7 @@ import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
+import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -249,6 +250,29 @@ class TartalomTipusKartya extends Kartya {
     });
   }
 
+  // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a tartalomtípusra. A modal maga
+  // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
+  async _ertesitesiBeallitasok(entitas) {
+    console.log('TartalomTipusKartya._ertesitesiBeallitasok - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
+      entitasId:    entitas.entitasId,
+      entitasTipus: 'TartalomTipus',
+      entitasCim:   entitas.adatok?.nev ?? '',
+      token:        this.token
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('TartalomTipusKartya._ertesitesiBeallitasok - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // Változatlan
   _hamburgerOpciok(entitas) {
     console.log('TartalomTipusKartya._hamburgerOpciok - KEZDÉS', {
@@ -293,6 +317,13 @@ class TartalomTipusKartya extends Kartya {
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
         akcio:          () => this._kuszobErtekJavaslat(entitas)
+      },
+      {
+        ikon:       '🔔',
+        felirat:    'Értesítési beállítások',
+        elvalaszto: true,
+        // NEM tudatpontFuggo: bárki beállíthatja a SAJÁT értesítéseit ezen az ágon.
+        akcio:      () => this._ertesitesiBeallitasok(entitas)
       }
     ];
 

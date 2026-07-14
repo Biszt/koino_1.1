@@ -77,12 +77,50 @@ letrehozva: {
 
 // ----- UTOLSÓ BEJELENTKEZÉS -----
 // Amikor a eember utoljára bejelentkezett
-utolsoBejelentkezes: { 
+utolsoBejelentkezes: {
   type: Date,         // Dátum típus
   default: null       // Alapértelmezett: null (még nem jelentkezett be)
+},
+
+// ----- GLOBÁLIS ÉRTESÍTÉSI ALAPBEÁLLÍTÁS -----
+// A fő menüs „Értesítési beállítások" tárolása: mely eseménytípusokról kér az
+// e-ember ALAPBÓL értesítést. Ez a cascade LEGVÉGSŐ visszaesése – akkor érvényes,
+// ha sem a csomóponton, sem a felmenőkön nincs saját beállítás (opt-in rendszer).
+// Ugyanaz a 7 típus, mint az ErtesitesiBeallitas modellben (szinkronban tartandó).
+ertesitesiAlapbeallitas: {
+  ertesitesTipusok: {
+    type: [String],
+    enum: {
+      values: [
+        'ujJavaslat',
+        'javaslatElfogadas',
+        'javaslatElvetve',
+        'szavazatErkezett',
+        'szavazasiHatarido',
+        'tudatpontValtozas',
+        'ujGyerekEntitas',
+      ],
+      message: 'Érvénytelen értesítési típus: {VALUE}',
+    },
+    default: [],
+  },
+  // Tudatpont-változási küszöbök a globális szinten is (ugyanúgy, mint csomóponti beállításnál):
+  // négy független küszöb (saját/össz bázis × direkt/százalék mérték), "VAGY" logikával.
+  tudatpontKuszobok: {
+    sajatDirekt:   { type: Number, min: 1, default: null },
+    sajatSzazalek: { type: Number, min: 1, max: 100, default: null },
+    osszDirekt:    { type: Number, min: 1, default: null },
+    osszSzazalek:  { type: Number, min: 1, max: 100, default: null },
+  },
 }
 
-}); 
+});
+
+// ===== INDEX: GLOBÁLIS ÉRTESÍTÉS-FELIRATKOZÓK GYORS LEKÉRÉSÉHEZ =====
+// Az értesítés-küldés címzett-feloldása lekéri, kik iratkoztak fel GLOBÁLISAN egy adott
+// eseménytípusra (ertesitesiAlapbeallitas.ertesitesTipusok tartalmazza a típust). Index
+// nélkül ez teljes kollekció-olvasás lenne minden eseménynél.
+eemberSchema.index({ 'ertesitesiAlapbeallitas.ertesitesTipusok': 1 });
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

@@ -110,7 +110,7 @@ a `localStorage`-ba menti.
 |---|---|---|
 | `javaslatTipus` | ✅ | `Torles, Modositas, Egyesites, Athelyezes, Csomag` |
 | `erintettEntitasok[]` | ✅ | min. 1; elemenként `entitasId`, `entitasTipus` (`Tartalom/Kategoria/TartalomTipus`), `muvelet` |
-| `indoklas` | ❌ | szövegszerkesztő JSON; **opcionális** (nincs kötelezőség, nincs min. karakter) |
+| `indoklas` | ✅ | szövegszerkesztő JSON; **kötelező** (nem lehet üres), de **nincs min. karakterszám** (2026-07-14) |
 | `kezdoTudatpont` | ✅ | a controller kötelezővé teszi (a javaslattevő induló pontja) |
 | `szuloId` | — | **NEM a frontend adja** — a service teszi az érintett entitás alá |
 | `egyezmenyTarhelyId` (+`egyezmenyTarhelyTipus`) | Csomagnál ✅, egyébként ❌ | hova kerül az elfogadott javaslat **egyezménye**. **Csomagnál KÖTELEZŐ** (a létrehozó dönt); a service minden csomag-töredékre ezt írja. Más típusnál lehet **null** (a modell elfogadja), a service vezeti le (Módosítás/Áthelyezés → érintett entitás, Törlés → szülő, Egyesítés → új entitás) |

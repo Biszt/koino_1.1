@@ -914,6 +914,28 @@ class JavaslatModal {
   // =============================================
   // MÓDOSÍTVA - indoklás ellenőrzése szerkesztőből
   // =============================================
+  // ===== INDOKLÁS ÜRES-E =====
+  // Igaz, ha az indoklás gyakorlatilag üres (nincs érdemi tartalom). A szerkesztő
+  // blokk-tömböt VAGY több oldalas objektumot ad. Bármely nem-szöveg blokk
+  // (kép/fájl/link/entitás) → NEM üres. (Kötelező, de nincs minimum karakter.)
+  _indoklasUres(indoklas) {
+    let blokkok = [];
+    if (Array.isArray(indoklas)) {
+      blokkok = indoklas;
+    } else if (indoklas && typeof indoklas === 'object' && indoklas.blokkok) {
+      blokkok = Object.values(indoklas.blokkok).flat();
+    }
+    if (blokkok.length === 0) return true;
+    for (const blokk of blokkok) {
+      if (!blokk || typeof blokk !== 'object') continue;
+      if (blokk.tipus && blokk.tipus !== 'szoveg') return false;
+      const nyers = (blokk.tartalom ?? blokk.szoveg ?? '').toString();
+      const csakSzoveg = nyers.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim();
+      if (csakSzoveg.length > 0) return false;
+    }
+    return true;
+  }
+
   _validalas() {
     console.log('JavaslatModal._validalas - KEZDÉS', { tipus: this.kivalasztottTipus });
 
@@ -923,10 +945,15 @@ class JavaslatModal {
     }
 
     // =============================================
-    // Indoklás – OPCIONÁLIS (nincs kötelezőség, nincs minimum karakter)
+    // Indoklás – KÖTELEZŐ (de nincs minimum karakter)
     // =============================================
-    // Az indoklás megadása nem kötelező, ezért itt NEM validáljuk. Amit a
-    // szerkesztő ad (üres blokk, rövid szöveg, vagy semmi), az mind elfogadott.
+    // Az indoklás megadása kötelező: nem lehet üres. Minimum hossz nincs – egyetlen
+    // karakter (vagy egy kép/link/hivatkozás blokk) is elég.
+    const indoklas = this.indoklasSzerkeszto ? this.indoklasSzerkeszto.getTartalom() : null;
+    if (this._indoklasUres(indoklas)) {
+      console.log('JavaslatModal._validalas - VÉGE: üres indoklás');
+      return 'Az indoklás megadása kötelező.';
+    }
 
     // =============================================
     // ÚJ - Típus-specifikus ellenőrzések

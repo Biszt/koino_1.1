@@ -18,6 +18,8 @@ import fejlesztesreVarMegjelenitese from './FejlesztesreVar.js';
 import TartalomModal from './modals/TartalomModal.js';
 import KategoriaModal from './modals/KategoriaModal.js';
 import TartalomTipusModal from './modals/TartalomTipusModal.js';
+import ErtesitesiBeallitasModal from './modals/ErtesitesiBeallitasModal.js';
+import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import Pakli from './Pakli.js';
 
 
@@ -124,9 +126,14 @@ init() {
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
       {
-        ikon:    '🚧',
+        ikon:    '🔔',
         felirat: 'Értesítések',
-        akcio:   () => fejlesztesreVarMegjelenitese('Értesítések')
+        akcio:   () => this._ertesitesekMegnyitasa()
+      },
+      {
+        ikon:    '🔔',
+        felirat: 'Értesítési beállítások',
+        akcio:   () => this._ertesitesiBeallitasokGlobalis()
       },
       {
         ikon:    '✏️',
@@ -247,6 +254,55 @@ init() {
     tartalomTipusModal.megnyitas();
 
     console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // GLOBÁLIS ÉRTESÍTÉSI BEÁLLÍTÁSOK MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Értesítési beállítások" – az e-ember GLOBÁLIS alapbeállítása
+  // (a cascade legvégső visszaesése). A közös ErtesitesiBeallitasModal-t nyitja
+  // globális módban (nincs entitás, nincs „vissza az örököltre").
+  async _ertesitesiBeallitasokGlobalis() {
+    console.log('FoOldal._ertesitesiBeallitasokGlobalis - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal('modal-kontener', {
+      globalis: true,
+      token:    this.token
+    });
+
+    await ertesitesiBeallitasModal.init();
+    await ertesitesiBeallitasModal.megnyitas();
+
+    console.log('FoOldal._ertesitesiBeallitasokGlobalis - VÉGE');
+  }
+
+
+  // =====================================
+  // ÉRTESÍTÉSEK (POSTAFIÓK) MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Értesítések" – megnyitja a postafiók-modalt. Egy értesítésre
+  // kattintva a paklit az érintett entitásra navigáljuk.
+  async _ertesitesekMegnyitasa() {
+    console.log('FoOldal._ertesitesekMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const ertesitesekModal = new ErtesitesekModal('modal-kontener', {
+      token: this.token,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('FoOldal - értesítésből navigálás', { entitasId, entitasTipus });
+        aktivEntitasMentese(entitasId, entitasTipus);
+        this._pakliInditasa(entitasId, entitasTipus);
+      }
+    });
+
+    await ertesitesekModal.init();
+    await ertesitesekModal.megnyitas();
+
+    console.log('FoOldal._ertesitesekMegnyitasa - VÉGE');
   }
 
 
