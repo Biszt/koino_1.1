@@ -52,7 +52,9 @@ init() {
     'hamburger-menu-kontener',
     this._hamburgerOpciokEpitese()
   );
-  this.hamburgerMenu.init();
+  // A menü init aszinkron (template-fetch) – a badge-et csak a DOM elkészülte
+  // UTÁN tudjuk feltölteni, ezért a then()-ben frissítjük először.
+  this.hamburgerMenu.init().then(() => this._ertesitesBadgeFrissitese());
 
   this.modal = new Modal('modal-kontener', {
     cim:      '',
@@ -128,6 +130,7 @@ init() {
       {
         ikon:    '🔔',
         felirat: 'Értesítések',
+        badge:   true, // A sor jobb szélén az olvasatlan értesítések piros számlálója
         akcio:   () => this._ertesitesekMegnyitasa()
       },
       {
@@ -296,13 +299,38 @@ init() {
         console.log('FoOldal - értesítésből navigálás', { entitasId, entitasTipus });
         aktivEntitasMentese(entitasId, entitasTipus);
         this._pakliInditasa(entitasId, entitasTipus);
-      }
+      },
+      // Olvasottnak jelölés után (egy vagy mind) a badge-számláló frissítése
+      onValtozas: () => this._ertesitesBadgeFrissitese()
     });
 
     await ertesitesekModal.init();
     await ertesitesekModal.megnyitas();
 
     console.log('FoOldal._ertesitesekMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // ÉRTESÍTÉS-BADGE FRISSÍTÉSE
+  // =====================================
+  // Lekéri az olvasatlan értesítések számát, és a HamburgerMenu badge-eire írja
+  // (a gomb sarka + az „Értesítések" menüpont). Hívjuk: betöltéskor (init) és
+  // a postafiókban történt olvasottnak jelölés után (ErtesitesekModal.onValtozas).
+  // Hiba esetén csak logolunk – a badge nem kritikus, az oldal működjön tovább.
+  async _ertesitesBadgeFrissitese() {
+    console.log('FoOldal._ertesitesBadgeFrissitese - KEZDÉS');
+
+    try {
+      const valasz = await apiGet('ertesitesek/olvasatlan-szam', this.token);
+      const olvasatlan = valasz?.adatok?.olvasatlan ?? 0;
+
+      this.hamburgerMenu?.badgeFrissitese(olvasatlan);
+
+      console.log('FoOldal._ertesitesBadgeFrissitese - VÉGE', { olvasatlan });
+    } catch (hiba) {
+      console.error('FoOldal._ertesitesBadgeFrissitese - HIBA', hiba.message);
+    }
   }
 
 

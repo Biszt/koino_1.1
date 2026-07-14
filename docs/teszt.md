@@ -374,6 +374,33 @@ docker logs -f koino-backend
     cím-keresés → találat kiválasztása kitölti az ID-t és a típust → **Oké** beszúrja a
     hivatkozást; a régi kézi ID + Oké út is működik.
 
+### F) Értesítések — postafiók + olvasatlan badge (ÚJ, 2026-07-15)
+
+> **Végpontok:** `GET /api/ertesitesek?lap=&lapMeret=` (postafiók, lapozva) ·
+> `GET /api/ertesitesek/olvasatlan-szam` (badge) · `PATCH /api/ertesitesek/:id/olvasott` ·
+> `PATCH /api/ertesitesek/mind-olvasott`. Mind auth-kötelesek, boríték: `{siker, adatok}`.
+>
+> **Teszt-értesítés gyártása kézzel** (amíg kevés az élő esemény) — közvetlen DB-beszúrás:
+> ```bash
+> docker exec koino-mongodb-dev mongosh koino --eval "db.ertesites.insertOne({
+>   eEmberId: ObjectId('<eember_id>'), tipus: 'ujJavaslat',
+>   entitasId: ObjectId('<tartalom_id>'), entitasTipus: 'Tartalom',
+>   adatok: {}, olvasva: false, olvasvaIdopont: null,
+>   createdAt: new Date(), updatedAt: new Date() })"
+> ```
+
+30. ⬜ **Badge betöltéskor:** legyen ≥1 olvasatlan értesítésed → belépés/frissítés után a
+    **fő hamburger gomb sarkán piros kör** mutatja a számot, és a menüben az
+    **„Értesítések" sor jobb szélén** ugyanaz a szám.
+31. ⬜ **Postafiók:** menü → *Értesítések* → a lista mutatja az értesítéseket
+    (típus-felirat + entitás címe + időpont), az olvasatlanok kiemelve (zöld pont).
+32. ⬜ **Egy elolvasása:** kattints egy olvasatlan értesítésre → a modal bezárul, a pakli
+    az érintett entitásra navigál, és **mindkét badge eggyel csökken** (0-nál eltűnik).
+33. ⬜ **Mind olvasottnak:** a postafiók *Mind olvasottnak* gombja után a lista kiemelései
+    eltűnnek és **mindkét badge elrejtődik**.
+34. ⬜ **99+ határeset:** 99-nél több olvasatlannál a badge „99+"-t mutat (DB-beszúrással
+    szimulálható; vizuális ellenőrzés).
+
 ---
 
 ## 6. Ismert megjegyzések / buktatók

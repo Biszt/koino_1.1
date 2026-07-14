@@ -28,12 +28,15 @@ class ErtesitesekModal {
   // @param {Object} beallitasok
   // @param {string} beallitasok.token               - JWT token (opcionális)
   // @param {Function} beallitasok.onEntitasKivalasztas - (entitasId, entitasTipus) navigáláshoz
+  // @param {Function} beallitasok.onValtozas        - olvasottnak jelölés után hívjuk
+  //                                                   (a FoOldal a badge-et frissíti vele)
   constructor(kontenerAzonosito, beallitasok = {}) {
     console.log('ErtesitesekModal.constructor - KEZDÉS');
 
     this.kontenerAzonosito     = kontenerAzonosito;
     this.token                 = beallitasok.token ?? tokenLekerese();
     this.onEntitasKivalasztas  = beallitasok.onEntitasKivalasztas ?? null;
+    this.onValtozas            = beallitasok.onValtozas ?? null;
 
     this.modal       = null;
     this.lap         = 1;
@@ -198,6 +201,9 @@ class ErtesitesekModal {
     // Olvasottnak jelölés (best-effort – ha hibázik, a navigáció akkor is menjen)
     try {
       await apiPatch(`ertesitesek/${ertesitesId}/olvasott`, {}, this.token);
+
+      // Sikeres jelölés → szólunk a hívónak (a FoOldal a badge-et frissíti)
+      if (typeof this.onValtozas === 'function') this.onValtozas();
     } catch (hiba) {
       console.error('ErtesitesekModal._elemKattintas - olvasott jelölés hiba', hiba.message);
     }
@@ -216,6 +222,10 @@ class ErtesitesekModal {
     try {
       await apiPatch('ertesitesek/mind-olvasott', {}, this.token);
       this.modal.betoltesBeallitasa(false);
+
+      // Sikeres jelölés → szólunk a hívónak (a FoOldal a badge-et frissíti)
+      if (typeof this.onValtozas === 'function') this.onValtozas();
+
       // Újratöltjük az első oldalt, hogy eltűnjenek az olvasatlan-jelzők
       await this._oldalBetoltese(1, false);
     } catch (hiba) {

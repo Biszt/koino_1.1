@@ -9,6 +9,9 @@
   align-items: center;
   justify-content: center;
 
+  /* A badge (értesítés-számláló) abszolút pozícionálásának viszonyítási pontja */
+  position: relative;
+
   /* Minimum érintési terület */
   width: 44px;
   height: 44px;
@@ -216,4 +219,56 @@
   margin: var(--space-2) var(--space-6); /* Oldalsó margó igazodik a menüpontokhoz */
   background-color: rgba(255, 255, 255, 0.18);
   border: none;
+}
+
+/* ===== ÉRTESÍTÉS BADGE ===== */
+/* Az olvasatlan értesítések számát mutató piros jelző.
+   Két helyen jelenik meg:
+   - a hamburger gomb jobb felső sarkán (app-ikon szint),
+   - az „Értesítések" menüpont sorának jobb szélén.
+   A HamburgerMenu.badgeFrissitese() tölti fel; 0-nál hidden attribútummal rejtve.
+   Szín: szándékosan élénk piros (nem a --color-error #8c3a1e, mert az túl sötét
+   a zöld panelen és a sötét alsó sávon – a badge-nek messziről ki kell ugrania). */
+
+/* Közös badge-alap: kis piros „pirula" fehér számmal */
+.hamburger-gomb__badge,
+.hamburger-menu-pont__badge {
+  min-width: 18px;          /* 1 számjegynél kör, többnél pirulává nyúlik */
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+
+  background: #e03a2f;      /* Élénk piros – lásd a fenti indoklást */
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;        /* Függőleges középre igazítás */
+  text-align: center;
+}
+
+/* A rejtett badge SOSEM foglal helyet (a hidden attribútumot erősítjük meg,
+   mert a display: flex/inline-block felülírná a böngésző alap hidden-kezelését) */
+.hamburger-gomb__badge[hidden],
+.hamburger-menu-pont__badge[hidden] {
+  display: none;
+}
+
+/* A gomb-badge a gomb jobb felső sarkára tűzve, kissé kilógatva */
+.hamburger-gomb__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+
+  /* Vékony sötét körvonal, hogy világos háttéren is elváljon a gombtól */
+  box-shadow: 0 0 0 2px rgba(27, 22, 14, 0.35);
+
+  /* A badge ne fogja el a gomb kattintását */
+  pointer-events: none;
+}
+
+/* A menüpont-badge a sor jobb szélére tolva (a felirat után) */
+.hamburger-menu-pont__badge {
+  margin-left: auto;
+  flex-shrink: 0; /* Kis képernyőn se nyomódjon össze */
 }

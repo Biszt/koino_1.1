@@ -167,6 +167,16 @@ class HamburgerMenu {
 
       pont.appendChild(ikonSpan);
       pont.appendChild(feliratSpan);
+
+      // Badge-es menüpont (opcio.badge: true, pl. Értesítések): a sor jobb szélén
+      // egy rejtett piros számláló, amit a badgeFrissitese() tölt fel/rejt el.
+      if (opcio.badge) {
+        const badgeSpan = document.createElement('span');
+        badgeSpan.className = 'hamburger-menu-pont__badge';
+        badgeSpan.hidden    = true; // Kezdetben rejtve – csak 0-nál nagyobb számnál látszik
+        pont.appendChild(badgeSpan);
+      }
+
       this.panel.appendChild(pont);
     });
 
@@ -323,6 +333,45 @@ class HamburgerMenu {
     });
 
     console.log('HamburgerMenu.tudatpontFuggoTiltasBeallitasa - VÉGE', { tiltva });
+  }
+
+  // ===== ÉRTESÍTÉS-BADGE FRISSÍTÉSE =====
+  // Az olvasatlan értesítések számát írja ki két helyre:
+  //   1. a hamburger gomb sarkán lévő badge-re (app-ikon szint),
+  //   2. minden badge-es (opcio.badge: true) menüpont számlálójára.
+  // 0 (vagy érvénytelen) számnál mindkét badge-et elrejti.
+  // Hívja: FoOldal._ertesitesBadgeFrissitese() – betöltéskor és olvasás után.
+  // @param {number} szam - az olvasatlan értesítések száma
+  badgeFrissitese(szam) {
+    console.log('HamburgerMenu.badgeFrissitese - KEZDÉS', { szam });
+
+    // Érvénytelen érték (undefined, NaN, negatív) → 0-ként kezeljük
+    const ervenyesSzam = Number.isFinite(szam) && szam > 0 ? szam : 0;
+
+    // 99 felett „99+" – a badge ne nőjön a gombnál szélesebbre
+    const kiirtSzoveg = ervenyesSzam > 99 ? '99+' : String(ervenyesSzam);
+
+    const kontener = this.kontenerElem ?? document.getElementById(this.kontenerAzonosito);
+    if (!kontener) {
+      console.error('HamburgerMenu.badgeFrissitese - HIBA: konténer nem található');
+      return;
+    }
+
+    // 1. A gomb sarkán lévő badge (a template statikus része)
+    const gombBadge = kontener.querySelector('.hamburger-gomb__badge');
+    if (gombBadge) {
+      gombBadge.textContent = kiirtSzoveg;
+      gombBadge.hidden      = ervenyesSzam === 0;
+    }
+
+    // 2. A badge-es menüpontok számlálói (a _pontokEpitese hozta létre őket)
+    const pontBadgek = kontener.querySelectorAll('.hamburger-menu-pont__badge');
+    pontBadgek.forEach((badge) => {
+      badge.textContent = kiirtSzoveg;
+      badge.hidden      = ervenyesSzam === 0;
+    });
+
+    console.log('HamburgerMenu.badgeFrissitese - VÉGE', { ervenyesSzam, kiirtSzoveg });
   }
 }
 
