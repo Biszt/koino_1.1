@@ -95,8 +95,10 @@ const ertesitesKuldes = async (
   });
 
   // A címzettek feloldása a BEÁLLÍTÁSOK alapján (csomóponti/felmenő nearest-wins + globális),
-  // tudatponttól függetlenül. Visszatérés: [{ eEmberId, tudatpontKuszobok }].
-  const cimzettek = await ertesitesiBeallitasService.cimzettekFeloldasa(
+  // tudatponttól függetlenül. A bejárás mellékterméke az esemény entitásának ŐS-LÁNCA is
+  // (első elem maga az entitás, utána a felmenők a gyökérig) — ezt mentjük az értesítésekbe.
+  // Visszatérés: { cimzettek: [{ eEmberId, tudatpontKuszobok }], osLanc: [{ entitasId, entitasTipus }] }.
+  const { cimzettek, osLanc } = await ertesitesiBeallitasService.cimzettekFeloldasa(
     entitasId,
     entitasTipus,
     ertesitesTipus
@@ -123,6 +125,7 @@ const ertesitesKuldes = async (
       tipus: ertesitesTipus,
       entitasId,
       entitasTipus,
+      osLanc, // Az esemény entitásának ős-lánca — a részfa-szűréshez (kártya-badge, ág-postafiók)
       adatok,
       olvasva: false,
       olvasvaIdopont: null,

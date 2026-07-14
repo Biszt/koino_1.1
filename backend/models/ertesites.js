@@ -56,6 +56,31 @@ const ertesitesSchema = new mongoose.Schema(
       required: [true, 'Az entitás típusa kötelező'],
     },
 
+    // ===== ŐS-LÁNC =====
+    // Az esemény entitásának teljes ős-lánca a fa gyökeréig, a keletkezés PILLANATÁBAN.
+    // Az ELSŐ elem mindig maga az esemény entitása (entitasId + entitasTipus),
+    // utána sorban a szülő, nagyszülő... egészen a gyökérig.
+    // Célja: részfa-szűrés egyetlen lekérdezéssel — "minden értesítés, ami az X entitás
+    // alatt (vagy magán X-en) történt" = { 'osLanc.entitasId': X }.
+    // Ezt használja majd: a kártya-badge (A2) és az ág-szűrt kártya-postafiók (A3).
+    osLanc: {
+      type: [
+        {
+          _id: false, // Az al-dokumentumoknak nem kell saját _id
+          entitasId: { type: mongoose.Schema.Types.ObjectId, required: true },
+          entitasTipus: {
+            type: String,
+            enum: {
+              values: ENTITAS_TIPUSOK,
+              message: 'Érvénytelen entitás típus az ős-láncban: {VALUE}',
+            },
+            required: true,
+          },
+        },
+      ],
+      default: [],
+    },
+
     // Esemény-specifikus adatok szabad formátumban
     // Pl. ujJavaslat esetén: { javaslatId: ObjectId, javaslatTipus: 'modositas' }
     // Pl. tudatpontValtozas esetén: { regiErtek: 5, ujErtek: 8, valtozas: 3 }
@@ -96,6 +121,11 @@ ertesitesSchema.index({ eEmberId: 1, createdAt: -1 });
 // INDEX 3: Egy konkrét entitáshoz kapcsolódó összes értesítés lekéréséhez
 // Pl. ha törölni kell egy entitást, és az összes kapcsolódó értesítést is törölni kell
 ertesitesSchema.index({ entitasId: 1, entitasTipus: 1 });
+
+// INDEX 4: Részfa-szűréshez — egy eEmber olvasatlan értesítései egy adott entitás ága alatt.
+// A tömb-mezőre tett index ún. "multikey index": a lánc MINDEN elemére keresést gyorsít,
+// így a { eEmberId, olvasva, 'osLanc.entitasId': X } lekérdezés (kártya-badge) indexből fut.
+ertesitesSchema.index({ eEmberId: 1, olvasva: 1, 'osLanc.entitasId': 1 });
 
 // A modell exportálása
 // Az első paraméter ('Ertesites') lesz a MongoDB kollekció neve (kisbetűsítve: ertesites)

@@ -118,7 +118,14 @@ const beallitasKeresesCascade = async (eEmberId, entitasId, entitasTipus) => {
 // bárhol, akkor is, ha nincs pontja az entitáson).
 // Hatékonyság: korlátos számú, indexelt lekérdezés – (fa-mélység) db `keresByEntitas`
 // + 1 db globális lekérdezés; nincs "címzettenként egy lekérdezés".
-// Visszatérés: [{ eEmberId (string), tudatpontKuszobok }] – a tudatpontValtozas küszöbeihez.
+// MELLÉKTERMÉK: a bejárás közben összegyűjtjük az esemény entitásának ŐS-LÁNCÁT is
+// (első elem maga az entitás, utána a felmenők a gyökérig) — ezt az ertesitesService
+// menti el az értesítésekbe (osLanc mező), hogy később részfa-szűrésre lehessen használni.
+// Így a fát csak EGYSZER járjuk be, nem kell külön kör az ős-lánchoz.
+// Visszatérés: {
+//   cimzettek – [{ eEmberId (string), tudatpontKuszobok }] a tudatpontValtozas küszöbeihez,
+//   osLanc    – [{ entitasId, entitasTipus }] az entitástól a gyökérig
+// }
 const cimzettekFeloldasa = async (entitasId, entitasTipus, ertesitesTipus) => {
   console.log('ertesitesiBeallitasService.cimzettekFeloldasa - KEZDET', {
     entitasId, entitasTipus, ertesitesTipus,
@@ -128,9 +135,13 @@ const cimzettekFeloldasa = async (entitasId, entitasTipus, ertesitesTipus) => {
   // A lánc bejárása nearest-first; aki egyszer bekerül, azt feljebb már nem írjuk felül.
   const feloldott = new Map();
 
+  // Az ős-lánc gyűjtője — a while-ciklus pontosan a láncot járja be, csak fel kell jegyezni
+  const osLanc = [];
+
   let aktId = entitasId;
   let aktTipus = entitasTipus;
   while (aktId && aktTipus) {
+    osLanc.push({ entitasId: aktId, entitasTipus: aktTipus });
     const beallitasok = await ertesitesiBeallitasRepository.keresByEntitas(aktId, aktTipus);
     for (const b of beallitasok) {
       const kulcs = b.eEmberId.toString();
@@ -170,8 +181,9 @@ const cimzettekFeloldasa = async (entitasId, entitasTipus, ertesitesTipus) => {
 
   console.log('ertesitesiBeallitasService.cimzettekFeloldasa - VEGE', {
     cimzettDarab: cimzettek.length,
+    osLancHossz: osLanc.length,
   });
-  return cimzettek;
+  return { cimzettek, osLanc };
 };
 // --- METÓDUS VEGE: cimzettekFeloldasa ---
 

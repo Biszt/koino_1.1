@@ -380,14 +380,20 @@ docker logs -f koino-backend
 > `GET /api/ertesitesek/olvasatlan-szam` (badge) · `PATCH /api/ertesitesek/:id/olvasott` ·
 > `PATCH /api/ertesitesek/mind-olvasott`. Mind auth-kötelesek, boríték: `{siker, adatok}`.
 >
-> **Teszt-értesítés gyártása kézzel** (amíg kevés az élő esemény) — közvetlen DB-beszúrás:
+> **Teszt-értesítés gyártása kézzel** (amíg kevés az élő esemény) — közvetlen DB-beszúrás.
+> FONTOS (2026-07-15 óta): az `osLanc` mezőt is add meg — ez az esemény entitásának
+> ős-lánca (első elem MAGA az entitás, utána a szülők a gyökérig); a részfa-szűrés
+> (kártya-badge, ág-postafiók) csak azokat az értesítéseket látja, amikben ez ki van töltve:
 > ```bash
 > docker exec koino-mongodb-dev mongosh koino --eval "db.ertesites.insertOne({
 >   eEmberId: ObjectId('<eember_id>'), tipus: 'ujJavaslat',
 >   entitasId: ObjectId('<tartalom_id>'), entitasTipus: 'Tartalom',
+>   osLanc: [ { entitasId: ObjectId('<tartalom_id>'), entitasTipus: 'Tartalom' } ],
 >   adatok: {}, olvasva: false, olvasvaIdopont: null,
 >   createdAt: new Date(), updatedAt: new Date() })"
 > ```
+> (Ha a tartalomnak van szülője, a szülőt is fűzd az `osLanc` végére — így a szülő
+> kártyáján is megjelenik majd a részfa-badge.)
 
 30. ⬜ **Badge betöltéskor:** legyen ≥1 olvasatlan értesítésed → belépés/frissítés után a
     **fő hamburger gomb sarkán piros kör** mutatja a számot, és a menüben az
