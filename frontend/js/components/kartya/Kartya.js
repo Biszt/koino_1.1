@@ -3,7 +3,8 @@
 // --- IMPORTOK ---
 import HamburgerMenu from '../HamburgerMenu.js'; // Hamburger menü komponens
 import { apiGet } from '../../utils/apiHelper.js';        // Backend GET – tudatpont-ellenőrzéshez
-import { tokenLekerese } from '../../utils/authHelper.js'; // A bejelentkezett eember tokenje
+import { tokenLekerese, aktivEntitasMentese } from '../../utils/authHelper.js'; // Token + navigáláskor az aktív entitás mentése
+import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt postafiók a kártya menüjéből
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -86,6 +87,21 @@ async init() {
   const opciok = this.onHamburgerOpciok
     ? this.onHamburgerOpciok(this.entitas)
     : [];
+
+  // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: az entitás ÁGÁNAK értesítései (ág-szűrt postafiók).
+  // A badge:true miatt a sor jobb szélén a részfa-olvasatlan számláló is megjelenik
+  // (ugyanaz a szám, mint a gomb sarkán — a lenti badgeFrissitese tölti mindkettőt).
+  // Csak akkor tesszük be, ha a kártya kapott modal-konténert (az ismeretlen típusú
+  // alap-kártyának nincs, ott a menüpont sem értelmezhető).
+  if (this.modalKontenerAzon) {
+    opciok.push({
+      ikon:    '🔔',
+      felirat: 'Értesítések',
+      badge:   true,
+      akcio:   () => this._agErtesitesekMegnyitasa()
+    });
+  }
+
   this.hamburgerMenu = new HamburgerMenu(hamburgerKontener, opciok);
   await this.hamburgerMenu.init();
 
@@ -210,6 +226,51 @@ async _tudatpontFuggoMenuFrissitese() {
     // Hiba esetén NEM tiltunk (a backend úgyis véd) – a menü használható marad
     console.error('Kartya._tudatpontFuggoMenuFrissitese - HIBA', hiba.message);
   }
+}
+
+// ----- ÁG-SZŰRT ÉRTESÍTÉSEK MEGNYITÁSA -----
+// A kártya-hamburger közös „Értesítések" menüpontja hívja. A közös ErtesitesekModal-t
+// nyitja ÁG-SZŰRT módban: csak azok az értesítések látszanak, amik EZEN az entitáson
+// vagy bármely leszármazottján történtek (a backend az osLanc alapján szűr).
+// Értesítésre kattintva az érintett entitásra navigálunk (pakli-újratöltés); ha csak
+// olvasottnak jelölés történt, a modal bezárásakor frissül a pakli (badge-fogyás).
+async _agErtesitesekMegnyitasa() {
+  console.log('Kartya._agErtesitesekMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  // A modal címébe az entitás címe/neve kerül, ha van (Javaslat/Egyezménynél nincs)
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+
+  const ertesitesekModal = new ErtesitesekModal(this.modalKontenerAzon, {
+    token:       this.token ?? tokenLekerese(),
+    agEntitasId: this.entitas.entitasId,
+    cim:         agCim ? `Értesítések – ${agCim}` : 'Értesítések – ez az ág',
+
+    // Értesítésre kattintás → az érintett entitásra navigálunk: elmentjük aktívnak,
+    // majd a központi újratöltő callback a paklit arra az entitásra építi újra
+    onEntitasKivalasztas: (entitasId, entitasTipus) => {
+      aktivEntitasMentese(entitasId, entitasTipus);
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes(entitasId, entitasTipus);
+    },
+
+    // Olvasottnak jelölés után az APP-SZINTŰ badge frissítése: a kártya nem éri el
+    // közvetlenül a FoOldal-t, ezért eseményt küldünk, amire a FoOldal feliratkozott
+    onValtozas: () => document.dispatchEvent(new CustomEvent('koino:ertesitesValtozas')),
+
+    // A modal bezárásakor (ha volt jelölés, de nem navigáltunk) a pakli újratöltése,
+    // hogy a kártya-badge-ek friss (csökkent) számokat mutassanak
+    onBezarasValtozassal: () => {
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+    }
+  });
+
+  await ertesitesekModal.init();
+  await ertesitesekModal.megnyitas();
+
+  console.log('Kartya._agErtesitesekMegnyitasa - VÉGE');
 }
 
 // ----- BODY FRISSÍTÉSE -----

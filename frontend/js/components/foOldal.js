@@ -56,6 +56,11 @@ init() {
   // UTÁN tudjuk feltölteni, ezért a then()-ben frissítjük először.
   this.hamburgerMenu.init().then(() => this._ertesitesBadgeFrissitese());
 
+  // A KÁRTYÁK ág-szűrt postafiókjából érkező jelzés: ha ott olvasottnak jelölés
+  // történt, az app-szintű badge-et is frissíteni kell. A kártya nem éri el a
+  // FoOldal-t közvetlenül, ezért DOM-eseményen keresztül szól (Kartya.js küldi).
+  document.addEventListener('koino:ertesitesValtozas', () => this._ertesitesBadgeFrissitese());
+
   this.modal = new Modal('modal-kontener', {
     cim:      '',
     tartalom: '',

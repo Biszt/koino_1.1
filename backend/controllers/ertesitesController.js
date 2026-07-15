@@ -19,10 +19,18 @@ const postafiokLekereses = async (req, res) => {
     const lap = parseInt(req.query.lap) || 1;
     const lapMeret = parseInt(req.query.lapMeret) || 20;
 
+    // Opcionális ÁG-SZŰRŐ (kártya-postafiók): csak akkor fogadjuk el, ha érvényes
+    // MongoDB ObjectId formátumú (24 hexadecimális karakter) — különben figyelmen
+    // kívül hagyjuk, és a teljes postafiókot adjuk vissza
+    const agEntitasId = /^[0-9a-fA-F]{24}$/.test(req.query.agEntitasId ?? '')
+      ? req.query.agEntitasId
+      : null;
+
     const eredmeny = await ertesitesService.postafiokLekereses(
       req.user.id,
       lap,
-      lapMeret
+      lapMeret,
+      agEntitasId
     );
 
     console.log('ertesitesController.postafiokLekereses - VEGE', {
@@ -122,7 +130,13 @@ const mindetOlvasottnak = async (req, res) => {
   });
 
   try {
-    const eredmeny = await ertesitesService.mindetOlvasottnak(req.user.id);
+    // Opcionális ÁG-SZŰRŐ: a kártya-postafiók „Mind olvasottnak" gombja csak a saját
+    // ága értesítéseit jelölheti — érvénytelen formátumnál nincs szűrés (teljes lista)
+    const agEntitasId = /^[0-9a-fA-F]{24}$/.test(req.query.agEntitasId ?? '')
+      ? req.query.agEntitasId
+      : null;
+
+    const eredmeny = await ertesitesService.mindetOlvasottnak(req.user.id, agEntitasId);
 
     console.log('ertesitesController.mindetOlvasottnak - VEGE', {
       modositottDarab: eredmeny.modifiedCount,

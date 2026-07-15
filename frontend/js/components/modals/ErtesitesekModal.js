@@ -21,7 +21,10 @@ const LAP_MERET = 20;
 // ===== POSTAFIÓK (ÉRTESÍTÉSEK) MODAL =====
 // Felelősség: a bejelentkezett e-ember értesítéseinek listázása lapozva, olvasottnak
 //   jelölés (egyenként vagy mind), és kattintásra navigálás az érintett entitásra.
-// Használja: a fő menü „Értesítések" pontja (foOldal.js).
+//   ÁG-SZŰRT módban (agEntitasId megadva) csak az adott entitás ága alatti értesítések
+//   látszanak, és a „Mind olvasottnak" is csak azokat jelöli.
+// Használja: a fő menü „Értesítések" pontja (foOldal.js — teljes postafiók) és a
+//   kártya-hamburgerek „Értesítések" pontja (Kartya.js — ág-szűrve).
 class ErtesitesekModal {
 
   // @param {string} kontenerAzonosito - a modal konténer div ID-ja
@@ -30,6 +33,13 @@ class ErtesitesekModal {
   // @param {Function} beallitasok.onEntitasKivalasztas - (entitasId, entitasTipus) navigáláshoz
   // @param {Function} beallitasok.onValtozas        - olvasottnak jelölés után hívjuk
   //                                                   (a FoOldal a badge-et frissíti vele)
+  // @param {string} beallitasok.agEntitasId         - ÁG-SZŰRŐ (opcionális): csak ennek az
+  //                                                   entitásnak az ága alatti értesítések
+  // @param {string} beallitasok.cim                 - a modal címe (alapból „Értesítések")
+  // @param {Function} beallitasok.onBezarasValtozassal - a modal BEZÁRÁSAKOR hívjuk, ha
+  //                                                   közben volt olvasottnak jelölés és NEM
+  //                                                   navigálunk el (a kártya a paklit
+  //                                                   frissíti vele, hogy a badge-ek fogyjanak)
   constructor(kontenerAzonosito, beallitasok = {}) {
     console.log('ErtesitesekModal.constructor - KEZDÉS');
 
@@ -37,10 +47,19 @@ class ErtesitesekModal {
     this.token                 = beallitasok.token ?? tokenLekerese();
     this.onEntitasKivalasztas  = beallitasok.onEntitasKivalasztas ?? null;
     this.onValtozas            = beallitasok.onValtozas ?? null;
+    this.agEntitasId           = beallitasok.agEntitasId ?? null;
+    this.cimFelirat            = beallitasok.cim ?? 'Értesítések';
+    this.onBezarasValtozassal  = beallitasok.onBezarasValtozassal ?? null;
 
     this.modal       = null;
     this.lap         = 1;
     this.lapokSzama  = 1;
+
+    // Történt-e olvasottnak jelölés a modal nyitva léte alatt (bezáráskor kell)
+    this.valtozott = false;
+    // Ha értesítésre kattintva navigálunk el, a bezárás-callback NEM fut (a navigálás
+    // úgyis újratölti a paklit — nem kell dupla újratöltés)
+    this._navigalasFolyamatban = false;
 
     console.log('ErtesitesekModal.constructor - VÉGE');
   }
@@ -53,7 +72,7 @@ class ErtesitesekModal {
     if (!tartalomHtml) return;
 
     this.modal = new Modal(this.kontenerAzonosito, {
-      cim:      'Értesítések',
+      cim:      this.cimFelirat,
       tartalom: tartalomHtml,
       meret:    'alap',
       gombok: [
@@ -70,7 +89,18 @@ class ErtesitesekModal {
           akcio:     () => this.modal.bezaras()
         }
       ],
-      onBezaras: () => console.log('ErtesitesekModal - modal bezárva')
+      onBezaras: () => {
+        console.log('ErtesitesekModal - modal bezárva', {
+          valtozott: this.valtozott,
+          navigalas: this._navigalasFolyamatban
+        });
+        // Ha volt olvasottnak jelölés és NEM navigálunk el, szólunk a hívónak
+        // (a kártya ezzel frissíti a paklit, hogy a badge-számok fogyjanak)
+        if (this.valtozott && !this._navigalasFolyamatban &&
+            typeof this.onBezarasValtozassal === 'function') {
+          this.onBezarasValtozassal();
+        }
+      }
     });
 
     await this.modal.init();
@@ -128,7 +158,10 @@ class ErtesitesekModal {
 
     this.modal.betoltesBeallitasa(true);
     try {
-      const valasz = await apiGet(`ertesitesek?lap=${lap}&lapMeret=${LAP_MERET}`, this.token);
+      // Ág-szűrt módban az agEntitasId query-paramétert is küldjük — a backend az
+      // értesítések ős-lánca (osLanc) alapján csak az ág alattiakat adja vissza
+      const agResz = this.agEntitasId ? `&agEntitasId=${this.agEntitasId}` : '';
+      const valasz = await apiGet(`ertesitesek?lap=${lap}&lapMeret=${LAP_MERET}${agResz}`, this.token);
       this.modal.betoltesBeallitasa(false);
 
       const adatok = valasz?.adatok ?? {};
@@ -202,12 +235,16 @@ class ErtesitesekModal {
     try {
       await apiPatch(`ertesitesek/${ertesitesId}/olvasott`, {}, this.token);
 
-      // Sikeres jelölés → szólunk a hívónak (a FoOldal a badge-et frissíti)
+      // Sikeres jelölés → megjegyezzük és szólunk a hívónak (badge-frissítéshez)
+      this.valtozott = true;
       if (typeof this.onValtozas === 'function') this.onValtozas();
     } catch (hiba) {
       console.error('ErtesitesekModal._elemKattintas - olvasott jelölés hiba', hiba.message);
     }
 
+    // Navigálás következik → a bezárás-callback (pakli-újratöltés) kimarad,
+    // mert a navigáció maga is újratölti a paklit
+    this._navigalasFolyamatban = true;
     this.modal.bezaras();
 
     if (typeof this.onEntitasKivalasztas === 'function' && entitasId && entitasTipus) {
@@ -220,10 +257,14 @@ class ErtesitesekModal {
     console.log('ErtesitesekModal._mindOlvasottnak - KEZDÉS');
     this.modal.betoltesBeallitasa(true);
     try {
-      await apiPatch('ertesitesek/mind-olvasott', {}, this.token);
+      // Ág-szűrt módban csak az ág alatti olvasatlanokat jelöljük — a query-paramétert
+      // a backend a megjelolMindetOlvasottnak szűrőjébe teszi (osLanc-alapú)
+      const agResz = this.agEntitasId ? `?agEntitasId=${this.agEntitasId}` : '';
+      await apiPatch(`ertesitesek/mind-olvasott${agResz}`, {}, this.token);
       this.modal.betoltesBeallitasa(false);
 
-      // Sikeres jelölés → szólunk a hívónak (a FoOldal a badge-et frissíti)
+      // Sikeres jelölés → megjegyezzük és szólunk a hívónak (badge-frissítéshez)
+      this.valtozott = true;
       if (typeof this.onValtozas === 'function') this.onValtozas();
 
       // Újratöltjük az első oldalt, hogy eltűnjenek az olvasatlan-jelzők

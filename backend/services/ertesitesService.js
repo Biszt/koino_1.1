@@ -153,19 +153,23 @@ const ertesitesKuldes = async (
 
 // --- METÓDUS KEZDETE: postafiokLekereses ---
 // Egy eEmber postafiókjának lekérése lapozással
-// Paraméterek: eEmberId, lap, lapMeret
+// Paraméterek: eEmberId, lap, lapMeret,
+//   agEntitasId – opcionális ág-szűrő: csak az adott entitás ága alatti értesítések
+//                 (osLanc-alapú; a kártya-hamburgerből nyíló „Értesítések" használja)
 // Visszatérés: { ertesitesek, osszes, olvasatlan, lapokSzama }
-const postafiokLekereses = async (eEmberId, lap = 1, lapMeret = 20) => {
+const postafiokLekereses = async (eEmberId, lap = 1, lapMeret = 20, agEntitasId = null) => {
   console.log('ertesitesService.postafiokLekereses - KEZDET', {
     eEmberId,
     lap,
     lapMeret,
+    agEntitasId,
   });
 
   const { ertesitesek, osszes, olvasatlan } = await ertesitesRepository.keresByE_Ember(
     eEmberId,
     lap,
-    lapMeret
+    lapMeret,
+    agEntitasId
   );
 
   // Az entitás címének/nevének feltöltése a megjelenítéshez (típusonként 1 lekérdezés)
@@ -228,11 +232,12 @@ const ertesitesMegjelolOlvasottnak = async (ertesitesId, eEmberId) => {
 
 // --- METÓDUS KEZDETE: mindetOlvasottnak ---
 // Egy eEmber összes olvasatlan értesítését olvasottnak jelöli
-// Paraméter: eEmberId
-const mindetOlvasottnak = async (eEmberId) => {
-  console.log('ertesitesService.mindetOlvasottnak - KEZDET', { eEmberId });
+// Paraméterek: eEmberId,
+//   agEntitasId – opcionális ág-szűrő: csak az adott entitás ága alattiakat jelöli
+const mindetOlvasottnak = async (eEmberId, agEntitasId = null) => {
+  console.log('ertesitesService.mindetOlvasottnak - KEZDET', { eEmberId, agEntitasId });
 
-  const eredmeny = await ertesitesRepository.megjelolMindetOlvasottnak(eEmberId);
+  const eredmeny = await ertesitesRepository.megjelolMindetOlvasottnak(eEmberId, agEntitasId);
 
   console.log('ertesitesService.mindetOlvasottnak - VEGE', {
     modositottDarab: eredmeny.modifiedCount,

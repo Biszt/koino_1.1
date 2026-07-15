@@ -63,30 +63,40 @@ const keresByid = async (id) => {
 //   eEmberId – kinek a postafiókja
 //   lap       – hányadik oldal (1-től indul)
 //   lapMeret  – hány elem per oldal (alapból 20)
+//   agEntitasId – opcionális ÁG-SZŰRŐ: csak azok az értesítések, amelyeknek az
+//                 ős-láncában (osLanc) szerepel ez az entitás — vagyis az entitáson
+//                 VAGY bármely leszármazottján történt az esemény (kártya-postafiók)
 // Visszatérés: { ertesitesek, osszes, olvasatlan }
-const keresByE_Ember = async (eEmberId, lap = 1, lapMeret = 20) => {
+const keresByE_Ember = async (eEmberId, lap = 1, lapMeret = 20, agEntitasId = null) => {
   console.log('ertesitesRepository.keresByE_Ember - KEZDET', {
     eEmberId,
     lap,
     lapMeret,
+    agEntitasId,
   });
 
   // Hány rekordot kell kihagyni (pl. 2. oldal, 20 elemet kihagyunk)
   const kihagyando = (lap - 1) * lapMeret;
 
+  // A közös szűrő-objektum: alapból az eEmber összes értesítése; ág-szűrésnél
+  // csak azok, amiknek az ős-láncában szerepel a kért entitás (a find automatikusan
+  // ObjectId-vá alakítja a stringet — az aggregációval ellentétben)
+  const szures = { eEmberId };
+  if (agEntitasId) szures['osLanc.entitasId'] = agEntitasId;
+
   // Párhuzamosan futtatjuk a három lekérdezést a gyorsaság érdekében
   const [ertesitesek, osszes, olvasatlan] = await Promise.all([
     // A tényleges lista: legújabb elöl, lapozással
-    Ertesites.find({ eEmberId })
+    Ertesites.find(szures)
       .sort({ createdAt: -1 })
       .skip(kihagyando)
       .limit(lapMeret),
 
     // Az összes értesítés száma (lapozáshoz kell)
-    Ertesites.countDocuments({ eEmberId }),
+    Ertesites.countDocuments(szures),
 
     // Az olvasatlan értesítések száma (badge számhoz kell a UI-ban)
-    Ertesites.countDocuments({ eEmberId, olvasva: false }),
+    Ertesites.countDocuments({ ...szures, olvasva: false }),
   ]);
 
   console.log('ertesitesRepository.keresByE_Ember - VEGE', {
@@ -187,13 +197,21 @@ const megjelolOlvasottnak = async (id) => {
 // --- METÓDUS KEZDETE: megjelolMindetOlvasottnak ---
 // Egy eEmber összes olvasatlan értesítését megjelöli olvasottként egyszerre
 // Pl. "Mindet olvasottnak jelöl" gomb a postafiókban
-// Paraméter: eEmberId
+// Paraméterek:
+//   eEmberId – kinek az értesítései
+//   agEntitasId – opcionális ÁG-SZŰRŐ: csak az adott entitás ága alatti (osLanc)
+//                 olvasatlanokat jelöli meg — a kártya-postafiók „Mind olvasottnak"
+//                 gombja NEM nyúlhat a többi ág értesítéseihez
 // Visszatérés: tömeges frissítés eredménye (hány rekord módosult)
-const megjelolMindetOlvasottnak = async (eEmberId) => {
-  console.log('ertesitesRepository.megjelolMindetOlvasottnak - KEZDET', { eEmberId });
+const megjelolMindetOlvasottnak = async (eEmberId, agEntitasId = null) => {
+  console.log('ertesitesRepository.megjelolMindetOlvasottnak - KEZDET', { eEmberId, agEntitasId });
+
+  // Csak az olvasatlanokat; ág-szűrésnél csak az ág alattiakat
+  const szures = { eEmberId, olvasva: false };
+  if (agEntitasId) szures['osLanc.entitasId'] = agEntitasId;
 
   const eredmeny = await Ertesites.updateMany(
-    { eEmberId, olvasva: false }, // csak az olvasatlanokat
+    szures,
     {
       olvasva: true,
       olvasvaIdopont: new Date(),

@@ -376,9 +376,12 @@ docker logs -f koino-backend
 
 ### F) Értesítések — postafiók + olvasatlan badge (ÚJ, 2026-07-15)
 
-> **Végpontok:** `GET /api/ertesitesek?lap=&lapMeret=` (postafiók, lapozva) ·
-> `GET /api/ertesitesek/olvasatlan-szam` (badge) · `PATCH /api/ertesitesek/:id/olvasott` ·
-> `PATCH /api/ertesitesek/mind-olvasott`. Mind auth-kötelesek, boríték: `{siker, adatok}`.
+> **Végpontok:** `GET /api/ertesitesek?lap=&lapMeret=&agEntitasId=` (postafiók, lapozva;
+> az `agEntitasId` opcionális ÁG-SZŰRŐ — csak az adott entitás ága alatti értesítések,
+> osLanc-alapon) · `GET /api/ertesitesek/olvasatlan-szam` (badge) ·
+> `PATCH /api/ertesitesek/:id/olvasott` · `PATCH /api/ertesitesek/mind-olvasott?agEntitasId=`
+> (az `agEntitasId`-vel csak az ág olvasatlanjait jelöli). Mind auth-kötelesek,
+> boríték: `{siker, adatok}`.
 >
 > **Teszt-értesítés gyártása kézzel** (amíg kevés az élő esemény) — közvetlen DB-beszúrás.
 > FONTOS (2026-07-15 óta): az `osLanc` mezőt is add meg — ez az esemény entitásának
@@ -412,6 +415,13 @@ docker logs -f koino-backend
     hamburger gomb sarkán („felbugyborékolás"); a nem érintett ágak kártyáin nincs badge.
     A szám a backend pakli-válasz `olvasatlanErtesitesek` mezőjéből jön (osLanc-alapú
     csoportos számlálás). Olvasottnak jelölés után a pakli újratöltésével tűnik el.
+36. ⬜ **Ág-szűrt kártya-postafiók (2026-07-15 óta):** bármely kártya hamburger-menüjében
+    ÚJ közös menüpont: **🔔 Értesítések** (jobb szélén a részfa-olvasatlan számláló) →
+    a postafiók-modal CSAK az adott entitás ága alatti értesítéseket listázza
+    (cím: „Értesítések – <entitás címe/neve>"). A **Mind olvasottnak** itt csak az ág
+    olvasatlanjait jelöli (a többi ág és az app-badge többi része érintetlen). Értesítésre
+    kattintva az érintett entitásra navigál; olvasás után az app-badge azonnal, a
+    kártya-badge-ek a modal bezárásakor (pakli-újratöltés) frissülnek.
 
 ---
 
