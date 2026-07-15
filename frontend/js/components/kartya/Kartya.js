@@ -89,6 +89,12 @@ async init() {
   this.hamburgerMenu = new HamburgerMenu(hamburgerKontener, opciok);
   await this.hamburgerMenu.init();
 
+  // RÉSZFA-BADGE: az entitás ága alatti olvasatlan értesítések száma a hamburger
+  // gomb sarkán (a badge-span a közös template része, alapból rejtett). A számot a
+  // backend küldi a pakli-elemen (olvasatlanErtesitesek, osLanc-alapú számlálás);
+  // 0-nál a badge rejtve marad.
+  this.hamburgerMenu.badgeFrissitese(this.entitas.olvasatlanErtesitesek ?? 0);
+
   // Jogosultság: a menü MINDEN megnyitásakor frissítjük a tudatpont-függő
   // menüpontokat (aktív/inaktív) a eember entitáson lévő pontja alapján.
   // A HamburgerMenu a megnyitas()-ban hívja ezt a callbacket – így az esemény-

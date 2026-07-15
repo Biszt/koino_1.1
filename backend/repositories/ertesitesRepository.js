@@ -1,5 +1,8 @@
 // backend/repositories/ertesitesRepository.js
 
+// A mongoose az aggregációs ObjectId-konverzióhoz kell (olvasatlanokSzamaEntitasonkent)
+const mongoose = require('mongoose');
+
 // Az Ertesites modell importálása
 const Ertesites = require('../models/ertesites');
 
@@ -113,6 +116,51 @@ const olvasatlanokSzama = async (eEmberId) => {
 // --- METÓDUS VEGE: olvasatlanokSzama ---
 
 
+// --- METÓDUS KEZDETE: olvasatlanokSzamaEntitasonkent ---
+// RÉSZFA-SZÁMLÁLÓ a kártya-badge-ekhez: egy eEmber olvasatlan értesítéseit számolja meg
+// ENTITÁSONKÉNT — egy értesítés MINDEN olyan kért entitásnál beleszámít, amelyik szerepel
+// az ős-láncában (osLanc). Így egy mély eseményről a szülő, nagyszülő... kártyája is tud
+// („felbugyborékolás"), és mindezt EGYETLEN aggregációs lekérdezéssel, nem entitásonként.
+// Lépések: $match (a multikey indexet használja) → $unwind (a lánc elemeire bontás) →
+// $match (csak a kért entitások maradnak) → $group (entitásonkénti darabszám).
+// Paraméterek: eEmberId, entitasIdk (tömb — a pakli összes elemének azonosítója)
+// Visszatérés: { '<entitasId>': darab, ... } — csak a 0-nál nagyobb számúak szerepelnek
+const olvasatlanokSzamaEntitasonkent = async (eEmberId, entitasIdk) => {
+  console.log('ertesitesRepository.olvasatlanokSzamaEntitasonkent - KEZDET', {
+    eEmberId,
+    entitasDarab: entitasIdk?.length ?? 0,
+  });
+
+  // Üres lista → nincs mit számolni
+  if (!Array.isArray(entitasIdk) || entitasIdk.length === 0) return {};
+
+  // Az aggregáció NEM végez automatikus string→ObjectId konverziót (a find igen),
+  // ezért kézzel alakítjuk át az azonosítókat
+  const idk = entitasIdk.map((id) => new mongoose.Types.ObjectId(id.toString()));
+
+  const sorok = await Ertesites.aggregate([
+    { $match: {
+        eEmberId: new mongoose.Types.ObjectId(eEmberId.toString()),
+        olvasva: false,
+        'osLanc.entitasId': { $in: idk },
+    } },
+    { $unwind: '$osLanc' },
+    { $match: { 'osLanc.entitasId': { $in: idk } } },
+    { $group: { _id: '$osLanc.entitasId', darab: { $sum: 1 } } },
+  ]);
+
+  // Tömb → egyszerű { entitasId: darab } térkép, hogy a hívó O(1) alatt olvashassa
+  const terkep = {};
+  for (const sor of sorok) terkep[sor._id.toString()] = sor.darab;
+
+  console.log('ertesitesRepository.olvasatlanokSzamaEntitasonkent - VEGE', {
+    talalatDarab: sorok.length,
+  });
+  return terkep;
+};
+// --- METÓDUS VEGE: olvasatlanokSzamaEntitasonkent ---
+
+
 // --- METÓDUS KEZDETE: megjelolOlvasottnak ---
 // Egy konkrét értesítés megjelölése olvasottként
 // Beállítja az olvasva: true és olvasvaIdopont: most mezőket
@@ -221,6 +269,7 @@ module.exports = {
   keresByid,
   keresByE_Ember,
   olvasatlanokSzama,
+  olvasatlanokSzamaEntitasonkent,
   megjelolOlvasottnak,
   megjelolMindetOlvasottnak,
   torol,

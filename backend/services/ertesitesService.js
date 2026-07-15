@@ -242,6 +242,29 @@ const mindetOlvasottnak = async (eEmberId) => {
 // --- METÓDUS VEGE: mindetOlvasottnak ---
 
 
+// --- METÓDUS KEZDETE: olvasatlanokSzamaEntitasonkent ---
+// RÉSZFA-SZÁMLÁLÓ a kártya-badge-ekhez: a megadott entitásokra visszaadja, hány olvasatlan
+// értesítése van az eEmbernek az adott entitás ÁGA alatt (magán az entitáson VAGY bármely
+// leszármazottján — az értesítések osLanc mezője alapján). Egyetlen aggregációs lekérdezés.
+// Használja: pakliService (a pakli minden elemére ráteszi az olvasatlanErtesitesek számot).
+// Paraméterek: eEmberId, entitasIdk (tömb)
+// Visszatérés: { '<entitasId>': darab, ... } — ami nincs benne, ott 0 az érték
+const olvasatlanokSzamaEntitasonkent = async (eEmberId, entitasIdk) => {
+  console.log('ertesitesService.olvasatlanokSzamaEntitasonkent - KEZDET', {
+    eEmberId,
+    entitasDarab: entitasIdk?.length ?? 0,
+  });
+
+  const terkep = await ertesitesRepository.olvasatlanokSzamaEntitasonkent(eEmberId, entitasIdk);
+
+  console.log('ertesitesService.olvasatlanokSzamaEntitasonkent - VEGE', {
+    talalatDarab: Object.keys(terkep).length,
+  });
+  return terkep;
+};
+// --- METÓDUS VEGE: olvasatlanokSzamaEntitasonkent ---
+
+
 // --- METÓDUS KEZDETE: olvasatlanokSzamaLekereses ---
 // Gyors lekérdezés: csak az olvasatlan értesítések száma
 // Paraméter: eEmberId
@@ -264,4 +287,5 @@ module.exports = {
   ertesitesMegjelolOlvasottnak,
   mindetOlvasottnak,
   olvasatlanokSzamaLekereses,
+  olvasatlanokSzamaEntitasonkent,
 };

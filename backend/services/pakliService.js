@@ -15,6 +15,9 @@ const egyezmenyRepository = require('../repositories/egyezmenyRepository');
 // tudatpontja), hogy a pakli által küldött `szavazhat` jelzés egyezzen a
 // szavazatService védelmével – egyetlen forrásból.
 const javaslatJogosultsagService = require('./javaslat/javaslatJogosultsagService');
+// A részfa-alapú olvasatlan értesítés-számláló (kártya-badge) – a pakli minden
+// elemére EGYETLEN csoportos lekérdezéssel kérjük le az ág alatti olvasatlanok számát.
+const ertesitesService = require('./ertesitesService');
 
 // --- PAKLI SERVICE OSZTÁLY ---
 class PakliService {
@@ -96,6 +99,12 @@ async pakliotOsszeallitasa(entitasId = null, entitasTipus = null, eemberId = nul
         kivalasztottMelysegiSzint,
         eemberId
     );
+
+    // 8. LÉPÉS - RÉSZFA-ALAPÚ OLVASATLAN ÉRTESÍTÉS-SZÁMOK (kártya-badge)
+    // A pakli ÉS a testvérek MINDEN elemére egyetlen csoportos lekérdezéssel
+    // rátesszük az `olvasatlanErtesitesek` számot (az elem ága alatti olvasatlanok).
+    // Best-effort: ha a számlálás hibázik, a pakli attól még kimegy (badge = 0).
+    await this.olvasatlanBadgeFeltoltese([...feltoltottPakli, ...testverek], eemberId);
 
     console.log('pakliotOsszeallitasa - VÉGE', {
         entitasId: kivalasztottEntitas.entitasId,
@@ -429,6 +438,46 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     eemberSajatTudatpontEntitason, // A néző e-ember saját pontja ezen az entitáson (0, ha nincs / nincs bejelentkezve)
     adatok
   };
+}
+
+// ----- OLVASATLAN BADGE-SZÁMOK FELTÖLTÉSE (részfa-alapú) -----
+/**
+* A megadott pakli-elemekre ráírja az `olvasatlanErtesitesek` mezőt: hány OLVASATLAN
+* értesítése van a néző e-embernek az elem ÁGA alatt (magán az entitáson vagy bármely
+* leszármazottján — az értesítések osLanc mezője alapján, "felbugyborékolás").
+* EGYETLEN csoportos lekérdezés fut az összes elemre (ertesitesService aggregáció).
+* Best-effort: hiba esetén minden elem 0-t kap, a pakli összeállítása nem törik meg.
+* A tömb elemeit HELYBEN módosítja (a hívó ugyanazokat az objektumokat küldi tovább).
+* @param {Array} elemek - Pakli-elemek (entitasId mezővel)
+* @param {string|null} eemberId - A néző e-ember azonosítója (null → minden badge 0)
+*/
+async olvasatlanBadgeFeltoltese(elemek, eemberId = null) {
+  console.log('olvasatlanBadgeFeltoltese - KEZDÉS', {
+    elemszam: elemek.length,
+    eemberId
+  });
+
+  // Alapérték: minden elem 0 – így a mező bejelentkezés nélkül is mindig létezik
+  for (const elem of elemek) elem.olvasatlanErtesitesek = 0;
+
+  // Nincs bejelentkezett néző vagy nincs elem → nincs mit számolni
+  if (!eemberId || elemek.length === 0) {
+    console.log('olvasatlanBadgeFeltoltese - VÉGE', { megjegyzes: 'nincs néző vagy elem' });
+    return;
+  }
+
+  try {
+    const entitasIdk = elemek.map(elem => elem.entitasId.toString());
+    const terkep = await ertesitesService.olvasatlanokSzamaEntitasonkent(eemberId, entitasIdk);
+    for (const elem of elemek) {
+      elem.olvasatlanErtesitesek = terkep[elem.entitasId.toString()] ?? 0;
+    }
+  } catch (hiba) {
+    // A badge másodlagos információ – hibája nem akaszthatja meg a paklit
+    console.error('olvasatlanBadgeFeltoltese - HIBA (badge-ek 0-n maradnak)', hiba.message);
+  }
+
+  console.log('olvasatlanBadgeFeltoltese - VÉGE', { elemszam: elemek.length });
 }
 
 // ----- ENTITÁS SZÖVEG LEKÉRÉSE -----

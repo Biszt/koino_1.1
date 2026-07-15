@@ -406,6 +406,12 @@ docker logs -f koino-backend
     eltűnnek és **mindkét badge elrejtődik**.
 34. ⬜ **99+ határeset:** 99-nél több olvasatlannál a badge „99+"-t mutat (DB-beszúrással
     szimulálható; vizuális ellenőrzés).
+35. ⬜ **Kártya-badge (részfa, 2026-07-15 óta):** legyen olvasatlan értesítésed egy
+    entitásról, aminek van szülője (az `osLanc`-ban a szülő is szerepel) → a paklin az
+    **esemény entitásának kártyáján ÉS minden felmenője kártyáján** piros badge a
+    hamburger gomb sarkán („felbugyborékolás"); a nem érintett ágak kártyáin nincs badge.
+    A szám a backend pakli-válasz `olvasatlanErtesitesek` mezőjéből jön (osLanc-alapú
+    csoportos számlálás). Olvasottnak jelölés után a pakli újratöltésével tűnik el.
 
 ---
 
