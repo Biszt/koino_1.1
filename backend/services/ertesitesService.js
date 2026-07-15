@@ -14,6 +14,10 @@ const Tartalom = require('../models/tartalom');
 const Kategoria = require('../models/kategoria');
 const TartalomTipus = require('../models/tartalomTipus');
 
+// A tudatpont-tulajdonossági szűrőhöz (tudatpontSzuro beállítás): az esemény entitásának
+// tudatpont-tulajdonosait kérjük le vele (kik tettek rá 0-nál több pontot).
+const tudatpontRepository = require('../repositories/tudatpontRepository');
+
 
 // ===== SEGÉDFÜGGVÉNY: entitasCimekFeltoltese =====
 // Az értesítésekhez feltölti az érintett entitás címét/nevét (`entitasCim`), típusonként
@@ -106,6 +110,23 @@ const ertesitesKuldes = async (
 
   const cselekvoKulcs = cselekvoId ? cselekvoId.toString() : null;
 
+  // ===== TUDATPONT-TULAJDONOSSÁGI SZŰRŐ ELŐKÉSZÍTÉSE (lusta betöltés) =====
+  // Csak akkor kérjük le az esemény entitásának tudatpont-tulajdonosait, ha van
+  // legalább egy szűrős (tudatpontSzuro: true) címzett — és akkor is csak EGYSZER,
+  // nem címzettenként. KIVÉTEL: Egyezmeny entitáson a szűrő nem értelmezhető
+  // (egyezményre nem lehet tudatpontot tenni), ott mindenkit átengedünk.
+  let tulajdonosok = null; // Set<eEmberId string> — az entitáson pontot tartók
+  const tulajdonosokLekerese = async () => {
+    if (tulajdonosok) return tulajdonosok;
+    const hozzarendelesek = await tudatpontRepository.findHozzarendelesekByEntitasNyers(
+      entitasId,
+      entitasTipus,
+      100000 // gyakorlati "nincs limit" — az összes tulajdonos kell
+    );
+    tulajdonosok = new Set(hozzarendelesek.map((h) => h.eemberId.toString()));
+    return tulajdonosok;
+  };
+
   // Az értesítendő eEmberek adatait gyűjtjük össze
   const kuldendoErtesitesek = [];
 
@@ -117,6 +138,13 @@ const ertesitesKuldes = async (
     if (ertesitesTipus === 'tudatpontValtozas' &&
         !tudatpontKuszobTeljesul(cimzett.tudatpontKuszobok, adatok)) {
       continue;
+    }
+
+    // Tudatpont-tulajdonossági szűrő: a bekapcsolt címzett csak akkor kap értesítést,
+    // ha PONTOSAN az esemény entitásán van saját tudatpontja (Egyezmenyen nem szűrünk)
+    if (cimzett.tudatpontSzuro === true && entitasTipus !== 'Egyezmeny') {
+      const tulajdonosKeszlet = await tulajdonosokLekerese();
+      if (!tulajdonosKeszlet.has(cimzett.eEmberId)) continue;
     }
 
     // Minden feltétel teljesül → ez az eEmber kap értesítést

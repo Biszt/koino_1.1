@@ -422,6 +422,16 @@ docker logs -f koino-backend
     olvasatlanjait jelöli (a többi ág és az app-badge többi része érintetlen). Értesítésre
     kattintva az érintett entitásra navigál; olvasás után az app-badge azonnal, a
     kártya-badge-ek a modal bezárásakor (pakli-újratöltés) frissülnek.
+37. ⬜ **Tudatpont-tulajdonossági szűrő (2026-07-15 óta):** az Értesítési beállítások
+    modalban (csomóponti ÉS globális módban is) a típus-lista alatt ÚJ pipa:
+    **„Csak ahol tudatpontom van"**. Bekapcsolva csak akkor jön értesítés, ha az
+    e-embernek PONTOSAN az esemény entitásán van saját tudatpontja (a felmenőkön lévő
+    pont NEM elég). KIVÉTEL: Egyezményen történt eseménynél a szűrő nem érvényesül
+    (egyezményre nem lehet tudatpontot tenni) — ott bekapcsolt szűrővel is jön az
+    értesítés. Próba: szűrő BE + pont nélküli entitáson esemény → nincs értesítés;
+    ugyanez pont birtokában vagy szűrő KI → van. A pipa állapota mentés után
+    visszatöltve is látszik (PUT/GET `ertesitesi-beallitasok[/globalis]`,
+    `tudatpontSzuro` mező).
 
 ---
 

@@ -16,11 +16,11 @@ const beallitasLetrehozasVagyFrissites = async (req, res) => {
   });
 
   try {
-    const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, kikapcsolva } = req.body;
+    const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, kikapcsolva } = req.body;
 
     const beallitas = await ertesitesiBeallitasService.beallitasLetrehozasVagyFrissites(
       req.user.id,
-      { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, kikapcsolva }
+      { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, kikapcsolva }
     );
 
     console.log('ertesitesiBeallitasController.beallitasLetrehozasVagyFrissites - VEGE', {
@@ -146,11 +146,12 @@ const globalisMentese = async (req, res) => {
   });
 
   try {
-    const { ertesitesTipusok, tudatpontKuszobok } = req.body;
+    const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro } = req.body;
 
     const eredmeny = await ertesitesiBeallitasService.globalisBeallitasMentese(req.user.id, {
       ertesitesTipusok,
       tudatpontKuszobok,
+      tudatpontSzuro,
     });
 
     console.log('ertesitesiBeallitasController.globalisMentese - VEGE', { eredmeny });

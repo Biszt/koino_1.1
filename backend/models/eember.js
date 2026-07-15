@@ -112,6 +112,13 @@ ertesitesiAlapbeallitas: {
     osszDirekt:    { type: Number, min: 1, default: null },
     osszSzazalek:  { type: Number, min: 1, max: 100, default: null },
   },
+  // TUDATPONT-TULAJDONOSSÁGI SZŰRŐ globális szinten: ha true, csak akkor jön értesítés,
+  // ha az esemény entitásán van saját tudatpont (Egyezmeny-eseményre nem vonatkozik).
+  // Ugyanaz a szabály, mint a csomóponti beállításban (ertesitesiBeallitas.tudatpontSzuro).
+  tudatpontSzuro: {
+    type: Boolean,
+    default: false,
+  },
 }
 
 });

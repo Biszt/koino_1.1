@@ -255,6 +255,7 @@ class ErtesitesiBeallitasModal {
         const adatok = valasz?.adatok ?? {};
         this._checkboxokBeallitasa(adatok.ertesitesTipusok ?? []);
         this._tudatpontKuszobokBeallitasa(adatok.tudatpontKuszobok);
+        this._tudatpontSzuroBeallitasa(adatok.tudatpontSzuro);
         this._tudatpontPanelFrissitese();
 
         const infoElem = document.getElementById('ertesites-beallitas-info');
@@ -280,9 +281,10 @@ class ErtesitesiBeallitasModal {
       const bekapcsolt = adatok.ertesitesTipusok ?? [];
       this.beallitasId = adatok.beallitasId ?? null;
 
-      // Checkboxok + tudatpont-küszöbök előtöltése az érvényes állapot szerint
+      // Checkboxok + tudatpont-küszöbök + tudatpont-szűrő előtöltése az érvényes állapot szerint
       this._checkboxokBeallitasa(bekapcsolt);
       this._tudatpontKuszobokBeallitasa(adatok.tudatpontKuszobok);
+      this._tudatpontSzuroBeallitasa(adatok.tudatpontSzuro);
       this._tudatpontPanelFrissitese();
 
       // Forrás-magyarázat kiírása
@@ -324,6 +326,19 @@ class ErtesitesiBeallitasModal {
   _orokoltGombLathatosaga(lathato) {
     const gomb = document.getElementById('ertesites-beallitas-orokolt-gomb');
     if (gomb) gomb.style.display = lathato ? '' : 'none';
+  }
+
+  // ===== TUDATPONT-SZŰRŐ PIPA: KITÖLTÉS =====
+  // A „Csak ahol tudatpontom van" pipa beállítása a betöltött (érvényes) állapotból.
+  _tudatpontSzuroBeallitasa(ertek) {
+    const pipa = document.getElementById('ertesites-tudatpont-szuro');
+    if (pipa) pipa.checked = ertek === true;
+  }
+
+  // ===== TUDATPONT-SZŰRŐ PIPA: KIOLVASÁS =====
+  _tudatpontSzuroErteke() {
+    const pipa = document.getElementById('ertesites-tudatpont-szuro');
+    return pipa?.checked === true;
   }
 
   // ===== TUDATPONT-KÜSZÖBÖK: MEZŐK KITÖLTÉSE =====
@@ -397,6 +412,7 @@ class ErtesitesiBeallitasModal {
 
     const ertesitesTipusok = this._bepipaltTipusok();
     const tudatpontKuszobok = this._tudatpontKuszobokOsszegyujtese();
+    const tudatpontSzuro = this._tudatpontSzuroErteke();
 
     // A tudatpont-küszöbök helyi ellenőrzése (a backend séma is validál, de így barátságosabb)
     const kuszobHiba = this._tudatpontKuszobokValidalas(tudatpontKuszobok);
@@ -411,14 +427,16 @@ class ErtesitesiBeallitasModal {
     try {
       if (this.globalis) {
         // Globális alapbeállítás mentése (fő menü)
-        await apiPut('ertesitesi-beallitasok/globalis', { ertesitesTipusok, tudatpontKuszobok }, this.token);
+        await apiPut('ertesitesi-beallitasok/globalis',
+          { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro }, this.token);
       } else {
         // Csomóponti beállítás mentése (mindig saját rekord → fixálás)
         await apiPut('ertesitesi-beallitasok', {
           entitasId:    this.entitasId,
           entitasTipus: this.entitasTipus,
           ertesitesTipusok,
-          tudatpontKuszobok
+          tudatpontKuszobok,
+          tudatpontSzuro
         }, this.token);
       }
 

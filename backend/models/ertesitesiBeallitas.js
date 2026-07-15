@@ -73,6 +73,16 @@ const ertesitesiBeallitasSchema = new mongoose.Schema(
       osszSzazalek:  { type: Number, min: [1, 'Legalább 1%'], max: [100, 'Legfeljebb 100%'], default: null },
     },
 
+    // TUDATPONT-TULAJDONOSSÁGI SZŰRŐ: ha true, az e-ember CSAK akkor kap értesítést,
+    // ha PONTOSAN az esemény entitásán van saját tudatpontja (nem a felmenőin!).
+    // KIVÉTEL: Egyezmeny entitáson történt eseményre a szűrő NEM vonatkozik, mert
+    // egyezményre nem lehet tudatpontot tenni (tudatpontHozzarendeles enum) — ott
+    // a szűrő bekapcsolva is átengedi az értesítést.
+    tudatpontSzuro: {
+      type: Boolean,
+      default: false, // Alapból kikapcsolt — minden feliratkozott esemény jön
+    },
+
     // Ha true, akkor ezen az entitáson (és leszármazottain) teljesen kikapcsol az értesítés
     // Ez lehetővé teszi, hogy egy ágat teljes csendbe lehessen állítani
     kikapcsolva: {

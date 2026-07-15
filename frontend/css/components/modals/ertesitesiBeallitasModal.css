@@ -160,3 +160,12 @@
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* ===== TUDATPONT-TULAJDONOSSÁGI SZŰRŐ SOR ===== */
+/* A típus-lista UTÁNI közös feltétel — vékony elválasztó vonallal jelezzük,
+   hogy nem egy újabb eseménytípus, hanem az összes kipipáltra vonatkozó szűrő. */
+.ertesitesi-beallitas-modal__tudatpont-szuro {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+}

@@ -161,7 +161,13 @@ const cimzettekFeloldasa = async (entitasId, entitasTipus, ertesitesTipus) => {
   for (const b of feloldott.values()) {
     if (b.kikapcsolva) continue;
     if (!Array.isArray(b.ertesitesTipusok) || !b.ertesitesTipusok.includes(ertesitesTipus)) continue;
-    cimzettek.push({ eEmberId: b.eEmberId.toString(), tudatpontKuszobok: b.tudatpontKuszobok });
+    cimzettek.push({
+      eEmberId: b.eEmberId.toString(),
+      tudatpontKuszobok: b.tudatpontKuszobok,
+      // Tudatpont-tulajdonossági szűrő: az ertesitesService dönti el vele, hogy a
+      // címzettnek van-e pontja az esemény entitásán (ha nincs → nem kap értesítést)
+      tudatpontSzuro: b.tudatpontSzuro === true,
+    });
   }
 
   // GLOBÁLIS feliratkozók: a globális alapjuk tartalmazza a típust, ÉS a lánc még nem oldotta
@@ -176,6 +182,8 @@ const cimzettekFeloldasa = async (entitasId, entitasTipus, ertesitesTipus) => {
     cimzettek.push({
       eEmberId: kulcs,
       tudatpontKuszobok: e.ertesitesiAlapbeallitas?.tudatpontKuszobok ?? {},
+      // A globális alapbeállítás tudatpont-szűrője ugyanúgy érvényes
+      tudatpontSzuro: e.ertesitesiAlapbeallitas?.tudatpontSzuro === true,
     });
   }
 
@@ -203,7 +211,7 @@ const beallitasLetrehozasVagyFrissites = async (eEmberId, beallitasAdatok) => {
     beallitasAdatok,
   });
 
-  const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, kikapcsolva } =
+  const { entitasId, entitasTipus, ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, kikapcsolva } =
     beallitasAdatok;
 
   // Megkeressük, hogy létezik-e már beállítás ezen az entitáson
@@ -220,6 +228,7 @@ const beallitasLetrehozasVagyFrissites = async (eEmberId, beallitasAdatok) => {
     eredmeny = await ertesitesiBeallitasRepository.frissit(meglevo._id, {
       ertesitesTipusok,
       tudatpontKuszobok: normalizaltKuszobok(tudatpontKuszobok),
+      tudatpontSzuro: tudatpontSzuro === true,
       kikapcsolva,
     });
   } else {
@@ -230,6 +239,7 @@ const beallitasLetrehozasVagyFrissites = async (eEmberId, beallitasAdatok) => {
       entitasTipus,
       ertesitesTipusok: ertesitesTipusok || [],
       tudatpontKuszobok: normalizaltKuszobok(tudatpontKuszobok),
+      tudatpontSzuro: tudatpontSzuro === true,
       kikapcsolva: kikapcsolva || false,
     });
   }
@@ -295,6 +305,7 @@ const globalisBeallitasLekereses = async (eEmberId) => {
   const eredmeny = {
     ertesitesTipusok: alap.ertesitesTipusok ?? [],
     tudatpontKuszobok: normalizaltKuszobok(alap.tudatpontKuszobok),
+    tudatpontSzuro: alap.tudatpontSzuro === true,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasLekereses - VEGE', { eredmeny });
@@ -310,7 +321,7 @@ const globalisBeallitasLekereses = async (eEmberId) => {
 const globalisBeallitasMentese = async (eEmberId, adatok) => {
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - KEZDET', { eEmberId, adatok });
 
-  const { ertesitesTipusok, tudatpontKuszobok } = adatok;
+  const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro } = adatok;
 
   const eember = await eEmber
     .findByIdAndUpdate(
@@ -319,6 +330,7 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
         ertesitesiAlapbeallitas: {
           ertesitesTipusok: ertesitesTipusok || [],
           tudatpontKuszobok: normalizaltKuszobok(tudatpontKuszobok),
+          tudatpontSzuro: tudatpontSzuro === true,
         },
       },
       { new: true, runValidators: true }
@@ -329,6 +341,7 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
   const eredmeny = {
     ertesitesTipusok: alap.ertesitesTipusok ?? [],
     tudatpontKuszobok: normalizaltKuszobok(alap.tudatpontKuszobok),
+    tudatpontSzuro: alap.tudatpontSzuro === true,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - VEGE', { eredmeny });
@@ -370,6 +383,7 @@ const ervenyesBeallitasLekereses = async (eEmberId, entitasId, entitasTipus) => 
       ertesitesTipusok: ervenyes.ertesitesTipusok,
       kikapcsolva: ervenyes.kikapcsolva,
       tudatpontKuszobok: normalizaltKuszobok(ervenyes.tudatpontKuszobok),
+      tudatpontSzuro: ervenyes.tudatpontSzuro === true,
       forras: vanSajat ? 'sajat' : 'orokolt',
       vanSajat,
       // A saját rekord azonosítója – ez kell a "vissza az örököltre" (törlés) gombhoz.
@@ -387,6 +401,7 @@ const ervenyesBeallitasLekereses = async (eEmberId, entitasId, entitasTipus) => 
     ertesitesTipusok: globalis.ertesitesTipusok,
     kikapcsolva: false,
     tudatpontKuszobok: normalizaltKuszobok(globalis.tudatpontKuszobok),
+    tudatpontSzuro: globalis.tudatpontSzuro === true,
     forras: 'globalis',
     vanSajat: false,
     beallitasId: null,

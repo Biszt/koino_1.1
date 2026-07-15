@@ -20,4 +20,18 @@
   <!-- A 7 eseménytípus checkbox-sorának helye – ide injektálja a JS a sorokat -->
   <div class="ertesitesi-beallitas-modal__mezok" id="ertesites-beallitas-mezok"></div>
 
+  <!-- TUDATPONT-TULAJDONOSSÁGI SZŰRŐ: a kipipált eseménytípusokra rátett közös feltétel.
+       Bekapcsolva csak akkor jön értesítés, ha az esemény entitásán van saját tudatpont.
+       (Egyezmény-eseményre nem vonatkozik — egyezményre nem lehet tudatpontot tenni.) -->
+  <label class="ertesitesi-beallitas-modal__sor ertesitesi-beallitas-modal__tudatpont-szuro">
+    <input type="checkbox" id="ertesites-tudatpont-szuro" class="ertesitesi-beallitas-modal__pipa">
+    <span class="ertesitesi-beallitas-modal__szoveg">
+      <span class="ertesitesi-beallitas-modal__felirat">Csak ahol tudatpontom van</span>
+      <span class="ertesitesi-beallitas-modal__magyarazat">
+        Bekapcsolva csak akkor kapsz értesítést, ha az esemény entitásán saját tudatpontod
+        van. (Egyezményen történt eseményre nem vonatkozik.)
+      </span>
+    </span>
+  </label>
+
 </div>
