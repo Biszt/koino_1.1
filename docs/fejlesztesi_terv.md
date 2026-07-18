@@ -224,11 +224,15 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   - ELHALASZTVA a v1-ből: felhatalmazott kibocsátók (D1 szerint is Fázis 2); szülői
     hozzájárulás-lépés (korhatár-döntés: nincs regisztrációs korhatár; a GDPR-kérdés
     nyitott pontként az N4 mellé).
-- [ ] **V2. Küszöbváltozás-értesítés** (H1, a vita 2. pontjának kötelező eleme) — új
-  értesítés-típus: az entitás érvényes (medián) küszöbeinek jelentős változásáról a
-  tudatpont-tulajdonosoknak. Az értesítés-infrastruktúra (beállítás-cascade,
-  postafiók, badge) kész; a típus + a trigger hiányzik (érték javaslat mentésekor
-  medián-újraszámítás és összevetés).
+- [x] **V2. Küszöbváltozás-értesítés** (H1, a vita 2. pontjának kötelező eleme) —
+  ✅ KÉSZ (2026-07-18; böngészős teszt hátra: teszt.md 41). Új `kuszobValtozas`
+  értesítés-típus + trigger az érték javaslat mentésekor (a mentés előtti és utáni
+  medián-értékek összevetése; az `adatok.valtozasok` őrzi a régi → új párokat).
+  FONTOS tervezési döntés: ez a típus **NEM opt-in** — a beállítás-cascade
+  megkerülésével MINDEN tudatpont-tulajdonos megkapja (a cselekvőt kivéve), mert a
+  D4 „alvó immunrendszer" elve ezt kívánja; ezért az Értesítési beállítások
+  listájába szándékosan nincs felvéve. „Jelentős változás" v1-ben = bármilyen
+  elmozdulás (az értékek egészek); később finomítható külön küszöbbel.
 - [ ] **V3. Szavazat-láthatóság szűkítése** (H2, D2 első lépése) — az egyéni szavazat
   ne legyen más e-emberek felé látható (API-válaszok átvizsgálása: pakli, részletek,
   saját-szavazat végpontok); az üzemeltetői láthatóság őszinte kimondása a

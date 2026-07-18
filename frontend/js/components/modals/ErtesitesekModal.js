@@ -4,6 +4,7 @@
 import Modal from './Modal.js';
 import { apiGet, apiPatch } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
+import { masodpercFelirat } from '../../utils/idoFormazo.js';
 
 // ===== ESEMÉNYTÍPUS → EMBERI SZÖVEG =====
 // (A szavazasiHatarido a cronnal jön később; a szavazatErkezett elhagyva – ezért nincsenek itt.)
@@ -13,6 +14,17 @@ const TIPUS_SZOVEG = {
   javaslatElvetve:   'Javaslat elvetve',
   tudatpontValtozas: 'Tudatpont-változás',
   ujGyerekEntitas:   'Új tartalom jött létre',
+  kuszobValtozas:    'Küszöbváltozás',
+};
+
+// ===== KÜSZÖB-MEZŐ → EMBERI FELIRAT + FORMÁZÁS =====
+// A kuszobValtozas értesítés adatok.valtozasok elemeihez: melyik küszöb változott,
+// és hogyan írjuk ki az értékét (% vagy emberi időformátum).
+const KUSZOB_MEZO_FELIRAT = {
+  javaslatElfogadasiKuszob: { felirat: 'elfogadási küszöb',  formaz: (e) => `${e}%` },
+  reszveteliAranyKuszob:    { felirat: 'részvételi küszöb',  formaz: (e) => `${e}%` },
+  minimumDontesiIdo:        { felirat: 'min. döntési idő',   formaz: (e) => masodpercFelirat(e) },
+  maximumDontesiIdo:        { felirat: 'max. döntési idő',   formaz: (e) => masodpercFelirat(e) },
 };
 
 // Egy oldalon ennyi értesítést kérünk le
@@ -206,6 +218,9 @@ class ErtesitesekModal {
     const entitasResz = ertesites.entitasCim ? ` – ${this._escape(ertesites.entitasCim)}` : '';
     const olvasatlanOsztaly = ertesites.olvasva ? '' : ' ertesitesek-modal__elem--olvasatlan';
 
+    // Küszöbváltozásnál kiírjuk, MELYIK küszöb változott és hogyan (régi → új)
+    const reszletResz = this._kuszobValtozasReszlet(ertesites);
+
     return `
       <button type="button"
         class="ertesitesek-modal__elem${olvasatlanOsztaly}"
@@ -215,9 +230,31 @@ class ErtesitesekModal {
         <span class="ertesitesek-modal__pont" aria-hidden="true"></span>
         <span class="ertesitesek-modal__szoveg">
           <span class="ertesitesek-modal__cim">${cimSzoveg}${entitasResz}</span>
+          ${reszletResz}
           <span class="ertesitesek-modal__ido">${this._idoSzoveg(ertesites.createdAt)}</span>
         </span>
       </button>`;
+  }
+
+  // ===== KÜSZÖBVÁLTOZÁS RÉSZLET-SOR =====
+  // A kuszobValtozas értesítés adatok.valtozasok tömbjéből emberi szöveg:
+  // pl. „elfogadási küszöb: 51% → 60% · min. döntési idő: 3 perc → 5 perc".
+  // Más típusnál (vagy hiányzó adatoknál) üres string.
+  _kuszobValtozasReszlet(ertesites) {
+    if (ertesites.tipus !== 'kuszobValtozas') return '';
+
+    const valtozasok = ertesites.adatok?.valtozasok;
+    if (!Array.isArray(valtozasok) || valtozasok.length === 0) return '';
+
+    const darabok = valtozasok
+      .filter((v) => KUSZOB_MEZO_FELIRAT[v.mezo])
+      .map((v) => {
+        const def = KUSZOB_MEZO_FELIRAT[v.mezo];
+        return `${def.felirat}: ${def.formaz(v.regi)} → ${def.formaz(v.uj)}`;
+      });
+    if (darabok.length === 0) return '';
+
+    return `<span class="ertesitesek-modal__reszlet">${this._escape(darabok.join(' · '))}</span>`;
   }
 
   // ===== „TOVÁBBIAK" GOMB FRISSÍTÉSE =====

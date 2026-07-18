@@ -8,6 +8,10 @@ const TartalomErtekHisztogramRepository = require('../repositories/tartalomErtek
 const TudatpontRepository = require('../repositories/tudatpontRepository');
 const JavaslatRepository = require('../repositories/javaslatRepository');
 
+// Küszöbváltozás-értesítés (V2): ha az érték javaslat mentése után az entitás
+// érvényes (medián) küszöbei megváltoztak, a tudatpont-tulajdonosok riasztást kapnak
+const ertesitesService = require('./ertesitesService');
+
 // ===================================
 // ÉRTÉK SZÁMÍTÁS SERVICE OSZTÁLY
 // ===================================
@@ -395,10 +399,28 @@ class ErtekJavaslatSzamitasService {
       entitasTipus
     );
 
-    // 4. LÉPÉS - VAN-E MÁR HISZTOGRAM?
+    // 4. LÉPÉS - VAN-E MÁR HISZTOGRAM? + A RÉGI ÉRVÉNYES ÉRTÉKEK RÖGZÍTÉSE
     // Régebbi entitásoknak lehet, hogy még nincs (pl. a rendszer bővítése előtt
     // jöttek létre) – ilyenkor az első érték javaslat HOZZA LÉTRE a hisztogramot.
-    const hisztogramLetezik = await TartalomErtekHisztogramRepository.existsByEntitas(entitasId, entitasTipus);
+    // A küszöbváltozás-értesítéshez (V2) ELMENTJÜK a mentés ELŐTTI érvényes
+    // értékeket: ha van hisztogram, annak aktuális mediánjait; ha nincs, akkor
+    // az alapértelmezett küszöböket (mert eddig azok voltak érvényben — lásd
+    // aktulisErtekekLekerese fallback).
+    const meglevoHisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    const hisztogramLetezik = !!meglevoHisztogram;
+    const regiErvenyesErtekek = hisztogramLetezik
+      ? {
+          javaslatElfogadasiKuszob: meglevoHisztogram.aktualJavaslatElfogadasiKuszob,
+          reszveteliAranyKuszob:    meglevoHisztogram.aktualReszveteliAranyKuszob,
+          minimumDontesiIdo:        meglevoHisztogram.aktualMinimumDontesiIdo,
+          maximumDontesiIdo:        meglevoHisztogram.aktualMaximumDontesiIdo,
+        }
+      : {
+          javaslatElfogadasiKuszob: 51,
+          reszveteliAranyKuszob:    51,
+          minimumDontesiIdo:        0,
+          maximumDontesiIdo:        31536000,
+        };
 
     // 5. LÉPÉS - ÉRTÉK JAVASLAT MENTÉSE (eemberenkénti rekord)
     const ertekJavaslat = await ErtekJavaslatRepository.createOrUpdate(
@@ -441,6 +463,35 @@ class ErtekJavaslatSzamitasService {
         minimumDontesiIdo,
         maximumDontesiIdo
       );
+    }
+
+    // 7. LÉPÉS - KÜSZÖBVÁLTOZÁS-ÉRTESÍTÉS (V2, D4 kötelező elem)
+    // A mentés ELŐTTI és UTÁNI érvényes (medián) értékek összevetése — ami
+    // változott, arról a tudatpont-tulajdonosok értesítést kapnak (a beadót
+    // kivéve). „Jelentős változás" v1-ben: BÁRMILYEN elmozdulás (az értékek
+    // egészek, tehát a legkisebb változás is legalább 1 egység); finomítható
+    // később külön küszöbbel. Hiba esetén a mentés NEM bukhat el (try/catch).
+    const ujErvenyesErtekek = {
+      javaslatElfogadasiKuszob: frissitettHisztogram.aktualJavaslatElfogadasiKuszob,
+      reszveteliAranyKuszob:    frissitettHisztogram.aktualReszveteliAranyKuszob,
+      minimumDontesiIdo:        frissitettHisztogram.aktualMinimumDontesiIdo,
+      maximumDontesiIdo:        frissitettHisztogram.aktualMaximumDontesiIdo,
+    };
+
+    const valtozasok = [];
+    for (const mezo of Object.keys(ujErvenyesErtekek)) {
+      if (regiErvenyesErtekek[mezo] !== ujErvenyesErtekek[mezo]) {
+        valtozasok.push({ mezo, regi: regiErvenyesErtekek[mezo], uj: ujErvenyesErtekek[mezo] });
+      }
+    }
+
+    if (valtozasok.length > 0) {
+      try {
+        await ertesitesService.kuszobValtozasErtesites(entitasId, entitasTipus, valtozasok, eemberId);
+      } catch (hiba) {
+        // Az értesítés best-effort — a hibája nem ronthatja el az érték javaslat mentését
+        console.error('ertekJavaslatLetrehozasaVagyModositasa - küszöbváltozás-értesítés HIBA:', hiba.message);
+      }
     }
 
     console.log("<<< ertekJavaslatLetrehozasaVagyModositasa - kész");

@@ -179,6 +179,95 @@ const ertesitesKuldes = async (
 // --- METÓDUS VEGE: ertesitesKuldes ---
 
 
+// --- METÓDUS KEZDETE: kuszobValtozasErtesites ---
+// KÜSZÖBVÁLTOZÁS-ÉRTESÍTÉS (V2 — a vízió-vita D4 döntésének kötelező eleme).
+// Az entitás érvényes (medián) küszöbeinek változásáról értesíti az entitás
+// TUDATPONT-TULAJDONOSAIT. FONTOS különbség a többi típushoz képest: NEM a
+// beállítás-cascade dönti el a címzetteket (nem opt-in!) — aki pontot tart az
+// entitáson, az felelős érte, ezért alapból riasztást kap, ha a döntési
+// szabályok megváltoznak („alvó immunrendszer"). A cselekvőt (aki az érték
+// javaslatával a változást okozta) nem értesítjük.
+// Paraméterek:
+//   entitasId, entitasTipus – az entitás, amelynek a küszöbei változtak
+//   valtozasok – [{ mezo, regi, uj }] a ténylegesen megváltozott mezőkről
+//                (mezo: javaslatElfogadasiKuszob | reszveteliAranyKuszob |
+//                       minimumDontesiIdo | maximumDontesiIdo)
+//   cselekvoId – az érték javaslatot beadó e-ember (őt nem értesítjük)
+// Visszatérés: a létrehozott értesítések tömbje
+const kuszobValtozasErtesites = async (entitasId, entitasTipus, valtozasok, cselekvoId = null) => {
+  console.log('ertesitesService.kuszobValtozasErtesites - KEZDET', {
+    entitasId,
+    entitasTipus,
+    valtozasDarab: valtozasok?.length ?? 0,
+    cselekvoId,
+  });
+
+  // Ha valójában semmi sem változott, nincs kit értesíteni
+  if (!valtozasok || valtozasok.length === 0) {
+    console.log('ertesitesService.kuszobValtozasErtesites - VEGE (nincs változás)');
+    return [];
+  }
+
+  // === 1. LÉPÉS: AZ ENTITÁS TUDATPONT-TULAJDONOSAI ===
+  // Ugyanaz a lekérés, mint a tudatpont-tulajdonossági szűrőnél
+  const hozzarendelesek = await tudatpontRepository.findHozzarendelesekByEntitasNyers(
+    entitasId,
+    entitasTipus,
+    100000 // gyakorlati "nincs limit" — az összes tulajdonos kell
+  );
+
+  const cselekvoKulcs = cselekvoId ? cselekvoId.toString() : null;
+  const cimzettek = [];
+  const marBenne = new Set(); // biztonsági duplikátum-szűrés
+  for (const h of hozzarendelesek) {
+    const kulcs = h.eemberId.toString();
+    if (kulcs === cselekvoKulcs) continue; // a változást okozót nem értesítjük
+    if (marBenne.has(kulcs)) continue;
+    marBenne.add(kulcs);
+    cimzettek.push(kulcs);
+  }
+
+  if (cimzettek.length === 0) {
+    console.log('ertesitesService.kuszobValtozasErtesites - VEGE (nincs címzett)');
+    return [];
+  }
+
+  // === 2. LÉPÉS: ŐS-LÁNC FELÉPÍTÉSE (kártya-badge + ág-postafiók szűréshez) ===
+  // Itt nem fut a cimzettekFeloldasa (nincs beállítás-feloldás), ezért a láncot
+  // külön építjük fel — ugyanazzal a szuloKereses logikával.
+  const osLanc = [];
+  let aktId = entitasId;
+  let aktTipus = entitasTipus;
+  while (aktId && aktTipus) {
+    osLanc.push({ entitasId: aktId, entitasTipus: aktTipus });
+    const szulo = await ertesitesiBeallitasService.szuloKereses(aktId, aktTipus);
+    if (!szulo) break;
+    aktId = szulo.szuloId;
+    aktTipus = szulo.szuloTipus;
+  }
+
+  // === 3. LÉPÉS: ÉRTESÍTÉSEK TÖMEGES LÉTREHOZÁSA ===
+  const kuldendoErtesitesek = cimzettek.map((eEmberId) => ({
+    eEmberId,
+    tipus: 'kuszobValtozas',
+    entitasId,
+    entitasTipus,
+    osLanc,
+    adatok: { valtozasok }, // a postafiók a régi → új értékeket ebből mutatja
+    olvasva: false,
+    olvasvaIdopont: null,
+  }));
+
+  const letrehozottErtesitesek = await ertesitesRepository.tomegesLetrehoz(kuldendoErtesitesek);
+
+  console.log('ertesitesService.kuszobValtozasErtesites - VEGE', {
+    kuldottDarab: letrehozottErtesitesek.length,
+  });
+  return letrehozottErtesitesek;
+};
+// --- METÓDUS VEGE: kuszobValtozasErtesites ---
+
+
 // --- METÓDUS KEZDETE: postafiokLekereses ---
 // Egy eEmber postafiókjának lekérése lapozással
 // Paraméterek: eEmberId, lap, lapMeret,
@@ -316,6 +405,7 @@ const olvasatlanokSzamaLekereses = async (eEmberId) => {
 // Az összes publikus metódus exportálása
 module.exports = {
   ertesitesKuldes,
+  kuszobValtozasErtesites,
   postafiokLekereses,
   ertesitesMegjelolOlvasottnak,
   mindetOlvasottnak,

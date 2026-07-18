@@ -78,6 +78,13 @@
   color: var(--color-text-muted);
 }
 
+/* Küszöbváltozás részlet-sor: melyik küszöb változott, régi → új értékkel */
+.ertesitesek-modal__reszlet {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
 /* ===== „TOVÁBBIAK" ===== */
 .ertesitesek-modal__tovabbiak-sor {
   display: flex;
