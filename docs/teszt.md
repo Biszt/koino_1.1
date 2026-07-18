@@ -485,6 +485,13 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 - **Egyezmény kártya „Javaslat létrehozása"** menüpont még 🚧 (nincs kész).
 - Régi (csak tartalom) érték-adatokat a polimorf átállásnál eldobtuk; a meglévő
   entitások az **első** érték javaslatnál kapják meg a hisztogramjukat.
+- **osLanc-pótlás (2026-07-18, LEFUTOTT):** a 2026-07-15 (A1) előtt keletkezett
+  értesítésekből hiányzott az `osLanc` mező, ezért azok NEM számítottak bele a
+  kártya-badge részfa-számlálásába és az ág-szűrt postafiókba (a fő menü badge-e jó
+  volt — az nem osLanc-alapú). Egyszeri migráció: `docker exec koino-backend node
+  tools/osLancPotlas.js` (52 értesítés pótolva; többször futtatható, csak a hiányos
+  rekordokhoz nyúl). Ha egy régi DB-mentés visszatöltése után a kártya-badge megint
+  „eltűnik", ezt kell újra lefuttatni.
 
 ---
 

@@ -445,6 +445,8 @@ const beallitasTorles = async (beallitasId, eEmberId) => {
 
 module.exports = {
   // A cascade-et, a címzett-feloldást és a globális lekérést az ertesitesService is használja
+  // A szuloKereses-t a tools/osLancPotlas.js egyszeri migráció is használja (azonos lánc-logika)
+  szuloKereses,
   beallitasKeresesCascade,
   cimzettekFeloldasa,
   globalisBeallitasLekereses,
