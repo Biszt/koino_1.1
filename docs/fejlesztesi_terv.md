@@ -186,6 +186,51 @@ frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
 
 ---
 
+## A vízió-vita hozadéka — új 1. fázisú feladatok (2026-07-17)
+
+*A 2026-07-15–17-i vízió-vita ([vizio_kritikak.md](vizio_kritikak.md)) döntéseiből az
+1. fázisra (központi szerveres koino) háruló feladatok. Részletes indoklás:
+[fejlesztesi_terv_fazis2.md](fejlesztesi_terv_fazis2.md) (D-döntések, H-híd-feladatok,
+N-nyitott kérdések). A sorrendről a tulajdonos dönt; a meglévő terv-sorrend
+(7. Tudatpontok nézet, 8. eember beállítások, 9. alkategória) mellé illesztendők.*
+
+**Elfogadott kidolgozási sorrend (2026-07-17, a tulajdonos döntése):** a vita
+lezárultával a kódírás-felfüggesztés VÉGET ÉRT, a fejlesztés az 1. fázisban
+folytatódik. Első lépés a **V1 részletes terve** (megvitatás, majd implementáció) —
+ez a bemutató dokumentum hitelességének feltétele is („a regisztráció meghívásos
+alapon működik", miközben a kód ma nyíltan regisztrál). Utána **V2**, majd **V5**;
+a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
+
+- [ ] **V1. Meghívásos regisztráció + tanúsítás (bizalmi háló v1)** — a bemutató
+  dokumentum ígéri („A regisztráció meghívásos alapon működik"), de ma a regisztráció
+  NYÍLT! Kell: meghívó (kód/entitás), tanúsítási lépés (a meghívott valódi, még nem
+  regisztrált személy), korlátok első köre (meghívás-darabszám/idő, visszavonhatóság
+  — az N4 szabályok v1-e). + 16 év alatti regisztrálónál szülői hozzájárulás-lépés
+  (GDPR). **A legnagyobb új darab.**
+- [ ] **V2. Küszöbváltozás-értesítés** (H1, a vita 2. pontjának kötelező eleme) — új
+  értesítés-típus: az entitás érvényes (medián) küszöbeinek jelentős változásáról a
+  tudatpont-tulajdonosoknak. Az értesítés-infrastruktúra (beállítás-cascade,
+  postafiók, badge) kész; a típus + a trigger hiányzik (érték javaslat mentésekor
+  medián-újraszámítás és összevetés).
+- [ ] **V3. Szavazat-láthatóság szűkítése** (H2, D2 első lépése) — az egyéni szavazat
+  ne legyen más e-emberek felé látható (API-válaszok átvizsgálása: pakli, részletek,
+  saját-szavazat végpontok); az üzemeltetői láthatóság őszinte kimondása a
+  dokumentációban.
+- [ ] **V4. E-mail privát** (H3) — ellenőrzés: az e-mail semmilyen, más felhasználónak
+  szóló API-válaszban nem szerepelhet; a nyilvános profil: név + település.
+- [ ] **V5. Elismerés-entitástípus** (N9 — már az 1. fázisban megépíthető) — e-emberek
+  által megfogalmazott, egymásra az érintett BELEEGYEZÉSÉVEL aggatható elismerés;
+  tájékoztat, nem jogosít (a szavazat egyenlő marad); később a kinevezési rendszer
+  bemenete.
+- [ ] **V6. Identitás-réteg modulba** (H4) — a regisztráció leválasztása külön modulba,
+  hogy a későbbi EUDI-kapu (második regisztrációs út, ~2027) a többi kód érintése
+  nélkül becsatlakozhasson.
+- [ ] **V7. P2P-előkészítés az adatmodellben** (H5+H6) — entitás-export/import-képes
+  formátum, stabil azonosítók; annak jelölése, mi tartozik a tartalmi rétegbe és mi a
+  tartós magba (D3).
+- [ ] **V8. Kormányzási ígéret dokumentum** (H7) — Csaba: „még nem kell, de felírva";
+  mit dönt egyedül / mihez kell közösségi támogatás / mi történik ellenjavaslat esetén.
+
 ## Stílus-irányelvek
 
 Az új modalok és menük stílusa a **standard vonalat** kövesse:
