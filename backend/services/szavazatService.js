@@ -406,88 +406,12 @@ async szavazatTorlese(eemberId, javaslatId) {
     return szavazat;
   }
 
-  // ===================================
-  // JAVASLAT ÖSSZES SZAVAZATÁNAK LEKÉRÉSE
-  // ===================================
-  /**
-   * Egy javaslat összes szavazatának lekérése
-   * @param {string} javaslatId - A javaslat ID-ja
-   * @returns {Promise} Szavazatok tömb
-   */
-  async javaslatSzavazatainakLekerese(javaslatId) {
-
-    console.log("=================================== javaslatSzavazatainakLekerese:: ", {
-      javaslatId: javaslatId
-    });
-    
-    // 1. LÉPÉS - PARAMÉTER VALIDÁLÁSA
-    if (!javaslatId) {
-      throw new Error('A javaslat azonosítója kötelező');
-    }
-
-    // 2. LÉPÉS - JAVASLAT LÉTEZÉSÉNEK ELLENŐRZÉSE
-
-    console.log("javaslatSzavazatainakLekerese >>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.findById", {
-      javaslatId: javaslatId
-    });
-    
-    const javaslat = await JavaslatRepository.findById(javaslatId);
-    if (!javaslat) {
-      throw new Error('A javaslat nem található');
-    }
-
-    // 3. LÉPÉS - SZAVAZATOK LEKÉRÉSE
-    console.log("javaslatSzavazatainakLekerese >>>>>>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByJavaslatId", {
-      javaslatId: javaslatId
-    });
-    const szavazatok = await SzavazatRepository.findByJavaslatId(javaslatId);
-
-    console.log("<<<<<<<<<<<<<<<<<<<<< javaslatSzavazatainakLekerese===szavazatok: ", {
-      szavazatok: szavazatok
-    });
-    
-    return szavazatok;
-  }
-
-  // ===================================
-  // EMBER ÖSSZES SZAVAZATÁNAK LEKÉRÉSE
-  // ===================================
-  /**
-   * Egy eember összes szavazatának lekérése
-   * @param {string} eemberId - A eember ID-ja
-   * @param {number} limit - Maximum ennyi szavazat (opcionális)
-   * @returns {Promise} Szavazatok tömb
-   */
-  async eemberSzavazatainakLekerese(eemberId, limit = null) {
-
-    console.log("=================================== eemberSzavazatainakLekerese:: ", {
-      eemberId: eemberId,
-      limit: limit
-    });
-    
-    // 1. LÉPÉS - PARAMÉTER VALIDÁLÁSA
-    if (!eemberId) {
-      throw new Error('A eember azonosítója kötelező');
-    }
-
-    // 2. LÉPÉS - SZAVAZATOK LEKÉRÉSE
-
-    console.log("eemberSzavazatainakLekerese >>>>>>>>>>>>>>>>>>>> SzavazatRepository.findByeEmberId", {
-      eemberId: eemberId,
-      limit: limit
-    });
-    
-    const szavazatok = await SzavazatRepository.findByeEmberId(
-      eemberId,
-      limit
-    );
-
-    console.log("<<<<<<<<<<<<<<<<<< eemberSzavazatainakLekerese====szavazatok", {
-      szavazatok: szavazatok
-    });    
-
-    return szavazatok;
-  }
+  // A javaslatSzavazatainakLekerese és eemberSzavazatainakLekerese metódusok
+  // TÖRÖLVE (V3 szavazat-láthatóság, 2026-07-18): egyéni szavazat-listákat adtak
+  // vissza (ki hogyan szavazott), amit a D2 döntés szerint más e-emberek felé nem
+  // adunk ki. Egyik metódust sem használta már semmi (a hozzájuk tartozó publikus
+  // végpont is megszűnt). A saját szavazat lekérése (sajatSzavazatLekerese) és az
+  // összesített statisztika (lent) változatlanul él.
 
   // ===================================
   // SZAVAZATOK STATISZTIKÁJA

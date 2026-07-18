@@ -50,12 +50,14 @@ router.get('/', JavaslatController.javaslatokListazasa);
 // VÉDETT - csak bejelentkezett eemberek
 router.get('/:id/reszletek', authMiddleware, JavaslatController.javaslatReszleteinekLekerese);
 
-// Javaslat szavazatainak listázása
-// GET /api/javaslat/:id/szavazatok
-// NYILVÁNOS - mindenki elérheti
-router.get('/:id/szavazatok', JavaslatController.javaslatSzavazatainakLekerese);
+// TÖRÖLVE (V3 szavazat-láthatóság, 2026-07-18): a GET /:id/szavazatok végpont
+// nyersen kiadta az egyéni szavazatokat (ki hogyan szavazott) — auth nélkül.
+// A D2 döntés szerint az egyéni szavazat NEM lehet látható más e-emberek felé,
+// ezért a végpont (a frontend nem is használta) megszűnt. Az EREDMÉNY nyilvános
+// marad: az összesített statisztika (lent) és a javaslat arány-mezői adják.
 
-// Szavazatok statisztikájának lekérése
+// Szavazatok statisztikájának lekérése — CSAK ÖSSZESÍTETT számok (darabszámok,
+// arányok), egyéni szavazat nincs benne; a D2 szerint az eredmény nyilvános.
 // GET /api/javaslat/:id/statisztika
 // NYILVÁNOS - mindenki elérheti
 router.get('/:id/statisztika', JavaslatController.szavazatokStatisztikaja);

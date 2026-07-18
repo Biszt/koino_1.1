@@ -473,50 +473,9 @@ async szavazatVisszavonasa(req, res) {
   }
 },
 
-  // =====================================
-  // ----- JAVASLAT SZAVAZATAINAK LISTÁZÁSA -----
-  // =====================================
-  /**
-   * Javaslat szavazatainak listázása
-   * GET /api/javaslat/:id/szavazatok
-   * @param {Object} req - Express request objektum
-   * @param {Object} res - Express response objektum
-   */
-  async javaslatSzavazatainakLekerese(req, res) {
-    try {
-      // 1. LÉPÉS - Javaslat ID kiolvasása URL paraméterből
-      const javaslatId = req.params.id;
-
-      // 2. LÉPÉS - Service hívás - szavazatok lekérése
-      const szavazatok = await SzavazatService.javaslatSzavazatainakLekerese(javaslatId);
-
-      // 3. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres lekérés
-      res.status(200).json({
-        success: true,
-        count: szavazatok.length,
-        szavazatok: szavazatok
-      });
-
-    } catch (error) {
-      // HIBAKEZELÉS
-      console.error('Szavazatok lekérése hiba:', error);
-
-      // 404 Not Found - Ha nem található a javaslat
-      if (error.message.includes('nem található')) {
-        return res.status(404).json({
-          success: false,
-          message: error.message
-        });
-      }
-
-      // 500 Internal Server Error - Egyéb szerver hiba
-      res.status(500).json({
-        success: false,
-        message: 'Szerver hiba történt a szavazatok lekérése során'
-      });
-    }
-  },
+  // A JAVASLAT SZAVAZATAINAK LISTÁZÁSA (javaslatSzavazatainakLekerese) TÖRÖLVE
+  // (V3 szavazat-láthatóság, 2026-07-18): az egyéni szavazat nem látható más
+  // e-emberek felé (D2) — csak az összesített statisztika maradt (lent).
 
   // =====================================
   // ----- SZAVAZATOK STATISZTIKÁJA -----

@@ -205,7 +205,7 @@ async findBySzuloId(szuloId, szuloTipus = null) {
   
   // Tartalmak lekérése kapcsolt adatokkal
   const tartalmak = await Tartalom.find(query)
-    .populate('letrehozo', 'eemberNev email')     // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev')     // Létrehozó adatok
     .populate('tartalomTipusId')                       // Tartalom típus adatok
     .populate('kategoriaIds')                          // Kategóriák adatai
     .sort({ letrehozva: -1 });                        // Legújabbak előre

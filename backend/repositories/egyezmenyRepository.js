@@ -45,7 +45,7 @@ class EgyezmenyRepository {
 
     // Egyezmény lekérése kapcsolódó adatokkal (populate)
     const egyezmeny = await Egyezmeny.findById(id)
-      .populate('letrehozo', 'eemberNev email') // Létrehozó adatok betöltése
+      .populate('letrehozo', 'eemberNev') // Létrehozó adatok betöltése
       .populate('javaslatId'); // Javaslat adatok betöltése (ha még létezik)
 
     // Log: metódus vége
@@ -92,7 +92,7 @@ class EgyezmenyRepository {
       .sort({ vegrehajtva: -1 }) // Legújabbak előre rendezés
       .limit(limit) // Limit alkalmazása
       .skip(skip) // Skip alkalmazása (lapozás)
-      .populate('letrehozo', 'eemberNev email') // Létrehozó adatok
+      .populate('letrehozo', 'eemberNev') // Létrehozó adatok
       .populate('javaslatId'); // Javaslat adatok (ha még létezik)
 
     // Log: metódus vége
@@ -121,7 +121,7 @@ class EgyezmenyRepository {
         runValidators: true // Mongoose validációk futtatása
       }
     )
-    .populate('letrehozo', 'eemberNev email')
+    .populate('letrehozo', 'eemberNev')
     .populate('javaslatId');
 
     // Log: metódus vége
@@ -195,7 +195,7 @@ class EgyezmenyRepository {
 
     // Egyezmény keresése javaslat ID alapján
     const egyezmeny = await Egyezmeny.findOne({ javaslatId: javaslatId })
-      .populate('letrehozo', 'eemberNev email')
+      .populate('letrehozo', 'eemberNev')
       .populate('javaslatId');
 
     // Log: metódus vége
@@ -221,7 +221,7 @@ class EgyezmenyRepository {
       .sort({ vegrehajtva: -1 }) // Legújabbak előre
       .limit(limit)
       .skip(skip)
-      .populate('letrehozo', 'eemberNev email')
+      .populate('letrehozo', 'eemberNev')
       .populate('javaslatId');
 
     // Log: metódus vége
@@ -257,7 +257,7 @@ async findByErintettEntitas(entitasId, entitasTipus, limit = 20, skip = 0) {
     .sort({ vegrehajtva: -1 })        // Legújabbak előre
     .limit(limit)                      // Limit alkalmazása
     .skip(skip)                        // Skip alkalmazása (lapozás)
-    .populate('letrehozo', 'eemberNev email') // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev') // Létrehozó adatok
     .populate('javaslatId');           // Javaslat adatok (ha még létezik)
 
   // Log metódus vége
@@ -289,7 +289,7 @@ async findBySzuloId(szuloId, limit = 20, skip = 0) {
     .sort({ vegrehajtva: -1 })                       // Legújabbak előre rendezés
     .limit(limit)                                     // Limit alkalmazása
     .skip(skip)                                       // Skip alkalmazása (lapozás)
-    .populate('letrehozo', 'eemberNev email')   // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev')   // Létrehozó adatok
     .populate('javaslatId');                         // Javaslat adatok (ha még létezik)
   
   // Log metódus vége
@@ -326,7 +326,7 @@ async findByErintettEntitas(entitasId, entitasTipus, limit = 20, skip = 0) {
     .sort({ vegrehajtva: -1 })                       // Legújabbak előre
     .limit(limit)                                     // Limit alkalmazása
     .skip(skip)                                       // Skip alkalmazása (lapozás)
-    .populate('letrehozo', 'eemberNev email')   // Létrehozó adatok
+    .populate('letrehozo', 'eemberNev')   // Létrehozó adatok
     .populate('javaslatId');                         // Javaslat adatok (ha még létezik)
 
   // Log metódus vége

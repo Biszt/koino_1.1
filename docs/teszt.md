@@ -499,6 +499,12 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 - **Egyezmény kártya „Javaslat létrehozása"** menüpont még 🚧 (nincs kész).
 - Régi (csak tartalom) érték-adatokat a polimorf átállásnál eldobtuk; a meglévő
   entitások az **első** érték javaslatnál kapják meg a hisztogramjukat.
+- **V3–V4 API-változások (2026-07-18):** a `GET /api/javaslat/:id/szavazatok`
+  végpont TÖRÖLVE (egyéni szavazatokat adott ki — D2 sértés); a
+  `/:id/statisztika` (összesített) és a `/:id/sajat-szavazat` marad. Az e-mail
+  minden entitás-válaszból kikerült (populate-ok `eemberNev`-re szűkítve) —
+  e-mail csak a saját regisztráció/bejelentkezés válaszában van. Részletek:
+  [adatkezeles.md](adatkezeles.md).
 - **osLanc-pótlás (2026-07-18, LEFUTOTT):** a 2026-07-15 (A1) előtt keletkezett
   értesítésekből hiányzott az `osLanc` mező, ezért azok NEM számítottak bele a
   kártya-badge részfa-számlálásába és az ág-szűrt postafiókba (a fő menü badge-e jó

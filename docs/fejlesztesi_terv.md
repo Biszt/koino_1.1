@@ -235,12 +235,17 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   csak beállítható"; az Értesítési beállítások listájában „Küszöbváltozás" néven
   szerepel. „Jelentős változás" v1-ben = bármilyen elmozdulás (az értékek
   egészek); később finomítható külön küszöbbel.
-- [ ] **V3. Szavazat-láthatóság szűkítése** (H2, D2 első lépése) — az egyéni szavazat
-  ne legyen más e-emberek felé látható (API-válaszok átvizsgálása: pakli, részletek,
-  saját-szavazat végpontok); az üzemeltetői láthatóság őszinte kimondása a
-  dokumentációban.
-- [ ] **V4. E-mail privát** (H3) — ellenőrzés: az e-mail semmilyen, más felhasználónak
-  szóló API-válaszban nem szerepelhet; a nyilvános profil: név + település.
+- [x] **V3. Szavazat-láthatóság szűkítése** (H2, D2 első lépése) — ✅ KÉSZ
+  (2026-07-18). Audit-eredmény: a `GET /api/javaslat/:id/szavazatok` publikus végpont
+  nyersen kiadta az egyéni szavazatokat (a frontend nem használta) → a végpont + a
+  mögötte lévő service-metódusok TÖRÖLVE. Az összesített statisztika
+  (`/:id/statisztika`) és a saját szavazat (`/:id/sajat-szavazat`) marad. Az
+  üzemeltetői láthatóság őszinte kimondása: ÚJ [adatkezeles.md](adatkezeles.md).
+- [x] **V4. E-mail privát** (H3) — ✅ KÉSZ (2026-07-18). Audit-eredmény: a
+  `letrehozo` és szavazat populate-ok 20+ helyen az e-mailt is kiadták
+  (javaslat/egyezmény/tartalom/szavazat válaszokban) → mind `eemberNev`-re szűkítve;
+  curl-lel igazolva, hogy a javaslat/egyezmény/pakli válaszokban nincs e-mail.
+  E-mailt csak a SAJÁT regisztráció/bejelentkezés válasza tartalmaz.
 - [ ] **V6. Identitás-réteg modulba** (H4) — a regisztráció leválasztása külön modulba,
   hogy a későbbi EUDI-kapu (második regisztrációs út, ~2027) a többi kód érintése
   nélkül becsatlakozhasson.

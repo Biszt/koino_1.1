@@ -44,7 +44,7 @@ class SzavazatRepository {
       eemberId: eemberId,
       javaslatId: javaslatId
     })
-    .populate('eemberId', 'eemberNev email'); // eEmber adatok
+    .populate('eemberId', 'eemberNev'); // eEmber adatok
     
     return szavazat;
   }
@@ -61,7 +61,7 @@ class SzavazatRepository {
     // Keresés: összes szavazat a javaslatra
     const szavazatok = await Szavazat.find({ javaslatId: javaslatId })
       .sort({ letrehozva: -1 }) // Legújabbak előre
-      .populate('eemberId', 'eemberNev email'); // eEmber adatok
+      .populate('eemberId', 'eemberNev'); // eEmber adatok
     
     return szavazatok;
   }
@@ -141,7 +141,7 @@ class SzavazatRepository {
         runValidators: true
       }
     )
-    .populate('eemberId', 'eemberNev email');
+    .populate('eemberId', 'eemberNev');
     
     return frissitettSzavazat;
   }
