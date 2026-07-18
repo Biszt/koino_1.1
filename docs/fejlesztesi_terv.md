@@ -200,6 +200,8 @@ folytatódik. Első lépés a **V1 részletes terve** (megvitatás, majd impleme
 ez a bemutató dokumentum hitelességének feltétele is („a regisztráció meghívásos
 alapon működik", miközben a kód ma nyíltan regisztrál). Utána **V2**, majd **V5**;
 a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
+**MÓDOSÍTÁS (2026-07-18, a tulajdonos döntése):** a V1 és V2 elkészült; a **V5
+(elismerés) HÁTRASOROLVA** a V-lista végére — a folytatás a többi feladatból megy.
 
 - [x] **V1. Meghívásos regisztráció + tanúsítás (bizalmi háló v1)** — ✅ KÉSZ
   (2026-07-18; böngészős teszt hátra: teszt.md 38–40). A megvalósítás (a tulajdonos
@@ -239,10 +241,6 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   dokumentációban.
 - [ ] **V4. E-mail privát** (H3) — ellenőrzés: az e-mail semmilyen, más felhasználónak
   szóló API-válaszban nem szerepelhet; a nyilvános profil: név + település.
-- [ ] **V5. Elismerés-entitástípus** (N9 — már az 1. fázisban megépíthető) — e-emberek
-  által megfogalmazott, egymásra az érintett BELEEGYEZÉSÉVEL aggatható elismerés;
-  tájékoztat, nem jogosít (a szavazat egyenlő marad); később a kinevezési rendszer
-  bemenete.
 - [ ] **V6. Identitás-réteg modulba** (H4) — a regisztráció leválasztása külön modulba,
   hogy a későbbi EUDI-kapu (második regisztrációs út, ~2027) a többi kód érintése
   nélkül becsatlakozhasson.
@@ -251,6 +249,10 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   tartós magba (D3).
 - [ ] **V8. Kormányzási ígéret dokumentum** (H7) — Csaba: „még nem kell, de felírva";
   mit dönt egyedül / mihez kell közösségi támogatás / mi történik ellenjavaslat esetén.
+- [ ] **V5. Elismerés-entitástípus** (N9) — ⏬ HÁTRASOROLVA (2026-07-18, a tulajdonos
+  döntése). E-emberek által megfogalmazott, egymásra az érintett BELEEGYEZÉSÉVEL
+  aggatható elismerés; tájékoztat, nem jogosít (a szavazat egyenlő marad); később a
+  kinevezési rendszer bemenete.
 
 ## Stílus-irányelvek
 
