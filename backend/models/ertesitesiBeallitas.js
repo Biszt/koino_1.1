@@ -13,6 +13,7 @@ const ERTESITES_TIPUSOK = [
   'szavazasiHatarido',   // Szavazási határidő közeleg (pl. 24 órán belül lejár)
   'tudatpontValtozas',   // Tudatpont elmozdulás történt az entitáson
   'ujGyerekEntitas',     // Új gyerek entitás jött létre az entitás alatt
+  'kuszobValtozas',      // Az entitás érvényes küszöbértékei (mediánjai) változtak (V2)
 ];
 
 // Az engedélyezett entitás típusok listája

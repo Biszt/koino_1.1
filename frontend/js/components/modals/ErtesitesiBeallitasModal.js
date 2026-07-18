@@ -16,6 +16,7 @@ const ERTESITES_TIPUSOK = [
   { ertek: 'javaslatElvetve',   felirat: 'Javaslat elvetve',   magyarazat: 'Ha egy javaslat nem lép hatályba.' },
   { ertek: 'tudatpontValtozas', felirat: 'Tudatpont-változás', magyarazat: 'Ha a tudatpont-eloszlás változik az entitáson.' },
   { ertek: 'ujGyerekEntitas',   felirat: 'Új gyerek entitás',  magyarazat: 'Ha új tartalom/entitás jön létre ez alatt.' },
+  { ertek: 'kuszobValtozas',    felirat: 'Küszöbváltozás',     magyarazat: 'Ha az entitás érvényes küszöbértékei (mediánjai) változnak.' },
 ];
 
 // A forrás (honnan jön az érvényes beállítás) → emberi magyarázat a felület tetejére

@@ -110,6 +110,7 @@ ertesitesiAlapbeallitas: {
         'szavazasiHatarido',
         'tudatpontValtozas',
         'ujGyerekEntitas',
+        'kuszobValtozas',
       ],
       message: 'Érvénytelen értesítési típus: {VALUE}',
     },

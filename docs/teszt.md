@@ -448,18 +448,20 @@ docker logs -f koino-backend
 40. ⬜ **Bizalmi gráf éle:** meghívóval regisztrált e-embernél a DB-ben a
     `meghivoEemberId` a kibocsátóra mutat (`docker exec koino-mongodb-dev mongosh
     koino --eval "db.eembers.findOne({eemberNev:'...'},{meghivoEemberId:1})"`).
-41. ⬜ **Küszöbváltozás-értesítés (V2, 2026-07-18 óta):** legyen egy entitás,
-    amin LEGALÁBB 2 e-embernek van tudatpontja → az egyik érték javaslatot ad be
-    úgy, hogy a medián elmozduljon (pl. jóval magasabb küszöbökkel) → a TÖBBI
-    tulajdonos postafiókjában **„Küszöbváltozás – <entitás címe>"** értesítés
-    jelenik meg, alatta részlet-sorral: melyik küszöb változott, régi → új
-    (pl. „elfogadási küszöb: 51% → 66% · min. döntési idő: – → 30 másodperc").
-    A beadó maga NEM kap értesítést. FONTOS: ez a típus NEM opt-in — beállítástól
-    függetlenül minden tudatpont-tulajdonos megkapja (D4 „alvó immunrendszer"),
-    ezért az Értesítési beállítások listájában szándékosan NEM szerepel. A
-    kártya-badge és az ág-szűrt postafiók ezt a típust is számolja (van osLanc).
-    API-ellenőrzés (curl, 2026-07-18, lefutott): 3 tulajdonosból a 2 nem-cselekvő
-    kapott, adatok.valtozasok = 4 mező régi/új értékkel.
+41. ⬜ **Küszöbváltozás-értesítés (V2, 2026-07-18 óta):** az Értesítési
+    beállításokban (csomóponti VAGY globális) pipáld be a **„Küszöbváltozás"**
+    típust → ezután ha valaki érték javaslatot ad be úgy, hogy az entitás
+    érvényes (medián) küszöbei elmozdulnak, a postafiókban **„Küszöbváltozás –
+    <entitás címe>"** értesítés jelenik meg, alatta részlet-sorral: melyik küszöb
+    változott, régi → új (pl. „elfogadási küszöb: 51% → 66% · min. döntési idő:
+    – → 30 másodperc"). A beadó maga NEM kap értesítést. A típus UGYANÚGY
+    beállítás-vezérelt (opt-in, cascade), mint a többi (a tulajdonos döntése,
+    2026-07-18: nincs különleges bánásmód); a tudatpont-tulajdonossági szűrővel
+    kombinálva szűkíthető a saját pontos entitásokra. A kártya-badge és az
+    ág-szűrt postafiók ezt a típust is számolja (van osLanc).
+    API-ellenőrzés (curl, 2026-07-18, lefutott): globálisan feliratkozott
+    e-ember kapott (adatok.valtozasok = 4 mező régi/új), a fel nem iratkozott
+    tulajdonos és a beadó nem.
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

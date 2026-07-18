@@ -467,10 +467,13 @@ class ErtekJavaslatSzamitasService {
 
     // 7. LÉPÉS - KÜSZÖBVÁLTOZÁS-ÉRTESÍTÉS (V2, D4 kötelező elem)
     // A mentés ELŐTTI és UTÁNI érvényes (medián) értékek összevetése — ami
-    // változott, arról a tudatpont-tulajdonosok értesítést kapnak (a beadót
-    // kivéve). „Jelentős változás" v1-ben: BÁRMILYEN elmozdulás (az értékek
-    // egészek, tehát a legkisebb változás is legalább 1 egység); finomítható
-    // később külön küszöbbel. Hiba esetén a mentés NEM bukhat el (try/catch).
+    // változott, arról értesítés megy a NORMÁL értesítés-küldőn keresztül
+    // (beállítás-cascade dönti el a címzetteket, mint minden más típusnál —
+    // a tulajdonos döntése [2026-07-18]: nincs különleges bánásmód, a típus
+    // ugyanúgy beállítható). A beadó (cselekvő) nem kap értesítést.
+    // „Jelentős változás" v1-ben: BÁRMILYEN elmozdulás (az értékek egészek,
+    // tehát a legkisebb változás is legalább 1 egység); finomítható később.
+    // Hiba esetén a mentés NEM bukhat el (try/catch).
     const ujErvenyesErtekek = {
       javaslatElfogadasiKuszob: frissitettHisztogram.aktualJavaslatElfogadasiKuszob,
       reszveteliAranyKuszob:    frissitettHisztogram.aktualReszveteliAranyKuszob,
@@ -487,7 +490,7 @@ class ErtekJavaslatSzamitasService {
 
     if (valtozasok.length > 0) {
       try {
-        await ertesitesService.kuszobValtozasErtesites(entitasId, entitasTipus, valtozasok, eemberId);
+        await ertesitesService.ertesitesKuldes(entitasId, entitasTipus, 'kuszobValtozas', { valtozasok }, eemberId);
       } catch (hiba) {
         // Az értesítés best-effort — a hibája nem ronthatja el az érték javaslat mentését
         console.error('ertekJavaslatLetrehozasaVagyModositasa - küszöbváltozás-értesítés HIBA:', hiba.message);

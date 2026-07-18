@@ -228,11 +228,11 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   ✅ KÉSZ (2026-07-18; böngészős teszt hátra: teszt.md 41). Új `kuszobValtozas`
   értesítés-típus + trigger az érték javaslat mentésekor (a mentés előtti és utáni
   medián-értékek összevetése; az `adatok.valtozasok` őrzi a régi → új párokat).
-  FONTOS tervezési döntés: ez a típus **NEM opt-in** — a beállítás-cascade
-  megkerülésével MINDEN tudatpont-tulajdonos megkapja (a cselekvőt kivéve), mert a
-  D4 „alvó immunrendszer" elve ezt kívánja; ezért az Értesítési beállítások
-  listájába szándékosan nincs felvéve. „Jelentős változás" v1-ben = bármilyen
-  elmozdulás (az értékek egészek); később finomítható külön küszöbbel.
+  A típus a NORMÁL beállítás-cascade szerint működik (opt-in, mint a többi típus)
+  — a tulajdonos döntése (2026-07-18): „nem kell neki különleges bánásmód, legyen
+  csak beállítható"; az Értesítési beállítások listájában „Küszöbváltozás" néven
+  szerepel. „Jelentős változás" v1-ben = bármilyen elmozdulás (az értékek
+  egészek); később finomítható külön küszöbbel.
 - [ ] **V3. Szavazat-láthatóság szűkítése** (H2, D2 első lépése) — az egyéni szavazat
   ne legyen más e-emberek felé látható (API-válaszok átvizsgálása: pakli, részletek,
   saját-szavazat végpontok); az üzemeltetői láthatóság őszinte kimondása a

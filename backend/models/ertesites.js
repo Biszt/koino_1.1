@@ -13,11 +13,7 @@ const ERTESITES_TIPUSOK = [
   'szavazasiHatarido',   // Szavazási határidő közeleg
   'tudatpontValtozas',   // Tudatpont elmozdulás történt az entitáson
   'ujGyerekEntitas',     // Új gyerek entitás jött létre az entitás alatt
-  // KÜLÖNLEGES TÍPUS (V2, a vízió-vita D4 döntésének kötelező eleme): az entitás
-  // érvényes (medián) küszöbei megváltoztak. NEM opt-in — a beállítás-cascade
-  // megkerülésével MINDEN tudatpont-tulajdonos megkapja („alvó immunrendszer"),
-  // ezért az ErtesitesiBeallitas/eember beállítás-enumokba SZÁNDÉKOSAN nincs felvéve.
-  'kuszobValtozas',      // Az entitás érvényes küszöbértékei (mediánjai) változtak
+  'kuszobValtozas',      // Az entitás érvényes küszöbértékei (mediánjai) változtak (V2)
 ];
 
 // Az engedélyezett entitás típusok – szintén azonos az ErtesitesiBeallitas modellel
