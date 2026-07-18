@@ -480,12 +480,12 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 
 ## 6. Ismert megjegyzések / buktatók
 
-- **⚠️ Küszöb csak Tartalomból (vizsgálandó):** a döntéskor a küszöböket az
-  `erintettTartalmakKuszobertekenekLekerese` **csak a `Tartalom` típusú** érintett
-  entitásokból átlagolja. Ha a javaslat kategórián/tartalomtípuson van (nincs köztük
-  Tartalom), **alapértelmezett 51% / 0%** küszöb él — a rájuk beállított küszöb érték
-  javaslatot a döntés **nem** veszi figyelembe. Lehet szándékos, de lehet a polimorf
-  átállás hiánya is. **Teszt közben figyeljük**, és ha hiba, külön feladatként javítjuk.
+- **✅ Küszöb csak Tartalomból — JAVÍTVA (2026-07-18):** a döntéskor a küszöböket
+  korábban csak a `Tartalom` típusú érintettekből átlagolta a rendszer; kategórián/
+  tartalomtípuson tett javaslat az alapértelmezett 51%/0%-kal dőlt el. A javított
+  `erintettEntitasokKuszobertekenekLekerese` mostantól **mindhárom érték-képes
+  típusból** (Tartalom, Kategoria, TartalomTipus) átlagol; ha egyik sincs az
+  érintettek között, marad az alapértelmezett 51%/0%.
 - **Nyitott finomság (terv 10. pont):** a szavazás backend-szabálya a javaslat
   *érintett entitásait* nézi, a frontend viszont a javaslat entitásán ellenőriz.
   A felmenő-szabály miatt általában egybeesnek, de eltérhet — érdemes fejben tartani.
@@ -540,11 +540,11 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
    Hibaüzenet: „Cannot read properties of null (reading 'entitasId')". Kerülő út: az első
    tartalom létrehozása (a menü a hiba ellenére működik) feloldja. **Javítandó** (null-ág:
    üres pakli barátságos üres állapottal).
-2. **⚠️ Kategória/tartalomtípus javaslat a saját küszöbét figyelmen kívül hagyja.** A döntés
-   az `erintettTartalmakKuszobertekenekLekerese`-vel **csak `Tartalom` típusú** érintettekből
-   átlagol; nem-Tartalomnál **alapértelmezett 51% / 0%** küszöb él. A teszt igazolta: a
-   kategória-javaslat 51/0-val fogadódott el, nem a kategóriára beállított értékekkel.
-   Eldöntendő: szándékos-e; ha nem, a küszöb-lekérést ki kell terjeszteni mindhárom típusra.
+2. ~~**⚠️ Kategória/tartalomtípus javaslat a saját küszöbét figyelmen kívül hagyja.**~~
+   → **JAVÍTVA (2026-07-18):** a küszöb-lekérés kiterjesztve mindhárom érték-képes
+   típusra (`erintettEntitasokKuszobertekenekLekerese` — lásd a 6. szakasz jegyzetét).
+   Az itteni eredeti találat: a kereszt-teszt igazolta, hogy a kategória-javaslat 51/0-val
+   fogadódott el, nem a kategóriára beállított értékekkel.
 
 ### ⏳ Időzítési tanulság (nem hiba)
 - Egy **magányos létrehozó** automatikus Támogat szavazata 100% támogatottságot ad → magas

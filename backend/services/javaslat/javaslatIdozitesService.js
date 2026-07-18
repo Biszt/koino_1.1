@@ -46,44 +46,50 @@ class JavaslatIdozitesService {
 
  // === SEGÉDFÜGGVÉNYEK ===
 
- // ----- ÉRINTETT TARTALMAK KÜSZÖBÉRTÉKEINEK LEKÉRÉSE -----
+ // ----- ÉRINTETT ENTITÁSOK KÜSZÖBÉRTÉKEINEK LEKÉRÉSE -----
  /**
-   * Érintett tartalmak küszöbértékeinek átlagolása
-   * Csak "Tartalom" típusú entitásokat vesz figyelembe
-   * Ha nincs tartalom az érintettek között, alapértelmezett értékeket ad vissza
+   * Érintett entitások küszöbértékeinek átlagolása.
+   * JAVÍTÁS (2026-07-18): korábban csak a "Tartalom" típusú érintetteket vette
+   * figyelembe, ezért kategórián/tartalomtípuson tett javaslat a SAJÁT beállított
+   * küszöbei helyett az alapértelmezett 51%/0%-kal dőlt el. Az érték-rendszer
+   * (aktulisErtekekLekerese) entitás-polimorf, ezért mostantól MINDHÁROM
+   * érték-képes típus (Tartalom, Kategoria, TartalomTipus) beleszámít.
+   * Ha egyik sincs az érintettek között, alapértelmezett értékeket ad vissza.
    * @param {Array} erintettEntitasok - Érintett entitások tömbje
    * @returns {Promise<Object>} Átlagolt küszöbértékek
    */
- async erintettTartalmakKuszobertekenekLekerese(erintettEntitasok) {
-   console.log('("=================================== erintettTartalmakKuszobertekenekLekerese', {
+ async erintettEntitasokKuszobertekenekLekerese(erintettEntitasok) {
+   console.log('("=================================== erintettEntitasokKuszobertekenekLekerese', {
      osszesErintett: erintettEntitasok.length
    });
 
-   // 1. LÉPÉS - Csak tartalom típusú entitásokat szűrjük ki
-   const tartalmak = erintettEntitasok.filter(e => e.entitasTipus === 'Tartalom');
-   console.log('Szűrt tartalmak száma:', tartalmak.length);
+   // 1. LÉPÉS - Az érték-képes típusú entitások kiszűrése (van/lehet hisztogramjuk)
+   const ERTEK_KEPES_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+   const ertekKepesek = erintettEntitasok.filter(e => ERTEK_KEPES_TIPUSOK.includes(e.entitasTipus));
+   console.log('Érték-képes érintettek száma:', ertekKepesek.length);
 
-   // Ha nincs tartalom az érintettek között, alapértelmezett értékeket adunk vissza
-   if (tartalmak.length === 0) {
-     console.log('Nincs tartalom az érintettek között, alapértelmezett értékek visszaadása');
+   // Ha nincs érték-képes entitás az érintettek között, alapértelmezett értékeket adunk vissza
+   if (ertekKepesek.length === 0) {
+     console.log('Nincs érték-képes entitás az érintettek között, alapértelmezett értékek visszaadása');
      return {
        aktualJavaslatElfogadasiKuszob: 51, // Alapértelmezett minimum
        aktualReszveteliAranyKuszob: 0 // Alapértelmezett 0% (nincs küszöb)
      };
    }
 
-   // 2. LÉPÉS - Minden tartalom küszöbértékeinek lekérése
+   // 2. LÉPÉS - Minden érintett entitás küszöbértékeinek lekérése
    let osszegErtekJavaslatKuszob = 0;
    let osszegReszveteliKuszob = 0;
 
-   for (const tartalom of tartalmak) {
+   for (const entitas of ertekKepesek) {
 
-     console.log("erintettTartalmakKuszobertekenekLekerese >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
-     
-     const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId, tartalom.entitasTipus);
+     console.log("erintettEntitasokKuszobertekenekLekerese >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
 
-     console.log('Tartalom értékei:', {
-       tartalomId: tartalom.entitasId,
+     const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(entitas.entitasId, entitas.entitasTipus);
+
+     console.log('Entitás értékei:', {
+       entitasId: entitas.entitasId,
+       entitasTipus: entitas.entitasTipus,
        javaslatElfogadasiKuszob: ertekek.javaslatElfogadasiKuszob,
        reszveteliAranyKuszob: ertekek.reszveteliAranyKuszob
      });
@@ -93,10 +99,10 @@ class JavaslatIdozitesService {
    }
 
    // 3. LÉPÉS - Átlagolás és kerekítés
-   const atlagErtekJavaslatKuszob = Math.round(osszegErtekJavaslatKuszob / tartalmak.length);
-   const atlagReszveteliKuszob = Math.round(osszegReszveteliKuszob / tartalmak.length);
+   const atlagErtekJavaslatKuszob = Math.round(osszegErtekJavaslatKuszob / ertekKepesek.length);
+   const atlagReszveteliKuszob = Math.round(osszegReszveteliKuszob / ertekKepesek.length);
 
-   console.log('("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< erintettTartalmakKuszobertekenekLekerese', {
+   console.log('("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< erintettEntitasokKuszobertekenekLekerese', {
      aktualJavaslatElfogadasiKuszob: atlagErtekJavaslatKuszob,
      aktualReszveteliAranyKuszob: atlagReszveteliKuszob
    });
@@ -255,12 +261,12 @@ class JavaslatIdozitesService {
     }
 
     // 3. LÉPÉS - KÜSZÖBÉRTÉKEK LEKÉRÉSE (MINDEN TÍPUSNÁL UGYANEZ)
-    console.log("javaslatVegrehajtasEllenorzese >>>>>>>>>>>>>>>>>>>>>>>>>>> this.erintettTartalmakKuszobertekenekLekerese: ", {
+    console.log("javaslatVegrehajtasEllenorzese >>>>>>>>>>>>>>>>>>>>>>>>>>> this.erintettEntitasokKuszobertekenekLekerese: ", {
       javaslatTipus: javaslat.javaslatTipus,
       erintettEntitasok: javaslat.erintettEntitasok
     });
-    
-    const kuszobok = await this.erintettTartalmakKuszobertekenekLekerese(javaslat.erintettEntitasok);
+
+    const kuszobok = await this.erintettEntitasokKuszobertekenekLekerese(javaslat.erintettEntitasok);
 
     // 4. LÉPÉS - KÜSZÖB ELLENŐRZÉS (UNIVERZÁLIS - MINDEN TÍPUSNÁL UGYANEZ)
     const kuszobTeljesul = 
@@ -395,9 +401,9 @@ class JavaslatIdozitesService {
         erintettEntitasok: javaslat.erintettEntitasok
       }); // Logoljuk a hívást
 
-      const kuszobok = await this.erintettTartalmakKuszobertekenekLekerese(
+      const kuszobok = await this.erintettEntitasokKuszobertekenekLekerese(
         javaslat.erintettEntitasok
-      ); // Lekérjük a tartalmi küszöböket
+      ); // Lekérjük az érintett entitások küszöbeit
 
       // 2.3 - KÜSZÖB ELLENŐRZÉS TÖREDÉKRE
       const kuszobTeljesul =
