@@ -1,0 +1,27 @@
+<!-- frontend/html/components/modals/meghivoModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     A meghívó-sorokat a MeghivoModal.js injektálja a #meghivo-lista-ba. -->
+<div class="meghivo-modal">
+
+  <!-- Tájékoztató sáv: kötelező-e most a meghívó a regisztrációhoz (a JS tölti fel) -->
+  <p class="meghivo-modal__info" id="meghivo-info"></p>
+
+  <!-- Új meghívó létrehozása: tanúsító nyilatkozat + gomb -->
+  <div class="meghivo-modal__letrehozas">
+    <label class="meghivo-modal__tanusitas">
+      <input type="checkbox" id="meghivo-tanusitas" />
+      <span>
+        Tanúsítom, hogy a meghívott <strong>valódi személy</strong>, és tudomásom
+        szerint <strong>még nem regisztrált</strong> a koino-ra.
+      </span>
+    </label>
+    <button type="button" class="meghivo-modal__uj-gomb" id="meghivo-uj-gomb" disabled>
+      ✉️ Új meghívó létrehozása
+    </button>
+  </div>
+
+  <!-- A saját meghívók listája – ide kerülnek a sorok (a JS tölti fel) -->
+  <div class="meghivo-modal__lista" id="meghivo-lista"></div>
+
+</div>

@@ -53,6 +53,7 @@
 @import './components/modals/hozzajarulokModal.css';
 @import './components/modals/ertesitesiBeallitasModal.css';
 @import './components/modals/ertesitesekModal.css';
+@import './components/modals/meghivoModal.css';
 @import './components/modals/ertekEloszlasModal.css';
 /* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,
    hogy azok felül tudják írni, ha kell */

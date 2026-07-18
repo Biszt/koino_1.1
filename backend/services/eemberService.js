@@ -10,6 +10,9 @@ const JelszoHelper = require('../utils/jelszoHelper');
 // JWT: JSON Web Token generáláshoz és ellenőrzéshez
 const jwt = require('jsonwebtoken');
 
+// Meghívó service: meghívásos regisztráció (MEGHIVAS_KOTELEZO kapcsoló)
+const MeghivoService = require('./meghivoService');
+
 // ===== EMBER SERVICE OSZTÁLY =====
 // Ez a réteg tartalmazza az ÜZLETI LOGIKÁT
 // Validációk, több lépéses folyamatok, szabályok végrehajtása
@@ -17,11 +20,22 @@ class eEmberService {
 
   // ===== REGISZTRÁCIÓ =====
   // Új eember regisztrációja
-  // Lépések: email/eembernév foglaltság, jelszó erősség, hash, mentés
-  // @param {Object} adatok - { eemberNev, email, jelszo, nev, lokacio }
+  // Lépések: (meghívó kód, ha kötelező), email/eembernév foglaltság,
+  // jelszó erősség, hash, mentés, meghívó felhasználtra állítása
+  // @param {Object} adatok - { eemberNev, email, jelszo, nev, lokacio, meghivoKod }
   // @returns {Promise} Létrehozott eember (jelszó nélkül)
   async regisztracio(adatok) {
     console.log('eEmberService.regisztracio - KEZDÉS', { eemberNev: adatok.eemberNev, email: adatok.email });
+
+    // === 0. LÉPÉS: MEGHÍVÓ KÓD ELLENŐRZÉSE (ha a kapcsoló be van kapcsolva) ===
+    // MEGHIVAS_KOTELEZO=true esetén érvényes, Aktiv meghívó kód kell a
+    // regisztrációhoz. A kódot itt csak ÉRVÉNYESÍTJÜK — felhasználtra majd a
+    // sikeres mentés UTÁN állítjuk (6.b lépés), hogy hibás regisztráció ne
+    // költse el a meghívót.
+    let meghivo = null;
+    if (MeghivoService.meghivasKotelezoE()) {
+      meghivo = await MeghivoService.kodErvenyesitese(adatok.meghivoKod);
+    }
 
     // === 1. LÉPÉS: EMAIL FOGLALTSÁG ELLENŐRZÉSE ===
     // ÜZLETI SZABÁLY: Egy email cím csak egyszer használható
@@ -55,8 +69,16 @@ class eEmberService {
       email:     adatok.email,
       jelszo:    hashedJelszo, // ← Hash-elt jelszó!
       nev:       adatok.nev,
-      lokacio:   adatok.lokacio
+      lokacio:   adatok.lokacio,
+      // A bizalmi gráf első éle: ki hívta meg (null, ha nyílt a regisztráció)
+      meghivoEemberId: meghivo ? meghivo.kibocsatoEemberId : null
     });
+
+    // === 5.b LÉPÉS: MEGHÍVÓ FELHASZNÁLTRA ÁLLÍTÁSA ===
+    // Csak sikeres mentés után — a kód innentől nem használható újra
+    if (meghivo) {
+      await MeghivoService.kodFelhasznalasa(meghivo, ujeEmber._id);
+    }
 
     // === 6. LÉPÉS: JELSZÓ ELTÁVOLÍTÁSA A VÁLASZBÓL ===
     // BIZTONSÁGI SZABÁLY: Jelszó (még hash-elve is) nem mehet ki a válaszban

@@ -1,7 +1,7 @@
 // frontend/js/components/RegisztracioForm.js
 
 // ── IMPORTOK ──
-import { apiPost } from '../utils/apiHelper.js';          // API híváshoz
+import { apiPost, apiGet } from '../utils/apiHelper.js';  // API híváshoz
 import { tokenMentese, eemberMentese } from '../utils/authHelper.js'; // Token és eember tároláshoz
 import { autocompleteRakotese } from '../utils/lokacioHelper.js';
 
@@ -27,6 +27,10 @@ class RegisztracioForm {
     // Töltés közbeni állapot — megakadályozza a dupla küldést
     this.toltesBan = false;
 
+    // Kötelező-e a meghívó kód — az init() kérdezi le a backendtől
+    // (MEGHIVAS_KOTELEZO kapcsoló); false-nál a mező rejtve marad
+    this.meghivoKotelezo = false;
+
     // Metódus vég log
     console.log('RegisztracioForm.constructor - VÉGE');
   }
@@ -49,6 +53,10 @@ class RegisztracioForm {
     autocompleteRakotese('orszag',    'lokacio/orszag');     // Ország mező
     autocompleteRakotese('regio',     'lokacio/regio');      // Régió mező
     autocompleteRakotese('telepules', 'lokacio/telepules');  // Település mező
+
+    // ── MEGHÍVÓ KÓD MEZŐ MEGJELENÍTÉSE (ha kötelező) ──
+    // Nem várjuk meg (nem async az init) — amint megjön a válasz, megmutatjuk
+    this._meghivoMezoBeallitasa();
 
     // Metódus vég log
     console.log('RegisztracioForm.init - VÉGE', { formTalalt: !!form });
@@ -79,12 +87,13 @@ class RegisztracioForm {
     const orszag            = document.getElementById('orszag')?.value?.trim();
     const regio             = document.getElementById('regio')?.value?.trim();
     const telepules         = document.getElementById('telepules')?.value?.trim();
+    const meghivoKod        = document.getElementById('meghivoKod')?.value?.trim();
 
     // Előző hibaüzenetek törlése
     this.hibakTorlese();
 
     // Kliens oldali validáció — ha hibás, nem küldünk kérést
-    if (!this.validacio(eemberNev, nev, email, jelszo, jelszoMegerosites, orszag, regio, telepules)) {
+    if (!this.validacio(eemberNev, nev, email, jelszo, jelszoMegerosites, orszag, regio, telepules, meghivoKod)) {
       console.log('RegisztracioForm.submitKezeles - VÉGE (validáció sikertelen)');
       return;
     }
@@ -100,7 +109,10 @@ class RegisztracioForm {
         nev,
         email,
         jelszo,
-        lokacio: { orszag, regio, telepules }
+        lokacio: { orszag, regio, telepules },
+        // Meghívó kód — csak akkor kerül a kérésbe, ha ki van töltve
+        // (a backend csak MEGHIVAS_KOTELEZO=true esetén ellenőrzi)
+        ...(meghivoKod ? { meghivoKod } : {})
       });
 
       // Siker — token és eember adatok mentése memóriába
@@ -132,7 +144,7 @@ class RegisztracioForm {
   // ── VALIDÁCIÓ ──
   // Kliens oldali mezőellenőrzés
   // returns boolean - true ha érvényes, false ha hibás
-  validacio(eemberNev, nev, email, jelszo, jelszoMegerosites, orszag, regio, telepules) {
+  validacio(eemberNev, nev, email, jelszo, jelszoMegerosites, orszag, regio, telepules, meghivoKod) {
     // Metódus kezdő log
     console.log('RegisztracioForm.validacio - KEZDÉS', {
       eemberNevHossz: eemberNev?.length,
@@ -191,9 +203,40 @@ class RegisztracioForm {
       ervenyesE = false;
     }
 
+    // Meghívó kód: csak akkor kötelező, ha a meghívásos regisztráció be van kapcsolva
+    if (this.meghivoKotelezo && !meghivoKod) {
+      this.mezohibaBeallitasa('mezo-meghivoKod', true);
+      ervenyesE = false;
+    }
+
     // Metódus vég log
     console.log('RegisztracioForm.validacio - VÉGE', { ervenyesE });
     return ervenyesE;
+  }
+
+  // ── MEGHÍVÓ KÓD MEZŐ BEÁLLÍTÁSA ──
+  // Lekérdezi a backendtől, kötelező-e a meghívó kód a regisztrációhoz
+  // (MEGHIVAS_KOTELEZO kapcsoló), és ha igen, megmutatja a mezőt.
+  async _meghivoMezoBeallitasa() {
+    console.log('RegisztracioForm._meghivoMezoBeallitasa - KEZDÉS');
+
+    try {
+      // GET /api/meghivo/kotelezo — nyilvános végpont, nem kell token
+      const valasz = await apiGet('meghivo/kotelezo');
+      this.meghivoKotelezo = valasz?.kotelezo === true;
+
+      // A mező csak kötelező módban látszik (rejtve indul a HTML-ben)
+      const mezo = document.getElementById('mezo-meghivoKod');
+      if (mezo && this.meghivoKotelezo) {
+        mezo.style.display = '';
+      }
+
+      console.log('RegisztracioForm._meghivoMezoBeallitasa - VÉGE', { meghivoKotelezo: this.meghivoKotelezo });
+    } catch (hiba) {
+      // Ha a lekérés hibázik, a mező rejtve marad — a backend a végső őr:
+      // kötelező módban a kód nélküli regisztrációt úgyis elutasítja
+      console.error('RegisztracioForm._meghivoMezoBeallitasa - HIBA', hiba.message);
+    }
   }
 
   // ── MEZŐHIBA BEÁLLÍTÁSA ──
@@ -228,6 +271,7 @@ class RegisztracioForm {
 
     // Mezőszintű hibák törlése
     [
+      'mezo-meghivoKod',
       'mezo-eemberNev',
       'mezo-nev',
       'mezo-email',

@@ -1,0 +1,146 @@
+/* frontend/css/components/modals/meghivoModal.css */
+
+/* A Meghívóim modal a standard modal-vázra épül (Modal.js).
+   Új meghívó létrehozása (tanúsító nyilatkozattal) + a saját meghívók listája. */
+
+/* ===== INFO SÁV ===== */
+.meghivo-modal__info {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ===== ÚJ MEGHÍVÓ BLOKK ===== */
+.meghivo-modal__letrehozas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+/* Tanúsító nyilatkozat: jelölőnégyzet + szöveg egy sorban */
+.meghivo-modal__tanusitas {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.meghivo-modal__tanusitas input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.meghivo-modal__uj-gomb {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.meghivo-modal__uj-gomb:hover:not(:disabled) {
+  background: var(--color-surface-offset);
+}
+
+.meghivo-modal__uj-gomb:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== LISTA ===== */
+.meghivo-modal__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+/* ===== ÜRES ÁLLAPOT ===== */
+.meghivo-modal__ures {
+  margin: var(--space-4) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ===== EGY MEGHÍVÓ-SOR ===== */
+.meghivo-modal__elem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background 0.12s ease;
+}
+
+.meghivo-modal__elem:hover {
+  background: var(--color-surface-offset);
+}
+
+/* A kód: jól olvasható, egyenszéles betű, hogy könnyű legyen átdiktálni */
+.meghivo-modal__kod {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+}
+
+/* Státusz jelvény */
+.meghivo-modal__statusz {
+  font-size: var(--text-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.meghivo-modal__statusz--aktiv {
+  color: var(--color-accent, #37a24d);
+  border-color: currentColor;
+}
+
+.meghivo-modal__statusz--felhasznalt {
+  color: var(--color-text-muted);
+  border-color: currentColor;
+}
+
+.meghivo-modal__statusz--visszavont {
+  color: var(--color-danger, #c0392b);
+  border-color: currentColor;
+}
+
+.meghivo-modal__ido,
+.meghivo-modal__felhasznalo {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Akció gombok (másolás, visszavonás) a sor jobb szélén */
+.meghivo-modal__akciok {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.meghivo-modal__masol,
+.meghivo-modal__visszavon {
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.meghivo-modal__masol:hover,
+.meghivo-modal__visszavon:hover {
+  background: var(--color-surface, rgba(127, 127, 127, 0.15));
+}

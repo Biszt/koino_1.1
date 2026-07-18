@@ -20,6 +20,24 @@
 
     <form class="regisztracio-form" id="regisztracio-form" novalidate>
 
+      <!-- MEGHÍVÓ KÓD – csak akkor látható, ha a meghívásos regisztráció be van
+           kapcsolva (GET /api/meghivo/kotelezo); a RegisztracioForm.js mutatja meg -->
+      <div class="form-mezo" id="mezo-meghivoKod" style="display: none">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="meghivoKod"
+          name="meghivoKod"
+          placeholder="Meghívó kód (XXXX-XXXX-XXXX)"
+          autocomplete="off"
+          autocapitalize="characters"
+          aria-label="Meghívó kód"
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-meghivoKod">
+          A regisztrációhoz érvényes meghívó kód szükséges.
+        </span>
+      </div>
+
       <!-- EEMBERNÉV – 3–30 karakter -->
       <div class="form-mezo" id="mezo-eemberNev">
         <input

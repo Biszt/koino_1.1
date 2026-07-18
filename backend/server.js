@@ -26,6 +26,7 @@ const tartalomTipusRoutes = require('./routes/tartalomTipusRoutes');
 const javaslatRoutes = require('./routes/javaslatRoutes');
 const ertekJavaslatRoutes = require('./routes/ertekJavaslatRoutes');
 const egyezmenyRoutes = require('./routes/egyezmenyRoutes');
+const meghivoRoutes = require('./routes/meghivoRoutes');
 
 // ÚJ – Értesítési rendszer routes importálása
 const ertesitesRoutes = require('./routes/ertesitesRoutes');
@@ -102,6 +103,7 @@ app.use('/api/tartalomTipus', tartalomTipusRoutes);
 app.use('/api/javaslat', javaslatRoutes);
 app.use('/api', ertekJavaslatRoutes);
 app.use('/api/egyezmeny', egyezmenyRoutes);
+app.use('/api/meghivo', meghivoRoutes);
 
 // Értesítési rendszer route-ok regisztrálása
 app.use('/api/ertesitesek', ertesitesRoutes);

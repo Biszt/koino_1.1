@@ -201,12 +201,29 @@ ez a bemutató dokumentum hitelességének feltétele is („a regisztráció me
 alapon működik", miközben a kód ma nyíltan regisztrál). Utána **V2**, majd **V5**;
 a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
 
-- [ ] **V1. Meghívásos regisztráció + tanúsítás (bizalmi háló v1)** — a bemutató
-  dokumentum ígéri („A regisztráció meghívásos alapon működik"), de ma a regisztráció
-  NYÍLT! Kell: meghívó (kód/entitás), tanúsítási lépés (a meghívott valódi, még nem
-  regisztrált személy), korlátok első köre (meghívás-darabszám/idő, visszavonhatóság
-  — az N4 szabályok v1-e). + 16 év alatti regisztrálónál szülői hozzájárulás-lépés
-  (GDPR). **A legnagyobb új darab.**
+- [x] **V1. Meghívásos regisztráció + tanúsítás (bizalmi háló v1)** — ✅ KÉSZ
+  (2026-07-18; böngészős teszt hátra: teszt.md 38–40). A megvalósítás (a tulajdonos
+  döntései szerint):
+  - **`MEGHIVAS_KOTELEZO` kapcsoló** (backend/.env): `false` = nyílt regisztráció
+    (fejlesztés/tesztelés alatt), `true` = meghívó kód kötelező. Így a bemutató
+    ígérete bekapcsolható anélkül, hogy a fejlesztés közbeni tesztelést nehezítené.
+  - **Meghívó entitás** (`meghivo` modell): kibocsátó, egyedi kód (XXXX-XXXX-XXXX),
+    státusz (Aktiv/Felhasznalt/Visszavont); a kódot a kibocsátó maga juttatja el a
+    meghívottnak (a rendszer NEM tárol adatot a még nem regisztrált személyről — D6).
+  - **Tanúsítás v1 = maga a meghívás** (1 tanúsító): a létrehozáskor kötelező
+    nyilatkozat („a meghívott valódi, még nem regisztrált személy"); a több-tanúsítós
+    rendszer Fázis 2.
+  - **NINCS darabszám-korlát és NINCS lejárat** (Csaba, 2026-07-18: „ha nem muszáj,
+    ne rakjunk be korlátot") — az 1. fázisban a kis közösség + a visszakövethető
+    kibocsátó-lánc elég védelem; a korlát-számok később közösségi döntés tárgyai (N4).
+    A visszavonhatóság (felhasználásig) VAN — az nem korlát, hanem a kibocsátó eszköze.
+  - **Bizalmi gráf első éle**: `eember.meghivoEemberId` = a felhasznált meghívó
+    kibocsátója (a Fázis 2 gráf-szabályai erre épülnek).
+  - Frontend: fő menü **✉️ Meghívóim** modal + a regisztrációs űrlapon feltételes
+    meghívó kód mező (csak bekapcsolt kapcsolónál látszik).
+  - ELHALASZTVA a v1-ből: felhatalmazott kibocsátók (D1 szerint is Fázis 2); szülői
+    hozzájárulás-lépés (korhatár-döntés: nincs regisztrációs korhatár; a GDPR-kérdés
+    nyitott pontként az N4 mellé).
 - [ ] **V2. Küszöbváltozás-értesítés** (H1, a vita 2. pontjának kötelező eleme) — új
   értesítés-típus: az entitás érvényes (medián) küszöbeinek jelentős változásáról a
   tudatpont-tulajdonosoknak. Az értesítés-infrastruktúra (beállítás-cascade,

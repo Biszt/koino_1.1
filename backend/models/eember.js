@@ -68,9 +68,20 @@ tudatpontok: {
   min: 0             // Minimum érték: nem lehet negatív
 },
 
+// ----- MEGHÍVÓ E-EMBER -----
+// Aki ezt az e-embert meghívta (a felhasznált meghívó kibocsátója).
+// Ez a bizalmi gráf első éle — a Fázis 2 több-tanúsítós rendszere erre épül rá.
+// null: a meghívás-kényszer bevezetése ELŐTT (nyílt regisztrációval) regisztrált,
+// vagy kikapcsolt MEGHIVAS_KOTELEZO mellett (fejlesztői/teszt környezet).
+meghivoEemberId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'eEmber',
+  default: null
+},
+
 // ----- LÉTREHOZÁS DÁTUMA -----
 // Amikor a eember regisztrált
-letrehozva: { 
+letrehozva: {
   type: Date,         // Dátum típus
   default: Date.now   // Alapértelmezett: jelenlegi időpont
 },

@@ -20,6 +20,7 @@ import KategoriaModal from './modals/KategoriaModal.js';
 import TartalomTipusModal from './modals/TartalomTipusModal.js';
 import ErtesitesiBeallitasModal from './modals/ErtesitesiBeallitasModal.js';
 import ErtesitesekModal from './modals/ErtesitesekModal.js';
+import MeghivoModal from './modals/MeghivoModal.js';
 import Pakli from './Pakli.js';
 
 
@@ -159,6 +160,11 @@ init() {
         akcio:   () => this._ujTartalomTipusModalMegnyitasa()
       },
       {
+        ikon:    '✉️',
+        felirat: 'Meghívóim',
+        akcio:   () => this._meghivoimMegnyitasa()
+      },
+      {
         ikon:       '🚧',
         felirat:    'Tudatpontok',
         elvalaszto: true,
@@ -262,6 +268,27 @@ init() {
     tartalomTipusModal.megnyitas();
 
     console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // MEGHÍVÓIM MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Meghívóim" – új meghívó létrehozása (tanúsítással),
+  // saját meghívók listája, visszavonás.
+  async _meghivoimMegnyitasa() {
+    console.log('FoOldal._meghivoimMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const meghivoModal = new MeghivoModal('modal-kontener', {
+      token: this.token
+    });
+
+    await meghivoModal.init();
+    await meghivoModal.megnyitas();
+
+    console.log('FoOldal._meghivoimMegnyitasa - VÉGE');
   }
 
 
