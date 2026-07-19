@@ -550,7 +550,7 @@ _sajatTudatpontChip(ertek, cimke) {
 
 // ----- TÍPUS-ELŐTAG IKON (a 2. ikonsávban az egyedi ikon elé) -----
 // Kis emoji-jelző, ami megmondja, MILYEN entitás egyedi ikonja következik:
-// 📁 kategória, 🏷️ tartalomtípus. A hívó egy szoros „csoport" konténerbe teszi az
+// 🧩 kategória, 🏷️ tartalomtípus. A hívó egy szoros „csoport" konténerbe teszi az
 // előtagot és az egyedi ikon(oka)t (pakli-kartya__tipus-ikon-csoport).
 // @param {string} emoji - a típus-jelző emoji
 // @param {string} cimke - a típus neve (aria-label + tooltip)

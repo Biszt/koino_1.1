@@ -94,12 +94,12 @@ class TartalomKartya extends Kartya {
       fejlecTartalom.appendChild(tipusCsoport);
     }
 
-    // --- KATEGÓRIA IKONOK (📁 típus-előtaggal) ---
+    // --- KATEGÓRIA IKONOK (🧩 típus-előtaggal) ---
     if (adatok.kategoriak?.length > 0) {
       const kategoriaKontener = document.createElement('div');
       kategoriaKontener.className = 'tartalom-kartya__kategoriak';
-      // 📁 előtag a kategória-ikonok elé (jelzi: ezek kategóriák)
-      kategoriaKontener.appendChild(this._tipusElotag('📁', 'Kategória'));
+      // 🧩 előtag a kategória-ikonok elé (jelzi: ezek kategóriák)
+      kategoriaKontener.appendChild(this._tipusElotag('🧩', 'Kategória'));
 
       adatok.kategoriak.forEach((kategoria) => {
         if (kategoria?.ikon) {

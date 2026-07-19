@@ -104,10 +104,10 @@ class KategoriaKartya extends Kartya {
     nevElem.textContent = adatok.nev ?? '(név nélkül)';
     cimSav.appendChild(nevElem);
 
-    // A kategória saját ikonja 📁 típus-előtaggal (a 2. sorban)
+    // A kategória saját ikonja 🧩 típus-előtaggal (a 2. sorban)
     const ikonCsoport = document.createElement('span');
     ikonCsoport.className = 'pakli-kartya__tipus-ikon-csoport';
-    ikonCsoport.appendChild(this._tipusElotag('📁', 'Kategória'));
+    ikonCsoport.appendChild(this._tipusElotag('🧩', 'Kategória'));
     this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'kategoria-kartya');
     fejlecTartalom.appendChild(ikonCsoport);
 

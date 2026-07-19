@@ -249,7 +249,7 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
   font-weight: 600;
 }
 
-/* Típus-ikon csoport a 2. sorban: a típus-előtag (📁/🏷️) + az egyedi ikon(ok) szorosan */
+/* Típus-ikon csoport a 2. sorban: a típus-előtag (🧩/🏷️) + az egyedi ikon(ok) szorosan */
 .pakli-kartya__tipus-ikon-csoport {
   display: inline-flex;
   align-items: center;

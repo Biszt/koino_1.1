@@ -9,7 +9,7 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 // A találat-sorokban jelöljük, milyen típusú entitás a találat.
 const TIPUS_IKON = {
   Tartalom:      '📄',
-  Kategoria:     '📁',
+  Kategoria:     '🧩',
   TartalomTipus: '🏷️',
 };
 
