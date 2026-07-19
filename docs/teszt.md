@@ -462,6 +462,20 @@ docker logs -f koino-backend
     API-ellenőrzés (curl, 2026-07-18, lefutott): globálisan feliratkozott
     e-ember kapott (adatok.valtozasok = 4 mező régi/új), a fel nem iratkozott
     tulajdonos és a beadó nem.
+42. ⬜ **Tudatpontok nézet (terv 7. pont, 2026-07-18 óta):** fő menü → **🌟
+    Tudatpontok** → fejlécben a szabad tudatpontod, alatta a saját AKTÍV
+    hozzárendelések (típus-ikon + entitás címe + 🌟 pont). Egy sorra kattintva a
+    modal bezárul és a pakli az entitásra navigál; a sor ✏️ gombja a megszokott
+    Tudatpont módosítás modalt nyitja AL-modalként — mentés után a lista, a
+    fejléc ÉS az alsó statisztika-sáv frissül; a modal bezárásakor (ha volt
+    módosítás) a pakli is újratölt. **Kártya-változat:** MINDEN kártya
+    hamburger-menüjében ÚJ közös menüpont: **🌟 Tudatpontok** → ugyanez a lista
+    ÁG-SZŰRVE (cím: „Tudatpontok – <entitás címe>"): csak az adott entitáson
+    VAGY leszármazottain lévő saját pontok látszanak. API-ellenőrzés (curl,
+    2026-07-18, lefutott): teljes lista entitás-címekkel; ág-szűrt lista =
+    szülő + gyerek igen, más ág (kategória) nem.
+    Végpont: `GET /api/tudatpont/aktiv-hozzarendelesek?limit=&skip=&agEntitasId=`
+    (auth; `entitasCim` mezővel).
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

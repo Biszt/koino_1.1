@@ -5,6 +5,7 @@ import HamburgerMenu from '../HamburgerMenu.js'; // Hamburger menü komponens
 import { apiGet } from '../../utils/apiHelper.js';        // Backend GET – tudatpont-ellenőrzéshez
 import { tokenLekerese, aktivEntitasMentese } from '../../utils/authHelper.js'; // Token + navigáláskor az aktív entitás mentése
 import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt postafiók a kártya menüjéből
+import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -99,6 +100,14 @@ async init() {
       felirat: 'Értesítések',
       badge:   true,
       akcio:   () => this._agErtesitesekMegnyitasa()
+    });
+    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: az entitás ÁGA alatti saját tudatpontok
+    // (ág-szűrt Tudatpontok nézet) — Csaba kérése (2026-07-18): a fő menüs lista
+    // a kártyákról ágazatra szűrve is elérhető legyen.
+    opciok.push({
+      ikon:    '🌟',
+      felirat: 'Tudatpontok',
+      akcio:   () => this._agTudatpontokMegnyitasa()
     });
   }
 
@@ -271,6 +280,52 @@ async _agErtesitesekMegnyitasa() {
   await ertesitesekModal.megnyitas();
 
   console.log('Kartya._agErtesitesekMegnyitasa - VÉGE');
+}
+
+// ----- ÁG-SZŰRT TUDATPONTOK MEGNYITÁSA -----
+// A kártya-hamburger közös „Tudatpontok" menüpontja hívja. A közös TudatpontokModal-t
+// nyitja ÁG-SZŰRT módban: csak azok a saját hozzárendelések látszanak, amelyek EZEN
+// az entitáson vagy bármely leszármazottján vannak (a backend az ős-lánc bejárásával
+// szűr). Sorra kattintva az entitásra navigálunk; pont-módosítás után a modal
+// bezárásakor frissül a pakli (hierarchikus pontok).
+async _agTudatpontokMegnyitasa() {
+  console.log('Kartya._agTudatpontokMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  // A modal címébe az entitás címe/neve kerül, ha van (Javaslat/Egyezménynél nincs)
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+
+  const tudatpontokModal = new TudatpontokModal(this.modalKontenerAzon, {
+    token:       this.token ?? tokenLekerese(),
+    agEntitasId: this.entitas.entitasId,
+    cim:         agCim ? `Tudatpontok – ${agCim}` : 'Tudatpontok – ez az ág',
+
+    // Sorra kattintás → az entitásra navigálunk: elmentjük aktívnak, majd a
+    // központi újratöltő callback a paklit arra az entitásra építi újra
+    onEntitasKivalasztas: (entitasId, entitasTipus) => {
+      aktivEntitasMentese(entitasId, entitasTipus);
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes(entitasId, entitasTipus);
+    },
+
+    // Pont-módosítás után az APP-SZINTŰ alsó sáv (szabad pont) frissítése — a kártya
+    // nem éri el közvetlenül a FoOldal-t, ezért ugyanazt az eseményt küldjük, amit
+    // az értesítés-változás is használ (a FoOldal adat-frissítést csinál rá)
+    onValtozas: () => document.dispatchEvent(new CustomEvent('koino:tudatpontValtozas')),
+
+    // A modal bezárásakor (ha volt módosítás, de nem navigáltunk) a pakli
+    // újratöltése, hogy a kártyák friss (hierarchikus) pontokat mutassanak
+    onBezarasValtozassal: () => {
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+    }
+  });
+
+  await tudatpontokModal.init();
+  await tudatpontokModal.megnyitas();
+
+  console.log('Kartya._agTudatpontokMegnyitasa - VÉGE');
 }
 
 // ----- BODY FRISSÍTÉSE -----

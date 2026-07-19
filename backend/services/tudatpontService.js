@@ -10,6 +10,7 @@ const JavaslatRepository = require('../repositories/javaslatRepository');
 const EgyezmenyRepository = require('../repositories/egyezmenyRepository'); 
 const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const ErtesitesService = require('./ertesitesService'); // Tudatpont-változáskor értesítjük a figyelőket
+const ErtesitesiBeallitasService = require('./ertesitesiBeallitasService'); // szuloKereses az ág-szűréshez (Tudatpontok nézet)
 
 
 // ===== TUDATPONT SERVICE OSZTÁLY =====
@@ -1047,46 +1048,90 @@ class TudatpontService {
   }
 
   // ----- EMBER AKTÍV HOZZÁRENDELÉSEINEK LEKÉRÉSE -----
-  // Csak azok a hozzárendelések, ahol tudatPontok > 0
+  // Csak azok a hozzárendelések, ahol tudatPontok > 0.
+  // A Tudatpontok nézethez (terv 7. pont) BŐVÍTVE (2026-07-18):
+  //   - minden elemhez feltöltjük az entitás címét/nevét (`entitasCim`),
+  //   - opcionális ÁG-SZŰRÉS (agEntitasId): csak azok a hozzárendelések, amelyek
+  //     entitása az adott entitás ÁGA alatt van (maga az entitás vagy leszármazott)
+  //     — a kártya-menük „Tudatpontok" pontja használja. A szűréshez az entitás
+  //     ős-láncát járjuk be (szuloKereses), entitásonként cache-elve.
   // @param {string} eemberId - A eember azonosítója
   // @param {number} limit - Maximum ennyi hozzárendelés
   // @param {number} skip - Ennyi hozzárendelés kihagyása (lapozás)
-  // @returns {Promise<Array>} Az aktív hozzárendelések listája
-  async eemberAktivHozzarendeleseinekLekerese(eemberId, limit = 20, skip = 0) {
+  // @param {string|null} agEntitasId - opcionális ág-szűrő entitás azonosító
+  // @returns {Promise<Array>} Az aktív hozzárendelések listája (entitasCim-mel)
+  async eemberAktivHozzarendeleseinekLekerese(eemberId, limit = 20, skip = 0, agEntitasId = null) {
 
-    console.log("=================================== eemberHozzarendeleseinekLekerese:: ", {
+    console.log("=================================== eemberAktivHozzarendeleseinekLekerese:: ", {
       eemberId: eemberId,
       limit: limit,
       skip: skip,
+      agEntitasId: agEntitasId,
     });
-    
-    
+
     // 1. LÉPÉS - Paraméter validálás
     if (!eemberId) {
       throw new Error('A eember azonosítója kötelező');
     }
 
     // 2. LÉPÉS - Aktív hozzárendelések lekérdezése
+    // Ág-szűrésnél NEM lapozunk az adatbázisban (a szűrés utólag dönti el, mi
+    // marad), hanem az összes aktív hozzárendelést lekérjük, és a végén
+    // alkalmazzuk a skip/limit-et. Egy e-ember aktív hozzárendelése a véges
+    // tudatpont-keret miatt korlátos mennyiség.
+    const dbLimit = agEntitasId ? 1000 : limit;
+    const dbSkip = agEntitasId ? 0 : skip;
 
-    console.log("eemberHozzarendeleseinekLekerese >>>>>>>>>>>>>>>>>> TudatpontRepository.findAktivHozzarendelesekByeEmber ", {
-      eemberId: eemberId,
-      limit: limit,
-      skip: skip,
-    });
-    
-    const hozzarendelesek = await TudatpontRepository.findAktivHozzarendelesekByeEmber(
+    let hozzarendelesek = await TudatpontRepository.findAktivHozzarendelesekByeEmber(
       eemberId,
-      limit,
-      skip
+      dbLimit,
+      dbSkip
     );
 
-    // 3. LÉPÉS - Hozzárendelések visszaadása
+    // 3. LÉPÉS - ÁG-SZŰRÉS (ha kérték)
+    if (agEntitasId) {
+      const agKulcs = agEntitasId.toString();
+      // Entitásonként egyszer döntjük el, az ág alatt van-e (cache)
+      const agAlattCache = new Map(); // '<tipus>:<id>' -> boolean
 
-    console.log("<<<<<<<<<<<<<<<<<<<< eemberAktivHozzarendeleseinekLekerese====hozzarendelesek: ", {
-      hozzarendelesek: hozzarendelesek
+      const agAlattE = async (entitasId, entitasTipus) => {
+        const kulcs = `${entitasTipus}:${entitasId}`;
+        if (agAlattCache.has(kulcs)) return agAlattCache.get(kulcs);
+
+        // Az ős-lánc bejárása: maga az entitás, majd a szülők a gyökérig
+        let benneVan = false;
+        let aktId = entitasId;
+        let aktTipus = entitasTipus;
+        while (aktId && aktTipus) {
+          if (aktId.toString() === agKulcs) { benneVan = true; break; }
+          const szulo = await ErtesitesiBeallitasService.szuloKereses(aktId, aktTipus);
+          if (!szulo) break;
+          aktId = szulo.szuloId;
+          aktTipus = szulo.szuloTipus;
+        }
+
+        agAlattCache.set(kulcs, benneVan);
+        return benneVan;
+      };
+
+      const szurt = [];
+      for (const h of hozzarendelesek) {
+        if (await agAlattE(h.entitasId, h.entitasTipus)) szurt.push(h);
+      }
+      // Lapozás a szűrt listán
+      hozzarendelesek = szurt.slice(skip, skip + limit);
+    }
+
+    // 4. LÉPÉS - ENTITÁS-CÍMEK FELTÖLTÉSE
+    // Közös segéd az ertesitesService-ből: Tartalom → cim, Kategoria/TartalomTipus
+    // → nev, Javaslat/Egyezmeny → null (`entitasCim` mező kerül minden elemre).
+    const cimmelEllatva = await ErtesitesService.entitasCimekFeltoltese(hozzarendelesek);
+
+    console.log("<<<<<<<<<<<<<<<<<<<< eemberAktivHozzarendeleseinekLekerese====darab: ", {
+      darab: cimmelEllatva.length
     });
-    
-    return hozzarendelesek;
+
+    return cimmelEllatva;
   }
 
   // ============================================================

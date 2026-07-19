@@ -315,6 +315,8 @@ const olvasatlanokSzamaLekereses = async (eEmberId) => {
 
 // Az összes publikus metódus exportálása
 module.exports = {
+  // A cím-feltöltő segédet a tudatpontService (Tudatpontok nézet) is használja
+  entitasCimekFeltoltese,
   ertesitesKuldes,
   postafiokLekereses,
   ertesitesMegjelolOlvasottnak,

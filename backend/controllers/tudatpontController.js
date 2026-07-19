@@ -234,6 +234,10 @@ class TudatpontController {
       const limit = parseInt(req.query.limit) || 20;   // Alapértelmezett: 20
       const skip = parseInt(req.query.skip) || 0;      // Alapértelmezett: 0
 
+      // Opcionális ág-szűrő (Tudatpontok nézet a kártya-menükből): csak az adott
+      // entitás ága alatti hozzárendelések
+      const agEntitasId = req.query.agEntitasId || null;
+
       // 3. LÉPÉS - Limit validálása (max 100)
       const validLimit = Math.min(limit, 100);
 
@@ -241,7 +245,8 @@ class TudatpontController {
       const hozzarendelesek = await TudatpontService.eemberAktivHozzarendeleseinekLekerese(
         eemberId,
         validLimit,
-        skip
+        skip,
+        agEntitasId
       );
 
       // 5. LÉPÉS - Sikeres válasz küldése

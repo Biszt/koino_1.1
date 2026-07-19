@@ -1,0 +1,13 @@
+<!-- frontend/html/components/modals/tudatpontokModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     A hozzárendelés-sorokat a TudatpontokModal.js injektálja a #tudatpontok-lista-ba. -->
+<div class="tudatpontok-modal">
+
+  <!-- Fejléc-sor: a szabad (még szét nem osztott) tudatpont (a JS tölti fel) -->
+  <p class="tudatpontok-modal__szabad" id="tudatpontok-szabad"></p>
+
+  <!-- A saját aktív hozzárendelések listája – ide kerülnek a sorok (a JS tölti fel) -->
+  <div class="tudatpontok-modal__lista" id="tudatpontok-lista"></div>
+
+</div>

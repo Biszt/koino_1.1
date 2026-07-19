@@ -21,6 +21,7 @@ import TartalomTipusModal from './modals/TartalomTipusModal.js';
 import ErtesitesiBeallitasModal from './modals/ErtesitesiBeallitasModal.js';
 import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
+import TudatpontokModal from './modals/TudatpontokModal.js';
 import Pakli from './Pakli.js';
 
 
@@ -61,6 +62,10 @@ init() {
   // történt, az app-szintű badge-et is frissíteni kell. A kártya nem éri el a
   // FoOldal-t közvetlenül, ezért DOM-eseményen keresztül szól (Kartya.js küldi).
   document.addEventListener('koino:ertesitesValtozas', () => this._ertesitesBadgeFrissitese());
+
+  // A KÁRTYÁK ág-szűrt Tudatpontok nézetéből érkező jelzés: pont-módosítás után
+  // az alsó statisztika-sáv (szabad tudatpont) frissítése (Kartya.js küldi).
+  document.addEventListener('koino:tudatpontValtozas', () => this.adatokBetoltese());
 
   this.modal = new Modal('modal-kontener', {
     cim:      '',
@@ -165,10 +170,10 @@ init() {
         akcio:   () => this._meghivoimMegnyitasa()
       },
       {
-        ikon:       '🚧',
+        ikon:       '🌟',
         felirat:    'Tudatpontok',
         elvalaszto: true,
-        akcio:      () => fejlesztesreVarMegjelenitese('Tudatpontok')
+        akcio:      () => this._tudatpontokMegnyitasa()
       },
       {
         ikon:    '🚧',
@@ -268,6 +273,41 @@ init() {
     tartalomTipusModal.megnyitas();
 
     console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // TUDATPONTOK MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Tudatpontok" – a saját aktív tudatpont-hozzárendelések teljes
+  // listája (terv 7. pont). Sorra kattintva a pakli az entitásra navigál;
+  // pont-módosítás után az alsó statisztika-sáv és (bezáráskor) a pakli frissül.
+  async _tudatpontokMegnyitasa() {
+    console.log('FoOldal._tudatpontokMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const tudatpontokModal = new TudatpontokModal('modal-kontener', {
+      token: this.token,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('FoOldal - tudatpontok listából navigálás', { entitasId, entitasTipus });
+        aktivEntitasMentese(entitasId, entitasTipus);
+        this._pakliInditasa(entitasId, entitasTipus);
+      },
+      // Pont-módosítás után az alsó sáv (szabad tudatpont) frissítése
+      onValtozas: () => this.adatokBetoltese(),
+      // Bezáráskor (ha volt módosítás, de nem navigáltunk) a pakli újratöltése,
+      // hogy a kártyák hierarchikus pontjai friss értéket mutassanak
+      onBezarasValtozassal: () => {
+        const { entitasId, entitasTipus } = aktivEntitasLekerese();
+        this._pakliInditasa(entitasId, entitasTipus);
+      }
+    });
+
+    await tudatpontokModal.init();
+    await tudatpontokModal.megnyitas();
+
+    console.log('FoOldal._tudatpontokMegnyitasa - VÉGE');
   }
 
 
