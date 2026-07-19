@@ -1,0 +1,36 @@
+<!-- frontend/html/components/modals/keresesModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     A találat-sorokat a KeresesModal.js injektálja a #kereses-lista-ba. -->
+<div class="kereses-modal">
+
+  <!-- Keresőmező – gépelés közben (rövid késleltetéssel) frissül a találati lista -->
+  <input
+    class="kereses-modal__mezo"
+    type="text"
+    id="kereses-mezo"
+    placeholder="Keresés cím vagy név szerint..."
+    autocomplete="off"
+    aria-label="Keresőszöveg"
+  />
+
+  <!-- Típus-szűrő pipák – alapból mindhárom bekapcsolva -->
+  <div class="kereses-modal__tipusok" role="group" aria-label="Típus-szűrő">
+    <label class="kereses-modal__tipus-pipa">
+      <input type="checkbox" id="kereses-tipus-tartalom" checked />
+      <span>📄 Tartalom</span>
+    </label>
+    <label class="kereses-modal__tipus-pipa">
+      <input type="checkbox" id="kereses-tipus-kategoria" checked />
+      <span>📁 Kategória</span>
+    </label>
+    <label class="kereses-modal__tipus-pipa">
+      <input type="checkbox" id="kereses-tipus-tartalomtipus" checked />
+      <span>🏷️ Tartalomtípus</span>
+    </label>
+  </div>
+
+  <!-- A találatok listája – ide kerülnek a sorok (a JS tölti fel) -->
+  <div class="kereses-modal__lista" id="kereses-lista"></div>
+
+</div>

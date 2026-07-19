@@ -6,6 +6,7 @@ import { apiGet } from '../../utils/apiHelper.js';        // Backend GET – tud
 import { tokenLekerese, aktivEntitasMentese } from '../../utils/authHelper.js'; // Token + navigáláskor az aktív entitás mentése
 import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt postafiók a kártya menüjéből
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
+import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -108,6 +109,13 @@ async init() {
       ikon:    '🌟',
       felirat: 'Tudatpontok',
       akcio:   () => this._agTudatpontokMegnyitasa()
+    });
+    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: keresés az entitás ÁGA alatt (ág-szűrt
+    // kereső) — Csaba kérése (2026-07-18): a kereső a kártyákról is elérhető.
+    opciok.push({
+      ikon:    '🔍',
+      felirat: 'Keresés',
+      akcio:   () => this._agKeresesMegnyitasa()
     });
   }
 
@@ -326,6 +334,40 @@ async _agTudatpontokMegnyitasa() {
   await tudatpontokModal.megnyitas();
 
   console.log('Kartya._agTudatpontokMegnyitasa - VÉGE');
+}
+
+// ----- ÁG-SZŰRT KERESÉS MEGNYITÁSA -----
+// A kártya-hamburger közös „Keresés" menüpontja hívja. A közös KeresesModal-t
+// nyitja ÁG-SZŰRT módban: csak azok a találatok jönnek, amelyek EZEN az entitáson
+// vagy bármely leszármazottján vannak (a backend az ős-lánc bejárásával szűr).
+// Találatra kattintva az entitásra navigálunk.
+async _agKeresesMegnyitasa() {
+  console.log('Kartya._agKeresesMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  // A modal címébe az entitás címe/neve kerül, ha van (Javaslat/Egyezménynél nincs)
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+
+  const keresesModal = new KeresesModal(this.modalKontenerAzon, {
+    token:       this.token ?? tokenLekerese(),
+    agEntitasId: this.entitas.entitasId,
+    cim:         agCim ? `Keresés – ${agCim}` : 'Keresés – ez az ág',
+
+    // Találatra kattintás → az entitásra navigálunk: elmentjük aktívnak, majd a
+    // központi újratöltő callback a paklit arra az entitásra építi újra
+    onEntitasKivalasztas: (entitasId, entitasTipus) => {
+      aktivEntitasMentese(entitasId, entitasTipus);
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes(entitasId, entitasTipus);
+    }
+  });
+
+  await keresesModal.init();
+  keresesModal.megnyitas();
+
+  console.log('Kartya._agKeresesMegnyitasa - VÉGE');
 }
 
 // ----- BODY FRISSÍTÉSE -----

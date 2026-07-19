@@ -55,6 +55,7 @@
 @import './components/modals/ertesitesekModal.css';
 @import './components/modals/meghivoModal.css';
 @import './components/modals/tudatpontokModal.css';
+@import './components/modals/keresesModal.css';
 @import './components/modals/ertekEloszlasModal.css';
 /* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,
    hogy azok felül tudják írni, ha kell */

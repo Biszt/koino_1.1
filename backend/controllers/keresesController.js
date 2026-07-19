@@ -43,8 +43,12 @@ class KeresesController {
       if (!Number.isInteger(limit) || limit < 1) limit = 10;
       if (limit > 50) limit = 50;
 
+      // Opcionális ág-szűrő (a kártya-menük Keresés pontja): csak az adott
+      // entitás ága alatti találatok
+      const agEntitasId = req.query.agEntitasId || null;
+
       // 3. LÉPÉS - Service hívás
-      const talalatok = await KeresesService.entitasKereses(kifejezes, tipusok, limit);
+      const talalatok = await KeresesService.entitasKereses(kifejezes, tipusok, limit, agEntitasId);
 
       console.log('KeresesController.entitasKereses - VÉGE', { talalatok: talalatok.length });
 

@@ -22,6 +22,7 @@ import ErtesitesiBeallitasModal from './modals/ErtesitesiBeallitasModal.js';
 import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
+import KeresesModal from './modals/KeresesModal.js';
 import Pakli from './Pakli.js';
 
 
@@ -138,6 +139,11 @@ init() {
     // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
     const opciok = [
+      {
+        ikon:    '🔍',
+        felirat: 'Keresés',
+        akcio:   () => this._keresesMegnyitasa()
+      },
       {
         ikon:    '🔔',
         felirat: 'Értesítések',
@@ -273,6 +279,32 @@ init() {
     tartalomTipusModal.megnyitas();
 
     console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // KERESÉS MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Keresés" – cím/név alapú entitás-keresés az egész platformon.
+  // Találatra kattintva a pakli az entitásra navigál.
+  async _keresesMegnyitasa() {
+    console.log('FoOldal._keresesMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const keresesModal = new KeresesModal('modal-kontener', {
+      token: this.token,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('FoOldal - kereső találatból navigálás', { entitasId, entitasTipus });
+        aktivEntitasMentese(entitasId, entitasTipus);
+        this._pakliInditasa(entitasId, entitasTipus);
+      }
+    });
+
+    await keresesModal.init();
+    keresesModal.megnyitas();
+
+    console.log('FoOldal._keresesMegnyitasa - VÉGE');
   }
 
 

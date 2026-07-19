@@ -151,6 +151,7 @@ hivatkozás-panelje használja).
 | `q` | ✅ | keresőszöveg (cím/név-részlet, kis/nagybetű független, részleges egyezés) |
 | `tipusok` | ❌ | vesszős lista: `Tartalom,Kategoria,TartalomTipus` (alap: mind a három) |
 | `limit` | ❌ | típusonkénti max. találat, 1–50, alap 10 |
+| `agEntitasId` | ❌ | ÁG-SZŰRŐ (2026-07-18 óta): csak az adott entitás ága alatti találatok (ős-lánc bejárás; a kártya-menük Keresés pontja használja) |
 
 **Válasz:** `{ success: true, talalatok: [{ entitasId, entitasTipus, cim }] }`.
 Csak a **cím-viselő** három típusra keres (Tartalom címe = `cim`, Kategória/Tartalomtípus = `nev`).
@@ -476,6 +477,18 @@ docker logs -f koino-backend
     szülő + gyerek igen, más ág (kategória) nem.
     Végpont: `GET /api/tudatpont/aktiv-hozzarendelesek?limit=&skip=&agEntitasId=`
     (auth; `entitasCim` mezővel).
+43. ⬜ **Keresés (2026-07-18 óta):** fő menü → **🔍 Keresés** → keresőmező +
+    3 típus-pipa (📄 Tartalom / 📁 Kategória / 🏷️ Tartalomtípus, alapból mind
+    bepipálva). Gépelés közben (~300 ms késleltetéssel) frissül a találati lista
+    (típus-ikon + cím); pipa-váltásra azonnal újrakeres; minden pipa kivéve →
+    „Pipálj be legalább egy típust." Találatra kattintva a modal bezárul és a
+    pakli az entitásra navigál. **Kártya-változat:** MINDEN kártya
+    hamburger-menüjében ÚJ közös menüpont: **🔍 Keresés** → ugyanez ÁG-SZŰRVE
+    (cím: „Keresés – <entitás címe>"): csak az adott entitás ága alatti
+    találatok. API-ellenőrzés (curl, 2026-07-18, lefutott): teljes keresés,
+    típus-szűrés, ág-szűrt találat (Gyerek C a Szulo P ágában), ágon kívüli
+    kizárás (0 találat) — mind helyes. A keresés cím/név alapú (v1); a
+    tartalmak szövegében keresés későbbi bővítés.
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 
