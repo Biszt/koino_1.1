@@ -1,0 +1,70 @@
+<!-- frontend/html/components/modals/eemberBeallitasokModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Az értékeket az EemberBeallitasokModal.js tölti ki a sajat-adatok válaszból. -->
+<div class="eember-beallitasok-modal">
+
+  <!-- ===== AZONOSÍTÓK (nem módosíthatók) ===== -->
+  <div class="eember-beallitasok-modal__szakasz">
+    <p class="eember-beallitasok-modal__sor">
+      <span class="eember-beallitasok-modal__cimke">E-embernév:</span>
+      <span id="beallitasok-eembernev">—</span>
+    </p>
+    <p class="eember-beallitasok-modal__sor">
+      <span class="eember-beallitasok-modal__cimke">E-mail:</span>
+      <span id="beallitasok-email">—</span>
+    </p>
+    <p class="eember-beallitasok-modal__megjegyzes">
+      Az e-embernév és az e-mail cím jelenleg nem módosítható.
+    </p>
+  </div>
+
+  <!-- ===== PROFIL-ADATOK (módosíthatók) ===== -->
+  <div class="eember-beallitasok-modal__szakasz">
+    <h3 class="eember-beallitasok-modal__szakasz-cim">Profil-adatok</h3>
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-nev">Valódi név</label>
+    <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-nev"
+      autocomplete="name" aria-label="Valódi név" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-orszag">Ország</label>
+    <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-orszag"
+      autocomplete="country-name" aria-label="Ország" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-regio">Régió / Megye</label>
+    <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-regio"
+      autocomplete="address-level1" aria-label="Régió vagy megye" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-telepules">Település</label>
+    <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-telepules"
+      autocomplete="address-level2" aria-label="Település" />
+
+    <button type="button" class="eember-beallitasok-modal__gomb" id="beallitasok-profil-mentes">
+      Profil mentése
+    </button>
+    <span class="eember-beallitasok-modal__siker" id="beallitasok-profil-siker"></span>
+  </div>
+
+  <!-- ===== JELSZÓVÁLTÁS ===== -->
+  <div class="eember-beallitasok-modal__szakasz">
+    <h3 class="eember-beallitasok-modal__szakasz-cim">Jelszóváltás</h3>
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-regi-jelszo">Jelenlegi jelszó</label>
+    <input class="eember-beallitasok-modal__mezo" type="password" id="beallitasok-regi-jelszo"
+      autocomplete="current-password" aria-label="Jelenlegi jelszó" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-uj-jelszo">Új jelszó</label>
+    <input class="eember-beallitasok-modal__mezo" type="password" id="beallitasok-uj-jelszo"
+      autocomplete="new-password" aria-label="Új jelszó" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-uj-jelszo2">Új jelszó megerősítése</label>
+    <input class="eember-beallitasok-modal__mezo" type="password" id="beallitasok-uj-jelszo2"
+      autocomplete="new-password" aria-label="Új jelszó megerősítése" />
+
+    <button type="button" class="eember-beallitasok-modal__gomb" id="beallitasok-jelszo-mentes">
+      Jelszó módosítása
+    </button>
+    <span class="eember-beallitasok-modal__siker" id="beallitasok-jelszo-siker"></span>
+  </div>
+
+</div>

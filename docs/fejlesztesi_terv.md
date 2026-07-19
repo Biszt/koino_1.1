@@ -107,7 +107,12 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
    Backend: `GET /api/tudatpont/aktiv-hozzarendelesek` bővítve `entitasCim`-mel
    (közös cím-feltöltő az ertesitesService-ből) + opcionális `agEntitasId` szűrővel
    (ős-lánc bejárás, entitásonként cache-elve).
-8. [ ] **eember beállítások** (főmenü)
+8. [x] **eember beállítások** — KÉSZ (2026-07-18; böngészős teszt hátra: teszt.md 47).
+   Új `EemberBeallitasokModal` (fő menü ⚙️): azonosítók megjelenítése (e-embernév,
+   e-mail — v1-ben nem módosíthatók), profil-adatok módosítása (valódi név + lokáció
+   autocomplete-tel; mentés után fejléc-frissítés) és jelszóváltás (jelenlegi jelszó
+   igazolásával, regisztrációs erősség-szabállyal). Backend: PUT `/api/eember/adatok`
+   + POST `/api/eember/jelszovaltas`; a `sajat-adatok` válaszban már email + lokacio is.
 9. [ ] **Új kategória létrehozása ebből** (Kategória kártya) — alkategória létrehozása; backend módosítást is igényel (kategória-hierarchia)
 10. [x] **Jogosultság-függő menüpontok** — a kártya-menük megnyitáskor jelzik a jogosultságot: a tudatpontot igénylő menüpontok (Javaslat létrehozása, Szavazat leadása, valamint „Új tartalom/kategória létrehozása ebből") inaktívak (halvány + magyarázó tipp), ha az eembernek nincs tudatpontja az entitáson. Megvalósítás: a menüpont `tudatpontFuggo: true` jelölést kap; a `Kartya` alaposztály a menü megnyitásakor a `GET /api/tudatpont/entitas/:tipus/:id → eemberHozzajarulas` (eemberenkénti `tudatponthozzarendeles.tudatPontok`) alapján tiltja/engedi. A backend a védelmet külön kikényszeríti (javaslatService, szavazatService).
     - **Döntés (2026-07-10) — a backend szabálya a mérvadó:** a szavazati jogosultságot MINDIG az érintett entitás(ok)on lévő tudatpont dönti el (`erintettEntitasok`, ahogy a backend teszi); a javaslaton magán lévő tudatpont hiánya NEM akadály, attól még lehet szavazni. A frontendet ehhez igazítjuk. **Választott megoldás:** a **pakli e-ember-tudatossá tétele** — a `pakliService` megkapja a néző e-ember azonosítóját (a pakli útvonal már `authMiddleware`-es, a `req.user.id` rendelkezésre áll), és a javaslat-kártya adataihoz kiszámolja a `szavazhat` jelzést a backend saját szabályával (`javaslatJogosultsagService`). A frontend a „Szavazat leadása" pontot ez alapján engedi/tiltja (nem a javaslat saját tudatpontja alapján). Ez foundational: az e-ember-tudatos pakli más funkciókhoz is kell (lásd a fejléc saját-tudatpont jelzés jegyzete, [jegyzetek.md](jegyzetek.md), 2026-07-10).

@@ -96,6 +96,44 @@ class eEmberRepository {
     return eredmeny;
   }
 
+  // ----- PROFIL-ADATOK FRISSÍTÉSE -----
+  // A módosítható profil-mezők (nev, lokacio) mentése.
+  // Használat: eember beállítások (terv 8. pont)
+  // @param {string} id - MongoDB ObjectId
+  // @param {Object} adatok - { nev, lokacio }
+  // @returns {Promise} Frissített eember
+  async updateProfil(id, adatok) {
+    console.log('eEmberRepository.updateProfil - KEZDÉS', { id });
+
+    const eredmeny = await eEmber.findByIdAndUpdate(
+      id,
+      { nev: adatok.nev, lokacio: adatok.lokacio },
+      { new: true, runValidators: true } // A séma-validációk frissítéskor is fussanak
+    );
+
+    console.log('eEmberRepository.updateProfil - VÉGE', { id: eredmeny?._id });
+    return eredmeny;
+  }
+
+  // ----- JELSZÓ FRISSÍTÉSE -----
+  // A hash-elt új jelszó mentése.
+  // Használat: eember beállítások — jelszóváltás
+  // @param {string} id - MongoDB ObjectId
+  // @param {string} hashedJelszo - Az ÚJ, már hash-elt jelszó
+  // @returns {Promise} Frissített eember
+  async updateJelszo(id, hashedJelszo) {
+    console.log('eEmberRepository.updateJelszo - KEZDÉS', { id });
+
+    const eredmeny = await eEmber.findByIdAndUpdate(
+      id,
+      { jelszo: hashedJelszo },
+      { new: true }
+    );
+
+    console.log('eEmberRepository.updateJelszo - VÉGE', { id: eredmeny?._id });
+    return eredmeny;
+  }
+
   // ----- EEMBEREK SZÁMLÁLÁSA -----
   // A platformon regisztrált összes eember számának lekérése
   // Használat: Főoldal statisztika sávhoz

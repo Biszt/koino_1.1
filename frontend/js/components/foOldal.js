@@ -23,6 +23,7 @@ import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
 import KeresesModal from './modals/KeresesModal.js';
+import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
 
 
@@ -182,9 +183,9 @@ init() {
         akcio:      () => this._tudatpontokMegnyitasa()
       },
       {
-        ikon:    '🚧',
+        ikon:    '⚙️',
         felirat: 'eember beállítások',
-        akcio:   () => fejlesztesreVarMegjelenitese('eember beállítások')
+        akcio:   () => this._eemberBeallitasokMegnyitasa()
       },
       {
         ikon:    '🚪',
@@ -279,6 +280,29 @@ init() {
     tartalomTipusModal.megnyitas();
 
     console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // EEMBER BEÁLLÍTÁSOK MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „eember beállítások" – profil-adatok (név, lokáció) módosítása
+  // és jelszóváltás. Sikeres mentés után a fejléc-adatok frissülnek.
+  async _eemberBeallitasokMegnyitasa() {
+    console.log('FoOldal._eemberBeallitasokMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const beallitasokModal = new EemberBeallitasokModal('modal-kontener', {
+      token: this.token,
+      // Profil-mentés után a fejléc/statisztika adatok újratöltése
+      onValtozas: () => this.adatokBetoltese()
+    });
+
+    await beallitasokModal.init();
+    await beallitasokModal.megnyitas();
+
+    console.log('FoOldal._eemberBeallitasokMegnyitasa - VÉGE');
   }
 
 

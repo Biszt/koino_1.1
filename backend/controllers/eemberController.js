@@ -105,6 +105,8 @@ class eEmberController {
         success:    true,
         eemberNev:  adatok.eemberNev,   // Eembernév a sávhoz
         nev:        adatok.nev,          // Valódi név
+        email:      adatok.email,        // Saját e-mail (beállítások modalhoz)
+        lokacio:    adatok.lokacio,      // Ország / régió / település
         tudatpontok: adatok.tudatpontok  // Aktuális egyenleg
       });
 
@@ -113,6 +115,52 @@ class eEmberController {
     } catch (error) {
       console.error('eEmberController.sajatAdatokLekereses - VÉGE (hiba)', { hiba: error.message });
       res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ===== PROFIL-ADATOK MÓDOSÍTÁSA =====
+  // A bejelentkezett eember valódi nevének és lokációjának módosítása
+  // PUT /api/eember/adatok
+  // @param {Object} req - Express request (body: nev, lokacio; req.user az authMiddleware-től)
+  // @param {Object} res - Express response
+  async profilModositasa(req, res) {
+    console.log('eEmberController.profilModositasa - KEZDÉS', { eemberId: req.user?.id });
+    try {
+      const frissitett = await eEmberService.profilModositasa(req.user.id, req.body);
+
+      res.status(200).json({
+        success: true,
+        message: 'Profil-adatok mentve',
+        eember:  frissitett
+      });
+
+      console.log('eEmberController.profilModositasa - VÉGE (siker)', { eemberId: req.user?.id });
+    } catch (error) {
+      console.error('eEmberController.profilModositasa - VÉGE (hiba)', { hiba: error.message });
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // ===== JELSZÓVÁLTÁS =====
+  // A bejelentkezett eember jelszavának módosítása (régi jelszóval igazolva)
+  // POST /api/eember/jelszovaltas
+  // @param {Object} req - Express request (body: regiJelszo, ujJelszo)
+  // @param {Object} res - Express response
+  async jelszoValtas(req, res) {
+    console.log('eEmberController.jelszoValtas - KEZDÉS', { eemberId: req.user?.id });
+    try {
+      const { regiJelszo, ujJelszo } = req.body;
+      await eEmberService.jelszoValtas(req.user.id, regiJelszo, ujJelszo);
+
+      res.status(200).json({
+        success: true,
+        message: 'Jelszó sikeresen módosítva'
+      });
+
+      console.log('eEmberController.jelszoValtas - VÉGE (siker)', { eemberId: req.user?.id });
+    } catch (error) {
+      console.error('eEmberController.jelszoValtas - VÉGE (hiba)', { hiba: error.message });
+      res.status(400).json({ success: false, message: error.message });
     }
   }
 

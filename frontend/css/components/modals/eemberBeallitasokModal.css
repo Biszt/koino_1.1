@@ -1,0 +1,83 @@
+/* frontend/css/components/modals/eemberBeallitasokModal.css */
+
+/* Az eember beállítások modal a standard modal-vázra épül (Modal.js).
+   Három szakasz: azonosítók (csak olvasható), profil-adatok, jelszóváltás. */
+
+/* ===== SZAKASZOK ===== */
+.eember-beallitasok-modal__szakasz {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border, rgba(127, 127, 127, 0.25));
+}
+
+.eember-beallitasok-modal__szakasz:last-child {
+  border-bottom: none;
+}
+
+.eember-beallitasok-modal__szakasz-cim {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ===== AZONOSÍTÓ SOROK (csak olvasható) ===== */
+.eember-beallitasok-modal__sor {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.eember-beallitasok-modal__cimke {
+  color: var(--color-text-muted);
+  margin-right: var(--space-1);
+}
+
+.eember-beallitasok-modal__megjegyzes {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ===== MEZŐK ===== */
+.eember-beallitasok-modal__mezo-cimke {
+  display: block;
+  margin: var(--space-2) 0 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.eember-beallitasok-modal__mezo {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-md);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.eember-beallitasok-modal__mezo:focus {
+  outline: 2px solid var(--color-accent, #37a24d);
+  outline-offset: 1px;
+}
+
+/* ===== MENTÉS GOMBOK + SIKER-ÜZENET ===== */
+.eember-beallitasok-modal__gomb {
+  margin-top: var(--space-3);
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.eember-beallitasok-modal__gomb:hover {
+  background: var(--color-surface-offset);
+}
+
+.eember-beallitasok-modal__siker {
+  margin-left: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-accent, #37a24d);
+}

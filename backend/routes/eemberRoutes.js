@@ -34,6 +34,16 @@ router.post('/eember/bejelentkezes', eemberController.bejelentkezes);
 // Visszaadja: eemberNev, nev, tudatpontok (főoldal statisztika sávhoz)
 router.get('/eember/sajat-adatok', authMiddleware, eemberController.sajatAdatokLekereses);
 
+// ----- PROFIL-ADATOK MÓDOSÍTÁSA -----
+// PUT kérés: /api/eember/adatok (body: nev, lokacio)
+// Védett – az eember beállítások modal használja (terv 8. pont)
+router.put('/eember/adatok', authMiddleware, eemberController.profilModositasa);
+
+// ----- JELSZÓVÁLTÁS -----
+// POST kérés: /api/eember/jelszovaltas (body: regiJelszo, ujJelszo)
+// Védett – csak a régi jelszó helyes megadásával
+router.post('/eember/jelszovaltas', authMiddleware, eemberController.jelszoValtas);
+
 // ===== ROUTER EXPORTÁLÁSA =====
 // Ezt importálja a server.js
 module.exports = router;

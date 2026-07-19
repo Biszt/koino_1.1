@@ -168,15 +168,98 @@ class eEmberService {
     }
 
     // === 3. LÉPÉS: CSAK A SZÜKSÉGES MEZŐK VISSZAADÁSA ===
-    // Jelszót és egyéb érzékeny adatot NEM adunk vissza
+    // Jelszót NEM adunk vissza. Az e-mail és a lokáció a SAJÁT adat (a végpont
+    // auth-os, csak a bejelentkezett e-ember kapja) — az eember beállítások
+    // modal (terv 8. pont) tölti ki belőlük az űrlapot.
     const valasz = {
       eemberNev:   eember.eemberNev,   // Megjelenítendő felhasználónév
       nev:         eember.nev,          // Valódi név
+      email:       eember.email,        // Saját e-mail (más felé SOHA nem megy ki)
+      lokacio:     eember.lokacio,      // Ország / régió / település
       tudatpontok: eember.tudatpontok   // Aktuális tudatpont egyenleg
     };
 
     console.log('eEmberService.sajatAdatokLekereses - VÉGE', { eemberNev: valasz.eemberNev, tudatpontok: valasz.tudatpontok });
     return valasz;
+  }
+
+  // ===== PROFIL-ADATOK MÓDOSÍTÁSA =====
+  // Az eember beállítások (terv 8. pont): a valódi név és a lokáció módosítható.
+  // Az eemberNev és az e-mail v1-ben NEM módosítható (azonosítók).
+  // @param {string} eemberId - A bejelentkezett e-ember azonosítója
+  // @param {Object} adatok - { nev, lokacio: { orszag, regio, telepules } }
+  // @returns {Promise} Frissített adatok (jelszó nélkül)
+  async profilModositasa(eemberId, adatok) {
+    console.log('eEmberService.profilModositasa - KEZDÉS', { eemberId });
+
+    // === 1. LÉPÉS: VALIDÁLÁS ===
+    const nev = adatok?.nev?.trim();
+    const lokacio = adatok?.lokacio ?? {};
+    if (!nev) {
+      throw new Error('A valódi név megadása kötelező');
+    }
+    if (!lokacio.orszag?.trim() || !lokacio.regio?.trim() || !lokacio.telepules?.trim()) {
+      throw new Error('Az ország, régió és település megadása kötelező');
+    }
+
+    // === 2. LÉPÉS: MENTÉS ===
+    const frissitett = await eEmberRepository.updateProfil(eemberId, {
+      nev,
+      lokacio: {
+        orszag:    lokacio.orszag.trim(),
+        regio:     lokacio.regio.trim(),
+        telepules: lokacio.telepules.trim()
+      }
+    });
+    if (!frissitett) {
+      throw new Error('eEmber nem található');
+    }
+
+    // === 3. LÉPÉS: JELSZÓ NÉLKÜLI VÁLASZ ===
+    const valasz = frissitett.toObject();
+    delete valasz.jelszo;
+
+    console.log('eEmberService.profilModositasa - VÉGE', { eemberId });
+    return valasz;
+  }
+
+  // ===== JELSZÓVÁLTÁS =====
+  // Csak a RÉGI jelszó helyes megadásával — az új jelszóra ugyanaz az
+  // erősség-szabály érvényes, mint regisztrációkor.
+  // @param {string} eemberId - A bejelentkezett e-ember azonosítója
+  // @param {string} regiJelszo - A jelenlegi jelszó
+  // @param {string} ujJelszo - Az új jelszó
+  // @returns {Promise<boolean>} true, ha sikeres
+  async jelszoValtas(eemberId, regiJelszo, ujJelszo) {
+    console.log('eEmberService.jelszoValtas - KEZDÉS', { eemberId });
+
+    // === 1. LÉPÉS: PARAMÉTEREK ===
+    if (!regiJelszo || !ujJelszo) {
+      throw new Error('A jelenlegi és az új jelszó megadása is kötelező');
+    }
+
+    // === 2. LÉPÉS: EEMBER + RÉGI JELSZÓ ELLENŐRZÉSE ===
+    const eember = await eEmberRepository.findById(eemberId);
+    if (!eember) {
+      throw new Error('eEmber nem található');
+    }
+    const regiHelyes = await JelszoHelper.osszehasonlitJelszo(regiJelszo, eember.jelszo);
+    if (!regiHelyes) {
+      throw new Error('A jelenlegi jelszó nem megfelelő');
+    }
+
+    // === 3. LÉPÉS: ÚJ JELSZÓ ERŐSSÉGE ===
+    const jelszoErosseg = JelszoHelper.validalJelszoErosseg(ujJelszo);
+    if (!jelszoErosseg.ervényes) {
+      throw new Error(`Gyenge jelszó: ${jelszoErosseg.hibak.join(', ')}`);
+    }
+
+    // === 4. LÉPÉS: HASH + MENTÉS ===
+    const hashedJelszo = await JelszoHelper.hashJelszo(ujJelszo);
+    await eEmberRepository.updateJelszo(eemberId, hashedJelszo);
+
+    console.log('eEmberService.jelszoValtas - VÉGE', { eemberId });
+    return true;
   }
 
   // ===== TOKEN ELLENŐRZÉSE =====
