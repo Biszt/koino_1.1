@@ -524,6 +524,60 @@ docker logs -f koino-backend
     (nev, lokacio — hiányos adatra 400), POST `/api/eember/jelszovaltas`
     (regiJelszo, ujJelszo — rossz régire 400; erősség-szabály mint
     regisztrációnál); új jelszóval a bejelentkezés igazolva.
+48. ⬜ **Testvér-jelző kacsacsőrök (terv 13/a pont, 2026-07-19 óta):** a
+    KIVÁLASZTOTT kártya két szélén lebegő **‹ N** és **N ›** gombok mutatják,
+    hány testvér entitás van az adott irányban (a testvér-sorrend: hierarchikus
+    pont csökkenő → régebbi előrébb). Ellenőrzés: (a) olyan entitásnál, aminek
+    több testvére van, mindkét irányban helyes szám látszik; a sor szélein csak
+    az egyik gomb van (0 testvér irányában NINCS gomb); (b) a gombra **koppintva**
+    testvérváltás történik (ugyanaz, mint a vízszintes görgetés), és a számok az
+    új helyzethez frissülnek; (c) a gombra kattintás NEM választja ki magát a
+    kártyát (nem "üt át" a kártya-koppintásra); (d) a paklin belül másik kártyára
+    koppintva a kacsacsőrök az ÚJ kiválasztott kártyára ugranak át (ha a
+    testvérlista még töltődik, rövid ideig nem látszanak, majd megjelennek);
+    (e) testvér nélküli entitásnál (pl. egyetlen gyökér) egyik gomb sem látszik.
+    Megjegyzés: a backend a testvéreket 100 darabban maximálja — a számláló
+    ennél többet nem mutat.
+49. ⬜ **Teljes szélességű kártyák (2026-07-19 óta, Csaba döntése):** a kártyák
+    (és velük a pakli) MINDEN képernyőn a képernyő szélességét követik (a
+    wrapper paddingjén belül) — a korábbi fix, legfeljebb 400px-es kártya-oszlop
+    megszűnt; a menük (fő hamburger, alsó sáv, kártya-hamburgerek) változatlanok.
+    Ellenőrzés: (a) széles (asztali) ablakban a kártya a képernyő szélét követi,
+    és az ablak átméretezésekor vele nyúlik/szűkül; (b) a KIVÁLASZTOTT kártya
+    magassága NEM nő az ablak szélességével (a régi kártya-arány szerinti fix
+    magasság marad, mobilon pixelre a korábbi); (c) mobilon (keskeny ablak) a
+    megjelenés gyakorlatilag a korábbi; (d) a cím-betűméret a szélesebb
+    kártyához igazodik (Tartalom-kártyán dinamikus); (e) a kártya-body szövege
+    a teljes szélességet használja (a 72 karakteres sor-korlát megszűnt);
+    (f) a testvér-kacsacsőrök (48.) a széles kártya szélein is jó helyen vannak.
+50. ⬜ **Térkép (terv 13/b pont, 2026-07-19 óta):** teljes képernyős, interaktív
+    fa-nézet. Elérés: fő menü → **🗺️ Térkép** (teljes fa), VAGY bármely kártya
+    hamburgere → **🗺️ Térkép** (ág-szűrt: csak az entitás részfája, a cím a
+    modal fejlécében). Ellenőrzés:
+    (a) megnyitáskor ELŐBB darabszám-kijelzés jön („A koino N entitást
+    tartalmaz. Elkészíted a térképet?" / ág-módban „Ez az ág N entitást...")
+    Elkészítés + Mégse gombbal — a Mégse (és az ESC/✕) építés nélkül zár;
+    (b) Elkészítésre folyamatjelző fut („Letöltés: X / N entitás", majd
+    „Elhelyezés: X / N entitás") és végig látható a **Megszakítás** gomb —
+    megnyomva a modal visszaáll az indító nézetre, félkész rajz nélkül;
+    (c) a kész térképen a GYÖKÉR ALUL van és az ágak FELFELÉ nőnek (mint a
+    pakliban: gyökér legalul, levél legfelül; 2026-07-19-i javítás), a
+    csomópontok típus-színű pöttyök; belenagyítva (görgetés vagy ＋ gomb)
+    megjelennek az interaktív csomópontok: típus-ikon + rövid cím (~15
+    karakter), rámutatva tooltip a teljes címmel (Javaslat/Egyezménynél a
+    típusnév látszik cím helyett);
+    (d) pan/zoom: húzással mozgatható, görgetéssel a kurzorra nagyít, a ＋/－
+    gombok a közepére, a ⤢ gomb a teljes fát behúzza;
+    (e) az AKTUÁLIS entitás (amin a pakli áll / amelyik kártyáról nyitottad)
+    kiemelt gyűrűt kap (távolról téglavörös gyűrű a pötty körül, közelről
+    vastag gyűrű az SVG-körön);
+    (f) csomópontra kattintva (közeli nézetben az SVG-elemre, távoliban a
+    pöttyre) a modal bezárul és a pakli a választott entitásra navigál;
+    (g) kártya-menüs (ág-szűrt) módban CSAK az adott entitás részfája látszik,
+    és a darabszám az ág mérete.
+    API (curl, 2026-07-19, lefutott): GET `/api/terkep/darabszam` (globális: 25;
+    `?agEntitasId=` ág-BFS: 5), GET `/api/terkep?lapMeret=&kurzor=` (kurzoros
+    lapozás, 3 lap = pontosan 25 sor, cím-viselőknél `cim`, auth nélkül 401).
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

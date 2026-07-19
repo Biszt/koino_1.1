@@ -7,6 +7,7 @@ import { tokenLekerese, aktivEntitasMentese } from '../../utils/authHelper.js'; 
 import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt postafiók a kártya menüjéből
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
+import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -116,6 +117,13 @@ async init() {
       ikon:    '🔍',
       felirat: 'Keresés',
       akcio:   () => this._agKeresesMegnyitasa()
+    });
+    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: az entitás ÁGÁNAK térképe (ág-szűrt
+    // Térkép) — terv 13/b: a fő menü a teljes fát, a kártya a saját részfáját nyitja.
+    opciok.push({
+      ikon:    '🗺️',
+      felirat: 'Térkép',
+      akcio:   () => this._agTerkepMegnyitasa()
     });
   }
 
@@ -368,6 +376,40 @@ async _agKeresesMegnyitasa() {
   keresesModal.megnyitas();
 
   console.log('Kartya._agKeresesMegnyitasa - VÉGE');
+}
+
+// ----- ÁG-SZŰRT TÉRKÉP MEGNYITÁSA -----
+// KÖZÖS menüpont minden kártya-hamburgerben: az entitás ÁGÁNAK teljes képernyős
+// térképe (terv 13/b). Az ág gyökere maga az entitás — a térképen kiemelve.
+// Csomópontra kattintva a pakli a választott entitásra navigál.
+async _agTerkepMegnyitasa() {
+  console.log('Kartya._agTerkepMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  // A modal címébe az entitás címe/neve kerül, ha van (Javaslat/Egyezménynél nincs)
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+
+  const terkepModal = new TerkepModal(this.modalKontenerAzon, {
+    token:             this.token ?? tokenLekerese(),
+    agEntitasId:       this.entitas.entitasId,
+    aktualisEntitasId: this.entitas.entitasId,
+    cim:               agCim ? `Térkép – ${agCim}` : 'Térkép – ez az ág',
+
+    // Csomópontra kattintás → az entitásra navigálunk: elmentjük aktívnak, majd a
+    // központi újratöltő callback a paklit arra az entitásra építi újra
+    onEntitasKivalasztas: (entitasId, entitasTipus) => {
+      aktivEntitasMentese(entitasId, entitasTipus);
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes(entitasId, entitasTipus);
+    }
+  });
+
+  await terkepModal.init();
+  terkepModal.megnyitas();
+
+  console.log('Kartya._agTerkepMegnyitasa - VÉGE');
 }
 
 // ----- BODY FRISSÍTÉSE -----

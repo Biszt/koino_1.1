@@ -8,6 +8,10 @@ import KategoriaKartya from './kartya/KategoriaKartya.js'; // Kategória típus�
 import TartalomTipusKartya from './kartya/TartalomTipusKartya.js'; // TartalomTípus kártya
 import JavaslatKartya from './kartya/JavaslatKartya.js'; // Javaslat típusú kártya
 import EgyezmenyKartya from './kartya/EgyezmenyKartya.js'; // Egyezmény típusú kártya
+import TestverJelzo from './TestverJelzo.js'; // ‹ N / N › kacsacsőrök a kiválasztott kártyán
+// A testvér-sor KÖZÖS rendezése + irányonkénti számok — a lépegetés és a
+// kacsacsőr-számok UGYANEBBŐL dolgoznak, így sosem térhetnek el egymástól
+import { testverSzamok } from '../utils/testverRendezes.js';
 // authHelper-ből az entitás mentő/lekérő függvények importálása
 import {
   aktivEntitasMentese,
@@ -65,6 +69,9 @@ constructor(token, tartalmKontenerAzonosito, modalKontenerAzonosito = 'modal-kon
   this.kartyaPeldanyok = [];        // Kartya példányok referenciái index szerint
   // dupla API hívás védelem – eltárolja a folyamatban lévő testvér ID-ját
   this.testverBetoltesAlatt = null;
+  // Testvér-jelző kacsacsőrök (‹ N / N ›) a kiválasztott kártya két szélén;
+  // kattintásra testvérváltást indítanak
+  this.testverJelzo = new TestverJelzo((irany) => this.testverValtasa(irany));
 
   console.log('Pakli.constructor - VÉGE', {
     tartalmKontenerAzonosito: this.tartalmKontenerAzonosito,
@@ -309,6 +316,8 @@ async paklitRendel() {
     }
     // 2. Görgetés: a kiválasztott kártya az alsó sáv tetejéhez igazodik.
     this._kivalasztottKartyaGorgetese();
+    // 3. Testvér-jelző kacsacsőrök a kiválasztott kártya két szélére.
+    this.testverJelzoFrissitese();
   });
 
   console.log('Pakli.paklitRendel - VÉGE', { kartyakSzama: aktivPakli.length });
@@ -347,7 +356,51 @@ kivalasztottCsakCssValt(ujIndex) {
   }
 
   this.kivalasztottIndex = ujIndex;
+
+  // A kacsacsőrök frissítése: ha az új kártya entitása nem egyezik az állapotban
+  // tárolt kiválasztott entitással (pl. hamburger-megnyitás másik kártyán, ahol
+  // a teljes kiválasztás-váltás nem fut le), a jelző magától elrejtőzik.
+  this.testverJelzoFrissitese();
+
   console.log('Pakli.kivalasztottCsakCssValt - VÉGE', { ujIndex });
+}
+
+// ----- TESTVÉR-JELZŐ FRISSÍTÉSE -----
+// A kiválasztott kártyára helyezi (vagy onnan leszedi) a ‹ N / N › kacsacsőröket.
+// A számok a KÖZÖS testverRendezes.js segédből jönnek — ugyanabból a rendezett
+// sorból, amiből a testverValtasa lépeget, így a szám és a lépés sosem tér el.
+// Önvédő: ha nincs adat, nincs kártya, vagy a kártya entitása nem egyezik az
+// állapotban tárolt kiválasztott entitással, a jelzőket eltávolítja.
+testverJelzoFrissitese() {
+  const kulcs = this.allapot.kivalasztottEntitasId;
+  const adat = kulcs ? this.allapot.paklikEsTestverek[kulcs] : null;
+  const kartyaDom = this.kartyadomElemek[this.kivalasztottIndex];
+  const kartyaEntitas = this.kartyaPeldanyok[this.kivalasztottIndex]?.entitas;
+
+  if (
+    !adat ||
+    !kartyaDom ||
+    !kartyaEntitas ||
+    kartyaEntitas.entitasId.toString() !== kulcs
+  ) {
+    console.log('Pakli.testverJelzoFrissitese - jelzők elrejtve (nincs adat vagy eltérő kártya)', {
+      kulcs,
+      vanAdat: !!adat,
+      vanKartyaDom: !!kartyaDom
+    });
+    this.testverJelzo.eltavolitas();
+    return;
+  }
+
+  // Az aktív elem a saját paklijából jön (ott biztosan megvannak a rendezéshez
+  // szükséges mezők: hierarchikusOsszesPont, letrehozva); fallback a kártya entitása
+  const aktivElem =
+    adat.pakli?.find((elem) => elem.entitasId.toString() === kulcs) ?? kartyaEntitas;
+  const { elozoSzam, kovetkezoSzam } = testverSzamok(aktivElem, adat.testverek ?? []);
+
+  this.testverJelzo.megjelenites(kartyaDom, elozoSzam, kovetkezoSzam);
+
+  console.log('Pakli.testverJelzoFrissitese - VÉGE', { kulcs, elozoSzam, kovetkezoSzam });
 }
 
 // ----- KÁRTYA PÉLDÁNYOSÍTÁSA -----
@@ -487,9 +540,18 @@ async kartyaKivalasztasa(index) {
 
     if (!this.allapot.paklikEsTestverek[ujKulcs]) {
       console.log('Pakli.kartyaKivalasztasa - háttér cache feltöltés indul', { ujKulcs });
-      this.pakliLekerese(ujKulcs, ujEntitas.entitasTipus).catch(hiba => {
-        console.error('Pakli.kartyaKivalasztasa - háttér cache hiba', { hiba: hiba.message });
-      });
+      this.pakliLekerese(ujKulcs, ujEntitas.entitasTipus)
+        .then(() => {
+          // A testvérlista megérkezett – ha közben nem váltottak tovább,
+          // most már kirakhatók a kacsacsőrök az új kiválasztott kártyára
+          this.testverJelzoFrissitese();
+        })
+        .catch(hiba => {
+          console.error('Pakli.kartyaKivalasztasa - háttér cache hiba', { hiba: hiba.message });
+        });
+    } else {
+      // A testvérlista már cache-ben van – a kacsacsőrök azonnal frissíthetők
+      this.testverJelzoFrissitese();
     }
   }
 
@@ -589,24 +651,15 @@ async testverValtasa(irany) {
   }
 
   // A teljes testvér-sorrend előállítása – az AKTÍV elemmel EGYÜTT –, hogy
-  // pozíció szerint (index ± 1) tudjunk lépni. A korábbi pont-összehasonlítás
-  // (< / >) az azonos pontú testvéreket teljesen átugrotta; ez a hiba ezzel szűnik meg.
-  // Rendezés: hierarchikus pont CSÖKKENŐ; döntetlennél letrehozva NÖVEKVŐ
-  // (régebbi entitás előrébb); végső, determinisztikus döntő az entitasId,
-  // hogy a sorrend soha ne „ugráljon".
-  const teljesSor = [aktivElem, ...testverek].sort((a, b) => {
-    const pontKulonbseg = (b.hierarchikusOsszesPont ?? 0) - (a.hierarchikusOsszesPont ?? 0);
-    if (pontKulonbseg !== 0) return pontKulonbseg;
-    const idoKulonbseg = new Date(a.letrehozva ?? 0) - new Date(b.letrehozva ?? 0);
-    if (idoKulonbseg !== 0) return idoKulonbseg;
-    return a.entitasId.toString().localeCompare(b.entitasId.toString());
-  });
+  // pozíció szerint (index ± 1) tudjunk lépni. A rendezés a KÖZÖS
+  // testverRendezes.js segédben él (a kacsacsőr-számok is onnan számolódnak,
+  // így a kijelzett szám és a tényleges lépés sosem térhet el egymástól).
+  const { teljesSor, aktivIndex } = testverSzamok(aktivElem, testverek);
 
-  // Az aktív elem helye a teljes sorban, majd lépés a kívánt irányba.
+  // Lépés a kívánt irányba.
   // 'kovetkezo' = lejjebb, alacsonyabb pont felé (index + 1);
   // 'elozo'     = feljebb, magasabb pont felé (index - 1).
-  const aktivIndex = teljesSor.findIndex(e => e.entitasId.toString() === kulcs);
-  const celIndex   = irany === 'kovetkezo' ? aktivIndex + 1 : aktivIndex - 1;
+  const celIndex = irany === 'kovetkezo' ? aktivIndex + 1 : aktivIndex - 1;
 
   if (celIndex < 0 || celIndex >= teljesSor.length) {
     console.log('Pakli.testverValtasa - VÉGE: elértük a sor végét', { irany });

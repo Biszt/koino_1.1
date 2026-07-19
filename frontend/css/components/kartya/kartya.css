@@ -4,12 +4,16 @@
 /* KÁRTYA MÉRET – CSS változók */
 /* ---------------------------------------- */
 
-/* Fix kártyaméret változók – mobilra optimalizálva.
-A szélesség és magasság egy helyen van definiálva,
-hogy könnyű legyen módosítani. */
+/* Kártyaméret változók.
+2026-07-19 (Csaba döntése): a kártyák SZÉLESSÉGE a képernyőt követi
+(width: 100% a pakli-wrapper paddingjén belül) — a korábbi fix
+min(90vw, 400px) szélesség megszűnt. A kiválasztott kártya FIX MAGASSÁGA
+viszont továbbra is a régi kártya-arányból számolódik (magasság-alap ×
+1.574), hogy széles képernyőn ne nőjön aránytalanul magasra — mobilon ez
+pontosan a korábbi magasságot adja. */
 :root {
-  --kartya-szelesseg: min(90vw, 400px);
-  --kartya-fix-magassag: calc(var(--kartya-szelesseg) * 1.574);
+  --kartya-magassag-alap: min(90vw, 400px);
+  --kartya-fix-magassag: calc(var(--kartya-magassag-alap) * 1.574);
 }
 
 /* ---------------------------------------- */
@@ -18,11 +22,11 @@ hogy könnyű legyen módosítani. */
 
 /* Külső kártya wrapper – nincs overflow és border-radius,
 hogy a segéd lap szabad maradjon a kártya fölött.
-Fix szélesség minden kártyán érvényes,
-hogy a pakli konzisztens maradjon. */
+Minden kártya a wrapper teljes szélességét kitölti,
+így a pakli konzisztens marad. */
 /* Külső kártya wrapper */
 .pakli-kartya {
-  width: var(--kartya-szelesseg);
+  width: 100%;
   position: relative;
   cursor: pointer;
   background-color: var(--color-surface);
@@ -352,13 +356,14 @@ Csak zárt állapotban aktív – kibővítve eltűnik. */
 /* SZÖVEGES TARTALOM */
 /* ---------------------------------------- */
 
-/* Szöveges tartalom */
+/* Szöveges tartalom — a kártya teljes szélességét követi
+   (a korábbi 72ch olvashatósági korlát 2026-07-19-én megszűnt,
+   mert a kártya már a képernyő szélességéhez igazodik) */
 .pakli-kartya__szoveg {
   font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--color-text);
   line-height: 1.6;
-  max-width: 72ch;
 }
 
 /* ---------------------------------------- */

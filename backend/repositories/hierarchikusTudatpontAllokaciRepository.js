@@ -425,6 +425,73 @@ async listByTipus(entitasTipus, limit = 100, skip = 0) {
     return lista;
 }
 
+// ----- ÖSSZES ALLOKÁCIÓ DARABSZÁMA -----
+/**
+* A teljes kollekció elemszáma — a Térkép (teljes képernyős fa-nézet) előzetes
+* darabszám-kijelzéséhez. Minden entitásnak pontosan egy allokációja van
+* (compound unique index), így ez az entitások összdarabszáma.
+* @returns {Promise<number>}
+*/
+async countOsszes() {
+    console.log('hierarchikusAllokaciRepository.countOsszes - KEZDÉS');
+
+    const darab = await HierarchikusTudatpontAllokacio.countDocuments({});
+
+    console.log('hierarchikusAllokaciRepository.countOsszes - VÉGE', { darab });
+    return darab;
+}
+
+// ----- TÉRKÉP LAP LEKÉRÉSE (KURZOROS LAPOZÁS) -----
+/**
+* A teljes fa lapozott lekérése a Térkép (teljes képernyős fa-nézet) számára.
+* Kurzoros lapozás _id szerint (stabil, skip nélkül): a hívó a legutóbb
+* kapott sor `_id`-ját adja át kurzorként, mi az annál nagyobbakat adjuk.
+* Csak a fa-rajzoláshoz szükséges mezőket küldjük (szűk projection).
+* @param {string|null} kurzorId - az előző lap utolsó sorának _id-ja (null = első lap)
+* @param {number} limit - lap mérete (alapértelmezett: 2000)
+* @returns {Promise<Array>} a lap sorai _id szerint növekvő sorrendben
+*/
+async findTerkepLap(kurzorId = null, limit = 2000) {
+    console.log('hierarchikusAllokaciRepository.findTerkepLap - KEZDÉS', { kurzorId, limit });
+
+    const szuro = kurzorId ? { _id: { $gt: new Types.ObjectId(kurzorId) } } : {};
+
+    const sorok = await HierarchikusTudatpontAllokacio.find(szuro)
+        .sort({ _id: 1 })
+        .limit(limit)
+        .select('entitasId entitasTipus szuloId hierarchikusOsszesPont letrehozva')
+        .lean();
+
+    console.log('hierarchikusAllokaciRepository.findTerkepLap - VÉGE', { count: sorok.length });
+    return sorok;
+}
+
+// ----- GYEREK-AZONOSÍTÓK LEKÉRÉSE TÖBB SZÜLŐHÖZ -----
+/**
+* Több szülő entitás KÖZVETLEN gyerekeinek entitasId-jai egyetlen lekérdezéssel.
+* A Térkép ág-darabszámlálása (szintenkénti BFS-bejárás) használja.
+* @param {Array} szuloIdk - a szülő entitás-azonosítók tömbje
+* @returns {Promise<Array>} a gyerekek entitasId-jai
+*/
+async findGyerekIdkBySzulok(szuloIdk) {
+    console.log('hierarchikusAllokaciRepository.findGyerekIdkBySzulok - KEZDÉS', {
+        szulokSzama: szuloIdk.length
+    });
+
+    if (!szuloIdk.length) return [];
+
+    const gyerekek = await HierarchikusTudatpontAllokacio.find({
+        szuloId: { $in: szuloIdk }
+    })
+        .select('entitasId')
+        .lean();
+
+    console.log('hierarchikusAllokaciRepository.findGyerekIdkBySzulok - VÉGE', {
+        gyerekekSzama: gyerekek.length
+    });
+    return gyerekek.map(gy => gy.entitasId);
+}
+
 // ----- ELAVULT HIERARCHIKUS ALLOKÁCIÓK KERESÉSE -----
 /**
 * Elavult hierarchikus adatok lekérése hierarchia szint alapján

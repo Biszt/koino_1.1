@@ -1,0 +1,229 @@
+/* frontend/css/components/modals/terkepModal.css */
+
+/* ===== TÉRKÉP MODAL ===== */
+/* A Térkép — az entitás-fa TELJES KÉPERNYŐS, interaktív nézete.
+   Hibrid rajzolás: Canvas alapréteg (teljes fa) + SVG fedőréteg (látható
+   csomópontok interakciója). A TerkepModal.js tölti fel és vezérli. */
+
+/* ----- TELJES KÉPERNYŐS PANEL-MÉRET ----- */
+/* A Modal.js a meret beállításból képzi az osztályt (modal-panel--teljes) —
+   ez az egyetlen modal, ami a teljes képernyőt elfoglalja. */
+.modal-panel--teljes {
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  border: none;
+
+  /* Fejléc + tartalom függőleges elrendezése, a tartalom tölti ki a maradékot */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* A tartalom a fejléc alatti TELJES területet kapja, padding nélkül —
+   a térkép-nézet széltől szélig ér */
+.modal-panel--teljes .modal-tartalom {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0; /* flex gyereknél kell, hogy tényleg zsugorodhasson */
+}
+
+/* A belső váz is töltse ki a rendelkezésre álló magasságot */
+.terkep-modal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* FONTOS: a nézet-váltás a hidden attribútummal történik (TerkepModal.js
+   _nezetValtas), de a lenti display: flex szabályok ERŐSEBBEK, mint a böngésző
+   beépített [hidden] → display: none szabálya — explicit felülírás kell,
+   különben a rejtett nézet is látszana (2026-07-19-i hibajavítás). */
+.terkep-modal [hidden] {
+  display: none !important;
+}
+
+/* ----- 1. INDÍTÓ NÉZET ----- */
+.terkep-modal__indito {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.terkep-modal__indito-ikon {
+  font-size: 48px;
+}
+
+.terkep-modal__darabszam {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  max-width: 44ch;
+  line-height: 1.5;
+}
+
+.terkep-modal__indito-gombok {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ----- 2. ÉPÍTÉS NÉZET (folyamatjelző) ----- */
+.terkep-modal__epites {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.terkep-modal__epites-szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+
+/* A folyamat-sáv kerete */
+.terkep-modal__folyamat {
+  width: min(420px, 80%);
+  height: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-offset);
+  overflow: hidden;
+}
+
+/* A folyamat-sáv töltése — a szélességét a JS állítja (0–100%) */
+.terkep-modal__folyamat-sav {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 200ms linear;
+}
+
+/* ----- 3. TÉRKÉP NÉZET ----- */
+.terkep-modal__nezet {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+  cursor: grab;      /* jelzi: a térkép húzható */
+  touch-action: none; /* érintésnél mi kezeljük a mozgatást, nem a böngésző */
+}
+
+.terkep-modal__nezet:active {
+  cursor: grabbing;
+}
+
+/* Canvas alapréteg — kitölti a nézetet (a felbontását a JS állítja) */
+.terkep-modal__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* SVG fedőréteg — ugyanakkora, a canvas FÖLÖTT; maga a réteg nem fog
+   eseményt (a húzás a nézeten marad), csak a csomópont-elemek kattinthatók */
+.terkep-modal__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ----- SVG-CSOMÓPONTOK (interaktív réteg) ----- */
+.terkep-modal__csomopont {
+  pointer-events: auto; /* a rétegtől eltérően a csomópont KATTINTHATÓ */
+  cursor: pointer;
+}
+
+.terkep-modal__csomopont-kor {
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  transition: stroke var(--transition-fast);
+}
+
+.terkep-modal__csomopont:hover .terkep-modal__csomopont-kor {
+  stroke: var(--color-text);
+}
+
+/* Az AKTUÁLIS entitás kiemelése: vastag, téglavörös gyűrű */
+.terkep-modal__csomopont--aktualis .terkep-modal__csomopont-kor {
+  stroke: var(--color-error);
+  stroke-width: 3;
+}
+
+/* Az ikon a kör közepén */
+.terkep-modal__csomopont-ikon {
+  font-size: 14px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none; /* a kattintás a <g>-re fusson */
+  user-select: none;
+}
+
+/* A rövid cím a kör alatt */
+.terkep-modal__csomopont-cim {
+  font-family: var(--font-body);
+  font-size: 11px;
+  fill: var(--color-text);
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+  paint-order: stroke;          /* olvashatóság: halvány kontúr a szöveg mögé */
+  stroke: var(--color-surface-2);
+  stroke-width: 3;
+}
+
+/* ----- VEZÉRLŐ GOMBOK (nagyítás/kicsinyítés/illesztés) ----- */
+.terkep-modal__vezerlok {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.terkep-modal__vezerlo-gomb {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.terkep-modal__vezerlo-gomb:hover {
+  background: var(--color-primary-highlight);
+}
+
+/* ----- SÚGÓ SOR ----- */
+.terkep-modal__sugo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--space-2);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}

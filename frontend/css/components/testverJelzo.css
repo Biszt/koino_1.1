@@ -1,0 +1,70 @@
+/* frontend/css/components/testverJelzo.css */
+
+/* ===== TESTVÉR-JELZŐ KACSACSŐRÖK ===== */
+/* A kiválasztott kártya két szélén lebegő ‹ N és N › gombok.
+   A hordozó a .pakli-kartya külső wrapper (position: relative, nincs rajta
+   overflow: hidden), így a gombok kicsit ki is lóghatnak a kártya szélén. */
+
+.testver-jelzo {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5; /* a kártya belső tartalma fölé */
+
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  padding: var(--space-1) var(--space-2);
+  /* ÁTTETSZŐ megjelenés (Csaba kérése, 2026-07-19): a gomb ne takarja ki
+     teljesen a body tartalmát ott, ahol rálóg — a háttér és a keret félig
+     átlátszó (a --color-surface #f7f3ec és a --color-border #c8c0b5 rgba
+     változata), rámutatáskor sűrűsödik vissza. */
+  border: 1px solid rgba(200, 192, 181, 0.6);
+  border-radius: var(--radius-full);
+  background: rgba(247, 243, 236, 0.55);
+  box-shadow: var(--shadow-sm);
+
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1;
+
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Bal / jobb pozíció — kicsit kilóg a kártya szélén, hogy "lebegjen" */
+.testver-jelzo--bal {
+  left: -0.5rem;
+}
+
+.testver-jelzo--jobb {
+  right: -0.5rem;
+}
+
+/* A kacsacsőr karakter (‹ ›) — nagyobb és hangsúlyosabb, mint a szám */
+.testver-jelzo__nyil {
+  font-size: 1.25em;
+  font-weight: 700;
+}
+
+/* A testvérek száma az adott irányban */
+.testver-jelzo__szam {
+  font-weight: 600;
+  min-width: 1ch;
+  text-align: center;
+}
+
+/* Rámutatás / megnyomás visszajelzés — rámutatva ismét tömör,
+   hogy kattintás előtt jól látható legyen */
+.testver-jelzo:hover {
+  border-color: var(--color-border);
+  background: var(--color-primary-highlight);
+  box-shadow: var(--shadow-lg);
+}
+
+.testver-jelzo:active {
+  background: var(--color-surface-offset);
+  box-shadow: var(--shadow-sm);
+}

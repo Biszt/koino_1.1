@@ -1,6 +1,6 @@
 # koino_1.1 — Fejlesztési terv
 
-*Utolsó frissítés: 2026. 07. 06.*
+*Utolsó frissítés: 2026. 07. 19.*
 
 ## A terv gerince: a menühálózat
 
@@ -25,6 +25,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
 | Tudatpontok | 🚧 | ÚJ menüpont — saját tudatpontok áttekintése és átrendezése |
 | eember beállítások | 🚧 | Most „hamarosan" modal |
+| Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b terv-pont; böngészős teszt: teszt.md 50) |
 | Kijelentkezés | ✅ | |
 
 ### 2. Tartalom kártya menü (`TartalomKartya.js`)
@@ -135,6 +136,64 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
     közös 🔍 pont ÁG-SZŰRT módban. Backend: a meglévő `GET /api/kereses` bővítve
     `agEntitasId` paraméterrel (ős-lánc bejárás cache-elve; ág-szűrésnél
     jelölt-többlet lekérés, a limitre vágás a szűrés után).
+
+13. [x] **Navigáció-bővítés: testvér-kacsacsőrök + Térkép** (terv elfogadva:
+    2026-07-19, Csaba döntései; 13/a KÉSZ és böngészőben igazolva, 13/b KÉSZ —
+    böngészős teszt hátra: teszt.md 50). Név-döntés (2026-07-19): a „minimap"
+    név elvetve, a funkció neve **Térkép**, és TELJES KÉPERNYŐS.
+    - **13/a. Testvér-jelző kacsacsőrök — ✅ KÉSZ (2026-07-19; böngészős teszt
+      hátra: teszt.md 48).** A kiválasztott kártya két szélén lebegő, KATTINTHATÓ
+      ‹ N és N › gombok: hány testvér van az adott irányban (a testvér-sorrendben
+      az aktív elem előtt/után). Koppintásra testvérváltás — így mobilon is megy
+      (eddig csak vízszintes görgetés/swipe). Csak frontend munka volt: a backend
+      a pakli-válaszban már küldte a `testverek` listát. Megvalósítás: a rendezés
+      KÖZÖS segédbe került (`frontend/js/utils/testverRendezes.js` —
+      `testverTeljesSor` + `testverSzamok`; a `Pakli.testverValtasa` lépegetése
+      és a számok UGYANEBBŐL jönnek, így sosem térhetnek el); új `TestverJelzo`
+      komponens (JS + CSS, a gombok a `.pakli-kartya` külső wrapperre kerülnek,
+      `stopPropagation`-nel, hogy ne váltsanak kártya-kiválasztást); a
+      `Pakli.testverJelzoFrissitese` önvédő (adat-hiánynál/kártya-eltérésnél
+      elrejt), hívva a render utáni rAF-ben, kártya-kiválasztáskor (cache-ből
+      azonnal, különben a háttér-letöltés után) és a csak-CSS váltásnál.
+      Node-os egység-teszt (15 eset: rendezés, döntetlenek, szél-helyzetek,
+      ObjectId) lefutott, a statikus kiszolgálás curl-lel igazolva. Ismert
+      korlát: a `findTestverek` 100 testvérre limitál, a számláló ott levág.
+    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ✅ KÉSZ (2026-07-19;
+      böngészős teszt hátra: teszt.md 50).** Teljes képernyős, interaktív nézet
+      az entitás-fáról. **Hibrid felépítés** (Csaba döntése: több tízezer
+      tartalomra kell készülni, de a részletes interakció is fontos):
+      **Canvas alapréteg** rajzolja a TELJES fát (élek + típus-színű pöttyök),
+      fölötte **SVG fedőréteg** CSAK a látható csomópontokra és legfeljebb 250
+      darabig (ikon + rövid cím + tooltip + kattintás) — távolról a canvas-kép,
+      belenagyítva az interaktív réteg. Közös transzformáció (skála + eltolás),
+      pan (húzás), zoom (görgetés a kurzorra + ＋/－/⤢ gombok). Az aktuális
+      entitás kiemelve (gyűrű); csomópontra kattintva pakli-navigálás; távoli
+      nézetben a pöttyre kattintás kézi találat-kereséssel működik.
+      Elérhetőség a Keresés/Tudatpontok mintájára: fő menü 🗺️ = TELJES fa,
+      MINDEN kártya-hamburger 🗺️ = ÁG-SZŰRT részfa. Mind az 5 entitástípus
+      fixen rajta van. **Folyamat-vezérlés (Csaba kérése):** (1) megnyitáskor
+      ELŐBB darabszám-kijelzés („N entitás — elkészíted?", Elkészítés/Mégse);
+      (2) építés közben folyamatjelző (Letöltés 0–50% + Elhelyezés 50–100%,
+      számokkal); (3) végig látható MEGSZAKÍTÁS gomb — a letöltést
+      `AbortController` állítja le, az elrendezés darabhatáron áll meg, a modal
+      visszaáll az indító nézetre.
+      **Backend:** `GET /api/terkep/darabszam` (globális darab + `agEntitasId`-re
+      szintenkénti BFS-sel az ág mérete) és `GET /api/terkep` (kurzoros lapozás
+      `_id` szerint, max 2000/lap, szűk projection) — forrás a
+      `hierarchikusTudatpontAllokacio` kollekció, címek a közös
+      `entitasCimekFeltoltese` segéddel (Javaslat/Egyezmény → null). Új
+      repository-metódusok: `countOsszes`, `findTerkepLap`, `findGyerekIdkBySzulok`.
+      Curl-igazolt: globális 25 / ág 5 darab; 3 lap = pontosan 25 sor; auth 401.
+      **Frontend:** új `TerkepModal` (JS + HTML + CSS; a Modal `meret: 'teljes'`
+      — új `modal-panel--teljes` CSS-osztály, az alaposztály nem változott) +
+      **`faElrendezes.js`** elrendezés-motor (DOM-független, Node-tesztelt:
+      30 eset zöld, 55 000 csomópont ~76 ms): levelek balról jobbra, szülő a
+      gyerekei közepén, testvér-sorrend a KÖZÖS `testverRendezes` szabállyal
+      (új `testverOsszehasonlitas` export); generátoros, darabolt feldolgozás
+      rAF-szünetekkel; kör-védelem + maradék-söprés (hibás adatnál sem tűnik el
+      entitás); árva entitás gyökérként jelenik meg. Az ág-szűrés a frontenden
+      történik (a letöltés mindig a teljes fa — vállalt v1-korlát, kis ágnál
+      többlet-letöltés; cserébe egyetlen egyszerű, kurzoros adat-út van).
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
@@ -299,6 +358,16 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   kinevezési rendszer bemenete.
 
 ## Stílus-irányelvek
+
+**Teljes szélességű kártya-elrendezés (2026-07-19, Csaba döntése):** a kártyák
+(és a pakli) MINDEN képernyőn a képernyő szélességét követik — a korábbi fix,
+legfeljebb 400px-es kártya-oszlop megszűnt (`--kartya-szelesseg` törölve,
+`.pakli-kartya { width: 100% }`, a pakli-wrapper 768px-es max-width korlátja és
+a body-szöveg 72ch sor-korlátja eltávolítva). A KIVÁLASZTOTT kártya fix
+magassága viszont a régi kártya-arányból számolódik (`--kartya-magassag-alap:
+min(90vw, 400px)` × 1.574), hogy széles képernyőn ne nőjön aránytalanul.
+A menük (fő hamburger, alsó sáv, kártya-hamburgerek) és a modálok változatlanok.
+(Böngészős teszt: teszt.md 49.)
 
 Az új modalok és menük stílusa a **standard vonalat** kövesse:
 - **Irányadó:** a tartalom (entitás) létrehozása modal (`TartalomModal`), a fő hamburger menü, és a kártyák hamburger menüi.

@@ -23,6 +23,7 @@ import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
 import KeresesModal from './modals/KeresesModal.js';
+import TerkepModal from './modals/TerkepModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
 
@@ -144,6 +145,11 @@ init() {
         ikon:    '🔍',
         felirat: 'Keresés',
         akcio:   () => this._keresesMegnyitasa()
+      },
+      {
+        ikon:    '🗺️',
+        felirat: 'Térkép',
+        akcio:   () => this._terkepMegnyitasa()
       },
       {
         ikon:    '🔔',
@@ -329,6 +335,38 @@ init() {
     keresesModal.megnyitas();
 
     console.log('FoOldal._keresesMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // TÉRKÉP MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Térkép" – a TELJES entitás-fa teljes képernyős, interaktív
+  // nézete (terv 13/b pont). Megnyitáskor előbb darabszám-kijelzés, az építés
+  // folyamatjelzővel és Megszakítás gombbal fut; csomópontra kattintva a
+  // pakli az entitásra navigál. Az aktuális entitás a térképen kiemelve.
+  async _terkepMegnyitasa() {
+    console.log('FoOldal._terkepMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    // Az éppen aktív entitás — a térképen kiemelve jelenik meg
+    const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
+
+    const terkepModal = new TerkepModal('modal-kontener', {
+      token: this.token,
+      aktualisEntitasId,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('FoOldal - térkép csomópontból navigálás', { entitasId, entitasTipus });
+        aktivEntitasMentese(entitasId, entitasTipus);
+        this._pakliInditasa(entitasId, entitasTipus);
+      }
+    });
+
+    await terkepModal.init();
+    terkepModal.megnyitas();
+
+    console.log('FoOldal._terkepMegnyitasa - VÉGE');
   }
 
 

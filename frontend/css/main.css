@@ -12,6 +12,7 @@
 @import './components/foOldal.css';
 @import './components/hamburgerMenu.css';
 @import './components/pakli.css';
+@import './components/testverJelzo.css';
 @import './components/szovegSzerkeszto.css';
 @import './components/eszkoztar.css';
 @import './components/entitasKeresoMezo.css';
@@ -56,6 +57,7 @@
 @import './components/modals/meghivoModal.css';
 @import './components/modals/tudatpontokModal.css';
 @import './components/modals/keresesModal.css';
+@import './components/modals/terkepModal.css';
 @import './components/modals/eemberBeallitasokModal.css';
 @import './components/modals/ertekEloszlasModal.css';
 /* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,

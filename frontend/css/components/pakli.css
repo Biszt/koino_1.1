@@ -13,9 +13,9 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* A kártyák fix szélességűek (--kartya-szelesseg) — vízszintesen
-     középre igazítjuk őket, hogy a pakli minden képernyőszélességen
-     középen maradjon, ne tapadjon balra */
+  /* A kártyák a wrapper teljes szélességét kitöltik (width: 100%) —
+     a pakli a wrapper paddingjén belül a képernyő szélességét követi
+     (2026-07-19, Csaba döntése) */
   align-items: center;
   gap: 0;
   padding: var(--space-4);
@@ -24,12 +24,11 @@
   min-height: 0; /* flex gyerekeknél min-height: 100% helyett ez kell */
 }
 
-/* Nagyobb képernyőn a pakli ne legyen túl széles —
-   a wrapper pont a kártya + padding szélességére korlátozódik */
+/* Nagyobb képernyőn csak a padding nő — szélesség-korlát NINCS,
+   a pakli a teljes képernyő-szélességet követi (2026-07-19, Csaba döntése;
+   a korábbi max-width: kártya + padding korlát megszűnt) */
 @media (min-width: 768px) {
   .pakli-wrapper {
-    max-width: calc(var(--kartya-szelesseg) + 2 * var(--space-6));
-    margin-inline: auto;
     padding: var(--space-6);
     padding-bottom: calc(var(--space-12) + var(--space-6));
   }

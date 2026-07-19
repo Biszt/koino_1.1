@@ -41,6 +41,9 @@ const feltoltesRoutes = require('./routes/feltoltesRoutes');
 // ÚJ – Cím-alapú entitás-kereső route importálása
 const keresesRoutes = require('./routes/keresesRoutes');
 
+// ÚJ – Térkép (teljes képernyős fa-nézet) route importálása
+const terkepRoutes = require('./routes/terkepRoutes');
+
 // ===================================
 // EXPRESS ALKALMAZÁS LÉTREHOZÁSA
 // ===================================
@@ -116,6 +119,8 @@ app.use('/api/pakli', pakliRoutes);
 app.use('/api/feltoltes', feltoltesRoutes);
 // ÚJ – Cím-alapú entitás-kereső route regisztrálása (GET /api/kereses)
 app.use('/api', keresesRoutes);
+// ÚJ – Térkép route regisztrálása (GET /api/terkep + /api/terkep/darabszam)
+app.use('/api', terkepRoutes);
 
 // ===================================
 // GYÖKÉR ÚTVONAL
