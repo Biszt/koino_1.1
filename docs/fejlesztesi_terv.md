@@ -25,7 +25,8 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
 | Tudatpontok | 🚧 | ÚJ menüpont — saját tudatpontok áttekintése és átrendezése |
 | eember beállítások | 🚧 | Most „hamarosan" modal |
-| Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b terv-pont; böngészős teszt: teszt.md 50) |
+| Térkép | ❓ | FELTÉTELES — elkészült (13/b), de lehet, hogy NEM kell: a Síkidom nézet kiválthatja. Egyelőre benne marad, döntés később (2026-07-20) |
+| Síkidom nézet | 🚧 | ÚJ menüpont — a koino_1.0 síkidomos megjelenítésének újraépítése tiszta architektúrában (lásd 14. terv-pont) |
 | Kijelentkezés | ✅ | |
 
 ### 2. Tartalom kártya menü (`TartalomKartya.js`)
@@ -138,9 +139,11 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
     jelölt-többlet lekérés, a limitre vágás a szűrés után).
 
 13. [x] **Navigáció-bővítés: testvér-kacsacsőrök + Térkép** (terv elfogadva:
-    2026-07-19, Csaba döntései; 13/a KÉSZ és böngészőben igazolva, 13/b KÉSZ —
-    böngészős teszt hátra: teszt.md 50). Név-döntés (2026-07-19): a „minimap"
-    név elvetve, a funkció neve **Térkép**, és TELJES KÉPERNYŐS.
+    2026-07-19, Csaba döntései; 13/a KÉSZ és böngészőben igazolva, 13/b KÉSZ, de
+    ❓ FELTÉTELES — böngészős teszt hátra: teszt.md 50). Név-döntés (2026-07-19):
+    a „minimap" név elvetve, a funkció neve **Térkép**, és TELJES KÉPERNYŐS.
+    **FIGYELEM (2026-07-20): a Térkép (13/b) LEHET, HOGY NEM KELL** — a Síkidom
+    nézet (14. pont) kiválthatja; a további Térkép-fejlesztés FELFÜGGESZTVE.
     - **13/a. Testvér-jelző kacsacsőrök — ✅ KÉSZ (2026-07-19; böngészős teszt
       hátra: teszt.md 48).** A kiválasztott kártya két szélén lebegő, KATTINTHATÓ
       ‹ N és N › gombok: hány testvér van az adott irányban (a testvér-sorrendben
@@ -158,8 +161,13 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       Node-os egység-teszt (15 eset: rendezés, döntetlenek, szél-helyzetek,
       ObjectId) lefutott, a statikus kiszolgálás curl-lel igazolva. Ismert
       korlát: a `findTestverek` 100 testvérre limitál, a számláló ott levág.
-    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ✅ KÉSZ (2026-07-19;
-      böngészős teszt hátra: teszt.md 50).** Teljes képernyős, interaktív nézet
+    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ❓ FELTÉTELES / lehet, hogy
+      NEM kell (2026-07-20).** Elkészült és curl-lel igazolt (böngészős teszt
+      hátra: teszt.md 50), DE a **Síkidom nézet (14. pont) kiválthatja** — ha a
+      síkidomos, skálázható megjelenítés jól működik, a Térkép feleslegessé
+      válhat. Egyelőre a kódban marad, a döntés később; a síkidommal kell
+      konzisztenssé tenni (Csaba, 2026-07-20). A leírás alább a megvalósult
+      állapotot rögzíti. Teljes képernyős, interaktív nézet
       az entitás-fáról. **Hibrid felépítés** (Csaba döntése: több tízezer
       tartalomra kell készülni, de a részletes interakció is fontos):
       **Canvas alapréteg** rajzolja a TELJES fát (élek + típus-színű pöttyök),
@@ -194,6 +202,75 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       entitás); árva entitás gyökérként jelenik meg. Az ág-szűrés a frontenden
       történik (a letöltés mindig a teljes fa — vállalt v1-korlát, kis ágnál
       többlet-letöltés; cserébe egyetlen egyszerű, kurzoros adat-út van).
+
+14. [ ] **Síkidom nézet (fő menü) — TERVEZÉS KÉSZ, kód még nincs (2026-07-20).**
+    A koino_1.0 (`C:/koino_1.0`) síkidomos megjelenítésének újraépítése tiszta
+    architektúrában. A koino_1.0 kód KÁOSZ (window.KioData/KioSystem globálisok,
+    `_mod_mod_mod_mod` fájlnevek, duplikált algoritmus, D3+SVG, rétegek nélkül) —
+    NEM egy az egyben átvenni, hanem a MŰKÖDÉST megérteni és a projekt
+    konvencióival (magyar camelCase, rétegek, egy komponens = egy fájl + CSS)
+    újraépíteni. A Térkép (13/b) ezzel válik feleslegessé vagy konzisztenssé.
+
+    **A koino_1.0 mechanizmusa (megértve):** fraktál kör-pakolás. Minden entitás
+    egy síkidom, területe a hierarchikus össztudatponttal arányos; a leszármazottak
+    a szülőn BELÜL (containment), minden szinttel a terület 1/20-ára (sugár
+    1/√20 ≈ 4,47) csökken → egy körbe ~20 gyerek. Végtelen zoom; egyszerre ~3-4
+    szint; „képernyőt kitöltő" tartalomnál átlép rá — EZ okozza a kifogásolt
+    PISLANTÁST (teljes DOM teardown+rebuild).
+
+    **Közös tervezési döntések (Csaba, 2026-07-20):**
+    - **Formák ENTITÁSTÍPUS szerint** (nem tartalomtípus szerint, mint 1.0):
+      Tartalom = kör, Kategória = háromszög (3), Tartalomtípus = négyzet (4),
+      Javaslat = ötszög (5), Egyezmény = hatszög (6). Oldalszám-progresszió.
+    - **Skálázhatóság a lényeg** (milliárd+ ember, több entitás) → NEM lehet a
+      teljes fát letölteni. Bounded, lazy betöltés mélységben ÉS szélességben.
+    - **Láthatóság = minimum-átmérő KÜSZÖB, NEM fix darabszám.** Effektív méret =
+      `hierarchikusOsszesPont / 20^(gyökér alatti szint)`; lefelé MONOTON csökken
+      (gyerek pontja ≤ szülőé + extra ×20) → ha egy csomópont túl kicsi, a
+      leszármazottai is → részfa levágható. A látható darabszám a képernyő-
+      kapacitásból KÖVETKEZIK. Első nézet: az összes gyökeret a megfelelő
+      TÁVOLSÁGBÓL; csak a legnagyobb össz-pontúak lépik át a küszöböt.
+    - **A globális nézet a LEGERŐSEBB gyökértől indul** (mint a pakli) — Csaba
+      döntése (2026-07-20).
+    - **Viewing distance aggregált össz-pontból** számolható (nem kell milliárd
+      rekordot felsorolni): gyökerek együttes területe = Σ(össz-pont) × faktor.
+    - **A NEHÉZ PROBLÉMA MEGOLDVA — spirál sorrend:** a testvérek/gyökerek
+      SPIRÁLISAN rakódnak, a soron-következés (nem csak a középtávolság) számít.
+      koino_1.0: LEGKISEBB középre → a látható nagyok a spirál VÉGÉN → pozíciójuk
+      az összes láthatatlan kicsitől függ → instabil (zoomkor ugrálna).
+      **MEGOLDÁS: MEGFORDÍTVA — LEGNAGYOBB KÖZÉPRE**, kisebbek kifelé. A látható
+      nagyok a spirál ELEJÉN, pozíciójuk csak a nála NAGYOBBAKTÓL függ (azok is
+      láthatók); a láthatatlan kicsik a spirál vége, zoomra kifelé HOZZÁFŰZŐDNEK,
+      a magot nem mozdítják. Konkrét: **napraforgó/filotaxis spirál** (n. elem
+      szöge = n × 137,5°, sugara a korábbiak összterületéből), pont szerint
+      csökkenő sorrend. Az n. pozíció csak n-től függ → append-stabil; NEM kell
+      helyet fenntartani a soron következőknek (kifelé szabadon tágul).
+    - **Pislantás megoldása:** NEM a mechanizmus eldobása (a drill-down kell a
+      skálához), hanem 3 dolog SZÉTVÁLASZTÁSA: (1) lazy adatbetöltés (prefetch),
+      (2) ritka, ZÖKKENŐMENTES koordináta-újrahorgonyzás (ugyanabban a
+      képkockában a transzformációt is illesztve), (3) INKREMENTÁLIS rajzolás
+      (közös csomópontok újrahasználva, csak delta — nincs teardown).
+    - **Pakli vs síkidom komplementaritás:** pakli = teljes mélység, keskeny;
+      síkidom = korlátos mélység, SZÉLES. Körre kattintva a pakli odanavigál.
+
+    **Backend-végpont alak (megbeszélt):**
+    `GET /api/sikidom?gyoker=<id|null>&kuszob=<min effektív méret>` → a küszöb
+    feletti csomópontok (entitasId, entitasTipus, szuloId, hierarchikusOsszesPont,
+    gyökérAlattiSzint, cim, vanTovabbGyerek) MONOTON metszéssel (legjobb-először
+    bejárás), + az aggregált „mennyi van még alatta" össz-pont. A
+    `hierarchikusTudatpontAllokacio`-ra épül (mint a Térkép; a Térkép
+    `findGyerekIdkBySzulok`-jához hasonló ág-bejáró segéddel).
+
+    **Kis lépések (Csaba egyetért):**
+    - **1. lépés:** backend `/api/sikidom` (küszöb-alapú, legjobb-először) +
+      STATIKUS frontend ablak — a legerősebb gyökér + a betöltött leszármazottak,
+      napraforgó-spirál, containment, entitástípus-formák, sima zoom/pan,
+      kattintás → pakli. MÉG NINCS dinamikus felfedés / drill-down.
+    - **2. lépés:** dinamikus felfedés (zoomra a küszöb csökken, új csomópontok
+      jönnek elő) + ZÖKKENŐMENTES drill-down (a nehéz rész, külön).
+
+    **Nyitott (nem blokkoló, képernyőn hangoljuk):** az első nézet pontos
+    „hátrahúzása" (az egész gyökér-mező vs. csak a látható nagyok kerete).
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
