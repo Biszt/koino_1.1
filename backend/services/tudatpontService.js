@@ -11,6 +11,7 @@ const EgyezmenyRepository = require('../repositories/egyezmenyRepository');
 const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const ErtesitesService = require('./ertesitesService'); // Tudatpont-változáskor értesítjük a figyelőket
 const ErtesitesiBeallitasService = require('./ertesitesiBeallitasService'); // szuloKereses az ág-szűréshez (Tudatpontok nézet)
+const ErtesitesRepository = require('../repositories/ertesitesRepository'); // Árva értesítések takarítása entitás-törléskor
 
 
 // ===== TUDATPONT SERVICE OSZTÁLY =====
@@ -1291,6 +1292,21 @@ class TudatpontService {
         hiba: hiba.message
       });
       entitasTorolve = true;
+    }
+
+    // 4.b LÉPÉS - ÁRVA ÉRTESÍTÉSEK TAKARÍTÁSA (2026-07-18)
+    // Ha az entitás törlődött, a KÖZVETLENÜL rá vonatkozó értesítések árvák
+    // lettek (kattintva sehova sem navigálnának) — töröljük őket. BEST-EFFORT:
+    // a takarítás hibája nem akaszthatja meg a visszaosztási folyamatot.
+    if (entitasTorolve) {
+      try {
+        await ErtesitesRepository.torolEntitasOsszes(entitasId, entitasTipus);
+      } catch (takaritasHiba) {
+        console.error("tudatpontokVisszaosztasa - árva értesítés takarítás HIBA (nem blokkoló)", {
+          entitasId,
+          hiba: takaritasHiba.message
+        });
+      }
     }
 
     // 5. LÉPÉS - Eredmény visszaadása

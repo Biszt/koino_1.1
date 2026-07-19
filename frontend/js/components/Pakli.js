@@ -87,6 +87,22 @@ async init(entitasId = null, entitasTipus = null) {
   this.betoltesAllapotMegjelenites();
   try {
     await this.pakliLekerese(entitasId, entitasTipus);
+
+    // ÜRES PAKLI ÁG (2026-07-18): ha a backend nem adott kiválasztott entitást:
+    //  - MENTETT entitással hívtak (entitasId van) → false-t adunk, hogy a hívó
+    //    (FoOldal._pakliInditasa) törölje a mentett adatot és gyökérről próbáljon;
+    //  - gyökér-hívásnál (nincs entitasId) → tényleg üres az adatbázis:
+    //    barátságos üres állapotot mutatunk (nem hibát!), és true-t adunk.
+    if (!this.allapot.kivalasztottEntitasId) {
+      if (entitasId) {
+        console.warn('Pakli.init - VÉGE (mentett entitás nem található, újrapróbálás kell)');
+        return false;
+      }
+      this.uresAllapotMegjelenites();
+      console.log('Pakli.init - VÉGE (üres pakli)');
+      return true;
+    }
+
     await this.kivalasztottSzovegFrissitese();
     await this.paklitRendel();
     this.esemenyekBekotese();
@@ -119,6 +135,18 @@ async pakliLekerese(entitasId, entitasTipus) {
   }
   const eredmeny = await apiGet(utvonal, this.token);
   console.log('Pakli.pakliLekerese - API válasz struktúra:', eredmeny);
+
+  // ÜRES PAKLI VÉDELEM (2026-07-18): friss/üres adatbázisnál a backend
+  // kivalasztottEntitas: null-t ad — ilyenkor nincs mit betölteni. A null-t
+  // jelezzük az állapotban, a kezelést (üres állapot VAGY újrapróbálás) az
+  // init() dönti el. Korábban itt null-hiba dőlt el, és a főoldal nem töltött be.
+  if (!eredmeny?.kivalasztottEntitas?.entitasId) {
+    console.warn('Pakli.pakliLekerese - VÉGE (üres pakli: nincs kiválasztott entitás)');
+    this.allapot.kivalasztottEntitasId = null;
+    this.allapot.betoltesFolyamatban = false;
+    return;
+  }
+
   const kulcs = eredmeny.kivalasztottEntitas.entitasId.toString();
   this.allapot.kivalasztottEntitasId = kulcs;
   this.allapot.paklikEsTestverek[kulcs] = {
@@ -735,6 +763,25 @@ betoltesAllapotMegjelenites() {
     </div>
   `;
   console.log('Pakli.betoltesAllapotMegjelenites - VÉGE');
+}
+
+// ----- ÜRES ÁLLAPOT MEGJELENÍTÉSE -----
+// Friss/üres adatbázisnál (nincs egyetlen entitás sem) barátságos útmutató
+// jelenik meg hibaüzenet helyett — az első tartalom a fő menüből hozható létre.
+uresAllapotMegjelenites() {
+  console.log('Pakli.uresAllapotMegjelenites - KEZDÉS');
+  const kontener = document.getElementById(this.tartalmKontenerAzonosito);
+  if (!kontener) return;
+  kontener.innerHTML = `
+    <div class="pakli-ures">
+      <span class="pakli-ures__ikon" aria-hidden="true">🌱</span>
+      <span class="pakli-ures__szoveg">
+        Még nincs tartalom a koino-n.<br>
+        Hozd létre az elsőt a fő menü <strong>✏️ Új tartalom létrehozása</strong> pontjával!
+      </span>
+    </div>
+  `;
+  console.log('Pakli.uresAllapotMegjelenites - VÉGE');
 }
 
 // ----- HIBA ÁLLAPOT MEGJELENÍTÉSE -----

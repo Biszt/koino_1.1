@@ -326,6 +326,41 @@ class JavaslatRepository {
   }
 
   // ===================================
+  // ----- HATÁRIDŐ-ÉRTESÍTÉSRE VÁRÓ JAVASLATOK -----
+  // ===================================
+  /**
+   * Aktív javaslatok, amelyeknek van hatályba lépési ideje, és még nem kaptak
+   * „szavazási határidő közeleg" értesítést (Cron job-hoz — a közelség
+   * kiértékelése a service dolga).
+   * @returns {Promise<Array>} Javaslatok tömb
+   */
+  async findHataridoErtesitesreVarok() {
+    const javaslatok = await Javaslat.find({
+      statusz: 'Aktiv',
+      hatalybaLepesIdeje: { $ne: null },
+      hataridoErtesitesElkuldve: { $ne: true }
+    });
+
+    return javaslatok;
+  }
+
+  // ===================================
+  // ----- HATÁRIDŐ-ÉRTESÍTÉS JELZŐ BEÁLLÍTÁSA -----
+  // ===================================
+  /**
+   * A hataridoErtesitesElkuldve jelző true-ra állítása (duplikátum-védelem)
+   * @param {string} javaslatId - A javaslat azonosítója
+   * @returns {Promise<Object>} Frissített javaslat
+   */
+  async setHataridoErtesitesElkuldve(javaslatId) {
+    return await Javaslat.findByIdAndUpdate(
+      javaslatId,
+      { hataridoErtesitesElkuldve: true },
+      { new: true }
+    );
+  }
+
+  // ===================================
   // ----- TÖBB ENTITÁS ÉRINTETTSÉGE -----
   // ===================================
   /**

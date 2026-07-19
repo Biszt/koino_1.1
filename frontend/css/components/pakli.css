@@ -95,6 +95,32 @@
 }
 
 /* ---------------------------------------- */
+/* ÜRES ÁLLAPOT (friss adatbázis)           */
+/* ---------------------------------------- */
+
+.pakli-ures {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.pakli-ures__ikon {
+  font-size: 40px;
+}
+
+.pakli-ures__szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 36ch;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------- */
 /* PAKLI WRAPPER ANIMÁCIÓ                   */
 /* ---------------------------------------- */
 

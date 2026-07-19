@@ -317,6 +317,14 @@ const javaslatSchema = new mongoose.Schema({
   dontesiIdo: {
     type: Number,       // Számérték típus (másodperc)
     default: 31536000   // Alapértelmezett: 1 év (maximum)
+  },
+
+  // ----- HATÁRIDŐ-ÉRTESÍTÉS ELKÜLDVE -----
+  // A szavazasiHatarido értesítés duplikátum-védelme: a cron csak EGYSZER küld
+  // „közeleg a határidő" értesítést egy javaslatra — utána ez a jelző true.
+  hataridoErtesitesElkuldve: {
+    type: Boolean,
+    default: false
   }
 
 });

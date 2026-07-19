@@ -7,14 +7,15 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 import { masodpercFelirat } from '../../utils/idoFormazo.js';
 
 // ===== ESEMÉNYTÍPUS → EMBERI SZÖVEG =====
-// (A szavazasiHatarido a cronnal jön később; a szavazatErkezett elhagyva – ezért nincsenek itt.)
+// (A szavazatErkezett a tulajdonos döntése alapján elhagyva – ezért nincs itt.)
 const TIPUS_SZOVEG = {
-  ujJavaslat:        'Új javaslat',
-  javaslatElfogadas: 'Javaslat elfogadva',
-  javaslatElvetve:   'Javaslat elvetve',
-  tudatpontValtozas: 'Tudatpont-változás',
-  ujGyerekEntitas:   'Új tartalom jött létre',
-  kuszobValtozas:    'Küszöbváltozás',
+  ujJavaslat:         'Új javaslat',
+  javaslatElfogadas:  'Javaslat elfogadva',
+  javaslatElvetve:    'Javaslat elvetve',
+  szavazasiHatarido:  'Szavazási határidő közeleg',
+  tudatpontValtozas:  'Tudatpont-változás',
+  ujGyerekEntitas:    'Új tartalom jött létre',
+  kuszobValtozas:     'Küszöbváltozás',
 };
 
 // ===== KÜSZÖB-MEZŐ → EMBERI FELIRAT + FORMÁZÁS =====

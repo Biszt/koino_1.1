@@ -44,6 +44,66 @@ class JavaslatIdozitesService {
     }
   }
 
+  // ----- ÉRTESÍTÉS: SZAVAZÁSI HATÁRIDŐ KÖZELEG (cron hívja percenként) -----
+  // A dormant szavazasiHatarido típus élesítése (2026-07-18): ha egy aktív javaslat
+  // hatályba lépési ideje KÖZEL van, az érintett entitás figyelői értesítést kapnak,
+  // hogy még szavazhassanak. „Közel" = a hátralévő idő legfeljebb a teljes döntési
+  // idő 25%-a, de legfeljebb 24 óra (rövid döntési időnél arányos, hosszúnál nem
+  // szól hetekkel előre). Duplikátum-védelem: a hataridoErtesitesElkuldve jelző —
+  // egy javaslatra csak EGYSZER megy ki. FIGYELEM: a cron percenként fut, ezért
+  // nagyon rövid (1-2 perces) döntési időnél az értesítés lemaradhat — ez vállalt
+  // korlát. BEST-EFFORT: hiba nem akasztja meg a cron többi munkáját.
+  async hataridoErtesitesekKuldese() {
+    console.log('JavaslatIdozitesService.hataridoErtesitesekKuldese - KEZDÉS');
+
+    const jeloltek = await JavaslatRepository.findHataridoErtesitesreVarok();
+    const most = Date.now();
+    const MAX_ELORE_MS = 24 * 60 * 60 * 1000; // legfeljebb 24 órával előre
+
+    let kuldott = 0;
+    for (const javaslat of jeloltek) {
+      const hatralevoMs = new Date(javaslat.hatalybaLepesIdeje).getTime() - most;
+
+      // Már lejárt (a végrehajtás-ellenőrzés úgyis lezárja) → nem küldünk
+      if (hatralevoMs <= 0) continue;
+
+      // A küszöb: a döntési idő 25%-a, de legfeljebb 24 óra
+      const kuszobMs = Math.min((javaslat.dontesiIdo ?? 0) * 1000 * 0.25, MAX_ELORE_MS);
+      if (hatralevoMs > kuszobMs) continue; // még nincs elég közel
+
+      const erintett = javaslat.erintettEntitasok?.[0];
+      if (!erintett) continue;
+
+      try {
+        await ErtesitesService.ertesitesKuldes(
+          erintett.entitasId,
+          erintett.entitasTipus,
+          'szavazasiHatarido',
+          {
+            javaslatId: javaslat._id,
+            javaslatTipus: javaslat.javaslatTipus,
+            hatalybaLepesIdeje: javaslat.hatalybaLepesIdeje
+          },
+          null // rendszer-esemény (cron) – nincs cselekvő
+        );
+        // Csak sikeres küldés után jelöljük elküldöttnek
+        await JavaslatRepository.setHataridoErtesitesElkuldve(javaslat._id);
+        kuldott++;
+      } catch (ertesitesHiba) {
+        console.error('hataridoErtesitesekKuldese - ertesites HIBA (nem blokkolo)', {
+          javaslatId: javaslat._id,
+          hiba: ertesitesHiba.message
+        });
+      }
+    }
+
+    console.log('JavaslatIdozitesService.hataridoErtesitesekKuldese - VÉGE', {
+      jelolt: jeloltek.length,
+      kuldott
+    });
+    return kuldott;
+  }
+
  // === SEGÉDFÜGGVÉNYEK ===
 
  // ----- ÉRINTETT ENTITÁSOK KÜSZÖBÉRTÉKEINEK LEKÉRÉSE -----

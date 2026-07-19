@@ -489,6 +489,30 @@ docker logs -f koino-backend
     típus-szűrés, ág-szűrt találat (Gyerek C a Szulo P ágában), ágon kívüli
     kizárás (0 találat) — mind helyes. A keresés cím/név alapú (v1); a
     tartalmak szövegében keresés későbbi bővítés.
+44. ⬜ **Üres-pakli barátságos állapot (2026-07-18 óta):** TELJESEN ÜRES (friss)
+    adatbázisnál a főoldal már nem hibázik el: a pakli helyén 🌱 útmutató
+    jelenik meg („Még nincs tartalom a koino-n. Hozd létre az elsőt...").
+    Az első tartalom létrehozása után a pakli normálisan betölt. Ha a MENTETT
+    aktív entitás nem található (pl. törölték), a pakli automatikusan gyökérről
+    próbál újra (a null-védelem most már a backend üres válaszát is kezeli).
+    Kipróbálás: friss DB (docker volume törlés) mellett belépés.
+45. ⬜ **Szavazási határidő értesítés (2026-07-18 óta):** az Értesítési
+    beállításokban ÚJ pipa: **„Szavazási határidő"**. Bekapcsolva akkor jön
+    értesítés, ha egy aktív javaslat döntési idejéből MÁR CSAK a teljes idő
+    25%-a (de legfeljebb 24 óra) van hátra — a cron percenként ellenőrzi, és
+    javaslatonként csak EGYSZER küld (hataridoErtesitesElkuldve jelző).
+    FIGYELEM: nagyon rövid (1-2 perces) döntési időnél az értesítés lemaradhat
+    (a cron percenként fut) — vállalt korlát. FIGYELEM 2: a cron a döntési időt
+    percenként újraszámolja (BM-dinamika), ezért kézi DB-s határidő-állítás
+    tesztnél felülíródik — a service-metódus (hataridoErtesitesekKuldese)
+    közvetlen hívásával tesztelhető megbízhatóan (2026-07-18: lefutott, 1 küldés
+    a feliratkozottnak, ismételt futásnál 0 = duplikátum-védelem OK).
+46. ⬜ **Árva értesítések takarítása (2026-07-18 óta):** amikor egy entitás
+    törlődik (tudatpontokVisszaosztasa → 0 pont → auto-törlés, pl. Törlési
+    javaslat végrehajtásakor), a KÖZVETLENÜL rá vonatkozó értesítések is
+    törlődnek (ertesitesRepository.torolEntitasOsszes, best-effort).
+    2026-07-18: teljes mini-folyamattal igazolva (eldobható tartalom + 3
+    értesítés → törlés után entitás és értesítések is eltűntek).
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 
@@ -571,8 +595,8 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
    null-ellenőrzés nélkül olvassa a `eredmeny.kivalasztottEntitas.entitasId`-t, miközben
    a backend üres paklinál `kivalasztottEntitas: null`-t ad ([`pakliService.js:40`](../backend/services/pakliService.js:40)).
    Hibaüzenet: „Cannot read properties of null (reading 'entitasId')". Kerülő út: az első
-   tartalom létrehozása (a menü a hiba ellenére működik) feloldja. **Javítandó** (null-ág:
-   üres pakli barátságos üres állapottal).
+   tartalom létrehozása (a menü a hiba ellenére működik) feloldja. → **JAVÍTVA
+   (2026-07-18):** null-védelem + 🌱 barátságos üres állapot (lásd 44. forgatókönyv).
 2. ~~**⚠️ Kategória/tartalomtípus javaslat a saját küszöbét figyelmen kívül hagyja.**~~
    → **JAVÍTVA (2026-07-18):** a küszöb-lekérés kiterjesztve mindhárom érték-képes
    típusra (`erintettEntitasokKuszobertekenekLekerese` — lásd a 6. szakasz jegyzetét).

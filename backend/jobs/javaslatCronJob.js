@@ -60,6 +60,15 @@ class JavaslatCronJob {
         // Általános CRON job hiba
         console.error('❌ Hiba a javaslat CRON job futtatása során:', error);
       }
+
+      // === SZAVAZÁSI HATÁRIDŐ ÉRTESÍTÉSEK (2026-07-18) ===
+      // A hamarosan lejáró aktív javaslatok figyelőinek „közeleg a határidő"
+      // értesítés. Külön try/catch: a hibája nem érinti a végrehajtás-ellenőrzést.
+      try {
+        await JavaslatIdozitesService.hataridoErtesitesekKuldese();
+      } catch (error) {
+        console.error('❌ Hiba a határidő-értesítések küldése során:', error);
+      }
     });
 
     console.log('✓ Javaslat CRON job sikeresen elindítva (futás: percenként)');

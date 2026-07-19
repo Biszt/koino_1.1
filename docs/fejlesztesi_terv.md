@@ -135,6 +135,20 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 - [ ] A backend hiányosságainak felmérése és listázása (külön feladat)
 
+- [x] **Üres-pakli barátságos állapot — KÉSZ (2026-07-18).** Friss/üres DB-n a főoldal
+  már nem hibázik el: a `Pakli.pakliLekerese` null-védelmet kapott, üres adatbázisnál
+  🌱 útmutató jelenik meg; érvénytelen MENTETT entitásnál a pakli gyökérről próbál
+  újra (teszt.md 44).
+- [x] **szavazasiHatarido cron-értesítés — KÉSZ (2026-07-18).** A dormant típus éles:
+  a cron percenként ellenőrzi az aktív javaslatokat, és ha a hátralévő idő legfeljebb
+  a döntési idő 25%-a (max. 24 óra), a figyelők „Szavazási határidő közeleg"
+  értesítést kapnak — javaslatonként EGYSZER (`hataridoErtesitesElkuldve` jelző).
+  A típus bekerült az Értesítési beállítások listájába. Vállalt korlát: 1-2 perces
+  döntési időnél lemaradhat (percenkénti cron). (teszt.md 45)
+- [x] **Árva értesítések takarítása — KÉSZ (2026-07-18).** Entitás-törléskor
+  (`tudatpontokVisszaosztasa` → 0 pont → auto-törlés) a közvetlenül rá vonatkozó
+  értesítések is törlődnek (`torolEntitasOsszes`, best-effort). (teszt.md 46)
+
 - [x] 🟠 **Indoklás nélküli javaslat elfogadáskor végrehajtási hibára futott — JAVÍTVA (2026-07-14).**
   Az `egyezmeny.indoklas` KÖTELEZŐ, de a javaslat `indoklas`-a 2026-07-10 óta opcionális volt, így
   egy indoklás nélküli (API-ból null) javaslat elfogadáskor egyezmény-létrehozási hibát dobott.

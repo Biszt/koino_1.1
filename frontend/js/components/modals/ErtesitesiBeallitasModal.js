@@ -7,13 +7,14 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 
 // ===== ÉRTESÍTÉSI TÍPUSOK =====
 // A felhasználó által választható eseménytípusok (felirat + magyarázat, egy helyen).
-// Megjegyzés: KIMARAD a `szavazasiHatarido` (időzített, cron alapú figyelést igényel →
-// később, a cron-nal) és a `szavazatErkezett` (a tulajdonos döntése alapján elhagyva).
-// (A backend enumban mindkét típus dormant módon megmarad.)
+// Megjegyzés: KIMARAD a `szavazatErkezett` (a tulajdonos döntése alapján elhagyva;
+// a backend enumban dormant módon megmarad). A `szavazasiHatarido` 2026-07-18 óta
+// ÉLES (a cron küldi, ha egy aktív javaslat határideje közeleg).
 const ERTESITES_TIPUSOK = [
   { ertek: 'ujJavaslat',        felirat: 'Új javaslat',        magyarazat: 'Ha új javaslat érkezik ebben az ágazatban.' },
   { ertek: 'javaslatElfogadas', felirat: 'Javaslat elfogadva', magyarazat: 'Ha egy javaslatból egyezmény lesz.' },
   { ertek: 'javaslatElvetve',   felirat: 'Javaslat elvetve',   magyarazat: 'Ha egy javaslat nem lép hatályba.' },
+  { ertek: 'szavazasiHatarido', felirat: 'Szavazási határidő', magyarazat: 'Ha egy javaslat döntési ideje hamarosan lejár ebben az ágazatban.' },
   { ertek: 'tudatpontValtozas', felirat: 'Tudatpont-változás', magyarazat: 'Ha a tudatpont-eloszlás változik az entitáson.' },
   { ertek: 'ujGyerekEntitas',   felirat: 'Új gyerek entitás',  magyarazat: 'Ha új tartalom/entitás jön létre ez alatt.' },
   { ertek: 'kuszobValtozas',    felirat: 'Küszöbváltozás',     magyarazat: 'Ha az entitás érvényes küszöbértékei (mediánjai) változnak.' },
