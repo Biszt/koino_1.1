@@ -49,6 +49,27 @@ async findById(id) {
     return eredmeny;
 }
 
+// ----- KERESÉS ENTITÁS-AZONOSÍTÓ ALAPJÁN (TÍPUS NÉLKÜL) -----
+/**
+* Egy entitáshoz pontosan egy allokáció tartozik (compound unique index),
+* így az entitasId önmagában (indexelt) egyértelműen azonosít. A Síkidom
+* nézet gyökér-lekérése használja, ahol csak az entitasId érkezik URL-ből.
+* @param {string} entitasId - Az entitás azonosítója
+* @returns {Promise<Object|null>} a lean allokáció, vagy null
+*/
+async findByEntitasId(entitasId) {
+    console.log('hierarchikusAllokaciRepository.findByEntitasId - KEZDÉS', { entitasId });
+
+    const objektumId = Types.ObjectId.isValid(entitasId)
+        ? new Types.ObjectId(entitasId)
+        : entitasId;
+
+    const eredmeny = await HierarchikusTudatpontAllokacio.findOne({ entitasId: objektumId }).lean();
+
+    console.log('hierarchikusAllokaciRepository.findByEntitasId - VÉGE', { talalt: !!eredmeny });
+    return eredmeny;
+}
+
 // ----- LÉTREHOZÁS VAGY FRISSÍTÉS (UPSERT) -----
 /**
 * @param {string} entitasId - Az entitás azonosítója

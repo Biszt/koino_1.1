@@ -44,6 +44,9 @@ const keresesRoutes = require('./routes/keresesRoutes');
 // ÚJ – Térkép (teljes képernyős fa-nézet) route importálása
 const terkepRoutes = require('./routes/terkepRoutes');
 
+// ÚJ – Síkidom nézet (fraktál kör-pakolás) route importálása
+const sikidomRoutes = require('./routes/sikidomRoutes');
+
 // ===================================
 // EXPRESS ALKALMAZÁS LÉTREHOZÁSA
 // ===================================
@@ -121,6 +124,8 @@ app.use('/api/feltoltes', feltoltesRoutes);
 app.use('/api', keresesRoutes);
 // ÚJ – Térkép route regisztrálása (GET /api/terkep + /api/terkep/darabszam)
 app.use('/api', terkepRoutes);
+// ÚJ – Síkidom nézet route regisztrálása (GET /api/sikidom)
+app.use('/api', sikidomRoutes);
 
 // ===================================
 // GYÖKÉR ÚTVONAL

@@ -1,0 +1,148 @@
+/* frontend/css/components/modals/sikidomModal.css */
+
+/* ===== SÍKIDOM NÉZET MODAL ===== */
+/* A koino_1.0 síkidomos megjelenítésének újraépítése: fraktál kör-pakolás,
+   entitástípus-formák, napraforgó-spirál. Teljes képernyős (modal-panel--teljes,
+   a közös modal.css-ből). A SikidomModal.js tölti fel és vezérli. */
+
+/* A belső váz tölti ki a rendelkezésre álló magasságot */
+.sikidom-modal {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A nézet-váltás hidden attribútummal történik; a lenti display:flex ERŐSEBB
+   a beépített [hidden]-nél → explicit felülírás kell (mint a Térképnél). */
+.sikidom-modal [hidden] {
+  display: none !important;
+}
+
+/* ----- TÖLTŐ ÁLLAPOT ----- */
+.sikidom-modal__betoltes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.sikidom-modal__betoltes-jelzo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  animation: sikidom-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes sikidom-shimmer {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sikidom-modal__betoltes-jelzo { animation: none; opacity: 0.5; }
+}
+
+.sikidom-modal__betoltes-szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+
+/* ----- NÉZET ----- */
+.sikidom-modal__nezet {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+  cursor: grab;
+  touch-action: none; /* a mozgatást mi kezeljük, nem a böngésző */
+}
+
+.sikidom-modal__nezet:active { cursor: grabbing; }
+
+/* Az SVG kitölti a nézetet */
+.sikidom-modal__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ----- SÍKIDOMOK (a világ-csoportban, a transzformmal zoomolnak) ----- */
+/* A kitöltés halvány (a szín + alacsony opacitás), a keret a típus színe.
+   A stroke-width a világ-transzform miatt vékonyodna nagyításkor — ezt a JS
+   a vonalvastagságot NEM skálázó vector-effect-tel oldja meg. */
+.sikidom-alakzat {
+  fill-opacity: 0.12;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill-opacity var(--transition-fast);
+}
+
+.sikidom-alakzat:hover {
+  fill-opacity: 0.28;
+}
+
+/* Az AKTUÁLIS entitás kiemelése */
+.sikidom-alakzat--aktualis {
+  stroke-width: 3;
+  fill-opacity: 0.25;
+}
+
+/* ----- CÍMKÉK (képernyő-koordinátában, nem torzulnak) ----- */
+.sikidom-cimke {
+  font-family: var(--font-body);
+  fill: var(--color-text);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+  paint-order: stroke;
+  stroke: var(--color-surface-2);
+  stroke-width: 3;
+}
+
+/* ----- VEZÉRLŐ GOMBOK ----- */
+.sikidom-modal__vezerlok {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sikidom-modal__vezerlo-gomb {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sikidom-modal__vezerlo-gomb:hover { background: var(--color-primary-highlight); }
+
+/* ----- SÚGÓ SOR ----- */
+.sikidom-modal__sugo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--space-2);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}

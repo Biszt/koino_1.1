@@ -88,6 +88,27 @@
   width: clamp(300px, 92vw, 640px);
 }
 
+/* Teljes – teljes képernyős nézetekhez (Térkép, Síkidom nézet).
+   A tartalom (a modal-tartalom) tölti ki a fejléc alatti egész területet;
+   a nézetkomponens gondoskodik a saját belső elrendezéséről. */
+.modal-panel--teljes {
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-panel--teljes .modal-tartalom {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0; /* flex gyereknél kell, hogy tényleg zsugorodhasson */
+}
+
 /* ===== BETÖLTÉSI ÁLLAPOT ===== */
 /* API hívás közben a panel enyhe halvány lesz */
 .modal-panel--betoltes {

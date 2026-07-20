@@ -25,8 +25,8 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
 | Tudatpontok | 🚧 | ÚJ menüpont — saját tudatpontok áttekintése és átrendezése |
 | eember beállítások | 🚧 | Most „hamarosan" modal |
-| Térkép | ❓ | FELTÉTELES — elkészült (13/b), de lehet, hogy NEM kell: a Síkidom nézet kiválthatja. Egyelőre benne marad, döntés később (2026-07-20) |
-| Síkidom nézet | 🚧 | ÚJ menüpont — a koino_1.0 síkidomos megjelenítésének újraépítése tiszta architektúrában (lásd 14. terv-pont) |
+| Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b). AKTÍV IRÁNY (2026-07-20: visszatértünk hozzá a síkidom felfüggesztése után) |
+| Síkidom nézet | ⏸️ | FELFÜGGESZTVE (2026-07-20) — az 1. lépés (statikus ablak) elkészült, de a megjelenés még nem jó; jegelve, később visszatérünk (14. terv-pont) |
 | Kijelentkezés | ✅ | |
 
 ### 2. Tartalom kártya menü (`TartalomKartya.js`)
@@ -142,8 +142,9 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
     2026-07-19, Csaba döntései; 13/a KÉSZ és böngészőben igazolva, 13/b KÉSZ, de
     ❓ FELTÉTELES — böngészős teszt hátra: teszt.md 50). Név-döntés (2026-07-19):
     a „minimap" név elvetve, a funkció neve **Térkép**, és TELJES KÉPERNYŐS.
-    **FIGYELEM (2026-07-20): a Térkép (13/b) LEHET, HOGY NEM KELL** — a Síkidom
-    nézet (14. pont) kiválthatja; a további Térkép-fejlesztés FELFÜGGESZTVE.
+    **FRISSÍTÉS (2026-07-20): visszatértünk a Térképhez.** A Síkidom nézet
+    (14. pont) 1. lépése elkészült, de a megjelenés még nem jó → FELFÜGGESZTVE;
+    a Térkép (13/b) újra az AKTÍV navigációs-vizualizációs irány.
     - **13/a. Testvér-jelző kacsacsőrök — ✅ KÉSZ (2026-07-19; böngészős teszt
       hátra: teszt.md 48).** A kiválasztott kártya két szélén lebegő, KATTINTHATÓ
       ‹ N és N › gombok: hány testvér van az adott irányban (a testvér-sorrendben
@@ -161,13 +162,11 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       Node-os egység-teszt (15 eset: rendezés, döntetlenek, szél-helyzetek,
       ObjectId) lefutott, a statikus kiszolgálás curl-lel igazolva. Ismert
       korlát: a `findTestverek` 100 testvérre limitál, a számláló ott levág.
-    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ❓ FELTÉTELES / lehet, hogy
-      NEM kell (2026-07-20).** Elkészült és curl-lel igazolt (böngészős teszt
-      hátra: teszt.md 50), DE a **Síkidom nézet (14. pont) kiválthatja** — ha a
-      síkidomos, skálázható megjelenítés jól működik, a Térkép feleslegessé
-      válhat. Egyelőre a kódban marad, a döntés később; a síkidommal kell
-      konzisztenssé tenni (Csaba, 2026-07-20). A leírás alább a megvalósult
-      állapotot rögzíti. Teljes képernyős, interaktív nézet
+    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ✅ KÉSZ, AKTÍV IRÁNY
+      (2026-07-20).** Elkészült és curl-lel igazolt (böngészős teszt hátra:
+      teszt.md 50). A Síkidom nézet (14. pont) felfüggesztése után visszatértünk
+      a Térképhez mint navigációs-vizualizációs irány. A leírás alább a
+      megvalósult állapotot rögzíti. Teljes képernyős, interaktív nézet
       az entitás-fáról. **Hibrid felépítés** (Csaba döntése: több tízezer
       tartalomra kell készülni, de a részletes interakció is fontos):
       **Canvas alapréteg** rajzolja a TELJES fát (élek + típus-színű pöttyök),
@@ -203,7 +202,11 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       történik (a letöltés mindig a teljes fa — vállalt v1-korlát, kis ágnál
       többlet-letöltés; cserébe egyetlen egyszerű, kurzoros adat-út van).
 
-14. [ ] **Síkidom nézet (fő menü) — TERVEZÉS KÉSZ, kód még nincs (2026-07-20).**
+14. [ ] **Síkidom nézet (fő menü) — ⏸️ FELFÜGGESZTVE (2026-07-20).** Az 1. lépés
+    (statikus ablak) elkészült és böngésző nélkül tesztelt, DE a megjelenés még
+    NEM jó (Csaba böngészős próbája) → jegelve, később visszatérünk. A kód és a
+    terv MEGMARAD (a Térképhez tértünk vissza). A dinamikus felfedés + drill-down
+    (2. lépés) is hátra. Az alábbi terv és az 1. lépés leírása érvényben marad.
     A koino_1.0 (`C:/koino_1.0`) síkidomos megjelenítésének újraépítése tiszta
     architektúrában. A koino_1.0 kód KÁOSZ (window.KioData/KioSystem globálisok,
     `_mod_mod_mod_mod` fájlnevek, duplikált algoritmus, D3+SVG, rétegek nélkül) —
@@ -230,8 +233,11 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       leszármazottai is → részfa levágható. A látható darabszám a képernyő-
       kapacitásból KÖVETKEZIK. Első nézet: az összes gyökeret a megfelelő
       TÁVOLSÁGBÓL; csak a legnagyobb össz-pontúak lépik át a küszöböt.
-    - **A globális nézet a LEGERŐSEBB gyökértől indul** (mint a pakli) — Csaba
-      döntése (2026-07-20).
+    - **A globális nézet az ÖSSZES gyökeret mutatja** (egymás mellé pakolva, a
+      legnagyobb középen) — így teljesül a „az összes gyökér tartalmat kéne
+      megjelenítenie" igény; a pakli indul a legerősebb gyökértől, a síkidom a
+      szélesebb rálátást adja. (2026-07-20; a korábbi „csak a legerősebb gyökér"
+      megfogalmazás javítva, mert az egy levél-gyökérnél üres nézetet adott.)
     - **Viewing distance aggregált össz-pontból** számolható (nem kell milliárd
       rekordot felsorolni): gyökerek együttes területe = Σ(össz-pont) × faktor.
     - **A NEHÉZ PROBLÉMA MEGOLDVA — spirál sorrend:** a testvérek/gyökerek
@@ -262,10 +268,20 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
     `findGyerekIdkBySzulok`-jához hasonló ág-bejáró segéddel).
 
     **Kis lépések (Csaba egyetért):**
-    - **1. lépés:** backend `/api/sikidom` (küszöb-alapú, legjobb-először) +
-      STATIKUS frontend ablak — a legerősebb gyökér + a betöltött leszármazottak,
-      napraforgó-spirál, containment, entitástípus-formák, sima zoom/pan,
-      kattintás → pakli. MÉG NINCS dinamikus felfedés / drill-down.
+    - **1. lépés — ✅ KÉSZ (2026-07-20; böngészős teszt: teszt.md 51):** backend
+      `/api/sikidom` (best-first, effektív méret szerint, `maxCsomopont`
+      biztonsági plafonnal + opcionális `kuszob`; `vanTovabbGyerek` jelző;
+      `sikidomService` + controller + route + `findByEntitasId` repo-metódus) +
+      STATIKUS frontend ablak. Új `SikidomModal` (SVG-világ + képernyő-cimkék,
+      pan/zoom, kattintás → pakli); `sikidomElrendezes.js` DOM-független motor
+      (napraforgó-spirál: r_i = √(korábbiak összterülete/π), legnagyobb középre,
+      APPEND-STABIL — a kisebb, hátrébb betöltött gyerek a meglévőket nem mozdítja;
+      containment a √20-matekból); `sikidomFormak.js` (entitástípus → forma-leíró
+      + szabályos sokszög pontjai). Node-teszt: elrendezés 16 eset zöld, formák
+      OK; curl: /api/sikidom best-first + plafon-jelző + 401. Fő menü 🔷.
+      **Megjegyzés:** az 1. lépésben a méret-skála miatt a világ-sugár a
+      √(effektivMeret)-tel arányos; a kezdő nézet a befoglaló dobozra illeszt
+      (nem a „megfelelő távolság" aggregált-terület logikára — az a 2. lépésé).
     - **2. lépés:** dinamikus felfedés (zoomra a küszöb csökken, új csomópontok
       jönnek elő) + ZÖKKENŐMENTES drill-down (a nehéz rész, külön).
 

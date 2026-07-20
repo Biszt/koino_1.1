@@ -1,0 +1,40 @@
+<!-- frontend/html/components/modals/sikidomModal.html -->
+
+<!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
+     Két állapota van (a SikidomModal.js váltja):
+       1. #sikidom-betoltes — töltő állapot (adatlekérés + elrendezés alatt)
+       2. #sikidom-nezet    — a kész nézet: SVG világ (síkidomok) + képernyő-cimkék -->
+<div class="sikidom-modal">
+
+  <!-- ===== TÖLTŐ ÁLLAPOT ===== -->
+  <div class="sikidom-modal__betoltes" id="sikidom-betoltes">
+    <span class="sikidom-modal__betoltes-jelzo" aria-hidden="true"></span>
+    <p class="sikidom-modal__betoltes-szoveg" id="sikidom-betoltes-szoveg">Síkidom nézet előkészítése…</p>
+  </div>
+
+  <!-- ===== NÉZET ===== -->
+  <div class="sikidom-modal__nezet" id="sikidom-nezet" hidden>
+    <!-- Egyetlen SVG: a .sikidom-vilag csoport a világ-transzformációt kapja
+         (a síkidomok vele zoomolnak/tolódnak); a .sikidom-cimkek csoport
+         képernyő-koordinátában marad (a feliratok nem torzulnak). -->
+    <svg class="sikidom-modal__svg" id="sikidom-svg" xmlns="http://www.w3.org/2000/svg">
+      <g class="sikidom-vilag" id="sikidom-vilag"></g>
+      <g class="sikidom-cimkek" id="sikidom-cimkek"></g>
+    </svg>
+
+    <!-- Vezérlők: nagyítás / kicsinyítés / teljes nézet -->
+    <div class="sikidom-modal__vezerlok">
+      <button id="sikidom-zoom-be-gomb" class="sikidom-modal__vezerlo-gomb" type="button"
+              aria-label="Nagyítás" title="Nagyítás">＋</button>
+      <button id="sikidom-zoom-ki-gomb" class="sikidom-modal__vezerlo-gomb" type="button"
+              aria-label="Kicsinyítés" title="Kicsinyítés">－</button>
+      <button id="sikidom-illesztes-gomb" class="sikidom-modal__vezerlo-gomb" type="button"
+              aria-label="Teljes nézet" title="Teljes nézet">⤢</button>
+    </div>
+
+    <p class="sikidom-modal__sugo">
+      Húzás: mozgatás · görgetés / ＋－: nagyítás · koppintás a síkidomra: ugrás
+    </p>
+  </div>
+
+</div>

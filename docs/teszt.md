@@ -578,6 +578,29 @@ docker logs -f koino-backend
     API (curl, 2026-07-19, lefutott): GET `/api/terkep/darabszam` (globális: 25;
     `?agEntitasId=` ág-BFS: 5), GET `/api/terkep?lapMeret=&kurzor=` (kurzoros
     lapozás, 3 lap = pontosan 25 sor, cím-viselőknél `cim`, auth nélkül 401).
+51. ⬜ **Síkidom nézet — 1. lépés (terv 14. pont, 2026-07-20 óta):** fő menü →
+    **🔷 Síkidom nézet**. STATIKUS ablak (még NINCS dinamikus felfedés / drill-down).
+    A globális nézet az **ÖSSZES gyökeret** mutatja (egymás mellé pakolva, a
+    legnagyobb középen). Ellenőrzés:
+    (a) rövid töltő után megjelenik a nézet: a síkidomok **entitástípus szerinti
+    formák** — Tartalom = kör, Kategória = háromszög, Tartalomtípus = négyzet,
+    Javaslat = ötszög, Egyezmény = hatszög (halvány kitöltés, típus-színű keret);
+    (b) a leszármazottak a szülő síkidomán **BELÜL**, napraforgó-spirálban, a
+    **legnagyobb középen**, a kisebbek kifelé; a méret a hierarchikus
+    össztudatponttal arányos (szintenként √20-szor kisebb);
+    (c) a elég nagynak látszó síkidomokon **felirat** (cím vagy típusnév), a
+    túl kicsiken nincs — zoomolva előjön / eltűnik;
+    (d) pan/zoom: húzással mozgatható, görgetéssel a kurzorra nagyít, ＋/－ a
+    közepére, ⤢ a teljes nézetre illeszt;
+    (e) az AKTUÁLIS entitás (amin a pakli áll) kiemelt kerettel jelenik meg, ha
+    látszik a nézetben;
+    (f) síkidomra **koppintva** a modal bezárul és a pakli az entitásra navigál
+    (beágyazott kicsire kattintva azt választja, nem a szülőt).
+    Node-teszt (böngésző nélkül, 2026-07-20): sikidomElrendezes 16 eset zöld
+    (containment, legnagyobb-középen, APPEND-STABILITÁS, determinizmus,
+    kör-védelem); sikidomFormak forma/pont-matek OK. API (curl): GET
+    `/api/sikidom` (best-first effektív méret szerint; a plafonnál
+    `vanTovabbGyerek` igaz; auth nélkül 401).
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

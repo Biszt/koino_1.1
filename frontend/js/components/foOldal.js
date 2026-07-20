@@ -24,6 +24,7 @@ import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
 import KeresesModal from './modals/KeresesModal.js';
 import TerkepModal from './modals/TerkepModal.js';
+import SikidomModal from './modals/SikidomModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
 
@@ -150,6 +151,11 @@ init() {
         ikon:    '🗺️',
         felirat: 'Térkép',
         akcio:   () => this._terkepMegnyitasa()
+      },
+      {
+        ikon:    '🔷',
+        felirat: 'Síkidom nézet',
+        akcio:   () => this._sikidomMegnyitasa()
       },
       {
         ikon:    '🔔',
@@ -367,6 +373,37 @@ init() {
     terkepModal.megnyitas();
 
     console.log('FoOldal._terkepMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // SÍKIDOM NÉZET MODAL MEGNYITÁSA
+  // =====================================
+  // A fő menüs „Síkidom nézet" – a koino_1.0 fraktál kör-pakolásának újraépítése
+  // (terv 14. pont, 1. lépés: statikus ablak). A globális nézet a legerősebb
+  // gyökértől indul; síkidomra koppintva a pakli az entitásra navigál.
+  async _sikidomMegnyitasa() {
+    console.log('FoOldal._sikidomMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    // Az éppen aktív entitás — a síkidom nézetben kiemelve jelenik meg (ha látszik)
+    const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
+
+    const sikidomModal = new SikidomModal('modal-kontener', {
+      token: this.token,
+      aktualisEntitasId,
+      onEntitasKivalasztas: (entitasId, entitasTipus) => {
+        console.log('FoOldal - síkidomból navigálás', { entitasId, entitasTipus });
+        aktivEntitasMentese(entitasId, entitasTipus);
+        this._pakliInditasa(entitasId, entitasTipus);
+      }
+    });
+
+    await sikidomModal.init();
+    await sikidomModal.megnyitas();
+
+    console.log('FoOldal._sikidomMegnyitasa - VÉGE');
   }
 
 

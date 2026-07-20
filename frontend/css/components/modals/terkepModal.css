@@ -5,30 +5,8 @@
    Hibrid rajzolás: Canvas alapréteg (teljes fa) + SVG fedőréteg (látható
    csomópontok interakciója). A TerkepModal.js tölti fel és vezérli. */
 
-/* ----- TELJES KÉPERNYŐS PANEL-MÉRET ----- */
-/* A Modal.js a meret beállításból képzi az osztályt (modal-panel--teljes) —
-   ez az egyetlen modal, ami a teljes képernyőt elfoglalja. */
-.modal-panel--teljes {
-  width: 100vw;
-  height: 100dvh;
-  max-height: 100dvh;
-  border-radius: 0;
-  border: none;
-
-  /* Fejléc + tartalom függőleges elrendezése, a tartalom tölti ki a maradékot */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* A tartalom a fejléc alatti TELJES területet kapja, padding nélkül —
-   a térkép-nézet széltől szélig ér */
-.modal-panel--teljes .modal-tartalom {
-  flex: 1;
-  padding: 0;
-  overflow: hidden;
-  min-height: 0; /* flex gyereknél kell, hogy tényleg zsugorodhasson */
-}
+/* A teljes képernyős panel-méret (.modal-panel--teljes) a közös modal.css-ben
+   van (Térkép + Síkidom nézet közösen használja). */
 
 /* A belső váz is töltse ki a rendelkezésre álló magasságot */
 .terkep-modal {
