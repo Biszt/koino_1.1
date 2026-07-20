@@ -258,6 +258,38 @@ const ertesitesMegjelolOlvasottnak = async (ertesitesId, eEmberId) => {
 // --- METÓDUS VEGE: ertesitesMegjelolOlvasottnak ---
 
 
+// --- METÓDUS KEZDETE: ertesitesTorlese ---
+// Egy értesítés végleges törlése a postafiókból – csak az eEmber SAJÁT értesítésén
+// végezhető el (ugyanaz a jogosultság-minta, mint az olvasottnak jelölésnél).
+// Paraméterek: ertesitesId, eEmberId (jogosultság-ellenőrzéshez)
+// Visszatérés: a törölt értesítés dokumentuma
+const ertesitesTorlese = async (ertesitesId, eEmberId) => {
+  console.log('ertesitesService.ertesitesTorlese - KEZDET', {
+    ertesitesId,
+    eEmberId,
+  });
+
+  // Megkeressük az értesítést
+  const ertesites = await ertesitesRepository.keresByid(ertesitesId);
+
+  // Ha nem létezik, hibát dobunk
+  if (!ertesites) {
+    throw new Error('Az értesítés nem található');
+  }
+
+  // Jogosultság-ellenőrzés: csak a saját értesítését törölheti
+  if (ertesites.eEmberId.toString() !== eEmberId.toString()) {
+    throw new Error('Nincs jogosultságod ehhez az értesítéshez');
+  }
+
+  const torolt = await ertesitesRepository.torol(ertesitesId);
+
+  console.log('ertesitesService.ertesitesTorlese - VEGE', { torolt });
+  return torolt;
+};
+// --- METÓDUS VEGE: ertesitesTorlese ---
+
+
 // --- METÓDUS KEZDETE: mindetOlvasottnak ---
 // Egy eEmber összes olvasatlan értesítését olvasottnak jelöli
 // Paraméterek: eEmberId,
@@ -320,6 +352,7 @@ module.exports = {
   ertesitesKuldes,
   postafiokLekereses,
   ertesitesMegjelolOlvasottnak,
+  ertesitesTorlese,
   mindetOlvasottnak,
   olvasatlanokSzamaLekereses,
   olvasatlanokSzamaEntitasonkent,

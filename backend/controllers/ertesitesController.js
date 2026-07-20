@@ -157,10 +157,52 @@ const mindetOlvasottnak = async (req, res) => {
 // --- METÓDUS VEGE: mindetOlvasottnak ---
 
 
+// --- METÓDUS KEZDETE: torolErtesites ---
+// DELETE /api/ertesitesek/:id
+// Egy konkrét értesítés végleges törlése a postafiókból (csak a saját értesítését)
+const torolErtesites = async (req, res) => {
+  console.log('ertesitesController.torolErtesites - KEZDET', {
+    ertesitesId: req.params.id,
+    eEmberId: req.user.id,
+  });
+
+  try {
+    const torolt = await ertesitesService.ertesitesTorlese(
+      req.params.id,
+      req.user.id
+    );
+
+    console.log('ertesitesController.torolErtesites - VEGE', { torolt });
+
+    res.status(200).json({
+      siker: true,
+      adatok: torolt,
+    });
+  } catch (hiba) {
+    console.error('ertesitesController.torolErtesites - HIBA', { hiba });
+
+    // A service-ből érkező hibaüzenetek alapján különböző HTTP kódokat küldünk
+    if (hiba.message === 'Az értesítés nem található') {
+      return res.status(404).json({ siker: false, uzenet: hiba.message });
+    }
+    if (hiba.message === 'Nincs jogosultságod ehhez az értesítéshez') {
+      return res.status(403).json({ siker: false, uzenet: hiba.message });
+    }
+
+    res.status(500).json({
+      siker: false,
+      uzenet: 'Az értesítés törlése sikertelen',
+    });
+  }
+};
+// --- METÓDUS VEGE: torolErtesites ---
+
+
 // Az összes controller metódus exportálása
 module.exports = {
   postafiokLekereses,
   olvasatlanokSzama,
   megjelolOlvasottnak,
   mindetOlvasottnak,
+  torolErtesites,
 };

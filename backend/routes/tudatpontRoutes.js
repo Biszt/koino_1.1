@@ -93,20 +93,16 @@ router.get(
 );
 
 // ============================================================
-// TUDATPONTOK VISSZAOSZTÁSA
+// TUDATPONTOK VISSZAOSZTÁSA — HTTP-VÉGPONT ELTÁVOLÍTVA (2026-07-20)
 // ============================================================
-
-// ----- TUDATPONTOK VISSZAOSZTÁSA (ADMIN/SYSTEM) -----
-// Endpoint: POST /api/tudatpont/visszaosztas
-// Body: { entitasId, entitasTipus }
-// Védett: Csak admin vagy system használhatja (moderátor törli a tartalmat)
-// TODO: adminMiddleware hozzáadása, ha van admin rendszer
-router.post(
-  '/visszaosztas',
-  authMiddleware,  // ✅ Kötelező auth
-  // TODO: adminMiddleware,  // Admin jogosultság kötelező (később implementálandó)
-  (req, res) => TudatpontController.tudatpontokVisszaosztasa(req, res)
-);
+// A `POST /api/tudatpont/visszaosztas` végpontot ELTÁVOLÍTOTTUK: csak authMiddleware
+// védte (admin-védelem nélkül), így bármely bejelentkezett e-ember bármely entitást
+// töröltethetett vele — a javaslat→szavazás→egyezmény folyamat MEGKERÜLÉSÉVEL. A
+// tulajdonos döntése (2026-07-20): egyezmény nélkül entitás nem törlődhet. A
+// frontend úgysem használta. A visszaosztás LOGIKÁJA változatlanul él a
+// `TudatpontService.tudatpontokVisszaosztasa` service-metódusban, amit a
+// törlés-/egyesítés-végrehajtók KÖZVETLENÜL hívnak (a szavazás után) — ezt NEM
+// érinti az útvonal törlése.
 
 // ============================================================
 // JAVASLAT RENDSZERHEZ (JOGOSULTSÁG ELLENŐRZÉS)

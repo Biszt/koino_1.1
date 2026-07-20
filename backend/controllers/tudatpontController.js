@@ -330,55 +330,13 @@ class TudatpontController {
   }
 
   // ============================================================
-  // TUDATPONTOK VISSZAOSZTÁSA (ADMIN/SYSTEM MŰVELET)
+  // TUDATPONTOK VISSZAOSZTÁSA — CONTROLLER ELTÁVOLÍTVA (2026-07-20)
   // ============================================================
-
-  // ----- TUDATPONTOK VISSZAOSZTÁSA -----
-  // Egy entitás összes tudatpontjának visszaosztása a hozzájárulóknak (POST kérés)
-  // Endpoint: POST /api/tudatpont/visszaosztas
-  // Használat: entitás törléskor (pl. moderátor törli a tartalmat)
-  // @param {Object} req - Express request objektum
-  // @param {Object} res - Express response objektum
-  async tudatpontokVisszaosztasa(req, res) {
-    try {
-      
-      // 1. LÉPÉS - Adatok kiolvasása request body-ból
-      const { entitasId, entitasTipus } = req.body;
-
-      // 2. LÉPÉS - Kötelező mezők validálása
-      if (!entitasId || !entitasTipus) {
-        return res.status(400).json({
-          success: false,
-          message: 'Hiányzó kötelező mezők: entitasId, entitasTipus'
-        });
-      }
-
-      // 3. LÉPÉS - Service hívás - tudatpontok visszaosztása
-      const eredmeny = await TudatpontService.tudatpontokVisszaosztasa(
-        entitasId,
-        entitasTipus
-      );
-
-      // 4. LÉPÉS - Sikeres válasz küldése
-      // 200 OK - Sikeres visszaosztás
-      res.status(200).json({
-        success: true,
-        message: `${eredmeny.visszaosztottPontok} tudatpont visszaosztva ${eredmeny.eemberekSzama} eembernak`,
-        data: eredmeny
-      });
-
-    } catch (error) {
-      // ===== HIBAKEZELÉS =====
-      console.error('Hiba a tudatpontok visszaosztása során:', error);
-
-      // 500 Internal Server Error
-      res.status(500).json({
-        success: false,
-        message: 'Szerver hiba történt a tudatpontok visszaosztása során',
-        error: error.message
-      });
-    }
-  }
+  // A `tudatpontokVisszaosztasa` controller-metódust (a `POST /api/tudatpont/visszaosztas`
+  // végpont kezelőjét) ELTÁVOLÍTOTTUK, mert governance-lyuk volt: admin-védelem nélkül
+  // bárki entitást töröltethetett a szavazás megkerülésével (lásd a route-fájl
+  // megjegyzését). A visszaosztás LOGIKÁJA a `TudatpontService.tudatpontokVisszaosztasa`
+  // service-metódusban él tovább, amit a törlés-/egyesítés-végrehajtók közvetlenül hívnak.
 
   // ============================================================
   // FELMENŐ-SZABÁLY FELMÉRÉSE (a tudatpont módosítás megnyitásakor)

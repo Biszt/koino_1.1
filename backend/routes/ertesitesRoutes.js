@@ -32,4 +32,10 @@ router.patch('/mind-olvasott', authMiddleware, ertesitesController.mindetOlvasot
 // Egy konkrét értesítés olvasottnak jelölése
 router.patch('/:id/olvasott', authMiddleware, ertesitesController.megjelolOlvasottnak);
 
+// DELETE /api/ertesitesek/:id
+// Egy konkrét értesítés végleges törlése a postafiókból (csak a saját értesítését).
+// Külön HTTP-metódus (DELETE), ezért nem ütközik a fenti GET/PATCH nevesített
+// útvonalakkal (olvasatlan-szam, mind-olvasott).
+router.delete('/:id', authMiddleware, ertesitesController.torolErtesites);
+
 module.exports = router;

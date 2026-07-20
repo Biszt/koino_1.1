@@ -373,7 +373,25 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 
-- [ ] A backend hiányosságainak felmérése és listázása (külön feladat)
+- [~] A backend hiányosságainak felmérése és listázása (külön feladat) — RÉSZBEN
+  elvégezve (2026-07-20, lásd lentebb az értesítés-tételeket + a lenti governance-javítást).
+  A felmérés tanulsága: kevés valódi adósság; a „backend-kész, frontend-hiányos" darabok
+  többsége SZÁNDÉKOSAN felfüggesztett funkció (nem hiba). Nyitva maradt megfigyelések:
+  `szamitHierarchiaSzinteket` (implementálatlan, hívatlan no-op — törölhető);
+  `uploads/fajlok/` régi teszt-feltöltések (forrásfájl-másolatok — rendrakás).
+
+- [x] 🔴→✅ **Governance-lyuk: védtelen `POST /api/tudatpont/visszaosztas` végpont
+  ELTÁVOLÍTVA (2026-07-20, a tulajdonos döntése).** A végpontot csak `authMiddleware`
+  védte (admin-védelem nélkül, csak `// TODO`), így BÁRMELY bejelentkezett e-ember
+  meghívhatta tetszőleges `{entitasId, entitasTipus}`-szal, és ezzel bármely entitást
+  töröltethetett a javaslat→szavazás→egyezmény folyamat MEGKERÜLÉSÉVEL (a visszaosztás
+  0-ra állítja a pontokat → az entitás auto-törlődik). A frontend nem használta.
+  Eltávolítva: a route (`tudatpontRoutes.js`) és a controller-metódus
+  (`tudatpontController.js`) — helyükön magyarázó komment. A visszaosztás LOGIKÁJA
+  változatlanul él a `TudatpontService.tudatpontokVisszaosztasa` service-metódusban,
+  amit a törlés-/egyesítés-végrehajtók KÖZVETLENÜL hívnak (a szavazás után) — a
+  végpont törlése ezt NEM érinti. Curl-igazolt: a végpont most 404. Alapelv:
+  egyezmény nélkül entitás nem törlődhet.
 
 - [x] **Üres-pakli barátságos állapot — KÉSZ (2026-07-18).** Friss/üres DB-n a főoldal
   már nem hibázik el: a `Pakli.pakliLekerese` null-védelmet kapott, üres adatbázisnál
@@ -407,41 +425,59 @@ A **fogyasztói oldal** (tárolás, lekérés lapozva, olvasottság, beállítá
 (minden végpont `authMiddleware`-es, minden lekérés `req.user.id`-re szűkít) és kész — a
 frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
 
-- [ ] 🔴 **Az értesítések SOHA nem keletkeznek — a termelői oldal nincs bekötve.**
-  A `ertesitesService.ertesitesKuldes` kész és exportált, de sehonnan nincs meghívva (sem
-  javaslat-létrehozás, sem szavazás, sem tudatpont-változás, sem a javaslat-cron lezárás nem
-  hívja). A postafiók emiatt üres marad, amíg az eseményforrásokat be nem kötjük
-  (pl. `javaslatService` → `ertesitesKuldes(...)`, a 7 típushoz: `ujJavaslat`,
-  `javaslatElfogadas`, `javaslatElvetve`, `szavazatErkezett`, `szavazasiHatarido`,
-  `tudatpontValtozas`, `ujGyerekEntitas`). Ez a legnagyobb hiányzó darab.
-- [ ] 🟠 **Fájlnév kis/nagybetű-eltérés (Docker/Linux-veszély).**
-  `ertesitesiBeallitasRepository.js` így importál: `require('../models/ErtesitesiBeallitas')`,
-  de a tényleges fájl `ertesitesiBeallitas.js` (kis `e`). Windows / Docker Desktop bind-mount
-  alatt működik (case-insensitive FS), de valódi Linux-hoston vagy case-sensitive köteten
-  indításkor elszáll („module not found"). Egysoros javítás. (Ugyanígy ellenőrizni: a
-  `models/ertesites.js` fejléc-kommentje `Ertesites.js`-t ír, de a require-ök kisbetűsek — a
-  require-ök a mérvadók, azok jók.)
-- [ ] 🟡 **Feliratkozás/beállítás felület hiányzik (opt-in következménye).**
-  Alapból senki nincs semmire feliratkozva (`ertesitesTipusok: []`), és nincs alapértelmezett
-  feliratkozás; a `beallitasKeresesCascade` csak FELFELÉ keres beállítást a fában. Így éles
-  értesítésekhez kell egy feliratkozás-UI is (entitásonként vagy globálisan) — a beállítás-API
-  (`PUT/GET/DELETE /api/ertesitesi-beallitasok/...`) készen áll hozzá.
-- [ ] 🟡 **Takarító metódusok nincsenek bekötve (árva adatok).**
-  `ertesitesRepository.torolEntitasOsszes` / `torolE_EmberOsszes` és
-  `ertesitesiBeallitasRepository.torolE_EmberOsszes` léteznek, de senki nem hívja őket. Entitás
-  törlésekor (`torlesiVegrehajto`) és eember törlésekor a kapcsolódó értesítések/beállítások
-  árván maradnak a DB-ben.
-- [ ] 🟡 **Halott kód:** `ertesitesiBeallitasRepository.keresByEntitas` definiált és exportált,
-  de sehol sem hívott — egy korábbi, meg nem valósult kiküldési terv maradványa (a mostani
-  `ertesitesKuldes` nem ezt használja). Törölhető, vagy a jövőbeli kiküldés-optimalizációhoz
-  meghagyható.
-- [ ] 🟢 **Nincs egyedi értesítés-törlés a postafiókból.** A repo-ban van `torol`, de nincs hozzá
-  controller/route — az eember csak olvasottnak jelölhet, törölni nem tud. Termék-döntés kérdése.
-- [ ] 🟢 **Válaszboríték-eltérés (a frontendnek fontos).** Az értesítés-controllerek
-  `{ siker, adatok }` borítékba csomagolnak, míg pl. `eember/sajat-adatok` laposan ad vissza; a
-  frontendnek `valasz.adatok.ertesitesek`-ként kell olvasnia. Mellékesen: a hiba-válaszok `uzenet`
-  mezőt küldenek, de az `apiHelper` `message`/`error`-t keres, így a szerver hibaszövege nem jut ki
-  a frontendre (ez az egész projektre igaz, nem csak ide).
+- [x] 🔴→✅ **A termelői oldal BE VAN kötve — a 2026-07-13-i megállapítás elavult.**
+  Az `ertesitesService.ertesitesKuldes` időközben minden eseményforrásból meghívásra
+  került. Mind a 8 típus él (2026-07-20-i ellenőrzés): `ujJavaslat`
+  (`javaslatService`), `javaslatElfogadas`/`javaslatElvetve` (`javaslatIdozitesService._lezarasErtesites`),
+  `szavazasiHatarido` (`javaslatIdozitesService`, cron), `tudatpontValtozas`
+  (`tudatpontService`), `ujGyerekEntitas` (`tartalomService`), `kuszobValtozas`
+  (`ertekSzamitasService`, V2). A **`szavazatErkezett`** külön eset (lásd lentebb).
+- [~] ⏸️ **`szavazatErkezett` — FÜGGŐBEN (2026-07-20, a tulajdonos döntése).** A backend
+  TERMELŐ be van kötve (`szavazatService.szavazatLeadasa`, nem-töredék + töredék ág,
+  best-effort, a szavazót magát kihagyva, minden szavazásnál), DE a frontend a
+  `szavazatErkezett`-et SZÁNDÉKOSAN kihagyja mindkét helyről: a feliratkozási
+  beállításokból (`ErtesitesiBeallitasModal.js` `ERTESITES_TIPUSOK`) és a
+  megjelenítésből (`ErtesitesekModal.js` `TIPUS_SZOVEG`) is — a korábbi tulajdonosi
+  döntés szerint (zaj: minden szavazás/módosítás értesítene). Emiatt a bekötött termelő
+  jelenleg HATÁSTALAN (nincs feliratkozó → 0 értesítés keletkezik), ami ártalmatlan.
+  ELDÖNTENDŐ (Csaba): vagy teljesen bekapcsoljuk (a 2 frontend-listába is felvesszük →
+  valódi opt-in értesítés), vagy visszavonjuk a backend-bekötést és marad dormant.
+- [x] 🟠→✅ **Fájlnév kis/nagybetű-eltérés — MÁR NINCS (2026-07-20-i ellenőrzés).**
+  A `ertesitesiBeallitasRepository.js:4` és az `ertesitesRepository.js:7` egyaránt
+  KISBETŰS modell-nevet importál (`../models/ertesitesiBeallitas`, `../models/ertesites`),
+  ami pontosan egyezik a tényleges fájlnevekkel — valódi Linux/case-sensitive köteten
+  sem száll el. (A `models/ertesites.js` fejléc-kommentje ugyan `Ertesites.js`-t ír, de az
+  csak komment; a require-ök jók.)
+- [x] 🟡→✅ **Feliratkozás/beállítás felület KÉSZ (2026-07-20-i ellenőrzés).**
+  A közös `ErtesitesiBeallitasModal` be van kötve a fő menübe („Értesítési beállítások" =
+  GLOBÁLIS alapbeállítás, a cascade legvégső visszaesése) ÉS MINDEN kártya-hamburgerbe
+  (entitásonkénti beállítás) — Tartalom/Kategória/Tartalomtípus/Javaslat/Egyezmény. Az opt-in
+  így teljes: az e-ember globálisan vagy entitásonként feliratkozhat a típusokra. A beállítás-API
+  (`PUT/GET/DELETE /api/ertesitesi-beallitasok/...`) mögötte működik.
+- [~] 🟡 **Takarító metódusok — RÉSZBEN kész (2026-07-20-i ellenőrzés).** Az ENTITÁS-törlési
+  takarítás (`torolEntitasOsszes`) 2026-07-18 óta be van kötve (lásd fentebb, „Árva értesítések
+  takarítása — KÉSZ"). Az E-EMBER-törlési takarítók (`ertesitesRepository.torolE_EmberOsszes`,
+  `ertesitesiBeallitasRepository.torolE_EmberOsszes`) még nincsenek hívva — DE nincs is
+  e-ember-törlés funkció a projektben (nincs rá controller/service/route), ezért ez egy
+  jövőbeli feature-re váró horog, nem aktív hiba. Amikor az e-ember-törlés megépül, ezeket be
+  kell kötni.
+- [x] 🟡→✅ **„Halott kód" tévedés — `keresByEntitas` MÉGIS használatban van (2026-07-20-i
+  ellenőrzés).** Az `ertesitesiBeallitasService.beallitasKeresesCascade` (145. sor) hívja a
+  szülőláncon felfelé bejáráskor. Élő kód, nem törlendő.
+- [x] 🟢→✅ **Egyedi értesítés-törlés a postafiókból — KÉSZ (2026-07-20).** ÚJ
+  `DELETE /api/ertesitesek/:id` (controller `torolErtesites` + service `ertesitesTorlese`
+  a SAJÁT-értesítés jogosultság-ellenőrzéssel, az olvasottnak-jelölés mintájára; a repo
+  `torol`-ját használja). Frontend: az `ErtesitesekModal` minden során 🗑️ törlés-gomb
+  (a sor wrapperbe került, hogy ne legyen gomb-a-gombban; egykattintásos, megerősítő
+  dialógus nélkül — alacsony tétű saját adat); törléskor a sor kikerül a DOM-ból, üres
+  listánál üres-állapot, és a badge frissül (`onValtozas`). Curl-igazolt: saját → 200 +
+  DB-ből törlődik; idegen → 403; nem létező → 404. (teszt.md 53)
+- [x] 🟢→✅ **Hiba-válasz boríték: `uzenet` mező — JAVÍTVA (2026-07-20).** Az `apiHelper`
+  hiba-ága mostantól `message || error || uzenet`-et néz (mindhárom mezőnevet, amit a
+  vegyes backend-controllerek használnak), így a szerver valódi hibaszövege (pl. az
+  értesítés-controllerek `uzenet`-je) eljut a felhasználóhoz. 3 helyen (JSON + FormData
+  POST/PATCH). Az egész projektre hat. (A `{ siker, adatok }` vs. lapos SIKER-boríték
+  eltérés NEM hiba — a frontend helyesen `valasz.adatok`-ként olvassa, ahol az van.)
 
 - [x] `docker-compose.dev.yml`: `NODEeNV` elírás javítása `NODE_ENV`-re
 - [x] **Csomag egyezmény-tárhely kötelező + cím-alapú entitás-kereső** (2026. 07. 12.):

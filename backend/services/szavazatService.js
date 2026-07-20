@@ -9,6 +9,10 @@ const JavaslatRepository = require('../repositories/javaslatRepository');
 // ⭐ ÚJ IMPORT - Refaktorált service-ek
 const JavaslatJogosultsagService = require('./javaslat/javaslatJogosultsagService');
 
+// Értesítés kiküldése szavazáskor (szavazatErkezett). A szavazatService a
+// projekt gyökér-service-mappájában van, ezért az ertesitesService is innen (./) jön.
+const ErtesitesService = require('./ertesitesService');
+
 // ===================================
 // SZAVAZAT SERVICE OSZTÁLY
 // ===================================
@@ -91,6 +95,26 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
     // A cron job fogja frissíteni a számított értékeket
     await JavaslatRepository.updateById(javaslatId, { ertekekElavultak: true });
     console.log('szavazatLeadasa - Javaslat megjelölve elavultként (nem töredék)', { javaslatId });
+
+    // 3c/b. ÉRTESÍTÉS: „szavazatErkezett" — az érintett entitás FIGYELŐinek (a szavazót
+    // magát kihagyva). BEST-EFFORT: az értesítés hibája NEM ronthatja el a szavazást.
+    const erintett = javaslat.erintettEntitasok?.[0];
+    if (erintett) {
+      try {
+        await ErtesitesService.ertesitesKuldes(
+          erintett.entitasId,
+          erintett.entitasTipus,
+          'szavazatErkezett',
+          { javaslatId, javaslatTipus: javaslat.javaslatTipus, szavazatTipus },
+          eemberId // a szavazót magát nem értesítjük
+        );
+      } catch (ertesitesHiba) {
+        console.error('szavazatLeadasa - szavazatErkezett értesítés HIBA (nem blokkoló)', {
+          javaslatId,
+          hiba: ertesitesHiba.message,
+        });
+      }
+    }
 
     // 3d. EREDMÉNY VISSZAADÁSA
     const eredmeny = {
@@ -177,6 +201,32 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
 
     // Töredékjavaslat megjelölése elavultként, hogy a cron job frissítse
     await JavaslatRepository.updateById(toredek._id.toString(), { ertekekElavultak: true });
+
+    // ÉRTESÍTÉS: „szavazatErkezett" — az adott töredék érintett entitásának FIGYELŐinek
+    // (a szavazót magát kihagyva). Töredékenként külön megy, mert minden töredéknek saját
+    // érintett entitása van. BEST-EFFORT: hiba nem akaszthatja meg a szavazást.
+    const toredekErintett = toredek.erintettEntitasok?.[0];
+    if (toredekErintett) {
+      try {
+        await ErtesitesService.ertesitesKuldes(
+          toredekErintett.entitasId,
+          toredekErintett.entitasTipus,
+          'szavazatErkezett',
+          {
+            javaslatId: toredek._id,
+            javaslatTipus: toredek.javaslatTipus,
+            szavazatTipus,
+            toredekCsoportId: javaslat.toredekCsoportId,
+          },
+          eemberId // a szavazót magát nem értesítjük
+        );
+      } catch (ertesitesHiba) {
+        console.error('szavazatLeadasa - szavazatErkezett (töredék) értesítés HIBA (nem blokkoló)', {
+          toredekId: toredek._id,
+          hiba: ertesitesHiba.message,
+        });
+      }
+    }
 
     // Eredmény rögzítése
     toredekSzavazatok.push({

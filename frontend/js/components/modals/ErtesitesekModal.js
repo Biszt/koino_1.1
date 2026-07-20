@@ -2,7 +2,7 @@
 
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
-import { apiGet, apiPatch } from '../../utils/apiHelper.js';
+import { apiGet, apiPatch, apiDelete } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import { masodpercFelirat } from '../../utils/idoFormazo.js';
 
@@ -122,6 +122,13 @@ class ErtesitesekModal {
     const lista = document.getElementById('ertesitesek-lista');
     if (lista) {
       lista.addEventListener('click', (esemeny) => {
+        // ELŐBB a törlés-gomb: ha arra kattintottak, törlünk (és NEM navigálunk)
+        const torolGomb = esemeny.target.closest('.ertesitesek-modal__torol');
+        if (torolGomb) {
+          this._elemTorles(torolGomb.dataset.torolId);
+          return;
+        }
+        // Egyébként a fő (navigáló) sor
         const elem = esemeny.target.closest('.ertesitesek-modal__elem');
         if (elem) {
           this._elemKattintas(elem.dataset.id, elem.dataset.entitasId, elem.dataset.entitasTipus);
@@ -222,19 +229,28 @@ class ErtesitesekModal {
     // Küszöbváltozásnál kiírjuk, MELYIK küszöb változott és hogyan (régi → új)
     const reszletResz = this._kuszobValtozasReszlet(ertesites);
 
+    // A sort egy wrapper fogja össze: a fő (navigáló) gomb + a törlés-gomb. Így nem
+    // lesz gomb-a-gombban (érvénytelen HTML), és a törlés kattintása külön kezelhető.
     return `
-      <button type="button"
-        class="ertesitesek-modal__elem${olvasatlanOsztaly}"
-        data-id="${ertesites._id}"
-        data-entitas-id="${ertesites.entitasId}"
-        data-entitas-tipus="${ertesites.entitasTipus}">
-        <span class="ertesitesek-modal__pont" aria-hidden="true"></span>
-        <span class="ertesitesek-modal__szoveg">
-          <span class="ertesitesek-modal__cim">${cimSzoveg}${entitasResz}</span>
-          ${reszletResz}
-          <span class="ertesitesek-modal__ido">${this._idoSzoveg(ertesites.createdAt)}</span>
-        </span>
-      </button>`;
+      <div class="ertesitesek-modal__sor" data-sor-id="${ertesites._id}">
+        <button type="button"
+          class="ertesitesek-modal__elem${olvasatlanOsztaly}"
+          data-id="${ertesites._id}"
+          data-entitas-id="${ertesites.entitasId}"
+          data-entitas-tipus="${ertesites.entitasTipus}">
+          <span class="ertesitesek-modal__pont" aria-hidden="true"></span>
+          <span class="ertesitesek-modal__szoveg">
+            <span class="ertesitesek-modal__cim">${cimSzoveg}${entitasResz}</span>
+            ${reszletResz}
+            <span class="ertesitesek-modal__ido">${this._idoSzoveg(ertesites.createdAt)}</span>
+          </span>
+        </button>
+        <button type="button"
+          class="ertesitesek-modal__torol"
+          data-torol-id="${ertesites._id}"
+          title="Értesítés törlése"
+          aria-label="Értesítés törlése">🗑️</button>
+      </div>`;
   }
 
   // ===== KÜSZÖBVÁLTOZÁS RÉSZLET-SOR =====
@@ -287,6 +303,38 @@ class ErtesitesekModal {
 
     if (typeof this.onEntitasKivalasztas === 'function' && entitasId && entitasTipus) {
       this.onEntitasKivalasztas(entitasId, entitasTipus);
+    }
+  }
+
+  // ===== EGY ÉRTESÍTÉS TÖRLÉSE =====
+  // A 🗑️ gombra kattintva véglegesen törli az értesítést a postafiókból, és kiveszi a
+  // sort a listából. Ha a törölt értesítés olvasatlan volt, a badge-számot is frissíti
+  // (onValtozas). NEM navigál, és a modal nyitva marad.
+  async _elemTorles(ertesitesId) {
+    console.log('ErtesitesekModal._elemTorles - KEZDÉS', { ertesitesId });
+    if (!ertesitesId) return;
+
+    try {
+      await apiDelete(`ertesitesek/${ertesitesId}`, {}, this.token);
+
+      // A sort kivesszük a DOM-ból
+      const lista = document.getElementById('ertesitesek-lista');
+      const sor = lista?.querySelector(`.ertesitesek-modal__sor[data-sor-id="${ertesitesId}"]`);
+      if (sor) sor.remove();
+
+      // Ha kiürült a lista, megjelenítjük az üres állapotot
+      if (lista && !lista.querySelector('.ertesitesek-modal__sor')) {
+        lista.innerHTML = '<p class="ertesitesek-modal__ures">Nincs értesítésed.</p>';
+      }
+
+      // A törlés érinthette az olvasatlan-számot → jelöljük és frissítjük a badge-et
+      this.valtozott = true;
+      if (typeof this.onValtozas === 'function') this.onValtozas();
+
+      console.log('ErtesitesekModal._elemTorles - VÉGE siker', { ertesitesId });
+    } catch (hiba) {
+      console.error('ErtesitesekModal._elemTorles - HIBA', hiba.message);
+      this.modal.hibaBeallitasa(hiba.message ?? 'Az értesítés törlése sikertelen.');
     }
   }
 

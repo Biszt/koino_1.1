@@ -41,7 +41,9 @@ async function apiKeres(utvonal, beallitasok = {}, token = null) {
 
     // Ha a szerver hibakódot küldött (4xx, 5xx), hibát dobunk
     if (!valasz.ok) {
-      const hibaUzenet = adatok.message || adatok.error || `HTTP hiba: ${valasz.status}`;
+      // A backend hiba-válaszai vegyes mezőnevet használnak (message / error / uzenet);
+      // mindhármat megnézzük, hogy a szerver valódi hibaszövege eljusson a felhasználóhoz.
+      const hibaUzenet = adatok.message || adatok.error || adatok.uzenet || `HTTP hiba: ${valasz.status}`;
       throw new Error(hibaUzenet);
     }
 
@@ -113,7 +115,9 @@ async function apiPostFormData(utvonal, formData, token = null) {
 
     // Ha a szerver hibakódot küldött (4xx, 5xx), hibát dobunk
     if (!valasz.ok) {
-      const hibaUzenet = adatok.message || adatok.error || `HTTP hiba: ${valasz.status}`;
+      // A backend hiba-válaszai vegyes mezőnevet használnak (message / error / uzenet);
+      // mindhármat megnézzük, hogy a szerver valódi hibaszövege eljusson a felhasználóhoz.
+      const hibaUzenet = adatok.message || adatok.error || adatok.uzenet || `HTTP hiba: ${valasz.status}`;
       throw new Error(hibaUzenet);
     }
 
@@ -157,7 +161,9 @@ async function apiPatchFormData(utvonal, formData, token = null) {
     const adatok = await valasz.json();
 
     if (!valasz.ok) {
-      const hibaUzenet = adatok.message || adatok.error || `HTTP hiba: ${valasz.status}`;
+      // A backend hiba-válaszai vegyes mezőnevet használnak (message / error / uzenet);
+      // mindhármat megnézzük, hogy a szerver valódi hibaszövege eljusson a felhasználóhoz.
+      const hibaUzenet = adatok.message || adatok.error || adatok.uzenet || `HTTP hiba: ${valasz.status}`;
       throw new Error(hibaUzenet);
     }
 

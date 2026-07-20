@@ -623,6 +623,22 @@ docker logs -f koino-backend
     kör-védelem); sikidomFormak forma/pont-matek OK. API (curl): GET
     `/api/sikidom` (best-first effektív méret szerint; a plafonnál
     `vanTovabbGyerek` igaz; auth nélkül 401).
+52. ⏸️ **Szavazat-értesítés (`szavazatErkezett`) — FÜGGŐBEN (2026-07-20):** a backend
+    TERMELŐ be van kötve (`szavazatService.szavazatLeadasa`, best-effort, a szavazót
+    kihagyva, minden szavazásnál), DE a frontend szándékosan kihagyja a típust a
+    feliratkozásból és a megjelenítésből is (tulajdonosi döntés, zaj miatt) → jelenleg
+    NINCS feliratkozó → 0 értesítés → böngészőből NEM tesztelhető. Csaba dönt: teljesen
+    bekapcsoljuk (a 2 frontend-listába is felvesszük) vagy visszavonjuk a backend-bekötést.
+53. ⬜ **Egyedi értesítés-törlés a postafiókból (2026-07-20 óta):** a fő menü vagy egy
+    kártya-hamburger → **Értesítések** postafiók. Minden sor jobb szélén **🗑️** gomb.
+    Ellenőrzés: (a) a 🗑️-re kattintva a sor eltűnik a listából, és a modal NYITVA marad
+    (NEM navigál el, mint a sor törzsére kattintva); (b) ha a törölt értesítés olvasatlan
+    volt, az app-badge és a kártya-badge száma is csökken (a modal bezárása után is helyes);
+    (c) az utolsó sor törlése után „Nincs értesítésed." üres-állapot jelenik meg; (d) a sor
+    TÖRZSÉRE kattintva továbbra is olvasottnak jelöl + navigál (a 🗑️ nem üt át, és fordítva).
+    Backend (curl, 2026-07-20, lefutott): `DELETE /api/ertesitesek/:id` — saját értesítés →
+    200 (+ DB-ből törlődik); MÁSIK e-ember értesítése → 403 „Nincs jogosultságod ehhez az
+    értesítéshez"; nem létező id → 404 „Az értesítés nem található"; auth nélkül → 401.
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 
