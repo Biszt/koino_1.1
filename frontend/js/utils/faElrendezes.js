@@ -53,6 +53,11 @@ constructor(sorok, agEntitasId = null) {
       hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
       letrehozva:             sor.letrehozva ?? null,
       szuloKulcs:             sor.szuloId ? sor.szuloId.toString() : null,
+      // Mellék-ikon adatok (Térkép közeli nézet): Tartalom kategóriái/típusa,
+      // illetve Javaslat/Egyezmény művelet-típusa — a backend tölti fel.
+      kategoriaIkonok:        sor.kategoriaIkonok ?? [],
+      tipusIkon:              sor.tipusIkon ?? null,
+      javaslatTipus:          sor.javaslatTipus ?? null,
       x: 0,
       y: 0
     });

@@ -1,37 +1,23 @@
 <!-- frontend/html/components/modals/terkepModal.html -->
 
 <!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
-     Három nézete van, egyszerre mindig csak egy látszik (a TerkepModal.js váltja):
-       1. #terkep-indito — előzetes darabszám + Elkészítés/Mégse
-       2. #terkep-epites — folyamatjelző + Megszakítás
-       3. #terkep-nezet  — a kész térkép: Canvas alapréteg + SVG fedőréteg -->
+     Két nézete van, egyszerre mindig csak egy látszik (a TerkepModal.js váltja):
+       1. #terkep-epites — folyamatjelző (számláló) + Mégse; megnyitáskor EGYBŐL ez indul
+       2. #terkep-nezet  — a kész térkép: Canvas alapréteg + SVG fedőréteg -->
 <div class="terkep-modal">
 
-  <!-- ===== 1. INDÍTÓ NÉZET ===== -->
-  <div class="terkep-modal__indito" id="terkep-indito">
-    <span class="terkep-modal__indito-ikon" aria-hidden="true">🗺️</span>
-    <p class="terkep-modal__darabszam" id="terkep-darabszam-szoveg">
-      Darabszám lekérése...
-    </p>
-    <div class="terkep-modal__indito-gombok">
-      <button id="terkep-inditas-gomb" class="modal-gomb modal-gomb--elsodleges" type="button" hidden>
-        Elkészítés
-      </button>
-      <button id="terkep-megse-gomb" class="modal-gomb modal-gomb--masodlagos" type="button">
-        Mégse
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== 2. ÉPÍTÉS NÉZET (folyamatjelző + megszakítás) ===== -->
-  <div class="terkep-modal__epites" id="terkep-epites" hidden>
+  <!-- ===== 1. ÉPÍTÉS NÉZET (folyamatjelző + Mégse) ===== -->
+  <!-- Megnyitáskor rögtön ez látszik: nincs előzetes kérdés, a Térkép egyből
+       nekiáll. A számláló mutatja a letöltés/elhelyezés állását, a Mégse leállít
+       és bezár. -->
+  <div class="terkep-modal__epites" id="terkep-epites">
     <p class="terkep-modal__epites-szoveg" id="terkep-epites-szoveg">Előkészítés...</p>
     <div class="terkep-modal__folyamat" role="progressbar"
          aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="terkep-folyamat">
       <div class="terkep-modal__folyamat-sav" id="terkep-folyamat-sav"></div>
     </div>
-    <button id="terkep-megszakitas-gomb" class="modal-gomb modal-gomb--veszelyes" type="button">
-      Megszakítás
+    <button id="terkep-megszakitas-gomb" class="modal-gomb modal-gomb--masodlagos" type="button">
+      Mégse
     </button>
   </div>
 
@@ -52,7 +38,7 @@
               aria-label="Teljes fa mutatása" title="Teljes fa mutatása">⤢</button>
     </div>
     <p class="terkep-modal__sugo">
-      Húzás: mozgatás · görgetés / ＋－: nagyítás · koppintás a csomópontra: ugrás
+      Húzás / kétujjas görgetés: mozgatás · ujjak széthúzása vagy ＋－: nagyítás (közelebb = több részlet) · koppintás a csomópontra: ugrás
     </p>
   </div>
 

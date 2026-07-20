@@ -201,6 +201,89 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
       entitás); árva entitás gyökérként jelenik meg. Az ág-szűrés a frontenden
       történik (a letöltés mindig a teljes fa — vállalt v1-korlát, kis ágnál
       többlet-letöltés; cserébe egyetlen egyszerű, kurzoros adat-út van).
+      - **13/b-2. Kétszintű (LOD) megjelenítés + kattintás-javítás (2026-07-20,
+        Csaba böngészős visszajelzése után).** Két hiba derült ki a böngészőben:
+        (1) a csomópontra kattintva nem ugrott a pakli, (2) a nagyításkor az ikon
+        nem nőtt és nem jött elő többletinfó — nem volt érezhető „ráközelítés".
+        **Okok:** (1) a pan-húzás `setPointerCapture`-je miatt a `pointerup`
+        `e.target`-je mindig a nézet-div volt, így az SVG-csomópont sosem
+        illeszkedett; ráadásul a canvas-tartalék tolerancia csak 10 px volt.
+        (2) az SVG-réteg a LÁTHATÓ darabszámtól függött, nem a nagyítástól — kis
+        fánál mindig minden látszott, fix méretben, így a zoom csak a távolságot
+        változtatta. **Megoldás (`TerkepModal.js` + `terkepModal.css`):**
+        (1) a kattintás mostantól `elementFromPoint`-tal keresi a valódi
+        csomópontot (a capture-t elengedve), tartalékként koordináta-kereséssel,
+        a látható jel-sugárhoz igazított toleranciával. (2) Új **részletességi
+        (LOD) szintek** a NAGYÍTÁStól függően (mérce: `FA_TAVOLSAG_Y * skála`
+        képernyő-rács): 0 = csak pötty (áttekintés) · 1 = + ikon · 2 = + cím ·
+        3 = + ágazati össztudatpont (🌿🌟). A csomópontok mérete VÉGIG EGYSÉGES
+        (Csaba döntése: nem a tudatpont-mennyiség, hanem a ráközelítés hozza elő
+        a részletet). Az illesztés max 0.6 skáláig zoomol be (marad hova
+        közelíteni), a kicsinyítés eléri az áttekintő pötty-szintet, `MAX_ZOOM`
+        4 → 6. Böngészős teszt hátra (teszt.md 50).
+        - **13/b-3. Csomópont-méret a zoomhoz (kipróbálás alatt, 2026-07-20).**
+          Csaba kérése: próbáljuk ki azt is, hogy a csomópontok NE fix képernyő-
+          méretűek legyenek, hanem a ráközelítéssel TERMÉSZETESEN nagyobbak.
+          Egy kapcsoló dönt (`TerkepModal.js`: `IKON_NO_A_ZOOMMAL`): `true` =
+          világhoz kötött (zoommal nő/zsugorodik, `NODE_VILAG_EGYUTTHATO` és
+          `NODE_MAX_SKALA` hangolja), `false` = a korábbi fix képernyő-méret. A
+          kattintás-tolerancia és a `scale()` transzform is ezt követi. Jelenlegi
+          alapérték: `true` — Csaba böngészős összevetése dönt a véglegesről.
+        - **13/b-4. Alsó sáv látszik a Térkép alatt is (2026-07-20, Csaba
+          kérése).** A teljes képernyős Térkép eddig eltakarta a főoldal alsó
+          sávját; most az is látszik, ahogy a pakli nézetben. Megoldás: a
+          `TerkepModal` megnyitáskor a body-ra teszi a `teljes-nezet-nyitva`
+          osztályt (záráskor leveszi), a `terkepModal.css` pedig (a) az
+          `.also-sav`-ot a modal fölé emeli — mivel önálló rétegződési kontextus,
+          a benne lévő hamburger menü is a modal fölé kerül, tehát HASZNÁLHATÓ
+          marad —, (b) az overlayt és a teljes panelt az alsó sáv fölött zárja
+          (`--alsosav-magassag`, a JS méri, mert kis képernyőn a statisztika
+          tördhet). A Síkidom nézet (teljes) egyelőre NEM kapja ezt (később
+          ugyanígy beköthető).
+        - **13/b-5. Finomítások (2026-07-20, Csaba böngészős visszajelzése).**
+          (1) **Nincs előzetes kérdés:** a Térkép megnyitáskor EGYBŐL épít (az
+          indító „N entitás — elkészíted?" nézet megszűnt, HTML/CSS/JS-ből is);
+          a folyamatjelző (számláló) + **Mégse** gomb végig látszik, a Mégse
+          leáll és bezár. (2) **Zoom-gesztus:** a kétujjas fel/le görgetés már
+          NEM zoomol (az pásztáz), a nagyítás CSAK pinch-re (`ctrlKey`-es
+          görgetés) történik. (3) **Kevésbé érzékeny zoom:** a pinch a delta
+          nagyságával arányos, sima (`Math.exp(-deltaY * ZOOM_ERZEKENYSEG)`,
+          `ZOOM_ERZEKENYSEG = 0.0025`, hangolható). A ＋/－ gombok maradtak.
+        - **13/b-6. Mellék-ikonok a közeli nézetben (2026-07-20, Csaba kérése).**
+          A legközelebbi (3.) LOD-szinten a fő ikon MELLETT kis körökben extra
+          típus-infó jelenik meg (a fő ikonnál kisebben, ugyanaz a dizájn):
+          Tartalomnál a KATEGÓRIÁI balra (kategória-szín), a TARTALOMTÍPUSA jobbra
+          (tartalomtípus-szín) — a körben az adott kategória/típus saját `ikon`-ja
+          (emoji vagy feltöltött kép, utóbbi körre vágva `<image>`-dzsel), csak ha
+          van hozzárendelve. Javaslat/Egyezménynél a `javaslatTipus` szerinti
+          művelet-emoji jobbra (Törlés 🗑️ · Módosítás ✏️ · Egyesítés 🔗 ·
+          Áthelyezés ➡️ · Csomag 📦), a csomópont saját színével. Kategóriának és
+          Tartalomtípusnak nincs mellék-ikonja. **Backend:** a `terkepService`
+          új `mellekIkonokFeltoltese` segéde típusonként EGY-EGY csoportos
+          lekérdezéssel (N+1 nélkül) tölti a `/api/terkep` sorait a
+          `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel; a
+          `faElrendezes` átvezeti a csomópontba, a `TerkepModal` rajzolja.
+        - **13/b-7. Sima zoom/pan — a drága SVG csak a mozgás végén épül újra
+          (2026-07-20, Csaba: „akadozik zoom közben").** Ok: eddig MINDEN zoom/pan
+          képkockán újraépült a teljes SVG-fedőréteg (`innerHTML`), ami az emoji-
+          raszterizálás miatt kis adatnál is akadt. Megoldás (`TerkepModal.js`):
+          mozgás közben csak az OLCSÓ canvas-réteg rajzolódik újra képkockánként,
+          az SVG-réteg pedig egyetlen közös `<g id="terkep-svg-tartalom">`-en át
+          egy TRANSZFORMMAL követi a nézetet (pontos pozíció/méret, GPU-gyors); a
+          teljes SVG-újraépítés csak a mozgás megállása után fut (settle-debounce,
+          150 ms), ekkor frissül a LOD-szint, a láthatóság és a feliratok.
+          (`_interakcioRajzolas` / `_gyorsRajzolas` / `_svgKovetes`, plusz a
+          canvas kiszervezve `_canvasRajzolas`-ba.)
+        - **13/b-8. Dinamikus cím-betűméret a csomópontokon (2026-07-20, Csaba
+          kérése).** A Térkép címei ugyanazt a lépcsős, hossz-alapú betűméretet
+          kapják, mint a kártya fejléce (rövid cím nagyobb, hosszú kisebb). A
+          közös skálát új segéd adja: `frontend/js/utils/cimBetumeret.js` →
+          `dinamikusCimBetumeret(hossz, maxMeret)`; a kártya (Kartya.
+          `_cimBetumeretBecsles`) és a `TerkepModal` is ezt hívja. A térkép a
+          csomóponthoz igazított maximummal (`CIM_MAX_BETUMERET = 13`) számol, és
+          a levágási hosszt a betűmérettel fordítottan arányosítja (kisebb betű →
+          több karakter). A méret inline `style`-lal kerül a SVG-címre (felülírja
+          a CSS tartalék 11px-et).
 
 14. [ ] **Síkidom nézet (fő menü) — ⏸️ FELFÜGGESZTVE (2026-07-20).** Az 1. lépés
     (statikus ablak) elkészült és böngésző nélkül tesztelt, DE a megjelenés még

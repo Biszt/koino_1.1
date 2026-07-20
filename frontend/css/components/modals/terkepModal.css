@@ -8,6 +8,42 @@
 /* A teljes képernyős panel-méret (.modal-panel--teljes) a közös modal.css-ben
    van (Térkép + Síkidom nézet közösen használja). */
 
+/* ===== ALSÓ SÁV EGYÜTTÉLÉSE A TELJES NÉZETTEL ===== */
+/* A teljes képernyős Térkép alatt is látsszon a főoldal alsó sávja (hamburger +
+   statisztikák), ahogy a pakli nézetben. A TerkepModal a body-ra teszi a
+   .teljes-nezet-nyitva osztályt megnyitáskor, és leveszi záráskor; a sáv
+   tényleges magasságát a JS méri a --alsosav-magassag változóba (kis képernyőn a
+   statisztika több sorba tördhet). */
+
+/* Biztonsági alapérték, amíg a JS meg nem méri a sáv tényleges magasságát */
+:root {
+  --alsosav-magassag: 56px;
+}
+
+/* Az alsó sávot (és a benne renderelt hamburger menüt) a teljes modal FÖLÉ
+   emeljük. Mivel az .also-sav önálló rétegződési kontextus (position + z-index),
+   a benne lévő hamburger overlay/panel is a modal fölé kerül — így az alsó sáv
+   nemcsak látható, hanem használható is marad a Térkép fölött. */
+body.teljes-nezet-nyitva .also-sav {
+  z-index: 302; /* a modal-panel (301) fölött */
+}
+
+/* Az overlay az alsó sáv FÖLÖTT érjen véget, ne sötétítse azt */
+body.teljes-nezet-nyitva .modal-overlay {
+  bottom: var(--alsosav-magassag);
+}
+
+/* A teljes panel a képernyő tetejétől az alsó sáv tetejéig tartson (nem középre
+   igazítva, hanem FELÜLRE kötve) — így a Térkép épp az alsó sáv fölött ér véget. */
+body.teljes-nezet-nyitva .modal-panel--teljes,
+body.teljes-nezet-nyitva .modal-panel--teljes.latható {
+  top: 0;
+  left: 0;
+  transform: none;
+  height: calc(100dvh - var(--alsosav-magassag));
+  max-height: calc(100dvh - var(--alsosav-magassag));
+}
+
 /* A belső váz is töltse ki a rendelkezésre álló magasságot */
 .terkep-modal {
   height: 100%;
@@ -23,36 +59,7 @@
   display: none !important;
 }
 
-/* ----- 1. INDÍTÓ NÉZET ----- */
-.terkep-modal__indito {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-6);
-  text-align: center;
-}
-
-.terkep-modal__indito-ikon {
-  font-size: 48px;
-}
-
-.terkep-modal__darabszam {
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  color: var(--color-text);
-  max-width: 44ch;
-  line-height: 1.5;
-}
-
-.terkep-modal__indito-gombok {
-  display: flex;
-  gap: var(--space-3);
-}
-
-/* ----- 2. ÉPÍTÉS NÉZET (folyamatjelző) ----- */
+/* ----- ÉPÍTÉS NÉZET (folyamatjelző) ----- */
 .terkep-modal__epites {
   flex: 1;
   display: flex;
@@ -152,11 +159,42 @@
   user-select: none;
 }
 
-/* A rövid cím a kör alatt */
+/* A rövid cím a kör alatt (2. LOD-szinttől). A betűméretet a JS állítja be inline,
+   a cím hosszából (dinamikusCimBetumeret) — az itteni font-size csak tartalék. */
 .terkep-modal__csomopont-cim {
   font-family: var(--font-body);
   font-size: 11px;
   fill: var(--color-text);
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+  paint-order: stroke;          /* olvashatóság: halvány kontúr a szöveg mögé */
+  stroke: var(--color-surface-2);
+  stroke-width: 3;
+}
+
+/* ----- MELLÉK-IKONOK (kategória / tartalomtípus / művelet) ----- */
+/* A fő ikon melletti kis körök (3. LOD-szinttől). Ugyanaz a dizájn, mint a fő
+   csomópont-kör (típus-szín + halvány keret), csak kisebb. */
+.terkep-modal__mellek-kor {
+  stroke: var(--color-surface);
+  stroke-width: 1.5;
+}
+
+/* A mellék-kör belsejében az emoji (feltöltött képnél <image> van helyette) */
+.terkep-modal__mellek-ikon {
+  font-size: 10px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Az ágazati össztudatpont a cím alatt (3. LOD-szinttől — a „többletinfó") */
+.terkep-modal__csomopont-info {
+  font-family: var(--font-body);
+  font-size: 10px;
+  fill: var(--color-text-faint);
   text-anchor: middle;
   pointer-events: none;
   user-select: none;

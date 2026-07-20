@@ -554,27 +554,49 @@ docker logs -f koino-backend
     fa-nézet. Elérés: fő menü → **🗺️ Térkép** (teljes fa), VAGY bármely kártya
     hamburgere → **🗺️ Térkép** (ág-szűrt: csak az entitás részfája, a cím a
     modal fejlécében). Ellenőrzés:
-    (a) megnyitáskor ELŐBB darabszám-kijelzés jön („A koino N entitást
-    tartalmaz. Elkészíted a térképet?" / ág-módban „Ez az ág N entitást...")
-    Elkészítés + Mégse gombbal — a Mégse (és az ESC/✕) építés nélkül zár;
-    (b) Elkészítésre folyamatjelző fut („Letöltés: X / N entitás", majd
-    „Elhelyezés: X / N entitás") és végig látható a **Megszakítás** gomb —
-    megnyomva a modal visszaáll az indító nézetre, félkész rajz nélkül;
+    (a) megnyitáskor NINCS előzetes kérdés — a Térkép EGYBŐL nekiáll az építésnek
+    (2026-07-20-i változás);
+    (b) építés közben folyamatjelző (számláló) fut („Letöltés: X / N entitás",
+    majd „Elhelyezés: X / N entitás") és végig látható a **Mégse** gomb —
+    megnyomva leáll és bezár, félkész rajz nélkül (az ESC/✕ is zár);
     (c) a kész térképen a GYÖKÉR ALUL van és az ágak FELFELÉ nőnek (mint a
-    pakliban: gyökér legalul, levél legfelül; 2026-07-19-i javítás), a
-    csomópontok típus-színű pöttyök; belenagyítva (görgetés vagy ＋ gomb)
-    megjelennek az interaktív csomópontok: típus-ikon + rövid cím (~15
-    karakter), rámutatva tooltip a teljes címmel (Javaslat/Egyezménynél a
-    típusnév látszik cím helyett);
-    (d) pan/zoom: húzással mozgatható, görgetéssel a kurzorra nagyít, a ＋/－
-    gombok a közepére, a ⤢ gomb a teljes fát behúzza;
+    pakliban: gyökér legalul, levél legfelül; 2026-07-19-i javítás). A
+    megjelenítés KÉTSZINTŰ, a részletesség a NAGYÍTÁStól függ (2026-07-20):
+    kicsinyítve csak típus-színű pöttyök (áttekintés); befelé nagyítva
+    (görgetés / ＋) FOKOZATOSAN jön elő előbb a típus-ikon, majd a cím, végül az
+    ágazati össztudatpont (🌿🌟 + szám). A cím betűmérete DINAMIKUS a cím hossza
+    szerint (rövid nagyobb, hosszú kisebb) — ugyanaz a lépcsős skála, mint a
+    kártya fejlécénél; a kisebb betűbe több karakter is fér (2026-07-20). A csomópontok
+    mérete VÉGIG egységes (nem a tudatponttal arányos). Rámutatva tooltip a
+    teljes címmel (Javaslat/Egyezménynél a típusnév látszik cím helyett).
+    Kicsinyítve vissza a pöttyök, kifelé nagyítva a cím/info eltűnik — a zoom
+    tehát ÉRZÉKELHETŐEN vált szintet (a korábbi „a zoom nem csinál semmit" hiba
+    javítva);
+    (d) pan/zoom (2026-07-20): húzással VAGY kétujjas görgetéssel mozgatható; a
+    nagyítás CSAK az ujjak széthúzására (pinch) történik — a kétujjas fel/le
+    görgetés NEM zoomol, hanem pásztáz; a pinch-zoom finom (nem „ugrik"); a ＋/－
+    gombok a közepére nagyítanak, a ⤢ gomb a teljes fát behúzza; a zoom/pan SIMA
+    marad (kis adatnál sem akadozik): mozgás közben csak a canvas frissül, a
+    részletes SVG-réteg a mozgás VÉGÉN (~150 ms) épül újra (2026-07-20);
     (e) az AKTUÁLIS entitás (amin a pakli áll / amelyik kártyáról nyitottad)
     kiemelt gyűrűt kap (távolról téglavörös gyűrű a pötty körül, közelről
     vastag gyűrű az SVG-körön);
     (f) csomópontra kattintva (közeli nézetben az SVG-elemre, távoliban a
     pöttyre) a modal bezárul és a pakli a választott entitásra navigál;
     (g) kártya-menüs (ág-szűrt) módban CSAK az adott entitás részfája látszik,
-    és a darabszám az ág mérete.
+    és a darabszám az ág mérete;
+    (h) a Térkép alatt (a teljes képernyős nézetben) is LÁTSZIK a főoldal alsó
+    sávja (koino · név · tudatpont · … + hamburger), ugyanúgy, mint a pakliban —
+    a Térkép épp az alsó sáv fölött ér véget, és a hamburger menü is használható
+    marad (2026-07-20);
+    (i) a LEGKÖZELEBBI szinten (a tudatponttal együtt) MELLÉK-IKONOK bukkannak elő
+    kis körökben, a fő ikonnál kisebben (2026-07-20): Tartalomnál a KATEGÓRIÁI
+    balra (lila kör), a TARTALOMTÍPUSA jobbra (okker kör) — a körben a kategória/
+    típus saját ikonja (emoji vagy feltöltött kép), csak ha van hozzárendelve;
+    Javaslat/Egyezménynél a MŰVELET-TÍPUS jobbra (a saját típus-színével): Törlés
+    🗑️ · Módosítás ✏️ · Egyesítés 🔗 · Áthelyezés ➡️ · Csomag 📦; Kategóriának és
+    Tartalomtípusnak NINCS mellék-ikonja. (Backend: a `/api/terkep` sorai
+    `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel bővültek.)
     API (curl, 2026-07-19, lefutott): GET `/api/terkep/darabszam` (globális: 25;
     `?agEntitasId=` ág-BFS: 5), GET `/api/terkep?lapMeret=&kurzor=` (kurzoros
     lapozás, 3 lap = pontosan 25 sor, cím-viselőknél `cim`, auth nélkül 401).

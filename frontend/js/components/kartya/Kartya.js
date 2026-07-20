@@ -8,6 +8,7 @@ import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt post
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
+import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Térkép is ezt használja)
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -654,14 +655,9 @@ _cimBetumeretBecsles(cimSav) {
 
   const hossz = cimGyerekek.reduce((ossz, el) => ossz + (el.textContent ?? '').trim().length, 0);
 
-  // Lépcsős betűméret a karakterszám függvényében (px). A tartomány a pontos
-  // hozzáigazításéval egyezik (MAX 24 – MIN 8).
-  let meret;
-  if      (hossz <= 12) meret = 24; // rövid cím – nagy
-  else if (hossz <= 18) meret = 20;
-  else if (hossz <= 26) meret = 16;
-  else if (hossz <= 36) meret = 12;
-  else                  meret = 9;  // hosszú cím – kicsi
+  // Lépcsős betűméret a karakterszám függvényében (px), a KÖZÖS skálából (a
+  // Térkép csomópont-címei is ezt használják). A maximum 24, mint eddig.
+  const meret = dinamikusCimBetumeret(hossz);
 
   // Minden cím-gyerekre (pl. egyezménynél a 🤝 jelző + a szöveg is)
   for (const gyerek of cimGyerekek) {
