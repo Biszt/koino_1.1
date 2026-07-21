@@ -8,6 +8,7 @@ import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt post
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
+import RendezesModal from '../modals/RendezesModal.js'; // Ág-szűrt rendezés a kártya menüjéből (15. terv-pont)
 import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Térkép is ezt használja)
 
 // --- ALAP KÁRTYA OSZTÁLY ---
@@ -125,6 +126,13 @@ async init() {
       ikon:    '🗺️',
       felirat: 'Térkép',
       akcio:   () => this._agTerkepMegnyitasa()
+    });
+    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: rendezés az entitás ÁGÁN (részfáján) belül
+    // (15. terv-pont) — a fő menü globálisan rendez, a kártya a saját részfáját.
+    opciok.push({
+      ikon:    '↕️',
+      felirat: 'Rendezés',
+      akcio:   () => this._agRendezesMegnyitasa()
     });
   }
 
@@ -411,6 +419,40 @@ async _agTerkepMegnyitasa() {
   terkepModal.megnyitas();
 
   console.log('Kartya._agTerkepMegnyitasa - VÉGE');
+}
+
+// ----- ÁG-SZŰRT RENDEZÉS MEGNYITÁSA -----
+// KÖZÖS menüpont minden kártya-hamburgerben: rendezés az entitás ÁGÁN (részfáján)
+// belül (15. terv-pont). A fő menü globálisan rendez; a kártya az adott entitást
+// veszi ágazat-gyökérnek. A választást a Rendezés-modal gyűjti, az alkalmazást a
+// jelenlegi pakli (window.aktivPakli) végzi. Hierarchikus módban az ágazatnak nincs
+// értelme (a fa-szelet a mentett entitástól épül) → ott globálisra esik vissza.
+async _agRendezesMegnyitasa() {
+  console.log('Kartya._agRendezesMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+  const pakli  = window.aktivPakli;
+
+  const rendezesModal = new RendezesModal(this.modalKontenerAzon, {
+    aktualisMod:   pakli?.rendezesMod   ?? 'hierarchikus',
+    aktualisIrany: pakli?.rendezesIrany ?? 'csokkeno',
+    agazatCim:     agCim,
+    onAlkalmaz: (mod, irany) => {
+      // Lapos módban az adott entitás az ágazat-gyökér; hierarchikusnál nincs ágazat.
+      const agazatId = (mod === 'hierarchikus') ? null : this.entitas.entitasId.toString();
+      console.log('Kartya - ág-szűrt rendezés alkalmazása', { mod, irany, agazatId });
+      window.aktivPakli?.rendezesBeallitasa(mod, irany, agazatId);
+    }
+  });
+
+  await rendezesModal.init();
+  rendezesModal.megnyitas();
+
+  console.log('Kartya._agRendezesMegnyitasa - VÉGE');
 }
 
 // ----- BODY FRISSÍTÉSE -----

@@ -84,6 +84,22 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
     default: null  // Null = még soha nem lett újraszámítva
   },
 
+  // ----- ŐS-LÁNC (SKÁLÁZHATÓ RÉSZFA-SZŰRÉSHEZ) -----
+  // Az entitás teljes szülő-lánca a gyökérig, ÖNMAGÁVAL kezdve:
+  //   [ {entitasId: saját}, {szülő}, {nagyszülő}, ..., {gyökér} ].
+  // Cél: egy ág (részfa) ÖSSZES eleme EGYETLEN indexelt lekérdezéssel megkapható
+  // ({ 'osLanc.entitasId': agazatId }) — több millió entitásnál is skálázik, BFS nélkül.
+  // Ugyanaz a minta, mint az értesítések osLanc mezőjénél. Mivel a lánc önmagát is
+  // tartalmazza, az ágazat-gyökér a saját részfájának is része (a csomópont + leszármazottai).
+  // Feltöltés: tools/entitasOsLancPotlas.js (meglévő adat) + karbantartás létrehozáskor/áthelyezéskor.
+  osLanc: {
+    type: [{
+      entitasId: { type: mongoose.Schema.Types.ObjectId },
+      entitasTipus: { type: String }
+    }],
+    default: []
+  },
+
   // ----- LÉTREHOZÁS DÁTUMA -----
   letrehozva: {
     type: Date,
@@ -123,6 +139,16 @@ hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1, hierarchikusOsszesPont: 
 hierarchikusTudatpontAllokaciSchema.index(
   { hierarchiaSzint: 1, hierarchikusAdatokElavultak: 1 }
 );
+
+// ŐS-LÁNC + IDŐREND compound index (multikey az osLanc.entitasId-n)
+// A Rendezés nézet ágazat-szűrt IDŐRENDI módja: { 'osLanc.entitasId': A } szűrő
+// + letrehozva rendezés EGYETLEN indexelt lekérdezésben (skálázható részfa).
+hierarchikusTudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, letrehozva: -1 });
+
+// ŐS-LÁNC + ÁGAZATI (HIERARCHIKUS) PONT compound index
+// A Rendezés nézet ágazat-szűrt „ágazati tudatpont" módja: { 'osLanc.entitasId': A }
+// szűrő + hierarchikusOsszesPont rendezés egyetlen indexelt lekérdezésben.
+hierarchikusTudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, hierarchikusOsszesPont: -1 });
 
 // ===== PRE-SAVE MIDDLEWARE =====
 hierarchikusTudatpontAllokaciSchema.pre('save', function(next) {

@@ -12,6 +12,7 @@ const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarc
 const ErtesitesService = require('./ertesitesService'); // Tudatpont-változáskor értesítjük a figyelőket
 const ErtesitesiBeallitasService = require('./ertesitesiBeallitasService'); // szuloKereses az ág-szűréshez (Tudatpontok nézet)
 const ErtesitesRepository = require('../repositories/ertesitesRepository'); // Árva értesítések takarítása entitás-törléskor
+const OsLancKarbantartoService = require('./osLancKarbantartoService'); // osLanc beállítása új entitásnál (részfa-szűrés, 3b)
 
 
 // ===== TUDATPONT SERVICE OSZTÁLY =====
@@ -371,6 +372,18 @@ class TudatpontService {
         sajatSzuloId,    // Szülő ID mentése az új rekordba
         sajatSzuloTipus  // Szülő típus mentése az új rekordba
       );
+
+      // ŐS-LÁNC (3b): az ÚJ entitás osLanc-jának beállítása a részfa-szűréshez.
+      // A szülő-lánc ekkor már helyes (a szülőknek a felmenő-szabály miatt van pontjuk).
+      // Best-effort: az osLanc-hiba NE akassza meg a pont-hozzárendelést — a migrációs
+      // tool (entitasOsLancPotlas) újrafuttatása pótolja az esetleg kimaradt láncot.
+      try {
+        await OsLancKarbantartoService.entitasOsLancFrissitese(entitasId, entitasTipus);
+      } catch (osLancHiba) {
+        console.error('hierarchikusFrissitesVegrehajtas - osLanc frissítés HIBA (nem blokkoló)', {
+          entitasId, entitasTipus, hiba: osLancHiba.message
+        });
+      }
     }
 
     // 3. LÉPÉS - Felfelé lépdelés a szülő láncon

@@ -640,6 +640,23 @@ docker logs -f koino-backend
     200 (+ DB-ből törlődik); MÁSIK e-ember értesítése → 403 „Nincs jogosultságod ehhez az
     értesítéshez"; nem létező id → 404 „Az értesítés nem található"; auth nélkül → 401.
 
+54. ⬜ **Rendezés (terv 15. pont, 2026-07-21 óta):** a pakli nézet rendezés-választója.
+    **Fő menü → ↕️ Rendezés** (GLOBÁLIS) modal, rádiók: mód (🌳 Hierarchikus / 🕒 Időrend /
+    🌟 Saját tudatpont [entitás közvetlen összpontja] / 🌿 Ágazati tudatpont [hierarchikus
+    összpont = az egész ág súlya]) + sorrend (csökkenő/növekvő). Ellenőrzés: (a) **Időrend** →
+    a pakli LAPOS lista, legújabb elöl, **testvér-kacsacsőrök és szülő-gyerek átfedés NÉLKÜL**;
+    (b) egy kártyára koppintva a **body helyben kibomlik** (nem navigál); (c) **Saját tudatpont**
+    → a lista az entitás saját összpontja szerint (legtöbb elöl); (c2) **Ágazati tudatpont**
+    → a lista a hierarchikus összpont (az egész ág súlya) szerint — MÁS sorrend, mint a saját;
+    (d) **Hierarchikus** → visszaáll
+    a fa-nézet (kacsacsőrök + átfedés); (e) a modalban **hierarchikus módnál a Sorrend-csoport
+    letiltott** (szürke), lapos módoknál aktív; (f) növekvő/csökkenő váltás megfordítja a sorrendet.
+    **Kártya-hamburger → ↕️ Rendezés** (ÁG-SZŰRT): ugyanaz a modal, a fejlécben „Rendezés ezen az
+    ágon: <cím>"; alkalmazva csak az adott entitás **részfája** jelenik meg laposan rendezve
+    (a gyökér-entitás önmaga is benne van). Backend (curl, 2026-07-21, lefutott):
+    `GET /api/pakli/rendezett?mod=ido|sajatPont&irany=csokkeno|novekvo&agazatId=<id>` — globális
+    27 elem, ág-szűrve a részfa mérete; auth nélkül 401; érvénytelen mod/irány/agazatId → 400.
+
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 
 | Végpont | Auth | Leírás |

@@ -1,6 +1,6 @@
 # koino_1.1 — Fejlesztési terv
 
-*Utolsó frissítés: 2026. 07. 19.*
+*Utolsó frissítés: 2026. 07. 20.*
 
 ## A terv gerince: a menühálózat
 
@@ -26,6 +26,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Tudatpontok | 🚧 | ÚJ menüpont — saját tudatpontok áttekintése és átrendezése |
 | eember beállítások | 🚧 | Most „hamarosan" modal |
 | Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b). AKTÍV IRÁNY (2026-07-20: visszatértünk hozzá a síkidom felfüggesztése után) |
+| Rendezés | 🚧 | ÚJ (15. pont, 2026-07-20) — pakli rendezés-választó: hierarchikus (alap) / időrend / saját összpont; fő menü = globális, kártya-menü = ág-szűrt (részfa) |
 | Síkidom nézet | ⏸️ | FELFÜGGESZTVE (2026-07-20) — az 1. lépés (statikus ablak) elkészült, de a megjelenés még nem jó; jegelve, később visszatérünk (14. terv-pont) |
 | Kijelentkezés | ✅ | |
 
@@ -370,6 +371,82 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
     **Nyitott (nem blokkoló, képernyőn hangoljuk):** az első nézet pontos
     „hátrahúzása" (az egész gyökér-mező vs. csak a látható nagyok kerete).
+
+15. [ ] **Rendezés (fő menü + kártya-menük) — TERV ELFOGADVA (2026-07-20).** A pakli
+    nézet kap egy RENDEZÉS-választót: a mostani **hierarchikus** elrendezés marad az
+    ALAP, e fölött két új, LAPOS mód: **időrend** (`letrehozva`) és **saját tudatpont**
+    szerint. A lapos módoknál nincs testvér-navigáció (kacsacsőrök) és nincs
+    szülő-gyerek kártya-átfedés — egyszintű, sorba rendezett kártyalista.
+    **Csaba döntései (2026-07-20):**
+    - „saját tudatpont" = az **entitás saját összpontja** (`entitasSajatTudatpont`),
+      NEM a néző e-emberé és NEM a hierarchikus összpont.
+    - a lapos lista **minden entitástípust** felsorol (Kategória, TartalomTípus,
+      Tartalom, Javaslat, Egyezmény).
+    - „ágazat" = **a fa egy ága (részfa)**: egy csomópont + minden leszármazottja.
+    - hatókör: **fő menüből → GLOBÁLIS**; **kártya-menüből → az a kártya az
+      ágazat-gyökér** (csak a részfáját rendezi) — a Keresés/Tudatpontok/Térkép
+      ág-szűrt mintájára.
+    **Lépések (apró, egyenként ellenőrizhető):**
+    - Backend 1. ✅ KÉSZ (2026-07-20, curl-igazolt) — Globális időrendi lista: új
+      `hierarchikusAllokaciRepository.findMindIdorendben` + `pakliService.rendezettListaOsszeallitasa`
+      + `pakliController.rendezettLekerese` + route `GET /api/pakli/rendezett?mod=ido&irany=csokkeno|novekvo`.
+      Minden entitás egy lapos listában `letrehozva` szerint, a pakliéval azonos fejléc-adat-
+      feltöltéssel + olvasatlan badge-ekkel; limit fix 200 (lapozás későbbi). Igazolva:
+      401 auth nélkül; 27 elem csökkenő/növekvő; mod/irány validáció 400; `sajatPont` egyelőre 400.
+    - Backend 2. ✅ KÉSZ (2026-07-20, curl-igazolt) — „Saját összpont" mód (`mod=sajatPont`):
+      DB-oldali rendezés a `tudatpontAllokacio` INDEXELT `osszesPont` mezőjén
+      (`tudatpontRepository.findMindSajatPontSzerint`), a top-N-hez a hierarchikus mezőket
+      batch `$in`-nel (`hierarchikusAllokaciRepository.findManyByEntitasIdk`). Csaba
+      döntése: (B) skálázható út; nincs 0-pontos entitás (mindig törlődik) → a
+      `tudatpontAllokacio` a teljes halmazt lefedi (27=27). Igazolva: csökkenő/növekvő
+      monoton a saját összpont szerint, minden típus, `hierarchikusOsszesPont` helyes.
+    - Backend 3. Ágazat (részfa) szűrés — SKÁLÁZHATÓ ős-lánc úton (Csaba döntése,
+      2026-07-21: több millió entitásra tervezünk, BFS helyett indexelt `osLanc`).
+      Alprojekt:
+      - 3a. ✅ KÉSZ (2026-07-21, curl-igazolt) — `osLanc` mező + `{ 'osLanc.entitasId':1,
+        letrehozva:-1 }` index a `hierarchikusTudatpontAllokacio`-ra; migrációs tool
+        (`tools/entitasOsLancPotlas.js`, 27/27 feltöltve); az `ido` mód `agazatId`
+        szűrője (`findMindIdorendben` 3. paraméter) az indexelt osLanc-on. Igazolva:
+        részfa = DB-számolt méret (5), globális 27, IXSCAN, védelmek (sajatPont+ágazat
+        → 400, érvénytelen agazatId → 400). Az „ágazat = részfa (csomópont + leszármazottai)",
+        a gyökér önmaga is beletartozik (az osLanc önmagával kezdődik).
+      - 3b. ✅ KÉSZ (2026-07-21, node-teszttel igazolt) — Karbantartás: közös
+        `osLancKarbantartoService` (a láncot MINDIG a szuloId-láncból építi újra →
+        sorrend-független). Bekötve best-effort (nem blokkoló) módon: `tudatpontService`
+        (új entitás első allokációjakor → `entitasOsLancFrissitese`) és `athelyezesiVegrehajto`
+        (áthelyezés után → `reszfaOsLancUjraepitese`, a részfát a RÉGI osLanc alapján gyűjti,
+        majd újraépíti mindkét kollekcióban). A migrációs tool is ezt a service-t hívja (DRY).
+        Igazolva (önmagát visszaállító teszt): lánc önmagával kezdődik+gyökérig ér;
+        áthelyezés után az új gyökér bekerül / a régi kikerül mindkét kollekcióban;
+        visszaállítás helyreáll.
+      - 3c. ✅ KÉSZ (2026-07-21, curl-igazolt) — `sajatPont` + ágazat: `osLanc` a
+        `tudatpontAllokacio`-ra is (+ `{ 'osLanc.entitasId':1, osszesPont:-1 }` index);
+        a migrációs tool a hierarchikus láncot TÜKRÖZI a tudatpont-táblára (27/27);
+        `findMindSajatPontSzerint` 3. paramétere az agazatId. Igazolva: ugyanaz az 5-elemű
+        részfa mint `ido`+ágazatnál, monoton csökkenő saját pont, IXSCAN. A controller
+        `sajatPont`+ágazat elzárása feloldva (mindkét mód szűrhető ágra).
+    - Frontend 4. ✅ KÉSZ (2026-07-21, kód; böngészős teszt hátra) — Lapos renderelési
+      út a `Pakli.js`-ben: `rendezesMod`/`rendezesIrany`/`rendezesAgazatId` állapot +
+      `rendezesBeallitasa()` (publikus) + `_lapositottInit`/`rendezettLekerese`/
+      `lapositottRendel`/`lapositottKartyaKivalasztasa`/`lapositottCsakCssValt`. Lapos
+      módban kimarad a `TestverJelzo`, a wheel-testvérváltás és a
+      `--szulo-alatta`/`--gyerek-felette` átfedés; a koppintás helyben bontja a body-t.
+    - Frontend 5. ✅ KÉSZ (2026-07-21, kód; böngészős teszt hátra) — „Rendezés" a fő
+      menüben (↕️): új `RendezesModal` (Modal-vázra épül, rádiók: 4 mód + irány;
+      hierarchikusnál az irány letiltva) + `FoOldal._rendezesMegnyitasa` (globális,
+      `agazatId=null`) + `rendezesModal.css`. Statikus kiszolgálás curl-igazolt (200).
+    - Backend 4. mód ✅ KÉSZ (2026-07-21, curl-igazolt, Csaba kérése) — „ÁGAZATI tudatpont"
+      (`mod=agazatiPont`): a `hierarchikusOsszesPont` (az entitás + teljes ága súlya) szerint,
+      a `sajatPont` (közvetlen összpont) MELLETT külön módként. `findMindHierarchikusPontSzerint`
+      + új `{ 'osLanc.entitasId':1, hierarchikusOsszesPont:-1 }` index; ág-szűrve IXSCAN.
+      A modal negyedik rádiója: 🌿 „Ágazati tudatpont (az egész ág)".
+    - Frontend 6. ✅ KÉSZ (2026-07-21, kód; böngészős teszt hátra) — „Rendezés" a
+      KÁRTYA-menükben (közös pont minden kártyán, a Keresés/Térkép/Tudatpontok mintájára):
+      `Kartya._agRendezesMegnyitasa` a `RendezesModal`-t nyitja `agazatCim`-mel; alkalmazáskor
+      az adott kártya az ágazat-gyökér (`window.aktivPakli.rendezesBeallitasa(mod, irany,
+      entitasId)`). Hierarchikus módban globálisra esik vissza (nincs ágazat).
+    - Frontend 7. Visszaváltás a hierarchikus alaphoz KÉSZ (a modalból); a CSISZOLÁS
+      (pl. lapos kártyák közti térköz, üres-ág állapot) a böngészős benyomásra vár.
 
 ### Backend adósságok (a levélben említett „optimalizáció és hiánypótlás")
 

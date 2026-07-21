@@ -45,9 +45,23 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
     min: 0                                 // Minimum érték: nem lehet negatív
   },
 
+  // ----- ŐS-LÁNC (SKÁLÁZHATÓ RÉSZFA-SZŰRÉSHEZ) -----
+  // Az entitás teljes szülő-lánca a gyökérig, ÖNMAGÁVAL kezdve — UGYANAZ a lánc,
+  // mint a hierarchikusTudatpontAllokacio.osLanc. A szülő-infó a hierarchikus
+  // kollekcióban él; ide csak TÜKRÖZZÜK, hogy a saját-pont rendezés is skálázhatóan
+  // szűrhessen ágra: { 'osLanc.entitasId': agazatId } szűrő + osszesPont rendezés
+  // EGYETLEN indexelt lekérdezésben. Feltöltés/karbantartás közös (entitasOsLancPotlas).
+  osLanc: {
+    type: [{
+      entitasId: { type: mongoose.Schema.Types.ObjectId },
+      entitasTipus: { type: String }
+    }],
+    default: []
+  },
+
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor először hozzárendeltek tudatpontot az entitáshoz
-  letrehozva: { 
+  letrehozva: {
     type: Date,                            // Dátum típus
     default: Date.now                      // Alapértelmezett: jelenlegi időpont
   },
@@ -78,6 +92,11 @@ tudatpontAllokaciSchema.index({ osszesPont: -1 });
 // Entitás típus indexelése
 // Használat: "Összes kategória allokációjának lekérése" típus szerinti szűréshez
 tudatpontAllokaciSchema.index({ entitasTipus: 1 });
+
+// ŐS-LÁNC + SAJÁT ÖSSZPONT compound index (multikey az osLanc.entitasId-n)
+// A Rendezés nézet ágazat-szűrt SAJÁT PONT módja: { 'osLanc.entitasId': A } szűrő
+// + osszesPont rendezés EGYETLEN indexelt lekérdezésben (skálázható részfa).
+tudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, osszesPont: -1 });
 
 // ===== MIDDLEWARE - PRE SAVE =====
 // Minden mentés előtt frissítjük a frissitve mezőt

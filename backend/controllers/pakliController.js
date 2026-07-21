@@ -1,6 +1,7 @@
 // backend/controllers/pakliController.js
 
 // --- IMPORTÁLÁSOK ---
+const mongoose = require('mongoose'); // ObjectId-validáláshoz (ágazat-szűrő)
 const pakliService = require('../services/pakliService');
 
 // --- PAKLI CONTROLLER OSZTÁLY ---
@@ -82,6 +83,67 @@ class PakliController {
             });
         }
     }
+    // ----- RENDEZETT LISTA LEKÉRÉSE (LAPOS NÉZET) -----
+    // GET /api/pakli/rendezett?mod=ido|sajatPont&irany=csokkeno|novekvo
+    // A Rendezés nézet (15. terv-pont) lapos listáját adja vissza a kért mód szerint.
+    // Támogatott módok: 'ido' (létrehozási idő) és 'sajatPont' (entitás saját összpontja).
+    // @param {Object} req - Express request objektum
+    // @param {Object} res - Express response objektum
+    async rendezettLekerese(req, res) {
+        console.log('rendezettLekerese endpoint hívás - KEZDÉS', req.query);
+
+        try {
+            // 1. LÉPÉS - MÓD KIOLVASÁSA ÉS VALIDÁLÁSA
+            const mod = req.query.mod ?? 'ido';
+            const megengedettModok = ['ido', 'sajatPont', 'agazatiPont']; // mind ágazat-szűrhető (osLanc)
+            if (!megengedettModok.includes(mod)) {
+                return res.status(400).json({
+                    message: `Érvénytelen rendezési mód. Megengedett értékek: ${megengedettModok.join(', ')}`
+                });
+            }
+
+            // 2. LÉPÉS - IRÁNY KIOLVASÁSA ÉS VALIDÁLÁSA
+            const irany = req.query.irany ?? 'csokkeno';
+            const megengedettIranyok = ['csokkeno', 'novekvo'];
+            if (!megengedettIranyok.includes(irany)) {
+                return res.status(400).json({
+                    message: `Érvénytelen irány. Megengedett értékek: ${megengedettIranyok.join(', ')}`
+                });
+            }
+
+            // 3. LÉPÉS - ÁGAZAT (RÉSZFA) OPCIONÁLIS SZŰRŐ
+            // Ha megadva, csak az adott ág elemei kerülnek a listába (indexelt osLanc-szűrés).
+            const agazatId = req.query.agazatId ?? null;
+            if (agazatId && !mongoose.Types.ObjectId.isValid(agazatId)) {
+                return res.status(400).json({ message: 'Érvénytelen agazatId (nem ObjectId).' });
+            }
+            // Az ágazat-szűrés MINDKÉT módban ('ido' és 'sajatPont') támogatott (indexelt osLanc).
+
+            // 4. LÉPÉS - SERVICE HÍVÁS
+            // A limit egyelőre fix (a lapozás későbbi lépés). Az eemberId az authMiddleware-ből.
+            const eemberId = req.user?.id ?? null;
+            const eredmeny = await pakliService.rendezettListaOsszeallitasa(mod, eemberId, { irany, limit: 200, agazatId });
+
+            // 5. LÉPÉS - SIKERES VÁLASZ
+            console.log('rendezettLekerese endpoint hívás - VÉGE', {
+                mod: eredmeny.mod,
+                elemszam: eredmeny.rendezettLista?.length ?? 0
+            });
+
+            return res.status(200).json({
+                success: true,
+                mod: eredmeny.mod,
+                rendezettLista: eredmeny.rendezettLista
+            });
+
+        } catch (error) {
+            console.error('rendezettLekerese hiba', error.message);
+            return res.status(500).json({
+                message: 'Szerverhiba a rendezett lista összeállítása során'
+            });
+        }
+    }
+
     // ----- ENTITÁS SZÖVEG LEKÉRÉSE -----
 // GET /api/pakli/szoveg/:entitasTipus/:entitasId
 // Egyetlen entitás szöveg/leírás/indoklás mezőjét adja vissza.

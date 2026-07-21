@@ -24,6 +24,7 @@ import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
 import KeresesModal from './modals/KeresesModal.js';
 import TerkepModal from './modals/TerkepModal.js';
+import RendezesModal from './modals/RendezesModal.js'; // Pakli rendezés-választó (15. terv-pont)
 import SikidomModal from './modals/SikidomModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
@@ -156,6 +157,11 @@ init() {
         ikon:    '🔷',
         felirat: 'Síkidom nézet',
         akcio:   () => this._sikidomMegnyitasa()
+      },
+      {
+        ikon:    '↕️',
+        felirat: 'Rendezés',
+        akcio:   () => this._rendezesMegnyitasa()
       },
       {
         ikon:    '🔔',
@@ -341,6 +347,33 @@ init() {
     keresesModal.megnyitas();
 
     console.log('FoOldal._keresesMegnyitasa - VÉGE');
+  }
+
+  // =====================================
+  // RENDEZÉS MODAL MEGNYITÁSA (fő menü — GLOBÁLIS)
+  // =====================================
+  // A fő menüs „Rendezés" (15. terv-pont): a pakli nézet rendezés-választója.
+  // Globális hatókör (nincs ágazat-szűrő). A kártya-menük ág-szűrt módban nyitják
+  // ugyanezt a modalt (az adott kártya lesz az ágazat-gyökér — 6. lépés).
+  async _rendezesMegnyitasa() {
+    console.log('FoOldal._rendezesMegnyitasa - KEZDÉS');
+
+    this.hamburgerMenu?.bezaras();
+
+    const rendezesModal = new RendezesModal('modal-kontener', {
+      aktualisMod:   this.pakli?.rendezesMod   ?? 'hierarchikus',
+      aktualisIrany: this.pakli?.rendezesIrany ?? 'csokkeno',
+      agazatCim:     null, // fő menüből → globális
+      onAlkalmaz: (mod, irany) => {
+        console.log('FoOldal - rendezés alkalmazása (globális)', { mod, irany });
+        this.pakli.rendezesBeallitasa(mod, irany, null);
+      }
+    });
+
+    await rendezesModal.init();
+    rendezesModal.megnyitas();
+
+    console.log('FoOldal._rendezesMegnyitasa - VÉGE');
   }
 
 

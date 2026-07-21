@@ -1,6 +1,7 @@
 // backend/repositories/tudatpontRepository.js
 
 // ===== MODELLEK IMPORTÁLÁSA =====
+const { Types } = require('mongoose'); // ObjectId-konverzió az ágazat-szűréshez
 const TudatpontAllokacio = require('../models/tudatpontAllokacio');
 const TudatpontHozzarendeles = require('../models/tudatpontHozzarendeles');
 const eEmber = require('../models/eember');
@@ -25,8 +26,41 @@ class TudatpontRepository {
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
-    
+
     return allokacio;
+  }
+
+  // ----- ÖSSZES ALLOKÁCIÓ SAJÁT ÖSSZPONT SZERINT (LAPOS RENDEZETT LISTA) -----
+  // A teljes tudatpontAllokacio kollekció egyetlen LAPOS listában, a denormalizált
+  // `osszesPont` (az entitás SAJÁT, közvetlen összpontja) szerint rendezve. A Rendezés
+  // nézet (15. terv-pont) „saját összpont" módja használja. Az `osszesPont`-ra van
+  // csökkenő index → a DB rendez és vág (skálázható). Determinisztikus döntő az _id,
+  // hogy azonos pontnál se ugráljon a sorrend.
+  // @param {string} irany - 'csokkeno' (legtöbb pont elöl, alapértelmezett) vagy 'novekvo'
+  // @param {number} limit - Maximum ennyi elem (alapértelmezett: 200; a lapozás későbbi lépés)
+  // @param {string|null} agazatId - ha megadva, CSAK ennek az ágnak (részfájának) elemei
+  //   (az indexelt osLanc-szűrésen; a gyökér önmaga is beletartozik)
+  // @returns {Promise<Array>} a rendezett allokációk (lean): entitasId, entitasTipus, osszesPont...
+  async findMindSajatPontSzerint(irany = 'csokkeno', limit = 200, agazatId = null) {
+    console.log('TudatpontRepository.findMindSajatPontSzerint - KEZDÉS', { irany, limit, agazatId });
+
+    // Irány → sort érték: csökkenő = -1 (legtöbb pont elöl), növekvő = 1.
+    // Az _id ugyanabba az irányba dönt, hogy azonos pontnál stabil legyen a sorrend.
+    const sortIrany = irany === 'novekvo' ? 1 : -1;
+
+    // Ágazat-szűrés: az osLanc tartalmazza az agazatId-t az ág gyökerénél és minden
+    // leszármazottjánál → egyetlen indexelt lekérdezés ({ 'osLanc.entitasId':1, osszesPont:-1 }).
+    const szuro = agazatId
+      ? { 'osLanc.entitasId': Types.ObjectId.isValid(agazatId) ? new Types.ObjectId(agazatId) : agazatId }
+      : {};
+
+    const sorok = await TudatpontAllokacio.find(szuro)
+      .sort({ osszesPont: sortIrany, _id: sortIrany })
+      .limit(limit)
+      .lean();
+
+    console.log('TudatpontRepository.findMindSajatPontSzerint - VÉGE', { count: sorok.length });
+    return sorok;
   }
 
   // ----- ÚJ ALLOKÁCIÓ LÉTREHOZÁSA -----

@@ -6,6 +6,9 @@ const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTuda
 // e-ember saját pontja) a TudatpontService egyetlen metódusa adja – ugyanaz a
 // forrás, mint amit a tudatpont-modal és a jogosultság-ellenőrzés is használ.
 const tudatpontService = require('./tudatpontService');
+// A „saját összpont" rendezés a denormalizált osszesPont mezőn megy (indexelt),
+// a tudatpontAllokacio kollekción — ezt a repository közvetlenül adja.
+const tudatpontRepository = require('../repositories/tudatpontRepository');
 const tartalomRepository = require('../repositories/tartalomRepository');
 const kategoriaRepository = require('../repositories/kategoriaRepository');
 const tartalomTipusRepository = require('../repositories/tartalomTipusRepository');
@@ -121,6 +124,92 @@ async pakliotOsszeallitasa(entitasId = null, entitasTipus = null, eemberId = nul
         testverek,
         pakli: feltoltottPakli
     };
+}
+
+// ----- RENDEZETT LISTA ÖSSZEÁLLÍTÁSA (LAPOS NÉZET) -----
+/**
+* A Rendezés nézet (15. terv-pont) lapos, egyszintű listáját állítja össze.
+* A hierarchikus pakli-val szemben ITT nincs fa, testvér vagy bogárlogika:
+* minden entitás EGY sík listában van, a `mod` szerint rendezve.
+* 2026-07-20: a GLOBÁLIS módok élnek — 'ido' (létrehozási idő) és 'sajatPont'
+*   (entitás saját összpontja, a tudatpontAllokacio indexelt osszesPont mezőjén);
+*   az ágazat (részfa) szűrés a következő lépésben jön.
+* A listaelemek adat-feltöltése UGYANAZ, mint a paklié (egyElemAdatainakFeltoltese),
+* így a kártyák fejléce változatlanul megjelenik; az olvasatlan badge-eket is
+* feltöltjük. A frontend lapos módban a testvér/átfedés-részt hagyja majd ki.
+* @param {string} mod - 'ido' (létrehozási idő) | 'sajatPont' (entitás saját összpontja) | 'agazatiPont' (hierarchikus összpont)
+* @param {string|null} eemberId - A néző e-ember azonosítója (fejléc + badge + szavazhat)
+* @param {Object} opciok - { irany: 'csokkeno'|'novekvo', limit: number }
+* @returns {Promise<Object>} { mod, rendezettLista }
+*/
+async rendezettListaOsszeallitasa(mod = 'ido', eemberId = null, opciok = {}) {
+    console.log('rendezettListaOsszeallitasa - KEZDÉS', { mod, eemberId, opciok });
+
+    const { irany = 'csokkeno', limit = 200, agazatId = null } = opciok;
+
+    // A rendezett, megjelenítendő lista — módonként másképp áll össze.
+    let feltoltottLista;
+
+    if (mod === 'ido') {
+        // ----- IDŐREND (opcionálisan ÁGAZAT-SZŰRTEN) -----
+        // A DB rendez létrehozási idő szerint ÉS limitál, így a limit pontos. Ha van
+        // agazatId, csak az az ág (részfa) — az indexelt osLanc-szűrésen (skálázható).
+        // A lapos lista minden entitástípust tartalmaz (Csaba döntése, 2026-07-20).
+        const nyersElemek = await hierarchikusAllokaciRepository.findMindIdorendben(irany, limit, agazatId);
+        feltoltottLista = await Promise.all(
+            nyersElemek.map(elem => this.egyElemAdatainakFeltoltese(elem, eemberId))
+        );
+
+    } else if (mod === 'sajatPont') {
+        // ----- SAJÁT ÖSSZPONT (DB-oldali rendezés, 2026-07-20) -----
+        // A saját összpont a tudatpontAllokacio DENORMALIZÁLT `osszesPont` mezője —
+        // pontosan az, amit a fejléc `entitasSajatTudatpont`-ként mutat (közös forrás).
+        // Erre van csökkenő index → a DB rendez ÉS vág (top-N), skálázható nagy adatnál is.
+        // Nincs 0-pontos entitás (az mindig törlődik), így a tudatpontAllokacio a teljes
+        // entitás-halmazt lefedi (a Térkép/idő-móddal egyező 27 elem). A kártya-fejléchez
+        // kellő hierarchikus mezőket (hierarchikusOsszesPont, szuloId, letrehozva) egy
+        // batch $in-nel csatoljuk a másik kollekcióból.
+        const rendezettAllok = await tudatpontRepository.findMindSajatPontSzerint(irany, limit, agazatId);
+        const idk = rendezettAllok.map(a => a.entitasId);
+        const hierSorok = await hierarchikusAllokaciRepository.findManyByEntitasIdk(idk);
+        const hierMap = new Map(hierSorok.map(h => [h.entitasId.toString(), h]));
+
+        // A tudatpontAllokacio sorrendje a mérvadó (ezen iterálunk); a hierarchikus batch
+        // csak kiegészítő adatot ad. A Promise.all sorrendtartó → a rendezés végig megmarad.
+        const feltoltendoElemek = rendezettAllok.map(a => {
+            const hier = hierMap.get(a.entitasId.toString());
+            return {
+                entitasId: a.entitasId,
+                entitasTipus: a.entitasTipus,
+                hierarchikusOsszesPont: hier?.hierarchikusOsszesPont ?? 0,
+                letrehozva: hier?.letrehozva ?? a.letrehozva ?? null,
+                szuloId: hier?.szuloId ?? null
+            };
+        });
+        feltoltottLista = await Promise.all(
+            feltoltendoElemek.map(elem => this.egyElemAdatainakFeltoltese(elem, eemberId))
+        );
+
+    } else if (mod === 'agazatiPont') {
+        // ----- ÁGAZATI (HIERARCHIKUS) ÖSSZPONT (opcionálisan ágazat-szűrten) -----
+        // A hierarchikusOsszesPont (az entitás + teljes ága/részfája súlya) szerint;
+        // a hierarchikus allokáció MAGA a forrás (minden mező megvan, mint az időrendnél).
+        const nyersElemek = await hierarchikusAllokaciRepository.findMindHierarchikusPontSzerint(irany, limit, agazatId);
+        feltoltottLista = await Promise.all(
+            nyersElemek.map(elem => this.egyElemAdatainakFeltoltese(elem, eemberId))
+        );
+
+    } else {
+        // Ismeretlen mód
+        throw new Error(`Ismeretlen vagy még nem támogatott rendezési mód: ${mod}`);
+    }
+
+    // RÉSZFA-ALAPÚ OLVASATLAN BADGE-SZÁMOK (mint a pakliban) — a végleges listára
+    await this.olvasatlanBadgeFeltoltese(feltoltottLista, eemberId);
+
+    console.log('rendezettListaOsszeallitasa - VÉGE', { mod, elemszam: feltoltottLista.length });
+
+    return { mod, rendezettLista: feltoltottLista };
 }
 
 // ----- TESTVÉREK ÖSSZEGYŰJTÉSE -----

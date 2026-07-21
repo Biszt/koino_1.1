@@ -487,6 +487,101 @@ async findTerkepLap(kurzorId = null, limit = 2000) {
     return sorok;
 }
 
+// ----- ÖSSZES ALLOKÁCIÓ IDŐREND SZERINT (LAPOS RENDEZETT LISTA) -----
+/**
+* A teljes kollekció egyetlen LAPOS listában, létrehozási idő szerint rendezve.
+* A Rendezés nézet (15. terv-pont) globális IDŐRENDI módja használja — itt nincs
+* hierarchia, testvér vagy bogárlogika, csak egy sík, rendezett halmaz.
+* Determinisztikus döntő az _id, hogy azonos időbélyegnél se ugráljon a sorrend.
+* @param {string} irany - 'csokkeno' (legújabb elöl, alapértelmezett) vagy 'novekvo'
+* @param {number} limit - Maximum ennyi elem (alapértelmezett: 200; a lapozás későbbi lépés)
+* @param {string|null} agazatId - ha megadva, CSAK ennek az ágnak (részfájának) elemei
+*   (az indexelt osLanc-szűrésen; a gyökér önmaga is beletartozik)
+* @returns {Promise<Array>} a rendezett allokációk (lean)
+*/
+async findMindIdorendben(irany = 'csokkeno', limit = 200, agazatId = null) {
+    console.log('hierarchikusAllokaciRepository.findMindIdorendben - KEZDÉS', { irany, limit, agazatId });
+
+    // Irány → sort érték: csökkenő = -1 (legújabb elöl), növekvő = 1 (legrégebbi elöl).
+    // Az _id ugyanabba az irányba dönt, hogy azonos időbélyegnél stabil legyen a sorrend.
+    const sortIrany = irany === 'novekvo' ? 1 : -1;
+
+    // Ágazat-szűrés: az osLanc tartalmazza az agazatId-t MINDEN olyan entitásnál, amely
+    // az ág gyökere vagy annak leszármazottja → egyetlen indexelt lekérdezés (skálázható).
+    const szuro = agazatId
+        ? { 'osLanc.entitasId': Types.ObjectId.isValid(agazatId) ? new Types.ObjectId(agazatId) : agazatId }
+        : {};
+
+    const sorok = await HierarchikusTudatpontAllokacio.find(szuro)
+        .sort({ letrehozva: sortIrany, _id: sortIrany })
+        .limit(limit)
+        .lean();
+
+    console.log('hierarchikusAllokaciRepository.findMindIdorendben - VÉGE', { count: sorok.length });
+    return sorok;
+}
+
+// ----- ÖSSZES ALLOKÁCIÓ ÁGAZATI (HIERARCHIKUS) PONT SZERINT (LAPOS RENDEZETT LISTA) -----
+/**
+* A teljes kollekció (vagy egy ág) LAPOS listában a hierarchikusOsszesPont szerint
+* rendezve — ez az „ágazati tudatpont" (az entitás + teljes ága/részfája alatti súly).
+* A Rendezés nézet (15. terv-pont) „ágazati tudatpont" módja. Globálisan a
+* { hierarchikusOsszesPont: -1 } index, ág-szűrésnél a
+* { 'osLanc.entitasId':1, hierarchikusOsszesPont:-1 } compound index szolgálja ki.
+* Determinisztikus döntő az _id, hogy azonos pontnál se ugráljon a sorrend.
+* @param {string} irany - 'csokkeno' (legtöbb elöl, alapértelmezett) vagy 'novekvo'
+* @param {number} limit - Maximum ennyi elem (alapértelmezett: 200)
+* @param {string|null} agazatId - ha megadva, CSAK ennek az ágnak (részfájának) elemei
+* @returns {Promise<Array>} a rendezett allokációk (lean)
+*/
+async findMindHierarchikusPontSzerint(irany = 'csokkeno', limit = 200, agazatId = null) {
+    console.log('hierarchikusAllokaciRepository.findMindHierarchikusPontSzerint - KEZDÉS', { irany, limit, agazatId });
+
+    const sortIrany = irany === 'novekvo' ? 1 : -1;
+
+    const szuro = agazatId
+        ? { 'osLanc.entitasId': Types.ObjectId.isValid(agazatId) ? new Types.ObjectId(agazatId) : agazatId }
+        : {};
+
+    const sorok = await HierarchikusTudatpontAllokacio.find(szuro)
+        .sort({ hierarchikusOsszesPont: sortIrany, _id: sortIrany })
+        .limit(limit)
+        .lean();
+
+    console.log('hierarchikusAllokaciRepository.findMindHierarchikusPontSzerint - VÉGE', { count: sorok.length });
+    return sorok;
+}
+
+// ----- TÖBB ALLOKÁCIÓ LEKÉRÉSE ENTITÁS-AZONOSÍTÓK ALAPJÁN (BATCH) -----
+/**
+* Több entitás hierarchikus allokációja EGYETLEN lekérdezéssel ($in).
+* A Rendezés nézet „saját összpont" módja használja: a tudatpontAllokacio adja a
+* rendezett top-N entitást, de a kártya-fejléchez kellő `hierarchikusOsszesPont`
+* (+ szuloId, letrehozva) a MÁSIK kollekcióban van — azt hozzuk ide egy batch-csel.
+* A visszaadott sorrend NEM garantált; a hívó entitasId szerint map-eli.
+* @param {Array} entitasIdk - entitás-azonosítók tömbje (ObjectId vagy string)
+* @returns {Promise<Array>} a megtalált allokációk (lean)
+*/
+async findManyByEntitasIdk(entitasIdk) {
+    console.log('hierarchikusAllokaciRepository.findManyByEntitasIdk - KEZDÉS', {
+        darab: entitasIdk?.length ?? 0
+    });
+
+    if (!entitasIdk || entitasIdk.length === 0) return [];
+
+    // A vegyes (ObjectId/string) bemenetet egységes ObjectId-kká alakítjuk a $in-hez
+    const objektumIdk = entitasIdk.map(id =>
+        Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : id
+    );
+
+    const sorok = await HierarchikusTudatpontAllokacio.find({
+        entitasId: { $in: objektumIdk }
+    }).lean();
+
+    console.log('hierarchikusAllokaciRepository.findManyByEntitasIdk - VÉGE', { count: sorok.length });
+    return sorok;
+}
+
 // ----- GYEREK-AZONOSÍTÓK LEKÉRÉSE TÖBB SZÜLŐHÖZ -----
 /**
 * Több szülő entitás KÖZVETLEN gyerekeinek entitasId-jai egyetlen lekérdezéssel.

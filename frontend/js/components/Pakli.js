@@ -73,6 +73,14 @@ constructor(token, tartalmKontenerAzonosito, modalKontenerAzonosito = 'modal-kon
   // kattintásra testvérváltást indítanak
   this.testverJelzo = new TestverJelzo((irany) => this.testverValtasa(irany));
 
+  // ===== RENDEZÉS-MÓD (15. terv-pont) =====
+  // 'hierarchikus' = a fa-szelet nézet (ALAP); 'ido'/'sajatPont' = LAPOS lista.
+  // Lapos módban nincs testvér-navigáció (kacsacsőr/wheel) és nincs szülő-gyerek átfedés.
+  this.rendezesMod = 'hierarchikus';  // 'hierarchikus' | 'ido' | 'sajatPont'
+  this.rendezesIrany = 'csokkeno';    // 'csokkeno' | 'novekvo'
+  this.rendezesAgazatId = null;       // null = globális; egyébként az ágazat-gyökér entitasId
+  this.lapositottLista = [];          // a lapos módban rendezett elemek (a backend rendezése szerint)
+
   console.log('Pakli.constructor - VÉGE', {
     tartalmKontenerAzonosito: this.tartalmKontenerAzonosito,
     vanKivalasztasValtasCallback: !!this.onKivalasztasValtas
@@ -92,6 +100,15 @@ async init(entitasId = null, entitasTipus = null) {
   window.aktivPakli = this;
 
   this.betoltesAllapotMegjelenites();
+
+  // ===== LAPOS MÓD ÁG (rendezés: idő / saját pont) =====
+  // A hierarchikus fa-szelet helyett a /api/pakli/rendezett végpontról jövő lapos,
+  // rendezett listát jeleníti meg — testvér/átfedés nélkül. Külön útvonal, mert az
+  // adatszerkezet és a renderelés is eltér a hierarchikustól.
+  if (this.rendezesMod !== 'hierarchikus') {
+    return this._lapositottInit();
+  }
+
   try {
     await this.pakliLekerese(entitasId, entitasTipus);
 
@@ -321,6 +338,205 @@ async paklitRendel() {
   });
 
   console.log('Pakli.paklitRendel - VÉGE', { kartyakSzama: aktivPakli.length });
+}
+
+// ==========================================================================
+// LAPOS MÓD (rendezés: idő / saját pont) — a fenti hierarchikus úttól elkülönítve
+// ==========================================================================
+
+// ----- RENDEZÉS BEÁLLÍTÁSA (publikus — a Rendezés-modal hívja) -----
+// Beállítja a rendezés-módot/irányt/ágazatot, majd újratölti a paklit.
+// Hierarchikusra váltáskor a mentett aktív entitástól indul (fa-szelet);
+// lapos módban az entitás irreleváns (globális vagy ágazat-szűrt lista).
+// @param {string} mod - 'hierarchikus' | 'ido' | 'sajatPont'
+// @param {string} irany - 'csokkeno' | 'novekvo'
+// @param {string|null} agazatId - null = globális; egyébként az ágazat-gyökér entitasId
+async rendezesBeallitasa(mod = 'hierarchikus', irany = 'csokkeno', agazatId = null) {
+  console.log('Pakli.rendezesBeallitasa - KEZDÉS', { mod, irany, agazatId });
+
+  this.rendezesMod = mod;
+  this.rendezesIrany = irany;
+  this.rendezesAgazatId = agazatId;
+  this.kivalasztottIndex = -1; // lapos módban induláskor nincs kibontott kártya
+
+  if (mod === 'hierarchikus') {
+    // A fa-szelet nézethez kell a kiindulási entitás – a mentett aktívtól indulunk
+    const mentett = aktivEntitasLekerese();
+    await this.init(mentett?.entitasId ?? null, mentett?.entitasTipus ?? null);
+  } else {
+    await this.init();
+  }
+
+  console.log('Pakli.rendezesBeallitasa - VÉGE', { mod });
+}
+
+// ----- LAPOS INICIALIZÁLÁS -----
+// A rendezett listát lekéri és lapos módban rendereli. Az init() delegál ide,
+// ha a rendezesMod nem 'hierarchikus'.
+// @returns {Promise<boolean>}
+async _lapositottInit() {
+  console.log('Pakli._lapositottInit - KEZDÉS', {
+    mod: this.rendezesMod, irany: this.rendezesIrany, agazatId: this.rendezesAgazatId
+  });
+  try {
+    await this.rendezettLekerese();
+
+    if (this.lapositottLista.length === 0) {
+      this.uresAllapotMegjelenites();
+      console.log('Pakli._lapositottInit - VÉGE (üres lista)');
+      return true;
+    }
+
+    await this.lapositottRendel();
+    console.log('Pakli._lapositottInit - VÉGE', { elemszam: this.lapositottLista.length });
+    return true;
+  } catch (hiba) {
+    console.error('Pakli._lapositottInit - HIBA', { hiba: hiba.message });
+    this.hibaAllapotMegjelenites(hiba.message);
+    return false;
+  }
+}
+
+// ----- RENDEZETT LISTA LEKÉRÉSE -----
+// GET /api/pakli/rendezett?mod=&irany=&agazatId= — a választ a lapositottLista-ba menti.
+// @returns {Promise}
+async rendezettLekerese() {
+  console.log('Pakli.rendezettLekerese - KEZDÉS', {
+    mod: this.rendezesMod, irany: this.rendezesIrany, agazatId: this.rendezesAgazatId
+  });
+
+  let utvonal = `pakli/rendezett?mod=${this.rendezesMod}&irany=${this.rendezesIrany}`;
+  if (this.rendezesAgazatId) utvonal += `&agazatId=${this.rendezesAgazatId}`;
+
+  const eredmeny = await apiGet(utvonal, this.token);
+  this.lapositottLista = eredmeny.rendezettLista ?? [];
+
+  console.log('Pakli.rendezettLekerese - VÉGE', { elemszam: this.lapositottLista.length });
+}
+
+// ----- LAPOS RENDERELÉS -----
+// A lapositottLista alapján egyszerű, rendezett kártyalistát rajzol:
+// NINCS fordított iterálás, NINCS szülő-gyerek átfedés-osztály, NINCS testvér-jelző,
+// NINCS wheel-esemény. A kártyák a backend rendezése szerint fentről lefelé.
+// @returns {Promise}
+async lapositottRendel() {
+  console.log('Pakli.lapositottRendel - KEZDÉS', { elemszam: this.lapositottLista.length });
+
+  const kontener = document.getElementById(this.tartalmKontenerAzonosito);
+  if (!kontener) {
+    console.error('Pakli.lapositottRendel - HIBA: konténer nem található');
+    return;
+  }
+
+  kontener.innerHTML = '';
+  this.kartyadomElemek = new Array(this.lapositottLista.length).fill(null);
+  this.kartyaPeldanyok = new Array(this.lapositottLista.length).fill(null);
+
+  // A régi wheel-figyelő leállítása (ha hierarchikusból váltottunk) – lapos módban nincs testvérváltás
+  if (this.swipeAbortController) {
+    this.swipeAbortController.abort();
+    this.swipeAbortController = null;
+  }
+  // Lapos módban nincsenek kacsacsőrök
+  this.testverJelzo.eltavolitas();
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pakli-wrapper pakli-wrapper--lapos';
+  wrapper.id = 'pakli-wrapper';
+
+  for (const [index, entitas] of this.lapositottLista.entries()) {
+    const kartya = this.kartyaPeldanyositasa(
+      entitas,
+      false, // induláskor egyik kártya sincs kibontva
+      () => this.lapositottKartyaKivalasztasa(index),
+      this.modalKontenerAzonosito,
+      () => this.init(), // újratöltés a jelenlegi (lapos) móddal
+      () => this.lapositottCsakCssValt(index) // hamburger megnyitás – csak CSS
+    );
+
+    const kartyaDom = await kartya.init();
+    if (kartyaDom) {
+      wrapper.appendChild(kartyaDom);
+      this.kartyadomElemek[index] = kartyaDom;
+      this.kartyaPeldanyok[index] = kartya;
+    }
+  }
+
+  kontener.appendChild(wrapper);
+
+  // A cím betűméretének pontos hozzáigazítása (mint a hierarchikusnál)
+  requestAnimationFrame(() => {
+    for (const kartya of this.kartyaPeldanyok) {
+      if (kartya && typeof kartya.cimBetumeretHozzaigazitasa === 'function') {
+        kartya.cimBetumeretHozzaigazitasa();
+      }
+    }
+  });
+
+  console.log('Pakli.lapositottRendel - VÉGE', { kartyakSzama: this.lapositottLista.length });
+}
+
+// ----- LAPOS KÁRTYA KIVÁLASZTÁSA (koppintás → body kibontás) -----
+// A hierarchikus kartyaKivalasztasa egyszerűsített párja: testvér-cache és
+// localStorage-mentés nélkül. Csak a body-t bontja ki és tölti fel szöveggel.
+// @param {number} index - a lapos listán belüli index
+async lapositottKartyaKivalasztasa(index) {
+  console.log('Pakli.lapositottKartyaKivalasztasa - KEZDÉS', { index, korabbiIndex: this.kivalasztottIndex });
+
+  if (index === this.kivalasztottIndex) {
+    console.log('Pakli.lapositottKartyaKivalasztasa - VÉGE: már kiválasztott');
+    return;
+  }
+
+  // 1. CSS-váltás (régi body elrejtése + új kiemelése)
+  this.lapositottCsakCssValt(index);
+
+  // 2. Szöveg lekérése az adott elemre és beírása a body-jába
+  const elem = this.lapositottLista[index];
+  const kartya = this.kartyaPeldanyok[index];
+  try {
+    const eredmeny = await apiGet(`pakli/szoveg/${elem.entitasTipus}/${elem.entitasId}`, this.token);
+    if (kartya && typeof kartya.bodyFrissitese === 'function') {
+      kartya.bodyFrissitese(eredmeny.szoveg ?? null);
+    }
+  } catch (hiba) {
+    console.error('Pakli.lapositottKartyaKivalasztasa - szöveg HIBA', { hiba: hiba.message });
+    if (kartya && typeof kartya.bodyFrissitese === 'function') kartya.bodyFrissitese(null);
+  }
+
+  // 3. Görgetés a kiválasztott kártyához (közös segéd)
+  this._kivalasztottKartyaGorgetese();
+
+  console.log('Pakli.lapositottKartyaKivalasztasa - VÉGE', { index });
+}
+
+// ----- LAPOS CSAK CSS VÁLT -----
+// A hierarchikus kivalasztottCsakCssValt párja, testvér-jelző nélkül.
+// @param {number} ujIndex
+lapositottCsakCssValt(ujIndex) {
+  console.log('Pakli.lapositottCsakCssValt - KEZDÉS', { ujIndex, korabbiIndex: this.kivalasztottIndex });
+
+  if (ujIndex === this.kivalasztottIndex) return;
+
+  const regiDom = this.kartyadomElemek[this.kivalasztottIndex];
+  if (regiDom) {
+    regiDom.classList.remove('pakli-kartya--kivalasztott');
+    regiDom.setAttribute('aria-selected', 'false');
+  }
+  const regiKartya = this.kartyaPeldanyok[this.kivalasztottIndex];
+  if (regiKartya && typeof regiKartya.bodyElrejtes === 'function') {
+    regiKartya.bodyElrejtes();
+  }
+
+  const ujDom = this.kartyadomElemek[ujIndex];
+  if (ujDom) {
+    ujDom.classList.add('pakli-kartya--kivalasztott');
+    ujDom.setAttribute('aria-selected', 'true');
+  }
+
+  this.kivalasztottIndex = ujIndex;
+
+  console.log('Pakli.lapositottCsakCssValt - VÉGE', { ujIndex });
 }
 
 // ----- KIVÁLASZTOTT CSAK CSS VÁLT -----

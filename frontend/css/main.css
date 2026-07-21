@@ -65,3 +65,4 @@
    hogy azok felül tudják írni, ha kell */
 @import './components/modals/kuszobErtekMezok.css';
 @import './components/modals/ertekJavaslatModal.css';
+@import './components/modals/rendezesModal.css';

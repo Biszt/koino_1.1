@@ -13,6 +13,9 @@ const HierarchikusTudatpontAllokaciRepository = require('../../../repositories/h
 // Hierarchikus frissítés szolgáltatás - az összesített pontok újraszámításához
 const HierarchikusFrissitesService = require('../../hierarchikusFrissitesService');
 
+// Ős-lánc karbantartó - áthelyezés után a mozgatott entitás részfájának osLanc-ját újraépíti (3b)
+const OsLancKarbantartoService = require('../../osLancKarbantartoService');
+
 // ===================================
 // ÁTHELYEZÉSI VÉGREHAJTÓ OSZTÁLY
 // ===================================
@@ -150,6 +153,17 @@ class AthelyezesiVegrehajto {
         }
         if (eredetiSzuloId && eredetiSzuloId.toString() !== (ujSzuloId ?? '').toString()) {
           await this._hierarchiaLancUjraszamitasa(eredetiSzuloId, eredetiSzuloTipus || 'Tartalom');
+        }
+
+        // ŐS-LÁNC (3b): az áthelyezett entitás ÉS teljes részfája osLanc-jának újraépítése.
+        // A szuloId-k ekkor már frissek (fent átálltak), így a szuloId-láncból épített lánc helyes.
+        // Best-effort: ne akassza meg az áthelyezést — a migrációs tool pótolhatja.
+        try {
+          await OsLancKarbantartoService.reszfaOsLancUjraepitese(entitas.entitasId, entitas.entitasTipus);
+        } catch (osLancHiba) {
+          console.error('athelyezes - osLanc újraépítés HIBA (nem blokkoló)', {
+            entitasId: entitas.entitasId, hiba: osLancHiba.message
+          });
         }
 
         athelyezve = !!frissitettTartalom;

@@ -1,0 +1,58 @@
+/* frontend/css/components/modals/rendezesModal.css */
+
+/* A Rendezés modal a standard modal-vázra épül (Modal.js).
+   Rádiógombos választó: rendezési MÓD + SORREND. (15. terv-pont) */
+
+.rendezes-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ===== CSOPORT (fieldset) ===== */
+.rendezes-modal__csoport {
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  margin: 0;
+}
+
+.rendezes-modal__legend {
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ===== EGY OPCIÓ (rádió sor) ===== */
+.rendezes-modal__opcio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-1);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.rendezes-modal__opcio input[type="radio"] {
+  flex-shrink: 0;
+  accent-color: var(--color-accent, #37a24d);
+  cursor: pointer;
+}
+
+.rendezes-modal__opcio small {
+  opacity: 0.65;
+}
+
+.rendezes-modal__ikon {
+  font-size: 1.1em;
+}
+
+/* ===== TILTOTT IRÁNY-CSOPORT (hierarchikus módban) ===== */
+.rendezes-modal__irany--tiltva {
+  opacity: 0.45;
+}
+
+.rendezes-modal__irany--tiltva .rendezes-modal__opcio {
+  cursor: default;
+}

@@ -30,6 +30,16 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-07-21
+
+- 🆕 „[A térképnek, sem, frondend szűrés kéne, mert az nagy adatmennyiségnél, nem
+  jó. több millio entitással kell tervezni.]"
+  → Kontextus: a Rendezés nézet (15. terv-pont) ágazat-szűrésének tervezése közben
+  merült fel. A Térkép (13/b) jelenleg FRONTEND-oldali ág-szűrést használ (a teljes
+  fát letölti, a részfát a kliens vágja ki) — ez több millió entitásnál nem tartható.
+  Cél: a Térkép ág-szűrését is BACKEND-oldalira cserélni, skálázható módon. A
+  skálázhatóság általános elvárás minden nézetnél (több millió entitásra tervezünk).
+
 ### 2026-07-11
 
 - ✅ „[A saját tudatpont elnevezést, a kódban, eggyértelműsíteni e kell, hogya az
