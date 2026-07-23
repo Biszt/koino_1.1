@@ -7,6 +7,10 @@
 // Tartalom repository importálása
 const TartalomRepository = require('../../../repositories/tartalomRepository');
 
+// Egyezmény repository — az egyezmény ÁTHELYEZÉSE (a domain szerint egyezményre
+// kizárólag áthelyezés indítható) a saját kollekcióját frissíti.
+const EgyezmenyRepository = require('../../../repositories/egyezmenyRepository');
+
 // Hierarchikus allokáció repository - a pakli hierarchia fa frissítéséhez
 const HierarchikusTudatpontAllokaciRepository = require('../../../repositories/hierarchikusTudatpontAllokaciRepository');
 
@@ -52,16 +56,24 @@ class AthelyezesiVegrehajto {
     for (const entitas of javaslat.erintettEntitasok) {
 
       // === 3. LÉPÉS: TÍPUS ELLENŐRZÉSE ===
-      // Áthelyezés csak Tartalom típusra támogatott
-      if (entitas.entitasTipus !== 'Tartalom') {
+      // Áthelyezés Tartalom VAGY Egyezmény típusra támogatott. (Kategóriát és
+      // Tartalomtípust a javaslatService már a beküldéskor kizárja az áthelyezésből.)
+      if (entitas.entitasTipus !== 'Tartalom' && entitas.entitasTipus !== 'Egyezmeny') {
         athelyezesiEredmenyek.push({
           entitasId: entitas.entitasId,
           entitasTipus: entitas.entitasTipus,
           athelyezve: false,
-          hiba: 'Áthelyezés csak Tartalom típusra támogatott'
+          hiba: 'Áthelyezés csak Tartalom vagy Egyezmény típusra támogatott'
         });
         continue;
       }
+
+      // A mozgatott entitás saját kollekciója típus szerint (a szülő-lánc
+      // bejárás/kör-ellenőrzés továbbra is a Tartalom-fán megy, mert az áthelyezés
+      // célja mindig Tartalom).
+      const mozgatottRepo = entitas.entitasTipus === 'Egyezmeny'
+        ? EgyezmenyRepository
+        : TartalomRepository;
 
       // === 4. LÉPÉS: ÚJ SZÜLŐ ID ELLENŐRZÉSE ===
       if (!entitas.modositasAdatok || !entitas.modositasAdatok.hasOwnProperty('ujSzuloId')) {
@@ -91,9 +103,9 @@ class AthelyezesiVegrehajto {
 
         // 5.B - A MOZGATOTT ENTITÁS EREDETI SZÜLŐJÉNEK FELJEGYZÉSE
         // A kör-feloldáshoz és a hierarchia újraszámításhoz is kell
-        const mozgatottTartalom = await TartalomRepository.findById(entitas.entitasId);
+        const mozgatottTartalom = await mozgatottRepo.findById(entitas.entitasId);
         if (!mozgatottTartalom) {
-          throw new Error('Az áthelyezendő tartalom nem található');
+          throw new Error('Az áthelyezendő entitás nem található');
         }
         const eredetiSzuloId = mozgatottTartalom.szuloId ?? null;
         const eredetiSzuloTipus = mozgatottTartalom.szuloTipus ?? null;
@@ -128,7 +140,7 @@ class AthelyezesiVegrehajto {
           ujSzuloTipus: ujSzuloTipus
         });
 
-        const frissitettTartalom = await TartalomRepository.updateById(
+        const frissitettTartalom = await mozgatottRepo.updateById(
           entitas.entitasId,
           {
             szuloId: ujSzuloId,

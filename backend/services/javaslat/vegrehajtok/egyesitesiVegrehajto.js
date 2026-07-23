@@ -4,13 +4,22 @@
 
 // Repository-k importálása
 const TartalomRepository = require('../../../repositories/tartalomRepository');
+// Kategória repository — kategória-egyesítésnél az új entitás szülője kategória
+const KategoriaRepository = require('../../../repositories/kategoriaRepository');
+const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
+const EgyezmenyRepository = require('../../../repositories/egyezmenyRepository');
 const TudatpontRepository = require('../../../repositories/tudatpontRepository');
+// Hierarchikus (pakli-fa) allokáció repo — a gyerekek fa-szülőjének átkötéséhez
+const HierarchikusTudatpontAllokaciRepository = require('../../../repositories/hierarchikusTudatpontAllokaciRepository');
 
 // Service-k importálása
 const TudatpontService = require('../../tudatpontService');
 const TartalomService = require('../../tartalomService');
 const KategoriaService = require('../../kategoriaService');
 const TartalomTipusService = require('../../tartalomTipusService');
+// Hierarchikus pont-újraszámítás + osLanc karbantartás a gyerek-átkötés után
+const HierarchikusFrissitesService = require('../../hierarchikusFrissitesService');
+const OsLancKarbantartoService = require('../../osLancKarbantartoService');
 
 // ===== EGYESÍTÉSI VÉGREHAJTÓ OSZTÁLY =====
 // Ez az osztály felelős az egyesítési javaslatok végrehajtásáért
@@ -52,12 +61,8 @@ class EgyesitesiVegrehajto {
     // visszafordíthatatlan (forrás törlés) történne, újra ellenőrizzük:
     // az új entitás szülője létezik, nem érintett entitás, és nem is
     // annak leszármazottja. Hiba esetén a végrehajtás tisztán meghiúsul.
-    {
+    if (egyesitesAdatok.ujEntitasAdatok.szuloId) {
       const ujSzuloId = egyesitesAdatok.ujEntitasAdatok.szuloId;
-
-      if (!ujSzuloId) {
-        throw new Error('Egyesítésnél az új entitás szülő tartalmának megadása kötelező');
-      }
 
       const erintettIdk = new Set(
         javaslat.erintettEntitasok.map(e => e.entitasId.toString())
@@ -67,21 +72,26 @@ class EgyesitesiVegrehajto {
         throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás, mert az a végrehajtáskor törlődik');
       }
 
-      const ujSzuloTartalom = await TartalomRepository.findById(ujSzuloId);
-      if (!ujSzuloTartalom) {
-        throw new Error('Az új entitás szülő tartalma nem található (időközben törölhették)');
+      // A szülő kollekciója az eredmény-típushoz igazodik (kategória-egyesítésnél kategória)
+      const szuloRepo = egyesitesAdatok.ujEntitasTipus === 'Kategoria'
+        ? KategoriaRepository
+        : TartalomRepository;
+
+      const ujSzulo = await szuloRepo.findById(ujSzuloId);
+      if (!ujSzulo) {
+        throw new Error('Az új entitás szülője nem található (időközben törölhették)');
       }
 
       // Felmenő-lánc bejárása: érintett entitás nem szerepelhet benne
-      let vizsgaltSzuloId = ujSzuloTartalom.szuloId ? ujSzuloTartalom.szuloId.toString() : null;
+      let vizsgaltSzuloId = ujSzulo.szuloId ? ujSzulo.szuloId.toString() : null;
       let lepesVedelem = 0; // Végtelen ciklus elleni védelem
       while (vizsgaltSzuloId && lepesVedelem < 100) {
         lepesVedelem++;
         if (erintettIdk.has(vizsgaltSzuloId)) {
           throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás leszármazottja');
         }
-        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
-        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+        const vizsgalt = await szuloRepo.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgalt?.szuloId ? vizsgalt.szuloId.toString() : null;
       }
 
       console.log('vegrehajtas - Új entitás szülő validálva (végrehajtáskori újra-ellenőrzés)', {
@@ -134,6 +144,24 @@ class EgyesitesiVegrehajto {
 
     console.log(`Létrehozó (${letrehozoId}) pontjai: ${letrehozoPontjai}`);
     console.log(`Többi eember: ${osszesitettHozzajarulasok.size} fő`);
+
+    // ----- 3.5 LÉPÉS - A FORRÁSOK GYEREKEINEK ÖSSZEGYŰJTÉSE (A TÖRLÉS ELŐTT!) -----
+    // FONTOS SORREND: a 4. lépés a forrásokat 0 pontra állítja → auto-törlés, ami a
+    // gyerekeket a NAGYSZÜLŐHÖZ kötné át. Ezért MÉG a törlés előtt összegyűjtjük a
+    // forrás-entitások közvetlen gyerekeit, hogy a 7. lépésben az ÚJ egyesített entitás
+    // alá köthessük őket (Csaba döntése, 2026-07-22). A hierarchikus (pakli-fa)
+    // kollekcióból kérdezünk, így BÁRMELY gyerek-típus (Tartalom/Kategória/…) bekerül.
+    // A magukat is egyesítendő entitásokat kihagyjuk (azok törlődnek).
+    const forrasIdHalmaz = new Set(javaslat.erintettEntitasok.map(e => e.entitasId.toString()));
+    const atkotendoGyerekek = [];
+    for (const entitas of javaslat.erintettEntitasok) {
+      const gyerekek = await HierarchikusTudatpontAllokaciRepository.findBySzuloId(entitas.entitasId);
+      for (const gy of gyerekek) {
+        if (forrasIdHalmaz.has(gy.entitasId.toString())) continue; // maga is forrás → kihagyjuk
+        atkotendoGyerekek.push({ entitasId: gy.entitasId, entitasTipus: gy.entitasTipus });
+      }
+    }
+    console.log(`3.5 - ${atkotendoGyerekek.length} átkötendő gyerek összegyűjtve (a törlés előtt)`);
 
     // ----- 4. LÉPÉS - FORRÁS ENTITÁSOK KIÜRÍTÉSE (PONTOK VISSZAOSZTÁSA) -----
     // ✅ Most már tudjuk az összesítést, kiüríthetjük a forrásokat
@@ -286,35 +314,53 @@ class EgyesitesiVegrehajto {
       console.warn(`${hozzarendelesiHibak.length} eembernál nem sikerült a hozzárendelés`);
     }
 
-    // ----- 7. LÉPÉS - GYEREKEK ÁTÁLLÍTÁSA (CSAK TARTALOM ENTITÁSOKNÁL!) -----
-    // ✅ JAVÍTVA: Csak akkor állítjuk át a gyerekeket, ha TARTALOM-okat egyesítünk
-    // TartalomTipus-nak vagy Kategória-nak NEM lehetnek gyerek Tartalom entitásai!
-    console.log('=== GYEREKEK ÁTÁLLÍTÁSA ===');
-    
+    // ----- 7. LÉPÉS - GYEREKEK ÁTÁLLÍTÁSA AZ ÚJ EGYESÍTETT ENTITÁS ALÁ -----
+    // A 3.5-ben (a törlés ELŐTT) összegyűjtött gyerekeket most az ÚJ entitás alá kötjük.
+    // (A 4. lépés törlésekor átmenetileg a nagyszülőhöz kerültek — itt felülírjuk.)
+    // Minden gyerekhez: (1) az entitás-doc szülője, (2) a hierarchikus pakli-fa szülője,
+    // (3) az osLanc-részfa újraépítése. Végül a hierarchikus pontokat az új entitástól
+    // a gyökérig újraszámoljuk, hogy a gyerekek súlya bekerüljön.
+    console.log('=== GYEREKEK ÁTÁLLÍTÁSA AZ ÚJ ENTITÁS ALÁ ===');
+
     let atallitottGyerekek = 0;
+    const ujTipus = egyesitesAdatok.ujEntitasTipus;
+    const gyerekRepoTipusSzerint = {
+      Tartalom:      TartalomRepository,
+      Kategoria:     KategoriaRepository,
+      TartalomTipus: TartalomTipusRepository,
+      Egyezmeny:     EgyezmenyRepository
+    };
 
-    if (egyesitesAdatok.ujEntitasTipus === 'Tartalom') {
-      for (const entitas of javaslat.erintettEntitasok) {
-        // Csak Tartalom típusú entitásoknak lehetnek gyerekei
-        if (entitas.entitasTipus === 'Tartalom') {
-          // Gyerekek lekérése (szuloId === entitas.entitasId)
-          const gyerekek = await TartalomRepository.findByParentId(entitas.entitasId);
-
-          // Minden gyerek szülőjének átállítása az új entitásra
-          for (const gyerek of gyerekek) {
-            await TartalomRepository.updateById(gyerek._id, { szuloId: ujEntitas._id });
-            atallitottGyerekek++;
-          }
+    for (const gy of atkotendoGyerekek) {
+      const repo = gyerekRepoTipusSzerint[gy.entitasTipus];
+      if (!repo) {
+        console.warn('7. - ismeretlen gyerek-típus, kihagyva', { gyerek: gy });
+        continue;
+      }
+      try {
+        // (1) az entitás saját dokumentumának szülője
+        await repo.updateById(gy.entitasId, { szuloId: ujEntitas._id, szuloTipus: ujTipus });
+        // (2) a hierarchikus (pakli-fa) szülője
+        await HierarchikusTudatpontAllokaciRepository.updateSzuloId(gy.entitasId, gy.entitasTipus, ujEntitas._id, ujTipus);
+        // (3) osLanc-részfa újraépítése (best-effort, nem blokkoló)
+        try {
+          await OsLancKarbantartoService.reszfaOsLancUjraepitese(gy.entitasId, gy.entitasTipus);
+        } catch (osLancHiba) {
+          console.error('7. - osLanc hiba (nem blokkoló)', { entitasId: gy.entitasId, hiba: osLancHiba.message });
         }
+        atallitottGyerekek++;
+      } catch (gyerekHiba) {
+        // Pl. típus-inkompatibilis szülő (enum) — nem állítjuk át, de a merge nem hiúsul meg
+        console.error('7. - gyerek átállítás kihagyva (hiba)', { gyerek: gy, hiba: gyerekHiba.message });
       }
+    }
 
-      if (atallitottGyerekek > 0) {
-        console.log(`${atallitottGyerekek} gyerek tartalom átállítva az új szülőre`);
-      } else {
-        console.log('Nincs átállítandó gyerek tartalom');
-      }
+    // Hierarchikus pontok újraszámítása az új entitástól a gyökérig (a gyerekek súlya bekerül)
+    if (atallitottGyerekek > 0) {
+      await this._hierarchiaPontokFelfele(ujEntitas._id, ujTipus);
+      console.log(`${atallitottGyerekek} gyerek átállítva az új ${ujTipus} alá (+ hierarchikus pont-újraszámítás)`);
     } else {
-      console.log('Nem Tartalom típus - gyerek átállítás kihagyva');
+      console.log('Nincs átállítandó gyerek');
     }
 
     // ----- 8. LÉPÉS - EREDMÉNY VISSZAADÁSA -----
@@ -342,6 +388,38 @@ class EgyesitesiVegrehajto {
       atallitottGyerekek: atallitottGyerekek,
       visszaosztasiEredmenyek: visszaosztasiEredmenyek
     };
+  }
+
+  // ===================================
+  // PRIVÁT - HIERARCHIKUS PONTOK ÚJRASZÁMÍTÁSA FELFELÉ
+  // ===================================
+  // Az adott entitástól a gyökérig újraszámítja a hierarchikus összesített pontokat,
+  // hogy az újonnan alá kötött gyerekek súlya bekerüljön a szülő-láncba.
+  // (Az athelyezesiVegrehajto _hierarchiaLancUjraszamitasa mintájára.)
+  // @param {string} entitasId - kiinduló entitás
+  // @param {string} entitasTipus - kiinduló entitás típusa
+  async _hierarchiaPontokFelfele(entitasId, entitasTipus) {
+    console.log('_hierarchiaPontokFelfele - KEZDÉS', { entitasId, entitasTipus });
+
+    let aktId = entitasId;
+    let aktTipus = entitasTipus;
+    let lepesVedelem = 0;
+
+    while (aktId && lepesVedelem < 100) {
+      lepesVedelem++;
+      try {
+        await HierarchikusFrissitesService.frissitEgyHierarchikusAllokacio(aktId, aktTipus);
+      } catch (hiba) {
+        console.warn('_hierarchiaPontokFelfele - újraszámítási hiba, lánc megszakítva', { aktId, hiba: hiba.message });
+        break;
+      }
+      const allokacio = await HierarchikusTudatpontAllokaciRepository.findByEntitas(aktId, aktTipus);
+      if (!allokacio || !allokacio.szuloId) break; // gyökér
+      aktId = allokacio.szuloId;
+      aktTipus = allokacio.szuloTipus || 'Tartalom';
+    }
+
+    console.log('_hierarchiaPontokFelfele - VÉGE', { lepesek: lepesVedelem });
   }
 }
 

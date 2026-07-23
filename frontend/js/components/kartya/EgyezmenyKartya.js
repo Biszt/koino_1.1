@@ -2,7 +2,7 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
-import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
+import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
@@ -262,9 +262,14 @@ class EgyezmenyKartya extends Kartya {
         akcio:          () => this._ujTartalomLetrehozasa(entitas)
       },
       {
-        ikon:    '🚧',
-        felirat: 'Javaslat létrehozása',
-        akcio:   () => fejlesztesreVarMegjelenitese('Javaslat létrehozása')
+        ikon:           '🌿',
+        felirat:        'Javaslat létrehozása',
+        // Egyezményre a domain szerint KIZÁRÓLAG áthelyezési javaslat indítható —
+        // a JavaslatModal a típusgombokat entitástípus szerint szűri (a backend is).
+        // Tudatpont-függő, mint a többi kártyán.
+        tudatpontFuggo: true,
+        tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+        akcio:          () => this._javaslatLetrehozasa(entitas)
       },
       {
         ikon:       '🌟',
@@ -292,6 +297,40 @@ class EgyezmenyKartya extends Kartya {
     });
 
     return opciok;
+  }
+
+  // ----- JAVASLAT LÉTREHOZÁSA -----
+  // Megnyitja a közös JavaslatModal-t erre az egyezményre. A domain-szabály szerint
+  // egyezményre KIZÁRÓLAG áthelyezési javaslat indítható — a modal a típusgombokat
+  // az entitástípus (Egyezmeny) alapján szűri, a backend pedig külön kikényszeríti.
+  // A szülőt (egyezmény-tárhely) itt NEM adjuk át: az áthelyezésből létrejövő egyezmény
+  // tárhelye opcionális (a felhasználó a modalban állíthatja, egyébként null/gyökér).
+  async _javaslatLetrehozasa(entitas) {
+    console.log('EgyezmenyKartya._javaslatLetrehozasa - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const javaslatModal = new JavaslatModal(this.modalKontenerAzon, {
+      entitasAdatok: {
+        entitasId:    entitas.entitasId,
+        entitasTipus: 'Egyezmeny',
+        adatok:       entitas.adatok
+      },
+      szuloAdatok: null,
+      onSiker: (ujJavaslat) => {
+        console.log('EgyezmenyKartya._javaslatLetrehozasa - onSiker', {
+          javaslatId: ujJavaslat?._id
+        });
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await javaslatModal.init();
+    javaslatModal.megnyitas();
+
+    console.log('EgyezmenyKartya._javaslatLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
   }
 
   // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----

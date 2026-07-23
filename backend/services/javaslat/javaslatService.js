@@ -10,7 +10,10 @@ const SzavazatRepository = require('../../repositories/szavazatRepository');
 const TartalomRepository = require('../../repositories/tartalomRepository'); 
 const KategoriaRepository = require('../../repositories/kategoriaRepository'); 
 const TartalomTipusRepository = require('../../repositories/tartalomTipusRepository');
+const EgyezmenyRepository = require('../../repositories/egyezmenyRepository');
 const TudatpontRepository = require('../../repositories/tudatpontRepository');
+// Ős-lánc építő — az egyesítésnél az új entitás alap-szülőjének (legközelebbi közös ős) számításához
+const OsLancKarbantartoService = require('../osLancKarbantartoService');
 
 // Segéd szolgáltatások importálása
 const JavaslatSzamitasService = require('./javaslatSzamitasService');
@@ -63,6 +66,106 @@ function indoklasUres(indoklas) {
 // Ez a fő koordinátor osztály a javaslatok kezeléséhez
 // Felelősség: CRUD műveletek + orchestration (más service-ek hívása)
 class JavaslatService {
+
+  // ===================================
+  // JAVASLAT-TÍPUS KORLÁTOK (DOMAIN-SZABÁLY)
+  // ===================================
+  // Kikényszeríti, hogy melyik entitástípuson melyik művelet indítható.
+  // Érintett-entitásonként vizsgál, ezért a Csomag tételeire is érvényes.
+  // @param {Object} javaslatAdatok - { javaslatTipus, erintettEntitasok[], egyesitesAdatok? }
+  _javaslatTipusKorlatokValidalasa(javaslatAdatok) {
+    console.log('_javaslatTipusKorlatokValidalasa - KEZDÉS', {
+      javaslatTipus: javaslatAdatok.javaslatTipus,
+      erintettek:    javaslatAdatok.erintettEntitasok?.length
+    });
+
+    const erintettek = javaslatAdatok.erintettEntitasok || [];
+
+    // --- 1. Érintett-entitásonkénti tiltások ---
+    for (const e of erintettek) {
+      // Egyezményre KIZÁRÓLAG áthelyezés
+      if (e.entitasTipus === 'Egyezmeny' && e.muvelet !== 'Athelyezes') {
+        throw new Error('Egyezményre csak áthelyezési javaslat indítható.');
+      }
+      // Kategóriát és Tartalomtípust nem lehet áthelyezni
+      if ((e.entitasTipus === 'Kategoria' || e.entitasTipus === 'TartalomTipus') && e.muvelet === 'Athelyezes') {
+        throw new Error('Kategóriát és tartalomtípust nem lehet áthelyezni.');
+      }
+      // Tartalomtípust nem lehet egyesíteni (csak törölni vagy módosítani)
+      if (e.entitasTipus === 'TartalomTipus' && e.muvelet === 'Egyesites') {
+        throw new Error('Tartalomtípust nem lehet egyesíteni — csak törölni vagy módosítani.');
+      }
+    }
+
+    // --- 2. Egyesítés-specifikus szabály: AZONOS típusúak egyesíthetők ---
+    // Tartalmat csak Tartalommal, Kategóriát csak Kategóriával; Tartalomtípust
+    // egyáltalán nem (azt a fenti per-entitás szabály már kizárta). Az eredmény
+    // típusa is a résztvevők közös típusa.
+    if (javaslatAdatok.javaslatTipus === 'Egyesites') {
+      const tipusok = new Set(erintettek.map(e => e.entitasTipus));
+      if (tipusok.size > 1) {
+        throw new Error('Egyesíteni csak azonos típusú entitásokat lehet: Tartalmat Tartalommal, Kategóriát Kategóriával.');
+      }
+
+      const kozosTipus = erintettek[0]?.entitasTipus;
+      if (kozosTipus !== 'Tartalom' && kozosTipus !== 'Kategoria') {
+        throw new Error('Egyesíteni csak Tartalmat vagy Kategóriát lehet.');
+      }
+
+      const ujTipus = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus;
+      if (ujTipus && ujTipus !== kozosTipus) {
+        const nev = kozosTipus === 'Kategoria' ? 'Kategóriák' : 'Tartalmak';
+        const ered = kozosTipus === 'Kategoria' ? 'kategória' : 'tartalom';
+        throw new Error(`${nev} egyesítéséből csak ${ered} jöhet létre.`);
+      }
+    }
+
+    console.log('_javaslatTipusKorlatokValidalasa - VÉGE (OK)');
+  }
+
+  // ===================================
+  // LEGKÖZELEBBI KÖZÖS ŐS (egyesítés alap-szülője)
+  // ===================================
+  // Az egyesítésnél, ha a felhasználó NEM ad meg szülőt az új entitásnak, a
+  // legközelebbi KÖZÖS ŐS lesz a szülő (vagy null = gyökér, ha nincs közös ős).
+  // Minden forráshoz felépítjük az ős-láncot (közvetlen szülőtől a gyökérig, a
+  // forrásokat kihagyva), és az első olyan őst választjuk, ami MINDEGYIK láncban
+  // szerepel (a legmélyebbet, azaz a forrásokhoz legközelebbit).
+  // @param {Array} erintettEntitasok - [{entitasId, entitasTipus}, ...]
+  // @returns {Promise<{szuloId, szuloTipus}|null>}
+  async _legkozelebbiKozosSzulo(erintettEntitasok) {
+    console.log('_legkozelebbiKozosSzulo - KEZDÉS', { forrasok: erintettEntitasok.length });
+
+    const forrasIdk = new Set(erintettEntitasok.map(e => e.entitasId.toString()));
+
+    // Forrásonként az ŐSÖK listája (self kihagyva, a forrásokat is kihagyva), deepest-first
+    const osLancok = [];
+    for (const e of erintettEntitasok) {
+      const lanc = await OsLancKarbantartoService.osLancFelepitese(e.entitasId, e.entitasTipus); // [self, szülő, …, gyökér]
+      const osok = lanc.slice(1).filter(a => !forrasIdk.has(a.entitasId.toString()));
+      osLancok.push(osok);
+    }
+
+    if (osLancok.length === 0) {
+      console.log('_legkozelebbiKozosSzulo - VÉGE: nincs forrás');
+      return null;
+    }
+
+    // Az első forrás ősein megyünk végig (a legmélyebbtől), és keressük az elsőt,
+    // ami MINDEN másik forrás ős-láncában is szerepel.
+    const [elso, ...tobbi] = osLancok;
+    for (const os of elso) {
+      const osId = os.entitasId.toString();
+      const mindbenneVan = tobbi.every(lanc => lanc.some(a => a.entitasId.toString() === osId));
+      if (mindbenneVan) {
+        console.log('_legkozelebbiKozosSzulo - VÉGE: közös ős', { szuloId: os.entitasId, szuloTipus: os.entitasTipus });
+        return { szuloId: os.entitasId, szuloTipus: os.entitasTipus };
+      }
+    }
+
+    console.log('_legkozelebbiKozosSzulo - VÉGE: nincs közös ős → gyökér (null)');
+    return null;
+  }
 
  // Tudatpont felosztása töredék javaslatok között
   // Minden töredék legalább 1 pontot kap, a maradékot az elejétől kezdve szétosztjuk
@@ -236,6 +339,10 @@ class JavaslatService {
         // Ha tartalom típus, tartalom típus repository-t használunk
         const tartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId); // Lekérjük a tartalom típust
         entitasLetezik = !!tartalomTipus; // Boolean értékké alakítjuk
+      } else if (entitas.entitasTipus === 'Egyezmeny') { // Ha Egyezmeny típus
+        // Egyezményre csak áthelyezési javaslat indítható (lásd a szabály-validációt lentebb)
+        const egyezmeny = await EgyezmenyRepository.findById(entitas.entitasId); // Lekérjük az egyezményt
+        entitasLetezik = !!egyezmeny; // Boolean értékké alakítjuk
       } // Más típusokra most nem számítunk
 
       if (!entitasLetezik) { // Ha az entitás nem létezik
@@ -243,6 +350,15 @@ class JavaslatService {
         throw new Error(`Érintett entitás ${entitas.entitasTipus} nem található: ${entitas.entitasId}`); // Hiba dobása részletes üzenettel
       } // Entitás létezik
     } // Minden érintett entitást validáltunk
+
+    // 4.AA LÉPÉS - JAVASLAT-TÍPUS KORLÁTOK ENTITÁSTÍPUS SZERINT (DOMAIN-SZABÁLY)
+    // A közösségi szabályok szerint nem minden művelet indítható minden entitáson:
+    //   • Egyezményre KIZÁRÓLAG áthelyezés (nem törölhető/módosítható/egyesíthető).
+    //   • Kategóriát és Tartalomtípust NEM lehet áthelyezni.
+    //   • Tartalomtípust NEM lehet egyesíteni (csak törölni vagy módosítani).
+    //   • Kategóriát csak MÁSIK KATEGÓRIÁVAL lehet egyesíteni (az eredmény is kategória).
+    // Ezt érintett-entitásonként ellenőrizzük, így a Csomag tételeire is érvényes.
+    this._javaslatTipusKorlatokValidalasa(javaslatAdatok);
 
     // 4.A LÉPÉS - ÁTHELYEZÉSI CÉLOK VALIDÁLÁSA
     // Már a javaslat BEKÜLDÉSEKOR elutasítjuk az érvénytelen áthelyezést,
@@ -285,18 +401,39 @@ class JavaslatService {
       }
     } // Áthelyezési célok validálva
 
-    // 4.B LÉPÉS - EGYESÍTÉS ÚJ ENTITÁS SZÜLŐJÉNEK VALIDÁLÁSA
-    // Az új egyesített entitás szülője KÖTELEZŐ, és nem lehet egyesítésben
-    // érintett entitás, sem azok leszármazottja — a források a végrehajtáskor
-    // törlődnek, így az új entitás törölt entitás alá kerülne, a gyerek-
-    // átállítás pedig körkörös hierarchiát okozna.
-    if (javaslatAdatok.javaslatTipus === 'Egyesites') {
-      const ujSzuloId = javaslatAdatok.egyesitesAdatok?.ujEntitasAdatok?.szuloId;
+    // 4.B LÉPÉS - EGYESÍTÉS ÚJ ENTITÁS SZÜLŐJÉNEK MEGHATÁROZÁSA + VALIDÁLÁSA
+    // Az új egyesített entitás szülője OPCIONÁLIS. Ha a felhasználó NEM ad meg szülőt,
+    // az alap-szülő a források LEGKÖZELEBBI KÖZÖS ŐSE lesz — vagy null (gyökér), ha
+    // nincs közös ős (Csaba döntése, 2026-07-22). Ha VAN szülő (megadott vagy számított),
+    // akkor nem lehet egyesítésben érintett entitás, sem azok leszármazottja.
+    if (javaslatAdatok.javaslatTipus === 'Egyesites'
+        && javaslatAdatok.egyesitesAdatok?.ujEntitasAdatok) {
+      const ujEntitasAdatok = javaslatAdatok.egyesitesAdatok.ujEntitasAdatok;
+      const ujTipus = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus;
 
-      // Az új entitás szülőjének megadása kötelező
-      if (!ujSzuloId) {
-        throw new Error('Egyesítésnél az új entitás szülő tartalmának megadása kötelező');
+      // Ha nincs megadott szülő → legközelebbi közös ős (vagy marad null = gyökér)
+      if (!ujEntitasAdatok.szuloId) {
+        const kozos = await this._legkozelebbiKozosSzulo(javaslatAdatok.erintettEntitasok);
+        // Típus-illesztés: kategória-eredmény szülője csak kategória lehet (az ős-lánc
+        // kategóriáknál úgyis csak kategória; defenzíven ellenőrizzük). Ha nem illik → gyökér.
+        if (kozos && (ujTipus !== 'Kategoria' || kozos.szuloTipus === 'Kategoria')) {
+          ujEntitasAdatok.szuloId    = kozos.szuloId;
+          ujEntitasAdatok.szuloTipus = kozos.szuloTipus;
+        }
       }
+    }
+
+    // Ha (megadott vagy számított) szülő van, validáljuk
+    if (javaslatAdatok.javaslatTipus === 'Egyesites'
+        && javaslatAdatok.egyesitesAdatok?.ujEntitasAdatok?.szuloId) {
+      const ujSzuloId = javaslatAdatok.egyesitesAdatok.ujEntitasAdatok.szuloId;
+
+      // A szülő kollekciója az egyesítés EREDMÉNY-típusához igazodik: kategória-
+      // egyesítésnél az eredmény kategória, így a szülője is kategória (a
+      // kategória-hierarchia szabálya). Egyébként a szülő Tartalom.
+      const ujTipus = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus;
+      const szuloRepo = ujTipus === 'Kategoria' ? KategoriaRepository : TartalomRepository;
+      const szuloMegnevezes = ujTipus === 'Kategoria' ? 'szülő kategória' : 'szülő tartalom';
 
       // Az érintett (egyesítendő) entitások azonosítói
       const erintettIdk = new Set(
@@ -308,24 +445,24 @@ class JavaslatService {
         throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás, mert az a végrehajtáskor törlődik');
       }
 
-      // A szülő tartalomnak léteznie kell
-      const ujSzuloTartalom = await TartalomRepository.findById(ujSzuloId);
-      if (!ujSzuloTartalom) {
-        throw new Error('Az új entitás szülő tartalma nem található');
+      // A szülőnek léteznie kell (a megfelelő kollekcióban)
+      const ujSzulo = await szuloRepo.findById(ujSzuloId);
+      if (!ujSzulo) {
+        throw new Error(`Az új entitás ${szuloMegnevezes}a nem található`);
       }
 
       // Felmenő-lánc ellenőrzése: a szülő nem lehet érintett entitás
       // leszármazottja sem — különben a végrehajtás után az új entitás
       // a saját (átállított) gyereke alá kerülne
-      let vizsgaltSzuloId = ujSzuloTartalom.szuloId ? ujSzuloTartalom.szuloId.toString() : null;
+      let vizsgaltSzuloId = ujSzulo.szuloId ? ujSzulo.szuloId.toString() : null;
       let lepesVedelem = 0; // Végtelen ciklus elleni védelem
       while (vizsgaltSzuloId && lepesVedelem < 100) {
         lepesVedelem++;
         if (erintettIdk.has(vizsgaltSzuloId)) {
           throw new Error('Az új entitás szülője nem lehet egyesítésben érintett entitás leszármazottja');
         }
-        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
-        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+        const vizsgalt = await szuloRepo.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgalt?.szuloId ? vizsgalt.szuloId.toString() : null;
       }
     } // Egyesítés szülő validálva
 

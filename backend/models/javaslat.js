@@ -38,7 +38,9 @@ const javaslatSchema = new mongoose.Schema({
         entitasTipus: {
           type: String,                                          // Szöveges típus
           required: true,                                        // Kötelező mező
-          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],     // Engedélyezett típusok
+          // Egyezmeny is engedélyezett: rá KIZÁRÓLAG áthelyezési javaslat indítható
+          // (a domain-szabályt a javaslatService kényszeríti ki).
+          enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Egyezmeny'],     // Engedélyezett típusok
           trim: true
         },
         // Művelet típusa ezen az entitáson

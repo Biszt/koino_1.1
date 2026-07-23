@@ -6,6 +6,7 @@ import { apiPost } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
 import EntitasKeresoMezo from '../EntitasKeresoMezo.js';
+import { engedelyezettJavaslatTipusok, egyesitesForrasTipusok, egyesitesEredmenyTipus } from '../../utils/javaslatSzabalyok.js';
 
 // Speciális egyezmény tárhely érték Egyesítésnél:
 // azt jelzi a backendnek, hogy az egyesítésből létrejövő ÚJ entitás
@@ -294,9 +295,23 @@ class JavaslatModal {
     const kontener  = document.getElementById(this.kontenerAzonosito);
     const tipusGombok = kontener?.querySelectorAll('.javaslat-modal__tipus-gomb');
 
+    // Az entitástípuson engedélyezett javaslat-típusok (domain-szabály).
+    // A tiltott típusok gombjait elrejtjük — a backend külön is kikényszeríti.
+    const entitasTipus = this.entitasAdatok?.entitasTipus ?? 'Tartalom';
+    const engedett = engedelyezettJavaslatTipusok(entitasTipus);
+    console.log('JavaslatModal._tipusGombokBekotese - engedélyezett típusok', { entitasTipus, engedett });
+
     tipusGombok?.forEach((gomb) => {
+      const tipus = gomb.dataset.tipus;
+
+      // Tiltott típus → a gomb elrejtése (nem választható)
+      if (!engedett.includes(tipus)) {
+        gomb.hidden = true;
+        gomb.setAttribute('aria-hidden', 'true');
+        return;
+      }
+
       gomb.addEventListener('click', () => {
-        const tipus = gomb.dataset.tipus;
         console.log('JavaslatModal - típus kiválasztva', { tipus });
         this.kivalasztottTipus = tipus;
         this._formaEpitese(tipus);
@@ -559,17 +574,18 @@ class JavaslatModal {
     tipusSelect.className = 'javaslat-modal__select';
     tipusSelect.id        = 'javaslat-egyesites-uj-tipus';
 
-    [
-      { ertek: '',              felirat: '— válassz típust —' },
-      { ertek: 'Tartalom',      felirat: 'Tartalom'           },
-      { ertek: 'Kategoria',     felirat: 'Kategória'          },
-      { ertek: 'TartalomTipus', felirat: 'TartalomTípus'      }
-    ].forEach(({ ertek, felirat }) => {
-      const option       = document.createElement('option');
-      option.value       = ertek;
-      option.textContent = felirat;
-      tipusSelect.appendChild(option);
-    });
+    // Az egyesítés eredmény-típusa a kártya entitástípusából KÖVETKEZIK: Tartalmat csak
+    // Tartalommal, Kategóriát csak Kategóriával lehet egyesíteni (a backend is ezt
+    // kényszeríti ki). Ezért egyetlen, előre kiválasztott opciót kínálunk.
+    const eredmenyTipus = egyesitesEredmenyTipus(this.entitasAdatok?.entitasTipus ?? 'Tartalom');
+    const csakKategoria = (eredmenyTipus === 'Kategoria');
+    const eredmenyFelirat = csakKategoria ? 'Kategória' : 'Tartalom';
+
+    const option       = document.createElement('option');
+    option.value       = eredmenyTipus;
+    option.textContent = eredmenyFelirat;
+    tipusSelect.appendChild(option);
+    tipusSelect.disabled = true; // nincs választás, a kártya típusa dönt
 
     tipusCsoport.appendChild(tipusCimke);
     tipusCsoport.appendChild(tipusSelect);
@@ -593,10 +609,13 @@ class JavaslatModal {
     szuloMezoKontener.className = 'javaslat-modal__mezo-csoport';
     kontener.appendChild(szuloMezoKontener);
 
+    // A szülő OPCIONÁLIS. Üresen hagyva az alap-szülő a források LEGKÖZELEBBI KÖZÖS ŐSE
+    // lesz (vagy gyökér, ha nincs közös ős) — ezt a backend számolja. Ha megadod:
+    // kategória-eredménynél kategória, egyébként tartalom a szülő típusa.
     this.egyesitesSzuloMezo = new EntitasKeresoMezo(szuloMezoKontener, {
-      cimke:       'Az új entitás szülő tartalma *',
-      placeholder: 'A tartalom ID-ja, ami alá az új entitás kerül',
-      tipusok:     ['Tartalom'],
+      cimke:       csakKategoria ? 'Az új kategória szülő kategóriája (opcionális)' : 'Az új entitás szülő tartalma (opcionális)',
+      placeholder: csakKategoria ? 'Üres = legközelebbi közös ős / gyökér' : 'Üres = legközelebbi közös ős / gyökér',
+      tipusok:     csakKategoria ? ['Kategoria'] : ['Tartalom'],
       token:       this.token
     });
 
@@ -652,8 +671,9 @@ class JavaslatModal {
     const mezo = new EntitasKeresoMezo(mezoKontener, {
       cimke:       `${this.forrasMezok.length + 2}. egyesítendő entitás`,
       placeholder: 'Az egyesítendő entitás ID-ja',
-      // Bármelyik entitás típus lehet forrás — a mező automatikusan felismeri
-      tipusok:     ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      // A forrás-típusok a kártya entitásától függnek: kategóriát csak másik
+      // kategóriával lehet egyesíteni (domain-szabály). Egyébként bármelyik lehet.
+      tipusok:     egyesitesForrasTipusok(this.entitasAdatok?.entitasTipus ?? 'Tartalom'),
       token:       this.token
     });
 
@@ -984,14 +1004,12 @@ class JavaslatModal {
         return 'A kártya saját entitása automatikusan része az egyesítésnek — ne add meg forrásként is.';
       }
 
-      // Az új entitás szülője kötelező, és nem lehet egyesítésben érintett entitás
-      // (a leszármazott-ellenőrzést a backend végzi)
+      // Az új entitás szülője OPCIONÁLIS (üres = gyökér). Ha megadták, nem lehet
+      // egyesítésben érintett entitás (a leszármazott-ellenőrzést a backend végzi).
       const ujSzuloId = this.egyesitesSzuloMezo?.getId();
-      if (!ujSzuloId) {
-        return 'Az egyesítéshez érvényes, létező szülő tartalmat kell megadni az új entitásnak.';
-      }
-      if (ujSzuloId === this.entitasAdatok?.entitasId
-          || ervenyesForrasok.some(m => m.getId() === ujSzuloId)) {
+      if (ujSzuloId
+          && (ujSzuloId === this.entitasAdatok?.entitasId
+              || ervenyesForrasok.some(m => m.getId() === ujSzuloId))) {
         return 'Az új entitás szülője nem lehet egyesítésben érintett entitás — az a végrehajtáskor törlődik.';
       }
     }
@@ -1270,7 +1288,8 @@ class JavaslatModal {
     const ujSzuloId = this.egyesitesSzuloMezo?.getId();
     if (ujSzuloId) {
       ujEntitasAdatok.szuloId    = ujSzuloId;
-      ujEntitasAdatok.szuloTipus = 'Tartalom';
+      // Kategória-eredménynél a szülő is kategória (domain-szabály), egyébként Tartalom.
+      ujEntitasAdatok.szuloTipus = ujTipus === 'Kategoria' ? 'Kategoria' : 'Tartalom';
     }
 
     const egyesitesAdatok = {
