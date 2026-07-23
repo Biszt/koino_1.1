@@ -462,20 +462,62 @@ async countOsszes() {
     return darab;
 }
 
+// ----- EGY ÁG (RÉSZFA) DARABSZÁMA (SKÁLÁZHATÓ, OS-LÁNCCAL) -----
+/**
+* Egy ágazat-gyökér RÉSZFÁJÁNAK elemszáma EGYETLEN indexelt lekérdezéssel.
+* A szűrő az osLanc multikey indexre épül: minden entitás, amelynek az ős-lánca
+* tartalmazza az ágazat-gyökeret, a részfa tagja (a gyökér önmaga is — az osLanc
+* önmagával kezdődik). Ez a szintenkénti BFS-számlálás skálázható helyettesítője
+* (több millió entitásnál is egy lekérdezés, N+1 nélkül) — ugyanaz a minta, mint a
+* Rendezés nézet ág-szűrésénél.
+* @param {string} agEntitasId - az ágazat-gyökér entitás azonosítója
+* @returns {Promise<number>} a részfa elemszáma
+*/
+async countAg(agEntitasId) {
+    console.log('hierarchikusAllokaciRepository.countAg - KEZDÉS', { agEntitasId });
+
+    const agId = Types.ObjectId.isValid(agEntitasId)
+        ? new Types.ObjectId(agEntitasId)
+        : agEntitasId;
+
+    const darab = await HierarchikusTudatpontAllokacio.countDocuments({ 'osLanc.entitasId': agId });
+
+    console.log('hierarchikusAllokaciRepository.countAg - VÉGE', { darab });
+    return darab;
+}
+
 // ----- TÉRKÉP LAP LEKÉRÉSE (KURZOROS LAPOZÁS) -----
 /**
-* A teljes fa lapozott lekérése a Térkép (teljes képernyős fa-nézet) számára.
+* A fa lapozott lekérése a Térkép (teljes képernyős fa-nézet) számára.
 * Kurzoros lapozás _id szerint (stabil, skip nélkül): a hívó a legutóbb
 * kapott sor `_id`-ját adja át kurzorként, mi az annál nagyobbakat adjuk.
 * Csak a fa-rajzoláshoz szükséges mezőket küldjük (szűk projection).
+*
+* ÁG-SZŰRÉS (skálázható, backend-oldali): ha agEntitasId meg van adva, CSAK az
+* adott ág (részfa) sorait adjuk vissza — az osLanc multikey indexre épülő
+* { 'osLanc.entitasId': agEntitasId } szűrővel (a gyökér önmaga is beletartozik,
+* mert az osLanc önmagával kezdődik). Így ág-módban a kliens csak a részfát tölti
+* le, nem a teljes fát — több millió entitásnál is tartható. A { 'osLanc.entitasId':1,
+* _id:1 } compound index gondoskodik róla, hogy a kurzoros lapozás ág-módban is
+* teljesen indexelt maradjon.
 * @param {string|null} kurzorId - az előző lap utolsó sorának _id-ja (null = első lap)
 * @param {number} limit - lap mérete (alapértelmezett: 2000)
+* @param {string|null} agEntitasId - opcionális ág-gyökér: csak ennek a részfája
 * @returns {Promise<Array>} a lap sorai _id szerint növekvő sorrendben
 */
-async findTerkepLap(kurzorId = null, limit = 2000) {
-    console.log('hierarchikusAllokaciRepository.findTerkepLap - KEZDÉS', { kurzorId, limit });
+async findTerkepLap(kurzorId = null, limit = 2000, agEntitasId = null) {
+    console.log('hierarchikusAllokaciRepository.findTerkepLap - KEZDÉS', { kurzorId, limit, agEntitasId });
 
-    const szuro = kurzorId ? { _id: { $gt: new Types.ObjectId(kurzorId) } } : {};
+    // Szűrő összeállítása: kurzor (_id > …) ÉS — ha kell — ág-szűrés (osLanc).
+    const szuro = {};
+    if (kurzorId) {
+        szuro._id = { $gt: new Types.ObjectId(kurzorId) };
+    }
+    if (agEntitasId) {
+        szuro['osLanc.entitasId'] = Types.ObjectId.isValid(agEntitasId)
+            ? new Types.ObjectId(agEntitasId)
+            : agEntitasId;
+    }
 
     const sorok = await HierarchikusTudatpontAllokacio.find(szuro)
         .sort({ _id: 1 })
@@ -585,7 +627,8 @@ async findManyByEntitasIdk(entitasIdk) {
 // ----- GYEREK-AZONOSÍTÓK LEKÉRÉSE TÖBB SZÜLŐHÖZ -----
 /**
 * Több szülő entitás KÖZVETLEN gyerekeinek entitasId-jai egyetlen lekérdezéssel.
-* A Térkép ág-darabszámlálása (szintenkénti BFS-bejárás) használja.
+* Általános, szintenkénti bejáráshoz használható segéd. (A Térkép ág-darabszámlálása
+* korábban ezt hívta; ma a skálázható osLanc-alapú countAg váltotta ki.)
 * @param {Array} szuloIdk - a szülő entitás-azonosítók tömbje
 * @returns {Promise<Array>} a gyerekek entitasId-jai
 */

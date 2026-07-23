@@ -13,6 +13,26 @@ const jwt = require('jsonwebtoken');
 // Meghívó service: meghívásos regisztráció (MEGHIVAS_KOTELEZO kapcsoló)
 const MeghivoService = require('./meghivoService');
 
+// --- FIÓK-TÖRLÉSHEZ (eemberTorlese) ---
+// A pont-visszaosztás a tudatpontService bevált, tranzakciós útját használja
+// (a 0-ra állítás indítja a „nincs 0-tudatpontos entitás" láncreakciót).
+const TudatpontService = require('./tudatpontService');
+const TudatpontRepository = require('../repositories/tudatpontRepository');
+const SzavazatRepository = require('../repositories/szavazatRepository');
+const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
+// Az érték-javaslatok a megmaradó entitások küszöb-hisztogramját is befolyásolják:
+// törléskor a mediánból is ki kell vonni őket (hisztogramCsokkentese).
+const ErtekSzamitasService = require('./ertekSzamitasService');
+const ErtesitesRepository = require('../repositories/ertesitesRepository');
+const ErtesitesiBeallitasRepository = require('../repositories/ertesitesiBeallitasRepository');
+// A megmaradó (mások által is támogatott) entitásoknál a létrehozó anonimizálásához.
+// A modellek közvetlen elérése bevált minta ebben a rétegben (lásd terkepService).
+const Tartalom = require('../models/tartalom');
+const Kategoria = require('../models/kategoria');
+const TartalomTipus = require('../models/tartalomTipus');
+const Javaslat = require('../models/javaslat');
+const Egyezmeny = require('../models/egyezmeny');
+
 // ===== EMBER SERVICE OSZTÁLY =====
 // Ez a réteg tartalmazza az ÜZLETI LOGIKÁT
 // Validációk, több lépéses folyamatok, szabályok végrehajtása
@@ -260,6 +280,113 @@ class eEmberService {
 
     console.log('eEmberService.jelszoValtas - VÉGE', { eemberId });
     return true;
+  }
+
+  // ===== FIÓK-TÖRLÉS (ÖNKÉNTES) =====
+  // A bejelentkezett e-ember saját fiókjának végleges törlése — a jelszavával
+  // igazolva (visszafordíthatatlan). A lépések SORRENDJE fontos:
+  //   1. A tudatpontok VISSZAOSZTÁSA: minden aktív hozzárendelést 0-ra állítunk.
+  //      Ez a tudatpontService bevált, tranzakciós útja — a 0-ra esett entitásokat
+  //      a „nincs 0-tudatpontos entitás" láncreakció automatikusan törli (a gyerekek
+  //      átszülőzésével). Amit MÁSOK is támogatnak, megmarad (a tartalom közösségi).
+  //   2. A kapcsolódó „árva" adatok törlése: 0 értékű hozzárendelés-rekordok,
+  //      szavazatok, érték-javaslatok, értesítések, értesítési beállítások.
+  //   3. A megmaradó entitásoknál a létrehozó anonimizálása (null = „törölt e-ember").
+  //   4. Végül maga az e-ember rekord (személyes adat: e-mail, név, jelszó, lokáció).
+  // A bizalmi gráf élét (akiket meghívott: mások meghivoEemberId-je) SZÁNDÉKOSAN
+  // ÉRINTETLENÜL hagyjuk — a Fázis 2 több-tanúsítós rendszere épül rá.
+  // MEGJEGYZÉS: a pont-visszaosztás lépései saját tranzakciókban futnak, ezért az
+  // egész törlés nem egyetlen atomi művelet; a sorrend úgy van megválasztva, hogy
+  // félbeszakadás esetén a fiók még létezzen és a művelet megismételhető legyen.
+  // @param {string} eemberId - A bejelentkezett e-ember azonosítója
+  // @param {string} jelszo - A jelszava (megerősítés)
+  // @returns {Promise<Object>} { siker: true }
+  async eemberTorlese(eemberId, jelszo) {
+    console.log('eEmberService.eemberTorlese - KEZDÉS', { eemberId });
+
+    // === 1. LÉPÉS: JELSZÓ-MEGERŐSÍTÉS ===
+    if (!jelszo) {
+      throw new Error('A törléshez a jelszavad megadása kötelező');
+    }
+    const eember = await eEmberRepository.findById(eemberId);
+    if (!eember) {
+      throw new Error('eEmber nem található');
+    }
+    const jelszoHelyes = await JelszoHelper.osszehasonlitJelszo(jelszo, eember.jelszo);
+    if (!jelszoHelyes) {
+      throw new Error('A jelszó nem megfelelő');
+    }
+
+    // === 2. LÉPÉS: TUDATPONTOK VISSZAOSZTÁSA (0-RA ÁLLÍTÁS, LÁNCREAKCIÓVAL) ===
+    // Előbb ÖSSZEGYŰJTJÜK az összes aktív hozzárendelést (lapozva), majd egyesével
+    // 0-ra állítjuk. A gyűjtés-előre azért kell, mert a 0-ra állítás közben a
+    // hozzárendelés kikerül az „aktív" halmazból (és entitások törlődhetnek).
+    const aktivak = [];
+    let skip = 0;
+    const oldalMeret = 50;
+    while (true) {
+      const oldal = await TudatpontRepository.findAktivHozzarendelesekByeEmber(eemberId, oldalMeret, skip);
+      if (!oldal.length) break;
+      for (const h of oldal) {
+        aktivak.push({ entitasId: h.entitasId, entitasTipus: h.entitasTipus });
+      }
+      if (oldal.length < oldalMeret) break;
+      skip += oldalMeret;
+    }
+    console.log('eEmberService.eemberTorlese - aktív hozzárendelések visszaosztása', { darab: aktivak.length });
+
+    for (const a of aktivak) {
+      try {
+        // 0-ra állítás → az entitás összpontja csökken; 0-nál a láncreakció törli.
+        await TudatpontService.tudatpontHozzarendelese(eemberId, a.entitasId, a.entitasTipus, 0);
+      } catch (hiba) {
+        // Best-effort: ha egy entitás időközben már törlődött (pl. szülője láncreakcióban),
+        // az adott visszaosztás elbukhat — a maradék 0-rekordokat a 3. lépés kitakarítja.
+        console.warn('eEmberService.eemberTorlese - egy visszaosztás kihagyva', {
+          entitasId: a.entitasId, entitasTipus: a.entitasTipus, hiba: hiba.message
+        });
+      }
+    }
+
+    // === 3. LÉPÉS: KAPCSOLÓDÓ ADATOK TÖRLÉSE ===
+    await TudatpontRepository.deleteHozzarendelesekByeEmber(eemberId); // maradék 0-rekordok
+    await SzavazatRepository.deleteByeEmberId(eemberId);               // szavazatai
+
+    // Érték-javaslatok: előbb KIVONJUK őket a MEGMARADÓ entitások küszöb-hisztogramjából
+    // (medián-frissítés), csak utána töröljük a dokumentumokat. A pont-visszaosztás
+    // láncreakciójában törölt entitásoknál már nincs hisztogram → a csökkentés kihagyja.
+    const ertekJavaslatok = await ErtekJavaslatRepository.findByeEmber(eemberId);
+    for (const ej of ertekJavaslatok) {
+      try {
+        await ErtekSzamitasService.hisztogramCsokkentese(ej.entitasId, ej.entitasTipus, ej);
+      } catch (hiba) {
+        console.warn('eEmberService.eemberTorlese - hisztogram-csökkentés kihagyva', {
+          entitasId: ej.entitasId, hiba: hiba.message
+        });
+      }
+    }
+    await ErtekJavaslatRepository.deleteByeEmber(eemberId);            // érték-javaslatai
+
+    await ErtesitesRepository.torolE_EmberOsszes(eemberId);            // értesítései
+    await ErtesitesiBeallitasRepository.torolE_EmberOsszes(eemberId); // értesítési beállításai
+
+    // === 4. LÉPÉS: LÉTREHOZÓ ANONIMIZÁLÁSA A MEGMARADÓ ENTITÁSOKON ===
+    // A még létező (mások által is támogatott) entitásoknál a létrehozó-hivatkozást
+    // null-ra állítjuk → a felület „törölt e-embert" mutat, a személyes kötés megszűnik.
+    // updateMany: nem fut rá a séma-validáció, de a mező most már megenged null-t.
+    await Promise.all([
+      Tartalom.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
+      Kategoria.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
+      TartalomTipus.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
+      Javaslat.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
+      Egyezmeny.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } })
+    ]);
+
+    // === 5. LÉPÉS: MAGA AZ E-EMBER REKORD ===
+    await eEmberRepository.deleteById(eemberId);
+
+    console.log('eEmberService.eemberTorlese - VÉGE', { eemberId, visszaosztott: aktivak.length });
+    return { siker: true };
   }
 
   // ===== TOKEN ELLENŐRZÉSE =====

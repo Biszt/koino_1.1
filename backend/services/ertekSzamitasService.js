@@ -335,6 +335,84 @@ class ErtekJavaslatSzamitasService {
     return frissitettHisztogram;
   }
 
+  // ----- HISZTOGRAM CSÖKKENTÉSE (ÉRTÉK JAVASLAT ELTÁVOLÍTÁSA) -----
+  /**
+   * Egy érték javaslat KIVONÁSA az entitás hisztogramjából — fiók-törléskor, amikor
+   * a törölt e-ember érték-javaslatait eltávolítjuk a MEGMARADÓ entitásokról. Ez a
+   * hisztogramFrissitese fordítottja: csak csökkent (nincs új érték), az összes
+   * érték-javaslat számát 1-gyel apasztja, újraszámolja a 4 mediánt, és az érintett
+   * aktív javaslatokat elavultként jelöli (a küszöbük újraszámítására). Ha az
+   * entitásnak már nincs hisztogramja (pl. a pont-visszaosztás láncreakciójában
+   * időközben törlődött), csendben kilép — ott már nincs mit frissíteni.
+   * @param {string} entitasId
+   * @param {string} entitasTipus
+   * @param {Object} ertekJavaslat - a kivonandó érték javaslat (a 4 küszöb-mezővel)
+   * @returns {Promise<Object|null>} a frissített hisztogram, vagy null ha nincs
+   */
+  async hisztogramCsokkentese(entitasId, entitasTipus, ertekJavaslat) {
+    console.log("=== hisztogramCsokkentese:", { entitasId, entitasTipus });
+
+    const hisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    if (!hisztogram) {
+      console.log("hisztogramCsokkentese - nincs hisztogram (entitás törölve?), kihagyva");
+      return null;
+    }
+
+    const ertekJavaslatElfogadasiMap = hisztogram.javaslatElfogadasiKuszobHisztogram;
+    const reszveteliAranyMap = hisztogram.reszveteliAranyKuszobHisztogram;
+    const minimumDontesiIdoMap = hisztogram.minimumDontesiIdoHisztogram;
+    const maximumDontesiIdoMap = hisztogram.maximumDontesiIdoHisztogram;
+
+    // Az adott érték javaslat bucket-jeinek csökkentése (0 alá nem megy)
+    const elf = ertekJavaslatElfogadasiMap.get(ertekJavaslat.javaslatElfogadasiKuszob.toString()) || 0;
+    ertekJavaslatElfogadasiMap.set(ertekJavaslat.javaslatElfogadasiKuszob.toString(), Math.max(0, elf - 1));
+
+    const resz = reszveteliAranyMap.get(ertekJavaslat.reszveteliAranyKuszob.toString()) || 0;
+    reszveteliAranyMap.set(ertekJavaslat.reszveteliAranyKuszob.toString(), Math.max(0, resz - 1));
+
+    const minB = this.idoHezBucketKulcs(ertekJavaslat.minimumDontesiIdo);
+    minimumDontesiIdoMap.set(minB, Math.max(0, (minimumDontesiIdoMap.get(minB) || 0) - 1));
+
+    const maxB = this.idoHezBucketKulcs(ertekJavaslat.maximumDontesiIdo);
+    maximumDontesiIdoMap.set(maxB, Math.max(0, (maximumDontesiIdoMap.get(maxB) || 0) - 1));
+
+    // Összes érték javaslat száma eggyel kevesebb (0 alá nem megy)
+    const ujOsszesErtekJavaslat = Math.max(0, hisztogram.osszesErtekJavaslat - 1);
+
+    // Mediánok újraszámolása — ugyanazokkal az alap-/határértékekkel, mint a növelésnél
+    const ujElfMedian  = this.szamitMedian(ertekJavaslatElfogadasiMap, ujOsszesErtekJavaslat, 51, 100);
+    const ujReszMedian = this.szamitMedian(reszveteliAranyMap, ujOsszesErtekJavaslat, 0, 100);
+    const ujMinMedian  = this.szamitIdoMedian(minimumDontesiIdoMap, ujOsszesErtekJavaslat, 0);
+    const ujMaxMedian  = this.szamitIdoMedian(maximumDontesiIdoMap, ujOsszesErtekJavaslat, 31536000);
+
+    const frissitettHisztogram = await TartalomErtekHisztogramRepository.updateByEntitas(
+      entitasId,
+      entitasTipus,
+      {
+        javaslatElfogadasiKuszobHisztogram: ertekJavaslatElfogadasiMap,
+        reszveteliAranyKuszobHisztogram: reszveteliAranyMap,
+        minimumDontesiIdoHisztogram: minimumDontesiIdoMap,
+        maximumDontesiIdoHisztogram: maximumDontesiIdoMap,
+        aktualJavaslatElfogadasiKuszob: ujElfMedian,
+        aktualReszveteliAranyKuszob: ujReszMedian,
+        aktualMinimumDontesiIdo: ujMinMedian,
+        aktualMaximumDontesiIdo: ujMaxMedian,
+        osszesErtekJavaslat: ujOsszesErtekJavaslat,
+        utolsoFrissites: new Date()
+      }
+    );
+
+    // Az entitást érintő aktív javaslatok küszöbei elavultak → újraszámításra jelöljük
+    const erintettJavaslatIds = await JavaslatRepository.findByErintettEntitas(entitasId, entitasTipus, 'Aktiv');
+    if (erintettJavaslatIds.length > 0) {
+      await JavaslatRepository.bulkSetErtekekElavultak(erintettJavaslatIds, true);
+      console.log('hisztogramCsokkentese - javaslatok elavultként megjelölve:', erintettJavaslatIds.length);
+    }
+
+    console.log("<<< hisztogramCsokkentese - kész");
+    return frissitettHisztogram;
+  }
+
   // ===================================
   // ÉRTÉK JAVASLAT LÉTREHOZÁS/MÓDOSÍTÁS
   // ===================================

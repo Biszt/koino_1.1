@@ -71,7 +71,7 @@ const kategoriaSchema = new mongoose.Schema({
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber',                         // Referencia az eEmber modellre
-    required: true                         // Kötelező mező
+    default: null                          // null = TÖRÖLT e-ember (a kategória közösségi, megmarad)
   },
 
   // ----- LÉTREHOZÁS DÁTUMA -----

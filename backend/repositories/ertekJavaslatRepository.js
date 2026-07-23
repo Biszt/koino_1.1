@@ -184,6 +184,19 @@ class ErtekJavaslatRepository {
     return await ErtekJavaslat.deleteMany({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
+  // ----- EGY EEMBER ÖSSZES ÉRTÉK-JAVASLATÁNAK TÖRLÉSE -----
+  // Fiók-törléskor: az e-ember minden küszöb-érték-javaslatának törlése.
+  // @param {string} eemberId - Az e-ember MongoDB ObjectId-ja
+  // @returns {Promise<Object>} Törlés eredménye (deletedCount)
+  async deleteByeEmber(eemberId) {
+    console.log('ertekJavaslatRepository.deleteByeEmber - KEZDÉS', { eemberId });
+
+    const eredmeny = await ErtekJavaslat.deleteMany({ eemberId: eemberId });
+
+    console.log('ertekJavaslatRepository.deleteByeEmber - VÉGE', { torolt: eredmeny.deletedCount });
+    return eredmeny;
+  }
+
 }
 
 // ===== EXPORTÁLÁS =====

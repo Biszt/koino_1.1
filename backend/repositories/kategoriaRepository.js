@@ -218,6 +218,16 @@ class KategoriaRepository {
     console.log('kategoriaRepository.count - VÉGE', darab);
     return darab;
   }
+
+  // ----- ÖSSZES KATEGÓRIA SZÁMA -----
+  // A platform-statisztika (alsó sáv) használja. Szűrés nélkül minden kategóriát számol.
+  // @returns {Promise<number>}
+  async countAll() {
+    console.log('kategoriaRepository.countAll - KEZDÉS');
+    const szam = await Kategoria.countDocuments();
+    console.log('kategoriaRepository.countAll - VÉGE', { szam });
+    return szam;
+  }
 }
 
 // Repository exportálása

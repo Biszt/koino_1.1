@@ -573,6 +573,15 @@ async findByToredekCsoportId(toredekCsoportId) {
   return toredekek; // Visszaadjuk a töredékek tömbjét
 }
 
+  // ----- ÖSSZES JAVASLAT SZÁMA -----
+  // A platform-statisztika (alsó sáv) használja. Szűrés nélkül minden javaslatot számol.
+  // @returns {Promise<number>}
+  async countAll() {
+    console.log('javaslatRepository.countAll - KEZDÉS');
+    const szam = await Javaslat.countDocuments();
+    console.log('javaslatRepository.countAll - VÉGE', { szam });
+    return szam;
+  }
 
 }
 

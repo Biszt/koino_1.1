@@ -524,6 +524,22 @@ docker logs -f koino-backend
     (nev, lokacio — hiányos adatra 400), POST `/api/eember/jelszovaltas`
     (regiJelszo, ujJelszo — rossz régire 400; erősség-szabály mint
     regisztrációnál); új jelszóval a bejelentkezés igazolva.
+    **FIÓK TÖRLÉSE (2026-07-23):** a modál alján, elkülönített „veszély"-szakaszban
+    a **Fiók törlése** (piros gomb) — jelszó-mezővel + megerősítő párbeszéddel.
+    Ellenőrzés: (a) üres jelszóra hibaüzenet; (b) a Mégse a párbeszédben nem töröl;
+    (c) rossz jelszóra a backend 400-at ad; (d) sikeres törlés után KIJELENTKEZTET
+    (token törlődik, újratöltés → bejelentkező képernyő), és a régi adatokkal már
+    nem lehet belépni. Domain: a tudatpontok VISSZAOSZTÓDNAK az entitásokról — amit
+    csak ő támogatott, 0-ra esik és a láncreakció törli; amit mások is, MEGMARAD,
+    és a létrehozója „törölt e-emberre" (null) áll. A szavazatai, érték-javaslatai,
+    értesítései és beállításai is törlődnek; az általa MEGHÍVOTTAK bizalmi-gráf éle
+    (meghivoEemberId) szándékosan érintetlen (Fázis 2). FONTOS: az érték-javaslatok
+    törlésekor a megmaradó entitások KÜSZÖB-HISZTOGRAMJÁBÓL is kivonjuk őket, így a
+    medián (küszöbérték) frissül — nem marad benne a törölt e-ember szavazata.
+    Végpont: DELETE `/api/eember` (body: jelszo; auth-köteles). Service-teszt
+    (2026-07-23, lefutott): (1) a csak-ő-ága törlődik, a megmaradó entitás létrehozója
+    null, hozzárendelés/szavazat 0; (2) két érték-javaslatos entitáson a hisztogram
+    osszesErtekJavaslat 2→1, a medián a megmaradó e-ember értékére áll.
 48. ⬜ **Testvér-jelző kacsacsőrök (terv 13/a pont, 2026-07-19 óta):** a
     KIVÁLASZTOTT kártya két szélén lebegő **‹ N** és **N ›** gombok mutatják,
     hány testvér entitás van az adott irányban (a testvér-sorrend: hierarchikus
@@ -590,7 +606,10 @@ docker logs -f koino-backend
     (f) csomópontra kattintva (közeli nézetben az SVG-elemre, távoliban a
     pöttyre) a modal bezárul és a pakli a választott entitásra navigál;
     (g) kártya-menüs (ág-szűrt) módban CSAK az adott entitás részfája látszik,
-    és a darabszám az ág mérete;
+    és a darabszám az ág mérete. A szűrés 2026-07-23 óta BACKEND-oldali: a kliens
+    ág-módban CSAK a részfát tölti le (nem a teljes fát, majd vágja) — így milliós
+    adatnál is tartható. Ellenőrizhető a hálózati fülön: a `GET /api/terkep` kérés
+    `agEntitasId=…` paramétert visz, és a válasz sorai csak a részfát tartalmazzák;
     (h) a Térkép alatt (a teljes képernyős nézetben) is LÁTSZIK a főoldal alsó
     sávja (koino · név · tudatpont · … + hamburger), ugyanúgy, mint a pakliban —
     a Térkép épp az alsó sáv fölött ér véget, és a hamburger menü is használható
@@ -603,9 +622,12 @@ docker logs -f koino-backend
     🗑️ · Módosítás ✏️ · Egyesítés 🔗 · Áthelyezés ➡️ · Csomag 📦; Kategóriának és
     Tartalomtípusnak NINCS mellék-ikonja. (Backend: a `/api/terkep` sorai
     `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel bővültek.)
-    API (curl, 2026-07-19, lefutott): GET `/api/terkep/darabszam` (globális: 25;
-    `?agEntitasId=` ág-BFS: 5), GET `/api/terkep?lapMeret=&kurzor=` (kurzoros
-    lapozás, 3 lap = pontosan 25 sor, cím-viselőknél `cim`, auth nélkül 401).
+    API: GET `/api/terkep/darabszam` (globális összes; `?agEntitasId=` → az ág
+    mérete — 2026-07-23 óta egyetlen indexelt `osLanc`-lekérdezés, nem szintenkénti
+    BFS), GET `/api/terkep?lapMeret=&kurzor=&agEntitasId=` (kurzoros lapozás;
+    `agEntitasId`-vel CSAK a részfát lapozza — indexelt `{ 'osLanc.entitasId':1, _id:1 }`;
+    cím-viselőknél `cim`, auth nélkül 401). Service-teszt (2026-07-23, lefutott):
+    ág → 5 sor, mind a részfa tagja; globális → teljes fa (33 sor).
 51. ⬜ **Síkidom nézet — 1. lépés (terv 14. pont, 2026-07-20 óta):** fő menü →
     **🔷 Síkidom nézet**. STATIKUS ablak (még NINCS dinamikus felfedés / drill-down).
     A globális nézet az **ÖSSZES gyökeret** mutatja (egymás mellé pakolva, a
@@ -710,6 +732,14 @@ docker logs -f koino-backend
     GYEREKEIK vannak (tartalmak/alkategóriák), az egyesítés elfogadása után a gyerekek az ÚJ
     egyesített entitás alá kerülnek (nem a nagyszülőhöz) — a pakliban lefelé navigálva ellenőrizhető.
     Ez a Tartalom-egyesítésre és a Kategória-egyesítésre is áll.
+58. ⬜ **Alsó sáv — entitástípus-darabszámok (2026-07-23):** a főoldal alsó statisztika-sávja
+    mostantól MIND AZ 5 entitástípus darabszámát mutatja (nem csak a tartalmakét): koino · e-embernév ·
+    🌟 tudatpont · 🧑‍🤝‍🧑 e-emberek · 📄 tartalmak · 🧩 kategóriák · 🏷️ tartalomtípusok · 📋 javaslatok ·
+    🤝 egyezmények. Ellenőrzés: a számok betöltődnek (nem „…" marad), és megegyeznek a tényleges
+    darabszámmal; kis képernyőn a sáv több sorba tördhet, de minden elem látszik. Végpont:
+    GET `/api/platform/statisztika` — a válasz most `kategoriakSzama`, `tartalomTipusokSzama`,
+    `javaslatokSzama`, `egyezmenyekSzama` mezőkkel is bővült. Service-teszt (2026-07-23, lefutott):
+    mind a 6 darabszám visszajön.
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

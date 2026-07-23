@@ -43,13 +43,21 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 ### 2026-07-21
 
-- 🆕 „[A térképnek, sem, frondend szűrés kéne, mert az nagy adatmennyiségnél, nem
+- ✅ „[A térképnek, sem, frondend szűrés kéne, mert az nagy adatmennyiségnél, nem
   jó. több millio entitással kell tervezni.]"
   → Kontextus: a Rendezés nézet (15. terv-pont) ágazat-szűrésének tervezése közben
   merült fel. A Térkép (13/b) jelenleg FRONTEND-oldali ág-szűrést használ (a teljes
   fát letölti, a részfát a kliens vágja ki) — ez több millió entitásnál nem tartható.
   Cél: a Térkép ág-szűrését is BACKEND-oldalira cserélni, skálázható módon. A
   skálázhatóság általános elvárás minden nézetnél (több millió entitásra tervezünk).
+  → **MEGVALÓSÍTVA (2026-07-23):** a Térkép ág-szűrése a Rendezés nézetnél már bevált,
+  indexelt `osLanc`-infrastruktúrára került. A letöltő végpont (`GET /api/terkep`)
+  mostantól kap `agEntitasId`-t, és ág-módban CSAK a részfát lapozza le
+  (`{ 'osLanc.entitasId': agEntitasId }` szűrő + új `{ 'osLanc.entitasId':1, _id:1 }`
+  index). A darabszám a szintenkénti BFS helyett egyetlen `countAg` (osLanc). A kliens
+  többé nem tölti le a teljes fát egy ág megjelenítéséhez. A GLOBÁLIS teljes-térkép
+  skálázása (millió csomópont egyszerre) KÜLÖN feladat — külön terv-pont (13/c).
+  Átvezetve a fejlesztési tervbe (13/b + 13/c).
 
 ### 2026-07-11
 

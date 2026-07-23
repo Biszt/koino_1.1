@@ -164,6 +164,29 @@ class eEmberController {
     }
   }
 
+  // ===== FIÓK-TÖRLÉS (ÖNKÉNTES) =====
+  // A bejelentkezett e-ember saját fiókjának végleges törlése, a jelszavával igazolva.
+  // DELETE /api/eember
+  // @param {Object} req - Express request (body: jelszo; req.user az authMiddleware-től)
+  // @param {Object} res - Express response
+  async eemberTorlese(req, res) {
+    console.log('eEmberController.eemberTorlese - KEZDÉS', { eemberId: req.user?.id });
+    try {
+      const { jelszo } = req.body;
+      await eEmberService.eemberTorlese(req.user.id, jelszo);
+
+      res.status(200).json({
+        success: true,
+        message: 'A fiókod és a hozzá tartozó adatok törölve'
+      });
+
+      console.log('eEmberController.eemberTorlese - VÉGE (siker)', { eemberId: req.user?.id });
+    } catch (error) {
+      console.error('eEmberController.eemberTorlese - VÉGE (hiba)', { hiba: error.message });
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
 }
 
 // ===== EXPORTÁLÁS =====

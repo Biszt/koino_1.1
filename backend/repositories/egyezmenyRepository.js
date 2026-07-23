@@ -374,6 +374,15 @@ async updateSzuloId(egyezmenyId, ujSzuloId, ujSzuloTipus) {
   return frissitettEgyezmeny;
 }
 
+  // ----- ÖSSZES EGYEZMÉNY SZÁMA -----
+  // A platform-statisztika (alsó sáv) használja. Szűrés nélkül minden egyezményt számol.
+  // @returns {Promise<number>}
+  async countAll() {
+    console.log('egyezmenyRepository.countAll - KEZDÉS');
+    const szam = await Egyezmeny.countDocuments();
+    console.log('egyezmenyRepository.countAll - VÉGE', { szam });
+    return szam;
+  }
 
 }
 

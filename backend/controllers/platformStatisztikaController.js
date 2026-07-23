@@ -36,17 +36,15 @@ class PlatformStatisztikaController {
       const statisztika = await platformStatisztikaService.platformStatisztikaLekereses();
 
       // === 3. LÉPÉS: SIKERES VÁLASZ KÜLDÉSE ===
-      // 200 OK – sikeres lekérés
+      // 200 OK – a teljes statisztika (mind az 5 entitástípus darabszáma) átadása.
+      // A service teljes objektumát szórjuk szét, hogy új mező hozzáadásakor ne
+      // maradjon le (ez okozta korábban, hogy a 4 új darabszám 0-nak látszott).
       res.status(200).json({
-        success:        true,
-        eemberekSzama:  statisztika.eemberekSzama,   // Platformon regisztrált eemberek száma
-        tartalmakSzama: statisztika.tartalmakSzama   // Platformon lévő tartalmak száma
+        success: true,
+        ...statisztika
       });
 
-      console.log('platformStatisztikaController.platformStatisztikaLekereses - VÉGE (siker)', {
-        eemberekSzama:  statisztika.eemberekSzama,
-        tartalmakSzama: statisztika.tartalmakSzama
-      });
+      console.log('platformStatisztikaController.platformStatisztikaLekereses - VÉGE (siker)', statisztika);
 
     } catch (error) {
       console.error('platformStatisztikaController.platformStatisztikaLekereses - VÉGE (hiba)', {

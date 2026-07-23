@@ -312,6 +312,9 @@ class TerkepModal {
       if (this._megszakitva) return; // megszakították — az _megszakitas már visszaváltott
 
       // --- 2/b. ELRENDEZÉS (darabolva, rAF-szünetekkel, megszakíthatóan) ---
+      // Ág-módban a backend MÁR csak a részfát küldte (skálázható osLanc-szűrés),
+      // így a FaElrendezes agEntitasId-je itt már csak VÉDŐHÁLÓ (ugyanazt a gyökeret
+      // választja ki) — nem tölt be feleslegesen a teljes fából.
       this.elrendezes = new FaElrendezes(sorok, this.agEntitasId);
 
       // Ág-módban a kijelzett összes az ág mérete (a darabszám-végpontból)
@@ -381,10 +384,16 @@ class TerkepModal {
     const sorok = [];
     let kurzor = null;
 
+    // ÁG-MÓDBAN a backend már CSAK a részfát adja vissza (skálázható osLanc-szűrés),
+    // így egy ág megjelenítéséhez sem a teljes fát töltjük le. A folyamatjelző
+    // nevezője ilyenkor az ág mérete (agDarab), globálisan az összes (osszesDarab).
+    const agResz = this.agEntitasId ? `&agEntitasId=${this.agEntitasId}` : '';
+    const nevezo = this.agEntitasId ? (this.agDarab ?? 0) : this.osszesDarab;
+
     do {
       const kurzorResz = kurzor ? `&kurzor=${kurzor}` : '';
       const valasz = await fetch(
-        `${API_ALAP_URL}terkep?lapMeret=${LAP_MERET}${kurzorResz}`,
+        `${API_ALAP_URL}terkep?lapMeret=${LAP_MERET}${kurzorResz}${agResz}`,
         {
           headers: { 'Authorization': `Bearer ${this.token}` },
           signal: this._megszakito?.signal
@@ -399,9 +408,9 @@ class TerkepModal {
       kurzor = adatok.kovetkezoKurzor ?? null;
 
       this._folyamatFrissitese(
-        `Letöltés: ${sorok.length.toLocaleString('hu-HU')} / ${this.osszesDarab.toLocaleString('hu-HU')} entitás`,
+        `Letöltés: ${sorok.length.toLocaleString('hu-HU')} / ${nevezo.toLocaleString('hu-HU')} entitás`,
         // A letöltés a sáv ELSŐ fele (0–50%)
-        Math.min(50, (sorok.length / Math.max(1, this.osszesDarab)) * 50)
+        Math.min(50, (sorok.length / Math.max(1, nevezo)) * 50)
       );
     } while (kurzor && !this._megszakitva);
 

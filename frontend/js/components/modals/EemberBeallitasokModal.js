@@ -2,8 +2,8 @@
 
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
-import { apiGet, apiPut, apiPost } from '../../utils/apiHelper.js';
-import { tokenLekerese, eemberMentese } from '../../utils/authHelper.js';
+import { apiGet, apiPut, apiPost, apiDelete } from '../../utils/apiHelper.js';
+import { tokenLekerese, eemberMentese, tokenTorlese } from '../../utils/authHelper.js';
 import { autocompleteRakotese } from '../../utils/lokacioHelper.js';
 
 // ===== EEMBER BEÁLLÍTÁSOK MODAL =====
@@ -60,6 +60,8 @@ class EemberBeallitasokModal {
       ?.addEventListener('click', () => this._profilMentese());
     document.getElementById('beallitasok-jelszo-mentes')
       ?.addEventListener('click', () => this._jelszoMentese());
+    document.getElementById('beallitasok-fiok-torles')
+      ?.addEventListener('click', () => this._fiokTorles());
 
     // Lokáció autocomplete — ugyanaz a segéd, mint a regisztrációs űrlapon
     autocompleteRakotese('beallitasok-orszag',    'lokacio/orszag');
@@ -200,6 +202,45 @@ class EemberBeallitasokModal {
       console.error('EemberBeallitasokModal._jelszoMentese - HIBA', hiba.message);
       this.modal.betoltesBeallitasa(false);
       this.modal.hibaBeallitasa(hiba.message ?? 'A jelszóváltás sikertelen.');
+    }
+  }
+
+  // ===== FIÓK TÖRLÉSE =====
+  // Végleges, visszafordíthatatlan törlés a jelszóval igazolva. Két lépcső:
+  // (1) a jelszó-mező kitöltése kötelező, (2) egy megerősítő párbeszéd. Siker után
+  // kijelentkeztetünk (token törlése + újratöltés → bejelentkező képernyő).
+  async _fiokTorles() {
+    console.log('EemberBeallitasokModal._fiokTorles - KEZDÉS');
+
+    this.modal.hibaTisztitasa();
+    this._sikerUzenet('beallitasok-torles-siker', '');
+
+    const jelszo = document.getElementById('beallitasok-torles-jelszo')?.value;
+    if (!jelszo) {
+      this.modal.hibaBeallitasa('A fiók törléséhez add meg a jelszavad.');
+      return;
+    }
+
+    // Megerősítő párbeszéd — a művelet visszafordíthatatlan
+    const megerosites = window.confirm(
+      'Biztosan véglegesen törlöd a fiókod? Ez a művelet NEM vonható vissza.'
+    );
+    if (!megerosites) {
+      console.log('EemberBeallitasokModal._fiokTorles - a felhasználó megszakította');
+      return;
+    }
+
+    this.modal.betoltesBeallitasa(true);
+    try {
+      await apiDelete('eember', { jelszo }, this.token);
+      // Sikeres törlés → kijelentkeztetés és vissza a bejelentkező képernyőre
+      tokenTorlese();
+      window.location.reload();
+      console.log('EemberBeallitasokModal._fiokTorles - VÉGE (siker)');
+    } catch (hiba) {
+      console.error('EemberBeallitasokModal._fiokTorles - HIBA', hiba.message);
+      this.modal.betoltesBeallitasa(false);
+      this.modal.hibaBeallitasa(hiba.message ?? 'A fiók törlése sikertelen.');
     }
   }
 

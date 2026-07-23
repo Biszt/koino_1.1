@@ -101,7 +101,7 @@ const egyezmenySchema = new mongoose.Schema({
   letrehozo: {
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'eEmber',                          // Referencia a eEmber modellre
-    required: true                          // Kötelező mező
+    default: null                           // null = TÖRÖLT e-ember (az egyezmény közösségi, megmarad)
     // Index: lásd egyezmenySchema.index({ letrehozo: 1 }) lejjebb
   },
 

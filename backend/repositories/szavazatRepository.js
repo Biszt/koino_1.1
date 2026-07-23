@@ -253,7 +253,20 @@ async countTartozkodok(javaslatId) {
     const eredmeny = await Szavazat.deleteMany({
       javaslatId: javaslatId
     });
-    
+
+    return eredmeny;
+  }
+
+  // ----- EGY EEMBER ÖSSZES SZAVAZATÁNAK TÖRLÉSE -----
+  // Fiók-törléskor: az e-ember minden leadott szavazatának törlése.
+  // @param {string} eemberId - Az e-ember MongoDB ObjectId-ja
+  // @returns {Promise<Object>} Törlés eredménye (deletedCount)
+  async deleteByeEmberId(eemberId) {
+    console.log('szavazatRepository.deleteByeEmberId - KEZDÉS', { eemberId });
+
+    const eredmeny = await Szavazat.deleteMany({ eemberId: eemberId });
+
+    console.log('szavazatRepository.deleteByeEmberId - VÉGE', { torolt: eredmeny.deletedCount });
     return eredmeny;
   }
 }

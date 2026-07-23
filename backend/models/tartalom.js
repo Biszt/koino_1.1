@@ -113,7 +113,7 @@ szuloTipus: {
 letrehozo: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber',                        // Referencia a eEmber modellre
-    required: true                         // Kötelező mező
+    default: null                          // null = TÖRÖLT e-ember (a tartalom közösségi, megmarad)
 },
 
 // ----- LÉTREHOZÁS DÁTUMA -----

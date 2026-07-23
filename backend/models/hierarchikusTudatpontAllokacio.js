@@ -150,6 +150,12 @@ hierarchikusTudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, letrehozva: -
 // szűrő + hierarchikusOsszesPont rendezés egyetlen indexelt lekérdezésben.
 hierarchikusTudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, hierarchikusOsszesPont: -1 });
 
+// ŐS-LÁNC + _id compound index
+// A Térkép ág-szűrt letöltése: { 'osLanc.entitasId': A } szűrő + _id szerinti
+// kurzoros lapozás (sort: { _id: 1 }) EGYETLEN indexelt lekérdezésben — így egy
+// milliós ág lapozott letöltése is teljesen indexelt marad (nincs in-memory sort).
+hierarchikusTudatpontAllokaciSchema.index({ 'osLanc.entitasId': 1, _id: 1 });
+
 // ===== PRE-SAVE MIDDLEWARE =====
 hierarchikusTudatpontAllokaciSchema.pre('save', function(next) {
   this.frissitve = new Date();

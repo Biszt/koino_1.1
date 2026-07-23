@@ -81,3 +81,22 @@
   font-size: var(--text-sm);
   color: var(--color-accent, #37a24d);
 }
+
+/* ===== FIÓK TÖRLÉSE (VESZÉLY-SZAKASZ) ===== */
+/* A visszafordíthatatlan műveletet vizuálisan is elkülönítjük a többitől. */
+.eember-beallitasok-modal__figyelmeztetes {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted, rgba(127, 127, 127, 0.95));
+}
+
+.eember-beallitasok-modal__gomb--veszely {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.eember-beallitasok-modal__gomb--veszely:hover {
+  background: #c0392b;
+  color: #fff;
+}

@@ -320,7 +320,24 @@ class TudatpontRepository {
       entitasId: entitasId,
       entitasTipus: entitasTipus
     });
-    
+
+    return torlesEredmeny;
+  }
+
+  // ----- EGY EEMBER ÖSSZES HOZZÁRENDELÉSÉNEK TÖRLÉSE -----
+  // Egy e-ember minden tudatpont-hozzárendelésének törlése (fiók-törléskor).
+  // A pontokat előbb a service visszaosztja (0-ra állítja) az entitásokról — ez
+  // csak a megmaradt (0 értékű) hozzárendelés-rekordokat söpri ki.
+  // @param {string} eemberId - Az e-ember MongoDB ObjectId-ja
+  // @returns {Promise<Object>} Törlés eredménye (deletedCount)
+  async deleteHozzarendelesekByeEmber(eemberId) {
+    console.log('tudatpontRepository.deleteHozzarendelesekByeEmber - KEZDÉS', { eemberId });
+
+    const torlesEredmeny = await TudatpontHozzarendeles.deleteMany({ eemberId: eemberId });
+
+    console.log('tudatpontRepository.deleteHozzarendelesekByeEmber - VÉGE', {
+      torolt: torlesEredmeny.deletedCount
+    });
     return torlesEredmeny;
   }
 

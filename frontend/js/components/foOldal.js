@@ -40,8 +40,12 @@ class FoOldal {
     this.pakli          = null;
     this.eemberNev      = '...';
     this.tudatpontok    = '...';
-    this.eemberekSzama  = '...';
-    this.tartalmakSzama = '...';
+    this.eemberekSzama        = '...';
+    this.tartalmakSzama       = '...';
+    this.kategoriakSzama      = '...';
+    this.tartalomTipusokSzama = '...';
+    this.javaslatokSzama      = '...';
+    this.egyezmenyekSzama     = '...';
     console.log('FoOldal.constructor - VÉGE', {
       tokenForrasa: token ? 'parameter' : 'authHelper',
       vanToken: !!this.token
@@ -625,8 +629,12 @@ init() {
 
       this.eemberNev      = sajatAdatok.eemberNev;
       this.tudatpontok    = sajatAdatok.tudatpontok.toLocaleString();
-      this.eemberekSzama  = platformStatisztika.eemberekSzama.toLocaleString();
-      this.tartalmakSzama = platformStatisztika.tartalmakSzama.toLocaleString();
+      this.eemberekSzama        = platformStatisztika.eemberekSzama.toLocaleString();
+      this.tartalmakSzama       = platformStatisztika.tartalmakSzama.toLocaleString();
+      this.kategoriakSzama      = (platformStatisztika.kategoriakSzama ?? 0).toLocaleString();
+      this.tartalomTipusokSzama = (platformStatisztika.tartalomTipusokSzama ?? 0).toLocaleString();
+      this.javaslatokSzama      = (platformStatisztika.javaslatokSzama ?? 0).toLocaleString();
+      this.egyezmenyekSzama     = (platformStatisztika.egyezmenyekSzama ?? 0).toLocaleString();
 
       this.alsoSavFrissitese();
 
@@ -673,8 +681,14 @@ init() {
     const elemek = {
       'info-eembernev':       this.eemberNev,
       'info-tudatpont':       `🌟 ${this.tudatpontok}`,
-      'info-eemberek-szama':  `🧑‍🤝‍🧑 ${this.eemberekSzama}`,
-      'info-tartalmak-szama': `📄 ${this.tartalmakSzama}`
+      'info-eemberek-szama':       `🧑‍🤝‍🧑 ${this.eemberekSzama}`,
+      // Az entitás-ikonok a platform egységes készletét követik (mint a Térképen):
+      // Tartalom 📄 · Kategória 🧩 · Tartalomtípus 🏷️ · Javaslat 📋 · Egyezmény 🤝
+      'info-tartalmak-szama':      `📄 ${this.tartalmakSzama}`,
+      'info-kategoriak-szama':     `🧩 ${this.kategoriakSzama}`,
+      'info-tartalomtipusok-szama':`🏷️ ${this.tartalomTipusokSzama}`,
+      'info-javaslatok-szama':     `📋 ${this.javaslatokSzama}`,
+      'info-egyezmenyek-szama':    `🤝 ${this.egyezmenyekSzama}`
     };
 
     Object.entries(elemek).forEach(([id, szoveg]) => {
@@ -701,7 +715,11 @@ init() {
       'info-eembernev',
       'info-tudatpont',
       'info-eemberek-szama',
-      'info-tartalmak-szama'
+      'info-tartalmak-szama',
+      'info-kategoriak-szama',
+      'info-tartalomtipusok-szama',
+      'info-javaslatok-szama',
+      'info-egyezmenyek-szama'
     ];
 
     elemIds.forEach(id => {

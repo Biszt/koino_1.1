@@ -4,9 +4,11 @@
 // Felelősség: a Térkép (teljes képernyős, interaktív fa-nézet) backend-adatai.
 //   1. darabszamLekerese  — az entitások összdarabszáma (és ág-szűrésnél az ág
 //      darabszáma) az ELŐZETES kijelzéshez ("N entitás — elkészíted?").
-//   2. lapLekerese        — a teljes fa LAPOZOTT lekérése (kurzoros, _id szerint);
-//      a fát a frontend építi fel a lapos sorokból. A lapozás adja a letöltési
+//   2. lapLekerese        — a fa LAPOZOTT lekérése (kurzoros, _id szerint); a fát a
+//      frontend építi fel a lapos sorokból. A lapozás adja a letöltési
 //      folyamatjelzőt és a megszakíthatóságot (a kliens egyszerűen nem kér többet).
+//      ÁG-MÓDBAN (agEntitasId) CSAK a részfát lapozza (skálázható osLanc-szűrés),
+//      így a kliens nem a teljes fát tölti le egyetlen ág megjelenítéséhez.
 // Adatforrás: a hierarchikusTudatpontAllokacio kollekció — ebben MINDEN entitás
 // (mind az 5 típus) benne van szülő-kapcsolattal és hierarchikus ponttal.
 // Címek: az ertesitesService közös entitasCimekFeltoltese segédje (a 3 cím-viselő
@@ -27,19 +29,14 @@ const Egyezmeny = require('../models/egyezmeny');
 // Egy lap maximális mérete — ennél többet egy kérésre nem adunk
 const MAX_LAP_MERET = 2000;
 
-// Az ág-bejárás (BFS) biztonsági mélység-korlátja — hibás (körkörös) szülő-lánc
-// esetén se fusson végtelen ciklusba
-const MAX_BEJARASI_MELYSEG = 100;
-
 // --- TÉRKÉP SERVICE OSZTÁLY ---
 class TerkepService {
 
 // ----- DARABSZÁM LEKÉRÉSE -----
 /**
 * Az entitások összdarabszáma, ág-szűrésnél az ág darabszáma is.
-* Az ág darabszámát szintenkénti BFS-sel számoljuk: a gyökértől lefelé
-* szintenként EGY-EGY csoportos ($in) lekérdezéssel gyűjtjük a gyerekeket —
-* a bejárt dokumentumok száma összesen az ág mérete (nincs N+1).
+* Az ág darabszámát EGYETLEN indexelt lekérdezés adja az osLanc-szűrésen
+* (repository.countAg) — skálázható, több millió entitásnál is (nincs N-körös BFS).
 * @param {string|null} agEntitasId - opcionális ág-gyökér entitás azonosítója
 * @returns {Promise<Object>} { osszesDarab, agDarab } (agDarab csak ág-szűrésnél)
 */
@@ -48,24 +45,12 @@ async darabszamLekerese(agEntitasId = null) {
 
   const osszesDarab = await hierarchikusAllokaciRepository.countOsszes();
 
-  let agDarab = null;
-  if (agEntitasId) {
-    // BFS szintenként: az ág gyökere (1 db) + a szintenkénti gyerekek összege
-    agDarab = 1;
-    let aktualisSzint = [agEntitasId];
-    let melyseg = 0;
-
-    while (aktualisSzint.length > 0 && melyseg < MAX_BEJARASI_MELYSEG) {
-      const kovetkezoSzint = await hierarchikusAllokaciRepository.findGyerekIdkBySzulok(aktualisSzint);
-      agDarab += kovetkezoSzint.length;
-      aktualisSzint = kovetkezoSzint;
-      melyseg++;
-    }
-
-    if (melyseg >= MAX_BEJARASI_MELYSEG) {
-      console.warn('TerkepService.darabszamLekerese - mélység-korlát elérve, az ág-darabszám csonka lehet');
-    }
-  }
+  // ÁG-DARABSZÁM (skálázható): a részfa méretét EGYETLEN indexelt lekérdezéssel
+  // számoljuk az osLanc-szűrésen (countAg) — a régi szintenkénti BFS (N-körös,
+  // több millió entitásnál nem tartható) helyett. A gyökér önmaga is beleszámít.
+  const agDarab = agEntitasId
+    ? await hierarchikusAllokaciRepository.countAg(agEntitasId)
+    : null;
 
   console.log('TerkepService.darabszamLekerese - VÉGE', { osszesDarab, agDarab });
   return { osszesDarab, agDarab };
@@ -78,13 +63,14 @@ async darabszamLekerese(agEntitasId = null) {
 * mezője a lap utolsó sorának _id-ja (null, ha nincs több lap).
 * @param {string|null} kurzorId - az előző lap utolsó sorának _id-ja (null = első lap)
 * @param {number} lapMeret - kért lapméret (a MAX_LAP_MERET-re vágva)
+* @param {string|null} agEntitasId - opcionális ág-gyökér: csak ennek a részfáját lapozza
 * @returns {Promise<Object>} { sorok, kovetkezoKurzor }
 */
-async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET) {
-  console.log('TerkepService.lapLekerese - KEZDÉS', { kurzorId, lapMeret });
+async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null) {
+  console.log('TerkepService.lapLekerese - KEZDÉS', { kurzorId, lapMeret, agEntitasId });
 
   const limit = Math.min(Math.max(1, lapMeret), MAX_LAP_MERET);
-  const nyersSorok = await hierarchikusAllokaciRepository.findTerkepLap(kurzorId, limit);
+  const nyersSorok = await hierarchikusAllokaciRepository.findTerkepLap(kurzorId, limit, agEntitasId);
 
   // Címek feltöltése típusonként EGY csoportos lekérdezéssel (közös segéd).
   // A segéd entitasCim mezőt tesz minden sorra (Javaslat/Egyezmény → null).

@@ -44,6 +44,11 @@ router.put('/eember/adatok', authMiddleware, eemberController.profilModositasa);
 // Védett – csak a régi jelszó helyes megadásával
 router.post('/eember/jelszovaltas', authMiddleware, eemberController.jelszoValtas);
 
+// ----- FIÓK-TÖRLÉS (ÖNKÉNTES) -----
+// DELETE kérés: /api/eember (body: jelszo)
+// Védett – a saját fiók végleges törlése, a jelszóval igazolva (visszafordíthatatlan)
+router.delete('/eember', authMiddleware, eemberController.eemberTorlese);
+
 // ===== ROUTER EXPORTÁLÁSA =====
 // Ezt importálja a server.js
 module.exports = router;

@@ -54,7 +54,7 @@ class TerkepController {
   // ===================================
   // LAP LEKÉRÉSE
   // ===================================
-  // GET /api/terkep?kurzor=<utolsoLapKurzor>&lapMeret=2000
+  // GET /api/terkep?kurzor=<utolsoLapKurzor>&lapMeret=2000&agEntitasId=<id>
   async lap(req, res) {
     console.log('TerkepController.lap - KEZDÉS', { query: req.query });
 
@@ -74,7 +74,11 @@ class TerkepController {
       let lapMeret = parseInt(req.query.lapMeret, 10);
       if (!Number.isInteger(lapMeret) || lapMeret < 1) lapMeret = 2000;
 
-      const eredmeny = await TerkepService.lapLekerese(kurzor, lapMeret);
+      // Opcionális ág-szűrő (a kártya-menük Térkép pontja): ág-módban csak a
+      // részfát lapozzuk le, nem a teljes fát (skálázható, osLanc-alapú szűrés).
+      const agEntitasId = req.query.agEntitasId || null;
+
+      const eredmeny = await TerkepService.lapLekerese(kurzor, lapMeret, agEntitasId);
 
       console.log('TerkepController.lap - VÉGE', {
         sorokSzama: eredmeny.sorok.length,

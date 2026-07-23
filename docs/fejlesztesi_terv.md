@@ -126,6 +126,20 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
    autocomplete-tel; mentés után fejléc-frissítés) és jelszóváltás (jelenlegi jelszó
    igazolásával, regisztrációs erősség-szabállyal). Backend: PUT `/api/eember/adatok`
    + POST `/api/eember/jelszovaltas`; a `sajat-adatok` válaszban már email + lokacio is.
+   - **FIÓK-TÖRLÉS (2026-07-23):** a modál „veszély"-szakaszában önkéntes, végleges
+     fiók-törlés — jelszós megerősítéssel. Backend: DELETE `/api/eember`
+     (`eemberService.eemberTorlese`). A tudatpontokat VISSZAOSZTJA (minden aktív
+     hozzárendelést 0-ra állít → a „nincs 0-tudatpontos entitás" láncreakció törli a
+     0-ra esett entitásokat; a mások által is támogatottak megmaradnak). Törli a
+     szavazatait, érték-javaslatait, értesítéseit és beállításait; a megmaradó
+     entitásokon a `letrehozo`-t null-ra („törölt e-ember") állítja (a séma most már
+     enged null-t az 5 entitásnál). Az érték-javaslatok törlésekor a megmaradó
+     entitások küszöb-HISZTOGRAMJÁBÓL is kivonja őket (új `ertekSzamitasService.
+     hisztogramCsokkentese`), így a medián-küszöb frissül, nem marad benne a törölt
+     e-ember szavazata. Az általa MEGHÍVOTTAK bizalmi-gráf éle
+     (`meghivoEemberId`) SZÁNDÉKOSAN érintetlen (Fázis 2 alapja). Böngésző nélkül
+     igazolva; böngészős teszt: teszt.md 47. Kapcsolódik az adatvédelmi nyilatkozat
+     „törlését kérheted" ígéretéhez ([adatvedelmi_nyilatkozat.md](adatvedelmi_nyilatkozat.md)).
 9. [x] **Új kategória létrehozása ebből → ALKATEGÓRIA** (Kategória kártya).
     KÉSZ (2026-07-22; böngészős teszt hátra: teszt.md 55). Menüpont: **🏷️ „Új alkategória
     létrehozása"** (a fő menü „Új kategória létrehozása" ikonjával, `tudatpontFuggo`),
@@ -378,6 +392,33 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
           a levágási hosszt a betűmérettel fordítottan arányosítja (kisebb betű →
           több karakter). A méret inline `style`-lal kerül a SVG-címre (felülírja
           a CSS tartalék 11px-et).
+        - **13/b-9. Ág-szűrés BACKEND-oldalra (skálázhatóság, 2026-07-23, Csaba
+          jegyzete 2026-07-21).** Eddig a kártya-menük „Térkép" pontja ág-módban is
+          a TELJES fát letöltötte, és a kliens (`FaElrendezes`) vágta ki a részfát —
+          több millió entitásnál nem tartható. Megoldás: a Térkép ág-szűrése a
+          Rendezés nézetnél már bevált, indexelt `osLanc`-infrastruktúrára került.
+          - **Letöltő végpont:** `GET /api/terkep` mostantól kap `agEntitasId`-t;
+            ág-módban a szűrő `{ 'osLanc.entitasId': agEntitasId }` → CSAK a részfa
+            sorai jönnek (a gyökér önmaga is, mert az osLanc önmagával kezdődik).
+            (`terkepController.lap` → `terkepService.lapLekerese` →
+            `repository.findTerkepLap(kurzor, limit, agEntitasId)`.)
+          - **Darabszám:** a szintenkénti BFS (`darabszamLekerese`) helyett egyetlen
+            indexelt `repository.countAg(agEntitasId)` (osLanc). A régi BFS-kód és a
+            `MAX_BEJARASI_MELYSEG` konstans törölve.
+          - **Új index:** `{ 'osLanc.entitasId': 1, _id: 1 }` — az ág-letöltés
+            `_id`-kurzoros lapozása milliós ágnál is teljesen indexelt marad.
+          - **Frontend (`TerkepModal._faLetoltese`):** ág-módban `&agEntitasId=…` a
+            kéréshez, a folyamatjelző nevezője az ág mérete (`agDarab`). A
+            `FaElrendezes` ág-szűrője megmarad VÉDŐHÁLÓNAK (már csak a részfa érkezik).
+          - Böngésző nélkül igazolva (service-teszt): ág → 5 sor, mind a részfa
+            tagja; globális → teljes fa. Böngészős teszt: Csaba.
+
+    - **13/c. GLOBÁLIS teljes-térkép skálázása — [ ] KÜLÖN FELADAT (2026-07-23).**
+      A 13/b-9 az ÁG-szűrt esetet oldotta meg. A globális „mutass mindent" nézet
+      (millió csomópont egyszerre) más stratégiát kíván (viewport/LOD-alapú
+      szerver-lapozás vagy aggregált áttekintés) — itt nincs mit szűrni, magát a
+      teljes halmaz megjelenítését kell darabolni. Nyitott terv-pont, még nem
+      kezdett.
 
 14. [ ] **Síkidom nézet (fő menü) — ⏸️ FELFÜGGESZTVE (2026-07-20).** Az 1. lépés
     (statikus ablak) elkészült és böngésző nélkül tesztelt, DE a megjelenés még

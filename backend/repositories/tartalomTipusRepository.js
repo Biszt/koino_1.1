@@ -170,8 +170,18 @@ class TartalomTipusRepository {
     
     // Tartalom típusok megszámlálása
     const darab = await TartalomTipus.countDocuments(query);
-    
+
     return darab;
+  }
+
+  // ----- ÖSSZES TARTALOMTÍPUS SZÁMA -----
+  // A platform-statisztika (alsó sáv) használja. Szűrés nélkül minden típust számol.
+  // @returns {Promise<number>}
+  async countAll() {
+    console.log('tartalomTipusRepository.countAll - KEZDÉS');
+    const szam = await TartalomTipus.countDocuments();
+    console.log('tartalomTipusRepository.countAll - VÉGE', { szam });
+    return szam;
   }
 }
 

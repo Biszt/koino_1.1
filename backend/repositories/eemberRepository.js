@@ -148,6 +148,20 @@ class eEmberRepository {
     return szam;
   }
 
+  // ----- EEMBER TÖRLÉSE ID ALAPJÁN -----
+  // Fiók-törlés: az e-ember rekord (személyes adatok: e-mail, név, jelszó, lokáció)
+  // végleges eltávolítása. A kapcsolódó adatok kezelése a service felelőssége.
+  // @param {string} id - Az e-ember MongoDB ObjectId-ja
+  // @returns {Promise<Object|null>} A törölt dokumentum vagy null
+  async deleteById(id) {
+    console.log('eEmberRepository.deleteById - KEZDÉS', { id });
+
+    const torolt = await eEmber.findByIdAndDelete(id);
+
+    console.log('eEmberRepository.deleteById - VÉGE', { torolt: !!torolt });
+    return torolt;
+  }
+
 }
 
 // ===== EXPORTÁLÁS =====
