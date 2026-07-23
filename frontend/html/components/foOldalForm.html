@@ -26,6 +26,29 @@
          A HamburgerMenu.js rendereli ide a gombot, overlayt és panelt -->
     <div id="hamburger-menu-kontener"></div>
 
+    <!-- ===== VISSZA / ELŐRE TÖRTÉNET GOMBOK =====
+         Mivel az app modálokat nyit/zár (nincs valódi oldalbetöltés), a böngésző
+         saját Vissza gombja nem használható – ezért saját történet-navigáció.
+         A foOldal.js köti be és állítja a tiltott állapotukat. -->
+    <div class="also-sav__tortenet" role="group" aria-label="Vissza és előre navigáció">
+      <button
+        type="button"
+        id="tortenet-vissza-gomb"
+        class="also-sav__tortenet-gomb"
+        aria-label="Vissza"
+        title="Vissza (Alt+←)"
+        disabled
+      >↩</button>
+      <button
+        type="button"
+        id="tortenet-elore-gomb"
+        class="also-sav__tortenet-gomb"
+        aria-label="Előre"
+        title="Előre (Alt+→)"
+        disabled
+      >↪</button>
+    </div>
+
     <!-- INFÓK SÁVA – statisztika adatok, foOldal.js tölti fel az API válasz alapján -->
     <div class="also-sav__infok" aria-label="Platform statisztika">
 

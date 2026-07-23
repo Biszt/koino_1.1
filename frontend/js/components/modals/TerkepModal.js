@@ -221,6 +221,14 @@ class TerkepModal {
     console.log('TerkepModal.megnyitas - KEZDÉS');
     this._teljesNezetBekapcsolasa();
     this.modal?.megnyitas();
+
+    // Jelzés a történet-kezelőnek (FoOldal): a Térkép NÉZET megnyílt, így külön
+    // vissza/előre lépésként rögzülhet. Az agEntitasId különbözteti meg a teljes
+    // (fő menüs, null) és az ág-szűrt (kártya-menüs) térképet — újranyitáskor is ez kell.
+    document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
+      detail: { nezet: 'terkep', agEntitasId: this.agEntitasId ?? null, cim: this.cimFelirat }
+    }));
+
     // NINCS előzetes kérdés (Csaba kérése): egyből nekiállunk az építésnek.
     // A folyamatjelző (számláló) + Mégse gomb az építés nézetben végig látszik.
     this._epitesInditasa();

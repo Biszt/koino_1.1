@@ -112,6 +112,15 @@ function aktivEntitasMentese(entitasId, entitasTipus) {
   if (entitasId && entitasTipus) {
     localStorage.setItem('koino_aktiv_entitas_id',     entitasId.toString());
     localStorage.setItem('koino_aktiv_entitas_tipus',  entitasTipus);
+
+    // ===== KÖZÖS NAVIGÁCIÓS JELZÉS =====
+    // MINDEN entitás-váltás átfut ezen a függvényen (kártya-koppintás, testvér-ugrás,
+    // térkép/kereső/értesítés – akár a fő menüből, akár egy kártya menüjéből), ezért
+    // ez az egyetlen közös hely, ahonnan a vissza/előre történetet rögzíteni lehet.
+    // A FoOldal erre az eseményre figyel (koino:aktivEntitasValtozas) és rögzít.
+    document.dispatchEvent(new CustomEvent('koino:aktivEntitasValtozas', {
+      detail: { entitasId: entitasId.toString(), entitasTipus }
+    }));
   } else {
     localStorage.removeItem('koino_aktiv_entitas_id');
     localStorage.removeItem('koino_aktiv_entitas_tipus');

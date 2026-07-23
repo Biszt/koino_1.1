@@ -83,6 +83,56 @@
   }
 }
 
+/* ===== VISSZA / ELŐRE TÖRTÉNET GOMBOK ===== */
+/* A hamburger gomb mellett, ugyanabban a zöld sávban ülnek – ezért a hamburger
+   gomb stílusvilágát követik (áttetsző fehér háttér, világos ikon). */
+.also-sav__tortenet {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.also-sav__tortenet-gomb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Kényelmes érintési terület mobilon */
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+
+  /* Stílus – a hamburger gombhoz igazítva */
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+  color: var(--color-text-inverse);
+  font-size: var(--text-lg); /* Az ← / → nyíl jól olvasható méretben */
+  line-height: 1;
+  cursor: pointer;
+
+  transition: background var(--transition-fast),
+              transform var(--transition-fast),
+              opacity var(--transition-fast);
+}
+
+/* Hover – csak engedélyezett gombon */
+.also-sav__tortenet-gomb:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Koppintás visszajelzés – csak engedélyezett gombon */
+.also-sav__tortenet-gomb:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95);
+}
+
+/* Tiltott állapot – ha nincs hova lépni: halvány, nem kattintható */
+.also-sav__tortenet-gomb:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ===== FŐOLDAL TARTALOM TERÜLET ===== */
 /* Az alsó sáv magassága (~56px) miatt a tartalom ne csússzon alá */
 /* calc: alsó sáv tényleges magassága + egy kis légköz */

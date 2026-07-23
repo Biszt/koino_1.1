@@ -741,6 +741,24 @@ docker logs -f koino-backend
     `javaslatokSzama`, `egyezmenyekSzama` mezőkkel is bővült. Service-teszt (2026-07-23, lefutott):
     mind a 6 darabszám visszajön.
 
+59. ⬜ **Főoldal vissza/előre történet (2026-07-23):** az alsó sávban a hamburger mellett két új
+    gomb: **↩ Vissza** / **↪ Előre** (billentyű: `Alt+←` / `Alt+→`). Mivel az app modálokat nyit/zár
+    (nincs valódi oldalbetöltés), a böngésző saját Vissza gombja nem használható — ez a saját
+    történet-navigáció. A gombok tiltottak, ha nincs hova lépni. Ellenőrzés:
+    - **Entitás-lánc:** navigálj több entitáson (kártya-koppintás, testvér-ugrás, kereső/térkép/
+      értesítés/tudatpont ugrás – akár a fő menüből, akár egy kártya menüjéből) → ↩ visszalépeget,
+      ↪ előre. (A rögzítés közös pontja: `aktivEntitasMentese` → `koino:aktivEntitasValtozas` esemény.)
+    - **Rendezés mint lépés:** menj be egy tartalomba → **rendezz** (kártya- vagy fő menü) → ↩ kilép a
+      rendezett (lapos) nézetből, vissza az entitásra; ↪ újra alkalmazza a rendezést.
+    - **Térkép mint lépés:** nyisd meg a **Térképet** (fő menüből VAGY kártya-menüből) → ↩ bezárja és
+      visszalép; ↪ újranyitja ugyanazt (teljes vagy ág-szűrt) térképet. A ↩ ↪ a teljes képernyős
+      térkép fölött is kattintható (az alsó sáv a térkép fölé emelkedik).
+    - **Modál-védelem:** nyitott MÓDOSÍTÓ modálnál (pl. új tartalom, javaslat) a ↩ / `Alt+←` először
+      csak bezárja a modált (mint az Esc), nem navigál alatta.
+    - Böngésző-konzol: `_debug_tortenet.allapotLekeres()` mutatja a `{visszaLehetseges, eloreLehetseges}`
+      állapotot. Architektúra: `FoOldalTortenetKezelo` (két-veremes), a nézet-állapotok típusai:
+      `entitas` · `rendezes` · `nezet` (térkép).
+
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 
 | Végpont | Auth | Leírás |

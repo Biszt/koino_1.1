@@ -367,6 +367,13 @@ async rendezesBeallitasa(mod = 'hierarchikus', irany = 'csokkeno', agazatId = nu
     await this.init();
   }
 
+  // Jelzés a történet-kezelőnek (FoOldal): a pakli NÉZETE változott (rendezés).
+  // A lapos mód nem hív aktivEntitasMentese-t, ezért külön eseménnyel jelezzük,
+  // hogy a rendezés is bekerülhessen a vissza/előre történetbe.
+  document.dispatchEvent(new CustomEvent('koino:rendezesValtozas', {
+    detail: { mod, irany, agazatId }
+  }));
+
   console.log('Pakli.rendezesBeallitasa - VÉGE', { mod });
 }
 
@@ -802,6 +809,21 @@ async entitasKivalasztasa(entitasId, entitasTipus) {
   console.log('Pakli.entitasKivalasztasa - VÉGE', { entitasId, entitasTipus });
 }
 
+// ----- AKTUÁLIS ENTITÁS LEKÉRÉSE -----
+// Tiszta, publikus lekérő: az ÉPPEN kiválasztott kártya entitása.
+// A FoOldal használja a történet-kezelő (vissza/előre) kezdő állapotának
+// beültetéséhez, mert innen tudja meg az aktuális entitás típusát is.
+// @returns {{ entitasId: string, entitasTipus: string }|null} - null, ha nincs kártya
+aktualisEntitas() {
+  const kartya = this.kartyaPeldanyok?.[this.kivalasztottIndex];
+  const ent = kartya?.entitas ?? null;
+  if (!ent) {
+    console.log('Pakli.aktualisEntitas - nincs kiválasztott kártya');
+    return null;
+  }
+  return { entitasId: ent.entitasId.toString(), entitasTipus: ent.entitasTipus };
+}
+
 // ----- ESEMÉNYEK BEKÖTÉSE -----
 // Wheel eseményt figyelünk a vízszintes testvérváltáshoz.
 // Debounce + instance-szintű jelző védi a többszörös gyors tüzelés ellen.
@@ -908,7 +930,9 @@ async testverValtasa(irany) {
   // Irány eltárolása az animációhoz (az ugrások is bal/jobb animációt kapnak)
   this.legutobbiIrany = animIrany;
 
-  // Azonnali mentés, hogy részleges betöltés közben is helyes érték legyen
+  // Azonnali mentés, hogy részleges betöltés közben is helyes érték legyen.
+  // (Ez küldi a koino:aktivEntitasValtozas eseményt is, így a testvér-ugrás
+  //  automatikusan bekerül a vissza/előre történetbe – külön jelzés nem kell.)
   aktivEntitasMentese(celId, celTestver.entitasTipus);
 
   // VÁLTOZÁS: nincs csonka fázis – közvetlenül a teljes betöltés indul

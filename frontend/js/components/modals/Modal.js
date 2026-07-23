@@ -485,6 +485,26 @@ async _templateBetoltese(kontener) {
     return megerositoModal;
   }
 
+  // ===== STATIKUS: VAN-E NYITOTT MODÁL =====
+  // Igaz, ha éppen legalább egy modal nyitva van (a nyitott-modál verem nem üres).
+  // A FoOldal vissza/előre logikája ezt nézi: nyitott modálnál a Vissza ELŐBB
+  // a modált zárja, nem a paklit navigálja.
+  // @returns {boolean}
+  static vanNyitottModal() {
+    return nyitottModalVerem.length > 0;
+  }
+
+  // ===== STATIKUS: LEGFELSŐ MODÁL BEZÁRÁSA =====
+  // A verem tetején lévő (aktív) modált zárja be – pontosan úgy, mint az ESC.
+  // Betöltés alatt lévő modált NEM zárunk (ahogy az ESC/overlay sem).
+  // @returns {boolean} - true, ha volt mit bezárni és be is zártuk
+  static legfelsoModalBezarasa() {
+    const legfelso = nyitottModalVerem[nyitottModalVerem.length - 1];
+    if (!legfelso || legfelso.betoltesbenE) return false;
+    legfelso.bezaras();
+    return true;
+  }
+
 }
 
 // ===== EXPORTÁLÁS =====

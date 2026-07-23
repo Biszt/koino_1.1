@@ -28,6 +28,7 @@ import RendezesModal from './modals/RendezesModal.js'; // Pakli rendezés-válas
 import SikidomModal from './modals/SikidomModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
+import FoOldalTortenetKezelo from './FoOldalTortenetKezelo.js';
 
 
 class FoOldal {
@@ -38,6 +39,14 @@ class FoOldal {
     this.hamburgerMenu  = null;
     this.modal          = null;
     this.pakli          = null;
+
+    // A főoldali vissza/előre navigáció történet-kezelője (2. lépés).
+    // Az init()-ben jön létre; itt csak a mezőket foglaljuk le.
+    this.tortenet = null;
+
+    // Jelző: éppen a vissza/előre gomb JÁTSSZA VISSZA egy korábbi állapotot?
+    // Ilyenkor a navigációt NEM szabad új történet-lépésként rögzíteni.
+    this._navigalasVisszajatszas = false;
     this.eemberNev      = '...';
     this.tudatpontok    = '...';
     this.eemberekSzama        = '...';
@@ -59,6 +68,20 @@ class FoOldal {
 init() {
   console.log('FoOldal.init - KEZDÉS');
 
+  // A vissza/előre történet-kezelő. A változás-callback a ◀ / ▶ gombok
+  // tiltott állapotát frissíti (a gombok maga a 3. lépésben kerülnek a DOM-ba;
+  // a frissítő addig is hibátlanul lefut, ha még nincsenek elemek).
+  this.tortenet = new FoOldalTortenetKezelo({
+    onValtozas: (allapot) => this._tortenetGombokFrissitese(allapot)
+  });
+  // Böngészős teszteléshez elérhetővé tesszük a konzolon (a gombok a 3. lépésben
+  // jönnek; addig is hívható: _debug_foOldal.tortenetVissza() / .tortenetElore())
+  window._debug_tortenet = this.tortenet;
+  window._debug_foOldal  = this;
+
+  // A ◀ / ▶ gombok és az Alt+←/→ billentyűk bekötése (a HTML már betöltött)
+  this._tortenetGombokBekotese();
+
   this.hamburgerMenu = new HamburgerMenu(
     'hamburger-menu-kontener',
     this._hamburgerOpciokEpitese()
@@ -75,6 +98,26 @@ init() {
   // A KÁRTYÁK ág-szűrt Tudatpontok nézetéből érkező jelzés: pont-módosítás után
   // az alsó statisztika-sáv (szabad tudatpont) frissítése (Kartya.js küldi).
   document.addEventListener('koino:tudatpontValtozas', () => this.adatokBetoltese());
+
+  // ===== KÖZÖS NAVIGÁCIÓS JELZÉS → VISSZA/ELŐRE TÖRTÉNET =====
+  // Minden entitás-váltás átfut az aktivEntitasMentese()-n, ami elküldi ezt az
+  // eseményt. Így EGY helyen rögzítjük a történetbe az összes navigációt – legyen
+  // az kártya-koppintás, testvér-ugrás, vagy fő-/kártya-menüs térkép/kereső ugrás.
+  document.addEventListener('koino:aktivEntitasValtozas', (esemeny) => {
+    this._aktivEntitasValtozott(esemeny.detail);
+  });
+
+  // A RENDEZÉS is nézet-állapot: a pakli rendezés-váltásakor (fő menü VAGY kártya
+  // menü) ide jelez, és külön vissza/előre lépésként rögzül.
+  document.addEventListener('koino:rendezesValtozas', (esemeny) => {
+    this._rendezesValtozott(esemeny.detail);
+  });
+
+  // A TÉRKÉP megnyitása is nézet-állapot (fő menü VAGY kártya menü): a TerkepModal
+  // jelez ide megnyitáskor, és külön vissza/előre lépésként rögzül.
+  document.addEventListener('koino:nezetNyitas', (esemeny) => {
+    this._nezetNyitott(esemeny.detail);
+  });
 
   this.modal = new Modal('modal-kontener', {
     cim:      '',
@@ -96,13 +139,29 @@ init() {
     'modal-kontener',
     (ujEntitasId, ujEntitasTipus) => {
       console.log('FoOldal - kiválasztott entitás váltás', { ujEntitasId, ujEntitasTipus });
+      // A pakli MÁR odalépett (kártya-koppintás). Csak mentünk – a mentés elküldi
+      // a koino:aktivEntitasValtozas eseményt, ami a történetbe is rögzíti.
       aktivEntitasMentese(ujEntitasId, ujEntitasTipus);
     }
   );
   window._debug_pakli = this.pakli;
 
-  // _pakliInditasa kezeli az érvénytelen mentett entitást
-  this._pakliInditasa(entitasId, entitasTipus);
+  // _pakliInditasa kezeli az érvénytelen mentett entitást.
+  // A betöltés UTÁN beültetjük a kezdő állapotot a történetbe (ez lesz az első,
+  // amire majd nincs hova visszalépni). A valós betöltött entitástól kérjük le,
+  // mert a mentett entitás érvénytelensége esetén a pakli gyökérről indul.
+  this._pakliInditasa(entitasId, entitasTipus).then(() => {
+    const kezdo = this.pakli?.aktualisEntitas?.();
+    // Közvetlenül a történetbe ültetjük (nem eseményen át) – ez a kiinduló állapot,
+    // amire nincs hova visszalépni. A localStorage-ban már benne van.
+    if (kezdo) {
+      this.tortenet.rogzit({
+        tipus: 'entitas',
+        entitasId: kezdo.entitasId,
+        entitasTipus: kezdo.entitasTipus
+      });
+    }
+  });
 
   this.adatokBetoltese();
 
@@ -135,6 +194,234 @@ init() {
     }
 
     console.log('FoOldal._pakliInditasa - VÉGE');
+  }
+
+
+  // =====================================
+  // AKTÍV ENTITÁS VÁLTOZOTT → TÖRTÉNETBE
+  // =====================================
+  // A koino:aktivEntitasValtozas eseményre fut (amit az aktivEntitasMentese küld).
+  // Ez az EGYETLEN hely, ahol entitás-váltás a történetbe kerül – így minden
+  // navigációs útvonal (kártya, testvér, fő-/kártya-menüs térkép/kereső) automatikusan
+  // bekerül. Vissza/előre visszajátszás közben NEM rögzítünk (nehogy hurkot képezzen).
+  // @param {{entitasId:string, entitasTipus:string}} reszletek
+  _aktivEntitasValtozott(reszletek) {
+    if (this._navigalasVisszajatszas) {
+      console.log('FoOldal._aktivEntitasValtozott - KIHAGYVA (visszajátszás)');
+      return;
+    }
+    if (!reszletek?.entitasId || !reszletek?.entitasTipus) return;
+
+    console.log('FoOldal._aktivEntitasValtozott - rögzítés', reszletek);
+    this.tortenet?.rogzit({
+      tipus: 'entitas',
+      entitasId: reszletek.entitasId,
+      entitasTipus: reszletek.entitasTipus
+    });
+  }
+
+
+  // =====================================
+  // RENDEZÉS VÁLTOZOTT → TÖRTÉNETBE
+  // =====================================
+  // A koino:rendezesValtozas eseményre fut (amit a Pakli.rendezesBeallitasa küld).
+  // Rendezett (lapos) módnál 'rendezes' állapotot rögzít; hierarchikusra visszatéréskor
+  // az aktuális entitást (entitás-állapot). Visszajátszás közben nem rögzít.
+  // @param {{mod:string, irany:string, agazatId:string|null}} reszletek
+  _rendezesValtozott(reszletek) {
+    if (this._navigalasVisszajatszas) {
+      console.log('FoOldal._rendezesValtozott - KIHAGYVA (visszajátszás)');
+      return;
+    }
+
+    if (reszletek.mod === 'hierarchikus') {
+      // Vissza a fa-nézetre → entitás-állapotként rögzül (ha van aktuális entitás)
+      const ent = this.pakli?.aktualisEntitas?.();
+      if (ent) {
+        this.tortenet?.rogzit({ tipus: 'entitas', entitasId: ent.entitasId, entitasTipus: ent.entitasTipus });
+      }
+      return;
+    }
+
+    console.log('FoOldal._rendezesValtozott - rögzítés', reszletek);
+    this.tortenet?.rogzit({
+      tipus: 'rendezes',
+      mod: reszletek.mod,
+      irany: reszletek.irany,
+      agazatId: reszletek.agazatId ?? null
+    });
+  }
+
+
+  // =====================================
+  // NÉZET-MODÁL MEGNYÍLT → TÖRTÉNETBE
+  // =====================================
+  // A koino:nezetNyitas eseményre fut (a TerkepModal küldi megnyitáskor). A térkép
+  // megnyitása külön 'nezet' állapotként rögzül: a Vissza bezárja, az Előre újranyitja.
+  // Az entitasId/entitasTipus az a pakli-entitás, ami fölött a nézet megnyílt (kontextus).
+  // @param {{nezet:string, agEntitasId:string|null, cim:string}} reszletek
+  _nezetNyitott(reszletek) {
+    if (this._navigalasVisszajatszas) {
+      console.log('FoOldal._nezetNyitott - KIHAGYVA (visszajátszás)');
+      return;
+    }
+
+    const ent = this.pakli?.aktualisEntitas?.() ?? {};
+    console.log('FoOldal._nezetNyitott - rögzítés', reszletek);
+    this.tortenet?.rogzit({
+      tipus: 'nezet',
+      nezet: reszletek.nezet,
+      agEntitasId: reszletek.agEntitasId ?? null,
+      cim: reszletek.cim ?? null,
+      entitasId: ent.entitasId ?? null,
+      entitasTipus: ent.entitasTipus ?? null
+    });
+  }
+
+
+  // =====================================
+  // NAVIGÁLÁS EGY ENTITÁSRA (KÖZÖS KAPU)
+  // =====================================
+  // A fő-menüs modál-vezérelt ugrások (kereső, térkép, síkidom, tudatpontok,
+  // értesítések) közös belépője: ment (ez küldi a történet-rögzítő eseményt), majd
+  // betölti a paklit az adott entitásra.
+  // @param {string} entitasId
+  // @param {string} entitasTipus
+  async _navigalasEntitasra(entitasId, entitasTipus) {
+    console.log('FoOldal._navigalasEntitasra - KEZDÉS', { entitasId, entitasTipus });
+    aktivEntitasMentese(entitasId, entitasTipus);
+    await this._pakliInditasa(entitasId, entitasTipus);
+    console.log('FoOldal._navigalasEntitasra - VÉGE');
+  }
+
+
+  // =====================================
+  // TÖRTÉNET: VISSZA / ELŐRE (PUBLIKUS)
+  // =====================================
+  // A 3. lépésben a ◀ / ▶ gombok és az Alt+←/→ billentyűk hívják majd.
+  // A történet-kezelő visszaadja a célállapotot, ezt itt JÁTSSZUK VISSZA.
+  async tortenetVissza() {
+    console.log('FoOldal.tortenetVissza - KEZDÉS');
+
+    // Ha nyitott modál van, ami NEM a történet része (módosító modál), a Vissza
+    // csak becsukja azt (mint az Esc). Ha viszont a jelenlegi állapot egy NÉZET
+    // (pl. nyitott térkép), akkor a rendes történet-vissza fut – ami az apply során
+    // úgyis bezárja a nézet-modált, és visszalép az előző állapotra.
+    if (Modal.vanNyitottModal() && this.tortenet?.jelenlegiAllapot()?.tipus !== 'nezet') {
+      Modal.legfelsoModalBezarasa();
+      console.log('FoOldal.tortenetVissza - VÉGE (nyitott módosító modál bezárva)');
+      return;
+    }
+
+    const cel = this.tortenet?.vissza();
+    if (cel) await this._allapotAlkalmazasa(cel);
+    console.log('FoOldal.tortenetVissza - VÉGE', { voltCel: !!cel });
+  }
+
+  async tortenetElore() {
+    console.log('FoOldal.tortenetElore - KEZDÉS');
+
+    // Nyitott MÓDOSÍTÓ modál mellett az Előre nem lép (nem navigálunk alatta). De ha
+    // a jelenlegi állapot egy NÉZET (nyitott térkép), az Előre léphet – az apply a
+    // térképet becsukja, és a következő állapotra vált.
+    if (Modal.vanNyitottModal() && this.tortenet?.jelenlegiAllapot()?.tipus !== 'nezet') {
+      console.log('FoOldal.tortenetElore - VÉGE (nyitott módosító modál, nincs lépés)');
+      return;
+    }
+
+    const cel = this.tortenet?.elore();
+    if (cel) await this._allapotAlkalmazasa(cel);
+    console.log('FoOldal.tortenetElore - VÉGE', { voltCel: !!cel });
+  }
+
+
+  // =====================================
+  // EGY KORÁBBI ÁLLAPOT VISSZAJÁTSZÁSA
+  // =====================================
+  // A vissza/előre célállapotát valósítja meg. A visszajátszás alatt a
+  // _navigalasVisszajatszas jelző biztosítja, hogy a betöltés ne rögzüljön újra.
+  // Kétféle rögzített állapot van: 'entitas' (pakli-entitás) és 'rendezes' (lapos
+  //   rendezett nézet). A térkép nézet-állapotként a következő lépésben kerül ide.
+  // @param {{tipus:string, entitasId?:string, entitasTipus?:string, mod?:string, irany?:string, agazatId?:string|null}} allapot
+  async _allapotAlkalmazasa(allapot) {
+    console.log('FoOldal._allapotAlkalmazasa - KEZDÉS', { allapot });
+
+    this._navigalasVisszajatszas = true;
+    try {
+      // Bármi nyitott nézet-modált bezárunk – a cél állapot majd újranyitja, ha kell
+      // (pl. entitásra visszalépéskor a nyitott térkép becsukódik).
+      if (Modal.vanNyitottModal()) Modal.legfelsoModalBezarasa();
+
+      if (allapot.tipus === 'nezet') {
+        // NÉZET (térkép) újranyitása a mentett paraméterekkel
+        await this._nezetModalNyitasa(allapot);
+      } else if (allapot.tipus === 'rendezes') {
+        // RENDEZETT (lapos) nézet visszaállítása a mentett rendezés-paraméterekkel
+        await this.pakli.rendezesBeallitasa(allapot.mod, allapot.irany, allapot.agazatId);
+      } else {
+        // ENTITÁS-nézet: mentés + hierarchikus fa-nézet a cél entitáson.
+        // A rendezesBeallitasa('hierarchikus') a most elmentett aktív entitástól indul,
+        // így egyúttal kilép egy esetleges rendezett (lapos) módból is.
+        aktivEntitasMentese(allapot.entitasId, allapot.entitasTipus);
+        await this.pakli.rendezesBeallitasa('hierarchikus', this.pakli?.rendezesIrany ?? 'csokkeno', null);
+      }
+    } finally {
+      this._navigalasVisszajatszas = false;
+    }
+
+    console.log('FoOldal._allapotAlkalmazasa - VÉGE');
+  }
+
+
+  // =====================================
+  // TÖRTÉNET-GOMBOK ÁLLAPOT-FRISSÍTÉSE
+  // =====================================
+  // A ◀ / ▶ gombok tiltott állapotát állítja a történet aktuális helyzete szerint.
+  // Védetten fut: ha a gombok még nincsenek a DOM-ban (3. lépés előtt), nem hibázik.
+  // @param {{visszaLehetseges:boolean, eloreLehetseges:boolean}} [allapot]
+  _tortenetGombokFrissitese(allapot) {
+    const { visszaLehetseges, eloreLehetseges } =
+      allapot ?? this.tortenet?.allapotLekeres() ?? { visszaLehetseges: false, eloreLehetseges: false };
+
+    const visszaGomb = document.getElementById('tortenet-vissza-gomb');
+    const eloreGomb  = document.getElementById('tortenet-elore-gomb');
+    if (visszaGomb) visszaGomb.disabled = !visszaLehetseges;
+    if (eloreGomb)  eloreGomb.disabled  = !eloreLehetseges;
+  }
+
+
+  // =====================================
+  // TÖRTÉNET-GOMBOK BEKÖTÉSE
+  // =====================================
+  // A ◀ / ▶ gombok kattintás-figyelője, és az Alt+←/→ billentyűparancsok.
+  // Az init() hívja, miután a HTML (benne a gombok) már a DOM-ban van.
+  _tortenetGombokBekotese() {
+    console.log('FoOldal._tortenetGombokBekotese - KEZDÉS');
+
+    const visszaGomb = document.getElementById('tortenet-vissza-gomb');
+    const eloreGomb  = document.getElementById('tortenet-elore-gomb');
+
+    if (visszaGomb) visszaGomb.addEventListener('click', () => this.tortenetVissza());
+    if (eloreGomb)  eloreGomb.addEventListener('click', () => this.tortenetElore());
+
+    // Billentyűparancsok: Alt+← = vissza, Alt+→ = előre.
+    // A böngésző saját Alt+nyíl lépését felülírjuk (preventDefault).
+    document.addEventListener('keydown', (esemeny) => {
+      if (!esemeny.altKey) return;
+
+      if (esemeny.key === 'ArrowLeft') {
+        esemeny.preventDefault();
+        this.tortenetVissza();
+      } else if (esemeny.key === 'ArrowRight') {
+        esemeny.preventDefault();
+        this.tortenetElore();
+      }
+    });
+
+    // Kezdő állapot beállítása (mindkét gomb tiltott, amíg nincs történet)
+    this._tortenetGombokFrissitese();
+
+    console.log('FoOldal._tortenetGombokBekotese - VÉGE');
   }
 
 
@@ -360,8 +647,7 @@ init() {
       token: this.token,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - kereső találatból navigálás', { entitasId, entitasTipus });
-        aktivEntitasMentese(entitasId, entitasTipus);
-        this._pakliInditasa(entitasId, entitasTipus);
+        this._navigalasEntitasra(entitasId, entitasTipus);
       }
     });
 
@@ -408,26 +694,59 @@ init() {
   // pakli az entitásra navigál. Az aktuális entitás a térképen kiemelve.
   async _terkepMegnyitasa() {
     console.log('FoOldal._terkepMegnyitasa - KEZDÉS');
-
     this.hamburgerMenu?.bezaras();
+    // Fő menüs Térkép = TELJES fa (nincs ág-szűrő → agEntitasId null)
+    await this._terkepModalLetrehozasa(null, null);
+    console.log('FoOldal._terkepMegnyitasa - VÉGE');
+  }
+
+
+  // =====================================
+  // TÉRKÉP MODAL LÉTREHOZÁSA (KÖZÖS)
+  // =====================================
+  // Egy helyen hozza létre és nyitja a Térkép modált – ezt használja a fő menüs
+  // megnyitás ÉS a vissza/előre visszajátszás (a történetből újranyitáskor) is.
+  // @param {string|null} agEntitasId - null: teljes fa (fő menü); id: ág-szűrt (kártya)
+  // @param {string|null} cim - opcionális modal-cím (ág-szűrt térképnél az ág neve)
+  async _terkepModalLetrehozasa(agEntitasId = null, cim = null) {
+    console.log('FoOldal._terkepModalLetrehozasa - KEZDÉS', { agEntitasId, cim });
 
     // Az éppen aktív entitás — a térképen kiemelve jelenik meg
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
 
-    const terkepModal = new TerkepModal('modal-kontener', {
+    const konfig = {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - térkép csomópontból navigálás', { entitasId, entitasTipus });
-        aktivEntitasMentese(entitasId, entitasTipus);
-        this._pakliInditasa(entitasId, entitasTipus);
+        this._navigalasEntitasra(entitasId, entitasTipus);
       }
-    });
+    };
+    if (agEntitasId) konfig.agEntitasId = agEntitasId;
+    if (cim)         konfig.cim         = cim;
 
+    const terkepModal = new TerkepModal('modal-kontener', konfig);
     await terkepModal.init();
     terkepModal.megnyitas();
 
-    console.log('FoOldal._terkepMegnyitasa - VÉGE');
+    console.log('FoOldal._terkepModalLetrehozasa - VÉGE');
+  }
+
+
+  // =====================================
+  // NÉZET-MODÁL ÚJRANYITÁSA (VISSZA/ELŐRE)
+  // =====================================
+  // Egy 'nezet' állapotot valósít meg: a mentett paraméterek szerint újranyitja
+  // a nézet-modált. Jelenleg a Térkép; a Síkidom/Világtérkép később bővíthető.
+  // @param {{nezet:string, agEntitasId:string|null, cim:string|null}} allapot
+  async _nezetModalNyitasa(allapot) {
+    console.log('FoOldal._nezetModalNyitasa - KEZDÉS', { allapot });
+    if (allapot.nezet === 'terkep') {
+      await this._terkepModalLetrehozasa(allapot.agEntitasId, allapot.cim);
+    } else {
+      console.warn('FoOldal._nezetModalNyitasa - ismeretlen nézet', { nezet: allapot.nezet });
+    }
+    console.log('FoOldal._nezetModalNyitasa - VÉGE');
   }
 
 
@@ -450,8 +769,7 @@ init() {
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - síkidomból navigálás', { entitasId, entitasTipus });
-        aktivEntitasMentese(entitasId, entitasTipus);
-        this._pakliInditasa(entitasId, entitasTipus);
+        this._navigalasEntitasra(entitasId, entitasTipus);
       }
     });
 
@@ -477,8 +795,7 @@ init() {
       token: this.token,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - tudatpontok listából navigálás', { entitasId, entitasTipus });
-        aktivEntitasMentese(entitasId, entitasTipus);
-        this._pakliInditasa(entitasId, entitasTipus);
+        this._navigalasEntitasra(entitasId, entitasTipus);
       },
       // Pont-módosítás után az alsó sáv (szabad tudatpont) frissítése
       onValtozas: () => this.adatokBetoltese(),
@@ -555,8 +872,7 @@ init() {
       token: this.token,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - értesítésből navigálás', { entitasId, entitasTipus });
-        aktivEntitasMentese(entitasId, entitasTipus);
-        this._pakliInditasa(entitasId, entitasTipus);
+        this._navigalasEntitasra(entitasId, entitasTipus);
       },
       // Olvasottnak jelölés után (egy vagy mind) a badge-számláló frissítése
       onValtozas: () => this._ertesitesBadgeFrissitese()
