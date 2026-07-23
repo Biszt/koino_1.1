@@ -9,6 +9,7 @@ import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tuda
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
 import RendezesModal from '../modals/RendezesModal.js'; // Ág-szűrt rendezés a kártya menüjéből (15. terv-pont)
+import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js'; // „Fejlesztésre vár" üzenet (pl. Világtérkép)
 import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Térkép is ezt használja)
 
 // --- ALAP KÁRTYA OSZTÁLY ---
@@ -99,36 +100,46 @@ async init() {
   // Csak akkor tesszük be, ha a kártya kapott modal-konténert (az ismeretlen típusú
   // alap-kártyának nincs, ott a menüpont sem értelmezhető).
   if (this.modalKontenerAzon) {
+    // KÖZÖS MENÜPONTOK MINDEN KÁRTYÁN, két csoportba rendezve (a kártya-specifikus
+    // műveletek után): (a) INFO — Értesítések, Tudatpontok; (b) NAVIGÁCIÓ — Keresés,
+    // Térkép, Világtérkép, Rendezés. A csoportok elejét elválasztó vonal jelzi.
+
+    // (a) INFO-csoport — elválasztóval a kártya-specifikus műveletektől.
+    // Az entitás ÁGÁNAK értesítései (ág-szűrt postafiók), a badge-dzsel.
     opciok.push({
-      ikon:    '🔔',
-      felirat: 'Értesítések',
-      badge:   true,
-      akcio:   () => this._agErtesitesekMegnyitasa()
+      ikon:       '🔔',
+      felirat:    'Értesítések',
+      elvalaszto: true,
+      badge:      true,
+      akcio:      () => this._agErtesitesekMegnyitasa()
     });
-    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: az entitás ÁGA alatti saját tudatpontok
-    // (ág-szűrt Tudatpontok nézet) — Csaba kérése (2026-07-18): a fő menüs lista
-    // a kártyákról ágazatra szűrve is elérhető legyen.
+    // Az entitás ÁGA alatti saját tudatpontok (ág-szűrt Tudatpontok nézet).
     opciok.push({
       ikon:    '🌟',
       felirat: 'Tudatpontok',
       akcio:   () => this._agTudatpontokMegnyitasa()
     });
-    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: keresés az entitás ÁGA alatt (ág-szűrt
-    // kereső) — Csaba kérése (2026-07-18): a kereső a kártyákról is elérhető.
+
+    // (b) NAVIGÁCIÓ-csoport — új elválasztóval. Keresés az entitás ÁGA alatt.
     opciok.push({
-      ikon:    '🔍',
-      felirat: 'Keresés',
-      akcio:   () => this._agKeresesMegnyitasa()
+      ikon:       '🔍',
+      felirat:    'Keresés',
+      elvalaszto: true,
+      akcio:      () => this._agKeresesMegnyitasa()
     });
-    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: az entitás ÁGÁNAK térképe (ág-szűrt
-    // Térkép) — terv 13/b: a fő menü a teljes fát, a kártya a saját részfáját nyitja.
+    // Az entitás ÁGÁNAK térképe (ág-szűrt Térkép) — terv 13/b.
     opciok.push({
       ikon:    '🗺️',
       felirat: 'Térkép',
       akcio:   () => this._agTerkepMegnyitasa()
     });
-    // KÖZÖS MENÜPONT MINDEN KÁRTYÁN: rendezés az entitás ÁGÁN (részfáján) belül
-    // (15. terv-pont) — a fő menü globálisan rendez, a kártya a saját részfáját.
+    // Világtérkép — ÚJ, még fejlesztésre vár (minden menüben egységesen).
+    opciok.push({
+      ikon:    '🚧',
+      felirat: 'Világtérkép',
+      akcio:   () => fejlesztesreVarMegjelenitese('Világtérkép', this.modalKontenerAzon)
+    });
+    // Rendezés az entitás ÁGÁN (részfáján) belül (15. terv-pont).
     opciok.push({
       ikon:    '↕️',
       felirat: 'Rendezés',

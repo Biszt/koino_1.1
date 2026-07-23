@@ -43,6 +43,13 @@
   right: -0.5rem;
 }
 
+/* UGRÁS-gomb (|‹ legelső / ›| legutolsó): ugyanaz az áttetsző stílus és bal/jobb
+   pozíció, mint a lépés-gomboké, csak a lépés-gomb ALÁ kerül (a base top:50%-ot
+   írjuk felül; a translateY(-50%) marad, így a gomb a lentebbi pontra igazodik). */
+.testver-jelzo--ugras {
+  top: calc(50% + 2.1rem);
+}
+
 /* A kacsacsőr karakter (‹ ›) — nagyobb és hangsúlyosabb, mint a szám */
 .testver-jelzo__nyil {
   font-size: 1.25em;

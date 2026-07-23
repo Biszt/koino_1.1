@@ -142,7 +142,11 @@ init() {
 
     // A 🚧 ikonú pontok a fejlesztési terv részei (docs/fejlesztesi_terv.md),
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg
+    // A pontok logikai CSOPORTOKBA rendezve, a csoportok között elválasztó vonallal
+    // (`elvalaszto: true` az adott csoport ELSŐ elemén). Csoportok:
+    //   1) Nézetek/navigáció · 2) Értesítések · 3) Létrehozás · 4) Fiók · 5) Kilépés
     const opciok = [
+      // — 1) Nézetek / navigáció —
       {
         ikon:    '🔍',
         felirat: 'Keresés',
@@ -154,30 +158,41 @@ init() {
         akcio:   () => this._terkepMegnyitasa()
       },
       {
-        ikon:    '🔷',
+        // ÚJ, még fejlesztésre vár (a régi koino világtérkép újraépítése)
+        ikon:    '🚧',
+        felirat: 'Világtérkép',
+        akcio:   () => fejlesztesreVarMegjelenitese('Világtérkép')
+      },
+      {
+        // Fejlesztésre vár állapotban (a nézet kódja megmarad, de egyelőre nem nyílik)
+        ikon:    '🚧',
         felirat: 'Síkidom nézet',
-        akcio:   () => this._sikidomMegnyitasa()
+        akcio:   () => fejlesztesreVarMegjelenitese('Síkidom nézet')
       },
       {
         ikon:    '↕️',
         felirat: 'Rendezés',
         akcio:   () => this._rendezesMegnyitasa()
       },
+      // — 2) Értesítések —
       {
-        ikon:    '🔔',
-        felirat: 'Értesítések',
-        badge:   true, // A sor jobb szélén az olvasatlan értesítések piros számlálója
-        akcio:   () => this._ertesitesekMegnyitasa()
+        ikon:       '🔔',
+        felirat:    'Értesítések',
+        elvalaszto: true,
+        badge:      true, // A sor jobb szélén az olvasatlan értesítések piros számlálója
+        akcio:      () => this._ertesitesekMegnyitasa()
       },
       {
         ikon:    '🔔',
         felirat: 'Értesítési beállítások',
         akcio:   () => this._ertesitesiBeallitasokGlobalis()
       },
+      // — 3) Létrehozás —
       {
-        ikon:    '✏️',
-        felirat: 'Új tartalom létrehozása',
-        akcio:   () => this._ujTartalomModalMegnyitasa()
+        ikon:       '✏️',
+        felirat:    'Új tartalom létrehozása',
+        elvalaszto: true,
+        akcio:      () => this._ujTartalomModalMegnyitasa()
       },
       {
         ikon:    '🏷️',
@@ -189,26 +204,29 @@ init() {
         felirat: 'Új tartalom típus létrehozása',
         akcio:   () => this._ujTartalomTipusModalMegnyitasa()
       },
+      // — 4) Fiók —
       {
-        ikon:    '✉️',
-        felirat: 'Meghívóim',
-        akcio:   () => this._meghivoimMegnyitasa()
+        ikon:       '✉️',
+        felirat:    'Meghívóim',
+        elvalaszto: true,
+        akcio:      () => this._meghivoimMegnyitasa()
       },
       {
-        ikon:       '🌟',
-        felirat:    'Tudatpontok',
-        elvalaszto: true,
-        akcio:      () => this._tudatpontokMegnyitasa()
+        ikon:    '🌟',
+        felirat: 'Tudatpontok',
+        akcio:   () => this._tudatpontokMegnyitasa()
       },
       {
         ikon:    '⚙️',
         felirat: 'eember beállítások',
         akcio:   () => this._eemberBeallitasokMegnyitasa()
       },
+      // — 5) Kilépés —
       {
-        ikon:    '🚪',
-        felirat: 'Kijelentkezés',
-        akcio:   () => this._kijelentkezes()
+        ikon:       '🚪',
+        felirat:    'Kijelentkezés',
+        elvalaszto: true,
+        akcio:      () => this._kijelentkezes()
       }
     ];
 

@@ -137,6 +137,15 @@
   /* Belső tér – vízszintesen a menüpontok saját paddingja adja */
   padding: var(--space-3) 0;
 
+  /* HOSSZÚ LISTA GÖRGETÉSE: ha a menü magasabb a képernyőnél, a PANEL görgessen
+     belül (ne a lista lógjon le a képernyőről, és ne az alatta lévő pakli mozogjon).
+     Az overscroll-behavior: contain megakadályozza, hogy a panel tetejére/aljára
+     érve a görgetés „átterjedjen" a paklira. */
+  max-height: 85vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; /* Sima, lendületes görgetés iOS-en */
+
   /* Kezdőállapot: láthatatlan + kicsit összenyomva */
   opacity: 0;
   pointer-events: none;

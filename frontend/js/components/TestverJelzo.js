@@ -10,18 +10,21 @@
 class TestverJelzo {
 
 // ----- KONSTRUKTOR -----
-// @param {Function} onLepes - callback: ('elozo'|'kovetkezo') irányú testvérváltás
+// @param {Function} onLepes - callback a testvérváltáshoz. Irányok:
+//   'elozo' / 'kovetkezo' (egy lépés), 'legelso' / 'legutolso' (a sor széléig ugrás)
 constructor(onLepes) {
   console.log('TestverJelzo.constructor - KEZDÉS');
   this.onLepes = onLepes;
-  this.balGomb = null;  // ‹ N gomb DOM eleme
-  this.jobbGomb = null; // N › gomb DOM eleme
+  // Minden kihelyezett gomb egy tömbben — az eltávolítás egyszerű és teljes.
+  this.gombok = [];
   console.log('TestverJelzo.constructor - VÉGE');
 }
 
 // ----- MEGJELENÍTÉS -----
 // A korábbi gombokat eltávolítja, majd a hordozó kártyára illeszti az újakat.
-// Csak abba az irányba tesz gombot, amerre VAN testvér (0-nál nincs gomb).
+// Oldalanként két gomb: egy LÉPÉS-gomb (‹ N / N ›) és egy UGRÁS-gomb (|‹ / ›|,
+// a sor legelejére / legvégére). Csak abba az irányba teszünk gombot, amerre
+// VAN testvér (0-nál egyik sem jelenik meg).
 // @param {HTMLElement} hordozoElem - a kiválasztott kártya külső DOM eleme
 //   (position: relative — a gombok ehhez képest pozicionálódnak)
 // @param {number} elozoSzam - testvérek száma az 'elozo' irányban (bal)
@@ -35,19 +38,53 @@ megjelenites(hordozoElem, elozoSzam, kovetkezoSzam) {
     return;
   }
 
+  // BAL oldal: lépés az előző testvérre + ugrás a legelső testvérre
   if (elozoSzam > 0) {
-    this.balGomb = this._gombLetrehozasa('elozo', elozoSzam);
-    hordozoElem.appendChild(this.balGomb);
+    this._gombKihelyezese(hordozoElem, this._gombLetrehozasa('elozo', elozoSzam));
+    this._gombKihelyezese(hordozoElem, this._ugrasGombLetrehozasa('legelso'));
   }
+  // JOBB oldal: lépés a következő testvérre + ugrás a legutolsó testvérre
   if (kovetkezoSzam > 0) {
-    this.jobbGomb = this._gombLetrehozasa('kovetkezo', kovetkezoSzam);
-    hordozoElem.appendChild(this.jobbGomb);
+    this._gombKihelyezese(hordozoElem, this._gombLetrehozasa('kovetkezo', kovetkezoSzam));
+    this._gombKihelyezese(hordozoElem, this._ugrasGombLetrehozasa('legutolso'));
   }
 
-  console.log('TestverJelzo.megjelenites - VÉGE', {
-    balGombVan: !!this.balGomb,
-    jobbGombVan: !!this.jobbGomb
+  console.log('TestverJelzo.megjelenites - VÉGE', { gombok: this.gombok.length });
+}
+
+// ----- EGY GOMB KIHELYEZÉSE -----
+// A hordozóra teszi és nyilvántartja a takarításhoz.
+_gombKihelyezese(hordozoElem, gomb) {
+  hordozoElem.appendChild(gomb);
+  this.gombok.push(gomb);
+}
+
+// ----- UGRÁS-GOMB LÉTREHOZÁSA -----
+// A sor szélére ugró gomb (nincs rajta szám, csak a jel). Ugyanaz az áttetsző
+// stílus, mint a lépés-gomboké (a --ugras módosító csak a függőleges pozíciót adja).
+// @param {string} irany - 'legelso' (bal, |‹) vagy 'legutolso' (jobb, ›|)
+// @returns {HTMLElement} a kész gomb
+_ugrasGombLetrehozasa(irany) {
+  const legelso = irany === 'legelso';
+
+  const gomb = document.createElement('button');
+  gomb.type = 'button';
+  gomb.className = `testver-jelzo testver-jelzo--ugras testver-jelzo--${legelso ? 'bal' : 'jobb'}`;
+  gomb.setAttribute('aria-label', legelso ? 'Ugrás a legelső testvérre' : 'Ugrás a legutolsó testvérre');
+
+  const jel = document.createElement('span');
+  jel.className = 'testver-jelzo__nyil';
+  jel.setAttribute('aria-hidden', 'true');
+  jel.textContent = legelso ? '|‹' : '›|';
+  gomb.appendChild(jel);
+
+  gomb.addEventListener('click', (esemeny) => {
+    esemeny.stopPropagation(); // ne váltson kártya-kiválasztást
+    console.log('TestverJelzo - ugrás gomb kattintás', { irany });
+    if (typeof this.onLepes === 'function') this.onLepes(irany);
   });
+
+  return gomb;
 }
 
 // ----- GOMB LÉTREHOZÁSA -----
@@ -99,16 +136,10 @@ _gombLetrehozasa(irany, szam) {
 }
 
 // ----- ELTÁVOLÍTÁS -----
-// Mindkét gombot leszedi a DOM-ról (ha épp rajta vannak) és elengedi a referenciákat.
+// Az összes kihelyezett gombot leszedi a DOM-ról és üríti a nyilvántartást.
 eltavolitas() {
-  if (this.balGomb) {
-    this.balGomb.remove();
-    this.balGomb = null;
-  }
-  if (this.jobbGomb) {
-    this.jobbGomb.remove();
-    this.jobbGomb = null;
-  }
+  this.gombok.forEach(gomb => gomb.remove());
+  this.gombok = [];
 }
 
 }

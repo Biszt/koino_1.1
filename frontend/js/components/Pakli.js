@@ -872,15 +872,27 @@ async testverValtasa(irany) {
   // így a kijelzett szám és a tényleges lépés sosem térhet el egymástól).
   const { teljesSor, aktivIndex } = testverSzamok(aktivElem, testverek);
 
-  // Lépés a kívánt irányba.
-  // 'kovetkezo' = lejjebb, alacsonyabb pont felé (index + 1);
-  // 'elozo'     = feljebb, magasabb pont felé (index - 1).
-  const celIndex = irany === 'kovetkezo' ? aktivIndex + 1 : aktivIndex - 1;
+  // Cél-index a kívánt irány szerint.
+  // 'kovetkezo' = lejjebb (index + 1); 'elozo' = feljebb (index - 1);
+  // 'legutolso' = a sor VÉGÉRE (utolsó index); 'legelso' = a sor ELEJÉRE (0).
+  let celIndex;
+  switch (irany) {
+    case 'kovetkezo': celIndex = aktivIndex + 1;           break;
+    case 'elozo':     celIndex = aktivIndex - 1;           break;
+    case 'legutolso': celIndex = teljesSor.length - 1;     break;
+    case 'legelso':   celIndex = 0;                        break;
+    default:          celIndex = aktivIndex;
+  }
 
-  if (celIndex < 0 || celIndex >= teljesSor.length) {
-    console.log('Pakli.testverValtasa - VÉGE: elértük a sor végét', { irany });
+  // Ha nincs hova lépni (kilóg a sorból, vagy már ott állunk) → nincs teendő.
+  if (celIndex < 0 || celIndex >= teljesSor.length || celIndex === aktivIndex) {
+    console.log('Pakli.testverValtasa - VÉGE: nincs hova lépni', { irany, celIndex, aktivIndex });
     return;
   }
+
+  // Az ANIMÁCIÓ iránya csak balra/jobbra lehet: az ugrások is a megfelelő
+  // oldalra „húznak" (legelso → mint elozo, legutolso → mint kovetkezo).
+  const animIrany = (irany === 'elozo' || irany === 'legelso') ? 'elozo' : 'kovetkezo';
 
   const celTestver = teljesSor[celIndex];
 
@@ -893,8 +905,8 @@ async testverValtasa(irany) {
 
   console.log('Pakli.testverValtasa - cél testvér meghatározva', { celId, celTipus: celTestver.entitasTipus });
 
-  // Irány eltárolása az animációhoz
-  this.legutobbiIrany = irany;
+  // Irány eltárolása az animációhoz (az ugrások is bal/jobb animációt kapnak)
+  this.legutobbiIrany = animIrany;
 
   // Azonnali mentés, hogy részleges betöltés közben is helyes érték legyen
   aktivEntitasMentese(celId, celTestver.entitasTipus);
@@ -915,7 +927,7 @@ async testverValtasa(irany) {
     // Irány attribútum beállítása az animációhoz
     const wrapper = document.getElementById('pakli-wrapper');
     if (wrapper) {
-      wrapper.setAttribute('data-irany', irany);
+      wrapper.setAttribute('data-irany', animIrany);
     }
   } catch (hiba) {
     console.error('Pakli.testverValtasa - API hiba', { hiba: hiba.message });
