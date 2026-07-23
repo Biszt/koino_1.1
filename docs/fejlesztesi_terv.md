@@ -17,18 +17,25 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 
 ### 1. Fő hamburger menü (alsó sáv — `foOldal.js`)
 
-| Menüpont | Állapot | Megjegyzés |
-|---|---|---|
-| Értesítések | 🚧 | Most „hamarosan" modal; a backend értesítés-rendszer (ertesitesService, ertesitesRoutes) már létezik, a frontend hiányzik |
-| Új tartalom létrehozása | ✅ | TartalomModal |
-| Új kategória létrehozása | ✅ | KategoriaModal |
-| Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
-| Tudatpontok | 🚧 | ÚJ menüpont — saját tudatpontok áttekintése és átrendezése |
-| eember beállítások | 🚧 | Most „hamarosan" modal |
-| Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b). AKTÍV IRÁNY (2026-07-20: visszatértünk hozzá a síkidom felfüggesztése után) |
-| Rendezés | 🚧 | ÚJ (15. pont, 2026-07-20) — pakli rendezés-választó: hierarchikus (alap) / időrend / saját összpont; fő menü = globális, kártya-menü = ág-szűrt (részfa) |
-| Síkidom nézet | ⏸️ | FELFÜGGESZTVE (2026-07-20) — az 1. lépés (statikus ablak) elkészült, de a megjelenés még nem jó; jegelve, később visszatérünk (14. terv-pont) |
-| Kijelentkezés | ✅ | |
+A menü CSOPORTOKBA rendezve, közöttük elválasztó vonallal (2026-07-22): (1) nézetek/navigáció ·
+(2) értesítések · (3) létrehozás · (4) fiók · (5) kilépés.
+
+| Csoport | Menüpont | Állapot | Megjegyzés |
+|---|---|---|---|
+| 1. Nézetek | Keresés | ✅ | KeresesModal (12. pont) |
+| 1. Nézetek | Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b) |
+| 1. Nézetek | **Világtérkép** | 🚧 | ÚJ (2026-07-22) — fejlesztésre vár; a régi koino világtérkép újraépítése. MINDEN menüben szerepel (fő + kártya) |
+| 1. Nézetek | Síkidom nézet | 🚧 | Fejlesztésre vár (2026-07-22, Csaba): a menü a „Fejlesztésre vár" üzenetet hívja; a nézet KÓDJA (`SikidomModal`, `_sikidomMegnyitasa`) megmarad (14. terv-pont) |
+| 1. Nézetek | Rendezés | ✅ | Pakli rendezés-választó (15. pont): hierarchikus/időrend/saját/ágazati pont; fő menü = globális |
+| 2. Értesítések | Értesítések | ✅ | ErtesitesekModal + olvasatlan badge |
+| 2. Értesítések | Értesítési beállítások | ✅ | Globális ErtesitesiBeallitasModal |
+| 3. Létrehozás | Új tartalom létrehozása | ✅ | TartalomModal |
+| 3. Létrehozás | Új kategória létrehozása | ✅ | KategoriaModal |
+| 3. Létrehozás | Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
+| 4. Fiók | Meghívóim | ✅ | Meghívó rendszer |
+| 4. Fiók | Tudatpontok | ✅ | Saját aktív tudatpont-hozzárendelések (7. pont) |
+| 4. Fiók | eember beállítások | ✅ | EemberBeallitasokModal (8. pont) |
+| 5. Kilépés | Kijelentkezés | ✅ | |
 
 ### 2. Tartalom kártya menü (`TartalomKartya.js`)
 
@@ -37,8 +44,11 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal |
 | Javaslat létrehozása | ✅ | JavaslatModal |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
-| Részletes adatok | 🚧 | Csak console.log |
+| Részletes adatok | ✅ | Közös ReszletekModal |
 | Küszöb érték javaslat | ✅ | ErtekJavaslatModal — támogatottsági/részvételi %, min/max döntési idő; a Tartalom létrehozó modál is bekéri az értékeket (alapértékekkel). Csak tartalomra! |
+
+**Közös kártya-menü rész (minden kártyán, a `Kartya` alaposztály adja hozzá — 2026-07-22 óta csoportosítva):**
+a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a) INFO: 🔔 Értesítések (ág-szűrt, badge) · 🌟 Tudatpontok (ág-szűrt); (b) NAVIGÁCIÓ: 🔍 Keresés · 🗺️ Térkép · 🚧 **Világtérkép** (fejlesztésre vár) · ↕️ Rendezés — mind ág-szűrt módban.
 
 ### 3. Javaslat kártya menü (`JavaslatKartya.js`)
 
@@ -65,7 +75,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
 | Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
-| Új kategória létrehozása ebből | 🚧 | ÚJ menüpont — az így létrehozott kategória ALKATEGÓRIA lesz; backend módosítás is kell hozzá (kategória-hierarchia) |
+| Új kategória létrehozása ebből | ✅ | Az így létrehozott kategória ALKATEGÓRIA lesz (a kategória lesz a szülő). A `KategoriaModal` `szuloAdatok`-ot fogad; a backend (modell + `kategoriaService`) már kezelte a `szuloId`/`szuloTipus`-t — csak frontend-munka volt. Böngészős teszt hátra (teszt.md 55) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal (név, típus, létrehozó, tudatpont, leírás) |
@@ -76,7 +86,7 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
 | Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
-| Javaslat létrehozása | 🚧 | ÚJ menüpont |
+| Javaslat létrehozása | ✅ | 🌿 `tudatpontFuggo`; JavaslatModal. Egyezményre a domain szerint KIZÁRÓLAG áthelyezési javaslat indítható (frontend gombszűrés + backend kikényszerítés) |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal (típus, létrehozó, érintett entitások, szavazás pillanatképe, tudatpont) |
 
@@ -116,10 +126,93 @@ A „fejlesztésre vár" állapotot egy közös komponens jeleníti meg minden m
    autocomplete-tel; mentés után fejléc-frissítés) és jelszóváltás (jelenlegi jelszó
    igazolásával, regisztrációs erősség-szabállyal). Backend: PUT `/api/eember/adatok`
    + POST `/api/eember/jelszovaltas`; a `sajat-adatok` válaszban már email + lokacio is.
-9. [ ] **Új kategória létrehozása ebből** (Kategória kártya) — alkategória létrehozása; backend módosítást is igényel (kategória-hierarchia)
+9. [x] **Új kategória létrehozása ebből → ALKATEGÓRIA** (Kategória kártya).
+    KÉSZ (2026-07-22; böngészős teszt hátra: teszt.md 55). Menüpont: **🏷️ „Új alkategória
+    létrehozása"** (a fő menü „Új kategória létrehozása" ikonjával, `tudatpontFuggo`),
+    a `KategoriaModal`-t nyitja az aktuális kategóriát szülőként átadva; a modal címe
+    ilyenkor „Új alkategória létrehozása".
+    - **Frontend:** `KategoriaModal` új `szuloAdatok` beállítást fogad, létrehozáskor a
+      `szuloId`+`szuloTipus`-t (párban) a FormData-hoz fűzi + a cím szülő esetén „alkategória";
+      `KategoriaKartya._ujKategoriaLetrehozasa` + a menüpont átkötve (elárvult `FejlesztesreVar`
+      import törölve).
+    - 🔴→✅ **HIBA JAVÍTVA (2026-07-22): az alkategória a fában a GYÖKÉRBE került.** Ok:
+      a `tudatpontService.getSzuloEntitas` a `Kategoria` típusra FIXEN `null`-t adott vissza
+      („Kategóriának nincs szülője" — a hierarchia előtti feltevés), így a hierarchikus
+      allokáció + osLanc sosem kapta meg a szülőt, hiába volt a `szuloId` a dokumentumon.
+      Javítás: a Kategoria-ág most a valódi `szuloId`-t olvassa (`KategoriaRepository.findById`)
+      — ez kaszkádol a hierarchia-pont felfelé propagálásába, a fa-szülőbe és az osLanc-ba.
+    - ✅ **DOMAIN-SZABÁLY (2026-07-22, Csaba kérése): kategória szülője CSAK másik kategória
+      lehet.** (1) `kategoria` modell `szuloTipus` enum SZŰKÍTVE `['Kategoria', null]`-ra;
+      (2) `kategoriaService._szuloKategoriaEllenorzese` (típus = 'Kategoria' + a szülő
+      LÉTEZIK) — bekötve létrehozáskor és módosításkor is.
+    - ✅ **Leírás-szerkesztő (Csaba kérése): a `KategoriaModal` ÉS a `TartalomTipusModal`
+      most a blokk-alapú `SzovegSzerkeszto`-t használja** (mint a `TartalomModal`).
+      Korábban mindkettőben holt kód volt: a JS a `leiras-szerkeszto-kontener`-t kereste,
+      de a HTML sima `<textarea>`-t tartalmazott + hiányzott az import → a LEÍRÁS nem
+      mentődött. Javítás: import + a `<textarea>` cseréje a szerkesztő-konténerre mindkét
+      modal HTML-jében.
+    - 🔴→✅ **Kártya nem jelenítette meg a blokk-szerkezetet — JAVÍTVA (2026-07-22).**
+      Ok: a Kategoria/TartalomTipus modálja MULTIPART FormData-t küld (ikon-fájl), ahol a
+      `leiras` csak stringként mehet → `JSON.stringify`-olt stringként tárolódott, és a
+      kártya megjelenítője „legacy sima szövegként" a NYERS JSON-t mutatta. (A Tartalom
+      JSON-body-t küld → ott a `szoveg` tömbként tárolódik, ezért jó.) Javítás: új
+      `backend/utils/leirasParser.js` (`leirasParse`) a FormData-ból jött JSON-stringet
+      tömbbé alakítja — bekötve a `kategoriaService` és a `tartalomTipusService`
+      létrehozás- ÉS módosítás-ágába. A már meglévő string-leírásokat egyszeri
+      DB-javítással tömbbé alakítottuk (mongosh, csak érvényes JSON-t konvertálva).
+    - ✅ **Kategória-választó a Tartalom modálban HIERARCHIKUS (Csaba kérése, a
+      jegyzetek.md 2026-07-22 ötletéből).** A `TartalomModal` legördülője fa-sorrendben,
+      mélység szerinti behúzással mutatja a kategóriákat (alkategória a szülője alatt,
+      nem törő szóközök + „└ " jel). Új `_kategoriakFaSorrendbe()` (DFS, mélység a teljes
+      fából, árva-söprés, kör-védelem); a `findAll` úgyis küldi a `szuloId`-t.
 10. [x] **Jogosultság-függő menüpontok** — a kártya-menük megnyitáskor jelzik a jogosultságot: a tudatpontot igénylő menüpontok (Javaslat létrehozása, Szavazat leadása, valamint „Új tartalom/kategória létrehozása ebből") inaktívak (halvány + magyarázó tipp), ha az eembernek nincs tudatpontja az entitáson. Megvalósítás: a menüpont `tudatpontFuggo: true` jelölést kap; a `Kartya` alaposztály a menü megnyitásakor a `GET /api/tudatpont/entitas/:tipus/:id → eemberHozzajarulas` (eemberenkénti `tudatponthozzarendeles.tudatPontok`) alapján tiltja/engedi. A backend a védelmet külön kikényszeríti (javaslatService, szavazatService).
     - **Döntés (2026-07-10) — a backend szabálya a mérvadó:** a szavazati jogosultságot MINDIG az érintett entitás(ok)on lévő tudatpont dönti el (`erintettEntitasok`, ahogy a backend teszi); a javaslaton magán lévő tudatpont hiánya NEM akadály, attól még lehet szavazni. A frontendet ehhez igazítjuk. **Választott megoldás:** a **pakli e-ember-tudatossá tétele** — a `pakliService` megkapja a néző e-ember azonosítóját (a pakli útvonal már `authMiddleware`-es, a `req.user.id` rendelkezésre áll), és a javaslat-kártya adataihoz kiszámolja a `szavazhat` jelzést a backend saját szabályával (`javaslatJogosultsagService`). A frontend a „Szavazat leadása" pontot ez alapján engedi/tiltja (nem a javaslat saját tudatpontja alapján). Ez foundational: az e-ember-tudatos pakli más funkciókhoz is kell (lásd a fejléc saját-tudatpont jelzés jegyzete, [jegyzetek.md](jegyzetek.md), 2026-07-10).
-    - **Egyezmény** kártya „Javaslat létrehozása" pontja még 🚧 (nincs kész) — amikor megépül, ugyanígy `tudatpontFuggo` jelölést kap.
+    - **Egyezmény** kártya „Javaslat létrehozása" pontja ✅ KÉSZ (2026-07-22) — `tudatpontFuggo`,
+      a JavaslatModal-t nyitja. Lásd a lenti **„Javaslat-típus domain-szabályok"** szakaszt.
+
+### Javaslat-típus domain-szabályok (2026-07-22, Csaba) — melyik entitáson mi indítható
+
+| Entitás | Törlés | Módosítás | Áthelyezés | Egyesítés | Csomag |
+|---|---|---|---|---|---|
+| Tartalom | ✅ | ✅ | ✅ | ✅ *(csak Tartalommal → Tartalom)* | ✅ |
+| Kategória | ✅ | ✅ | ❌ | ✅ *(csak Kategóriával → Kategória)* | — |
+| Tartalomtípus | ✅ | ✅ | ❌ | ❌ | — |
+| Egyezmény | ❌ | ❌ | ✅ | ❌ | ❌ |
+
+- **Egyesítés — AZONOS típus (2026-07-22, Csaba finomítás):** Tartalmat csak Tartalommal,
+  Kategóriát csak Kategóriával lehet egyesíteni; Tartalomtípust egyáltalán nem. Az „új entitás
+  típusa" a kártya típusából KÖVETKEZIK (nincs szabad választás), a forrás-mezők is csak ezt a
+  típust engedik. Backend: a résztvevők típusa AZONOS kell legyen (`Set(erintettek).size===1`) és
+  Tartalom/Kategória; az eredmény-típus egyezik.
+- **Az új entitás szülője OPCIONÁLIS (Csaba, 2026-07-22):** üresen hagyva az alap-szülő a források
+  **LEGKÖZELEBBI KÖZÖS ŐSE** (`javaslatService._legkozelebbiKozosSzulo` — forrásonkénti ős-lánc az
+  `osLancFelepitese`-ből, a legmélyebb mindegyikben szereplő ős), vagy null (gyökér), ha nincs közös
+  ős. A számítás a javaslat LÉTREHOZÁSAKOR történik és bekerül a javaslatba. Ha megadják a szülőt:
+  Tartalom-eredménynél Tartalom, Kategória-eredménynél Kategória; nem lehet érintett entitás vagy
+  annak leszármazottja (service + végrehajtó). Kategória-eredménynél a közös ős úgyis kategória
+  (a kategória-hierarchia enumja miatt), de defenzíven ellenőrizzük.
+- **Egyezmény tárhely egyesítésnél:** üresen hagyva az ÚJ entitás (a `…0001` placeholder → a
+  létrejövő entitás ID-ja), és lehet null is (gyökér egyezmény) — a modell/backend elfogadja.
+
+- **Kikényszerítés KÉT szinten:** (1) frontend — `frontend/js/utils/javaslatSzabalyok.js`
+  (`engedelyezettJavaslatTipusok` + `egyesitesForrasTipusok`), a `JavaslatModal` a típusgombokat
+  entitástípus szerint elrejti, és a kategória-egyesítés forrás-/eredmény-/szülő-típusát kategóriára
+  szűri; (2) backend — `javaslatService._javaslatTipusKorlatokValidalasa` érintett-entitásonként
+  (így a Csomag tételeire is), a `javaslat` modell `erintettEntitasok.entitasTipus` enumja bővült
+  `Egyezmeny`-nyel, a létezés-ellenőrzés is.
+- **Egyezmény áthelyezése VÉGREHAJTÁS is:** az `athelyezesiVegrehajto` Egyezményt is mozgat
+  (repository típus szerint; a cél mindig Tartalom). Az egyezmény-tárhely áthelyezésnél opcionális (null=gyökér).
+- **Kategória-egyesítés:** a szülő-validáció (service) és a végrehajtó (create + kör-ellenőrzés) az
+  eredmény-típushoz igazodó repository-t használ (kategóriánál `KategoriaRepository`).
+- ✅ **Egyesített entitás GYEREKEI az ÚJ entitás alá kerülnek (Csaba döntése, 2026-07-22).** Korábban
+  az `egyesitesiVegrehajto` 7. lépése (gyerek-átállítás) HALOTT kód volt: a 4. lépés a forrásokat
+  0 pontra állítja → auto-törlés, ami a gyerekeket a NAGYSZÜLŐHÖZ kötötte, mielőtt a 7. lépés lefutott
+  volna (findByParentId üres). Javítás: új **3.5 lépés** a törlés ELŐTT összegyűjti a forrás-gyerekeket
+  (a hierarchikus fából, bármely típus, a magukat-is-forrás entitások kihagyva), a **7. lépés** pedig
+  az ÚJ entitás alá köti őket — entitás-doc + hierarchikus fa (`updateSzuloId`) + osLanc-részfa
+  (`reszfaOsLancUjraepitese`) + hierarchikus pont-újraszámítás felfelé (`_hierarchiaPontokFelfele`).
+  Ez EGYSZERRE javítja a Tartalom-egyesítést (eddig a nagyszülőhöz kerültek) és valósítja meg a
+  kategóriát. Típus-inkompatibilis gyerek (enum) esetén az adott gyerek átugorva, a merge nem hiúsul meg.
 
 11. [ ] **Kártya-fejléc átalakítása (folyamatban, 2026-07-11)** — a fejléc három vízszintes sávra oszlik (elválasztó vonalak nélkül): **felső sor** = cím/név/megnevezés (dinamikus betűméret — [jegyzetek.md](jegyzetek.md)); **bal négyzet** = lejjebb hozott hamburger; **jobb oldali két sor** = ikon+szám blokkok (jobbra igazítva). Entitástípusonként:
     - **Közös 1. sor:** entitás saját tudatpont + hierarchikus tudatpont + hozzájárulók száma (mindig), a néző e-ember saját pontja (csak ha >0).

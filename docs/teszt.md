@@ -538,6 +538,12 @@ docker logs -f koino-backend
     (e) testvér nélküli entitásnál (pl. egyetlen gyökér) egyik gomb sem látszik.
     Megjegyzés: a backend a testvéreket 100 darabban maximálja — a számláló
     ennél többet nem mutat.
+    **(2026-07-22, ÚJ) Ugrás-gombok:** a lépés-gombok ALATT megjelenik egy-egy
+    **|‹** (bal) és **›|** (jobb) gomb — ugyanaz az áttetsző stílus. Koppintásra a
+    testvér-sor **legelejére** (|‹, a legerősebb ág) illetve **legvégére** (›|)
+    ugrik. Ellenőrzés: (f) sok testvérnél az ugrás egy lépésben a szélső testvérre
+    visz (nem egyesével); (g) a legszélen már állva nincs oda mutató gomb; (h) az
+    ugrás is bal/jobb irányú animációt kap.
 49. ⬜ **Teljes szélességű kártyák (2026-07-19 óta, Csaba döntése):** a kártyák
     (és velük a pakli) MINDEN képernyőn a képernyő szélességét követik (a
     wrapper paddingjén belül) — a korábbi fix, legfeljebb 400px-es kártya-oszlop
@@ -656,6 +662,54 @@ docker logs -f koino-backend
     (a gyökér-entitás önmaga is benne van). Backend (curl, 2026-07-21, lefutott):
     `GET /api/pakli/rendezett?mod=ido|sajatPont&irany=csokkeno|novekvo&agazatId=<id>` — globális
     27 elem, ág-szűrve a részfa mérete; auth nélkül 401; érvénytelen mod/irány/agazatId → 400.
+
+55. ⬜ **Alkategória létrehozása (terv 9. pont, 2026-07-22 óta):** egy kategória kártya
+    hamburger menüjében a **🏷️ „Új alkategória létrehozása"** pont (a fő menü „Új kategória
+    létrehozása" ikonjával; korábban 🚧 volt). Előfeltétel: legyen tudatpontod ezen a
+    kategórián (különben a pont halvány/tiltott — `tudatpontFuggo`). Ellenőrzés:
+    (a) a pontra koppintva megnyílik a modal, a **címe „Új alkategória létrehozása"**;
+    (b) a **leírás mező most a blokk-alapú szerkesztő** (nem sima textarea) — írj bele,
+    formázd; (c) kitöltés (név + ikon + leírás + küszöbök + kezdő tudatpont) után
+    **Létrehozás** → siker, a pakli frissül; (d) 🔴 a leggontosabb: az új kategória a
+    **szülő kategória ALÁ** kerüljön (NE a gyökérbe!) — a pakliban a szülő kategóriából
+    lefelé navigálva jelenjen meg, illetve a Térkép/Rendezés ág-nézetében a szülő
+    részfájában; (e) nyisd meg újra a kártya Részletes adatait / szerkesztését → a
+    **leírás megőrződött** (korábban nem mentődött); (f) a **fő menü** „Új kategória
+    létrehozása" továbbra is GYÖKÉR kategóriát hoz létre — ez ne változzon.
+    **Domain-szabály (backend):** kategória szülője csak másik kategória lehet — ezt a
+    modell enum + a service kikényszeríti (kézzel/API-ból erőltetett más szülő-típus → hiba).
+    **Kapcsolódó — leírás-szerkesztő a TartalomTípusnál is:** a fő menü „Új tartalomtípus
+    létrehozása" modáljában is a blokk-szerkesztő van, és a leírás elmentődik/visszatöltődik.
+    (g) **Kártya-megjelenítés:** a kategória (és tartalomtípus) kártyát kiválasztva a body
+    a BLOKK-szerkezetet mutassa (formázott szöveg/kép), NE nyers JSON-t. (A backend a
+    FormData-ból jött leírást tömbbé parse-olja — `leirasParser`.)
+    (h) **Hierarchikus kategória-választó:** a fő menü „Új tartalom létrehozása" modál
+    kategória-legördülőjében az alkategóriák a szülőjük alatt, BEHÚZVA jelenjenek meg
+    („└ " jellel, mélység szerint); gyökér-kategóriák behúzás nélkül.
+
+56. ⬜ **Alkategória a Tartalom kategória-választójában (terv 9. pont záró-ellenőrzés):**
+    hozz létre egy alkategóriát (55. pont), majd nyisd meg az „Új tartalom létrehozása"
+    modált → a kategória-legördülőben az alkategória a szülője alatt, behúzva látszik;
+    kiválasztva chip lesz belőle, és a legördülőből kikerül, de a többi behúzása marad jó.
+
+57. ⬜ **Javaslat-típus domain-szabályok (terv 10. pont bővítés, 2026-07-22 óta):** a kártya-
+    hamburger „Javaslat létrehozása" pontja (tudatpont kell rá). Nyisd meg minden entitástípuson,
+    és nézd az 1. lépés TÍPUSGOMBJAIT: (a) **Tartalom** → mind az 5 (Törlés/Módosítás/Áthelyezés/
+    Egyesítés/Csomag); (b) **Kategória** → Törlés/Módosítás/Egyesítés (NINCS Áthelyezés, nincs Csomag);
+    (c) **Tartalomtípus** → csak Törlés/Módosítás; (d) **Egyezmény** → CSAK Áthelyezés (az Egyezmény
+    kártyán a menüpont most már működik, nem „fejlesztésre vár"). **Egyesítés — azonos típus:**
+    Tartalmat CSAK Tartalommal, Kategóriát CSAK Kategóriával (az „új entitás típusa" a kártyából
+    következik, nem választható; a forrás-mezők is csak ezt a típust engedik). **Az új entitás
+    szülője OPCIONÁLIS** — üresen hagyva GYÖKÉR lesz (ez volt a „nem tudok egyesíteni" hiba oka).
+    **Egyezmény tárhely:** alapból az új entitás.
+    **Backend-kikényszerítés (a lényeg):** ha API-ból erőltetsz tiltott kombinációt (pl. Egyezményre
+    Törlés, vagy Kategóriára Áthelyezés, vagy Tartalomtípus Egyesítés, vagy kategória+tartalom
+    egyesítés), a `POST /api/javaslat` **400**-at ad, magyar hibaüzenettel. **Egyezmény áthelyezés
+    végrehajtás:** ha egy egyezmény-áthelyezési javaslat elfogadásra kerül, az egyezmény tényleg
+    átkerül az új szülő alá. **Egyesítés — gyerekek:** ha az egyesített (forrás) entitásoknak
+    GYEREKEIK vannak (tartalmak/alkategóriák), az egyesítés elfogadása után a gyerekek az ÚJ
+    egyesített entitás alá kerülnek (nem a nagyszülőhöz) — a pakliban lefelé navigálva ellenőrizhető.
+    Ez a Tartalom-egyesítésre és a Kategória-egyesítésre is áll.
 
 ### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
 

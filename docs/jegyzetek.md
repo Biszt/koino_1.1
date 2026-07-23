@@ -30,6 +30,17 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-07-22
+
+- ✅ „még az is eszembe jutott, hogy az új tartalom létrehozása modalban, a kategória
+  választó, legyen képes a legördülő menüben, jelezni, (mondjuk eltolással), hogy ha
+  valamelyik, alkategóriája, a másiknak."
+  → MEGVALÓSÍTVA (2026-07-22): a `TartalomModal` kategória-választó legördülője most
+  fa-sorrendben, MÉLYSÉG szerinti behúzással jeleníti meg a kategóriákat (az alkategória
+  a szülője alatt, nem törő szóközökkel + „└ " jellel). Új `_kategoriakFaSorrendbe()`
+  segéd (DFS, árva-söprés, kör-védelem), a mélységet a teljes fából számolja.
+  Átvezetve a fejlesztési tervbe (9. terv-pont).
+
 ### 2026-07-21
 
 - 🆕 „[A térképnek, sem, frondend szűrés kéne, mert az nagy adatmennyiségnél, nem
