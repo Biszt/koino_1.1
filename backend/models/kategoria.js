@@ -41,25 +41,26 @@ const kategoriaSchema = new mongoose.Schema({
   },
 
   // ----- SZÜLŐ AZONOSÍTÓ MEZŐ -----
-  // Melyik entitás a közvetlen szülője ennek a kategóriának (opcionális)
+  // Melyik kategória a közvetlen szülője ennek a kategóriának (opcionális)
   // Lehet null, ha ez egy gyökér kategória (nincs szülője)
-  // Bármilyen entitás lehet a szülő: Tartalom, Kategoria, TartalomTipus, Javaslat, Egyezmeny
+  // DOMAIN-SZABÁLY: egy kategória szülője CSAK MÁSIK KATEGÓRIA lehet
+  // (alkategória-hierarchia). Ezért a szuloId mindig egy Kategoria _id-ra mutat,
+  // vagy null (gyökér). Lásd a szuloTipus enumját is.
   szuloId: {
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     default: null                          // Alapértelmezetten nincs szülő (gyökér elem)
   },
 
   // ----- SZÜLŐ TÍPUSA MEZŐ -----
-  // Meghatározza, hogy a szuloId melyik kollekciára mutat
-  // Kötelező, ha szuloId meg van adva - különben null
+  // Meghatározza, hogy a szuloId melyik kollekciára mutat.
+  // DOMAIN-SZABÁLY: kategória szülője csak Kategoria lehet → az enum SZŰKÍTVE
+  // (2026-07-22). Korábban minden entitástípus szerepelt itt, de az a
+  // kategória-hierarchia előtti, téves feltevés volt. Kötelező, ha szuloId
+  // meg van adva — különben null (gyökér kategória).
   szuloTipus: {
     type: String,           // Szöveges típus
     enum: [                 // Csak ezek az értékek engedélyezettek
-      'Tartalom',
-      'Kategoria',
-      'TartalomTipus',
-      'Javaslat',
-      'Egyezmeny',
+      'Kategoria',          // Egyetlen megengedett szülő-típus (alkategória)
       null                  // Null értéket is elfogad (gyökér elem esetén)
     ],
     default: null           // Alapértelmezetten nincs szülő típus

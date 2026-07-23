@@ -762,9 +762,12 @@ class TudatpontService {
       console.log('getSzuloEntitas - TartalomRepository.findById');
       entitas = await TartalomRepository.findById(entitasId);
     } else if (entitasTipus === 'Kategoria') {
-      // Kategóriának NINCS szülője
-      console.log('getSzuloEntitas - Kategoria - nincs szülő');
-      return null;
+      // Kategória szülője lehet másik Kategória (ALKATEGÓRIA) vagy null (gyökér).
+      // Korábban itt fixen null-t adtunk vissza („nincs szülő") — ez a
+      // kategória-hierarchia (9. terv-pont) előtti feltevés volt, és emiatt az
+      // alkategória a fában a gyökérbe került. Most a valódi szuloId-t olvassuk.
+      console.log('getSzuloEntitas - KategoriaRepository.findById');
+      entitas = await KategoriaRepository.findById(entitasId);
     } else if (entitasTipus === 'TartalomTipus') {
       // TartalomTípusnak NINCS szülője
       console.log('getSzuloEntitas - TartalomTipus - nincs szülő');

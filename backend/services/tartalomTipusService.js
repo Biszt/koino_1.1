@@ -8,6 +8,7 @@ const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
 const { kuszobertekekParse } = require('../utils/kuszobErtekParser');
+const { leirasParse } = require('../utils/leirasParser');
 
 // ===================================
 // TARTALOM TÍPUS SERVICE OSZTÁLY
@@ -97,7 +98,9 @@ class TartalomTipusService {
     // ===== 6. LÉPÉS - LEÍRÁS KEZELÉSE HA VAN =====
     // MÓDOSÍTVA: Mixed típus - nem hívunk trim()-et, JSON tömböt fogad a szövegszerkesztőtől
     // Ha nincs megadva, null marad (üres string helyett)
-    const tisztitottLeiras = adatok.leiras !== undefined ? adatok.leiras : null;
+    // A leiras a FormData-ból JSON-stringként érkezik (blokk-tömb) → tömbbé parse-oljuk,
+    // hogy a Mixed mezőben tömbként tárolódjon (mint a Tartalom szoveg-e).
+    const tisztitottLeiras = leirasParse(adatok.leiras);
 
     // ===== 7. LÉPÉS - IKON ÚTVONAL TISZTÍTÁSA =====
     const tisztitottIkon = adatok.ikon.trim();
@@ -320,7 +323,9 @@ class TartalomTipusService {
     }
 
     // 6. LÉPÉS - LEÍRÁS KEZELÉSE (ha változik)
+    // A FormData-ból JSON-stringként érkező leírást tömbbé parse-oljuk (mint létrehozáskor).
     if (tisztitottFrissitesek.leiras !== undefined) {
+      tisztitottFrissitesek.leiras = leirasParse(tisztitottFrissitesek.leiras);
     }
 
     // 7. LÉPÉS - Ikon útvonal tisztítása (ha változik)

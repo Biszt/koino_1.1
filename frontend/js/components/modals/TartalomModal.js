@@ -282,6 +282,58 @@ class TartalomModal {
     });
   }
 
+  // ===== KATEGÓRIÁK FA-SORRENDBE RENDEZÉSE =====
+  // A lapos kategória-listát HIERARCHIKUS sorrendbe teszi: minden kategória a
+  // szülője után jön, és megkapja a MÉLYSÉGÉT (0 = gyökér). Így a legördülőben
+  // az alkategóriák a szülőjük alatt, behúzva jelenhetnek meg.
+  // A mélységet a TELJES fából számoljuk (a kiválasztott, épp elrejtett kategóriák
+  // is beleszámítanak), hogy egy gyerek behúzása akkor is helyes maradjon, ha a
+  // szülője épp ki van választva.
+  // @returns {Array<{kat: Object, melyseg: number}>} fa-sorrendű lista mélységgel
+  _kategoriakFaSorrendbe() {
+    console.log('TartalomModal._kategoriakFaSorrendbe - KEZDÉS', {
+      osszes: this.kategoriak.length
+    });
+
+    // Gyerekek csoportosítása szülő szerint (kulcs: szuloId string, gyökérnél 'null')
+    const gyerekekMap = new Map();
+    this.kategoriak.forEach(kat => {
+      const kulcs = kat.szuloId ? kat.szuloId.toString() : 'null';
+      if (!gyerekekMap.has(kulcs)) gyerekekMap.set(kulcs, []);
+      gyerekekMap.get(kulcs).push(kat);
+    });
+
+    const eredmeny = [];
+    const bejart   = new Set(); // kör-védelem + duplikáció ellen
+
+    // Mélységi bejárás (DFS): a gyökerektől lefelé, mélységgel
+    const bejar = (szuloKulcs, melyseg) => {
+      const gyerekek = gyerekekMap.get(szuloKulcs) || [];
+      gyerekek.forEach(kat => {
+        const id = kat._id.toString();
+        if (bejart.has(id)) return; // már bejártuk (kör vagy duplikáció)
+        bejart.add(id);
+        eredmeny.push({ kat, melyseg });
+        bejar(id, melyseg + 1); // a gyerekei eggyel beljebb
+      });
+    };
+    bejar('null', 0);
+
+    // Árvák: olyan kategória, amelynek szülője NINCS a listában (nem értük el) →
+    // gyökérként a lista végére fűzzük, hogy egyetlen kategória se maradjon ki.
+    this.kategoriak.forEach(kat => {
+      if (!bejart.has(kat._id.toString())) {
+        bejart.add(kat._id.toString());
+        eredmeny.push({ kat, melyseg: 0 });
+      }
+    });
+
+    console.log('TartalomModal._kategoriakFaSorrendbe - VÉGE', {
+      rendezett: eredmeny.length
+    });
+    return eredmeny;
+  }
+
   // ===== KATEGÓRIA SELECT FELTÖLTÉSE =====
   _kategoriaSelectFeltoltese() {
     console.log('TartalomModal._kategoriaSelectFeltoltese - KEZDÉS');
@@ -289,23 +341,31 @@ class TartalomModal {
     const selectElem = document.getElementById('tartalom-kategoria-valaszto');
     if (!selectElem) return;
 
-    const szabadKategoriak = this.kategoriak.filter(
-      kat => !this.kivalasztottKategoriaIds.includes(kat._id)
-    );
+    // Fa-sorrend (mélységgel), majd a MÁR kiválasztottakat kihagyjuk a legördülőből
+    const faSorrend = this._kategoriakFaSorrendbe();
 
     selectElem.innerHTML = '<option value="">– Kategória hozzáadása, maximum 3 – (opcionális)</option>';
 
-    szabadKategoriak.forEach(kat => {
-      const option       = document.createElement('option');
-      option.value       = kat._id;
-      option.textContent = kat.nev;
+    let szabadSzam = 0;
+    faSorrend.forEach(({ kat, melyseg }) => {
+      if (this.kivalasztottKategoriaIds.includes(kat._id)) return; // már kiválasztott
+
+      const option = document.createElement('option');
+      option.value = kat._id;
+      // Behúzás a mélység szerint: nem törő szóközök + egy fa-jel a nem-gyökereknél.
+      // (Az <option> nem stílusozható megbízhatóan, ezért szöveges behúzást használunk.)
+      const behuzas = melyseg > 0
+        ? '  '.repeat(melyseg) + '└ '
+        : '';
+      option.textContent = behuzas + kat.nev;
       selectElem.appendChild(option);
+      szabadSzam++;
     });
 
     selectElem.disabled = this.kivalasztottKategoriaIds.length >= 3;
 
     console.log('TartalomModal._kategoriaSelectFeltoltese - VÉGE', {
-      szabad:       szabadKategoriak.length,
+      szabad:       szabadSzam,
       kivalasztott: this.kivalasztottKategoriaIds.length
     });
   }

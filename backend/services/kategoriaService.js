@@ -8,11 +8,40 @@ const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
 const { kuszobertekekParse } = require('../utils/kuszobErtekParser');
+const { leirasParse } = require('../utils/leirasParser');
 
 // ===================================
 // KATEGÓRIA SERVICE OSZTÁLY
 // ===================================
 class KategoriaService {
+
+  // =====================================
+  // ----- SZÜLŐ-KATEGÓRIA ELLENŐRZÉSE (DOMAIN-SZABÁLY) -----
+  // =====================================
+  /**
+   * Kikényszeríti a domain-szabályt: egy kategória szülője CSAK MÁSIK,
+   * LÉTEZŐ kategória lehet. Csak akkor hívjuk, ha van szülő (szuloId).
+   * A modell enumja is szűkítve van (Kategoria/null) — ez a service-szintű,
+   * érthető hibaüzenetet adó, defenzív ellenőrzés.
+   * @param {string} szuloId    - A megadott szülő azonosítója
+   * @param {string} szuloTipus - A megadott szülő típusa
+   */
+  async _szuloKategoriaEllenorzese(szuloId, szuloTipus) {
+    console.log('KategoriaService._szuloKategoriaEllenorzese - KEZDÉS', { szuloId, szuloTipus });
+
+    // 1. Típus: csak Kategoria lehet a szülő
+    if (szuloTipus !== 'Kategoria') {
+      throw new Error('Egy kategória szülője csak másik kategória lehet');
+    }
+
+    // 2. Létezés: a megadott szülő kategóriának léteznie kell
+    const szuloKategoria = await KategoriaRepository.findById(szuloId);
+    if (!szuloKategoria) {
+      throw new Error('A megadott szülő kategória nem található');
+    }
+
+    console.log('KategoriaService._szuloKategoriaEllenorzese - VÉGE (OK)');
+  }
 
   // =====================================
   // ----- ÚJ KATEGÓRIA LÉTREHOZÁSA -----
@@ -79,6 +108,11 @@ class KategoriaService {
       throw new Error('Ha szuloTipus meg van adva, a szuloId megadása is kötelező');
     }
 
+    // DOMAIN-SZABÁLY: ha van szülő, az csak egy létező Kategoria lehet.
+    if (adatok.szuloId) {
+      await this._szuloKategoriaEllenorzese(adatok.szuloId, adatok.szuloTipus);
+    }
+
     // ===== 4. LÉPÉS - NÉV TISZTÍTÁSA (trim) =====
     const tisztitottNev = adatok.nev.trim();
 
@@ -93,7 +127,9 @@ class KategoriaService {
     }
 
     // ===== 6. LÉPÉS - LEÍRÁS KEZELÉSE HA VAN =====
-    const tisztitottLeiras = adatok.leiras !== undefined ? adatok.leiras : null;
+    // A leiras a FormData-ból JSON-stringként érkezik (blokk-tömb) → tömbbé parse-oljuk,
+    // hogy a Mixed mezőben tömbként tárolódjon (mint a Tartalom szoveg-e).
+    const tisztitottLeiras = leirasParse(adatok.leiras);
 
     // ===== 7. LÉPÉS - IKON ÚTVONAL TISZTÍTÁSA =====
     const tisztitottIkon = adatok.ikon.trim();
@@ -279,6 +315,15 @@ class KategoriaService {
       if (szuloIdNull !== szuloTipusNull) {
         throw new Error('A szuloId és szuloTipus egyszerre kell null legyen, vagy egyszerre kell értéket tartalmazzon');
       }
+
+      // DOMAIN-SZABÁLY: ha NEM null-ra állítjuk (tehát valódi szülőt adunk),
+      // az csak egy létező Kategoria lehet.
+      if (!szuloIdNull) {
+        await this._szuloKategoriaEllenorzese(
+          tisztitottFrissitesek.szuloId,
+          tisztitottFrissitesek.szuloTipus
+        );
+      }
     }
 
     // 5. LÉPÉS - Név validálás és egyediség ellenőrzése (ha változik)
@@ -298,7 +343,9 @@ class KategoriaService {
     }
 
     // 6. LÉPÉS - LEÍRÁS KEZELÉSE (ha változik)
+    // A FormData-ból JSON-stringként érkező leírást tömbbé parse-oljuk (mint létrehozáskor).
     if (tisztitottFrissitesek.leiras !== undefined) {
+      tisztitottFrissitesek.leiras = leirasParse(tisztitottFrissitesek.leiras);
     }
 
     // 7. LÉPÉS - Ikon útvonal tisztítása (ha változik)

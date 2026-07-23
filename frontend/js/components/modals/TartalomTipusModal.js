@@ -4,6 +4,7 @@
 // IMPORTOK
 // ===================================
 import Modal from './Modal.js';
+import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
 import { apiPostFormData, apiPatchFormData } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import {

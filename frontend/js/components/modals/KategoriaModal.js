@@ -4,6 +4,7 @@
 // IMPORTOK
 // ===================================
 import Modal from './Modal.js';
+import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
 import { apiPostFormData, apiPatchFormData } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import {
@@ -43,6 +44,14 @@ class KategoriaModal {
     this.kivalasztottFajl  = null;
 
     // =============================================
+    // ÚJ - Szülő-adatok (alkategória létrehozásához)
+    // =============================================
+    // Ha a modal egy kategória kártyából nyílik meg „Új kategória létrehozása ebből"
+    // módon, akkor itt kapja meg a szülő kategóriát: { szuloId, szuloTipus: 'Kategoria' }.
+    // A fő menüből (gyökér-kategória) ez null marad.
+    this.szuloAdatok       = beallitasok.szuloAdatok || null;
+
+    // =============================================
     // ÚJ - SzovegSzerkeszto példány referencia
     // =============================================
     this.szovegSzerkeszto = null;
@@ -63,8 +72,10 @@ class KategoriaModal {
     const formHtml = await this.templateBetoltese();
     if (!formHtml) return;
 
+    // Ha van szülő (a modal egy kategória kártyából nyílt), ALKATEGÓRIÁT hozunk
+    // létre → a cím is ezt tükrözze.
     const cim = this.mod === 'letrehozas'
-      ? 'Új kategória létrehozása'
+      ? (this.szuloAdatok?.szuloId ? 'Új alkategória létrehozása' : 'Új kategória létrehozása')
       : 'Kategória szerkesztése';
 
     this.modal = new Modal(this.kontenerAzonosito, {
@@ -372,6 +383,18 @@ class KategoriaModal {
     if (this.mod === 'letrehozas') {
       const kezdoTudatpont = document.getElementById('kategoria-kezdo-tudatpont')?.value;
       formData.append('kezdoTudatpont', kezdoTudatpont || '1');
+
+      // =============================================
+      // ÚJ - Szülő elküldése (alkategória)
+      // =============================================
+      // Ha szülő-kategóriából nyílt a modal, a backend (kategoriaService) ebből
+      // állítja be a hierarchiát. A szuloId és szuloTipus mindig PÁRBAN megy
+      // (a service ezt ki is kényszeríti). Szülő nélkül (gyökér) semmit nem küldünk.
+      if (this.szuloAdatok?.szuloId) {
+        formData.append('szuloId',    this.szuloAdatok.szuloId);
+        formData.append('szuloTipus', this.szuloAdatok.szuloTipus || 'Kategoria');
+        console.log('KategoriaModal.formDataOsszeallit - szülő hozzáfűzve', this.szuloAdatok);
+      }
 
       // A négy küszöbérték hozzáfűzése (a backend kategoriaService ezekből
       // hozza létre a létrehozó érték javaslatát és a kezdeti hisztogramot).

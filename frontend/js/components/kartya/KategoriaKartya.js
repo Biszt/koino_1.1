@@ -7,9 +7,9 @@ import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
+import KategoriaModal from '../modals/KategoriaModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
-import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js';
 
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
@@ -222,6 +222,35 @@ class KategoriaKartya extends Kartya {
     });
   }
 
+  // ----- ÚJ KATEGÓRIA (ALKATEGÓRIA) LÉTREHOZÁSA EBBŐL -----
+  // A közös KategoriaModal-t nyitja meg létrehozás módban, ezt a kategóriát
+  // szülőként átadva (szuloId + szuloTipus: 'Kategoria'). Az így létrejövő
+  // kategória ennek a kategóriának az ALKATEGÓRIÁJA lesz. A backend (kategoriaService)
+  // már kezeli a szülőt — a hierarchia beállítása ott történik.
+  async _ujKategoriaLetrehozasa(entitas) {
+    console.log('KategoriaKartya._ujKategoriaLetrehozasa - KEZDÉS', {
+      entitasId: entitas?.entitasId
+    });
+
+    const kategoriaModal = new KategoriaModal(this.modalKontenerAzon, {
+      mod: 'letrehozas',
+      szuloAdatok: {
+        szuloId:    entitas.entitasId,
+        szuloTipus: 'Kategoria'
+      },
+      onSiker: () => {
+        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+      }
+    });
+
+    await kategoriaModal.init();
+    kategoriaModal.megnyitas();
+
+    console.log('KategoriaKartya._ujKategoriaLetrehozasa - VÉGE', {
+      entitasId: entitas?.entitasId
+    });
+  }
+
   // ----- RÉSZLETES ADATOK -----
   // Megnyitja a közös ReszletekModal-t erre a kategóriára.
   // A modal maga kéri le a /reszletek adatokat és jeleníti meg őket.
@@ -315,12 +344,14 @@ class KategoriaKartya extends Kartya {
         akcio:          () => this._ujTartalomLetrehozasa(entitas)
       },
       {
-        ikon:           '🚧',
-        felirat:        'Új kategória létrehozása ebből',
+        // Ugyanaz az ikon (🏷️), mint a fő menü „Új kategória létrehozása" pontja,
+        // de itt a felirat egyértelműsíti, hogy ALKATEGÓRIA jön létre.
+        ikon:           '🏷️',
+        felirat:        'Új alkategória létrehozása',
         // Alkategória ebből a kategóriából → tudatpont kell rá
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => fejlesztesreVarMegjelenitese('Új kategória létrehozása ebből', this.modalKontenerAzon)
+        akcio:          () => this._ujKategoriaLetrehozasa(entitas)
       },
       {
         ikon:           '🌿',
