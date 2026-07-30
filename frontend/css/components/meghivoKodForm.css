@@ -1,0 +1,13 @@
+/* frontend/css/components/meghivoKodForm.css */
+
+/* A meghívó kód-lépés (regisztráció 1. lépése) a bejelentkezés-oldal megosztott
+   osztályaira épül (kártya, form-mezo, gombok) — itt csak a magyarázó szöveg
+   saját stílusa van. */
+
+.meghivo-kod-form__info {
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.5;
+}

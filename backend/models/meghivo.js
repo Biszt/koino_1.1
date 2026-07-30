@@ -34,6 +34,17 @@ const meghivoSchema = new mongoose.Schema({
     trim: true
   },
 
+  // ----- MEGHÍVOTT TELJES NEVE -----
+  // A kibocsátó a meghívó létrehozásakor megadja, KIT hív meg (a meghívott
+  // valódi, teljes neve). Ezt a regisztráció 1. lépése (kód-ellenőrzés) olvassa
+  // vissza, és a regisztrációs űrlap a névvel ELŐRE KITÖLTVE nyílik meg — így a
+  // kibocsátó tanúsítása a névre is kiterjed (a meghívott javíthatja elgépeléskor).
+  meghivottNev: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
   // ----- TANÚSÍTÁS -----
   // A kibocsátó nyilatkozata a létrehozáskor: „a meghívott valódi személy,
   // és tudtommal még nem regisztrált". Kötelezően true — a service enélkül

@@ -21,6 +21,23 @@
   margin-bottom: var(--space-3);
 }
 
+/* Meghívott neve: címke + szöveges mező (a névvel nyílik meg a regisztráció) */
+.meghivo-modal__nev-cimke {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.meghivo-modal__nev {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.4));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, transparent);
+  color: inherit;
+  font: inherit;
+}
+
 /* Tanúsító nyilatkozat: jelölőnégyzet + szöveg egy sorban */
 .meghivo-modal__tanusitas {
   display: flex;
@@ -92,6 +109,11 @@
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: var(--text-sm);
   letter-spacing: 0.5px;
+}
+
+/* A meghívott neve a sorban */
+.meghivo-modal__nev-cimke2 {
+  font-size: var(--text-sm);
 }
 
 /* Státusz jelvény */

@@ -53,12 +53,20 @@ Böngészőben a regisztrációs űrlap mezői (a `POST /api/eember/regisztracio
 |---|---|---|---|
 | `eemberNev` | ✅ | `tesztAnna` | egyedi, 3–30 karakter |
 | `email` | ✅ | `anna@teszt.hu` | egyedi, kisbetűsít |
-| `jelszo` | ✅ | `jelszo123` | min. 6 karakter |
+| `jelszo` | ✅ | `jelszo123` | min. 8 karakter, + legalább egy betű ÉS egy szám (`jelszoHelper.validalJelszoErosseg`) |
 | `nev` | ✅ | `Teszt Anna` | valódi név |
 | `lokacio.orszag` | ✅ | `Magyarország` | |
 | `lokacio.regio` | ✅ | `Komárom-Esztergom` | |
 | `lokacio.telepules` | ✅ | `Tatabánya` | |
-| `meghivoKod` | ⚙️ | `MCUQ-QDQA-Q8R5` | CSAK ha `MEGHIVAS_KOTELEZO=true` (backend/.env); a mező az űrlapon is csak ekkor látszik. Fejlesztés alatt a kapcsoló `false` → nyílt regisztráció. |
+| `meghivoKod` | ⚙️ | `MCUQ-QDQA-Q8R5` | Kötelező, ha kell meghívó (lásd lent). Böngészőben NEM az űrlapon adod meg, hanem a **regisztráció 1. lépésében** (külön kód-oldal); a 2. lépésben nyíló űrlapon rejtett mezőben utazik tovább. |
+
+> **Élesítés (2026-07-23): `MEGHIVAS_KOTELEZO=true`.** A regisztráció kétlépcsős:
+> **1.** meghívó kód-oldal (`GET /api/meghivo/ellenorzes/:kod` ellenőrzi, nem fogyasztja el) →
+> **2.** regisztrációs űrlap a meghívott **nevével előre kitöltve** (szerkeszthető).
+> **Kivétel:** ha még **0 e-ember** van, az ELSŐ (alapító) regisztráció **kód nélkül** mehet
+> (`GET /api/meghivo/kotelezo` ilyenkor `false`-t ad). A backend a végső őr: kód kell, ha
+> `MEGHIVAS_KOTELEZO=true` **és** már van legalább 1 e-ember.
+> **Nyílt regisztráció visszakapcsolása** (fejlesztéshez): `MEGHIVAS_KOTELEZO=false` + `docker restart koino-backend`.
 
 **Javasolt teszt-e-emberek** (a szavazás/részvétel teszteléséhez legalább 2–3 kell):
 
@@ -434,18 +442,23 @@ docker logs -f koino-backend
     ugyanez pont birtokában vagy szűrő KI → van. A pipa állapota mentés után
     visszatöltve is látszik (PUT/GET `ertesitesi-beallitasok[/globalis]`,
     `tudatpontSzuro` mező).
-38. ⬜ **Meghívóim modal (2026-07-18 óta):** fő menü → **✉️ Meghívóim** → info-sor
-    mutatja, kötelező-e most a meghívó; a tanúsító pipa NÉLKÜL az „Új meghívó" gomb
-    inaktív; bepipálva → új meghívó jön létre (kód: `XXXX-XXXX-XXXX`), a pipa
-    visszaáll üresre (minden meghívóhoz újra kell). A listában: kód, státusz-jelvény,
-    dátum; aktív sornál 📋 (kód másolása, ✅ visszajelzéssel) és 🗑️ (visszavonás,
-    megerősítő al-modallal). Visszavont meghívónál az akció-gombok eltűnnek.
-39. ⬜ **Meghívó kód mező a regisztrációnál:** `MEGHIVAS_KOTELEZO=false` mellett a
-    regisztrációs űrlapon NINCS meghívó kód mező; `true`-ra állítva (+ `docker
-    restart koino-backend`) a mező megjelenik és kötelező. Érvénytelen/visszavont/
-    felhasznált kóddal a backend 400-at ad; érvényes kóddal a regisztráció sikeres,
-    a meghívó `Felhasznalt`-ra vált, és a Meghívóim listában megjelenik a
-    felhasználó e-emberneve. A kód kis- és nagybetűvel is beírható.
+38. ⬜ **Meghívóim modal (2026-07-18 óta, névvel 2026-07-23 óta):** fő menü →
+    **✉️ Meghívóim** → info-sor mutatja, kötelező-e most a meghívó; az „Új meghívó"
+    gomb csak akkor aktív, ha a **meghívott teljes neve** ki van töltve **és** a
+    tanúsító pipa be van pipálva. Létrehozás után a név-mező és a pipa is visszaáll
+    üresre (minden meghívóhoz újra). A listában: kód, **a meghívott neve**,
+    státusz-jelvény, dátum; aktív sornál 📋 (kód másolása, ✅ visszajelzéssel) és
+    🗑️ (visszavonás, megerősítő al-modallal). Visszavont meghívónál az akció-gombok eltűnnek.
+39. ⬜ **Kétlépcsős regisztráció (2026-07-23 óta):** `MEGHIVAS_KOTELEZO=true` és van
+    már e-ember → a „Regisztráció" gomb ELŐBB a **meghívó kód-oldalt** nyitja. Rossz
+    kód → mezőhiba („érvénytelen vagy már felhasznált"). Jó kód → a regisztrációs
+    űrlap nyílik meg a meghívott **nevével előre kitöltve** (szerkeszthető). Sikeres
+    regisztráció után a meghívó `Felhasznalt`, a Meghívóim listában megjelenik a
+    felhasználó e-emberneve. **Első e-ember:** üres DB-n a kód-oldal kimarad, a
+    regisztráció egyből nyílik (alapító). A kód kis- és nagybetűvel is beírható.
+39/b. ⬜ **Adatvédelmi nyilatkozat (2026-07-23 óta):** a bejelentkezés oldal alján
+    **„Adatvédelmi nyilatkozat"** link → felugró ablakban a nyilatkozat szövege,
+    „Bezárás" gombbal (ESC / overlay-kattintás is zár).
 40. ⬜ **Bizalmi gráf éle:** meghívóval regisztrált e-embernél a DB-ben a
     `meghivoEemberId` a kibocsátóra mutat (`docker exec koino-mongodb-dev mongosh
     koino --eval "db.eembers.findOne({eemberNev:'...'},{meghivoEemberId:1})"`).
@@ -759,12 +772,13 @@ docker logs -f koino-backend
       állapotot. Architektúra: `FoOldalTortenetKezelo` (két-veremes), a nézet-állapotok típusai:
       `entitas` · `rendezes` · `nezet` (térkép).
 
-### API-referencia — meghívó rendszer (2026-07-18, curl-lel igazolva)
+### API-referencia — meghívó rendszer (2026-07-18, névvel/kétlépcsőssel 2026-07-23, curl-lel igazolva)
 
 | Végpont | Auth | Leírás |
 |---|---|---|
-| `GET /api/meghivo/kotelezo` | – | `{ kotelezo: bool }` — a MEGHIVAS_KOTELEZO kapcsoló állása |
-| `POST /api/meghivo` | ✅ | body: `{ tanusitva: true }` — enélkül 400; válasz: a meghívó a `kod`-dal |
+| `GET /api/meghivo/kotelezo` | – | `{ kotelezo: bool }` — **effektív**: `MEGHIVAS_KOTELEZO=true` ÉS van már ≥1 e-ember (0 e-embernél `false` → alapító kód nélkül) |
+| `GET /api/meghivo/ellenorzes/:kod` | – | `{ ervenyes: bool, meghivottNev }` — kód ellenőrzése a regisztráció 1. lépésében, **nem fogyasztja el**; rossz kód → `ervenyes:false` (nem hiba) |
+| `POST /api/meghivo` | ✅ | body: `{ tanusitva: true, meghivottNev }` — bármelyik hiányzik → 400; válasz: a meghívó a `kod`-dal és a `meghivottNev`-vel |
 | `GET /api/meghivo/sajat` | ✅ | saját meghívók (felhasznaloEemberId → eemberNev populate) |
 | `POST /api/meghivo/:id/visszavonas` | ✅ | csak a kibocsátó, csak `Aktiv` státuszban |
 

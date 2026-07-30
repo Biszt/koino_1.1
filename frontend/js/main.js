@@ -3,8 +3,11 @@
 // ===== IMPORTOK =====
 import BejelentkezesForm from './components/BejelentkezesForm.js';
 import RegisztracioForm from './components/RegisztracioForm.js';
+import MeghivoKodForm from './components/MeghivoKodForm.js';
+import AdatvedelmiNyilatkozatModal from './components/modals/AdatvedelmiNyilatkozatModal.js';
 import FoOldal from './components/foOldal.js';
 import { tokenMentese, eemberMentese, tokenTorlese, beVanJelentkezve, tokenLekerese } from './utils/authHelper.js';
+import { apiGet } from './utils/apiHelper.js';
 
 // Token tárolása memóriában
 let aktvToken = null;
@@ -85,18 +88,76 @@ function sikeresBejelentkezes(token, eember) {
   console.log('main.sikeresBejelentkezes - VÉGE', { eemberNev: eember?.eemberNev });
 }
 
+// ===== REGISZTRÁCIÓ INDÍTÁSA (kétlépcsős, ha meghívásos) =====
+// A „Regisztráció" gomb ezt hívja. Megkérdezi a backendtől, kell-e meghívó kód
+// (GET /api/meghivo/kotelezo — env-kapcsoló ÉS van-e már e-ember):
+//   - ha KELL → előbb a meghívó kód lépés,
+//   - ha NEM (nyílt regisztráció vagy az első, alapító e-ember) → egyből az űrlap.
+async function regisztracioIndito() {
+  console.log('main.regisztracioIndito - KEZDÉS');
+
+  try {
+    const valasz = await apiGet('meghivo/kotelezo');
+    if (valasz?.kotelezo) {
+      console.log('main.regisztracioIndito - meghívásos → kód lépés');
+      await meghivoKodLepesMegjelenites();
+      return;
+    }
+  } catch (hiba) {
+    // Ha a lekérés hibázik, essünk vissza a sima regisztrációra — a backend
+    // a végső őr: kötelező módban a kód nélküli regisztrációt úgyis elutasítja.
+    console.error('main.regisztracioIndito - kotelezo lekérés hiba, sima regisztráció', hiba.message);
+  }
+
+  await regisztracioMegjelenites();
+  console.log('main.regisztracioIndito - VÉGE');
+}
+
+// ===== MEGHÍVÓ KÓD LÉPÉS MEGJELENÍTÉSE (regisztráció 1. lépése) =====
+// A meghivoKodForm.html komponenst tölti be. Érvényes kód után a regisztrációs
+// űrlapot nyitja meg a meghívott nevével előre kitöltve.
+async function meghivoKodLepesMegjelenites() {
+  console.log('main.meghivoKodLepesMegjelenites - KEZDÉS');
+
+  try {
+    const sikerult = await oldalBetoltese('./html/components/meghivoKodForm.html');
+    if (!sikerult) return;
+
+    // Érvényes kód esetén → regisztrációs űrlap a kóddal + a névvel előre kitöltve
+    const meghivoKodForm = new MeghivoKodForm(({ kod, meghivottNev }) => {
+      regisztracioMegjelenites({ meghivoKod: kod, eloreKitoltottNev: meghivottNev });
+    });
+    meghivoKodForm.init();
+
+    // "Már van fiókod? Bejelentkezés" link figyelése
+    const bejelentkezesLink = document.getElementById('meghivo-kod-bejelentkezes-link');
+    if (bejelentkezesLink) {
+      bejelentkezesLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        alkalmazasInditasa();
+      });
+    }
+  } catch (hiba) {
+    console.error('main.meghivoKodLepesMegjelenites - HIBA', { hiba: hiba.message });
+  }
+
+  console.log('main.meghivoKodLepesMegjelenites - VÉGE');
+}
+
 // ===== REGISZTRÁCIÓS OLDAL MEGJELENÍTÉSE =====
 // A regisztracioForm.html komponenst tölti be az #app-ba.
-async function regisztracioMegjelenites() {
-  console.log('main.regisztracioMegjelenites - KEZDÉS');
+// @param {Object} opciok - a meghívó kód-lépésből átadott adatok (opcionális):
+//   { meghivoKod, eloreKitoltottNev } — a névvel előre kitöltve nyílik meg
+async function regisztracioMegjelenites(opciok = {}) {
+  console.log('main.regisztracioMegjelenites - KEZDÉS', { vanMeghivoKod: !!opciok.meghivoKod });
 
   try {
     // 1 lépés: a komponens HTML betöltése közvetlenül az #app-ba
     const sikerult = await oldalBetoltese('./html/components/regisztracioForm.html');
     if (!sikerult) return;
 
-    // 2. RegisztracioForm JS osztály inicializálása
-    const regisztracioForm = new RegisztracioForm(sikeresBejelentkezes);
+    // 2. RegisztracioForm JS osztály inicializálása (előre kitöltött adatokkal, ha van)
+    const regisztracioForm = new RegisztracioForm(sikeresBejelentkezes, opciok);
     regisztracioForm.init();
 
     // 3. "Már van fiókod? Bejelentkezés" link figyelése
@@ -145,12 +206,21 @@ async function alkalmazasInditasa() {
     const bejelentkezesForm = new BejelentkezesForm(sikeresBejelentkezes);
     bejelentkezesForm.init();
 
-    // 3. "Regisztráció" link figyelése
+    // 3. "Regisztráció" link figyelése — kétlépcsős indító (meghívásos esetén kód előbb)
     const regisztracioLink = document.getElementById('regisztracio-link');
     if (regisztracioLink) {
       regisztracioLink.addEventListener('click', (e) => {
         e.preventDefault();
-        regisztracioMegjelenites();
+        regisztracioIndito();
+      });
+    }
+
+    // 4. "Adatvédelmi nyilatkozat" link figyelése — felugró ablakban nyílik meg
+    const adatvedelmiLink = document.getElementById('adatvedelmi-link');
+    if (adatvedelmiLink) {
+      adatvedelmiLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        new AdatvedelmiNyilatkozatModal().megnyitas();
       });
     }
 

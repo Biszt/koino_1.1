@@ -28,10 +28,13 @@ email: {
 },
 
 // ----- JELSZÓ MEZŐ -----
-jelszo: { 
+// FIGYELEM: itt a HASH-elt jelszó tárolódik (bcrypt, ~60 karakter), ezért ez a
+// minlength gyakorlatilag mindig teljesül. A tényleges jelszó-erősség szabályt
+// (min. 8 karakter + betű + szám) a jelszoHelper.validalJelszoErosseg érvényesíti.
+jelszo: {
   type: String,       // Szöveges típus
-  required: true,     // Kötelező mező 
-  minlength: 6        // Minimum 6 karakter hosszú 
+  required: true,     // Kötelező mező
+  minlength: 8        // Konzisztencia a jelszó-szabály minimumával
 },
 
 // ----- NÉV MEZŐ -----

@@ -51,17 +51,31 @@ class JelszoHelper {
   static validalJelszoErosseg(jelszo) {
     // Hibák gyűjtése ebbe a tömbbe
     const hibak = [];
-    
+
+    // Biztos, ami biztos: mindig stringgel dolgozunk
+    const jelszoSzoveg = jelszo || '';
+
     // === SZABÁLY 1: Minimum hossz ===
     const minHossz = 8;
-    if (jelszo.length < minHossz) {
-      hibak.push(`A jelszónak legalább ${minHossz} karakter hosszúnak kell lennie`);
+    if (jelszoSzoveg.length < minHossz) {
+      hibak.push(`legalább ${minHossz} karakter hosszú legyen`);
     }
-    
+
+    // === SZABÁLY 2: Tartalmazzon legalább egy BETŰT ===
+    // (bármilyen betű — kis vagy nagy, ékezetes is; nem kötelező nagybetű)
+    if (!/\p{L}/u.test(jelszoSzoveg)) {
+      hibak.push('tartalmazzon legalább egy betűt');
+    }
+
+    // === SZABÁLY 3: Tartalmazzon legalább egy SZÁMOT ===
+    if (!/[0-9]/.test(jelszoSzoveg)) {
+      hibak.push('tartalmazzon legalább egy számot');
+    }
+
     // Eredmény objektum visszaadása
     return {
       ervényes: hibak.length === 0,  // Ha nincs hiba, akkor érvényes
-      hibak: hibak                    // Hibaüzenetek tömbje
+      hibak: hibak                    // Hibaüzenetek tömbje (rövid, felsorolható tagmondatok)
     };
   }
   

@@ -18,6 +18,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // Nyilvános – a regisztrációs űrlap kérdezi le bejelentkezés előtt
 router.get('/kotelezo', meghivoController.kotelezoLekerese);
 
+// ----- MEGHÍVÓ KÓD ELLENŐRZÉSE (regisztráció 1. lépése) -----
+// GET /api/meghivo/ellenorzes/:kod
+// Nyilvános – a beírt kód érvényességét ellenőrzi és visszaadja a meghívott
+// előre megadott nevét (a kódot NEM fogyasztja el)
+router.get('/ellenorzes/:kod', meghivoController.ellenorzes);
+
 // ----- SAJÁT MEGHÍVÓK LISTÁZÁSA -----
 // GET /api/meghivo/sajat
 // Védett – a „Meghívóim" modal listája

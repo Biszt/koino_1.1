@@ -52,8 +52,10 @@ class eEmberService {
     // regisztrációhoz. A kódot itt csak ÉRVÉNYESÍTJÜK — felhasználtra majd a
     // sikeres mentés UTÁN állítjuk (6.b lépés), hogy hibás regisztráció ne
     // költse el a meghívót.
+    // A követelmény EFFEKTÍV: az env-kapcsolón felül azt is nézi, van-e már
+    // e-ember — 0 e-embernél az ELSŐ (alapító) regisztráció kód nélkül is mehet.
     let meghivo = null;
-    if (MeghivoService.meghivasKotelezoE()) {
+    if (await MeghivoService.meghivasSzuksegesE()) {
       meghivo = await MeghivoService.kodErvenyesitese(adatok.meghivoKod);
     }
 

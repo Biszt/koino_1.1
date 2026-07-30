@@ -7,8 +7,20 @@
   <!-- Tájékoztató sáv: kötelező-e most a meghívó a regisztrációhoz (a JS tölti fel) -->
   <p class="meghivo-modal__info" id="meghivo-info"></p>
 
-  <!-- Új meghívó létrehozása: tanúsító nyilatkozat + gomb -->
+  <!-- Új meghívó létrehozása: meghívott neve + tanúsító nyilatkozat + gomb -->
   <div class="meghivo-modal__letrehozas">
+    <!-- Meghívott teljes neve — ezzel nyílik meg előre kitöltve a regisztráció -->
+    <label class="meghivo-modal__nev-cimke" for="meghivo-nev">
+      A meghívott teljes neve
+    </label>
+    <input
+      type="text"
+      class="meghivo-modal__nev"
+      id="meghivo-nev"
+      placeholder="pl. Kovács Anna"
+      autocomplete="off"
+    />
+
     <label class="meghivo-modal__tanusitas">
       <input type="checkbox" id="meghivo-tanusitas" />
       <span>

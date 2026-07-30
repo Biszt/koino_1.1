@@ -17,9 +17,14 @@ class RegisztracioForm {
 
   // ── KONSTRUKTOR ──
   // param Function sikerCallback - Sikeres regisztráció után hívódik meg, megkapja az eember objektumot
-  constructor(sikerCallback) {
+  // param Object opciok - a kétlépcsős (meghívós) regisztrációból átadott adatok:
+  //   { meghivoKod, eloreKitoltottNev } — a meghívó kód-lépésből érkeznek (opcionális)
+  constructor(sikerCallback, opciok = {}) {
     // Metódus kezdő log
-    console.log('RegisztracioForm.constructor - KEZDÉS', { vanSikerCallback: typeof sikerCallback === 'function' });
+    console.log('RegisztracioForm.constructor - KEZDÉS', {
+      vanSikerCallback: typeof sikerCallback === 'function',
+      vanMeghivoKod: !!opciok.meghivoKod
+    });
 
     // Sikeres regisztráció után ezt hívjuk meg — main.js adja át
     this.sikerCallback = sikerCallback;
@@ -30,6 +35,12 @@ class RegisztracioForm {
     // Kötelező-e a meghívó kód — az init() kérdezi le a backendtől
     // (MEGHIVAS_KOTELEZO kapcsoló); false-nál a mező rejtve marad
     this.meghivoKotelezo = false;
+
+    // ── A KÉTLÉPCSŐS REGISZTRÁCIÓBÓL ÁTADOTT ADATOK ──
+    // Ha a meghívó kód-lépésből érkeztünk, a kódot már ellenőriztük, és a
+    // meghívott előre megadott nevét is ismerjük — ezeket az init() tölti be.
+    this.eloreKitoltottMeghivoKod = opciok.meghivoKod || null;
+    this.eloreKitoltottNev        = opciok.eloreKitoltottNev || null;
 
     // Metódus vég log
     console.log('RegisztracioForm.constructor - VÉGE');
@@ -54,9 +65,28 @@ class RegisztracioForm {
     autocompleteRakotese('regio',     'lokacio/regio');      // Régió mező
     autocompleteRakotese('telepules', 'lokacio/telepules');  // Település mező
 
-    // ── MEGHÍVÓ KÓD MEZŐ MEGJELENÍTÉSE (ha kötelező) ──
-    // Nem várjuk meg (nem async az init) — amint megjön a válasz, megmutatjuk
-    this._meghivoMezoBeallitasa();
+    // ── KÉTLÉPCSŐS REGISZTRÁCIÓ: ELŐRE KITÖLTÖTT ADATOK ──
+    // Ha a meghívó kód-lépésből érkeztünk:
+    //   - a nevet ELŐRE KITÖLTJÜK (a meghívott javíthatja, ha elgépelés volt),
+    //   - a kódot a rejtett mezőbe írjuk (nem kell újra beírni), a mező rejtve marad,
+    //   - a validáció szempontjából a kód „kötelező" (értéke már megvan).
+    if (this.eloreKitoltottMeghivoKod) {
+      const nevMezo = document.getElementById('nev');
+      if (nevMezo && this.eloreKitoltottNev) {
+        nevMezo.value = this.eloreKitoltottNev;
+      }
+      const kodMezo = document.getElementById('meghivoKod');
+      if (kodMezo) {
+        kodMezo.value = this.eloreKitoltottMeghivoKod;
+      }
+      this.meghivoKotelezo = true;
+      // A látható kód-mezőt NEM mutatjuk meg — a kódot már megadta az 1. lépésben.
+      console.log('RegisztracioForm.init - előre kitöltött meghívó adatok betöltve');
+    } else {
+      // ── MEGHÍVÓ KÓD MEZŐ MEGJELENÍTÉSE (ha kötelező) ──
+      // Nem várjuk meg (nem async az init) — amint megjön a válasz, megmutatjuk
+      this._meghivoMezoBeallitasa();
+    }
 
     // Metódus vég log
     console.log('RegisztracioForm.init - VÉGE', { formTalalt: !!form });
@@ -173,8 +203,13 @@ class RegisztracioForm {
       ervenyesE = false;
     }
 
-    // Jelszó: kötelező, minimum 6 karakter
-    if (!jelszo || jelszo.length < 6) {
+    // Jelszó: kötelező, min. 8 karakter, legalább egy betű ÉS egy szám
+    // (ugyanaz a szabály, mint a backend jelszoHelper.validalJelszoErosseg-ben —
+    //  itt csak azért ismételjük, hogy a felhasználó azonnal visszajelzést kapjon)
+    const jelszoElegHosszu = !!jelszo && jelszo.length >= 8;
+    const vanBetu = /\p{L}/u.test(jelszo || '');
+    const vanSzam = /[0-9]/.test(jelszo || '');
+    if (!jelszoElegHosszu || !vanBetu || !vanSzam) {
       this.mezohibaBeallitasa('mezo-jelszo', true);
       ervenyesE = false;
     }

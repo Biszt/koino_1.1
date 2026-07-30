@@ -863,39 +863,54 @@ _kibovitöGombFrissitese() {
     this.kibovitöGomb = null;
   }
 
-  // Túlnyúlás ellenőrzése: scrollHeight > clientHeight azt jelenti, hogy a tartalom
-  // nem fér el a látható területen, tehát szükség van a kibővítő gombra
-  const tulnyulikE = this.bodyElem.scrollHeight > this.bodyElem.clientHeight;
+  // A túlnyúlás-mérést a KÖVETKEZŐ képkockára halasztjuk. Közvetlenül a body
+  // feltöltése után az elem gyakran még NINCS elrendezve (a kiválasztott kártya
+  // fix magassága, így a body látható magassága még nem érvényes) → a scrollHeight
+  // és a clientHeight is 0 lenne, és a gomb sosem jelenne meg. Emiatt bukkant fel a
+  // „..." csak egy KÉSŐBBI újrarajzolás (pl. gyerek létrehozása) után, törléskor meg
+  // eltűnt. A requestAnimationFrame callbackjében a böngésző már kiszámolta az
+  // elrendezést, így a mérés MINDIG helyes (létrehozás/törlés/újratöltés után is).
+  requestAnimationFrame(() => {
+    // A kártya időközben megsemmisülhetett (törlés, navigáció) → óvatosan
+    if (!this.bodyElem) return;
 
-  console.log('Kartya._kibovitöGombFrissitese - túlnyúlás ellenőrzés', {
-    scrollHeight: this.bodyElem.scrollHeight,
-    clientHeight: this.bodyElem.clientHeight,
-    tulnyulikE
+    // Duplázás elleni védelem: ha egy másik hívás már kitett gombot, nem teszünk másikat
+    if (this.kibovitöGomb) return;
+
+    // Túlnyúlás ellenőrzése: scrollHeight > clientHeight azt jelenti, hogy a tartalom
+    // nem fér el a látható területen, tehát szükség van a kibővítő gombra
+    const tulnyulikE = this.bodyElem.scrollHeight > this.bodyElem.clientHeight;
+
+    console.log('Kartya._kibovitöGombFrissitese - túlnyúlás ellenőrzés', {
+      scrollHeight: this.bodyElem.scrollHeight,
+      clientHeight: this.bodyElem.clientHeight,
+      tulnyulikE
+    });
+
+    if (!tulnyulikE) {
+      console.log('Kartya._kibovitöGombFrissitese - VÉGE: nincs túlnyúlás, gomb nem szükséges');
+      return;
+    }
+
+    // Kibővítő gomb létrehozása
+    const gomb = document.createElement('button');
+    gomb.className = 'pakli-kartya__kibovito-gomb';
+    gomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése'); // akadálymentesség
+    gomb.setAttribute('type', 'button'); // form submit elkerülése
+    gomb.textContent = '...'; // alapállapot: csonkított
+
+    // Koppintás esemény – kibővítés és visszazárás váltogatása
+    gomb.addEventListener('click', (e) => {
+      e.stopPropagation(); // megakadályozza, hogy a kártya koppintás eseménye is lefusson
+      this._kibovitesValtasa();
+    });
+
+    // Gomb hozzáadása a bodyhoz és referencia eltárolása
+    this.bodyElem.appendChild(gomb);
+    this.kibovitöGomb = gomb;
+
+    console.log('Kartya._kibovitöGombFrissitese - VÉGE: gomb hozzáadva');
   });
-
-  if (!tulnyulikE) {
-    console.log('Kartya._kibovitöGombFrissitese - VÉGE: nincs túlnyúlás, gomb nem szükséges');
-    return;
-  }
-
-  // Kibővítő gomb létrehozása
-  const gomb = document.createElement('button');
-  gomb.className = 'pakli-kartya__kibovito-gomb';
-  gomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése'); // akadálymentesség
-  gomb.setAttribute('type', 'button'); // form submit elkerülése
-  gomb.textContent = '...'; // alapállapot: csonkított
-
-  // Koppintás esemény – kibővítés és visszazárás váltogatása
-  gomb.addEventListener('click', (e) => {
-    e.stopPropagation(); // megakadályozza, hogy a kártya koppintás eseménye is lefusson
-    this._kibovitesValtasa();
-  });
-
-  // Gomb hozzáadása a bodyhoz és referencia eltárolása
-  this.bodyElem.appendChild(gomb);
-  this.kibovitöGomb = gomb;
-
-  console.log('Kartya._kibovitöGombFrissitese - VÉGE: gomb hozzáadva');
 }
 
 // ----- KIBŐVÍTÉS VÁLTÁSA -----

@@ -65,13 +65,17 @@ class MeghivoModal {
 
     await this.modal.init();
 
-    // Tanúsítás jelölőnégyzet: csak bepipálva aktív az „Új meghívó" gomb
+    // Az „Új meghívó" gomb csak akkor aktív, ha a NÉV ki van töltve ÉS a
+    // tanúsítás be van pipálva — mindkét mező változását figyeljük.
     const tanusitas = document.getElementById('meghivo-tanusitas');
+    const nevMezo   = document.getElementById('meghivo-nev');
     const ujGomb    = document.getElementById('meghivo-uj-gomb');
-    if (tanusitas && ujGomb) {
-      tanusitas.addEventListener('change', () => {
-        ujGomb.disabled = !tanusitas.checked;
-      });
+    if (tanusitas && nevMezo && ujGomb) {
+      const gombFrissites = () => {
+        ujGomb.disabled = !(tanusitas.checked && nevMezo.value.trim());
+      };
+      tanusitas.addEventListener('change', gombFrissites);
+      nevMezo.addEventListener('input', gombFrissites);
       ujGomb.addEventListener('click', () => this._ujMeghivo());
     }
 
@@ -188,9 +192,15 @@ class MeghivoModal {
          <button type="button" class="meghivo-modal__visszavon" data-id="${meghivo._id}" data-kod="${meghivo.kod}" title="Visszavonás">🗑️</button>`
       : '';
 
+    // A meghívott neve, amit a kibocsátó adott meg (felhasználói adat → escape)
+    const nevResz = meghivo.meghivottNev
+      ? `<span class="meghivo-modal__nev-cimke2">${this._escape(meghivo.meghivottNev)}</span>`
+      : '';
+
     return `
       <div class="meghivo-modal__elem">
         <span class="meghivo-modal__kod">${meghivo.kod}</span>
+        ${nevResz}
         <span class="meghivo-modal__statusz meghivo-modal__statusz--${statuszOsztaly}">${statuszFelirat}</span>
         <span class="meghivo-modal__ido">${this._idoSzoveg(meghivo.letrehozva)}</span>
         ${felhasznaloResz}
@@ -202,15 +212,20 @@ class MeghivoModal {
   async _ujMeghivo() {
     console.log('MeghivoModal._ujMeghivo - KEZDÉS');
 
+    // A meghívott nevét a névmezőből olvassuk ki (kötelező — a gomb enélkül tiltva van)
+    const nevMezo = document.getElementById('meghivo-nev');
+    const meghivottNev = nevMezo?.value?.trim() || '';
+
     this.modal.hibaTisztitasa();
     this.modal.betoltesBeallitasa(true);
     try {
-      await apiPost('meghivo', { tanusitva: true }, this.token);
+      await apiPost('meghivo', { tanusitva: true, meghivottNev }, this.token);
       this.modal.betoltesBeallitasa(false);
 
-      // A nyilatkozatot minden meghívóhoz ÚJRA el kell fogadni — visszaállítjuk
+      // A nevet és a nyilatkozatot minden meghívóhoz ÚJRA meg kell adni — visszaállítjuk
       const tanusitas = document.getElementById('meghivo-tanusitas');
       const ujGomb    = document.getElementById('meghivo-uj-gomb');
+      if (nevMezo)    nevMezo.value     = '';
       if (tanusitas) tanusitas.checked = false;
       if (ujGomb)    ujGomb.disabled   = true;
 

@@ -3,8 +3,12 @@
 // ===================================
 // BACKEND ALAP URL
 // ===================================
-// Ha változik, csak itt kell módosítani
-export const API_ALAP_URL = 'http://localhost:3000/api/';
+// RELATÍV útvonal — ugyanarra az origin-re mutat, ahonnan az oldal betöltődött.
+// A backend statikusan szolgálja ki a frontendet ÉS az /api-t (server.js), így
+// ez fejlesztésben (http://localhost:3000/api/) és élesben (https://koino.hu/api/)
+// egyaránt helyesen működik. NEM szabad abszolút 'localhost'-ot használni: az a
+// látogató saját gépére mutatna, nem a szerverre.
+export const API_ALAP_URL = '/api/';
 
 // ===================================
 // ÁLTALÁNOS API KÉRÉS

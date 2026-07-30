@@ -9,6 +9,7 @@
 /* ===== KOMPONENS STÍLUSOK ===== */
 @import './components/regisztracioForm.css';
 @import './components/bejelentkezesForm.css';
+@import './components/meghivoKodForm.css';
 @import './components/foOldal.css';
 @import './components/hamburgerMenu.css';
 @import './components/pakli.css';
@@ -66,3 +67,4 @@
 @import './components/modals/kuszobErtekMezok.css';
 @import './components/modals/ertekJavaslatModal.css';
 @import './components/modals/rendezesModal.css';
+@import './components/modals/adatvedelmiNyilatkozatModal.css';

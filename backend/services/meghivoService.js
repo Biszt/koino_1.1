@@ -13,6 +13,10 @@
 // ===== IMPORTOK =====
 const crypto = require('crypto');                                  // Véletlen kód generálásához
 const MeghivoRepository = require('../repositories/meghivoRepository');
+// Az „effektív" meghívás-kötelezettséghez az e-emberek számára van szükség
+// (0 e-embernél az ELSŐ regisztráció kód nélkül is mehet). Csak a repository-t
+// importáljuk (NEM az eemberService-t) — így nincs körkörös függés.
+const EemberRepository = require('../repositories/eemberRepository');
 
 // ===== KÓD-GENERÁLÁS BEÁLLÍTÁSAI =====
 // Olyan karakterkészlet, amiből kimaradnak az összetéveszthető jelek
@@ -35,18 +39,51 @@ class MeghivoService {
     return ertek === 'true';
   }
 
+  // ===== EFFEKTÍV KAPCSOLÓ: KELL-E MOST MEGHÍVÓ KÓD? =====
+  // A nyers env-kapcsolón felül egy KIVÉTELT is figyelembe vesz: ha még EGYETLEN
+  // e-ember sincs, az ELSŐ (alapító) regisztráció kód nélkül is mehet — különben
+  // senki nem tudna belépni ahhoz, hogy az első meghívót kiadja.
+  // Ezt hívja a regisztráció (eemberService) ÉS a /api/meghivo/kotelezo végpont,
+  // hogy a backend és a frontend ugyanabból az igazságból dolgozzon.
+  // @returns {Promise<boolean>} true, ha a regisztrációhoz meghívó kód kell
+  async meghivasSzuksegesE() {
+    console.log('MeghivoService.meghivasSzuksegesE - KEZDÉS');
+
+    // Ha a kapcsoló ki van kapcsolva, sosem kell kód (nyílt regisztráció)
+    if (!this.meghivasKotelezoE()) {
+      console.log('MeghivoService.meghivasSzuksegesE - VÉGE (kapcsoló ki)', { szukseges: false });
+      return false;
+    }
+
+    // Kapcsoló be — de az ELSŐ e-ember kivétel: 0 e-embernél még nincs kód
+    const eemberSzam = await EemberRepository.countAll();
+    const szukseges = eemberSzam > 0;
+
+    console.log('MeghivoService.meghivasSzuksegesE - VÉGE', { eemberSzam, szukseges });
+    return szukseges;
+  }
+
   // ===== MEGHÍVÓ LÉTREHOZÁSA =====
   // ÜZLETI SZABÁLY: a kibocsátónak a létrehozáskor TANÚSÍTANIA kell, hogy a
-  // meghívott valódi személy és tudtomása szerint még nem regisztrált (D1).
+  // meghívott valódi személy és tudtomása szerint még nem regisztrált (D1),
+  // ÉS meg kell adnia a meghívott teljes nevét (ezt a regisztráció előre kitölti).
   // @param {string} kibocsatoEemberId - A bejelentkezett e-ember azonosítója
   // @param {boolean} tanusitva - A tanúsító nyilatkozat elfogadása
+  // @param {string} meghivottNev - A meghívott teljes neve
   // @returns {Promise} Létrehozott meghívó
-  async meghivoLetrehozasa(kibocsatoEemberId, tanusitva) {
-    console.log('MeghivoService.meghivoLetrehozasa - KEZDÉS', { kibocsatoEemberId, tanusitva });
+  async meghivoLetrehozasa(kibocsatoEemberId, tanusitva, meghivottNev) {
+    console.log('MeghivoService.meghivoLetrehozasa - KEZDÉS', { kibocsatoEemberId, tanusitva, meghivottNev });
 
     // === 1. LÉPÉS: TANÚSÍTÁS ELLENŐRZÉSE ===
     if (tanusitva !== true) {
       throw new Error('A meghívó létrehozásához tanúsítanod kell, hogy a meghívott valódi, még nem regisztrált személy');
+    }
+
+    // === 1.b LÉPÉS: MEGHÍVOTT NEVÉNEK ELLENŐRZÉSE ===
+    // A név kötelező — ez lesz a regisztrációnál előre kitöltött teljes név
+    const nev = (meghivottNev || '').trim();
+    if (!nev) {
+      throw new Error('A meghívó létrehozásához add meg a meghívott teljes nevét');
     }
 
     // === 2. LÉPÉS: EGYEDI KÓD GENERÁLÁSA ===
@@ -59,6 +96,7 @@ class MeghivoService {
         meghivo = await MeghivoRepository.create({
           kibocsatoEemberId,
           kod,
+          meghivottNev: nev,
           tanusitva: true
         });
       } catch (hiba) {
@@ -123,6 +161,32 @@ class MeghivoService {
 
     console.log('MeghivoService.meghivoVisszavonasa - VÉGE', { id: eredmeny._id });
     return eredmeny;
+  }
+
+  // ===== KÓD ELLENŐRZÉSE (regisztráció 1. lépése — NEM fogyasztja el) =====
+  // A regisztráció ELŐTT hívja a frontend (nyilvános végpont): a beírt kódról
+  // megmondja, érvényes-e, és ha igen, visszaadja a meghívott ELŐRE MEGADOTT
+  // nevét, hogy a regisztrációs űrlap ki tudja tölteni. A kódot NEM állítja
+  // felhasználtra — az továbbra is csak a tényleges regisztráció végén történik.
+  // (Szemben a kodErvenyesitese-vel, ez NEM dob hibát érvénytelen kódra, hanem
+  // { ervenyes: false }-t ad — a hívó felület barátságos üzenetet mutathat.)
+  // @param {string} kod - A regisztráló által beírt meghívó kód
+  // @returns {Promise<{ervenyes: boolean, meghivottNev: string|null}>}
+  async kodEllenorzese(kod) {
+    console.log('MeghivoService.kodEllenorzese - KEZDÉS', { kod });
+
+    if (!kod || !kod.trim()) {
+      return { ervenyes: false, meghivottNev: null };
+    }
+
+    const meghivo = await MeghivoRepository.findByKod(kod);
+    const ervenyes = !!meghivo && meghivo.statusz === 'Aktiv';
+
+    console.log('MeghivoService.kodEllenorzese - VÉGE', { ervenyes });
+    return {
+      ervenyes,
+      meghivottNev: ervenyes ? meghivo.meghivottNev : null
+    };
   }
 
   // ===== KÓD ÉRVÉNYESÍTÉSE ÉS FELHASZNÁLÁSA (regisztrációkor) =====

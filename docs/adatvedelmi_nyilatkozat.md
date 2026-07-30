@@ -1,7 +1,17 @@
 # Adatvédelmi nyilatkozat — koino (1. fázis)
 
-**Rólad tárolok:** e-embernév, valódi név, település, e-mail, jelszó (titkosítva), valamint a tudatpontjaid, tartalmaid és szavazataid.
+> Ez a szöveg jelenik meg a bejelentkezés oldalon az „Adatvédelmi nyilatkozat"
+> linkre kattintva (felugró ablak). A forrás és a UI-szöveg szinkronban tartandó:
+> `frontend/html/components/modals/adatvedelmiNyilatkozatModal.html`.
 
-**Más e-emberek látják:** a neved, településed, tudatpont-eloszlásod, tartalmaid és a döntések összesített eredményét. **Nem látják** az egyéni szavazatod és az e-mailed.
+**Rólad tárolom:** az e-emberneved, a valódi neved, a településed, az e-mail-címed,
+a jelszavad (titkosítva), valamint a tudatpontjaidat, a tartalmaidat és a
+szavazataidat. Ezeket nem adom ki senkinek; a teljes körű biztonsági védelem
+kiépítése még folyamatban van.
 
-Reklámot nem küldök, követni nem követlek. Adataid megtekintését, javítását vagy törlését kérheted: [e-mail].
+**Más e-emberek látják:** a neved, a településed, a tudatpont-eloszlásod, a
+tartalmaid és a döntések összesített eredményét. **Nem látják** az egyéni
+szavazatod és az e-mail-címed.
+
+Bármikor törölheted magad; ekkor a tudatpontjaid visszaosztódnak, és minden
+adatod törlődik.

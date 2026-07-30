@@ -1,0 +1,64 @@
+<!-- frontend/html/components/meghivoKodForm.html -->
+
+<!-- A regisztráció 1. LÉPÉSE: a meghívó kód bekérése. A main.js tölti be az
+     #app div-be, ha a regisztráció meghívásos (GET /api/meghivo/kotelezo → true).
+     Érvényes kód után a regisztrációs űrlap nyílik meg a névvel előre kitöltve.
+     A bejelentkezés-oldal megosztott osztályait (kártya, form-mezo, gombok)
+     használja újra. -->
+
+<div class="bejelentkezes-oldal">
+
+  <div class="bejelentkezes-kartya">
+
+    <h1 class="bejelentkezes-kartya__cim">Meghívó kód</h1>
+
+    <!-- Rövid magyarázat: miért kell kód -->
+    <p class="meghivo-kod-form__info">
+      A koino meghívásos: a csatlakozáshoz add meg a meghívó kódot, amit egy
+      már regisztrált e-embertől kaptál.
+    </p>
+
+    <!-- Általános hibaüzenet – a MeghivoKodForm.js tölti fel -->
+    <div
+      class="bejelentkezes-form__altalanos-hiba"
+      id="meghivo-kod-altalanos-hiba"
+      role="alert"
+      aria-live="polite"
+    ></div>
+
+    <form class="bejelentkezes-form" id="meghivo-kod-form" novalidate>
+
+      <!-- MEGHÍVÓ KÓD -->
+      <div class="form-mezo" id="mezo-meghivo-kod">
+        <input
+          class="form-mezo__bemenet"
+          type="text"
+          id="meghivo-kod-bemenet"
+          name="meghivoKod"
+          placeholder="Meghívó kód (XXXX-XXXX-XXXX)"
+          autocomplete="off"
+          autocapitalize="characters"
+          aria-label="Meghívó kód"
+          required
+        />
+        <span class="form-mezo__hiba-uzenet" id="hiba-meghivo-kod">
+          Érvénytelen vagy már felhasznált meghívó kód.
+        </span>
+      </div>
+
+      <!-- TOVÁBB GOMB -->
+      <button type="submit" class="btn-bejelentkezes" id="btn-meghivo-kod-tovabb">
+        Tovább
+      </button>
+
+    </form>
+
+    <!-- LÁBLÉC LINK – bejelentkezés oldalra -->
+    <p class="bejelentkezes-lab">
+      Már van fiókod?
+      <a href="bejelentkezes" id="meghivo-kod-bejelentkezes-link">Bejelentkezés</a>
+    </p>
+
+  </div>
+
+</div>

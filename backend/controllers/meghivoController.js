@@ -15,7 +15,9 @@ class MeghivoController {
   async kotelezoLekerese(req, res) {
     console.log('MeghivoController.kotelezoLekerese - KEZDÉS');
     try {
-      const kotelezo = MeghivoService.meghivasKotelezoE();
+      // Az EFFEKTÍV követelmény: env-kapcsoló ÉS van már legalább 1 e-ember
+      // (az első, alapító regisztráció kód nélkül is mehet).
+      const kotelezo = await MeghivoService.meghivasSzuksegesE();
 
       res.status(200).json({ success: true, kotelezo });
 
@@ -26,12 +28,38 @@ class MeghivoController {
     }
   }
 
+  // ===== MEGHÍVÓ KÓD ELLENŐRZÉSE (regisztráció 1. lépése) =====
+  // GET /api/meghivo/ellenorzes/:kod — NYILVÁNOS: a regisztráció első lépésében
+  // a frontend ezzel ellenőrzi a beírt kódot, és megkapja a meghívott előre
+  // megadott nevét (amivel a regisztrációs űrlapot kitölti). A kódot NEM fogyasztja el.
+  async ellenorzes(req, res) {
+    console.log('MeghivoController.ellenorzes - KEZDÉS', { kod: req.params.kod });
+    try {
+      const eredmeny = await MeghivoService.kodEllenorzese(req.params.kod);
+
+      res.status(200).json({
+        success: true,
+        ervenyes: eredmeny.ervenyes,
+        meghivottNev: eredmeny.meghivottNev
+      });
+
+      console.log('MeghivoController.ellenorzes - VÉGE (siker)', { ervenyes: eredmeny.ervenyes });
+    } catch (error) {
+      console.error('MeghivoController.ellenorzes - VÉGE (hiba)', { hiba: error.message });
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   // ===== ÚJ MEGHÍVÓ LÉTREHOZÁSA =====
-  // POST /api/meghivo — védett; body: { tanusitva: true }
+  // POST /api/meghivo — védett; body: { tanusitva: true, meghivottNev }
   async letrehozas(req, res) {
     console.log('MeghivoController.letrehozas - KEZDÉS', { eemberId: req.user?.id, body: req.body });
     try {
-      const meghivo = await MeghivoService.meghivoLetrehozasa(req.user.id, req.body?.tanusitva);
+      const meghivo = await MeghivoService.meghivoLetrehozasa(
+        req.user.id,
+        req.body?.tanusitva,
+        req.body?.meghivottNev
+      );
 
       res.status(201).json({
         success: true,
