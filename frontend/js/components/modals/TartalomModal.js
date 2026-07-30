@@ -602,6 +602,15 @@ class TartalomModal {
     this.modal.betoltesBeallitasa(true);
 
     try {
+      // HALASZTOTT FELTÖLTÉS: a szerkesztőben függőben lévő (még csak helyben,
+      // blob:-URL-ként tárolt) képeket/fájlokat MOST töltjük fel, és a
+      // blob:-URL-eket valódi szerver-URL-re cseréljük. Így csak akkor kerül
+      // fájl a szerverre, ha tényleg mentünk. Hiba esetén a hívás dob, és a
+      // lenti catch megjeleníti az üzenetet (semmi nem mentődik el).
+      if (this.szovegSzerkeszto) {
+        await this.szovegSzerkeszto.fuggoFeltoltesekVeglegesitese(this.token);
+      }
+
       const adatok = this._adatokOsszegyujtese();
 
       let eredmeny;
@@ -626,6 +635,9 @@ class TartalomModal {
 
     } catch (hiba) {
       console.error('TartalomModal._mentes - HIBA', { hiba: hiba.message });
+      // A betöltés-jelző leállítása, hogy hiba (pl. sikertelen kép-feltöltés)
+      // után se ragadjon be a pörgő spinner.
+      this.modal.betoltesBeallitasa(false);
       this.modal.hibaBeallitasa(
         hiba.message || 'Mentés sikertelen, kérjük próbáld újra.'
       );

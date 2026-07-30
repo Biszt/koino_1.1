@@ -786,6 +786,42 @@ V1-szabályok (Csaba döntése, 2026-07-18): **nincs darabszám-korlát és ninc
 (a korlátozás később közösségi döntés lehet — fazis2 N4); a tanúsítás = maga a
 meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívottnak.
 
+### G) Feltöltött fájlok élettartama — árva-fájl kezelés (ÚJ, 2026-07-30)
+
+> **Cél:** az `uploads/` mappában NE gyűljenek árva fájlok. Két mechanizmus véd:
+> **(1) halasztott feltöltés** — a szövegszerkesztő kép/fájl blokkjai csak a tartalom
+> MENTÉSEKOR kerülnek a szerverre (előtte `blob:`-URL-lel helyi előnézet); **(2) törlés
+> és csere takarítása** — entitás törlésekor és ikon/kép cserekor a lemezes fájl is
+> törlődik (`fajlKezeloService`).
+>
+> **Ikon (kategória/típus) — nincs halasztás gond:** az ikon eleve a create/update
+> `multipart`-tal megy fel, tehát csak mentéskor. Cserénél a régi ikon törlődik.
+>
+> **Ellenőrző parancs (a konténerből):**
+> ```bash
+> docker exec koino-backend sh -c 'ls -1 uploads/icons uploads/kepek uploads/fajlok'
+> ```
+
+**Fontos:** minden kép/fájl-teszt előtt **hard refresh** (Ctrl+Shift+R), különben a régi JS fut.
+
+40. ⬜ **Halasztott feltöltés — normál mentés:** új tartalom → szúrj be képet → az
+    előnézet látszik, de a *Network* fülön **nincs** `/feltoltes` hívás → Mentés → **ekkor**
+    fut a `/feltoltes/kep`, majd a `/tartalom` POST; a kép mentés után is megvan (valódi
+    `/uploads/...` URL, nem `blob:`).
+41. ⬜ **Halasztott feltöltés — elvetés (a lényeg):** új tartalom → szúrj be képet →
+    zárd be **mentés nélkül** → az `uploads/kepek` (és `fajlok`) **üres marad**
+    (semmi nem került fel).
+42. ⬜ **Törlés takarítása:** tartalom képpel/csatolmánnyal, majd told **0 tudatpontra**
+    (automatikus törlés) → a hozzá tartozó fájl **eltűnik** az `uploads/`-ból.
+43. ⬜ **Ikon-csere takarítása:** szerkessz egy kategóriát/típust, tölts fel **új** ikont →
+    a régi `uploads/icons/...` fájl **eltűnik**, csak az új marad.
+44. ⬜ **Szöveg-csere takarítása:** meglévő tartalom szerkesztése → cserélj le egy képet a
+    szerkesztőben → Mentés → a **régi** kép eltűnik, a megmaradók megvannak.
+
+> **Ismert él:** ha a képek feltöltése sikerül, de a rá következő tartalom-mentés maga
+> hibázik (ritka szerverhiba), a feltöltött képek árván maradhatnak. Ritka; szükség
+> esetén később egy vékony söprögető (nem hivatkozott + régi fájlok) biztonsági háló.
+
 ---
 
 ## 6. Ismert megjegyzések / buktatók

@@ -10,6 +10,7 @@ const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
 const ErtesitesService = require('./ertesitesService'); // Új gyerek-tartalomkor értesítjük a szülő figyelőit
+const FajlKezeloService = require('./fajlKezeloService'); // Szöveg-módosításkor a kieső (lecserélt/törölt) fájlok törlése
 
 // ===================================
 // TARTALOM SERVICE OSZTÁLY
@@ -476,6 +477,22 @@ class TartalomService {
     console.log("<<<<<<<<<<<<<<<<<<<< tartalomModositasa====frissitettTartalom: ", {
       frissitettTartalom: frissitettTartalom
     });
+
+    // 9. LÉPÉS - ELAVULT FÁJLOK TÖRLÉSE (ha a szöveg változott)
+    // Ha a szerkesztésnél kép/csatolmány blokkot lecseréltek vagy töröltek,
+    // a régi fájl árván maradna az uploads/ mappában. Összevetjük a RÉGI és
+    // az ÚJ szöveg fájl-URL-jeit, és a kieső (már nem hivatkozott) fájlokat
+    // töröljük a lemezről. Best-effort: hibát csak naplózunk, nem dobunk.
+    if (tisztitottFrissitesek.szoveg !== undefined) {
+      try {
+        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(tartalom, 'Tartalom');
+        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettTartalom, 'Tartalom');
+        await FajlKezeloService.elavultFajlokTorlese(regiUrlek, ujUrlek);
+      } catch (hiba) {
+        console.warn('tartalomModositasa - Elavult fájlok törlése sikertelen', { id, hiba: hiba.message });
+      }
+    }
+
     return frissitettTartalom;
   }
 

@@ -297,6 +297,62 @@ getTartalom() {
 }
 
 // =============================================
+// PUBLIKUS API - FÜGGŐ FELTÖLTÉSEK VÉGLEGESÍTÉSE
+// =============================================
+// A HALASZTOTT FELTÖLTÉS lelke – a tartalom mentése ELŐTT kell meghívni.
+// Végigmegy a mentendő blokkokon, és minden helyben tárolt (blob:-URL-es)
+// kép/fájl blokkot MOST tölt fel a szerverre, majd a blob:-URL-t lecseréli
+// a kapott VALÓDI szerver-URL-re a blokk adatában. Így a getTartalom() már
+// valódi URL-eket ad vissza, és csak akkor kerül fájl a szerverre, ha
+// tényleg mentünk.
+//
+// Ha egy feltöltés hibázik, a hibát TOVÁBBDOBJUK: a hívó (mentés) ilyenkor
+// megszakad, és a hibaüzenet megjelenik az e-embernek.
+// @param {string} token - JWT az API-feltöltéshez
+async fuggoFeltoltesekVeglegesitese(token) {
+  console.log('SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese - KEZDÉS');
+
+  // A mentendő blokkok forrása ugyanaz, mint a getTartalom-nál:
+  //  - navigáció nélkül: a fő blokkLista
+  //  - navigációval: minden fül saját blokkListája
+  const blokkTombok = [];
+  if (this.oldalNavigacio.getFulek().length === 0) {
+    blokkTombok.push(this.blokkLista.blokkok);
+  } else {
+    Object.values(this.blokkListak).forEach(bl => blokkTombok.push(bl.blokkok));
+  }
+
+  // Végigmegyünk minden blokkon; csak a helyben tárolt kép/fájl érdekel
+  for (const blokkok of blokkTombok) {
+    for (const blokk of blokkok) {
+      if (typeof blokk.url !== 'string' || !blokk.url.startsWith('blob:')) continue;
+      if (blokk.tipus !== 'kep' && blokk.tipus !== 'fajl') continue;
+
+      const regiObjectUrl = blokk.url;
+      console.log('SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese - feltöltés', {
+        tipus: blokk.tipus
+      });
+
+      // Feltöltés a szerverre (hiba esetén továbbdobódik → a mentés megszakad)
+      const eredmeny = await this.feltoltesKezelo.fuggoFeltoltese(regiObjectUrl, token);
+
+      if (eredmeny && eredmeny.url) {
+        // blob: → valódi szerver-URL a blokk adatában
+        blokk.url = eredmeny.url;
+        // A helyi blob felszabadítása (már nincs rá szükség)
+        this.feltoltesKezelo.torolFuggo(regiObjectUrl);
+      } else {
+        // Nem sikerült feloldani a blobot – NE mentsünk el egy blob:-URL-t,
+        // mert az csak ezen a gépen, ideiglenesen érvényes.
+        throw new Error('A beszúrt kép/fájl feltöltése nem sikerült. Kérjük, próbáld újra.');
+      }
+    }
+  }
+
+  console.log('SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese - VÉGE');
+}
+
+// =============================================
 // PUBLIKUS API - TARTALOM BEÁLLÍTÁSA
 // =============================================
 // Külső tartalom betöltésére szolgál (pl. szerkesztés módban megnyitáskor).
@@ -358,6 +414,13 @@ destroy() {
 
   // MozgatasiKezelo nem tart eseményfigyelőt, de null-ra állítjuk
   this.mozgatasiKezelo = null;
+
+  // HALASZTOTT FELTÖLTÉS: a még fel nem töltött (blob:) képek/fájlok
+  // felszabadítása. Ha az e-ember mentés nélkül zárta be a szerkesztőt,
+  // ezek úgysem kerültek a szerverre – csak a böngésző memóriáját tartanák.
+  if (this.feltoltesKezelo) {
+    this.feltoltesKezelo.torolMindenFuggo();
+  }
 
   this.blokkLista.urites();
   this.kontener.innerHTML = '';

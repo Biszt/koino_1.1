@@ -9,6 +9,7 @@ const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository
 const ErtekSzamitasService = require('./ertekSzamitasService');
 const { kuszobertekekParse } = require('../utils/kuszobErtekParser');
 const { leirasParse } = require('../utils/leirasParser');
+const FajlKezeloService = require('./fajlKezeloService'); // Ikon-cserekor a régi ikon-fájl törlése
 
 // ===================================
 // KATEGÓRIA SERVICE OSZTÁLY
@@ -370,6 +371,20 @@ class KategoriaService {
     console.log('<<<<<<<<<<<<<<<<<<<<< kategoriaModositasa====frissitettKategoria: ', {
       frissitettKategoria: frissitettKategoria
     });
+
+    // 9. LÉPÉS - RÉGI IKON TÖRLÉSE (ha az ikont lecserélték)
+    // Ha a módosítás új ikont hozott, a régi ikon-fájl árván maradna az
+    // uploads/icons/ mappában. Összevetjük a régi és az új ikon-URL-t: ha
+    // eltérnek, a régit töröljük. Ha az ikon nem változott, a diff üres.
+    if (tisztitottFrissitesek.ikon) {
+      try {
+        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(kategoria, 'Kategoria');
+        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettKategoria, 'Kategoria');
+        await FajlKezeloService.elavultFajlokTorlese(regiUrlek, ujUrlek);
+      } catch (hiba) {
+        console.warn('kategoriaModositasa - Régi ikon törlése sikertelen', { id, hiba: hiba.message });
+      }
+    }
 
     return frissitettKategoria;
   }

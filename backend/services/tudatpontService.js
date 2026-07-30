@@ -13,6 +13,7 @@ const ErtesitesService = require('./ertesitesService'); // Tudatpont-változásk
 const ErtesitesiBeallitasService = require('./ertesitesiBeallitasService'); // szuloKereses az ág-szűréshez (Tudatpontok nézet)
 const ErtesitesRepository = require('../repositories/ertesitesRepository'); // Árva értesítések takarítása entitás-törléskor
 const OsLancKarbantartoService = require('./osLancKarbantartoService'); // osLanc beállítása új entitásnál (részfa-szűrés, 3b)
+const FajlKezeloService = require('./fajlKezeloService'); // Entitás törlésekor a feltöltött fájljait is töröljük a lemezről
 
 
 // ===== TUDATPONT SERVICE OSZTÁLY =====
@@ -472,6 +473,33 @@ class TudatpontService {
 
     console.log('entitasTorleseEllenorzese - Entitás törlendő (0 tudatpont)', { entitasId, entitasTipus });
 
+    // 2.B LÉPÉS - A törlendő entitás FELTÖLTÖTT FÁJLJAINAK kigyűjtése
+    // FONTOS: ezt a DB-rekord törlése ELŐTT kell megtenni, mert utána már
+    // nem olvasható ki a szöveg/ikon. Magukat a fájlokat a függvény VÉGÉN
+    // töröljük (a lemezes törlés nem tranzakcionális — csak a DB-műveletek után).
+    // Csak azoknak a típusoknak van feltöltött fájljuk, amelyeknek ikon vagy
+    // szöveg mezőjük van (Tartalom, Kategoria, TartalomTipus).
+    let torlendoFajlUrlek = [];
+    try {
+      let fajlForrasEntitas = null;
+      if (entitasTipus === 'Tartalom') {
+        fajlForrasEntitas = await TartalomRepository.findById(entitasId);
+      } else if (entitasTipus === 'Kategoria') {
+        fajlForrasEntitas = await KategoriaRepository.findById(entitasId);
+      } else if (entitasTipus === 'TartalomTipus') {
+        fajlForrasEntitas = await TartalomTipusRepository.findById(entitasId);
+      }
+      torlendoFajlUrlek = FajlKezeloService.entitasbolFajlUrlek(fajlForrasEntitas, entitasTipus);
+      console.log('entitasTorleseEllenorzese - Törlendő fájlok kigyűjtve', {
+        entitasId, db: torlendoFajlUrlek.length
+      });
+    } catch (hiba) {
+      // A fájl-kigyűjtés hibája NE akadályozza meg az entitás törlését
+      console.warn('entitasTorleseEllenorzese - Fájl-URL-ek kigyűjtése sikertelen', {
+        entitasId, hiba: hiba.message
+      });
+    }
+
     // 3. LÉPÉS - Törölt entitás szülőjének lekérése (kaszkádhoz)
     let toroltEntitasSzuloId = null;
     let toroltEntitasSzuloTipus = null;
@@ -661,6 +689,18 @@ class TudatpontService {
     console.log('entitasTorleseEllenorzese - Hierarchikus allokáció törölve', {
       entitasTipus, entitasId
     });
+
+    // 10. LÉPÉS - A FELTÖLTÖTT FÁJLOK TÖRLÉSE A LEMEZRŐL
+    // A DB-rekord megszűnt; most a hozzá tartozó feltöltött fájlokat (ikon,
+    // szöveg-blokk képek és csatolmányok) is töröljük, hogy ne maradjanak
+    // árva fájlok az uploads/ mappában. Best-effort: a hiányzó fájl nem hiba,
+    // az esetleges hibát a FajlKezeloService csak naplózza, nem dobja tovább.
+    if (torlendoFajlUrlek.length > 0) {
+      console.log('entitasTorleseEllenorzese - Fájlok törlése a lemezről', {
+        entitasId, db: torlendoFajlUrlek.length
+      });
+      await FajlKezeloService.fajlokTorlese(torlendoFajlUrlek);
+    }
 
     console.log('entitasTorleseEllenorzese - VÉGE', { entitasId, entitasTipus });
   }

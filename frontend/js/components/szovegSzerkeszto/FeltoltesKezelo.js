@@ -34,6 +34,12 @@ class FeltoltesKezelo {
   // Token eltárolása – az API hívásokhoz szükséges azonosítás
   this.token = callbacks.token || null;
 
+  // HALASZTOTT FELTÖLTÉS tárolója.
+  // Kulcs: a helyi előnézeti 'blob:'-URL; érték: { fajl, tipus }.
+  // A képet/fájlt NEM töltjük fel azonnal a szerverre – csak a tartalom
+  // MENTÉSEKOR (lásd SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese).
+  this.fuggoFeltoltesek = new Map();
+
   this._pasteEsemenyBekotese();
 
   console.log('FeltoltesKezelo.constructor - VÉGE');
@@ -161,29 +167,20 @@ class FeltoltesKezelo {
       return;
     }
 
-    // Folyamatjelző megjelenítése
-    const folyamatId = this._folyamatJelzoLetrehozasa('Kép feltöltése...');
+    // HALASZTOTT FELTÖLTÉS:
+    // NEM töltjük fel most a szerverre. A fájlt helyben tartjuk, és egy
+    // 'blob:' object URL-t adunk a blokknak, amivel a böngésző azonnal meg
+    // tudja jeleníteni az előnézetet. A tényleges feltöltés csak a tartalom
+    // mentésekor történik (SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese).
+    const objectUrl = URL.createObjectURL(fajl);
+    this.fuggoFeltoltesek.set(objectUrl, { fajl, tipus: 'kep' });
 
-    try {
-      // API hívás a feltöltéshez
-      const eredmeny = await kepFeltoltes(fajl, this.token);
-
-      // Folyamatjelző eltávolítása
-      this._folyamatJelzoTorlese(folyamatId);
-
-      // Callback hívása a szülő felé
-      if (this.onKepKesz) {
-        this.onKepKesz(eredmeny.url, alt || fajl.name);
-      }
-
-    } catch (hiba) {
-      this._folyamatJelzoTorlese(folyamatId);
-      const uzenet = 'A kép feltöltése sikertelen. Kérjük, próbáld újra.';
-      if (this.onHiba) this.onHiba(uzenet);
-      console.error('FeltoltesKezelo._kepFajlFeltoltese - Hiba:', hiba);
+    // Callback hívása a szülő felé – a blokk ezt a 'blob:'-URL-t tárolja
+    if (this.onKepKesz) {
+      this.onKepKesz(objectUrl, alt || fajl.name);
     }
 
-    console.log('FeltoltesKezelo._kepFajlFeltoltese - VÉGE');
+    console.log('FeltoltesKezelo._kepFajlFeltoltese - VÉGE', { objectUrl });
   }
 
   // =============================================
@@ -206,29 +203,74 @@ class FeltoltesKezelo {
       return;
     }
 
-    // Folyamatjelző megjelenítése
-    const folyamatId = this._folyamatJelzoLetrehozasa('Fájl feltöltése...');
+    // HALASZTOTT FELTÖLTÉS (mint a képnél): a fájlt helyben tartjuk, és egy
+    // 'blob:' object URL-t adunk a blokknak. A tényleges feltöltés csak a
+    // tartalom mentésekor történik.
+    const objectUrl = URL.createObjectURL(fajl);
+    this.fuggoFeltoltesek.set(objectUrl, { fajl, tipus: 'fajl' });
 
-    try {
-      // API hívás
-      const eredmeny = await fajlFeltoltes(fajl, this.token);
-
-      // Folyamatjelző eltávolítása
-      this._folyamatJelzoTorlese(folyamatId);
-
-      // Callback hívása
-      if (this.onFajlKesz) {
-        this.onFajlKesz(eredmeny.url, fajl.name);
-      }
-
-    } catch (hiba) {
-      this._folyamatJelzoTorlese(folyamatId);
-      const uzenet = 'A fájl feltöltése sikertelen. Kérjük, próbáld újra.';
-      if (this.onHiba) this.onHiba(uzenet);
-      console.error('FeltoltesKezelo._fajlFeltoltese - Hiba:', hiba);
+    // Callback hívása – a blokk a 'blob:'-URL-t és a fájlnevet tárolja
+    if (this.onFajlKesz) {
+      this.onFajlKesz(objectUrl, fajl.name);
     }
 
-    console.log('FeltoltesKezelo._fajlFeltoltese - VÉGE');
+    console.log('FeltoltesKezelo._fajlFeltoltese - VÉGE', { objectUrl });
+  }
+
+  // =============================================
+  // FÜGGŐ FELTÖLTÉS VÉGLEGESÍTÉSE (EGY DARAB)
+  // =============================================
+  // A megadott 'blob:'-URL-hez tartozó, helyben tárolt fájlt MOST tölti fel
+  // a szerverre (a megfelelő végpontra a típus szerint), és visszaadja a
+  // szerver válaszát ({ url, nev? }). Ha nincs ilyen függő feltöltés, null.
+  // Hívja: SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese (mentéskor).
+  // @param {string} objectUrl - a helyi 'blob:'-URL
+  // @param {string} token - JWT az API-feltöltéshez
+  // @returns {Promise<{url: string, nev?: string}|null>}
+  async fuggoFeltoltese(objectUrl, token) {
+    console.log('FeltoltesKezelo.fuggoFeltoltese - KEZDÉS', { objectUrl });
+
+    const bejegyzes = this.fuggoFeltoltesek.get(objectUrl);
+    if (!bejegyzes) {
+      console.warn('FeltoltesKezelo.fuggoFeltoltese - nincs ilyen függő feltöltés', { objectUrl });
+      return null;
+    }
+
+    const eredmeny = bejegyzes.tipus === 'kep'
+      ? await kepFeltoltes(bejegyzes.fajl, token)
+      : await fajlFeltoltes(bejegyzes.fajl, token);
+
+    console.log('FeltoltesKezelo.fuggoFeltoltese - VÉGE', { url: eredmeny?.url });
+    return eredmeny;
+  }
+
+  // =============================================
+  // EGY FÜGGŐ BLOB ELDOBÁSA
+  // =============================================
+  // Felszabadítja a 'blob:'-URL-t (memória) és kiveszi a nyilvántartásból.
+  // Sikeres feltöltés után hívjuk, amikor már a valódi URL-t használjuk.
+  // @param {string} objectUrl - a felszabadítandó 'blob:'-URL
+  torolFuggo(objectUrl) {
+    if (this.fuggoFeltoltesek.has(objectUrl)) {
+      URL.revokeObjectURL(objectUrl);
+      this.fuggoFeltoltesek.delete(objectUrl);
+      console.log('FeltoltesKezelo.torolFuggo - felszabadítva', { objectUrl });
+    }
+  }
+
+  // =============================================
+  // MINDEN FÜGGŐ BLOB ELDOBÁSA
+  // =============================================
+  // A szerkesztő bezárásakor (destroy) hívjuk: felszabadítja az összes még
+  // fel nem töltött blobot, hogy ne szivárogjon a böngésző memóriája, ha az
+  // e-ember mentés nélkül zárja be a szerkesztőt.
+  torolMindenFuggo() {
+    console.log('FeltoltesKezelo.torolMindenFuggo - KEZDÉS', { db: this.fuggoFeltoltesek.size });
+    for (const objectUrl of this.fuggoFeltoltesek.keys()) {
+      URL.revokeObjectURL(objectUrl);
+    }
+    this.fuggoFeltoltesek.clear();
+    console.log('FeltoltesKezelo.torolMindenFuggo - VÉGE');
   }
 
   // =============================================
