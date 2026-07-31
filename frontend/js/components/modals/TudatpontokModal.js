@@ -10,8 +10,8 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 // A lista soraiban jelöljük, milyen típusú entitáson van a tudatpont.
 const TIPUS_MEGJELENES = {
   Tartalom:      { ikon: '📄', felirat: 'Tartalom' },
-  Kategoria:     { ikon: '🧩', felirat: 'Kategória' },
-  TartalomTipus: { ikon: '🏷️', felirat: 'Tartalomtípus' },
+  Kategoria:     { ikon: '🏷️', felirat: 'Kategória' },
+  TartalomTipus: { ikon: '🧩', felirat: 'Tartalomtípus' },
   Javaslat:      { ikon: '✍️', felirat: 'Javaslat' },
   Egyezmeny:     { ikon: '🤝', felirat: 'Egyezmény' },
 };

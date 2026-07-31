@@ -48,7 +48,6 @@ const authMiddleware = (req, res, next) => {
         req.user = {
             id: decoded.id,
             eemberNev: decoded.eemberNev,
-            email: decoded.email,
             tudatpontok: decoded.tudatpontok
         };
         
@@ -105,7 +104,6 @@ const optionalAuthMiddleware = (req, res, next) => {
             req.user = {
                 id: decoded.id,
                 eemberNev: decoded.eemberNev,
-                email: decoded.email,
                 tudatpontok: decoded.tudatpontok
             };
         } else {

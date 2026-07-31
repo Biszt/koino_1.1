@@ -8,11 +8,11 @@ import FaElrendezes, { FA_TAVOLSAG_Y } from '../../utils/faElrendezes.js';
 import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js';
 
 // ===== ENTITÁSTÍPUS → IKON / SZÍN / FELIRAT =====
-// Az ikonok a platform egységes ikon-készletét követik (kategória 🧩 stb.).
+// Az ikonok a platform egységes ikon-készletét követik (kategória 🏷️ stb.).
 const TIPUS_IKON = {
   Tartalom:      '📄',
-  Kategoria:     '🧩',
-  TartalomTipus: '🏷️',
+  Kategoria:     '🏷️',
+  TartalomTipus: '🧩',
   Javaslat:      '📋',
   Egyezmeny:     '🤝',
 };

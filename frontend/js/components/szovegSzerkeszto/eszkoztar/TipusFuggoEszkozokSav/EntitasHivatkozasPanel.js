@@ -135,8 +135,8 @@ class EntitasHivatkozasPanel {
     // Elérhető entitástípusok — ikonnal és névvel
     const tipusok = [
       { ertek: 'Tartalom',      felirat: '📄 Tartalom' },
-      { ertek: 'Kategoria',     felirat: '🧩 Kategória' },
-      { ertek: 'TartalomTipus', felirat: '🏷️ Tartalom típus' },
+      { ertek: 'Kategoria',     felirat: '🏷️ Kategória' },
+      { ertek: 'TartalomTipus', felirat: '🧩 Tartalom típus' },
       { ertek: 'Egyezmeny',     felirat: '🤝 Egyezmény' },
       { ertek: 'Javaslat',      felirat: '💡 Javaslat' },
     ];

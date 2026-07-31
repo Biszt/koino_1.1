@@ -27,8 +27,11 @@ ami jól hangzik.*
   mindenki egyenlő, és a nyílt szavazás a D2 szerint elvetett (kikényszeríthető
   szavazatvásárlás + önkiválasztási torzítás); az API kizárólag a saját
   szavazatot adja vissza a bejelentkezett e-embernek;
-- az **e-mail cím** — kizárólag azonosításra szolgál, semmilyen más
-  felhasználónak szóló API-válaszban nem szerepel;
+- az **e-mail cím** — **megadása nem kötelező** (adatvédelmi döntés, 2026-07-31);
+  ha megadták, kizárólag azonosításra (bejelentkezésre) szolgál, e-mailt sosem
+  küldünk rá, és semmilyen más felhasználónak szóló API-válaszban nem szerepel.
+  Aki nem ad meg e-mailt, arról **egyáltalán nem tárolunk e-mailt** (a mező hiányzik),
+  így nem keletkezik funkció nélküli e-mail-jegyzék;
 - a **jelszó** — hash-elve tárolódik (bcrypt), visszafejthető formában sehol.
 
 ## Mit lát az üzemeltető? (őszinte kimondás)
@@ -51,7 +54,11 @@ zero-knowledge irány; CÉLKÉNT kommunikáljuk, nem kész képességként) és 
   és a hozzá tartozó service-metódusok **törölve**; az összesített statisztika
   (`GET /api/javaslat/:id/statisztika`) megmaradt.
 - Az e-mail **minden** entitás-válaszból kikerült (a `letrehozo` és a szavazat
-  populate-ok csak `eemberNev`-et adnak); e-mailt csak a saját regisztráció/
-  bejelentkezés válasza tartalmaz.
+  populate-ok csak `eemberNev`-et adnak); e-mailt csak a saját adatok
+  (regisztráció/bejelentkezés/beállítások) válasza tartalmaz — és csak akkor, ha
+  az e-ember egyáltalán megadott e-mailt.
+- Az e-mail a **JWT tokenből is kikerült** (2026-07-31): a token payload csak
+  `id`-t és `eemberNev`-et tartalmaz — a kliensoldalon olvasható tokenben nincs
+  személyes e-mail.
 - Változás esetén ezt a dokumentumot is frissíteni kell (teszt-referencia:
   [teszt.md](teszt.md)).

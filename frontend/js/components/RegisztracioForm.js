@@ -137,9 +137,11 @@ class RegisztracioForm {
       const valasz = await apiPost('eember/regisztracio', {
         eemberNev,
         nev,
-        email,
         jelszo,
         lokacio: { orszag, regio, telepules },
+        // Email — OPCIONÁLIS: csak akkor kerül a kérésbe, ha ki van töltve
+        // (a backend e-mail nélkül is regisztrál, és nem tárol e-mailt)
+        ...(email ? { email } : {}),
         // Meghívó kód — csak akkor kerül a kérésbe, ha ki van töltve
         // (a backend csak MEGHIVAS_KOTELEZO=true esetén ellenőrzi)
         ...(meghivoKod ? { meghivoKod } : {})
@@ -196,11 +198,13 @@ class RegisztracioForm {
       ervenyesE = false;
     }
 
-    // Email: kötelező, egyszerű formátum ellenőrzés
-    const emailMinta = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailMinta.test(email)) {
-      this.mezohibaBeallitasa('mezo-email', true);
-      ervenyesE = false;
+    // Email: OPCIONÁLIS. Üresen hagyva rendben van; ha megadták, formátum-ellenőrzés.
+    if (email) {
+      const emailMinta = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailMinta.test(email)) {
+        this.mezohibaBeallitasa('mezo-email', true);
+        ervenyesE = false;
+      }
     }
 
     // Jelszó: kötelező, min. 8 karakter, legalább egy betű ÉS egy szám

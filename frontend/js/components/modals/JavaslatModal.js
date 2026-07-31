@@ -2,7 +2,7 @@
 
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
-import { apiPost } from '../../utils/apiHelper.js';
+import { apiGet, apiPost } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import SzovegSzerkeszto from '../szovegSzerkeszto/SzovegSzerkeszto.js';
 import EntitasKeresoMezo from '../EntitasKeresoMezo.js';
@@ -59,6 +59,15 @@ class JavaslatModal {
     // Csomag: tételek listája — { idMezo, muveletSelect, cimInput, celMezo, sorElem }
     this.csomagTetelek = [];
 
+    // =============================================
+    // ÚJ - MÓDOSÍTÁS: kategória + tartalomtípus választó adatai
+    // =============================================
+    // Csak Tartalom entitás módosításánál használjuk. A listákat az init()
+    // tölti be a szerverről (apiGet), a kiválasztott kategóriákat menet közben követjük.
+    this.tartalomTipusok         = []; // az összes választható tartalomtípus
+    this.kategoriak              = []; // az összes választható kategória (fához is)
+    this.kivalasztottKategoriaIds = []; // a módosítás után érvényes kategória-ID-k (max 3)
+
     console.log('JavaslatModal.constructor - VÉGE', {
       entitasId: this.entitasAdatok?.entitasId,
       vanSzulo:  !!this.szuloAdatok?.szuloId
@@ -105,6 +114,16 @@ class JavaslatModal {
     // Opcionális ID-ellenőrző mező a 3. lépésben: hova kerüljön
     // a javaslat elfogadása után létrejövő egyezmény
     this._egyezmenyTarhelyMezoLetrehozasa();
+
+    // =============================================
+    // ÚJ - MÓDOSÍTÁS választó-listák előtöltése (csak Tartalomnál)
+    // =============================================
+    // A módosítási forma a 2. lépésben épül fel; a tartalomtípus- és
+    // kategória-legördülőhöz szükséges listákat itt, előre lekérjük, hogy
+    // a forma felépülésekor már rendelkezésre álljanak.
+    if ((this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom') {
+      await this._modositasLenyilokBetoltese();
+    }
 
     console.log('JavaslatModal.init - VÉGE');
   }
@@ -530,7 +549,280 @@ class JavaslatModal {
     // (a DOM-ba kerülés után azonnal, szinkron módon)
     this._modositasSzovegSzerkesztoLetrehozasa(szovegSzerkesztoKontener);
 
+    // =============================================
+    // ÚJ - Tartalomtípus + kategória mezők (CSAK Tartalomnál)
+    // =============================================
+    // Kategória és tartalomtípus csak a Tartalom entitásra értelmezett
+    // (a Kategória és a Tartalomtípus entitásoknak nincs ilyen mezőjük).
+    if (tartalomE) {
+      this._modositasTipusMezoEpitese(kontener, adatok);
+      this._modositasKategoriaMezoEpitese(kontener, adatok);
+    }
+
     console.log('JavaslatModal._modositasFormaEpitese - VÉGE');
+  }
+
+  // ===== MÓDOSÍTÁS: TARTALOMTÍPUS MEZŐ ÉPÍTÉSE =====
+  // =============================================
+  // ÚJ - egyszerű legördülő a tartalom típusához
+  // =============================================
+  // A listát az init() már betöltötte (this.tartalomTipusok). Az aktuális
+  // típust előre kiválasztjuk az adatok.tartalomTipus.id alapján.
+  _modositasTipusMezoEpitese(kontener, adatok) {
+    console.log('JavaslatModal._modositasTipusMezoEpitese - KEZDÉS', {
+      tipusokSzama: this.tartalomTipusok.length
+    });
+
+    const csoport = document.createElement('div');
+    csoport.className = 'javaslat-modal__mezo-csoport';
+
+    const cimke = document.createElement('label');
+    cimke.className   = 'javaslat-modal__cimke';
+    cimke.htmlFor     = 'javaslat-modositas-tipus';
+    cimke.textContent = 'Tartalom típusa';
+
+    const select = document.createElement('select');
+    select.id        = 'javaslat-modositas-tipus';
+    select.name      = 'javaslat-modositas-tipus';
+    select.className = 't-modal-select'; // a TartalomModal-ból örökölt közös stílus
+
+    // Első, „nincs típus" opció — a tartalomTipusId nem kötelező mező
+    const uresOpcio = document.createElement('option');
+    uresOpcio.value       = '';
+    uresOpcio.textContent = '– Nincs típus –';
+    select.appendChild(uresOpcio);
+
+    // A választható típusok feltöltése
+    this.tartalomTipusok.forEach(tipus => {
+      const opcio       = document.createElement('option');
+      opcio.value       = tipus._id;
+      opcio.textContent = tipus.nev;
+      select.appendChild(opcio);
+    });
+
+    // Aktuális típus előre kiválasztása (a kártya adatok.tartalomTipus.id-jából)
+    const jelenlegiTipusId = adatok?.tartalomTipus?.id ?? adatok?.tartalomTipusId ?? '';
+    if (jelenlegiTipusId) select.value = jelenlegiTipusId.toString();
+
+    csoport.appendChild(cimke);
+    csoport.appendChild(select);
+    kontener.appendChild(csoport);
+
+    console.log('JavaslatModal._modositasTipusMezoEpitese - VÉGE', {
+      jelenlegiTipusId: jelenlegiTipusId?.toString?.() ?? null
+    });
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIA MEZŐ ÉPÍTÉSE =====
+  // =============================================
+  // ÚJ - chip-es, maximum 3 kategóriás választó (a TartalomModal mintájára)
+  // =============================================
+  // A már kiválasztott kategóriák „chip"-ként jelennek meg (✕-szel törölhetők),
+  // a legördülőben pedig csak a MÉG nem választott kategóriák maradnak.
+  _modositasKategoriaMezoEpitese(kontener, adatok) {
+    console.log('JavaslatModal._modositasKategoriaMezoEpitese - KEZDÉS');
+
+    // A kiválasztott lista mindig tiszta lappal indul a forma felépítésekor
+    this.kivalasztottKategoriaIds = [];
+
+    const csoport = document.createElement('div');
+    csoport.className = 'javaslat-modal__mezo-csoport';
+
+    const cimke = document.createElement('label');
+    cimke.className   = 'javaslat-modal__cimke';
+    cimke.htmlFor     = 'javaslat-modositas-kategoria';
+    cimke.textContent = 'Kategóriák (max. 3)';
+
+    // A már kiválasztott kategóriák chip-jeit befogadó konténer
+    const chipKontener = document.createElement('div');
+    chipKontener.id        = 'javaslat-modositas-kategoria-chipek';
+    chipKontener.className = 't-modal-kategoria-chipek';
+
+    // A választó legördülő
+    const select = document.createElement('select');
+    select.id        = 'javaslat-modositas-kategoria';
+    select.name      = 'javaslat-modositas-kategoria';
+    select.className = 't-modal-select';
+
+    csoport.appendChild(cimke);
+    csoport.appendChild(chipKontener);
+    csoport.appendChild(select);
+    kontener.appendChild(csoport);
+
+    // A legördülő feltöltése + a hozzáadás-esemény bekötése
+    this._modositasKategoriaSelectFeltoltese();
+    this._modositasKategoriaValasztoBekotese();
+
+    // Aktuális kategóriák előre betöltése chipként (a kártya adatok.kategoriak-jából).
+    // Az elemek alakja: { id, nev, ikon } — közvetlenül van nevünk, nem kell keresés.
+    (adatok?.kategoriak ?? []).forEach(kategoria => {
+      const id  = (kategoria.id ?? kategoria._id)?.toString();
+      const nev = kategoria.nev ?? '(névtelen)';
+      if (id && !this.kivalasztottKategoriaIds.includes(id)) {
+        this.kivalasztottKategoriaIds.push(id);
+        this._modositasKategoriaChipHozzaadasa(id, nev);
+      }
+    });
+    // A legördülőt frissítjük, hogy a már kiválasztottak kiessenek belőle
+    this._modositasKategoriaSelectFeltoltese();
+
+    console.log('JavaslatModal._modositasKategoriaMezoEpitese - VÉGE', {
+      eloreKivalasztott: this.kivalasztottKategoriaIds.length
+    });
+  }
+
+  // ===== MÓDOSÍTÁS: VÁLASZTÓ-LISTÁK BETÖLTÉSE =====
+  // =============================================
+  // ÚJ - a tartalomtípusok és kategóriák lekérése a szerverről
+  // =============================================
+  // Az init() hívja meg (csak Tartalom entitásnál). Hiba esetén üres listákkal
+  // folytatunk — ilyenkor a mezők egyszerűen üresek lesznek, a javaslat többi
+  // része (cím, szöveg) továbbra is működik.
+  async _modositasLenyilokBetoltese() {
+    console.log('JavaslatModal._modositasLenyilokBetoltese - KEZDÉS');
+
+    try {
+      const [tipusValasz, kategoriaValasz] = await Promise.all([
+        apiGet('tartalomTipus', this.token),
+        apiGet('kategoria',     this.token)
+      ]);
+
+      this.tartalomTipusok = tipusValasz?.tartalomTipusok || [];
+      this.kategoriak      = kategoriaValasz?.kategoriak   || [];
+
+      console.log('JavaslatModal._modositasLenyilokBetoltese - VÉGE', {
+        tipusokSzama:    this.tartalomTipusok.length,
+        kategoriakSzama: this.kategoriak.length
+      });
+    } catch (hiba) {
+      console.error('JavaslatModal._modositasLenyilokBetoltese - HIBA', { hiba: hiba.message });
+      this.tartalomTipusok = [];
+      this.kategoriak      = [];
+    }
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIÁK FA-SORRENDBE RENDEZÉSE =====
+  // =============================================
+  // ÚJ - a lapos listát hierarchikus sorrendbe teszi (mélységgel)
+  // =============================================
+  // Minden kategória a szülője után jön, és megkapja a MÉLYSÉGÉT (0 = gyökér),
+  // hogy a legördülőben az alkategóriák a szülőjük alatt, behúzva jelenjenek meg.
+  // (A TartalomModal azonos logikájának másolata — apró, önálló segéd.)
+  // @returns {Array<{kat: Object, melyseg: number}>}
+  _modositasKategoriakFaSorrendbe() {
+    // Gyerekek csoportosítása szülő szerint (kulcs: szuloId string, gyökérnél 'null')
+    const gyerekekMap = new Map();
+    this.kategoriak.forEach(kat => {
+      const kulcs = kat.szuloId ? kat.szuloId.toString() : 'null';
+      if (!gyerekekMap.has(kulcs)) gyerekekMap.set(kulcs, []);
+      gyerekekMap.get(kulcs).push(kat);
+    });
+
+    const eredmeny = [];
+    const bejart   = new Set(); // kör-védelem + duplikáció ellen
+
+    const bejar = (szuloKulcs, melyseg) => {
+      const gyerekek = gyerekekMap.get(szuloKulcs) || [];
+      gyerekek.forEach(kat => {
+        const id = kat._id.toString();
+        if (bejart.has(id)) return;
+        bejart.add(id);
+        eredmeny.push({ kat, melyseg });
+        bejar(id, melyseg + 1);
+      });
+    };
+    bejar('null', 0);
+
+    // Árvák (nem elért szülőjű kategória) a lista végére, gyökérként
+    this.kategoriak.forEach(kat => {
+      if (!bejart.has(kat._id.toString())) {
+        bejart.add(kat._id.toString());
+        eredmeny.push({ kat, melyseg: 0 });
+      }
+    });
+
+    return eredmeny;
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIA LEGÖRDÜLŐ FELTÖLTÉSE =====
+  // A már kiválasztottakat kihagyja; 3 kiválasztottnál letiltja a legördülőt.
+  _modositasKategoriaSelectFeltoltese() {
+    const select = document.getElementById('javaslat-modositas-kategoria');
+    if (!select) return;
+
+    const faSorrend = this._modositasKategoriakFaSorrendbe();
+
+    select.innerHTML = '<option value="">– Kategória hozzáadása –</option>';
+
+    faSorrend.forEach(({ kat, melyseg }) => {
+      if (this.kivalasztottKategoriaIds.includes(kat._id)) return; // már kiválasztott
+
+      const opcio = document.createElement('option');
+      opcio.value = kat._id;
+      // Szöveges behúzás a mélység szerint (az <option> nem stílusozható megbízhatóan)
+      const behuzas = melyseg > 0 ? '  '.repeat(melyseg) + '└ ' : '';
+      opcio.textContent = behuzas + kat.nev;
+      select.appendChild(opcio);
+    });
+
+    select.disabled = this.kivalasztottKategoriaIds.length >= 3;
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIA VÁLASZTÓ ESEMÉNY BEKÖTÉSE =====
+  // Kiválasztáskor chipet ad hozzá, és frissíti a legördülőt.
+  _modositasKategoriaValasztoBekotese() {
+    const select = document.getElementById('javaslat-modositas-kategoria');
+    if (!select) return;
+
+    select.addEventListener('change', (esemeny) => {
+      const kivalasztottId  = esemeny.target.value;
+      const kivalasztottNev = esemeny.target.options[esemeny.target.selectedIndex]?.text?.trim();
+
+      if (!kivalasztottId) return;
+
+      if (this.kivalasztottKategoriaIds.length >= 3) {
+        console.warn('JavaslatModal - max 3 kategória adható meg');
+        esemeny.target.value = '';
+        return;
+      }
+
+      this.kivalasztottKategoriaIds.push(kivalasztottId);
+      this._modositasKategoriaChipHozzaadasa(kivalasztottId, kivalasztottNev);
+      this._modositasKategoriaSelectFeltoltese();
+      esemeny.target.value = '';
+    });
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIA CHIP HOZZÁADÁSA =====
+  _modositasKategoriaChipHozzaadasa(id, nev) {
+    const chipKontener = document.getElementById('javaslat-modositas-kategoria-chipek');
+    if (!chipKontener) return;
+
+    const chip = document.createElement('span');
+    chip.className           = 't-modal-kategoria-chip';
+    chip.dataset.kategoriaId = id;
+
+    const nevElem = document.createElement('span');
+    nevElem.className   = 't-modal-chip-nev';
+    nevElem.textContent = nev;
+
+    const torloGomb = document.createElement('button');
+    torloGomb.type        = 'button';
+    torloGomb.className    = 't-modal-chip-torlo';
+    torloGomb.setAttribute('aria-label', `${nev} kategória eltávolítása`);
+    torloGomb.textContent = '✕';
+    torloGomb.addEventListener('click', () => this._modositasKategoriaEltavolitasa(id, chip));
+
+    chip.appendChild(nevElem);
+    chip.appendChild(torloGomb);
+    chipKontener.appendChild(chip);
+  }
+
+  // ===== MÓDOSÍTÁS: KATEGÓRIA ELTÁVOLÍTÁSA =====
+  _modositasKategoriaEltavolitasa(id, chip) {
+    this.kivalasztottKategoriaIds = this.kivalasztottKategoriaIds.filter(kId => kId !== id);
+    chip.remove();
+    this._modositasKategoriaSelectFeltoltese();
   }
 
   // ===== ÁTHELYEZÉS FORMA ÉPÍTÉSE =====
@@ -1263,6 +1555,23 @@ class JavaslatModal {
         if (tartalomE) modositasAdatok.szoveg     = szoveg;
         else           modositasAdatok.szovegMezo = szoveg;
       }
+    }
+
+    // =============================================
+    // ÚJ - Tartalomtípus + kategóriák (CSAK Tartalomnál)
+    // =============================================
+    // Ezeket MINDIG beletesszük (a mezők előre ki vannak töltve a jelenlegi
+    // értékekkel), így a javaslat a típus és a kategóriák KÍVÁNT végállapotát
+    // rögzíti — és a törlésük is kifejezhető (üres típus / üres kategória-lista).
+    if (tartalomE) {
+      const tipusSelect = kontener?.querySelector('#javaslat-modositas-tipus');
+      if (tipusSelect) {
+        // Üres opció → null (nincs típus); egyébként a kiválasztott ID
+        modositasAdatok.tartalomTipusId = tipusSelect.value || null;
+      }
+
+      // A chipekből felépített kiválasztott kategória-ID lista (0–3 elem)
+      modositasAdatok.kategoriaIds = [...this.kivalasztottKategoriaIds];
     }
 
     console.log('JavaslatModal._modositasAdatokOsszegyujtese - VÉGE', { modositasAdatok });

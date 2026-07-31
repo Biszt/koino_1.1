@@ -52,7 +52,7 @@ Böngészőben a regisztrációs űrlap mezői (a `POST /api/eember/regisztracio
 | Mező | Kötelező | Példa | Megkötés |
 |---|---|---|---|
 | `eemberNev` | ✅ | `tesztAnna` | egyedi, 3–30 karakter |
-| `email` | ✅ | `anna@teszt.hu` | egyedi, kisbetűsít |
+| `email` | ⬜ (opcionális) | `anna@teszt.hu` | **Nem kötelező** (2026-07-31). Ha megadják: egyedi, kisbetűsít, csak azonosításra. Ha üresen hagyják: nem tárolódik e-mail (a mező hiányzik). |
 | `jelszo` | ✅ | `jelszo123` | min. 8 karakter, + legalább egy betű ÉS egy szám (`jelszoHelper.validalJelszoErosseg`) |
 | `nev` | ✅ | `Teszt Anna` | valódi név |
 | `lokacio.orszag` | ✅ | `Magyarország` | |
@@ -498,7 +498,7 @@ docker logs -f koino-backend
     Végpont: `GET /api/tudatpont/aktiv-hozzarendelesek?limit=&skip=&agEntitasId=`
     (auth; `entitasCim` mezővel).
 43. ⬜ **Keresés (2026-07-18 óta):** fő menü → **🔍 Keresés** → keresőmező +
-    3 típus-pipa (📄 Tartalom / 📁 Kategória / 🏷️ Tartalomtípus, alapból mind
+    3 típus-pipa (📄 Tartalom / 🏷️ Kategória / 🧩 Tartalomtípus, alapból mind
     bepipálva). Gépelés közben (~300 ms késleltetéssel) frissül a találati lista
     (típus-ikon + cím); pipa-váltásra azonnal újrakeres; minden pipa kivéve →
     „Pipálj be legalább egy típust." Találatra kattintva a modal bezárul és a
@@ -754,7 +754,7 @@ docker logs -f koino-backend
     Ez a Tartalom-egyesítésre és a Kategória-egyesítésre is áll.
 58. ⬜ **Alsó sáv — entitástípus-darabszámok (2026-07-23):** a főoldal alsó statisztika-sávja
     mostantól MIND AZ 5 entitástípus darabszámát mutatja (nem csak a tartalmakét): koino · e-embernév ·
-    🌟 tudatpont · 🧑‍🤝‍🧑 e-emberek · 📄 tartalmak · 🧩 kategóriák · 🏷️ tartalomtípusok · 📋 javaslatok ·
+    🌟 tudatpont · 🧑‍🤝‍🧑 e-emberek · 📄 tartalmak · 🏷️ kategóriák · 🧩 tartalomtípusok · 📋 javaslatok ·
     🤝 egyezmények. Ellenőrzés: a számok betöltődnek (nem „…" marad), és megegyeznek a tényleges
     darabszámmal; kis képernyőn a sáv több sorba tördhet, de minden elem látszik. Végpont:
     GET `/api/platform/statisztika` — a válasz most `kategoriakSzama`, `tartalomTipusokSzama`,
@@ -856,6 +856,19 @@ terv „Részvételi modell" szakasz. Backend-változás után **`docker restart
 51. ⬜ **≤100% szavazás után passzívra váltva:** B szavazzon egy javaslaton, majd a
     „Részvételi beállítások"-ban állítsa magát **passzív**-ra → az arány **nem** lép 100% fölé
     (a szavazó-unió miatt B a nevezőben marad).
+52. ⬜ **Módosítási javaslat — kategória + tartalomtípus is (2026-07-31):** egy **Tartalom**
+    kártyán indíts **Módosítás** javaslatot. A 2. lépés formájában a Cím és a Szöveg alatt
+    mostantól **két új mező** is van: (a) **Tartalom típusa** legördülő — a tartalom jelenlegi
+    típusa **előre kiválasztva**, első opciója „– Nincs típus –"; (b) **Kategóriák (max. 3)** —
+    a jelenlegi kategóriák **chipként** megjelenítve (✕-szel törölhetők), a legördülő behúzva
+    mutatja a hierarchiát, és a **4. kategóriát már nem enged** hozzáadni (letiltott legördülő).
+    Változtass a típuson és a kategóriákon, tedd meg a javaslatot, majd **fogadtasd el** (szavazás/
+    cron). *Elvárt:* elfogadás után a tartalom kártyáján a **típus-ikon (jobb, okker kör)** és a
+    **kategória-ikonok (bal, lila kör)** az új értékeket mutatják. **Csak Tartalomnál** jelenik meg
+    a két mező — **Kategória** és **Tartalomtípus** entitás módosításánál NINCS (nekik nincs ilyen
+    mezőjük). Megjegyzés: **backend-módosítás nem történt** (a `modositasAdatok` már generikusan
+    alkalmazódik `updateById`-vel, a „max 3 kategória" a szerveren is érvényes) → elég a böngésző
+    **hard-refresh**-e, `docker restart` nem kell.
 
 ---
 

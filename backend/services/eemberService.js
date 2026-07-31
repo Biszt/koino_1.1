@@ -59,11 +59,16 @@ class eEmberService {
       meghivo = await MeghivoService.kodErvenyesitese(adatok.meghivoKod);
     }
 
-    // === 1. LÉPÉS: EMAIL FOGLALTSÁG ELLENŐRZÉSE ===
-    // ÜZLETI SZABÁLY: Egy email cím csak egyszer használható
-    const emailLetezik = await eEmberRepository.findByEmail(adatok.email);
-    if (emailLetezik) {
-      throw new Error('Ez az email cím már használatban van');
+    // === 1. LÉPÉS: EMAIL (OPCIONÁLIS) NORMALIZÁLÁSA + FOGLALTSÁG ELLENŐRZÉSE ===
+    // Az e-mail megadása NEM kötelező (adatvédelmi döntés). Ha üresen hagyták,
+    // egyáltalán nem tárolunk e-mailt (a mező hiányzik). Ha megadták, kisbetűsítjük,
+    // levágjuk, és ellenőrizzük, hogy még szabad-e (egy e-mail = egy fiók).
+    const email = adatok.email?.trim()?.toLowerCase() || undefined;
+    if (email) {
+      const emailLetezik = await eEmberRepository.findByEmail(email);
+      if (emailLetezik) {
+        throw new Error('Ez az email cím már használatban van');
+      }
     }
 
     // === 2. LÉPÉS: EMBERNÉV FOGLALTSÁG ELLENŐRZÉSE ===
@@ -88,7 +93,9 @@ class eEmberService {
     // Repository hívás: csak technikai mentés, nincs validáció
     const ujeEmber = await eEmberRepository.create({
       eemberNev: adatok.eemberNev,
-      email:     adatok.email,
+      // Az e-mailt CSAK akkor tesszük be, ha ténylegesen megadták — így e-mail nélkül
+      // a mező hiányzik (nem üres/null), és a részleges egyedi index sem érinti.
+      ...(email ? { email } : {}),
       jelszo:    hashedJelszo, // ← Hash-elt jelszó!
       nev:       adatok.nev,
       lokacio:   adatok.lokacio,
@@ -109,9 +116,10 @@ class eEmberService {
 
     // === 7. LÉPÉS: JWT TOKEN GENERÁLÁSA ===
     // A bejelentkezéssel megegyező payload, hogy regisztráció után rögtön be legyen jelentkezve
+    // Adatminimum: az e-mail NEM kerül a tokenbe (sehol nem használjuk belőle,
+    // és a token kliensoldalon olvasható — felesleges személyes adat lenne benne).
     const payload = {
       id:        valasz._id,
-      email:     valasz.email,
       eemberNev: valasz.eemberNev
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -156,10 +164,10 @@ class eEmberService {
     await eEmberRepository.updateUtolsoBejelentkezes(eember._id);
 
     // === 5. LÉPÉS: JWT TOKEN GENERÁLÁSA ===
-    // A token payload-ba kerül az ID, email és eemberNev
+    // A token payload-ba CSAK az ID és az eemberNev kerül — az e-mailt szándékosan
+    // NEM tesszük bele (adatminimum; a token kliensoldalon olvasható).
     const payload = {
       id:        eember._id,
-      email:     eember.email,
       eemberNev: eember.eemberNev
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });

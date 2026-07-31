@@ -267,6 +267,19 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
   opacity: 0.7;
 }
 
+/* ===== ELVÁLASZTÓ VONAL A FEJLÉC ADAT-CSOPORTJAI KÖZÖTT ===== */
+/* A fejléc mindkét ikon-sorában (1. = tudatpont-adatok, 2. = tartalomtípus +
+   kategóriák) az egymás mellett álló adat-csoportok közé vékony, SZOLID
+   függőleges vonal kerül. Így jól látható, meddig tart az egyik adat és hol
+   kezdődik a másik – vagyis melyik ikon melyik adathoz tartozik.
+   A vonalat CSAK a MÁSODIK és további csoport elé tesszük (az első elé nem),
+   ezért a `* + *` (szomszéd-testvér) szelektor. A meglévő `gap` adja a vonal
+   előtti térközt, a `padding-left` a vonal utánit – így a vonal középre esik. */
+.pakli-kartya__ikon-sor > * + * {
+  border-left: 1px solid var(--color-divider);
+  padding-left: var(--space-2);
+}
+
 /* Hamburger gomb – minden kártyán egyformán aktív */
 /* Minimum 44x44px érintési célterület */
 .pakli-kartya__hamburger {

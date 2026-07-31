@@ -266,8 +266,8 @@ letrehozas() {
 _tipusIkon() {
   const ikonTerkep = {
     'Tartalom':      '📄',
-    'Kategoria':     '🧩',
-    'TartalomTipus': '🏷️',
+    'Kategoria':     '🏷️',
+    'TartalomTipus': '🧩',
     'Egyezmeny':     '🤝',
     'Javaslat':      '💡',
   };

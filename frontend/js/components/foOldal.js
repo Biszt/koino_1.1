@@ -999,10 +999,10 @@ init() {
       'info-tudatpont':       `🌟 ${this.tudatpontok}`,
       'info-eemberek-szama':       `🧑‍🤝‍🧑 ${this.eemberekSzama}`,
       // Az entitás-ikonok a platform egységes készletét követik (mint a Térképen):
-      // Tartalom 📄 · Kategória 🧩 · Tartalomtípus 🏷️ · Javaslat 📋 · Egyezmény 🤝
+      // Tartalom 📄 · Kategória 🏷️ · Tartalomtípus 🧩 · Javaslat 📋 · Egyezmény 🤝
       'info-tartalmak-szama':      `📄 ${this.tartalmakSzama}`,
-      'info-kategoriak-szama':     `🧩 ${this.kategoriakSzama}`,
-      'info-tartalomtipusok-szama':`🏷️ ${this.tartalomTipusokSzama}`,
+      'info-kategoriak-szama':     `🏷️ ${this.kategoriakSzama}`,
+      'info-tartalomtipusok-szama':`🧩 ${this.tartalomTipusokSzama}`,
       'info-javaslatok-szama':     `📋 ${this.javaslatokSzama}`,
       'info-egyezmenyek-szama':    `🤝 ${this.egyezmenyekSzama}`
     };

@@ -19,12 +19,17 @@ eemberNev: {
 },
 
 // ----- EMAIL MEZŐ -----
-email: { 
-  type: String,       // Szöveges típus
-  required: true,     // Kötelező mező 
-  unique: true,       // Egyedi érték 
-  trim: true,         // Levágja a felesleges szóközöket
-  lowercase: true     // Automatikusan kisbetűssé alakítja
+// OPCIONÁLIS (adatvédelmi döntés): az e-ember maga dönti el, ad-e meg e-mailt.
+// Az e-mailnek jelenleg NINCS önálló funkciója (nincs e-mail-küldés) — csak
+// azonosításra/bejelentkezésre használható. Ezért nem kötelező, és aki nem ad meg,
+// annál a mező HIÁNYZIK (nem üres string, nem null) → nem képződik funkció nélküli
+// e-mail-jegyzék. Az egyediséget a séma alatti RÉSZLEGES egyedi index adja.
+email: {
+  type: String,        // Szöveges típus
+  required: false,     // NEM kötelező — opcionális mező
+  trim: true,          // Levágja a felesleges szóközöket
+  lowercase: true,     // Automatikusan kisbetűssé alakítja
+  default: undefined   // Ha nincs megadva, a mező hiányzik (nem null/üres)
 },
 
 // ----- JELSZÓ MEZŐ -----
@@ -137,6 +142,16 @@ ertesitesiAlapbeallitas: {
 }
 
 });
+
+// ===== RÉSZLEGES EGYEDI INDEX AZ E-MAILRE =====
+// Az e-mail OPCIONÁLIS, de HA meg van adva, EGYEDI kell legyen (egy e-mail = egy fiók),
+// hogy az e-maillel való bejelentkezés egyértelmű maradjon. A `partialFilterExpression`
+// miatt az egyediség CSAK a string-típusú (ténylegesen megadott) e-mailekre vonatkozik —
+// így tetszőlegesen sok e-ember lehet e-mail NÉLKÜL (a hiányzó mezők nem ütköznek).
+eemberSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
 
 // ===== INDEX: GLOBÁLIS ÉRTESÍTÉS-FELIRATKOZÓK GYORS LEKÉRÉSÉHEZ =====
 // Az értesítés-küldés címzett-feloldása lekéri, kik iratkoztak fel GLOBÁLISAN egy adott
