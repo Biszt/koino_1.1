@@ -134,10 +134,15 @@ a `localStorage`-ba menti.
 > (fallback). A szövegszerkesztő entitás-hivatkozás panelje szintén kap cím-keresőt.
 
 ### 3.5. Tudatpont-hozzárendelés — `POST /api/tudatpont/hozzarendeles` (auth)
-Body: `{ entitasId, entitasTipus, pontok }`
-Az **új felmenő-szabály**: pont hozzárendelésekor a teljes szülőláncon kell legalább
-1 pont. A frontend megnyitáskor felméri (`GET /api/tudatpont/hianyzo-felmenok/:entitasTipus/:entitasId`),
-és hozzájárulás után automatikusan kitölti a hiányzó felmenőket.
+Body: `{ entitasId, entitasTipus, pontok, felmenoketAutomatikusan?, szerep? }`
+- **Felmenő-kényszer MEGSZŰNT** (2026-07-30): pont akkor is tehető egy entitásra, ha a
+  felmenőkön nincs. A frontend csak FIGYELMEZTET (`GET /api/tudatpont/hianyzo-felmenok/...`),
+  és a „Felmenők kitöltése" gomb `felmenoketAutomatikusan`-nal opcionálisan tölti ki őket.
+- **`szerep`** (`'passziv'` | `'aktiv'`): csak az ELSŐ allokáláskor érvényes; a részvételi
+  szerep. Alapból `passziv`. Lásd az **5/b. H)** mélytesztet és a fejlesztési terv
+  „Részvételi modell" szakaszát.
+- **Szerep utólagos módosítása:** `PUT /api/tudatpont/szerep/:entitasTipus/:entitasId`,
+  body: `{ szerep }` (a kártya „Részvételi beállítások" menüje).
 
 ### 3.6. Szavazat — `POST /api/javaslat/szavazat` (auth)
 Body: `{ javaslatId, szavazatTipus }` — `szavazatTipus` ∈ `Tamogat, Ellenez, Tartozkodik`.
@@ -241,11 +246,13 @@ Minden lépésnél párhuzamosan figyeljük:
 5. ⬜ Hozz létre **Tartalom-B**-t (elutasítás-ág): **elfogadás 60 / részvétel 90 / min 0 / max 3 perc**.
    - *Elvárt:* mindkét kártya megjelenik a pakliban; DB-ben a `tartalomertekhisztograms` létrejön (első érték javaslat).
 
-### 2. Tudatpont-hozzárendelés + felmenő-szabály
+### 2. Tudatpont-hozzárendelés + részvételi szerep (felmenő már NEM kötelező)
 6. ⬜ **Mind a 3 e-emberrel** rendelj tudatpontot **Tartalom-A**-ra és **Tartalom-B**-re
-   (ehhez ki/bejelentkezés a 3 e-ember közt).
-   - *Elvárt:* a felmenő-szabály a szülőláncot is kitölti; DB-ben a `tudatpont`-hozzárendelések látszanak,
-     az érintett tartalmon **3 tudatpont-tulajdonos** (ez a részvétel nevezője).
+   (ehhez ki/bejelentkezés a 3 e-ember közt). Az ELSŐ allokáláskor a szerepválasztó
+   felugrik (alapból **passzív**); tegyél legalább egy e-embert **aktív**-ra.
+   - *Elvárt:* a felmenő-figyelmeztetés NEM blokkol (mentés kitöltés nélkül is megy);
+     DB-ben a `tudatpont`-hozzárendelések látszanak a `szerep` mezővel. A részvételi
+     arány **nevezője csak az AKTÍV** tulajdonosok (∪ a szavazók) — nem mind a 3.
 
 ### 3. Ágaztatás („Új tartalom létrehozása ebből")
 7. ⬜ Egy kártya menüjéből *Új tartalom létrehozása ebből* → a `TartalomModal` szülő-adatokkal nyílik.
@@ -821,6 +828,34 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 > **Ismert él:** ha a képek feltöltése sikerül, de a rá következő tartalom-mentés maga
 > hibázik (ritka szerverhiba), a feltöltött képek árván maradhatnak. Ritka; szükség
 > esetén később egy vékony söprögető (nem hivatkozott + régi fájlok) biztonsági háló.
+
+### H) Részvételi szerep (passzív/aktív) + felmenő-kényszer megszűnése (ÚJ, 2026-07-31)
+
+*A modell: a részvételi arány NEVEZŐJE csak az AKTÍV tudatpont-tulajdonosokat számolja
+(∪ a szavazókat) — a passzív figyelők nem korlátozzák a döntést. A szerep alapból
+`passziv`; bármely döntés-alakító tett (szavazás, érték javaslat, javaslattétel,
+tartalom/kategória/típus LÉTREHOZÁS) automatikusan aktívvá tesz. Részletek: fejlesztési
+terv „Részvételi modell" szakasz. Backend-változás után **`docker restart koino-backend`**!*
+
+45. ⬜ **Első allokáláskori szerepválasztó:** tegyél pontot egy entitásra, ahol még nincs
+    szereped → Mentés → felugrik a szerepválasztó (alapból **passzív**) → válassz → mentés.
+    - *Elvárt:* a pont-allokálás megtörténik; a `tudatpontHozzarendeles.szerep` a választott.
+46. ⬜ **Második allokálás ugyanott:** módosítsd a pontot → Mentés → **NEM** kérdez szerepet.
+47. ⬜ **Felmenő NEM blokkol:** olyan entitás, aminek a felmenőin nincs pontod → a
+    figyelmeztetés látszik, de a **Mentés kitöltés nélkül is** végbemegy. A „Felmenők
+    kitöltése" gomb → **felmenőnként sorban** felugrik a szerepválasztó.
+48. ⬜ **Létrehozó automatikusan aktív:** hozz létre egy ÚJ tartalmat/kategóriát/típust →
+    a kártya **🙋 Részvételi beállítások** pontja → **aktív**-ot mutat (a kezdő értékjavaslat miatt).
+49. ⬜ **„Részvételi beállítások" menü:** ahol van pontod, a menüpont aktív; nyisd meg →
+    a jelenlegi szerep van kiválasztva → válts → Mentés → újranyitva a váltott érték látszik.
+    Ahol nincs pontod → a menüpont **inaktív**.
+50. ⬜ **Nevező-hatás (a lényeg):** A és B is tegyen pontot egy tartalomra; A **passzív**,
+    B tegyen rá **törlési javaslatot** (a beadó auto-„Támogat" szavazatot kap + aktívvá válik).
+    - *Elvárt:* a részvételi arány **100%** (nevező = {B}), NEM 50%. Ha a meglévő javaslatot
+      nézed, a friss számhoz vagy új javaslat kell, vagy egy szavazat-változás (elavultra jelöl → cron).
+51. ⬜ **≤100% szavazás után passzívra váltva:** B szavazzon egy javaslaton, majd a
+    „Részvételi beállítások"-ban állítsa magát **passzív**-ra → az arány **nem** lép 100% fölé
+    (a szavazó-unió miatt B a nevezőben marad).
 
 ---
 

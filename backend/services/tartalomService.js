@@ -273,6 +273,16 @@ class TartalomService {
       console.error('Hisztogram inicializálási hiba:', error.message);
     }
 
+    // ===== 11/b. LÉPÉS - A LÉTREHOZÓ AKTÍVVÁ TÉTELE =====
+    // A létrehozó kezdő értékjavaslatot adott (a küszöbök beállítása) → döntés-alakító
+    // tett, ezért AKTÍV szerepet kap az új tartalmon (bekerül a részvételi arány
+    // nevezőjébe). Best-effort: a hibája nem döntheti meg a létrehozást.
+    try {
+      await TudatpontService.szerepAktivalasa(eemberId, ujTartalom._id, 'Tartalom');
+    } catch (error) {
+      console.error('A létrehozó aktívvá tétele sikertelen (nem blokkoló):', error.message);
+    }
+
     // ===== 11.C - ÉRTESÍTÉS: ÚJ GYEREK ENTITÁS a szülőnek =====
     // Ha az új tartalom SZÜLŐ alá jött létre, a szülő FIGYELŐit értesítjük (a létrehozót
     // kihagyva). BEST-EFFORT: a küldés hibája nem érinti a létrehozást.

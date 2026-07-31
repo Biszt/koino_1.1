@@ -13,6 +13,11 @@ const JavaslatJogosultsagService = require('./javaslat/javaslatJogosultsagServic
 // projekt gyökér-service-mappájában van, ezért az ertesitesService is innen (./) jön.
 const ErtesitesService = require('./ertesitesService');
 
+// Részvételi szerep aktiválása szavazáskor: a szavazás PASSZÍV → AKTÍV-ra billenti a
+// szavazót minden érintett entitáson (ahol van pontja). Így a szavazó bekerül a
+// részvételi arány NEVEZŐJÉBE is (számláló ⊆ nevező → a részvételi arány ≤ 100%).
+const TudatpontService = require('./tudatpontService');
+
 // ===================================
 // SZAVAZAT SERVICE OSZTÁLY
 // ===================================
@@ -90,6 +95,12 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
       szavazatTipus
     );
     console.log('szavazatLeadasa - Szavazat mentve (nem töredék)', { szavazat });
+
+    // 3b/2. RÉSZVÉTELI SZEREP AKTÍVVÁ BILLENTÉSE
+    // A szavazás döntés-alakító tett → a szavazót minden érintett entitáson aktívvá
+    // tesszük (ahol van pontja). A cron később a nevezőt már aktívként számolja.
+    // Best-effort: a helper sosem dob, a szavazást nem ronthatja el.
+    await TudatpontService.szerepAktivalasaTobbEntitason(eemberId, javaslat.erintettEntitasok);
 
     // 3c. JAVASLAT MEGJELÖLÉSE ELAVULTKÉNT
     // A cron job fogja frissíteni a számított értékeket
@@ -201,6 +212,10 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
 
     // Töredékjavaslat megjelölése elavultként, hogy a cron job frissítse
     await JavaslatRepository.updateById(toredek._id.toString(), { ertekekElavultak: true });
+
+    // RÉSZVÉTELI SZEREP: a töredékre adott szavazat is aktívvá tesz az adott töredék
+    // érintett entitásán (ahol van pont). Best-effort — nem akaszthatja meg a szavazást.
+    await TudatpontService.szerepAktivalasaTobbEntitason(eemberId, toredek.erintettEntitasok);
 
     // ÉRTESÍTÉS: „szavazatErkezett" — az adott töredék érintett entitásának FIGYELŐinek
     // (a szavazót magát kihagyva). Töredékenként külön megy, mert minden töredéknek saját

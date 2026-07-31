@@ -165,6 +165,14 @@ class TartalomTipusService {
         kuszobErtekek.maximumDontesiIdo
       );
       console.log('Tartalomtípus küszöbérték-hisztogram inicializálva');
+
+      // A LÉTREHOZÓ AKTÍVVÁ TÉTELE: kezdő értékjavaslatot adott → döntés-alakító tett,
+      // ezért AKTÍV szerepet kap az új tartalomtípuson (bekerül a részvételi arány nevezőjébe).
+      try {
+        await TudatpontService.szerepAktivalasa(eemberId, ujTartalomTipus._id, 'TartalomTipus');
+      } catch (szerepHiba) {
+        console.error('A létrehozó aktívvá tétele sikertelen (nem blokkoló):', szerepHiba.message);
+      }
     } catch (error) {
       // Nem kritikus: logoljuk, de nem döntjük meg a tartalomtípust
       console.error('Tartalomtípus küszöbérték inicializálási hiba:', error.message);

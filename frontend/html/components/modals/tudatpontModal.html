@@ -30,9 +30,10 @@
     <p class="tudatpont-modal__egyenleg" id="tudatpont-egyenleg"></p>
   </div>
 
-  <!-- ── FELMENŐ FIGYELMEZTETÉS ── -->
-  <!-- Alapból rejtett. A JS mutatja meg, ha van olyan felmenő, amelyen
-       a eembernek nincs tudatpontja. -->
+  <!-- ── FELMENŐ FIGYELMEZTETÉS (NEM BLOKKOLÓ) ── -->
+  <!-- Alapból rejtett. A JS mutatja meg, ha van olyan felmenő, amelyen a eembernek
+       nincs tudatpontja. A felmenő-kitöltés OPCIONÁLIS: a mentés akkor is működik,
+       ha nem töltöd ki. A „kitöltés" gomb felmenőnként bekéri a szerepet. -->
   <div class="tudatpont-modal__felmeno" id="tudatpont-felmeno" hidden>
 
     <p class="tudatpont-modal__felmeno-cim" id="tudatpont-felmeno-cim"></p>
@@ -40,11 +41,12 @@
     <!-- A hiányzó felmenők listája – a JS tölti fel -->
     <ul class="tudatpont-modal__felmeno-lista" id="tudatpont-felmeno-lista"></ul>
 
-    <!-- Kifejezett hozzájárulás az automatikus kitöltéshez -->
-    <label class="tudatpont-modal__felmeno-jovahagyas">
-      <input type="checkbox" id="tudatpont-felmeno-checkbox" />
-      <span id="tudatpont-felmeno-checkbox-felirat"></span>
-    </label>
+    <!-- Opcionális kitöltés: felmenőnként 1 pont, felmenőnként szerep-kérdéssel -->
+    <button
+      type="button"
+      class="tudatpont-modal__felmeno-gomb"
+      id="tudatpont-felmeno-kitolt-gomb"
+    >Felmenők kitöltése 1-1 ponttal (opcionális)</button>
 
   </div>
 

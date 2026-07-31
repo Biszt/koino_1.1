@@ -12,6 +12,11 @@ const JavaslatRepository = require('../repositories/javaslatRepository');
 // érvényes (medián) küszöbei megváltoztak, a tudatpont-tulajdonosok riasztást kapnak
 const ertesitesService = require('./ertesitesService');
 
+// Részvételi szerep aktiválása: az ÉRTÉK JAVASLAT adása döntés-alakító tett →
+// a beadót PASSZÍV → AKTÍV-ra billenti az entitáson (bekerül a részvételi arány
+// nevezőjébe). Best-effort hívás (lásd lent), a mentést nem ronthatja el.
+const tudatpontService = require('./tudatpontService');
+
 // ===================================
 // ÉRTÉK SZÁMÍTÁS SERVICE OSZTÁLY
 // ===================================
@@ -515,6 +520,17 @@ class ErtekJavaslatSzamitasService {
         eemberId: eemberId
       }
     );
+
+    // 5/b. LÉPÉS - RÉSZVÉTELI SZEREP AKTÍVVÁ BILLENTÉSE
+    // Az érték javaslat beadása döntés-alakító tett → a beadó aktívvá válik az
+    // entitáson (a küszöböt alakítja, tehát a döntésben is részt vesz). A tudatpont
+    // meglétét az 1. lépés már ellenőrizte. Best-effort: a szerep-billentés hibája
+    // NEM ronthatja el az érték javaslat mentését.
+    try {
+      await tudatpontService.szerepAktivalasa(eemberId, entitasId, entitasTipus);
+    } catch (szerepHiba) {
+      console.error('ertekJavaslatLetrehozasaVagyModositasa - szerep-aktiválás HIBA (nem blokkoló):', szerepHiba.message);
+    }
 
     // 6. LÉPÉS - HISZTOGRAM FRISSÍTÉSE VAGY LÉTREHOZÁSA
     let frissitettHisztogram;

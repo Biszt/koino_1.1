@@ -28,6 +28,17 @@ router.post(
   (req, res) => TudatpontController.tudatpontHozzarendelese(req, res)
 );
 
+// ----- RÉSZVÉTELI SZEREP BEÁLLÍTÁSA -----
+// Endpoint: PUT /api/tudatpont/szerep/:entitasTipus/:entitasId
+// Body: { szerep: 'passziv' | 'aktiv' }
+// Védett: Csak bejelentkezett eemberek (a SAJÁT szerepük az entitáson).
+// A kártya „Részvételi beállítások" menüpontja hívja; a pontokhoz nem nyúl.
+router.put(
+  '/szerep/:entitasTipus/:entitasId',
+  authMiddleware,
+  (req, res) => TudatpontController.szerepBeallitasa(req, res)
+);
+
 // ============================================================
 // ALLOKÁCIÓ LEKÉRDEZÉS
 // ============================================================

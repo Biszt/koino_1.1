@@ -196,13 +196,45 @@ class TudatpontRepository {
           frissitve: Date.now()                            // Frissítési dátum
         }
       },
-      { 
+      {
         new: true,                                         // Frissített dokumentumot ad vissza
         upsert: true,                                      // Ha nem létezik, létrehozza
         runValidators: true                                // Mongoose validációk futtatása
       }
     );
-    
+
+    return hozzarendeles;
+  }
+
+  // ----- RÉSZVÉTELI SZEREP FRISSÍTÉSE -----
+  // Egy LÉTEZŐ hozzárendelés szerep mezőjének beállítása (passzív ↔ aktív).
+  // A pontokhoz NEM nyúl. Szándékosan NINCS upsert: szerep pont nélkül nem
+  // értelmezett, ezért ha nincs ilyen hozzárendelés, null-t adunk vissza.
+  // @param {string} eemberId - A eember MongoDB ObjectId-ja
+  // @param {string} entitasId - Az entitás MongoDB ObjectId-ja
+  // @param {string} entitasTipus - Az entitás típusa
+  // @param {string} szerep - 'passziv' vagy 'aktiv'
+  // @returns {Promise<Object|null>} A frissített hozzárendelés, vagy null ha nincs
+  async updateSzerep(eemberId, entitasId, entitasTipus, szerep) {
+    const hozzarendeles = await TudatpontHozzarendeles.findOneAndUpdate(
+      {
+        eemberId: eemberId,
+        entitasId: entitasId,
+        entitasTipus: entitasTipus
+      },
+      {
+        $set: {
+          szerep: szerep,                                  // Szerep beállítása
+          frissitve: Date.now()                            // Frissítési dátum
+        }
+      },
+      {
+        new: true,                                         // Frissített dokumentumot ad vissza
+        upsert: false,                                     // NEM hozunk létre új rekordot
+        runValidators: true                                // enum validáció fusson
+      }
+    );
+
     return hozzarendeles;
   }
 
@@ -288,7 +320,28 @@ class TudatpontRepository {
     .limit(limit)                                          // Maximum ennyi dokumentum
     .skip(skip);                                           // Lapozás (ennyi dokumentumot ugrik át)
     // ✅ NINCS .populate() - eemberId tiszta ObjectId marad (backend logikához)
-    
+
+    return hozzarendelesek;
+  }
+
+  // ----- AKTÍV SZEREPŰ HOZZÁRENDELÉSEK LEKÉRÉSE ENTITÁSHOZ (NYERS) -----
+  // A részvételi arány NEVEZŐJÉHEZ: azok a hozzárendelések, ahol
+  //  - van pont (tudatPontok > 0), ÉS
+  //  - a szerep 'aktiv' (a passzív FIGYELŐK szándékosan kimaradnak).
+  // FIGYELEM a szó kettős jelentésére: itt a `tudatPontok > 0` az „aktív = van pontja",
+  // a `szerep: 'aktiv'` pedig a részvételi SZEREP — a kettő külön feltétel.
+  // Populate nélkül (csak backend-számoláshoz kell az eemberId).
+  // @param {string} entitasId - Az entitás azonosítója
+  // @param {string} entitasTipus - Az entitás típusa
+  // @returns {Promise<Array>} Aktív szerepű hozzárendelések (tiszta ObjectId-kkal)
+  async findAktivSzerepuHozzarendelesekByEntitas(entitasId, entitasTipus) {
+    const hozzarendelesek = await TudatpontHozzarendeles.find({
+      entitasId: entitasId,
+      entitasTipus: entitasTipus,
+      tudatPontok: { $gt: 0 },                             // Van pontja
+      szerep: 'aktiv'                                      // Aktív részvételi szerep
+    });
+    // ✅ NINCS .populate() - eemberId tiszta ObjectId marad
     return hozzarendelesek;
   }
 

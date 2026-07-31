@@ -26,9 +26,10 @@ class TudatpontController {
       const eemberId = req.user.id;
 
       // 2. LÉPÉS - Adatok kiolvasása request body-ból
-      // Frontend küldi: { entitasId, entitasTipus, pontok, felmenoketAutomatikusan? }
-      // felmenoketAutomatikusan: ha true, a hiányzó felmenőkre 1-1 pontot tesz
-      const { entitasId, entitasTipus, pontok, felmenoketAutomatikusan } = req.body;
+      // Frontend küldi: { entitasId, entitasTipus, pontok, felmenoketAutomatikusan?, szerep? }
+      // felmenoketAutomatikusan: ha true, a hiányzó felmenőkre 1-1 pontot tesz (opció)
+      // szerep: 'passziv' | 'aktiv' — csak az ELSŐ allokáláskori szerep-választáshoz
+      const { entitasId, entitasTipus, pontok, felmenoketAutomatikusan, szerep } = req.body;
 
       // 3. LÉPÉS - Kötelező mezők validálása
       if (!entitasId || !entitasTipus || pontok === undefined) {
@@ -54,15 +55,16 @@ class TudatpontController {
         });
       }
 
-      // 6. LÉPÉS - Service hívás - felhasználói belépési pont (felmenő-ellenőrzéssel)
-      // A felmenő-szabályt itt kényszerítjük ki: ha hiányzik pont valamelyik
-      // felmenőn, és nincs felmenoketAutomatikusan flag, HIANYZO_FELMENOK hibát kapunk.
+      // 6. LÉPÉS - Service hívás - felhasználói belépési pont
+      // A felmenő-kitöltés OPCIONÁLIS (felmenoketAutomatikusan). A szerep csak az ELSŐ
+      // allokáláskor érvényesül. A régi HIANYZO_FELMENOK kényszer MEGSZŰNT (2026-07-30).
       const eredmeny = await TudatpontService.felhasznaloTudatpontHozzarendelese(
         eemberId,
         entitasId,
         entitasTipus,
         pontok,
-        felmenoketAutomatikusan === true
+        felmenoketAutomatikusan === true,
+        szerep
       );
 
       // 7. LÉPÉS - Sikeres válasz küldése
@@ -77,17 +79,6 @@ class TudatpontController {
       // ===== HIBAKEZELÉS =====
       // Ha bármi hiba történik
       console.error('Hiba a tudatpontok hozzárendelése során:', error);
-
-      // 409 Conflict - Hiányzó tudatpont a felmenőkön
-      // A frontend ebből a listából ajánlja fel az automatikus kitöltést.
-      if (error.kod === 'HIANYZO_FELMENOK') {
-        return res.status(409).json({
-          success: false,
-          kod: 'HIANYZO_FELMENOK',
-          message: error.message,
-          hianyzoFelmenok: error.hianyzoFelmenok
-        });
-      }
 
       // 400 Bad Request - Kliens oldali hiba (pl. nincs elég tudatpont)
       if (error.message.includes('Nincs elég tudatpont')) {
@@ -385,6 +376,71 @@ class TudatpontController {
       res.status(500).json({
         success: false,
         message: 'Szerver hiba történt a felmenők felmérése során',
+        error: error.message
+      });
+    }
+  }
+
+  // ============================================================
+  // RÉSZVÉTELI SZEREP BEÁLLÍTÁSA (a kártya „Részvételi beállítások" menüje)
+  // ============================================================
+
+  // ----- RÉSZVÉTELI SZEREP BEÁLLÍTÁSA -----
+  // A eember explicit passzív↔aktív váltása egy entitáson. A pontokhoz NEM nyúl;
+  // feltétel: legyen már tudatpont-hozzárendelése az entitáson.
+  // Endpoint: PUT /api/tudatpont/szerep/:entitasTipus/:entitasId  Body: { szerep }
+  // @param {Object} req - Express request objektum
+  // @param {Object} res - Express response objektum
+  async szerepBeallitasa(req, res) {
+    try {
+      // 1. LÉPÉS - eEmber ID a JWT tokenből + paraméterek
+      const eemberId = req.user.id;
+      const { entitasTipus, entitasId } = req.params;
+      const { szerep } = req.body;
+
+      // 2. LÉPÉS - Validáció
+      if (!entitasId || !entitasTipus) {
+        return res.status(400).json({
+          success: false,
+          message: 'Hiányzó kötelező paraméterek: entitasId, entitasTipus'
+        });
+      }
+      if (szerep !== 'passziv' && szerep !== 'aktiv') {
+        return res.status(400).json({
+          success: false,
+          message: "Érvénytelen szerep. Megengedett értékek: 'passziv' vagy 'aktiv'"
+        });
+      }
+
+      // 3. LÉPÉS - Service hívás
+      const eredmeny = await TudatpontService.szerepBeallitasa(
+        eemberId,
+        entitasId,
+        entitasTipus,
+        szerep
+      );
+
+      // 4. LÉPÉS - Sikeres válasz
+      res.status(200).json({
+        success: true,
+        message: 'A részvételi szereped frissítve.',
+        data: { szerep: eredmeny.szerep }
+      });
+
+    } catch (error) {
+      console.error('Hiba a részvételi szerep beállítása során:', error);
+
+      // Kliens-oldali hibák (nincs hozzárendelés / érvénytelen szerep) → 400
+      if (
+        error.message.includes('Nincs tudatpont-hozzárendelésed') ||
+        error.message.includes('Érvénytelen szerep')
+      ) {
+        return res.status(400).json({ success: false, message: error.message });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Szerver hiba történt a részvételi szerep beállítása során',
         error: error.message
       });
     }

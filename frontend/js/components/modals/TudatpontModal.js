@@ -2,15 +2,19 @@
 
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
+import SzerepValasztoModal from './SzerepValasztoModal.js';
 import { apiGet, apiPost } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 
 // ===== TUDATPONT MODAL OSZTÁLY =====
 // Felelősség: egy entitáson a bejelentkezett eember tudatpontjainak módosítása.
-//  1. Megnyitáskor lekéri a jelenlegi saját pontot (előtöltés) és felméri a felmenőket.
-//  2. Ha van olyan felmenő, amelyen nincs pontja, figyelmeztet és hozzájárulást kér
-//     az automatikus 1-1 pont kitöltéséhez (a szabályt a backend is kikényszeríti).
-//  3. Mentéskor a POST /api/tudatpont/hozzarendeles végpontot hívja.
+//  1. Megnyitáskor lekéri a jelenlegi saját pontot ÉS a részvételi szerepet (ebből
+//     tudjuk, ELSŐ allokálás-e), és felméri a felmenőket.
+//  2. Ha van olyan felmenő, amelyen nincs pontja, FIGYELMEZTET — de NEM blokkol
+//     (a felmenő-kényszer megszűnt, 2026-07-30). A „Felmenők kitöltése" gomb
+//     felmenőnként 1 pontot tesz, felmenőnként megkérdezve a szerepet.
+//  3. Mentéskor az ELSŐ allokáláskor felugró szerep-választóval bekéri a részvételi
+//     szerepet (passzív/aktív), majd a POST /api/tudatpont/hozzarendeles-t hívja.
 // Használják: minden kártyatípus „Tudatpont módosítás" menüpontja.
 // A standard modal-stílust követi (t-modal-* osztályok), mint a TartalomModal.
 class TudatpontModal {
@@ -35,8 +39,13 @@ class TudatpontModal {
     this.entitasId   = this.entitasAdatok?.entitasId   ?? null;
     this.entitasTipus = this.entitasAdatok?.entitasTipus ?? null;
 
-    // A megnyitáskor felmért hiányzó felmenők (a mentés és a validáció ezt használja)
+    // A megnyitáskor felmért hiányzó felmenők (a kitöltés ezt használja)
     this.felmeres = null;
+
+    // A saját részvételi szerep az entitáson: 'passziv' | 'aktiv' | null.
+    // null → még nincs hozzárendelése → ELSŐ allokálás → mentéskor kérdezünk szerepet.
+    this.eemberSzerep  = null;
+    this.elsoAllokalas = false;
 
     this.modal = null;
 
@@ -77,10 +86,8 @@ class TudatpontModal {
 
     await this.modal.init();
 
-    // A felmenő-figyelmeztetés jóváhagyó checkboxa és az értékmező is
-    // a mentés gomb állapotát vezérli
-    this._checkboxBekotese();
-    this._ertekMezoBekotese();
+    // A felmenő-kitöltés gomb bekötése (nem blokkoló, opcionális)
+    this._felmenoGombBekotese();
 
     console.log('TudatpontModal.init - VÉGE');
   }
@@ -106,7 +113,7 @@ class TudatpontModal {
   }
 
   // ===== MEGNYITÁS =====
-  // Megnyitja a modalt, majd betölti a jelenlegi pontot és felméri a felmenőket.
+  // Megnyitja a modalt, majd betölti a jelenlegi pontot/szerepet és felméri a felmenőket.
   async megnyitas() {
     console.log('TudatpontModal.megnyitas - KEZDÉS');
 
@@ -115,9 +122,7 @@ class TudatpontModal {
     // Az entitás neve a fejlécbe
     const nevElem = document.getElementById('tudatpont-entitas-nev');
     if (nevElem) {
-      const nev = this.entitasAdatok?.adatok?.cim
-        ?? this.entitasAdatok?.adatok?.nev
-        ?? '(névtelen entitás)';
+      const nev = this._entitasNev();
       nevElem.textContent = `Entitás: ${nev}`;
     }
 
@@ -133,8 +138,15 @@ class TudatpontModal {
     console.log('TudatpontModal.bezaras - VÉGE');
   }
 
+  // ===== SEGÉD: ENTITÁS NEVE =====
+  _entitasNev() {
+    return this.entitasAdatok?.adatok?.cim
+      ?? this.entitasAdatok?.adatok?.nev
+      ?? '(névtelen entitás)';
+  }
+
   // ===== ADATOK BETÖLTÉSE =====
-  // 1. Jelenlegi saját pont lekérése (input előtöltés).
+  // 1. Jelenlegi saját pont + szerep lekérése (input előtöltés, első-allokálás eldöntése).
   // 2. Felmenők felmérése (figyelmeztetés + egyenleg).
   async _adatokBetoltese() {
     console.log('TudatpontModal._adatokBetoltese - KEZDÉS', {
@@ -144,12 +156,16 @@ class TudatpontModal {
     this.modal.betoltesBeallitasa(true);
 
     try {
-      // 1. LÉPÉS - Jelenlegi allokáció (saját hozzájárulás előtöltése)
+      // 1. LÉPÉS - Jelenlegi allokáció (saját pont + szerep előtöltése)
       const allokacioValasz = await apiGet(
         `tudatpont/entitas/${this.entitasTipus}/${this.entitasId}`,
         this.token
       );
       const sajatPont = allokacioValasz?.data?.eemberHozzajarulas ?? 0;
+
+      // eemberSzerep: 'passziv' | 'aktiv' | null (null → még nincs hozzárendelés → első allokálás)
+      this.eemberSzerep  = allokacioValasz?.data?.eemberSzerep ?? null;
+      this.elsoAllokalas = (this.eemberSzerep === null);
 
       const ertekMezo = document.getElementById('tudatpont-ertek');
       if (ertekMezo) ertekMezo.value = sajatPont;
@@ -161,17 +177,15 @@ class TudatpontModal {
       );
       this.felmeres = felmeresValasz?.data ?? null;
 
-      // 3. LÉPÉS - Felület igazítása a felméréshez
-      // FONTOS: előbb kikapcsoljuk a betöltési állapotot (ez minden gombot
-      // újra engedélyez), és CSAK UTÁNA futtatjuk a _felmenoMegjelenites-t,
-      // amely a mentés gombot szükség esetén letiltja — különben a betöltés
-      // kikapcsolása felülírná a letiltást.
+      // 3. LÉPÉS - Felület igazítása
       this.modal.betoltesBeallitasa(false);
       this._egyenlegMegjelenites();
       this._felmenoMegjelenites();
 
       console.log('TudatpontModal._adatokBetoltese - VÉGE', {
         sajatPont,
+        eemberSzerep: this.eemberSzerep,
+        elsoAllokalas: this.elsoAllokalas,
         hianyzoDb: this.felmeres?.hianyzoDb
       });
 
@@ -189,8 +203,9 @@ class TudatpontModal {
       `Elérhető egyenleged: ${this.felmeres.eemberEgyenleg.toLocaleString()} tudatpont`;
   }
 
-  // ===== FELMENŐ FIGYELMEZTETÉS MEGJELENÍTÉSE =====
-  // Ha van hiányzó felmenő, megmutatja a listát és a jóváhagyó checkboxot.
+  // ===== FELMENŐ FIGYELMEZTETÉS MEGJELENÍTÉSE (NEM BLOKKOLÓ) =====
+  // Ha van hiányzó felmenő, megmutatja a listát és a kitöltő gombot. A mentést NEM
+  // gátolja — a felmenő-kitöltés opcionális.
   _felmenoMegjelenites() {
     console.log('TudatpontModal._felmenoMegjelenites - KEZDÉS', {
       hianyzoDb: this.felmeres?.hianyzoDb
@@ -202,19 +217,18 @@ class TudatpontModal {
     // Nincs hiányzó felmenő → a figyelmeztetés rejtve marad
     if (this.felmeres.hianyzoDb === 0) {
       doboz.hidden = true;
-      this._mentesGombFrissitese();
       return;
     }
 
     doboz.hidden = false;
 
-    // Cím szöveg
+    // Cím szöveg — NEM kötelező hangnem
     const cimElem = document.getElementById('tudatpont-felmeno-cim');
     if (cimElem) {
       cimElem.textContent =
         `${this.felmeres.hianyzoDb} felmenőn még nincs tudatpontod. ` +
-        `A tudatpont hozzárendeléséhez mindegyiken kell legalább 1, ezért mentéskor ` +
-        `1-1 pont kerül rájuk (összesen ${this.felmeres.hianyzoDb}).`;
+        `Ez már nem kötelező — a mentés így is működik. Ha szeretnéd, alább 1-1 pontot ` +
+        `tehetsz rájuk; mindegyiknél megkérdezzük a szerepet (passzív/aktív).`;
     }
 
     // Lista feltöltése
@@ -229,75 +243,73 @@ class TudatpontModal {
       });
     }
 
-    // Checkbox felirata és állapota
-    const checkbox = document.getElementById('tudatpont-felmeno-checkbox');
-    const felirat  = document.getElementById('tudatpont-felmeno-checkbox-felirat');
-    if (felirat) {
-      felirat.textContent =
-        `Hozzájárulok, hogy 1-1 tudatpont kerüljön a fenti ${this.felmeres.hianyzoDb} felmenőre.`;
+    // Kitöltő gomb: csak akkor tiltjuk, ha egyáltalán nincs egyenleg (0 pont)
+    const gomb = document.getElementById('tudatpont-felmeno-kitolt-gomb');
+    if (gomb) {
+      const vanEgyenleg = this.felmeres.eemberEgyenleg > 0;
+      gomb.disabled = !vanEgyenleg;
+      gomb.textContent = vanEgyenleg
+        ? 'Felmenők kitöltése 1-1 ponttal (opcionális)'
+        : 'Nincs elég tudatpontod a felmenők kitöltéséhez';
     }
-
-    // Ha nincs elég egyenleg a felmenőkre, jelezzük és letiltjuk a jóváhagyást
-    if (!this.felmeres.elegEgyenlegAFelmenokre) {
-      if (checkbox) {
-        checkbox.checked  = false;
-        checkbox.disabled = true;
-      }
-      this.modal.hibaBeallitasa(
-        `Nincs elég tudatpontod: ${this.felmeres.hianyzoDb} felmenőre kellene 1-1 pont, ` +
-        `de csak ${this.felmeres.eemberEgyenleg} tudatpontod van.`
-      );
-    } else if (checkbox) {
-      checkbox.disabled = false;
-    }
-
-    this._mentesGombFrissitese();
 
     console.log('TudatpontModal._felmenoMegjelenites - VÉGE');
   }
 
-  // ===== CHECKBOX BEKÖTÉSE =====
-  _checkboxBekotese() {
-    const checkbox = document.getElementById('tudatpont-felmeno-checkbox');
-    checkbox?.addEventListener('change', () => {
-      console.log('TudatpontModal - felmenő jóváhagyás váltás', { checked: checkbox.checked });
-      this._mentesGombFrissitese();
-    });
+  // ===== FELMENŐ-KITÖLTÉS GOMB BEKÖTÉSE =====
+  _felmenoGombBekotese() {
+    const gomb = document.getElementById('tudatpont-felmeno-kitolt-gomb');
+    gomb?.addEventListener('click', () => this._felmenokKitoltese());
   }
 
-  // ===== ÉRTÉKMEZŐ BEKÖTÉSE =====
-  // Az érték változása is befolyásolja, kell-e felmenő-jóváhagyás:
-  // 0-ra állításnál (visszavonás) nincs felmenő-követelmény.
-  _ertekMezoBekotese() {
-    const ertekMezo = document.getElementById('tudatpont-ertek');
-    ertekMezo?.addEventListener('input', () => {
-      this._mentesGombFrissitese();
-    });
-  }
+  // ===== FELMENŐK OPCIONÁLIS KITÖLTÉSE (felmenőnként szerep-kérdéssel) =====
+  // A hiányzó felmenőkre egyenként 1 pontot tesz. MINDEGYIK felmenőnél felugrik a
+  // szerep-választó (passzív/aktív) — a tulajdonos döntése: „annyiszor nyíljon fel a
+  // modal, ahány entitásra kerül allokáció". Ha valahol Mégse-t nyom, a folyamat
+  // megáll, a már kitöltött felmenők megmaradnak.
+  async _felmenokKitoltese() {
+    console.log('TudatpontModal._felmenokKitoltese - KEZDÉS');
 
-  // ===== MENTÉS GOMB ÁLLAPOTÁNAK FRISSÍTÉSE =====
-  // A mentés gomb csak akkor tiltott, ha pontot TESZÜNK (érték > 0), van hiányzó
-  // felmenő, és a eember még nem hagyta jóvá a kitöltést (vagy nincs rá egyenlege).
-  // 0-ra állításnál (visszavonás) mindig menthető.
-  _mentesGombFrissitese() {
-    const kontener   = document.getElementById(this.kontenerAzonosito);
-    const mentesGomb = kontener?.querySelector('#tudatpont-modal-mentes-gomb');
-    if (!mentesGomb) return;
+    if (!this.felmeres || this.felmeres.hianyzoDb === 0) return;
 
-    const ertekMezo = document.getElementById('tudatpont-ertek');
-    const ertek = parseInt(ertekMezo?.value, 10);
+    this.modal.hibaTisztitasa();
 
-    let tilt = false;
+    // Másolat: a lista a _adatokBetoltese során úgyis frissül a végén
+    const felmenok = [...this.felmeres.hianyzoFelmenok];
 
-    // Csak akkor gátoljuk a mentést, ha ténylegesen pontot teszünk (érték > 0)
-    if (!isNaN(ertek) && ertek > 0 && this.felmeres && this.felmeres.hianyzoDb > 0) {
-      const checkbox = document.getElementById('tudatpont-felmeno-checkbox');
-      const jovahagyva = !!checkbox?.checked;
-      // Hiányzó felmenőknél kell a jóváhagyás ÉS az elég egyenleg
-      tilt = !jovahagyva || !this.felmeres.elegEgyenlegAFelmenokre;
+    for (const felmeno of felmenok) {
+      // Szerep bekérése ERRE a felmenőre
+      const valaszto = new SzerepValasztoModal(`${felmeno.nev} (${felmeno.entitasTipus})`);
+      const szerep = await valaszto.valaszt();
+
+      // Mégse → a folyamat megáll, a már kitöltöttek megmaradnak
+      if (szerep === null) {
+        console.log('TudatpontModal._felmenokKitoltese - megszakítva', { felmeno: felmeno.nev });
+        break;
+      }
+
+      // 1 pont az adott felmenőre, a választott szereppel
+      try {
+        await apiPost('tudatpont/hozzarendeles', {
+          entitasId:    felmeno.entitasId,
+          entitasTipus: felmeno.entitasTipus,
+          pontok:       1,
+          szerep:       szerep
+        }, this.token);
+        console.log('TudatpontModal._felmenokKitoltese - felmenő kitöltve', {
+          felmeno: felmeno.nev, szerep
+        });
+      } catch (hiba) {
+        console.error('TudatpontModal._felmenokKitoltese - HIBA', hiba.message);
+        this.modal.hibaBeallitasa(`A felmenő kitöltése sikertelen (${felmeno.nev}): ${hiba.message}`);
+        break;
+      }
     }
 
-    mentesGomb.disabled = tilt;
+    // Felmérés frissítése: a kitöltött felmenők eltűnnek, az egyenleg frissül
+    await this._adatokBetoltese();
+
+    console.log('TudatpontModal._felmenokKitoltese - VÉGE');
   }
 
   // ===== MENTÉS =====
@@ -315,18 +327,18 @@ class TudatpontModal {
       return;
     }
 
-    // 2. LÉPÉS - Felmenő-jóváhagyás ellenőrzése (csak ha pontot teszünk: ertek > 0)
-    const vanHianyzoFelmeno = this.felmeres && this.felmeres.hianyzoDb > 0;
-    const checkbox = document.getElementById('tudatpont-felmeno-checkbox');
-    const jovahagyva = !!checkbox?.checked;
+    // 2. LÉPÉS - ELSŐ ALLOKÁLÁSKORI SZEREP-VÁLASZTÁS (csak ha pontot TESZÜNK)
+    // Ha még nincs szerepe ezen az entitáson, és pontot tesz (ertek > 0), felugró
+    // választóval bekérjük a szerepet. Későbbi allokálásnál (van már szerepe) NEM
+    // kérdezünk — a szerep a „Részvételi beállítások" menüből módosítható.
+    let szerep = null;
+    if (ertek > 0 && this.elsoAllokalas) {
+      const valaszto = new SzerepValasztoModal(this._entitasNev());
+      szerep = await valaszto.valaszt();
 
-    if (ertek > 0 && vanHianyzoFelmeno) {
-      if (!this.felmeres.elegEgyenlegAFelmenokre) {
-        this.modal.hibaBeallitasa('Nincs elég tudatpontod a hiányzó felmenők kitöltéséhez.');
-        return;
-      }
-      if (!jovahagyva) {
-        this.modal.hibaBeallitasa('A mentéshez járulj hozzá a felmenők automatikus kitöltéséhez.');
+      // Mégse a szerep-választón → nem mentünk (a eember visszaléphet)
+      if (szerep === null) {
+        console.log('TudatpontModal._mentes - szerep-választás megszakítva, mentés elmarad');
         return;
       }
     }
@@ -336,15 +348,15 @@ class TudatpontModal {
     this.modal.betoltesBeallitasa(true);
 
     try {
-      // A flag csak akkor releváns, ha pontot teszünk és van hiányzó felmenő
-      const felmenoketAutomatikusan = ertek > 0 && vanHianyzoFelmeno && jovahagyva;
-
-      const eredmeny = await apiPost('tudatpont/hozzarendeles', {
+      const payload = {
         entitasId:    this.entitasId,
         entitasTipus: this.entitasTipus,
-        pontok:       ertek,
-        felmenoketAutomatikusan
-      }, this.token);
+        pontok:       ertek
+      };
+      // A szerepet csak az első allokáláskor küldjük (egyébként null marad)
+      if (szerep) payload.szerep = szerep;
+
+      const eredmeny = await apiPost('tudatpont/hozzarendeles', payload, this.token);
 
       this.modal.betoltesBeallitasa(false);
       this.modal.bezaras();
@@ -361,8 +373,7 @@ class TudatpontModal {
       console.error('TudatpontModal._mentes - HIBA', hiba.message);
       this.modal.hibaBeallitasa(hiba.message ?? 'A mentés sikertelen, kérjük próbáld újra.');
 
-      // Ha a backend a felmenő-szabály miatt utasított el (pl. időközben változott
-      // a fa), frissítjük a felmérést, hogy a figyelmeztetés naprakész legyen.
+      // Frissítjük a felmérést, hogy a figyelmeztetés/egyenleg naprakész legyen
       await this._adatokBetoltese();
     }
   }

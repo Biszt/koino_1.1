@@ -735,17 +735,23 @@ class TudatpontService {
     const allokacio = await TudatpontRepository.findAllokaciByEntitas(entitasId, entitasTipus);
 
     // 2. LÉPÉS - Ha nincs allokáció, üres adatok visszaadása
+    // eemberSzerep: null → az e-embernek nincs itt hozzárendelése (első allokálás lesz).
     if (!allokacio) {
       return {
         osszesPont: 0,
         hozzajarulokSzama: 0,
-        eemberHozzajarulas: 0
+        eemberHozzajarulas: 0,
+        eemberSzerep: null
       };
     }
 
-    // 3. LÉPÉS - eEmber hozzájárulásának meghatározása (ha kérték)
+    // 3. LÉPÉS - eEmber hozzájárulásának ÉS szerepének meghatározása (ha kérték)
+    // eemberSzerep: 'passziv' | 'aktiv' ha van hozzárendelése; null, ha még nincs.
+    // A frontend ebből tudja: ha null → ELSŐ allokálás → mutassa a szerepválasztót;
+    // ha van érték → már van szerepe, ne kérdezzen újra (a menüből módosítható).
     let eemberHozzajarulas = 0;
-    
+    let eemberSzerep = null;
+
     if (eemberId) {
 
       console.log("entitasAllokaciLekerese >>>>>>>>>>>>>>>>>>>>>>>> TudatpontRepository.findHozzarendelesByeEmberEsEntitas", {
@@ -758,9 +764,10 @@ class TudatpontService {
         entitasId,
         entitasTipus
       );
-      
+
       if (hozzarendeles) {
         eemberHozzajarulas = hozzarendeles.tudatPontok;
+        eemberSzerep = hozzarendeles.szerep;   // 'passziv' vagy 'aktiv'
       }
     }
 
@@ -770,14 +777,16 @@ class TudatpontService {
       osszesPont: allokacio.osszesPont,
       hozzajarulokSzama: allokacio.hozzajarulokSzama,
       eemberHozzajarulas: eemberHozzajarulas,
+      eemberSzerep: eemberSzerep,
       letrehozva: allokacio.letrehozva,
       frissitve: allokacio.frissitve
     });
-    
+
     return {
       osszesPont: allokacio.osszesPont,
       hozzajarulokSzama: allokacio.hozzajarulokSzama,
       eemberHozzajarulas: eemberHozzajarulas,
+      eemberSzerep: eemberSzerep,
       letrehozva: allokacio.letrehozva,
       frissitve: allokacio.frissitve
     };
@@ -983,23 +992,33 @@ class TudatpontService {
     return eredmeny;
   }
 
-  // ----- FELHASZNÁLÓI TUDATPONT HOZZÁRENDELÉS (FELMENŐ-ELLENŐRZÉSSEL) -----
+  // ----- FELHASZNÁLÓI TUDATPONT HOZZÁRENDELÉS (FELMENŐ-FELAJÁNLÁSSAL) -----
   /**
    * A felhasználó által indított tudatpont hozzárendelés belépési pontja.
-   * Kikényszeríti a felmenő-szabályt, mielőtt a nyers hozzárendelést elvégzi.
-   * A belső/rendszer hívások (javaslat-végrehajtók, visszaosztás) továbbra is
-   * közvetlenül a tudatpontHozzarendelese-t használják, ellenőrzés nélkül.
+   * A felmenő-kitöltés OPCIONÁLIS (nincs kényszer); a részvételi szerep az ELSŐ
+   * allokáláskor beállítható. A belső/rendszer hívások (javaslat-végrehajtók,
+   * visszaosztás) továbbra is közvetlenül a tudatpontHozzarendelese-t használják.
    * @param {string} eemberId
    * @param {string} entitasId
    * @param {string} entitasTipus
    * @param {number} ujPontok - Az új abszolút tudatpont érték (nem különbség)
-   * @param {boolean} felmenoketAutomatikusan - Ha true, a hiányzó felmenőkre 1-1 pontot tesz
+   * @param {boolean} felmenoketAutomatikusan - Ha true, a hiányzó felmenőkre 1-1 pontot tesz (opció)
+   * @param {string|null} szerep - 'passziv' | 'aktiv' — csak az ELSŐ allokáláskor
+   *        (amikor még nincs hozzárendelés) érvényesül; egyébként figyelmen kívül marad
+   *        (a meglévő szerepet a „Részvételi beállítások" menü módosítja).
    * @returns {Promise<Object>} A nyers hozzárendelés eredménye
    */
-  async felhasznaloTudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan = false) {
+  async felhasznaloTudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan = false, szerep = null) {
     console.log('felhasznaloTudatpontHozzarendelese - KEZDÉS', {
-      eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan
+      eemberId, entitasId, entitasTipus, ujPontok, felmenoketAutomatikusan, szerep
     });
+
+    // 0. LÉPÉS - ELSŐ ALLOKÁLÁS? (a szerep-választás csak ekkor érvényes)
+    // A fő művelet ELŐTT nézzük meg, van-e már hozzárendelés — utána már lenne.
+    const letezoHozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+      eemberId, entitasId, entitasTipus
+    );
+    const elsoAllokalas = !letezoHozzarendeles;
 
     // 1. LÉPÉS - Alap validáció (a részletes ellenőrzést a nyers metódus is elvégzi)
     if (!eemberId || !entitasId || !entitasTipus) {
@@ -1012,22 +1031,18 @@ class TudatpontService {
       throw new Error('A tudatpontok nem lehetnek negatívak');
     }
 
-    // 2. LÉPÉS - Felmenő-szabály (csak ha pontot TESZÜNK az entitásra)
-    // 0-ra állításnál (visszavonás) nincs felmenő-követelmény.
-    if (ujPontok > 0) {
+    // 2. LÉPÉS - FELMENŐK OPCIONÁLIS KITÖLTÉSE (már NEM kötelező)
+    // A régi „felmenő-szabály" MEGSZŰNT (2026-07-30, Csaba döntése): a gyerekre
+    // úgy is tehetsz pontot, hogy a felmenőkön nincs — a mentés akkor is végbemegy.
+    // A hiányzó felmenők 1-1 pontos kitöltése immár OPCIÓ: csak akkor fut, ha a hívó
+    // (a frontend, a figyelmeztetés utáni felajánlásra igent mondva) kérte. Nincs
+    // HIANYZO_FELMENOK dobás. A felmenő-kitöltés a szokásos allokáláson megy át, így
+    // a szerepük az alapértelmezett 'passziv' lesz (jelenlét-jelölés a lánc felé).
+    if (ujPontok > 0 && felmenoketAutomatikusan) {
       const felmeres = await this.hianyzoFelmenokFelmerese(eemberId, entitasId, entitasTipus);
 
       if (felmeres.hianyzoDb > 0) {
-        // 2.A - Ha a hívó nem kérte a felmenők automatikus kitöltését, elutasítjuk,
-        // és a hiányzó felmenők listáját visszaadjuk (a frontend ebből ajánlja fel a kitöltést)
-        if (!felmenoketAutomatikusan) {
-          const err = new Error('A tudatpont-hozzárendeléshez minden felmenőn legalább 1 tudatpont szükséges');
-          err.kod = 'HIANYZO_FELMENOK';
-          err.hianyzoFelmenok = felmeres.hianyzoFelmenok;
-          throw err;
-        }
-
-        // 2.B - Egyenleg-előellenőrzés: a hiányzó felmenőkre 1-1 pont + erre az
+        // 2.A - Egyenleg-előellenőrzés: a hiányzó felmenőkre 1-1 pont + erre az
         // entitásra a növekmény. Így nem fordulhat elő, hogy pár felmenő megkapja
         // a pontot, de a fő művelet egyenleg híján elbukik (részleges állapot).
         const regiPontok = (await this.eemberHozzajarulasaEntitason(eemberId, entitasId, entitasTipus)).pontok;
@@ -1040,9 +1055,9 @@ class TudatpontService {
           );
         }
 
-        // 2.C - Hiányzó felmenők kitöltése: mindegyikre 1 pont
+        // 2.B - Hiányzó felmenők kitöltése: mindegyikre 1 pont (alapból passzív szerep)
         for (const felmeno of felmeres.hianyzoFelmenok) {
-          console.log('felhasznaloTudatpontHozzarendelese - Felmenő automatikus kitöltése', felmeno);
+          console.log('felhasznaloTudatpontHozzarendelese - Felmenő opcionális kitöltése', felmeno);
           await this.tudatpontHozzarendelese(eemberId, felmeno.entitasId, felmeno.entitasTipus, 1);
         }
       }
@@ -1051,8 +1066,18 @@ class TudatpontService {
     // 3. LÉPÉS - Fő művelet: a kért entitásra a kért pont beállítása
     const eredmeny = await this.tudatpontHozzarendelese(eemberId, entitasId, entitasTipus, ujPontok);
 
+    // 3/b. LÉPÉS - ELSŐ ALLOKÁLÁSKORI SZEREP-VÁLASZTÁS ÉRVÉNYESÍTÉSE
+    // A rekord a fő műveletnél az alapértelmezett 'passziv' szereppel jött létre.
+    // Ha ez ELSŐ allokálás volt, pontot tettünk (ujPontok > 0), és a felhasználó
+    // explicit szerepet választott, azt most beállítjuk. Későbbi allokálásnál (van
+    // már rekord) a szerep-paramétert szándékosan figyelmen kívül hagyjuk.
+    if (elsoAllokalas && ujPontok > 0 && (szerep === 'passziv' || szerep === 'aktiv')) {
+      console.log('felhasznaloTudatpontHozzarendelese - első allokáláskori szerep beállítása', { szerep });
+      await TudatpontRepository.updateSzerep(eemberId, entitasId, entitasTipus, szerep);
+    }
+
     console.log('felhasznaloTudatpontHozzarendelese - VÉGE', {
-      ujeEmberEgyenleg: eredmeny?.ujeEmberEgyenleg
+      ujeEmberEgyenleg: eredmeny?.ujeEmberEgyenleg, elsoAllokalas
     });
     return eredmeny;
   }
@@ -1463,6 +1488,48 @@ class TudatpontService {
     return Array.from(egyediEemberIds);
   }
 
+  // ----- ENTITÁS AKTÍV SZEREPŰ TULAJDONOSAINAK LEKÉRÉSE -----
+  // Egy entitás AKTÍV szerepű tudatpont-tulajdonosainak eember ID-i (a részvételi
+  // arány nevezőjéhez). A passzív FIGYELŐK kimaradnak — ez a lényege a modellnek.
+  // @param {string} entitasId - Az entitás azonosítója
+  // @param {string} entitasTipus - Az entitás típusa
+  // @returns {Promise<Array>} Aktív szerepű eember ID-k tömbje (stringként)
+  async entitasAktivTulajdonosainakLekerese(entitasId, entitasTipus) {
+    const hozzarendelesek = await TudatpontRepository.findAktivSzerepuHozzarendelesekByEntitas(
+      entitasId,
+      entitasTipus
+    );
+    return hozzarendelesek.map(h => h.eemberId.toString());
+  }
+
+  // ----- TÖBB ENTITÁS EGYESÍTETT AKTÍV TULAJDONOSAINAK LEKÉRÉSE -----
+  // A tobbEntitasEgyesitettHozzajaruloinakLekerese AKTÍV-szűrt párja: több entitás
+  // aktív szerepű tudatpont-tulajdonosainak egyesített (egyedi) halmaza. Ez adja a
+  // részvételi arány nevezőjének MAGVÁT (a javaslatSzamitasService ezt szavazókkal
+  // uniózza, hogy szavazás utáni passzívra-váltásnál is álljon a ≤100%).
+  // @param {Array} entitasok - [{entitasId, entitasTipus}, ...]
+  // @returns {Promise<Array>} Egyedi aktív eember ID-k tömbje
+  async tobbEntitasEgyesitettAktivHozzajaruloinakLekerese(entitasok) {
+    console.log('tobbEntitasEgyesitettAktivHozzajaruloinakLekerese - KEZDÉS', {
+      db: Array.isArray(entitasok) ? entitasok.length : 0
+    });
+
+    const egyediEemberIds = new Set();
+
+    for (const entitas of entitasok) {
+      const tulajdonosok = await this.entitasAktivTulajdonosainakLekerese(
+        entitas.entitasId,
+        entitas.entitasTipus
+      );
+      tulajdonosok.forEach(eemberId => egyediEemberIds.add(eemberId));
+    }
+
+    console.log('tobbEntitasEgyesitettAktivHozzajaruloinakLekerese - VÉGE', {
+      aktivDb: egyediEemberIds.size
+    });
+    return Array.from(egyediEemberIds);
+  }
+
   // ----- EMBER HOZZÁJÁRULÁSA ENTITÁSON (JOGOSULTSÁG ELLENŐRZÉS) -----
   // Ellenőrzi, hogy egy eember rendelkezik-e tudatponttal egy entitáson
   // Használat: szavazási jogosultság ellenőrzéshez (javaslat rendszer)
@@ -1518,6 +1585,105 @@ class TudatpontService {
         pontok: 0
       };
     }
+  }
+
+  // ----- RÉSZVÉTELI SZEREP AKTÍVVÁ BILLENTÉSE (passzív → aktív) -----
+  // Egy e-ember szerepét 'aktiv'-ra állítja az adott entitáson, HA jelenleg passzív.
+  // Idempotens: ha már aktív, vagy nincs pontja az entitáson, nem csinál semmit.
+  // EZT HÍVJA minden döntés-alakító tett (szavazás, érték javaslat, javaslattétel) —
+  // a passzív e-ember ilyenkor automatikusan aktívvá válik. Így a részvételi arány
+  // számlálója (a szavazók) sosem lép a nevező (aktívak) fölé.
+  // @param {string} eemberId - A eember azonosítója
+  // @param {string} entitasId - Az entitás azonosítója
+  // @param {string} entitasTipus - Az entitás típusa
+  // @returns {Promise<boolean>} true, ha tényleges billentés történt; egyébként false
+  async szerepAktivalasa(eemberId, entitasId, entitasTipus) {
+    console.log('szerepAktivalasa - KEZDÉS', { eemberId, entitasId, entitasTipus });
+
+    // 1. LÉPÉS - Jelenlegi hozzárendelés lekérése
+    const hozzarendeles = await TudatpontRepository.findHozzarendelesByeEmberEsEntitas(
+      eemberId,
+      entitasId,
+      entitasTipus
+    );
+
+    // 2. LÉPÉS - Nincs pont az entitáson → nincs mit aktiválni
+    if (!hozzarendeles || hozzarendeles.tudatPontok < 1) {
+      console.log('szerepAktivalasa - nincs pont az entitáson, SKIP');
+      return false;
+    }
+
+    // 3. LÉPÉS - Már aktív → idempotens, nincs teendő
+    if (hozzarendeles.szerep === 'aktiv') {
+      console.log('szerepAktivalasa - már aktív, SKIP');
+      return false;
+    }
+
+    // 4. LÉPÉS - Billentés passzív → aktív
+    await TudatpontRepository.updateSzerep(eemberId, entitasId, entitasTipus, 'aktiv');
+    console.log('szerepAktivalasa - VÉGE: passzív → aktív');
+    return true;
+  }
+
+  // ----- SZEREP AKTÍVVÁ BILLENTÉSE TÖBB ENTITÁSON -----
+  // Kényelmi burkoló: az érintett entitások MINDEGYIKÉN aktívvá teszi az e-embert
+  // (ahol van pontja). Szavazásnál/javaslattételnél hívjuk, ahol több entitás érintett.
+  // Best-effort: soha nem dob — egy entitás hibája ne akassza meg a többit, se a
+  // hívó műveletét (a szavazás/javaslat akkor is menjen végbe).
+  // @param {string} eemberId - A eember azonosítója
+  // @param {Array} erintettEntitasok - [{ entitasId, entitasTipus }, ...]
+  async szerepAktivalasaTobbEntitason(eemberId, erintettEntitasok) {
+    console.log('szerepAktivalasaTobbEntitason - KEZDÉS', {
+      eemberId, db: Array.isArray(erintettEntitasok) ? erintettEntitasok.length : 0
+    });
+
+    if (!Array.isArray(erintettEntitasok)) return;
+
+    for (const entitas of erintettEntitasok) {
+      try {
+        await this.szerepAktivalasa(eemberId, entitas.entitasId, entitas.entitasTipus);
+      } catch (hiba) {
+        console.error('szerepAktivalasaTobbEntitason - HIBA (nem blokkoló)', {
+          entitasId: entitas.entitasId, entitasTipus: entitas.entitasTipus, hiba: hiba.message
+        });
+      }
+    }
+
+    console.log('szerepAktivalasaTobbEntitason - VÉGE');
+  }
+
+  // ----- RÉSZVÉTELI SZEREP BEÁLLÍTÁSA (kártya-menü: „Részvételi beállítások") -----
+  // A eember EXPLICIT szerep-választása egy entitáson (passzív ↔ aktív), a pontokhoz
+  // NEM nyúl. Feltétel: legyen már hozzárendelése (pontja) az entitáson — szerep pont
+  // nélkül nem értelmezett. Ha nincs, hibát dobunk (a controller 4xx-ként adja tovább).
+  // @param {string} eemberId - A eember azonosítója
+  // @param {string} entitasId - Az entitás azonosítója
+  // @param {string} entitasTipus - Az entitás típusa
+  // @param {string} szerep - 'passziv' vagy 'aktiv'
+  // @returns {Promise<Object>} A frissített hozzárendelés
+  async szerepBeallitasa(eemberId, entitasId, entitasTipus, szerep) {
+    console.log('szerepBeallitasa - KEZDÉS', { eemberId, entitasId, entitasTipus, szerep });
+
+    // 1. LÉPÉS - Érték-validáció
+    if (!['passziv', 'aktiv'].includes(szerep)) {
+      throw new Error("Érvénytelen szerep. Megengedett értékek: 'passziv' vagy 'aktiv'");
+    }
+
+    // 2. LÉPÉS - Frissítés (csak létező rekordon)
+    const frissitett = await TudatpontRepository.updateSzerep(
+      eemberId,
+      entitasId,
+      entitasTipus,
+      szerep
+    );
+
+    // 3. LÉPÉS - Nincs hozzárendelés → nem állítható szerep
+    if (!frissitett) {
+      throw new Error('Nincs tudatpont-hozzárendelésed ezen az entitáson — előbb allokálj pontot.');
+    }
+
+    console.log('szerepBeallitasa - VÉGE', { szerep });
+    return frissitett;
   }
 
 }

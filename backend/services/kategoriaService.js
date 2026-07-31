@@ -190,6 +190,14 @@ class KategoriaService {
         kuszobErtekek.maximumDontesiIdo
       );
       console.log('Kategória küszöbérték-hisztogram inicializálva');
+
+      // A LÉTREHOZÓ AKTÍVVÁ TÉTELE: kezdő értékjavaslatot adott → döntés-alakító tett,
+      // ezért AKTÍV szerepet kap az új kategórián (bekerül a részvételi arány nevezőjébe).
+      try {
+        await TudatpontService.szerepAktivalasa(eemberId, ujKategoria._id, 'Kategoria');
+      } catch (szerepHiba) {
+        console.error('A létrehozó aktívvá tétele sikertelen (nem blokkoló):', szerepHiba.message);
+      }
     } catch (error) {
       // Nem kritikus: logoljuk, de nem döntjük meg a kategóriát
       console.error('Kategória küszöbérték inicializálási hiba:', error.message);

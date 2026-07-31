@@ -505,6 +505,13 @@ class JavaslatService {
 
     console.log('javaslatLetrehozas - Szavazási jogosultság OK'); // Log üzenet, hogy jogosultság rendben
 
+    // 6/b. LÉPÉS - RÉSZVÉTELI SZEREP AKTÍVVÁ BILLENTÉSE
+    // A javaslattétel döntés-alakító tett → a beadó AKTÍVVÁ válik minden érintett
+    // entitáson (a fenti jogosultság-ellenőrzés épp igazolta, hogy mindegyiken van
+    // pontja). Így bekerül a részvételi arány nevezőjébe. Best-effort: a helper sosem
+    // dob, a javaslat létrehozását nem befolyásolja.
+    await TudatpontService.szerepAktivalasaTobbEntitason(eEmberId, javaslatAdatok.erintettEntitasok);
+
     // 7. LÉPÉS - TÖREDÉK JAVASLATOK LÉTREHOZÁSA
     const letrehozottJavaslatok = []; // Itt gyűjtjük a létrehozott javaslatokat
 

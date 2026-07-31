@@ -9,6 +9,7 @@ import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tuda
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
 import RendezesModal from '../modals/RendezesModal.js'; // Ág-szűrt rendezés a kártya menüjéből (15. terv-pont)
+import ReszveteliBeallitasokModal from '../modals/ReszveteliBeallitasokModal.js'; // Passzív↔aktív szerep az entitáson
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js'; // „Fejlesztésre vár" üzenet (pl. Világtérkép)
 import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Térkép is ezt használja)
 
@@ -118,6 +119,15 @@ async init() {
       ikon:    '🌟',
       felirat: 'Tudatpontok',
       akcio:   () => this._agTudatpontokMegnyitasa()
+    });
+    // Részvételi szerep (passzív↔aktív) EZEN az entitáson. Tudatpont-függő: szerep
+    // csak ott értelmezett, ahol van pontod (a backend is ezt követeli meg).
+    opciok.push({
+      ikon:           '🙋',
+      felirat:        'Részvételi beállítások',
+      tudatpontFuggo: true,
+      tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
+      akcio:          () => this._reszveteliBeallitasokMegnyitasa()
     });
 
     // (b) NAVIGÁCIÓ-csoport — új elválasztóval. Keresés az entitás ÁGA alatt.
@@ -362,6 +372,36 @@ async _agTudatpontokMegnyitasa() {
   await tudatpontokModal.megnyitas();
 
   console.log('Kartya._agTudatpontokMegnyitasa - VÉGE');
+}
+
+// ----- RÉSZVÉTELI BEÁLLÍTÁSOK MEGNYITÁSA -----
+// A kártya-hamburger közös „Részvételi beállítások" menüpontja hívja. Az adott
+// entitáson a bejelentkezett eember részvételi szerepét (passzív↔aktív) állítja.
+// A pontokhoz nem nyúl; sikeres mentés után a paklit frissítjük (a nevező-hatás
+// miatt a kártya-adatok később úgyis frissülnek a döntéseknél).
+async _reszveteliBeallitasokMegnyitasa() {
+  console.log('Kartya._reszveteliBeallitasokMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  const reszveteliModal = new ReszveteliBeallitasokModal(this.modalKontenerAzon, {
+    token: this.token ?? tokenLekerese(),
+    entitasAdatok: {
+      entitasId:    this.entitas.entitasId,
+      entitasTipus: this.entitas.entitasTipus,
+      adatok:       this.entitas.adatok ?? {}
+    },
+    // Sikeres szerep-váltás után a pakli újratöltése (ha a kártya ad rá módot)
+    onSiker: () => {
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
+    }
+  });
+
+  await reszveteliModal.init();
+  await reszveteliModal.megnyitas();
+
+  console.log('Kartya._reszveteliBeallitasokMegnyitasa - VÉGE');
 }
 
 // ----- ÁG-SZŰRT KERESÉS MEGNYITÁSA -----

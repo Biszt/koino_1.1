@@ -111,17 +111,28 @@ class JavaslatSzamitasService {
       throw new Error('A javaslat nem található');
     }
 
-    // 2. LÉPÉS - ENTITÁSOK TUDATPONT TULAJDONOSAINAK SZÁMA
-    // Egyesített halmaz az összes érintett entitás tudatpont tulajdonosaiból
-     console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>> TudatpontService.tobbEntitasEgyesitettHozzajaruloinakLekerese", {
+    // 2. LÉPÉS - A RÉSZVÉTELI ARÁNY NEVEZŐJE: AKTÍV TULAJDONOSOK ∪ SZAVAZÓK
+    // (a) Az érintett entitások AKTÍV szerepű tudatpont-tulajdonosai. A passzív
+    //     FIGYELŐK szándékosan kimaradnak → nem korlátozzák a döntést (a modell lényege).
+    // (b) UNIÓ a javaslat SZAVAZÓIVAL: aki szavazott, az résztvevő, ezért a nevezőben
+    //     is benne kell legyen. Így a számláló ⊆ nevező (a részvételi arány ≤ 100%)
+    //     akkor is áll, ha valaki a szavazása UTÁN a menüből passzívra vált. (A
+    //     szavazás egyébként automatikusan aktívvá tesz — lásd szavazatService.)
+    console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>> TudatpontService.tobbEntitasEgyesitettAktivHozzajaruloinakLekerese", {
       erintettEntitasok: javaslat.erintettEntitasok
-     });
-    const entitasTudatpontTulajdonosokeEmberek = await TudatpontService.tobbEntitasEgyesitettHozzajaruloinakLekerese(
+    });
+    const aktivTulajdonosok = await TudatpontService.tobbEntitasEgyesitettAktivHozzajaruloinakLekerese(
       javaslat.erintettEntitasok
     );
-    const entitasokTudatpontTulajdonosokSzama = entitasTudatpontTulajdonosokeEmberek.length;
+    const szavazoIds = await SzavazatRepository.getSzavazokListaja(javaslatId);
 
-    console.log("entitasokTudatpontTulajdonosokSzama:::::::::::::::::::::", entitasokTudatpontTulajdonosokSzama);
+    // Egyedi halmaz: aktív tulajdonosok + szavazók (duplikációk kiesnek)
+    const nevezoEmberIds = new Set(aktivTulajdonosok.map(id => id.toString()));
+    szavazoIds.forEach(id => nevezoEmberIds.add(id.toString()));
+
+    const entitasokTudatpontTulajdonosokSzama = nevezoEmberIds.size;
+
+    console.log("entitasokTudatpontTulajdonosokSzama (aktív ∪ szavazók):", entitasokTudatpontTulajdonosokSzama);
     
 
     // 3. LÉPÉS - SZAVAZATOK SZÁMOLÁSA (TÁMOGATÓK, ELLENZŐK, TARTÓZKODÓK)
@@ -151,8 +162,12 @@ class JavaslatSzamitasService {
     const szavazok = javaslatotTamogatok + javaslatotEllenzok + tartozkodok;
 
     // 6. LÉPÉS - RÉSZVÉTELI ARÁNY SZÁMÍTÁSA (RA)
-    // RA = (résztvevőTudatpontTulajdonosok / entitásokTudatpontTulajdonosok) * 100
-    const reszveteliArany = (resztvevoTudatpontTulajdonosokSzama / entitasokTudatpontTulajdonosokSzama) * 100;
+    // RA = (résztvevőTudatpontTulajdonosok / nevező) * 100, ahol a nevező az aktív
+    // tulajdonosok ∪ szavazók halmaza (2. lépés). Osztás-védelem: ha a nevező 0
+    // (nincs se aktív tulajdonos, se szavazó), a részvételi arány 0.
+    const reszveteliArany = entitasokTudatpontTulajdonosokSzama > 0
+      ? (resztvevoTudatpontTulajdonosokSzama / entitasokTudatpontTulajdonosokSzama) * 100
+      : 0;
 
     // 7. LÉPÉS - TÁMOGATOTTSÁGI / ELLENZŐI / TARTÓZKODÓI ARÁNY (MODELL A – TISZTA SZELETEK)
     // A három arány a szavazók (T + E + tk) között oszlik el, és együtt MINDIG 100%-ot ad ki.

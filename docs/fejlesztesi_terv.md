@@ -780,6 +780,93 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   aggatható elismerés; tájékoztat, nem jogosít (a szavazat egyenlő marad); később a
   kinevezési rendszer bemenete.
 
+## Részvételi modell — passzív/aktív szerep + a felmenő-kényszer leváltása (2026-07-30, Csaba döntése)
+
+*Cél: a szavazásokat NE korlátozzák a passzív tudatpont-tulajdonosok. A tudatpontnak
+eddig két, ütköző jelentése volt egyszerre — (1) prioritás-jelzés („legyen látható"),
+(2) kormányzati belépő („szavazhatok/javasolhatok"). Ez a feladat szétválasztja a
+kettőt egy explicit szereppel, és önkéntessé teszi a hierarchiába-tartozást.*
+
+### A vezérszabály
+
+> **Passzív** = az e-ember csak figyel és prioritást jelez a tudatpontjával; **NEM
+> számít a részvételi arány nevezőjébe.**
+> **Aktív** = számít a nevezőbe.
+> **Bármilyen döntés-alakító tett aktívvá teszi az e-embert** az érintett entitáson:
+> **szavazás, érték javaslat, javaslattétel.** Így a résztvevők (számláló) mindig
+> részhalmaza a nevezőnek → a részvételi arány sosem lép 100% fölé.
+> A szerepet **csak az entitás első allokálásakor** kérdezzük (alapból passzív);
+> később ugyanazon az entitáson már nem kérdez rá.
+
+### Rögzített döntések (2026-07-30, Csaba)
+
+1. **Passzív az alapértelmezett.** Minden entitás ELSŐ allokálásakor egy beszédes
+   modal elmagyarázza a passzív/aktív jelentését + hogy később átállítható; passzív
+   előre kiválasztva. A második allokálástól ugyanazon az entitáson NEM kérdez újra.
+2. **Passzív is szavazhat**, de a szavazattal (és az érték javaslattal, javaslattétellel
+   is) **automatikusan aktívvá válik** — így tartható a 100%-os felső határ.
+3. **Vállalt trade-off: elkötelezett kisebbség dönthet** a néma többség ellenére
+   (szakmai/hozzáértés-igényes témák: pl. programfejlesztés). Nincs alsó védőkorlát —
+   mert mindenki meg lett kérdezve.
+4. **A kikényszerített felmenő-allokálás megszűnik.** Eddig: gyerekre csak úgy tehettél
+   pontot, ha minden felmenőn is volt (`HIANYZO_FELMENOK` dobás + blokkoló checkbox).
+   Ezután: **figyelmeztetés + opcionális** 1-1 pontos felmenő-kitöltés; a mentés
+   kitöltés nélkül is végbemegy. A felmenő-kitöltés is a rendes szabály alá esik:
+   **ahány felmenőre pont kerül, annyiszor** nyílik fel a passzív/aktív modal (mindegyik
+   a saját első allokálásakor, egyenként — nincs „batch" közös választás).
+5. **Külön menüpont a szerep utólagos állításához.** A kártya-menübe új, tudatpont-függő
+   **„Részvételi beállítások"** pont kerül; itt az adott entitáson passzív↔aktív
+   váltható (ez váltja ki az „első allokáláskor egyszer kérdezünk" ígéretének utóéletét).
+
+**Migráció:** NINCS — a rendszer még éles indulás előtt (nincs valós e-ember,
+a helyi DB tiszta). A `szerep` mező tiszta lappal indul.
+
+**Parkolva (nem most, az első közösséggel egyeztetve):** részletesebb, **javaslat-
+típusonkénti** aktív/passzív hozzáállás beállítása.
+
+### Megvalósítási lépések (apró, izolált lépések)
+
+- [x] **1. Modell** — ✅ KÉSZ (backend). [tudatpontHozzarendeles.js](../backend/models/tudatpontHozzarendeles.js):
+  új `szerep` mező (`enum: ['passziv','aktiv']`, `default: 'passziv'`) + `{ entitasId,
+  entitasTipus, szerep }` index az „aktív hozzájárulók" indexelt számolásához.
+- [x] **2. Segédfüggvények** — ✅ KÉSZ (backend). [tudatpontService.js](../backend/services/tudatpontService.js):
+  `szerepAktivalasa()` (passzív→aktív billentés, idempotens) + `szerepAktivalasaTobbEntitason()`
+  (best-effort burkoló) + `szerepBeallitasa()` (a menüből, csak a szerepet állítja);
+  [tudatpontRepository.js](../backend/repositories/tudatpontRepository.js) `updateSzerep()`.
+- [x] **3. Aktívvá billentés bekötése** — ✅ KÉSZ (backend). [szavazatService.js](../backend/services/szavazatService.js),
+  [ertekSzamitasService.js](../backend/services/ertekSzamitasService.js),
+  [javaslatService.js](../backend/services/javaslat/javaslatService.js): a három
+  döntés-alakító tett minden érintett entitáson (ahol a cselekvőnek van pontja)
+  aktívvá teszi. A szavazásnál a billentés a nevező újraszámítása ELŐTT fusson.
+- [x] **4. Nevező aktívra szűrése** — ✅ KÉSZ (backend). [javaslatSzamitasService.js](../backend/services/javaslat/javaslatSzamitasService.js)
+  (`entitasokTudatpontTulajdonosokSzama`): a nevező = **aktív tulajdonosok ∪ szavazók**
+  (a szavazó-unió miatt a ≤100% szavazás utáni passzívra-váltásnál is áll) + osztás-védelem.
+  Az ÉRTESÍTÉS-címzettek lekérdezése marad teljes (minden tulajdonos)! Több-entitásos
+  javaslatnál: aki legalább egy érintett entitáson aktív.
+- [x] **5. Felmenő-kényszer kivétele** — ✅ KÉSZ (backend). [tudatpontService.js](../backend/services/tudatpontService.js)
+  (`felhasznaloTudatpontHozzarendelese`): a `HIANYZO_FELMENOK` dobás törölve; az 1-1
+  kitöltés opció marad (`felmenoketAutomatikusan`, alapból passzív szereppel). A
+  [tudatpontController.js](../backend/controllers/tudatpontController.js) `HIANYZO_FELMENOK`-ága
+  így holt kód → a 6. lépésnél/takarításnál eltávolítandó.
+- [x] **6. TudatpontModal + szerepválasztó** — ✅ KÉSZ (böngészős teszt hátra).
+  Támogató backend: az allokáló végpont (`szerep` param) + `entitasAllokaciLekerese`
+  (`eemberSzerep`) átvezetve. Új [SzerepValasztoModal.js](../frontend/js/components/modals/SzerepValasztoModal.js)
+  (+ [szerepValasztoModal.css](../frontend/css/components/modals/szerepValasztoModal.css)):
+  újrahasznált, promise-t adó passzív/aktív választó. [TudatpontModal.js](../frontend/js/components/modals/TudatpontModal.js):
+  első-allokáláskor felugró szerepválasztó; a felmenő-figyelmeztetés NEM blokkoló, a
+  „Felmenők kitöltése" gomb felmenőnként (sorban) kér szerepet; a régi blokkoló
+  checkbox-logika törölve.
+- [x] **7. „Részvételi beállítások" menüpont** — ✅ KÉSZ (böngészős teszt hátra).
+  Backend: `PUT /api/tudatpont/szerep/:entitasTipus/:entitasId` ([route](../backend/routes/tudatpontRoutes.js)
+  + [controller](../backend/controllers/tudatpontController.js) `szerepBeallitasa`, a service-metódus a 2. lépésből).
+  Frontend: új [ReszveteliBeallitasokModal.js](../frontend/js/components/modals/ReszveteliBeallitasokModal.js)
+  (a `.szerepvalaszto` CSS-t újrahasználja) + közös, tudatpont-függő menüpont a
+  [Kartya.js](../frontend/js/components/kartya/Kartya.js)-ben (🙋 „Részvételi beállítások").
+- [x] **8. Dokumentáció** — ✅ KÉSZ. [teszt.md](teszt.md): 3.5. végpont-leírás frissítve
+  (`szerep`, felmenő opcionális, `PUT .../szerep/...`), a körteszt 2. lépése átírva, és
+  új **5/b. H)** mélyteszt-szakasz (45–51. lépés: szerepválasztó, felmenő nem blokkol,
+  létrehozó aktív, „Részvételi beállítások" menü, nevező-hatás, ≤100%).
+
 ## Stílus-irányelvek
 
 **Teljes szélességű kártya-elrendezés (2026-07-19, Csaba döntése):** a kártyák
