@@ -1,0 +1,56 @@
+# docker-compose.prod.yml — ÉLES stack a koino.hu-hoz.
+#
+# Felelősség: a fejlesztőitől TELJESEN FÜGGETLEN éles környezet EGY gépen.
+# Külön konténerek, külön adatbázis-kötet, külön feltöltés-mappa, saját titkok —
+# így a fejlesztés (localhost:3000) SEMMILYEN módon nem érinti a koino.hu-t.
+#
+# A `name: koino-prod` külön Compose-projektté teszi, ezért nyugodtan futhat
+# egyszerre a fejlesztői stackkel.
+#
+# Indítás / frissítés (deploy):  docker-compose -f docker-compose.prod.yml up -d --build
+# Leállítás:                     docker-compose -f docker-compose.prod.yml down
+# Naplók:                        docker logs -f koino-backend-prod
+name: koino-prod
+
+services:
+  backend:
+    build:
+      context: .                    # a gyökér, hogy a frontendet is elérje
+      dockerfile: Dockerfile.prod
+    container_name: koino-backend-prod
+    # A gép/Docker újraindulása vagy összeomlás után is jöjjön vissza magától,
+    # hogy a koino.hu ne essen ki. Csak kézi leállításnál marad leállítva.
+    restart: unless-stopped
+    # A koino.hu a gép 8080-as portjára érkezik (Cloudflare Tunnel vagy közvetlen IP).
+    # A konténer belül a 3000-en figyel, ezt tesszük ki a hoston a 8080-ra.
+    ports:
+      - "8080:3000"
+    # A titkok és a beállítások az éles .env-ből jönnek (NINCS a képben, NINCS a gitben)
+    env_file:
+      - backend/.env.prod
+    volumes:
+      # A feltöltött fájlok a HOSTON maradnak, hogy image-újraépítéskor (deploy)
+      # NE vesszenek el. Külön mappa, mint a fejlesztőié.
+      - ./backend/uploads-prod:/app/uploads
+    depends_on:
+      - mongodb
+    networks:
+      - koino-prod-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: koino-mongodb-prod
+    restart: unless-stopped
+    # Éles adatbázis: SZÁNDÉKOSAN nincs host-port — kívülről nem elérhető,
+    # csak a backend konténer éri el a belső hálózaton. (A fejlesztői a 27018-on van.)
+    volumes:
+      - mongodb-data-prod:/data/db   # külön kötet → a valódi közösségi adatok
+    networks:
+      - koino-prod-network
+
+volumes:
+  mongodb-data-prod:                 # a fejlesztői 'mongodb-data'-tól FÜGGETLEN
+
+networks:
+  koino-prod-network:
+    driver: bridge

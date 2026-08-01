@@ -4,16 +4,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: koino-backend
-    # Éles üzem: a konténer automatikusan újrainduljon (gép-újraindítás, Docker-újraindulás,
-    # összeomlás után is), hogy a koino.hu ne essen ki. Csak kézi leállításnál marad leállítva.
+    # Fejlesztői kényelem: a konténer jöjjön vissza magától gép-/Docker-újraindulás után.
     restart: unless-stopped
-    # A konténer a 3000-en figyel; a gépen KÉT porton is elérhetővé tesszük:
-    #  - 3000: helyi fejlesztői elérés (http://localhost:3000)
-    #  - 8080: ezt a portot éri el a Cloudflare Tunnel (mint a koino_1.0-nál) → koino.hu
-    #    Így a tunnelen (Cloudflare dashboard) semmit nem kell átállítani.
+    # FEJLESZTŐI stack: CSAK a helyi 3000-es port. A 8080-at (koino.hu → Cloudflare
+    # Tunnel / IP) mostantól az ÉLES stack szolgálja ki (docker-compose.prod.yml),
+    # hogy a localhoston végzett kódolás SOHA ne szivárogjon az éles oldalra.
     ports:
       - "3000:3000"
-      - "8080:3000"
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/koino  # ← Ez marad 27017 (belső hálózat)

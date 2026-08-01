@@ -1,0 +1,18 @@
+# .dockerignore — mi NE kerüljön be az éles image build-kontextusába.
+# (A Dockerfile.prod a gyökeret használja kontextusként.)
+
+# Függőségek: a képben friss npm install épül, a host node_modules nem kell
+**/node_modules
+
+# Titkok: az éles env-t az env_file adja futáskor, SOHA ne égjen a képbe
+backend/.env
+backend/.env.prod
+
+# Feltöltések: az éles uploads külön hoston tárolt kötet (uploads-prod)
+backend/uploads
+backend/uploads-prod
+
+# Verziókövetés és egyéb, a képben felesleges dolgok
+.git
+.gitignore
+*.log

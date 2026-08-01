@@ -1,0 +1,42 @@
+# Dockerfile.prod — ÉLES (produkciós) kép a koino.hu-hoz.
+#
+# Felelősség: a fejlesztőitől FÜGGETLEN, stabil kép építése.
+# A fejlesztői Dockerfile-lal (backend/Dockerfile) szemben itt:
+#   - a kód BE VAN ÉGETVE a képbe (nincs forrás-mount), így a fejlesztői gépen
+#     végzett módosításaid NEM szivárognak az élesbe — csak szándékos
+#     újraépítéssel (deploy) frissül a koino.hu,
+#   - sima `node`-dal fut (nincs nodemon, nincs automatikus újratöltés),
+#   - a nodemon (devDependency) nem is települ (--omit=dev).
+
+# Node.js alap image (ugyanaz a verzió, mint fejlesztésben)
+FROM node:18-alpine
+
+# Munkakönyvtár — a server.js innen indul, cwd = /app (a multer relatív
+# 'uploads/...' célmappái ehhez képest oldódnak fel → /app/uploads/...)
+WORKDIR /app
+
+# 1) Csak a package fájlok másolása előbb — így a függőség-réteg cache-elhető,
+#    és nem épül újra minden kódmódosításkor.
+COPY backend/package*.json ./
+
+# 2) Függőségek telepítése.
+#    Python/make/g++ csak a bcrypt fordításához kell, utána eltávolítjuk (kisebb kép).
+#    --omit=dev: az éles képbe a fejlesztői függőségek (nodemon) nem kellenek.
+RUN apk add --no-cache python3 make g++ && \
+    npm install --omit=dev && \
+    apk del python3 make g++
+
+# 3) Forrás bemásolása:
+#    - a backend a /app-ba,
+#    - a frontend a /frontend-be (a server.js a PROJEKT_GYOKER/../frontend-et,
+#      azaz /frontend-et szolgálja ki statikusan).
+#    A .dockerignore gondoskodik róla, hogy a node_modules, a .env* és az
+#    uploads NE kerüljön a képbe.
+COPY backend/ /app/
+COPY frontend/ /frontend/
+
+# A konténer belül a 3000-en figyel (server.js: app.listen(3000))
+EXPOSE 3000
+
+# Éles indítás: sima node (package.json "start"), NEM nodemon
+CMD ["npm", "start"]

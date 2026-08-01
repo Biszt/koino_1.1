@@ -1,5 +1,7 @@
 node_modules/
 *.log
 .env
+.env.prod
 uploads/
+backend/uploads-prod/
 .DS_Store
