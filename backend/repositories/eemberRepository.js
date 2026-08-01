@@ -97,17 +97,34 @@ class eEmberRepository {
   }
 
   // ----- PROFIL-ADATOK FRISSÍTÉSE -----
-  // A módosítható profil-mezők (nev, lokacio) mentése.
+  // A módosítható profil-mezők (nev, lokacio, opcionális email) mentése.
   // Használat: eember beállítások (terv 8. pont)
   // @param {string} id - MongoDB ObjectId
-  // @param {Object} adatok - { nev, lokacio }
+  // @param {Object} adatok - { nev, lokacio, email? } — email string = beállítás,
+  //                          undefined = eltávolítás (a mező törlése, $unset)
   // @returns {Promise} Frissített eember
   async updateProfil(id, adatok) {
-    console.log('eEmberRepository.updateProfil - KEZDÉS', { id });
+    const emailSzandek = adatok.email === undefined ? 'nincs-valtozas'
+                       : adatok.email === null      ? 'torles'
+                       : 'beallitas';
+    console.log('eEmberRepository.updateProfil - KEZDÉS', { id, emailSzandek });
+
+    // Alap $set: a mindig frissülő mezők
+    const modositas = { $set: { nev: adatok.nev, lokacio: adatok.lokacio } };
+
+    // E-mail HÁROMféle szándéka (a service dönti el, mit adjon át):
+    //   undefined → az e-ember NEM nyúlt az e-mailhez → nem módosítjuk
+    //   null      → TÖRLÉS → $unset, hogy a mező TÉNYLEGESEN eltűnjön
+    //   string    → beállítás/módosítás → $set
+    if (adatok.email === null) {
+      modositas.$unset = { email: '' };
+    } else if (typeof adatok.email === 'string') {
+      modositas.$set.email = adatok.email;
+    }
 
     const eredmeny = await eEmber.findByIdAndUpdate(
       id,
-      { nev: adatok.nev, lokacio: adatok.lokacio },
+      modositas,
       { new: true, runValidators: true } // A séma-validációk frissítéskor is fussanak
     );
 

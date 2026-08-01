@@ -534,14 +534,20 @@ docker logs -f koino-backend
     2026-07-18: teljes mini-folyamattal igazolva (eldobható tartalom + 3
     értesítés → törlés után entitás és értesítések is eltűntek).
 47. ⬜ **eember beállítások (terv 8. pont, 2026-07-18 óta):** fő menü → **⚙️
-    eember beállítások** → felül az azonosítók (e-embernév, e-mail — v1-ben nem
-    módosíthatók), alatta a **Profil-adatok** (valódi név + ország/régió/település
-    lokáció-autocomplete-tel; „Profil mentése" → ✅ Mentve, a fejléc-adatok
-    frissülnek), legalul a **Jelszóváltás** (jelenlegi + új + megerősítés; rossz
-    jelenlegi jelszóval hibaüzenet; sikeres váltás után a mezők ürülnek, és az
-    ÚJ jelszóval kell belépni). API (curl, 2026-07-18, lefutott): GET
+    eember beállítások** → felül az azonosító (e-embernév — nem módosítható),
+    alatta a **Profil-adatok** (valódi név + **E-mail (nem kötelező)** + ország/
+    régió/település lokáció-autocomplete-tel; „Profil mentése" → ✅ Mentve, a
+    fejléc-adatok frissülnek), legalul a **Jelszóváltás** (jelenlegi + új +
+    megerősítés; rossz jelenlegi jelszóval hibaüzenet; sikeres váltás után a mezők
+    ürülnek, és az ÚJ jelszóval kell belépni).
+    **E-MAIL SZERKESZTÉSE A BEÁLLÍTÁSOKBAN (2026-07-31):** az e-mail utólag is
+    **megadható / módosítható / TÖRÖLHETŐ** (üresen hagyva + Profil mentése → törlődik,
+    a `sajat-adatok` „—"-t ad vissza). Érvénytelen formátumra azonnali hiba; már más
+    által használt e-mailre a backend 400-at ad („már használatban"); a SAJÁT,
+    változatlan e-mail újramentése NEM hibázik (önmagát kihagyó egyediség-ellenőrzés).
+    API (curl, 2026-07-18, lefutott): GET
     `/api/eember/sajat-adatok` (már email+lokacio is), PUT `/api/eember/adatok`
-    (nev, lokacio — hiányos adatra 400), POST `/api/eember/jelszovaltas`
+    (nev, lokacio, **opcionális email** — hiányos alap-adatra 400), POST `/api/eember/jelszovaltas`
     (regiJelszo, ujJelszo — rossz régire 400; erősség-szabály mint
     regisztrációnál); új jelszóval a bejelentkezés igazolva.
     **FIÓK TÖRLÉSE (2026-07-23):** a modál alján, elkülönített „veszély"-szakaszban

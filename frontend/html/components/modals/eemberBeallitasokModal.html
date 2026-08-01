@@ -10,12 +10,8 @@
       <span class="eember-beallitasok-modal__cimke">E-embernév:</span>
       <span id="beallitasok-eembernev">—</span>
     </p>
-    <p class="eember-beallitasok-modal__sor">
-      <span class="eember-beallitasok-modal__cimke">E-mail:</span>
-      <span id="beallitasok-email">—</span>
-    </p>
     <p class="eember-beallitasok-modal__megjegyzes">
-      Az e-embernév és az e-mail cím jelenleg nem módosítható.
+      Az e-embernév nem módosítható.
     </p>
   </div>
 
@@ -26,6 +22,14 @@
     <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-nev">Valódi név</label>
     <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-nev"
       autocomplete="name" aria-label="Valódi név" />
+
+    <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-email">E-mail (nem kötelező)</label>
+    <input class="eember-beallitasok-modal__mezo" type="email" id="beallitasok-email"
+      autocomplete="email" aria-label="E-mail (nem kötelező)" placeholder="Nincs megadva" />
+    <p class="eember-beallitasok-modal__megjegyzes">
+      Csak azonosításra használjuk; sosem küldünk rá levelet. <strong>Üresen hagyva
+      töröljük</strong> az e-mail-címed.
+    </p>
 
     <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-orszag">Ország</label>
     <input class="eember-beallitasok-modal__mezo" type="text" id="beallitasok-orszag"

@@ -105,13 +105,14 @@ class EemberBeallitasokModal {
       const adatok = await apiGet('eember/sajat-adatok', this.token);
       this.modal.betoltesBeallitasa(false);
 
-      // Azonosítók (csak megjelenítés)
-      const nevElem   = document.getElementById('beallitasok-eembernev');
-      const emailElem = document.getElementById('beallitasok-email');
-      if (nevElem)   nevElem.textContent   = adatok?.eemberNev ?? '—';
-      if (emailElem) emailElem.textContent = adatok?.email ?? '—';
+      // Azonosító (csak megjelenítés) — az e-embernév nem módosítható
+      const nevElem = document.getElementById('beallitasok-eembernev');
+      if (nevElem) nevElem.textContent = adatok?.eemberNev ?? '—';
 
-      // Szerkeszthető mezők előtöltése
+      // Szerkeszthető mezők előtöltése (az e-mail is szerkeszthető input már;
+      // üres, ha az e-ember nem adott meg e-mailt)
+      this._eredetiEmail = adatok?.email ?? '';   // referencia a „változott-e?" ellenőrzéshez
+      this._mezoErtek('beallitasok-email',     adatok?.email ?? '');
       this._mezoErtek('beallitasok-nev',       adatok?.nev ?? '');
       this._mezoErtek('beallitasok-orszag',    adatok?.lokacio?.orszag ?? '');
       this._mezoErtek('beallitasok-regio',     adatok?.lokacio?.regio ?? '');
@@ -133,6 +134,7 @@ class EemberBeallitasokModal {
     this._sikerUzenet('beallitasok-profil-siker', '');
 
     const nev       = document.getElementById('beallitasok-nev')?.value?.trim();
+    const email     = document.getElementById('beallitasok-email')?.value?.trim();
     const orszag    = document.getElementById('beallitasok-orszag')?.value?.trim();
     const regio     = document.getElementById('beallitasok-regio')?.value?.trim();
     const telepules = document.getElementById('beallitasok-telepules')?.value?.trim();
@@ -143,16 +145,35 @@ class EemberBeallitasokModal {
       return;
     }
 
+    // E-mail OPCIONÁLIS: üresen hagyva a backend törli. Ha van érték, gyors formátum-
+    // ellenőrzés az azonnali visszajelzésért (a backend a végső őr, az egyediséggel együtt).
+    if (email) {
+      const emailMinta = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailMinta.test(email)) {
+        this.modal.hibaBeallitasa('Ha megadsz e-mail címet, annak érvényesnek kell lennie.');
+        return;
+      }
+    }
+
+    // Az e-mailt CSAK akkor küldjük el, ha VÁLTOZOTT az eredetihez képest. Így ha az
+    // e-ember hozzá sem nyúlt (pl. nincs is e-mailje), a mentés nem futtat felesleges
+    // törlést a backend oldalán. (üres string elküldve = törlés)
+    const kuldendoAdatok = { nev, lokacio: { orszag, regio, telepules } };
+    if (email !== (this._eredetiEmail ?? '')) {
+      kuldendoAdatok.email = email;
+    }
+
     this.modal.betoltesBeallitasa(true);
     try {
-      const valasz = await apiPut('eember/adatok', {
-        nev,
-        lokacio: { orszag, regio, telepules }
-      }, this.token);
+      const valasz = await apiPut('eember/adatok', kuldendoAdatok, this.token);
       this.modal.betoltesBeallitasa(false);
 
       // A memóriában tárolt eember-adatok frissítése (a fejléc ebből dolgozik)
       if (valasz?.eember) eemberMentese(valasz.eember);
+
+      // A mostani e-mail lesz az új „eredeti" — így egy azonnali második mentés
+      // már nem küldi el újra fölöslegesen ugyanazt.
+      this._eredetiEmail = email;
 
       this._sikerUzenet('beallitasok-profil-siker', '✅ Mentve');
       if (typeof this.onValtozas === 'function') this.onValtozas();

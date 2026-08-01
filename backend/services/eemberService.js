@@ -214,10 +214,11 @@ class eEmberService {
   }
 
   // ===== PROFIL-ADATOK MÓDOSÍTÁSA =====
-  // Az eember beállítások (terv 8. pont): a valódi név és a lokáció módosítható.
-  // Az eemberNev és az e-mail v1-ben NEM módosítható (azonosítók).
+  // Az eember beállítások (terv 8. pont): a valódi név, a lokáció és az OPCIONÁLIS
+  // e-mail módosítható (utóbbi megadható / módosítható / törölhető). Az eemberNev
+  // NEM módosítható (elsődleges azonosító).
   // @param {string} eemberId - A bejelentkezett e-ember azonosítója
-  // @param {Object} adatok - { nev, lokacio: { orszag, regio, telepules } }
+  // @param {Object} adatok - { nev, lokacio: { orszag, regio, telepules }, email? }
   // @returns {Promise} Frissített adatok (jelszó nélkül)
   async profilModositasa(eemberId, adatok) {
     console.log('eEmberService.profilModositasa - KEZDÉS', { eemberId });
@@ -232,14 +233,40 @@ class eEmberService {
       throw new Error('Az ország, régió és település megadása kötelező');
     }
 
+    // === 1.b LÉPÉS: E-MAIL (OPCIONÁLIS) KEZELÉSE ===
+    // Az e-mailnek HÁROM szándéka lehet (a repository ez alapján dönt):
+    //   - a kulcs HIÁNYZIK a kérésből (undefined) → nem nyúlunk hozzá (nincs felesleges törlés)
+    //   - üres string ('') → null-t adunk tovább = TÖRLÉS
+    //   - kitöltött string → beállítás/módosítás (formátum + egyediség önmagát kihagyva)
+    let email; // undefined = nincs változás
+    if (adatok?.email !== undefined) {
+      const tisztitott = adatok.email.trim().toLowerCase();
+      if (!tisztitott) {
+        email = null; // üresen küldve → törlés
+      } else {
+        const emailMinta = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailMinta.test(tisztitott)) {
+          throw new Error('Érvénytelen email cím');
+        }
+        const foglalt = await eEmberRepository.findByEmail(tisztitott);
+        if (foglalt && foglalt._id.toString() !== eemberId.toString()) {
+          throw new Error('Ez az email cím már használatban van');
+        }
+        email = tisztitott;
+      }
+    }
+
     // === 2. LÉPÉS: MENTÉS ===
+    // Az `email`: undefined (nincs változás) | null (törlés) | string (beállítás) —
+    // a repository ez alapján dönt: nem nyúl hozzá / $unset / $set.
     const frissitett = await eEmberRepository.updateProfil(eemberId, {
       nev,
       lokacio: {
         orszag:    lokacio.orszag.trim(),
         regio:     lokacio.regio.trim(),
         telepules: lokacio.telepules.trim()
-      }
+      },
+      email
     });
     if (!frissitett) {
       throw new Error('eEmber nem található');
