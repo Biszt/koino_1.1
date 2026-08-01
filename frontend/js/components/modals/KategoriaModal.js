@@ -81,7 +81,7 @@ class KategoriaModal {
     this.modal = new Modal(this.kontenerAzonosito, {
       cim,
       tartalom: formHtml,
-      meret:    'alap',
+      meret:    'korlatlan', // A szerkesztő olyan széles lehessen, mint a (korlátlan) kártyák
       gombok: [
         {
           felirat:   this.mod === 'letrehozas' ? 'Létrehozás' : 'Mentés',

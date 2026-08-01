@@ -88,6 +88,14 @@
   width: clamp(300px, 92vw, 640px);
 }
 
+/* Korlátlan szélesség – a szerkesztős modálokhoz. NINCS felső szélesség-korlát:
+   a modál (és benne a szerkesztő) a kártyákhoz hasonlóan a képernyő szélességét
+   követi (a pakli szintén korlátlan), csak egy kis oldalmargó marad. A magasság-
+   kezelés (max-height, görgetés) marad a .modal-panel alapból. */
+.modal-panel--korlatlan {
+  width: 96vw;
+}
+
 /* Teljes – teljes képernyős nézetekhez (Térkép, Síkidom nézet).
    A tartalom (a modal-tartalom) tölti ki a fejléc alatti egész területet;
    a nézetkomponens gondoskodik a saját belső elrendezéséről. */

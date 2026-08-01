@@ -84,7 +84,7 @@ class JavaslatModal {
     this.modal = new Modal(this.kontenerAzonosito, {
       cim:      'Javaslat indítása',
       tartalom: formHtml,
-      meret:    'szeles',
+      meret:    'korlatlan', // A szerkesztő olyan széles lehessen, mint a (korlátlan) kártyák
       gombok:   [],
       onBezaras: () => {
         // =============================================

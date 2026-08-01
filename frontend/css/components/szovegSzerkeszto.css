@@ -11,7 +11,24 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  overflow: hidden;
+  /* FIGYELEM: NINCS overflow: hidden. Ez szándékos: egy overflow:hidden szülő
+     megtörné az eszköztár position: sticky viselkedését (a modál görgetéséhez
+     kell ragadnia). A felső sarkokat ehelyett az eszköztár kerekíti le. */
+  overflow: visible;
+}
+
+/* Az eszközsávok RAGADNAK a görgetési terület (a modál) tetejéhez, és követik a
+   lefelé görgetést, amíg a szerkesztő body-ján belül vagyunk — így hosszú
+   tartalomnál is a képben maradnak. A tömör háttér (surface-offset) eltakarja a
+   mögötte felgörgő szöveget; a z-index a blokkok fölé emeli. */
+.szoveg-szerkeszto > .eszkoztar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  /* A szerkesztő lekerekített felső sarkaihoz igazodva (mivel a szülő már nem
+     vágja le az overflow-t) */
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
 }
 
 /* =============================================
@@ -46,9 +63,12 @@
   font-size: var(--text-base);
   line-height: normal;
   outline: none;
-  /* csak szóhatáron törhet, karakterenként soha */
+  max-width: 100%;
+  /* Sortörés: a normál szavak SZÓHATÁRON törnek (word-break: normal), a túl
+     hosszú, szóköz nélküli token (URL, kódsor) pedig a BLOKK SZÉLÉNÉL megtörik
+     (overflow-wrap: break-word) — így a szöveg soha nem lóg ki a blokkból. */
   word-break: normal;
-  overflow-wrap: normal;
+  overflow-wrap: break-word;
   white-space: normal;
   transition:
     border-color var(--transition-interactive),
@@ -66,6 +86,71 @@
   content: attr(data-placeholder);
   color: var(--color-text-faint);
   pointer-events: none;
+}
+
+/* =============================================
+   BEILLESZTETT, ELŐRE MEGFORMÁZOTT DOKUMENTUMOK ELEMEI
+   Címsorok, listák, kódblokk, idézet, link megjelenése.
+   Ugyanez a szabály él a SZERKESZTŐBEN és a KÁRTYA-MEGJELENÍTŐBEN is,
+   mert mindkettő a .szoveg-blokk osztályt használja.
+   (em egység = a blokk aktuális betűméretéhez arányosít.)
+   ============================================= */
+
+/* Címsorok */
+.szoveg-blokk h1 { font-size: 1.6em; font-weight: 700; line-height: 1.2;  margin: 0.4em 0 0.2em; }
+.szoveg-blokk h2 { font-size: 1.4em; font-weight: 700; line-height: 1.2;  margin: 0.4em 0 0.2em; }
+.szoveg-blokk h3 { font-size: 1.2em; font-weight: 700; line-height: 1.25; margin: 0.3em 0 0.2em; }
+.szoveg-blokk h4 { font-size: 1.1em; font-weight: 700; margin: 0.3em 0 0.2em; }
+.szoveg-blokk h5,
+.szoveg-blokk h6 { font-size: 1em;   font-weight: 700; margin: 0.3em 0 0.2em; }
+
+/* Listák — a behúzás a blokkon belül marad, a listajelek láthatók */
+.szoveg-blokk ul,
+.szoveg-blokk ol { margin: 0.3em 0; padding-left: 1.5em; }
+.szoveg-blokk ul { list-style: disc; }
+.szoveg-blokk ol { list-style: decimal; }
+.szoveg-blokk li { margin: 0.15em 0; }
+
+/* Idézet */
+.szoveg-blokk blockquote {
+  margin: 0.4em 0;
+  padding: 0.2em 0.8em;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* Kódblokk — a hosszú kódsor a blokk szélénél tördeljön, ne lógjon ki */
+.szoveg-blokk pre {
+  margin: 0.4em 0;
+  padding: 0.6em 0.8em;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* Beágyazott (soron belüli) kód */
+.szoveg-blokk code {
+  font-family: monospace;
+  font-size: 0.9em;
+  background: var(--color-surface-2);
+  padding: 0.05em 0.3em;
+  border-radius: var(--radius-sm);
+}
+
+/* Kódblokkon BELÜLI code ne kapjon dupla hátteret/keretet */
+.szoveg-blokk pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+/* Link */
+.szoveg-blokk a {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 /* =============================================

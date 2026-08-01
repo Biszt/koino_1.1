@@ -1,6 +1,6 @@
 // frontend/js/components/szovegSzerkeszto/blokkok/SzovegBlokk.js
 
-import { sanitizeRichText } from '../../../utils/sanitizeHelper.js';
+import { sanitizeRichText, sanitizePastedRichText } from '../../../utils/sanitizeHelper.js';
 
 class SzovegBlokk {
 
@@ -438,6 +438,24 @@ getAktualisFormatas() {
   }
 
   // =============================================
+  // PRIVÁT - SIMA SZÖVEG BIZTONSÁGOS HTML-LÉ ALAKÍTÁSA
+  // =============================================
+  // Ha a vágólapon csak sima szöveg van (nincs HTML), akkor a speciális HTML
+  // karaktereket escape-eljük (< > &), a sortöréseket pedig <br>-re cseréljük,
+  // hogy a beillesztett szöveg soronként helyesen jelenjen meg.
+  // @param {string} szoveg - A nyers, sima szöveg a vágólapról
+  // @returns {string} Biztonságos, beilleszthető HTML
+  _simaSzovegHtmlle(szoveg) {
+    if (!szoveg) return '';
+    const escapelt = szoveg
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // Windows (\r\n) és Unix (\n) sortörés egyaránt <br>-re
+    return escapelt.replace(/\r?\n/g, '<br>');
+  }
+
+  // =============================================
   // PRIVÁT - ESEMÉNYEK BEKÖTÉSE
   // =============================================
   // @param {HTMLElement} elem - A DOM elem
@@ -485,6 +503,36 @@ elem.addEventListener('keydown', (e) => {
 
     // Input esemény — tartalom változásakor jelezzük a szülőnek
     elem.addEventListener('input', () => {
+      if (this.onValtozas) this.onValtozas(this.blokk.id, elem.innerHTML);
+    });
+
+    // Beillesztés (paste) — a vágólap tartalmát NEM nyersen szúrjuk be, hanem
+    // előbb átengedjük a sanitizálón (engedélyezőlista + biztonságos linkek).
+    // Így: (1) amit a szerkesztőben látsz, az EGYEZIK a mentett és a kártyán
+    // megjelenő tartalommal, (2) a hosszú sorok nem lógnak ki (a nyers beillesztés
+    // white-space: pre stílusa nem jut be), (3) egy beillesztett <img onerror=...>
+    // payload sem kerülhet kezeletlenül a DOM-ba.
+    elem.addEventListener('paste', (e) => {
+      e.preventDefault();
+
+      const vagolap = e.clipboardData || window.clipboardData;
+      if (!vagolap) return;
+
+      // A formázott HTML-t részesítjük előnyben; ha nincs, a sima szövegből dolgozunk.
+      // Beillesztéskor a SZIGORÚBB sanitizálót használjuk (sanitizePastedRichText):
+      // a külső forrás témát-felülíró méret/vastagság stílusait eldobja, a szerkezetet
+      // (címsor, lista, kód, félkövér...) megtartja.
+      const nyersHtml   = vagolap.getData('text/html');
+      const nyersSzoveg = vagolap.getData('text/plain');
+
+      const beillesztendo = nyersHtml
+        ? sanitizePastedRichText(nyersHtml)
+        : this._simaSzovegHtmlle(nyersSzoveg);
+
+      // Beszúrás a kurzor pozíciójára — az insertHTML megőrzi a visszavonás (undo) láncot
+      document.execCommand('insertHTML', false, beillesztendo);
+
+      // Változás jelzése a szülőnek (mentés + történet)
       if (this.onValtozas) this.onValtozas(this.blokk.id, elem.innerHTML);
     });
 

@@ -120,8 +120,10 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-surface-2);
-  /* Belső tartalom ne lógjon ki */
-  overflow: hidden;
+  /* NINCS overflow: hidden — szándékos: a szerkesztő sticky eszköztárának a modál
+     görgetéséhez kell ragadnia, amit egy overflow:hidden szülő megtörne.
+     (A belső szerkesztő saját kerete/lekerekítése adja a vizuális határt.) */
+  overflow: visible;
   /* Fókuszban lévő szerkesztő vizuálisan jelzett legyen –
      a SzovegSzerkeszto belső inputjai kezelik a :focus-t,
      de a konténer is reagálhat, ha fókusz van benne */
