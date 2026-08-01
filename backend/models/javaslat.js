@@ -81,9 +81,11 @@ const javaslatSchema = new mongoose.Schema({
   // ----- SZÜLŐ TÍPUSA -----
   // Az érintett entitás típusa (a javaslat annak a gyereke).
   szuloTipus: {
-    type: String,                                     // Szöveges típus
-    default: 'Tartalom',                              // Alapértelmezett: Tartalom
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus']  // Az érték-rendszerrel azonos entitástípusok
+    type: String,                                                  // Szöveges típus
+    default: 'Tartalom',                                           // Alapértelmezett: Tartalom
+    // Az érintett entitás típusa. Egyezmény is lehet (törlés/áthelyezés javaslatnál
+    // a töredék szülője maga az egyezmény), ezért az 'Egyezmeny' is engedélyezett.
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Egyezmeny']
   },
 
   // ----- EGYEZMÉNY TÁRHELY AZONOSÍTÓ -----
@@ -108,7 +110,10 @@ const javaslatSchema = new mongoose.Schema({
   egyezmenyTarhelyTipus: {
     type: String,
     default: 'Tartalom',
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus']
+    // Egyezmény törlésénél a tárhely (átmenetileg) maga az egyezmény lehet, ezért
+    // az 'Egyezmeny' is engedélyezett (a végleges elhelyezést a végrehajtás a szülő
+    // alá teszi az eredetiSzuloId alapján).
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Egyezmeny']
   },
 
   // ----- TÖREDÉK JAVASLAT METAADATOK -----
