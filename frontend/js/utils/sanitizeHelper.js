@@ -25,17 +25,30 @@ const ENGEDELYEZETT_TAGEK = new Set([
 
 // Engedélyezett style tulajdonságok RENDERELÉSKOR (a szerkesztőben gépelt saját
 // formázáshoz — pl. a betűméret-választó <span style="font-size">-ei — kellenek).
+// A 'background-color' a szöveg-kiemelés (háttérszín) megjelenítéséhez kell.
 const ENGEDELYEZETT_STYLE_TULAJDONSAGOK = new Set([
-  'color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'line-height', 'text-align'
+  'color', 'background-color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'line-height', 'text-align'
 ]);
 
-// Engedélyezett style tulajdonságok BEILLESZTÉSKOR (szigorúbb!). Külső forrás
-// (pl. claude.ai chat) minden szintre ráerőltet egy 'font-size'/'font-weight'/
-// 'line-height' stílust, ami elnyomná a koino saját megjelenését — ezért ezeket
-// beillesztéskor ELDOBJUK, és a szemantikus tagekre (strong, ol/li, pre/code...)
-// + a koino CSS-ére bízzuk a formázást. A színt (syntax highlight) megtartjuk.
+// Engedélyezett style tulajdonságok BEILLESZTÉSKOR.
+// Cél: a beillesztett tartalom MEGTARTSA a formázását (méret, vastagság, szín,
+// háttérszín) — a „hűen a forráshoz” (B) elv szerint. A méretet a _betumeretPxRe
+// valós px-re oldja fel és 144px-re vágja (lásd MAX_BETUMERET_PX); a háttérszínből
+// az átlátszót (a forrás alapértéke, nem valódi kiemelés) eldobjuk. A 'line-height'-ot
+// szándékosan NEM engedjük át, mert az idegen sortávolság elrontaná a koino ritmusát.
 const BEILLESZTES_STYLE_TULAJDONSAGOK = new Set([
-  'color', 'font-style', 'text-decoration', 'text-align'
+  'color', 'background-color', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'text-align'
+]);
+
+// A beillesztett betűméret felső határa pixelben (a koino saját méret-választójának
+// maximuma is ennyi) — efölött a beillesztett méretet erre a plafonra vágjuk.
+const MAX_BETUMERET_PX = 144;
+
+// Tagek, amelyeket a TELJES tartalmukkal EGYÜTT eldobunk (nem engedélyezett tagnél
+// egyébként a szöveges tartalmat megtartjuk — de a <style>/<script> CSS/JS szövege
+// NEM kerülhet be látható szövegként a blokkba; ez Word-beillesztésnél gyakori).
+const TELJESEN_ELDOBANDO_TAGEK = new Set([
+  'STYLE', 'SCRIPT', 'HEAD', 'META', 'TITLE', 'LINK', 'BASE', 'NOSCRIPT'
 ]);
 
 // =============================================
@@ -60,12 +73,45 @@ function _biztonsagosHref(href) {
 }
 
 // =============================================
+// SEGÉD - ÁTLÁTSZÓ HÁTTÉRSZÍN FELISMERÉSE
+// =============================================
+// A forrás gyakran 'transparent'/'rgba(0,0,0,0)' hátteret tesz minden elemre —
+// ez nem valódi kiemelés, csak alapérték, ezért NEM tartjuk meg (különben minden
+// beillesztett szöveg „üres” háttérstílust kapna, ami zajt visz a tartalomba).
+// @param {string} ertek - A background-color érték
+// @returns {boolean} true, ha átlátszó/üres (eldobandó)
+function _atlatszoHatterE(ertek) {
+  const v = (ertek || '').replace(/\s+/g, '').toLowerCase();
+  return v === '' || v === 'transparent' || v === 'rgba(0,0,0,0)';
+}
+
+// =============================================
+// SEGÉD - BETŰMÉRET VALÓS PX-RE OLDÁSA + PLAFON
+// =============================================
+// A böngésző KISZÁMOLT font-size-át olvassa ki (px-ben), így MINDEN CSS-egységet
+// (px, pt, em, rem, %, kulcsszó, calc...) helyesen old fel — kézi átváltó-táblázat
+// nélkül. FONTOS: a getComputedStyle csak a DOM-ba KÖTÖTT elemre ad valós értéket,
+// ezért köti be a _sanitizal a forrás fát ideiglenesen a body-ba.
+// A végén 144px-re (MAX_BETUMERET_PX) vágja, egész px-re kerekítve.
+// @param {Element} elem - A forrás elem (aminek saját font-size stílusa van)
+// @returns {string|null} A tiszta 'Npx' érték, vagy null ha nem értelmezhető
+function _betumeretPxRe(elem) {
+  const szamolt = window.getComputedStyle(elem).fontSize; // pl. "72px", "14.6667px"
+  const px = parseFloat(szamolt);
+  if (!isFinite(px) || px <= 0) return null;
+
+  const vagott = Math.min(px, MAX_BETUMERET_PX);
+  return Math.round(vagott) + 'px';
+}
+
+// =============================================
 // A FA REKURZÍV, SZŰRT MÁSOLÁSA
 // =============================================
 // @param {Node} forrasElem - A tisztítandó forrás DOM node (rekurzívan bejárva)
 // @param {Node} celElem - A tiszta másolatot befogadó szülő node
 // @param {Set<string>} engedelyezettStilusok - Az átmásolható style tulajdonságok
-function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok) {
+// @param {boolean} meretPxRe - true beillesztéskor: a font-size valós px-re oldva + 144px plafon
+function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok, meretPxRe) {
   forrasElem.childNodes.forEach((gyerek) => {
     if (gyerek.nodeType === Node.TEXT_NODE) {
       celElem.appendChild(gyerek.cloneNode(true));
@@ -77,9 +123,15 @@ function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok) {
       return;
     }
 
+    if (TELJESEN_ELDOBANDO_TAGEK.has(gyerek.tagName)) {
+      // pl. <style>, <script>, <head> — a TELJES részfát eldobjuk (a CSS/JS szöveg
+      // ne szivárogjon be látható szövegként a blokkba)
+      return;
+    }
+
     if (!ENGEDELYEZETT_TAGEK.has(gyerek.tagName)) {
       // Nem engedélyezett tag: a szöveges tartalmát megtartjuk, a taget eldobjuk
-      _fatMasolasaSzurve(gyerek, celElem, engedelyezettStilusok);
+      _fatMasolasaSzurve(gyerek, celElem, engedelyezettStilusok, meretPxRe);
       return;
     }
 
@@ -88,9 +140,22 @@ function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok) {
     // Csak az engedélyezett style tulajdonságokat másoljuk át
     if (gyerek.style && gyerek.style.length > 0) {
       for (const tulajdonsag of gyerek.style) {
-        if (engedelyezettStilusok.has(tulajdonsag)) {
-          tisztaElem.style.setProperty(tulajdonsag, gyerek.style.getPropertyValue(tulajdonsag));
+        if (!engedelyezettStilusok.has(tulajdonsag)) continue;
+
+        let ertek = gyerek.style.getPropertyValue(tulajdonsag);
+
+        // Háttérszín: az átlátszót (a forrás alapértéke) eldobjuk
+        if (tulajdonsag === 'background-color' && _atlatszoHatterE(ertek)) {
+          continue;
         }
+
+        // Betűméret beillesztéskor: valós px-re feloldva + 144px plafon
+        if (tulajdonsag === 'font-size' && meretPxRe) {
+          ertek = _betumeretPxRe(gyerek);
+          if (!ertek) continue;
+        }
+
+        tisztaElem.style.setProperty(tulajdonsag, ertek);
       }
     }
 
@@ -110,7 +175,7 @@ function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok) {
       }
     }
 
-    _fatMasolasaSzurve(gyerek, tisztaElem, engedelyezettStilusok);
+    _fatMasolasaSzurve(gyerek, tisztaElem, engedelyezettStilusok, meretPxRe);
     celElem.appendChild(tisztaElem);
   });
 }
@@ -124,7 +189,7 @@ function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok) {
 // @param {string} html - A tisztítandó HTML string
 // @returns {string} A csak engedélyezett tageket/attribútumokat tartalmazó HTML
 export function sanitizeRichText(html) {
-  return _sanitizal(html, ENGEDELYEZETT_STYLE_TULAJDONSAGOK);
+  return _sanitizal(html, ENGEDELYEZETT_STYLE_TULAJDONSAGOK, false);
 }
 
 // BEILLESZTÉSI sanitizálás — szigorúbb: a külső forrás témát-felülíró méret/
@@ -133,21 +198,42 @@ export function sanitizeRichText(html) {
 // @param {string} html - A vágólapról jövő HTML
 // @returns {string} A koino megjelenéséhez igazított, tiszta HTML
 export function sanitizePastedRichText(html) {
-  return _sanitizal(html, BEILLESZTES_STYLE_TULAJDONSAGOK);
+  return _sanitizal(html, BEILLESZTES_STYLE_TULAJDONSAGOK, true);
 }
 
 // Belső közös implementáció — a megadott style-engedélyezőlistával tisztít.
 // @param {string} html - A tisztítandó HTML
 // @param {Set<string>} engedelyezettStilusok - Az átmásolható style tulajdonságok
+// @param {boolean} meretPxRe - true beillesztéskor: a font-size valós px-re oldva + 144px plafon
 // @returns {string} A tiszta HTML
-function _sanitizal(html, engedelyezettStilusok) {
+function _sanitizal(html, engedelyezettStilusok, meretPxRe) {
   if (!html) return '';
 
   const forras = document.createElement('div');
   forras.innerHTML = html;
 
+  // A font-size valós px-értékét a getComputedStyle csak a DOM-ba KÖTÖTT elemre
+  // adja meg. Beillesztéskor ezért a forrás fát ideiglenesen, képernyőn kívül a
+  // body-ba kötjük, 16px alap-betűmérettel (az em/% ehhez, a koino alapjához igazodik).
+  let ideiglenesKonteener = null;
+  if (meretPxRe) {
+    ideiglenesKonteener = document.createElement('div');
+    ideiglenesKonteener.style.position   = 'absolute';
+    ideiglenesKonteener.style.left       = '-99999px';
+    ideiglenesKonteener.style.top        = '0';
+    ideiglenesKonteener.style.visibility = 'hidden';
+    ideiglenesKonteener.style.fontSize   = '16px';
+    ideiglenesKonteener.appendChild(forras);
+    document.body.appendChild(ideiglenesKonteener);
+  }
+
   const cel = document.createElement('div');
-  _fatMasolasaSzurve(forras, cel, engedelyezettStilusok);
+  _fatMasolasaSzurve(forras, cel, engedelyezettStilusok, meretPxRe);
+
+  // A képernyőn kívüli ideiglenes konténer eltávolítása (ha bekötöttük)
+  if (ideiglenesKonteener) {
+    document.body.removeChild(ideiglenesKonteener);
+  }
 
   return cel.innerHTML;
 }

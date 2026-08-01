@@ -518,16 +518,24 @@ elem.addEventListener('keydown', (e) => {
       const vagolap = e.clipboardData || window.clipboardData;
       if (!vagolap) return;
 
-      // A formázott HTML-t részesítjük előnyben; ha nincs, a sima szövegből dolgozunk.
-      // Beillesztéskor a SZIGORÚBB sanitizálót használjuk (sanitizePastedRichText):
-      // a külső forrás témát-felülíró méret/vastagság stílusait eldobja, a szerkezetet
-      // (címsor, lista, kód, félkövér...) megtartja.
+      // A formázott HTML-t részesítjük előnyben; ha nincs (a forrás csak sima szöveget
+      // adott a vágólapra), a text/plain-ből dolgozunk. A sanitizePastedRichText a
+      // formázást MEGTARTJA (méret px-re oldva + 144px plafon, szín, háttérszín,
+      // félkövér, szerkezet), csak a veszélyes/zajos részeket szűri.
       const nyersHtml   = vagolap.getData('text/html');
       const nyersSzoveg = vagolap.getData('text/plain');
 
-      const beillesztendo = nyersHtml
-        ? sanitizePastedRichText(nyersHtml)
-        : this._simaSzovegHtmlle(nyersSzoveg);
+      // Védőháló: ha a tisztítás bármiért hibázna, ne törjön el a beillesztés —
+      // essünk vissza sima szövegre, és naplózzuk a hibát.
+      let beillesztendo;
+      try {
+        beillesztendo = nyersHtml
+          ? sanitizePastedRichText(nyersHtml)
+          : this._simaSzovegHtmlle(nyersSzoveg);
+      } catch (hiba) {
+        console.error('SzovegBlokk.paste - a tisztítás HIBÁZOTT, sima szövegre esünk vissza:', hiba);
+        beillesztendo = this._simaSzovegHtmlle(nyersSzoveg);
+      }
 
       // Beszúrás a kurzor pozíciójára — az insertHTML megőrzi a visszavonás (undo) láncot
       document.execCommand('insertHTML', false, beillesztendo);

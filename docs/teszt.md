@@ -880,6 +880,17 @@ terv „Részvételi modell" szakasz. Backend-változás után **`docker restart
     mezőjük). Megjegyzés: **backend-módosítás nem történt** (a `modositasAdatok` már generikusan
     alkalmazódik `updateById`-vel, a „max 3 kategória" a szerveren is érvényes) → elég a böngésző
     **hard-refresh**-e, `docker restart` nem kell.
+53. ⬜ **Beillesztett szöveg megtartja a formázását (2026-08-01):** egy szövegblokkba
+    másolj be **formázott** szöveget több forrásból (Word, Google Docs, Claude chat, weboldal).
+    - *Elvárt:* megmarad a **félkövér / dőlt / aláhúzás**, a **címsor / lista / idézet / kód**,
+      a **betűszín** ÉS a **betűméret** (a forrás mérete pontosan, px-ben — akár `pt`/`em`/`%`
+      forrásból is helyesen feloldva), valamint a **szöveg-háttérszín (kiemelés)**.
+    - *Méret-plafon:* 144px fölötti beillesztett méret **144px-re** vágódik (a koino saját
+      méret-választójának maximuma is mostantól **144** — a legördülő: 12…48, 60, 72, 96, 120, 144).
+    - *Zaj-szűrés:* az átlátszó (`transparent`) háttér nem jelenik meg kiemelésként.
+    - A blokkban látott formázás **egyezik** a mentés utáni kártya-megjelenítéssel.
+    - Megjegyzés: **frontend-változás** (`sanitizeHelper.js`, `SzovegPanel.js`) → elég a
+      böngésző **hard-refresh**-e (Ctrl+F5), `docker restart` nem kell.
 
 ---
 

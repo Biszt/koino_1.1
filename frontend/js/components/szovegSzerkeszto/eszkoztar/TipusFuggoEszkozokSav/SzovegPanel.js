@@ -186,7 +186,7 @@ _betumeretLegordulotrehozasa() {
 
 
     // Elérhető betűméretek listája pixelben
-    const meretek = [12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
+    const meretek = [12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72, 96, 120, 144];
     meretek.forEach(px => {
         const option = document.createElement('option');
         option.value = px;
