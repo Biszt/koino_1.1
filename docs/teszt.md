@@ -751,8 +751,13 @@ docker logs -f koino-backend
     szülője OPCIONÁLIS** — üresen hagyva GYÖKÉR lesz (ez volt a „nem tudok egyesíteni" hiba oka).
     **Egyezmény tárhely:** alapból az új entitás.
     **Backend-kikényszerítés (a lényeg):** ha API-ból erőltetsz tiltott kombinációt (pl. Egyezményre
-    Törlés, vagy Kategóriára Áthelyezés, vagy Tartalomtípus Egyesítés, vagy kategória+tartalom
-    egyesítés), a `POST /api/javaslat` **400**-at ad, magyar hibaüzenettel. **Egyezmény áthelyezés
+    Módosítás/Egyesítés, vagy Kategóriára Áthelyezés, vagy Tartalomtípus Egyesítés, vagy kategória+tartalom
+    egyesítés), a `POST /api/javaslat` **400**-at ad, magyar hibaüzenettel. **Egyezmény javaslat-típusok
+    (2026-08-01):** Egyezményre mostantól **Törlés ÉS Áthelyezés** is indítható (módosítás/egyesítés továbbra
+    is tiltott). A JavaslatModalban Egyezmény-kártyáról a **Törlés** és **Áthelyezés** gomb látszik, a többi
+    rejtve. **Egyezmény törlés-végrehajtás:** elfogadott törlési javaslatnál az egyezmény tényleg törlődik
+    (a tudatpontok visszaosztódnak, a gyerekei a szülő alá kerülnek), és a törlés-egyezmény a törölt egyezmény
+    eredeti szülője alá kerül. **Egyezmény áthelyezés
     végrehajtás:** ha egy egyezmény-áthelyezési javaslat elfogadásra kerül, az egyezmény tényleg
     átkerül az új szülő alá. **Egyesítés — gyerekek:** ha az egyesített (forrás) entitásoknak
     GYEREKEIK vannak (tartalmak/alkategóriák), az egyesítés elfogadása után a gyerekek az ÚJ

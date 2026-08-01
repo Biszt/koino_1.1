@@ -10,7 +10,7 @@
 //   • Tartalom      → mindegyik (Törlés, Módosítás, Áthelyezés, Egyesítés, Csomag)
 //   • Kategória     → Törlés, Módosítás, Egyesítés (áthelyezés TILTOTT; egyesítés csak kategóriával)
 //   • Tartalomtípus → Törlés, Módosítás (áthelyezés és egyesítés TILTOTT)
-//   • Egyezmény     → KIZÁRÓLAG Áthelyezés
+//   • Egyezmény     → Törlés, Áthelyezés (módosítás/egyesítés TILTOTT) [Törlés: Csaba, 2026-08-01]
 //   • Javaslat      → mindegyik (nincs külön korlát)
 
 // Az összes lehetséges javaslat-típus (a modal 1. lépésének gombjai)
@@ -21,7 +21,7 @@ const ENGEDELYEZETT_TIPUSOK = {
   Tartalom:      ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag'],
   Kategoria:     ['Torles', 'Modositas', 'Egyesites'],
   TartalomTipus: ['Torles', 'Modositas'],
-  Egyezmeny:     ['Athelyezes'],
+  Egyezmeny:     ['Torles', 'Athelyezes'],
   Javaslat:      ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag']
 };
 

@@ -11,6 +11,7 @@ const TudatpontService = require('../../tudatpontService');
 const TartalomRepository = require('../../../repositories/tartalomRepository');
 const KategoriaRepository = require('../../../repositories/kategoriaRepository');
 const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
+const EgyezmenyRepository = require('../../../repositories/egyezmenyRepository');
 
 // ===================================
 // TÖRLÉSI VÉGREHAJTÓ OSZTÁLY
@@ -60,6 +61,8 @@ class TorlesiVegrehajto {
           torlendoEntitas = await KategoriaRepository.findById(entitas.entitasId);
         } else if (entitas.entitasTipus === 'TartalomTipus') {
           torlendoEntitas = await TartalomTipusRepository.findById(entitas.entitasId);
+        } else if (entitas.entitasTipus === 'Egyezmeny') {
+          torlendoEntitas = await EgyezmenyRepository.findById(entitas.entitasId);
         }
         eredetiSzuloId = torlendoEntitas?.szuloId ?? null;
         eredetiSzuloTipus = torlendoEntitas?.szuloTipus ?? null;

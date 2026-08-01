@@ -83,9 +83,9 @@ class JavaslatService {
 
     // --- 1. Érintett-entitásonkénti tiltások ---
     for (const e of erintettek) {
-      // Egyezményre KIZÁRÓLAG áthelyezés
-      if (e.entitasTipus === 'Egyezmeny' && e.muvelet !== 'Athelyezes') {
-        throw new Error('Egyezményre csak áthelyezési javaslat indítható.');
+      // Egyezményre csak áthelyezés vagy törlés (módosítás/egyesítés TILTOTT)
+      if (e.entitasTipus === 'Egyezmeny' && e.muvelet !== 'Athelyezes' && e.muvelet !== 'Torles') {
+        throw new Error('Egyezményre csak áthelyezési vagy törlési javaslat indítható.');
       }
       // Kategóriát és Tartalomtípust nem lehet áthelyezni
       if ((e.entitasTipus === 'Kategoria' || e.entitasTipus === 'TartalomTipus') && e.muvelet === 'Athelyezes') {
@@ -340,7 +340,7 @@ class JavaslatService {
         const tartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId); // Lekérjük a tartalom típust
         entitasLetezik = !!tartalomTipus; // Boolean értékké alakítjuk
       } else if (entitas.entitasTipus === 'Egyezmeny') { // Ha Egyezmeny típus
-        // Egyezményre csak áthelyezési javaslat indítható (lásd a szabály-validációt lentebb)
+        // Egyezményre áthelyezési vagy törlési javaslat indítható (lásd a szabály-validációt lentebb)
         const egyezmeny = await EgyezmenyRepository.findById(entitas.entitasId); // Lekérjük az egyezményt
         entitasLetezik = !!egyezmeny; // Boolean értékké alakítjuk
       } // Más típusokra most nem számítunk
@@ -353,7 +353,7 @@ class JavaslatService {
 
     // 4.AA LÉPÉS - JAVASLAT-TÍPUS KORLÁTOK ENTITÁSTÍPUS SZERINT (DOMAIN-SZABÁLY)
     // A közösségi szabályok szerint nem minden művelet indítható minden entitáson:
-    //   • Egyezményre KIZÁRÓLAG áthelyezés (nem törölhető/módosítható/egyesíthető).
+    //   • Egyezményre csak áthelyezés vagy törlés (módosítás/egyesítés TILTOTT).
     //   • Kategóriát és Tartalomtípust NEM lehet áthelyezni.
     //   • Tartalomtípust NEM lehet egyesíteni (csak törölni vagy módosítani).
     //   • Kategóriát csak MÁSIK KATEGÓRIÁVAL lehet egyesíteni (az eredmény is kategória).
