@@ -1,4 +1,4 @@
-// frontend/js/components/modals/TerkepModal.js
+// frontend/js/components/modals/StrukturaModal.js
 
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
@@ -95,7 +95,7 @@ const NODE_VILAG_EGYUTTHATO = 2.0; // a csomópont rajz-skálája = zoom * ez (v
 const NODE_MAX_SKALA        = 4;   // a csomópont ennél nagyobbra nem nő (felső korlát)
 
 // ===== TÉRKÉP MODAL =====
-// Felelősség: a Térkép — az entitás-fa TELJES KÉPERNYŐS, interaktív nézete.
+// Felelősség: a Struktúra nézet — az entitás-fa TELJES KÉPERNYŐS, interaktív nézete.
 // HIBRID rajzolás: a Canvas alapréteg a TELJES fát rajzolja (élek + típus-színű
 // pöttyök — több tízezer csomópontra is gyors), az SVG fedőréteg pedig CSAK a
 // látható/közeli csomópontokat teszi interaktívvá (ikon + cím, kattintás,
@@ -103,19 +103,19 @@ const NODE_MAX_SKALA        = 4;   // a csomópont ennél nagyobbra nem nő (fel
 // Folyamat-vezérlés (Csaba kérése): megnyitáskor ELŐBB darabszám-kijelzés
 // („N entitás — elkészíted?"), építés közben folyamatjelző, és végig látható
 // Megszakítás gomb (letöltés AbortController-rel, elrendezés darabhatáron áll le).
-// Használja: a fő menü „Térkép" pontja (foOldal.js — teljes fa) és a
-//   kártya-hamburgerek „Térkép" pontja (Kartya.js — ág-szűrve).
-class TerkepModal {
+// Használja: a fő menü „Struktúra nézet" pontja (foOldal.js — teljes fa) és a
+//   kártya-hamburgerek „Struktúra nézet" pontja (Kartya.js — ág-szűrve).
+class StrukturaModal {
 
   // @param {string} kontenerAzonosito - a modal konténer div ID-ja
   // @param {Object} beallitasok
   // @param {string} beallitasok.token                  - JWT token (opcionális)
   // @param {string} beallitasok.agEntitasId            - ÁG-SZŰRŐ (opcionális)
-  // @param {string} beallitasok.cim                    - a modal címe (alapból „Térkép")
+  // @param {string} beallitasok.cim                    - a modal címe (alapból „Struktúra nézet")
   // @param {string} beallitasok.aktualisEntitasId      - a kiemelt (aktuális) entitás (opcionális)
   // @param {Function} beallitasok.onEntitasKivalasztas - (entitasId, entitasTipus) navigáláshoz
   constructor(kontenerAzonosito, beallitasok = {}) {
-    console.log('TerkepModal.constructor - KEZDÉS', {
+    console.log('StrukturaModal.constructor - KEZDÉS', {
       agEntitasId: beallitasok.agEntitasId,
       aktualisEntitasId: beallitasok.aktualisEntitasId
     });
@@ -123,7 +123,7 @@ class TerkepModal {
     this.kontenerAzonosito    = kontenerAzonosito;
     this.token                = beallitasok.token ?? tokenLekerese();
     this.agEntitasId          = beallitasok.agEntitasId ?? null;
-    this.cimFelirat           = beallitasok.cim ?? 'Térkép';
+    this.cimFelirat           = beallitasok.cim ?? 'Struktúra nézet';
     this.aktualisEntitasId    = beallitasok.aktualisEntitasId
       ? beallitasok.aktualisEntitasId.toString()
       : null;
@@ -154,12 +154,12 @@ class TerkepModal {
     this._svgBazis = null;    // { skala, eltolasX, eltolasY } az utolsó teljes SVG-építéskor
     this._settleTimer = null; // a mozgás-vége (settle) időzítő
 
-    console.log('TerkepModal.constructor - VÉGE');
+    console.log('StrukturaModal.constructor - VÉGE');
   }
 
   // ===== INICIALIZÁLÁS =====
   async init() {
-    console.log('TerkepModal.init - KEZDÉS');
+    console.log('StrukturaModal.init - KEZDÉS');
 
     const tartalomHtml = await this._templateBetoltese();
     if (!tartalomHtml) return;
@@ -167,7 +167,7 @@ class TerkepModal {
     this.modal = new Modal(this.kontenerAzonosito, {
       cim:      this.cimFelirat,
       tartalom: tartalomHtml,
-      meret:    'teljes', // saját méret-osztály: modal-panel--teljes (terkepModal.css)
+      meret:    'teljes', // saját méret-osztály: modal-panel--teljes (strukturaModal.css)
       gombok:   [],       // nincs lábléc — minden vezérlő a nézetekben van
       // Bezáráskor (✕ / ESC / overlay) a futó építést is leállítjuk,
       // és az ablak-átméretezés figyelőt is levesszük
@@ -185,48 +185,48 @@ class TerkepModal {
     await this.modal.init();
 
     // --- Gombok bekötése ---
-    // A Mégse gomb az építés közben: leállítja a munkát és bezárja a Térképet
-    document.getElementById('terkep-megszakitas-gomb')
+    // A Mégse gomb az építés közben: leállítja a munkát és bezárja a Struktúra nézetet
+    document.getElementById('struktura-megszakitas-gomb')
       ?.addEventListener('click', () => this._megszakitas());
-    document.getElementById('terkep-zoom-be-gomb')
+    document.getElementById('struktura-zoom-be-gomb')
       ?.addEventListener('click', () => this._zoomKozeppontra(ZOOM_LEPES));
-    document.getElementById('terkep-zoom-ki-gomb')
+    document.getElementById('struktura-zoom-ki-gomb')
       ?.addEventListener('click', () => this._zoomKozeppontra(1 / ZOOM_LEPES));
-    document.getElementById('terkep-illesztes-gomb')
+    document.getElementById('struktura-illesztes-gomb')
       ?.addEventListener('click', () => this._teljesFaIllesztese());
 
-    // --- Pan/zoom/kattintás a térkép-nézeten ---
+    // --- Pan/zoom/kattintás a struktúra nézeten ---
     this._nezetEsemenyekBekotese();
 
-    console.log('TerkepModal.init - VÉGE');
+    console.log('StrukturaModal.init - VÉGE');
   }
 
   // ===== TEMPLATE BETÖLTÉSE =====
   async _templateBetoltese() {
     try {
-      const valasz = await fetch('./html/components/modals/terkepModal.html');
+      const valasz = await fetch('./html/components/modals/strukturaModal.html');
       if (!valasz.ok) {
-        console.error('TerkepModal._templateBetoltese - HIBA', { statusz: valasz.status });
+        console.error('StrukturaModal._templateBetoltese - HIBA', { statusz: valasz.status });
         return null;
       }
       return await valasz.text();
     } catch (hiba) {
-      console.error('TerkepModal._templateBetoltese - kivétel', hiba.message);
+      console.error('StrukturaModal._templateBetoltese - kivétel', hiba.message);
       return null;
     }
   }
 
   // ===== MEGNYITÁS =====
   megnyitas() {
-    console.log('TerkepModal.megnyitas - KEZDÉS');
+    console.log('StrukturaModal.megnyitas - KEZDÉS');
     this._teljesNezetBekapcsolasa();
     this.modal?.megnyitas();
 
-    // Jelzés a történet-kezelőnek (FoOldal): a Térkép NÉZET megnyílt, így külön
+    // Jelzés a történet-kezelőnek (FoOldal): a Struktúra nézet NÉZET megnyílt, így külön
     // vissza/előre lépésként rögzülhet. Az agEntitasId különbözteti meg a teljes
-    // (fő menüs, null) és az ág-szűrt (kártya-menüs) térképet — újranyitáskor is ez kell.
+    // (fő menüs, null) és az ág-szűrt (kártya-menüs) struktúra nézetet — újranyitáskor is ez kell.
     document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
-      detail: { nezet: 'terkep', agEntitasId: this.agEntitasId ?? null, cim: this.cimFelirat }
+      detail: { nezet: 'struktura', agEntitasId: this.agEntitasId ?? null, cim: this.cimFelirat }
     }));
 
     // NINCS előzetes kérdés (Csaba kérése): egyből nekiállunk az építésnek.
@@ -239,9 +239,9 @@ class TerkepModal {
   }
 
   // ===== ALSÓ SÁV LÁTHATÓSÁGA (A PAKLI MINTÁJÁRA) =====
-  // A teljes képernyős Térkép alatt is látsszon — és használható maradjon — a
+  // A teljes képernyős Struktúra nézet alatt is látsszon — és használható maradjon — a
   // főoldal alsó sávja (hamburger + statisztikák), ugyanúgy, mint a pakli nézetben.
-  // A body-ra tett `teljes-nezet-nyitva` osztály (terkepModal.css): (a) az alsó
+  // A body-ra tett `teljes-nezet-nyitva` osztály (strukturaModal.css): (a) az alsó
   // sávot a modal FÖLÉ emeli — mivel a sáv önálló rétegződési kontextus, a benne
   // renderelt hamburger menü is a modal fölé kerül —, (b) a panelt/overlayt az
   // alsó sáv FÖLÖTT zárja. A sáv magasságát meg is mérjük (kis képernyőn a
@@ -262,12 +262,12 @@ class TerkepModal {
   }
 
   // ===== NÉZET-VÁLTÁS =====
-  // A két belső nézet (építés / térkép) közül pontosan egyet mutat.
-  // @param {string} nezetNev - 'epites' | 'terkep'
+  // A két belső nézet (építés / struktúra nézet) közül pontosan egyet mutat.
+  // @param {string} nezetNev - 'epites' | 'struktura'
   _nezetValtas(nezetNev) {
-    console.log('TerkepModal._nezetValtas', { nezetNev });
-    document.getElementById('terkep-epites')?.toggleAttribute('hidden', nezetNev !== 'epites');
-    document.getElementById('terkep-nezet')?.toggleAttribute('hidden', nezetNev !== 'terkep');
+    console.log('StrukturaModal._nezetValtas', { nezetNev });
+    document.getElementById('struktura-epites')?.toggleAttribute('hidden', nezetNev !== 'epites');
+    document.getElementById('struktura-nezet')?.toggleAttribute('hidden', nezetNev !== 'struktura');
   }
 
   // ===== DARABSZÁM LEKÉRÉSE =====
@@ -275,15 +275,15 @@ class TerkepModal {
   // rá az építésre (nincs indító nézet) — csak beállítja az osszesDarab / agDarab
   // mezőket. Az _epitesInditasa hívja az építés legelején.
   async _darabszamLekerese() {
-    console.log('TerkepModal._darabszamLekerese - KEZDÉS');
+    console.log('StrukturaModal._darabszamLekerese - KEZDÉS');
 
     const agResz = this.agEntitasId ? `?agEntitasId=${this.agEntitasId}` : '';
-    const valasz = await apiGet(`terkep/darabszam${agResz}`, this.token);
+    const valasz = await apiGet(`struktura/darabszam${agResz}`, this.token);
 
     this.osszesDarab = valasz?.osszesDarab ?? 0;
     this.agDarab     = valasz?.agDarab ?? null;
 
-    console.log('TerkepModal._darabszamLekerese - VÉGE', {
+    console.log('StrukturaModal._darabszamLekerese - VÉGE', {
       osszesDarab: this.osszesDarab,
       agDarab: this.agDarab
     });
@@ -291,7 +291,7 @@ class TerkepModal {
 
   // ===== 2. LÉPÉS: ÉPÍTÉS (LETÖLTÉS + ELRENDEZÉS) =====
   async _epitesInditasa() {
-    console.log('TerkepModal._epitesInditasa - KEZDÉS');
+    console.log('StrukturaModal._epitesInditasa - KEZDÉS');
 
     this._megszakitva = false;
     this._megszakito = new AbortController();
@@ -349,8 +349,8 @@ class TerkepModal {
         return;
       }
 
-      // --- 2/c. KÉSZ: térkép-nézet + kezdő illesztés + rajzolás ---
-      this._nezetValtas('terkep');
+      // --- 2/c. KÉSZ: struktúra nézet + kezdő illesztés + rajzolás ---
+      this._nezetValtas('struktura');
       this._canvasMeretezes();
       this._teljesFaIllesztese();
 
@@ -364,17 +364,17 @@ class TerkepModal {
         window.addEventListener('resize', this._ablakMeretezoBound);
       }
 
-      console.log('TerkepModal._epitesInditasa - VÉGE', {
+      console.log('StrukturaModal._epitesInditasa - VÉGE', {
         csomopontokSzama: this.elrendezes.csomopontok.length
       });
     } catch (hiba) {
       // Az AbortError a Megszakítás gomb következménye — az nem hiba
       if (hiba?.name === 'AbortError') {
-        console.log('TerkepModal._epitesInditasa - letöltés megszakítva');
+        console.log('StrukturaModal._epitesInditasa - letöltés megszakítva');
         return;
       }
-      console.error('TerkepModal._epitesInditasa - HIBA', hiba.message);
-      this.modal?.hibaBeallitasa(hiba.message ?? 'A térkép elkészítése sikertelen.');
+      console.error('StrukturaModal._epitesInditasa - HIBA', hiba.message);
+      this.modal?.hibaBeallitasa(hiba.message ?? 'A struktúra nézet elkészítése sikertelen.');
     } finally {
       this._epitesFut = false;
       this._megszakito = null;
@@ -387,7 +387,7 @@ class TerkepModal {
   // a folyamatban lévő HTTP-kérést is azonnal leállítja.
   // @returns {Promise<Array>} az összes letöltött sor
   async _faLetoltese() {
-    console.log('TerkepModal._faLetoltese - KEZDÉS');
+    console.log('StrukturaModal._faLetoltese - KEZDÉS');
 
     const sorok = [];
     let kurzor = null;
@@ -401,7 +401,7 @@ class TerkepModal {
     do {
       const kurzorResz = kurzor ? `&kurzor=${kurzor}` : '';
       const valasz = await fetch(
-        `${API_ALAP_URL}terkep?lapMeret=${LAP_MERET}${kurzorResz}${agResz}`,
+        `${API_ALAP_URL}struktura?lapMeret=${LAP_MERET}${kurzorResz}${agResz}`,
         {
           headers: { 'Authorization': `Bearer ${this.token}` },
           signal: this._megszakito?.signal
@@ -422,15 +422,15 @@ class TerkepModal {
       );
     } while (kurzor && !this._megszakitva);
 
-    console.log('TerkepModal._faLetoltese - VÉGE', { sorokSzama: sorok.length });
+    console.log('StrukturaModal._faLetoltese - VÉGE', { sorokSzama: sorok.length });
     return sorok;
   }
 
   // ===== FOLYAMATJELZŐ FRISSÍTÉSE =====
   _folyamatFrissitese(szoveg, szazalek) {
-    const szovegElem = document.getElementById('terkep-epites-szoveg');
-    const sav = document.getElementById('terkep-folyamat-sav');
-    const folyamat = document.getElementById('terkep-folyamat');
+    const szovegElem = document.getElementById('struktura-epites-szoveg');
+    const sav = document.getElementById('struktura-folyamat-sav');
+    const folyamat = document.getElementById('struktura-folyamat');
     if (szovegElem) szovegElem.textContent = szoveg;
     if (sav) sav.style.width = `${szazalek}%`;
     if (folyamat) folyamat.setAttribute('aria-valuenow', Math.round(szazalek));
@@ -439,13 +439,13 @@ class TerkepModal {
   // ===== MEGSZAKÍTÁS (MÉGSE) =====
   // A Mégse gomb: a letöltést az AbortController állítja le, az elrendezés a
   // következő darabhatáron áll meg (a ciklus a jelzőt figyeli). Mivel nincs
-  // indító nézet, a Mégse egyben be is zárja a Térképet.
+  // indító nézet, a Mégse egyben be is zárja a Struktúra nézetet.
   _megszakitas() {
-    console.log('TerkepModal._megszakitas - KEZDÉS');
+    console.log('StrukturaModal._megszakitas - KEZDÉS');
     this._epitesLeallitasa();
-    // Nincs indító nézet, ahová visszaváltsunk — a Mégse egyben bezárja a Térképet
+    // Nincs indító nézet, ahová visszaváltsunk — a Mégse egyben bezárja a Struktúra nézetet
     this.bezaras();
-    console.log('TerkepModal._megszakitas - VÉGE');
+    console.log('StrukturaModal._megszakitas - VÉGE');
   }
 
   // A futó építés leállítása (a Megszakítás gomb ÉS a modal bezárása is ezt hívja)
@@ -459,14 +459,14 @@ class TerkepModal {
 
   // A canvas felbontásának igazítása a konténer méretéhez (devicePixelRatio-val)
   _canvasMeretezes() {
-    const nezetElem = document.getElementById('terkep-nezet');
-    const canvas = document.getElementById('terkep-canvas');
+    const nezetElem = document.getElementById('struktura-nezet');
+    const canvas = document.getElementById('struktura-canvas');
     if (!nezetElem || !canvas) return;
 
     const arany = window.devicePixelRatio || 1;
     canvas.width  = nezetElem.clientWidth * arany;
     canvas.height = nezetElem.clientHeight * arany;
-    console.log('TerkepModal._canvasMeretezes', {
+    console.log('StrukturaModal._canvasMeretezes', {
       szelesseg: nezetElem.clientWidth,
       magassag: nezetElem.clientHeight,
       arany
@@ -475,7 +475,7 @@ class TerkepModal {
 
   // Kezdő (és ⤢ gombos) nézet: a TELJES fa beférjen a képernyőre, középre igazítva
   _teljesFaIllesztese() {
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem || !this.elrendezes) return;
 
     const meret = this.elrendezes.vilagMeret();
@@ -508,7 +508,7 @@ class TerkepModal {
   // minden zoom/pan képkocka (az a _gyorsRajzolas, ami csak követ).
   _rajzolas() {
     this._rajzolasKeres = false;
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem || !this.elrendezes) return;
 
     const szelesseg = nezetElem.clientWidth;
@@ -522,7 +522,7 @@ class TerkepModal {
   // Csak a CANVAS alapréteg (élek + típus-színű pöttyök) újrarajzolása — olcsó,
   // ezért zoom/pan közben minden képkockán ez fut (a drága SVG nélkül).
   _canvasRajzolas(szelesseg, magassag) {
-    const canvas = document.getElementById('terkep-canvas');
+    const canvas = document.getElementById('struktura-canvas');
     if (!canvas || !this.elrendezes) return;
 
     const ctx = canvas.getContext('2d');
@@ -605,7 +605,7 @@ class TerkepModal {
   // OLCSÓ képkocka: a canvas újrarajzolása + az SVG-réteg TRANSZFORMMAL követése
   // (nincs innerHTML-újraépítés, nincs emoji-raszterizálás → sima marad)
   _gyorsRajzolas() {
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem || !this.elrendezes) return;
     this._canvasRajzolas(nezetElem.clientWidth, nezetElem.clientHeight);
     this._svgKovetes();
@@ -615,7 +615,7 @@ class TerkepModal {
   // igazítja. A transzform PONTOS: a csomópontok középpontja és (világhoz kötött
   // méretnél) a mérete is a helyére kerül — a mozgás végi teljes újraépítésig.
   _svgKovetes() {
-    const g = document.getElementById('terkep-svg-tartalom');
+    const g = document.getElementById('struktura-svg-tartalom');
     if (!g || !this._svgBazis) return;
     const b = this._svgBazis;
     const s = this.nezet.skala / b.skala;
@@ -653,7 +653,7 @@ class TerkepModal {
   // A cím a 2., az össztudatpont a 3. szinttől jelenik meg — ez a fokozatos,
   // kétszintű „ráközelítés-nyílás".
   _svgFrissitese(szelesseg, magassag) {
-    const svg = document.getElementById('terkep-svg');
+    const svg = document.getElementById('struktura-svg');
     if (!svg) return;
 
     // 0. szint (távoli, sűrű): nincs interaktív réteg — csak a canvas-pöttyök
@@ -705,24 +705,24 @@ class TerkepModal {
 
       // Cím CSAK a 2. szinttől, össztudatpont CSAK a 3. szinttől
       const cimSor = szint >= 2
-        ? `<text y="${SVG_KOR_SUGAR + 14}" class="terkep-modal__csomopont-cim" style="font-size:${cimMeret}px">${this._escape(rovidCim)}</text>`
+        ? `<text y="${SVG_KOR_SUGAR + 14}" class="struktura-modal__csomopont-cim" style="font-size:${cimMeret}px">${this._escape(rovidCim)}</text>`
         : '';
       const infoSor = szint >= 3
-        ? `<text y="${SVG_KOR_SUGAR + 30}" class="terkep-modal__csomopont-info">${OSSZPONT_IKON} ${(cs.hierarchikusOsszesPont ?? 0).toLocaleString('hu-HU')}</text>`
+        ? `<text y="${SVG_KOR_SUGAR + 30}" class="struktura-modal__csomopont-info">${OSSZPONT_IKON} ${(cs.hierarchikusOsszesPont ?? 0).toLocaleString('hu-HU')}</text>`
         : '';
 
       // Mellék-ikonok (kategória/típus/művelet) CSAK a 3. szinttől — a tudatponttal együtt
       const mellekSor = szint >= 3 ? this._mellekIkonokSvg(cs) : '';
 
       darabok.push(`
-        <g class="terkep-modal__csomopont${aktualisE ? ' terkep-modal__csomopont--aktualis' : ''}"
+        <g class="struktura-modal__csomopont${aktualisE ? ' struktura-modal__csomopont--aktualis' : ''}"
            transform="translate(${x}, ${y}) scale(${gSkala})"
            data-entitas-id="${cs.entitasId}"
            data-entitas-tipus="${cs.entitasTipus}"
            role="button" tabindex="0">
           <title>${this._escape(teljesCim)} (${TIPUS_FELIRAT[cs.entitasTipus] ?? cs.entitasTipus})</title>
-          <circle r="${SVG_KOR_SUGAR}" fill="${szin}" class="terkep-modal__csomopont-kor"></circle>
-          <text y="1" class="terkep-modal__csomopont-ikon">${ikon}</text>
+          <circle r="${SVG_KOR_SUGAR}" fill="${szin}" class="struktura-modal__csomopont-kor"></circle>
+          <text y="1" class="struktura-modal__csomopont-ikon">${ikon}</text>
           ${cimSor}
           ${infoSor}
           ${mellekSor}
@@ -732,8 +732,8 @@ class TerkepModal {
     // A feltöltött kép-mellékikonokat körre vágó defs (egyszer, a réteg elején).
     // A csomópontok EGY közös <g>-be kerülnek: a mozgás közbeni követés ezt az
     // egyetlen elemet transzformálja (nem épül újra az egész réteg).
-    const defs = `<defs><clipPath id="terkep-mellek-klip"><circle r="${MELLEK_SUGAR}"></circle></clipPath></defs>`;
-    svg.innerHTML = `${defs}<g id="terkep-svg-tartalom">${darabok.join('')}</g>`;
+    const defs = `<defs><clipPath id="struktura-mellek-klip"><circle r="${MELLEK_SUGAR}"></circle></clipPath></defs>`;
+    svg.innerHTML = `${defs}<g id="struktura-svg-tartalom">${darabok.join('')}</g>`;
 
     // A bázis-nézet rögzítése: ehhez képest számol a _svgKovetes a mozgás alatt
     this._svgBazis = {
@@ -781,24 +781,24 @@ class TerkepModal {
   _egyMellekIkon(cx, szin, ikonErtek, cim) {
     const kepE = typeof ikonErtek === 'string' && /^(https?:\/\/|\/)/.test(ikonErtek);
     const belso = kepE
-      ? `<image href="${this._escape(ikonErtek)}" x="${-MELLEK_SUGAR}" y="${-MELLEK_SUGAR}" width="${2 * MELLEK_SUGAR}" height="${2 * MELLEK_SUGAR}" preserveAspectRatio="xMidYMid slice" clip-path="url(#terkep-mellek-klip)"></image>`
-      : `<text y="0.5" class="terkep-modal__mellek-ikon">${this._escape(ikonErtek ?? '')}</text>`;
-    return `<g class="terkep-modal__mellek" transform="translate(${cx}, 0)">
+      ? `<image href="${this._escape(ikonErtek)}" x="${-MELLEK_SUGAR}" y="${-MELLEK_SUGAR}" width="${2 * MELLEK_SUGAR}" height="${2 * MELLEK_SUGAR}" preserveAspectRatio="xMidYMid slice" clip-path="url(#struktura-mellek-klip)"></image>`
+      : `<text y="0.5" class="struktura-modal__mellek-ikon">${this._escape(ikonErtek ?? '')}</text>`;
+    return `<g class="struktura-modal__mellek" transform="translate(${cx}, 0)">
       <title>${this._escape(cim ?? '')}</title>
-      <circle r="${MELLEK_SUGAR}" fill="${szin}" class="terkep-modal__mellek-kor"></circle>
+      <circle r="${MELLEK_SUGAR}" fill="${szin}" class="struktura-modal__mellek-kor"></circle>
       ${belso}
     </g>`;
   }
 
   // ===== PAN / ZOOM / KATTINTÁS =====
   _nezetEsemenyekBekotese() {
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem) return;
 
     // --- Húzás (pan) pointer-eseményekkel (egér + érintés egységesen) ---
     nezetElem.addEventListener('pointerdown', (e) => {
       // A vezérlő gombokon indított mozdulat nem húzás
-      if (e.target.closest('.terkep-modal__vezerlok')) return;
+      if (e.target.closest('.struktura-modal__vezerlok')) return;
       this._huzasAktiv = true;
       this._huzasTavolsag = 0;
       this._huzasKezdet = {
@@ -841,9 +841,9 @@ class TerkepModal {
     // A Windows touchpad az ujjak SZÉTHÚZÁSÁT (pinch) `ctrlKey`-es görgetésként
     // küldi, a kétujjas fel/le/oldalt mozgatást viszont sima görgetésként. Ezért:
     //   - ctrlKey  → ZOOM (a delta nagyságával arányosan, finoman — nem „ugrik"),
-    //   - egyébként → PÁSZTÁZÁS (a térkép mozgatása), NEM zoom (Csaba kérése).
+    //   - egyébként → PÁSZTÁZÁS (a struktúra nézet mozgatása), NEM zoom (Csaba kérése).
     nezetElem.addEventListener('wheel', (e) => {
-      e.preventDefault(); // az oldal ne görögjön a térkép alatt
+      e.preventDefault(); // az oldal ne görögjön a struktúra nézet alatt
       const teglalap = nezetElem.getBoundingClientRect();
       const px = e.clientX - teglalap.left;
       const py = e.clientY - teglalap.top;
@@ -853,7 +853,7 @@ class TerkepModal {
         const szorzo = Math.exp(-e.deltaY * ZOOM_ERZEKENYSEG);
         this._zoom(szorzo, px, py);
       } else {
-        // Kétujjas görgetés: a térkép pásztázása (a lap-görgetés irányát követve)
+        // Kétujjas görgetés: a struktúra nézet pásztázása (a lap-görgetés irányát követve)
         this.nezet.eltolasX -= e.deltaX;
         this.nezet.eltolasY -= e.deltaY;
         this._interakcioRajzolas();
@@ -877,7 +877,7 @@ class TerkepModal {
 
   // A ＋/－ gombok zoomja: a nézet közepére központosítva
   _zoomKozeppontra(szorzo) {
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem) return;
     this._zoom(szorzo, nezetElem.clientWidth / 2, nezetElem.clientHeight / 2);
   }
@@ -889,12 +889,12 @@ class TerkepModal {
   // a legközelebbi csomópontot keressük a képernyő-koordinátából, a látható
   // csomópont-sugárhoz igazított toleranciával.
   _kattintasKezelese(esemeny) {
-    const nezetElem = document.getElementById('terkep-nezet');
+    const nezetElem = document.getElementById('struktura-nezet');
     if (!nezetElem || !this.elrendezes) return;
 
     // (1) Pontos találat: a kurzor alatti elem SVG-csomópontja (kör vagy ikon)
     const elem = document.elementFromPoint(esemeny.clientX, esemeny.clientY);
-    const svgCsomopont = elem?.closest?.('.terkep-modal__csomopont');
+    const svgCsomopont = elem?.closest?.('.struktura-modal__csomopont');
     if (svgCsomopont) {
       this._csomopontKattintas(
         svgCsomopont.dataset.entitasId,
@@ -935,7 +935,7 @@ class TerkepModal {
 
   // ===== CSOMÓPONTRA KATTINTÁS: NAVIGÁLÁS =====
   _csomopontKattintas(entitasId, entitasTipus) {
-    console.log('TerkepModal._csomopontKattintas - KEZDÉS', { entitasId, entitasTipus });
+    console.log('StrukturaModal._csomopontKattintas - KEZDÉS', { entitasId, entitasTipus });
 
     this.bezaras();
 
@@ -955,4 +955,4 @@ class TerkepModal {
 }
 
 // ===== EXPORTÁLÁS =====
-export default TerkepModal;
+export default StrukturaModal;

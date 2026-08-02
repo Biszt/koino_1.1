@@ -96,7 +96,7 @@
   width: 96vw;
 }
 
-/* Teljes – teljes képernyős nézetekhez (Térkép, Síkidom nézet).
+/* Teljes – teljes képernyős nézetekhez (Struktúra nézet, Síkidom nézet).
    A tartalom (a modal-tartalom) tölti ki a fejléc alatti egész területet;
    a nézetkomponens gondoskodik a saját belső elrendezéséről. */
 .modal-panel--teljes {

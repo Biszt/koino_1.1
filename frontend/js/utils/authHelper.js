@@ -115,7 +115,7 @@ function aktivEntitasMentese(entitasId, entitasTipus) {
 
     // ===== KÖZÖS NAVIGÁCIÓS JELZÉS =====
     // MINDEN entitás-váltás átfut ezen a függvényen (kártya-koppintás, testvér-ugrás,
-    // térkép/kereső/értesítés – akár a fő menüből, akár egy kártya menüjéből), ezért
+    // struktúra nézet/kereső/értesítés – akár a fő menüből, akár egy kártya menüjéből), ezért
     // ez az egyetlen közös hely, ahonnan a vissza/előre történetet rögzíteni lehet.
     // A FoOldal erre az eseményre figyel (koino:aktivEntitasValtozas) és rögzít.
     document.dispatchEvent(new CustomEvent('koino:aktivEntitasValtozas', {

@@ -1,4 +1,4 @@
-// backend/routes/terkepRoutes.js
+// backend/routes/strukturaRoutes.js
 
 // ===================================
 // EXPRESS ROUTER IMPORTÁLÁSA
@@ -9,7 +9,7 @@ const router = express.Router();
 // ===================================
 // CONTROLLER IMPORTÁLÁSA
 // ===================================
-const terkepController = require('../controllers/terkepController');
+const strukturaController = require('../controllers/strukturaController');
 
 // ===================================
 // MIDDLEWARE IMPORTÁLÁSA
@@ -20,15 +20,15 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ÚTVONALAK DEFINIÁLÁSA
 // ===================================
 
-// A Térkép (fa-nézet) előzetes darabszáma
-// GET /api/terkep/darabszam?agEntitasId=<id>
+// A Struktúra nézet (fa-nézet) előzetes darabszáma
+// GET /api/struktura/darabszam?agEntitasId=<id>
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/terkep/darabszam', authMiddleware, terkepController.darabszam);
+router.get('/struktura/darabszam', authMiddleware, strukturaController.darabszam);
 
 // A fa lapozott lekérése (kurzoros)
-// GET /api/terkep?kurzor=<utolsoLapKurzor>&lapMeret=2000
+// GET /api/struktura?kurzor=<utolsoLapKurzor>&lapMeret=2000
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/terkep', authMiddleware, terkepController.lap);
+router.get('/struktura', authMiddleware, strukturaController.lap);
 
 // ===================================
 // ROUTER EXPORTÁLÁSA

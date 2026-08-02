@@ -41,8 +41,8 @@ const feltoltesRoutes = require('./routes/feltoltesRoutes');
 // ÚJ – Cím-alapú entitás-kereső route importálása
 const keresesRoutes = require('./routes/keresesRoutes');
 
-// ÚJ – Térkép (teljes képernyős fa-nézet) route importálása
-const terkepRoutes = require('./routes/terkepRoutes');
+// ÚJ – Struktúra nézet (teljes képernyős fa-nézet) route importálása
+const strukturaRoutes = require('./routes/strukturaRoutes');
 
 // ÚJ – Síkidom nézet (fraktál kör-pakolás) route importálása
 const sikidomRoutes = require('./routes/sikidomRoutes');
@@ -122,8 +122,8 @@ app.use('/api/pakli', pakliRoutes);
 app.use('/api/feltoltes', feltoltesRoutes);
 // ÚJ – Cím-alapú entitás-kereső route regisztrálása (GET /api/kereses)
 app.use('/api', keresesRoutes);
-// ÚJ – Térkép route regisztrálása (GET /api/terkep + /api/terkep/darabszam)
-app.use('/api', terkepRoutes);
+// ÚJ – Struktúra nézet route regisztrálása (GET /api/struktura + /api/struktura/darabszam)
+app.use('/api', strukturaRoutes);
 // ÚJ – Síkidom nézet route regisztrálása (GET /api/sikidom)
 app.use('/api', sikidomRoutes);
 

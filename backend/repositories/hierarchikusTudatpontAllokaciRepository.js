@@ -448,7 +448,7 @@ async listByTipus(entitasTipus, limit = 100, skip = 0) {
 
 // ----- ÖSSZES ALLOKÁCIÓ DARABSZÁMA -----
 /**
-* A teljes kollekció elemszáma — a Térkép (teljes képernyős fa-nézet) előzetes
+* A teljes kollekció elemszáma — a Struktúra nézet (teljes képernyős fa-nézet) előzetes
 * darabszám-kijelzéséhez. Minden entitásnak pontosan egy allokációja van
 * (compound unique index), így ez az entitások összdarabszáma.
 * @returns {Promise<number>}
@@ -488,7 +488,7 @@ async countAg(agEntitasId) {
 
 // ----- TÉRKÉP LAP LEKÉRÉSE (KURZOROS LAPOZÁS) -----
 /**
-* A fa lapozott lekérése a Térkép (teljes képernyős fa-nézet) számára.
+* A fa lapozott lekérése a Struktúra nézet (teljes képernyős fa-nézet) számára.
 * Kurzoros lapozás _id szerint (stabil, skip nélkül): a hívó a legutóbb
 * kapott sor `_id`-ját adja át kurzorként, mi az annál nagyobbakat adjuk.
 * Csak a fa-rajzoláshoz szükséges mezőket küldjük (szűk projection).
@@ -505,8 +505,8 @@ async countAg(agEntitasId) {
 * @param {string|null} agEntitasId - opcionális ág-gyökér: csak ennek a részfája
 * @returns {Promise<Array>} a lap sorai _id szerint növekvő sorrendben
 */
-async findTerkepLap(kurzorId = null, limit = 2000, agEntitasId = null) {
-    console.log('hierarchikusAllokaciRepository.findTerkepLap - KEZDÉS', { kurzorId, limit, agEntitasId });
+async findStrukturaLap(kurzorId = null, limit = 2000, agEntitasId = null) {
+    console.log('hierarchikusAllokaciRepository.findStrukturaLap - KEZDÉS', { kurzorId, limit, agEntitasId });
 
     // Szűrő összeállítása: kurzor (_id > …) ÉS — ha kell — ág-szűrés (osLanc).
     const szuro = {};
@@ -525,7 +525,7 @@ async findTerkepLap(kurzorId = null, limit = 2000, agEntitasId = null) {
         .select('entitasId entitasTipus szuloId hierarchikusOsszesPont letrehozva')
         .lean();
 
-    console.log('hierarchikusAllokaciRepository.findTerkepLap - VÉGE', { count: sorok.length });
+    console.log('hierarchikusAllokaciRepository.findStrukturaLap - VÉGE', { count: sorok.length });
     return sorok;
 }
 
@@ -627,7 +627,7 @@ async findManyByEntitasIdk(entitasIdk) {
 // ----- GYEREK-AZONOSÍTÓK LEKÉRÉSE TÖBB SZÜLŐHÖZ -----
 /**
 * Több szülő entitás KÖZVETLEN gyerekeinek entitasId-jai egyetlen lekérdezéssel.
-* Általános, szintenkénti bejáráshoz használható segéd. (A Térkép ág-darabszámlálása
+* Általános, szintenkénti bejáráshoz használható segéd. (A Struktúra nézet ág-darabszámlálása
 * korábban ezt hívta; ma a skálázható osLanc-alapú countAg váltotta ki.)
 * @param {Array} szuloIdk - a szülő entitás-azonosítók tömbje
 * @returns {Promise<Array>} a gyerekek entitasId-jai

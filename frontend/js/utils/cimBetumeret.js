@@ -3,11 +3,11 @@
 // ===== DINAMIKUS CÍM-BETŰMÉRET (KARAKTERSZÁM ALAPJÁN) =====
 // Felelősség: a cím HOSSZÁBÓL egy lépcsős betűméretet ad — rövid cím nagy, hosszú
 // cím kicsi. Ez a KÖZÖS skála, amit a kártya fejléce (Kartya._cimBetumeretBecsles)
-// és a Térkép csomópont-címei (TerkepModal) is használnak, hogy egységes legyen a
+// és a Struktúra nézet csomópont-címei (StrukturaModal) is használnak, hogy egységes legyen a
 // megjelenés. A küszöbök és az arányok a kártya eredeti skálájából származnak
 // (24 / 20 / 16 / 12 / 9 px, ahol a maximum 24). A maxMeret paraméterrel más
-// kontextus (pl. a kisebb térkép-csomópont) arányosan lekicsinyítheti a skálát.
-// Használják: Kartya, TerkepModal.
+// kontextus (pl. a kisebb struktúra nézet-csomópont) arányosan lekicsinyítheti a skálát.
+// Használják: Kartya, StrukturaModal.
 
 // @param {number} hossz    - a cím karakterszáma
 // @param {number} maxMeret - a legnagyobb (rövid címhez tartozó) betűméret px-ben (alap: 24)

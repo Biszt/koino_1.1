@@ -1,7 +1,7 @@
-// backend/services/terkepService.js
+// backend/services/strukturaService.js
 
 // ===== TÉRKÉP SERVICE =====
-// Felelősség: a Térkép (teljes képernyős, interaktív fa-nézet) backend-adatai.
+// Felelősség: a Struktúra nézet (teljes képernyős, interaktív fa-nézet) backend-adatai.
 //   1. darabszamLekerese  — az entitások összdarabszáma (és ág-szűrésnél az ág
 //      darabszáma) az ELŐZETES kijelzéshez ("N entitás — elkészíted?").
 //   2. lapLekerese        — a fa LAPOZOTT lekérése (kurzoros, _id szerint); a fát a
@@ -13,12 +13,12 @@
 // (mind az 5 típus) benne van szülő-kapcsolattal és hierarchikus ponttal.
 // Címek: az ertesitesService közös entitasCimekFeltoltese segédje (a 3 cím-viselő
 // típusra; Javaslat/Egyezmény → null, a frontend típus-feliratot mutat).
-// Használja: terkepController.
+// Használja: strukturaController.
 
 // --- IMPORTÁLÁSOK ---
 const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const { entitasCimekFeltoltese } = require('./ertesitesService');
-// A mellék-ikonokhoz (Térkép közeli nézet): a Tartalom típusa/kategóriái, illetve
+// A mellék-ikonokhoz (Struktúra nézet közeli nézet): a Tartalom típusa/kategóriái, illetve
 // a Javaslat/Egyezmény művelet-típusa a forrás-kollekciókból.
 const Tartalom = require('../models/tartalom');
 const Kategoria = require('../models/kategoria');
@@ -30,7 +30,7 @@ const Egyezmeny = require('../models/egyezmeny');
 const MAX_LAP_MERET = 2000;
 
 // --- TÉRKÉP SERVICE OSZTÁLY ---
-class TerkepService {
+class StrukturaService {
 
 // ----- DARABSZÁM LEKÉRÉSE -----
 /**
@@ -41,7 +41,7 @@ class TerkepService {
 * @returns {Promise<Object>} { osszesDarab, agDarab } (agDarab csak ág-szűrésnél)
 */
 async darabszamLekerese(agEntitasId = null) {
-  console.log('TerkepService.darabszamLekerese - KEZDÉS', { agEntitasId });
+  console.log('StrukturaService.darabszamLekerese - KEZDÉS', { agEntitasId });
 
   const osszesDarab = await hierarchikusAllokaciRepository.countOsszes();
 
@@ -52,7 +52,7 @@ async darabszamLekerese(agEntitasId = null) {
     ? await hierarchikusAllokaciRepository.countAg(agEntitasId)
     : null;
 
-  console.log('TerkepService.darabszamLekerese - VÉGE', { osszesDarab, agDarab });
+  console.log('StrukturaService.darabszamLekerese - VÉGE', { osszesDarab, agDarab });
   return { osszesDarab, agDarab };
 }
 
@@ -67,16 +67,16 @@ async darabszamLekerese(agEntitasId = null) {
 * @returns {Promise<Object>} { sorok, kovetkezoKurzor }
 */
 async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null) {
-  console.log('TerkepService.lapLekerese - KEZDÉS', { kurzorId, lapMeret, agEntitasId });
+  console.log('StrukturaService.lapLekerese - KEZDÉS', { kurzorId, lapMeret, agEntitasId });
 
   const limit = Math.min(Math.max(1, lapMeret), MAX_LAP_MERET);
-  const nyersSorok = await hierarchikusAllokaciRepository.findTerkepLap(kurzorId, limit, agEntitasId);
+  const nyersSorok = await hierarchikusAllokaciRepository.findStrukturaLap(kurzorId, limit, agEntitasId);
 
   // Címek feltöltése típusonként EGY csoportos lekérdezéssel (közös segéd).
   // A segéd entitasCim mezőt tesz minden sorra (Javaslat/Egyezmény → null).
   const cimmelFeltoltott = await entitasCimekFeltoltese(nyersSorok);
 
-  // Mellék-ikonok (a Térkép közeli nézetéhez): kulcs `${tipus}:${id}` → adatok
+  // Mellék-ikonok (a Struktúra nézet közeli nézetéhez): kulcs `${tipus}:${id}` → adatok
   const mellekIkonMap = await this.mellekIkonokFeltoltese(nyersSorok);
 
   // Szűk válasz-sorok: csak amire a fa-rajzolásnak szüksége van
@@ -104,7 +104,7 @@ async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null)
     ? sorok[sorok.length - 1].lapKurzor
     : null;
 
-  console.log('TerkepService.lapLekerese - VÉGE', {
+  console.log('StrukturaService.lapLekerese - VÉGE', {
     sorokSzama: sorok.length,
     vanKovetkezoLap: !!kovetkezoKurzor
   });
@@ -114,7 +114,7 @@ async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null)
 
 // ----- MELLÉK-IKONOK FELTÖLTÉSE -----
 /**
-* A Térkép közeli nézetének mellék-ikonjaihoz gyűjti össze — típusonként EGY-EGY
+* A Struktúra nézet közeli nézetének mellék-ikonjaihoz gyűjti össze — típusonként EGY-EGY
 * csoportos lekérdezéssel, N+1 nélkül — az entitások extra adatait:
 *   - Tartalom → a tartalomtípusa ({nev, ikon}) és a kategóriái ([{nev, ikon}]);
 *   - Javaslat / Egyezmény → a művelet-típusa (javaslatTipus enum);
@@ -124,7 +124,7 @@ async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null)
 * @returns {Promise<Map>} kulcs `${entitasTipus}:${entitasId}` → { tipusIkon, kategoriaIkonok, javaslatTipus }
 */
 async mellekIkonokFeltoltese(sorok) {
-  console.log('TerkepService.mellekIkonokFeltoltese - KEZDÉS', { sorokSzama: sorok.length });
+  console.log('StrukturaService.mellekIkonokFeltoltese - KEZDÉS', { sorokSzama: sorok.length });
 
   // Entitás-azonosítók típusonként
   const tartalomIdk  = [];
@@ -185,7 +185,7 @@ async mellekIkonokFeltoltese(sorok) {
     // Kategória / Tartalomtípus: nincs mellék-ikon
   }
 
-  console.log('TerkepService.mellekIkonokFeltoltese - VÉGE', {
+  console.log('StrukturaService.mellekIkonokFeltoltese - VÉGE', {
     tartalom: tartalomIdk.length, javaslat: javaslatIdk.length, egyezmeny: egyezmenyIdk.length
   });
   return eredmeny;
@@ -194,4 +194,4 @@ async mellekIkonokFeltoltese(sorok) {
 }
 
 // --- EXPORTÁLÁS - SINGLETON példány ---
-module.exports = new TerkepService();
+module.exports = new StrukturaService();

@@ -23,7 +23,7 @@ A menü CSOPORTOKBA rendezve, közöttük elválasztó vonallal (2026-07-22): (1
 | Csoport | Menüpont | Állapot | Megjegyzés |
 |---|---|---|---|
 | 1. Nézetek | Keresés | ✅ | KeresesModal (12. pont) |
-| 1. Nézetek | Térkép | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b) |
+| 1. Nézetek | Struktúra nézet | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b) |
 | 1. Nézetek | **Világtérkép** | 🚧 | ÚJ (2026-07-22) — fejlesztésre vár; a régi koino világtérkép újraépítése. MINDEN menüben szerepel (fő + kártya) |
 | 1. Nézetek | Síkidom nézet | 🚧 | Fejlesztésre vár (2026-07-22, Csaba): a menü a „Fejlesztésre vár" üzenetet hívja; a nézet KÓDJA (`SikidomModal`, `_sikidomMegnyitasa`) megmarad (14. terv-pont) |
 | 1. Nézetek | Rendezés | ✅ | Pakli rendezés-választó (15. pont): hierarchikus/időrend/saját/ágazati pont; fő menü = globális |
@@ -48,7 +48,7 @@ A menü CSOPORTOKBA rendezve, közöttük elválasztó vonallal (2026-07-22): (1
 | Küszöb érték javaslat | ✅ | ErtekJavaslatModal — támogatottsági/részvételi %, min/max döntési idő; a Tartalom létrehozó modál is bekéri az értékeket (alapértékekkel). Csak tartalomra! |
 
 **Közös kártya-menü rész (minden kártyán, a `Kartya` alaposztály adja hozzá — 2026-07-22 óta csoportosítva):**
-a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a) INFO: 🔔 Értesítések (ág-szűrt, badge) · 🌟 Tudatpontok (ág-szűrt); (b) NAVIGÁCIÓ: 🔍 Keresés · 🗺️ Térkép · 🚧 **Világtérkép** (fejlesztésre vár) · ↕️ Rendezés — mind ág-szűrt módban.
+a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a) INFO: 🔔 Értesítések (ág-szűrt, badge) · 🌟 Tudatpontok (ág-szűrt); (b) NAVIGÁCIÓ: 🔍 Keresés · 🗺️ Struktúra nézet · 🚧 **Világtérkép** (fejlesztésre vár) · ↕️ Rendezés — mind ág-szűrt módban.
 
 ### 3. Javaslat kártya menü (`JavaslatKartya.js`)
 
@@ -246,13 +246,13 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     `agEntitasId` paraméterrel (ős-lánc bejárás cache-elve; ág-szűrésnél
     jelölt-többlet lekérés, a limitre vágás a szűrés után).
 
-13. [x] **Navigáció-bővítés: testvér-kacsacsőrök + Térkép** (terv elfogadva:
+13. [x] **Navigáció-bővítés: testvér-kacsacsőrök + Struktúra nézet** (terv elfogadva:
     2026-07-19, Csaba döntései; 13/a KÉSZ és böngészőben igazolva, 13/b KÉSZ, de
     ❓ FELTÉTELES — böngészős teszt hátra: teszt.md 50). Név-döntés (2026-07-19):
-    a „minimap" név elvetve, a funkció neve **Térkép**, és TELJES KÉPERNYŐS.
-    **FRISSÍTÉS (2026-07-20): visszatértünk a Térképhez.** A Síkidom nézet
+    a „minimap" név elvetve, a funkció neve **Struktúra nézet**, és TELJES KÉPERNYŐS.
+    **FRISSÍTÉS (2026-07-20): visszatértünk a Struktúra nézethez.** A Síkidom nézet
     (14. pont) 1. lépése elkészült, de a megjelenés még nem jó → FELFÜGGESZTVE;
-    a Térkép (13/b) újra az AKTÍV navigációs-vizualizációs irány.
+    a Struktúra nézet (13/b) újra az AKTÍV navigációs-vizualizációs irány.
     - **13/a. Testvér-jelző kacsacsőrök — ✅ KÉSZ (2026-07-19; böngészős teszt
       hátra: teszt.md 48).** A kiválasztott kártya két szélén lebegő, KATTINTHATÓ
       ‹ N és N › gombok: hány testvér van az adott irányban (a testvér-sorrendben
@@ -270,10 +270,10 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       Node-os egység-teszt (15 eset: rendezés, döntetlenek, szél-helyzetek,
       ObjectId) lefutott, a statikus kiszolgálás curl-lel igazolva. Ismert
       korlát: a `findTestverek` 100 testvérre limitál, a számláló ott levág.
-    - **13/b. Térkép (HIBRID Canvas + SVG fa-nézet) — ✅ KÉSZ, AKTÍV IRÁNY
+    - **13/b. Struktúra nézet (HIBRID Canvas + SVG fa-nézet) — ✅ KÉSZ, AKTÍV IRÁNY
       (2026-07-20).** Elkészült és curl-lel igazolt (böngészős teszt hátra:
       teszt.md 50). A Síkidom nézet (14. pont) felfüggesztése után visszatértünk
-      a Térképhez mint navigációs-vizualizációs irány. A leírás alább a
+      a Struktúra nézethez mint navigációs-vizualizációs irány. A leírás alább a
       megvalósult állapotot rögzíti. Teljes képernyős, interaktív nézet
       az entitás-fáról. **Hibrid felépítés** (Csaba döntése: több tízezer
       tartalomra kell készülni, de a részletes interakció is fontos):
@@ -292,14 +292,14 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       számokkal); (3) végig látható MEGSZAKÍTÁS gomb — a letöltést
       `AbortController` állítja le, az elrendezés darabhatáron áll meg, a modal
       visszaáll az indító nézetre.
-      **Backend:** `GET /api/terkep/darabszam` (globális darab + `agEntitasId`-re
-      szintenkénti BFS-sel az ág mérete) és `GET /api/terkep` (kurzoros lapozás
+      **Backend:** `GET /api/struktura/darabszam` (globális darab + `agEntitasId`-re
+      szintenkénti BFS-sel az ág mérete) és `GET /api/struktura` (kurzoros lapozás
       `_id` szerint, max 2000/lap, szűk projection) — forrás a
       `hierarchikusTudatpontAllokacio` kollekció, címek a közös
       `entitasCimekFeltoltese` segéddel (Javaslat/Egyezmény → null). Új
-      repository-metódusok: `countOsszes`, `findTerkepLap`, `findGyerekIdkBySzulok`.
+      repository-metódusok: `countOsszes`, `findStrukturaLap`, `findGyerekIdkBySzulok`.
       Curl-igazolt: globális 25 / ág 5 darab; 3 lap = pontosan 25 sor; auth 401.
-      **Frontend:** új `TerkepModal` (JS + HTML + CSS; a Modal `meret: 'teljes'`
+      **Frontend:** új `StrukturaModal` (JS + HTML + CSS; a Modal `meret: 'teljes'`
       — új `modal-panel--teljes` CSS-osztály, az alaposztály nem változott) +
       **`faElrendezes.js`** elrendezés-motor (DOM-független, Node-tesztelt:
       30 eset zöld, 55 000 csomópont ~76 ms): levelek balról jobbra, szülő a
@@ -318,7 +318,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
         illeszkedett; ráadásul a canvas-tartalék tolerancia csak 10 px volt.
         (2) az SVG-réteg a LÁTHATÓ darabszámtól függött, nem a nagyítástól — kis
         fánál mindig minden látszott, fix méretben, így a zoom csak a távolságot
-        változtatta. **Megoldás (`TerkepModal.js` + `terkepModal.css`):**
+        változtatta. **Megoldás (`StrukturaModal.js` + `strukturaModal.css`):**
         (1) a kattintás mostantól `elementFromPoint`-tal keresi a valódi
         csomópontot (a capture-t elengedve), tartalékként koordináta-kereséssel,
         a látható jel-sugárhoz igazított toleranciával. (2) Új **részletességi
@@ -332,16 +332,16 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
         - **13/b-3. Csomópont-méret a zoomhoz (kipróbálás alatt, 2026-07-20).**
           Csaba kérése: próbáljuk ki azt is, hogy a csomópontok NE fix képernyő-
           méretűek legyenek, hanem a ráközelítéssel TERMÉSZETESEN nagyobbak.
-          Egy kapcsoló dönt (`TerkepModal.js`: `IKON_NO_A_ZOOMMAL`): `true` =
+          Egy kapcsoló dönt (`StrukturaModal.js`: `IKON_NO_A_ZOOMMAL`): `true` =
           világhoz kötött (zoommal nő/zsugorodik, `NODE_VILAG_EGYUTTHATO` és
           `NODE_MAX_SKALA` hangolja), `false` = a korábbi fix képernyő-méret. A
           kattintás-tolerancia és a `scale()` transzform is ezt követi. Jelenlegi
           alapérték: `true` — Csaba böngészős összevetése dönt a véglegesről.
-        - **13/b-4. Alsó sáv látszik a Térkép alatt is (2026-07-20, Csaba
-          kérése).** A teljes képernyős Térkép eddig eltakarta a főoldal alsó
+        - **13/b-4. Alsó sáv látszik a Struktúra nézet alatt is (2026-07-20, Csaba
+          kérése).** A teljes képernyős Struktúra nézet eddig eltakarta a főoldal alsó
           sávját; most az is látszik, ahogy a pakli nézetben. Megoldás: a
-          `TerkepModal` megnyitáskor a body-ra teszi a `teljes-nezet-nyitva`
-          osztályt (záráskor leveszi), a `terkepModal.css` pedig (a) az
+          `StrukturaModal` megnyitáskor a body-ra teszi a `teljes-nezet-nyitva`
+          osztályt (záráskor leveszi), a `strukturaModal.css` pedig (a) az
           `.also-sav`-ot a modal fölé emeli — mivel önálló rétegződési kontextus,
           a benne lévő hamburger menü is a modal fölé kerül, tehát HASZNÁLHATÓ
           marad —, (b) az overlayt és a teljes panelt az alsó sáv fölött zárja
@@ -349,7 +349,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
           tördhet). A Síkidom nézet (teljes) egyelőre NEM kapja ezt (később
           ugyanígy beköthető).
         - **13/b-5. Finomítások (2026-07-20, Csaba böngészős visszajelzése).**
-          (1) **Nincs előzetes kérdés:** a Térkép megnyitáskor EGYBŐL épít (az
+          (1) **Nincs előzetes kérdés:** a Struktúra nézet megnyitáskor EGYBŐL épít (az
           indító „N entitás — elkészíted?" nézet megszűnt, HTML/CSS/JS-ből is);
           a folyamatjelző (számláló) + **Mégse** gomb végig látszik, a Mégse
           leáll és bezár. (2) **Zoom-gesztus:** a kétujjas fel/le görgetés már
@@ -366,54 +366,54 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
           van hozzárendelve. Javaslat/Egyezménynél a `javaslatTipus` szerinti
           művelet-emoji jobbra (Törlés 🗑️ · Módosítás ✏️ · Egyesítés 🔗 ·
           Áthelyezés ➡️ · Csomag 📦), a csomópont saját színével. Kategóriának és
-          Tartalomtípusnak nincs mellék-ikonja. **Backend:** a `terkepService`
+          Tartalomtípusnak nincs mellék-ikonja. **Backend:** a `strukturaService`
           új `mellekIkonokFeltoltese` segéde típusonként EGY-EGY csoportos
-          lekérdezéssel (N+1 nélkül) tölti a `/api/terkep` sorait a
+          lekérdezéssel (N+1 nélkül) tölti a `/api/struktura` sorait a
           `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel; a
-          `faElrendezes` átvezeti a csomópontba, a `TerkepModal` rajzolja.
+          `faElrendezes` átvezeti a csomópontba, a `StrukturaModal` rajzolja.
         - **13/b-7. Sima zoom/pan — a drága SVG csak a mozgás végén épül újra
           (2026-07-20, Csaba: „akadozik zoom közben").** Ok: eddig MINDEN zoom/pan
           képkockán újraépült a teljes SVG-fedőréteg (`innerHTML`), ami az emoji-
-          raszterizálás miatt kis adatnál is akadt. Megoldás (`TerkepModal.js`):
+          raszterizálás miatt kis adatnál is akadt. Megoldás (`StrukturaModal.js`):
           mozgás közben csak az OLCSÓ canvas-réteg rajzolódik újra képkockánként,
-          az SVG-réteg pedig egyetlen közös `<g id="terkep-svg-tartalom">`-en át
+          az SVG-réteg pedig egyetlen közös `<g id="struktura-svg-tartalom">`-en át
           egy TRANSZFORMMAL követi a nézetet (pontos pozíció/méret, GPU-gyors); a
           teljes SVG-újraépítés csak a mozgás megállása után fut (settle-debounce,
           150 ms), ekkor frissül a LOD-szint, a láthatóság és a feliratok.
           (`_interakcioRajzolas` / `_gyorsRajzolas` / `_svgKovetes`, plusz a
           canvas kiszervezve `_canvasRajzolas`-ba.)
         - **13/b-8. Dinamikus cím-betűméret a csomópontokon (2026-07-20, Csaba
-          kérése).** A Térkép címei ugyanazt a lépcsős, hossz-alapú betűméretet
+          kérése).** A Struktúra nézet címei ugyanazt a lépcsős, hossz-alapú betűméretet
           kapják, mint a kártya fejléce (rövid cím nagyobb, hosszú kisebb). A
           közös skálát új segéd adja: `frontend/js/utils/cimBetumeret.js` →
           `dinamikusCimBetumeret(hossz, maxMeret)`; a kártya (Kartya.
-          `_cimBetumeretBecsles`) és a `TerkepModal` is ezt hívja. A térkép a
+          `_cimBetumeretBecsles`) és a `StrukturaModal` is ezt hívja. A struktúra nézet a
           csomóponthoz igazított maximummal (`CIM_MAX_BETUMERET = 13`) számol, és
           a levágási hosszt a betűmérettel fordítottan arányosítja (kisebb betű →
           több karakter). A méret inline `style`-lal kerül a SVG-címre (felülírja
           a CSS tartalék 11px-et).
         - **13/b-9. Ág-szűrés BACKEND-oldalra (skálázhatóság, 2026-07-23, Csaba
-          jegyzete 2026-07-21).** Eddig a kártya-menük „Térkép" pontja ág-módban is
+          jegyzete 2026-07-21).** Eddig a kártya-menük „Struktúra nézet" pontja ág-módban is
           a TELJES fát letöltötte, és a kliens (`FaElrendezes`) vágta ki a részfát —
-          több millió entitásnál nem tartható. Megoldás: a Térkép ág-szűrése a
+          több millió entitásnál nem tartható. Megoldás: a Struktúra nézet ág-szűrése a
           Rendezés nézetnél már bevált, indexelt `osLanc`-infrastruktúrára került.
-          - **Letöltő végpont:** `GET /api/terkep` mostantól kap `agEntitasId`-t;
+          - **Letöltő végpont:** `GET /api/struktura` mostantól kap `agEntitasId`-t;
             ág-módban a szűrő `{ 'osLanc.entitasId': agEntitasId }` → CSAK a részfa
             sorai jönnek (a gyökér önmaga is, mert az osLanc önmagával kezdődik).
-            (`terkepController.lap` → `terkepService.lapLekerese` →
-            `repository.findTerkepLap(kurzor, limit, agEntitasId)`.)
+            (`strukturaController.lap` → `strukturaService.lapLekerese` →
+            `repository.findStrukturaLap(kurzor, limit, agEntitasId)`.)
           - **Darabszám:** a szintenkénti BFS (`darabszamLekerese`) helyett egyetlen
             indexelt `repository.countAg(agEntitasId)` (osLanc). A régi BFS-kód és a
             `MAX_BEJARASI_MELYSEG` konstans törölve.
           - **Új index:** `{ 'osLanc.entitasId': 1, _id: 1 }` — az ág-letöltés
             `_id`-kurzoros lapozása milliós ágnál is teljesen indexelt marad.
-          - **Frontend (`TerkepModal._faLetoltese`):** ág-módban `&agEntitasId=…` a
+          - **Frontend (`StrukturaModal._faLetoltese`):** ág-módban `&agEntitasId=…` a
             kéréshez, a folyamatjelző nevezője az ág mérete (`agDarab`). A
             `FaElrendezes` ág-szűrője megmarad VÉDŐHÁLÓNAK (már csak a részfa érkezik).
           - Böngésző nélkül igazolva (service-teszt): ág → 5 sor, mind a részfa
             tagja; globális → teljes fa. Böngészős teszt: Csaba.
 
-    - **13/c. GLOBÁLIS teljes-térkép skálázása — [ ] KÜLÖN FELADAT (2026-07-23).**
+    - **13/c. GLOBÁLIS teljes-struktúra nézet skálázása — [ ] KÜLÖN FELADAT (2026-07-23).**
       A 13/b-9 az ÁG-szűrt esetet oldotta meg. A globális „mutass mindent" nézet
       (millió csomópont egyszerre) más stratégiát kíván (viewport/LOD-alapú
       szerver-lapozás vagy aggregált áttekintés) — itt nincs mit szűrni, magát a
@@ -423,14 +423,14 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 14. [ ] **Síkidom nézet (fő menü) — ⏸️ FELFÜGGESZTVE (2026-07-20).** Az 1. lépés
     (statikus ablak) elkészült és böngésző nélkül tesztelt, DE a megjelenés még
     NEM jó (Csaba böngészős próbája) → jegelve, később visszatérünk. A kód és a
-    terv MEGMARAD (a Térképhez tértünk vissza). A dinamikus felfedés + drill-down
+    terv MEGMARAD (a Struktúra nézethez tértünk vissza). A dinamikus felfedés + drill-down
     (2. lépés) is hátra. Az alábbi terv és az 1. lépés leírása érvényben marad.
     A koino_1.0 (`C:/koino_1.0`) síkidomos megjelenítésének újraépítése tiszta
     architektúrában. A koino_1.0 kód KÁOSZ (window.KioData/KioSystem globálisok,
     `_mod_mod_mod_mod` fájlnevek, duplikált algoritmus, D3+SVG, rétegek nélkül) —
     NEM egy az egyben átvenni, hanem a MŰKÖDÉST megérteni és a projekt
     konvencióival (magyar camelCase, rétegek, egy komponens = egy fájl + CSS)
-    újraépíteni. A Térkép (13/b) ezzel válik feleslegessé vagy konzisztenssé.
+    újraépíteni. A Struktúra nézet (13/b) ezzel válik feleslegessé vagy konzisztenssé.
 
     **A koino_1.0 mechanizmusa (megértve):** fraktál kör-pakolás. Minden entitás
     egy síkidom, területe a hierarchikus össztudatponttal arányos; a leszármazottak
@@ -482,7 +482,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     feletti csomópontok (entitasId, entitasTipus, szuloId, hierarchikusOsszesPont,
     gyökérAlattiSzint, cim, vanTovabbGyerek) MONOTON metszéssel (legjobb-először
     bejárás), + az aggregált „mennyi van még alatta" össz-pont. A
-    `hierarchikusTudatpontAllokacio`-ra épül (mint a Térkép; a Térkép
+    `hierarchikusTudatpontAllokacio`-ra épül (mint a Struktúra nézet; a Struktúra nézet
     `findGyerekIdkBySzulok`-jához hasonló ág-bejáró segéddel).
 
     **Kis lépések (Csaba egyetért):**
@@ -518,7 +518,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       Tartalom, Javaslat, Egyezmény).
     - „ágazat" = **a fa egy ága (részfa)**: egy csomópont + minden leszármazottja.
     - hatókör: **fő menüből → GLOBÁLIS**; **kártya-menüből → az a kártya az
-      ágazat-gyökér** (csak a részfáját rendezi) — a Keresés/Tudatpontok/Térkép
+      ágazat-gyökér** (csak a részfáját rendezi) — a Keresés/Tudatpontok/Struktúra nézet
       ág-szűrt mintájára.
     **Lépések (apró, egyenként ellenőrizhető):**
     - Backend 1. ✅ KÉSZ (2026-07-20, curl-igazolt) — Globális időrendi lista: új
@@ -575,7 +575,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       + új `{ 'osLanc.entitasId':1, hierarchikusOsszesPont:-1 }` index; ág-szűrve IXSCAN.
       A modal negyedik rádiója: 🌿 „Ágazati tudatpont (az egész ág)".
     - Frontend 6. ✅ KÉSZ (2026-07-21, kód; böngészős teszt hátra) — „Rendezés" a
-      KÁRTYA-menükben (közös pont minden kártyán, a Keresés/Térkép/Tudatpontok mintájára):
+      KÁRTYA-menükben (közös pont minden kártyán, a Keresés/Struktúra nézet/Tudatpontok mintájára):
       `Kartya._agRendezesMegnyitasa` a `RendezesModal`-t nyitja `agazatCim`-mel; alkalmazáskor
       az adott kártya az ágazat-gyökér (`window.aktivPakli.rendezesBeallitasa(mod, irany,
       entitasId)`). Hierarchikus módban globálisra esik vissza (nincs ágazat).

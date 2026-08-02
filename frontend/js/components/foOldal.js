@@ -23,7 +23,7 @@ import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
 import TudatpontokModal from './modals/TudatpontokModal.js';
 import KeresesModal from './modals/KeresesModal.js';
-import TerkepModal from './modals/TerkepModal.js';
+import StrukturaModal from './modals/StrukturaModal.js';
 import RendezesModal from './modals/RendezesModal.js'; // Pakli rendezés-választó (15. terv-pont)
 import SikidomModal from './modals/SikidomModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
@@ -102,7 +102,7 @@ init() {
   // ===== KÖZÖS NAVIGÁCIÓS JELZÉS → VISSZA/ELŐRE TÖRTÉNET =====
   // Minden entitás-váltás átfut az aktivEntitasMentese()-n, ami elküldi ezt az
   // eseményt. Így EGY helyen rögzítjük a történetbe az összes navigációt – legyen
-  // az kártya-koppintás, testvér-ugrás, vagy fő-/kártya-menüs térkép/kereső ugrás.
+  // az kártya-koppintás, testvér-ugrás, vagy fő-/kártya-menüs struktúra nézet/kereső ugrás.
   document.addEventListener('koino:aktivEntitasValtozas', (esemeny) => {
     this._aktivEntitasValtozott(esemeny.detail);
   });
@@ -113,7 +113,7 @@ init() {
     this._rendezesValtozott(esemeny.detail);
   });
 
-  // A TÉRKÉP megnyitása is nézet-állapot (fő menü VAGY kártya menü): a TerkepModal
+  // A TÉRKÉP megnyitása is nézet-állapot (fő menü VAGY kártya menü): a StrukturaModal
   // jelez ide megnyitáskor, és külön vissza/előre lépésként rögzül.
   document.addEventListener('koino:nezetNyitas', (esemeny) => {
     this._nezetNyitott(esemeny.detail);
@@ -202,7 +202,7 @@ init() {
   // =====================================
   // A koino:aktivEntitasValtozas eseményre fut (amit az aktivEntitasMentese küld).
   // Ez az EGYETLEN hely, ahol entitás-váltás a történetbe kerül – így minden
-  // navigációs útvonal (kártya, testvér, fő-/kártya-menüs térkép/kereső) automatikusan
+  // navigációs útvonal (kártya, testvér, fő-/kártya-menüs struktúra nézet/kereső) automatikusan
   // bekerül. Vissza/előre visszajátszás közben NEM rögzítünk (nehogy hurkot képezzen).
   // @param {{entitasId:string, entitasTipus:string}} reszletek
   _aktivEntitasValtozott(reszletek) {
@@ -256,7 +256,7 @@ init() {
   // =====================================
   // NÉZET-MODÁL MEGNYÍLT → TÖRTÉNETBE
   // =====================================
-  // A koino:nezetNyitas eseményre fut (a TerkepModal küldi megnyitáskor). A térkép
+  // A koino:nezetNyitas eseményre fut (a StrukturaModal küldi megnyitáskor). A struktúra nézet
   // megnyitása külön 'nezet' állapotként rögzül: a Vissza bezárja, az Előre újranyitja.
   // Az entitasId/entitasTipus az a pakli-entitás, ami fölött a nézet megnyílt (kontextus).
   // @param {{nezet:string, agEntitasId:string|null, cim:string}} reszletek
@@ -282,7 +282,7 @@ init() {
   // =====================================
   // NAVIGÁLÁS EGY ENTITÁSRA (KÖZÖS KAPU)
   // =====================================
-  // A fő-menüs modál-vezérelt ugrások (kereső, térkép, síkidom, tudatpontok,
+  // A fő-menüs modál-vezérelt ugrások (kereső, struktúra nézet, síkidom, tudatpontok,
   // értesítések) közös belépője: ment (ez küldi a történet-rögzítő eseményt), majd
   // betölti a paklit az adott entitásra.
   // @param {string} entitasId
@@ -305,7 +305,7 @@ init() {
 
     // Ha nyitott modál van, ami NEM a történet része (módosító modál), a Vissza
     // csak becsukja azt (mint az Esc). Ha viszont a jelenlegi állapot egy NÉZET
-    // (pl. nyitott térkép), akkor a rendes történet-vissza fut – ami az apply során
+    // (pl. nyitott struktúra nézet), akkor a rendes történet-vissza fut – ami az apply során
     // úgyis bezárja a nézet-modált, és visszalép az előző állapotra.
     if (Modal.vanNyitottModal() && this.tortenet?.jelenlegiAllapot()?.tipus !== 'nezet') {
       Modal.legfelsoModalBezarasa();
@@ -322,8 +322,8 @@ init() {
     console.log('FoOldal.tortenetElore - KEZDÉS');
 
     // Nyitott MÓDOSÍTÓ modál mellett az Előre nem lép (nem navigálunk alatta). De ha
-    // a jelenlegi állapot egy NÉZET (nyitott térkép), az Előre léphet – az apply a
-    // térképet becsukja, és a következő állapotra vált.
+    // a jelenlegi állapot egy NÉZET (nyitott struktúra nézet), az Előre léphet – az apply a
+    // struktúra nézetet becsukja, és a következő állapotra vált.
     if (Modal.vanNyitottModal() && this.tortenet?.jelenlegiAllapot()?.tipus !== 'nezet') {
       console.log('FoOldal.tortenetElore - VÉGE (nyitott módosító modál, nincs lépés)');
       return;
@@ -341,7 +341,7 @@ init() {
   // A vissza/előre célállapotát valósítja meg. A visszajátszás alatt a
   // _navigalasVisszajatszas jelző biztosítja, hogy a betöltés ne rögzüljön újra.
   // Kétféle rögzített állapot van: 'entitas' (pakli-entitás) és 'rendezes' (lapos
-  //   rendezett nézet). A térkép nézet-állapotként a következő lépésben kerül ide.
+  //   rendezett nézet). A struktúra nézet-állapotként a következő lépésben kerül ide.
   // @param {{tipus:string, entitasId?:string, entitasTipus?:string, mod?:string, irany?:string, agazatId?:string|null}} allapot
   async _allapotAlkalmazasa(allapot) {
     console.log('FoOldal._allapotAlkalmazasa - KEZDÉS', { allapot });
@@ -349,11 +349,11 @@ init() {
     this._navigalasVisszajatszas = true;
     try {
       // Bármi nyitott nézet-modált bezárunk – a cél állapot majd újranyitja, ha kell
-      // (pl. entitásra visszalépéskor a nyitott térkép becsukódik).
+      // (pl. entitásra visszalépéskor a nyitott struktúra nézet becsukódik).
       if (Modal.vanNyitottModal()) Modal.legfelsoModalBezarasa();
 
       if (allapot.tipus === 'nezet') {
-        // NÉZET (térkép) újranyitása a mentett paraméterekkel
+        // NÉZET (struktúra nézet) újranyitása a mentett paraméterekkel
         await this._nezetModalNyitasa(allapot);
       } else if (allapot.tipus === 'rendezes') {
         // RENDEZETT (lapos) nézet visszaállítása a mentett rendezés-paraméterekkel
@@ -445,8 +445,8 @@ init() {
       },
       {
         ikon:    '🗺️',
-        felirat: 'Térkép',
-        akcio:   () => this._terkepMegnyitasa()
+        felirat: 'Struktúra nézet',
+        akcio:   () => this._strukturaMegnyitasa()
       },
       {
         // ÚJ, még fejlesztésre vár (a régi koino világtérkép újraépítése)
@@ -688,48 +688,48 @@ init() {
   // =====================================
   // TÉRKÉP MODAL MEGNYITÁSA
   // =====================================
-  // A fő menüs „Térkép" – a TELJES entitás-fa teljes képernyős, interaktív
+  // A fő menüs „Struktúra nézet" – a TELJES entitás-fa teljes képernyős, interaktív
   // nézete (terv 13/b pont). Megnyitáskor előbb darabszám-kijelzés, az építés
   // folyamatjelzővel és Megszakítás gombbal fut; csomópontra kattintva a
-  // pakli az entitásra navigál. Az aktuális entitás a térképen kiemelve.
-  async _terkepMegnyitasa() {
-    console.log('FoOldal._terkepMegnyitasa - KEZDÉS');
+  // pakli az entitásra navigál. Az aktuális entitás a struktúra nézeten kiemelve.
+  async _strukturaMegnyitasa() {
+    console.log('FoOldal._strukturaMegnyitasa - KEZDÉS');
     this.hamburgerMenu?.bezaras();
-    // Fő menüs Térkép = TELJES fa (nincs ág-szűrő → agEntitasId null)
-    await this._terkepModalLetrehozasa(null, null);
-    console.log('FoOldal._terkepMegnyitasa - VÉGE');
+    // Fő menüs Struktúra nézet = TELJES fa (nincs ág-szűrő → agEntitasId null)
+    await this._strukturaModalLetrehozasa(null, null);
+    console.log('FoOldal._strukturaMegnyitasa - VÉGE');
   }
 
 
   // =====================================
   // TÉRKÉP MODAL LÉTREHOZÁSA (KÖZÖS)
   // =====================================
-  // Egy helyen hozza létre és nyitja a Térkép modált – ezt használja a fő menüs
+  // Egy helyen hozza létre és nyitja a Struktúra nézet modált – ezt használja a fő menüs
   // megnyitás ÉS a vissza/előre visszajátszás (a történetből újranyitáskor) is.
   // @param {string|null} agEntitasId - null: teljes fa (fő menü); id: ág-szűrt (kártya)
-  // @param {string|null} cim - opcionális modal-cím (ág-szűrt térképnél az ág neve)
-  async _terkepModalLetrehozasa(agEntitasId = null, cim = null) {
-    console.log('FoOldal._terkepModalLetrehozasa - KEZDÉS', { agEntitasId, cim });
+  // @param {string|null} cim - opcionális modal-cím (ág-szűrt struktúra nézetnél az ág neve)
+  async _strukturaModalLetrehozasa(agEntitasId = null, cim = null) {
+    console.log('FoOldal._strukturaModalLetrehozasa - KEZDÉS', { agEntitasId, cim });
 
-    // Az éppen aktív entitás — a térképen kiemelve jelenik meg
+    // Az éppen aktív entitás — a struktúra nézeten kiemelve jelenik meg
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
 
     const konfig = {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
-        console.log('FoOldal - térkép csomópontból navigálás', { entitasId, entitasTipus });
+        console.log('FoOldal - struktúra nézet csomópontból navigálás', { entitasId, entitasTipus });
         this._navigalasEntitasra(entitasId, entitasTipus);
       }
     };
     if (agEntitasId) konfig.agEntitasId = agEntitasId;
     if (cim)         konfig.cim         = cim;
 
-    const terkepModal = new TerkepModal('modal-kontener', konfig);
-    await terkepModal.init();
-    terkepModal.megnyitas();
+    const strukturaModal = new StrukturaModal('modal-kontener', konfig);
+    await strukturaModal.init();
+    strukturaModal.megnyitas();
 
-    console.log('FoOldal._terkepModalLetrehozasa - VÉGE');
+    console.log('FoOldal._strukturaModalLetrehozasa - VÉGE');
   }
 
 
@@ -737,12 +737,12 @@ init() {
   // NÉZET-MODÁL ÚJRANYITÁSA (VISSZA/ELŐRE)
   // =====================================
   // Egy 'nezet' állapotot valósít meg: a mentett paraméterek szerint újranyitja
-  // a nézet-modált. Jelenleg a Térkép; a Síkidom/Világtérkép később bővíthető.
+  // a nézet-modált. Jelenleg a Struktúra nézet; a Síkidom/Világtérkép később bővíthető.
   // @param {{nezet:string, agEntitasId:string|null, cim:string|null}} allapot
   async _nezetModalNyitasa(allapot) {
     console.log('FoOldal._nezetModalNyitasa - KEZDÉS', { allapot });
-    if (allapot.nezet === 'terkep') {
-      await this._terkepModalLetrehozasa(allapot.agEntitasId, allapot.cim);
+    if (allapot.nezet === 'struktura') {
+      await this._strukturaModalLetrehozasa(allapot.agEntitasId, allapot.cim);
     } else {
       console.warn('FoOldal._nezetModalNyitasa - ismeretlen nézet', { nezet: allapot.nezet });
     }
@@ -998,7 +998,7 @@ init() {
       'info-eembernev':       this.eemberNev,
       'info-tudatpont':       `🌟 ${this.tudatpontok}`,
       'info-eemberek-szama':       `🧑‍🤝‍🧑 ${this.eemberekSzama}`,
-      // Az entitás-ikonok a platform egységes készletét követik (mint a Térképen):
+      // Az entitás-ikonok a platform egységes készletét követik (mint a Struktúra nézeten):
       // Tartalom 📄 · Kategória 🏷️ · Tartalomtípus 🧩 · Javaslat 📋 · Egyezmény 🤝
       'info-tartalmak-szama':      `📄 ${this.tartalmakSzama}`,
       'info-kategoriak-szama':     `🏷️ ${this.kategoriakSzama}`,

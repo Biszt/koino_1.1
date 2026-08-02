@@ -211,7 +211,7 @@ Nincs React/Vue — komponens-**osztályok** vannak, minden komponens egy JS-fá
 - **`js/components/modals/`** — Modal alaposztály + specifikus modálok (pl.
   JavaslatModal); a hozzájuk tartozó HTML a `html/components/modals/` alatt.
 - **`FoOldalTortenetKezelo.js`** — a böngésző vissza/előre gombjainak kezelése
-  (entitás + rendezés + térkép állapot).
+  (entitás + rendezés + struktúra nézet állapot).
 
 A **CSS** komponensenként külön fájlban van a `css/components/` alatt, és a
 `css/main.css` importálja őket.

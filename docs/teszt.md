@@ -598,16 +598,16 @@ docker logs -f koino-backend
     kártyához igazodik (Tartalom-kártyán dinamikus); (e) a kártya-body szövege
     a teljes szélességet használja (a 72 karakteres sor-korlát megszűnt);
     (f) a testvér-kacsacsőrök (48.) a széles kártya szélein is jó helyen vannak.
-50. ⬜ **Térkép (terv 13/b pont, 2026-07-19 óta):** teljes képernyős, interaktív
-    fa-nézet. Elérés: fő menü → **🗺️ Térkép** (teljes fa), VAGY bármely kártya
-    hamburgere → **🗺️ Térkép** (ág-szűrt: csak az entitás részfája, a cím a
+50. ⬜ **Struktúra nézet (terv 13/b pont, 2026-07-19 óta):** teljes képernyős, interaktív
+    fa-nézet. Elérés: fő menü → **🗺️ Struktúra nézet** (teljes fa), VAGY bármely kártya
+    hamburgere → **🗺️ Struktúra nézet** (ág-szűrt: csak az entitás részfája, a cím a
     modal fejlécében). Ellenőrzés:
-    (a) megnyitáskor NINCS előzetes kérdés — a Térkép EGYBŐL nekiáll az építésnek
+    (a) megnyitáskor NINCS előzetes kérdés — a Struktúra nézet EGYBŐL nekiáll az építésnek
     (2026-07-20-i változás);
     (b) építés közben folyamatjelző (számláló) fut („Letöltés: X / N entitás",
     majd „Elhelyezés: X / N entitás") és végig látható a **Mégse** gomb —
     megnyomva leáll és bezár, félkész rajz nélkül (az ESC/✕ is zár);
-    (c) a kész térképen a GYÖKÉR ALUL van és az ágak FELFELÉ nőnek (mint a
+    (c) a kész struktúra nézeten a GYÖKÉR ALUL van és az ágak FELFELÉ nőnek (mint a
     pakliban: gyökér legalul, levél legfelül; 2026-07-19-i javítás). A
     megjelenítés KÉTSZINTŰ, a részletesség a NAGYÍTÁStól függ (2026-07-20):
     kicsinyítve csak típus-színű pöttyök (áttekintés); befelé nagyítva
@@ -634,11 +634,11 @@ docker logs -f koino-backend
     (g) kártya-menüs (ág-szűrt) módban CSAK az adott entitás részfája látszik,
     és a darabszám az ág mérete. A szűrés 2026-07-23 óta BACKEND-oldali: a kliens
     ág-módban CSAK a részfát tölti le (nem a teljes fát, majd vágja) — így milliós
-    adatnál is tartható. Ellenőrizhető a hálózati fülön: a `GET /api/terkep` kérés
+    adatnál is tartható. Ellenőrizhető a hálózati fülön: a `GET /api/struktura` kérés
     `agEntitasId=…` paramétert visz, és a válasz sorai csak a részfát tartalmazzák;
-    (h) a Térkép alatt (a teljes képernyős nézetben) is LÁTSZIK a főoldal alsó
+    (h) a Struktúra nézet alatt (a teljes képernyős nézetben) is LÁTSZIK a főoldal alsó
     sávja (koino · név · tudatpont · … + hamburger), ugyanúgy, mint a pakliban —
-    a Térkép épp az alsó sáv fölött ér véget, és a hamburger menü is használható
+    a Struktúra nézet épp az alsó sáv fölött ér véget, és a hamburger menü is használható
     marad (2026-07-20);
     (i) a LEGKÖZELEBBI szinten (a tudatponttal együtt) MELLÉK-IKONOK bukkannak elő
     kis körökben, a fő ikonnál kisebben (2026-07-20): Tartalomnál a KATEGÓRIÁI
@@ -646,11 +646,11 @@ docker logs -f koino-backend
     típus saját ikonja (emoji vagy feltöltött kép), csak ha van hozzárendelve;
     Javaslat/Egyezménynél a MŰVELET-TÍPUS jobbra (a saját típus-színével): Törlés
     🗑️ · Módosítás ✏️ · Egyesítés 🔗 · Áthelyezés ➡️ · Csomag 📦; Kategóriának és
-    Tartalomtípusnak NINCS mellék-ikonja. (Backend: a `/api/terkep` sorai
+    Tartalomtípusnak NINCS mellék-ikonja. (Backend: a `/api/struktura` sorai
     `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel bővültek.)
-    API: GET `/api/terkep/darabszam` (globális összes; `?agEntitasId=` → az ág
+    API: GET `/api/struktura/darabszam` (globális összes; `?agEntitasId=` → az ág
     mérete — 2026-07-23 óta egyetlen indexelt `osLanc`-lekérdezés, nem szintenkénti
-    BFS), GET `/api/terkep?lapMeret=&kurzor=&agEntitasId=` (kurzoros lapozás;
+    BFS), GET `/api/struktura?lapMeret=&kurzor=&agEntitasId=` (kurzoros lapozás;
     `agEntitasId`-vel CSAK a részfát lapozza — indexelt `{ 'osLanc.entitasId':1, _id:1 }`;
     cím-viselőknél `cim`, auth nélkül 401). Service-teszt (2026-07-23, lefutott):
     ág → 5 sor, mind a részfa tagja; globális → teljes fa (33 sor).
@@ -720,7 +720,7 @@ docker logs -f koino-backend
     formázd; (c) kitöltés (név + ikon + leírás + küszöbök + kezdő tudatpont) után
     **Létrehozás** → siker, a pakli frissül; (d) 🔴 a leggontosabb: az új kategória a
     **szülő kategória ALÁ** kerüljön (NE a gyökérbe!) — a pakliban a szülő kategóriából
-    lefelé navigálva jelenjen meg, illetve a Térkép/Rendezés ág-nézetében a szülő
+    lefelé navigálva jelenjen meg, illetve a Struktúra nézet/Rendezés ág-nézetében a szülő
     részfájában; (e) nyisd meg újra a kártya Részletes adatait / szerkesztését → a
     **leírás megőrződött** (korábban nem mentődött); (f) a **fő menü** „Új kategória
     létrehozása" továbbra is GYÖKÉR kategóriát hoz létre — ez ne változzon.
@@ -776,19 +776,19 @@ docker logs -f koino-backend
     gomb: **↩ Vissza** / **↪ Előre** (billentyű: `Alt+←` / `Alt+→`). Mivel az app modálokat nyit/zár
     (nincs valódi oldalbetöltés), a böngésző saját Vissza gombja nem használható — ez a saját
     történet-navigáció. A gombok tiltottak, ha nincs hova lépni. Ellenőrzés:
-    - **Entitás-lánc:** navigálj több entitáson (kártya-koppintás, testvér-ugrás, kereső/térkép/
+    - **Entitás-lánc:** navigálj több entitáson (kártya-koppintás, testvér-ugrás, kereső/struktúra nézet/
       értesítés/tudatpont ugrás – akár a fő menüből, akár egy kártya menüjéből) → ↩ visszalépeget,
       ↪ előre. (A rögzítés közös pontja: `aktivEntitasMentese` → `koino:aktivEntitasValtozas` esemény.)
     - **Rendezés mint lépés:** menj be egy tartalomba → **rendezz** (kártya- vagy fő menü) → ↩ kilép a
       rendezett (lapos) nézetből, vissza az entitásra; ↪ újra alkalmazza a rendezést.
-    - **Térkép mint lépés:** nyisd meg a **Térképet** (fő menüből VAGY kártya-menüből) → ↩ bezárja és
-      visszalép; ↪ újranyitja ugyanazt (teljes vagy ág-szűrt) térképet. A ↩ ↪ a teljes képernyős
-      térkép fölött is kattintható (az alsó sáv a térkép fölé emelkedik).
+    - **Struktúra nézet mint lépés:** nyisd meg a **Struktúra nézetet** (fő menüből VAGY kártya-menüből) → ↩ bezárja és
+      visszalép; ↪ újranyitja ugyanazt (teljes vagy ág-szűrt) struktúra nézetet. A ↩ ↪ a teljes képernyős
+      struktúra nézet fölött is kattintható (az alsó sáv a struktúra nézet fölé emelkedik).
     - **Modál-védelem:** nyitott MÓDOSÍTÓ modálnál (pl. új tartalom, javaslat) a ↩ / `Alt+←` először
       csak bezárja a modált (mint az Esc), nem navigál alatta.
     - Böngésző-konzol: `_debug_tortenet.allapotLekeres()` mutatja a `{visszaLehetseges, eloreLehetseges}`
       állapotot. Architektúra: `FoOldalTortenetKezelo` (két-veremes), a nézet-állapotok típusai:
-      `entitas` · `rendezes` · `nezet` (térkép).
+      `entitas` · `rendezes` · `nezet` (struktúra nézet).
 
 ### API-referencia — meghívó rendszer (2026-07-18, névvel/kétlépcsőssel 2026-07-23, curl-lel igazolva)
 

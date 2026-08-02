@@ -4,7 +4,7 @@
 // Felelősség:
 //   - A főoldali navigáció "vissza / előre" történetének kezelése két veremmel.
 //   - Egy "állapot" az, hogy MIT nézünk éppen: egy entitás a pakliban, vagy
-//     egy nézet-modál (Térkép / Világtérkép / Síkidom / Rendezés) nyitva fölötte.
+//     egy nézet-modál (Struktúra nézet / Világtérkép / Síkidom / Rendezés) nyitva fölötte.
 //   - Az osztály TISZTA adatstruktúra-logika: NEM nyúl a DOM-hoz és NEM navigál
 //     maga. A vissza()/elore() csak VISSZAADJA, melyik állapotra kell ugrani —
 //     a tényleges ugrást (pakli-navigálás, modál nyitás/zárás) a FoOldal végzi.
@@ -20,7 +20,7 @@
 // Megjegyzés az "állapot" objektumról:
 //   - Az osztály számára ez ÁTLÁTSZÓ (nem tudja, mi van benne). A FoOldal ilyet ad:
 //       entitás:     { entitasId, entitasTipus, nezetModal: null }
-//       nézet-modál: { entitasId, entitasTipus, nezetModal: 'terkep' }
+//       nézet-modál: { entitasId, entitasTipus, nezetModal: 'struktura' }
 //   - Az egyezés-vizsgálat (ismétlődő lépés kiszűrése) alapból JSON-összehasonlítás;
 //     az opciok.egyezik függvénnyel felülírható.
 class FoOldalTortenetKezelo {

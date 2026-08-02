@@ -16,7 +16,7 @@
 
 // ----- ÖSSZEHASONLÍTÓ FÜGGVÉNY -----
 // A rendezési szabály magja — sort() comparator formában, hogy bármely
-// testvér-lista (pakli-testvérek, Térkép fa-elrendezés gyerek-sorrendje)
+// testvér-lista (pakli-testvérek, Struktúra nézet fa-elrendezés gyerek-sorrendje)
 // ugyanazzal a szabállyal rendezhessen.
 // @param {Object} a - egyik elem (entitasId, hierarchikusOsszesPont, letrehozva)
 // @param {Object} b - másik elem

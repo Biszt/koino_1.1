@@ -7,11 +7,11 @@ import { tokenLekerese, aktivEntitasMentese } from '../../utils/authHelper.js'; 
 import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt postafiók a kártya menüjéből
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
-import TerkepModal from '../modals/TerkepModal.js'; // Ág-szűrt Térkép a kártya menüjéből
+import StrukturaModal from '../modals/StrukturaModal.js'; // Ág-szűrt Struktúra nézet a kártya menüjéből
 import RendezesModal from '../modals/RendezesModal.js'; // Ág-szűrt rendezés a kártya menüjéből (15. terv-pont)
 import ReszveteliBeallitasokModal from '../modals/ReszveteliBeallitasokModal.js'; // Passzív↔aktív szerep az entitáson
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js'; // „Fejlesztésre vár" üzenet (pl. Világtérkép)
-import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Térkép is ezt használja)
+import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös lépcsős cím-betűméret (a Struktúra nézet is ezt használja)
 
 // --- ALAP KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -103,7 +103,7 @@ async init() {
   if (this.modalKontenerAzon) {
     // KÖZÖS MENÜPONTOK MINDEN KÁRTYÁN, két csoportba rendezve (a kártya-specifikus
     // műveletek után): (a) INFO — Értesítések, Tudatpontok; (b) NAVIGÁCIÓ — Keresés,
-    // Térkép, Világtérkép, Rendezés. A csoportok elejét elválasztó vonal jelzi.
+    // Struktúra nézet, Világtérkép, Rendezés. A csoportok elejét elválasztó vonal jelzi.
 
     // (a) INFO-csoport — elválasztóval a kártya-specifikus műveletektől.
     // Az entitás ÁGÁNAK értesítései (ág-szűrt postafiók), a badge-dzsel.
@@ -137,11 +137,11 @@ async init() {
       elvalaszto: true,
       akcio:      () => this._agKeresesMegnyitasa()
     });
-    // Az entitás ÁGÁNAK térképe (ág-szűrt Térkép) — terv 13/b.
+    // Az entitás ÁGÁNAK struktúra nézete (ág-szűrt Struktúra nézet) — terv 13/b.
     opciok.push({
       ikon:    '🗺️',
-      felirat: 'Térkép',
-      akcio:   () => this._agTerkepMegnyitasa()
+      felirat: 'Struktúra nézet',
+      akcio:   () => this._agStrukturaMegnyitasa()
     });
     // Világtérkép — ÚJ, még fejlesztésre vár (minden menüben egységesen).
     opciok.push({
@@ -440,10 +440,10 @@ async _agKeresesMegnyitasa() {
 
 // ----- ÁG-SZŰRT TÉRKÉP MEGNYITÁSA -----
 // KÖZÖS menüpont minden kártya-hamburgerben: az entitás ÁGÁNAK teljes képernyős
-// térképe (terv 13/b). Az ág gyökere maga az entitás — a térképen kiemelve.
+// struktúra nézete (terv 13/b). Az ág gyökere maga az entitás — a struktúra nézeten kiemelve.
 // Csomópontra kattintva a pakli a választott entitásra navigál.
-async _agTerkepMegnyitasa() {
-  console.log('Kartya._agTerkepMegnyitasa - KEZDÉS', {
+async _agStrukturaMegnyitasa() {
+  console.log('Kartya._agStrukturaMegnyitasa - KEZDÉS', {
     entitasId: this.entitas?.entitasId,
     entitasTipus: this.entitas?.entitasTipus
   });
@@ -452,11 +452,11 @@ async _agTerkepMegnyitasa() {
   const adatok = this.entitas?.adatok ?? {};
   const agCim  = adatok.cim ?? adatok.nev ?? null;
 
-  const terkepModal = new TerkepModal(this.modalKontenerAzon, {
+  const strukturaModal = new StrukturaModal(this.modalKontenerAzon, {
     token:             this.token ?? tokenLekerese(),
     agEntitasId:       this.entitas.entitasId,
     aktualisEntitasId: this.entitas.entitasId,
-    cim:               agCim ? `Térkép – ${agCim}` : 'Térkép – ez az ág',
+    cim:               agCim ? `Struktúra nézet – ${agCim}` : 'Struktúra nézet – ez az ág',
 
     // Csomópontra kattintás → az entitásra navigálunk: elmentjük aktívnak, majd a
     // központi újratöltő callback a paklit arra az entitásra építi újra
@@ -466,10 +466,10 @@ async _agTerkepMegnyitasa() {
     }
   });
 
-  await terkepModal.init();
-  terkepModal.megnyitas();
+  await strukturaModal.init();
+  strukturaModal.megnyitas();
 
-  console.log('Kartya._agTerkepMegnyitasa - VÉGE');
+  console.log('Kartya._agStrukturaMegnyitasa - VÉGE');
 }
 
 // ----- ÁG-SZŰRT RENDEZÉS MEGNYITÁSA -----
@@ -749,7 +749,7 @@ _cimBetumeretBecsles(cimSav) {
   const hossz = cimGyerekek.reduce((ossz, el) => ossz + (el.textContent ?? '').trim().length, 0);
 
   // Lépcsős betűméret a karakterszám függvényében (px), a KÖZÖS skálából (a
-  // Térkép csomópont-címei is ezt használják). A maximum 24, mint eddig.
+  // Struktúra nézet csomópont-címei is ezt használják). A maximum 24, mint eddig.
   const meret = dinamikusCimBetumeret(hossz);
 
   // Minden cím-gyerekre (pl. egyezménynél a 🤝 jelző + a szöveg is)

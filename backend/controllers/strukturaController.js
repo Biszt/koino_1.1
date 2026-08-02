@@ -1,25 +1,25 @@
-// backend/controllers/terkepController.js
+// backend/controllers/strukturaController.js
 
 // ===================================
 // IMPORTOK
 // ===================================
-const TerkepService = require('../services/terkepService');
+const StrukturaService = require('../services/strukturaService');
 
 // ===================================
 // TÉRKÉP CONTROLLER OSZTÁLY
 // ===================================
-// Felelősség: a Térkép (teljes képernyős fa-nézet) két végpontja —
-// a query paraméterek kiolvasása és a TerkepService hívása.
-//   GET /api/terkep/darabszam — előzetes darabszám ("N entitás — elkészíted?")
-//   GET /api/terkep           — a fa lapozott lekérése (kurzoros)
-class TerkepController {
+// Felelősség: a Struktúra nézet (teljes képernyős fa-nézet) két végpontja —
+// a query paraméterek kiolvasása és a StrukturaService hívása.
+//   GET /api/struktura/darabszam — előzetes darabszám ("N entitás — elkészíted?")
+//   GET /api/struktura           — a fa lapozott lekérése (kurzoros)
+class StrukturaController {
 
   // ===================================
   // DARABSZÁM
   // ===================================
-  // GET /api/terkep/darabszam?agEntitasId=<id>
+  // GET /api/struktura/darabszam?agEntitasId=<id>
   async darabszam(req, res) {
-    console.log('TerkepController.darabszam - KEZDÉS', { query: req.query });
+    console.log('StrukturaController.darabszam - KEZDÉS', { query: req.query });
 
     try {
       const eemberId = req.user?.id;
@@ -30,12 +30,12 @@ class TerkepController {
         });
       }
 
-      // Opcionális ág-szűrő (a kártya-menük Térkép pontja)
+      // Opcionális ág-szűrő (a kártya-menük Struktúra nézet pontja)
       const agEntitasId = req.query.agEntitasId || null;
 
-      const eredmeny = await TerkepService.darabszamLekerese(agEntitasId);
+      const eredmeny = await StrukturaService.darabszamLekerese(agEntitasId);
 
-      console.log('TerkepController.darabszam - VÉGE', eredmeny);
+      console.log('StrukturaController.darabszam - VÉGE', eredmeny);
 
       return res.status(200).json({
         success: true,
@@ -43,7 +43,7 @@ class TerkepController {
       });
 
     } catch (error) {
-      console.error('TerkepController.darabszam - HIBA', { hiba: error.message });
+      console.error('StrukturaController.darabszam - HIBA', { hiba: error.message });
       return res.status(500).json({
         success: false,
         message: error.message ?? 'Darabszám-lekérési hiba'
@@ -54,9 +54,9 @@ class TerkepController {
   // ===================================
   // LAP LEKÉRÉSE
   // ===================================
-  // GET /api/terkep?kurzor=<utolsoLapKurzor>&lapMeret=2000&agEntitasId=<id>
+  // GET /api/struktura?kurzor=<utolsoLapKurzor>&lapMeret=2000&agEntitasId=<id>
   async lap(req, res) {
-    console.log('TerkepController.lap - KEZDÉS', { query: req.query });
+    console.log('StrukturaController.lap - KEZDÉS', { query: req.query });
 
     try {
       const eemberId = req.user?.id;
@@ -74,13 +74,13 @@ class TerkepController {
       let lapMeret = parseInt(req.query.lapMeret, 10);
       if (!Number.isInteger(lapMeret) || lapMeret < 1) lapMeret = 2000;
 
-      // Opcionális ág-szűrő (a kártya-menük Térkép pontja): ág-módban csak a
+      // Opcionális ág-szűrő (a kártya-menük Struktúra nézet pontja): ág-módban csak a
       // részfát lapozzuk le, nem a teljes fát (skálázható, osLanc-alapú szűrés).
       const agEntitasId = req.query.agEntitasId || null;
 
-      const eredmeny = await TerkepService.lapLekerese(kurzor, lapMeret, agEntitasId);
+      const eredmeny = await StrukturaService.lapLekerese(kurzor, lapMeret, agEntitasId);
 
-      console.log('TerkepController.lap - VÉGE', {
+      console.log('StrukturaController.lap - VÉGE', {
         sorokSzama: eredmeny.sorok.length,
         vanKovetkezoLap: !!eredmeny.kovetkezoKurzor
       });
@@ -91,10 +91,10 @@ class TerkepController {
       });
 
     } catch (error) {
-      console.error('TerkepController.lap - HIBA', { hiba: error.message });
+      console.error('StrukturaController.lap - HIBA', { hiba: error.message });
       return res.status(500).json({
         success: false,
-        message: error.message ?? 'Térkép-lekérési hiba'
+        message: error.message ?? 'Struktúra nézet-lekérési hiba'
       });
     }
   }
@@ -103,4 +103,4 @@ class TerkepController {
 // ===================================
 // EXPORTÁLÁS
 // ===================================
-module.exports = new TerkepController();
+module.exports = new StrukturaController();

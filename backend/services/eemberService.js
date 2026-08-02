@@ -26,7 +26,7 @@ const ErtekSzamitasService = require('./ertekSzamitasService');
 const ErtesitesRepository = require('../repositories/ertesitesRepository');
 const ErtesitesiBeallitasRepository = require('../repositories/ertesitesiBeallitasRepository');
 // A megmaradó (mások által is támogatott) entitásoknál a létrehozó anonimizálásához.
-// A modellek közvetlen elérése bevált minta ebben a rétegben (lásd terkepService).
+// A modellek közvetlen elérése bevált minta ebben a rétegben (lásd strukturaService).
 const Tartalom = require('../models/tartalom');
 const Kategoria = require('../models/kategoria');
 const TartalomTipus = require('../models/tartalomTipus');

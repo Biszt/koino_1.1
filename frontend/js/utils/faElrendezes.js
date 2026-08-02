@@ -1,6 +1,6 @@
 // frontend/js/utils/faElrendezes.js
 
-// ===== FA-ELRENDEZÉS (a Térkép elrendezés-motorja) =====
+// ===== FA-ELRENDEZÉS (a Struktúra nézet elrendezés-motorja) =====
 // Felelősség: a backend lapos sor-listájából (entitasId, szuloId, ...) fa-struktúra
 // építése és minden csomópont (x, y) VILÁG-koordinátájának kiszámítása.
 //   - x: a levelek balról jobbra sorszámozódnak; a belső csomópont a gyerekei
@@ -12,9 +12,9 @@
 //     csökkenő → régebbi előrébb → entitasId) — ugyanaz, mint a pakliban.
 // A feldolgozás GENERÁTORRAL darabolt (elhelyezesLepesekben): a hívó minden
 // darab után frissítheti a folyamatjelzőt, és bármikor abbahagyhatja (return)
-// — ez adja a Térkép "elhelyezve X / Y" kijelzését és a megszakíthatóságot.
+// — ez adja a Struktúra nézet "elhelyezve X / Y" kijelzését és a megszakíthatóságot.
 // SZÁNDÉKOSAN nincs DOM-függése: Node-ból egység-tesztelhető.
-// Használja: TerkepModal.
+// Használja: StrukturaModal.
 
 import { testverOsszehasonlitas } from './testverRendezes.js';
 
@@ -53,7 +53,7 @@ constructor(sorok, agEntitasId = null) {
       hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
       letrehozva:             sor.letrehozva ?? null,
       szuloKulcs:             sor.szuloId ? sor.szuloId.toString() : null,
-      // Mellék-ikon adatok (Térkép közeli nézet): Tartalom kategóriái/típusa,
+      // Mellék-ikon adatok (Struktúra nézet közeli nézet): Tartalom kategóriái/típusa,
       // illetve Javaslat/Egyezmény művelet-típusa — a backend tölti fel.
       kategoriaIkonok:        sor.kategoriaIkonok ?? [],
       tipusIkon:              sor.tipusIkon ?? null,
@@ -124,7 +124,7 @@ constructor(sorok, agEntitasId = null) {
   // Kiindulási csomópontok: előbb a gyökerek, majd — CSAK globális módban —
   // maradék-söprésként az összes többi csomópont. Erre a körkörös (hibás)
   // szülő-láncok miatt van szükség: egy kör egyik tagja sem gyökér, így a
-  // gyökerekből sosem érnénk el őket — a söprés nélkül eltűnnének a térképről.
+  // gyökerekből sosem érnénk el őket — a söprés nélkül eltűnnének a struktúra nézetről.
   // A már bejárt csomópontokat a ciklus eleje úgyis átugorja, ezért a söprés
   // a normál (kör nélküli) esetben nem csinál semmit.
   const kiindulok = this.agEntitasId

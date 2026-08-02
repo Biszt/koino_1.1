@@ -166,7 +166,7 @@ async rendezettListaOsszeallitasa(mod = 'ido', eemberId = null, opciok = {}) {
         // pontosan az, amit a fejléc `entitasSajatTudatpont`-ként mutat (közös forrás).
         // Erre van csökkenő index → a DB rendez ÉS vág (top-N), skálázható nagy adatnál is.
         // Nincs 0-pontos entitás (az mindig törlődik), így a tudatpontAllokacio a teljes
-        // entitás-halmazt lefedi (a Térkép/idő-móddal egyező 27 elem). A kártya-fejléchez
+        // entitás-halmazt lefedi (a Struktúra nézet/idő-móddal egyező 27 elem). A kártya-fejléchez
         // kellő hierarchikus mezőket (hierarchikusOsszesPont, szuloId, letrehozva) egy
         // batch $in-nel csatoljuk a másik kollekcióból.
         const rendezettAllok = await tudatpontRepository.findMindSajatPontSzerint(irany, limit, agazatId);

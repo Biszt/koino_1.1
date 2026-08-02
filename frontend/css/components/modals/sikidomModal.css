@@ -13,7 +13,7 @@
 }
 
 /* A nézet-váltás hidden attribútummal történik; a lenti display:flex ERŐSEBB
-   a beépített [hidden]-nél → explicit felülírás kell (mint a Térképnél). */
+   a beépített [hidden]-nél → explicit felülírás kell (mint a Struktúra nézetnél). */
 .sikidom-modal [hidden] {
   display: none !important;
 }
