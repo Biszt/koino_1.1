@@ -825,7 +825,9 @@ aktualisEntitas() {
 }
 
 // ----- ESEMÉNYEK BEKÖTÉSE -----
-// Wheel eseményt figyelünk a vízszintes testvérváltáshoz.
+// A vízszintes testvérváltás két egeres/érintős módja:
+//   1. wheel (vízszintes deltaX — érintőpad / Shift+görgetés),
+//   2. bal gomb + vízszintes HÚZÁS (hagyományos egérre is — carousel/swipe minta).
 // Debounce + instance-szintű jelző védi a többszörös gyors tüzelés ellen.
 esemenyekBekotese() {
   console.log('Pakli.esemenyekBekotese - KEZDÉS');
@@ -864,6 +866,73 @@ esemenyekBekotese() {
       swipeFolyamatban = false;
     });
   }, { signal });
+
+  // ===== EGERES HÚZÁS (bal gomb + vízszintes) → testvérváltás =====
+  // A wheel-navigáció párja hagyományos egérre (Csaba kérése, 2026-08-02): egy
+  // sima egérgörgő csak függőleges deltaY-t ad, ezért a vízszintes wheel nem megy
+  // vele. A nyomva tartott bal gomb + vízszintes húzás viszont igen — ez a
+  // carousel/swipe minta párja egérrel, ugyanazzal az iránnyal és küszöbbel.
+  //
+  // A swipeKuszob (60px) védi a sima kattintást: kattintás = kártyaválasztás marad,
+  // csak a küszöböt átlépő húzás vált testvért. A húzást lezáró 'click'-et
+  // capture-fázisban elnyeljük, hogy ne váltson kártya-kiválasztást is.
+  let huzasStartX = null;          // a lenyomás X-e (null = nincs folyamatban lévő húzás)
+  let huzasStartY = null;
+  let huzasKuszobAtlepve = false;  // valódi húzás történt-e (a kattintás elnyomásához)
+
+  kontener.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;                         // csak a BAL egérgomb
+    if (e.target.closest('.testver-jelzo')) return;     // a nyíl-gombon ne induljon húzás
+    huzasStartX = e.clientX;
+    huzasStartY = e.clientY;
+    huzasKuszobAtlepve = false;
+  }, { signal });
+
+  // A move/up a window-on figyel, hogy a húzás akkor is végigkövethető legyen,
+  // ha a kurzor közben elhagyja a paklit.
+  window.addEventListener('pointermove', (e) => {
+    if (huzasStartX === null) return;
+    const dx = e.clientX - huzasStartX;
+    const dy = e.clientY - huzasStartY;
+    // Csak akkor húzás, ha a VÍZSZINTES elmozdulás dominál és átlépi a küszöböt.
+    if (!huzasKuszobAtlepve &&
+        Math.abs(dx) >= this.swipeKuszob &&
+        Math.abs(dx) > Math.abs(dy)) {
+      huzasKuszobAtlepve = true;
+      document.body.classList.add('testver-huzas-folyamatban'); // szövegkijelölés tiltása + fogó-kurzor
+    }
+  }, { signal });
+
+  window.addEventListener('pointerup', (e) => {
+    if (huzasStartX === null) return;
+    const dx = e.clientX - huzasStartX;
+    huzasStartX = null;
+    huzasStartY = null;
+    document.body.classList.remove('testver-huzas-folyamatban');
+
+    if (!huzasKuszobAtlepve) return;          // nem volt húzás → marad a normál kattintás
+    if (this.testverBetoltesAlatt) return;    // betöltés közben nem indítunk új váltást
+    if (swipeFolyamatban) return;
+
+    // Balra húzás (dx<0) → következő testvér; jobbra húzás → előző (carousel-logika).
+    const irany = dx < 0 ? 'kovetkezo' : 'elozo';
+    console.log('Pakli.esemenyekBekotese - húzás esemény', { irany, dx });
+
+    swipeFolyamatban = true;
+    this.testverValtasa(irany).finally(() => {
+      swipeFolyamatban = false;
+    });
+  }, { signal });
+
+  // A húzást lezáró kattintást capture-fázisban elnyeljük (a kártya click-figyelője
+  // ELŐTT fut), hogy a húzás ne váltson kártya-kiválasztást is.
+  kontener.addEventListener('click', (e) => {
+    if (huzasKuszobAtlepve) {
+      e.stopPropagation();
+      e.preventDefault();
+      huzasKuszobAtlepve = false;
+    }
+  }, { capture: true, signal });
 
   console.log('Pakli.esemenyekBekotese - VÉGE');
 }

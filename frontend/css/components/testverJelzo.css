@@ -2,14 +2,17 @@
 
 /* ===== TESTVÉR-JELZŐ KACSACSŐRÖK ===== */
 /* A kiválasztott kártya két szélén lebegő ‹ N és N › gombok.
-   A hordozó a .pakli-kartya külső wrapper (position: relative, nincs rajta
-   overflow: hidden), így a gombok kicsit ki is lóghatnak a kártya szélén. */
+   FÜGGŐLEGESEN a KÉPERNYŐ közepéhez rögzítve (position: fixed; top: 50%),
+   így mindig könnyen elérhetők, nem a kártya közepéhez tapadnak (Csaba kérése,
+   2026-08-02). A VÍZSZINTES helyüket (a kártya bal/jobb széléhez) a
+   TestverJelzo._pozicionalas() számolja a kártya getBoundingClientRect-jéből,
+   inline left/right stílusként. Ezért a gombok a <body>-ra kerülnek. */
 
 .testver-jelzo {
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 5; /* a kártya belső tartalma fölé */
+  z-index: 150; /* a kártyák fölött, de a hamburger (200) és a modal (300) alatt */
 
   display: inline-flex;
   align-items: center;
@@ -34,13 +37,22 @@
   transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-/* Bal / jobb pozíció — kicsit kilóg a kártya szélén, hogy "lebegjen" */
+/* Bal / jobb VÍZSZINTES pozíció — a KÉPERNYŐ (monitor) széléhez rögzítve, fix
+   távolságra, a kártyától FÜGGETLENÜL. Így testvérváltáskor (a kártya-animáció
+   alatt) sem mozdulnak el, mindig ugyanott vannak (Csaba kérése, 2026-08-03). */
 .testver-jelzo--bal {
-  left: -0.5rem;
+  left: 1rem;
 }
 
 .testver-jelzo--jobb {
-  right: -0.5rem;
+  right: 1rem;
+}
+
+/* Egeres testvér-húzás közben (bal gomb + vízszintes húzás): ne jelöljön ki
+   szöveget, és jelezze a fogást a kurzor (Csaba kérése, 2026-08-02). */
+body.testver-huzas-folyamatban {
+  user-select: none;
+  cursor: grabbing;
 }
 
 /* UGRÁS-gomb (|‹ legelső / ›| legutolsó): ugyanaz az áttetsző stílus és bal/jobb

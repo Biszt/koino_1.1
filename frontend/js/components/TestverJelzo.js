@@ -40,22 +40,26 @@ megjelenites(hordozoElem, elozoSzam, kovetkezoSzam) {
 
   // BAL oldal: lépés az előző testvérre + ugrás a legelső testvérre
   if (elozoSzam > 0) {
-    this._gombKihelyezese(hordozoElem, this._gombLetrehozasa('elozo', elozoSzam));
-    this._gombKihelyezese(hordozoElem, this._ugrasGombLetrehozasa('legelso'));
+    this._gombKihelyezese(this._gombLetrehozasa('elozo', elozoSzam));
+    this._gombKihelyezese(this._ugrasGombLetrehozasa('legelso'));
   }
   // JOBB oldal: lépés a következő testvérre + ugrás a legutolsó testvérre
   if (kovetkezoSzam > 0) {
-    this._gombKihelyezese(hordozoElem, this._gombLetrehozasa('kovetkezo', kovetkezoSzam));
-    this._gombKihelyezese(hordozoElem, this._ugrasGombLetrehozasa('legutolso'));
+    this._gombKihelyezese(this._gombLetrehozasa('kovetkezo', kovetkezoSzam));
+    this._gombKihelyezese(this._ugrasGombLetrehozasa('legutolso'));
   }
 
   console.log('TestverJelzo.megjelenites - VÉGE', { gombok: this.gombok.length });
 }
 
 // ----- EGY GOMB KIHELYEZÉSE -----
-// A hordozóra teszi és nyilvántartja a takarításhoz.
-_gombKihelyezese(hordozoElem, gomb) {
-  hordozoElem.appendChild(gomb);
+// A gombok FIXen a KÉPERNYŐHÖZ (monitorhoz) igazodnak: függőlegesen a képernyő
+// közepén, vízszintesen a képernyő bal/jobb szélénél — mindezt a CSS adja
+// (position: fixed). Ezért a body-ra tesszük őket, így egy transzformált szülő
+// (pl. a kártya-váltás animációja) NEM mozdítja el őket — testvérváltáskor is
+// pontosan egy helyben maradnak (Csaba kérése, 2026-08-03).
+_gombKihelyezese(gomb) {
+  document.body.appendChild(gomb);
   this.gombok.push(gomb);
 }
 
