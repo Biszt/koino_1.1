@@ -319,6 +319,15 @@ async paklitRendel() {
 
   kontener.appendChild(pakliWrapper);
 
+  // A testvér-navigáció figyelőinek (wheel + egeres húzás + érintéses swipe) ÚJRA-
+  // bekötése. MIÉRT KELL ITT (2026-08-03, mobil-hiba oka): a LAPOS (rendezett) nézet
+  // renderelése abort()-tal leállítja ezeket a figyelőket, és korábban csak az init()
+  // kötötte be őket — így a laposból hierarchikusba visszatérve a nyilak ugyan
+  // visszajöttek (azokat ez a render újra kirakja), de a HÚZÁS néma maradt.
+  // Az esemenyekBekotese() idempotens (előbb abortálja a régi figyelőket), ezért
+  // itt biztonságosan hívható minden hierarchikus rendereléskor.
+  this.esemenyekBekotese();
+
   // A kártyák most már a DOM-ban vannak → itt van értelme a mérésen alapuló
   // munkának. requestAnimationFrame: megvárjuk a következő festési kört, amikor a
   // böngésző már kiszámolta a tényleges méreteket.
@@ -867,11 +876,16 @@ esemenyekBekotese() {
     });
   }, { signal });
 
-  // ===== EGERES HÚZÁS (bal gomb + vízszintes) → testvérváltás =====
+  // ===== VÍZSZINTES HÚZÁS (egér ÉS érintés) → testvérváltás =====
   // A wheel-navigáció párja hagyományos egérre (Csaba kérése, 2026-08-02): egy
   // sima egérgörgő csak függőleges deltaY-t ad, ezért a vízszintes wheel nem megy
   // vele. A nyomva tartott bal gomb + vízszintes húzás viszont igen — ez a
   // carousel/swipe minta párja egérrel, ugyanazzal az iránnyal és küszöbbel.
+  //
+  // Pointer-események → ugyanez a kód viszi az ÉRINTÉSES swipe-ot is (mobil).
+  // FONTOS: ehhez kell a `.pakli-wrapper { touch-action: pan-y }` a pakli.css-ben,
+  // különben a böngésző elveszi az oldalirányú mozdulatot görgetésre és
+  // 'pointercancel'-lel megszakít minket (2026-08-03-i mobil-hiba oka).
   //
   // A swipeKuszob (60px) védi a sima kattintást: kattintás = kártyaválasztás marad,
   // csak a küszöböt átlépő húzás vált testvért. A húzást lezáró 'click'-et
@@ -880,8 +894,20 @@ esemenyekBekotese() {
   let huzasStartY = null;
   let huzasKuszobAtlepve = false;  // valódi húzás történt-e (a kattintás elnyomásához)
 
+  // A húzás állapotának visszaállítása (közös: pointerup és pointercancel után is)
+  const huzasVisszaallitas = () => {
+    huzasStartX = null;
+    huzasStartY = null;
+    document.body.classList.remove('testver-huzas-folyamatban');
+  };
+
   kontener.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;                         // csak a BAL egérgomb
+    if (!e.isPrimary) return;                           // többujjas érintés (pl. nagyítás) nem húzás
+    // ÉRINTÉST NEM ITT kezelünk: a mobil swipe-ot a lentebbi natív touch-figyelők
+    // viszik (azok minden böngészőben mennek és preventDefault-tal el tudják venni
+    // a gesztust). Enélkül egy érintés MINDKÉT ágon lefutna → dupla testvérváltás.
+    if (e.pointerType === 'touch') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // egérnél csak a BAL gomb
     if (e.target.closest('.testver-jelzo')) return;     // a nyíl-gombon ne induljon húzás
     huzasStartX = e.clientX;
     huzasStartY = e.clientY;
@@ -903,12 +929,19 @@ esemenyekBekotese() {
     }
   }, { signal });
 
+  // Ha a böngésző elveszi a mozdulatot (pl. mégis függőleges görgetés lett belőle),
+  // 'pointercancel' jön 'pointerup' HELYETT — ilyenkor csak takarítunk, nem váltunk.
+  window.addEventListener('pointercancel', () => {
+    if (huzasStartX === null) return;
+    console.log('Pakli.esemenyekBekotese - húzás megszakítva (pointercancel)');
+    huzasVisszaallitas();
+    huzasKuszobAtlepve = false;
+  }, { signal });
+
   window.addEventListener('pointerup', (e) => {
     if (huzasStartX === null) return;
     const dx = e.clientX - huzasStartX;
-    huzasStartX = null;
-    huzasStartY = null;
-    document.body.classList.remove('testver-huzas-folyamatban');
+    huzasVisszaallitas();
 
     if (!huzasKuszobAtlepve) return;          // nem volt húzás → marad a normál kattintás
     if (this.testverBetoltesAlatt) return;    // betöltés közben nem indítunk új váltást
@@ -933,6 +966,91 @@ esemenyekBekotese() {
       huzasKuszobAtlepve = false;
     }
   }, { capture: true, signal });
+
+  // ===== ÉRINTÉSES SWIPE (mobil) — natív touch-események =====
+  // Miért külön, a pointer-ág mellett (2026-08-03)? Mert mobilon a pointer-alapú
+  // húzás nem működött: a böngésző a saját görgetésének foglalta le a mozdulatot,
+  // és 'pointercancel'-lel megszakított minket. A natív touch-figyelők MINDEN mobil
+  // böngészőben mennek, és — mivel a KONTÉNERRE, `passive: false`-szal kötjük be —
+  // a touchmove-ban `preventDefault()`-tal EL TUDJUK VENNI a gesztust a böngészőtől.
+  //
+  // Az irányt egyszer, az első ~10px elmozdulásnál eldöntjük és RÖGZÍTJÜK:
+  //  - függőleges → hozzá se nyúlunk, marad a normál lapgörgetés,
+  //  - vízszintes → miénk a gesztus (preventDefault), és a küszöböt átlépve váltunk.
+  const IRANY_DONTES_PX = 10;   // ennyi elmozdulás után döntjük el, merre indult az ujj
+  let erintesStartX  = null;
+  let erintesStartY  = null;
+  let erintesVizszintes = false; // a rögzített irány: true = miénk a gesztus
+  let erintesDontve  = false;    // eldöntöttük-e már az irányt
+
+  kontener.addEventListener('touchstart', (e) => {
+    // Új érintés indul: a kattintás-elnyomó jelzőt MINDIG nullázzuk, különben egy
+    // korábbi swipe után beragadna, és a következő koppintás nem választana kártyát.
+    huzasKuszobAtlepve = false;
+
+    if (e.touches.length !== 1) return;               // többujjas (nagyítás) nem swipe
+    if (e.target.closest('.testver-jelzo')) return;   // a nyíl-gombon ne induljon swipe
+    erintesStartX = e.touches[0].clientX;
+    erintesStartY = e.touches[0].clientY;
+    erintesVizszintes = false;
+    erintesDontve = false;
+  }, { passive: false, signal });
+
+  kontener.addEventListener('touchmove', (e) => {
+    if (erintesStartX === null) return;
+    if (e.touches.length !== 1) return;
+
+    const dx = e.touches[0].clientX - erintesStartX;
+    const dy = e.touches[0].clientY - erintesStartY;
+
+    // Az irány egyszeri eldöntése (és rögzítése) az első érdemi elmozdulásnál
+    if (!erintesDontve && (Math.abs(dx) > IRANY_DONTES_PX || Math.abs(dy) > IRANY_DONTES_PX)) {
+      erintesDontve = true;
+      erintesVizszintes = Math.abs(dx) > Math.abs(dy);
+    }
+
+    // Vízszintes gesztus: a MIÉNK — megakadályozzuk, hogy a böngésző elvegye görgetésre
+    if (erintesVizszintes && e.cancelable) {
+      e.preventDefault();
+    }
+  }, { passive: false, signal });
+
+  kontener.addEventListener('touchend', (e) => {
+    if (erintesStartX === null) return;
+
+    const veg = e.changedTouches[0];
+    const dx  = veg ? veg.clientX - erintesStartX : 0;
+    const vizszintesVolt = erintesVizszintes;
+
+    erintesStartX = null;
+    erintesStartY = null;
+    erintesVizszintes = false;
+    erintesDontve = false;
+
+    if (!vizszintesVolt) return;                    // függőleges volt → nem a mi dolgunk
+    if (Math.abs(dx) < this.swipeKuszob) return;    // túl rövid swipe → nincs váltás
+    if (this.testverBetoltesAlatt) return;
+    if (swipeFolyamatban) return;
+
+    // A koppintás utáni kártya-kiválasztást is elnyomjuk (a click a touchend után jön)
+    huzasKuszobAtlepve = true;
+
+    // Balra swipe (dx<0) → következő testvér; jobbra → előző (ugyanaz, mint egérrel).
+    const irany = dx < 0 ? 'kovetkezo' : 'elozo';
+    console.log('Pakli.esemenyekBekotese - érintéses swipe', { irany, dx });
+
+    swipeFolyamatban = true;
+    this.testverValtasa(irany).finally(() => {
+      swipeFolyamatban = false;
+    });
+  }, { passive: false, signal });
+
+  kontener.addEventListener('touchcancel', () => {
+    erintesStartX = null;
+    erintesStartY = null;
+    erintesVizszintes = false;
+    erintesDontve = false;
+  }, { signal });
 
   console.log('Pakli.esemenyekBekotese - VÉGE');
 }

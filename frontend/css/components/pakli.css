@@ -22,6 +22,17 @@
   padding-bottom: calc(var(--space-12) + var(--space-4));
   flex: 1;       /* kitölti a szülő teljes magasságát */
   min-height: 0; /* flex gyerekeknél min-height: 100% helyett ez kell */
+
+  /* ÉRINTÉSES TESTVÉR-HÚZÁS (2026-08-03, Csaba jelezte: mobilon nem működött).
+     Alapból (touch-action: auto) a böngésző MAGÁNAK foglalja le az oldalirányú
+     mozdulatot görgetésre: ilyenkor 'pointercancel'-t küld, és onnantól NEM kapunk
+     több pointermove/pointerup-ot → a húzásos testvérváltás sosem fejeződik be.
+     A 'pan-y' azt mondja: a FÜGGŐLEGES görgetés maradjon a böngészőé, a
+     VÍZSZINTES mozdulat viszont a miénk (Pakli.esemenyekBekotese kezeli).
+     A második sor progresszív ráadás: ahol támogatott, a csippentős nagyítás is
+     megmarad; ahol nem, ott érvénytelen → az első sor marad érvényben. */
+  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Nagyobb képernyőn csak a padding nő — szélesség-korlát NINCS,
