@@ -25,7 +25,7 @@ A menü CSOPORTOKBA rendezve, közöttük elválasztó vonallal (2026-07-22): (1
 | 1. Nézetek | Keresés | ✅ | KeresesModal (12. pont) |
 | 1. Nézetek | Struktúra nézet | ✅ | A teljes entitás-fa teljes képernyős, interaktív nézete (13/b) |
 | 1. Nézetek | **Világtérkép** | 🚧 | ÚJ (2026-07-22) — fejlesztésre vár; a régi koino világtérkép újraépítése. MINDEN menüben szerepel (fő + kártya) |
-| 1. Nézetek | Síkidom nézet | 🚧 | Fejlesztésre vár (2026-07-22, Csaba): a menü a „Fejlesztésre vár" üzenetet hívja; a nézet KÓDJA (`SikidomModal`, `_sikidomMegnyitasa`) megmarad (14. terv-pont) |
+| 1. Nézetek | Síkidom nézet | ✅ | ÚJRAÉPÍTVE (2026-08-03): terület ∝ tudatpont, háromszögeléses pakolás üres maggal, képernyő-vezérelt betöltés, KORLÁTLAN nagyítás horgonyváltással (pislogás nélkül); koppintásra egyetlen bezárható kártya (14. terv-pont) |
 | 1. Nézetek | Rendezés | ✅ | Pakli rendezés-választó (15. pont): hierarchikus/időrend/saját/ágazati pont; fő menü = globális |
 | 2. Értesítések | Értesítések | ✅ | ErtesitesekModal + olvasatlan badge |
 | 2. Értesítések | Értesítési beállítások | ✅ | Globális ErtesitesiBeallitasModal |
@@ -420,11 +420,20 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       teljes halmaz megjelenítését kell darabolni. Nyitott terv-pont, még nem
       kezdett.
 
-14. [ ] **Síkidom nézet (fő menü) — ⏸️ FELFÜGGESZTVE (2026-07-20).** Az 1. lépés
-    (statikus ablak) elkészült és böngésző nélkül tesztelt, DE a megjelenés még
-    NEM jó (Csaba böngészős próbája) → jegelve, később visszatérünk. A kód és a
-    terv MEGMARAD (a Struktúra nézethez tértünk vissza). A dinamikus felfedés + drill-down
-    (2. lépés) is hátra. Az alábbi terv és az 1. lépés leírása érvényben marad.
+14. [x] **Síkidom nézet (fő menü) — ✅ ÚJRAÉPÍTVE (2026-08-03).** A 2026-07-20-i
+    1. lépés (napraforgó-spirál) megbukott a böngészős próbán: a mérés szerint a
+    testvérek a kisebbik átmérőjük FELÉIG átfedték egymást, mert a spirál sugár-képlete
+    100%-os területkitöltést feltételezett (körökkel ez geometriailag lehetetlen).
+    Ezért elölről kezdtük, Csaba döntései szerint (2026-08-03):
+    minden síkidom KÖRKÉNT pozicionálódik; a TERÜLET arányos a tudatponttal;
+    a pozicionálás a koino_1.0 HÁROMSZÖGELÉSE, kiegészítve egy ÜRES MAGGAL
+    (ez adja a stabilitást és a lapozás helyét); a betöltést a KÉPERNYŐ-ÁTMÉRŐ
+    vezérli, nem a szülő-gyerek bejárás; a látómezőn +50%-on kívüli ágakat
+    elengedjük; koppintásra a nézetben maradunk, csak az entitás kártyája jelenik
+    meg bezárhatóan (az alsó sáv végig látszik, a kártya hamburgeréből visz
+    „Pakli nézet" az adott ágra).
+    A régi `sikidomElrendezes.js`, a `reszfaLekerese` és a `GET /api/sikidom`
+    TÖRÖLVE.
     A koino_1.0 (`C:/koino_1.0`) síkidomos megjelenítésének újraépítése tiszta
     architektúrában. A koino_1.0 kód KÁOSZ (window.KioData/KioSystem globálisok,
     `_mod_mod_mod_mod` fájlnevek, duplikált algoritmus, D3+SVG, rétegek nélkül) —
@@ -485,8 +494,75 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     `hierarchikusTudatpontAllokacio`-ra épül (mint a Struktúra nézet; a Struktúra nézet
     `findGyerekIdkBySzulok`-jához hasonló ág-bejáró segéddel).
 
-    **Kis lépések (Csaba egyetért):**
-    - **1. lépés — ✅ KÉSZ (2026-07-20; böngészős teszt: teszt.md 51):** backend
+    ### ÁLLAPOT 2026-08-04 (session-váltó összefoglaló)
+
+    **MŰKÖDIK, a menüből elérhető (🔷 Síkidom nézet).** A fejlesztői adatbázisban
+    105 gyökér van (`tools/sikidomTesztAdat.js` hozta létre), a nézet kirajzolja,
+    lehet nagyítani, koppintásra megjelenik a bezárható kártya.
+
+    **Az elkészült rétegek:**
+    - `GET /api/sikidom/gyerekek` — KÜSZÖBÖS betöltés (nem lapozás), kurzorral.
+      Lásd a teszt.md API-referenciáját. A régi `GET /api/sikidom` **megszűnt**.
+    - `frontend/js/utils/sikidomMeret.js` — tudatpont → sugár (TERÜLET ∝ pont,
+      szintenként /20); `PAKOLASI_SURUSEG = 0.45` (MÉRT érték).
+    - `frontend/js/utils/sikidomPakolas.js` — háromszögeléses kör-pakolás üres
+      maggal, determinisztikus (nincs `Math.random`), beépített zsugorító vészfékkel.
+    - `frontend/js/utils/sikidomHorgony.js` — KORLÁTLAN nagyítás horgonyváltással.
+      Mérve: 295 váltás 10²⁸⁷-szeres nagyításig, 2,9·10⁻¹¹ px képeltéréssel →
+      **nincs pislogás** (ez váltja ki a koino_1.0 vászon-újraépítését).
+    - `SikidomModal.js` — Canvas, képernyő-vezérelt betöltés/elengedés, pan/zoom,
+      csippentés, koppintás → egyetlen bezárható kártya (`kartyaGyar.js` +
+      `Kartya.extraMenuOpciok` → „🃏 Pakli nézet"). Alsó sáv végig látszik.
+    - Törölve: `sikidomElrendezes.js` (a régi napraforgó-spirál, 50% átfedéssel).
+
+    **⚠️ NYITOTT PROBLÉMA — itt tartottunk (a következő session ezzel kezdjen):**
+    Ha egy szülő alatt SOK testvér van (a kérés-plafonnál, 150-nél több), a
+    betöltés adagokban történik, és minden adag az előző adag üres magjába
+    pakolódik. A mérés szerint **a rekurzív gyűrűs beágyazás elveszti a
+    pakolási hatékonyságot**: a fenntartott mag 2-3 adag után elfogy, és onnantól
+    **entitások maradnak ki** (600 gyerekes próbán 60-as adagokkal csak 180,
+    küszöbös adagokkal csak 5 került ki).
+    - Az ok: a `PAKOLASI_SURUSEG = 0.45` EGYETLEN adag magba pakolására lett mérve,
+      nem egymásba ágyazott adagokra. Minden újabb gyűrű vékonyabb, ott a pakolás
+      hatékonysága sokkal rosszabb.
+    - A következő lépés: **sűrűség-söprés** (0,45 → 0,3 → 0,2 → 0,1), hogy kiderüljön,
+      milyen feltételezett sűrűséggel hány adag ágyazható egymásba veszteség nélkül;
+      ha ez nem elég, a gyűrűs beágyazás helyett más elrendezés kell.
+    - **A jelenlegi fejlesztői adaton NEM jelentkezik** (105 gyökér egyetlen kérésbe
+      belefér), tehát a nézet böngészőben rendben működik.
+
+    **Menet közben javított hibák (ne essünk vissza beléjük):**
+    - `pakolas`: a `maxKulsoSugar = 0`-t tévesen „nincs korlát"-nak vette →
+      az adagok teljes méretben egymásra pakolódtak (több ezer átfedés). Most a
+      0 = „nincs hely", és üres eredményt ad.
+    - A magra tett fix `maxKülső × 0,9` ráhagyás adagonként ÚJRA levonódott
+      (0,9²⁸ ≈ 0,05) → elvette azt a területet, ami az adagnak kellett. Helyette
+      levezetett korlát: `mag ≤ √(maxKülső² − adagTerület / sűrűség)`.
+    - Az üres mag mérete NEM becslés: a backend `osszesGyerekPont`-jából a
+      TÉNYLEGES maradék jön (a korábbi becslés a szülő saját pontját is
+      beleszámolta → kétszeres túlfoglalás, látható üres gyűrű).
+    - A minimum mag a LEGKISEBB testvérhez van kötve (nem a legnagyobbhoz),
+      különben a középső üresség nem igazodik a képernyőhöz.
+    - `findBySzuloId` / `findGyokerek`: a rendezés döntője az `_id` — enélkül
+      azonos pontszámnál a lapok átfedtek volna.
+
+    **Csaba döntései (kötelező érvényűek):**
+    - Minden síkidomot KÖRKÉNT pozicionálunk; a TERÜLET arányos a tudatponttal.
+    - Az üres mag MINDIG van (nem feltételhez kötött).
+    - Koppintás → a nézet MARAD, csak az entitás kártyája jelenik meg, bezárhatóan.
+    - Az alsó sáv végig látszik (onnan lehet pakli nézetre váltani).
+    - Zoom van (görgetés/csippentés), de koppintásra nem.
+    - A böngészős tesztet Csaba végzi.
+
+    **Kis lépések — az ALÁBBI (2026-07-20-i) lépéssor TÖRTÉNETI: a napraforgó-spirálos
+    megközelítést a 2026-08-03-i újraépítés leváltotta. A megvalósult lépések:
+    (1) backend lapozós gyerek-végpont `GET /api/sikidom/gyerekek`; (2) `sikidomMeret.js`
+    + `sikidomPakolas.js` (méret és háromszögeléses pakolás); (3) `sikidomHorgony.js`
+    + a `SikidomModal` Canvas-alapú újraírása; (4) koppintás → egyetlen kártya
+    (`kartyaGyar.js`, `Kartya.extraMenuOpciok`); (5) menü élesítése + doksik.**
+
+    *(Történeti — a leváltott megközelítés:)*
+    - **1. lépés — ~~✅ KÉSZ~~ LEVÁLTVA (2026-07-20; a böngészős próbán megbukott):** backend
       `/api/sikidom` (best-first, effektív méret szerint, `maxCsomopont`
       biztonsági plafonnal + opcionális `kuszob`; `vanTovabbGyerek` jelző;
       `sikidomService` + controller + route + `findByEntitasId` repo-metódus) +

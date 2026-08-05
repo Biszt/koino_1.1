@@ -654,29 +654,68 @@ docker logs -f koino-backend
     `agEntitasId`-vel CSAK a részfát lapozza — indexelt `{ 'osLanc.entitasId':1, _id:1 }`;
     cím-viselőknél `cim`, auth nélkül 401). Service-teszt (2026-07-23, lefutott):
     ág → 5 sor, mind a részfa tagja; globális → teljes fa (33 sor).
-51. ⬜ **Síkidom nézet — 1. lépés (terv 14. pont, 2026-07-20 óta):** fő menü →
-    **🔷 Síkidom nézet**. STATIKUS ablak (még NINCS dinamikus felfedés / drill-down).
-    A globális nézet az **ÖSSZES gyökeret** mutatja (egymás mellé pakolva, a
-    legnagyobb középen). Ellenőrzés:
-    (a) rövid töltő után megjelenik a nézet: a síkidomok **entitástípus szerinti
+51. ⬜ **Síkidom nézet — ÚJRAÉPÍTVE (terv 14. pont, 2026-08-03):** fő menü →
+    **🔷 Síkidom nézet**. *(A korábbi, napraforgó-spirálos változat forgatókönyve
+    ÉRVÉNYTELEN — az az elrendezés átfedő síkidomokat adott, a kódja törölve lett.)*
+
+    **A modell:** minden entitás egy síkidom, a **TERÜLETE arányos** a hierarchikus
+    össztudatpontjával; a leszármazottak a szülőn **BELÜL**. A pozicionálás minden
+    formát KÖRKÉNT kezel (háromszögelés + üres mag). A betöltést a **képernyő-átmérő**
+    vezérli, nem a fa bejárása.
+
+    Ellenőrzés:
+    (a) rövid töltő után megjelenik a nézet; a síkidomok **entitástípus szerinti
     formák** — Tartalom = kör, Kategória = háromszög, Tartalomtípus = négyzet,
     Javaslat = ötszög, Egyezmény = hatszög (halvány kitöltés, típus-színű keret);
-    (b) a leszármazottak a szülő síkidomán **BELÜL**, napraforgó-spirálban, a
-    **legnagyobb középen**, a kisebbek kifelé; a méret a hierarchikus
-    össztudatponttal arányos (szintenként √20-szor kisebb);
-    (c) a elég nagynak látszó síkidomokon **felirat** (cím vagy típusnév), a
-    túl kicsiken nincs — zoomolva előjön / eltűnik;
-    (d) pan/zoom: húzással mozgatható, görgetéssel a kurzorra nagyít, ＋/－ a
-    közepére, ⤢ a teljes nézetre illeszt;
-    (e) az AKTUÁLIS entitás (amin a pakli áll) kiemelt kerettel jelenik meg, ha
-    látszik a nézetben;
-    (f) síkidomra **koppintva** a modal bezárul és a pakli az entitásra navigál
-    (beágyazott kicsire kattintva azt választja, nem a szülőt).
-    Node-teszt (böngésző nélkül, 2026-07-20): sikidomElrendezes 16 eset zöld
-    (containment, legnagyobb-középen, APPEND-STABILITÁS, determinizmus,
-    kör-védelem); sikidomFormak forma/pont-matek OK. API (curl): GET
-    `/api/sikidom` (best-first effektív méret szerint; a plafonnál
-    `vanTovabbGyerek` igaz; auth nélkül 401).
+    (b) **átfedés SEHOL** — sem testvérek között, sem szülőből kilógó gyerek;
+    (b2) **ÜRES MAG szaggatott körrel:** minden kibontott síkidom közepén
+    **szaggatott kör** jelzi az ürességet. A kör pereme a kettő közül a nagyobbik:
+    a *fenntartott mag* (a még be nem töltött testvérek helye) vagy a *rejtett
+    tartomány* (ami betöltődött, de még a 24 képpontos küszöb alatt van).
+    - **Nagyítás közben:** amíg van meg nem jelent entitás, a kör átmérője
+      **nagyjából állandó marad a képernyőn** (a peremén sorra előbukkannak az
+      újabbak) — ugyanúgy, mint a sikidomTeszt.html-ben. Amikor elfogynak, a kör
+      a nagyítással **arányosan nőni kezd**.
+    - A gyökér-szint magjában felirat is van („üres kör — nagyíts befelé"), ha elfér.
+      A 10 képpontnál kisebb átmérőjű magokat nem rajzoljuk ki;
+    (c) az **alsó sáv végig látszik és használható** (hamburger + statisztikák) —
+    innen bármikor át lehet váltani pakli nézetre;
+    (d) **nagyítás**: görgetés a kurzorra, csippentés érintőképernyőn, ＋/－ a középre,
+    ⤢ a teljes nézetre illeszt; húzással mozgatható;
+    (e) **befelé nagyítva** egy síkidom gyerekei maguktól előjönnek (nem kell kattintani),
+    és a nagyítás **nem áll meg, nem esik szét** — tetszőlegesen mélyre lehet menni.
+    **PISLOGÁS NINCS**: a háttérben horgonyváltás történik, de a kép nem ugrik meg
+    (ez váltja ki a koino_1.0 vászon-újraépítését);
+    (f) **LÁTHATÓSÁGI KÜSZÖB — minimum képernyő-átmérő:** egy síkidom csak akkor
+    jelenik meg, ha a képernyőn mért **átmérője eléri a 24 képpontot**; felirata
+    csak **48 képpont** fölött van. A látható darabszám tehát a képernyő
+    befogadóképességéből KÖVETKEZIK, nem fix szám (terv 14. pont). A küszöb alatti
+    síkidomok **eltűnnek**, és **benagyítva jelennek meg** újra — a részfájukat
+    addig nem is töltjük le. Egyetlen szám hangolja a sűrűséget:
+    `MIN_KEP_ATMERO` a `SikidomModal.js`-ben;
+    (g) az AKTUÁLIS entitás (amin a pakli áll) kiemelt kerettel jelenik meg, ha látszik;
+    (h) **koppintás egy síkidomra:** a nézet MARAD, és bal alul megjelenik az entitás
+    **egyetlen kártyája**, ✕-szel bezárhatóan (beágyazott kicsire koppintva azt
+    választja, nem a szülőt; üres helyre koppintva bezárul);
+    (i) a kártya **hamburger menüjében** ott a **🃏 Pakli nézet** pont → a síkidom nézet
+    bezárul, és a pakli AZ ADOTT entitásra navigál. A menü többi pontja (Értesítések,
+    Tudatpontok, Keresés, Struktúra nézet, Rendezés…) is működik, és a saját modáljaik
+    **nem lövik ki** a síkidom nézetet (külön `almodal-kontener`-ben nyílnak).
+
+    API: `GET /api/sikidom/gyerekek?szulo=&kihagy=&darab=` (lásd a fenti
+    API-referenciát). A régi `GET /api/sikidom` **megszűnt** (404).
+
+    **Teszt-adat a próbához** (csak fejlesztői környezetben):
+    `docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér
+    tartalmat hoz létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már
+    létező címeket kihagyja). A 100 elem TÖBB a 60-as lapméretnél, tehát a
+    **lapozás és a fenntartott mag** is kipróbálódik.
+
+    *Böngésző nélkül már igazolva:* a teljes elrendező folyamat négy fa-alakon
+    (105–4680 csomópont, 150 gyökér = 3 lap is) **0 testvér-átfedés, 0 beágyazási hiba**;
+    295 horgonyváltás 10²⁸⁷-szeres nagyításig **2,9·10⁻¹¹ px** képeltéréssel; a lapozás
+    döntetlen pontszámoknál is stabil; mind a 79 frontend-modul import-útja feloldódik.
+
 52. ⏸️ **Szavazat-értesítés (`szavazatErkezett`) — FÜGGŐBEN (2026-07-20):** a backend
     TERMELŐ be van kötve (`szavazatService.szavazatLeadasa`, best-effort, a szavazót
     kihagyva, minden szavazásnál), DE a frontend szándékosan kihagyja a típust a
@@ -891,6 +930,96 @@ terv „Részvételi modell" szakasz. Backend-változás után **`docker restart
     - A blokkban látott formázás **egyezik** a mentés utáni kártya-megjelenítéssel.
     - Megjegyzés: **frontend-változás** (`sanitizeHelper.js`, `SzovegPanel.js`) → elég a
       böngésző **hard-refresh**-e (Ctrl+F5), `docker restart` nem kell.
+
+### I) Síkidom teszt-oldal — önhasonló spirál (ÚJ, 2026-08-03)
+
+*Fejlesztői **homokozó**, NEM az éles nézet: teszt körökkel próbáljuk ki a Síkidom nézet
+új pakoló-motorját, valódi adat és bejelentkezés nélkül. Cím:*
+**http://localhost:3000/sikidomTeszt.html** *(csak frontend — `docker restart` nem kell,
+elég a hard-refresh). A motor: [`frontend/js/utils/sikidomSpiral.js`](../frontend/js/utils/sikidomSpiral.js).*
+
+*A modell: a kör sugara ARÁNYOS a középponttól mért távolságával → a kép minden nagyítási
+szinten ugyanúgy néz ki (önhasonló). Ebből jön a képernyőhöz igazodó üres kör és a
+végtelen nagyítás. A helyet CSAK a sorszám adja — nem kell előre tudni az egész fát.*
+
+54. ⬜ **Alapkép:** nyisd meg az oldalt → a közepén **szaggatott üres kör** („nagyíts befelé"),
+    körülötte **kifelé növekvő** körök spirálba rendezve, egymást nem metszve.
+    - *Elvárt:* a legkisebbek mindig a **közép körül** vannak — ez volt a cél.
+55. ⬜ **Befelé nagyítás:** görgess befelé (vagy dupla kattintás) → az üres kör peremén
+    **sorra megjelennek** az újabb, kisebb körök; az üres kör mérete **nagyjából állandó**
+    marad a képernyőn (~23 px sugár az alapbeállítással).
+56. ⬜ **Végtelenség:** kapcsold be az **Automatikus mélyülés**t → a kép folyamatosan
+    mélyül, a „Mélység" és „Össznagyítás" kijelző nő, a kép **nem ugrik** és **nem esik szét**
+    (a háttérben újranormálás fut). Böngésző nélkül igazolva: 10^637× nagyításig ép.
+57. ⬜ **Paraméterek:** told a **Méret-arány** csúszkát 1,01 felé → sok, hasonló méretű kör;
+    1,5 felé → kevés, ugrásszerű. A **Szöglépés** rajzolja a spirál-karokat (20° = egy karú,
+    137,5° = napraforgó, 150° = legtömörebb). A **Kitöltés** 100%-on érintik egymást.
+    - *Elvárt:* az „Átfedésmentes?" kijelző **végig „igen ✔"** marad (a program magától
+      a biztonságos sugár-arányt számolja).
+58. ⬜ **Előbeállítások:** a négy gomb (Legtömörebb / Napraforgó / Egy karú / Sok apró)
+    átállítja a csúszkákat és azonnal újrarajzol.
+- *Böngésző nélkül már igazolva:* 401 kör minden párja **átfedésmentes**; az önhasonlóság
+  gépi pontosságú; az újranormálás képernyő-eltérése **5,5·10⁻¹² px** (a kép nem ugrik).
+
+*Elrendező modulok (2026-08-03, böngésző nélkül mérve — még nincs bekötve a nézetbe):*
+[`sikidomMeret.js`](../frontend/js/utils/sikidomMeret.js) (tudatpont → sugár, terület-arányosan),
+[`sikidomPakolas.js`](../frontend/js/utils/sikidomPakolas.js) (háromszögeléses kör-pakolás üres maggal),
+[`sikidomHorgony.js`](../frontend/js/utils/sikidomHorgony.js) (korlátlan nagyítás horgonyváltással).
+*Igazolva: 1–200 testvérnél nulla átfedés és a szülőn belül maradás; 4 egymást követő,
+egymásba ágyazott lapnál (240 kör) is nulla átfedés, a korábbi lapok mozdulása nélkül;
+kevert bemeneti sorrenddel 20 futásból 0 eltérés (determinizmus); 295 horgonyváltás
+10²⁸⁷-szeres nagyításig 2,9·10⁻¹¹ px képeltéréssel.*
+
+### API-referencia — Síkidom nézet, KÜSZÖBÖS gyerek-végpont (2026-08-04)
+
+`GET /api/sikidom/gyerekek?szulo=<entitasId|elhagyva>&minPont=<szám>&kurzorPont=<szám>&kurzorId=<id>&darab=<szám>`
+— **auth-köteles**. A `szulo` elhagyva → a **gyökerek**.
+
+**NEM lapozás.** A nézetben egy síkidom akkor látszik, ha a képernyőn mért átmérője
+elér egy minimumot (24 px). Ebből a méret-képlet megfordításával a kliens kiszámolja,
+mekkora tudatpont kell hozzá:
+
+```
+pontKüszöb = 20 × szülőPont × ( minimumÁtmérő / (2 × szülőKépernyőSugár) )²
+```
+
+…és azt kéri le, ami elér oda. Nagyításkor a küszöb folyamatosan süllyed, mindig
+pontosan azok érkeznek, amelyek épp láthatóvá váltak — nincs önkényes lap-határ.
+*(A 2026-08-03-i, `kihagy`+`darab` alapú lapozás megszűnt: Csaba kifogása szerint a
+lapok között megtört a folytonosság.)*
+
+```json
+{ "success": true, "osszesGyerekPont": 13469, "vanTovabb": false,
+  "kurzor": { "pont": 1, "id": "…" },
+  "gyerekek": [ { "entitasId": "…", "entitasTipus": "Tartalom", "cim": "…",
+                  "hierarchikusOsszesPont": 8400, "vanGyereke": true } ] }
+```
+
+- `kurzor` — meddig jutottunk a rangsorban (`pont` + az allokáció `_id`-ja). A
+  következő kérésbe visszaadva folytatható. A döntő az `_id`, ugyanaz, mint a
+  rendezésé — így azonos pontszámnál sem marad ki és nem duplázódik sor.
+- `vanTovabb` — az adag beletelt a `darab` plafonba (a küszöbig van még); a kliens
+  ilyenkor a kurzorral újra kér.
+- `osszesGyerekPont` — az ÖSSZES gyerek együttes pontja (egy csoportosító
+  lekérdezés). Ebből számolja a kliens a **még hátralévő** pontot, és pontosan
+  akkora üres magot hagy, amekkora kell.
+- `vanGyereke` — egyetlen `distinct` lekérdezésből az egész adagra (nincs N+1).
+- Indexek: `{ szuloId, hierarchikusOsszesPont, _id }` — a szűrés és a rendezés is
+  teljesen indexelt (nincs memóriabeli rendezés).
+- Backend-változás → **`docker restart koino-backend`**.
+- *Böngésző nélkül igazolva (2026-08-04, valódi 105 gyökéren):* küszöbös lekérdezés
+  minden küszöbnél pontosan a fölötte lévőket adja; kurzoros folytatás 10-es
+  adagokban 105 egyedi elemet ad, duplikátum és kimaradás nélkül.
+
+**Teszt-adat a próbához** (csak fejlesztői környezetben):
+`docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér tartalmat hoz
+létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már létező címeket kihagyja).
+
+*Al-entitások (2026-08-03): a síkidomokon BELÜL ugyanez a spirál ismétlődik — a legnagyobb
+al-entitás éppen érinti belülről a szülő peremét. Kapcsoló: „Al-entitások a síkidomokon
+belül"; a „Beágyazási mélység" csúszka (0–4) mondja meg, hány al-szintet rajzolunk.
+Külön teszt-forgatókönyv nem tartozik hozzá. Böngésző nélkül ellenőrizve: 44 szülő 707
+al-síkidomja közül egy sem lóg ki a szülőjéből.*
 
 ---
 
