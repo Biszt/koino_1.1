@@ -130,9 +130,17 @@ hierarchikusTudatpontAllokaciSchema.index({ hierarchikusOsszesPont: -1 });
 // SzuloId index - gyors keresés szülő alapján (kártyastóc összeállításhoz)
 hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1 });
 
-// SzuloId + hierarchikusOsszesPont compound index
-// Bogár logikához: adott szülő gyerekei pont szerint rendezve
-hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1, hierarchikusOsszesPont: -1 });
+// SzuloId + hierarchikusOsszesPont + _id compound index
+// Bogár logikához: adott szülő gyerekei pont szerint rendezve.
+// A HARMADIK mező (_id) a Síkidom nézet LAPOZÁSA miatt kell: azonos pontszámú
+// testvéreknél a sorrend csak akkor determinisztikus, ha van egyértelmű döntő.
+// Enélkül két egymást követő lap-lekérdezés más sorrendet adhatna, és ugyanaz az
+// entitás két lapon is megjelenhetne (vagy kimaradhatna). Mivel a döntő is az
+// indexben van, a rendezés teljesen indexelt marad (nincs memóriabeli rendezés).
+// Megjegyzés: ez az index a korábbi { szuloId, hierarchikusOsszesPont } párost
+// magában foglalja (előtag), így az feleslegessé vált — az adatbázisból külön
+// paranccsal dobható, de ártalmatlan.
+hierarchikusTudatpontAllokaciSchema.index({ szuloId: 1, hierarchikusOsszesPont: -1, _id: 1 });
 
 // VÁLTOZÁS: ÚJ INDEX - CRON job lekérdezés gyorsításához
 // findElavultHierarchikusAllokaciok() erre a két mezőre szűr egyszerre

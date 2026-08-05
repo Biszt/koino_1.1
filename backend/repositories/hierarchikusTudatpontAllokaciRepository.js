@@ -193,14 +193,147 @@ async updateSzuloId(entitasId, entitasTipus, ujSzuloId, ujSzuloTipus) {
 async findBySzuloId(szuloId, limit = 100, skip = 0) {
     console.log('hierarchikusAllokaciRepository.findBySzuloId - KEZDÉS', { szuloId, limit, skip });
 
+    // A döntő (_id) NÉLKÜLÖZHETETLEN a lapozáshoz: azonos pontszámú testvéreknél
+    // enélkül nem determinisztikus a sorrend, így egy entitás két lapon is
+    // megjelenhetne vagy kimaradhatna. A { szuloId, hierarchikusOsszesPont, _id }
+    // index miatt a rendezés teljesen indexelt marad.
     const gyerekek = await HierarchikusTudatpontAllokacio.find({ szuloId: szuloId })
-        .sort({ hierarchikusOsszesPont: -1 })
+        .sort({ hierarchikusOsszesPont: -1, _id: 1 })
         .limit(limit)
         .skip(skip)
         .lean();
 
     console.log('hierarchikusAllokaciRepository.findBySzuloId - VÉGE', { count: gyerekek.length });
     return gyerekek;
+}
+
+// ----- GYEREKEK EGY TUDATPONT-KÜSZÖB FÖLÖTT (kurzorral) -----
+/**
+* Egy szülő azon gyerekei, amelyek elérnek egy TUDATPONT-KÜSZÖBÖT — pont szerint
+* csökkenő sorrendben, kurzoros folytatással.
+*
+* MIÉRT NEM LAPOZÁS: a Síkidom nézetben egy síkidom akkor látszik, ha a képernyőn
+* mért átmérője elér egy minimumot. Ebből a méret-képlet megfordításával pontosan
+* kiszámolható, MEKKORA TUDATPONT kell hozzá — tehát nem „a következő 60"-at kell
+* kérni, hanem „mindent, ami eléri ezt a küszöböt". Így nincs önkényes lap-határ,
+* és a nagyításkor folyamatosan, kis adagokban érkeznek az újak.
+*
+* A KURZOR (utolsoPont + utolsoId) azt mondja meg, meddig jutottunk: azokat kérjük,
+* amelyek a rendezésben UTÁNA következnek. A döntő az _id, ugyanúgy, mint a
+* rendezésben — így az azonos pontszámú testvérek sem maradnak ki és nem is
+* duplázódnak. (Ugyanaz a minta, mint a findKovetkezoTestver-nél.)
+*
+* @param {string|null} szuloId - a szülő azonosítója; null → a gyökerek
+* @param {number} minPont - ennél kisebb pontú gyereket nem kérünk
+* @param {number|null} utolsoPont - a legutóbb megkapott sor pontja (kurzor)
+* @param {string|null} utolsoId - a legutóbb megkapott sor `_id`-ja (kurzor). FONTOS:
+*   az allokáció `_id`-ja, mert a RENDEZÉS döntője is az — a kurzornak pontosan a
+*   rendezéssel kell egyeznie, különben kimaradna vagy duplázódna sor.
+* @param {number} limit - biztonsági darab-plafon
+* @returns {Promise<Array>}
+*/
+async findGyerekekKuszobFolott(szuloId, minPont, utolsoPont = null, utolsoId = null, limit = 200) {
+    console.log('hierarchikusAllokaciRepository.findGyerekekKuszobFolott - KEZDÉS', {
+        szuloId, minPont, utolsoPont, utolsoId, limit
+    });
+
+    const szuro = {
+        szuloId: szuloId ?? null,
+        hierarchikusOsszesPont: { $gte: minPont }
+    };
+
+    // Kurzor: a rendezésben az utolsó megkapott UTÁN következők
+    if (utolsoPont != null) {
+        const kurzorId = (utolsoId && Types.ObjectId.isValid(utolsoId))
+            ? new Types.ObjectId(utolsoId)
+            : utolsoId;
+
+        szuro.$or = [
+            { hierarchikusOsszesPont: { $lt: utolsoPont } },
+            { hierarchikusOsszesPont: utolsoPont, _id: { $gt: kurzorId } }
+        ];
+    }
+
+    const gyerekek = await HierarchikusTudatpontAllokacio.find(szuro)
+        .sort({ hierarchikusOsszesPont: -1, _id: 1 })
+        .limit(limit)
+        .lean();
+
+    console.log('hierarchikusAllokaciRepository.findGyerekekKuszobFolott - VÉGE', {
+        count: gyerekek.length
+    });
+    return gyerekek;
+}
+
+// ----- EGY SZÜLŐ ÖSSZES GYEREKÉNEK EGYÜTTES PONTJA -----
+/**
+* Egy szülő KÖZVETLEN gyerekeinek együttes hierarchikus össztudatpontja, EGYETLEN
+* csoportosító lekérdezéssel. szuloId nélkül a GYÖKEREK együttes pontja.
+*
+* A Síkidom nézet használja: a síkidom közepén hagyott ÜRES MAG akkora legyen,
+* amekkora a még be nem töltött testvéreknek pontosan kell. A méret a
+* tudatpontból számolható (a terület arányos vele), de ehhez tudni kell, mennyi
+* tudatpont van MÉG hátra — ezt adja meg ez a metódus. Becslés helyett pontos
+* érték: enélkül a mag túl nagy lett (a mérés szerint kétszeres), és a betöltött
+* adagok közt látható üres gyűrű maradt.
+*
+* @param {string|null} szuloId - a szülő azonosítója; null → a gyökerek
+* @returns {Promise<number>} az együttes pont (0, ha nincs gyereke)
+*/
+async gyerekekOsszPontja(szuloId = null) {
+    console.log('hierarchikusAllokaciRepository.gyerekekOsszPontja - KEZDÉS', { szuloId });
+
+    const szuro = { szuloId: szuloId ?? null };
+
+    const sorok = await HierarchikusTudatpontAllokacio.aggregate([
+        { $match: szuro },
+        { $group: { _id: null, ossz: { $sum: '$hierarchikusOsszesPont' } } }
+    ]);
+
+    const ossz = sorok[0]?.ossz ?? 0;
+
+    console.log('hierarchikusAllokaciRepository.gyerekekOsszPontja - VÉGE', { szuloId, ossz });
+    return ossz;
+}
+
+// ----- MELYIK SZÜLŐNEK VAN EGYÁLTALÁN GYEREKE (BATCH) -----
+/**
+* A megadott entitások közül melyeknek van legalább egy közvetlen gyereke —
+* EGYETLEN indexelt lekérdezéssel (distinct a szuloId mezőn, ami indexelt).
+*
+* A Síkidom nézet használja: a kirajzolt síkidomokon jelezni kell, érdemes-e
+* beléjük nagyítani. Enélkül síkidomonként külön lekérdezés kellene (egy 60-as
+* lapnál 60 kérdés az adatbázishoz) — ez a klasszikus N+1 probléma.
+*
+* FONTOS: a findGyerekIdkBySzulok-tól abban tér el, hogy NEM a gyerekeket adja
+* vissza (azok sok ezren lehetnek), hanem csak azt, hogy MELY SZÜLŐKNEK van
+* gyerekük — így a válasz mérete legfeljebb a szülők száma.
+*
+* @param {Array} szuloIdk - a vizsgálandó entitás-azonosítók tömbje
+* @returns {Promise<Array>} azoknak az azonosítói, akiknek van gyerekük
+*/
+async melyikSzulonekVanGyereke(szuloIdk) {
+    console.log('hierarchikusAllokaciRepository.melyikSzulonekVanGyereke - KEZDÉS', {
+        vizsgaltDarab: szuloIdk?.length ?? 0
+    });
+
+    if (!szuloIdk || szuloIdk.length === 0) return [];
+
+    // A vegyes (ObjectId/string) bemenetet egységes ObjectId-kká alakítjuk a $in-hez
+    const objektumIdk = szuloIdk.map(id =>
+        Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : id
+    );
+
+    // A distinct csak azokat a szuloId értékeket adja vissza, amelyek ténylegesen
+    // előfordulnak — vagyis pontosan azokat, akiknek van gyerekük
+    const gyerekesek = await HierarchikusTudatpontAllokacio.distinct('szuloId', {
+        szuloId: { $in: objektumIdk }
+    });
+
+    console.log('hierarchikusAllokaciRepository.melyikSzulonekVanGyereke - VÉGE', {
+        gyerekesDarab: gyerekesek.length
+    });
+    return gyerekesek;
 }
 
 // ----- LEGERŐSEBB GYEREK KERESÉSE -----
@@ -234,8 +367,9 @@ async findLegerossebbGyerek(szuloId) {
 async findGyokerek(limit = 100, skip = 0) {
     console.log('hierarchikusAllokaciRepository.findGyokerek - KEZDÉS', { limit, skip });
 
+    // A döntő (_id) itt is kell a lapozáshoz — lásd a findBySzuloId indoklását
     const gyokerek = await HierarchikusTudatpontAllokacio.find({ szuloId: null })
-        .sort({ hierarchikusOsszesPont: -1 })
+        .sort({ hierarchikusOsszesPont: -1, _id: 1 })
         .limit(limit)
         .skip(skip)
         .lean();

@@ -20,10 +20,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ÚTVONALAK DEFINIÁLÁSA
 // ===================================
 
-// A Síkidom nézet részfája (best-first, effektív méret szerint)
-// GET /api/sikidom?gyoker=<id|null>&kuszob=<szám>&maxCsomopont=<szám>
+// Egy szülő gyerekei tudatpont szerint, LAPOZVA — a Síkidom nézet
+// képernyő-vezérelt betöltésének adatforrása.
+// GET /api/sikidom/gyerekek?szulo=<id|elhagyva>&kihagy=<szám>&darab=<szám>
+// A `szulo` elhagyva → a gyökerek (a legfelső szint).
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/sikidom', authMiddleware, sikidomController.reszfa);
+router.get('/sikidom/gyerekek', authMiddleware, sikidomController.gyerekek);
 
 // ===================================
 // ROUTER EXPORTÁLÁSA
