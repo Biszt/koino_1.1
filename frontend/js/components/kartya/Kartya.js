@@ -157,6 +157,15 @@ async init() {
     });
   }
 
+  // BŐVÍTMÉNY: a kártyát megjelenítő NÉZET további menüpontokat adhat hozzá.
+  // Így nem kell minden nézet kedvéért a kártya-osztályokat módosítani.
+  // Jelenleg a Síkidom nézet használja: ott a „Pakli nézet" menüpontnak van
+  // értelme (a pakliban magában nyilván nem, hiszen ott már ott vagyunk).
+  // A hívó az init() ELŐTT állítja be a kartya.extraMenuOpciok tulajdonságot.
+  if (Array.isArray(this.extraMenuOpciok) && this.extraMenuOpciok.length > 0) {
+    opciok.push(...this.extraMenuOpciok);
+  }
+
   this.hamburgerMenu = new HamburgerMenu(hamburgerKontener, opciok);
   await this.hamburgerMenu.init();
 

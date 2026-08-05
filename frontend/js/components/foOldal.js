@@ -455,10 +455,9 @@ init() {
         akcio:   () => fejlesztesreVarMegjelenitese('Világtérkép')
       },
       {
-        // Fejlesztésre vár állapotban (a nézet kódja megmarad, de egyelőre nem nyílik)
-        ikon:    '🚧',
+        ikon:    '🔷',
         felirat: 'Síkidom nézet',
-        akcio:   () => fejlesztesreVarMegjelenitese('Síkidom nézet')
+        akcio:   () => this._sikidomMegnyitasa()
       },
       {
         ikon:    '↕️',
@@ -753,9 +752,12 @@ init() {
   // =====================================
   // SÍKIDOM NÉZET MODAL MEGNYITÁSA
   // =====================================
-  // A fő menüs „Síkidom nézet" – a koino_1.0 fraktál kör-pakolásának újraépítése
-  // (terv 14. pont, 1. lépés: statikus ablak). A globális nézet a legerősebb
-  // gyökértől indul; síkidomra koppintva a pakli az entitásra navigál.
+  // A fő menüs „Síkidom nézet" — minden entitás egy síkidom, a TERÜLETE arányos a
+  // hierarchikus össztudatpontjával; a leszármazottak a szülőn belül. A betöltés
+  // képernyő-vezérelt, a nagyítás korlátlan (horgonyváltással, pislogás nélkül).
+  // Síkidomra koppintva a nézetben marad, csak az entitás kártyája jelenik meg —
+  // a pakli nézetre a kártya hamburger menüje (vagy az alsó sáv) visz át; azt
+  // szolgálja ki az alábbi onEntitasKivalasztas.
   async _sikidomMegnyitasa() {
     console.log('FoOldal._sikidomMegnyitasa - KEZDÉS');
 

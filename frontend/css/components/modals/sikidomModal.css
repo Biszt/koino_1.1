@@ -1,9 +1,14 @@
 /* frontend/css/components/modals/sikidomModal.css */
 
 /* ===== SÍKIDOM NÉZET MODAL ===== */
-/* A koino_1.0 síkidomos megjelenítésének újraépítése: fraktál kör-pakolás,
-   entitástípus-formák, napraforgó-spirál. Teljes képernyős (modal-panel--teljes,
-   a közös modal.css-ből). A SikidomModal.js tölti fel és vezérli. */
+/* A koino_1.0 síkidomos megjelenítésének újraépítése: háromszögeléses kör-pakolás,
+   entitástípus-formák, korlátlan nagyítás horgonyváltással. Teljes képernyős
+   (modal-panel--teljes, a közös modal.css-ből). A SikidomModal.js vezérli.
+
+   MEGJEGYZÉS az alsó sávhoz: a `body.teljes-nezet-nyitva` szabályok (az alsó sáv
+   a modal fölé emelése + a panel magasságának igazítása) a strukturaModal.css-ben
+   élnek, és minden .modal-panel--teljes nézetre érvényesek — a Síkidom nézet is
+   ezt használja, ezért itt nem ismételjük meg. */
 
 /* A belső váz tölti ki a rendelkezésre álló magasságot */
 .sikidom-modal {
@@ -59,53 +64,19 @@
   overflow: hidden;
   background: var(--color-surface-2);
   cursor: grab;
-  touch-action: none; /* a mozgatást mi kezeljük, nem a böngésző */
+  touch-action: none; /* a mozgatást/nagyítást mi kezeljük, nem a böngésző */
 }
 
 .sikidom-modal__nezet:active { cursor: grabbing; }
 
-/* Az SVG kitölti a nézetet */
-.sikidom-modal__svg {
+/* A vászon kitölti a nézetet. A tényleges képpont-felbontást a JS állítja be
+   (devicePixelRatio), hogy nagy felbontású kijelzőn is éles legyen. */
+.sikidom-modal__vaszon {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* ----- SÍKIDOMOK (a világ-csoportban, a transzformmal zoomolnak) ----- */
-/* A kitöltés halvány (a szín + alacsony opacitás), a keret a típus színe.
-   A stroke-width a világ-transzform miatt vékonyodna nagyításkor — ezt a JS
-   a vonalvastagságot NEM skálázó vector-effect-tel oldja meg. */
-.sikidom-alakzat {
-  fill-opacity: 0.12;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-  cursor: pointer;
-  transition: fill-opacity var(--transition-fast);
-}
-
-.sikidom-alakzat:hover {
-  fill-opacity: 0.28;
-}
-
-/* Az AKTUÁLIS entitás kiemelése */
-.sikidom-alakzat--aktualis {
-  stroke-width: 3;
-  fill-opacity: 0.25;
-}
-
-/* ----- CÍMKÉK (képernyő-koordinátában, nem torzulnak) ----- */
-.sikidom-cimke {
-  font-family: var(--font-body);
-  fill: var(--color-text);
-  text-anchor: middle;
-  dominant-baseline: middle;
-  pointer-events: none;
-  user-select: none;
-  paint-order: stroke;
-  stroke: var(--color-surface-2);
-  stroke-width: 3;
 }
 
 /* ----- VEZÉRLŐ GOMBOK ----- */
@@ -132,6 +103,92 @@
 }
 
 .sikidom-modal__vezerlo-gomb:hover { background: var(--color-primary-highlight); }
+
+/* ----- HÁTTÉRBEN FUTÓ BETÖLTÉS JELZŐJE ----- */
+/* Diszkrét: a nézet közben használható marad, csak jelezzük, hogy jön még adat. */
+.sikidom-modal__folyamat {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+.sikidom-modal__folyamat-pont {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  animation: sikidom-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sikidom-modal__folyamat-pont { animation: none; opacity: 0.6; }
+}
+
+/* ----- EGYETLEN KÁRTYA (koppintásra) ----- */
+/* Koppintásra NEM váltunk pakli nézetre, csak a megkoppintott entitás kártyáját
+   mutatjuk meg — bezárhatóan, a nézet fölött lebegve. Az alsó sáv és a nézet
+   használható marad mögötte. */
+.sikidom-modal__kartya-panel {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-8);
+  z-index: 2;
+  width: min(420px, calc(100% - 2 * var(--space-4)));
+  max-height: min(70%, 620px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.sikidom-modal__kartya-bezar {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sikidom-modal__kartya-bezar:hover { background: var(--color-primary-highlight); }
+
+.sikidom-modal__kartya-hely {
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+/* Kis képernyőn a panel a nézet alját tölti ki */
+@media (max-width: 640px) {
+  .sikidom-modal__kartya-panel {
+    left: var(--space-2);
+    right: var(--space-2);
+    width: auto;
+    bottom: var(--space-6);
+    max-height: 60%;
+  }
+}
 
 /* ----- SÚGÓ SOR ----- */
 .sikidom-modal__sugo {

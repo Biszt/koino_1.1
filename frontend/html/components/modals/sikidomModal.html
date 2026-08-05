@@ -2,8 +2,13 @@
 
 <!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel.
      Két állapota van (a SikidomModal.js váltja):
-       1. #sikidom-betoltes — töltő állapot (adatlekérés + elrendezés alatt)
-       2. #sikidom-nezet    — a kész nézet: SVG világ (síkidomok) + képernyő-cimkék -->
+       1. #sikidom-betoltes — töltő állapot (az első lap lekérése alatt)
+       2. #sikidom-nezet    — a kész nézet: egyetlen vászon (Canvas)
+
+     A síkidomokat Canvas-ra rajzoljuk, nem DOM-elemenként: a nézet több ezer
+     síkidomot mutathat egyszerre, és folyamatosan nagyítható — elemenkénti DOM
+     mellett ez akadozna. A koppintás-találatot ezért számítással keressük
+     (minden kör helyét és sugarát ismerjük), nem a böngésző eseménykezelőjével. -->
 <div class="sikidom-modal">
 
   <!-- ===== TÖLTŐ ÁLLAPOT ===== -->
@@ -14,13 +19,8 @@
 
   <!-- ===== NÉZET ===== -->
   <div class="sikidom-modal__nezet" id="sikidom-nezet" hidden>
-    <!-- Egyetlen SVG: a .sikidom-vilag csoport a világ-transzformációt kapja
-         (a síkidomok vele zoomolnak/tolódnak); a .sikidom-cimkek csoport
-         képernyő-koordinátában marad (a feliratok nem torzulnak). -->
-    <svg class="sikidom-modal__svg" id="sikidom-svg" xmlns="http://www.w3.org/2000/svg">
-      <g class="sikidom-vilag" id="sikidom-vilag"></g>
-      <g class="sikidom-cimkek" id="sikidom-cimkek"></g>
-    </svg>
+
+    <canvas class="sikidom-modal__vaszon" id="sikidom-vaszon"></canvas>
 
     <!-- Vezérlők: nagyítás / kicsinyítés / teljes nézet -->
     <div class="sikidom-modal__vezerlok">
@@ -32,8 +32,24 @@
               aria-label="Teljes nézet" title="Teljes nézet">⤢</button>
     </div>
 
+    <!-- Betöltés-jelző: a háttérben futó lap-lekérésekhez -->
+    <div class="sikidom-modal__folyamat" id="sikidom-folyamat" hidden>
+      <span class="sikidom-modal__folyamat-pont" aria-hidden="true"></span>
+      <span id="sikidom-folyamat-szoveg">Betöltés…</span>
+    </div>
+
+    <!-- ===== EGYETLEN KÁRTYA (koppintásra) =====
+         Nem váltunk pakli nézetre — csak a megkoppintott entitás kártyája
+         jelenik meg, bezárhatóan. A kártya SAJÁT hamburger menüjéből lehet
+         az adott ágra pakli nézetbe váltani (lásd SikidomModal). -->
+    <div class="sikidom-modal__kartya-panel" id="sikidom-kartya-panel" hidden>
+      <button class="sikidom-modal__kartya-bezar" id="sikidom-kartya-bezar" type="button"
+              aria-label="Adatlap bezárása" title="Bezárás">✕</button>
+      <div class="sikidom-modal__kartya-hely" id="sikidom-kartya-hely"></div>
+    </div>
+
     <p class="sikidom-modal__sugo">
-      Húzás: mozgatás · görgetés / ＋－: nagyítás · koppintás a síkidomra: ugrás
+      Húzás: mozgatás · görgetés / csippentés: nagyítás · koppintás a síkidomra: adatlap
     </p>
   </div>
 
