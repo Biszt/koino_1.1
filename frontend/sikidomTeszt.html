@@ -1,0 +1,146 @@
+<!-- frontend/sikidomTeszt.html -->
+<!--
+  SÍKIDOM TESZT-OLDAL (fejlesztői homokozó)
+
+  Felelősség: az önhasonló spirál-pakolás kipróbálása TESZT KÖRÖKKEL, valódi
+  adat és bejelentkezés nélkül. Itt hangoljuk be, hogyan nézzen ki a Síkidom
+  nézet, mielőtt bekötnénk az igazi entitásokhoz.
+
+  Megnyitás: http://localhost:3000/sikidomTeszt.html
+  (A backend a frontend mappát statikusan kiszolgálja, ezért külön útvonal nem kell.)
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Síkidom teszt — önhasonló spirál</title>
+  <link rel="stylesheet" href="./css/teszt/sikidomTeszt.css">
+</head>
+<body>
+
+  <!-- ===== RAJZFELÜLET ===== -->
+  <!-- A síkidomokat ide rajzolja a sikidomTesztOldal.js (Canvas 2D). -->
+  <canvas id="sikidom-vaszon" class="sikidom-teszt__vaszon"></canvas>
+
+  <!-- ===== VEZÉRLŐ PANEL ===== -->
+  <aside class="sikidom-teszt__panel" id="sikidom-panel">
+
+    <header class="sikidom-teszt__fejlec">
+      <h1 class="sikidom-teszt__cim">Síkidom teszt</h1>
+      <button type="button" class="sikidom-teszt__osszecsuk" id="sikidom-osszecsuk"
+              aria-label="Panel összecsukása" title="Panel összecsukása">–</button>
+    </header>
+
+    <div class="sikidom-teszt__panel-torzs" id="sikidom-panel-torzs">
+
+      <!-- ----- CSÚSZKÁK ----- -->
+      <label class="sikidom-teszt__mezo">
+        <span class="sikidom-teszt__cimke">
+          Méret-arány <em id="ertek-meretArany">1.05</em>
+        </span>
+        <input type="range" id="csuszka-meretArany"
+               min="1.01" max="1.50" step="0.01" value="1.05">
+        <span class="sikidom-teszt__sugo">
+          Mennyivel kisebb a következő. Kicsi érték = sok, hasonló méretű síkidom.
+        </span>
+      </label>
+
+      <label class="sikidom-teszt__mezo">
+        <span class="sikidom-teszt__cimke">
+          Szöglépés <em id="ertek-szogLepes">150,0°</em>
+        </span>
+        <input type="range" id="csuszka-szogLepes"
+               min="5" max="180" step="0.5" value="150">
+        <span class="sikidom-teszt__sugo">
+          Mennyit fordul a spirál síkidomonként. Ez adja a spirál-karok rajzolatát.
+        </span>
+      </label>
+
+      <label class="sikidom-teszt__mezo">
+        <span class="sikidom-teszt__cimke">
+          Kitöltés <em id="ertek-kitoltes">94%</em>
+        </span>
+        <input type="range" id="csuszka-kitoltes"
+               min="0.30" max="1.00" step="0.01" value="0.94">
+        <span class="sikidom-teszt__sugo">
+          1,00 = a síkidomok éppen érintik egymást. Alatta levegősebb a kép.
+        </span>
+      </label>
+
+      <label class="sikidom-teszt__mezo">
+        <span class="sikidom-teszt__cimke">
+          Üres kör mérete <em id="ertek-minKeppont">6 px</em>
+        </span>
+        <input type="range" id="csuszka-minKeppont"
+               min="1" max="40" step="1" value="6">
+        <span class="sikidom-teszt__sugo">
+          Ekkora látszó sugár alatt már nem rajzolunk — ez tartja üresen a közepét.
+        </span>
+      </label>
+
+      <label class="sikidom-teszt__mezo">
+        <span class="sikidom-teszt__cimke">
+          Beágyazási mélység <em id="ertek-gyerekMelyseg">2</em>
+        </span>
+        <input type="range" id="csuszka-gyerekMelyseg"
+               min="0" max="4" step="1" value="2">
+        <span class="sikidom-teszt__sugo">
+          Hány al-szintet rajzolunk a síkidomokon belül. 0 = csak a legfelső szint.
+        </span>
+      </label>
+
+      <!-- ----- ELŐBEÁLLÍTÁSOK ----- -->
+      <div class="sikidom-teszt__csoport">
+        <span class="sikidom-teszt__cimke">Előbeállítások</span>
+        <div class="sikidom-teszt__gombsor">
+          <button type="button" class="sikidom-teszt__gomb" data-elobeallitas="tomor">Legtömörebb</button>
+          <button type="button" class="sikidom-teszt__gomb" data-elobeallitas="napraforgo">Napraforgó</button>
+          <button type="button" class="sikidom-teszt__gomb" data-elobeallitas="egykaru">Egy karú</button>
+          <button type="button" class="sikidom-teszt__gomb" data-elobeallitas="suru">Sok apró</button>
+        </div>
+      </div>
+
+      <!-- ----- KAPCSOLÓK ----- -->
+      <div class="sikidom-teszt__csoport">
+        <label class="sikidom-teszt__kapcsolo">
+          <input type="checkbox" id="kapcsolo-melyules">
+          <span>Automatikus mélyülés (végtelen nagyítás)</span>
+        </label>
+        <label class="sikidom-teszt__kapcsolo">
+          <input type="checkbox" id="kapcsolo-alEntitas" checked>
+          <span>Al-entitások a síkidomokon belül</span>
+        </label>
+        <label class="sikidom-teszt__kapcsolo">
+          <input type="checkbox" id="kapcsolo-sorszam" checked>
+          <span>Sorszámok mutatása</span>
+        </label>
+        <label class="sikidom-teszt__kapcsolo">
+          <input type="checkbox" id="kapcsolo-uresKor" checked>
+          <span>Üres kör jelölése</span>
+        </label>
+      </div>
+
+      <!-- ----- KIJELZŐK ----- -->
+      <dl class="sikidom-teszt__kijelzo">
+        <dt>Kirajzolt síkidom</dt><dd id="kijelzo-darab">–</dd>
+        <dt>Sugár / távolság</dt><dd id="kijelzo-sugarArany">–</dd>
+        <dt>Átfedésmentes?</dt><dd id="kijelzo-atfedes">–</dd>
+        <dt>Mélység (sorszám)</dt><dd id="kijelzo-melyseg">–</dd>
+        <dt>Össznagyítás</dt><dd id="kijelzo-nagyitas">–</dd>
+      </dl>
+
+      <button type="button" class="sikidom-teszt__gomb sikidom-teszt__gomb--teljes"
+              id="gomb-alaphelyzet">Alaphelyzet</button>
+
+    </div>
+  </aside>
+
+  <!-- ===== SÚGÓ SÁV ===== -->
+  <p class="sikidom-teszt__sugosav">
+    Görgetés: nagyítás · húzás: mozgatás · dupla kattintás: mélyülés a közép felé
+  </p>
+
+  <script type="module" src="./js/teszt/sikidomTesztOldal.js"></script>
+</body>
+</html>
