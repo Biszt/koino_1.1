@@ -43,9 +43,25 @@
 // A visszaadott helyek a SZÜLŐ KÖZÉPPONTJÁHOZ képest, a SZÜLŐ SUGARÁNAK
 // egységében értendők — pontosan ezt várja a horgony-modul (relX, relY).
 //
+// HOGYAN SKÁLÁZÓDIK
+// Két helyen nőne a munka a darabszám NÉGYZETÉVEL, ha nem figyelnénk oda —
+// mindkettő azért, mert lerakásonként végigolvasná az összes eddigi kört:
+//
+//   1. a tiltott ívek gyűjtése → ezt a TÉRBELI RÁCS oldja meg (`sikidomRacs.js`):
+//      csak a közeli körök tilthatnak, a többit meg sem nézzük;
+//   2. a pót-horgonyok kiválasztása → ezt a PEREM-RANGSOR oldja meg: a peremtől
+//      mért távolság egy lerakott körnél soha többé nem változik, ezért nem kell
+//      minden lerakásnál újrarendezni — elég a legkülső néhányat karbantartani.
+//
+// (A mérés szerint eredetileg a MÁSODIK vitte az időt: 1500 síkidomnál a
+// futásidő kétharmadát a pót-horgony rendezése ette meg, a geometria alig 5%-ot.)
+//
 // SZÁNDÉKOSAN nincs DOM-függése: Node-ból egység-tesztelhető
 // (backend/tools/sikidomPakolasProba.mjs).
 // Használja: a Síkidom nézet újrapakoló rétege (SikidomModal._ujrapakolas).
+
+// ===== IMPORTOK =====
+import { SikidomRacs } from './sikidomRacs.js';
 
 // ===== ÁLLANDÓK =====
 
@@ -64,6 +80,11 @@ const EPSZILON = 1e-12;
 // legnagyobb köröknek kifelé kell hely. 12-es kerettel 600-ból 197 a várólistán
 // ragadt; 40-nel mind a 600 lekerül.
 const POT_HORGONY_HATAR = 40;
+
+// A PEREM-RANGSOR mérete: ennyi legkülső kört tartunk nyilván pót-horgonynak.
+// Kettővel több a `POT_HORGONY_HATAR`-nál, mert a horgony-listán a mag és a
+// legutóbb lerakott kör is helyet foglalhat, azokat pedig kiszűrjük innen.
+const PEREM_RANGSOR_MERET = POT_HORGONY_HATAR + 2;
 
 const ketPi = Math.PI * 2;
 const normal = (szog) => ((szog % ketPi) + ketPi) % ketPi;
@@ -136,16 +157,19 @@ function szabadIvek(tiltottak) {
 }
 
 // ===== EGY KÖR LERAKÁSA EGY HORGONY MELLÉ =====
+// @param {Object} racs - a már lerakott körök térbeli rácsa (`sikidomRacs.js`)
 // @returns {Object|null} { x, y } — vagy null, ha e körül nincs szabad hely
-function horgonyMelle(horgony, r, akadalyok) {
+function horgonyMelle(horgony, r, racs) {
   const r1 = horgony.sugar + r;
 
   // 1. A tiltott ívek összegyűjtése.
-  //    A `tiltottIv` magától eldobja azokat, akik túl messze vannak — csak a
-  //    horgony szűk környezete tilthat. (Itt van a helye egy térbeli rácsnak, ha
-  //    a lineáris skálázódás kell: akkor nem kell végigolvasni az összes kört.)
+  //    CSAK A KÖZELI KÖRÖK tilthatnak. Egy C kör akkor zavarhat, ha a
+  //    horgonytól mért távolsága kisebb, mint r₁ + r + r_C (ennél távolabb a
+  //    `tiltottIv` úgyis null-t adna) — pontosan ezt kérjük a rácstól. A kör
+  //    saját sugarát (r_C) a rács adja hozzá méret-szintenként, ezért itt csak
+  //    az attól független rész, az r₁ + r a hatótáv.
   const ivek = [];
-  for (const a of akadalyok) {
+  for (const a of racs.kozeliek(horgony.x, horgony.y, r1 + r)) {
     if (a === horgony) continue;
     const iv = tiltottIv(horgony, a, r1, r);
     if (!iv) continue;
@@ -182,6 +206,33 @@ function horgonyMelle(horgony, r, akadalyok) {
   }
 
   return legjobb ? { x: legjobb.x, y: legjobb.y } : null;
+}
+
+// ===== A PEREM-RANGSOR =====
+// A pót-horgonyok a LEGKÜLSŐ körök (lásd a pakolás magyarázatát). A „külsőség"
+// mértéke a `|közép| + sugár` — ez egy lerakott körnél SOHA többé nem változik,
+// tehát fölösleges minden lerakásnál újrarendezni az egészet: elég a rangsor
+// elejét karbantartani.
+//
+// Csökkenő sorrend; holtversenynél a KORÁBBAN felvett kör marad elöl. (Így
+// ugyanaz a sorrend jön ki, mint a korábbi stabil rendezésnél — a kép nem
+// változik, csak gyorsabban áll elő.)
+function rangsorba(rangsor, kor) {
+  const perem = Math.hypot(kor.x, kor.y) + kor.sugar;
+
+  // Kettes keresés: az első olyan hely, ahol a perem MÁR kisebb az újénál
+  let also = 0;
+  let felso = rangsor.length;
+  while (also < felso) {
+    const kozep = (also + felso) >> 1;
+    if (rangsor[kozep].perem >= perem) also = kozep + 1;
+    else felso = kozep;
+  }
+
+  if (also >= PEREM_RANGSOR_MERET) return;      // úgysem férne be a rangsorba
+
+  rangsor.splice(also, 0, { kor, perem });
+  if (rangsor.length > PEREM_RANGSOR_MERET) rangsor.length = PEREM_RANGSOR_MERET;
 }
 
 // ===== A MÉRT MAG =====
@@ -231,19 +282,33 @@ export function pakolas(elemek, opciok = {}) {
     (a.sugar - b.sugar) || String(a.id).localeCompare(String(b.id))
   );
 
-  // Az akadály-halmaz: a mag (ha van) + a helyben maradó környezet + a lerakottak.
+  // AZ AKADÁLYOK: a mag (ha van) + a helyben maradó környezet + a lerakottak.
   // A mag virtuális kör az origóban: nem rajzoljuk ki, de a tiltott ívek
   // számításában ugyanúgy részt vesz, mint bármely másik kör.
-  const akadalyok = [];
-  if (magSugar > 0) akadalyok.push({ id: '__mag', x: 0, y: 0, sugar: magSugar, mag: true });
-  for (const k of kornyezet) akadalyok.push({ id: k.id, x: k.x, y: k.y, sugar: k.sugar });
+  //
+  // Két nyilvántartásban vannak, mert kétféle kérdést teszünk fel róluk:
+  //   - `racs`    → „ki van közel ehhez a ponthoz?" (a tiltott ívekhez)
+  //   - `rangsor` → „ki van a legkívül?" (a pót-horgonyokhoz)
+  const racs = new SikidomRacs();
+  const rangsor = [];
+
+  const mag = magSugar > 0 ? { id: '__mag', x: 0, y: 0, sugar: magSugar, mag: true } : null;
+  if (mag) racs.hozzaad(mag);          // a mag akadály, de pót-horgonynak NEM jelölt
+
+  for (const k of kornyezet) {
+    const kor = { id: k.id, x: k.x, y: k.y, sugar: k.sugar };
+    racs.hozzaad(kor);
+    rangsorba(rangsor, kor);
+  }
 
   const helyek = [];
   const lerakatlanIdk = [];
 
+  // A legutóbb lerakott kör: ott van a „munkafront", ő az első pót-horgony
+  let utolsoLerakott = null;
+
   // A mag peremére addig pakolunk, amíg elfér rajta — utána nincs értelme
   // próbálkozni vele (a kör körbeért).
-  const mag = magSugar > 0 ? akadalyok[0] : null;
   let magTelt = false;
 
   // Üres lapról, mag nélkül a legkisebb kör a KÖZÉPPONTBA kerül
@@ -272,19 +337,16 @@ export function pakolas(elemek, opciok = {}) {
       //     a várólistán ragadt.)
       const horgonyok = [];
       if (mag && !magTelt) horgonyok.push(mag);
-      if (helyek.length > 0) horgonyok.push(akadalyok[akadalyok.length - 1]);
+      if (utolsoLerakott) horgonyok.push(utolsoLerakott);
 
-      const peremSorrend = akadalyok
-        .filter(a => !a.mag && !horgonyok.includes(a))
-        .sort((x, y) => (Math.hypot(y.x, y.y) + y.sugar) - (Math.hypot(x.x, x.y) + x.sugar));
-
-      for (const a of peremSorrend) {
+      for (const tetel of rangsor) {
         if (horgonyok.length >= POT_HORGONY_HATAR) break;
-        horgonyok.push(a);
+        if (horgonyok.includes(tetel.kor)) continue;    // már bent van (a munkafront)
+        horgonyok.push(tetel.kor);
       }
 
       for (const h of horgonyok) {
-        hely = horgonyMelle(h, elem.sugar, akadalyok);
+        hely = horgonyMelle(h, elem.sugar, racs);
         if (hely) break;
         if (h === mag) magTelt = true;
       }
@@ -297,7 +359,11 @@ export function pakolas(elemek, opciok = {}) {
     }
 
     helyek.push({ id: elem.id, sugar: elem.sugar, x: hely.x, y: hely.y });
-    akadalyok.push({ id: elem.id, x: hely.x, y: hely.y, sugar: elem.sugar });
+
+    const lerakott = { id: elem.id, x: hely.x, y: hely.y, sugar: elem.sugar };
+    racs.hozzaad(lerakott);
+    rangsorba(rangsor, lerakott);
+    utolsoLerakott = lerakott;
   }
 
   let kulsoSugar = 0;

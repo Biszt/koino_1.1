@@ -618,11 +618,107 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     3000 testvérnél is **mind a hat átmegy**: 3000 lerakva, 0 a várólistán, perem
     0,3442, mag végig 120 px, a legdrágább lépés 2114 ms.
 
-    **⚠️ NYITOTT — a lineáris skálázódás.** A lépésidő még mindig négyzetesen nő
-    (600 → 100 ms, 3000 → 2114 ms), mert a `horgonyMelle` minden lerakásnál
-    végigolvassa az ÖSSZES kört. Pedig csak a közeliek tilthatnak: a `tiltottIv`
-    magától eldobja azt, akire `D ≥ r₁ + r + r_C`. Egyetlen ciklusról van szó —
-    ide jön egy TÉRBELI RÁCS, és a pakolás lineárissá válik. Ez a következő lépés.
+    ### ÁLLAPOT 2026-08-06 — A LINEÁRIS SKÁLÁZÓDÁS MEGVAN
+
+    A 2026-08-05-én nyitva hagyott pont lezárva. **A mérés viszont mást mutatott,
+    mint amit a terv feltételezett — ezt fontos rögzíteni.**
+
+    **A DIAGNÓZIS JAVÍTÁSA.** A terv azt írta, hogy „az egyetlen ok a `horgonyMelle`
+    ciklusa". A CPU-profil (`node --cpu-prof`, 1500 síkidom) ezt megcáfolta:
+
+    | mit mértünk | a futásidő hányada |
+    |---|---|
+    | a pót-horgonyok rendezése (`peremSorrend`) | **67%** |
+    | a `pakolas` törzse (a rendezés előkészítése) | 16% |
+    | a geometria (`tiltottIv` + `horgonyMelle`) | **5%** |
+
+    Vagyis a geometria alig számított; az időt az vitte el, hogy a pakoló MINDEN
+    lerakásnál újrarendezte az összes kört a peremtől mért távolság szerint —
+    ráadásul olyan összehasonlítóval, ami hívásonként KÉT gyökvonást végez.
+
+    **A KÉT JAVÍTÁS.**
+
+    1. **PEREM-RANGSOR** (`sikidomPakolas.js`). Egy lerakott kör „külsősége"
+       (`|közép| + sugár`) többé nem változik — fölösleges újrarendezni. Helyette
+       egy 42 elemű, csökkenő rangsort tartunk karban (kettes kereséssel), és
+       mindig annak az elejéről jönnek a pót-horgonyok. A rendezés 67%-ból 1,6%
+       lett.
+    2. **TÉRBELI RÁCS** (új: `frontend/js/utils/sikidomRacs.js`). A `horgonyMelle`
+       nem olvassa végig az összes kört, csak a közelieket kéri el. A nehézség a
+       méret-szórás volt (mért 765-szörös sugárarány): egyetlen cellamérettel vagy
+       a nagy körök lógnának ki száz cellába, vagy a kicsikből zsúfolódna ezer
+       egyetlen cellába. **Ezért méret-osztályonként külön rács van:** a kör
+       szintje `⌊log₂ sugár⌋`, a szint cellamérete `2^(szint+2)` — így az átmérő
+       pont egy cella, minden kör legfeljebb 2×2 cellát érint. A szintek száma
+       logaritmikus (765-szörös szórás = 10 szint). Ha egy szinten több cellát
+       járnánk be, mint ahány kör van rajta, BIZTONSÁGI FÉK kapcsol be, és a
+       szint listáját olvassuk végig — így a rács soha nem lehet lassabb a réginél.
+
+    **A KÉP NEM VÁLTOZOTT.** Nyolc pakolás-eset (200/600/1500/3000 kör, négy
+    méret-eloszlás, maggal és anélkül, befagyasztott környezettel) pozíció-szintű
+    ujjlenyomata **bitre azonos** a gyorsítás előttivel. A gyorsítás tehát nem
+    „másik pakolás", hanem ugyanaz, kevesebb munkával.
+
+    **MÉRT EREDMÉNY.**
+
+    | eset | előtte | utána |
+    |---|---|---|
+    | mérőpróba, 600 síkidom, a legdrágább lépés | 91 ms | **11 ms** |
+    | mérőpróba, 3000 síkidom, a legdrágább lépés | 2114 ms | **25 ms** |
+    | egyetlen pakolás, 3000 kör | 2224 ms | **52 ms** |
+
+    Skálázódás (egy pakolás, Zipf-eloszlás): 500 → 27 ms, 4000 → 65 ms,
+    32 000 → 710 ms, **64 000 → 1099 ms**. Az egy síkidomra jutó idő 128-szoros
+    mérettartományban 0,015–0,022 ms között marad — ez a linearitás.
+
+    A linearitás OKA is mérve (`backend/tools/sikidomRacsProba.mjs`): a lerakásonként
+    megnézendő jelöltek száma KORLÁTOS. 500 körnél 71,9 jelölt, 32 000-nél 99,0 —
+    vagyis 64-szeres darabszámnál 1,38-szoros munka, az összes kör 0,31%-a.
+
+    Az új próba a rács helyességét is bizonyítja: 2400 lekérdezésen, négy
+    méret-eloszláson (a legszélsőségesebb 1400-szoros sugárugrással) a rács
+    **egyetlen közeli kört sem hagyott ki** a nyers erővel összevetve.
+
+    ### HÁNY SÍKIDOM LEHET EGYSZERRE A KÉPERNYŐN? (matematikai korlát)
+
+    Csaba kérdése (2026-08-06): korlátozza-e a minimum-méret és a képernyő+50%
+    matematikailag a darabszámot? **Igen — és ez a nézet egyik alaptörvénye.**
+
+    A levezetés két tényből áll:
+    - a síkidomok **nem fedik át egymást**, tehát a területük összege legfeljebb
+      akkora, mint a mező, amin vannak;
+    - minden látható síkidom **átmérője legalább `MIN_KEP_ATMERO` = 24 px**, tehát
+      a területe legalább `π · 12² ≈ 452 px²`.
+
+    Az újrapakolás mezője egy `R = (min(szélesség, magasság) / 2) · 1,5` sugarú
+    korong (`UJRAPAKOLASI_TARTALEK`). Legyen `M = min(szélesség, magasság)` CSS-
+    képpontban (a nézet `clientWidth`/`clientHeight`-tel számol, tehát a retina-
+    szorzó NEM sokszorozza a darabszámot). Ekkor
+
+    ```
+        N · π · 12²  ≤  π · R²  =  π · (0,75 · M)²
+        N  ≤  (0,75 · M)² / 12²  =  M² / 256
+    ```
+
+    | képernyő | M | elméleti felső korlát | reális (0,9069 pakolási sűrűséggel) |
+    |---|---|---|---|
+    | telefon, 390×844 | 390 | 594 | ~539 |
+    | laptop, 1366×768 | 768 | 2304 | ~2090 |
+    | Full HD, 1920×1080 | 1080 | 4556 | ~4132 |
+    | 4K, 3840×2160 | 2160 | 18 225 | ~16 529 |
+
+    Ez **a képernyő méretének négyzetével** nő, és teljesen független attól, hány
+    entitás van a rendszerben (millió vagy milliárd). A gyakorlati szám ennél
+    KISEBB, mert a síkidomok nem mind minimális méretűek — a nagyok sok helyet
+    esznek. A korábban mért „egyszerre legfeljebb ~600 testvér" ezzel egyezik.
+
+    Következmények:
+    - A `MIN_KEP_ATMERO` a nézet igazi szabályozója: **négyzetesen** hat a
+      darabszámra (24 → 34 px felezi a maximumot).
+    - **Ellenőrizendő:** a `MAX_RAJZOLT` = 4000 biztonsági plafon Full HD fölött
+      már a korlát ALÁ esik (4556, illetve 4K-n 18 225). Nagy képernyőn tehát nem
+      a matematika, hanem a plafon vágna — ezt vagy fel kell emelni, vagy a
+      képernyő-méretből kell számolni. Külön, kis lépés.
 
     **⚠️ NYITOTT — kifelé zoom.** Csaba döntése szerint kicsinyítéskor NEM kell
     újraépíteni: az ív-számítással hozzá kell fűzni azokat, amik újonnan a

@@ -727,6 +727,23 @@ docker logs -f koino-backend
     szülőn belül, középtől kifelé monoton nő a méret, a mag képpontban állandó,
     determinizmus. Paraméterek: darab, zoom-szorzó, zoom-lépések száma,
     minimum képernyő-átmérő. 600 és 3000 testvérrel egyaránt mind a hat átmegy.
+    A legdrágább lépés 2026-08-06 óta: 600-nál 11 ms, 3000-nél 25 ms.
+
+    **A térbeli rács mérőpróbája (Claude futtatja):**
+    `node backend/tools/sikidomRacsProba.mjs`
+    A pakolás gyorsítását (`frontend/js/utils/sikidomRacs.js`) ellenőrzi. Négy
+    állítás:
+    - **a rács egyetlen közeli kört sem hagy ki** — 2400 lekérdezésen, négy
+      méret-eloszláson (egyenletes, valósághű, kétpúpú, mértani) NYERS ERŐVEL
+      összevetve. Ez a legfontosabb: ha a rács kihagyna egy szomszédot, átfedés
+      keletkezne;
+    - determinizmus (ugyanaz a kérdés → ugyanaz a válasz, ugyanabban a sorrendben);
+    - a megnézendő jelöltek száma korlátos (64× darabszámnál 1,38× jelölt);
+    - a rács érdemben szűkít (32 000 körnél az összes 0,31%-át adja vissza).
+
+    Kiír egy tájékoztató táblát is a rács legrosszabb esetéről (szétszórt körök,
+    a mérettől független lekérdezési hatótáv) — ott a biztonsági fék kapcsol be,
+    ilyenkor a rács nem gyorsít, de lassabb sem lesz a régi megoldásnál.
 
     *Böngésző nélkül már igazolva:* a teljes elrendező folyamat négy fa-alakon
     (105–4680 csomópont, 150 gyökér = 3 lap is) **0 testvér-átfedés, 0 beágyazási hiba**;
