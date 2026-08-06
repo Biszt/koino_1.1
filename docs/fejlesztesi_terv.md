@@ -715,6 +715,35 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     aznap vált lineárissá — a régi, négyzetes pakolóval a megnövelt hatókör
     vállalhatatlan lett volna.)
 
+    **A MARADÉK RÉSEK NEM HIBÁK — MÉRVE (2026-08-06).** A javítás után Csaba még
+    mindig látott hézagokat a nagy síkidomok között. Böngészőből kiolvasva a
+    pakoló tényleges bemenetét és eredményét (ideiglenes `window.__sikidomNyom`
+    horog), három nagyítási szinten:
+
+    | mérés | eredmény |
+    |---|---|
+    | befagyasztott síkidom | **0** |
+    | lerakatlan | **0** |
+    | 2%-nál nagyobb réssel „lebegő" | **0** |
+    | a 40 px-nél nagyobb körök rése a legközelebbi NAGY szomszédjukhoz | **0 px** |
+
+    Vagyis **minden kör érint legalább két másikat, és minden nagy kör érint egy
+    másik nagyot is.** A látott ékek a különböző méretű körök pakolásának
+    ELKERÜLHETETLEN hézagai: egy körpakolásban nem lehet minden szemre szomszédos
+    pár érintkező. A geometria tehát rendben van.
+
+    **AMI VISZONT VALÓDI, ÉS TERVEZÉSI KÉRDÉS.** A hézagok azért ILYEN feltűnőek,
+    mert a pakolás sorrendje „legkisebb középre, növekvő kifelé". Így a nagy körök
+    utoljára, egy finom szemcsés belső tömb PEREMÉRE kerülnek: mindegyik beékelődik
+    a tömb egy-egy horpadásába, és a szomszédos nagyok közt ék alakú üresség marad.
+    Ez a sorrend szándékos (a mag peremén bukkanjanak elő az újonnan láthatóvá váló
+    kicsik) — a látvány ennek az ára.
+
+    Ha a tömörebb, „buborékfürt" kép a cél, az irány a D3 `packSiblings`-éhez
+    hasonló FRONT-LÁNC: a legnagyobbakkal kezdeni, és minden új kört a front két
+    egymást követő köréhez érintve letenni. Ez viszont felülírná a „legkisebb
+    középre" döntést, ezért külön, tudatos döntés kell hozzá.
+
     **MEGMARADT, KISEBB PONT.** A `_lathatoLista` kiszámolja minden csomópont
     képernyő-pozícióját (`kepX`, `kepY`), de az újrapakolásnak csak a `kepSugar`-t
     adja át. Az `_ujrapakolas` ezért a SZÜLŐ KÖZÉPPONTJÁTÓL mért távolságot
