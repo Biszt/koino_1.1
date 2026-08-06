@@ -504,9 +504,11 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     - `GET /api/sikidom/gyerekek` — KÜSZÖBÖS betöltés (nem lapozás), kurzorral.
       Lásd a teszt.md API-referenciáját. A régi `GET /api/sikidom` **megszűnt**.
     - `frontend/js/utils/sikidomMeret.js` — tudatpont → sugár (TERÜLET ∝ pont,
-      szintenként /20); `PAKOLASI_SURUSEG = 0.45` (MÉRT érték).
+      szintenként /20). A becslő réteg (`PAKOLASI_SURUSEG`, `magSugarBecsles`,
+      `gyokerMagSugar`) 2026-08-05-én TÖRÖLVE — lásd az alábbi állapotot.
     - `frontend/js/utils/sikidomPakolas.js` — háromszögeléses kör-pakolás üres
-      maggal, determinisztikus (nincs `Math.random`), beépített zsugorító vészfékkel.
+      maggal, determinisztikus (nincs `Math.random`), plusz a `kitoltPont`
+      helycsináló mozgatás.
     - `frontend/js/utils/sikidomHorgony.js` — KORLÁTLAN nagyítás horgonyváltással.
       Mérve: 295 váltás 10²⁸⁷-szeres nagyításig, 2,9·10⁻¹¹ px képeltéréssel →
       **nincs pislogás** (ez váltja ki a koino_1.0 vászon-újraépítését).
@@ -515,21 +517,130 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       `Kartya.extraMenuOpciok` → „🃏 Pakli nézet"). Alsó sáv végig látszik.
     - Törölve: `sikidomElrendezes.js` (a régi napraforgó-spirál, 50% átfedéssel).
 
-    **⚠️ NYITOTT PROBLÉMA — itt tartottunk (a következő session ezzel kezdjen):**
-    Ha egy szülő alatt SOK testvér van (a kérés-plafonnál, 150-nél több), a
-    betöltés adagokban történik, és minden adag az előző adag üres magjába
-    pakolódik. A mérés szerint **a rekurzív gyűrűs beágyazás elveszti a
-    pakolási hatékonyságot**: a fenntartott mag 2-3 adag után elfogy, és onnantól
-    **entitások maradnak ki** (600 gyerekes próbán 60-as adagokkal csak 180,
-    küszöbös adagokkal csak 5 került ki).
-    - Az ok: a `PAKOLASI_SURUSEG = 0.45` EGYETLEN adag magba pakolására lett mérve,
-      nem egymásba ágyazott adagokra. Minden újabb gyűrű vékonyabb, ott a pakolás
-      hatékonysága sokkal rosszabb.
-    - A következő lépés: **sűrűség-söprés** (0,45 → 0,3 → 0,2 → 0,1), hogy kiderüljön,
-      milyen feltételezett sűrűséggel hány adag ágyazható egymásba veszteség nélkül;
-      ha ez nem elég, a gyűrűs beágyazás helyett más elrendezés kell.
-    - **A jelenlegi fejlesztői adaton NEM jelentkezik** (105 gyökér egyetlen kérésbe
-      belefér), tehát a nézet böngészőben rendben működik.
+    ### ÁLLAPOT 2026-08-05 — A SOK-TESTVÉRES PROBLÉMA MEGOLDVA
+
+    A 2026-08-04-i nyitott probléma (sok testvérnél entitások maradtak ki) **le van
+    zárva**. A tervezett „sűrűség-söprés" NEM kellett: nem a `PAKOLASI_SURUSEG`
+    értéke volt rossz, hanem maga a becslő modell.
+
+    **A hiba oka, visszafejtve.** A magot a tudatpontból BECSÜLTÜK, egy feltételezett
+    0,45-ös sűrűséggel. A becslés csak TERÜLETTEL számolt — pedig egy `w` szélességű
+    gyűrűbe egy `r > w/2` sugarú kör semennyi területtel sem fér be, és a pakolás
+    növekvő sorrendben rak, tehát épp a legnagyobb kör kerül legkívülre. Ilyenkor a
+    pakoló a magot felezve „javított", akár NULLÁRA; a `szabadMagSugar = 0` onnantól
+    véglegesen 0 maradt, minden további adag `nincsHely`-t kapott, a hívó viszont a
+    `betoltottGyerekPont`-ot mégis növelte → az entitások NÉMÁN elvesztek.
+    (3 sikeres adag × 60 = 180 — pontosan egyezik a méréssel.)
+
+    **AZ ÚJ MODELL — EGYETLEN SZABÁLY (Csaba döntései, 2026-08-05).**
+    A nagyítás VÉGÉN fogjuk azt, ami a képernyőn (+50%) látszik — a már
+    lerakottakat és a soron következő várakozókat —, és ÚJRAPAKOLJUK bentről
+    kifelé, növekvő méret szerint, a mag körül. Nincs kitolás, nincs
+    biztonsági szelep, nincs adagonkénti láncolás: egy szabály.
+
+    - **A MAG MINDIG ÜRES** — soha semmit nem teszünk bele; a testvérek KÖRÉ
+      pakolódnak.
+    - **A mag képpontban állandó** (`MAG_CEL_ATMERO` = 120 px), adat-térben
+      `(MAG_CEL_ATMERO/2) / szülőKépernyőSugár`. Ebből a szintenkénti √20-as
+      váltószám miatt MAGÁTÓL kijön a helyes magméret minden hierarchia-
+      mélységben — nem kell külön mélység-logika.
+    - **A letöltés és a lerakás külön lépés:** a letöltött, de le nem rakott
+      testvérek a csomópont `varolista`-ján várnak. Így semmit nem számolunk
+      lerakottnak, aminek nincs helye.
+    - **Az újrapakolás hatóköre a látómező:** aki oda benyúlik, azt átrendezzük;
+      aki teljesen kívül van, helyben marad és akadály lesz.
+    - **A szülő nem tud megtelni:** a gyerekek együttes területe legfeljebb a
+      szülő 1/20-a (hierarchikus össztudatpont), tehát hússzoros a tartalék. A
+      mérésen a perem 0,35 körül marad (a szülő sugara 1).
+
+    **A PAKOLÓ: SZABAD ÍVEK SZÁMÍTÁSA (2026-08-05, Csaba döntése).**
+    Az új kört a legutóbb lerakott kör („horgony") mellé tesszük. Ha érinti a
+    horgonyt, a KÖZÉPPONTJA egy körön van (a horgony körül, r₁ = r_H + r sugárral)
+    — végtelen sok hely. Kiszámoljuk, mely szögek TILTOTTAK: egy C kör (D
+    távolságra, φ irányban, r_C sugárral) akkor zavar, ha
+
+    ```
+    cos(θ − φ)  >  (r₁² + D² − (r + r_C)²) / (2·r₁·D)
+    ```
+
+    vagyis φ körüli, szimmetrikus szög-intervallumot tilt le. A tiltott
+    intervallumokat összefésüljük; ami marad, az a SZABAD ÍVEK halmaza, és azok
+    VÉGPONTJAI pontosan azok a helyek, ahol az új kör egy MÁSODIK kört is érint —
+    a klasszikus háromszögelés, csak hiánytalanul.
+
+    Ezzel **az ütközés-ellenőrzés nem külön lépés, hanem maga a számítás.** Nem
+    kell partner-választás, korrekciós ág, Σ-távolság heurisztika, véletlen
+    tartalék — és nem kell szülő-perem korlát sem.
+
+    - **A mag ugyanolyan horgony, mint bármely kör**, és ő az ELSŐ jelölt (növekvő
+      méretben pakolunk, a legkisebbek oda valók). Enélkül — befagyasztott
+      környezet mellett — senki nem került a mag peremére, és a középső üresség a
+      célérték TÍZSZERESÉRE nőtt.
+    - **Az üres mag CSAK akkor van, ha van még meg nem jelenített testvér.** Ha
+      nincs, a legkisebb a KÖZÉPPONTBA kerül.
+    - **Pót-horgonyok a LEGKÜLSŐVEL kezdve**: a horgony akkor fullad be, ha körbe
+      van véve, a szabad hely pedig a peremen van. (Befelé rendezve 600-ból 197 a
+      várólistán ragadt.)
+    - **Nincs perem-korlát élesben** — a matematika garantálja: 3000 testvérnél a
+      legkülső pont 0,3442, pedig semmi nem tartja bent. A mérőpróba ELLENŐRZI.
+
+    **MIÉRT EZ, ÉS NEM A KORÁBBI JELÖLT-GYÁRTÁS.** A koino_1.0 (és az első 1.1-es
+    változat) néhány jelöltet mintavételezett, majd ellenőrizte őket. Ha a mintában
+    nem volt szabad hely, átfedés keletkezett. A homokozóban (`regiPakolasTeszt.html`)
+    a két módszer egymás mellett futtatható, ugyanazon az adaton:
+
+    | eset | régi: átfedő pár / legrosszabb | íves |
+    |---|---|---|
+    | 100 kör, valósághű | 4 / 24,8% | **0** |
+    | 300 kör, valósághű | 23 / 122,3% | **0** |
+    | 300 kör, EGYENLETES méret | 767 / 100,0% | **0** |
+    | 100 kör, mértani ×2 ugrás | 290 / 100,0% | **0** |
+    | 100 kör, kétpúpú (59 049× ugrás) | 109 / 240,3% | **0** |
+    | 300 kör, kétpúpú | 1534 / **13 392%** | **0** |
+
+    Az egyenletes eset a legbeszédesebb: azonos méreteknél a régi „legközelebbi"
+    döntései holtversenybe futnak (42 véletlen elhelyezés) — pont az a szimmetria-
+    probléma, amit a koino_1.0-ban a `+0,001`-es ráhagyás próbált feloldani. Az
+    íves módszernél ilyen döntés nincs, csak tiltott és szabad ívek.
+
+    **MÉRT EREDMÉNY** (`node backend/tools/sikidomPakolasProba.mjs 600 1.3 90`):
+
+    ```
+    OK  Nulla átfedés — 600 síkidom, 179 700 pár ellenőrizve
+    OK  Egyetlen entitás sem vész el — 600 lerakva + 0 várólistán = 600
+    OK  Minden síkidom a szülőn belül — a legkülső perem 0,3545
+    OK  Középtől kifelé monoton nő a méret — 11 egymásba fűzött gyűrű
+    OK  A lyuk képpontban állandó — 120–120 px (cél 120 px)
+    OK  Determinizmus (kétszer futtatva bitre azonos)
+    Újrapakolás: 11× · a legdrágább lépés: 100 ms
+    ```
+
+    3000 testvérnél is **mind a hat átmegy**: 3000 lerakva, 0 a várólistán, perem
+    0,3442, mag végig 120 px, a legdrágább lépés 2114 ms.
+
+    **⚠️ NYITOTT — a lineáris skálázódás.** A lépésidő még mindig négyzetesen nő
+    (600 → 100 ms, 3000 → 2114 ms), mert a `horgonyMelle` minden lerakásnál
+    végigolvassa az ÖSSZES kört. Pedig csak a közeliek tilthatnak: a `tiltottIv`
+    magától eldobja azt, akire `D ≥ r₁ + r + r_C`. Egyetlen ciklusról van szó —
+    ide jön egy TÉRBELI RÁCS, és a pakolás lineárissá válik. Ez a következő lépés.
+
+    **⚠️ NYITOTT — kifelé zoom.** Csaba döntése szerint kicsinyítéskor NEM kell
+    újraépíteni: az ív-számítással hozzá kell fűzni azokat, amik újonnan a
+    képernyő+50%-os területre kerültek, a középen a minimum alá esők pedig
+    egyszerűen eltűnnek. A modalba ez még nincs bekötve (most kicsinyítéskor is a
+    teljes újrapakolás fut).
+
+    **ELVETETT IRÁNY — kitolás.** A már lerakottak kifelé tolása (sugárirányban,
+    bizonyítottan átfedésmentesen, 600 síkidomra 0,04 ms) működött, de pazarolt: Δ-t
+    nyitni a magnál minden sugáron nyit egy Δ széles sávot, és ~750 lerakott testvér
+    fölött a perem elérte a szülőt. Az újrapakolás egyszerűbb és jobb képet ad.
+
+    **ELVETETT IRÁNY — spirál-lánc.** A síkidomok egyetlen, kifelé csavarodó láncot
+    alkotnának, és helycsináláskor a lánc elcsúszna a saját pályáján (Csaba képe:
+    összetekeredett kígyó, aminek a feje elindul a teste mellett). Sebességben
+    kiváló: 600 síkidom 1,3 ms. DE a prototípus 25–37 átfedő párt adott (a
+    legrosszabb 24%), és 1200 gyerek fölött a lánc kicsavarodott a szülőn kívülre
+    (perem 7,4 → 15,4). Szoros burkoló és rendes érintő-számítás kellene hozzá.
 
     **Menet közben javított hibák (ne essünk vissza beléjük):**
     - `pakolas`: a `maxKulsoSugar = 0`-t tévesen „nincs korlát"-nak vette →
@@ -548,7 +659,12 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
     **Csaba döntései (kötelező érvényűek):**
     - Minden síkidomot KÖRKÉNT pozicionálunk; a TERÜLET arányos a tudatponttal.
-    - Az üres mag MINDIG van (nem feltételhez kötött).
+    - Az üres mag MINDIG van (nem feltételhez kötött), és MINDIG ÜRES — soha
+      semmit nem teszünk bele; a testvérek köré pakolódnak.
+    - A mag mérete a KÉPERNYŐHÖZ van kötve (állandó képpont-átmérő), nem a
+      tudatponthoz. A hierarchia-mélység szerinti skálázás ebből magától adódik.
+    - Helyszűkében a már lerakottak KIMOZDULHATNAK (kifelé tolás), hogy a
+      frissen láthatóvá vált testvéreknek jusson hely a mag mellett.
     - Koppintás → a nézet MARAD, csak az entitás kártyája jelenik meg, bezárhatóan.
     - Az alsó sáv végig látszik (onnan lehet pakli nézetre váltani).
     - Zoom van (görgetés/csippentés), de koppintásra nem.

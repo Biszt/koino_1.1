@@ -669,13 +669,19 @@ docker logs -f koino-backend
     Javaslat = ötszög, Egyezmény = hatszög (halvány kitöltés, típus-színű keret);
     (b) **átfedés SEHOL** — sem testvérek között, sem szülőből kilógó gyerek;
     (b2) **ÜRES MAG szaggatott körrel:** minden kibontott síkidom közepén
-    **szaggatott kör** jelzi az ürességet. A kör pereme a kettő közül a nagyobbik:
-    a *fenntartott mag* (a még be nem töltött testvérek helye) vagy a *rejtett
-    tartomány* (ami betöltődött, de még a 24 képpontos küszöb alatt van).
+    **szaggatott kör** jelzi az ürességet. A mag **MINDIG ÜRES** — soha nem kerül
+    bele semmi; a testvérek KÖRÉ pakolódnak. A kör pereme a MÉRT üresség (a
+    legbelső testvér belső széle), nem becslés.
     - **Nagyítás közben:** amíg van meg nem jelent entitás, a kör átmérője
-      **nagyjából állandó marad a képernyőn** (a peremén sorra előbukkannak az
-      újabbak) — ugyanúgy, mint a sikidomTeszt.html-ben. Amikor elfogynak, a kör
-      a nagyítással **arányosan nőni kezd**.
+      **állandó marad a képernyőn** (`MAG_CEL_ATMERO` = 120 képpont), és a peremén
+      sorra előbukkannak az újabbak. Amikor elfogynak, a kör a nagyítással
+      **arányosan nőni kezd** — ez a jelzés, hogy „itt nincs több".
+      *Böngésző nélkül mérve: 600 testvéren 90 nagyítási lépésen át végig
+      pontosan 120–120 px.*
+    - **A már lerakott síkidomok ÁTRENDEZŐDNEK.** A nagyítás VÉGÉN (nem görgetés
+      közben) a képernyőn látszó síkidomok újrapakolódnak bentről kifelé, hogy a
+      frissen előbukkanóknak is jusson hely a mag körül. Ez egy egyszeri,
+      összehangolt átrendeződés — a kép nem remeg görgetés közben;
     - A gyökér-szint magjában felirat is van („üres kör — nagyíts befelé"), ha elfér.
       A 10 képpontnál kisebb átmérőjű magokat nem rajzoljuk ki;
     (c) az **alsó sáv végig látszik és használható** (hamburger + statisztikák) —
@@ -702,14 +708,25 @@ docker logs -f koino-backend
     Tudatpontok, Keresés, Struktúra nézet, Rendezés…) is működik, és a saját modáljaik
     **nem lövik ki** a síkidom nézetet (külön `almodal-kontener`-ben nyílnak).
 
-    API: `GET /api/sikidom/gyerekek?szulo=&kihagy=&darab=` (lásd a fenti
-    API-referenciát). A régi `GET /api/sikidom` **megszűnt** (404).
+    API: `GET /api/sikidom/gyerekek?szulo=&minPont=&kurzorPont=&kurzorId=&darab=`
+    (lásd a fenti API-referenciát). A régi `GET /api/sikidom` **megszűnt** (404).
+
+    (j) **SOK-TESTVÉRES PRÓBA:** hozz létre egy szülőt sok (100+) gyerekkel, és
+    nagyíts bele végig. **Mindegyik gyereknek elő kell bukkannia** a mag peremén,
+    átfedés nélkül, és a nézet nem akadhat el. *(Ez volt a 2026-08-04-i nyitott
+    hiba: 600 gyerekből 180 némán elveszett. Most mind a 600 megjelenik.)*
 
     **Teszt-adat a próbához** (csak fejlesztői környezetben):
     `docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér
     tartalmat hoz létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már
-    létező címeket kihagyja). A 100 elem TÖBB a 60-as lapméretnél, tehát a
-    **lapozás és a fenntartott mag** is kipróbálódik.
+    létező címeket kihagyja).
+
+    **Böngésző nélküli mérőpróba (Claude futtatja):**
+    `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90`
+    Hat állítást ellenőriz: nulla átfedés, egyetlen entitás sem vész el, minden a
+    szülőn belül, középtől kifelé monoton nő a méret, a mag képpontban állandó,
+    determinizmus. Paraméterek: darab, zoom-szorzó, zoom-lépések száma,
+    minimum képernyő-átmérő. 600 és 3000 testvérrel egyaránt mind a hat átmegy.
 
     *Böngésző nélkül már igazolva:* a teljes elrendező folyamat négy fa-alakon
     (105–4680 csomópont, 150 gyökér = 3 lap is) **0 testvér-átfedés, 0 beágyazási hiba**;
@@ -969,6 +986,46 @@ végtelen nagyítás. A helyet CSAK a sorszám adja — nem kell előre tudni az
 egymásba ágyazott lapnál (240 kör) is nulla átfedés, a korábbi lapok mozdulása nélkül;
 kevert bemeneti sorrenddel 20 futásból 0 eltérés (determinizmus); 295 horgonyváltás
 10²⁸⁷-szeres nagyításig 2,9·10⁻¹¹ px képeltéréssel.*
+
+### Fejlesztői homokozó — kör-pakolás (2026-08-05)
+
+*NEM az éles nézet: a pakolási módszerek összehasonlítására szolgál, backend és
+bejelentkezés nélkül.*
+
+**http://localhost:3000/regiPakolasTeszt.html** *(tisztán frontend — `docker restart`
+nem kell, elég a hard-refresh).*
+
+Két módszer futtatható ugyanazon az adaton:
+
+- **régi — koino_1.0 háromszögelés:** a
+  [`ContentPositioner.js`](../../koino_1.0/public/js/ContentPositioner.js) hű
+  portja ([`regiPakolas.js`](../frontend/js/teszt/regiPakolas.js)). Minden új kört
+  az utoljára lerakotthoz és a hozzá legközelebbihez illeszt; ütközés-ellenőrzés
+  nincs, ezért átfedések keletkeznek.
+- **íves — szabad ívek:** ugyanaz, amit az éles nézet is használ
+  ([`ivesPakolas.js`](../frontend/js/teszt/ivesPakolas.js) a lépésenkénti
+  naplóval; élesben
+  [`sikidomPakolas.js`](../frontend/js/utils/sikidomPakolas.js)).
+
+Amit tud:
+
+- **lépésenkénti lerakás** a legkisebbel kezdve (⏮ ◀ ▶ ⏭, lejátszás, csúszka,
+  ← → billentyű), és a jobb oldali ablakban a **teljes pozíció-számítás**:
+  a réginél horgony → partner → segédkörök → metszéspontok → ellenőrzés →
+  korrekció; az ívesnél horgony → a lehetséges középpontok köre → tiltott ívek →
+  szabad ívek → jelöltek → választás;
+- a vásznon **geometriailag is** látszik ugyanez (szaggatott segédkörök és
+  metszéspontok, illetve a szabad ívek vastag zölddel);
+- **méret-eloszlás**: valósághű · egyenletes · mértani (állandó ugrás) ·
+  kétpúpú (apró + óriás), plusz egy **ugrás-csúszka** (1,00–3,00×);
+- statisztika: átfedő párok, érintett síkidomok, az átfedés mélysége a KISEBBIK
+  kör átmérőjéhez mérve (100% = a kisebbik teljesen eltűnt), méret-szórás,
+  legnagyobb szomszéd-ugrás.
+
+**Amit érdemes megnézni:** állítsd `egyenletes` eloszlásra 300 körrel, és váltogasd
+a módszert. A régi 767 átfedő párt ad (42 véletlen elhelyezéssel), az íves nullát —
+ez a szimmetria-probléma, amit a koino_1.0-ban a `+0,001`-es ráhagyás próbált
+feloldani.
 
 ### API-referencia — Síkidom nézet, KÜSZÖBÖS gyerek-végpont (2026-08-04)
 
