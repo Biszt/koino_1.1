@@ -795,6 +795,61 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     átlós ráhagyás ezt elfedi, de a tiszta megoldás a `kepX`/`kepY` átadása és a
     valódi látómező-téglalaphoz mérés. Külön, kis lépés.
 
+    ### HIBAJAVÍTÁS 2026-08-06 (3.) — A MAG SZINTENKÉNTI SKÁLÁZÁSA
+
+    **Csaba pontosítása:** „a belső magméretnek a képernyőhöz kell igazodnia, DE a
+    hierarchia szintet, azaz a 20-adra csökkentést, szintenként alkalmazni kell."
+    Ez javítja ki a modell valódi hibáját — a (2.) pont korlátja csak tünetet kezelt.
+
+    **A KORÁBBI HIBÁS MODELL.** A mag minden csomópontnál a SAJÁT képernyő-
+    sugarából jött: `60 / sajátKépSugár`. Vagyis MINDEN szint egyszerre akart
+    120 képpontos lyukat. Csakhogy egy szinttel lejjebb a csomópont √20 ≈ 4,47-szer
+    kisebb a képernyőn — ott a 120 px már nem fér bele, és a mag kilökte a
+    gyerekeket a szülőből. A terv korábbi állítása („a szintenkénti √20-as
+    váltószám miatt MAGÁTÓL kijön a helyes magméret minden mélységben, nem kell
+    külön mélység-logika") tehát **téves volt** — épp fordítva: a szintenkénti
+    skálázást KÜLÖN kell alkalmazni.
+
+    **A HELYES SZABÁLY.** A 120 px EGY szintre szól: arra, amit épp nézünk (a
+    horgony szintje). Lejjebb szintenként √20-cal kisebb a lyuk is. Adat-térben ez
+    azt jelenti, hogy minden csomópont UGYANAZT a relatív magot kapja, a HORGONY
+    képernyő-sugarából számolva:
+
+    ```
+    magSugarRel = (MAG_CEL_ATMERO / 2) / horgonyKépernyőSugár
+    ```
+
+    A horgony képernyő-sugara maga a `_nezet.skala` (a horgony kerete definíció
+    szerint 1 sugarú). Kapcsoló: `MAG_SZABALY` — `'szintenkent'` (új) /
+    `'csomopontonkent'` (korábbi).
+
+    **A PROGRAM TUDJA, MELYIK SZINTET NÉZI.** Csaba kérése: „amikor beleközelítenek
+    egy entitásba, azt a programnak érzékelnie kell; a koino_1.0 ezt már tudta."
+    A nézet ezt a HORGONNYAL érzékeli (`_horgonyEllenorzes` lépteti le/föl). Az új
+    `_horgonySzint()` teszi kiolvashatóvá (VILÁG = −1, gyökerek = 0, gyerekeik = 1…),
+    és a naplóba is bekerül. Erre épül a mag skálázása, és erre épülhet később a
+    szint kiírása vagy a szinthez kötött viselkedés.
+
+    **INVARIÁNS-ŐR.** Az `_ujrapakolas` mostantól `console.error`-t ír, ha egy
+    gyerek a szülőn kívülre kerül (`kulsoSugar > 1`). Ez a hiba 2026-08-06-án épp
+    egy konzolos képernyőképről derült ki — ne kelljen legközelebb kitalálni.
+
+    **MEGSZŰNT AZ ADATHIÁNY.** Új eszköz: `backend/tools/sikidomMelysegTesztAdat.js`
+    — TÖBB SZINTŰ fát épít egy meglévő gyökér alá (a rendes service-en át, tehát
+    minden származtatott rekord konzisztens). Futtatva: 155 tartalom 3 szinten.
+    Erre azért volt szükség, mert a fejlesztői adatbázisban 105 gyökér mellett
+    mindössze 3 nem-gyökér entitás volt — **a horgony szintje mérve végig −1
+    maradt**, vagyis a drill-down esetet hetekig nem is teszteltük.
+
+    ```
+    docker exec koino-backend node tools/sikidomMelysegTesztAdat.js 3 5
+    ```
+
+    **NYITOTT — böngészős ellenőrzés.** A mélységi adat megvan, a szabály és az
+    invariáns-őr bekötve, a böngészőben eddig 0 sértés — de a horgony a próbáim
+    alatt még nem lépett 0. szint alá, tehát a drill-down eset ELLENŐRZÉSRE VÁR
+    (a böngészős tesztet Csaba végzi).
+
     ### KÍSÉRLET 2026-08-06 — ÜRES MAG NÉLKÜL
 
     Csaba kérése: próbáljuk ki a nézetet üres mag nélkül. **Minden újrapakolásnál

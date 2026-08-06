@@ -89,6 +89,33 @@ const ELENGEDES_TURELEM = 240;
 // darabszám pedig ebből KÖVETKEZIK, nem mi találjuk ki.
 const MAG_CEL_ATMERO = 120;
 
+// ===== A MAG SZINTENKÉNTI SKÁLÁZÁSA =====
+// Csaba pontosítása (2026-08-06): „a belső magméretnek a képernyőhöz kell
+// igazodnia, DE a hierarchia szintet, azaz a 20-adra csökkentést, szintenként
+// alkalmazni kell."
+//
+// Ez javítja ki a korábbi modell hibáját. Eddig a mag minden csomópontnál a SAJÁT
+// képernyő-sugarából jött (`60 / sajátKépSugár`), vagyis MINDEN szint egyszerre
+// akart 120 képpontos lyukat. Csakhogy egy szinttel lejjebb a csomópont √20 ≈ 4,47
+// -szer kisebb a képernyőn — ott a 120 px már nem fér bele, és a mag KILÖKTE a
+// gyerekeket a szülőből (mérve: mag 0,8969, kulsoSugar 1,2842).
+//
+// A HELYES SZABÁLY: a 120 px EGY szintre, a most nézett (horgony) szintre szól.
+// Lejjebb szintenként √20-cal kisebb a lyuk is. Adat-térben ez épp azt jelenti,
+// hogy MINDEN csomópont ugyanazt a RELATÍV magot kapja, a HORGONY képernyő-
+// sugarából számolva:
+//
+//     magSugarRel = (MAG_CEL_ATMERO / 2) / horgonyKépernyőSugár
+//
+// (A horgony képernyő-sugara maga a `_nezet.skala`, mert a horgony kerete
+// definíció szerint 1 sugarú.) Ehhez a programnak TUDNIA kell, melyik szintet
+// nézi éppen — ezt a horgony adja, és a horgonyváltás érzékeli a befelé
+// közelítést (`_horgonyEllenorzes`).
+//
+//   'szintenkent'    — az új szabály: a mag a horgony szintjéhez igazodik
+//   'csomopontonkent' — a korábbi: minden csomópont a saját méretéből számol
+const MAG_SZABALY = 'szintenkent';
+
 // ===== ÜRES MAG: KI / BE =====
 // KÍSÉRLET (2026-08-06, Csaba kérése): próbáljuk ki a nézetet ÜRES MAG NÉLKÜL.
 //
@@ -549,7 +576,15 @@ class SikidomModal {
     const vilagSzint = cs.id === VILAG;
     if (!((vilagSzint ? cs.legerosebbGyerekPont : cs.pont) > 0)) return false;
 
-    const celMag = (MAG_CEL_ATMERO / 2) / kepSugar;
+    // A MAG MÉRETE. Az új szabálynál a HORGONY képernyő-sugarából számolunk
+    // (`_nezet.skala`), nem a csomópont sajátjából — így a 120 px a most nézett
+    // szintre szól, lejjebb pedig szintenként √20-cal kisebb a lyuk. Lásd a
+    // MAG_SZABALY állandó magyarázatát.
+    const magVonatkoztatas = MAG_SZABALY === 'szintenkent'
+      ? (this._nezet.skala || kepSugar)
+      : kepSugar;
+    const celMag = (MAG_CEL_ATMERO / 2) / magVonatkoztatas;
+
     const hatar = this._ujrapakolasiSugar();
 
     const relSugar = (pont) => vilagSzint
@@ -602,6 +637,11 @@ class SikidomModal {
     // ezt ellenőrzi (`Minden síkidom a szülőn belül`).
     // Mag NÉLKÜL (URES_MAG = false) a pakoló a legkisebb testvért a KÖZÉPPONTBA
     // teszi — feltéve, hogy a helyben maradó környezet nem ül rajta.
+    // ===== BIZTONSÁGI HÁLÓ: A MAG NEM NŐHETI KI A SZÜLŐT =====
+    // A szintenkénti szabály (MAG_SZABALY) után ennek már nem KELLENE elsülnie —
+    // de bent marad, mert az invariáns (minden síkidom a szülőn belül) fontosabb,
+    // mint a lyuk pontos mérete. Ha egyszer mégis elsül, az jelzés, hogy a
+    // szintenkénti számítás valahol elcsúszott.
     // ===== A MAG NEM NŐHETI KI A SZÜLŐT =====
     // A mag képpontban ÁLLANDÓ (MAG_CEL_ATMERO), a szülő viszont a nagyítástól
     // függően kicsi is lehet a képernyőn. Ha a szülő képernyő-sugara a mag
@@ -692,8 +732,18 @@ class SikidomModal {
       helybenMaradt: allok.length,
       varolistan: cs.varolista.length,
       magKeppont: Math.round(cs.magSugarRel * kepSugar * 2),
-      kulsoSugar: cs.kulsoSugar.toFixed(4)
+      kulsoSugar: cs.kulsoSugar.toFixed(4),
+      horgonySzint: this._horgonySzint()
     });
+
+    // A beágyazási invariánst ITT is őrizzük: a konzolban azonnal látszódjon, ha
+    // egy gyerek a szülőjén kívülre kerül. (Ez a hiba 2026-08-06-án épp egy
+    // konzolos képernyőképről derült ki — ne kelljen legközelebb kitalálni.)
+    if (!vilagSzint && cs.kulsoSugar > 1.000001) {
+      console.error('SikidomModal._ujrapakolas - BEÁGYAZÁS SÉRÜL: gyerek a szülőn kívül', {
+        csomopont: cs.id, kulsoSugar: cs.kulsoSugar, magSugar, kepSugar
+      });
+    }
 
     return true;
   }
@@ -739,6 +789,30 @@ class SikidomModal {
 
   _kepernyoMeret() {
     return Math.min(this._szelesseg || 1, this._magassag || 1);
+  }
+
+  // ===== MELYIK HIERARCHIA-SZINTET NÉZZÜK ÉPPEN? =====
+  // Csaba kérése (2026-08-06): „amikor beleközelítenek egy entitásba, azt a
+  // programnak érzékelnie kell; a koino_1.0 ezt már tudta." A nézet ezt a
+  // HORGONNYAL érzékeli: a `_horgonyEllenorzes` nagyításkor lefelé, kicsinyítéskor
+  // fölfelé lépteti, a képernyő-kép közben változatlan marad.
+  //
+  // Ez a metódus teszi a tudást KIOLVASHATÓVÁ: hányadik szinten állunk a
+  // gyökerektől számolva (a VILÁG = -1, a gyökerek = 0, a gyerekeik = 1 …).
+  // Erre épül a mag szintenkénti skálázása (MAG_SZABALY), és erre épülhet később
+  // a szint kiírása vagy a szinthez kötött viselkedés.
+  _horgonySzint() {
+    let szint = 0;
+    let id = this._horgony;
+
+    for (let lepes = 0; lepes < 64; lepes++) {
+      if (id === VILAG) return szint - 1;
+      const cs = this._tar.get(id);
+      if (!cs || !cs.szuloId) return szint;
+      id = cs.szuloId;
+      szint++;
+    }
+    return szint;
   }
 
   // ===== AZ ÚJRAPAKOLÁS HATÓSUGARA =====

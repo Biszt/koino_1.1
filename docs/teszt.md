@@ -1200,3 +1200,28 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
 - Szavazat-UI (SzavazatModal): korábbi szavazat kiemelése, módosítás, visszavonás.
 - Jogosultság-függő menük halványítása olyan entitáson, ahol nincs tudatpont.
 - „Részletes adatok" modál tartalma; egyezmény-kártya külön megjelenítése a pakliban.
+
+### Síkidom nézet — MÉLYSÉGI teszt-adat (2026-08-06)
+
+A fejlesztői adatbázisban 105 gyökér volt, de mindössze 3 nem-gyökér entitás —
+ezért a Síkidom nézet horgonya SOSEM lépett be egy entitásba (mérve: a horgony
+szintje végig −1, a virtuális VILÁG maradt), és a befelé nagyítás (drill-down)
+esetét nem is teszteltük.
+
+```bash
+docker exec koino-backend node tools/sikidomMelysegTesztAdat.js 3 5
+```
+
+(mélység, gyerek/csomópont) — a `Közösségi döntéshozatal` gyökér alá épít fát a
+rendes service-en át, tehát minden származtatott rekord konzisztens. Újrafuttatható
+(a már létező című gyerekeket kihagyja). Futtatva: 155 tartalom 3 szinten.
+
+**Amit a mélységi próbán nézni kell:**
+
+1. Nagyíts BELE egy körbe, amíg a felirataiból látszik, hogy egy szinttel lejjebb
+   vagy (pl. „Alapelvek — Közösségi döntéshozatal").
+2. A gyerekeknek a SZÜLŐN BELÜL kell maradniuk. Ha nem, a konzol azonnal szól:
+   `SikidomModal._ujrapakolas - BEÁGYAZÁS SÉRÜL: gyerek a szülőn kívül`.
+3. A konzol `_ujrapakolas` naplója kiírja a `horgonySzint`-et (VILÁG = −1,
+   gyökerek = 0, gyerekeik = 1…) és a `magKeppont`-ot. A lyuk a HORGONY szintjén
+   ~120 px; lejjebb szintenként √20 ≈ 4,47-szer kisebb — ez a helyes viselkedés.
