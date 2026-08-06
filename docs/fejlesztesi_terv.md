@@ -856,9 +856,21 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     a LEGKISEBB olyan testvér kerüljön a KÖZÉPPONTBA, amelyik elérte a láthatósági
     küszöböt.** Ez felülírja a 2026-08-05-i „a mag mindig üres" döntést.
 
-    **A kapcsoló:** `SikidomModal.URES_MAG`. Jelenleg **`false`** (mag nélkül);
-    `true`-ra állítva egy sorral visszajön a korábbi viselkedés. A mérőpróba is
-    tudja mindkettőt: `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`.
+    **DÖNTÉS (2026-08-06 este, Csaba): MARADUNK A MAG NÉLKÜLI VÁLTOZATNÁL.**
+    `SikidomModal.URES_MAG = false`. Napközben egyszer visszaállt `true`-ra, mert
+    a böngészős próbán a mag nélküli változat rosszabbnak tűnt — de utóbb kiderült,
+    hogy a „szétesést" NEM a mag hiánya okozta, hanem két külön hiba: a fagyasztási
+    határ (1. javítás) és a szülőt kinövő mag (2–3. javítás). A mérés végig a mag
+    NÉLKÜLI változatot mutatta tömörebbnek: **52,7% kitöltöttség és 4,08 átlagos
+    érintés**, szemben a maggal futó 48,7%-kal és 3,01-gyel (105 valódi gyökéren).
+
+    A mérőpróba tudja mindkettőt:
+    `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`.
+    Mag nélkül 600-nál és 3000-nél is mind a hat ellenőrzés átmegy (perem 0,3547
+    illetve 0,3439, nincs középső lyuk).
+
+    **AMI EZZEL NYITOTTÁ VÁLIK:** a mag azt IS jelezte, hogy „van még lejjebb
+    testvér". Ezt — ha kell — MÁSHOGY kell megoldani, nem a kép lazítása árán.
 
     **Ami a kapcsolón kívül változott:** a pakoló eddig csak TELJESEN ÜRES lapon
     tette a legkisebb kört a középpontba (`kornyezet.length === 0`). Mag nélküli

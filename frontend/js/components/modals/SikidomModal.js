@@ -130,12 +130,19 @@ const MAG_SZABALY = 'szintenkent';
 //     a „kinőtt a mag" ág nem sülhet el, mert nincs mag.
 // A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
 //
-// ÁLLÁS 2026-08-06: a böngészős próbán a mag nélküli változat ROSSZABB volt
-// („szétesik"), ezért visszaállítva `true`-ra. A kísérlet kódja megmarad, hogy
-// egy sorral újra kipróbálható legyen. Amit a mérés mutatott: a mag nem csak
-// lyuk volt, hanem a pakolás ELSŐ HORGONYA is — a peremére kerültek sorra a
-// legkisebbek, ez adta a rendezett gyűrűket.
-const URES_MAG = true;
+// ÁLLÁS 2026-08-06 (Csaba döntése): MARADJUNK A MAG NÉLKÜLI VÁLTOZATNÁL.
+//
+// A napközbeni oda-vissza rövid története, hogy ne kelljen újra végigjárni:
+// először `false`-ra állítottuk (kísérlet), a böngészős próbán rosszabbnak tűnt,
+// ezért visszaállt `true`-ra — de utóbb kiderült, hogy a „szétesést" NEM a mag
+// hiánya okozta, hanem két külön hiba (a fagyasztási határ és a mag szülőt
+// kinövő mérete). A mérés pedig végig a mag NÉLKÜLI változatot mutatta
+// tömörebbnek: 52,7% kitöltöttség és 4,08 átlagos érintés, szemben a maggal
+// futó 48,7%-kal és 3,01-gyel (105 valódi gyökéren mérve).
+//
+// A mag „van még lejjebb testvér" jelzését tehát MÁSHOGY kell megoldani, ha kell
+// — nem a kép lazítása árán.
+const URES_MAG = false;
 
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
