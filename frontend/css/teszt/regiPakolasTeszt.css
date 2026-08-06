@@ -1,0 +1,284 @@
+/* frontend/css/teszt/regiPakolasTeszt.css */
+
+/* ===== RÉGI PAKOLÁS — HOMOKOZÓ =====
+   A koino_1.0 háromszögelését bemutató fejlesztői oldal stílusa.
+   Szándékosan önálló (nem a main.css-re épül): a homokozó fusson akkor is, ha az
+   éles stílusok változnak. */
+
+:root {
+  --regi-hatter:  #faf7f2;
+  --regi-szoveg:  #2b2318;
+  --regi-halvany: #7a6f5f;
+  --regi-keret:   #ded5c6;
+  --regi-panel:   rgba(255, 255, 255, 0.92);
+  --regi-hiba:    #c0392b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--regi-hatter);
+  color: var(--regi-szoveg);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.regi-teszt {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ===== FEJLÉC ===== */
+.regi-teszt__fejlec {
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid var(--regi-keret);
+}
+
+.regi-teszt__fejlec h1 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.regi-teszt__fejlec p {
+  margin: 0;
+  max-width: 88ch;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--regi-halvany);
+}
+
+/* ===== VEZÉRLŐK ===== */
+.regi-teszt__vezerlok {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--regi-keret);
+  font-size: 13px;
+}
+
+.regi-teszt__vezerlok label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.regi-teszt__vezerlok input[type="range"] { width: 170px; }
+.regi-teszt__kapcsolo { cursor: pointer; }
+
+.regi-teszt__vezerlok select,
+.regi-teszt__vezerlok button,
+.regi-teszt__lepkedo button {
+  padding: 5px 10px;
+  border: 1px solid var(--regi-keret);
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.regi-teszt__vezerlok button:hover,
+.regi-teszt__lepkedo button:hover { background: #f2ece1; }
+
+/* ===== LÉPKEDŐ SÁV ===== */
+.regi-teszt__lepkedo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--regi-keret);
+  background: #f5f0e7;
+  font-size: 13px;
+}
+
+.regi-teszt__lepkedo input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+}
+
+.regi-teszt__lepkedo b {
+  min-width: 92px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== TÖRZS: vászon + számítás ===== */
+.regi-teszt__torzs {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.regi-teszt__vaszonKeret {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#regi-vaszon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+#regi-vaszon:active { cursor: grabbing; }
+
+/* ===== STATISZTIKA-PANEL (a vásznon) ===== */
+.regi-teszt__panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 262px;
+  padding: 11px 13px;
+  border: 1px solid var(--regi-keret);
+  border-radius: 8px;
+  background: var(--regi-panel);
+  backdrop-filter: blur(3px);
+  font-size: 13px;
+}
+
+.regi-teszt__sor {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.regi-teszt__sor span { color: var(--regi-halvany); }
+
+.regi-teszt__magyarazat {
+  margin: 9px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--regi-keret);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--regi-halvany);
+}
+
+/* ===== A SZÁMÍTÁS ABLAKA ===== */
+.regi-teszt__szamitas {
+  display: flex;
+  flex-direction: column;
+  width: 430px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--regi-keret);
+  background: #fffdf9;
+}
+
+.regi-teszt__szamitas h2 {
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--regi-keret);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.regi-szam {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 20px;
+  font-size: 12.5px;
+}
+
+.regi-szam__fejlec {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--regi-keret);
+}
+
+.regi-szam__fejlec b { font-size: 14px; }
+.regi-szam__fejlec span { color: var(--regi-halvany); font-size: 12px; }
+
+.regi-szam__magyarazat {
+  margin: 8px 0 12px;
+  line-height: 1.5;
+  color: var(--regi-halvany);
+}
+
+.regi-szam__blokk {
+  margin-bottom: 11px;
+  padding: 8px 10px;
+  border: 1px solid var(--regi-keret);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.regi-szam__blokk--hiba {
+  border-color: var(--regi-hiba);
+  background: #fdf3f2;
+}
+
+.regi-szam__cim {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--regi-halvany);
+}
+
+.regi-szam__blokk--hiba .regi-szam__cim { color: var(--regi-hiba); }
+
+.regi-szam__sor {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.regi-szam__sor span {
+  color: var(--regi-halvany);
+  flex-shrink: 0;
+}
+
+.regi-szam__sor code {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 11.5px;
+  text-align: right;
+  word-break: break-word;
+}
+
+.regi-szam__rendben {
+  padding: 7px 10px;
+  border: 1px solid #b9d4b3;
+  border-radius: 6px;
+  background: #f2f8f0;
+  color: #2d5a27;
+}
+
+/* ===== LÁBJEGYZET ===== */
+.regi-teszt__labjegyzet {
+  padding: 7px 18px;
+  border-top: 1px solid var(--regi-keret);
+  font-size: 12px;
+  color: var(--regi-halvany);
+}
+
+.regi-teszt__labjegyzet code {
+  font-size: 11px;
+  background: #f2ece1;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ===== KESKENY KÉPERNYŐ ===== */
+@media (max-width: 1100px) {
+  .regi-teszt__torzs { flex-direction: column; }
+  .regi-teszt__vaszonKeret { min-height: 55vh; }
+  .regi-teszt__szamitas {
+    width: 100%;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid var(--regi-keret);
+  }
+}

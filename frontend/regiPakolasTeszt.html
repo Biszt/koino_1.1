@@ -1,0 +1,117 @@
+<!-- frontend/regiPakolasTeszt.html -->
+<!--
+  RÉGI PAKOLÁS — HOMOKOZÓ
+
+  A koino_1.0 háromszögelése egy az egyben, középpontos indulással, ÜRES MAG
+  NÉLKÜL. Fejlesztői oldal, nem az éles nézet: backend és bejelentkezés nem kell.
+
+  A síkidomok LÉPÉSENKÉNT is lerakhatók (a legkisebbel kezdve), és közben a jobb
+  oldali ablakban végigkövethető a pozíció-számítás minden részlete.
+
+  Megnyitás: http://localhost:3000/regiPakolasTeszt.html
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Régi pakolás (koino_1.0) — homokozó</title>
+<link rel="stylesheet" href="./css/teszt/regiPakolasTeszt.css">
+
+<div class="regi-teszt">
+
+  <header class="regi-teszt__fejlec">
+    <h1>Kör-pakolás — homokozó</h1>
+    <p>
+      Középpontos indulás, üres mag nélkül. Két módszer hasonlítható össze
+      ugyanazon az adaton. <b>Régi (koino_1.0):</b> minden új kör az utoljára
+      lerakotthoz („horgony") és a hozzá legközelebbihez („partner") illeszkedik;
+      ütközés-ellenőrzés nincs, ezért keletkezhetnek átfedések.
+      <b>Íves:</b> a horgony körüli körből kivonjuk a szomszédok által tiltott
+      szög-tartományokat, és a megmaradó szabad ívek végpontjai közül választunk —
+      így az ütközés-ellenőrzés nem külön lépés, hanem maga a számítás.
+    </p>
+  </header>
+
+  <div class="regi-teszt__vezerlok">
+    <label>
+      Módszer
+      <select id="regi-modszer">
+        <option value="regi">régi — koino_1.0 háromszögelés</option>
+        <option value="ives">íves — szabad ívek számítása</option>
+      </select>
+    </label>
+
+    <label>
+      Testvérek száma: <b id="regi-darab-ertek">100</b>
+      <input type="range" id="regi-darab" min="3" max="600" step="1" value="100">
+    </label>
+
+    <label>
+      Méret-eloszlás
+      <select id="regi-eloszlas">
+        <option value="zipf">valósághű (néhány nagy, sok kicsi)</option>
+        <option value="egyenletes">egyenletes (mind ugyanakkora)</option>
+        <option value="mertani">mértani (állandó ugrás)</option>
+        <option value="ketpupu">kétpúpú (apró + óriás)</option>
+      </select>
+    </label>
+
+    <label>
+      Ugrás: <b id="regi-ugras-ertek">1.30</b>&times;
+      <input type="range" id="regi-ugras" min="1" max="3" step="0.05" value="1.3">
+    </label>
+
+    <label class="regi-teszt__kapcsolo">
+      <input type="checkbox" id="regi-atfedes" checked> átfedők pirossal
+    </label>
+
+    <label class="regi-teszt__kapcsolo">
+      <input type="checkbox" id="regi-szerkesztes" checked> szerkesztés (segédkörök)
+    </label>
+
+    <label class="regi-teszt__kapcsolo">
+      <input type="checkbox" id="regi-sorszam"> sorszámok
+    </label>
+
+    <button type="button" id="regi-ujra">Újraszámolás</button>
+    <button type="button" id="regi-illeszt">Illesztés</button>
+  </div>
+
+  <!-- ===== LÉPKEDŐ SÁV ===== -->
+  <div class="regi-teszt__lepkedo">
+    <button type="button" id="regi-elso" title="az elejére">⏮</button>
+    <button type="button" id="regi-elozo" title="előző (←)">◀</button>
+    <button type="button" id="regi-lejatszas">▶ Lejátszás</button>
+    <button type="button" id="regi-kovetkezo" title="következő (→)">▶</button>
+    <button type="button" id="regi-utolso" title="a végére">⏭</button>
+
+    <input type="range" id="regi-lepes" min="1" max="100" step="1" value="100">
+    <b id="regi-lepes-ertek">100 / 100</b>
+  </div>
+
+  <div class="regi-teszt__torzs">
+    <div class="regi-teszt__vaszonKeret">
+      <canvas id="regi-vaszon"></canvas>
+
+      <aside class="regi-teszt__panel">
+        <div id="regi-statisztika"></div>
+        <p class="regi-teszt__magyarazat">
+          Az átfedés mélységét a <b>kisebbik</b> kör átmérőjéhez mérjük:
+          100% = a kisebbik teljesen eltűnt a nagyobbikban.
+        </p>
+      </aside>
+    </div>
+
+    <!-- ===== A SZÁMÍTÁS ABLAKA ===== -->
+    <section class="regi-teszt__szamitas">
+      <h2>A pozíció kiszámítása</h2>
+      <div id="regi-szamitas" class="regi-szam"></div>
+    </section>
+  </div>
+
+  <footer class="regi-teszt__labjegyzet">
+    Görgetés = nagyítás · húzás = mozgatás · ← → = lépkedés ·
+    forrás: <code>C:/koino_1.0/public/js/ContentPositioner.js</code>
+  </footer>
+
+</div>
+
+<script type="module" src="./js/teszt/regiPakolasTesztOldal.js"></script>
