@@ -602,10 +602,33 @@ class SikidomModal {
     // ezt ellenőrzi (`Minden síkidom a szülőn belül`).
     // Mag NÉLKÜL (URES_MAG = false) a pakoló a legkisebb testvért a KÖZÉPPONTBA
     // teszi — feltéve, hogy a helyben maradó környezet nem ül rajta.
-    const opciok = {
-      magSugar: (URES_MAG && vanMegNemJelenitett) ? celMag : 0,
-      kornyezet: allok
-    };
+    // ===== A MAG NEM NŐHETI KI A SZÜLŐT =====
+    // A mag képpontban ÁLLANDÓ (MAG_CEL_ATMERO), a szülő viszont a nagyítástól
+    // függően kicsi is lehet a képernyőn. Ha a szülő képernyő-sugara a mag
+    // sugara körül van, akkor `celMag` az 1-hez közelít vagy meg is haladja —
+    // és a mag KILÖKI a gyerekeket a szülőből.
+    //
+    // MÉRVE a böngészőben (2026-08-06): egy 67 px sugarú szülőnél a mag 0,8969
+    // lett (a szülő 90%-a), a gyereke pedig `kulsoSugar = 1,2842`-re került —
+    // a szülőn KÍVÜLRE. Innen a „szétesik" látvány: a gyerekek kiszóródnak a
+    // szülő testvérei közé. (A mérőpróba ezt az invariánst ellenőrzi is
+    // — „Minden síkidom a szülőn belül" —, csak sosem futott ilyen kis
+    // képernyő-sugárral, ezért nem bukott meg.)
+    //
+    // A KORLÁT: egy gyerek a mag peremén ülve `mag + 2·sugár`-ig ér ki. Ez
+    // legfeljebb 1 lehet, tehát `mag ≤ 1 − 2·legnagyobbGyerekSugár`.
+    // A VILÁG szint kivétel: az virtuális, nincs valódi pereme, és a gyökereket
+    // szándékosan a mag KÖRÉ terítjük.
+    let magSugar = (URES_MAG && vanMegNemJelenitett) ? celMag : 0;
+
+    if (!vilagSzint && magSugar > 0) {
+      let legnagyobb = 0;
+      for (const m of mozgok) legnagyobb = Math.max(legnagyobb, m.sugar);
+      for (const u of ujak) legnagyobb = Math.max(legnagyobb, u.sugar);
+      magSugar = Math.max(0, Math.min(magSugar, 1 - 2 * legnagyobb));
+    }
+
+    const opciok = { magSugar, kornyezet: allok };
 
     let eredmeny = pakolas([...mozgok, ...ujak.map(u => ({ id: u.id, sugar: u.sugar }))], opciok);
 

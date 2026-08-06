@@ -744,6 +744,49 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     egymást követő köréhez érintve letenni. Ez viszont felülírná a „legkisebb
     középre" döntést, ezért külön, tudatos döntés kell hozzá.
 
+    ### HIBAJAVÍTÁS 2026-08-06 (2.) — A MAG KILÖKTE A GYEREKEKET A SZÜLŐBŐL
+
+    Csaba küldött egy képernyőképet MEGNYITOTT KONZOLLAL, és abban ott volt a
+    bizonyíték:
+
+    ```
+    sikidomPakolas.pakolas - VÉGE
+    {lerakott: 1, lerakatlan: 0, mertMag: '0.8969', kulsoSugar: 1.2842}
+    ```
+
+    **`kulsoSugar = 1,2842`** — a gyerek a szülőjén KÍVÜLRE került (a szülő sugara
+    1). Ez a nézet egyik alapinvariánsának sérülése.
+
+    **AZ OK.** A mag képpontban ÁLLANDÓ (`MAG_CEL_ATMERO` = 120 px), a szülő
+    viszont a nagyítás állásától függően kicsi is lehet a képernyőn. Ha a szülő
+    képernyő-sugara a mag sugara körül van, `celMag = 60 / kepSugar` az 1-hez
+    közelít. A mért esetben a szülő 67 px sugarú volt → a mag 0,8969, vagyis a
+    szülő 90%-a. A gyerekek a mag peremére kerülnek, és a szülőn kívülre lógnak —
+    onnan pedig a szülő TESTVÉREI közé szóródnak. Ez a „szétesik" látvány.
+
+    **MIÉRT NEM BUKOTT MEG A MÉRŐPRÓBA.** A `beagyazasEllenorzes` pontosan ezt
+    az invariánst nézi („Minden síkidom a szülőn belül"), de a próba
+    `KEZDO_KEPSUGAR = 400`-ról indul és csak NŐ — ilyen kis képernyő-sugárral
+    sosem futott, ezért a hibás tartományba bele sem ért.
+
+    **A JAVÍTÁS.** Egy gyerek a mag peremén ülve `mag + 2·sugár`-ig ér ki, ez
+    pedig legfeljebb 1 lehet:
+
+    ```
+    magSugar ≤ 1 − 2 · legnagyobbGyerekSugár
+    ```
+
+    A VILÁG szint kivétel: virtuális csomópont, nincs valódi pereme, és a
+    gyökereket szándékosan a mag KÖRÉ terítjük (ott a mért `kulsoSugar` 5,43 —
+    ez helyes).
+
+    **NYITOTT: HIÁNYZIK A MÉLYSÉGI TESZT-ADAT.** A fejlesztői adatbázisban 105
+    gyökér van, de alattuk alig van gyerek (a mért csomópontnak 1 darab). Ezért a
+    drill-down eset böngészőben alig gyakorolható, és ezért kerülgettük ilyen
+    sokáig ezt a hibát. A `tools/sikidomTesztAdat.js`-t ki kellene egészíteni
+    TÖBB SZINTŰ teszt-adattal, és a mérőpróbát kis kezdő képernyő-sugárral is
+    futtatni.
+
     **MEGMARADT, KISEBB PONT.** A `_lathatoLista` kiszámolja minden csomópont
     képernyő-pozícióját (`kepX`, `kepY`), de az újrapakolásnak csak a `kepSugar`-t
     adja át. Az `_ujrapakolas` ezért a SZÜLŐ KÖZÉPPONTJÁTÓL mért távolságot
