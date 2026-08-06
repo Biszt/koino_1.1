@@ -72,53 +72,25 @@ export function gyokerRelativSugar(pont, legerosebbPont) {
   return Math.min(Math.sqrt(Math.max(0, pont ?? 0) / legerosebbPont), 1);
 }
 
-// ===== A PAKOLÁS TÉNYLEGES SŰRŰSÉGE =====
-// A háromszögeléses kör-pakolás ennyire tölti ki a rendelkezésre álló kört.
-// NEM elméleti érték, hanem MÉRT: a sűrűséget söpörve az 0,45 az a legnagyobb
-// érték, amivel az egymás után betöltött adagok még hézagmentesen (5% rés) és
-// ÁTFEDÉS NÉLKÜL illeszkednek egymáshoz. Nagyobb érték (0,5–0,62) alábecsüli a
-// szükséges helyet → az újabb adag túlnyúlik a magon és átfedés keletkezik.
-export const PAKOLASI_SURUSEG = 0.45;
-
-// ===== AZ ÜRES MAG SUGARA (a még be nem töltött testvérek helye) =====
-// Mekkora üres kört hagyjunk a közepén a MÉG BE NEM TÖLTÖTT, gyengébb
-// testvéreknek? A becslés nem tippelés, hanem a tudatpontból számolható:
+// ===== A KÖZÉPSŐ LYUKAT MÁR NEM ITT SZÁMOLJUK =====
+// Korábban itt állt a `PAKOLASI_SURUSEG`, a `magSugarBecsles` és a
+// `gyokerMagSugar`: a még be nem töltött testvéreknek fenntartott üres mag
+// méretét a tudatpontból BECSÜLTÜK, egy feltételezett kör-pakolási sűrűséggel.
 //
-//   - a testvérek együttes TERÜLETE arányos az együttes tudatpontjukkal,
-//     szintenként a SZINT_OSZTO-val osztva;
-//   - egy m sugarú magba `π·m²·sűrűség` területnyi kör fér.
+// A becslés megbukott. Csak TERÜLETTEL számolt, pedig egy `w` szélességű gyűrűbe
+// egy `r > w/2` sugarú kör semennyi területtel sem fér be — a pakolás pedig épp
+// a legnagyobb kört teszi legkívülre. Ilyenkor a pakoló a magot felezve
+// „javított", akár nullára, és onnantól minden további adag némán elveszett
+// (600 gyerekes próbán 60-as adagokkal csak 180 jelent meg).
 //
-// Ebből:  m = √( maradékPont / (SZINT_OSZTO × szülőPont × sűrűség) )
+// AZ ÚJ MODELL (Csaba döntése, 2026-08-05): a lyukat nem becsüljük, hanem a
+// KÉPERNYŐHÖZ horgonyozzuk. Van egy állandó cél-átmérő képpontban
+// (`MAG_CEL_ATMERO` a SikidomModal-ban), a lyuk adat-térbeli sugara pedig
+// egyszerűen `(MAG_CEL_ATMERO / 2) / szülőKépernyőSugár`. Nagyítás után a lyuk
+// képpontban megnő, és addig fűzünk befelé újabb síkidomokat, amíg vissza nem
+// csökken a cél alá. Nincs mit becsülni, tehát nincs mit elhibázni.
 //
-// A `maradekPont` NEM becslés: a backend megküldi az összes gyerek együttes
-// pontját (`osszesGyerekPont`), abból a hívó kivonja a már betöltötteket. A
-// korábbi becslés (szülőPont − betöltött) a szülő SAJÁT pontját is beleszámolta,
-// ezért kétszeresen túlfoglalt, és a betöltött adagok közt üres gyűrű maradt.
-//
-// @param {number} maradekPont - a MÉG BE NEM TÖLTÖTT testvérek együttes pontja
-// @param {number} szuloPont - a szülő hierarchikus össztudatpontja
-// @param {number} suruseg - kör-pakolási sűrűség (0…1); a 0,5 óvatos érték
-// @returns {number} a mag sugara a szülő sugarának egységében
-export function magSugarBecsles(maradekPont, szuloPont, suruseg = PAKOLASI_SURUSEG) {
-  if (!(szuloPont > 0) || !(maradekPont > 0)) return 0;
-  const arany = maradekPont / (SZINT_OSZTO * szuloPont * suruseg);
-  return Math.min(Math.sqrt(arany), 1);
-}
-
-// ===== AZ ÜRES MAG SUGARA A GYÖKÉR-SZINTEN =====
-// A gyökereknél nincs szülő, ezért a LEGERŐSEBB gyökérhez viszonyítunk (az kapja
-// az 1-es sugarat, lásd gyokerRelativSugar). Egy p pontú gyökér területe így a
-// mértékegység-körhöz képest p / legerősebbPont, tehát:
-//   m = √( maradékPont / (legerősebbPont × sűrűség) )
-//
-// @param {number} maradekPont - a még be nem töltött gyökerek együttes pontja
-// @param {number} legerosebbPont - a legerősebb gyökér pontja (a mértékegység)
-// @param {number} suruseg
-// @returns {number} a mag sugara a legerősebb gyökér sugarának egységében
-export function gyokerMagSugar(maradekPont, legerosebbPont, suruseg = PAKOLASI_SURUSEG) {
-  if (!(legerosebbPont > 0) || !(maradekPont > 0)) return 0;
-  return Math.sqrt(maradekPont / (legerosebbPont * suruseg));
-}
+// A pakolás utáni tényleges lyukat a `sikidomPakolas.pakolas` MÉRI és adja vissza.
 
 // ===== ABSZOLÚT SUGÁR (tájékoztató/ellenőrző célra) =====
 // Terület-arányos sugár egy tetszőleges egységrendszerben. A nézet ezt közvetlenül
@@ -133,6 +105,6 @@ export function abszolutSugar(pont, teruletFaktor = 1) {
 }
 
 export default {
-  gyerekRelativSugar, gyokerRelativSugar, magSugarBecsles, gyokerMagSugar,
-  abszolutSugar, SZINT_OSZTO, PAKOLASI_SURUSEG
+  gyerekRelativSugar, gyokerRelativSugar, abszolutSugar,
+  SZINT_OSZTO, LEGNAGYOBB_GYEREK_ARANY
 };

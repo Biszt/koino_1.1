@@ -1,284 +1,318 @@
 // frontend/js/utils/sikidomPakolas.js
 
-// ===== SÍKIDOM-PAKOLÁS (háromszögeléses kör-pakolás üres maggal) =====
+// ===== SÍKIDOM-PAKOLÁS (szabad ívek számítása) =====
 //
 // Felelősség: egy szülőn belül elhelyezni a testvéreket úgy, hogy ne fedjék át
 // egymást, és a kép tömör legyen.
 //
-// AZ ALAPGONDOLAT a koino_1.0-ból (`ContentPositioner.positionByTriangulation`):
-// a köröket NÖVEKVŐ méret szerint rakjuk le, és mindegyik új kört két már
-// lerakott körhöz ÉRINTŐLEGESEN illesztjük. Az érintési helyet két segédkör
-// metszéspontja adja (innen a „háromszögelés" név). Így tetszőleges, szabálytalan
-// méretekkel is hézagmentes, szerves elrendezés jön ki — ezt a szabályos spirál
-// nem tudta.
+// A MÓDSZER
+// Az új kört a legutóbb lerakott kör („horgony") mellé tesszük. Ha érinti a
+// horgonyt, akkor a KÖZÉPPONTJA egy körön van: a horgony körül, r₁ = r_H + r
+// sugárral. Ez végtelen sok lehetséges hely — a kérdés csak az, melyik szabad.
 //
-// KÉT DOLOGBAN TÉRÜNK EL a koino_1.0-tól, mindkettő szándékos javítás:
+// Kiszámoljuk, hogy ezen a körön MELY SZÖGEK TILTOTTAK. Egy már lerakott C kör
+// (a horgonytól D távolságra, φ irányban, r_C sugárral) akkor zavar, ha
 //
-// 1. ÜRES MAG. A koino_1.0 az első kört a (0,0)-ba tette, ezért egy KÉSŐBB
-//    betöltött, kisebb testvér az egész elrendezést eltolta — ez volt a
-//    skálázási buktató. Nálunk a (0,0)-ban egy LÁTHATATLAN üres kör (a „mag")
-//    áll, és a pakolás ehhez képest kezdődik kifelé. A később betöltött kisebb
-//    testvérek a mag BELSEJÉBE kerülnek, a már lerakottakat nem mozdítják.
+//     |X(θ) − C|² = r₁² + D² − 2·r₁·D·cos(θ − φ)  <  (r + r_C)²
 //
-// 2. DETERMINIZMUS. A koino_1.0 véletlen szöget használt, ha nem talált helyet
-//    (`Math.random()`), és az ütközés-ellenőrzése is csak közelítő volt. Ugyanaz
-//    az adat így más-más képet adhatott. Nálunk nincs véletlen: minden jelöltet
-//    ellenőrzünk az ÖSSZES lerakott körrel szemben, és a szabályos jelöltek közül
-//    mindig a középhez legközelebbit választjuk (döntetlennél a kisebb szögűt).
-//    Ugyanaz az adat mindig ugyanazt a képet adja.
+// amiből
+//
+//     cos(θ − φ)  >  (r₁² + D² − (r + r_C)²) / (2·r₁·D)  =:  hatar
+//
+// vagyis C egy φ KÖRÜLI, SZIMMETRIKUS szög-intervallumot tilt le, félszélessége
+// arccos(hatar). A tiltott intervallumokat összefésüljük; ami marad, az a SZABAD
+// ÍVEK halmaza, és azok VÉGPONTJAI pontosan azok a helyek, ahol az új kör egy
+// MÁSODIK kört is érint — vagyis a klasszikus háromszögelés, csak hiánytalanul.
+//
+// MIÉRT EZ, ÉS NEM A KORÁBBI JELÖLT-GYÁRTÁS
+// A koino_1.0 (és az első 1.1-es változat) néhány jelöltet mintavételezett, majd
+// ellenőrizte őket. Ha a mintában nem volt szabad hely, átfedés keletkezett —
+// mérve: 100 körnél 4 átfedő pár, 300-nál 23, egyenletes méreteknél 300 körnél
+// 767. Az ív-számítás nem mintavételez: az ütközés-ellenőrzés nem külön lépés,
+// hanem MAGA a tiltott ívek kiszámítása. Mérve 0 átfedés minden próbán, extrém
+// méret-ugrásoknál (59 049-szeres szomszéd-arány) is.
+//
+// AMI KIMARAD, MERT NEM KELL
+//   - Nincs szülő-perem korlát. A gyerekek együttes területe a hierarchikus
+//     össztudatpont miatt legfeljebb a szülő 1/20-a, tehát hússzoros a tartalék;
+//     a mérés szerint a külső perem 0,25–0,37 között marad (a szülő sugara 1).
+//     A mérőpróba ezt ELLENŐRZI — ha valaha kilógna, azonnal kiderül.
+//   - Nincs véletlen: holtversenynél a középtávolság, majd a szög, végül az
+//     azonosító dönt. Ugyanaz az adat mindig ugyanazt a képet adja.
 //
 // A visszaadott helyek a SZÜLŐ KÖZÉPPONTJÁHOZ képest, a SZÜLŐ SUGARÁNAK
 // egységében értendők — pontosan ezt várja a horgony-modul (relX, relY).
 //
-// SZÁNDÉKOSAN nincs DOM-függése: Node-ból egység-tesztelhető.
-// Használják: a Síkidom nézet betöltő rétege.
+// SZÁNDÉKOSAN nincs DOM-függése: Node-ból egység-tesztelhető
+// (backend/tools/sikidomPakolasProba.mjs).
+// Használja: a Síkidom nézet újrapakoló rétege (SikidomModal._ujrapakolas).
 
 // ===== ÁLLANDÓK =====
 
-// Ennyi KÜLSŐ kört veszünk figyelembe az érintési helyek keresésekor. Az új kör
-// mindig kifelé kerül, ezért elég a külső peremet nézni — enélkül a pakolás
-// négyzetesen lassulna a testvérek számával.
-const FRONT_MERET = 28;
-
-// Relatív tűrés az érintés-ellenőrzéshez: az érintkezés (a távolság PONTOSAN a
-// sugarak összege) nem ütközés, csak a lebegőpontos számítás zaja
+// Relatív tűrés. SZÁNDÉKOSAN relatív, nem abszolút: a nézet korlátlanul
+// nagyítható, egy fix érték néhány szinttel lejjebb mindent „döntetlennek"
+// mutatna. (A koino_1.0 fix 0,0001-es tűrése ebbe futott bele — ráadásul az
+// epszilonos összehasonlítás nem is tranzitív, tehát a rendezés motorfüggő.)
 const TURES = 1e-9;
 
 // Numerikus nullaszint
 const EPSZILON = 1e-12;
 
-// ===== KÉT KÖRT KÍVÜLRŐL ÉRINTŐ HELYEK =====
-// Hova kerülhet egy `r` sugarú kör úgy, hogy KÍVÜLRŐL érintse `a`-t és `b`-t is?
-// A középpontja `a`-tól (a.sugar + r), `b`-től (b.sugar + r) távolságra van —
-// vagyis két segédkör metszéspontjait keressük (koszinusztétel + merőleges).
+// Ha a horgony körül nincs szabad ív, ennyi másik kört próbálunk ki helyette,
+// a LEGKÜLSŐVEL kezdve. Erre valóban szükség van: a látómezőre szűkített
+// újrapakolásnál a befagyasztott külső gyűrű bezárja a belső zsebet, és a
+// legnagyobb köröknek kifelé kell hely. 12-es kerettel 600-ból 197 a várólistán
+// ragadt; 40-nel mind a 600 lekerül.
+const POT_HORGONY_HATAR = 40;
+
+const ketPi = Math.PI * 2;
+const normal = (szog) => ((szog % ketPi) + ketPi) % ketPi;
+
+// ===== EGY KÖR ÁLTAL TILTOTT SZÖG-INTERVALLUM =====
+// A horgony körüli, r₁ sugarú körön mely szögek esnek ki az `akadaly` miatt?
 //
-// @returns {Array} 0, 1 vagy 2 jelölt pont
-function erintoHelyek(a, b, r) {
-  const ra = a.sugar + r;
-  const rb = b.sugar + r;
+// @returns {Object|null} { tol, ig } — vagy null, ha nem zavar.
+//   `{ teljes: true }`, ha az egész kör tiltott.
+function tiltottIv(horgony, akadaly, r1, r) {
+  const dx = akadaly.x - horgony.x;
+  const dy = akadaly.y - horgony.y;
+  const D = Math.hypot(dx, dy);
+  if (D < EPSZILON) return { teljes: true };
 
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const d = Math.hypot(dx, dy);
+  const kellene = r + akadaly.sugar;
+  const hatar = (r1 * r1 + D * D - kellene * kellene) / (2 * r1 * D);
 
-  if (d < EPSZILON) return [];              // egybeeső középpontok
-  if (d > ra + rb) return [];               // túl távol: nincs közös érintő hely
-  if (d < Math.abs(ra - rb)) return [];     // egyik segédkör a másik belsejében
+  if (hatar >= 1 - TURES) return null;               // túl távol: nem zavar
+  if (hatar <= -1 + TURES) return { teljes: true };  // mindenhol zavar
 
-  // A metszésvonal helye a két középpontot összekötő egyenesen
-  const t = (ra * ra - rb * rb + d * d) / (2 * d);
-  const magassagNegyzet = ra * ra - t * t;
-  if (magassagNegyzet < 0) return [];
+  const felSzelesseg = Math.acos(hatar);
+  const kozep = Math.atan2(dy, dx);
 
-  const h = Math.sqrt(magassagNegyzet);
-  const kozepX = a.x + (t * dx) / d;
-  const kozepY = a.y + (t * dy) / d;
-
-  // Merőleges irány a középvonalra
-  const merolegesX = (-dy / d) * h;
-  const merolegesY = (dx / d) * h;
-
-  return [
-    { x: kozepX + merolegesX, y: kozepY + merolegesY },
-    { x: kozepX - merolegesX, y: kozepY - merolegesY }
-  ];
+  return { tol: normal(kozep - felSzelesseg), ig: normal(kozep + felSzelesseg) };
 }
 
-// ===== SZABAD-E A HELY? =====
-// Ellenőrzés az ÖSSZES lerakott körrel szemben (a magot is beleértve — az új kör
-// nem kerülhet a mag belsejébe).
-function szabad(pont, r, lerakottak) {
-  for (const l of lerakottak) {
-    const d = Math.hypot(pont.x - l.x, pont.y - l.y);
-    const kellTavolsag = l.sugar + r;
-    if (d < kellTavolsag * (1 - TURES)) return false;
-  }
-  return true;
-}
-
-// ===== A KÜLSŐ PEREM KIVÁLASZTÁSA =====
-// A legkülső körök (a legnagyobb „középtávolság + sugár" értékkel), plusz mindig
-// a mag — ő a horgonya a legbelső gyűrűnek.
-function frontKivalasztas(lerakottak) {
-  if (lerakottak.length <= FRONT_MERET) return lerakottak;
-
-  const rendezett = [...lerakottak].sort((x, y) =>
-    (Math.hypot(y.x, y.y) + y.sugar) - (Math.hypot(x.x, x.y) + x.sugar)
-  );
-
-  const front = rendezett.slice(0, FRONT_MERET);
-  const mag = lerakottak.find(l => l.mag);
-  if (mag && !front.includes(mag)) front.push(mag);
-  return front;
-}
-
-// ===== DETERMINISZTIKUS TARTALÉK-HELY =====
-// Ha egyetlen érintési jelölt sem szabad (szélsőséges méret-arányoknál fordulhat
-// elő), akkor kifelé tartó gyűrűkben, rögzített szög-lépésekkel keresünk helyet.
-// Véletlen NINCS — ugyanaz az adat ugyanazt a helyet adja.
-function tartalekHely(r, lerakottak, magSugar) {
-  const kezdoTavolsag = magSugar + r;
-
-  for (let gyuru = 0; gyuru < 400; gyuru++) {
-    const tavolsag = kezdoTavolsag + gyuru * r * 0.25;
-    for (let fok = 0; fok < 360; fok += 3) {
-      const szog = (fok * Math.PI) / 180;
-      const pont = { x: Math.cos(szog) * tavolsag, y: Math.sin(szog) * tavolsag };
-      if (szabad(pont, r, lerakottak)) return pont;
+// ===== TILTOTT INTERVALLUMOK ÖSSZEFÉSÜLÉSE =====
+// A [0, 2π) körön dolgozunk, ezért a 0-t átlépő intervallumokat kettévágjuk.
+function osszefesules(ivek) {
+  const daraboltak = [];
+  for (const iv of ivek) {
+    if (iv.tol <= iv.ig) {
+      daraboltak.push([iv.tol, iv.ig]);
+    } else {
+      daraboltak.push([iv.tol, ketPi]);
+      daraboltak.push([0, iv.ig]);
     }
   }
 
-  // Végső eset: a legkülső kör mögé
-  let kulso = magSugar;
-  for (const l of lerakottak) kulso = Math.max(kulso, Math.hypot(l.x, l.y) + l.sugar);
-  return { x: kulso + r, y: 0 };
+  daraboltak.sort((a, b) => a[0] - b[0]);
+
+  const eredmeny = [];
+  for (const [tol, ig] of daraboltak) {
+    const utolso = eredmeny[eredmeny.length - 1];
+    if (utolso && tol <= utolso[1] + TURES) {
+      utolso[1] = Math.max(utolso[1], ig);
+    } else {
+      eredmeny.push([tol, ig]);
+    }
+  }
+  return eredmeny;
 }
 
-// ===== EGY KÖR ELHELYEZÉSE =====
-function elhelyezes(r, lerakottak, magSugar) {
-  if (lerakottak.length === 0) return { x: 0, y: 0 };
+// ===== A SZABAD ÍVEK =====
+// A tiltott intervallumok komplementere a [0, 2π) körön.
+function szabadIvek(tiltottak) {
+  if (tiltottak.length === 0) return [[0, ketPi]];
 
-  // Egyetlen lerakott kör (tipikusan a mag): mellé, rögzített irányba
-  if (lerakottak.length === 1) {
-    const a = lerakottak[0];
-    return { x: a.x + a.sugar + r, y: a.y };
+  const szabadok = [];
+  let hol = 0;
+
+  for (const [tol, ig] of tiltottak) {
+    if (tol > hol + TURES) szabadok.push([hol, tol]);
+    hol = Math.max(hol, ig);
+  }
+  if (hol < ketPi - TURES) szabadok.push([hol, ketPi]);
+
+  return szabadok;
+}
+
+// ===== EGY KÖR LERAKÁSA EGY HORGONY MELLÉ =====
+// @returns {Object|null} { x, y } — vagy null, ha e körül nincs szabad hely
+function horgonyMelle(horgony, r, akadalyok) {
+  const r1 = horgony.sugar + r;
+
+  // 1. A tiltott ívek összegyűjtése.
+  //    A `tiltottIv` magától eldobja azokat, akik túl messze vannak — csak a
+  //    horgony szűk környezete tilthat. (Itt van a helye egy térbeli rácsnak, ha
+  //    a lineáris skálázódás kell: akkor nem kell végigolvasni az összes kört.)
+  const ivek = [];
+  for (const a of akadalyok) {
+    if (a === horgony) continue;
+    const iv = tiltottIv(horgony, a, r1, r);
+    if (!iv) continue;
+    if (iv.teljes) return null;
+    ivek.push(iv);
   }
 
-  const front = frontKivalasztas(lerakottak);
+  const tiltottak = osszefesules(ivek);
+  const szabadok = szabadIvek(tiltottak);
+  if (szabadok.length === 0) return null;
 
+  // 2. A jelöltek a szabad ívek VÉGPONTJAI — ott érint az új kör egy második
+  //    kört is, tehát ott a legtömörebb a kép. Ha az egész kör szabad, a
+  //    középpont felé mutató irányt vesszük.
+  const jeloltek = [];
+  if (tiltottak.length === 0) {
+    jeloltek.push(normal(Math.atan2(-horgony.y, -horgony.x)));
+  } else {
+    for (const [tol, ig] of szabadok) { jeloltek.push(tol); jeloltek.push(ig); }
+  }
+
+  // 3. A KÖZÉPPONTHOZ LEGKÖZELEBBI nyer (tömör kép); döntetlennél a kisebb szög.
   let legjobb = null;
-  for (let i = 0; i < front.length; i++) {
-    for (let j = i + 1; j < front.length; j++) {
-      for (const jelolt of erintoHelyek(front[i], front[j], r)) {
-        if (!szabad(jelolt, r, lerakottak)) continue;
+  for (const szog of jeloltek) {
+    const x = horgony.x + Math.cos(szog) * r1;
+    const y = horgony.y + Math.sin(szog) * r1;
+    const tavolsag = Math.hypot(x, y);
 
-        const tavolsag = Math.hypot(jelolt.x, jelolt.y);
-        const szog = Math.atan2(jelolt.y, jelolt.x);
-
-        // A középhez legközelebbi nyer (tömör kép); döntetlennél a kisebb szög
-        // (determinizmus)
-        if (!legjobb ||
-            tavolsag < legjobb.tavolsag - EPSZILON ||
-            (Math.abs(tavolsag - legjobb.tavolsag) <= EPSZILON && szog < legjobb.szog)) {
-          legjobb = { x: jelolt.x, y: jelolt.y, tavolsag, szog };
-        }
-      }
+    if (!legjobb ||
+        tavolsag < legjobb.tavolsag - EPSZILON ||
+        (Math.abs(tavolsag - legjobb.tavolsag) <= EPSZILON && szog < legjobb.szog)) {
+      legjobb = { x, y, szog, tavolsag };
     }
   }
 
-  if (legjobb) return { x: legjobb.x, y: legjobb.y };
-  return tartalekHely(r, lerakottak, magSugar);
+  return legjobb ? { x: legjobb.x, y: legjobb.y } : null;
+}
+
+// ===== A MÉRT MAG =====
+// A középső üresség sugara: a legbelső kör belső széle. NEM becslés — a lerakott
+// körökből MÉRJÜK.
+function magMerese(korok) {
+  let mag = Infinity;
+  for (const k of korok) mag = Math.min(mag, Math.hypot(k.x, k.y) - k.sugar);
+  return Number.isFinite(mag) ? Math.max(0, mag) : Infinity;
 }
 
 // ===== A PAKOLÁS =====
 /**
-* Testvérek elhelyezése a szülőn belül.
+* Testvérek elhelyezése a szülőn belül, növekvő méret szerint kifelé.
 *
-* @param {Array} elemek - [{ id, sugar }] — a sugarak a SZÜLŐ sugarához viszonyítva
+* @param {Array} elemek - [{ id, sugar }] — a sugarak a SZÜLŐ sugarához
+*   viszonyítva. A rendezést a modul végzi (növekvő, holtversenynél azonosító).
 * @param {Object} opciok
-* @param {number} opciok.magSugar - az üres mag sugara. A hívó a tudatpontból
-*   számolja: `sikidomMeret.magSugarBecsles(maradekPont, szuloPont)`. Ha nincs
-*   megadva, nem hagyunk magot (0) — ilyenkor a későbbi lapok nem férnének be,
-*   ezért éles használatban MINDIG add meg.
-* @param {number} opciok.maxKulsoSugar - ennél messzebbre nem nyúlhat a csoport
-*   (alapból 1 = a szülő pereme; a mag-lapoknál a szülő magjának sugara)
-* @returns {Object} { helyek: [{ id, sugar, x, y }], kulsoSugar, magSugar }
-*   kulsoSugar = a legkülső pont távolsága (a beágyazás ellenőrzéséhez)
+* @param {number} [opciok.magSugar=0] - az ÜRES MAG sugara. Akkor adjuk meg, ha
+*   van még meg nem jelenített testvér: ide egyetlen kör sem léphet be, és a
+*   peremén sorra előbukkannak az újak, ahogy az e-ember nagyít. Ha 0, akkor
+*   nincs mag, és a legkisebb kör a KÖZÉPPONTBA kerül.
+* @param {Array} [opciok.kornyezet=[]] - már lerakott, HELYBEN MARADÓ körök
+*   [{ id, x, y, sugar }]; akadályként vesznek részt.
+* @returns {Object} { helyek, lerakatlanIdk, magSugar, kulsoSugar }
+*   helyek: [{ id, sugar, x, y }] — csak amit tényleg le tudtunk rakni
+*   lerakatlanIdk: amire nem volt hely (rendes esetben üres)
+*   magSugar: a MÉRT középső üresség a pakolás után
+*   kulsoSugar: a legkülső pont távolsága (a beágyazás ellenőrzéséhez)
 */
 export function pakolas(elemek, opciok = {}) {
-  console.log('sikidomPakolas.pakolas - KEZDÉS', { elemDarab: elemek?.length ?? 0 });
+  const kornyezet = opciok.kornyezet ?? [];
+  const magSugar = Math.max(0, opciok.magSugar ?? 0);
+
+  console.log('sikidomPakolas.pakolas - KEZDÉS', {
+    elemDarab: elemek?.length ?? 0, kornyezet: kornyezet.length, magSugar
+  });
 
   if (!elemek || elemek.length === 0) {
     console.log('sikidomPakolas.pakolas - VÉGE (nincs elem)');
-    return { helyek: [], kulsoSugar: 0, magSugar: 0 };
+    return { helyek: [], lerakatlanIdk: [], magSugar: magMerese(kornyezet), kulsoSugar: 0 };
   }
 
-  // A felső korlát háromféle lehet, és ÉLESEN meg kell különböztetni őket:
-  //   - hiányzik / Infinity / NaN → NINCS korlát (pl. a virtuális gyökér-szint,
-  //     aminek nincs „pereme"); ilyenkor a vészfék nem szólhat bele;
-  //   - pozitív szám → eddig terjedhet a csoport;
-  //   - NULLA vagy negatív → NINCS HELY. Ezt korábban tévesen „nincs korlát"-nak
-  //     vettük, és a csoport teljes méretben, a már kirajzoltakra pakolódott
-  //     (a mérés szerint több ezer átfedés). Most üres eredményt adunk, és a
-  //     hívó ebből tudja, hogy nem fér el több.
-  const nyersKorlat = opciok.maxKulsoSugar;
-  const nincsKorlat = nyersKorlat == null || !Number.isFinite(nyersKorlat);
-  const maxKulsoSugar = nincsKorlat ? Infinity : nyersKorlat;
-
-  if (!nincsKorlat && maxKulsoSugar <= 0) {
-    console.warn('sikidomPakolas.pakolas - VÉGE (nincs hely: a felső korlát 0)');
-    return { helyek: [], kulsoSugar: 0, magSugar: 0, zsugoritva: 1, nincsHely: true };
-  }
-
-  // NÖVEKVŐ sugár szerint: a legkisebbek kerülnek beljebb, a nagyobbak kifelé.
-  // Döntetlennél az azonosító dönt — így a sorrend (és a kép) determinisztikus.
+  // NÖVEKVŐ sugár szerint: a legkisebbek középre, a nagyobbak kifelé.
+  // Holtversenynél az azonosító dönt — szigorú rendezés, epszilon nélkül.
   const rendezett = [...elemek].sort((a, b) =>
     (a.sugar - b.sugar) || String(a.id).localeCompare(String(b.id))
   );
 
-  // Egy adott mag-mérettel végigpakol
-  const egyProbalkozas = (magSugar) => {
-    // A mag virtuális: ütközés-ellenőrzésben részt vesz, de sosem rajzoljuk ki
-    const lerakottak = [];
-    if (magSugar > 0) lerakottak.push({ x: 0, y: 0, sugar: magSugar, mag: true });
+  // Az akadály-halmaz: a mag (ha van) + a helyben maradó környezet + a lerakottak.
+  // A mag virtuális kör az origóban: nem rajzoljuk ki, de a tiltott ívek
+  // számításában ugyanúgy részt vesz, mint bármely másik kör.
+  const akadalyok = [];
+  if (magSugar > 0) akadalyok.push({ id: '__mag', x: 0, y: 0, sugar: magSugar, mag: true });
+  for (const k of kornyezet) akadalyok.push({ id: k.id, x: k.x, y: k.y, sugar: k.sugar });
 
-    const helyek = [];
-    for (const elem of rendezett) {
-      const hely = elhelyezes(elem.sugar, lerakottak, magSugar);
-      helyek.push({ id: elem.id, sugar: elem.sugar, x: hely.x, y: hely.y });
-      lerakottak.push({ x: hely.x, y: hely.y, sugar: elem.sugar });
+  const helyek = [];
+  const lerakatlanIdk = [];
+
+  // A mag peremére addig pakolunk, amíg elfér rajta — utána nincs értelme
+  // próbálkozni vele (a kör körbeért).
+  const mag = magSugar > 0 ? akadalyok[0] : null;
+  let magTelt = false;
+
+  // Üres lapról, mag nélkül a legkisebb kör a KÖZÉPPONTBA kerül
+  const uresLap = !mag && kornyezet.length === 0;
+
+  for (const elem of rendezett) {
+    let hely = null;
+
+    if (uresLap && helyek.length === 0) {
+      hely = { x: 0, y: 0 };
+    } else {
+      // A horgony-jelöltek sorrendje:
+      //
+      //  1. A MAG PEREME. A magra ugyanúgy lehet horgonyozni, mint bármely körre,
+      //     és mivel növekvő méretben pakolunk, a legkisebbek ide valók. Enélkül
+      //     — amikor van befagyasztott környezet — senki nem kerülne a mag mellé,
+      //     és a középső üresség a célérték TÍZSZERESÉRE nőtt (mérve 3000
+      //     testvérnél). Ha a mag pereme körbeért, többé nem próbálkozunk vele.
+      //
+      //  2. A LEGUTÓBB LERAKOTT kör: ott van a „munkafront", onnan marad tömör
+      //     a kép.
+      //
+      //  3. PÓT-HORGONYOK a LEGKÜLSŐVEL kezdve. Miért kifelé? Mert a horgony
+      //     akkor fullad be, ha körbe van véve — a szabad hely a peremen van.
+      //     (Befelé rendezve a legnagyobb körök nem találtak helyet: 600-ból 197
+      //     a várólistán ragadt.)
+      const horgonyok = [];
+      if (mag && !magTelt) horgonyok.push(mag);
+      if (helyek.length > 0) horgonyok.push(akadalyok[akadalyok.length - 1]);
+
+      const peremSorrend = akadalyok
+        .filter(a => !a.mag && !horgonyok.includes(a))
+        .sort((x, y) => (Math.hypot(y.x, y.y) + y.sugar) - (Math.hypot(x.x, x.y) + x.sugar));
+
+      for (const a of peremSorrend) {
+        if (horgonyok.length >= POT_HORGONY_HATAR) break;
+        horgonyok.push(a);
+      }
+
+      for (const h of horgonyok) {
+        hely = horgonyMelle(h, elem.sugar, akadalyok);
+        if (hely) break;
+        if (h === mag) magTelt = true;
+      }
     }
 
-    let kulsoSugar = 0;
-    for (const h of helyek) {
-      kulsoSugar = Math.max(kulsoSugar, Math.hypot(h.x, h.y) + h.sugar);
+    if (!hely) {
+      console.warn('sikidomPakolas.pakolas - nincs szabad hely', { id: elem.id });
+      lerakatlanIdk.push(elem.id);
+      continue;
     }
-    return { helyek, kulsoSugar, magSugar };
-  };
 
-  // Az ÜRES MAG a még be nem töltött testvérek helye — de nem nyomhatja ki a
-  // testvéreket a szülőből. Ha a csoport túlnyúlna a megengedett peremen, a magot
-  // felezve újrapróbáljuk. Kevés, de NAGY gyereknél ez életbe is lép: ilyenkor
-  // úgysincs sok be nem töltött testvér, tehát a kisebb mag nem veszteség.
-  let mag = opciok.magSugar ?? 0;
-  let eredmeny = egyProbalkozas(mag);
-
-  let probalkozas = 0;
-  while (eredmeny.kulsoSugar > maxKulsoSugar && mag > 0 && probalkozas++ < 16) {
-    mag = mag / 2;
-    if (mag < 1e-6) mag = 0;
-    eredmeny = egyProbalkozas(mag);
+    helyek.push({ id: elem.id, sugar: elem.sugar, x: hely.x, y: hely.y });
+    akadalyok.push({ id: elem.id, x: hely.x, y: hely.y, sugar: elem.sugar });
   }
 
-  // VÉGSŐ GARANCIA: ha mag nélkül SEM fér el (szélsőséges méret-arányoknál),
-  // arányosan összehúzzuk az egész csoportot. Ilyenkor a méret már nem pontosan
-  // terület-arányos, DE a csoporton belüli arányok megmaradnak, és — ami itt a
-  // fontosabb — soha nem lóg ki és soha nincs átfedés. A `zsugoritva` jelzőből
-  // a hívó tudja, hogy ez történt.
-  let zsugoritva = 1;
-  if (eredmeny.kulsoSugar > maxKulsoSugar && eredmeny.kulsoSugar > 0) {
-    zsugoritva = maxKulsoSugar / eredmeny.kulsoSugar;
-    eredmeny = {
-      helyek: eredmeny.helyek.map(h => ({
-        id: h.id,
-        sugar: h.sugar * zsugoritva,
-        x: h.x * zsugoritva,
-        y: h.y * zsugoritva
-      })),
-      kulsoSugar: eredmeny.kulsoSugar * zsugoritva,
-      magSugar: eredmeny.magSugar * zsugoritva
-    };
-  }
+  let kulsoSugar = 0;
+  for (const h of helyek) kulsoSugar = Math.max(kulsoSugar, Math.hypot(h.x, h.y) + h.sugar);
+
+  const mertMag = magMerese([...kornyezet, ...helyek]);
 
   console.log('sikidomPakolas.pakolas - VÉGE', {
-    lerakott: eredmeny.helyek.length,
-    magSugar: eredmeny.magSugar.toFixed(4),
-    kulsoSugar: eredmeny.kulsoSugar.toFixed(4),
-    magFelezes: probalkozas,
-    zsugoritva: zsugoritva !== 1 ? zsugoritva.toFixed(4) : 'nem'
+    lerakott: helyek.length,
+    lerakatlan: lerakatlanIdk.length,
+    mertMag: Number.isFinite(mertMag) ? mertMag.toFixed(4) : '∞',
+    kulsoSugar: kulsoSugar.toFixed(4)
   });
 
-  return { ...eredmeny, zsugoritva };
+  return { helyek, lerakatlanIdk, magSugar: mertMag, kulsoSugar };
 }
 
 export default { pakolas };
