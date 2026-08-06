@@ -679,6 +679,50 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     méret-eloszláson (a legszélsőségesebb 1400-szoros sugárugrással) a rács
     **egyetlen közeli kört sem hagyott ki** a nyers erővel összevetve.
 
+    ### HIBAJAVÍTÁS 2026-08-06 — „NEM TAPADNAK EGYBE, HA KILÓG A KÉPERNYŐBŐL"
+
+    **Csaba megfigyelése:** „zoom-kor, ha már egy része kilóg a képernyőből, akkor
+    már rosszul pakolja le a köröket. Nem tapadnak egybe." Böngészőben
+    reprodukálva (felvétellel): amíg minden elfér, a gyűrű tömör; ahogy a kép
+    túlnő a képernyőn, a KÜLSŐ nagy síkidomok láthatóan elválnak egymástól —
+    miközben a belső, kis körök gyűrűje végig hibátlanul tömör marad.
+
+    **AZ OK.** Az újrapakolás hatósugarát eddig a rövidebb képernyő-oldalból
+    számoltuk: `(min(szélesség, magasság) / 2) × 1,5`. Széles ablakban ez súlyosan
+    alábecsül. A mért esetben a vászon 1535×480 volt:
+
+    | mennyiség | érték |
+    |---|---|
+    | rövidebb oldal fele | 240 px |
+    | ebből a fagyasztási határ (× 1,5) | **360 px** |
+    | a vászon sarkának távolsága a középtől | **803 px** |
+
+    Vagyis a fagyasztási határ BELÜL került a látható területen. A határon kívüli
+    — de még jól látható — síkidomok befagytak egy korábbi nagyításkor számolt
+    helyükön, miközben a bentebbiek szorosan újrapakolódtak a zsugorodó mag köré.
+    A két réteg találkozásánál nyílt a rés. Ezért függött a jelenség pontosan
+    attól, hogy a kép kilóg-e a képernyőből: a varrat épp ott futott.
+
+    **A JAVÍTÁS.** A hatósugár mostantól a vászon FÉL ÁTLÓJÁBÓL számolódik
+    (`_ujrapakolasiSugar()`): ez a képernyő-téglalap körülírt körének sugara,
+    tehát bármilyen képarány mellett lefedi az egész látható területet; a
+    `UJRAPAKOLASI_TARTALEK` pedig ezen felül ad ráhagyást, hogy a varrat a
+    képernyőn KÍVÜLRE essen. A mért esetben 360 px → 1206 px.
+
+    **Böngészőben ellenőrizve:** ugyanaz a nagyítási sor, ugyanaz a mélység — a
+    külső gyűrű összefüggő maradt. A munka nem nőtt el: a teljes nagyítási soron
+    6 újrapakolás futott. (Ez a javítás azért volt megfizethető, mert a pakolás
+    aznap vált lineárissá — a régi, négyzetes pakolóval a megnövelt hatókör
+    vállalhatatlan lett volna.)
+
+    **MEGMARADT, KISEBB PONT.** A `_lathatoLista` kiszámolja minden csomópont
+    képernyő-pozícióját (`kepX`, `kepY`), de az újrapakolásnak csak a `kepSugar`-t
+    adja át. Az `_ujrapakolas` ezért a SZÜLŐ KÖZÉPPONTJÁTÓL mért távolságot
+    hasonlítja a képernyőből számolt küszöbhöz — hallgatólagosan feltéve, hogy a
+    szülő a képernyő közepén van. Elhúzott (panolt) képnél ez nem igaz. A fél
+    átlós ráhagyás ezt elfedi, de a tiszta megoldás a `kepX`/`kepY` átadása és a
+    valódi látómező-téglalaphoz mérés. Külön, kis lépés.
+
     ### KÍSÉRLET 2026-08-06 — ÜRES MAG NÉLKÜL
 
     Csaba kérése: próbáljuk ki a nézetet üres mag nélkül. **Minden újrapakolásnál

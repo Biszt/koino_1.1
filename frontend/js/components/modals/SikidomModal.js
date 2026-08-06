@@ -102,18 +102,26 @@ const MAG_CEL_ATMERO = 120;
 //   - az újrapakolást innentől CSAK az hajtja, hogy érkezett-e új testvér —
 //     a „kinőtt a mag" ág nem sülhet el, mert nincs mag.
 // A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
-const URES_MAG = false;
+//
+// ÁLLÁS 2026-08-06: a böngészős próbán a mag nélküli változat ROSSZABB volt
+// („szétesik"), ezért visszaállítva `true`-ra. A kísérlet kódja megmarad, hogy
+// egy sorral újra kipróbálható legyen. Amit a mérés mutatott: a mag nem csak
+// lyuk volt, hanem a pakolás ELSŐ HORGONYA is — a peremére kerültek sorra a
+// legkisebbek, ez adta a rendezett gyűrűket.
+const URES_MAG = true;
 
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
 // számolunk fölöslegesen minden képkockán.
 const ZOOM_VEGE_MS = 140;
 
-// AZ ÚJRAPAKOLÁS HATÓKÖRE: a látómező + ennyiszerese.
-// A zoom végén CSAK azt pakoljuk újra, ami a képernyőn (+50%) van; a kívül lévők
-// helyben maradnak, és akadályként szerepelnek. Ettől a munka KORLÁTOS: mérve
-// egyszerre legfeljebb ~600 testvér látszik, akár 600, akár 12 000 van összesen.
-// Ha a betöltés lassúnak bizonyul, a MIN_KEP_ATMERO növelésével hangolható.
+// AZ ÚJRAPAKOLÁS HATÓKÖRE: a látómező körülírt köre + ennyiszerese.
+// A zoom végén CSAK azt pakoljuk újra, ami ezen belül van; a kívül lévők helyben
+// maradnak, és akadályként szerepelnek. Ettől a munka KORLÁTOS.
+//
+// FONTOS: a hatósugarat a `_ujrapakolasiSugar()` számolja a vászon FÉL ÁTLÓJÁBÓL,
+// nem a rövidebb oldalából — lásd az ottani magyarázatot. Ez a ráhagyás gondoskodik
+// arról, hogy a fagyasztási varrat a képernyőn KÍVÜLRE essen.
 const UJRAPAKOLASI_TARTALEK = 1.5;
 
 const ZOOM_LEPES = 1.2;
@@ -542,7 +550,7 @@ class SikidomModal {
     if (!((vilagSzint ? cs.legerosebbGyerekPont : cs.pont) > 0)) return false;
 
     const celMag = (MAG_CEL_ATMERO / 2) / kepSugar;
-    const hatar = (this._kepernyoMeret() / 2) * UJRAPAKOLASI_TARTALEK;
+    const hatar = this._ujrapakolasiSugar();
 
     const relSugar = (pont) => vilagSzint
       ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
@@ -708,6 +716,28 @@ class SikidomModal {
 
   _kepernyoMeret() {
     return Math.min(this._szelesseg || 1, this._magassag || 1);
+  }
+
+  // ===== AZ ÚJRAPAKOLÁS HATÓSUGARA =====
+  // Ennél távolabb (a szülő középpontjától mérve) a testvérek BEFAGYNAK: helyben
+  // maradnak, és csak akadályként vesznek részt.
+  //
+  // MIÉRT A FÉL ÁTLÓ, ÉS NEM A RÖVIDEBB OLDAL FELE (2026-08-06-i javítás):
+  // korábban `min(szélesség, magasság) / 2` volt a kiindulás. Széles ablakban ez
+  // SÚLYOSAN alábecsül: egy 1535×480-as vászonnál a rövidebb oldal fele 240 px,
+  // a sarok viszont 803 px-re van. A fagyasztási határ (240 × 1,5 = 360 px) így
+  // BELÜL került a látható területen — a képernyőn látszó körök egy része
+  // befagyott egy korábbi nagyításkor számolt helyén, miközben a bentebbiek
+  // szorosan újrapakolódtak. A kettő találkozásánál NYÍLT A RÉS: a külső nagy
+  // síkidomok láthatóan elváltak egymástól, amint a kép túlnőtt a képernyőn.
+  //
+  // A fél átló a vászon KÖRÜLÍRT körének sugara, tehát az egész látható
+  // téglalapot lefedi — bármilyen képarány mellett. A `UJRAPAKOLASI_TARTALEK`
+  // ezen felül ad ráhagyást, hogy a varrat a képernyőn KÍVÜLRE essen.
+  _ujrapakolasiSugar() {
+    const sz = this._szelesseg || 1;
+    const m = this._magassag || 1;
+    return (Math.hypot(sz, m) / 2) * UJRAPAKOLASI_TARTALEK;
   }
 
   // ===== ALAPHELYZET =====

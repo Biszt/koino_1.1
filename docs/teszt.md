@@ -735,6 +735,13 @@ docker logs -f koino-backend
     **nincs középső lyuk** — a legkisebb testvér a középpontban ül. 600-nál és
     3000-nél is mind a hat átmegy.
 
+    **Nagyítás-próba (2026-08-06 óta):** nyisd meg a Síkidom nézetet, és nagyíts
+    addig, amíg a kép TÚLNŐ a képernyőn. A külső, nagy síkidomoknak ekkor is
+    TAPADNIUK kell egymáshoz. Ha rés nyílik köztük, az az újrapakolás fagyasztási
+    határa (`_ujrapakolasiSugar()`) — a vászon fél átlójából számoljuk, épp azért,
+    hogy a varrat a képernyőn kívülre essen. Széles (alacsony) ablakban a
+    legárulkodóbb: ott tér el legjobban a fél átló a rövidebb oldal felétől.
+
     **A böngészős próbán a mag nélküli nézetnél ezt nézd:** (1) látszik-e, hogy
     érdemes tovább nagyítani, ha nincs a lyuk mint jelzés; (2) nyugodt-e, hogy
     nagyításkor a középső síkidom cserélődik (mindig az új legkisebb kerül oda).
