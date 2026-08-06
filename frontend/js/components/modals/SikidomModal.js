@@ -89,6 +89,21 @@ const ELENGEDES_TURELEM = 240;
 // darabszám pedig ebből KÖVETKEZIK, nem mi találjuk ki.
 const MAG_CEL_ATMERO = 120;
 
+// ===== ÜRES MAG: KI / BE =====
+// KÍSÉRLET (2026-08-06, Csaba kérése): próbáljuk ki a nézetet ÜRES MAG NÉLKÜL.
+//
+//   `false` → nincs középső lyuk. Minden újrapakolásnál a LEGKISEBB olyan
+//             testvér kerül a KÖZÉPPONTBA, amelyik elérte a láthatósági küszöböt.
+//   `true`  → a korábbi viselkedés: a mag mindig üres, képpontban állandó
+//             (MAG_CEL_ATMERO) átmérővel, és a peremén bukkannak elő az újak.
+//
+// MI VÁLTOZIK MÉG EMELLETT (magától, külön kód nélkül):
+//   - a szaggatott mag-kör nem rajzolódik ki (a mért lyuk 0 lesz);
+//   - az újrapakolást innentől CSAK az hajtja, hogy érkezett-e új testvér —
+//     a „kinőtt a mag" ág nem sülhet el, mert nincs mag.
+// A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
+const URES_MAG = false;
+
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
 // számolunk fölöslegesen minden képkockán.
@@ -577,8 +592,10 @@ class SikidomModal {
     // hierarchikus össztudatpont miatt legfeljebb a szülő 1/20-a, tehát hússzoros
     // a tartalék — a matematika garantálja, hogy nem lóghatnak ki. A mérőpróba
     // ezt ellenőrzi (`Minden síkidom a szülőn belül`).
+    // Mag NÉLKÜL (URES_MAG = false) a pakoló a legkisebb testvért a KÖZÉPPONTBA
+    // teszi — feltéve, hogy a helyben maradó környezet nem ül rajta.
     const opciok = {
-      magSugar: vanMegNemJelenitett ? celMag : 0,
+      magSugar: (URES_MAG && vanMegNemJelenitett) ? celMag : 0,
       kornyezet: allok
     };
 

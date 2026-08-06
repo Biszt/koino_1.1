@@ -23,7 +23,10 @@
 // Futtatás:  node backend/tools/sikidomPakolasProba.mjs
 //            node backend/tools/sikidomPakolasProba.mjs 600 1.3 200 24
 //            (darab, zoom-szorzó, zoom-lépések, minimum képernyő-átmérő)
-//            (darab, zoom-lépés szorzó, zoom-lépések száma)
+//
+//            node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag
+//            → ÜRES MAG NÉLKÜL (a legkisebb testvér a középpontba kerül).
+//              Ez a `SikidomModal.URES_MAG = false` beállítás tükre.
 
 // --- IMPORTÁLÁSOK ---
 import { pakolas } from '../../frontend/js/utils/sikidomPakolas.js';
@@ -32,6 +35,10 @@ import { gyerekRelativSugar, SZINT_OSZTO } from '../../frontend/js/utils/sikidom
 // ===== A NÉZET ÁLLANDÓI (a SikidomModal-lal egyezően) =====
 const MIN_KEP_ATMERO = Number(process.argv[5]) || 24;
 const MAG_CEL_ATMERO = 120;
+
+// A 6. paraméter: `nincsmag` → üres mag nélkül futtatunk (a legkisebb testvér a
+// középpontba kerül). Ez a `SikidomModal.URES_MAG` kapcsoló tükre.
+const URES_MAG = String(process.argv[6] || '').toLowerCase() !== 'nincsmag';
 
 // ===== A PRÓBA PARAMÉTEREI =====
 const GYEREK_DARAB   = Number(process.argv[2]) || 600;
@@ -117,7 +124,7 @@ function bejaras(gyerekek) {
 
     if (vanDolgunk && (mozgok.length > 0 || ujak.length > 0)) {
       const opciok = {
-        magSugar: celMag,
+        magSugar: URES_MAG ? celMag : 0,
         kornyezet: allok
       };
 
@@ -251,6 +258,16 @@ function monotoniaEllenorzes(lerakottak) {
 function lyukEllenorzes(lepesek) {
   const relevans = lepesek.filter(l => l.varolistan > 0 && Number.isFinite(l.lyukKepAtmero));
   if (relevans.length === 0) { allitas(true, 'A lyuk képpontban állandó', 'nincs mérhető lépés'); return; }
+
+  // MAG NÉLKÜL az elvárás a fordítottja: NE legyen lyuk — a legkisebb testvér a
+  // középpontban ül, tehát a mért lyuk 0 (a legbelső kör belső széle a
+  // középpontban van vagy azon túl).
+  if (!URES_MAG) {
+    const legnagyobbLyuk = Math.max(...relevans.map(l => l.lyukKepAtmero));
+    allitas(legnagyobbLyuk === 0, 'Nincs középső lyuk (a legkisebb a középpontban ül)',
+      `a legnagyobb mért lyuk ${legnagyobbLyuk} px`);
+    return;
+  }
 
   const ertekek = relevans.map(l => l.lyukKepAtmero);
   const min = Math.min(...ertekek), max = Math.max(...ertekek);

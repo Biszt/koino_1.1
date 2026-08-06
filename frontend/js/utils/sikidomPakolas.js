@@ -208,6 +208,19 @@ function horgonyMelle(horgony, r, racs) {
   return legjobb ? { x: legjobb.x, y: legjobb.y } : null;
 }
 
+// ===== SZABAD-E A KÖZÉPPONT? =====
+// Mag nélkül a LEGKISEBB kör a középpontba kerül — de csak akkor, ha a helyben
+// maradó környezetből senki nem ül rajta. (Az újrapakolásnál a környezet a
+// látómezőn KÍVÜLI, tehát a középpont rendes esetben szabad; ez a vizsgálat
+// mégis kell, mert a modul önmagában is helyes kell legyen: egy vak (0,0)-ra
+// helyezés átfedést okozna.)
+function kozeppontSzabad(kornyezet, r) {
+  for (const k of kornyezet) {
+    if (Math.hypot(k.x, k.y) < k.sugar + r) return false;
+  }
+  return true;
+}
+
 // ===== A PEREM-RANGSOR =====
 // A pót-horgonyok a LEGKÜLSŐ körök (lásd a pakolás magyarázatát). A „külsőség"
 // mértéke a `|közép| + sugár` — ez egy lerakott körnél SOHA többé nem változik,
@@ -311,13 +324,17 @@ export function pakolas(elemek, opciok = {}) {
   // próbálkozni vele (a kör körbeért).
   let magTelt = false;
 
-  // Üres lapról, mag nélkül a legkisebb kör a KÖZÉPPONTBA kerül
-  const uresLap = !mag && kornyezet.length === 0;
+  // MAG NÉLKÜL A LEGKISEBB KÖR A KÖZÉPPONTBA KERÜL.
+  // (Korábban ez csak teljesen üres lapon történt meg. Mag nélküli nézetben
+  // viszont MINDEN újrapakolásnál kell — különben a kép közepén ok nélkül
+  // maradna lyuk. A befagyasztott környezet miatt a középpont elvileg szabad,
+  // de ezt megvizsgáljuk, nem feltételezzük.)
+  const kozepreTehet = !mag && kozeppontSzabad(kornyezet, rendezett[0].sugar);
 
   for (const elem of rendezett) {
     let hely = null;
 
-    if (uresLap && helyek.length === 0) {
+    if (kozepreTehet && helyek.length === 0) {
       hely = { x: 0, y: 0 };
     } else {
       // A horgony-jelöltek sorrendje:

@@ -679,6 +679,43 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     méret-eloszláson (a legszélsőségesebb 1400-szoros sugárugrással) a rács
     **egyetlen közeli kört sem hagyott ki** a nyers erővel összevetve.
 
+    ### KÍSÉRLET 2026-08-06 — ÜRES MAG NÉLKÜL
+
+    Csaba kérése: próbáljuk ki a nézetet üres mag nélkül. **Minden újrapakolásnál
+    a LEGKISEBB olyan testvér kerüljön a KÖZÉPPONTBA, amelyik elérte a láthatósági
+    küszöböt.** Ez felülírja a 2026-08-05-i „a mag mindig üres" döntést.
+
+    **A kapcsoló:** `SikidomModal.URES_MAG`. Jelenleg **`false`** (mag nélkül);
+    `true`-ra állítva egy sorral visszajön a korábbi viselkedés. A mérőpróba is
+    tudja mindkettőt: `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`.
+
+    **Ami a kapcsolón kívül változott:** a pakoló eddig csak TELJESEN ÜRES lapon
+    tette a legkisebb kört a középpontba (`kornyezet.length === 0`). Mag nélküli
+    nézetben ez kevés — újrapakoláskor mindig van befagyasztott környezet (a
+    látómezőn kívüli testvérek), tehát a kép közepén ok nélkül maradt volna lyuk.
+    Most a feltétel az, hogy a **középpont szabad-e** (`kozeppontSzabad`): a
+    környezet egyetlen köre se üljön rajta. Vak (0,0)-ra helyezés átfedést okozna,
+    ezért ezt megvizsgáljuk, nem feltételezzük.
+
+    **Ami MAGÁTÓL megszűnik, külön kód nélkül:**
+    - a szaggatott mag-kör nem rajzolódik (a mért lyuk 0 lesz, a rajzoló pedig
+      csak pozitív lyukat rajzol);
+    - a „kinőtt a mag" újrapakolás-ág nem sülhet el — innentől az újrapakolást
+      CSAK az hajtja, hogy érkezett-e új, láthatóvá vált testvér.
+    - A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
+
+    **Mérve** (mind a hat ellenőrzés átmegy mag nélkül is, 600-nál és 3000-nél):
+    nulla átfedés, egyetlen entitás sem vész el, minden a szülőn belül (perem
+    0,3547 / 0,3439), monoton gyűrűk, **nincs középső lyuk (0 px)**, determinizmus.
+    A meglévő nyolc pakolás-eset ujjlenyomata változatlan — a maggal futó
+    viselkedést a módosítás nem érintette.
+
+    **AMIT A BÖNGÉSZŐS PRÓBÁN FIGYELNI KELL** (ezt csak képernyőn lehet eldönteni):
+    - A mag eddig azt IS jelezte, hogy „van még lejjebb testvér". Mag nélkül ez a
+      jelzés eltűnik — látszik-e egyáltalán, hogy érdemes tovább nagyítani?
+    - Nagyításkor mindig új, kisebb testvér lesz a legkisebb, tehát a KÖZÉPSŐ
+      síkidom cserélődik. Nyugodt-e ez a csere, vagy ugrálásnak látszik?
+
     ### HÁNY SÍKIDOM LEHET EGYSZERRE A KÉPERNYŐN? (matematikai korlát)
 
     Csaba kérdése (2026-08-06): korlátozza-e a minimum-méret és a képernyő+50%
@@ -755,10 +792,11 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
     **Csaba döntései (kötelező érvényűek):**
     - Minden síkidomot KÖRKÉNT pozicionálunk; a TERÜLET arányos a tudatponttal.
-    - Az üres mag MINDIG van (nem feltételhez kötött), és MINDIG ÜRES — soha
-      semmit nem teszünk bele; a testvérek köré pakolódnak.
+    - ~~Az üres mag MINDIG van (nem feltételhez kötött), és MINDIG ÜRES~~ —
+      **FELÜLÍRVA 2026-08-06-án, lásd az „ÜRES MAG NÉLKÜL" kísérletet alább.**
     - A mag mérete a KÉPERNYŐHÖZ van kötve (állandó képpont-átmérő), nem a
       tudatponthoz. A hierarchia-mélység szerinti skálázás ebből magától adódik.
+      (Csak akkor érvényes, ha a mag be van kapcsolva.)
     - Helyszűkében a már lerakottak KIMOZDULHATNAK (kifelé tolás), hogy a
       frissen láthatóvá vált testvéreknek jusson hely a mag mellett.
     - Koppintás → a nézet MARAD, csak az entitás kártyája jelenik meg, bezárhatóan.

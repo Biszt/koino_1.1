@@ -729,6 +729,17 @@ docker logs -f koino-backend
     minimum képernyő-átmérő. 600 és 3000 testvérrel egyaránt mind a hat átmegy.
     A legdrágább lépés 2026-08-06 óta: 600-nál 11 ms, 3000-nél 25 ms.
 
+    **Üres mag NÉLKÜL** (a jelenlegi beállítás, `SikidomModal.URES_MAG = false`):
+    `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`
+    Ilyenkor az ötödik állítás megfordul: a lyuk-ellenőrzés helyett azt várjuk, hogy
+    **nincs középső lyuk** — a legkisebb testvér a középpontban ül. 600-nál és
+    3000-nél is mind a hat átmegy.
+
+    **A böngészős próbán a mag nélküli nézetnél ezt nézd:** (1) látszik-e, hogy
+    érdemes tovább nagyítani, ha nincs a lyuk mint jelzés; (2) nyugodt-e, hogy
+    nagyításkor a középső síkidom cserélődik (mindig az új legkisebb kerül oda).
+    A visszaváltás egy sor: `URES_MAG = true` a `SikidomModal.js`-ben.
+
     **A térbeli rács mérőpróbája (Claude futtatja):**
     `node backend/tools/sikidomRacsProba.mjs`
     A pakolás gyorsítását (`frontend/js/utils/sikidomRacs.js`) ellenőrzi. Négy
