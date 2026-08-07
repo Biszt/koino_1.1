@@ -54,8 +54,23 @@ const MAX_RAJZOLT = 4000;
 // Ennyi szinttel a horgony FÖLÖTT kezdjük a bejárást (hogy a környezet is látsszon)
 const FELFELE_SZINTEK = 3;
 
+// ===== KIKAPCSOLVA: A KÉPERNYŐN KÍVÜLIEK ELTÜNTETÉSE =====
+// Csaba döntése (2026-08-06): „ne tüntessen el semmit azért, mert kilóg a
+// képernyőből."
+//
+// `false` esetén a látómező SEHOL nem zár ki semmit:
+//   - a rajzolás nem hagy ki csomópontot (és nem vágja le a részfáját);
+//   - a takarítás nem enged el ágakat a memóriából;
+//   - az újrapakolás MINDENT átrendez, semmi nem fagy be akadállyá.
+// Ilyenkor a képet EGYEDÜL a láthatósági küszöb (MIN_KEP_ATMERO) korlátozza —
+// ami a méretből következik, nem a képernyő-pozícióból.
+//
+// `true`-ra állítva visszajön a korábbi viselkedés (a képernyő +
+// LATOMEZO_TARTALEK arányú keretén kívüliek kimaradnak).
+const KEPERNYON_KIVULIEK_ELTUNTETESE = false;
+
 // A képernyőn kívül ekkora tartalékot hagyunk (a képernyő méretének arányában).
-// Ami ezen kívül van, azt nem rajzoljuk és nem is tartjuk életben.
+// Csak akkor számít, ha a fenti kapcsoló `true`.
 const LATOMEZO_TARTALEK = 0.5;
 
 // Ekkora látszó ÁTMÉRŐ fölött írjuk ki a címet. Nagyobb, mint a láthatósági
@@ -651,8 +666,12 @@ class SikidomModal {
       const ky = kepY + kepSugar * gy.relY;
       const kr = kepSugar * gy.relR;
 
-      if (latomezobeNyulik(kx, ky, kr)) mozgok.push({ id: gy.id, sugar: gy.relR });
-      else allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
+      // Kikapcsolt látómező-szűrésnél MINDENKIT átrendezünk — semmi nem fagy be
+      // pusztán azért, mert kilóg a képernyőből.
+      const marad = KEPERNYON_KIVULIEK_ELTUNTETESE && !latomezobeNyulik(kx, ky, kr);
+
+      if (marad) allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
+      else mozgok.push({ id: gy.id, sugar: gy.relR });
     }
 
     const ujak = [];
@@ -1058,7 +1077,12 @@ class SikidomModal {
 
   // A látómező a képernyő + LATOMEZO_TARTALEK arányú keret. Ami ezen kívül esik,
   // azt nem rajzoljuk (és a takarítás előbb-utóbb el is engedi).
+  //
+  // KIKAPCSOLVA (KEPERNYON_KIVULIEK_ELTUNTETESE = false): mindig igazat adunk,
+  // tehát semmi nem marad ki a képernyő-pozíciója miatt.
   _latomezobenVan(kep) {
+    if (!KEPERNYON_KIVULIEK_ELTUNTETESE) return true;
+
     const tx = this._szelesseg * LATOMEZO_TARTALEK;
     const ty = this._magassag * LATOMEZO_TARTALEK;
     const bal = -tx, jobb = this._szelesseg + tx;
@@ -1251,6 +1275,9 @@ class SikidomModal {
   // A horgony ŐSEIT és magát a horgonyt sosem bántjuk — azokra a keret-számításhoz
   // szükség van.
   _takaritas() {
+    // Csaba döntése: ne tüntessünk el semmit azért, mert kilóg a képernyőből.
+    if (!KEPERNYON_KIVULIEK_ELTUNTETESE) return;
+
     const vedett = new Set([VILAG]);
     let p = this._horgony;
     while (p && this._tar.has(p)) {
