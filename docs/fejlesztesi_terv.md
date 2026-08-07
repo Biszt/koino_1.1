@@ -1398,3 +1398,39 @@ Az új modalok és menük stílusa a **standard vonalat** kövesse:
 
 1. A menühálózat később bővül — a bővítéseket ebbe a dokumentumba vezetjük át.
 2. A „Részletes adatok" és a „Tudatpont módosítás" pontos tartalmát/felületét az adott feladat megkezdésekor tervezzük meg.
+
+---
+
+## Síkidom nézet — az újrapakolás hatóköre a VALÓDI látómezőhöz (2026-08-06 este)
+
+**Csaba kérdése:** „nem azt beszéltük, hogy befelé zoomkor újrarakjuk az egészet,
+mindig, a zoom végén? ez most így működik?"
+
+**A válasz a kódból: NEM egészen.** Két korlát volt benne:
+
+1. **Az újrapakolás csak akkor FUT LE**, ha új testvér vált láthatóvá
+   (`ujak.length > 0`), vagy — maggal futva — ha a mag kinőtte a célméretet.
+   Mag nélkül a második ág soha nem sül el, tehát ha semmi új nem jött, nincs
+   újrapakolás. Ez rendben van: a relatív helyek nagyítás-függetlenek, nincs mit
+   újraszámolni.
+
+2. **A hatókör NEM az egész**, hanem a látómező — ez így is volt eltervezve
+   (2026-08-05). DE a válogatás rosszul mért: a gyerek `|relX, relY|` távolságát,
+   vagyis a SZÜLŐ KÖZÉPPONTJÁTÓL vett távolságot hasonlította egy képernyőből
+   számolt sugárhoz. Ez hallgatólagosan feltette, hogy a szülő a képernyő
+   közepén van.
+
+**A KÖVETKEZMÉNY (ez okozta Csaba új hibáját).** Amint az e-ember elhúzza a
+képet, vagy egy OLDALSÓ körbe nagyít bele, a szülő középpontja elcsúszik a
+képernyő közepétől. Ilyenkor a képernyőn LÁTHATÓ testvérek befagynak (mert a
+szülő középpontjától messze esnek), a frissen érkező kicsik pedig a szülő
+KÖZÉPPONTJA köré épülnek — vagyis „nem középen jelennek meg, hanem teljesen
+máshol, a nagyok között".
+
+**A JAVÍTÁS.** A `_lathatoLista` mostantól a teljes `kep`-et adja át
+(`{ kepX, kepY, kepSugar }`), és az `_ujrapakolas` a gyerek VALÓDI
+képernyő-körét veti össze a látómező TÉGLALAPJÁVAL (a képernyő +
+`UJRAPAKOLASI_TARTALEK` arányú kerete). A korábbi fél átlós kerülőút
+(`_ujrapakolasiSugar`) ezzel feleslegessé vált — törölve.
+
+**Böngészős ellenőrzésre vár** (a tesztet Csaba végzi).

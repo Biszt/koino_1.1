@@ -149,13 +149,14 @@ const URES_MAG = false;
 // számolunk fölöslegesen minden képkockán.
 const ZOOM_VEGE_MS = 140;
 
-// AZ ÚJRAPAKOLÁS HATÓKÖRE: a látómező körülírt köre + ennyiszerese.
-// A zoom végén CSAK azt pakoljuk újra, ami ezen belül van; a kívül lévők helyben
-// maradnak, és akadályként szerepelnek. Ettől a munka KORLÁTOS.
+// AZ ÚJRAPAKOLÁS HATÓKÖRE: a képernyő-téglalap, minden irányban ennyiszeres
+// kerettel megnövelve. A zoom végén CSAK azt pakoljuk újra, ami ebbe BENYÚLIK;
+// a teljesen kívül lévők helyben maradnak, és akadályként szerepelnek. Ettől a
+// munka KORLÁTOS.
 //
-// FONTOS: a hatósugarat a `_ujrapakolasiSugar()` számolja a vászon FÉL ÁTLÓJÁBÓL,
-// nem a rövidebb oldalából — lásd az ottani magyarázatot. Ez a ráhagyás gondoskodik
-// arról, hogy a fagyasztási varrat a képernyőn KÍVÜLRE essen.
+// A válogatás a gyerekek VALÓDI képernyő-helyéhez mér (`_ujrapakolas`), nem a
+// szülő középpontjától vett távolsághoz — az utóbbi elhúzott vagy oldalra
+// nagyított képnél rossz köröket fagyasztott be.
 const UJRAPAKOLASI_TARTALEK = 1.5;
 
 const ZOOM_LEPES = 1.2;
@@ -577,7 +578,11 @@ class SikidomModal {
   // a MIN_KEP_ATMERO növelése csökkenti az egyszerre látható darabszámot.
   //
   // @returns {boolean} változott-e az elrendezés (kell-e újrarajzolni)
-  _ujrapakolas(cs, kepSugar) {
+  // @param {Object} kep - a csomópont KÉPERNYŐ-adatai: { kepX, kepY, kepSugar }.
+  //   A pozíció is kell, nem csak a méret: enélkül a látómező-válogatás a szülő
+  //   középpontjához mérne (lásd lentebb).
+  _ujrapakolas(cs, kep) {
+    const { kepX, kepY, kepSugar } = kep || {};
     if (!cs || !(kepSugar > 0)) return false;
 
     const vilagSzint = cs.id === VILAG;
@@ -592,29 +597,50 @@ class SikidomModal {
       : kepSugar;
     const celMag = (MAG_CEL_ATMERO / 2) / magVonatkoztatas;
 
-    const hatar = this._ujrapakolasiSugar();
 
     const relSugar = (pont) => vilagSzint
       ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
       : gyerekRelativSugar(pont, cs.pont);
 
     // --- KI KERÜL BELE? ---
-    // (a) a már lerakott gyerekek közül azok, akik a látómezőben vannak;
+    // (a) a már lerakott gyerekek közül azok, akik a LÁTÓMEZŐBE benyúlnak;
     // (b) a várólistáról azok, akik ezen a nagyításon már LÁTSZANÁNAK.
-    // A BELSŐ szélük alapján válogatunk: aki a látómezőbe BENYÚLIK, azt
-    // átrendezzük. Aki teljesen kívül van, az helyben marad és akadály lesz.
+    // Aki teljesen a látómezőn kívül van, az helyben marad és akadály lesz.
     //
-    // MIÉRT A BELSŐ SZÉL: a látómezőt átlógó nagy körök a belső szélükkel a mag
-    // mellé nyúlnak. Ha ezeket befagyasztanánk (külső szél szerinti válogatás),
-    // elzárnák a helyet az újonnan érkező kicsik elől — mérve: 430 jelöltből 2
-    // fért be, a nézet pedig 168 síkidomnál elakadt.
+    // A VÁLOGATÁS A VALÓDI KÉPERNYŐ-TÉGLALAPHOZ MÉR (2026-08-06-i javítás).
+    // Korábban a SZÜLŐ KÖZÉPPONTJÁTÓL mért távolságot hasonlítottuk egy
+    // képernyőből számolt sugárhoz — ez hallgatólagosan feltette, hogy a szülő a
+    // képernyő közepén van. Amint az e-ember elhúzza vagy egy oldalsó körbe
+    // nagyít bele, ez nem igaz: a képernyőn LÁTHATÓ testvérek befagytak (mert a
+    // szülő középpontjától messze estek), a frissen érkezők pedig a szülő
+    // KÖZÉPPONTJA köré épültek — vagyis „teljesen máshol" bukkantak fel.
+    //
+    // Most a gyerek TÉNYLEGES képernyő-körét vetjük össze a látómező
+    // téglalapjával (a képernyő + UJRAPAKOLASI_TARTALEK arányú kerete).
+    const tx = this._szelesseg * UJRAPAKOLASI_TARTALEK;
+    const ty = this._magassag * UJRAPAKOLASI_TARTALEK;
+    const mezoBal = -tx, mezoJobb = this._szelesseg + tx;
+    const mezoFent = -ty, mezoLent = this._magassag + ty;
+
+    // Egy kör akkor nyúlik a téglalapba, ha a téglalap LEGKÖZELEBBI pontjától
+    // mért távolsága kisebb a sugaránál.
+    const latomezobeNyulik = (kx, ky, kr) => {
+      const dx = Math.max(mezoBal - kx, 0, kx - mezoJobb);
+      const dy = Math.max(mezoFent - ky, 0, ky - mezoLent);
+      return (dx * dx + dy * dy) <= kr * kr;
+    };
+
     const mozgok = [];
     const allok = [];
     for (const gid of cs.gyerekIdk) {
       const gy = this._tar.get(gid);
       if (!gy) continue;
-      const belsoKepSzel = (Math.hypot(gy.relX, gy.relY) - gy.relR) * kepSugar;
-      if (belsoKepSzel <= hatar) mozgok.push({ id: gy.id, sugar: gy.relR });
+
+      const kx = kepX + kepSugar * gy.relX;
+      const ky = kepY + kepSugar * gy.relY;
+      const kr = kepSugar * gy.relR;
+
+      if (latomezobeNyulik(kx, ky, kr)) mozgok.push({ id: gy.id, sugar: gy.relR });
       else allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
     }
 
@@ -822,28 +848,6 @@ class SikidomModal {
     return szint;
   }
 
-  // ===== AZ ÚJRAPAKOLÁS HATÓSUGARA =====
-  // Ennél távolabb (a szülő középpontjától mérve) a testvérek BEFAGYNAK: helyben
-  // maradnak, és csak akadályként vesznek részt.
-  //
-  // MIÉRT A FÉL ÁTLÓ, ÉS NEM A RÖVIDEBB OLDAL FELE (2026-08-06-i javítás):
-  // korábban `min(szélesség, magasság) / 2` volt a kiindulás. Széles ablakban ez
-  // SÚLYOSAN alábecsül: egy 1535×480-as vászonnál a rövidebb oldal fele 240 px,
-  // a sarok viszont 803 px-re van. A fagyasztási határ (240 × 1,5 = 360 px) így
-  // BELÜL került a látható területen — a képernyőn látszó körök egy része
-  // befagyott egy korábbi nagyításkor számolt helyén, miközben a bentebbiek
-  // szorosan újrapakolódtak. A kettő találkozásánál NYÍLT A RÉS: a külső nagy
-  // síkidomok láthatóan elváltak egymástól, amint a kép túlnőtt a képernyőn.
-  //
-  // A fél átló a vászon KÖRÜLÍRT körének sugara, tehát az egész látható
-  // téglalapot lefedi — bármilyen képarány mellett. A `UJRAPAKOLASI_TARTALEK`
-  // ezen felül ad ráhagyást, hogy a varrat a képernyőn KÍVÜLRE essen.
-  _ujrapakolasiSugar() {
-    const sz = this._szelesseg || 1;
-    const m = this._magassag || 1;
-    return (Math.hypot(sz, m) / 2) * UJRAPAKOLASI_TARTALEK;
-  }
-
   // ===== ALAPHELYZET =====
   // ===== KEZDŐ NÉZET BECSLÉSE (csak az első pakolás elindításához) =====
   // A gyökerek együttes TERÜLETE a legerősebb gyökér egységében: Σpont /
@@ -1019,7 +1023,7 @@ class SikidomModal {
         : Infinity;
 
       if (cs.varolista.length > 0 || magKepAtmero > MAG_CEL_ATMERO) {
-        pakolandok.push({ id: cs.id, kepSugar: kep.kepSugar });
+        pakolandok.push({ id: cs.id, kep });
       }
 
       // --- BETÖLTÉS-IGÉNY: EGYETLEN szabály, a tudatpont-küszöb ---
@@ -1120,7 +1124,7 @@ class SikidomModal {
 
     let valtozott = false;
     for (const p of pakolandok) {
-      if (this._ujrapakolas(this._tar.get(p.id), p.kepSugar)) valtozott = true;
+      if (this._ujrapakolas(this._tar.get(p.id), p.kep)) valtozott = true;
     }
 
     // Betöltések indítása (a legnagyobbak előbb)
