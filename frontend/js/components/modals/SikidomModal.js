@@ -157,7 +157,18 @@ const ZOOM_VEGE_MS = 140;
 // A válogatás a gyerekek VALÓDI képernyő-helyéhez mér (`_ujrapakolas`), nem a
 // szülő középpontjától vett távolsághoz — az utóbbi elhúzott vagy oldalra
 // nagyított képnél rossz köröket fagyasztott be.
-const UJRAPAKOLASI_TARTALEK = 1.5;
+//
+// AZ ÉRTÉK JELENTÉSE: keret-arány, mint a `LATOMEZO_TARTALEK`-nál — oldalanként
+// a képernyő-méret ennyiszeresét adjuk hozzá. (Korábban ez SUGÁR-SZORZÓ volt
+// [fél képernyő × 1,5 = képernyő + 50%]; a téglalapos válogatásra áttéréskor
+// keret-aránnyá vált, és az 1,5-ös érték ott már képernyő + 150%-ot jelentett.)
+//
+// MIÉRT A RAJZOLÁSI KERET KÉTSZERESE: a rajzolás a képernyő + 50%-át mutatja
+// (`LATOMEZO_TARTALEK`). Az újrapakolás keretének ennél NAGYOBBNAK kell lennie,
+// különben a fagyasztási varrat épp a látható terület szélére esne, és ott
+// szakadna el a kép. A kétszeres keret a varratot biztosan a rajzolt területen
+// KÍVÜLRE viszi.
+const UJRAPAKOLASI_TARTALEK = LATOMEZO_TARTALEK * 2;
 
 const ZOOM_LEPES = 1.2;
 const KATTINTAS_KUSZOB = 5;
