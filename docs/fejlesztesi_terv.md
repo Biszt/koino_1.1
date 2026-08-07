@@ -1434,3 +1434,74 @@ képernyő-körét veti össze a látómező TÉGLALAPJÁVAL (a képernyő +
 (`_ujrapakolasiSugar`) ezzel feleslegessé vált — törölve.
 
 **Böngészős ellenőrzésre vár** (a tesztet Csaba végzi).
+
+---
+
+## Síkidom nézet — a több milliós testvér-állomány kezelése (2026-08-06, Csaba modellje)
+
+Miután a képernyő-pozíció alapú kivágást kikapcsoltuk (mert az okozta a napi
+hibákat), valaminek korlátoznia kell a munkát. Csaba javaslata:
+
+> „ugyanabban a sorban szednénk vissza a kívül esőket, ahogyan leraktuk, és
+> kifelé zoomkor az íves számítással építjük vissza. Meg ha lenne maximum
+> terület, ami fölött eltűnik a síkidom, akkor az sorrendben tüntetné el őket."
+
+### A modell
+
+A testvérek EGY rendezett sort alkotnak (növekvő méret szerint — ez a pakolás
+sorrendje is), és ebből mindig egy ABLAK látszik:
+
+- a sor **elejét** a láthatósági küszöb vágja (`MIN_KEP_ATMERO` — túl kicsi);
+- a sor **végét** a képernyő **kapacitása** vágja (nem fér több a képre).
+
+Nagyításkor az ablak előre csúszik: elöl belépnek az apróbbak, a végéről leesnek
+a legnagyobbak. Kicsinyítéskor pontosan fordítva, UGYANABBAN a sorrendben épül
+vissza — az íves pakolás hozzáfűzésre való, ez természetes.
+
+**Miért ez a jó megoldás:** a sorrend az ADATBÓL következik (méretből), nem
+abból, hogy épp hol van a kép. Egy pozíció-teszt referenciapontja elcsúszhat (ez
+okozta az egész napi hibasorozatot) — a sorrendé nem tud.
+
+### ELVETVE: a maximum-MÉRET küszöb (mérés)
+
+Csaba felvetése szerint a vágás egy felső méret-küszöb lenne. **Mérve nem
+korlátoz** (1 000 000 testvér, Zipf-eloszlás):
+
+| szülő képsugár | csak MIN | MAX=2000 px | MAX=600 px | MAX=200 px |
+|---|---|---|---|---|
+| 6 400 | 722 | 722 | 719 | 701 |
+| 102 400 | 73 408 | 73 362 | 73 065 | 71 265 |
+| 409 600 | 739 909 | 739 444 | 736 448 | 718 308 |
+
+A felső küszöb 0,5–3%-ot vág le, és ez az arány a nagyítással NEM javul. Az ok:
+a tömeg nem a néhány nagynál van, hanem a hosszú farokban — ahogy nagyítunk,
+egyre több apró lépi át az ALSÓ küszöböt, és a darabszám a nagyítás négyzetével
+nő. A felső küszöb tehát csak állandó hányadot vág, nem korlát.
+
+### A VÉGE: a képernyő kapacitása, TERÜLETBEN
+
+`_kepernyoKapacitas()`: a rajzolt mező (képernyő + `LATOMEZO_TARTALEK` kerete)
+területe × `PAKOLASI_SURUSEG`. Addig veszünk a sorból, amíg a síkidomok
+együttes KÉPERNYŐ-TERÜLETE ebbe belefér.
+
+**Miért terület, és nem darabszám:** egy darabszám-plafon a legrosszabb esetet
+(csupa minimum-méretű síkidom) feltételezné, és 4K-n 73 000-et engedne — pedig
+néhány nagy síkidom ugyanennyi helyet foglal. A terület magától igazodik a
+méret-keverékhez.
+
+**MÉRVE — a munka a testvérek számától FÜGGETLEN:**
+
+| szülő képsugár | 10 000 testvér | 100 000 | 1 000 000 |
+|---|---|---|---|
+| 6 400 | 765 | 730 | 710 |
+| 102 400 | 370 | 4 399 | 4 395 |
+
+Képernyőnként (1 000 000 testvér): telefon 151, széles ablak 409, Full HD 1 150,
+4K 4 593 síkidom. A lineáris pakolóval ez legrosszabb esetben is ~80 ms.
+
+### Ami a sor végéről leesik
+
+Nem vész el: visszakerül a `varolista`-ra (ugyanabba a sorba), a részfáját pedig
+elengedjük a tárból. Kicsinyítéskor onnan épül vissza.
+
+**Böngészős ellenőrzésre vár** (a tesztet Csaba végzi).

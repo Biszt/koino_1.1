@@ -60,14 +60,22 @@ const FELFELE_SZINTEK = 3;
 //
 // `false` esetén a látómező SEHOL nem zár ki semmit:
 //   - a rajzolás nem hagy ki csomópontot (és nem vágja le a részfáját);
-//   - a takarítás nem enged el ágakat a memóriából;
-//   - az újrapakolás MINDENT átrendez, semmi nem fagy be akadállyá.
-// Ilyenkor a képet EGYEDÜL a láthatósági küszöb (MIN_KEP_ATMERO) korlátozza —
-// ami a méretből következik, nem a képernyő-pozícióból.
+//   - a takarítás nem enged el ágakat a memóriából.
+// (Az újrapakolás amúgy sem fagyaszt be semmit pozíció alapján: ott a méret
+// szerinti SOR és a képernyő KAPACITÁSA dönt — lásd `_kepernyoKapacitas`.)
+//
+// A munkát így a láthatósági küszöb (MIN_KEP_ATMERO) és a kapacitás korlátozza,
+// mindkettő a MÉRETBŐL, nem a képernyő-pozícióból.
 //
 // `true`-ra állítva visszajön a korábbi viselkedés (a képernyő +
 // LATOMEZO_TARTALEK arányú keretén kívüliek kimaradnak).
 const KEPERNYON_KIVULIEK_ELTUNTETESE = false;
+
+// Reális pakolási sűrűség: a kör-pakolás a rendelkezésre álló területnek ekkora
+// hányadát tölti ki. (Azonos körök elméleti maximuma 0,9069; vegyes méreteknél a
+// MÉRT érték nálunk 0,41–0,53 — lásd a tervben a 105 gyökéren végzett mérést.
+// A 0,7 óvatosan a kettő közé esik: nem enged túl sokat, de nem is fog vissza.)
+const PAKOLASI_SURUSEG = 0.7;
 
 // A képernyőn kívül ekkora tartalékot hagyunk (a képernyő méretének arányában).
 // Csak akkor számít, ha a fenti kapcsoló `true`.
@@ -628,100 +636,114 @@ class SikidomModal {
       ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
       : gyerekRelativSugar(pont, cs.pont);
 
-    // --- KI KERÜL BELE? ---
-    // (a) a már lerakott gyerekek közül azok, akik a LÁTÓMEZŐBE benyúlnak;
-    // (b) a várólistáról azok, akik ezen a nagyításon már LÁTSZANÁNAK.
-    // Aki teljesen a látómezőn kívül van, az helyben marad és akadály lesz.
+    // --- A TESTVÉREK EGYETLEN, MÉRET SZERINTI SORA ---
+    // Csaba modellje (2026-08-06): a testvérek EGY rendezett sort alkotnak (növekvő
+    // méret szerint, ez a pakolás sorrendje is), és ebből a sorból mindig egy
+    // ABLAK látszik:
+    //   - a sor ELEJÉT a láthatósági küszöb vágja (túl kicsi, MIN_KEP_ATMERO);
+    //   - a sor VÉGÉT a képernyő KAPACITÁSA vágja (nem fér több a képre).
+    // Nagyításkor az ablak előre csúszik: elöl belépnek az apróbbak, a végéről
+    // leesnek a legnagyobbak. Kicsinyítéskor pontosan fordítva, UGYANABBAN a
+    // sorrendben épül vissza — az íves pakolás hozzáfűzésre való, ez természetes.
     //
-    // A VÁLOGATÁS A VALÓDI KÉPERNYŐ-TÉGLALAPHOZ MÉR (2026-08-06-i javítás).
-    // Korábban a SZÜLŐ KÖZÉPPONTJÁTÓL mért távolságot hasonlítottuk egy
-    // képernyőből számolt sugárhoz — ez hallgatólagosan feltette, hogy a szülő a
-    // képernyő közepén van. Amint az e-ember elhúzza vagy egy oldalsó körbe
-    // nagyít bele, ez nem igaz: a képernyőn LÁTHATÓ testvérek befagytak (mert a
-    // szülő középpontjától messze estek), a frissen érkezők pedig a szülő
-    // KÖZÉPPONTJA köré épültek — vagyis „teljesen máshol" bukkantak fel.
+    // MIÉRT NEM A KÉPERNYŐ-POZÍCIÓ DÖNT (a mai hibák tanulsága): a sorrend az
+    // ADATBÓL következik (méretből), nem abból, hogy épp hol van a kép. Egy
+    // pozíció-teszt referenciapontja elcsúszhat — a sorrendé nem tud.
     //
-    // Most a gyerek TÉNYLEGES képernyő-körét vetjük össze a látómező
-    // téglalapjával (a képernyő + UJRAPAKOLASI_TARTALEK arányú kerete).
-    const tx = this._szelesseg * UJRAPAKOLASI_TARTALEK;
-    const ty = this._magassag * UJRAPAKOLASI_TARTALEK;
-    const mezoBal = -tx, mezoJobb = this._szelesseg + tx;
-    const mezoFent = -ty, mezoLent = this._magassag + ty;
+    // MIÉRT NEM MAXIMUM-MÉRET A VÉGE: mérve (1 000 000 testvér, Zipf-eloszlás) egy
+    // felső méret-küszöb csak 0,5–3%-ot vág le, és ez az arány a nagyítással NEM
+    // javul — a tömeg nem a néhány nagynál van, hanem a hosszú farokban. Nem korlát,
+    // csak állandó hányad. Ezért a vég a KAPACITÁS, ami a képernyőből következik.
+    const engedettTerulet = this._kepernyoKapacitas();
 
-    // Egy kör akkor nyúlik a téglalapba, ha a téglalap LEGKÖZELEBBI pontjától
-    // mért távolsága kisebb a sugaránál.
-    const latomezobeNyulik = (kx, ky, kr) => {
-      const dx = Math.max(mezoBal - kx, 0, kx - mezoJobb);
-      const dy = Math.max(mezoFent - ky, 0, ky - mezoLent);
-      return (dx * dx + dy * dy) <= kr * kr;
-    };
-
-    const mozgok = [];
-    const allok = [];
+    const jeloltek = [];
     for (const gid of cs.gyerekIdk) {
       const gy = this._tar.get(gid);
       if (!gy) continue;
-
-      const kx = kepX + kepSugar * gy.relX;
-      const ky = kepY + kepSugar * gy.relY;
-      const kr = kepSugar * gy.relR;
-
-      // Kikapcsolt látómező-szűrésnél MINDENKIT átrendezünk — semmi nem fagy be
-      // pusztán azért, mert kilóg a képernyőből.
-      const marad = KEPERNYON_KIVULIEK_ELTUNTETESE && !latomezobeNyulik(kx, ky, kr);
-
-      if (marad) allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
-      else mozgok.push({ id: gy.id, sugar: gy.relR });
+      jeloltek.push({ id: gy.id, sugar: gy.relR, lerakott: true });
     }
-
-    const ujak = [];
     for (const v of cs.varolista) {
       const sugar = relSugar(v.pont);
-      if (2 * kepSugar * sugar < MIN_KEP_ATMERO) continue;
-      ujak.push({ id: v.id, sugar, varo: v });
+      if (2 * kepSugar * sugar < MIN_KEP_ATMERO) continue;   // a sor ELEJE
+      jeloltek.push({ id: v.id, sugar, varo: v });
     }
 
-    if (ujak.length === 0 && mozgok.length === 0) return false;
-    if (ujak.length === 0 && !this._magNottTulNagyra(cs, kepSugar)) return false;
+    // Ugyanaz a rendezés, mint a pakolóé — hogy a sor és a lerakás egyezzen
+    jeloltek.sort((a, b) => (a.sugar - b.sugar) || String(a.id).localeCompare(String(b.id)));
+
+    // A VÁGÁS HELYE: addig veszünk a sorból, amíg a síkidomok együttes
+    // KÉPERNYŐ-TERÜLETE belefér a rajzolt mezőbe. Mivel növekvő méret szerint
+    // haladunk, az első, ami nem fér be, egyben a sor vége — utána már csak
+    // nagyobbak jönnének.
+    const beferok = [];
+    const kimaradok = [];
+    let osszTerulet = 0;
+
+    for (const j of jeloltek) {
+      if (kimaradok.length > 0) { kimaradok.push(j); continue; }
+
+      const kepsugar = kepSugar * j.sugar;
+      const terulet = Math.PI * kepsugar * kepsugar;
+
+      if (beferok.length > 0 && osszTerulet + terulet > engedettTerulet) {
+        kimaradok.push(j);                                   // a sor VÉGE
+        continue;
+      }
+      osszTerulet += terulet;
+      beferok.push(j);
+    }
+
+    if (beferok.length === 0) return false;
+
+    const ujDarab = beferok.reduce((n, j) => n + (j.lerakott ? 0 : 1), 0);
+    if (ujDarab === 0 && kimaradok.length === 0 && !this._magNottTulNagyra(cs, kepSugar)) {
+      return false;
+    }
+
+    // --- A SOR VÉGÉRŐL LEESŐK: VISSZA A VÁRÓLISTÁRA ---
+    // Nem vesznek el: ugyanabba a sorba kerülnek vissza, ahonnan kiestek, és
+    // kicsinyítéskor onnan épülnek vissza.
+    const visszaszedett = [];
+    for (const k of kimaradok) {
+      if (!k.lerakott) continue;
+      const gy = this._tar.get(k.id);
+      if (!gy) continue;
+
+      cs.varolista.push({
+        id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim,
+        pont: gy.pont, vanGyereke: gy.vanGyereke
+      });
+      this._reszfaTorlese(gy);
+      this._tar.delete(gy.id);
+      visszaszedett.push(gy.id);
+    }
+    if (visszaszedett.length > 0) {
+      const kiesett = new Set(visszaszedett);
+      cs.gyerekIdk = cs.gyerekIdk.filter(id => !kiesett.has(id));
+    }
+
+    const mozgok = beferok.filter(j => j.lerakott).map(j => ({ id: j.id, sugar: j.sugar }));
+    const ujak = beferok.filter(j => !j.lerakott);
+    const allok = [];
 
     // --- AZ ÜRES MAG: CSAK AMÍG VAN MEG NEM JELENÍTETT TESTVÉR ---
-    // A mag azért van, hogy a peremén sorra előbukkanjanak az újak, ahogy az
-    // e-ember nagyít. Ha már MINDEN testvér a képen van (a várólista kiürült, és
-    // a backendtől sincs több), akkor nincs mit jelezni: ilyenkor a legkisebb
-    // síkidom a KÖZÉPPONTBA kerül.
     const varMegLetoltes = cs.osszesGyerekPont === 0
       || cs.betoltottGyerekPont < cs.osszesGyerekPont;
-    const marad = cs.varolista.length - ujak.length;   // amit most sem rakunk le
-    const vanMegNemJelenitett = varMegLetoltes || marad > 0;
+    const vanMegNemJelenitett = varMegLetoltes || cs.varolista.length > ujak.length;
 
-    // A perem-korlát SZÁNDÉKOSAN nincs itt: a gyerekek együttes területe a
-    // hierarchikus össztudatpont miatt legfeljebb a szülő 1/20-a, tehát hússzoros
-    // a tartalék — a matematika garantálja, hogy nem lóghatnak ki. A mérőpróba
-    // ezt ellenőrzi (`Minden síkidom a szülőn belül`).
-    // Mag NÉLKÜL (URES_MAG = false) a pakoló a legkisebb testvért a KÖZÉPPONTBA
-    // teszi — feltéve, hogy a helyben maradó környezet nem ül rajta.
     // ===== BIZTONSÁGI HÁLÓ: A MAG NEM NŐHETI KI A SZÜLŐT =====
+    // A mag képpontban állandó (MAG_CEL_ATMERO), a szülő viszont a nagyítástól
+    // függően kicsi is lehet a képernyőn — ilyenkor `celMag` az 1-hez közelít, és
+    // a mag KILÖKNÉ a gyerekeket a szülőből. Mérve (2026-08-06): egy 67 px sugarú
+    // szülőnél a mag 0,8969 lett, a gyereke pedig `kulsoSugar = 1,2842`-re került.
+    //
+    // A KORLÁT: egy gyerek a mag peremén ülve `mag + 2·sugár`-ig ér ki, ez pedig
+    // legfeljebb 1 lehet. A VILÁG szint kivétel: virtuális, nincs valódi pereme.
+    //
     // A szintenkénti szabály (MAG_SZABALY) után ennek már nem KELLENE elsülnie —
     // de bent marad, mert az invariáns (minden síkidom a szülőn belül) fontosabb,
-    // mint a lyuk pontos mérete. Ha egyszer mégis elsül, az jelzés, hogy a
-    // szintenkénti számítás valahol elcsúszott.
-    // ===== A MAG NEM NŐHETI KI A SZÜLŐT =====
-    // A mag képpontban ÁLLANDÓ (MAG_CEL_ATMERO), a szülő viszont a nagyítástól
-    // függően kicsi is lehet a képernyőn. Ha a szülő képernyő-sugara a mag
-    // sugara körül van, akkor `celMag` az 1-hez közelít vagy meg is haladja —
-    // és a mag KILÖKI a gyerekeket a szülőből.
-    //
-    // MÉRVE a böngészőben (2026-08-06): egy 67 px sugarú szülőnél a mag 0,8969
-    // lett (a szülő 90%-a), a gyereke pedig `kulsoSugar = 1,2842`-re került —
-    // a szülőn KÍVÜLRE. Innen a „szétesik" látvány: a gyerekek kiszóródnak a
-    // szülő testvérei közé. (A mérőpróba ezt az invariánst ellenőrzi is
-    // — „Minden síkidom a szülőn belül" —, csak sosem futott ilyen kis
-    // képernyő-sugárral, ezért nem bukott meg.)
-    //
-    // A KORLÁT: egy gyerek a mag peremén ülve `mag + 2·sugár`-ig ér ki. Ez
-    // legfeljebb 1 lehet, tehát `mag ≤ 1 − 2·legnagyobbGyerekSugár`.
-    // A VILÁG szint kivétel: az virtuális, nincs valódi pereme, és a gyökereket
-    // szándékosan a mag KÖRÉ terítjük.
+    // mint a lyuk pontos mérete. Ha mégis elsül, az jelzés, hogy a szintenkénti
+    // számítás valahol elcsúszott.
     let magSugar = (URES_MAG && vanMegNemJelenitett) ? celMag : 0;
 
     if (!vilagSzint && magSugar > 0) {
@@ -852,6 +874,28 @@ class SikidomModal {
 
   _kepernyoMeret() {
     return Math.min(this._szelesseg || 1, this._magassag || 1);
+  }
+
+  // ===== A KÉPERNYŐ KAPACITÁSA (képpont-TERÜLETBEN) =====
+  // Mennyi síkidom-terület fér el egyszerre? Ez az EGYETLEN dolog, ami a munkát
+  // korlátozza, amióta a képernyőn kívüliek eltüntetése ki van kapcsolva — és
+  // pont ezért nem szabad becslésnek lennie.
+  //
+  // A síkidomok NEM fedik át egymást, tehát a területük összege legfeljebb akkora
+  // lehet, mint a rajzolt mező (a képernyő + LATOMEZO_TARTALEK arányú kerete),
+  // szorozva egy reális pakolási sűrűséggel.
+  //
+  // MIÉRT TERÜLET, ÉS NEM DARABSZÁM: egy darabszám-plafon a legrosszabb esetet
+  // (csupa minimum-méretű síkidom) feltételezné, és 4K-n 73 000-et engedne —
+  // pedig néhány nagy síkidom ugyanennyi helyet foglal. A terület magától
+  // igazodik a méret-keverékhez.
+  //
+  // FONTOS: ez a KÉPERNYŐ méretétől függ, NEM a testvérek számától. Millió vagy
+  // milliárd testvérnél ugyanannyi — ez teszi kezelhetővé a nagy állományt.
+  _kepernyoKapacitas() {
+    const keret = 1 + 2 * LATOMEZO_TARTALEK;
+    const mezoTerulet = (this._szelesseg || 1) * keret * (this._magassag || 1) * keret;
+    return mezoTerulet * PAKOLASI_SURUSEG;
   }
 
   // ===== MELYIK HIERARCHIA-SZINTET NÉZZÜK ÉPPEN? =====
