@@ -750,6 +750,9 @@ docker logs -f koino-backend
       a később érkezőknek.)*
     - **Nem lehet „kígyó":** apró síkidomok nem fűződhetnek láncban kifelé, a nagyok
       közé vagy azokon túlra. Ha ilyet látsz, a mag kicsi → `MAG_SURUSEG` lejjebb.
+    - **A letöltés MÉLYEBBRE megy, mint a rajzolás** (`BETOLTESI_MELYSEG = 4`):
+      a hálózati fülön a `minPont` érték a láthatóság-számolta érték ~1/16-a legyen.
+      Így a farok a láthatóvá válás ELŐTT megérkezik és helyet kap.
     - **A mag KÖZELÍTÉSRE FOGY, nem nő.** Ahogy közelítesz, a tudatpont-küszöb
       süllyed, több testvér töltődik le, mindegyik helyet kap, és a szaggatott kör
       összehúzódik. Ha a mag a képernyőn NŐNI kezd közelítéskor, az hiba.

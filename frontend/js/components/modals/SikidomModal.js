@@ -98,6 +98,29 @@ const LATOMEZO_TARTALEK = 0.5;
 // tehát a kétszeres puffer egy teljes lépést kiszolgál letöltés nélkül.
 const BETOLTESI_TARTALEK = 2;
 
+// ===== MÉLYEBBRE TÖLTÜNK, MINT AMIT RAJZOLUNK =====
+// A letöltési küszöb eddig PONTOSAN a láthatósági küszöb volt: mindig csak azt
+// hoztuk le, ami épp láthatóvá vált. A farok így közvetlenül a küszöb alatt várt,
+// és csak további nagyításra jött — közben a fenntartott mag a képernyőn nőtt.
+// Csaba tünete (2026-08-09): „rakja le őket, de nem olyan tempóban, hogy kitöltse
+// a folyton növő üres magot."
+//
+// Mostantól a letöltési küszöböt a láthatósági küszöb ENNYIED részéből számoljuk.
+// Mivel a küszöb a méret NÉGYZETÉVEL arányos, a 4-es osztó 16-szor több testvért
+// enged be — a farok jóval a láthatóvá válás ELŐTT megérkezik és helyet kap,
+// tehát a `T_hátra` (és vele a mag) magától lefogy.
+//
+// MIÉRT NEM VESZÜNK EL EGYSZERŰEN A MAGBÓL: mérve (2026-08-09) a tartalék
+// elvétele hat beállításból ötben MEGFORDÍTOTTA a rendet (a méret-tizedek
+// 0,4064 → 0,1446 lettek). A magot nem elvenni kell, hanem FELESLEGESSÉ tenni.
+//
+// A letöltés így sem szalad el: a `BETOLTESI_TARTALEK` fék továbbra is a
+// várólista TERÜLETÉHEZ méri, mennyit érdemes még kérni.
+//
+// HANGOLÁS: nagyobb érték = mélyebb előretöltés (több hálózat, kisebb mag),
+// 1 = a korábbi viselkedés.
+const BETOLTESI_MELYSEG = 4;
+
 // Ekkora látszó ÁTMÉRŐ fölött írjuk ki a címet. Nagyobb, mint a láthatósági
 // küszöb: egy síkidom előbb látszik, és csak nagyobbra nőve kap feliratot.
 const CIMKE_MIN_ATMERO = 48;
@@ -715,14 +738,18 @@ class SikidomModal {
   // korlátozza, tárból nem töröl semmit, ezért a védelemre nincs többé szükség.
   // (Ha valaha visszakerül olyan lépés, ami csomópontot töröl, ezt vissza kell hozni.)
 
-  // ===== A LÁTHATÓSÁGI KÜSZÖB TUDATPONTBAN =====
+  // ===== A BETÖLTÉSI KÜSZÖB TUDATPONTBAN =====
   // A méret-képlet megfordítása. Egy gyerek képernyő-átmérője:
   //     2 · szülőKépernyőSugár · √( gyerekPont / (20 · szülőPont) )
-  // Ez akkor éri el a MIN_KEP_ATMERO-t, ha
-  //     gyerekPont ≥ 20 · szülőPont · ( MIN_KEP_ATMERO / (2 · szülőKépernyőSugár) )²
+  // Ez akkor éri el a `d` átmérőt, ha
+  //     gyerekPont ≥ 20 · szülőPont · ( d / (2 · szülőKépernyőSugár) )²
+  //
+  // A `d` NEM a láthatósági küszöb, hanem annak `BETOLTESI_MELYSEG`-ed része:
+  // mélyebbre töltünk, mint amit rajzolunk, hogy a farok a láthatóvá válás ELŐTT
+  // megérkezzen és helyet kapjon (különben a fenntartott mag nem tud lefogyni).
   //
   // Ez a nézet betöltésének EGYETLEN szabálya: nem „a következő 60"-at kérjük,
-  // hanem pontosan azt, ami elér a láthatóságig. A gyökér-szinten nincs szülő-pont,
+  // hanem pontosan azt, ami elér eddig a méretig. A gyökér-szinten nincs szülő-pont,
   // ott a LEGERŐSEBB gyökér a mértékegység (és nincs /20, mert a gyökerek nem egy
   // szinttel lejjebb vannak).
   //
@@ -732,7 +759,8 @@ class SikidomModal {
   _pontKuszob(cs, kepSugar) {
     if (!(kepSugar > 0)) return Infinity;
 
-    const arany = MIN_KEP_ATMERO / (2 * kepSugar);
+    // MÉLYEBBRE TÖLTÜNK, MINT AMIT RAJZOLUNK (lásd BETOLTESI_MELYSEG).
+    const arany = (MIN_KEP_ATMERO / BETOLTESI_MELYSEG) / (2 * kepSugar);
     const negyzet = arany * arany;
 
     return cs.id === VILAG

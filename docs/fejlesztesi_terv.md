@@ -1972,3 +1972,46 @@ testvér 450-es és 50-es adagokban. A nagy adagok most már külön is mérve v
 épp azok hozták elő ezt a hibát.
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j6).
+
+---
+
+## Síkidom nézet — mélyebbre töltünk, mint amit rajzolunk (2026-08-09)
+
+**Csaba megfigyelése:** „addig szépen pakolja a síkidomokat a közép felé, ameddig
+azok el nem érik a belső mag kerületét… utána már csak hátráltat." Javaslata: a
+magot az első adag lerakása után vegyük ki.
+
+### ELVETVE (mérve): a mag elvétele az első adag után
+
+Megcsináltuk és lemértük. **Hat beállításból ötben megfordítja a rendet:**
+
+| beállítás | méret-tizedek (legkisebb → legnagyobb) | |
+|---|---|---|
+| 600 / 450-es adag | 0,0126 → 0,1353 | ✅ |
+| 600 / 150-es adag | 0,1914 → 0,1469 | ❌ |
+| 600 / 20-as adag | 0,2932 → 0,1174 | ❌ |
+| 3000 / 50-es adag | 0,3237 → 0,1524 | ❌ |
+| 3000 / 20-as adag | 0,4064 → 0,1446 | ❌ |
+
+Csak ott megy át, ahol gyakorlatilag EGYETLEN adagban érkezik minden — vagyis épp
+ott, ahol nincs is „utána". Amint több adag jön, a második elfoglalja a
+középpontot, a harmadiknak (még kisebbnek) már csak kifelé jut hely.
+
+### Az igazi ok — és a megoldás
+
+A megfigyelés helyes volt, csak az ok más: a mag nem „hátráltat", hanem **nem jön
+senki, aki betöltse**. A letöltési küszöb ugyanis PONTOSAN egyenlő volt a
+láthatósági küszöbbel — mindig csak azt hoztuk le, ami épp láthatóvá vált. A farok
+közvetlenül a küszöb alatt várt, és csak további nagyításra jött; közben a
+fenntartott mag a képernyőn nőtt.
+
+**A javítás:** `BETOLTESI_MELYSEG = 4` — a letöltési küszöböt a láthatósági küszöb
+negyedéből számoljuk. Mivel a küszöb a méret NÉGYZETÉVEL arányos, ez **16-szor**
+több testvért enged be: a farok jóval a láthatóvá válás előtt megérkezik és helyet
+kap, tehát a `T_hátra` (és vele a mag) magától lefogy.
+
+Vagyis a magot nem elvesszük, hanem **feleslegessé tesszük**. A rajzolás küszöbe
+változatlan (`MIN_KEP_ATMERO = 24`), és a letöltést továbbra is fékezi a
+`BETOLTESI_TARTALEK` (a várólista területéhez mérve).
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j6).
