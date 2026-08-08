@@ -188,7 +188,13 @@ function bejaras(gyerekek) {
     //     a mag nem zsugorodik, és minden új síkidom a nagy mag peremére, KIFELÉ
     //     kerül — mérve pontosan ez történt: a legkisebbek kerültek legkívülre
     //     (tized-átlagok 0,3042 … 0,2241, vagyis fordítva).
-    const hatraPont = Math.max(0, osszesGyerekPont - helyezettPont);
+    //     A MOST lerakandó adagot LEVONJUK: ők épp helyet kapnak, tehát nem nekik
+    //     kell fenntartani. Enélkül egy nagy adag (a nézetben a megnyitáskori 150
+    //     gyökér) ötször akkora mag köré kerül, mint kellene — és ott is ragad,
+    //     mert semmi nem mozdul. Kis adagnál a hiba elenyésző: ezért nem tűnt fel.
+    const mostLerakandoPont = varolista.reduce((s, v) => s + v.pont, 0);
+    const hatraPont = Math.max(0,
+      osszesGyerekPont - helyezettPont - mostLerakandoPont);
     const magSugar = URES_MAG
       ? Math.sqrt(hatraPont / (SZINT_OSZTO * SZULO_PONT * MAG_SURUSEG))
       : 0;
@@ -424,6 +430,37 @@ function magElegEllenorzes(lerakottak) {
       : `${sertes} tizednél megfordul a sorrend — a mag kicsi (σ = ${MAG_SURUSEG})`);
 }
 
+// 9. A LYUK NEM NAGYOBB AZ INDOKOLTNÁL
+// A 8. állítás a SORRENDET méri (kicsik belül), ez viszont a MÉRETET: mekkora a
+// tényleges középső üresség ahhoz képest, amennyit a hátralévők indokolnak.
+//
+// Ezt az állítást azért kellett megírni, mert a 8. NEM fogta meg a 2026-08-09-i
+// hibát: a nézet a megnyitáskor egyszerre kapott 150 gyökeret, és őket egy olyan
+// mag köré pakolta, ami MINDEN 405 testvérre volt méretezve (T_hátra a lerakandó
+// adagot is tartalmazta). A sorrend közben végig helyes maradt — csak a lyuk lett
+// 5,4-szer akkora a kelleténél, és mivel semmi nem mozdul, ott is ragadt.
+//
+// A várt lyuk: a MÉG HELY NÉLKÜLIEK (a futás végén: senki) területéből. Ha a
+// futás végére mindenki lekerült, a lyuknak gyakorlatilag el kell tűnnie — a
+// tűrés a legkisebb síkidom átmérője, mert a legbelső kör körül mindig marad egy
+// kis rés.
+function lyukMeretEllenorzes(lerakottak, varolista) {
+  const { magSugarRel } = meretek(lerakottak);
+  const legkisebbSugar = Math.min(...lerakottak.map(l => l.sugar));
+
+  // Ami még hely nélkül maradt, annak a területéből adódó indokolt lyuk
+  const hatraPont = varolista.reduce((s, v) => s + v.pont, 0);
+  const indokolt = Math.sqrt(hatraPont / (SZINT_OSZTO * SZULO_PONT * MAG_SURUSEG));
+
+  // Tűrés: az indokolt lyuk + két legkisebb sugár (a legbelső kör körüli rés)
+  const felsoHatar = indokolt + 2 * legkisebbSugar;
+  const rendben = magSugarRel <= felsoHatar + 1e-9;
+
+  allitas(rendben, 'A lyuk nem nagyobb az indokoltnál',
+    `mért ${magSugarRel.toFixed(4)} · indokolt ${indokolt.toFixed(4)} · ` +
+    `felső határ ${felsoHatar.toFixed(4)}`);
+}
+
 // ===== FUTTATÁS =====
 naplo('');
 naplo('===== SÍKIDOM-PAKOLÁS MÉRŐPRÓBA =====');
@@ -451,6 +488,7 @@ monotoniaEllenorzes(lerakottak);
 lyukEllenorzes(lepesek);
 stabilitasEllenorzes(lerakottak, elsoHelyek);
 magElegEllenorzes(lerakottak);
+lyukMeretEllenorzes(lerakottak, varolista);
 determinizmusEllenorzes(gyerekek);
 naplo('');
 

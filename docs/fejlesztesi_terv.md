@@ -1909,3 +1909,66 @@ középtávolsága végig szigorúan monoton:
 | 3000 / 20-as adag | 0,0150 → 0,1519 |
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j6).
+
+---
+
+## Síkidom nézet — a mag a lerakandó adagot is fenntartotta (2026-08-09)
+
+**A tünet:** hatalmas üres kör a kép közepén, körülötte gyűrű, és semmi nem tudta
+betölteni. Csaba kérdése: „lehet, hogy a helyük megvan, de miért nem látszanak?"
+
+### A mérés döntötte el
+
+Beépítettünk egy `SikidomModal - ÁLLAPOT` naplósort, ami a zoom végén kiírja, mi
+történik. A böngészőből:
+
+```
+csomopont: 'vilag' · lerakott: 150 · rajzolt: 24→32→49 · varolistan: 0 · hatraPont: 592
+```
+
+Ez kizárta a két kézenfekvő magyarázatot:
+- `varolistan: 0` → **nem a lerakás akadt el**, minden letöltött testvér helyet kapott;
+- a minimum átmérő sem a lerakást fogja vissza (csak a rajzolást: a 150-ből
+  126 kisebb 24 px-nél, ezért nem látszik — de helyük VAN).
+
+### Az ok
+
+A `lerakott: 150` a megnyitáskori adag (küszöb nélkül kérünk, a 150-es plafonig).
+Amikor ezt a 150-et lepakoltuk, a mag még **az összes 405 testvérre** volt méretezve,
+mert a `T_hátra` a MOST lerakandó adagot is tartalmazta:
+
+| | T_hátra | mag |
+|---|---|---|
+| lerakás ELŐTT | 17 235 (mindenki) | **3,92** |
+| lerakás UTÁN | 592 (a maradék 255) | **0,73** |
+
+A 150 síkidom tehát egy **5,4-szer nagyobb** mag köré került, mint kellett volna —
+és mivel a lerakottak nem mozdulnak, ott is ragadt. A hely nem hiányzott: fölöslegesen
+volt fenntartva.
+
+### A javítás
+
+```
+T_hátra  =  összes  −  már helyet kapott  −  MOST lerakandó
+```
+
+Egy sor. Kis adagoknál a hiba elenyésző (ezért nem tűnt fel a mérőpróbán, ahol
+5–20-as adagokkal mértünk), 150-esnél viszont uralja a képet.
+
+### Új, 9. állítás: „A lyuk nem nagyobb az indokoltnál"
+
+A 8. állítás a SORRENDET méri (kicsik belül) — ezt a hibát NEM fogta meg, mert a
+sorrend végig helyes maradt, csak a lyuk lett túl nagy. A 9. a MÉRETET méri: a
+tényleges középső üresség nem lehet nagyobb, mint amit a még hely nélküliek
+indokolnak (plusz a legbelső kör körüli rés).
+
+Visszapróbálva a régi képlettel **el is bukik**: mért 0,0420 · indokolt 0,0000 ·
+felső határ 0,0045 — kilencszeres.
+
+### Mérés
+
+Mind a 9 állítás átmegy: 600 testvér 450-es, 150-es és 20-as adagokban; 3000
+testvér 450-es és 50-es adagokban. A nagy adagok most már külön is mérve vannak —
+épp azok hozták elő ezt a hibát.
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j6).

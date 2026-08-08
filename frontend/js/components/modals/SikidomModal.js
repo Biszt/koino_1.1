@@ -648,9 +648,18 @@ class SikidomModal {
   // zsugorodott, és a legkisebbek kerültek LEGKÍVÜLRE (tized-átlagok 0,3042 …
   // 0,2241, vagyis fordítva).
   //
+  // A MOST LERAKANDÓ ADAGOT LE KELL VONNI. Ez nem finomítás, hanem a modell
+  // helyessége (Csaba mérése, 2026-08-09): a megnyitáskor egyszerre érkezett
+  // 150 gyökér, és mi őket egy olyan mag köré pakoltuk, ami MINDEN 405 testvérre
+  // volt méretezve. Számokkal: lerakás előtt T_hátra = 17 235 → mag 3,92; utána
+  // T_hátra = 592 → mag 0,73. A lyuk tehát 5,4-szer nagyobb lett a kelleténél —
+  // és mivel semmi nem mozdul, ÖRÖKRE akkora is maradt. Ez okozta a hatalmas
+  // üres közepet, amit semmi nem tudott betölteni.
+  //
   // @param {Object} cs - a szülő csomópont
+  // @param {number} [mostLerakandoPont=0] - a MOST lerakás alatt álló adag pontja
   // @returns {number} a mag sugara a szülő sugarának egységében
-  _magSugar(cs) {
+  _magSugar(cs, mostLerakandoPont = 0) {
     if (!URES_MAG) return 0;
 
     // A mértékegység: a gyökér-szinten a legerősebb gyökér (nincs /20, mert a
@@ -661,7 +670,8 @@ class SikidomModal {
 
     if (!(egyseg > 0)) return 0;
 
-    const hatraPont = Math.max(0, (cs.osszesGyerekPont || 0) - (cs.helyezettPont || 0));
+    const hatraPont = Math.max(0,
+      (cs.osszesGyerekPont || 0) - (cs.helyezettPont || 0) - Math.max(0, mostLerakandoPont));
     if (hatraPont <= 0) return 0;                 // mindenkinek van már helye
 
     const sugar = Math.sqrt(hatraPont / (egyseg * MAG_SURUSEG));
@@ -937,7 +947,12 @@ class SikidomModal {
     // ===== A MAG: A HÁTRALÉVŐ TUDATPONTBÓL =====
     // Lásd `_magSugar`. Ennyi helyet tartunk fenn középen azoknak, akiknek MÉG
     // NINCS helyük — így a később érkezők befelé férnek, nem kifelé szorulnak.
-    const magSugar = this._magSugar(cs);
+    //
+    // A MOST lerakandó adagot LEVONJUK: ők épp helyet kapnak, tehát nem nekik kell
+    // fenntartani. Enélkül az első, nagy adag (150 gyökér) egy ötször akkora mag
+    // köré került, mint kellett volna — és ott is ragadt.
+    const ujPont = ujak.reduce((s, u) => s + (u.varo?.pont ?? 0), 0);
+    const magSugar = this._magSugar(cs, ujPont);
 
     const eredmeny = pakolas(
       ujak.map(u => ({ id: u.id, sugar: u.sugar })),
@@ -1401,6 +1416,57 @@ class SikidomModal {
     if (this._kepkocka % TAKARITAS_KEPKOCKANKENT === 0) this._takaritas();
   }
 
+  // ===== ÁLLAPOT-NAPLÓ A ZOOM VÉGÉN =====
+  // Felelősség: EGYETLEN sorban megmondani, MIÉRT üres a kép közepe. Három
+  // versengő magyarázat van, és képernyőképből nem lehet köztük dönteni:
+  //
+  //   1. „nincs mit lerakni"  → `varolistan` = 0 ÉS `hatra` ≈ 0
+  //   2. „le van rakva, csak nem rajzoljuk" → `lerakott` >> `rajzolt`
+  //   3. „még nincs letöltve" → `hatra` nagy, `varolistan` = 0
+  //
+  // A `magKep` / `kepernyoMeret` arány mutatja, mekkora részét foglalja a mag a
+  // képernyőnek — ha ez közelítéskor NŐ, a letöltés nem tart lépést a zoommal.
+  _allapotNaplo() {
+    const cs = this._tar.get(this._horgony) ?? this._tar.get(VILAG);
+    if (!cs) return;
+
+    // A horgony (vagy a VILÁG) képernyő-sugara: a horgony kerete 1 sugarú
+    const kepSugar = this._horgony === cs.id
+      ? this._nezet.skala
+      : this._nezet.skala;
+
+    const osszes = cs.osszesGyerekPont || 0;
+    const helyezett = cs.helyezettPont || 0;
+    const hatra = Math.max(0, osszes - helyezett);
+
+    // Hány gyereke van lerakva, és ezek közül hányat rajzolunk ki ténylegesen?
+    let rajzolt = 0;
+    for (const gid of cs.gyerekIdk) {
+      const gy = this._tar.get(gid);
+      if (!gy) continue;
+      if (this._nezet.skala * gy.relR * 2 >= MIN_KEP_ATMERO) rajzolt++;
+    }
+
+    const magRel = this._magSugar(cs, kepSugar);
+
+    console.log('SikidomModal - ÁLLAPOT', {
+      csomopont: cs.id,
+      lerakott: cs.gyerekIdk.length,
+      rajzolt,                                   // ha << lerakott: túl kicsik
+      varolistan: cs.varolista.length,           // ha > 0: a lerakás akadt el
+      hatraPont: Math.round(hatra),              // ha nagy: még nincs letöltve
+      osszesPont: Math.round(osszes),
+      hatraAranya: osszes > 0 ? (hatra / osszes * 100).toFixed(1) + '%' : '–',
+      magRel: magRel.toFixed(4),
+      magKep: Math.round(magRel * kepSugar * 2),          // a mag ÁTMÉRŐJE képpontban
+      kepernyoMeret: Math.round(this._kepernyoMeret()),
+      betoltesFut: cs.betoltesFut,
+      betoltottKuszob: Number.isFinite(cs.betoltottKuszob)
+        ? cs.betoltottKuszob.toFixed(2) : '∞',
+      mostiKuszob: this._pontKuszob(cs, kepSugar).toFixed(2)
+    });
+  }
+
   // ===== A NAGYÍTÁS VÉGE =====
   // Minden nagyítás újraindítja az időzítőt; a munka csak akkor indul el, amikor
   // ZOOM_VEGE_MS ideje nem történt semmi. Csaba kérése: „csak a zoom végén
@@ -1421,6 +1487,7 @@ class SikidomModal {
     if (!this.rajzolo || !this._szelesseg) return;
 
     const { betoltendok, pakolandok } = this._lathatoLista();
+    this._allapotNaplo();
 
     let valtozott = false;
     for (const p of pakolandok) {
