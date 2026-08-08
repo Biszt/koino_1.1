@@ -215,19 +215,26 @@ const MAG_SZABALY = 'szintenkent';
 //     a „kinőtt a mag" ág nem sülhet el, mert nincs mag.
 // A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
 //
-// ÁLLÁS 2026-08-06 (Csaba döntése): MARADJUNK A MAG NÉLKÜLI VÁLTOZATNÁL.
+// ÁLLÁS 2026-08-08 (Csaba döntése): VISSZA A MAGHOZ — mert ez a nézet
+// STABILITÁSÁNAK a kulcsa, nem díszítés.
 //
-// A napközbeni oda-vissza rövid története, hogy ne kelljen újra végigjárni:
-// először `false`-ra állítottuk (kísérlet), a böngészős próbán rosszabbnak tűnt,
-// ezért visszaállt `true`-ra — de utóbb kiderült, hogy a „szétesést" NEM a mag
-// hiánya okozta, hanem két külön hiba (a fagyasztási határ és a mag szülőt
-// kinövő mérete). A mérés pedig végig a mag NÉLKÜLI változatot mutatta
-// tömörebbnek: 52,7% kitöltöttség és 4,08 átlagos érintés, szemben a maggal
-// futó 48,7%-kal és 3,01-gyel (105 valódi gyökéren mérve).
+// Az előzmény: 2026-08-06-án `false`-ra állt, mert a mérés a mag nélküli
+// változatot mutatta tömörebbnek (52,7% kitöltöttség / 4,08 átlagos érintés,
+// szemben a maggal futó 48,7% / 3,01-gyel, 105 valódi gyökéren). Akkor viszont
+// nem tudtuk, MIT fizetünk érte.
 //
-// A mag „van még lejjebb testvér" jelzését tehát MÁSHOGY kell megoldani, ha kell
-// — nem a kép lazítása árán.
-const URES_MAG = false;
+// A számla 2026-08-08-án érkezett meg: mag nélkül minden újrapakolás az EGÉSZ
+// elrendezést újraszámolta, mert az új — az eddigieknél kisebb — testvérek a
+// méret szerinti sor ELEJÉRE kerülnek, és onnantól minden utánuk következő
+// síkidom új helyre ugrik. Csaba tünete: „amikor közelítek, máshová kerülnek a
+// síkidomok, és így nehéz ráközelíteni egy szélsőre, mert mindig elugrál,
+// kb. kergetni kell."
+//
+// A maggal ez megszűnik: a mag képpontban állandó, tehát ADAT-TÉRBEN zsugorodik
+// a nagyítással, és a pereme mentén GYŰRŰ nyílik — az újak oda kerülnek, a
+// meglévők pedig HELYBEN MARADNAK (`kornyezet`-ként vesznek részt a pakolásban).
+// A ~4 százalékpont tömörség ennek olcsó ára.
+const URES_MAG = true;
 
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
@@ -918,10 +925,9 @@ class SikidomModal {
 
     if (beferok.length === 0) return false;
 
-    const ujDarab = beferok.reduce((n, j) => n + (j.lerakott ? 0 : 1), 0);
-    if (ujDarab === 0 && kimaradok.length === 0 && !this._magNottTulNagyra(cs, kepSugar)) {
-      return false;
-    }
+    const ujakSzama = beferok.reduce((n, j) => n + (j.lerakott ? 0 : 1), 0);
+    const vanEldobando = kimaradok.some(k => k.lerakott);
+    if (ujakSzama === 0 && !vanEldobando) return false;
 
     // --- A SOR VÉGÉRŐL LEESŐK: VISSZA A VÁRÓLISTÁRA ---
     // Nem vesznek el: ugyanabba a sorba kerülnek vissza, ahonnan kiestek, és
@@ -962,9 +968,29 @@ class SikidomModal {
       cs.gyerekIdk = cs.gyerekIdk.filter(id => !kiesett.has(id));
     }
 
-    const mozgok = beferok.filter(j => j.lerakott).map(j => ({ id: j.id, sugar: j.sugar }));
-    const ujak = beferok.filter(j => !j.lerakott);
+    // ===== A MÁR LERAKOTTAK HELYBEN MARADNAK =====
+    // Ez a nézet STABILITÁSÁNAK alapja (Csaba, 2026-08-08). Korábban minden
+    // újrapakolásnál MINDENT újrarendeztünk, és mivel a pakolás sorrend-érzékeny
+    // (növekvő méret szerint, a legkisebb középre), egyetlen új — az eddigieknél
+    // KISEBB — testvér a sor ELEJÉRE került, és onnantól minden utána következő
+    // síkidom új helyre ugrott.
+    //
+    // A tünet: befelé közelítve a kép átrendeződött, és egy szélső síkidomra
+    // gyakorlatilag lehetetlen volt ráközelíteni — mindig elugrott, kergetni kellett.
+    //
+    // A MEGOLDÁS: a már lerakottak KÖRNYEZETKÉNT (akadályként) vesznek részt, nem
+    // pakolandóként — így a helyük NEM változik. Csak az újakat rakjuk le, abba a
+    // gyűrűbe, ami a zsugorodó mag és a legbelső meglévő síkidom között nyílik.
+    // Pontosan erre való a pakoló `kornyezet` és `magSugar` paramétere.
     const allok = [];
+    for (const j of beferok) {
+      if (!j.lerakott) continue;
+      const gy = this._tar.get(j.id);
+      if (!gy) continue;
+      allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
+    }
+
+    const ujak = beferok.filter(j => !j.lerakott);
 
     // --- AZ ÜRES MAG: CSAK AMÍG VAN MEG NEM JELENÍTETT TESTVÉR ---
     const varMegLetoltes = cs.osszesGyerekPont === 0
@@ -988,34 +1014,32 @@ class SikidomModal {
 
     if (!vilagSzint && magSugar > 0) {
       let legnagyobb = 0;
-      for (const m of mozgok) legnagyobb = Math.max(legnagyobb, m.sugar);
       for (const u of ujak) legnagyobb = Math.max(legnagyobb, u.sugar);
       magSugar = Math.max(0, Math.min(magSugar, 1 - 2 * legnagyobb));
     }
 
-    const opciok = { magSugar, kornyezet: allok };
-
-    let eredmeny = pakolas([...mozgok, ...ujak.map(u => ({ id: u.id, sugar: u.sugar }))], opciok);
-
-    // A már LERAKOTTAKNAK mindenképp jusson hely: ha a közös pakolás valamelyiküket
-    // kihagyná, újrapróbáljuk az újak nélkül — egy meglévő síkidom nem tűnhet el.
-    if (eredmeny.lerakatlanIdk.length > 0 && mozgok.length > 0) {
-      const mozgoIdk = new Set(mozgok.map(m => m.id));
-      const kimaradtMeglevo = eredmeny.lerakatlanIdk.filter(id => mozgoIdk.has(id));
-
-      if (kimaradtMeglevo.length > 0) {
-        console.warn('SikidomModal._ujrapakolas - meglévő maradt ki, újra az újak nélkül', {
-          csomopont: cs.id, kimaradt: kimaradtMeglevo.length
-        });
-        eredmeny = pakolas(mozgok, opciok);
-        if (eredmeny.lerakatlanIdk.length > 0) {
-          console.error('SikidomModal._ujrapakolas - a meglévők sem férnek el, kihagyjuk', {
-            csomopont: cs.id
-          });
-          return false;
-        }
+    // ===== AZ ÚJAK LERAKÁSA A MEGLÉVŐK KÖZÉ =====
+    // Nem kell külön megkötés arra, hogy az újak a mag körüli gyűrűbe kerüljenek:
+    // a pakoló HORGONY-SORRENDJE magától ezt adja — előbb a MAG PEREMÉT próbálja,
+    // csak utána a munkafrontot és a pót-horgonyokat. Mérve (600 testvér, Zipf):
+    // a kicsik így is végig belül maradnak, 11 egymásba fűzött gyűrűben.
+    //
+    // Egy KIKÉNYSZERÍTETT gyűrű-szűrés viszont éheztet — ki is próbáltuk: 600-ból
+    // csak 99 került le, a többi végleg a várólistán ragadt. Az ok, hogy a mag
+    // képpontban állandó, tehát adat-térben zsugorodik, a testvérek mérete viszont
+    // fix: a gyűrű előbb-utóbb mindenkinél túl vékony lesz.
+    if (ujak.length === 0) {
+      if (visszaszedett.length > 0) {
+        this._meretekUjramerese(cs);
+        return true;
       }
+      return false;
     }
+
+    const eredmeny = pakolas(
+      ujak.map(u => ({ id: u.id, sugar: u.sugar })),
+      { magSugar, kornyezet: allok }
+    );
 
     // --- AZ EREDMÉNY BEKÖTÉSE ---
     const ujTerkep = new Map(ujak.map(u => [u.id, u.varo]));
@@ -1023,13 +1047,6 @@ class SikidomModal {
 
     for (const hely of eredmeny.helyek) {
       lerakottIdk.add(hely.id);
-
-      const meglevo = this._tar.get(hely.id);
-      if (meglevo) {                      // már lerakott: csak a helye változik
-        meglevo.relX = hely.x;
-        meglevo.relY = hely.y;
-        continue;
-      }
 
       const v = ujTerkep.get(hely.id);    // most került be a várólistáról
       if (!v) continue;
@@ -1066,8 +1083,9 @@ class SikidomModal {
 
     console.log('SikidomModal._ujrapakolas', {
       csomopont: cs.id,
-      atrendezett: mozgok.length,
-      ujonnan: eredmeny.helyek.length - mozgok.length,
+      helybenMaradt: allok.length,           // ezek NEM mozdultak
+      ujonnan: lerakottIdk.size,
+      lerakatlan: eredmeny.lerakatlanIdk.length,
       vedett: vedettek.size,
       visszaesett: visszaszedett.length,
       varolistan: cs.varolista.length,
@@ -1086,13 +1104,6 @@ class SikidomModal {
     }
 
     return true;
-  }
-
-  // Kinőtte-e a mag a célméretet? Ha igen, van értelme újrapakolni akkor is, ha
-  // épp nem érkezett új testvér — a mag ilyenkor visszaáll a cél-átmérőre.
-  _magNottTulNagyra(cs, kepSugar) {
-    if (!Number.isFinite(cs.magSugarRel)) return false;
-    return cs.magSugarRel * kepSugar * 2 > MAG_CEL_ATMERO;
   }
 
   // A mag és a külső perem ÚJRAMÉRÉSE a gyerekekből. Nem vezetjük görgetve

@@ -1714,3 +1714,72 @@ true`-val, de sokkal kisebb delta-értékekkel, mint a kétujjas görgetést. K�
 böngészőben ugyanakkorát nagyít.
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j5).
+
+---
+
+## Síkidom nézet — a lerakottak HELYBEN MARADNAK (2026-08-08)
+
+**Csaba tünete:** „amikor közelítek, akkor újrapakolja az egészet, és ettől
+máshová kerülnek a síkidomok, és így nehéz ráközelíteni egy szélső síkidomra,
+mert az mindig elugrál, kb. kergetni kell."
+
+### Az ok
+
+A `pakolas()` **sorrend-érzékeny**: növekvő méret szerint rak le, a legkisebbet a
+középpontba. Közelítéskor az újonnan láthatóvá vált — az eddigieknél KISEBB —
+testvérek a méret szerinti sor **elejére** kerülnek, tehát minden utánuk következő
+lerakás új helyre kerül. Nem hiba: a „legkisebb középre" szabály következménye.
+
+A másik irány stabil volt: amikor a kapacitás-vágás a sor VÉGÉRŐL dobott le
+nagyokat, a kép nem rendeződött át (a pakoló determinisztikus, azonos kezdőszakasz
+azonos eredményt ad). Kizárólag az **elülső beszúrás** destabilizál.
+
+### A megoldás (Csaba választása: „A”)
+
+Visszakapcsoltuk azt a szerkezetet, **amire a pakoló eredetileg épült** — a
+`magSugar` és a `kornyezet` paraméterét eddig üresen hagytuk:
+
+- **`URES_MAG = true`** — a mag képpontban állandó, tehát ADAT-TÉRBEN zsugorodik
+  a nagyítással, és a pereme mentén folyamatosan hely szabadul fel;
+- **a már lerakottak `kornyezet`-ként** (akadályként) vesznek részt, nem
+  pakolandóként — a helyük **soha többé nem változik**;
+- csak az ÚJAKAT rakjuk le.
+
+A 2026-08-06-i mérés a mag NÉLKÜLI változatot mutatta tömörebbnek (52,7% / 4,08
+érintés, szemben a 48,7% / 3,01-gyel) — de akkor nem tudtuk, hogy a stabilitást
+fizetjük érte. A ~4 százalékpont ennek olcsó ára.
+
+### ZSÁKUTCA (mérve): a kikényszerített gyűrű-szűrés
+
+Első nekifutásra beépítettünk egy megkötést: az újak CSAK a zsugorodó mag pereme
+és a legbelső meglévő síkidom közötti gyűrűbe kerülhessenek (radiális előszűrés +
+utólagos elvetés). Az indok az volt, hogy a pakoló különben a pót-horgonyokhoz
+fordul, azok pedig a legkülső körök — tehát az apró újakat a nagyok KÜLSŐ peremére
+tenné.
+
+**Mérve ez ÉHEZTET: 600 testvérből csak 99 került le, 501 véglegesen a várólistán
+ragadt.** Az ok: a mag képpontban állandó (adat-térben zsugorodik), a testvérek
+mérete viszont fix — a gyűrű előbb-utóbb mindenkinél túl vékony lesz, és mivel
+onnantól nem kerül le semmi, a mért belső perem sem frissül. Holtpont.
+
+**A megkötés fölösleges is volt.** A pakoló horgony-sorrendje (1. a mag pereme,
+2. a munkafront, 3. pót-horgonyok kifelé) magától a helyes szerkezetet adja. Szűrés
+NÉLKÜL mind a 600 lekerül, és a „középtől kifelé monoton nő a méret" ellenőrzés is
+átmegy: 11 egymásba fűzött gyűrű.
+
+### Mérés (böngésző nélkül, `sikidomPakolasProba.mjs`)
+
+Új, 7. ellenőrzés: **„Lerakás után egyetlen síkidom sem mozdul"** — minden síkidom
+helyét a lerakás pillanatában rögzítjük, és a futás végén összevetjük.
+
+| testvér | lerakva | várólistán | legdrágább lépés | mozdult |
+|---|---|---|---|---|
+| 600 | 600 | 0 | 15 ms | **0** |
+| 3000 | 3000 | 0 | 20 ms | **0** |
+
+Mindkettőnél mind a 7 állítás átmegy: nulla átfedés, semmi nem vész el, minden a
+szülőn belül, a méret középtől kifelé monoton nő, a lyuk képpontban pontosan
+120 px, semmi nem mozdul, és a futás determinisztikus. (A régi, mindent
+újrapakoló modell 3000-nél 25 ms-os legdrágább lépést adott — ez tehát gyorsabb is.)
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j6).

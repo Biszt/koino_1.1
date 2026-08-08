@@ -735,6 +735,24 @@ docker logs -f koino-backend
     - **Görgő:** érintőpadon a nagyítás sima és folytonos, nem ugrál; „kattanós"
       egérgörgőn egy kattanás ~1,15-szörös lépés.
 
+    (j6) **STABILITÁS-PRÓBA (2026-08-08) — a legfontosabb:**
+    Válassz ki egy **szélső** síkidomot, és közelíts rá több lépésben.
+    - A már látható síkidomok **nem mozdulhatnak el**. A célpontod nem „ugrálhat",
+      nem kell kergetni. *(Ez volt a hiba: minden újrapakolás az egészet
+      újraszámolta, mert az új — kisebb — testvérek a méret szerinti sor elejére
+      kerültek, és onnantól minden utánuk következő új helyre ugrott.)*
+    - Az **új** síkidomok a középső üres kör (szaggatott vonal) **peremén**
+      bukkannak elő, gyűrűnként — a meglévők közé, nem a helyükre.
+    - A szaggatott kör átmérője nagyítás közben **állandó marad** (~120 px), amíg
+      van még meg nem jelenített testvér. Ha nőni kezd, az a jelzés, hogy „itt
+      nincs több".
+    - A konzolban a `_ujrapakolas` sorában a `helybenMaradt` érték nőjön, az
+      `ujonnan` pedig kicsi legyen — ez mutatja, hogy tényleg csak az újakat rakjuk le.
+
+    Böngésző nélkül: `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24`
+    — a 7. állítás („Lerakás után egyetlen síkidom sem mozdul") ezt méri. 600 és
+    3000 testvérrel is mind a 7 átmegy, 0 elmozdulással.
+
     (j5) **ÉRINTŐPAD- ÉS MOBIL-PRÓBA (2026-08-08):**
     - **Érintőpad, kétujjas görgetés** → sima, folytonos nagyítás.
     - **Érintőpad, csippentés** → szintén nagyít (a böngésző `ctrlKey`-jel küldi;
@@ -790,7 +808,12 @@ docker logs -f koino-backend
     minimum képernyő-átmérő. 600 és 3000 testvérrel egyaránt mind a hat átmegy.
     A legdrágább lépés 2026-08-06 óta: 600-nál 11 ms, 3000-nél 25 ms.
 
-    **Üres mag NÉLKÜL** (a jelenlegi beállítás, `SikidomModal.URES_MAG = false`):
+    *2026-08-08 óta 7 állítást ellenőriz — az új a **stabilitás** (lásd (j6)) —, és
+    a modell is más: a már lerakottak `kornyezet`-ként (akadályként) vesznek részt,
+    csak az újakat rakja le. `URES_MAG = true` ismét.*
+
+    **Üres mag NÉLKÜL** (`SikidomModal.URES_MAG = false` tükre — már NEM a jelenlegi
+    beállítás, csak összehasonlításhoz):
     `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`
     Ilyenkor az ötödik állítás megfordul: a lyuk-ellenőrzés helyett azt várjuk, hogy
     **nincs középső lyuk** — a legkisebb testvér a középpontban ül. 600-nál és

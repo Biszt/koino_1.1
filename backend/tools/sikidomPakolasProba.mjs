@@ -45,8 +45,6 @@ const GYEREK_DARAB   = Number(process.argv[2]) || 600;
 const ZOOM_SZORZO    = Number(process.argv[3]) || 1.3;
 const KEZDO_KEPSUGAR = 400;      // a szülő képernyő-sugara az induláskor
 const MAX_ZOOM_LEPES = Number(process.argv[4]) || 60;
-const UJRAPAKOLASI_TARTALEK = 1.5;  // a látómező + 50%-a
-const KEPERNYO_SUGAR        = 400;  // a látómező sugara képpontban
 const SZULO_PONT     = 1_000_000;
 
 // A VALÓSÁGHŰ BETÖLTÉS: a nézet kérésenként legfeljebb ennyi testvért tölt le
@@ -92,26 +90,25 @@ function bejaras(gyerekek) {
 
   const lepesek = [];
 
+  // STABILITÁS-NAPLÓ: minden síkidom helye a LERAKÁS pillanatában. A futás végén
+  // ehhez hasonlítunk — ha bármelyik elmozdult volna, az a nézet fő hibája
+  // (Csaba tünete 2026-08-08: „nehéz ráközelíteni egy szélső síkidomra, mert
+  // mindig elugrál, kb. kergetni kell").
+  const elsoHelyek = new Map();
+
   for (let kor = 1; kor <= MAX_ZOOM_LEPES; kor++) {
     // Egy zoom-lépésre ennyi érkezhet a backendtől (csökkenő pont szerint)
     varolista.push(...meg.splice(0, KERES_PLAFON * EGYIDEJU_BETOLTES));
 
     const celMag = (MAG_CEL_ATMERO / 2) / kepSugar;
-    const hatar = KEPERNYO_SUGAR * UJRAPAKOLASI_TARTALEK;
     let lepesMs = 0;
 
-    // (a) a látómezőben lévő, MÁR lerakottak — ezeket rendezzük át
-    // (b) a látómezőn kívüliek — helyben maradnak, akadályok
-    const latomezoRel = hatar / kepSugar;
+    // (a) A MÁR LERAKOTTAK HELYBEN MARADNAK — mind KÖRNYEZET (akadály), egyik
+    //     sem pakolandó. Ez a 2026-08-08-i modell lényege: a nézet csak akkor
+    //     stabil, ha egy lerakott síkidom SOHA többé nem mozdul.
+    const allok = lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }));
 
-    const mozgok = [], allok = [];
-    for (const l of lerakottak) {
-      const belsoKepSzel = (Math.hypot(l.x, l.y) - l.sugar) * kepSugar;
-      if (belsoKepSzel <= hatar) mozgok.push({ id: l.id, sugar: l.sugar });
-      else allok.push(l);
-    }
-
-    // (c) a várólistáról azok, akik ezen a nagyításon már látszanának
+    // (b) A várólistáról azok, akik ezen a nagyításon már látszanának
     const ujak = [];
     for (const v of varolista) {
       const sugar = gyerekRelativSugar(v.pont, SZULO_PONT);
@@ -119,36 +116,35 @@ function bejaras(gyerekek) {
       ujak.push({ id: v.id, sugar });
     }
 
-    const magKepAtmero = Number.isFinite(magSugarRel) ? magSugarRel * kepSugar * 2 : Infinity;
-    const vanDolgunk = ujak.length > 0 || magKepAtmero > MAG_CEL_ATMERO;
+    // (c) A LERAKÁS. Nem kell külön „csak a mag körüli gyűrűbe" megkötés: a pakoló
+    //     HORGONY-SORRENDJE magától ezt adja — előbb a MAG PEREMÉT próbálja, csak
+    //     utána a munkafrontot és a pót-horgonyokat. Mérve (600 testvér): a kicsik
+    //     így is végig belül maradnak, 11 egymásba fűzött gyűrűben.
+    //
+    //     Egy kikényszerített gyűrű-szűrés viszont ÉHEZTET: kipróbálva 600-ból csak
+    //     99 került le, a többi végleg a várólistán ragadt, mert a mag képpontban
+    //     állandó (tehát adat-térben zsugorodik), a testvérek mérete viszont fix —
+    //     a gyűrű előbb-utóbb mindenkinél túl vékony lett.
+    const magSugar = URES_MAG ? celMag : 0;
 
-    if (vanDolgunk && (mozgok.length > 0 || ujak.length > 0)) {
-      const opciok = {
-        magSugar: URES_MAG ? celMag : 0,
-        kornyezet: allok
-      };
-
+    if (ujak.length > 0) {
       const t0 = process.hrtime.bigint();
-      let e = pakolas([...mozgok, ...ujak], opciok);
-      if (e.lerakatlanIdk.length > 0 && mozgok.length > 0) {
-        e = pakolas(mozgok, opciok);     // az újak nélkül, a meglévők helyéért
-      }
+      const e = pakolas(ujak, { magSugar, kornyezet: allok });
       lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
       legdragabb = Math.max(legdragabb, lepesMs);
       ujrapakolasok++;
 
-      if (e.lerakatlanIdk.length === 0) {
-        const lerakottIdk = new Set(e.helyek.map(h => h.id));
-        const regiKor = new Map(lerakottak.map(l => [l.id, l.kor]));
-        lerakottak = [
-          ...allok,
-          ...e.helyek.map(h => ({ ...h, kor: regiKor.get(h.id) ?? kor }))
-        ];
-        for (let i = varolista.length - 1; i >= 0; i--) {
-          if (lerakottIdk.has(varolista[i].id)) varolista.splice(i, 1);
-        }
-        magSugarRel = meretek(lerakottak).magSugarRel;
+      const lerakottIdk = new Set();
+      for (const h of e.helyek) {
+        lerakottIdk.add(h.id);
+        lerakottak.push({ ...h, kor });
+        elsoHelyek.set(h.id, { x: h.x, y: h.y });
       }
+
+      for (let i = varolista.length - 1; i >= 0; i--) {
+        if (lerakottIdk.has(varolista[i].id)) varolista.splice(i, 1);
+      }
+      magSugarRel = meretek(lerakottak).magSugarRel;
     }
 
     lepesek.push({
@@ -166,7 +162,7 @@ function bejaras(gyerekek) {
     kepSugar *= ZOOM_SZORZO;
   }
 
-  return { lerakottak, varolista: [...varolista, ...meg], lepesek, ujrapakolasok, legdragabb };
+  return { lerakottak, varolista: [...varolista, ...meg], lepesek, ujrapakolasok, legdragabb, elsoHelyek };
 }
 
 // A mag és a külső perem a lerakottakból
@@ -289,6 +285,27 @@ function determinizmusEllenorzes(gyerekek) {
     'Determinizmus (kétszer futtatva bitre azonos)');
 }
 
+// 7. STABILITÁS: EGY LERAKOTT SÍKIDOM SOHA NEM MOZDUL
+// Ez a 2026-08-08-i modell fő ígérete. Ha megsérül, a nézetben az történik, amit
+// Csaba jelzett: közelítéskor átrendeződik a kép, és egy szélső síkidomra
+// gyakorlatilag lehetetlen ráközelíteni, mert elugrál.
+function stabilitasEllenorzes(lerakottak, elsoHelyek) {
+  let mozdult = 0;
+  let legnagyobb = 0;
+
+  for (const l of lerakottak) {
+    const elso = elsoHelyek.get(l.id);
+    if (!elso) continue;
+    const eltolodas = Math.hypot(l.x - elso.x, l.y - elso.y);
+    if (eltolodas > 0) { mozdult++; legnagyobb = Math.max(legnagyobb, eltolodas); }
+  }
+
+  allitas(mozdult === 0, 'Lerakás után egyetlen síkidom sem mozdul',
+    mozdult === 0
+      ? `${lerakottak.length} síkidom helye végig változatlan`
+      : `${mozdult} elmozdult, a legnagyobb ${legnagyobb.toExponential(2)}`);
+}
+
 // ===== FUTTATÁS =====
 naplo('');
 naplo('===== SÍKIDOM-PAKOLÁS MÉRŐPRÓBA =====');
@@ -298,7 +315,7 @@ naplo('');
 
 const gyerekek = tesztGyerekek(GYEREK_DARAB);
 const kezdet = Date.now();
-const { lerakottak, varolista, lepesek, ujrapakolasok, legdragabb } = bejaras(gyerekek);
+const { lerakottak, varolista, lepesek, ujrapakolasok, legdragabb, elsoHelyek } = bejaras(gyerekek);
 const idotartam = Date.now() - kezdet;
 
 naplo('--- NAGYÍTÁS-LÉPÉSEK ---');
@@ -314,6 +331,7 @@ hianyEllenorzes(gyerekek, lerakottak, varolista);
 beagyazasEllenorzes(lerakottak);
 monotoniaEllenorzes(lerakottak);
 lyukEllenorzes(lepesek);
+stabilitasEllenorzes(lerakottak, elsoHelyek);
 determinizmusEllenorzes(gyerekek);
 naplo('');
 
