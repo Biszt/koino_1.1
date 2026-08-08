@@ -708,8 +708,53 @@ docker logs -f koino-backend
     Tudatpontok, Keresés, Struktúra nézet, Rendezés…) is működik, és a saját modáljaik
     **nem lövik ki** a síkidom nézetet (külön `almodal-kontener`-ben nyílnak).
 
-    API: `GET /api/sikidom/gyerekek?szulo=&minPont=&kurzorPont=&kurzorId=&darab=`
+    API: `GET /api/sikidom/gyerekek?szulo=&minPont=&kurzorPont=&kurzorId=&darab=&osszesKell=`
     (lásd a fenti API-referenciát). A régi `GET /api/sikidom` **megszűnt** (404).
+
+    (j2) **HORGONY-PRÓBA (2026-08-08):** nagyíts BELE egy síkidomba addig, amíg
+    kitölti a képernyőt, majd nagyíts tovább még néhány lépést. A vászon **NEM
+    ürülhet ki**. Korábban ilyenkor a kapacitás-vágás kidobta a horgonyt a tárból
+    (a horgony a legnagyobb a képernyőn, tehát a méret szerinti sor VÉGÉN áll),
+    és onnantól a rajzolásnak nem volt mihez viszonyítania. A konzolban
+    **nem szabad** megjelennie ennek: `VÉDETT csomópont került a vágásba`.
+
+    (j4) **MEGJELENÍTÉS-PRÓBA (2026-08-08, a koino_1.0-ból átvett elemek):**
+    - **Címke:** a felirat a síkidom közepe FÖLÖTT, félig áttetsző lekerekített
+      kártyán, több sorba tördelve (legfeljebb 3 sor, az utolsón „…"). NEM takarhatja
+      a középpontba pakolt legkisebb gyereket.
+    - **Mellék-ikonok:** 96 px látszó átmérő fölött a felirat ALATT egy sorban
+      megjelennek a kategória-ikonok (balra) és a tartalomtípus ikonja (jobbra).
+      Csak azoknál, akiknek van ilyenje. *(A `tools/sikidomTesztAdat.js` gyökerei
+      kategória és típus NÉLKÜL jönnek létre — ott jogosan nincs ikon; kézzel
+      felvett, kategóriás tartalommal érdemes próbálni.)*
+    - **Elhalványodás:** befelé nagyítva a túlnőtt szülő kitöltése ÉS kerete is
+      fokozatosan halványul; a kerete nem vághatja át a képernyőt.
+    - **Illesztés:** az „illesztés" gomb ANIMÁLVA áll rá a nézetre (~0,4 s), nem ugrik.
+    - **Kifelé nagyítás:** a gyökér-szinten a kicsinyítés MEGÁLL (az illesztési
+      nagyítás negyedénél) — a képernyő nem ürülhet ki attól, hogy kizoomoltál.
+    - **Görgő:** érintőpadon a nagyítás sima és folytonos, nem ugrál; „kattanós"
+      egérgörgőn egy kattanás ~1,15-szörös lépés.
+
+    (j5) **ÉRINTŐPAD- ÉS MOBIL-PRÓBA (2026-08-08):**
+    - **Érintőpad, kétujjas görgetés** → sima, folytonos nagyítás.
+    - **Érintőpad, csippentés** → szintén nagyít (a böngésző `ctrlKey`-jel küldi;
+      külön, nagyobb érzékenységgel megy — ha lomha, `GORGO_EGYSEG_CSIPPENTES`).
+    - **Mobil, EGY ujj** → mozgatás.
+    - **Mobil, KÉT ujj** → nagyítás **és** mozgatás EGYSZERRE. *(Ez volt hibás:
+      ha az ujjak együtt csúsztak, a kép meg sem mozdult.)*
+    - **Mobil, csippentés után egy ujjat felemelve** → a maradék ujjal AZONNAL
+      tovább lehet mozgatni, ugrás nélkül. *(Ez volt hibás: az ott maradt ujjal
+      addig nem lehetett mozgatni, amíg mindet fel nem emelted.)*
+    - **Mobil, csippentés után az utolsó ujj felemelése** → NEM nyithat meg
+      véletlenül adatlapot. Adatlap csak akkor, ha végig EGY ujj volt, és alig
+      mozdult (7 képpont).
+    - **Három ujj** → nem eshet szét: az első kettő vezérel.
+
+    (j3) **LETÖLTÉS-FÉK PRÓBA (2026-08-08):** mély nagyításnál a hálózati fülön a
+    `sikidom/gyerekek` kérések **nem futhatnak sorozatban** (korábban a küszöb fölötti
+    összes testvért lehozta, 150-esével). A `_ujrapakolas` naplósorában a
+    `varolistan` érték nem nőhet korlátlanul. Az első kérés után minden továbbiban
+    ott kell lennie az `osszesKell=0` paraméternek.
 
     (j) **SOK-TESTVÉRES PRÓBA:** hozz létre egy szülőt sok (100+) gyerekkel, és
     nagyíts bele végig. **Mindegyik gyereknek elő kell bukkannia** a mag peremén,
@@ -720,6 +765,22 @@ docker logs -f koino-backend
     `docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér
     tartalmat hoz létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már
     létező címeket kihagyja).
+
+    **SOK gyökér (2026-08-08):** `docker exec koino-backend node tools/sikidomSokGyokerTesztAdat.js`
+    — alapból **300 további** gyökeret hoz létre, Zipf-szerű hosszú farokkal
+    (`pont = C / sorszám`). A címek generáltak (10 jelző × 30 témakör), ezért
+    ütközésmentesek; a témakör elemenként forog, a jelző 30-anként, így minden
+    témakörből jut nagy és apró síkidom is.
+    - Paraméterek: `<darab> <eemberNev> proba` — a `proba` SZÁRAZ FUTÁS (csak
+      kiírja, mit hozna létre, semmit nem ír az adatbázisba).
+    - A pontokat a választott e-ember **szabad tudatpontjának 90%-ára** skálázza,
+      és előre ellenőrzi, hogy belefér-e. Minden tartalom legalább 1 pontot kap.
+    - Újrafuttatható (a már létező címeket kihagyja).
+    - *Lefuttatva 2026-08-08-án: 300 db jött létre 2423 pontból; a gyökér-allokációk
+      száma ezzel **405**, összpontjuk 17 235, a legerősebb 2243, és 62 db 1 pontos.
+      A világ-síkidom képernyő-sugarának függvényében a 24 px-es küszöböt 200-nál
+      116, 400-nál 238, 800-nál mind a 405 gyökér lépi át — vagyis a nagyítás
+      SORBAN hozza elő őket, épp ahogy a (j2)–(j5) próbákhoz kell.*
 
     **Böngésző nélküli mérőpróba (Claude futtatja):**
     `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90`
@@ -1064,7 +1125,7 @@ feloldani.
 
 ### API-referencia — Síkidom nézet, KÜSZÖBÖS gyerek-végpont (2026-08-04)
 
-`GET /api/sikidom/gyerekek?szulo=<entitasId|elhagyva>&minPont=<szám>&kurzorPont=<szám>&kurzorId=<id>&darab=<szám>`
+`GET /api/sikidom/gyerekek?szulo=<entitasId|elhagyva>&minPont=<szám>&kurzorPont=<szám>&kurzorId=<id>&darab=<szám>&osszesKell=<0|1>`
 — **auth-köteles**. A `szulo` elhagyva → a **gyökerek**.
 
 **NEM lapozás.** A nézetben egy síkidom akkor látszik, ha a képernyőn mért átmérője
@@ -1093,9 +1154,19 @@ lapok között megtört a folytonosság.)*
 - `vanTovabb` — az adag beletelt a `darab` plafonba (a küszöbig van még); a kliens
   ilyenkor a kurzorral újra kér.
 - `osszesGyerekPont` — az ÖSSZES gyerek együttes pontja (egy csoportosító
-  lekérdezés). Ebből számolja a kliens a **még hátralévő** pontot, és pontosan
-  akkora üres magot hagy, amekkora kell.
+  lekérdezés). Ebből tudja a kliens, maradt-e még le nem töltött testvér.
+- `osszesKell` — **új (2026-08-08).** Alapértéke `1`. `osszesKell=0` esetén a
+  backend **kihagyja** a fenti aggregációt, és `osszesGyerekPont: null`-t ad.
+  Miért: a `$group` a szülő MINDEN gyerekére fut, a kliens viszont 150-esével
+  kér — egy milliós ágnál ez több ezer teljes végigolvasás ugyanazért az egy
+  számért. A kliens ezért csak az **első** kérésnél kéri el, utána `osszesKell=0`
+  megy, és a saját másolatát használja.
 - `vanGyereke` — egyetlen `distinct` lekérdezésből az egész adagra (nincs N+1).
+- `kategoriaIkonok` / `tipusIkon` / `javaslatTipus` — **új (2026-08-08).** Mellék-ikonok
+  `{ ikon, nev }` alakban; az `ikon` feltöltött kép-URL VAGY emoji. A Struktúra
+  nézettel KÖZÖS forrásból (`strukturaService.mellekIkonokFeltoltese`), típusonként
+  egy csoportos lekérdezéssel. A síkidom FORMÁJA az entitástípust mutatja, ezek az
+  ikonok pedig azt, amit a forma nem tud: a kategóriát és a tartalomtípust.
 - Indexek: `{ szuloId, hierarchikusOsszesPont, _id }` — a szűrés és a rendezés is
   teljesen indexelt (nincs memóriabeli rendezés).
 - Backend-változás → **`docker restart koino-backend`**.

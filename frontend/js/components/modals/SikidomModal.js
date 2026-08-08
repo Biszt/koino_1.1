@@ -4,7 +4,7 @@
 import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
-import { sikidomLeiro } from '../../utils/sikidomFormak.js';
+import { sikidomLeiro, TIPUS_FORMA } from '../../utils/sikidomFormak.js';
 import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO }
   from '../../utils/sikidomMeret.js';
 import { pakolas } from '../../utils/sikidomPakolas.js';
@@ -81,10 +81,72 @@ const PAKOLASI_SURUSEG = 0.7;
 // Csak akkor számít, ha a fenti kapcsoló `true`.
 const LATOMEZO_TARTALEK = 0.5;
 
+// ===== A LETÖLTÉS VÉGE IS A KAPACITÁS =====
+// A képernyő kapacitása eddig CSAK a lerakást korlátozta, a letöltést nem: azt
+// egyedül a tudatpont-küszöb vezérelte. Mély nagyításnál viszont a küszöb annyira
+// lesüllyed, hogy — a saját mérésünk szerint — akár 739 909 testvér kerül fölé, és
+// a nézet mindet letöltötte, 150-esével (kb. 4900 kérés), majd mind ott ült a
+// várólistán. A jelölt-gyűjtés és a rendezés onnantól több százezer elemen futott
+// képernyőnyi eredményért.
+//
+// A JAVÍTÁS: ugyanaz a két vágás vezérli a letöltést is, mint a megjelenítést.
+// Amíg a várólistán már legalább ennyiszer annyi FRISS anyag vár, mint amennyi a
+// képernyőre fér, addig nem kérünk többet — a soron következőket a kurzor őrzi,
+// onnan bármikor folytatható.
+//
+// Miért 2-szeres: egy zoom-lépés (×1,2) a látszó területet ~1,44-szeresére növeli,
+// tehát a kétszeres puffer egy teljes lépést kiszolgál letöltés nélkül.
+const BETOLTESI_TARTALEK = 2;
+
 // Ekkora látszó ÁTMÉRŐ fölött írjuk ki a címet. Nagyobb, mint a láthatósági
 // küszöb: egy síkidom előbb látszik, és csak nagyobbra nőve kap feliratot.
 const CIMKE_MIN_ATMERO = 48;
-const CIM_MAX_HOSSZ = 24;
+
+// ===== A CÍMKE: KÁRTYA, SORTÖRÉS, HELY (a koino_1.0 titlecards.js mintájára) =====
+// A koino_1.0 három dolgot csinált jobban a felirattal, mindhármat átvesszük:
+//
+//  1. TÖBB SORBA TÖRDEL, valódi szélesség-méréssel (`measureText`), szóhatáron —
+//     nem 24 karakternél vág el „…"-tal.
+//  2. FÉLIG ÁTTETSZŐ, LEKEREKÍTETT KÁRTYÁT tesz a szöveg alá. Ez bármilyen
+//     háttéren olvasható marad; a korábbi fehér kontúr (`strokeText`) zsúfolt
+//     képen elmosódott.
+//  3. NEM A KÖZÉPPONTBA teszi, hanem fölé (`sugár × CIMKE_FELETT_ARANY`).
+//     Ez nálunk már nem szépészeti kérdés: `URES_MAG = false` óta a középpontban
+//     a LEGKISEBB GYEREK ül, tehát a középre írt felirat rátakart.
+const CIMKE_MAX_SOR = 3;            // ennél több sorba nem tördelünk (az utolsó „…"-t kap)
+const CIMKE_FELETT_ARANY = 0.6;     // a kártya közepe ennyiszer a sugárral a középpont FÖLÖTT
+const CIMKE_SOR_SZELESSEG = 1.3;    // a sor legnagyobb szélessége a sugár arányában
+const CIMKE_HATTER = 'rgba(255, 255, 255, 0.78)';
+
+// ===== MELLÉK-IKONOK: KATEGÓRIA ÉS TARTALOMTÍPUS =====
+// A síkidom FORMÁJA az entitástípust mutatja (kör / háromszög / …), a SZÍNE
+// ugyanazt — de arról, hogy egy Tartalom MELYIK kategóriába tartozik és milyen
+// TÍPUSÚ, eddig semmi nem árulkodott. A koino_1.0 ezt a kategória SZÍNÉVEL és a
+// típus FORMÁJÁVAL oldotta meg; nálunk ez nem járható, mert a színek és a formák
+// száma korlátozott, az ikonoké viszont nem (Csaba, 2026-08-08).
+//
+// Ezért a Struktúra nézet mintáját követjük: a felirat alatt egy sorban a
+// kategória-ikonok BALRA, a tartalomtípus ikonja JOBBRA.
+const IKON_MIN_ATMERO = 96;         // ekkora látszó átmérő alatt nincs mellék-ikon
+const IKON_ALATT_ARANY = 0.5;       // az ikon-sor a középpont ALATT, a sugár arányában
+const IKON_SUGAR_ARANY = 0.10;      // egy ikon sugara a síkidom sugarának arányában
+const IKON_MAX_SUGAR = 22;          // de ennél nagyobbra nem nő (a nagy szülőkön ne uralkodjon)
+const IKON_MAX_DARAB = 4;           // legfeljebb ennyi ikon fér ki egy síkidomra
+
+// ===== ELHALVÁNYODÁS: A TÚLNŐTT SÍKIDOM ÁTADJA A HELYET =====
+// A koino_1.0 `calculateOpacity`-je: ahogy egy síkidom túlnő a képernyőn, a
+// kitöltése fokozatosan eltűnik. Nálunk ez azért is kell, mert a KERET eddig
+// végig átlátszatlan maradt — egy óriásira nagyított szülő kontúrja egyszerűen
+// átvágott a képernyőn.
+//
+// A küszöböket a KÉPERNYŐHÖZ mérjük, nem fix képpontban (a 1.0 fix 4000-et
+// használt, ami telefonon és 4K-n mást jelent). Egységük: a képernyő kisebbik
+// oldala. A horgonyváltás a képernyő KÉTSZERES átmérőjénél történik, azaz
+// 1,0-s sugárnál — a halványodás tehát pont ott kezdődik, ahol a síkidom
+// „körénk zárul", és 3,0-nál ér véget.
+const HALVANYODAS_KEZDET = 1.0;
+const HALVANYODAS_VEGE = 3.0;
+const HALVANYODAS_MARADEK = 0.06;   // teljesen sosem tűnik el: ennyi marad a keretből
 
 // Az ÜRES MAG szaggatott jelölése: ekkora látszó ÁTMÉRŐ alatt nem rajzoljuk ki
 // (nem látszana, csak zajt csinálna)
@@ -193,8 +255,58 @@ const ZOOM_VEGE_MS = 140;
 // KÍVÜLRE viszi.
 const UJRAPAKOLASI_TARTALEK = LATOMEZO_TARTALEK * 2;
 
+// A +/− GOMBOK egy kattintásának nagyítása. A görgő NEM ezt használja — lásd alább.
 const ZOOM_LEPES = 1.2;
-const KATTINTAS_KUSZOB = 5;
+
+// ===== A GÖRGŐ ÉRZÉKENYSÉGE (a koino_1.0 D3-as viselkedése) =====
+// Eddig egy görgetés-esemény FIX 1,2-szeres ugrást adott, akármekkora volt.
+// Ez érintőpadon rossz: ott egy finom mozdulat is sok apró eseményt küld
+// (deltaY = 1–4), amiből így 1,2-szeres ugrások sorozata lett — a kép elszaladt.
+//
+// A koino_1.0 a D3 alapértelmezését használta (`d3.zoom`, 7.8.5), ami a delta
+// NAGYSÁGÁVAL arányos:  szorzó = 2^(−deltaY × egység).
+// Egy „kattanós" egérgörgő deltaY-ja 100 → 2^0,2 ≈ 1,149-szeres lépés;
+// egy finom érintőpad-mozdulaté 3 → 2^0,006 ≈ 1,004 — vagyis simán, folytonosan.
+//
+// Az egységek a D3 `wheelDelta`-jából: képpont / sor / oldal görgetési módhoz.
+// EZ A FŐ HANGOLÓ SZÁM (érintőpad kétujjas görgetése, egérgörgő):
+//   0,001 → egy egérgörgő-kattanás ×1,07 · 0,002 → ×1,15 · 0,003 → ×1,23
+//   0,004 → ×1,32 · 0,005 → ×1,41 (két kattanás = kétszeres nagyítás)
+const GORGO_EGYSEG_KEPPONT = 0.002;   // deltaMode 0 — képpont (érintőpad, modern egér)
+
+// deltaMode 1 — SOROKBAN görgető böngésző (Windowson jellemzően a Firefox
+// egérgörgője: deltaY = 3). Szándékosan a képpontos egység 100/3-szorosa, hogy
+// egy egérgörgő-kattanás MINDEN böngészőben ugyanakkorát nagyítson. (A D3
+// alapértéke itt 0,05 volt, amitől a Firefox érezhetően lassabban nagyított.)
+const GORGO_EGYSEG_SOR     = GORGO_EGYSEG_KEPPONT * 100 / 3;
+
+// deltaMode 2 — OLDALANKÉNT görgető (ritka)
+const GORGO_EGYSEG_OLDAL   = 1;
+
+// ÉRINTŐPAD-CSIPPENTÉS. A böngészők `ctrlKey = true`-val küldik, és sokkal
+// KISEBB delta-értékekkel, mint a kétujjas görgetést — a görgetés egységével a
+// csippentés alig mozdítaná a képet. Ha a csippentés lomhának érződik, EZT emeld.
+//
+// 0,010 → 0,012 (Csaba, 2026-08-08): 20%-kal érzékenyebb, mert lomha volt.
+const GORGO_EGYSEG_CSIPPENTES = 0.012;
+
+// ===== KIFELÉ NAGYÍTÁS ALSÓ HATÁRA =====
+// Befelé a nagyítás KORLÁTLAN (ezért van a horgonyváltás). Kifelé viszont a
+// VILÁG szintnél elfogy a hierarchia: a horgony nem tud tovább fölfelé lépni, és
+// ha tovább kicsinyítesz, minden a láthatósági küszöb alá esik — üres képernyő,
+// amiből csak az „illesztés" gomb hoz vissza. A koino_1.0-ban ezt a D3
+// `scaleExtent` fogta meg; nálunk az illesztési nagyítás töredékében húzzuk meg.
+const KIFELE_HATAR = 0.25;          // az illesztési skála negyedénél megáll
+
+// ===== AZ ILLESZTÉS ANIMÁCIÓJA =====
+// A koino_1.0 `fitZoom`-ja 750 ms-os átmenettel állt rá az új nézetre; a miénk
+// eddig UGROTT. Animálva látszik, honnan hová kerültünk — ez a térbeli
+// tájékozódás miatt számít. (750 ms hosszúnak bizonyult egy gombnyomáshoz.)
+const ILLESZTES_MS = 420;
+
+// A koppintás és a húzás határa képpontban (a koino_1.0-ban 7 — a miénk 5 volt,
+// és érintőképernyőn a szándékos koppintás is gyakran „húzásnak" számított)
+const KATTINTAS_KUSZOB = 7;
 
 // ===== SÍKIDOM NÉZET MODAL =====
 // Felelősség: a Síkidom nézet — minden entitás egy síkidom, a TERÜLETE arányos a
@@ -275,13 +387,31 @@ class SikidomModal {
     this._futoBetoltesek = 0;
     this._kepkocka = 0;
     this._rajzolasKeres = false;
-    this._huzasAktiv = false;
-    this._huzasKezdet = null;
-    this._huzasTavolsag = 0;
-    this._ujjTavolsag = null;      // csippentéshez
+    // ----- GESZTUS-ÁLLAPOT -----
+    // A lenyomott ujjak/egérgombok: pointerId → { x, y } (képernyő-koordináták)
     this._aktivMutatok = new Map();
+
+    // A gesztus ELŐZŐ mérése ({ kozepX, kozepY, tavolsag }) — mindent ehhez
+    // képest, INKREMENTÁLISAN számolunk, lásd `_esemenyekBekotese`
+    this._gesztusElozo = null;
+
+    // Az összegyűlt elmozdulás és a legtöbb egyszerre lenyomott ujj — a
+    // koppintás felismeréséhez (csak végig egy ujj + alig mozdult = koppintás)
+    this._gesztusTavolsag = 0;
+    this._gesztusMaxUjj = 0;
     this._ablakMeretezoBound = null;
     this._zoomVegeIdozito = null;  // a nagyítás végét figyelő időzítő
+
+    // Az illesztési (alaphelyzet-) nagyítás — ehhez mérjük a kifelé nagyítás
+    // alsó határát (KIFELE_HATAR). Amíg nincs első illesztés, nincs korlát.
+    this._alapSkala = null;
+    this._illesztesAnimacio = null;   // a futó illesztés-animáció azonosítója
+
+    // MELLÉK-IKON KÉP-TÁR: URL → { kep: Image, kesz: boolean, hibas: boolean }.
+    // A Canvas csak betöltött képet tud kirajzolni, ezért egyszer betöltjük és
+    // megjegyezzük. Betöltéskor újrarajzolást kérünk — így az ikon „bevillan",
+    // de a rajzolás sosem vár rá.
+    this._ikonTar = new Map();
 
     console.log('SikidomModal.constructor - VÉGE');
   }
@@ -369,7 +499,7 @@ class SikidomModal {
     // igazítunk — és ha az igazítás új helyet nyitott, még egyszer pakolunk.
     this._kezdoNezetBecslese(vilag);
     this._tennivalokFeldolgozasa();
-    this._alaphelyzet();
+    this._alaphelyzet(false);          // megnyitáskor nincs mit animálni
 
     if (!this._ablakMeretezoBound) {
       this._ablakMeretezoBound = () => {
@@ -396,6 +526,11 @@ class SikidomModal {
       clearTimeout(this._zoomVegeIdozito);
       this._zoomVegeIdozito = null;
     }
+    if (this._illesztesAnimacio) {
+      cancelAnimationFrame(this._illesztesAnimacio);
+      this._illesztesAnimacio = null;
+    }
+    this._ikonTar.clear();
     this._kartyaKeres = null;
     this._teljesNezetKikapcsolasa();
     this._tar.clear();
@@ -441,6 +576,13 @@ class SikidomModal {
       vanGyereke: adatok.vanGyereke ?? false,
       szuloId: adatok.szuloId ?? null,
 
+      // Mellék-ikonok: { ikon, nev } objektumok (az `ikon` kép-URL vagy emoji).
+      // A síkidom formája/színe csak az ENTITÁSTÍPUST mutatja — a kategóriát és
+      // a tartalomtípust ezek az ikonok hordozzák.
+      kategoriaIkonok: adatok.kategoriaIkonok ?? [],
+      tipusIkon: adatok.tipusIkon ?? null,
+      javaslatTipus: adatok.javaslatTipus ?? null,
+
       // A SZÜLŐ sugarának egységében
       relX: adatok.relX ?? 0,
       relY: adatok.relY ?? 0,
@@ -454,9 +596,24 @@ class SikidomModal {
       // várakozik, az nem veszett el — csak még nincs akkora hely, ahol látszana.
       varolista: [],
 
+      // A várólistán álló FRISS (backendtől most érkezett) testvérek együttes
+      // RELATÍV területe: Σ π·relR². Ebből egyetlen szorzással megkapjuk, mennyi
+      // képernyő-terület vár lerakásra (`× kepSugar²`) — ez a letöltés fékje
+      // (lásd BETOLTESI_TARTALEK). Relatív, ezért nagyítás-független: nem kell
+      // képkockánként végigolvasni a listát.
+      //
+      // A kapacitás-vágás által VISSZADOBOTT testvérek szándékosan NEM számítanak
+      // bele: azok a sor VÉGÉRŐL estek le (túl nagyok), és ha beszámítanának,
+      // örökre elzárnák a még hiányzó KICSIK letöltését.
+      varolistaRelTerulet: 0,
+
       // A középső üresség MÉRT sugara a saját keretében (a pakoló adja vissza).
       // Amíg nincs lerakott gyerek, végtelen = „az egész belseje üres".
       magSugarRel: Infinity,
+
+      // A legkülső gyerek pereme a saját keretében (a `_meretekUjramerese` méri).
+      // A beágyazási invariáns ellenőrzéséhez és a kezdő nagyításhoz kell.
+      kulsoSugar: 0,
 
       betoltottGyerekPont: 0,     // a már LETÖLTÖTT gyerekek össz-pontja
       // Meddig töltöttünk le: a legutóbb kért tudatpont-küszöb, és a kurzor
@@ -469,6 +626,45 @@ class SikidomModal {
       legerosebbGyerekPont: 0,    // a gyökér-szint mértékegységéhez
       utoljaraLatva: 0
     };
+  }
+
+  // ===== EGY GYEREK RELATÍV SUGARA (a szülő sugara = 1) =====
+  // EGY helyen, mert két külön ponton is kell: a várólistára fűzéskor (ott
+  // rögzítjük az elem `relR`-jét) és az újrapakoláskor (ott áll össze a méret
+  // szerinti sor). A kettőnek BIZTOSAN ugyanazt kell adnia, különben a sor
+  // sorrendje és a lerakás sorrendje elválna egymástól.
+  //
+  // A gyökér-szinten nincs közös szülő, ezért a LEGERŐSEBB gyökérhez viszonyítunk
+  // (és nincs /20, mert a gyökerek nem egy szinttel lejjebb vannak).
+  _relSugar(cs, pont) {
+    return cs.id === VILAG
+      ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
+      : gyerekRelativSugar(pont, cs.pont);
+  }
+
+  // ===== A VÉDETT CSOMÓPONTOK: A HORGONY ÉS AZ ŐSEI =====
+  // Ezeket a kapacitás-vágás SOSEM dobhatja el.
+  //
+  // MIÉRT: a horgony adja a rajzolás vonatkoztatási keretét, az ősei pedig a
+  // keret-számítás láncát (a `keretbenCsomopont` rajtuk keresztül halmoz). Ha
+  // bármelyikük hiányzik a tárból, a `_horgonyEllenorzes` és a `_lathatoLista`
+  // is azonnal kilép, és a vászon KIÜRÜL — csak az „illesztés" gomb hozza vissza.
+  //
+  // ÉS PONT ŐK VANNAK VESZÉLYBEN: befelé nagyítva a horgony a legnagyobb a
+  // képernyőn (a váltás küszöbe a képernyő kétszerese, lásd sikidomHorgony.js),
+  // tehát a méret szerinti sor VÉGÉN áll — épp ott, ahol a kapacitás vág.
+  _vedettIdk() {
+    const vedettek = new Set();
+    let id = this._horgony;
+
+    for (let lepes = 0; lepes < 64 && id; lepes++) {
+      vedettek.add(id);
+      const cs = this._tar.get(id);
+      if (!cs) break;
+      id = cs.szuloId;
+    }
+
+    return vedettek;
   }
 
   // ===== A LÁTHATÓSÁGI KÜSZÖB TUDATPONTBAN =====
@@ -527,6 +723,12 @@ class SikidomModal {
       }
       reszek.push(`darab=${KERES_PLAFON}`);
 
+      // Az ÖSSZES gyerek együttes pontját CSAK az ELSŐ kérésnél kérjük el. A
+      // backendnek ehhez a szülő minden gyerekét össze kell adnia (aggregáció),
+      // ami egy milliós ágnál kérésenként végigolvasná az egészet. Az érték egy
+      // munkamenet alatt gyakorlatilag állandó — elég egyszer megkérdezni.
+      if (szulo.osszesGyerekPont > 0) reszek.push('osszesKell=0');
+
       const valasz = await apiGet(`sikidom/gyerekek?${reszek.join('&')}`, this.token);
 
       const gyerekek = valasz?.gyerekek ?? [];
@@ -577,14 +779,27 @@ class SikidomModal {
     }
 
     for (const gy of gyerekek) {
+      const pont = gy.hierarchikusOsszesPont ?? 0;
+
+      // A relatív sugarat MOST számoljuk ki, egyszer: nagyítás-független érték,
+      // és így a letöltési puffer mérőszáma (`varolistaRelTerulet`) is
+      // karbantartható anélkül, hogy képkockánként végigolvasnánk a listát.
+      const relR = this._relSugar(szulo, pont);
+
       szulo.varolista.push({
         id: gy.entitasId.toString(),
         entitasTipus: gy.entitasTipus,
         cim: gy.cim,
-        pont: gy.hierarchikusOsszesPont ?? 0,
-        vanGyereke: gy.vanGyereke
+        pont,
+        relR,
+        vanGyereke: gy.vanGyereke,
+        kategoriaIkonok: gy.kategoriaIkonok ?? [],
+        tipusIkon: gy.tipusIkon ?? null,
+        javaslatTipus: gy.javaslatTipus ?? null
       });
-      szulo.betoltottGyerekPont += gy.hierarchikusOsszesPont ?? 0;
+
+      szulo.betoltottGyerekPont += pont;
+      szulo.varolistaRelTerulet += Math.PI * relR * relR;
     }
 
     // A backend csökkenő pont szerint ad, a kurzor pedig folytatólagos — az
@@ -632,9 +847,7 @@ class SikidomModal {
     const celMag = (MAG_CEL_ATMERO / 2) / magVonatkoztatas;
 
 
-    const relSugar = (pont) => vilagSzint
-      ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
-      : gyerekRelativSugar(pont, cs.pont);
+    const relSugar = (pont) => this._relSugar(cs, pont);
 
     // --- A TESTVÉREK EGYETLEN, MÉRET SZERINTI SORA ---
     // Csaba modellje (2026-08-06): a testvérek EGY rendezett sort alkotnak (növekvő
@@ -663,7 +876,7 @@ class SikidomModal {
       jeloltek.push({ id: gy.id, sugar: gy.relR, lerakott: true });
     }
     for (const v of cs.varolista) {
-      const sugar = relSugar(v.pont);
+      const sugar = v.relR ?? relSugar(v.pont);
       if (2 * kepSugar * sugar < MIN_KEP_ATMERO) continue;   // a sor ELEJE
       jeloltek.push({ id: v.id, sugar, varo: v });
     }
@@ -675,21 +888,31 @@ class SikidomModal {
     // KÉPERNYŐ-TERÜLETE belefér a rajzolt mezőbe. Mivel növekvő méret szerint
     // haladunk, az első, ami nem fér be, egyben a sor vége — utána már csak
     // nagyobbak jönnének.
+    //
+    // KIVÉTEL: A HORGONY ÉS AZ ŐSEI (lásd `_vedettIdk`). Ők mindig maradnak, és a
+    // kapacitásból NEM esznek — a horgony nem a testvéreivel versenyez a helyért,
+    // ő MAGA a jelenlegi látómező. Ha a területét beszámítanánk, egyedül fölemésztené
+    // az egész keretet, és minden testvére kiesne.
+    const vedettek = this._vedettIdk();
+
     const beferok = [];
     const kimaradok = [];
     let osszTerulet = 0;
+    let normalDarab = 0;      // a NEM védett beférők száma (a „legalább egy" szabályhoz)
 
     for (const j of jeloltek) {
+      if (vedettek.has(j.id)) { beferok.push(j); continue; }
       if (kimaradok.length > 0) { kimaradok.push(j); continue; }
 
       const kepsugar = kepSugar * j.sugar;
       const terulet = Math.PI * kepsugar * kepsugar;
 
-      if (beferok.length > 0 && osszTerulet + terulet > engedettTerulet) {
+      if (normalDarab > 0 && osszTerulet + terulet > engedettTerulet) {
         kimaradok.push(j);                                   // a sor VÉGE
         continue;
       }
       osszTerulet += terulet;
+      normalDarab++;
       beferok.push(j);
     }
 
@@ -709,9 +932,26 @@ class SikidomModal {
       const gy = this._tar.get(k.id);
       if (!gy) continue;
 
+      // BIZTONSÁGI ELLENŐRZÉS. Védett csomópont ide nem juthat el (a vágás
+      // kihagyja őket), de ha valaha mégis, azt AZONNAL tudni akarjuk: ez az a
+      // hiba, ami üres vásznat okozna.
+      if (vedettek.has(gy.id)) {
+        console.error('SikidomModal._ujrapakolas - VÉDETT csomópont került a vágásba, megtartjuk', {
+          csomopont: cs.id, vedett: gy.id, horgony: this._horgony
+        });
+        continue;
+      }
+
       cs.varolista.push({
         id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim,
-        pont: gy.pont, vanGyereke: gy.vanGyereke
+        pont: gy.pont, relR: gy.relR, vanGyereke: gy.vanGyereke,
+        kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
+        javaslatTipus: gy.javaslatTipus,
+
+        // A kapacitás dobta vissza, NEM friss letöltés. Ezért nem számít bele a
+        // letöltési puffer mérőszámába: ha beszámítana, ezek a nagyok örökre
+        // elzárnák a még hiányzó KICSIK letöltését.
+        visszaesett: true
       });
       this._reszfaTorlese(gy);
       this._tar.delete(gy.id);
@@ -800,13 +1040,27 @@ class SikidomModal {
         cim: v.cim,
         pont: v.pont,
         vanGyereke: v.vanGyereke,
+        kategoriaIkonok: v.kategoriaIkonok,
+        tipusIkon: v.tipusIkon,
+        javaslatTipus: v.javaslatTipus,
         szuloId: cs.id,
-        relX: hely.x, relY: hely.y, relR: relSugar(v.pont)
+        // Ugyanaz a `relR`, amivel a sorba került — nem számoljuk újra
+        relX: hely.x, relY: hely.y, relR: v.relR ?? relSugar(v.pont)
       }));
       cs.gyerekIdk.push(v.id);
     }
 
-    cs.varolista = cs.varolista.filter(v => !lerakottIdk.has(v.id));
+    // A lerakottak lejönnek a várólistáról — és a letöltési puffer mérőszámából is
+    // (csak a FRISS letöltések számítottak bele, a visszaesettek nem).
+    cs.varolista = cs.varolista.filter(v => {
+      if (!lerakottIdk.has(v.id)) return true;
+      if (!v.visszaesett) {
+        const r = v.relR ?? 0;
+        cs.varolistaRelTerulet -= Math.PI * r * r;
+      }
+      return false;
+    });
+    cs.varolistaRelTerulet = Math.max(0, cs.varolistaRelTerulet);
 
     this._meretekUjramerese(cs);
 
@@ -814,7 +1068,8 @@ class SikidomModal {
       csomopont: cs.id,
       atrendezett: mozgok.length,
       ujonnan: eredmeny.helyek.length - mozgok.length,
-      helybenMaradt: allok.length,
+      vedett: vedettek.size,
+      visszaesett: visszaszedett.length,
       varolistan: cs.varolista.length,
       magKeppont: Math.round(cs.magSugarRel * kepSugar * 2),
       kulsoSugar: cs.kulsoSugar.toFixed(4),
@@ -946,26 +1201,87 @@ class SikidomModal {
     });
   }
 
-  _alaphelyzet() {
-    console.log('SikidomModal._alaphelyzet - KEZDÉS');
+  // @param {boolean} animalt - átmenettel álljunk-e rá (a megnyitáskor NEM:
+  //   ott nincs honnan animálni, csak villogást okozna)
+  _alaphelyzet(animalt = true) {
+    console.log('SikidomModal._alaphelyzet - KEZDÉS', { animalt });
 
     this._horgony = VILAG;
 
     // A gyökér-szint tényleges kiterjedéséhez igazítunk, hogy az egész beférjen
     const kiterjedes = this._tar.get(VILAG)?.kulsoSugar || 1;
 
-    this._nezet = {
+    const cel = {
       skala: (this._kepernyoMeret() * 0.45) / kiterjedes,
       eltolasX: (this._szelesseg || 0) / 2,
       eltolasY: (this._magassag || 0) / 2
     };
 
-    this._rajzolasKerese();
+    // Innentől van mihez mérni a kifelé nagyítás alsó határát
+    this._alapSkala = cel.skala;
 
-    // Az új nagyítás új lyuk-méretet jelent — hátha most még befér valami
-    this._tennivalokFeldolgozasa();
+    if (animalt) {
+      this._nezetAnimacio(cel, () => this._tennivalokFeldolgozasa());
+    } else {
+      this._nezet = cel;
+      this._rajzolasKerese();
+      // Az új nagyítás új lyuk-méretet jelent — hátha most még befér valami
+      this._tennivalokFeldolgozasa();
+    }
 
     console.log('SikidomModal._alaphelyzet - VÉGE');
+  }
+
+  // ===== NÉZET-ÁTMENET (a koino_1.0 fitZoom-jának megfelelője) =====
+  // A nagyítást MÉRTANI közepekkel interpoláljuk (a `skala` logaritmusán), mert a
+  // nagyítás szorzó jellegű: lineárisan interpolálva a mozgás az elején rohanna,
+  // a végén kúszna. Az eltolás lineáris, koszinuszos lágyítással.
+  //
+  // A horgony az animáció alatt is helyben marad (a `_rajzolas` úgyis ellenőrzi),
+  // és mivel a horgonyváltás nem mozdítja a képet, az átmenet zökkenőmentes.
+  //
+  // @param {Object} cel - a cél-nézet { skala, eltolasX, eltolasY }
+  // @param {Function} [kesz] - a végén meghívandó visszahívás
+  _nezetAnimacio(cel, kesz) {
+    if (this._illesztesAnimacio) cancelAnimationFrame(this._illesztesAnimacio);
+
+    const kezdet = { ...this._nezet };
+    const indulas = performance.now();
+
+    // Ha a kiindulás értelmetlen (0 vagy negatív skála), ugorjunk azonnal
+    if (!(kezdet.skala > 0) || !(cel.skala > 0)) {
+      this._nezet = { ...cel };
+      this._rajzolasKerese();
+      kesz?.();
+      return;
+    }
+
+    const lnKezdet = Math.log(kezdet.skala);
+    const lnCel = Math.log(cel.skala);
+
+    const lepes = (most) => {
+      const t = Math.min(1, (most - indulas) / ILLESZTES_MS);
+      const lagy = 0.5 - Math.cos(Math.PI * t) / 2;   // easeInOutSine
+
+      this._nezet = {
+        skala:    Math.exp(lnKezdet + (lnCel - lnKezdet) * lagy),
+        eltolasX: kezdet.eltolasX + (cel.eltolasX - kezdet.eltolasX) * lagy,
+        eltolasY: kezdet.eltolasY + (cel.eltolasY - kezdet.eltolasY) * lagy
+      };
+      this._rajzolasKerese();
+
+      if (t < 1) {
+        this._illesztesAnimacio = requestAnimationFrame(lepes);
+        return;
+      }
+
+      this._illesztesAnimacio = null;
+      this._nezet = { ...cel };     // pontosan a célon álljunk meg
+      this._rajzolasKerese();
+      kesz?.();
+    };
+
+    this._illesztesAnimacio = requestAnimationFrame(lepes);
   }
 
   // ===== HORGONYVÁLTÁS =====
@@ -1110,8 +1426,19 @@ class SikidomModal {
         const vanMegBetoltetlen = cs.osszesGyerekPont === 0 ||
           cs.betoltottGyerekPont < cs.osszesGyerekPont;
 
-        if (vanMegBetoltetlen && kuszob < cs.betoltottKuszob) {
-          betoltendok.push({ id: cs.id, kuszob, sulyy: kep.kepSugar });
+        // A LETÖLTÉS VÉGE IS A KAPACITÁS. A küszöb csak azt mondja meg, MI válna
+        // láthatóvá — azt nem, hogy MENNYI fér a képre. Mély nagyításnál a küszöb
+        // fölött százezrek is lehetnek; ha mindet lehoznánk, a várólista és vele a
+        // jelölt-rendezés is elszállna. Ezért: amíg a várólistán már elég FRISS
+        // anyag vár a képernyő kitöltéséhez, addig nem kérünk többet.
+        //
+        // Semmi nem vész el: a kurzor őrzi, hol tartunk, és amint a puffer lerakás
+        // közben leapad, a következő adag pontosan onnan folytatódik.
+        const varakozoTerulet = cs.varolistaRelTerulet * kep.kepSugar * kep.kepSugar;
+        const kellMegAnyag = varakozoTerulet < this._kepernyoKapacitas() * BETOLTESI_TARTALEK;
+
+        if (vanMegBetoltetlen && kuszob < cs.betoltottKuszob && kellMegAnyag) {
+          betoltendok.push({ id: cs.id, kuszob, suly: kep.kepSugar });
         }
       }
     }
@@ -1172,8 +1499,9 @@ class SikidomModal {
     // Az üres magok a síkidomok FÖLÖTT, de a feliratok ALATT
     for (const mag of magok) this._uresMagRajzolasa(mag);
 
-    // Feliratok külön menetben, hogy semmi ne takarja őket
+    // Feliratok és mellék-ikonok külön menetben, hogy semmi ne takarja őket
     for (const { cs, kep } of lathatoak) this._cimkeRajzolasa(cs, kep);
+    for (const { cs, kep } of lathatoak) this._mellekIkonokRajzolasa(cs, kep);
 
     this._utolsoLathatoak = lathatoak;
 
@@ -1207,7 +1535,7 @@ class SikidomModal {
     }
 
     // Betöltések indítása (a legnagyobbak előbb)
-    betoltendok.sort((a, b) => b.sulyy - a.sulyy);
+    betoltendok.sort((a, b) => b.suly - a.suly);
     for (const b of betoltendok) {
       if (this._futoBetoltesek >= EGYIDEJU_BETOLTES) break;
       this._gyerekekBetoltese(b.id, b.kuszob);
@@ -1239,14 +1567,38 @@ class SikidomModal {
     const aktualis = this.aktualisEntitasId && cs.id === this.aktualisEntitasId;
     const kivalasztott = this._kivalasztottId && cs.id === this._kivalasztottId;
 
-    c.fillStyle = leiro.szin;
-    c.globalAlpha = kivalasztott ? 0.38 : (aktualis ? 0.30 : 0.14);
-    c.fill();
-    c.globalAlpha = 1;
+    // Ahogy a síkidom túlnő a képernyőn, átadja a helyet a gyerekeinek: a
+    // kitöltése ÉS a kerete is fokozatosan elhalványul (lásd HALVANYODAS_KEZDET).
+    const lathatosag = this._halvanyodas(kep.kepSugar);
+    if (lathatosag <= 0) return;
 
+    c.fillStyle = leiro.szin;
+    c.globalAlpha = (kivalasztott ? 0.38 : (aktualis ? 0.30 : 0.14)) * lathatosag;
+    c.fill();
+
+    c.globalAlpha = lathatosag;
     c.strokeStyle = leiro.szin;
     c.lineWidth = (aktualis || kivalasztott) ? 3 : 1.5;
     c.stroke();
+    c.globalAlpha = 1;
+  }
+
+  // ===== ELHALVÁNYODÁS A MÉRETTEL =====
+  // 1-et ad, amíg a síkidom „normál" méretű; onnantól lineárisan csökken, ahogy
+  // túlnő a képernyőn. A küszöbök egysége a képernyő KISEBBIK oldala — így
+  // telefonon és 4K-n ugyanott történik, amit az e-ember lát.
+  //
+  // @param {number} kepSugar - a síkidom képernyő-sugara
+  // @returns {number} 0 és 1 közötti láthatóság-szorzó
+  _halvanyodas(kepSugar) {
+    const egyseg = this._kepernyoMeret();
+    if (!(egyseg > 0)) return 1;
+
+    const arany = kepSugar / egyseg;
+    if (arany <= HALVANYODAS_KEZDET) return 1;
+
+    const hanyad = (arany - HALVANYODAS_KEZDET) / (HALVANYODAS_VEGE - HALVANYODAS_KEZDET);
+    return Math.max(HALVANYODAS_MARADEK, 1 - Math.min(1, hanyad));
   }
 
   // ===== ÜRES MAG RAJZOLÁSA (szaggatott kör) =====
@@ -1287,12 +1639,20 @@ class SikidomModal {
     return this._magSzinErtek;
   }
 
+  // ===== CÍMKE: KÁRTYA + SORTÖRÉS, A KÖZÉPPONT FÖLÖTT =====
+  // Lásd a CIMKE_* állandók magyarázatát: a koino_1.0 titlecards.js három
+  // megoldását vesszük át (tördelés, háttérkártya, a középpont fölé helyezés).
   _cimkeRajzolasa(cs, kep) {
     if (kep.kepSugar * 2 < CIMKE_MIN_ATMERO) return;
 
+    // A címke ugyanúgy halványul, mint maga a síkidom — különben egy kifelé
+    // eltűnő szülő felirata ott maradna a semmiben.
+    const lathatosag = this._halvanyodas(kep.kepSugar);
+    if (lathatosag <= HALVANYODAS_MARADEK) return;
+
     const leiro = sikidomLeiro(cs.entitasTipus);
-    const teljes = cs.cim ?? leiro.nev;
-    const rovid = teljes.length > CIM_MAX_HOSSZ ? `${teljes.slice(0, CIM_MAX_HOSSZ)}…` : teljes;
+    const teljes = (cs.cim ?? leiro.nev ?? '').trim();
+    if (!teljes) return;
 
     const c = this.rajzolo;
     const betuMeret = Math.max(11, Math.min(20, kep.kepSugar * 0.28));
@@ -1300,14 +1660,197 @@ class SikidomModal {
     c.textAlign = 'center';
     c.textBaseline = 'middle';
 
-    // A felirat a síkidom KÖZEPÉRE kerül — ott épp a gyerekeknek fenntartott üres
-    // mag van, tehát nem takar el semmit. Kontúrral, hogy bármilyen háttéren
-    // olvasható maradjon.
-    c.lineWidth = 3;
-    c.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    c.strokeText(rovid, kep.kepX, kep.kepY);
+    const sorok = this._sortores(teljes, kep.kepSugar * CIMKE_SOR_SZELESSEG);
+    if (sorok.length === 0) return;
+
+    // A kártya mérete a TÉNYLEGES szövegből (nem becslésből)
+    let sorSzelesseg = 0;
+    for (const sor of sorok) sorSzelesseg = Math.max(sorSzelesseg, c.measureText(sor).width);
+
+    const parkany = betuMeret * 0.45;             // belső margó, egyben a lekerekítés sugara
+    const sorMagassag = betuMeret * 1.18;
+    const kartyaSzelesseg = sorSzelesseg + 2 * parkany;
+    const kartyaMagassag = sorok.length * sorMagassag + 2 * parkany * 0.7;
+
+    // A kártya közepe a síkidom középpontja FÖLÖTT — ott már nem takarja a
+    // középpontba pakolt legkisebb gyereket.
+    const kozepY = kep.kepY - kep.kepSugar * CIMKE_FELETT_ARANY;
+
+    c.save();
+    c.globalAlpha = lathatosag;
+
+    c.beginPath();
+    this._lekerekitettTeglalap(
+      kep.kepX - kartyaSzelesseg / 2, kozepY - kartyaMagassag / 2,
+      kartyaSzelesseg, kartyaMagassag, parkany
+    );
+    c.fillStyle = CIMKE_HATTER;
+    c.fill();
+
     c.fillStyle = '#2b2318';
-    c.fillText(rovid, kep.kepX, kep.kepY);
+    const elsoSorY = kozepY - ((sorok.length - 1) * sorMagassag) / 2;
+    sorok.forEach((sor, i) => c.fillText(sor, kep.kepX, elsoSorY + i * sorMagassag));
+
+    c.restore();
+  }
+
+  // ===== SORTÖRÉS SZÓHATÁRON, MÉRT SZÉLESSÉGGEL =====
+  // A hívó már beállította a betűtípust a rajzolón — a mérés ahhoz igazodik.
+  // Az utolsó sor „…"-t kap, ha nem fért ki minden. Egyetlen, önmagában is túl
+  // hosszú szót nem darabolunk: azt is „…"-sal rövidítjük.
+  //
+  // @param {string} szoveg
+  // @param {number} maxSzelesseg - egy sor legnagyobb szélessége képpontban
+  // @returns {string[]} legfeljebb CIMKE_MAX_SOR sor
+  _sortores(szoveg, maxSzelesseg) {
+    const c = this.rajzolo;
+    const szavak = szoveg.split(/\s+/).filter(Boolean);
+    const sorok = [];
+    let aktualis = '';
+
+    for (const szo of szavak) {
+      const proba = aktualis ? `${aktualis} ${szo}` : szo;
+
+      if (c.measureText(proba).width <= maxSzelesseg || !aktualis) {
+        aktualis = proba;
+        continue;
+      }
+
+      sorok.push(aktualis);
+      aktualis = szo;
+
+      if (sorok.length === CIMKE_MAX_SOR) break;
+    }
+
+    if (sorok.length < CIMKE_MAX_SOR && aktualis) sorok.push(aktualis);
+
+    // Az utolsó sor rövidítése, ha kilóg (vagy mert egyetlen hosszú szó, vagy
+    // mert elfogytak a sorok, és még lett volna szöveg)
+    const utolso = sorok.length - 1;
+    if (utolso >= 0 && c.measureText(sorok[utolso]).width > maxSzelesseg) {
+      let rovid = sorok[utolso];
+      while (rovid.length > 1 && c.measureText(`${rovid}…`).width > maxSzelesseg) {
+        rovid = rovid.slice(0, -1);
+      }
+      sorok[utolso] = `${rovid}…`;
+    }
+
+    return sorok;
+  }
+
+  // ===== MELLÉK-IKONOK: KATEGÓRIA (BALRA) + TARTALOMTÍPUS (JOBBRA) =====
+  // A forma és a szín az entitástípust mondja meg; ezek az ikonok azt, amit a
+  // forma nem tud: melyik kategóriába tartozik és milyen típusú. A Struktúra
+  // nézet ugyanezt a rendezést használja, hogy a két nézet egyformán olvasható.
+  _mellekIkonokRajzolasa(cs, kep) {
+    if (kep.kepSugar * 2 < IKON_MIN_ATMERO) return;
+
+    const lathatosag = this._halvanyodas(kep.kepSugar);
+    if (lathatosag <= HALVANYODAS_MARADEK) return;
+
+    // Balra a kategóriák, jobbra a típus — ugyanabban a sorban, középről kifelé
+    const balra = (cs.kategoriaIkonok ?? []).filter(k => k?.ikon).slice(0, IKON_MAX_DARAB);
+    const jobbra = [];
+    if (cs.tipusIkon?.ikon) jobbra.push(cs.tipusIkon);
+    if (cs.javaslatTipus) jobbra.push({ ikon: cs.javaslatTipus, nev: cs.javaslatTipus });
+
+    if (balra.length === 0 && jobbra.length === 0) return;
+
+    const sugar = Math.min(IKON_MAX_SUGAR, kep.kepSugar * IKON_SUGAR_ARANY);
+    if (sugar < 5) return;                       // ilyen kicsin úgysem lehetne kivenni
+
+    const lepes = sugar * 2.3;
+    const y = kep.kepY + kep.kepSugar * IKON_ALATT_ARANY;
+
+    const c = this.rajzolo;
+    c.save();
+    c.globalAlpha = lathatosag;
+
+    balra.forEach((k, i) => {
+      this._egyIkonRajzolasa(kep.kepX - (i + 0.5) * lepes, y, sugar, k.ikon, TIPUS_FORMA.Kategoria.szin);
+    });
+    jobbra.forEach((t, i) => {
+      this._egyIkonRajzolasa(kep.kepX + (i + 0.5) * lepes, y, sugar, t.ikon, TIPUS_FORMA.TartalomTipus.szin);
+    });
+
+    c.restore();
+  }
+
+  // Egyetlen ikon: világos korong + benne a kép VAGY az emoji.
+  // Az `ikonErtek` feltöltött kép URL-je (http…/…) vagy emoji — a Struktúra
+  // nézet ugyanezzel a szabállyal dönt.
+  _egyIkonRajzolasa(x, y, sugar, ikonErtek, keretSzin) {
+    const c = this.rajzolo;
+
+    c.beginPath();
+    c.arc(x, y, sugar, 0, Math.PI * 2);
+    c.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    c.fill();
+    c.lineWidth = Math.max(1, sugar * 0.12);
+    c.strokeStyle = keretSzin;
+    c.stroke();
+
+    const kepE = typeof ikonErtek === 'string' && /^(https?:\/\/|\/)/.test(ikonErtek);
+
+    if (!kepE) {
+      c.font = `${(sugar * 1.25).toFixed(0)}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillStyle = '#2b2318';
+      c.fillText(String(ikonErtek ?? ''), x, y + sugar * 0.05);
+      return;
+    }
+
+    const bejegyzes = this._ikonKep(ikonErtek);
+    if (!bejegyzes?.kesz) return;                // még tölt (vagy hibás) — a korong marad
+
+    // A képet a korongba vágjuk, hogy a nem négyzetes ikonok se lógjanak ki
+    c.save();
+    c.beginPath();
+    c.arc(x, y, sugar - 1, 0, Math.PI * 2);
+    c.clip();
+    c.drawImage(bejegyzes.kep, x - sugar, y - sugar, sugar * 2, sugar * 2);
+    c.restore();
+  }
+
+  // ===== IKON-KÉPEK TÁRA =====
+  // A Canvas csak BETÖLTÖTT képet tud kirajzolni. Ezért URL-enként egyszer
+  // betöltjük, megjegyezzük, és a betöltés végén újrarajzolást kérünk — a
+  // rajzolás sosem vár a hálózatra.
+  _ikonKep(url) {
+    const meglevo = this._ikonTar.get(url);
+    if (meglevo) return meglevo;
+
+    const bejegyzes = { kep: new Image(), kesz: false, hibas: false };
+    bejegyzes.kep.onload = () => {
+      bejegyzes.kesz = true;
+      this._rajzolasKerese();
+    };
+    bejegyzes.kep.onerror = () => {
+      bejegyzes.hibas = true;
+      console.warn('SikidomModal._ikonKep - az ikon nem tölthető be', { url });
+    };
+    bejegyzes.kep.src = url;
+
+    this._ikonTar.set(url, bejegyzes);
+    return bejegyzes;
+  }
+
+  // Lekerekített téglalap útvonala (a Canvas `roundRect`-je még nem mindenhol van meg)
+  _lekerekitettTeglalap(x, y, szelesseg, magassag, sugar) {
+    const c = this.rajzolo;
+    const r = Math.max(0, Math.min(sugar, szelesseg / 2, magassag / 2));
+
+    c.moveTo(x + r, y);
+    c.lineTo(x + szelesseg - r, y);
+    c.quadraticCurveTo(x + szelesseg, y, x + szelesseg, y + r);
+    c.lineTo(x + szelesseg, y + magassag - r);
+    c.quadraticCurveTo(x + szelesseg, y + magassag, x + szelesseg - r, y + magassag);
+    c.lineTo(x + r, y + magassag);
+    c.quadraticCurveTo(x, y + magassag, x, y + magassag - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
   }
 
   _folyamatJelzo(latszik) {
@@ -1359,6 +1902,7 @@ class SikidomModal {
     // A szülő visszaáll „még nem töltöttük be" állapotba
     cs.gyerekIdk = [];
     cs.varolista = [];
+    cs.varolistaRelTerulet = 0;
     cs.magSugarRel = Infinity;
     cs.kulsoSugar = 0;
     cs.betoltottGyerekPont = 0;
@@ -1373,18 +1917,29 @@ class SikidomModal {
     const nezetElem = document.getElementById('sikidom-nezet');
     if (!nezetElem) return;
 
+    // ===== GESZTUSOK: EGY UJJ = MOZGATÁS, KÉT UJJ = NAGYÍTÁS **ÉS** MOZGATÁS =====
+    // A kezelés INKREMENTÁLIS: minden mozgás-eseménynél az ELŐZŐ állapothoz képest
+    // számolunk. Ez azért fontos, mert így az ujjak számának változása magától
+    // helyreáll — nem kell külön kezelni, hogy közben fel- vagy letettél egy ujjat.
+    //
+    // A korábbi, abszolút („kezdőponthoz mért") megoldás két hibát okozott mobilon:
+    //   1. KÉT UJJAL NEM LEHETETT MOZGATNI. Csak a távolságuk arányát néztük;
+    //      ha az ujjak együtt csúsztak (az arány 1 maradt), a kép meg sem mozdult.
+    //   2. CSIPPENTÉS UTÁN AZ OTT MARADT UJJAL NEM LEHETETT MOZGATNI. A húzás
+    //      kezdőpontja elavult maradt, amíg minden ujjat fel nem emeltél.
     nezetElem.addEventListener('pointerdown', (e) => {
       if (e.target.closest('.sikidom-modal__vezerlok')) return;
-      this._aktivMutatok.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      if (this._aktivMutatok.size === 1) {
-        this._huzasAktiv = true;
-        this._huzasTavolsag = 0;
-        this._huzasKezdet = {
-          x: e.clientX, y: e.clientY,
-          eltolasX: this._nezet.eltolasX, eltolasY: this._nezet.eltolasY
-        };
+      // Új gesztus kezdődik, ha eddig egyetlen ujj sem volt a képernyőn
+      if (this._aktivMutatok.size === 0) {
+        this._gesztusTavolsag = 0;
+        this._gesztusMaxUjj = 0;
       }
+
+      this._aktivMutatok.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this._gesztusMaxUjj = Math.max(this._gesztusMaxUjj, this._aktivMutatok.size);
+      this._gesztusElozo = this._gesztusMerese();
+
       nezetElem.setPointerCapture(e.pointerId);
     });
 
@@ -1392,76 +1947,154 @@ class SikidomModal {
       if (!this._aktivMutatok.has(e.pointerId)) return;
       this._aktivMutatok.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      // Két ujj: csippentéses nagyítás
-      if (this._aktivMutatok.size === 2) {
-        const [a, b] = [...this._aktivMutatok.values()];
-        const tavolsag = Math.hypot(a.x - b.x, a.y - b.y);
-        const teglalap = nezetElem.getBoundingClientRect();
-        const kozepX = (a.x + b.x) / 2 - teglalap.left;
-        const kozepY = (a.y + b.y) / 2 - teglalap.top;
+      const most = this._gesztusMerese();
+      const elozo = this._gesztusElozo;
+      if (!most || !elozo) { this._gesztusElozo = most; return; }
 
-        if (this._ujjTavolsag && tavolsag > 0) {
-          this._zoom(tavolsag / this._ujjTavolsag, kozepX, kozepY);
+      const teglalap = nezetElem.getBoundingClientRect();
+
+      // 1. NAGYÍTÁS — csak ha MOST is és ELŐBB is legalább két ujj volt.
+      //    A gyújtópont az ujjak MOSTANI középpontja: így a kép ott marad a
+      //    helyén, ahol az ujjaid fogják.
+      if (most.tavolsag > 0 && elozo.tavolsag > 0) {
+        const arany = most.tavolsag / elozo.tavolsag;
+        if (arany > 0 && arany !== 1) {
+          this._zoom(arany, most.kozepX - teglalap.left, most.kozepY - teglalap.top);
         }
-        this._ujjTavolsag = tavolsag;
-        this._huzasAktiv = false;
-        return;
       }
 
-      if (!this._huzasAktiv || !this._huzasKezdet) return;
-      const dx = e.clientX - this._huzasKezdet.x;
-      const dy = e.clientY - this._huzasKezdet.y;
-      this._huzasTavolsag = Math.max(this._huzasTavolsag, Math.abs(dx) + Math.abs(dy));
-      this._nezet.eltolasX = this._huzasKezdet.eltolasX + dx;
-      this._nezet.eltolasY = this._huzasKezdet.eltolasY + dy;
-      this._rajzolasKerese();
+      // 2. MOZGATÁS — a középpont elmozdulása. Egy ujjnál ez maga a húzás,
+      //    két ujjnál a csippentés melletti eltolás. Ugyanaz a képlet mindkettőre.
+      const dx = most.kozepX - elozo.kozepX;
+      const dy = most.kozepY - elozo.kozepY;
+
+      if (dx !== 0 || dy !== 0) {
+        this._nezet.eltolasX += dx;
+        this._nezet.eltolasY += dy;
+        this._gesztusTavolsag += Math.abs(dx) + Math.abs(dy);
+        this._rajzolasKerese();
+      }
+
+      this._gesztusElozo = most;
     });
 
-    const mutatoVege = (e) => {
-      this._aktivMutatok.delete(e.pointerId);
-      if (this._aktivMutatok.size < 2) this._ujjTavolsag = null;
+    const mutatoVege = (e, koppinthat) => {
+      // KOPPINTÁS-e? Csak akkor, ha VÉGIG egyetlen ujj volt, és alig mozdult.
+      // (A `_gesztusMaxUjj` őrzi, hogy csippentés után az utolsó ujj felemelése
+      // ne nyisson meg véletlenül egy adatlapot.)
+      const kattintasVolt = koppinthat
+        && this._aktivMutatok.size === 1
+        && this._gesztusMaxUjj === 1
+        && this._gesztusTavolsag <= KATTINTAS_KUSZOB;
 
-      // A csippentés vége: itt már BIZTOS, hogy vége a nagyításnak, nem kell
-      // kivárni az időzítőt
+      this._aktivMutatok.delete(e.pointerId);
+
+      // A maradék ujjakhoz igazítjuk az alapállapotot — így az ott maradt ujjal
+      // AZONNAL tovább lehet mozgatni, ugrás nélkül.
+      this._gesztusElozo = this._gesztusMerese();
+
+      // Ha minden ujj felkerült, biztos vége a gesztusnak: nem kell kivárni az
+      // időzítőt az újrapakolással.
       if (this._aktivMutatok.size === 0 && this._zoomVegeIdozito) {
         clearTimeout(this._zoomVegeIdozito);
         this._zoomVegeIdozito = null;
         this._tennivalokFeldolgozasa();
       }
 
-      const kattintasVolt = this._huzasAktiv && this._huzasTavolsag <= KATTINTAS_KUSZOB;
-      this._huzasAktiv = false;
-      this._huzasKezdet = null;
       if (!kattintasVolt) return;
 
       const teglalap = nezetElem.getBoundingClientRect();
       this._koppintas(e.clientX - teglalap.left, e.clientY - teglalap.top);
     };
 
-    nezetElem.addEventListener('pointerup', mutatoVege);
-    nezetElem.addEventListener('pointercancel', (e) => {
-      this._aktivMutatok.delete(e.pointerId);
-      this._ujjTavolsag = null;
-      this._huzasAktiv = false;
-      this._huzasKezdet = null;
-    });
+    nezetElem.addEventListener('pointerup', (e) => mutatoVege(e, true));
+    nezetElem.addEventListener('pointercancel', (e) => mutatoVege(e, false));
 
+    // ===== GÖRGŐ ÉS ÉRINTŐPAD-CSIPPENTÉS =====
+    // A görgetés mértékével ARÁNYOS nagyítás (lásd GORGO_EGYSEG_*).
+    //
+    // Az érintőpad CSIPPENTÉSE is ide érkezik, `ctrlKey = true`-val (a böngészők
+    // így jelzik) — de sokkal KISEBB delta-értékekkel, mint a kétujjas görgetés.
+    // Ugyanazzal az egységgel a csippentés alig mozdítaná a képet, ezért annak
+    // külön (nagyobb) egysége van.
     nezetElem.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const szorzo = e.deltaY < 0 ? ZOOM_LEPES : 1 / ZOOM_LEPES;
+
+      const egyseg = e.ctrlKey      ? GORGO_EGYSEG_CSIPPENTES
+                   : e.deltaMode === 1 ? GORGO_EGYSEG_SOR
+                   : e.deltaMode === 2 ? GORGO_EGYSEG_OLDAL
+                   : GORGO_EGYSEG_KEPPONT;
+
+      const szorzo = Math.pow(2, -e.deltaY * egyseg);
+      if (!(szorzo > 0) || szorzo === 1) return;
+
       const teglalap = nezetElem.getBoundingClientRect();
       this._zoom(szorzo, e.clientX - teglalap.left, e.clientY - teglalap.top);
     }, { passive: false });
   }
 
+  // ===== A GESZTUS PILLANATNYI ÁLLAPOTA =====
+  // Az ÖSSZES lenyomott ujj közül az első kettőt vesszük (három ujjnál sem esik
+  // szét a kezelés). Egy ujjnál a „középpont" maga az ujj, a távolság 0 — ilyenkor
+  // a hívó nem nagyít, csak mozgat.
+  //
+  // A koordináták KÉPERNYŐ-koordináták (clientX/Y); a nézet-elemhez viszonyítást
+  // a hívó végzi el, ahol szükséges.
+  //
+  // @returns {{kozepX:number, kozepY:number, tavolsag:number}|null}
+  _gesztusMerese() {
+    const mutatok = [...this._aktivMutatok.values()];
+    if (mutatok.length === 0) return null;
+
+    const [a, b] = mutatok;
+    if (!b) return { kozepX: a.x, kozepY: a.y, tavolsag: 0 };
+
+    return {
+      kozepX: (a.x + b.x) / 2,
+      kozepY: (a.y + b.y) / 2,
+      tavolsag: Math.hypot(a.x - b.x, a.y - b.y)
+    };
+  }
+
   _zoom(szorzo, kozepX, kozepY) {
-    this._nezet.skala *= szorzo;
-    this._nezet.eltolasX = kozepX - (kozepX - this._nezet.eltolasX) * szorzo;
-    this._nezet.eltolasY = kozepY - (kozepY - this._nezet.eltolasY) * szorzo;
+    // Bármilyen kézi nagyítás megszakítja a futó illesztés-animációt — különben
+    // az visszarántaná a képet az e-ember keze alól.
+    if (this._illesztesAnimacio) {
+      cancelAnimationFrame(this._illesztesAnimacio);
+      this._illesztesAnimacio = null;
+    }
+
+    const hatarolt = this._kifeleHatarolas(szorzo);
+    if (hatarolt === 1) return;                  // már a határon állunk, nincs mit tenni
+
+    this._nezet.skala *= hatarolt;
+    this._nezet.eltolasX = kozepX - (kozepX - this._nezet.eltolasX) * hatarolt;
+    this._nezet.eltolasY = kozepY - (kozepY - this._nezet.eltolasY) * hatarolt;
     this._rajzolasKerese();
 
     // A kép azonnal követi a nagyítást, de az ÚJ síkidomok csak a végén jelennek meg
     this._zoomVegeUtemezes();
+  }
+
+  // ===== A KIFELÉ NAGYÍTÁS ALSÓ HATÁRA =====
+  // Befelé nincs korlát (arra való a horgonyváltás). Kifelé viszont a VILÁG
+  // szintnél elfogy a hierarchia, és tovább kicsinyítve minden a láthatósági
+  // küszöb alá esne — üres képernyő. A határt az illesztési nagyításhoz mérjük.
+  //
+  // Csak a VILÁG horgonynál kell vizsgálni: mélyebbről a `_horgonyEllenorzes`
+  // úgyis fölfelé lépteti a horgonyt, amíg ide nem ér.
+  //
+  // @param {number} szorzo - a kért nagyítás-szorzó
+  // @returns {number} a ténylegesen alkalmazható szorzó (1 = nincs mozgás)
+  _kifeleHatarolas(szorzo) {
+    if (szorzo >= 1) return szorzo;              // befelé sosem korlátozunk
+    if (this._horgony !== VILAG) return szorzo;  // van még hova fölfelé lépni
+    if (!(this._alapSkala > 0)) return szorzo;   // még nem volt illesztés
+
+    const alsoHatar = this._alapSkala * KIFELE_HATAR;
+    if (this._nezet.skala <= alsoHatar) return 1;
+
+    return Math.max(szorzo, alsoHatar / this._nezet.skala);
   }
 
   _zoomKozeppontra(szorzo) {

@@ -23,6 +23,10 @@
 // --- IMPORTÁLÁSOK ---
 const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const { entitasCimekFeltoltese } = require('./ertesitesService');
+// A MELLÉK-IKONOK a Struktúra nézettel KÖZÖS forrásból jönnek (nem másoljuk a
+// logikát): Tartalomnál a kategóriák + a tartalomtípus ikonja, Javaslatnál és
+// Egyezménynél a művelet-típus. Típusonként EGY csoportos lekérdezés, nincs N+1.
+const strukturaService = require('./strukturaService');
 
 // Biztonsági darab-plafon EGY kérésre. NEM ez az elsődleges szabály (azt a küszöb
 // adja) — csak azért van, hogy egy szélsőségesen alacsony küszöb se robbantson.
@@ -41,11 +45,12 @@ class SikidomService {
 * @param {number|null} kurzorPont - meddig jutottunk (a legutóbbi sor pontja)
 * @param {string|null} kurzorId - meddig jutottunk (a legutóbbi sor `_id`-ja)
 * @param {number} darab - biztonsági darab-plafon
+* @param {boolean} osszesKell - kérjük-e az ÖSSZES gyerek együttes pontját
 * @returns {Promise<Object>} { gyerekek, osszesGyerekPont, kurzor, vanTovabb }
 */
-async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId = null, darab = MAX_DARAB) {
+async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId = null, darab = MAX_DARAB, osszesKell = true) {
   console.log('SikidomService.gyerekekLekerese - KEZDÉS', {
-    szuloId, minPont, kurzorPont, kurzorId, darab
+    szuloId, minPont, kurzorPont, kurzorId, darab, osszesKell
   });
 
   const plafon = Math.max(1, Math.min(darab, MAX_DARAB));
@@ -60,9 +65,18 @@ async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId 
   const vanTovabb = sorok.length > plafon;
   const adag = vanTovabb ? sorok.slice(0, plafon) : sorok;
 
-  // Az ÖSSZES gyerek együttes pontja — ebből számolja a kliens az üres mag
-  // PONTOS méretét (összes − a már betöltöttek = ami még hátravan).
-  const osszesGyerekPont = await hierarchikusAllokaciRepository.gyerekekOsszPontja(szuloId ?? null);
+  // Az ÖSSZES gyerek együttes pontja — ebből tudja a kliens, maradt-e még
+  // le nem töltött testvér (összes − a már betöltöttek = ami még hátravan).
+  //
+  // CSAK KÉRÉSRE SZÁMOLJUK. Ez egy `$group` aggregáció a szülő MINDEN gyerekére:
+  // egy milliós ágnál kérésenként végigolvasná az egészet, a kliens viszont
+  // 150-esével kér — az több ezer teljes végigolvasás ugyanazért az egy számért.
+  // A kliens ezért csak az ELSŐ kérésnél kéri el (`osszesKell=0` a többinél), és
+  // utána a saját másolatát használja. Nem kérés esetén `null` megy vissza, amit
+  // a kliens `??`-tal átugrik — a korábbi értéke marad érvényben.
+  const osszesGyerekPont = osszesKell
+    ? await hierarchikusAllokaciRepository.gyerekekOsszPontja(szuloId ?? null)
+    : null;
 
   if (adag.length === 0) {
     console.log('SikidomService.gyerekekLekerese - VÉGE (a küszöb fölött nincs több)');
@@ -79,13 +93,27 @@ async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId 
   // típusoknál (Javaslat, Egyezmény) az entitasCim null marad.
   const cimmel = await entitasCimekFeltoltese(adag);
 
-  const gyerekek = cimmel.map(sor => ({
-    entitasId: sor.entitasId,
-    entitasTipus: sor.entitasTipus,
-    cim: sor.entitasCim ?? null,
-    hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
-    vanGyereke: gyerekesHalmaz.has(sor.entitasId.toString())
-  }));
+  // Mellék-ikonok: a síkidom FORMÁJA az entitástípust mutatja (kör/háromszög/…),
+  // az IKONOK pedig azt, amit a forma nem tud — melyik kategóriába tartozik és
+  // milyen típusú. A színek és formák száma korlátozott, az ikonoké nem.
+  const mellekIkonok = await strukturaService.mellekIkonokFeltoltese(adag);
+
+  const gyerekek = cimmel.map(sor => {
+    const mellek = mellekIkonok.get(`${sor.entitasTipus}:${sor.entitasId.toString()}`) ?? {};
+
+    return {
+      entitasId: sor.entitasId,
+      entitasTipus: sor.entitasTipus,
+      cim: sor.entitasCim ?? null,
+      hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
+      vanGyereke: gyerekesHalmaz.has(sor.entitasId.toString()),
+
+      // { ikon, nev } objektumok; az `ikon` feltöltött kép-URL VAGY emoji
+      kategoriaIkonok: mellek.kategoriaIkonok ?? [],
+      tipusIkon:       mellek.tipusIkon ?? null,
+      javaslatTipus:   mellek.javaslatTipus ?? null
+    };
+  });
 
   // A kurzor a KÖVETKEZŐ kéréshez: az utolsó visszaadott sor helye a rendezésben
   const utolso = adag[adag.length - 1];

@@ -1505,3 +1505,212 @@ Nem vész el: visszakerül a `varolista`-ra (ugyanabba a sorba), a részfáját 
 elengedjük a tárból. Kicsinyítéskor onnan épül vissza.
 
 **Böngészős ellenőrzésre vár** (a tesztet Csaba végzi).
+
+---
+
+## Síkidom nézet — a kapacitás-vágás két hiányossága (2026-08-08)
+
+A méret szerinti sor + képernyő-kapacitás modell (fentebb) a **megjelenítést**
+korlátozta. Kódolvasáskor két rés derült ki rajta; mindkettőt ugyanabban a
+metódusban (`_ujrapakolas` / `_lathatoLista`) javítottuk.
+
+### 1. A horgony kieshetett a tárból → ÜRES VÁSZON
+
+**A hiba.** A kapacitás-vágás a sor VÉGÉRŐL, tehát a **legnagyobbaktól** dobott le
+síkidomokat, és a leesőket ki is törölte a tárból (`_reszfaTorlese` + `_tar.delete`).
+Csakhogy befelé nagyítva épp a **horgony** a legnagyobb a képernyőn (a váltás
+küszöbe a képernyő kétszerese) — vagyis garantáltan a sor végén állt, ott, ahol a
+vágás történik.
+
+Ha a horgony kiesett, a `this._horgony` egy nem létező azonosítóra mutatott. A
+`_horgonyEllenorzes` és a `_lathatoLista` is azonnal kilépett, és a **vászon
+kiürült** — csak az „illesztés" gomb hozta vissza. Számokkal: egy 1000×800-as
+ablaknál a kapacitás 2,24 millió képpont², a horgony területe 900 képpontos
+sugárnál már 2,54 millió.
+
+**A javítás.** Új `_vedettIdk()`: a horgony és a teljes ős-lánca védett. Ők
+- mindig bekerülnek a `beferok` közé (kell nekik hely, a pakoló elhelyezi őket);
+- a kapacitásból **nem esznek** — a horgony nem a testvéreivel versenyez a
+  helyért, ő MAGA a jelenlegi látómező. Ha a területe beszámítana, egyedül
+  fölemésztené a keretet, és minden testvére kiesne.
+
+A „legalább egy elem mindig befér" szabályt külön számláló (`normalDarab`) őrzi,
+hogy egy védett elem jelenléte ne rontsa el. A visszadobó ágban maradt egy
+`console.error` biztonsági ellenőrzés: ha valaha mégis védett elem kerülne a
+vágásba, azonnal látszik a konzolon.
+
+### 2. A kapacitás a LERAKÁST korlátozta, a LETÖLTÉST nem
+
+**A hiba.** A letöltést egyedül a tudatpont-küszöb vezérelte, és a
+`betoltottKuszob` csak akkor frissült, ha az adag nem telt bele a 150-es plafonba.
+Amíg `vanTovabb` igaz volt, `Infinity` maradt → a feltétel mindig teljesült, a
+betöltés `finally` ága pedig újra meghívta a `_tennivalokFeldolgozasa`-t, tehát a
+kérések **maguktól láncolódtak**.
+
+Következmény: mély nagyításnál — a saját mérésünk szerint — akár **739 909**
+testvér kerül a küszöb fölé. A nézet mindet lehozta, 150-esével (~4900 kérés), és
+mind ott ült a várólistán; a jelölt-gyűjtés és a rendezés onnantól több százezer
+elemen futott képernyőnyi eredményért.
+
+**A javítás.** Ugyanaz a két vágás vezérli a letöltést is:
+
+- új csomópont-mező `varolistaRelTerulet` — a FRISS (backendtől érkezett)
+  várakozók együttes **relatív** területe (Σ π·relR²). Relatív, ezért
+  nagyítás-független: a képernyő-terület egyetlen szorzás (`× kepSugar²`), nem
+  kell képkockánként végigolvasni a listát;
+- a `_lathatoLista` csak akkor kér újat, ha ez a puffer a képernyő-kapacitás
+  `BETOLTESI_TARTALEK` (= 2) szeresénél kevesebb. Miért 2: egy zoom-lépés (×1,2)
+  a látszó területet ~1,44-szeresére növeli, tehát a kétszeres puffer egy teljes
+  lépést kiszolgál letöltés nélkül;
+- a kapacitás által **visszadobott** testvérek `visszaesett: true` jelölést kapnak,
+  és **nem** számítanak a pufferbe. Ez a lényegi finomság: ők a sor végéről estek
+  le (túl nagyok), és ha beszámítanának, örökre elzárnák a még hiányzó **kicsik**
+  letöltését.
+
+Semmi nem vész el: a kurzor őrzi, hol tartunk, és amint a puffer lerakás közben
+leapad, a következő adag pontosan onnan folytatódik. A `relR`-t mostantól a
+várólistára fűzéskor számoljuk ki, egyszer, a közös `_relSugar()` segéddel — így a
+sor és a lerakás sorrendje biztosan egy forrásból jön.
+
+### 3. Backend: az összesítő aggregáció nem futhat kérésenként
+
+A `gyerekekOsszPontja` egy `$group` a szülő MINDEN gyerekére. A fenti láncolással
+ez ~4900-szor futott volna le ugyanazért az egy számért. Új `osszesKell` query
+paraméter (alap: `1`): `osszesKell=0` esetén a service kihagyja, és
+`osszesGyerekPont: null`-t ad. A kliens csak az ELSŐ kérésnél kéri el, utána a
+saját másolatát használja (a `??` miatt a null nem írja felül).
+
+### Mellékesen javítva
+
+- `kulsoSugar` felvéve az `_ujCsomopont`-ba (eddig az első `_meretekUjramerese`-ig
+  `undefined` volt);
+- `sulyy` → `suly` elgépelés a betöltési sorrendben;
+- a `sikidomRoutes.js` és a `sikidomController.js` elavult kommentjei (a törölt
+  `kihagy`+`darab` lapozásra, illetve a megszűnt `GET /api/sikidom`-ra hivatkoztak).
+
+**Böngészős ellenőrzésre vár** (a tesztet Csaba végzi) — a `teszt.md` (j2) és (j3)
+forgatókönyve.
+
+---
+
+## Síkidom nézet — mit veszünk át a koino_1.0-ból (2026-08-08)
+
+Csaba kérésére végignéztük a `C:/koino_1.0` síkidomos rétegét (`calculators.js`,
+`ContentPositioner.js`, `contentLayout.js`, `screenFillingContentDetector.js`,
+`contentRenderer.js`, `canvasZoomPanManager.js`, `titlecards.js`, `shapes.js`),
+hogy van-e benne bármi, amit az jobban csinál.
+
+### Amit NEM veszünk át — és miért
+
+- **A pakolás.** A `positionByTriangulation` három ágon `Math.random()`-mal helyez
+  el, `+0,001` / `+0,000001` ráhagyásokkal, és `0,0001`-es epszilonnal rendez (ami
+  nem tranzitív → motorfüggő sorrend). Átfedés-ellenőrzés nincs. Mérve: 300 körnél
+  767 átfedő pár, szemben a 1.1 nullájával.
+- **Az abszolút koordináták** (`szülő abs + gyerek rel`). Ez fogy el mélységben —
+  emiatt kellett a teljes vászon-újraépítés. A 1.1 horgony-kerete ezt megoldja.
+- **A DOM-alapú drill-down.** A `screenFillingContentDetector` csomópontonként
+  `getBoundingClientRect`-tel mér, hiszterézis nélkül, és `CanvasReset`-et hív.
+- **Az inkrementális DOM-delta** (`calculateContentDeltas`: új / eltávolított /
+  változatlan). Okos SVG-hez, de a 1.1 Canvasra rajzol, ott minden képkocka új.
+- **Kategória-SZÍN és típus-FORMA az adatból** (`category.color`,
+  `contentType.shapeId`). Csaba döntése (2026-08-08): **nem kell** — a színek és a
+  formák száma korlátozott, tehát nem tudnák lefedni a kategóriákat és a típusokat.
+  Az IKONOK száma viszont nem korlátozott → az információt ikonnal hordozzuk.
+
+### A szintváltás folyamata 1.0-ban (átnézve, nincs átvennivaló)
+
+A `handleZoomEnd` → `detectAndUpdateScreenFillingContent` → `CanvasReset` lánc:
+
+1. **Menti** az activeCanvasRoot képernyő-pozícióját (`savedActiveCanvasRootPosition`).
+2. `previousVisibleContents` snapshot, majd **kiüríti** a `visibleContents`-t.
+3. **Zoom-korrekció:** lefelé `zoom / √20`, fölfelé `zoom × √20`.
+4. **Teljes újraszámolás** (`calculateKioDisplayData`): processedContentsMap,
+   sugarak, pozicionálás, abszolút pozíciók.
+5. Új transform: az új gyökér a képernyő közepére, a mentett pozícióval korrigálva.
+6. `updateVisibleContents` + inkrementális render.
+
+**Mit tesz be a képernyőre** (`populateProcessedContents`, hierarchikus mód):
+nagyszülő → nagyszülő gyermekei (vagy ha nincs: az összes gyökér + azok gyermekei)
+→ a szülő gyermekei és azok gyermekei (az aktív ágat kizárva) → az aktív gyökér
+részfája. Mélységi ablak: `minDepth = canvasLevel`, `maxDepth = canvasLevel + 3` —
+tehát **négy szint** egyszerre. **Mit vesz ki:** a maxDepth-en túli részfát, a 3 px
+DOM-sugárnál kisebbeket, és a viewport-körön kívülieket.
+
+**A két tanulság:**
+
+- A **√20-as zoom-korrekció közelítés**: a valódi gyerek/szülő sugárarány
+  `√(gyerekPont / (20 · szülőPont))`, ami csak akkor pont `1/√20`, ha a gyerek
+  pontja megegyezik a szülőével. 1.0 tehát **ugrik** a váltáskor. A 1.1
+  `horgonyValtasNezet` a VALÓDI `relR`-rel számol, ezért nem mozdul a kép.
+- A **fölfelé épített kontextus** (2 szint + oldalág) nálunk már bővebb:
+  `FELFELE_SZINTEK = 3`, és onnan lefelé mindent bejárunk a méret-küszöbig.
+
+### Amit ÁTVESZÜNK — megvalósítva
+
+1. **Címke: kártya + sortörés + a középpont fölé** (`titlecards.js` mintájára).
+   Több sor (max 3) mért szélességgel, szóhatáron; félig áttetsző lekerekített
+   háttérkártya; a hely `sugár × 0,6`-tal a középpont FÖLÖTT.
+   **Ez nálunk hibajavítás is volt:** `URES_MAG = false` óta a középpontban a
+   LEGKISEBB GYEREK ül, tehát a középre írt felirat rátakart — a kód kommentje
+   viszont még azt állította, hogy ott üres mag van.
+2. **Mellék-ikonok a síkidomon.** Kategória-ikonok balra, tartalomtípus jobbra, a
+   felirat alatt, 96 px látszó átmérő fölött. Backend: a `sikidomService` a
+   Struktúra nézettel KÖZÖS `mellekIkonokFeltoltese`-t hívja (nincs duplikált
+   logika, típusonként egy csoportos lekérdezés). Frontend: `_ikonTar` kép-gyorsítótár,
+   betöltéskor újrarajzolás — a rajzolás sosem vár a hálózatra.
+3. **Elhalványodás a mérettel** (`calculateOpacity` mintájára). A képernyőhöz
+   mérve (nem fix 4000 px-hez, mint 1.0): a halványodás a képernyő kisebbik
+   oldalával egyenlő SUGÁRNÁL kezdődik — pont ahol a horgonyváltás történik — és
+   háromszorosánál ér véget. A kitöltésre ÉS a keretre is vonatkozik (1.0 csak a
+   kitöltésre alkalmazta; nálunk épp a keret vágta át a képernyőt).
+4. **Animált illesztés** (`fitZoom` mintájára), 420 ms. A nagyítást a `skala`
+   LOGARITMUSÁN interpoláljuk, mert a nagyítás szorzó jellegű; az eltolás lineáris,
+   koszinuszos lágyítással. Megnyitáskor nincs animáció.
+   **+ kifelé nagyítás alsó határa** (a D3 `scaleExtent` megfelelője): a VILÁG
+   szinten az illesztési nagyítás negyedénél megáll — eddig nem volt korlát, és
+   kizoomolva üres képernyő maradt.
+5. **Görgő-érzékenység** (Csaba kérése). Eddig egy görgetés-esemény FIX 1,2-szeres
+   ugrást adott; érintőpadon ez elszaladt (ott egy mozdulat sok apró eseményt küld).
+   Mostantól a D3 `wheelDelta` képlete: `szorzó = 2^(−deltaY × egység)`, ahol az
+   egység a görgetési módtól függ (képpont 0,002 / sor 0,05 / oldal 1). Egérgörgőn
+   ez ~1,149-szeres lépés, érintőpadon folytonos. A +/− gombok maradnak 1,2-esek.
+   A koppintás/húzás határa 5 → **7 px** (a 1.0 értéke).
+
+**Böngészős ellenőrzésre vár** (a tesztet Csaba végzi) — `teszt.md` (j4).
+
+### Utólag (2026-08-08): érintőpad és mobil
+
+Csaba jelezte, hogy érintőpadot használ, és mobilon is működnie kell. Az átnézés
+két VALÓDI hibát talált a gesztuskezelésben, plusz egy hiányzó érintőpad-ágat.
+
+**1. Két ujjal nem lehetett mozgatni.** A csippentés csak az ujjak TÁVOLSÁGÁNAK
+arányát nézte; ha az ujjak együtt csúsztak (az arány 1 maradt), a kép meg sem
+mozdult. Mobilon a kétujjas mozgatás alapelvárás.
+
+**2. Csippentés után az ott maradt ujjal nem lehetett mozgatni.** A húzás
+kezdőpontja (`_huzasKezdet`) elavult maradt, és a `_huzasAktiv` false-ra állt —
+amíg minden ujjat fel nem emeltél, a mozgatás nem indult újra.
+
+**A megoldás: INKREMENTÁLIS gesztuskezelés.** Minden mozgás-eseménynél az ELŐZŐ
+mérethez képest számolunk (`_gesztusMerese` → `{ kozepX, kozepY, tavolsag }`):
+
+- **nagyítás** = a távolságok aránya, az ujjak MOSTANI középpontja körül;
+- **mozgatás** = a középpont elmozdulása — egy ujjnál ez maga a húzás, kettőnél a
+  csippentés melletti eltolás. **Ugyanaz a képlet mindkettőre.**
+
+Ettől az ujjak számának változása MAGÁTÓL helyreáll: `pointerdown`/`pointerup`
+után újramérjük az alapállapotot, tehát nincs ugrás. Három ujjnál sem esik szét
+(az első kettő vezérel). A koppintás felismerése szigorúbb lett: csak akkor
+adatlap, ha VÉGIG egy ujj volt (`_gesztusMaxUjj === 1`) és alig mozdult — így a
+csippentés utolsó ujjának felemelése nem nyit véletlenül adatlapot.
+
+**3. Érintőpad-csippentés.** A böngészők `wheel` eseményként küldik, `ctrlKey =
+true`-val, de sokkal kisebb delta-értékekkel, mint a kétujjas görgetést. Külön
+(nagyobb) egységet kapott: `GORGO_EGYSEG_CSIPPENTES` — Csaba próbája után
+0,010-ről **0,012**-re emelve (20%-kal érzékenyebb).
+
+**4. Firefox-igazítás.** A `GORGO_EGYSEG_SOR` mostantól a képpontos egység
+100/3-szorosa (nem a D3 fix 0,05-e), így egy egérgörgő-kattanás minden
+böngészőben ugyanakkorát nagyít.
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j5).

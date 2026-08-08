@@ -20,9 +20,11 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ÚTVONALAK DEFINIÁLÁSA
 // ===================================
 
-// Egy szülő gyerekei tudatpont szerint, LAPOZVA — a Síkidom nézet
-// képernyő-vezérelt betöltésének adatforrása.
-// GET /api/sikidom/gyerekek?szulo=<id|elhagyva>&kihagy=<szám>&darab=<szám>
+// Egy szülő gyerekei egy TUDATPONT-KÜSZÖB fölött (nem lapozás, kurzoros) —
+// a Síkidom nézet képernyő-vezérelt betöltésének adatforrása.
+// GET /api/sikidom/gyerekek?szulo=<id|elhagyva>&minPont=<szám>
+//                          &kurzorPont=<szám>&kurzorId=<id>&darab=<szám>
+//                          &osszesKell=<0|1>
 // A `szulo` elhagyva → a gyökerek (a legfelső szint).
 // VÉDETT - csak bejelentkezett eemberek
 router.get('/sikidom/gyerekek', authMiddleware, sikidomController.gyerekek);
