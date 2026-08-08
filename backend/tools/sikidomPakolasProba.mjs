@@ -162,30 +162,22 @@ function bejaras(gyerekek) {
 
     let lepesMs = 0;
 
-    // (a) KAPACITÁS-VÁGÁS: ami már nem fér a képernyőre, az lekerül — a
-    //     LEGNAGYOBBAKTÓL kezdve. A helyét MEGJEGYEZZÜK: mivel semmi nem mozdul,
-    //     a régi helye szabadon marad, tehát visszatéréskor pontosan oda kerül.
-    //     (Enélkül újként térne vissza, és a mag peremére — a kicsik közé —
-    //     kerülne. Ez okozta a 2026-08-08-i rossz elrendezést.)
-    lerakottak.sort((a, b) => a.sugar - b.sugar);
+    // (a) A KAPACITÁS CSAK A RAJZOLÁST KORLÁTOZZA — a lerakást NEM (Csaba, 2026-08-09).
+    //     Korábban itt egy vágás állt: ami nem fért a képernyőre, azt levettük a
+    //     tárból. Ez ördögi kört csinált — közelítéskor egyre több esett ki, azok
+    //     nem kaptak helyet, tehát bent maradtak a HÁTRALÉVŐK között, amitől a mag
+    //     tovább nőtt. Így a közelítés NÖVELTE az üres közepet ahelyett, hogy
+    //     fogyasztotta volna. A hely kiosztása néhány szám — nem kerül rajzolási
+    //     időbe —, ezért mindenki azonnal helyet kap, aki letöltődött.
+    //     Mérőszám: hány síkidom FÉRNE a képre (csak tájékoztatásul).
+    let rajzolhato = 0;
     let osszKepTerulet = 0;
-    const megmaradok = [];
-    for (const l of lerakottak) {
+    for (const l of [...lerakottak].sort((a, b) => a.sugar - b.sugar)) {
       const kepsugar = kepSugar * l.sugar;
       const terulet = Math.PI * kepsugar * kepsugar;
-      if (megmaradok.length > 0 && osszKepTerulet + terulet > KEPERNYO_KAPACITAS) {
-        // Vissza a sorba, a helyével ÉS az eredeti körével együtt. A kör azért
-        // kell, mert a rend-ellenőrzések körönként csoportosítanak — egy
-        // visszahelyezett síkidom nem tartozik a mostani körhöz.
-        varolista.push({ id: l.id, pont: l.pont, hely: { x: l.x, y: l.y }, kor: l.kor });
-        continue;
-      }
+      if (rajzolhato > 0 && osszKepTerulet + terulet > KEPERNYO_KAPACITAS) break;
       osszKepTerulet += terulet;
-      megmaradok.push(l);
-    }
-    if (megmaradok.length !== lerakottak.length) {
-      lerakottak = megmaradok;
-      varolista.sort((a, b) => (b.pont - a.pont) || a.id.localeCompare(b.id));
+      rajzolhato++;
     }
 
     // (b) A MAG A HÁTRALÉVŐ TUDATPONTBÓL. A `T_hátra` azokat számolja, akiknek
@@ -204,37 +196,20 @@ function bejaras(gyerekek) {
     // (d) LERAKÁS. A láthatóság NEM kapu többé — az csak a RAJZOLÁST vezérli.
     //     Amit letöltöttünk, azt lerakjuk; a helyet a mag tartja fenn a többinek.
     const ujak = varolista.map(v => ({
-      id: v.id, sugar: gyerekRelativSugar(v.pont, SZULO_PONT), hely: v.hely, regiKor: v.kor
+      id: v.id, sugar: gyerekRelativSugar(v.pont, SZULO_PONT)
     }));
 
     if (ujak.length > 0) {
-      // Akinek MEGVAN a régi helye, oda kerül vissza — nem pakoljuk újra
-      const visszahelyezett = new Set();
-      for (const u of ujak) {
-        if (!u.hely) continue;
-        lerakottak.push({
-          id: u.id, x: u.hely.x, y: u.hely.y, sugar: u.sugar,
-          kor: u.regiKor ?? kor, pont: pontJa(u.id)
-        });
-        visszahelyezett.add(u.id);
-      }
+      const t0 = process.hrtime.bigint();
+      const e = pakolas(ujak, {
+        magSugar,
+        kornyezet: lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }))
+      });
+      lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
+      legdragabb = Math.max(legdragabb, lepesMs);
+      ujrapakolasok++;
 
-      const pakolando = ujak.filter(u => !visszahelyezett.has(u.id))
-        .map(u => ({ id: u.id, sugar: u.sugar }));
-
-      let e = { helyek: [], lerakatlanIdk: [] };
-      if (pakolando.length > 0) {
-        const t0 = process.hrtime.bigint();
-        e = pakolas(pakolando, {
-          magSugar,
-          kornyezet: lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }))
-        });
-        lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
-        legdragabb = Math.max(legdragabb, lepesMs);
-        ujrapakolasok++;
-      }
-
-      const lerakottIdk = new Set(visszahelyezett);
+      const lerakottIdk = new Set();
       for (const h of e.helyek) {
         lerakottIdk.add(h.id);
         lerakottak.push({ ...h, kor, pont: pontJa(h.id) });

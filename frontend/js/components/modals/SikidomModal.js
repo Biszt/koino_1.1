@@ -699,30 +699,11 @@ class SikidomModal {
     cs.gyerekIdk.push(v.id);
   }
 
-  // ===== A VÉDETT CSOMÓPONTOK: A HORGONY ÉS AZ ŐSEI =====
-  // Ezeket a kapacitás-vágás SOSEM dobhatja el.
-  //
-  // MIÉRT: a horgony adja a rajzolás vonatkoztatási keretét, az ősei pedig a
-  // keret-számítás láncát (a `keretbenCsomopont` rajtuk keresztül halmoz). Ha
-  // bármelyikük hiányzik a tárból, a `_horgonyEllenorzes` és a `_lathatoLista`
-  // is azonnal kilép, és a vászon KIÜRÜL — csak az „illesztés" gomb hozza vissza.
-  //
-  // ÉS PONT ŐK VANNAK VESZÉLYBEN: befelé nagyítva a horgony a legnagyobb a
-  // képernyőn (a váltás küszöbe a képernyő kétszerese, lásd sikidomHorgony.js),
-  // tehát a méret szerinti sor VÉGÉN áll — épp ott, ahol a kapacitás vág.
-  _vedettIdk() {
-    const vedettek = new Set();
-    let id = this._horgony;
-
-    for (let lepes = 0; lepes < 64 && id; lepes++) {
-      vedettek.add(id);
-      const cs = this._tar.get(id);
-      if (!cs) break;
-      id = cs.szuloId;
-    }
-
-    return vedettek;
-  }
+  // MEGJEGYZÉS: itt állt a `_vedettIdk()` — a horgonyt és őseit védte a
+  // kapacitás-vágástól, mert az kitörölte a csomópontokat a tárból, és ha a
+  // horgony esett ki, a vászon kiürült. A vágás 2026-08-09 óta CSAK a rajzolást
+  // korlátozza, tárból nem töröl semmit, ezért a védelemre nincs többé szükség.
+  // (Ha valaha visszakerül olyan lépés, ami csomópontot töröl, ezt vissza kell hozni.)
 
   // ===== A LÁTHATÓSÁGI KÜSZÖB TUDATPONTBAN =====
   // A méret-képlet megfordítása. Egy gyerek képernyő-átmérője:
@@ -897,126 +878,30 @@ class SikidomModal {
 
     const relSugar = (pont) => this._relSugar(cs, pont);
 
-    // --- A TESTVÉREK EGYETLEN, MÉRET SZERINTI SORA ---
-    // A testvérek EGY rendezett sort alkotnak (növekvő méret szerint, ez a pakolás
-    // sorrendje is). A sor VÉGÉT a képernyő KAPACITÁSA vágja: ami nem fér a képre,
-    // az lekerül — de a HELYÉT megtartja, tehát visszatéréskor ugyanoda kerül.
+    // ===== A LERAKÁS ÉS A MEGJELENÍTÉS SZÉT VAN VÁLASZTVA =====
+    // Csaba döntése (2026-08-09). Korábban a képernyő KAPACITÁSA döntötte el, ki
+    // kap egyáltalán helyet: ami nem fért a képre, azt levettük a tárból.
     //
-    // MIÉRT NEM A KÉPERNYŐ-POZÍCIÓ DÖNT (a korábbi hibák tanulsága): a sorrend az
-    // ADATBÓL következik (méretből), nem abból, hogy épp hol van a kép. Egy
-    // pozíció-teszt referenciapontja elcsúszhat — a sorrendé nem tud.
+    // EZ ÖRDÖGI KÖRT CSINÁLT. Közelítéskor a síkidomok képernyő-területe nő, tehát
+    // a vágás egyre többet dobott le — azok pedig nem kaptak helyet, tehát bent
+    // maradtak a HÁTRALÉVŐK között, amitől a mag (`_magSugar`) tovább nőtt.
+    // Csaba tünete: „ahogy közelítek, a belső mag a képernyőhöz képest folyamatosan
+    // nő, és előbb-utóbb csak az üres magot látom." Minél jobban közelítettél,
+    // annál kevesebb került le, és annál nagyobb lett az üres közép.
     //
-    // MIÉRT NEM MAXIMUM-MÉRET A VÉGE: mérve (1 000 000 testvér, Zipf-eloszlás) egy
-    // felső méret-küszöb csak 0,5–3%-ot vág le, és ez az arány a nagyítással NEM
-    // javul — a tömeg nem a néhány nagynál van, hanem a hosszú farokban. Nem korlát,
-    // csak állandó hányad. Ezért a vég a KAPACITÁS, ami a képernyőből következik.
-    const engedettTerulet = this._kepernyoKapacitas();
-
-    const jeloltek = [];
-    for (const gid of cs.gyerekIdk) {
-      const gy = this._tar.get(gid);
-      if (!gy) continue;
-      jeloltek.push({ id: gy.id, sugar: gy.relR, lerakott: true });
-    }
-    // A VÁRÓLISTA — láthatósági szűrés NÉLKÜL. A minimum átmérő mostantól CSAK a
-    // RAJZOLÁST vezérli (Csaba, 2026-08-08): ha a lerakást is ő kapuzná, ütközne a
-    // geometriával — a mag képernyőn állandó 60 px sugarú volt, tehát egy ×1,2-es
-    // lépés csak 12 px széles gyűrűt nyitott, a láthatósághoz viszont 24 px átmérő
-    // kell. A kettő sosem jött össze, és a pakoló ilyenkor nem várt: a
-    // pót-horgonyokhoz fordult, azok pedig a LEGKÜLSŐ körök — így kerültek apró
-    // újak a nagyok közé, kígyóban kifelé fűzve.
+    // AZ ÚJ SZABÁLY: a kapacitás azt dönti el, mit RAJZOLUNK KI — nem azt, ki kap
+    // helyet. Egy hely kiosztása néhány szám, nem kerül rajzolási időbe. Így:
+    //   - minden letöltött testvér AZONNAL helyet kap;
+    //   - a `T_hátra` már csak a LE NEM TÖLTÖTTEKET jelenti;
+    //   - közelítéskor a tudatpont-küszöb süllyed → több töltődik le → mind helyet
+    //     kap → a MAG MAGÁTÓL ZSUGORODIK. A közelítés fogyasztja a magot, nem növeli.
+    // A rajzolást továbbra is a MIN_KEP_ATMERO és a MAX_RAJZOLT korlátozza.
     //
-    // A helyet mostantól a MAG tartja fenn (lásd `_magSugar`), nem a láthatóság.
-    for (const v of cs.varolista) {
-      const sugar = v.relR ?? relSugar(v.pont);
-      jeloltek.push({ id: v.id, sugar, varo: v });
-    }
-
-    // Ugyanaz a rendezés, mint a pakolóé — hogy a sor és a lerakás egyezzen
-    jeloltek.sort((a, b) => (a.sugar - b.sugar) || String(a.id).localeCompare(String(b.id)));
-
-    // A VÁGÁS HELYE: addig veszünk a sorból, amíg a síkidomok együttes
-    // KÉPERNYŐ-TERÜLETE belefér a rajzolt mezőbe. Mivel növekvő méret szerint
-    // haladunk, az első, ami nem fér be, egyben a sor vége — utána már csak
-    // nagyobbak jönnének.
-    //
-    // KIVÉTEL: A HORGONY ÉS AZ ŐSEI (lásd `_vedettIdk`). Ők mindig maradnak, és a
-    // kapacitásból NEM esznek — a horgony nem a testvéreivel versenyez a helyért,
-    // ő MAGA a jelenlegi látómező. Ha a területét beszámítanánk, egyedül fölemésztené
-    // az egész keretet, és minden testvére kiesne.
-    const vedettek = this._vedettIdk();
-
-    const beferok = [];
-    const kimaradok = [];
-    let osszTerulet = 0;
-    let normalDarab = 0;      // a NEM védett beférők száma (a „legalább egy" szabályhoz)
-
-    for (const j of jeloltek) {
-      if (vedettek.has(j.id)) { beferok.push(j); continue; }
-      if (kimaradok.length > 0) { kimaradok.push(j); continue; }
-
-      const kepsugar = kepSugar * j.sugar;
-      const terulet = Math.PI * kepsugar * kepsugar;
-
-      if (normalDarab > 0 && osszTerulet + terulet > engedettTerulet) {
-        kimaradok.push(j);                                   // a sor VÉGE
-        continue;
-      }
-      osszTerulet += terulet;
-      normalDarab++;
-      beferok.push(j);
-    }
-
-    if (beferok.length === 0) return false;
-
-    const ujakSzama = beferok.reduce((n, j) => n + (j.lerakott ? 0 : 1), 0);
-    const vanEldobando = kimaradok.some(k => k.lerakott);
-    if (ujakSzama === 0 && !vanEldobando) return false;
-
-    // --- A SOR VÉGÉRŐL LEESŐK: VISSZA A VÁRÓLISTÁRA ---
-    // Nem vesznek el: ugyanabba a sorba kerülnek vissza, ahonnan kiestek, és
-    // kicsinyítéskor onnan épülnek vissza.
-    const visszaszedett = [];
-    for (const k of kimaradok) {
-      if (!k.lerakott) continue;
-      const gy = this._tar.get(k.id);
-      if (!gy) continue;
-
-      // BIZTONSÁGI ELLENŐRZÉS. Védett csomópont ide nem juthat el (a vágás
-      // kihagyja őket), de ha valaha mégis, azt AZONNAL tudni akarjuk: ez az a
-      // hiba, ami üres vásznat okozna.
-      if (vedettek.has(gy.id)) {
-        console.error('SikidomModal._ujrapakolas - VÉDETT csomópont került a vágásba, megtartjuk', {
-          csomopont: cs.id, vedett: gy.id, horgony: this._horgony
-        });
-        continue;
-      }
-
-      cs.varolista.push({
-        id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim,
-        pont: gy.pont, relR: gy.relR, vanGyereke: gy.vanGyereke,
-        kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
-        javaslatTipus: gy.javaslatTipus,
-
-        // A kapacitás dobta vissza, NEM friss letöltés. Ezért nem számít bele a
-        // letöltési puffer mérőszámába: ha beszámítana, ezek a nagyok örökre
-        // elzárnák a még hiányzó KICSIK letöltését.
-        visszaesett: true,
-
-        // A HELYÉT MEGJEGYEZZÜK. Mivel a lerakottak nem mozdulnak, a régi helye
-        // szabadon marad — visszatéréskor pontosan oda kerül vissza. Enélkül
-        // ÚJKÉNT térne vissza, és a mag peremére, a kicsik közé kerülne: ez volt
-        // a 2026-08-08-i rossz elrendezés egyik oka.
-        hely: { x: gy.relX, y: gy.relY }
-      });
-      this._reszfaTorlese(gy);
-      this._tar.delete(gy.id);
-      visszaszedett.push(gy.id);
-    }
-    if (visszaszedett.length > 0) {
-      const kiesett = new Set(visszaszedett);
-      cs.gyerekIdk = cs.gyerekIdk.filter(id => !kiesett.has(id));
-    }
+    // MIÉRT NEM KORLÁTOZHATJUK MÉGIS A LERAKÁST: mérve (2026-08-09) a mag
+    // képernyő-korlátja mind a négy beállításban MEGFORDÍTOTTA a rendet (a
+    // méret-tizedek átlagos középtávolsága 0,6616 → 0,1460 lett a helyes
+    // 0,0222 → 0,2241 helyett). Fix helyek mellett a tartalék nem opcionális: ha
+    // elvesszük, a később érkezők kifelé szorulnak.
 
     // ===== A MÁR LERAKOTTAK HELYBEN MARADNAK =====
     // Ez a nézet STABILITÁSÁNAK alapja (Csaba, 2026-08-08). Korábban minden
@@ -1033,50 +918,35 @@ class SikidomModal {
     // pereme mentén. Pontosan erre való a pakoló `kornyezet` és `magSugar`
     // paramétere — eddig üresen hagytuk mindkettőt.
     const allok = [];
-    for (const j of beferok) {
-      if (!j.lerakott) continue;
-      const gy = this._tar.get(j.id);
+    for (const gid of cs.gyerekIdk) {
+      const gy = this._tar.get(gid);
       if (!gy) continue;
       allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
     }
 
-    const ujak = beferok.filter(j => !j.lerakott);
+    // AZ ÚJAK: a teljes várólista, sorrendben (csökkenő tudatpont). Nincs se
+    // láthatósági, se kapacitás-szűrés — a helyet a mag tartja fenn.
+    const ujak = cs.varolista.map(v => ({
+      id: v.id,
+      sugar: v.relR ?? relSugar(v.pont),
+      varo: v
+    }));
 
-    if (ujak.length === 0) {
-      if (visszaszedett.length > 0) {
-        this._meretekUjramerese(cs);
-        return true;
-      }
-      return false;
-    }
+    if (ujak.length === 0) return false;
 
     // ===== A MAG: A HÁTRALÉVŐ TUDATPONTBÓL =====
     // Lásd `_magSugar`. Ennyi helyet tartunk fenn középen azoknak, akiknek MÉG
     // NINCS helyük — így a később érkezők befelé férnek, nem kifelé szorulnak.
     const magSugar = this._magSugar(cs);
 
-    // ===== AKINEK MÁR VAN HELYE, ODA KERÜL VISSZA =====
-    // A kapacitás-vágásból visszatérőket NEM pakoljuk újra: a régi helyük szabad
-    // (semmi nem mozdult), tehát pontosan oda tesszük őket vissza.
-    const visszahelyezendok = ujak.filter(u => u.varo?.hely);
-    const pakolandok = ujak.filter(u => !u.varo?.hely);
-
-    for (const u of visszahelyezendok) {
-      this._gyerekFelvetele(cs, u.varo, u.varo.hely.x, u.varo.hely.y, u.sugar);
-    }
-
-    // A visszahelyezettek MÁR akadályok az újonnan pakolandóknak
-    for (const u of visszahelyezendok) {
-      allok.push({ id: u.id, x: u.varo.hely.x, y: u.varo.hely.y, sugar: u.sugar });
-    }
-
-    const eredmeny = pakolandok.length > 0
-      ? pakolas(pakolandok.map(u => ({ id: u.id, sugar: u.sugar })), { magSugar, kornyezet: allok })
-      : { helyek: [], lerakatlanIdk: [] };
+    const eredmeny = pakolas(
+      ujak.map(u => ({ id: u.id, sugar: u.sugar })),
+      { magSugar, kornyezet: allok }
+    );
 
     // --- AZ EREDMÉNY BEKÖTÉSE ---
     const ujTerkep = new Map(ujak.map(u => [u.id, u.varo]));
-    const lerakottIdk = new Set(visszahelyezendok.map(u => u.id));
+    const lerakottIdk = new Set();
 
     for (const hely of eredmeny.helyek) {
       lerakottIdk.add(hely.id);
@@ -1088,13 +958,10 @@ class SikidomModal {
     }
 
     // A lerakottak lejönnek a várólistáról — és a letöltési puffer mérőszámából is
-    // (csak a FRISS letöltések számítottak bele, a visszaesettek nem).
     cs.varolista = cs.varolista.filter(v => {
       if (!lerakottIdk.has(v.id)) return true;
-      if (!v.visszaesett) {
-        const r = v.relR ?? 0;
-        cs.varolistaRelTerulet -= Math.PI * r * r;
-      }
+      const r = v.relR ?? 0;
+      cs.varolistaRelTerulet -= Math.PI * r * r;
       return false;
     });
     cs.varolistaRelTerulet = Math.max(0, cs.varolistaRelTerulet);
@@ -1106,9 +973,8 @@ class SikidomModal {
       helybenMaradt: allok.length,           // ezek NEM mozdultak
       ujonnan: lerakottIdk.size,
       lerakatlan: eredmeny.lerakatlanIdk.length,
-      vedett: vedettek.size,
-      visszaesett: visszaszedett.length,
       varolistan: cs.varolista.length,
+      magSugar: magSugar.toFixed(4),
       magKeppont: Math.round(cs.magSugarRel * kepSugar * 2),
       kulsoSugar: cs.kulsoSugar.toFixed(4),
       horgonySzint: this._horgonySzint()

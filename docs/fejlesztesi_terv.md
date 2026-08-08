@@ -1846,3 +1846,66 @@ lépés 4–5 ms. A kis adagok a lényegesek: azok kényszerítik a magot arra, 
 körön át helyet tartson a még meg sem érkezett testvéreknek.
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j6).
+
+---
+
+## Síkidom nézet — a lerakás és a megjelenítés szétválasztása (2026-08-09)
+
+**Csaba tünete:** „ahogy közelítek, a belső mag a képernyőhöz képest folyamatosan
+nő, és előbb-utóbb csak az üres magot látom."
+
+### Az ok — egy ördögi kör
+
+A mag a HÁTRALÉVŐ tudatpontból számol. A hátralévők közé viszont bekerültek azok
+is, akiket a **kapacitás-vágás** nem engedett lerakni. Közelítéskor a síkidomok
+képernyő-területe nő → a vágás egyre többet dob le → azok nem kapnak helyet →
+bent maradnak a hátralévők között → **a mag tovább nő**. Minél jobban közelítettél,
+annál kevesebb került le, és annál nagyobb lett az üres közép.
+
+### ZSÁKUTCA (mérve): a mag képernyő-korlátja
+
+Kézenfekvő javításnak tűnt, hogy a becslés csak felső korlát legyen, és a mag
+képernyő-sugara ne léphessen túl egy határt (MAG_KEP_ARANY = 0,18). **Mind a négy
+beállításban MEGFORDÍTOTTA a rendet:**
+
+| beállítás | méret-tizedek átlagos középtávolsága (legkisebb → legnagyobb) |
+|---|---|
+| korlát nélkül | 0,0222 → 0,2241 ✅ |
+| korláttal, 600/20 | 0,2618 → 0,2241 ❌ |
+| korláttal, 600/5 | **0,6616 → 0,1460** ❌ |
+| korláttal, 3000/20 | 0,4614 → 0,1261 ❌ |
+
+Az ok: a korlát elveszi a tartalékot. Amint a mag lecsökken, a következő adag a
+középpontot foglalja el, a rá következő, még kisebb adagnak befelé már nincs hely,
+ezért kifelé szorul — és így tovább, körről körre. **Fix helyek mellett a tartalék
+nem opcionális.**
+
+### A MEGOLDÁS: a kapacitás csak a RAJZOLÁST korlátozza
+
+A hely kiosztása néhány szám — nem kerül rajzolási időbe. Ezért:
+
+- **minden letöltött testvér azonnal helyet kap** (nincs kapacitás-szűrés a
+  lerakás útjában, és nincs visszadobás sem);
+- a `T_hátra` már csak a **le nem töltötteket** jelenti;
+- közelítéskor a tudatpont-küszöb süllyed → több töltődik le → mind helyet kap →
+  **a mag magától zsugorodik.** A közelítés fogyasztja a magot, nem növeli;
+- a rajzolást továbbra is a `MIN_KEP_ATMERO` és a `MAX_RAJZOLT` korlátozza, a
+  letöltést pedig a `_kepernyoKapacitas` × `BETOLTESI_TARTALEK` fék.
+
+Ezzel elesett a `_vedettIdk()` (a horgony védelme a vágástól) is: mivel a tárból
+többé semmi nem törlődik, a horgony nem tud kiesni. A helyét kommentben jeleztük,
+hogy ha valaha visszakerül törlő lépés, vissza kell hozni.
+
+### Mérés
+
+Mind a 8 állítás átmegy, négy beállításban — és a méret-tizedek átlagos
+középtávolsága végig szigorúan monoton:
+
+| beállítás | tizedek (legkisebb → legnagyobb) |
+|---|---|
+| 600 / 20-as adag | 0,0222 → 0,2241 |
+| 600 / 5-ös adag | 0,0198 → 0,1927 |
+| 3000 / 50-es adag | 0,0159 → 0,1668 |
+| 3000 / 20-as adag | 0,0150 → 0,1519 |
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j6).

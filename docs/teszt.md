@@ -750,6 +750,11 @@ docker logs -f koino-backend
       a később érkezőknek.)*
     - **Nem lehet „kígyó":** apró síkidomok nem fűződhetnek láncban kifelé, a nagyok
       közé vagy azokon túlra. Ha ilyet látsz, a mag kicsi → `MAG_SURUSEG` lejjebb.
+    - **A mag KÖZELÍTÉSRE FOGY, nem nő.** Ahogy közelítesz, a tudatpont-küszöb
+      süllyed, több testvér töltődik le, mindegyik helyet kap, és a szaggatott kör
+      összehúzódik. Ha a mag a képernyőn NŐNI kezd közelítéskor, az hiba.
+      *(2026-08-09 óta a kapacitás csak a RAJZOLÁST korlátozza; korábban a lerakást
+      is, és emiatt a közelítés növelte az üres közepet.)*
     - A konzolban a `_ujrapakolas` sorában a `helybenMaradt` érték nőjön, az
       `ujonnan` pedig kicsi legyen — ez mutatja, hogy tényleg csak az újakat rakjuk
       le. A `magSugar` **nem lehet 0**, amíg van várakozó testvér.
