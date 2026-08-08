@@ -12,21 +12,32 @@
 // magot felezve „javított", akár nullára, és onnantól minden további adag NÉMÁN
 // elveszett. Mérés: 600 gyerekes próbán 60-as adagokkal csak 180 jelent meg.
 //
-// AZ ÚJ MODELL: a lyuk nem becslés, hanem a KÉPERNYŐHÖZ horgonyzott állandó
-// (MAG_CEL_ATMERO képpont). Nagyítás után annyi várakozó síkidomot fűzünk befelé,
-// amennyi elfér; ami nem fér, az a várólistán MARAD. Ez a próba azt ellenőrzi,
-// hogy ebből tényleg hiánytalan kép jön ki.
+// A MODELL (Csaba, 2026-08-08) — HÁROM állítás, ez a próba mindet méri:
+//
+//   1. A lerakott síkidomok HELYE SOHA NEM VÁLTOZIK. (Enélkül közelítéskor
+//      átrendeződik a kép, és egy szélső síkidomra nem lehet ráközelíteni.)
+//   2. A középen fenntartott MAG a HÁTRALÉVŐ TUDATPONTBÓL számolódik — nem a
+//      képernyőből. Ez tartja fenn a helyet a később érkezőknek.
+//   3. Ebből a kettőből következik a nézet rendje: a legkisebbek a közép körül,
+//      a legnagyobbak kívül.
 //
 // A próba a valódi geometria-modult hívja (frontend/js/utils/sikidomPakolas.js),
-// és a SikidomModal._pakolasFolytatasa lépéssorát tükrözi.
+// és a SikidomModal._ujrapakolas lépéssorát tükrözi — beleértve a
+// KAPACITÁS-VÁGÁST is (ez 2026-08-08-ig hiányzott belőle, és épp ezért nem fogta
+// meg a böngészőben látott rossz elrendezést).
 //
 // Futtatás:  node backend/tools/sikidomPakolasProba.mjs
-//            node backend/tools/sikidomPakolasProba.mjs 600 1.3 200 24
-//            (darab, zoom-szorzó, zoom-lépések, minimum képernyő-átmérő)
+//            node backend/tools/sikidomPakolasProba.mjs 600 1.3 200 24 mag 0.5 20
+//            (darab, zoom-szorzó, zoom-lépések, min. képernyő-átmérő,
+//             mag-kapcsoló, mag-sűrűség σ, egy körben érkező darab)
+//
+//            A 7. paraméter (σ) a mag ÓVATOSSÁGA: kisebb érték = nagyobb mag.
+//            A 8. (adag) CSÖKKENTVE feszíti meg a modellt: sok körön át kell
+//            helyet tartani a még meg sem érkezett testvéreknek. Nagy adaggal
+//            két körben minden lekerül, tehát a próba nem bizonyít semmit.
 //
 //            node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag
-//            → ÜRES MAG NÉLKÜL (a legkisebb testvér a középpontba kerül).
-//              Ez a `SikidomModal.URES_MAG = false` beállítás tükre.
+//            → ÜRES MAG NÉLKÜL (összehasonlításhoz).
 
 // --- IMPORTÁLÁSOK ---
 import { pakolas } from '../../frontend/js/utils/sikidomPakolas.js';
@@ -40,6 +51,25 @@ const MAG_CEL_ATMERO = 120;
 // középpontba kerül). Ez a `SikidomModal.URES_MAG` kapcsoló tükre.
 const URES_MAG = String(process.argv[6] || '').toLowerCase() !== 'nincsmag';
 
+// ===== A BECSLÉS-ALAPÚ MAG (Csaba modellje, 2026-08-08) =====
+// A mag NEM a képernyőhöz igazodik, hanem a HÁTRALÉVŐ TUDATPONTHOZ: annyi helyet
+// tartunk fenn középen, amennyi a még le nem rakott testvéreknek kell.
+//
+//   a hátralévők együttes területe:  A = π · T_hátra / (20 · P_szülő)
+//   ezt a mag σ sűrűséggel nyeli el: π · c² · σ = A
+//                               →    c = √( T_hátra / (20 · P_szülő · σ) )
+//
+// MIÉRT KELL EGYÁLTALÁN FENNTARTANI: mert a lerakott síkidomok mostantól FIXEK.
+// Ha újrapakolnánk, menet közben lehetne igazítani — így viszont előre kell tudni,
+// mennyi hely kell a később érkezőknek.
+//
+// A σ SZÁNDÉKOSAN ÓVATOS. Utánaszámolva egy teljes GYŰRŰ a felszabaduló hely
+// π/4 ≈ 78,5%-át tölti ki, a vegyes méretekre MÉRT pakolási sűrűség pedig
+// 0,41–0,53. A 0,5-tel tehát ~1,57-szer akkora magot tartunk fenn, mint a
+// szigorúan szükséges — Csaba kérése szerint „inkább maradjon üres belső rész,
+// mint hogy elfogyjon a belső tér".
+const MAG_SURUSEG = Number(process.argv[7]) || 0.5;
+
 // ===== A PRÓBA PARAMÉTEREI =====
 const GYEREK_DARAB   = Number(process.argv[2]) || 600;
 const ZOOM_SZORZO    = Number(process.argv[3]) || 1.3;
@@ -47,12 +77,32 @@ const KEZDO_KEPSUGAR = 400;      // a szülő képernyő-sugara az induláskor
 const MAX_ZOOM_LEPES = Number(process.argv[4]) || 60;
 const SZULO_PONT     = 1_000_000;
 
+// ===== A KÉPERNYŐ ÉS A KAPACITÁS (a SikidomModal-lal egyezően) =====
+// Ez eddig HIÁNYZOTT a próbából — és épp ezért nem fogta meg a 2026-08-08-i
+// hibát: a nézetben a kapacitás-vágás ledobja a legnagyobbakat, azok visszakerülnek
+// a várólistára, majd ÚJKÉNT térnek vissza — és a mag peremére, a kicsik közé
+// kerültek. A próba enélkül tiszta szerkezetet mutatott, a böngésző nem.
+const KEPERNYO_SZELESSEG = 1280;
+const KEPERNYO_MAGASSAG  = 800;
+const LATOMEZO_TARTALEK  = 0.5;
+const PAKOLASI_SURUSEG   = 0.7;
+
+const KEPERNYO_KAPACITAS =
+  KEPERNYO_SZELESSEG * (1 + 2 * LATOMEZO_TARTALEK) *
+  KEPERNYO_MAGASSAG  * (1 + 2 * LATOMEZO_TARTALEK) * PAKOLASI_SURUSEG;
+
 // A VALÓSÁGHŰ BETÖLTÉS: a nézet kérésenként legfeljebb ennyi testvért tölt le
 // (SikidomModal.KERES_PLAFON), és egyszerre 3 kérés futhat. A várólistára tehát
 // adagokban érkeznek az elemek, nem egyszerre több ezer. A próba ezt utánozza —
 // enélkül irreálisan nagy pakolásokat mérnénk.
 const KERES_PLAFON       = 150;
 const EGYIDEJU_BETOLTES  = 3;
+
+// Egy körben ennyi testvér érkezhet. A 8. paraméterrel CSÖKKENTHETŐ — így a
+// becslés-alapú mag valóban MEGFESZÜL: sok körön át kell helyet tartania a még
+// meg sem érkezett testvéreknek. Nagy adaggal a modell meg sem izzad (két körben
+// minden lekerül), tehát nem is bizonyít semmit.
+const ADAG = Number(process.argv[8]) || KERES_PLAFON * EGYIDEJU_BETOLTES;
 
 // A naplót elnyomjuk: a pakoló képkockánként logol, itt több ezerszer futna
 console.log = () => {};
@@ -82,8 +132,14 @@ function tesztGyerekek(darab) {
 function bejaras(gyerekek) {
   const meg = [...gyerekek];              // amit a backend még nem küldött el
   const varolista = [];                   // amit már letöltöttünk, de nem raktunk le
-  let lerakottak = [];                    // { id, x, y, sugar, kor }
+  let lerakottak = [];                    // { id, x, y, sugar, kor, pont }
   let magSugarRel = Infinity;
+
+  // A gyerekek EGYÜTTES pontja — ezt a nézetben a backend adja (`osszesGyerekPont`,
+  // ami a szülő ágazati összpontja mínusz a saját pontja). A mag ebből számol.
+  const osszesGyerekPont = gyerekek.reduce((s, g) => s + g.pont, 0);
+  const pontTerkep = new Map(gyerekek.map(g => [g.id, g.pont]));
+  const pontJa = (id) => pontTerkep.get(id) ?? 0;
   let kepSugar = KEZDO_KEPSUGAR;
   let ujrapakolasok = 0;
   let legdragabb = 0;
@@ -96,49 +152,96 @@ function bejaras(gyerekek) {
   // mindig elugrál, kb. kergetni kell").
   const elsoHelyek = new Map();
 
+  // Akinek MÁR VAN helye (akkor is, ha a kapacitás épp levette a képernyőről).
+  // A mag csak azoknak tart fenn helyet, akiknek MÉG NINCS.
+  let helyezettPont = 0;
+
   for (let kor = 1; kor <= MAX_ZOOM_LEPES; kor++) {
     // Egy zoom-lépésre ennyi érkezhet a backendtől (csökkenő pont szerint)
-    varolista.push(...meg.splice(0, KERES_PLAFON * EGYIDEJU_BETOLTES));
+    varolista.push(...meg.splice(0, ADAG));
 
-    const celMag = (MAG_CEL_ATMERO / 2) / kepSugar;
     let lepesMs = 0;
 
-    // (a) A MÁR LERAKOTTAK HELYBEN MARADNAK — mind KÖRNYEZET (akadály), egyik
-    //     sem pakolandó. Ez a 2026-08-08-i modell lényege: a nézet csak akkor
-    //     stabil, ha egy lerakott síkidom SOHA többé nem mozdul.
-    const allok = lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }));
-
-    // (b) A várólistáról azok, akik ezen a nagyításon már látszanának
-    const ujak = [];
-    for (const v of varolista) {
-      const sugar = gyerekRelativSugar(v.pont, SZULO_PONT);
-      if (2 * kepSugar * sugar < MIN_KEP_ATMERO) continue;
-      ujak.push({ id: v.id, sugar });
+    // (a) KAPACITÁS-VÁGÁS: ami már nem fér a képernyőre, az lekerül — a
+    //     LEGNAGYOBBAKTÓL kezdve. A helyét MEGJEGYEZZÜK: mivel semmi nem mozdul,
+    //     a régi helye szabadon marad, tehát visszatéréskor pontosan oda kerül.
+    //     (Enélkül újként térne vissza, és a mag peremére — a kicsik közé —
+    //     kerülne. Ez okozta a 2026-08-08-i rossz elrendezést.)
+    lerakottak.sort((a, b) => a.sugar - b.sugar);
+    let osszKepTerulet = 0;
+    const megmaradok = [];
+    for (const l of lerakottak) {
+      const kepsugar = kepSugar * l.sugar;
+      const terulet = Math.PI * kepsugar * kepsugar;
+      if (megmaradok.length > 0 && osszKepTerulet + terulet > KEPERNYO_KAPACITAS) {
+        // Vissza a sorba, a helyével ÉS az eredeti körével együtt. A kör azért
+        // kell, mert a rend-ellenőrzések körönként csoportosítanak — egy
+        // visszahelyezett síkidom nem tartozik a mostani körhöz.
+        varolista.push({ id: l.id, pont: l.pont, hely: { x: l.x, y: l.y }, kor: l.kor });
+        continue;
+      }
+      osszKepTerulet += terulet;
+      megmaradok.push(l);
+    }
+    if (megmaradok.length !== lerakottak.length) {
+      lerakottak = megmaradok;
+      varolista.sort((a, b) => (b.pont - a.pont) || a.id.localeCompare(b.id));
     }
 
-    // (c) A LERAKÁS. Nem kell külön „csak a mag körüli gyűrűbe" megkötés: a pakoló
-    //     HORGONY-SORRENDJE magától ezt adja — előbb a MAG PEREMÉT próbálja, csak
-    //     utána a munkafrontot és a pót-horgonyokat. Mérve (600 testvér): a kicsik
-    //     így is végig belül maradnak, 11 egymásba fűzött gyűrűben.
+    // (b) A MAG A HÁTRALÉVŐ TUDATPONTBÓL. A `T_hátra` azokat számolja, akiknek
+    //     MÉG NINCS HELYÜK — a le sem töltötteket is.
     //
-    //     Egy kikényszerített gyűrű-szűrés viszont ÉHEZTET: kipróbálva 600-ból csak
-    //     99 került le, a többi végleg a várólistán ragadt, mert a mag képpontban
-    //     állandó (tehát adat-térben zsugorodik), a testvérek mérete viszont fix —
-    //     a gyűrű előbb-utóbb mindenkinél túl vékony lett.
-    const magSugar = URES_MAG ? celMag : 0;
+    //     FONTOS: akit a kapacitás vágott ki, annak VAN helye (megjegyeztük), csak
+    //     épp nem látszik. Őt tehát NEM szabad a hátralévők közé számolni. Enélkül
+    //     a mag nem zsugorodik, és minden új síkidom a nagy mag peremére, KIFELÉ
+    //     kerül — mérve pontosan ez történt: a legkisebbek kerültek legkívülre
+    //     (tized-átlagok 0,3042 … 0,2241, vagyis fordítva).
+    const hatraPont = Math.max(0, osszesGyerekPont - helyezettPont);
+    const magSugar = URES_MAG
+      ? Math.sqrt(hatraPont / (SZINT_OSZTO * SZULO_PONT * MAG_SURUSEG))
+      : 0;
+
+    // (d) LERAKÁS. A láthatóság NEM kapu többé — az csak a RAJZOLÁST vezérli.
+    //     Amit letöltöttünk, azt lerakjuk; a helyet a mag tartja fenn a többinek.
+    const ujak = varolista.map(v => ({
+      id: v.id, sugar: gyerekRelativSugar(v.pont, SZULO_PONT), hely: v.hely, regiKor: v.kor
+    }));
 
     if (ujak.length > 0) {
-      const t0 = process.hrtime.bigint();
-      const e = pakolas(ujak, { magSugar, kornyezet: allok });
-      lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
-      legdragabb = Math.max(legdragabb, lepesMs);
-      ujrapakolasok++;
+      // Akinek MEGVAN a régi helye, oda kerül vissza — nem pakoljuk újra
+      const visszahelyezett = new Set();
+      for (const u of ujak) {
+        if (!u.hely) continue;
+        lerakottak.push({
+          id: u.id, x: u.hely.x, y: u.hely.y, sugar: u.sugar,
+          kor: u.regiKor ?? kor, pont: pontJa(u.id)
+        });
+        visszahelyezett.add(u.id);
+      }
 
-      const lerakottIdk = new Set();
+      const pakolando = ujak.filter(u => !visszahelyezett.has(u.id))
+        .map(u => ({ id: u.id, sugar: u.sugar }));
+
+      let e = { helyek: [], lerakatlanIdk: [] };
+      if (pakolando.length > 0) {
+        const t0 = process.hrtime.bigint();
+        e = pakolas(pakolando, {
+          magSugar,
+          kornyezet: lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }))
+        });
+        lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
+        legdragabb = Math.max(legdragabb, lepesMs);
+        ujrapakolasok++;
+      }
+
+      const lerakottIdk = new Set(visszahelyezett);
       for (const h of e.helyek) {
         lerakottIdk.add(h.id);
-        lerakottak.push({ ...h, kor });
-        elsoHelyek.set(h.id, { x: h.x, y: h.y });
+        lerakottak.push({ ...h, kor, pont: pontJa(h.id) });
+        if (!elsoHelyek.has(h.id)) {
+          elsoHelyek.set(h.id, { x: h.x, y: h.y });
+          helyezettPont += pontJa(h.id);      // MOST kapott először helyet
+        }
       }
 
       for (let i = varolista.length - 1; i >= 0; i--) {
@@ -306,6 +409,46 @@ function stabilitasEllenorzes(lerakottak, elsoHelyek) {
       : `${mozdult} elmozdult, a legnagyobb ${legnagyobb.toExponential(2)}`);
 }
 
+// 8. A FENNTARTOTT MAG ELÉG NAGY VOLT-E
+// A becslés-alapú modell EGYETLEN lényegi állítása: a középen fenntartott hely
+// elegendő a később érkezőknek. Ha nem az, a később jövők nem férnek befelé, és
+// KIFELÉ szorulnak — ez borítja fel a rendet („a legkisebbek középen").
+//
+// A mérés MÉRET-TIZEDENKÉNT: a síkidomokat méret szerint tíz csoportra osztjuk, és
+// megnézzük az átlagos középpont-távolságukat. Ha a mag elég nagy volt, ez a tíz
+// átlag KIFELÉ NŐ — a legkisebbek a közép körül, a legnagyobbak a szélen.
+//
+// SZÁNDÉKOSAN NEM azt követeljük, hogy a körök tökéletesen egymásba ágyazódjanak:
+// a valódi kör-pakolás a korábbi gyűrűk RÉSEIBE is tesz, tehát a szigorú
+// „minden új kör beljebb" feltétel akkor is megsérülne, ha a modell hibátlan.
+function magElegEllenorzes(lerakottak) {
+  const rendezett = [...lerakottak].sort((a, b) => a.sugar - b.sugar);
+  const tizedMeret = Math.max(1, Math.floor(rendezett.length / 10));
+
+  const atlagok = [];
+  for (let i = 0; i + tizedMeret <= rendezett.length && atlagok.length < 10; i += tizedMeret) {
+    const csoport = rendezett.slice(i, i + tizedMeret);
+    const osszeg = csoport.reduce((s, l) => s + Math.hypot(l.x, l.y), 0);
+    atlagok.push(osszeg / csoport.length);
+  }
+
+  let sertes = 0;
+  for (let i = 1; i < atlagok.length; i++) {
+    if (atlagok[i] < atlagok[i - 1] - 1e-12) sertes++;
+  }
+
+  const elso = atlagok[0]?.toFixed(4) ?? '–';
+  const utolso = atlagok[atlagok.length - 1]?.toFixed(4) ?? '–';
+
+  naplo('       méret-tizedek átlagos középtávolsága (legkisebbtől a legnagyobbig):');
+  naplo('       ' + atlagok.map(a => a.toFixed(4)).join('  '));
+
+  allitas(sertes === 0, 'A fenntartott mag elég — a méret kifelé nő (tizedenként)',
+    sertes === 0
+      ? `a legkisebb tized átlagosan ${elso}, a legnagyobb ${utolso} távolságra (σ = ${MAG_SURUSEG})`
+      : `${sertes} tizednél megfordul a sorrend — a mag kicsi (σ = ${MAG_SURUSEG})`);
+}
+
 // ===== FUTTATÁS =====
 naplo('');
 naplo('===== SÍKIDOM-PAKOLÁS MÉRŐPRÓBA =====');
@@ -332,6 +475,7 @@ beagyazasEllenorzes(lerakottak);
 monotoniaEllenorzes(lerakottak);
 lyukEllenorzes(lepesek);
 stabilitasEllenorzes(lerakottak, elsoHelyek);
+magElegEllenorzes(lerakottak);
 determinizmusEllenorzes(gyerekek);
 naplo('');
 
