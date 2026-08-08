@@ -1783,3 +1783,66 @@ szülőn belül, a méret középtől kifelé monoton nő, a lyuk képpontban po
 újrapakoló modell 3000-nél 25 ms-os legdrágább lépést adott — ez tehát gyorsabb is.)
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j6).
+
+---
+
+## Síkidom nézet — a mag a HÁTRALÉVŐ TUDATPONTBÓL (2026-08-09)
+
+Csaba felismerése: ha a lerakott síkidomokat fixen tartjuk, akkor **előre kell
+tudni, mennyi hely kell a később érkezőknek** — és ezt meg lehet becsülni az
+ágazati tudatpont mínusz a saját tudatpont alapján.
+
+### Miért bukott meg a képernyőhöz kötött mag
+
+A 2026-08-08-i változatban a mag képpontban állandó volt (120 px átmérő). Ez
+adat-térben zsugorodik a nagyítással — **függetlenül attól, hány testvér van még
+hátra**. Amikor a világ-szinten minden gyökér letöltődött, a `vanMegNemJelenitett`
+hamis lett, és a `magSugar` **0**-ra esett: onnantól a pakoló a pót-horgonyokhoz
+fordult, azok pedig a LEGKÜLSŐ körök. A böngészőben ebből kifelé fűződő „kígyó"
+lett (`helybenMaradt: 361, ujonnan: 36, magSugar: 0`).
+
+Volt egy második ütközés is: a mag 60 px sugarú, tehát egy ×1,2-es nagyítás-lépés
+csak `60 × 0,2 = 12 px` széles gyűrűt nyit — a láthatósághoz viszont 24 px átmérő
+kell. **A két feltétel sosem jött össze**, és a pakoló nem várt, hanem kifelé rakott.
+
+### Az új szabály
+
+```
+c = √( T_hátra / (20 · P_szülő · σ) )        — `_magSugar`
+```
+
+- `T_hátra` = azok együttes pontja, akiknek **még nincs helyük** — a le sem
+  töltötteket is beleértve. Forrás: `osszesGyerekPont` (a backend adja) mínusz a
+  már helyet kapottak pontja (`helyezettPont`).
+- A **láthatóság (MIN_KEP_ATMERO) mostantól CSAK a rajzolást vezérli**, a lerakást
+  nem. A helyet a mag tartja fenn.
+- A kapacitás-vágásból visszatérő síkidom a **megjegyzett helyére** kerül vissza
+  (`hely: {x, y}` a várólista-elemen), nem újként a mag peremére.
+
+### A mérésből jött két buktató
+
+1. **A `T_hátra` NEM a képernyőn látszókból számol.** Akit a kapacitás levett,
+   annak VAN helye — ha őt is a hátralévők közé vesszük, a mag nem zsugorodik, és
+   minden új síkidom a nagy mag peremére, KIFELÉ kerül. Mérve: a méret-tizedek
+   átlagos középtávolsága fordítva állt (0,3042 … 0,2241). Javítás után monoton:
+   **0,0222 → 0,2241**.
+2. **A régi „monotónia" ellenőrzés vak volt:** csak a MÉRETEKET hasonlította
+   körönként, a POZÍCIÓKAT nem. Mivel a letöltés amúgy is méret szerint csökkenő,
+   mindig átment — akkor is, amikor az elrendezés rossz volt. Ez magyarázza,
+   miért mutatott a próba tiszta képet, miközben a böngészőben szétesett.
+
+### σ (MAG_SURUSEG) = 0,5
+
+Egy teljes GYŰRŰ a felszabaduló hely π/4 ≈ 78,5%-át tölti ki, a vegyes méretekre
+mért pakolási sűrűség 0,41–0,53. A 0,5-tel ~1,57-szer akkora magot tartunk fenn,
+mint a szigorúan szükséges — Csaba kérése szerint „inkább maradjon üres belső rész,
+mint hogy elfogyjon a belső tér". Hangolás: nagyobb σ = kisebb mag.
+
+### Mérés
+
+`sikidomPakolasProba.mjs`, mind a 8 állítás átmegy: 600 testvér (20-as és 5-ös
+adagokban, σ = 0,5 és 0,35), 3000 testvér (50-es és 20-as adagokban). A legdrágább
+lépés 4–5 ms. A kis adagok a lényegesek: azok kényszerítik a magot arra, hogy sok
+körön át helyet tartson a még meg sem érkezett testvéreknek.
+
+**Böngészős ellenőrzésre vár** — `teszt.md` (j6).

@@ -743,11 +743,16 @@ docker logs -f koino-backend
       kerültek, és onnantól minden utánuk következő új helyre ugrott.)*
     - Az **új** síkidomok a középső üres kör (szaggatott vonal) **peremén**
       bukkannak elő, gyűrűnként — a meglévők közé, nem a helyükre.
-    - A szaggatott kör átmérője nagyítás közben **állandó marad** (~120 px), amíg
-      van még meg nem jelenített testvér. Ha nőni kezd, az a jelzés, hogy „itt
-      nincs több".
+    - A szaggatott kör **annál nagyobb, minél több testvér vár még helyre**, és
+      ahogy sorra lekerülnek, MAGÁTÓL zsugorodik. Amikor mindenkinek van helye,
+      eltűnik. *(2026-08-09 óta a mag a HÁTRALÉVŐ TUDATPONTBÓL számolódik, nem a
+      képernyőből — korábban állandó ~120 px volt, és épp ezért nem tartott helyet
+      a később érkezőknek.)*
+    - **Nem lehet „kígyó":** apró síkidomok nem fűződhetnek láncban kifelé, a nagyok
+      közé vagy azokon túlra. Ha ilyet látsz, a mag kicsi → `MAG_SURUSEG` lejjebb.
     - A konzolban a `_ujrapakolas` sorában a `helybenMaradt` érték nőjön, az
-      `ujonnan` pedig kicsi legyen — ez mutatja, hogy tényleg csak az újakat rakjuk le.
+      `ujonnan` pedig kicsi legyen — ez mutatja, hogy tényleg csak az újakat rakjuk
+      le. A `magSugar` **nem lehet 0**, amíg van várakozó testvér.
 
     Böngésző nélkül: `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24`
     — a 7. állítás („Lerakás után egyetlen síkidom sem mozdul") ezt méri. 600 és

@@ -161,67 +161,37 @@ const TAKARITAS_KEPKOCKANKENT = 180;
 // Ennyi képkockán át nem látott ág gyerekeit engedjük el
 const ELENGEDES_TURELEM = 240;
 
-// ===== A KÖZÉPSŐ LYUK CÉL-ÁTMÉRŐJE KÉPPONTBAN =====
-// A nézet MÁSODIK hangoló száma a MIN_KEP_ATMERO mellett — és a betöltés
-// tényleges vezérlője.
+// ===== A MAG SŰRŰSÉGE (σ) — A NÉZET MÁSODIK HANGOLÓ SZÁMA =====
+// A középső üresség NEM a képernyőből jön, hanem a HÁTRALÉVŐ TUDATPONTBÓL:
 //
-// A lyukat NEM a tudatpontból becsüljük (az volt a régi modell buktatója), hanem
-// a KÉPERNYŐHÖZ horgonyozzuk: adat-térbeli sugara mindig
-//     (MAG_CEL_ATMERO / 2) / szülőKépernyőSugár.
-// Nagyításkor a lyuk képpontban megnőne, ezért a nagyítás VÉGÉN addig fűzünk
-// befelé újabb síkidomokat, amíg vissza nem csökken a cél alá. Így a lyuk
-// képpontban ÁLLANDÓ marad, amíg van még meg nem jelenített testvér — a lerakott
-// darabszám pedig ebből KÖVETKEZIK, nem mi találjuk ki.
-const MAG_CEL_ATMERO = 120;
+//     c = √( T_hátra / (20 · P_szülő · σ) )        — lásd `_magSugar`
+//
+// A σ azt mondja meg, mekkora pakolási sűrűséggel számolunk, amikor helyet
+// tartunk fenn a még hely nélküli testvéreknek. KISEBB σ = NAGYOBB, óvatosabb mag.
+//
+// MIÉRT ÓVATOS A 0,5: utánaszámolva egy teljes GYŰRŰ a felszabaduló hely
+// π/4 ≈ 78,5%-át tölti ki, a vegyes méretekre MÉRT pakolási sűrűség pedig
+// 0,41–0,53. A 0,5-tel tehát ~1,57-szer akkora magot tartunk fenn, mint a
+// szigorúan szükséges — Csaba kérése szerint „inkább maradjon üres belső rész,
+// mint hogy elfogyjon a belső tér" (2026-08-08).
+//
+// HANGOLÁS: ha a nézetben túl nagy a lyuk, EMELD (0,6–0,7); ha a később érkezők
+// kifelé szorulnak, CSÖKKENTSD. A `sikidomPakolasProba.mjs` 7. paramétere ugyanez.
+const MAG_SURUSEG = 0.5;
 
-// ===== A MAG SZINTENKÉNTI SKÁLÁZÁSA =====
-// Csaba pontosítása (2026-08-06): „a belső magméretnek a képernyőhöz kell
-// igazodnia, DE a hierarchia szintet, azaz a 20-adra csökkentést, szintenként
-// alkalmazni kell."
-//
-// Ez javítja ki a korábbi modell hibáját. Eddig a mag minden csomópontnál a SAJÁT
-// képernyő-sugarából jött (`60 / sajátKépSugár`), vagyis MINDEN szint egyszerre
-// akart 120 képpontos lyukat. Csakhogy egy szinttel lejjebb a csomópont √20 ≈ 4,47
-// -szer kisebb a képernyőn — ott a 120 px már nem fér bele, és a mag KILÖKTE a
-// gyerekeket a szülőből (mérve: mag 0,8969, kulsoSugar 1,2842).
-//
-// A HELYES SZABÁLY: a 120 px EGY szintre, a most nézett (horgony) szintre szól.
-// Lejjebb szintenként √20-cal kisebb a lyuk is. Adat-térben ez épp azt jelenti,
-// hogy MINDEN csomópont ugyanazt a RELATÍV magot kapja, a HORGONY képernyő-
-// sugarából számolva:
-//
-//     magSugarRel = (MAG_CEL_ATMERO / 2) / horgonyKépernyőSugár
-//
-// (A horgony képernyő-sugara maga a `_nezet.skala`, mert a horgony kerete
-// definíció szerint 1 sugarú.) Ehhez a programnak TUDNIA kell, melyik szintet
-// nézi éppen — ezt a horgony adja, és a horgonyváltás érzékeli a befelé
-// közelítést (`_horgonyEllenorzes`).
-//
-//   'szintenkent'    — az új szabály: a mag a horgony szintjéhez igazodik
-//   'csomopontonkent' — a korábbi: minden csomópont a saját méretéből számol
-const MAG_SZABALY = 'szintenkent';
 
 // ===== ÜRES MAG: KI / BE =====
-// KÍSÉRLET (2026-08-06, Csaba kérése): próbáljuk ki a nézetet ÜRES MAG NÉLKÜL.
+// `true` → a középen fenntartott hely a HÁTRALÉVŐ TUDATPONTBÓL számolódik
+//          (`_magSugar`), és a peremén bukkannak elő a később érkezők.
+// `false` → nincs fenntartott hely; csak összehasonlításhoz.
 //
-//   `false` → nincs középső lyuk. Minden újrapakolásnál a LEGKISEBB olyan
-//             testvér kerül a KÖZÉPPONTBA, amelyik elérte a láthatósági küszöböt.
-//   `true`  → a korábbi viselkedés: a mag mindig üres, képpontban állandó
-//             (MAG_CEL_ATMERO) átmérővel, és a peremén bukkannak elő az újak.
-//
-// MI VÁLTOZIK MÉG EMELLETT (magától, külön kód nélkül):
-//   - a szaggatott mag-kör nem rajzolódik ki (a mért lyuk 0 lesz);
-//   - az újrapakolást innentől CSAK az hajtja, hogy érkezett-e új testvér —
-//     a „kinőtt a mag" ág nem sülhet el, mert nincs mag.
-// A BETÖLTÉST ez nem érinti: azt a tudatpont-küszöb vezérli (`_pontKuszob`).
-//
-// ÁLLÁS 2026-08-08 (Csaba döntése): VISSZA A MAGHOZ — mert ez a nézet
+// ÁLLÁS 2026-08-08 (Csaba döntése): KELL A MAG — mert ez a nézet
 // STABILITÁSÁNAK a kulcsa, nem díszítés.
 //
 // Az előzmény: 2026-08-06-án `false`-ra állt, mert a mérés a mag nélküli
 // változatot mutatta tömörebbnek (52,7% kitöltöttség / 4,08 átlagos érintés,
-// szemben a maggal futó 48,7% / 3,01-gyel, 105 valódi gyökéren). Akkor viszont
-// nem tudtuk, MIT fizetünk érte.
+// szemben a maggal futó 48,7% / 3,01-gyel, 105 valódi gyökéren). Akkor még nem
+// tudtuk, MIT fizetünk érte.
 //
 // A számla 2026-08-08-án érkezett meg: mag nélkül minden újrapakolás az EGÉSZ
 // elrendezést újraszámolta, mert az új — az eddigieknél kisebb — testvérek a
@@ -230,10 +200,14 @@ const MAG_SZABALY = 'szintenkent';
 // síkidomok, és így nehéz ráközelíteni egy szélsőre, mert mindig elugrál,
 // kb. kergetni kell."
 //
-// A maggal ez megszűnik: a mag képpontban állandó, tehát ADAT-TÉRBEN zsugorodik
-// a nagyítással, és a pereme mentén GYŰRŰ nyílik — az újak oda kerülnek, a
-// meglévők pedig HELYBEN MARADNAK (`kornyezet`-ként vesznek részt a pakolásban).
-// A ~4 százalékpont tömörség ennek olcsó ára.
+// EGY KÉPERNYŐHÖZ KÖTÖTT mag ezt viszont NEM oldotta meg (2026-08-08, mérve és
+// böngészőben is látva): állandó képpont-méret mellett a mag adat-térben
+// zsugorodik, függetlenül attól, hány testvér van még hátra — így a később
+// érkezőknek nem maradt hely, és a pakoló a pót-horgonyokra kényszerült, azok
+// pedig a LEGKÜLSŐ körök. Az eredmény kifelé fűződő „kígyó" lett.
+//
+// Ezért jön a mag mostantól az ADATBÓL: annyi helyet tartunk fenn, amennyi a még
+// hely nélküli testvéreknek KELL. Lásd `_magSugar` és `MAG_SURUSEG`.
 const URES_MAG = true;
 
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
@@ -333,14 +307,13 @@ const KATTINTAS_KUSZOB = 7;
 //     várakoznak (csökkenő tudatpont szerint);
 //   - az elrendezésről a NAGYÍTÁS VÉGÉN futó `_ujrapakolas` dönt.
 //
-// AZ ELRENDEZÉS EGYETLEN SZABÁLYA: a zoom végén fogjuk azt, ami a képernyőn (+50%)
-// látszik — a már lerakottakat és a soron következő várakozókat —, és
-// ÚJRAPAKOLJUK bentről kifelé, NÖVEKVŐ méret szerint, a mag körül. Ebből adódik a
-// nézet képe: a legkisebbek a mag körül, a nagyobbak kifelé.
-//
-// A MAG MINDIG ÜRES, és képpontban ÁLLANDÓ (MAG_CEL_ATMERO). Adat-térben
-// `(MAG_CEL_ATMERO/2) / szülőKépernyőSugár` — ebből a szintenkénti √20-as
-// váltószám miatt magától kijön a helyes magméret minden hierarchia-mélységben.
+// AZ ELRENDEZÉS KÉT SZABÁLYA (Csaba modellje, 2026-08-08):
+//   1. EGY LERAKOTT SÍKIDOM SOHA NEM MOZDUL. A már lerakottak akadályként
+//      (`kornyezet`) vesznek részt, nem pakolandóként — csak az újakat rakjuk le.
+//   2. A KÖZÉPEN FENNTARTOTT MAG a HÁTRALÉVŐ TUDATPONTBÓL számolódik
+//      (`_magSugar`), nem a képernyőből. Ez tartja fenn a helyet a később
+//      érkezőknek — enélkül kifelé szorulnának, és felborulna a rend.
+// Ebből következik a nézet képe: a legkisebbek a mag körül, a nagyobbak kifelé.
 //
 // Miért fér el mindig minden: a gyerekek együttes területe legfeljebb a szülő
 // területének 1/20-a (a hierarchikus össztudatpont miatt), tehát hússzoros a
@@ -622,6 +595,11 @@ class SikidomModal {
       // A beágyazási invariáns ellenőrzéséhez és a kezdő nagyításhoz kell.
       kulsoSugar: 0,
 
+      // Akinek MÁR VAN helye — akkor is, ha a kapacitás épp levette a képernyőről.
+      // A mag CSAK azoknak tart fenn helyet, akiknek még nincs (lásd `_magSugar`).
+      helyezettIdk: new Set(),
+      helyezettPont: 0,
+
       betoltottGyerekPont: 0,     // a már LETÖLTÖTT gyerekek össz-pontja
       // Meddig töltöttünk le: a legutóbb kért tudatpont-küszöb, és a kurzor
       // (hol tartunk a rangsorban). Nincs lap és nincs „hányadik oldal".
@@ -647,6 +625,78 @@ class SikidomModal {
     return cs.id === VILAG
       ? gyokerRelativSugar(pont, cs.legerosebbGyerekPont)
       : gyerekRelativSugar(pont, cs.pont);
+  }
+
+  // ===== A MAG SUGARA A HÁTRALÉVŐ TUDATPONTBÓL =====
+  // Csaba modellje (2026-08-08). A mag NEM a képernyőhöz igazodik, hanem ahhoz,
+  // hogy mennyi testvérnek KELL MÉG hely:
+  //
+  //   a hely nélküliek együttes területe:  A = π · T_hátra / (20 · P_szülő)
+  //   ezt a mag σ sűrűséggel nyeli el:     π · c² · σ = A
+  //                                   →    c = √( T_hátra / (20 · P_szülő · σ) )
+  //
+  // MIÉRT KELL EGYÁLTALÁN: mert a lerakott síkidomok mostantól FIXEK. Ha
+  // újrapakolnánk, menet közben lehetne igazítani — így viszont ELŐRE kell helyet
+  // tartani a később érkezőknek, különben kifelé szorulnak, és felborul a rend
+  // („a legkisebbek középen"). A képernyőhöz kötött, állandó képpont-méretű mag
+  // ezt nem tudta: nagyításkor adat-térben zsugorodott, függetlenül attól,
+  // mennyi testvér van még hátra.
+  //
+  // A `T_hátra` azokat számolja, akiknek MÉG NINCS HELYÜK — a le sem töltötteket
+  // is. Akit a kapacitás-vágás levett a képernyőről, annak VAN helye (megjegyeztük),
+  // ezért ő NEM tartozik ide. Ez nem apróság: a mérőpróbán enélkül a mag nem
+  // zsugorodott, és a legkisebbek kerültek LEGKÍVÜLRE (tized-átlagok 0,3042 …
+  // 0,2241, vagyis fordítva).
+  //
+  // @param {Object} cs - a szülő csomópont
+  // @returns {number} a mag sugara a szülő sugarának egységében
+  _magSugar(cs) {
+    if (!URES_MAG) return 0;
+
+    // A mértékegység: a gyökér-szinten a legerősebb gyökér (nincs /20, mert a
+    // gyökerek nem egy szinttel lejjebb vannak), egyébként 20 × a szülő pontja.
+    const egyseg = cs.id === VILAG
+      ? (cs.legerosebbGyerekPont || 0)
+      : SZINT_OSZTO * (cs.pont || 0);
+
+    if (!(egyseg > 0)) return 0;
+
+    const hatraPont = Math.max(0, (cs.osszesGyerekPont || 0) - (cs.helyezettPont || 0));
+    if (hatraPont <= 0) return 0;                 // mindenkinek van már helye
+
+    const sugar = Math.sqrt(hatraPont / (egyseg * MAG_SURUSEG));
+
+    // A VILÁG virtuális (nincs valódi pereme); máshol a mag nem lökheti ki a
+    // gyerekeket a szülőből — a mag peremén ülő gyerek `mag + 2·sugár`-ig ér.
+    return cs.id === VILAG ? sugar : Math.min(sugar, 1);
+  }
+
+  // ===== EGY GYEREK FELVÉTELE A TÁRBA, ADOTT HELYRE =====
+  // Egy helyen, mert két útvonalon is történik: frissen lepakolt testvérnél és a
+  // kapacitás-vágásból visszatérőnél (ő a MEGJEGYZETT helyére kerül vissza).
+  //
+  // Itt könyveljük a `helyezettPont`-ot is: egy testvér pontja CSAK ELŐSZÖR
+  // számít bele, mert a hely azután is az övé marad, ha a kapacitás épp leveszi
+  // a képernyőről.
+  _gyerekFelvetele(cs, v, relX, relY, relR) {
+    if (!cs.helyezettIdk.has(v.id)) {
+      cs.helyezettIdk.add(v.id);
+      cs.helyezettPont += v.pont ?? 0;
+    }
+
+    this._tar.set(v.id, this._ujCsomopont({
+      id: v.id,
+      entitasTipus: v.entitasTipus,
+      cim: v.cim,
+      pont: v.pont,
+      vanGyereke: v.vanGyereke,
+      kategoriaIkonok: v.kategoriaIkonok,
+      tipusIkon: v.tipusIkon,
+      javaslatTipus: v.javaslatTipus,
+      szuloId: cs.id,
+      relX, relY, relR
+    }));
+    cs.gyerekIdk.push(v.id);
   }
 
   // ===== A VÉDETT CSOMÓPONTOK: A HORGONY ÉS AZ ŐSEI =====
@@ -815,20 +865,20 @@ class SikidomModal {
     szulo.varolista.sort((a, b) => (b.pont - a.pont) || a.id.localeCompare(b.id));
   }
 
-  // ===== ÚJRAPAKOLÁS A NAGYÍTÁS VÉGÉN =====
-  // A nézet EGYETLEN elrendező szabálya. A zoom végén fogjuk azt, ami a képernyőn
-  // (+50%) látszik — a MÁR LERAKOTTAKAT és a várólistán soron következőket —, és
-  // újrapakoljuk BENTRŐL KIFELÉ, növekvő méret szerint, a mag körül.
+  // ===== A LERAKÁS =====
+  // A nézet elrendező lépése. NEM újrapakolás: a már lerakottak helye VÉGLEGES,
+  // csak az újakat helyezzük el közéjük.
   //
   // MIÉRT ÍGY:
-  //   - A mag MINDIG ÜRES, és képpontban állandó (MAG_CEL_ATMERO). Adat-térben
-  //     `(MAG_CEL_ATMERO/2) / szülőKépernyőSugár` — ebből a szintenkénti √20-as
-  //     váltószám miatt MAGÁTÓL kijön a helyes magméret minden hierarchia-
-  //     mélységben, külön mélység-logika nélkül.
-  //   - Az újrapakolás mindig tömör elrendezést ad, tehát a szülő nem tud
-  //     „megtelni" (a gyerekek együttes területe legfeljebb a szülő 1/20-a).
-  //   - A hatókör a látómezőre szűkül, ezért a munka KORLÁTOS: a látómezőn kívüli
-  //     testvérek helyben maradnak, és csak akadályként szerepelnek.
+  //   - A pakolás sorrend-érzékeny (növekvő méret szerint, a legkisebb középre).
+  //     Ha mindent újrapakolnánk, egyetlen új — az eddigieknél kisebb — testvér a
+  //     sor ELEJÉRE kerülne, és onnantól minden utána következő síkidom új helyre
+  //     ugrana. Emiatt volt lehetetlen ráközelíteni egy szélső síkidomra.
+  //   - A helyet a MAG tartja fenn a később érkezőknek (`_magSugar`), a hátralévő
+  //     tudatpontból. A kapacitás-vágásból visszatérő síkidom pedig a MEGJEGYZETT
+  //     helyére kerül vissza — nem újként, a mag peremére.
+  //   - A szülő nem tud „megtelni": a gyerekek együttes területe legfeljebb a
+  //     szülő 1/20-a (a hierarchikus össztudatpont miatt), tehát hússzoros a tartalék.
   //
   // Mérve: 100 kör 28 ms, 200 kör 71 ms, 400 kör 307 ms. Ha ez soknak bizonyul,
   // a MIN_KEP_ATMERO növelése csökkenti az egyszerre látható darabszámot.
@@ -844,29 +894,15 @@ class SikidomModal {
     const vilagSzint = cs.id === VILAG;
     if (!((vilagSzint ? cs.legerosebbGyerekPont : cs.pont) > 0)) return false;
 
-    // A MAG MÉRETE. Az új szabálynál a HORGONY képernyő-sugarából számolunk
-    // (`_nezet.skala`), nem a csomópont sajátjából — így a 120 px a most nézett
-    // szintre szól, lejjebb pedig szintenként √20-cal kisebb a lyuk. Lásd a
-    // MAG_SZABALY állandó magyarázatát.
-    const magVonatkoztatas = MAG_SZABALY === 'szintenkent'
-      ? (this._nezet.skala || kepSugar)
-      : kepSugar;
-    const celMag = (MAG_CEL_ATMERO / 2) / magVonatkoztatas;
-
 
     const relSugar = (pont) => this._relSugar(cs, pont);
 
     // --- A TESTVÉREK EGYETLEN, MÉRET SZERINTI SORA ---
-    // Csaba modellje (2026-08-06): a testvérek EGY rendezett sort alkotnak (növekvő
-    // méret szerint, ez a pakolás sorrendje is), és ebből a sorból mindig egy
-    // ABLAK látszik:
-    //   - a sor ELEJÉT a láthatósági küszöb vágja (túl kicsi, MIN_KEP_ATMERO);
-    //   - a sor VÉGÉT a képernyő KAPACITÁSA vágja (nem fér több a képre).
-    // Nagyításkor az ablak előre csúszik: elöl belépnek az apróbbak, a végéről
-    // leesnek a legnagyobbak. Kicsinyítéskor pontosan fordítva, UGYANABBAN a
-    // sorrendben épül vissza — az íves pakolás hozzáfűzésre való, ez természetes.
+    // A testvérek EGY rendezett sort alkotnak (növekvő méret szerint, ez a pakolás
+    // sorrendje is). A sor VÉGÉT a képernyő KAPACITÁSA vágja: ami nem fér a képre,
+    // az lekerül — de a HELYÉT megtartja, tehát visszatéréskor ugyanoda kerül.
     //
-    // MIÉRT NEM A KÉPERNYŐ-POZÍCIÓ DÖNT (a mai hibák tanulsága): a sorrend az
+    // MIÉRT NEM A KÉPERNYŐ-POZÍCIÓ DÖNT (a korábbi hibák tanulsága): a sorrend az
     // ADATBÓL következik (méretből), nem abból, hogy épp hol van a kép. Egy
     // pozíció-teszt referenciapontja elcsúszhat — a sorrendé nem tud.
     //
@@ -882,9 +918,17 @@ class SikidomModal {
       if (!gy) continue;
       jeloltek.push({ id: gy.id, sugar: gy.relR, lerakott: true });
     }
+    // A VÁRÓLISTA — láthatósági szűrés NÉLKÜL. A minimum átmérő mostantól CSAK a
+    // RAJZOLÁST vezérli (Csaba, 2026-08-08): ha a lerakást is ő kapuzná, ütközne a
+    // geometriával — a mag képernyőn állandó 60 px sugarú volt, tehát egy ×1,2-es
+    // lépés csak 12 px széles gyűrűt nyitott, a láthatósághoz viszont 24 px átmérő
+    // kell. A kettő sosem jött össze, és a pakoló ilyenkor nem várt: a
+    // pót-horgonyokhoz fordult, azok pedig a LEGKÜLSŐ körök — így kerültek apró
+    // újak a nagyok közé, kígyóban kifelé fűzve.
+    //
+    // A helyet mostantól a MAG tartja fenn (lásd `_magSugar`), nem a láthatóság.
     for (const v of cs.varolista) {
       const sugar = v.relR ?? relSugar(v.pont);
-      if (2 * kepSugar * sugar < MIN_KEP_ATMERO) continue;   // a sor ELEJE
       jeloltek.push({ id: v.id, sugar, varo: v });
     }
 
@@ -957,7 +1001,13 @@ class SikidomModal {
         // A kapacitás dobta vissza, NEM friss letöltés. Ezért nem számít bele a
         // letöltési puffer mérőszámába: ha beszámítana, ezek a nagyok örökre
         // elzárnák a még hiányzó KICSIK letöltését.
-        visszaesett: true
+        visszaesett: true,
+
+        // A HELYÉT MEGJEGYEZZÜK. Mivel a lerakottak nem mozdulnak, a régi helye
+        // szabadon marad — visszatéréskor pontosan oda kerül vissza. Enélkül
+        // ÚJKÉNT térne vissza, és a mag peremére, a kicsik közé kerülne: ez volt
+        // a 2026-08-08-i rossz elrendezés egyik oka.
+        hely: { x: gy.relX, y: gy.relY }
       });
       this._reszfaTorlese(gy);
       this._tar.delete(gy.id);
@@ -979,9 +1029,9 @@ class SikidomModal {
     // gyakorlatilag lehetetlen volt ráközelíteni — mindig elugrott, kergetni kellett.
     //
     // A MEGOLDÁS: a már lerakottak KÖRNYEZETKÉNT (akadályként) vesznek részt, nem
-    // pakolandóként — így a helyük NEM változik. Csak az újakat rakjuk le, abba a
-    // gyűrűbe, ami a zsugorodó mag és a legbelső meglévő síkidom között nyílik.
-    // Pontosan erre való a pakoló `kornyezet` és `magSugar` paramétere.
+    // pakolandóként — így a helyük NEM változik. Csak az újakat rakjuk le, a mag
+    // pereme mentén. Pontosan erre való a pakoló `kornyezet` és `magSugar`
+    // paramétere — eddig üresen hagytuk mindkettőt.
     const allok = [];
     for (const j of beferok) {
       if (!j.lerakott) continue;
@@ -992,42 +1042,6 @@ class SikidomModal {
 
     const ujak = beferok.filter(j => !j.lerakott);
 
-    // --- AZ ÜRES MAG: CSAK AMÍG VAN MEG NEM JELENÍTETT TESTVÉR ---
-    const varMegLetoltes = cs.osszesGyerekPont === 0
-      || cs.betoltottGyerekPont < cs.osszesGyerekPont;
-    const vanMegNemJelenitett = varMegLetoltes || cs.varolista.length > ujak.length;
-
-    // ===== BIZTONSÁGI HÁLÓ: A MAG NEM NŐHETI KI A SZÜLŐT =====
-    // A mag képpontban állandó (MAG_CEL_ATMERO), a szülő viszont a nagyítástól
-    // függően kicsi is lehet a képernyőn — ilyenkor `celMag` az 1-hez közelít, és
-    // a mag KILÖKNÉ a gyerekeket a szülőből. Mérve (2026-08-06): egy 67 px sugarú
-    // szülőnél a mag 0,8969 lett, a gyereke pedig `kulsoSugar = 1,2842`-re került.
-    //
-    // A KORLÁT: egy gyerek a mag peremén ülve `mag + 2·sugár`-ig ér ki, ez pedig
-    // legfeljebb 1 lehet. A VILÁG szint kivétel: virtuális, nincs valódi pereme.
-    //
-    // A szintenkénti szabály (MAG_SZABALY) után ennek már nem KELLENE elsülnie —
-    // de bent marad, mert az invariáns (minden síkidom a szülőn belül) fontosabb,
-    // mint a lyuk pontos mérete. Ha mégis elsül, az jelzés, hogy a szintenkénti
-    // számítás valahol elcsúszott.
-    let magSugar = (URES_MAG && vanMegNemJelenitett) ? celMag : 0;
-
-    if (!vilagSzint && magSugar > 0) {
-      let legnagyobb = 0;
-      for (const u of ujak) legnagyobb = Math.max(legnagyobb, u.sugar);
-      magSugar = Math.max(0, Math.min(magSugar, 1 - 2 * legnagyobb));
-    }
-
-    // ===== AZ ÚJAK LERAKÁSA A MEGLÉVŐK KÖZÉ =====
-    // Nem kell külön megkötés arra, hogy az újak a mag körüli gyűrűbe kerüljenek:
-    // a pakoló HORGONY-SORRENDJE magától ezt adja — előbb a MAG PEREMÉT próbálja,
-    // csak utána a munkafrontot és a pót-horgonyokat. Mérve (600 testvér, Zipf):
-    // a kicsik így is végig belül maradnak, 11 egymásba fűzött gyűrűben.
-    //
-    // Egy KIKÉNYSZERÍTETT gyűrű-szűrés viszont éheztet — ki is próbáltuk: 600-ból
-    // csak 99 került le, a többi végleg a várólistán ragadt. Az ok, hogy a mag
-    // képpontban állandó, tehát adat-térben zsugorodik, a testvérek mérete viszont
-    // fix: a gyűrű előbb-utóbb mindenkinél túl vékony lesz.
     if (ujak.length === 0) {
       if (visszaszedett.length > 0) {
         this._meretekUjramerese(cs);
@@ -1036,14 +1050,33 @@ class SikidomModal {
       return false;
     }
 
-    const eredmeny = pakolas(
-      ujak.map(u => ({ id: u.id, sugar: u.sugar })),
-      { magSugar, kornyezet: allok }
-    );
+    // ===== A MAG: A HÁTRALÉVŐ TUDATPONTBÓL =====
+    // Lásd `_magSugar`. Ennyi helyet tartunk fenn középen azoknak, akiknek MÉG
+    // NINCS helyük — így a később érkezők befelé férnek, nem kifelé szorulnak.
+    const magSugar = this._magSugar(cs);
+
+    // ===== AKINEK MÁR VAN HELYE, ODA KERÜL VISSZA =====
+    // A kapacitás-vágásból visszatérőket NEM pakoljuk újra: a régi helyük szabad
+    // (semmi nem mozdult), tehát pontosan oda tesszük őket vissza.
+    const visszahelyezendok = ujak.filter(u => u.varo?.hely);
+    const pakolandok = ujak.filter(u => !u.varo?.hely);
+
+    for (const u of visszahelyezendok) {
+      this._gyerekFelvetele(cs, u.varo, u.varo.hely.x, u.varo.hely.y, u.sugar);
+    }
+
+    // A visszahelyezettek MÁR akadályok az újonnan pakolandóknak
+    for (const u of visszahelyezendok) {
+      allok.push({ id: u.id, x: u.varo.hely.x, y: u.varo.hely.y, sugar: u.sugar });
+    }
+
+    const eredmeny = pakolandok.length > 0
+      ? pakolas(pakolandok.map(u => ({ id: u.id, sugar: u.sugar })), { magSugar, kornyezet: allok })
+      : { helyek: [], lerakatlanIdk: [] };
 
     // --- AZ EREDMÉNY BEKÖTÉSE ---
     const ujTerkep = new Map(ujak.map(u => [u.id, u.varo]));
-    const lerakottIdk = new Set();
+    const lerakottIdk = new Set(visszahelyezendok.map(u => u.id));
 
     for (const hely of eredmeny.helyek) {
       lerakottIdk.add(hely.id);
@@ -1051,20 +1084,7 @@ class SikidomModal {
       const v = ujTerkep.get(hely.id);    // most került be a várólistáról
       if (!v) continue;
 
-      this._tar.set(v.id, this._ujCsomopont({
-        id: v.id,
-        entitasTipus: v.entitasTipus,
-        cim: v.cim,
-        pont: v.pont,
-        vanGyereke: v.vanGyereke,
-        kategoriaIkonok: v.kategoriaIkonok,
-        tipusIkon: v.tipusIkon,
-        javaslatTipus: v.javaslatTipus,
-        szuloId: cs.id,
-        // Ugyanaz a `relR`, amivel a sorba került — nem számoljuk újra
-        relX: hely.x, relY: hely.y, relR: v.relR ?? relSugar(v.pont)
-      }));
-      cs.gyerekIdk.push(v.id);
+      this._gyerekFelvetele(cs, v, hely.x, hely.y, v.relR ?? relSugar(v.pont));
     }
 
     // A lerakottak lejönnek a várólistáról — és a letöltési puffer mérőszámából is
@@ -1172,8 +1192,7 @@ class SikidomModal {
   //
   // Ez a metódus teszi a tudást KIOLVASHATÓVÁ: hányadik szinten állunk a
   // gyökerektől számolva (a VILÁG = -1, a gyökerek = 0, a gyerekeik = 1 …).
-  // Erre épül a mag szintenkénti skálázása (MAG_SZABALY), és erre épülhet később
-  // a szint kiírása vagy a szinthez kötött viselkedés.
+  // Erre épülhet később a szint kiírása vagy a szinthez kötött viselkedés.
   _horgonySzint() {
     let szint = 0;
     let id = this._horgony;
@@ -1398,12 +1417,12 @@ class SikidomModal {
 
       // --- A KÖZÉPSŐ LYUK ---
       // A szaggatott kör pereme a MÉRT lyuk: a legbelső lerakott testvér belső
-      // széle (`magSugarRel`, mérve). Nincs benne becslés.
+      // széle (`magSugarRel`, mérve) — nem a becsült mag, hanem a tényleges.
       //
-      // Képpontban ez a MAG_CEL_ATMERO körül marad, amíg van még várakozó
-      // testvér — mert a nagyítás végén pontosan addig fűzünk befelé újabbakat,
-      // amíg vissza nem csökken a célra. Amikor a várólista kiürül, a lyuk
-      // átveszi a nagyítást és onnantól NŐ: ez a jelzés, hogy „itt nincs több".
+      // A lyuk annál nagyobb, minél több testvér vár még helyre (`_magSugar` ennyit
+      // tart fenn). Ahogy sorra lekerülnek, a lyuk MAGÁTÓL zsugorodik; amikor
+      // mindenkinek van helye, eltűnik. Vagyis a lyuk mérete azt mutatja meg, hogy
+      // „mennyi van még lejjebb" — pontosan ez volt a szerepe.
       if (cs.gyerekIdk.length > 0 && Number.isFinite(cs.magSugarRel) && cs.magSugarRel > 0) {
         const magKepSugar = kep.kepSugar * cs.magSugarRel;
         if (magKepSugar * 2 >= MAG_MIN_ATMERO) {
@@ -1416,14 +1435,11 @@ class SikidomModal {
         }
       }
 
-      // --- ÚJRAPAKOLÁS-IGÉNY ---
-      // Akkor van dolgunk, ha (a) van még várakozó testvér, vagy (b) a mag
-      // kinőtte a cél-átmérőt (nagyítottak, tehát helyet kell újraosztani).
-      const magKepAtmero = Number.isFinite(cs.magSugarRel)
-        ? cs.magSugarRel * kep.kepSugar * 2
-        : Infinity;
-
-      if (cs.varolista.length > 0 || magKepAtmero > MAG_CEL_ATMERO) {
+      // --- LERAKÁS-IGÉNY ---
+      // Egyetlen szabály: van-e még várakozó testvér. A mag mérete NEM lehet
+      // kiváltó ok, mert az adatból jön (`_magSugar`), nem a nagyításból — a
+      // nagyítás önmagában nem szabadít fel helyet, tehát nincs mit újraosztani.
+      if (cs.varolista.length > 0) {
         pakolandok.push({ id: cs.id, kep });
       }
 
@@ -1914,6 +1930,8 @@ class SikidomModal {
     cs.gyerekIdk = [];
     cs.varolista = [];
     cs.varolistaRelTerulet = 0;
+    cs.helyezettIdk = new Set();
+    cs.helyezettPont = 0;
     cs.magSugarRel = Infinity;
     cs.kulsoSugar = 0;
     cs.betoltottGyerekPont = 0;
