@@ -372,11 +372,25 @@ const GORGO_EGYSEG_CSIPPENTES = 0.012;
 // `scaleExtent` fogta meg; nálunk az illesztési nagyítás töredékében húzzuk meg.
 const KIFELE_HATAR = 0.25;          // az illesztési skála negyedénél megáll
 
+// ===== AZ ILLESZTÉS ARÁNYA =====
+// A teljes kiterjedés a képernyő kisebbik oldalának ennyiszeresére illeszkedjen —
+// SUGÁRBAN értve, tehát az ÁTMÉRŐ ennek a kétszerese. 0,45 → a spirál a rövidebb
+// oldal 90%-át tölti ki, marad egy kis perem.
+//
+// Eddig két helyen volt beégetve ugyanez a szám (`_kezdoNezetBecslese`,
+// `_alaphelyzet`); mostantól a kezdő fázis lezárása is ehhez méri, elférünk-e.
+const ILLESZTESI_ARANY = 0.45;
+
 // ===== AZ ILLESZTÉS ANIMÁCIÓJA =====
 // A koino_1.0 `fitZoom`-ja 750 ms-os átmenettel állt rá az új nézetre; a miénk
 // eddig UGROTT. Animálva látszik, honnan hová kerültünk — ez a térbeli
 // tájékozódás miatt számít. (750 ms hosszúnak bizonyult egy gombnyomáshoz.)
 const ILLESZTES_MS = 420;
+
+// A kezdő fázis (zárolt nézet) leghosszabb ideje. Ennyi után mindenképpen
+// feloldjuk, akkor is, ha a letöltés elakadt — a nézet nem fagyhat be.
+// Mérve: 10 405 gyökér letöltése + pakolása bőven ezen belül van.
+const KEZDO_FAZIS_HATARIDO_MS = 20000;
 
 // A koppintás és a húzás határa képpontban (a koino_1.0-ban 7 — a miénk 5 volt,
 // és érintőképernyőn a szándékos koppintás is gyakran „húzásnak" számított)
@@ -454,6 +468,25 @@ class SikidomModal {
 
     // Világ → képernyő
     this._nezet = { skala: 1, eltolasX: 0, eltolasY: 0 };
+
+    // Hozzányúlt-e már az e-ember a nézethez? (Ma csak naplózásra/diagnosztikára;
+    // az automatikus illesztést a KEZDŐ FÁZIS zárolása védi, lásd lentebb.)
+    this._eemberMozgatott = false;
+
+    // ===== KEZDŐ FÁZIS: A NÉZET ZÁROLVA (Csaba, 2026-08-09) =====
+    // „Ameddig nem történt meg a teljes lepakolás és az újraillesztés, addig ne
+    // engedjük az e-embernek a mozgatást/zoomolást, hogy ne zavarjon bele."
+    //
+    // MIÉRT KELL: megnyitáskor a nézet több hullámban tölt, és minden hullám után
+    // ÚJRAILLESZT, hogy a teljes spirál látszódjon. Ha közben az e-ember mozgatna,
+    // az illesztés kirántaná a kezéből a képet. Ezért amíg a kezdő fázis tart, a
+    // gesztusok, a görgő és a +/− gombok nem hatnak; utána végleg feloldódik, és
+    // automatikus illesztés soha többé nem történik (csak az „illesztés" gombbal).
+    this._kezdoFazis = true;
+
+    // BIZTONSÁGI HATÁRIDŐ: ha a letöltés elakad (hálózati hiba, végtelen várakozás),
+    // a zárolás nem ragadhat be — ennyi idő után mindenképpen feloldjuk.
+    this._kezdoFazisHatarido = null;
 
     // ----- ÁLLAPOT -----
     this._kivalasztottId = null;
@@ -571,8 +604,24 @@ class SikidomModal {
     // Ezért egy DURVA becsléssel indulunk, lepakolunk, majd a MÉRT kiterjedésre
     // igazítunk — és ha az igazítás új helyet nyitott, még egyszer pakolunk.
     this._kezdoNezetBecslese(vilag);
+
+    // A kezdő fázis alatt a nézet ZÁROLVA (lásd `_kezdoFazis`): előbb megérkezik és
+    // lepakolódik a teljes készlet, aztán illesztünk, és csak utána nyúlhat hozzá
+    // az e-ember. A lezárást a `_tennivalokFeldolgozasa` végzi, amint nyugalom van.
+    this._kezdoFazis = true;
+    this._folyamatJelzo(true);
+
+    // Ha a letöltés elakadna, a zárolás ne ragadjon be
+    if (this._kezdoFazisHatarido) clearTimeout(this._kezdoFazisHatarido);
+    this._kezdoFazisHatarido = setTimeout(() => {
+      console.warn('SikidomModal - a kezdő fázis időtúllépés miatt oldódik fel', {
+        futoBetoltesek: this._futoBetoltesek
+      });
+      this._kezdoFazisLezarasa();
+    }, KEZDO_FAZIS_HATARIDO_MS);
+
     this._tennivalokFeldolgozasa();
-    this._alaphelyzet(false);          // megnyitáskor nincs mit animálni
+    this._alaphelyzet(false);          // az első illesztés a becsült kiterjedésre
 
     if (!this._ablakMeretezoBound) {
       this._ablakMeretezoBound = () => {
@@ -598,6 +647,10 @@ class SikidomModal {
     if (this._zoomVegeIdozito) {
       clearTimeout(this._zoomVegeIdozito);
       this._zoomVegeIdozito = null;
+    }
+    if (this._kezdoFazisHatarido) {
+      clearTimeout(this._kezdoFazisHatarido);
+      this._kezdoFazisHatarido = null;
     }
     if (this._illesztesAnimacio) {
       cancelAnimationFrame(this._illesztesAnimacio);
@@ -921,7 +974,9 @@ class SikidomModal {
     } finally {
       szulo.betoltesFut = false;
       this._futoBetoltesek--;
-      if (this._futoBetoltesek <= 0) this._folyamatJelzo(false);
+      // A kezdő fázisban végig látszik a jelző — ott a zárolás miatt fontos, hogy
+      // az e-ember lássa: dolgozunk, nem fagyott meg.
+      if (this._futoBetoltesek <= 0 && !this._kezdoFazis) this._folyamatJelzo(false);
 
       // A friss adag azért érkezett, mert az e-ember befelé nagyított és megállt —
       // tehát most rögtön le is akarjuk rakni belőle, ami elfér.
@@ -1255,7 +1310,7 @@ class SikidomModal {
 
     this._horgony = VILAG;
     this._nezet = {
-      skala: (this._kepernyoMeret() * 0.45) / becsultKiterjedes,
+      skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / becsultKiterjedes,
       eltolasX: (this._szelesseg || 0) / 2,
       eltolasY: (this._magassag || 0) / 2
     };
@@ -1276,7 +1331,7 @@ class SikidomModal {
     const kiterjedes = this._tar.get(VILAG)?.kulsoSugar || 1;
 
     const cel = {
-      skala: (this._kepernyoMeret() * 0.45) / kiterjedes,
+      skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes,
       eltolasX: (this._szelesseg || 0) / 2,
       eltolasY: (this._magassag || 0) / 2
     };
@@ -1294,6 +1349,44 @@ class SikidomModal {
     }
 
     console.log('SikidomModal._alaphelyzet - VÉGE');
+  }
+
+  // ===== KELL-E MÉG ILLESZTENI? =====
+  // Összeveti a mostani nagyítást azzal, amit a MÉRT kiterjedés kívánna. Amíg a
+  // kettő érdemben eltér, a kezdő fázis nem zárulhat le — különben a spirál egy
+  // része kilógna a képből (Csaba, 2026-08-09: „nem fért bele a teljes spirál").
+  //
+  // 1%-os tűrés: a lebegőpontos hajszálnyi eltérés miatt ne illesszünk örökké.
+  _kezdoIllesztesKell() {
+    const kiterjedes = this._tar.get(VILAG)?.kulsoSugar || 0;
+    if (!(kiterjedes > 0)) return false;          // még nincs mit illeszteni
+
+    const celSkala = (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes;
+    if (!(celSkala > 0) || !(this._nezet.skala > 0)) return false;
+
+    return Math.abs(celSkala / this._nezet.skala - 1) > 0.01;
+  }
+
+  // ===== A KEZDŐ FÁZIS LEZÁRÁSA =====
+  // Innentől az e-emberé a nézet: a gesztusok élnek, és automatikus illesztés
+  // soha többé nem történik (csak az „illesztés" gombbal).
+  _kezdoFazisLezarasa() {
+    if (!this._kezdoFazis) return;
+
+    this._kezdoFazis = false;
+    if (this._kezdoFazisHatarido) {
+      clearTimeout(this._kezdoFazisHatarido);
+      this._kezdoFazisHatarido = null;
+    }
+    this._folyamatJelzo(false);
+
+    const vilag = this._tar.get(VILAG);
+    console.log('SikidomModal - KEZDŐ FÁZIS LEZÁRVA', {
+      lerakott: vilag?.gyerekIdk.length ?? 0,
+      kiterjedes: (vilag?.kulsoSugar ?? 0).toFixed(4),
+      skala: this._nezet.skala.toFixed(4),
+      kepernyoMeret: Math.round(this._kepernyoMeret())
+    });
   }
 
   // ===== NÉZET-ÁTMENET (a koino_1.0 fitZoom-jának megfelelője) =====
@@ -1702,6 +1795,33 @@ class SikidomModal {
     // elengedjük (részfástul). Ez a lerakás UTÁN fut, hogy a most érkezettek is
     // benne legyenek a mérlegelésben.
     if (this._visszaszedes()) valtozott = true;
+
+    // ===== A KEZDŐ FÁZIS LEZÁRÁSA =====
+    // Akkor vagyunk készen, ha SEMMI nincs folyamatban: nem fut letöltés, nincs
+    // mit kérni, és a nézet már a mért kiterjedésre van illesztve.
+    if (this._kezdoFazis) {
+      const nyugalom = this._futoBetoltesek === 0 && betoltendok.length === 0;
+
+      if (nyugalom) {
+        // Illeszt-e még valamit? Az illesztés megváltoztatja a nagyítást, az pedig
+        // új küszöböt jelent — ezért addig ismételjük, amíg a skála be nem áll.
+        // (Az `_alaphelyzet` a végén maga hívja újra ezt a metódust.)
+        // REKURZIÓ-KORLÁT: az `_alaphelyzet` a végén újra ide hív. Rendes esetben
+        // egy-két menet után beáll a skála, de ha az adat menet közben nőne, ne
+        // pörögjünk vég nélkül — a zárolás feloldása fontosabb a tökéletes
+        // illesztésnél.
+        this._illesztesMelyseg = (this._illesztesMelyseg ?? 0) + 1;
+
+        if (this._illesztesMelyseg <= 8 && this._kezdoIllesztesKell()) {
+          this._alaphelyzet(false);
+          this._illesztesMelyseg--;
+          return;
+        }
+        this._illesztesMelyseg--;
+
+        this._kezdoFazisLezarasa();
+      }
+    }
 
     // Betöltések indítása (a legnagyobbak előbb)
     betoltendok.sort((a, b) => b.suly - a.suly);
@@ -2239,6 +2359,7 @@ class SikidomModal {
     //   2. CSIPPENTÉS UTÁN AZ OTT MARADT UJJAL NEM LEHETETT MOZGATNI. A húzás
     //      kezdőpontja elavult maradt, amíg minden ujjat fel nem emeltél.
     nezetElem.addEventListener('pointerdown', (e) => {
+      if (this._kezdoFazis) return;        // a kezdő fázis alatt a nézet zárolva
       if (e.target.closest('.sikidom-modal__vezerlok')) return;
 
       // Új gesztus kezdődik, ha eddig egyetlen ujj sem volt a képernyőn
@@ -2280,6 +2401,7 @@ class SikidomModal {
       const dy = most.kozepY - elozo.kozepY;
 
       if (dx !== 0 || dy !== 0) {
+        this._eemberMozgatott = true;
         this._nezet.eltolasX += dx;
         this._nezet.eltolasY += dy;
         this._gesztusTavolsag += Math.abs(dx) + Math.abs(dy);
@@ -2330,6 +2452,7 @@ class SikidomModal {
     // külön (nagyobb) egysége van.
     nezetElem.addEventListener('wheel', (e) => {
       e.preventDefault();
+      if (this._kezdoFazis) return;        // a kezdő fázis alatt a nézet zárolva
 
       const egyseg = e.ctrlKey      ? GORGO_EGYSEG_CSIPPENTES
                    : e.deltaMode === 1 ? GORGO_EGYSEG_SOR
@@ -2368,6 +2491,8 @@ class SikidomModal {
   }
 
   _zoom(szorzo, kozepX, kozepY) {
+    if (this._kezdoFazis) return;          // a kezdő fázis alatt a nézet zárolva
+    this._eemberMozgatott = true;
     // Bármilyen kézi nagyítás megszakítja a futó illesztés-animációt — különben
     // az visszarántaná a képet az e-ember keze alól.
     if (this._illesztesAnimacio) {
