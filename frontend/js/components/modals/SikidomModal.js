@@ -283,6 +283,41 @@ const URES_MAG = false;
 //     másfél-két másodperc hálózat, ami belefér a 3 másodperces megnyitási keretbe.
 const ELORETOLTES_DARAB = 10_000;
 
+// ===== MÉRET SZERINTI VISSZASZEDÉS (Csaba, 2026-08-09) =====
+// „Mindenképpen sorrendben kell visszaszedni azokat, amik már nincsenek képben —
+// vagy darabszám-korláttal, vagy a maximum terület alapján. Amik a külső részről
+// tűnnek el, azoknak még a pozíciójukat sem kell tárolni, mert a kifelé építkezés
+// az íves elhelyezéssel elég gyors. Nem kell halmozni."
+//
+// MIÉRT LEHET EZT MEGTENNI: a pakoló NÖVEKVŐ méret szerint halad, és minden elem
+// helye kizárólag a nála KISEBBEKTŐL függ. Ezért a kanonikus sorrend egy ELŐTAGJA
+// külön lepakolva BITRE ugyanazokat a helyeket adja (mérve 100–2999 elemig).
+// A sorrend VÉGÉRŐL — a legnagyobbaktól, akik a külső gyűrűben ülnek — tehát
+// ingyen elengedhetünk, és visszanagyításkor pontosan visszakapjuk a képet.
+//
+// ⚠️ KÉT SZABÁLY, MINDKETTŐ MÉRVE — ezek megsértése szétveri a képet:
+//
+//  1. CSAK ÖSSZEFÜGGŐ FAROK. Ha egyetlen elemet kihagyunk a sorrend közepéből
+//     (például „megvédenénk" a horgonyt az elengedéstől), a maradék FELE új helyre
+//     kerül: mérve 599/1199 síkidom mozdult el. A visszaszedés tehát SOHA nem
+//     elemenkénti döntés.
+//  2. HOLTVERSENY-CSOPORTOT NEM VÁGUNK FÉLBE. Azonos méretűeknél az azonosító
+//     dönt; ha a csoport felét megtartjuk, 83 síkidom ugrik el, a legnagyobb
+//     elmozdulás 7,78 (a legerősebb gyökér sugarának hétszerese). A tiszta
+//     MÉRET-KÜSZÖB ezt magától megoldja: az egyformák együtt lépik át.
+//     (A mai teszt-adatban 10 405 gyökérből 9 910 egypontos — csupa holtverseny,
+//     tehát ez nem elméleti aggály.)
+//
+// Ekkora látszó ÁTMÉRŐ fölött szedjük vissza a testvért (a képernyő kisebbik
+// oldalának többszöröseként). A horgonyváltás a képernyő KÉTSZERESÉNÉL történik,
+// ezért ennél nagyobbnak kell lennie — különben azt szednénk vissza, amibe épp
+// belenagyítasz.
+const VISSZASZEDES_ATMERO_ARANY = 4;
+
+// Darabszám-korlát szülőnként: ennyi lerakott gyereknél többet nem tartunk. A
+// sorrend VÉGÉRŐL vágunk, ugyanazzal a két szabállyal.
+const MEGTARTOTT_DARAB = 4000;
+
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
 // számolunk fölöslegesen minden képkockán.
@@ -661,6 +696,13 @@ class SikidomModal {
       // Meddig töltöttünk le: a legutóbb kért tudatpont-küszöb, és a kurzor
       // (hol tartunk a rangsorban). Nincs lap és nincs „hányadik oldal".
       betoltottKuszob: Infinity,
+
+      // A VISSZASZEDETT testvérek: van adatuk (pont, cím), de nincs HELYÜK és
+      // nincs részfájuk. A kanonikus sorrend végéről kerültek le, ezért
+      // visszatéréskor az előtag-stabilitás miatt pontosan a régi helyükre állnak
+      // vissza. Csökkenő méret szerint áll (a legelöl a legnagyobb: ő ment el
+      // utoljára, és ő jön vissza először).
+      visszaszedettek: [],
 
       // MINDEN gyerek letöltve? A `betoltottGyerekPont >= osszesGyerekPont`
       // összehasonlítás lebegőpontos összegekre épül, tehát sosem szabad rá
@@ -1487,6 +1529,10 @@ class SikidomModal {
       //
       // A `betoltesFut` is kizáró ok: egy éppen úton lévő adag pont az a „kisebb
       // testvér", akinek a középpont kellene.
+      // --- VISSZAHOZATAL: kicsinyítéskor a visszaszedettek újra beférnek ---
+      // A várólistára kerülnek, tehát a lentebbi lerakás-igény veszi fel őket.
+      if (cs.visszaszedettek.length > 0) this._visszahozatal(cs, kep.kepSugar);
+
       if (cs.varolista.length > 0 && !cs.betoltesFut && !kellBetoltes) {
         pakolandok.push({ id: cs.id, kep });
       }
@@ -1651,6 +1697,11 @@ class SikidomModal {
     for (const p of pakolandok) {
       if (this._ujrapakolas(this._tar.get(p.id), p.kep)) valtozott = true;
     }
+
+    // VISSZASZEDÉS a nagyítás végén: a túlnőtt testvéreket a sorrend végéről
+    // elengedjük (részfástul). Ez a lerakás UTÁN fut, hogy a most érkezettek is
+    // benne legyenek a mérlegelésben.
+    if (this._visszaszedes()) valtozott = true;
 
     // Betöltések indítása (a legnagyobbak előbb)
     betoltendok.sort((a, b) => b.suly - a.suly);
@@ -1975,6 +2026,144 @@ class SikidomModal {
     document.getElementById('sikidom-folyamat')?.toggleAttribute('hidden', !latszik);
   }
 
+  // ===== MÉRET SZERINTI VISSZASZEDÉS =====
+  // Felelősség: a lerakott testvérek számát KORLÁTOSAN tartani úgy, hogy a kép ne
+  // változzon — se most, se visszanagyításkor. Lásd a `VISSZASZEDES_ATMERO_ARANY`
+  // melletti magyarázatot: a pakoló előtag-stabil, tehát a kanonikus sorrend
+  // VÉGÉRŐL ingyen elengedhetünk, de KIZÁRÓLAG összefüggő farkat.
+  //
+  // Hol van értelme: a HORGONY SZÜLŐJÉNÉL. Ott vannak azok a testvérek, amik a
+  // nagyítás során túlnőttek a képernyőn — a horgony maga és a nála kisebbek
+  // (a befelé eső gyűrűk) maradnak.
+  //
+  // @returns {boolean} változott-e valami (kell-e újrarajzolni)
+  _visszaszedes() {
+    const horgony = this._tar.get(this._horgony);
+    if (!horgony || !horgony.szuloId) return false;
+
+    const szulo = this._tar.get(horgony.szuloId);
+    if (!szulo || szulo.gyerekIdk.length === 0) return false;
+
+    // A szülő képernyő-sugara a horgony keretéből visszaszámolva
+    const szKeret = szuloKeretben(this._tar, this._horgony);
+    if (!szKeret) return false;
+    const szuloKepSugar = this._nezet.skala * szKeret.r;
+    if (!(szuloKepSugar > 0)) return false;
+
+    // A KANONIKUS SORREND — pontosan az, amit a pakoló használ
+    // (növekvő sugár, holtversenynél azonosító). Ez nem stílus: az előtag-
+    // stabilitás CSAK erre a sorrendre igaz.
+    const gyerekek = szulo.gyerekIdk
+      .map(id => this._tar.get(id))
+      .filter(Boolean)
+      .sort((a, b) => (a.relR - b.relR) || String(a.id).localeCompare(String(b.id)));
+
+    // A horgonyt és a nála kisebbeket SOSEM engedjük el — de nem kivételként
+    // (az szétverné a képet), hanem úgy, hogy a vágás nem mehet alá.
+    const horgonyIndex = gyerekek.findIndex(g => g.id === this._horgony);
+    const alsoHatar = Math.max(0, horgonyIndex + 1);
+
+    const maxAtmero = this._kepernyoMeret() * VISSZASZEDES_ATMERO_ARANY;
+
+    // A VÁGÁS: a sorrend végéről addig lépünk visszafelé, amíg a testvér látszó
+    // átmérője túl nagy VAGY a darabszám-korlát fölött vagyunk.
+    let vagas = gyerekek.length;
+    while (vagas > alsoHatar) {
+      const gy = gyerekek[vagas - 1];
+      const tulNagy = 2 * szuloKepSugar * gy.relR > maxAtmero;
+      const tulSok = vagas > MEGTARTOTT_DARAB;
+      if (!tulNagy && !tulSok) break;
+      vagas--;
+    }
+
+    // HOLTVERSENY-VÉDELEM: ha a vágás egy azonos méretű csoport KÖZEPÉRE esne, a
+    // csoport egészét bent hagyjuk. Mérve: félbevágott csoportnál 83 síkidom
+    // ugrott el, a legnagyobb elmozdulás 7,78.
+    while (vagas > alsoHatar && vagas < gyerekek.length &&
+           gyerekek[vagas - 1].relR === gyerekek[vagas].relR) {
+      vagas++;
+    }
+    if (vagas >= gyerekek.length) return false;
+
+    // --- AZ ELENGEDÉS ---
+    const elengedendok = gyerekek.slice(vagas);
+    const megtartott = new Set(gyerekek.slice(0, vagas).map(g => g.id));
+
+    for (const gy of elengedendok) {
+      // A részfát is elengedjük — ott van a valódi memória
+      this._reszfaTorlese(gy);
+      this._tar.delete(gy.id);
+
+      // Az ADATA megmarad, a HELYE nem: visszatéréskor a pakoló újraszámolja
+      szulo.visszaszedettek.push({
+        id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim, pont: gy.pont,
+        relR: gy.relR, vanGyereke: gy.vanGyereke,
+        kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
+        javaslatTipus: gy.javaslatTipus
+      });
+
+      szulo.helyezettIdk.delete(gy.id);
+      szulo.helyezettPont = Math.max(0, szulo.helyezettPont - (gy.pont ?? 0));
+    }
+
+    szulo.gyerekIdk = szulo.gyerekIdk.filter(id => megtartott.has(id));
+
+    // A visszaszedettek CSÖKKENŐ méret szerint állnak: a legnagyobb ment el
+    // utoljára, és kicsinyítéskor ő jön vissza először.
+    szulo.visszaszedettek.sort((a, b) => (b.relR - a.relR) || String(a.id).localeCompare(String(b.id)));
+
+    this._meretekUjramerese(szulo);
+
+    console.log('SikidomModal._visszaszedes', {
+      szulo: szulo.id,
+      elengedve: elengedendok.length,
+      maradt: szulo.gyerekIdk.length,
+      visszaszedettOsszesen: szulo.visszaszedettek.length,
+      maxAtmero: Math.round(maxAtmero)
+    });
+
+    return true;
+  }
+
+  // ===== A VISSZASZEDETTEK VISSZAHOZATALA (kicsinyítéskor) =====
+  // Amint a szülő képernyő-sugara annyira lecsökkent, hogy a visszaszedettek már
+  // beleférnének a megengedett átmérőbe, visszatesszük őket a VÁRÓLISTÁRA — onnan
+  // a szokásos, teljes újrapakolás állítja vissza a helyüket. Az előtag-stabilitás
+  // miatt PONTOSAN a régi helyükre kerülnek.
+  //
+  // Hiszterézis: csak a küszöb 80%-a alatt hozzuk vissza, hogy a határon ácsorogva
+  // ne kapkodjon oda-vissza.
+  _visszahozatal(cs, kepSugar) {
+    if (cs.visszaszedettek.length === 0 || !(kepSugar > 0)) return false;
+
+    const hatar = this._kepernyoMeret() * VISSZASZEDES_ATMERO_ARANY * 0.8;
+
+    let hozhato = 0;
+    while (hozhato < cs.visszaszedettek.length &&
+           2 * kepSugar * cs.visszaszedettek[hozhato].relR <= hatar &&
+           cs.gyerekIdk.length + cs.varolista.length + hozhato < MEGTARTOTT_DARAB) {
+      hozhato++;
+    }
+
+    // HOLTVERSENY-VÉDELEM visszafelé is: az azonos méretűek együtt jönnek vissza
+    while (hozhato > 0 && hozhato < cs.visszaszedettek.length &&
+           cs.visszaszedettek[hozhato - 1].relR === cs.visszaszedettek[hozhato].relR) {
+      hozhato++;
+    }
+
+    if (hozhato === 0) return false;
+
+    cs.varolista.push(...cs.visszaszedettek.splice(0, hozhato));
+    cs.varolistaRelTerulet = cs.varolista
+      .reduce((s, v) => s + Math.PI * (v.relR ?? 0) * (v.relR ?? 0), 0);
+
+    console.log('SikidomModal._visszahozatal', {
+      csomopont: cs.id, visszahozva: hozhato, maradtVisszaszedve: cs.visszaszedettek.length
+    });
+
+    return true;
+  }
+
   // ===== TAKARÍTÁS =====
   // A régóta nem látott ágak gyerekeit elengedjük, hogy a tár ne nőjön korlátlanul.
   // A horgony ŐSEIT és magát a horgonyt sosem bántjuk — azokra a keret-számításhoz
@@ -2020,6 +2209,7 @@ class SikidomModal {
     // A szülő visszaáll „még nem töltöttük be" állapotba
     cs.gyerekIdk = [];
     cs.varolista = [];
+    cs.visszaszedettek = [];
     cs.varolistaRelTerulet = 0;
     cs.helyezettIdk = new Set();
     cs.helyezettPont = 0;

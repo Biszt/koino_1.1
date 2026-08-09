@@ -2216,3 +2216,66 @@ Amik a külső részről tűnnek el, azoknak még a pozíciójukat sem kell tár
 kifelé építkezés az íves elhelyezéssel elég gyors. Nem kell halmozni."
 
 A `_kepernyoKapacitas()` és a `BETOLTESI_TARTALEK` ehhez maradt meg.
+
+---
+
+## Síkidom nézet — méret szerinti visszaszedés (2026-08-09)
+
+**Csaba kérése:** „mindenképpen sorrendben kell visszaszedni azokat, amik már
+nincsenek képben — vagy darabszám-korláttal, vagy a maximum terület alapján. Amik a
+külső részről tűnnek el, azoknak még a pozíciójukat sem kell tárolni, mert a kifelé
+építkezés az íves elhelyezéssel elég gyors. Nem kell halmozni."
+
+### Amire épül: a pakoló ELŐTAG-STABIL
+
+A pakoló növekvő méret szerint halad, és minden elem helye kizárólag a nála
+KISEBBEKTŐL függ. Ezért a kanonikus sorrend (méret növekvő, holtversenynél
+azonosító) egy ELŐTAGJA külön lepakolva **bitre ugyanazokat a helyeket** adja —
+mérve 100, 500, 1000, 2000 és 2999 elemű előtagra, 3000-es készletből.
+
+A sorrend VÉGÉRŐL tehát ingyen elengedhetünk, és visszanagyításkor pontosan
+visszakapjuk a képet.
+
+### ⚠️ Két szabály, mindkettő MÉRVE
+
+Csaba felvetése: „előfordulhatnak egyforma méretűek is egymás mellett, úgyhogy arra
+ügyeljünk, hogy sorrendbe szedjük őket vissza." A mérés igazolta, és élesebben:
+
+| megtartott halmaz | elmozdul | legnagyobb elmozdulás |
+|---|---|---|
+| pontos előtag (kanonikus sorrend) | 0 / 1200 | **bitre azonos** ✅ |
+| méret-küszöb szerinti vágás (csoport egészben) | 0 / 1332 | **bitre azonos** ✅ |
+| holtverseny-csoport **félbevágva** | 83 / 1248 | **7,78** ❌ |
+| **egyetlen** elem kihagyva a közepéből | **599 / 1199** | 0,099 ❌ |
+
+1. **Csak összefüggő farok.** Egyetlen kivétel a sorrend közepén (például a horgony
+   „megvédése") a maradék FELÉT új helyre viszi. A visszaszedés SOHA nem lehet
+   elemenkénti döntés.
+2. **Holtverseny-csoportot nem vágunk félbe.** 7,78-as elmozdulás = a legerősebb
+   gyökér sugarának hétszerese, több képernyőnyi ugrás. A tiszta méret-küszöb ezt
+   magától megoldja (az egyformák együtt lépik át), de a kód külön is védi.
+
+Ez nem elméleti aggály: a mai teszt-adatban **10 405 gyökérből 9 910 egypontos**,
+vagyis a holtverseny a tipikus eset, nem a kivétel.
+
+### A megvalósítás
+
+- `_visszaszedes()` — a HORGONY SZÜLŐJÉNÉL fut (ott vannak a túlnőtt testvérek).
+  Kanonikus sorrendbe rendez, a végéről vág, a horgony alá nem megy, és
+  holtverseny-csoportot nem vág félbe. Az elengedett testvér **részfája is
+  eldobódik** (ott a valódi memória), az adata megmarad, a helye nem.
+- `_visszahozatal()` — kicsinyítéskor a küszöb 80%-a alatt (hiszterézis) visszateszi
+  őket a várólistára; onnan a szokásos teljes újrapakolás állítja vissza a helyüket.
+- `VISSZASZEDES_ATMERO_ARANY = 4` (a képernyő kisebbik oldalának többszöröse; a
+  horgonyváltás a kétszeresénél van, ezért kell ennél nagyobb),
+  `MEGTARTOTT_DARAB = 4000`.
+
+### Teszt-adat: `tools/sikidomTizezerGyokerTesztAdat.js`
+
+10 000 gyökér-tartalom. Mivel 0 tudatpontos entitás nem létezik, ehhez legalább
+10 000 tudatpont kell — a szerszám ezért annyi „töltő" e-embert hoz létre
+(`tesztTolto1…`, jelszó `jelszo123`), amennyi a kerethez kell.
+
+*Lefuttatva 2026-08-09-én: 10 000 tartalom 337 másodperc alatt, 0 hiba. A gyökér-
+allokációk száma **10 405**, összpont 28 025, a legerősebb 2243, és **9 910
+egypontos** (a keret szűk volt, ezért az eloszlás farka lapos).*
