@@ -2279,3 +2279,67 @@ vagyis a holtverseny a tipikus eset, nem a kivétel.
 *Lefuttatva 2026-08-09-én: 10 000 tartalom 337 másodperc alatt, 0 hiba. A gyökér-
 allokációk száma **10 405**, összpont 28 025, a legerősebb 2243, és **9 910
 egypontos** (a keret szűk volt, ezért az eloszlás farka lapos).*
+
+---
+
+## Síkidom nézet — az üres mag mint LÁTHATÓSÁGI szabály (2026-08-09)
+
+**Csaba tünete:** „a nagyítás gyorsabban történik, mint ahogy betöltenék az űrt az
+előbukkanó síkidomok."
+
+**Az ok:** a láthatóságot MÉRET döntötte el (24 képpontos minimum-átmérő). Mivel a
+legkisebbek ülnek a közép körül, nagyításkor versenyfutás indult: a lyuk azonnal
+tágult, a benne lévők viszont csak fokozatosan nőttek a küszöb fölé — és ezt a
+versenyt a nagyítás nyerte.
+
+**Csaba megoldása:** ne a méret döntsön, hanem a HELY. Van egy KÉPPONTBAN ÁLLANDÓ
+üres mag a közép körül; ami azon kívülre esik, az látszik, mérettől függetlenül.
+Mivel a mag képpontban nem változik, nagyításkor sem tágul — nincs miért futni.
+
+**⚠️ Ez CSAK rajzolási szabály.** A helyek továbbra is egyben, előre, bentről kifelé
+számolódnak; a pakoló mit sem tud a magról. Ezért nem hozza vissza a 2026-08-08-i
+mag bajait (nem szorítja kifelé a később érkezőket, nem borítja fel a rendet).
+
+### A szabály
+
+- **Rejtés a KÖZÉPPONT alapján** (Csaba választása): a mag pereme szaggatott, a
+  síkidomok félig belelógnak, az előbukkanás folyamatos.
+- **Egy kikötéssel:** aki már NAGYOBB a magnál, az akkor is látszik, ha a közepén
+  ül. Enélkül a legbelső síkidom — ami épp a középpontban van — sosem bukkanna elő,
+  akármekkorára nő.
+- **A mag mérete a képernyő arányában** (`MAG_ATMERO_ARANY = 0.12`), hogy telefonon
+  és nagy monitoron is ugyanúgy nézzen ki. 800 képpont magas ablakon 96 px átmérő.
+  **Ez a nézet fő hangoló száma.**
+- **A részfa-metszés is innen jön:** a magban rejtett síkidom gyerekeit meg sem
+  nézzük (nála is kisebbek, és rajta belül vannak).
+
+### Egy tévedésem, mérve
+
+Azt állítottam, hogy a mag peremén ülő síkidomok a nagyítással ZSUGORODNÁNAK (mert
+befelé a méretek gyorsabban fogynak, mint a távolságok). **Ez téves volt** — a mérés
+az ellenkezőjét mutatja:
+
+| nagyítás | a mag peremén ülők átmérője | a magban rejtve |
+|---|---|---|
+| ×1 (illesztett) | 3,0 px | 955 |
+| ×2 | 6,0 px | 241 |
+| ×4 | 11,9 px | 61 |
+| ×8 | (a perem üres) | 19 |
+| ×32 | | 1 |
+
+A síkidomok a mag peremén **nőnek**, pontosan a nagyítás arányában. Az ok: a 10 405
+gyökérből 9 910 EGYPONTOS, vagyis a közép körüli teljes tartomány azonos méretű
+síkidomok tömege — ott a méret nem függ a távolságtól. A korábbi számom a ritkább,
+405 gyökeres adatból származó becslés volt. **Alsó vágásra tehát nincs szükség.**
+
+### Ami ezzel járt
+
+- `MIN_KEP_ATMERO` már NEM a láthatóság kapuja — mostantól kizárólag a LETÖLTÉST
+  vezérli (`_pontKuszob`, nem-fókusz csomópontoknál).
+- `MAX_RAJZOLT` 4000 → 30 000 (vészfék, nem napi korlát): az illesztett nézetben a
+  11 143 síkidomból ~10 200 rajzolandó.
+- **Olcsó rajzolási út** 5 képpont alatt: egyetlen kitöltött pont, forma, körvonal
+  és halványodás nélkül. Ekkora méretben úgysem látszik a különbség, viszont
+  ezekből van a legtöbb.
+- A szaggatott magkört mostantól a SZABÁLY rajzolja ki (a fix mag), nem a mért
+  üresség — amit az e-ember lát, pontosan az, ami a szabály.

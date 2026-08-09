@@ -41,15 +41,25 @@ const KERES_PLAFON = 150;
 // és mivel a gyerek mindig kisebb a szülőjénél ÉS a szülőn belül van, a küszöb
 // alá esett síkidom teljes részfája is levágható.
 //
-// Ez EGYETLEN szám, amivel a nézet sűrűsége hangolható: nagyobb érték =
-// levegősebb, kevesebb síkidom; kisebb = zsúfoltabb, több apró.
+// ⚠️ 2026-08-09 ÓTA EZ MÁR NEM A LÁTHATÓSÁG KAPUJA. A megjelenést az ÜRES MAG
+// dönti el (`MAG_ATMERO_ARANY`), mert a méret-küszöb versenyfutást okozott a
+// nagyítással. Ez a szám mostantól KIZÁRÓLAG a LETÖLTÉST vezérli: `_pontKuszob`
+// ebből számolja, mekkora tudatpont fölött érdemes egy testvért lehozni egy
+// nem-fókusz csomópontnál. (A fókusz küszöb nélkül tölt — lásd ELORETOLTES_DARAB.)
 const MIN_KEP_ATMERO = 24;
 
 // Egyszerre ennyi lekérés futhat
 const EGYIDEJU_BETOLTES = 3;
 
-// Biztonsági plafon egy képkockára
-const MAX_RAJZOLT = 4000;
+// Biztonsági plafon egy képkockára. 2026-08-09-én 4000-ről emelve: a méret-küszöb
+// megszűntével az illesztett nézetben a 11 143 síkidomból ~10 200 rajzolandó (a
+// többit a mag rejti). A plafon így valóban csak vészfék, nem napi korlát.
+const MAX_RAJZOLT = 30000;
+
+// Ekkora látszó ÁTMÉRŐ alatt OLCSÓN rajzolunk: egyetlen kitöltött pont, körvonal,
+// forma és átlátszóság-számítás nélkül. Néhány képpontos folton úgysem látszik a
+// különbség, viszont ezekből van a legtöbb — az illesztett nézetben több ezer.
+const APRO_ATMERO = 5;
 
 // Ennyi szinttel a horgony FÖLÖTT kezdjük a bejárást (hogy a környezet is látsszon)
 const FELFELE_SZINTEK = 3;
@@ -64,8 +74,8 @@ const FELFELE_SZINTEK = 3;
 // (Az újrapakolás amúgy sem fagyaszt be semmit pozíció alapján: ott a méret
 // szerinti SOR és a képernyő KAPACITÁSA dönt — lásd `_kepernyoKapacitas`.)
 //
-// A munkát így a láthatósági küszöb (MIN_KEP_ATMERO) és a kapacitás korlátozza,
-// mindkettő a MÉRETBŐL, nem a képernyő-pozícióból.
+// A munkát így az ÜRES MAG (`MAG_ATMERO_ARANY`) és a `MAX_RAJZOLT` vészfék
+// korlátozza — nem a képernyő-pozíció.
 //
 // `true`-ra állítva visszajön a korábbi viselkedés (a képernyő +
 // LATOMEZO_TARTALEK arányú keretén kívüliek kimaradnak).
@@ -189,6 +199,16 @@ const IKON_MAX_DARAB = 4;           // legfeljebb ennyi ikon fér ki egy síkido
 const HALVANYODAS_KEZDET = 1.0;
 const HALVANYODAS_VEGE = 3.0;
 const HALVANYODAS_MARADEK = 0.06;   // teljesen sosem tűnik el: ennyi marad a keretből
+
+// ===== AZ ÜRES MAG: A LÁTHATÓSÁG KAPUJA (Csaba, 2026-08-09) =====
+// A mag ÁTMÉRŐJE a képernyő KISEBBIK oldalának ekkora hányada. Szándékosan
+// arányban, nem fix képpontban: Csaba kérése szerint „mindenféle méretű monitoron
+// jó legyen" — 800 képpont magas ablakon ez 96 px átmérő (48 px sugár), telefonon
+// arányosan kisebb.
+//
+// EZ A NÉZET FŐ HANGOLÓ SZÁMA. Nagyobb érték = nagyobb üres közép, kevesebb, de
+// nagyobb síkidom; kisebb érték = tömörebb, zsúfoltabb kép.
+const MAG_ATMERO_ARANY = 0.12;
 
 // Az ÜRES MAG szaggatott jelölése: ekkora látszó ÁTMÉRŐ alatt nem rajzoljuk ki
 // (nem látszana, csak zajt csinálna)
@@ -1042,8 +1062,8 @@ class SikidomModal {
   //   - A szülő nem tud „megtelni": a gyerekek együttes területe legfeljebb a
   //     szülő 1/20-a (a hierarchikus össztudatpont miatt), tehát hússzoros a tartalék.
   //
-  // Mérve: 100 kör 28 ms, 200 kör 71 ms, 400 kör 307 ms. Ha ez soknak bizonyul,
-  // a MIN_KEP_ATMERO növelése csökkenti az egyszerre látható darabszámot.
+  // Mérve (2026-08-09): 2 000 síkidom 15–20 ms, 10 000 kb. 70 ms, 128 000 kb.
+  // 850 ms — nagyjából lineárisan, nulla átfedéssel.
   //
   // @returns {boolean} változott-e az elrendezés (kell-e újrarajzolni)
   // @param {Object} kep - a csomópont KÉPERNYŐ-adatai; ebből a `kepSugar` kell.
@@ -1076,7 +1096,7 @@ class SikidomModal {
     //   - a `T_hátra` már csak a LE NEM TÖLTÖTTEKET jelenti;
     //   - közelítéskor a tudatpont-küszöb süllyed → több töltődik le → mind helyet
     //     kap → a MAG MAGÁTÓL ZSUGORODIK. A közelítés fogyasztja a magot, nem növeli.
-    // A rajzolást továbbra is a MIN_KEP_ATMERO és a MAX_RAJZOLT korlátozza.
+    // A rajzolást 2026-08-09 óta az ÜRES MAG és a `MAX_RAJZOLT` vészfék korlátozza.
     //
     // MIÉRT NEM KORLÁTOZHATJUK MÉGIS A LERAKÁST: mérve (2026-08-09) a mag
     // képernyő-korlátja mind a négy beállításban MEGFORDÍTOTTA a rendet (a
@@ -1351,6 +1371,15 @@ class SikidomModal {
     console.log('SikidomModal._alaphelyzet - VÉGE');
   }
 
+  // ===== AZ ÜRES MAG SUGARA KÉPPONTBAN =====
+  // A képernyő kisebbik oldalának arányában (lásd `MAG_ATMERO_ARANY`), hogy
+  // telefonon és nagy monitoron is ugyanúgy nézzen ki. Egyetlen helyen számoljuk,
+  // mert három dolog függ tőle, és MIND a háromnak ugyanazt kell látnia:
+  // a láthatóság, a részfa-metszés és a szaggatott kör kirajzolása.
+  _magSugarKeppontban() {
+    return (this._kepernyoMeret() * MAG_ATMERO_ARANY) / 2;
+  }
+
   // ===== KELL-E MÉG ILLESZTENI? =====
   // Összeveti a mostani nagyítást azzal, amit a MÉRT kiterjedés kívánna. Amíg a
   // kettő érdemben eltér, a kezdő fázis nem zárulhat le — különben a spirál egy
@@ -1521,12 +1550,30 @@ class SikidomModal {
         cs.utoljaraLatva = this._kepkocka;
       }
 
-      // --- GYEREKEK ÁTVIZSGÁLÁSA ---
-      // Itt dől el, mely gyerekek látszanak (LÁTHATÓSÁGI KÜSZÖB). A küszöb
-      // alattiakat NEM rajzoljuk és a részfájukat sem járjuk be (a gyerek mindig
-      // kisebb a szülőjénél → a részfa levágható). Ilyen csak akkor fordul elő,
-      // ha az e-ember KIcsinyített: a lerakott helyeket megtartjuk, hogy
-      // visszanagyítva pontosan ugyanaz a kép jöjjön vissza.
+      // --- GYEREKEK ÁTVIZSGÁLÁSA: AZ ÜRES MAG DÖNT, NEM A MÉRET ---
+      // Csaba modellje (2026-08-09). Korábban itt egy MÉRET-küszöb állt: egy
+      // síkidom akkor látszott, ha a képernyőn elért 24 képpontot. Ezzel az volt a
+      // baj, hogy nagyításkor VERSENYFUTÁS indult — a középső üresség azonnal
+      // tágult, a benne lévők viszont csak fokozatosan nőttek a küszöb fölé, és
+      // ezt a versenyt a nagyítás nyerte. Csaba szava: „a nagyítás gyorsabban
+      // történik, mint ahogy betöltenék az űrt az előbukkanó síkidomok."
+      //
+      // MOSTANTÓL a HELY dönt: a szülő közepén van egy KÉPPONTBAN ÁLLANDÓ üres mag,
+      // és ami azon kívülre esik, az látszik — MÉRETTŐL FÜGGETLENÜL. Mivel a mag
+      // képpontban nem változik, nagyításkor sem tud tágulni: nincs miért futni.
+      //
+      // ⚠️ EZ CSAK RAJZOLÁSI SZABÁLY. A helyek továbbra is egyben, előre, bentről
+      // kifelé számolódnak — a pakoló mit sem tud a magról. Ezért nem hozza vissza
+      // a 2026-08-08-i mag bajait (nem szorítja kifelé a később érkezőket).
+      //
+      // A REJTÉS SZABÁLYA: a KÖZÉPPONT esik-e a magba (Csaba választása) — így a
+      // mag pereme szaggatott, a síkidomok félig belelógnak, az előbukkanás
+      // folyamatos. EGY KIKÖTÉSSEL: aki már NAGYOBB a magnál, az akkor is látszik,
+      // ha a közepén ül. Enélkül a legbelső síkidom — ami épp a középpontban van —
+      // sosem bukkanna elő, akármekkorára nő.
+      const magSugarPx = this._magSugarKeppontban();
+      let magonKivuli = 0;              // hány gyerek látszik a magon kívül
+
       for (const gid of cs.gyerekIdk) {
         const gy = this._tar.get(gid);
         if (!gy) continue;
@@ -1537,26 +1584,33 @@ class SikidomModal {
           r: elem.keret.r * gy.relR
         };
 
-        if (this._nezet.skala * gyKeret.r * 2 < MIN_KEP_ATMERO) continue;
+        // A gyerek helye és mérete a SZÜLŐ középpontjához mérve, képpontban
+        const tavolsagPx = this._nezet.skala * elem.keret.r * Math.hypot(gy.relX, gy.relY);
+        const gyerekSugarPx = this._nezet.skala * gyKeret.r;
+
+        // A magban ülő, a magnál kisebb síkidomot nem rajzoljuk — és a részfáját
+        // sem járjuk be (a gyerekei nála is kisebbek, és rajta belül vannak)
+        if (tavolsagPx < magSugarPx && gyerekSugarPx <= magSugarPx) continue;
+
+        magonKivuli++;
 
         sor.push({ id: gid, keret: gyKeret });
       }
 
-      // --- A KÖZÉPSŐ LYUK ---
-      // A szaggatott kör pereme a MÉRT lyuk: a legbelső lerakott testvér belső
-      // széle (`magSugarRel`, mérve) — nem a becsült mag, hanem a tényleges.
+      // --- A KÖZÉPSŐ LYUK: A FIX MAG ---
+      // 2026-08-09 óta ez NEM a mért üresség (`magSugarRel`), hanem a rajzolási
+      // szabály maga: az a képpontban állandó kör, amin belül nem mutatunk
+      // síkidomot. Így amit az e-ember lát, pontosan az, ami a szabály — nem egy
+      // külön számított, esetleg eltérő kör.
       //
-      // A lyuk annál nagyobb, minél több testvér vár még helyre (`_magSugar` ennyit
-      // tart fenn). Ahogy sorra lekerülnek, a lyuk MAGÁTÓL zsugorodik; amikor
-      // mindenkinek van helye, eltűnik. Vagyis a lyuk mérete azt mutatja meg, hogy
-      // „mennyi van még lejjebb" — pontosan ez volt a szerepe.
-      if (cs.gyerekIdk.length > 0 && Number.isFinite(cs.magSugarRel) && cs.magSugarRel > 0) {
-        const magKepSugar = kep.kepSugar * cs.magSugarRel;
-        if (magKepSugar * 2 >= MAG_MIN_ATMERO) {
+      // Csak akkor rajzoljuk ki, ha a szülőnek VAN a magon kívül eső gyereke:
+      // különben egy üres csomópont közepére is odakerülne a szaggatott kör.
+      if (magonKivuli > 0) {
+        if (magSugarPx * 2 >= MAG_MIN_ATMERO) {
           magok.push({
             kepX: kep.kepX,
             kepY: kep.kepY,
-            kepSugar: magKepSugar,
+            kepSugar: magSugarPx,
             vilag: cs.id === VILAG
           });
         }
@@ -1727,7 +1781,12 @@ class SikidomModal {
     for (const gid of cs.gyerekIdk) {
       const gy = this._tar.get(gid);
       if (!gy) continue;
-      if (this._nezet.skala * gy.relR * 2 >= MIN_KEP_ATMERO) rajzolt++;
+      // AZ ÚJ SZABÁLY SZERINT: a magon kívül esik-e (a horgony kerete 1 sugarú,
+      // tehát a szülő képernyő-sugara maga a skála)
+      const tavolsagPx = kepSugar * Math.hypot(gy.relX, gy.relY);
+      const gyerekSugarPx = kepSugar * gy.relR;
+      const magSugarPx = this._magSugarKeppontban();
+      if (!(tavolsagPx < magSugarPx && gyerekSugarPx <= magSugarPx)) rajzolt++;
     }
 
     // A KÖVETKEZŐ lerakásnál érvényes mag. A `_magSugar` második paramétere
@@ -1836,6 +1895,26 @@ class SikidomModal {
   _alakzatRajzolasa(cs, kep) {
     const c = this.rajzolo;
     const leiro = sikidomLeiro(cs.entitasTipus);
+
+    // ===== OLCSÓ ÚT A LEGAPRÓBBAKNAK (2026-08-09) =====
+    // A méret-küszöb megszűnése óta az illesztett nézetben több EZER néhány
+    // képpontos folt is rajzolódik. Ekkora méretben a forma (kör/háromszög/…), a
+    // körvonal és az elhalványodás úgysem látszik, viszont mindhárom külön munka
+    // képkockánként. Ezért néhány képpont alatt egyetlen kitöltött kört rajzolunk,
+    // körvonal és átlátszóság-váltogatás nélkül.
+    //
+    // A halványodás itt szándékosan kimarad: az a TÚLNŐTT síkidomokra való
+    // (`HALVANYODAS_KEZDET` a képernyő méretéhez mér), egy 3 képpontos folt pedig
+    // biztosan nem túlnőtt.
+    if (kep.kepSugar * 2 < APRO_ATMERO) {
+      c.fillStyle = leiro.szin;
+      c.globalAlpha = 0.55;
+      c.beginPath();
+      c.arc(kep.kepX, kep.kepY, Math.max(0.5, kep.kepSugar), 0, Math.PI * 2);
+      c.fill();
+      c.globalAlpha = 1;
+      return;
+    }
 
     c.beginPath();
     if (leiro.forma === 'kor') {
