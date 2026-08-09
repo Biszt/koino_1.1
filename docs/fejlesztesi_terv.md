@@ -2179,3 +2179,40 @@ visszaszedni azokat, amik már nincsenek képben — vagy darabszám-korláttal,
 maximum terület alapján. Amik a külső részről tűnnek el, azoknak még a pozícióját
 sem kell tárolni, mert a kifelé építkezés elég gyors. Nem kell halmozni."
 A `_kepernyoKapacitas()` és a `BETOLTESI_TARTALEK` ehhez megmarad.
+
+---
+
+## ✅ Síkidom nézet — BÖNGÉSZŐBEN IGAZOLVA (2026-08-09)
+
+Csaba visszajelzése a bentről kifelé pakoló, egyszerre lerakó modellre:
+**„ez most jól működik."**
+
+Ezzel lezárul a 2026-08-05 óta tartó sorozat. A fenti szakaszok mindegyike
+„Böngészős ellenőrzésre vár — `teszt.md` (j6)" jelzéssel zárult; ezek az utolsó,
+érvényes modellben (`URES_MAG = false` + egyszerre pakolás + fókusz-előretöltés)
+együtt lettek ellenőrizve, és rendben vannak.
+
+### A végleges modell három szabálya
+
+1. **Bentről kifelé.** Nincs fenntartott mag; a legkisebb a középpontba kerül, és
+   onnan épül kifelé. (Csaba érve: nagy átmérő-ugrásoknál a befelé pakolás belső
+   pereme a kidudorodásoktól egyre szabálytalanabb lesz.)
+2. **Egyszerre, nem adagonként.** A gyűjtés végén EGY pakolás rakja le a teljes
+   készletet. Adagonként pakolva a rend felborul — mérve a legkisebbek kerülnek
+   legkívülre.
+3. **A fókusz küszöb nélkül kap mindent.** A horgony `ELORETOLTES_DARAB` (10 000)
+   testvért kap egyben, a láthatósági küszöbtől függetlenül; a többi csomópont
+   marad a küszöb-vezérelt betöltésnél.
+
+Mérve: 405 · 600 · 3000 testvérnél egyaránt **1 pakolás, 0 elmozdulás**, monoton
+méret-sorrend, nulla átfedés, nincs középső lyuk.
+
+### Hátravan — a méret szerinti visszaszedés
+
+Csaba (2026-08-09): „mindenképpen sorrendben kell visszaszedni azokat, amik már
+nincsenek képben — vagy darabszám-korláttal (ekkor közelítéskor, ahogy előjönnek az
+újabb síkidomok, úgy tűnnek el a régiek), vagy a maximum terület alapján tűnnek el.
+Amik a külső részről tűnnek el, azoknak még a pozíciójukat sem kell tárolni, mert a
+kifelé építkezés az íves elhelyezéssel elég gyors. Nem kell halmozni."
+
+A `_kepernyoKapacitas()` és a `BETOLTESI_TARTALEK` ehhez maradt meg.
