@@ -369,20 +369,42 @@ function bejaras(gyerekek) {
       id: v.id, sugar: relSugar(v.pont)
     }));
 
-    if (ujak.length > 0) {
+    // ===== AZ ÚJ MODELLBEN MINDENT ÚJRAPAKOLUNK, ÜRES LAPRA =====
+    // A `SikidomModal._ujrapakolas` 2026-08-09 óta a MÁR LERAKOTTAKAT is beveszi a
+    // pakolandók közé, és nem ad se magot, se környezetet: a teljes készlet megy be
+    // egyetlen menetben, növekvő méret szerint, a legkisebbel a középpontban.
+    //
+    // MIÉRT NEM ELÉG CSAK AZ ÚJAKAT LERAKNI: mert az újak KISEBBEK mindenkinél (a
+    // küszöb süllyedésével jönnek), tehát a KÖZÉPPONT kellene nekik — ami már
+    // foglalt. Környezetként megtartva a régieket az újak kifelé szorulnának.
+    // Mérve: a méret-tizedek 6 helyen fordultak meg (gyerek-szint, 3000 testvér).
+    //
+    // AMIT EZÉRT FELADUNK: a lerakottak elmozdulhatnak. Ezt az `ELORETOLTES_DARAB`
+    // teszi ritkává — lásd a stabilitás-ellenőrzés magyarázatát.
+    const pakolandok = ADAGONKENT_PAKOL
+      ? ujak
+      : [...lerakottak.map(l => ({ id: l.id, sugar: l.sugar })), ...ujak];
+
+    if (pakolandok.length > 0 && ujak.length > 0) {
       const t0 = process.hrtime.bigint();
-      const e = pakolas(ujak, {
-        magSugar,
-        kornyezet: lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar }))
-      });
+      const e = pakolas(pakolandok, ADAGONKENT_PAKOL
+        ? { magSugar, kornyezet: lerakottak.map(l => ({ id: l.id, x: l.x, y: l.y, sugar: l.sugar })) }
+        : { magSugar: 0, kornyezet: [] });
       lepesMs = Number(process.hrtime.bigint() - t0) / 1e6;
       legdragabb = Math.max(legdragabb, lepesMs);
       ujrapakolasok++;
 
       const lerakottIdk = new Set();
+
+      // Teljes újrapakolásnál a régi helyek ÉRVÉNYTELENEK — a lista újraépül.
+      // A `kor` mezőt megőrizzük (melyik körben került be először), mert a
+      // gyűrű-ellenőrzés arra épül.
+      const regiKor = new Map(lerakottak.map(l => [l.id, l.kor]));
+      if (!ADAGONKENT_PAKOL) lerakottak = [];
+
       for (const h of e.helyek) {
         lerakottIdk.add(h.id);
-        lerakottak.push({ ...h, kor, pont: pontJa(h.id) });
+        lerakottak.push({ ...h, kor: regiKor.get(h.id) ?? kor, pont: pontJa(h.id) });
         if (!elsoHelyek.has(h.id)) {
           elsoHelyek.set(h.id, { x: h.x, y: h.y });
           helyezettPont += pontJa(h.id);      // MOST kapott először helyet
@@ -588,7 +610,7 @@ function determinizmusEllenorzes(gyerekek) {
 // Ez a 2026-08-08-i modell fő ígérete. Ha megsérül, a nézetben az történik, amit
 // Csaba jelzett: közelítéskor átrendeződik a kép, és egy szélső síkidomra
 // gyakorlatilag lehetetlen ráközelíteni, mert elugrál.
-function stabilitasEllenorzes(lerakottak, elsoHelyek) {
+function stabilitasEllenorzes(lerakottak, elsoHelyek, ujrapakolasok) {
   let mozdult = 0;
   let legnagyobb = 0;
 
@@ -597,6 +619,20 @@ function stabilitasEllenorzes(lerakottak, elsoHelyek) {
     if (!elso) continue;
     const eltolodas = Math.hypot(l.x - elso.x, l.y - elso.y);
     if (eltolodas > 0) { mozdult++; legnagyobb = Math.max(legnagyobb, eltolodas); }
+  }
+
+  // AZ ÚJ MODELLBEN A MOZGÁS SZÁNDÉKOS, NEM HIBA. Minden új adag érkezésekor a
+  // teljes készletet újrapakoljuk, mert az újak kisebbek mindenkinél, és nekik a
+  // KÖZÉPPONT kell. A „soha nem mozdul" ígéretet tudatosan adtuk fel, cserébe a
+  // rend (a legkisebbek középen) végig helyes marad.
+  //
+  // Amit itt MÉRNI érdemes: hányszor rendeződik át a kép egy teljes benagyítás
+  // alatt — ennyiszer „ugranak el" a síkidomok az e-ember szeme előtt. Ez az
+  // `ELORETOLTES_DARAB` hangolásának a mérőszáma.
+  if (!ADAGONKENT_PAKOL) {
+    naplo(`  --   Átrendeződés (szándékos) — a kép ${ujrapakolasok}× rendeződött át a ` +
+          `benagyítás alatt · ${mozdult}/${lerakottak.length} síkidom került új helyre`);
+    return;
   }
 
   allitas(mozdult === 0, 'Lerakás után egyetlen síkidom sem mozdul',
@@ -704,7 +740,7 @@ hianyEllenorzes(gyerekek, lerakottak, varolista);
 beagyazasEllenorzes(lerakottak);
 monotoniaEllenorzes(lerakottak);
 lyukEllenorzes(lepesek);
-stabilitasEllenorzes(lerakottak, elsoHelyek);
+stabilitasEllenorzes(lerakottak, elsoHelyek, ujrapakolasok);
 magElegEllenorzes(lerakottak);
 lyukMeretEllenorzes(lerakottak, varolista);
 determinizmusEllenorzes(gyerekek);

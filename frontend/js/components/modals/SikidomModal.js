@@ -112,6 +112,9 @@ const LATOMEZO_TARTALEK = 0.5;
 //
 // Miért 2-szeres: egy zoom-lépés (×1,2) a látszó területet ~1,44-szeresére növeli,
 // tehát a kétszeres puffer egy teljes lépést kiszolgál letöltés nélkül.
+// HASZNÁLATON KÍVÜL 2026-08-09 óta: a letöltés fékje az ELORETOLTES_DARAB
+// (darabszám) lett, mert a területalapú fék részleges pakolást engedett volna.
+// A konstans megmarad, mert a KÉPERNYŐNKÉNTI visszaszedéshez újra kelleni fog.
 const BETOLTESI_TARTALEK = 2;
 
 // ===== MÉLYEBBRE TÖLTÜNK, MINT AMIT RAJZOLUNK =====
@@ -130,8 +133,8 @@ const BETOLTESI_TARTALEK = 2;
 // elvétele hat beállításból ötben MEGFORDÍTOTTA a rendet (a méret-tizedek
 // 0,4064 → 0,1446 lettek). A magot nem elvenni kell, hanem FELESLEGESSÉ tenni.
 //
-// A letöltés így sem szalad el: a `BETOLTESI_TARTALEK` fék továbbra is a
-// várólista TERÜLETÉHEZ méri, mennyit érdemes még kérni.
+// A letöltés így sem szalad el: a gyűjtés határa az `ELORETOLTES_DARAB`
+// (2026-08-09 óta; korábban a `BETOLTESI_TARTALEK` területalapú féke).
 //
 // HANGOLÁS: nagyobb érték = mélyebb előretöltés (több hálózat, kisebb mag),
 // 1 = a korábbi viselkedés.
@@ -245,9 +248,40 @@ const MAG_SURUSEG = 0.5;
 // érkezőknek nem maradt hely, és a pakoló a pót-horgonyokra kényszerült, azok
 // pedig a LEGKÜLSŐ körök. Az eredmény kifelé fűződő „kígyó" lett.
 //
-// Ezért jön a mag mostantól az ADATBÓL: annyi helyet tartunk fenn, amennyi a még
-// hely nélküli testvéreknek KELL. Lásd `_magSugar` és `MAG_SURUSEG`.
-const URES_MAG = true;
+// Ezért jött a mag az ADATBÓL: annyi helyet tartottunk fenn, amennyi a még hely
+// nélküli testvéreknek KELL. Lásd `_magSugar` és `MAG_SURUSEG`.
+//
+// ===== 2026-08-09: A MAG KIKAPCSOLVA — MÁS ÚTON OLDJUK MEG =====
+// Csaba érve: „a kör átmérők között nagy ugrások is lehetnek, és így a belső kör
+// egyre szabálytalanabb lesz a kidudorodások miatt." Ez pontosan az, amit a
+// mérőpróba is mutat a VALÓDI 405 gyökeres adaton: a mag peremére adagonként
+// felfűzött síkidomok után a belső perem szabálytalanná válik, a lyuk 581 px-re nő,
+// és a méret-tizedek sorrendje megfordul (0,094 · 0,263 · 0,418 · 0,250 · …).
+//
+// AZ ÚJ MODELL: nincs fenntartott hely — bentről kifelé pakolunk, a legkisebbel a
+// középpontban, ÉS EGYSZERRE MINÉL TÖBBET (lásd `ELORETOLTES_DARAB`). A mag azért
+// kellett, mert adagonként raktunk le; ha egyszerre rakunk le mindent, nincs kinek
+// helyet fenntartani.
+//
+// FIGYELEM — EZ A KETTŐ EGYÜTT ÉRVÉNYES. Mag nélkül, de továbbra is ADAGONKÉNT
+// pakolva a rend TELJESEN felborul: mérve a legkisebbek kerülnek legkívülre
+// (tized-átlagok 2,59 · 2,46 · 2,32 · … vagyis fordítva). A mag kikapcsolása
+// ÖNMAGÁBAN rosszabb a réginél — csak az „egyszerre pakolunk" szabállyal együtt jó.
+const URES_MAG = false;
+
+// ===== HÁNY TESTVÉR POZÍCIÓJÁT SZÁMOLJUK KI ELŐRE (Csaba, 2026-08-09) =====
+// „csak a pozíciók kiszámítása legyen meg előre, mondjuk 10000, de a megjelenítés
+// ugyanúgy használja a min területet, és a maximum területet."
+//
+// A pozíció-számítás tehát MÉLYEBBRE megy, mint a rajzolás: egy szülő alatt ennyi
+// testvér helyét számoljuk ki, függetlenül attól, hogy közülük hány látszik.
+//
+// MIÉRT PONT ENNYI (mérve, 2026-08-09):
+//   - a pakolás nem korlát: 10 000 síkidom ~70 ms, 128 000 ~850 ms (~145 000/s);
+//   - a LETÖLTÉS a szűk keresztmetszet: ~12 600 testvér/s meleg dev adatbázison,
+//     hálózat nélkül — interneten reálisan ~6 500/s. 10 000 tehát nagyjából
+//     másfél-két másodperc hálózat, ami belefér a 3 másodperces megnyitási keretbe.
+const ELORETOLTES_DARAB = 10_000;
 
 // A nagyítás „végét" ennyi eseménymentes ezredmásodperc jelenti. Nagyítás KÖZBEN
 // szándékosan nem pakolunk: a kép így nem ugrál a görgetés alatt, és nem is
@@ -600,11 +634,10 @@ class SikidomModal {
       // várakozik, az nem veszett el — csak még nincs akkora hely, ahol látszana.
       varolista: [],
 
-      // A várólistán álló FRISS (backendtől most érkezett) testvérek együttes
-      // RELATÍV területe: Σ π·relR². Ebből egyetlen szorzással megkapjuk, mennyi
-      // képernyő-terület vár lerakásra (`× kepSugar²`) — ez a letöltés fékje
-      // (lásd BETOLTESI_TARTALEK). Relatív, ezért nagyítás-független: nem kell
-      // képkockánként végigolvasni a listát.
+      // A várólistán álló testvérek együttes RELATÍV területe: Σ π·relR².
+      // Egyetlen szorzással megadja, mennyi képernyő-terület vár lerakásra
+      // (`× kepSugar²`). A letöltés fékjeként 2026-08-09 óta NEM használjuk (azt
+      // az `ELORETOLTES_DARAB` végzi), de a képernyőnkénti visszaszedéshez kell.
       //
       // A kapacitás-vágás által VISSZADOBOTT testvérek szándékosan NEM számítanak
       // bele: azok a sor VÉGÉRŐL estek le (túl nagyok), és ha beszámítanának,
@@ -942,7 +975,27 @@ class SikidomModal {
     // 0,0222 → 0,2241 helyett). Fix helyek mellett a tartalék nem opcionális: ha
     // elvesszük, a később érkezők kifelé szorulnak.
 
-    // ===== A MÁR LERAKOTTAK HELYBEN MARADNAK =====
+    // ===== 2026-08-09 ÓTA: EGYETLEN, TELJES PAKOLÁS, BENTRŐL KIFELÉ =====
+    // Csaba modellje. Nincs mag és nincs befagyasztott környezet: MINDEN ismert
+    // testvért (a már lerakottakat ÉS a várólistát) egyetlen menetben, növekvő
+    // méret szerint rakunk le — a legkisebb a középpontba, onnan kifelé.
+    //
+    // MIÉRT LEHET EZT: mert a kifelé építkezés az ív-számítással GYORS. Mérve
+    // (2026-08-09): 2 000 síkidom 15–20 ms, 10 000 kb. 70 ms, 128 000 kb. 850 ms —
+    // nagyjából lineárisan, nulla átfedéssel, még extrém méret-ugrásoknál is.
+    // Nem kell tehát a helyeket „megőrizni": olcsóbb újraszámolni.
+    //
+    // MIT ADUNK FEL: a „lerakott síkidom soha nem mozdul" ígéretet. Ha új, az
+    // eddigieknél KISEBB testvér érkezik, az a sor elejére kerül, és a kép
+    // átrendeződik. Ezt az `ELORETOLTES_DARAB` teszi ritkává: 10 000 testvér
+    // helyét előre kiszámoljuk, tehát a nagyítás sokáig nem hoz újat.
+    //
+    // MIÉRT NEM TARTHATJUK MEG MÉGIS A RÉGI HELYEKET: mert akkor az új, kisebb
+    // testvéreknek a KÖZÉPPONT kellene, ami már foglalt — kifelé szorulnának.
+    // Mérve pontosan ez történt: a méret-tizedek 2,59 · 2,46 · 2,32 · … lettek,
+    // vagyis a legkisebbek kerültek legkívülre.
+
+    // ===== A MÁR LERAKOTTAK HELYBEN MARADNAK (2026-08-09-ig) =====
     // Ez a nézet STABILITÁSÁNAK alapja (Csaba, 2026-08-08). Korábban minden
     // újrapakolásnál MINDENT újrarendeztünk, és mivel a pakolás sorrend-érzékeny
     // (növekvő méret szerint, a legkisebb középre), egyetlen új — az eddigieknél
@@ -956,22 +1009,27 @@ class SikidomModal {
     // pakolandóként — így a helyük NEM változik. Csak az újakat rakjuk le, a mag
     // pereme mentén. Pontosan erre való a pakoló `kornyezet` és `magSugar`
     // paramétere — eddig üresen hagytuk mindkettőt.
-    const allok = [];
+    // MINDEN ISMERT TESTVÉR egy listába: a már lerakottak (őket ÁTHELYEZZÜK) és a
+    // várólistán állók (ők most kapnak helyet). A pakoló rendezi őket növekvő
+    // méret szerint — a sorrendet nem itt döntjük el.
+    const mind = [];
+
     for (const gid of cs.gyerekIdk) {
       const gy = this._tar.get(gid);
       if (!gy) continue;
-      allok.push({ id: gy.id, x: gy.relX, y: gy.relY, sugar: gy.relR });
+      mind.push({ id: gy.id, sugar: gy.relR, csomopont: gy });
     }
 
-    // AZ ÚJAK: a teljes várólista, sorrendben (csökkenő tudatpont). Nincs se
-    // láthatósági, se kapacitás-szűrés — a helyet a mag tartja fenn.
-    const ujak = cs.varolista.map(v => ({
-      id: v.id,
-      sugar: v.relR ?? relSugar(v.pont),
-      varo: v
-    }));
+    for (const v of cs.varolista) {
+      mind.push({ id: v.id, sugar: v.relR ?? relSugar(v.pont), varo: v });
+    }
 
-    if (ujak.length === 0) return false;
+    if (mind.length === 0) return false;
+
+    // Ha nincs új, és a régiek már le vannak rakva, nincs mit tenni — a pakolás
+    // determinisztikus, tehát pontosan ugyanazt adná vissza. (Enélkül minden
+    // zoom-lépés végén fölöslegesen újraszámolnánk az egészet.)
+    if (cs.varolista.length === 0) return false;
 
     // ===== A MAG: A HÁTRALÉVŐ TUDATPONTBÓL =====
     // Lásd `_magSugar`. Ennyi helyet tartunk fenn középen azoknak, akiknek MÉG
@@ -980,42 +1038,51 @@ class SikidomModal {
     // A MOST lerakandó adagot LEVONJUK: ők épp helyet kapnak, tehát nem nekik kell
     // fenntartani. Enélkül az első, nagy adag (150 gyökér) egy ötször akkora mag
     // köré került, mint kellett volna — és ott is ragadt.
-    const ujPont = ujak.reduce((s, u) => s + (u.varo?.pont ?? 0), 0);
-    const magSugar = this._magSugar(cs, ujPont);
+    // NINCS MAG és NINCS KÖRNYEZET: üres lapra pakolunk, a legkisebbel a
+    // középpontban. (A `_magSugar` a kikapcsolt `URES_MAG` miatt 0-t ad — a
+    // számítás megmarad, hogy egy sorral visszakapcsolható legyen.)
+    const magSugar = this._magSugar(cs, 0);
 
     const eredmeny = pakolas(
-      ujak.map(u => ({ id: u.id, sugar: u.sugar })),
-      { magSugar, kornyezet: allok }
+      mind.map(m => ({ id: m.id, sugar: m.sugar })),
+      { magSugar, kornyezet: [] }
     );
 
     // --- AZ EREDMÉNY BEKÖTÉSE ---
-    const ujTerkep = new Map(ujak.map(u => [u.id, u.varo]));
-    const lerakottIdk = new Set();
+    // A már meglévő csomópontnak CSAK a helyét írjuk át (a leszármazottai a
+    // SZÜLŐJÜKHÖZ képest vannak tárolva, tehát a teljes részfa vele mozog — nem
+    // kell hozzányúlni). Az újakat felvesszük a tárba.
+    const terkep = new Map(mind.map(m => [m.id, m]));
+    let athelyezett = 0;
+    let ujonnan = 0;
 
     for (const hely of eredmeny.helyek) {
-      lerakottIdk.add(hely.id);
+      const m = terkep.get(hely.id);
+      if (!m) continue;
 
-      const v = ujTerkep.get(hely.id);    // most került be a várólistáról
-      if (!v) continue;
-
-      this._gyerekFelvetele(cs, v, hely.x, hely.y, v.relR ?? relSugar(v.pont));
+      if (m.csomopont) {
+        m.csomopont.relX = hely.x;
+        m.csomopont.relY = hely.y;
+        athelyezett++;
+      } else if (m.varo) {
+        this._gyerekFelvetele(cs, m.varo, hely.x, hely.y, m.sugar);
+        ujonnan++;
+      }
     }
 
-    // A lerakottak lejönnek a várólistáról — és a letöltési puffer mérőszámából is
-    cs.varolista = cs.varolista.filter(v => {
-      if (!lerakottIdk.has(v.id)) return true;
-      const r = v.relR ?? 0;
-      cs.varolistaRelTerulet -= Math.PI * r * r;
-      return false;
-    });
-    cs.varolistaRelTerulet = Math.max(0, cs.varolistaRelTerulet);
+    // Mindenki lekerült a várólistáról (a pakoló üres lapon mindig talál helyet;
+    // ha mégsem, a `lerakatlanIdk` alább naplózódik)
+    const lerakatlan = new Set(eredmeny.lerakatlanIdk);
+    cs.varolista = cs.varolista.filter(v => lerakatlan.has(v.id));
+    cs.varolistaRelTerulet = cs.varolista
+      .reduce((s, v) => s + Math.PI * (v.relR ?? 0) * (v.relR ?? 0), 0);
 
     this._meretekUjramerese(cs);
 
     console.log('SikidomModal._ujrapakolas', {
       csomopont: cs.id,
-      helybenMaradt: allok.length,           // ezek NEM mozdultak
-      ujonnan: lerakottIdk.size,
+      athelyezett,                           // a már meglévők ÚJ helyre kerültek
+      ujonnan,
       lerakatlan: eredmeny.lerakatlanIdk.length,
       varolistan: cs.varolista.length,
       magSugar: magSugar.toFixed(4),
@@ -1088,6 +1155,9 @@ class SikidomModal {
   //
   // FONTOS: ez a KÉPERNYŐ méretétől függ, NEM a testvérek számától. Millió vagy
   // milliárd testvérnél ugyanannyi — ez teszi kezelhetővé a nagy állományt.
+  // HASZNÁLATON KÍVÜL 2026-08-09 óta (a letöltést a darabszám fékezi) — de ez a
+  // MEGJELENÍTÉS korlátjának alapja lesz: „a darabszám (képernyőnkénti) korlátos
+  // visszaszedés" (Csaba, 2026-08-09).
   _kepernyoKapacitas() {
     const keret = 1 + 2 * LATOMEZO_TARTALEK;
     const mezoTerulet = (this._szelesseg || 1) * keret * (this._magassag || 1) * keret;
@@ -1345,38 +1415,56 @@ class SikidomModal {
         }
       }
 
-      // --- LERAKÁS-IGÉNY ---
-      // Egyetlen szabály: van-e még várakozó testvér. A mag mérete NEM lehet
-      // kiváltó ok, mert az adatból jön (`_magSugar`), nem a nagyításból — a
-      // nagyítás önmagában nem szabadít fel helyet, tehát nincs mit újraosztani.
-      if (cs.varolista.length > 0) {
-        pakolandok.push({ id: cs.id, kep });
-      }
-
       // --- BETÖLTÉS-IGÉNY: EGYETLEN szabály, a tudatpont-küszöb ---
       // Kiszámoljuk, mekkora tudatpont kell MOST a láthatósághoz. Ha ez lejjebb
       // került, mint ameddig eddig letöltöttünk, és van még be nem töltött gyerek,
       // akkor pontosan azokat kérjük le, amelyek épp láthatóvá váltak. Nincs lap,
       // nincs lap-határ — a küszöb folyamatosan süllyed a nagyítással.
+      // A LERAKÁS-IGÉNY IS ITT DŐL EL, mert ugyanezekből a számokból következik:
+      // csak akkor pakolunk, ha a gyűjtés BEFEJEZŐDÖTT (lásd lentebb).
+      let kellBetoltes = false;
+
       if (cs.vanGyereke && !cs.betoltesFut) {
         const kuszob = this._pontKuszob(cs, kep.kepSugar);
         const vanMegBetoltetlen = cs.osszesGyerekPont === 0 ||
           cs.betoltottGyerekPont < cs.osszesGyerekPont;
 
-        // A LETÖLTÉS VÉGE IS A KAPACITÁS. A küszöb csak azt mondja meg, MI válna
-        // láthatóvá — azt nem, hogy MENNYI fér a képre. Mély nagyításnál a küszöb
-        // fölött százezrek is lehetnek; ha mindet lehoznánk, a várólista és vele a
-        // jelölt-rendezés is elszállna. Ezért: amíg a várólistán már elég FRISS
-        // anyag vár a képernyő kitöltéséhez, addig nem kérünk többet.
+        // ===== A LETÖLTÉS FÉKJE: DARABSZÁM, NEM TERÜLET (2026-08-09) =====
+        // Itt korábban a TERÜLET-ALAPÚ fék állt (`BETOLTESI_TARTALEK`): amíg a
+        // várólistán elég friss anyag várt a képernyő kitöltéséhez, nem kértünk
+        // többet. Az új modellben ez ÁRTANA — ha a fék megállítaná a gyűjtést, a
+        // lerakás-igény azonnal teljesülne, és RÉSZLEGESEN pakolnánk. Mérve épp ez
+        // borítja fel a rendet (a méret-tizedek 2,59 · 2,46 · 2,32 · … lesznek).
         //
-        // Semmi nem vész el: a kurzor őrzi, hol tartunk, és amint a puffer lerakás
-        // közben leapad, a következő adag pontosan onnan folytatódik.
-        const varakozoTerulet = cs.varolistaRelTerulet * kep.kepSugar * kep.kepSugar;
-        const kellMegAnyag = varakozoTerulet < this._kepernyoKapacitas() * BETOLTESI_TARTALEK;
+        // Helyette a gyűjtés határa az ELŐRETÖLTÉSI KORLÁT: egy szülő alatt ennyi
+        // testvér HELYÉT számoljuk ki előre, aztán egyszerre lerakjuk. A letöltés
+        // így sem szalad el: a tudatpont-küszöb fölött csak annyi van, amennyi a
+        // mostani nagyításhoz kell, és a kurzor őrzi, hol tartunk.
+        const mennyiVanMar = cs.gyerekIdk.length + cs.varolista.length;
 
-        if (vanMegBetoltetlen && kuszob < cs.betoltottKuszob && kellMegAnyag) {
+        kellBetoltes = vanMegBetoltetlen && kuszob < cs.betoltottKuszob &&
+          mennyiVanMar < ELORETOLTES_DARAB;
+
+        if (kellBetoltes) {
           betoltendok.push({ id: cs.id, kuszob, suly: kep.kepSugar });
         }
+      }
+
+      // --- LERAKÁS-IGÉNY: CSAK A GYŰJTÉS VÉGÉN ---
+      // Ez a nézet legfontosabb időzítése (Csaba modellje, 2026-08-09). Amíg jön
+      // még anyag, NEM pakolunk: előbb összegyűjtjük, amit a küszöb és az
+      // előretöltési korlát enged, és csak azután rakjuk le, EGYETLEN menetben.
+      //
+      // MIÉRT: mag nélkül, adagonként pakolva a rend teljesen felborul — a
+      // második adag (csupa kisebb) a középpontba kívánkozna, de ott már ül az
+      // első adag, tehát kifelé szorul. Mérve a méret-tizedek 2,59 · 2,46 · 2,32
+      // · … lettek, vagyis a legkisebbek kerültek legkívülre. Egyszerre pakolva
+      // ugyanez az adat 0,094 · 0,179 · 0,267 · … — tökéletesen monoton.
+      //
+      // A `betoltesFut` is kizáró ok: egy éppen úton lévő adag pont az a „kisebb
+      // testvér", akinek a középpont kellene.
+      if (cs.varolista.length > 0 && !cs.betoltesFut && !kellBetoltes) {
+        pakolandok.push({ id: cs.id, kep });
       }
     }
 

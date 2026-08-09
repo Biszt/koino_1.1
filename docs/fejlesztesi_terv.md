@@ -2092,3 +2092,74 @@ teljesül. Döntést igényel, hogy emeljük-e a mélységet (több hálózat, k
   mint a rajzolás-szűrés — Csaba döntése („ne tüntess el semmit, ami kilóg") a
   rajzolásra szólt, de az ágak elengedését is kikapcsolta. A tár azóta monoton nő.
   A kapcsoló szétválasztva (`AGAK_ELENGEDESE`), a viselkedés egyelőre változatlan.
+
+---
+
+## Síkidom nézet — bentről kifelé, egyszerre (2026-08-09)
+
+**Csaba döntése:** „a befelé pakolás nem lesz jó, mert a kör átmérők között nagy
+ugrások is lehetnek, és így a belső kör egyre szabálytalanabb lesz a kidudorodások
+miatt. Szóval mindenképpen bentről kifelé pakoljunk, és egyszerre minél többet.
+A láthatóság csak a minimum felett, de a pozíciók legyenek meg mélyebben is."
+
+### A régi modell hibája — reprodukálva
+
+A mérőpróba világ-szintű módjában, a VALÓDI 405 gyökeres adattal:
+
+| modell | méret-tizedek (legkisebb → legnagyobb) | lyuk |
+|---|---|---|
+| mag + adagonként (régi) | 0,094 · 0,263 · 0,418 · **0,250** · 0,438 … 1,85 | ❌ 581 px |
+| mag nélkül + adagonként | **2,59 · 2,46 · 2,32** · 2,58 · 2,42 · 2,49 · 1,06 · 0,42 · 0,77 · 1,68 | káosz |
+| **mag nélkül + egyszerre** | **0,094 · 0,179 · 0,267 · 0,336 · 0,402 · 0,483 · 0,576 · 0,710 · 0,964 · 1,78** | ✅ nincs |
+
+Az első sor Csaba képe. A középső a figyelmeztetés: **a mag kikapcsolása önmagában
+ROSSZABB a réginél** — a legkisebbek kerülnek legkívülre. A kettő csak együtt jó.
+
+### Amit a nézetben átírtunk
+
+1. `URES_MAG = false` — nincs fenntartott hely.
+2. `_ujrapakolas` MINDENT újrapakol (a már lerakottakat is), üres lapra, mag és
+   környezet nélkül. A leszármazottakhoz nem kell nyúlni: ők a szülőjükhöz képest
+   vannak tárolva, tehát a részfa vele mozog.
+3. A lerakás CSAK a gyűjtés végén fut (`_lathatoLista`): amíg jön még anyag vagy
+   letöltés fut, nem pakolunk.
+4. Új `ELORETOLTES_DARAB = 10 000`: egy szülő alatt ennyi testvér HELYÉT számoljuk
+   ki előre. Ez váltja a területalapú féket (`BETOLTESI_TARTALEK`), ami részleges
+   pakolást engedett volna — épp azt, amitől a rend felborul.
+
+### A mérés (a próba `egyszerre` módja)
+
+| adat | pakolás | átrendeződés | legdrágább lépés |
+|---|---|---|---|
+| 405 gyökér (világ-szint, valódi) | 1× | **0 / 405 síkidom** | 27 ms |
+| 600 testvér (gyerek-szint) | 6× | 456 / 600 | 14 ms |
+| 3000 testvér (gyerek-szint) | 10× | 2440 / 3000 | 42 ms |
+
+Minden beállításban monoton a méret-sorrend, nulla átfedés, nincs középső lyuk.
+
+### Amit feladtunk, és mit kaptunk érte
+
+A „lerakott síkidom soha nem mozdul" ígéret megszűnt: ha új, az eddigieknél KISEBB
+testvér érkezik, a kép átrendeződik. **Csaba képernyőjén (405 gyökér) ez 0-szor
+történik meg** — egyetlen pakolás, semmi nem mozdul. Mélyebb szinteken viszont egy
+teljes benagyítás alatt 6–10 átrendeződés jön ki. Ha ez zavaró lesz, az
+`ELORETOLTES_DARAB` emelése csökkenti (a pakolás nem korlát: 128 000 síkidom
+850 ms, a letöltés viszont igen).
+
+### Sebesség-mérések a döntéshez
+
+- **Kifelé pakolás:** 2 000 síkidom 15–20 ms · 10 000 kb. 70 ms · 128 000 kb.
+  850 ms → **~145 000 síkidom/másodperc**, lineárisan, nulla átfedéssel. Extrém
+  méret-ugrások NEM lassítanak.
+- **Letöltés:** 12 600 testvér/s meleg dev adatbázison, HTTP és hálózat nélkül →
+  3 másodperces megnyitási kerettel reálisan ~20 000 testvér. Egy adag kiszolgálása
+  150-esével 19,6 ms, 300-asával 27,5 ms (elemenként 0,130 → **0,092 ms**), tehát a
+  `KERES_PLAFON` 150 → 300 emelése olcsó nyereség, ha mélyen töltünk előre.
+
+### Hátravan
+
+A **méret szerinti visszaszedés** (Csaba, 2026-08-09): „mindenképpen sorrendben kell
+visszaszedni azokat, amik már nincsenek képben — vagy darabszám-korláttal, vagy a
+maximum terület alapján. Amik a külső részről tűnnek el, azoknak még a pozícióját
+sem kell tárolni, mert a kifelé építkezés elég gyors. Nem kell halmozni."
+A `_kepernyoKapacitas()` és a `BETOLTESI_TARTALEK` ehhez megmarad.
