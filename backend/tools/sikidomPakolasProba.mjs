@@ -48,7 +48,46 @@
 
 // --- IMPORTÁLÁSOK ---
 import { pakolas } from '../../frontend/js/utils/sikidomPakolas.js';
-import { gyerekRelativSugar, SZINT_OSZTO } from '../../frontend/js/utils/sikidomMeret.js';
+import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO } from '../../frontend/js/utils/sikidomMeret.js';
+
+// ===== VILÁG-SZINT (GYÖKÉR) MÓD — 10. paraméter: `vilag` =====
+// EDDIG HIÁNYZOTT, pedig a böngészőben látott hiba PONT ITT jelentkezik: a
+// megnyitáskor a nézet a VILÁG csomópontot mutatja, aminek MÁS a geometriája,
+// mint egy közönséges szülőé:
+//
+//   - a méret NEM a szülőhöz, hanem a LEGERŐSEBB GYÖKÉRHEZ viszonyul, és nincs
+//     `/20` (a gyökerek nem egy szinttel lejjebb vannak) → a sugarak 20-szor
+//     nagyobbak ugyanahhoz a ponthoz képest;
+//   - a mag ezért szintén `/20` nélkül számolódik, ÉS nincs 1-re vágva —
+//     nyugodtan lehet 3–4-szerese a legerősebb gyökérnek.
+//
+// Vagyis a gyerek-szinten mért „minden rendben" semmit nem mond a világ-szintről.
+const GYOKER_MOD = String(process.argv[10] || '').toLowerCase() === 'vilag';
+
+// ===== MIKOR PAKOLUNK? — 11. paraméter: `adagonkent` / `egyszerre` =====
+// `adagonkent` a MAI viselkedés (minden befejezett kérés után pakolunk),
+// `egyszerre` az ÚJ modell (előbb gyűjtünk, aztán egyetlen menetben rakunk le).
+// Alapértelmezés: a mai viselkedés, hogy a régi kép reprodukálható maradjon.
+const ADAGONKENT_PAKOL = String(process.argv[11] || 'adagonkent').toLowerCase() !== 'egyszerre';
+
+// Hány testvér POZÍCIÓJÁT számoljuk ki előre egy szülő alatt (Csaba, 2026-08-09).
+// A letöltés a szűk keresztmetszet: 10 000 mérve ~1 s hálózat + 70 ms pakolás.
+const ELORETOLTES_DARAB = 10_000;
+
+// A VALÓDI gyökér-eloszlás a fejlesztői adatbázisból (2026-08-09-én lekérdezve):
+// 405 gyökér, összesen 17 235 pont, a legerősebb 2243, 62 db egypontos.
+// Szándékosan a MÉRT adat, nem szintetikus Zipf — ez a kép, amit Csaba lát.
+const VALODI_GYOKEREK = [
+  2243, 810, 720, 660, 600, 560, 520, 485, 450, 425, 400, 387, 380, 360, 340, 320,
+  305, 290, 275, 260, 247, 235, 222, 210, 200, 193, 190, 180, 170, 162, 155, 147,
+  140, 132, 129, 125, 120, 115, 110, 105, 100, 97, 95, 90, 85, 80, 77, 75, 71, 68,
+  64, 64, 60, 56, 55, 52, 48, 48, 45, 43, 41, 39, 38, 35, 34, 32, 30, 30, 28, 26,
+  26, 24, 23, 22, 21, 20, 19, 18, 18, 18, 17, 16, 15, 15, 15, 14, 14, 14, 14, 13,
+  13, 13, 13, 12, 12, 12, 12, 12, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10,
+  ...Array(7).fill(9), ...Array(8).fill(8), ...Array(10).fill(7), ...Array(13).fill(6),
+  ...Array(17).fill(5), ...Array(28).fill(4), ...Array(46).fill(3), ...Array(105).fill(2),
+  ...Array(62).fill(1)
+];
 
 // ===== A NÉZET ÁLLANDÓI (a SikidomModal-lal egyezően) =====
 const MIN_KEP_ATMERO = Number(process.argv[5]) || 24;
@@ -82,6 +121,20 @@ const ZOOM_SZORZO    = Number(process.argv[3]) || 1.3;
 const KEZDO_KEPSUGAR = 400;      // a szülő képernyő-sugara az induláskor
 const MAX_ZOOM_LEPES = Number(process.argv[4]) || 60;
 const SZULO_PONT     = 1_000_000;
+
+// ===== A GEOMETRIA MÉRTÉKEGYSÉGE =====
+// A nézetben minden képlet ugyanezt a két számot használja: a méret és a mag is
+// `pont / MERTEKEGYSEG` alakú, és a küszöb is ebből fordul vissza. A két szint
+// KIZÁRÓLAG a mértékegységben tér el (lásd `SikidomModal._relSugar`, `_magSugar`,
+// `_pontKuszob` — mindháromban ugyanez a `cs.id === VILAG ? … : …` elágazás áll).
+const LEGEROSEBB_GYOKER = Math.max(...VALODI_GYOKEREK);
+const MERTEKEGYSEG = GYOKER_MOD ? LEGEROSEBB_GYOKER : SZINT_OSZTO * SZULO_PONT;
+
+// A relatív sugár a szint szerinti valódi függvénnyel (a gyerek-ág 1/√20-ra vág,
+// a gyökér-ág 1-re — ezt is hűen akarjuk)
+const relSugar = GYOKER_MOD
+  ? (pont) => gyokerRelativSugar(pont, LEGEROSEBB_GYOKER)
+  : (pont) => gyerekRelativSugar(pont, SZULO_PONT);
 
 // ===== A KÉPERNYŐ ÉS A KAPACITÁS (a SikidomModal-lal egyezően) =====
 // Ez eddig HIÁNYZOTT a próbából — és épp ezért nem fogta meg a 2026-08-08-i
@@ -148,6 +201,14 @@ const naplo = (...ertekek) => process.stdout.write(ertekek.join(' ') + '\n');
 // Zipf-eloszlás: néhány erős testvér, majd hosszú farok — ez a valósághű eset, és
 // ez feszíti meg a modellt (a farok csak mély nagyításnál válik láthatóvá).
 function tesztGyerekek(darab) {
+  // VILÁG-SZINTEN a valódi gyökér-eloszlást használjuk (a `darab` ilyenkor nem
+  // számít — a mért adat annyi, amennyi)
+  if (GYOKER_MOD) {
+    return VALODI_GYOKEREK.map((pont, i) => ({
+      id: `g${String(i + 1).padStart(4, '0')}`, pont
+    }));
+  }
+
   const sulyok = [];
   let osszSuly = 0;
   for (let i = 1; i <= darab; i++) {
@@ -188,7 +249,7 @@ function bejaras(gyerekek) {
   // körönként, és 60 kör után 29 MILLIÓ képpontos „lyukat" mérnénk egy olyan
   // szülőn, amit a nézet rég elhagyott. (Mérve: pontosan ez jött ki, mielőtt ez a
   // korlát bekerült.)
-  const legnagyobbRelR = Math.max(...gyerekek.map(g => gyerekRelativSugar(g.pont, SZULO_PONT)));
+  const legnagyobbRelR = Math.max(...gyerekek.map(g => relSugar(g.pont)));
   const horgonyValtasKepSugar =
     Math.min(KEPERNYO_SZELESSEG, KEPERNYO_MAGASSAG) / Math.max(legnagyobbRelR, 1e-9);
 
@@ -216,13 +277,13 @@ function bejaras(gyerekek) {
     //   1. a tudatpont-küszöb (mi válna láthatóvá — a betöltési mélységgel osztva),
     //   2. a kérés-plafon (`ADAG`),
     //   3. a fék: ha a várólistán már elég terület vár, nem kérünk többet.
-    const pontKuszob = SZINT_OSZTO * SZULO_PONT *
+    const pontKuszob = MERTEKEGYSEG *
       Math.pow((MIN_KEP_ATMERO / BETOLTESI_MELYSEG) / (2 * kepSugar), 2);
 
     // A várakozó anyag KÉPERNYŐ-területe (a nézetben ezt a `varolistaRelTerulet`
     // tartja karban, itt elég kiszámolni — a lista rövid)
     const varakozoTerulet = () => varolista.reduce((s, v) => {
-      const r = gyerekRelativSugar(v.pont, SZULO_PONT) * kepSugar;
+      const r = relSugar(v.pont) * kepSugar;
       return s + Math.PI * r * r;
     }, 0);
 
@@ -232,17 +293,35 @@ function bejaras(gyerekek) {
     // körönként EGYETLEN adagot engedett — emiatt egy kis `ADAG` érték nem a
     // modellt feszítette meg, hanem egy olyan lassú letöltést utánzott, amilyet a
     // nézet sosem csinál (mérve: 20-as adaggal 1109 px-es „lyuk", pusztán ezért).
+    // ===== MIKOR PAKOLUNK? A NÉZET LEGFONTOSABB DÖNTÉSE =====
+    // `adagonkent` (a MAI viselkedés): a nézet MINDEN befejezett kérés után pakol
+    //   (`_gyerekekBetoltese` `finally` ága → `_tennivalokFeldolgozasa`). Az első
+    //   adag tehát lekerül, mielőtt a második megérkezne.
+    // `egyszerre` (az ÚJ modell): előbb összegyűjtjük, amit a küszöb és az
+    //   előretöltési korlát enged, és CSAK AZUTÁN pakolunk, egyetlen menetben.
+    //
+    // Ez nem stílus-kérdés. Mag NÉLKÜL, adagonként pakolva a rend MEGFORDUL: a
+    // második adag (csupa kisebb) a középpontba kívánkozna, de ott már ül az első
+    // adag — tehát kifelé szorul. A „bentről kifelé" modell CSAK akkor működik, ha
+    // egyszerre látjuk az egész készletet.
+    const adagokEredmenye = [];
     let erkezett = 0;
     while (meg.length > 0 && meg[0].pont >= pontKuszob) {
       if (varakozoTerulet() >= KEPERNYO_KAPACITAS * BETOLTESI_TARTALEK) break;
+      if (varolista.length + erkezett >= ELORETOLTES_DARAB) break;
 
       // Egy kérés-adag (a nézetben KERES_PLAFON × EGYIDEJU_BETOLTES)
-      let adagDarab = 0;
-      while (meg.length > 0 && meg[0].pont >= pontKuszob && adagDarab < ADAG) {
-        varolista.push(meg.shift());
-        adagDarab++;
+      const adag = [];
+      while (meg.length > 0 && meg[0].pont >= pontKuszob && adag.length < ADAG) {
+        adag.push(meg.shift());
         erkezett++;
       }
+      varolista.push(...adag);
+      adagokEredmenye.push(adag.length);
+
+      // A MAI viselkedésnél minden adag után külön pakolunk — a lentebbi lerakás
+      // ilyenkor adagonként fut le. Az ÚJ modellnél tovább gyűjtünk.
+      if (ADAGONKENT_PAKOL) break;
     }
 
     let lepesMs = 0;
@@ -281,13 +360,13 @@ function bejaras(gyerekek) {
     const hatraPont = Math.max(0,
       osszesGyerekPont - helyezettPont - mostLerakandoPont);
     const magSugar = URES_MAG
-      ? Math.sqrt(hatraPont / (SZINT_OSZTO * SZULO_PONT * MAG_SURUSEG))
+      ? Math.sqrt(hatraPont / (MERTEKEGYSEG * MAG_SURUSEG))
       : 0;
 
     // (d) LERAKÁS. A láthatóság NEM kapu többé — az csak a RAJZOLÁST vezérli.
     //     Amit letöltöttünk, azt lerakjuk; a helyet a mag tartja fenn a többinek.
     const ujak = varolista.map(v => ({
-      id: v.id, sugar: gyerekRelativSugar(v.pont, SZULO_PONT)
+      id: v.id, sugar: relSugar(v.pont)
     }));
 
     if (ujak.length > 0) {
@@ -399,6 +478,15 @@ function hianyEllenorzes(gyerekek, lerakottak, varolista) {
 function beagyazasEllenorzes(lerakottak) {
   let legnagyobb = 0;
   for (const l of lerakottak) legnagyobb = Math.max(legnagyobb, Math.hypot(l.x, l.y) + l.sugar);
+
+  // VILÁG-SZINTEN nincs mibe beágyazódni: a VILÁG virtuális csomópont, nincs valódi
+  // pereme (ezért nem is vágjuk 1-re a magot). Itt csak KIÍRJUK a kiterjedést.
+  if (GYOKER_MOD) {
+    naplo(`  --   Kiterjedés (világ-szint, nincs szülő-perem) — ${legnagyobb.toFixed(4)} ` +
+          `(a legerősebb gyökér sugara 1)`);
+    return;
+  }
+
   allitas(legnagyobb <= 1 + 1e-9, 'Minden síkidom a szülőn belül',
     `a legkülső perem ${legnagyobb.toFixed(4)} (a szülő sugara 1)`);
 }
@@ -577,7 +665,7 @@ function lyukMeretEllenorzes(lerakottak, varolista) {
 
   // Ami még hely nélkül maradt, annak a területéből adódó indokolt lyuk
   const hatraPont = varolista.reduce((s, v) => s + v.pont, 0);
-  const indokolt = Math.sqrt(hatraPont / (SZINT_OSZTO * SZULO_PONT * MAG_SURUSEG));
+  const indokolt = Math.sqrt(hatraPont / (MERTEKEGYSEG * MAG_SURUSEG));
 
   // Tűrés: az indokolt lyuk + két legkisebb sugár (a legbelső kör körüli rés)
   const felsoHatar = indokolt + 2 * legkisebbSugar;
@@ -591,7 +679,10 @@ function lyukMeretEllenorzes(lerakottak, varolista) {
 // ===== FUTTATÁS =====
 naplo('');
 naplo('===== SÍKIDOM-PAKOLÁS MÉRŐPRÓBA =====');
-naplo(`Gyerekek: ${GYEREK_DARAB} · zoom-lépés: ×${ZOOM_SZORZO} · kezdő képernyő-sugár: ${KEZDO_KEPSUGAR} px`);
+naplo(GYOKER_MOD
+  ? `VILÁG-SZINT (valódi gyökér-adat): ${VALODI_GYOKEREK.length} gyökér · összesen ` +
+    `${VALODI_GYOKEREK.reduce((a, b) => a + b, 0)} pont · a legerősebb ${LEGEROSEBB_GYOKER}`
+  : `Gyerekek: ${GYEREK_DARAB} · zoom-lépés: ×${ZOOM_SZORZO} · kezdő képernyő-sugár: ${KEZDO_KEPSUGAR} px`);
 naplo(`Láthatósági küszöb: ${MIN_KEP_ATMERO} px átmérő · betöltési mélység: ${BETOLTESI_MELYSEG}× · mag-sűrűség σ = ${MAG_SURUSEG}`);
 naplo('');
 
