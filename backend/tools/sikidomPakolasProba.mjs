@@ -26,15 +26,22 @@
 // KAPACITÁS-VÁGÁST is (ez 2026-08-08-ig hiányzott belőle, és épp ezért nem fogta
 // meg a böngészőben látott rossz elrendezést).
 //
+// A BETÖLTÉS IS A NÉZET SZABÁLYA SZERINT MEGY (2026-08-09 óta): a testvérek nem
+// vak adagokban érkeznek, hanem akkor, amikor a tudatpontjuk eléri a nagyításból
+// számolt küszöböt. Enélkül a próba nem látott semmit a betöltés hangolásából —
+// lásd a `BETOLTESI_MELYSEG` melletti magyarázatot.
+//
 // Futtatás:  node backend/tools/sikidomPakolasProba.mjs
-//            node backend/tools/sikidomPakolasProba.mjs 600 1.3 200 24 mag 0.5 20
+//            node backend/tools/sikidomPakolasProba.mjs 600 1.3 200 24 mag 0.5 20 4
 //            (darab, zoom-szorzó, zoom-lépések, min. képernyő-átmérő,
-//             mag-kapcsoló, mag-sűrűség σ, egy körben érkező darab)
+//             mag-kapcsoló, mag-sűrűség σ, kérés-plafon körönként,
+//             betöltési mélység)
 //
 //            A 7. paraméter (σ) a mag ÓVATOSSÁGA: kisebb érték = nagyobb mag.
 //            A 8. (adag) CSÖKKENTVE feszíti meg a modellt: sok körön át kell
-//            helyet tartani a még meg sem érkezett testvéreknek. Nagy adaggal
-//            két körben minden lekerül, tehát a próba nem bizonyít semmit.
+//            helyet tartani a még meg sem érkezett testvéreknek.
+//            A 9. (mélység) az előretöltés: 1 = csak a láthatóvá válókat hozzuk
+//            le, 4 = a nézet mai beállítása (16-szor több testvér).
 //
 //            node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag
 //            → ÜRES MAG NÉLKÜL (összehasonlításhoz).
@@ -45,7 +52,6 @@ import { gyerekRelativSugar, SZINT_OSZTO } from '../../frontend/js/utils/sikidom
 
 // ===== A NÉZET ÁLLANDÓI (a SikidomModal-lal egyezően) =====
 const MIN_KEP_ATMERO = Number(process.argv[5]) || 24;
-const MAG_CEL_ATMERO = 120;
 
 // A 6. paraméter: `nincsmag` → üres mag nélkül futtatunk (a legkisebb testvér a
 // középpontba kerül). Ez a `SikidomModal.URES_MAG` kapcsoló tükre.
@@ -98,11 +104,41 @@ const KEPERNYO_KAPACITAS =
 const KERES_PLAFON       = 150;
 const EGYIDEJU_BETOLTES  = 3;
 
-// Egy körben ennyi testvér érkezhet. A 8. paraméterrel CSÖKKENTHETŐ — így a
-// becslés-alapú mag valóban MEGFESZÜL: sok körön át kell helyet tartania a még
-// meg sem érkezett testvéreknek. Nagy adaggal a modell meg sem izzad (két körben
-// minden lekerül), tehát nem is bizonyít semmit.
+// EGY KÉRÉS-ADAG mérete (a nézetben `KERES_PLAFON` × `EGYIDEJU_BETOLTES`). Mivel a
+// kérések láncolódnak — amíg a fék engedi, jön a következő adag —, ez az érték a
+// VÉGEREDMÉNYT nem befolyásolja, csak azt, hány részletben érkezik ugyanaz.
+// Mérve (2026-08-09): 20-as és 450-es adaggal a lyuk ugyanaz a 119 px, 3000
+// testvérnél az 50-es és a 450-es egyaránt 267 px. A betöltést tehát valóban a FÉK
+// szabályozza (`BETOLTESI_TARTALEK`), nem a darabszám-plafon.
 const ADAG = Number(process.argv[8]) || KERES_PLAFON * EGYIDEJU_BETOLTES;
+
+// ===== A LETÖLTÉS KÜSZÖB-VEZÉRELT (2026-08-09) =====
+// EDDIG HIÁNYZOTT A PRÓBÁBÓL, és pontosan ezért volt vak arra a változtatásra,
+// amit mérnie kellett volna. A testvérek körönként egyszerűen `ADAG`-onként
+// érkeztek, függetlenül attól, mekkora a nagyítás — a `MIN_KEP_ATMERO` deklarálva
+// volt és ki is íródott a fejlécbe, de SEHOL nem használtuk. Mérve: ugyanaz a
+// futás 24-es és 4-es küszöbbel bitre azonos eredményt adott.
+//
+// Emiatt a `BETOLTESI_MELYSEG` bevezetése (az a javítás, ami a folyton növő üres
+// magot hivatott megszüntetni) a próba számára LÁTHATATLAN volt: a 9 állítás
+// akkor is változatlanul átment volna, ha az érték 1 vagy 100.
+//
+// MOSTANTÓL a próba a nézet valódi szabályát futtatja. A küszöb a méret-képlet
+// megfordítása (`SikidomModal._pontKuszob`):
+//
+//   pontKüszöb = 20 · P_szülő · ( (minÁtmérő / mélység) / (2 · képSugár) )²
+//
+// és egy körben csak azok érkeznek meg, akik ezt elérik — legfeljebb `ADAG`
+// darab, és csak amíg a fék (lásd lentebb) engedi.
+//
+// HANGOLÁS: nagyobb érték = mélyebb előretöltés (több hálózat, kisebb mag),
+// 1 = a láthatósági küszöbbel egyező, korábbi viselkedés. Ez a 9. paraméter.
+const BETOLTESI_MELYSEG = Number(process.argv[9]) || 4;
+
+// A LETÖLTÉS FÉKJE (`SikidomModal.BETOLTESI_TARTALEK`): amíg a várólistán már
+// legalább ennyiszer annyi terület vár, mint amennyi a képernyőre fér, addig nem
+// kérünk többet. A kurzor őrzi, hol tartunk — semmi nem vész el.
+const BETOLTESI_TARTALEK = 2;
 
 // A naplót elnyomjuk: a pakoló képkockánként logol, itt több ezerszer futna
 console.log = () => {};
@@ -140,6 +176,22 @@ function bejaras(gyerekek) {
   const osszesGyerekPont = gyerekek.reduce((s, g) => s + g.pont, 0);
   const pontTerkep = new Map(gyerekek.map(g => [g.id, g.pont]));
   const pontJa = (id) => pontTerkep.get(id) ?? 0;
+
+  // ===== MEDDIG SZÓL EGYÁLTALÁN EZ A SZÜLŐ? =====
+  // A próbában NINCS horgonyváltás: egyetlen szülőt nagyítunk a végtelenségig. A
+  // valódi nézet ezzel szemben LEFELÉ LÉP, amint egy gyerek képernyő-átmérője eléri
+  // a képernyő kétszeresét (`sikidomHorgony.LEFELE_KUSZOB`) — onnantól már nem ezt
+  // a szülőt nézi az e-ember, hanem a gyerekét.
+  //
+  // Ezt a határt ki KELL számolni, különben a képpontban mért lyuk értelmetlenné
+  // válik: kis adaggal a betöltés sok körig tart, a képsugár közben ×1,3-del nő
+  // körönként, és 60 kör után 29 MILLIÓ képpontos „lyukat" mérnénk egy olyan
+  // szülőn, amit a nézet rég elhagyott. (Mérve: pontosan ez jött ki, mielőtt ez a
+  // korlát bekerült.)
+  const legnagyobbRelR = Math.max(...gyerekek.map(g => gyerekRelativSugar(g.pont, SZULO_PONT)));
+  const horgonyValtasKepSugar =
+    Math.min(KEPERNYO_SZELESSEG, KEPERNYO_MAGASSAG) / Math.max(legnagyobbRelR, 1e-9);
+
   let kepSugar = KEZDO_KEPSUGAR;
   let ujrapakolasok = 0;
   let legdragabb = 0;
@@ -157,8 +209,41 @@ function bejaras(gyerekek) {
   let helyezettPont = 0;
 
   for (let kor = 1; kor <= MAX_ZOOM_LEPES; kor++) {
-    // Egy zoom-lépésre ennyi érkezhet a backendtől (csökkenő pont szerint)
-    varolista.push(...meg.splice(0, ADAG));
+    // ===== (0) A LETÖLTÉS: KÜSZÖB-VEZÉRELT, MINT A NÉZETBEN =====
+    // A `meg` lista csökkenő pont szerint áll (a backend is így ad), tehát elölről
+    // véve pontosan azok érkeznek, akik elérik a küszöböt. Három kapu van, mind a
+    // három a `SikidomModal` tükre:
+    //   1. a tudatpont-küszöb (mi válna láthatóvá — a betöltési mélységgel osztva),
+    //   2. a kérés-plafon (`ADAG`),
+    //   3. a fék: ha a várólistán már elég terület vár, nem kérünk többet.
+    const pontKuszob = SZINT_OSZTO * SZULO_PONT *
+      Math.pow((MIN_KEP_ATMERO / BETOLTESI_MELYSEG) / (2 * kepSugar), 2);
+
+    // A várakozó anyag KÉPERNYŐ-területe (a nézetben ezt a `varolistaRelTerulet`
+    // tartja karban, itt elég kiszámolni — a lista rövid)
+    const varakozoTerulet = () => varolista.reduce((s, v) => {
+      const r = gyerekRelativSugar(v.pont, SZULO_PONT) * kepSugar;
+      return s + Math.PI * r * r;
+    }, 0);
+
+    // A KÉRÉSEK LÁNCOLÓDNAK egy zoom-lépésen belül: a nézetben minden befejezett
+    // letöltés `finally` ága újraindítja a feldolgozást, tehát amíg a fék engedi és
+    // van a küszöb fölött anyag, addig jön a következő adag. A próba korábban
+    // körönként EGYETLEN adagot engedett — emiatt egy kis `ADAG` érték nem a
+    // modellt feszítette meg, hanem egy olyan lassú letöltést utánzott, amilyet a
+    // nézet sosem csinál (mérve: 20-as adaggal 1109 px-es „lyuk", pusztán ezért).
+    let erkezett = 0;
+    while (meg.length > 0 && meg[0].pont >= pontKuszob) {
+      if (varakozoTerulet() >= KEPERNYO_KAPACITAS * BETOLTESI_TARTALEK) break;
+
+      // Egy kérés-adag (a nézetben KERES_PLAFON × EGYIDEJU_BETOLTES)
+      let adagDarab = 0;
+      while (meg.length > 0 && meg[0].pont >= pontKuszob && adagDarab < ADAG) {
+        varolista.push(meg.shift());
+        adagDarab++;
+        erkezett++;
+      }
+    }
 
     let lepesMs = 0;
 
@@ -235,8 +320,13 @@ function bejaras(gyerekek) {
       kor,
       ms: lepesMs,
       kepSugar: Math.round(kepSugar),
+      erkezett,                          // ennyi jött le a küszöb fölül ebben a körben
       lerakott: lerakottak.length,
       varolistan: varolista.length,
+      hatravan: meg.length,              // ennyit a backend még el sem küldött
+      // Ezen a nagyításon még VALÓBAN ezt a szülőt nézi az e-ember? (Fölötte a
+      // nézet már lefelé lépett volna egy gyerekre — lásd `horgonyValtasKepSugar`.)
+      horgonyErvenyes: kepSugar <= horgonyValtasKepSugar,
       lyukKepAtmero: Number.isFinite(magSugarRel)
         ? Math.round(magSugarRel * kepSugar * 2)
         : Infinity
@@ -334,14 +424,44 @@ function monotoniaEllenorzes(lerakottak) {
     sertes ? `megsérül a ${sertes}-ben` : `${korok.length} egymásba fűzött gyűrű`);
 }
 
-// 5. A LYUK KÉPPONTBAN ÁLLANDÓ, AMÍG VAN VÁRAKOZÓ
+// 5. A LYUK KÖZELÍTÉSKOR NEM SZALAD EL
+//
+// EZ AZ ÁLLÍTÁS KICSERÉLVE (2026-08-09). Korábban azt mérte, hogy a lyuk
+// KÉPPONTBAN ÁLLANDÓ marad-e (`MAG_CEL_ATMERO ± 20%`) — de az a régi, elvetett
+// modell elvárása volt, amikor a magot a KÉPERNYŐHÖZ horgonyoztuk. A mai modellben
+// a mag az ADATBÓL jön, és épp az a dolga, hogy ELFOGYJON, ahogy a testvérek
+// helyet kapnak. Az állítás tehát olyat követelt, aminek nem szabad teljesülnie.
+//
+// Mégis mindig átment — mert a `varolistan > 0` szűrő SOHA nem talált egyetlen
+// lépést sem: 2026-08-09 óta a várólista minden körben kiürül (a kapacitás már nem
+// korlátozza a lerakást). Vagyis üresen, „nincs mérhető lépés" indoklással ment át,
+// akármit csináltunk a modellel. Ez volt a próba vakfoltja.
+//
+// A HELYÉBE Csaba VALÓDI tünete kerül (2026-08-09): „ahogy közelítek, a belső mag
+// a képernyőhöz képest folyamatosan nő, és előbb-utóbb csak az üres magot látom."
+// Ez akkor mérhető, ha a letöltés is küszöb-vezérelt — ezért kellett előbb azt
+// megcsinálni.
+//
+// A SZABÁLY: az üres mag ÁTMÉRŐJE nem nőheti túl a képernyő kisebbik oldalának a
+// FELÉT. Miért a fele, és nem az egésze: a tünet nem akkor kezdődik, amikor a lyuk
+// már kitölti a képernyőt, hanem amikor URALJA — fél képernyőnyi üresség fölött a
+// kép már inkább lyuk, mint tartalom. (Az „egész képernyő" határ ráadásul vak
+// maradna egy 700 px-es lyukra, ami nyilvánvalóan hibás.)
+//
+// A NÖVEKEDÉST MÉRJÜK, DE NEM BUKTATJUK EL RAJTA. Az utolsó commit ígérete az volt,
+// hogy „a mag magától lefogy" — a mérés szerint ez 600 testvérnél teljesül, 3000-nél
+// viszont NEM (118 → 281 px csúcs, mielőtt elfogy). Ez valós korlát, nem hiba: a
+// nézet közben végig használható marad. Ezért a trend minden futásban KIÍRÓDIK
+// (így egy romlás azonnal látszik), de a bukást a fenti, tünet-alapú határ dönti el.
 function lyukEllenorzes(lepesek) {
-  const relevans = lepesek.filter(l => l.varolistan > 0 && Number.isFinite(l.lyukKepAtmero));
-  if (relevans.length === 0) { allitas(true, 'A lyuk képpontban állandó', 'nincs mérhető lépés'); return; }
+  // CSAK azok a körök számítanak, ahol a nézet még tényleg ezt a szülőt mutatja:
+  // fölötte már horgonyt váltott volna (lásd `horgonyValtasKepSugar`).
+  const relevans = lepesek.filter(l =>
+    Number.isFinite(l.lyukKepAtmero) && l.lerakott > 0 && l.horgonyErvenyes);
+  if (relevans.length === 0) { allitas(false, 'A lyuk közelítéskor nem szalad el', 'nincs mérhető lépés'); return; }
 
   // MAG NÉLKÜL az elvárás a fordítottja: NE legyen lyuk — a legkisebb testvér a
-  // középpontban ül, tehát a mért lyuk 0 (a legbelső kör belső széle a
-  // középpontban van vagy azon túl).
+  // középpontban ül, tehát a mért lyuk 0.
   if (!URES_MAG) {
     const legnagyobbLyuk = Math.max(...relevans.map(l => l.lyukKepAtmero));
     allitas(legnagyobbLyuk === 0, 'Nincs középső lyuk (a legkisebb a középpontban ül)',
@@ -349,12 +469,19 @@ function lyukEllenorzes(lepesek) {
     return;
   }
 
-  const ertekek = relevans.map(l => l.lyukKepAtmero);
-  const min = Math.min(...ertekek), max = Math.max(...ertekek);
-  const also = MAG_CEL_ATMERO * 0.8, felso = MAG_CEL_ATMERO * 1.2;
+  const legnagyobb = Math.max(...relevans.map(l => l.lyukKepAtmero));
+  const hatar = Math.min(KEPERNYO_SZELESSEG, KEPERNYO_MAGASSAG) / 2;
 
-  allitas(min >= also && max <= felso, 'A lyuk képpontban állandó (cél ±20%)',
-    `${min}–${max} px (cél ${MAG_CEL_ATMERO} px, tűrés ${Math.round(also)}–${Math.round(felso)})`);
+  // A betöltés alatti szakasz trendje: innen látszik, fogy-e a mag közelítés közben
+  const betoltesAlatt = relevans.filter(l => l.hatravan > 0 || l.varolistan > 0);
+  const elso = betoltesAlatt[0]?.lyukKepAtmero;
+  const utolso = betoltesAlatt[betoltesAlatt.length - 1]?.lyukKepAtmero;
+
+  allitas(legnagyobb <= hatar, 'A lyuk közelítéskor nem szalad el',
+    `a legnagyobb mért lyuk ${legnagyobb} px (a határ ${hatar} px) · ` +
+    (betoltesAlatt.length === 0
+      ? 'a betöltés egyetlen körben lezajlott'
+      : `a betöltés alatt ${elso} → ${utolso} px (${utolso <= elso ? 'fogy' : 'NŐ'})`));
 }
 
 // 6. DETERMINIZMUS
@@ -465,7 +592,7 @@ function lyukMeretEllenorzes(lerakottak, varolista) {
 naplo('');
 naplo('===== SÍKIDOM-PAKOLÁS MÉRŐPRÓBA =====');
 naplo(`Gyerekek: ${GYEREK_DARAB} · zoom-lépés: ×${ZOOM_SZORZO} · kezdő képernyő-sugár: ${KEZDO_KEPSUGAR} px`);
-naplo(`Láthatósági küszöb: ${MIN_KEP_ATMERO} px átmérő · lyuk cél-átmérője: ${MAG_CEL_ATMERO} px`);
+naplo(`Láthatósági küszöb: ${MIN_KEP_ATMERO} px átmérő · betöltési mélység: ${BETOLTESI_MELYSEG}× · mag-sűrűség σ = ${MAG_SURUSEG}`);
 naplo('');
 
 const gyerekek = tesztGyerekek(GYEREK_DARAB);
@@ -474,9 +601,9 @@ const { lerakottak, varolista, lepesek, ujrapakolasok, legdragabb, elsoHelyek } 
 const idotartam = Date.now() - kezdet;
 
 naplo('--- NAGYÍTÁS-LÉPÉSEK ---');
-naplo('  kör   képsugár   lerakva   várólistán   lyuk(px)   idő(ms)');
+naplo('  kör   képsugár   érkezett   lerakva   várólistán   hátravan   lyuk(px)   idő(ms)');
 for (const l of lepesek) {
-  naplo(`  ${String(l.kor).padStart(3)}   ${String(l.kepSugar).padStart(8)}   ${String(l.lerakott).padStart(7)}   ${String(l.varolistan).padStart(10)}   ${String(l.lyukKepAtmero).padStart(8)}   ${l.ms.toFixed(0).padStart(7)}`);
+  naplo(`  ${String(l.kor).padStart(3)}   ${String(l.kepSugar).padStart(8)}   ${String(l.erkezett).padStart(8)}   ${String(l.lerakott).padStart(7)}   ${String(l.varolistan).padStart(10)}   ${String(l.hatravan).padStart(8)}   ${String(l.lyukKepAtmero).padStart(8)}   ${l.ms.toFixed(0).padStart(7)}`);
 }
 naplo('');
 

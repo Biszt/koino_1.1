@@ -83,12 +83,14 @@ export function gyokerRelativSugar(pont, legerosebbPont) {
 // „javított", akár nullára, és onnantól minden további adag némán elveszett
 // (600 gyerekes próbán 60-as adagokkal csak 180 jelent meg).
 //
-// AZ ÚJ MODELL (Csaba döntése, 2026-08-05): a lyukat nem becsüljük, hanem a
-// KÉPERNYŐHÖZ horgonyozzuk. Van egy állandó cél-átmérő képpontban
-// (`MAG_CEL_ATMERO` a SikidomModal-ban), a lyuk adat-térbeli sugara pedig
-// egyszerűen `(MAG_CEL_ATMERO / 2) / szülőKépernyőSugár`. Nagyítás után a lyuk
-// képpontban megnő, és addig fűzünk befelé újabb síkidomokat, amíg vissza nem
-// csökken a cél alá. Nincs mit becsülni, tehát nincs mit elhibázni.
+// AZ ELSŐ JAVÍTÁSI KÍSÉRLET (2026-08-05) a lyukat a KÉPERNYŐHÖZ horgonyozta: állandó
+// cél-átmérő képpontban. Ez is megbukott (2026-08-08): állandó képpont-méret mellett
+// a mag adat-térben zsugorodik, függetlenül attól, hány testvér van még hátra — a
+// később érkezőknek így nem maradt hely, és kifelé fűződő „kígyó" lett belőle.
+//
+// AZ ÉRVÉNYES MODELL (Csaba, 2026-08-08): a mag a HÁTRALÉVŐ TUDATPONTBÓL számolódik
+// (`SikidomModal._magSugar` és `MAG_SURUSEG`) — annyi helyet tartunk fenn, amennyi a
+// még hely nélküli testvéreknek kell.
 //
 // A pakolás utáni tényleges lyukat a `sikidomPakolas.pakolas` MÉRI és adja vissza.
 

@@ -71,6 +71,22 @@ const FELFELE_SZINTEK = 3;
 // LATOMEZO_TARTALEK arányú keretén kívüliek kimaradnak).
 const KEPERNYON_KIVULIEK_ELTUNTETESE = false;
 
+// ===== AZ ÁGAK ELENGEDÉSE A MEMÓRIÁBÓL (külön kérdés!) =====
+// Ez KORÁBBAN ugyanaz a kapcsoló volt, mint a fenti — pedig két külön dologról
+// szól. Csaba döntése arra vonatkozott, hogy a RAJZOLÁS ne hagyjon ki semmit;
+// azzal viszont a memória-takarítás is némán megszűnt (`_takaritas` első sora).
+//
+// A KÖVETKEZMÉNY, amivel számolni kell: a csomópont-tár így MONOTON NŐ, elengedési
+// út nincs. Egy hosszú, mélyre nagyító munkamenet minden lerakott csomópontot
+// megtart, és a `_lathatoLista` képkockánként végig is olvassa őket. A
+// `BETOLTESI_MELYSEG = 4` ezt a növekedést 16-szorosára gyorsította.
+//
+// `false` marad (a mai viselkedés), de mostantól KÜLÖN kapcsolható: ha a nézet
+// hosszú használat után belassul, ez az első hely, ahol nézni kell. Bekapcsolva a
+// régóta nem látott ágak gyerekei elengedődnek (a helyük NEM vész el: a szülő
+// „még nem töltöttük be" állapotba áll vissza, és újra letöltődik).
+const AGAK_ELENGEDESE = false;
+
 // Reális pakolási sűrűség: a kör-pakolás a rendelkezésre álló területnek ekkora
 // hányadát tölti ki. (Azonos körök elméleti maximuma 0,9069; vegyes méreteknél a
 // MÉRT érték nálunk 0,41–0,53 — lásd a tervben a 105 gyökéren végzett mérést.
@@ -238,26 +254,11 @@ const URES_MAG = true;
 // számolunk fölöslegesen minden képkockán.
 const ZOOM_VEGE_MS = 140;
 
-// AZ ÚJRAPAKOLÁS HATÓKÖRE: a képernyő-téglalap, minden irányban ennyiszeres
-// kerettel megnövelve. A zoom végén CSAK azt pakoljuk újra, ami ebbe BENYÚLIK;
-// a teljesen kívül lévők helyben maradnak, és akadályként szerepelnek. Ettől a
-// munka KORLÁTOS.
-//
-// A válogatás a gyerekek VALÓDI képernyő-helyéhez mér (`_ujrapakolas`), nem a
-// szülő középpontjától vett távolsághoz — az utóbbi elhúzott vagy oldalra
-// nagyított képnél rossz köröket fagyasztott be.
-//
-// AZ ÉRTÉK JELENTÉSE: keret-arány, mint a `LATOMEZO_TARTALEK`-nál — oldalanként
-// a képernyő-méret ennyiszeresét adjuk hozzá. (Korábban ez SUGÁR-SZORZÓ volt
-// [fél képernyő × 1,5 = képernyő + 50%]; a téglalapos válogatásra áttéréskor
-// keret-aránnyá vált, és az 1,5-ös érték ott már képernyő + 150%-ot jelentett.)
-//
-// MIÉRT A RAJZOLÁSI KERET KÉTSZERESE: a rajzolás a képernyő + 50%-át mutatja
-// (`LATOMEZO_TARTALEK`). Az újrapakolás keretének ennél NAGYOBBNAK kell lennie,
-// különben a fagyasztási varrat épp a látható terület szélére esne, és ott
-// szakadna el a kép. A kétszeres keret a varratot biztosan a rajzolt területen
-// KÍVÜLRE viszi.
-const UJRAPAKOLASI_TARTALEK = LATOMEZO_TARTALEK * 2;
+// MEGJEGYZÉS: itt állt az `UJRAPAKOLASI_TARTALEK` — az újrapakolás hatóköre,
+// amikor még a látómezőbe benyúló köröket pakoltuk újra, a kívül esőket pedig
+// „befagyasztottuk". 2026-08-08 óta MINDEN lerakott síkidom helye végleges, tehát
+// nincs se hatókör, se fagyasztási varrat: az `_ujrapakolas` csak az újakat rakja
+// le, a régiek akadályként vesznek részt. A konstansra nincs többé szükség.
 
 // A +/− GOMBOK egy kattintásának nagyítása. A görgő NEM ezt használja — lásd alább.
 const ZOOM_LEPES = 1.2;
@@ -903,11 +904,11 @@ class SikidomModal {
   // a MIN_KEP_ATMERO növelése csökkenti az egyszerre látható darabszámot.
   //
   // @returns {boolean} változott-e az elrendezés (kell-e újrarajzolni)
-  // @param {Object} kep - a csomópont KÉPERNYŐ-adatai: { kepX, kepY, kepSugar }.
-  //   A pozíció is kell, nem csak a méret: enélkül a látómező-válogatás a szülő
-  //   középpontjához mérne (lásd lentebb).
+  // @param {Object} kep - a csomópont KÉPERNYŐ-adatai; ebből a `kepSugar` kell.
+  //   (A `kepX`/`kepY` a látómező-válogatáshoz kellett, ami megszűnt — a lerakott
+  //   síkidomok 2026-08-08 óta mind helyben maradnak, nincs mit válogatni.)
   _ujrapakolas(cs, kep) {
-    const { kepX, kepY, kepSugar } = kep || {};
+    const { kepSugar } = kep || {};
     if (!cs || !(kepSugar > 0)) return false;
 
     const vilagSzint = cs.id === VILAG;
@@ -1455,13 +1456,16 @@ class SikidomModal {
   // A `magKep` / `kepernyoMeret` arány mutatja, mekkora részét foglalja a mag a
   // képernyőnek — ha ez közelítéskor NŐ, a letöltés nem tart lépést a zoommal.
   _allapotNaplo() {
-    const cs = this._tar.get(this._horgony) ?? this._tar.get(VILAG);
+    // CSAK A HORGONYRÓL naplózunk. Korábban itt egy `?? this._tar.get(VILAG)`
+    // visszaesés állt, a képernyő-sugarat viszont mindkét ágon a `skala`-nak vette
+    // — az pedig CSAK a horgonyra igaz (a horgony kerete definíció szerint 1
+    // sugarú). A VILÁG-ra esve tehát rossz számokat írtunk volna ki; inkább nem
+    // írunk ki semmit.
+    const cs = this._tar.get(this._horgony);
     if (!cs) return;
 
-    // A horgony (vagy a VILÁG) képernyő-sugara: a horgony kerete 1 sugarú
-    const kepSugar = this._horgony === cs.id
-      ? this._nezet.skala
-      : this._nezet.skala;
+    // A horgony képernyő-sugara: a kerete 1 sugarú, tehát ez maga a skála
+    const kepSugar = this._nezet.skala;
 
     const osszes = cs.osszesGyerekPont || 0;
     const helyezett = cs.helyezettPont || 0;
@@ -1475,7 +1479,20 @@ class SikidomModal {
       if (this._nezet.skala * gy.relR * 2 >= MIN_KEP_ATMERO) rajzolt++;
     }
 
-    const magRel = this._magSugar(cs, kepSugar);
+    // A KÖVETKEZŐ lerakásnál érvényes mag. A `_magSugar` második paramétere
+    // TUDATPONT (a most lerakandó adag), nem képpont — ide tehát a várólistán álló
+    // testvérek pontja való, pontosan úgy, ahogy az `_ujrapakolas` számolja.
+    //
+    // (Korábban itt a `kepSugar` állt: a napló pontból vont ki képpontot. Mély
+    // nagyításnál a skála a hátralévő pont fölé nő, és a napló `magRel: 0.0000`-t
+    // írt ki olyankor is, amikor a mag valójában nagy volt — épp abban a kérdésben
+    // félrevezetve, amire ez a napló való.)
+    const varoPont = cs.varolista.reduce((s, v) => s + (v.pont ?? 0), 0);
+    const magRel = this._magSugar(cs, varoPont);
+
+    // A MÉRT lyuk (amit az e-ember lát) és a SZÁMOLT mag (amit fenntartunk) két
+    // külön szám — ha eltérnek, az önmagában is magyarázat.
+    const mertMag = Number.isFinite(cs.magSugarRel) ? cs.magSugarRel : null;
 
     console.log('SikidomModal - ÁLLAPOT', {
       csomopont: cs.id,
@@ -1487,6 +1504,7 @@ class SikidomModal {
       hatraAranya: osszes > 0 ? (hatra / osszes * 100).toFixed(1) + '%' : '–',
       magRel: magRel.toFixed(4),
       magKep: Math.round(magRel * kepSugar * 2),          // a mag ÁTMÉRŐJE képpontban
+      mertMagKep: mertMag === null ? '–' : Math.round(mertMag * kepSugar * 2),
       kepernyoMeret: Math.round(this._kepernyoMeret()),
       betoltesFut: cs.betoltesFut,
       betoltottKuszob: Number.isFinite(cs.betoltottKuszob)
@@ -1850,8 +1868,8 @@ class SikidomModal {
   // A horgony ŐSEIT és magát a horgonyt sosem bántjuk — azokra a keret-számításhoz
   // szükség van.
   _takaritas() {
-    // Csaba döntése: ne tüntessünk el semmit azért, mert kilóg a képernyőből.
-    if (!KEPERNYON_KIVULIEK_ELTUNTETESE) return;
+    // KÜLÖN kapcsoló, nem a rajzolás-szűrésé (lásd `AGAK_ELENGEDESE`)
+    if (!AGAK_ELENGEDESE) return;
 
     const vedett = new Set([VILAG]);
     let p = this._horgony;

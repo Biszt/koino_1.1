@@ -2015,3 +2015,80 @@ változatlan (`MIN_KEP_ATMERO = 24`), és a letöltést továbbra is fékezi a
 `BETOLTESI_TARTALEK` (a várólista területéhez mérve).
 
 **Böngészős ellenőrzésre vár** — `teszt.md` (j6).
+
+---
+
+## Síkidom nézet — a mérőpróba vakfoltjai (2026-08-09)
+
+A nézet átnézésekor kiderült: a mérőpróba **nem mérte azt, amit az utolsó két
+commit megváltoztatott**. Ez a legfontosabb tanulság, mert épp az a szabályunk,
+hogy mérünk, nem saccolunk — a műszer viszont vak volt.
+
+### 1. A betöltés hiányzott a modellből
+
+A próbában a testvérek körönként vak `ADAG`-onként érkeztek, függetlenül a
+nagyítástól. A `MIN_KEP_ATMERO` deklarálva volt és a fejlécbe is kiíródott, de
+SEHOL nem használtuk. Mérve: ugyanaz a futás 24-es és 4-es küszöbbel bitre azonos
+eredményt adott.
+
+Következmény: a `BETOLTESI_MELYSEG` bevezetése — az a javítás, aminek a folyton
+növő üres magot kellett megszüntetnie — a próba számára láthatatlan volt. A „mind
+a 9 állítás átmegy" igaz volt, de semmit nem mondott a javításról: akkor is
+átment volna, ha az érték 1 vagy 100.
+
+**Javítva:** a próba mostantól a nézet valódi szabályát futtatja — tudatpont-küszöb
+(`_pontKuszob` tükre), területalapú fék (`BETOLTESI_TARTALEK`), és **láncolt
+kérések** (a nézetben minden befejezett letöltés `finally` ága újraindítja a
+feldolgozást, tehát egy zoom-lépésen belül több adag is jöhet).
+
+### 2. Az 5. állítás mindig üresen ment át
+
+A „lyuk képpontban állandó (cél ±20%)" két okból volt rossz:
+
+- **Rossz elvárást mért.** A `MAG_CEL_ATMERO = 120` az elvetett, KÉPERNYŐHÖZ
+  horgonyzott mag modelljéből maradt ott. A mai modellben a mag az adatból jön, és
+  épp az a dolga, hogy ELFOGYJON — az állandóság nem elvárás, hanem hiba lenne.
+- **Sosem futott le.** A `varolistan > 0` szűrő 2026-08-09 óta egyetlen lépést sem
+  talál (a várólista minden körben kiürül, mert a kapacitás már nem korlátozza a
+  lerakást), ezért „nincs mérhető lépés" indoklással mindig átment.
+
+**Helyette:** „A lyuk közelítéskor nem szalad el" — Csaba valódi tünetének
+(„ahogy közelítek, a belső mag folyamatosan nő, és előbb-utóbb csak az üres magot
+látom") a fordítása. Határ: a képernyő kisebbik oldalának a fele. A növekedés
+TRENDJE minden futásban kiíródik, de nem buktat — az nem hiba, csak korlát.
+
+### 3. A próbában nincs horgonyváltás
+
+A próba egyetlen szülőt nagyít a végtelenségig, a valódi nézet viszont lefelé lép,
+amint egy gyerek átmérője eléri a képernyő kétszeresét. Enélkül a képpontban mért
+lyuk értelmetlenné vált: kis adaggal **29 millió képpontos** „lyukat" mértünk egy
+olyan szülőn, amit a nézet rég elhagyott. A mérés mostantól csak azokra a körökre
+szól, ahol a horgony még érvényes.
+
+### A MÉRÉS EREDMÉNYE — a `BETOLTESI_MELYSEG = 4` igazolva
+
+| testvérek | mélység 1 (a javítás előtt) | mélység 4 (mai) | mélység 8 |
+|---|---|---|---|
+| 600 | ❌ 480 px (164 → 421, NŐ) | ✅ 119 px (97 → 94, fogy) | – |
+| 3000 | ❌ 1053 px (171 → 1053, NŐ) | ✅ 267 px (118 → 189, nő) | ✅ 134 px |
+
+A javítás tehát valóban működik, és most már **bizonyítva** is van, nem csak
+levezetve. A legnagyobb lyuk jó közelítéssel fordítottan arányos a mélységgel.
+
+**Ismert korlát:** 3000 testvérnél a mag mélység 4-gyel még nem fogy — 118-ról
+267 px-ig nő, mielőtt elfogyna. A „magától lefogy" ígéret tehát ~600 testvérig
+teljesül. Döntést igényel, hogy emeljük-e a mélységet (több hálózat, kisebb mag).
+
+### Mellékesen kiderült
+
+- **A kérés-plafon nem szabályoz.** 20-as és 450-es adaggal a lyuk azonos 119 px.
+  A betöltés fékje a `BETOLTESI_TARTALEK` (terület), nem a darabszám.
+- **Az állapot-napló rossz mértékegységgel számolt.** A `_magSugar` második
+  paramétere tudatpont, a napló viszont képpontot adott át — mély nagyításnál
+  `magRel: 0.0000`-t írt ki akkor is, amikor a mag nagy volt. Épp abban a
+  kérdésben vezetett félre, amire való. Javítva (a várólista pontját adjuk át), és
+  mostantól a MÉRT lyukat is kiírja a számolt mag mellett.
+- **A memória-takarítás némán megszűnt.** A `_takaritas` ugyanazon a kapcsolón ült,
+  mint a rajzolás-szűrés — Csaba döntése („ne tüntess el semmit, ami kilóg") a
+  rajzolásra szólt, de az ágak elengedését is kikapcsolta. A tár azóta monoton nő.
+  A kapcsoló szétválasztva (`AGAK_ELENGEDESE`), a viselkedés egyelőre változatlan.

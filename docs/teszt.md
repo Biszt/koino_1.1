@@ -825,12 +825,48 @@ docker logs -f koino-backend
     a modell is más: a már lerakottak `kornyezet`-ként (akadályként) vesznek részt,
     csak az újakat rakja le. `URES_MAG = true` ismét.*
 
+    **2026-08-09 — A PRÓBA MOST MÁR A BETÖLTÉST IS MÉRI (9 állítás, új 9. paraméter):**
+    `node backend/tools/sikidomPakolasProba.mjs 600 1.3 80 24 mag 0.5 450 4`
+    (darab, zoom-szorzó, zoom-lépések, min. átmérő, mag-kapcsoló, σ, kérés-adag,
+    **betöltési mélység**).
+    - Eddig a testvérek vak adagokban érkeztek, a `MIN_KEP_ATMERO` deklarálva volt,
+      de SEHOL nem használtuk — a próba ugyanazt adta 24-es és 4-es küszöbbel.
+      Emiatt a `BETOLTESI_MELYSEG` bevezetése **láthatatlan volt** számára.
+      Mostantól a nézet valódi szabálya fut: küszöb + fék + láncolt kérések.
+    - Az 5. állítás KICSERÉLVE. A régi („a lyuk képpontban állandó, cél ±20%") az
+      elvetett, képernyő-horgonyzott mag elvárása volt, ráadásul a `varolistan > 0`
+      szűrője miatt SOHA nem talált mérhető lépést — mindig üresen ment át. Helyette:
+      **„A lyuk közelítéskor nem szalad el"** — az üres mag átmérője nem nőheti túl
+      a képernyő kisebbik oldalának a felét (a trend a napló minden sorában látszik).
+    - Csak azok a körök számítanak, ahol a nézet még VALÓBAN ezt a szülőt mutatná;
+      fölötte horgonyt váltana (a próbában nincs horgonyváltás, enélkül 29 millió
+      képpontos „lyukat" mérnénk egy rég elhagyott szülőn).
+    - **Mért eredmény — ez igazolja a `BETOLTESI_MELYSEG = 4`-et:**
+
+      | testvérek | mélység 1 (a javítás előtt) | mélység 4 (mai) | mélység 8 |
+      |---|---|---|---|
+      | 600 | ❌ 480 px (164 → 421, NŐ) | ✅ 119 px (97 → 94, fogy) | – |
+      | 3000 | ❌ 1053 px (171 → 1053, NŐ) | ✅ 267 px (118 → 189, nő) | ✅ 134 px |
+
+    - **Ismert korlát:** 3000 testvérnél a mag mélység 4-gyel még NEM fogy — 118-ról
+      267 px-ig nő, mielőtt elfogyna. A nézet közben használható marad (a határ
+      400 px), de a „magától lefogy" ígéret csak ~600-ig teljesül. A mélység
+      emelése (8 vagy 16) ezen segít, több hálózat árán.
+    - **A kérés-adag (8. paraméter) már nem befolyásolja az eredményt:** 20-as és
+      450-es adaggal a lyuk azonos 119 px. A betöltést a **fék**
+      (`BETOLTESI_TARTALEK`) szabályozza, nem a darabszám-plafon.
+
     **Üres mag NÉLKÜL** (`SikidomModal.URES_MAG = false` tükre — már NEM a jelenlegi
     beállítás, csak összehasonlításhoz):
     `node backend/tools/sikidomPakolasProba.mjs 600 1.3 90 24 nincsmag`
     Ilyenkor az ötödik állítás megfordul: a lyuk-ellenőrzés helyett azt várjuk, hogy
-    **nincs középső lyuk** — a legkisebb testvér a középpontban ül. 600-nál és
-    3000-nél is mind a hat átmegy.
+    **nincs középső lyuk** — a legkisebb testvér a középpontban ül.
+
+    *2026-08-09: ebben a módban a 8. állítás („a fenntartott mag elég") SZÁNDÉKOSAN
+    bukik — épp ezt hivatott megmutatni. Mag nélkül a később érkezők kifelé
+    szorulnak, tehát a méret-sorrend megfordul. A javítás előtt 2 tizednél fordult
+    meg, a valósághű betöltéssel 7-nél: a próba most élesebben mutatja, MIÉRT kell a
+    mag. Nem regresszió — az összehasonlító mód elvárt eredménye.*
 
     **Nagyítás-próba (2026-08-06 óta):** nyisd meg a Síkidom nézetet, és nagyíts
     addig, amíg a kép TÚLNŐ a képernyőn. A külső, nagy síkidomoknak ekkor is
