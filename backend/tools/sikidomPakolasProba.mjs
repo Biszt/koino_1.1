@@ -304,15 +304,25 @@ function bejaras(gyerekek) {
     // második adag (csupa kisebb) a középpontba kívánkozna, de ott már ül az első
     // adag — tehát kifelé szorul. A „bentről kifelé" modell CSAK akkor működik, ha
     // egyszerre látjuk az egész készletet.
+    // ===== A FÓKUSZ MINDENT KAP (2026-08-09) =====
+    // A próba EGYETLEN szülőt nagyít — az tehát végig a FÓKUSZ (a nézetben a
+    // horgony). Az új modellben a fókusz-csomópontnak nincs letöltési küszöbe:
+    // a rangsor elejétől kap mindent az `ELORETOLTES_DARAB` korlátig, egyben.
+    //
+    // Enélkül a küszöb adagolta volna a testvéreket, és minden adagnál újra
+    // kellett volna pakolni: mérve 3000 testvérnél az első körben 73 érkezett
+    // 3000 helyett, és 10-szer rendeződött át a kép.
+    const ervenyesKuszob = ADAGONKENT_PAKOL ? pontKuszob : 0;
+
     const adagokEredmenye = [];
     let erkezett = 0;
-    while (meg.length > 0 && meg[0].pont >= pontKuszob) {
+    while (meg.length > 0 && meg[0].pont >= ervenyesKuszob) {
       if (varakozoTerulet() >= KEPERNYO_KAPACITAS * BETOLTESI_TARTALEK) break;
       if (varolista.length + erkezett >= ELORETOLTES_DARAB) break;
 
       // Egy kérés-adag (a nézetben KERES_PLAFON × EGYIDEJU_BETOLTES)
       const adag = [];
-      while (meg.length > 0 && meg[0].pont >= pontKuszob && adag.length < ADAG) {
+      while (meg.length > 0 && meg[0].pont >= ervenyesKuszob && adag.length < ADAG) {
         adag.push(meg.shift());
         erkezett++;
       }

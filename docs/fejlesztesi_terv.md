@@ -2127,24 +2127,40 @@ ROSSZABB a réginél** — a legkisebbek kerülnek legkívülre. A kettő csak e
    ki előre. Ez váltja a területalapú féket (`BETOLTESI_TARTALEK`), ami részleges
    pakolást engedett volna — épp azt, amitől a rend felborul.
 
+### 5. A FÓKUSZ MINDENT KAP — enélkül az egész hiábavaló
+
+Az első átíráskor bennmaradt a letöltési küszöb a gyűjtés feltételében. Emiatt
+3000 testvérből az első körben csak **73** jött le (aki átlépte a láthatósági
+küszöb negyedét), és a kép **10-szer rendeződött át** a benagyítás alatt — pontosan
+az, amit el akartunk kerülni. Csaba észrevétele: „azt beszéltük, hogy 10000
+síkidomig az egészet elhelyezzük, nem?"
+
+A pozíció-számítás NEM függhet a láthatóságtól. Ezért a **horgony** — az a csomópont,
+amibe épp belenagyítottál — küszöb nélkül kapja meg az `ELORETOLTES_DARAB` testvérét,
+egyben. Mindenki más marad a küszöb-vezérelt betöltésnél.
+
+**Miért nem kap mindenki mély előretöltést:** mert egyszerre sok csomópont látszik.
+100 látható csomópont × 10 000 gyerek = egymillió sor — miközben egy 24 képpontos
+síkidom gyerekei úgyis 5 képpont alatt maradnának, tehát láthatatlanok.
+
 ### A mérés (a próba `egyszerre` módja)
 
 | adat | pakolás | átrendeződés | legdrágább lépés |
 |---|---|---|---|
-| 405 gyökér (világ-szint, valódi) | 1× | **0 / 405 síkidom** | 27 ms |
-| 600 testvér (gyerek-szint) | 6× | 456 / 600 | 14 ms |
-| 3000 testvér (gyerek-szint) | 10× | 2440 / 3000 | 42 ms |
+| 405 gyökér (világ-szint, valódi) | **1×** | **0 / 405** | 27 ms |
+| 600 testvér (gyerek-szint) | **1×** | **0 / 600** | 21 ms |
+| 3000 testvér (gyerek-szint) | **1×** | **0 / 3000** | 71 ms |
 
-Minden beállításban monoton a méret-sorrend, nulla átfedés, nincs középső lyuk.
+Minden beállításban monoton a méret-sorrend, nulla átfedés, nincs középső lyuk, és
+**egyetlen síkidom sem mozdul** — az `ELORETOLTES_DARAB` korlátig egyszer pakolunk,
+és kész.
 
-### Amit feladtunk, és mit kaptunk érte
+### Amit elvben feladtunk
 
-A „lerakott síkidom soha nem mozdul" ígéret megszűnt: ha új, az eddigieknél KISEBB
-testvér érkezik, a kép átrendeződik. **Csaba képernyőjén (405 gyökér) ez 0-szor
-történik meg** — egyetlen pakolás, semmi nem mozdul. Mélyebb szinteken viszont egy
-teljes benagyítás alatt 6–10 átrendeződés jön ki. Ha ez zavaró lesz, az
-`ELORETOLTES_DARAB` emelése csökkenti (a pakolás nem korlát: 128 000 síkidom
-850 ms, a letöltés viszont igen).
+A „lerakott síkidom soha nem mozdul" ígéret elvben megszűnt: ha az `ELORETOLTES_DARAB`
+korláton TÚL érkezik új, kisebb testvér, a kép átrendeződik. A mérés szerint 10 000-ig
+ez egyszer sem fordul elő. Efölött az `ELORETOLTES_DARAB` emelése tolja ki a határt —
+a pakolás nem korlát (128 000 síkidom 850 ms), a letöltés viszont igen.
 
 ### Sebesség-mérések a döntéshez
 

@@ -661,6 +661,14 @@ class SikidomModal {
       // Meddig töltöttünk le: a legutóbb kért tudatpont-küszöb, és a kurzor
       // (hol tartunk a rangsorban). Nincs lap és nincs „hányadik oldal".
       betoltottKuszob: Infinity,
+
+      // MINDEN gyerek letöltve? A `betoltottGyerekPont >= osszesGyerekPont`
+      // összehasonlítás lebegőpontos összegekre épül, tehát sosem szabad rá
+      // egyedül bízni: ha egy hajszállal alatta ragad, a fókusz-csomópont (aminek
+      // a küszöbe 0) VÉGTELEN sok üres kérést indítana. Ezt a jelzőt a backend
+      // egyértelmű válasza állítja be (`vanTovabb === false` nulla küszöbnél).
+      mindenLetoltve: false,
+
       kurzorPont: null,
       kurzorId: null,
       osszesGyerekPont: 0,        // a backend adja: az ÖSSZES gyerek együttes pontja
@@ -852,7 +860,11 @@ class SikidomModal {
       // A küszöböt csak akkor jegyezzük be teljesítettként, ha az adag NEM
       // vágódott le a darab-plafonon — különben a küszöbig még van hátra, és a
       // következő képkockán a kurzortól folytatjuk.
-      if (!valasz?.vanTovabb) szulo.betoltottKuszob = Math.max(0, pontKuszob);
+      if (!valasz?.vanTovabb) {
+        szulo.betoltottKuszob = Math.max(0, pontKuszob);
+        // Nulla küszöbnél a „nincs több" azt jelenti: EGYÁLTALÁN nincs több
+        if (pontKuszob <= 0) szulo.mindenLetoltve = true;
+      }
 
       if (gyerekek.length > 0) this._varolistaraFuzes(szulo, gyerekek);
 
@@ -1415,19 +1427,36 @@ class SikidomModal {
         }
       }
 
-      // --- BETÖLTÉS-IGÉNY: EGYETLEN szabály, a tudatpont-küszöb ---
-      // Kiszámoljuk, mekkora tudatpont kell MOST a láthatósághoz. Ha ez lejjebb
-      // került, mint ameddig eddig letöltöttünk, és van még be nem töltött gyerek,
-      // akkor pontosan azokat kérjük le, amelyek épp láthatóvá váltak. Nincs lap,
-      // nincs lap-határ — a küszöb folyamatosan süllyed a nagyítással.
-      // A LERAKÁS-IGÉNY IS ITT DŐL EL, mert ugyanezekből a számokból következik:
-      // csak akkor pakolunk, ha a gyűjtés BEFEJEZŐDÖTT (lásd lentebb).
+      // ===== BETÖLTÉS-IGÉNY: A FÓKUSZ MINDENT KAP, A TÖBBI CSAK A KÜSZÖBIG =====
+      // Csaba modellje (2026-08-09): „a pozíciók kiszámítása legyen meg előre,
+      // mondjuk 10000, de a megjelenítés ugyanúgy használja a min területet."
+      // Vagyis a POZÍCIÓ-SZÁMÍTÁS nem függhet a láthatóságtól — az csak rajzolási
+      // kérdés. Ha a letöltést a láthatósági küszöb vezérli, akkor adagokban
+      // érkezik minden, és minden adagnál újrapakolunk: mérve 3000 testvérnél az
+      // első körben 73 jött le 3000 helyett, és 10-szer rendeződött át a kép.
+      //
+      // MIÉRT NEM KAP MINDENKI MÉLY ELŐRETÖLTÉST: mert egyszerre sok csomópont
+      // látszik. Ha mindegyiknek 10 000 gyereket kérnénk le, 100 látható
+      // csomópontnál egymillió sor lenne — miközben egy 24 képpontos síkidom
+      // gyerekei úgyis 5 képpont alatt maradnának, tehát láthatatlanok.
+      //
+      // A SZABÁLY: a HORGONY — az a csomópont, amibe épp belenagyítottál, és ami
+      // a képernyőt kitölti — a küszöbtől függetlenül megkapja az `ELORETOLTES_DARAB`
+      // testvérét, egyben. Mindenki más marad a küszöb-vezérelt betöltésnél, ami
+      // magától a mérethez skálázódik.
+      //
+      // A LERAKÁS-IGÉNY IS ITT DŐL EL: csak akkor pakolunk, ha a gyűjtés VÉGE.
       let kellBetoltes = false;
 
       if (cs.vanGyereke && !cs.betoltesFut) {
-        const kuszob = this._pontKuszob(cs, kep.kepSugar);
-        const vanMegBetoltetlen = cs.osszesGyerekPont === 0 ||
-          cs.betoltottGyerekPont < cs.osszesGyerekPont;
+        const fokuszban = cs.id === this._horgony;
+
+        // A fókuszban lévőnek NINCS küszöbe: a rangsor elejétől kérünk mindent,
+        // amíg az előretöltési korlátot el nem érjük.
+        const kuszob = fokuszban ? 0 : this._pontKuszob(cs, kep.kepSugar);
+
+        const vanMegBetoltetlen = !cs.mindenLetoltve &&
+          (cs.osszesGyerekPont === 0 || cs.betoltottGyerekPont < cs.osszesGyerekPont);
 
         // ===== A LETÖLTÉS FÉKJE: DARABSZÁM, NEM TERÜLET (2026-08-09) =====
         // Itt korábban a TERÜLET-ALAPÚ fék állt (`BETOLTESI_TARTALEK`): amíg a
@@ -1435,15 +1464,10 @@ class SikidomModal {
         // többet. Az új modellben ez ÁRTANA — ha a fék megállítaná a gyűjtést, a
         // lerakás-igény azonnal teljesülne, és RÉSZLEGESEN pakolnánk. Mérve épp ez
         // borítja fel a rendet (a méret-tizedek 2,59 · 2,46 · 2,32 · … lesznek).
-        //
-        // Helyette a gyűjtés határa az ELŐRETÖLTÉSI KORLÁT: egy szülő alatt ennyi
-        // testvér HELYÉT számoljuk ki előre, aztán egyszerre lerakjuk. A letöltés
-        // így sem szalad el: a tudatpont-küszöb fölött csak annyi van, amennyi a
-        // mostani nagyításhoz kell, és a kurzor őrzi, hol tartunk.
         const mennyiVanMar = cs.gyerekIdk.length + cs.varolista.length;
 
-        kellBetoltes = vanMegBetoltetlen && kuszob < cs.betoltottKuszob &&
-          mennyiVanMar < ELORETOLTES_DARAB;
+        kellBetoltes = vanMegBetoltetlen && mennyiVanMar < ELORETOLTES_DARAB &&
+          (fokuszban || kuszob < cs.betoltottKuszob);
 
         if (kellBetoltes) {
           betoltendok.push({ id: cs.id, kuszob, suly: kep.kepSugar });
@@ -2003,6 +2027,7 @@ class SikidomModal {
     cs.kulsoSugar = 0;
     cs.betoltottGyerekPont = 0;
     cs.betoltottKuszob = Infinity;
+    cs.mindenLetoltve = false;
     cs.kurzorPont = null;
     cs.kurzorId = null;
     return darab;
