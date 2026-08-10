@@ -2343,3 +2343,21 @@ síkidomok tömege — ott a méret nem függ a távolságtól. A korábbi szám
   ezekből van a legtöbb.
 - A szaggatott magkört mostantól a SZABÁLY rajzolja ki (a fix mag), nem a mért
   üresség — amit az e-ember lát, pontosan az, ami a szabály.
+
+---
+
+## ✅ Síkidom nézet — böngészőben igazolva a 10 405 gyökéren (2026-08-09)
+
+Csaba visszajelzése az üres-mag-alapú láthatóságra, a valódi 10 405 gyökeres
+adaton: **„egész jó, nem akadozik túlságosan."**
+
+Vagyis a ~10 200 egyszerre rajzolt síkidomot a vászon elbírja — de **enyhe akadozás
+előfordul**. Ez a nézet egyetlen ismert, nyitott gyengéje.
+
+### Ha a sebesség kell (a következő lépés, ha zavaróvá válik)
+
+Az olcsó rajzolási út (5 képpont alatt kitöltött pont) már bent van. A következő
+kézenfekvő lépés: a legapróbbakat **egyetlen `Path2D`-be gyűjteni** és egy húzásra
+kirajzolni, szín szerint csoportosítva — így képkockánként néhány rajzoló-hívás
+marad több ezer helyett. ELŐBB MÉRNI KELL, hol megy el az idő (böngésző-profil),
+mert a `_lathatoLista` bejárása is jelölt: az is végigmegy ~10 000 csomóponton.
