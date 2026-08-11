@@ -2967,3 +2967,64 @@ pakolás van, nem tucatnyi.
 mélységben soha nem pakolt kétszer); a mező az 1. mélységben **pontosan 250-et** rakott
 le egyetlen menetben, majd a horgonyváltáskor 250 → 5 000. Hiba és beágyazás-sértés
 nem volt. Csaba: „nekem jónak tűnik."*
+
+
+## Síkidom nézet — a `SikidomModal.js` SZÉTBONTÁSA (terv, 2026-08-11)
+
+A fájl **3 584 sor**, ~66 metódus — a projekt legnagyobb fájlja, és szemben áll a
+CLAUDE.md „egy komponens = egy JS-fájl" elvével. A cél nem a soralapú aprítás, hanem
+hogy a fájl **egyetlen felelősséget** viseljen: a nézet összefogását.
+
+### A mai szerkezet, csoportokba rendezve
+
+| csoport | metódusok | kb. sor |
+|---|---|---|
+| **rajzolás** (tiszta canvas) | `_alakzatRajzolasa` · `_hatarjeloloRajzolasa` · `_halvanyodas` · `_uresMagRajzolasa` · `_feliratSzin` · `_magSzin` · `_cimkeRajzolasa` · `_sortores` · `_mellekIkonokRajzolasa` · `_egyIkonRajzolasa` · `_ikonKep` · `_lekerekitettTeglalap` | ~425 |
+| **tár és memória** | `_visszaszedes` · `_osSopres` · `_kiparkolas` · `_visszahozatal` · `_takaritas` · `_reszfaTorlese` | ~320 |
+| **vezérlés** (egér, érintés, koppintás) | `_esemenyekBekotese` · `_gesztusMerese` · `_zoom` · `_kifeleHatarolas` · `_befeleHatarolas` · `_zoomKozeppontra` · `_ajanlatKoppintas` · `_koppintas` · `_kartyaMegjelenitese` · `_kartyaSzovegBetoltese` | ~500 |
+| **betöltés** | `_pontKuszob` · `_gyerekekBetoltese` · `_varolistaraFuzes` | ~165 |
+| **elrendezés** | `_ujrapakolas` (244!) · `_pakolasiMagSugar` · `_relSugar` · `_legnagyobbGyerekRelR` · `_gyerekFelvetele` · `_meretekUjramerese` | ~350 |
+| **nézet és horgony** | `_horgonySzint` · `_kezdoNezetBecslese` · `_alaphelyzet` · `_magSugarKeppontban` · `_kezdoIllesztesKell` · `_kezdoFazisLezarasa` · `_nezetAnimacio` · `_horgonyEllenorzes` | ~230 |
+| **láthatóság** | `_lathatoLista` (**358!**) · `_latomezobenVan` | ~370 |
+
+### A javasolt sorrend — a legkisebb kockázattal kezdve
+
+1. **`sikidomRajzolo.js`** — a rajzoló csoport. Ez a legbiztonságosabb: tiszta
+   függvények, csak a `rajzolo` (2D kontextus) és számok kellenek nekik, állapotot
+   nem módosítanak. Első lépésnek ideális, mert megmutatja, működik-e a minta.
+2. **`sikidomTar.js`** — a tár-kezelés (visszaszedés, ős-söprés, parkolás,
+   takarítás). Önálló felelősség, és **már van rá mérőpróbája**
+   (`sikidomParkolasProba.mjs`), tehát a helyesség ellenőrizhető.
+3. **`sikidomVezerles.js`** — az események és a gesztusok. Nagy, de jól elhatárolt;
+   a nézetet csak a `_zoom`-on és a horgonyon át éri el.
+4. **`sikidomBetoltes.js`** — a küszöb-számítás és a letöltés.
+
+### ⚠️ AMIHEZ UTOLJÁRA (VAGY EGYÁLTALÁN NE) NYÚLJUNK
+
+`_ujrapakolas` (244 sor) és `_lathatoLista` (358 sor) — ez a két metódus hordozza a
+nézet ÖSSZES nehezen megszerzett szabályát:
+
+- a kanonikus pakolási sorrend és az **előtag-stabilitás**,
+- a **két üzemmód** (mag vs. minimum méret) és a horgony-szintű kivétel,
+- a **pozicionálási keret** (5 000 / 250 / 12) és a kereten kívüliek visszavezetése,
+- a betöltés időzítése („csak a gyűjtés végén pakolunk").
+
+Ezek mindegyike mérésből született, és több nekifutásból. Szétvágásuk nem
+formázási kérdés — **előbb a köréjük épült szabályokat kell mérőpróbába zárni**,
+utána szabad hozzájuk nyúlni. Ha marad idő, inkább belőlük emeljünk ki apró,
+tiszta segédeket (pl. a keret-vágás, a mag-üzemmód eldöntése), mint hogy magát a
+metódust daraboljuk.
+
+### A biztonsági háló
+
+Minden lépés után futtatandó, és **mindnek állnia kell**:
+
+```bash
+node backend/tools/sikidomMelysegProba.mjs      # 5 állítás
+node backend/tools/sikidomParkolasProba.mjs     # 16 állítás
+node backend/tools/sikidomRacsProba.mjs
+node backend/tools/sikidomPakolasProba.mjs
+```
+
+Ezek böngésző nélkül futnak, tehát minden egyes kiemelés után olcsón ellenőrizhető,
+hogy a viselkedés nem változott. A böngészős próba ezek UTÁN jön, nem helyettük.
