@@ -1610,3 +1610,62 @@ curl -s -H "Authorization: Bearer <token>" \
 ```
 
 Az `osszesGyerekPont` nem lehet 0, ha a szülőnek van gyereke.
+
+
+### Síkidom nézet — a BEFELÉ NAGYÍTÁS felső határa (2026-08-11)
+
+Eddig a befelé nagyítás korlátlan volt, mert „arra való a horgonyváltás". Ez csak
+addig igaz, amíg a horgony le TUD lépni. Ha olyan csomóponton áll, aminek nincs
+betöltött gyereke (levél, vagy még meg nem érkezett adat), akkor ott ragad, és a
+skála elszalad — böngészőben mérve 1,18·10³-ról **1,81·10¹⁴**-re. Ekkor a `double`
+16 jegye elfogy, és a **kép remegni kezd**. Ez volt a „19–20. szint után szétesik".
+
+Az új korlát a meglévő állandókból jön (`LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY`
+≈ 8,94): a horgony legfeljebb a képernyő ~8,9-szeresére nőhet, ha nincs mibe
+lelépnie. Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+**Amit a böngészőben nézni kell:**
+
+1. **A levél-eset.** Nagyíts bele egy olyan síkidomba, aminek nincs gyereke (pl. az
+   „Ötezres testvér-mező" bármelyik gyereke). A nagyításnak **simán meg kell
+   állnia**, amikor a síkidom nagyjából 9 képernyőnyi — se remegés, se üres kép.
+   A kifelé nagyítás és a húzás ilyenkor is működjön.
+2. **A lánc.** Az „Ötven szintű mély lánc"-ban menj le, ameddig tudsz. Ahol eddig
+   remegni kezdett, most **meg kell állnia**. Ha a következő láncszem betöltődik,
+   a korlát felenged, és mehetsz tovább — vagyis a lefelé haladásnak folytatódnia
+   kell, csak esetleg meg kell várni az adatot.
+3. **Nem szabad falba ütközni ott, ahol van még lejjebb.** Ha egy olyan
+   síkidomnál áll meg a nagyítás, aminek VAN gyereke, az hiba — jelezd.
+4. A konzol `_ujrapakolas` naplójában a `horgonySzint` továbbra is nőjön, ahogy
+   lefelé haladsz.
+
+⚠️ **Ez a korlát nem a mélységet korlátozza.** A horgony-keretes nagyítás böngésző
+nélkül 50 szinten át pontosnak mérve (`tools/sikidomMelysegProba.mjs`). A korlát
+csak azt tiltja, hogy a nézet OLYAN mélyre menjen, ahonnan már nincs tovább.
+
+
+### Síkidom nézet — a horgonyváltás POZÍCIÓ-feltétele (2026-08-11)
+
+A lefelé váltás sokáig CSAK a méretet nézte, és a küszöböt átlépők közül a
+legnagyobbat választotta — akkor is, ha az már kicsúszott a képből. Emiatt a
+horgony nem abba az ágba ment, amibe nagyítottál. A koino_1.0 szabálya nyomán
+(`distanceFromCenter <= content.radius`) mostantól kell a második feltétel is:
+**a képernyő közepe a síkidomon belül legyen**. Részletek:
+[fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+**Amit a böngészőben nézni kell:**
+
+1. **A mély lánc:** nagyíts bele, és menj le. A horgonynak **végig azt kell
+   követnie, amibe nagyítasz** — a konzol `_ujrapakolas` naplójában a
+   `horgonySzint` szintenként pontosan **eggyel** nőjön (0 → 1 → 2 → …), ugrás
+   nélkül. Az 50. szintig el kell jutni, remegés nélkül.
+2. **Ne ugorjon más ágra:** ha egy erős testvér mellett nagyítasz be egy gyengébbe,
+   a nézetnek a gyengébbet kell követnie — azt, ami a képernyő közepén van.
+3. **Félre-nagyítás:** ha két síkidom KÖZÉ nagyítasz (egyikük közepén sincs a
+   képernyő közepe), a horgony maradjon ott, ahol van. Ez helyes: nincs egyértelmű
+   cél, amibe belépne.
+
+*Böngészőben igazolva (2026-08-11, Csaba): az 50 szintű láncon a horgony útja
+VILÁG → gyökér → 1 → 2 → … → 50, minden lépés pontosan +1, ugrás nélkül; a skála
+végig 77 és 3 437 között maradt (a javítás előtt 1,81·10¹⁴-ig szaladt), és a
+`BEFELE_HATAR` korlátnak egyszer sem kellett közbelépnie.*

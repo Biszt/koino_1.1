@@ -35,7 +35,9 @@ import { gyerekRelativSugar } from '../../frontend/js/utils/sikidomMeret.js';
 const naplo = (...ertekek) => process.stdout.write(ertekek.join(' ') + '\n');
 
 const hibak = [];
+let allitasDb = 0;
 function allitas(rendben, cimke, reszlet = '') {
+  allitasDb++;
   if (!rendben) hibak.push(`${cimke}${reszlet ? ' — ' + reszlet : ''}`);
   naplo(`  ${rendben ? '✔' : '✘'} ${cimke}${reszlet ? '  (' + reszlet + ')' : ''}`);
 }
@@ -93,7 +95,13 @@ function horgonyEllenorzes(allapot) {
       .map(gy => ({ id: gy.id, keret: { x: gy.relX, y: gy.relY, r: gy.relR } }));
 
     const vanSzulo = !!(cs.szuloId && tar.has(cs.szuloId));
-    const dontes = horgonyValtasSzukseges(allapot.nezet, KEPERNYO, gyerekKeretek, vanSzulo);
+
+    // A képernyő közepe — a lefelé váltás POZÍCIÓ-feltételéhez (Csaba, 2026-08-11,
+    // a koino_1.0 szabálya nyomán): csak abba a gyerekbe lépünk, amelyiken a
+    // képernyő közepe rajta van.
+    const kepKozep = { x: KEPERNYO / 2, y: KEPERNYO / 2 };
+
+    const dontes = horgonyValtasSzukseges(allapot.nezet, KEPERNYO, gyerekKeretek, vanSzulo, kepKozep);
     if (!dontes) break;
 
     if (dontes.irany === 'le') {
@@ -136,16 +144,17 @@ let elsoHibasSzint = null;
 
 // A nagyítást a LEGMÉLYEBB csomópont képernyő-helyére célozzuk (oda „megyünk be")
 for (let i = 0; i < LEPESEK; i++) {
-  // --- nagyítás a képernyő közepe köré, a legmélyebb LÁTHATÓ csomópontra célozva ---
+  // --- nagyítás a legmélyebb LÁTHATÓ csomópontra, KÖZÉPEN tartva ---
+  // A célt szándékosan a képernyő közepén tartjuk: a lefelé váltás pozíció-feltétele
+  // épp ezt kívánja meg, és ez felel meg annak, amikor az e-ember belenagyít valamibe.
   const cel = keretbenCsomopont(tar, allapot.horgony, `sz${Math.min(elertSzint + 2, MELYSEG)}`)
            ?? { x: 0, y: 0, r: 1 };
-  const celKep = kepernyore(allapot.nezet, cel);
 
-  // A nagyítás a célpontot a helyén tartja (mint az egérrel/ujjal nagyítás)
+  const ujSkala = allapot.nezet.skala * LEPES_FAKTOR;
   allapot.nezet = {
-    skala: allapot.nezet.skala * LEPES_FAKTOR,
-    eltolasX: celKep.kepX - (celKep.kepX - allapot.nezet.eltolasX) * LEPES_FAKTOR,
-    eltolasY: celKep.kepY - (celKep.kepY - allapot.nezet.eltolasY) * LEPES_FAKTOR
+    skala: ujSkala,
+    eltolasX: KEPERNYO / 2 - ujSkala * cel.x,
+    eltolasY: KEPERNYO / 2 - ujSkala * cel.y
   };
 
   horgonyEllenorzes(allapot);
@@ -217,11 +226,61 @@ naplo('');
 naplo(`  a közös koordináta-rendszer a ${elveszettSzint}. szinten fogy el`);
 naplo(`  (a Csaba által látott ~1e-21 a ${Math.round(Math.log(1.2e-21) / Math.log(0.2236))}. szint környéke)`);
 
+// ===== 3. PRÓBA: A ROSSZ TESTVÉR (Csaba böngészős találata, 2026-08-11) =====
+// A hiba, ami miatt a horgony nem oda ment, ahova az e-ember nagyított: a döntés
+// CSAK a méretet nézte, ezért a legnagyobb testvért választotta akkor is, ha az
+// már rég kicsúszott a képből. Böngészőben mérve: a képernyőn a lánc látszott, a
+// horgony mégis a mező legerősebb gyerekére állt.
+//
+// A koino_1.0 szabálya ezt eleve kizárta: `distanceFromCenter <= content.radius`,
+// vagyis a képernyő közepének a síkidomon BELÜL kell lennie.
+naplo('');
+naplo('===== 3. PRÓBA: a rossz testvér — méret ÉS pozíció =====');
+
+{
+  const kepernyo = 800;
+  const skala = 4000;
+  const nezet = { skala, eltolasX: kepernyo / 2, eltolasY: kepernyo / 2 };
+  const kepKozep = { x: kepernyo / 2, y: kepernyo / 2 };
+
+  // NAGY testvér, de FÉLRE: átmérője 1 760 px (a küszöb 1 600), viszont a
+  // középpontja 2 800 px-re van a képernyő közepétől, a sugara csak 880.
+  // KICSI testvér, de KÖZÉPEN: átmérője pont 1 600 px, a közepén ül.
+  const gyerekek = [
+    { id: 'NAGY_FELRE',  keret: { x: 0.7, y: 0, r: 0.22 } },
+    { id: 'KISEBB_KOZEPEN', keret: { x: 0,   y: 0, r: 0.20 } }
+  ];
+
+  const dontes = horgonyValtasSzukseges(nezet, kepernyo, gyerekek, true, kepKozep);
+
+  for (const gy of gyerekek) {
+    const kep = kepernyore(nezet, gy.keret);
+    const tav = Math.hypot(kep.kepX - kepKozep.x, kep.kepY - kepKozep.y);
+    naplo(`  ${gy.id.padEnd(15)} átmérő=${Math.round(2 * kep.kepSugar)} px ` +
+      `(küszöb ${kepernyo * LEFELE_KUSZOB}) · közép-távolság=${Math.round(tav)} px ` +
+      `(sugár ${Math.round(kep.kepSugar)}) → ${tav <= kep.kepSugar ? 'RAJTA' : 'nincs rajta'}`);
+  }
+  naplo(`  döntés: ${dontes ? dontes.irany + ' → ' + dontes.gyerekId : 'nincs váltás'}`);
+  naplo('');
+
+  allitas(dontes && dontes.gyerekId === 'KISEBB_KOZEPEN',
+    'a horgony ARRA vált, amin a képernyő közepe van (nem a legnagyobbra)',
+    dontes ? dontes.gyerekId : 'nincs váltás');
+
+  // És ha a képernyő közepén SENKI nincs, akkor nem szabad váltani
+  const felreDontes = horgonyValtasSzukseges(
+    nezet, kepernyo, [{ id: 'NAGY_FELRE', keret: { x: 0.7, y: 0, r: 0.22 } }], true, kepKozep);
+  allitas(felreDontes === null,
+    'ha a képernyő közepén nincs elég nagy gyerek, NINCS lefelé váltás',
+    felreDontes ? felreDontes.irany + ' → ' + felreDontes.gyerekId : 'nincs váltás');
+}
+
 // ===== ÖSSZEGZÉS =====
 naplo('');
 naplo('=================== EREDMÉNY ===================');
 if (hibak.length === 0) {
-  naplo(`Mind a 3 állítás áll — a horgony-keretes nagyítás ${MELYSEG} szinten át pontos.`);
+  naplo(`Mind a ${allitasDb} állítás áll — a horgony-keretes nagyítás ${MELYSEG} szinten át ` +
+    `pontos, és a horgony arra vált, amire nézel.`);
 } else {
   naplo(`${hibak.length} ÁLLÍTÁS BUKOTT:`);
   for (const h of hibak) naplo(`  ✘ ${h}`);

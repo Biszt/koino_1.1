@@ -5,10 +5,11 @@ import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import { sikidomLeiro, TIPUS_FORMA } from '../../utils/sikidomFormak.js';
-import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO }
+import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO, LEGNAGYOBB_GYEREK_ARANY }
   from '../../utils/sikidomMeret.js';
 import { pakolas, pakolasiSorrend, frissebbElol } from '../../utils/sikidomPakolas.js';
-import { szuloKeretben, horgonyValtasNezet, kepernyore, horgonyValtasSzukseges, keretbenCsomopont }
+import { szuloKeretben, horgonyValtasNezet, kepernyore, horgonyValtasSzukseges,
+         keretbenCsomopont, LEFELE_KUSZOB }
   from '../../utils/sikidomHorgony.js';
 import { kartyaLetrehozasa } from '../kartya/kartyaGyar.js';
 
@@ -374,12 +375,38 @@ const GORGO_EGYSEG_OLDAL   = 1;
 const GORGO_EGYSEG_CSIPPENTES = 0.012;
 
 // ===== KIFELÉ NAGYÍTÁS ALSÓ HATÁRA =====
-// Befelé a nagyítás KORLÁTLAN (ezért van a horgonyváltás). Kifelé viszont a
-// VILÁG szintnél elfogy a hierarchia: a horgony nem tud tovább fölfelé lépni, és
+// A VILÁG szintnél elfogy a hierarchia: a horgony nem tud tovább fölfelé lépni, és
 // ha tovább kicsinyítesz, minden a láthatósági küszöb alá esik — üres képernyő,
 // amiből csak az „illesztés" gomb hoz vissza. A koino_1.0-ban ezt a D3
 // `scaleExtent` fogta meg; nálunk az illesztési nagyítás töredékében húzzuk meg.
 const KIFELE_HATAR = 0.25;          // az illesztési skála negyedénél megáll
+
+// ===== BEFELÉ NAGYÍTÁS FELSŐ HATÁRA (Csaba böngészős mérése, 2026-08-11) =====
+// Sokáig az volt a szabály, hogy „befelé nincs korlát, arra való a horgonyváltás".
+// Ez IGAZ — de csak addig, amíg a horgony le TUD lépni. Ha olyan csomóponton áll,
+// aminek nincs (betöltött) gyereke, akkor nincs mibe lelépnie, kifelé viszont már
+// túl nagy: ott ragad, és a befelé nagyítást SEMMI nem fogja meg.
+//
+// MÉRVE a böngészőben (2026-08-11, Csaba vezetett, a nézetet kívülről mértük):
+// a horgony az 1. szinten megállt `gyerekDb: 0`-val, és onnantól a skála
+// 1,18·10³-ról 1,81·10¹⁴-re szaladt. A mély síkidomok helye `eltolás + skála · x`
+// alakban áll elő; 10¹⁴ nagyságrendű skálánál a `double` 16 jegye elfogy, és a kép
+// REMEGNI kezd. Pontosan ez volt a „19-20. szint után szétesik" tünet.
+//
+// A SZABÁLY: a befelé nagyítás nem viheti a horgonyt túl azon a ponton, ahol a
+// váltás esedékes LENNE. A határt nem önkényesen választjuk, hanem a meglévő két
+// állandóból vezetjük le: a horgony akkor váltana le, ha egy gyereke elérné a
+// képernyő `LEFELE_KUSZOB`-szorosát, és a lehető legnagyobb gyerek a szülője
+// sugarának `LEGNAGYOBB_GYEREK_ARANY`-szorosa (1/√20). Ennél nagyobbra tehát még
+// a legkedvezőbb esetben sem kellene nőnie:
+//
+//   maxHorgonyÁtmérő = képernyő × LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY
+//                    = képernyő × 2 / 0,2236 ≈ képernyő × 8,94
+//
+// Ez a korlát CSAK akkor él, ha a horgonynak nincs betöltött gyereke. Amint
+// megérkeznek, a korlát magától felenged, és a horgony lelép — vagyis a betöltésre
+// váró e-ember nem falba ütközik, csak megvárja az adatot.
+const BEFELE_HATAR = LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY;
 
 // ===== AZ ILLESZTÉS ARÁNYA =====
 // A teljes kiterjedés a képernyő kisebbik oldalának ennyiszeresére illeszkedjen —
@@ -1504,8 +1531,17 @@ class SikidomModal {
         .map(gy => ({ id: gy.id, keret: { x: gy.relX, y: gy.relY, r: gy.relR } }));
 
       const vanSzulo = !!(cs.szuloId && this._tar.has(cs.szuloId));
+
+      // A KÉPERNYŐ KÖZEPE — a lefelé váltás második feltételéhez (lásd
+      // `horgonyValtasSzukseges`): csak abba a gyerekbe lépünk le, amelyiken
+      // a képernyő közepe RAJTA van, vagyis amelyikbe tényleg belenagyítottak.
+      const kepKozep = {
+        x: (this._szelesseg || 0) / 2,
+        y: (this._magassag || 0) / 2
+      };
+
       const dontes = horgonyValtasSzukseges(
-        this._nezet, this._kepernyoMeret(), gyerekKeretek, vanSzulo
+        this._nezet, this._kepernyoMeret(), gyerekKeretek, vanSzulo, kepKozep
       );
       if (!dontes) break;
 
@@ -2806,7 +2842,10 @@ class SikidomModal {
       this._illesztesAnimacio = null;
     }
 
-    const hatarolt = this._kifeleHatarolas(szorzo);
+    // KÉT HATÁR: kifelé a VILÁG-nál fogy el a hierarchia, befelé pedig akkor, ha a
+    // horgonynak nincs mibe lelépnie (lásd `BEFELE_HATAR`). A kettő sosem harap
+    // egyszerre — az egyik csak kicsinyítésre, a másik csak nagyításra vonatkozik.
+    const hatarolt = this._befeleHatarolas(this._kifeleHatarolas(szorzo));
     if (hatarolt === 1) return;                  // már a határon állunk, nincs mit tenni
 
     this._nezet.skala *= hatarolt;
@@ -2837,6 +2876,37 @@ class SikidomModal {
     if (this._nezet.skala <= alsoHatar) return 1;
 
     return Math.max(szorzo, alsoHatar / this._nezet.skala);
+  }
+
+  // ===== A BEFELÉ NAGYÍTÁS FELSŐ HATÁRA =====
+  // Lásd `BEFELE_HATAR`. A korlát CSAK akkor él, ha a horgonynak nincs betöltött
+  // gyereke — ilyenkor a horgonyváltás nem tud dolgozni, tehát semmi más nem
+  // fogná meg a nagyítást, és a skála elszaladna a `double` pontossága fölé.
+  //
+  // Ha VAN betöltött gyerek, nem korlátozunk: a váltást a `_horgonyEllenorzes`
+  // úgyis elvégzi, amint a gyerek eléri a küszöböt. Egy nagyon gyenge (parányi)
+  // gyerekhez nagy skála kell — ez rendben van, mert az ő helye `skála · relR`
+  // szorzatként marad épp akkora, amekkorának látszik.
+  //
+  // @param {number} szorzo - a kért nagyítás-szorzó
+  // @returns {number} a ténylegesen alkalmazható szorzó (1 = nincs mozgás)
+  _befeleHatarolas(szorzo) {
+    if (szorzo <= 1) return szorzo;              // kifelé itt sosem korlátozunk
+
+    const cs = this._tar.get(this._horgony);
+    if (!cs) return szorzo;
+
+    // Van-e egyáltalán olyan gyereke, amibe a horgony le tudna lépni?
+    for (const gid of cs.gyerekIdk) {
+      if (this._tar.has(gid)) return szorzo;
+    }
+
+    // A skála a horgony képernyő-SUGARA (a horgony sugara a saját keretében 1),
+    // ezért a megengedett átmérő fele a felső határ.
+    const felsoHatar = (this._kepernyoMeret() * BEFELE_HATAR) / 2;
+    if (this._nezet.skala >= felsoHatar) return 1;
+
+    return Math.min(szorzo, felsoHatar / this._nezet.skala);
   }
 
   _zoomKozeppontra(szorzo) {

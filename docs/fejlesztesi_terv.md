@@ -2656,3 +2656,140 @@ mindhárom egyezik az adatbázissal.*
 ⚠️ **Tanulság a jövőre:** `aggregate()`-ben MINDEN azonosítót kézzel kell ObjectId-dá
 alakítani. A hiba némán 0-t ad vissza, nem dob — és egy 0 pont tökéletesen
 életszerűen néz ki.
+
+
+## Síkidom nézet — a BEFELÉ NAGYÍTÁS felső határa (2026-08-11, Csaba böngészős mérése)
+
+### A tünet
+
+Az 50 szintű mély láncon a kép nagyjából a 19–20. szint után **remegni** kezdett.
+Csaba megfigyelése: „elértük a maximum karakterszámot a zoom értékben, valahogy
+így 0,0000000000000000000012".
+
+### Amit a böngésző nélküli mérés kizárt
+
+`tools/sikidomMelysegProba.mjs`: a horgony-keretes nagyítás **50 szinten át pontos**
+— a skála végig 4,2·10²…4,9·10³ között marad, a legnagyobb relatív hiba 9,6·10⁻¹⁵.
+Egy közös koordináta-rendszerben ellenben a `double` már a 24. szinten elfogyna
+(a 20. szinten 7,6·10⁻¹⁴-nél tartunk, ott már csak 2-3 értékes jegy marad).
+
+Vagyis a technológia nem merült ki. A tünet abból jön, hogy a kép egy pillanatban
+NEM a horgony keretében számolódik.
+
+### A böngészős mérés (Csaba vezetett, a nézetet kívülről mértük)
+
+A horgony **helyesen** dolgozott, amíg dolgozhatott — két váltás, hiszterézissel:
+VILÁG → 0. szint (skála 528), majd 0. → 1. szint (skála 9 790). A 59,4 mp-es
+mintában a legnagyobb gyerek 992 px volt a 1 034 px-es küszöbnél: még nem váltott,
+és amint átlépte, váltott.
+
+Aztán megállt, és ez a három sor mondja meg, miért:
+
+| idő | horgony szintje | skála | a horgony gyerekei |
+|---|---|---|---|
+| 69 mp | 1 | 1,18·10³ | **0** |
+| 78 mp | 1 | 4,00·10⁴ | **0** |
+| 132,8 mp | 1 | **1,81·10¹⁴** | **0** |
+
+**A horgonynak nem volt betöltött gyereke.** Nincs mibe lelépnie; kifelé viszont
+már túl nagy (3,6·10¹⁴ px átmérő), tehát ott ragadt — és a befelé nagyítást ettől
+kezdve SEMMI nem fogta meg. A mély síkidomok helye `eltolás + skála · x` alakban
+áll elő; 10¹⁴ nagyságrendű skálánál a `double` 16 jegye elfogy → remegés.
+
+*(A mérés a „Ötezres testvér-mező" egyik gyerekén készült, ami LEVÉL — ott a
+gyerek-hiány végleges. A láncban ugyanez áll elő, valahányszor a következő
+láncszem nem érkezik meg időben.)*
+
+### A hiányzó szabály
+
+A kód eddig ezt mondta: „Befelé nincs korlát (arra való a horgonyváltás)." Ez igaz
+— **amíg a horgony le tud lépni**. Ha nem tud, nincs korlát.
+
+Az új szabály: **a befelé nagyítás nem viheti a horgonyt túl azon a ponton, ahol a
+váltás esedékes LENNE.** A határt nem önkényesen választjuk, hanem a meglévő két
+állandóból vezetjük le:
+
+```
+BEFELE_HATAR = LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY = 2 / (1/√20) ≈ 8,944
+```
+
+— vagyis a horgony legfeljebb a képernyő ~8,9-szeresére nőhet, mert a lehető
+LEGNAGYOBB gyerek (a szülő sugarának 1/√20-a) már ennél a méretnél kiváltaná a
+váltást. Nagyobbra tehát a legkedvezőbb esetben sem kellene nőnie.
+
+A korlát **csak akkor él, ha a horgonynak nincs betöltött gyereke**. Amint
+megérkeznek, magától felenged, és a horgony lelép — a betöltésre váró e-ember tehát
+nem falba ütközik, csak megvárja az adatot.
+
+Megvalósítás: `SikidomModal._befeleHatarolas`, a `_kifeleHatarolas` párjaként; a
+`_zoom` mindkettőn átereszti a szorzót.
+
+*Mérve (2026-08-11, böngészőben, a modul valódi metódusán): 200 befelé görgetés
+gyerek nélküli horgonnyal — a skála **2 312,1-nél megáll** (517 px-es képernyőn),
+a javítás előtt ugyanez 9,5·10¹⁰ lett volna. A már elszaladt állapotban (1,8·10¹⁴)
+sem enged tovább. Betöltött gyerekkel a szorzó érintetlen marad, és a kifelé
+nagyítást sem érinti. Mind az 5 eset áll.*
+
+
+## Síkidom nézet — a horgonyváltás POZÍCIÓ-feltétele (2026-08-11, Csaba)
+
+### Csaba találata
+
+> „Nézd meg a koino_1.0 mappát, hogy ott hogyan történik a hierarchia szint váltás.
+> Ott úgy működik, hogy ha egy síkidom mérete elér egy méretet, a képernyőhöz
+> viszonyítva, **és a képernyőn belül van**, akkor vált arra a síkidomra."
+
+Igaza volt. A koino_1.0 `screenFillingContentDetector.isContentFillingScreen`-je
+KÉT lépcsőt vizsgál:
+
+```js
+// 1. MÉRET   (checkDOMSize)
+screenDiameter >= min(width, height) * 1.5
+
+// 2. POZÍCIÓ (checkViewportPosition)
+distanceFromCenter <= content.radius     // a viewport KÖZEPE a síkidomon BELÜL
+```
+
+A koino_1.1 `horgonyValtasSzukseges`-éből a **második hiányzott**: csak a méretet
+nézte, és a küszöböt átlépők közül a LEGNAGYOBBAT választotta — akkor is, ha az
+közben rég kicsúszott a képből.
+
+### Mit okozott
+
+Böngészőben mérve (2026-08-11): a képernyőn a „2. szint — mély lánc" látszott, a
+horgony viszont a mező legerősebb gyerekén állt („Helyi energiaközösség — Alsóvár",
+550 pont), mert az volt a legnagyobb testvér. **A nézett ág soha nem lett horgony**,
+így a horgonyváltás nem tudta követni a nagyítást, a skála elszaladt, és a kép
+remegni kezdett. Ez volt a „19-20. szint után szétesik" valódi oka.
+
+### A javítás
+
+A lefelé váltás mostantól MINDKÉT feltételt kéri: a gyerek elég nagy **ÉS** a
+képernyő közepe rajta van. A `horgonyValtasSzukseges` új paramétert kap
+(`kepKozep`), a `SikidomModal._horgonyEllenorzes` pedig átadja a vászon közepét.
+
+⚠️ **Mellékhaszon:** a testvérek nem fedik át egymást, ezért a képernyő közepét
+LEGFELJEBB EGY gyerek tartalmazhatja — a választás egyértelmű, nincs „melyik a
+legnagyobb" holtverseny.
+
+A `BEFELE_HATAR` korlát **marad**: az más bajt fed (amikor egyáltalán nincs mibe
+lelépni, például levélnél). A kettő együtt teljes.
+
+### Mérve
+
+`tools/sikidomMelysegProba.mjs` — mind az 5 állítás áll, köztük az új
+visszaesés-őr: egy 1 760 px-es, de félrecsúszott testvér mellett egy 1 600 px-es,
+középen ülő testvér van, és a horgony a **középen lévőt** választja; ha pedig a
+képernyő közepén nincs elég nagy gyerek, egyáltalán nem vált lefelé.
+
+**Böngészőben igazolva (2026-08-11, Csaba vezetett, a horgony útját mértük):**
+
+| | eredmény |
+|---|---|
+| a horgony útja | VILÁG (−1) → gyökér (0) → 1 → 2 → … → **50** |
+| lépés-ugrás | **nincs** — minden lépés pontosan +1 |
+| minden horgony a láncból való | igen |
+| skála tartománya | **77 … 3 437** *(a javítás előtt 1,81·10¹⁴-ig szaladt)* |
+| a `BEFELE_HATAR` korlát beavatkozott | **egyszer sem** — a horgony végig tudott lépni |
+
+Csaba szavával: „le tudtam menni az aljáig."

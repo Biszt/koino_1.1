@@ -131,24 +131,55 @@ export function kepernyore(nezet, keret) {
 
 // ===== KELL-E HORGONYT VÁLTANI? =====
 // Eldönti, hogy a jelenlegi nagyításnál váltani kell-e, és merre.
-//   'le'  — egy gyerek akkora, hogy ő legyen az új horgony
+//   'le'  — egy gyerek akkora ÉS ott van, ahova nézel: ő legyen az új horgony
 //   'fel' — a horgony már túl kicsi, a szülője legyen az
 //   null  — marad minden
 //
-// @param {Object} nezet - {skala, ...}
+// ===== A LEFELÉ VÁLTÁS KÉT FELTÉTELE (Csaba, 2026-08-11) =====
+// A koino_1.0 `screenFillingContentDetector.isContentFillingScreen`-je KÉT lépcsőt
+// vizsgált, és a koino_1.1-ből sokáig hiányzott a második:
+//
+//   1. MÉRET   — a síkidom képernyő-átmérője elér egy küszöböt (ott 1,5, itt 2,0
+//                képernyőnyi);
+//   2. POZÍCIÓ — `distanceFromCenter <= content.radius`, vagyis a KÉPERNYŐ KÖZEPE
+//                a síkidomon BELÜL van.
+//
+// MIÉRT KELL A MÁSODIK. Enélkül a döntés csak azt nézte, melyik gyerek a
+// LEGNAGYOBB — akkor is, ha az közben rég kicsúszott a képből. Böngészőben mérve
+// (2026-08-11): a képernyőn a „2. szint — mély lánc" látszott, a horgony viszont a
+// mező legerősebb gyerekére („Helyi energiaközösség — Alsóvár", 550 pont) állt,
+// mert az volt a legnagyobb testvér. Így a horgony nem abba a részfába ment,
+// amelyikbe az e-ember nagyított — a nézett ág soha nem lett horgony, a skála
+// elszaladt, és a kép remegni kezdett.
+//
+// MELLÉKHASZON: a testvérek nem fedik át egymást, ezért a képernyő közepét
+// LEGFELJEBB EGY gyerek tartalmazhatja. A választás így egyértelmű — nem kell
+// „a legnagyobbat" választani, nincs holtverseny.
+//
+// @param {Object} nezet - {skala, eltolasX, eltolasY}
 // @param {number} kepernyoMeret - a képernyő KISEBBIK oldala képpontban
 // @param {Array} gyerekKeretek - a horgony gyerekei a horgony keretében:
 //   [{ id, keret:{x,y,r} }]
 // @param {boolean} vanSzulo - van-e a horgonynak szülője (fölfelé váltható-e)
+// @param {{x:number, y:number}} kepKozep - a képernyő közepe képpontban
 // @returns {{irany:'le', gyerekId:string}|{irany:'fel'}|null}
-export function horgonyValtasSzukseges(nezet, kepernyoMeret, gyerekKeretek, vanSzulo) {
-  // --- LEFELÉ: a legnagyobb olyan gyerek, ami átlépi a küszöböt ---
+export function horgonyValtasSzukseges(nezet, kepernyoMeret, gyerekKeretek, vanSzulo, kepKozep) {
+  // --- LEFELÉ: elég nagy ÉS a képernyő közepe rajta van ---
   let legnagyobb = null;
   for (const gy of gyerekKeretek) {
-    const kepAtmero = 2 * nezet.skala * gy.keret.r;
-    if (kepAtmero >= kepernyoMeret * LEFELE_KUSZOB) {
-      if (!legnagyobb || gy.keret.r > legnagyobb.keret.r) legnagyobb = gy;
-    }
+    const kep = kepernyore(nezet, gy.keret);
+
+    // 1. MÉRET
+    if (2 * kep.kepSugar < kepernyoMeret * LEFELE_KUSZOB) continue;
+
+    // 2. POZÍCIÓ — a képernyő közepe a síkidomon belül (a koino_1.0 szabálya).
+    // Ha a hívó nem ad középpontot, a pozíció-feltétel nem vizsgálható: ilyenkor
+    // SEM váltunk, mert a méret önmagában bizonyítottan téves ágra visz.
+    if (!kepKozep) continue;
+    const tavolsag = Math.hypot(kep.kepX - kepKozep.x, kep.kepY - kepKozep.y);
+    if (tavolsag > kep.kepSugar) continue;
+
+    if (!legnagyobb || gy.keret.r > legnagyobb.keret.r) legnagyobb = gy;
   }
   if (legnagyobb) return { irany: 'le', gyerekId: legnagyobb.id };
 
