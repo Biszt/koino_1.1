@@ -108,6 +108,13 @@ async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId 
       hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
       vanGyereke: gyerekesHalmaz.has(sor.entitasId.toString()),
 
+      // HOLTVERSENY-DÖNTŐ (Csaba, 2026-08-11). Azonos pontnál a LÉTREHOZÁS DÁTUMA
+      // dönt, ugyanúgy, ahogy a Pakli sorolja be az egyenlő testvéreket
+      // (`testverRendezes.js`). A Síkidom nézetben a FRISSEBB számít „kisebbnek",
+      // tehát ő kerül beljebb — így marad igaz a nézet alapszabálya: ami később
+      // érkezik, az beljebb való. (Az allokáció létrehozási ideje, mint a Pakliban.)
+      letrehozva: sor.letrehozva ?? null,
+
       // { ikon, nev } objektumok; az `ikon` feltöltött kép-URL VAGY emoji
       kategoriaIkonok: mellek.kategoriaIkonok ?? [],
       tipusIkon:       mellek.tipusIkon ?? null,

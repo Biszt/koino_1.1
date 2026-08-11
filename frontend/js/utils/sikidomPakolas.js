@@ -257,6 +257,41 @@ function magMerese(korok) {
   return Number.isFinite(mag) ? Math.max(0, mag) : Infinity;
 }
 
+// ===== HOLTVERSENY-DÖNTŐ: A FRISSEBB A „KISEBB" (Csaba, 2026-08-11) =====
+// Felelősség: azonos méretű testvérek sorrendje. A FRISSEBB kerül előrébb, vagyis
+// BELJEBB. Ugyanaz a szabály, amivel a Pakli sorolja be az egyenlő testvéreket
+// (`testverRendezes.js`: pont csökkenő → `letrehozva` növekvő), csak innen nézve:
+// a Pakli sorának a VÉGÉN álló legfrissebb az, ami itt a KÖZÉPRE kerül.
+//
+// MIÉRT KELLETT (mérve, 2026-08-11): korábban itt is, a LETÖLTÉSNÉL is növekvő
+// AZONOSÍTÓ döntött a holtversenyben. Így a LEGKORÁBBAN letöltött lett a LEGBELSŐ —
+// pontosan fordítva, mint amire a nézet épül („ami később érkezik, az beljebb
+// való"). A következmény: azonos méretű testvéreknél a később érkezők CSAK KIFELÉ
+// kerülhettek, tehát a középen fenntartott lyukat soha nem tudták kitölteni.
+// A valódi adatban 10 405 gyökérből 10 005 egypontos — vagyis ez nem elméleti eset,
+// hanem gyakorlatilag az egész adathalmaz.
+//
+// A `letrehozva` az allokáció létrehozási ideje (a backend adja). Ha hiányzik vagy
+// egyenlő, az azonosító a végső, determinisztikus döntő — CSÖKKENŐ irányban, hogy
+// a „frissebb elöl" szabállyal egy irányba mutasson (az ObjectId is időrendben nő).
+export function frissebbElol(a, b) {
+  const aIdo = a.letrehozva ? Date.parse(a.letrehozva) : NaN;
+  const bIdo = b.letrehozva ? Date.parse(b.letrehozva) : NaN;
+
+  if (Number.isFinite(aIdo) && Number.isFinite(bIdo) && aIdo !== bIdo) {
+    return bIdo - aIdo;                 // a FRISSEBB előre
+  }
+  return String(b.id).localeCompare(String(a.id));
+}
+
+// ===== A KANONIKUS PAKOLÁSI SORREND =====
+// EGY helyen, mert három ponton is kell: a pakolásnál, a méret szerinti
+// visszaszedésnél és a megjelölendő legkisebb kiválasztásánál. Ha a három
+// eltérne, a képek szétcsúsznának — ez a hibaforrás már megtörtént egyszer.
+export function pakolasiSorrend(a, b) {
+  return (a.sugar - b.sugar) || frissebbElol(a, b);
+}
+
 // ===== A PAKOLÁS =====
 /**
 * Testvérek elhelyezése a szülőn belül, növekvő méret szerint kifelé.
@@ -290,10 +325,8 @@ export function pakolas(elemek, opciok = {}) {
   }
 
   // NÖVEKVŐ sugár szerint: a legkisebbek középre, a nagyobbak kifelé.
-  // Holtversenynél az azonosító dönt — szigorú rendezés, epszilon nélkül.
-  const rendezett = [...elemek].sort((a, b) =>
-    (a.sugar - b.sugar) || String(a.id).localeCompare(String(b.id))
-  );
+  // Holtversenynél a LÉTREHOZÁS DÁTUMA dönt — lásd `pakolasiSorrend`.
+  const rendezett = [...elemek].sort(pakolasiSorrend);
 
   // AZ AKADÁLYOK: a mag (ha van) + a helyben maradó környezet + a lerakottak.
   // A mag virtuális kör az origóban: nem rajzoljuk ki, de a tiltott ívek
@@ -398,4 +431,4 @@ export function pakolas(elemek, opciok = {}) {
   return { helyek, lerakatlanIdk, magSugar: mertMag, kulsoSugar };
 }
 
-export default { pakolas };
+export default { pakolas, pakolasiSorrend, frissebbElol };

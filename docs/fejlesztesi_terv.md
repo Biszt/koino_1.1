@@ -1,6 +1,6 @@
 # koino_1.1 — Fejlesztési terv
 
-*Utolsó frissítés: 2026. 07. 20.*
+*Utolsó frissítés: 2026. 08. 10.*
 
 ## A terv gerince: a menühálózat
 
@@ -2361,3 +2361,203 @@ kézenfekvő lépés: a legapróbbakat **egyetlen `Path2D`-be gyűjteni** és eg
 kirajzolni, szín szerint csoportosítva — így képkockánként néhány rajzoló-hívás
 marad több ezer helyett. ELŐBB MÉRNI KELL, hol megy el az idő (böngésző-profil),
 mert a `_lathatoLista` bejárása is jelölt: az is végigmegy ~10 000 csomóponton.
+
+
+## Síkidom nézet — VÉGTELEN TESTVÉR: lapozás teljes újraépítéssel (2026-08-10, Csaba modellje)
+
+A nézet eddig 10 000 testvérnél megállt (`ELORETOLTES_DARAB`). Ez a terv arról szól,
+hogyan jelenítünk meg tetszőlegesen sokat.
+
+### A kiindulás: két sorrend, egymással szemben
+
+- **Letöltés:** csökkenő tudatpont — a legerősebb jön először (kurzoros lapozás,
+  `kurzorPont` + `kurzorId`).
+- **Pakolás:** növekvő méret — a legkisebb kerül középre, a legnagyobb legkívülre.
+
+Ebből következik minden: **minél később érkezik egy testvér, annál kisebb, tehát
+annál beljebb a helye.** A 10 001. testvérnek a KÖZÉPEN kell hely — ott, ahol már
+ülnek a korábbiak.
+
+### A modell: az egész újraépül (Csaba, 2026-08-10)
+
+Amikor az e-ember a következő 10 000-et kéri, **az egész elrendezés újraszámolódik**,
+immár a következő sorozat legkisebbjétől kezdve. De nem kell mind a 20 000-et
+lerakni: csak a legkisebbtől nagyjából a 12 000-ig, mert a többi az adott
+nagyításban már a **maximális méret fölött** van (`VISSZASZEDES_ATMERO_ARANY`).
+
+**Miért ez a jó modell:**
+
+1. **Nincs varrat.** A 2026-08-08-i mag azért lett szabálytalan („kidudorodások"),
+   mert adagonként fűztük a peremére az újakat. Teljes újraépítésnél minden
+   koppintás EGYETLEN tiszta pakolási futás.
+2. **Az ablak a kanonikus sorrend ELŐTAGJA** (a legkisebbtől indul, a nagy végén
+   vág) — pontosan az a forma, amire a két mért szabály ki van élezve: összefüggő
+   farok, és a tiszta méretküszöb nem vágja félbe a holtverseny-csoportot.
+3. **Nem kerül semmibe.** A pakolás mért sebessége ~145 000 síkidom/s → egy
+   12 000-es újraépítés ~85 ms. Koppintásra észrevehetetlen.
+
+### ❌ ELVETVE: a foglalásos mag (`_magSugar`)
+
+A 2026-08-08-i mag a hátralévő tudatpontból méretezett:
+`c = √(T_hátra / (20 · P_szülő · σ))`. **Csaba cáfolata (2026-08-10):** végtelen
+testvérnél `T_hátra` sem korlátos, tehát a mag sem — vagyis épp abban az esetben
+mond csődöt, amiért az egészet csináljuk. És a foglalás egyetlen célja a már
+lerakottak védelme volt; teljes újraépítésnél nincs mit megvédeni.
+
+→ A `_magSugar`, a `MAG_SURUSEG` és az `URES_MAG` **törlendő**, amint a böngészős
+teszt megerősítette az új magot.
+
+### ⚠️ KÉT KÜLÖN „üres mag" — soha ne keverd őket
+
+- **Kijelző-mag** (`MAG_ATMERO_ARANY = 0.12`): a képernyőhöz fixált, állandó
+  képpont-méretű kör. CSAK azt szabályozza, mi rajzolódik ki. Nagyításkor
+  adat-térben zsugorodik — ezért bukkannak elő belőle a síkidomok.
+- **Pakolási mag** (`PAKOLASI_MAG_ARANY = 6`): VALÓDI lyuk az adat-térben. Nem
+  zsugorodik, tehát bármilyen mélységben üres marad. Ez ad helyet a feliratnak, és
+  önmagában is jelzi, hogy van még. Mértékegysége a legkisebb testvér sugara.
+
+### A felirat megjelenésének feltétele
+
+**Amikor a kijelző-mag belezsugorodott a pakolási lyukba** — vagyis már egyetlen
+lerakott síkidomot sem takar el. Ez pontosan Csaba megfogalmazása („a legbelső
+lerakott is előbukkant"), csak nem kell nyilvántartani, melyik a legbelső.
+
+A `PAKOLASI_MAG_ARANY` tehát azt szabja meg, milyen mélyre kell nagyítani, mielőtt
+a nézet felajánlja a következő adagot.
+
+### A nagyítás megőrzése (Csaba, 2026-08-10)
+
+A kép ELUGORHAT a koppintáskor — ezt az e-ember maga váltotta ki, és az ÚJAKRA
+kíváncsi, nem arra, hogy egy meglévőn maradjon a szeme. A horgony-igazítás tehát
+NEM kell. Egyetlen kikötés: **ne vesszen el a mélység.**
+
+A megoldás: a betöltés ELŐTT megjelöljük a legkisebb entitást (még a régi
+lepakolásban), és a következő lepakolásnál **ugyanakkora legyen a területe**, mint
+előtte. A helye változhat, a mérete nem — a szem ezt érzékeli mélységként.
+
+**Vizuálisan is megjelöljük:** az a tartalom, ami eddig (majdnem) középen volt, most
+valahol a gyűrűben lesz, ezért fontos, hogy az e-ember lássa, **hol maradt abba az
+előző lepakolás**.
+
+### A lépések
+
+1. [x] **A mag mint jelzés** (2026-08-10) — `PAKOLASI_MAG_ARANY` + `_pakolasiMagSugar`
+   + `_vanMegBetoltetlen`. Ha van még le nem töltött testvér → lyuk; ha nincs → nincs
+   lyuk, és a legkisebb síkidom a középpontban, láthatóan. Böngésző nélkül mérve
+   (9 állítás áll); böngészős teszt: [teszt.md](teszt.md), „a PAKOLÁSI MAG mint jelzés".
+2. [x] **A feltétel** (2026-08-11) — `magbanRejtett === 0` (a kijelző-mag már EGYETLEN
+   lerakott síkidomot sem takar) ÉS van még le nem töltött testvér → „további tartalmak"
+   felirat a magban. CSAK A HORGONYON, hogy egy egyértelmű koppintási cél legyen.
+   Új: `TOVABBI_FELIRAT_MIN_SUGAR`, `_feliratSzin()`. A felirat a MÉRT ürességhez
+   (a pakolási lyukhoz) méretezi magát, nem a kijelző-maghoz.
+
+   *Mérve (2026-08-11): asztalon (800 px kisebbik oldal) az illesztett nézet ×5-énél
+   jelenik meg, telefonon (390 px) ×8-nál. A billenés nem pontosan ott van, ahol a
+   lyuk eléri a kijelző-magot (×5,73), hanem hamarabb — mert aki már NAGYOBB a
+   magnál, az akkor is látszik, ha a közepén ül. Ez a dokumentált kivétel, és épp
+   ezt jelenti a „a legbelső is előbukkant".*
+
+   **🔴 Böngészős találat és javítása (Csaba, 2026-08-11):** a felirat MEGJELENT, de
+   tovább közelítve ELTŰNT. Az ok az én kötésem volt: az ajánlatot a KIJELZŐ-MAGHOZ
+   kötöttem (méretben és a horgony-feltételen át is). A kijelző-mag képpontban
+   állandó, tehát befelé nagyítva adat-térben zsugorodik, és egy ponton belecsúszik a
+   pakolási lyukba; a horgony pedig eközben lejjebb lép, amitől a feltétel elbukott.
+   → **Csaba szabálya: a képernyő-fix mag zsugorodása NE legyen hatással a szövegre
+   és a koppintásra.** Javítás: (1) a horgony-feltétel KIVÉVE — így a feltétel
+   MONOTON, ami egyszer megjelent, nem tűnhet el a további nagyítástól; (2) a
+   felirat ÉS a szaggatott kör is a MÉRT ürességhez (`magSugarRel` → `uresSugarPx`)
+   igazodik, nem a kijelző-maghoz. *Mérve: 400 lépéses nagyítás-söprés az illesztett
+   nézettől a ×200-ig, asztalon és telefonon is — 0 visszaesés, mind a 6 állítás áll.*
+3. [x] **A koppintás** (2026-08-11) — `_ajanlatKoppintas`: az ajánlat a síkidomok ELŐTT
+   kapja a találatot (a szülő síkidoma elnyelné), a célja a PAKOLÁSI LYUK
+   (`uresSugarPx`), nem a kijelző-mag. Csomópontonkénti `betoltesiPlafon` +
+   `tovabbiKert`: **egy koppintás = egy adag**, a kurzor onnan folytatja, ahol
+   abbahagyta. A mélységet a megjelölt legkisebb entitás LÁTSZÓ SUGARÁNAK
+   visszaállítása őrzi (`_jeloltHelyzet`), a vizuális jelölés egy tágabb szaggatott
+   gyűrű (`_jeloltId`).
+
+   **Két őrszem, amit menet közben tettem bele:** (1) a `tovabbiKert` lezárul, amint a
+   kért adag megérkezett — enélkül a méret szerinti visszaszedés a plafon alá vihetné
+   a darabszámot, és a nézet magától lapozna tovább, pedig ez az e-ember döntése;
+   (2) ha az e-ember a letöltés alatt MAGA nagyít, a mélység-visszaállítás kimarad —
+   az ő szándéka az erősebb.
+
+4. [x] **A korlát** (2026-08-11) — `MEGTARTOTT_DARAB` 4000 → 12 000, hogy az ablak
+   tetejét a MÉRET vágja (`VISSZASZEDES_ATMERO_ARANY`), ne a darabszám. A darabszám
+   így vészfék marad, nem napi korlát.
+
+### ⚠️ A lapozás KÉTFÉLE arca (mérve, 2026-08-11)
+
+A teljes kör lemérve (10 000 lerakva → jelölés → +10 000 → teljes újrapakolás),
+kétféle pont-eloszláson. A megjelölt síkidom **mérete mindkettőben változatlan** —
+a mélység tehát megmarad. A HELYE viszont nem:
+
+| | változatos pontok | csupa egypontos (holtverseny) |
+|---|---|---|
+| az új adag mérete | kisebb | ugyanakkora |
+| hová kerül | **középre** | **kívülre** |
+| a megjelölt | 12,77×-ére tolódik kifelé | **meg sem mozdul** |
+
+Mindkettő HELYES, és ugyanabból a szabályból jön: a pakolás növekvő méret szerint
+halad, és az azonos méretűeknél az azonosító dönt — az új, ugyanakkora testvér tehát
+nem kerülhet a régiek ELÉ a sorrendben.
+
+**Gyakorlati következmény a teszteléshez:** a mai teszt-adatban 10 405 gyökérből
+9 910 egypontos, tehát ott a koppintás után a kép közepén *látszólag nem történik
+semmi* — az új adag a külső gyűrűbe kerül. Ez nem hiba. Változatos tudatpont-eloszlású
+(valósághű) adaton az új adag középre érkezik, ahogy a modell mondja.
+
+
+## Síkidom nézet — a HOLTVERSENY-DÖNTŐ megfordítása (2026-08-11, Csaba)
+
+### A hiba, amit Csaba a böngészőben megtalált
+
+A lapozás után a megjelölt síkidom a KÖZÉPPONTBAN maradt, pedig a modell szerint
+kifelé kellett volna tolódnia, és az újaknak kellett volna középre kerülniük.
+
+**A mérés (2026-08-11):** a megjelölt egyezmény a 10 005 egypontos allokáció közül
+az **ELSŐ** az azonosító szerinti sorban. Az ok: MINDKÉT sorrend növekvő azonosítóval
+döntötte el a holtversenyt —
+
+- letöltés: `{ hierarchikusOsszesPont: -1, _id: 1 }`
+- pakolás: `(a.sugar - b.sugar) || a.id.localeCompare(b.id)`
+
+— ezért a **legkorábban letöltött lett a legbelső**, pontosan fordítva, mint amire a
+nézet épül („ami később érkezik, az beljebb való"). Azonos méretű testvéreknél a
+később érkezők így CSAK KIFELÉ kerülhettek, tehát a középen fenntartott lyukat soha
+nem tudták kitölteni. A valódi adatban 10 405 gyökérből 10 005 egypontos — vagyis ez
+nem elméleti eset, hanem gyakorlatilag az egész adathalmaz.
+
+### Csaba szabálya
+
+> „Holtversenyeknél a létrehozás dátuma legyen a döntő; amelyik a legfrissebb, az a
+> »legkisebb«. Úgy, mint a Pakli esetében is, ahol az egyenlő testvéreket besorolja."
+
+Ez illeszkedik a meglévő konvencióhoz: a Pakli (`testverRendezes.js`) pont csökkenő →
+döntetlennél `letrehozva` NÖVEKVŐ szerint sorol, vagyis a sor VÉGÉN a legfrissebb áll.
+A Síkidom nézet ugyanezt a sort nézi a másik végéről: ami a Pakliban utolsó, az itt a
+legbelső.
+
+### A megvalósítás
+
+- **Backend** (`sikidomService.js`): a gyerek-végpont mostantól küldi az allokáció
+  `letrehozva` mezőjét.
+- **Pakoló** (`sikidomPakolas.js`): új, EXPORTÁLT `frissebbElol` és `pakolasiSorrend`.
+  A kanonikus sorrend: méret növekvő → holtversenynél `letrehozva` CSÖKKENŐ (frissebb
+  elöl) → végső döntő az azonosító, szintén csökkenő.
+- **Modal** (`SikidomModal.js`): a `letrehozva` végigvezetve (várólista → csomópont →
+  pakolandó sor), és MIND A NÉGY rendezés a közös `pakolasiSorrend`-ből dolgozik:
+  a pakolás, a méret szerinti visszaszedés, a visszahozatal és a megjelölendő
+  legkisebb kiválasztása. A LETÖLTÉSI sorrend ennek pontos tükörképe
+  (`frissebbElol(b, a)`), hogy a legfrissebb érkezzen utoljára.
+
+⚠️ **A négy rendezésnek EGY forrásból kell jönnie.** Épp az volt a hiba oka, hogy a
+letöltés és a pakolás holtverseny-döntője külön-külön volt leírva, és egy irányba
+mutatott — pedig egymás tükörképének kell lenniük.
+
+*Mérve (2026-08-11): 20 000 azonos méretű testvérrel — a megjelölt kifelé tolódik, a
+LEGFRISSEBB a középpontba kerül, a megjelölt mérete változatlan. Mind a 4 állítás áll.*
+
+*Böngészőben igazolva (2026-08-11): a megjelölt azonosítója a javítás után a friss
+tartományból való (`6a78f6b4…`, a korábbi `6a6c41d8…` helyett), a határjelölő gyűrű a
+képernyő közepén, a mező üres közepe pedig elmozdult — az új adag foglalta el.*

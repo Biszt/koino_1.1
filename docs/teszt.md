@@ -1368,3 +1368,155 @@ rendes service-en át, tehát minden származtatott rekord konzisztens. Újrafut
 3. A konzol `_ujrapakolas` naplója kiírja a `horgonySzint`-et (VILÁG = −1,
    gyökerek = 0, gyerekeik = 1…) és a `magKeppont`-ot. A lyuk a HORGONY szintjén
    ~120 px; lejjebb szintenként √20 ≈ 4,47-szer kisebb — ez a helyes viselkedés.
+
+
+### Síkidom nézet — a PAKOLÁSI MAG mint jelzés (2026-08-10, 1. lépés)
+
+A „végtelen testvér" lapozás első lépése. Ekkor még NINCS felirat és NINCS
+koppintás — csak a lyuk maga.
+
+**⚠️ Két külön „üres mag" van, ne keverd őket:**
+
+| | kijelző-mag | pakolási mag |
+|---|---|---|
+| hol él | a képernyőn | az adatban |
+| mérete | állandó képpont (`MAG_ATMERO_ARANY = 0.12`) | a legkisebb testvér sugarának többszöröse (`PAKOLASI_MAG_ARANY = 6`) |
+| mit csinál | eldönti, mi RAJZOLÓDIK ki | valódi lyukat hagy a pakolásban |
+| nagyításkor | adat-térben zsugorodik | nem változik |
+
+**Amit nézni kell:**
+
+1. A 10 405 gyökeres adaton (`sikidomTizezerGyokerTesztAdat.js`) nyisd meg a
+   Síkidom nézetet. Mivel az előretöltés 10 000-nél megáll, marad 405 le nem
+   töltött gyökér — tehát **kell lennie lyuknak** a közepén.
+2. Nagyíts befelé. A kijelző-mag zsugorodik, sorra előbukkannak a síkidomok — de
+   a közép **akármilyen mélyen üres marad**. Ez a pakolási lyuk; korábban ilyenkor
+   a legkisebb síkidom ült a középpontban.
+3. A konzol `SikidomModal._ujrapakolas` naplójában a `magSugar` mostantól **> 0**,
+   amíg van le nem töltött testvér.
+4. **Kis adathalmazon** (ahol minden testvér letöltve): a `magSugar` **0**, és a
+   legkisebb síkidom a KÖZÉPPONTBAN ül, láthatóan. Ez maga az üzenet, hogy nincs
+   több tartalom.
+5. A beágyazás nem sérülhet: ha mégis, a konzol azonnal szól
+   (`BEÁGYAZÁS SÉRÜL: gyerek a szülőn kívül`).
+
+**A döntés, ami Csabára vár:** nagyobb vagy kisebb legyen a lyuk. Ez a szám azt
+szabja meg, milyen mélyre kell nagyítani, mielőtt a nézet felajánlja a következő
+adagot (2. lépés): nagyobb lyuk = hamarabb ajánl. Egyetlen állandó,
+`PAKOLASI_MAG_ARANY` a `SikidomModal.js`-ben.
+
+*Böngésző nélkül mérve (2026-08-10): 10 405 gyökéren és 3000 apró gyereken a lyuk
+üres marad (behatolás ~1e-17), nincs átfedés, a beágyazás áll, és mag nélkül a
+legkisebb pontosan a (0,0)-ba kerül. Kevés, nagy gyereknél a felső határ élesen
+harap: mag 0,56 = 1 − 2×0,22, külső sugár pont 1,0000.*
+
+
+### Síkidom nézet — a „további tartalmak" AJÁNLAT megjelenése (2026-08-11, 2. lépés)
+
+Az 1. lépés (pakolási mag) folytatása. A koppintás MÉG NEM működik — az a 3. lépés;
+most csak azt nézzük, a felirat a helyes pillanatban jelenik-e meg, és jól néz-e ki.
+
+**A feltétel:** a kijelző-mag már EGYETLEN lerakott síkidomot sem takar el,
+ÉS van még le nem töltött testvér. Csak a HORGONYON (abban a csomópontban, amibe
+belenagyítottál) — nem minden látható szülő közepén.
+
+**Amit nézni kell:**
+
+1. A 10 405 gyökeres adaton nyisd meg a Síkidom nézetet, és nagyíts befelé.
+2. Kezdetben a „— nagyíts befelé —" súgó szól: van még mit előhívni nagyítással.
+3. Nagyjából az **illesztett nézet ötszörösénél** (telefonon a nyolcszorosánál) a
+   súgó helyét átveszi a **„további tartalmak"** felirat, rendes (nem halvány)
+   szövegszínnel. A kettő SOSEM látszik egyszerre.
+4. Kis adathalmazon (minden testvér letöltve) a felirat **soha nem jelenik meg** —
+   nincs több tartalom, és lyuk sincs.
+
+5. **TOVÁBB KÖZELÍTVE a feliratnak OTT KELL MARADNIA.** Ez 2026-08-11-en hiba volt
+   (eltűnt, amikor a kijelző-mag belecsúszott a pakolási lyukba) — a feltétel azóta
+   monoton, és a felirat a valódi ürességhez igazodik, nem a kijelző-maghoz. Mélyen
+   bent a szaggatott kör már nagyobb lehet a képernyőnél: ilyenkor a képen CSAK a
+   felirat látszik, ez a helyes (odabent tényleg nincs semmi, amíg nem töltünk).
+
+**A döntések, amik Csabára várnak:**
+
+- Jó-e a felirat szövege, mérete, színe. (`_uresMagRajzolasa`)
+- Nem túl korán / túl későn jelenik-e meg. Ha korán: `PAKOLASI_MAG_ARANY` csökkentése.
+- Telefon-méretű ablakban van egy rés: minden síkidom látszik már (×5), de a felirat
+  csak ×8-nál fér ki. Ha ez zavaró, a `TOVABBI_FELIRAT_MIN_SUGAR` (most 30 px)
+  csökkenthető.
+- Mélyen bent a felirat betűmérete 16 px-nél megáll, miközben az üres kör tovább nő.
+  Ha ott elveszettnek tűnik, a `_uresMagRajzolasa` betű-képletének felső korlátja
+  emelhető.
+
+*Böngésző nélkül mérve (2026-08-11): a feltétel mind asztali, mind telefon-méretben
+billen, nem azonnal (kell nagyítani), és a billenés pontosan a „senki sincs elrejtve"
+pillanatban van — mind a 4 állítás áll.*
+
+
+### Síkidom nézet — a KOPPINTÁS és a lapozás (2026-08-11, 3–4. lépés)
+
+Ezzel teljes a „végtelen testvér" kör: a felirat mostantól működik.
+
+**Amit nézni kell:**
+
+1. Nagyíts befelé, amíg megjelenik a „további tartalmak" felirat, majd **koppints rá**.
+   A konzolban `SikidomModal._ajanlatKoppintas` sor jelenik meg (`ujPlafon`, `jelolt`).
+2. Megérkezik a következő adag, és az **egész elrendezés újraépül**. A folyamatjelző
+   közben látszik — az adag több körben jön (150-esével), ez eltarthat pár másodpercig.
+3. **A mélység nem veszhet el:** a koppintás előtti legkisebb síkidom LÁTSZÓ MÉRETE
+   ugyanakkora marad. Ha a konzolban `MÉLYSÉG visszaállítva` sor jelenik meg, valami
+   elmozdította a skálát, és visszaállt — ez rendben van. Ha `MÉLYSÉG: kihagyva
+   (közben nagyított)`, akkor te magad nagyítottál a letöltés alatt; ilyenkor a te
+   szándékod az erősebb.
+4. **A határjelölő:** a megjelölt síkidom körül tágabb, szaggatott gyűrű jelenik meg —
+   ez mutatja, hol maradt abba az előző lepakolás.
+5. **Egy koppintás = egy adag.** A felirat az adag beérkezése után újra megjelenhet
+   (ha van még), de magától NEM tölt tovább.
+
+**⚠️ FONTOS a mai teszt-adatnál.** A 10 405 gyökérből **9 910 egypontos**, vagyis a
+következő adag UGYANAKKORA síkidomokból áll. Mivel a pakolás növekvő méret szerint
+halad, az azonos méretűek nem kerülhetnek a régiek elé — így az új adag a **külső
+gyűrűbe** kerül, és a kép közepén *látszólag nem történik semmi*. **Ez nem hiba.**
+Változatos tudatpont-eloszlású adaton az új adag középre érkezik.
+
+Ha a középre érkezést is látni akarod, olyan teszt-adat kell, ahol a pontok
+érdemben szórnak (nem csupa 1-es).
+
+*Böngésző nélkül mérve (2026-08-11): a teljes lapozási kör mindkét eloszláson —
+a megjelölt mérete változatlan, változatos pontoknál 12,77×-ére tolódik kifelé,
+holtversenynél meg sem mozdul, és mind a 20 000 lerakódik. Mind a 7 állítás áll.*
+
+
+### Síkidom nézet — két böngészős hiba javítása (2026-08-11, Csaba)
+
+**🔴 1. A határjelölő eltűnt az újrapakolás után.** A jelölés a koppintáskor még
+látszott, utána nem. Ok: a gyűrűt az `_alakzatRajzolasa`-ban rajzoltam, ott viszont
+a néhány képpontos síkidomok az OLCSÓ útra esnek (`APRO_ATMERO` alatt egyetlen folt,
+korai `return`) — a megjelölt pedig épp a lepakolás LEGKISEBBJE, tehát mindig oda
+esett. → Javítás: külön rajzoló menet (`_hatarjeloloRajzolasa`), minden más FÖLÖTT.
+
+**🔴 2. Mélyen az üres magban koppintva a kép a TELJES SPIRÁLON KÍVÜLRE került.**
+→ Javítás Csaba kérése szerint: **a megjelölt síkidom a lepakolás után a KÉPERNYŐ
+KÖZEPÉRE kerül**, a koppintáskori méretében. A nézetet expliciten állítjuk be a
+megjelölt keretéből (`keretbenCsomopont` + `skala = kepSugarPx / keret.r`).
+
+**🔴 2/b. Az első javítás NEM MŰKÖDÖTT — az IDŐZÍTÉS volt a hiba.** A fókuszálást az
+`_ujrapakolas`-ba tettem, az viszont a kért adag alatt SOKSZOR lefut: az adag
+150-esével, kb. 67 körben érkezik. Így az első 150 síkidom után fókuszáltunk, majd
+még ~9 850 érkezett, mindegyik újrapakolással — a nézet pedig ott maradt.
+→ A fókuszálás átkerült EGYETLEN helyre (`_fokuszAMegjeloltre`, a
+`_tennivalokFeldolgozasa` végén), és csak akkor fut, ha a LAPOZOTT csomópontra
+nincs futó letöltés, nem is várunk rá továbbit, és a várólistája üres. A feltétel
+szándékosan nem globális csend — más csomópontok folyamatosan kérhetnek adatot.
+
+*Mérve (2026-08-11): az új képlet képpont-pontosan a közepére teszi és tartja a
+méretét; a javítás előtti állapotban ugyanez a síkidom 4 képernyőnyire volt a
+képernyő közepétől. Mind a 4 állítás áll.*
+
+**Amit a böngészőben nézni kell:**
+
+1. Nagyíts MÉLYEN bele az üres magba (annyira, hogy a szaggatott kör se látszódjon),
+   és koppints a „további tartalmak"-ra. A lepakolás után a megjelölt síkidomnak a
+   **képernyő közepén** kell lennie, a szaggatott határjelölő gyűrűvel körülvéve.
+2. A konzolban `FÓKUSZ a megjelöltre` sor. Ha `FÓKUSZ: kihagyva (közben nagyított)`,
+   akkor a letöltés alatt magad mozgattad a nézetet — ilyenkor a te szándékod győz.
+3. A határjelölő gyűrűnek a legapróbb méretben is látszania kell.
