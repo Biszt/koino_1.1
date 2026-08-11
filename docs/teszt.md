@@ -1438,14 +1438,15 @@ belenagyítottál) — nem minden látható szülő közepén.
 
 **A döntések, amik Csabára várnak:**
 
-- Jó-e a felirat szövege, mérete, színe. (`_uresMagRajzolasa`)
+- Jó-e a felirat szövege, mérete, színe. (`uresMagRajzolasa` —
+  [`sikidomRajzolo.js`](../frontend/js/utils/sikidomRajzolo.js), 2026-08-11 óta)
 - Nem túl korán / túl későn jelenik-e meg. Ha korán: `PAKOLASI_MAG_ARANY` csökkentése.
 - Telefon-méretű ablakban van egy rés: minden síkidom látszik már (×5), de a felirat
   csak ×8-nál fér ki. Ha ez zavaró, a `TOVABBI_FELIRAT_MIN_SUGAR` (most 30 px)
   csökkenthető.
 - Mélyen bent a felirat betűmérete 16 px-nél megáll, miközben az üres kör tovább nő.
-  Ha ott elveszettnek tűnik, a `_uresMagRajzolasa` betű-képletének felső korlátja
-  emelhető.
+  Ha ott elveszettnek tűnik, a `uresMagRajzolasa` betű-képletének felső korlátja
+  emelhető (`sikidomRajzolo.js`).
 
 *Böngésző nélkül mérve (2026-08-11): a feltétel mind asztali, mind telefon-méretben
 billen, nem azonnal (kell nagyítani), és a billenés pontosan a „senki sincs elrejtve"

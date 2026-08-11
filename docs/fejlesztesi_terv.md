@@ -1,6 +1,6 @@
 # koino_1.1 — Fejlesztési terv
 
-*Utolsó frissítés: 2026. 08. 10.*
+*Utolsó frissítés: 2026. 08. 11.*
 
 ## A terv gerince: a menühálózat
 
@@ -3028,3 +3028,50 @@ node backend/tools/sikidomPakolasProba.mjs
 
 Ezek böngésző nélkül futnak, tehát minden egyes kiemelés után olcsón ellenőrizhető,
 hogy a viselkedés nem változott. A böngészős próba ezek UTÁN jön, nem helyettük.
+
+---
+
+## ✅ Síkidom nézet — 1. lépés: a RAJZOLÓ kiemelve (2026-08-11)
+
+Az első kiemelés megtörtént: a rajzoló csoport a
+[`frontend/js/utils/sikidomRajzolo.js`](../frontend/js/utils/sikidomRajzolo.js)-ben él.
+**A SikidomModal.js 3 584 → 3 157 sor** (−427), a rajzoló 575 sor. Viselkedés-változás
+nincs: a kód VÁLTOZATLANUL költözött, csak a hivatkozásai lettek explicitek.
+
+### Mi került át
+
+A tervezett tizenkét metódus (`alakzatRajzolasa` · `hatarjeloloRajzolasa` ·
+`halvanyodas` · `uresMagRajzolasa` · `cimkeRajzolasa` · `mellekIkonokRajzolasa` +
+a hat belső segéd: `_feliratSzin` · `_magSzin` · `_sortores` · `_egyIkonRajzolasa` ·
+`_ikonKep` · `_lekerekitettTeglalap`), és VELÜK EGYÜTT a csak általuk használt
+állandók: `APRO_ATMERO`, `CIMKE_*`, `IKON_*`, `HALVANYODAS_*`,
+`MAG_FELIRAT_MIN_SUGAR`, `TOVABBI_FELIRAT_MIN_SUGAR`. Az ikon-kép gyorsítótár
+(`_ikonTar`) is a rajzolóé lett — az ő gondja, nem a nézeté.
+
+### Három döntés, amit érdemes tudni
+
+1. **A `TOVABBI_FELIRAT_MIN_SUGAR` a rajzolóból EXPORTÁLT.** A modal
+   (`_ajanlatKoppintas`) is ezt a küszöböt kérdezi: amit ki sem rajzoltunk, arra nem
+   is lehet koppintani. Ha két helyen állna, némán elcsúszhatna — most egy forrása van.
+2. **A képkockánként változó állapotot EGYSZER adjuk át** (`kepkockaKezdese`:
+   képernyő-méret, kiemelt/kiválasztott/megjelölt azonosító), nem hívásonként. Így a
+   rajzoló metódusok aláírása ugyanaz maradt (`cs, kep`), és nem kellett hat
+   paramétert végigfűzni a menetein.
+3. **A `this.rajzolo` mostantól A RAJZOLÓ MODUL, a 2D kontextus `this.kontextus`.**
+   Korábbi néven a `rajzolo` a Canvas-kontextust jelentette; a kiemelés után abból
+   már csak hat hivatkozás maradt a modálban, tehát olcsó volt a pontos névre váltani.
+
+### Az igazolás
+
+- A négy mérőpróba **változatlanul áll** (5 + 16 + rács + pakolás) — de ezek a
+  rajzolást NEM érintik, csak azt igazolják, hogy a számító réteg ép maradt.
+- **Böngészős füst-próba:** a modul betöltődik, mind az öt rajzoló menet lefut hibátlanul,
+  és a vászon ténylegesen festődik; a `halvanyodas` a régi képlettel egyező értéket ad.
+- ⚠️ **Ami Csabára vár:** a nézet SZEMREVÉTELEZÉSE valódi adaton (feliratok, mellék-ikonok,
+  üres mag, a megjelölt gyűrűje) — a rajzolás helyességéről csak a szem dönthet.
+
+### A következő lépés
+
+A terv szerint a **`sikidomTar.js`** (visszaszedés · ős-söprés · parkolás · takarítás).
+Ennek MÁR VAN mérőpróbája (`sikidomParkolasProba.mjs`, 16 állítás), tehát a kiemelés
+helyessége böngésző nélkül is ellenőrizhető lesz — a rajzolóval ellentétben.
