@@ -275,7 +275,15 @@ const PAKOLASI_MAG_ARANY = 6;
 //   - a LETÖLTÉS a szűk keresztmetszet: ~12 600 testvér/s meleg dev adatbázison,
 //     hálózat nélkül — interneten reálisan ~6 500/s. 10 000 tehát nagyjából
 //     másfél-két másodperc hálózat, ami belefér a 3 másodperces megnyitási keretbe.
-const ELORETOLTES_DARAB = 10_000;
+//
+// 2026-08-11-en 10 000 → 5 000 (Csaba): egy adag így nagyjából FÉL MÁSODPERC
+// hálózat internetes sebességgel, tehát a megnyitás és minden egyes lapozás is
+// észrevehetően gyorsabb. A szám kettős szerepű — ez az ELSŐ adag mérete ÉS a
+// „további tartalmak" koppintásával kért következő adagé is (`betoltesiPlafon`
+// növekménye) —, tehát a lapozás lépésköze is feleződik: több, de fürgébb lépés.
+// A `MEGTARTOTT_DARAB` (12 000) érintetlen marad: az vészfék, nem lépésköz, és
+// most még nagyobb a ráhagyása az adag fölött.
+const ELORETOLTES_DARAB = 5_000;
 
 // ===== MÉRET SZERINTI VISSZASZEDÉS (Csaba, 2026-08-09) =====
 // „Mindenképpen sorrendben kell visszaszedni azokat, amik már nincsenek képben —
@@ -1121,7 +1129,7 @@ class SikidomModal {
     //
     // MIT ADUNK FEL: a „lerakott síkidom soha nem mozdul" ígéretet. Ha új, az
     // eddigieknél KISEBB testvér érkezik, az a sor elejére kerül, és a kép
-    // átrendeződik. Ezt az `ELORETOLTES_DARAB` teszi ritkává: 10 000 testvér
+    // átrendeződik. Ezt az `ELORETOLTES_DARAB` teszi ritkává: 5 000 testvér
     // helyét előre kiszámoljuk, tehát a nagyítás sokáig nem hoz újat.
     //
     // MIÉRT NEM TARTHATJUK MEG MÉGIS A RÉGI HELYEKET: mert akkor az új, kisebb

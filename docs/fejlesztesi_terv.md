@@ -2561,3 +2561,98 @@ LEGFRISSEBB a középpontba kerül, a megjelölt mérete változatlan. Mind a 4 
 *Böngészőben igazolva (2026-08-11): a megjelölt azonosítója a javítás után a friss
 tartományból való (`6a78f6b4…`, a korábbi `6a6c41d8…` helyett), a határjelölő gyűrű a
 képernyő közepén, a mező üres közepe pedig elmozdult — az új adag foglalta el.*
+
+
+## Síkidom nézet — az ADAG feleződése és két új próba-ág (2026-08-11, Csaba)
+
+### Az adag: 10 000 → 5 000
+
+`SikidomModal.ELORETOLTES_DARAB` 10 000 → **5 000**. A szám kettős szerepű: ez az
+ELSŐ adag mérete ÉS a „további tartalmak" koppintásával kért következő adagé is
+(a `betoltesiPlafon` növekménye). A feleződéssel tehát a megnyitás és minden egyes
+lapozás is fürgébb — a 2026-08-09-i mérés szerint (~6 500 testvér/s internetes
+sebességgel) egy adag másfél-két másodpercről nagyjából fél másodpercre esik.
+Cserébe több lépés kell ugyanannak a mennyiségnek a bejárásához; ez a lapozás
+lényege, nem mellékhatása.
+
+A `MEGTARTOTT_DARAB` (12 000) **érintetlen**. Az vészfék, nem lépésköz — és most
+még nagyobb a ráhagyása az adag fölött, tehát továbbra is a MÉRET vágja az ablakot
+(`VISSZASZEDES_ATMERO_ARANY`), nem a darabszám.
+
+### Két próba-ág, amit a gyökér-szintű adat nem tudott megadni
+
+Új szerszám: `backend/tools/sikidomAgTesztAdat.js`. Mindkét ágat KÜLÖN gyökér alá
+építi, a rendes service-en át, újrafuttathatóan. Részletes teszt-forgatókönyv:
+[teszt.md](teszt.md), „Síkidom nézet — KÉT PRÓBA-ÁG teszt-adat".
+
+**A) „Ötezres testvér-mező"** — 5 000 gyerek egy gyökér alatt, Zipf-eloszlású
+ponttal (550 → 1, ~23-szoros sugár-különbség). Ez pótolja a mai adat hiányát: a
+gyökér-szinten 10 405-ből 9 910 egypontos, csupa holtverseny, ezért ott az új adag
+a külső gyűrűbe kerül és a kép közepén látszólag nem történik semmi (lásd fentebb,
+„A lapozás KÉTFÉLE arca"). Szóró pontokon az új adagnak **középre** kell érkeznie.
+
+**B) „Ötven szintű mély lánc"** — 50 szint, szintenként EGYETLEN gyerek, egyenként
+1 tudatponttal. Ez a végtelen egymásba ágyazhatóság próbája: szintenként a terület
+a huszadára esik, a sugár tehát √20 ≈ 4,47-szeresére nagyítandó — 50 szint alatt
+nagyjából 10³²-szeres nagyítás.
+
+⚠️ **Miért 1 pont minden láncszemnek.** A gyerek látszó mérete a SAJÁT és a SZÜLŐ
+hierarchikus pontjának arányából jön, a szülőé pedig halmozott (tartalmazza a
+leszármazottaiét). Egyenletes 1 pontnál a d-edik szint pontja (mélység − d + 1),
+az arány pedig (n−1)/n — a lehető legközelebb az 1-hez, vagyis ez adja a LEGNAGYOBB
+elérhető láncszemet. Több pontot adni a mélyebb szinteknek épp rontana: a fölöttük
+lévő arányt nyomná le. Ugyanezért kapnak a próba-gyökerek is csak 1 saját pontot.
+
+### 🔴 Közben talált hiba: az `osszesGyerekPont` minden nem-gyökér szülőn 0 volt
+
+A két próba-ág API-s ellenőrzésekor derült ki (2026-08-11). A `sikidom/gyerekek`
+végpont a `letrehozva`-t, a kurzort és magukat a gyerekeket helyesen adta, az
+`osszesGyerekPont` viszont **0**-t — pedig az 5 000 gyerekes mezőnél 8 549-nek
+kellett volna lennie.
+
+**Az ok:** `hierarchikusTudatpontAllokaciRepository.gyerekekOsszPontja` **aggregációt**
+használ, és az `aggregate()` — a `find()`-dal ellentétben — **nem kasztol a séma
+alapján**. A `$match: { szuloId: "6a7acc…" }` tehát szó szerint hasonlít, egy
+szöveges azonosítóra pedig soha nem talál sort. Mérve, ugyanazon az adaton:
+
+```
+string-ként:   []
+ObjectId-ként: [{ ossz: 50 }]
+```
+
+A végpont a query-paraméterből kapja az azonosítót, tehát **stringként** — így ez
+MINDEN nem-gyökér szülőn elsült. A gyökér szinten viszont a szűrő `null`, nincs mit
+kasztolni: ott végig helyes volt. Ezért maradt eddig rejtve — a Síkidom nézetet
+végig a gyökér-szinten mértük.
+
+**Mit rontott el.** Nem azt, amire először gondoltam — a `_vanMegBetoltetlen` a
+0-t szándékosan „nem tudni, tehát lehet még" értelemben veszi
+(`osszesGyerekPont === 0 || betoltott < osszes`). Az ajánlat tehát nem tűnt el;
+a nézet csak elvesztette az egyetlen VALÓDI adatát arról, mennyi van hátra, és
+egy tartalék-ágra esett vissza. Három következménye volt:
+
+1. **A takarékossági fék kimaradt.** A kliens az `osszesKell=0`-t csak akkor küldi,
+   ha már ismeri az összeget (`if (szulo.osszesGyerekPont > 0)`). Mivel az örökre
+   0 maradt, **minden egyes kérés újra végigolvasta a szülő ÖSSZES gyerekét** egy
+   aggregációval. Pont az a csapda, amitől a kód kommentje óv: „egy milliós ágnál
+   kérésenként végigolvasná az egészet". Egy 5 000 gyerekes szülő 150-esével kérve
+   ~34 kérés — 34 teljes végigolvasás ugyanazért az egy számért.
+2. **Kamu lyuk a nem-fókusz szülőkben.** A `mindenLetoltve` csak nulla küszöbnél
+   áll be (`pontKuszob <= 0`), amit egyedül a FÓKUSZ csomópont kap meg. Egy
+   nem-fókusz szülő tehát a 0-s tartalék-ágon maradt: **lyukat mutatott akkor is,
+   ha már minden gyereke le volt töltve.**
+3. A diagnosztikai kiírás (`hatra = osszes − helyezett`) végig 0-t mutatott.
+
+A FÓKUSZ csomópontban a lapozás emiatt véletlenül helyesen viselkedett (a
+`mindenLetoltve` elfedte a hibát) — ezért nem bukott ki a korábbi böngészős
+próbákon.
+
+**Javítás:** kézi `Types.ObjectId` átalakítás a `$match` előtt, ugyanúgy, ahogy a
+`melyikSzulonekVanGyereke` már csinálta.
+
+*Mérve a javítás után (2026-08-11): mező 8 549 · lánc 50 · gyökér-szint 36 626 —
+mindhárom egyezik az adatbázissal.*
+
+⚠️ **Tanulság a jövőre:** `aggregate()`-ben MINDEN azonosítót kézzel kell ObjectId-dá
+alakítani. A hiba némán 0-t ad vissza, nem dob — és egy 0 pont tökéletesen
+életszerűen néz ki.

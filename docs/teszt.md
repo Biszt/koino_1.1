@@ -1520,3 +1520,93 @@ képernyő közepétől. Mind a 4 állítás áll.*
 2. A konzolban `FÓKUSZ a megjelöltre` sor. Ha `FÓKUSZ: kihagyva (közben nagyított)`,
    akkor a letöltés alatt magad mozgattad a nézetet — ilyenkor a te szándékod győz.
 3. A határjelölő gyűrűnek a legapróbb méretben is látszania kell.
+
+
+### Síkidom nézet — KÉT PRÓBA-ÁG teszt-adat (2026-08-11, Csaba)
+
+Két hiányzó eset kipróbálásához, amit a mai gyökér-szintű adat nem tudott megadni.
+Egyetlen szerszám építi mindkettőt, KÜLÖN gyökér alá, hogy a meglévő 10 402 gyökeret
+ne zavarja, és a Keresésből azonnal megtalálható legyen:
+
+```bash
+docker exec koino-backend node tools/sikidomAgTesztAdat.js
+```
+
+Paraméterezhető (`testvér-darab`, `lánc-mélység`), és van SZÁRAZ FUTÁSA is, ami csak
+kiírja, mit hozna létre:
+
+```bash
+docker exec koino-backend node tools/sikidomAgTesztAdat.js proba
+```
+
+Újrafuttatható: a meglévő című gyerekeket kihagyja, a láncban pedig egyszerűen lelép
+a meglévő szinteken — egy félbeszakadt futás tehát folytatható.
+
+#### A) „Ötezres testvér-mező (síkidom próba)" — a lapozás VÁLTOZATOS pontokkal
+
+5 000 gyerek egyetlen gyökér alatt, **Zipf-eloszlású** tudatponttal: a legerősebb
+550 pont, a leggyengébb 1 — nagyjából 23-szoros sugár-különbség.
+
+**Ez az az adat, ami a fenti „⚠️ FONTOS a mai teszt-adatnál" hiányát pótolja.** A
+gyökér-szinten 10 405-ből 9 910 egypontos, tehát ott a lapozás után az új adag a
+külső gyűrűbe kerül, és a kép közepén látszólag nem történik semmi. Itt viszont a
+pontok érdemben szórnak, tehát:
+
+1. Nagyíts bele a mezőbe, amíg megjelenik a „további tartalmak" felirat, és koppints rá.
+2. **Az új adagnak KÖZÉPRE kell érkeznie** — a megjelölt síkidom kifelé tolódik, a
+   határjelölő gyűrű a képernyő közepén marad, és körülötte megjelennek az újak.
+3. A megjelölt síkidom LÁTSZÓ MÉRETE közben nem változhat (a mélység megmarad).
+
+Mivel az adag mérete 5 000 (`ELORETOLTES_DARAB`), az 5 000 testvér épp EGY adag —
+tehát a felirat itt a mező alján **nem** jelenik meg, ha minden testvér lejött. A
+lapozás próbájához futtasd nagyobb darabszámmal, pl. `… sikidomAgTesztAdat.js 8000`.
+
+#### B) „Ötven szintű mély lánc (síkidom próba)" — a végtelen egymásba ágyazás
+
+50 szint, szintenként EGYETLEN gyerek, mindegyik 1 tudatponttal.
+
+**Miért 1 pont:** a gyerek látszó mérete a saját és a szülő hierarchikus pontjának
+arányából jön, a szülőé pedig tartalmazza a gyerekéit. Egyenletes 1 pontnál ez az
+arány (n−1)/n — a lehető legközelebb az 1-hez, vagyis ez adja a LEGNAGYOBB elérhető
+láncszemet. Több pontot adni a mélyebb szinteknek épp rontana.
+
+**Amit nézni kell:**
+
+1. Keresd meg a gyökeret, és nagyíts BELE, szintről szintre. A feliratból mindig
+   látszik, hol tartasz: `1. szint — mély lánc`, `2. szint — mély lánc`, …
+2. Szintenként a terület a huszadára csökken, a sugár tehát √20 ≈ **4,47-szeresére**
+   nagyítandó. 50 szint alatt ez nagyjából **10³²-szeres** nagyítás — pontosan ez
+   teszi próbára a korlátlan nagyítást és a horgonyváltást.
+3. A konzol `_ujrapakolas` naplójában a `horgonySzint` szintenként eggyel nő
+   (VILÁG = −1, gyökerek = 0, az 1. szint = 1 …). **Az 50. szintig el kell jutni
+   pislogás és skála-ugrás nélkül.**
+4. A beágyazás egyetlen szinten sem sérülhet: ha mégis, a konzol azonnal szól —
+   `SikidomModal._ujrapakolas - BEÁGYAZÁS SÉRÜL: gyerek a szülőn kívül`.
+
+#### 🔴 Amit ez a teszt-adat kihozott: az `osszesGyerekPont` hibája (2026-08-11)
+
+A két ág API-s ellenőrzésekor derült ki, hogy a `GET /api/sikidom/gyerekek`
+**minden nem-gyökér szülőre `osszesGyerekPont: 0`-t adott** (az 5 000 gyerekes
+mezőnél 8 549 helyett). Ok: az aggregáció `$match`-e nem kasztolja a szöveges
+azonosítót ObjectId-ra. Javítva; részletek a
+[fejlesztesi_terv.md](fejlesztesi_terv.md)-ben.
+
+**Két dolgot érdemes emiatt külön nézni:**
+
+1. **Nem-fókusz szülő nem mutathat kamu lyukat.** A hiba miatt a nézet nem tudta,
+   mennyi van hátra, és a „lehet még" tartalék-ágra esett — így egy olyan szülő
+   közepén is lyuk maradt, aminek MINDEN gyereke le volt töltve. A javítás után
+   ott a legkisebb síkidomnak a középpontban kell ülnie, lyuk nélkül.
+2. **Sebesség.** A hiba miatt minden kérés újra végigolvasta a szülő összes
+   gyerekét. A mezőbe (5 000 gyerek) nagyítva a betöltés most érezhetően fürgébb
+   lehet; a konzolban az első kérés után `osszesKell=0` kell hogy szerepeljen a
+   további kérések URL-jében.
+
+Gyors ellenőrzés API-ból (a `<id>` helyére a szülő azonosítója):
+
+```bash
+curl -s -H "Authorization: Bearer <token>" \
+  "http://localhost:3000/api/sikidom/gyerekek?szulo=<id>&minPont=0&darab=5&osszesKell=1"
+```
+
+Az `osszesGyerekPont` nem lehet 0, ha a szülőnek van gyereke.

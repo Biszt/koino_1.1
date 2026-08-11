@@ -283,7 +283,28 @@ async findGyerekekKuszobFolott(szuloId, minPont, utolsoPont = null, utolsoId = n
 async gyerekekOsszPontja(szuloId = null) {
     console.log('hierarchikusAllokaciRepository.gyerekekOsszPontja - KEZDÉS', { szuloId });
 
-    const szuro = { szuloId: szuloId ?? null };
+    // ⚠️ AZ AGGREGÁCIÓ NEM KASZTOL (2026-08-11, mérve). A `find()` a séma alapján
+    // magától ObjectId-dá alakítja a szöveges azonosítót, az `aggregate()` viszont
+    // NEM — ott a `$match` szó szerint hasonlít, tehát egy string szuloId SOHA nem
+    // talál egyetlen sort sem, és az összeg némán 0 lett. Mivel a végpont a
+    // query-paraméterből kapja az azonosítót (tehát stringként), ez MINDEN
+    // nem-gyökér szülőre elsült; a gyökér szinten viszont a szűrő `null`, ott nincs
+    // mit kasztolni — ezért maradt sokáig rejtve.
+    //
+    // MIT ROMLOTT EL TŐLE (a kliens oldalán): a nézet nem tűnt el, csak elvesztette
+    // az egyetlen valódi adatát arról, mennyi van hátra, és a tartalék-ágra esett
+    // (`_vanMegBetoltetlen` a 0-t „lehet még"-nek veszi). Ebből (1) az `osszesKell=0`
+    // takarékossági fék sosem kapcsolt be, tehát MINDEN kérés újra végigolvasta a
+    // szülő összes gyerekét — pont az a csapda, amitől a metódus fenti leírása óv;
+    // és (2) a nem-fókusz szülők akkor is lyukat mutattak, ha már minden gyerekük
+    // le volt töltve.
+    //
+    // Ugyanezt a kézi átalakítást végzi a `melyikSzulonekVanGyereke` is.
+    const szuro = {
+        szuloId: (szuloId && Types.ObjectId.isValid(szuloId))
+            ? new Types.ObjectId(szuloId)
+            : (szuloId ?? null)
+    };
 
     const sorok = await HierarchikusTudatpontAllokacio.aggregate([
         { $match: szuro },

@@ -1,0 +1,231 @@
+// backend/tools/sikidomMelysegProba.mjs
+
+// ===== A MÉLYSÉGI NAGYÍTÁS MÉRŐPRÓBÁJA =====
+//
+// Felelősség: böngésző nélkül eldönteni, hogy a horgony-keretes technológia
+// tényleg KORLÁTLAN nagyítást ad-e — vagy elfogynak a lebegőpontos számok.
+//
+// MIÉRT KELL (2026-08-11, Csaba böngészős találata):
+// az 50 szintű mély láncon a nézet nagyjából a 20. szintnél „szétesett", és a
+// nagyítási érték ~1e-21 körül járt. Ez a `double` pontosságának a széle. A kérdés,
+// amit ez a próba eldönt: a horgonyváltás MEGVÉD-e ettől, vagy sem.
+//
+// A MÉRÉS: ugyanaz a lánc, mint az adatbázisban (50 szint, szintenként 1 pont),
+// és egy lépésenkénti nagyítás-söprés a legfelső szinttől a legalsóig. Minden
+// lépésnél megnézzük:
+//   - hol tart a horgony (melyik szinten),
+//   - mekkora a `nezet.skala` (ez az, amit Csaba a böngészőben látott),
+//   - és hogy a KÉPERNYŐ-KÉP pontos-e — vagyis a horgony-kereten át számolt hely
+//     megegyezik-e a független, EGZAKT referenciával.
+//
+// AZ EGZAKT REFERENCIA. A lánc egyenes: minden szinten pontosan egy gyerek. Egy
+// d-edik szintű csomópont képernyő-sugara tehát a szorzatok szorzata. Ezt a
+// szorzatot LOGARITMUSBAN is kiszámoljuk (∑ log relR), ahol nincs alulcsordulás —
+// ez a mérce, amihez a lebegőpontos utat hasonlítjuk.
+//
+// Futtatás:  node backend/tools/sikidomMelysegProba.mjs
+
+// --- IMPORTÁLÁSOK ---
+import {
+  keretbenCsomopont, szuloKeretben, horgonyValtasNezet, kepernyore,
+  horgonyValtasSzukseges, LEFELE_KUSZOB, FOLFELE_KUSZOB
+} from '../../frontend/js/utils/sikidomHorgony.js';
+import { gyerekRelativSugar } from '../../frontend/js/utils/sikidomMeret.js';
+
+const naplo = (...ertekek) => process.stdout.write(ertekek.join(' ') + '\n');
+
+const hibak = [];
+function allitas(rendben, cimke, reszlet = '') {
+  if (!rendben) hibak.push(`${cimke}${reszlet ? ' — ' + reszlet : ''}`);
+  naplo(`  ${rendben ? '✔' : '✘'} ${cimke}${reszlet ? '  (' + reszlet + ')' : ''}`);
+}
+
+// ===== A LÁNC FELÉPÍTÉSE =====
+// Pontosan úgy, ahogy az adatbázisban van: 50 szint, mindenki 1 saját pontot kap,
+// tehát a d-edik szint HIERARCHIKUS pontja (MELYSEG − d + 1).
+const MELYSEG = 50;
+const KEPERNYO = 800;            // a képernyő kisebbik oldala képpontban
+
+// A csomópont-tár: id → { id, szuloId, relX, relY, relR, gyerekIdk }
+const tar = new Map();
+
+const GYOKER = 'sz0';
+tar.set(GYOKER, { id: GYOKER, szuloId: null, relX: 0, relY: 0, relR: 1, gyerekIdk: [] });
+
+// A gyerek helye a szülő sugarának egységében. A VALÓDI láncban ez 0: ha minden
+// testvér le van töltve, a pakoló a legkisebbet — itt az egyetlent — a KÖZÉPPONTBA
+// teszi. Az eltolt esetet is mérni akarjuk, ezért paraméter:
+//   node backend/tools/sikidomMelysegProba.mjs 0.35
+const ELTOLAS = Number.isFinite(Number(process.argv[2])) ? Number(process.argv[2]) : 0;
+
+for (let d = 1; d <= MELYSEG; d++) {
+  const szuloId = d === 1 ? GYOKER : `sz${d - 1}`;
+  const id = `sz${d}`;
+
+  // A hierarchikus pontok: a szülőé eggyel több, mint a gyereké
+  const gyerekPont = MELYSEG - d + 1;
+  const szuloPont = MELYSEG - d + 2;
+
+  const relR = gyerekRelativSugar(gyerekPont, szuloPont);
+
+  tar.set(id, { id, szuloId, relX: ELTOLAS, relY: 0, relR, gyerekIdk: [] });
+  tar.get(szuloId).gyerekIdk.push(id);
+}
+
+// ===== EGZAKT REFERENCIA LOGARITMUSBAN =====
+// A d-edik szint sugara a GYÖKÉR keretében: ∏ relR. Logaritmusban összeadás,
+// tehát sem alul-, sem túlcsordulás nincs.
+const logSugar = [0];
+for (let d = 1; d <= MELYSEG; d++) {
+  logSugar[d] = logSugar[d - 1] + Math.log(tar.get(`sz${d}`).relR);
+}
+
+// ===== A HORGONYVÁLTÁS (a SikidomModal._horgonyEllenorzes mása) =====
+// Szándékosan ugyanaz a szerkezet, hogy amit itt mérünk, az a valódi viselkedés.
+function horgonyEllenorzes(allapot) {
+  for (let lepes = 0; lepes < 8; lepes++) {
+    const cs = tar.get(allapot.horgony);
+    if (!cs) break;
+
+    const gyerekKeretek = cs.gyerekIdk
+      .map(gid => tar.get(gid))
+      .filter(Boolean)
+      .map(gy => ({ id: gy.id, keret: { x: gy.relX, y: gy.relY, r: gy.relR } }));
+
+    const vanSzulo = !!(cs.szuloId && tar.has(cs.szuloId));
+    const dontes = horgonyValtasSzukseges(allapot.nezet, KEPERNYO, gyerekKeretek, vanSzulo);
+    if (!dontes) break;
+
+    if (dontes.irany === 'le') {
+      const gy = tar.get(dontes.gyerekId);
+      allapot.nezet = horgonyValtasNezet(allapot.nezet, { x: gy.relX, y: gy.relY, r: gy.relR });
+      allapot.horgony = gy.id;
+    } else {
+      const szKeret = szuloKeretben(tar, allapot.horgony);
+      if (!szKeret) break;
+      allapot.nezet = horgonyValtasNezet(allapot.nezet, szKeret);
+      allapot.horgony = cs.szuloId;
+    }
+  }
+}
+
+function szint(id) { return id === GYOKER ? 0 : Number(id.slice(2)); }
+
+// ===== 1. PRÓBA: NAGYÍTÁS-SÖPRÉS A LEGALSÓ SZINTIG =====
+naplo('');
+naplo('===== 1. PRÓBA: nagyítás-söprés a 0. szinttől az 50.-ig =====');
+naplo(`  lánc: ${MELYSEG} szint · képernyő: ${KEPERNYO} px · eltolás: ${ELTOLAS}`);
+naplo('');
+
+// Kiindulás: a gyökér kitölti a képernyőt
+let allapot = {
+  horgony: GYOKER,
+  nezet: { skala: KEPERNYO / 2, eltolasX: KEPERNYO / 2, eltolasY: KEPERNYO / 2 }
+};
+
+// A nagyítás középpontja: a képernyő közepe. Lépésenként 1,05-szörös nagyítás —
+// ez elég apró ahhoz, hogy egyetlen horgony-küszöböt se ugorjunk át.
+const LEPES_FAKTOR = 1.05;
+const LEPESEK = 1600;
+
+let legnagyobbSkala = 0;
+let legkisebbSkala = Infinity;
+let elertSzint = 0;
+let legnagyobbHiba = 0;
+let elsoHibasSzint = null;
+
+// A nagyítást a LEGMÉLYEBB csomópont képernyő-helyére célozzuk (oda „megyünk be")
+for (let i = 0; i < LEPESEK; i++) {
+  // --- nagyítás a képernyő közepe köré, a legmélyebb LÁTHATÓ csomópontra célozva ---
+  const cel = keretbenCsomopont(tar, allapot.horgony, `sz${Math.min(elertSzint + 2, MELYSEG)}`)
+           ?? { x: 0, y: 0, r: 1 };
+  const celKep = kepernyore(allapot.nezet, cel);
+
+  // A nagyítás a célpontot a helyén tartja (mint az egérrel/ujjal nagyítás)
+  allapot.nezet = {
+    skala: allapot.nezet.skala * LEPES_FAKTOR,
+    eltolasX: celKep.kepX - (celKep.kepX - allapot.nezet.eltolasX) * LEPES_FAKTOR,
+    eltolasY: celKep.kepY - (celKep.kepY - allapot.nezet.eltolasY) * LEPES_FAKTOR
+  };
+
+  horgonyEllenorzes(allapot);
+
+  const h = szint(allapot.horgony);
+  if (h > elertSzint) elertSzint = h;
+
+  legnagyobbSkala = Math.max(legnagyobbSkala, allapot.nezet.skala);
+  legkisebbSkala = Math.min(legkisebbSkala, allapot.nezet.skala);
+
+  // --- PONTOSSÁG: a horgony képernyő-sugara az EGZAKT referenciához képest ---
+  // A horgony sugara a saját keretében 1, tehát a képernyő-sugara maga a skála.
+  // Az egzakt érték: a kiinduló skála × ∏relR × (a nagyítások szorzata).
+  // A nagyítások szorzatát a NÉZET hordozza, ezért közvetlenül nem hasonlítható —
+  // helyette azt mérjük, ami a képet ELRONTJA: a horgony és egy nála 5 szinttel
+  // MÉLYEBB csomópont sugár-arányát, aminek egzakt értéke ismert.
+  const melyebb = Math.min(h + 5, MELYSEG);
+  if (melyebb > h) {
+    const keret = keretbenCsomopont(tar, allapot.horgony, `sz${melyebb}`);
+    if (keret) {
+      const varhato = Math.exp(logSugar[melyebb] - logSugar[h]);
+      const hiba = Math.abs(keret.r - varhato) / varhato;
+      if (hiba > legnagyobbHiba) legnagyobbHiba = hiba;
+      if (hiba > 1e-9 && elsoHibasSzint === null) elsoHibasSzint = h;
+    }
+  }
+
+  if (elertSzint >= MELYSEG) break;
+}
+
+naplo(`  elért horgony-szint:      ${elertSzint} / ${MELYSEG}`);
+naplo(`  skála tartománya:         ${legkisebbSkala.toExponential(3)} … ${legnagyobbSkala.toExponential(3)}`);
+naplo(`  legnagyobb relatív hiba:  ${legnagyobbHiba.toExponential(3)}`);
+naplo('');
+
+allitas(elertSzint === MELYSEG, 'a horgony leér a legalsó szintig',
+  `elért: ${elertSzint}`);
+allitas(legkisebbSkala > 1 && legnagyobbSkala < 1e6,
+  'a skála végig 1 körüli nagyságrendben marad (nem fogy el a double)',
+  `${legkisebbSkala.toExponential(2)} … ${legnagyobbSkala.toExponential(2)}`);
+allitas(legnagyobbHiba < 1e-9, 'a horgony-kereten át számolt sugár egzakt marad',
+  `legnagyobb hiba: ${legnagyobbHiba.toExponential(2)}`);
+
+// ===== 2. PRÓBA: MI TÖRTÉNNE HORGONY NÉLKÜL? =====
+// Ugyanaz a lánc, de EGYETLEN, közös koordináta-rendszerben (a gyökérhez képest).
+// Ez a koino_1.0 útja — és ez mutatja meg, honnan jön az 1e-21.
+naplo('');
+naplo('===== 2. PRÓBA: ugyanez horgony NÉLKÜL (a koino_1.0 útja) =====');
+
+let abszolutSugar = 1;
+let elveszettSzint = null;
+
+for (let d = 1; d <= MELYSEG; d++) {
+  abszolutSugar *= tar.get(`sz${d}`).relR;
+
+  // Hány értékes tizedesjegy maradt? A double ~2.2e-16 relatív felbontású; ha a
+  // sugárhoz képest az 1-es nagyságrendű koordináták felbontása durvább, mint a
+  // sugár maga, a csomópont helye értelmezhetetlenné válik.
+  const felbontas = Number.EPSILON;             // 1 körüli számok lépésköze
+  if (elveszettSzint === null && abszolutSugar < felbontas) elveszettSzint = d;
+
+  if (d % 10 === 0 || d === elveszettSzint) {
+    naplo(`  ${String(d).padStart(2)}. szint: abszolút sugár = ${abszolutSugar.toExponential(3)}` +
+      (d === elveszettSzint ? '   ← itt fogy el a double' : ''));
+  }
+}
+
+naplo('');
+naplo(`  a közös koordináta-rendszer a ${elveszettSzint}. szinten fogy el`);
+naplo(`  (a Csaba által látott ~1e-21 a ${Math.round(Math.log(1.2e-21) / Math.log(0.2236))}. szint környéke)`);
+
+// ===== ÖSSZEGZÉS =====
+naplo('');
+naplo('=================== EREDMÉNY ===================');
+if (hibak.length === 0) {
+  naplo(`Mind a 3 állítás áll — a horgony-keretes nagyítás ${MELYSEG} szinten át pontos.`);
+} else {
+  naplo(`${hibak.length} ÁLLÍTÁS BUKOTT:`);
+  for (const h of hibak) naplo(`  ✘ ${h}`);
+}
+naplo('');
+
+process.exit(hibak.length ? 1 : 0);
