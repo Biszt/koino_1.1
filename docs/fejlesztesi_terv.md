@@ -3075,3 +3075,71 @@ a hat belső segéd: `_feliratSzin` · `_magSzin` · `_sortores` · `_egyIkonRaj
 A terv szerint a **`sikidomTar.js`** (visszaszedés · ős-söprés · parkolás · takarítás).
 Ennek MÁR VAN mérőpróbája (`sikidomParkolasProba.mjs`, 16 állítás), tehát a kiemelés
 helyessége böngésző nélkül is ellenőrizhető lesz — a rajzolóval ellentétben.
+
+---
+
+## ✅ Síkidom nézet — 2. lépés: a TÁR-KEZELÉS kiemelve (2026-08-11)
+
+A tár-csoport a [`frontend/js/utils/sikidomTar.js`](../frontend/js/utils/sikidomTar.js)-be
+került. **A SikidomModal.js 3 157 → 2 793 sor** (−364; a kiindulás óta összesen −791,
+azaz a fájl 22%-a), a tár-modul 525 sor. A modul DOM-független, tehát Node-ból mérhető.
+
+### Mi került át
+
+`visszaszedes` · `osSopres` · `kiparkolas` · `visszahozatal` · `takaritas` ·
+`reszfaTorlese` · `meretekUjramerese`, és velük a szabályaik: `VISSZASZEDES_ATMERO_ARANY`,
+`MEGTARTOTT_DARAB`, `FOLYOSO_SZINT`, `AGAK_ELENGEDESE`, `ELENGEDES_TURELEM`.
+
+### Három döntés, amit érdemes tudni
+
+1. **A tár MARADT egyszerű `Map`, a modal birtokában.** Kézenfekvő lett volna a
+   `Map`-et is a modulba zárni, de akkor a nézet MINDEN `this._tar.get(id)` hívását
+   át kellett volna írni — köztük a két érinthetetlen metódusét. A modul így csak
+   megkapja a tárat: a nyereség ugyanaz, a kockázat nulla.
+2. **HÁROM VÉKONY ÁTJÁRÓ maradt a modálban** (`_meretekUjramerese`,
+   `_reszfaTorlese`, `_visszahozatal`). Mind a hármat KIZÁRÓLAG az `_ujrapakolas`
+   és a `_lathatoLista` hívja — egy egysoros átjáró olcsóbb, mint hozzájuk nyúlni.
+   Amikor rájuk kerül a sor, az átjárók eltűnhetnek.
+3. **A gerinc-bejárás EGY helyre került** (`gerincLanc`). Eddig háromszor volt
+   leírva, kétszer 64-es korláttal, egyszer korlát nélkül — és ez az eltérés NEM
+   véletlen volt: lásd alább.
+
+### ⚠️ EGY VALÓDI (LAPPANGÓ) HIBA, AMIT AZ EGYSÉGESÍTÉS HOZOTT ELŐ
+
+A három gerinc-bejárás közül kettő 64 szintnél megállt, a harmadik — a
+`takaritas` VÉDETT-halmaza — nem. Ha a közös segédre naivan mind a hármat a
+64-es korláttal írtuk volna át, akkor egy 64-nél mélyebbre nagyított nézetben a
+64. fölötti ős már nem lett volna védett, és a takarítás elengedhette volna a
+részfáját — **benne magával a horgonnyal**. Ma ez nem sülne el (`AGAK_ELENGEDESE`
+`false`), de bekapcsolva azonnal.
+
+Ezért a `gerincLanc` harmadik paramétere a korlát, a `takaritas` pedig korlát
+nélkül kéri a láncot. A `gerincLanc` fejlécében ott a figyelmeztetés is.
+
+### Az igazolás — most már a KÓDRA is
+
+A parkolás-mérőpróba eddig a SZABÁLYT mérte (a pakolás determinisztikus a teljes
+készletből), nem az azt megvalósító kódot: saját másolatból dolgozott. Mivel a
+tár-modul DOM-független lett, a próba mostantól **a valódi függvényeket futtatja**
+egy kézzel épített, 10 szint mély csomópont-táron:
+
+```bash
+node backend/tools/sikidomParkolasProba.mjs
+```
+
+**16 → 43 állítás**, mind áll. Amit az új szakasz lemér: a gerinc hossza és a
+korlát hatása · a folyosón belüli szint érintetlensége · a folyosón kívül CSAK a
+gerinc-gyerek marad · a `parkolt` jelzés · az elengedettek adata megmarad · a tár
+tényleg csökken · **a visszahozatal őrszeme parkolt szinten** · a kiparkolás
+egyben ad vissza · a visszaszedés CSAK a sorrend végéről enged el · a horgony és a
+nála kisebbek bent maradnak · a `helyezettIdk` együtt csökken · a visszaszedettek
+csökkenő sorrendje · a részfa-törlés utáni „még nem töltöttük be" állapot.
+
+Böngészős füst-próba: a három átjáró tényleg a modulhoz vezet.
+
+### A következő lépés
+
+A terv szerint a **`sikidomVezerles.js`** (események, gesztusok, zoom, koppintás).
+Ez a legnagyobb megmaradt csoport (~500 sor), és jól elhatárolt: a nézetet csak a
+`_zoom`-on és a horgonyon át éri el. Mérőpróbája nincs és nem is lehet (böngésző-
+események), tehát utána a böngészős ellenőrzés KÖTELEZŐ.
