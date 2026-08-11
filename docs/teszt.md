@@ -1669,3 +1669,62 @@ horgony nem abba az ágba ment, amibe nagyítottál. A koino_1.0 szabálya nyom�
 VILÁG → gyökér → 1 → 2 → … → 50, minden lépés pontosan +1, ugrás nélkül; a skála
 végig 77 és 3 437 között maradt (a javítás előtt 1,81·10¹⁴-ig szaladt), és a
 `BEFELE_HATAR` korlátnak egyszer sem kellett közbelépnie.*
+
+
+### Síkidom nézet — MÉLYSÉG szerinti ős-söprés (2026-08-11)
+
+A tár eddig monoton nőtt: a 49. szinten mérve **5 094** csomópontból **5 040 volt
+gyökér**, 49 szinttel a látómezőn kívül. Mostantól a folyosón (`FOLYOSO_SZINT = 6`)
+kívül eső ősök gyerekei elengedődnek — mérettől függetlenül, tisztán a mélység
+alapján. Az adatuk megmarad, tehát visszafelé nincs újraletöltés. Részletek:
+[fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+**Amit a böngészőben nézni kell:**
+
+1. **A kép nem változhat.** Menj le a mély láncban 10-15 szintet, majd gyere vissza.
+   A síkidomoknak PONTOSAN ott kell lenniük, ahol lefelé menet voltak — se ugrás,
+   se átrendeződés. Ez a legfontosabb: a söprés a sorrend közepéből is elenged,
+   és csak akkor helyes, ha a visszaút hiánytalan.
+2. **A konzolban** `SikidomModal._osSopres` sorok jelennek meg lefelé haladva
+   (`elengedve`, `parkolvaOsszesen`), kifelé jövet pedig `_kiparkolas`
+   (`visszaadva`). A kettőnek párban kell állnia.
+3. **Nem szabad újraletöltésnek indulnia** visszafelé: a parkolt szint adata
+   megvan. Ha a hálózaton új `sikidom/gyerekek` kérés megy ugyanarra a szülőre,
+   az hiba — jelezd.
+4. **A pakolási lyuk és a „további tartalmak" ajánlat** ugyanúgy viselkedjen, mint
+   eddig — a söprés nem érintheti a folyosón belüli szinteket.
+
+*Böngésző nélkül mérve (`tools/sikidomParkolasProba.mjs`, 16 állítás): öt eseten
+(300–3000 elem, változatos / vegyes / csupa holtverseny, maggal és anélkül) a
+parkolás után egyetlen kör sem mozdul el. Ellenpróba: hiányos készlettel pakolva
+600 kör mozdul el — ezért kötelező a szintet EGYBEN visszaadni.*
+
+
+### Síkidom nézet — RÉSZLETESSÉGI FOKOZAT és a két üzemmód (2026-08-11)
+
+A nézet mostantól mélység szerint fokozza a részletességet, és csomópontonként két
+üzemmód között vált. Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+| mélység a horgonyhoz képest | pozicionált síkidom | kijelző-mag (517 px képernyőn) |
+|---|---|---|
+| 0 (a horgony) | 5 000 | 31,0 px |
+| 1 | 250 | 6,9 px |
+| 2 | 12 | 1,6 px |
+
+**Amit nézni kell:**
+
+1. **Nem szabad minden közelítéskor újrarendeznie.** A konzol `_ujrapakolas` sorai
+   közt NEM lehet két olyan, ami ugyanarra a csomópontra, ugyanabban a mélységben
+   fut le egymás után. Ha van, az visszaesés — jelezd.
+2. **A horgony szintjén minden testvér látszik**, akármilyen apró. A minimum méret
+   csak a mélyebb szinteken szűr.
+3. **Ha minden testvér helyet kapott, nincs szaggatott kör** és nincs rejtés a
+   közepén — a legkisebb síkidom ott ül, láthatóan. Ez az üzenet, hogy nincs több
+   tartalom. Egy entitásos síkidomban a gyereknek azonnal látszania kell.
+4. **Szintváltáskor átrendeződik a kép** (250 → 5 000). Ez TERVEZETT: végtelen
+   testvérrel nem lehet megúszni az újrapakolást, csak ritkítani. Ha zavaróan
+   erősnek érzed, jelezd — az időzítésen lehet állítani.
+
+*Böngészőben igazolva (2026-08-11, oda-vissza zoomolással): 6 pakolás a teljes
+munkamenetben, ismétlődés nélkül; a mező az 1. mélységben pontosan 250-et rakott le
+egyetlen menetben.*

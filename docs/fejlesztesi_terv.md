@@ -2793,3 +2793,177 @@ képernyő közepén nincs elég nagy gyerek, egyáltalán nem vált lefelé.
 | a `BEFELE_HATAR` korlát beavatkozott | **egyszer sem** — a horgony végig tudott lépni |
 
 Csaba szavával: „le tudtam menni az aljáig."
+
+
+## Síkidom nézet — MÉLYSÉG szerinti ős-söprés (2026-08-11, Csaba)
+
+### A találat
+
+Csaba mérése a 49. szinten: a tár **5 094** csomópont, ebből **5 040 a gyökér** — a
+tár 99%-a olyan síkidom, ami 49 szinttel a látómezőn kívül van. A VILÁG-nál a
+visszaszedés **60-nál megállt**, mert a `_visszaszedes` kizárólag a horgony
+SZÜLŐJÉNÉL dolgozik: amint a horgony lelépett a 0. szintről, a VILÁG már nem volt
+„a horgony szülője", és ott soha többé nem takarított senki.
+
+A kód ezt egyébként előre látta (`AGAK_ELENGEDESE = false` melletti magyarázat:
+„a csomópont-tár így MONOTON NŐ, elengedési út nincs"), de a `_takaritas` ezt nem
+oldja meg: az csak RÉSZFÁKAT töröl, a levél-csomópontokat kihagyja — a 5 040
+gyökér tehát úgy is bent maradt volna.
+
+### A koino_1.0 szabálya (Csaba mutatta meg)
+
+`calculators.populateProcessedContents()`, hierarchikus ág — a munkakészlet egy
+FOLYOSÓRA szűkül:
+
+| lépés | mit tart meg |
+|---|---|
+| 1. | a **nagyszülő** — csak őt magát, testvérek nélkül |
+| 2. | a **nagyszülő gyerekei** (a szülő + a szülő testvérei), részfák nélkül |
+| 3. | a **szülő gyerekei** (az aktív csomópont testvérei) és azok gyerekei |
+| 4. | az **aktív ág** lefelé, `maxDepth = 3 + currentCanvasLevel` mélységig |
+
+A `processedContentsMap` minden szintváltáskor NULLÁRÓL épül újra — a 1.0
+megengedhette magának, mert ott minden szintváltás újraszámolás volt. Épp ez volt
+a PISLOGÁS forrása, amit a koino_1.1 szándékosan megszüntetett.
+
+### ⚠️ KÉT TENGELY, KÉT KÜLÖN SZABÁLY
+
+Csaba szava: „az 1.1-nek se méret szerint kell hogy végezze a hierarchikus
+visszaszedést, hanem mélység szerint, adott entitást figyelembe véve."
+
+| tengely | mit dönt el | mi alapján |
+|---|---|---|
+| **mélység** (ÚJ, `FOLYOSO_SZINT`) | mely SZINTEK maradnak | az aktív entitáshoz mért távolság |
+| **méret** (meglévő, `VISSZASZEDES_ATMERO_ARANY`) | egy szinten BELÜL hány testvér marad | a látszó átmérő |
+
+A kettő nem verseng. A mélység nem tud egy szinten belül dönteni (ott minden testvér
+ugyanolyan mélyen van), a méret pedig nem tud a hierarchia mentén. A koino_1.0-ban
+a második nem volt kérdés, mert ott a folyosón belül MINDEN testvér megmaradt — a
+koino_1.1-ben viszont egy szülő alatt 5 000 (távlatilag több millió) testvér lehet.
+
+A folyosón KÍVÜL tisztán a mélység dönt: ott minden megy, mérettől függetlenül.
+
+### A megvalósítás
+
+- **`FOLYOSO_SZINT = 6`** (Csaba választása a koino_1.0 nagyszülő-folyosója helyett):
+  a nyereség gyakorlatilag ugyanaz (5 040 → néhány száz), de a szokásos ki-be
+  nagyítgatás a folyosón belül marad, tehát ritkábban kell visszaállítani. A
+  rajzolás `FELFELE_SZINTEK = 3` szinttel a horgony fölött kezd — a 6-os folyosó
+  tehát 3 szint ráhagyást ad: ami parkol, az biztosan nincs a képen.
+- **`_osSopres()`** — a folyosón kívüli ősöknél MINDEN gyereket elenged a
+  gerinc-gyereken kívül (ő vezet lefelé, rá épül a keret-lánc). Az adat a
+  `visszaszedettek`-be kerül, tehát nincs újraletöltés.
+- **`parkolt` jelző** — amíg igaz, a szint készlete a sorrend KÖZEPÉN is hiányos.
+  Két őrszem néz rá: `_ujrapakolas` és `_visszahozatal` egyaránt visszalép parkolt
+  csomóponton.
+- **`_kiparkolas()`** — a folyosóba visszakerült ősnek EGYBEN adja vissza a teljes
+  készletét, még a lerakás ELŐTT (a `_tennivalokFeldolgozasa` első lépése).
+
+### Miért szabad itt a sorrend közepéből elengedni
+
+A `_visszaszedes`-nél az „összefüggő farok" szabálya kötelező, mert ott a szint
+LÁTSZIK: a gerinc-gyereknél kisebb testvérek elvétele elmozdítaná magát a
+gerinc-gyereket, és a kép kirántana az e-ember keze alól. A parkolt szint viszont
+nincs a képen és nem is pakolódik — visszafelé jövet pedig egyben kapja vissza a
+készletét, a pakolás pedig a TELJES sorból determinisztikus.
+
+*Mérve (`tools/sikidomParkolasProba.mjs`, mind a 16 állítás áll): teljes pakolás →
+parkolás (a gerinc-gyereken kívül minden el, a sorrend KÖZEPÉRŐL is) → kiparkolás
+egyben → újrapakolás. Öt eseten (300–3000 elem, változatos / vegyes / csupa
+holtverseny eloszlás, maggal és anélkül) **egyetlen kör sem mozdul el**, az eltérés
+pontosan 0.*
+
+*Ellenpróba ugyanabban a szerszámban: ha a szintet ADAGOLVA adnánk vissza (hiányos
+készlettel pakolnánk), **600 kör mozdul el**, a legnagyobb eltérés a szülő
+sugarának 86%-a. Az egyben visszaadás tehát nem óvatosság, hanem feltétel.*
+
+
+## Síkidom nézet — RÉSZLETESSÉGI FOKOZAT (LOD) és a két üzemmód (2026-08-11, Csaba)
+
+### A kiinduló megfigyelés
+
+Csaba: „a képernyőre fixált üres mag akkor is megvan, amikor az összes testvér lent
+van az adott horgonyponttól. Ettől még az egy entitásos síkidomokban is csak akkor
+bukkan elő a gyerek, ha a szaggatott kör kisebb lesz nála."
+
+Az ok: a rejtési szabály SOHA nem kérdezte meg, maradt-e még nem pozicionált
+testvér. Egy láncszemnél az egyetlen gyerek a szülő PONTOS középpontjába kerül
+(nincs pakolási lyuk, mert nincs mire várni), tehát a középponttól mért távolsága
+nulla — és a kijelző-mag elrejtette, amíg túl nem nőtte a ~31 képpontos kört.
+
+*(Csaba felvetése, hogy a gyökereknél maradt betöltetlen tartalom „öröklődött volna
+tovább": ez nem így van — a feltétel csomópontonként külön dől el.)*
+
+### A KÉT ÜZEMMÓD
+
+Csaba: „a pakolási üres mag és a képernyő-fix üres mag más, de ezeknek csak
+EGYSZERRE kell létezniük, mert ugyanaz a feltételük."
+
+| | van nem pozicionált testvér | minden pozicionálva |
+|---|---|---|
+| pakolási lyuk (adat-tér) | **van** | nincs |
+| kijelző-mag (képernyő) | **van** | nincs |
+| mi dönti el, mi látszik | a **mag** (a középpont beleesik-e) | a **minimum méret** |
+
+⚠️ A feltétel **„nem pozicionált"**, nem „nem letöltött" — ez tágabb: egy testvér
+lehet letöltve, mégis helytelen (várólistán áll, visszaszedve/parkolva van, vagy a
+pozicionálási kereten kívülre esett). Ezt a `_vanNemPozicionaltTestver` fogja össze.
+
+⚠️ **A HORGONY SZINTJÉN NINCS minimum-méret szűrés** (Csaba, böngészős próba után):
+„a horgony szintjén még se használjuk a minimum méret korlátot a megjelenítéshez."
+Ott minden testvér látszik, akármilyen apró — az a szint, amit épp nézel. A mai
+adatban ez létfontosságú: a gyökerek nagy része egypontos, tehát a szűréssel az
+egész mező eltűnt volna abban a pillanatban, amikor az utolsó testvér helyet kap.
+
+### A KERET-LÉPCSŐ
+
+Csaba: „az egyszerre pozicionált síkidomokat is 1/20-ára kell venni az eggyel
+lejjebbi hierarchia szinten."
+
+| mélység a horgonyhoz képest | pozicionált síkidom | kijelző-mag sugara (517 px képernyőn) |
+|---|---|---|
+| 0 (a horgony) | **5 000** | 31,0 px |
+| 1 | **250** | 6,9 px |
+| 2 | **12** | 1,6 px |
+| 3+ | 0 | — |
+
+A keret SZÁNDÉKOSAN levezetett, nem beírt szám (`ELORETOLTES_DARAB / 20^mélység`):
+ha az adag változik, a lépcső magától követi. A mag ugyanezzel a hányaddal
+zsugorodik, de TERÜLETBEN — tehát a sugara szintenként √20 ≈ 4,47-szeresével kisebb.
+A **minimum méret ezzel szemben nem skálázódik**: „átível a hierarchia szinteken".
+
+**Melyik 250-et?** A LEGNAGYOBBAKAT (Csaba döntése) — nem a kanonikus sorrend
+elejét. Ennek ára, hogy szintváltáskor, amikor a keret 5 000-re bővül, ezek
+elmozdulnak. Ez tervezett: „nem tudjuk megúszni az újrapakolást, csak ritkítani."
+
+⚠️ A kereten kívüliek VISSZAKERÜLNEK a várólistára, és kiesnek a `gyerekIdk`-ból.
+Kötelező: a pakolás a kiválasztott halmazt EGÉSZKÉNT kezeli, tehát ha a kimaradókat
+a régi helyükön hagynánk, a most lerakottak ÁTFEDNÉNEK velük.
+
+### 🔴 A keretnek a BETÖLTÉST is vezérelnie kell
+
+Csaba első böngészős próbája: „minden közelítéskor újrarendezi, pedig elvileg
+pozicionált 250-et, és csak horgonyváltáskor kellett volna újrapakolni."
+
+Mérve — ugyanaz a csomópont, VÁLTOZATLAN mélységben, egy másodpercen belül:
+
+```
+21,4s  m1  Ötezres testvér-mező:  gy 0→17,   varo 17→0
+23,8s  m1  Ötezres testvér-mező:  gy 17→34,  varo 17→0
+```
+
+Az ok: a keret eddig CSAK a pakolást korlátozta. A betöltés küszöb-vezérelt maradt,
+tehát közelítés közben a küszöb süllyedt, újabb adag érkezett, és MINDEN érkezés
+újrapakolta az egész csomópontot. A keret sosem telt be — a szám nem korlátozott, a
+csordogálás viszont folyamatosan újrarendezett.
+
+**Javítás:** amint egy szint legnagyobb testvére elérné a minimum méretet, az a
+csomópont küszöb NÉLKÜL kéri le a keretnyi testvért (mint a horgony), és a plafonja
+is a kerethez igazodik — tehát ott MEGÁLL. Egy szint életében egy betöltés és egy
+pakolás van, nem tucatnyi.
+
+*Böngészőben igazolva (2026-08-11, Csaba oda-vissza zoomolt): a teljes munkamenetben
+**6 pakolás** összesen, **egyetlen ismétlődés nélkül** (ugyanaz a csomópont azonos
+mélységben soha nem pakolt kétszer); a mező az 1. mélységben **pontosan 250-et** rakott
+le egyetlen menetben, majd a horgonyváltáskor 250 → 5 000. Hiba és beágyazás-sértés
+nem volt. Csaba: „nekem jónak tűnik."*

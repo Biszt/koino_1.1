@@ -225,6 +225,53 @@ const MAG_FELIRAT_MIN_SUGAR = 62;
 // minden képernyőn előbb-utóbb kifér.
 const TOVABBI_FELIRAT_MIN_SUGAR = 30;
 
+// ===== RÉSZLETESSÉGI FOKOZAT: A POZICIONÁLÁSI KERET (Csaba, 2026-08-11) =====
+// „Az egyszerre pozicionált síkidomokat is 1/20-ára kell venni az eggyel lejjebbi
+// hierarchia szinten." Vagyis a keret ugyanazzal a hányaddal fogy lefelé, amivel a
+// terület: a horgony 5 000 gyereket rak le, egy szinttel lejjebb 250, két szinttel
+// lejjebb 12, azon túl semmit.
+//
+// SZÁNDÉKOSAN LEVEZETETT, nem beírt szám: ha az adag (`ELORETOLTES_DARAB`) változik,
+// a lépcső magától követi. 5000 → 250 → 12 → 0.
+//
+// MELYIK 250-ET (Csaba döntése): a LEGNAGYOBBAKAT, mert azok számítanak — nem a
+// kanonikus sorrend elejét. Ennek ára, hogy szintváltáskor, amikor a keret 5 000-re
+// bővül, ezek ELMOZDULNAK: hiányzott alóluk az összes kisebb testvér. Ez tervezett.
+// Csaba szava: „nem tudjuk megúszni az újrapakolást, csak ritkítani" — végtelen
+// testvérrel másképp nem is lehet.
+function pozicionalasiKeret(melyseg) {
+  if (!(melyseg >= 0)) return ELORETOLTES_DARAB;          // a horgony fölött nincs szűkítés
+  return Math.floor(ELORETOLTES_DARAB / Math.pow(SZINT_OSZTO, melyseg));
+}
+
+// ===== A MEGTARTÁSI FOLYOSÓ (Csaba, 2026-08-11 — a koino_1.0 nyomán) =====
+// Csaba mérése: a 49. szinten állva a tár 5 094 csomópont volt, és ebből 5 040 a
+// GYÖKÉR — a tár 99%-a olyan síkidom, ami 49 szinttel a látómezőn kívül van. A
+// VILÁG-nál a visszaszedés 60 elemnél megállt, mert a `_visszaszedes` csak a
+// horgony SZÜLŐJÉNÉL dolgozik: amint a horgony lelépett a 0. szintről, a VILÁG
+// már nem volt „a horgony szülője", és ott soha többé nem takarított senki.
+//
+// A KOINO_1.0 MEGOLDÁSA (`calculators.populateProcessedContents`, hierarchikus ág):
+// a munkakészletet szintváltáskor egy FOLYOSÓRA szűkíti — nagyszülő (testvérek
+// nélkül), a nagyszülő gyerekei, az aktív csomópont testvérei és azok gyerekei,
+// plusz az aktív ág 3 szint mélyen. Minden más kimarad.
+//
+// ⚠️ KÉT TENGELY, KÉT KÜLÖN SZABÁLY. Csaba szava: „az 1.1-nek se méret szerint kell
+// hogy végezze a hierarchikus visszaszedést, hanem mélység szerint, adott entitást
+// figyelembe véve." Pontosan így:
+//   - MÉLYSÉG (ez az állandó) — mely SZINTEK maradnak egyáltalán. A folyosón kívül
+//     minden megy, mérettől függetlenül.
+//   - MÉRET (`VISSZASZEDES_ATMERO_ARANY`) — egy szinten BELÜL hány testvér marad.
+//     Ezt nem váltja ki a mélység: egy szülő alatt 5 000 (távlatilag több millió)
+//     testvér lehet, azok mind ugyanolyan mélyen vannak. A koino_1.0-ban ez nem volt
+//     kérdés, mert ott a folyosón belül MINDEN testvér megmaradt.
+//
+// MIÉRT 6 ÉS NEM 2 (Csaba választása): a koino_1.0 folyosója a nagyszülőig ér, ami
+// a legnagyobb memória-nyereséget adja, de minden egyes kifelé lépésnél
+// visszaállítást kíván. Hat szinttel a szokásos ki-be nagyítgatás a folyosón belül
+// marad, a nyereség viszont gyakorlatilag ugyanaz (5 040 → néhány száz).
+const FOLYOSO_SZINT = 6;
+
 // Ennyi képkockánként takarítunk (a látómezőn kívülre került ágak elengedése)
 const TAKARITAS_KEPKOCKANKENT = 180;
 
@@ -804,6 +851,16 @@ class SikidomModal {
       // utoljára, és ő jön vissza először).
       visszaszedettek: [],
 
+      // PARKOLT-E EZ A SZINT (lásd `_osSopres`)? Ha igen, a `visszaszedettek` a
+      // sorrend KÖZEPÉRŐL is tartalmaz elemeket, tehát a készlet hiányos —
+      // ilyenkor PAKOLNI TILOS, amíg a `_kiparkolas` egyben vissza nem adta.
+      parkolt: false,
+
+      // A pozicionálási keret őrszemének állapota (lásd `_ujrapakolas`): mekkora
+      // kerettel és mekkora várólistával dolgoztunk utoljára.
+      utolsoKeret: -1,
+      utolsoVarolistaDarab: -1,
+
       // MINDEN gyerek letöltve? A `betoltottGyerekPont >= osszesGyerekPont`
       // összehasonlítás lebegőpontos összegekre épül, tehát sosem szabad rá
       // egyedül bízni: ha egy hajszállal alatta ragad, a fókusz-csomópont (aminek
@@ -851,6 +908,49 @@ class SikidomModal {
   //
   // A `mindenLetoltve` a backend egyértelmű válaszából jön (`vanTovabb === false`);
   // a pont-összehasonlítás lebegőpontos összegekre épül, ezért önmagában sosem elég.
+  // ===== A LEGNAGYOBB GYEREK RELATÍV SUGARA =====
+  // A szülő sugarának egységében, a MÁR LERAKOTTAK és a VÁRÓLISTÁN állók közül.
+  // Ebből dől el, hogy egy szint egyáltalán elkezdjen-e pozicionálni (lásd a
+  // `pakolandok` melletti magyarázatot): ha a legnagyobb testvér sem érné el a
+  // minimum méretet, fölösleges helyet számolni bárkinek.
+  //
+  // CIKLUSSAL, nem `Math.max(...tomb)`-bel: ötezres sornál a szórás-operátor
+  // túlcsordítaná a hívási vermet.
+  _legnagyobbGyerekRelR(cs) {
+    let legnagyobb = 0;
+    for (const gid of cs.gyerekIdk) {
+      const gy = this._tar.get(gid);
+      if (gy && gy.relR > legnagyobb) legnagyobb = gy.relR;
+    }
+    for (const v of cs.varolista) {
+      const r = v.relR ?? 0;
+      if (r > legnagyobb) legnagyobb = r;
+    }
+    return legnagyobb;
+  }
+
+  // ===== VAN MÉG NEM POZICIONÁLT TESTVÉR? =====
+  // Csaba, 2026-08-11: „a pakolási üres mag és a képernyő-fix üres mag más, de
+  // ezeknek csak EGYSZERRE kell létezniük, mert ugyanaz a feltételük: legyen még
+  // nem pozicionált testvér. Ha már pozicionálva van az utolsó testvér is, akkor
+  // használjuk a minimum méretet."
+  //
+  // ⚠️ EZ TÁGABB, MINT A „NINCS MÉG LETÖLTVE". Egy testvér lehet letöltve, mégis
+  // pozicionálatlan — három okból:
+  //   - a VÁRÓLISTÁN áll (megjött, de még nem kapott helyet);
+  //   - VISSZASZEDTÜK vagy PARKOL (van adata, de nincs helye);
+  //   - a POZICIONÁLÁSI KERETEN kívülre esett (lásd `pozicionalasiKeret`).
+  // A várólista és a visszaszedettek mindhárom esetet lefedik.
+  //
+  // @param {Object} cs - a szülő csomópont
+  // @returns {boolean}
+  _vanNemPozicionaltTestver(cs) {
+    if (!cs) return false;
+    if (cs.varolista.length > 0) return true;
+    if (cs.visszaszedettek.length > 0) return true;
+    return this._vanMegBetoltetlen(cs);
+  }
+
   _vanMegBetoltetlen(cs) {
     if (cs.mindenLetoltve) return false;
     return cs.osszesGyerekPont === 0 || cs.betoltottGyerekPont < cs.osszesGyerekPont;
@@ -1109,9 +1209,16 @@ class SikidomModal {
   // @param {Object} kep - a csomópont KÉPERNYŐ-adatai; ebből a `kepSugar` kell.
   //   (A `kepX`/`kepY` a látómező-válogatáshoz kellett, ami megszűnt — a lerakott
   //   síkidomok 2026-08-08 óta mind helyben maradnak, nincs mit válogatni.)
-  _ujrapakolas(cs, kep) {
+  // @param {number} melyseg - a csomópont mélysége a HORGONYHOZ képest. Ebből jön a
+  //   pozicionálási keret (lásd `pozicionalasiKeret`).
+  _ujrapakolas(cs, kep, melyseg = 0) {
     const { kepSugar } = kep || {};
     if (!cs || !(kepSugar > 0)) return false;
+
+    // ŐRSZEM: parkolt szinten a készlet a sorrend közepén is hiányos (lásd
+    // `_osSopres`), ezért a pakolás rossz helyeket adna. A `_kiparkolas` adja
+    // vissza egyben, mielőtt ez a szint újra sorra kerülne.
+    if (cs.parkolt) return false;
 
     const vilagSzint = cs.id === VILAG;
     if (!((vilagSzint ? cs.legerosebbGyerekPont : cs.pont) > 0)) return false;
@@ -1205,6 +1312,39 @@ class SikidomModal {
     // zoom-lépés végén fölöslegesen újraszámolnánk az egészet.)
     if (cs.varolista.length === 0) return false;
 
+    // ===== A POZICIONÁLÁSI KERET: A LEGNAGYOBBAK KAPNAK HELYET =====
+    // Lásd `pozicionalasiKeret`. A horgony 5 000-et rak le, egy szinttel lejjebb
+    // 250-et, két szinttel lejjebb 12-t — a keret ugyanazzal a hányaddal fogy,
+    // amivel a terület.
+    //
+    // ⚠️ A KERETEN KÍVÜLIEK VISSZAKERÜLNEK A VÁRÓLISTÁRA, és a `gyerekIdk`-ból is
+    // kiesnek. Ez azért kötelező, mert a pakolás a kiválasztott halmazt EGÉSZKÉNT
+    // kezeli: ha a keretből kimaradókat a régi helyükön hagynánk, a most lerakottak
+    // ÁTFEDNÉNEK velük. Így viszont a keret bővülésekor (szintváltáskor) a
+    // várólistáról mind visszatérnek, és egyetlen menetben pakolódnak újra.
+    const keretDarab = pozicionalasiKeret(melyseg);
+
+    // ŐRSZEM A FÖLÖSLEGES KÖRÖZÉS ELLEN: ha a keret miatt marad tartósan valami a
+    // várólistán, a `varolista.length > 0` önmagában minden zoom-lépés végén
+    // újrapakolást kérne — pedig a pakolás determinisztikus, tehát ugyanazt adná.
+    // Csak akkor dolgozunk, ha a KERET változott (szintváltás) vagy ÚJ anyag jött.
+    if (keretDarab === cs.utolsoKeret && cs.varolista.length === cs.utolsoVarolistaDarab) {
+      return false;
+    }
+
+    let pakolando = mind;
+    let keretenKivul = [];
+
+    if (mind.length > keretDarab) {
+      // A LEGNAGYOBBAKAT tartjuk meg (Csaba döntése): a kanonikus sorrend VÉGÉT.
+      const rendezett = [...mind].sort((a, b) => pakolasiSorrend(
+        { id: a.id, sugar: a.sugar, letrehozva: a.letrehozva },
+        { id: b.id, sugar: b.sugar, letrehozva: b.letrehozva }
+      ));
+      keretenKivul = rendezett.slice(0, rendezett.length - keretDarab);
+      pakolando = rendezett.slice(rendezett.length - keretDarab);
+    }
+
     // ===== A PAKOLÁSI MAG: JELZÉS, HOGY VAN MÉG =====
     // Lásd `PAKOLASI_MAG_ARANY`. Ez NEM a régi, foglalásos mag: nem a hátralévő
     // tudatpontból méretezzük (az végtelen testvérnél végtelen lenne), hanem a
@@ -1216,10 +1356,10 @@ class SikidomModal {
     //
     // NINCS KÖRNYEZET: üres lapra pakolunk. A következő adag betöltésekor is így
     // lesz — az egész elrendezés újraépül, ezért nincs mit „megvédeni".
-    const magSugar = this._pakolasiMagSugar(cs, mind);
+    const magSugar = this._pakolasiMagSugar(cs, pakolando);
 
     const eredmeny = pakolas(
-      mind.map(m => ({ id: m.id, sugar: m.sugar, letrehozva: m.letrehozva })),
+      pakolando.map(m => ({ id: m.id, sugar: m.sugar, letrehozva: m.letrehozva })),
       { magSugar, kornyezet: [] }
     );
 
@@ -1227,7 +1367,7 @@ class SikidomModal {
     // A már meglévő csomópontnak CSAK a helyét írjuk át (a leszármazottai a
     // SZÜLŐJÜKHÖZ képest vannak tárolva, tehát a teljes részfa vele mozog — nem
     // kell hozzányúlni). Az újakat felvesszük a tárba.
-    const terkep = new Map(mind.map(m => [m.id, m]));
+    const terkep = new Map(pakolando.map(m => [m.id, m]));
     let athelyezett = 0;
     let ujonnan = 0;
 
@@ -1245,10 +1385,45 @@ class SikidomModal {
       }
     }
 
-    // Mindenki lekerült a várólistáról (a pakoló üres lapon mindig talál helyet;
-    // ha mégsem, a `lerakatlanIdk` alább naplózódik)
+    // ===== A KERETEN KÍVÜLIEK VISSZA A VÁRÓLISTÁRA =====
+    // Aki nem fért a keretbe, az NEM maradhat lerakva: a most lepakoltak
+    // átfednének vele. Az adata megmarad, tehát a keret bővülésekor (szintváltás)
+    // újra helyet kap — letöltés nélkül.
+    const varolistaraVissza = [];
+    let keretbolKiesett = 0;
+
+    for (const m of keretenKivul) {
+      if (m.csomopont) {
+        const gy = m.csomopont;
+        this._reszfaTorlese(gy);
+        this._tar.delete(gy.id);
+        cs.helyezettIdk.delete(gy.id);
+        cs.helyezettPont = Math.max(0, cs.helyezettPont - (gy.pont ?? 0));
+        varolistaraVissza.push({
+          id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim, pont: gy.pont,
+          relR: gy.relR, letrehozva: gy.letrehozva, vanGyereke: gy.vanGyereke,
+          kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
+          javaslatTipus: gy.javaslatTipus
+        });
+        keretbolKiesett++;
+      }
+      // aki `varo` volt, az úgyis a várólistán marad (lásd a szűrést lentebb)
+    }
+
+    if (keretbolKiesett > 0) {
+      cs.gyerekIdk = cs.gyerekIdk.filter(id => this._tar.has(id));
+    }
+
+    // A várólistán marad, amit a pakoló nem tudott lerakni, ÉS ami a kereten kívülre
+    // esett (a pakoló azt nem is látta)
     const lerakatlan = new Set(eredmeny.lerakatlanIdk);
-    cs.varolista = cs.varolista.filter(v => lerakatlan.has(v.id));
+    const keretenKivuliVaroIdk = new Set(keretenKivul.filter(m => m.varo).map(m => m.id));
+    cs.varolista = cs.varolista.filter(v => lerakatlan.has(v.id) || keretenKivuliVaroIdk.has(v.id));
+    if (varolistaraVissza.length > 0) cs.varolista.push(...varolistaraVissza);
+
+    // Az őrszem állapota: mivel dolgoztunk most (lásd fentebb)
+    cs.utolsoKeret = keretDarab;
+    cs.utolsoVarolistaDarab = cs.varolista.length;
     cs.varolistaRelTerulet = cs.varolista
       .reduce((s, v) => s + Math.PI * (v.relR ?? 0) * (v.relR ?? 0), 0);
 
@@ -1422,8 +1597,22 @@ class SikidomModal {
   // telefonon és nagy monitoron is ugyanúgy nézzen ki. Egyetlen helyen számoljuk,
   // mert három dolog függ tőle, és MIND a háromnak ugyanazt kell látnia:
   // a láthatóság, a részfa-metszés és a szaggatott kör kirajzolása.
-  _magSugarKeppontban() {
-    return (this._kepernyoMeret() * MAG_ATMERO_ARANY) / 2;
+  //
+  // ===== SZINTENKÉNT ZSUGORODIK (Csaba, 2026-08-11) =====
+  // „A hierarchia szintenkénti képernyő-fix üres magot is 1/20 méretre kell szabni."
+  // UGYANAZZAL A HÁNYADDAL, amivel a síkidomok: a `SZINT_OSZTO` TERÜLETET oszt,
+  // tehát a SUGÁR szintenként √20 ≈ 4,47-szeresével csökken. Enélkül a mag a
+  // mélyebb szinteken aránytalanul nagy lenne — ott minden síkidom 4,47-szer
+  // kisebb, a mag viszont változatlan maradt volna, és mindent elrejtene.
+  //
+  // A `melyseg` a HORGONYHOZ mért mélység. A horgony fölött (negatív) nem
+  // nagyítjuk a magot — ott a 0. szint mérete a helyes.
+  //
+  // @param {number} melyseg - a csomópont mélysége a horgonyhoz képest
+  _magSugarKeppontban(melyseg = 0) {
+    const alap = (this._kepernyoMeret() * MAG_ATMERO_ARANY) / 2;
+    const szint = Math.max(0, melyseg);
+    return alap / Math.pow(Math.sqrt(SZINT_OSZTO), szint);
   }
 
   // ===== KELL-E MÉG ILLESZTENI? =====
@@ -1568,6 +1757,11 @@ class SikidomModal {
     let kiindulo = this._horgony;
     let keret = { x: 0, y: 0, r: 1 };
 
+    // Hány szintet léptünk FÖLFELÉ? Ebből tudjuk a kiinduló csomópont mélységét a
+    // horgonyhoz képest (negatív), és onnantól a bejárás szintenként növeli. A
+    // mélységre a részletességi fokozat épül: a pozicionálási keret és a mag mérete.
+    let felfeleLepes = 0;
+
     for (let i = 0; i < FELFELE_SZINTEK; i++) {
       const cs = this._tar.get(kiindulo);
       if (!cs || !cs.szuloId || !this._tar.has(cs.szuloId)) break;
@@ -1579,6 +1773,7 @@ class SikidomModal {
         r: keret.r * sz.r
       };
       kiindulo = cs.szuloId;
+      felfeleLepes++;
     }
 
     // 2. Lefelé bejárás, vágásokkal
@@ -1586,7 +1781,7 @@ class SikidomModal {
     const betoltendok = [];
     const pakolandok = [];
     const magok = [];
-    const sor = [{ id: kiindulo, keret }];
+    const sor = [{ id: kiindulo, keret, melyseg: -felfeleLepes }];
 
     while (sor.length > 0 && lathatoak.length < MAX_RAJZOLT) {
       const elem = sor.shift();
@@ -1626,7 +1821,10 @@ class SikidomModal {
       // folyamatos. EGY KIKÖTÉSSEL: aki már NAGYOBB a magnál, az akkor is látszik,
       // ha a közepén ül. Enélkül a legbelső síkidom — ami épp a középpontban van —
       // sosem bukkanna elő, akármekkorára nő.
-      const magSugarPx = this._magSugarKeppontban();
+      // A mag mérete ANNAK a szintnek szól, amelyik épp a képernyőt uralja: a
+      // horgony gyerekeinél a teljes méret (31 px), egy szinttel lejjebb ennek
+      // √20-ad része. Ezért a SZÜLŐ mélységével számolunk, nem a gyerekekével.
+      const magSugarPx = this._magSugarKeppontban(elem.melyseg);
       let magonKivuli = 0;              // hány gyerek látszik a magon kívül
       let magbanRejtett = 0;            // hány gyereket TAKAR EL a kijelző-mag
 
@@ -1645,6 +1843,40 @@ class SikidomModal {
         ? this._nezet.skala * elem.keret.r * cs.magSugarRel
         : 0;
       const uresSugarPx = Math.max(magSugarPx, mertUresPx);
+
+      // ===== A KIJELZŐ-MAGNAK CSAK AKKOR VAN DOLGA, HA VÁRUNK MÉG VALAMIRE =====
+      // Csaba, 2026-08-11: „a képernyőre fixált üres mag akkor is megvan, amikor az
+      // összes testvér lent van az adott horgonyponttól. Ettől még az egy entitásos
+      // síkidomokban is csak akkor bukkan elő a gyerek, ha a szaggatott kör kisebb
+      // lesz nála."
+      //
+      // Igaza volt. A rejtési szabály eddig FELTÉTEL NÉLKÜL futott: sosem kérdezte
+      // meg, maradt-e még le nem töltött testvér. Egy láncszemnél viszont az
+      // egyetlen gyerek a szülő PONTOS középpontjába kerül (nincs pakolási lyuk,
+      // mert nincs mire várni), tehát `tavolsagPx = 0` — és így a kijelző-mag
+      // elrejtette, amíg túl nem nőtte a ~31 képpontos kört. Fölösleges késleltetés.
+      //
+      // MIÉRT VAN EGYÁLTALÁN A KIJELZŐ-MAG (2026-08-09): hogy nagyításkor ne legyen
+      // VERSENYFUTÁS — a középső üresség ne tudjon gyorsabban tágulni, mint ahogy az
+      // előbukkanó síkidomok kitöltik. Ha viszont MÁR MINDEN testvér lent van, nincs
+      // mivel versenyezni: nem jön több síkidom, tehát nincs mit elrejteni.
+      //
+      // Ez egyben helyreállítja a 2026-08-10-i modell ígéretét is: „ha nincs több
+      // le nem töltött testvér → nincs lyuk, és a legkisebb síkidom a középpontban,
+      // LÁTHATÓAN. Ez maga az üzenet, hogy nincs több tartalom." Eddig ezt a
+      // pakolás teljesítette, a rajzolás viszont elrontotta.
+      //
+      // (Csaba felvetése, hogy a gyökereknél maradt betöltetlen tartalom „öröklődött
+      // volna tovább a többi horgonyon": ez nem így van — a feltétel csomópontonként
+      // külön dől el, nincs átöröklés. Az ok kizárólag az volt, hogy a rejtési
+      // szabály meg sem kérdezte.)
+      //
+      // ===== KÉT ÜZEMMÓD (Csaba, 2026-08-11) =====
+      //   A) VAN még nem pozicionált testvér → van pakolási lyuk ÉS van kijelző-mag,
+      //      és a MAG dönti el, mi látszik (a középpont beleesik-e).
+      //   B) MINDEN pozicionálva → nincs egyik mag sem, és a MINIMUM MÉRET dönt.
+      // A kettő együtt jön és együtt megy: ugyanaz a feltételük.
+      const magnakVanDolga = this._vanNemPozicionaltTestver(cs);
 
       for (const gid of cs.gyerekIdk) {
         const gy = this._tar.get(gid);
@@ -1673,14 +1905,37 @@ class SikidomModal {
         //
         // Ez ugyanaz a szabály, mint a feliratnál és a koppintásnál: a képernyőhöz
         // kötött mag nem szólhat bele abba, amit szándékosan mutatunk.
-        if (gid !== this._jeloltId && tavolsagPx < magSugarPx && gyerekSugarPx <= magSugarPx) {
-          magbanRejtett++;
-          continue;
+        if (magnakVanDolga) {
+          // --- A) A MAG DÖNT ---
+          if (gid !== this._jeloltId &&
+              tavolsagPx < magSugarPx && gyerekSugarPx <= magSugarPx) {
+            magbanRejtett++;
+            continue;
+          }
+        } else {
+          // --- B) A MINIMUM MÉRET DÖNT (Csaba, 2026-08-11) ---
+          // Ha már mindenki helyet kapott, nincs mire várni, tehát nincs mag sem.
+          // Ilyenkor az dönt, hogy a síkidom egyáltalán LÁTHATÓ-e: a minimum méret
+          // KÉPERNYŐ-ÁLLANDÓ, és SZÁNDÉKOSAN nem osztjuk 20-szal szintenként —
+          // Csaba szava: „a minimum méret átível a hierarchia szinteken".
+          //
+          // ⚠️ A HORGONY SZINTJÉN NEM SZŰRÜNK (Csaba, 2026-08-11, böngészős próba
+          // után): „a horgony szintjén még se használjuk a minimum méret korlátot a
+          // megjelenítéshez." Ez az a szint, ami a képernyőt uralja — ott MINDEN
+          // testvér látszik, akármilyen apró. A minimum méret csak a MÉLYEBB
+          // szinteken szűr, ahol amúgy is csak ízelítőt mutatunk (250, majd 12).
+          //
+          // Enélkül a horgony gyenge testvérei eltűnnének, pedig épp azt a szintet
+          // nézed — és a mai adatban a gyökerek nagy része egypontos, tehát szinte
+          // az egész mező eltűnt volna.
+          const minMeretSzur = elem.melyseg > 0;
+          if (minMeretSzur && gid !== this._jeloltId &&
+              2 * gyerekSugarPx < MIN_KEP_ATMERO) continue;
         }
 
         magonKivuli++;
 
-        sor.push({ id: gid, keret: gyKeret });
+        sor.push({ id: gid, keret: gyKeret, melyseg: elem.melyseg + 1 });
       }
 
       // --- A KÖZÉPSŐ LYUK: A FIX MAG ---
@@ -1691,7 +1946,11 @@ class SikidomModal {
       //
       // Csak akkor rajzoljuk ki, ha a szülőnek VAN a magon kívül eső gyereke:
       // különben egy üres csomópont közepére is odakerülne a szaggatott kör.
-      if (magonKivuli > 0) {
+      // A SZAGGATOTT KÖR IS CSAK AKKOR, HA VÁRUNK MÉG VALAMIRE (Csaba, 2026-08-11).
+      // Ugyanaz az indok, mint a rejtésnél: ha minden testvér lent van, a közép nem
+      // „üres, mert még jön valami", hanem egyszerűen ott ül a legkisebb síkidom.
+      // Ilyenkor a szaggatott kör félrevezető — azt ígérné, hogy van még mit várni.
+      if (magonKivuli > 0 && magnakVanDolga) {
         if (magSugarPx * 2 >= MAG_MIN_ATMERO) {
           // ===== A „TOVÁBBI TARTALMAK" AJÁNLAT FELTÉTELE (Csaba, 2026-08-10) =====
           // „amikor a legbelső, már pozicionált síkidom is előbukkant" — ezt nem kell
@@ -1748,7 +2007,27 @@ class SikidomModal {
       if (cs.vanGyereke && !cs.betoltesFut) {
         // A KÉRÉSRE töltő csomópont ugyanúgy viselkedik, mint a horgony: küszöb
         // nélkül, a kurzortól folytatva kapja a következő adagot (Csaba, 2026-08-11).
-        const fokuszban = cs.id === this._horgony || cs.tovabbiKert;
+        // ===== A KERET VEZÉRLI A BETÖLTÉST IS (Csaba, 2026-08-11) =====
+        // Csaba böngészős találata: „minden közelítéskor újrarendezi, pedig elvileg
+        // pozicionált 250-et, és csak horgonyváltáskor kellett volna újrapakolni."
+        //
+        // MÉRVE (2026-08-11): a mező VÁLTOZATLAN mélységben (m1) egy másodpercen
+        // belül kétszer pakolt újra — `gy 36→54`, majd `gy 54→78` —, pedig 78 messze
+        // a 250-es kereten belül van. Az ok: a keret eddig CSAK a pakolást
+        // korlátozta, a betöltést nem. A betöltés küszöb-vezérelt maradt, tehát
+        // közelítés közben a küszöb süllyedt, újabb adag érkezett, és MINDEN érkezés
+        // újrapakolta az egész csomópontot. A keret sosem telt be — a szám nem
+        // korlátozott, a csordogálás viszont folyamatosan újrarendezett.
+        //
+        // A SZABÁLY MÁSIK FELE tehát: a keretnyi testvért EGYSZERRE kell megszerezni.
+        // Egy szint, amint a legnagyobb testvére elérné a minimum méretet, küszöb
+        // NÉLKÜL kéri le a keretnyi testvért — pontosan úgy, ahogy a horgony teszi —,
+        // és utána nem tölt többet, amíg a horgony nem vált. Egy szint életében így
+        // egy betöltés és egy pakolás van, nem tucatnyi.
+        const keretnyiKell = elem.melyseg > 0 &&
+          2 * kep.kepSugar * this._legnagyobbGyerekRelR(cs) >= MIN_KEP_ATMERO;
+
+        const fokuszban = cs.id === this._horgony || cs.tovabbiKert || keretnyiKell;
 
         // A fókuszban lévőnek NINCS küszöbe: a rangsor elejétől kérünk mindent,
         // amíg az előretöltési korlátot el nem érjük.
@@ -1775,7 +2054,14 @@ class SikidomModal {
 
         // A plafon már NEM az állandó, hanem a csomópont sajátja: a „további
         // tartalmak" koppintás adagonként emeli (lásd `betoltesiPlafon`).
-        kellBetoltes = vanMegBetoltetlen && mennyiVanMar < cs.betoltesiPlafon &&
+        //
+        // A MÉLYEBB SZINTEKEN a POZICIONÁLÁSI KERET a szűkebb plafon: fölösleges
+        // 5 000-et letölteni oda, ahol úgyis csak 250 (vagy 12) kap helyet. A kettő
+        // közül a kisebbik érvényes — így a szint egyetlen menetben megkapja a
+        // keretnyi testvért, és utána MEGÁLL.
+        const plafon = Math.min(cs.betoltesiPlafon, pozicionalasiKeret(elem.melyseg));
+
+        kellBetoltes = vanMegBetoltetlen && mennyiVanMar < plafon &&
           (fokuszban || kuszob < cs.betoltottKuszob);
 
         if (kellBetoltes) {
@@ -1800,8 +2086,19 @@ class SikidomModal {
       // A várólistára kerülnek, tehát a lentebbi lerakás-igény veszi fel őket.
       if (cs.visszaszedettek.length > 0) this._visszahozatal(cs, kep.kepSugar);
 
-      if (cs.varolista.length > 0 && !cs.betoltesFut && !kellBetoltes) {
-        pakolandok.push({ id: cs.id, kep });
+      // ===== EGY SZINT CSAK AKKOR KEZD POZICIONÁLNI, HA MÁR LÁTSZANA =====
+      // Csaba, 2026-08-11: „az egy hierarchia szinttel lejjebbi gyerekek akkor
+      // pozicionáljanak csak, ha a legnagyobb testvér eléri a minimum méretet."
+      // Enélkül a mélyebb szintek fölöslegesen pakolnának olyan síkidomokat, amiket
+      // úgysem rajzolunk ki — és minden újabb adagnál újra.
+      //
+      // A HORGONY (és a fölötte lévők) KIVÉTEL: ott mindig pakolunk, mert az a
+      // szint tölti ki a képernyőt.
+      const legnagyobbGyerekPx = 2 * kep.kepSugar * this._legnagyobbGyerekRelR(cs);
+      const eleriAMinimumot = elem.melyseg <= 0 || legnagyobbGyerekPx >= MIN_KEP_ATMERO;
+
+      if (cs.varolista.length > 0 && !cs.betoltesFut && !kellBetoltes && eleriAMinimumot) {
+        pakolandok.push({ id: cs.id, kep, melyseg: elem.melyseg });
       }
     }
 
@@ -1972,18 +2269,27 @@ class SikidomModal {
   _tennivalokFeldolgozasa() {
     if (!this.rajzolo || !this._szelesseg) return;
 
+    // KIPARKOLÁS ELSŐKÉNT: ha kifelé jövet egy parkolt ős visszakerült a
+    // folyosóba, a készletét EGYBEN visszaadjuk — még a lerakás előtt, hogy a
+    // most következő pakolás már a TELJES sorból dolgozzon (csak úgy kapjuk
+    // vissza pontosan a régi helyeket).
+    let valtozott = this._kiparkolas();
+
     const { betoltendok, pakolandok } = this._lathatoLista();
     this._allapotNaplo();
 
-    let valtozott = false;
     for (const p of pakolandok) {
-      if (this._ujrapakolas(this._tar.get(p.id), p.kep)) valtozott = true;
+      if (this._ujrapakolas(this._tar.get(p.id), p.kep, p.melyseg)) valtozott = true;
     }
 
     // VISSZASZEDÉS a nagyítás végén: a túlnőtt testvéreket a sorrend végéről
     // elengedjük (részfástul). Ez a lerakás UTÁN fut, hogy a most érkezettek is
     // benne legyenek a mérlegelésben.
     if (this._visszaszedes()) valtozott = true;
+
+    // ŐS-SÖPRÉS: a folyosón kívüli szintek elengedése, MÉLYSÉG szerint. A
+    // visszaszedés UTÁN fut, hogy a két szabály ne dolgozzon ugyanazon a szinten.
+    if (this._osSopres()) valtozott = true;
 
     // ===== A KEZDŐ FÁZIS LEZÁRÁSA =====
     // Akkor vagyunk készen, ha SEMMI nincs folyamatban: nem fut letöltés, nincs
@@ -2587,6 +2893,125 @@ class SikidomModal {
     return true;
   }
 
+  // ===== MÉLYSÉG SZERINTI ŐS-SÖPRÉS (Csaba, 2026-08-11) =====
+  // Felelősség: a folyosón KÍVÜL eső ősök gyerekeit elengedni — mérettől
+  // függetlenül. Lásd `FOLYOSO_SZINT`.
+  //
+  // MIT NEM BÁNTUNK SOHA:
+  //   - a GERINCET (a horgony és minden őse): rájuk épül a keret-számítás;
+  //   - a folyosón belüli szinteket: ott a méret-alapú `_visszaszedes` dolgozik.
+  //
+  // ⚠️ MIÉRT SZABAD ITT A SORREND KÖZEPÉBŐL IS ELENGEDNI. A `_visszaszedes`-nél az
+  // „összefüggő farok" szabálya azért kötelező, mert ott a szint LÁTSZIK: ha a
+  // gerinc-gyereknél KISEBB testvéreket vennénk el, a gerinc-gyerek helye
+  // elmozdulna, és a kép kirántana a kezed alól. A folyosón kívüli szint viszont
+  // NINCS a képen (a `_lathatoLista` csak `FELFELE_SZINTEK = 3` szinttel a horgony
+  // fölött kezd), és amíg parkol, NEM IS PAKOLJUK újra. Visszafelé jövet pedig a
+  // szintet EGYBEN állítjuk vissza (`_kiparkolas`), és a pakolás a TELJES
+  // készletből determinisztikus — tehát pontosan ugyanazokat a helyeket adja.
+  //
+  // A gerinc-gyerek maradnia KELL a `gyerekIdk`-ban: rajta keresztül vezet a
+  // keret-lánc lefelé.
+  //
+  // @returns {boolean} változott-e valami
+  _osSopres() {
+    let valtozott = false;
+
+    // A gerinc: a horgony és ősei, a horgonytól fölfelé
+    const gerinc = [];
+    let id = this._horgony;
+    for (let i = 0; i < 64 && id && this._tar.has(id); i++) {
+      gerinc.push(id);
+      id = this._tar.get(id).szuloId;
+    }
+
+    // A folyosón belül semmit nem bántunk; azon túl minden ősnél söprünk
+    for (let i = FOLYOSO_SZINT; i < gerinc.length; i++) {
+      const os = this._tar.get(gerinc[i]);
+      if (!os) continue;
+
+      // a gerinc-gyerek: ő vezet lefelé, ő marad
+      const gerincGyerekId = gerinc[i - 1];
+      if (os.gyerekIdk.length <= 1) continue;      // nincs mit elengedni
+
+      const elengedendok = os.gyerekIdk
+        .filter(gid => gid !== gerincGyerekId)
+        .map(gid => this._tar.get(gid))
+        .filter(Boolean);
+
+      if (elengedendok.length === 0) continue;
+
+      for (const gy of elengedendok) {
+        this._reszfaTorlese(gy);
+        this._tar.delete(gy.id);
+
+        // Az ADAT megmarad — visszatéréskor nem kell újra letölteni
+        os.visszaszedettek.push({
+          id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim, pont: gy.pont,
+          relR: gy.relR, letrehozva: gy.letrehozva, vanGyereke: gy.vanGyereke,
+          kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
+          javaslatTipus: gy.javaslatTipus
+        });
+
+        os.helyezettIdk.delete(gy.id);
+        os.helyezettPont = Math.max(0, os.helyezettPont - (gy.pont ?? 0));
+      }
+
+      os.gyerekIdk = [gerincGyerekId];
+
+      // A PARKOLÁS JELZÉSE. Amíg ez igaz, a szint készlete HIÁNYOS a sorrend
+      // közepén is — tehát ezen a csomóponton PAKOLNI TILOS, amíg vissza nem
+      // állítottuk (lásd `_kiparkolas`).
+      os.parkolt = true;
+      valtozott = true;
+
+      console.log('SikidomModal._osSopres', {
+        os: os.id, szintTavolsag: i, elengedve: elengedendok.length,
+        parkolvaOsszesen: os.visszaszedettek.length
+      });
+    }
+
+    return valtozott;
+  }
+
+  // ===== KIPARKOLÁS: a parkolt szint TELJES visszaállítása =====
+  // Amikor egy parkolt ős visszakerül a folyosóba, a készletét EGYBEN adjuk vissza
+  // a várólistára — nem adagolva, ahogy a `_visszahozatal` teszi. Ez azért fontos,
+  // mert a parkoláskor a sorrend KÖZEPÉBŐL is engedtünk el: csak a teljes készlet
+  // ad újra azonos helyeket.
+  //
+  // @returns {boolean} változott-e valami
+  _kiparkolas() {
+    let valtozott = false;
+
+    const gerinc = [];
+    let id = this._horgony;
+    for (let i = 0; i < 64 && id && this._tar.has(id); i++) {
+      gerinc.push(id);
+      id = this._tar.get(id).szuloId;
+    }
+
+    // A folyosóba visszakerült ősök: a gerinc első FOLYOSO_SZINT eleme
+    for (let i = 0; i < Math.min(FOLYOSO_SZINT, gerinc.length); i++) {
+      const os = this._tar.get(gerinc[i]);
+      if (!os || !os.parkolt) continue;
+
+      if (os.visszaszedettek.length > 0) {
+        os.varolista.push(...os.visszaszedettek.splice(0));
+        os.varolistaRelTerulet = os.varolista
+          .reduce((s, v) => s + Math.PI * (v.relR ?? 0) * (v.relR ?? 0), 0);
+      }
+      os.parkolt = false;
+      valtozott = true;
+
+      console.log('SikidomModal._kiparkolas', {
+        os: os.id, visszaadva: os.varolista.length
+      });
+    }
+
+    return valtozott;
+  }
+
   // ===== A VISSZASZEDETTEK VISSZAHOZATALA (kicsinyítéskor) =====
   // Amint a szülő képernyő-sugara annyira lecsökkent, hogy a visszaszedettek már
   // beleférnének a megengedett átmérőbe, visszatesszük őket a VÁRÓLISTÁRA — onnan
@@ -2597,6 +3022,12 @@ class SikidomModal {
   // ne kapkodjon oda-vissza.
   _visszahozatal(cs, kepSugar) {
     if (cs.visszaszedettek.length === 0 || !(kepSugar > 0)) return false;
+
+    // ŐRSZEM: parkolt szinten a `visszaszedettek` a sorrend KÖZEPÉRŐL is tartalmaz
+    // elemeket, ezért ADAGOLVA nem adható vissza — a hiányos készlet szétvinné a
+    // helyeket (mérve: 600 kör mozdult el, a legnagyobb eltérés a szülő sugarának
+    // 86%-a). A parkolt szintet egyedül a `_kiparkolas` állítja vissza, egyben.
+    if (cs.parkolt) return false;
 
     const hatar = this._kepernyoMeret() * VISSZASZEDES_ATMERO_ARANY * 0.8;
 
