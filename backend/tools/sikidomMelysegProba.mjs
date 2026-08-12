@@ -31,6 +31,12 @@ import {
   horgonyValtasSzukseges, LEFELE_KUSZOB, FOLFELE_KUSZOB
 } from '../../frontend/js/utils/sikidomHorgony.js';
 import { gyerekRelativSugar } from '../../frontend/js/utils/sikidomMeret.js';
+// A nagyítás számtana (2026-08-11 óta külön, DOM-független modul) — az utolsó
+// szakasz a két nagyítási határt és a gesztus-mérést méri.
+import {
+  kifeleHatarolas, befeleHatarolas, gesztusAllapot, gorgoSzorzo,
+  KIFELE_HATAR, BEFELE_HATAR
+} from '../../frontend/js/utils/sikidomNagyitas.js';
 
 const naplo = (...ertekek) => process.stdout.write(ertekek.join(' ') + '\n');
 
@@ -275,12 +281,107 @@ naplo('===== 3. PRÓBA: a rossz testvér — méret ÉS pozíció =====');
     felreDontes ? felreDontes.irany + ' → ' + felreDontes.gyerekId : 'nincs váltás');
 }
 
+// ===== A NAGYÍTÁS KÉT HATÁRA (2026-08-11) =====
+// A nagyítás számtana külön, DOM-független modulba került
+// (`frontend/js/utils/sikidomNagyitas.js`), tehát innentől mérhető. Ez a szakasz
+// a KÉT HATÁRT igazolja — azt, ami nélkül a kép „a 19-20. szint után szétesett".
+naplo('===== A NAGYÍTÁS KÉT HATÁRA (sikidomNagyitas.js) =====');
+{
+  const kepernyoMeret = 800;
+
+  // --- KIFELÉ: a VILÁG szintnél megáll ---
+  const alapSkala = 100;
+  allitas(kifeleHatarolas({ szorzo: 1.2, vilagSzinten: true, alapSkala, skala: 50 }) === 1.2,
+    'befelé a KIFELÉ-korlát sosem szól bele');
+  allitas(kifeleHatarolas({ szorzo: 0.8, vilagSzinten: false, alapSkala, skala: 10 }) === 0.8,
+    'mélyebb horgonynál nincs kifelé-korlát (van hova fölfelé lépni)');
+  allitas(kifeleHatarolas({ szorzo: 0.8, vilagSzinten: true, alapSkala: null, skala: 50 }) === 0.8,
+    'illesztés előtt nincs korlát');
+  allitas(kifeleHatarolas({ szorzo: 0.8, vilagSzinten: true, alapSkala, skala: 25 }) === 1,
+    'a határon (az illesztési skála negyede) MEGÁLL',
+    `alapSkala ${alapSkala} × ${KIFELE_HATAR} = ${alapSkala * KIFELE_HATAR}`);
+  {
+    // a határ FÖLÖTT: pont a határig enged, nem tovább
+    const szorzo = kifeleHatarolas({ szorzo: 0.5, vilagSzinten: true, alapSkala, skala: 30 });
+    const ujSkala = 30 * szorzo;
+    allitas(Math.abs(ujSkala - alapSkala * KIFELE_HATAR) < 1e-9,
+      'a kifelé nagyítás PONTOSAN a határig enged',
+      `30 → ${ujSkala.toFixed(4)}`);
+  }
+
+  // --- BEFELÉ: csak ha nincs hova lelépni ---
+  const felsoHatar = (kepernyoMeret * BEFELE_HATAR) / 2;
+  allitas(befeleHatarolas({ szorzo: 0.8, vanHovaLelepni: false, kepernyoMeret, skala: 1e9 }) === 0.8,
+    'kifelé a BEFELÉ-korlát sosem szól bele');
+  allitas(befeleHatarolas({ szorzo: 5, vanHovaLelepni: true, kepernyoMeret, skala: 1e9 }) === 5,
+    'ha VAN betöltött gyerek, nincs korlát (a horgonyváltás megfogja)');
+  allitas(befeleHatarolas({ szorzo: 5, vanHovaLelepni: false, kepernyoMeret, skala: felsoHatar }) === 1,
+    'gyerek nélkül a felső határon MEGÁLL',
+    `felsőHatár = ${Math.round(felsoHatar)} px`);
+  {
+    const skala = felsoHatar / 2;
+    const szorzo = befeleHatarolas({ szorzo: 100, vanHovaLelepni: false, kepernyoMeret, skala });
+    allitas(Math.abs(skala * szorzo - felsoHatar) < 1e-9,
+      'a befelé nagyítás PONTOSAN a határig enged',
+      `${skala.toFixed(1)} → ${(skala * szorzo).toFixed(1)}`);
+  }
+
+  // --- A LÉNYEG: a két határ EGYÜTT nem engedi elszaladni a skálát ---
+  // Ez volt a 2026-08-11-i tünet oka: gyerek nélküli horgonyon a skála
+  // 1,18·10³-ról 1,81·10¹⁴-re szaladt, és a `double` 16 jegye elfogyott.
+  {
+    let skala = 1000;
+    for (let i = 0; i < 500; i++) {
+      const szorzo = befeleHatarolas({
+        szorzo: kifeleHatarolas({ szorzo: 1.2, vilagSzinten: false, alapSkala, skala }),
+        vanHovaLelepni: false, kepernyoMeret, skala
+      });
+      skala *= szorzo;
+    }
+    allitas(skala <= felsoHatar + 1e-6,
+      '500 befelé nagyítás UTÁN sem szalad el a skála (ez volt a „szétesik" oka)',
+      `skála = ${skala.toFixed(1)} ≤ ${felsoHatar.toFixed(1)}`);
+  }
+
+  // --- A GESZTUS-MÉRÉS ---
+  allitas(gesztusAllapot([]) === null, 'ujj nélkül nincs gesztus-állapot');
+  {
+    const egy = gesztusAllapot([{ x: 10, y: 20 }]);
+    allitas(egy.kozepX === 10 && egy.kozepY === 20 && egy.tavolsag === 0,
+      'egy ujjnál a „középpont" maga az ujj, a távolság 0 (nincs nagyítás, csak mozgatás)');
+  }
+  {
+    const ketto = gesztusAllapot([{ x: 0, y: 0 }, { x: 6, y: 8 }]);
+    allitas(ketto.kozepX === 3 && ketto.kozepY === 4 && ketto.tavolsag === 10,
+      'két ujjnál a középpont és a távolság a csippentéshez');
+    const harom = gesztusAllapot([{ x: 0, y: 0 }, { x: 6, y: 8 }, { x: 99, y: 99 }]);
+    allitas(harom.tavolsag === 10, 'három ujjnál sem esik szét (az első kettő számít)');
+  }
+
+  // --- A GÖRGŐ EGYSÉGEI ---
+  // Egy egérgörgő-kattanás MINDEN böngészőben ugyanakkorát nagyítson: a
+  // képpontos deltaY = 100 és a soros deltaY = 3 ugyanoda vezet.
+  {
+    const keppontos = gorgoSzorzo({ deltaY: -100, deltaMode: 0, ctrlKey: false });
+    const soros     = gorgoSzorzo({ deltaY: -3,   deltaMode: 1, ctrlKey: false });
+    allitas(Math.abs(keppontos - soros) < 1e-12,
+      'egy egérgörgő-kattanás a Firefoxban (sor) és máshol (képpont) UGYANANNYI',
+      `${keppontos.toFixed(6)} vs ${soros.toFixed(6)}`);
+    allitas(keppontos > 1, 'a fölfelé görgetés BEFELÉ nagyít', keppontos.toFixed(4));
+    const csippentes = gorgoSzorzo({ deltaY: -3, deltaMode: 0, ctrlKey: true });
+    allitas(csippentes > gorgoSzorzo({ deltaY: -3, deltaMode: 0, ctrlKey: false }),
+      'az érintőpad-csippentés érzékenyebb, mint az azonos deltájú görgetés');
+  }
+  naplo('');
+}
+
 // ===== ÖSSZEGZÉS =====
 naplo('');
 naplo('=================== EREDMÉNY ===================');
 if (hibak.length === 0) {
   naplo(`Mind a ${allitasDb} állítás áll — a horgony-keretes nagyítás ${MELYSEG} szinten át ` +
-    `pontos, és a horgony arra vált, amire nézel.`);
+    `pontos, a horgony arra vált, amire nézel,`);
+  naplo('és a nagyítás két határa nem engedi elszaladni a skálát.');
 } else {
   naplo(`${hibak.length} ÁLLÍTÁS BUKOTT:`);
   for (const h of hibak) naplo(`  ✘ ${h}`);

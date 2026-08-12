@@ -4,23 +4,19 @@
 import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
-import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO, LEGNAGYOBB_GYEREK_ARANY }
+import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO }
   from '../../utils/sikidomMeret.js';
 import { pakolas, pakolasiSorrend, frissebbElol } from '../../utils/sikidomPakolas.js';
 import { szuloKeretben, horgonyValtasNezet, kepernyore, horgonyValtasSzukseges,
-         keretbenCsomopont, LEFELE_KUSZOB }
+         keretbenCsomopont }
   from '../../utils/sikidomHorgony.js';
 import { SikidomRajzolo, TOVABBI_FELIRAT_MIN_SUGAR } from '../../utils/sikidomRajzolo.js';
 import { visszaszedes, osSopres, kiparkolas, visszahozatal, takaritas,
          reszfaTorlese, meretekUjramerese }
   from '../../utils/sikidomTar.js';
-import { kartyaLetrehozasa } from '../kartya/kartyaGyar.js';
-
-// A kártya SAJÁT modáljainak (javaslat, tudatpont, részletek…) konténere. NEM
-// lehet ugyanaz, mint a Síkidom nézeté: a Modal felülírja a konténere tartalmát,
-// tehát a kártya egy modálja kilőné alóla a nézetet. Ugyanaz a minta, mint a
-// HozzajarulokModal / MeghivoModal al-modaljainál.
-const ALMODAL_KONTENER_ID = 'almodal-kontener';
+import { gorgoSzorzo, kifeleHatarolas, befeleHatarolas, gesztusAllapot, ZOOM_LEPES }
+  from '../../utils/sikidomNagyitas.js';
+import SikidomKartyaPanel from './SikidomKartyaPanel.js';
 
 // ===== HANGOLÓ ÁLLANDÓK =====
 
@@ -284,74 +280,11 @@ const ZOOM_VEGE_MS = 140;
 // nincs se hatókör, se fagyasztási varrat: az `_ujrapakolas` csak az újakat rakja
 // le, a régiek akadályként vesznek részt. A konstansra nincs többé szükség.
 
-// A +/− GOMBOK egy kattintásának nagyítása. A görgő NEM ezt használja — lásd alább.
-const ZOOM_LEPES = 1.2;
-
-// ===== A GÖRGŐ ÉRZÉKENYSÉGE (a koino_1.0 D3-as viselkedése) =====
-// Eddig egy görgetés-esemény FIX 1,2-szeres ugrást adott, akármekkora volt.
-// Ez érintőpadon rossz: ott egy finom mozdulat is sok apró eseményt küld
-// (deltaY = 1–4), amiből így 1,2-szeres ugrások sorozata lett — a kép elszaladt.
-//
-// A koino_1.0 a D3 alapértelmezését használta (`d3.zoom`, 7.8.5), ami a delta
-// NAGYSÁGÁVAL arányos:  szorzó = 2^(−deltaY × egység).
-// Egy „kattanós" egérgörgő deltaY-ja 100 → 2^0,2 ≈ 1,149-szeres lépés;
-// egy finom érintőpad-mozdulaté 3 → 2^0,006 ≈ 1,004 — vagyis simán, folytonosan.
-//
-// Az egységek a D3 `wheelDelta`-jából: képpont / sor / oldal görgetési módhoz.
-// EZ A FŐ HANGOLÓ SZÁM (érintőpad kétujjas görgetése, egérgörgő):
-//   0,001 → egy egérgörgő-kattanás ×1,07 · 0,002 → ×1,15 · 0,003 → ×1,23
-//   0,004 → ×1,32 · 0,005 → ×1,41 (két kattanás = kétszeres nagyítás)
-const GORGO_EGYSEG_KEPPONT = 0.002;   // deltaMode 0 — képpont (érintőpad, modern egér)
-
-// deltaMode 1 — SOROKBAN görgető böngésző (Windowson jellemzően a Firefox
-// egérgörgője: deltaY = 3). Szándékosan a képpontos egység 100/3-szorosa, hogy
-// egy egérgörgő-kattanás MINDEN böngészőben ugyanakkorát nagyítson. (A D3
-// alapértéke itt 0,05 volt, amitől a Firefox érezhetően lassabban nagyított.)
-const GORGO_EGYSEG_SOR     = GORGO_EGYSEG_KEPPONT * 100 / 3;
-
-// deltaMode 2 — OLDALANKÉNT görgető (ritka)
-const GORGO_EGYSEG_OLDAL   = 1;
-
-// ÉRINTŐPAD-CSIPPENTÉS. A böngészők `ctrlKey = true`-val küldik, és sokkal
-// KISEBB delta-értékekkel, mint a kétujjas görgetést — a görgetés egységével a
-// csippentés alig mozdítaná a képet. Ha a csippentés lomhának érződik, EZT emeld.
-//
-// 0,010 → 0,012 (Csaba, 2026-08-08): 20%-kal érzékenyebb, mert lomha volt.
-const GORGO_EGYSEG_CSIPPENTES = 0.012;
-
-// ===== KIFELÉ NAGYÍTÁS ALSÓ HATÁRA =====
-// A VILÁG szintnél elfogy a hierarchia: a horgony nem tud tovább fölfelé lépni, és
-// ha tovább kicsinyítesz, minden a láthatósági küszöb alá esik — üres képernyő,
-// amiből csak az „illesztés" gomb hoz vissza. A koino_1.0-ban ezt a D3
-// `scaleExtent` fogta meg; nálunk az illesztési nagyítás töredékében húzzuk meg.
-const KIFELE_HATAR = 0.25;          // az illesztési skála negyedénél megáll
-
-// ===== BEFELÉ NAGYÍTÁS FELSŐ HATÁRA (Csaba böngészős mérése, 2026-08-11) =====
-// Sokáig az volt a szabály, hogy „befelé nincs korlát, arra való a horgonyváltás".
-// Ez IGAZ — de csak addig, amíg a horgony le TUD lépni. Ha olyan csomóponton áll,
-// aminek nincs (betöltött) gyereke, akkor nincs mibe lelépnie, kifelé viszont már
-// túl nagy: ott ragad, és a befelé nagyítást SEMMI nem fogja meg.
-//
-// MÉRVE a böngészőben (2026-08-11, Csaba vezetett, a nézetet kívülről mértük):
-// a horgony az 1. szinten megállt `gyerekDb: 0`-val, és onnantól a skála
-// 1,18·10³-ról 1,81·10¹⁴-re szaladt. A mély síkidomok helye `eltolás + skála · x`
-// alakban áll elő; 10¹⁴ nagyságrendű skálánál a `double` 16 jegye elfogy, és a kép
-// REMEGNI kezd. Pontosan ez volt a „19-20. szint után szétesik" tünet.
-//
-// A SZABÁLY: a befelé nagyítás nem viheti a horgonyt túl azon a ponton, ahol a
-// váltás esedékes LENNE. A határt nem önkényesen választjuk, hanem a meglévő két
-// állandóból vezetjük le: a horgony akkor váltana le, ha egy gyereke elérné a
-// képernyő `LEFELE_KUSZOB`-szorosát, és a lehető legnagyobb gyerek a szülője
-// sugarának `LEGNAGYOBB_GYEREK_ARANY`-szorosa (1/√20). Ennél nagyobbra tehát még
-// a legkedvezőbb esetben sem kellene nőnie:
-//
-//   maxHorgonyÁtmérő = képernyő × LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY
-//                    = képernyő × 2 / 0,2236 ≈ képernyő × 8,94
-//
-// Ez a korlát CSAK akkor él, ha a horgonynak nincs betöltött gyereke. Amint
-// megérkeznek, a korlát magától felenged, és a horgony lelép — vagyis a betöltésre
-// váró e-ember nem falba ütközik, csak megvárja az adatot.
-const BEFELE_HATAR = LEFELE_KUSZOB / LEGNAGYOBB_GYEREK_ARANY;
+// ===== A NAGYÍTÁS SZÁMTANA: A `sikidomNagyitas.js`-BEN =====
+// A +/− gombok lépése (`ZOOM_LEPES`), a görgő érzékenysége (`GORGO_EGYSEG_*`), a
+// két nagyítási határ (`KIFELE_HATAR`, `BEFELE_HATAR`) és a levezetésük a
+// nagyítás-modulba került (2026-08-11) — ott tiszta számítás, tehát Node-ból is
+// mérhető. Ez a fájl csak alkalmazza a kapott szorzót a nézetre.
 
 // ===== AZ ILLESZTÉS ARÁNYA =====
 // A teljes kiterjedés a képernyő kisebbik oldalának ennyiszeresére illeszkedjen —
@@ -458,6 +391,26 @@ class SikidomModal {
       // A mellék-ikonok képei a hálózatról jönnek; amikor egy megérkezik, a
       // rajzoló új képkockát kér — a rajzolás sosem vár rá.
       ujrarajzolasKerese: () => this._rajzolasKerese()
+    });
+
+    // ===== A KOPPINTOTT ENTITÁS ADATLAPJA (külön modul) =====
+    // A panel a saját DOM-jával és a kártya-gyárral dolgozik; a nézetre csak
+    // ezen a két visszahíváson át hat.
+    this._kartyaPanel = new SikidomKartyaPanel({
+      token: this.token,
+      // A panel bezárult → a kiválasztás is szűnjön meg, és rajzoljunk újra
+      onBezaras: () => {
+        this._kivalasztottId = null;
+        this._rajzolasKerese();
+      },
+      // „Pakli nézet": a síkidom nézetet bezárjuk, a pakli az adott entitásra
+      // navigál (ezt a foOldal adja át `onEntitasKivalasztas`-ként)
+      onPakliraValtas: (entitasId, entitasTipus) => {
+        this.bezaras();
+        if (typeof this.onEntitasKivalasztas === 'function') {
+          this.onEntitasKivalasztas(entitasId.toString(), entitasTipus);
+        }
+      }
     });
 
     // ----- ADAT -----
@@ -659,14 +612,9 @@ class SikidomModal {
       this._illesztesAnimacio = null;
     }
     this.rajzolo.ikonTarUrites();
-    this._kartyaKeres = null;
+    this._kartyaPanel.takaritas();
     this._teljesNezetKikapcsolasa();
     this._tar.clear();
-
-    // A kártya al-modal konténerét is kiürítjük, hogy ne maradjon rejtett
-    // modal-DOM a body végén (a HozzajarulokModal mintája)
-    const alKontener = document.getElementById(ALMODAL_KONTENER_ID);
-    if (alKontener) alKontener.innerHTML = '';
   }
 
   // ===== ALSÓ SÁV LÁTHATÓSÁGA (a Struktúra nézet mintájára) =====
@@ -2368,6 +2316,7 @@ class SikidomModal {
       const teglalap = nezetElem.getBoundingClientRect();
 
       // 1. NAGYÍTÁS — csak ha MOST is és ELŐBB is legalább két ujj volt.
+      //    (a gyújtópont az ujjak MOSTANI középpontja)
       //    A gyújtópont az ujjak MOSTANI középpontja: így a kép ott marad a
       //    helyén, ahol az ujjaid fogják.
       if (most.tavolsag > 0 && elozo.tavolsag > 0) {
@@ -2436,12 +2385,7 @@ class SikidomModal {
       e.preventDefault();
       if (this._kezdoFazis) return;        // a kezdő fázis alatt a nézet zárolva
 
-      const egyseg = e.ctrlKey      ? GORGO_EGYSEG_CSIPPENTES
-                   : e.deltaMode === 1 ? GORGO_EGYSEG_SOR
-                   : e.deltaMode === 2 ? GORGO_EGYSEG_OLDAL
-                   : GORGO_EGYSEG_KEPPONT;
-
-      const szorzo = Math.pow(2, -e.deltaY * egyseg);
+      const szorzo = gorgoSzorzo(e);
       if (!(szorzo > 0) || szorzo === 1) return;
 
       const teglalap = nezetElem.getBoundingClientRect();
@@ -2449,27 +2393,10 @@ class SikidomModal {
     }, { passive: false });
   }
 
-  // ===== A GESZTUS PILLANATNYI ÁLLAPOTA =====
-  // Az ÖSSZES lenyomott ujj közül az első kettőt vesszük (három ujjnál sem esik
-  // szét a kezelés). Egy ujjnál a „középpont" maga az ujj, a távolság 0 — ilyenkor
-  // a hívó nem nagyít, csak mozgat.
-  //
-  // A koordináták KÉPERNYŐ-koordináták (clientX/Y); a nézet-elemhez viszonyítást
-  // a hívó végzi el, ahol szükséges.
-  //
-  // @returns {{kozepX:number, kozepY:number, tavolsag:number}|null}
+  // A gesztus pillanatnyi állapota a lenyomott ujjakból (a számítás a
+  // `sikidomNagyitas.js`-ben — ez csak átadja neki a mutatókat)
   _gesztusMerese() {
-    const mutatok = [...this._aktivMutatok.values()];
-    if (mutatok.length === 0) return null;
-
-    const [a, b] = mutatok;
-    if (!b) return { kozepX: a.x, kozepY: a.y, tavolsag: 0 };
-
-    return {
-      kozepX: (a.x + b.x) / 2,
-      kozepY: (a.y + b.y) / 2,
-      tavolsag: Math.hypot(a.x - b.x, a.y - b.y)
-    };
+    return gesztusAllapot([...this._aktivMutatok.values()]);
   }
 
   _zoom(szorzo, kozepX, kozepY) {
@@ -2485,7 +2412,17 @@ class SikidomModal {
     // KÉT HATÁR: kifelé a VILÁG-nál fogy el a hierarchia, befelé pedig akkor, ha a
     // horgonynak nincs mibe lelépnie (lásd `BEFELE_HATAR`). A kettő sosem harap
     // egyszerre — az egyik csak kicsinyítésre, a másik csak nagyításra vonatkozik.
-    const hatarolt = this._befeleHatarolas(this._kifeleHatarolas(szorzo));
+    const hatarolt = befeleHatarolas({
+      szorzo: kifeleHatarolas({
+        szorzo,
+        vilagSzinten: this._horgony === VILAG,
+        alapSkala: this._alapSkala,
+        skala: this._nezet.skala
+      }),
+      vanHovaLelepni: this._vanHovaLelepni(),
+      kepernyoMeret: this._kepernyoMeret(),
+      skala: this._nezet.skala
+    });
     if (hatarolt === 1) return;                  // már a határon állunk, nincs mit tenni
 
     this._nezet.skala *= hatarolt;
@@ -2497,56 +2434,21 @@ class SikidomModal {
     this._zoomVegeUtemezes();
   }
 
-  // ===== A KIFELÉ NAGYÍTÁS ALSÓ HATÁRA =====
-  // Befelé nincs korlát (arra való a horgonyváltás). Kifelé viszont a VILÁG
-  // szintnél elfogy a hierarchia, és tovább kicsinyítve minden a láthatósági
-  // küszöb alá esne — üres képernyő. A határt az illesztési nagyításhoz mérjük.
+  // ===== VAN-E A HORGONYNAK MIBE LELÉPNIE? =====
+  // A befelé nagyítás felső határa CSAK akkor él, ha nincs — ilyenkor a
+  // horgonyváltás nem tud dolgozni, tehát semmi más nem fogná meg a nagyítást
+  // (lásd `BEFELE_HATAR` a nagyítás-modulban). A választ csak innen lehet
+  // megadni: ehhez a csomópont-tárat kell ismerni.
   //
-  // Csak a VILÁG horgonynál kell vizsgálni: mélyebbről a `_horgonyEllenorzes`
-  // úgyis fölfelé lépteti a horgonyt, amíg ide nem ér.
-  //
-  // @param {number} szorzo - a kért nagyítás-szorzó
-  // @returns {number} a ténylegesen alkalmazható szorzó (1 = nincs mozgás)
-  _kifeleHatarolas(szorzo) {
-    if (szorzo >= 1) return szorzo;              // befelé sosem korlátozunk
-    if (this._horgony !== VILAG) return szorzo;  // van még hova fölfelé lépni
-    if (!(this._alapSkala > 0)) return szorzo;   // még nem volt illesztés
-
-    const alsoHatar = this._alapSkala * KIFELE_HATAR;
-    if (this._nezet.skala <= alsoHatar) return 1;
-
-    return Math.max(szorzo, alsoHatar / this._nezet.skala);
-  }
-
-  // ===== A BEFELÉ NAGYÍTÁS FELSŐ HATÁRA =====
-  // Lásd `BEFELE_HATAR`. A korlát CSAK akkor él, ha a horgonynak nincs betöltött
-  // gyereke — ilyenkor a horgonyváltás nem tud dolgozni, tehát semmi más nem
-  // fogná meg a nagyítást, és a skála elszaladna a `double` pontossága fölé.
-  //
-  // Ha VAN betöltött gyerek, nem korlátozunk: a váltást a `_horgonyEllenorzes`
-  // úgyis elvégzi, amint a gyerek eléri a küszöböt. Egy nagyon gyenge (parányi)
-  // gyerekhez nagy skála kell — ez rendben van, mert az ő helye `skála · relR`
-  // szorzatként marad épp akkora, amekkorának látszik.
-  //
-  // @param {number} szorzo - a kért nagyítás-szorzó
-  // @returns {number} a ténylegesen alkalmazható szorzó (1 = nincs mozgás)
-  _befeleHatarolas(szorzo) {
-    if (szorzo <= 1) return szorzo;              // kifelé itt sosem korlátozunk
-
+  // @returns {boolean} igaz, ha a horgonynak van BETÖLTÖTT gyereke
+  _vanHovaLelepni() {
     const cs = this._tar.get(this._horgony);
-    if (!cs) return szorzo;
+    if (!cs) return true;                        // ismeretlen horgony: nem korlátozunk
 
-    // Van-e egyáltalán olyan gyereke, amibe a horgony le tudna lépni?
     for (const gid of cs.gyerekIdk) {
-      if (this._tar.has(gid)) return szorzo;
+      if (this._tar.has(gid)) return true;
     }
-
-    // A skála a horgony képernyő-SUGARA (a horgony sugara a saját keretében 1),
-    // ezért a megengedett átmérő fele a felső határ.
-    const felsoHatar = (this._kepernyoMeret() * BEFELE_HATAR) / 2;
-    if (this._nezet.skala >= felsoHatar) return 1;
-
-    return Math.min(szorzo, felsoHatar / this._nezet.skala);
+    return false;
   }
 
   _zoomKozeppontra(szorzo) {
@@ -2664,129 +2566,16 @@ class SikidomModal {
 
     this._kivalasztottId = talalat.cs.id;
     this._rajzolasKerese();
-    this._kartyaMegjelenitese(talalat.cs.id, talalat.cs.entitasTipus);
+    this._kartyaPanel.megjelenites(talalat.cs.id, talalat.cs.entitasTipus);
   }
 
-  // ===== EGYETLEN KÁRTYA MEGJELENÍTÉSE =====
-  // Koppintásra NEM váltunk pakli nézetre — az alsó sáv úgyis ott marad, onnan
-  // bármikor át lehet váltani. Csak a megkoppintott entitás kártyáját mutatjuk
-  // meg, bezárhatóan; a kártya saját hamburger menüjéből lehet az ADOTT ÁGRA
-  // pakli nézetbe váltani („Pakli nézet" menüpont, lásd extraMenuOpciok).
-  async _kartyaMegjelenitese(entitasId, entitasTipus) {
-    console.log('SikidomModal._kartyaMegjelenitese - KEZDÉS', { entitasId, entitasTipus });
-
-    const panel = document.getElementById('sikidom-kartya-panel');
-    const hely = document.getElementById('sikidom-kartya-hely');
-    if (!panel || !hely) return;
-
-    hely.innerHTML = '';
-    panel.removeAttribute('hidden');
-
-    // Ugyanaz a kérés-jelölő, mint a rajzolásnál: ha közben másra koppintanak,
-    // a régi válasz ne írja felül az újabbat
-    const kerés = Symbol('kartya');
-    this._kartyaKeres = kerés;
-
-    try {
-      // A kártya teljes adatait a meglévő pakli-végpont adja (a `kivalasztottEntitas`
-      // épp az az elem, amit kértünk) — nem kell hozzá új backend-út.
-      const valasz = await apiGet(
-        `pakli?entitasId=${encodeURIComponent(entitasId)}&entitasTipus=${encodeURIComponent(entitasTipus)}`,
-        this.token
-      );
-      if (this._kartyaKeres !== kerés) return;
-
-      const entitas = valasz?.kivalasztottEntitas;
-      if (!entitas?.entitasId) {
-        hely.innerHTML = '<p class="sikidom-modal__betoltes-szoveg">Az adatlap nem tölthető be.</p>';
-        return;
-      }
-
-      const kartya = kartyaLetrehozasa({
-        entitas,
-        kivalasztott: true,
-        onKivalasztas: () => {},                 // a síkidomban nincs kártya-váltás
-        token: this.token,
-        modalKontenerAzon: this._alKontenerBiztositasa(),
-        ujratoltesCb: () => this._kartyaMegjelenitese(entitasId, entitasTipus),
-        onHamburgerMegnyitas: () => {}
-      });
-
-      // A NÉZET-FÜGGŐ menüpont: innen lehet az adott ágra pakli nézetbe váltani.
-      // (A pakliban ennek nem volna értelme, ezért nem a kártya alap-menüjében van.)
-      kartya.extraMenuOpciok = [{
-        ikon:       '🃏',
-        felirat:    'Pakli nézet',
-        elvalaszto: true,
-        akcio:      () => this._pakliraValtas(entitasId, entitasTipus)
-      }];
-
-      const kartyaDom = await kartya.init();
-      if (this._kartyaKeres !== kerés) return;
-      if (kartyaDom) hely.appendChild(kartyaDom);
-
-      // A kártya szövege külön végponton érkezik (mint a pakliban)
-      this._kartyaSzovegBetoltese(kartya, entitas, kerés);
-
-      console.log('SikidomModal._kartyaMegjelenitese - VÉGE', { entitasId });
-    } catch (hiba) {
-      console.error('SikidomModal._kartyaMegjelenitese - HIBA', { hiba: hiba.message });
-      if (this._kartyaKeres === kerés) {
-        hely.innerHTML = '<p class="sikidom-modal__betoltes-szoveg">Az adatlap nem tölthető be.</p>';
-      }
-    }
-  }
-
-  // A kártya szövegtörzse (a pakli külön végponton adja, hogy a lista gyors legyen)
-  async _kartyaSzovegBetoltese(kartya, entitas, kerés) {
-    try {
-      const valasz = await apiGet(
-        `pakli/szoveg/${entitas.entitasTipus}/${entitas.entitasId}`, this.token
-      );
-      if (this._kartyaKeres !== kerés) return;
-      if (typeof kartya.bodyFrissitese === 'function') {
-        kartya.bodyFrissitese(valasz?.szoveg ?? null);
-      }
-    } catch (hiba) {
-      console.warn('SikidomModal._kartyaSzovegBetoltese - a szöveg nem tölthető be', {
-        hiba: hiba.message
-      });
-      if (typeof kartya.bodyFrissitese === 'function') kartya.bodyFrissitese(null);
-    }
-  }
-
+  // ===== A KÁRTYA-PANEL =====
+  // Az adatlap megjelenítése a `SikidomKartyaPanel`-é (külön fájl); innen csak
+  // az kell, ami a NÉZETET érinti: a kiválasztás megszűnése és az újrarajzolás.
   _kartyaBezarasa() {
-    console.log('SikidomModal._kartyaBezarasa');
-    this._kartyaKeres = null;
-    const panel = document.getElementById('sikidom-kartya-panel');
-    const hely = document.getElementById('sikidom-kartya-hely');
-    panel?.setAttribute('hidden', '');
-    if (hely) hely.innerHTML = '';
-    this._kivalasztottId = null;
-    this._rajzolasKerese();
+    this._kartyaPanel.bezaras();
   }
 
-  // A „Pakli nézet" menüpont: bezárjuk a síkidom nézetet, és a pakli az adott
-  // entitásra navigál (ezt a foOldal adja át onEntitasKivalasztas-ként).
-  _pakliraValtas(entitasId, entitasTipus) {
-    console.log('SikidomModal._pakliraValtas', { entitasId, entitasTipus });
-    this._kartyaBezarasa();
-    this.bezaras();
-    if (typeof this.onEntitasKivalasztas === 'function') {
-      this.onEntitasKivalasztas(entitasId.toString(), entitasTipus);
-    }
-  }
-
-  // A kártya saját modáljainak konténere (a body végén, a nézet fölött)
-  _alKontenerBiztositasa() {
-    let kontener = document.getElementById(ALMODAL_KONTENER_ID);
-    if (!kontener) {
-      kontener = document.createElement('div');
-      kontener.id = ALMODAL_KONTENER_ID;
-      document.body.appendChild(kontener);
-    }
-    return ALMODAL_KONTENER_ID;
-  }
 }
 
 // ===== EXPORTÁLÁS =====

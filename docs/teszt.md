@@ -769,7 +769,8 @@ docker logs -f koino-backend
     (j5) **ÉRINTŐPAD- ÉS MOBIL-PRÓBA (2026-08-08):**
     - **Érintőpad, kétujjas görgetés** → sima, folytonos nagyítás.
     - **Érintőpad, csippentés** → szintén nagyít (a böngésző `ctrlKey`-jel küldi;
-      külön, nagyobb érzékenységgel megy — ha lomha, `GORGO_EGYSEG_CSIPPENTES`).
+      külön, nagyobb érzékenységgel megy — ha lomha, `GORGO_EGYSEG_CSIPPENTES` a
+      [`sikidomNagyitas.js`](../frontend/js/utils/sikidomNagyitas.js)-ben, 2026-08-11 óta).
     - **Mobil, EGY ujj** → mozgatás.
     - **Mobil, KÉT ujj** → nagyítás **és** mozgatás EGYSZERRE. *(Ez volt hibás:
       ha az ujjak együtt csúsztak, a kép meg sem mozdult.)*

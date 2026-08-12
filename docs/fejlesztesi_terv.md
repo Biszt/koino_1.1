@@ -3143,3 +3143,82 @@ A terv szerint a **`sikidomVezerles.js`** (események, gesztusok, zoom, koppint�
 Ez a legnagyobb megmaradt csoport (~500 sor), és jól elhatárolt: a nézetet csak a
 `_zoom`-on és a horgonyon át éri el. Mérőpróbája nincs és nem is lehet (böngésző-
 események), tehát utána a böngészős ellenőrzés KÖTELEZŐ.
+
+---
+
+## ✅ Síkidom nézet — 3. lépés: a VEZÉRLÉS kettéválasztva (2026-08-11)
+
+**A SikidomModal.js 2 793 → 2 582 sor** (a kiindulás óta −1 002, a fájl 28%-a).
+
+### ⚠️ ELTÉRÉS A TERVTŐL — és miért
+
+A terv egyetlen `sikidomVezerles.js`-t írt elő a teljes vezérlés-csoportra. Ezt
+NEM így csináltuk, mert a csoport valójában **kétféle** dolgot tartalmaz:
+
+- olyat, ami **tiszta számítás** (a két nagyítási határ, a gesztus-mérés, a görgő
+  egységei) — ez kiemelve mérhetővé válik;
+- olyat, ami **saját felelősségű felület** (a koppintott entitás adatlapja) — ez
+  önálló komponens;
+- és olyat, ami **maga a koordináció** (az események bekötése: melyik gesztus mit
+  indít el). Ez a modal dolga — épp ez maradt a feladata a szétbontás után.
+
+Egy `sikidomVezerles.js` mind a hármat egy fájlba tette volna, ráadásul egy
+**vissza-hivatkozással a modálra** (a vezérlőnek állítania kell a nézetet), ami
+körkörös függést csinál. Két külön modul + a modálban maradó bekötés ugyanazt a
+sort viszi ki, körkörösség nélkül.
+
+### A két új modul
+
+**1. [`frontend/js/utils/sikidomNagyitas.js`](../frontend/js/utils/sikidomNagyitas.js)** (191 sor)
+— `kifeleHatarolas` · `befeleHatarolas` · `gesztusAllapot` · `gorgoSzorzo`, és a
+hozzájuk tartozó állandók (`ZOOM_LEPES`, `GORGO_EGYSEG_*`, `KIFELE_HATAR`,
+`BEFELE_HATAR`). DOM-független.
+
+A tár-ismeretet egyetlen kérdés választja le: `_vanHovaLelepni()` — van-e a
+horgonynak betöltött gyereke. Ezt csak a modal tudja megmondani, a HATÁRT viszont
+már tiszta számítás adja.
+
+**2. [`frontend/js/components/modals/SikidomKartyaPanel.js`](../frontend/js/components/modals/SikidomKartyaPanel.js)** (173 sor)
+— a koppintott entitás adatlapja: betöltés, szövegtörzs, bezárás, „Pakli nézet",
+al-modal konténer. A nézetre **két visszahíváson** át hat (`onBezaras`,
+`onPakliraValtas`), a geometriáról semmit nem tud.
+
+### Az igazolás — a nagyítás is mérhető lett
+
+A mélység-mérőpróba mostantól a nagyítás-modult is futtatja:
+
+```bash
+node backend/tools/sikidomMelysegProba.mjs
+```
+
+**5 → 22 állítás**, mind áll. A legfontosabb: **500 egymást követő befelé nagyítás
+után sem szalad el a skála** — pontosan ez volt a „19-20. szint után szétesik"
+tünet oka. Emellett lemérve: mindkét határ pontosan a határig enged (nem tovább és
+nem kevesebbet) · a korlátok csak a saját irányukban élnek · egy egérgörgő-kattanás
+Firefoxban (sor) és máshol (képpont) ugyanakkorát nagyít · a csippentés érzékenyebb ·
+a gesztus-mérés egy/két/három ujjnál.
+
+Böngészős füst-próba a VALÓDI modálon: 200 nagyítás gyerek nélküli horgonyon
+pontosan a felső határon (2 683 px) állt meg, és a kártya-panel bezárása törli a
+kiválasztást.
+
+### Hol tartunk
+
+| fájl | sor | szerep |
+|---|---|---|
+| `SikidomModal.js` | 2 582 | a nézet összefogása: betöltés, tár, nézet-állapot, események |
+| `sikidomRajzolo.js` | 575 | megjelenítés |
+| `sikidomTar.js` | 525 | a tár karbantartása |
+| `sikidomNagyitas.js` | 191 | a nagyítás számtana |
+| `SikidomKartyaPanel.js` | 173 | a koppintott entitás adatlapja |
+
+A megmaradt 2 582 sorból **602 az `_ujrapakolas` (244) és a `_lathatoLista` (358)**
+— az a kettő, amihez a terv szerint nem nyúlunk. A többi a betöltés, a
+csomópont-tár építése, a nézet-állapot (horgony, illesztés, animáció) és az
+események bekötése: ezek MÁR a modal saját felelősségei.
+
+### A következő lépés
+
+A terv 4. pontja a **`sikidomBetoltes.js`** (`_pontKuszob` · `_gyerekekBetoltese` ·
+`_varolistaraFuzes`, ~165 sor). Ez a csomópont-tár építéséhez és a hálózathoz is
+nyúl, tehát nem tiszta számítás — előbb érdemes eldönteni, megéri-e.
