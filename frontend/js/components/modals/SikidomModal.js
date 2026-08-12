@@ -4,7 +4,8 @@
 import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
-import { gyerekRelativSugar, gyokerRelativSugar, SZINT_OSZTO }
+import { gyerekRelativSugar, gyokerRelativSugar,
+         gyerekPontKuszob, gyokerPontKuszob, SZINT_OSZTO }
   from '../../utils/sikidomMeret.js';
 import { pakolas, pakolasiSorrend, frissebbElol } from '../../utils/sikidomPakolas.js';
 import { szuloKeretben, horgonyValtasNezet, kepernyore, horgonyValtasSzukseges,
@@ -909,13 +910,14 @@ class SikidomModal {
   _pontKuszob(cs, kepSugar) {
     if (!(kepSugar > 0)) return Infinity;
 
-    // MÉLYEBBRE TÖLTÜNK, MINT AMIT RAJZOLUNK (lásd BETOLTESI_MELYSEG).
-    const arany = (MIN_KEP_ATMERO / BETOLTESI_MELYSEG) / (2 * kepSugar);
-    const negyzet = arany * arany;
+    // MÉLYEBBRE TÖLTÜNK, MINT AMIT RAJZOLUNK (lásd BETOLTESI_MELYSEG): a
+    // legkisebb ÉRDEMES méret a szülő sugarának arányában.
+    const relSugar = (MIN_KEP_ATMERO / BETOLTESI_MELYSEG) / (2 * kepSugar);
 
+    // A méret-modul megfordítása — így a két irány sosem csúszhat el egymástól
     return cs.id === VILAG
-      ? (cs.legerosebbGyerekPont || 0) * negyzet
-      : SZINT_OSZTO * (cs.pont || 0) * negyzet;
+      ? gyokerPontKuszob(relSugar, cs.legerosebbGyerekPont || 0)
+      : gyerekPontKuszob(relSugar, cs.pont || 0);
   }
 
   // ===== GYEREKEK BETÖLTÉSE EGY KÜSZÖBIG =====

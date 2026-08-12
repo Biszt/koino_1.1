@@ -30,7 +30,10 @@ import {
   keretbenCsomopont, szuloKeretben, horgonyValtasNezet, kepernyore,
   horgonyValtasSzukseges, LEFELE_KUSZOB, FOLFELE_KUSZOB
 } from '../../frontend/js/utils/sikidomHorgony.js';
-import { gyerekRelativSugar } from '../../frontend/js/utils/sikidomMeret.js';
+import {
+  gyerekRelativSugar, gyokerRelativSugar,
+  gyerekPontKuszob, gyokerPontKuszob, LEGNAGYOBB_GYEREK_ARANY
+} from '../../frontend/js/utils/sikidomMeret.js';
 // A nagyítás számtana (2026-08-11 óta külön, DOM-független modul) — az utolsó
 // szakasz a két nagyítási határt és a gesztus-mérést méri.
 import {
@@ -279,6 +282,48 @@ naplo('===== 3. PRÓBA: a rossz testvér — méret ÉS pozíció =====');
   allitas(felreDontes === null,
     'ha a képernyő közepén nincs elég nagy gyerek, NINCS lefelé váltás',
     felreDontes ? felreDontes.irany + ' → ' + felreDontes.gyerekId : 'nincs váltás');
+}
+
+// ===== A MÉRET-MODELL KÉT IRÁNYA (2026-08-11) =====
+// A nézet kétféleképpen kérdezi ugyanazt a modellt:
+//   „mekkora legyen ez az entitás?"          → gyerekRelativSugar / gyokerRelativSugar
+//   „mekkora pont kell ekkora mérethez?"     → gyerekPontKuszob / gyokerPontKuszob
+// A második a betöltés küszöbét adja (`SikidomModal._pontKuszob`). Ha a kettő
+// valaha elcsúszna, a nézet vagy fölöslegesen töltene le tömegével, vagy némán
+// kihagyna látható testvéreket — egyik hiba sem tűnne fel a képen azonnal.
+// Ezért itt KÖRBEMÉRJÜK: oda-vissza ugyanazt kell adniuk.
+naplo('===== A MÉRET-MODELL KÉT IRÁNYA (sikidomMeret.js) =====');
+{
+  let legnagyobbElteres = 0;
+  for (const szuloPont of [1, 100, 12345, 9_876_543]) {
+    for (const relSugar of [0.001, 0.01, 0.05, 0.1, 0.2, LEGNAGYOBB_GYEREK_ARANY]) {
+      const pont = gyerekPontKuszob(relSugar, szuloPont);
+      const vissza = gyerekRelativSugar(pont, szuloPont);
+      legnagyobbElteres = Math.max(legnagyobbElteres, Math.abs(vissza - relSugar));
+    }
+  }
+  allitas(legnagyobbElteres < 1e-12,
+    'GYEREK: a pont-küszöb és a relatív sugár egymás pontos megfordítása',
+    `legnagyobb eltérés: ${legnagyobbElteres.toExponential(2)}`);
+
+  let gyokerElteres = 0;
+  for (const legerosebb of [1, 500, 1_000_000]) {
+    for (const relSugar of [0.001, 0.01, 0.25, 0.5, 1]) {
+      const pont = gyokerPontKuszob(relSugar, legerosebb);
+      const vissza = gyokerRelativSugar(pont, legerosebb);
+      gyokerElteres = Math.max(gyokerElteres, Math.abs(vissza - relSugar));
+    }
+  }
+  allitas(gyokerElteres < 1e-12,
+    'GYÖKÉR: ugyanez a legerősebb gyökérhez viszonyítva',
+    `legnagyobb eltérés: ${gyokerElteres.toExponential(2)}`);
+
+  // A küszöb NŐ a kért mérettel: nagyobb síkidomhoz erősebb entitás kell
+  allitas(gyerekPontKuszob(0.2, 1000) > gyerekPontKuszob(0.1, 1000),
+    'nagyobb kért mérethez nagyobb pont-küszöb tartozik');
+  allitas(gyerekPontKuszob(0.1, 0) === 0 && gyokerPontKuszob(0.1, 0) === 0,
+    'nulla szülő-pontnál a küszöb is nulla (nincs mit szűrni)');
+  naplo('');
 }
 
 // ===== A NAGYÍTÁS KÉT HATÁRA (2026-08-11) =====

@@ -3217,8 +3217,78 @@ A megmaradt 2 582 sorból **602 az `_ujrapakolas` (244) és a `_lathatoLista` (3
 csomópont-tár építése, a nézet-állapot (horgony, illesztés, animáció) és az
 események bekötése: ezek MÁR a modal saját felelősségei.
 
-### A következő lépés
+---
 
-A terv 4. pontja a **`sikidomBetoltes.js`** (`_pontKuszob` · `_gyerekekBetoltese` ·
-`_varolistaraFuzes`, ~165 sor). Ez a csomópont-tár építéséhez és a hálózathoz is
-nyúl, tehát nem tiszta számítás — előbb érdemes eldönteni, megéri-e.
+## ✅ Síkidom nézet — 4. lépés: a BETÖLTÉS — és amit NEM emeltünk ki (2026-08-11)
+
+A terv 4. pontja a `sikidomBetoltes.js` volt (`_pontKuszob` · `_gyerekekBetoltese` ·
+`_varolistaraFuzes`). **Ebből csak a tiszta számítás került ki — a többi maradt, és
+ez tudatos döntés.**
+
+### Amit kiemeltünk: a pont-küszöb, a MÉRET-MODUL megfordításaként
+
+A `_pontKuszob` képlete pontosan a `sikidomMeret.js` két függvényének a
+megfordítása volt, csak külön leírva:
+
+| irány | kérdés | függvény |
+|---|---|---|
+| oda | „mekkora legyen ez az entitás?" | `gyerekRelativSugar` / `gyokerRelativSugar` |
+| vissza | „mekkora pont kell ekkora mérethez?" | **`gyerekPontKuszob` / `gyokerPontKuszob`** (ÚJ) |
+
+A két új függvény a [`sikidomMeret.js`](../frontend/js/utils/sikidomMeret.js)-be
+került, a párja mellé. Ha a méret-modell valaha változik, a két irány EGYÜTT
+változik — külön leírva némán elcsúszhatnának, és az a fajta hiba, ami nem
+látszik a képen: a nézet vagy fölöslegesen töltene le tömegével, vagy némán
+kihagyna látható testvéreket.
+
+A mérőpróba ezt **körbeméri**: 24 érték-páron oda-vissza ugyanaz jön ki (a
+legnagyobb eltérés 2,8·10⁻¹⁷). A böngészőben a `_pontKuszob` bitre ugyanazt adja,
+mint a régi képlet.
+
+### ⚠️ Amit NEM emeltünk ki, és miért
+
+A `_gyerekekBetoltese` **nyolc ponton** kapcsolódik a modálhoz — és több
+irányban: `_tar` · `token` · `_futoBetoltesek` (olvassa ÉS írja) · `_kezdoFazis` ·
+`_folyamatJelzo` · `_varolistaraFuzes` · `_tennivalokFeldolgozasa` ·
+`_rajzolasKerese`. A `_varolistaraFuzes` ezen felül a `_relSugar`-t is hívja.
+
+Egy `sikidomBetoltes.js` ezeket mind paraméterként vagy visszahívásként kapná meg
+— vagyis lényegében **magát a modált adnánk át neki**. Az nem szétbontás, csak a
+sorok áthelyezése egy másik fájlba, cserébe egy körkörös függésért. Ugyanaz az
+indok, amiért a `sikidomVezerles.js` sem egyben készült el.
+
+**A betöltés a modal SAJÁT felelőssége** — ezt a fájl fejléce ki is mondja.
+
+### Hol tartunk — a szétbontás LEZÁRVA
+
+| fájl | sor | szerep |
+|---|---|---|
+| `SikidomModal.js` | **2 584** | a nézet összefogása: betöltés, tár építése, nézet-állapot, események |
+| `sikidomRajzolo.js` | 575 | megjelenítés |
+| `sikidomTar.js` | 525 | a tár karbantartása |
+| `sikidomNagyitas.js` | 191 | a nagyítás számtana |
+| `SikidomKartyaPanel.js` | 173 | a koppintott entitás adatlapja |
+
+**3 584 → 2 584 sor: a fájl 28%-a kikerült**, és nem véletlenszerűen: a maradék
+egyetlen felelősség köré áll össze. Ebből 599 sor a két érinthetetlen metódus
+(`_ujrapakolas` 241, `_lathatoLista` 358) — hozzájuk a terv szerint nem nyúltunk.
+
+### A mérőháló, amivel gazdagabbak lettünk
+
+A szétbontás mellékterméke, hogy a kiemelt modulok DOM-függetlenek, tehát
+MÉRHETŐK. A két próba állításai:
+
+| próba | előtte | utána |
+|---|---|---|
+| `sikidomMelysegProba.mjs` | 5 | **26** |
+| `sikidomParkolasProba.mjs` | 16 | **43** |
+
+És ami fontosabb a számnál: a parkolás-próba eddig a SZABÁLYT igazolta a saját
+másolatán, most a VALÓDI kódot futtatja.
+
+### Ami Csabára vár
+
+A szemrevételezés valódi adaton — a rajzolást és az események bekötését gép nem
+tudja igazolni. Amit érdemes végignézni: feliratok · mellék-ikonok · üres mag és a
+„további tartalmak" ajánlat · a megjelölt gyűrűje · egy/kétujjas gesztusok ·
+görgő és csippentés · koppintás → adatlap → „Pakli nézet" · mély nagyítás.

@@ -72,6 +72,31 @@ export function gyokerRelativSugar(pont, legerosebbPont) {
   return Math.min(Math.sqrt(Math.max(0, pont ?? 0) / legerosebbPont), 1);
 }
 
+// ===== A MEGFORDÍTÁSUK: MEKKORA PONT KELL EGY ADOTT MÉRETHEZ? =====
+// A nézet nem csak azt kérdezi, „mekkora legyen ez az entitás" — a BETÖLTÉSNÉL a
+// fordítottját is: „mekkora tudatpont fölött érdemes egyáltalán lehozni egy
+// testvért, ha ekkora méret alatt úgysem látszana?" (Lásd `SikidomModal._pontKuszob`.)
+//
+// Ez pontosan a fenti két függvény megfordítása, ezért van itt a helyük: ha a
+// méret-modell valaha változik, a két irány EGYÜTT változik. Külön leírva némán
+// elcsúszhatnának egymástól.
+//
+// @param {number} relSugar - a kívánt sugár a SZÜLŐ sugarának arányában
+// @param {number} szuloPont - a szülő hierarchikus össztudatpontja
+// @returns {number} ekkora pont adja pontosan ezt a relatív sugarat
+export function gyerekPontKuszob(relSugar, szuloPont) {
+  return SZINT_OSZTO * Math.max(0, szuloPont ?? 0) * relSugar * relSugar;
+}
+
+// Ugyanaz a gyökér-szintre: ott a LEGERŐSEBB gyökérhez viszonyítunk (sugara = 1).
+//
+// @param {number} relSugar - a kívánt sugár a legerősebb gyökérhez képest
+// @param {number} legerosebbPont - a legerősebb gyökér pontja
+// @returns {number}
+export function gyokerPontKuszob(relSugar, legerosebbPont) {
+  return Math.max(0, legerosebbPont ?? 0) * relSugar * relSugar;
+}
+
 // ===== A KÖZÉPSŐ LYUKAT MÁR NEM ITT SZÁMOLJUK =====
 // Korábban itt állt a `PAKOLASI_SURUSEG`, a `magSugarBecsles` és a
 // `gyokerMagSugar`: a még be nem töltött testvéreknek fenntartott üres mag
@@ -107,6 +132,7 @@ export function abszolutSugar(pont, teruletFaktor = 1) {
 }
 
 export default {
-  gyerekRelativSugar, gyokerRelativSugar, abszolutSugar,
+  gyerekRelativSugar, gyokerRelativSugar,
+  gyerekPontKuszob, gyokerPontKuszob, abszolutSugar,
   SZINT_OSZTO, LEGNAGYOBB_GYEREK_ARANY
 };
