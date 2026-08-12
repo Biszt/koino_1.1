@@ -1170,11 +1170,6 @@ class SikidomModal {
 
     if (mind.length === 0) return false;
 
-    // Ha nincs új, és a régiek már le vannak rakva, nincs mit tenni — a pakolás
-    // determinisztikus, tehát pontosan ugyanazt adná vissza. (Enélkül minden
-    // zoom-lépés végén fölöslegesen újraszámolnánk az egészet.)
-    if (cs.varolista.length === 0) return false;
-
     // ===== A POZICIONÁLÁSI KERET: A LEGNAGYOBBAK KAPNAK HELYET =====
     // Lásd `pozicionalasiKeret`. A horgony 5 000-et rak le, egy szinttel lejjebb
     // 250-et, két szinttel lejjebb 12-t — a keret ugyanazzal a hányaddal fogy,
@@ -1187,6 +1182,18 @@ class SikidomModal {
     // várólistáról mind visszatérnek, és egyetlen menetben pakolódnak újra.
     const keretDarab = pozicionalasiKeret(melyseg);
 
+    // ===== A KERET ODA-VISSZA JÁR (Csaba, 2026-08-12) =====
+    // Itt korábban egy `if (cs.varolista.length === 0) return false;` állt, a
+    // keret kiszámítása ELŐTT. Emiatt a keret EGYIRÁNYÚ RACSNI volt: nőni tudott,
+    // zsugorodni nem. Aki egyszer lerakta az 5 000-et, annál a várólista kiürült,
+    // és onnantól ez a sor minden további hívást kilőtt — kizoomolás után is,
+    // amikor már csak 250 kellene. A tár így a BEJÁRÁS TÖRTÉNETÉVEL nőtt, nem a
+    // mostani nézettel.
+    //
+    // A lenti őrszem MINDKÉT esetet lefedi, ezért a külön kilépés fölösleges volt:
+    //   - üres várólista + változatlan keret → itt megállunk (nincs mit tenni);
+    //   - üres várólista + ZSUGORODOTT keret → átmegyünk, és lenyessük a fölösleget.
+    //
     // ŐRSZEM A FÖLÖSLEGES KÖRÖZÉS ELLEN: ha a keret miatt marad tartósan valami a
     // várólistán, a `varolista.length > 0` önmagában minden zoom-lépés végén
     // újrapakolást kérne — pedig a pakolás determinisztikus, tehát ugyanazt adná.
@@ -1965,7 +1972,21 @@ class SikidomModal {
       const legnagyobbGyerekPx = 2 * kep.kepSugar * this._legnagyobbGyerekRelR(cs);
       const eleriAMinimumot = elem.melyseg <= 0 || legnagyobbGyerekPx >= MIN_KEP_ATMERO;
 
-      if (cs.varolista.length > 0 && !cs.betoltesFut && !kellBetoltes && eleriAMinimumot) {
+      // ===== A NYESÉS MINDIG FUTHAT (Csaba, 2026-08-12) =====
+      // A fenti „csak ha már látszana" szabály a FÖLÖSLEGES MUNKA ellen való: ne
+      // pakoljunk olyat, amit úgysem rajzolunk ki. A keret ZSUGORODÁSA viszont az
+      // ellenkezője — az kevesebb síkidomot hagy lent, tehát kevesebb munka lesz
+      // tőle, nem több. Ezért a nyesésre nem vonatkozik sem a minimum-méret
+      // feltétel, sem az, hogy van-e várólista.
+      //
+      // Enélkül a kizoomolás után az 5 000 lerakott gyerek OTT MARADNA azon a
+      // szinten, amelyiknek már csak 250 jár: a csomópont épp azért nem kerülne a
+      // pakolandók közé, mert kifelé jövet a gyerekei a minimum méret alá estek.
+      const keretSzukult = pozicionalasiKeret(elem.melyseg) < cs.utolsoKeret;
+
+      const pakolasKell = keretSzukult || (cs.varolista.length > 0 && eleriAMinimumot);
+
+      if (pakolasKell && !cs.betoltesFut && !kellBetoltes) {
         pakolandok.push({ id: cs.id, kep, melyseg: elem.melyseg });
       }
     }
