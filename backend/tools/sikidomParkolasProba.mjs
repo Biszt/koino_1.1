@@ -260,6 +260,21 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
   const horgony = `sz${MELYSEG - 1}`;
   const tarMeretElotte = tar.size;
 
+  // --- 0. A FOLYOSÓ ÉS A RAJZOLÁSI ABLAK ÖSSZE VAN KÖTVE ---
+  // A söprés helyessége azon áll, hogy amit elenged, az NEM LÁTSZIK. A rajzolás
+  // `FELFELE_SZINTEK` (= 3) szinttel a horgony fölött kezd (SikidomModal.js), tehát
+  // a folyosónak ennél NAGYOBBNAK kell lennie. Ha nem az, a söprés a képernyőn lévő
+  // síkidomokat törölné, a szint újratöltendő állapotba állna, a következő képkocka
+  // letöltené, a söprés megint törölné — letöltés–törlés hurok.
+  //
+  // A `FELFELE_SZINTEK` a modálban privát, és a modal DOM-függő (Node-ból nem
+  // importálható), ezért itt a KÖVETKEZMÉNYT rögzítjük számként. Ha a rajzolási
+  // ablak valaha változik, ezt a számot is mozgatni kell vele.
+  const RAJZOLASI_ABLAK = 3;
+  allitas(FOLYOSO_SZINT > RAJZOLASI_ABLAK,
+    'a folyosó NAGYOBB a rajzolási ablaknál (amit söprünk, az nem látszik)',
+    `FOLYOSO_SZINT = ${FOLYOSO_SZINT} > ${RAJZOLASI_ABLAK}`);
+
   // --- 1. GERINC ---
   const gerinc = gerincLanc(tar, horgony);
   allitas(gerinc.length === MELYSEG, 'a gerinc a horgonytól a gyökérig tart',

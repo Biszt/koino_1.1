@@ -2850,6 +2850,8 @@ A folyosón KÍVÜL tisztán a mélység dönt: ott minden megy, mérettől füg
   nagyítgatás a folyosón belül marad, tehát ritkábban kell visszaállítani. A
   rajzolás `FELFELE_SZINTEK = 3` szinttel a horgony fölött kezd — a 6-os folyosó
   tehát 3 szint ráhagyást ad: ami parkol, az biztosan nincs a képen.
+  → **2026-08-12 óta 4** (lásd a legalsó szakaszt): a 6 olyan bőkezű volt, hogy a
+  söprés egy egész munkameneten át egyszer sem indult el.
 - **`_osSopres()`** — a folyosón kívüli ősöknél MINDEN gyereket elenged a
   gerinc-gyereken kívül (ő vezet lefelé, rá épül a keret-lánc). Az adat a
   `visszaszedettek`-be kerül, tehát nincs újraletöltés.

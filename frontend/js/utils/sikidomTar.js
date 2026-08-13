@@ -100,11 +100,24 @@ export const MEGTARTOTT_DARAB = 12_000;
 // nélkül), a nagyszülő gyerekei, az aktív csomópont testvérei és azok gyerekei,
 // plusz az aktív ág 3 szint mélyen. Minden más kimarad.
 //
-// MIÉRT 6 ÉS NEM 2 (Csaba választása): a koino_1.0 folyosója a nagyszülőig ér, ami
-// a legnagyobb memória-nyereséget adja, de minden egyes kifelé lépésnél
-// visszaállítást kíván. Hat szinttel a szokásos ki-be nagyítgatás a folyosón belül
-// marad, a nyereség viszont gyakorlatilag ugyanaz (5 040 → néhány száz).
-export const FOLYOSO_SZINT = 6;
+// ===== 6 → 4 (Csaba, 2026-08-12) =====
+// Az eredeti 6 azért volt bőkezű, hogy a szokásos ki-be nagyítgatás a folyosón
+// belül maradjon, és ritkán kelljen visszatölteni. A gyakorlatban viszont Csaba
+// egy egész munkamenetet végigtesztelt anélkül, hogy az ős-söprés EGYSZER is
+// elindult volna — 6 szintnél mélyebbre ritkán megy az ember egy húzásra, tehát a
+// takarítás gyakorlatilag sosem futott.
+//
+// ⚠️ A LEGKISEBB BIZTONSÁGOS ÉRTÉK 4, ÉS EZ NEM ÍZLÉS KÉRDÉSE. A söprés helyessége
+// azon áll, hogy amit elenged, az NEM LÁTSZIK — a rajzolás pedig `FELFELE_SZINTEK`
+// (= 3) szinttel a horgony fölött kezdődik. Ha a folyosó ennél nem nagyobb, a
+// söprés a képernyőn lévő síkidomokat törölné, a szint azonnal újratöltendő
+// állapotba állna, a következő képkocka letöltené, a söprés megint törölné —
+// LETÖLTÉS–TÖRLÉS HUROK. A két szám tehát össze van kötve:
+//
+//     FOLYOSO_SZINT > FELFELE_SZINTEK
+//
+// Ha a rajzolási ablak valaha változik, ezt együtt kell mozgatni vele.
+export const FOLYOSO_SZINT = 4;
 
 // ===== AZ ÁGAK ELENGEDÉSE A MEMÓRIÁBÓL (külön kérdés!) =====
 // Ez KORÁBBAN ugyanaz a kapcsoló volt, mint a rajzolás-szűrésé

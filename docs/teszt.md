@@ -1676,9 +1676,15 @@ végig 77 és 3 437 között maradt (a javítás előtt 1,81·10¹⁴-ig szaladt
 ### Síkidom nézet — MÉLYSÉG szerinti ős-söprés (2026-08-11)
 
 A tár eddig monoton nőtt: a 49. szinten mérve **5 094** csomópontból **5 040 volt
-gyökér**, 49 szinttel a látómezőn kívül. Mostantól a folyosón (`FOLYOSO_SZINT = 6`)
-kívül eső ősök gyerekei elengedődnek — mérettől függetlenül, tisztán a mélység
-alapján. Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md).
+gyökér**, 49 szinttel a látómezőn kívül. Mostantól a folyosón (`FOLYOSO_SZINT = 4`,
+2026-08-12 óta — előtte 6) kívül eső ősök gyerekei elengedődnek — mérettől
+függetlenül, tisztán a mélység alapján. Részletek:
+[fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+⚠️ **A söprés így már 5 szint mélyen elindul** (a 6-os folyosónál Csaba egy egész
+munkamenetet végigtesztelt anélkül, hogy egyszer is lefutott volna). A 4 a
+LEGKISEBB biztonságos érték: a rajzolás `FELFELE_SZINTEK = 3` szinttel a horgony
+fölött kezd, és a söprés csak akkor helyes, ha amit töröl, az nem látszik.
 
 ⚠️ **2026-08-12 ÓTA TÖRLÜNK, NEM PARKOLTATUNK.** Korábban az elengedettek adata az
 ős `visszaszedettek` listájába került, hogy visszafelé ne kelljen újratölteni — de

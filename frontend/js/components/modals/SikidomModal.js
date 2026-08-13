@@ -58,6 +58,12 @@ const EGYIDEJU_BETOLTES = 3;
 const MAX_RAJZOLT = 30000;
 
 // Ennyi szinttel a horgony FÖLÖTT kezdjük a bejárást (hogy a környezet is látsszon)
+//
+// ⚠️ ÖSSZE VAN KÖTVE A `sikidomTar.FOLYOSO_SZINT`-tel: `FOLYOSO_SZINT > FELFELE_SZINTEK`.
+// Az ős-söprés helyessége azon áll, hogy amit elenged, az NEM LÁTSZIK. Ha ez a szám
+// eléri vagy meghaladja a folyosót, a söprés a képernyőn lévő síkidomokat törölné, a
+// szint azonnal újratöltendő állapotba állna, a következő képkocka letöltené, a
+// söprés megint törölné — letöltés–törlés hurok. Ha ezt emeled, a folyosót is emeld.
 const FELFELE_SZINTEK = 3;
 
 // ===== KIKAPCSOLVA: A KÉPERNYŐN KÍVÜLIEK ELTÜNTETÉSE =====
