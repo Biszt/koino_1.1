@@ -172,9 +172,25 @@ const MAG_MIN_ATMERO = 10;
 // bővül, ezek ELMOZDULNAK: hiányzott alóluk az összes kisebb testvér. Ez tervezett.
 // Csaba szava: „nem tudjuk megúszni az újrapakolást, csak ritkítani" — végtelen
 // testvérrel másképp nem is lehet.
-function pozicionalasiKeret(melyseg) {
-  if (!(melyseg >= 0)) return ELORETOLTES_DARAB;          // a horgony fölött nincs szűkítés
-  return Math.floor(ELORETOLTES_DARAB / Math.pow(SZINT_OSZTO, melyseg));
+//
+// ===== AZ ALAP A CSOMÓPONT SAJÁT PLAFONJA (Csaba mérése, 2026-08-12) =====
+// Az alap eddig a fix `ELORETOLTES_DARAB` volt, és ettől A LAPOZÁS NEM MŰKÖDÖTT:
+// a horgony szintjén a keret (5 000/20⁰ = 5 000) PONT ugyanaz a szám, mint a kezdő
+// `betoltesiPlafon`. A „további tartalmak" koppintás 10 000-re emelte a plafont, a
+// `Math.min(plafon, keret)` viszont azonnal visszanyomta 5 000-re — tehát a
+// koppintás után SEMMI nem történt. (Csaba a gyökér-testvéreknél vette észre, de
+// minden szinten így volt.)
+//
+// A keret mostantól a csomópont SAJÁT plafonjából számol. Így a koppintás EGYÜTT
+// emeli a letöltési plafont és a pozicionálási keretet — ami kötelező is: hiába
+// töltenénk le 10 000-et, ha a keret csak 5 000-et rakna le belőle.
+//
+// @param {number} melyseg   - a csomópont mélysége a HORGONYHOZ képest
+// @param {number} alapDarab - a csomópont `betoltesiPlafon`-ja (a lapozás adagja)
+// @returns {number} ennyi testvér kaphat helyet ezen a szinten
+function pozicionalasiKeret(melyseg, alapDarab = ELORETOLTES_DARAB) {
+  if (!(melyseg >= 0)) return alapDarab;                  // a horgony fölött nincs szűkítés
+  return Math.floor(alapDarab / Math.pow(SZINT_OSZTO, melyseg));
 }
 
 // ===== A MEGTARTÁSI FOLYOSÓ (Csaba, 2026-08-11 — a koino_1.0 nyomán) =====
@@ -1174,7 +1190,7 @@ class SikidomModal {
     // kezeli: ha a keretből kimaradókat a régi helyükön hagynánk, a most lerakottak
     // ÁTFEDNÉNEK velük. Így viszont a keret bővülésekor (szintváltáskor) a
     // várólistáról mind visszatérnek, és egyetlen menetben pakolódnak újra.
-    const keretDarab = pozicionalasiKeret(melyseg);
+    const keretDarab = pozicionalasiKeret(melyseg, cs.betoltesiPlafon);
 
     // ===== A KERET ODA-VISSZA JÁR (Csaba, 2026-08-12) =====
     // Itt korábban egy `if (cs.varolista.length === 0) return false;` állt, a
@@ -1914,21 +1930,27 @@ class SikidomModal {
         // borítja fel a rendet (a méret-tizedek 2,59 · 2,46 · 2,32 · … lesznek).
         const mennyiVanMar = cs.gyerekIdk.length + cs.varolista.length;
 
+        // A PLAFON = A KERET (2026-08-12). Fölösleges 5 000-et letölteni oda, ahol
+        // úgyis csak 250 (vagy 12) kap helyet — ezért a letöltés korlátja maga a
+        // pozicionálási keret. A keret pedig a csomópont SAJÁT `betoltesiPlafon`-jából
+        // számol, tehát a „további tartalmak" koppintás mindkettőt együtt emeli.
+        //
+        // ⚠️ ITT KORÁBBAN `Math.min(cs.betoltesiPlafon, pozicionalasiKeret(...))` állt,
+        // és ettől A LAPOZÁS NEM MŰKÖDÖTT: a horgony szintjén a keret pont ugyanaz a
+        // szám volt, mint a kezdő plafon, tehát a `min` a megemelt plafont azonnal
+        // visszanyomta. Lásd a `pozicionalasiKeret` fejlécét.
+        const plafon = pozicionalasiKeret(elem.melyseg, cs.betoltesiPlafon);
+
         // EGY KOPPINTÁS = EGY ADAG. Amint a kért adag megérkezett (elértük a
         // plafont), a kérés-mód lezárul, és a következő adaghoz új koppintás kell.
         // Enélkül a csomópont VÉGLEG küszöb nélküli maradna: a méret szerinti
         // visszaszedés bármikor a plafon alá viheti a darabszámot, és onnantól
         // magától lapozna tovább — pedig ez az e-ember döntése.
-        if (cs.tovabbiKert && mennyiVanMar >= cs.betoltesiPlafon) cs.tovabbiKert = false;
-
-        // A plafon már NEM az állandó, hanem a csomópont sajátja: a „további
-        // tartalmak" koppintás adagonként emeli (lásd `betoltesiPlafon`).
         //
-        // A MÉLYEBB SZINTEKEN a POZICIONÁLÁSI KERET a szűkebb plafon: fölösleges
-        // 5 000-et letölteni oda, ahol úgyis csak 250 (vagy 12) kap helyet. A kettő
-        // közül a kisebbik érvényes — így a szint egyetlen menetben megkapja a
-        // keretnyi testvért, és utána MEGÁLL.
-        const plafon = Math.min(cs.betoltesiPlafon, pozicionalasiKeret(elem.melyseg));
+        // A KERETHEZ mérünk, nem a nyers plafonhoz: egy mélyebb szinten a keret a
+        // kisebb szám, oda a nyers plafonnyi testvér SOSEM érkezne meg, tehát a
+        // kérés-mód örökre nyitva maradna.
+        if (cs.tovabbiKert && mennyiVanMar >= plafon) cs.tovabbiKert = false;
 
         kellBetoltes = vanMegBetoltetlen && mennyiVanMar < plafon &&
           (fokuszban || kuszob < cs.betoltottKuszob);
@@ -1976,7 +1998,7 @@ class SikidomModal {
       // Enélkül a kizoomolás után az 5 000 lerakott gyerek OTT MARADNA azon a
       // szinten, amelyiknek már csak 250 jár: a csomópont épp azért nem kerülne a
       // pakolandók közé, mert kifelé jövet a gyerekei a minimum méret alá estek.
-      const keretSzukult = pozicionalasiKeret(elem.melyseg) < cs.utolsoKeret;
+      const keretSzukult = pozicionalasiKeret(elem.melyseg, cs.betoltesiPlafon) < cs.utolsoKeret;
 
       const pakolasKell = keretSzukult || (cs.varolista.length > 0 && eleriAMinimumot);
 
