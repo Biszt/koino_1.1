@@ -1678,28 +1678,38 @@ végig 77 és 3 437 között maradt (a javítás előtt 1,81·10¹⁴-ig szaladt
 A tár eddig monoton nőtt: a 49. szinten mérve **5 094** csomópontból **5 040 volt
 gyökér**, 49 szinttel a látómezőn kívül. Mostantól a folyosón (`FOLYOSO_SZINT = 6`)
 kívül eső ősök gyerekei elengedődnek — mérettől függetlenül, tisztán a mélység
-alapján. Az adatuk megmarad, tehát visszafelé nincs újraletöltés. Részletek:
-[fejlesztesi_terv.md](fejlesztesi_terv.md).
+alapján. Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+⚠️ **2026-08-12 ÓTA TÖRLÜNK, NEM PARKOLTATUNK.** Korábban az elengedettek adata az
+ős `visszaszedettek` listájába került, hogy visszafelé ne kelljen újratölteni — de
+így az adat SOSEM hagyta el a rendszert, csak vándorolt, és a hosszú böngészés
+korlátlanul halmozott. Mostantól a folyosón kívül minden törlődik, a szint pedig
+újratölthető állapotba áll.
 
 **Amit a böngészőben nézni kell:**
 
 1. **A kép nem változhat.** Menj le a mély láncban 10-15 szintet, majd gyere vissza.
    A síkidomoknak PONTOSAN ott kell lenniük, ahol lefelé menet voltak — se ugrás,
-   se átrendeződés. Ez a legfontosabb: a söprés a sorrend közepéből is elenged,
-   és csak akkor helyes, ha a visszaút hiánytalan.
-2. **A konzolban** `SikidomModal._osSopres` sorok jelennek meg lefelé haladva
-   (`elengedve`, `parkolvaOsszesen`), kifelé jövet pedig `_kiparkolas`
-   (`visszaadva`). A kettőnek párban kell állnia.
-3. **Nem szabad újraletöltésnek indulnia** visszafelé: a parkolt szint adata
-   megvan. Ha a hálózaton új `sikidom/gyerekek` kérés megy ugyanarra a szülőre,
-   az hiba — jelezd.
+   se átrendeződés. Ez a legfontosabb: a söprés mindent elenged a gerinc-gyereken
+   kívül, és csak akkor helyes, ha a visszaút hiánytalan (a szint EGYBEN töltődik újra).
+2. **A konzolban** `sikidomTar.osSopres` sorok jelennek meg lefelé haladva
+   (`torolveCsomopont`, `torolveAdat`, `tarMeret`). A `tarMeret`-nek CSÖKKENNIE kell.
+3. **Visszafelé ÚJRALETÖLTÉS INDUL** — ez most már a helyes viselkedés (korábban
+   hiba lett volna). A hálózaton `sikidom/gyerekek` kérés megy ugyanarra a szülőre,
+   és a kép ugyanaz lesz, mint lefelé menet.
 4. **A pakolási lyuk és a „további tartalmak" ajánlat** ugyanúgy viselkedjen, mint
    eddig — a söprés nem érintheti a folyosón belüli szinteket.
+5. **HOSSZÚ BÖNGÉSZÉS (ÚJ):** járj be 10-15 KÜLÖNBÖZŐ ágat oda-vissza, majd térj
+   vissza az elsőhöz. A nézetnek ugyanolyan fürgének kell lennie, mint az elején —
+   ha lassul, a felhalmozódás visszatért. A konzolban a `tarMeret` nem nőhet
+   monoton.
 
-*Böngésző nélkül mérve (`tools/sikidomParkolasProba.mjs`, 16 állítás): öt eseten
+*Böngésző nélkül mérve (`tools/sikidomParkolasProba.mjs`, 45 állítás): öt eseten
 (300–3000 elem, változatos / vegyes / csupa holtverseny, maggal és anélkül) a
-parkolás után egyetlen kör sem mozdul el. Ellenpróba: hiányos készlettel pakolva
-600 kör mozdul el — ezért kötelező a szintet EGYBEN visszaadni.*
+söprés után egyetlen kör sem mozdul el. Ellenpróba: hiányos készlettel pakolva
+600 kör mozdul el — ezért kötelező a szintet EGYBEN újratölteni. A tár-modul valódi
+függvényeire külön szakasz méri, hogy az ÖSSZES tárolt adat csökken (250 → 34), nem
+csak átköltözik.*
 
 
 ### Síkidom nézet — RÉSZLETESSÉGI FOKOZAT és a két üzemmód (2026-08-11)

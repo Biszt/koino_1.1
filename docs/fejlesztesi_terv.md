@@ -3292,3 +3292,131 @@ A szemrevételezés valódi adaton — a rajzolást és az események bekötés�
 tudja igazolni. Amit érdemes végignézni: feliratok · mellék-ikonok · üres mag és a
 „további tartalmak" ajánlat · a megjelölt gyűrűje · egy/kétujjas gesztusok ·
 görgő és csippentés · koppintás → adatlap → „Pakli nézet" · mély nagyítás.
+
+---
+
+## ✅ Síkidom nézet — AZ ADAT-FELHALMOZÓDÁS MEGSZÜNTETÉSE (Csaba, 2026-08-12)
+
+Csaba megfigyelése: „amikor ráközelítek az 5 000 gyerekes síkidomra, amitől
+pozicionálja 5 000-ig a tartalmakat, akkor miután kizoomolok belőle, újra csak
+250-et kéne pozicionálni." Majd a lényeg: **„a végtelen böngészés ne okozzon
+végtelen felhalmozódást az adatokban."**
+
+### A diagnózis: két külön hiba, közös gyökérrel
+
+**1. A pozicionálási keret EGYIRÁNYÚ RACSNI volt.** Nőni tudott, zsugorodni nem.
+Két őrszem zárta ki — a `_lathatoLista` csak várólistás csomópontot tett a
+`pakolandok` közé, az `_ujrapakolas` pedig üres várólistánál azonnal kilépett, és
+a keret kiszámítása MINDKETTŐ mögött állt. A zsugorítás kódja megvolt, csak
+elérhetetlen.
+
+**2. AZ ADATNAK NEM VOLT KIVEZETŐ ÚTJA.** A három tár — `_tar`, `varolista`,
+`visszaszedettek` — csak egymásnak adogatta a tartalmát:
+
+| honnan | hova | mikor |
+|---|---|---|
+| `visszaszedettek` | `varolista` | `visszahozatal`, `kiparkolas` |
+| `varolista` | `_tar` | `_ujrapakolas` |
+| `_tar` | `visszaszedettek` | `visszaszedes`, `osSopres` |
+
+Az egyetlen valódi kivezető út a `reszfaTorlese` két sora, amit csak a `takaritas`
+hív úgy, hogy az adat ne máshova kerüljön — **és a `takaritas` ki van kapcsolva**
+(`AGAK_ELENGEDESE = false`, egy 2026-08-06-i döntés néma mellékhatásaként).
+
+Ezért a mért „tár 5 094 → 52" javulás igaz volt, **de az elengedettek adata nem
+tűnt el, csak átköltözött** az ősök `visszaszedettek` listájába.
+
+### A megoldás: invariáns, nem plafon
+
+Csaba elvetette a mennyezet-beállítást: „nem a mennyezet beállítása a lényeg, hanem
+hogy a logikája olyan legyen, hogy ne tudjon felhalmozódni." Ebből lett a szabály:
+
+> **A tárolt adat mennyisége a MOSTANI horgony helyzetének függvénye, ne a bejárás
+> történetéé.**
+
+Ez szerkezeti tulajdonság: ha teljesül, mindegy, hogy tíz percet vagy három órát
+böngészel — ugyanannál a horgonynál ugyanannyi adat van a memóriában. A korlát
+ebből *következik*, nem beállítani kell.
+
+### MIÉRT SZABAD TÖRÖLNI
+
+A pakolás **determinisztikus a teljes készletből** (a pakolás- és a söprés-próba is
+bitre azonos helyeket mér). **Nem a megőrzött pozíciók adják a kép állandóságát**,
+hanem az, hogy a TELJES keretnyi készlet EGYBEN jön vissza — a betöltő pedig
+pontosan így dolgozik: egy szint küszöb nélkül, egyetlen menetben kéri le a
+keretnyi testvért. A veszélyes RÉSZLEGES készlet (mérve: 600 kör mozdul el) nem áll
+elő.
+
+### A második érv: a FRISSESSÉG
+
+Ez nem mellékhatás, hanem önálló indok. Eddig egy hosszú munkamenetben a letöltött
+adat **véglegesen elavult**: ha közben valaki tudatpontot rendezett át vagy új
+tartalmat hozott létre abban a csoportban, a nézet soha nem vette észre, mert a
+`visszaszedettek`-ből töltött vissza, nem a backendről. A törlés + újratöltés ezt
+magától megoldja.
+
+**A felhalmozódás és az elavulás ugyanannak a hibának a két arca** — az adat sosem
+hagyta el a rendszert.
+
+### A két javítás
+
+**1. commit `1adc9eb` — a keret zsugorodni is tud.** Az `_ujrapakolas` korai
+kilépése törölve, a keret kiszámítása fölé került; a meglévő őrszem mindkét esetet
+lefedi. A `_lathatoLista` pedig a nyesést akkor is kéri, ha nincs várólista és ha a
+gyerekek a minimum méret alá estek — az a szabály a FÖLÖSLEGES munka ellen való, a
+nyesés viszont kevesebb munkát jelent, nem többet.
+
+**2. commit `81b7bfa` — az ős-söprés töröl, nem parkoltat.** A folyosón kívül a
+csomópontok részfástul mennek, a szint pedig újratölthető állapotba áll
+(`szintUjratoltesre`): kurzor a rangsor elejére, küszöb vissza, **a lapozás plafonja
+is** (különben a „további tartalmak" koppintásokkal felhizlalt plafon azon az úton
+halmozna tovább), az össz-pont újra kérdés.
+
+Ezzel a **parkolás gépezete feleslegessé vált**: `kiparkolas`, a `parkolt` mező és a
+`visszahozatal` őrszeme elhagyva. A `visszaszedettek`-be mostantól CSAK a
+`visszaszedes` tesz, az pedig szigorúan a sorrend végéről — abból adagolva
+visszaadni biztonságos.
+
+### A mérések
+
+**A racsni, közvetlenül** (5 000 gyerekes csomópont, valódi `_ujrapakolas`):
+
+| mélység | lerakva | várólistán | keret |
+|---|---|---|---|
+| 0 (horgony) | 5 000 | 0 | 5 000 |
+| 1 (kizoomolás) | **250** | 4 750 | 250 |
+| 2 | **12** | 4 988 | 12 |
+| vissza 0 | 5 000 | 0 | 5 000 |
+
+A körút után **mind az 5 000 hely BITRE AZONOS** a kiindulóval, és ugyanazzal a
+mélységgel a második hívás már nem dolgozik (nincs körözés képkockánként).
+
+**A söprés, a valódi feldolgozáson át:**
+- 12 szint mély gerinc, szintenként 40 testvérrel, adattal a két listán:
+  **1 681 → 708** az első bejárás után, és **pontosan 708 mind a 10 oda-vissza kör
+  végén**.
+- 20 KÜLÖNBÖZŐ mély ág bejárása: **108 241 → 3 997**, és mind a 20 látogatás után
+  **3 997** — a szám a bejárás hosszától független.
+
+**A mérőpróba** (`sikidomParkolasProba.mjs`): **43 → 45 állítás**. Az új állítások
+közvetlenül az invariánst mérik: az elengedettek NEM kerültek át a
+`visszaszedettek`-be · a várólista is üres · az ÖSSZES tárolt adat CSÖKKENT
+(250 → 34), nem csak átköltözött · a szint újratölthető állapotban van · a második
+söprés már nem dolgozik.
+
+### ⚠️ Amit NEM sikerült megmérni
+
+Egy olyan szintetikus böngészés-próbát, ami a RÉGI és az ÚJ viselkedést
+**megkülönbözteti**. A letöltési utat nem sikerült hűen szimulálni, e nélkül pedig
+mindkét változat ugyanazt a számot adja. A különbség így a mérőpróba állításain és a
+böngészős szemrevételezésen múlik — nem egy összehasonlító számon.
+
+Egy mérés közben tanulság is lett: a böngésző a modal ALMODULJAIT gyorsítótárazta
+(a `?v=` csak a fő fájl URL-jét frissíti), ezért egy ideig a RÉGI tár-modult mértem
+frissnek hitt kód helyett. Modul-mérésnél teljes újratöltés kell.
+
+### Ami Csabára vár
+
+Böngészős szemrevételezés valódi adaton: ráközelíteni az 5 000 gyerekes síkidomra,
+kizoomolni, és megnézni, hogy (a) a kép nem esik szét, (b) visszaközelítve ugyanaz a
+kép fogad, (c) hosszabb böngészés után sem lassul be a nézet.
