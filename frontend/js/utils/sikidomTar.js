@@ -15,9 +15,22 @@
 // Két, egymást NEM helyettesítő szabály tartja korlátosan a tárat:
 //
 //   MÉRET  (`visszaszedes`) — egy szinten BELÜL hány testvér marad. A kanonikus
-//          sorrend VÉGÉRŐL, összefüggő farokként engedünk el.
+//          sorrend VÉGÉRŐL, összefüggő farokként engedünk el; az ADATUK megmarad
+//          (`visszaszedettek`), mert ugyanazon a szinten ki-be zoomolva gyakran
+//          kellenek vissza.
 //   MÉLYSÉG (`osSopres`)    — mely SZINTEK maradnak egyáltalán. A folyosón kívül
-//          minden megy, mérettől függetlenül.
+//          minden megy, mérettől függetlenül — és ott TÖRLÜNK, nem parkoltatunk.
+//
+// ===== AZ INVARIÁNS (Csaba, 2026-08-12) =====
+// „A végtelen böngészés ne okozzon végtelen felhalmozódást az adatokban."
+//
+//   A tárolt adat mennyisége a MOSTANI horgony helyzetének függvénye,
+//   NEM a bejárás történetéé.
+//
+// Ez nem plafon, hanem szerkezeti tulajdonság: bármeddig böngészel, ugyanannál a
+// horgonynál ugyanannyi adat van a memóriában. A korábbi modellben az adat SOSEM
+// hagyta el a rendszert — a három tár (`_tar`, `varolista`, `visszaszedettek`)
+// csak egymásnak adogatta —, ezért a bejárás hosszával nőtt.
 //
 // ===== MIÉRT NEM VÁLTOZIK A KÉP =====
 // A pakoló NÖVEKVŐ méret szerint halad, és minden elem helye kizárólag a nála
@@ -26,13 +39,13 @@
 // Ez a modul mindenhol ezt a szabályt őrzi — a `pakolasiSorrend`-et használja,
 // nem egy külön leírt rendezést.
 //
-// ⚠️ EGY KIVÉTELLEL: az ős-söprés a sorrend KÖZEPÉBŐL is elenged. Ez ott szabad,
-// mert az a szint NEM látszik, és amíg `parkolt`, nem is pakoljuk újra; visszafelé
-// jövet pedig a szintet EGYBEN adjuk vissza (`kiparkolas`). Ezt az őrszemet a
-// `visszahozatal` első sora tartja: parkolt szintből adagolva TILOS visszaadni.
+// És ezért szabad TÖRÖLNI is: nem a megőrzött pozíciók adják a kép állandóságát,
+// hanem az, hogy a TELJES keretnyi készlet EGYBEN jön vissza. A veszélyes eset a
+// RÉSZLEGES készlet (mérve: 600 kör mozdul el) — az viszont nem áll elő, mert a
+// betöltő egy szintet küszöb nélkül, egyetlen menetben tölt fel.
 //
 // SZÁNDÉKOSAN nincs DOM-függése: Node-ból egység-tesztelhető — a mérőpróbája a
-// `backend/tools/sikidomParkolasProba.mjs` (16 állítás).
+// `backend/tools/sikidomParkolasProba.mjs` (45 állítás).
 // Használja: SikidomModal.js (a Síkidom nézet).
 
 // ===== IMPORTOK =====
@@ -318,6 +331,57 @@ export function visszaszedes({ tar, horgonyId, nezet, kepernyoMeret }) {
   return true;
 }
 
+// ===== EGY SZINT ÚJRATÖLTHETŐ ÁLLAPOTBA ÁLLÍTÁSA =====
+// Az ős-söprés után a csomópontnak úgy kell kinéznie, mintha még sosem töltöttük
+// volna be — egyetlen kivétellel: a GERINC-GYEREK marad, mert rajta vezet a
+// keret-lánc lefelé.
+//
+// ⚠️ AMIT SZÁNDÉKOSAN NEM NULLÁZUNK: a `legerosebbGyerekPont`. Az a gyökér-szint
+// MÉRTÉKEGYSÉGE (a rangsor eleje), és ha elmozdulna, minden gyökér mérete
+// megváltozna a visszatéréskor.
+//
+// @param {Map} tar
+// @param {Object} cs
+// @param {string} megtartottId - az egyetlen megmaradó gyerek (a gerinc-gyerek)
+// @param {number} alapPlafon   - a betöltési plafon alapértéke (ELORETOLTES_DARAB)
+function szintUjratoltesre(tar, cs, megtartottId, alapPlafon) {
+  const megtartott = megtartottId ? tar.get(megtartottId) : null;
+
+  cs.gyerekIdk = megtartott ? [megtartott.id] : [];
+  cs.varolista = [];
+  cs.varolistaRelTerulet = 0;
+  cs.visszaszedettek = [];
+
+  cs.helyezettIdk = new Set(megtartott ? [megtartott.id] : []);
+  cs.helyezettPont = megtartott?.pont ?? 0;
+  cs.betoltottGyerekPont = megtartott?.pont ?? 0;
+
+  // A letöltés a rangsor ELEJÉRŐL indul újra, küszöb nélkül
+  cs.betoltottKuszob = Infinity;
+  cs.mindenLetoltve = false;
+  cs.kurzorPont = null;
+  cs.kurzorId = null;
+
+  // A LAPOZÁS PLAFONJA IS VISSZAÁLL. Enélkül a „további tartalmak" koppintásokkal
+  // felhizlalt plafon (adagonként +5 000) örökre a csomóponton maradna, és
+  // visszatéréskor újra annyit töltene le — vagyis a felhalmozódás egy másik
+  // úton térne vissza.
+  cs.betoltesiPlafon = alapPlafon;
+  cs.tovabbiKert = false;
+
+  // A backend ÖSSZES-pontja is újra kérdés lesz. Ez nem csak takarítás: ha közben
+  // változott a csoport (tudatpont-átrendezés, új tartalom), a visszatéréskor a
+  // FRISS állapotot kapjuk — a régi modellben a `visszaszedettek`-ből töltöttünk
+  // vissza, tehát az adat egy hosszú munkamenetben véglegesen elavult.
+  cs.osszesGyerekPont = 0;
+
+  // A keret-őrszem is induljon tiszta lappal
+  cs.utolsoKeret = -1;
+  cs.utolsoVarolistaDarab = -1;
+
+  meretekUjramerese(tar, cs);
+}
+
 // ===== MÉLYSÉG SZERINTI ŐS-SÖPRÉS (Csaba, 2026-08-11) =====
 // Felelősség: a folyosón KÍVÜL eső ősök gyerekeit elengedni — mérettől
 // függetlenül. Lásd `FOLYOSO_SZINT`.
@@ -326,22 +390,33 @@ export function visszaszedes({ tar, horgonyId, nezet, kepernyoMeret }) {
 //   - a GERINCET (a horgony és minden őse): rájuk épül a keret-számítás;
 //   - a folyosón belüli szinteket: ott a méret-alapú `visszaszedes` dolgozik.
 //
-// ⚠️ MIÉRT SZABAD ITT A SORREND KÖZEPÉBŐL IS ELENGEDNI. A `visszaszedes`-nél az
-// „összefüggő farok" szabálya azért kötelező, mert ott a szint LÁTSZIK: ha a
-// gerinc-gyereknél KISEBB testvéreket vennénk el, a gerinc-gyerek helye
-// elmozdulna, és a kép kirántana a kezed alól. A folyosón kívüli szint viszont
-// NINCS a képen (a `_lathatoLista` csak `FELFELE_SZINTEK = 3` szinttel a horgony
-// fölött kezd), és amíg parkol, NEM IS PAKOLJUK újra. Visszafelé jövet pedig a
-// szintet EGYBEN állítjuk vissza (`kiparkolas`), és a pakolás a TELJES
-// készletből determinisztikus — tehát pontosan ugyanazokat a helyeket adja.
+// ===== TÖRLÜNK, NEM PARKOLTATUNK (Csaba, 2026-08-12) =====
+// Ez a metódus korábban az elengedettek ADATÁT átrakta a `visszaszedettek`-be,
+// hogy visszatéréskor ne kelljen újra letölteni. A tár mérete így csökkent — az
+// ADAT viszont sosem hagyta el a rendszert, csak vándorolt a listák között.
+// Végtelen böngészésnél tehát korlátlanul halmozódott.
+//
+// Csaba szabálya: „horgonyváltáskor akár törölni is lehetne azokat a pozíciókat,
+// amiket mentettünk és nem kellenek, mert az újrapozicionálás elég gyors."
+//
+// MIÉRT SZABAD EZ: a pakolás DETERMINISZTIKUS a teljes készletből (a pakolás- és
+// a söprés-próba is bitre azonos helyeket mér). Nem a megőrzött pozíciók adják a
+// kép állandóságát, hanem az, hogy a TELJES keretnyi készlet EGYBEN jön vissza —
+// a betöltő pedig pontosan így dolgozik: egy szint küszöb nélkül, egy menetben
+// kéri le a keretnyi testvért. A veszélyes RÉSZLEGES készlet nem áll elő.
+//
+// EBBŐL AZ IS KÖVETKEZIK, hogy nincs többé „parkolt" állapot és kiparkolás: a
+// szint egyszerűen újratölthető állapotba áll (lásd `szintUjratoltesre`).
 //
 // A gerinc-gyerek maradnia KELL a `gyerekIdk`-ban: rajta keresztül vezet a
 // keret-lánc lefelé.
 //
-// @param {Map} tar
-// @param {string} horgonyId
+// @param {Object} beallitasok
+// @param {Map} beallitasok.tar
+// @param {string} beallitasok.horgonyId
+// @param {number} beallitasok.alapPlafon - a betöltési plafon alapértéke
 // @returns {boolean} változott-e valami
-export function osSopres(tar, horgonyId) {
+export function osSopres({ tar, horgonyId, alapPlafon }) {
   let valtozott = false;
 
   const gerinc = gerincLanc(tar, horgonyId);
@@ -353,77 +428,35 @@ export function osSopres(tar, horgonyId) {
 
     // a gerinc-gyerek: ő vezet lefelé, ő marad
     const gerincGyerekId = gerinc[i - 1];
-    if (os.gyerekIdk.length <= 1) continue;      // nincs mit elengedni
+
+    // Nincs mit elengedni? A HÁROM tárat együtt nézzük — a lerakottakon kívül a
+    // várólista és a visszaszedettek is adatot tartanak, azoknak is menniük kell.
+    const vanMitElengedni = os.gyerekIdk.some(gid => gid !== gerincGyerekId) ||
+      os.varolista.length > 0 || os.visszaszedettek.length > 0;
+    if (!vanMitElengedni) continue;
 
     const elengedendok = os.gyerekIdk
       .filter(gid => gid !== gerincGyerekId)
       .map(gid => tar.get(gid))
       .filter(Boolean);
 
-    if (elengedendok.length === 0) continue;
-
+    // A LERAKOTTAK RÉSZFÁSTUL MENNEK — az adatuk sem marad meg sehol
     for (const gy of elengedendok) {
       reszfaTorlese(tar, gy);
       tar.delete(gy.id);
-
-      // Az ADAT megmarad — visszatéréskor nem kell újra letölteni
-      os.visszaszedettek.push({
-        id: gy.id, entitasTipus: gy.entitasTipus, cim: gy.cim, pont: gy.pont,
-        relR: gy.relR, letrehozva: gy.letrehozva, vanGyereke: gy.vanGyereke,
-        kategoriaIkonok: gy.kategoriaIkonok, tipusIkon: gy.tipusIkon,
-        javaslatTipus: gy.javaslatTipus
-      });
-
-      os.helyezettIdk.delete(gy.id);
-      os.helyezettPont = Math.max(0, os.helyezettPont - (gy.pont ?? 0));
     }
 
-    os.gyerekIdk = [gerincGyerekId];
+    const adatElengedve = elengedendok.length +
+      os.varolista.length + os.visszaszedettek.length;
 
-    // A PARKOLÁS JELZÉSE. Amíg ez igaz, a szint készlete HIÁNYOS a sorrend
-    // közepén is — tehát ezen a csomóponton PAKOLNI TILOS, amíg vissza nem
-    // állítottuk (lásd `kiparkolas`).
-    os.parkolt = true;
+    szintUjratoltesre(tar, os, gerincGyerekId, alapPlafon);
     valtozott = true;
 
     console.log('sikidomTar.osSopres', {
-      os: os.id, szintTavolsag: i, elengedve: elengedendok.length,
-      parkolvaOsszesen: os.visszaszedettek.length
-    });
-  }
-
-  return valtozott;
-}
-
-// ===== KIPARKOLÁS: a parkolt szint TELJES visszaállítása =====
-// Amikor egy parkolt ős visszakerül a folyosóba, a készletét EGYBEN adjuk vissza
-// a várólistára — nem adagolva, ahogy a `visszahozatal` teszi. Ez azért fontos,
-// mert a parkoláskor a sorrend KÖZEPÉBŐL is engedtünk el: csak a teljes készlet
-// ad újra azonos helyeket.
-//
-// @param {Map} tar
-// @param {string} horgonyId
-// @returns {boolean} változott-e valami
-export function kiparkolas(tar, horgonyId) {
-  let valtozott = false;
-
-  const gerinc = gerincLanc(tar, horgonyId);
-
-  // A folyosóba visszakerült ősök: a gerinc első FOLYOSO_SZINT eleme
-  for (let i = 0; i < Math.min(FOLYOSO_SZINT, gerinc.length); i++) {
-    const os = tar.get(gerinc[i]);
-    if (!os || !os.parkolt) continue;
-
-    if (os.visszaszedettek.length > 0) {
-      os.varolista.push(...os.visszaszedettek.splice(0));
-      os.varolistaRelTerulet = os.varolista
-        .reduce((s, v) => s + Math.PI * (v.relR ?? 0) * (v.relR ?? 0), 0);
-    }
-    os.parkolt = false;
-    valtozott = true;
-
-    console.log('sikidomTar.kiparkolas', {
-      os: os.id, visszaadva: os.varolista.length
+      os: os.id, szintTavolsag: i,
+      torolveCsomopont: elengedendok.length,
+      torolveAdat: adatElengedve,
+      tarMeret: tar.size
     });
   }
 
@@ -446,11 +479,15 @@ export function kiparkolas(tar, horgonyId) {
 export function visszahozatal(cs, kepSugar, kepernyoMeret) {
   if (cs.visszaszedettek.length === 0 || !(kepSugar > 0)) return false;
 
-  // ŐRSZEM: parkolt szinten a `visszaszedettek` a sorrend KÖZEPÉRŐL is tartalmaz
-  // elemeket, ezért ADAGOLVA nem adható vissza — a hiányos készlet szétvinné a
-  // helyeket (mérve: 600 kör mozdult el, a legnagyobb eltérés a szülő sugarának
-  // 86%-a). A parkolt szintet egyedül a `kiparkolas` állítja vissza, egyben.
-  if (cs.parkolt) return false;
+  // ⚠️ MIÉRT ADHATÓ VISSZA ADAGOLVA. A `visszaszedettek`-be 2026-08-12 óta CSAK a
+  // `visszaszedes` tesz, az pedig szigorúan a kanonikus sorrend VÉGÉRŐL enged el
+  // (összefüggő farok). Egy ilyen lista eleje tehát mindig a legnagyobbak
+  // összefüggő darabja — abból adagolva visszaadni biztonságos.
+  //
+  // Korábban az ős-söprés is ide tett, a sorrend KÖZEPÉRŐL is, ezért kellett egy
+  // `parkolt` őrszem: a hiányos készlet szétvitte volna a helyeket (mérve: 600 kör
+  // mozdult el). Az ős-söprés azóta TÖRÖL parkoltatás helyett, tehát a hiányos
+  // készlet nem áll elő, és az őrszemre sincs szükség.
 
   const hatar = kepernyoMeret * VISSZASZEDES_ATMERO_ARANY * 0.8;
 
@@ -519,7 +556,7 @@ export function takaritas({ tar, horgonyId, kepkocka, gyokerId }) {
 // ===== EXPORTÁLÁS =====
 export default {
   gerincLanc, reszfaTorlese, meretekUjramerese,
-  visszaszedes, osSopres, kiparkolas, visszahozatal, takaritas,
+  visszaszedes, osSopres, visszahozatal, takaritas,
   VISSZASZEDES_ATMERO_ARANY, MEGTARTOTT_DARAB, FOLYOSO_SZINT,
   AGAK_ELENGEDESE, ELENGEDES_TURELEM
 };

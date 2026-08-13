@@ -12,7 +12,7 @@ import { szuloKeretben, horgonyValtasNezet, kepernyore, horgonyValtasSzukseges,
          keretbenCsomopont }
   from '../../utils/sikidomHorgony.js';
 import { SikidomRajzolo, TOVABBI_FELIRAT_MIN_SUGAR } from '../../utils/sikidomRajzolo.js';
-import { visszaszedes, osSopres, kiparkolas, visszahozatal, takaritas,
+import { visszaszedes, osSopres, visszahozatal, takaritas,
          reszfaTorlese, meretekUjramerese }
   from '../../utils/sikidomTar.js';
 import { gorgoSzorzo, kifeleHatarolas, befeleHatarolas, gesztusAllapot, ZOOM_LEPES }
@@ -713,11 +713,6 @@ class SikidomModal {
       // utoljára, és ő jön vissza először).
       visszaszedettek: [],
 
-      // PARKOLT-E EZ A SZINT (lásd `_osSopres`)? Ha igen, a `visszaszedettek` a
-      // sorrend KÖZEPÉRŐL is tartalmaz elemeket, tehát a készlet hiányos —
-      // ilyenkor PAKOLNI TILOS, amíg a `_kiparkolas` egyben vissza nem adta.
-      parkolt: false,
-
       // A pozicionálási keret őrszemének állapota (lásd `_ujrapakolas`): mekkora
       // kerettel és mekkora várólistával dolgoztunk utoljára.
       utolsoKeret: -1,
@@ -1078,10 +1073,9 @@ class SikidomModal {
     const { kepSugar } = kep || {};
     if (!cs || !(kepSugar > 0)) return false;
 
-    // ŐRSZEM: parkolt szinten a készlet a sorrend közepén is hiányos (lásd
-    // `_osSopres`), ezért a pakolás rossz helyeket adna. A `_kiparkolas` adja
-    // vissza egyben, mielőtt ez a szint újra sorra kerülne.
-    if (cs.parkolt) return false;
+    // (Itt korábban egy `parkolt` őrszem állt: a parkolt szint készlete a sorrend
+    // közepén is hiányos volt, tehát pakolni tilos volt rajta. Az ős-söprés
+    // 2026-08-12 óta TÖRÖL parkoltatás helyett, így hiányos készlet nem áll elő.)
 
     const vilagSzint = cs.id === VILAG;
     if (!((vilagSzint ? cs.legerosebbGyerekPont : cs.pont) > 0)) return false;
@@ -2171,11 +2165,11 @@ class SikidomModal {
   _tennivalokFeldolgozasa() {
     if (!this.kontextus || !this._szelesseg) return;
 
-    // KIPARKOLÁS ELSŐKÉNT: ha kifelé jövet egy parkolt ős visszakerült a
-    // folyosóba, a készletét EGYBEN visszaadjuk — még a lerakás előtt, hogy a
-    // most következő pakolás már a TELJES sorból dolgozzon (csak úgy kapjuk
-    // vissza pontosan a régi helyeket).
-    let valtozott = kiparkolas(this._tar, this._horgony);
+    // (Itt korábban a KIPARKOLÁS állt: a folyosóba visszakerült parkolt ős
+    // készletét adta vissza egyben. Az ős-söprés 2026-08-12 óta törli az adatot
+    // parkoltatás helyett, tehát nincs mit visszaadni — a szint a szokásos úton,
+    // FRISSEN töltődik újra.)
+    let valtozott = false;
 
     const { betoltendok, pakolandok } = this._lathatoLista();
     this._allapotNaplo();
@@ -2196,7 +2190,11 @@ class SikidomModal {
 
     // ŐS-SÖPRÉS: a folyosón kívüli szintek elengedése, MÉLYSÉG szerint. A
     // visszaszedés UTÁN fut, hogy a két szabály ne dolgozzon ugyanazon a szinten.
-    if (osSopres(this._tar, this._horgony)) valtozott = true;
+    if (osSopres({
+      tar: this._tar,
+      horgonyId: this._horgony,
+      alapPlafon: ELORETOLTES_DARAB
+    })) valtozott = true;
 
     // ===== A KEZDŐ FÁZIS LEZÁRÁSA =====
     // Akkor vagyunk készen, ha SEMMI nincs folyamatban: nem fut letöltés, nincs

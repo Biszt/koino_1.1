@@ -1,27 +1,36 @@
 // backend/tools/sikidomParkolasProba.mjs
 
-// ===== A PARKOLÁS MÉRŐPRÓBÁJA =====
+// ===== AZ ŐS-SÖPRÉS MÉRŐPRÓBÁJA =====
+//
+// ⚠️ A FÁJL NEVE TÖRTÉNETI. 2026-08-12-ig az ős-söprés PARKOLTATOTT: az
+// elengedettek adatát az ős `visszaszedettek` listájába tette, hogy visszatéréskor
+// ne kelljen újra letölteni. Csaba döntése óta TÖRLÜNK helyette (lásd lentebb) —
+// a próba viszont ugyanazt a szabályt méri, ezért a neve maradt.
 //
 // Felelősség: böngésző nélkül bebizonyítani, hogy a mélység szerinti ős-söprés
-// (`SikidomModal._osSopres`) NEM VÁLTOZTATJA MEG a helyeket.
+// (`sikidomTar.osSopres`) NEM VÁLTOZTATJA MEG a helyeket.
 //
 // MIÉRT EZ A LEGFONTOSABB ELLENŐRZÉS
-// A `_visszaszedes` szigorúan a kanonikus sorrend VÉGÉRŐL enged el — az „összefüggő
+// A `visszaszedes` szigorúan a kanonikus sorrend VÉGÉRŐL enged el — az „összefüggő
 // farok" szabálya azért kötelező, mert a szint LÁTSZIK, és ha a sorrend közepéből
 // vennénk el, a maradék fele új helyre kerülne (mérve: 599/1199 síkidom mozdult el).
 //
-// Az ős-söprés viszont a sorrend KÖZEPÉBŐL is elenged: egy parkolt szinten CSAK a
-// gerinc-gyerek marad. Ezt egyetlen dolog teszi megengedhetővé:
+// Az ős-söprés viszont MINDENT elenged a gerinc-gyereken kívül. Ezt egyetlen dolog
+// teszi megengedhetővé:
 //
-//   a parkolt szint NEM LÁTSZIK és NEM PAKOLÓDIK, amíg parkol,
-//   visszafelé jövet pedig EGYBEN kapja vissza a teljes készletét.
+//   a söpört szint NEM LÁTSZIK (a rajzolás csak 3 szinttel a horgony fölött kezd,
+//   a söprés pedig a 6. szinten túl dolgozik), visszatéréskor pedig a TELJES
+//   keretnyi készletet EGYBEN kapja vissza — a betöltő egy menetben tölti fel.
 //
 // Ez a próba pontosan ezt az ígéretet méri: teljes készlet → helyek feljegyezve →
-// parkolás (mindent elengedünk a gerinc-gyereken kívül) → kiparkolás (egyben
-// vissza) → újrapakolás → a helyek ÖSSZEVETÉSE.
+// söprés (mindent elengedünk a gerinc-gyereken kívül) → a teljes készlet vissza →
+// újrapakolás → a helyek ÖSSZEVETÉSE.
 //
 // Ha a pakolás determinisztikus a teljes készletből, a két helyzet BITRE azonos.
 // Ha nem az, ez a próba azonnal megbukik — és akkor az ős-söprés nem engedhető ki.
+//
+// AZ UTOLSÓ SZAKASZ AZ INVARIÁNST MÉRI (Csaba, 2026-08-12): „a végtelen böngészés
+// ne okozzon végtelen felhalmozódást az adatokban."
 //
 // Futtatás:  node backend/tools/sikidomParkolasProba.mjs
 
@@ -29,7 +38,7 @@
 import { pakolas, pakolasiSorrend } from '../../frontend/js/utils/sikidomPakolas.js';
 // A tár-modul VALÓDI függvényei (2026-08-11 óta külön fájlban, DOM nélkül) — az
 // utolsó szakasz ezeket futtatja, nem a szabályuk másolatát.
-import { gerincLanc, osSopres, kiparkolas, visszahozatal, visszaszedes,
+import { gerincLanc, osSopres, visszahozatal, visszaszedes,
          reszfaTorlese, FOLYOSO_SZINT }
   from '../../frontend/js/utils/sikidomTar.js';
 
@@ -103,31 +112,31 @@ function proba(darab, eloszlas, magSugar) {
   // --- 1. TELJES PAKOLÁS (ez a mérce) ---
   const elotte = pakolas(elemek, { magSugar });
 
-  // --- 2. PARKOLÁS ---
+  // --- 2. ŐS-SÖPRÉS ---
   // A gerinc-gyerek az, amibe „belenagyítottunk": legyen a kanonikus sorrend
-  // közepe táján — épp az az eset, amit a `_visszaszedes` sosem engedne meg.
+  // közepe táján — épp az az eset, amit a `visszaszedes` sosem engedne meg.
   const rendezett = [...elemek].sort(pakolasiSorrend);
   const gerincGyerek = rendezett[Math.floor(rendezett.length / 2)];
 
-  // A modal ezt teszi: gyerekIdk = [gerincGyerek], minden más a `visszaszedettek`-be
-  const parkolt = elemek.filter(e => e.id !== gerincGyerek.id);
+  // A söprés ezt teszi: gyerekIdk = [gerincGyerek], minden más TÖRLŐDIK
+  const elengedett = elemek.filter(e => e.id !== gerincGyerek.id);
   const bentMaradt = elemek.filter(e => e.id === gerincGyerek.id);
 
-  // --- 3. KIPARKOLÁS: EGYBEN vissza a várólistára, majd újrapakolás ---
+  // --- 3. VISSZATÉRÉS: a TELJES készlet újratöltve, majd újrapakolás ---
   // A modal a `gyerekIdk` + `varolista` UNIÓJÁT pakolja — a sorrendet a pakoló adja.
-  const visszaall = [...bentMaradt, ...parkolt];
+  const visszaall = [...bentMaradt, ...elengedett];
   const utana = pakolas(visszaall, { magSugar });
 
   const o = helyekOsszevetese(elotte.helyek, utana.helyek);
 
-  return { elotte, utana, o, gerincGyerek, parkoltDarab: parkolt.length };
+  return { elotte, utana, o, gerincGyerek, elengedettDarab: elengedett.length };
 }
 
 // ===== A PRÓBÁK =====
 naplo('');
-naplo('===== A PARKOLÁS MÉRŐPRÓBÁJA =====');
-naplo('  teljes pakolás → parkolás (a gerinc-gyereken kívül minden el) →');
-naplo('  kiparkolás egyben → újrapakolás → a helyek összevetése');
+naplo('===== AZ ŐS-SÖPRÉS MÉRŐPRÓBÁJA =====');
+naplo('  teljes pakolás → söprés (a gerinc-gyereken kívül minden el) →');
+naplo('  a teljes készlet vissza → újrapakolás → a helyek összevetése');
 naplo('');
 
 const esetek = [
@@ -140,11 +149,11 @@ const esetek = [
 
 for (const e of esetek) {
   const kezdet = Date.now();
-  const { o, gerincGyerek, parkoltDarab } = proba(e.darab, e.eloszlas, e.magSugar);
+  const { o, gerincGyerek, elengedettDarab } = proba(e.darab, e.eloszlas, e.magSugar);
   const ido = Date.now() - kezdet;
 
   naplo(`--- ${e.nev} ---`);
-  naplo(`  parkolva: ${parkoltDarab} · gerinc-gyerek: ${gerincGyerek.id} · ${ido} ms`);
+  naplo(`  elengedve: ${elengedettDarab} · gerinc-gyerek: ${gerincGyerek.id} · ${ido} ms`);
   naplo(`  lerakva előtte: ${o.darabA} · utána: ${o.darabB}`);
 
   allitas(o.darabA === o.darabB, 'ugyanannyi kör kerül le', `${o.darabA} vs ${o.darabB}`);
@@ -157,7 +166,7 @@ for (const e of esetek) {
 // ===== ELLENPRÓBA: MI TÖRTÉNNE KIPARKOLÁS NÉLKÜL? =====
 // Ez mutatja meg, MIÉRT kötelező a teljes visszaállítás pakolás előtt: ha a
 // hiányos készletet pakolnánk, a kép szétesne.
-naplo('===== ELLENPRÓBA: pakolás a HIÁNYOS készlettel (kiparkolás nélkül) =====');
+naplo('===== ELLENPRÓBA: pakolás a HIÁNYOS készlettel =====');
 {
   const elemek = keszlet(1200, 'vegyes');
   const elotte = pakolas(elemek, { magSugar: 0 });
@@ -165,7 +174,7 @@ naplo('===== ELLENPRÓBA: pakolás a HIÁNYOS készlettel (kiparkolás nélkül)
   const rendezett = [...elemek].sort(pakolasiSorrend);
   const gerincGyerek = rendezett[Math.floor(rendezett.length / 2)];
 
-  // CSAK a fele jön vissza — mintha adagolva engednénk vissza a parkolt szintet
+  // CSAK a fele jön vissza — mintha a söpört szint hiányosan töltődne újra
   const fele = [gerincGyerek, ...elemek.filter(e => e.id !== gerincGyerek.id).slice(0, 600)];
   const hianyos = pakolas(fele, { magSugar: 0 });
 
@@ -173,7 +182,7 @@ naplo('===== ELLENPRÓBA: pakolás a HIÁNYOS készlettel (kiparkolás nélkül)
   naplo(`  hiányos készlettel: ${o.elmozdult} kör mozdult el, ` +
     `a legnagyobb eltérés ${o.legnagyobbElteres.toFixed(4)}`);
   allitas(o.elmozdult > 0,
-    'a hiányos készlet TÉNYLEG szétveri a helyeket (ezért kötelező az egyben visszaadás)',
+    'a hiányos készlet TÉNYLEG szétveri a helyeket (ezért kell EGYBEN újratölteni)',
     `elmozdult: ${o.elmozdult}`);
 }
 
@@ -200,7 +209,9 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
       helyezettIdk: new Set(), helyezettPont: 0,
       magSugarRel: Infinity, kulsoSugar: 0,
       betoltottGyerekPont: 0, betoltottKuszob: Infinity, mindenLetoltve: false,
-      kurzorPont: null, kurzorId: null, parkolt: false, utoljaraLatva: 0
+      kurzorPont: null, kurzorId: null, utoljaraLatva: 0,
+      betoltesiPlafon: 5000, tovabbiKert: false, osszesGyerekPont: 0,
+      utolsoKeret: -1, utolsoVarolistaDarab: -1
     };
   }
 
@@ -224,6 +235,27 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
     }
     elozoId = id;
   }
+  // A folyosón KÍVÜLI szintekre teszünk ADATOT is a két listára — különben az
+  // „eltűnt-e az adat" állítás üres lenne (nem volna mit elveszíteni). Pont ez a
+  // két lista halmozott a régi modellben.
+  for (let szint = 0; szint <= MELYSEG - 1 - FOLYOSO_SZINT; szint++) {
+    const os = tar.get(`sz${szint}`);
+    for (let i = 0; i < 30; i++) {
+      os.varolista.push({ id: `${os.id}v${i}`, entitasTipus: 'Tartalom', cim: 'v',
+        pont: 30 - i, relR: 0.01, letrehozva: null, vanGyereke: false });
+    }
+    for (let i = 0; i < 20; i++) {
+      os.visszaszedettek.push({ id: `${os.id}vsz${i}`, entitasTipus: 'Tartalom', cim: 'vsz',
+        pont: 20 - i, relR: 0.03, letrehozva: null, vanGyereke: false });
+    }
+    os.betoltesiPlafon = 25_000;      // mintha többször koppintottak volna a „további tartalmak"-ra
+    os.tovabbiKert = true;
+    os.osszesGyerekPont = 9_999;
+    os.betoltottKuszob = 1.5;
+    os.kurzorPont = 7; os.kurzorId = 'valami';
+    os.utolsoKeret = 5000;
+  }
+
   // a legmélyebb szint a horgony; a gerinc-gyerekek a lánc mentén állnak
   const horgony = `sz${MELYSEG - 1}`;
   const tarMeretElotte = tar.size;
@@ -236,48 +268,69 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
   allitas(gerincLanc(tar, horgony, 3).length === 3,
     'a korlát rövidre vágja a láncot (a söprés így nézi a folyosót)');
 
-  // --- 2. ŐS-SÖPRÉS: a folyosón kívül minden testvér megy ---
-  const sopresValtozott = osSopres(tar, horgony);
+  // --- 2. ŐS-SÖPRÉS: a folyosón kívül minden testvér megy, ÉS TÖRLŐDIK ---
+  // Az adat MENNYISÉGÉT mérjük, nem csak a tár méretét: a régi modellben az
+  // elengedettek adata átköltözött a `visszaszedettek`-be, tehát a tár csökkent,
+  // az ÖSSZES tárolt adat viszont nem.
+  const osszesAdat = () => {
+    let db = tar.size;
+    for (const cs of tar.values()) db += cs.varolista.length + cs.visszaszedettek.length;
+    return db;
+  };
+  const adatElotte = osszesAdat();
+
+  const sopresValtozott = osSopres({ tar, horgonyId: horgony, alapPlafon: 5000 });
   allitas(sopresValtozott === true, 'az ős-söprés dolgozott');
 
   // a folyosón BELÜL (az első FOLYOSO_SZINT ős) érintetlen
   const folyosonBelul = tar.get(gerinc[FOLYOSO_SZINT - 1]);
-  allitas(folyosonBelul.gyerekIdk.length === 5 && !folyosonBelul.parkolt,
+  allitas(folyosonBelul.gyerekIdk.length === 5,
     'a folyosón BELÜLI szint érintetlen', `${folyosonBelul.gyerekIdk.length} gyerek`);
 
-  // a folyosón KÍVÜL csak a gerinc-gyerek maradt, és a szint parkol
+  // a folyosón KÍVÜL csak a gerinc-gyerek maradt
   const folyosonKivul = tar.get(gerinc[FOLYOSO_SZINT]);
   allitas(folyosonKivul.gyerekIdk.length === 1,
     'a folyosón KÍVÜLI szinten CSAK a gerinc-gyerek maradt',
     `${folyosonKivul.gyerekIdk.length} gyerek`);
   allitas(folyosonKivul.gyerekIdk[0] === gerinc[FOLYOSO_SZINT - 1],
     'és épp a gerinc-gyerek az (rajta vezet a keret-lánc lefelé)');
-  allitas(folyosonKivul.parkolt === true, 'a szint PARKOLTNAK van jelölve');
-  allitas(folyosonKivul.visszaszedettek.length === 4,
-    'az elengedettek ADATA megmaradt (nem kell újra letölteni)',
+
+  // --- 3. AZ INVARIÁNS: AZ ADAT TÉNYLEG ELTŰNT, NEM ÁTKÖLTÖZÖTT ---
+  // Ez a lényeg (Csaba, 2026-08-12): a végtelen böngészés ne halmozzon.
+  allitas(folyosonKivul.visszaszedettek.length === 0,
+    'az elengedettek NEM kerültek át a `visszaszedettek`-be (nincs parkolás)',
     `${folyosonKivul.visszaszedettek.length} db`);
-  allitas(tar.size < tarMeretElotte, 'a tár TÉNYLEGESEN csökkent',
+  allitas(folyosonKivul.varolista.length === 0,
+    'a várólista is üres — ott sem bújt meg adat');
+
+  const adatUtana = osszesAdat();
+  allitas(adatUtana < adatElotte,
+    'az ÖSSZES tárolt adat csökkent (nem csak átköltözött)',
+    `${adatElotte} → ${adatUtana}`);
+  allitas(tar.size < tarMeretElotte, 'a tár is csökkent',
     `${tarMeretElotte} → ${tar.size}`);
 
-  // --- 3. AZ ŐRSZEM: parkolt szintből ADAGOLVA tilos visszaadni ---
-  allitas(visszahozatal(folyosonKivul, 1000, 800) === false,
-    'PARKOLT szintből a visszahozatal nem ad vissza semmit (őrszem)');
-  allitas(folyosonKivul.varolista.length === 0,
-    'a parkolt szint várólistája érintetlen maradt');
+  // --- 4. A SÖPÖRT SZINT ÚJRATÖLTHETŐ ÁLLAPOTBAN VAN ---
+  // Ennélkül a törlés ADATVESZTÉS lenne: visszatéréskor a szint üres maradna.
+  allitas(folyosonKivul.betoltottKuszob === Infinity && folyosonKivul.mindenLetoltve === false,
+    'a szint újra le fog tölteni (küszöb visszaállt, nincs „minden letöltve")');
+  allitas(folyosonKivul.kurzorPont === null && folyosonKivul.kurzorId === null,
+    'a kurzor a rangsor ELEJÉRŐL indul újra');
+  allitas(folyosonKivul.osszesGyerekPont === 0,
+    'az össz-pontot is újra kérdezzük — így a visszatérés FRISS adatot hoz');
+  allitas(folyosonKivul.betoltesiPlafon === 5000 && folyosonKivul.tovabbiKert === false,
+    'a lapozás plafonja is visszaállt (különben azon az úton halmozna)');
+  allitas(folyosonKivul.utolsoKeret === -1,
+    'a keret-őrszem is tiszta lappal indul');
+  allitas(folyosonKivul.helyezettIdk.size === 1 &&
+          folyosonKivul.helyezettPont === tar.get(gerinc[FOLYOSO_SZINT - 1]).pont,
+    'a könyvelés (helyezettIdk, helyezettPont) a gerinc-gyerekre állt');
 
-  // --- 4. KIPARKOLÁS: a készlet EGYBEN jön vissza ---
-  // (a horgonyt a folyosón kívüli szintre állítjuk, hogy visszakerüljön a folyosóba)
-  const kiparkolasValtozott = kiparkolas(tar, folyosonKivul.id);
-  allitas(kiparkolasValtozott === true, 'a kiparkolás dolgozott');
-  allitas(folyosonKivul.parkolt === false, 'a parkolás jelzése megszűnt');
-  allitas(folyosonKivul.varolista.length === 4,
-    'a TELJES készlet egyben került a várólistára',
-    `${folyosonKivul.varolista.length} db`);
-  allitas(folyosonKivul.visszaszedettek.length === 0,
-    'és a parkoló kiürült');
-  allitas(folyosonKivul.varolistaRelTerulet > 0,
-    'a várólista relatív területe újraszámolódott',
-    folyosonKivul.varolistaRelTerulet.toFixed(5));
+  // --- 4/b. NINCS KÖRÖZÉS: másodszorra már nincs mit tenni ---
+  const masodszor = osSopres({ tar, horgonyId: horgony, alapPlafon: 5000 });
+  allitas(masodszor === false,
+    'a második söprés már NEM dolgozik (nincs körözés képkockánként)');
+  allitas(osszesAdat() === adatUtana, 'és az adat mennyisége sem változott tőle');
 
   // --- 5. MÉRET SZERINTI VISSZASZEDÉS: csak a sorrend VÉGÉRŐL ---
   {
@@ -350,8 +403,8 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
 naplo('');
 naplo('=================== EREDMÉNY ===================');
 if (hibak.length === 0) {
-  naplo(`Mind a ${allitasDb} állítás áll — a parkolás nem mozdít el egyetlen síkidomot sem,`);
-  naplo('feltéve, hogy a szintet EGYBEN kapja vissza a pakolás előtt.');
+  naplo(`Mind a ${allitasDb} állítás áll — az ős-söprés nem mozdít el egyetlen síkidomot sem,`);
+  naplo('feltéve, hogy a szint a TELJES készletét egyben kapja vissza a pakolás előtt.');
   naplo('A tár-modul (sikidomTar.js) VALÓDI függvényei is le vannak mérve.');
 } else {
   naplo(`${hibak.length} ÁLLÍTÁS BUKOTT:`);
