@@ -287,6 +287,41 @@ const PAKOLASI_MAG_ARANY = 6;
 // most még nagyobb a ráhagyása az adag fölött.
 const ELORETOLTES_DARAB = 5_000;
 
+// ===== A LAPOZÁS VISSZAFELÉ IS JÁR (Csaba, 2026-08-16) =====
+// A `betoltesiPlafon` eddig EGYIRÁNYÚ RACSNI volt: a „további tartalmak" koppintás
+// emelte egy adaggal (5 000 → 10 000 → 15 000), lefelé viszont soha nem lépett. Emiatt
+// a lerakott mennyiség a BEJÁRÁS TÖRTÉNETÉT követte, nem a mostani nézetet: aki egyszer
+// lelapozott 15 000-ig, annál 15 000 maradt lent akkor is, ha utána teljesen kizoomolt —
+// és a „további tartalmak" mag sem jött vissza, hiszen minden le volt töltve.
+//
+// Csaba szabálya: „ha annyira kizoomol a használó a spirálból, vissza kéne állnia az
+// 5 000-es limitre, amiben a további tartalmak mag ismét visszajön. Ez persze szintenként
+// kell érteni." Vagyis a lapozás lépcsőjén VISSZAFELÉ is lépünk, csomópontonként.
+//
+// MIKOR LÉPÜNK VISSZA: ha a csomópont képernyő-sugara a FELÉRE csökkent ahhoz képest,
+// amekkora az adag elkérésekor volt. A feleződő sugár negyedelődő területet jelent —
+// ugyanaz a síkidom negyedannyi képpontot kap —, tehát ez nem ízlés szerinti szám, hanem
+// a nézet saját mértékegysége. És összeadódik: 15 000 az R sugárnál, 10 000 az R/2-nél,
+// 5 000 az R/4-nél, pontosan úgy, ahogy Csaba leírta.
+//
+// AMIT NEM KELL KÜLÖN MEGÍRNI: a szűkítést már tudja a nézet. A `pozicionalasiKeret` a
+// csomópont SAJÁT plafonjából számol, tehát a plafon csökkenésétől a keret magától
+// zsugorodik, a fölösleg visszakerül a várólistára (lásd `_ujrapakolas`), a
+// `_vanMegBetoltetlen` újra igaz lesz, ettől a pakolási mag visszanő, és vele a
+// „további tartalmak" ajánlat is. A lépcső tehát csak ELINDÍTJA a meglévő gépezetet.
+const PLAFON_VISSZALEPES_ARANY = 0.5;
+
+// ⚠️ IDEIGLENESEN KIKAPCSOLVA (2026-08-16). A lépcső elve jó — mérve lelépked
+// 15 000 → 10 000 → 5 000, a tár 10 692-ről 5 262-re esett —, de a KIOLDÁSA hibás: a
+// csomópont képernyő-sugarát figyeli, az viszont nem csak az e-ember zoomolásától
+// változik, hanem az újrapakolástól, az illesztéstől és a fókusz-animációtól is. Ezért
+// a saját lapozás animációjára is elsült, és visszavette a kért adagot.
+//
+// A javítás iránya: a lépcső a VALÓDI GESZTUSHOZ kösse magát (görgő, csippentés, +/−
+// gomb), ne a mért sugárhoz. Addig kikapcsolva, hogy a fókusz-kapu javítása külön,
+// tisztán mérhető legyen. A hozzá tartozó mezők és a metódus BENT MARADNAK.
+const PLAFON_LEPCSO_BEKAPCSOLVA = false;
+
 // ===== MÉRET SZERINTI VISSZASZEDÉS: A `sikidomTar.js`-BEN =====
 // A két szabály (`VISSZASZEDES_ATMERO_ARANY`, `MEGTARTOTT_DARAB`) és a hozzájuk
 // tartozó, mérésekkel szerzett magyarázat a tár-modulban van — ott is használják.
@@ -502,6 +537,15 @@ class SikidomModal {
   // ===== INICIALIZÁLÁS =====
   async init() {
     console.log('SikidomModal.init - KEZDÉS');
+
+    // ===== BÖNGÉSZŐS MÉRÉSHEZ: A NÉZET KIVEZETÉSE A KONZOLRA =====
+    // Ugyanaz a minta, mint a `foOldal.js` `_debug_pakli` / `_debug_foOldal`
+    // fogantyúinál. A csomópont-tár (`_tar`), a nézet-állapot és a horgony
+    // kívülről különben nem látszik, így nem lehetne megmérni, hogy a letöltött
+    // síkidomokból hány kap ténylegesen feliratot vagy mellék-ikont — pedig ez
+    // dönti el, érdemes-e a cím/ikon letöltését a pozíció-adattól elválasztani.
+    // CSAK OLVASÁSRA való; a nézet működésére nincs hatással.
+    window._debug_sikidom = this;
 
     const tartalomHtml = await this._templateBetoltese();
     if (!tartalomHtml) return;
@@ -756,6 +800,20 @@ class SikidomModal {
       // horgonynak (küszöb nélkül, a rangsor elejétől a kurzoron át).
       tovabbiKert: false,
 
+      // ===== A LAPOZÁS LÉPCSŐJE VISSZAFELÉ (lásd PLAFON_VISSZALEPES_ARANY) =====
+      // `plafonLepcsoKepSugar`: mekkora volt a csomópont képernyő-sugara, amikor a
+      // mostani adagot elkérték. Ehhez mérjük a kizoomolást. `null`, amíg egyszer sem
+      // lapoztak — ilyenkor nincs mit visszalépni, a plafon már az alapértéken áll.
+      plafonLepcsoKepSugar: null,
+      // A lapozás UTÁN újra kell mérni a mércét (lásd `_plafonLepcsoVisszafele`):
+      // a koppintás pillanatában mért sugár használhatatlan, mert a `_fokuszAMegjeloltre`
+      // rögtön utána átállítja a nagyítást.
+      plafonLepcsoUjramerendo: false,
+      // A LEGUTÓBB MÉRT képernyő-sugár. A `_lathatoLista` írja képkockánként (mérés),
+      // a `_plafonLepcsoVisszafele` pedig a nagyítás végén olvassa (döntés) — a kettő
+      // itt is szét van választva, mint mindenhol máshol a nézetben.
+      utolsoKepSugar: null,
+
       kurzorPont: null,
       kurzorId: null,
       osszesGyerekPont: 0,        // a backend adja: az ÖSSZES gyerek együttes pontja
@@ -846,8 +904,26 @@ class SikidomModal {
   // @param {Object} cs - a szülő csomópont
   // @param {Array} mind - a most lerakandó teljes sor [{ id, sugar }]
   // @returns {number} a lyuk sugara a szülő sugarának egységében
-  _pakolasiMagSugar(cs, mind) {
-    if (!this._vanMegBetoltetlen(cs)) return 0;
+  // @param {boolean} maradKivul - marad-e testvér a mostani pakolás UTÁN is elhelyezetlenül
+  _pakolasiMagSugar(cs, mind, maradKivul = false) {
+    // ===== MEGMUTATNIVALÓ, NEM LETÖLTENIVALÓ — DE CSAK A NÉZETT SZINTEN =====
+    // A NÉZETT szinten (`melyseg === 0`) a mag akkor is jár, ha a testvérek adata már
+    // itt van, csak a VÁRÓLISTÁN vár lerakásra — enélkül a lapozás visszalépése után
+    // nem jött volna vissza a „további tartalmak" mag (Csaba kérése, 2026-08-16).
+    //
+    // ⚠️ MÉLYEBBEN MARAD A RÉGI SZABÁLY. Ott a pozicionálási keret eleve szűk (1 szinttel
+    // lejjebb 250, 2-vel lejjebb 12), tehát MINDIG van kereten kívüli testvér — a lyuk
+    // állandóan ki lett volna foglalva, felirat viszont nem járt hozzá (az csak akkor jön,
+    // ha a kijelző-mag már senkit nem takar). Csaba ezt üres, felirat nélküli magként
+    // látta meg a mérésben; korábban ott egyáltalán nem volt lyuk.
+    // ⚠️ A PAKOLÁS UTÁNI ÁLLAPOT SZÁMÍT, NEM A MOSTANI (Csaba mérése, 2026-08-16).
+    // Itt előbb `_vanNemPozicionaltTestver` állt, az viszont a MOSTANI várólistát nézi —
+    // csakhogy ez a metódus a pakolás KÖZBEN fut, amikor a várólista még tele van azokkal,
+    // akiket épp most rakunk le. Emiatt akkor is 140 képpontos lyukat foglalt, amikor a
+    // pakolás végére nem maradt senki: üres mag, felirat nélkül.
+    // A hívó pontosan tudja, ki marad kívül (`keretenKivul`) — azt kapjuk meg itt.
+    const vanMegMutatnivalo = maradKivul || this._vanMegBetoltetlen(cs);
+    if (!vanMegMutatnivalo) return 0;
 
     // A legkisebb ÉS a legnagyobb sugár — CIKLUSSAL, nem `Math.min(...tomb)`-bel:
     // tízezres sorozatnál a szórás-operátor túlcsordítaná a hívási vermet.
@@ -1242,7 +1318,7 @@ class SikidomModal {
     //
     // NINCS KÖRNYEZET: üres lapra pakolunk. A következő adag betöltésekor is így
     // lesz — az egész elrendezés újraépül, ezért nincs mit „megvédeni".
-    const magSugar = this._pakolasiMagSugar(cs, pakolando);
+    const magSugar = this._pakolasiMagSugar(cs, pakolando, keretenKivul.length > 0);
 
     const eredmeny = pakolas(
       pakolando.map(m => ({ id: m.id, sugar: m.sugar, letrehozva: m.letrehozva })),
@@ -1681,6 +1757,10 @@ class SikidomModal {
 
       const kep = kepernyore(this._nezet, elem.keret);
 
+      // A csomópont képernyő-sugara EBBEN a képkockában. Csak MÉRÜNK: a lapozás
+      // visszafelé lépését a nagyítás végén, a `_plafonLepcsoVisszafele` dönti el.
+      cs.utolsoKepSugar = this._nezet.skala * elem.keret.r;
+
       // A kiinduló csomópontot mindig kibontjuk (ő a bejárás gyökere)
       const kiindulopont = elem.id === kiindulo;
 
@@ -1857,7 +1937,15 @@ class SikidomModal {
           // Zaj nem lesz belőle — a „senki sincs elrejtve" állapotot egyszerre nagyon
           // kevés csomópont teljesíti, és mindegyik ajánlat a SAJÁT közepén ül, tehát
           // a koppintási célok akkor sem esnek egybe, ha többen is látszanak.
-          const tovabbiTartalom = magbanRejtett === 0 && this._vanMegBetoltetlen(cs);
+          // ===== MEGMUTATNIVALÓ, NEM LETÖLTENIVALÓ (Csaba, 2026-08-16) =====
+          // PONTOSAN ugyanaz a feltétel, mint a `_pakolasiMagSugar`-ban — és ez nem
+          // véletlen egyezés, hanem kötelező: a lyukat az foglalja ki, az ajánlat pedig
+          // arra a lyukra mutat. Ha a kettő szétcsúszna, vagy felirat nélküli üres mag
+          // lenne, vagy koppinthatatlan felirat.
+          const vanMegMutatnivalo = elem.melyseg === 0
+            ? this._vanNemPozicionaltTestver(cs)
+            : this._vanMegBetoltetlen(cs);
+          const tovabbiTartalom = magbanRejtett === 0 && vanMegMutatnivalo;
 
           magok.push({
             kepX: kep.kepX,
@@ -2186,6 +2274,87 @@ class SikidomModal {
     }, ZOOM_VEGE_MS);
   }
 
+  // ===== A LAPOZÁS LÉPCSŐJE VISSZAFELÉ =====
+  // Lásd `PLAFON_VISSZALEPES_ARANY`. Végigmegy a táron, és ahol lapoztak, megnézi:
+  // a csomópont képernyő-sugara a megjegyzett FELÉRE csökkent-e. Ha igen, a
+  // `betoltesiPlafon` egy adaggal visszalép — a szűkítés többi részét a meglévő
+  // gépezet végzi (keret → várólista → visszatérő pakolási mag → „további tartalmak").
+  //
+  // SZINTENKÉNT, ahogy Csaba kérte: minden csomópontnak saját plafonja ÉS saját
+  // lépcső-emléke van, tehát a gyökér-szint meg egy mély ág egymástól függetlenül lépked.
+  //
+  // EGYSZERRE CSAK EGY ADAG. Nagy ugrásnál (illesztés gomb) sem esünk vissza rögtön az
+  // alapra: minden lépés újrapakolást von maga után, és a következő nagyítás végén ez
+  // úgyis lefut megint — a többlépcsős visszaút így magától áll össze, rángatás nélkül.
+  //
+  // @returns {boolean} változott-e valami
+  _plafonLepcsoVisszafele() {
+    // Lásd `PLAFON_LEPCSO_BEKAPCSOLVA`: a kioldás átkötéséig kikapcsolva.
+    if (!PLAFON_LEPCSO_BEKAPCSOLVA) return false;
+
+    let valtozott = false;
+
+    for (const cs of this._tar.values()) {
+      // ===== LAPOZÁS KÖZBEN NEM DÖNTÜNK (Csaba mérése, 2026-08-16) =====
+      // Amíg a kért adag meg nem érkezett és le nem ült, ez a szint érinthetetlen.
+      // Enélkül a lapozás saját fókusz-animációja oldotta ki a visszalépést, és a
+      // rendszer három másodperccel a koppintás után visszavette a kért adagot.
+      if (cs.tovabbiKert) continue;
+
+      // A LAPOZÁS UTÁNI ÚJRAMÉRÉS: a mérce a leülés utáni első nagyítás-végen áll be.
+      // Ebben a menetben tehát csak MÉRÜNK, nem lépünk vissza.
+      if (cs.plafonLepcsoUjramerendo) {
+        if (!(cs.utolsoKepSugar > 0)) continue;
+        cs.plafonLepcsoKepSugar = cs.utolsoKepSugar;
+        cs.plafonLepcsoUjramerendo = false;
+        console.log('SikidomModal._plafonLepcsoVisszafele - MÉRCE FELVÉVE', {
+          csomopont: cs.id, plafon: cs.betoltesiPlafon, merce: Math.round(cs.utolsoKepSugar)
+        });
+        continue;
+      }
+
+      // Nem lapoztak rajta → nincs mit visszalépni
+      if (cs.plafonLepcsoKepSugar == null) continue;
+
+      // Már az alapadagnál tart: az emléket is eldobjuk, hogy ne mérjünk feleslegesen
+      if (cs.betoltesiPlafon <= ELORETOLTES_DARAB) {
+        cs.plafonLepcsoKepSugar = null;
+        continue;
+      }
+
+      // Ebben a menetben nem mértük (nem járt a látómezőben) → nem döntünk róla.
+      // Fontos: a hiányzó mérés NEM jelent kizoomolást.
+      if (!(cs.utolsoKepSugar > 0)) continue;
+
+      const hatar = cs.plafonLepcsoKepSugar * PLAFON_VISSZALEPES_ARANY;
+      if (cs.utolsoKepSugar > hatar) continue;
+
+      const regiPlafon = cs.betoltesiPlafon;
+      cs.betoltesiPlafon = Math.max(ELORETOLTES_DARAB, cs.betoltesiPlafon - ELORETOLTES_DARAB);
+
+      // A „kérésre töltünk" állapot is megszűnik: ezt a szintet már nem kérte senki
+      cs.tovabbiKert = false;
+
+      // Az ÚJ fokozat mércéje a MOSTANI sugár — innen mérjük a következő visszalépést.
+      // Ha visszaértünk az alapadagra, nincs több lépcső, tehát az emlék is elenged.
+      cs.plafonLepcsoKepSugar =
+        cs.betoltesiPlafon > ELORETOLTES_DARAB ? cs.utolsoKepSugar : null;
+
+      valtozott = true;
+
+      console.log('SikidomModal._plafonLepcsoVisszafele', {
+        csomopont: cs.id,
+        regiPlafon,
+        ujPlafon: cs.betoltesiPlafon,
+        kepSugar: Math.round(cs.utolsoKepSugar),
+        hatar: Math.round(hatar),
+        lerakott: cs.gyerekIdk.length
+      });
+    }
+
+    return valtozott;
+  }
+
   // ===== TENNIVALÓK: LERAKÁS, MAJD BETÖLTÉS =====
   // Először azt rakjuk le, ami MÁR itt van (a várólistáról) — hátha a nagyítás
   // felszabadított annyi helyet, hogy letöltés nélkül is bővül a kép. Csak utána
@@ -2223,6 +2392,11 @@ class SikidomModal {
       horgonyId: this._horgony,
       alapPlafon: ELORETOLTES_DARAB
     })) valtozott = true;
+
+    // A LAPOZÁS LÉPCSŐJE VISSZAFELÉ: ha egy szintről kizoomoltak, egy adaggal
+    // visszalépünk. A két fenti takarítás UTÁN fut, hogy a plafon-változás már a
+    // megtisztított állapotra hasson (az ős-söprés maga is állít plafont).
+    if (this._plafonLepcsoVisszafele()) valtozott = true;
 
     // ===== A KEZDŐ FÁZIS LEZÁRÁSA =====
     // Akkor vagyunk készen, ha SEMMI nincs folyamatban: nem fut letöltés, nincs
@@ -2272,7 +2446,26 @@ class SikidomModal {
       const szulo = this._tar.get(szuloId);
       const varMegRa = betoltendok.some(b => b.id === szuloId);
 
-      if (szulo && !szulo.betoltesFut && !varMegRa && szulo.varolista.length === 0) {
+      // ===== „A KÉRT ADAG LE VAN RAKVA" — NEM „SEMMI NEM VÁR" (Csaba mérése, 2026-08-16) =====
+      // Itt eddig CSAK `szulo.varolista.length === 0` állt, és ettől a fókusz a mérésben
+      // az első két koppintásra egyszer sem futott le, csak a harmadikra.
+      //
+      // AZ OK: a pozicionálási keret SZÁNDÉKOSAN hagy maradékot a várólistán, valahányszor
+      // több a testvér, mint amennyi a keretbe fér. 10 407 gyökérnél a 10 000-es keret
+      // mellett 407 mindig ott marad — az üres-várólista feltétel tehát SOHA nem teljesül.
+      // Csak a 15 000-es plafonnál ürült ki, mert akkor a keret nagyobb lett a készletnél.
+      // Éles adaton (milliós testvér) ez azt jelentené, hogy a fókusz soha nem fut le.
+      //
+      // A HELYES KÉRDÉS: megérkezett és le van-e rakva, amit a keret befogad. Két úton
+      // teljesülhet, és a második pontosan a régi feltétel — így ami eddig működött, az
+      // ezután is működik:
+      //   1. a lerakott darabszám elérte a keretet (a maradék a várólistán TERVEZETT), VAGY
+      //   2. a várólista kiürült (kevesebb a testvér, mint a keret).
+      const keret = szulo?.utolsoKeret ?? 0;
+      const adagLerakva = (keret > 0 && szulo.gyerekIdk.length >= keret)
+        || szulo?.varolista.length === 0;
+
+      if (szulo && !szulo.betoltesFut && !varMegRa && adagLerakva) {
         this._fokuszAMegjeloltre();
       }
     }
@@ -2565,6 +2758,19 @@ class SikidomModal {
     // abbahagyta, tehát nem töltünk le semmit kétszer.
     cs.betoltesiPlafon += ELORETOLTES_DARAB;
     cs.tovabbiKert = true;
+
+    // MEDDIG ÉRVÉNYES EZ AZ ADAG: a mércét NEM most vesszük fel.
+    //
+    // ⚠️ MÉRVE (Csaba, 2026-08-16): itt korábban `talalat.szuloKepSugar` állt, és ettől a
+    // lapozás megette önmagát. A koppintás után a `_fokuszAMegjeloltre` átállítja a
+    // nagyítást, a világ képernyő-sugara a felére esik — a lépcső ezt kizoomolásnak hitte,
+    // és három másodperccel a koppintás után visszavette az adagot (10 000 → 5 000).
+    // A nézet így nem követte a megjelölt tartalmat.
+    //
+    // A mércét ezért a lapozás LEÜLÉSE UTÁN vesszük fel, az első olyan nagyítás-végen,
+    // amikor a `tovabbiKert` már lement — azaz a kért adag megérkezett és le van rakva.
+    cs.plafonLepcsoKepSugar = null;
+    cs.plafonLepcsoUjramerendo = true;
 
     console.log('SikidomModal._ajanlatKoppintas', {
       csomopont: cs.id,
