@@ -3583,3 +3583,93 @@ window._debug_sikidom._lepcsoAllapot()
 Táblázatot ír minden csomópontról, ami az alapadag fölött áll, és **megmondja, melyik
 kapun akadt el**: kérés-mód nyitva · nincs mérce · még nem zoomolt eleget · lelép a
 következő nagyítás-végen. Csak olvas.
+
+---
+
+## ✅ Síkidom nézet — A MÉLY LÁNC MÉRÉSE (Csaba böngészős mérése, 2026-08-17)
+
+*A `sikidom_fooldal_terv.md` 5. szakaszának 2. pontja. **Az ős-söprés és a
+horgonyváltás itt futott először valódi munkamenetben** — eddig csak a Node-os
+mérőpróbák igazolták őket.*
+
+### A mérés
+
+Dev környezet, 15 611 tartalom / 10 407 gyökér. Csaba megnyitotta a Síkidom nézetet,
+lement az `Ötven szintű mély lánc (síkidom próba)` ágon, majd ugyanazon az úton
+vissza. A nézetet kívülről mértük (képkockánkénti horgony-figyelés + a napló-sorok
+elkapása), **a kódhoz nem kellett hozzányúlni**.
+
+⚠️ Kiderült, hogy **a horgonyváltás egyáltalán nem naplóz** — a `_horgonyEllenorzes`
+némán írja a `_horgony`-t. Ezért figyeltük kívülről. Ha még egyszer mérni kell,
+érdemes lehet egy napló-sort adni neki.
+
+### Az eredmény: 35 láncszem mélyre, 73 horgonyváltással
+
+| | |
+|---|---|
+| horgonyváltás összesen | **73** |
+| egyedi horgony | 37 (`vilag` + a lánc gyökere + 35 láncszem) |
+| a legmélyebb horgony | **`35. szint — mély lánc`** (`osLanc` hossza 36) |
+| ismételt váltás (a visszaút) | 36 |
+| hiba a konzolon | **0** |
+
+A horgonyváltás tehát **mindkét irányban** működik: lefelé 36 lépés, felfelé
+ugyanannyi, és a végén pontosan a `vilag`-on állt meg.
+
+### Az ős-söprés: EGYSZER futott, és VALÓBAN törölt
+
+```
+sikidomTar.osSopres {
+  os: 'vilag', szintTavolsag: 4,
+  torolveCsomopont: 4939, torolveAdat: 5099, tarMeret: 6
+}
+```
+
+Ez a mérés legfontosabb sora. A söprés a `FOLYOSO_SZINT = 4` távolságnál kapcsolt be,
+és a világ-szintet **részfástul elengedte**: 4939 csomópont, 5099 adat — a tár **6**
+csomópontra esett.
+
+**A `torolveCsomopont` és a `torolveAdat` EGYÜTT csökkent.** Pontosan ezt kellett
+igazolni: az ős-söprés 2026-08-12 óta töröl, nem parkoltat, tehát az adat nem
+vándorol át egy másik tárba (lásd „AZ ADAT-FELHALMOZÓDÁS MEGSZÜNTETÉSE"). A böngészős
+mérés most ezt kívülről, a teljes tárat összeszámolva is megerősítette.
+
+**Miért csak EGYSZER futott 36 szint alatt?** Mert a naplója csak akkor szólal meg,
+ha van mit elengedni (`vanMitElengedni`, `osSopres` 449. sor). A lánc minden
+láncszemének **egyetlen** gyereke van — az pedig maga a gerinc-gyerek, ami marad.
+Az egyetlen drága ős a világ-szint volt; azt elsöpörve a további 30+ szint
+gyakorlatilag ingyen van. Ez nem hiányosság, hanem a mély lánc természete.
+
+### A tár görbéje — a mérés lelke
+
+| idő | horgony | tár | össz-adat | memória |
+|---|---|---|---|---|
+| 86 mp | `vilag` | 1 | 1 350 | 4 MB |
+| 101 mp | `vilag` | 5 006 | 5 121 | 23 MB |
+| 131 mp | `vilag` | 5 256 | 5 421 | 7 MB |
+| 146 mp | 2. láncszem | 4 948 | 5 047 | 12 MB |
+| **161 mp** | 12. láncszem | **16** | **15** | **3 MB** |
+| 191 mp | ~35. láncszem | 35 | 34 | 4 MB |
+| 206 mp | a legmélyebb | 40 | 39 | 4 MB |
+| 236 mp | vissza `vilag` | 5 293 | 5 477 | 10 MB |
+| 297 mp | `vilag` (nyugalom) | 5 293 | 5 477 | 11 MB |
+
+Három dolog olvasható ki belőle:
+
+1. **A teljes, 35 szintes mélyben a tár 15–40 csomópont volt.** Nem ezres
+   nagyságrend — a nézet a mélységgel nem hízik.
+2. **Az össz-adat végig együtt mozgott a tár méretével** (16 csomópont → 15 adat).
+   Nem gyűlt fel semmi a várólistákon: a fogyás valódi, nem látszat.
+3. **A visszaút nem halmozott.** A világ-szintre visszaérve 5 293 / 5 477 —
+   gyakorlatilag ugyanannyi, mint az induló 5 256 / 5 421, nem a kétszerese. A szint
+   frissen töltődött újra, ahogy a terv mondja.
+
+A memória csúcsa 36 MB volt (a világ-szint első betöltésekor), a lánc mélyén **3 MB**,
+a munkamenet végén 11 MB. Nem szállt el.
+
+### Ami ebből következik
+
+A terv 5. szakaszának 2. pontja **lezárva**. A síkidom motorjának két
+legbizonytalanabb eleme — az ős-söprés és a horgonyváltás — valódi munkamenetben,
+mérve működik. A nagy átalakítás (a síkidom mint főoldal) elé ez volt az utolsó
+nyitott igazolás.

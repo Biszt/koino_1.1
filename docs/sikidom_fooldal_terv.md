@@ -150,9 +150,11 @@ interneten fordítva lenne. **Mérni kell, mielőtt hozzányúlunk.**
 majdnem kitölti a teljes megtartási keretet — és főoldalként ezt látja mindenki
 elsőként.
 
-**Amit NEM sikerült megmérni:** az **ős-söprés egyszer sem futott** (a horgony végig
-`vilag` maradt, a legnagyobb mélység 4). Az adat készen áll rá: az
-`Ötven szintű mély lánc (síkidom próba)` ág **51 szint** mély.
+**Amit ez a menet NEM mért meg:** az **ős-söprés egyszer sem futott** (a horgony végig
+`vilag` maradt, a legnagyobb mélység 4).
+→ **Pótolva 2026-08-17-én**, az `Ötven szintű mély lánc (síkidom próba)` ágon: 35
+láncszem mélyre, 73 horgonyváltással; a söprés a világ-szintet elengedte, a tár 6-ra
+esett. Lásd [fejlesztesi_terv.md](fejlesztesi_terv.md), „A MÉLY LÁNC MÉRÉSE".
 
 ---
 
@@ -209,7 +211,12 @@ három következménnyel:
    javítása is, ami kifogyott szinten örökre nyitva maradt és némán elnyelte a lépcsőt.
    Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md), a „A LAPOZÁS LÉPCSŐJE A VALÓDI
    GESZTUSHOZ KÖTVE" szakasz.
-2. **A mély lánc mérése** — az ős-söprés és a horgonyváltás még sosem futott.
+2. ~~**A mély lánc mérése**~~ ✅ **KÉSZ (2026-08-17, Csaba böngészős mérése).** Az
+   ős-söprés és a horgonyváltás először futott valódi munkamenetben. 35 láncszem
+   mélyre, 73 horgonyváltással, 0 hibával; az ős-söprés a világ-szintet részfástul
+   elengedte (4 939 csomópont / 5 099 adat → a tár 6-ra esett), és a mélyben a tár
+   végig 15–40 csomópont volt. A visszaút nem halmozott. Részletek:
+   [fejlesztesi_terv.md](fejlesztesi_terv.md), „A MÉLY LÁNC MÉRÉSE".
 3. **A nagy átalakítás** (2. szakasz).
 4. **Tömörítés bekapcsolása** a backenden (a legolcsóbb nagy nyereség).
 5. **A cím/ikon szétválasztása** — csak mérés után.
