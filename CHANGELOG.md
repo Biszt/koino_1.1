@@ -9,6 +9,59 @@ szellemét (magyarul, a projekt stílusához igazítva).
 
 ---
 
+## 2026-08-16–17 — A lapozás visszafelé is jár
+
+- **A lapozás lépcsője a valódi gesztushoz kötve.** Ha egy szintről kizoomolsz, a
+  lerakott mennyiség visszalép egy adaggal (15 000 → 10 000 → 5 000), és a
+  „további tartalmak" mag újra megjelenik. A kioldás mércéje a valódi nagyítási
+  gesztusok futó szorzata (görgő, csippentés, +/− gomb) — nem a mért képernyő-sugár,
+  amit az illesztés, a fókusz-animáció és az újrapakolás is elmozdít. Ezzel együtt
+  javítva a kérés-mód, ami kifogyott szinten örökre nyitva maradt és némán elnyelte
+  a visszalépést. Új mérőműszer: `_lepcsoAllapot()` a konzolról.
+- **A lapozás fókusza és a mag-foglalás** javítása: a régi „várólista üres" feltétel
+  nagy készleten sosem teljesült.
+- **Terv:** a Síkidom nézet főoldallá tétele, a hozzá tartozó mérési eredményekkel
+  ([`docs/sikidom_fooldal_terv.md`](docs/sikidom_fooldal_terv.md)).
+
+## 2026-08-11–13 — A síkidom motorjának szétbontása és az adat-felhalmozódás
+
+- **A `SikidomModal.js` szétbontása** négy modulba (3584 → 2631 sor): rajzoló,
+  tár-kezelés, vezérlés, pont-küszöb. A pont-küszöb a méret-modell megfordításaként
+  áll elő, tehát egyetlen forrásból.
+- **Mélység szerinti ős-söprés:** a megtartási folyosón kívüli szintek elengedése.
+  Az ős-söprés **töröl, nem parkoltat** — a parkoltatás csak vándoroltatta az adatot,
+  a memória nem szabadult fel. A megtartási folyosó 6 → 4.
+- **Végtelen testvér:** lapozás a „további tartalmak" koppintással, 5000-es adagokban.
+- **A horgony arra vált, amire nézel** (pozíció-feltétellel), a pozicionálási keret
+  pedig zsugorodni is tud.
+- Biztonsági frissítés: 12 sebezhetőség → 0.
+
+## 2026-08-05–10 — A Síkidom nézet
+
+- **Canvas-alapú síkidom nézet**, képernyő-vezérelt betöltéssel: a hierarchia úgy
+  jelenik meg, hogy minden entitás **területe a tudatpontjával arányos**.
+- **Küszöbös gyerek-végpont** a backenden — a lapozás helyett a képernyőn látható
+  méret dönti el, mi töltődik le.
+- **Geometria-modulok:** méret, pakolás, horgony, rács, spirál — böngésző nélkül is
+  mérhető, tiszta számításként.
+- **A pakolási modell** többszöri mérés után állt össze: bentről kifelé, egyszerre
+  pakolunk; a lerakott síkidomok helye végleges; a mag üressége a láthatóság
+  szabálya; méret szerinti visszaszedés a nagyítás végén.
+- **Fejlesztői homokozó** (`sikidomTeszt.html`) és böngésző nélküli mérőpróbák a
+  `backend/tools/` alatt; böngészős igazolás 10 405 gyökéren.
+
+## 2026-08-08 — Megismerés
+
+- **E-embereknek szóló használati leírások** (`megismeres/`, 16 dokumentum): tartalom,
+  kategória, javaslat, szavazás, bizonyossági mutató, keresés, értesítés és a többi.
+
+## 2026-08-03 — Struktúra nézet és testvér-navigáció
+
+- **A „Térkép nézet" átnevezve Struktúra nézetre** (kódban és dokumentumokban) — a
+  térkép név a későbbi, valódi földrajzi nézeté.
+- **Testvér-navigáció:** egeres húzás és mobilos érintéses swipe; a nyilak a képernyő
+  közepéhez rögzítve.
+
 ## 2026-08-01 — Élesítés és finomítás
 
 - **Egyezmény törölhető:** törlés-javaslat engedélyezése egyezményre; a
