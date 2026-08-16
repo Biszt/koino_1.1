@@ -3422,3 +3422,164 @@ frissnek hitt kód helyett. Modul-mérésnél teljes újratöltés kell.
 Böngészős szemrevételezés valódi adaton: ráközelíteni az 5 000 gyerekes síkidomra,
 kizoomolni, és megnézni, hogy (a) a kép nem esik szét, (b) visszaközelítve ugyanaz a
 kép fogad, (c) hosszabb böngészés után sem lassul be a nézet.
+
+---
+
+## ✅ Síkidom nézet — A LAPOZÁS LÉPCSŐJE A VALÓDI GESZTUSHOZ KÖTVE (2026-08-17)
+
+*A `sikidom_fooldal_terv.md` 5. szakaszának 1. pontja. **Csaba böngészőben igazolta
+(2026-08-17)** — de csak a lenti MÁSODIK hiba javítása után; az átkötés önmagában
+néma maradt.*
+
+### A kiindulás: az elv jó volt, a kioldás nem
+
+A lapozás lépcsője visszafelé (2026-08-16) azt csinálja, amit Csaba kért: ha valaki
+annyira kizoomol egy szintről, hogy már nem látja a részleteit, a `betoltesiPlafon`
+visszalép egy adagot, a fölösleg a várólistára kerül, és a „további tartalmak" mag
+ismét megjelenik. Mérve is működött: **15 000 → 10 000 → 5 000**, a tár 10 692-ről
+5 262-re, a memória 14 MB-ról 9-re.
+
+A baj a KIOLDÁSSAL volt. A mérce a csomópont **képernyő-sugara** volt
+(`utolsoKepSugar = nezet.skala * keret.r`), és ez öt különböző dologtól változik:
+
+| mi mozgatja a képernyő-sugarat | e-ember csinálja? |
+|---|---|
+| görgő / csippentés / +/− gomb | **igen** |
+| az illesztés (⛶ és a kezdő fázis) | nem |
+| a `_fokuszAMegjeloltre` animációja | nem |
+| az újrapakolás | nem |
+| a zsugorodó pozicionálási keret | nem |
+
+Ötből négy nem az e-ember keze. A leglátványosabb következmény: a lapozás
+**megette önmagát** — a koppintás utáni fókusz-animáció felezte a világ
+képernyő-sugarát, a lépcső ezt kizoomolásnak hitte, és három másodperccel a
+koppintás után visszavette a kért adagot. Ezért lett kikapcsolva.
+
+### A javítás: mérj ott, ahol csak az e-ember ír
+
+Új mező a nézeten: **`_gesztusSzorzo`** — a valódi nagyítási gesztusok futó
+szorzata. 1-ről indul, és **kizárólag a `_zoom` írja**:
+
+```js
+this._gesztusSzorzo *= hatarolt;   // a HATÁROLT szorzó, nem a nyers
+```
+
+Ez azért működik, mert a `_zoom` **mind a három valódi gesztus egyetlen tölcsére**
+— a görgő és az érintőpad-csippentés (`wheel`), az ujjas csippentés (`pointermove`)
+és a +/− gomb (`_zoomKozeppontra`) is rajta megy át —, és **semmi más nem hívja**.
+Ellenőrizve: a `_nezet` objektumot az illesztés-animáció, a horgonyváltás és a
+fókusz hét helyen kicseréli, a `skala`-t viszont csak a `_zoom` szorozza.
+
+A lépcső döntése így egyetlen hányados:
+
+```js
+const valtozas = this._gesztusSzorzo / cs.plafonLepcsoSzorzo;
+if (valtozas > PLAFON_VISSZALEPES_ARANY) continue;   // 0,5
+```
+
+**A határolt szorzót adjuk hozzá, nem a nyerset.** Ha a nagyítás a `KIFELE_HATAR`-ba
+ütközött, a kép sem mozdult annyit — a mércének sem szabad. Így a szorzó mindig azt
+mondja meg, mennyivel változott VALÓJÁBAN a nézet az e-ember keze nyomán.
+
+### Amit a javítás MAGÁTÓL kiejtett
+
+Nem csak egy hibát javít, hanem **elveszi három mező létjogosultságát**:
+
+| régi mező | mi lett vele |
+|---|---|
+| `utolsoKepSugar` | **törölve** — képkockánként írtuk minden csomópontra, senki más nem olvasta |
+| `plafonLepcsoUjramerendo` | **törölve** — a „lapozás után újramérendő" állapot csak azért kellett, mert a régi mércét a fókusz-animáció meghamisította |
+| `plafonLepcsoKepSugar` | **`plafonLepcsoSzorzo`** lett |
+
+A mércét ezért most **a koppintás pillanatában** vesszük fel, nem a leülés utáni
+első nagyítás-végen. És eltűnt a „ebben a menetben nem mértük, tehát nem döntünk"
+kapu is: a szorzó nem a csomópontról mért adat, hanem a nézeté, tehát a
+**látómezőn kívüli szintekre is pontosan érvényes**.
+
+Csomópontonként három mező helyett egy — 10 000 csomópontnál ez nem semmi.
+
+### ⚠️ AMIT SZÁNDÉKOSAN NEM KÖTÖTTÜNK BE: az alaphelyzet (⛶) gomb
+
+A ⛶ teljesen kizoomol, tehát kézenfekvő lenne visszalépésnek venni. **Nem tettük**,
+mert az `_alaphelyzet()`-et **a kezdő fázis is hívja magától** (a
+`_tennivalokFeldolgozasa` addig ismétli, amíg a skála be nem áll) — a hozzá kötés
+pontosan ugyanabba a csapdába vezetne, amit most bontunk le. Ha kiderül, hogy az
+e-ember a ⛶-től is visszalépést vár, azt **külön, a gomb eseménykezelőjében** kell
+bekötni, soha nem az `_alaphelyzet` belsejében.
+
+### Ami Csabára vár — a mérés
+
+A `PLAFON_LEPCSO_BEKAPCSOLVA` már `true`. A nézet a konzolról figyelhető
+(`window._debug_sikidom`), a lépcső pedig minden lépésnél naplóz.
+
+1. **A regresszió, ami miatt kikapcsoltuk.** Koppints a „további tartalmak"-ra, és
+   **ne csinálj semmit** 5–10 másodpercig. A konzolban NEM szabad megjelennie
+   `_plafonLepcsoVisszafele` sornak. (Régen itt vette vissza az adagot.)
+2. **A lépcső lefelé.** Lapozz kétszer (5 000 → 10 000 → 15 000), majd görgővel
+   zoomolj kifelé. Két `_plafonLepcsoVisszafele` sort várunk, `kizoomolas ≈ 0,5`
+   értékkel, és a „további tartalmak" magnak vissza kell jönnie.
+3. **A szorzó tükre.** Zoomolj be és pontosan ugyanannyit vissza:
+   `window._debug_sikidom._gesztusSzorzo` térjen vissza a kiindulóhoz (±pár ezred).
+4. **Az illesztés NE lépjen.** Lapozz, majd nyomd meg a ⛶-t. A lépcsőnek **nem**
+   szabad megszólalnia (lásd a fenti szakaszt) — ez a szándékolt viselkedés.
+
+⚠️ **Teljes újratöltés kell** (Ctrl+Shift+R): a `?v=` csak a fő fájl URL-jét
+frissíti, a modalt a böngésző különben a gyorsítótárból veszi.
+
+### 🔴 Közben talált hiba: a kérés-mód örökre nyitva maradt (Csaba mérése, 2026-08-17)
+
+**A tünet:** az átkötés után Csaba böngészőben kipróbálta, és a visszalépcsőzés
+**egyáltalán nem történt meg**. Nem rosszkor sült el — meg sem szólalt.
+
+**Az ok NEM az új mércében volt.** A `_plafonLepcsoVisszafele` első kapuja ez:
+
+```js
+if (cs.tovabbiKert) continue;      // lapozás közben nem döntünk
+```
+
+A `tovabbiKert`-et pedig egyetlen helyen oltjuk el:
+
+```js
+if (cs.tovabbiKert && mennyiVanMar >= plafon) cs.tovabbiKert = false;
+```
+
+Ez a feltétel **csak egyfajta teljesülést ismert**: amikor a kért adag hiánytalanul
+megérkezik. De van egy másik is — **elfogyott a tartalom**. Csaba adatán 10 407 gyökér
+van; a második lapozás 15 000-re emeli a plafont, amit a `mennyiVanMar` **soha nem
+ér el**. A `tovabbiKert` így örökre igaz marad, a lépcső pedig a kapunál minden
+menetben kilép. **A második lapozás után a visszalépés soha többé nem tud elsülni.**
+
+**Miért nem derült ki korábban:** a `tovabbiKert` kaput 2026-08-16-án kapta a lépcső, és
+a lépcső ugyanabban a menetben ki is lett kapcsolva. A 15 000 → 10 000 → 5 000 mérés
+még a kapu előtti kódon készült. A hiba tehát a javítással együtt született, és a
+kikapcsolás elrejtette.
+
+**A javítás** — a kérés akkor teljesült, ha megjött a kért adag **vagy** nincs több,
+ami jöhetne:
+
+```js
+if (cs.tovabbiKert && (mennyiVanMar >= plafon || !vanMegBetoltetlen)) {
+  cs.tovabbiKert = false;
+}
+```
+
+A `vanMegBetoltetlen` ugyanabban a menetben már ki van számolva (`_vanMegBetoltetlen`),
+tehát nincs új kör. Mellékhatás nincs: ha nincs mit letölteni, a `kellBetoltes` úgyis
+hamis, a `fokuszban` küszöb-nélkülisége pedig ilyenkor tárgytalan.
+
+**A tanulság ugyanaz, mint 2026-08-09-én:** két külön hiba volt egy tünet mögött — az
+elsüléshez a mérce átkötése kellett, a megszólaláshoz meg ez. Az elsőt kijavítva a
+tünet változatlan maradt, és emiatt könnyű lett volna azt hinni, hogy az átkötés rossz.
+
+### A némaság ellen: `_lepcsoAllapot()`
+
+Ez a mérés azért állt meg félúton, mert **a lépcső NEM-lépése néma**. Új, konzolról
+hívható műszer:
+
+```js
+window._debug_sikidom._lepcsoAllapot()
+```
+
+Táblázatot ír minden csomópontról, ami az alapadag fölött áll, és **megmondja, melyik
+kapun akadt el**: kérés-mód nyitva · nincs mérce · még nem zoomolt eleget · lelép a
+következő nagyítás-végen. Csak olvas.

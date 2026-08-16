@@ -1746,3 +1746,61 @@ A nézet mostantól mélység szerint fokozza a részletességet, és csomópont
 *Böngészőben igazolva (2026-08-11, oda-vissza zoomolással): 6 pakolás a teljes
 munkamenetben, ismétlődés nélkül; a mező az 1. mélységben pontosan 250-et rakott le
 egyetlen menetben.*
+
+---
+
+### Síkidom nézet — A LAPOZÁS LÉPCSŐJE VISSZAFELÉ (2026-08-17)
+
+*Csaba böngészőben igazolta (2026-08-17): a mérce átkötése után, a kérés-mód
+javításával együtt a visszalépcsőzés működik.*
+
+Ha egy szintről kizoomolsz, a lerakott mennyiség **visszalép egy adaggal**
+(15 000 → 10 000 → 5 000), és a „további tartalmak" mag újra megjelenik. A kioldás
+2026-08-17 óta a **valódi nagyítási gesztushoz** kötött (görgő, csippentés, +/− gomb),
+nem a mért képernyő-sugárhoz. Részletek:
+[fejlesztesi_terv.md](fejlesztesi_terv.md).
+
+⚠️ **Teljes újratöltés kell** (Ctrl+Shift+R) — a `?v=` csak a fő fájl URL-jét
+frissíti, a modalt a böngésző különben a gyorsítótárból veszi.
+
+**Előkészítés:** olyan síkidom kell, aminek 5 000-nél több gyereke van — a
+`Tízezer gyökér (síkidom próba)` teszt-adat jó hozzá
+(`node backend/tools/sikidomTizezerGyokerTesztAdat.js`).
+
+**A MŰSZER — ezzel kezdd, ha valami nem stimmel.** A lépcső NEM-lépése néma, ezért
+a konzolból bármikor lekérdezhető, melyik kapun akadt el:
+
+```js
+window._debug_sikidom._lepcsoAllapot()
+```
+
+Táblázatot ír minden csomópontról, ami az alapadag (5 000) fölött áll, és a `miert`
+oszlopban megmondja: ⛔ kérés-mód nyitva · ⛔ nincs mérce · ⏳ még nem zoomolt eleget ·
+✅ a következő nagyítás-végen lelép. Csak olvas, semmit nem állít.
+
+**Amit nézni kell:**
+
+1. **A lapozás NE egye meg önmagát.** Koppints a „további tartalmak"-ra, és utána
+   **ne csinálj semmit** 5–10 másodpercig. A konzolban NEM szabad megjelennie
+   `SikidomModal._plafonLepcsoVisszafele` sornak. *(Ez volt a hiba, ami miatt
+   2026-08-16-án kikapcsoltuk: a lapozás saját fókusz-animációja oldotta ki, és
+   három másodperccel a koppintás után visszavette a kért adagot.)*
+
+   ⚠️ **A KIFOGYOTT SZINT.** Ha a plafont a rendelkezésre álló tartalom FÖLÉ emeled
+   (pl. 10 407 gyökérnél a második lapozás 15 000-re), a kért adag sosem „érkezik meg"
+   hiánytalanul. 2026-08-17-ig ettől a kérés-mód örökre nyitva maradt, és a lépcső
+   **egyáltalán nem szólalt meg többé**. Javítva — de ez az az eset, amit érdemes
+   külön kipróbálni: lapozz addig, amíg elfogy a tartalom, és a `_lepcsoAllapot()`
+   `miert` oszlopában NEM szabad „kérés-mód nyitva"-t látnod.
+2. **A lépcső lefelé.** Lapozz kétszer (5 000 → 10 000 → 15 000), majd **görgővel**
+   zoomolj kifelé. Két `_plafonLepcsoVisszafele` sort várunk, mindkettőnél
+   `kizoomolas ≈ 0,5`, és a „további tartalmak" magnak vissza kell jönnie.
+   Egyszerre **csak egy** adagot lép vissza — a többlépcsős visszaút magától áll össze.
+3. **A gesztus-szorzó tükre.** Zoomolj be, majd pontosan ugyanannyit vissza:
+   `window._debug_sikidom._gesztusSzorzo` térjen vissza a kiinduló értékhez
+   (±pár ezred). Ha elcsúszik, a mérce hazudik.
+4. **Az illesztés (⛶) NE lépjen vissza.** Lapozz, majd nyomd meg a ⛶ gombot. A
+   lépcsőnek **nem** szabad megszólalnia. Ez SZÁNDÉKOS: az `_alaphelyzet()`-et a
+   kezdő fázis is hívja magától, tehát a hozzá kötés ugyanabba a csapdába vezetne.
+   Ha úgy érzed, a ⛶-től is vissza kéne lépnie, **jelezd** — külön, a gomb
+   eseménykezelőjében köthető be.

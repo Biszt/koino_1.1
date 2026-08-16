@@ -201,12 +201,14 @@ három következménnyel:
 
 ## 5. Nyitott feladatok (sorrendben)
 
-1. **A lapozás lépcsőjének átkötése.** A `_plafonLepcsoVisszafele` ma a mért
-   `utolsoKepSugar`-ból következtet, az viszont az újrapakolástól, az illesztéstől
-   és a `_fokuszAMegjeloltre`-tól is változik → a saját lapozás animációjára is
-   elsült. Kösd a **valódi gesztushoz** (görgő, csippentés, +/− gomb), majd
-   `PLAFON_LEPCSO_BEKAPCSOLVA = true`, és mérd újra.
-   *(Az elve bizonyított: 15 000 → 10 000 → 5 000, tár 10 692 → 5 262, memória 14 → 9 MB.)*
+1. ~~**A lapozás lépcsőjének átkötése.**~~ ✅ **KÉSZ (2026-08-17, böngészőben igazolva).**
+   A `_plafonLepcsoVisszafele` már nem a mért `utolsoKepSugar`-ból következtet, hanem az
+   új `_gesztusSzorzo`-ból: a valódi nagyítási gesztusok (görgő, csippentés, +/− gomb)
+   futó szorzatából, amit kizárólag a `_zoom` ír. `PLAFON_LEPCSO_BEKAPCSOLVA = true`.
+   **Két hiba volt egy tünet mögött**: az átkötés mellé kellett a kérés-mód (`tovabbiKert`)
+   javítása is, ami kifogyott szinten örökre nyitva maradt és némán elnyelte a lépcsőt.
+   Részletek: [fejlesztesi_terv.md](fejlesztesi_terv.md), a „A LAPOZÁS LÉPCSŐJE A VALÓDI
+   GESZTUSHOZ KÖTVE" szakasz.
 2. **A mély lánc mérése** — az ős-söprés és a horgonyváltás még sosem futott.
 3. **A nagy átalakítás** (2. szakasz).
 4. **Tömörítés bekapcsolása** a backenden (a legolcsóbb nagy nyereség).
