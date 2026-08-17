@@ -3134,6 +3134,23 @@ class SikidomModal {
     // teszt-panel, ami a fejlesztéshez kellett. A terv 9. pontja szerint az törlendő;
     // a panel objektuma egyelőre marad, csak nem ez nyitja.)
     if (typeof this.onEntitasKivalasztas === 'function') {
+      // ===== A SÍKIDOM → PAKLI VÁLTÁS A TÖRTÉNETBE (Csaba, 2026-08-17) =====
+      // Eddig CSAK a pakli → síkidom váltás rögzült (a megnyitás). A koppintás a
+      // fordított váltás (síkidom → pakli); mielőtt a pakli átveszi, rögzítjük a
+      // síkidom AKKORI állapotát a MOSTANI horgonnyal — így a Vissza oda hozza
+      // vissza, ahol épp jártál, nem a megnyitási állapotba.
+      //
+      // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas). Ha a horgony
+      // a megnyitás óta nem változott, a történet-kezelő kiszűri a duplikátumot,
+      // tehát ilyenkor nem keletkezik fölösleges lépés.
+      document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
+        detail: {
+          nezet: 'sikidom',
+          horgonyEntitasId: this._horgony === VILAG ? null : this._horgony,
+          cim: this.cimFelirat
+        }
+      }));
+
       this.bezaras();
       this.onEntitasKivalasztas(talalat.cs.id.toString(), talalat.cs.entitasTipus);
     }

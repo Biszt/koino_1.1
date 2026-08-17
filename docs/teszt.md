@@ -1853,8 +1853,15 @@ Csaba szabálya szerint:
   a ▶ újranyitja (a kártya-menüsét a HORGONYÁVAL, ugyanoda).
 - **A síkidomon BELÜLI navigálás NEM rögzül.** Nagyítás, horgonyváltás,
   kizoomolás — ezek nem tesznek új történet-lépést.
-- **Koppintás → pakli:** a síkidom bezárul, a pakli az entitásra ugrik, és EZ
-  rögzül (pakli-entitásként) — ez maga a síkidom→pakli váltás.
+- **Koppintás → pakli:** a síkidom bezárul, a pakli az entitásra ugrik. EKKOR két
+  dolog rögzül: (1) a síkidom AKKORI állapota a mostani horgonnyal — így a Vissza
+  oda hozza vissza, AHOL ÉPP JÁRTÁL, nem a megnyitási állapotba —, majd (2) a
+  pakli-entitás. Ha a horgony a megnyitás óta nem változott, az (1) duplikátum,
+  amit a történet-kezelő kiszűr.
+
+Így a történetben KÉT síkidom-bejegyzés állhat egymás mellett: a megnyitási (VILÁG
+vagy — kártyáról nyitva — ágazati) és a koppintáskori (ahol jártál). A Vissza az
+utóbbira hoz, egy újabb Vissza a megnyitásira.
 
 **Amit nézni kell:**
 
