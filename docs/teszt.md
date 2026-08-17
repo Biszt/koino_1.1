@@ -1876,14 +1876,13 @@ Csaba szabálya szerint:
 - **A síkidomon BELÜLI navigálás NEM rögzül.** Nagyítás, horgonyváltás,
   kizoomolás — ezek nem tesznek új történet-lépést.
 - **Koppintás → pakli:** a síkidom bezárul, a pakli az entitásra ugrik. EKKOR két
-  dolog rögzül: (1) a síkidom AKKORI állapota a mostani horgonnyal — így a Vissza
-  oda hozza vissza, AHOL ÉPP JÁRTÁL, nem a megnyitási állapotba —, majd (2) a
-  pakli-entitás. Ha a horgony a megnyitás óta nem változott, az (1) duplikátum,
-  amit a történet-kezelő kiszűr.
+  dolog rögzül: (1) a síkidom PONTOS KAMERÁJA (horgony + skála + eltolás) — így a
+  Vissza PONTOSAN ugyanoda, ugyanabban a zoom-szintben hoz vissza, ahol a koppintás
+  előtt voltál —, majd (2) a pakli-entitás.
 
-Így a történetben KÉT síkidom-bejegyzés állhat egymás mellett: a megnyitási (VILÁG
-vagy — kártyáról nyitva — ágazati) és a koppintáskori (ahol jártál). A Vissza az
-utóbbira hoz, egy újabb Vissza a megnyitásira.
+Így a történetben két síkidom-bejegyzés állhat egymás mellett: a megnyitási
+(fókuszált: VILÁG vagy kártyáról az ágazat) és a koppintáskori (pontos kamera). A
+Vissza a koppintáskori PONTOS képre hoz, egy újabb Vissza a megnyitási képre.
 
 **Amit nézni kell:**
 

@@ -273,8 +273,12 @@ init() {
       tipus: 'nezet',
       nezet: reszletek.nezet,
       agEntitasId: reszletek.agEntitasId ?? null,
-      // A Síkidom nézet horgonya (ág-gyökértől indításnál); a Struktúránál nincs
+      // A Síkidom nézet horgonya (kártya-menüs, fókuszált MEGNYITÁSKOR); a
+      // Struktúránál nincs
       horgonyEntitasId: reszletek.horgonyEntitasId ?? null,
+      // A Síkidom nézet PONTOS kamerája (síkidom → pakli KOPPINTÁSKOR): a horgony +
+      // a nézet (skála, eltolás), hogy a Vissza pontosan ugyanoda hozzon
+      kamera: reszletek.kamera ?? null,
       cim: reszletek.cim ?? null,
       entitasId: ent.entitasId ?? null,
       entitasTipus: ent.entitasTipus ?? null
@@ -746,7 +750,9 @@ init() {
     if (allapot.nezet === 'struktura') {
       await this._strukturaModalLetrehozasa(allapot.agEntitasId, allapot.cim);
     } else if (allapot.nezet === 'sikidom') {
-      await this._sikidomModalLetrehozasa(allapot.horgonyEntitasId, allapot.cim);
+      // Ha van mentett KAMERA (síkidom → pakli koppintás), azzal pontosan
+      // visszaállítunk; egyébként a fókuszált MEGNYITÁS a horgony-entitással.
+      await this._sikidomModalLetrehozasa(allapot.horgonyEntitasId, allapot.cim, allapot.kamera);
     } else {
       console.warn('FoOldal._nezetModalNyitasa - ismeretlen nézet', { nezet: allapot.nezet });
     }
@@ -772,10 +778,12 @@ init() {
   }
 
   // Közös síkidom-létrehozó (mint a `_strukturaModalLetrehozasa`): a fő menü és a
-  // történet-visszajátszás (`_nezetModalNyitasa`) is ezt hívja. A `horgonyEntitasId`
-  // dönti el: null → VILÁG-tól; érték → ág-gyökértől horgonyozva.
-  async _sikidomModalLetrehozasa(horgonyEntitasId = null, cim = null) {
-    console.log('FoOldal._sikidomModalLetrehozasa - KEZDÉS', { horgonyEntitasId, cim });
+  // történet-visszajátszás (`_nezetModalNyitasa`) is ezt hívja. Háromféle indulás:
+  //   - `kamera` megadva → PONTOS visszaállítás (síkidom → pakli koppintás után);
+  //   - `horgonyEntitasId` megadva → fókuszált indítás (kártya-menüs megnyitás);
+  //   - egyik sincs → VILÁG-tól (fő menü).
+  async _sikidomModalLetrehozasa(horgonyEntitasId = null, cim = null, kamera = null) {
+    console.log('FoOldal._sikidomModalLetrehozasa - KEZDÉS', { horgonyEntitasId, cim, kamera });
 
     // Az éppen aktív entitás — a síkidom nézetben kiemelve jelenik meg (ha látszik)
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
@@ -788,6 +796,7 @@ init() {
         this._navigalasEntitasra(entitasId, entitasTipus);
       }
     };
+    if (kamera)           konfig.kamera           = kamera;
     if (horgonyEntitasId) konfig.horgonyEntitasId = horgonyEntitasId;
     if (cim)              konfig.cim              = cim;
 

@@ -467,6 +467,14 @@ class SikidomModal {
       ? beallitasok.horgonyEntitasId.toString()
       : null;
 
+    // ===== PONTOS KAMERA-VISSZAÁLLÍTÁS (történet-vissza, 2026-08-17) =====
+    // Ha meg van adva ({ horgony, skala, eltolasX, eltolasY }), a nézet NEM
+    // fókuszál/illeszt, hanem PONTOSAN visszaállítja a mentett kamerát: ugyanaz a
+    // képernyő-pozíció és zoom-szint, ahol a koppintás előtt voltál. A `horgony`
+    // lehet a VILÁG (`'vilag'`) vagy egy entitás-id; a `_koppintas` menti el, a
+    // történet-vissza adja át. Lásd `_kameraVisszaallitas`.
+    this.kezdoKamera = beallitasok.kamera ?? null;
+
     this.modal = null;
     this.vaszon = null;
 
@@ -524,6 +532,12 @@ class SikidomModal {
     // horgonyként), `FOKUSZ_ATMERO_ARANY` méretben — így a kiválasztott normál
     // síkidomként látszik a szülője terében. A kezdő fázis lezárásakor törlődik.
     this._kezdoFokusz = null;
+
+    // ===== A PONTOS KAMERA (visszaállítás közben) =====
+    // Ha meg van adva ({ horgony, skala, eltolasX, eltolasY }), a kezdő fázis NEM
+    // illeszt/fókuszál, hanem a nézetet EZEN a beállításon tartja. A kezdő fázis
+    // lezárásakor törlődik.
+    this._kamera = null;
 
     // Világ → képernyő
     this._nezet = { skala: 1, eltolasX: 0, eltolasY: 0 };
@@ -697,7 +711,18 @@ class SikidomModal {
     // Ág-indításnál felfűzzük az ős-láncot és a horgonyt az entitásra állítjuk;
     // egyébként a szokásos módon a gyökereket töltjük.
     let kezdoCsomopont;
-    if (this.horgonyEntitasId) {
+    if (this.kezdoKamera) {
+      // PONTOS KAMERA-VISSZAÁLLÍTÁS (történet-vissza): a mentett horgony + nézet
+      kezdoCsomopont = await this._kameraVisszaallitas();
+      if (!kezdoCsomopont) {
+        console.warn('SikidomModal.megnyitas - kamera-visszaállítás nem sikerült, VILÁG-nézet');
+        this._horgony = VILAG;
+        this._illesztesHorgony = VILAG;
+        this._kamera = null;
+        await this._gyerekekBetoltese(VILAG, 0);
+        kezdoCsomopont = this._tar.get(VILAG);
+      }
+    } else if (this.horgonyEntitasId) {
       kezdoCsomopont = await this._gerincFelfuzese();
       if (!kezdoCsomopont) {
         // Nem sikerült a lánc (hiba / törölt entitás): essünk vissza a VILÁG-nézetre
@@ -727,11 +752,25 @@ class SikidomModal {
     this._nezetValtas('nezet');
     this._vaszonMeretezese();
 
-    // KÖRKÖRÖSSÉG FELOLDÁSA: a pakoláshoz kell a nagyítás (abból jön a lyuk
-    // képpont-mérete), a végleges nagyításhoz viszont a pakolás kiterjedése.
-    // Ezért egy DURVA becsléssel indulunk, lepakolunk, majd a MÉRT kiterjedésre
-    // igazítunk — és ha az igazítás új helyet nyitott, még egyszer pakolunk.
-    this._kezdoNezetBecslese(kezdoCsomopont);
+    if (this._kamera) {
+      // PONTOS KAMERA: a nézetet közvetlenül a mentett értékre állítjuk, NEM
+      // illesztünk. A kezdő fázis csak betölt+pakol, a `_kezdoIllesztesKell` a
+      // kamera miatt sosem kér újra-illesztést, tehát a nézet ezen marad. (Ha a
+      // betöltés közben a `_horgonyEllenorzes` horgonyt vált, a képernyő-kép
+      // változatlan marad — a nezet vele mozog, lásd `horgonyValtasNezet`.)
+      this._nezet = {
+        skala: this._kamera.skala,
+        eltolasX: this._kamera.eltolasX,
+        eltolasY: this._kamera.eltolasY
+      };
+      this._alapSkala = this._kamera.skala;
+    } else {
+      // KÖRKÖRÖSSÉG FELOLDÁSA: a pakoláshoz kell a nagyítás (abból jön a lyuk
+      // képpont-mérete), a végleges nagyításhoz viszont a pakolás kiterjedése.
+      // Ezért egy DURVA becsléssel indulunk, lepakolunk, majd a MÉRT kiterjedésre
+      // igazítunk — és ha az igazítás új helyet nyitott, még egyszer pakolunk.
+      this._kezdoNezetBecslese(kezdoCsomopont);
+    }
 
     // A kezdő fázis alatt a nézet ZÁROLVA (lásd `_kezdoFazis`): előbb megérkezik és
     // lepakolódik a teljes készlet, aztán illesztünk, és csak utána nyúlhat hozzá
@@ -749,7 +788,9 @@ class SikidomModal {
     }, KEZDO_FAZIS_HATARIDO_MS);
 
     this._tennivalokFeldolgozasa();
-    this._alaphelyzet(false);          // az első illesztés a becsült kiterjedésre
+    // Kamera-módban NEM illesztünk — a nézet a mentett kamerán marad. Egyébként az
+    // első illesztés a becsült kiterjedésre (vagy fókusz esetén a kiválasztottra).
+    if (!this._kamera) this._alaphelyzet(false);
 
     if (!this._ablakMeretezoBound) {
       this._ablakMeretezoBound = () => {
@@ -782,67 +823,9 @@ class SikidomModal {
   async _gerincFelfuzese() {
     console.log('SikidomModal._gerincFelfuzese - KEZDÉS', { horgony: this.horgonyEntitasId });
 
-    let valasz;
-    try {
-      valasz = await apiGet(
-        `sikidom/oslanc?entitas=${encodeURIComponent(this.horgonyEntitasId)}`, this.token
-      );
-    } catch (hiba) {
-      console.error('SikidomModal._gerincFelfuzese - HIBA', { hiba: hiba.message });
-      return null;
-    }
-
-    // A lánc ELÖL a horgony, VÉGÉN a gyökér. Felfűzni fentről lefelé kell, ezért
-    // megfordítjuk: [gyökér, …, szülő, horgony].
-    const lanc = valasz?.oslanc ?? [];
-    if (!lanc.length) {
-      console.warn('SikidomModal._gerincFelfuzese - üres lánc');
-      return null;
-    }
-    const gyokertolLefele = [...lanc].reverse();
-
-    // A legfelső ős (a gyökér) méretét a VILÁG-hoz a legerősebb gyökér adja —
-    // ugyanaz a mértékegység, mint a rendes gyökér-szinten (`_relSugar` VILÁG-ágán).
-    const vilag = this._tar.get(VILAG);
-    vilag.legerosebbGyerekPont = valasz.legerosebbGyokerPont || 0;
-
-    let szulo = vilag;
-    let kivalasztott = null;      // a kért entitás (E) — erre fókuszálunk
-    let kivalasztottSzulo = vilag; // E szülője (P) — EZ lesz a horgony
-
-    for (const elem of gyokertolLefele) {
-      const id = elem.entitasId.toString();
-      const pont = elem.hierarchikusOsszesPont ?? 0;
-      const relR = this._relSugar(szulo, pont);
-
-      const csomopont = this._ujCsomopont({
-        id,
-        entitasTipus: elem.entitasTipus,
-        cim: elem.cim,
-        pont,
-        vanGyereke: elem.vanGyereke,
-        szuloId: szulo.id,
-        // KÖZÉPRE a szülőben (lásd a fejléc magyarázatát)
-        relX: 0, relY: 0, relR,
-        letrehozva: elem.letrehozva,
-        kategoriaIkonok: elem.kategoriaIkonok,
-        tipusIkon: elem.tipusIkon,
-        javaslatTipus: elem.javaslatTipus
-      });
-
-      this._tar.set(id, csomopont);
-
-      // A szülő LERAKOTT gyerekei közé (hogy a bejárás rajzolja). A dedup a
-      // `_varolistaraFuzes`-ben óv attól, hogy egy későbbi testvér-betöltés
-      // megismételje ezt a gyereket.
-      if (!szulo.gyerekIdk.includes(id)) szulo.gyerekIdk.push(id);
-      szulo.betoltottGyerekPont += pont;
-
-      // Az ELŐZŐ `szulo` a mostani elem szülője; az utolsó körben ez lesz E szülője (P)
-      kivalasztottSzulo = szulo;
-      szulo = csomopont;
-      kivalasztott = csomopont;
-    }
+    const eredmeny = await this._osLancFelfuzese(this.horgonyEntitasId);
+    if (!eredmeny) return null;
+    const { cel: kivalasztott, szulo: kivalasztottSzulo } = eredmeny;
 
     // ===== A HORGONY A KIVÁLASZTOTT SZÜLŐJE, A FÓKUSZ MAGA A KIVÁLASZTOTT =====
     // A kiválasztottat NEM világ-ként mutatjuk (nem ő tölti ki a teret), hanem
@@ -860,14 +843,103 @@ class SikidomModal {
     await this._gyerekekBetoltese(kivalasztott.id, 0);
 
     console.log('SikidomModal._gerincFelfuzese - VÉGE', {
-      lancHossz: gyokertolLefele.length,
-      horgony: this._horgony,
-      fokusz: kivalasztott.id,
-      szuloGyerekek: kivalasztottSzulo.varolista.length
+      horgony: this._horgony, fokusz: kivalasztott.id
     });
 
     // A kezdő nézet-becsléshez a horgonyt (szülőt) adjuk vissza
     return kivalasztottSzulo;
+  }
+
+  // ===== KÖZÖS: AZ ŐS-LÁNC FELFŰZÉSE A VILÁG ALÁ =====
+  // Lehozza `celId` ős-láncát a backendtől, és felfűzi: VILÁG → gyökér → … → celId.
+  // Minden láncszem a szülőjében KÖZÉPRE kerül (relX=0, relY=0), a méretét a pontból
+  // számoljuk. Használja a fókuszált indítás (`_gerincFelfuzese`) ÉS a pontos
+  // kamera-visszaállítás (`_kameraVisszaallitas`) is.
+  // @param {string} celId - a lánc alsó vége (a kért entitás)
+  // @returns {Promise<{cel:Object, szulo:Object}|null>} a cél és a szülő csomópontja
+  async _osLancFelfuzese(celId) {
+    let valasz;
+    try {
+      valasz = await apiGet(`sikidom/oslanc?entitas=${encodeURIComponent(celId)}`, this.token);
+    } catch (hiba) {
+      console.error('SikidomModal._osLancFelfuzese - HIBA', { hiba: hiba.message });
+      return null;
+    }
+
+    // A lánc ELÖL a cél, VÉGÉN a gyökér. Felfűzni fentről lefelé kell → megfordítjuk.
+    const lanc = valasz?.oslanc ?? [];
+    if (!lanc.length) {
+      console.warn('SikidomModal._osLancFelfuzese - üres lánc', { celId });
+      return null;
+    }
+    const gyokertolLefele = [...lanc].reverse();
+
+    // A legfelső ős (a gyökér) méretét a VILÁG-hoz a legerősebb gyökér adja.
+    const vilag = this._tar.get(VILAG);
+    vilag.legerosebbGyerekPont = valasz.legerosebbGyokerPont || 0;
+
+    let szulo = vilag;
+    let cel = null;
+    let celSzulo = vilag;
+
+    for (const elem of gyokertolLefele) {
+      const id = elem.entitasId.toString();
+      const pont = elem.hierarchikusOsszesPont ?? 0;
+      const relR = this._relSugar(szulo, pont);
+
+      const csomopont = this._ujCsomopont({
+        id, entitasTipus: elem.entitasTipus, cim: elem.cim, pont,
+        vanGyereke: elem.vanGyereke, szuloId: szulo.id,
+        relX: 0, relY: 0, relR,          // KÖZÉPRE a szülőben
+        letrehozva: elem.letrehozva, kategoriaIkonok: elem.kategoriaIkonok,
+        tipusIkon: elem.tipusIkon, javaslatTipus: elem.javaslatTipus
+      });
+
+      this._tar.set(id, csomopont);
+      if (!szulo.gyerekIdk.includes(id)) szulo.gyerekIdk.push(id);
+      szulo.betoltottGyerekPont += pont;
+
+      celSzulo = szulo;   // az ELŐZŐ szülő a mostani elem szülője
+      szulo = csomopont;
+      cel = csomopont;
+    }
+
+    return { cel, szulo: celSzulo };
+  }
+
+  // ===== A PONTOS KAMERA VISSZAÁLLÍTÁSA (történet-vissza) =====
+  // A mentett kamera (`this.kezdoKamera` = { horgony, skala, eltolasX, eltolasY })
+  // alapján felépíti a tárat, és a horgonyt a mentett horgonyra állítja. A tényleges
+  // nézetet (nezet) a `megnyitas` állítja pontosan a mentett értékre; itt csak a
+  // tartalmat építjük fel. Ha a mentett horgony a VILÁG, nincs ős-lánc — csak a
+  // gyökereket töltjük.
+  // @returns {Promise<Object|null>} a horgony csomópontja, vagy null hiba esetén
+  async _kameraVisszaallitas() {
+    const k = this.kezdoKamera;
+    console.log('SikidomModal._kameraVisszaallitas - KEZDÉS', { horgony: k?.horgony });
+
+    // VILÁG-kamera: nincs ős-lánc, csak a gyökereket töltjük
+    if (!k.horgony || k.horgony === VILAG) {
+      this._horgony = VILAG;
+      this._illesztesHorgony = VILAG;
+      await this._gyerekekBetoltese(VILAG, 0);
+      this._kamera = { horgony: VILAG, skala: k.skala, eltolasX: k.eltolasX, eltolasY: k.eltolasY };
+      return this._tar.get(VILAG);
+    }
+
+    // Entitás-horgony: felfűzzük az ős-láncot, a horgony maga a mentett entitás
+    const eredmeny = await this._osLancFelfuzese(k.horgony);
+    if (!eredmeny) return null;
+    const { cel } = eredmeny;
+
+    this._horgony = cel.id;
+    this._illesztesHorgony = cel.id;
+    this._kamera = { horgony: cel.id, skala: k.skala, eltolasX: k.eltolasX, eltolasY: k.eltolasY };
+
+    await this._gyerekekBetoltese(cel.id, 0);
+
+    console.log('SikidomModal._kameraVisszaallitas - VÉGE', { horgony: this._horgony });
+    return cel;
   }
 
   bezaras() { this.modal?.bezaras(); }
@@ -1892,6 +1964,9 @@ class SikidomModal {
   //
   // 1%-os tűrés: a lebegőpontos hajszálnyi eltérés miatt ne illesszünk örökké.
   _kezdoIllesztesKell() {
+    // Kamera-módban a nézet PONTOS: sosem illesztünk újra (a mentett kamerán marad)
+    if (this._kamera) return false;
+
     // Fókusz-módban a cél a kiválasztott FOKUSZ-mérete, nem a horgony kiterjedése
     if (this._kezdoFokusz) {
       const cel = this._fokuszNezet(this._kezdoFokusz);
@@ -1919,9 +1994,11 @@ class SikidomModal {
       clearTimeout(this._kezdoFazisHatarido);
       this._kezdoFazisHatarido = null;
     }
-    // A kezdő fókusz egyszer használatos: a beállt kép után az ⛶ és a további
-    // illesztések a normál (horgony-kiterjedés) úton menjenek.
+    // A kezdő fókusz és a kamera egyszer használatos: a beállt kép után az ⛶ és a
+    // további illesztések a normál (horgony-kiterjedés) úton menjenek, a nézettel
+    // pedig innentől szabadon lehet mozogni.
     this._kezdoFokusz = null;
+    this._kamera = null;
     this._folyamatJelzo(false);
 
     const vilag = this._tar.get(VILAG);
@@ -3211,21 +3288,23 @@ class SikidomModal {
     if (typeof this.onEntitasKivalasztas === 'function') {
       // ===== A SÍKIDOM → PAKLI VÁLTÁS A TÖRTÉNETBE (Csaba, 2026-08-17) =====
       // Eddig CSAK a pakli → síkidom váltás rögzült (a megnyitás). A koppintás a
-      // fordított váltás (síkidom → pakli); mielőtt a pakli átveszi, rögzítjük a
-      // síkidom AKKORI állapotát — így a Vissza oda hozza vissza, ahol épp jártál.
+      // fordított váltás (síkidom → pakli); mielőtt a pakli átveszi, elmentjük a
+      // síkidom PONTOS KAMERÁJÁT — a horgonyt ÉS a nézetet (skála + eltolás) —, hogy
+      // a Vissza pontosan ugyanoda, ugyanabban a zoom-szintben hozzon vissza, ahol
+      // a koppintás előtt voltál. (Nem fókuszálás/illesztés: pontos visszaállítás.)
       //
-      // A KÖZÉPEN NÉZETT entitást rögzítjük, NEM a horgonyt: a kártya-menüs
-      // (fókuszált) indítás óta a horgony a nézett entitás SZÜLŐJE, tehát a horgony
-      // egy szinttel feljebbre (vagy sekély entitásnál a teljes VILÁG-ra) töltene
-      // vissza. A `_kozpontiEntitas` azt adja, amire tényleg ránézel — és a
-      // Vissza épp arra fókuszál (a szülőt horgonyként), pont mint a megnyitáskor.
-      //
-      // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas). Ha ez azonos a
-      // megnyitási állapottal, a történet-kezelő kiszűri a duplikátumot.
+      // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas), csak
+      // `horgonyEntitasId` helyett `kamera`. A történet-kezelő a JSON-alak szerint
+      // szűri a duplikátumot.
       document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
         detail: {
           nezet: 'sikidom',
-          horgonyEntitasId: this._kozpontiEntitas(),
+          kamera: {
+            horgony: this._horgony,          // lehet a VILÁG sentinel is
+            skala: this._nezet.skala,
+            eltolasX: this._nezet.eltolasX,
+            eltolasY: this._nezet.eltolasY
+          },
           cim: this.cimFelirat
         }
       }));
@@ -3233,35 +3312,6 @@ class SikidomModal {
       this.bezaras();
       this.onEntitasKivalasztas(talalat.cs.id.toString(), talalat.cs.entitasTipus);
     }
-  }
-
-  // ===== A KÖZÉPEN NÉZETT ENTITÁS =====
-  // Melyik entitást nézi épp az e-ember? A képernyő közepét tartalmazó, a
-  // képernyőre FÉRŐ (nem az egésznél nagyobb) síkidomok közül a LEGNAGYOBB — ez a
-  // „fő" dolog, amire ránézel. A horgony erre NEM jó: a kártya-menüs (fókuszált)
-  // indítás óta a horgony a nézett entitás SZÜLŐJE.
-  //
-  // A méret-szűrő (≤ fél képernyő SUGÁR) zárja ki a nézett entitás ŐSEIT (azok az
-  // egésznél nagyobbak, tehát nem „rájuk nézünk"), és beengedi magát a nézettet és
-  // annak (kisebb) gyerekeit — közülük a legnagyobb a nézett.
-  //
-  // A történet ezt rögzíti (síkidom → pakli); a Vissza erre fókuszál újra.
-  // @returns {string|null} az entitás id-je, vagy null (VILÁG-szint / üres közép)
-  _kozpontiEntitas() {
-    const kx = (this._szelesseg || 0) / 2;
-    const ky = (this._magassag || 0) / 2;
-    const felkepernyoSugar = this._kepernyoMeret() / 2;
-
-    let jelolt = null;
-    for (const { cs, kep } of (this._utolsoLathatoak ?? [])) {
-      if (cs.id === VILAG) continue;
-      if (kep.kepSugar > felkepernyoSugar) continue;                 // nagyobb a képernyőnél
-      if (Math.hypot(kep.kepX - kx, kep.kepY - ky) > kep.kepSugar) continue; // a közép nincs rajta
-      if (!jelolt || kep.kepSugar > jelolt.kepSugar) {
-        jelolt = { id: cs.id, kepSugar: kep.kepSugar };
-      }
-    }
-    return jelolt?.id ?? null;
   }
 
   // ===== A KÁRTYA-PANEL =====
