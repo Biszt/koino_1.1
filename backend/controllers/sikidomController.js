@@ -81,6 +81,41 @@ class SikidomController {
       });
     }
   }
+
+  // ===================================
+  // GET /api/sikidom/oslanc
+  // ===================================
+  // Egy entitás ŐS-LÁNCA (önmagától a gyökérig) — a Síkidom nézet ág-gyökértől
+  // indításához: a horgony fölé fel kell fűzni az ősöket, hogy a környezet
+  // (szülők) is látsszon.
+  //   GET /api/sikidom/oslanc?entitas=<id>
+  async oslanc(req, res) {
+    console.log('SikidomController.oslanc - KEZDÉS', { query: req.query });
+
+    try {
+      const eemberId = req.user?.id;
+      if (!eemberId) {
+        return res.status(401).json({ success: false, message: 'Bejelentkezés szükséges' });
+      }
+
+      const entitasId = req.query.entitas || null;
+      if (!entitasId) {
+        return res.status(400).json({ success: false, message: 'Hiányzó entitás azonosító' });
+      }
+
+      const eredmeny = await SikidomService.osLancLekerese(entitasId);
+
+      console.log('SikidomController.oslanc - VÉGE', { lancHossz: eredmeny.oslanc.length });
+      return res.status(200).json({ success: true, ...eredmeny });
+
+    } catch (error) {
+      console.error('SikidomController.oslanc - HIBA', { hiba: error.message });
+      return res.status(500).json({
+        success: false,
+        message: error.message ?? 'Síkidom ős-lánc lekérési hiba'
+      });
+    }
+  }
 }
 
 // ===================================

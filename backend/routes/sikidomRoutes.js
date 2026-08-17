@@ -29,6 +29,12 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // VÉDETT - csak bejelentkezett eemberek
 router.get('/sikidom/gyerekek', authMiddleware, sikidomController.gyerekek);
 
+// Egy entitás ŐS-LÁNCA (önmagától a gyökérig) — a Síkidom nézet ág-gyökértől
+// indításához (a kártya-menüs „Síkidom nézet").
+// GET /api/sikidom/oslanc?entitas=<id>
+// VÉDETT - csak bejelentkezett eemberek
+router.get('/sikidom/oslanc', authMiddleware, sikidomController.oslanc);
+
 // ===================================
 // ROUTER EXPORTÁLÁSA
 // ===================================

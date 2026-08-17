@@ -70,6 +70,55 @@ async findByEntitasId(entitasId) {
     return eredmeny;
 }
 
+// ----- EGY ENTITÁS ŐS-LÁNCA (ÖNMAGÁTÓL A GYÖKÉRIG) -----
+/**
+* Az entitás allokációi az ŐS-LÁNCA mentén: ELŐL az entitás maga, majd a szülője,
+* nagyszülője, ... a gyökérig. A Síkidom nézet ág-gyökértől indítása használja: a
+* horgony fölé fel kell fűzni az ősöket, hogy a környezet (szülők) is látsszon.
+*
+* A sorrendet az entitás `osLanc` mezője adja (önmagával kezdve, gyökérrel végezve).
+* A tényleges allokáció-sorokat EGYETLEN indexelt lekérdezéssel hozzuk le (nincs
+* szintenkénti kör), majd az osLanc sorrendjére rendezzük — ugyanaz az adat, mint
+* amit a gyerek-lekérés ad, tehát a cím- és ikon-feltöltés rá is ráhúzható.
+*
+* @param {string} entitasId - a horgony entitás azonosítója
+* @returns {Promise<Array>} a lean allokációk [saját, szülő, ..., gyökér] sorrendben
+*/
+async findOsLancEntitasok(entitasId) {
+    console.log('hierarchikusAllokaciRepository.findOsLancEntitasok - KEZDÉS', { entitasId });
+
+    const sajat = await this.findByEntitasId(entitasId);
+    if (!sajat) {
+        console.log('hierarchikusAllokaciRepository.findOsLancEntitasok - VÉGE (nincs allokáció)');
+        return [];
+    }
+
+    // Az osLanc önmagával kezdődik és a gyökérrel végződik. Ha valamiért üres
+    // (régi adat), legalább önmagát adjuk vissza — a nézet így is megnyílik.
+    const lanc = Array.isArray(sajat.osLanc) && sajat.osLanc.length > 0
+        ? sajat.osLanc
+        : [{ entitasId: sajat.entitasId, entitasTipus: sajat.entitasTipus }];
+
+    const idk = lanc.map(elem => elem.entitasId);
+
+    // A lánc ÖSSZES allokációja egy lekérdezéssel (az entitasId indexelt)
+    const sorok = await HierarchikusTudatpontAllokacio
+        .find({ entitasId: { $in: idk } })
+        .lean();
+
+    // Az osLanc SORRENDJÉRE rendezzük (a $in nem őrzi meg a sorrendet)
+    const kulcs = (id) => id.toString();
+    const terkep = new Map(sorok.map(sor => [kulcs(sor.entitasId), sor]));
+    const rendezett = idk
+        .map(id => terkep.get(kulcs(id)))
+        .filter(Boolean);
+
+    console.log('hierarchikusAllokaciRepository.findOsLancEntitasok - VÉGE', {
+        lancHossz: rendezett.length
+    });
+    return rendezett;
+}
+
 // ----- LÉTREHOZÁS VAGY FRISSÍTÉS (UPSERT) -----
 /**
 * @param {string} entitasId - Az entitás azonosítója

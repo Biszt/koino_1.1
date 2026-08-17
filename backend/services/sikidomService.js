@@ -138,6 +138,71 @@ async gyerekekLekerese(szuloId = null, minPont = 0, kurzorPont = null, kurzorId 
   return { gyerekek, osszesGyerekPont, kurzor, vanTovabb };
 }
 
+// ----- EGY ENTITÁS ŐS-LÁNCA (A NÉZET ÁG-GYÖKÉRTŐL INDÍTÁSÁHOZ) -----
+/**
+* A horgony entitás ős-lánca: ELŐL az entitás maga, majd a szülője, ... a gyökérig.
+* A Síkidom nézet a kártya-menüből így nyílik meg egy ágon: a horgony fölé fel kell
+* fűzni az ősöket, hogy a környezet (szülők) is látsszon (a méretezéshez kell a
+* szülők pontja).
+*
+* Ugyanabban a formában adja vissza az elemeket, mint a `gyerekekLekerese` — így a
+* kliens ugyanazzal a `_ujCsomopont`-tal építi fel őket. A `legerosebbGyokerPont`
+* külön jön: a LEGFELSŐ ős (a gyökér) méretét a VILÁG-hoz képest ebből számolja a
+* kliens (`gyokerRelativSugar`), ugyanúgy, ahogy a rendes gyökér-szinten.
+*
+* @param {string} entitasId - a horgony entitás azonosítója
+* @returns {Promise<Object>} { oslanc: [saját, szülő, ..., gyökér], legerosebbGyokerPont }
+*/
+async osLancLekerese(entitasId) {
+  console.log('SikidomService.osLancLekerese - KEZDÉS', { entitasId });
+
+  const sorok = await hierarchikusAllokaciRepository.findOsLancEntitasok(entitasId);
+  if (sorok.length === 0) {
+    console.log('SikidomService.osLancLekerese - VÉGE (nincs lánc)');
+    return { oslanc: [], legerosebbGyokerPont: 0 };
+  }
+
+  // Kinek van SAJÁT gyereke? (a gerinc minden tagjának van — kivéve talán a
+  // horgony —, de EGY lekérdezéssel az egész láncra, nincs N+1)
+  const gyerekesIdk = await hierarchikusAllokaciRepository.melyikSzulonekVanGyereke(
+    sorok.map(sor => sor.entitasId)
+  );
+  const gyerekesHalmaz = new Set(gyerekesIdk.map(id => id.toString()));
+
+  // Cím + mellék-ikonok — UGYANAZ a közös forrás, mint a gyerekeknél
+  const cimmel = await entitasCimekFeltoltese(sorok);
+  const mellekIkonok = await strukturaService.mellekIkonokFeltoltese(sorok);
+
+  const oslanc = cimmel.map(sor => {
+    const mellek = mellekIkonok.get(`${sor.entitasTipus}:${sor.entitasId.toString()}`) ?? {};
+    return {
+      entitasId: sor.entitasId,
+      entitasTipus: sor.entitasTipus,
+      cim: sor.entitasCim ?? null,
+      hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
+      vanGyereke: gyerekesHalmaz.has(sor.entitasId.toString()),
+      letrehozva: sor.letrehozva ?? null,
+      kategoriaIkonok: mellek.kategoriaIkonok ?? [],
+      tipusIkon:       mellek.tipusIkon ?? null,
+      javaslatTipus:   mellek.javaslatTipus ?? null
+    };
+  });
+
+  // A legerősebb GYÖKÉR pontja: a legfelső ős méretét a VILÁG-hoz ebből számolja a
+  // kliens. A gyerek-lekérés null szülővel, egyetlen sorral megadja (pont szerint
+  // csökkenő az első = a legerősebb gyökér).
+  const legerosebbGyokerSor = await hierarchikusAllokaciRepository.findGyerekekKuszobFolott(
+    null, 0, null, null, 1
+  );
+  const legerosebbGyokerPont = legerosebbGyokerSor[0]?.hierarchikusOsszesPont ?? 0;
+
+  console.log('SikidomService.osLancLekerese - VÉGE', {
+    lancHossz: oslanc.length, legerosebbGyokerPont
+  });
+
+  return { oslanc, legerosebbGyokerPont };
+}
+
 }
 
 // --- EXPORTÁLÁS - SINGLETON példány ---
