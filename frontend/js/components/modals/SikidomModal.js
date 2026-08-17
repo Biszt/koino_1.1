@@ -2902,9 +2902,19 @@ class SikidomModal {
       entitasId: talalat.cs.id, entitasTipus: talalat.cs.entitasTipus
     });
 
-    this._kivalasztottId = talalat.cs.id;
-    this._rajzolasKerese();
-    this._kartyaPanel.megjelenites(talalat.cs.id, talalat.cs.entitasTipus);
+    // ===== KOPPINTÁS → A PAKLI ARRA A KÁRTYÁRA UGRIK (2026-08-17) =====
+    // A struktúra nézet mintájára (`StrukturaModal`): koppintásra BEZÁRJUK a
+    // síkidomot, és a mögötte lévő pakli arra az entitásra épül újra. A navigálást a
+    // `foOldal` végzi, az `onEntitasKivalasztas` visszahíváson át (aktív entitás
+    // mentése → a központi újratöltő a paklit erre az entitásra állítja).
+    //
+    // (Korábban itt a `SikidomKartyaPanel.megjelenites` állt — az egykártyás
+    // teszt-panel, ami a fejlesztéshez kellett. A terv 9. pontja szerint az törlendő;
+    // a panel objektuma egyelőre marad, csak nem ez nyitja.)
+    if (typeof this.onEntitasKivalasztas === 'function') {
+      this.bezaras();
+      this.onEntitasKivalasztas(talalat.cs.id.toString(), talalat.cs.entitasTipus);
+    }
   }
 
   // ===== A KÁRTYA-PANEL =====
