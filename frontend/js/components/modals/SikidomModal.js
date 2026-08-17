@@ -4,6 +4,7 @@
 import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
+import { debugFogantyu } from '../../utils/debugFogantyu.js'; // Dev-only konzol-fogantyú
 import { gyerekRelativSugar, gyokerRelativSugar,
          gyerekPontKuszob, gyokerPontKuszob, SZINT_OSZTO }
   from '../../utils/sikidomMeret.js';
@@ -582,8 +583,9 @@ class SikidomModal {
     // kívülről különben nem látszik, így nem lehetne megmérni, hogy a letöltött
     // síkidomokból hány kap ténylegesen feliratot vagy mellék-ikont — pedig ez
     // dönti el, érdemes-e a cím/ikon letöltését a pozíció-adattól elválasztani.
-    // CSAK OLVASÁSRA való; a nézet működésére nincs hatással.
-    window._debug_sikidom = this;
+    // CSAK OLVASÁSRA való; a nézet működésére nincs hatással. CSAK DEV-BEN jön
+    // létre (lásd debugFogantyu) — élesen (koino.hu) nem szivárog ki a konzolra.
+    debugFogantyu('_debug_sikidom', this);
 
     const tartalomHtml = await this._templateBetoltese();
     if (!tartalomHtml) return;

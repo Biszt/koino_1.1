@@ -77,6 +77,22 @@ console.log('PROJEKT_GYOKER:', PROJEKT_GYOKER);
 console.log('Frontend útvonal:', path.join(PROJEKT_GYOKER, 'frontend'));
 console.log('index.html útvonal:', path.join(PROJEKT_GYOKER, 'frontend', 'index.html'));
 
+// ===== FEJLESZTŐI HOMOKOZÓK KIZÁRÁSA ÉLESBEN (2026-08-17) =====
+// A síkidom-/pakolás-teszt oldalak és a hozzájuk tartozó teszt-kód dev-only
+// homokozók (böngészős kísérletezéshez). Élesen (koino.hu, NODE_ENV=production)
+// ne legyenek elérhetők — 404-gyel válaszolunk rájuk, MIELŐTT a statikus
+// kiszolgáló odaadná őket. Dev-ben (NODE_ENV=development) érintetlenül maradnak.
+if (process.env.NODE_ENV === 'production') {
+  const tesztHomokozoMinta = /^\/(sikidomTeszt\.html|regiPakolasTeszt\.html|js\/teszt\/|css\/teszt\/)/;
+  app.use((req, res, next) => {
+    if (tesztHomokozoMinta.test(req.path)) {
+      console.log('server.js - teszt-homokozó blokkolva (éles):', req.path);
+      return res.status(404).send('Not found');
+    }
+    next();
+  });
+}
+
 // Statikus fájlok kiszolgálása a frontend mappából
 // pl. koino_1.1/frontend/css/main.css → http://localhost:3000/css/main.css
 app.use(express.static(path.join(PROJEKT_GYOKER, 'frontend')));

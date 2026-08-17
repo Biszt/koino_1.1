@@ -29,6 +29,7 @@ import SikidomModal from './modals/SikidomModal.js';
 import EemberBeallitasokModal from './modals/EemberBeallitasokModal.js';
 import Pakli from './Pakli.js';
 import FoOldalTortenetKezelo from './FoOldalTortenetKezelo.js';
+import { debugFogantyu } from '../utils/debugFogantyu.js'; // Dev-only konzol-fogantyúk
 
 
 class FoOldal {
@@ -74,10 +75,10 @@ init() {
   this.tortenet = new FoOldalTortenetKezelo({
     onValtozas: (allapot) => this._tortenetGombokFrissitese(allapot)
   });
-  // Böngészős teszteléshez elérhetővé tesszük a konzolon (a gombok a 3. lépésben
-  // jönnek; addig is hívható: _debug_foOldal.tortenetVissza() / .tortenetElore())
-  window._debug_tortenet = this.tortenet;
-  window._debug_foOldal  = this;
+  // Böngészős teszteléshez elérhetővé tesszük a konzolon (CSAK DEV-BEN, lásd
+  // debugFogantyu): _debug_foOldal.tortenetVissza() / .tortenetElore()
+  debugFogantyu('_debug_tortenet', this.tortenet);
+  debugFogantyu('_debug_foOldal', this);
 
   // A ◀ / ▶ gombok és az Alt+←/→ billentyűk bekötése (a HTML már betöltött)
   this._tortenetGombokBekotese();
@@ -144,7 +145,7 @@ init() {
       aktivEntitasMentese(ujEntitasId, ujEntitasTipus);
     }
   );
-  window._debug_pakli = this.pakli;
+  debugFogantyu('_debug_pakli', this.pakli);
 
   // _pakliInditasa kezeli az érvénytelen mentett entitást.
   // A betöltés UTÁN beültetjük a kezdő állapotot a történetbe (ez lesz az első,
