@@ -1749,6 +1749,28 @@ egyetlen menetben.*
 
 ---
 
+### Síkidom nézet — A KÁRTYA-MENÜS INDÍTÁS A KIVÁLASZTOTTRA KÖZPONTOZ (2026-08-17)
+
+Kártya-menüből „Síkidom nézet"-et választva a kiválasztott entitást NEM a világ-ként
+mutatjuk (nem ő tölti ki a teret), hanem NORMÁL síkidomként a **szülője** terében, rá
+központozva — így a környezete (a testvérei) is látszik. Ha a kiválasztott gyökér, a
+szülője a VILÁG, de akkor is rá központozunk.
+
+A méretet a `FOKUSZ_ATMERO_ARANY` (0,5) adja: a kiválasztott átmérője a kisebbik
+képernyő-oldal fele. Ízlés szerint hangolható.
+
+**Amit nézni kell:**
+
+1. Nyiss egy kártyát, a hamburger menüjéből „Síkidom nézet" → a kiválasztott entitás
+   a KÉPERNYŐ KÖZEPÉN, fél-képernyő méretben, a szülője terében (testvérek körben).
+2. Kizoomolva a szülő (és fölfelé az ősök) tárul fel; a kiválasztott a helyén marad.
+3. Mély láncon is (sok ős): a horgony a kiválasztott SZÜLŐJE, nem maga a kiválasztott.
+
+*Böngészőben igazolva (2026-08-17): a kiválasztott pontosan középen, átmérője a fél
+képernyő; a horgony a szülő; 0 hiba.*
+
+---
+
 ### Síkidom nézet — A LAPOZÁS LÉPCSŐJE VISSZAFELÉ (2026-08-17)
 
 *Csaba böngészőben igazolta (2026-08-17): a mérce átkötése után, a kérés-mód

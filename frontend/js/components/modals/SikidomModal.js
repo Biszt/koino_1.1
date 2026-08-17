@@ -368,6 +368,15 @@ const ZOOM_VEGE_MS = 140;
 // `_alaphelyzet`); mostantól a kezdő fázis lezárása is ehhez méri, elférünk-e.
 const ILLESZTESI_ARANY = 0.45;
 
+// ===== A FÓKUSZÁLT (KÁRTYA-MENÜS) INDÍTÁS MÉRETE =====
+// Kártya-menüből indítva a kiválasztott entitást NEM a világ-ként mutatjuk (nem ő
+// tölti ki a teret), hanem NORMÁL síkidomként a SZÜLŐJE terében, rá központozva —
+// így látszik a környezete (a testvérei) is. Ez a szám mondja meg, mekkora legyen a
+// kiválasztott a képernyőn: az ÁTMÉRŐJE a kisebbik képernyő-oldal ennyiszerese.
+// 0,5 → a kiválasztott a fél képernyőt tölti be, körülötte a szülő tere. Ez az
+// „optimális távolság" (Csaba, 2026-08-17) — ízlés szerint hangolható.
+const FOKUSZ_ATMERO_ARANY = 0.5;
+
 // ===== AZ ILLESZTÉS ANIMÁCIÓJA =====
 // A koino_1.0 `fitZoom`-ja 750 ms-os átmenettel állt rá az új nézetre; a miénk
 // eddig UGROTT. Animálva látszik, honnan hová kerültünk — ez a térbeli
@@ -508,6 +517,13 @@ class SikidomModal {
     // működés változatlan. Ág-gyökértől indításnál (`_megnyitasHorgonnyal`) a
     // horgony-entitásra állítjuk, hogy a kezdő kép RÁ illeszkedjen, ne a VILÁG-ra.
     this._illesztesHorgony = VILAG;
+
+    // ===== A KEZDŐ FÓKUSZ (kártya-menüs indítás) =====
+    // Ha meg van adva ({ szuloId, id }), a kezdő fázis NEM a horgony teljes
+    // kiterjedésére illeszt, hanem az `id` entitásra KÖZPONTOZ (a `szuloId`
+    // horgonyként), `FOKUSZ_ATMERO_ARANY` méretben — így a kiválasztott normál
+    // síkidomként látszik a szülője terében. A kezdő fázis lezárásakor törlődik.
+    this._kezdoFokusz = null;
 
     // Világ → képernyő
     this._nezet = { skala: 1, eltolasX: 0, eltolasY: 0 };
@@ -791,7 +807,8 @@ class SikidomModal {
     vilag.legerosebbGyerekPont = valasz.legerosebbGyokerPont || 0;
 
     let szulo = vilag;
-    let horgonyCsomopont = null;
+    let kivalasztott = null;      // a kért entitás (E) — erre fókuszálunk
+    let kivalasztottSzulo = vilag; // E szülője (P) — EZ lesz a horgony
 
     for (const elem of gyokertolLefele) {
       const id = elem.entitasId.toString();
@@ -821,24 +838,36 @@ class SikidomModal {
       if (!szulo.gyerekIdk.includes(id)) szulo.gyerekIdk.push(id);
       szulo.betoltottGyerekPont += pont;
 
+      // Az ELŐZŐ `szulo` a mostani elem szülője; az utolsó körben ez lesz E szülője (P)
+      kivalasztottSzulo = szulo;
       szulo = csomopont;
-      horgonyCsomopont = csomopont;
+      kivalasztott = csomopont;
     }
 
-    // A horgony az utolsó láncszem (maga a kért entitás)
-    this._horgony = horgonyCsomopont.id;
-    this._illesztesHorgony = horgonyCsomopont.id;
+    // ===== A HORGONY A KIVÁLASZTOTT SZÜLŐJE, A FÓKUSZ MAGA A KIVÁLASZTOTT =====
+    // A kiválasztottat NEM világ-ként mutatjuk (nem ő tölti ki a teret), hanem
+    // normál síkidomként a SZÜLŐJE terében, rá központozva (Csaba, 2026-08-17). Ha a
+    // kiválasztott gyökér, a szülője a VILÁG. A tényleges központozást a kezdő fázis
+    // végzi a `_kezdoFokusz` alapján (lásd `_alaphelyzet`).
+    this._horgony = kivalasztottSzulo.id;
+    this._illesztesHorgony = kivalasztottSzulo.id;
+    this._kezdoFokusz = { szuloId: kivalasztottSzulo.id, id: kivalasztott.id };
 
-    // A horgony gyerekeinek letöltése — küszöb nélkül, mint a VILÁG első adagja
-    await this._gyerekekBetoltese(horgonyCsomopont.id, 0);
+    // A SZÜLŐ gyerekei (a kiválasztott TESTVÉREI, a környezet) ÉS a kiválasztott
+    // saját gyerekei (hogy legyen mit mutatnia belül) — küszöb nélkül, mint a
+    // VILÁG első adagja.
+    await this._gyerekekBetoltese(kivalasztottSzulo.id, 0);
+    await this._gyerekekBetoltese(kivalasztott.id, 0);
 
     console.log('SikidomModal._gerincFelfuzese - VÉGE', {
       lancHossz: gyokertolLefele.length,
       horgony: this._horgony,
-      horgonyGyerekek: horgonyCsomopont.varolista.length
+      fokusz: kivalasztott.id,
+      szuloGyerekek: kivalasztottSzulo.varolista.length
     });
 
-    return horgonyCsomopont;
+    // A kezdő nézet-becsléshez a horgonyt (szülőt) adjuk vissza
+    return kivalasztottSzulo;
   }
 
   bezaras() { this.modal?.bezaras(); }
@@ -1768,19 +1797,33 @@ class SikidomModal {
   // @param {boolean} animalt - átmenettel álljunk-e rá (a megnyitáskor NEM:
   //   ott nincs honnan animálni, csak villogást okozna)
   _alaphelyzet(animalt = true) {
-    console.log('SikidomModal._alaphelyzet - KEZDÉS', { animalt, illesztesHorgony: this._illesztesHorgony });
+    console.log('SikidomModal._alaphelyzet - KEZDÉS', {
+      animalt, illesztesHorgony: this._illesztesHorgony, fokusz: this._kezdoFokusz?.id
+    });
 
-    this._horgony = this._illesztesHorgony;
+    // ===== FÓKUSZ-MÓD: A KIVÁLASZTOTTRA KÖZPONTOZUNK (kártya-menüs indítás) =====
+    // Fókusz-módban NEM a horgony teljes kiterjedésére illesztünk, hanem a
+    // kiválasztott entitást állítjuk a képernyő közepére, FOKUSZ_ATMERO_ARANY
+    // méretben. A horgony ilyenkor a kiválasztott szülője, tehát a környezete
+    // (testvérek) körben látszik.
+    let cel;
+    const fokuszCel = this._kezdoFokusz ? this._fokuszNezet(this._kezdoFokusz) : null;
 
-    // A horgony-szint tényleges kiterjedéséhez igazítunk, hogy az egész beférjen.
-    // Alapból ez a VILÁG (teljes gyökér-szint); ág-indításnál a horgony-entitás.
-    const kiterjedes = this._tar.get(this._illesztesHorgony)?.kulsoSugar || 1;
+    if (fokuszCel) {
+      this._horgony = this._kezdoFokusz.szuloId;
+      cel = fokuszCel;
+    } else {
+      this._horgony = this._illesztesHorgony;
 
-    const cel = {
-      skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes,
-      eltolasX: (this._szelesseg || 0) / 2,
-      eltolasY: (this._magassag || 0) / 2
-    };
+      // A horgony-szint tényleges kiterjedéséhez igazítunk, hogy az egész beférjen.
+      // Alapból ez a VILÁG (teljes gyökér-szint); ág-indításnál a horgony-entitás.
+      const kiterjedes = this._tar.get(this._illesztesHorgony)?.kulsoSugar || 1;
+      cel = {
+        skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes,
+        eltolasX: (this._szelesseg || 0) / 2,
+        eltolasY: (this._magassag || 0) / 2
+      };
+    }
 
     // Innentől van mihez mérni a kifelé nagyítás alsó határát
     this._alapSkala = cel.skala;
@@ -1795,6 +1838,28 @@ class SikidomModal {
     }
 
     console.log('SikidomModal._alaphelyzet - VÉGE');
+  }
+
+  // ===== A FÓKUSZ-NÉZET SZÁMÍTÁSA =====
+  // A kiválasztott entitást (`id`) a képernyő közepére, FOKUSZ_ATMERO_ARANY
+  // átmérőben, a szülőt (`szuloId`) horgonyként. A `_fokuszAMegjeloltre` képletének
+  // testvére, de EGYSZER használatos állapot nélkül (a kezdő fázis többször hívja).
+  // @param {{szuloId:string, id:string}} fokusz
+  // @returns {{skala:number, eltolasX:number, eltolasY:number}|null}
+  _fokuszNezet({ szuloId, id }) {
+    const keret = keretbenCsomopont(this._tar, szuloId, id);
+    if (!keret || !(keret.r > 0)) return null;
+
+    // A kiválasztott képernyő-SUGARA legyen a kisebbik oldal FOKUSZ_ATMERO_ARANY-ának
+    // FELE (az átmérő az arány maga)
+    const kepSugarPx = (this._kepernyoMeret() * FOKUSZ_ATMERO_ARANY) / 2;
+    const skala = kepSugarPx / keret.r;
+
+    return {
+      skala,
+      eltolasX: (this._szelesseg || 0) / 2 - skala * keret.x,
+      eltolasY: (this._magassag || 0) / 2 - skala * keret.y
+    };
   }
 
   // ===== AZ ÜRES MAG SUGARA KÉPPONTBAN =====
@@ -1827,6 +1892,13 @@ class SikidomModal {
   //
   // 1%-os tűrés: a lebegőpontos hajszálnyi eltérés miatt ne illesszünk örökké.
   _kezdoIllesztesKell() {
+    // Fókusz-módban a cél a kiválasztott FOKUSZ-mérete, nem a horgony kiterjedése
+    if (this._kezdoFokusz) {
+      const cel = this._fokuszNezet(this._kezdoFokusz);
+      if (!cel || !(cel.skala > 0) || !(this._nezet.skala > 0)) return false;
+      return Math.abs(cel.skala / this._nezet.skala - 1) > 0.01;
+    }
+
     const kiterjedes = this._tar.get(this._illesztesHorgony)?.kulsoSugar || 0;
     if (!(kiterjedes > 0)) return false;          // még nincs mit illeszteni
 
@@ -1847,6 +1919,9 @@ class SikidomModal {
       clearTimeout(this._kezdoFazisHatarido);
       this._kezdoFazisHatarido = null;
     }
+    // A kezdő fókusz egyszer használatos: a beállt kép után az ⛶ és a további
+    // illesztések a normál (horgony-kiterjedés) úton menjenek.
+    this._kezdoFokusz = null;
     this._folyamatJelzo(false);
 
     const vilag = this._tar.get(VILAG);
