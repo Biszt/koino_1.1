@@ -3212,16 +3212,20 @@ class SikidomModal {
       // ===== A SÍKIDOM → PAKLI VÁLTÁS A TÖRTÉNETBE (Csaba, 2026-08-17) =====
       // Eddig CSAK a pakli → síkidom váltás rögzült (a megnyitás). A koppintás a
       // fordított váltás (síkidom → pakli); mielőtt a pakli átveszi, rögzítjük a
-      // síkidom AKKORI állapotát a MOSTANI horgonnyal — így a Vissza oda hozza
-      // vissza, ahol épp jártál, nem a megnyitási állapotba.
+      // síkidom AKKORI állapotát — így a Vissza oda hozza vissza, ahol épp jártál.
       //
-      // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas). Ha a horgony
-      // a megnyitás óta nem változott, a történet-kezelő kiszűri a duplikátumot,
-      // tehát ilyenkor nem keletkezik fölösleges lépés.
+      // A KÖZÉPEN NÉZETT entitást rögzítjük, NEM a horgonyt: a kártya-menüs
+      // (fókuszált) indítás óta a horgony a nézett entitás SZÜLŐJE, tehát a horgony
+      // egy szinttel feljebbre (vagy sekély entitásnál a teljes VILÁG-ra) töltene
+      // vissza. A `_kozpontiEntitas` azt adja, amire tényleg ránézel — és a
+      // Vissza épp arra fókuszál (a szülőt horgonyként), pont mint a megnyitáskor.
+      //
+      // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas). Ha ez azonos a
+      // megnyitási állapottal, a történet-kezelő kiszűri a duplikátumot.
       document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
         detail: {
           nezet: 'sikidom',
-          horgonyEntitasId: this._horgony === VILAG ? null : this._horgony,
+          horgonyEntitasId: this._kozpontiEntitas(),
           cim: this.cimFelirat
         }
       }));
@@ -3229,6 +3233,35 @@ class SikidomModal {
       this.bezaras();
       this.onEntitasKivalasztas(talalat.cs.id.toString(), talalat.cs.entitasTipus);
     }
+  }
+
+  // ===== A KÖZÉPEN NÉZETT ENTITÁS =====
+  // Melyik entitást nézi épp az e-ember? A képernyő közepét tartalmazó, a
+  // képernyőre FÉRŐ (nem az egésznél nagyobb) síkidomok közül a LEGNAGYOBB — ez a
+  // „fő" dolog, amire ránézel. A horgony erre NEM jó: a kártya-menüs (fókuszált)
+  // indítás óta a horgony a nézett entitás SZÜLŐJE.
+  //
+  // A méret-szűrő (≤ fél képernyő SUGÁR) zárja ki a nézett entitás ŐSEIT (azok az
+  // egésznél nagyobbak, tehát nem „rájuk nézünk"), és beengedi magát a nézettet és
+  // annak (kisebb) gyerekeit — közülük a legnagyobb a nézett.
+  //
+  // A történet ezt rögzíti (síkidom → pakli); a Vissza erre fókuszál újra.
+  // @returns {string|null} az entitás id-je, vagy null (VILÁG-szint / üres közép)
+  _kozpontiEntitas() {
+    const kx = (this._szelesseg || 0) / 2;
+    const ky = (this._magassag || 0) / 2;
+    const felkepernyoSugar = this._kepernyoMeret() / 2;
+
+    let jelolt = null;
+    for (const { cs, kep } of (this._utolsoLathatoak ?? [])) {
+      if (cs.id === VILAG) continue;
+      if (kep.kepSugar > felkepernyoSugar) continue;                 // nagyobb a képernyőnél
+      if (Math.hypot(kep.kepX - kx, kep.kepY - ky) > kep.kepSugar) continue; // a közép nincs rajta
+      if (!jelolt || kep.kepSugar > jelolt.kepSugar) {
+        jelolt = { id: cs.id, kepSugar: kep.kepSugar };
+      }
+    }
+    return jelolt?.id ?? null;
   }
 
   // ===== A KÁRTYA-PANEL =====
