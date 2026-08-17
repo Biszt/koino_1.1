@@ -1498,6 +1498,32 @@ class SikidomModal {
     let athelyezett = 0;
     let ujonnan = 0;
 
+    // ===== FOLYTONOSSÁG: A NÉZETT TARTALOM MARADJON A HELYÉN (2026-08-17) =====
+    // A pakolás minden gyereknek ÚJ relX/relY-t ad (üres lapra épít, `kornyezet: []`).
+    // A rendes nézetnél ez rejtve marad — a teljes klaszterre illesztünk —, de
+    // ág-indítás után KIZOOMOLÁSKOR a nézet EGY gyerekre (a gerincre) van
+    // központozva: ha az a pakoláskor elmozdul, a kép elugrik. Ezért a HORGONY
+    // szintjén megjegyezzük a képernyő közepéhez legközelebbi lerakott gyerek
+    // képernyő-helyét, és a pakolás UTÁN tiszta ELTOLÁSSAL visszaállítjuk a nézetet
+    // úgy, hogy az a gyerek ott maradjon, ahol volt. A méretet (skálát) a pakolás
+    // nem érinti, ezért az eltolás elég. A kezdő fázisban NEM tesszük: ott az
+    // `_alaphelyzet` illeszt, azzal nem szabad ütközni.
+    let fokuszGyerek = null;
+    if (!this._kezdoFazis && cs.id === this._horgony) {
+      const kx = (this._szelesseg || 0) / 2, ky = (this._magassag || 0) / 2;
+      let legkozelebb = Infinity;
+      for (const gid of cs.gyerekIdk) {
+        const gy = this._tar.get(gid);
+        if (!gy) continue;
+        const sp = kepernyore(this._nezet, { x: gy.relX, y: gy.relY, r: gy.relR });
+        const tav = Math.hypot(sp.kepX - kx, sp.kepY - ky);
+        if (tav < legkozelebb) {
+          legkozelebb = tav;
+          fokuszGyerek = { id: gid, kepX: sp.kepX, kepY: sp.kepY };
+        }
+      }
+    }
+
     for (const hely of eredmeny.helyek) {
       const m = terkep.get(hely.id);
       if (!m) continue;
@@ -1547,6 +1573,17 @@ class SikidomModal {
     const keretenKivuliVaroIdk = new Set(keretenKivul.filter(m => m.varo).map(m => m.id));
     cs.varolista = cs.varolista.filter(v => lerakatlan.has(v.id) || keretenKivuliVaroIdk.has(v.id));
     if (varolistaraVissza.length > 0) cs.varolista.push(...varolistaraVissza);
+
+    // ===== A FOLYTONOSSÁG HELYREÁLLÍTÁSA (lásd fentebb) =====
+    // A megjegyzett gyerek maradjon a képernyőn ugyanott. Ha a pakolás kilökte a
+    // keretből (törlődött), nincs mit visszaállítani — akkor a nézet a szokásos
+    // módon áll be.
+    if (fokuszGyerek && this._tar.has(fokuszGyerek.id)) {
+      const gy = this._tar.get(fokuszGyerek.id);
+      const sp = kepernyore(this._nezet, { x: gy.relX, y: gy.relY, r: gy.relR });
+      this._nezet.eltolasX += fokuszGyerek.kepX - sp.kepX;
+      this._nezet.eltolasY += fokuszGyerek.kepY - sp.kepY;
+    }
 
     // Az őrszem állapota: mivel dolgoztunk most (lásd fentebb)
     cs.utolsoKeret = keretDarab;
