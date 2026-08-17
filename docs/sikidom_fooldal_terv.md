@@ -88,17 +88,35 @@ horgonya pedig **külön állapot**. A kettő szándékosan nem szinkronizált.
 
 ### A megvalósítás lépései (megegyezve, 2026-08-17)
 
-Apró lépések, mindegyik után működő állapottal:
-
 1. ✅ **A síkidom saját rétegre** (ki a `Modal`-ból) — *kész, böngészőben igazolva*
-2. A **harmadik réteg** bevezetése, a pakli modálként megnyithatóvá tétele
-3. **A lusta pakli** — a `FoOldal` 17 pakli-hivatkozásának felkészítése a hiányra
-   *(itt érdemes megállni böngészős ellenőrzésre — ez a legnagyobb munka)*
-4. A síkidom lesz a **belépő nézet**; menüben „Térkép nézet 🚧"; az **ideiglenes ✕ törlése**
-5. Koppintás → **a pakli modálként** nyílik az entitásra
-6. A `SikidomKartyaPanel` **törlése**
-7. **Ág-gyökértől indítás** a kártyák hamburger menüjéből (D4: a pakli bezárul)
-8. **Üres/hibás állapot** a síkidomon + horgony megőrzése `sessionStorage`-ban
+2. A pakli **modálként megnyitható** (`modal-kontener` + `almodal-kontener`)
+3. **Koppintás → a pakli modálként nyílik** ← *ez a kiút a síkidomból*
+4. A síkidom lesz a **belépő nézet**, és az **ideiglenes ✕ törlődik**
+5. A `SikidomKartyaPanel` **törlése**
+6. **Ág-gyökértől indítás** a kártyák hamburger menüjéből (D4: a pakli bezárul)
+7. **Üres/hibás állapot** a síkidomon + horgony megőrzése `sessionStorage`-ban
+8. *(később, opcionális)* **a lusta pakli** — teljesítmény, nem feltétel
+
+#### ⚠️ A sorrend átírva (2026-08-17) — a lusta pakli NEM előfeltétel
+
+Az első sorrend a lusta paklit tette a 3. helyre, „a legnagyobb tényleges munka"
+címkével, és a főoldallá tételt csak utána. **Ez téves volt.** Csaba kérdezett rá:
+miért nem azzal kezdjük, hogy a síkidom a főoldal?
+
+- **A pakli nyugodtan létrejöhet indításkor úgy, ahogy ma**, csak nem látszik — a
+  síkidom rétege eltakarja. Mind a 17 `FoOldal`-hivatkozás változatlanul működik. A
+  lustaság **teljesítmény-kérdés**, nem helyességi feltétel.
+- **A valódi akadály a KIÚT.** A fő menü 14 pontja között nincs „Pakli nézet" (a terv
+  5. pontja szerint nem is lesz), tehát a pakli egyetlen elérési útja a koppintás. Ha
+  a síkidom előbb lesz belépő nézet, mint a koppintás-útvonal, nincs használható út a
+  tartalomhoz: a „Keresés" és a „Rendezés" navigálná ugyan a paklit, de takarva.
+
+Ezért került a kiút (3.) a főoldallá tétel (4.) elé. Mellékhaszon: az 1. lépés
+ideiglenes ✕ gombja így egyetlen commitnál tovább nem él.
+
+*Megjegyzés a 8. ponthoz: amíg a pakli mohón indul, a belépés a síkidom ÉS a pakli
+hálózatát is elviszi (a síkidom kezdő fázisa mérve 1,73 mp, abból 1,72 a hálózat).
+A lustaság tehát előbb-utóbb jönni fog — csak nem ez a kritikus út.*
 
 ### A három csapda, amit a kód átnézése feltárt
 
