@@ -598,6 +598,14 @@ class SikidomModal {
 
     await this.modal.init();
 
+    // ===== A FEJLÉC ELREJTÉSE, A ✕ MEGTARTÁSA (Csaba, 2026-08-17) =====
+    // A teljes képernyős fejléc (cím + elválasztó) függőleges teret vett el a
+    // vászontól, a címe pedig nem hordoz fontos információt. A `sikidom-panel`
+    // osztály a CSS-ben a fejlécet a vászon fölé emeli (abszolút, átlátszó), a
+    // címet elrejti — így csak a ✕ marad, jobbra fent, és a vászon teljes magas.
+    document.querySelector(`#${this.kontenerAzonosito} .modal-panel`)
+      ?.classList.add('sikidom-panel');
+
     this.vaszon = document.getElementById('sikidom-vaszon');
     this.kontextus = this.vaszon?.getContext('2d') ?? null;
     this.rajzolo.vaszonBeallitasa(this.kontextus);

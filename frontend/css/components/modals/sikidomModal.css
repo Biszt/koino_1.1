@@ -10,6 +10,27 @@
    élnek, és minden .modal-panel--teljes nézetre érvényesek — a Síkidom nézet is
    ezt használja, ezért itt nem ismételjük meg. */
 
+/* ===== A FEJLÉC A VÁSZON FÖLÉ, CSAK A ✕ MARAD (Csaba, 2026-08-17) ===== */
+/* A teljes képernyős fejléc függőleges teret vett el, a címe pedig nem fontos.
+   A `sikidom-panel` osztályt a SikidomModal.init teszi a panelre. A fejlécet
+   kivesszük a folyamatból (abszolút pozíció), átlátszóvá tesszük, a címet
+   elrejtjük — így a vászon a teljes magasságot megkapja, és csak a ✕ látszik,
+   jobbra fent, a vászon fölött (saját háttere van, ezért olvasható). */
+.sikidom-panel .modal-fejlec {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: auto;
+  padding: var(--space-3);
+  background: transparent;
+  border-bottom: none;
+  z-index: 5;
+}
+
+.sikidom-panel .modal-cim {
+  display: none;
+}
+
 /* A belső váz tölti ki a rendelkezésre álló magasságot */
 .sikidom-modal {
   height: 100%;
