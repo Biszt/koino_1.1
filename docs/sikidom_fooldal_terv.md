@@ -63,6 +63,43 @@ Csaba által rögzített hatókör:
 9. A `SikidomKartyaPanel` (egykártyás panel koppintásra) **törlendő** — a pakli
    lép a helyére.
 
+### Csaba döntései a megvalósítás előtt (2026-08-17)
+
+A hatókör négy nyitott kérdését a kódolás előtt tisztáztuk. **A lényeg: a két réteg
+LAZÁN kapcsolódik** — nem kell összehangoló gépezet, és ez érezhetően kisebb munka.
+
+- **D1 — A ◀ vissza-gomb.** Ha a pakli nyitva van, a vissza **csak bezárja**. A síkidom
+  **kimarad a történetből** (ma sincs benne: a `_sikidomMegnyitasa` nem rögzít állapotot).
+  A horgony-váltások történetbe kötése későbbi, ráépíthető lépés.
+- **D2 — A pakli bezárása után a síkidom OTT MARAD, ahol volt.** A horgonya független
+  állapot; nem a pakli „aktív entitása" vezérli.
+- **D3 — A síkidom NEM követi a paklit.** Ha a nyitott pakliban másik entitásra lépsz
+  (testvér-lapozás, rendezés), a mögötte lévő síkidom **meg sem mozdul**. Navigálni a
+  síkidomban egyetlen módon lehet: a kártya hamburger menüjének „Síkidom nézet"
+  pontjával. *(Csaba: „később lesz majd valami duplakattintásos módja is a
+  navigációnak, de egyelőre a paklin keresztül, a Síkidom nézet kiválasztásával
+  lehet csak navigálni.")*
+- **D4 — A kártya-menüs „Síkidom nézet" BEZÁRJA a paklit.** Az ágra állított síkidomot
+  akarod nézni, nem a paklit fölötte.
+
+**Következmény, amit ebből levezettünk:** az „aktív entitás" (amire az alsó sáv és a
+menük hivatkoznak) megtartja a mai jelentését — a pakli utolsó entitása —, a síkidom
+horgonya pedig **külön állapot**. A kettő szándékosan nem szinkronizált.
+
+### A megvalósítás lépései (megegyezve, 2026-08-17)
+
+Apró lépések, mindegyik után működő állapottal:
+
+1. ✅ **A síkidom saját rétegre** (ki a `Modal`-ból) — *kész, böngészőben igazolva*
+2. A **harmadik réteg** bevezetése, a pakli modálként megnyithatóvá tétele
+3. **A lusta pakli** — a `FoOldal` 17 pakli-hivatkozásának felkészítése a hiányra
+   *(itt érdemes megállni böngészős ellenőrzésre — ez a legnagyobb munka)*
+4. A síkidom lesz a **belépő nézet**; menüben „Térkép nézet 🚧"; az **ideiglenes ✕ törlése**
+5. Koppintás → **a pakli modálként** nyílik az entitásra
+6. A `SikidomKartyaPanel` **törlése**
+7. **Ág-gyökértől indítás** a kártyák hamburger menüjéből (D4: a pakli bezárul)
+8. **Üres/hibás állapot** a síkidomon + horgony megőrzése `sessionStorage`-ban
+
 ### A három csapda, amit a kód átnézése feltárt
 
 **1. A síkidom nem maradhat `Modal`.** A `Modal` vermet vezet a nyitott

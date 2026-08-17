@@ -6,6 +6,18 @@
 
 <div class="fooldal-oldal">
 
+  <!-- ===== ALAPRÉTEG: SÍKIDOM NÉZET =====
+       A Síkidom nézet NEM modal (2026-08-17 óta): saját rétege van, a modal-verem
+       alatt. Ennek két oka van:
+         1. A `Modal` vermet vezet a nyitott modálokról, és a főoldal vissza-gombja
+            azt kérdezi: „van nyitott modál? akkor előbb azt zárjuk". Ha a síkidom
+            mindig nyitott modál volna, ez ÖRÖKRE igaz lenne → a vissza-gomb soha
+            többé nem navigálna.
+         2. A `Modal.init` FELÜLÍRJA a konténere tartalmát, tehát a síkidom és a
+            fölötte nyíló pakli nem férne meg ugyanabban a konténerben.
+       A réteg üresen indul; a SikidomModal.js tölti fel megnyitáskor. -->
+  <div id="sikidom-kontener" class="sikidom-reteg" hidden></div>
+
   <!-- ===== MODAL KONTÉNER =====
        A Modal.js rendereli ide a modalt, ha megnyitják -->
   <div id="modal-kontener"></div>

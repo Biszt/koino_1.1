@@ -1,7 +1,9 @@
 ﻿// frontend/js/components/modals/SikidomModal.js
 
 // ===== IMPORTOK =====
-import Modal from './Modal.js';
+// (A `Modal` importja 2026-08-17-én megszűnt: a Síkidom nézet saját alaprétegre
+//  került, lásd `_retegFelepitese`. A név megtévesztő maradt — az osztály
+//  átnevezése külön, mechanikus lépés lesz.)
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 import { gyerekRelativSugar, gyokerRelativSugar,
@@ -447,8 +449,11 @@ class SikidomModal {
       ? beallitasok.aktualisEntitasId.toString()
       : null;
     this.onEntitasKivalasztas = beallitasok.onEntitasKivalasztas ?? null;
+    this.onBezaras            = beallitasok.onBezaras ?? null;
 
-    this.modal = null;
+    // Az ALAPRÉTEG DOM-eleme (a korábbi `Modal` példány helyén) — lásd
+    // `_retegFelepitese`. A síkidom 2026-08-17 óta nem modal.
+    this._reteg = null;
     this.vaszon = null;
 
     // A vászon 2D kontextusa. Csak a modal DOM-jának felépítése után áll elő
@@ -572,15 +577,7 @@ class SikidomModal {
     const tartalomHtml = await this._templateBetoltese();
     if (!tartalomHtml) return;
 
-    this.modal = new Modal(this.kontenerAzonosito, {
-      cim:      this.cimFelirat,
-      tartalom: tartalomHtml,
-      meret:    'teljes',
-      gombok:   [],
-      onBezaras: () => this._takaritasBezaraskor()
-    });
-
-    await this.modal.init();
+    if (!this._retegFelepitese(tartalomHtml)) return;
 
     this.vaszon = document.getElementById('sikidom-vaszon');
     this.kontextus = this.vaszon?.getContext('2d') ?? null;
@@ -598,6 +595,59 @@ class SikidomModal {
     this._esemenyekBekotese();
 
     console.log('SikidomModal.init - VÉGE');
+  }
+
+  // ===== AZ ALAPRÉTEG FELÉPÍTÉSE (a `Modal` HELYETT, 2026-08-17) =====
+  // A Síkidom nézet 2026-08-17 óta NEM `Modal`. Két oka van, mindkettő szerkezeti:
+  //
+  //   1. A `Modal` VERMET vezet a nyitott modálokról, és a főoldal vissza-gombja azt
+  //      kérdezi: „van nyitott modál? akkor előbb azt zárjuk" (`foOldal.tortenetVissza`).
+  //      Ha a síkidom mindig nyitott modál, ez örökre igaz → a vissza-gomb soha többé
+  //      nem navigál. Ugyanez a csapda az `_allapotAlkalmazasa`-ban is ott van: az
+  //      minden történet-visszajátszáskor bezárja a legfelső modált — vagyis a
+  //      síkidomot lőné ki.
+  //   2. A `Modal.init` FELÜLÍRJA a konténere tartalmát (`kontener.innerHTML = ...`),
+  //      tehát a síkidom és a fölötte modálként nyíló pakli nem férne meg egy
+  //      konténerben. Három réteg kell: alapréteg (síkidom) · modal (pakli) ·
+  //      al-modal (a pakli kártyáinak modáljai).
+  //
+  // AMIT A `Modal`-tól ÁTVESZÜNK: semmit. Nincs overlay (nincs mi alá sötétíteni),
+  // nincs ESC-re zárás és nincs háttér-kattintás — ez az alapréteg, nem lehet
+  // „mögé" jutni. A teljes képernyős méretet és az alsó sávval való együttélést a
+  // `.sikidom-reteg` CSS adja (a `body.teljes-nezet-nyitva` szabályok mintájára).
+  //
+  // @param {string} tartalomHtml - a sikidomModal.html tartalma
+  // @returns {boolean} sikerült-e
+  _retegFelepitese(tartalomHtml) {
+    console.log('SikidomModal._retegFelepitese - KEZDÉS');
+
+    const kontener = document.getElementById(this.kontenerAzonosito);
+    if (!kontener) {
+      console.error('SikidomModal._retegFelepitese - HIBA: konténer nem található', {
+        kontenerAzonosito: this.kontenerAzonosito
+      });
+      return false;
+    }
+
+    kontener.innerHTML = tartalomHtml;
+    this._reteg = kontener;
+
+    // ⚠️ IDEIGLENES BEZÁRÓ GOMB — a 4. lépésben TÖRLENDŐ.
+    // A terv 3. pontja szerint a síkidomon nem lesz ✕ (ő az alapréteg, nincs mögötte
+    // hova visszamenni). Amíg viszont még a fő menüből nyílik ÉS nem ő a belépő
+    // nézet, bezárás nélkül csapdába esne az e-ember. Ez a gomb tehát az átmenet
+    // mankója: amint a síkidom lesz a főoldal, ez a blokk megy.
+    const bezaro = document.createElement('button');
+    bezaro.type = 'button';
+    bezaro.className = 'sikidom-reteg__ideiglenes-bezaro';
+    bezaro.textContent = '✕';
+    bezaro.setAttribute('aria-label', 'Síkidom nézet bezárása');
+    bezaro.title = 'Bezárás (ideiglenes — a síkidom hamarosan a főoldal lesz)';
+    bezaro.addEventListener('click', () => this.bezaras());
+    kontener.appendChild(bezaro);
+
+    console.log('SikidomModal._retegFelepitese - VÉGE');
+    return true;
   }
 
   async _templateBetoltese() {
@@ -618,7 +668,8 @@ class SikidomModal {
   async megnyitas() {
     console.log('SikidomModal.megnyitas - KEZDÉS');
 
-    this.modal?.megnyitas();
+    // Az alapréteg megjelenítése (a `Modal.megnyitas` helyett — lásd `_retegFelepitese`)
+    if (this._reteg) this._reteg.hidden = false;
     this._teljesNezetBekapcsolasa();
     this._nezetValtas('betoltes');
 
@@ -681,7 +732,22 @@ class SikidomModal {
     console.log('SikidomModal.megnyitas - VÉGE');
   }
 
-  bezaras() { this.modal?.bezaras(); }
+  // ===== BEZÁRÁS =====
+  // Az alapréteg elrejtése + takarítás. A `Modal.bezaras` az `onBezaras`
+  // visszahíváson át futtatta a takarítást; itt közvetlenül hívjuk.
+  //
+  // A 4. lépés után (amikor a síkidom lesz a belépő nézet) ezt már csak a
+  // nézetváltás hívhatja — az e-embernek nem lesz mivel bezárnia.
+  bezaras() {
+    console.log('SikidomModal.bezaras - KEZDÉS');
+    if (this._reteg) {
+      this._reteg.hidden = true;
+      this._reteg.innerHTML = '';
+    }
+    this._takaritasBezaraskor();
+    this.onBezaras?.();
+    console.log('SikidomModal.bezaras - VÉGE');
+  }
 
   _takaritasBezaraskor() {
     if (this._ablakMeretezoBound) {

@@ -766,7 +766,10 @@ init() {
     // Az éppen aktív entitás — a síkidom nézetben kiemelve jelenik meg (ha látszik)
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
 
-    const sikidomModal = new SikidomModal('modal-kontener', {
+    // A síkidom SAJÁT rétegére kerül, nem a modal-konténerbe (2026-08-17). Így nem
+    // kerül be a modal-verembe — különben a vissza-gomb soha többé nem navigálna,
+    // csak a síkidomot csukogatná (lásd `tortenetVissza` és `SikidomModal`).
+    const sikidomModal = new SikidomModal('sikidom-kontener', {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
