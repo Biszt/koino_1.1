@@ -272,6 +272,8 @@ init() {
       tipus: 'nezet',
       nezet: reszletek.nezet,
       agEntitasId: reszletek.agEntitasId ?? null,
+      // A Síkidom nézet horgonya (ág-gyökértől indításnál); a Struktúránál nincs
+      horgonyEntitasId: reszletek.horgonyEntitasId ?? null,
       cim: reszletek.cim ?? null,
       entitasId: ent.entitasId ?? null,
       entitasTipus: ent.entitasTipus ?? null
@@ -742,6 +744,8 @@ init() {
     console.log('FoOldal._nezetModalNyitasa - KEZDÉS', { allapot });
     if (allapot.nezet === 'struktura') {
       await this._strukturaModalLetrehozasa(allapot.agEntitasId, allapot.cim);
+    } else if (allapot.nezet === 'sikidom') {
+      await this._sikidomModalLetrehozasa(allapot.horgonyEntitasId, allapot.cim);
     } else {
       console.warn('FoOldal._nezetModalNyitasa - ismeretlen nézet', { nezet: allapot.nezet });
     }
@@ -760,25 +764,37 @@ init() {
   // szolgálja ki az alábbi onEntitasKivalasztas.
   async _sikidomMegnyitasa() {
     console.log('FoOldal._sikidomMegnyitasa - KEZDÉS');
-
     this.hamburgerMenu?.bezaras();
+    // A fő menüs síkidom a VILÁG-tól indul (nincs horgony)
+    await this._sikidomModalLetrehozasa(null, null);
+    console.log('FoOldal._sikidomMegnyitasa - VÉGE');
+  }
+
+  // Közös síkidom-létrehozó (mint a `_strukturaModalLetrehozasa`): a fő menü és a
+  // történet-visszajátszás (`_nezetModalNyitasa`) is ezt hívja. A `horgonyEntitasId`
+  // dönti el: null → VILÁG-tól; érték → ág-gyökértől horgonyozva.
+  async _sikidomModalLetrehozasa(horgonyEntitasId = null, cim = null) {
+    console.log('FoOldal._sikidomModalLetrehozasa - KEZDÉS', { horgonyEntitasId, cim });
 
     // Az éppen aktív entitás — a síkidom nézetben kiemelve jelenik meg (ha látszik)
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
 
-    const sikidomModal = new SikidomModal('modal-kontener', {
+    const konfig = {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
         console.log('FoOldal - síkidomból navigálás', { entitasId, entitasTipus });
         this._navigalasEntitasra(entitasId, entitasTipus);
       }
-    });
+    };
+    if (horgonyEntitasId) konfig.horgonyEntitasId = horgonyEntitasId;
+    if (cim)              konfig.cim              = cim;
 
+    const sikidomModal = new SikidomModal('modal-kontener', konfig);
     await sikidomModal.init();
     await sikidomModal.megnyitas();
 
-    console.log('FoOldal._sikidomMegnyitasa - VÉGE');
+    console.log('FoOldal._sikidomModalLetrehozasa - VÉGE');
   }
 
 

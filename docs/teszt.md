@@ -1836,3 +1836,33 @@ látszanak), a horgony gyerekeit kitölti.
 gerinc épült (gyökér a világ alatt, horgony az alján); kizoomolva a horgony 20→19→…
 →VILÁG lépdelt, és a VILÁG-nál a gyökér-szint 1-ről 5100-ra töltődött; koppintásra a
 pakli a megkoppintott gyerekre ugrott. A rendes (VILÁG-tól induló) nézet változatlan.*
+
+---
+
+### Síkidom nézet — A FELSŐ SÁV ÉS A TÖRTÉNET (2026-08-17)
+
+**A felső címsáv eltűnt, a ✕ maradt.** A teljes képernyős fejléc (cím) nem
+foglal többé függőleges teret — a vászon a tetőtől indul —, és csak a ✕ látszik,
+jobbra fent.
+
+**A síkidom mostantól a vissza/előre TÖRTÉNETBEN van** (mint a Struktúra nézet),
+Csaba szabálya szerint:
+
+- **A pakli ↔ síkidom váltás rögzül.** A síkidom megnyitása (fő menüből vagy
+  kártya-menüből) külön vissza/előre lépés. A ◀ bezárja és a paklihoz visz vissza;
+  a ▶ újranyitja (a kártya-menüsét a HORGONYÁVAL, ugyanoda).
+- **A síkidomon BELÜLI navigálás NEM rögzül.** Nagyítás, horgonyváltás,
+  kizoomolás — ezek nem tesznek új történet-lépést.
+- **Koppintás → pakli:** a síkidom bezárul, a pakli az entitásra ugrik, és EZ
+  rögzül (pakli-entitásként) — ez maga a síkidom→pakli váltás.
+
+**Amit nézni kell:**
+
+1. Nyisd meg a síkidomot → a ◀ gomb aktívvá válik. Nyomd meg → a síkidom bezárul,
+   a pakli ott van, ahol volt. ▶ → a síkidom újranyílik.
+2. A síkidomban zoomolj/navigálj → a ◀/▶ állapota NEM változik közben.
+3. Kártya-menüs „Síkidom nézet" → ◀ bezárja, ▶ újranyitja UGYANARRA az ágra.
+
+*Böngészőben igazolva (2026-08-17): a nyitás `nezet:sikidom` lépést rögzít, 6×
+nagyítás után a történet hossza változatlan, koppintás után pakli-entitás lépés;
+a kártya-menüs horgony vissza/előre után is helyreáll. 0 konzolhiba.*

@@ -651,6 +651,21 @@ class SikidomModal {
     this._teljesNezetBekapcsolasa();
     this._nezetValtas('betoltes');
 
+    // ===== JELZÉS A TÖRTÉNET-KEZELŐNEK (2026-08-17) =====
+    // A Síkidom nézet megnyitása NÉZET-váltás (pakli → síkidom), ezért külön
+    // vissza/előre lépésként rögzül — pontosan úgy, mint a Struktúra nézet. A
+    // síkidomon BELÜLI navigálás (nagyítás, horgonyváltás) NEM emit-el, tehát nem
+    // kerül a történetbe (Csaba kérése: csak a pakli↔síkidom váltás számít). A
+    // `horgonyEntitasId` különbözteti meg a fő menüs (null, VILÁG-tól) és a
+    // kártya-menüs (ág-gyökértől indított) síkidomot — újranyitáskor is ez kell.
+    document.dispatchEvent(new CustomEvent('koino:nezetNyitas', {
+      detail: {
+        nezet: 'sikidom',
+        horgonyEntitasId: this.horgonyEntitasId ?? null,
+        cim: this.cimFelirat
+      }
+    }));
+
     // A virtuális világ-csomópont: a gyökér-entitások szülője. MINDIG létrejön —
     // ág-indításnál is ő a lánc teteje (a legfelső ős az ő gyereke).
     this._tar.clear();
