@@ -10,57 +10,6 @@
    élnek, és minden .modal-panel--teljes nézetre érvényesek — a Síkidom nézet is
    ezt használja, ezért itt nem ismételjük meg. */
 
-/* ===== AZ ALAPRÉTEG (2026-08-17) ===== */
-/* A Síkidom nézet már nem `Modal` (lásd SikidomModal._retegFelepitese), ezért a
-   teljes képernyős méretet és az alsó sávval való együttélést itt kell megadni —
-   eddig ezt a `.modal-panel--teljes` + `body.teljes-nezet-nyitva` páros adta a
-   modal.css-ből és a strukturaModal.css-ből.
-
-   A RÉTEGSORREND a lényeg: a síkidom a modal-overlay (300) ALATT van, tehát a
-   fölötte nyíló pakli és minden modál rendesen rátakar; az alsó sáv (302) viszont
-   fölötte marad, hogy a menü mindig elérhető legyen. */
-.sikidom-reteg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-
-  /* A képernyő tetejétől az ALSÓ SÁV tetejéig — a sáv magasságát a JS méri
-     (--alsosav-magassag, lásd _alsoSavMagassagFrissitese) */
-  height: calc(100dvh - var(--alsosav-magassag));
-
-  z-index: 290;            /* a modal-overlay (300) ALATT, a hamburger (200) fölött */
-  background-color: var(--color-surface);
-  overflow: hidden;
-}
-
-/* A `hidden` attribútum erősebb legyen a fenti szabályoknál */
-.sikidom-reteg[hidden] {
-  display: none !important;
-}
-
-/* ⚠️ IDEIGLENES BEZÁRÓ GOMB — a 4. lépésben ez a szabály is TÖRLENDŐ.
-   Amíg a síkidom a fő menüből nyílik és nem ő a belépő nézet, kell egy kiút. */
-.sikidom-reteg__ideiglenes-bezaro {
-  position: absolute;
-  top: var(--space-md, 12px);
-  right: var(--space-md, 12px);
-  z-index: 2;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.sikidom-reteg__ideiglenes-bezaro:hover {
-  background-color: var(--color-surface-alt, var(--color-surface));
-}
-
 /* A belső váz tölti ki a rendelkezésre álló magasságot */
 .sikidom-modal {
   height: 100%;

@@ -133,17 +133,10 @@ init() {
 
   // VÁLTOZÁS: callback átadása – a Pakli ezt hívja kártyaváltáskor,
   // a localStorage mentés felelőssége ide kerül át a Pakli.js-ből
-  // A PAKLI MODÁLJAI AZ AL-MODAL RÉTEGRE (2026-08-17). A pakli maga hamarosan
-  // modálként nyílik (`_pakliModalNyitasa`) a `modal-kontener`-ben; a kártyáiról
-  // induló modálok ezért eggyel feljebb, az `almodal-kontener`-be kell kerüljenek,
-  // különben az első javaslat-modál kilőné alóluk a paklit (a `Modal.init`
-  // felülírja a konténere tartalmát). Az `almodal-kontener` bevált minta: hat modál
-  // használja már (`HozzajarulokModal`, `TudatpontokModal`, `MeghivoModal`, ...),
-  // a body végére kerül, tehát a pakli-modál FÖLÉ rajzolódik.
   this.pakli = new Pakli(
     this.token,
     'fooldal-tartalom',
-    'almodal-kontener',
+    'modal-kontener',
     (ujEntitasId, ujEntitasTipus) => {
       console.log('FoOldal - kiválasztott entitás váltás', { ujEntitasId, ujEntitasTipus });
       // A pakli MÁR odalépett (kártya-koppintás). Csak mentünk – a mentés elküldi
@@ -765,85 +758,6 @@ init() {
   // Síkidomra koppintva a nézetben marad, csak az entitás kártyája jelenik meg —
   // a pakli nézetre a kártya hamburger menüje (vagy az alsó sáv) visz át; azt
   // szolgálja ki az alábbi onEntitasKivalasztas.
-  // =====================================
-  // A PAKLI MEGNYITÁSA MODÁLKÉNT (2. lépés, 2026-08-17)
-  // =====================================
-  // A terv 4. pontja: „Egy entitásra koppintva a pakli nyílik meg modálként, azzal az
-  // entitással; a síkidom a háttérben marad, a pakli kiixelhető."
-  //
-  // ⚠️ NEM ÚJRARENDERELÜNK, HANEM ÁTMOZGATJUK AZ ELEMET. A `Pakli` a konténerét
-  // AZONOSÍTÓ alapján keresi meg minden rendereléskor (öt helyen), és két üzemmódja
-  // van (hierarchikus `paklitRendel` + lapított `lapositottRendel`). Ha a konténer
-  // azonosítóját írnánk át, mindkét ág újrarajzolását kézzel kellene levezényelni —
-  // és a betöltött állapot is veszne. Így viszont a `#fooldal-tartalom` elem MAGA
-  // költözik a modal törzsébe: a pakli ebből semmit nem vesz észre, se újratöltés,
-  // se mód-elágazás nem kell.
-  //
-  // MIÉRT VALÓDI `Modal`: hogy bekerüljön a modal-VEREMBE. A D1 döntés szerint „ha a
-  // pakli nyitva van, a vissza csak bezárja" — ezt a `tortenetVissza` már ma is
-  // megcsinálja minden veremben lévő modállal. Ingyen megkapjuk, és az ESC is.
-  async _pakliModalNyitasa() {
-    console.log('FoOldal._pakliModalNyitasa - KEZDÉS');
-
-    if (this._pakliModal) {
-      console.log('FoOldal._pakliModalNyitasa - VÉGE (már nyitva)');
-      return;
-    }
-
-    const tartalom = document.getElementById('fooldal-tartalom');
-    if (!tartalom) {
-      console.error('FoOldal._pakliModalNyitasa - HIBA: nincs #fooldal-tartalom');
-      return;
-    }
-
-    // Hova tegyük vissza záráskor — a pontos helyet jegyezzük meg, ne csak a szülőt
-    this._pakliEredetiSzulo = tartalom.parentElement;
-    this._pakliEredetiKovetkezo = tartalom.nextElementSibling;
-
-    this._pakliModal = new Modal('modal-kontener', {
-      cim:      '',
-      tartalom: '',
-      meret:    'teljes',
-      gombok:   [],
-      onBezaras: () => this._pakliModalBezarult()
-    });
-    await this._pakliModal.init();
-
-    const hely = document.querySelector('#modal-kontener .modal-tartalom');
-    if (!hely) {
-      console.error('FoOldal._pakliModalNyitasa - HIBA: nincs .modal-tartalom');
-      this._pakliModal = null;
-      return;
-    }
-
-    tartalom.classList.add('fooldal-tartalom--modalban');
-    hely.appendChild(tartalom);
-
-    this._pakliModal.megnyitas();
-
-    console.log('FoOldal._pakliModalNyitasa - VÉGE');
-  }
-
-  // A pakli-modál bezárult: a tartalom-elemet VISSZA kell vinni a helyére.
-  // Ez nem szépészet, hanem kötelező: a következő `Modal.init` a `modal-kontener`
-  // teljes tartalmát felülírja — ha a pakli még bent volna, megsemmisülne.
-  _pakliModalBezarult() {
-    console.log('FoOldal._pakliModalBezarult - KEZDÉS');
-
-    const tartalom = document.getElementById('fooldal-tartalom');
-    if (tartalom && this._pakliEredetiSzulo) {
-      tartalom.classList.remove('fooldal-tartalom--modalban');
-      this._pakliEredetiSzulo.insertBefore(tartalom, this._pakliEredetiKovetkezo);
-    }
-
-    this._pakliModal = null;
-    this._pakliEredetiSzulo = null;
-    this._pakliEredetiKovetkezo = null;
-
-    console.log('FoOldal._pakliModalBezarult - VÉGE');
-  }
-
-
   async _sikidomMegnyitasa() {
     console.log('FoOldal._sikidomMegnyitasa - KEZDÉS');
 
@@ -852,10 +766,7 @@ init() {
     // Az éppen aktív entitás — a síkidom nézetben kiemelve jelenik meg (ha látszik)
     const { entitasId: aktualisEntitasId } = aktivEntitasLekerese();
 
-    // A síkidom SAJÁT rétegére kerül, nem a modal-konténerbe (2026-08-17). Így nem
-    // kerül be a modal-verembe — különben a vissza-gomb soha többé nem navigálna,
-    // csak a síkidomot csukogatná (lásd `tortenetVissza` és `SikidomModal`).
-    const sikidomModal = new SikidomModal('sikidom-kontener', {
+    const sikidomModal = new SikidomModal('modal-kontener', {
       token: this.token,
       aktualisEntitasId,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {

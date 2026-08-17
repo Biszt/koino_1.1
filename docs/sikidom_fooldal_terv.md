@@ -43,7 +43,30 @@ megyének a struktúráját látod.
 
 ---
 
-## 2. A most következő átalakítás (hatókör)
+## 2. Az átalakítás (hatókör) — ⏸️ SZÜNETEL, KÖZÖSSÉGI DÖNTÉSRE VÁR
+
+> ### ⏸️ 2026-08-17: az irány felfüggesztve
+>
+> Csaba döntése: **egyelőre marad a pakli főoldalnak, és a síkidom marad kiixelhető
+> modálnak.** Ezeket a döntéseket **a közösséggel egyeztetve** hozza majd meg — ami
+> következetes a platform lényegével: nem a fejlesztő dönt egyedül arról, hogyan
+> nézzen ki a közös tér.
+>
+> **A kód visszaállítva** a mérések utáni állapotra (`2b9fd59`). A két megkezdett
+> lépés (`1fd50eb` — a síkidom saját rétegre; `78b9e3d` — a pakli modálként
+> megnyitható) **vissza van vonva**, de a git-ben megvannak: ha a közösség a
+> síkidom-főoldal mellett dönt, `git cherry-pick`-kel visszahozhatók.
+>
+> **Miért kellett visszavonni, nem elég „nem folytatni":** a két lépés nem volt
+> semleges a MAI működésre nézve. A síkidom kikerült a `Modal`-ból, ezért (a) az ESC
+> már nem zárta be — az ESC-figyelőt a `Modal` adta —, és (b) a vissza-gomb sem
+> zárta be, hanem rendes történet-lépést tett a **takarásban lévő paklin**. Amíg a
+> síkidom modál marad, ez a kettő visszalépés lett volna.
+>
+> **Ami a szünet ellenére is érvényes és megmarad:** az alábbi hatókör, a D1–D4
+> döntések, a három csapda, a lépéssorrend és a hozzá tartozó indoklás — plusz a
+> 3. szakasz mérései és a mély lánc mérése. A visszatéréshez ez a dokumentum a
+> kiindulópont; a kódot nem kell újra kitalálni, csak visszaemelni.
 
 Csaba által rögzített hatókör:
 

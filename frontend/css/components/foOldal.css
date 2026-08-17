@@ -142,16 +142,3 @@
   display: flex;      /* ← flex konténer legyen */
   flex-direction: column;
 }
-
-/* ===== A PAKLI MODÁLBAN (2026-08-17) ===== */
-/* A pakli 2026-08-17 óta modálként is megnyitható: ilyenkor a `#fooldal-tartalom`
-   elem MAGA költözik a modal törzsébe (lásd FoOldal._pakliModalNyitasa) — nem
-   rendereljük újra, csak áthelyezzük. A fenti `min-height: 100dvh` viszont a
-   TELJES OLDALRA volt szabva; a modal panelén belül ettől kilógna, ezért a
-   modálban a magasságot a panel adja. */
-.fooldal-tartalom--modalban {
-  min-height: 0;
-  height: 100%;
-  padding-bottom: var(--space-4);
-  overflow-y: auto;
-}
