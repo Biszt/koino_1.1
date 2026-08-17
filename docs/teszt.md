@@ -1804,3 +1804,35 @@ oszlopban megmondja: ⛔ kérés-mód nyitva · ⛔ nincs mérce · ⏳ még nem
    kezdő fázis is hívja magától, tehát a hozzá kötés ugyanabba a csapdába vezetne.
    Ha úgy érzed, a ⛶-től is vissza kéne lépnie, **jelezd** — külön, a gomb
    eseménykezelőjében köthető be.
+
+---
+
+### Síkidom nézet — KOPPINTÁS → PAKLI, és a KÁRTYA-MENÜS SÍKIDOM (2026-08-17)
+
+Két új navigációs viselkedés (böngészőben igazolva):
+
+**1. Koppintás → a pakli arra a kártyára ugrik.** A struktúra nézet mintájára:
+egy síkidomra koppintva a síkidom BEZÁRUL, és a pakli az adott entitásra épül újra.
+(Eddig az egykártyás teszt-panelt nyitotta.) Nézni: koppints egy síkidomra → a
+nézet bezárul, alatta a pakli a megkoppintott entitáson áll.
+
+**2. A kártyák hamburger menüjében „Síkidom nézet" (🔵).** Az adott entitást
+HORGONYKÉNT nyitja: a horgony fölé felfűzi az ős-láncot (a szülők, a környezet
+látszanak), a horgony gyerekeit kitölti.
+
+**Amit nézni kell:**
+
+- **A nézet a horgony BELSEJÉT mutatja** — a horgony gyerekeit, ahogy a fő nézet a
+  VILÁG gyerekeit (a gyökereket). A horgony maga a körülvevő keret.
+- **Kifelé zoomolva feljönnek a szülők**, egyre feljebb (a horgony az ős-láncon
+  lépdel fölfelé). Teljesen kizoomolva a VILÁG-nál betöltődik a többi gyökér is
+  (a testvérek nem az első képkockán jönnek, hanem ahogy odaérsz).
+- **Az ⛶ „Teljes nézet" a VILÁG-ra illeszt** (kizoomol a teljes világ-szintre),
+  akkor is, ha a nézet ág-gyökértől indult.
+- **Koppintásra itt is a pakli navigál** (mint a fő menüs síkidomnál), és a nézet
+  bezárul.
+
+*Böngészőben igazolva a mély láncon (2026-08-17): 20. szintre horgonyozva 21 elemű
+gerinc épült (gyökér a világ alatt, horgony az alján); kizoomolva a horgony 20→19→…
+→VILÁG lépdelt, és a VILÁG-nál a gyökér-szint 1-ről 5100-ra töltődött; koppintásra a
+pakli a megkoppintott gyerekre ugrott. A rendes (VILÁG-tól induló) nézet változatlan.*

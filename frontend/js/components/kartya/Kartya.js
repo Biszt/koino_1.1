@@ -8,6 +8,7 @@ import ErtesitesekModal from '../modals/ErtesitesekModal.js'; // Ág-szűrt post
 import TudatpontokModal from '../modals/TudatpontokModal.js'; // Ág-szűrt Tudatpontok nézet a kártya menüjéből
 import KeresesModal from '../modals/KeresesModal.js'; // Ág-szűrt keresés a kártya menüjéből
 import StrukturaModal from '../modals/StrukturaModal.js'; // Ág-szűrt Struktúra nézet a kártya menüjéből
+import SikidomModal from '../modals/SikidomModal.js'; // Ág-gyökértől indított Síkidom nézet a kártya menüjéből
 import RendezesModal from '../modals/RendezesModal.js'; // Ág-szűrt rendezés a kártya menüjéből (15. terv-pont)
 import ReszveteliBeallitasokModal from '../modals/ReszveteliBeallitasokModal.js'; // Passzív↔aktív szerep az entitáson
 import fejlesztesreVarMegjelenitese from '../FejlesztesreVar.js'; // „Fejlesztésre vár" üzenet (pl. Világtérkép)
@@ -142,6 +143,13 @@ async init() {
       ikon:    '🗺️',
       felirat: 'Struktúra nézet',
       akcio:   () => this._agStrukturaMegnyitasa()
+    });
+    // Síkidom nézet EBBŐL az entitásból HORGONYOZVA: az adott ág a környezetével
+    // (szülők), a horgony gyerekei kitöltve. Koppintásra a pakli arra ugrik.
+    opciok.push({
+      ikon:    '🔵',
+      felirat: 'Síkidom nézet',
+      akcio:   () => this._agSikidomMegnyitasa()
     });
     // Világtérkép — ÚJ, még fejlesztésre vár (minden menüben egységesen).
     opciok.push({
@@ -479,6 +487,39 @@ async _agStrukturaMegnyitasa() {
   strukturaModal.megnyitas();
 
   console.log('Kartya._agStrukturaMegnyitasa - VÉGE');
+}
+
+// ----- ÁG-GYÖKÉRTŐL INDÍTOTT SÍKIDOM NÉZET -----
+// A Síkidom nézet EBBŐL az entitásból, HORGONYOZVA (a terv 6. pontja): a nézet a
+// horgony fölé felfűzi az ős-láncot (a környezet, a szülők látszanak), és a horgony
+// gyerekeit tölti le. Koppintásra — mint a fő menüs síkidomnál — a pakli arra az
+// entitásra ugrik (az `onEntitasKivalasztas` az `onUjratoltes`-en át navigál).
+async _agSikidomMegnyitasa() {
+  console.log('Kartya._agSikidomMegnyitasa - KEZDÉS', {
+    entitasId: this.entitas?.entitasId,
+    entitasTipus: this.entitas?.entitasTipus
+  });
+
+  const adatok = this.entitas?.adatok ?? {};
+  const agCim  = adatok.cim ?? adatok.nev ?? null;
+
+  const sikidomModal = new SikidomModal(this.modalKontenerAzon, {
+    token:            this.token ?? tokenLekerese(),
+    horgonyEntitasId: this.entitas.entitasId,
+    aktualisEntitasId: this.entitas.entitasId,
+    cim:              agCim ? `Síkidom nézet – ${agCim}` : 'Síkidom nézet – ez az ág',
+
+    // Síkidomra koppintva a pakli arra navigál (mentés + a központi újratöltő)
+    onEntitasKivalasztas: (entitasId, entitasTipus) => {
+      aktivEntitasMentese(entitasId, entitasTipus);
+      if (typeof this.onUjratoltes === 'function') this.onUjratoltes(entitasId, entitasTipus);
+    }
+  });
+
+  await sikidomModal.init();
+  sikidomModal.megnyitas();
+
+  console.log('Kartya._agSikidomMegnyitasa - VÉGE');
 }
 
 // ----- ÁG-SZŰRT RENDEZÉS MEGNYITÁSA -----

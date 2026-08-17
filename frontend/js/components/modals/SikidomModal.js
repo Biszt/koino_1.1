@@ -448,6 +448,15 @@ class SikidomModal {
       : null;
     this.onEntitasKivalasztas = beallitasok.onEntitasKivalasztas ?? null;
 
+    // ===== ÁG-GYÖKÉRTŐL INDÍTÁS (2026-08-17) =====
+    // Ha meg van adva, a nézet NEM a VILÁG-tól indul, hanem erre az entitásra
+    // HORGONYOZVA nyílik: a horgony fölé felfűzzük az ős-láncot (a szülők, a
+    // környezet látszik), és a horgony gyerekeit töltjük le. A kártya-menüs
+    // „Síkidom nézet" adja át. Lásd `_megnyitasHorgonnyal`.
+    this.horgonyEntitasId = beallitasok.horgonyEntitasId
+      ? beallitasok.horgonyEntitasId.toString()
+      : null;
+
     this.modal = null;
     this.vaszon = null;
 
@@ -491,6 +500,13 @@ class SikidomModal {
     // nagyítást (lásd sikidomHorgony.js).
     this._tar = new Map();
     this._horgony = VILAG;
+
+    // ===== AZ ILLESZTÉS HORGONYA =====
+    // A kezdő fázis és az ⛶ gomb ERRE illeszt (kulsoSugar-ából számol nagyítást).
+    // Alapból a VILÁG — a rendes megnyitás így a teljes gyökér-szintet illeszti, a
+    // működés változatlan. Ág-gyökértől indításnál (`_megnyitasHorgonnyal`) a
+    // horgony-entitásra állítjuk, hogy a kezdő kép RÁ illeszkedjen, ne a VILÁG-ra.
+    this._illesztesHorgony = VILAG;
 
     // Világ → képernyő
     this._nezet = { skala: 1, eltolasX: 0, eltolasY: 0 };
@@ -591,7 +607,12 @@ class SikidomModal {
     document.getElementById('sikidom-zoom-ki-gomb')
       ?.addEventListener('click', () => this._zoomKozeppontra(1 / ZOOM_LEPES));
     document.getElementById('sikidom-illesztes-gomb')
-      ?.addEventListener('click', () => this._alaphelyzet());
+      ?.addEventListener('click', () => {
+        // Az ⛶ „Teljes nézet": mindig a VILÁG-ra illeszt, akkor is, ha a nézet
+        // ág-gyökértől indult (kizoomol a teljes világ-szintre).
+        this._illesztesHorgony = VILAG;
+        this._alaphelyzet();
+      });
     document.getElementById('sikidom-kartya-bezar')
       ?.addEventListener('click', () => this._kartyaBezarasa());
 
@@ -622,18 +643,40 @@ class SikidomModal {
     this._teljesNezetBekapcsolasa();
     this._nezetValtas('betoltes');
 
-    // A virtuális világ-csomópont: a gyökér-entitások szülője
+    // A virtuális világ-csomópont: a gyökér-entitások szülője. MINDIG létrejön —
+    // ág-indításnál is ő a lánc teteje (a legfelső ős az ő gyereke).
     this._tar.clear();
     this._tar.set(VILAG, this._ujCsomopont({
       id: VILAG, szuloId: null, relX: 0, relY: 0, relR: 1, pont: 0, vanGyereke: true
     }));
     this._horgony = VILAG;
+    this._illesztesHorgony = VILAG;
 
-    // Az első adag: még nincs képernyő-méret, ezért küszöb nélkül (a darab-plafonig)
-    await this._gyerekekBetoltese(VILAG, 0);
+    // ===== ÁG-GYÖKÉRTŐL vagy a VILÁG-tól? =====
+    // Ág-indításnál felfűzzük az ős-láncot és a horgonyt az entitásra állítjuk;
+    // egyébként a szokásos módon a gyökereket töltjük.
+    let kezdoCsomopont;
+    if (this.horgonyEntitasId) {
+      kezdoCsomopont = await this._gerincFelfuzese();
+      if (!kezdoCsomopont) {
+        // Nem sikerült a lánc (hiba / törölt entitás): essünk vissza a VILÁG-nézetre
+        console.warn('SikidomModal.megnyitas - ág-indítás nem sikerült, VILÁG-nézet');
+        this._horgony = VILAG;
+        this._illesztesHorgony = VILAG;
+        await this._gyerekekBetoltese(VILAG, 0);
+        kezdoCsomopont = this._tar.get(VILAG);
+      }
+    } else {
+      // Az első adag: még nincs képernyő-méret, ezért küszöb nélkül (a darab-plafonig)
+      await this._gyerekekBetoltese(VILAG, 0);
+      kezdoCsomopont = this._tar.get(VILAG);
+    }
 
-    const vilag = this._tar.get(VILAG);
-    if (!vilag.varolista.length && !vilag.gyerekIdk.length) {
+    // „Nincs adat" csak a VILÁG-nézetnél értelmes — ág-indításnál a horgony maga a
+    // tartalom (lehet levél is, gyerekek nélkül; a szülei akkor is látszanak).
+    const uresVilag = this._illesztesHorgony === VILAG
+      && !kezdoCsomopont.varolista.length && !kezdoCsomopont.gyerekIdk.length;
+    if (uresVilag) {
       const szoveg = document.getElementById('sikidom-betoltes-szoveg');
       if (szoveg) szoveg.textContent = 'Még nincs megjeleníthető entitás.';
       console.log('SikidomModal.megnyitas - VÉGE (nincs adat)');
@@ -647,7 +690,7 @@ class SikidomModal {
     // képpont-mérete), a végleges nagyításhoz viszont a pakolás kiterjedése.
     // Ezért egy DURVA becsléssel indulunk, lepakolunk, majd a MÉRT kiterjedésre
     // igazítunk — és ha az igazítás új helyet nyitott, még egyszer pakolunk.
-    this._kezdoNezetBecslese(vilag);
+    this._kezdoNezetBecslese(kezdoCsomopont);
 
     // A kezdő fázis alatt a nézet ZÁROLVA (lásd `_kezdoFazis`): előbb megérkezik és
     // lepakolódik a teljes készlet, aztán illesztünk, és csak utána nyúlhat hozzá
@@ -679,6 +722,98 @@ class SikidomModal {
     }
 
     console.log('SikidomModal.megnyitas - VÉGE');
+  }
+
+  // ===== A GERINC FELFŰZÉSE (ág-gyökértől indítás, 2026-08-17) =====
+  // A horgony-entitás ős-láncát lehozza a backendtől, és felfűzi a VILÁG alá:
+  //   VILÁG → gyökér → … → szülő → HORGONY.
+  // Minden láncszem a szülőjében KÖZÉPRE kerül (relX=0, relY=0), a méretét a pontból
+  // számoljuk (`_relSugar`). Ez a hideg ugrás állapota: az ősöknek (még) csak a
+  // gerinc-gyerekük van lerakva; a testvéreik akkor töltődnek be, amikor kizoomolsz
+  // és az ős fókuszba kerül (a `_gyerekekBetoltese` a szokásos úton lehozza őket).
+  //
+  // MIÉRT KÖZÉPRE: hideg ugráskor nincs meg az ősök testvér-elrendezése (nem
+  // navigáltunk rajtuk keresztül), ezért a gerinc-gyerek a szülője közepén ül. Ez
+  // egybevág az ős-söprés utáni állapottal is: ott a folyosón kívüli ősnek szintén
+  // egyetlen (középre kerülő) gyereke marad.
+  //
+  // @returns {Promise<Object|null>} a horgony csomópontja, vagy null hiba esetén
+  async _gerincFelfuzese() {
+    console.log('SikidomModal._gerincFelfuzese - KEZDÉS', { horgony: this.horgonyEntitasId });
+
+    let valasz;
+    try {
+      valasz = await apiGet(
+        `sikidom/oslanc?entitas=${encodeURIComponent(this.horgonyEntitasId)}`, this.token
+      );
+    } catch (hiba) {
+      console.error('SikidomModal._gerincFelfuzese - HIBA', { hiba: hiba.message });
+      return null;
+    }
+
+    // A lánc ELÖL a horgony, VÉGÉN a gyökér. Felfűzni fentről lefelé kell, ezért
+    // megfordítjuk: [gyökér, …, szülő, horgony].
+    const lanc = valasz?.oslanc ?? [];
+    if (!lanc.length) {
+      console.warn('SikidomModal._gerincFelfuzese - üres lánc');
+      return null;
+    }
+    const gyokertolLefele = [...lanc].reverse();
+
+    // A legfelső ős (a gyökér) méretét a VILÁG-hoz a legerősebb gyökér adja —
+    // ugyanaz a mértékegység, mint a rendes gyökér-szinten (`_relSugar` VILÁG-ágán).
+    const vilag = this._tar.get(VILAG);
+    vilag.legerosebbGyerekPont = valasz.legerosebbGyokerPont || 0;
+
+    let szulo = vilag;
+    let horgonyCsomopont = null;
+
+    for (const elem of gyokertolLefele) {
+      const id = elem.entitasId.toString();
+      const pont = elem.hierarchikusOsszesPont ?? 0;
+      const relR = this._relSugar(szulo, pont);
+
+      const csomopont = this._ujCsomopont({
+        id,
+        entitasTipus: elem.entitasTipus,
+        cim: elem.cim,
+        pont,
+        vanGyereke: elem.vanGyereke,
+        szuloId: szulo.id,
+        // KÖZÉPRE a szülőben (lásd a fejléc magyarázatát)
+        relX: 0, relY: 0, relR,
+        letrehozva: elem.letrehozva,
+        kategoriaIkonok: elem.kategoriaIkonok,
+        tipusIkon: elem.tipusIkon,
+        javaslatTipus: elem.javaslatTipus
+      });
+
+      this._tar.set(id, csomopont);
+
+      // A szülő LERAKOTT gyerekei közé (hogy a bejárás rajzolja). A dedup a
+      // `_varolistaraFuzes`-ben óv attól, hogy egy későbbi testvér-betöltés
+      // megismételje ezt a gyereket.
+      if (!szulo.gyerekIdk.includes(id)) szulo.gyerekIdk.push(id);
+      szulo.betoltottGyerekPont += pont;
+
+      szulo = csomopont;
+      horgonyCsomopont = csomopont;
+    }
+
+    // A horgony az utolsó láncszem (maga a kért entitás)
+    this._horgony = horgonyCsomopont.id;
+    this._illesztesHorgony = horgonyCsomopont.id;
+
+    // A horgony gyerekeinek letöltése — küszöb nélkül, mint a VILÁG első adagja
+    await this._gyerekekBetoltese(horgonyCsomopont.id, 0);
+
+    console.log('SikidomModal._gerincFelfuzese - VÉGE', {
+      lancHossz: gyokertolLefele.length,
+      horgony: this._horgony,
+      horgonyGyerekek: horgonyCsomopont.varolista.length
+    });
+
+    return horgonyCsomopont;
   }
 
   bezaras() { this.modal?.bezaras(); }
@@ -1121,7 +1256,21 @@ class SikidomModal {
       szulo.legerosebbGyerekPont = gyerekek[0].hierarchikusOsszesPont ?? 0;
     }
 
+    // ===== DEDUP: MÁR LERAKOTT VAGY VÁRÓLISTÁN LÉVŐ TESTVÉR KIHAGYÁSA =====
+    // Rendes betöltésnél nincs átfedés (kurzoros lapozás), de az ÁG-INDÍTÁS
+    // előre lerakja a gerinc-gyereket a szülő `gyerekIdk`-jába (lásd
+    // `_gerincFelfuzese`). Amikor az az ős később betölti a saját gyerekeit
+    // (kizoomoláskor), a gerinc-gyerek MEGINT megjönne a válaszban — ez a kapu
+    // hagyja ki, hogy ne kerüljön be kétszer.
+    const marMegvan = new Set([
+      ...szulo.gyerekIdk,
+      ...szulo.varolista.map(v => v.id)
+    ]);
+
     for (const gy of gyerekek) {
+      const gyId = gy.entitasId.toString();
+      if (marMegvan.has(gyId)) continue;
+
       const pont = gy.hierarchikusOsszesPont ?? 0;
 
       // A relatív sugarat MOST számoljuk ki, egyszer: nagyítás-független érték,
@@ -1527,12 +1676,21 @@ class SikidomModal {
   // Ez SEHOL nem befolyásolja a végleges képet — az `_alaphelyzet` a MÉRT
   // kiterjedésre igazít utána —, csak arra kell, hogy a legelső pakolásnak
   // legyen mihez viszonyítania a lyuk képpont-méretét.
-  _kezdoNezetBecslese(vilag) {
-    const osszes = vilag.varolista.reduce((s, v) => s + v.pont, 0);
-    const egyseg = vilag.legerosebbGyerekPont || 1;
-    const becsultKiterjedes = Math.max(1, Math.sqrt(osszes / egyseg / 0.5));
+  _kezdoNezetBecslese(csomopont) {
+    // A VILÁG-nál a gyökerek együttes területe a legerősebb gyökér egységében adja a
+    // becslést. Ág-indításnál a horgony gyerekei a horgony KERETÉN belül (sugár ≤ 1)
+    // pakolódnak, ezért ott a keret sugara (1) a jó kiinduló becslés — a `_alaphelyzet`
+    // úgyis a MÉRT `kulsoSugar`-ra igazít utána.
+    let becsultKiterjedes;
+    if (csomopont.id === VILAG) {
+      const osszes = csomopont.varolista.reduce((s, v) => s + v.pont, 0);
+      const egyseg = csomopont.legerosebbGyerekPont || 1;
+      becsultKiterjedes = Math.max(1, Math.sqrt(osszes / egyseg / 0.5));
+    } else {
+      becsultKiterjedes = 1;
+    }
 
-    this._horgony = VILAG;
+    this._horgony = csomopont.id;
     this._nezet = {
       skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / becsultKiterjedes,
       eltolasX: (this._szelesseg || 0) / 2,
@@ -1540,19 +1698,21 @@ class SikidomModal {
     };
 
     console.log('SikidomModal._kezdoNezetBecslese', {
-      gyokerek: vilag.varolista.length, becsultKiterjedes: becsultKiterjedes.toFixed(2)
+      horgony: csomopont.id, varolista: csomopont.varolista.length,
+      becsultKiterjedes: becsultKiterjedes.toFixed(2)
     });
   }
 
   // @param {boolean} animalt - átmenettel álljunk-e rá (a megnyitáskor NEM:
   //   ott nincs honnan animálni, csak villogást okozna)
   _alaphelyzet(animalt = true) {
-    console.log('SikidomModal._alaphelyzet - KEZDÉS', { animalt });
+    console.log('SikidomModal._alaphelyzet - KEZDÉS', { animalt, illesztesHorgony: this._illesztesHorgony });
 
-    this._horgony = VILAG;
+    this._horgony = this._illesztesHorgony;
 
-    // A gyökér-szint tényleges kiterjedéséhez igazítunk, hogy az egész beférjen
-    const kiterjedes = this._tar.get(VILAG)?.kulsoSugar || 1;
+    // A horgony-szint tényleges kiterjedéséhez igazítunk, hogy az egész beférjen.
+    // Alapból ez a VILÁG (teljes gyökér-szint); ág-indításnál a horgony-entitás.
+    const kiterjedes = this._tar.get(this._illesztesHorgony)?.kulsoSugar || 1;
 
     const cel = {
       skala: (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes,
@@ -1605,7 +1765,7 @@ class SikidomModal {
   //
   // 1%-os tűrés: a lebegőpontos hajszálnyi eltérés miatt ne illesszünk örökké.
   _kezdoIllesztesKell() {
-    const kiterjedes = this._tar.get(VILAG)?.kulsoSugar || 0;
+    const kiterjedes = this._tar.get(this._illesztesHorgony)?.kulsoSugar || 0;
     if (!(kiterjedes > 0)) return false;          // még nincs mit illeszteni
 
     const celSkala = (this._kepernyoMeret() * ILLESZTESI_ARANY) / kiterjedes;
