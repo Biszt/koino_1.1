@@ -3673,3 +3673,144 @@ A terv 5. szakaszának 2. pontja **lezárva**. A síkidom motorjának két
 legbizonytalanabb eleme — az ős-söprés és a horgonyváltás — valódi munkamenetben,
 mérve működik. A nagy átalakítás (a síkidom mint főoldal) elé ez volt az utolsó
 nyitott igazolás.
+
+## Javaslat- és Egyezmény-kártya — fülekre osztott body (2026-08-18, Csaba)
+
+**A probléma.** A módosítási javaslat kártyája jelenleg CSAK az indoklást mutatja,
+a javasolt ÚJ (módosított) tartalmat nem — így nem lehet érdemben szavazni. Az
+egyezmény kártyája a lecserélt (régi) tartalmat nem őrzi meg, a body-ja pedig a
+részvételi arányt DUPLIKÁLTAN mutatja (a fejléc már közli).
+
+**A megoldás.** A két kártya body-ja **külső fülsávot** kap (ahogy a tartalom
+fülekre osztható, csak eggyel feljebb): egy fül tartalma maga egy tartalom, aminek
+LEHET saját belső fülsávja — ezért két réteg fül kell. A belső réteg MÁR KÉSZ: a
+`SzovegMezoMegjelenito` a „több oldalas" formátumnál magától kirajzolja a belső
+fülsávot. Építeni a KÜLSŐ réteget kell.
+
+**Adat-helyzet (megvizsgálva).**
+- Javaslat → módosított tartalom: az adat LÉTEZIK (`javaslat.erintettEntitasok[]
+  .modositasAdatok` = `{ cim/nev, szoveg/szovegMezo, ... }`), de a `pakliService`
+  jelenleg nem küldi ki a kártyának. → csak kiszállítani kell.
+- Egyezmény → lecserélt tartalom: NEM létezik sehol — a `modositasiVegrehajto`
+  `updateById`-dal felülír, a régit előtte nem menti. → a végrehajtáskor
+  snapshotolni kell. **A legegyszerűbb út (választott):** a `modositasiVegrehajto`
+  a felülírás ELŐTT `findById`-dal kiolvassa a régi `cim`/`szoveg`-et, és a
+  visszaadott eredménybe teszi (`modositottEntitasok[].regiAdatok`). Ez MAGÁTÓL
+  bekerül az egyezmény `vegrehajatasEredmeny` mezőjébe
+  (`egyezmenyService.egyezmenyLetrehozasa` a teljes eredményt menti) — **séma-
+  módosítás NÉLKÜL**. A régi egyezményeknél nincs `regiAdatok` → a fül üres marad,
+  migráció nélkül (a régi egyezmények nem fontosak).
+
+**Csaba döntései (2026-08-18):**
+1. A külső fülsáv KÖZÖS, újrahasznált komponens (Javaslat + Egyezmény).
+2. Most CSAK a **Módosítás** típust csináljuk meg; a többi típus (Törlés/
+   Áthelyezés/Egyesítés/Csomag) body-ját később bontjuk fülekre.
+3. Az egyezménynek egyelőre CSAK KÉT füle van: (1) lecserélt tartalom, (2) indoklás.
+   (A „részletes adatok" fület most kihagyjuk.)
+4. A régi egyezmények üres „lecserélt tartalom" füle elfogadott (a legegyszerűbb út).
+
+**A javaslat-kártya terve (Módosítás):** külső fülsáv 3 füllel —
+(1) **Indoklás** (a mai body), (2) **Módosított tartalom** (a `modositasAdatok`-ból:
+a cím a KÉT fülsáv KÖZÉ, alatta a tartalom saját belső fülsávja + blokkjai),
+(3) **Szavazás** (a szavazógombok a `SzavazatModal` logikájával; a hamburgerből
+ide kerül; csak `statusz==='Aktiv'`-nál, `!szavazhat`-nál tiltva).
+
+**Az egyezmény-kártya terve:** a duplikált részvételi-arány sor törlése, majd külső
+fülsáv 2 füllel — (1) **Lecserélt tartalom** (a `regiAdatok`-ból; ha nincs: „nincs
+megőrzött adat"), (2) **Indoklás** (a mai body).
+
+**Érintett fájlok.** Új: `KartyaFulsav.js` + CSS. Módosul: `JavaslatKartya.js`,
+`EgyezmenyKartya.js`, `pakliService.js`, `modositasiVegrehajto.js`. Változatlan és
+újrahasznált: `SzovegMezoMegjelenito.js`, `SzavazatModal.js`.
+
+**Sorrend.** (A) közös komponens + backend Javaslat-adat + JavaslatKártya fülek
+(Indoklás + Módosított tartalom) → böngészős teszt; (B) Javaslat szavazás-fül;
+(C) backend `regiAdatok` snapshot + Egyezmény-adat + EgyezményKártya fülek.
+
+### ✅ (A) lépés — Javaslat: Indoklás / Módosított tartalom fülek (2026-08-18)
+
+Elkészült, böngészős teszt hátra. Amit tartalmaz:
+- **Új közös komponens:** `frontend/js/components/kartya/KartyaFulsav.js` + CSS
+  (`css/components/kartya/kartyaFulsav.css`, importálva a `main.css`-ben). Külső
+  fül-réteg, előre megépített tartalom-elemek közti váltással (mutat/rejt, nem épít
+  újra → nincs szivárgás); a tartalom-elemek életciklusát a kártya birtokolja. Egy
+  fülnél nincs fülsáv. Közös `kartya-fulsav__cim` (cím a két fülsáv közé) és
+  `kartya-fulsav__ures` (üres-állapot) osztály.
+- **Backend adat-kiszállítás (lusta úton):** `pakliService.javaslatModositottTartalom`
+  a Módosítás-javaslat első Módosítás-műveletű érintett entitásának
+  `modositasAdatok`-jából ad `{ cim, szoveg, entitasTipus }`-t (Tartalom→cim/szoveg,
+  egyéb→nev/szovegMezo). A `pakliController.entitasSzovegLekerese` (GET
+  `/api/pakli/szoveg/:tipus/:id`) Javaslatnál a válaszba teszi `modositottTartalom`
+  néven; a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.modositottTartalom`-ra
+  (siker- és hiba-ágon is). Nem-Módosítás típusnál / más entitásnál null.
+- **JavaslatKártya:** ha van `adatok.modositottTartalom`, a body külső fülsávot kap —
+  1. Indoklás, 2. Módosított tartalom (cím a két sáv közé, alatta a belső fülsáv +
+  blokkok). Ha csak a cím módosult (nincs szöveg): „Ehhez a módosításhoz nincs
+  szöveges tartalom." Egyéb esetben a body a régi módon csak az indoklást mutatja.
+  A single `szovegMezoMegjelenito` → `megjelenitok` tömb + `kartyaFulsav`; a
+  `destroy` mindet felszabadítja.
+
+**Böngészős visszajelzés utáni javítások (2026-08-18, Csaba):**
+- A body-ból KIKERÜLT a töredékcsoport-azonosító sor (a fejléc „2/6" badge-e elég).
+- **Fül-átfedés javítva:** a „Módosított tartalom" fül az indoklást is mutatta, mert a
+  `SzovegMezoMegjelenito` közvetlenül a fül-panelre került → a panel megkapta a
+  `szoveg-mezo-megjelenito` (display:flex) osztályt, ami a CSS import-sorrend miatt
+  felülírta a rejtő `display:none`-t. Javítás: a megjelenítő külön gyerek-konténerbe
+  kerül + a rejtő szabály leszármazott-szelektoros (magasabb specifikusság).
+- **A 2. fül a teljes EREDMÉNY-tartalmat képezi le** (cím + body): a
+  `javaslatModositottTartalom` a `modositasAdatok`-ot ráolvassa az érintett entitás
+  JELENLEGI tartalmára, így a body akkor is látszik, ha csak a cím változott; ha a
+  tartalom body-ja eleve üres, ott is üres. (Az „nincs szöveges tartalom" üzenet
+  megszűnt.)
+
+Hátra: (B) Javaslat szavazás-fül; (C) Egyezmény (backend `regiAdatok` snapshot +
+Lecserélt tartalom / Indoklás fülek).
+
+### ✅ (B) lépés — Javaslat: Szavazás fül (2026-08-18)
+
+Elkészült, böngészős teszt hátra. A szavazás a hamburger menüből a body „Szavazás"
+fülébe költözött. Amit tartalmaz:
+- **Új komponens:** `frontend/js/components/kartya/SzavazasFul.js` + CSS
+  (`szavazasFul.css`, importálva). A SzavazatModal-lal AZONOS végpontok
+  (`GET javaslat/:id/sajat-szavazat`, `POST/DELETE javaslat/szavazat`), de a
+  gombok AZONNAL hatnak (nincs „Rendben" lépés) — ez a felhasználó saját,
+  visszavonható szavazata. Szavazás után NEM töltjük újra a paklit (a kártya nem
+  ugrik vissza az 1. fülre); a fejléc arányait a cron frissíti. A saját korábbi
+  szavazatot a fül maga tölti be és emeli ki; jogosultság hiányában (`szavazhat`
+  false) a gombok tiltva, indokkal.
+- **A body-építés EGYSÉGESÍTVE:** a `JavaslatKartya._bodyFeltoltese` mindig
+  fül-listát épít és a KartyaFulsav-ra bízza. Fülek: Indoklás (ha van szöveg) ·
+  Módosított tartalom (Módosításnál) · Szavazás (AKTÍV javaslatnál). Egyetlen
+  fülnél nincs fülsáv, csak a tartalom. Így a szavazás MINDEN aktív javaslaton
+  elérhető (nem csak Módosításnál) — nem esett ki a nem-módosítási javaslatoknál.
+- **A hamburger menüből a „Szavazat leadása" pont KIKERÜLT**; a `_szavazatLeadasa`
+  metódus és a `SzavazatModal` import törölve a JavaslatKártyából. (A
+  `SzavazatModal.js` fájl megmarad, csak innen nem hivatkozzuk.)
+
+Hátra: (C) Egyezmény (backend `regiAdatok` snapshot + Lecserélt tartalom /
+Indoklás fülek).
+
+### ✅ (C) lépés — Egyezmény: Lecserélt tartalom / Indoklás fülek (2026-08-18)
+
+Elkészült, böngészős teszt hátra. Amit tartalmaz:
+- **Backend — a régi állapot MENTÉSE végrehajtáskor:** a `modositasiVegrehajto` a
+  `updateById` (felülírás) ELŐTT `findById`-dal kiolvassa az érintett entitás régi
+  cím/body-ját, és a végrehajtási eredménybe teszi
+  (`modositottEntitasok[].regiAdatok`; Tartalom→cim/szoveg, Kat/Típus→nev/leiras).
+  Ez az `egyezmenyLetrehozasa` révén MAGÁTÓL bekerül az egyezmény
+  `vegrehajatasEredmeny`-ébe — **séma-módosítás nélkül**. Csak a mostantól
+  létrejövő egyezményekre hat; a régieknél nincs `regiAdatok`.
+- **Backend — kiszállítás (lusta úton):** `pakliService.egyezmenyLecsereltTartalom`
+  a Módosítás-egyezmény `vegrehajatasEredmeny.modositottEntitasok[].regiAdatok`-jából
+  ad `{ cim, szoveg, entitasTipus }`-t. A `pakliController` (GET
+  `/api/pakli/szoveg/...`) Egyezménynél a válaszba teszi `lecsereltTartalom` néven;
+  a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.lecsereltTartalom`-ra.
+- **EgyezményKártya:** a duplikált „Részvételi arány" body-sor KIKERÜLT (a fejléc
+  mutatja). A body külső fülsávot kap: 1. Lecserélt tartalom (ha van `lecsereltTartalom`
+  — cím a két sáv közé, alatta a régi body), 2. Indoklás. Egyetlen fülnél (régi vagy
+  nem-módosítási egyezmény) nincs sáv, csak az indoklás. `megjelenitok` tömb +
+  `kartyaFulsav`; a `destroy` mindet felszabadítja.
+
+**A teljes feladat (Javaslat + Egyezmény kártya fülek) KÉSZ** — böngészős teszt
+mindhárom lépésre. A „Lecserélt tartalom" fül csak a MOSTANTÓL létrejövő módosítási
+egyezményeknél jelenik meg (a régieknél nincs elmentve a régi állapot).

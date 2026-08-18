@@ -29,6 +29,10 @@
 @import './components/kartya/tartalomTipusKartya.css';
 @import './components/kartya/javaslatKartya.css';
 @import './components/kartya/egyezmenyKartya.css';
+/* Közös külső fülsáv a Javaslat- és Egyezmény-kártya body-jához */
+@import './components/kartya/kartyaFulsav.css';
+/* A Javaslat-kártya „Szavazás" fülének tartalma */
+@import './components/kartya/szavazasFul.css';
 
 
 /* ── SZÖVEG MEZŐ MEGJELENÍTŐ ── */

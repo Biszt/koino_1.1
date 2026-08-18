@@ -1,0 +1,107 @@
+/* frontend/css/components/kartya/kartyaFulsav.css */
+
+/* =============================================
+   KÁRTYA FÜLSÁV (KÜLSŐ FÜL-RÉTEG)
+   =============================================
+   A Javaslat- és Egyezmény-kártya body-jának külső
+   fülsávja. Vizuálisan erősebb, mint a belső
+   (szoveg-mezo-megjelenito__fulsav) fülsáv, hogy a
+   két réteg elkülönüljön: a KÜLSŐ a kártya szerkezetét
+   tagolja, a BELSŐ egy tartalom saját oldalait.
+   ============================================= */
+.kartya-fulsav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* ----- A FÜLSÁV (gombok sora) ----- */
+.kartya-fulsav__sav {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 2px solid var(--color-border);
+}
+
+/* Böngésző-görgetősáv elrejtése (WebKit) */
+.kartya-fulsav__sav::-webkit-scrollbar {
+  display: none;
+}
+
+/* ----- EGY FÜL (gomb) ----- */
+.kartya-fulsav__ful {
+  flex-shrink: 0;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  /* Az aktív fül alsó kiemelését egy áttetsző alsó szegély adja, hogy a
+     fülsáv 2px-es alapvonalára pontosan ráüljön */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color        var(--transition-interactive),
+    border-color var(--transition-interactive);
+}
+
+.kartya-fulsav__ful:hover {
+  color: var(--color-text);
+}
+
+.kartya-fulsav__ful--aktiv {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ----- TARTALOM-TERÜLET ----- */
+.kartya-fulsav__tartalom {
+  width: 100%;
+}
+
+/* A nem-aktív panel elrejtése (a váltás csak mutat/rejt, nem épít újra).
+   A leszármazott-szelektor (magasabb specifikusság) biztosítja, hogy akkor is
+   rejtsen, ha a panel maga egyéb `display`-t hozó osztályt is kapna. */
+.kartya-fulsav__tartalom .kartya-fulsav__panel--rejtett {
+  display: none;
+}
+
+/* =============================================
+   CÍM A KÉT FÜLSÁV KÖZÖTT
+   =============================================
+   A „Módosított tartalom" (és később a „Lecserélt
+   tartalom") fülben a tartalom CÍME a KÜLSŐ fülsáv és
+   a tartalom saját BELSŐ fülsávja KÖZÉ kerül.
+   ============================================= */
+.kartya-fulsav__cim {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-heading, var(--font-body));
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+/* Üres-állapot felirat (pl. régi egyezménynél nincs megőrzött tartalom) */
+.kartya-fulsav__ures {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-style: italic;
+}

@@ -164,17 +164,38 @@ async entitasSzovegLekerese(req, res) {
       });
     }
 
-    // 3. LÉPÉS - SERVICE HÍVÁS
+    // 3. LÉPÉS - SERVICE HÍVÁS (indoklás / leírás / szöveg)
     const szoveg = await pakliService.entitasSzovegLekerese(entitasId, entitasTipus);
 
+    // 3/b. LÉPÉS - MÓDOSÍTÁSI JAVASLAT: a JAVASOLT ÚJ tartalom is (a kártya
+    // „Módosított tartalom" füléhez). Más típusnál / entitásnál null marad.
+    let modositottTartalom = null;
+    if (entitasTipus === 'Javaslat') {
+      modositottTartalom = await pakliService.javaslatModositottTartalom(entitasId);
+    }
+
+    // 3/c. LÉPÉS - MÓDOSÍTÁSI EGYEZMÉNY: a LECSERÉLT (régi) tartalom is (a kártya
+    // „Lecserélt tartalom" füléhez). Más típusnál / entitásnál null marad.
+    let lecsereltTartalom = null;
+    if (entitasTipus === 'Egyezmeny') {
+      lecsereltTartalom = await pakliService.egyezmenyLecsereltTartalom(entitasId);
+    }
+
     // 4. LÉPÉS - SIKERES VÁLASZ
-    console.log('entitasSzovegLekerese endpoint hívás - VÉGE', { entitasId, entitasTipus });
+    console.log('entitasSzovegLekerese endpoint hívás - VÉGE', {
+      entitasId,
+      entitasTipus,
+      vanModositottTartalom: !!modositottTartalom,
+      vanLecsereltTartalom:  !!lecsereltTartalom
+    });
 
     return res.status(200).json({
       success: true,
       entitasId,
       entitasTipus,
-      szoveg
+      szoveg,
+      modositottTartalom,
+      lecsereltTartalom
     });
 
   } catch (error) {

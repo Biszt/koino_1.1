@@ -2,7 +2,6 @@
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
-import SzavazatModal from '../modals/SzavazatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
 import TartalomModal from '../modals/TartalomModal.js';
@@ -15,13 +14,20 @@ import { masodpercFelirat } from '../../utils/idoFormazo.js';
 // =============================================
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 
+// =============================================
+// ÚJ - KartyaFulsav (külső fül-réteg) + SzavazasFul (szavazás-fül) importja
+// =============================================
+import KartyaFulsav from './KartyaFulsav.js';
+import SzavazasFul from './SzavazasFul.js';
+
 // --- JAVASLAT KÁRTYA OSZTÁLY ---
 // Felelőssége:
 // 1. Örökli a Kartya.js teljes váz logikáját (hamburger, koppintás, állapot)
 // 2. Feltölti a fejlécet: javaslatTípus, státusz, részvételi arány,
 //    támogatottsági arány, ellenzői arány, bizonyossági mutató,
 //    döntési idő, töredék jelzés (pl. "2 / 6") – ha töredék javaslat
-// 3. Feltölti a body-t (csak kiválasztott kártyán): töredék részletek + indoklás blokkok
+// 3. Feltölti a body-t (csak kiválasztott kártyán): töredék részletek + külső fülsáv
+//    (Módosításnál Indoklás / Módosított tartalom), egyébként csak indoklás
 // 4. Megadja a hamburger menü opcióit
 class JavaslatKartya extends Kartya {
 
@@ -42,9 +48,14 @@ class JavaslatKartya extends Kartya {
     this.onUjratoltes      = onUjratoltes;
 
     // =============================================
-    // ÚJ - Megjelenítő példány referencia
+    // ÚJ - Megjelenítő példányok + külső fülsáv referenciái
     // =============================================
-    this.szovegMezoMegjelenito = null;
+    // A body-ban több SzovegMezoMegjelenito is lehet (indoklás + módosított
+    // tartalom), ezért tömbben tartjuk őket a destroy()-hoz. A KartyaFulsav a
+    // külső fül-réteg (Indoklás / Módosított tartalom).
+    this.megjelenitok = [];
+    this.kartyaFulsav = null;
+    this.szavazasFul  = null;
 
     console.log('JavaslatKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
@@ -125,9 +136,16 @@ class JavaslatKartya extends Kartya {
 
   // ----- BODY FELTÖLTÉSE -----
   // =============================================
-  // MÓDOSÍTVA - indoklás blokk alapú renderelés
+  // MÓDOSÍTVA - külső fülsáv (Indoklás / Módosított tartalom / Szavazás)
   // =============================================
-  // A szovegMezo az indoklás tartalma, blokkok tömbjeként tárolva.
+  // A body-t egységesen egy KÜLSŐ fülsáv (KartyaFulsav) tölti fel, a lehetséges
+  // fülek listájából:
+  //   1. Indoklás           — ha van szöveg (adatok.szovegMezo)
+  //   2. Módosított tartalom — Módosítás-javaslatnál (adatok.modositottTartalom):
+  //      a tartalom címe a két fülsáv közé, alatta a tartalom SAJÁT belső fülsávja
+  //   3. Szavazás           — AKTÍV javaslatnál (adatok.statusz === 'Aktiv')
+  // Egyetlen fülnél a KartyaFulsav nem rajzol fülsávot, csak a tartalmat mutatja
+  // (pl. lezárt, nem módosítási javaslat: csak az indoklás).
   // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
     console.log('JavaslatKartya._bodyFeltoltese - KEZDÉS', {
@@ -136,59 +154,96 @@ class JavaslatKartya extends Kartya {
 
     const adatok = this.entitas.adatok ?? {};
 
-    // --- TÖREDÉK RÉSZLETEK ---
-    // Változatlan
-    if (adatok.toredekAdatok) {
-      const toredekReszletek = document.createElement('div');
-      toredekReszletek.className = 'javaslat-kartya__toredek-reszletek';
+    // Tiszta kiindulás (újra-feltöltés esetére)
+    this.megjelenitok = [];
 
-      const csoportCimke = document.createElement('span');
-      csoportCimke.className   = 'javaslat-kartya__toredek-cimke';
-      csoportCimke.textContent = 'Töredék csoport azonosító:';
+    const fulek = [];
 
-      const csoportId = document.createElement('span');
-      csoportId.className   = 'javaslat-kartya__toredek-csoport-id';
-      csoportId.textContent = adatok.toredekAdatok.toredekCsoportId ?? '—';
-
-      toredekReszletek.appendChild(csoportCimke);
-      toredekReszletek.appendChild(csoportId);
-      body.appendChild(toredekReszletek);
-    }
-
-    // --- INDOKLÁS ---
-    // =============================================
-    // ÚJ - textContent helyett SzovegMezoMegjelenito
-    // =============================================
-    // Az indoklás blokk tömb (kép, link, entitás hivatkozás is lehet benne),
-    // ezért ugyanolyan renderelés kell, mint a többi kártya szöveg mezőjénél.
+    // --- 1. fül — INDOKLÁS ---
+    // FONTOS: a megjelenítő NEM közvetlenül a fül-panelre kerül, hanem egy saját
+    // gyerek-konténerre. Különben a panel megkapná a `szoveg-mezo-megjelenito`
+    // (display:flex) osztályt, ami felülírná a fülváltás rejtő `display:none`-ját →
+    // a rejtett panel is látszana.
     if (adatok.szovegMezo) {
-      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
-      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
-      const blokkok = adatok.szovegMezo;
-
-      const indoklasKontener = document.createElement('div');
-      indoklasKontener.className = 'javaslat-kartya__indoklas-kontener';
-      body.appendChild(indoklasKontener);
-
-      this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(indoklasKontener, {
-        blokkok,
-        onEntitasKivalasztas: (entitasId, entitasTipus) => {
-          console.log('JavaslatKartya - entitás hivatkozás koppintva', {
-            entitasId,
-            entitasTipus
-          });
-          if (typeof this.onKivalasztas === 'function') {
-            this.onKivalasztas(entitasId, entitasTipus);
-          }
-        }
-      });
+      const indoklasElem = document.createElement('div');
+      indoklasElem.className = 'javaslat-kartya__indoklas-kontener';
+      const indoklasMegj = document.createElement('div');
+      indoklasElem.appendChild(indoklasMegj);
+      this.megjelenitok.push(new SzovegMezoMegjelenito(indoklasMegj, {
+        blokkok:              adatok.szovegMezo,
+        onEntitasKivalasztas: this._entitasHivatkozasKezelo()
+      }));
+      fulek.push({ id: 'indoklas', felirat: 'Indoklás', tartalomElem: indoklasElem });
     }
+
+    // --- 2. fül — MÓDOSÍTOTT TARTALOM (Módosítás-javaslatnál) ---
+    // A tartalom leképezése a címével együtt (cím a két fülsáv közé, alatta a body).
+    // A body akkor is megjelenik, ha csak a cím változott (a backend a jelenlegi
+    // tartalommal olvassa össze); ha a tartalom body-ja eleve üres, itt is üres.
+    const modositottTartalom = adatok.modositottTartalom;
+    if (modositottTartalom) {
+      const modElem = document.createElement('div');
+      modElem.className = 'javaslat-kartya__modositott-kontener';
+
+      if (modositottTartalom.cim) {
+        const cimElem = document.createElement('span');
+        cimElem.className   = 'kartya-fulsav__cim';
+        cimElem.textContent = modositottTartalom.cim;
+        modElem.appendChild(cimElem);
+      }
+
+      const szovegKontener = document.createElement('div');
+      modElem.appendChild(szovegKontener);
+      this.megjelenitok.push(new SzovegMezoMegjelenito(szovegKontener, {
+        blokkok:              modositottTartalom.szoveg,
+        onEntitasKivalasztas: this._entitasHivatkozasKezelo()
+      }));
+
+      fulek.push({ id: 'modositas', felirat: 'Módosított tartalom', tartalomElem: modElem });
+    }
+
+    // --- 3. fül — SZAVAZÁS (csak AKTÍV javaslatnál) ---
+    // A szavazás korábban a hamburger menüben volt; onnan kikerült, ide költözött.
+    // A jogosultságot a backend számolja (adatok.szavazhat); ha nincs, a gombok
+    // tiltva, indokkal. A saját korábbi szavazatot a fül maga tölti be.
+    if (adatok.statusz === 'Aktiv') {
+      const szavazasElem = document.createElement('div');
+      this.szavazasFul = new SzavazasFul(szavazasElem, {
+        javaslatId:  this.entitas.entitasId,
+        token:       this.token,
+        szavazhat:   adatok.szavazhat === true,
+        tiltvaIndok: 'Ehhez az érintett tartalmon kell tudatpont (a javaslaton magán nem szükséges).'
+      });
+      // A saját szavazat lekérése + kiemelés (async, nem blokkoló)
+      this.szavazasFul.betoltes();
+      fulek.push({ id: 'szavazas', felirat: 'Szavazás', tartalomElem: szavazasElem });
+    }
+
+    // --- A külső fülsáv felépítése (egyetlen fülnél nem rajzol sávot) ---
+    const fulsavKontener = document.createElement('div');
+    body.appendChild(fulsavKontener);
+    this.kartyaFulsav = new KartyaFulsav(fulsavKontener, { fulek });
 
     console.log('JavaslatKartya._bodyFeltoltese - VÉGE', {
       entitasId:  this.entitas?.entitasId,
-      vanToredek: !!adatok.toredekAdatok,
-      vanSzoveg:  !!adatok.szovegMezo
+      fulekSzama: fulek.length
     });
+  }
+
+  // ----- ENTITÁS HIVATKOZÁS KOPPINTÁS KEZELŐ -----
+  // Közös callback a SzovegMezoMegjelenito példányoknak: a szövegben lévő
+  // entitás-hivatkozásra koppintva a paklit oda navigálja.
+  // @returns {Function} (entitasId, entitasTipus) => void
+  _entitasHivatkozasKezelo() {
+    return (entitasId, entitasTipus) => {
+      console.log('JavaslatKartya - entitás hivatkozás koppintva', {
+        entitasId,
+        entitasTipus
+      });
+      if (typeof this.onKivalasztas === 'function') {
+        this.onKivalasztas(entitasId, entitasTipus);
+      }
+    };
   }
 
   // ----- MUTATÓ ELEM LÉTREHOZÁSA -----
@@ -221,9 +276,22 @@ class JavaslatKartya extends Kartya {
       entitasId: this.entitas?.entitasId
     });
 
-    if (this.szovegMezoMegjelenito) {
-      this.szovegMezoMegjelenito.destroy();
-      this.szovegMezoMegjelenito = null;
+    // A külső fülsáv előbb (csak a DOM-ot üríti, a megjelenítőket nem bántja)
+    if (this.kartyaFulsav) {
+      this.kartyaFulsav.destroy();
+      this.kartyaFulsav = null;
+    }
+
+    // Minden SzovegMezoMegjelenito (indoklás + módosított tartalom) felszabadítása
+    if (Array.isArray(this.megjelenitok)) {
+      this.megjelenitok.forEach((m) => m?.destroy?.());
+      this.megjelenitok = [];
+    }
+
+    // A szavazás-fül felszabadítása
+    if (this.szavazasFul) {
+      this.szavazasFul.destroy();
+      this.szavazasFul = null;
     }
 
     super.destroy?.();
@@ -233,37 +301,8 @@ class JavaslatKartya extends Kartya {
     });
   }
 
-  // =============================================
-  // ÚJ - SZAVAZAT LEADÁSA
-  // =============================================
-  // Megnyitja a szavazat modalt erre a javaslatra. A modal maga kéri le
-  // a eember korábbi szavazatát, és kezeli a szavazás / visszavonás hívásokat.
-  // @param {Object} entitas - A javaslat entitása (entitasId-t innen vesszük)
-  async _szavazatLeadasa(entitas) {
-    console.log('JavaslatKartya._szavazatLeadasa - KEZDÉS', {
-      entitasId: entitas?.entitasId
-    });
-
-    const szavazatModal = new SzavazatModal(this.modalKontenerAzon, {
-      entitasAdatok: {
-        entitasId: entitas.entitasId,
-        adatok:    entitas.adatok
-      },
-      // Szavazás után frissítjük a paklit, hogy a kártya a helyes állapotot mutassa
-      // (az arányokat a cron frissíti kb. 1 percen belül)
-      onSiker: () => {
-        console.log('JavaslatKartya._szavazatLeadasa - onSiker: pakli újratöltése');
-        if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
-      }
-    });
-
-    await szavazatModal.init();
-    await szavazatModal.megnyitas();
-
-    console.log('JavaslatKartya._szavazatLeadasa - VÉGE', {
-      entitasId: entitas?.entitasId
-    });
-  }
+  // A szavazás korábban itt egy külön modált nyitott (_szavazatLeadasa); azt a
+  // funkciót a body „Szavazás" füle (SzavazasFul) váltotta le. Lásd _bodyFeltoltese.
 
   // =============================================
   // ÚJ - TUDATPONT MÓDOSÍTÁS
@@ -375,7 +414,8 @@ class JavaslatKartya extends Kartya {
   }
 
   // ----- HAMBURGER MENÜ OPCIÓK -----
-  // A „Szavazat leadása" pont már működik (SzavazatModal), a többi 🚧 még fejlesztésre vár.
+  // A szavazás a body „Szavazás" fülébe költözött (lásd _bodyFeltoltese +
+  // SzavazasFul), ezért a menüből kikerült. A többi 🚧 még fejlesztésre vár.
   _hamburgerOpciok(entitas) {
     console.log('JavaslatKartya._hamburgerOpciok - KEZDÉS', {
       entitasId: entitas?.entitasId
@@ -385,29 +425,7 @@ class JavaslatKartya extends Kartya {
     // de még nem készültek el – kattintásra a közös FejlesztesreVar üzenet jelenik meg.
     // A korábbi „Törlés" pont a terv szerint törölve (a törlés javaslat útján történik).
 
-    // A szavazati jogosultságot a backend szabálya dönti el: az e-embernek az
-    // ÉRINTETT entitás(ok)on kell tudatpont – a javaslaton magán NEM. Ezt a pakli
-    // előre kiszámolja és `adatok.szavazhat`-ként küldi (lásd pakliService).
-    const adatok    = entitas.adatok ?? {};
-    const szavazhat = adatok.szavazhat === true;
-
-    // Csak AKTÍV javaslatra lehet szavazni – nem aktív státusznál
-    // (pl. Elfogadva/Elvetve) a szavazás opció teljesen kimarad a menüből
-    // (a backend úgyis elutasítaná). A státusz a kártya adataiból jön.
-    const aktivJavaslat = adatok.statusz === 'Aktiv';
-
     const opciok = [
-      // --- SZAVAZAT LEADÁSA (csak aktív javaslatnál kerül a menübe) ---
-      // FONTOS: NEM tudatpontFuggo – nem a javaslat entitásán ellenőrzünk,
-      // hanem a backend által számolt szavazhat jelzésen. Így a menüpont
-      // pontosan akkor aktív, amikor a szavazatService is engedné.
-      ...(aktivJavaslat ? [{
-        ikon:        '🗳️',
-        felirat:     'Szavazat leadása',
-        tiltva:      !szavazhat,
-        tiltvaIndok: 'Ehhez az érintett tartalmon kell tudatpont (a javaslaton magán nem szükséges).',
-        akcio:       () => this._szavazatLeadasa(entitas)
-      }] : []),
       {
         ikon:           '✏️',
         felirat:        'Új tartalom létrehozása ebből',

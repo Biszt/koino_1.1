@@ -605,6 +605,120 @@ if (entitasTipus === 'Tartalom') {
 console.log('entitasSzovegLekerese - VÉGE', { entitasId, szoveg: szoveg ? 'van adat' : null });
 return szoveg;
 }
+
+// ----- JAVASLAT MÓDOSÍTOTT (JAVASOLT ÚJ) TARTALMA -----
+/**
+* Egy MÓDOSÍTÁSI javaslat EREDMÉNY-tartalmát adja vissza a kártya „Módosított
+* tartalom" füléhez: azt, AMILYEN a tartalom LENNE a módosítás után (cím + body).
+* A javaslat `modositasAdatok`-ja csak a VÁLTOZOTT mezőket tartalmazza, ezért a
+* nem változott mezőket (pl. a body, ha csak a cím módosult) az érintett entitás
+* JELENLEGI tartalmából vesszük — a kettőt összeolvassuk. Így a fül mindig a teljes
+* tartalmat mutatja; ha a body eleve üres, ott is üres marad.
+* Csak 'Modositas' típusnál ad vissza adatot; minden más típusnál null
+* (a többi típus body-ját később bontjuk fülekre).
+* @param {string} javaslatId - A javaslat azonosítója
+* @returns {Promise<{cim: string|null, szoveg: any, entitasTipus: string|null}|null>}
+*/
+async javaslatModositottTartalom(javaslatId) {
+  console.log('javaslatModositottTartalom - KEZDÉS', { javaslatId });
+
+  const javaslat = await javaslatRepository.findById(javaslatId);
+
+  // Csak módosítási javaslatnál van „módosított tartalom"
+  if (!javaslat || javaslat.javaslatTipus !== 'Modositas') {
+    console.log('javaslatModositottTartalom - VÉGE (nem Módosítás, null)');
+    return null;
+  }
+
+  // Az első módosítás-műveletű érintett entitás
+  const erintett = (javaslat.erintettEntitasok || []).find(
+    (e) => e.muvelet === 'Modositas'
+  );
+  if (!erintett) {
+    console.log('javaslatModositottTartalom - VÉGE (nincs érintett entitás, null)');
+    return null;
+  }
+
+  const ma = erintett.modositasAdatok || {};
+
+  // Az érintett entitás JELENLEGI címe és body-ja (a nem változott mezőkhöz).
+  // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras.
+  let jelenlegiCim    = null;
+  let jelenlegiSzoveg = null;
+  if (erintett.entitasTipus === 'Tartalom') {
+    const t = await tartalomRepository.findById(erintett.entitasId);
+    jelenlegiCim    = t?.cim ?? null;
+    jelenlegiSzoveg = t?.szoveg ?? null;
+  } else if (erintett.entitasTipus === 'Kategoria') {
+    const k = await kategoriaRepository.findById(erintett.entitasId);
+    jelenlegiCim    = k?.nev ?? null;
+    jelenlegiSzoveg = k?.leiras ?? null;
+  } else if (erintett.entitasTipus === 'TartalomTipus') {
+    const tt = await tartalomTipusRepository.findById(erintett.entitasId);
+    jelenlegiCim    = tt?.nev ?? null;
+    jelenlegiSzoveg = tt?.leiras ?? null;
+  }
+
+  // A módosítás EREDMÉNYE: a változott mezők felülírják a jelenlegit
+  const modositottTartalom = {
+    cim:          (ma.cim ?? ma.nev) ?? jelenlegiCim,
+    szoveg:       (ma.szoveg ?? ma.szovegMezo) ?? jelenlegiSzoveg,
+    entitasTipus: erintett.entitasTipus ?? null
+  };
+
+  console.log('javaslatModositottTartalom - VÉGE', {
+    vanCim:    !!modositottTartalom.cim,
+    vanSzoveg: !!modositottTartalom.szoveg
+  });
+  return modositottTartalom;
+}
+
+// ----- EGYEZMÉNY LECSERÉLT (RÉGI) TARTALMA -----
+/**
+* Egy MÓDOSÍTÁSI egyezmény által LECSERÉLT (régi) tartalmat adja vissza a kártya
+* „Lecserélt tartalom" füléhez. A régi állapotot a végrehajtáskor mentettük el az
+* egyezmény vegrehajatasEredmeny.modositottEntitasok[].regiAdatok mezőjébe (a
+* modositasiVegrehajto a felülírás előtt olvassa ki). Régi (a mentés bevezetése
+* előtti) egyezményeknél nincs ilyen adat → null (a fül üresen jelzi).
+* @param {string} egyezmenyId - Az egyezmény azonosítója
+* @returns {Promise<{cim: string|null, szoveg: any, entitasTipus: string|null}|null>}
+*/
+async egyezmenyLecsereltTartalom(egyezmenyId) {
+  console.log('egyezmenyLecsereltTartalom - KEZDÉS', { egyezmenyId });
+
+  const egyezmeny = await egyezmenyRepository.findById(egyezmenyId);
+
+  // Csak módosítási egyezménynél van „lecserélt tartalom"
+  if (!egyezmeny || egyezmeny.javaslatTipus !== 'Modositas') {
+    console.log('egyezmenyLecsereltTartalom - VÉGE (nem Módosítás, null)');
+    return null;
+  }
+
+  // A végrehajtási eredményben az első olyan érintett entitás, amihez van
+  // elmentett régi állapot (regiAdatok)
+  const eredmeny     = egyezmeny.vegrehajatasEredmeny || {};
+  const modEntitasok = eredmeny.modositottEntitasok || [];
+  const elso         = modEntitasok.find((e) => e && e.regiAdatok);
+  const ra           = elso?.regiAdatok;
+
+  if (!ra) {
+    console.log('egyezmenyLecsereltTartalom - VÉGE (nincs megőrzött régi tartalom, null)');
+    return null;
+  }
+
+  // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras
+  const lecsereltTartalom = {
+    cim:          ra.cim ?? ra.nev ?? null,
+    szoveg:       ra.szoveg ?? ra.leiras ?? null,
+    entitasTipus: elso.entitasTipus ?? null
+  };
+
+  console.log('egyezmenyLecsereltTartalom - VÉGE', {
+    vanCim:    !!lecsereltTartalom.cim,
+    vanSzoveg: !!lecsereltTartalom.szoveg
+  });
+  return lecsereltTartalom;
+}
 }
 
 // --- EXPORTÁLÁS - SINGLETON példány ---

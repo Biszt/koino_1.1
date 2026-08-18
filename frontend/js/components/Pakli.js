@@ -223,6 +223,12 @@ async kivalasztottSzovegFrissitese() {
     if (celElem) {
       if (!celElem.adatok) celElem.adatok = {};
       celElem.adatok.szovegMezo = eredmeny.szoveg ?? null;
+      // Módosítási javaslatnál a javasolt ÚJ tartalom (a „Módosított tartalom"
+      // fülhöz); más típusnál / entitásnál a backend null-t küld
+      celElem.adatok.modositottTartalom = eredmeny.modositottTartalom ?? null;
+      // Módosítási egyezménynél a LECSERÉLT (régi) tartalom (a „Lecserélt
+      // tartalom" fülhöz); más típusnál / entitásnál null
+      celElem.adatok.lecsereltTartalom = eredmeny.lecsereltTartalom ?? null;
     }
   } catch (hiba) {
     console.error('Pakli.kivalasztottSzovegFrissitese - HIBA', hiba);
@@ -232,6 +238,8 @@ async kivalasztottSzovegFrissitese() {
     if (celElemHiba) {
       if (!celElemHiba.adatok) celElemHiba.adatok = {};
       celElemHiba.adatok.szovegMezo = null;
+      celElemHiba.adatok.modositottTartalom = null;
+      celElemHiba.adatok.lecsereltTartalom = null;
     }
   }
   console.log('Pakli.kivalasztottSzovegFrissitese - VÉGE', {

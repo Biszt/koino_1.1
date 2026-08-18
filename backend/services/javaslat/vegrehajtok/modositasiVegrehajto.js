@@ -58,16 +58,27 @@ class ModositasiVegrehajto {
       // === 4. LÉPÉS: ENTITÁS MÓDOSÍTÁSA TÍPUS ALAPJÁN ===
       let modositva = false;
       let hibaUzenet = null;
+      // A LECSERÉLT (régi) tartalom pillanatképe — a felülírás ELŐTT olvassuk ki,
+      // hogy az egyezmény meg tudja őrizni (a kártya „Lecserélt tartalom" fülének).
+      // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras.
+      let regiAdatok = null;
 
       try {
 
         if (entitas.entitasTipus === 'Tartalom') {
+          // A régi tartalom kiolvasása a felülírás előtt
+          const regiTartalom = await TartalomRepository.findById(entitas.entitasId);
+          regiAdatok = {
+            cim:    regiTartalom?.cim ?? null,
+            szoveg: regiTartalom?.szoveg ?? null
+          };
+
           // Tartalom módosítása
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> TartalomRepository.updateById: ", {
            entitasId: entitas.entitasId,
            modositasAdatok: entitas.modositasAdatok
           });
-          
+
           const frissitettTartalom = await TartalomRepository.updateById(
             entitas.entitasId,
             entitas.modositasAdatok
@@ -75,6 +86,13 @@ class ModositasiVegrehajto {
           modositva = !!frissitettTartalom;
 
         } else if (entitas.entitasTipus === 'Kategoria') {
+          // A régi kategória kiolvasása a felülírás előtt
+          const regiKategoria = await KategoriaRepository.findById(entitas.entitasId);
+          regiAdatok = {
+            nev:    regiKategoria?.nev ?? null,
+            leiras: regiKategoria?.leiras ?? null
+          };
+
           // Kategória módosítása
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> KategoriaRepository.updateById: ", {
            entitasId: entitas.entitasId,
@@ -88,6 +106,13 @@ class ModositasiVegrehajto {
           modositva = !!frissitettKategoria;
 
         } else if (entitas.entitasTipus === 'TartalomTipus') {
+          // A régi tartalomtípus kiolvasása a felülírás előtt
+          const regiTartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId);
+          regiAdatok = {
+            nev:    regiTartalomTipus?.nev ?? null,
+            leiras: regiTartalomTipus?.leiras ?? null
+          };
+
           // Tartalom típus módosítása
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> TartalomTipusRepository.updateById: ", {
            entitasId: entitas.entitasId,
@@ -116,6 +141,7 @@ class ModositasiVegrehajto {
         entitasTipus: entitas.entitasTipus,
         modositva: modositva,
         modositasAdatok: entitas.modositasAdatok,
+        regiAdatok: regiAdatok,   // A lecserélt (régi) tartalom pillanatképe
         hiba: hibaUzenet
       });
     }

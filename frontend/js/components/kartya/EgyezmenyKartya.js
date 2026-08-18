@@ -10,15 +10,17 @@ import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 
 // =============================================
-// ÚJ - SzovegMezoMegjelenito importja
+// ÚJ - SzovegMezoMegjelenito + KartyaFulsav (külső fül-réteg) importja
 // =============================================
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
+import KartyaFulsav from './KartyaFulsav.js';
 
 // --- EGYEZMÉNY KÁRTYA OSZTÁLY ---
 // Felelőssége:
 // 1. Örökli a Kartya.js teljes váz logikáját (hamburger, koppintás, állapot)
 // 2. Feltölti a fejlécet: javaslatTípus, támogatottsági arány, bizonyossági mutató
-// 3. Feltölti a body-t (csak kiválasztott kártyán): részvételi arány + indoklás blokkok
+// 3. Feltölti a body-t (csak kiválasztott kártyán): külső fülsáv — Lecserélt
+//    tartalom (Módosításnál) / Indoklás. (A részvételi arány sor kikerült: a fejléc mutatja.)
 // 4. Megadja a hamburger menü opcióit
 class EgyezmenyKartya extends Kartya {
 
@@ -39,9 +41,13 @@ class EgyezmenyKartya extends Kartya {
     this.onUjratoltes      = onUjratoltes;
 
     // =============================================
-    // ÚJ - Megjelenítő példány referencia
+    // ÚJ - Megjelenítő példányok + külső fülsáv referenciái
     // =============================================
-    this.szovegMezoMegjelenito = null;
+    // A body-ban több SzovegMezoMegjelenito is lehet (lecserélt tartalom +
+    // indoklás), ezért tömbben tartjuk őket a destroy()-hoz. A KartyaFulsav a
+    // külső fül-réteg (Lecserélt tartalom / Indoklás).
+    this.megjelenitok = [];
+    this.kartyaFulsav = null;
 
     console.log('EgyezmenyKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
@@ -104,8 +110,16 @@ class EgyezmenyKartya extends Kartya {
 
   // ----- BODY FELTÖLTÉSE -----
   // =============================================
-  // MÓDOSÍTVA - indoklás blokk alapú renderelés
+  // MÓDOSÍTVA - külső fülsáv (Lecserélt tartalom / Indoklás)
   // =============================================
+  // A body-t egy KÜLSŐ fülsáv (KartyaFulsav) tölti fel:
+  //   1. Lecserélt tartalom — Módosítás-egyezménynél (adatok.lecsereltTartalom):
+  //      a régi tartalom címe a két fülsáv közé, alatta a régi body
+  //   2. Indoklás           — a lezárt javaslat szövegmezőjének pillanatképe
+  // A korábbi „Részvételi arány" body-sor KIKERÜLT: a fejléc már mutatja (👥 %),
+  // ott duplikáció volt. Egyetlen fülnél a KartyaFulsav nem rajzol sávot (pl. régi
+  // vagy nem-módosítási egyezménynél nincs lecserélt tartalom → csak az indoklás).
+  // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
     console.log('EgyezmenyKartya._bodyFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
@@ -113,59 +127,81 @@ class EgyezmenyKartya extends Kartya {
 
     const adatok = this.entitas.adatok ?? {};
 
-    // --- RÉSZVÉTELI ARÁNY ---
-    // Változatlan
-    if (adatok.reszveteliArany !== null && adatok.reszveteliArany !== undefined) {
-      const raKontener = document.createElement('div');
-      raKontener.className = 'egyezmeny-kartya__reszletek-sor';
+    // Tiszta kiindulás (újra-feltöltés esetére)
+    this.megjelenitok = [];
 
-      const raCimke = document.createElement('span');
-      raCimke.className   = 'egyezmeny-kartya__reszlet-cimke';
-      raCimke.textContent = 'Részvételi arány:';
+    const fulek = [];
 
-      const raErtek = document.createElement('span');
-      raErtek.className   = 'egyezmeny-kartya__reszlet-ertek';
-      raErtek.textContent = `👥 ${adatok.reszveteliArany}%`;
+    // --- 1. fül — LECSERÉLT TARTALOM (Módosítás-egyezménynél) ---
+    // A régi tartalom leképezése a címével együtt (cím a két fülsáv közé, alatta a
+    // régi body). Csak akkor jelenik meg, ha a régi állapotot elmentettük a
+    // végrehajtáskor (régi vagy nem-módosítási egyezménynél nincs → nem lesz fül).
+    const lecsereltTartalom = adatok.lecsereltTartalom;
+    if (lecsereltTartalom) {
+      const lecsereltElem = document.createElement('div');
+      lecsereltElem.className = 'egyezmeny-kartya__lecserelt-kontener';
 
-      raKontener.appendChild(raCimke);
-      raKontener.appendChild(raErtek);
-      body.appendChild(raKontener);
+      if (lecsereltTartalom.cim) {
+        const cimElem = document.createElement('span');
+        cimElem.className   = 'kartya-fulsav__cim';
+        cimElem.textContent = lecsereltTartalom.cim;
+        lecsereltElem.appendChild(cimElem);
+      }
+
+      const szovegKontener = document.createElement('div');
+      lecsereltElem.appendChild(szovegKontener);
+      this.megjelenitok.push(new SzovegMezoMegjelenito(szovegKontener, {
+        blokkok:              lecsereltTartalom.szoveg,
+        onEntitasKivalasztas: this._entitasHivatkozasKezelo()
+      }));
+
+      fulek.push({ id: 'lecserelt', felirat: 'Lecserélt tartalom', tartalomElem: lecsereltElem });
     }
 
-    // --- INDOKLÁS ---
-    // =============================================
-    // ÚJ - textContent helyett SzovegMezoMegjelenito
-    // =============================================
-    // Az egyezmény indoklása a lezárt javaslat szövegmezőjének pillanatképe,
-    // ezért ugyanolyan blokk alapú renderelés kell, mint a JavaslatKártyánál.
+    // --- 2. fül — INDOKLÁS ---
+    // Az egyezmény indoklása a lezárt javaslat szövegmezőjének pillanatképe.
+    // FONTOS: a megjelenítő saját gyerek-konténerre kerül (nem közvetlenül a
+    // panelra), különben a panel `szoveg-mezo-megjelenito` (display:flex) osztálya
+    // felülírná a fülváltás rejtő `display:none`-ját.
     if (adatok.szovegMezo) {
-      // A formátum felismerését (blokk tömb, több oldalas objektum vagy
-      // legacy string) a SzovegMezoMegjelenito végzi — nyersen adjuk át
-      const blokkok = adatok.szovegMezo;
-
-      const indoklasKontener = document.createElement('div');
-      indoklasKontener.className = 'egyezmeny-kartya__indoklas-kontener';
-      body.appendChild(indoklasKontener);
-
-      this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(indoklasKontener, {
-        blokkok,
-        onEntitasKivalasztas: (entitasId, entitasTipus) => {
-          console.log('EgyezmenyKartya - entitás hivatkozás koppintva', {
-            entitasId,
-            entitasTipus
-          });
-          if (typeof this.onKivalasztas === 'function') {
-            this.onKivalasztas(entitasId, entitasTipus);
-          }
-        }
-      });
+      const indoklasElem = document.createElement('div');
+      indoklasElem.className = 'egyezmeny-kartya__indoklas-kontener';
+      const indoklasMegj = document.createElement('div');
+      indoklasElem.appendChild(indoklasMegj);
+      this.megjelenitok.push(new SzovegMezoMegjelenito(indoklasMegj, {
+        blokkok:              adatok.szovegMezo,
+        onEntitasKivalasztas: this._entitasHivatkozasKezelo()
+      }));
+      fulek.push({ id: 'indoklas', felirat: 'Indoklás', tartalomElem: indoklasElem });
     }
+
+    // --- A külső fülsáv felépítése (egyetlen fülnél nem rajzol sávot) ---
+    const fulsavKontener = document.createElement('div');
+    body.appendChild(fulsavKontener);
+    this.kartyaFulsav = new KartyaFulsav(fulsavKontener, { fulek });
 
     console.log('EgyezmenyKartya._bodyFeltoltese - VÉGE', {
-      entitasId:          this.entitas?.entitasId,
-      vanReszveteliArany: adatok.reszveteliArany !== null && adatok.reszveteliArany !== undefined,
-      vanSzoveg:          !!adatok.szovegMezo
+      entitasId:      this.entitas?.entitasId,
+      vanLecserelt:   !!lecsereltTartalom,
+      vanSzoveg:      !!adatok.szovegMezo,
+      fulekSzama:     fulek.length
     });
+  }
+
+  // ----- ENTITÁS HIVATKOZÁS KOPPINTÁS KEZELŐ -----
+  // Közös callback a SzovegMezoMegjelenito példányoknak: a szövegben lévő
+  // entitás-hivatkozásra koppintva a paklit oda navigálja.
+  // @returns {Function} (entitasId, entitasTipus) => void
+  _entitasHivatkozasKezelo() {
+    return (entitasId, entitasTipus) => {
+      console.log('EgyezmenyKartya - entitás hivatkozás koppintva', {
+        entitasId,
+        entitasTipus
+      });
+      if (typeof this.onKivalasztas === 'function') {
+        this.onKivalasztas(entitasId, entitasTipus);
+      }
+    };
   }
 
   // =============================================
@@ -176,9 +212,16 @@ class EgyezmenyKartya extends Kartya {
       entitasId: this.entitas?.entitasId
     });
 
-    if (this.szovegMezoMegjelenito) {
-      this.szovegMezoMegjelenito.destroy();
-      this.szovegMezoMegjelenito = null;
+    // A külső fülsáv előbb (csak a DOM-ot üríti, a megjelenítőket nem bántja)
+    if (this.kartyaFulsav) {
+      this.kartyaFulsav.destroy();
+      this.kartyaFulsav = null;
+    }
+
+    // Minden SzovegMezoMegjelenito (lecserélt tartalom + indoklás) felszabadítása
+    if (Array.isArray(this.megjelenitok)) {
+      this.megjelenitok.forEach((m) => m?.destroy?.());
+      this.megjelenitok = [];
     }
 
     super.destroy?.();
