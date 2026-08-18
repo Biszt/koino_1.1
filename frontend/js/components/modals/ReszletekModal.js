@@ -246,7 +246,7 @@ class ReszletekModal {
     this._sor(lista, 'Cím',            adatok.cim ?? tartalom.cim ?? '—');
     this._sor(lista, 'Tartalomtípus',  this._tipusFelirat(adatok));
     this._sor(lista, 'Kategóriák',     this._kategoriakFelirat(adatok));
-    this._sor(lista, 'Létrehozó',      tartalom.letrehozo?.eemberNev ?? '—');
+    this._szerkesztokSor(lista,        tartalom.szerkesztok);
     this._sor(lista, 'Létrehozva',     this._datumFelirat(tartalom.letrehozva));
 
     // --- TUDATPONT ---
@@ -303,7 +303,7 @@ class ReszletekModal {
     // --- ALAPADATOK ---
     this._sor(lista, 'Név',        adatok.nev ?? entitasObj.nev ?? '—');
     this._sor(lista, 'Típus',      tipusFelirat);
-    this._sor(lista, 'Létrehozó',  entitasObj.letrehozo?.eemberNev ?? '—');
+    this._szerkesztokSor(lista,    entitasObj.szerkesztok);
     this._sor(lista, 'Létrehozva', this._datumFelirat(entitasObj.letrehozva));
 
     // --- TUDATPONT ---
@@ -449,6 +449,60 @@ class ReszletekModal {
     sor.appendChild(cimkeElem);
     sor.appendChild(ertekElem);
     lista.appendChild(sor);
+  }
+
+  // ===== SEGÉD: SZERKESZTŐK SORA (több név, színezve) =====
+  // Egy entitásnak (tartalom / kategória / tartalomtípus) több szerkesztője lehet.
+  // A neveket egymás ALÁ írjuk:
+  //   - a LEGFELSŐ (0.) az utolsó szerkesztő → mindig ZÖLD,
+  //   - az alatta lévők színe a szerint, hogy az UTOLJÁRA elfogadott módosításnál
+  //     hogyan szavaztak: Tamogatja=zöld, Ellenzi=piros, egyéb (tartózkodott / nem
+  //     szavazott)=fekete.
+  // @param {Array} szerkesztok - [{ eemberId: { eemberNev }, allapot, eredeti }]
+  _szerkesztokSor(lista, szerkesztok) {
+    const elemek = Array.isArray(szerkesztok) ? szerkesztok : [];
+
+    // Egy szerkesztőnél „Szerkesztő", többnél „Szerkesztők".
+    const cimke = elemek.length > 1 ? 'Szerkesztők' : 'Szerkesztő';
+
+    const sor = document.createElement('div');
+    sor.className = 'reszletek-modal__sor reszletek-modal__sor--szerkesztok';
+
+    const cimkeElem = document.createElement('span');
+    cimkeElem.className   = 'reszletek-modal__cimke';
+    cimkeElem.textContent = cimke;
+
+    const ertekElem = document.createElement('span');
+    ertekElem.className = 'reszletek-modal__ertek reszletek-modal__szerkesztok';
+
+    if (elemek.length === 0) {
+      // Nincs szerkesztő (pl. régi, migráció előtti entitás)
+      ertekElem.textContent = '—';
+    } else {
+      // Minden szerkesztő egy külön, színezett név-sorba kerül
+      elemek.forEach((sz, index) => {
+        const nevElem = document.createElement('span');
+        nevElem.className = 'reszletek-modal__szerkeszto ' + this._szerkesztoSzinOsztaly(sz, index);
+        nevElem.textContent = sz?.eemberId?.eemberNev ?? '—'; // null eemberId = törölt e-ember
+        ertekElem.appendChild(nevElem);
+      });
+    }
+
+    sor.appendChild(cimkeElem);
+    sor.appendChild(ertekElem);
+    lista.appendChild(sor);
+  }
+
+  // ===== SEGÉD: EGY SZERKESZTŐ NEVÉNEK SZÍN-OSZTÁLYA =====
+  // A 0. (legfelső) elem mindig zöld — ő az utolsó szerkesztő.
+  // A többinél az `allapot` dönt.
+  _szerkesztoSzinOsztaly(sz, index) {
+    if (index === 0) return 'reszletek-modal__szerkeszto--tamogatja'; // az utolsó szerkesztő: zöld
+    switch (sz?.allapot) {
+      case 'Tamogatja': return 'reszletek-modal__szerkeszto--tamogatja'; // zöld
+      case 'Ellenzi':   return 'reszletek-modal__szerkeszto--ellenzi';   // piros
+      default:          return 'reszletek-modal__szerkeszto--semleges';  // Tartozkodik / NemSzavazott: fekete
+    }
   }
 
   // ===== SEGÉD: SOR RÉSZLETEK GOMBBAL =====

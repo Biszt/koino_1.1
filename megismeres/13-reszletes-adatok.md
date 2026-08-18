@@ -12,7 +12,13 @@ pontot.
 **Mit látsz?** (az entitás típusától függően)
 
 **Tartalom / kategória / tartalomtípus**
-- Név/cím, típus, létrehozó, létrehozás ideje
+- Név/cím, típus, **szerkesztő(k)**, létrehozás ideje
+  - Egy entitásnak **több szerkesztője** is lehet: az eredeti létrehozó, és
+    mindenki, akinek elfogadott **módosítási** javaslata módosította az entitást.
+  - A nevek egymás alatt jelennek meg. **Legfelül az utolsó szerkesztő**, mindig
+    **zölddel**. Az alatta lévők neveinek színe azt mutatja, hogyan szavaztak az
+    **utoljára elfogadott módosításnál**: 🟢 zöld = támogatta, 🔴 piros = ellenezte,
+    ⚫ fekete = tartózkodott vagy nem szavazott.
 - **Tudatpont:** saját pontod, összes pont az entitáson, hozzájárulók száma
   (részletezhető), hierarchikus összes (az egész ág)
 - **Küszöbértékek** (a mediánból számolt tényleges értékek)

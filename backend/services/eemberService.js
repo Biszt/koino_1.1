@@ -407,14 +407,31 @@ class eEmberService {
     await ErtesitesRepository.torolE_EmberOsszes(eemberId);            // értesítései
     await ErtesitesiBeallitasRepository.torolE_EmberOsszes(eemberId); // értesítési beállításai
 
-    // === 4. LÉPÉS: LÉTREHOZÓ ANONIMIZÁLÁSA A MEGMARADÓ ENTITÁSOKON ===
-    // A még létező (mások által is támogatott) entitásoknál a létrehozó-hivatkozást
-    // null-ra állítjuk → a felület „törölt e-embert" mutat, a személyes kötés megszűnik.
-    // updateMany: nem fut rá a séma-validáció, de a mező most már megenged null-t.
+    // === 4. LÉPÉS: LÉTREHOZÓ/SZERKESZTŐ ANONIMIZÁLÁSA A MEGMARADÓ ENTITÁSOKON ===
+    // A még létező (mások által is támogatott) entitásoknál a személyes kötést
+    // null-ra állítjuk → a felület „törölt e-embert" mutat.
+    // - Tartalom / Kategória / Tartalomtípus: a SZERKESZTŐK tömbösödtek, ezért
+    //   minden olyan szerkesztő-elem eemberId-ját nullázzuk, ami erre az e-emberre
+    //   mutat (arrayFilters). A bejegyzés MEGMARAD (allapot/eredeti sértetlen),
+    //   csak a név válik „törölt e-emberré".
+    // - Javaslat / Egyezmény: itt egyszeres `letrehozo` maradt, azt nullázzuk.
+    // updateMany: nem fut rá a séma-validáció, de a mezők megengedik a null-t.
     await Promise.all([
-      Tartalom.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
-      Kategoria.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
-      TartalomTipus.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
+      Tartalom.updateMany(
+        { 'szerkesztok.eemberId': eemberId },
+        { $set: { 'szerkesztok.$[elem].eemberId': null } },
+        { arrayFilters: [{ 'elem.eemberId': eemberId }] }
+      ),
+      Kategoria.updateMany(
+        { 'szerkesztok.eemberId': eemberId },
+        { $set: { 'szerkesztok.$[elem].eemberId': null } },
+        { arrayFilters: [{ 'elem.eemberId': eemberId }] }
+      ),
+      TartalomTipus.updateMany(
+        { 'szerkesztok.eemberId': eemberId },
+        { $set: { 'szerkesztok.$[elem].eemberId': null } },
+        { arrayFilters: [{ 'elem.eemberId': eemberId }] }
+      ),
       Javaslat.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } }),
       Egyezmeny.updateMany({ letrehozo: eemberId }, { $set: { letrehozo: null } })
     ]);

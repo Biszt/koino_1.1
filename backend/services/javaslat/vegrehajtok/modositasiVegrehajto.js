@@ -9,6 +9,9 @@ const TartalomRepository = require('../../../repositories/tartalomRepository');
 const KategoriaRepository = require('../../../repositories/kategoriaRepository');
 const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
 
+// Szerkesztő szerviz - az elfogadott módosítás után frissíti az entitás szerkesztő-listáját
+const SzerkesztoService = require('../../szerkesztoService');
+
 // ===================================
 // MÓDOSÍTÁSI VÉGREHAJTÓ OSZTÁLY
 // ===================================
@@ -133,6 +136,26 @@ class ModositasiVegrehajto {
       } catch (error) {
         // Hiba esetén rögzítjük, de folytatjuk
         hibaUzenet = error.message;
+      }
+
+      // === 4.5. LÉPÉS: SZERKESZTŐ-LISTA FRISSÍTÉSE ===
+      // Ha a módosítás sikeres volt, a javaslattevő SZERKESZTŐVÉ válik (a lista élére kerül),
+      // és a meglévő szerkesztők állapota (a nevük színe) újraszámolódik a mostani szavazatok
+      // alapján. Külön try/catch: ha ez a lépés elhasalna, a MÁR végrehajtott módosítás
+      // akkor is érvényes marad — csak a szerkesztő-lista nem frissül.
+      if (modositva) {
+        try {
+          await SzerkesztoService.szerkesztoketFrissit(
+            entitas.entitasTipus,
+            entitas.entitasId,
+            javaslat
+          );
+        } catch (szerkHiba) {
+          console.error('modositasiVegrehajto.vegrehajtas - a szerkesztő-lista frissítése sikertelen', {
+            entitasId: entitas.entitasId,
+            hiba: szerkHiba.message
+          });
+        }
       }
 
       // === 5. LÉPÉS: EREDMÉNY RÖGZÍTÉSE ===

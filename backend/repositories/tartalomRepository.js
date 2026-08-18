@@ -35,7 +35,7 @@ async findById(id) {
   // kategoriaIds és tartalomTipusId szándékosan NEM populate-elve
   // a pakliService közvetlenül az ID-kkal dolgozik
   const tartalom = await Tartalom.findById(id)
-    .populate('letrehozo', 'eemberNev')           // Létrehozó adatok betöltése
+    .populate('szerkesztok.eemberId', 'eemberNev')           // Létrehozó adatok betöltése
     .populate('szuloId', 'cim tartalomTipusId')   // Szülő tartalom adatok betöltése
     .lean();                                       // Sima JS objektum (nem Mongoose doc)
 
@@ -79,16 +79,19 @@ async findById(id) {
       query.kategoriaIds = szurok.kategoriaId;
     }
     
-    // Létrehozó szerinti szűrés
+    // Szerkesztő szerinti szűrés
+    // A `letrehozo` szűrő-kulcs nevét megtartjuk (belső API), de a tömbösített
+    // szerkesztok mezőre illesztünk: minden olyan tartalom, aminek EZ az e-ember
+    // (bármelyik) szerkesztője.
     if (szurok.letrehozo) {
-      query.letrehozo = szurok.letrehozo;
+      query['szerkesztok.eemberId'] = szurok.letrehozo;
     }
     
     // Tartalmak lekérése kapcsolódó adatokkal
     const tartalmak = await Tartalom.find(query)
       .sort({ letrehozva: -1 }) // Legújabbak előre rendezés
       .populate('tartalomTipusId', 'name shapeId') // Tartalom típus adatok
-      .populate('letrehozo', 'eemberNev') // Létrehozó adatok
+      .populate('szerkesztok.eemberId', 'eemberNev') // Létrehozó adatok
       .populate('kategoriaIds', 'nev szin'); // MÓDOSÍTVA: kategoriaIds tömb (többes szám!)
     
     return tartalmak;
@@ -110,7 +113,7 @@ async findById(id) {
       }
     )
     .populate('tartalomTipusId', 'name shapeId')
-    .populate('letrehozo', 'eemberNev')
+    .populate('szerkesztok.eemberId', 'eemberNev')
     .populate('kategoriaIds', 'nev szin'); // MÓDOSÍTVA: kategoriaIds tömb (többes szám!)
     
     return frissitettTartalom;
@@ -205,7 +208,7 @@ async findBySzuloId(szuloId, szuloTipus = null) {
   
   // Tartalmak lekérése kapcsolt adatokkal
   const tartalmak = await Tartalom.find(query)
-    .populate('letrehozo', 'eemberNev')     // Létrehozó adatok
+    .populate('szerkesztok.eemberId', 'eemberNev')     // Létrehozó adatok
     .populate('tartalomTipusId')                       // Tartalom típus adatok
     .populate('kategoriaIds')                          // Kategóriák adatai
     .sort({ letrehozva: -1 });                        // Legújabbak előre

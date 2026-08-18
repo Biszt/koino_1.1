@@ -4,6 +4,9 @@
 // Mongoose: MongoDB adatbázis kezelésére szolgáló library
 const mongoose = require('mongoose');
 
+// A szerkesztő-elem közös al-sémája (eemberId + allapot + eredeti)
+const szerkesztoResz = require('./szerkesztoResz');
+
 // ===== TARTALOM SÉMA DEFINIÁLÁSA =====
 // A Schema meghatározza a tartalom adatszerkezetét és validációs szabályokat
 const tartalomSchema = new mongoose.Schema({
@@ -108,12 +111,16 @@ szuloTipus: {
     }
 },
 
-// ----- LÉTREHOZÓ EMBER -----
-// Ki hozta létre ezt a tartalmat
-letrehozo: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'eEmber',                        // Referencia a eEmber modellre
-    default: null                          // null = TÖRÖLT e-ember (a tartalom közösségi, megmarad)
+// ----- SZERKESZTŐK -----
+// Kik szerkesztették ezt a tartalmat. Egy tartalomnak TÖBB szerkesztője lehet:
+// az eredeti létrehozó + mindenki, akinek elfogadott MÓDOSÍTÁSI javaslata
+// ténylegesen módosította a tartalmat.
+// Sorrend: időrendben VISSZAFELÉ — a 0. elem a LEGUTOLSÓ szerkesztő,
+// a lista vége felé az eredeti létrehozó (kivéve ha ő módosított utoljára).
+// (A régi egyszeres `letrehozo` mező helyére lépett.)
+szerkesztok: {
+    type: [szerkesztoResz],   // A közös szerkesztő al-séma tömbje
+    default: []               // Alap: üres tömb
 },
 
 // ----- LÉTREHOZÁS DÁTUMA -----
@@ -137,8 +144,8 @@ tartalomSchema.index({ szuloId: 1 });
 // Gyors keresés: "Egy javaslat alatti összes tartalom"
 tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
 
-// Létrehozó indexelése - gyors keresés eember tartalmai alapján
-tartalomSchema.index({ letrehozo: 1 });
+// Szerkesztő indexelése - gyors keresés "mely tartalmakat szerkesztette egy e-ember"
+tartalomSchema.index({ 'szerkesztok.eemberId': 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
 tartalomSchema.index({ kategoriaIds: 1 });

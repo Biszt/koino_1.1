@@ -32,7 +32,7 @@ class TartalomTipusRepository {
   async findById(id) {
     // Tartalom típus lekérése kapcsolódó adatokkal (populate)
     const tartalomTipus = await TartalomTipus.findById(id)
-      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok betöltése
+      .populate('szerkesztok.eemberId', 'eemberNev'); // Létrehozó adatok betöltése
     
     return tartalomTipus;
   }
@@ -51,7 +51,8 @@ class TartalomTipusRepository {
     
     // Létrehozó szerinti szűrés
     if (szurok.letrehozo) {
-      query.letrehozo = szurok.letrehozo;
+      // Szerkesztő szerinti szűrés a tömbösített mezőn (a `letrehozo` kulcsnevet megtartjuk)
+      query['szerkesztok.eemberId'] = szurok.letrehozo;
     }
     
     // Név szerinti szűrés (részleges egyezés, kis/nagybetű érzéketlen)
@@ -65,7 +66,7 @@ class TartalomTipusRepository {
     // Tartalom típusok lekérése kapcsolódó adatokkal
     const tartalomTipusok = await TartalomTipus.find(query)
       .sort({ letrehozva: -1 })                 // Legújabbak előre rendezés
-      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok
+      .populate('szerkesztok.eemberId', 'eemberNev'); // Létrehozó adatok
     
     return tartalomTipusok;
   }
@@ -105,7 +106,7 @@ class TartalomTipusRepository {
         runValidators: true   // Mongoose validációk futtatása
       }
     )
-    .populate('letrehozo', 'eemberNev');
+    .populate('szerkesztok.eemberId', 'eemberNev');
     
     return frissitettTartalomTipus;
   }
@@ -158,7 +159,8 @@ class TartalomTipusRepository {
     const query = {};
     
     if (szurok.letrehozo) {
-      query.letrehozo = szurok.letrehozo;
+      // Szerkesztő szerinti szűrés a tömbösített mezőn (a `letrehozo` kulcsnevet megtartjuk)
+      query['szerkesztok.eemberId'] = szurok.letrehozo;
     }
     
     if (szurok.nev) {

@@ -113,7 +113,10 @@ class TartalomTipusService {
       ikon:       tisztitottIkon,
       szuloId:    adatok.szuloId    || null,
       szuloTipus: adatok.szuloTipus || null,
-      letrehozo:  eemberId
+      // A létrehozó lesz az ELSŐ (és egyben eredeti) szerkesztő.
+      szerkesztok: [
+        { eemberId: eemberId, allapot: 'Tamogatja', eredeti: true }
+      ]
     };
 
     // ===== 9. LÉPÉS - REPOSITORY HÍVÁS - MENTÉS ADATBÁZISBA =====
@@ -274,8 +277,10 @@ class TartalomTipusService {
     const tartalomTipus = await this.tartalomTipusLekerese(id);
 
     // 2. LÉPÉS - Jogosultság ellenőrzése
-    // Csak a létrehozó módosíthatja a saját tartalom típusát
-    if (tartalomTipus.letrehozo._id.toString() !== eemberId.toString()) {
+    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját tartalom típusát.
+    const eredetiSzerkeszto = (tartalomTipus.szerkesztok || []).find(sz => sz.eredeti);
+    const eredetiId = eredetiSzerkeszto?.eemberId?._id ?? eredetiSzerkeszto?.eemberId;
+    if (!eredetiId || eredetiId.toString() !== eemberId.toString()) {
       throw new Error('Nincs jogosultságod módosítani ezt a tartalom típust');
     }
 

@@ -49,6 +49,41 @@
   gap: var(--space-3);
 }
 
+/* ===== SZERKESZTŐK (több név, egymás alatt, színezve) ===== */
+/* A szerkesztő-sor felül igazít, hogy a címke a nevek tetejéhez essen. */
+.reszletek-modal__sor--szerkesztok {
+  align-items: flex-start;
+}
+
+/* Az érték-oszlop: a nevek egymás ALATT, jobbra igazítva. */
+.reszletek-modal__szerkesztok {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+/* Egy szerkesztő neve */
+.reszletek-modal__szerkeszto {
+  line-height: 1.3;
+}
+
+/* Zöld: az utolsó szerkesztő, ill. aki TÁMOGATTA az utolsó módosítást */
+.reszletek-modal__szerkeszto--tamogatja {
+  color: var(--color-success, #16a34a);
+  font-weight: 600;
+}
+
+/* Piros: aki ELLENEZTE az utolsó módosítást */
+.reszletek-modal__szerkeszto--ellenzi {
+  color: var(--color-danger, #dc2626);
+}
+
+/* Alap (fekete): aki TARTÓZKODOTT vagy NEM szavazott */
+.reszletek-modal__szerkeszto--semleges {
+  color: var(--color-text);
+}
+
 /* Kis „részletek" gomb – link-szerű, diszkrét */
 .reszletek-modal__reszletek-gomb {
   font-size: var(--text-xs);

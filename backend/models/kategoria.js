@@ -4,6 +4,9 @@
 // Mongoose: MongoDB adatbázis kezelésére szolgáló library
 const mongoose = require('mongoose');
 
+// A szerkesztő-elem közös al-sémája (eemberId + allapot + eredeti)
+const szerkesztoResz = require('./szerkesztoResz');
+
 // ===== KATEGÓRIA SÉMA DEFINIÁLÁSA =====
 const kategoriaSchema = new mongoose.Schema({
 
@@ -66,12 +69,15 @@ const kategoriaSchema = new mongoose.Schema({
     default: null           // Alapértelmezetten nincs szülő típus
   },
 
-  // ----- LÉTREHOZÓ EEMBER -----
-  // Ki hozta létre ezt a kategóriát
-  letrehozo: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'eEmber',                         // Referencia az eEmber modellre
-    default: null                          // null = TÖRÖLT e-ember (a kategória közösségi, megmarad)
+  // ----- SZERKESZTŐK -----
+  // Kik szerkesztették ezt a kategóriát. Egy kategóriának TÖBB szerkesztője lehet:
+  // az eredeti létrehozó + mindenki, akinek elfogadott MÓDOSÍTÁSI javaslata
+  // ténylegesen módosította a kategóriát.
+  // Sorrend: időrendben VISSZAFELÉ — a 0. elem a LEGUTOLSÓ szerkesztő.
+  // (A régi egyszeres `letrehozo` mező helyére lépett.)
+  szerkesztok: {
+    type: [szerkesztoResz],   // A közös szerkesztő al-séma tömbje
+    default: []               // Alap: üres tömb
   },
 
   // ----- LÉTREHOZÁS DÁTUMA -----
@@ -86,8 +92,8 @@ const kategoriaSchema = new mongoose.Schema({
 // ===== INDEXEK LÉTREHOZÁSA =====
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Létrehozó indexelése - gyors keresés eember kategóriái alapján
-kategoriaSchema.index({ letrehozo: 1 });
+// Szerkesztő indexelése - gyors keresés "mely kategóriákat szerkesztette egy e-ember"
+kategoriaSchema.index({ 'szerkesztok.eemberId': 1 });
 
 // Létrehozás dátuma indexelése - gyors időrendi rendezés
 kategoriaSchema.index({ letrehozva: -1 });

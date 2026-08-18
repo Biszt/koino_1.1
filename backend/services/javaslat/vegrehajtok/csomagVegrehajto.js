@@ -102,8 +102,15 @@ class CsomagVegrehajto {
       
       // ----- MÓDOSÍTÁS MŰVELET -----
       else if (entitas.muvelet === 'Modositas') {
-        // Mini javaslat objektum létrehozása a ModositasiVegrehajto számára
+        // Mini javaslat objektum létrehozása a ModositasiVegrehajto számára.
+        // FONTOS: a szerkesztő-lista frissítéséhez átadjuk a csomag-javaslat
+        // azonosítóját, létrehozóját és (ha van) a töredék-javaslatait is —
+        // enélkül a ModositasiVegrehajto nem tudná, kit vegyen fel szerkesztőnek,
+        // és mely szavazatokból számolja a színeket.
         const miniJavaslat = {
+          _id: javaslat._id,
+          letrehozo: javaslat.letrehozo,
+          eredetiToredekJavaslatok: javaslat.eredetiToredekJavaslatok,
           erintettEntitasok: [entitas]
         };
         

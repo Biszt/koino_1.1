@@ -184,7 +184,11 @@ class TartalomService {
       kategoriaIds: validaltKategoriaIds,
       szuloId: adatok.szuloId || null,
       szuloTipus: adatok.szuloTipus || null,
-      letrehozo: eemberId,
+      // A létrehozó lesz az ELSŐ (és egyben eredeti) szerkesztő.
+      // eredeti: true → övé a közvetlen szerkesztési jog; allapot: 'Tamogatja' → zöld név.
+      szerkesztok: [
+        { eemberId: eemberId, allapot: 'Tamogatja', eredeti: true }
+      ],
     };
 
 
@@ -411,8 +415,12 @@ class TartalomService {
     }
 
     // 2. LÉPÉS - Jogosultság ellenőrzése
-    // Csak a létrehozó módosíthatja a saját tartalmát
-    if (tartalom.letrehozo._id.toString() !== eemberId.toString()) {
+    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját tartalmát.
+    // (A szerkesztok tömbben ő az `eredeti: true` jelölésű elem; az eemberId
+    //  populate-olva jön, ezért az ._id-t hasonlítjuk.)
+    const eredetiSzerkeszto = (tartalom.szerkesztok || []).find(sz => sz.eredeti);
+    const eredetiId = eredetiSzerkeszto?.eemberId?._id ?? eredetiSzerkeszto?.eemberId;
+    if (!eredetiId || eredetiId.toString() !== eemberId.toString()) {
       throw new Error('Nincs jogosultságod módosítani ezt a tartalmat');
     }
 

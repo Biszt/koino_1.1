@@ -3,6 +3,9 @@
 // Mongoose importálása - MongoDB adatbázis kezelésére szolgáló library
 const mongoose = require('mongoose');
 
+// A szerkesztő-elem közös al-sémája (eemberId + allapot + eredeti)
+const szerkesztoResz = require('./szerkesztoResz');
+
 // TARTALOM TÍPUS SÉMA DEFINÍCIÓJA
 // A Schema meghatározza a tartalom típus adatszerkezetét és validációs szabályokat
 // Pl.: poszt, komment, esemény, kérdés, stb.
@@ -62,12 +65,15 @@ const tartalomTipusSchema = new mongoose.Schema({
     default: null           // Alapértelmezetten nincs szülő típus
   },
 
-  // ----- LÉTREHOZÓ EMBER -----
-  // Ki hozta létre ezt a tartalom típust
-  letrehozo: {
-    type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'eEmber',                         // Referencia az eEmber modellre
-    default: null                          // null = TÖRÖLT e-ember (a tartalomtípus közösségi, megmarad)
+  // ----- SZERKESZTŐK -----
+  // Kik szerkesztették ezt a tartalomtípust. Egy tartalomtípusnak TÖBB szerkesztője
+  // lehet: az eredeti létrehozó + mindenki, akinek elfogadott MÓDOSÍTÁSI javaslata
+  // ténylegesen módosította a tartalomtípust.
+  // Sorrend: időrendben VISSZAFELÉ — a 0. elem a LEGUTOLSÓ szerkesztő.
+  // (A régi egyszeres `letrehozo` mező helyére lépett.)
+  szerkesztok: {
+    type: [szerkesztoResz],   // A közös szerkesztő al-séma tömbje
+    default: []               // Alap: üres tömb
   },
 
   // ----- LÉTREHOZÁS DÁTUMA -----
@@ -85,8 +91,8 @@ const tartalomTipusSchema = new mongoose.Schema({
 // Név indexelése - gyors név szerinti keresés és egyediség ellenőrzés
 tartalomTipusSchema.index({ nev: 1 });
 
-// Létrehozó indexelése - gyors keresés eember típusai alapján
-tartalomTipusSchema.index({ letrehozo: 1 });
+// Szerkesztő indexelése - gyors keresés "mely tartalomtípusokat szerkesztette egy e-ember"
+tartalomTipusSchema.index({ 'szerkesztok.eemberId': 1 });
 
 // Létrehozás dátuma indexelése - időrendi rendezéshez
 tartalomTipusSchema.index({ letrehozva: -1 });

@@ -36,7 +36,7 @@ class KategoriaRepository {
     console.log('kategoriaRepository.findById - KEZDÉS', id);
     // Kategória lekérése kapcsolódó adatokkal (populate)
     const kategoria = await Kategoria.findById(id)
-      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok betöltése
+      .populate('szerkesztok.eemberId', 'eemberNev'); // Létrehozó adatok betöltése
     // Log metódus vége
     console.log('kategoriaRepository.findById - VÉGE', kategoria);
     return kategoria;
@@ -56,13 +56,13 @@ class KategoriaRepository {
     // MongoDB query objektum építése
     const query = {};
     // Létrehozó szerinti szűrés
-    if (szurok.letrehozo) query.letrehozo = szurok.letrehozo;
+    if (szurok.letrehozo) query['szerkesztok.eemberId'] = szurok.letrehozo; // Szerkesztő szerinti szűrés (a tömbösített mezőn)
     // Név szerinti szűrés (részleges egyezés, kis/nagybetű érzéketlen)
     if (szurok.nev) query.nev = { $regex: szurok.nev, $options: 'i' };
     // Kategóriák lekérése kapcsolódó adatokkal
     const kategoriak = await Kategoria.find(query)
       .sort({ letrehozva: -1 })
-      .populate('letrehozo', 'eemberNev');
+      .populate('szerkesztok.eemberId', 'eemberNev');
     // Log metódus vége
     console.log('kategoriaRepository.findAll - VÉGE', kategoriak.length);
     return kategoriak;
@@ -103,7 +103,7 @@ class KategoriaRepository {
       .sort({ letrehozva: -1 }) // Legújabbak előre
       .limit(limit)
       .skip(skip)
-      .populate('letrehozo', 'eemberNev'); // Létrehozó adatok betöltése
+      .populate('szerkesztok.eemberId', 'eemberNev'); // Létrehozó adatok betöltése
     // Log metódus vége
     console.log('kategoriaRepository.findBySzuloId - VÉGE', kategoriak.length);
     return kategoriak;
@@ -153,7 +153,7 @@ class KategoriaRepository {
       id,
       { $set: frissitesek },
       { new: true, runValidators: true }
-    ).populate('letrehozo', 'eemberNev');
+    ).populate('szerkesztok.eemberId', 'eemberNev');
     // Log metódus vége
     console.log('kategoriaRepository.updateById - VÉGE', frissitettKategoria);
     return frissitettKategoria;
@@ -210,7 +210,7 @@ class KategoriaRepository {
     console.log('kategoriaRepository.count - KEZDÉS', szurok);
     // MongoDB query objektum építése
     const query = {};
-    if (szurok.letrehozo) query.letrehozo = szurok.letrehozo;
+    if (szurok.letrehozo) query['szerkesztok.eemberId'] = szurok.letrehozo; // Szerkesztő szerinti szűrés (a tömbösített mezőn)
     if (szurok.nev) query.nev = { $regex: szurok.nev, $options: 'i' };
     // Kategóriák megszámlálása
     const darab = await Kategoria.countDocuments(query);
