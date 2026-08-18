@@ -110,11 +110,6 @@
   color: var(--color-text-muted);
 }
 
-/* ===== SZÖVEG BLOKK (rich text renderelés helye) ===== */
-.reszletek-modal__szoveg {
-  margin-top: var(--space-2);
-}
-
 /* ===== HAMAROSAN / ÜRES ÜZENET ===== */
 .reszletek-modal__hamarosan {
   font-size: var(--text-sm);

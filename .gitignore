@@ -5,3 +5,6 @@ node_modules/
 uploads/
 backend/uploads-prod/
 .DS_Store
+
+# Adatbázis biztonsági mentések (nem verziózzuk)
+backups/

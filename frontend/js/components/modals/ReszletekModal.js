@@ -4,7 +4,6 @@
 import Modal from './Modal.js';
 import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
-import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 import HozzajarulokModal from './HozzajarulokModal.js';
 import ErtekEloszlasModal from './ErtekEloszlasModal.js';
 import { masodpercFelirat } from '../../utils/idoFormazo.js';
@@ -54,7 +53,6 @@ const ENTITAS_TIPUS_FELIRAT = {
 // Felelősség: egy entitás részletes (csak olvasható) adatainak megjelenítése.
 //  1. Megnyitáskor lekéri az entitás `/reszletek` adatait a backendről.
 //  2. Entitástípusonként „címke: érték" sorokban jeleníti meg.
-//  3. A gazdag szöveget (tartalom szövege) a SzovegMezoMegjelenito rendereli.
 // Használják: a kártyák „Részletes adatok" menüpontja.
 // Jelenleg a Tartalom típus teljes; a többi típus fokozatosan bővül.
 class ReszletekModal {
@@ -82,9 +80,6 @@ class ReszletekModal {
 
     this.modal = null;
 
-    // A szöveg blokk-renderelő példány – bezáráskor megsemmisítjük
-    this.szovegMegjelenito = null;
-
     console.log('ReszletekModal.constructor - VÉGE', {
       entitasId: this.entitasId, entitasTipus: this.entitasTipus
     });
@@ -110,9 +105,6 @@ class ReszletekModal {
         }
       ],
       onBezaras: () => {
-        // A szöveg megjelenítő eseményfigyelőinek felszabadítása (ha volt)
-        this.szovegMegjelenito?.destroy?.();
-        this.szovegMegjelenito = null;
         console.log('ReszletekModal - modal bezárva');
       }
     });
@@ -266,9 +258,6 @@ class ReszletekModal {
     // --- KÜSZÖBÉRTÉKEK (MEDIÁN) ---
     this._kuszobSzakasz(lista, ertekAdatok);
 
-    // --- SZÖVEG (rich text) ---
-    this._szovegSzakasz(lista, tartalom.szoveg);
-
     // --- AZONOSÍTÓ ---
     this._szakaszCim(lista, 'Azonosító');
     this._sor(lista, 'Entitás ID', this.entitasId ?? '—', 'reszletek-modal__ertek--halvany');
@@ -321,10 +310,6 @@ class ReszletekModal {
 
     // --- KÜSZÖBÉRTÉKEK (MEDIÁN) ---
     this._kuszobSzakasz(lista, ertekAdatok);
-
-    // --- LEÍRÁS (rich text) ---
-    // A mező neve itt `leiras` (nem `szoveg`), a szakasz címe „Leírás”.
-    this._szovegSzakasz(lista, entitasObj.leiras, 'Leírás');
 
     // --- AZONOSÍTÓ ---
     this._szakaszCim(lista, 'Azonosító');
@@ -620,34 +605,6 @@ class ReszletekModal {
     p.className   = 'reszletek-modal__hamarosan';
     p.textContent = szoveg;
     lista.appendChild(p);
-  }
-
-  // ===== SEGÉD: SZÖVEG SZAKASZ (rich text blokk-renderelés) =====
-  // @param {string} cim - a szakasz címe (alap: „Szöveg”; a leírásokhoz „Leírás”)
-  _szovegSzakasz(lista, szoveg, cim = 'Szöveg') {
-    // Üres szöveg esetén nem jelenítünk meg szakaszt
-    const uresE = !szoveg
-      || (Array.isArray(szoveg) && szoveg.length === 0);
-    if (uresE) return;
-
-    this._szakaszCim(lista, cim);
-
-    const kontener = document.createElement('div');
-    kontener.className = 'reszletek-modal__szoveg';
-    lista.appendChild(kontener);
-
-    // A blokk-renderelő ugyanaz, mint a kártyák body-jában
-    this.szovegMegjelenito = new SzovegMezoMegjelenito(kontener, {
-      blokkok: szoveg,
-      onEntitasKivalasztas: (entitasId, entitasTipus) => {
-        console.log('ReszletekModal - entitás hivatkozás koppintva', { entitasId, entitasTipus });
-        // Navigációhoz előbb bezárjuk a modalt, majd a pakli arra vált
-        this.bezaras();
-        if (typeof this.onEntitasKivalasztas === 'function') {
-          this.onEntitasKivalasztas(entitasId, entitasTipus);
-        }
-      }
-    });
   }
 
   // ===== SEGÉD: TÍPUS FELIRAT =====
