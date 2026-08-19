@@ -1,7 +1,8 @@
 /* frontend/css/components/modals/hozzajarulokModal.css */
 
 /* A Hozzájárulók modal a standard modal-vázra épül (Modal.js).
-   Egy entitás tudatpont-hozzájárulóit listázza (név + pont), lapozással. */
+   Egy entitás tudatpont-hozzájárulóit listázza (név + részvételi szerep + pont),
+   lapozással. */
 
 /* ===== A LISTA ===== */
 .hozzajarulok-modal__lista {
@@ -31,9 +32,44 @@
   break-inside: avoid;
 }
 
+/* A sor bal oldala: név + szerep-jelvény egy csoportban.
+   A min-width: 0 kell, hogy a hosszú eember-név tudjon törni a hasábban. */
+.hozzajarulok-modal__nev-csoport {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .hozzajarulok-modal__nev {
   color: var(--color-text);
   word-break: break-word;
+}
+
+/* ===== RÉSZVÉTELI SZEREP JELVÉNYE ===== */
+/* Kis „pirula" a név mellett. Két állapota van, és a kettő SZÍNBEN is elválik:
+   az aktív az elsődleges (erdőzöld) kiemelést kapja, a passzív visszafogott
+   felület-színt – a passzív a gyakoribb, ne az vigye el a figyelmet. */
+.hozzajarulok-modal__szerep {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.hozzajarulok-modal__szerep--aktiv {
+  color: var(--color-primary);
+  background: var(--color-primary-highlight);
+  border: 1px solid var(--color-primary-highlight);
+}
+
+.hozzajarulok-modal__szerep--passziv {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset-2);
+  border: 1px solid var(--color-border);
 }
 
 .hozzajarulok-modal__pont {

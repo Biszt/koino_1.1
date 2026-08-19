@@ -19,7 +19,7 @@ const TOVABBI_MERET  = 50;
 // Felelősség: egy entitás tudatpont-hozzájárulóinak listázása.
 //  1. Megnyitáskor betölti az első 10 hozzájárulót (pont szerint csökkenő).
 //  2. „Több betöltése" gombbal továbbiakat tölt (40, majd 50-esével).
-//  3. Minden sor: eember neve + hozzárendelt tudatpont.
+//  3. Minden sor: eember neve + RÉSZVÉTELI SZEREP (passzív/aktív) + hozzárendelt tudatpont.
 // Használják: a ReszletekModal „Hozzájárulók" sorának részletek gombja.
 class HozzajarulokModal {
 
@@ -197,6 +197,8 @@ class HozzajarulokModal {
   }
 
   // ===== SOROK HOZZÁFŰZÉSE A LISTÁHOZ =====
+  // Egy sor felépítése:  [név] [szerep-jelvény] ............ [tudatpont 🌟]
+  // A név és a jelvény közös csoportba kerül, így a pont marad a sor jobb szélén.
   _sorokHozzafuzese(lista) {
     const listaElem = document.getElementById('hozzajarulok-modal-lista');
     if (!listaElem) return;
@@ -205,18 +207,52 @@ class HozzajarulokModal {
       const li = document.createElement('li');
       li.className = 'hozzajarulok-modal__elem';
 
+      // --- Bal oldal: név + részvételi szerep jelvénye ---
+      const nevCsoport = document.createElement('span');
+      nevCsoport.className = 'hozzajarulok-modal__nev-csoport';
+
       const nevElem = document.createElement('span');
       nevElem.className   = 'hozzajarulok-modal__nev';
       nevElem.textContent = hozzarendeles?.eemberId?.eemberNev ?? '(névtelen)';
 
+      nevCsoport.appendChild(nevElem);
+      nevCsoport.appendChild(this._szerepJelveny(hozzarendeles?.szerep));
+
+      // --- Jobb oldal: a hozzárendelt tudatpont ---
       const pontElem = document.createElement('span');
       pontElem.className   = 'hozzajarulok-modal__pont';
       pontElem.textContent = `${(hozzarendeles?.tudatPontok ?? 0).toLocaleString('hu-HU')} 🌟`;
 
-      li.appendChild(nevElem);
+      li.appendChild(nevCsoport);
       li.appendChild(pontElem);
       listaElem.appendChild(li);
     });
+  }
+
+  // ===== SZEREP-JELVÉNY LÉTREHOZÁSA (PASSZÍV / AKTÍV) =====
+  // A hozzárendelés `szerep` mezőjéből épít egy kis jelvényt a név mellé.
+  //  - 'aktiv'  → „aktív" (résztvevő): BELESZÁMÍT a szavazások részvételi arányába.
+  //  - minden más ('passziv', null, hiányzó mező) → „passzív" (figyelő).
+  // A hiányzó érték szándékosan passzívnak számít: a domain alapértelmezése is ez
+  // (lásd a tudatpontHozzarendeles séma `szerep` mezőjét), így a régi, még szerep
+  // nélküli hozzárendelések sem jelennek meg tévesen aktívként.
+  // @param {string|undefined} szerep - a hozzárendelés szerep mezője
+  // @returns {HTMLElement} a kész jelvény-elem
+  _szerepJelveny(szerep) {
+    const aktivE = (szerep === 'aktiv');
+
+    const elem = document.createElement('span');
+    elem.className = aktivE
+      ? 'hozzajarulok-modal__szerep hozzajarulok-modal__szerep--aktiv'
+      : 'hozzajarulok-modal__szerep hozzajarulok-modal__szerep--passziv';
+    elem.textContent = aktivE ? 'aktív' : 'passzív';
+
+    // Egérrel fölé állva a jelentés is előjön (a jelmagyarázat rövidített párja)
+    elem.title = aktivE
+      ? 'Aktív (résztvevő): beleszámít a szavazások részvételi arányába.'
+      : 'Passzív (figyelő): csak figyel és prioritást jelez, nem számít a részvételi arányba.';
+
+    return elem;
   }
 
   // ===== „TÖBB" GOMB – BETÖLTÉS ALATTI ÁLLAPOT =====
