@@ -150,9 +150,14 @@ async init(entitasId = null, entitasTipus = null) {
 // @param {string|null} entitasId
 // @param {string|null} entitasTipus
 // @returns {Promise}
-async pakliLekerese(entitasId, entitasTipus) {
-  console.log('Pakli.pakliLekerese - KEZDÉS', { entitasId, entitasTipus });
-  this.allapot.betoltesFolyamatban = true;
+// @param {boolean} csakCache - Ha true: CSAK a cache-t (paklikEsTestverek) tölti fel,
+//   és NEM nyúl a kiválasztási állapothoz (kivalasztottEntitasId / kivalasztottIndex).
+//   Ezt a háttér-cache feltöltés használja: a testvér-jelzőkhöz kell a testvérlista,
+//   de a megjelenített paklihoz tartozó kiválasztási indexet nem szabad elmozdítania —
+//   különben a fejléc és a body szétcsúszik (a szöveg rossz pakliból/indexből jönne).
+async pakliLekerese(entitasId, entitasTipus, csakCache = false) {
+  console.log('Pakli.pakliLekerese - KEZDÉS', { entitasId, entitasTipus, csakCache });
+  if (!csakCache) this.allapot.betoltesFolyamatban = true;
   let utvonal = 'pakli';
   if (entitasId && entitasTipus) {
     utvonal += `?entitasId=${entitasId}&entitasTipus=${entitasTipus}`;
@@ -166,27 +171,36 @@ async pakliLekerese(entitasId, entitasTipus) {
   // init() dönti el. Korábban itt null-hiba dőlt el, és a főoldal nem töltött be.
   if (!eredmeny?.kivalasztottEntitas?.entitasId) {
     console.warn('Pakli.pakliLekerese - VÉGE (üres pakli: nincs kiválasztott entitás)');
-    this.allapot.kivalasztottEntitasId = null;
-    this.allapot.betoltesFolyamatban = false;
+    if (!csakCache) {
+      this.allapot.kivalasztottEntitasId = null;
+      this.allapot.betoltesFolyamatban = false;
+    }
     return;
   }
 
   const kulcs = eredmeny.kivalasztottEntitas.entitasId.toString();
-  this.allapot.kivalasztottEntitasId = kulcs;
+  // A cache-t MINDIG feltöltjük (ez a lényeg a háttér-hívásnál is).
   this.allapot.paklikEsTestverek[kulcs] = {
     pakli: eredmeny.pakli ?? [],
     testverek: eredmeny.testverek ?? []
   };
-  this.allapot.betoltesFolyamatban = false;
-  const aktivPakli = this.allapot.paklikEsTestverek[kulcs].pakli;
-  const talalat = aktivPakli.findIndex(
-    (elem) => elem.entitasId.toString() === kulcs
-  );
-  this.kivalasztottIndex = talalat !== -1 ? talalat : 0;
+
+  // A KIVÁLASZTÁSI ÁLLAPOTOT csak a normál (nem cache-only) hívás állítja.
+  if (!csakCache) {
+    this.allapot.kivalasztottEntitasId = kulcs;
+    this.allapot.betoltesFolyamatban = false;
+    const aktivPakli = this.allapot.paklikEsTestverek[kulcs].pakli;
+    const talalat = aktivPakli.findIndex(
+      (elem) => elem.entitasId.toString() === kulcs
+    );
+    this.kivalasztottIndex = talalat !== -1 ? talalat : 0;
+  }
+
   console.log('Pakli.pakliLekerese - VÉGE', {
+    csakCache,
     kivalasztottEntitasId: this.allapot.kivalasztottEntitasId,
     kivalasztottIndex: this.kivalasztottIndex,
-    aktivPakliMeret: aktivPakli.length,
+    aktivPakliMeret: this.allapot.paklikEsTestverek[kulcs].pakli.length,
     testverekSzama: this.allapot.paklikEsTestverek[kulcs].testverek.length,
     elmentettPaklikSzama: Object.keys(this.allapot.paklikEsTestverek).length
   });
@@ -207,45 +221,52 @@ async kivalasztottSzovegFrissitese() {
     console.warn('Pakli.kivalasztottSzovegFrissitese - nincs kiválasztott elem');
     return;
   }
-  console.log('Pakli.kivalasztottSzovegFrissitese - API HIVAS ELOTT', {
-    entitasTipus: kivalasztottElem.entitasTipus,
-    entitasId: kivalasztottElem.entitasId?.toString()
+  // A szöveget közvetlenül a KIVÁLASZTOTT PAKLI-ELEMRE töltjük. Ezt az init hívja,
+  // amikor a kártyák még nincsenek példányosítva, ezért itt a pakli-elem a cél.
+  await this._entitasSzovegBetoltese(kivalasztottElem);
+  console.log('Pakli.kivalasztottSzovegFrissitese - VÉGE', {
+    entitasId: kivalasztottElem.entitasId,
+    vanSzoveg: !!kivalasztottElem.adatok?.szovegMezo
+  });
+}
+
+// ----- EGY ENTITÁS SZÖVEG-MEZŐINEK BETÖLTÉSE -----
+// Lekéri a megadott entitás (pakli-elem VAGY kártya.entitas) szöveg/leírás/indoklás
+// mezőit, és RÁÍRJA a kapott objektum `adatok` mezőjére (szovegMezo + a fül-tartalmak).
+// FONTOS: közvetlenül a KAPOTT objektumon dolgozik, nem a megosztott
+// kivalasztottEntitasId-indexből olvas — így a fejléc és a body sosem csúszhat szét
+// (a kártya mindig a SAJÁT entitását rendereli). Ezt a szétcsúszást okozta korábban,
+// hogy a kiválasztás után a kivalasztottEntitasId a kijelölt kártyára ugrott, de a
+// megjelenített pakli nem renderelődött újra.
+// @param {Object} entitas - a cél objektum (kap egy `adatok` mezőt, ha nincs)
+// @returns {Promise<Array|null>} a betöltött szöveg (szovegMezo), vagy null
+async _entitasSzovegBetoltese(entitas) {
+  if (!entitas) return null;
+  if (!entitas.adatok) entitas.adatok = {};
+  console.log('Pakli._entitasSzovegBetoltese - API HIVAS ELOTT', {
+    entitasTipus: entitas.entitasTipus,
+    entitasId: entitas.entitasId?.toString()
   });
   try {
     const eredmeny = await apiGet(
-      `pakli/szoveg/${kivalasztottElem.entitasTipus}/${kivalasztottElem.entitasId}`,
+      `pakli/szoveg/${entitas.entitasTipus}/${entitas.entitasId}`,
       this.token
     );
-    console.log('Pakli.kivalasztottSzovegFrissitese - API VALASZ', { eredmeny });
-    const celElem = aktivPakli.find(
-      (elem) => elem.entitasId.toString() === kivalasztottElem.entitasId.toString()
-    );
-    if (celElem) {
-      if (!celElem.adatok) celElem.adatok = {};
-      celElem.adatok.szovegMezo = eredmeny.szoveg ?? null;
-      // Módosítási javaslatnál a javasolt ÚJ tartalom (a „Módosított tartalom"
-      // fülhöz); más típusnál / entitásnál a backend null-t küld
-      celElem.adatok.modositottTartalom = eredmeny.modositottTartalom ?? null;
-      // Módosítási egyezménynél a LECSERÉLT (régi) tartalom (a „Lecserélt
-      // tartalom" fülhöz); más típusnál / entitásnál null
-      celElem.adatok.lecsereltTartalom = eredmeny.lecsereltTartalom ?? null;
-    }
+    entitas.adatok.szovegMezo = eredmeny.szoveg ?? null;
+    // Módosítási javaslatnál a javasolt ÚJ tartalom (a „Módosított tartalom"
+    // fülhöz); más típusnál / entitásnál a backend null-t küld
+    entitas.adatok.modositottTartalom = eredmeny.modositottTartalom ?? null;
+    // Módosítási egyezménynél a LECSERÉLT (régi) tartalom (a „Lecserélt
+    // tartalom" fülhöz); más típusnál / entitásnál null
+    entitas.adatok.lecsereltTartalom = eredmeny.lecsereltTartalom ?? null;
+    return entitas.adatok.szovegMezo;
   } catch (hiba) {
-    console.error('Pakli.kivalasztottSzovegFrissitese - HIBA', hiba);
-    const celElemHiba = aktivPakli?.find(
-      (elem) => elem.entitasId.toString() === kivalasztottElem.entitasId.toString()
-    );
-    if (celElemHiba) {
-      if (!celElemHiba.adatok) celElemHiba.adatok = {};
-      celElemHiba.adatok.szovegMezo = null;
-      celElemHiba.adatok.modositottTartalom = null;
-      celElemHiba.adatok.lecsereltTartalom = null;
-    }
+    console.error('Pakli._entitasSzovegBetoltese - HIBA', hiba);
+    entitas.adatok.szovegMezo = null;
+    entitas.adatok.modositottTartalom = null;
+    entitas.adatok.lecsereltTartalom = null;
+    return null;
   }
-  console.log('Pakli.kivalasztottSzovegFrissitese - VÉGE', {
-    entitasId: kivalasztottElem.entitasId,
-    vanSzoveg: !!aktivPakli?.[this.kivalasztottIndex]?.adatok?.szovegMezo
-  });
 }
 
 // ----- PAKLI RENDERELÉSE -----
@@ -750,17 +771,20 @@ async kartyaKivalasztasa(index) {
   // 1. LÉPÉS – Azonnali CSS osztálycsere
   this.kivalasztottCsakCssValt(index);
 
-  // 2. LÉPÉS – Szöveg lekérése az API-tól
-  await this.kivalasztottSzovegFrissitese();
-
-  // 3. LÉPÉS – A letöltött szöveg beírása célzottan az adott kártya body-jába
-  const kulcs = this.allapot.kivalasztottEntitasId;
+  // 2.+3. LÉPÉS – A szöveget KÖZVETLENÜL a kiválasztott kártya SAJÁT entitására töltjük,
+  // és annak body-jába írjuk. Így a fejléc és a body SOSEM csúszhat szét — akkor sem,
+  // ha a megosztott kivalasztottEntitasId/kivalasztottIndex időközben elmozdult.
   const kartya = this.kartyaPeldanyok[this.kivalasztottIndex];
-  const ujSzoveg = this.allapot.paklikEsTestverek[kulcs]
-    ?.pakli?.[this.kivalasztottIndex]
-    ?.adatok?.szovegMezo ?? null;
+  const kivalasztottEntitas = kartya?.entitas ?? null;
+  const ujSzoveg = await this._entitasSzovegBetoltese(kivalasztottEntitas);
 
-  if (kartya && typeof kartya.bodyFrissitese === 'function') {
+  // Verseny-védelem: csak akkor rajzoljuk ki a body-t, ha a lekérés végére MÉG MINDIG
+  // ez a kártya a kiválasztott (gyors kattintgatásnál a régi lekérés ne írjon felül).
+  if (
+    kartya &&
+    kartya === this.kartyaPeldanyok[this.kivalasztottIndex] &&
+    typeof kartya.bodyFrissitese === 'function'
+  ) {
     kartya.bodyFrissitese(ujSzoveg);
   }
 
@@ -780,7 +804,9 @@ async kartyaKivalasztasa(index) {
 
     if (!this.allapot.paklikEsTestverek[ujKulcs]) {
       console.log('Pakli.kartyaKivalasztasa - háttér cache feltöltés indul', { ujKulcs });
-      this.pakliLekerese(ujKulcs, ujEntitas.entitasTipus)
+      // csakCache=true: CSAK a testvérlistát tölti a cache-be, a kiválasztási
+      // indexet NEM mozdítja el (különben a megjelenített paklitól elcsúszna).
+      this.pakliLekerese(ujKulcs, ujEntitas.entitasTipus, true)
         .then(() => {
           // A testvérlista megérkezett – ha közben nem váltottak tovább,
           // most már kirakhatók a kacsacsőrök az új kiválasztott kártyára
