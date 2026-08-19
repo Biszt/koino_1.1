@@ -716,6 +716,42 @@ _ikonElem(emoji, ertek, cimke, extraOsztaly = '') {
   return el;
 }
 
+// ----- FEJLÉC DÁTUM-ELEM (létrehozás / utolsó módosítás, szín-jelzéssel) -----
+// A `modositva` dátumát mutatja NAP pontossággal (induláskor = létrehozás, később az
+// utolsó tartalmi módosítás — egyetlen mező mindkét esetre). A SZÍN jelzi, elavulhat-e
+// a gyerek a SZÜLŐ utolsó módosításához képest, MÁSODPERC pontossággal összevetve:
+//   • gyerek régebbi → piros (--elavult): a tartalom a szülő módosítása ELŐTTRŐL való;
+//   • gyerek újabb   → zöld  (--friss);
+//   • egyenlő vagy nincs szülő → semleges (nincs plusz osztály).
+// CSAK a tartalom/kategória/tartalomtípus kártya hívja (a Javaslat/Egyezmény marad a
+// saját dátumánál). A cím szándékosan NEM jelzi „létrehozás/módosítás" — az a
+// Részletes adatokban derül ki.
+// @param {Object} adatok - a kártya adatai (modositva, szuloModositva)
+// @returns {HTMLElement|null} a dátum-elem, vagy null ha nincs érvényes dátum
+_datumFejlecElem(adatok) {
+  const modositva = adatok?.modositva ? new Date(adatok.modositva) : null;
+  if (!modositva || Number.isNaN(modositva.getTime())) return null;
+
+  const el = document.createElement('span');
+  el.className = 'pakli-kartya__datum';
+
+  // Szín: a szülő utolsó módosításához hasonlítva, MÁSODPERC pontossággal
+  const szuloModositva = adatok?.szuloModositva ? new Date(adatok.szuloModositva) : null;
+  if (szuloModositva && !Number.isNaN(szuloModositva.getTime())) {
+    const sajatMp = Math.floor(modositva.getTime() / 1000);
+    const szuloMp = Math.floor(szuloModositva.getTime() / 1000);
+    if (sajatMp < szuloMp)      el.classList.add('pakli-kartya__datum--elavult'); // piros
+    else if (sajatMp > szuloMp) el.classList.add('pakli-kartya__datum--friss');   // zöld
+    // egyenlő → semleges
+  }
+
+  const szoveg = modositva.toLocaleDateString('hu-HU');
+  el.textContent = `📅 ${szoveg}`;
+  el.setAttribute('aria-label', `Dátum: ${szoveg}`);
+  el.title = szoveg;
+  return el;
+}
+
 // ----- SAJÁT (RAJZOLT) LEVÉL-A-SZÁRON IKON -----
 // Kis inline SVG: zöld levél egy barna száron (a fejlesztő rajza alapján). Azért SVG
 // és nem emoji, mert a Unicode-ban nincs „egy levél egy száron" glyph. A méret 1em

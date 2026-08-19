@@ -295,6 +295,14 @@ Minden lépésnél párhuzamosan figyeljük:
 19. ⬜ Jogosultság: olyan entitáson, ahol nincs tudatpontod, a tudatpont-függő menüpontok **halványak** + tooltip;
     tudatpont adása után **aktívak**.
 20. ⬜ Pakli: a javaslatok/egyezmény az érintett entitás alatt jelennek meg.
+21. ⬜ **Fejléc-dátum (2026-08-19):** a **Tartalom / Kategória / Tartalomtípus** kártya
+    fejlécének 2. sorában megjelenik a 📅 dátum (a `modositva` = létrehozás, amíg nincs
+    tartalmi módosítás). **Szín** a szülő utolsó módosításához mérve (másodperc pontosság):
+    **piros** = a gyerek régebbi (elavulhat), **zöld** = újabb, **semleges** = egyenlő
+    vagy gyökér (nincs szülő). A Javaslat/Egyezmény kártyán ez NINCS (marad a döntési
+    idő / döntés dátuma). *Részletes adatok:* külön „Létrehozva" **és** „Módosítva" sor.
+    A `modositva` csak tartalmi **Módosítás** (közvetlen vagy csomag) elfogadásakor frissül;
+    áthelyezés/egyesítés/tudatpont NEM. Meglévő adathoz: `node tools/modositvaPotlas.js`.
 
 ### Hasznos ellenőrző parancsok (DB — a konténerből)
 ```bash

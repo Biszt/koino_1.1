@@ -85,6 +85,16 @@ const kategoriaSchema = new mongoose.Schema({
   letrehozva: {
     type: Date,             // Dátum típus
     default: Date.now       // Alapértelmezett: jelenlegi időpont
+  },
+
+  // ----- UTOLSÓ (TARTALMI) MÓDOSÍTÁS DÁTUMA -----
+  // A név/leírás LEGUTÓBBI tartalmi módosítása egy elfogadott Módosítás-egyezmény
+  // által. Létrehozáskor = letrehozva; CSAK tartalmi módosítás (Modositas) frissíti,
+  // áthelyezés/egyesítés/tudatpont NEM. A kártya ezt mutatja, a gyerek↔szülő
+  // összevetés ebből dönti el, elavulhat-e a gyerek (piros = régebbi, zöld = újabb).
+  modositva: {
+    type: Date,
+    default: Date.now
   }
 
 });

@@ -240,6 +240,8 @@ class ReszletekModal {
     this._sor(lista, 'Kategóriák',     this._kategoriakFelirat(adatok));
     this._szerkesztokSor(lista,        tartalom.szerkesztok);
     this._sor(lista, 'Létrehozva',     this._datumFelirat(tartalom.letrehozva));
+    // Itt (és CSAK itt) jelezzük a különbséget: a kártyán csak egy dátum van.
+    this._sor(lista, 'Módosítva',      this._datumFelirat(tartalom.modositva ?? tartalom.letrehozva));
 
     // --- TUDATPONT ---
     this._szakaszCim(lista, 'Tudatpont');
@@ -294,6 +296,8 @@ class ReszletekModal {
     this._sor(lista, 'Típus',      tipusFelirat);
     this._szerkesztokSor(lista,    entitasObj.szerkesztok);
     this._sor(lista, 'Létrehozva', this._datumFelirat(entitasObj.letrehozva));
+    // Itt (és CSAK itt) jelezzük a különbséget: a kártyán csak egy dátum van.
+    this._sor(lista, 'Módosítva',  this._datumFelirat(entitasObj.modositva ?? entitasObj.letrehozva));
 
     // --- TUDATPONT ---
     this._szakaszCim(lista, 'Tudatpont');

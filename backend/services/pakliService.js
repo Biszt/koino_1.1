@@ -417,7 +417,11 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
         id: tartalom?.tartalomTipusId ?? null,
         nev: tartalomTipus?.nev ?? null,
         ikon: tartalomTipus?.ikon ?? null
-      }
+      },
+      // A kártya-fejléc dátumához: a saját utolsó (tartalmi) módosítás — induláskor
+      // = létrehozás. A szülő referencia-dátuma a szín-jelzéshez (elavulhat-e).
+      modositva: tartalom?.modositva ?? tartalom?.letrehozva ?? null,
+      szuloModositva: await this._szuloModositasReferencia(tartalom?.szuloId, tartalom?.szuloTipus)
     };
   } else if (elem.entitasTipus === 'Kategoria') {
     const kategoria = await kategoriaRepository.findById(elem.entitasId);
@@ -426,7 +430,10 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     adatok = {
       nev: kategoria?.nev ?? null,
       ikon: kategoria?.ikon ?? null,
-      hasznaloTartalmakSzama
+      hasznaloTartalmakSzama,
+      // Kártya-fejléc dátum + szín-referencia (lásd Tartalom ág)
+      modositva: kategoria?.modositva ?? kategoria?.letrehozva ?? null,
+      szuloModositva: await this._szuloModositasReferencia(kategoria?.szuloId, kategoria?.szuloTipus)
     };
   } else if (elem.entitasTipus === 'TartalomTipus') {
     const tartalomTipus = await tartalomTipusRepository.findById(elem.entitasId);
@@ -435,7 +442,10 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     adatok = {
       nev: tartalomTipus?.nev ?? null,
       ikon: tartalomTipus?.ikon ?? null,
-      hasznaloTartalmakSzama
+      hasznaloTartalmakSzama,
+      // Kártya-fejléc dátum + szín-referencia (lásd Tartalom ág)
+      modositva: tartalomTipus?.modositva ?? tartalomTipus?.letrehozva ?? null,
+      szuloModositva: await this._szuloModositasReferencia(tartalomTipus?.szuloId, tartalomTipus?.szuloTipus)
     };
   } else if (elem.entitasTipus === 'Javaslat') {
     const javaslat = await javaslatRepository.findById(elem.entitasId);
@@ -527,6 +537,49 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     eemberSajatTudatpontEntitason, // A néző e-ember saját pontja ezen az entitáson (0, ha nincs / nincs bejelentkezve)
     adatok
   };
+}
+
+// ----- A SZÜLŐ MÓDOSÍTÁS-REFERENCIA DÁTUMA (a kártya szín-jelzéséhez) -----
+/**
+* A gyerek kártya dátumának SZÍNE attól függ, régebbi-e a gyerek `modositva`-ja a
+* SZÜLŐ utolsó (tartalmi) módosításánál (piros = elavulhat, zöld = frissebb). Ez a
+* segéd a szülő megfelelő referencia-dátumát adja vissza, típusonként:
+*  - Tartalom/Kategoria/TartalomTipus → `modositva` (a valódi utolsó tartalmi módosítás)
+*  - Javaslat  → `letrehozva` (nem módosul; a létrehozása a mérce)
+*  - Egyezmeny → `vegrehajtva` (a döntés pillanata)
+* Best-effort: hiba vagy ismeretlen típus esetén null (a kártya semleges színt kap).
+* @param {string|ObjectId|null} szuloId
+* @param {string|null} szuloTipus
+* @returns {Promise<Date|null>}
+*/
+async _szuloModositasReferencia(szuloId, szuloTipus) {
+  if (!szuloId || !szuloTipus) return null;
+  const id = szuloId.toString();
+  try {
+    if (szuloTipus === 'Tartalom') {
+      const sz = await tartalomRepository.findById(id);
+      return sz?.modositva ?? sz?.letrehozva ?? null;
+    }
+    if (szuloTipus === 'Kategoria') {
+      const sz = await kategoriaRepository.findById(id);
+      return sz?.modositva ?? sz?.letrehozva ?? null;
+    }
+    if (szuloTipus === 'TartalomTipus') {
+      const sz = await tartalomTipusRepository.findById(id);
+      return sz?.modositva ?? sz?.letrehozva ?? null;
+    }
+    if (szuloTipus === 'Javaslat') {
+      const sz = await javaslatRepository.findById(id);
+      return sz?.letrehozva ?? null;
+    }
+    if (szuloTipus === 'Egyezmeny') {
+      const sz = await egyezmenyRepository.findById(id);
+      return sz?.vegrehajtva ?? sz?.letrehozva ?? null;
+    }
+  } catch (hiba) {
+    console.error('pakliService._szuloModositasReferencia - HIBA', { szuloId: id, szuloTipus, hiba: hiba.message });
+  }
+  return null;
 }
 
 // ----- OLVASATLAN BADGE-SZÁMOK FELTÖLTÉSE (részfa-alapú) -----

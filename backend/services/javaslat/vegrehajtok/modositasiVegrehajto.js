@@ -43,6 +43,11 @@ class ModositasiVegrehajto {
 
     const modositasiEredmenyek = [];
 
+    // A módosítás időpontja — EGY közös bélyeg az egész végrehajtásra, hogy a
+    // javaslatban érintett összes entitás `modositva`-ja pontosan egyezzen. Ezt írjuk
+    // az entitások `modositva` mezőjébe (a kártya innen tudja, elavulhat-e a gyerek).
+    const modositasIdo = new Date();
+
     // === 2. LÉPÉS: MINDEN ÉRINTETT ENTITÁS FELDOLGOZÁSA ===
     for (const entitas of javaslat.erintettEntitasok) {
 
@@ -84,7 +89,7 @@ class ModositasiVegrehajto {
 
           const frissitettTartalom = await TartalomRepository.updateById(
             entitas.entitasId,
-            entitas.modositasAdatok
+            { ...entitas.modositasAdatok, modositva: modositasIdo }  // tartalmi módosítás → modositva frissül
           );
           modositva = !!frissitettTartalom;
 
@@ -104,7 +109,7 @@ class ModositasiVegrehajto {
 
           const frissitettKategoria = await KategoriaRepository.updateById(
             entitas.entitasId,
-            entitas.modositasAdatok
+            { ...entitas.modositasAdatok, modositva: modositasIdo }  // tartalmi módosítás → modositva frissül
           );
           modositva = !!frissitettKategoria;
 
@@ -124,7 +129,7 @@ class ModositasiVegrehajto {
 
           const frissitettTartalomTipus = await TartalomTipusRepository.updateById(
             entitas.entitasId,
-            entitas.modositasAdatok
+            { ...entitas.modositasAdatok, modositva: modositasIdo }  // tartalmi módosítás → modositva frissül
           );
           modositva = !!frissitettTartalomTipus;
 

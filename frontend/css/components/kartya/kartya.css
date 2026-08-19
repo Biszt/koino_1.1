@@ -253,6 +253,34 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
   font-weight: 600;
 }
 
+/* ===== FEJLÉC DÁTUM (létrehozás / utolsó módosítás) ===== */
+/* A 2. ikon-sorban jelenik meg (📅 + nap-pontosságú dátum). A SZÍN jelzi, elavulhat-e
+   a gyerek a szülő utolsó módosításához képest: piros = régebbi (elavulhat),
+   zöld = frissebb, alap (semleges) = egyenlő vagy nincs szülő. Lásd Kartya._datumFejlecElem. */
+.pakli-kartya__datum {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);   /* semleges alapszín */
+  white-space: nowrap;
+}
+
+/* A gyerek RÉGEBBI a szülő utolsó módosításánál → a tartalom elavulhat.
+   Fallbackkel (a --color-danger nincs a token-készletben; a projekt mintája szerint
+   fallback-értéket adunk, mint a reszletekModal.css / entitasKeresoMezo.css). */
+.pakli-kartya__datum--elavult {
+  color: var(--color-danger, #e03131);
+  font-weight: 600;
+}
+
+/* A gyerek ÚJABB a szülő utolsó módosításánál → friss */
+.pakli-kartya__datum--friss {
+  color: var(--color-success, #2f9e44);
+  font-weight: 600;
+}
+
 /* Típus-ikon csoport a 2. sorban: a típus-előtag (🧩/🏷️) + az egyedi ikon(ok) szorosan */
 .pakli-kartya__tipus-ikon-csoport {
   display: inline-flex;

@@ -126,6 +126,10 @@ class TartalomKartya extends Kartya {
       fejlecTartalom.appendChild(kategoriaKontener);
     }
 
+    // --- DÁTUM (létrehozás / utolsó módosítás, szín-jelzéssel) — a 2. sor végén ---
+    const datumElem = this._datumFejlecElem(adatok);
+    if (datumElem) fejlecTartalom.appendChild(datumElem);
+
     console.log('TartalomKartya._fejlecFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,
       cim:       adatok.cim

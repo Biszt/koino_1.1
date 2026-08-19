@@ -116,6 +116,10 @@ class KategoriaKartya extends Kartya {
       this._ikonElem('📄', adatok.hasznaloTartalmakSzama, 'Ezt a kategóriát használó tartalmak száma')
     );
 
+    // --- DÁTUM (létrehozás / utolsó módosítás, szín-jelzéssel) — a 2. sor végén ---
+    const datumElem = this._datumFejlecElem(adatok);
+    if (datumElem) fejlecTartalom.appendChild(datumElem);
+
     console.log('KategoriaKartya._fejlecFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,
       nev:       adatok.nev
