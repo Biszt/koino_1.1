@@ -95,7 +95,23 @@ if (process.env.NODE_ENV === 'production') {
 
 // Statikus fájlok kiszolgálása a frontend mappából
 // pl. koino_1.1/frontend/css/main.css → http://localhost:3000/css/main.css
-app.use(express.static(path.join(PROJEKT_GYOKER, 'frontend')));
+//
+// ===== CACHE-STRATÉGIA: „no-cache" (mindig egyeztetünt) =====
+// A böngésző CACHE-ELHETI a fájlt, de HASZNÁLAT ELŐTT mindig egyeztetnie kell a
+// szerverrel (feltételes kérés az ETag / Last-Modified alapján). Ha a fájl nem
+// változott, a szerver olcsó „304 Not Modified"-ot ad (nincs újraletöltés); ha
+// változott (pl. új deploy után), friss „200"-at a friss tartalommal.
+// MIÉRT KELL (Csaba, 2026-08-19): enélkül a mobil böngészők agresszíven cache-elik
+// az ES-modulokat, és deploy után is a RÉGI kódot futtatják — órákig félrevezető
+// „nem működik" tüneteket okozva, holott a kód rég jó. (Nem `no-store`: azzal minden
+// betöltés újraletöltene; a `no-cache` + ETag a gyors ÉS friss kombináció.)
+app.use(express.static(path.join(PROJEKT_GYOKER, 'frontend'), {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 // Feltöltött fájlok kiszolgálása – böngészőben futtatható kiterjesztések
 // letöltésként kezelve (Content-Type felülírással)
@@ -154,6 +170,10 @@ const celFajl = path.join(PROJEKT_GYOKER, 'frontend', 'index.html');
 // Diagnosztika: kiírjuk melyik fájlt próbáljuk kiszolgálni
 console.log('index.html kiszolgálása:', celFajl);
 
+// Az index.html a belépési pont — soha ne szolgáljon ki régi verziót cache-ből
+// (lásd a statikus kiszolgálás no-cache magyarázatát fentebb). Egyeztetés ETag
+// alapján: változatlan = 304, változott = friss 200.
+res.setHeader('Cache-Control', 'no-cache');
 res.sendFile(celFajl);
 });
 
