@@ -222,7 +222,12 @@ class JavaslatKartya extends Kartya {
     // --- A külső fülsáv felépítése (egyetlen fülnél nem rajzol sávot) ---
     const fulsavKontener = document.createElement('div');
     body.appendChild(fulsavKontener);
-    this.kartyaFulsav = new KartyaFulsav(fulsavKontener, { fulek });
+    this.kartyaFulsav = new KartyaFulsav(fulsavKontener, {
+      fulek,
+      // Fülváltáskor a kártya újramérje a túlnyúlást az új aktív fülre — így a „..."
+      // gomb és a dupla-koppintásos kinyitás fülenként helyesen működik.
+      onFulValtas: () => this._kibovitesUjraertekeles()
+    });
 
     console.log('JavaslatKartya._bodyFeltoltese - VÉGE', {
       entitasId:  this.entitas?.entitasId,

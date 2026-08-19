@@ -945,6 +945,40 @@ bodyElrejtes() {
   console.log('Kartya.bodyElrejtes - VÉGE', { entitasId: this.entitas?.entitasId });
 }
 
+// ----- KIBŐVÍTÉS ÚJRAÉRTÉKELÉSE (FÜLVÁLTÁSKOR) -----
+// A Javaslat/Egyezmény kártya body-ja fülekből áll (KartyaFulsav). Minden fül más
+// magasságú lehet, ezért a „..." gomb (túlnyúlás) fülenként KÜLÖN kérdés. A
+// KartyaFulsav minden fülváltáskor ide szól vissza (onFulValtas): összecsukott
+// kiindulásból újramérünk az ÚJ aktív fül tartalmára.
+//
+// MIÉRT KELL: a fülváltás csak `display:none`-t kapcsolgat, a body magassága klampolt
+// marad (overflow:hidden), így a body-t figyelő ResizeObserver NEM indul újra.
+// Enélkül csak az ELSŐ (kezdő) fül tartalmát mértük, és egy hosszabb második fülnél
+// sosem jelent meg a gomb — így a dupla-koppintásos kinyitás sem működött (annak is
+// kell a gomb). Lásd KartyaFulsav._fulValtas → onFulValtas.
+_kibovitesUjraertekeles() {
+  console.log('Kartya._kibovitesUjraertekeles - KEZDÉS', {
+    entitasId: this.entitas?.entitasId
+  });
+
+  if (!this.bodyElem) {
+    console.log('Kartya._kibovitesUjraertekeles - VÉGE: nincs bodyElem');
+    return;
+  }
+
+  // Összecsukott kiindulás, hogy az új fül a SAJÁT magasságával méretődjön. (A régi
+  // gombot és méret-figyelőt maga a _kibovitöGombFrissitese dobja el az elején.)
+  this.kibovitettE = false;
+  this.bodyElem.classList.remove('pakli-kartya__body--kibovitett');
+
+  // Újramérés az új aktív fül tartalmára
+  this._kibovitöGombFrissitese();
+
+  console.log('Kartya._kibovitesUjraertekeles - VÉGE', {
+    entitasId: this.entitas?.entitasId
+  });
+}
+
 // ----- KIBŐVÍTŐ GOMB FRISSÍTÉSE -----
 // A body feltöltése után ellenőrzi, hogy a tartalom túlnyúlik-e a fix magasságon.
 // Ha igen, hozzáadja a kibővítő gombot a body aljára.
@@ -979,19 +1013,7 @@ _kibovitöGombFrissitese() {
     if (this.kibovitettE) return true;                              // kibővítve: nincs „..." logika
     if (this.kibovitöGomb) return true;                             // már van gomb → kész
 
-    // A tartalom valódi magassága. A body scrollHeight-ja mellett a TARTALOM-elem saját
-    // magasságát is nézzük: a body flex-elrendezése miatt a gyerek magasságát a
-    // scrollHeight nem mindig tükrözi, ezért ez a megbízhatóbb jel.
-    const bodyScroll = this.bodyElem.scrollHeight;
-    const bodyClient = this.bodyElem.clientHeight;
-    const tartalomElem = this.bodyElem.querySelector('.szoveg-mezo-megjelenito')
-      || this.bodyElem.firstElementChild;
-    const tartalomMagassag = tartalomElem ? tartalomElem.scrollHeight : 0;
-
-    // +1 px tűrés a kerekítésre
-    const tulnyulikE = (bodyScroll > bodyClient + 1) || (tartalomMagassag > bodyClient + 1);
-
-    if (tulnyulikE) {
+    if (this._bodyTulnyulikE()) {
       this._kibovitoGombLetrehozasa();
       return true; // kész, van gomb
     }
@@ -1040,6 +1062,38 @@ _kibovitoGombLetrehozasa() {
   console.log('Kartya._kibovitoGombLetrehozasa - gomb hozzáadva', { entitasId: this.entitas?.entitasId });
 }
 
+// ----- TÚLNYÚLIK-E A BODY? -----
+// Igaz, ha a tartalom magasabb, mint a látható (klampolt) body — tehát van értelme a
+// „..." kibővítésnek. A body scrollHeight-ja mellett a TARTALOM-elem saját magasságát
+// is nézzük: a body flex-elrendezése miatt a scrollHeight nem mindig tükrözi a gyerek
+// magasságát. EGYETLEN forrás, hogy a kezdő mérő-ciklus (_kibovitöGombFrissitese) és a
+// dupla-koppintásos kinyitás (_kibovitesValtasa) PONTOSAN ugyanazt lássa.
+_bodyTulnyulikE() {
+  if (!this.bodyElem) return false;
+
+  const bodyClient = this.bodyElem.clientHeight;
+
+  // A body EGYETLEN közvetlen gyereke a teljes tartalom (TartalomKartyánál a
+  // szöveg-megjelenítő, Javaslat/Egyezménynél a fülsáv). Ez a gyerek a TELJES
+  // magasságában rendeződik el — a body csak levágja (overflow:hidden) —, ezért a
+  // magassága a legmegbízhatóbb jel a túlnyúlásra.
+  //
+  // ⚠️ MIÉRT NEM querySelector('.szoveg-mezo-megjelenito') (Csaba, 2026-08-19):
+  // a fülsávnál az első ilyen elem egy REJTETT (display:none) panelbe ágyazott
+  // megjelenítő is lehet, aminek a magassága 0 → a mérés hamisan „nem nyúlik túl"-t
+  // adott, főleg MOBILON, ahol a body scrollHeight-ja is megbízhatatlanabb
+  // (overflow:hidden flexnél). A közvetlen gyerek magassága ettől mentes.
+  const tartalomElem = this.bodyElem.firstElementChild;
+  const tartalomMagassag = tartalomElem
+    ? Math.max(tartalomElem.scrollHeight, tartalomElem.offsetHeight)
+    : 0;
+
+  const bodyScroll = this.bodyElem.scrollHeight;
+
+  // +1 px tűrés a kerekítésre
+  return (tartalomMagassag > bodyClient + 1) || (bodyScroll > bodyClient + 1);
+}
+
 // ----- KIBŐVÍTÉS VÁLTÁSA -----
 // A kibővítő gomb koppintásakor váltja a body állapotát:
 // zárt → kibővített, kibővített → zárt.
@@ -1050,8 +1104,11 @@ _kibovitesValtasa() {
     kibovitettE: this.kibovitettE
   });
 
-  if (!this.bodyElem || !this.kibovitöGomb) {
-    console.warn('Kartya._kibovitesValtasa - VÉGE: hiányzó elemek');
+  // A dupla-koppintás NEM a gomb létére támaszkodik (csak a body-ra) — így akkor is
+  // működik, ha a „..." gomb a kezdő méréskor nem jött létre (pl. mobilon időzítési
+  // okból, ahogy Csaba tapasztalta: csak elforgatás után jelent meg).
+  if (!this.bodyElem) {
+    console.warn('Kartya._kibovitesValtasa - VÉGE: nincs bodyElem');
     return;
   }
 
@@ -1059,18 +1116,33 @@ _kibovitesValtasa() {
     // --- VISSZAZÁRÁS ---
     // CSS modifier eltávolítása – overflow: hidden visszaáll, fix magasság érvényes
     this.bodyElem.classList.remove('pakli-kartya__body--kibovitett');
-    // Gomb felirat visszaállítása „..."-ra
-    this.kibovitöGomb.textContent = '...';
-    this.kibovitöGomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése');
     this.kibovitettE = false;
+    // A gomb feliratának visszaállítása „..."-ra (ha van gomb)
+    if (this.kibovitöGomb) {
+      this.kibovitöGomb.textContent = '...';
+      this.kibovitöGomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése');
+    }
   } else {
     // --- KIBŐVÍTÉS ---
+    // Ha nincs „..." gomb (a kezdő mérés nem tette ki), MOST mérünk újra: koppintáskor
+    // a layout már rég beállt, nincs a kiválasztáskori rAF-verseny → megbízható mérés.
+    // Csak akkor nyitunk, ha tényleg van mit; és pótoljuk a gombot, legyen látható
+    // összecsukó vezérlő is.
+    if (!this.kibovitöGomb) {
+      if (!this._bodyTulnyulikE()) {
+        console.log('Kartya._kibovitesValtasa - VÉGE: nincs mit kinyitni (nem nyúlik túl)');
+        return;
+      }
+      this._kibovitoGombLetrehozasa();
+    }
     // CSS modifier hozzáadása – overflow: visible, flex: none, tartalom szabja a magasságot
     this.bodyElem.classList.add('pakli-kartya__body--kibovitett');
-    // Gomb felirat váltása összezárás jelre
-    this.kibovitöGomb.textContent = '∧';
-    this.kibovitöGomb.setAttribute('aria-label', 'Tartalom összecsukása');
     this.kibovitettE = true;
+    // Gomb felirat váltása összezárás jelre
+    if (this.kibovitöGomb) {
+      this.kibovitöGomb.textContent = '∧';
+      this.kibovitöGomb.setAttribute('aria-label', 'Tartalom összecsukása');
+    }
   }
 
   console.log('Kartya._kibovitesValtasa - VÉGE', {

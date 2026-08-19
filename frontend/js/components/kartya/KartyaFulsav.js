@@ -48,6 +48,10 @@ class KartyaFulsav {
     // Az aktív fül ID-ja: a megadott, vagy az első fül
     this.aktivFulId = beallitasok.aktivFulId ?? this.fulek[0]?.id ?? null;
 
+    // Opcionális visszahívás fülváltáskor (fulId) — a kártya ebből méri újra a
+    // „..." túlnyúlás-gombot az új aktív fülre (lásd Kartya._kibovitesUjraertekeles).
+    this.onFulValtas = beallitasok.onFulValtas ?? null;
+
     // A fülgombok DOM-referenciái { fulId: gombElem } — az aktív jelöléshez
     this.fulGombok = {};
 
@@ -150,6 +154,11 @@ class KartyaFulsav {
     if (ujFul?.tartalomElem)   ujFul.tartalomElem.classList.remove('kartya-fulsav__panel--rejtett');
 
     this.aktivFulId = fulId;
+
+    // A kártya értesítése: mérje újra a túlnyúlást az új aktív fül tartalmára.
+    if (typeof this.onFulValtas === 'function') {
+      this.onFulValtas(fulId);
+    }
 
     console.log('KartyaFulsav._fulValtas - VÉGE', { fulId });
   }
