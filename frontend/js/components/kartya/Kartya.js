@@ -970,44 +970,53 @@ _kibovitöGombFrissitese() {
     this._kibovitoFigyelo = null;
   }
 
-  // ----- EGYSZERI KIÉRTÉKELÉS -----
-  // Megnézi, túlnyúlik-e a body, és eszerint tesz ki / vesz le kibővítő gombot.
+  // ----- KIÉRTÉKELÉS (CSAK HOZZÁAD) -----
+  // Megnézi, túlnyúlik-e a tartalom a látható body-n; ha igen, kiteszi a „..." gombot.
+  // CSAK hozzáad: egy korai/téves mérés SOHA nem vesz le egy már jó gombot.
+  // @returns {boolean} true, ha kész (van gomb, vagy nem is kell) – ekkor a próbálkozás leáll
   const ertekeles = () => {
-    if (!this.bodyElem) return;
+    if (!this.bodyElem || !this.bodyElem.isConnected) return true; // nincs mit mérni → leállunk
+    if (this.kibovitettE) return true;                              // kibővítve: nincs „..." logika
+    if (this.kibovitöGomb) return true;                             // már van gomb → kész
 
-    // Ha a body időközben kikerült a DOM-ból (kártya lecserélve), leállunk és
-    // leszereljük a figyelőt – ne mérjünk halott elemen.
-    if (!this.bodyElem.isConnected) {
-      if (this._kibovitoFigyelo) {
-        this._kibovitoFigyelo.disconnect();
-        this._kibovitoFigyelo = null;
-      }
-      return;
-    }
+    // A tartalom valódi magassága. A body scrollHeight-ja mellett a TARTALOM-elem saját
+    // magasságát is nézzük: a body flex-elrendezése miatt a gyerek magasságát a
+    // scrollHeight nem mindig tükrözi, ezért ez a megbízhatóbb jel.
+    const bodyScroll = this.bodyElem.scrollHeight;
+    const bodyClient = this.bodyElem.clientHeight;
+    const tartalomElem = this.bodyElem.querySelector('.szoveg-mezo-megjelenito')
+      || this.bodyElem.firstElementChild;
+    const tartalomMagassag = tartalomElem ? tartalomElem.scrollHeight : 0;
 
-    // Kibővített állapotban a „..." gomb-logika nem fut (a teljes tartalom látszik).
-    if (this.kibovitettE) return;
+    // +1 px tűrés a kerekítésre
+    const tulnyulikE = (bodyScroll > bodyClient + 1) || (tartalomMagassag > bodyClient + 1);
 
-    // Túlnyúlás: a tartalom magasabb, mint a látható body (+1 px tűrés a kerekítésre).
-    const tulnyulikE = this.bodyElem.scrollHeight > this.bodyElem.clientHeight + 1;
+    console.log('Kartya._kibovitöGombFrissitese - mérés', {
+      entitasId: this.entitas?.entitasId,
+      bodyScroll, bodyClient, tartalomMagassag, tulnyulikE
+    });
 
-    if (tulnyulikE && !this.kibovitöGomb) {
+    if (tulnyulikE) {
       this._kibovitoGombLetrehozasa();
-    } else if (!tulnyulikE && this.kibovitöGomb) {
-      this.kibovitöGomb.remove();
-      this.kibovitöGomb = null;
+      return true; // kész, van gomb
     }
+    return false;  // még nem nyúlik túl (lehet, hogy az elrendezés még nem állt be)
   };
 
-  // 1) Azonnali mérés a következő képkockán – a szokásos eset (a body már elrendezve).
-  requestAnimationFrame(ertekeles);
+  // 1) TÖBB KÉPKOCKÁS PRÓBÁLKOZÁS: a kiválasztott kártya body-ja renderelés/testvér-
+  //    váltás után csak néhány képkockával később áll a VÉGLEGES magasságára. Ezért
+  //    nem elég egyetlen mérés (emiatt nem jelent meg a „..." testvér-váltáskor,
+  //    amíg ki-be nem kattintottál). Legfeljebb ~8 képkockán át újramérünk, amíg a
+  //    túlnyúlás ki nem derül vagy le nem telik a keret.
+  let proba = 0;
+  const ujraProba = () => {
+    if (ertekeles()) return;      // kész (van gomb vagy nem kell)
+    if (++proba < 8) requestAnimationFrame(ujraProba);
+  };
+  requestAnimationFrame(ujraProba);
 
-  // 2) MEGBÍZHATÓSÁG: a body magassága a kiválasztáskor ANIMÁLTAN nő
-  //    (transition: max-height ~0,35 s), és testvér-váltáskor az újrarenderelés után
-  //    a VÉGLEGES magasság csak később áll be. Emiatt bukott meg korábban az egyszeri,
-  //    túl korai mérés (a „..." nem jelent meg, amíg ki-be nem kattintottál). Egy
-  //    ResizeObserver a body méretének MINDEN változásakor (az animáció végén is)
-  //    újraértékel, így a gomb a VALÓDI magasságnál jelenik meg vagy tűnik el.
+  // 2) RÁADÁS BIZTONSÁG: a body méretének KÉSŐBBI változására (pl. animált magasság,
+  //    kép betöltése) egy ResizeObserver újra kiértékel.
   if (typeof ResizeObserver !== 'undefined') {
     this._kibovitoFigyelo = new ResizeObserver(() => ertekeles());
     this._kibovitoFigyelo.observe(this.bodyElem);
