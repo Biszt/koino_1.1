@@ -991,11 +991,6 @@ _kibovitöGombFrissitese() {
     // +1 px tűrés a kerekítésre
     const tulnyulikE = (bodyScroll > bodyClient + 1) || (tartalomMagassag > bodyClient + 1);
 
-    console.log('Kartya._kibovitöGombFrissitese - mérés', {
-      entitasId: this.entitas?.entitasId,
-      bodyScroll, bodyClient, tartalomMagassag, tulnyulikE
-    });
-
     if (tulnyulikE) {
       this._kibovitoGombLetrehozasa();
       return true; // kész, van gomb
