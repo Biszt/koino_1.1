@@ -122,7 +122,10 @@ class eEmberService {
       id:        valasz._id,
       eemberNev: valasz.eemberNev
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+    // A token szándékosan NEM jár le: az e-ember addig marad bejelentkezve,
+    // ameddig akar (amíg ki nem jelentkezik, vagy le nem törli a böngésző adatait).
+    // Ezért nincs `expiresIn` opció — a JWT-be nem kerül `exp` mező.
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
 
     console.log('eEmberService.regisztracio - VÉGE', { id: valasz._id });
     return { eember: valasz, token };
@@ -170,7 +173,10 @@ class eEmberService {
       id:        eember._id,
       eemberNev: eember.eemberNev
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+    // A token szándékosan NEM jár le: az e-ember addig marad bejelentkezve,
+    // ameddig akar (amíg ki nem jelentkezik, vagy le nem törli a böngésző adatait).
+    // Ezért nincs `expiresIn` opció — a JWT-be nem kerül `exp` mező.
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
 
     // === 6. LÉPÉS: JELSZÓ ELTÁVOLÍTÁSA A VÁLASZBÓL ===
     const valasz = eember.toObject();
