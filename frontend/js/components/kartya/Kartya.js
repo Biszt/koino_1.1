@@ -240,6 +240,18 @@ async init() {
   // majd ellenőrizzük, hogy kell-e kibővítő gomb.
   // Nem kiválasztott állapotban a hidden megmarad – nincs felesleges DOM tartalom.
   this.bodyElem = this.domElem.querySelector('.pakli-kartya__body');
+
+  // Dupla koppintás a body-n → a teljes tartalom ki/be nyitása (a „..." gombbal
+  // egyenértékű). A _kibovitesValtasa magától nem csinál semmit, ha nincs mit
+  // kinyitni (nincs kibővítő gomb, mert a tartalom elfér).
+  if (this.bodyElem) {
+    this.bodyElem.addEventListener('dblclick', (e) => {
+      e.stopPropagation(); // ne váltson kártyát a dupla koppintás
+      e.preventDefault();   // ne jelöljön ki szöveget
+      this._kibovitesValtasa();
+    });
+  }
+
   if (this.kivalasztott && this.bodyElem) {
     this.bodyElem.removeAttribute('hidden');
     this._bodyFeltoltese(this.bodyElem);
@@ -952,55 +964,76 @@ _kibovitöGombFrissitese() {
     this.kibovitöGomb.remove();
     this.kibovitöGomb = null;
   }
+  // Régi méret-figyelő leállítása (mielőtt újat indítanánk)
+  if (this._kibovitoFigyelo) {
+    this._kibovitoFigyelo.disconnect();
+    this._kibovitoFigyelo = null;
+  }
 
-  // A túlnyúlás-mérést a KÖVETKEZŐ képkockára halasztjuk. Közvetlenül a body
-  // feltöltése után az elem gyakran még NINCS elrendezve (a kiválasztott kártya
-  // fix magassága, így a body látható magassága még nem érvényes) → a scrollHeight
-  // és a clientHeight is 0 lenne, és a gomb sosem jelenne meg. Emiatt bukkant fel a
-  // „..." csak egy KÉSŐBBI újrarajzolás (pl. gyerek létrehozása) után, törléskor meg
-  // eltűnt. A requestAnimationFrame callbackjében a böngésző már kiszámolta az
-  // elrendezést, így a mérés MINDIG helyes (létrehozás/törlés/újratöltés után is).
-  requestAnimationFrame(() => {
-    // A kártya időközben megsemmisülhetett (törlés, navigáció) → óvatosan
+  // ----- EGYSZERI KIÉRTÉKELÉS -----
+  // Megnézi, túlnyúlik-e a body, és eszerint tesz ki / vesz le kibővítő gombot.
+  const ertekeles = () => {
     if (!this.bodyElem) return;
 
-    // Duplázás elleni védelem: ha egy másik hívás már kitett gombot, nem teszünk másikat
-    if (this.kibovitöGomb) return;
-
-    // Túlnyúlás ellenőrzése: scrollHeight > clientHeight azt jelenti, hogy a tartalom
-    // nem fér el a látható területen, tehát szükség van a kibővítő gombra
-    const tulnyulikE = this.bodyElem.scrollHeight > this.bodyElem.clientHeight;
-
-    console.log('Kartya._kibovitöGombFrissitese - túlnyúlás ellenőrzés', {
-      scrollHeight: this.bodyElem.scrollHeight,
-      clientHeight: this.bodyElem.clientHeight,
-      tulnyulikE
-    });
-
-    if (!tulnyulikE) {
-      console.log('Kartya._kibovitöGombFrissitese - VÉGE: nincs túlnyúlás, gomb nem szükséges');
+    // Ha a body időközben kikerült a DOM-ból (kártya lecserélve), leállunk és
+    // leszereljük a figyelőt – ne mérjünk halott elemen.
+    if (!this.bodyElem.isConnected) {
+      if (this._kibovitoFigyelo) {
+        this._kibovitoFigyelo.disconnect();
+        this._kibovitoFigyelo = null;
+      }
       return;
     }
 
-    // Kibővítő gomb létrehozása
-    const gomb = document.createElement('button');
-    gomb.className = 'pakli-kartya__kibovito-gomb';
-    gomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése'); // akadálymentesség
-    gomb.setAttribute('type', 'button'); // form submit elkerülése
-    gomb.textContent = '...'; // alapállapot: csonkított
+    // Kibővített állapotban a „..." gomb-logika nem fut (a teljes tartalom látszik).
+    if (this.kibovitettE) return;
 
-    // Koppintás esemény – kibővítés és visszazárás váltogatása
-    gomb.addEventListener('click', (e) => {
-      e.stopPropagation(); // megakadályozza, hogy a kártya koppintás eseménye is lefusson
-      this._kibovitesValtasa();
-    });
+    // Túlnyúlás: a tartalom magasabb, mint a látható body (+1 px tűrés a kerekítésre).
+    const tulnyulikE = this.bodyElem.scrollHeight > this.bodyElem.clientHeight + 1;
 
-    // Gomb hozzáadása a bodyhoz és referencia eltárolása
-    this.bodyElem.appendChild(gomb);
-    this.kibovitöGomb = gomb;
+    if (tulnyulikE && !this.kibovitöGomb) {
+      this._kibovitoGombLetrehozasa();
+    } else if (!tulnyulikE && this.kibovitöGomb) {
+      this.kibovitöGomb.remove();
+      this.kibovitöGomb = null;
+    }
+  };
 
-    console.log('Kartya._kibovitöGombFrissitese - VÉGE: gomb hozzáadva');
+  // 1) Azonnali mérés a következő képkockán – a szokásos eset (a body már elrendezve).
+  requestAnimationFrame(ertekeles);
+
+  // 2) MEGBÍZHATÓSÁG: a body magassága a kiválasztáskor ANIMÁLTAN nő
+  //    (transition: max-height ~0,35 s), és testvér-váltáskor az újrarenderelés után
+  //    a VÉGLEGES magasság csak később áll be. Emiatt bukott meg korábban az egyszeri,
+  //    túl korai mérés (a „..." nem jelent meg, amíg ki-be nem kattintottál). Egy
+  //    ResizeObserver a body méretének MINDEN változásakor (az animáció végén is)
+  //    újraértékel, így a gomb a VALÓDI magasságnál jelenik meg vagy tűnik el.
+  if (typeof ResizeObserver !== 'undefined') {
+    this._kibovitoFigyelo = new ResizeObserver(() => ertekeles());
+    this._kibovitoFigyelo.observe(this.bodyElem);
+  }
+
+  console.log('Kartya._kibovitöGombFrissitese - VÉGE (mérés ütemezve)');
+}
+
+// ----- KIBŐVÍTŐ GOMB LÉTREHOZÁSA -----
+// A „..." gomb létrehozása a body jobb alsó sarkába, és a referencia eltárolása.
+_kibovitoGombLetrehozasa() {
+  const gomb = document.createElement('button');
+  gomb.className = 'pakli-kartya__kibovito-gomb';
+  gomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése'); // akadálymentesség
+  gomb.setAttribute('type', 'button'); // form submit elkerülése
+  gomb.textContent = '...'; // alapállapot: csonkított
+
+  // Koppintás esemény – kibővítés és visszazárás váltogatása
+  gomb.addEventListener('click', (e) => {
+    e.stopPropagation(); // ne fusson le a kártya koppintás eseménye is
+    this._kibovitesValtasa();
   });
+
+  this.bodyElem.appendChild(gomb);
+  this.kibovitöGomb = gomb;
+  console.log('Kartya._kibovitoGombLetrehozasa - gomb hozzáadva', { entitasId: this.entitas?.entitasId });
 }
 
 // ----- KIBŐVÍTÉS VÁLTÁSA -----
