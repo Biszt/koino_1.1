@@ -392,6 +392,15 @@ const KEZDO_FAZIS_HATARIDO_MS = 20000;
 // és érintőképernyőn a szándékos koppintás is gyakran „húzásnak" számított)
 const KATTINTAS_KUSZOB = 7;
 
+// ===== EGYSZERES vs. DUPLA KOPPINTÁS =====
+// EGY koppintás → a nézet a megkoppintott entitásra FÓKUSZÁL (a síkidomban maradva,
+//   mint egy „kártya → síkidom, ugyanazon az ágon" nyitás).
+// DUPLA koppintás → BEZÁRJA a síkidomot, és a pakli arra az entitásra épül újra.
+// Ha ennyi ezredmásodpercen belül ÉS ennyi képponton belül érkezik a MÁSODIK
+// koppintás, duplának számít (a böngésző natív ~300 ms-os dupla-kattintásához igazítva).
+const DUPLA_KOPPINTAS_MS = 280;
+const DUPLA_KOPPINTAS_TAVOLSAG = 30;
+
 // ===== SÍKIDOM NÉZET MODAL =====
 // Felelősség: a Síkidom nézet — minden entitás egy síkidom, a TERÜLETE arányos a
 // hierarchikus össztudatpontjával, a leszármazottak a szülőn BELÜL helyezkednek el.
@@ -586,6 +595,13 @@ class SikidomModal {
     this._gesztusMaxUjj = 0;
     this._ablakMeretezoBound = null;
     this._zoomVegeIdozito = null;  // a nagyítás végét figyelő időzítő
+
+    // ===== EGYSZERES/DUPLA KOPPINTÁS ÁLLAPOTA =====
+    // Az előző elfogadott koppintás (idő + hely) és a függő egyszeres-koppintás
+    // időzítője. Ha a határidőn belül jön egy közeli MÁSODIK koppintás, dupla;
+    // különben az ablak végén lefut az egyszeres. Lásd `_koppintas`.
+    this._elozoKoppintas = null;
+    this._egyszeresKoppIdozito = null;
 
     // ===== A VALÓDI NAGYÍTÁSI GESZTUSOK FUTÓ SZORZATA =====
     // 1-ről indul, és minden ELFOGADOTT gesztus-szorzóval megszorzódik (lásd `_zoom`).
@@ -952,6 +968,10 @@ class SikidomModal {
     if (this._zoomVegeIdozito) {
       clearTimeout(this._zoomVegeIdozito);
       this._zoomVegeIdozito = null;
+    }
+    if (this._egyszeresKoppIdozito) {
+      clearTimeout(this._egyszeresKoppIdozito);
+      this._egyszeresKoppIdozito = null;
     }
     if (this._kezdoFazisHatarido) {
       clearTimeout(this._kezdoFazisHatarido);
@@ -3243,55 +3263,147 @@ class SikidomModal {
     return true;
   }
 
-  // ===== KOPPINTÁS =====
-  // A találatot számítással keressük (nincs elemenkénti DOM). A LEGKISEBB
-  // találat nyer: a beágyazott gyerek van fölül, azt akarta az e-ember.
+  // ===== KOPPINTÁS-DISZPÉCSER (egyszeres vs. dupla) =====
+  // A `mutatoVege` minden elfogadott koppintáskor ide hív. Két viselkedés van:
+  //   • EGY koppintás → a nézet a megkoppintott entitásra FÓKUSZÁL, a síkidomon
+  //     belül maradva (mint egy „kártya → síkidom, ugyanazon az ágon" nyitás).
+  //   • DUPLA koppintás → BEZÁRJA a síkidomot, és a pakli arra az entitásra épül
+  //     újra (ez volt korábban, 2026-08-17 óta, az egyszeres koppintás dolga).
+  //
+  // A megkülönböztetés időzítéssel megy: az első koppintást elmentjük és várunk egy
+  // rövid ablakot (`DUPLA_KOPPINTAS_MS`); ha közben jön egy második, közeli koppintás,
+  // az dupla — különben az ablak végén lefut az egyszeres. Ezért az egyszeres fókusz
+  // enyhén (a dupla-ablaknyival) késik — ez a dupla-koppintás felismerésének ára.
   _koppintas(kepX, kepY) {
     // ===== ELŐBB A „TOVÁBBI TARTALMAK" AJÁNLAT =====
-    // Az ajánlat a szülő közepén, a valódi ÜRES körben ül, ahol definíció szerint
-    // nincs síkidom — tehát nem vesz el találatot senkitől. Mégis előbb nézzük,
-    // mert a szülő síkidoma alatta van, és az elnyelné a koppintást.
+    // Ez sosem entitás, hanem LAPOZÁS — MINDIG azonnal, egy koppintásra hat, nem
+    // tartozik az egyszeres/dupla megkülönböztetéshez.
     //
     // ⚠️ A CÉL A PAKOLÁSI LYUK, NEM A KIJELZŐ-MAG (Csaba, 2026-08-11): „a
     // képernyő-fix mag zsugorodása ne legyen hatással a szövegre és a koppintásra".
-    // Ezért `uresSugarPx` a sugár — ugyanaz, amihez a felirat is igazodik.
-    if (this._ajanlatKoppintas(kepX, kepY)) return;
+    if (this._ajanlatKoppintas(kepX, kepY)) {
+      this._koppintasAllapotTorlese();
+      return;
+    }
 
+    const most = performance.now();
+    const elozo = this._elozoKoppintas;
+
+    // DUPLA-e? Röviddel az előző után, közel ugyanoda.
+    const dupla = elozo
+      && (most - elozo.ido) <= DUPLA_KOPPINTAS_MS
+      && Math.hypot(kepX - elozo.kepX, kepY - elozo.kepY) <= DUPLA_KOPPINTAS_TAVOLSAG;
+
+    if (dupla) {
+      // A függő egyszeres koppintást eldobjuk, és a duplát futtatjuk.
+      this._koppintasAllapotTorlese();
+      this._duplaKoppintas(kepX, kepY);
+      return;
+    }
+
+    // EGYELŐRE egyszeres: elmentjük, és várunk, jön-e dupla. Ha nem, az ablak végén
+    // fókuszálunk a megkoppintott entitásra.
+    this._elozoKoppintas = { ido: most, kepX, kepY };
+    this._egyszeresKoppIdozito = setTimeout(() => {
+      this._egyszeresKoppIdozito = null;
+      this._elozoKoppintas = null;
+      this._egyszeresKoppintas(kepX, kepY);
+    }, DUPLA_KOPPINTAS_MS);
+  }
+
+  // A függő egyszeres-koppintás és a mentett előző koppintás eldobása.
+  _koppintasAllapotTorlese() {
+    if (this._egyszeresKoppIdozito) {
+      clearTimeout(this._egyszeresKoppIdozito);
+      this._egyszeresKoppIdozito = null;
+    }
+    this._elozoKoppintas = null;
+  }
+
+  // ===== TALÁLAT KERESÉSE (közös) =====
+  // A találatot számítással keressük (nincs elemenkénti DOM). A LEGKISEBB találat
+  // nyer: a beágyazott gyerek van fölül, azt akarta az e-ember.
+  _talalatKeresese(kepX, kepY) {
     const lathatoak = this._utolsoLathatoak ?? [];
     let talalat = null;
-
     for (const { cs, kep } of lathatoak) {
       const tavolsag = Math.hypot(kepX - kep.kepX, kepY - kep.kepY);
       if (tavolsag > kep.kepSugar) continue;
       if (!talalat || kep.kepSugar < talalat.kep.kepSugar) talalat = { cs, kep };
     }
+    return talalat;
+  }
 
+  // ===== EGY KOPPINTÁS → FÓKUSZ A MEGKOPPINTOTT ENTITÁSRA =====
+  // A nézetet a megkoppintott entitásra központozzuk, FOKUSZ_ATMERO_ARANY méretben
+  // — ugyanúgy, mint amikor a síkidom egy kártyáról nyílik meg az adott ágon. A
+  // síkidomban MARADUNK (nem zárjuk be, a pakli nem vált).
+  //
+  // AZONNAL állítjuk be a nézetet (nem animálunk), pontosan mint a
+  // `_fokuszAMegjeloltre`: a horgony a szülő lesz, és a három nézet-szám ebből a
+  // keretből értendő. Így egyetlen konzisztens képkockában áll be; a horgonyváltás
+  // (ami minden képkockán fut) utána finomít, elcsúszás nélkül. (Az átmenet-animáció
+  // itt szándékosan kimarad: azt a minden képkockán futó horgonyváltás elcsúsztatná.)
+  _egyszeresKoppintas(kepX, kepY) {
+    const talalat = this._talalatKeresese(kepX, kepY);
     if (!talalat) {
       // Üres helyre koppintva a kiválasztás és az adatlap is megszűnik
       if (this._kivalasztottId) this._kartyaBezarasa();
       return;
     }
 
-    console.log('SikidomModal._koppintas - találat', {
+    const cs = talalat.cs;
+
+    // Kell a szülő (ő lesz a horgony). A látható listában sosincs benne a VILÁG,
+    // de a gyökér szülője a VILÁG, ami a tárban ott van — arra viszont nem
+    // fókuszálunk (az a teljes nézet), ezért ha nincs valódi szülő, kilépünk.
+    if (!cs.szuloId || !this._tar.has(cs.szuloId)) return;
+
+    const cel = this._fokuszNezet({ szuloId: cs.szuloId, id: cs.id });
+    if (!cel) return;
+
+    console.log('SikidomModal._egyszeresKoppintas - fókusz', {
+      entitasId: cs.id, entitasTipus: cs.entitasTipus
+    });
+
+    // A horgony a szülő — a nézet ebből a keretből számol (mint _fokuszAMegjeloltre)
+    this._horgony = cs.szuloId;
+    this._nezet = cel;
+
+    // Ha a megkoppintott entitásnak VAN gyereke, de még egy sincs lerakva, hozzuk
+    // le — hogy legyen mit mutatnia, amikor belenagyítasz.
+    if (cs.vanGyereke && cs.gyerekIdk.length === 0) {
+      this._gyerekekBetoltese(cs.id, 0);
+    }
+
+    this._rajzolasKerese();
+  }
+
+  // ===== DUPLA KOPPINTÁS → A PAKLI ARRA A KÁRTYÁRA UGRIK =====
+  // A struktúra nézet mintájára (`StrukturaModal`): BEZÁRJUK a síkidomot, és a
+  // mögötte lévő pakli arra az entitásra épül újra. A navigálást a `foOldal` végzi,
+  // az `onEntitasKivalasztas` visszahíváson át (aktív entitás mentése → a központi
+  // újratöltő a paklit erre az entitásra állítja).
+  //
+  // (2026-08-17 óta ez volt az EGYSZERES koppintás dolga; 2026-08-19-től a DUPLA
+  // koppintásé — az egyszeres mostantól a síkidomon belül fókuszál.)
+  _duplaKoppintas(kepX, kepY) {
+    const talalat = this._talalatKeresese(kepX, kepY);
+    if (!talalat) {
+      if (this._kivalasztottId) this._kartyaBezarasa();
+      return;
+    }
+
+    console.log('SikidomModal._duplaKoppintas - találat', {
       entitasId: talalat.cs.id, entitasTipus: talalat.cs.entitasTipus
     });
 
-    // ===== KOPPINTÁS → A PAKLI ARRA A KÁRTYÁRA UGRIK (2026-08-17) =====
-    // A struktúra nézet mintájára (`StrukturaModal`): koppintásra BEZÁRJUK a
-    // síkidomot, és a mögötte lévő pakli arra az entitásra épül újra. A navigálást a
-    // `foOldal` végzi, az `onEntitasKivalasztas` visszahíváson át (aktív entitás
-    // mentése → a központi újratöltő a paklit erre az entitásra állítja).
-    //
-    // (Korábban itt a `SikidomKartyaPanel.megjelenites` állt — az egykártyás
-    // teszt-panel, ami a fejlesztéshez kellett. A terv 9. pontja szerint az törlendő;
-    // a panel objektuma egyelőre marad, csak nem ez nyitja.)
     if (typeof this.onEntitasKivalasztas === 'function') {
       // ===== A SÍKIDOM → PAKLI VÁLTÁS A TÖRTÉNETBE (Csaba, 2026-08-17) =====
-      // Eddig CSAK a pakli → síkidom váltás rögzült (a megnyitás). A koppintás a
-      // fordított váltás (síkidom → pakli); mielőtt a pakli átveszi, elmentjük a
-      // síkidom PONTOS KAMERÁJÁT — a horgonyt ÉS a nézetet (skála + eltolás) —, hogy
-      // a Vissza pontosan ugyanoda, ugyanabban a zoom-szintben hozzon vissza, ahol
-      // a koppintás előtt voltál. (Nem fókuszálás/illesztés: pontos visszaállítás.)
+      // Mielőtt a pakli átveszi, elmentjük a síkidom PONTOS KAMERÁJÁT — a horgonyt
+      // ÉS a nézetet (skála + eltolás) —, hogy a Vissza pontosan ugyanoda, ugyanabban
+      // a zoom-szintben hozzon vissza, ahol a koppintás előtt voltál. (Nem
+      // fókuszálás/illesztés: pontos visszaállítás.)
       //
       // Ugyanaz a mechanizmus, mint a megnyitásé (koino:nezetNyitas), csak
       // `horgonyEntitasId` helyett `kamera`. A történet-kezelő a JSON-alak szerint
