@@ -3969,9 +3969,17 @@ kapcsolni a click trackinget (lásd fentebb).
 - **A jelszóváltás nem lökje ki magát az e-embert:** a `tokenVerzio` léptetése a SAJÁT
   tokent is érvénytelenítené, ezért a jelszóváltás válasza FRISS tokent ad. A többi
   eszköz kijelentkezik, a jelenlegi munkamenet folytatódik.
-- **⚠️ Élesítés előtt:** a Resendben KI KELL KAPCSOLNI a click trackinget, különben a
-  jelszó-helyreállító token átmenne a `links.koino.hu` átirányítón és ott naplózódna.
-  Fejlesztés közben (napló mód) ez nem játszik szerepet.
+- **✅ A click tracking kérdése LEZÁRVA (2026-08-24, méréssel).** A domain
+  létrehozásakor a tracking-kapcsolók inaktívak voltak, ezért nyitva maradt a kérdés,
+  hogy a Resend átírja-e a hivatkozásainkat — ami a jelszó-helyreállító tokent egy
+  külső szerver naplójába vinné. A Configuration fülön kiderült: a Resendnél a
+  kattintás-követéshez KÜLÖN tracking-aldomaint kell konfigurálni, és az nincs
+  beállítva (a domain létrehozásakor üresen hagytuk a „Tracking Subdomain" mezőt).
+  **Megmérve:** a próbalevélbe tett gomb a megérkezett levélben `https://koino.hu`-ra
+  mutat, nem átirányítóra. A `tools/emailProba.js` mostantól tartalmaz egy ilyen
+  ellenőrző gombot, tehát ez bármikor újramérhető.
+  ⚠️ Ha valaha megnyomnád a Configuration → „Enable tracking metrics" alatti
+  **Configure** gombot, ez a helyzet megváltozna — a jelszó-levél miatt ne tedd.
 
 Az 1–3. lépés a jelszó-funkciót teszi teljessé; a 4–5. az értesítéseket. Az 1. lépés
 mindkettőhöz kell, és valódi levélküldés nélkül is tesztelhető.

@@ -310,7 +310,15 @@ function probaLevel(idopontSzoveg) {
       `A küldés időpontja: ${idopontSzoveg}`,
       'Ha ezt a levelet a Beérkezettek között látod (nem a spam mappában), akkor a ' +
       'feladó-domain hitelesítése (SPF/DKIM/DMARC) is rendben van.',
+      'ELLENŐRIZD A LENTI GOMBOT IS: húzd fölé az egeret, és nézd meg, hova mutat. ' +
+      'Ha koino.hu-ra, akkor a szolgáltató NEM írja át a hivatkozásainkat. Ha valami ' +
+      'másra (pl. links.koino.hu vagy resend.com), akkor a kattintás-követés be van ' +
+      'kapcsolva — azt ki kell kapcsolni, mert különben a jelszó-helyreállító ' +
+      'hivatkozás is átmenne rajta.',
     ],
+    // A gomb SZÁNDÉKOSAN van benne: ez teszi a próbalevelet alkalmassá a
+    // kattintás-követés ellenőrzésére (a követés az <a> elemeket írja át).
+    gomb: { szoveg: 'Ellenőrző hivatkozás (koino.hu)', link: 'https://koino.hu/' },
     indok: 'proba',
   });
 
