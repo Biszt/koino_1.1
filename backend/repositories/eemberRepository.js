@@ -100,8 +100,11 @@ class eEmberRepository {
   // A módosítható profil-mezők (nev, lokacio, opcionális email) mentése.
   // Használat: eember beállítások (terv 8. pont)
   // @param {string} id - MongoDB ObjectId
-  // @param {Object} adatok - { nev, lokacio, email? } — email string = beállítás,
-  //                          undefined = eltávolítás (a mező törlése, $unset)
+  // @param {Object} adatok - { nev, lokacio, email?, emailMegerositveTorlese? }
+  //                          email: string = beállítás, null = eltávolítás ($unset),
+  //                          undefined = nem nyúlunk hozzá.
+  //                          emailMegerositveTorlese: true = a megerősítés elvész
+  //                          (a service állítja be, ha a cím ténylegesen VÁLTOZOTT)
   // @returns {Promise} Frissített eember
   async updateProfil(id, adatok) {
     const emailSzandek = adatok.email === undefined ? 'nincs-valtozas'
@@ -122,6 +125,13 @@ class eEmberRepository {
       modositas.$set.email = adatok.email;
     }
 
+    // A MEGERŐSÍTÉS ELVESZTÉSE: ha a cím ténylegesen megváltozott (vagy törlődött), az
+    // új címről semmit nem tudunk — újra igazolni kell. A service dönti el, hogy valódi
+    // változás történt-e (ugyanannak a címnek az újbóli beírása NEM veszíti el).
+    if (adatok.emailMegerositveTorlese === true) {
+      modositas.$set.emailMegerositve = false;
+    }
+
     const eredmeny = await eEmber.findByIdAndUpdate(
       id,
       modositas,
@@ -129,6 +139,25 @@ class eEmberRepository {
     );
 
     console.log('eEmberRepository.updateProfil - VÉGE', { id: eredmeny?._id });
+    return eredmeny;
+  }
+
+  // ----- AZ E-MAIL MEGERŐSÍTETTSÉGÉNEK ÁLLÍTÁSA -----
+  // Használat: a megerősítő hivatkozás beváltása (true), illetve cím-változáskor a
+  // megerősítés elvesztése (false).
+  // @param {string} id - MongoDB ObjectId
+  // @param {boolean} ertek - az új érték
+  // @returns {Promise} Frissített eember
+  async updateEmailMegerositve(id, ertek) {
+    console.log('eEmberRepository.updateEmailMegerositve - KEZDÉS', { id, ertek });
+
+    const eredmeny = await eEmber.findByIdAndUpdate(
+      id,
+      { emailMegerositve: !!ertek },
+      { new: true }
+    );
+
+    console.log('eEmberRepository.updateEmailMegerositve - VÉGE', { id: eredmeny?._id });
     return eredmeny;
   }
 

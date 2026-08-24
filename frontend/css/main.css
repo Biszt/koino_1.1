@@ -18,6 +18,8 @@
 @import './components/eszkoztar.css';
 @import './components/entitasKeresoMezo.css';
 @import './components/fejlesztesreVar.css';
+/* Levélből érkező hivatkozások eredmény-képernyője (main.js urlKapu) */
+@import './components/uzenetKepernyo.css';
 
 
 /* ── KÁRTYA STÍLUSOK ── */

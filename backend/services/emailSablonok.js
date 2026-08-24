@@ -150,6 +150,32 @@ function keret({ cim, bekezdesek = [], gomb = null, indok }) {
   return { szoveg, html };
 }
 
+// ===== SABLON: E-MAIL CÍM MEGERŐSÍTÉSE =====
+// Az e-ember a beállításokban a „Cím megerősítése" gombbal kérte ezt a levelet.
+// A hivatkozás egyszer használatos és 24 óra után lejár.
+// @param {Object} adatok
+// @param {string} adatok.eemberNev - a címzett e-embernév (megszólításhoz)
+// @param {string} adatok.link      - a megerősítő hivatkozás
+// @returns {Object} { targy, szoveg, html }
+function megerositoLevel({ eemberNev, link }) {
+  const { szoveg, html } = keret({
+    cim: 'Erősítsd meg az e-mail-címed',
+    bekezdesek: [
+      `Szia ${eemberNev}!`,
+      'A koino beállításaiban azt kérted, hogy megerősítsd ezt az e-mail-címet. ' +
+      'Ehhez csak nyisd meg az alábbi hivatkozást.',
+      'A megerősítés után két dolgot tudsz majd használni, ha szeretnéd: kérheted, ' +
+      'hogy az értesítéseidet e-mailben is megkapd, és elfelejtett jelszó esetén ' +
+      'tudunk segíteni a belépésben.',
+      'A hivatkozás 24 óráig érvényes, és csak egyszer használható.',
+    ],
+    gomb: { szoveg: 'E-mail-cím megerősítése', link },
+    indok: 'megerosites',
+  });
+
+  return { targy: 'koino — erősítsd meg az e-mail-címed', szoveg, html };
+}
+
 // ===== SABLON: PRÓBALEVÉL =====
 // A tools/emailProba.js használja. Nem e-embernek szól: azt ellenőrzi, hogy a
 // beállított szolgáltató valóban kézbesít-e (és hogy a feladó-domain rendben van-e).
@@ -172,8 +198,9 @@ function probaLevel(idopontSzoveg) {
 
 // ===== EXPORTÁLÁS =====
 module.exports = {
-  keret,           // A közös keret — minden további sablon ezen át készül
-  probaLevel,      // 1. lépés: a levélküldés ellenőrzése
-  htmlBiztonsagos, // Segéd a további sablonokhoz (entitás-címek beillesztéséhez)
+  keret,            // A közös keret — minden további sablon ezen át készül
+  megerositoLevel,  // 2. lépés: az e-mail cím igazolása
+  probaLevel,       // 1. lépés: a levélküldés ellenőrzése
+  htmlBiztonsagos,  // Segéd a további sablonokhoz (entitás-címek beillesztéséhez)
   LAB_SZOVEGEK,
 };

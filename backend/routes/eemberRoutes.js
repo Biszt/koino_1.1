@@ -49,6 +49,18 @@ router.post('/eember/jelszovaltas', authMiddleware, eemberController.jelszoValta
 // Védett – a saját fiók végleges törlése, a jelszóval igazolva (visszafordíthatatlan)
 router.delete('/eember', authMiddleware, eemberController.eemberTorlese);
 
+// ----- MEGERŐSÍTŐ LEVÉL KÉRÉSE -----
+// POST kérés: /api/eember/email-megerosites-keres
+// Védett – a bejelentkezett e-ember kéri a SAJÁT címére. Maga a kérés a felhatalmazás
+// a levél kiküldésére: a koino magától soha nem küld levelet.
+router.post('/eember/email-megerosites-keres', authMiddleware, eemberController.emailMegerositesKeres);
+
+// ----- MEGERŐSÍTŐ HIVATKOZÁS BEVÁLTÁSA -----
+// GET kérés: /api/eember/email-megerosites/:token
+// NYILVÁNOS – a levelet más gépen/böngészőben is megnyithatja, ahol nincs bejelentkezve.
+// A biztonságot a token kitalálhatatlansága adja (32 bájt véletlen), nem a bejelentkezés.
+router.get('/eember/email-megerosites/:token', eemberController.emailMegerositesBevaltas);
+
 // ===== ROUTER EXPORTÁLÁSA =====
 // Ezt importálja a server.js
 module.exports = router;

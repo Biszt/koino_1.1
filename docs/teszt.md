@@ -1902,3 +1902,46 @@ Vissza a koppintáskori PONTOS képre hoz, egy újabb Vissza a megnyitási képr
 *Böngészőben igazolva (2026-08-17): a nyitás `nezet:sikidom` lépést rögzít, 6×
 nagyítás után a történet hossza változatlan, koppintás után pakli-entitás lépés;
 a kártya-menüs horgony vissza/előre után is helyreáll. 0 konzolhiba.*
+
+---
+
+## E-mail: cím-megerősítés (2026-08-24, a 2. lépés)
+
+*Előfeltétel: fejlesztői környezetben `EMAIL_SZOLGALTATO=naplo` (a `backend/.env`-ben) —
+így VALÓDI levél NEM megy ki, a teljes levél a szerver naplójába íródik:
+`docker logs koino-backend`. A megerősítő hivatkozás onnan másolható ki.*
+
+**Végpontok:**
+- `POST /api/eember/email-megerosites-keres` — védett (a bejelentkezett e-ember kéri)
+- `GET /api/eember/email-megerosites/:token` — NYILVÁNOS (a levélből érkezik)
+
+**A hivatkozás alakja:** `<PUBLIKUS_URL>/?email-megerosites=TOKEN` — a `main.js`
+**URL-kapuja** dolgozza fel, még a bejelentkezés-ellenőrzés ELŐTT.
+
+59. ⬜ **Állapot-kijelzés:** fő menü → *eember beállítások*. Ha van e-mail címed és az
+    nincs megerősítve, a mező alatt PIROS figyelmeztetés áll („nem küldünk rá értesítést,
+    és elfelejtett jelszó esetén sem tudunk segíteni") + **Cím megerősítése** gomb.
+    Ha nincs e-mail cím: sem állapot, sem gomb nem látszik.
+
+60. ⬜ **Megerősítő levél kérése:** nyomd meg a *Cím megerősítése* gombot → siker-üzenet,
+    a gomb felirata *Levél újraküldése* lesz. A naplóban megjelenik a teljes levél a
+    hivatkozással. Másold ki a hivatkozást és nyisd meg egy böngészőben.
+
+61. ⬜ **A hivatkozás beváltása:** a megnyitás után ✅ *„E-mail-cím megerősítve"* képernyő,
+    *Tovább a koinóra* gombbal. Ellenőrizd: **a token eltűnt a címsorból** (frissítéskor
+    ne váltsa be újra). A gomb a szokásos indításra visz (főoldal vagy bejelentkezés).
+    Utána a beállításokban ✅ *„Ez a cím megerősítve"* áll, gomb nélkül.
+
+62. ⬜ **Egyszer használatos + hibás hivatkozás:** nyisd meg UGYANAZT a hivatkozást
+    másodszor → ⚠️ *„Ezt a hivatkozást már felhasználtad"*. Írj át benne pár karaktert →
+    ⚠️ *„érvénytelen vagy már lejárt"*. Egyik sem hibaképernyő, hanem emberi üzenet.
+
+63. ⬜ **A cím-változás ELVESZI a megerősítést:** a beállításokban írj be MÁSIK e-mail
+    címet → mentés → a megerősítés elvész, újra megjelenik a piros figyelmeztetés és a
+    gomb. FONTOS ellenpróba: ha UGYANAZT a címet mented újra (vagy hozzá sem nyúlsz),
+    a megerősítés **MEGMARAD** — különben minden mentés után újra igazolni kellene.
+
+64. ⬜ **A kapu zárva marad megerősítés nélkül:** a levél-kapu megerősítetlen címre
+    SEMMIT nem küld, kivéve magát a megerősítő levelet. (Service-szinten mérhető:
+    `emailKuldoService.kuldesEemberNek({eember, indok:'ertesites'})` → `sikeres:false`,
+    ok: „a cím nincs megerősítve".)

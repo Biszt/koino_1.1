@@ -26,9 +26,23 @@
     <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-email">E-mail (nem kötelező)</label>
     <input class="eember-beallitasok-modal__mezo" type="email" id="beallitasok-email"
       autocomplete="email" aria-label="E-mail (nem kötelező)" placeholder="Nincs megadva" />
+
+    <!-- A cím állapota: megerősítve / megerősítésre vár. A JS tölti ki és mutatja meg. -->
+    <p class="eember-beallitasok-modal__email-allapot" id="beallitasok-email-allapot" hidden></p>
+
+    <!-- Megerősítő levél kérése — csak megerősítetlen címnél látszik.
+         EZ A GOMBNYOMÁS a felhatalmazás a levél kiküldésére: a koino magától nem küld. -->
+    <button type="button" class="eember-beallitasok-modal__gomb"
+      id="beallitasok-email-megerosites" hidden>
+      Cím megerősítése
+    </button>
+    <span class="eember-beallitasok-modal__siker" id="beallitasok-email-siker"></span>
+
     <p class="eember-beallitasok-modal__megjegyzes">
-      Csak azonosításra használjuk; sosem küldünk rá levelet. <strong>Üresen hagyva
-      töröljük</strong> az e-mail-címed.
+      A koino <strong>magától soha nem küld levelet</strong>. A cím megerősítése után
+      kérheted, hogy az értesítéseidet e-mailben is megkapd, és elfelejtett jelszó
+      esetén tudunk segíteni a belépésben. <strong>Üresen hagyva töröljük</strong> az
+      e-mail-címed.
     </p>
 
     <label class="eember-beallitasok-modal__mezo-cimke" for="beallitasok-orszag">Ország</label>

@@ -176,6 +176,93 @@ async function regisztracioMegjelenites(opciok = {}) {
   console.log('main.regisztracioMegjelenites - VÉGE');
 }
 
+// ===== URL-KAPU: A LEVÉLBŐL ÉRKEZŐ HIVATKOZÁSOK =====
+// A koino leveleiben lévő hivatkozások a főoldalra mutatnak, egy URL-paraméterrel:
+//   https://koino.hu/?email-megerosites=TOKEN
+//
+// MIÉRT KELL EZ: az alkalmazás indításkor eddig CSAK azt nézte, van-e mentett token,
+// és ha volt, egyből a főoldalra ment. Az URL-paraméter így soha nem jutott szóhoz —
+// a levélben lévő hivatkozás hatástalan maradt volna.
+//
+// Ezért ez a kapu a token-ellenőrzés ELŐTT fut le. Ha talál feldolgozandó
+// paramétert, elvégzi a műveletet, megmutatja az eredményt, és `true`-val tér vissza
+// (az indítás ilyenkor NEM megy tovább — a képernyőn lévő gomb viszi tovább).
+//
+// A 3. lépésben ide kerül majd a `?jelszo-helyreallitas=TOKEN` ág is.
+// @returns {Promise<boolean>} true, ha kezeltünk egy hivatkozást
+async function urlKapu() {
+  console.log('main.urlKapu - KEZDÉS');
+
+  const parameterek = new URLSearchParams(window.location.search);
+  const megerositoToken = parameterek.get('email-megerosites');
+
+  if (!megerositoToken) {
+    console.log('main.urlKapu - VÉGE: nincs feldolgozandó paraméter');
+    return false;
+  }
+
+  // A paraméter eltávolítása a címsorból — hogy egy oldal-frissítés NE próbálja
+  // újra beváltani ugyanazt a (már felhasznált) hivatkozást, és hogy a token ne
+  // maradjon ott a címsorban.
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  let uzenet;
+  let sikeres = false;
+  try {
+    // NYILVÁNOS végpont — nem kell hozzá bejelentkezés (a levelet más gépen is
+    // megnyithatja az e-ember).
+    const valasz = await apiGet(`eember/email-megerosites/${encodeURIComponent(megerositoToken)}`);
+    sikeres = valasz?.sikeres === true;
+    uzenet  = valasz?.message ?? 'Ismeretlen válasz a szervertől.';
+  } catch (hiba) {
+    console.error('main.urlKapu - HIBA', hiba.message);
+    uzenet = 'A megerősítés nem sikerült. Próbáld újra később.';
+  }
+
+  _uzenetKepernyo({
+    cim:     sikeres ? 'E-mail-cím megerősítve' : 'A megerősítés nem sikerült',
+    szoveg:  uzenet,
+    sikeres
+  });
+
+  console.log('main.urlKapu - VÉGE', { sikeres });
+  return true;
+}
+
+// ===== EGYSZERŰ ÜZENET-KÉPERNYŐ =====
+// A levélből érkező műveletek eredményét mutatja, egy „Tovább a koinóra" gombbal.
+// Szándékosan JS-ből épül (nincs hozzá külön HTML-sablon): egyetlen helyen használjuk,
+// és a bejelentkezési űrlap stílusaira támaszkodik.
+// @param {Object} adatok - { cim, szoveg, sikeres }
+function _uzenetKepernyo({ cim, szoveg, sikeres }) {
+  const appDiv = document.getElementById('app');
+  if (!appDiv) return;
+
+  appDiv.innerHTML = '';
+
+  const doboz = document.createElement('div');
+  doboz.className = 'uzenet-kepernyo';
+
+  const cimElem = document.createElement('h1');
+  cimElem.className   = 'uzenet-kepernyo__cim';
+  cimElem.textContent = `${sikeres ? '✅' : '⚠️'} ${cim}`;
+
+  const szovegElem = document.createElement('p');
+  szovegElem.className   = 'uzenet-kepernyo__szoveg';
+  szovegElem.textContent = szoveg;
+
+  const gomb = document.createElement('button');
+  gomb.type        = 'button';
+  gomb.className   = 'uzenet-kepernyo__gomb';
+  gomb.textContent = 'Tovább a koinóra';
+  gomb.addEventListener('click', () => alkalmazasInditasa());
+
+  doboz.appendChild(cimElem);
+  doboz.appendChild(szovegElem);
+  doboz.appendChild(gomb);
+  appDiv.appendChild(doboz);
+}
+
 // ===== AZ ALKALMAZÁS INDÍTÁSA =====
 // Belépési pont: megnézi, be van-e jelentkezve az eember.
 // Ha igen → főoldal, ha nem → bejelentkezési form.
@@ -245,5 +332,10 @@ document.addEventListener('wheel', (esemeny) => {
 }, { passive: false });
 
 // ===== INDÍTÁS =====
-// DOM betöltése után indul az alkalmazás
-document.addEventListener('DOMContentLoaded', alkalmazasInditasa);
+// DOM betöltése után indul az alkalmazás.
+// ELŐBB az URL-kapu fut (levélből érkező hivatkozások), és CSAK ha az nem kezelt
+// semmit, indul a szokásos folyamat (főoldal vagy bejelentkezés).
+document.addEventListener('DOMContentLoaded', async () => {
+  const kezelve = await urlKapu();
+  if (!kezelve) await alkalmazasInditasa();
+});

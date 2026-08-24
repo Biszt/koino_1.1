@@ -36,6 +36,23 @@
   color: var(--color-text-muted);
 }
 
+/* ===== AZ E-MAIL CÍM ÁLLAPOTA (megerősítve / megerősítésre vár) ===== */
+/* Közvetlenül az e-mail mező alatt. Két állapota van; a megerősítetlen szándékosan
+   FIGYELEMFELKELTŐ, mert abból zsákutca lehet (elfelejtett jelszó + igazolatlan cím). */
+.eember-beallitasok-modal__email-allapot {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.eember-beallitasok-modal__email-allapot--megerositve {
+  color: var(--color-primary);
+}
+
+.eember-beallitasok-modal__email-allapot--var {
+  color: var(--color-error);
+}
+
 /* ===== MEZŐK ===== */
 .eember-beallitasok-modal__mezo-cimke {
   display: block;

@@ -32,6 +32,25 @@ email: {
   default: undefined   // Ha nincs megadva, a mező hiányzik (nem null/üres)
 },
 
+// ----- AZ E-MAIL CÍM MEGERŐSÍTETTSÉGE -----
+// false: a cím meg van adva, de NEM bizonyított, hogy az e-emberé.
+// true : az e-ember rákattintott a címére küldött megerősítő hivatkozásra.
+//
+// MIÉRT KELL (2026-08-24): a cím puszta beírása nem bizonyít semmit — el lehet
+// gépelni, és be lehet írni MÁSVALAKI címét is. Megerősítetlen címre küldeni
+// egyszerre lenne kéretlen levél egy idegennek, ÉS fiók-átvételi kockázat
+// (a jelszó-helyreállító hivatkozás idegen kezébe jutna).
+// Ezért: megerősítetlen címre a koino SEMMIT nem küld — kivéve magát a megerősítő
+// levelet. Ezt a szabályt az emailKuldoService.kuldesEemberNek() kényszeríti ki.
+//
+// FONTOS: ha az e-ember MEGVÁLTOZTATJA a címét, ez a mező VISSZAÁLL false-ra
+// (lásd eemberService.profilModositasa) — az új címet újra igazolni kell.
+// A meglévő e-emberek mind false-ról indulnak: visszamenőleg SENKI nem kap levelet.
+emailMegerositve: {
+  type: Boolean,
+  default: false
+},
+
 // ----- JELSZÓ MEZŐ -----
 // FIGYELEM: itt a HASH-elt jelszó tárolódik (bcrypt, ~60 karakter), ezért ez a
 // minlength gyakorlatilag mindig teljesül. A tényleges jelszó-erősség szabályt

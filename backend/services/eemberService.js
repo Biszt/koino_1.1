@@ -13,6 +13,11 @@ const jwt = require('jsonwebtoken');
 // Meghívó service: meghívásos regisztráció (MEGHIVAS_KOTELEZO kapcsoló)
 const MeghivoService = require('./meghivoService');
 
+// E-mail tokenek: a cím-megerősítő / jelszó-helyreállító hivatkozások nyilvántartása.
+// Itt két helyen kell hozzányúlni: cím-változáskor (a régi hivatkozás érvénytelen) és
+// fiók-törléskor (ne maradjon lógó token a megszűnt e-emberhez).
+const emailTokenRepository = require('../repositories/emailTokenRepository');
+
 // --- FIÓK-TÖRLÉSHEZ (eemberTorlese) ---
 // A pont-visszaosztás a tudatpontService bevált, tranzakciós útját használja
 // (a 0-ra állítás indítja a „nincs 0-tudatpontos entitás" láncreakciót).
@@ -211,6 +216,9 @@ class eEmberService {
       eemberNev:   eember.eemberNev,   // Megjelenítendő felhasználónév
       nev:         eember.nev,          // Valódi név
       email:       eember.email,        // Saját e-mail (más felé SOHA nem megy ki)
+      // Megerősített-e a cím: a beállítások képernyő ebből mutatja az állapotot és
+      // dönti el, kell-e felkínálni a „Cím megerősítése" gombot.
+      emailMegerositve: eember.emailMegerositve === true,
       lokacio:     eember.lokacio,      // Ország / régió / település
       tudatpontok: eember.tudatpontok   // Aktuális tudatpont egyenleg
     };
@@ -262,6 +270,26 @@ class eEmberService {
       }
     }
 
+    // === 1.c LÉPÉS: VÁLTOZOTT-E VALÓBAN A CÍM? ===
+    // Ha igen, az e-mail MEGERŐSÍTÉSE ELVÉSZ: az új címről semmit nem tudunk, újra
+    // igazolni kell. FONTOS a pontos összehasonlítás: ha az e-ember csak megnyitja a
+    // beállításokat és változatlanul visszaküldi ugyanazt a címet, a megerősítés
+    // MEGMARAD — különben minden mentés után újra igazolnia kellene magát.
+    // A régi tokeneket is eldobjuk: a korábbi címre küldött hivatkozás nem igazolhat
+    // egy másik címet (ezt a beváltás is ellenőrzi, de itt takarítunk is).
+    let emailMegerositveTorlese = false;
+    if (email !== undefined) {
+      const jelenlegi = await eEmberRepository.findById(eemberId);
+      const regiEmail = jelenlegi?.email ?? null;
+      const ujEmail   = email;                    // null (törlés) vagy string
+
+      if (regiEmail !== ujEmail) {
+        emailMegerositveTorlese = true;
+        await emailTokenRepository.torolEemberTokenjeit(eemberId, 'megerosites');
+        console.log('eEmberService.profilModositasa - a cím változott → a megerősítés elvész');
+      }
+    }
+
     // === 2. LÉPÉS: MENTÉS ===
     // Az `email`: undefined (nincs változás) | null (törlés) | string (beállítás) —
     // a repository ez alapján dönt: nem nyúl hozzá / $unset / $set.
@@ -272,7 +300,8 @@ class eEmberService {
         regio:     lokacio.regio.trim(),
         telepules: lokacio.telepules.trim()
       },
-      email
+      email,
+      emailMegerositveTorlese
     });
     if (!frissitett) {
       throw new Error('eEmber nem található');
@@ -412,6 +441,7 @@ class eEmberService {
 
     await ErtesitesRepository.torolE_EmberOsszes(eemberId);            // értesítései
     await ErtesitesiBeallitasRepository.torolE_EmberOsszes(eemberId); // értesítési beállításai
+    await emailTokenRepository.torolEemberOsszesTokenjet(eemberId);   // e-mail hivatkozásai
 
     // === 4. LÉPÉS: LÉTREHOZÓ/SZERKESZTŐ ANONIMIZÁLÁSA A MEGMARADÓ ENTITÁSOKON ===
     // A még létező (mások által is támogatott) entitásoknál a személyes kötést

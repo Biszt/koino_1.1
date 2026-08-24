@@ -62,6 +62,8 @@ class EemberBeallitasokModal {
       ?.addEventListener('click', () => this._jelszoMentese());
     document.getElementById('beallitasok-fiok-torles')
       ?.addEventListener('click', () => this._fiokTorles());
+    document.getElementById('beallitasok-email-megerosites')
+      ?.addEventListener('click', () => this._megerositoLevelKerese());
 
     // Lokáció autocomplete — ugyanaz a segéd, mint a regisztrációs űrlapon
     autocompleteRakotese('beallitasok-orszag',    'lokacio/orszag');
@@ -117,6 +119,9 @@ class EemberBeallitasokModal {
       this._mezoErtek('beallitasok-orszag',    adatok?.lokacio?.orszag ?? '');
       this._mezoErtek('beallitasok-regio',     adatok?.lokacio?.regio ?? '');
       this._mezoErtek('beallitasok-telepules', adatok?.lokacio?.telepules ?? '');
+
+      // Az e-mail cím állapota (megerősítve / megerősítésre vár)
+      this._emailAllapotFrissitese(adatok?.email ?? '', adatok?.emailMegerositve === true);
 
       console.log('EemberBeallitasokModal._adatokBetoltese - VÉGE');
     } catch (hiba) {
@@ -174,6 +179,12 @@ class EemberBeallitasokModal {
       // A mostani e-mail lesz az új „eredeti" — így egy azonnali második mentés
       // már nem küldi el újra fölöslegesen ugyanazt.
       this._eredetiEmail = email;
+
+      // Az e-mail állapotának újraértékelése: ha a cím VÁLTOZOTT, a backend elvette a
+      // megerősítést (az új címről semmit nem tudunk), és most újra fel kell kínálnunk
+      // a megerősítő gombot.
+      this._emailAllapotFrissitese(email, valasz?.eember?.emailMegerositve === true);
+      this._sikerUzenet('beallitasok-email-siker', '');
 
       this._sikerUzenet('beallitasok-profil-siker', '✅ Mentve');
       if (typeof this.onValtozas === 'function') this.onValtozas();
@@ -262,6 +273,90 @@ class EemberBeallitasokModal {
       console.error('EemberBeallitasokModal._fiokTorles - HIBA', hiba.message);
       this.modal.betoltesBeallitasa(false);
       this.modal.hibaBeallitasa(hiba.message ?? 'A fiók törlése sikertelen.');
+    }
+  }
+
+  // ===== AZ E-MAIL CÍM ÁLLAPOTÁNAK MEGJELENÍTÉSE =====
+  // Három eset:
+  //   1. nincs cím        → nem mutatunk semmit (nincs mit megerősíteni)
+  //   2. megerősítve      → nyugtázó sor, gomb nélkül
+  //   3. nincs megerősítve→ FIGYELMEZTETÉS + „Cím megerősítése" gomb
+  //
+  // A 3. esetben a figyelmeztetés szándékosan konkrét: enélkül keletkezhet egy
+  // ZSÁKUTCA — aki elfelejti a jelszavát ÉS nincs megerősítve a címe, az nem tud
+  // belépni, és megerősíteni sem tud (ahhoz be kellene lépnie). Ezt csak megelőzni
+  // lehet, utólag orvosolni nem.
+  // @param {string} email - a mostani cím ('' ha nincs)
+  // @param {boolean} megerositve - meg van-e erősítve
+  _emailAllapotFrissitese(email, megerositve) {
+    console.log('EemberBeallitasokModal._emailAllapotFrissitese - KEZDÉS', { megerositve });
+
+    const allapotElem = document.getElementById('beallitasok-email-allapot');
+    const gomb        = document.getElementById('beallitasok-email-megerosites');
+    if (!allapotElem || !gomb) return;
+
+    // 1. eset: nincs cím
+    if (!email) {
+      allapotElem.hidden = true;
+      gomb.hidden        = true;
+      console.log('EemberBeallitasokModal._emailAllapotFrissitese - VÉGE (nincs cím)');
+      return;
+    }
+
+    allapotElem.hidden = false;
+
+    if (megerositve) {
+      // 2. eset: megerősítve
+      allapotElem.textContent = '✅ Ez a cím megerősítve.';
+      allapotElem.className   = 'eember-beallitasok-modal__email-allapot eember-beallitasok-modal__email-allapot--megerositve';
+      gomb.hidden             = true;
+    } else {
+      // 3. eset: megerősítésre vár
+      allapotElem.textContent = '⚠️ Ez a cím nincs megerősítve — így nem küldünk rá értesítést, '
+        + 'és elfelejtett jelszó esetén sem tudunk segíteni.';
+      allapotElem.className   = 'eember-beallitasok-modal__email-allapot eember-beallitasok-modal__email-allapot--var';
+      gomb.hidden             = false;
+      gomb.disabled           = false;
+      gomb.textContent        = 'Cím megerősítése';
+    }
+
+    console.log('EemberBeallitasokModal._emailAllapotFrissitese - VÉGE');
+  }
+
+  // ===== MEGERŐSÍTŐ LEVÉL KÉRÉSE =====
+  // A „Cím megerősítése" gomb. EZ A GOMBNYOMÁS a felhatalmazás a levél kiküldésére —
+  // a koino magától soha nem küld levelet.
+  async _megerositoLevelKerese() {
+    console.log('EemberBeallitasokModal._megerositoLevelKerese - KEZDÉS');
+
+    this.modal.hibaTisztitasa();
+    this._sikerUzenet('beallitasok-email-siker', '');
+
+    const gomb = document.getElementById('beallitasok-email-megerosites');
+    if (gomb) {
+      gomb.disabled    = true;
+      gomb.textContent = 'Küldés…';
+    }
+
+    try {
+      const valasz = await apiPost('eember/email-megerosites-keres', {}, this.token);
+
+      this._sikerUzenet('beallitasok-email-siker', valasz?.message ?? '✅ Elküldve');
+
+      // A gomb marad látható (újraküldhető, ha nem érkezne meg a levél)
+      if (gomb) {
+        gomb.disabled    = false;
+        gomb.textContent = 'Levél újraküldése';
+      }
+
+      console.log('EemberBeallitasokModal._megerositoLevelKerese - VÉGE (siker)');
+    } catch (hiba) {
+      console.error('EemberBeallitasokModal._megerositoLevelKerese - HIBA', hiba.message);
+      this.modal.hibaBeallitasa(hiba.message ?? 'A megerősítő levél küldése sikertelen.');
+      if (gomb) {
+        gomb.disabled    = false;
+        gomb.textContent = 'Cím megerősítése';
+      }
     }
   }
 

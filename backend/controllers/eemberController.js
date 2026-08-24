@@ -4,6 +4,9 @@
 // Service: üzleti logika kezelése
 const eEmberService = require('../services/eemberService');
 
+// E-mail cím megerősítése (2. lépés): megerősítő levél küldése + a hivatkozás beváltása
+const emailMegerositesService = require('../services/emailMegerositesService');
+
 // ===== EEMBER CONTROLLER OSZTÁLY =====
 // Ez a réteg kezeli a HTTP kéréseket és válaszokat
 // Feladata: kérés fogadása → service hívás → válasz küldése
@@ -106,6 +109,9 @@ class eEmberController {
         eemberNev:  adatok.eemberNev,   // Eembernév a sávhoz
         nev:        adatok.nev,          // Valódi név
         email:      adatok.email,        // Saját e-mail (beállítások modalhoz)
+        // Meg van-e erősítve a cím — ebből mutatja a beállítások képernyő az
+        // állapotot és dönti el, kell-e a „Cím megerősítése" gomb.
+        emailMegerositve: adatok.emailMegerositve,
         lokacio:    adatok.lokacio,      // Ország / régió / település
         tudatpontok: adatok.tudatpontok  // Aktuális egyenleg
       });
@@ -184,6 +190,62 @@ class eEmberController {
     } catch (error) {
       console.error('eEmberController.eemberTorlese - VÉGE (hiba)', { hiba: error.message });
       res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // ===== MEGERŐSÍTŐ LEVÉL KÉRÉSE =====
+  // A bejelentkezett e-ember a beállításokban a „Cím megerősítése" gombbal kérte.
+  // EZ A KÉRÉS maga a felhatalmazás a levél kiküldésére — a koino magától nem küld.
+  // POST /api/eember/email-megerosites-keres
+  // @param {Object} req - Express request (req.user az authMiddleware-től)
+  // @param {Object} res - Express response
+  async emailMegerositesKeres(req, res) {
+    console.log('eEmberController.emailMegerositesKeres - KEZDÉS', { eemberId: req.user?.id });
+    try {
+      const eredmeny = await emailMegerositesService.megerositoLevelKuldese(req.user.id);
+
+      res.status(200).json({
+        success: true,
+        kuldve:  eredmeny.kuldve,
+        message: eredmeny.uzenet
+      });
+
+      console.log('eEmberController.emailMegerositesKeres - VÉGE (siker)', {
+        eemberId: req.user?.id, kuldve: eredmeny.kuldve
+      });
+    } catch (error) {
+      console.error('eEmberController.emailMegerositesKeres - VÉGE (hiba)', { hiba: error.message });
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // ===== MEGERŐSÍTŐ HIVATKOZÁS BEVÁLTÁSA =====
+  // A levélben lévő hivatkozás megnyitásakor a frontend hívja.
+  // NYILVÁNOS végpont (nincs authMiddleware): a levelet más gépen, más böngészőben is
+  // megnyithatja az e-ember, ahol nincs bejelentkezve. A biztonságot a token
+  // kitalálhatatlansága adja (32 bájt véletlen), nem a bejelentkezés.
+  // GET /api/eember/email-megerosites/:token
+  // @param {Object} req - Express request (params: token)
+  // @param {Object} res - Express response
+  async emailMegerositesBevaltas(req, res) {
+    console.log('eEmberController.emailMegerositesBevaltas - KEZDÉS');
+    try {
+      const eredmeny = await emailMegerositesService.tokenBevaltasa(req.params.token);
+
+      // A sikertelen beváltás sem SZERVERHIBA: a hivatkozás lehet lejárt vagy már
+      // felhasznált. 200-zal válaszolunk, a `sikeres` mező hordozza az eredményt —
+      // így a frontend emberi üzenetet tud mutatni, nem hibaképernyőt.
+      res.status(200).json({
+        success:   true,
+        sikeres:   eredmeny.sikeres,
+        message:   eredmeny.uzenet,
+        eemberNev: eredmeny.eemberNev ?? null
+      });
+
+      console.log('eEmberController.emailMegerositesBevaltas - VÉGE', { sikeres: eredmeny.sikeres });
+    } catch (error) {
+      console.error('eEmberController.emailMegerositesBevaltas - VÉGE (hiba)', { hiba: error.message });
+      res.status(500).json({ success: false, message: 'Szerver hiba a megerősítés során' });
     }
   }
 
