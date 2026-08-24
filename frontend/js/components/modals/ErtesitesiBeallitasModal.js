@@ -138,6 +138,14 @@ class ErtesitesiBeallitasModal {
       mezokKontener.innerHTML = this._checkboxokHtml();
     }
 
+    // E-mailes kézbesítés kapcsolója — CSAK globális módban (az egész fiókra vonatkozik,
+    // nem egy ágra). Entitás-szintű beállításnál a szakasz rejtve marad.
+    if (this.globalis) {
+      const emailSzakasz = document.getElementById('ertesites-email-szakasz');
+      if (emailSzakasz) emailSzakasz.hidden = false;
+      await this._emailAllapotBetoltese();
+    }
+
     // A „Tudatpont-változás” pipa be/ki kapcsolása engedélyezi/tiltja a küszöb-mezőket
     const tvCheckbox = this.modal.panel?.querySelector('input[value="tudatpontValtozas"]');
     if (tvCheckbox) {
@@ -258,6 +266,7 @@ class ErtesitesiBeallitasModal {
         this._checkboxokBeallitasa(adatok.ertesitesTipusok ?? []);
         this._tudatpontKuszobokBeallitasa(adatok.tudatpontKuszobok);
         this._tudatpontSzuroBeallitasa(adatok.tudatpontSzuro);
+        this._emailKapcsoloBeallitasa(adatok.emailErtesites);
         this._tudatpontPanelFrissitese();
 
         const infoElem = document.getElementById('ertesites-beallitas-info');
@@ -328,6 +337,64 @@ class ErtesitesiBeallitasModal {
   _orokoltGombLathatosaga(lathato) {
     const gomb = document.getElementById('ertesites-beallitas-orokolt-gomb');
     if (gomb) gomb.style.display = lathato ? '' : 'none';
+  }
+
+  // ===== E-MAILES KÉZBESÍTÉS: ÁLLAPOT BETÖLTÉSE =====
+  // Megnézi, van-e MEGERŐSÍTETT e-mail cím. Ha nincs, a kapcsolót letiltjuk és
+  // megmondjuk, miért — enélkül az e-ember bekapcsolná, aztán értetlenül várná a
+  // leveleket, amik sosem jönnének meg (a levél-kapu megerősítetlen címre nem küld).
+  async _emailAllapotBetoltese() {
+    console.log('ErtesitesiBeallitasModal._emailAllapotBetoltese - KEZDÉS');
+
+    const kapcsolo      = document.getElementById('ertesites-email-kapcsolo');
+    const figyelmeztetes = document.getElementById('ertesites-email-figyelmeztetes');
+    if (!kapcsolo) return;
+
+    try {
+      const adatok = await apiGet('eember/sajat-adatok', this.token);
+
+      const vanCim      = !!adatok?.email;
+      const megerositve = adatok?.emailMegerositve === true;
+
+      if (!vanCim) {
+        kapcsolo.disabled = true;
+        kapcsolo.checked  = false;
+        if (figyelmeztetes) {
+          figyelmeztetes.hidden = false;
+          figyelmeztetes.textContent =
+            'Ehhez előbb meg kell adnod egy e-mail címet a fő menü → eember beállítások alatt.';
+        }
+      } else if (!megerositve) {
+        kapcsolo.disabled = true;
+        kapcsolo.checked  = false;
+        if (figyelmeztetes) {
+          figyelmeztetes.hidden = false;
+          figyelmeztetes.textContent =
+            'Az e-mail címed még nincs megerősítve. Erősítsd meg a fő menü → eember '
+            + 'beállítások alatt, utána kapcsolható be.';
+        }
+      } else {
+        kapcsolo.disabled = false;
+        if (figyelmeztetes) figyelmeztetes.hidden = true;
+      }
+
+      console.log('ErtesitesiBeallitasModal._emailAllapotBetoltese - VÉGE', { vanCim, megerositve });
+    } catch (hiba) {
+      console.error('ErtesitesiBeallitasModal._emailAllapotBetoltese - HIBA', hiba.message);
+      kapcsolo.disabled = true;
+    }
+  }
+
+  // ===== E-MAILES KÉZBESÍTÉS: PIPA KITÖLTÉSE / KIOLVASÁSA =====
+  _emailKapcsoloBeallitasa(ertek) {
+    const kapcsolo = document.getElementById('ertesites-email-kapcsolo');
+    // A `disabled` állapotot NEM írjuk felül: azt a cím-ellenőrzés döntötte el.
+    if (kapcsolo && !kapcsolo.disabled) kapcsolo.checked = ertek === true;
+  }
+
+  _emailKapcsoloErteke() {
+    const kapcsolo = document.getElementById('ertesites-email-kapcsolo');
+    return kapcsolo?.checked === true;
   }
 
   // ===== TUDATPONT-SZŰRŐ PIPA: KITÖLTÉS =====
@@ -430,7 +497,14 @@ class ErtesitesiBeallitasModal {
       if (this.globalis) {
         // Globális alapbeállítás mentése (fő menü)
         await apiPut('ertesitesi-beallitasok/globalis',
-          { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro }, this.token);
+          {
+            ertesitesTipusok,
+            tudatpontKuszobok,
+            tudatpontSzuro,
+            // E-mailes kézbesítés (4. lépés). FONTOS: a mentés a teljes alapbeállítást
+            // lecseréli, ezért ezt is minden mentéskor küldeni kell.
+            emailErtesites: this._emailKapcsoloErteke()
+          }, this.token);
       } else {
         // Csomóponti beállítás mentése (mindig saját rekord → fixálás)
         await apiPut('ertesitesi-beallitasok', {

@@ -3952,7 +3952,7 @@ bekapcsolásához — külön gomb kell rá a beállításokban, és látható f
 | 1 | Levél-kapu + sablon-keret + próba-eszköz (dev-napló mód) | ✅ KÉSZ (`6741905`) |
 | 2 | Cím-megerősítés (modell, végpontok, beállítások-képernyő) | ✅ KÉSZ (`85b5535`) |
 | 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | ✅ KÉSZ |
-| 4 | Értesítés e-mailben — AZONNALI mód | — |
+| 4 | Értesítés e-mailben — AZONNALI mód | ✅ KÉSZ |
 | 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | — |
 | 6 | Dokumentáció + megismerés-leírás + CHANGELOG | — |
 

@@ -1998,3 +1998,43 @@ Fejlesztői környezetben a levél a naplóba megy — a hivatkozás így olvash
 73. ⬜ **Jelszóváltás a beállításokban (VÁLTOZOTT):** a beállításokban jelszót váltva
     a jelenlegi munkamenet **megmarad** (a szerver friss tokent ad), de a többi eszköz
     kijelentkezik. Az üzenet erre figyelmeztet is.
+
+---
+
+## E-mail: értesítés levélben — AZONNALI mód (2026-08-24, a 4. lépés)
+
+*Ez a lépés NEM dönti el, ki kap értesítést — azt a meglévő értesítés-rendszer teszi.
+Csak azt adja hozzá, hogy a MÁR ELDÖNTÖTT értesítés levélben is kimenjen annak, aki ezt
+kérte. Fejlesztői környezetben a levél a naplóba megy.*
+
+**A kapcsoló helye:** fő menü → **Értesítési beállítások** (a GLOBÁLIS ablak alján).
+Az entitás-szintű (kártya-menüs) ablakban szándékosan NEM jelenik meg: ez az egész
+fiókra vonatkozik, nem egy ágra.
+
+**HÁROM feltétel kell a levélhez, mind:** (1) az e-ember bekapcsolta · (2) a címe
+**megerősített** · (3) az értesítés még nem ment ki levélben (`emailKikuldve`).
+
+74. ⬜ **A kapcsoló csak globálisan látszik:** nyisd meg a fő menüs *Értesítési
+    beállítások*-at → alul ott az *„E-mailben is kérem az értesítéseket"*. Nyisd meg
+    egy kártya menüjéből ugyanezt → ott **nincs** ilyen szakasz.
+
+75. ⬜ **Megerősítetlen címnél tiltott:** ha a címed nincs megerősítve, a kapcsoló
+    **szürke (nem kapcsolható)**, alatta piros magyarázat, hogy hol erősítheted meg.
+    Cím nélkül ugyanígy, más szöveggel. Ez szándékos: enélkül bekapcsolná, aztán
+    hiába várná a leveleket.
+
+76. ⬜ **Be- és kikapcsolás megmarad:** kapcsold be, ments, nyisd meg újra → bekapcsolva
+    marad. Ellenpróba: kapcsold ki, ments → kikapcsolva marad, és a fenti
+    eseménytípus-pipák **nem vesznek el** (a mentés a teljes alapbeállítást cseréli).
+
+77. ⬜ 🔴 **A levél tényleg kimegy:** kapcsold be, majd válts ki egy olyan eseményt,
+    amire fel vagy iratkozva (pl. hozz létre egy tartalmat egy figyelt entitás alá egy
+    MÁSIK e-emberrel). A naplóban megjelenik a levél, tárgya a felülettel egyező
+    megnevezéssel: `koino — Új tartalom jött létre — <entitás címe>`.
+
+78. ⬜ **Alapból NEM megy semmi:** egy olyan e-embernél, aki NEM kapcsolta be, ugyanez
+    az esemény felületi értesítést ad, de **levelet nem**. (Service-szinten mérve:
+    `emailKikuldve` false marad.)
+
+79. ⬜ **Nem megy ki kétszer:** ugyanaz az értesítés csak egyszer küldhető ki
+    (`emailKikuldve: true` a sikeres küldés után).

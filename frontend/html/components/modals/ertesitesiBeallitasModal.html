@@ -34,4 +34,26 @@
     </span>
   </label>
 
+  <!-- E-MAILES KÉZBESÍTÉS: csak a GLOBÁLIS (fő menüs) módban látszik, mert ez az egész
+       fiókra vonatkozik, nem egy ágra. A JS mutatja meg globális módban.
+       A koino magától soha nem küld levelet — EZ A KAPCSOLÓ maga a kérés. -->
+  <div class="ertesitesi-beallitas-modal__email" id="ertesites-email-szakasz" hidden>
+
+    <label class="ertesitesi-beallitas-modal__sor">
+      <input type="checkbox" id="ertesites-email-kapcsolo" class="ertesitesi-beallitas-modal__pipa">
+      <span class="ertesitesi-beallitas-modal__szoveg">
+        <span class="ertesitesi-beallitas-modal__felirat">E-mailben is kérem az értesítéseket</span>
+        <span class="ertesitesi-beallitas-modal__magyarazat">
+          Ugyanazokról az eseményekről, amiket fent kipipáltál — csak levélben is.
+          Bármikor kikapcsolhatod itt.
+        </span>
+      </span>
+    </label>
+
+    <!-- Figyelmeztetés, ha nincs megerősített e-mail cím (a JS tölti ki) -->
+    <p class="ertesitesi-beallitas-modal__email-figyelmeztetes"
+       id="ertesites-email-figyelmeztetes" hidden></p>
+
+  </div>
+
 </div>

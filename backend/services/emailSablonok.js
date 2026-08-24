@@ -207,6 +207,58 @@ function jelszoHelyreallitoLevel({ eemberNev, link }) {
   return { targy: 'koino — új jelszó beállítása', szoveg, html };
 }
 
+// ===== ESEMÉNYTÍPUS → EMBERI SZÖVEG =====
+// SZÁNDÉKOSAN UGYANAZOK a megnevezések, mint a felületi értesítés-listában
+// (frontend ErtesitesekModal.js TIPUS_SZOVEG). Ha a kettő szétcsúszna, ugyanarról az
+// eseményről más nevet olvasna az e-ember a levélben, mint a koinóban — ezért ha ott
+// változik egy felirat, ITT is át kell vezetni.
+const ERTESITES_TIPUS_SZOVEG = {
+  ujJavaslat:        'Új javaslat',
+  javaslatElfogadas: 'Javaslat elfogadva',
+  javaslatElvetve:   'Javaslat elvetve',
+  szavazatErkezett:  'Szavazat érkezett',
+  szavazasiHatarido: 'Szavazási határidő közeleg',
+  tudatpontValtozas: 'Tudatpont-változás',
+  ujGyerekEntitas:   'Új tartalom jött létre',
+  kuszobValtozas:    'Küszöbváltozás',
+};
+
+// ===== SEGÉD: EGY ÉRTESÍTÉS EMBERI SORA =====
+// „Új javaslat — A közösségi költségvetésről" alakban. Ha az entitásnak nincs címe
+// (Javaslat/Egyezmény), csak az eseménytípus marad.
+// @param {Object} ertesites - { tipus, entitasCim }
+// @returns {string} az emberi sor
+function ertesitesSor(ertesites) {
+  const tipusSzoveg = ERTESITES_TIPUS_SZOVEG[ertesites?.tipus] ?? 'Értesítés';
+  const cim = ertesites?.entitasCim;
+  return cim ? `${tipusSzoveg} — ${cim}` : tipusSzoveg;
+}
+
+// ===== SABLON: EGYETLEN ÉRTESÍTÉS (AZONNALI MÓD) =====
+// Akkor megy ki, ha az e-ember bekapcsolta az e-mailes értesítést, és minden eseményt
+// azonnal kér. A levél SZÁNDÉKOSAN rövid: a részletek a koinóban vannak, ide csak
+// annyi kell, hogy tudja, érdemes-e most megnézni.
+// @param {Object} adatok
+// @param {string} adatok.eemberNev - a címzett
+// @param {Object} adatok.ertesites - { tipus, entitasCim }
+// @param {string} adatok.link      - a koino címe
+// @returns {Object} { targy, szoveg, html }
+function ertesitesLevel({ eemberNev, ertesites, link }) {
+  const sor = ertesitesSor(ertesites);
+
+  const { szoveg, html } = keret({
+    cim: sor,
+    bekezdesek: [
+      `Szia ${eemberNev}!`,
+      `Történt valami a koinóban, amire feliratkoztál: ${sor}`,
+    ],
+    gomb: { szoveg: 'Megnézem a koinóban', link },
+    indok: 'ertesites',
+  });
+
+  return { targy: `koino — ${sor}`, szoveg, html };
+}
+
 // ===== SABLON: PRÓBALEVÉL =====
 // A tools/emailProba.js használja. Nem e-embernek szól: azt ellenőrzi, hogy a
 // beállított szolgáltató valóban kézbesít-e (és hogy a feladó-domain rendben van-e).
@@ -232,6 +284,9 @@ module.exports = {
   keret,                   // A közös keret — minden további sablon ezen át készül
   megerositoLevel,         // 2. lépés: az e-mail cím igazolása
   jelszoHelyreallitoLevel, // 3. lépés: elfelejtett jelszó
+  ertesitesLevel,          // 4. lépés: egyetlen értesítés (azonnali mód)
+  ertesitesSor,            // Segéd — az 5. lépés összefoglalója is ezt használja majd
+  ERTESITES_TIPUS_SZOVEG,
   probaLevel,       // 1. lépés: a levélküldés ellenőrzése
   htmlBiztonsagos,  // Segéd a további sablonokhoz (entitás-címek beillesztéséhez)
   LAB_SZOVEGEK,

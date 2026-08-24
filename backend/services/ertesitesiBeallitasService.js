@@ -306,6 +306,8 @@ const globalisBeallitasLekereses = async (eEmberId) => {
     ertesitesTipusok: alap.ertesitesTipusok ?? [],
     tudatpontKuszobok: normalizaltKuszobok(alap.tudatpontKuszobok),
     tudatpontSzuro: alap.tudatpontSzuro === true,
+    // E-mailes kézbesítés kapcsolója (4. lépés) — alapból ki
+    emailErtesites: alap.emailErtesites === true,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasLekereses - VEGE', { eredmeny });
@@ -321,7 +323,14 @@ const globalisBeallitasLekereses = async (eEmberId) => {
 const globalisBeallitasMentese = async (eEmberId, adatok) => {
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - KEZDET', { eEmberId, adatok });
 
-  const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro } = adatok;
+  const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, emailErtesites } = adatok;
+
+  // FIGYELEM: ez a mentés a TELJES `ertesitesiAlapbeallitas` objektumot lecseréli.
+  // Emiatt MINDEN almezőt fel kell itt sorolni — ami kimarad, az a mentéssel TÖRLŐDNE.
+  // Az `emailErtesites`-nél ezért `?? a mostani érték`: ha a hívó nem küldi (pl. egy
+  // régebbi kliens vagy egy másik képernyő ment), a kapcsoló NE billenjen vissza magától.
+  const jelenlegi = await eEmber.findById(eEmberId).select('ertesitesiAlapbeallitas');
+  const jelenlegiEmail = jelenlegi?.ertesitesiAlapbeallitas?.emailErtesites === true;
 
   const eember = await eEmber
     .findByIdAndUpdate(
@@ -331,6 +340,7 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
           ertesitesTipusok: ertesitesTipusok || [],
           tudatpontKuszobok: normalizaltKuszobok(tudatpontKuszobok),
           tudatpontSzuro: tudatpontSzuro === true,
+          emailErtesites: (emailErtesites === undefined) ? jelenlegiEmail : (emailErtesites === true),
         },
       },
       { new: true, runValidators: true }
@@ -342,6 +352,7 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
     ertesitesTipusok: alap.ertesitesTipusok ?? [],
     tudatpontKuszobok: normalizaltKuszobok(alap.tudatpontKuszobok),
     tudatpontSzuro: alap.tudatpontSzuro === true,
+    emailErtesites: alap.emailErtesites === true,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - VEGE', { eredmeny });

@@ -175,6 +175,24 @@ ertesitesiAlapbeallitas: {
   // TUDATPONT-TULAJDONOSSÁGI SZŰRŐ globális szinten: ha true, csak akkor jön értesítés,
   // ha az esemény entitásán van saját tudatpont (Egyezmeny-eseményre nem vonatkozik).
   // Ugyanaz a szabály, mint a csomóponti beállításban (ertesitesiBeallitas.tudatpontSzuro).
+  // ----- E-MAILES ÉRTESÍTÉS (opt-in kapcsoló) -----
+  // Ha true, az e-ember a felületi értesítéseket LEVÉLBEN is megkapja.
+  //
+  // ALAPBÓL FALSE, és ez szándékos: a koino magától soha nem küld levelet. Ez a
+  // kapcsoló maga a kérés — amíg az e-ember be nem kapcsolja, semmi nem megy ki.
+  // A meglévő e-emberek mind false-ról indulnak, tehát visszamenőleg senki nem kap
+  // semmit (ők még az „e-mailt sosem küldünk rá" ígéret mellett adták meg a címüket).
+  //
+  // A bekapcsolás önmagában NEM elég: a levél-kapu megerősítetlen címre akkor sem küld
+  // (lásd emailKuldoService.kuldesEemberNek + eember.emailMegerositve).
+  //
+  // Csak azokra a típusokra jön levél, amikre a felületi értesítés is jár — vagyis ez
+  // nem egy külön feliratkozás-lista, hanem a MEGLÉVŐ értesítéseid KÉZBESÍTÉSI MÓDJA.
+  emailErtesites: {
+    type: Boolean,
+    default: false,
+  },
+
   tudatpontSzuro: {
     type: Boolean,
     default: false,

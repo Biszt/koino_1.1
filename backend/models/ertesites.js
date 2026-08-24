@@ -103,6 +103,17 @@ const ertesitesSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // ===== KIMENT-E MÁR LEVÉLBEN? =====
+    // Az e-mailes kézbesítés nyilvántartása. Két dologra kell:
+    //   - AZONNALI módban: ne menjen ki kétszer ugyanaz (pl. újrapróbálkozásnál),
+    //   - ÖSSZEFOGLALÓ módban (5. lépés): ebből tudjuk, mi kerüljön a következő
+    //     összefoglalóba — minden, ami még nem ment ki.
+    // Ha az e-ember nem kér e-mailes értesítést, ez a mező egyszerűen false marad.
+    emailKikuldve: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     // timestamps: true automatikusan kezeli a createdAt és updatedAt mezőket
@@ -127,6 +138,11 @@ ertesitesSchema.index({ entitasId: 1, entitasTipus: 1 });
 // A tömb-mezőre tett index ún. "multikey index": a lánc MINDEN elemére keresést gyorsít,
 // így a { eEmberId, olvasva, 'osLanc.entitasId': X } lekérdezés (kártya-badge) indexből fut.
 ertesitesSchema.index({ eEmberId: 1, olvasva: 1, 'osLanc.entitasId': 1 });
+
+// INDEX 5: E-mailben még ki nem küldött értesítések egy eEmberhez.
+// Használat: az összefoglaló-küldő (5. lépés) ezzel gyűjti össze, mi kerüljön a
+// következő levélbe. Az időrend a levélen belüli sorrendhez kell.
+ertesitesSchema.index({ eEmberId: 1, emailKikuldve: 1, createdAt: 1 });
 
 // A modell exportálása
 // Az első paraméter ('Ertesites') lesz a MongoDB kollekció neve (kisbetűsítve: ertesites)

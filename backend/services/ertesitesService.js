@@ -171,6 +171,21 @@ const ertesitesKuldes = async (
   // Tömeges mentés – egy adatbázis kérés az összes értesítésnek
   const letrehozottErtesitesek = await ertesitesRepository.tomegesLetrehoz(kuldendoErtesitesek);
 
+  // ===== E-MAILES KÉZBESÍTÉS (4. lépés) =====
+  // A felületi értesítés ezzel készen van. Aki KÉRTE, annak levélben is kimegy.
+  //
+  // SZÁNDÉKOSAN NEM `await`: ez a metódus a szavazás / javaslattétel / tudatpont-mozgatás
+  // közben fut, és a levélküldés egy külső szolgáltató válaszidejétől függ. Ha megvárnánk,
+  // az e-ember kérése annyival lassulna. A háttérben futó küldés hibáit naplózzuk —
+  // ez azért biztonságos, mert a levél-kapu SOHA nem dob hibát (emailKuldoService).
+  //
+  // Késleltetett import: az emailErtesitesService visszahivatkozik ide (a cím-feltöltő
+  // segédért), a fájl tetején kölcsönös betöltés lenne belőle.
+  const emailErtesitesService = require('./emailErtesitesService');
+  emailErtesitesService
+    .azonnaliKezbesites(letrehozottErtesitesek)
+    .catch((hiba) => console.error('ertesitesService - az e-mailes kézbesítés hibája', hiba.message));
+
   console.log('ertesitesService.ertesitesKuldes - VEGE', {
     kuldottDarab: letrehozottErtesitesek.length,
   });

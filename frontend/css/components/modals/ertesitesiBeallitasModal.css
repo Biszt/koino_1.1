@@ -1,5 +1,23 @@
 /* frontend/css/components/modals/ertesitesiBeallitasModal.css */
 
+/* ===== E-MAILES KÉZBESÍTÉS SZAKASZ (csak globális módban) ===== */
+/* Elválasztva a fenti eseménytípus-listától, mert ez nem AZT állítja, MIRŐL kapsz
+   értesítést, hanem hogy HOGYAN kézbesítjük. */
+.ertesitesi-beallitas-modal__email {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border, rgba(127, 127, 127, 0.25));
+}
+
+/* Figyelmeztetés, ha nincs (megerősített) e-mail cím — ilyenkor a kapcsoló tiltott */
+.ertesitesi-beallitas-modal__email-figyelmeztetes {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-6);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-error);
+}
+
 /* Az Értesítési beállítások modal a standard modal-vázra épül (Modal.js).
    Egy entitáson (csomóponton) állítja be az e-ember, mely eseményekről kér
    értesítést. A beállítás a szülőkön felfelé öröklődik. */
