@@ -3953,7 +3953,7 @@ bekapcsolásához — külön gomb kell rá a beállításokban, és látható f
 | 2 | Cím-megerősítés (modell, végpontok, beállítások-képernyő) | ✅ KÉSZ (`85b5535`) |
 | 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | ✅ KÉSZ |
 | 4 | Értesítés e-mailben — AZONNALI mód | ✅ KÉSZ |
-| 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | — |
+| 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | ✅ KÉSZ |
 | 6 | Dokumentáció + megismerés-leírás + CHANGELOG | — |
 
 ### Ami az 1–3. lépés közben eldőlt (a terven felül)

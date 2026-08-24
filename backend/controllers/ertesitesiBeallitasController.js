@@ -149,13 +149,16 @@ const globalisMentese = async (req, res) => {
     // FIGYELEM: minden almezőt tovább kell adni — a mentés a teljes
     // `ertesitesiAlapbeallitas` objektumot lecseréli, tehát ami itt kimarad, az törlődne.
     // Az `emailErtesites` a 4. lépésben jött (e-mailes kézbesítés kapcsolója).
-    const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, emailErtesites } = req.body;
+    const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, emailErtesites,
+            emailMod, emailOrakoz } = req.body;
 
     const eredmeny = await ertesitesiBeallitasService.globalisBeallitasMentese(req.user.id, {
       ertesitesTipusok,
       tudatpontKuszobok,
       tudatpontSzuro,
       emailErtesites,
+      emailMod,    // 'azonnal' | 'osszefoglalo' (5. lépés)
+      emailOrakoz, // az összefoglaló időköze órában (1–168)
     });
 
     console.log('ertesitesiBeallitasController.globalisMentese - VEGE', { eredmeny });

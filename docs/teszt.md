@@ -2038,3 +2038,51 @@ fiókra vonatkozik, nem egy ágra.
 
 79. ⬜ **Nem megy ki kétszer:** ugyanaz az értesítés csak egyszer küldhető ki
     (`emailKikuldve: true` a sikeres küldés után).
+
+---
+
+## E-mail: ÖSSZEFOGLALÓ mód + állítható időköz (2026-08-24, az 5. lépés)
+
+*Csaba döntése: az e-ember válassza meg az ütemet — minden értesítés azonnal, VAGY
+időközönkénti összefoglaló, és az időköz maga is állítható (1–168 óra).*
+
+**Alapérték: ÖSSZEFOGLALÓ, 24 óránként.** Tudatos: egy aktív e-ember naponta sok
+értesítést kaphat, és ha mind külön levélben menne, az levél-özön lenne.
+
+**A küldő cron 10 percenként fut**, és minden futáskor megnézi, kinél telt le a SAJÁT
+időköze. Így egyetlen ütemezés kiszolgál bármilyen időközt. Kézi futtatás:
+`docker exec koino-backend node -e "require('./jobs/emailOsszefoglaloCronJob').runManual()"`
+
+80. ⬜ **Az ütem-panel csak bekapcsolt e-mailnél látszik:** fő menü → *Értesítési
+    beállítások*. Kapcsold be az e-mailes értesítést → megjelenik a két választás
+    (*Összefoglaló* / *Azonnal*) és az időköz. Kapcsold ki → az egész ütem-panel eltűnik.
+
+81. ⬜ **Az időköz csak összefoglaló módban él:** válaszd az *Azonnal*-t → az időköz-sor
+    **elhalványul és tiltottá válik** (nem tűnik el — hogy lásd, mit kapcsoltál ki).
+    Vissza az *Összefoglaló*-ra → újra állítható.
+
+82. ⬜ **Gyorsválasztók:** az *óránként / 6 óránként / naponta / hetente* gombok
+    beírják a mezőbe az 1 / 6 / 24 / 168 értéket. A mező szabadon is írható
+    (1–168 között; a backend a tartományba húzza a hibás értéket).
+
+83. ⬜ **A beállítás megmarad:** ments, zárd be, nyisd meg újra → a mód és az óraszám
+    ugyanaz. Ellenpróba: a fenti eseménytípus-pipák nem vesznek el.
+
+84. ⬜ 🔴 **Összefoglaló módban NEM jön azonnal levél:** állítsd összefoglalóra, majd
+    válts ki 2-3 értesítést. A naplóban NINCS kimenő levél — az értesítések várakoznak
+    (`emailKikuldve: false`). Ezek a következő esedékes összefoglalóba kerülnek.
+
+85. ⬜ **Az időköz tiszteletben tartása:** a cron csak akkor küld, ha az utolsó
+    összefoglaló óta letelt a beállított óraszám. Ha még sosem ment összefoglaló, a
+    LEGRÉGEBBI várakozó értesítés kora dönt — így a bekapcsolás után nem csap be
+    azonnal egy levél. **Üres összefoglalót sosem küldünk.**
+
+86. ⬜ **A levél tartalma:** egy levél, tárgya `koino — N új értesítésed van`, benne
+    felsorolva az értesítések (ugyanazokkal a megnevezésekkel, mint a felületen).
+    Kiküldés után mind `emailKikuldve: true`, tehát a következő összefoglalóba
+    már nem kerülnek bele.
+
+> **Teszt-buktató:** az értesítés `createdAt` mezője a Mongoose-ban VÁLTOZTATHATATLAN,
+> ezért egy `Ertesites.updateMany({}, { $set: { createdAt } })` csendben nem csinál
+> semmit. Ha „megöregített" értesítésekkel akarod tesztelni az időközt, a natív
+> kollekción kell írni: `Ertesites.collection.updateMany(...)`.

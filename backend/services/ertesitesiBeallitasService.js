@@ -308,6 +308,9 @@ const globalisBeallitasLekereses = async (eEmberId) => {
     tudatpontSzuro: alap.tudatpontSzuro === true,
     // E-mailes kézbesítés kapcsolója (4. lépés) — alapból ki
     emailErtesites: alap.emailErtesites === true,
+    // A kézbesítés üteme (5. lépés) — alapból időközönkénti összefoglaló, 24 óránként
+    emailMod:    alap.emailMod ?? 'osszefoglalo',
+    emailOrakoz: alap.emailOrakoz ?? 24,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasLekereses - VEGE', { eredmeny });
@@ -323,14 +326,25 @@ const globalisBeallitasLekereses = async (eEmberId) => {
 const globalisBeallitasMentese = async (eEmberId, adatok) => {
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - KEZDET', { eEmberId, adatok });
 
-  const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, emailErtesites } = adatok;
+  const { ertesitesTipusok, tudatpontKuszobok, tudatpontSzuro, emailErtesites,
+          emailMod, emailOrakoz } = adatok;
 
   // FIGYELEM: ez a mentés a TELJES `ertesitesiAlapbeallitas` objektumot lecseréli.
   // Emiatt MINDEN almezőt fel kell itt sorolni — ami kimarad, az a mentéssel TÖRLŐDNE.
   // Az `emailErtesites`-nél ezért `?? a mostani érték`: ha a hívó nem küldi (pl. egy
   // régebbi kliens vagy egy másik képernyő ment), a kapcsoló NE billenjen vissza magától.
   const jelenlegi = await eEmber.findById(eEmberId).select('ertesitesiAlapbeallitas');
-  const jelenlegiEmail = jelenlegi?.ertesitesiAlapbeallitas?.emailErtesites === true;
+  const jelenlegiAlap   = jelenlegi?.ertesitesiAlapbeallitas ?? {};
+  const jelenlegiEmail  = jelenlegiAlap.emailErtesites === true;
+  const jelenlegiMod    = jelenlegiAlap.emailMod ?? 'osszefoglalo';
+  const jelenlegiOrakoz = jelenlegiAlap.emailOrakoz ?? 24;
+
+  // Az időköz épeszű határok közé szorítása: a séma is validál (1–168), de a hibás
+  // értéket itt inkább a tartományba húzzuk, mint hogy az egész mentés elbukjon egy
+  // elgépelt szám miatt.
+  const tisztitottOrakoz = (emailOrakoz === undefined || emailOrakoz === null || emailOrakoz === '')
+    ? jelenlegiOrakoz
+    : Math.min(168, Math.max(1, Math.round(Number(emailOrakoz)) || jelenlegiOrakoz));
 
   const eember = await eEmber
     .findByIdAndUpdate(
@@ -341,6 +355,8 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
           tudatpontKuszobok: normalizaltKuszobok(tudatpontKuszobok),
           tudatpontSzuro: tudatpontSzuro === true,
           emailErtesites: (emailErtesites === undefined) ? jelenlegiEmail : (emailErtesites === true),
+          emailMod:    (emailMod === 'azonnal' || emailMod === 'osszefoglalo') ? emailMod : jelenlegiMod,
+          emailOrakoz: tisztitottOrakoz,
         },
       },
       { new: true, runValidators: true }
@@ -353,6 +369,8 @@ const globalisBeallitasMentese = async (eEmberId, adatok) => {
     tudatpontKuszobok: normalizaltKuszobok(alap.tudatpontKuszobok),
     tudatpontSzuro: alap.tudatpontSzuro === true,
     emailErtesites: alap.emailErtesites === true,
+    emailMod:       alap.emailMod ?? 'osszefoglalo',
+    emailOrakoz:    alap.emailOrakoz ?? 24,
   };
 
   console.log('ertesitesiBeallitasService.globalisBeallitasMentese - VEGE', { eredmeny });

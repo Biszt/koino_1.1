@@ -143,6 +143,7 @@ class ErtesitesiBeallitasModal {
     if (this.globalis) {
       const emailSzakasz = document.getElementById('ertesites-email-szakasz');
       if (emailSzakasz) emailSzakasz.hidden = false;
+      this._utemVezerlokBekotese();
       await this._emailAllapotBetoltese();
     }
 
@@ -267,6 +268,7 @@ class ErtesitesiBeallitasModal {
         this._tudatpontKuszobokBeallitasa(adatok.tudatpontKuszobok);
         this._tudatpontSzuroBeallitasa(adatok.tudatpontSzuro);
         this._emailKapcsoloBeallitasa(adatok.emailErtesites);
+        this._utemBeallitasa(adatok.emailMod, adatok.emailOrakoz);
         this._tudatpontPanelFrissitese();
 
         const infoElem = document.getElementById('ertesites-beallitas-info');
@@ -397,6 +399,73 @@ class ErtesitesiBeallitasModal {
     return kapcsolo?.checked === true;
   }
 
+  // ===== A KÉZBESÍTÉS ÜTEME (5. lépés) =====
+  // Az ütem-panel csak akkor látszik, ha az e-mailes értesítés BE van kapcsolva —
+  // kikapcsolt állapotban nincs mit ütemezni. Az időköz-mező pedig csak
+  // ÖSSZEFOGLALÓ módban él (azonnali módban nincs értelme).
+  _utemPanelFrissitese() {
+    const bekapcsolva = this._emailKapcsoloErteke();
+    const utemPanel   = document.getElementById('ertesites-email-utem');
+    if (utemPanel) utemPanel.hidden = !bekapcsolva;
+
+    const osszefoglaloE = document.getElementById('ertesites-email-mod-osszefoglalo')?.checked === true;
+    const orakozSor = document.getElementById('ertesites-email-orakoz-sor');
+    if (orakozSor) {
+      // Nem elrejtjük, csak halványítjuk és tiltjuk: így látszik, MI az, amit
+      // az azonnali mód választásával épp kikapcsolt.
+      orakozSor.classList.toggle('ertesitesi-beallitas-modal__orakoz--tiltva', !osszefoglaloE);
+      orakozSor.querySelectorAll('input, button').forEach((el) => { el.disabled = !osszefoglaloE; });
+    }
+  }
+
+  // ----- Az ütem-vezérlők bekötése (egyszer, az init-ben) -----
+  _utemVezerlokBekotese() {
+    document.getElementById('ertesites-email-kapcsolo')
+      ?.addEventListener('change', () => this._utemPanelFrissitese());
+
+    document.getElementsByName('ertesites-email-mod')
+      .forEach?.((r) => r.addEventListener('change', () => this._utemPanelFrissitese()));
+    // A NodeList-nek van forEach-e, de a régi getElementsByName HTMLCollection-t ad —
+    // ezért biztosra megyünk:
+    [...document.querySelectorAll('input[name="ertesites-email-mod"]')]
+      .forEach((r) => r.addEventListener('change', () => this._utemPanelFrissitese()));
+
+    // Gyorsválasztó gombok: beírják az óraszámot a mezőbe
+    document.querySelectorAll('.ertesitesi-beallitas-modal__gyorsvalaszto button')
+      .forEach((gomb) => {
+        gomb.addEventListener('click', () => {
+          const mezo = document.getElementById('ertesites-email-orakoz');
+          if (mezo) mezo.value = gomb.dataset.orakoz;
+        });
+      });
+  }
+
+  // ----- Az ütem-beállítás kitöltése a betöltött adatokból -----
+  _utemBeallitasa(mod, orakoz) {
+    const modErtek = (mod === 'azonnal') ? 'azonnal' : 'osszefoglalo';
+    const radio = document.getElementById(`ertesites-email-mod-${modErtek}`);
+    if (radio) radio.checked = true;
+
+    const mezo = document.getElementById('ertesites-email-orakoz');
+    if (mezo) mezo.value = orakoz ?? 24;
+
+    this._utemPanelFrissitese();
+  }
+
+  // ----- Az ütem-beállítás kiolvasása mentéshez -----
+  _utemErteke() {
+    const azonnalE = document.getElementById('ertesites-email-mod-azonnal')?.checked === true;
+    const mezoErtek = Number(document.getElementById('ertesites-email-orakoz')?.value);
+
+    return {
+      emailMod: azonnalE ? 'azonnal' : 'osszefoglalo',
+      // Épeszű határok: a backend is szorítja, de itt sem küldünk értelmetlen számot
+      emailOrakoz: Number.isFinite(mezoErtek) && mezoErtek >= 1
+        ? Math.min(168, Math.round(mezoErtek))
+        : 24
+    };
+  }
+
   // ===== TUDATPONT-SZŰRŐ PIPA: KITÖLTÉS =====
   // A „Csak ahol tudatpontom van" pipa beállítása a betöltött (érvényes) állapotból.
   _tudatpontSzuroBeallitasa(ertek) {
@@ -503,7 +572,9 @@ class ErtesitesiBeallitasModal {
             tudatpontSzuro,
             // E-mailes kézbesítés (4. lépés). FONTOS: a mentés a teljes alapbeállítást
             // lecseréli, ezért ezt is minden mentéskor küldeni kell.
-            emailErtesites: this._emailKapcsoloErteke()
+            emailErtesites: this._emailKapcsoloErteke(),
+            // A kézbesítés üteme (5. lépés): mód + az összefoglaló időköze
+            ...this._utemErteke()
           }, this.token);
       } else {
         // Csomóponti beállítás mentése (mindig saját rekord → fixálás)

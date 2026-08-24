@@ -72,6 +72,16 @@ tokenVerzio: {
   default: 0
 },
 
+// ----- AZ UTOLSÓ ÖSSZEFOGLALÓ IDŐPONTJA -----
+// ÜZEMI mező (nem beállítás): ebből tudja a küldő cron, kinél telt le az időköz.
+// null = még sosem ment összefoglaló; ilyenkor a LEGRÉGEBBI kiküldetlen értesítés
+// kora dönti el, esedékes-e — így a bekapcsolás után nem jön azonnal egy levél,
+// és nem is kell külön „első" logika.
+emailOsszefoglaloUtoljara: {
+  type: Date,
+  default: null
+},
+
 // ----- JELSZÓ MEZŐ -----
 // FIGYELEM: itt a HASH-elt jelszó tárolódik (bcrypt, ~60 karakter), ezért ez a
 // minlength gyakorlatilag mindig teljesül. A tényleges jelszó-erősség szabályt
@@ -191,6 +201,34 @@ ertesitesiAlapbeallitas: {
   emailErtesites: {
     type: Boolean,
     default: false,
+  },
+
+  // ----- A KÉZBESÍTÉS ÜTEME (Csaba döntése, 2026-08-24) -----
+  // 'azonnal'      : minden értesítésről KÜLÖN levél, rögtön.
+  // 'osszefoglalo' : időközönként EGY levél, benne az azóta keletkezett értesítések.
+  //
+  // Az alapérték az ÖSSZEFOGLALÓ, és ez tudatos: egy aktív e-ember naponta sok
+  // értesítést kaphat (szavazat, tudatpont-változás, új javaslat…), és ha ezek mind
+  // külön levélben mennének, az levél-özön lenne — az pedig leiratkozáshoz vagy
+  // spam-jelöléshez vezet. Aki mindent azonnal akar, átállíthatja.
+  emailMod: {
+    type: String,
+    enum: {
+      values: ['azonnal', 'osszefoglalo'],
+      message: 'Érvénytelen e-mail mód: {VALUE}',
+    },
+    default: 'osszefoglalo',
+  },
+
+  // ----- AZ ÖSSZEFOGLALÓ IDŐKÖZE ÓRÁBAN -----
+  // Csak 'osszefoglalo' módban számít. Szabadon megadható 1 és 168 (= egy hét) között,
+  // hogy mindenki a saját ritmusához igazíthassa — a felület gyorsválasztókat is kínál
+  // (óránként / 6 óránként / naponta / hetente), de a szám bármi lehet a tartományban.
+  emailOrakoz: {
+    type: Number,
+    min: [1, 'Legalább 1 óra'],
+    max: [168, 'Legfeljebb 168 óra (egy hét)'],
+    default: 24,
   },
 
   tudatpontSzuro: {

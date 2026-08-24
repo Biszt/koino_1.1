@@ -188,6 +188,11 @@ console.log('MongoDB kapcsolat sikeres');
 const javaslatCronJob = require('./jobs/javaslatCronJob');
 javaslatCronJob.start();
 
+// E-mail összefoglalók (5. lépés): azoknak, akik időközönkénti összefoglalót kérnek.
+// 10 percenként fut, és csak annak küld, akinél letelt a SAJÁT beállított időköze.
+const emailOsszefoglaloCronJob = require('./jobs/emailOsszefoglaloCronJob');
+emailOsszefoglaloCronJob.start();
+
 app.listen(3000, () => {
 console.log('Szerver fut a 3000-es porton');
 console.log('Elérhető: http://localhost:3000');

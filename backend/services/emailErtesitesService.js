@@ -55,7 +55,7 @@ async function azonnaliKezbesites(ertesitesek) {
 
   const eemberek = await eEmber
     .find({ _id: { $in: eemberIdk } })
-    .select('eemberNev email emailMegerositve ertesitesiAlapbeallitas.emailErtesites');
+    .select('eemberNev email emailMegerositve ertesitesiAlapbeallitas.emailErtesites ertesitesiAlapbeallitas.emailMod');
 
   // Gyors kereséshez: id → e-ember
   const eemberTerkep = new Map(eemberek.map((e) => [String(e._id), e]));
@@ -78,6 +78,14 @@ async function azonnaliKezbesites(ertesitesek) {
 
     // FELTÉTEL 1: kérte-e egyáltalán?
     if (!eember || eember.ertesitesiAlapbeallitas?.emailErtesites !== true) {
+      kihagyott++;
+      continue;
+    }
+
+    // FELTÉTEL 1/b: AZONNALI módot kért-e?
+    // Aki összefoglalót kér, annak ez az értesítés nem most megy ki, hanem a következő
+    // összefoglalóba kerül (az `emailKikuldve: false` jelöléssel várakozik rá).
+    if ((eember.ertesitesiAlapbeallitas?.emailMod ?? 'osszefoglalo') !== 'azonnal') {
       kihagyott++;
       continue;
     }
@@ -119,5 +127,116 @@ async function azonnaliKezbesites(ertesitesek) {
   return { kuldott, kihagyott };
 }
 
+// =============================================
+// ÖSSZEFOGLALÓ KÉZBESÍTÉS (5. lépés)
+// =============================================
+//
+// Egy levél, benne az időszak összes értesítése. A `jobs/emailOsszefoglaloCronJob`
+// hívja rendszeresen.
+//
+// ===== HOGYAN DÖNTJÜK EL, KINEK ESEDÉKES =====
+// Nem külön ütemezünk mindenkinek (az e-emberenként más-más órát jelentene). Helyette
+// a cron sűrűn fut, és MINDEN futáskor megnézi, kinél telt le a saját időköze:
+//
+//   esedékes, ha:  most - (utolsó összefoglaló ideje)  >=  a beállított időköz
+//
+// Ha még sosem ment összefoglaló (`emailOsszefoglaloUtoljara` null), akkor a
+// LEGRÉGEBBI kiküldetlen értesítés kora dönt. Így a bekapcsolás után nem csap be
+// azonnal egy levél, és nem kell külön „első alkalom" logika.
+//
+// Aki mindkét feltételnek megfelel, de nincs kiküldetlen értesítése, az kimarad —
+// ÜRES összefoglalót sosem küldünk.
+
+// ===== ESEDÉKES ÖSSZEFOGLALÓK KÜLDÉSE =====
+// @returns {Promise<Object>} { vizsgalt, kuldott, ertesitesek } — a naplóhoz/teszthez
+async function osszefoglalokKuldese() {
+  console.log('emailErtesitesService.osszefoglalokKuldese - KEZDÉS');
+
+  // ----- 1. LÉPÉS: A SZÓBA JÖHETŐ E-EMBEREK -----
+  // Csak akik e-mailes értesítést kérnek ÉS összefoglaló módban vannak. A megerősítést
+  // itt nem szűrjük — azt a levél-kapu úgyis elvégzi, és így egy helyen marad a szabály.
+  const jeloltek = await eEmber.find({
+    'ertesitesiAlapbeallitas.emailErtesites': true,
+    'ertesitesiAlapbeallitas.emailMod': 'osszefoglalo'
+  }).select('eemberNev email emailMegerositve emailOsszefoglaloUtoljara ertesitesiAlapbeallitas.emailOrakoz');
+
+  console.log('emailErtesitesService.osszefoglalokKuldese - jelöltek', { darab: jeloltek.length });
+
+  const alapUrl = (process.env.PUBLIKUS_URL ?? '').trim().replace(/\/+$/, '');
+  const most = Date.now();
+  let kuldott = 0;
+  let osszesErtesites = 0;
+
+  // A cím-feltöltő segéd (késleltetett import — kölcsönös hivatkozás elkerülése)
+  const { entitasCimekFeltoltese } = require('./ertesitesService');
+
+  for (const eember of jeloltek) {
+    const orakoz = eember.ertesitesiAlapbeallitas?.emailOrakoz ?? 24;
+    const idokozMs = orakoz * 60 * 60 * 1000;
+
+    // ----- 2. LÉPÉS: A KIKÜLDETLEN ÉRTESÍTÉSEI (időrendben) -----
+    const varakozok = await Ertesites
+      .find({ eEmberId: eember._id, emailKikuldve: false })
+      .sort({ createdAt: 1 });
+
+    // ÜRES összefoglalót sosem küldünk
+    if (varakozok.length === 0) continue;
+
+    // ----- 3. LÉPÉS: ESEDÉKES-E? -----
+    // Ha már ment összefoglaló, az utolsó időpontjától mérünk. Ha még sosem,
+    // a legrégebbi várakozó értesítés korától.
+    const kiindulas = eember.emailOsszefoglaloUtoljara
+      ? eember.emailOsszefoglaloUtoljara.getTime()
+      : new Date(varakozok[0].createdAt).getTime();
+
+    if ((most - kiindulas) < idokozMs) continue; // még nem telt le az időköze
+
+    // ----- 4. LÉPÉS: A LEVÉL ÖSSZEÁLLÍTÁSA -----
+    const cimmel = await entitasCimekFeltoltese(varakozok);
+
+    const level = emailSablonok.osszefoglaloLevel({
+      eemberNev:   eember.eemberNev,
+      ertesitesek: cimmel.map((e) => ({ tipus: e.tipus, entitasCim: e.entitasCim })),
+      link:        alapUrl || 'https://koino.hu'
+    });
+
+    const eredmeny = await emailKuldoService.kuldesEemberNek({
+      eember,
+      targy:  level.targy,
+      szoveg: level.szoveg,
+      html:   level.html,
+      indok:  'osszefoglalo'
+    });
+
+    if (eredmeny.sikeres) {
+      // Az összes belefoglalt értesítés kiküldöttre vált — így a következő
+      // összefoglalóba már nem kerülnek bele.
+      await Ertesites.updateMany(
+        { _id: { $in: varakozok.map((e) => e._id) } },
+        { $set: { emailKikuldve: true } }
+      );
+      // És innen számoljuk a következő időközt
+      await eEmber.updateOne(
+        { _id: eember._id },
+        { $set: { emailOsszefoglaloUtoljara: new Date() } }
+      );
+
+      kuldott++;
+      osszesErtesites += varakozok.length;
+
+      console.log('emailErtesitesService.osszefoglalokKuldese - kiküldve', {
+        eemberNev: eember.eemberNev, ertesitesekSzama: varakozok.length, orakoz
+      });
+    }
+    // Ha nem sikerült (pl. nincs megerősítve a cím), SEMMIT nem jelölünk meg:
+    // az értesítések várakoznak tovább, és egy későbbi futásban még kimehetnek.
+  }
+
+  console.log('emailErtesitesService.osszefoglalokKuldese - VÉGE', {
+    vizsgalt: jeloltek.length, kuldott, ertesitesek: osszesErtesites
+  });
+  return { vizsgalt: jeloltek.length, kuldott, ertesitesek: osszesErtesites };
+}
+
 // ===== EXPORTÁLÁS =====
-module.exports = { azonnaliKezbesites };
+module.exports = { azonnaliKezbesites, osszefoglalokKuldese };

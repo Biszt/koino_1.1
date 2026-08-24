@@ -54,6 +54,44 @@
     <p class="ertesitesi-beallitas-modal__email-figyelmeztetes"
        id="ertesites-email-figyelmeztetes" hidden></p>
 
+    <!-- A KÉZBESÍTÉS ÜTEME — csak bekapcsolt e-mailes értesítésnél van értelme,
+         ezért a JS mutatja/rejti a kapcsolóval együtt. -->
+    <div class="ertesitesi-beallitas-modal__utem" id="ertesites-email-utem" hidden>
+
+      <label class="ertesitesi-beallitas-modal__utem-sor">
+        <input type="radio" name="ertesites-email-mod" value="osszefoglalo"
+               id="ertesites-email-mod-osszefoglalo">
+        <span>
+          <strong>Összefoglaló</strong> — egy levél, benne az időszak értesítései
+        </span>
+      </label>
+
+      <!-- Az időköz: gyorsválasztók + szabadon írható óraszám -->
+      <div class="ertesitesi-beallitas-modal__orakoz" id="ertesites-email-orakoz-sor">
+        <span class="ertesitesi-beallitas-modal__orakoz-cimke">Milyen gyakran:</span>
+
+        <input type="number" id="ertesites-email-orakoz" min="1" max="168" step="1"
+               class="ertesitesi-beallitas-modal__orakoz-mezo" aria-label="Összefoglaló időköze órában">
+        <span class="ertesitesi-beallitas-modal__orakoz-egyseg">óránként</span>
+
+        <div class="ertesitesi-beallitas-modal__gyorsvalaszto">
+          <button type="button" data-orakoz="1">óránként</button>
+          <button type="button" data-orakoz="6">6 óránként</button>
+          <button type="button" data-orakoz="24">naponta</button>
+          <button type="button" data-orakoz="168">hetente</button>
+        </div>
+      </div>
+
+      <label class="ertesitesi-beallitas-modal__utem-sor">
+        <input type="radio" name="ertesites-email-mod" value="azonnal"
+               id="ertesites-email-mod-azonnal">
+        <span>
+          <strong>Azonnal</strong> — minden értesítésről külön levél, rögtön
+        </span>
+      </label>
+
+    </div>
+
   </div>
 
 </div>

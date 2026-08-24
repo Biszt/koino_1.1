@@ -259,6 +259,44 @@ function ertesitesLevel({ eemberNev, ertesites, link }) {
   return { targy: `koino — ${sor}`, szoveg, html };
 }
 
+// ===== SABLON: ÖSSZEFOGLALÓ (IDŐKÖZÖNKÉNTI MÓD) =====
+// Egy levél, benne az időszak összes értesítése. A lista SZÁNDÉKOSAN tömör: nem a
+// levélben akarjuk elolvastatni a koinót, csak megmutatni, mi történt, hogy eldönthesse,
+// érdemes-e most benézni.
+//
+// A HTML-változatban a sorok listaelemek; a szöveges változatban „• " jelöléssel — mert
+// ott nincs formázás, viszont a tagolás így is látszik.
+// @param {Object} adatok
+// @param {string} adatok.eemberNev  - a címzett
+// @param {Array}  adatok.ertesitesek- [{ tipus, entitasCim }, …] időrendben
+// @param {string} adatok.link       - a koino címe
+// @returns {Object} { targy, szoveg, html }
+function osszefoglaloLevel({ eemberNev, ertesitesek, link }) {
+  const darab = ertesitesek.length;
+
+  // A tárgy megmondja a lényeget a megnyitás előtt is
+  const targy = (darab === 1)
+    ? 'koino — 1 új értesítésed van'
+    : `koino — ${darab} új értesítésed van`;
+
+  // A sorokat a keret sima szövegként kapja; a felsorolás-jelet itt tesszük ki.
+  const sorok = ertesitesek.map((e) => `• ${ertesitesSor(e)}`);
+
+  const { szoveg, html } = keret({
+    cim: targy.replace('koino — ', ''),
+    bekezdesek: [
+      `Szia ${eemberNev}!`,
+      'A legutóbbi összefoglaló óta ez történt a koinóban, azokon a helyeken, ' +
+      'amiket figyelsz:',
+      ...sorok,
+    ],
+    gomb: { szoveg: 'Megnézem a koinóban', link },
+    indok: 'osszefoglalo',
+  });
+
+  return { targy, szoveg, html };
+}
+
 // ===== SABLON: PRÓBALEVÉL =====
 // A tools/emailProba.js használja. Nem e-embernek szól: azt ellenőrzi, hogy a
 // beállított szolgáltató valóban kézbesít-e (és hogy a feladó-domain rendben van-e).
@@ -285,6 +323,7 @@ module.exports = {
   megerositoLevel,         // 2. lépés: az e-mail cím igazolása
   jelszoHelyreallitoLevel, // 3. lépés: elfelejtett jelszó
   ertesitesLevel,          // 4. lépés: egyetlen értesítés (azonnali mód)
+  osszefoglaloLevel,       // 5. lépés: időközönkénti összefoglaló
   ertesitesSor,            // Segéd — az 5. lépés összefoglalója is ezt használja majd
   ERTESITES_TIPUS_SZOVEG,
   probaLevel,       // 1. lépés: a levélküldés ellenőrzése
