@@ -1,0 +1,119 @@
+<!-- frontend/html/components/jelszoHelyreallitasForm.html -->
+
+<!-- A main.js tölti be ezt a fájlt közvetlenül az #app div-be, KÉT helyzetben:
+     1. KÉRÉS: a bejelentkezésről, az „Elfelejtetted a jelszavad?" linkre.
+     2. ÚJ JELSZÓ: a levélben lévő hivatkozásról érkezve (URL-kapu).
+     Mindkét panel itt van; a JelszoHelyreallitasForm.js mutatja a megfelelőt. -->
+
+<div class="bejelentkezes-oldal">
+
+  <div class="bejelentkezes-kartya">
+
+    <!-- Általános hiba- és állapot-üzenet -->
+    <div
+      class="bejelentkezes-form__altalanos-hiba"
+      id="helyreallitas-uzenet"
+      role="alert"
+      aria-live="polite"
+    ></div>
+
+    <!-- ===== 1. PANEL: HELYREÁLLÍTÁS KÉRÉSE ===== -->
+    <!-- MINDHÁROM panel alapból rejtett, és a JS mutatja meg a helyzethez illőt.
+         Enélkül `ujJelszo` módban ez a panel is ott maradna az új-jelszó űrlap
+         mellett — két űrlap egymás alatt. -->
+    <div id="helyreallitas-keres-panel" hidden>
+
+      <h1 class="bejelentkezes-kartya__cim">Elfelejtett jelszó</h1>
+
+      <p class="helyreallitas-leiras">
+        Add meg az e-embernevedet vagy az e-mail-címedet. Ha tartozik hozzá
+        <strong>megerősített</strong> e-mail cím, küldünk rá egy hivatkozást, amivel új
+        jelszót adhatsz meg.
+      </p>
+
+      <form class="bejelentkezes-form" id="helyreallitas-keres-form" novalidate>
+
+        <div class="form-mezo">
+          <input
+            class="form-mezo__bemenet"
+            type="text"
+            id="helyreallitas-azonosito"
+            name="azonosito"
+            placeholder="Eembernév vagy email"
+            autocomplete="username"
+            autocapitalize="none"
+            aria-label="Eembernév vagy email"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn-bejelentkezes" id="helyreallitas-keres-gomb">
+          Hivatkozás kérése
+        </button>
+
+        <a href="#" id="helyreallitas-vissza-link" class="btn-masodlagos">
+          Vissza a bejelentkezéshez
+        </a>
+
+      </form>
+
+    </div>
+
+    <!-- ===== 2. PANEL: ÚJ JELSZÓ MEGADÁSA ===== -->
+    <!-- Csak a levélben lévő hivatkozásról érkezve látszik -->
+    <div id="helyreallitas-ujjelszo-panel" hidden>
+
+      <h1 class="bejelentkezes-kartya__cim">Új jelszó</h1>
+
+      <p class="helyreallitas-leiras" id="helyreallitas-eember-nev"></p>
+
+      <form class="bejelentkezes-form" id="helyreallitas-ujjelszo-form" novalidate>
+
+        <div class="form-mezo">
+          <input
+            class="form-mezo__bemenet"
+            type="password"
+            id="helyreallitas-uj-jelszo"
+            placeholder="Új jelszó"
+            autocomplete="new-password"
+            aria-label="Új jelszó"
+            required
+          />
+        </div>
+
+        <div class="form-mezo">
+          <input
+            class="form-mezo__bemenet"
+            type="password"
+            id="helyreallitas-uj-jelszo2"
+            placeholder="Új jelszó megerősítése"
+            autocomplete="new-password"
+            aria-label="Új jelszó megerősítése"
+            required
+          />
+        </div>
+
+        <p class="helyreallitas-leiras helyreallitas-leiras--kicsi">
+          Legalább 8 karakter, és tartalmazzon legalább egy betűt és egy számot.
+          A mentés után a korábbi bejelentkezéseid <strong>minden eszközön</strong>
+          megszűnnek.
+        </p>
+
+        <button type="submit" class="btn-bejelentkezes" id="helyreallitas-ujjelszo-gomb">
+          Új jelszó mentése
+        </button>
+
+      </form>
+
+    </div>
+
+    <!-- ===== 3. PANEL: LEZÁRÁS (siker vagy zsákutca) ===== -->
+    <div id="helyreallitas-vege-panel" hidden>
+      <a href="#" id="helyreallitas-bejelentkezes-link" class="btn-bejelentkezes">
+        Tovább a bejelentkezéshez
+      </a>
+    </div>
+
+  </div>
+
+</div>

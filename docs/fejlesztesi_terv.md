@@ -3949,12 +3949,26 @@ bekapcsolásához — külön gomb kell rá a beállításokban, és látható f
 
 | # | Lépés | Állapot |
 |---|---|---|
-| 1 | Levél-kapu + sablon-keret + próba-eszköz (dev-napló mód) | folyamatban |
-| 2 | Cím-megerősítés (modell, végpontok, beállítások-képernyő) | — |
-| 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | — |
+| 1 | Levél-kapu + sablon-keret + próba-eszköz (dev-napló mód) | ✅ KÉSZ (`6741905`) |
+| 2 | Cím-megerősítés (modell, végpontok, beállítások-képernyő) | ✅ KÉSZ (`85b5535`) |
+| 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | ✅ KÉSZ |
 | 4 | Értesítés e-mailben — AZONNALI mód | — |
 | 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | — |
 | 6 | Dokumentáció + megismerés-leírás + CHANGELOG | — |
+
+### Ami az 1–3. lépés közben eldőlt (a terven felül)
+
+- **A Resend beüzemelve** (biszt100 fiók, eu-west-1), a koino.hu DKIM+SPF+DMARC
+  hitelesítve a Cloudflare-ben; a próbalevél a Gmail **Beérkezett** mappájába érkezik.
+- **Kérés-korlát: saját middleware** (`middlewares/keresKorlatMiddleware.js`), nem
+  `express-rate-limit` — így nulla új npm csomag. Memóriában számol, IP + útvonal
+  szerint; a korlátai a fájl fejlécében ki vannak mondva.
+- **A jelszóváltás nem lökje ki magát az e-embert:** a `tokenVerzio` léptetése a SAJÁT
+  tokent is érvénytelenítené, ezért a jelszóváltás válasza FRISS tokent ad. A többi
+  eszköz kijelentkezik, a jelenlegi munkamenet folytatódik.
+- **⚠️ Élesítés előtt:** a Resendben KI KELL KAPCSOLNI a click trackinget, különben a
+  jelszó-helyreállító token átmenne a `links.koino.hu` átirányítón és ott naplózódna.
+  Fejlesztés közben (napló mód) ez nem játszik szerepet.
 
 Az 1–3. lépés a jelszó-funkciót teszi teljessé; a 4–5. az értesítéseket. Az 1. lépés
 mindkettőhöz kell, és valódi levélküldés nélkül is tesztelhető.

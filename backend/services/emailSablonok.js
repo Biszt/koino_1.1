@@ -176,6 +176,37 @@ function megerositoLevel({ eemberNev, link }) {
   return { targy: 'koino — erősítsd meg az e-mail-címed', szoveg, html };
 }
 
+// ===== SABLON: JELSZÓ-HELYREÁLLÍTÁS =====
+// Az e-ember a bejelentkezési képernyőn kérte („Elfelejtetted a jelszavad?").
+// A hivatkozás egyszer használatos és 1 óra után lejár.
+//
+// A szöveg SZÁNDÉKOSAN megnyugtató arra az esetre, ha nem az e-ember kérte: ilyenkor
+// nincs teendője, a jelszava érintetlen marad. Ez fontos, mert ezt a levelet bárki
+// kiválthatja bárkinek a címére — a fiók viszont csak a levél BIRTOKÁBAN vehető át.
+// @param {Object} adatok
+// @param {string} adatok.eemberNev - a címzett e-embernév
+// @param {string} adatok.link      - a helyreállító hivatkozás
+// @returns {Object} { targy, szoveg, html }
+function jelszoHelyreallitoLevel({ eemberNev, link }) {
+  const { szoveg, html } = keret({
+    cim: 'Új jelszó beállítása',
+    bekezdesek: [
+      `Szia ${eemberNev}!`,
+      'A koinóban jelszó-helyreállítást kértél. Az alábbi hivatkozáson új jelszót ' +
+      'adhatsz meg, és utána azzal léphetsz be.',
+      'A hivatkozás 1 óráig érvényes, és csak egyszer használható.',
+      'Ha nem te kérted: nincs teendőd. A jelszavad változatlan marad, és a hivatkozás ' +
+      'magától érvényét veszti — amíg meg nem nyitja valaki, a fiókoddal nem történik semmi.',
+      'Amikor beállítod az új jelszót, a korábbi bejelentkezéseid MINDEN eszközön ' +
+      'megszűnnek. Így ha valaki illetéktelenül fért hozzá a fiókodhoz, azzal ki is zárod.',
+    ],
+    gomb: { szoveg: 'Új jelszó beállítása', link },
+    indok: 'jelszoHelyreallitas',
+  });
+
+  return { targy: 'koino — új jelszó beállítása', szoveg, html };
+}
+
 // ===== SABLON: PRÓBALEVÉL =====
 // A tools/emailProba.js használja. Nem e-embernek szól: azt ellenőrzi, hogy a
 // beállított szolgáltató valóban kézbesít-e (és hogy a feladó-domain rendben van-e).
@@ -198,8 +229,9 @@ function probaLevel(idopontSzoveg) {
 
 // ===== EXPORTÁLÁS =====
 module.exports = {
-  keret,            // A közös keret — minden további sablon ezen át készül
-  megerositoLevel,  // 2. lépés: az e-mail cím igazolása
+  keret,                   // A közös keret — minden további sablon ezen át készül
+  megerositoLevel,         // 2. lépés: az e-mail cím igazolása
+  jelszoHelyreallitoLevel, // 3. lépés: elfelejtett jelszó
   probaLevel,       // 1. lépés: a levélküldés ellenőrzése
   htmlBiztonsagos,  // Segéd a további sablonokhoz (entitás-címek beillesztéséhez)
   LAB_SZOVEGEK,

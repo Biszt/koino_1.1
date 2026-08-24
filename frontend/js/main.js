@@ -5,6 +5,7 @@ import BejelentkezesForm from './components/BejelentkezesForm.js';
 import RegisztracioForm from './components/RegisztracioForm.js';
 import MeghivoKodForm from './components/MeghivoKodForm.js';
 import AdatvedelmiNyilatkozatModal from './components/modals/AdatvedelmiNyilatkozatModal.js';
+import JelszoHelyreallitasForm from './components/JelszoHelyreallitasForm.js';
 import FoOldal from './components/foOldal.js';
 import { tokenMentese, eemberMentese, tokenTorlese, beVanJelentkezve, tokenLekerese } from './utils/authHelper.js';
 import { apiGet } from './utils/apiHelper.js';
@@ -194,9 +195,10 @@ async function urlKapu() {
   console.log('main.urlKapu - KEZDÉS');
 
   const parameterek = new URLSearchParams(window.location.search);
-  const megerositoToken = parameterek.get('email-megerosites');
+  const megerositoToken  = parameterek.get('email-megerosites');
+  const helyreallitoToken = parameterek.get('jelszo-helyreallitas');
 
-  if (!megerositoToken) {
+  if (!megerositoToken && !helyreallitoToken) {
     console.log('main.urlKapu - VÉGE: nincs feldolgozandó paraméter');
     return false;
   }
@@ -206,6 +208,17 @@ async function urlKapu() {
   // maradjon ott a címsorban.
   window.history.replaceState({}, document.title, window.location.pathname);
 
+  // ----- JELSZÓ-HELYREÁLLÍTÁS -----
+  // Itt nem elég egy üzenet: az e-embernek új jelszót kell megadnia, ezért a
+  // helyreállítás-űrlapot töltjük be „ujJelszo" módban.
+  if (helyreallitoToken) {
+    console.log('main.urlKapu - jelszó-helyreállítás hivatkozás');
+    await jelszoHelyreallitasMegjelenites({ mod: 'ujJelszo', token: helyreallitoToken });
+    console.log('main.urlKapu - VÉGE (jelszó-helyreállítás)');
+    return true;
+  }
+
+  // ----- E-MAIL CÍM MEGERŐSÍTÉSE -----
   let uzenet;
   let sikeres = false;
   try {
@@ -227,6 +240,33 @@ async function urlKapu() {
 
   console.log('main.urlKapu - VÉGE', { sikeres });
   return true;
+}
+
+// ===== JELSZÓ-HELYREÁLLÍTÁS KÉPERNYŐ MEGJELENÍTÉSE =====
+// Két helyzetben hívjuk:
+//   - a bejelentkezés „Elfelejtetted a jelszavad?" linkjéről (mod: 'keres')
+//   - a levélben lévő hivatkozásról, az URL-kapuból (mod: 'ujJelszo' + token)
+// @param {Object} opciok - { mod, token }
+async function jelszoHelyreallitasMegjelenites(opciok = {}) {
+  console.log('main.jelszoHelyreallitasMegjelenites - KEZDÉS', { mod: opciok.mod });
+
+  try {
+    const sikerult = await oldalBetoltese('./html/components/jelszoHelyreallitasForm.html');
+    if (!sikerult) return;
+
+    const urlap = new JelszoHelyreallitasForm({
+      mod:      opciok.mod ?? 'keres',
+      token:    opciok.token ?? null,
+      // A „Vissza / Tovább a bejelentkezéshez" a szokásos indítást hívja
+      onVissza: () => alkalmazasInditasa()
+    });
+    await urlap.init();
+
+  } catch (hiba) {
+    console.error('main.jelszoHelyreallitasMegjelenites - HIBA', { hiba: hiba.message });
+  }
+
+  console.log('main.jelszoHelyreallitasMegjelenites - VÉGE');
 }
 
 // ===== EGYSZERŰ ÜZENET-KÉPERNYŐ =====
@@ -302,7 +342,16 @@ async function alkalmazasInditasa() {
       });
     }
 
-    // 4. "Adatvédelmi nyilatkozat" link figyelése — felugró ablakban nyílik meg
+    // 4. "Elfelejtetted a jelszavad?" link figyelése
+    const elfelejtettLink = document.getElementById('elfelejtett-jelszo-link');
+    if (elfelejtettLink) {
+      elfelejtettLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        jelszoHelyreallitasMegjelenites({ mod: 'keres' });
+      });
+    }
+
+    // 5. "Adatvédelmi nyilatkozat" link figyelése — felugró ablakban nyílik meg
     const adatvedelmiLink = document.getElementById('adatvedelmi-link');
     if (adatvedelmiLink) {
       adatvedelmiLink.addEventListener('click', (e) => {

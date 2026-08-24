@@ -1945,3 +1945,56 @@ a kártya-menüs horgony vissza/előre után is helyreáll. 0 konzolhiba.*
     SEMMIT nem küld, kivéve magát a megerősítő levelet. (Service-szinten mérhető:
     `emailKuldoService.kuldesEemberNek({eember, indok:'ertesites'})` → `sikeres:false`,
     ok: „a cím nincs megerősítve".)
+
+---
+
+## E-mail: elfelejtett jelszó (2026-08-24, a 3. lépés)
+
+*Előfeltétel: az e-embernek legyen MEGERŐSÍTETT e-mail címe (lásd az előző szakaszt).
+Fejlesztői környezetben a levél a naplóba megy — a hivatkozás így olvasható ki:*
+`docker logs koino-backend 2>&1 | grep -A 25 "KIMENŐ LEVÉL"`
+
+**Végpontok** (mind NYILVÁNOS — aki nem tud belépni, épp ezért használja):
+- `POST /api/eember/jelszo-helyreallitas-keres` (body: `azonosito`) — kérés-korlát: 5/óra
+- `GET  /api/eember/jelszo-helyreallitas/:token` — a hivatkozás ellenőrzése
+- `POST /api/eember/jelszo-helyreallitas` (body: `token`, `ujJelszo`) — korlát: 10/óra
+
+**A hivatkozás alakja:** `<PUBLIKUS_URL>/?jelszo-helyreallitas=TOKEN` — 1 óráig érvényes.
+
+65. ⬜ **A link a bejelentkezésen:** a bejelentkező képernyő alján *„Elfelejtetted a
+    jelszavad?"*. Rákattintva a kérő űrlap jelenik meg — **csak az az egy űrlap**,
+    az új-jelszó panel nem látszik alatta.
+
+66. ⬜ **A válasz MINDIG ugyanaz:** add meg (a) egy létező, megerősített címet, majd
+    (b) egy nem létező azonosítót. **Mindkettő szó szerint ugyanazt** az üzenetet kapja.
+    Ez szándékos: különben a végpontból kideríthető lenne, ki tagja a koinónak.
+
+67. ⬜ **A levél:** a naplóban megjelenik a helyreállító levél. Ellenőrizd, hogy
+    tartalmazza a megnyugtató mondatot arra az esetre, ha nem az e-ember kérte
+    („nincs teendőd, a jelszavad változatlan marad").
+
+68. ⬜ **Az új jelszó űrlap:** a hivatkozást megnyitva *„Új jelszó"* képernyő, a fiók
+    nevével. A token eltűnik a címsorból. Próbáld: (a) két különböző jelszó → *„A két
+    jelszó nem egyezik"*; (b) `rovid` → a backend elutasítja gyenge jelszóként;
+    (c) helyes, erős jelszó → siker-üzenet.
+
+69. ⬜ **A régi jelszó megszűnt:** jelentkezz be a RÉGI jelszóval → *„Hibás azonosító
+    vagy jelszó"*. Az ÚJ jelszóval → sikeres belépés.
+
+70. ⬜ 🔴 **A HELYREÁLLÍTÁS KILÖKI A BETOLAKODÓT** (ez a lépés lényege): jelentkezz be
+    egy MÁSIK böngészőben (vagy privát ablakban) ugyanazzal a fiókkal, és hagyd ott
+    nyitva. Utána az első böngészőben állíts be új jelszót a hivatkozással. A másik
+    böngészőben az első kérésnél *„A bejelentkezésed érvényét vesztette"* (HTTP 401).
+    Enélkül a helyreállítás félkarú lenne: a koino tokenjei nem járnak le, tehát aki
+    illetéktelenül bejutott, a régi tokenjével bent maradna.
+
+71. ⬜ **Egyszer használatos:** nyisd meg UGYANAZT a hivatkozást másodszor →
+    *„érvénytelen vagy már lejárt"*, és nem jelenik meg az űrlap.
+
+72. ⬜ **Kérés-korlát:** kérj hivatkozást hatszor egymás után → az 5. után
+    *„Túl sok helyreállítási kérés. Próbáld újra egy óra múlva."* (A számláló
+    memóriában van: a backend újraindítása nullázza.)
+
+73. ⬜ **Jelszóváltás a beállításokban (VÁLTOZOTT):** a beállításokban jelszót váltva
+    a jelenlegi munkamenet **megmarad** (a szerver friss tokent ad), de a többi eszköz
+    kijelentkezik. Az üzenet erre figyelmeztet is.

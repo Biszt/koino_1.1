@@ -1,0 +1,29 @@
+/* frontend/css/components/jelszoHelyreallitasForm.css */
+
+/* Az „elfelejtett jelszó" folyamat két képernyője. A bejelentkezési űrlap vázára épül
+   (`bejelentkezes-oldal`, `bejelentkezes-kartya`, `form-mezo`, `btn-bejelentkezes`),
+   ezért itt csak a néhány saját elem stílusa van. */
+
+/* ===== MAGYARÁZÓ SZÖVEG ===== */
+.helyreallitas-leiras {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.helyreallitas-leiras--kicsi {
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-3);
+}
+
+/* ===== SIKER-ÜZENET ===== */
+/* Az üzenet-doboz alapból hiba-stílusú (a bejelentkezési űrlaptól örökli). Siker
+   esetén ugyanaz a doboz semleges/megnyugtató színt kap — így egy elemmel megoldható
+   mindkét eset, és nem ugrál a képernyő elrendezése. */
+.helyreallitas-uzenet--siker {
+  color: var(--color-primary);
+  background: var(--color-primary-highlight);
+  border-color: var(--color-primary-highlight);
+}

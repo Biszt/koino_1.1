@@ -10,6 +10,8 @@
 @import './components/regisztracioForm.css';
 @import './components/bejelentkezesForm.css';
 @import './components/meghivoKodForm.css';
+/* Elfelejtett jelszó: kérő űrlap + új jelszó képernyő (a bejelentkezés vázára épül) */
+@import './components/jelszoHelyreallitasForm.css';
 @import './components/foOldal.css';
 @import './components/hamburgerMenu.css';
 @import './components/pakli.css';

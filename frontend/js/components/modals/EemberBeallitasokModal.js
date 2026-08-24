@@ -3,7 +3,7 @@
 // ===== IMPORTOK =====
 import Modal from './Modal.js';
 import { apiGet, apiPut, apiPost, apiDelete } from '../../utils/apiHelper.js';
-import { tokenLekerese, eemberMentese, tokenTorlese } from '../../utils/authHelper.js';
+import { tokenLekerese, tokenMentese, eemberMentese, tokenTorlese } from '../../utils/authHelper.js';
 import { autocompleteRakotese } from '../../utils/lokacioHelper.js';
 
 // ===== EEMBER BEÁLLÍTÁSOK MODAL =====
@@ -219,15 +219,23 @@ class EemberBeallitasokModal {
 
     this.modal.betoltesBeallitasa(true);
     try {
-      await apiPost('eember/jelszovaltas', { regiJelszo, ujJelszo }, this.token);
+      const valasz = await apiPost('eember/jelszovaltas', { regiJelszo, ujJelszo }, this.token);
       this.modal.betoltesBeallitasa(false);
+
+      // ÚJ TOKEN MENTÉSE: a jelszóváltás MINDEN korábbi bejelentkezést érvénytelenített
+      // (a többi eszközön is — ez a jelszóváltás értelme). A szerver ezért friss tokent
+      // ad; enélkül az e-ember a saját jelszóváltásától rögtön kiesne.
+      if (valasz?.token) {
+        tokenMentese(valasz.token);
+        this.token = valasz.token;
+      }
 
       // A jelszó-mezők ürítése sikeres váltás után
       this._mezoErtek('beallitasok-regi-jelszo', '');
       this._mezoErtek('beallitasok-uj-jelszo', '');
       this._mezoErtek('beallitasok-uj-jelszo2', '');
 
-      this._sikerUzenet('beallitasok-jelszo-siker', '✅ Jelszó módosítva');
+      this._sikerUzenet('beallitasok-jelszo-siker', '✅ Jelszó módosítva — a többi eszközön ki kell jelentkezned');
 
       console.log('EemberBeallitasokModal._jelszoMentese - VÉGE (siker)');
     } catch (hiba) {

@@ -16,6 +16,9 @@ const eemberController = require('../controllers/eemberController');
 // Az authMiddleware ellenőrzi a JWT tokent és beállítja a req.user objektumot
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
+// A kérés-korlát: a levélküldő végpontokat védi a visszaéléstől (levél-özön)
+const { keresKorlat } = require('../middlewares/keresKorlatMiddleware');
+
 // ===== ÚTVONALAK DEFINIÁLÁSA =====
 
 // ----- EEMBER REGISZTRÁCIÓ -----
@@ -53,7 +56,44 @@ router.delete('/eember', authMiddleware, eemberController.eemberTorlese);
 // POST kérés: /api/eember/email-megerosites-keres
 // Védett – a bejelentkezett e-ember kéri a SAJÁT címére. Maga a kérés a felhatalmazás
 // a levél kiküldésére: a koino magától soha nem küld levelet.
-router.post('/eember/email-megerosites-keres', authMiddleware, eemberController.emailMegerositesKeres);
+// Kérés-korlát: óránként 5 — a levél-özön ellen (a saját címére is).
+router.post(
+  '/eember/email-megerosites-keres',
+  keresKorlat({ percek: 60, max: 5, uzenet: 'Túl sok megerősítő levelet kértél. Próbáld újra egy óra múlva.' }),
+  authMiddleware,
+  eemberController.emailMegerositesKeres
+);
+
+// ===== ELFELEJTETT JELSZÓ (3. lépés) =====
+
+// ----- HELYREÁLLÍTÓ LEVÉL KÉRÉSE -----
+// POST kérés: /api/eember/jelszo-helyreallitas-keres (body: azonosito)
+// NYILVÁNOS – aki nem tud belépni, épp ezért használja.
+// A válasz MINDIG ugyanaz, akár létezik az azonosító, akár nem (különben a végpont
+// kiderítené, ki tagja a koinónak).
+// Kérés-korlát: óránként 5 kérés IP-nként — enélkül bárki levél-özönt zúdíthatna egy
+// e-emberre a MI nevünkben, és a szolgáltatói keretünket is elhasználná.
+router.post(
+  '/eember/jelszo-helyreallitas-keres',
+  keresKorlat({ percek: 60, max: 5, uzenet: 'Túl sok helyreállítási kérés. Próbáld újra egy óra múlva.' }),
+  eemberController.jelszoHelyreallitasKeres
+);
+
+// ----- A HIVATKOZÁS ELLENŐRZÉSE -----
+// GET kérés: /api/eember/jelszo-helyreallitas/:token
+// NYILVÁNOS – a frontend ezzel dönti el, megmutassa-e az új-jelszó űrlapot.
+router.get('/eember/jelszo-helyreallitas/:token', eemberController.jelszoHelyreallitasEllenorzes);
+
+// ----- ÚJ JELSZÓ BEÁLLÍTÁSA -----
+// POST kérés: /api/eember/jelszo-helyreallitas (body: token, ujJelszo)
+// NYILVÁNOS – a token maga az igazolás. A beállítás MINDEN korábbi bejelentkezést
+// érvénytelenít (tokenVerzio léptetés), így a betolakodót is kizárja.
+// Kérés-korlát: óránként 10 — a token-találgatás kifárasztására.
+router.post(
+  '/eember/jelszo-helyreallitas',
+  keresKorlat({ percek: 60, max: 10, uzenet: 'Túl sok próbálkozás. Próbáld újra egy óra múlva.' }),
+  eemberController.jelszoHelyreallitas
+);
 
 // ----- MEGERŐSÍTŐ HIVATKOZÁS BEVÁLTÁSA -----
 // GET kérés: /api/eember/email-megerosites/:token

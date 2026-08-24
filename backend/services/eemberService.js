@@ -125,7 +125,10 @@ class eEmberService {
     // és a token kliensoldalon olvasható — felesleges személyes adat lenne benne).
     const payload = {
       id:        valasz._id,
-      eemberNev: valasz.eemberNev
+      eemberNev: valasz.eemberNev,
+      // Token-verzió: ebből tudjuk később érvényteleníteni a tokent (lásd a modell
+      // `tokenVerzio` mezőjének magyarázatát). Új e-embernél ez 0.
+      tv:        valasz.tokenVerzio ?? 0
     };
     // A token szándékosan NEM jár le: az e-ember addig marad bejelentkezve,
     // ameddig akar (amíg ki nem jelentkezik, vagy le nem törli a böngésző adatait).
@@ -176,7 +179,10 @@ class eEmberService {
     // NEM tesszük bele (adatminimum; a token kliensoldalon olvasható).
     const payload = {
       id:        eember._id,
-      eemberNev: eember.eemberNev
+      eemberNev: eember.eemberNev,
+      // Token-verzió: jelszóváltás / jelszó-helyreállítás után a tárolt szám nő,
+      // és az ezzel a régi verzióval kiadott tokenek érvénytelenné válnak.
+      tv:        eember.tokenVerzio ?? 0
     };
     // A token szándékosan NEM jár le: az e-ember addig marad bejelentkezve,
     // ameddig akar (amíg ki nem jelentkezik, vagy le nem törli a böngésző adatait).
@@ -321,7 +327,7 @@ class eEmberService {
   // @param {string} eemberId - A bejelentkezett e-ember azonosítója
   // @param {string} regiJelszo - A jelenlegi jelszó
   // @param {string} ujJelszo - Az új jelszó
-  // @returns {Promise<boolean>} true, ha sikeres
+  // @returns {Promise<Object>} { token } — FRISS token a jelenlegi munkamenethez
   async jelszoValtas(eemberId, regiJelszo, ujJelszo) {
     console.log('eEmberService.jelszoValtas - KEZDÉS', { eemberId });
 
@@ -350,8 +356,30 @@ class eEmberService {
     const hashedJelszo = await JelszoHelper.hashJelszo(ujJelszo);
     await eEmberRepository.updateJelszo(eemberId, hashedJelszo);
 
-    console.log('eEmberService.jelszoValtas - VÉGE', { eemberId });
-    return true;
+    // === 5. LÉPÉS: A KORÁBBI BEJELENTKEZÉSEK ÉRVÉNYTELENÍTÉSE ===
+    // A jelszóváltás értelme, hogy aki eddig hozzáfért a fiókhoz, NE férjen hozzá
+    // tovább. Mivel a tokenjeink nem járnak le, ehhez a token-verziót léptetjük:
+    // ettől MINDEN korábban kiadott token érvénytelen lesz, minden eszközön.
+    const frissitett = await eEmberRepository.incrementTokenVerzio(eemberId);
+
+    // === 6. LÉPÉS: FRISS TOKEN A JELENLEGI MUNKAMENETHEZ ===
+    // Az előző lépés a SAJÁT tokenünket is érvénytelenítette. Ha nem adnánk újat, az
+    // e-ember a saját jelszóváltásától rögtön kiesne — pedig ő épp most igazolta magát
+    // a régi jelszavával. Ezért kap egy friss tokent az ÚJ verzióval: a többi eszköz
+    // kijelentkezik, ez az egy folytatódik.
+    const token = jwt.sign(
+      {
+        id:        frissitett._id,
+        eemberNev: frissitett.eemberNev,
+        tv:        frissitett.tokenVerzio
+      },
+      process.env.JWT_SECRET
+    );
+
+    console.log('eEmberService.jelszoValtas - VÉGE', {
+      eemberId, ujTokenVerzio: frissitett.tokenVerzio
+    });
+    return { token };
   }
 
   // ===== FIÓK-TÖRLÉS (ÖNKÉNTES) =====

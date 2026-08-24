@@ -161,6 +161,28 @@ class eEmberRepository {
     return eredmeny;
   }
 
+  // ----- TOKEN-VERZIÓ LÉPTETÉSE -----
+  // Eggyel növeli a `tokenVerzio` mezőt → MINDEN korábban kiadott bejelentkezési
+  // token azonnal érvénytelenné válik (az authMiddleware ezt veti össze).
+  // Használat: jelszóváltás és jelszó-helyreállítás.
+  // A `$inc` atomi művelet: párhuzamos hívásnál sem veszhet el léptetés.
+  // @param {string} id - MongoDB ObjectId
+  // @returns {Promise} A frissített eember (az ÚJ tokenVerzio értékkel)
+  async incrementTokenVerzio(id) {
+    console.log('eEmberRepository.incrementTokenVerzio - KEZDÉS', { id });
+
+    const eredmeny = await eEmber.findByIdAndUpdate(
+      id,
+      { $inc: { tokenVerzio: 1 } },
+      { new: true }
+    );
+
+    console.log('eEmberRepository.incrementTokenVerzio - VÉGE', {
+      id: eredmeny?._id, ujVerzio: eredmeny?.tokenVerzio
+    });
+    return eredmeny;
+  }
+
   // ----- JELSZÓ FRISSÍTÉSE -----
   // A hash-elt új jelszó mentése.
   // Használat: eember beállítások — jelszóváltás

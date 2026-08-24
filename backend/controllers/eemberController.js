@@ -7,6 +7,9 @@ const eEmberService = require('../services/eemberService');
 // E-mail cím megerősítése (2. lépés): megerősítő levél küldése + a hivatkozás beváltása
 const emailMegerositesService = require('../services/emailMegerositesService');
 
+// Elfelejtett jelszó (3. lépés): helyreállító levél + új jelszó beállítása
+const jelszoHelyreallitasService = require('../services/jelszoHelyreallitasService');
+
 // ===== EEMBER CONTROLLER OSZTÁLY =====
 // Ez a réteg kezeli a HTTP kéréseket és válaszokat
 // Feladata: kérés fogadása → service hívás → válasz küldése
@@ -156,11 +159,15 @@ class eEmberController {
     console.log('eEmberController.jelszoValtas - KEZDÉS', { eemberId: req.user?.id });
     try {
       const { regiJelszo, ujJelszo } = req.body;
-      await eEmberService.jelszoValtas(req.user.id, regiJelszo, ujJelszo);
+      const eredmeny = await eEmberService.jelszoValtas(req.user.id, regiJelszo, ujJelszo);
 
       res.status(200).json({
         success: true,
-        message: 'Jelszó sikeresen módosítva'
+        message: 'Jelszó sikeresen módosítva',
+        // FRISS token: a jelszóváltás minden korábbi bejelentkezést érvénytelenített
+        // (más eszközökön is). Ezt a tokent a kliens elmenti, így EZ a munkamenet
+        // folytatódhat — az e-ember nem esik ki a saját jelszóváltásától.
+        token: eredmeny.token
       });
 
       console.log('eEmberController.jelszoValtas - VÉGE (siker)', { eemberId: req.user?.id });
@@ -246,6 +253,84 @@ class eEmberController {
     } catch (error) {
       console.error('eEmberController.emailMegerositesBevaltas - VÉGE (hiba)', { hiba: error.message });
       res.status(500).json({ success: false, message: 'Szerver hiba a megerősítés során' });
+    }
+  }
+
+  // ===== JELSZÓ-HELYREÁLLÍTÁS KÉRÉSE =====
+  // A bejelentkezési képernyő „Elfelejtetted a jelszavad?" űrlapjáról.
+  // NYILVÁNOS végpont — hiszen aki nem tud belépni, épp ezért használja.
+  //
+  // A VÁLASZ MINDIG UGYANAZ, akár létezik a megadott azonosító, akár nem. Ez nem
+  // lustaság: különben a végpont KERESŐVÉ válna, amivel bárki kiderítheti, ki tagja a
+  // koinónak. A tagság nem nyilvános adat.
+  // POST /api/eember/jelszo-helyreallitas-keres
+  // @param {Object} req - Express request (body: azonosito)
+  // @param {Object} res - Express response
+  async jelszoHelyreallitasKeres(req, res) {
+    console.log('eEmberController.jelszoHelyreallitasKeres - KEZDÉS');
+    try {
+      const eredmeny = await jelszoHelyreallitasService.helyreallitasKerese(req.body?.azonosito);
+
+      res.status(200).json({ success: true, message: eredmeny.uzenet });
+
+      console.log('eEmberController.jelszoHelyreallitasKeres - VÉGE (semleges válasz elküldve)');
+    } catch (error) {
+      // Ide elvileg nem jutunk (a service maga nyeli a hibákat), de ha mégis:
+      // itt is a semleges válasz megy vissza, nehogy a hiba árulkodjon.
+      console.error('eEmberController.jelszoHelyreallitasKeres - VÉGE (hiba)', { hiba: error.message });
+      res.status(200).json({
+        success: true,
+        message: 'Ha tartozik ehhez az azonosítóhoz megerősített e-mail cím, elküldtük rá a helyreállító hivatkozást.'
+      });
+    }
+  }
+
+  // ===== A HELYREÁLLÍTÓ HIVATKOZÁS ELLENŐRZÉSE =====
+  // A frontend ezzel kérdezi meg, érdemes-e megmutatni az új-jelszó űrlapot.
+  // GET /api/eember/jelszo-helyreallitas/:token
+  // @param {Object} req - Express request (params: token)
+  // @param {Object} res - Express response
+  async jelszoHelyreallitasEllenorzes(req, res) {
+    console.log('eEmberController.jelszoHelyreallitasEllenorzes - KEZDÉS');
+    try {
+      const eredmeny = await jelszoHelyreallitasService.tokenEllenorzese(req.params.token);
+
+      res.status(200).json({
+        success:   true,
+        ervenyes:  eredmeny.ervenyes,
+        message:   eredmeny.uzenet,
+        eemberNev: eredmeny.eemberNev ?? null
+      });
+
+      console.log('eEmberController.jelszoHelyreallitasEllenorzes - VÉGE', { ervenyes: eredmeny.ervenyes });
+    } catch (error) {
+      console.error('eEmberController.jelszoHelyreallitasEllenorzes - VÉGE (hiba)', { hiba: error.message });
+      res.status(500).json({ success: false, message: 'Szerver hiba az ellenőrzés során' });
+    }
+  }
+
+  // ===== ÚJ JELSZÓ BEÁLLÍTÁSA A HIVATKOZÁSRÓL =====
+  // POST /api/eember/jelszo-helyreallitas
+  // @param {Object} req - Express request (body: token, ujJelszo)
+  // @param {Object} res - Express response
+  async jelszoHelyreallitas(req, res) {
+    console.log('eEmberController.jelszoHelyreallitas - KEZDÉS');
+    try {
+      const { token, ujJelszo } = req.body ?? {};
+      const eredmeny = await jelszoHelyreallitasService.ujJelszoBeallitasa(token, ujJelszo);
+
+      // A sikertelenség itt sem szerverhiba (lejárt hivatkozás, gyenge jelszó) — a
+      // `sikeres` mező hordozza az eredményt, hogy a frontend emberi üzenetet mutasson.
+      res.status(200).json({
+        success: true,
+        sikeres: eredmeny.sikeres,
+        message: eredmeny.uzenet
+      });
+
+      console.log('eEmberController.jelszoHelyreallitas - VÉGE', { sikeres: eredmeny.sikeres });
+    } catch (error) {
+      console.error('eEmberController.jelszoHelyreallitas - VÉGE (hiba)', { hiba: error.message });
+      res.status(500).json({ success: false, message: 'Szerver hiba a jelszó beállítása során' });
     }
   }
 

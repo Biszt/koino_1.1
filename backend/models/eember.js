@@ -51,6 +51,27 @@ emailMegerositve: {
   default: false
 },
 
+// ----- TOKEN-VERZIÓ (A BEJELENTKEZÉSEK ÉRVÉNYTELENÍTÉSÉHEZ) -----
+// A bejelentkezési token (JWT) szándékosan NEM jár le: az e-ember addig marad
+// bejelentkezve, ameddig akar. Ennek viszont van egy csapdája: ha egy token
+// illetéktelen kézbe kerül, a jelszó megváltoztatása ÖNMAGÁBAN nem lökné ki a
+// támadót — a régi tokenje továbbra is érvényes maradna. A jelszó-helyreállítás
+// enélkül félkarú lenne: „visszaszerzem a fiókom", de a betolakodó bent marad.
+//
+// Ezért minden kiadott token magában hordozza ezt a verziószámot (`tv` mező), és az
+// authMiddleware minden kérésnél összeveti az ITT tárolt értékkel. Ha eltér, a token
+// érvénytelen. A szám NŐ egyet:
+//   - jelszóváltáskor (a beállításokban),
+//   - jelszó-helyreállításkor (elfelejtett jelszó).
+// Így e két művelet MINDEN korábbi bejelentkezést megszüntet, minden eszközön.
+//
+// A 0 alapérték fontos: a régi, még `tv` nélküli tokeneket 0-nak tekintjük, így a
+// bevezetés NEM lökte ki a már bejelentkezett e-embereket.
+tokenVerzio: {
+  type: Number,
+  default: 0
+},
+
 // ----- JELSZÓ MEZŐ -----
 // FIGYELEM: itt a HASH-elt jelszó tárolódik (bcrypt, ~60 karakter), ezért ez a
 // minlength gyakorlatilag mindig teljesül. A tényleges jelszó-erősség szabályt
