@@ -1,0 +1,179 @@
+// backend/services/emailSablonok.js
+
+// =============================================
+// E-MAIL SABLONOK — a koinóból kimenő levelek szövege, egy helyen
+// =============================================
+//
+// Felelősség: minden kimenő levél SZÖVEGE itt készül el. A küldést nem ez végzi
+// (arra való az emailKuldoService), csak a tartalmat állítja elő két alakban:
+//   - `szoveg`: sima szöveg. EZ A FONTOSABB — sok levelezőprogram (és a szűrők) ezt
+//               olvassák, és mindig megjelenik, akkor is, ha a HTML nem töltődik be.
+//   - `html`:   egyszerű, INLINE stílusozott HTML. A levelezőkliensek nem ismerik a
+//               külső stíluslapot és a modern elrendezéseket (flexbox, grid), ezért
+//               itt szándékosan nagyon egyszerű felépítés van.
+//
+// ===== MINDEN LEVÉL MEGMONDJA, MIÉRT JÖTT =====
+// A koino sosem küld magától levelet (lásd emailKuldoService). Ezt az e-ember felé is
+// kimondjuk: minden levél lábában ott áll, MELYIK saját kérése nyomán kapta, és — ahol
+// értelmezhető — hogyan kapcsolhatja ki. A lábat a keret automatikusan hozzáteszi, így
+// nem lehet elfelejteni.
+//
+// Használják (a későbbi lépésekben): eemberService (megerősítés),
+// jelszoHelyreallitasService, emailErtesitesService, tools/emailProba.js
+// =============================================
+
+// ===== A LÁB SZÖVEGE INDOKONKÉNT =====
+// Az emailKuldoService ENGEDELYEZETT_INDOKOK listájának minden eleméhez tartozik egy
+// mondat arról, miért kapta az e-ember a levelet.
+const LAB_SZOVEGEK = {
+  megerosites:
+    'Ezt a levelet azért kaptad, mert a koino beállításaiban az e-mail-címed ' +
+    'megerősítését kérted. Ha nem te voltál, hagyd figyelmen kívül ezt a levelet — ' +
+    'megerősítés nélkül a cím nem kapcsolódik a fiókhoz.',
+
+  jelszoHelyreallitas:
+    'Ezt a levelet azért kaptad, mert valaki jelszó-helyreállítást kért ehhez a ' +
+    'címhez. Ha nem te voltál, nincs teendőd: a jelszavad változatlan marad, és a ' +
+    'lenti hivatkozás magától érvényét veszti.',
+
+  ertesites:
+    'Ezt a levelet azért kaptad, mert bekapcsoltad az e-mailes értesítést a koino ' +
+    'beállításaiban. Bármikor kikapcsolhatod ugyanott: fő menü → Értesítési beállítások.',
+
+  osszefoglalo:
+    'Ezt az összefoglalót azért kaptad, mert bekapcsoltad az e-mailes értesítést a ' +
+    'koino beállításaiban. Az összefoglaló gyakoriságát bármikor átállíthatod, vagy ' +
+    'az egészet kikapcsolhatod: fő menü → Értesítési beállítások.',
+
+  proba:
+    'Ez egy fejlesztői próbalevél a koino levélküldésének ellenőrzésére. ' +
+    'E-embereknek szóló tartalmat nem hordoz.',
+};
+
+// ===== SEGÉD: HTML-BE KERÜLŐ SZÖVEG BIZTONSÁGOSSÁ TÉTELE =====
+// A levelekbe e-ember által írt szöveg is kerülhet (pl. egy entitás címe az
+// összefoglalóban). Ezt nem szabad nyersen HTML-be tenni, mert elronthatná a levél
+// szerkezetét. Az öt HTML-jelentésű karaktert entitásra cseréljük.
+// @param {string} szoveg - a beillesztendő nyers szöveg
+// @returns {string} a HTML-be biztonságosan beilleszthető szöveg
+function htmlBiztonsagos(szoveg) {
+  return String(szoveg ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ===== A KÖZÖS LEVÉL-KERET =====
+// Minden koino-levél ezen a kereten át készül, hogy egységes legyen a megjelenés és
+// hogy a „miért kaptad" láb sose maradjon le.
+//
+// @param {Object} adatok
+// @param {string} adatok.cim         - a levél nagy címsora (a tárgy nem ez, azt külön adjuk)
+// @param {string[]} adatok.bekezdesek- a törzs bekezdései (nyers szöveg, nem HTML)
+// @param {Object} adatok.gomb        - opcionális { szoveg, link } — a fő cselekvés
+// @param {string} adatok.indok       - melyik LAB_SZOVEGEK kerüljön a lábba
+// @returns {Object} { szoveg, html }
+function keret({ cim, bekezdesek = [], gomb = null, indok }) {
+  const labSzoveg = LAB_SZOVEGEK[indok] ?? '';
+
+  // ----- SIMA SZÖVEGES VÁLTOZAT -----
+  // A gomb itt egyszerűen a nyers hivatkozás — hogy másolható legyen akkor is, ha a
+  // levelezőprogram nem tesz rá kattintható linket.
+  const szovegReszek = [cim, '', ...bekezdesek];
+
+  if (gomb) {
+    szovegReszek.push('', `${gomb.szoveg}:`, gomb.link);
+  }
+
+  szovegReszek.push(
+    '',
+    '—',
+    labSzoveg,
+    '',
+    'koino — Kollektív Intelligencia Online',
+    'https://koino.hu'
+  );
+
+  const szoveg = szovegReszek.join('\n');
+
+  // ----- HTML VÁLTOZAT -----
+  // Inline stílusok, a koino erdő-témájának színeivel (lásd frontend variables.css).
+  const bekezdesekHtml = bekezdesek
+    .map((b) => `<p style="margin:0 0 16px 0;">${htmlBiztonsagos(b)}</p>`)
+    .join('\n      ');
+
+  const gombHtml = gomb
+    ? `<p style="margin:24px 0;">
+        <a href="${htmlBiztonsagos(gomb.link)}"
+           style="display:inline-block;padding:12px 24px;background:#2d5a27;color:#f7f3ec;
+                  text-decoration:none;border-radius:8px;font-weight:bold;">
+          ${htmlBiztonsagos(gomb.szoveg)}
+        </a>
+      </p>
+      <p style="margin:0 0 16px 0;font-size:13px;color:#5f5747;">
+        Ha a gomb nem működik, másold be ezt a címet a böngésződbe:<br>
+        <span style="word-break:break-all;">${htmlBiztonsagos(gomb.link)}</span>
+      </p>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="hu">
+<head><meta charset="utf-8"><title>${htmlBiztonsagos(cim)}</title></head>
+<body style="margin:0;padding:24px;background:#ede7de;
+             font-family:Helvetica,Arial,sans-serif;color:#2b2318;line-height:1.6;">
+  <div style="max-width:560px;margin:0 auto;background:#f7f3ec;
+              border-radius:12px;padding:32px;">
+
+    <h1 style="margin:0 0 24px 0;font-size:20px;color:#2d5a27;">
+      ${htmlBiztonsagos(cim)}
+    </h1>
+
+      ${bekezdesekHtml}
+      ${gombHtml}
+
+    <hr style="border:none;border-top:1px solid #d4cdc3;margin:32px 0 16px 0;">
+
+    <p style="margin:0 0 8px 0;font-size:13px;color:#5f5747;">
+      ${htmlBiztonsagos(labSzoveg)}
+    </p>
+    <p style="margin:0;font-size:13px;color:#5f5747;">
+      <strong>koino</strong> — Kollektív Intelligencia Online ·
+      <a href="https://koino.hu" style="color:#2d5a27;">koino.hu</a>
+    </p>
+
+  </div>
+</body>
+</html>`;
+
+  return { szoveg, html };
+}
+
+// ===== SABLON: PRÓBALEVÉL =====
+// A tools/emailProba.js használja. Nem e-embernek szól: azt ellenőrzi, hogy a
+// beállított szolgáltató valóban kézbesít-e (és hogy a feladó-domain rendben van-e).
+// @param {string} idopontSzoveg - a küldés időpontja emberi alakban
+// @returns {Object} { targy, szoveg, html }
+function probaLevel(idopontSzoveg) {
+  const { szoveg, html } = keret({
+    cim: 'koino — próbalevél',
+    bekezdesek: [
+      'Ez a levél azt igazolja, hogy a koino levélküldése működik.',
+      `A küldés időpontja: ${idopontSzoveg}`,
+      'Ha ezt a levelet a Beérkezettek között látod (nem a spam mappában), akkor a ' +
+      'feladó-domain hitelesítése (SPF/DKIM/DMARC) is rendben van.',
+    ],
+    indok: 'proba',
+  });
+
+  return { targy: 'koino — próbalevél', szoveg, html };
+}
+
+// ===== EXPORTÁLÁS =====
+module.exports = {
+  keret,           // A közös keret — minden további sablon ezen át készül
+  probaLevel,      // 1. lépés: a levélküldés ellenőrzése
+  htmlBiztonsagos, // Segéd a további sablonokhoz (entitás-címek beillesztéséhez)
+  LAB_SZOVEGEK,
+};

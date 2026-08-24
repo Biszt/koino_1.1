@@ -3814,3 +3814,147 @@ Elkészült, böngészős teszt hátra. Amit tartalmaz:
 **A teljes feladat (Javaslat + Egyezmény kártya fülek) KÉSZ** — böngészős teszt
 mindhárom lépésre. A „Lecserélt tartalom" fül csak a MOSTANTÓL létrejövő módosítási
 egyezményeknél jelenik meg (a régieknél nincs elmentve a régi állapot).
+
+## E-mail: értesítés-kézbesítés + elfelejtett jelszó (2026-08-24, Csaba döntései)
+
+Eddig a koino **egyetlen levelet sem küldött** — nem is volt hozzá kódja. Az e-mail
+cím opcionális volt, és kizárólag bejelentkezésre szolgált. Ez most kibővül két
+funkcióval, DE az alapelv szigorúbb lesz, nem lazább.
+
+### AZ ALAPELV (Csaba, 2026-08-24) — ez minden mást felülír
+
+**A program magától SOHA nem küld levelet.** Minden kimenő levélnek van egy
+azonosítható, e-ember általi KÉRÉSE:
+
+| Levél | Mi a kérés? |
+|---|---|
+| Cím-megerősítő | az e-ember megnyomta a „Cím megerősítése" gombot |
+| Értesítés / összefoglaló | az e-ember bekapcsolta az e-mailes értesítést |
+| Jelszó-helyreállító | az e-ember rákattintott az „Elfelejtett jelszó"-ra |
+
+Ezt nem elvként, hanem a KÓDBAN kikényszerítve tartjuk: a levél-kapu kötelező
+`indok` paramétert kér minden híváshoz, és megerősítetlen címre semmit nem enged ki.
+Visszamenőleg senki nem kap semmit: minden meglévő e-ember `emailMegerositve: false`
+állapotban indul.
+
+**Ez egy korábbi ígéret módosítása.** Az `adatkezeles.md` ma azt mondja: „e-mailt
+sosem küldünk rá". Aki eddig megadta a címét, ezt olvasva tette. Ezért a
+dokumentumokat át KELL írni, és az opt-in nem opció, hanem kötelezettség.
+
+### Csaba döntései (2026-08-24)
+
+1. **Elfelejtett jelszó:** a levélben lévő link ÚJ JELSZÓ megadására visz (klasszikus
+   visszaállítás), nem beléptető varázs-link.
+2. **Küldő:** e-mail-szolgáltató API (Resend/Brevo), `koino.hu` feladó-domainnel.
+3. **Ütem:** az e-ember VÁLASZTHAT — minden értesítés azonnal, VAGY időközönkénti
+   összefoglaló; és **az időköz maga is beállítható**.
+4. **Cím-megerősítés:** kötelező. Megerősítetlen címre sem értesítés, sem
+   jelszó-helyreállítás nem megy.
+
+### Adatmodell
+
+**`eember`** új mezői:
+- `emailMegerositve` (Boolean, false) — enélkül semmilyen levél nem megy ki
+- `tokenVerzio` (Number, 0) — lásd lentebb, a JWT-visszavonás miatt
+- `ertesitesiAlapbeallitas.emailErtesites` (Boolean, false) — a fő kapcsoló
+- `ertesitesiAlapbeallitas.emailMod` ('azonnal' | 'osszefoglalo', alap: 'osszefoglalo')
+- `ertesitesiAlapbeallitas.emailOrakoz` (Number, 1–168, alap: 24)
+- `emailOsszefoglaloUtoljara` (Date, null) — üzemi mező a cronnak
+
+**`Ertesites`** új mezője: `emailKikuldve` (Boolean, false) + index
+`{ eEmberId, emailKikuldve }`. Ez a nyilvántartás arról, mi ment már ki levélben —
+kell az azonnali módhoz (ne menjen kétszer) és az összefoglalóhoz is (mi kerüljön bele).
+
+**Új modell: `emailToken`** — egy modell két célra, `tipus` mezővel
+('megerosites' | 'jelszoHelyreallitas'):
+- a token SOSEM tárolódik nyersen, csak SHA-256 hash-elve (`tokenHash`)
+- `lejarat` (helyreállítás: 1 óra, megerősítés: 24 óra), `felhasznalva`, TTL-index
+- a megerősítő tokennél az `email` is tárolódik, amire kiment — mert az e-ember
+  közben átírhatja a címét, és a régi linknek NEM szabad az újat igazolnia
+
+### Új backend-rétegek
+
+| Fájl | Felelősség |
+|---|---|
+| `services/emailKuldoService.js` | AZ EGYETLEN kimenő kapu. Kötelező `indok`. Dev-ben / API-kulcs nélkül nem küld, csak naplóz. Hibát naplóz, de NEM dob tovább — egy levélküldési hiba nem boríthatja fel a szavazást. |
+| `services/emailSablonok.js` | A levelek szövege magyarul, egy helyen; közös láb (miért kapta, hol kapcsolható ki). |
+| `services/emailErtesitesService.js` | Értesítés → levél: azonnali küldés + az összefoglaló összeállítása. |
+| `services/jelszoHelyreallitasService.js` | Token kiadása és beváltása. |
+| `jobs/emailOsszefoglaloCronJob.js` | 10 percenként fut; annak küld, akinél `utoljára + időköz` letelt és van kiküldetlen értesítése. Így tetszőleges óraszám kiszolgálható EGYETLEN cronnal. |
+
+Az értesítés-bekötés EGYETLEN pont: az `ertesitesService.ertesitesKuldes()` végén, a
+tömeges mentés után. (Ez a rendszer egyetlen kapuja — nem kell 8 eseménytípust külön
+megfogni.)
+
+### Új végpontok
+
+```
+POST /api/eember/email-megerosites-keres     (védett)    – megerősítő levél (újra)küldése
+GET  /api/eember/email-megerosites/:token    (nyilvános) – a link beváltása
+POST /api/eember/jelszo-helyreallitas-keres  (nyilvános) – levélkérés
+POST /api/eember/jelszo-helyreallitas        (nyilvános) – token + új jelszó
+```
+
+### Frontend
+
+**FONTOS LELET:** a `main.js` jelenleg EGYÁLTALÁN NEM néz URL-paramétert — indításkor
+csak azt vizsgálja, van-e mentett token. A levélben lévő link így NEM tudna hatni.
+Kell egy „URL-kapu" az `alkalmazasInditasa` legelejére, a token-ellenőrzés ELÉ, ami
+felismeri a `?jelszo-helyreallitas=…` és `?email-megerosites=…` paramétert.
+
+- **Bejelentkezés:** „Elfelejtetted a jelszavad?" link + kérő űrlap
+- **Új jelszó képernyő:** a linkről érkezve
+- **eember beállítások:** az e-mail mező mellé állapot („megerősítve" / „megerősítésre
+  vár" + újraküldés gomb); a mostani „sosem küldünk rá levelet" szöveg CSERÉJE
+- **Értesítési beállítások (globális):** kapcsoló + azonnali/összefoglaló + időköz
+  (a `kuszobErtekMezok` mintájára: gyorsválasztók + szabadon írható óraszám)
+
+### Biztonsági szabályok
+
+- A helyreállítás-kérés válasza MINDIG ugyanaz („ha van ilyen fiók, elküldtük") —
+  különben a végpont kideríthetővé tenné, ki regisztrált a koinóra.
+- Rate limit a kérő végpontokra (új csomag: `express-rate-limit` — jelenleg semmilyen
+  rate-limit nincs a projektben).
+- Token: 32 bájt véletlen, egyszer használatos, lejáró; sikeres helyreállítás után az
+  összes korábbi token érvénytelen.
+
+**A `tokenVerzio` MIÉRT KELL.** A bejelentkezési token szándékosan nem jár le
+(`a7c4c6d`), és nincs visszavonás. Emiatt ha egy fiók illetéktelen kézbe kerül, a
+jelszó megváltoztatása ÖNMAGÁBAN NEM lökné ki a támadót — a régi tokenje továbbra is
+érvényes maradna. A jelszó-helyreállítás enélkül félkarú. A `tokenVerzio` jelszóváltáskor
+és helyreállításkor nő eggyel, az auth-middleware pedig összeveti a tokenben lévővel.
+
+### ZSÁKUTCA, amit meg kell előzni
+
+Aki elfelejti a jelszavát ÉS nem erősítette meg a címét: nem tud belépni, és megerősíteni
+sem tud (ahhoz be kellene lépnie). Ezért a megerősítés NEM köthető az értesítés
+bekapcsolásához — külön gomb kell rá a beállításokban, és látható figyelmeztetés:
+„a címed nincs megerősítve — így elfelejtett jelszó esetén nem tudunk segíteni".
+
+### Amit Csabának kézzel kell elintéznie
+
+1. Fiók a levélküldőnél (Resend vagy Brevo — ingyenes szinttel indul)
+2. A **koino.hu domain hitelesítése**: SPF + DKIM + DMARC DNS-rekord a Cloudflare-ben —
+   a **biszt100@gmail.com** fiókban (NEM a biszt5-ösben!)
+3. Feladó-cím eldöntése (pl. `ertesites@koino.hu`)
+4. Az API-kulcs a `backend/.env.prod`-ba
+
+### Dokumentáció, amit át kell írni
+
+`adatkezeles.md` (az „e-mailt sosem küldünk" ígéret), `adatvedelmi_nyilatkozat.md`,
+`eemberBeallitasokModal.html` szövege, `teszt.md` forgatókönyvek, új
+`megismeres/17-email-ertesitesek.md`, CHANGELOG.
+
+### A lépések sorrendje (mindegyik külön commit + külön böngészős teszt)
+
+| # | Lépés | Állapot |
+|---|---|---|
+| 1 | Levél-kapu + sablon-keret + próba-eszköz (dev-napló mód) | folyamatban |
+| 2 | Cím-megerősítés (modell, végpontok, beállítások-képernyő) | — |
+| 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | — |
+| 4 | Értesítés e-mailben — AZONNALI mód | — |
+| 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | — |
+| 6 | Dokumentáció + megismerés-leírás + CHANGELOG | — |
+
+Az 1–3. lépés a jelszó-funkciót teszi teljessé; a 4–5. az értesítéseket. Az 1. lépés
+mindkettőhöz kell, és valódi levélküldés nélkül is tesztelhető.
