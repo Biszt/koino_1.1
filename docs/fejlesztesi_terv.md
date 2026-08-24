@@ -3954,7 +3954,10 @@ bekapcsolásához — külön gomb kell rá a beállításokban, és látható f
 | 3 | Elfelejtett jelszó + `tokenVerzio` + URL-kapu a `main.js`-ben | ✅ KÉSZ |
 | 4 | Értesítés e-mailben — AZONNALI mód | ✅ KÉSZ |
 | 5 | ÖSSZEFOGLALÓ mód + időköz-beállítás + cron | ✅ KÉSZ |
-| 6 | Dokumentáció + megismerés-leírás + CHANGELOG | — |
+| 6 | Dokumentáció + megismerés-leírás + CHANGELOG | ✅ KÉSZ |
+
+**A teljes e-mail feladat KÉSZ** — hátra az élesítés van, ELŐTTE a Resendben ki kell
+kapcsolni a click trackinget (lásd fentebb).
 
 ### Ami az 1–3. lépés közben eldőlt (a terven felül)
 

@@ -9,6 +9,48 @@ szellemét (magyarul, a projekt stílusához igazítva).
 
 ---
 
+## 2026-08-24 — E-mail: értesítés levélben és elfelejtett jelszó
+
+A koino eddig **egyetlen levelet sem küldött** — nem is volt hozzá kódja. Ez most két
+funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
+
+- **A program magától SOHA nem küld levelet.** Minden kimenő levélhez tartozik egy
+  azonosítható, e-ember általi kérés (gombnyomás, kapcsoló, űrlap). A **levél-kapu**
+  (`emailKuldoService`) ezt kódban kényszeríti ki: kötelező `indok` zárt listából,
+  és **megerősítetlen címre semmit nem enged ki**. Hiányos beállításnál magától
+  „napló módba" esik — kiírja a levelet, de nem küldi el.
+- **Cím-megerősítés:** a megadott cím önmagában nem bizonyít semmit, ezért egyszer
+  használatos hivatkozással igazolható. Cím-változáskor a megerősítés elvész.
+- **Elfelejtett jelszó:** helyreállító hivatkozás a megerősített címre (1 óra, egyszer
+  használatos). A kérés válasza **mindig ugyanaz**, akár létezik az azonosító, akár
+  nem — így a végpont nem árulja el, ki tagja a koinónak.
+- **A bejelentkezések visszavonhatók (`tokenVerzio`).** A tokenek nem járnak le, ezért
+  a jelszócsere önmagában nem lökte volna ki azt, aki illetéktelenül bejutott.
+  Jelszóváltáskor és helyreállításkor most minden korábbi token érvénytelen lesz,
+  minden eszközön.
+- **Értesítés e-mailben**, választható ütemmel: minden értesítésről külön levél
+  **azonnal**, vagy **időközönkénti összefoglaló** — az időköz szabadon állítható
+  (1–168 óra). Alapérték: összefoglaló, naponta.
+- **Kérés-korlát** a levélküldő végpontokra (saját middleware, nulla új npm csomag).
+- **Élesben:** Resend (EU-s régió), a koino.hu DKIM+SPF+DMARC hitelesítéssel.
+- **Adatkezelés:** az `adatkezeles.md` korábbi „e-mailt sosem küldünk" ígérete
+  átírva, a változás okával együtt kimondva. Visszamenőleg senki nem kap semmit:
+  minden meglévő e-ember kikapcsolt állapotból indul.
+- Új e-embereknek szóló leírás: [`megismeres/17-email-ertesitesek.md`](megismeres/17-email-ertesitesek.md).
+
+## 2026-08-18–24 — Szerkesztők, kártya-dátum, hozzájárulók
+
+- **„Létrehozó" → „Szerkesztő":** egy entitásnak több szerkesztője lehet (az eredeti
+  létrehozó + akinek elfogadott módosítási javaslata módosította). A Részletes
+  adatokban a nevek a szavazatuk szerinti színnel jelennek meg.
+- **Kártya-fejléc dátum + elavulás-jelző szín:** a tartalom/kategória/tartalomtípus
+  kártyán 📅 dátum, a szülő utolsó módosításához mérve (piros = elavulhat).
+- **Hozzájárulók:** a Részletes adatok → Hozzájárulók listájában látszik minden
+  e-ember **részvételi szerepe** (aktív / passzív).
+- **Cache-javítás:** `Cache-Control: no-cache` a statikus frontendre — megelőzi a
+  deploy utáni „régi JS fut a telefonon" csapdát.
+- **A bejelentkezés nem jár le:** az e-ember addig marad bejelentkezve, ameddig akar.
+
 ## 2026-08-16–17 — A lapozás visszafelé is jár
 
 - **A lapozás lépcsője a valódi gesztushoz kötve.** Ha egy szintről kizoomolsz, a

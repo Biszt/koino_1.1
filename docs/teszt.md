@@ -52,7 +52,7 @@ Böngészőben a regisztrációs űrlap mezői (a `POST /api/eember/regisztracio
 | Mező | Kötelező | Példa | Megkötés |
 |---|---|---|---|
 | `eemberNev` | ✅ | `tesztAnna` | egyedi, 3–30 karakter |
-| `email` | ⬜ (opcionális) | `anna@teszt.hu` | **Nem kötelező** (2026-07-31). Ha megadják: egyedi, kisbetűsít, csak azonosításra. Ha üresen hagyják: nem tárolódik e-mail (a mező hiányzik). |
+| `email` | ⬜ (opcionális) | `anna@teszt.hu` | **Nem kötelező** (2026-07-31). Ha megadják: egyedi, kisbetűsít. Ha üresen hagyják: nem tárolódik e-mail (a mező hiányzik). Regisztráció után `emailMegerositve: false` — megerősítésig SEMMILYEN levél nem megy rá (2026-08-24). |
 | `jelszo` | ✅ | `jelszo123` | min. 8 karakter, + legalább egy betű ÉS egy szám (`jelszoHelper.validalJelszoErosseg`) |
 | `nev` | ✅ | `Teszt Anna` | valódi név |
 | `lokacio.orszag` | ✅ | `Magyarország` | |

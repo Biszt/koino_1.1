@@ -28,11 +28,42 @@ ami jól hangzik.*
   szavazatvásárlás + önkiválasztási torzítás); az API kizárólag a saját
   szavazatot adja vissza a bejelentkezett e-embernek;
 - az **e-mail cím** — **megadása nem kötelező** (adatvédelmi döntés, 2026-07-31);
-  ha megadták, kizárólag azonosításra (bejelentkezésre) szolgál, e-mailt sosem
-  küldünk rá, és semmilyen más felhasználónak szóló API-válaszban nem szerepel.
-  Aki nem ad meg e-mailt, arról **egyáltalán nem tárolunk e-mailt** (a mező hiányzik),
-  így nem keletkezik funkció nélküli e-mail-jegyzék;
+  semmilyen más felhasználónak szóló API-válaszban nem szerepel. Aki nem ad meg
+  e-mailt, arról **egyáltalán nem tárolunk e-mailt** (a mező hiányzik);
 - a **jelszó** — hash-elve tárolódik (bcrypt), visszafejthető formában sehol.
+
+## Mire használjuk az e-mail címet? (2026-08-24 — VÁLTOZÁS)
+
+**Ez a szakasz egy korábbi ígéret módosítása, ezért kimondjuk, mi változott.**
+
+2026-08-24 előtt itt az állt, hogy a megadott címre **„e-mailt sosem küldünk"** —
+mert akkor a koinónak egyáltalán nem volt levélküldése. Azóta két funkció épült rá:
+az **elfelejtett jelszó** és az **e-mailes értesítés**. Aki korábban ebben a hitben
+adta meg a címét, azt ez a változás nem érheti váratlanul, ezért:
+
+**A koino magától SOHA nem küld levelet.** Minden kimenő levélhez tartozik egy
+azonosítható, e-ember általi kérés:
+
+| Levél | Mi a kérés? |
+|---|---|
+| Cím-megerősítő | az e-ember megnyomta a „Cím megerősítése" gombot |
+| Értesítés / összefoglaló | az e-ember bekapcsolta az e-mailes értesítést |
+| Jelszó-helyreállító | az e-ember rákattintott az „Elfelejtett jelszó"-ra |
+
+Ez nem csak elv, hanem a kódban kikényszerített szabály: a levél-kapu
+(`services/emailKuldoService.js`) minden híváshoz **kötelező indokot** kér egy zárt
+listából, és **megerősítetlen címre semmit nem enged ki** — egyetlen kivétel maga a
+megerősítő levél, hiszen az teszi megerősítetté a címet.
+
+**Visszamenőleg senki nem kapott és nem kap semmit:** a mező bevezetésekor minden
+meglévő e-ember `emailMegerositve: false` és `emailErtesites: false` állapotból indult.
+Aki nem kapcsol be semmit, annak a helyzete pontosan ugyanaz, mint a változás előtt.
+
+**Amit a levélküldés szükségszerűen jelent:** a leveleket egy külső szolgáltató
+(Resend, EU-s régió) kézbesíti, tehát a címzett e-mail címe és a levél tárgya
+áthalad rajta. A levelekbe **nem kerül** koino-tartalom a címeknél és az esemény
+megnevezésénél több (pl. „Új javaslat — <entitás címe>"), és nem kerül bele
+szavazat, tudatpont-adat vagy jelszó.
 
 ## Mit lát az üzemeltető? (őszinte kimondás)
 
@@ -58,7 +89,14 @@ zero-knowledge irány; CÉLKÉNT kommunikáljuk, nem kész képességként) és 
   (regisztráció/bejelentkezés/beállítások) válasza tartalmaz — és csak akkor, ha
   az e-ember egyáltalán megadott e-mailt.
 - Az e-mail a **JWT tokenből is kikerült** (2026-07-31): a token payload csak
-  `id`-t és `eemberNev`-et tartalmaz — a kliensoldalon olvasható tokenben nincs
-  személyes e-mail.
+  `id`-t, `eemberNev`-et és a token-verziót (`tv`) tartalmazza — a kliensoldalon
+  olvasható tokenben nincs személyes e-mail.
+- **A bejelentkezések visszavonhatók** (2026-08-24): a tokenek szándékosan nem járnak
+  le, ezért jelszóváltáskor és jelszó-helyreállításkor az e-ember `tokenVerzio`
+  értéke nő — ettől minden korábban kiadott token azonnal érvénytelen lesz, minden
+  eszközön. Enélkül a jelszó megváltoztatása nem zárná ki azt, aki illetéktelenül
+  hozzáfért a fiókhoz.
+- **A jelszó-helyreállítás nem árulja el, ki tagja a koinónak** (2026-08-24): a kérés
+  válasza szó szerint ugyanaz, akár létezik a megadott azonosító, akár nem.
 - Változás esetén ezt a dokumentumot is frissíteni kell (teszt-referencia:
   [teszt.md](teszt.md)).
