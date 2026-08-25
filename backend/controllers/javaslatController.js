@@ -330,9 +330,10 @@ async szavazatLeadasa(req, res) {
       });
     }
 
-    // 2. LÉPÉS - Javaslat ID és szavazat típus kiolvassa request body-ből (JSON)
-    const { javaslatId, szavazatTipus } = req.body;
-    
+    // 2. LÉPÉS - Javaslat ID, szavazat típus és különválási szándék kiolvassa
+    // request body-ből (JSON). A kulonvalasIgeny NEM kötelező — ha hiányzik, hamis.
+    const { javaslatId, szavazatTipus, kulonvalasIgeny } = req.body;
+
     // 3. LÉPÉS - Validációk
     if (!javaslatId) {
       return res.status(400).json({
@@ -340,7 +341,7 @@ async szavazatLeadasa(req, res) {
         message: 'A javaslat azonosítója kötelező'
       });
     }
-    
+
     if (!szavazatTipus) {
       return res.status(400).json({
         success: false,
@@ -349,10 +350,13 @@ async szavazatLeadasa(req, res) {
     }
 
     // 4. LÉPÉS - Service hívás - szavazat leadása
+    // A különválási szándékot logikaivá alakítjuk; a domain-szabályt (tartózkodásnál
+    // mindig hamis) a service kényszeríti ki, nem itt.
     const eredmeny = await SzavazatService.szavazatLeadasa(
       eemberId,
       javaslatId,
-      szavazatTipus
+      szavazatTipus,
+      !!kulonvalasIgeny
     );
 
     // 5. LÉPÉS - Sikeres válasz küldése

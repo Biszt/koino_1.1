@@ -71,7 +71,8 @@ router.get('/:id/sajat-szavazat', authMiddleware, JavaslatController.sajatSzavaz
 // Szavazat leadása egy javaslatra
 // POST /api/javaslat/szavazat
 // VÉDETT - csak bejelentkezett eemberek
-// Body: { javaslatId, szavazatTipus }
+// Body: { javaslatId, szavazatTipus, kulonvalasIgeny? }
+// A kulonvalasIgeny elhagyható (alap: false) — a különválási szándék jelölése.
 router.post('/szavazat', authMiddleware, JavaslatController.szavazatLeadasa);
 
 // Szavazat visszavonása

@@ -100,16 +100,18 @@ class SzavazatRepository {
    * @param {string} eemberId - A eember MongoDB ObjectId-ja
    * @param {string} javaslatId - A javaslat MongoDB ObjectId-ja
    * @param {string} szavazatTipus - 'Tamogat' vagy 'Ellenez'
+   * @param {boolean} kulonvalasIgeny - Kér-e külön ágat (alap: false)
    * @returns {Promise<Object>} A szavazat objektum
    */
-  async createOrUpdate(eemberId, javaslatId, szavazatTipus) {
+  async createOrUpdate(eemberId, javaslatId, szavazatTipus, kulonvalasIgeny = false) {
     // Model static metódus használata
     const szavazat = await Szavazat.keresVagyLetrehoz(
       eemberId,
       javaslatId,
-      szavazatTipus
+      szavazatTipus,
+      kulonvalasIgeny
     );
-    
+
     return szavazat;
   }
 

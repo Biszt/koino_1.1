@@ -32,10 +32,11 @@ class SzavazatService {
 // param: string eemberId    - A szavazó eember ID-ja
 // param: string javaslatId  - A javaslat ID-ja
 // param: string szavazatTipus - 'Tamogat' | 'Ellenez' | 'Tartozkodik'
+// param: boolean kulonvalasIgeny - Kér-e külön ágat, ha nem az ő álláspontja szerint dől el
 // returns: Promise<Object> - Szavazat és eredmény adatok
-async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
+async szavazatLeadasa(eemberId, javaslatId, szavazatTipus, kulonvalasIgeny = false) {
   // Log a metódus elejére az értékekkel
-  console.log('szavazatLeadasa - KEZDÉS', { eemberId, javaslatId, szavazatTipus });
+  console.log('szavazatLeadasa - KEZDÉS', { eemberId, javaslatId, szavazatTipus, kulonvalasIgeny });
 
   // 1. LÉPÉS - PARAMÉTEREK VALIDÁLÁSA
   if (!eemberId) throw new Error('A eember azonosítója kötelező');
@@ -47,6 +48,18 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
   if (!megengedettTipusok.includes(szavazatTipus)) {
     throw new Error(`Érvénytelen szavazat típus. Megengedett értékek: ${megengedettTipusok.join(', ')}`);
   }
+
+  // 1/b. LÉPÉS - A KÜLÖNVÁLÁSI SZÁNDÉK NORMALIZÁLÁSA (DOMAIN-SZABÁLY)
+  // Tartózkodásnál a szándék MINDIG hamis: aki nem foglalt állást, nem válik külön,
+  // ő a főágon marad (5. döntés, docs/fejlesztesi_terv.md „Különválás" szakasz).
+  // Itt, EGY helyen döntjük el — így a nem-töredék és a töredék ág is ugyanazt kapja.
+  const kulonvalasSzandek = szavazatTipus === 'Tartozkodik' ? false : !!kulonvalasIgeny;
+
+  console.log('szavazatLeadasa - Különválási szándék normalizálva', {
+    kapott: kulonvalasIgeny,
+    szavazatTipus,
+    hasznalt: kulonvalasSzandek
+  });
 
   // 2. LÉPÉS - JAVASLAT LÉTEZÉSÉNEK ÉS STÁTUSZÁNAK ELLENŐRZÉSE
   console.log('szavazatLeadasa - JavaslatRepository.findById', { javaslatId });
@@ -92,7 +105,8 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
     const szavazat = await SzavazatRepository.createOrUpdate(
       eemberId,
       javaslatId,
-      szavazatTipus
+      szavazatTipus,
+      kulonvalasSzandek   // A különválási szándék minden leadáskor felülíródik
     );
     console.log('szavazatLeadasa - Szavazat mentve (nem töredék)', { szavazat });
 
@@ -132,7 +146,8 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
       siker: true,
       szavazat: szavazat,
       uzenet: 'Szavazat sikeresen leadva. Az értékek frissítése 1 percen belül megtörténik.',
-      isToredek: false, // Jelezzük, hogy nem töredékes szavazás volt
+      isToredek: false,                    // Jelezzük, hogy nem töredékes szavazás volt
+      kulonvalasIgeny: kulonvalasSzandek,  // A ténylegesen elmentett szándék
     };
     console.log('szavazatLeadasa - VÉGE (nem töredék)', { eredmeny });
     return eredmeny;
@@ -207,7 +222,8 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
     const szavazat = await SzavazatRepository.createOrUpdate(
       eemberId,
       toredek._id.toString(), // A töredékjavaslat ID-ja
-      szavazatTipus           // Egységesen ugyanolyan szavazat minden töredékre
+      szavazatTipus,          // Egységesen ugyanolyan szavazat minden töredékre
+      kulonvalasSzandek       // …és egységesen ugyanaz a különválási szándék is
     );
 
     // Töredékjavaslat megjelölése elavultként, hogy a cron job frissítse
@@ -259,6 +275,7 @@ async szavazatLeadasa(eemberId, javaslatId, szavazatTipus) {
     siker: true,
     uzenet: `Szavazat sikeresen leadva ${jogosultToredekek.length} töredékre. Az értékek frissítése 1 percen belül megtörténik.`,
     isToredek: true,                        // Jelezzük, hogy töredékes szavazás volt
+    kulonvalasIgeny: kulonvalasSzandek,     // A ténylegesen elmentett szándék (minden töredéken ugyanaz)
     toredekSzavazatok: toredekSzavazatok,   // Melyek töredékekre sikerült szavazni
     atugrottToredekek: atugrottToredekek,   // Melyek lettek kihagyva (nem volt jogosultság)
   };

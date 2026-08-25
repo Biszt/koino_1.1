@@ -21,6 +21,9 @@ const SZAVAZAT_FELIRATOK = {
 //  3. A tényleges szerverhívás (leadás / módosítás / visszavonás) csak a
 //     „Rendben" gombra történik meg, a kiválasztás alapján; sikeres mentés
 //     után a modal bezárul. Bezárás mentés nélkül (X / ESC) = nincs változás.
+//  4. Támogatom / Ellenzem mellett megjelenik a KÜLÖNVÁLÁSI kérdés is: kér-e
+//     külön ágat, ha a döntés nem az ő álláspontját követi. Ez is csak helyben
+//     áll be; a „Rendben" küldi a szavazattal együtt (kulonvalasIgeny).
 // Használják: JavaslatKartya (hamburger menü „Szavazat leadása" pontja).
 class SzavazatModal {
 
@@ -51,6 +54,12 @@ class SzavazatModal {
     // A típus-gombok ezt állítják; a „Rendben" ezt küldi majd a szervernek.
     // null = nincs kiválasztva / visszavonás szándéka.
     this.kivalasztottTipus = null;
+
+    // KÜLÖNVÁLÁSI SZÁNDÉK — ugyanaz a kettősség, mint a szavazatnál:
+    // ami a szerveren van, és ami a felületen éppen ki van pipálva.
+    // Tartózkodásnál mindig hamis (a tartózkodó a főágon marad).
+    this.jelenlegiKulonvalas   = false;
+    this.kivalasztottKulonvalas = false;
 
     // Igaz, ha a modal élettartama alatt ténylegesen mentettünk (szerverhívás
     // sikeres volt) — bezáráskor ez alapján töltjük-e újra a paklit
@@ -97,6 +106,7 @@ class SzavazatModal {
     // Eseménykezelők bekötése a body gombjaira
     this._szavazoGombokBekotese();
     this._visszavonasGombBekotese();
+    this._kulonvalasJeloloBekotese();
 
     console.log('SzavazatModal.init - VÉGE');
   }
@@ -157,13 +167,17 @@ class SzavazatModal {
       const valasz = await apiGet(`javaslat/${this.javaslatId}/sajat-szavazat`, this.token);
       // A data null, ha még nem szavazott
       this.jelenlegiSzavazat = valasz?.data?.szavazatTipus ?? null;
+      // A korábban jelölt különválási szándék (régi szavazatoknál nincs ilyen mező → hamis)
+      this.jelenlegiKulonvalas = !!valasz?.data?.kulonvalasIgeny;
       // A kiválasztás az eredeti szavazatról indul (ezt emeljük ki), így a
       // „Rendben" változatlan állapotnál nem küld feleslegesen a szervernek.
-      this.kivalasztottTipus = this.jelenlegiSzavazat;
+      this.kivalasztottTipus      = this.jelenlegiSzavazat;
+      this.kivalasztottKulonvalas = this.jelenlegiKulonvalas;
       this._kivalasztottGombFrissitese();
 
       console.log('SzavazatModal._sajatSzavazatBetoltese - VÉGE', {
-        jelenlegiSzavazat: this.jelenlegiSzavazat
+        jelenlegiSzavazat: this.jelenlegiSzavazat,
+        jelenlegiKulonvalas: this.jelenlegiKulonvalas
       });
     } catch (hiba) {
       // A korábbi szavazat lekérése nem kritikus: a szavazás enélkül is működik,
@@ -185,6 +199,11 @@ class SzavazatModal {
         console.log('SzavazatModal - szavazó gomb kattintás (helyi kiválasztás)', { tipus });
         // CSAK helyben választunk – a szerverhívás a „Rendben"-re történik
         this.kivalasztottTipus = tipus;
+        // Tartózkodásra váltva a különválási szándék elesik: aki nem foglal állást,
+        // a főágon marad. (Ugyanezt a szabályt a backend is kikényszeríti.)
+        if (tipus === 'Tartozkodik') {
+          this.kivalasztottKulonvalas = false;
+        }
         this.modal.hibaTisztitasa();
         this._kivalasztottGombFrissitese();
       });
@@ -204,12 +223,32 @@ class SzavazatModal {
       console.log('SzavazatModal - visszavonás gomb kattintás (helyi törlés)');
       // CSAK helyben töröljük a kiválasztást (nincs szerverhívás). Ha volt
       // eredeti szavazat, a „Rendben" ebből fog visszavonást (DELETE) csinálni.
-      this.kivalasztottTipus = null;
+      this.kivalasztottTipus      = null;
+      this.kivalasztottKulonvalas = false;  // szavazat nélkül nincs különválási szándék
       this.modal.hibaTisztitasa();
       this._kivalasztottGombFrissitese();
     });
 
     console.log('SzavazatModal._visszavonasGombBekotese - VÉGE');
+  }
+
+  // ===== KÜLÖNVÁLÁSI JELÖLŐNÉGYZET BEKÖTÉSE =====
+  // A pipa CSAK helyben állítja a szándékot; a szerverhívás a „Rendben"-re történik.
+  _kulonvalasJeloloBekotese() {
+    console.log('SzavazatModal._kulonvalasJeloloBekotese - KEZDÉS');
+
+    const kontener = document.getElementById(this.kontenerAzonosito);
+    const jelolo   = kontener?.querySelector('.szavazat-modal__kulonvalas-jelolo');
+
+    jelolo?.addEventListener('change', () => {
+      this.kivalasztottKulonvalas = jelolo.checked;
+      console.log('SzavazatModal - különválási szándék jelölve (helyi)', {
+        kivalasztottKulonvalas: this.kivalasztottKulonvalas
+      });
+      this.modal.hibaTisztitasa();
+    });
+
+    console.log('SzavazatModal._kulonvalasJeloloBekotese - VÉGE', { vanJelolo: !!jelolo });
   }
 
   // ===== MEGERŐSÍTÉS (Rendben) =====
@@ -222,12 +261,20 @@ class SzavazatModal {
   async _megerosites() {
     const pending = this.kivalasztottTipus;   // amit a felületen kiválasztott
     const eredeti = this.jelenlegiSzavazat;   // amit a szerver tárol
+    // A különválási szándék ugyanígy: kiválasztott ↔ szerveren tárolt
+    const pendingKulonvalas = this.kivalasztottKulonvalas;
+    const eredetiKulonvalas = this.jelenlegiKulonvalas;
     console.log('SzavazatModal._megerosites - KEZDÉS', {
-      javaslatId: this.javaslatId, pending, eredeti
+      javaslatId: this.javaslatId, pending, eredeti, pendingKulonvalas, eredetiKulonvalas
     });
 
-    // Nincs változás → felesleges szerverhívás nélkül zárunk
-    if (pending === eredeti) {
+    // Nincs változás → felesleges szerverhívás nélkül zárunk.
+    // FIGYELEM: a szavazat típusa ÉS a különválási szándék is számít — ha csak a
+    // pipa változott (ugyanaz a szavazat), azt is menteni kell.
+    const nincsValtozas = (pending === eredeti) &&
+                          (pending === null || pendingKulonvalas === eredetiKulonvalas);
+
+    if (nincsValtozas) {
       console.log('SzavazatModal._megerosites - nincs változás, csak zárás');
       this.modal.bezaras();
       return;
@@ -240,8 +287,9 @@ class SzavazatModal {
       if (pending) {
         // Szavazat leadása vagy módosítása a kiválasztott típussal
         await apiPost('javaslat/szavazat', {
-          javaslatId:    this.javaslatId,
-          szavazatTipus: pending
+          javaslatId:      this.javaslatId,
+          szavazatTipus:   pending,
+          kulonvalasIgeny: pendingKulonvalas
         }, this.token);
       } else {
         // pending null, de volt eredeti szavazat → visszavonás
@@ -251,11 +299,12 @@ class SzavazatModal {
       }
 
       // Sikeres mentés: állapot frissítése és zárás
-      this.jelenlegiSzavazat = pending;
-      this.valtozottE        = true;
+      this.jelenlegiSzavazat   = pending;
+      this.jelenlegiKulonvalas = pending ? pendingKulonvalas : false;
+      this.valtozottE          = true;
       this.modal.betoltesBeallitasa(false);
 
-      console.log('SzavazatModal._megerosites - VÉGE: sikeres', { pending });
+      console.log('SzavazatModal._megerosites - VÉGE: sikeres', { pending, pendingKulonvalas });
       this.modal.bezaras();
 
     } catch (hiba) {
@@ -294,7 +343,24 @@ class SzavazatModal {
       visszavonasGomb.hidden = !this.jelenlegiSzavazat;
     }
 
-    console.log('SzavazatModal._kivalasztottGombFrissitese - VÉGE');
+    // A különválási kérdés CSAK állásfoglalásnál értelmes: Támogatom vagy Ellenzem.
+    // Tartózkodásnál és kiválasztás nélkül elrejtjük (a tartózkodó a főágon marad).
+    const kulonvalasBlokk = kontener.querySelector('.szavazat-modal__kulonvalas');
+    const kulonvalasJelolo = kontener.querySelector('.szavazat-modal__kulonvalas-jelolo');
+    const kerdesLathato = this.kivalasztottTipus === 'Tamogat' ||
+                          this.kivalasztottTipus === 'Ellenez';
+
+    if (kulonvalasBlokk) {
+      kulonvalasBlokk.hidden = !kerdesLathato;
+    }
+    if (kulonvalasJelolo) {
+      kulonvalasJelolo.checked = this.kivalasztottKulonvalas;
+    }
+
+    console.log('SzavazatModal._kivalasztottGombFrissitese - VÉGE', {
+      kerdesLathato,
+      kivalasztottKulonvalas: this.kivalasztottKulonvalas
+    });
   }
 }
 

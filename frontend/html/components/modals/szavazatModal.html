@@ -32,6 +32,25 @@
 
   </div>
 
+  <!-- ===== KÜLÖNVÁLÁSI SZÁNDÉK ===== -->
+  <!-- Csak a Támogatom / Ellenzem mellett látszik (a JS mutatja és rejti):
+       a tartózkodó nem foglalt állást, ezért ő mindig a főágon marad. -->
+  <div class="szavazat-modal__kulonvalas" hidden>
+
+    <label class="szavazat-modal__kulonvalas-sor">
+      <input class="szavazat-modal__kulonvalas-jelolo" type="checkbox">
+      <span class="szavazat-modal__kulonvalas-kerdes">
+        Ha a döntés nem a te álláspontodat követi, szeretnél külön ágat?
+      </span>
+    </label>
+
+    <p class="szavazat-modal__kulonvalas-magyarazat">
+      Így a te álláspontod szerinti változat külön ágon élne tovább — a tudatpontoddal
+      együtt, a másik ágra mutató hivatkozással. Senki nem veszít, csak külön útra lép.
+    </p>
+
+  </div>
+
   <!-- ===== VISSZAVONÁS ===== -->
   <!-- Csak akkor látható, ha az eembernek van SZERVEREN tárolt szavazata (JS kezeli). -->
   <!-- A gomb helyben törli a kiválasztást; a tényleges visszavonás a „Rendben"-re történik. -->

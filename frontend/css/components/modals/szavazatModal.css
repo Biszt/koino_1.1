@@ -76,6 +76,54 @@
   color: var(--color-primary-active);
 }
 
+/* ===== KÜLÖNVÁLÁSI SZÁNDÉK ===== */
+/* A szavazó gombok alatti jelölőnégyzet: kér-e külön ágat, ha nem az ő
+   álláspontja szerint dől el a döntés. Csak Támogatom / Ellenzem mellett látszik. */
+.szavazat-modal__kulonvalas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface-offset);
+  border-radius: var(--radius-md);
+}
+
+/* A hidden attribútum rejtse el megbízhatóan (a flex felülírná) */
+.szavazat-modal__kulonvalas[hidden] {
+  display: none;
+}
+
+/* A jelölőnégyzet és a kérdés egy sorban, kattintható címkeként */
+.szavazat-modal__kulonvalas-sor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  /* Érintési felület mobilon */
+  min-height: 44px;
+}
+
+.szavazat-modal__kulonvalas-jelolo {
+  /* A szöveg első sorával legyen egy magasságban */
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.szavazat-modal__kulonvalas-kerdes {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Magyarázat — halkabb, mint a kérdés */
+.szavazat-modal__kulonvalas-magyarazat {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 /* ===== SIKERÜZENET SÁV ===== */
 /* Szavazás / visszavonás utáni visszajelzés — zöld, elkülönül a hiba sávtól. */
 .szavazat-modal__uzenet {
