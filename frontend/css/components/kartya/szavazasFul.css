@@ -121,3 +121,54 @@
 .szavazas-ful__uzenet--hiba {
   color: var(--color-error);
 }
+
+/* ---------------------------------------- */
+/* KÜLÖNVÁLÁSI SZÁNDÉK                      */
+/* ---------------------------------------- */
+/* Csak Támogatom / Ellenzem mellett látszik: aki tartózkodik, a főágon marad.
+   A pipa azonnal hat (mint a gombok) — újraküldi a szavazatot a módosított
+   szándékkal. Lásd: megismeres/18-kulonvalas.md */
+
+.szavazas-ful__kulonvalas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface-offset);
+  border-radius: var(--radius-md);
+}
+
+/* A hidden attribútum rejtse el megbízhatóan (a flex felülírná) */
+.szavazas-ful__kulonvalas[hidden] {
+  display: none;
+}
+
+/* Jelölőnégyzet + kérdés egy sorban, kattintható címkeként */
+.szavazas-ful__kulonvalas-sor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  min-height: 44px;   /* érintési felület mobilon */
+}
+
+.szavazas-ful__kulonvalas-jelolo {
+  margin-top: 2px;    /* a szöveg első sorával egy magasságban */
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.szavazas-ful__kulonvalas-kerdes {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Magyarázat — halkabb, mint a kérdés */
+.szavazas-ful__kulonvalas-magyarazat {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}

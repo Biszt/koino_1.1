@@ -57,10 +57,17 @@ class SzavazasFul {
     // A szerveren tárolt saját szavazat ('Tamogat' | 'Ellenez' | 'Tartozkodik' | null)
     this.jelenlegiSzavazat = null;
 
+    // KÜLÖNVÁLÁSI SZÁNDÉK: kér-e külön ágat, ha a döntés nem az ő álláspontját követi.
+    // Tartózkodásnál mindig hamis (a tartózkodó a főágon marad) — ezt a backend is
+    // kikényszeríti. Lásd: megismeres/18-kulonvalas.md
+    this.kulonvalasIgeny = false;
+
     // DOM-referenciák (a _felepites tölti ki)
     this.gombok         = {};   // { Tamogat: <button>, ... }
     this.visszavonasGomb = null;
     this.uzenetElem     = null;
+    this.kulonvalasBlokk  = null;   // a kérdés konténere (rejthető)
+    this.kulonvalasJelolo = null;   // maga a jelölőnégyzet
 
     this._felepites();
 
@@ -122,6 +129,42 @@ class SzavazasFul {
 
     this.kontener.appendChild(gombokKontener);
 
+    // --- KÜLÖNVÁLÁSI SZÁNDÉK ---
+    // Csak Támogatom / Ellenzem mellett látszik: aki tartózkodik, nem foglalt állást,
+    // tehát a főágon marad. A pipa — a gombokhoz hasonlóan — AZONNAL hat: újraküldi a
+    // szavazatot a módosított szándékkal.
+    this.kulonvalasBlokk = document.createElement('div');
+    this.kulonvalasBlokk.className = 'szavazas-ful__kulonvalas';
+    this.kulonvalasBlokk.hidden = true;
+
+    const kulonvalasSor = document.createElement('label');
+    kulonvalasSor.className = 'szavazas-ful__kulonvalas-sor';
+
+    this.kulonvalasJelolo = document.createElement('input');
+    this.kulonvalasJelolo.type = 'checkbox';
+    this.kulonvalasJelolo.className = 'szavazas-ful__kulonvalas-jelolo';
+    this.kulonvalasJelolo.addEventListener('click', (e) => e.stopPropagation()); // a kártya ne váltson
+    this.kulonvalasJelolo.addEventListener('change', () => this._kulonvalasValtozott());
+
+    const kulonvalasKerdes = document.createElement('span');
+    kulonvalasKerdes.className   = 'szavazas-ful__kulonvalas-kerdes';
+    kulonvalasKerdes.textContent = 'Ha a döntés nem a te álláspontodat követi, szeretnél külön ágat?';
+
+    kulonvalasSor.appendChild(this.kulonvalasJelolo);
+    kulonvalasSor.appendChild(kulonvalasKerdes);
+    // A címkére kattintás is a jelölőnégyzetet billenti — ne váltson kártyát
+    kulonvalasSor.addEventListener('click', (e) => e.stopPropagation());
+    this.kulonvalasBlokk.appendChild(kulonvalasSor);
+
+    const kulonvalasMagyarazat = document.createElement('p');
+    kulonvalasMagyarazat.className   = 'szavazas-ful__kulonvalas-magyarazat';
+    kulonvalasMagyarazat.textContent =
+      'Így a te álláspontod szerinti változat külön ágon élne tovább — a tudatpontoddal ' +
+      'együtt, a másik ágra mutató hivatkozással. Senki nem veszít, csak külön útra lép.';
+    this.kulonvalasBlokk.appendChild(kulonvalasMagyarazat);
+
+    this.kontener.appendChild(this.kulonvalasBlokk);
+
     // --- Visszavonás gomb (csak ha van szerveren tárolt szavazat) ---
     this.visszavonasGomb = document.createElement('button');
     this.visszavonasGomb.type = 'button';
@@ -153,10 +196,13 @@ class SzavazasFul {
       const valasz = await apiGet(`javaslat/${this.javaslatId}/sajat-szavazat`, this.token);
       // A data null, ha még nem szavazott
       this.jelenlegiSzavazat = valasz?.data?.szavazatTipus ?? null;
+      // Régi szavazatoknál a mező hiányzik → hamis
+      this.kulonvalasIgeny = !!valasz?.data?.kulonvalasIgeny;
       this._allapotFrissitese();
 
       console.log('SzavazasFul.betoltes - VÉGE', {
-        jelenlegiSzavazat: this.jelenlegiSzavazat
+        jelenlegiSzavazat: this.jelenlegiSzavazat,
+        kulonvalasIgeny:   this.kulonvalasIgeny
       });
     } catch (hiba) {
       // A korábbi szavazat lekérése nem kritikus: a szavazás enélkül is működik,
@@ -181,20 +227,67 @@ class SzavazasFul {
     this._gombokTiltasa(true);
     this._uzenet('', 'semleges');
 
+    // Tartózkodásra váltva a különválási szándék elesik (a backend is ezt teszi)
+    const kuldendoIgeny = tipus === 'Tartozkodik' ? false : this.kulonvalasIgeny;
+
     try {
       await apiPost('javaslat/szavazat', {
-        javaslatId:    this.javaslatId,
-        szavazatTipus: tipus
+        javaslatId:      this.javaslatId,
+        szavazatTipus:   tipus,
+        kulonvalasIgeny: kuldendoIgeny
       }, this.token);
 
       this.jelenlegiSzavazat = tipus;
+      this.kulonvalasIgeny   = kuldendoIgeny;
       this._allapotFrissitese();
       this._uzenet(`A szavazatod elmentve: ${SZAVAZAT_FELIRATOK[tipus]}.`, 'siker');
 
-      console.log('SzavazasFul._szavazas - VÉGE: sikeres', { tipus });
+      console.log('SzavazasFul._szavazas - VÉGE: sikeres', { tipus, kuldendoIgeny });
     } catch (hiba) {
       console.error('SzavazasFul._szavazas - HIBA', hiba.message);
       this._uzenet(hiba.message ?? 'A szavazat mentése sikertelen.', 'hiba');
+    } finally {
+      this._gombokTiltasa(false);
+    }
+  }
+
+  // ----- A KÜLÖNVÁLÁSI SZÁNDÉK MEGVÁLTOZOTT -----
+  // A pipa azonnal hat: újraküldjük a MEGLÉVŐ szavazatot a módosított szándékkal.
+  // (A backend a `kulonvalasIgeny`-t minden leadáskor felülírja a beérkező értékkel.)
+  async _kulonvalasValtozott() {
+    const ujIgeny = this.kulonvalasJelolo.checked;
+    console.log('SzavazasFul._kulonvalasValtozott - KEZDÉS', { ujIgeny });
+
+    // Szavazat nélkül nincs mihez kötni a szándékot (a blokk ilyenkor rejtve is van)
+    if (!this.szavazhat || !this.jelenlegiSzavazat) {
+      this.kulonvalasJelolo.checked = false;
+      return;
+    }
+
+    this._gombokTiltasa(true);
+    this._uzenet('', 'semleges');
+
+    try {
+      await apiPost('javaslat/szavazat', {
+        javaslatId:      this.javaslatId,
+        szavazatTipus:   this.jelenlegiSzavazat,   // a szavazat NEM változik
+        kulonvalasIgeny: ujIgeny
+      }, this.token);
+
+      this.kulonvalasIgeny = ujIgeny;
+      this._uzenet(
+        ujIgeny
+          ? 'Elmentve: ha a döntés nem a te álláspontodat követi, külön ágat kapsz.'
+          : 'Elmentve: nem kérsz külön ágat.',
+        'siker'
+      );
+
+      console.log('SzavazasFul._kulonvalasValtozott - VÉGE: sikeres', { ujIgeny });
+    } catch (hiba) {
+      console.error('SzavazasFul._kulonvalasValtozott - HIBA', hiba.message);
+      // Vissza a korábbi állapotra, hogy a pipa ne hazudjon
+      this.kulonvalasJelolo.checked = this.kulonvalasIgeny;
+      this._uzenet(hiba.message ?? 'A módosítás mentése sikertelen.', 'hiba');
     } finally {
       this._gombokTiltasa(false);
     }
@@ -215,6 +308,7 @@ class SzavazasFul {
       }, this.token);
 
       this.jelenlegiSzavazat = null;
+      this.kulonvalasIgeny   = false;   // szavazat nélkül nincs különválási szándék
       this._allapotFrissitese();
       this._uzenet('A szavazatod visszavonva.', 'siker');
 
@@ -240,6 +334,14 @@ class SzavazasFul {
     if (this.visszavonasGomb) {
       this.visszavonasGomb.hidden = !this.jelenlegiSzavazat || !this.szavazhat;
     }
+
+    // A különválási kérdés CSAK állásfoglalásnál értelmes: Támogatom vagy Ellenzem.
+    // Tartózkodásnál és szavazat nélkül elrejtjük (a tartózkodó a főágon marad).
+    const kerdesLathato = this.szavazhat &&
+      (this.jelenlegiSzavazat === 'Tamogat' || this.jelenlegiSzavazat === 'Ellenez');
+
+    if (this.kulonvalasBlokk)  this.kulonvalasBlokk.hidden = !kerdesLathato;
+    if (this.kulonvalasJelolo) this.kulonvalasJelolo.checked = this.kulonvalasIgeny;
   }
 
   // ----- GOMBOK TILTÁSA/ENGEDÉSE (hívás közben) -----
@@ -267,10 +369,12 @@ class SzavazasFul {
   // body-t); itt csak a referenciákat vágjuk el.
   destroy() {
     console.log('SzavazasFul.destroy - KEZDÉS');
-    this.gombok          = {};
-    this.visszavonasGomb = null;
-    this.uzenetElem      = null;
-    this.kontener        = null;
+    this.gombok           = {};
+    this.visszavonasGomb  = null;
+    this.uzenetElem       = null;
+    this.kulonvalasBlokk  = null;
+    this.kulonvalasJelolo = null;
+    this.kontener         = null;
     console.log('SzavazasFul.destroy - VÉGE');
   }
 }
