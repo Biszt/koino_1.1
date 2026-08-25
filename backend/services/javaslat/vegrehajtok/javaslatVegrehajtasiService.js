@@ -13,6 +13,12 @@ const CsomagVegrehajto = require('./csomagVegrehajto');
 // Egyezmény szolgáltatás importálása
 const EgyezmenyService = require('../../egyezmenyService');
 
+// Különválás: elfogadott módosítás után az ELLENZŐK külön ágra léphetnek a régi
+// állapottal (docs/fejlesztesi_terv.md „Különválás" szakaszai)
+const KulonvalasService = require('../../kulonvalasService');
+// A szavazatokból derül ki, ki kérte a külön ágat (Ellenez + kulonvalasIgeny)
+const SzavazatRepository = require('../../../repositories/szavazatRepository');
+
 // =====================================================
 // JAVASLAT VÉGREHAJTÁSI SERVICE OSZTÁLY
 // =====================================================
@@ -260,6 +266,21 @@ atkoltoztetettPontok: tudatpontEredmeny.tamogatok.atkoltoztetettPontok, // Logol
 visszaosztottPontok: tudatpontEredmeny.ellenzokEsTartozkodok.visszaosztottPontok // Logoljuk a visszaosztott pontokat
 }); // Tudatpont átrendezés log vége
 
+// ===== KÜLÖNVÁLÁS: AZ ELLENZŐK KÜLÖN ÁGRA LÉPHETNEK =====
+// A döntés MEGSZÜLETETT (az egyezmény létrejött, a tudatpontok átrendeződtek). Most jön
+// a másik oldal: aki ELLENEZTE a módosítást ÉS kérte a külön ágat, az elviheti magával a
+// RÉGI állapotot. Külön try/catch: ha ez elhasal, a már megszületett döntés érvényes marad
+// (ugyanez a minta védi a szerkesztő-lista frissítését a modositasiVegrehajto-ban).
+let kulonvalasEredmeny = null; // Ide kerül a különválások összegzése (null, ha nem volt)
+try {
+kulonvalasEredmeny = await this._kulonvalasokVegrehajtasa(javaslat, vegrehajatasEredmeny, egyezmeny); // Különválások futtatása
+} catch (kulonvalasHiba) { // Ha bármi elhasalt a különválás közben
+console.error('javaslatVegrehajtasa - KÜLÖNVÁLÁS HIBA (nem blokkoló)', { // Hibát logolunk, de nem dobjuk tovább
+javaslatId: javaslat._id, // A javaslat azonosítója
+hiba: kulonvalasHiba.message // A hiba szövege
+}); // Hiba log vége
+} // Különválás try/catch vége
+
 const eredmeny = { // Összeállítjuk a visszaadandó eredmény objektumot
 siker: true, // Jelezzük, hogy sikeres volt a végrehajtás
 javaslatId: javaslat._id, // Visszaadjuk a technikai javaslat azonosítót
@@ -269,7 +290,8 @@ egyezmeny: { // Egyezmény részobjektum kezdete
 id: egyezmeny._id, // Az egyezmény azonosítója
 vegrehajtva: egyezmeny.vegrehajtva // Az egyezmény végrehajtott állapota
 }, // Egyezmény részobjektum vége
-tudatpontok: tudatpontEredmeny // Visszaadjuk a tudatpont átrendezés eredményét
+tudatpontok: tudatpontEredmeny, // Visszaadjuk a tudatpont átrendezés eredményét
+kulonvalasok: kulonvalasEredmeny // A különválások összegzése (null, ha nem volt ilyen)
 }; // Eredmény objektum vége
 
 console.log('<<<<<<<<<<<<<<<<<<<<<<< javaslatVegrehajtasa', { // Záró log a teljes eredményről
@@ -278,6 +300,180 @@ eredmeny: eredmeny // Logoljuk a visszaadandó eredmény objektumot
 
 return eredmeny; // Visszaadjuk a végrehajtás összesített eredményét
 } // A javaslatVegrehajtasa metódus vége
+
+  // =====================================================
+  // PRIVÁT - KÜLÖNVÁLÁSOK VÉGREHAJTÁSA ELFOGADOTT MÓDOSÍTÁS UTÁN
+  // =====================================================
+  /**
+   * Az ELLENZŐK különválása egy ELFOGADOTT módosítási javaslat után.
+   *
+   * ===== A SZIMMETRIA =====
+   * A módosítás átment, tehát a főágon a MÓDOSÍTOTT szöveg él tovább. Aki viszont
+   * ellenezte ÉS kérte a külön ágat, az elviszi magával a RÉGI (módosítás előtti)
+   * állapotot egy új ágra — a tudatpontjával együtt. Így mindkét oldal azt viszi,
+   * amit akart. (Elvetett javaslatnál ugyanez tükrözve: a TÁMOGATÓK viszik a
+   * módosított állapotot — az az 5. lépés, másik belépési ponton.)
+   *
+   * ===== HONNAN JÖN A RÉGI ÁLLAPOT? =====
+   * A `modositasiVegrehajto` a felülírás ELŐTT elmenti (`regiAdatok`), és ez a
+   * végrehajtási eredményen át az egyezménybe is bekerül („Lecserélt tartalom" fül).
+   * Nem kell tehát semmit visszafejteni — a vesztes verzió adata készen áll.
+   *
+   * ===== TÖREDÉKCSOPORT =====
+   * Egy módosítási javaslat több töredékre eshet szét (több entitás egyszerre).
+   * Minden töredéknek SAJÁT szavazatai és SAJÁT érintett entitása van, ezért
+   * töredékenként külön nézzük meg, ki válik külön és miről.
+   *
+   * @param {Object} javaslat - A normalizált (esetleg összevont) javaslat
+   * @param {Object} vegrehajatasEredmeny - A módosítási végrehajtó eredménye (benne a regiAdatok)
+   * @param {Object} egyezmeny - A most létrejött egyezmény
+   * @returns {Promise<Object|null>} Összegzés, vagy null ha nem volt különválás
+   */
+  async _kulonvalasokVegrehajtasa(javaslat, vegrehajatasEredmeny, egyezmeny) {
+    console.log('_kulonvalasokVegrehajtasa - KEZDÉS', {
+      javaslatId: javaslat?._id,
+      javaslatTipus: javaslat?.javaslatTipus
+    });
+
+    // ----- 1. LÉPÉS - HATÓKÖR: CSAK MÓDOSÍTÁS -----
+    // Az első kör csak módosítási javaslatra terjed ki (C döntés, 2026-08-25).
+    // Törlésnél/áthelyezésnél/egyesítésnél nincs értelmes „régi állapot", amit vinni lehetne.
+    if (javaslat.javaslatTipus !== 'Modositas') {
+      console.log('_kulonvalasokVegrehajtasa - VÉGE (nem Modositas, kihagyva)');
+      return null;
+    }
+
+    // ----- 2. LÉPÉS - A FORRÁS JAVASLATOK ÖSSZEGYŰJTÉSE -----
+    // Töredékcsoportnál minden töredék külön szavazat-halmazt és külön érintett
+    // entitást hoz; egyedi javaslatnál egyetlen elem az egész.
+    const forrasJavaslatok = Array.isArray(javaslat.eredetiToredekJavaslatok) && javaslat.eredetiToredekJavaslatok.length > 0
+      ? javaslat.eredetiToredekJavaslatok
+      : [javaslat];
+
+    console.log('_kulonvalasokVegrehajtasa - Forrás javaslatok', {
+      darab: forrasJavaslatok.length
+    });
+
+    // A módosítási eredmények entitás szerint (innen jön a régi állapot)
+    const modositottak = vegrehajatasEredmeny?.modositottEntitasok ?? [];
+
+    const kulonvalasok = [];   // A sikeres szétválások
+    const kihagyottak = [];    // Amit szándékosan kihagytunk (indokkal)
+    const hibak = [];          // Amit meg akartunk csinálni, de nem sikerült
+
+    // ----- 3. LÉPÉS - TÖREDÉKENKÉNT: KI VÁLIK KÜLÖN, ÉS MIRŐL? -----
+    for (const forrasJavaslat of forrasJavaslatok) {
+      const forrasJavaslatId = (forrasJavaslat._id ?? forrasJavaslat.id).toString();
+
+      // 3.A - A töredék szavazatai
+      console.log('_kulonvalasokVegrehajtasa >>>>> SzavazatRepository.findByJavaslatId', { forrasJavaslatId });
+      const szavazatok = await SzavazatRepository.findByJavaslatId(forrasJavaslatId);
+
+      // 3.B - AKIK KÜLÖNVÁLNAK: ellenezték, ÉS kérték a külön ágat.
+      // (A tartózkodóknál a szándék eleve hamis — a szavazat-service ezt kikényszeríti.)
+      const kulonvalokIdk = szavazatok
+        .filter((sz) => sz.szavazatTipus === 'Ellenez' && sz.kulonvalasIgeny === true)
+        .map((sz) => (sz.eemberId?._id ?? sz.eemberId).toString());
+
+      console.log('_kulonvalasokVegrehajtasa - Különválók a töredéken', {
+        forrasJavaslatId,
+        szavazatokSzama: szavazatok.length,
+        kulonvalokSzama: kulonvalokIdk.length
+      });
+
+      // Ha senki nem kért külön ágat, ezzel a töredékkel nincs teendő (ez a gyakori eset)
+      if (kulonvalokIdk.length === 0) continue;
+
+      // 3.C - A TÖREDÉK ÉRINTETT ENTITÁSAI
+      for (const erintett of (forrasJavaslat.erintettEntitasok ?? [])) {
+        const entitasId = erintett.entitasId.toString();
+
+        // Az első kör csak tartalomra terjed ki
+        if (erintett.entitasTipus !== 'Tartalom') {
+          kihagyottak.push({ entitasId, ok: `Nem Tartalom (${erintett.entitasTipus})` });
+          continue;
+        }
+
+        // 3.D - A RÉGI ÁLLAPOT MEGKERESÉSE
+        // A `regiAdatok` a módosítás ELŐTTI cím/szöveg pillanatképe. Ha az entitás
+        // végül nem módosult (hiba volt, vagy nem volt módosítási adat), nincs mit vinni.
+        const modositasiEredmeny = modositottak.find(
+          (m) => m.entitasId?.toString() === entitasId
+        );
+
+        if (!modositasiEredmeny || !modositasiEredmeny.modositva || !modositasiEredmeny.regiAdatok) {
+          kihagyottak.push({ entitasId, ok: 'Nincs régi állapot (az entitás nem módosult)' });
+          continue;
+        }
+
+        const regiAdatok = modositasiEredmeny.regiAdatok;
+
+        // 3.E - A SZÉTVÁLASZTÁS
+        // A KulonvalasService maga ellenőrzi, hogy a különválóknak van-e pontja ezen az
+        // entitáson, és hogy a főág nem esne-e 0-ra. Ha nincs mit átvinni, hibát dob —
+        // ezt itt kihagyásként kezeljük, nem valódi hibaként.
+        try {
+          console.log('_kulonvalasokVegrehajtasa >>>>> KulonvalasService.kulonvalasVegrehajtasa', {
+            entitasId,
+            kulonvalokSzama: kulonvalokIdk.length
+          });
+
+          const eredmeny = await KulonvalasService.kulonvalasVegrehajtasa({
+            forrasEntitasId: entitasId,
+            forrasEntitasTipus: 'Tartalom',
+            kulonvaloEemberIdk: kulonvalokIdk,
+            // A különválók a RÉGI (módosítás előtti) állapotot viszik magukkal
+            ujAgAdatok: { cim: regiAdatok.cim, szoveg: regiAdatok.szoveg },
+            forrasJavaslatId: forrasJavaslatId,
+            forrasEgyezmenyId: egyezmeny._id,
+            // A szerkesztő-nevek színéhez az ÁG szempontjából (7. döntés):
+            // itt az ELLENZŐK válnak külön, tehát ezen az ágon ők a „zöldek".
+            szavazatok: szavazatok,
+            kulonvaloOldalSzavazata: 'Ellenez'
+          });
+
+          kulonvalasok.push({
+            foagId: entitasId,
+            kulonvaltAgId: eredmeny.kulonvaltAg.id,
+            atvittEmberekSzama: eredmeny.atvittEmberekSzama,
+            atvittPontok: eredmeny.atvittPontokOsszesen,
+            leszarmazottak: eredmeny.leszarmazottak
+          });
+
+        } catch (hiba) {
+          // A „nincs mit átvinni" nem valódi hiba: pl. az ellenző időközben elvette a
+          // pontját az entitásról. Külön kezeljük, hogy a napló ne riogasson feleslegesen.
+          const nincsMitAtvinni = hiba.message.includes('nincs tudatpontja');
+
+          if (nincsMitAtvinni) {
+            kihagyottak.push({ entitasId, ok: hiba.message });
+          } else {
+            console.error('_kulonvalasokVegrehajtasa - HIBA egy entitás szétválasztásánál', {
+              entitasId,
+              hiba: hiba.message
+            });
+            hibak.push({ entitasId, hiba: hiba.message });
+          }
+        }
+      }
+    }
+
+    // ----- 4. LÉPÉS - ÖSSZEGZÉS -----
+    if (kulonvalasok.length === 0 && kihagyottak.length === 0 && hibak.length === 0) {
+      console.log('_kulonvalasokVegrehajtasa - VÉGE (senki nem kért külön ágat)');
+      return null;
+    }
+
+    const osszegzes = {
+      szetvalasztottEntitasok: kulonvalasok.length,
+      kulonvalasok,
+      kihagyottak,
+      hibak
+    };
+
+    console.log('_kulonvalasokVegrehajtasa - VÉGE', osszegzes);
+    return osszegzes;
+  }
 
 }
 

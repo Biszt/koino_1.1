@@ -9,10 +9,161 @@ const JavaslatVegrehajtasiService = require('./vegrehajtok/javaslatVegrehajtasiS
 const ErtekSzamitasService = require('../ertekSzamitasService'); // ÚJ IMPORT
 const ErtesitesService = require('../ertesitesService'); // Javaslat lezárásakor értesítjük a figyelőket
 
+// Különválás ELVETÉS után: a TÁMOGATÓK vihetik magukkal a módosított állapotot
+// (docs/fejlesztesi_terv.md „Különválás" szakaszai, 5. lépés)
+const KulonvalasService = require('../kulonvalasService');
+const SzavazatRepository = require('../../repositories/szavazatRepository');
+const TartalomRepository = require('../../repositories/tartalomRepository');
+
 // === JAVASLAT IDŐZÍTÉS SERVICE OSZTÁLY ===
 // Ez az osztály felelős a javaslatok időzítési logikájáért
 // Felelősség: Hatályba lépés, végrehajtás ellenőrzése
 class JavaslatIdozitesService {
+
+  // ----- KÜLÖNVÁLÁS ELVETETT MÓDOSÍTÁS UTÁN -----
+  /**
+   * A TÁMOGATÓK különválása egy ELVETETT módosítási javaslat után.
+   *
+   * ===== A SZIMMETRIA MÁSIK FELE =====
+   * Elfogadásnál az ELLENZŐK viszik a RÉGI állapotot (lásd javaslatVegrehajtasiService).
+   * Elvetésnél tükörképe: a főágon minden marad a régiben, és aki TÁMOGATTA a módosítást
+   * ÉS kérte a külön ágat, az elviszi magával a MÓDOSÍTOTT állapotot egy új ágra.
+   * Így mindkét oldal azt viszi, amit akart — akkor is, ha a javaslat megbukott.
+   *
+   * ===== A HORGONY: MAGA A JAVASLAT (A döntés, 2026-08-25) =====
+   * Elvetéskor NEM születik egyezmény (az egyezmény kizárólag elfogadott javaslat
+   * eredménye). Az elvetett javaslat viszont entitásként ott marad a fán `Elvetve`
+   * státusszal, benne a teljes szavazási eredménnyel — ő a különvált ág horgonya.
+   * A `forrasEgyezmenyId` ezért itt mindig null.
+   *
+   * ===== A MÓDOSÍTOTT ÁLLAPOTOT ÖSSZE KELL RAKNI =====
+   * Elfogadásnál készen kaptuk a régi állapotot (`regiAdatok` pillanatkép). Itt nincs
+   * ilyen: a módosítás VÉGRE SEM HAJTÓDOTT. A módosított állapotot tehát nekünk kell
+   * előállítani: a tartalom MOSTANI cím/szöveg mezőire ráterítjük a javaslat
+   * `modositasAdatok` mezőit. (Ha a javaslat csak a címet változtatta volna, a szöveg
+   * a mostani marad — pontosan az az állapot, ami elfogadás esetén létrejött volna.)
+   *
+   * @param {Array} javaslatok - a most ELVETETT (töredék) javaslatok
+   * @returns {Promise<Object|null>} Összegzés, vagy null ha nem volt különválás
+   */
+  async _kulonvalasokElvetesUtan(javaslatok) {
+    console.log('_kulonvalasokElvetesUtan - KEZDÉS', { javaslatokSzama: javaslatok?.length ?? 0 });
+
+    const kulonvalasok = [];   // A sikeres szétválások
+    const kihagyottak = [];    // Amit szándékosan kihagytunk (indokkal)
+    const hibak = [];          // Amit meg akartunk csinálni, de nem sikerült
+
+    for (const javaslat of (javaslatok ?? [])) {
+      // ----- 1. HATÓKÖR: CSAK MÓDOSÍTÁS -----
+      // Törlésnél/áthelyezésnél/egyesítésnél nincs „módosított állapot", amit vinni lehetne.
+      if (javaslat.javaslatTipus !== 'Modositas') continue;
+
+      const javaslatId = (javaslat._id ?? javaslat.id).toString();
+
+      // ----- 2. KIK VÁLNAK KÜLÖN? -----
+      // A TÁMOGATÓK közül azok, akik kérték a külön ágat.
+      // FIGYELEM: a javaslattevő automatikus „Támogat" szavazata alapból NEM kér külön
+      // ágat — ha a beadó tartalék-ágat szeretne, azt külön be kell pipálnia.
+      const szavazatok = await SzavazatRepository.findByJavaslatId(javaslatId);
+
+      const kulonvalokIdk = szavazatok
+        .filter((sz) => sz.szavazatTipus === 'Tamogat' && sz.kulonvalasIgeny === true)
+        .map((sz) => (sz.eemberId?._id ?? sz.eemberId).toString());
+
+      console.log('_kulonvalasokElvetesUtan - Különválók a javaslaton', {
+        javaslatId,
+        szavazatokSzama: szavazatok.length,
+        kulonvalokSzama: kulonvalokIdk.length
+      });
+
+      if (kulonvalokIdk.length === 0) continue;   // A gyakori eset: senki nem kért külön ágat
+
+      // ----- 3. ENTITÁSONKÉNT A SZÉTVÁLASZTÁS -----
+      for (const erintett of (javaslat.erintettEntitasok ?? [])) {
+        const entitasId = erintett.entitasId.toString();
+
+        // Az első kör csak tartalomra terjed ki (C döntés)
+        if (erintett.entitasTipus !== 'Tartalom') {
+          kihagyottak.push({ entitasId, ok: `Nem Tartalom (${erintett.entitasTipus})` });
+          continue;
+        }
+
+        // Van-e egyáltalán módosítási adat? (Enélkül nincs „másik állapot".)
+        const modositasAdatok = erintett.modositasAdatok ?? {};
+        if (Object.keys(modositasAdatok).length === 0) {
+          kihagyottak.push({ entitasId, ok: 'Nincs módosítási adat' });
+          continue;
+        }
+
+        // A MÓDOSÍTOTT állapot összerakása: a mostani tartalomra ráterítjük a javaslatot
+        const jelenlegi = await TartalomRepository.findById(entitasId);
+        if (!jelenlegi) {
+          kihagyottak.push({ entitasId, ok: 'A tartalom időközben megszűnt' });
+          continue;
+        }
+
+        const modositottAllapot = {
+          cim:    modositasAdatok.cim    !== undefined ? modositasAdatok.cim    : jelenlegi.cim,
+          szoveg: modositasAdatok.szoveg !== undefined ? modositasAdatok.szoveg : (jelenlegi.szoveg ?? null)
+        };
+
+        try {
+          console.log('_kulonvalasokElvetesUtan >>>>> KulonvalasService.kulonvalasVegrehajtasa', {
+            entitasId,
+            kulonvalokSzama: kulonvalokIdk.length
+          });
+
+          const eredmeny = await KulonvalasService.kulonvalasVegrehajtasa({
+            forrasEntitasId: entitasId,
+            forrasEntitasTipus: 'Tartalom',
+            kulonvaloEemberIdk: kulonvalokIdk,
+            ujAgAdatok: modositottAllapot,   // A támogatók a MÓDOSÍTOTT állapotot viszik
+            forrasJavaslatId: javaslatId,    // A horgony: maga az elvetett javaslat
+            forrasEgyezmenyId: null,         // Elvetéskor nincs egyezmény
+            // A szerkesztő-nevek színéhez az ÁG szempontjából (7. döntés):
+            // itt a TÁMOGATÓK válnak külön, tehát ezen az ágon ők a „zöldek".
+            szavazatok: szavazatok,
+            kulonvaloOldalSzavazata: 'Tamogat'
+          });
+
+          kulonvalasok.push({
+            foagId: entitasId,
+            kulonvaltAgId: eredmeny.kulonvaltAg.id,
+            atvittEmberekSzama: eredmeny.atvittEmberekSzama,
+            atvittPontok: eredmeny.atvittPontokOsszesen,
+            leszarmazottak: eredmeny.leszarmazottak
+          });
+
+        } catch (hiba) {
+          // A „nincs mit átvinni" nem valódi hiba (pl. a támogató időközben elvette a
+          // pontját az entitásról) — kihagyásként naplózzuk, hogy ne riogasson.
+          if (hiba.message.includes('nincs tudatpontja')) {
+            kihagyottak.push({ entitasId, ok: hiba.message });
+          } else {
+            console.error('_kulonvalasokElvetesUtan - HIBA egy entitás szétválasztásánál', {
+              entitasId, hiba: hiba.message
+            });
+            hibak.push({ entitasId, hiba: hiba.message });
+          }
+        }
+      }
+    }
+
+    if (kulonvalasok.length === 0 && kihagyottak.length === 0 && hibak.length === 0) {
+      console.log('_kulonvalasokElvetesUtan - VÉGE (senki nem kért külön ágat)');
+      return null;
+    }
+
+    const osszegzes = {
+      szetvalasztottEntitasok: kulonvalasok.length,
+      kulonvalasok,
+      kihagyottak,
+      hibak
+    };
+
+    console.log('_kulonvalasokElvetesUtan - VÉGE', osszegzes);
+    return osszegzes;
+  }
 
   // ----- ÉRTESÍTÉS: JAVASLAT LEZÁRÁSA (elfogadás / elvetés) -----
   // Egy vagy több (töredék) javaslatra kiküldi a lezárás-értesítést az érintett
@@ -375,8 +526,19 @@ class JavaslatIdozitesService {
       console.log("javaslatVegrehajtasEllenorzese >>>>>>>>>>>>>>>>>>>>>>>>>>> JavaslatRepository.updateStatusz: ", {
         javaslatId: javaslatId
       }, "Elvetve");
-      
+
       await JavaslatRepository.updateStatusz(javaslatId, 'Elvetve');
+
+      // KÜLÖNVÁLÁS: aki TÁMOGATTA a módosítást és kérte a külön ágat, elviheti magával a
+      // módosított állapotot. Külön try/catch: a döntés (az elvetés) MÁR megtörtént —
+      // ha a különválás elhasal, az elvetés attól még érvényes marad.
+      try {
+        await this._kulonvalasokElvetesUtan([javaslat]);
+      } catch (kulonvalasHiba) {
+        console.error('javaslatVegrehajtasEllenorzese - KÜLÖNVÁLÁS HIBA (nem blokkoló)', {
+          javaslatId, hiba: kulonvalasHiba.message
+        });
+      }
     }
 
     // 6. LÉPÉS - EREDMÉNY VISSZAADÁSA
@@ -521,6 +683,16 @@ class JavaslatIdozitesService {
       for (const javaslat of javaslatok) {
         await JavaslatRepository.updateStatusz(javaslat._id, 'Elvetve'); // Státusz frissítése
       } // Minden töredéket Elvetve-re állítottunk
+
+      // KÜLÖNVÁLÁS: töredékenként, mert minden töredéknek saját szavazatai és saját
+      // érintett entitása van. Külön try/catch — a csoport elvetése már megtörtént.
+      try {
+        await this._kulonvalasokElvetesUtan(javaslatok);
+      } catch (kulonvalasHiba) {
+        console.error('toredekCsoportVegrehajtasEllenorzese - KÜLÖNVÁLÁS HIBA (nem blokkoló)', {
+          toredekCsoportId, hiba: kulonvalasHiba.message
+        });
+      }
 
       return {
         elfogadva: false,
