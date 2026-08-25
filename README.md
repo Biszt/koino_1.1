@@ -163,7 +163,7 @@ A `docs/` mappa a projekt tudásbázisa:
 | [`vizio_kritikak.md`](docs/vizio_kritikak.md) | A vízió melletti és elleni érvek |
 | [`jegyzetek.md`](docs/jegyzetek.md) | Zárójeles ötletek naplója |
 | [`adatkezeles.md`](docs/adatkezeles.md) / [`adatvedelmi_nyilatkozat.md`](docs/adatvedelmi_nyilatkozat.md) | Adatvédelem |
-| [`a_nev_tortenete.md`](docs/a_nev_tortenete.md) | A „koino" név eredete |
+| [`koinos_idios.md`](docs/koinos_idios.md) | A „koino" név eredete, és a koinós/idios szembenállás |
 | [`bemutato_kivulalloknak.md`](docs/bemutato_kivulalloknak.md) / [`bemutato_kormany.md`](docs/bemutato_kormany.md) | Bemutató anyagok |
 
 ## Állapot
