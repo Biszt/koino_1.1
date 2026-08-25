@@ -145,13 +145,32 @@ Body: `{ entitasId, entitasTipus, pontok, felmenoketAutomatikusan?, szerep? }`
   body: `{ szerep }` (a kártya „Részvételi beállítások" menüje).
 
 ### 3.6. Szavazat — `POST /api/javaslat/szavazat` (auth)
-Body: `{ javaslatId, szavazatTipus }` — `szavazatTipus` ∈ `Tamogat, Ellenez, Tartozkodik`.
+Body: `{ javaslatId, szavazatTipus, kulonvalasIgeny? }` — `szavazatTipus` ∈
+`Tamogat, Ellenez, Tartozkodik`; a `kulonvalasIgeny` logikai, **elhagyható** (alap: `false`).
 Visszavonás: `DELETE /api/javaslat/szavazat`, body: `{ javaslatId }`.
 Feltétel: tudatpont az érintett entitáson.
 **UI (SzavazatModal):** a típus-gombok és a „Visszavonás" CSAK helyben választanak;
 a tényleges szerverhívás (leadás/módosítás/visszavonás) a **„Rendben"** gombra
 történik. Bezárás „Rendben" nélkül (X/ESC) = nincs változás. A „Szavazat leadása"
 menüpont csak **Aktiv** státuszú javaslatnál jelenik meg.
+
+**Különválási szándék (`kulonvalasIgeny`, 2026-08-25 — a különválás 1. lépése):**
+a Támogatom / Ellenzem alatt megjelenő jelölőnégyzet („Ha a döntés nem a te álláspontodat
+követi, szeretnél külön ágat?"). Szabályok, amiket tesztelni kell:
+- **Tartózkodom mellett a kérdés NEM látszik**, és a mentett érték mindig `false`
+  (a szolgáltatás akkor is felülírja, ha a kliens `true`-t küldene).
+- **Nem „ragad be":** minden leadás felülírja a beérkező értékkel. Ha kiveszed a pipát és
+  ugyanazt a szavazatot hagyod, a „Rendben" akkor is ment (csak a pipa változott).
+- **Visszavonás** után új szavazatnál a pipa üresen indul.
+- A modal újranyitásakor a korábbi pipa **vissza van töltve** (`GET /:id/sajat-szavazat`
+  válaszának `kulonvalasIgeny` mezőjéből).
+- Ellenőrzés adatbázisban:
+  `docker exec koino-mongodb-dev mongosh koino --eval "db.szavazats.find({}, {szavazatTipus:1, kulonvalasIgeny:1}).pretty()"`
+
+> A pipa **valódi következménnyel jár**: a javaslat lezárásakor a jelölők külön ágat
+> kapnak. A teljes menet a lenti „Különválás: elfogadott / ELVETETT módosítás után"
+> szakaszokban. (2026-08-25-ig a jelölés csak gyűlt — akkor készült el a motor és a
+> bekötése.)
 
 ### 3.7. Entitás-kereső (cím alapján) — `GET /api/kereses` (auth)
 
@@ -2086,3 +2105,170 @@ időköze. Így egyetlen ütemezés kiszolgál bármilyen időközt. Kézi futta
 > ezért egy `Ertesites.updateMany({}, { $set: { createdAt } })` csendben nem csinál
 > semmit. Ha „megöregített" értesítésekkel akarod tesztelni az időközt, a natív
 > kollekción kell írni: `Ertesites.collection.updateMany(...)`.
+
+## Különválás: a szétosztás motorja (2026-08-25, a 3/a–3/b lépés)
+
+A különválás gépezete még NINCS bekötve a javaslat-lezárásba (az a 4–5. lépés) — előbb
+önmagában mérjük, egy dev-only próba-eszközzel. Ez ugyanaz a minta, mint az
+`emailProba.js`-nél: a motor a felület előtt, külön kerül a mérlegre.
+
+**Felmérés (nem módosít semmit) — kiírja a tartalom tudatpont-tulajdonosait:**
+```
+docker exec koino-backend node tools/kulonvalasProba.js <tartalomId>
+```
+
+**Szétválasztás — a felsorolt e-emberek különválnak:**
+```
+docker exec koino-backend node tools/kulonvalasProba.js <tartalomId> <eemberId1,eemberId2> "Az új ág címe" [javaslatId]
+```
+
+A `javaslatId` elhagyható; ilyenkor próba-azonosító kerül a bejegyzésbe, és a „Másik ág"
+hivatkozás egy nem létező javaslatra mutat majd. **Éles adatbázison (koino-backend-prod)
+ne futtasd.**
+
+**Az eszköz maga értékeli ki a mérést** — ezeknek kell teljesülniük:
+
+| Ellenőrzés | Miért ez a helyes |
+|---|---|
+| A rendszerben lévő ÖSSZES tudatpont változatlan | a tudatpont ÁTKERÜL, nem duplázódik (1. döntés) |
+| A két ág SAJÁT pontja kiadja az eredetit | a szétosztás nem teremt és nem nyel el pontot |
+| A két ág HIERARCHIKUS pontja (részfástul) kiadja az eredetit | **a leszármazottak szétosztása is hibátlan** — ez a legerősebb ellenőrzés |
+| A szülő hierarchikus összpontja változatlan | a pont a szülőn belül vándorolt egyik gyerekről egy új testvérre |
+| Mindkét ág tudja, ki a testvére (`agSzerep`) | a szétválás nem marad nyomtalan (6. döntés) |
+| A két ág ugyanaz alá került | a két ág testvér a fában |
+
+**A leszármazottak három kimenete** — az eszköz külön kiírja, hányan jutottak melyikre:
+
+| Kimenet | Mikor | Mi történik |
+|---|---|---|
+| **marad** | a különválóknak nincs rajta pontja | a helyén marad; ha a szülője elköltözött, a legközelebbi MEGMARADT ősre kötjük át |
+| **átköltözik** | CSAK a különválóknak van pontja | az entitás a pontjaival együtt átkerül; megtartja az azonosítóját, a gyerekeit, a történetét |
+| **megkettőződik** | mindkét oldalnak van pontja | az eredeti megmarad a maradók pontjával, az új ágra másolat készül a különválókéval |
+
+Köztes szint nem másolódik üresen: ami átmegy, a legközelebbi ÁTKERÜLT ősre csatlakozik.
+
+Hasznos ellenőrző lekérdezés — melyik tartalmon van elég tulajdonos a próbához:
+```
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tudatponthozzarendeles.aggregate([{ $match: { entitasTipus: "Tartalom", tudatPontok: { $gt: 0 } } }, { $group: { _id: "$entitasId", tulajdonosok: { $sum: 1 } } }, { $match: { tulajdonosok: { $gte: 2 } } }]).forEach(d => print(d._id + "  " + d.tulajdonosok))'
+```
+
+**Szándékos védőkorlát:** ha MINDEN tulajdonos szerepel a különválók listájában, az eszköz
+hibával elakad („A főág 0 tudatpontra esne"), MIELŐTT bármit módosítana. Ez nem hiba,
+hanem a modell ellenőrzése: valódi szavazásból ez nem következhet be.
+
+**Ami még nincs benne:** a motor az ELVETETT ágon még nincs bekötve (5. lépés), és a
+bejárás csak TARTALOM-leszármazottakat oszt szét. A tartalom alatti javaslatok és
+egyezmények a helyükön maradnak — a javaslat folyamatban lévő döntés, az egyezményt pedig
+a `tudatpontHozzarendeles` enum-hiánya miatt még nem mozgatjuk.
+
+**Teszt-fa a három kimenet kipróbálásához.** Ilyen alakú fa kell hozzá (A = marad,
+B = különválik):
+
+```
+gyökér        A=100, B=50
+├─ C1         B=10          → átköltözik
+│  └─ C1a     A=7           → marad, de árva lesz → a gyökérre kötjük át
+├─ C2         A=8, B=4      → megkettőződik
+│  └─ C2a     B=3           → átköltözik, a MÁSOLAT alá
+└─ C3         A=6           → marad
+   └─ C3a     B=2           → átköltözik, de a köztes C3 nem megy → az ÚJ GYÖKÉR alá
+```
+
+Az eredmény ellenőrzése (a fa alakja mindkét ágon):
+```
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'function fa(id,sz){const t=db.tartaloms.findOne({_id:ObjectId(id)});const a=db.tudatpontallokacios.findOne({entitasId:ObjectId(id),entitasTipus:"Tartalom"});print("  ".repeat(sz)+"- "+t.cim+"   ["+(a?a.osszesPont:0)+" pont]");db.tartaloms.find({szuloId:ObjectId(id)}).forEach(gy=>fa(gy._id.toString(),sz+1));} fa("<agGyokerId>",1)'
+```
+
+## Különválás: elfogadott módosítás után (2026-08-25, a 4. lépés)
+
+**Ez már a valódi menet — böngészőből is végigjátszható.** A forgatókönyv:
+
+1. Egy tartalomra **három** e-embernek legyen tudatpontja (A, B, C).
+2. **A** tegyen rá **módosítási javaslatot** (a beadó automatikusan „Támogat"-ot kap).
+3. **C** szavazzon *Támogatom*, **B** *Ellenzem* — és B **pipálja be** a külön ág kérdését.
+4. Várd meg a lezárást (cron, percenként), vagy told múltba a hatályba lépést.
+
+**Amit látnod kell:** a javaslat elfogadva → az eredeti tartalom a **módosított** címmel él
+tovább (ez a főág, ő tartotta meg az azonosítót), és **létrejön egy új tartalom az EREDETI
+címmel**, rajta B tudatpontjával. A főág elveszti B pontjait.
+
+Ellenőrzés adatbázisban (a testvér-bejegyzés mindkét oldalon):
+```
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tartaloms.find({"kulonvalasok.0": {$exists: true}}, {cim:1, kulonvalasok:1}).forEach(t => print(t.cim + "  ->  agSzerep: " + t.kulonvalasok[0].agSzerep + ", testver: " + t.kulonvalasok[0].testverId))'
+```
+
+**Amit külön érdemes megnézni:**
+
+| Eset | Elvárt viselkedés |
+|---|---|
+| Senki nem pipálja be | Nem jön létre új ág; a főág viszi az összes pontot |
+| Csak tartózkodó „kérné" | A pipa meg sem jelenik; a mentett érték `false` |
+| Az ellenző időközben elveszi a pontját a tartalomról | Nincs szétválás; a naplóban „kihagyva", NEM hiba |
+| A javaslat nem Módosítás (Törlés/Áthelyezés/Egyesítés) | A különválás meg sem indul (első kör hatóköre) |
+
+> A különválás **külön try/catch-ben** fut, az egyezmény létrejötte UTÁN. Ha elhasal, a
+> döntés akkor is érvényes marad — a naplóban `KÜLÖNVÁLÁS HIBA (nem blokkoló)` sor jelzi.
+
+> ⚠️ **Ismert, még eldöntetlen:** minden pont-mozgatás `tudatpontValtozas` értesítést küld
+> a figyelőknek, így egy több fős különválás sok értesítést szór szét ugyanarról az
+> egyetlen eseményről. Figyelt tartalommal tesztelve ez látszani fog.
+
+## Különválás: ELVETETT módosítás után (2026-08-25, az 5. lépés)
+
+A tükörkép: ha a javaslat **megbukik**, a főágon minden marad a régiben — és aki
+**TÁMOGATTA** és kérte a külön ágat, az elviszi magával a **módosított** állapotot.
+
+**Forgatókönyv:** ugyanaz, mint fent, csak fordított szavazatokkal — **A** tegye be a
+javaslatot **és pipálja be** a külön ágat, **B** és **C** pedig *Ellenzem* (így a
+támogatottság 33% marad, a javaslat elbukik).
+
+**Amit látnod kell:** a javaslat `Elvetve` → az eredeti tartalom **változatlan** (cím és
+szöveg is), és létrejön egy új tartalom a **módosított** címmel, rajta A tudatpontjával.
+
+| Amit ellenőrizni kell | Elvárt |
+|---|---|
+| A `kulonvalasok[0].forrasJavaslatId` | az elvetett javaslat (ez a horgony) |
+| A `kulonvalasok[0].forrasEgyezmenyId` | **null** — elvetéskor nem születik egyezmény |
+| Az új ág **szövege**, ha a javaslat csak a CÍMET módosította volna | az EREDETI szöveg (a javaslat nem nyúlt hozzá) |
+| A javaslat kártyája | megmarad `Elvetve` státusszal (rá mutat a különvált ág) |
+
+> **Buktató, amibe könnyű beleszaladni:** a javaslattevő **automatikus** „Támogat"
+> szavazatában a különválási szándék **hamis**. Ha a beadó tartalék-ágat szeretne arra az
+> esetre, ha megbukik a javaslata, azt külön be kell pipálnia — vagyis újra kell
+> szavaznia. Enélkül a saját javaslata bukásakor nem kap külön ágat.
+
+## Különválás: küszöbök, fülsáv, szerkesztők (2026-08-25, a 6–8. lépés)
+
+**Érték javaslatok (6. lépés).** A különválók viszik a saját küszöb-elképzelésüket, ezért
+a két ág érvényes küszöbei ELTÉRHETNEK. Teszteléshez: adj a különválónak saját érték
+javaslatot (kártya menü → *Küszöb érték javaslat*), és nézd meg szétválás után:
+
+| Ellenőrzés | Elvárt |
+|---|---|
+| A főág érvényes küszöbe | visszaáll a nélküle számolt mediánra |
+| Az új ág érvényes küszöbe | a különváló saját értékei |
+| Az új ágon hány érték javaslat sor van | **1** — az alapító alapértelmezett sora FELÜLÍRÓDIK, nem duplázódik |
+| Ha a különválónak nem volt érték javaslata | az új ág alapértelmezett küszöbökkel indul |
+
+**A „Másik ág" fül (7. lépés).** A kettévált tartalom kártyáján megjelenik egy fülsáv:
+első fül a tartalom, második a *Másik ág*. Amit nézni kell:
+
+- **Ahol NINCS szétválás, a kártya megjelenése változatlan** — egyetlen fülnél a fülsáv
+  nem rajzol sávot. Ezt a régi tartalmakon is ellenőrizd, ez a legfontosabb regresszió.
+- A *Másik ág* fülön: mondat a szétválásról + dátum, alatta **koppintható hivatkozás** a
+  testvérre → a pakli odanavigál.
+- **Mindkét** kártyán megjelenik (a főágon és a különvált ágon is), más szöveggel.
+- Több szétválásnál a fülek sorszámozódnak („Másik ág 1", „Másik ág 2").
+- Ha a testvér-ág időközben megszűnt: *„A másik ág időközben megszűnt."*
+- A „..." túlnyúlás-gomb fülváltáskor újramérődik (mint a Javaslat/Egyezmény kártyán).
+
+**Szerkesztők színe (8. lépés).** *Részletes adatok* → a szerkesztők neve az ADOTT ÁG
+szempontjából kap színt. Ugyanaz az ember az egyik ágon zöld, a másikon piros lehet —
+ez nem hiba. A szabály: **aki a különválókkal azonosan szavazott, az azon az ágon zöld.**
+
+| Eset | A különvált ágon |
+|---|---|
+| Elfogadott javaslat, valaki TÁMOGATTA | **piros** (nem ért egyet ezzel az ággal) |
+| Elfogadott javaslat, valaki ELLENEZTE | zöld |
+| Elvetett javaslat, valaki TÁMOGATTA | zöld |
+| Az alapító | zöld, és nála van az `eredeti` (közvetlen szerkesztési) jog |

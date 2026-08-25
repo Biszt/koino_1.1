@@ -9,6 +9,42 @@ szellemét (magyarul, a projekt stílusához igazítva).
 
 ---
 
+## 2026-08-25 — Különválás: a módosítási döntés kétágú kimenete
+
+Egy módosítási javaslatnak eddig **egy** nyertese volt. Mostantól **mindkét oldal
+magával viheti azt, amit szeretett volna** — a koinón BELÜL, a mindennapi működés
+részeként (ez nem a hálózat-szintű „fork-jog", ami vésznyílás).
+
+- **A szándék a szavazatra kerül.** A *Támogatom* / *Ellenzem* mellett megjelenik a
+  kérdés: *„Ha a döntés nem a te álláspontodat követi, szeretnél külön ágat?"*
+  Tartózkodásnál nem jelenik meg — aki nem foglal állást, a **főágon** marad. A szándék
+  nem „ragad be": minden szavazat-módosításkor újra meg kell adni.
+- **Szimmetria:** elfogadott javaslatnál az **ellenzők** válhatnak külön a RÉGI
+  tartalommal; elvetettnél a **támogatók** a MÓDOSÍTOTTAL.
+- **A tudatpont ÁTKERÜL, nem duplázódik.** Aki elmegy, viszi a súlyát; a rendszerben
+  lévő összes tudatpont nem változik. A főág sosem eshet 0-ra — ez nem védőkorlát,
+  hanem levezethető: szavazni csak pont-tulajdonos tud.
+- **A fa szétválik, nem megkettőződik.** Egyetlen szabály dönt minden leszármazottról:
+  oda kerül, ahol tudatpontja van annak, aki különválik. Három kimenet: **marad**,
+  **átköltözik**, vagy **megkettőződik**. Köztes szint nem másolódik üresen — ami
+  átmegy, a legközelebbi átkerült ősre csatlakozik; ami marad, a legközelebbi
+  megmaradt ősre.
+- **A két ág nem veszíti szem elől egymást:** a kártya „Másik ág" fülén hivatkozás mutat
+  a testvérre. Így később **újra egyesíthetők** a meglévő egyesítési javaslattal.
+- **A szerkesztők átkerülnek**, és a nevük színe az ÁG szempontjából számolódik: aki a
+  módosítást támogatta, a különvált (régi tartalmú) ágon pirosan jelenik meg. Ugyanaz az
+  adat, két nézőpontból.
+- **Az érték javaslatok is átvándorolnak** a különválókkal, ezért a két ág küszöbei
+  eltérhetnek.
+- **Az azonosító a főágé** — elfogadott javaslatnál tehát a régi tartalom kap újat.
+- **Elvetéskor nincs egyezmény** (az egyezmény kizárólag elfogadott javaslat eredménye),
+  ezért ott a különvált ág horgonya maga az elvetett javaslat.
+- Új e-embereknek szóló leírás: [`megismeres/18-kulonvalas.md`](megismeres/18-kulonvalas.md).
+- Fejlesztői próba-eszköz a motor méréséhez: `backend/tools/kulonvalasProba.js`.
+
+**Hatókör (első kör):** csak `Modositas` típusú javaslat, csak `Tartalom` entitás. A
+kategória/tartalomtípus különválása és a láncolt (többszörös) szétválás külön kör.
+
 ## 2026-08-24 — E-mail: értesítés levélben és elfelejtett jelszó
 
 A koino eddig **egyetlen levelet sem küldött** — nem is volt hozzá kódja. Ez most két

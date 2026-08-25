@@ -3983,3 +3983,453 @@ kapcsolni a click trackinget (lásd fentebb).
 
 Az 1–3. lépés a jelszó-funkciót teszi teljessé; a 4–5. az értesítéseket. Az 1. lépés
 mindkettőhöz kell, és valódi levélküldés nélkül is tesztelhető.
+
+## KÜLÖNVÁLÁS: a módosítási javaslat → egyezmény esemény kétágú kimenete (2026-08-24, Csaba)
+
+> **Ez a szakasz egy TERVEZŐ BESZÉLGETÉS eredménye — kód még nincs hozzá.** A modell
+> végig van gondolva és önmagában konzisztens; a lépésekre bontás a kódolás előtt jön.
+
+### Miben más ez, mint az eddigi „fork-jog"
+
+A fork-jog eddig **hálózat-szintű** fogalomként szerepelt (D9, `vizio_kritikak.md`):
+a teljes koino kettéválik, a kód forkolódik, a közösség két hálózatra szakad — vésznyílás.
+
+Ez itt **entitás-szintű** és **működés közbeni**: egyetlen tartalom válik ketté, a koinón
+BELÜL, egy módosítási javaslat kapcsán. Nem szakadás, hanem a mindennapi működés része.
+
+### AZ ALAPELV: a szimmetria
+
+Ma egy módosítási javaslatnak egy nyertese van. A különválással **mindkét oldal azt viszi
+magával, amit ő akart**:
+
+| A szavazás vége | Akik különválhatnak | Az új ág tartalma |
+|---|---|---|
+| **Elfogadva** | az ellenzők | a **régi** (módosítás előtti) állapot |
+| **Elvetve** | a támogatók | a **módosított** (javasolt) állapot |
+
+Ettől igaz, hogy „mindenki megkapja, amit szeretne". A vesztes verzió adata mindkét
+irányban rendelkezésre áll: a `modositasiVegrehajto` már MOST elmenti a régi állapotot
+(`modositottEntitasok[].regiAdatok` → az Egyezmény-kártya „Lecserélt tartalom" füle).
+
+### AZ EGYETLEN SZABÁLY, ami mindent levezet
+
+> **Minden kapcsolódó entitás oda kerül, ahol tudatpontja van annak, aki különválik.**
+
+Ez vonatkozik a leszármazott tartalmakra, a javaslatokra ÉS az egyezményekre — nincs
+külön szabály típusonként. Következménye, hogy a művelet **NEM másolás, hanem szétosztás
+a súlyok mentén**. Minden kapcsolódó entitásnál három kimenet lehet:
+
+- **mindkét ágon megmarad** — mindkét oldalon van tudatpont-tulajdonosa,
+- **átköltözik** az új ágra — csak a különválóknak volt rajta pontja (az eredetiből
+  TÖRLŐDIK, a „nincs 0-tudatpontos entitás" invariáns szerint),
+- **marad, ahol van** — a különválóknak nincs rajta pontja.
+
+A fa tehát nem „megkettőződik", hanem szétválik. És ez magától arányos: aki egyetlen
+tartalomhoz szólt hozzá, egyetlen tartalmat visz, nem az ágat.
+
+### CSABA DÖNTÉSEI (2026-08-24, pontonként)
+
+**1. Tudatpontok: ÁTKERÜLNEK, nem duplázódnak.** A különválók pontjai lekerülnek az
+eredetiről és felkerülnek az új ágra. A szétválás „ára", hogy az eredeti ág prioritása
+csökken — aki elmegy, viszi a súlyát. (A duplázás felhígítaná a tudatpont jelentését:
+több pont lenne a rendszerben, mint amennyit kiosztottak.)
+
+**2. Ha az eredeti emiatt 0-ra esik: TÖRLŐDIK az eredeti ágból**, és csak az újon él
+tovább. Nincs kivétel az invariáns alól.
+
+**3. Unokák: a legközelebbi átkerült ŐSRE csatlakoznak.** Ha egy köztes szintnek nincs
+különváló tulajdonosa, az nem másolódik; a lejjebb lévő, saját jogán átkerülő entitás
+a legközelebbi átkerült őshöz kapcsolódik. (Nem hozunk létre üres „átjáró" szinteket.)
+
+**4. A jog ABSZOLÚT: egyetlen ember különválási szándéka is elég.**
+Csaba érve: *„amúgy is megtehetné, hogy nulláról felépíti ugyanazt egyedül, ami volt a
+módosítási javaslat előtt — csak így munkát spórolunk neki."* A különválás tehát NEM AD
+ÚJ JOGOT, csak olcsóvá teszi a meglévőt.
+Az ellenvetés (egy ember fává robbanthatja a koinót) magától megoldódik a 3-as
+szabálytól: a hatókör a tudatponthoz kötött, tehát arányos.
+
+**5. A tartózkodók és a passzív tudatpont-tulajdonosok a FŐÁGON maradnak.** Nem
+foglaltak állást, tehát nem különválnak. Szavazat MÓDOSÍTÁSAKOR a különválási szándékot
+ÚJRA meg kell kérdezni.
+
+**6. A két ág nem veszíti szem elől egymást.** A különvált entitás (és a testvére) egy
+PLUSZ FÜLSÁVOT kap — ugyanúgy, ahogy a Javaslat- és Egyezmény-kártya body-ja már most
+fülekre van osztva (`KartyaFulsav`). Az első fül maga a tartalom, a második fülben egy
+**entitás-hivatkozás** (a szövegszerkesztő `EntitasHivatkozasBlokk`-ja már létezik) a
+másik ágra. Így a különválás nem nyomtalan, és a két ág később ÚJRA EGYESÍTHETŐ a
+meglévő egyesítési javaslattal — a kör zárul: szétválni és visszatalálni is lehet.
+
+**7. Szerkesztők: átkerülnek, a MEGLÉVŐ szín-szabály jelzi az egyet nem értést.**
+Ha az eredeti szerkesztő a módosításra szavazott, a különvált (régi tartalmú) ágon is ő
+a szerkesztő — de a neve PIROS. Ehhez nem kell új mechanizmus: a `szerkesztok[].allapot`
+(Tamogatja / Ellenzi / Tartozkodik / NemSzavazott) és a `ReszletekModal` szín-logikája
+már működik, csak AZ ÁG SZEMPONTJÁBÓL kell kiszámolni. Ugyanaz az adat, két nézőpontból.
+
+**8. Érték javaslatok: a különválók sajátjai ÁTVÁNDOROLNAK.** Ha emiatt valamelyik ágnak
+nem marad értéke, az az ALAPÉRTELMEZETT küszöbre áll, amíg valaki nem tesz rá új érték
+javaslatot. (Ez azért kellett külön kimondani, mert érték javaslatra NEM lehet
+tudatpontot tenni — a `tudatpontHozzarendeles` enum csak Tartalom / Kategoria /
+TartalomTipus / Javaslat —, tehát rájuk az egységes szabály nem alkalmazható. A megoldás
+konzisztens az 1-essel: aki elmegy, viszi a magáét.)
+
+**9. Az azonosító a FŐÁGÉ.** Elfogadott javaslatnál tehát a RÉGI tartalom kap új
+azonosítót, pedig ő a folytonos. Ezt tudatosan vállaljuk (az egyezmény ott született).
+Következménye: **a hivatkozás a HELYHEZ tapad, nem a tartalomhoz** — aki a régi
+tartalomra hivatkozott, annak a hivatkozása a módosított változatra fog mutatni.
+Csaba ezt így akarja; a jelölésre külön ötlet van (lásd a nyitott szálaknál).
+
+### A NYELV (Csaba kérésére: ne „vereség" és ne „győztes")
+
+Csaba saját szava adta meg: *„akik leválnak a **főágról**"*.
+
+| NEM így | Hanem |
+|---|---|
+| győztes oldal | **a főág** — itt marad az azonosító, a passzívak és a tartózkodók pontja |
+| vesztes oldal | **a különválók** / a **különvált ág** |
+
+A mechanizmus neve: **különválás** (`kulonvalas`, `kulonvalasIgeny`). A felületi kérdés
+megfogalmazása: *„Ha a döntés nem a te álláspontodat követi, szeretnél külön ágat?"* —
+tehát „eltérő álláspont", nem vereség. Senki nem veszít, csak külön útra lép.
+
+### AMI A MEGLÉVŐ KÓDBÓL MÁR MEGVAN
+
+- **`regiAdatok` snapshot** (`modositasiVegrehajto`) — a vesztes verzió adata megvan.
+- **`egyesitesiVegrehajto`** — a különválás sok szempontból ennek a TÜKÖRKÉPE: új entitás
+  létrehozása, tudatpont-mozgatás, gyerekek átkötése, `osLanc` karbantartás,
+  hierarchikus pont-újraszámítás. Ott átkötni kell, itt szétosztani — de a gépezet áll.
+- **`KartyaFulsav`** — a body fülekre osztása megoldott (Javaslat/Egyezmény kártya).
+- **`EntitasHivatkozasBlokk`** — a testvér-ágra mutató hivatkozáshoz.
+- **`szerkesztok[].allapot` + szín-logika** — a 7-es ponthoz, változtatás nélkül.
+
+### AZ INVARIÁNSOK, AMIK NEM SÉRÜLNEK
+
+- **„Nincs 0-tudatpontos entitás"** — MAGÁTÓL teljesül: szavazni csak az tud, akinek van
+  tudatpontja az érintett entitáson (`szavazatService` → `JavaslatJogosultsagService.
+  szavazasiJogosultsagEllenorzese`), tehát minden különváló szükségszerűen
+  tudatpont-tulajdonos. Az új ág sosem születhet 0 ponttal.
+- **„A tudatpont nem elkölthető, csak szétosztható"** — az 1-es döntés (átkerülés, nem
+  duplázás) épp ezt őrzi meg.
+- **„Szavazásnál mindenki egyenlő"** — a különválás nem szavazaterő, hanem külön kimenet.
+
+### NYITOTT SZÁLAK (nem blokkolók)
+
+1. **Hivatkozás-jelölés** (Csaba: „ezzel most nem kell foglalkozni"): ha egy
+   entitás-hivatkozás RÉGEBBI, mint a hivatkozott tartalom módosítása, azt valahogy
+   jelölni kellene — így látszana, hogy a hivatkozó nem a mostani szöveget ismerte.
+2. **Az adatmodell konkrét mezői** még nincsenek kitalálva. Vázlatosan kelleni fog:
+   a szavazatra egy különválási szándék jelölés; az entitásra a testvér-ág mutatója
+   (melyik entitásból vált ki, melyik egyezmény kapcsán).
+3. **Kategória / tartalomtípus különválás?** Eddig végig TARTALOMRÓL beszéltünk.
+4. **Többszörös különválás**: a különvált ágon is lehet javaslat és újabb különválás —
+   a fülsáv és a testvér-nyilvántartás ezt bírja-e láncban.
+5. **Mikor fut le** — az egyezmény létrejöttével egy tranzakcióban, vagy külön lépésben.
+
+### MIÉRT ILLIK EZ A KOINÓBA
+
+Egyetlen elv (a tudatpont dönt) vezeti le az összes esetet, és a meglévő mechanizmusok
+nagyrészt már megvannak hozzá. Nem ráaggatott funkció, hanem olyasmi, ami a rendszer
+saját logikájából következik: ha a tudatpont a prioritás kifejezése, akkor a szétváláskor
+is annak kell döntenie, ki mit visz magával.
+
+## KÜLÖNVÁLÁS — MEGVALÓSÍTÁSI TERV (2026-08-25)
+
+> Ez a fenti tervező szakasz **lépésekre bontása**, a valódi kód átolvasása után. A
+> döntések (1–9) NEM változnak; itt csak az derül ki, HOL és MILYEN SORRENDBEN kell
+> hozzányúlni a kódhoz, és hol NEM úgy áll a gépezet, ahogy a tervező beszélgetésben
+> feltételeztük.
+
+### AMIT A KÓD ÁTOLVASÁSA HOZZÁTETT
+
+**1. A támogató/ellenző szétválasztás gépezete tényleg megvan — de nem ott, ahol
+kerestük.** Nem a végrehajtókban, hanem az
+`egyezmenyService.tudatpontokAtrendezeseJavaslatrolEgyezmenyre`-ben: az már MA is két
+külön táborként kezeli a szavazókat (a támogatók pontja a javaslatról az egyezményre
+költözik, az ellenzőké és a tartózkodóké visszakerül hozzájuk). A különválás ugyanezt a
+kettéosztást viszi át a JAVASLATRÓL az ENTITÁSRA.
+
+**2. ELVETÉSKOR NINCS EGYEZMÉNY — ez a terv legfontosabb korlátja.** A
+`javaslatIdozitesService.javaslatVegrehajtasEllenorzese` elvetéskor MINDÖSSZE ennyit
+tesz: `JavaslatRepository.updateStatusz(javaslatId, 'Elvetve')`. Nincs végrehajtó, nincs
+egyezmény, nincs tudatpont-átrendezés. A „ha elvetik, a támogatók válhatnak külön" ág
+tehát nem tud egy meglévő végrehajtási pontra ráülni — oda ÚJ belépési pontot kell
+nyitni, és el kell dönteni, mi lesz a különvált ág horgonya (lásd: A DÖNTÉSRE VÁRÓ HÁROM
+KÉRDÉS, A).
+
+**3. A főág SOSEM eshet 0 tudatpontra — ez levezethető, nem kell rá védelem.** Szavazni
+csak az tud, akinek van pontja az érintett entitáson
+(`JavaslatJogosultsagService.szavazasiJogosultsagEllenorzese`), a győztes oldalon pedig
+szükségszerűen van legalább egy szavazó. A 2. döntés („ha 0-ra esik, törlődik") tehát a
+gyakorlatban CSAK a leszármazottakra vonatkozik — ott viszont valóban előfordul.
+
+**4. Az `egyesitesiVegrehajto` tényleg a tükörkép, de a sorrendje kényszer, nem stílus.**
+Ott előbb ki kell üríteni a forrásokat, és csak utána lehet létrehozni az új entitást —
+mert a `TartalomService.tartalomLetrehozasa` legalább 1 tudatpontot követel a
+létrehozótól, az pedig csak akkor szabad, ha már levettük a forrásról. A különválásnál
+UGYANEZ a kényszer áll fenn: előbb a különváló „alapító" pontjának nullázása a forráson,
+utána az új ág létrehozása. Nincs adatbázis-tranzakció (a MongoDB önálló példányként fut),
+ezért a motornak **újrafuttathatónak** kell lennie: félbeszakadás esetén a pont nem vész
+el (visszakerül az e-emberhez), de a művelet befejezetlen marad.
+
+**5. A `KartyaFulsav` ma CSAK a Javaslat- és az Egyezmény-kártyán van bekötve.** A
+6. döntéshez (testvér-ág fül) tehát a `TartalomKartya`-ba is be kell vezetni — ez nem új
+komponens, de nem is puszta konfigurálás.
+
+**6. Ismert csapda a tudatpont-modellben.** A `tudatpontHozzarendeles.entitasTipus` enum
+értékei: `Tartalom | Kategoria | TartalomTipus | Javaslat` — az **`Egyezmeny` hiányzik**,
+holott a rendszer ma is ír rá ilyet (a fenti 1. pont átrendezése). A hozzárendelés
+upserttel megy, ezért a séma-ellenőrzés nem csap le rá. Amíg tartalmat mozgatunk, ez nem
+érint minket; **amint egyezményt is szétosztunk (az egységes szabály szerint), előbb az
+enumot kell rendbe tenni.**
+
+### A HÁROM ELDÖNTÖTT KÉRDÉS (Csaba, 2026-08-25)
+
+**A) A különvált ág horgonya ELVETÉSKOR: maga az elvetett javaslat.** (a 2. felfedezés
+miatt kellett dönteni) Az elvetett javaslat entitásként ott marad a fán `Elvetve`
+státusszal, benne a szavazás teljes eredményével — kézenfekvő horgony, és nem kell hozzá
+sem új entitástípus, sem az egyezmény fogalmának tágítása. (Az egyezmény továbbra is
+KIZÁRÓLAG elfogadott javaslat eredménye.)
+
+**B) A szétosztás közvetlenül a lezárás után fut, külön try/catch-ben.** (a tervező
+szakasz 5. nyitott szála — ezzel lezárva) Elfogadásnál a `javaslatVegrehajtasiService`-ben,
+az egyezmény létrejötte UTÁN (mert a hivatkozáshoz kell az egyezmény azonosítója);
+elvetésnél az `javaslatIdozitesService` `Elvetve` ágán. A külön try/catch a projekt bevált
+mintája (így véd a `modositasiVegrehajto` a szerkesztő-lista frissítésénél): ha a
+különválás elhasal, a MÁR megszületett döntés érvényes marad.
+
+**C) Az első kör hatóköre: csak `Modositas` típusú javaslat, csak `Tartalom` entitáson.**
+A tervező szakasz is végig tartalomról beszél; a kategória/tartalomtípus (3. nyitott szál)
+és a láncolt különválás (4. nyitott szál) külön kör.
+
+### A LÉPÉSEK
+
+Mindegyik lépés önmagában befejezhető és böngészőben ellenőrizhető. Az 1–2. lépés semmit
+nem változtat a működésen (csak adatot gyűjt és helyet készít) — ez ugyanaz a minta, mint
+az e-mail 1. lépésénél („a levél-kapu dev-ben nem küld, csak naplóz").
+
+**1. lépés — A szándék rögzítése. ✅ KÉSZ (2026-08-25).** A `szavazat` sémába új mező: `kulonvalasIgeny`
+(logikai, alap: hamis). A `szavazatService.szavazatLeadasa` és a
+`szavazatRepository.createOrUpdate` átveszi és menti; szavazat MÓDOSÍTÁSAKOR mindig a
+beérkező érték írja felül (5. döntés: a szándékot újra meg kell adni, nem „ragad be").
+A `SzavazatModal`-ban a Támogatom/Ellenzem mellé egy jelölőnégyzet: *„Ha a döntés nem a te
+álláspontodat követi, szeretnél külön ágat?"* — Tartózkodom mellett nem jelenik meg.
+**Ellenőrzés:** leadás / módosítás / visszavonás után a mező értéke az adatbázisban.
+A működés még változatlan: a jelölés csak gyűlik.
+
+**2. lépés — A testvér-nyilvántartás helye. ✅ KÉSZ (2026-08-25).** A `tartalom` sémába
+`kulonvalasok` mező kerül, a `models/kulonvalasResz.js` közös al-sémával (a
+`szerkesztoResz.js` mintájára). Elemenként: `testverId`, `testverTipus`, `agSzerep`
+(`foag` / `kulonvalt`), `forrasJavaslatId`, `forrasEgyezmenyId`, `kulonvalasIdeje`.
+**Mindkét** entitásra ráírjuk (a főágra is), hogy a fül mindkét oldalon megjelenhessen.
+Index: `kulonvalasok.testverId`. Logika még nincs.
+
+> **Eltérés a fenti vázlattól: TÖMB lett, nem egyetlen objektum.** Egy entitás élete során
+> többször is szétválhat (a különvált ágra ugyanúgy lehet javaslatot tenni — ez a 4. nyitott
+> szál). Egyetlen objektumnál a második szétválás felülírná az elsőt, vagy adatbázis-
+> átalakítás kellene hozzá; a tömb egy elemmel pontosan ugyanúgy viselkedik, tehát most nem
+> kerül semmibe, később viszont megspórol egy migrációt.
+>
+> **Az `agSzerep` a 9. döntés hordozója**: a főág az, aki megtartotta az EREDETI azonosítót.
+> Elfogadott javaslatnál tehát a módosított tartalom a főág (a régi kap új azonosítót),
+> elvetettnél a változatlan tartalom a főág (a módosított kap újat).
+
+**3. lépés — A szétosztás motorja (felület nélkül).** Új service:
+`services/kulonvalasService.js` (nem javaslat-végrehajtó: nem egy javaslat-TÍPUS
+végrehajtása, hanem egy lezárt döntés utóhatása). A lépés KETTÉ van osztva, mert a
+leszármazottak szétosztása külön, saját döntést igénylő feladat.
+
+**3/a lépés — a gyökér szétválasztása. ✅ KÉSZ (2026-08-25).** Bemenete: a forrás entitás,
+a különválók e-ember-listája, és hogy melyik állapotot viszik (a régit vagy a módosítottat).
+A metódus sorrendje — a 4. felfedezés kényszere szerint:
+1. felmérés (ki mennyi pontot visz, mennyi marad) — MIELŐTT bármit módosítanánk,
+2. az „alapító" (a legtöbb pontot adó különváló) pontjának nullázása a forráson,
+3. az új ág létrehozása `TartalomService.tartalomLetrehozasa`-val, ezekkel a pontokkal,
+4. a többi különváló pontjának átvitele (forráson 0, célon a régi érték),
+5. a testvér-mezők beírása mindkét oldalra.
+
+Amit menet közben ki kellett mondani:
+- **Az „alapító" technikai szerep**, nem többletjog: a legtöbb pontot vivő különváló, mert
+  a tartalom létrehozásához kell egy létrehozó, legalább 1 ponttal. Holtversenynél az
+  azonosító dönt — kimondva, hogy ugyanaz a bemenet mindig ugyanazt adja.
+- **Védőkorlát: a főág nem eshet 0-ra.** Ha mégis oda vezetne, a service hangosan elakad.
+  Nem óvatoskodás: valódi szavazásból ez nem következhet (a győztes oldalon szükségszerűen
+  van pont-tulajdonos), tehát ha bekövetkezik, a hívó rosszul állította össze a listát —
+  és a néma következmény a főág automatikus törlése lenne.
+- **Az új ág a forrás TESTVÉRE** (ugyanaz a szülő), és átveszi a kategóriákat/típust.
+  A küszöbök egyelőre alapértelmezettek — az érték javaslatok átvitele a 6. lépés.
+- **A hierarchikus pontokat nem kell külön újraszámolni**: a `tudatpontHozzarendelese`
+  minden pont-mozgásnál magától lépked felfelé a szülő-láncon.
+
+**A mérés (`backend/tools/kulonvalasProba.js`, 2026-08-25, dev adat):** két esetben,
+gyökér tartalmon és gyerek tartalmon is. Mind a hat ellenőrzés RENDBEN:
+a rendszerben lévő összes tudatpont változatlan (40000 → 40000); a két ág pontja kiadja az
+eredetit (901+15=916, illetve 20+8=28); a szülő hierarchikus összpontja változatlan
+(2276 → 2276); a testvér-bejegyzés mindkét oldalon helyes `agSzerep`-pel; a két ág
+ugyanaz alá került. A védőkorlát is elsült, MIELŐTT bármit módosított volna.
+
+**3/b lépés — a leszármazottak szétosztása. ✅ KÉSZ (2026-08-25).** Bejárás a forrás gyökértől
+lefelé (`hierarchikusTudatpontAllokaciRepository.findBySzuloId`, ahogy az egyesítés teszi),
+és minden leszármazottnál a három kimenet valamelyike:
+- **csak a különválóknak volt rajta pontja** → az entitás ÁTKÖLTÖZIK (átkötjük az új ág
+  alá; megtartja az azonosítóját, a gyerekeit és a történetét — nem törlés+újralétrehozás),
+- **mindkét oldalon van pont-tulajdonosa** → az entitás MEGKETTŐZŐDIK: az új ágra másolat
+  készül, és a különválók pontjai oda kerülnek át,
+- **a különválóknak nincs rajta pontja** → marad, ahol van.
+A 3. döntés szerint a köztes szintek NEM másolódnak üresen: a lejjebbi, saját jogán
+átkerülő entitás a legközelebbi átkerült ŐSRE csatlakozik.
+
+> **CSAPDA, amit a 3/a mérése közben találtunk:** a `tudatpontHozzarendelese(..., 0)`
+> nem csak levesz — ha az entitás 0 pontra esik, `entitasTorleseEllenorzese` TÖRLI, és a
+> gyerekeit átköti a NAGYSZÜLŐHÖZ. A leszármazottak bejárását tehát MINDEN pont-mozgatás
+> ELŐTT el kell végezni (az egyesítési végrehajtó 3.5 lépése pontosan ezt a leckét őrzi).
+>
+**AZ ÁRVA-KÉRDÉS ELDÖNTVE (Csaba, 2026-08-25):** ha egy leszármazott TELJESEN átköltözik,
+a maradó gyerekei **a legközelebbi MEGMARADT ősre csatlakoznak** — a 3. döntés pontos
+tükörképe. A rendszer törléskor amúgy is pontosan ezt teszi
+(`entitasTorleseEllenorzese` a nagyszülőhöz köti a gyerekeket), tehát nem kell új
+mechanizmus. A motor ezért KÉT „legközelebbi ős" nyilvántartást vezet egyszerre: egyet az
+új ágon (ide kapcsolódik, ami átmegy), egyet az eredetin (ide, ami marad).
+
+**Amit a megvalósítás hozzátett:**
+- **Az átköltözés NEM pont-mozgatás, hanem átkötés.** Az entitás a pontjaival EGYÜTT
+  vándorol; csak a szülője változik — három helyen: az entitás dokumentumában, a
+  hierarchikus (pakli-fa) allokációban és az ős-láncban (a teljes részfára).
+- **Három menet**, mert a sorrend itt is kényszer: (1) FELMÉRÉS az egész részfáról,
+  (2) VÉGREHAJTÁS szélességi sorrendben (a szülő sorsa a gyerekéé előtt dől el),
+  (3) HIERARCHIKUS ÚJRASZÁMÍTÁS. A felmérés azért van elöl, mert a pont-mozgatás menet
+  közben törölhetne entitást, és kifutna a fa a bejárás alól.
+
+> **A MÉRÉS HIBÁT TALÁLT (2026-08-25) — érdemes megjegyezni.** A hierarchikus ellenőrzés
+> első futásra ELBUKOTT: 121 + 66 = 187, az eredeti 190 helyett. A hiányzó 3 pont annak az
+> unokának a súlya volt, aki egy MÁSOLAT alá költözött. Az ok: az újraszámítandó szülők
+> listáját a felmért leszármazottakra szűrtem — az újonnan létrejött másolatok viszont
+> nincsenek abban a listában, így kimaradtak, és a gyökér az ő ELAVULT összegükkel
+> számolt. A javítás: a szülőket VALÓDI MÉLYSÉG szerint rendezzük (legmélyebb előre),
+> szűrés nélkül. Enélkül a hiba néma maradt volna — a felület semmit nem mutatott volna
+> belőle, csak a részfa súlya lett volna kevesebb.
+
+**4. lépés — Bekötés az ELFOGADOTT ágba (az ellenzők különválnak). ✅ KÉSZ (2026-08-25).** A
+`javaslatVegrehajtasiService.javaslatVegrehajtasa` végén, az egyezmény és a
+tudatpont-átrendezés UTÁN: ha `Modositas` és van legalább egy `Ellenez` + `kulonvalasIgeny`
+szavazat → a `KulonvalasService` hívása a RÉGI állapottal. A régi állapot már megvan: a
+`modositasiVegrehajto` `regiAdatok` pillanatképe, ami a `vegrehajatasEredmeny`-en át az
+egyezménybe is bekerül.
+**A megvalósítás (`_kulonvalasokVegrehajtasa` a `javaslatVegrehajtasiService`-ben):**
+- **Töredékenként** nézzük meg, ki válik külön és miről: egy módosítási javaslat több
+  töredékre eshet szét, és minden töredéknek SAJÁT szavazatai és SAJÁT érintett entitása
+  van. A töredék ellenzői a töredék entitásáról válnak külön.
+- **Különváló = `Ellenez` + `kulonvalasIgeny`.** A tartózkodóknál a szándék eleve hamis
+  (a szavazat-service kényszeríti ki), tehát külön szűrni sem kell rájuk.
+- **A régi állapot készen áll:** `vegrehajatasEredmeny.modositottEntitasok[].regiAdatok`.
+  Ha az entitás végül nem módosult (hiba vagy üres módosítási adat), kihagyjuk — nincs mit vinni.
+- **A „nincs mit átvinni" nem hiba:** ha az ellenző időközben elvette a pontját az
+  entitásról, kihagyásként naplózzuk, nem hibaként. Így a napló nem riogat feleslegesen.
+
+**Végponttól végpontig mérve (2026-08-25, dev):** tartalom A=100 / B=50 / C=5 pontokkal,
+módosítási javaslat, A és C támogat, B ellenez + külön ágat kér. Támogatottság 66,67%,
+részvétel 100% → elfogadva. Eredmény: a **főág** a MÓDOSÍTOTT címet viseli 105 ponttal
+(A+C), a **különvált ág** az EREDETI címet 50 ponttal (B), mindkét oldalon helyes
+`agSzerep`, és a bejegyzésben ott a forrás-javaslat ÉS a forrás-egyezmény is.
+A fordítottja is mérve: ha B NEM kér külön ágat, nem jön létre semmi — a főág viszi
+mind a 155 pontot.
+
+> **AZ ÉRTESÍTÉSEK KÉRDÉSE ELDÖNTVE (Csaba, 2026-08-25): MARADNAK.** Minden pont-mozgatás
+> `tudatpontValtozas` értesítést küld a FIGYELŐknek (és az érték javaslatok mozgatása
+> küszöbváltozás-értesítést), így egy több fős különválás sok értesítést szór szét
+> ugyanarról az egyetlen eseményről. Csaba döntése: *„nem baj, attól még küldjön
+> értesítést. Nem baj ha sok, hiszen tényleg történt sok változás egy esemény alatt."*
+> Tehát NEM némítjuk a mozgatásokat, és nem vezetünk be összefoglaló értesítés-típust —
+> az értesítések hűen tükrözik, hogy mi minden mozdult el.
+
+**5. lépés — Bekötés az ELVETETT ágba (a támogatók különválnak). ✅ KÉSZ (2026-08-25).** A
+`javaslatIdozitesService` `Elvetve` ága ÉS a töredékcsoport elvetési ága — mindkettő
+ugyanazt a `_kulonvalasokElvetesUtan` metódust hívja, külön try/catch-ben (a döntés, az
+elvetés, már megtörtént). Itt lép életbe az (A) döntés a horgonyról: a `forrasJavaslatId`
+az elvetett javaslat, a `forrasEgyezmenyId` pedig **mindig null**.
+
+**Egy különbség, ami csak itt derült ki:** elfogadásnál a régi állapotot KÉSZEN kapjuk
+(`regiAdatok` pillanatkép). Elvetésnél nincs ilyen — a módosítás végre sem hajtódott —,
+ezért a módosított állapotot ÖSSZE KELL RAKNI: a tartalom MOSTANI cím/szöveg mezőire
+ráterítjük a javaslat `modositasAdatok` mezőit. Ha a javaslat csak a címet változtatta
+volna, a szöveg a mostani marad — pontosan az az állapot, ami elfogadás esetén létrejött
+volna.
+
+**Figyelmet érdemel:** a javaslattevő automatikus „Támogat" szavazata alapból NEM kér
+külön ágat. Ha a beadó tartalék-ágat szeretne arra az esetre, ha megbukik a javaslata,
+azt külön be kell pipálnia (újraszavazással).
+
+**Végponttól végpontig mérve (2026-08-25, dev):** tartalom A=50 / B=100 / C=3 pontokkal,
+A módosítási javaslatot tesz és bepipálja a külön ágat, B és C ellenzi. Támogatottság
+33,33% → **elvetve**. Eredmény: a **főág** változatlan címmel és szöveggel él tovább
+103 ponttal (B+C), a **különvált ág** a MÓDOSÍTOTT címmel és az EREDETI szöveggel
+(amihez a javaslat nem nyúlt) 50 ponttal (A). A horgony a javaslat, egyezmény nincs.
+
+> **Külön észrevétel, NEM ennek a feladatnak a része:** elvetéskor ma a javaslatra tett
+> tudatpontok senkihez nem kerülnek vissza (a visszaosztás csak az elfogadási úton fut le,
+> a `tudatpontokAtrendezeseJavaslatrolEgyezmenyre`-ben). Ezt érdemes külön megnézni.
+> Mellékhatásként viszont épp ez tartja életben a horgonyt: az elvetett javaslat a
+> pontjaival együtt megmarad entitásként, tehát a különvált ág hivatkozása nem üresedik ki.
+
+**6. lépés — Az érték javaslatok átvándorlása (8. döntés). ✅ KÉSZ (2026-08-25).** A különválók saját
+`ertekJavaslat` sorai átíródnak az új entitásra. Ha az egyik ágon nem marad egy sem, az az
+ág az alapértelmezett küszöbre áll — ez magától teljesül, mert a
+`tartalomLetrehozasa` úgyis alapértéket ad.
+
+**7. lépés — A fülsáv és a testvér-hivatkozás (frontend). ✅ KÉSZ (2026-08-25).** A `TartalomKartya`-ba
+bekötjük a `KartyaFulsav`-ot (5. felfedezés): első fül a tartalom, második a „Másik ág" —
+benne egy `EntitasHivatkozasBlokk` a testvérre, és egy mondat arról, melyik döntés kapcsán
+váltak szét. A „..." túlnyúlás-gomb újramérése fülváltáskor már megoldott
+(`Kartya._kibovitesUjraertekeles` ↔ `KartyaFulsav.onFulValtas`), ehhez nem kell semmi új.
+> **Csapda, amit a 2. lépésnél mértünk ki:** a `tartalomRepository.findById` `.lean()`-nel
+> olvas, ezért a RÉGI (2026-08-25 előtti) tartalmaknál a `kulonvalasok` mező egyszerűen
+> HIÁNYZIK a válaszból — nem üres tömb, hanem `undefined`. A frontend tehát ne
+> `tartalom.kulonvalasok.length`-t nézzen, hanem `(tartalom.kulonvalasok ?? [])`-t.
+> (Mongoose-dokumentumként olvasva `[]`-t kapnánk — a `.lean()` az, ami ezt elrejti.)
+
+**8. lépés — A szerkesztők ág-szempontú színe (7. döntés). ✅ KÉSZ (2026-08-25).** A `szerkesztok[].allapot` és
+a `ReszletekModal` szín-logikája marad; csak azt kell hozzátenni, hogy a különvált ágon a
+nézőpont FORDÍTOTT (aki a módosítást támogatta, az ezen az ágon piros). Ugyanaz az adat,
+két nézőpontból — a `kulonvalas` mező jelenléte fordít.
+
+**9. lépés — Dokumentáció. ✅ KÉSZ (2026-08-25).** `docs/teszt.md` (a forgatókönyv és a kötelező mezők —
+a CLAUDE.md szerint kötelező átvezetni), új `megismeres/18-kulonvalas.md` az
+e-embereknek, és a `CHANGELOG.md`.
+
+### AMIT A 6–8. LÉPÉS HOZZÁTETT
+
+**6. — Az érték javaslatok.** Két dolgot kellett kimondani. (1) A `tartalomLetrehozasa`
+az ALAPÍTÓNAK már létrehozott egy érték javaslatot az új ágon, ALAPÉRTELMEZETT
+küszöbökkel — ezért a célon `ertekJavaslatLetrehozasaVagyModositasa`-t hívunk
+(createOrUpdate), ami felülírja, nem duplikálja. (2) A forrásból nem elég törölni a sort:
+a hisztogramból is KI KELL VONNI (`hisztogramCsokkentese`), különben a főág küszöbe olyan
+véleményt is beleszámolna, ami már nem tartozik hozzá.
+*Mérve:* forrás 2 érték javaslattal (51/51 és 90/80), érvényes küszöb a medián 71/66.
+Szétválás után a főág 51/51-re állt vissza, az új ágon pontosan 1 sor van (90/80),
+duplikátum nélkül.
+
+**7. — A fülsáv.** A `KartyaFulsav` eddig csak a Javaslat- és Egyezmény-kártyán volt
+bekötve; most a `TartalomKartya` is használja. Fontos: ha nincs szétválás, a fülsáv
+EGYETLEN füllel épül fel, és olyankor nem rajzol sávot — a régi kártyák megjelenése tehát
+változatlan. A testvérre a szövegszerkesztő `EntitasHivatkozasBlokk`-ja mutat,
+megjelenítés módban. A `pakliService` Tartalom-ága mostantól átadja a `kulonvalasok`
+tömböt, a testvér CÍMÉVEL kiegészítve (plusz lekérdezés, de csak ott, ahol tényleg van
+szétválás). Ha a testvér-ág időközben megszűnt, a fül ezt írja ki.
+
+**8. — A szerkesztők színe.** Itt kiderült, hogy a kézenfekvő megoldás — „fordítsuk meg a
+forrás állapotait" — **hibás lenne**. A forráson tárolt `allapot` az UTOLJÁRA ELFOGADOTT
+módosításra vonatkozik (a `szerkesztoService` csak elfogadáskor fut). Elvetésnél tehát a
+forrás állapotai egy KORÁBBI, más döntésről szólnak — azok megfordítása értelmetlen.
+Ezért az új ág szerkesztő-állapotait mindig EBBŐL a javaslatból, a szavazatokból
+számoljuk: aki a KÜLÖNVÁLÓKKAL azonosan szavazott, az ezen az ágon zöld. Egy szabály,
+mindkét irányban működik. Az `eredeti` (közvetlen szerkesztési) jog az ALAPÍTÓÉ — ő hozta
+létre ezt az entitást; a forrás eredeti létrehozója lehet, hogy át sem lépett ide.
+*Mérve:* A támogatta a módosítást, B ellenezte és különvált → a különvált ágon B zöld
+(alapító), A **piros**. Pontosan a 7. döntés példája.
+
+### AMI EBBE A KÖRBE NEM FÉR BELE
+
+- kategória / tartalomtípus különválása (3. nyitott szál),
+- láncolt, többszörös különválás (4. nyitott szál),
+- az elavult entitás-hivatkozások jelölése (1. nyitott szál — Csaba: „ezzel most nem kell
+  foglalkozni"),
+- egyezmények szétosztása — előbb a `tudatpontHozzarendeles` enumját kell rendbe tenni
+  (6. felfedezés).
