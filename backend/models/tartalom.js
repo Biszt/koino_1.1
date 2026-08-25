@@ -7,6 +7,9 @@ const mongoose = require('mongoose');
 // A szerkesztő-elem közös al-sémája (eemberId + allapot + eredeti)
 const szerkesztoResz = require('./szerkesztoResz');
 
+// A különválás-elem közös al-sémája (testverId + agSzerep + forrás-javaslat/egyezmény)
+const kulonvalasResz = require('./kulonvalasResz');
+
 // ===== TARTALOM SÉMA DEFINIÁLÁSA =====
 // A Schema meghatározza a tartalom adatszerkezetét és validációs szabályokat
 const tartalomSchema = new mongoose.Schema({
@@ -123,6 +126,23 @@ szerkesztok: {
     default: []               // Alap: üres tömb
 },
 
+// ----- KÜLÖNVÁLÁSOK -----
+// Ha ez a tartalom valamikor kettévált (vagy egy szétválásból született), itt
+// vannak a testvér-ágai — eseményenként egy bejegyzés. Üres tömb = ez a tartalom
+// még sosem vált szét, és nem is szétválásból származik (a legtöbb tartalom ilyen).
+//
+// Egy szétváláskor MINDKÉT entitás kap egy bejegyzést, egymásra mutatva; az elem
+// `agSzerep` mezője mondja meg, melyik oldalon állunk (főág vagy különvált ág).
+// A mező szerkezetét és a fogalmat a models/kulonvalasResz.js írja le.
+//
+// FIGYELEM: ezt a mezőt ma még SEMMI nem tölti fel — a szétosztás motorja külön
+// lépésben épül (docs/fejlesztesi_terv.md „Különválás — megvalósítási terv").
+// Ez a lépés csak a HELYET készíti elő.
+kulonvalasok: {
+    type: [kulonvalasResz],   // A közös különválás al-séma tömbje
+    default: []               // Alap: üres tömb (nincs testvér-ág)
+},
+
 // ----- LÉTREHOZÁS DÁTUMA -----
 // Amikor a tartalom létrejött
 letrehozva: {
@@ -157,6 +177,12 @@ tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
 
 // Szerkesztő indexelése - gyors keresés "mely tartalmakat szerkesztette egy e-ember"
 tartalomSchema.index({ 'szerkesztok.eemberId': 1 });
+
+// Testvér-ág indexelése - gyors keresés "melyik tartalom mutat erre az entitásra"
+// Használat: a másik ág felől visszakeresés (pl. törléskor a testvér bejegyzésének
+// karbantartása), és a szétválás-láncok bejárása. Ritka lekérdezés, de index nélkül
+// teljes kollekció-bejárás lenne — több millió entitásra tervezünk.
+tartalomSchema.index({ 'kulonvalasok.testverId': 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
 tartalomSchema.index({ kategoriaIds: 1 });

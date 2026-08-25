@@ -119,6 +119,40 @@ async findById(id) {
     return frissitettTartalom;
   }
 
+  // ----- KÜLÖNVÁLÁS-BEJEGYZÉS HOZZÁADÁSA -----
+  // Egy szétválás-esemény felvétele a tartalom `kulonvalasok` tömbjébe.
+  // Miért KÜLÖN metódus, és nem az updateById? Mert az updateById `$set`-tel
+  // dolgozik, ami FELÜLÍRNÁ a teljes tömböt — itt viszont HOZZÁFŰZNI kell
+  // ($push), hogy a korábbi szétválások megmaradjanak (egy tartalom többször is
+  // szétválhat, lásd models/kulonvalasResz.js).
+  // @param {string} tartalomId - A tartalom MongoDB ObjectId-ja
+  // @param {Object} kulonvalasElem - { testverId, testverTipus, agSzerep, forrasJavaslatId, forrasEgyezmenyId }
+  // @returns {Promise<Object|null>} A frissített tartalom vagy null
+  async kulonvalasHozzaadasa(tartalomId, kulonvalasElem) {
+    console.log('tartalomRepository.kulonvalasHozzaadasa - KEZDÉS', {
+      tartalomId,
+      testverId: kulonvalasElem?.testverId,
+      agSzerep: kulonvalasElem?.agSzerep
+    });
+
+    const frissitettTartalom = await Tartalom.findByIdAndUpdate(
+      tartalomId,
+      { $push: { kulonvalasok: kulonvalasElem } },  // HOZZÁFŰZÉS (nem felülírás!)
+      {
+        new: true,           // A frissített dokumentumot adja vissza
+        runValidators: true  // Az al-séma validációi (pl. kötelező agSzerep) fussanak le
+      }
+    );
+
+    console.log('tartalomRepository.kulonvalasHozzaadasa - VÉGE', {
+      tartalomId,
+      sikeres: !!frissitettTartalom,
+      kulonvalasokSzama: frissitettTartalom?.kulonvalasok?.length ?? 0
+    });
+
+    return frissitettTartalom;
+  }
+
   // ----- TARTALOM TorlesE -----
   // Egy tartalom törlése ID alapján
   // @param {string} id - A tartalom MongoDB ObjectId-ja
