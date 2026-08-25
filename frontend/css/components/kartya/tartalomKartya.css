@@ -86,3 +86,32 @@
   width: 100%;               /* ← hozzáadás: flex gyerekként kitölti a szélességet */
   min-width: 0;              /* ← hozzáadás: flex min-width: auto felülírása */
 }
+/* ---------------------------------------- */
+/* BODY – „MÁSIK ÁG" FÜL (KÜLÖNVÁLÁS)       */
+/* ---------------------------------------- */
+/* A fül akkor jelenik meg, ha a tartalom valaha kettévált (vagy szétválásból
+   született). Tartalma: egy magyarázó mondat + koppintható hivatkozás a testvér-ágra.
+   Lásd: docs/fejlesztesi_terv.md „Különválás" szakaszai. */
+
+.tartalom-kartya__masik-ag {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;              /* flex gyerekként ne feszítse szét a kártyát */
+}
+
+/* A magyarázó mondat – halkabb, mint maga a hivatkozás */
+.tartalom-kartya__masik-ag-magyarazat {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+/* Ha a testvér-ág időközben megszűnt (0 tudatpontra esett és törlődött) */
+.tartalom-kartya__masik-ag-megszunt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}

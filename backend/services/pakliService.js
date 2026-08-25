@@ -410,6 +410,28 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     const tartalomTipus = tartalom?.tartalomTipusId
       ? await tartalomTipusRepository.findById(tartalom.tartalomTipusId.toString())
       : null;
+    // ----- KÜLÖNVÁLÁSOK (a kártya „Másik ág" fülének) -----
+    // Ha ez a tartalom valaha kettévált (vagy szétválásból született), itt vannak a
+    // testvér-ágai. A kártyának a testvér CÍME is kell (hogy legyen mit kiírni), ezért
+    // egy-egy plusz lekérdezés — csak akkor, ha tényleg van szétválás (ritka).
+    // FIGYELEM: a findById `.lean()`-nel olvas, ezért a RÉGI (2026-08-25 előtti)
+    // tartalmaknál a mező nem üres tömb, hanem HIÁNYZIK — innen a `?? []`.
+    const kulonvalasok = await Promise.all(
+      (tartalom?.kulonvalasok ?? []).map(async (k) => {
+        const testver = await tartalomRepository.findById(k.testverId.toString());
+        return {
+          testverId: k.testverId,
+          testverTipus: k.testverTipus ?? 'Tartalom',
+          // null, ha a testvér-ág időközben megszűnt (0 tudatpontra esett)
+          testverCim: testver?.cim ?? null,
+          agSzerep: k.agSzerep,
+          kulonvalasIdeje: k.kulonvalasIdeje ?? null,
+          forrasJavaslatId: k.forrasJavaslatId ?? null,
+          forrasEgyezmenyId: k.forrasEgyezmenyId ?? null
+        };
+      })
+    );
+
     adatok = {
       cim: tartalom?.cim ?? null,
       kategoriak,
@@ -421,7 +443,8 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
       // A kártya-fejléc dátumához: a saját utolsó (tartalmi) módosítás — induláskor
       // = létrehozás. A szülő referencia-dátuma a szín-jelzéshez (elavulhat-e).
       modositva: tartalom?.modositva ?? tartalom?.letrehozva ?? null,
-      szuloModositva: await this._szuloModositasReferencia(tartalom?.szuloId, tartalom?.szuloTipus)
+      szuloModositva: await this._szuloModositasReferencia(tartalom?.szuloId, tartalom?.szuloTipus),
+      kulonvalasok
     };
   } else if (elem.entitasTipus === 'Kategoria') {
     const kategoria = await kategoriaRepository.findById(elem.entitasId);

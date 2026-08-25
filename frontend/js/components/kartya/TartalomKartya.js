@@ -9,6 +9,9 @@ import ReszletekModal from '../modals/ReszletekModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
+// Külső fül-réteg + entitás-hivatkozás a testvér-ághoz (különválás, 7. lépés)
+import KartyaFulsav from './KartyaFulsav.js';
+import EntitasHivatkozasBlokk from '../szovegSzerkeszto/blokkok/EntitasHivatkozasBlokk.js';
 
 // --- TARTALOM KÁRTYA OSZTÁLY ---
 // Felelőssége:
@@ -35,6 +38,9 @@ class TartalomKartya extends Kartya {
 
     // SzovegMezoMegjelenito példány — a body feltöltésekor jön létre
     this.szovegMezoMegjelenito = null;
+
+    // Külső fülsáv (tartalom / másik ág) — csak akkor rajzol sávot, ha van szétválás
+    this.kartyaFulsav = null;
 
     console.log('TartalomKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
@@ -143,6 +149,11 @@ class TartalomKartya extends Kartya {
   // A SzovegMezoMegjelenito minden mentett formátumot kezel:
   // blokk tömb, több oldalas (fülekkel) tartalom és régi string is.
   // Az elmentett blokk-méreteket a blokk osztályok állítják vissza.
+  //
+  // KÜLÖNVÁLÁS (2026-08-25): ha ez a tartalom valaha kettévált, a body egy KÜLSŐ
+  // fülsávot kap (KartyaFulsav) — az első fül maga a tartalom, a második(ok) a
+  // testvér-ág(ak)ra mutató hivatkozás. Ha nincs szétválás, a fülsáv EGYETLEN füllel
+  // épül fel, és olyankor nem is rajzol sávot — vagyis a megjelenés változatlan.
   // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
     console.log('TartalomKartya._bodyFeltoltese - KEZDÉS', {
@@ -152,37 +163,139 @@ class TartalomKartya extends Kartya {
     const adatok = this.entitas.adatok ?? {};
 
     const szoveg = adatok.szoveg ?? adatok.szovegMezo ?? null;
+    // A `?? []` NEM formaság: a régi tartalmaknál a mező hiányzik a válaszból
+    // (a tartalomRepository.findById `.lean()`-nel olvas), tehát undefined jön.
+    const kulonvalasok = adatok.kulonvalasok ?? [];
 
-    // Ha nincs szöveg adat, üres body marad
-    if (!szoveg) {
-      console.log('TartalomKartya._bodyFeltoltese - VÉGE (nincs szöveg)');
+    // Ha nincs se szöveg, se szétválás, üres body marad (a korábbi viselkedés)
+    if (!szoveg && kulonvalasok.length === 0) {
+      console.log('TartalomKartya._bodyFeltoltese - VÉGE (nincs szöveg és nincs szétválás)');
       return;
     }
 
-    // SzovegMezoMegjelenito konténere
-    const szovegKontener = document.createElement('div');
-    szovegKontener.className = 'tartalom-kartya__szoveg-kontener';
-    body.appendChild(szovegKontener);
+    const fulek = [];
 
-    // Megjelenítő példányosítása — a formátum felismerését és a blokkok
-    // renderelését (méretekkel, fülekkel együtt) a megjelenítő végzi
-    this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(szovegKontener, {
-      blokkok: szoveg,
-      onEntitasKivalasztas: (entitasId, entitasTipus) => {
-        console.log('TartalomKartya - entitás hivatkozás koppintva', {
-          entitasId,
-          entitasTipus
-        });
-        // A Pakli.js window.aktivPakli-ban tárolja magát
-        if (window.aktivPakli) {
-          window.aktivPakli.entitasKivalasztasa(entitasId, entitasTipus);
+    // --- 1. fül — MAGA A TARTALOM ---
+    if (szoveg) {
+      const szovegKontener = document.createElement('div');
+      szovegKontener.className = 'tartalom-kartya__szoveg-kontener';
+
+      // Megjelenítő példányosítása — a formátum felismerését és a blokkok
+      // renderelését (méretekkel, fülekkel együtt) a megjelenítő végzi
+      this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(szovegKontener, {
+        blokkok: szoveg,
+        onEntitasKivalasztas: (entitasId, entitasTipus) => {
+          console.log('TartalomKartya - entitás hivatkozás koppintva', {
+            entitasId,
+            entitasTipus
+          });
+          // A Pakli.js window.aktivPakli-ban tárolja magát
+          if (window.aktivPakli) {
+            window.aktivPakli.entitasKivalasztasa(entitasId, entitasTipus);
+          }
         }
-      }
+      });
+
+      fulek.push({ id: 'tartalom', felirat: 'Tartalom', tartalomElem: szovegKontener });
+    }
+
+    // --- TOVÁBBI FÜLEK — A TESTVÉR-ÁGAK ---
+    // Szétválásonként egy fül. Több szétválásnál sorszámozzuk a feliratot, hogy
+    // meg lehessen különböztetni őket („Másik ág 1", „Másik ág 2").
+    kulonvalasok.forEach((kulonvalas, index) => {
+      const felirat = kulonvalasok.length > 1 ? `Másik ág ${index + 1}` : 'Másik ág';
+      fulek.push({
+        id: `masikAg-${index}`,
+        felirat,
+        tartalomElem: this._masikAgFul(kulonvalas)
+      });
+    });
+
+    // --- A külső fülsáv felépítése (egyetlen fülnél nem rajzol sávot) ---
+    const fulsavKontener = document.createElement('div');
+    body.appendChild(fulsavKontener);
+    this.kartyaFulsav = new KartyaFulsav(fulsavKontener, {
+      fulek,
+      // Fülváltáskor a kártya újramérje a túlnyúlást az új aktív fülre — így a „..."
+      // gomb és a dupla-koppintásos kinyitás fülenként helyesen működik.
+      onFulValtas: () => this._kibovitesUjraertekeles()
     });
 
     console.log('TartalomKartya._bodyFeltoltese - VÉGE', {
-      entitasId: this.entitas?.entitasId
+      entitasId:        this.entitas?.entitasId,
+      fulekSzama:       fulek.length,
+      kulonvalasokSzama: kulonvalasok.length
     });
+  }
+
+  // ----- „MÁSIK ÁG" FÜL TARTALMA -----
+  // Egy szétválás-esemény megjelenítése: mondat arról, melyik oldalon állunk és mikor
+  // vált szét, alatta koppintható hivatkozás a testvér-ágra.
+  //
+  // A NYELV (a domain-döntés szerint): nincs „győztes" és „vesztes" — csak FŐÁG és
+  // KÜLÖNVÁLT ÁG. Senki nem veszít, csak külön útra lép.
+  // @param {Object} kulonvalas - { testverId, testverCim, agSzerep, kulonvalasIdeje, ... }
+  // @returns {HTMLElement} a fül tartalom-eleme
+  _masikAgFul(kulonvalas) {
+    console.log('TartalomKartya._masikAgFul - KEZDÉS', {
+      testverId: kulonvalas?.testverId,
+      agSzerep:  kulonvalas?.agSzerep
+    });
+
+    const kontener = document.createElement('div');
+    kontener.className = 'tartalom-kartya__masik-ag';
+
+    // --- MAGYARÁZÓ MONDAT ---
+    const magyarazat = document.createElement('p');
+    magyarazat.className = 'tartalom-kartya__masik-ag-magyarazat';
+
+    const datumSzoveg = kulonvalas.kulonvalasIdeje
+      ? new Date(kulonvalas.kulonvalasIdeje).toLocaleDateString('hu-HU')
+      : null;
+
+    // Melyik oldalon állunk? A főág tartotta meg az eredeti azonosítót.
+    const oldalSzoveg = kulonvalas.agSzerep === 'foag'
+      ? 'Ez a tartalom kettévált: egy részük külön ágon folytatta.'
+      : 'Ez a tartalom egy szétválásból született: egy másik ágból vált ki.';
+
+    magyarazat.textContent = datumSzoveg
+      ? `${oldalSzoveg} (${datumSzoveg})`
+      : oldalSzoveg;
+
+    kontener.appendChild(magyarazat);
+
+    // --- HIVATKOZÁS A TESTVÉR-ÁGRA ---
+    if (kulonvalas.testverCim) {
+      // Ugyanaz a blokk, amit a szövegszerkesztő is használ entitás-hivatkozásra —
+      // megjelenítés módban (koppintásra a pakli odanavigál).
+      const hivatkozasBlokk = new EntitasHivatkozasBlokk(
+        {
+          id:           `kulonvalas-${kulonvalas.testverId}`,
+          entitasId:    kulonvalas.testverId,
+          entitasTipus: kulonvalas.testverTipus ?? 'Tartalom',
+          felirat:      kulonvalas.testverCim
+        },
+        {
+          megjelenitesMod: true,
+          onKoppintas: (entitasId, entitasTipus) => {
+            console.log('TartalomKartya - másik ág hivatkozás koppintva', { entitasId, entitasTipus });
+            if (window.aktivPakli) {
+              window.aktivPakli.entitasKivalasztasa(entitasId, entitasTipus);
+            }
+          }
+        }
+      );
+      kontener.appendChild(hivatkozasBlokk.letrehozas());
+    } else {
+      // A testvér-ág időközben megszűnt (0 tudatpontra esett és törlődött)
+      const megszunt = document.createElement('p');
+      megszunt.className   = 'tartalom-kartya__masik-ag-megszunt';
+      megszunt.textContent = 'A másik ág időközben megszűnt.';
+      kontener.appendChild(megszunt);
+    }
+
+    console.log('TartalomKartya._masikAgFul - VÉGE');
+    return kontener;
   }
 
   // ----- MEGSEMMISÍTÉS -----
@@ -195,6 +308,13 @@ class TartalomKartya extends Kartya {
     if (this.szovegMezoMegjelenito) {
       this.szovegMezoMegjelenito.destroy();
       this.szovegMezoMegjelenito = null;
+    }
+
+    // A fülsáv csak MEGJELENÍTI a tartalom-elemeket (nem birtokolja őket), de a saját
+    // eseménykezelőit takarítania kell — ugyanúgy, ahogy a Javaslat/Egyezmény kártyán.
+    if (this.kartyaFulsav) {
+      this.kartyaFulsav.destroy?.();
+      this.kartyaFulsav = null;
     }
 
     // Szülő destroy() meghívása (eseményfigyelők eltávolítása stb.)
