@@ -379,10 +379,112 @@ elosztott adat-alapot.*
   validálás) — a legközelebbi létező rokona az entitás-láncok ötletének (N8/N1).
 - **libp2p** — a P2P hálózati alapréteg (kapcsolatok, felfedezés, NAT) — bármelyik
   fenti alatt ez van/lehet.
+- **git** *(2026-08-25)* — nem adat-jelölt, hanem **működő precedens** és a KÓD-terjesztés
+  jelöltje: tartalom-címzett objektum-DAG, natív merge, teljes replikáció, hash-ellenőrzött
+  történet — mindez központi hatóság nélkül, világméretben bizonyítva. A D9 ellenőrzési
+  fele gyakorlatilag kész technológia (az egyezmény megnevez egy commit-hasht). **Nem ad
+  konszenzust, identitást és jogosultságot** — a nehéz felét nem. Részletes elemzés lentebb:
+  „A git mint minta". ⚠️ A **GitHub** ≠ git: a GitHub a Microsoft tulajdona, arra
+  kormányzást építeni a D12-t érvénytelenítené.
 - FONTOS KORLÁT mindnél: végső (eventual) konzisztencia ≠ tartós mag — szavazás-
   véglegesség, egyezmény-örökség és duplikátum-védelem EGYIKBŐL SEM jön; a tartós mag
   (N1) és az identitás (N4) külön megoldás marad. Egyik sem bizonyított országos
   léptékben.
+
+---
+
+## A git mint minta — mit vehet át a koino, és mit NEM (2026-08-25)
+
+*Csaba kérdésére: „a GitHub egy jól kidolgozott verziókezelő platform, és független is —
+a koino tudna a rendszerére támaszkodni?" A válasz kétfelé válik.*
+
+### Először a tévedés: a GitHub NEM független
+
+A GitHub a **Microsoft** tulajdona (2018, 7,5 mrd USD). Egyetlen cég, egyetlen jogrend,
+egyetlen felhasználási feltétel. Nem elméleti aggály: **2019-ben szankciós okokból
+zárolta iráni, szíriai és krími fejlesztők fiókjait** — a hozzáférés egy cég döntésén és
+egy állam politikáján múlik.
+
+> Ha a koino kód-kormányzása a GitHubra épülne, a **D12** állítása — hogy nincs teteje —
+> egyszerűen nem lenne igaz: **a Microsoft lenne a tető.**
+
+**A `git` ezzel szemben senkié**: nyílt forrású (GPL-2.0), és **eleve elosztott** — nincs
+benne központi szerver, minden klón teljes értékű, a teljes történettel. Az ítélet tehát:
+**a gitre igen, a GitHubra nem.**
+
+*(A 2026-08-25-i nyilvánossá tétel + AGPL ezt a függést a gyakorlatban már meg is
+szüntette: bárki klónozhat, és minden klón teljes biztonsági mentés.)*
+
+### Az érdemi átfedések
+
+A git nem analógia, hanem **működő precedens**: bizonyítja, hogy elosztott,
+hash-ellenőrzött, forkolható-egyesíthető adatmodell világméretben működik, központi
+hatóság nélkül — évekkel a blokklánc divatja előtt.
+
+| A koino igénye | Amit a git már megoldott | Miért fontos |
+|---|---|---|
+| **DAG entitás-láncokból** (N8) | a commit-történet pontosan egy DAG; a merge-commitnak több szülője van | az N8 „kutatási terep" — de a DAG-alakzat maga bizonyított |
+| **Az egyesítés legyen natív** — lineáris láncban rémálom | a `merge` alapművelet | egybevág az N8 megállapításával |
+| **Fork: a teljes történet lemásolódik, közös múlt + külön jövő** (D13) | szó szerint ez a `clone` + saját ág | a D13 nem újdonság a világban, csak a koinóban |
+| **Hamisíthatatlan történet hash-ellenőrzéssel** (D9) | minden objektum a TARTALMA lenyomatával azonosított — a múlt átírása minden leszármazott azonosítót megváltoztat | **tartalom-címzés = ingyen manipuláció-bizonyíték** |
+| **TÉNY örök ↔ HATÁLY elavulhat** (D8) | a git szétválasztja a **megváltoztathatatlan objektum-DAG-ot** a **mozgatható mutatóktól** (branch/tag) | a D8-at magunktól találtuk ki — a git implementálja |
+| **Tudatpont = tárolási vállalás, érdeklődés-vezérelt replikáció** (D3) | `partial clone`, `sparse checkout`, `shallow clone` — részleges másolat ismert kompromisszumokkal | a D3 „csak azt tárolom, ami érdekel" mérnökileg megoldott terep |
+| **Csomópontok szinkronizálása** | a fetch-protokoll alkudozása („mim van / mi kell") a minimális átvitelről | P2P-ben ugyanez a probléma, kipróbált megoldással |
+| **„Tényleg ez az e-ember tette?"** központi hatóság nélkül | aláírt commitok/tagek (GPG/SSH) | kriptográfiai szerzőség-bizonyíték precedense |
+
+### Három konkrét fejlesztési nyom
+
+**1. A D9 ellenőrzési fele gyakorlatilag kész technológia.** A D9 szerint a kliens az
+elfogadott kód-egyezmény alapján, **hash-ellenőrzéssel** áll át. De a git-commit MAGA egy
+hash. Vagyis: **az egyezmény megnevez egy commit-azonosítót; a kliens klónozza — bárhonnan
+—, és ellenőrzi, hogy azt kapta.** Nem kell hozzá letöltő-szerver, sem GitHub; a git
+peer-to-peer is működik.
+
+**2. A KÖZÖS ŐS (merge base) — és a felismerés, hogy már meg is van.** A git nem egyszerűen
+összefésül két ágat: megkeresi a **közös ősüket**, és ahhoz képest nézi, ki mit
+változtatott (három-utas összefésülés). Ami csak az egyik oldalon változott, magától
+átmegy; ami mindkettőn, azt ütközésként az ember elé teszi.
+
+> A koino **különvált ágainak újraegyesítése** (a 6. döntés ígérete) pontosan ezzel a
+> problémával fog szembenézni. És a **merge base már rögzítve van**: a
+> `models/kulonvalasResz.js` `forrasJavaslatId` / `forrasEgyezmenyId` /
+> `kulonvalasIdeje` hármasa **pontosan azt mondja meg, honnan indult a szétválás**.
+> Ez akaratlanul készült el — de amikor az újraegyesítést tervezzük, ez lesz a horgony.
+
+**3. A tartalom-címzés csökkentheti, mi kerül a láncra (D5/N1).** Ha egy entitás
+azonosítója a tartalmának + előzményének lenyomata, akkor az entitás-lánc **önmagát
+igazolja** — nem kell a lánc ahhoz, hogy bizonyítsuk, senki nem írta át a múltat. A lánc
+szerepe így **horgonyzásra** szűkül (az N8 már ezt mondja: „az entitás-láncok időnként
+bele-pecsételik az állapot-ujjlenyomatukat"). A git bizonyítja, hogy a horgony lehet
+**ritka**.
+
+### Ahol az átvitel NEM működik — ez a fontosabb fele
+
+| A git NEM ad | Miért kritikus a koinónál |
+|---|---|
+| **Konszenzust** | a git SOHA nem dönti el, melyik ág az igazság — azt ember dönti el, kézzel. **A koino lényege épp a közös döntés.** A git a HORDOZÓT adja, a KORMÁNYZÁST soha. Aki azt mondja, „használjatok gitet", az a nehéz felét hagyta ki. |
+| **Identitást** | a commit szerző-mezője szabad szöveg — bárki bárkinek kiadhatja magát (az aláírás segít, de a git nem tud „egy ember = egy fiók"-ról). A D1/N4 teljesen a git hatókörén kívül van. |
+| **Jogosultságot** | a git nem ismer hozzáférés-vezérlést — **pontosan ezért létezik a GitHub üzletként**. A tudatpont-alapú jogosultság külön réteg marad. |
+| **Jelentés-szintű összefésülést** | a git SOROKAT fésül össze. A koino **jelentést** egyesít: két tartalom egyesítése emberi ítélet, nem szöveg-diff. **A közös-ős GONDOLATA átvihető, az ALGORITMUS nem.** |
+| **A koino DAG-ja gazdagabb** | a git-commit csak a saját előzményére mutat, egy repón belül. A koinóban egy esemény **két láncot köt össze** (cselekvő + entitás, N8) — ez inkább több-láncú főkönyv, mint git. |
+
+### A SHA-1 csapda (mérve, 2026-08-25)
+
+A koino repója **SHA-1** objektum-azonosítót használ (`git rev-parse
+--show-object-format` → `sha1`, 40 hex karakter). A SHA-1 ütközés-ellenállását **2017-ben
+feltörték**; a git tett ellene védelmet, és a hétköznapi használatban ez nem gond.
+
+**De amint biztonsági garanciát építünk rá — márpedig a D9 pontosan az —, SHA-256 módú
+git kell.** Ez létezik, külön be kell kapcsolni, és **nem visszamenőleg**. Nem most kell
+megoldani; a D9 tervezésekor ez az első kérdés.
+
+### Amire NE támaszkodjunk
+
+A GitHub **kormányzási** felületére (pull request, issue, jogosultság, moderálás): ezek egy
+cég fiókrendszerén és szabályzatán állnak. **A kód-módosítási javaslat helye a koino
+fája** — a GitHub legfeljebb a bájtokat szállítja. → új híd-feladat: **H8**.
+
+---
 
 **eIDAS 2.0 / EUDI-tárca helyzetkép (2026-07-17, webes kutatás — Csaba kérdésére:
 „ha a kormány nemet mond, tudja-e a koino másképp biztosítani az egy ember = egy
@@ -460,6 +562,18 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
 - **H6. Adat-osztályozás előkészítése** — már a Fázis 1 adatmodelljében jelölni, mi
   tartozik a tartalmi rétegbe és mi a tartós magba (D3), hogy a szétválás ne utólagos
   szétszálazás legyen.
+- **H8. Kód-terjesztés függetlenítése a GitHubtól** (2026-08-25) — két lépés, mindkettő
+  olcsó:
+  1. **Tükör-másolat egy második, független szolgáltatónál** (jelölt: Codeberg — nonprofit,
+     európai). Egyetlen további `git push`, és a koino kódja két, egymástól független
+     helyen van. *(A nyilvános repó + AGPL már ma is azt jelenti, hogy minden klón teljes
+     biztonsági mentés — ez csak felezi a kiesés esélyét.)*
+  2. **Verzió-végpont**: a futó példány mondja meg, melyik commitból épült. Ma semmiből nem
+     állapítható meg, hogy a koino.hu a közzétett kódot futtatja-e — elég egy elfelejtett
+     deploy, és a GitHub meg az éles kód némán szétcsúszik. Nem bizonyíték (hazug szerver
+     hazudhat), de a VÉLETLEN szétcsúszást kizárja, és megteremti a szokást, hogy ez
+     ellenőrizhető adat. Ez a 4. lépcső („ki kényszeríti ki, hogy az elfogadott kód
+     fusson") legkisebb, Fázis 1-ben is megtehető darabja.
 - **H7. Kormányzási ígéret dokumentum** (Csaba, 2026-07-16: „még nem kell, de
   felírhatod") — nyilvános dokumentum az 1. fázis kormányzásáról: mit dönt Csaba
   egyedül, mihez kell közösségi támogatás, mi történik, ha a közösség az ellenjavaslata
@@ -493,3 +607,14 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   fenntartva"), vagyis a vita 9. pontjának VÉGSŐ GARANCIÁJA nem létezett.
   Két új nyitott szál: a **névvédelem** kérdése (D13) és a **pénz mint fork-motiváció**
   (a „társadalmi gravitáció" érve nem vihető át változatlanul a pénzre).
+- **2026-08-25 (2)** — Csaba két döntése lezárta a fenti két szálat: **nem lesz védjegy**
+  (vállalja a kockázatot; a védjegy hatóságot igényelne → visszahozná a „tetőt"), és **a
+  pénz szétváláskor nem duplázódik** (külön név, 0 értékről). A repó **nyilvános lett**
+  (AGPL-3.0 licenccel, `0b9c996`). Csaba kérdésére új szakasz: **„A git mint minta"** — a
+  git nem analógia, hanem működő precedens (tartalom-címzett DAG, natív merge, teljes
+  replikáció); a **D9 ellenőrzési fele gyakorlatilag kész technológia** (az egyezmény
+  megnevez egy commit-hasht), a különvált ágak újraegyesítéséhez pedig **a merge base már
+  rögzítve van** a `kulonvalasResz`-ben. De a git **nem ad konszenzust, identitást és
+  jogosultságot** — a nehéz felét nem. ⚠️ A **GitHub ≠ git** (Microsoft-tulajdon) → új
+  híd-feladat: **H8** (tükör + verzió-végpont). Mérve: a repó SHA-1 objektum-azonosítót
+  használ — a D9-hez SHA-256 módú git kell majd.

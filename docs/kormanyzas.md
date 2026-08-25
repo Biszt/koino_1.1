@@ -52,6 +52,14 @@ A 2. lépcső megoldása a legkényesebb egyensúly: az **elismerés** látható
 hozzáértést anélkül, hogy jogot adna neki. A szavazat egyenlő marad. Enélkül két rossz
 irány közül kellene választani: vak szavazás a kódról, vagy szakértői kapuőrség.
 
+> **A 4. lépcső ellenőrzési fele már létező technológia.** A D9 szerint a kliens
+> hash-ellenőrzéssel áll át az elfogadott kódra — de a **git-commit maga egy hash**.
+> Vagyis az egyezmény megnevezhet egy commit-azonosítót, a kliens pedig bárhonnan
+> klónozhat és ellenőrizhet. Nem kell hozzá letöltő-szerver, sem GitHub.
+> ⚠️ **GitHub ≠ git:** a GitHub a Microsoft tulajdona — arra kormányzást építeni a D12-t
+> érvénytelenítené. Részletes elemzés (átfedések, korlátok, SHA-1 csapda):
+> [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) → „A git mint minta".
+
 ## A három szint
 
 Ahhoz, hogy a 4. lépcső megoldódjon, szét kell választani három dolgot, amit könnyű
@@ -376,7 +384,9 @@ Hogy a fenti tervből ne látsszon több késznek, mint amennyi:
 | Konszenzuális önfrissítés (D9) | ❌ nincs |
 | Elismerés-entitás (N9) | ❌ nincs *(már a Fázis 1-ben megépíthető lenne)* |
 | Koinók közti felfedezés | ❌ nincs |
-| Ellenőrizhető, hogy a koino.hu a közzétett kódot futtatja | ❌ nincs *(nincs verzió-végpont)* |
+| A forrás bárki számára elérhető és forkolható | ✅ **nyilvános repó**, 2026-08-25 — minden klón teljes mentés a történettel |
+| Ellenőrizhető, hogy a koino.hu a közzétett kódot futtatja | ❌ nincs *(nincs verzió-végpont — → H8)* |
+| Kód-terjesztés független a GitHubtól | ❌ nincs tükör *(→ H8)* |
 
 ---
 
