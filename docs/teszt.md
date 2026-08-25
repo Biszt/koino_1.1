@@ -143,6 +143,16 @@ Body: `{ entitasId, entitasTipus, pontok, felmenoketAutomatikusan?, szerep? }`
   „Részvételi modell" szakaszát.
 - **Szerep utólagos módosítása:** `PUT /api/tudatpont/szerep/:entitasTipus/:entitasId`,
   body: `{ szerep }` (a kártya „Részvételi beállítások" menüje).
+- **`entitasTipus` értékkészlete** (2026-08-25 óta egységes mind a három tudatpont-modellben):
+  `Tartalom / Kategoria / TartalomTipus / Javaslat / Egyezmeny`. Az `Egyezmeny` korábban
+  hiányzott a `tudatpontAllokacio` és a `tudatpontHozzarendeles` sémájából, pedig a rendszer
+  írt ilyen sorokat (az egyezmény létrejöttekor a támogatók pontja a javaslatról az
+  egyezményre költözik) — a hozzárendelés upserttel megy, ezért a validátor nem csapott le rá.
+  Ellenőrzés (mindhárom kollekcióban szerepelnie kell `Egyezmeny` sornak, ha volt már
+  elfogadott javaslat):
+  ```bash
+  docker exec koino-mongodb-dev mongosh koino --quiet --eval 'for (const k of ["tudatpontallokacios","tudatponthozzarendeles","hierarchikustudatpontallokacios"]) { print(k); printjson(db[k].aggregate([{ $group: { _id: "$entitasTipus", db: { $sum: 1 } } }]).toArray()); }'
+  ```
 
 ### 3.6. Szavazat — `POST /api/javaslat/szavazat` (auth)
 Body: `{ javaslatId, szavazatTipus, kulonvalasIgeny? }` — `szavazatTipus` ∈
@@ -2108,9 +2118,12 @@ időköze. Így egyetlen ütemezés kiszolgál bármilyen időközt. Kézi futta
 
 ## Különválás: a szétosztás motorja (2026-08-25, a 3/a–3/b lépés)
 
-A különválás gépezete még NINCS bekötve a javaslat-lezárásba (az a 4–5. lépés) — előbb
-önmagában mérjük, egy dev-only próba-eszközzel. Ez ugyanaz a minta, mint az
-`emailProba.js`-nél: a motor a felület előtt, külön kerül a mérlegre.
+A különválás gépezete **azóta be van kötve** a javaslat-lezárásba (4–5. lépés, lásd a
+lenti két forgatókönyvet) — ez a próba-eszköz viszont megmaradt, mert a motort **szavazás
+nélkül, önmagában** méri. Ez ugyanaz a minta, mint az `emailProba.js`-nél: a motor a
+felület mellett, külön is a mérlegre tehető. Akkor hasznos, ha a szétosztás szabályát
+akarod ellenőrizni (ki mit visz, mi kettőződik meg) anélkül, hogy egy teljes szavazást
+végig kellene játszanod.
 
 **Felmérés (nem módosít semmit) — kiírja a tartalom tudatpont-tulajdonosait:**
 ```

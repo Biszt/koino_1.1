@@ -34,9 +34,11 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 | D6 | Adatvédelem | A láncra személyes adat soha — csak kriptográfiai bizonyíték; a név a tartalmi rétegben él. |
 | D7 | Konszenzus | Személy-alapú (egy ember = egy érvényesítő hang) — vállalt kutatási terep. |
 | D8 | Egyezmény | A TÉNY a láncon örök; a HATÁLY a tartalmi rétegben elavulhat — a lánc a levéltár, a tartalmi réteg az élő jog. |
-| D9 | Kód | Konszenzuális önfrissítés (egyezmény-vezérelt, időzáras, hash-ellenőrzött) + a visszautasítás/fork joga mint vésznyílás. |
+| D9 | Kód | Konszenzuális önfrissítés (egyezmény-vezérelt, időzáras, hash-ellenőrzött) + a visszautasítás/fork joga. *(A „vésznyílás" keret a D13-ban felülírva: normál üzemmód.)* |
 | D10 | Pénz | Alkotmányos kibocsátási szabály + egyenlő osztalék minden e-embernél; hozam-ígéret nincs; vagyon ≠ hatalom. |
 | D11 | Pénz-ütemezés | Pénz csak az identitás-réteg éles bizonyítása után (az osztalék a hamis regisztrációt pénznyomtatóvá tenné). |
+| D12 | Kód-kormányzás | Három szint: a verzió-entitás a koinón BELÜL él (önalkalmazás, nincs regresszus), a koinók sokasága fölött pedig NINCS kormányzat — ott nincs mit eldönteni. A térkép nem kormányzat. |
+| D13 | A koino mint eszköz | Bárki indíthat koinót; a fork normál üzemmód, nem vésznyílás; az egység az ADATBÁZIS. A skálázás nem opcionális — a legfőbb koino evolúciósan jön létre. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -158,9 +160,12 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
 - **N4. Tanúsítási szabályok számszerűsítése** — hány független tanúsító kelljen,
   meghívás-korlátok (db/idő), gráf-szabályok, visszavonás; a felhatalmazott kibocsátók
   audit-folyamata. Vita 1. pont.
-- **N5. Forráskód-kormányzás** — hogyan hat a közösség közvetlenül a forráskódra;
-  ki kényszeríti ki, hogy a csomópontok az elfogadott kódot futtassák; forkok kezelése.
-  (⏸️ a vita 9. pontja, Csaba kérésére későbbre halasztva.)
+- **N5. ~~Forráskód-kormányzás~~** — ✅ **LEZÁRVA (2026-08-25)** → **D12** (a három szint:
+  önalkalmazás + kormányzat-nélküli legfelső szint) és **D13** (a koino eszköz, nem
+  közösség; a fork normál üzemmód). A teljes levezetés önálló dokumentumban:
+  [`kormanyzas.md`](kormanyzas.md). Ami NEM zárult le, és a nyitott listán marad:
+  a **névvédelem kérdése** (védjegy vagy sem — lásd D13), valamint a koinók közti
+  **felfedezési formátum** részletei (N1-gyel együtt vizsgálandó).
 - **N6. Elérhetőség és replikáció-padló** — „annyi helyen, ahány tulajdonos" nem elég
   (kikapcsolt készülékek); minimális replikáció a tulajdonos-számtól függetlenül;
   a blokklánc-réteg NEM védi a valódi támadási felületeket (botok,
@@ -193,7 +198,11 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
 - **N10. A koino-pénz paraméterei** (vita 6. pont — a D10 kerete adott, a részletek
   nyitottak) — az osztalék üteme (Duniter-minta: időben szimmetrikus keletkezés);
   új belépő kezelése (kap-e visszamenőleg — Duniter: nem, az osztalék idővel
-  kiegyenlít); kilépő/elhunyt e-ember pénzének sorsa; közös kassza részesedése
+  kiegyenlít); kilépő/elhunyt e-ember pénzének sorsa; **szétváláskor a pénz sorsa —
+  az ALAPSZABÁLY megvan (nem duplázódik; külön név, 0 értékről — D13), a részletek
+  nyitottak: mi lesz a főág pénzének értékével, hogyan árazódnak a koino-pénzek
+  EGYMÁSHOZ képest („kripto-család"), és Sybil-kockázat-e az örökölt identitás-háló**;
+  közös kassza részesedése
   (Csaba levélbeli (a) opciója); egység/elnevezés; volatilitás-kezelés a
   bér-fizetéshez (kis közösségnél a pénz ingadozik — árazás referencia-egységben?
   kassza-puffer?); a feladat/feladatvállalás fizetési rendszer terve. *(A vita 6.
@@ -269,6 +278,85 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   lehetséges; a koinonál minden ismert előfeltétele megvan vagy tervben van; ami nem
   garantálható, az a világméretű elfogadottság — de az nem is előfeltétele annak,
   hogy a pénz a közösségnek szolgáljon."
+
+### D12. A három szint: önalkalmazás + kormányzat-nélküli legfelső szint (N5 lezárása, 2026-08-25)
+
+*Teljes levezetés: [`kormanyzas.md`](kormanyzas.md).*
+
+- **A koino-verzió entitásként él a fában**, a gyökér-entitások felett — de AZON A KOINÓN
+  BELÜL, amit leír. Ezért a teljes meglévő gépezet magától vonatkozik rá: tudatpont,
+  küszöb, javaslat, szavazás, **különválás**. A forráskód-kormányzás nem új mechanizmus,
+  hanem **ugyanaz a mechanizmus, magasabb magasságban**.
+- **Nincs végtelen regresszus**, mert a verzió-szint nem a rendszer FELETT van, hanem
+  BENNE: a program a saját módosítását a saját eszközeivel dönti el (**önalkalmazás** —
+  ahogy egy alkotmány tartalmazza a saját módosítási szabályát). Az 1. és 2. szint
+  valójában egy szint; a hurok bezárul.
+- **A koinók sokasága NEM kormányzott szint.** Nincs rajta tudatpont, szavazás, küszöb —
+  mert **nincs mit eldönteni**: egy koino léte tény, nem határozat. A legfelső szinten a
+  szabályozó erő nem a döntés, hanem a **kompatibilitás** (RFC-minta: ajánlás, nem
+  jogszabály). A közös megjelenítés **térkép, nem kormányzat** — bárki rajzolhat egyet,
+  több létezhet egyszerre.
+- **Ez nem hiányosság, hanem a garancia:** ha a legfelső szinten kormányzat lenne, a
+  koinónak lenne TETEJE — aminek pedig teteje van, azt egyetlen ponton el lehet foglalni.
+- **A különválás és a fork ugyanaz a művelet**, két szinten: tartalom-szinten egy gondolat
+  válik szét, verzió-szinten egy világ. A Fázis 1-ben megépített különválás (2026-08-25)
+  ennek a főpróbája — és empirikus választ ad a kérdésre, amire a blokklánc-világ csak
+  anekdotákkal felel: **mi történik, ha az elválás olcsó?**
+
+### D13. A koino eszköz, nem közösség; a fork normál üzemmód (2026-08-25, Csaba)
+
+*Ez a vita 9. pontjához képest ÚJ álláspont — Csaba továbbgondolása.*
+
+- A vitában a fork **vésznyílás** volt („az ereje a létezése, nem a gyakorlása"). Mostantól
+  **normál működés**, sőt: **bárki indíthat teljesen új koinót** — család, osztály,
+  munkahely, párt. *„A koinót nem kizárólag egy közösségnek építem, hanem egy eszközt
+  szeretnék adni, amivel bárkik csinálhatnak közösséget."*
+- **Siker-mérce változik:** nem az, hányan vannak a koino.hu-n, hanem **hány koino létezik**.
+- **Az értelmezési egység az ADATBÁZIS.** Két születési mód: **szétválás** (a verzió-javaslat
+  megosztja a közösséget → az adatbázis LEMÁSOLÓDIK, a regisztráltakon is osztoznak, a múlt
+  közös) és **új alapítás** (üres, teljesen külön adatbázis, nincs közös múlt). A szétválás
+  akkor is így megy, ha valaki csak TESZTELÉSRE rak fel egy verziót.
+- **Verzió-szinten a szétosztás TELJES, nem arányos** (szemben a tartalom-szintűvel) — mert
+  a verzió nem csomópont, hanem **talaj**: programból nem lehet „felet" elvinni. Az e-ember
+  kezdetben mindkét ágon létezik.
+- **A koinók közti kapcsolat választható**: lehetnek szigetek, lehetnek összekapcsolva.
+- **A bootstrap-probléma helye megszűnik:** ha nincs „a koino", nincs mit átadni. A koino.hu
+  egy koino lesz — az első, talán a legnagyobb, de nem kiváltságos. A többlet-jog nem
+  lemondással szűnik meg, hanem mert megszűnik a hely, ahol létezhetne. *(A H7 az ÁTMENETRE
+  továbbra is kell.)*
+- **Az identitás koinónként külön van** → az „egy ember = egy e-ember" szabály koinón belüli,
+  nem világszintű (a **D1** hatókörének pontosítása).
+- **A skálázás NEM opcionális** (Csaba helyesbítése): az igény az, hogy BÁRMELYIK koino
+  megnőhessen milliárdos nagyságrendre. Az N3/N4/N8 tehát nem gördül le a projektről — csak
+  a SORREND változik: előfeltételből a **növekedés árává** válnak. A legfőbb koino
+  **evolúciósan** jön létre, „igazságos versenyben", nem kinevezéssel.
+- **✅ NÉVVÉDELEM: NEM LESZ (Csaba döntése, 2026-08-25).** Ha bárki kirakhat módosított
+  verziót, kirakhat olyat is, ami megtartja a nevet, de elárulja a lényeget (pl. a
+  tudatpont szavazaterővé válik). A kompatibilitás technikai mérce, a lényeg etikai —
+  **a kompatibilitás nem védi meg**. A védjegy megvédené, de hatóságot igényelne, ami
+  **visszahozná a tetőt**, amit a D12 megszüntetett → az eszközt nem vesszük fel. *„Vállalom
+  a kockázatot, hogy rosszul használják majd fel mások."*
+  - **A kérdés amúgy is rossz volt: nem megakadályozni kell.** A koino nem tiltja az
+    elárult változatot, hanem **veszteségessé teszi** — az olcsó kilépés miatt aki elfoglal
+    egy koinót, pontosan azt semmisíti meg, amiért érdemes volt elfoglalni. Ez a **D4
+    felelősség-elve egy szinttel feljebb**.
+  - **Ha MÁS védeti le a nevet:** a védjegy a névhasználatot korlátozza, nem a szoftvert —
+    a futtatást/másolást/módosítást az AGPL rendezi, P2P-ben pedig senki engedélye nem kell.
+    A védekezés ingyenes és most készül: **nyilvános, dátumozott előzmény** (nyilvános repó
+    + élő koino.hu + AGPL). *(Nem jogi tanácsadás.)*
+- **✅ A PÉNZ MINT FORK-MOTIVÁCIÓ — szabállyal kezelve (Csaba, 2026-08-25).** A fork-ritkaság
+  érve arra épült, hogy „a koino értéke az emberek, nem a kód" — de ha a szétválással pénz
+  is másolódik (D10), a forknak **anyagi motivációja** lesz, ami az ötletek szintjén nem
+  létezett (a kripto-forkok jelentős része haszonszerzési célú volt). **SZABÁLY: a pénz
+  szétváláskor NEM duplázódik**; ha a különvált ág saját pénzt akar, **külön nevet kap, és
+  0 értékről indul**, amíg nem fektetnek bele.
+  - **Ez nem puszta deklaráció:** a koino-pénz értékét nem a szűkösség adja, hanem **az a
+    közösség, amelyik elfogadja** — a fork az adatbázist másolja, az élő közösséget nem.
+    Haszonszerzésből nem lehet forkolni **anélkül, hogy embereket ne hozna magával** — és
+    akkor az már valódi közösségi szétválás. → részletek: [`kormanyzas.md`](kormanyzas.md).
+  - **Marad kockázatnak:** a szétválás MINDKÉT ág pénzét gyengíti (egészséges fék); a
+    különvált ág kész identitás-hálót örököl (D11-gyel vizsgálandó); a sok koino-pénz
+    egymáshoz képesti árazódása feltáratlan (→ N10).
 
 ---
 
@@ -397,3 +485,11 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   1./3./10. pont ✅ (maradék → N4/N3/H2 + betakarítási lista). Vita 6. pont (pénz):
   **D10** (alkotmányos kibocsátás + egyenlő osztalék) + **N10** (paraméterek; nyitott:
   áramló-vs-befektetés, sorrend, Sybil-pénz ütemezési szabály).
+- **2026-08-25** — **N5 ✅ LEZÁRVA** → **D12** (a három szint: önalkalmazás + kormányzat-
+  nélküli legfelső szint) és **D13** (a koino eszköz, nem közösség; a fork normál
+  üzemmód; az egység az adatbázis). A teljes levezetés önálló dokumentumba került:
+  [`kormanyzas.md`](kormanyzas.md). Előzmény ugyanaznap: a repó megkapta az **AGPL-3.0**
+  licencet — a fork-jog eddig jogi alap nélkül állt (licenc hiányában „minden jog
+  fenntartva"), vagyis a vita 9. pontjának VÉGSŐ GARANCIÁJA nem létezett.
+  Két új nyitott szál: a **névvédelem** kérdése (D13) és a **pénz mint fork-motiváció**
+  (a „társadalmi gravitáció" érve nem vihető át változatlanul a pénzre).

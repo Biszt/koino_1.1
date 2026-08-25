@@ -19,7 +19,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   },
 
   // ----- ENTITÁS AZONOSÍTÓ -----
-  // Melyik entitásra (tartalom/kategória/típus/javaslat) rendelte hozzá a pontokat
+  // Melyik entitásra (tartalom/kategória/típus/javaslat/egyezmény) rendelte hozzá a pontokat
   entitasId: { 
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
     required: true,                         // Kötelező mező
@@ -28,10 +28,16 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
 
   // ----- ENTITÁS TÍPUS -----
   // Milyen típusú az entitás
-  entitasTipus: { 
+  // Az 'Egyezmeny' 2026-08-25 óta szerepel itt: a rendszer MÁR RÉGÓTA írt ilyen sorokat
+  // (az egyezmény létrejöttekor a támogatók pontja a javaslatról az egyezményre költözik,
+  // lásd egyezmenyService.tudatpontokAtrendezeseJavaslatrolEgyezmenyre), csak a séma
+  // hallgatott róla: a hozzárendelés upserttel megy, ezért a validátor nem futott le rá.
+  // A testvér-modell (hierarchikusTudatpontAllokacio) enumja mindig is elfogadta —
+  // ez az eltérés hiány volt, nem szándék.
+  entitasTipus: {
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat'],  // Engedélyezett értékek
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
     trim: true                             // Levágja a felesleges szóközöket
   },
 

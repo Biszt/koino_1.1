@@ -4174,12 +4174,18 @@ el (visszakerül az e-emberhez), de a művelet befejezetlen marad.
 6. döntéshez (testvér-ág fül) tehát a `TartalomKartya`-ba is be kell vezetni — ez nem új
 komponens, de nem is puszta konfigurálás.
 
-**6. Ismert csapda a tudatpont-modellben.** A `tudatpontHozzarendeles.entitasTipus` enum
-értékei: `Tartalom | Kategoria | TartalomTipus | Javaslat` — az **`Egyezmeny` hiányzik**,
-holott a rendszer ma is ír rá ilyet (a fenti 1. pont átrendezése). A hozzárendelés
-upserttel megy, ezért a séma-ellenőrzés nem csap le rá. Amíg tartalmat mozgatunk, ez nem
-érint minket; **amint egyezményt is szétosztunk (az egységes szabály szerint), előbb az
-enumot kell rendbe tenni.**
+**6. Ismert csapda a tudatpont-modellben. ✅ RENDBE TÉVE (2026-08-25).** A
+`tudatpontHozzarendeles.entitasTipus` enum értékei: `Tartalom | Kategoria | TartalomTipus |
+Javaslat` — az **`Egyezmeny` hiányzott**, holott a rendszer ma is ír rá ilyet (a fenti
+1. pont átrendezése). A hozzárendelés upserttel megy, ezért a séma-ellenőrzés nem csapott
+le rá.
+
+> **Mérés, nem tipp:** a dev adatbázisban MÁR VOLTAK ilyen sorok — `tudatpontallokacios`:
+> 9 db `Egyezmeny`, `tudatponthozzarendeles`: 13 db. A harmadik testvér-modell
+> (`hierarchikusTudatpontAllokacio`) enumja pedig mindig is elfogadta. Az eltérés tehát
+> hiány volt, nem szándék — a javítás nem bővítés, hanem a séma hozzáigazítása ahhoz, amit
+> a rendszer amúgy is csinál. Mindkét enum megkapta az `Egyezmeny`-t; a validátor a nem
+> létező típusokat továbbra is elutasítja (a védelem megmaradt, csak a vakfolt szűnt meg).
 
 ### A HÁROM ELDÖNTÖTT KÉRDÉS (Csaba, 2026-08-25)
 

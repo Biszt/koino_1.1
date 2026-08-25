@@ -9,6 +9,83 @@ szellemét (magyarul, a projekt stílusához igazítva).
 
 ---
 
+## 2026-08-25 — Forráskód-kormányzás: az N5 lezárása (D12–D13)
+
+A vízió-vita 9. pontja („hogyan hat a közösség közvetlenül a forráskódra") **elvi szinten**
+2026-07-16-án lezárult, de a tervezés szintjén nyitva maradt (**N5**). Most ez is lezárult,
+és közben a keret is megváltozott. Új dokumentum: [`docs/kormanyzas.md`](docs/kormanyzas.md).
+
+- **A végtelen regresszus feloldva (D12).** Ha a koino-verzió entitás a fában él, kell-e
+  fölé egy rendszer, ami AZT kormányozza — és annak is egy fölöttes, a végtelenségig?
+  Nem: a verzió-entitás nem a rendszer FELETT van, hanem **BENNE**. A program a saját
+  módosítását a saját eszközeivel dönti el (**önalkalmazás** — ahogy egy alkotmány
+  tartalmazza a saját módosítási szabályát). A forráskód-kormányzás nem új mechanizmus,
+  hanem **ugyanaz a mechanizmus, magasabb magasságban**.
+- **A koinók sokasága felett NINCS kormányzat** — és ez nem hiányosság, hanem a garancia.
+  Nincs rajta tudatpont, szavazás, küszöb, mert **nincs mit eldönteni**: egy koino léte
+  tény, nem határozat. A közös megjelenítés **térkép, nem kormányzat**. Ha lenne ott
+  kormányzat, a koinónak lenne TETEJE — aminek pedig teteje van, azt egyetlen ponton el
+  lehet foglalni.
+- **A fork vésznyílásból normál üzemmóddá vált (D13).** És nem csak a szétválás: **bárki
+  indíthat teljesen új koinót** — család, osztály, munkahely, párt. A koino ezzel
+  **közösségből eszközzé** vált: nem az a siker, hányan vannak egy helyen, hanem hogy hány
+  koino létezik.
+- **Az értelmezési egység az ADATBÁZIS.** Szétváláskor lemásolódik (a regisztráltakon is
+  osztoznak, a múlt közös); új alapításkor üres és teljesen külön. Verzió-szinten a
+  szétosztás **teljes**, nem arányos, mert a verzió nem csomópont, hanem **talaj**.
+- **A skálázás nem opcionális.** Kézenfekvő lett volna azt hinni, hogy ha a legtöbb koino
+  kicsi, akkor a nehéz kutatási problémák (N3/N4/N8) legördülnek a projektről. Nem
+  gördülnek le: az igény az, hogy **bármelyik koino megnőhessen milliárdos nagyságrendre**.
+  Csak a SORREND változik — előfeltételből a növekedés árává válnak.
+- **Nem lesz védjegy.** Ha bárki kirakhat módosított verziót, kirakhat olyat is, ami
+  megtartja a nevet, de elárulja a lényeget (elég egy sor: a tudatpont szavazaterővé
+  válik). A védjegy megvédené a nevet — de hatóságot igényelne, aki eldönti, mi nevezheti
+  magát koinónak, és ezzel **visszahozná a tetőt**. *„Vállalom a kockázatot."*
+  A kérdés amúgy is rossz volt: a koino nem **tiltja** az elárult változatot, hanem
+  **veszteségessé teszi** — az olcsó kilépés miatt aki elfoglal egy koinót, pontosan azt
+  semmisíti meg, amiért érdemes volt elfoglalni. Ez a D4 felelősség-elve egy szinttel
+  feljebb.
+- **A pénz szétváláskor NEM duplázódik.** A fork-ritkaság érve arra épült, hogy „a koino
+  értéke az emberek, nem a kód" — de ha a szétválással pénz is másolódik, a forknak
+  anyagi motivációja lesz (a kripto-forkok jelentős része haszonszerzési célú volt).
+  Szabály: ha a különvált ág saját pénzt akar, **külön nevet kap és 0 értékről indul**.
+  Ez nem puszta deklaráció: a koino-pénz értékét **az elfogadó közösség** adja, azt pedig
+  a fork nem másolja — haszonszerzésből nem lehet forkolni anélkül, hogy embereket vinne
+  magával, és akkor az már valódi szétválás.
+
+---
+
+## 2026-08-25 — Licenc: AGPL-3.0 (a fork-jog jogi alapja)
+
+A koino eddig **licenc nélkül** volt a repóban. Ez nem semlegesség: licenc hiányában a
+szerzői jog alapértelmezése lép életbe — *minden jog fenntartva* —, vagyis jogilag senki
+nem másolhatta, módosíthatta vagy terjeszthette a kódot a szerzőn kívül.
+
+Ez ellentmondott a projekt két kimondott állításának: hogy a koino forráskódját hosszú
+távon a közössége alakítja ([`docs/bemutato_kormany.md`](docs/bemutato_kormany.md)), és
+hogy a **fork-jog a végső garancia** a kisebbség elfoglalása ellen
+([`docs/vizio_kritikak.md`](docs/vizio_kritikak.md) 9. pont). A fork jogi művelet is
+(másolás + módosítás + terjesztés) — licenc nélkül a végső garancia olyan jog volt, amit
+a szerzőnek kellett volna egyenként megadnia.
+
+- **[`LICENSE`](LICENSE)** — a GNU Affero General Public License v3.0 hivatalos, szó
+  szerinti szövege (a gnu.org-ról letöltve, nem átírva).
+- **Miért AGPL és nem MIT?** Az AGPL 13. szakasza az, ami a koino tervéhez kell: aki a
+  koinót módosítva **hálózaton szolgáltatja** (= futtat egy koino-verziót), köteles a
+  módosított forrást is elérhetővé tenni. Így a fork-lánc **nem vágható el**: a kirakott
+  verziót a következő ember is letöltheti és továbbforkolhatja. Megengedő licenc mellett
+  az első, aki bezárja a forrást, megállítaná a láncot — és létrejöhetne pontosan az,
+  ami ellen a koino született.
+- A `package.json`-ök megkapták az `AGPL-3.0-only` mezőt; a `README` új **Licenc**
+  szakaszt kapott, magyarul elmagyarázva, mit jelent ez egy e-embernek.
+
+> **Amit a licenc NEM old meg:** a szerzőség ténye és a licenc megváltoztatásának joga
+> egyelőre egyetlen embernél van — de csak addig, amíg egyedüli szerző. Az első külső
+> hozzájárulással a licenc **már senki által sem** vonható vissza egyedül. A szabadságot
+> nem egy aktus rögzíti, hanem a közösen írt kód.
+
+---
+
 ## 2026-08-25 — Különválás: a módosítási döntés kétágú kimenete
 
 Egy módosítási javaslatnak eddig **egy** nyertese volt. Mostantól **mindkét oldal
@@ -41,6 +118,14 @@ részeként (ez nem a hálózat-szintű „fork-jog", ami vésznyílás).
   ezért ott a különvált ág horgonya maga az elvetett javaslat.
 - Új e-embereknek szóló leírás: [`megismeres/18-kulonvalas.md`](megismeres/18-kulonvalas.md).
 - Fejlesztői próba-eszköz a motor méréséhez: `backend/tools/kulonvalasProba.js`.
+- **Séma-vakfolt megszüntetve a tudatpont-modellekben.** A `tudatpontAllokacio` és a
+  `tudatpontHozzarendeles` `entitasTipus` enumjából hiányzott az `Egyezmeny`, holott a
+  rendszer régóta ír ilyen sorokat (az egyezmény létrejöttekor a támogatók pontja a
+  javaslatról az egyezményre költözik); a hozzárendelés upserttel megy, ezért a validátor
+  nem csapott le rá. A harmadik testvér-modell (`hierarchikusTudatpontAllokacio`) enumja
+  mindig is elfogadta — az eltérés hiány volt, nem szándék. Mind a három mostantól
+  egységes. Nem viselkedés-változás: a meglévő adatot legalizálja, a nem létező típusokat
+  a validátor továbbra is elutasítja.
 
 **Hatókör (első kör):** csak `Modositas` típusú javaslat, csak `Tartalom` entitás. A
 kategória/tartalomtípus különválása és a láncolt (többszörös) szétválás külön kör.

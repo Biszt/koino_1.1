@@ -2,10 +2,13 @@
 
 // FEJLESZTŐI PRÓBA-ESZKÖZ: a KÜLÖNVÁLÁS motorjának mérése valódi adaton.
 //
-// Mire való? A különválás gépezete (services/kulonvalasService.js) még nincs bekötve a
-// javaslat-lezárásba — előbb MEGMÉRJÜK, hogy tényleg azt csinálja-e, amit várunk.
-// Ez ugyanaz a minta, mint a levélküldésnél (tools/emailProba.js): a motort a felület
-// előtt, önmagában próbáljuk ki.
+// Mire való? A különválás gépezete (services/kulonvalasService.js) a javaslat-lezárásba
+// BE VAN KÖTVE (elfogadásnál a javaslatVegrehajtasiService, elvetésnél a
+// javaslatIdozitesService hívja) — ez az eszköz viszont SZAVAZÁS NÉLKÜL, közvetlenül
+// hívja meg, hogy a szétosztás szabálya (ki mit visz, mi kettőződik meg) egy teljes
+// szavazás végigjátszása nélkül is mérhető legyen.
+// Ez ugyanaz a minta, mint a levélküldésnél (tools/emailProba.js): a motor a felület
+// mellett, önmagában is kipróbálható.
 //
 // ===== FUTTATÁS =====
 //

@@ -22,6 +22,7 @@ egyenlő szavazási mechanika vezérli.
 - [Hol kezdd az olvasást?](#hol-kezdd-az-olvasást)
 - [Dokumentáció](#dokumentáció)
 - [Állapot](#állapot)
+- [Licenc](#licenc)
 
 ---
 
@@ -107,6 +108,7 @@ koino_1.1/
 ├─ README.md              ← ezt olvasod
 ├─ CLAUDE.md              ← domain-fogalmak + architektúra + konvenciók (kötelező olvasmány)
 ├─ CHANGELOG.md           ← mi változott mikor
+├─ LICENSE                ← AGPL-3.0 (lásd a Licenc szakaszt)
 ├─ SECURITY.md            ← biztonsági hiba bejelentése
 ├─ docker-compose.dev.yml ← fejlesztői stack
 ├─ docker-compose.prod.yml← éles stack
@@ -160,6 +162,7 @@ A `docs/` mappa a projekt tudásbázisa:
 | [`elesites.md`](docs/elesites.md) | Éles (koino.hu) üzemeltetési kézikönyv |
 | [`fejlesztesi_terv.md`](docs/fejlesztesi_terv.md) | Fázis 1 fejlesztési terv |
 | [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) | Fázis 2 (P2P) terv |
+| [`kormanyzas.md`](docs/kormanyzas.md) | **Forráskód-kormányzás** — hogyan alakítja a közösség magát a programot, és miért nincs a koinók felett kormányzat |
 | [`vizio_kritikak.md`](docs/vizio_kritikak.md) | A vízió melletti és elleni érvek |
 | [`jegyzetek.md`](docs/jegyzetek.md) | Zárójeles ötletek naplója |
 | [`adatkezeles.md`](docs/adatkezeles.md) / [`adatvedelmi_nyilatkozat.md`](docs/adatvedelmi_nyilatkozat.md) | Adatvédelem |
@@ -173,3 +176,27 @@ mechanika működik; a finomítás és a Fázis 2 (P2P) tervezése folyamatban.
 
 Nincs automatizált teszt — a tesztelés böngészős, referenciája a
 [`docs/teszt.md`](docs/teszt.md).
+
+## Licenc
+
+**GNU Affero General Public License v3.0** ([`LICENSE`](LICENSE)) —
+Copyright © 2026 Csaba és a koino közreműködői.
+
+Ez azt jelenti, hogy **bárki** használhatja, tanulmányozhatja, módosíthatja és
+terjesztheti a koino kódját — ugyanazokkal a jogokkal, amikkel a szerzője.
+
+Az AGPL egyetlen feltételt szab, és az a koino lényegéből következik: **aki a
+koinót módosítva hálózaton szolgáltatja** — vagyis futtat egy saját koino-verziót
+—, annak a módosított forrást is elérhetővé kell tennie a felhasználói számára.
+
+Ez nem korlátozás, hanem a **fork-jog védelme**. A koino terve szerint bárki
+letöltheti a kódot, átalakíthatja, és kirakhatja választható közösségként; az
+AGPL garantálja, hogy ez a lánc **nem vágható el** — a kirakott verziót a
+következő ember is letöltheti és továbbforkolhatja. Egy megengedőbb licenc
+(pl. MIT) mellett az első, aki bezárja a forrást, megállítaná a láncot, és
+létrejöhetne pontosan az, ami ellen a koino született: egy közösségi tér,
+amelynek a tagjai nem látják és nem alakíthatják a kódot, ami őket működteti.
+
+A forráskód-kormányzás tervéről (hogyan hat a közösség közvetlenül a kódra)
+lásd: [`docs/vizio_kritikak.md`](docs/vizio_kritikak.md) 9. pontja és
+[`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) D9 / N5.

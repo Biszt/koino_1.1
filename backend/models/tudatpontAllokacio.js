@@ -5,7 +5,7 @@
 const mongoose = require('mongoose');
 
 // ===== TUDATPONT ALLOKÁCIÓ SÉMA DEFINIÁLÁSA =====
-// Ez a séma tárolja, hogy egy entitásra (tartalom/kategória/típus/javaslat)
+// Ez a séma tárolja, hogy egy entitásra (tartalom/kategória/típus/javaslat/egyezmény)
 // összesen mennyi tudatpont van allokálva
 const tudatpontAllokaciSchema = new mongoose.Schema({
 
@@ -19,10 +19,13 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
 
   // ----- ENTITÁS TÍPUS -----
   // Milyen típusú az entitás (tartalom, kategória, stb.)
-  entitasTipus: { 
+  // Az 'Egyezmeny' 2026-08-25 óta szerepel itt — ugyanaz a hiány, mint a
+  // tudatpontHozzarendeles-nél: a rendszer már írt ilyen sorokat, a séma nem tudott róluk.
+  // A három tudatpont-modell enumja mostantól egységes.
+  entitasTipus: {
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat'],  // Engedélyezett értékek
+    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
     trim: true                             // Levágja a felesleges szóközöket
   },
 
