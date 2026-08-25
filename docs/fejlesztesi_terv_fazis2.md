@@ -38,7 +38,10 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 | D10 | Pénz | Alkotmányos kibocsátási szabály + egyenlő osztalék minden e-embernél; hozam-ígéret nincs; vagyon ≠ hatalom. |
 | D11 | Pénz-ütemezés | Pénz csak az identitás-réteg éles bizonyítása után (az osztalék a hamis regisztrációt pénznyomtatóvá tenné). |
 | D12 | Kód-kormányzás | Három szint: a verzió-entitás a koinón BELÜL él (önalkalmazás, nincs regresszus), a koinók sokasága fölött pedig NINCS kormányzat — ott nincs mit eldönteni. A térkép nem kormányzat. |
-| D13 | A koino mint eszköz | Bárki indíthat koinót; a fork normál üzemmód, nem vésznyílás; az egység az ADATBÁZIS. A skálázás nem opcionális — a legfőbb koino evolúciósan jön létre. |
+| D13 | A koino mint eszköz | Bárki indíthat koinót; a fork normál üzemmód, nem vésznyílás; az egység az ADATBÁZIS. A skálázás nem opcionális — a legfőbb koino evolúciósan jön létre. **D13/b:** a paramétereket nem eltaláljuk, hanem koinónként szétosztjuk. |
+| D14 | Tartós mag | A csalás-elleni CSONTVÁZRA szűkül (azonosság-egyszeriség, később pénz); minden más — az **egyezmény is** — a tudatpontot követi és elfelejthető. → **N2 (GDPR) megoldva.** |
+| D15 | Kulcs | A kulcs HITELESÍT, nem titkol — a lopás minden kára visszafordítható, kivéve a pénzt. A helyreállítás TÖBB FÜGGETLEN TANÚBÓL áll (háló + opcionálisan EUDI + opcionálisan választott bizottság); a bizottság **tanú, nem hatóság**. |
+| D16 | Pénz-tempó | Az irreverzibilitás DÖNTÉS, nem törvény: a nagyobb átutalás késleltetve, nyilvánosan, az ablakban megtámadhatóan megy — értesítéssel, **külön csatornán**. A kulcslopás így túlélhető. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -151,12 +154,35 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
 - **N1. A tartós mag megtervezése** — pontosan mi kerül bele (regisztrációk, eredmények,
   egyezmények, metaadatok köre — „ezt még ki kell találni", Csaba); hogyan replikálódik
   mindenhová; hogyan írható (konszenzus-mechanizmus). Kapcsolódik: vita 4–5. pont.
-- **N2. Kilépési jog kontra örök elszámoltathatóság** — kilépéskor a név
-  leválasztható/törölhető-e úgy, hogy egy kriptográfiai azonosító („ez a hely foglalt
-  volt") megmarad a duplikátum-védelemhez; a múltbeli szavazatok/javaslatok sorsa.
-  GDPR-kritikus. Kapcsolódik: vita 3–4. pont.
-- **N3. A titkos-ellenőrizhető szavazás mechanizmusa** — technológia-választás (zk,
-  homomorf, MACI-tanulságok), és hogy mely döntéstípusokra mikortól. Vita 3. pont.
+- **N2. ~~Kilépési jog kontra örök elszámoltathatóság~~** — ✅ **LEZÁRVA (2026-08-25)** a
+  **D14** által. A kérdés az volt, hogyan fér össze a GDPR törléshez való joga a
+  megmásíthatatlan, P2P-replikált adatbázissal. A D14 megszünteti az ütközést: **ha semmi
+  nem marad örökre magától, csak amit valaki aktívan tart, akkor a felejtés a rendszer
+  ALAPÁLLAPOTA** — nem kell „törlés" funkciót építeni a megmásíthatatlanság ellen.
+  **Ami nyitva marad** (szűkebben, mint eredetileg): a tartós magban maradó
+  duplikátum-védelmi azonosító („ez a hely foglalt volt") jogi megítélése — ez az EGYETLEN
+  dolog, amit a kilépő nem tud magával vinni. Kapcsolódik: vita 3–4. pont.
+- **N3. A titkos-ellenőrizhető szavazás mechanizmusa** — 🟡 **ÁTFOGALMAZVA (2026-08-25).**
+  Eddig egy „kutatás-közeli" problémának látszott. Valójában **kettő**, és a kettő
+  természete gyökeresen más:
+  - 🔴 **KIS szavazásoknál a titkosság ELVILEG lehetetlen** — és ennek semmi köze a
+    kriptográfiához. Ha egy tartalomnak 3 tudatpont-tulajdonosa van és az eredmény 2:1,
+    mindenki tudja, ki hogyan szavazott: **nincs elég ember, aki mögé el lehetne bújni.**
+    Információelméleti korlát, amit semmilyen zk-technológia nem javít meg. **És a koino
+    szavazásainak túlnyomó többsége ilyen lesz** (entitásonként csak a tulajdonosok
+    szavaznak). → **Ezt SZABÁLLYAL kell kezelni, nem technológiával** (pl. kimondjuk, hogy
+    kis létszámnál a szavazás gyakorlatilag nyílt; vagy késleltetett/aggregált közzététel).
+    ⚠️ Ez a felismerés a **D2** ígéretét („titkos-de-ellenőrizhető") **korlátozza** — a
+    bemutató anyagokban is így kell szerepelnie.
+  - 🟢 **NAGY szavazásoknál létező technológia**, és a koino három tulajdonsága
+    **kedvezőbbé** teszi az általános esetnél: (1) a döntési ablak órák–napok → **nincs
+    valós idejű követelmény**, ahonnan a nehézség java jön; (2) mindenki egyenlő, nincs
+    súlyozás → egyszerű összeadás; (3) **a tudatpont nyilvános**, tehát *ki jogosult* eleve
+    publikus — csak azt kell rejteni, *hogyan* szavazott; (4) a **személy-alapú
+    érvényesítők** (D7/N8) mellé a küszöbös (k-az-n-ből) visszafejtés természetesen
+    illeszkedik: egyetlen érvényesítő sem tudja egyedül megnyitni a szavazatot.
+  - **Marad tervezendő:** hol a határ a két üzemmód között (→ paraméter, D13/b), és a
+    konkrét technológia-választás a nagy üzemmódhoz. Vita 3. pont.
 - **N4. Tanúsítási szabályok számszerűsítése** — hány független tanúsító kelljen,
   meghívás-korlátok (db/idő), gráf-szabályok, visszavonás; a felhatalmazott kibocsátók
   audit-folyamata. Vita 1. pont.
@@ -166,10 +192,25 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   [`kormanyzas.md`](kormanyzas.md). Ami NEM zárult le, és a nyitott listán marad:
   a **névvédelem kérdése** (védjegy vagy sem — lásd D13), valamint a koinók közti
   **felfedezési formátum** részletei (N1-gyel együtt vizsgálandó).
-- **N6. Elérhetőség és replikáció-padló** — „annyi helyen, ahány tulajdonos" nem elég
-  (kikapcsolt készülékek); minimális replikáció a tulajdonos-számtól függetlenül;
-  a blokklánc-réteg NEM védi a valódi támadási felületeket (botok,
-  napirend-manipuláció) — külön védelmi rétegek kellenek. Vita 4–5. pont.
+- **N6. Elérhetőség és replikáció-padló** — 🟡 **A FELE LEZÁRVA (2026-08-25, Csaba).**
+  - ✅ **A replikáció-padló KIVÁLTVA a tartalmi rétegre — nem kell megépíteni.** Csaba
+    szabálya: *„ha egyik tudatpont-tulajdonos sem elérhető, akkor a tartalom sem lesz
+    elérhető — egy szellem-kártya, offline státusszal, és kész. Ami sok mindenkinek
+    fontos, az sok készüléken lesz rajta."* Az elérhetőség tehát **a tényleges
+    törődéshez kötött**, nem külön alrendszerhez. Egybevág a meglévő invariánssal
+    (0 pont → az entitás törlődik) és a **D14**-gyel.
+    - **Ellenőrizve (2026-08-25):** a fa „felfelé" mutat (a gyerek tudja a `szuloId`-t,
+      a szülő NEM tartja nyilván a gyerekeit) — lefelé navigálni tehát nem triviális
+      offline szülőnél. **A mechanizmus viszont már létezik:** a
+      `tudatpontAllokacio.osLanc` indexelve tárolja minden entitás teljes ős-láncát, így
+      „X összes leszármazottja" egyetlen lekérdezés. P2P-ben: **egy entitás gyerekeit
+      azoktól kérdezed meg, akiknek pontjuk van az alatta lévő ágban** — megint a
+      tudatpont-térkép, és ugyanúgy viselkedik, ahogy a szabály kívánja.
+    - **Határ:** ez a TARTALMI rétegre igaz. A tartós mag (D14: azonosság-egyszeriség,
+      később pénz) továbbra is garantált replikációt igényel.
+  - ❌ **NYITVA MARAD a másik fele:** a blokklánc-réteg NEM védi a valódi támadási
+    felületeket (botok, napirend-manipuláció) — ehhez külön védelmi rétegek kellenek.
+    Vita 4–5. pont.
 - **N7. ~~A „mit véd a blokklánc" védelmi rétegek~~** — LEZÁRVA (2026-07-16): a vita
   5. pontja megoldódott → D5–D7 döntések; a rétegzett védelem táblája a D5-ben.
 - **N8. A személy-alapú konszenzus kidolgozása** (D7 folytatása) — hogyan lesz az
@@ -195,6 +236,13 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   mandátummal, nyilvános lépésekkel, utólagos közösségi jóváhagyással). Tervezendő:
   az elismerés életciklusa (visszavonható? elavul?), kinevezés/visszahívás folyamata.
   *(Az elismerés-entitás akár már az 1. fázisban megépíthető.)*
+  - **KITERJESZTVE (2026-08-25, D15):** a kinevezési minta MÁSODIK feladatot is kap — a
+    **kulcs-helyreállító bizottságot** (akár személyes megjelenéssel igazolja, hogy a
+    kérelmező az, akinek mondja magát). Ugyanaz az alakzat, másik tárgyra: időkorlátos
+    mandátum, nyilvános lépések, utólagos jóváhagyás. **Kötelező korlát: a bizottság TANÚ,
+    nem HATÓSÁG** — a szava önmagában soha nem elég (különben királyt csináltunk). Az N9
+    tervezendő része ezzel bővül: hogyan választódik, hogyan hívható vissza, és hány
+    tanúra van szükség egy helyreállításhoz.
 - **N10. A koino-pénz paraméterei** (vita 6. pont — a D10 kerete adott, a részletek
   nyitottak) — az osztalék üteme (Duniter-minta: időben szimmetrikus keletkezés);
   új belépő kezelése (kap-e visszamenőleg — Duniter: nem, az osztalék idővel
@@ -357,6 +405,156 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   - **Marad kockázatnak:** a szétválás MINDKÉT ág pénzét gyengíti (egészséges fék); a
     különvált ág kész identitás-hálót örököl (D11-gyel vizsgálandó); a sok koino-pénz
     egymáshoz képesti árazódása feltáratlan (→ N10).
+
+#### D13/b. PARAMÉTER-PLURALIZMUS: a beállításokat nem eltaláljuk, hanem szétosztjuk (2026-08-25, Csaba)
+
+*Ez a D13 következménye, és egy VISSZATÉRŐ problémára ad elvi választ.*
+
+A tervezés során újra és újra ugyanabba futunk: *mekkora legyen a késleltetés? hány tanú
+kell a helyreállításhoz? hol legyen a küszöb?* — és minden alkalommal ott lebeg, hogy ezt
+valakinek el kell találnia.
+
+> „Ezért is tartom jó ötletnek a több koino létezését, hogy minden közösség maga
+> alkothassa meg a szabályait, és így természetes módon valamelyik pont optimális lesz."
+> — Csaba
+
+**Ne találja el senki: legyen paraméter, és a koinók térjenek el benne.** Ez nem új elv —
+a koino BELÜL már így működik (**D4**: a küszöböket az érték javaslatok mediánja adja, nem
+a tervező). A D13 ezt viszi **a koinók közé**, ahogy a D12 a kormányzást vitte egy
+szinttel feljebb.
+
+**Gyakorlati következmény a tervezésre:** ahol a terv „nyitott paramétert" mond (D15
+tanú-szám, D16 összeghatár és ablak-hossz, D4 küszöbök), ott NEM kell egy helyes értéket
+találni — **alapértelmezést** kell adni, és a koinóra bízni a változtatást.
+
+> **Őszinte fenntartás.** Az evolúciós érveléshez három dolog kell: változatosság ✅ (sok
+> koino), öröklődés ✅ (a fork viszi a szabályokat) — és **kiválasztódási nyomás**, ami itt
+> **gyenge és lassú**: a közösségek nem halnak meg gyorsan, az emberek nem költöznek
+> könnyen. És ami terjed, nem szükségképpen a legjobb — a rövid távon vonzóbb is terjedhet
+> (az internetet nem a legjobb platformok nyerték meg). A pontos mondat tehát nem
+> „természetes módon optimális lesz", hanem: **„jobb eséllyel találjuk meg, mint
+> találgatással — de nem magától és nem gyorsan."**
+
+### D14. A tartós mag = a csalás-elleni csontváz (2026-08-25, Csaba — a D5 határának áthelyezése)
+
+> „Ha mindenki leveszi a tudatpontját egy egyezményről, akkor az sem kell. Tudom, hogy
+> korábban azt mondtam, hogy kell, de mégsem. Ami fontos a közösségnek, arra rakjanak
+> tudatpontot." — Csaba *(és: „nem is akartam megdönteni, tudom hogy kell egy tartós mag,
+> de az legyen minél kisebb")*
+
+A D5 határa **rossz helyen volt**. Nem „tartalmi réteg vs. tartós mag" a törésvonal, hanem:
+
+| | Amit valaki **fontosnak tart** | Amit senki nem tart fontosnak, de nélküle a rendszer **csalható** |
+|---|---|---|
+| Példa | tartalom, javaslat, **egyezmény** | „ez az ember már regisztrált"; „ez a pénz már el lett költve" |
+| Ki tenne rá tudatpontot? | akit érdekel | **senki** — ez nem tartalom, hanem csontváz |
+| Elfelejthető? | ✅ igen | ❌ nem — **a felejtés maga a csalás** |
+
+- **A tartós mag tehát az azonosság egyszeriségére és (később) a pénzre szűkül.** Minden
+  más — az **egyezményeket is beleértve** — a tudatpontot követi.
+- **Egybevág egy MÁR MEGLÉVŐ invariánssal:** a `tudatpontService` ma is törli az entitást,
+  ha 0 pontra csökken („aminek nincs gazdája, az nem létezik"). A D14 ennek időbeli
+  változata.
+- **A D8 pontosítása:** az egyezmény TÉNYE nem magától örök, hanem **addig, amíg valaki
+  tartja**. A tény ↔ hatály szétválasztás érvényes marad, de az „örök" feltételessé válik.
+
+**→ Ezzel az N2 (GDPR-törlés ↔ megmásíthatatlanság) MEGOLDÓDIK:** ha semmi nem marad
+örökre magától, csak amit valaki aktívan tart, akkor **a felejtés a rendszer
+alapállapota** — nem kell „törlés" funkciót építeni a megmásíthatatlanság ellen.
+
+### D15. A kulcs hitelesít, nem titkol — a helyreállítás több tanúból áll (2026-08-25)
+
+**A kulcsnak a koinóban egyetlen dolga van.** Egy kulcspár kétféle munkát végezhet:
+**hitelesítés** („ez tényleg ő") és **titkosítás** („csak ő olvashatja"). A koino
+**szándékosan nyilvános** — a tartalom, a tudatpont, a név mind az —, ezért a titkosítási
+munkából alig marad valami (egyedül a szavazat, D2).
+
+> **A kulcs nem páncélszekrény, hanem aláírás.** Aki ellopja, nem megtud rólad valamit,
+> hanem **beszél helyetted**.
+
+**A visszaélés-tábla — és a benne rejlő aszimmetria:**
+
+| Visszaélés | Visszafordítható? |
+|---|---|
+| **Elviszi a pénzedet** | ❌ **soha** *(→ D16 oldja meg)* |
+| Átrendezi a tudatpontjaidat | 🟡 újra kiosztható |
+| Szavaz a nevedben | ✅ a szavazat módosítható |
+| Javaslatot tesz a nevedben | ✅ visszavonható |
+| Tartalmat ír a nevedben | 🟡 törölhető, de olvasták |
+
+**Egyetlen visszafordíthatatlan sor van, és az a pénz.** Minden más feljegyzés, amit a
+koino amúgy is folyamatosan felülír.
+
+**Miért nehezebb ez P2P-ben:** ma van kihez fordulni (az üzemeltető visszaállít, a
+`tokenVerzio` kiléptet). P2P-ben **nincs fellebbviteli fórum** — a kulcs maga az azonosság.
+Ez a probléma valódi magja.
+
+**A koino megoldása — amivel a Bitcoin nem rendelkezik:** ott a kulcs MAGA a számla, nincs
+mögötte ember. A koinóban az e-ember **személy, akiért mások kezeskedtek** (D1). Ezért:
+
+> Nem a kulcsot állítjuk helyre, hanem **új kulcsot** veszel fel, és **tanúk igazolják,
+> hogy te vagy.**
+
+**A helyreállítás TÖBB FÜGGETLEN FORRÁSBÓL áll — egyik sem elegendő egyedül:**
+
+| Forrás | Státusz | Megjegyzés |
+|---|---|---|
+| **Bizalmi háló tanúi** | alapút, mindig | akik eredetileg is beengedtek |
+| **EUDI-tárca** | opcionális, **kihagyható** | Csaba: *„vannak nagyon becstelen kormányok, kik visszaélhetnek vele"* |
+| **Választott bizottság** | opcionális | akár személyes megjelenéssel — az **N9 mintája** |
+
+**A bizottság az N9 újrahasznosítása**, nem új mechanizmus: az N9 már így írja le a
+vészhelyzeti „őröket" — *időkorlátos mandátummal, nyilvános lépésekkel, utólagos közösségi
+jóváhagyással*. Ugyanaz az alakzat, másik tárgyra.
+
+> **A DÖNTŐ SZABÁLY: a bizottság TANÚ legyen, ne HATÓSÁG.** Ha a szava önmagában elég,
+> **királyt csináltunk**. Ha egy a több szükséges jel közül, akkor tanú.
+
+**Három veszély, kimondva:**
+1. **A bizottság kisebb célpont, mint egy kormány.** Egy államot megnyomni nehéz, hét
+   embert megfélemlíteni vagy megvesztegetni olcsó. Aki kulcsot adhat, **bárkivé válhat**.
+2. **A személyes megjelenés kizár** — mozgásképtelen, távoli, menekülő embereket; megint
+   azokat, akiknek a legjobban kellene.
+3. **Mit néz meg a bizottság?** Ha **okmányt**, akkor a kormányt nem kiszerveztük, hanem
+   **elszámoltathatatlan közvetítőt tettünk elé** — rosszabb lett. Ha **ismeretséget**,
+   akkor ez már nem bizottság, hanem maga a bizalmi háló, intézményesítve.
+
+**Nyitott paraméter** (→ D13/b): hány tanú kell, milyen súllyal, mekkora várakozással.
+
+### D16. A pénz lassú, nyilvános és megtámadható (2026-08-25)
+
+**Az irreverzibilitás DÖNTÉS, nem természeti törvény.** A kripto döntött így — és pont
+ettől lett a kulcslopás végzetes. A koino minden más döntésnél az ellenkezőjét teszi:
+
+> „A döntést nem elvesszük, hanem **lelassítjuk és megdrágítjuk**." — D10
+
+Minden javaslatnak van minimum döntési ideje, nyilvános, és amíg tart, bárki reagálhat.
+**A pénz ne legyen kivétel.** A nagyobb átutalások örököljék a koino tempóját:
+**késleltetve, nyilvánosan, a várakozási ablakban megtámadhatóan.**
+
+| Eset | Mi történik |
+|---|---|
+| Ellopják a kulcsod, de **neked is megvan** | látod a függő átutalást, és **megállítod** |
+| Ellopják és **ki is zártak** | a D15 helyreállítása **beleér az ablakba** |
+| Csak **elvesztetted** | nincs tolvaj, nincs sietség — a lassú út elég |
+
+Ezzel a kulcslopás **túlélhetővé** válik. Nem külön mentőöv: ugyanaz az elv, amiből az
+egész koino épül. *(A bankoknál is van visszahívási ablak; a kripto azért nincs, mert ott
+nincs kihez fordulni — a koinóban **van**: maga a közösség.)*
+
+**Az értesítés teszi valóságossá az ablakot** — papíron egy ablak semmit nem ér, ha nem
+tudsz róla. Az infrastruktúra **megvan** (a 2026-08-24-i értesítés-rendszer: azonnali vagy
+összefoglaló, bekapcsolható ütemmel) — csak új értesítés-típus kell.
+
+> ⚠️ **Tervezési kényszer:** az értesítés olyan csatornára menjen, ami **NEM ugyanaz az
+> eszköz**, mint amin a kulcs van. Ellopott telefonon a tolvajnál van a kulcs ÉS az
+> értesítés is.
+
+**Az ár őszintén:** a koino-pénz **nem lesz azonnali**. Cserébe **nem lesz
+visszafordíthatatlan**.
+
+**Nyitott paraméter** (→ D13/b): mekkora összeg fölött legyen késleltetés, milyen hosszú
+az ablak.
 
 ---
 
@@ -618,3 +816,18 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   jogosultságot** — a nehéz felét nem. ⚠️ A **GitHub ≠ git** (Microsoft-tulajdon) → új
   híd-feladat: **H8** (tükör + verzió-végpont). Mérve: a repó SHA-1 objektum-azonosítót
   használ — a D9-hez SHA-256 módú git kell majd.
+- **2026-08-25 (3)** — **A Fázis 2 elméleti hidak átvizsgálása ELINDULT.** Csaba döntése:
+  előbb a legkritikusabb problémákat hidaljuk át elméletben, és csak utána jön a részletes
+  terv és a kódolás. Indok: *„ha az lesz a vége, hogy ez lehetetlen, akkor tényleg nem
+  világmegváltás lesz belőle, hanem csak esetleg egy hasznos program, és akkor úgy is
+  állok hozzá"* — plusz az ismertető anyagokhoz tudni kell, mit lehet kihozni a koinóból.
+  - Claude **helyesbítette** korábbi pesszimizmusát: rossz dolgokhoz hasonlított
+    (a Holochain általános platform, a Matrix szándékosan föderált), és a **D13 előtti
+    léptékhez** mért (globális konszenzus), pedig a D13 azt már átírta.
+  - **Az 1. probléma (kulcskezelés és helyreállítás) ÁTHIDALVA** → **D14–D16** és a
+    **D13/b**. Két korábbi nyitott kérdés lezárult (**N2** teljesen, **N6** fele), az
+    **N9** kiterjedt, a **D5** határa áthelyeződött, a **D8** „örök"-je feltételessé vált,
+    a **D10** pénzképe pedig tempót kapott.
+  - **Az N3 (titkos-ellenőrizhető szavazás) ÁTFOGALMAZÓDOTT** — lásd ott: nem egy probléma,
+    hanem kettő, és a nehezebbik elvi korlát, nem kutatási feladat.
+  - **Következő:** N8 — személy-alapú konszenzus.
