@@ -42,6 +42,7 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 | D14 | Tartós mag | A csalás-elleni CSONTVÁZRA szűkül (azonosság-egyszeriség, később pénz); minden más — az **egyezmény is** — a tudatpontot követi és elfelejthető. → **N2 (GDPR) megoldva.** |
 | D15 | Kulcs | A kulcs HITELESÍT, nem titkol — a lopás minden kára visszafordítható, kivéve a pénzt. A helyreállítás TÖBB FÜGGETLEN TANÚBÓL áll (háló + opcionálisan EUDI + opcionálisan választott bizottság); a bizottság **tanú, nem hatóság**. |
 | D16 | Pénz-tempó | Az irreverzibilitás DÖNTÉS, nem törvény: a nagyobb átutalás késleltetve, nyilvánosan, az ablakban megtámadhatóan megy — értesítéssel, **külön csatornán**. A kulcslopás így túlélhető. |
+| D17 | Konszenzus | A globális egyetértés hatóköre = a tartós mag (D14), semmi más; minden egyéb saját lánc-következetesség + determinisztikus számítás. **A konszenzus biztonsága = az identitás-réteg biztonsága** → az identitás a gerinc, elsőként kell állnia. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -151,9 +152,16 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
 
 ## Nyitott tervezési kérdések (a Fázis 2 feladatlistája)
 
-- **N1. A tartós mag megtervezése** — pontosan mi kerül bele (regisztrációk, eredmények,
-  egyezmények, metaadatok köre — „ezt még ki kell találni", Csaba); hogyan replikálódik
-  mindenhová; hogyan írható (konszenzus-mechanizmus). Kapcsolódik: vita 4–5. pont.
+- **N1. A tartós mag megtervezése** — 🟡 **KÉTHARMADA LEZÁRVA (2026-08-25).**
+  - ✅ **MI kerül bele:** a **D14** megválaszolta — a csalás-elleni csontváz és semmi más
+    (azonosság-egyszeriség, később pénz). Az egyezmények **kikerültek** belőle: azok is a
+    tudatpontot követik.
+  - ✅ **HOGYAN írható:** a **D17** vázolja — személy-alapú érvényesítés, lassú
+    véglegességgel (D16); a hatókör olyan kicsi, hogy a konszenzus ritkán fut.
+  - ❌ **NYITVA: hogyan replikálódik mindenhová.** A tartalmi rétegre ezt az N6/D14
+    megoldja (a tudatpont a tárolási térkép) — de a tartós magra **épp az a lényeg, hogy
+    NE a tudatponthoz kötődjön**, hiszen senki nem tesz rá pontot. Kell tehát egy külön,
+    garantált replikációs szabály erre a nagyon kicsi halmazra. Kapcsolódik: vita 4–5. pont.
 - **N2. ~~Kilépési jog kontra örök elszámoltathatóság~~** — ✅ **LEZÁRVA (2026-08-25)** a
   **D14** által. A kérdés az volt, hogyan fér össze a GDPR törléshez való joga a
   megmásíthatatlan, P2P-replikált adatbázissal. A D14 megszünteti az ütközést: **ha semmi
@@ -213,7 +221,14 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
     Vita 4–5. pont.
 - **N7. ~~A „mit véd a blokklánc" védelmi rétegek~~** — LEZÁRVA (2026-07-16): a vita
   5. pontja megoldódott → D5–D7 döntések; a rétegzett védelem táblája a D5-ben.
-- **N8. A személy-alapú konszenzus kidolgozása** (D7 folytatása) — hogyan lesz az
+- **N8. A személy-alapú konszenzus kidolgozása** — 🟡 **NAGYRÉSZT ÁTHIDALVA (2026-08-25)**
+  → **D17**. A „kutatási terep" minősítés egy NAGYOBB tartós magot feltételezett; a **D14**
+  után a globális konszenzus hatóköre az azonosság-egyszeriségre és (később) a pénzre
+  szűkül, a **D16** pedig elveszi a legdrágább követelményt (az azonnali véglegességet).
+  A biztonsági alap kimondva: **a konszenzus biztonsága = az identitás-réteg biztonsága.**
+  **Nyitva marad:** az érvényesítő-kiválasztás (befolyásolhatatlan véletlen) és a köztes
+  méret veszélyzónájának paraméterei. *(Az alábbi eredeti megfogalmazás referenciaként
+  marad.)* — hogyan lesz az
   identitás-rétegből érvényesítő-halmaz; mi véd a kis-hálózatos korai fázisban;
   entitás-láncok vizsgálata (számla-láncos DAG-minta: minden entitásnak saját lánca,
   globális konszenzus csak a tartós maghoz — az N1-gyel együtt vizsgálandó). Kutatási
@@ -556,6 +571,80 @@ visszafordíthatatlan**.
 **Nyitott paraméter** (→ D13/b): mekkora összeg fölött legyen késleltetés, milyen hosszú
 az ablak.
 
+### D17. A konszenzus hatóköre és biztonsági alapja (2026-08-25 — az N8 áthidalása)
+
+*A D7 („személy-alapú konszenzus") folytatása. A **D14 megváltoztatta a feladatot**: az N8
+„kutatási terep" minősítése egy NAGYOBB tartós magot feltételezett.*
+
+#### A hatókör: mihez kell egyáltalán globális egyetértés?
+
+| Művelet | Globális egyetértés? | Mi elég helyette |
+|---|---|---|
+| Tartalom létrehozása | ❌ | senki nem ütközik senkivel |
+| Tudatpont-hozzárendelés | ❌ | **saját lánc-következetesség** — a saját keretedből osztasz, bárki utánaszámolhat |
+| Szavazás | ❌ | ugyanaz — a kettős szavazás a SAJÁT láncod ellentmondása |
+| Egy javaslat eredménye | ❌ | **determinisztikus számítás** — ugyanabból a bemenetből mindenki ugyanazt kapja |
+| **Azonosság egyszerisége** | ✅ | — |
+| **Pénz** (később) | ✅ | — |
+
+> **A tartós mag és a globális konszenzus UGYANAZ A HALMAZ.** Amit örökre meg kell őrizni,
+> arról kell megegyezni; amit el lehet felejteni, arról nem. A D14 tehát nem csak a
+> tárolást csökkentette — **a konszenzus-problémát is összezsugorította.**
+
+Amit a többi igényel helyette, az két olcsóbb dolog: **(1) saját lánc-következetesség**
+(a „számla-láncos" minta, amit az N8 már megnevez: ne tudj két különböző változatot mutatni
+két különböző embernek), és **(2) elérhetőség** — hogy mindenki lássa ugyanazokat a
+szavazatokat. Ez utóbbi nem konszenzus-, hanem terjesztési kérdés, és a koino órás–napos
+döntési ablakai bőven adnak rá időt.
+
+#### A D16 másodszor is fizet
+
+A konszenzus azért drága, mert rendszerint **azonnali véglegességet** követelnek (a Bitcoin
+~egy órát kér, és attól szenved). A **D16** kimondja, hogy a koino-pénz lassú, nyilvános és
+az ablakban megtámadható — **tehát a konszenzusnak nem kell másodpercek alatt döntenie.**
+Nagyságrendekkel könnyebb feladat. A D16-ot kulcslopás ellen hoztuk; közben megoldotta a
+konszenzus legdrágább követelményét is.
+
+#### A biztonsági alap — Csaba elfogadta (2026-08-25)
+
+> **A konszenzus biztonsága = az identitás-réteg biztonsága. Semmi más.**
+
+Nincs bányászat, nincs letét, nincs vagyon — egyetlen kérdés van: **valódi, különböző
+emberek-e a szavazók.** Ez egyszerű és elegáns, de **egyetlen ponton koncentrálja a
+kockázatot**: ha a D1 (bizalmi háló + EUDI) megtörik, nem egy funkció romlik el, hanem
+minden egyszerre.
+
+**Következmény a Fázis 2 SORRENDJÉRE:** az identitás-réteg nem egy a részrendszerek közül,
+hanem **a gerinc, amin az összes többi áll** — tehát elsőként kell állnia.
+
+#### A köztes méret veszélyzónája — a D11-minta általánosítva (Csaba elfogadta)
+
+- **Kicsiben** (család, osztály, munkahely) nincs baj: **ismeritek egymást**, vita esetén
+  megkérdezitek egymást — a konszenzus társas.
+- **Nagyban** a háló sűrű, a hamis azonosság aránya elenyészik.
+- **Köztes méretben** — már nem ismersz mindenkit, de még kevés hamis azonosság is sokat
+  számít — ott a legsérülékenyebb. *(Az N8 ezt „mi véd a kis-hálózatos korai fázisban"
+  néven már felvetette; válasz nem volt rá.)*
+
+**A szabály:** minden koino **maga dönti el, mikor kapcsolja be a „drágább" képességeket**
+(pénz, nagy tétű globális döntések) — a mérete és a hálója erőssége szerint. Ez a **D11**
+logikája („pénz csak bizonyított identitás-réteg után") általánosítva, és egybevág a
+**D13/b** paraméter-pluralizmussal.
+
+*(A D14 után amúgy is alig van, amit globálisan érdemes lenne megtámadni.)*
+
+#### Ami nyitva marad az N8-ból
+
+1. **Érvényesítő-kiválasztás.** Nem követelhető meg, hogy az e-emberek többsége online
+   legyen. Kell egy kiválasztott részhalmaz — de a kiválasztásnak **megjósolhatatlannak és
+   befolyásolhatatlannak** kell lennie, különben a támadó megvárja, míg az ő emberei
+   kerülnek sorra. Vannak rá bevált eszközök (ellenőrizhető véletlen), de nem triviális.
+2. **A köztes zóna gyakorlati paraméterei** — mikor „elég erős" egy háló.
+
+> ⚠️ **Módszertani figyelmeztetés:** a D17 levezetése **saját következtetés**, nem kész
+> szakirodalom. A hatókör-szűkítés érvelése erős, de az 1. pont (érvényesítő-kiválasztás)
+> tényleges megoldását elosztott rendszerek irodalmához kell mérni, mielőtt kódot írunk.
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -831,3 +920,15 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   - **Az N3 (titkos-ellenőrizhető szavazás) ÁTFOGALMAZÓDOTT** — lásd ott: nem egy probléma,
     hanem kettő, és a nehezebbik elvi korlát, nem kutatási feladat.
   - **Következő:** N8 — személy-alapú konszenzus.
+- **2026-08-25 (4)** — **A 2. probléma (személy-alapú konszenzus) NAGYRÉSZT ÁTHIDALVA**
+  → **D17**. A kulcs-felismerés: **a tartós mag és a globális konszenzus ugyanaz a halmaz**,
+  tehát a D14 nem csak a tárolást, hanem a konszenzus-problémát is összezsugorította — az
+  N8 „kutatási terep" minősítése egy nagyobb tartós magot feltételezett. A **D16** (lassú
+  pénz) másodszor is fizetett: elvette az azonnali véglegesség követelményét, ami a
+  konszenzus legdrágább része. Csaba két döntése: (1) elfogadja, hogy **a konszenzus
+  biztonsága teljes egészében az identitás-rétegre támaszkodik** → az identitás a Fázis 2
+  gerince, elsőként kell állnia; (2) a köztes méret veszélyzónájára a **D11-minta**
+  általánosítva — minden koino maga dönti el, mikor kapcsolja be a drágább képességeket.
+  **N1 kétharmada is lezárult** ennek melléktermékeként (a „mi kerül bele" a D14-től, a
+  „hogyan írható" a D17-től); nyitva a tartós mag replikációja.
+  **Következő:** N1 maradéka + a Fázis 2 sorrendjének megtervezése.
