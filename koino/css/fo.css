@@ -1,0 +1,196 @@
+/* koino/css/fo.css */
+
+/*
+  A koino alap-megjelenése. Szándékosan visszafogott: a Szakasz 1 a szerkezetről szól,
+  a felület kidolgozott formáját a prototípusból örököljük majd (D22), amikor a kártyák
+  és a pakli átkerülnek.
+*/
+
+/* ===== ALAP ===== */
+
+:root {
+  color-scheme: light dark;
+
+  --szin-hatter: #ffffff;
+  --szin-szoveg: #1a1a1a;
+  --szin-halvany: #6b6b6b;
+  --szin-keret: #e0e0e0;
+  --szin-doboz: #fafafa;
+  --szin-kiemelt: #167d3a;
+  --szin-figyelem: #8a6d00;
+  --szin-figyelem-hatter: #fff8e1;
+  --szin-hiba: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --szin-hatter: #16181c;
+    --szin-szoveg: #e8e8e8;
+    --szin-halvany: #9a9a9a;
+    --szin-keret: #2e3238;
+    --szin-doboz: #1c1f24;
+    --szin-kiemelt: #4ec27a;
+    --szin-figyelem: #e0b400;
+    --szin-figyelem-hatter: #2a2410;
+    --szin-hiba: #f2685e;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1rem 3rem;
+  background: var(--szin-hatter);
+  color: var(--szin-szoveg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+/* ===== FEJLÉC ===== */
+
+.fejlec {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2.5rem 0 1.5rem;
+}
+
+.fejlec__cim {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fejlec__alcim {
+  margin: 0.25rem 0 0;
+  color: var(--szin-halvany);
+  font-size: 0.95rem;
+}
+
+/* ===== TARTALOM ÉS DOBOZOK ===== */
+
+.tartalom {
+  max-width: 44rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.doboz {
+  background: var(--szin-doboz);
+  border: 1px solid var(--szin-keret);
+  border-radius: 0.6rem;
+  padding: 1.25rem 1.4rem;
+}
+
+.doboz--figyelem {
+  background: var(--szin-figyelem-hatter);
+  border-color: var(--szin-figyelem);
+}
+
+.doboz--halvany {
+  background: transparent;
+  color: var(--szin-halvany);
+  font-size: 0.92rem;
+}
+
+.doboz__cim {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.doboz__betoltes {
+  margin: 0;
+  color: var(--szin-halvany);
+}
+
+.doboz p { margin: 0 0 0.75rem; }
+.doboz p:last-child { margin-bottom: 0; }
+
+/* ===== AZ AZONOSSÁG ===== */
+
+.azonossag__magyarazat {
+  color: var(--szin-halvany);
+  font-size: 0.94rem;
+}
+
+/* A kulcs: monospace, mert karakterenként kell összehasonlítani */
+.azonossag__kulcs {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 1.1rem;
+  color: var(--szin-kiemelt);
+  cursor: pointer;
+  user-select: all;
+  word-break: break-all;
+}
+
+.azonossag__teljes {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.85rem;
+  color: var(--szin-halvany);
+  word-break: break-all;
+  user-select: all;
+}
+
+/* ===== ÁLLAPOT-LISTA ===== */
+
+.allapotLista {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+}
+
+.allapotLista dt { color: var(--szin-halvany); }
+.allapotLista dd { margin: 0; }
+
+/* ===== GOMBOK ===== */
+
+.gombsor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.gomb {
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--szin-keret);
+  border-radius: 0.4rem;
+  background: var(--szin-hatter);
+  color: var(--szin-szoveg);
+  font: inherit;
+  font-size: 0.94rem;
+  cursor: pointer;
+}
+
+.gomb:hover { border-color: var(--szin-halvany); }
+
+.gomb--elsodleges {
+  background: var(--szin-kiemelt);
+  border-color: var(--szin-kiemelt);
+  color: #ffffff;
+}
+
+.gomb--elsodleges:hover { opacity: 0.9; }
+
+/* ===== ÜZENETEK ===== */
+
+.figyelmeztetes {
+  color: var(--szin-figyelem);
+  font-size: 0.92rem;
+}
+
+.uzenet {
+  margin-top: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.4rem;
+  background: var(--szin-hatter);
+  font-size: 0.92rem;
+}
+
+.hibaSzoveg { color: var(--szin-hiba); }

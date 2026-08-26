@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- koino/index.html -->
+<!--
+  A koino belépési pontja. A Fázis 2 (P2P) programja: minden a készüléken fut,
+  központi szerver nélkül. Jelenlegi állapot: Szakasz 1, 1. lépés — a kulcs-réteg.
+-->
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>koino</title>
+  <link rel="stylesheet" href="css/fo.css">
+</head>
+<body>
+
+  <header class="fejlec">
+    <h1 class="fejlec__cim">koino</h1>
+    <p class="fejlec__alcim">a készülékeden fut · nincs szerver · nincs fiók</p>
+  </header>
+
+  <main class="tartalom">
+
+    <!-- ===== AZ AZONOSSÁG ===== -->
+    <section class="doboz" id="azonossagDoboz">
+      <h2 class="doboz__cim">Az azonosságod</h2>
+      <p class="doboz__betoltes" id="azonossagBetoltes">Betöltés…</p>
+
+      <div class="azonossag" id="azonossagAdatok" hidden>
+        <p class="azonossag__magyarazat">
+          A koinóban nincs felhasználónév és nincs jelszó. Az azonosságod egy
+          <strong>kulcs</strong>, ami ezen a készüléken készült, és nem hagyta el.
+          A nyilvános fele a „neved" a hálózaton:
+        </p>
+
+        <p class="azonossag__kulcs" id="azonositoRovid" title="Kattints a teljes alakért"></p>
+        <p class="azonossag__teljes" id="azonositoTeljes" hidden></p>
+
+        <dl class="allapotLista">
+          <dt>Tartós tárolás</dt>
+          <dd id="tartosAllapot">—</dd>
+          <dt>Szabad hely</dt>
+          <dd id="helyAllapot">—</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ===== A KULCS MENTÉSE ===== -->
+    <section class="doboz doboz--figyelem" id="mentesDoboz" hidden>
+      <h2 class="doboz__cim">Mentsd el a kulcsodat</h2>
+      <p>
+        A böngésző <strong>kiürítheti</strong> a tárat — és azzal a kulcsod is eltűnne.
+        A mentés egyetlen fájl, és bármikor visszatölthető.
+      </p>
+      <p class="figyelmeztetes">
+        ⚠️ Aki megszerzi ezt a fájlt, a nevedben tud aláírni. Őrizd olyan helyen, ahova
+        más nem lát bele.
+      </p>
+      <div class="gombsor">
+        <button type="button" id="mentesGomb" class="gomb gomb--elsodleges">Kulcs mentése fájlba</button>
+        <button type="button" id="visszatoltesGomb" class="gomb">Kulcs visszatöltése</button>
+        <input type="file" id="visszatoltesMezo" accept="application/json,.json" hidden>
+      </div>
+      <p class="uzenet" id="mentesUzenet" hidden></p>
+    </section>
+
+    <!-- ===== HOL TARTUNK ===== -->
+    <section class="doboz doboz--halvany">
+      <h2 class="doboz__cim">Hol tart a program</h2>
+      <p>
+        Ez a <strong>Szakasz 1</strong> első lépése: a kulcs-réteg. A következő lépések:
+        aláírt események, helyi tár, majd az állapot számítása — végül a teljes kör
+        (tartalom → tudatpont → javaslat → szavazat → egyezmény), egyetlen készüléken.
+      </p>
+    </section>
+
+  </main>
+
+  <script type="module" src="js/fo.js"></script>
+</body>
+</html>
