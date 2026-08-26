@@ -1155,7 +1155,12 @@ pedig elveszíti a sajátját, **újra tanúsíttathatja magát** (D18) — **fo
 > Filozófiailag is ez a helyes: **az azonosság-rekordod nálad lakik.**
 
 **Az 1. és 3. réteg egymást váltja, nem zárja ki:** a csúcs-szám mindkettőnél ugyanaz, ezért az
-átállás **semmi mást nem érint**. A tervezési alapelv szerint önkéntessel kezdünk.
+átállás **semmi mást nem érint**. Az első megvalósítás az önkéntes változat.
+
+> ⚠️ **Módosítás (Csaba, 2026-08-25 — milliárdos cél):** a szeletelés **nem „később, ha a
+> méret kikényszeríti"**, hanem **az első naptól a tervben van**. Az illesztésnek eleve
+> engednie kell a 3. réteget, még ha az első kiadás az 1.-et használja is — különben
+> pontosan az a fajta „majd kicseréljük" adósság keletkezik, amit a milliárdos cél kizár.
 
 #### KÖTEGELÉS — a konszenzus-teher eltüntetése
 
@@ -1461,24 +1466,80 @@ Csak azután, hogy az identitás-réteg **élesben bizonyított** (D11). Tartalm
 (alkotmányos kibocsátás, egyenlő osztalék), **D16** (lassú, megtámadható), **D18/8**
 (osztalék csak hitelesítettnek), **D20** (öröklés), **N10** paraméterei.
 
-### A szakaszok EGYBEN MENÜ IS
+### ⚠️ A SZAKASZOK NEM MÉRETRŐL SZÓLNAK — FÜGGŐSÉGI SORREND (Csaba pontosítása, 2026-08-25)
 
-**Nem minden koinónak kell mind a hat.** A D13 (a koino eszköz) és a D17 köztes-méret
-logikája szerint:
+**Az A–F NEM azt jelenti, hogy „előbb kicsi koino, aztán nagy".** Ez korábban félreérthetően
+volt megfogalmazva („menü"), és Csaba jogosan javította ki:
 
-| Koino | Meddig kell eljutnia |
-|---|---|
-| **család, osztály, munkahely** (ismeritek egymást) | **C vagy D** — konszenzus és pénz nélkül teljes értékű |
-| **nagy, nyílt közösség** | **E**, majd ha akar, **F** |
+> „Én most már egyből a több milliárdos közösséget befogadni képes P2P-t szeretném
+> kifejleszteni, ami már a pénz létrehozását is magába foglalja. Az, hogy kisebb közösségek
+> is létrehozhatók, nem egy lépcsőfok, amit elég elérni elsőnek, hanem magától értetődő:
+> **ha világméretűen is működőképes, akkor egy család szintjén is.**"
 
-Ez a **D13/b** paraméter-pluralizmus gyakorlati alakja: nem egy végállapot van, hanem
-**választható mélységek**.
+**A sorrend a FÜGGŐSÉGEKBŐL jön, nem a méretből** — és ugyanez a sorrend érvényes akkor is,
+ha az első naptól nyolcmilliárdra tervezünk: nincs konszenzus (E) identitás nélkül (A, D17);
+nincs pénz (F) bizonyított identitás nélkül (D11); nincsenek aláírt események (C) kulcsok
+nélkül (A).
+
+**A lefelé skálázás olcsó, a felfelé nem — tehát a CÉL a milliárdos lépték.**
+
+#### Amit a milliárdos cél KONKRÉTAN megváltoztat
+
+| # | Változás | Mihez képest |
+|---|---|---|
+| 1 | **A szeletelés (DHT) az első naptól a tervben van** — még ha az első megvalósítás az egyszerű önkéntes változat is, az **illesztésnek eleve engednie kell** | a D21 korábban azt írta, „akkor jön, amikor a méret kikényszeríti" |
+| 2 | **A konszenzust a NEHÉZ esetre tervezzük** — nincs „kis csoportnál elég egyszerűbb megoldás" rövidítés, amit később cserélni kell → az **érvényesítő-kiválasztás** fontossági sorban előrébb kerül (a megvalósításban hátul marad) | — |
+| 3 | **Az identitás-rétegnek rögtön a PÉNZ mércéjét kell ütnie**, nem a szavazásét: egy hamis azonosság a szavazásnál egy hang, a pénznél **pénznyomtató gép** (D11). Az A szakasz nem lehet „egyelőre elég jó" | — |
+| 4 | **A hibrid hálózat alapszerkezet, nem kiegészítés** — a telefon rossz P2P-polgár, kellenek önkéntes tartós csomópontok a gerincnek (N11) | — |
+
+#### A pénz hatóköre — pontosítva
+
+Csaba: *„nem ezt írom felül, de a programnak készen kell állnia arra, hogy kiszolgálja a
+már teljesen hitelesített e-embereket."*
+
+> **A pénz KÉPESSÉGE megépül; a D11 KAPUJA marad.** A pénz a fejlesztés hatókörében van, nem
+> az indulás sorrendjében: megtervezzük és megépítjük, de **élesíteni akkor élesítjük, amikor
+> a háló kibírja.**
+
+#### A feszültség, és a feloldása
+
+A tervezési alapelv (*egyszerű és változtatható > összetett és teljes*) szembefeszül azzal,
+hogy az első naptól a végső célra tervezünk — ez az a hely, ahol sok projekt elvérzik
+(megépítik a tökéletes architektúrát, és soha nem adják ki). A feloldás:
+
+> **Milliárdra TERVEZZÜNK, függőségi sorrendben ÉPÍTSÜNK, és minden réteget adjunk ki, amint
+> áll.**
+
+A cél globális; az építés sorrendjét a függőségek adják; a kiadás nem várja meg a végét.
 
 ### Hol lesz a koino „P2P"?
 
 **A D szakasztól.** De az **A–B** már önmagában nagy nyereség: *ellenőrizhető központi
 rendszer*, ahol a szerver **nem tud hazudni az azonosságról** — ez ma sehol nem így van, és
 a jelenlegi kódbázisban megépíthető.
+
+### ⏸️ ÜZEMI DÖNTÉS: az éles koino szándékosan befagyasztva (Csaba, 2026-08-25)
+
+> „Amíg a jelenlegi közösség ennyire inaktív, addig én sem akarok aktív lenni, mert a
+> P2P-ben lehet, hogy újra regisztrálás kell. Ezt a 16 főt még könnyedén meg tudom erre
+> kérni. Ugyanezen okokból az entitások számát sem szeretném gyarapítani magamtól. Persze
+> ha kérdeznek, válaszolok."
+
+**Indok:** ha az architektúra-váltás újraregisztrálást (és adat-migrációt) igényel, akkor
+minden most felhalmozott adat potenciálisan eldobandó. **16 főnél egy újraindítás triviális
+— 1600-nál nem.** A szándékos kicsiben tartás tehát nem tétlenség, hanem **a váltási költség
+alacsonyan tartása**.
+
+**Következmény a tervezésre:** a *„minden réteget adjunk ki, amint áll"* elv **technikai
+kiadásra** vonatkozik, nem a közösség növelésére. Az élesítés és a népesítés külön kérdés,
+és az utóbbi **vár**.
+
+**Egy dolog viszont EMBEREKET fog igényelni:** az **A szakasz** (bizalmi háló) az egyetlen
+réteg, amit **nem lehet kóddal tesztelni** — csak azzal, hogy valódi emberek tanúsítják
+egymást. Ez viszont pontosan olyan **kicsi, konkrét kérés**, amilyet Csaba a 16 főtől
+meg tud tenni (és a re-regisztrációnál amúgy is meg fog). **Nem tartalom-gyarapítás,
+hanem néhány koppintás** — a D18/10 bootstrap-tanulsága szerint: *nem engem kell igazolni,
+hanem egymást.*
 
 ---
 
@@ -1649,4 +1710,24 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
     felismerés: az identitás-réteg (A szakasz) megépíthető P2P NÉLKÜL**, a mostani
     kódbázisban, és a mai 16 fővel kipróbálható. Az egyetlen valódi kutatási kérdés
     (érvényesítő-kiválasztás) a legkésőbbi szakaszban (E) ül, tehát **semmi nem áll az első
-    három szakasz útjában**. A szakaszok **menüt** is alkotnak: kis koinónak a C/D elég.
+    három szakasz útjában**. *(A „menü" keret — kis koinónak elég a C/D — másnap törölve,
+    lásd lentebb.)*
+- **2026-08-25 (8)** — **Csaba két pontosítása a lépés-sorrendhez.**
+  - **A cél az első naptól a MILLIÁRDOS lépték, a pénzzel együtt.** A „menü" keret
+    **törölve** — félreérthető volt: *„az, hogy kisebb közösségek is létrehozhatók, nem egy
+    lépcsőfok, amit elég elérni elsőnek, hanem magától értetődő: ha világméretűen is
+    működőképes, akkor egy család szintjén is."* A szakaszok **függőségi**, nem
+    méret-sorrendet adnak — és ez akkor is így van, ha az első naptól nyolcmilliárdra
+    tervezünk. Négy konkrét következmény rögzítve: szeletelés az első naptól · a konszenzust
+    a NEHÉZ esetre · az identitás rögtön a PÉNZ mércéjét üsse (nem a szavazásét) · a hibrid
+    hálózat alapszerkezet.
+  - **A pénz: a KÉPESSÉG megépül, a D11 KAPUJA marad** — *„a programnak készen kell állnia
+    arra, hogy kiszolgálja a már teljesen hitelesített e-embereket."*
+  - **⏸️ ÜZEMI DÖNTÉS: az éles koino szándékosan befagyasztva.** Amíg a közösség inaktív,
+    Csaba sem gyarapítja az entitásokat — mert a P2P-váltás újraregisztrálást igényelhet, és
+    **16 főnél egy újraindítás triviális, 1600-nál nem**. A *„minden réteget adjunk ki, amint
+    áll"* elv tehát **technikai kiadásra** vonatkozik, nem a közösség növelésére.
+  - **Feszültség kimondva:** a tervezési alapelv (egyszerű és változtatható) szembefeszül a
+    végső célra tervezéssel — ez az a hely, ahol sok projekt elvérzik. Feloldás:
+    **milliárdra tervezzünk, függőségi sorrendben építsünk, és minden réteget adjunk ki,
+    amint áll.**
