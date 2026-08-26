@@ -39,6 +39,12 @@ adat **esemény**: *„én, ekkor, ezt tettem"* — aláírva. Az állapot ebbő
 | `azonosito` | a fentiek **hash-e** (SHA-256) | az esemény neve = a tartalma |
 | `alairas` | a szerző aláírása az azonosítón (64 bájt) | **ez teszi hamisíthatatlanná** |
 
+**Az entitást létrehozó és módosító események `adat` részében kötelező a MÉRET** (D26):
+a tudatpont-hozzárendelés tárolási vállalás is, ezért **tudni kell, mit vállalsz, mielőtt
+vállalod** — és ehhez a méretnek a *hivatkozásban* kell utaznia, nem csak a letöltött
+tartalomban. A csatolt fájlok külön objektumok: a rájuk mutató hivatkozás hordozza a
+**lenyomatukat és a méretüket**.
+
 ### Az azonosító = a tartalom lenyomata
 
 Az esemény **neve a tartalmából származik** — pontosan úgy, ahogy a git nevezi el az

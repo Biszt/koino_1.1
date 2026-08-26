@@ -41,7 +41,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-26)
 
-**25 tervezési döntés (D1–D25) áll.** 2026-08-25-én három elméleti hidat építettünk
+**26 tervezési döntés (D1–D26) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
@@ -1456,6 +1456,94 @@ A D25 **nem hoz új mechanizmust**. Amit használ, az mind megvan:
 4. **Kihalt koino:** a D14 szerint *ami senkinek nem kell, eltűnik* — a térképről is
    lekerül. **Megerősítendő.**
 
+### D26. Az entitás MÉRETE — a tárolási vállalás mértéke (2026-08-27, Csaba)
+
+> „Eszembe jutott még egy adat, amit az entitásoknak tárolnia kell: a **méretük** — mivel
+> P2P-ben a tudatpont-hozzárendelés tárolási vállalás is, ezért tudniuk kell, hogy mekkora
+> az entitás." — Csaba
+
+**A D3 egyenes következménye, amit eddig nem vezettünk le a végéig.** Ha a tudatpont
+tárolási vállalás is, akkor **tudni kell, mit vállalsz, mielőtt vállalod.**
+
+#### 1. A méretet a DÖNTÉS ELŐTT kell tudni
+
+Ez a kulcs, és ez határozza meg, hova kerül az adat. Ha a méret csak az entitás
+*tartalmában* lenne benne, akkor **le kellene tölteni ahhoz, hogy kiderüljön, megéri-e
+letölteni**. Ezért:
+
+> **A méret a HIVATKOZÁSBAN utazik, nem (csak) a tartalomban** — ugyanúgy, ahogy egy
+> torrent-leíró tartalmazza a méretet és az ellenőrző összeget, mielőtt bármit letöltenél.
+
+#### 2. Ki mondja meg — és mi van, ha hazudik?
+
+A méret az **aláírt eseménybe** kerül, tehát a szerző állítja. Hazudhat — de ez ugyanaz a
+minta, mint mindenhol: **nem megakadályozzuk, hanem leleplezzük** (D17/D19). Letöltéskor
+kiderül, és mivel **aláírta**, a hamis méret **bizonyíték**, nem szóbeszéd.
+
+#### 3. A fájlok külön objektumok
+
+A szöveges tartalom mérete számítható; a képek és csatolt fájlok viszont nem folyhatnak
+bele az esemény törzsébe. **A rájuk mutató hivatkozás hordozza a lenyomatukat ÉS a
+méretüket** — így a fájl letöltése is ellenőrizhető és előre mérlegelhető.
+
+#### 4. A vállalás hatóköre: CSAK AZ AZ ENTITÁS (Csaba döntése)
+
+| | |
+|---|---|
+| **Amit vállalsz** | **az az egy entitás**, amire tudatpontot tettél |
+| A leszármazottak | **külön pontot igényelnek** — a fa nem kötelez |
+| Az ág teljes mérete | **tájékoztató adat** (mint ma a hierarchikus tudatpont), nem teher |
+
+**Indok:** így a vállalt teher **kiszámítható marad**. A másik változat (az egész ág
+vállalása) azzal járna, hogy bárki új gyereket tehet egy népszerű szülő alá — és ezzel
+**mások gépét terheli** anélkül, hogy azok beleegyeztek volna.
+
+#### 5. A méretnövekedés — a védelem NAGYRÉSZT MÁR MEGVAN (Csaba helyesbítése)
+
+*Először azt írtam, hogy a méretnövekedés „a vállalók beleegyezése nélkül" terheli meg a
+gépüket. **Ez pontatlan volt**, és Csaba kijavította:*
+
+> „Egy entitás mérete **csak módosítási javaslat mentén tud nőni**, amiről **szavazás
+> történik** az aktív tudatpont-tulajdonosok között, és a javaslatban benne van a
+> módosított tartalom, aminek tartalmaznia kell **az új méretét is**." — Csaba
+
+**Vagyis a rendes eset már védve van, méghozzá a koino saját gépezetével:**
+
+| | |
+|---|---|
+| Hogyan nőhet egy entitás? | **csak elfogadott módosítási javaslattal** |
+| Ki dönt róla? | a **tudatpont-tulajdonosok** — akiknek a gépét terhelné |
+| Látják-e előre? | **igen**: a javaslat maga hordozza az új méretet, tehát **a szavazás előtt látszik** |
+| Új gyerek-entitás? | **nem terheli** a szülő vállalóit — a D26/4 szerint a vállalás csak arra az egy entitásra szól |
+
+**Ami valóban nyitva marad: a PASSZÍV tulajdonos.** Aki nem szavaz, annak a döntés
+meglepetésként érkezik — a tudatpontja viszont ott van, tehát a teher rá is hárul.
+
+> 💡 **Csaba ötlete (2026-08-27, felírva):** legyen egy **maximum méretnövekedési érték
+> százalékban**, amit a passzív tudatpont-tulajdonosok is megadhatnak.
+
+Ez **pontosan a D4 küszöb-gépezete, egy új paraméterrel** — ugyanaz a medián-mechanizmus,
+amit a támogatottsági küszöbre használunk, csak most a méretre. Nincs új mechanizmus, és
+illeszkedik a D13/b paraméter-pluralizmusához is.
+
+> ⏸️ **Státusz: FELÍRVA, DE NEM MEGÉPÍTVE.** Csaba: *„ez már csak finomítás, meg még ezen
+> nem is gondolkodtam eleget."* A tervezési alapelv szerint járunk el: *ami ritka és nem
+> végzetes, azt felírjuk, de nem építjük meg* — a Szakasz 1-hez elég, hogy **a méret ott
+> van az adatban és látható**.
+
+**A maradék két védelem, ami így is kell:**
+
+- **a méretváltozás legyen LÁTHATÓ** (a küszöbváltozás-értesítés, D4/H1 mintájára);
+- **a tudatpont bármikor elvehető** → a vállalás **felmondható**.
+
+#### 6. Mit jelent ez az adat-osztályozásra (H6)
+
+| Adat | Réteg |
+|---|---|
+| az entitás **saját mérete** (az aláírt eseményben) | `tartalom` |
+| a **fájl-hivatkozás** (lenyomat + méret) | `tartalom` |
+| az **ág teljes mérete** (leszármazottakkal) | `szamitott` — összeadható, nem tárolandó igazságként |
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -2174,3 +2262,26 @@ hanem egymást.*
   - **Négy nyitott kérdés felírva:** (1) a koino-tagság a tartós mag része-e — ettől függ,
     hogy a **létszám szerinti besorolás hamisítható-e**; (2) osztalék-aszimmetria az átvett
     pénznél; (3) a tér elárasztása üres koinókkal; (4) a kihalt koino sorsa.
+- **2026-08-27** — **D26: az entitás MÉRETE** (Csaba felvetése a Szakasz 1 kodolasa kozben).
+  A D3 egyenes következménye, amit eddig nem vezettünk le a végéig: *ha a tudatpont
+  tárolási vállalás is, akkor tudni kell, mit vállalsz, MIELŐTT vállalod.*
+  - **A méret a HIVATKOZÁSBAN utazik**, nem csak a tartalomban — különben le kellene
+    tölteni ahhoz, hogy kiderüljön, megéri-e letölteni (a torrent-leíró mintája).
+  - **A szerző állítja, aláírva** → a hamis méret **bizonyíték**, nem szóbeszéd
+    (ugyanaz a minta, mint mindenhol: nem megakadályozzuk, hanem leleplezzük).
+  - **A csatolt fájlok külön objektumok**: a hivatkozás hordozza a lenyomatukat ÉS a
+    méretüket.
+  - **A vállalás hatóköre (Csaba döntése): CSAK az az entitás, amire pontot tettél.** A
+    leszármazottak külön pontot igényelnek; az ág teljes mérete tájékoztató adat. Indok:
+    így a teher **kiszámítható** — az „egész ág" változatban bárki új gyereket tehetne egy
+    népszerű szülő alá, és azzal **mások gépét terhelné**.
+  - ⚠️ **Csaba helyesbítése egy pontatlanságomra:** azt írtam, a méretnövekedés „a vállalók
+    beleegyezése nélkül" terhel. Nem: **egy entitás mérete csak elfogadott MÓDOSÍTÁSI
+    JAVASLAT mentén nőhet**, amiről a tudatpont-tulajdonosok szavaznak, és a javaslat maga
+    hordozza az új méretet — tehát **a szavazás előtt látszik**. A rendes eset védve van a
+    koino saját gépezetével.
+  - 💡 **Ami nyitva marad: a PASSZÍV tulajdonos**, akinek a döntés meglepetés. Csaba ötlete
+    (**felírva, nem megépítve**): **maximum méretnövekedési érték százalékban**, amit a
+    passzívak is megadhatnak — ez **pontosan a D4 küszöb-gépezete egy új paraméterrel**,
+    nincs benne új mechanizmus. *„Ez már csak finomítás, meg még ezen nem is gondolkodtam
+    eleget."*
