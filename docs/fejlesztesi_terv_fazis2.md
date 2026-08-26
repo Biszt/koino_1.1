@@ -43,6 +43,7 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 | D15 | Kulcs | A kulcs HITELESÍT, nem titkol — a lopás minden kára visszafordítható, kivéve a pénzt. A helyreállítás TÖBB FÜGGETLEN TANÚBÓL áll (háló + opcionálisan EUDI + opcionálisan választott bizottság); a bizottság **tanú, nem hatóság**. |
 | D16 | Pénz-tempó | Az irreverzibilitás DÖNTÉS, nem törvény: a nagyobb átutalás késleltetve, nyilvánosan, az ablakban megtámadhatóan megy — értesítéssel, **külön csatornán**. A kulcslopás így túlélhető. |
 | D17 | Konszenzus | A globális egyetértés hatóköre = a tartós mag (D14), semmi más; minden egyéb saját lánc-következetesség + determinisztikus számítás. **A konszenzus biztonsága = az identitás-réteg biztonsága** → az identitás a gerinc, elsőként kell állnia. |
+| D18 | Identitás | **Pozíció, nem darabszám** (távolság-szabály, Duniter-precedens) + **folytonos igazolás** (kockázati korlát, SOHA nem hang). Lejárat helyett **öregedés**, megújítás helyett **tevékenység = életjel**; a halál megtámadható tanúsítás. ⚠️ Az aláírás a KULCS használatát bizonyítja, nem az EMBER életét (kulcs-öröklés) → az öregedés a szerkezeti védelem. **Osztalék csak hitelesítettnek** — birtoklás, keresés, befektetés mindenkinek. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -191,9 +192,15 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
     illeszkedik: egyetlen érvényesítő sem tudja egyedül megnyitni a szavazatot.
   - **Marad tervezendő:** hol a határ a két üzemmód között (→ paraméter, D13/b), és a
     konkrét technológia-választás a nagy üzemmódhoz. Vita 3. pont.
-- **N4. Tanúsítási szabályok számszerűsítése** — hány független tanúsító kelljen,
-  meghívás-korlátok (db/idő), gráf-szabályok, visszavonás; a felhatalmazott kibocsátók
-  audit-folyamata. Vita 1. pont.
+- **N4. ~~Tanúsítási szabályok számszerűsítése~~** — ✅ **LEZÁRVA (2026-08-25)** → **D18**.
+  A gerinc a **távolság-szabály** (pozíció, nem darabszám — Duniter-precedens, 2017 óta
+  üzemel), kiegészítve Csaba **folytonos igazolás** ötletével (kockázati korlát, soha nem
+  hang). A Duniter öt paramétere átvizsgálva: kettő megtartva, három elvetve (helyettük
+  **öregedés** és **tevékenység = életjel**). A halál a D15/D16 mintáját kapja („aki alá
+  tud írni, az él"). A pénz-hozzáférés fokozatos, és a Sybil-lyuk befoltozva (**osztalék
+  csak hitelesítettnek**). **Nyitva marad:** a paraméter-alapértékek (→ D13/b), a
+  visszavonás pontos mechanizmusa, és a **felhatalmazott kibocsátók audit-folyamata**.
+  Vita 1. pont.
 - **N5. ~~Forráskód-kormányzás~~** — ✅ **LEZÁRVA (2026-08-25)** → **D12** (a három szint:
   önalkalmazás + kormányzat-nélküli legfelső szint) és **D13** (a koino eszköz, nem
   közösség; a fork normál üzemmód). A teljes levezetés önálló dokumentumban:
@@ -645,6 +652,264 @@ logikája („pénz csak bizonyított identitás-réteg után") általánosítva
 > szakirodalom. A hatókör-szűkítés érvelése erős, de az 1. pont (érvényesítő-kiválasztás)
 > tényleges megoldását elosztott rendszerek irodalmához kell mérni, mielőtt kódot írunk.
 
+### D18. Az identitás-réteg (2026-08-25 — az N4 lezárása, a 3. elméleti híd)
+
+*A **D17** kimondta: a konszenzus biztonsága = az identitás-réteg biztonsága. Ez a döntés
+tehát a Fázis 2 **gerince**. Épít a **D1**-re (meghívásos bizalmi háló + felhatalmazott
+kibocsátók), és lezárja az **N4**-et (a tanúsítási szabályok számszerűsítése).*
+
+#### 0. Pontosítás a D17-hez: miért a KÖZEPES méret a veszélyzóna
+
+*(A D17 „nagyban sűrű a háló" megfogalmazása pontatlan volt.)* Nem a méret véd, hanem
+**két teljesen különböző védelmi mechanizmus**, amelyek nem érnek össze:
+
+| Méret | Mi véd | Hogyan |
+|---|---|---|
+| **Kicsi** | **közvetlen ismeret** | tudod, ki valódi, mert ismered. Nem kell rendszer. |
+| **Nagy** | **a gráf szerkezete** | nem ismersz senkit, de a hamis csomók *alakja* elárulja magát |
+| **Közepes** | 🔴 **egyik sem** | az első már kiesett, a második még nem kapcsolt be |
+
+> ⚠️ A „nagyban a gráf megvéd" a **legkevésbé bizonyított** állítás az egészben: a Duniter
+> soha nem lett nagy (lásd lent a számokat), és nagyban a támadás HASZNA is nagyobb. A
+> veszély tehát nem eltűnik mérettel — **átalakul**.
+
+#### 1. Mit állít a tanúsítás — és mit NEM
+
+A **D1** zárójele a legfontosabb mondat az egész identitás-kérdésben: a tanú **csak azt**
+állítja, hogy *valódi, külön személy, aki még nem regisztrált*.
+
+| Mit állíthatna | Ítélet |
+|---|---|
+| „létező, külön ember" | ✅ **ennyi kell** — gyenge állítás, olcsó, nem jár felelősséggel |
+| „tudom, hogy X-nek hívják" | ❌ személyes adat, felelősség |
+| „megbízom benne" | ❌ hírnév-rendszer lenne, kapuőrséggel |
+
+Ettől a tanúsítás **nem ajánlólevél**: nem kell jól ismerned valakit, és nem felelsz a
+viselkedéséért.
+
+#### 2. A VÉDELEM MAGVA: távolság-szabály — pozíció, nem darabszám
+
+**A darabszám hamisítható, a pozíció nem.** Ezer hamis azonosság **tökéletesen** teljesít
+bármilyen darabszám-küszöböt, ha egymást igazolják — amit viszont **nem tudnak**
+előállítani, az a valódi hálóban elfoglalt helyzet.
+
+> **Falusi hasonlat.** „Kezeskedik érted öt ember?" — ha hozott öt cinkost, ez a próba
+> átmegy. „Tőled indulva, ismerőstől ismerősig, néhány lépésben eléred-e a falu ismert
+> embereinek nagy részét?" — egy valódi falusi eléri; egy kívülálló öt cinkossal soha,
+> mert ők egy **sziget** maradnak.
+
+**A Duniter/Ğ1 ezt kidolgozta és 2017 óta üzemelteti** (forrás: duniter.org, lekérdezve
+2026-08-25):
+- **Referens tagok:** akiknek a befelé ÉS kifelé menő tanúsításaik száma is meghaladja az
+  **N^(1/5)** értéket (N = összes tag) — a küszöb **magától skálázódik** a mérettel.
+- **Belépés feltétele:** az új tag **6 lépésen belüli környezete tartalmazza a referens
+  tagok legalább 80%-át.**
+
+**Ez a koino „csillag vagy háló?" kérdésének a mérőszáma is** — a D11/D13b minta
+(*„akkor kapcsold be, ha a háló elég erős"*) csak ezzel válik értelmes mondattá.
+
+#### 3. FOLYTONOS IGAZOLÁS (Csaba ötlete, 2026-08-25) — a hitelesség fokozat, nem kapcsoló
+
+A mai kép kétállapotú: be vagy engedve, vagy nem. Csaba javaslata folytonossá teszi: az
+e-emberek a belépés UTÁN is igazolhatják egymás valódiságát, és **több igazolás nagyobb
+pénzügyi mozgásteret ad** (pl. az egyszerre utalható összeg).
+
+**Miért erős:** pont a **közepes rést tömi be**. Ott az emberek egyszerűen kevesebb
+igazolással rendelkeznek, tehát alacsonyabb a korlátjuk — a rendszer **magától fékez a
+tényleges bizonyosság szerint**, emberenként, nem koinónként. Ez a D11-logika finomabb
+felbontásban.
+
+> **🔒 KÖTELEZŐ VÉDŐKORLÁT: a több igazolás KOCKÁZATI KORLÁTOT emeljen, SOHA NEM HANGOT.**
+> Amint az „igazolás = jog" gondolat létezik, jönni fog a nyomás a kiterjesztésére (több
+> igazolás = nagyobb szavazatsúly?) — és ott a koino megszűnik. Ez nem kiváltság, hanem
+> **csalás-védelmi limit**, mint egy új banki számla átutalási korlátja. A szavazathoz
+> semmi köze.
+
+- **Nem a darabszám, a FÜGGETLENSÉG számít.** Tíz igazolás egy baráti körből kevesebbet ér,
+  mint három a háló távoli pontjairól — különben kialakulnak a kölcsönös igazolgató gyűrűk.
+- **Kapcsolat az N9-cel:** ez az **elismerés-entitás** egy speciális fajtája („igazolom,
+  hogy valódi ember"). Az N9 szabálya („tájékoztat, nem jogosít") alól ez **szándékos, szűk
+  kivétel** — épp ezért kell írásban rögzíteni, meddig terjed.
+- **Kapcsolat a D15-tel:** aki igazolta, hogy létezel, az a természetes tanú akkor is, ha
+  elvesztetted a kulcsod. **Ugyanaz a halmaz, két feladatra.**
+
+#### 4. A Duniter-paraméterek átvizsgálva (Csaba döntései, 2026-08-25)
+
+**Keret:** a Duniter azért ilyen szigorú, mert náluk a bizalmi háló **közvetlenül a
+pénzteremtést** őrzi (minden tag = pénznyomtatási engedély). A koino identitás-rétege
+**először csak a szavazást** őrzi, a pénz később jön és kapuzva (D11) — **tehát a koino
+lazábban indulhat, és a tét növekedésével szigorodhat.**
+
+| Duniter-szabály | Érték | Döntés |
+|---|---|---|
+| Tanúsítás belépéshez | 5 | ✅ **elv megtartva**, de az érték **közösségi paraméter** (medián, D4) — kicsiben az 5 majdnem egyhangúság lenne, tehát vétójog, nem küszöb |
+| Max. tanúsítás / tag | 100 (élethosszig) | ✅ **megtartva**, de **időszakonként**, nem élethosszig; az értéket a közösség adja (medián) |
+| Min. szünet két tanúsítás közt | 5 nap | ❌ **ELVETVE** — egy tanár 30 diákkal 150 napig onboardolna; a normális csoportos belépést bünteti (osztály, munkahely). A távolság-szabály végzi az érdemi munkát, ez csak másodlagos védelem |
+| Tanúsítás lejárata | 2 év, megújítandó | ❌ **ELVETVE** → helyette **ÖREGEDÉS** (lásd 5.) |
+| Tagság-megújítás | évente, különben kiesés | ❌ **ELVETVE** → helyette **TEVÉKENYSÉG = ÉLETJEL** (lásd 6.) |
+
+#### 5. Lejárat helyett ÖREGEDÉS
+
+A cél jó (egy 2010-es tanúsítás ne érjen annyit 2030-ban), a módszer rossz (mindenkinek
+folyamatos házimunka). Megoldás: **a tanúsítás nem jár le, hanem a SÚLYA csökken az
+idővel.**
+
+| | Lejárat | Öregedés |
+|---|---|---|
+| Mit kell tenni? | 2 évente kézzel megújítani | **semmit** |
+| Mi történik? | egyik napról a másikra megszűnik | fokozatosan kevesebbet ér |
+| Ki érzi? | mindenki, folyamatosan | senki |
+
+Folytonos — illik a 3. ponthoz (a hitelesség fokozat). A **visszavonás** marad kifejezett
+cselekvés. *(Technikai következmény: a távolság-szabályhoz kell egy súly-küszöb — mi
+számít még „élő" élnek a gráfban. Paraméter, nem akadály.)*
+
+#### 6. Éves megújítás helyett: A TEVÉKENYSÉG AZ ÉLETJEL
+
+Minden művelet a koinóban **aláírt** (a privát kulcs matematikai bizonyítékot ad arról,
+hogy te állítottad elő). Ezért **nincs szükség külön „még élek" gombra**: aki szavaz,
+tudatpontot rendez, tartalmat ír — az él.
+
+Az aktív e-ember **soha nem találkozik ezzel a szabállyal.** Aki évek óta nincs sehol, az
+**alvó** lesz (nem törölt): az azonossága megmarad (a D14 szerint a helye úgyis örökre
+foglalt), de a tanúsításai nem számítanak be másokéba, és — ha már van pénz — **nem kap
+osztalékot**. A visszatérés egyszerű.
+
+#### 7. A HALÁL — tanúsítás, a D15/D16 mintájával
+
+**A halál csak akkor sürgős probléma, amikor már van pénz:** a D10 egyenlő osztaléka miatt
+egy halott ember **örökké termelne pénzt** — ugyanaz a hígulás, mint a Sybil-támadásnál,
+csak természetes okból. *(Az N10 ezt már felvetette.)*
+
+| Elem | Hogyan |
+|---|---|
+| Ki kezdeményezi | több **független** tanú a hálóból (akik a valódiságát is igazolták) |
+| Mennyi idő | **hosszú, nyilvános várakozás** |
+| Ki tiltakozhat | **bárki** — és mindenekelőtt **az érintett** |
+
+Ugyanaz az alakzat, mint a lassú pénznél (D16) és a kulcs-helyreállításnál (D15): **lassú,
+nyilvános, megtámadható.**
+
+##### ⚠️ A KULCS-ÖRÖKLÉS TÁMADÁS (Csaba, 2026-08-25 — egy elvetett szabály helyreigazítása)
+
+Az első megfogalmazás ez volt: *„aki alá tud írni, az él"* — egyetlen aláírt művelet
+érvénytelenítse a halál-bejelentést. **Ez HIBÁS, és Csaba mutatott rá:**
+
+> „A haldokló nagyszülő megadja a jelszavát a leszármazottjának a halála előtt, és akkor
+> neki, ha aktív, plusz profilja van."
+
+**A hiba pontosan:** az aláírás nem azt bizonyítja, hogy az EMBER él, hanem hogy a **KULCS
+használatban van**. A kettő nem ugyanaz.
+
+Ez a támadás **rosszabb a kulcslopásnál**, mert **önkéntes** — nincs áldozat, aki
+tiltakozzon, és semmilyen lopás-felismerés nem fogja meg. Egyenlő osztalék mellett (D10)
+minden örökölt kulcs **örökös jövedelemforrás**, tehát valódi gazdasági ösztönző. És ha
+normalizálódik („persze, hogy örökölöd a nagyi fiókját"), akkor nem ritka kivétel lesz,
+hanem tömeges.
+
+**A javított szabály — három rétegben:**
+
+1. **Az aláírás nem érvénytelenít, hanem ESZKALÁL.** Ha a halál-bejelentést aláírás
+   vitatja, az nem automatikus felmentés: **újra-tanúsítás** következik — független
+   tanúknak kell megerősíteniük, hogy a személy **jelen van**. Aki valóban él, azt látják
+   az emberek; egy örökölt kulcs nem tud embereket előállítani.
+2. **A szerkezeti védelem az ÖREGEDÉS** (5. pont) — és most derül ki, hogy ez nem csak
+   kényelmi megoldás volt. A halott tanúsításai **elhalványulnak**, és senki nem újítja meg
+   őket, mert nincs kit megerősíteni. Az örökös **birtokolhatja a kulcsot, de nem tudja
+   rávenni a hálót, hogy továbbra is igazoljon egy jelen nem lévő embert.** Az örökölt
+   azonosság magától lecsúszik: előbb a pénz-korlátja esik (3. pont), végül **alvó** lesz
+   (6. pont).
+   > **Utólagos belátás a Duniter-ről:** a 2 éves lejárat, amit a 4. pontban „túlzásnak"
+   > minősítettünk, RÉSZBEN pontosan ezt védte. Az öregedés megtartja a védelmet a teher
+   > nélkül — de csak azért működik, mert **súlyozott újra-megerősítést** követel, nem
+   > puszta kulcs-aktivitást.
+3. **Opcionális erősítés EU-polgároknál:** az EUDI-tárcát az állam a halotti
+   nyilvántartásból érvényteleníti — ez **további független tanú** lehet (a D15 szabálya
+   szerint: egy a több közül, önmagában soha nem elég).
+
+**Ami őszintén marad:** a halál és a tanúsítások elhalványulása között van egy **ablak**,
+amíg az örökölt azonosság teljes értékű. Ennek hossza az öregedési ütem paramétere
+(→ D13/b). **És általánosabban: ezt teljesen kizárni nem lehet** — bármilyen tisztán
+digitális azonosság átadható. Csak két valódi védelem létezik: (a) időszakos
+**jelenlét**-bizonyítás (személyes, biometrikus vagy társas), vagy (b) az azonosság
+**magától veszítsen értéket**, ha nem újítják meg. A koino a **(b)**-t választja, és az
+(a)-t opcionálisan, csak a nagy tétű képességekhez.
+
+*(Összefüggés: ha valaki elvesztette a kulcsát ÉS halottnak nyilvánítják, aláírni nem tud
+— akkor a D15 helyreállítási útján kell visszajönnie. A két mechanizmus egymásba
+kapaszkodik.)*
+
+**Az örökség — Csaba döntése:** a halott tudatpontjai felszabadulnak, és a **D14** szerint
+aminek nincs gazdája, az eltűnik. *„Amin nincs tudatpont, az nem fontos a közösségnek,
+tehát kuka."* Vagyis **ami csak az elhunytnak volt fontos, elhalványul vele; amit mások is
+értékesnek tartanak, arra ráteszik a saját pontjaikat — és megmarad.** Nem külön szabály a
+halálra: csak a D14, alkalmazva.
+
+#### 8. A PÉNZ-HOZZÁFÉRÉS FOKOZATAI — és a Sybil-lyuk befoltozása
+
+Csaba javaslata: a nem (vagy még nem teljesen) hitelesített e-ember is részt vehessen a
+gazdaságban, amíg az EUDI nem elérhető.
+
+**A lyuk, amit meg kellett találni:** a D10 szerint a pénz **egyenlő osztalékként
+keletkezik**. Ezért a Sybil-támadás nyeresége **nem az utalásnál keletkezik, hanem a
+KELETKEZÉSNÉL** — ezer hamis e-ember hígítja a pénzt akkor is, ha egyikük sem tud utalni.
+Az utalás korlátozása a kifolyást zárja el, a **csapot** nem.
+
+> **A SZABÁLY: a nem hitelesített e-ember BIRTOKOLHAT és HASZNÁLHAT pénzt — de NEM KAP
+> OSZTALÉKOT.** Hozzájuthat úgy, hogy **megkeresi** (feladatvállalás) vagy **megveszi**
+> (befektet — Csaba pontosítása: bárki vásárolhat koino-pénzt hitelesítés nélkül is).
+
+Így a hamis azonosság **nem termel semmit** (tehát nem éri meg létrehozni), a valódi ember
+viszont, aki még nem tudta igazolni magát, **teljes értékűen részt vehet**.
+
+A teljes jogosultság (osztalék + magasabb utalási korlátok) **két úton** nyílik:
+**EUDI-igazolás VAGY elegendő, független, megfelelő hálózati távolságú tanúsítás** — az
+értékeket a közösség adja (medián, D4 / D13b).
+
+#### 9. Hatókör: EU-FIRST, de a háló az elsődleges (Csaba, 2026-08-25)
+
+> „Ha kitalálunk egy nagyon jó bizalmi hálót, akkor jó; ha nem, egyelőre azzal is
+> megelégszem, ha EU-n belül működik — aztán ha elterjed, azt már az EU vagy az európai
+> koino közösség kitalálja."
+
+**Elfogadva**, egy megszorítással: az **EUDI-bevezetés csúszik** (2026 tavaszán a
+tagállamok kevesebb mint harmada állt készen), ezért a **bizalmi háló marad az elsődleges
+út**, az EUDI pedig a gyorsító — ahogy a D1 amúgy is mondja. Fordítva építve egy csúszó
+EU-s ütemterven múlna, hogy egyáltalán indul-e a koino.
+
+**Elfogadott következmény:** egy EU-polgár azonossága *robusztusabb* lesz (két
+helyreállítási út a D15 szerint, nem egy) — de **a jogai nem többek**. A védettség eltér,
+a hang nem.
+
+#### 10. BOOTSTRAP-TANULSÁG — ami MA, 16 emberrel is érvényes
+
+**A Duniter nem csillagból indult:** 59 alapító taggal kezdtek, akik **egymást
+tanúsították** — a háló az első napon háló volt, nem sugár.
+
+A koino mai állapota csillag (minden tanúsítás Csabához fut vissza) — ez **kiindulási
+állapot, nem szerkezeti tulajdonság** (mások is meghívhatnak, csak még nem tették). A
+Duniter-képlettel 16 tagnál a referens-küszöb ≈ 2 be- és 2 kimenő tanúsítás, vagyis
+**ahhoz, hogy egyáltalán legyenek referensek, az embereknek EGYMÁST kell tanúsítaniuk.**
+
+> Ez a mondat való az ismertető anyagokba: **„nem az a dolgod, hogy engem igazolj, hanem
+> hogy egymást igazoljátok."**
+
+#### 11. A VALÓSÁG SZÁMAI — és ami nyitva marad
+
+> **Ğ1: 8 449 tag és 98 756 tanúsítás (2023. szept.), az induláskor (2017. márc.) 59 tag.**
+
+Hat és fél év alatt 59-ből 8 449. Egy tiszta bizalmi háló **működik, de lassú** — ez
+támasztja alá az EU-first + EUDI-gyorsító hatókört (9. pont), és ez az oka annak is, hogy
+a „nagyban a gráf megvéd" állítás **csak ~8 000 fős léptékben bizonyított**.
+
+**Nyitva marad:**
+1. A konkrét paraméter-alapértékek (tanúszám, időszakos korlát, öregedési ütem,
+   súly-küszöb a távolság-szabályhoz) — de a **D13/b** szerint ezeket nem kell eltalálni,
+   csak alapértelmezésnek megadni.
+2. A **visszavonás** pontos mechanizmusa (a Duniter dokumentációja, amit elértünk, nem
+   részletezi — utánanézendő).
+3. A **felhatalmazott kibocsátók** audit-folyamata (a D1-ből maradt).
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -932,3 +1197,21 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   **N1 kétharmada is lezárult** ennek melléktermékeként (a „mi kerül bele" a D14-től, a
   „hogyan írható" a D17-től); nyitva a tartós mag replikációja.
   **Következő:** N1 maradéka + a Fázis 2 sorrendjének megtervezése.
+- **2026-08-25 (5)** — **A 3. elméleti híd: az IDENTITÁS-RÉTEG → D18, az N4 LEZÁRVA.**
+  A D17 után ez lett a gerinc („ha itt fal van, minden más mindegy"). Webes utánanézés a
+  **Duniter/Ğ1** bizalmi hálójának tényleges szabályairól (duniter.org), és a
+  **távolság-szabály** felismerése: nem a tanúsítások SZÁMA véd, hanem a hálóban elfoglalt
+  POZÍCIÓ — „a darabszám hamisítható, a pozíció nem". Ez egyben a „csillag vagy háló?"
+  kérdés mérőszáma is, ami nélkül a D11/D13b minta üres mondat maradt volna.
+  Csaba hozzájárulásai: **folytonos igazolás** (a hitelesség fokozat, nem kapcsoló — és épp
+  a közepes rést tömi be), a Duniter öt paraméterének átvizsgálása (kettő marad, három
+  elvetve), a **fokozatos pénz-hozzáférés**, és a **halál** kérdésének felvetése.
+  Claude hozzájárulásai: a **védőkorlát** (igazolás = kockázati korlát, SOHA nem hang), a
+  **függetlenség ≠ darabszám** követelmény, az **öregedés** és a **tevékenység = életjel**
+  a renitens Duniter-szabályok helyett, a **Sybil-lyuk** megtalálása (az osztalék a
+  nyereség, nem az utalás), és a **D17 pontosítása** (a közepes rés = két védelmi
+  mechanizmus, ami nem ér össze).
+  **Számok a valóságból:** Ğ1 = 8 449 tag 6,5 év alatt (59-ről) — a tiszta bizalmi háló
+  működik, de lassú; a „nagyban a gráf megvéd" állítás csak ~8 000 fős léptékben
+  bizonyított.
+  **Következő:** N1 maradéka (a tartós mag replikációja) + a Fázis 2 sorrendjének terve.
