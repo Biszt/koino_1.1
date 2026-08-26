@@ -39,11 +39,30 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ---
 
-## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-25)
+## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-26)
 
-**20 tervezési döntés (D1–D20) áll. 2026-08-25-én három elméleti hidat építettünk**
+**25 tervezési döntés (D1–D25) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
+
+> ### 🔀 FORDULAT (2026-08-26): P2P AZ ELSŐ KIADÁSTÓL
+>
+> Három döntés írta át a végrehajtás tervét — az elméleti hidak **érintetlenül** maradtak:
+>
+> - **D22** — nincs központi szerveres kiadás; *„a kis családi közösségeknek is P2P-nek
+>   kell lenniük"*. Ezzel a *„ne újraírás legyen, hanem feloldódás"* vezérelv elesett, és
+>   helyébe lépett: **a régi koino a prototípus, az új a készüléken kezdődik.**
+> - **D23** — a nyelv **JavaScript marad**; a nyelvhatárt a H6 réteg-besorolása jelöli ki
+>   (a `mag` 8 mező, a `tartalom` 73 — nem a programot kell nyelvre választani, legfeljebb
+>   a magot).
+> - **D24** — a meglévő adat sem költözik: **új regisztráció** lesz. Ezzel a **Szakasz 0
+>   (híd-feladatok) lezárult**, egyetlen elkészült termékkel: a **H6 adat-osztályozással**.
+> - **D25** — **A BELÉPŐ TÉR**: a koinók családfája. Az azonosság és a tanúsítások
+>   **közösek a térben**, a küszöbök, szabályok, tartalom és a pénz **koinónként külön**.
+>   *Az azonosság közös, a jogosultság helyi.* A tér a **tartós mag második hasznosítása**
+>   — új mechanizmus nélkül.
+>
+> **A következő lépés: a lépés-sorrend Szakasz 1-e — „A HELYI KOINO".**
 
 Indoka szó szerint: *„ha az lesz a vége, hogy ez lehetetlen, akkor tényleg nem
 világmegváltás lesz belőle, hanem csak esetleg egy hasznos program, és akkor úgy is állok
@@ -70,7 +89,7 @@ hozzá."*
 ### Ami VALÓBAN nyitva maradt
 
 1. **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen *(N8)* — **az egyetlen valódi
-   kutatási kérdés**, és a lépés-sorrendben a legkésőbbi szakaszban (E) ül
+   kutatási kérdés**, és a lépés-sorrendben a legkésőbbi szakaszok egyikében (5.) ül
 2. **Nagy léptékű titkos szavazás** — technológia-választás *(N3)*
 3. **Botok, napirend-manipuláció** — ez társadalmi probléma, nem technikai *(N6)*
 4. **Az elismerés-rendszer és a kinevezés terve** *(N9)*
@@ -78,7 +97,8 @@ hozzá."*
 6. **A teljes mérnöki munka** — ami nem elméleti kérdés
 
 **A lépés-sorrend** (lentebb, saját szakaszban) megmutatja, hogy ezek közül **egyik sem áll
-az első három szakasz útjában**.
+az első három szakasz útjában** — a helyi koino, a kapcsolat és a bizalmi háló megépíthető
+anélkül, hogy bármelyik nyitott kérdésre válaszolnánk.
 
 ### A legfontosabb szerkezeti felismerések
 
@@ -1195,6 +1215,247 @@ Ugyanaz a gépezet, megint egy szinttel feljebb — **nincs új mechanizmus**, �
 paraméter nem adminisztratív dolog lesz, hanem **ugyanolyan látható, vitatható, módosítható
 tartalom, mint bármi más**.
 
+### D22. P2P AZ ELSŐ KIADÁSTÓL — nincs központi szerveres kiadás (2026-08-26, Csaba)
+
+> „A központi server részét most nem kell fejleszteni. A kis családi közösségeknek is
+> P2P-nek kell lenniük." — Csaba
+
+**Ez a döntés felülír egy tervezési feltevést.** Az eredeti lépés-sorrend az A szakaszt
+(kulcsok, bizalmi háló) kifejezetten *„még központi szerverrel"* építette volna meg, azzal
+az érveléssel, hogy az identitás-réteg P2P nélkül is kipróbálható. Ez az érv technikailag
+igaz volt — de **egy központi szerveres köztes kiadást feltételezett**, és Csaba ezt nem
+akarja.
+
+| | Ami eddig volt | Ami a D22 után van |
+|---|---|---|
+| Az első kiadás | központi szerver, fokozatosan feloldva | **P2P, az első naptól** |
+| A mai koino.hu szerepe | a fejlődés kiindulópontja | **prototípus, ami tanított** (befagyasztva) |
+| A „kicsi" közösség | ugyanaz a szerver, kevés emberrel | **saját, önálló P2P-háló** |
+
+**Ami ELESIK ezzel:** a *„ne újraírás legyen, hanem feloldódás"* vezérelv. Nem lehet
+feloldani egy szervert, amire nem építünk. Őszintén ki kell mondani: **a D22 újraírást
+jelent** — a régi elv helyébe másik lép:
+
+> **ÚJ VEZÉRELV: a régi koino a prototípus, ami tanított; az új a KÉSZÜLÉKEN kezdődik.**
+> Nem oldódik fel, hanem **örökölünk belőle**: a domain-logikát (küszöbök, bizonyossági
+> mutató, javaslat-életciklus), a felületet (kártyák, pakli, szövegszerkesztő) és — a
+> **H5** révén — az eddigi adatot. Ami megmarad a régi elvből: **minden lépés önmagában
+> működő, kiadható állapot.**
+
+**Ami NEM változik:** a függőségi sorrend (nincs konszenzus identitás nélkül, nincs pénz
+bizonyított identitás nélkül) és a milliárdos léptékű cél. Az építés sorrendje viszont
+átrendeződik — lásd a lépés-sorrend szakaszt.
+
+#### ⚠️ Fogalmi tisztázás: a P2P nem jelent nulla infrastruktúrát
+
+Két készülék nem talál egymásra magától: kell egy **jelzőpont** a kapcsolat felépítéséhez,
+és tűzfalak mögött néha egy **továbbító**. Ezek viszont **nem hatóságok** — nem látják az
+adatot, nem dönthetnek róla, bárki üzemeltethet ilyet, és bármikor cserélhetők.
+
+> A különbség a mai szerverhez képest nem az, hogy „van-e gép a hálózaton", hanem hogy
+> **az igazság forrása a szerver-e vagy az aláírás.**
+
+Ez egybevág az N11 hibrid hálózatával (a telefon rossz P2P-polgár, kellenek önkéntes
+tartós csomópontok) — azzal a különbséggel, hogy ezek a csomópontok **kényelmi réteg**,
+nem hatóság (pontosan a D21 1. tárolási rétegének logikája).
+
+### D23. A megvalósítás nyelve: JavaScript marad (2026-08-26, Csaba)
+
+A kérdés jogosan merült fel: a JS/HTML/CSS hármas eredetileg **a központi weboldalas
+kiszolgálás miatt** lett választva — ha az elesik (D22), akkor a nyelvválasztás is
+újranyitható. Az átvizsgálás eredménye:
+
+| Követelmény | Valódi JS-korlát? |
+|---|---|
+| Determinizmus a pénznél (D10/D16) | ❌ nem — `BigInt`-tel egész aritmetika; fegyelem kérdése, nem nyelvé |
+| Kriptográfia (aláírás, Merkle) | ❌ nem — a műveletet natív/WASM könyvtár végzi |
+| Mobil háttérfutás (N11) | ⚠️ valódi korlát, de **platformi, nem nyelvi** — a telefon minden nyelven rossz P2P-polgár |
+| Böngészőben futó P2P | ✅ **a JS-nek ELŐNYE**: böngészőben csak a JS-libp2p (WebRTC/WebTransport) működik érdemben |
+| Milliárdos lépték teljesítménye | 🟡 számít, de a szűk keresztmetszet ritkán a nyelv — **mérni kell, nem saccolni** |
+
+**Egyik sem blokkoló**, és a böngésző-elérhetőség (telepítés nélkül bárki csatlakozhat)
+egyenesen a JS mellett szól — ez a koino „bárki beléphet" ígéretének gyakorlati feltétele.
+
+#### A nyelvhatárt a réteg-besorolás jelöli ki (H6)
+
+A H6 adat-osztályozás mellékterméke egy váratlanul hasznos térkép:
+
+| Réteg | Mezők | Természete |
+|---|---|---|
+| `mag` | **8** | determinizmus-kritikus, ritkán változik |
+| `lanc` | 36 | aláírt cselekvés |
+| `tartalom` | **73** | gyakran változik, **nem** konszenzus-kritikus |
+| `szamitott` | 56 | eldobható gyorsítótár |
+| `helyi` | 51 | soha nem hagyja el a készüléket |
+
+> **Nem a programot kell nyelvre választani, hanem legfeljebb a MAGOT** — és az néhány
+> száz sor, nem 200 fájl. Ha valaha kiderül, hogy a mag más nyelvet (pl. Rust/WASM)
+> kíván, az **egy jól körülhatárolt csere**, nem újraírás — épp azért, mert a H6 már
+> most megmondja, hol a határ.
+
+**Döntés:** a nyelvi kérdés ezzel **lezárva a Fázis 2 egészére**; a mag nyelve külön,
+későbbi kérdés, és csak akkor kerül elő, ha mérés indokolja.
+
+### D24. A meglévő adat sem költözik — új regisztráció lesz (2026-08-26, Csaba)
+
+> „Ez sem fontos. Új regisztrációt fogok tőlük kérni." — Csaba (a H5-ről)
+
+A **H5** (entitások önhordozóvá tétele, export/import) eddig a *„valódi előfeltétel"*
+minősítést viselte, mert a meglévő adat átmentését szolgálta. A D24 ezt megszünteti: a
+16 fő **újra regisztrál**, és az eddigi tartalom nem költözik.
+
+**Ez a befagyasztási döntés egyenes folytatása** (⏸️ üzemi döntés, 2026-08-25): ha az adat
+úgyis eldobható, akkor nemcsak a *gyarapítása* értelmetlen, hanem a *költöztetése* is.
+16 főnél egy újraindítás triviális — és most már **kimondottan az a terv**.
+
+| Következmény | Mire |
+|---|---|
+| **A H5 elesik** | nincs export-formátum, nincs migráció, nincs kettős adatmodell-karbantartás |
+| **A H6 értéke megmarad** | de a szerepe változik: nem az export alapja, hanem **az új adatmodell térképe** (mi kerül a készülékre) és a nyelvhatár rajza (D23) |
+| **A Szakasz 0 lezárul** | a H6 volt az utolsó élő híd-feladat |
+| **A régi kódbázis szerepe** | nem forrás, hanem **örökség**: domain-logika + felület (D22) |
+
+> ⚠️ **Ki kell mondani a veszteséget is:** a mai koino tartalma (kategóriák, tartalmak,
+> javaslatok, egyezmények, tudatpont-elrendezések) ezzel **elvész**. Ez vállalt ár —
+> pontosan azért tartottuk kicsiben a közösséget, hogy ez az ár alacsony maradjon.
+
+### D25. A BELÉPŐ TÉR — a koinók családfája (2026-08-26, Csaba)
+
+> „Bárki létrehozhat közösséget. Az elsőt én fogom létrehozni, de tőlem teljesen független
+> közösségeket is lehet indítani — ekkor azok nincsenek egymás belépő rétegében. Azonban a
+> már meglévő közösség több koinót is létrehozhat, **ugyanabban a belépő térben**." — Csaba
+
+**A D12 eddig azt mondta:** *a koinók sokasága felett nincs kormányzat — „a térkép nem
+kormányzat"*. Ez igaz volt, de a térképnek **nem volt szerkezete**. A D25 megadja:
+
+> **A belépő teret a LESZÁRMAZÁS hozza létre.** Nem globális regiszter, amibe valaki
+> felvesz, hanem **családfa**: aki egy koinóból származik, az annak a terében van.
+
+*(Csaba szóhasználatában „belépő réteg" és „belépő tér" ugyanaz; a dokumentum a **belépő
+tér** alakot használja.)*
+
+#### Hogyan szaporodnak a koinók
+
+| Mód | Mi történik | Melyik döntés folytatása |
+|---|---|---|
+| **1. Más paraméterek** | ugyanaz a program, eltérő beállításokkal | **D13/b** paraméter-pluralizmus: *a beállításokat nem eltaláljuk, hanem szétosztjuk* |
+| **2. Új szabályrendszer** | módosított program, saját szabályokkal | **D13**: a fork **normál üzemmód** |
+| **3. Nézeteltérésből** | a közösség egy **program-szintű** módosításban nem ért egyet → kettéválik | **D9** (konszenzuális önfrissítés) elágazó ága |
+| **— Új tér** | teljesen független indulás | **saját, új belépő teret nyit** — a két tér nem látja egymást |
+
+> 🔁 **A 3. mód a KÜLÖNVÁLÁS, egy szinttel feljebb.** Amit 2026-08-25-én entitás-szinten
+> megépítettünk (a szavazó külön ágat kér; elfogadásnál az ellenzők viszik a régi,
+> elvetésnél a támogatók a módosított állapotot; testvér-nyilvántartás) — **ugyanaz a
+> mozdulat a közösség szintjén.** A koino már tudja ezt, csak kisebb léptékben. Ez a
+> D13/c-ben kimondott minta harmadik előfordulása: *ugyanaz a gépezet, megint egy szinttel
+> feljebb.*
+
+#### ⭐ A D25 MAGVA: mi közös a térben, és mi koinónként külön
+
+| | Közös a térben | Koinónként külön |
+|---|---|---|
+| **Azonosság (kulcs)** | ✅ | |
+| **Tanúsítások** (a bizalmi háló élei) | ✅ **átjönnek** | |
+| **A hitelesítettség KÜSZÖBE** | | ✅ |
+| **Belépési szabály** | | ✅ |
+| **Szabályrendszer, paraméterek** | | ✅ |
+| **Tartalom, javaslatok, egyezmények** | | ✅ |
+| **Pénz** | | ✅ (de **átvihető** — lásd lentebb) |
+| **Tudatpont** | | ⚠️ *feltehetően koinónként — megerősítendő* |
+
+> **Az azonosság közös, a jogosultság helyi.** Ez a D25 egy mondatban — és ettől lesz
+> értelme a „belépő" szónak: **a tér az, ahol az azonosságod érvényes.**
+
+#### A hitelesítettség: közös tanúsítások, helyi küszöb
+
+> „Elképzelhető, hogy egy koinóban te már elérted a teljesen hitelesített állapotot, de a
+> másikban szigorúbbak a paraméterek… Pl. az egyik azt mondja, hogy **3 tanúsító elég**, és
+> az neked már meg is van; de ha csak annyi van, és a másik koinóban **10 tanúsító kell**,
+> akkor még **7-et össze kell szedned**." — Csaba
+
+Vagyis a **tanúsítások halmaza közös**, a belőle levont **következtetés koino-szintű**. Ez
+pontosan a **D18/3** folytonos igazolása (*a hitelesség fokozat, nem kapcsoló*) — csak most
+kiderül, hogy **a fokozat-skála is koino-paraméter** (D13/c).
+
+**Ez erős tulajdonság, nem bonyodalom:**
+- egy szigorúbb koino **nem tudja felhígítani** a lazábbat, és fordítva sem;
+- aki sok tanúsítást gyűjt, azt **mindenhová viszi** — a bizalmi háló építése egyszeri munka;
+- a **köztes méret veszélyzónája** (D18/0) koinónként külön kezelhető: a fiatal koino
+  szigorúbb küszöböt állíthat, amíg a hálója gyenge.
+
+#### A belépés szabálya is koino-paraméter
+
+> „Az is lehet, hogy egy közösség **nyílt azok számára, akik a tér valamelyik koinójában már
+> benne vannak**, meg olyan is lehet, amelyik **egy plusz meghívást igényel**." — Csaba
+
+Két ismert fokozat tehát: **tér-nyílt** (aki a térben bárhol tag, beléphet) és
+**meghívásos** (a téren belüli tagság nem elég). *(A mai koino a szigorúbb változatot
+futtatja: meghívó kötelező.)*
+
+#### A pénz a térben (Csaba, 2026-08-26)
+
+> „A pénzt **nem a térhez kötjük, hanem a koinókhoz** a térben. Egy új koino átviheti
+> ugyanazt a pénzt, de **a pénzről az eredeti koinóban döntenek, és ott is termelődik**.
+> Létrehozhatnak új pénzt is, és akár később a közös térben **kriptopiac** is kialakulhat."
+
+| Kérdés | Válasz |
+|---|---|
+| Hol él a pénz? | **a koinóban**, nem a térben |
+| Átvihető? | ✅ egy új koino **használhatja** ugyanazt a pénzt |
+| Ki dönt róla? | **a kibocsátó koino** — a paraméterek, a szabályok ott vannak |
+| Hol termelődik? | **a kibocsátó koinóban** (D10: alkotmányos kibocsátás + egyenlő osztalék) |
+| Lehet saját pénz? | ✅ egy koino **új pénzt** is létrehozhat |
+| Több pénz egymás mellett? | ✅ és később **csere is** — kriptopiac a térben |
+
+**Ez a D10/D16 hatókörét pontosítja:** az „alkotmányos kibocsátás" és az „egyenlő osztalék"
+**egy koino** belügye. A tér nem pénzügyi hatóság — ahogy kormányzati sem (D12).
+
+> 💡 **Ismerős minta a való világból:** egy közösség használhatja más közösség pénzét
+> anélkül, hogy beleszólna a kibocsátásába (mint amikor egy ország idegen valutát használ).
+> A koino ezt **nem tiltja és nem is bátorítja** — egyszerűen lehetővé teszi, és a
+> következményeket a közösségek viselik. Ez a D13/b szelleme.
+
+#### Miért OLCSÓ ez — nem új alrendszer
+
+A D25 **nem hoz új mechanizmust**. Amit használ, az mind megvan:
+
+| Amit a belépő tér igényel | Ami már megvan |
+|---|---|
+| közös azonosság több koino felett | **a tartós mag** (D14) + a Merkle-fa (D21) — a mag **eleve téri, nem koino-szintű** |
+| tanúsítások, amik átjönnek | **D18** bizalmi háló |
+| koinónként eltérő küszöb | **D13/b** + **D13/c** (a paraméter is entitás) |
+| kettéválás nézeteltérésnél | **KÜLÖNVÁLÁS** (megépítve) + **D9** |
+| „nincs felette hatóság" | **D12** |
+
+> **A belépő tér tehát a tartós mag MÁSODIK hasznosítása.** Ugyanaz az adat (ki valódi
+> ember, ki tanúsította), amit a csalás ellen amúgy is őriznünk kell — most a koinók közti
+> mozgást is ez teszi lehetővé, **külön ár nélkül**.
+
+#### Nyitott kérdések a D25-höz
+
+1. ✅ **A LÉTSZÁM BIZONYÍTÁSA — ELDÖNTVE (Csaba, 2026-08-26).** A kérdés az volt: a
+   „létszám szerinti besorolás" **rangsor**, tehát érdemes benne hazudni (a hamis nagy
+   koino embereket csábít). **A döntés: a tagság NEM kerül a magba.**
+
+   > Elég, ha a koino meg tudja mutatni a tagjai **aláírt belépéseit**; az egyes emberek
+   > valódisága pedig a **téri magból** igazolódik. Így a létszám ellenőrizhető — bárki
+   > leszámolhatja az aláírásokat, és mindegyikről igazolható, hogy **külön valódi emberé**
+   > —, a mag viszont marad az, ami: *„ez az ember már regisztrált a térben"*.
+
+   **Miért ez a jó válasz:** (a) **nem növeli a magot** (D14: legyen minél kisebb); (b) a
+   rangsor **magától becsületes** — hamis tagot csak valódi, tanúsított emberrel tehetsz a
+   listádra, vagyis **ugyanaz a védelem őrzi, ami a szavazást** (D18); (c) a tagság így a
+   koino saját, aláírt adata marad, ami illeszkedik a `lanc` réteghez (H6).
+2. **Osztalék-aszimmetria:** ha egy koino más koino pénzét használja, a tagjai **nem
+   kapnak osztalékot** (az a kibocsátó koino tagjainak jár). Ez valós gazdasági
+   következmény — nem hiba, de **ki kell mondani**, mielőtt valaki meglepődik rajta.
+3. **A tér elárasztása:** ha bárki indíthat koinót a térben, ezerszám gyárthatók üres
+   koinók. Védelem valószínűleg **magától adódik** (a létszám szerinti rendezés az üreseket
+   a lista aljára teszi — a D14 elve: *ami senkit nem érdekel, az láthatatlan*), de
+   érdemes kimondani.
+4. **Kihalt koino:** a D14 szerint *ami senkinek nem kell, eltűnik* — a térképről is
+   lekerül. **Megerősítendő.**
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -1376,95 +1637,154 @@ regisztrációt?"):**
 
 ---
 
-## A FÁZIS 2 LÉPÉS-SORRENDJE (2026-08-25)
+## A FÁZIS 2 LÉPÉS-SORRENDJE (2026-08-25 — **átírva 2026-08-26 a D22 után**)
 
-> **A vezérelv: NE ÚJRAÍRÁS LEGYEN, HANEM FELOLDÓDÁS.**
->
-> Nem egy nagy ugrással cseréljük le a központi szervert egy P2P rendszerre. Minden szakasz
-> **egy okkal kevesebbet ad arra, hogy a szervernek higgyünk** — amíg a végén már csak egy
-> csomópont lesz a sok közül. Így minden lépés önmagában is működő, élesíthető állapot, és
-> bármikor meg lehet állni.
+> ⚠️ **EZT A SORRENDET A D22 ÁTÍRTA.** Az eredeti terv a központi szerver **fokozatos
+> feloldódására** épült, és az identitás-réteget „még központi szerverrel" építette volna
+> meg. A D22 (P2P az első kiadástól) ezt a feltevést megszüntette. A régi A–F szakaszok
+> **tartalma érvényes marad** — a dokumentum sok helyen hivatkozik rájuk —, de a
+> **végrehajtási sorrendjük** és a keretük megváltozott. A leképezés minden szakasznál ott
+> áll.
 
-**A sorrendet a D17 szabja meg:** *a konszenzus biztonsága = az identitás-réteg biztonsága*
-→ **az identitás a gerinc, elsőként kell állnia.**
+**Ami NEM változott: a függőségi sorrend.** Nincs konszenzus identitás nélkül (D17), nincs
+pénz bizonyított identitás nélkül (D11), nincsenek aláírt események kulcsok nélkül.
 
-### Szakasz 0 — Előkészítés a Fázis 1-ben (híd-feladatok)
+**Ami változott: az indulási pont.** Nem a szerverből indulunk kifelé, hanem **a
+készülékből**. A koino a saját gépeden kezd létezni, és onnan terjed — nem fordítva.
 
-A jelenlegi kódbázisban, a mostani architektúrával. **H5** (entitások önhordozóvá tétele:
-export/import, stabil azonosítók) és **H6** (adat-osztályozás: mi tartalmi réteg, mi tartós
-mag) **valódi előfeltétel** — nélkülük a későbbi szakaszok utólagos szétszálazássá válnak.
-Mellettük: **H4** (identitás-réteg leválasztása modulként), **H8** (verzió-végpont + tükör),
-**H1–H3**.
+### A régi és az új sorrend leképezése
 
-### Szakasz A — A GERINC: kulcsok és bizalmi háló *(még központi szerverrel!)*
+| Új | Szakasz | Régi megfelelő |
+|---|---|---|
+| **1** | A HELYI KOINO — egy készülék, hálózat nélkül | A (kulcs-rész) + C |
+| **2** | A KAPCSOLAT — két készülék egymásra talál | D |
+| **3** | A BIZALMI HÁLÓ — tanúsítás, most már terjeszthető | A (a többi) |
+| **4** | A LÉPTÉK — Merkle-bizonyíték, kötegelés, szeletelés | B |
+| **5** | KONSZENZUS | E |
+| **6** | PÉNZ | F |
 
-**Ez a legfontosabb felismerés a sorrendben: az identitás-réteg megépíthető P2P NÉLKÜL.**
+### Szakasz 0 — ✅ LEZÁRVA (2026-08-26)
 
-- Minden e-ember kap **kulcspárt**; a privát fele a készülékén marad.
-- A műveletek **aláírást** kapnak a meglévő bejelentkezés MELLETT (nem helyette).
+A híd-feladatok legnagyobb része **elesett** a D22 (nincs központi kiadás) és a **D24**
+(nincs adat-költöztetés, új regisztráció lesz) nyomán. Ami elkészült és érvényes marad:
+
+- **H6 — adat-osztályozás** ✅ *(2026-08-26)*: 224 mező besorolva öt rétegbe
+  (`mag` / `lanc` / `tartalom` / `szamitott` / `helyi`) + `szemelyes` jelölés.
+  Termék: [`adat_osztalyozas.md`](adat_osztalyozas.md) — **nyelv- és
+  architektúra-független**, ezért a P2P-fordulat után is teljes értékű.
+
+**Amit a H6 az új sorrendnek ad:** megmondja, **mi kerül a készülékre** (`mag` + `lanc` +
+`tartalom`), mi számolható újra (`szamitott` — nem kell tárolni, nem kell terjeszteni), és
+mi nem hagyhatja el a készüléket (`helyi`). Ez a Szakasz 1 adatmodelljének kiindulása.
+
+### Szakasz 1 — A HELYI KOINO *(egy készülék, hálózat nélkül)*
+
+**A legfontosabb felismerés az új sorrendben: a koino működőképes EGYETLEN készüléken is.**
+Hálózat nélkül, szerver nélkül — és ez nem játék-üzemmód, hanem a valódi alap.
+
+- **Kulcspár a készüléken** (D15): a privát fele soha nem hagyja el; a kulcs **hitelesít,
+  nem titkol**.
+- **Minden művelet aláírt esemény**: tartalom-létrehozás, tudatpont-rendezés, érték
+  javaslat, szavazat (a H6 `lanc` rétege).
+- **Helyi tár**: az adat a készüléken él (a böngésző tárában), nem egy szerveren.
+- **Az állapot determinisztikus számítás** az eseményekből (D17) — a `szamitott` réteg
+  megszűnik tárolt adat lenni, és **függvénnyé válik**.
+- **Örökség a prototípusból**: a domain-logika (küszöbök, medián, bizonyossági mutató,
+  javaslat-életciklus) és a felület (kártyák, pakli, szövegszerkesztő).
+
+| | |
+|---|---|
+| Mit tud a végén? | egy ember, egy készülék: teljes koino — tartalom, javaslat, szavazás, egyezmény, **aláírva** |
+| Miért ELSŐ? | mert minden más ezen áll, és mert **egyedül is kipróbálható** — nem kell hozzá se hálózat, se másik ember |
+| Kockázat | 🟠 ez a legnagyobb építés (az esemény-modell + a felület ráültetése), de **ismert terep**, és minden darabja kipróbálható |
+
+### Szakasz 2 — A KAPCSOLAT *(két készülék)*
+
+- **Felfedezés és átvitel**: hogyan talál egymásra két készülék (jelzőpont), és hogyan
+  cserélnek eseményt (WebRTC / libp2p).
+- **Összefésülés**: két készülék eseményhalmaza egyesül — a sorrend nem számít, mert az
+  állapot számítás (D17).
+- **Saját lánc-következetesség** ellenőrzése: a kettős szavazat itt **lelepleződik**, nem
+  tiltás által, hanem ellentmondásként.
+
+| | |
+|---|---|
+| Mit tud a végén? | **egy család, egy baráti kör koinózik** — központi szereplő nélkül |
+| Miért itt? | a D22 szerint ez az első kiadás feltétele; és **itt derül ki, mennyi infrastruktúra kell valójában** |
+| Kockázat | 🟠 mérnökileg nehéz (NAT, tűzfalak, mobil-háttérfutás, N11) — **mérni kell, nem feltételezni** |
+
+### Szakasz 3 — A BIZALMI HÁLÓ *(most már terjeszthető)*
+
 - **Tanúsítás-entitás** (D18/1): „valódi, külön ember, még nem regisztrált".
 - **Távolság-szabály** (D18/2): referensek, elérhetőség — a „csillag vagy háló" mérőszáma.
 - **Folytonos igazolás** (D18/3) — kockázati korlát, soha nem hang.
-- **Halál-bejelentés** (D18/7) + **D19** rendszer-tartalom + **D20** öröklés.
+- **Halál-bejelentés** (D18/7) + **D19** (a rendszer bejelentő, nem bíró) + **D20**
+  (öröklés).
 
 | | |
 |---|---|
-| Mit lehet abbahagyni? | még semmit — de az adat **önmagát igazolóvá** válik |
-| Miért itt? | a D17 szerint ez a gerinc; és **valódi emberekkel kell kipróbálni**, mielőtt az architektúra változik |
-| Kipróbálható a mai 16 fővel? | ✅ **igen** — sőt, itt derül ki a bootstrap-tanulság (D18/10): *nem engem kell igazolni, hanem egymást* |
-| Kockázat | 🟡 a bizalmi háló csak **emberekkel** tesztelhető, nem kóddal |
+| Mit tud a végén? | a háló **maga tudja**, ki valódi — a D17 gerince áll |
+| Miért itt és nem előbb? | mert a tanúsítás **terjesztést** igényel: aláírt nyilatkozat, aminek el kell jutnia máshoz. A Szakasz 2 nélkül nincs hová |
+| Kockázat | 🟡 **csak emberekkel tesztelhető, nem kóddal** — és a D18/10 bootstrap-tanulsága szerint: *nem engem kell igazolni, hanem egymást* |
 
-### Szakasz B — AZ ELLENŐRIZHETŐSÉG: a mag mint Merkle-fa
+### Szakasz 4 — A LÉPTÉK *(amikor már nem fér el minden mindenkinél)*
 
-- A szerver **építi** a fát, de a kliens megkapja a **csúcs-számot** (D21).
-- A kliens **bizonyítékot ellenőriz**, nem a szerver szavát hiszi el.
-- **Mindenki tárolja a saját lapját** (D21, 2. réteg) — az adat elkezd a szerveren kívül élni.
-- Megjelennek az **önkéntes tárolók** (1. réteg); **napi kötegelés**.
+- A tartós mag mint **Merkle-fa**, csúcs-szám és bizonyítékok (D21).
+- **Mindenki tárolja a saját lapját** (D21, 2. réteg) + **önkéntes tárolók** (1. réteg).
+- **Napi kötegelés** (D21) és a **szeletelés** (3. réteg) illesztése.
 
 | | |
 |---|---|
-| Mit lehet abbahagyni? | 🔓 **a szerver szavát arról, hogy KI REGISZTRÁLT** |
-| Miért itt? | ez az első valódi decentralizáció — a szerver **már nem tud hazudni** az azonosságról |
+| Mit tud a végén? | **bizonyítható azonosság** anélkül, hogy bárki a teljes adatot tárolná |
+| ⚠️ Mikor kell? | **családi léptéknél NEM** — lásd a következő szakaszt |
 | Kockázat | 🟢 alacsony — bevált technika (könnyű kliensek) |
 
-### Szakasz C — AZ ESEMÉNY-ALAPÚ ADATMODELL *(a legnagyobb átalakítás)*
-
-- Minden **aláírt eseménnyé** válik: tartalom-létrehozás, tudatpont-rendezés, szavazat.
-- **E-ember-láncok és entitás-láncok** (N8 DAG-ja): egy esemény két láncot köt össze.
-- Az eredmény **determinisztikus számítás** az eseményekből (D17), nem a szerver állítása.
-
-| | |
-|---|---|
-| Mit lehet abbahagyni? | 🔓 **a szerver szavát arról, hogy MI TÖRTÉNT** |
-| Kockázat | 🔴 **ez a nagy átírás** — a backend „vízvezeték" háromnegyede (repositories, models, controllers) itt cserélődik. A domain-logika (küszöb, bizonyossági mutató, javaslat-életciklus) viszont **átvihető**. |
-
-### Szakasz D — A HÁLÓZAT: eszközök egymás közt
-
-- **P2P átvitel** (libp2p vagy hasonló), felfedezés.
-- **A tudatpont mint tárolási térkép** (D3, N6) — aki pontot rendelt, az tárolja.
-- **Szellem-kártya** offline tartalomra.
-
-| | |
-|---|---|
-| Mit lehet abbahagyni? | 🔓 **a szerver LÉTEZÉSÉT** — egy csomópont lesz a sok közül |
-| Kockázat | 🟠 mérnökileg nehéz (NAT, mobil-háttérfutás, N11 hibrid hálózat), de **ismert terep** |
-
-### Szakasz E — KONSZENZUS: a köteg-gyökér elfogadása
+### Szakasz 5 — KONSZENZUS *(a köteg-gyökér elfogadása)*
 
 - **Személy-alapú érvényesítők** az identitás-rétegből (D17).
 - **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen.
-- Napi köteg-gyökér elfogadása.
 
 | | |
 |---|---|
-| Mit lehet abbahagyni? | 🔓 **bármely EGYETLEN szereplőt** |
 | Kockázat | 🔴 **itt ül az utolsó valódi kutatási kérdés** (N8 maradéka) |
 
-### Szakasz F — PÉNZ *(a D11 kapuja mögött)*
+### Szakasz 6 — PÉNZ *(a D11 kapuja mögött)*
 
 Csak azután, hogy az identitás-réteg **élesben bizonyított** (D11). Tartalma: **D10**
 (alkotmányos kibocsátás, egyenlő osztalék), **D16** (lassú, megtámadható), **D18/8**
 (osztalék csak hitelesítettnek), **D20** (öröklés), **N10** paraméterei.
+
+### ⚠️ NINCS „CSALÁDI" ÉS „GLOBÁLIS" KOINO — egy program, ami nő (Csaba helyreigazítása, 2026-08-26)
+
+> „Nem teszünk különbséget családi meg globális koino között. **Bármelyik koino közösség
+> nőhessen akkorára, hogy több milliárd e-embert is tudjon kezelni.**" — Csaba
+
+**Ez a helyreigazítás másodszor hangzott el** (először 2026-08-25, a „menü" keret
+törlésekor), és most is jogos volt: a szakaszokat könnyű úgy olvasni, mintha egy „kicsi"
+és egy „nagy" változat volna. **Nincs két változat.**
+
+| Rossz olvasat | Helyes olvasat |
+|---|---|
+| „a családi koinóhoz elég az 1–2. szakasz" | **minden koino a teljes programot futtatja** |
+| „a 4–6. szakasz a nagy verzió" | a 4–6. szakasz mechanizmusa **minden koinóban ott van** |
+| „később kicseréljük a nagyra" | **nincs csere** — ugyanaz a kód, más terhelés alatt |
+
+**Ami a mérettel változik, az nem a program, hanem a TERHELÉS:**
+
+| Szakasz | Tíz embernél | Milliárdnál |
+|---|---|---|
+| 4. Lépték (Merkle) | a fa **ott van**, csak mindenki tárol mindent, és a bizonyíték triviális | szeletelés, önkéntes tárolók, kötegelés — a fa **ugyanaz** |
+| 5. Konszenzus | tíz aláírás egy köteg-gyökérre — **triviálisan teljesül** | érvényesítő-kiválasztás, befolyásolhatatlan véletlen |
+| 6. Pénz | ugyanaz a kibocsátás, kis számokkal | ugyanaz, nagy számokkal (D11 kapuja mögött) |
+
+> **A szakaszok a FEJLESZTÉS sorrendjét adják, nem a termék változatait.** Amikor a 4.
+> szakasz elkészül, **minden koino megkapja** — a tízfős is. Ott csak épp nem látszik,
+> mert nincs mit megoldania.
+
+⚠️ **A D21 figyelmeztetése ezért kétszeresen áll:** a szeletelés **illesztésének már az
+1–2. szakaszban engednie kell**, különben pontosan az a „majd kicseréljük" adósság
+keletkezik, amit a milliárdos cél kizár. **Milliárdra tervezünk — és az első kiadás is
+milliárdra képes program, csak kevesebb emberrel.**
 
 ### ⚠️ A SZAKASZOK NEM MÉRETRŐL SZÓLNAK — FÜGGŐSÉGI SORREND (Csaba pontosítása, 2026-08-25)
 
@@ -1482,6 +1802,21 @@ nincs pénz (F) bizonyított identitás nélkül (D11); nincsenek aláírt esem�
 nélkül (A).
 
 **A lefelé skálázás olcsó, a felfelé nem — tehát a CÉL a milliárdos lépték.**
+
+> #### ⚠️ Látszólagos ellentmondás a D22-vel — és a feloldása (2026-08-26)
+>
+> A fenti szakasz azt mondja: *„a kisebb közösség nem lépcsőfok"*. Az új sorrend viszont
+> épp azzal kezd, hogy **egy család koinózni tudjon**. Ez nem ellentmondás, mert **két
+> különböző dologról szól**:
+>
+> | | Amiről a 2026-08-25-i pontosítás szól | Amiről a D22 szól |
+> |---|---|---|
+> | | a **TERVEZÉS** léptéke | a **KIADÁS** sorrendje |
+> | Állítás | ne tervezzünk kicsire, amit aztán ki kell cserélni | az első működő kiadás természetesen kicsi lesz |
+>
+> A családi koino **nem egy egyszerűsített változat**, amit később lecserélünk — hanem
+> **ugyanaz a program, kevesebb emberrel**. A 4–6. szakasz nem „a nagy verzió", hanem
+> ugyanannak a programnak a **később aktiválódó rétegei** (a D11/D13b minta).
 
 #### Amit a milliárdos cél KONKRÉTAN megváltoztat
 
@@ -1514,9 +1849,20 @@ A cél globális; az építés sorrendjét a függőségek adják; a kiadás nem
 
 ### Hol lesz a koino „P2P"?
 
-**A D szakasztól.** De az **A–B** már önmagában nagy nyereség: *ellenőrizhető központi
-rendszer*, ahol a szerver **nem tud hazudni az azonosságról** — ez ma sehol nem így van, és
-a jelenlegi kódbázisban megépíthető.
+**Az első kiadástól — ez a D22.** *(A korábbi válasz „a D szakasztól" szólt, egy központi
+szerveres köztes állapotot feltételezve; az elesett.)*
+
+Pontosabban két lépcsőben, de mindkettő P2P:
+
+- **Szakasz 1 után:** a koino a **saját készülékeden** él, aláírt eseményekkel — szerver
+  nélkül, de még magányosan.
+- **Szakasz 2 után:** két készülék egymásra talál → **valódi közösségi P2P**, központi
+  szereplő nélkül.
+
+> Amit a régi terv az A–B szakasztól várt (*„a szerver nem tud hazudni az azonosságról"*),
+> az itt **erősebb formában** teljesül: nincs szerver, aki hazudhatna. Cserébe egy nehezebb
+> feladatot kaptunk — **az elérhetőséget** (hogy az adat eljusson a másikhoz) —, ami viszont
+> a D21 szerint **bizalmi problémából mérnöki problémává** vált.
 
 ### ⏸️ ÜZEMI DÖNTÉS: az éles koino szándékosan befagyasztva (Csaba, 2026-08-25)
 
@@ -1543,20 +1889,31 @@ hanem egymást.*
 
 ---
 
-## Híd-feladatok — amit a Fázis 1 készít elő a Fázis 2-höz
+## Híd-feladatok — ✅ A SZAKASZ LEZÁRVA (2026-08-26)
 
-*(Ezek a központi szerveres kódban készülnek el, amikor a kódolás-felfüggesztés
-feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők akkor.)*
-
-> ⏸️ **MIELŐTT BÁRMELYIKET VÁLASZTANÁD — OLVASD EL az „ÜZEMI DÖNTÉS: az éles koino
-> szándékosan befagyasztva" szakaszt** (a lépés-sorrendnél, feljebb). Röviden: Csaba
-> **nem gyarapítja az entitásokat és nem toboroz**, amíg az architektúra nem áll, mert a
-> P2P-váltás újraregisztrációt igényelhet.
+> ⛔ **EZ A LISTA TÖRTÉNETI. NE VÁLASSZ BELŐLE FELADATOT.**
 >
-> **Ebből következik a híd-feladatok RANGSORA:** az „új, látható funkció a mai 16 főnek"
-> most **NEM érv egy feladat mellett** — sőt, a befagyasztás szellemével megy szembe. Ami
-> most értékes: **a szerkezeti előkészítés** (H5, H6, H4) és a **kockázatmentes
-> átvizsgálás** (H2, H3, H8/2).
+> A híd-feladatok arra szolgáltak, hogy a **központi szerveres** Fázis 1 előkészítse a
+> Fázis 2-t. A **D22** (P2P az első kiadástól) és a **D24** (nincs adat-költöztetés,
+> új regisztráció) után a legtöbbjüknek **nincs kire és mire hatnia**.
+>
+> **A folytatás a lépés-sorrend Szakasz 1-e** („A HELYI KOINO"), nem ez a lista.
+
+### Állapot-összegzés
+
+| # | Feladat | Állapot | Miért |
+|---|---|---|---|
+| **H6** | Adat-osztályozás | ✅ **KÉSZ** (2026-08-26) | 224 mező, 5 réteg → [`adat_osztalyozas.md`](adat_osztalyozas.md). **Nyelv- és architektúra-független**, a Szakasz 1 adatmodelljének kiindulása |
+| **H5** | Entitások önhordozóvá tétele | ❌ **ELESETT** | **D24**: nincs adat-migráció, a 16 fő újra regisztrál |
+| **H1** | Küszöbváltozás-értesítés | ❌ **ELESETT** | a központi szerver funkciója lett volna; a D4 követelménye a Szakasz 1-ben teljesül majd, új alapon |
+| **H8/2** | Verzió-végpont | ❌ **ELESETT** | a futó **központi** példány önvallomása volt — nincs mit vallania |
+| **H8/1** | Tükör-másolat (Codeberg) | ❌ elvetve *(2026-08-25)* | lásd a részleteket lentebb: a repó nyilvános + AGPL, és a Codeberg ToU kizárja a koinót |
+| **H4** | Identitás-réteg leválasztása | 🔄 **BEOLVAD** | nem a régi kódból választjuk le, hanem eleve P2P-ként épül → **Szakasz 1 + 3** |
+| **H2** | Szavazat-titkosság 1. lépés | ⏸️ **HALASZTVA** | a befagyasztott éles rendszert védte volna; az elv a Szakasz 1-ben épül be (a szavazat aláírt esemény, nem szerver-rekord) |
+| **H3** | E-mail privát | ⏸️ **HALASZTVA** | *(átvizsgálva 2026-08-26: a `populate()` hívások mindenütt projekcióval mennek, e-mail csak a saját adatok válaszában van)* |
+| **H7** | Kormányzási ígéret dokumentum | 🟡 **NYITVA** | az egyetlen, ami **független** a D22-től — a Fázis 1 kormányzásáról szól, és a `kormanyzas.md` részben már fedi |
+
+*Az eredeti leírások alább maradnak, változatlanul — a döntések története is tudás.*
 
 - **H1. Küszöbváltozás-értesítés** (D4 kötelező eleme) — új értesítés-típus a meglévő
   értesítés-rendszerben: az entitás érvényes (medián) küszöbeinek jelentős változásáról
@@ -1752,3 +2109,68 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
     végső célra tervezéssel — ez az a hely, ahol sok projekt elvérzik. Feloldás:
     **milliárdra tervezzünk, függőségi sorrendben építsünk, és minden réteget adjunk ki,
     amint áll.**
+- **2026-08-26** — **A SZAKASZ 0 LEZÁRULT, ÉS A VÉGREHAJTÁS TERVE ÁTFORDULT.**
+  - **H6 elkészült** (az egyetlen befejezett híd-feladat): a mai adatmodell **224 mezője**
+    besorolva öt rétegbe — `mag` (8) / `lanc` (36) / `tartalom` (73) / `szamitott` (56) /
+    `helyi` (51) —, mellette `szemelyes` jelölés a D6-hoz (8 mező). Termék:
+    [`adat_osztalyozas.md`](adat_osztalyozas.md); a kódban séma-opcióként (`reteg`), és
+    egy ellenőrző eszközzel (`backend/tools/retegEllenorzes.js`), hogy a besorolás **ne
+    tudjon némán elavulni**. **A legfontosabb felismerés: a mai adatmodellben a tartós mag
+    majdnem üres** — amit ma az `eembers` unique indexe intéz, az nem bizonyíték, hanem a
+    szerver szava.
+  - **D22 — P2P AZ ELSŐ KIADÁSTÓL.** Csaba: *„a központi server részét most nem kell
+    fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* Ezzel **elesett a
+    „ne újraírás legyen, hanem feloldódás" vezérelv** (nem lehet feloldani egy szervert,
+    amire nem építünk), és helyébe lépett: **a régi koino a prototípus, ami tanított; az új
+    a KÉSZÜLÉKEN kezdődik** — örökölve belőle a domain-logikát és a felületet. Fogalmi
+    tisztázás rögzítve: **a P2P nem jelent nulla infrastruktúrát** (jelzőpont, továbbító
+    kell) — a különbség nem az, hogy van-e gép a hálózaton, hanem hogy **az igazság forrása
+    a szerver-e vagy az aláírás**.
+  - **D23 — a nyelv JavaScript marad.** Csaba kérdésére (a JS/HTML/CSS a *központi
+    weboldal* miatt lett választva — a D22 után újranyitható) az átvizsgálás: a
+    determinizmus (`BigInt`), a kriptográfia és a teljesítmény **nem nyelvi korlát**; a
+    mobil háttérfutás **platformi**, nem nyelvi; a böngésző-P2P viszont **a JS előnye**.
+    **A H6 mellékterméke a nyelvhatár térképe:** nem a programot kell nyelvre választani,
+    legfeljebb a `mag`-ot — az néhány száz sor, nem 200 fájl.
+  - **D24 — a meglévő adat sem költözik**, új regisztráció lesz (*„ez sem fontos"*). Ezzel
+    a **H5 elesett**, és vele a Szakasz 0 utolsó élő feladata. A veszteség kimondva: a mai
+    tartalom elvész — vállalt ár, épp ezért tartottuk kicsiben a közösséget.
+  - **A LÉPÉS-SORREND ÁTÍRVA** hat szakaszra, a régi A–F leképezésével: **1. A helyi koino**
+    (egy készülék, hálózat nélkül — A kulcs-rész + C) · **2. A kapcsolat** (D) ·
+    **3. A bizalmi háló** (A többi) · **4. A lépték** (B) · **5. Konszenzus** (E) ·
+    **6. Pénz** (F). **A függőségi sorrend NEM változott** — az indulási pont igen: nem a
+    szerverből kifelé, hanem **a készülékből**.
+  - ⚠️ **CSABA HELYREIGAZÍTÁSA (másodszor!):** *„nem teszünk különbséget családi meg
+    globális koino között — bármelyik koino közösség nőhessen akkorára, hogy több milliárd
+    e-embert is tudjon kezelni."* Először azt írtam, hogy „a családi lépték a 4–6. szakaszt
+    nem igényli" — ez **visszacsempészte a 2026-08-25-én már törölt „menü"-gondolkodást**.
+    A helyes megfogalmazás: **minden koino a teljes programot futtatja**; ami a mérettel
+    változik, az nem a program, hanem a **terhelés** (tíz embernél a Merkle-fa ott van,
+    csak triviális; a konszenzus ott van, csak magától teljesül). A szakaszok a
+    **fejlesztés** sorrendjét adják, nem a termék változatait — és amikor a 4. szakasz
+    elkészül, **a tízfős koino is megkapja**.
+- **2026-08-26 (2)** — **D25: A BELÉPŐ TÉR** — Csaba kifejtette a koinók sokaságának
+  szerkezetét, amiről a D12 eddig csak annyit mondott, hogy „a térkép nem kormányzat".
+  - **A teret a LESZÁRMAZÁS hozza létre** (családfa, nem globális regiszter): a független
+    indulás **új teret nyit**, egy meglévő közösség viszont a **saját terébe** hozhat létre
+    új koinókat — három módon: más paraméterekkel (D13/b) · új szabályrendszerrel (D13) ·
+    **program-szintű nézeteltérésből** (D9).
+  - 🔁 **A harmadik mód a KÜLÖNVÁLÁS egy szinttel feljebb** — amit entitás-szinten már
+    megépítettünk (S29), az itt a **közösség** szintjén ismétlődik. A D13/c mintájának
+    harmadik előfordulása: *ugyanaz a gépezet, megint egy szinttel feljebb.*
+  - ⭐ **A DÖNTÉS MAGVA: az azonosság közös, a jogosultság helyi.** A kulcs és a
+    **tanúsítások átjönnek** a tér koinói között; a **hitelesítettség küszöbe** viszont
+    koinónként eltér (Csaba példája: ahol 3 tanúsító elég, ott kész vagy; ahol 10 kell, ott
+    még 7-et kell szerezned). A **belépési szabály** is koino-paraméter: lehet **tér-nyílt**
+    (aki a térben bárhol tag) vagy **plusz meghívást igénylő**.
+  - 💰 **A pénz: nem a térhez, hanem a KOINÓKHOZ kötött.** Egy új koino **átviheti** ugyanazt
+    a pénzt, de **a döntés és a kibocsátás az eredeti koinóban marad**; saját, új pénz is
+    létrehozható; később a térben **kriptopiac** alakulhat ki. Ez a **D10/D16 hatókörét
+    pontosítja**: az alkotmányos kibocsátás és az egyenlő osztalék **egy koino belügye** —
+    a tér nem pénzügyi hatóság, ahogy kormányzati sem (D12).
+  - 💡 **Miért olcsó:** a D25 **nem hoz új mechanizmust** — a tartós mag (D14/D21) **eleve
+    téri, nem koino-szintű**, ezért a belépő tér ennek a **második hasznosítása**, külön ár
+    nélkül.
+  - **Négy nyitott kérdés felírva:** (1) a koino-tagság a tartós mag része-e — ettől függ,
+    hogy a **létszám szerinti besorolás hamisítható-e**; (2) osztalék-aszimmetria az átvett
+    pénznél; (3) a tér elárasztása üres koinókkal; (4) a kihalt koino sorsa.
