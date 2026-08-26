@@ -191,7 +191,7 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **1** ✅ | **Kulcs-réteg** — kulcspár létrehozása, tárolása, mentése, `persist()` | van azonosságod | a felületen látod a nyilvános kulcsod; újratöltés után is megvan |
 | **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.html`](../koino/meres/kanonikusProba.html) — **14/14 rendben** |
 | **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.html`](../koino/meres/esemenyProba.html) — **13/13 rendben** |
-| **4** | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | újratöltés után is ott a lánc, hézag nélkül |
+| **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
 | **5** | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | a számított állapot megjelenik |
 | **6** | **Felület** — a pakli és a kártya ráültetése | a megszokott koino-kép | ugyanaz, mint ma, de helyi adatból |
 | **7** | **A teljes kör** — tartalom → tudatpont → javaslat → szavazat → **egyezmény** | **működő koino egy gépen** | végigjátszod magadnak |
