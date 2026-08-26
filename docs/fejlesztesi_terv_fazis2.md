@@ -22,6 +22,91 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 
 ---
 
+## TERVEZÉSI ALAPELV: egyszerű és változtatható > összetett és teljes (2026-08-25, Csaba)
+
+> „A koinóban az a jó, hogy nem kell az első verziónak tökéletesnek lennie, mert tud
+> fejlődni, sokszorozódni." — Csaba
+
+Ez nem megjegyzés, hanem **alapelv, ami újra és újra dönt helyettünk.** A tervezés során
+többször kísértett, hogy egy ritka támadás miatt építsünk be még egy védelmi réteget — és
+minden ilyen réteg terheli a becsületes többséget.
+
+A **D12/D13** gyakorlati hozadéka épp az, hogy nem kell: ami hiányzik, azt egy későbbi
+verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipróbálja**.
+
+**Gyakorlati szabály:** ami ritka és nem végzetes, azt **felírjuk, de nem építjük meg.**
+*(Így járt a „csendes halál" foltja a D18/5-ben, és így az elhalványulás elvetése is.)*
+
+---
+
+## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-25)
+
+**20 tervezési döntés (D1–D20) áll. 2026-08-25-én három elméleti hidat építettünk**
+(kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
+át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
+
+Indoka szó szerint: *„ha az lesz a vége, hogy ez lehetetlen, akkor tényleg nem
+világmegváltás lesz belőle, hanem csak esetleg egy hasznos program, és akkor úgy is állok
+hozzá."*
+
+### A nyitott kérdések állapota
+
+| # | Kérdés | Állapot | Mi oldotta meg |
+|---|---|---|---|
+| N1 | Tartós mag | 🟡 **alakja megvan** | mi: D14 · hogyan írható: D17 · replikáció: alak megvan, terv nincs |
+| N2 | GDPR ↔ megmásíthatatlanság | ✅ **lezárva** | D14 (a felejtés az alapállapot) |
+| N3 | Titkos-ellenőrizhető szavazás | 🟡 **átfogalmazva** | kicsiben elvi korlát, nagyban létező tech |
+| N4 | Tanúsítási szabályok | ✅ **lezárva** | D18 |
+| N5 | Forráskód-kormányzás | ✅ **lezárva** | D12, D13 |
+| N6 | Elérhetőség / replikáció-padló | 🟡 **fele lezárva** | a „szellem-kártya" szabály kiváltotta; a botok/napirend-manipuláció nyitva |
+| N7 | Védelmi rétegek | ✅ lezárva (2026-07-16) | D5–D7 |
+| N8 | Személy-alapú konszenzus | 🟡 **nagyrészt** | D17; nyitva az érvényesítő-kiválasztás |
+| N9 | Elismerés + kinevezés | 🟡 kiterjesztve | D15 (helyreállító bizottság), D18/3; a terv hiányzik |
+| N10 | Pénz-paraméterek | 🟡 részben | D16 (tempó), D18/8 (osztalék), D20 (öröklés); a paraméterek nyitva |
+| N11 | Emberiség-lépték | 🟡 elemezve | verdikt: szeletelt architektúrával megvalósítható |
+
+**Négy kérdés teljesen lezárult** (N2, N4, N5, N7), a többi részben.
+
+### Ami VALÓBAN nyitva maradt
+
+1. **A tartós mag replikációja** — az alak megvan (ujjlenyomat + ellenőrizhető bizonyíték),
+   a konkrét terv nincs *(N1)*
+2. **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen *(N8)*
+3. **Nagy léptékű titkos szavazás** — technológia-választás *(N3)*
+4. **Botok, napirend-manipuláció** — ez társadalmi probléma, nem technikai *(N6)*
+5. **Az elismerés-rendszer és a kinevezés terve** *(N9)*
+6. **A pénz paraméterei** *(N10)* — de a **D13/b** szerint ezeket nem kell eltalálni
+7. **A teljes mérnöki munka** — ami nem elméleti kérdés
+
+### A legfontosabb szerkezeti felismerések
+
+- **A tartós mag és a globális konszenzus ugyanaz a halmaz** (D17) — amikor a D14
+  összezsugorította a magot, **három probléma zsugorodott vele**: a GDPR-ütközés, a
+  konszenzus és a replikáció.
+- **A konszenzus biztonsága = az identitás-réteg biztonsága** (D17) → az identitás **a
+  gerinc**, elsőként kell állnia; ez szabja meg a Fázis 2 sorrendjét.
+- **Nem öt problémánk van, hanem egy, ami ötször jelenik meg: a KÖZTES MÉRET** (D18/0) —
+  ahol a közvetlen ismeret már nem véd, a gráf szerkezete még nem. Egyetlen stratégiai
+  válasz: a D11/D13b minta (a drágább képességek a háló erősödésével nyílnak).
+- **A „lassú, nyilvános, megtámadható" mintát háromszor mondtuk ki** (D15, D16, D18) — és a
+  **D19** adja meg a hiányzó „hol"-t.
+
+### Az őszinte mérleg
+
+> **Nem ütköztünk falba egyetlen kritikus ponton sem.** Egyetlen valódi kutatási függés
+> maradt — az **identitás** —, és annak a nehezebbik felét az **EU csinálja meg** (EUDI,
+> jogi kötelezettséggel), a másik felére pedig van élő precedens (a Duniter bizalmi hálója
+> működik, csak kicsiben: 8 449 tag 6,5 év alatt).
+
+**A kutatási kockázat nagyrészt mérnöki kockázattá és paraméter-választássá alakult.**
+
+**De:** az elméleti híd **nem működő rendszer**. A D17–D20 levezetése **saját
+következtetés**, nem kész szakirodalom — kódolás előtt elosztott rendszerek irodalmához
+kell mérni. A vita 9. pontjának záró mondata változatlanul érvényes: *a bizonyítást a
+működő közösség adja majd.*
+
+---
+
 ## Összegzés — a vita döntései egy pillantásra (2026-07-17)
 
 | # | Döntés | Egy mondatban |
@@ -43,7 +128,9 @@ szándékát", nem „a társadalmi többség döntését". A közvetlen dönté
 | D15 | Kulcs | A kulcs HITELESÍT, nem titkol — a lopás minden kára visszafordítható, kivéve a pénzt. A helyreállítás TÖBB FÜGGETLEN TANÚBÓL áll (háló + opcionálisan EUDI + opcionálisan választott bizottság); a bizottság **tanú, nem hatóság**. |
 | D16 | Pénz-tempó | Az irreverzibilitás DÖNTÉS, nem törvény: a nagyobb átutalás késleltetve, nyilvánosan, az ablakban megtámadhatóan megy — értesítéssel, **külön csatornán**. A kulcslopás így túlélhető. |
 | D17 | Konszenzus | A globális egyetértés hatóköre = a tartós mag (D14), semmi más; minden egyéb saját lánc-következetesség + determinisztikus számítás. **A konszenzus biztonsága = az identitás-réteg biztonsága** → az identitás a gerinc, elsőként kell állnia. |
-| D18 | Identitás | **Pozíció, nem darabszám** (távolság-szabály, Duniter-precedens) + **folytonos igazolás** (kockázati korlát, SOHA nem hang). Lejárat helyett **öregedés**, megújítás helyett **tevékenység = életjel**; a halál megtámadható tanúsítás. ⚠️ Az aláírás a KULCS használatát bizonyítja, nem az EMBER életét (kulcs-öröklés) → az öregedés a szerkezeti védelem. **Osztalék csak hitelesítettnek** — birtoklás, keresés, befektetés mindenkinek. |
+| D18 | Identitás | **Pozíció, nem darabszám** (távolság-szabály, Duniter-precedens) + **folytonos igazolás** (kockázati korlát, SOHA nem hang). Megújítás helyett **tevékenység = életjel**; a halál megtámadható tanúsítás. ⚠️ Az aláírás a KULCS használatát bizonyítja, nem az EMBER életét (kulcs-öröklés) → a védelem a D20 ösztönző-szerkezete. **Osztalék csak hitelesítettnek** — birtoklás, keresés, befektetés mindenkinek. |
+| D19 | Rendszer-tartalom | A program **BEJELENTŐ, nem BÍRÓ**: ellentmondásnál tartalmat hoz létre, a közösség dönt, egyezmény zárja. Ez adja meg a D15/D16/D18 hiányzó „hol"-ját. Zárt lista, felismerhető, gazdát kap, határidőre alapértelmezett kimenet. A **vita** a tartalmi rétegben marad, csak a **kimenet** megy a magba. |
+| D20 | Öröklés | **Pénz igen; tudatpont és azonosság soha.** Nem csak méltányosság: **ösztönző-védelem a kulcs-öröklés ellen** — a családot cinkosból egymás őrzőjévé alakítja. Az egyenlő osztalék miatt a dinasztikus koncentráció magától gyengül. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -159,10 +246,33 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
     tudatpontot követik.
   - ✅ **HOGYAN írható:** a **D17** vázolja — személy-alapú érvényesítés, lassú
     véglegességgel (D16); a hatókör olyan kicsi, hogy a konszenzus ritkán fut.
-  - ❌ **NYITVA: hogyan replikálódik mindenhová.** A tartalmi rétegre ezt az N6/D14
-    megoldja (a tudatpont a tárolási térkép) — de a tartós magra **épp az a lényeg, hogy
-    NE a tudatponthoz kötődjön**, hiszen senki nem tesz rá pontot. Kell tehát egy külön,
-    garantált replikációs szabály erre a nagyon kicsi halmazra. Kapcsolódik: vita 4–5. pont.
+  - 🟡 **HOGYAN replikálódik: a megoldás ALAKJA megvan, a részletei nem (2026-08-25).**
+    A tartalmi rétegre ezt az N6/D14 megoldja (a tudatpont a tárolási térkép) — de a tartós
+    magra **épp az a lényeg, hogy NE a tudatponthoz kötődjön**, hiszen senki nem tesz rá
+    pontot.
+    - **MIÉRT KELL KICSINEK LENNIE — a valódi ok** (Csaba kérdésére): nem a tárhely ára. A
+      mag az, amit **mindenkinek** tárolnia kell, mert amit nem tárolsz, azt nem tudod
+      magad ellenőrizni — meg kell kérdezned valakit, aki tárolja. **És aki olyat tárol,
+      amit más nem tud ellenőrizni, az kapuőr.** Ha a mag akkorára nő, hogy egy átlagos
+      telefon nem bírja, akkor csak a jól felszerelt gépek tartják → **ők lesznek az
+      érvényesítők → a koinónak megint lesz teteje → a D12 bukása.** *(A Bitcoin
+      gyakorlatilag ezen bukott meg: a lánca akkorára nőtt, hogy teljes csomópontot már
+      kevesen futtatnak.)*
+    - **MÉRET-BECSLÉS (2026-08-25):** egy azonosság-rekord a magban durván **~600 bájt–1 KB**
+      (nyilvános kulcs 32 B + állapot/dátumok ~20 B + néhány tanúsítás hivatkozással és
+      aláírással ~500 B). Ebből: család (6 fő) 6 KB; falu (500) 0,5 MB; város (100 000)
+      100 MB; **ország (10 millió) ~10 GB — ez már sok egy telefonnak.** Vagyis **még a
+      minimális mag is méret-problémába fut, jóval a milliárd előtt.**
+    - **A MEGOLDÁS ALAKJA:** nem kell mindenkinek a TELJES magot tárolnia ahhoz, hogy senki
+      ne lehessen kapuőr. Elég, ha mindenki tárol egy **pici ujjlenyomatot** az egészről
+      (néhány tíz bájt), és amikor tudni akarod, hogy „X regisztrált-e", **bizonyítékot**
+      kérsz valakitől, aki tárolja. A trükk: a bizonyíték **ellenőrizhető az ujjlenyomat
+      ellenében**, tehát **a tároló nem tud hazudni** — az adat kevés helyen van, de senki
+      nem kapuőr, mert a kapuőrséghez hazudni kellene tudni. Bevált technika (a könnyű
+      kliensek így működnek).
+    - ❌ **Ami hiányzik:** a konkrét terv — milyen szerkezet, ki tárolja a teljes másolatot
+      és hány helyen, hogyan frissül az ujjlenyomat, mi történik, ha senki nem válaszol.
+      Kapcsolódik: vita 4–5. pont, N11.
 - **N2. ~~Kilépési jog kontra örök elszámoltathatóság~~** — ✅ **LEZÁRVA (2026-08-25)** a
   **D14** által. A kérdés az volt, hogyan fér össze a GDPR törléshez való joga a
   megmásíthatatlan, P2P-replikált adatbázissal. A D14 megszünteti az ütközést: **ha semmi
@@ -745,24 +855,29 @@ lazábban indulhat, és a tét növekedésével szigorodhat.**
 | Tanúsítás belépéshez | 5 | ✅ **elv megtartva**, de az érték **közösségi paraméter** (medián, D4) — kicsiben az 5 majdnem egyhangúság lenne, tehát vétójog, nem küszöb |
 | Max. tanúsítás / tag | 100 (élethosszig) | ✅ **megtartva**, de **időszakonként**, nem élethosszig; az értéket a közösség adja (medián) |
 | Min. szünet két tanúsítás közt | 5 nap | ❌ **ELVETVE** — egy tanár 30 diákkal 150 napig onboardolna; a normális csoportos belépést bünteti (osztály, munkahely). A távolság-szabály végzi az érdemi munkát, ez csak másodlagos védelem |
-| Tanúsítás lejárata | 2 év, megújítandó | ❌ **ELVETVE** → helyette **ÖREGEDÉS** (lásd 5.) |
+| Tanúsítás lejárata | 2 év, megújítandó | ❌ **ELVETVE, pótlás nélkül** (lásd 5.) |
 | Tagság-megújítás | évente, különben kiesés | ❌ **ELVETVE** → helyette **TEVÉKENYSÉG = ÉLETJEL** (lásd 6.) |
 
-#### 5. Lejárat helyett ÖREGEDÉS
+#### 5. A TANÚSÍTÁS NEM JÁR LE, ÉS NEM IS HALVÁNYUL (Csaba döntése, 2026-08-25)
 
-A cél jó (egy 2010-es tanúsítás ne érjen annyit 2030-ban), a módszer rossz (mindenkinek
-folyamatos házimunka). Megoldás: **a tanúsítás nem jár le, hanem a SÚLYA csökken az
-idővel.**
+> „Akiről egyszer bebizonyosodott, hogy valódi ember, az tartson ki addig, ameddig meg nem
+> hal, és a környezete ezt jelzi." — Csaba
 
-| | Lejárat | Öregedés |
-|---|---|---|
-| Mit kell tenni? | 2 évente kézzel megújítani | **semmit** |
-| Mi történik? | egyik napról a másikra megszűnik | fokozatosan kevesebbet ér |
-| Ki érzi? | mindenki, folyamatosan | senki |
+**Két megoldást is elvetettünk**, és a második az enyém volt:
+- ❌ a Duniter **2 éves lejárata** — folyamatos házimunkát ró mindenkire
+- ❌ Claude javaslata, az **elhalványulás** (a tanúsítás súlya csökken az idővel) — szintén
+  elvetve, és Csaba érve jobb volt: **ez az összes felhasználót terhelte volna egy ritka
+  támadás miatt** (klasszikus biztonsági hiba), és filozófiailag is téves: **hogy valaki
+  valódi ember, az TÉNY, nem előfizetés.** Nem jár le.
 
-Folytonos — illik a 3. ponthoz (a hitelesség fokozat). A **visszavonás** marad kifejezett
-cselekvés. *(Technikai következmény: a távolság-szabályhoz kell egy súly-küszöb — mi
-számít még „élő" élnek a gráfban. Paraméter, nem akadály.)*
+**A helyette választott elv: kivétel-alapú, nem folyamatos.** A rendszer nem terheli a
+normális esetet, hanem **akkor néz oda, amikor tényleg ellentmondás van** (7. pont). A
+**visszavonás** marad kifejezett cselekvés.
+
+> **Felírva, de NEM megépítve** *(a lenti tervezési alapelv szerint)*: ha a „csendes halál"
+> valaha gondot okoz, van olcsó folt — a rendszer **ritkán** megkérdezhetné a tanúkat:
+> *„X köztetek van még?"* — egyetlen koppintás, nem újra-tanúsítás. Nem elhalványulás,
+> csak egy néha feltett kérdés.
 
 #### 6. Éves megújítás helyett: A TEVÉKENYSÉG AZ ÉLETJEL
 
@@ -813,27 +928,27 @@ hanem tömeges.
    vitatja, az nem automatikus felmentés: **újra-tanúsítás** következik — független
    tanúknak kell megerősíteniük, hogy a személy **jelen van**. Aki valóban él, azt látják
    az emberek; egy örökölt kulcs nem tud embereket előállítani.
-2. **A szerkezeti védelem az ÖREGEDÉS** (5. pont) — és most derül ki, hogy ez nem csak
-   kényelmi megoldás volt. A halott tanúsításai **elhalványulnak**, és senki nem újítja meg
-   őket, mert nincs kit megerősíteni. Az örökös **birtokolhatja a kulcsot, de nem tudja
-   rávenni a hálót, hogy továbbra is igazoljon egy jelen nem lévő embert.** Az örökölt
-   azonosság magától lecsúszik: előbb a pénz-korlátja esik (3. pont), végül **alvó** lesz
-   (6. pont).
-   > **Utólagos belátás a Duniter-ről:** a 2 éves lejárat, amit a 4. pontban „túlzásnak"
-   > minősítettünk, RÉSZBEN pontosan ezt védte. Az öregedés megtartja a védelmet a teher
-   > nélkül — de csak azért működik, mert **súlyozott újra-megerősítést** követel, nem
-   > puszta kulcs-aktivitást.
-3. **Opcionális erősítés EU-polgároknál:** az EUDI-tárcát az állam a halotti
+2. **A PÉNZ BEFAGY az ellentmondás idejére** (Csaba). Ha egyszerre van halál-bejelentés és
+   kulcshasználat, a **pénzmozgás megáll**, amíg a közösség nem dönt. A többi (szavazás,
+   tartalom) mehet — az mind visszafordítható (D15 táblája). **Csak azt fagyasztjuk, ami
+   nem az.** A vita helye: **D19**.
+3. **A FŐ VÉDELEM AZ ÖRÖKLÉS → D20.** Nem technikai, hanem **ösztönző-szerkezeti**: ha van
+   tisztességes út a nagymama pénzéhez, akkor a tisztességtelennek versenytársa támad. A
+   testvérek, akik a bejelentett halálból részt kapnának, **érdekeltté válnak a
+   bejelentésben** — a család cinkosból egymás őrzőjévé alakul. A csaláshoz **mindenkinek
+   együtt kell hazudnia**, és mindenki részt kérne.
+4. **Opcionális erősítés EU-polgároknál:** az EUDI-tárcát az állam a halotti
    nyilvántartásból érvényteleníti — ez **további független tanú** lehet (a D15 szabálya
    szerint: egy a több közül, önmagában soha nem elég).
 
-**Ami őszintén marad:** a halál és a tanúsítások elhalványulása között van egy **ablak**,
-amíg az örökölt azonosság teljes értékű. Ennek hossza az öregedési ütem paramétere
-(→ D13/b). **És általánosabban: ezt teljesen kizárni nem lehet** — bármilyen tisztán
-digitális azonosság átadható. Csak két valódi védelem létezik: (a) időszakos
-**jelenlét**-bizonyítás (személyes, biometrikus vagy társas), vagy (b) az azonosság
-**magától veszítsen értéket**, ha nem újítják meg. A koino a **(b)**-t választja, és az
-(a)-t opcionálisan, csak a nagy tétű képességekhez.
+**Ami őszintén marad:** a védelem arra a pillanatra épül, amikor **valaki bejelenti a
+halált**. Ha az egész család hallgat, nincs mi kiváltsa — a D20 ezt teszi drágává, de nem
+lehetetlenné. **És általánosabban: ezt teljesen kizárni nem lehet** — bármilyen tisztán
+digitális azonosság átadható. Csak két valódi védelem létezik: **(a)** időszakos
+**jelenlét**-bizonyítás (személyes, biometrikus vagy társas), vagy **(b)** az azonosság
+**magától veszítsen értéket**, ha nem újítják meg. A koino **egyiket sem** választja
+alapesetben (mindkettő terhelné a becsületes többséget) — helyette a **kivétel-alapú
+D19-D20 kombinációt**, az (a)-t pedig opcionálisan meghagyja a nagy tétű képességekhez.
 
 *(Összefüggés: ha valaki elvesztette a kulcsát ÉS halottnak nyilvánítják, aláírni nem tud
 — akkor a D15 helyreállítási útján kell visszajönnie. A két mechanizmus egymásba
@@ -909,6 +1024,83 @@ a „nagyban a gráf megvéd" állítás **csak ~8 000 fős léptékben bizonyí
 2. A **visszavonás** pontos mechanizmusa (a Duniter dokumentációja, amit elértünk, nem
    részletezi — utánanézendő).
 3. A **felhatalmazott kibocsátók** audit-folyamata (a D1-ből maradt).
+
+### D19. A rendszer BEJELENTŐ, nem BÍRÓ (2026-08-25, Csaba)
+
+*Ez a döntés egy lyukat tömít be, amit HÁROMSZOR nyitottunk ki anélkül, hogy észrevettük
+volna.*
+
+A **D15** (kulcs-helyreállítás), a **D16** (pénzmozgás) és a **D18** (halál-bejelentés)
+mind ugyanazt mondja: *„lassú, nyilvános, megtámadható"*. Egyikük sem mondta meg, **HOL**.
+Hol látja meg bárki? Hol tiltakozik? Hol vitatkoznak róla?
+
+> **A válasz: a koinóban magában.** Ellentmondás vagy döntést igénylő kivétel esetén **a
+> program létrehoz egy TARTALMAT**, ami jelzi a helyzetet; a közösség megvitatja, és
+> **egyezmény zárja le.**
+
+Ettől a koino olyat csinál, amit kevés rendszer: **nem eldönti a kivételes eseteket, hanem
+megkérdezi.** A program nem bíró, hanem bejelentő.
+
+**Négy kötelező korlát:**
+
+| # | Korlát | Miért |
+|---|---|---|
+| 1 | **Zárt lista** — csak meghatározott események válthatják ki | különben egy módosított koino-verzió (D13) elárasztaná a napirendet „rendszer-üzenetekkel" — ami **napirend-manipuláció**, épp az N6 másik fele |
+| 2 | **Felismerhető** — látszódjon, hogy rendszer hozta létre | ne lehessen emberi véleménynek álcázni |
+| 3 | **Gazdát kap** — az érintettek és tanúik értesítést kapnak | a D14 szerint gazdátlan entitás eltűnik; itt az érintetteknek amúgy is ez a legfontosabb |
+| 4 | **Alapértelmezett kimenet határidőre** | ha a közösség nem dönt, a **nem-döntés nem lehet a támadó nyeresége**: a pénz marad fagyasztva, a többi feloldódik |
+
+**Tárolás — a mag NEM nő (Csaba és Claude egyeztetése):**
+
+| Mi | Hova | Miért |
+|---|---|---|
+| **A vita** (a tartalom, a hozzászólások, az érvek) | ❌ **normál tartalmi réteg** | ha lezárult és senkit nem érdekel, elfelejthető (D14) |
+| **A kimenet** („ez az azonosság halott") | ✅ **a magba** | de **nem új adatfajtaként**: néhány mező az azonosság-rekordon, ami eddig is a magban élt (állapot, mikor változott, kik tanúsították, a lezáró egyezmény azonosítója) |
+
+*(Nagyságrend: egy vitatott halál kimenete ~100 bájt. Halál ritka, vitatott halál még
+ritkább — elhanyagolható.)*
+
+**Ez ma nem létezik:** a koino ma értesítést tud létrehozni, és a cron le tud zárni
+javaslatokat — de **tartalmat semmi nem hoz létre magától**. Valódi új képesség.
+
+**Alkalmazási esetek (a zárt lista jelöltjei):** vitatott halál-bejelentés (D18),
+kulcs-helyreállítási kérelem (D15), megtámadott pénzmozgás (D16). További jelöltek később
+vizsgálandók — a lista **bővítése maga is közösségi döntés** kell legyen.
+
+### D20. Öröklés: a pénz igen, a tudatpont és az azonosság soha (2026-08-25, Csaba)
+
+*Ez egyszerre válasz az N10 egy nyitott kérdésére („elhunyt e-ember pénzének sorsa") és
+**ösztönző-szerkezeti védelem a D18 kulcs-öröklés támadása ellen**.*
+
+| Mi | Örökölhető? | Miért |
+|---|---|---|
+| **Azonosság** | ❌ soha | ez maga a támadás, amit kizárunk |
+| **Tudatpont** | ❌ nem | nem vagyon, hanem **figyelem** — mindenkinek ugyanannyi van; örökölni megtörné az egyenlőséget. A halott pontjai felszabadulnak (D14), és ami csak neki volt fontos, elhalványul vele |
+| **Pénz** | ✅ igen | valódi vagyon: megkeresték vagy megvették. Az elhunyt rendelkezhet róla; ha nem rendelkezett, **egyenlően oszlik a közvetlen leszármazottak közt** |
+
+#### Miért VÉDELEM ez, nem csak méltányosság
+
+> **Ha van tisztességes út a nagymama pénzéhez, akkor a tisztességtelen útnak versenytársa
+> támad.**
+
+| | Öröklés nélkül | Örökléssel |
+|---|---|---|
+| Az örökös, aki tartja a kulcsot | nyer mindent, senki nem veszít vele | **a testvérei elől lopja el a részüket** |
+| A többi leszármazott | nincs érdekük szólni | **érdekük bejelenteni a halált** |
+| A csalás feltétele | egy ember hallgat | **mindenkinek együtt kell hazudnia** — és mindenki részt kérne |
+
+**A családot cinkosból egymás őrzőjévé alakítja.** Nem kell felderíteni semmit — elég, ha
+az érdekek szétválnak. *(Csaba: „még így is fenntarthatják a profilt, de csökken a haszon,
+már csak azért is, mert több embernek kell hazudnia érte, és ezért vélhetően mindenki
+osztalékot kérne.")* **A támadás nem lehetetlen, csak nem éri meg** — a koino végig ezt
+csinálja.
+
+#### A dinasztikus vagyon ellenvetése — és miért gyengébb itt
+
+A szokásos ellenérv az öröklés ellen a vagyon-koncentráció. A koino-pénznél ez **magától
+gyengül**: az egyenlő osztalék (D10) folyamatosan új pénzt teremt mindenkinél, tehát a
+régi vagyon **relatív értéke magától csökken**. Fix mennyiségű pénznél (Bitcoin) az
+öröklés örökre koncentrál — itt nem.
 
 ---
 
@@ -1215,3 +1407,26 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
   működik, de lassú; a „nagyban a gráf megvéd" állítás csak ~8 000 fős léptékben
   bizonyított.
   **Következő:** N1 maradéka (a tartós mag replikációja) + a Fázis 2 sorrendjének terve.
+- **2026-08-25 (6)** — **A D18 finomítása Csaba két beavatkozása nyomán, és két új döntés.**
+  - **Csaba lyukat talált egy percekkel korábban leírt szabályban:** a *„aki alá tud írni,
+    az él"* HIBÁS — az aláírás a KULCS használatát bizonyítja, nem az EMBER életét
+    (haldokló nagyszülő átadja a kulcsát → az örökösnek plusz profilja lesz; önkéntes,
+    tehát semmilyen lopás-felismerés nem fogja meg).
+  - **Csaba elvetette Claude javítását is** (a tanúsítás elhalványulását): *„akiről egyszer
+    bebizonyosodott, hogy valódi ember, az tartson ki, ameddig meg nem hal"* — és az érve
+    jobb volt: az elhalványulás **az összes felhasználót terhelte volna egy ritka támadás
+    miatt**, és filozófiailag is téves (a személy-mivolt tény, nem előfizetés).
+  - **Helyette: kivétel-alapú védelem.** Ellentmondásnál (halál-bejelentés + kulcshasználat)
+    a **pénz befagy**, és a rendszer **tartalmat hoz létre** a vitának → **D19**.
+  - **D20 (öröklés)** — Csaba ötlete, és ez a fő védelem a kulcs-öröklés ellen: ösztönző-
+    szerkezeti, nem technikai. A pénz örökölhető (rendelkezés szerint, vagy egyenlően a
+    közvetlen leszármazottak közt), a **tudatpont és az azonosság soha**. A család
+    cinkosból **egymás őrzőjévé** alakul.
+  - **N1: a mag mérete a valódi korlát** (Csaba kérdésére) — nem a tárhely ára, hanem hogy
+    egy átlagos telefon teljes értékű résztvevő maradhasson, különben kapuőrök keletkeznek
+    (D12 bukása). Becslés: ~1 KB/fő → 10 milliós koinónál ~10 GB, **ami már sok**. A
+    megoldás alakja: **ujjlenyomat + ellenőrizhető bizonyíték** (a tároló nem tud hazudni).
+  - **Új tervezési alapelv rögzítve:** *egyszerű és változtatható > összetett és teljes* —
+    ami ritka és nem végzetes, azt felírjuk, de nem építjük meg.
+  - **Új szakasz a dokumentum elején: „HOL TARTUNK"** — a Fázis 2 tervezés állapota
+    egy helyen.
