@@ -1548,6 +1548,16 @@ hanem egymást.*
 *(Ezek a központi szerveres kódban készülnek el, amikor a kódolás-felfüggesztés
 feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők akkor.)*
 
+> ⏸️ **MIELŐTT BÁRMELYIKET VÁLASZTANÁD — OLVASD EL az „ÜZEMI DÖNTÉS: az éles koino
+> szándékosan befagyasztva" szakaszt** (a lépés-sorrendnél, feljebb). Röviden: Csaba
+> **nem gyarapítja az entitásokat és nem toboroz**, amíg az architektúra nem áll, mert a
+> P2P-váltás újraregisztrációt igényelhet.
+>
+> **Ebből következik a híd-feladatok RANGSORA:** az „új, látható funkció a mai 16 főnek"
+> most **NEM érv egy feladat mellett** — sőt, a befagyasztás szellemével megy szembe. Ami
+> most értékes: **a szerkezeti előkészítés** (H5, H6, H4) és a **kockázatmentes
+> átvizsgálás** (H2, H3, H8/2).
+
 - **H1. Küszöbváltozás-értesítés** (D4 kötelező eleme) — új értesítés-típus a meglévő
   értesítés-rendszerben: az entitás érvényes (medián) küszöbeinek jelentős változásáról
   a tudatpont-tulajdonosoknak. Az infrastruktúra (beállítás-cascade, postafiók, badge)
@@ -1566,13 +1576,24 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
 - **H6. Adat-osztályozás előkészítése** — már a Fázis 1 adatmodelljében jelölni, mi
   tartozik a tartalmi rétegbe és mi a tartós magba (D3), hogy a szétválás ne utólagos
   szétszálazás legyen.
-- **H8. Kód-terjesztés függetlenítése a GitHubtól** (2026-08-25) — két lépés, mindkettő
-  olcsó:
-  1. **Tükör-másolat egy második, független szolgáltatónál** (jelölt: Codeberg — nonprofit,
-     európai). Egyetlen további `git push`, és a koino kódja két, egymástól független
-     helyen van. *(A nyilvános repó + AGPL már ma is azt jelenti, hogy minden klón teljes
-     biztonsági mentés — ez csak felezi a kiesés esélyét.)*
-  2. **Verzió-végpont**: a futó példány mondja meg, melyik commitból épült. Ma semmiből nem
+- **H8. Kód-terjesztés függetlenítése a GitHubtól** (2026-08-25) — **egy** lépés maradt:
+  1. ❌ **TÜKÖR-MÁSOLAT: ELVETVE (Csaba, 2026-08-25) — „nem kell tükör".** Indok: a repó
+     2026-08-25 óta **nyilvános, AGPL-3.0 alatt**, tehát **minden klón teljes biztonsági
+     mentés a történettel** — a kód nem tud elveszni akkor sem, ha a GitHub önkényesen
+     törli (a helyi példány teljes: 189 commit, az első commitig).
+     > ⚠️ **A Codeberg NEM jelölt — a felhasználási feltételeik kizárják a koinót.**
+     > (Ellenőrizve 2026-08-25, a ToU szövegéből, MIUTÁN Csaba fiókot nyitott ott.) Két
+     > kikötés is talál: *„You must not share projects that mostly consist of code written
+     > by 'generative AI'-tools (including services such as Claude…)"* — a koino kódja
+     > jelentős részben így készült, és a `Co-Authored-By: Claude` sorok ezt láthatóvá is
+     > teszik; valamint *„Content that harms the reputation of Codeberg, such as
+     > cryptocurrency related projects"* — a D10/D11 pénzterv nyilvánosan olvasható a
+     > repóban. **Mindkettő tiltás, nem feltétel.** Ha valaha mégis kell tükör, **előbb a
+     > célszolgáltató feltételeit kell elolvasni** — ez a hiba egyszer már megtörtént.
+     > *(Tanulság általánosabban: az „LLM-mel írt kód" korlátozása kezd megjelenni a
+     > kódmegosztóknál — a koino fejlesztési módja emiatt hosszabb távon is szempont.)*
+  2. **Verzió-végpont** — ✅ **EZ MARADT AZ EGYETLEN H8-FELADAT.** A futó példány mondja meg,
+     melyik commitból épült. Ma semmiből nem
      állapítható meg, hogy a koino.hu a közzétett kódot futtatja-e — elég egy elfelejtett
      deploy, és a GitHub meg az éles kód némán szétcsúszik. Nem bizonyíték (hazug szerver
      hazudhat), de a VÉLETLEN szétcsúszást kizárja, és megteremti a szokást, hogy ez
