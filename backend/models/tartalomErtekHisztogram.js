@@ -22,6 +22,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // ----- ENTITÁS AZONOSÍTÓ -----
   // Melyik entitáshoz tartoznak ezek az aggregált adatok
   entitasId: {
+    reteg: 'szamitott',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     refPath: 'entitasTipus',               // Polimorf referencia
     required: true                         // Kötelező mező
@@ -30,6 +31,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // ----- ENTITÁS TÍPUSA -----
   // Meghatározza, melyik kollekcióra mutat az entitasId.
   entitasTipus: {
+    reteg: 'szamitott',  // H6
     type: String,
     enum: ENTITAS_TIPUSOK,
     required: true,
@@ -40,6 +42,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Bucket-ek: hány eember javasol 51, 52, ..., 100-ot
   // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   javaslatElfogadasiKuszobHisztogram: {
+    reteg: 'szamitott',  // H6
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
     default: () => {
@@ -57,6 +60,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Bucket-ek: hány eember javasol 0, 1, ..., 100-ot
   // Kulcs: a százalék érték (string), érték: eemberek száma (number)
   reszveteliAranyKuszobHisztogram: {
+    reteg: 'szamitott',  // H6
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
     default: () => {
@@ -75,6 +79,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
   // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   minimumDontesiIdoHisztogram: {
+    reteg: 'szamitott',  // H6
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
     default: () => new Map() // Alapértelmezett: üres Map (bucket-ek dinamikusan jönnek létre)
@@ -85,6 +90,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // 515 bucket (0-315360000 mp) - időhezBucketKulcs() szerinti kulcsok
   // Kulcs: bucket kulcs (string), érték: eemberek száma (number)
   maximumDontesiIdoHisztogram: {
+    reteg: 'szamitott',  // H6
     type: Map, // Map típus (kulcs-érték párok)
     of: Number, // Az értékek számok lesznek
     default: () => new Map() // Alapértelmezett: üres Map (bucket-ek dinamikusan jönnek létre)
@@ -94,6 +100,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Cache-elt medián érték - gyors lekéréshez
   // Ezt a hisztogramból számoljuk ki
   aktualJavaslatElfogadasiKuszob: {
+    reteg: 'szamitott',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     min: 51, // Minimum érték: 51
@@ -104,6 +111,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Cache-elt medián érték - gyors lekéréshez
   // Ezt a hisztogramból számoljuk ki
   aktualReszveteliAranyKuszob: {
+    reteg: 'szamitott',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     min: 0, // Minimum érték: 0
@@ -114,6 +122,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Cache-elt medián érték - gyors lekéréshez
   // Ezt a hisztogramból számoljuk ki (másodpercben)
   aktualMinimumDontesiIdo: {
+    reteg: 'szamitott',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     default: 0, // Alapértelmezett: 0 mp
@@ -124,6 +133,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // Cache-elt medián érték - gyors lekéréshez
   // Ezt a hisztogramból számoljuk ki (másodpercben)
   aktualMaximumDontesiIdo: {
+    reteg: 'szamitott',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     default: 31536000, // Alapértelmezett: 31536000 mp (1 év)
@@ -134,6 +144,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // ----- ÖSSZ ÉRTÉK JAVASLATOK SZÁMA -----
   // Hány eember adott összesen érték javaslatot
   osszesErtekJavaslat: {
+    reteg: 'szamitott',  // H6
     type: Number, // Szám típus
     default: 0, // Alapértelmezett: 0
     min: 0 // Nem lehet negatív
@@ -142,6 +153,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
   // ----- UTOLSÓ FRISSÍTÉS DÁTUMA -----
   // Amikor utoljára frissítették ezt a hisztogramot
   utolsoFrissites: {
+    reteg: 'szamitott',  // H6
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
   }
@@ -209,6 +221,13 @@ tartalomErtekHisztogramSchema.methods.csokkentBucket = function(hisztogramNev, e
     this.setBucket(hisztogramNev, ertek, jelenlegi - 1); // -1
   }
 };
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+tartalomErtekHisztogramSchema.options.retegAlapertelmezes = 'szamitott';
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

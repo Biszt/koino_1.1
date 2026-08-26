@@ -17,6 +17,7 @@ const tartalomSchema = new mongoose.Schema({
 // ----- CÍM MEZŐ -----
 // A tartalom címe (kötelező)
 cim: {
+  reteg: 'tartalom',  // H6
     type: String,       // Szöveges típus
     required: true,     // Kötelező mező
     trim: true          // Levágja a felesleges szóközöket elejéről és végéről
@@ -27,6 +28,7 @@ cim: {
 // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
 // komponens egy JSON blokkokból álló tömböt tárol ide
 szoveg: {
+  reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.Mixed, // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: false,                   // Nem kötelező mező
     default: null                      // Alapértelmezett érték: null (üres string helyett)
@@ -35,6 +37,7 @@ szoveg: {
 // ----- TARTALOM TÍPUS AZONOSÍTÓ -----
 // Referencia a TartalomTipus modellre (pl. poszt, komment, stb.)
 tartalomTipusId: {
+  reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'TartalomTipus',                 // Referencia a TartalomTipus modellre
     required: false                        // Nem kötelező mező
@@ -43,6 +46,7 @@ tartalomTipusId: {
 // ----- KATEGÓRIA AZONOSÍTÓK (MAXIMUM 3) -----
 // Tömb, amely maximum 3 kategória referenciát tárolhat
 kategoriaIds: {
+  reteg: 'tartalom',  // H6
     type: [{                                  // ObjectId tömb típus
         type: mongoose.Schema.Types.ObjectId, // Tömb elemek típusa: ObjectId
         ref: 'Kategoria'                      // Referencia a Kategoria modellre
@@ -67,12 +71,14 @@ kategoriaIds: {
 // valamint Kategória és Tartalomtípus is (az „Új tartalom létrehozása ebből”
 // menüpont mind az öt kártyatípusról ágaztathat).
 szuloId: {
+  reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus - bármilyen entitás lehet
     default: null                          // Alapértelmezett: nincs szülő (főtartalom)
 },
 
 // ----- SZÜLŐ TÍPUSA -----
 szuloTipus: {
+  reteg: 'tartalom',  // H6
     type: String,                                                          // Szöveges típus
     enum: ['Tartalom', 'Javaslat', 'Egyezmeny', 'Kategoria', 'TartalomTipus'], // Engedélyezett értékek
     default: null,                                                         // Alapértelmezett: nincs szülő típus
@@ -122,6 +128,7 @@ szuloTipus: {
 // a lista vége felé az eredeti létrehozó (kivéve ha ő módosított utoljára).
 // (A régi egyszeres `letrehozo` mező helyére lépett.)
 szerkesztok: {
+  reteg: 'lanc',  // H6
     type: [szerkesztoResz],   // A közös szerkesztő al-séma tömbje
     default: []               // Alap: üres tömb
 },
@@ -139,6 +146,7 @@ szerkesztok: {
 // lépésben épül (docs/fejlesztesi_terv.md „Különválás — megvalósítási terv").
 // Ez a lépés csak a HELYET készíti elő.
 kulonvalasok: {
+  reteg: 'tartalom',  // H6
     type: [kulonvalasResz],   // A közös különválás al-séma tömbje
     default: []               // Alap: üres tömb (nincs testvér-ág)
 },
@@ -146,6 +154,7 @@ kulonvalasok: {
 // ----- LÉTREHOZÁS DÁTUMA -----
 // Amikor a tartalom létrejött
 letrehozva: {
+  reteg: 'tartalom',  // H6
     type: Date,         // Dátum típus
     default: Date.now   // Alapértelmezett: jelenlegi időpont
 },
@@ -157,6 +166,7 @@ letrehozva: {
 // VAGY utolsó módosítás" egyetlen mezővel lefedve); a gyerek↔szülő összevetés ebből
 // dönti el, elavulhat-e a gyerek (piros = régebbi, zöld = újabb).
 modositva: {
+  reteg: 'tartalom',  // H6
     type: Date,
     default: Date.now
 }
@@ -186,6 +196,13 @@ tartalomSchema.index({ 'kulonvalasok.testverId': 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
 tartalomSchema.index({ kategoriaIds: 1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+tartalomSchema.options.retegAlapertelmezes = 'tartalom';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

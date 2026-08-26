@@ -16,6 +16,7 @@ const javaslatSchema = new mongoose.Schema({
   // ----- JAVASLAT TÍPUSA -----
   // ===================================
   javaslatTipus: {
+    reteg: 'tartalom',  // H6
     type: String,                                                          // Szöveges típus
     required: true,                                                        // Kötelező mező
     enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'],   // Engedélyezett értékek
@@ -27,6 +28,7 @@ const javaslatSchema = new mongoose.Schema({
   // ===================================
   // Egy vagy több entitás, amelyekre a javaslat vonatkozik
   erintettEntitasok: {
+    reteg: 'tartalom',  // H6
     type: [
       {
         // Entitás MongoDB ObjectId-ja
@@ -72,6 +74,7 @@ const javaslatSchema = new mongoose.Schema({
   // érintett entitás gyereke (a service töredékenként állítja be), ezért
   // kötelező. A szülő típusa polimorf: Tartalom / Kategoria / TartalomTipus.
   szuloId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     refPath: 'szuloTipus',                  // Polimorf referencia (a szuloTipus dönti el a modellt)
     required: true                          // KÖTELEZŐ mező - a javaslat mindig az érintett entitás gyereke
@@ -81,6 +84,7 @@ const javaslatSchema = new mongoose.Schema({
   // ----- SZÜLŐ TÍPUSA -----
   // Az érintett entitás típusa (a javaslat annak a gyereke).
   szuloTipus: {
+    reteg: 'tartalom',  // H6
     type: String,                                                  // Szöveges típus
     default: 'Tartalom',                                           // Alapértelmezett: Tartalom
     // Az érintett entitás típusa. Egyezmény is lehet (törlés/áthelyezés javaslatnál
@@ -94,6 +98,7 @@ const javaslatSchema = new mongoose.Schema({
   // Módosítás/Áthelyezés → érintett entitás, Egyesítés → placeholder → új entitás).
   // Egyesítésnél a placeholder id kerül ide, a valódira a végrehajtás frissíti.
   egyezmenyTarhelyId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     refPath: 'egyezmenyTarhelyTipus',       // Polimorf referencia
     // NULL IS MEGENGEDETT minden típusnál (required: false). A kötelezőséget NEM a
@@ -108,6 +113,7 @@ const javaslatSchema = new mongoose.Schema({
   // ----- EGYEZMÉNY TÁRHELY TÍPUSA -----
   // Az egyezmenyTarhelyId entitásának típusa (polimorf egyezmény-elhelyezéshez).
   egyezmenyTarhelyTipus: {
+    reteg: 'tartalom',  // H6
     type: String,
     default: 'Tartalom',
     // Egyezmény törlésénél a tárhely (átmenetileg) maga az egyezmény lehet, ezért
@@ -118,12 +124,14 @@ const javaslatSchema = new mongoose.Schema({
 
   // ----- TÖREDÉK JAVASLAT METAADATOK -----
   toredekCsoportId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // Töredék csoport azonosító
     required: false,                        // Csak akkor van értéke, ha töredék javaslat
     default: null                           // Alapértelmezett: nincs csoport
   }, // Egy logikai javaslat összes töredéke ugyanazt az értéket kapja
 
   toredekSorszam: {
+    reteg: 'tartalom',  // H6
     type: Number,       // A töredék pozíciója: 1, 2, ..., N
     required: false,    // Nem kötelező – régi javaslatoknál hiányozhat
     default: null,      // Ha nincs beállítva, null lesz
@@ -131,6 +139,7 @@ const javaslatSchema = new mongoose.Schema({
   }, // Pl. 1/6 esetén ez az 1-es lesz
 
   toredekDarab: {
+    reteg: 'tartalom',  // H6
     type: Number,       // Hány töredék tartozik a csoportba összesen
     required: false,    // Nem kötelező – régi javaslatoknál hiányozhat
     default: null,      // Ha nincs csoport, akkor null
@@ -144,6 +153,7 @@ const javaslatSchema = new mongoose.Schema({
   egyesitesAdatok: {
     // Az új entitás típusa (ami létrejön az egyesítésből)
     ujEntitasTipus: {
+      reteg: 'tartalom',  // H6
       type: String,                                          // Szöveges típus
       enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],     // Engedélyezett típusok
       required: function() {
@@ -154,6 +164,7 @@ const javaslatSchema = new mongoose.Schema({
     // Az új entitás adatai (mezők: nev, leiras, stb.)
     // Object típus: befogadja a szövegszerkesztő JSON tömbjét is
     ujEntitasAdatok: {
+      reteg: 'tartalom',  // H6
       type: Object,   // Objektum típus - Mixed-ként viselkedik, bármit elfogad
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
@@ -163,6 +174,7 @@ const javaslatSchema = new mongoose.Schema({
     // Forrás entitások ID-i (amelyek egyesülnek)
     forrasEntitasok: [
       {
+        reteg: 'tartalom',  // H6 — a tömb ELEMÉN jelölve (a mező tömb-literállal készül)
         type: mongoose.Schema.Types.ObjectId // MongoDB ObjectId típus
       }
     ]
@@ -172,6 +184,7 @@ const javaslatSchema = new mongoose.Schema({
   // ----- LÉTREHOZÓ eEmber -----
   // ===================================
   letrehozo: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'eEmber',                          // Referencia a eEmber modellre
     default: null                           // null = TÖRÖLT e-ember (a javaslat közösségi, megmarad)
@@ -184,6 +197,7 @@ const javaslatSchema = new mongoose.Schema({
   // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
   // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: true,                     // KÖTELEZŐ – az indoklás megadása kötelező (de nincs min. karakter)
     default: null                       // Alapértelmezett: null (a service üres indoklásnál előbb dob)
@@ -194,6 +208,7 @@ const javaslatSchema = new mongoose.Schema({
   // ===================================
   // A javaslat jelenlegi állapota
   statusz: {
+    reteg: 'szamitott',  // H6
     type: String,                                         // Szöveges típus
     enum: ['Aktiv', 'Elfogadva', 'Elvetve', 'Hiba'],     // Engedélyezett értékek
     default: 'Aktiv'                                      // Alapértelmezett: Aktiv
@@ -203,6 +218,7 @@ const javaslatSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // ===================================
   letrehozva: {
+    reteg: 'lanc',  // H6
     type: Date,         // Dátum típus
     default: Date.now   // Alapértelmezett: jelenlegi időpont
   },
@@ -212,6 +228,7 @@ const javaslatSchema = new mongoose.Schema({
   // ===================================
   // Mikor lép hatályba a javaslat (számított érték)
   hatalybaLepesIdeje: {
+    reteg: 'szamitott',  // H6
     type: Date,     // Dátum típus
     default: null   // Alapértelmezett: nincs beállítva
   },
@@ -221,6 +238,7 @@ const javaslatSchema = new mongoose.Schema({
   // ===================================
   // Mikor történt utoljára a BM, HI, stb. újraszámítása
   utolsoSzamitas: {
+    reteg: 'szamitott',  // H6
     type: Date,         // Dátum típus
     default: Date.now   // Alapértelmezett: jelenlegi időpont
   },
@@ -229,6 +247,7 @@ const javaslatSchema = new mongoose.Schema({
   // Jelzi, hogy a számított értékek elavultak-e (hisztogram vagy szavazat változás miatt)
   // A cron job vagy részletes lekérés fogja frissíteni
   ertekekElavultak: {
+    reteg: 'szamitott',  // H6
     type: Boolean,  // Boolean típus
     default: false  // Alapértelmezett: false (nem elavult)
   },
@@ -242,6 +261,7 @@ const javaslatSchema = new mongoose.Schema({
   // Érintett entitásokon lévő tudatpont tulajdonosok száma
   // Egyesített halmaz - egyedi eEmberek
   entitasokTudatpontTulajdonosokSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0      // Alapértelmezett: 0
   },
@@ -249,24 +269,28 @@ const javaslatSchema = new mongoose.Schema({
   // Részvevő tudatpont tulajdonosok száma
   // Akik mind a javaslaton, mind valamelyik érintett entitáson is vannak
   resztvevoTudatpontTulajdonosokSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0      // Alapértelmezett: 0
   },
 
   // Javaslat támogatóinak száma
   javaslatTamogatoinakSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0      // Alapértelmezett: 0
   },
 
   // Javaslat ellenzőinek száma
   javaslatEllenzoinekSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0      // Alapértelmezett: 0
   },
 
   // Javaslat tartózkodóinak száma
   javaslatTartozkodoinakSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Szám típus
     default: 0,     // Alapértelmezett: 0 tartózkodó
     min: 0          // Minimum érték: nem lehet negatív
@@ -275,6 +299,7 @@ const javaslatSchema = new mongoose.Schema({
   // Részvételi arány - százalékban (RA)
   // RA = resztvevoTudatpontTulajdonosokSzama / entitasokTudatpontTulajdonosokSzama * 100
   reszveteliArany: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0
     min: 0,         // Minimum érték: 0
@@ -284,6 +309,7 @@ const javaslatSchema = new mongoose.Schema({
   // Támogatottsági arány - százalékban
   // TA = javaslatTamogatoinakSzama / resztvevoTudatpontTulajdonosokSzama * 100
   tamogatotsagiArany: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0
     min: 0,         // Minimum érték: 0
@@ -293,6 +319,7 @@ const javaslatSchema = new mongoose.Schema({
   // Ellenzői arány - százalékban
   // EA = javaslatEllenzoinekSzama / resztvevoTudatpontTulajdonosokSzama * 100
   ellenzoiArany: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0
     min: 0,         // Minimum érték: 0
@@ -303,6 +330,7 @@ const javaslatSchema = new mongoose.Schema({
   // TartA = javaslatTartozkodoinakSzama / resztvevoTudatpontTulajdonosokSzama * 100
   // A támogatottsági + ellenzői + tartózkodói arány együtt MINDIG 100%.
   tartozkodoiArany: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0
     min: 0,         // Minimum érték: 0
@@ -313,6 +341,7 @@ const javaslatSchema = new mongoose.Schema({
   // BM = ( | TA − EA | + RA ) / 2   – a tartózkodás csökkenti a TA és EA különbségét,
   // így az egyértelműséget is (több tartózkodó → alacsonyabb bizonyosság → hosszabb döntési idő)
   bizonyossagiMutato: {
+    reteg: 'szamitott',  // H6
     type: Number,   // Számérték típus
     default: 0,     // Alapértelmezett: 0
     min: 0,         // Minimum érték: 0
@@ -322,6 +351,7 @@ const javaslatSchema = new mongoose.Schema({
   // Hatályba lépési idő másodpercben (HI)
   // HI = 31_536_000 * (1 - BM/100)^5
   dontesiIdo: {
+    reteg: 'szamitott',  // H6
     type: Number,       // Számérték típus (másodperc)
     default: 31536000   // Alapértelmezett: 1 év (maximum)
   },
@@ -330,6 +360,7 @@ const javaslatSchema = new mongoose.Schema({
   // A szavazasiHatarido értesítés duplikátum-védelme: a cron csak EGYSZER küld
   // „közeleg a határidő" értesítést egy javaslatra — utána ez a jelző true.
   hataridoErtesitesElkuldve: {
+    reteg: 'helyi',  // H6
     type: Boolean,
     default: false
   }
@@ -449,6 +480,13 @@ javaslatSchema.pre('save', function(next) { // Mentés előtti middleware kezdet
 
   next(); // Folytatás a mentéssel, ha minden rendben volt
 }); // pre('save') middleware vége
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+javaslatSchema.options.retegAlapertelmezes = 'tartalom';
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

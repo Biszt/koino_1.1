@@ -20,6 +20,7 @@ const emailTokenSchema = new mongoose.Schema({
 
   // ----- KIÉ A TOKEN -----
   eemberId: {
+    reteg: 'helyi',  // H6
     type: mongoose.Schema.Types.ObjectId,
     ref: 'eEmber',
     required: true,
@@ -28,6 +29,7 @@ const emailTokenSchema = new mongoose.Schema({
 
   // ----- MIRE SZÓL -----
   tipus: {
+    reteg: 'helyi',  // H6
     type: String,
     enum: {
       values: ['megerosites', 'jelszoHelyreallitas'],
@@ -39,6 +41,7 @@ const emailTokenSchema = new mongoose.Schema({
   // ----- A TOKEN LENYOMATA (SHA-256, hex) -----
   // Ezen keresünk a beváltáskor, ezért indexelt.
   tokenHash: {
+    reteg: 'helyi',  // H6
     type: String,
     required: true,
     index: true
@@ -50,6 +53,7 @@ const emailTokenSchema = new mongoose.Schema({
   // egy olyan címet, amihez nem fér hozzá. Ezért beváltáskor összevetjük: a token
   // csak akkor érvényes, ha az e-ember MOSTANI címe ugyanez.
   email: {
+    reteg: 'helyi', szemelyes: true,  // H6
     type: String,
     required: true,
     trim: true,
@@ -60,6 +64,7 @@ const emailTokenSchema = new mongoose.Schema({
   // A MongoDB a lejárat után MAGÁTÓL törli a rekordot (TTL index, lásd lentebb),
   // így nem gyűlnek a felhasznált/elavult tokenek.
   lejarat: {
+    reteg: 'helyi',  // H6
     type: Date,
     required: true
   },
@@ -68,11 +73,13 @@ const emailTokenSchema = new mongoose.Schema({
   // Beváltás után true — a hivatkozás másodszor már nem működik (pl. ha a levél
   // idegen kézbe kerül azután, hogy az e-ember már használta).
   felhasznalva: {
+    reteg: 'helyi',  // H6
     type: Boolean,
     default: false
   },
 
   letrehozva: {
+    reteg: 'helyi',  // H6
     type: Date,
     default: Date.now
   }
@@ -89,6 +96,13 @@ emailTokenSchema.index({ lejarat: 1 }, { expireAfterSeconds: 0 });
 // ===== INDEX: EGY E-EMBER ADOTT TÍPUSÚ TOKENJEI =====
 // Használat: új token kiadásakor a korábbiak érvénytelenítése.
 emailTokenSchema.index({ eemberId: 1, tipus: 1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+emailTokenSchema.options.retegAlapertelmezes = 'helyi';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 module.exports = mongoose.model('EmailToken', emailTokenSchema);

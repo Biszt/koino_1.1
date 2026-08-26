@@ -8,6 +8,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
 
   // ----- ENTITÁS AZONOSÍTÓ -----
   entitasId: {
+    reteg: 'szamitott',  // H6
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     index: true
@@ -15,6 +16,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
 
   // ----- ENTITÁS TÍPUSA -----
   entitasTipus: {
+    reteg: 'szamitott',  // H6
     type: String,
     required: true,
     enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],
@@ -25,6 +27,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // Melyik entitás a közvetlen szülője ennek az entitásnak
   // Null érték esetén ez egy gyökér entitás (nincs szülője)
   szuloId: {
+    reteg: 'szamitott',  // H6
     type: mongoose.Schema.Types.ObjectId,
     default: null
   },
@@ -33,6 +36,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // Meghatározza, hogy a szuloId melyik kollekciára mutat
   // Null, ha ez egy gyökér entitás
   szuloTipus: {
+    reteg: 'szamitott',  // H6
     type: String,
     enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny', null],
     default: null
@@ -41,6 +45,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // ----- HIERARCHIKUS ÖSSZPONTSZÁM -----
   // Saját pont + összes leszármazott hierarchikus pontja
   hierarchikusOsszesPont: {
+    reteg: 'szamitott',  // H6
     type: Number,
     required: true,
     default: 0,
@@ -51,6 +56,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // Egyedi eemberek száma, akik ebben az ágban hozzájárultak
   // VÁLTOZÁS: ÚJ MEZŐ - hierarchikusFrissitesService számítja
   hierarchikusHozzajarulokSzama: {
+    reteg: 'szamitott',  // H6
     type: Number,
     default: 0,
     min: 0
@@ -62,6 +68,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // 2 = két szinttel feljebb, stb.
   // VÁLTOZÁS: ÚJ MEZŐ - findElavultHierarchikusAllokaciok() szűr rá
   hierarchiaSzint: {
+    reteg: 'szamitott',  // H6
     type: Number,
     default: 0,
     min: 0
@@ -72,6 +79,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // false: az adatok frissek, nem kell újraszámítani
   // VÁLTOZÁS: ÚJ MEZŐ - CRON job és frissítés logika használja
   hierarchikusAdatokElavultak: {
+    reteg: 'szamitott',  // H6
     type: Boolean,
     default: true  // Alapból elavult - első létrehozáskor mindig számítsuk ki
   },
@@ -80,6 +88,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // Mikor számította utoljára a CRON job a hierarchikus adatokat
   // VÁLTOZÁS: ÚJ MEZŐ - hierarchikusFrissitesService állítja be
   hierarchikusAdatokUtolsoFrissites: {
+    reteg: 'szamitott',  // H6
     type: Date,
     default: null  // Null = még soha nem lett újraszámítva
   },
@@ -93,6 +102,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   // tartalmazza, az ágazat-gyökér a saját részfájának is része (a csomópont + leszármazottai).
   // Feltöltés: tools/entitasOsLancPotlas.js (meglévő adat) + karbantartás létrehozáskor/áthelyezéskor.
   osLanc: {
+    reteg: 'szamitott',  // H6
     type: [{
       entitasId: { type: mongoose.Schema.Types.ObjectId },
       entitasTipus: { type: String }
@@ -102,12 +112,14 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
 
   // ----- LÉTREHOZÁS DÁTUMA -----
   letrehozva: {
+    reteg: 'szamitott',  // H6
     type: Date,
     default: Date.now
   },
 
   // ----- FRISSÍTÉS DÁTUMA -----
   frissitve: {
+    reteg: 'szamitott',  // H6
     type: Date,
     default: Date.now
   }
@@ -169,6 +181,13 @@ hierarchikusTudatpontAllokaciSchema.pre('save', function(next) {
   this.frissitve = new Date();
   next();
 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+hierarchikusTudatpontAllokaciSchema.options.retegAlapertelmezes = 'szamitott';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 const HierarchikusTudatpontAllokacio = mongoose.model(

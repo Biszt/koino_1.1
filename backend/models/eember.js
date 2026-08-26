@@ -10,6 +10,7 @@ const eemberSchema = new mongoose.Schema({
 
 // ----- EMBERNÉV MEZŐ -----
 eemberNev: { 
+  reteg: 'tartalom', szemelyes: true,  // H6
   type: String,       // Szöveges típus
   required: true,     // Kötelező mező 
   unique: true,       // Egyedi érték 
@@ -25,6 +26,7 @@ eemberNev: {
 // annál a mező HIÁNYZIK (nem üres string, nem null) → nem képződik funkció nélküli
 // e-mail-jegyzék. Az egyediséget a séma alatti RÉSZLEGES egyedi index adja.
 email: {
+  reteg: 'helyi', szemelyes: true,  // H6
   type: String,        // Szöveges típus
   required: false,     // NEM kötelező — opcionális mező
   trim: true,          // Levágja a felesleges szóközöket
@@ -47,6 +49,7 @@ email: {
 // (lásd eemberService.profilModositasa) — az új címet újra igazolni kell.
 // A meglévő e-emberek mind false-ról indulnak: visszamenőleg SENKI nem kap levelet.
 emailMegerositve: {
+  reteg: 'helyi',  // H6
   type: Boolean,
   default: false
 },
@@ -68,6 +71,7 @@ emailMegerositve: {
 // A 0 alapérték fontos: a régi, még `tv` nélküli tokeneket 0-nak tekintjük, így a
 // bevezetés NEM lökte ki a már bejelentkezett e-embereket.
 tokenVerzio: {
+  reteg: 'helyi',  // H6
   type: Number,
   default: 0
 },
@@ -78,6 +82,7 @@ tokenVerzio: {
 // kora dönti el, esedékes-e — így a bekapcsolás után nem jön azonnal egy levél,
 // és nem is kell külön „első" logika.
 emailOsszefoglaloUtoljara: {
+  reteg: 'helyi',  // H6
   type: Date,
   default: null
 },
@@ -87,6 +92,7 @@ emailOsszefoglaloUtoljara: {
 // minlength gyakorlatilag mindig teljesül. A tényleges jelszó-erősség szabályt
 // (min. 8 karakter + betű + szám) a jelszoHelper.validalJelszoErosseg érvényesíti.
 jelszo: {
+  reteg: 'helyi',  // H6
   type: String,       // Szöveges típus
   required: true,     // Kötelező mező
   minlength: 8        // Konzisztencia a jelszó-szabály minimumával
@@ -95,6 +101,7 @@ jelszo: {
 // ----- NÉV MEZŐ -----
 // A eember valódi neve 
 nev: { 
+  reteg: 'tartalom', szemelyes: true,  // H6
   type: String,       // Szöveges típus
   required: true,     // Kötelező mező
   trim: true          // Levágja a felesleges szóközöket
@@ -104,14 +111,17 @@ nev: {
 // Földrajzi elhelyezkedés tárolása (3 szintű: ország/régió/település)
 lokacio: {
   orszag: {           // Ország mező
+    reteg: 'tartalom', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   },
   regio: {            // Régió/megye mező
+    reteg: 'tartalom', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   },
   telepules: {        // Település/város mező
+    reteg: 'tartalom', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   }
@@ -121,6 +131,7 @@ lokacio: {
 // A eember tudatpontjainak száma
 // Regisztrációkor minden eember 10.000 tudatpontot kap
 tudatpontok: {
+  reteg: 'szamitott',  // H6
   type: Number,       // Szám típus
   default: 10000,     // Alapértelmezett érték: 10.000 tudatpont
   min: 0             // Minimum érték: nem lehet negatív
@@ -132,6 +143,7 @@ tudatpontok: {
 // null: a meghívás-kényszer bevezetése ELŐTT (nyílt regisztrációval) regisztrált,
 // vagy kikapcsolt MEGHIVAS_KOTELEZO mellett (fejlesztői/teszt környezet).
 meghivoEemberId: {
+  reteg: 'mag',  // H6
   type: mongoose.Schema.Types.ObjectId,
   ref: 'eEmber',
   default: null
@@ -140,6 +152,7 @@ meghivoEemberId: {
 // ----- LÉTREHOZÁS DÁTUMA -----
 // Amikor a eember regisztrált
 letrehozva: {
+  reteg: 'mag',  // H6
   type: Date,         // Dátum típus
   default: Date.now   // Alapértelmezett: jelenlegi időpont
 },
@@ -147,6 +160,7 @@ letrehozva: {
 // ----- UTOLSÓ BEJELENTKEZÉS -----
 // Amikor a eember utoljára bejelentkezett
 utolsoBejelentkezes: {
+  reteg: 'helyi',  // H6
   type: Date,         // Dátum típus
   default: null       // Alapértelmezett: null (még nem jelentkezett be)
 },
@@ -158,6 +172,7 @@ utolsoBejelentkezes: {
 // Ugyanaz a 7 típus, mint az ErtesitesiBeallitas modellben (szinkronban tartandó).
 ertesitesiAlapbeallitas: {
   ertesitesTipusok: {
+    reteg: 'helyi',  // H6
     type: [String],
     enum: {
       values: [
@@ -177,10 +192,10 @@ ertesitesiAlapbeallitas: {
   // Tudatpont-változási küszöbök a globális szinten is (ugyanúgy, mint csomóponti beállításnál):
   // négy független küszöb (saját/össz bázis × direkt/százalék mérték), "VAGY" logikával.
   tudatpontKuszobok: {
-    sajatDirekt:   { type: Number, min: 1, default: null },
-    sajatSzazalek: { type: Number, min: 1, max: 100, default: null },
-    osszDirekt:    { type: Number, min: 1, default: null },
-    osszSzazalek:  { type: Number, min: 1, max: 100, default: null },
+    sajatDirekt:   { reteg: 'helyi', type: Number, min: 1, default: null },
+    sajatSzazalek: { reteg: 'helyi', type: Number, min: 1, max: 100, default: null },
+    osszDirekt:    { reteg: 'helyi', type: Number, min: 1, default: null },
+    osszSzazalek:  { reteg: 'helyi', type: Number, min: 1, max: 100, default: null },
   },
   // TUDATPONT-TULAJDONOSSÁGI SZŰRŐ globális szinten: ha true, csak akkor jön értesítés,
   // ha az esemény entitásán van saját tudatpont (Egyezmeny-eseményre nem vonatkozik).
@@ -199,6 +214,7 @@ ertesitesiAlapbeallitas: {
   // Csak azokra a típusokra jön levél, amikre a felületi értesítés is jár — vagyis ez
   // nem egy külön feliratkozás-lista, hanem a MEGLÉVŐ értesítéseid KÉZBESÍTÉSI MÓDJA.
   emailErtesites: {
+    reteg: 'helyi',  // H6
     type: Boolean,
     default: false,
   },
@@ -212,6 +228,7 @@ ertesitesiAlapbeallitas: {
   // külön levélben mennének, az levél-özön lenne — az pedig leiratkozáshoz vagy
   // spam-jelöléshez vezet. Aki mindent azonnal akar, átállíthatja.
   emailMod: {
+    reteg: 'helyi',  // H6
     type: String,
     enum: {
       values: ['azonnal', 'osszefoglalo'],
@@ -225,6 +242,7 @@ ertesitesiAlapbeallitas: {
   // hogy mindenki a saját ritmusához igazíthassa — a felület gyorsválasztókat is kínál
   // (óránként / 6 óránként / naponta / hetente), de a szám bármi lehet a tartományban.
   emailOrakoz: {
+    reteg: 'helyi',  // H6
     type: Number,
     min: [1, 'Legalább 1 óra'],
     max: [168, 'Legfeljebb 168 óra (egy hét)'],
@@ -232,6 +250,7 @@ ertesitesiAlapbeallitas: {
   },
 
   tudatpontSzuro: {
+    reteg: 'helyi',  // H6
     type: Boolean,
     default: false,
   },
@@ -254,6 +273,13 @@ eemberSchema.index(
 // eseménytípusra (ertesitesiAlapbeallitas.ertesitesTipusok tartalmazza a típust). Index
 // nélkül ez teljes kollekció-olvasás lenne minden eseménynél.
 eemberSchema.index({ 'ertesitesiAlapbeallitas.ertesitesTipusok': 1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+eemberSchema.options.retegAlapertelmezes = 'mag';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

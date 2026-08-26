@@ -18,6 +18,7 @@ const meghivoSchema = new mongoose.Schema({
   // ----- KIBOCSÁTÓ E-EMBER -----
   // Aki a meghívót létrehozta — ő a tanúsító is (bizalmi gráf első éle)
   kibocsatoEemberId: {
+    reteg: 'mag',  // H6
     type: mongoose.Schema.Types.ObjectId,  // Hivatkozás egy e-emberre
     ref: 'eEmber',                          // Az eEmber kollekcióra mutat
     required: true                          // Kötelező: meghívó nincs kibocsátó nélkül
@@ -27,6 +28,7 @@ const meghivoSchema = new mongoose.Schema({
   // Egyedi, véletlen kód (formátum: XXXX-XXXX-XXXX), ezt adja meg a
   // regisztráló. A kódot a meghivoService generálja.
   kod: {
+    reteg: 'helyi',  // H6
     type: String,
     required: true,
     unique: true,       // Két meghívónak nem lehet azonos kódja
@@ -40,6 +42,7 @@ const meghivoSchema = new mongoose.Schema({
   // vissza, és a regisztrációs űrlap a névvel ELŐRE KITÖLTVE nyílik meg — így a
   // kibocsátó tanúsítása a névre is kiterjed (a meghívott javíthatja elgépeléskor).
   meghivottNev: {
+    reteg: 'helyi', szemelyes: true,  // H6
     type: String,
     required: true,
     trim: true
@@ -50,6 +53,7 @@ const meghivoSchema = new mongoose.Schema({
   // és tudtommal még nem regisztrált". Kötelezően true — a service enélkül
   // nem enged meghívót létrehozni (D1 döntés: a meghívás = tanúsítás v1-ben).
   tanusitva: {
+    reteg: 'mag',  // H6
     type: Boolean,
     required: true
   },
@@ -59,6 +63,7 @@ const meghivoSchema = new mongoose.Schema({
   // Felhasznalt: valaki ezzel a kóddal már regisztrált
   // Visszavont:  a kibocsátó felhasználás előtt visszavonta (pl. rossz kézbe került)
   statusz: {
+    reteg: 'lanc',  // H6
     type: String,
     enum: {
       values: ['Aktiv', 'Felhasznalt', 'Visszavont'],
@@ -69,6 +74,7 @@ const meghivoSchema = new mongoose.Schema({
 
   // ----- LÉTREHOZÁS DÁTUMA -----
   letrehozva: {
+    reteg: 'lanc',  // H6
     type: Date,
     default: Date.now
   },
@@ -76,10 +82,12 @@ const meghivoSchema = new mongoose.Schema({
   // ----- FELHASZNÁLÁS ADATAI -----
   // Csak akkor kap értéket, amikor valaki a kóddal regisztrál
   felhasznalva: {
+    reteg: 'mag',  // H6
     type: Date,
     default: null
   },
   felhasznaloEemberId: {
+    reteg: 'mag',  // H6
     type: mongoose.Schema.Types.ObjectId,  // A kóddal regisztrált új e-ember
     ref: 'eEmber',
     default: null
@@ -90,6 +98,13 @@ const meghivoSchema = new mongoose.Schema({
 // ===== INDEX: SAJÁT MEGHÍVÓK GYORS LISTÁZÁSÁHOZ =====
 // A „Meghívóim" lista a kibocsátó szerint kérdez le (kod-ra a unique index már van)
 meghivoSchema.index({ kibocsatoEemberId: 1, letrehozva: -1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+meghivoSchema.options.retegAlapertelmezes = 'mag';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 const Meghivo = mongoose.model('Meghivo', meghivoSchema);

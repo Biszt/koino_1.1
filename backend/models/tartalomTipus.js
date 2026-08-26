@@ -14,6 +14,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // ----- NÉV MEZŐ -----
   // A tartalom típus neve (kötelező)
   nev: {
+    reteg: 'tartalom',  // H6
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező
     trim: true,             // Levágja a felesleges szóközöket elejéről és végéről
@@ -26,6 +27,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
   // komponens egy JSON blokkokból álló tömböt tárol ide
   leiras: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.Mixed, // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: false,                   // Nem kötelező mező
     default: null                      // Alapértelmezett érték: null (üres string helyett)
@@ -35,6 +37,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // A feltöltött ikon fájl elérési útvonala (kötelező)
   // Pl.: 'uploads/icons/icon-1234567890-987654321.png'
   ikon: {
+    reteg: 'tartalom',  // H6
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező - minden típusnak kell legyen ikonja
     trim: true              // Levágja a felesleges szóközöket
@@ -45,6 +48,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // Lehet null, ha ez egy gyökér tartalom típus (nincs szülője)
   // Bármilyen entitás lehet a szülő: Tartalom, Kategoria, TartalomTipus, Javaslat, Egyezmeny
   szuloId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     default: null                          // Alapértelmezetten nincs szülő (gyökér elem)
   },
@@ -53,6 +57,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // Meghatározza, hogy a szuloId melyik kollekciára mutat
   // Kötelező, ha szuloId meg van adva - különben null
   szuloTipus: {
+    reteg: 'tartalom',  // H6
     type: String,           // Szöveges típus
     enum: [                 // Csak ezek az értékek engedélyezettek
       'Tartalom',
@@ -72,6 +77,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // Sorrend: időrendben VISSZAFELÉ — a 0. elem a LEGUTOLSÓ szerkesztő.
   // (A régi egyszeres `letrehozo` mező helyére lépett.)
   szerkesztok: {
+    reteg: 'lanc',  // H6
     type: [szerkesztoResz],   // A közös szerkesztő al-séma tömbje
     default: []               // Alap: üres tömb
   },
@@ -79,6 +85,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor a tartalom típus létrejött
   letrehozva: {
+    reteg: 'tartalom',  // H6
     type: Date,             // Dátum típus
     default: Date.now       // Alapértelmezett: jelenlegi időpont
   },
@@ -89,6 +96,7 @@ const tartalomTipusSchema = new mongoose.Schema({
   // áthelyezés/egyesítés/tudatpont NEM. A kártya ezt mutatja, a gyerek↔szülő
   // összevetés ebből dönti el, elavulhat-e a gyerek (piros = régebbi, zöld = újabb).
   modositva: {
+    reteg: 'tartalom',  // H6
     type: Date,
     default: Date.now
   }
@@ -112,6 +120,13 @@ tartalomTipusSchema.index({ szuloId: 1 });
 
 // SzuloTipus indexelése - gyors keresés szülő típus alapján
 tartalomTipusSchema.index({ szuloTipus: 1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+tartalomTipusSchema.options.retegAlapertelmezes = 'tartalom';
 
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA
 // A model a séma alapján létrehozott adatbázis kollekció

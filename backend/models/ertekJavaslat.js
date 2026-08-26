@@ -23,6 +23,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // Melyik entitáshoz tartozik ez az érték javaslat (tartalom / kategória / tartalomtípus).
   // A refPath miatt a populate a helyes modellt tölti be az entitasTipus alapján.
   entitasId: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     refPath: 'entitasTipus',               // Polimorf referencia (az entitasTipus dönti el a modellt)
     required: true                         // Kötelező mező
@@ -31,6 +32,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- ENTITÁS TÍPUSA -----
   // Meghatározza, melyik kollekcióra mutat az entitasId.
   entitasTipus: {
+    reteg: 'lanc',  // H6
     type: String,             // Szöveges típus
     enum: ENTITAS_TIPUSOK,    // Csak a támogatott típusok engedélyezettek
     required: true,           // Kötelező mező
@@ -40,6 +42,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- EMBER AZONOSÍTÓ -----
   // Ki adta ezt az érték javaslatot
   eemberId: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber', // Referencia a eEmber modellre
     required: true // Kötelező mező
@@ -48,6 +51,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // -----ÉRTÉK ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB-----
   // eEmber által javasolt érték (51-100)
   javaslatElfogadasiKuszob: {
+    reteg: 'lanc',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     min: 51, // Minimum érték: 51
@@ -61,6 +65,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- RÉSZVÉTELI ARÁNY KÜSZÖB ERTEK JAVASLAT -----
   // eEmber által javasolt érték (0-100)
   reszveteliAranyKuszob: {
+    reteg: 'lanc',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     min: 0, // Minimum érték: 0
@@ -74,6 +79,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- MINIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
   // eEmber által javasolt alsó határ másodpercben (0-31536000)
   minimumDontesiIdo: {
+    reteg: 'lanc',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     default: 0, // Alapértelmezett: 0 mp (azonnali végrehajtás lehetséges)
@@ -87,6 +93,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- MAXIMUM DÖNTÉSI IDŐ ERTEK JAVASLAT -----
   // eEmber által javasolt felső határ másodpercben (0-315360000)
   maximumDontesiIdo: {
+    reteg: 'lanc',  // H6
     type: Number, // Szám típus
     required: true, // Kötelező mező
     default: 31536000, // Alapértelmezett: 31536000 mp (1 év)
@@ -101,6 +108,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor az érték javaslat először létrejött
   letrehozva: {
+    reteg: 'lanc',  // H6
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
   },
@@ -108,6 +116,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
   // ----- MÓDOSÍTÁS DÁTUMA -----
   // Amikor a eember utoljára módosította az érték javaslatát
   modositva: {
+    reteg: 'lanc',  // H6
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
   }
@@ -142,6 +151,13 @@ ertekJavaslatSchema.pre('save', function(next) {
   }
   next(); // Továbblépés a mentéshez
 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+ertekJavaslatSchema.options.retegAlapertelmezes = 'lanc';
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

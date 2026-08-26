@@ -39,6 +39,7 @@ const kulonvalasResz = new mongoose.Schema({
   // A másik entitás, amivel ez a szétválás összeköt. Ide mutat a kártya
   // „Másik ág" fülének entitás-hivatkozása.
   testverId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     required: true                          // Testvér nélkül nincs értelme a bejegyzésnek
   },
@@ -47,6 +48,7 @@ const kulonvalasResz = new mongoose.Schema({
   // Polimorf: ma mindig 'Tartalom' (az első kör csak tartalomra terjed ki),
   // de a mező készen áll a kategória / tartalomtípus különválásra is.
   testverTipus: {
+    reteg: 'tartalom',  // H6
     type: String,                                        // Szöveges típus
     enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],    // Engedélyezett típusok
     default: 'Tartalom'                                  // Alapértelmezett: tartalom
@@ -62,6 +64,7 @@ const kulonvalasResz = new mongoose.Schema({
   // NYELVI SZABÁLY: sehol nem beszélünk „győztesről" és „vesztesről" — csak
   // főágról és különválókról. Senki nem veszít, csak külön útra lép.
   agSzerep: {
+    reteg: 'tartalom',  // H6
     type: String,                      // Szöveges típus
     enum: ['foag', 'kulonvalt'],       // Csak e két érték engedélyezett
     required: true                     // Enélkül nem tudnánk, melyik oldalt nézzük
@@ -73,6 +76,7 @@ const kulonvalasResz = new mongoose.Schema({
   // olyankor egyezmény NEM születik (az egyezmény kizárólag elfogadott javaslat
   // eredménye). Az elvetett javaslat entitásként megmarad `Elvetve` státusszal.
   forrasJavaslatId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Javaslat',                        // Referencia a Javaslat modellre
     required: true                          // Kötelező: mindig van kiváltó javaslat
@@ -82,6 +86,7 @@ const kulonvalasResz = new mongoose.Schema({
   // Csak akkor van kitöltve, ha a javaslatot ELFOGADTÁK (ilyenkor születik egyezmény).
   // Elvetett javaslatnál null — ilyenkor a forrasJavaslatId a hivatkozási pont.
   forrasEgyezmenyId: {
+    reteg: 'tartalom',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Egyezmeny',                       // Referencia az Egyezmeny modellre
     default: null                           // Alapértelmezett: nincs (elvetett ág)
@@ -90,6 +95,7 @@ const kulonvalasResz = new mongoose.Schema({
   // ----- A SZÉTVÁLÁS IDŐPONTJA -----
   // Mikor vált szét a két ág. A kártya „Másik ág" fülén ezt mutatjuk meg.
   kulonvalasIdeje: {
+    reteg: 'tartalom',  // H6
     type: Date,          // Dátum típus
     default: Date.now    // Alapértelmezett: a bejegyzés keletkezésének ideje
   }

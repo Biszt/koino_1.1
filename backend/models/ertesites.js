@@ -25,6 +25,7 @@ const ertesitesSchema = new mongoose.Schema(
   {
     // Az eEmber azonosítója, akinek ez az értesítés szól
     eEmberId: {
+      reteg: 'helyi',  // H6
       type: mongoose.Schema.Types.ObjectId,
       ref: 'eEmber',
       required: [true, 'Az eEmber azonosítója kötelező'],
@@ -32,6 +33,7 @@ const ertesitesSchema = new mongoose.Schema(
 
     // Az értesítés típusa – megmondja, mi történt
     tipus: {
+      reteg: 'helyi',  // H6
       type: String,
       enum: {
         values: ERTESITES_TIPUSOK,
@@ -42,6 +44,7 @@ const ertesitesSchema = new mongoose.Schema(
 
     // Annak az entitásnak az azonosítója, amelyen az esemény történt
     entitasId: {
+      reteg: 'helyi',  // H6
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'Az entitás azonosítója kötelező'],
       // Nincs 'ref', mert különböző típusú entitásokra mutathat
@@ -49,6 +52,7 @@ const ertesitesSchema = new mongoose.Schema(
 
     // Az entitás típusa – megmondja, melyik kollekcióban keressük az entitasId-t
     entitasTipus: {
+      reteg: 'helyi',  // H6
       type: String,
       enum: {
         values: ENTITAS_TIPUSOK,
@@ -65,6 +69,7 @@ const ertesitesSchema = new mongoose.Schema(
     // alatt (vagy magán X-en) történt" = { 'osLanc.entitasId': X }.
     // Ezt használja majd: a kártya-badge (A2) és az ág-szűrt kártya-postafiók (A3).
     osLanc: {
+      reteg: 'helyi',  // H6
       type: [
         {
           _id: false, // Az al-dokumentumoknak nem kell saját _id
@@ -88,18 +93,21 @@ const ertesitesSchema = new mongoose.Schema(
     // Pl. javaslatElfogadas esetén: { javaslatId: ObjectId }
     // Mixed típus: bármilyen objektumot tárolhat, nincs séma-kötöttsége
     adatok: {
+      reteg: 'helyi',  // H6
       type: mongoose.Schema.Types.Mixed,
       default: {}, // Alapból üres objektum
     },
 
     // Olvasott állapot – false: olvasatlan (piros pont), true: már látta az eEmber
     olvasva: {
+      reteg: 'helyi',  // H6
       type: Boolean,
       default: false, // Minden új értesítés olvasatlanként jön létre
     },
 
     // Az olvasás időpontja – null amíg nem olvasta el
     olvasvaIdopont: {
+      reteg: 'helyi',  // H6
       type: Date,
       default: null,
     },
@@ -111,6 +119,7 @@ const ertesitesSchema = new mongoose.Schema(
     //     összefoglalóba — minden, ami még nem ment ki.
     // Ha az e-ember nem kér e-mailes értesítést, ez a mező egyszerűen false marad.
     emailKikuldve: {
+      reteg: 'helyi',  // H6
       type: Boolean,
       default: false,
     },
@@ -143,6 +152,13 @@ ertesitesSchema.index({ eEmberId: 1, olvasva: 1, 'osLanc.entitasId': 1 });
 // Használat: az összefoglaló-küldő (5. lépés) ezzel gyűjti össze, mi kerüljön a
 // következő levélbe. Az időrend a levélen belüli sorrendhez kell.
 ertesitesSchema.index({ eEmberId: 1, emailKikuldve: 1, createdAt: 1 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+ertesitesSchema.options.retegAlapertelmezes = 'helyi';
 
 // A modell exportálása
 // Az első paraméter ('Ertesites') lesz a MongoDB kollekció neve (kisbetűsítve: ertesites)

@@ -12,6 +12,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // ----- ENTITÁS AZONOSÍTÓ -----
   // Melyik entitásra vonatkozik az allokáció
   entitasId: { 
+    reteg: 'szamitott',  // H6
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
     required: true,                         // Kötelező mező
     index: true                             // Indexelve gyors kereséshez
@@ -23,6 +24,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // tudatpontHozzarendeles-nél: a rendszer már írt ilyen sorokat, a séma nem tudott róluk.
   // A három tudatpont-modell enumja mostantól egységes.
   entitasTipus: {
+    reteg: 'szamitott',  // H6
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
     enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
@@ -33,6 +35,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // Az entitásra allokált összes tudatpont összege
   // Ez a denormalizált cache mező → gyors lekérdezéshez
   osszesPont: { 
+    reteg: 'szamitott',  // H6
     type: Number,                          // Szám típus
     required: true,                        // Kötelező mező
     default: 0,                            // Alapértelmezett érték: 0
@@ -42,6 +45,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // ----- HOZZÁJÁRULÓK SZÁMA -----
   // Hány eember adott tudatpontot erre az entitásra
   hozzajarulokSzama: { 
+    reteg: 'szamitott',  // H6
     type: Number,                          // Szám típus
     required: true,                        // Kötelező mező
     default: 0,                            // Alapértelmezett érték: 0
@@ -55,6 +59,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // szűrhessen ágra: { 'osLanc.entitasId': agazatId } szűrő + osszesPont rendezés
   // EGYETLEN indexelt lekérdezésben. Feltöltés/karbantartás közös (entitasOsLancPotlas).
   osLanc: {
+    reteg: 'szamitott',  // H6
     type: [{
       entitasId: { type: mongoose.Schema.Types.ObjectId },
       entitasTipus: { type: String }
@@ -65,6 +70,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor először hozzárendeltek tudatpontot az entitáshoz
   letrehozva: {
+    reteg: 'szamitott',  // H6
     type: Date,                            // Dátum típus
     default: Date.now                      // Alapértelmezett: jelenlegi időpont
   },
@@ -72,6 +78,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   // ----- FRISSÍTÉS DÁTUMA -----
   // Amikor utoljára módosították az allokációt
   frissitve: { 
+    reteg: 'szamitott',  // H6
     type: Date,                            // Dátum típus
     default: Date.now                      // Alapértelmezett: jelenlegi időpont
   }
@@ -110,6 +117,13 @@ tudatpontAllokaciSchema.pre('save', function(next) {
   }
   next();
 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+tudatpontAllokaciSchema.options.retegAlapertelmezes = 'szamitott';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

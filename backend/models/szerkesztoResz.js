@@ -26,6 +26,7 @@ const szerkesztoResz = new mongoose.Schema({
   // ----- AZ E-EMBER -----
   // Ki ez a szerkesztő. null = TÖRÖLT e-ember (az entitás közösségi, megmarad).
   eemberId: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber',                         // Referencia az eEmber modellre
     default: null                          // null = törölt e-ember
@@ -40,6 +41,7 @@ const szerkesztoResz = new mongoose.Schema({
   // A Tartozkodik és a NemSzavazott KÜLÖN tárolódik (későbbi finomításhoz),
   // de a megjelenítésben mindkettő fekete.
   allapot: {
+    reteg: 'lanc',  // H6
     type: String,                                              // Szöveges típus
     enum: ['Tamogatja', 'Ellenzi', 'Tartozkodik', 'NemSzavazott'],
     default: 'Tamogatja'                                       // Alap: támogatja (pl. a friss létrehozó)
@@ -52,6 +54,7 @@ const szerkesztoResz = new mongoose.Schema({
   // nem lehetne megbízhatóan megmondani, ki az eredeti létrehozó — pedig
   // a KÖZVETLEN szerkesztési jog (PATCH) csak őt illeti meg.
   eredeti: {
+    reteg: 'lanc',  // H6
     type: Boolean,   // Igaz/hamis típus
     default: false   // Alap: nem az eredeti létrehozó
   }

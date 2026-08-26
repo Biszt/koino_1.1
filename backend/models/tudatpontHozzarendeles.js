@@ -12,6 +12,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // ----- EMBER AZONOSÍTÓ -----
   // Ki rendelte hozzá a tudatpontokat
   eemberId: { 
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
     ref: 'eEmber',                     // Referencia a eEmber modellre
     required: true,                         // Kötelező mező
@@ -21,6 +22,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // ----- ENTITÁS AZONOSÍTÓ -----
   // Melyik entitásra (tartalom/kategória/típus/javaslat/egyezmény) rendelte hozzá a pontokat
   entitasId: { 
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
     required: true,                         // Kötelező mező
     index: true                             // Indexelve gyors kereséshez
@@ -35,6 +37,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // A testvér-modell (hierarchikusTudatpontAllokacio) enumja mindig is elfogadta —
   // ez az eltérés hiány volt, nem szándék.
   entitasTipus: {
+    reteg: 'lanc',  // H6
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
     enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
@@ -45,6 +48,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // Hány tudatpontot rendelt hozzá a eember erre az entitásra
   // 0 érték = visszavonta a hozzárendelést
   tudatPontok: {
+    reteg: 'lanc',  // H6
     type: Number,                          // Szám típus
     required: true,                        // Kötelező mező
     default: 0,                            // Alapértelmezett érték: 0
@@ -62,6 +66,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // nevezőt (a részvételi arány felső határa 100% marad).
   // Részletes terv: docs/fejlesztesi_terv.md „Részvételi modell" szakasz (2026-07-30).
   szerep: {
+    reteg: 'lanc',  // H6
     type: String,                          // Szöveges típus
     enum: ['passziv', 'aktiv'],            // Csak e két érték engedélyezett
     default: 'passziv',                    // Alapból passzív (figyelő)
@@ -71,6 +76,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor először hozzárendelte a tudatpontokat
   letrehozva: { 
+    reteg: 'lanc',  // H6
     type: Date,                            // Dátum típus
     default: Date.now                      // Alapértelmezett: jelenlegi időpont
   },
@@ -78,6 +84,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   // ----- FRISSÍTÉS DÁTUMA -----
   // Amikor utoljára módosította a hozzárendelést
   frissitve: { 
+    reteg: 'lanc',  // H6
     type: Date,                            // Dátum típus
     default: Date.now                      // Alapértelmezett: jelenlegi időpont
   }
@@ -143,6 +150,13 @@ tudatpontHozzarendelesSchema.pre('save', function(next) {
 tudatpontHozzarendelesSchema.virtual('aktiv').get(function() {
   return this.tudatPontok > 0;
 });
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+tudatpontHozzarendelesSchema.options.retegAlapertelmezes = 'lanc';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció

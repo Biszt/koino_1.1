@@ -17,6 +17,7 @@ const szavazatSchema = new mongoose.Schema({
   // ===================================
   // Ki adta le ezt a szavazatot
   eemberId: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'eEmber', // Referencia a eEmber modellre
     required: true // Kötelező mező
@@ -27,6 +28,7 @@ const szavazatSchema = new mongoose.Schema({
   // ===================================
   // Melyik javaslatra vonatkozik ez a szavazat
   javaslatId: {
+    reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     ref: 'Javaslat', // Referencia a Javaslat modellre
     required: true // Kötelező mező
@@ -35,6 +37,7 @@ const szavazatSchema = new mongoose.Schema({
   // ----- SZAVAZAT TÍPUSA -----
   // A eember támogatja, ellenzi, vagy tartózkodik a javaslatot
   szavazatTipus: {
+    reteg: 'lanc',  // H6
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező
     enum: ['Tamogat', 'Ellenez', 'Tartozkodik'],
@@ -57,6 +60,7 @@ const szavazatSchema = new mongoose.Schema({
   // FIGYELEM: ez a mező ma még csak GYŰLIK — a különválás motorja külön lépésben
   // épül meg. Enélkül a jelölés semmit nem változtat a döntés kimenetén.
   kulonvalasIgeny: {
+    reteg: 'lanc',  // H6
     type: Boolean,          // Logikai típus
     default: false          // Alapértelmezett: nem kér külön ágat
   },
@@ -66,6 +70,7 @@ const szavazatSchema = new mongoose.Schema({
   // ===================================
   // Mikor adta le először a szavazatot
   letrehozva: {
+    reteg: 'lanc',  // H6
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
   },
@@ -76,6 +81,7 @@ const szavazatSchema = new mongoose.Schema({
   // Mikor módosította utoljára a szavazatát
   // A eember bármikor meggondolhatja magát és átszavazhat
   modositva: {
+    reteg: 'lanc',  // H6
     type: Date, // Dátum típus
     default: Date.now // Alapértelmezett: jelenlegi időpont
   }
@@ -275,6 +281,13 @@ szavazatSchema.statics.szavazokListaja = async function(javaslatId) {
   
   return eemberIds;
 };
+// ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
+// A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
+// A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
+// nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
+// A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
+// Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
+szavazatSchema.options.retegAlapertelmezes = 'lanc';
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA
