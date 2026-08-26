@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>koino — az állapotszámítás próbája</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
+         max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
+  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  p.alcim { margin-top: 0; opacity: .75; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.3); }
+  th { font-weight: 600; width: 4.5rem; }
+  .jo  { color: #167d3a; font-weight: 600; }
+  .nem { color: #b3261e; font-weight: 600; }
+  .osszegzes { font-size: 1.1rem; font-weight: 600; padding: .8rem 1rem; border-radius: .4rem;
+               background: rgba(128,128,128,.12); }
+</style>
+</head>
+<body>
+
+<h1>Az állapotszámítás próbája</h1>
+<p class="alcim">
+  A legfontosabb állítás, amit bizonyít: <strong>az események SORRENDJE nem számít</strong> —
+  ugyanabból a halmazból mindig ugyanaz az állapot jön ki (D17). Enélkül két gép soha nem
+  értene egyet.
+</p>
+
+<div class="osszegzes" id="osszegzes">Fut…</div>
+<table id="eredmeny"><tbody></tbody></table>
+
+<script type="module">
+// koino/meres/allapotProba.html — az állapot-réteg önpróbája (Szakasz 1 / 5. lépés)
+//
+// Az allapotSzamitasa TISZTA FÜGGVÉNY: nem kell hozzá se tár, se hálózat. Ezért itt
+// csak eseményeket gyártunk (aláírva), és megnézzük, mi jön ki belőlük.
+
+import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { allapotSzamitasa, median, szetosztottPontok } from '../js/allapot/allapotSzamitas.js';
+
+const probak = [];
+function proba(nev, futtat) { probak.push({ nev, futtat }); }
+
+const KOINO = 'proba';
+
+// ===== SEGÉD: LÁNC-ÉPÍTŐ =====
+// Minden „e-ember" egy kulcspár és egy saját sorszám-számláló.
+async function ujEember() {
+  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const nyers = await crypto.subtle.exportKey('raw', kulcspar.publicKey);
+  let s = ''; for (const b of new Uint8Array(nyers)) s += String.fromCharCode(b);
+  const szerzo = btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+  let sorszam = 0;
+  let elozo = null;
+
+  return {
+    szerzo,
+    /** Új esemény a lánc végére. */
+    async tesz(tipus, adat) {
+      sorszam++;
+      const e = await esemenyLetrehozasa({ koino: KOINO, tipus, adat, elozo, sorszam }, kulcspar);
+      elozo = e.azonosito;
+      return e;
+    },
+    /** Elágazás előidézése: ugyanarra a sorszámra egy MÁSIK esemény. */
+    async agaztat(tipus, adat) {
+      const e = await esemenyLetrehozasa(
+        { koino: KOINO, tipus, adat, elozo, sorszam }, kulcspar);
+      return e;
+    }
+  };
+}
+
+// ===== ALAPESET =====
+
+proba('Üres eseményhalmazból üres állapot', async () => {
+  const a = allapotSzamitasa([]);
+  return a.entitasok.size === 0;
+});
+
+proba('Tartalom + tudatpont → az entitás LÉTEZIK', async () => {
+  const anna = await ujEember();
+  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Első tartalom', meret: 120 });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 500 });
+
+  const a = allapotSzamitasa([tartalom, pont]);
+  const e = a.entitasok.get(tartalom.azonosito);
+  return e?.cim === 'Első tartalom' && e.osszesPont === 500 && e.meret === 120;
+});
+
+proba('Tudatpont NÉLKÜL az entitás nem létezik (közösségi felejtés)', async () => {
+  const anna = await ujEember();
+  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Senkinek nem kell', meret: 50 });
+
+  const a = allapotSzamitasa([tartalom]);
+  return a.entitasok.size === 0 && a.elfelejtettek.length === 1;
+});
+
+proba('A pont ELVÉTELE (0) után az entitás eltűnik', async () => {
+  const anna = await ujEember();
+  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Meggondoltam', meret: 50 });
+  const ad = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 300 });
+  const elvesz = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 0 });
+
+  const a = allapotSzamitasa([tartalom, ad, elvesz]);
+  return a.entitasok.size === 0;
+});
+
+// ===== „AZ UTOLSÓ NYER" =====
+
+proba('Két pont-rendezésből az UTOLSÓ számít', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Átrendezés', meret: 10 });
+  const elso = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
+  const masodik = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
+
+  const a = allapotSzamitasa([t, elso, masodik]);
+  return a.entitasok.get(t.azonosito).osszesPont === 900;
+});
+
+// ===== ⭐ A LEGFONTOSABB: A SORREND NEM SZÁMÍT =====
+
+proba('⭐ A SORREND NEM SZÁMÍT — kevert események, azonos állapot', async () => {
+  const anna = await ujEember();
+  const bela = await ujEember();
+
+  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'Egyik', meret: 100 });
+  const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 200 });
+  const t2 = await bela.tesz('TartalomLetrehozas', { cim: 'Másik', meret: 300 });
+  const p2 = await bela.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 400 });
+  const p3 = await bela.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 50 });
+  const p4 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 700 });
+
+  const sorrendA = [t1, p1, t2, p2, p3, p4];
+  const sorrendB = [p4, p3, p2, t2, p1, t1];        // fordítva
+  const sorrendC = [p2, t1, p4, t2, p1, p3];        // összevissza
+
+  const jellemzo = (a) => JSON.stringify(
+    [...a.entitasok.values()]
+      .map((e) => [e.azonosito, e.cim, e.osszesPont, [...e.hozzajarulok.entries()].sort()])
+      .sort()
+  );
+
+  const x = jellemzo(allapotSzamitasa(sorrendA));
+  const y = jellemzo(allapotSzamitasa(sorrendB));
+  const z = jellemzo(allapotSzamitasa(sorrendC));
+
+  // Az „utolsó nyer" miatt Anna 700-a felülírja a 200-at, Béla 50-e hozzáadódik
+  const helyes = allapotSzamitasa(sorrendA).entitasok.get(t1.azonosito).osszesPont === 750;
+  return x === y && y === z && helyes;
+});
+
+proba('Kétszer számolva ugyanaz jön ki (determinizmus)', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Kétszer', meret: 1 });
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 5 });
+  const jellemzo = (a) => JSON.stringify([...a.entitasok.values()].map((e) => [e.cim, e.osszesPont]));
+  return jellemzo(allapotSzamitasa([t, p])) === jellemzo(allapotSzamitasa([t, p]));
+});
+
+// ===== KÜSZÖBÖK: A TULAJDONOSOK MEDIÁNJA (D4) =====
+
+proba('A medián a középső értéket adja (nem átlagol)', async () => {
+  return median([51, 60, 90]) === 60 && median([51, 90]) === 51 && median([]) === null;
+});
+
+proba('A küszöb a TULAJDONOSOK érték javaslatainak mediánja', async () => {
+  const anna = await ujEember();
+  const bela = await ujEember();
+  const cecil = await ujEember();
+
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Küszöbös', meret: 10 });
+  const pA = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
+  const pB = await bela.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
+  const pC = await cecil.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
+
+  const eA = await anna.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 51, reszveteliKuszob: 10, minimumDontesiIdo: 3600, maximumDontesiIdo: 86400 } });
+  const eB = await bela.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 66, reszveteliKuszob: 20, minimumDontesiIdo: 7200, maximumDontesiIdo: 86400 } });
+  const eC = await cecil.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 90, reszveteliKuszob: 30, minimumDontesiIdo: 9000, maximumDontesiIdo: 86400 } });
+
+  const a = allapotSzamitasa([t, pA, pB, pC, eA, eB, eC]);
+  const k = a.entitasok.get(t.azonosito).kuszobok;
+  return k.elfogadasiKuszob === 66 && k.reszveteliKuszob === 20 && k.minimumDontesiIdo === 7200;
+});
+
+proba('AKINEK NINCS PONTJA, annak az érték javaslata nem számít', async () => {
+  const anna = await ujEember();
+  const kivulallo = await ujEember();
+
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Védett', meret: 10 });
+  const pA = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
+  const eA = await anna.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 51 } });
+  // A kívülálló szélsőséges értéket javasol, de nincs tudatpontja az entitáson
+  const eK = await kivulallo.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 100 } });
+
+  const a = allapotSzamitasa([t, pA, eA, eK]);
+  const e = a.entitasok.get(t.azonosito);
+  return e.kuszobok.elfogadasiKuszob === 51 && e.kuszobErtekelokSzama === 1;
+});
+
+// ===== ELÁGAZÁS =====
+
+proba('Az elágazás feloldása DETERMINISZTIKUS (mindkét sorrendben ugyanaz)', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 });
+  const egyik = await anna.agaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
+  const masik = await anna.agaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
+
+  const a1 = allapotSzamitasa([t, egyik, masik]);
+  const a2 = allapotSzamitasa([t, masik, egyik]);
+
+  const p1 = a1.entitasok.get(t.azonosito)?.osszesPont;
+  const p2 = a2.entitasok.get(t.azonosito)?.osszesPont;
+  return p1 === p2 && a1.ellentmondasok.length === 1 && a2.ellentmondasok.length === 1;
+});
+
+// ===== D26: MÉRET ÉS ÁG-MÉRET =====
+
+proba('Az ág mérete a leszármazottakkal együtt számítódik (D26)', async () => {
+  const anna = await ujEember();
+  const szulo = await anna.tesz('TartalomLetrehozas', { cim: 'Szülő', meret: 100 });
+  const pSz = await anna.tesz('TudatpontRendezes', { entitas: szulo.azonosito, pont: 10 });
+  const gyerek = await anna.tesz('TartalomLetrehozas', { cim: 'Gyerek', meret: 250, szulo: szulo.azonosito });
+  const pGy = await anna.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 10 });
+
+  const a = allapotSzamitasa([szulo, pSz, gyerek, pGy]);
+  const sz = a.entitasok.get(szulo.azonosito);
+  // A SAJÁT mérete 100 (csak ezt vállalja, aki rá tett pontot), az ÁG mérete 350
+  return sz.meret === 100 && sz.agMeret === 350;
+});
+
+// ===== A TUDATPONT-KERET =====
+
+proba('A szétosztott pontok összege lekérdezhető', async () => {
+  const anna = await ujEember();
+  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'A', meret: 1 });
+  const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 300 });
+  const t2 = await anna.tesz('TartalomLetrehozas', { cim: 'B', meret: 1 });
+  const p2 = await anna.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 700 });
+
+  const a = allapotSzamitasa([t1, p1, t2, p2]);
+  return szetosztottPontok(a, anna.szerzo) === 1000;
+});
+
+// ===== JÖVŐÁLLÓSÁG =====
+
+proba('Az ISMERETLEN esemény-típus nem töri el a számítást', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Ismert', meret: 10 });
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
+  const jovobeli = await anna.tesz('ValamiUjTipus2030', { barmi: 'amit ma még nem ismerünk' });
+
+  const a = allapotSzamitasa([t, p, jovobeli]);
+  return a.entitasok.size === 1;
+});
+
+// ===== FUTTATÁS =====
+
+(async function futtatas() {
+  console.log('allapotProba - KEZDÉS', { darab: probak.length });
+  const tbody = document.querySelector('#eredmeny tbody');
+  let sikeres = 0;
+
+  for (const p of probak) {
+    let rendben = false, hibaSzoveg = '';
+    try { rendben = await p.futtat(); }
+    catch (hiba) { rendben = false; hibaSzoveg = ' — váratlan hiba: ' + hiba.message; }
+    if (rendben) sikeres++;
+
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.className = rendben ? 'jo' : 'nem';
+    th.textContent = rendben ? 'RENDBEN' : 'BUKOTT';
+    const td = document.createElement('td');
+    td.textContent = p.nev + hibaSzoveg;
+    tr.append(th, td);
+    tbody.append(tr);
+  }
+
+  const osszegzes = document.getElementById('osszegzes');
+  osszegzes.textContent = sikeres === probak.length
+    ? '✅ Mind a ' + probak.length + ' próba rendben'
+    : '❌ ' + (probak.length - sikeres) + ' próba BUKOTT (' + probak.length + '-ből)';
+  osszegzes.className = 'osszegzes ' + (sikeres === probak.length ? 'jo' : 'nem');
+
+  window.KOINO_PROBA = { osszes: probak.length, sikeres };
+  console.log('allapotProba - VÉGE', window.KOINO_PROBA);
+})();
+</script>
+
+</body>
+</html>

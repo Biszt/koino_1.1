@@ -127,6 +127,19 @@ eldobható. *(A H6 `szamitott` rétege pontosan ez, 56 mezővel.)*
 
 ---
 
+### ⚠️ Döntés az állapotszámításhoz: mi legyen az ELÁGAZÁS sorsa? (2026-08-27)
+
+Ha valaki két különböző eseményt írt alá ugyanarról a pontról, az állapotnak **akkor is
+determinisztikusnak kell lennie** — különben két gép két különböző eredményre jutna, és
+épp az veszne el, amiért az egész épül.
+
+**A megvalósított szabály: az azonosító szerint KISEBBET vesszük.**
+
+| Miért nem zárjuk ki a csalót? | Mert az elágazás **nem mindig csalás**: ha valakinek két készüléke van, és mindkettő **offline** volt, természetes módon keletkezhet. A hang elvesztése aránytalan büntetés lenne egy hétköznapi helyzetért — és ez a helyzet a P2P-ben **gyakori** lesz. |
+|---|---|
+| **Miért jó így?** | Mindenki **ugyanazt** az állapotot számolja, tehát a csalásnak **nincs haszna**: nem lehet két embernek két különböző eredményt mutatni. |
+| **És a felelősség?** | Az ellentmondás **látható marad** — a tár jelzi mentéskor, az állapot pedig felsorolja. **A koino bejelent, nem büntet** (D19). |
+
 ## 4. A TÁROLÁS — mi kerül a készülékre
 
 A H6 besorolása közvetlenül megmondja ([`adat_osztalyozas.md`](adat_osztalyozas.md)):
@@ -192,7 +205,7 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.html`](../koino/meres/kanonikusProba.html) — **14/14 rendben** |
 | **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.html`](../koino/meres/esemenyProba.html) — **13/13 rendben** |
 | **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
-| **5** | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | a számított állapot megjelenik |
+| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **14/14 rendben** |
 | **6** | **Felület** — a pakli és a kártya ráültetése | a megszokott koino-kép | ugyanaz, mint ma, de helyi adatból |
 | **7** | **A teljes kör** — tartalom → tudatpont → javaslat → szavazat → **egyezmény** | **működő koino egy gépen** | végigjátszod magadnak |
 
