@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>koino — kanonikus alak próbája</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
+         max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
+  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  p.alcim { margin-top: 0; opacity: .75; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.3); }
+  th { font-weight: 600; width: 4.5rem; }
+  .jo  { color: #167d3a; font-weight: 600; }
+  .nem { color: #b3261e; font-weight: 600; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; }
+  .osszegzes { font-size: 1.1rem; font-weight: 600; padding: .8rem 1rem; border-radius: .4rem;
+               background: rgba(128,128,128,.12); }
+</style>
+</head>
+<body>
+
+<h1>A kanonikus alak próbája</h1>
+<p class="alcim">
+  Azt bizonyítja, hogy <strong>ugyanaz a logikai adat mindig ugyanazt a lenyomatot adja</strong>
+  — és hogy a különböző adatok lenyomata tényleg különbözik.
+  <em>Ha ez a lap valaha pirosat mutat, a koino két gépe nem fog egyetérteni.</em>
+</p>
+
+<div class="osszegzes" id="osszegzes">Fut…</div>
+<table id="eredmeny"><tbody></tbody></table>
+
+<script type="module">
+// koino/meres/kanonikusProba.html — a kanonikus alak önpróbája
+//
+// Nincs teszt-könyvtár: a próbák egyszerű függvények, az eredmény a lapon látszik.
+// Ez a Szakasz 1 / 2. lépésének „megnézhető eredménye".
+
+import { kanonikusSzoveg, lenyomat } from '../js/esemeny/kanonikusAlak.js';
+
+const probak = [];
+function proba(nev, futtat) { probak.push({ nev, futtat }); }
+
+// ===== AZONOSSÁG: ugyanaz az adat, másképp összerakva =====
+
+proba('A mezők sorrendje NEM számít', async () => {
+  const a = { alma: 1, banan: 2, cseresznye: 3 };
+  const b = { cseresznye: 3, alma: 1, banan: 2 };
+  return await lenyomat(a) === await lenyomat(b);
+});
+
+proba('A beágyazott mezők sorrendje sem számít', async () => {
+  const a = { kulso: { egy: 1, ketto: 2 }, masik: [ { x: 1, y: 2 } ] };
+  const b = { masik: [ { y: 2, x: 1 } ], kulso: { ketto: 2, egy: 1 } };
+  return await lenyomat(a) === await lenyomat(b);
+});
+
+proba('Az „é" kétféle Unicode-alakja azonos', async () => {
+  const egyKarakter = { nev: 'kék' };            // é = U+00E9
+  const ketKarakter = { nev: 'kék' };           // e + kombináló ékezet
+  return await lenyomat(egyKarakter) === await lenyomat(ketKarakter);
+});
+
+proba('A hiányzó (undefined) mező nem számít', async () => {
+  const a = { alma: 1, korte: undefined };
+  const b = { alma: 1 };
+  return await lenyomat(a) === await lenyomat(b);
+});
+
+// ===== KÜLÖNBÖZŐSÉG: más adat, más lenyomat =====
+
+proba('Egyetlen karakter változása MÁS lenyomatot ad', async () => {
+  const a = { uzenet: 'tamogatom' };
+  const b = { uzenet: 'tamogatoM' };
+  return await lenyomat(a) !== await lenyomat(b);
+});
+
+proba('A TÖMB sorrendje SZÁMÍT (ott jelentés van)', async () => {
+  return await lenyomat([1, 2, 3]) !== await lenyomat([3, 2, 1]);
+});
+
+proba('A null NEM ugyanaz, mint a hiányzó mező', async () => {
+  return await lenyomat({ a: null }) !== await lenyomat({});
+});
+
+proba('A szám és a szöveg nem keverhető össze', async () => {
+  return await lenyomat({ pont: 100 }) !== await lenyomat({ pont: '100' });
+});
+
+// ===== SZIGORÍTÁS: amit VISSZA KELL UTASÍTANI =====
+
+proba('A TÖRT szám hibát dob (csak egész lehet)', async () => {
+  try { await lenyomat({ arany: 66.7 }); return false; }
+  catch (h) { return h.message.includes('EGÉSZ'); }
+});
+
+proba('A NaN és a végtelen hibát dob', async () => {
+  try { await lenyomat({ x: NaN }); return false; } catch { /* jó */ }
+  try { await lenyomat({ x: Infinity }); return false; } catch { return true; }
+});
+
+proba('A túl nagy szám hibát dob (pontosságvesztés)', async () => {
+  try { await lenyomat({ x: 9007199254740993 }); return false; } catch { return true; }
+});
+
+proba('A függvény nem szerepelhet eseményben', async () => {
+  try { await lenyomat({ f: () => 1 }); return false; } catch { return true; }
+});
+
+// ===== A KANONIKUS SZÖVEG ALAKJA =====
+
+proba('A kanonikus szöveg rendezett és tömör', async () => {
+  const szoveg = kanonikusSzoveg({ b: 2, a: 1, c: [3, { z: 1, y: 2 }] });
+  return szoveg === '{"a":1,"b":2,"c":[3,{"y":2,"z":1}]}';
+});
+
+// ===== REGRESSZIÓ: a szabály ne változzon NÉMÁN =====
+//
+// Egy rögzített bemenet rögzített lenyomata. Ha valaki később megváltoztatja a
+// kanonikus alak szabályait, ez a próba AZONNAL bukik — ami épp a lényeg: a szabály
+// megváltoztatása minden korábbi esemény azonosítóját érvénytelenítené.
+
+const HORGONY_ADAT = {
+  koino: 'proba',
+  tipus: 'TartalomLetrehozas',
+  szerzo: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+  elozo: null,
+  sorszam: 1,
+  ido: 1756252800000,
+  adat: { cim: 'Első tartalom', szoveg: 'Árvíztűrő tükörfúrógép' }
+};
+const HORGONY_LENYOMAT = 'lmeSv52X_ekE-RGg-0hGaCVtPl80E4awmXtNSnZ8xIY';  // mérve: 2026-08-27
+
+proba('REGRESSZIÓ: a rögzített lenyomat változatlan', async () => {
+  const most = await lenyomat(HORGONY_ADAT);
+  if (most !== HORGONY_LENYOMAT) {
+    console.warn('A horgony-lenyomat megváltozott! Mostani érték:', most);
+  }
+  return most === HORGONY_LENYOMAT;
+});
+
+// ===== FUTTATÁS =====
+
+(async function futtatas() {
+  console.log('kanonikusProba - KEZDÉS', { darab: probak.length });
+  const tbody = document.querySelector('#eredmeny tbody');
+  let sikeres = 0;
+
+  for (const p of probak) {
+    let rendben = false;
+    let hibaSzoveg = '';
+    try {
+      rendben = await p.futtat();
+    } catch (hiba) {
+      rendben = false;
+      hibaSzoveg = ' — váratlan hiba: ' + hiba.message;
+    }
+    if (rendben) sikeres++;
+
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.className = rendben ? 'jo' : 'nem';
+    th.textContent = rendben ? 'RENDBEN' : 'BUKOTT';
+    const td = document.createElement('td');
+    td.textContent = p.nev + hibaSzoveg;
+    tr.append(th, td);
+    tbody.append(tr);
+  }
+
+  const osszegzes = document.getElementById('osszegzes');
+  osszegzes.textContent = sikeres === probak.length
+    ? '✅ Mind a ' + probak.length + ' próba rendben'
+    : '❌ ' + (probak.length - sikeres) + ' próba BUKOTT (' + probak.length + '-ből)';
+  osszegzes.className = 'osszegzes ' + (sikeres === probak.length ? 'jo' : 'nem');
+
+  window.KOINO_PROBA = { osszes: probak.length, sikeres };
+  console.log('kanonikusProba - VÉGE', window.KOINO_PROBA);
+})();
+</script>
+
+</body>
+</html>
