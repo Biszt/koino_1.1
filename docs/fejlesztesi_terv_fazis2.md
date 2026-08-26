@@ -53,7 +53,7 @@ hozzá."*
 
 | # | Kérdés | Állapot | Mi oldotta meg |
 |---|---|---|---|
-| N1 | Tartós mag | 🟡 **alakja megvan** | mi: D14 · hogyan írható: D17 · replikáció: alak megvan, terv nincs |
+| N1 | Tartós mag | ✅ **lezárva** | mi: D14 · hogyan írható: D17 · **replikáció: D21** |
 | N2 | GDPR ↔ megmásíthatatlanság | ✅ **lezárva** | D14 (a felejtés az alapállapot) |
 | N3 | Titkos-ellenőrizhető szavazás | 🟡 **átfogalmazva** | kicsiben elvi korlát, nagyban létező tech |
 | N4 | Tanúsítási szabályok | ✅ **lezárva** | D18 |
@@ -69,14 +69,16 @@ hozzá."*
 
 ### Ami VALÓBAN nyitva maradt
 
-1. **A tartós mag replikációja** — az alak megvan (ujjlenyomat + ellenőrizhető bizonyíték),
-   a konkrét terv nincs *(N1)*
-2. **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen *(N8)*
-3. **Nagy léptékű titkos szavazás** — technológia-választás *(N3)*
-4. **Botok, napirend-manipuláció** — ez társadalmi probléma, nem technikai *(N6)*
-5. **Az elismerés-rendszer és a kinevezés terve** *(N9)*
-6. **A pénz paraméterei** *(N10)* — de a **D13/b** szerint ezeket nem kell eltalálni
-7. **A teljes mérnöki munka** — ami nem elméleti kérdés
+1. **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen *(N8)* — **az egyetlen valódi
+   kutatási kérdés**, és a lépés-sorrendben a legkésőbbi szakaszban (E) ül
+2. **Nagy léptékű titkos szavazás** — technológia-választás *(N3)*
+3. **Botok, napirend-manipuláció** — ez társadalmi probléma, nem technikai *(N6)*
+4. **Az elismerés-rendszer és a kinevezés terve** *(N9)*
+5. **A pénz paraméterei** *(N10)* — de a **D13/b** szerint ezeket nem kell eltalálni
+6. **A teljes mérnöki munka** — ami nem elméleti kérdés
+
+**A lépés-sorrend** (lentebb, saját szakaszban) megmutatja, hogy ezek közül **egyik sem áll
+az első három szakasz útjában**.
 
 ### A legfontosabb szerkezeti felismerések
 
@@ -131,6 +133,7 @@ működő közösség adja majd.*
 | D18 | Identitás | **Pozíció, nem darabszám** (távolság-szabály, Duniter-precedens) + **folytonos igazolás** (kockázati korlát, SOHA nem hang). Megújítás helyett **tevékenység = életjel**; a halál megtámadható tanúsítás. ⚠️ Az aláírás a KULCS használatát bizonyítja, nem az EMBER életét (kulcs-öröklés) → a védelem a D20 ösztönző-szerkezete. **Osztalék csak hitelesítettnek** — birtoklás, keresés, befektetés mindenkinek. |
 | D19 | Rendszer-tartalom | A program **BEJELENTŐ, nem BÍRÓ**: ellentmondásnál tartalmat hoz létre, a közösség dönt, egyezmény zárja. Ez adja meg a D15/D16/D18 hiányzó „hol"-ját. Zárt lista, felismerhető, gazdát kap, határidőre alapértelmezett kimenet. A **vita** a tartalmi rétegben marad, csak a **kimenet** megy a magba. |
 | D20 | Öröklés | **Pénz igen; tudatpont és azonosság soha.** Nem csak méltányosság: **ösztönző-védelem a kulcs-öröklés ellen** — a családot cinkosból egymás őrzőjévé alakítja. Az egyenlő osztalék miatt a dinasztikus koncentráció magától gyengül. |
+| D21 | Mag-replikáció | **Ujjlenyomat + bizonyíték** (a tároló nem tud hazudni → bizalmi helyett elérhetőségi probléma). **Három réteg:** önkéntesek · **mindenki tárolja a saját lapját** (~1 KB — az újjáépítés magja) · szeletelés később. **Napi kötegelés** → évi ~365 konszenzus-esemény, bármekkora koinónál. |
 
 További lezárt kérdések: EUDI = belépési kapu, nem üzemi függőség — a meghívó-rendszer
 MELLÉ jön (~2027), nem helyette; nincs regisztrációs korhatár (16 alatt szülői lépés);
@@ -270,9 +273,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
       ellenében**, tehát **a tároló nem tud hazudni** — az adat kevés helyen van, de senki
       nem kapuőr, mert a kapuőrséghez hazudni kellene tudni. Bevált technika (a könnyű
       kliensek így működnek).
-    - ❌ **Ami hiányzik:** a konkrét terv — milyen szerkezet, ki tárolja a teljes másolatot
-      és hány helyen, hogyan frissül az ujjlenyomat, mi történik, ha senki nem válaszol.
-      Kapcsolódik: vita 4–5. pont, N11.
+    - ✅ **A TERV MEGVAN (2026-08-25) — lásd D21.** Kapcsolódik: vita 4–5. pont, N11.
 - **N2. ~~Kilépési jog kontra örök elszámoltathatóság~~** — ✅ **LEZÁRVA (2026-08-25)** a
   **D14** által. A kérdés az volt, hogyan fér össze a GDPR törléshez való joga a
   megmásíthatatlan, P2P-replikált adatbázissal. A D14 megszünteti az ütközést: **ha semmi
@@ -1102,6 +1103,93 @@ gyengül**: az egyenlő osztalék (D10) folyamatosan új pénzt teremt mindenkin
 régi vagyon **relatív értéke magától csökken**. Fix mennyiségű pénznél (Bitcoin) az
 öröklés örökre koncentrál — itt nem.
 
+### D21. A tartós mag replikációja (2026-08-25 — az N1 lezárása)
+
+#### A szerkezet: ujjlenyomat + bizonyíték
+
+Képzeljünk el egy könyvet, amiben **minden oldal kap egy ellenőrző számot**; két-két szám
+összevonva ad egy magasabb szintűt, és a csúcson **egyetlen szám** áll az egész könyvre
+(Merkle-fa). Aki csak ezt az egy számot ismeri, az egy **oldal + a hozzá vezető ellenőrző
+láncolat** birtokában **maga ki tudja számolni**, hogy az oldal tényleg a könyvben van-e.
+
+| Mit tárol | Méret |
+|---|---|
+| **mindenki** — a csúcs-szám (ujjlenyomat) | **~32 bájt** |
+| **egy ellenőrzés** („X regisztrált-e?") — a *bizonyíték* | ~1 KB, alkalmanként |
+| **a teljes „könyv"** | csak az, aki vállalja |
+
+> **AKI TÁROL, NEM TUD HAZUDNI.** Hamis oldal nem adja ki a csúcs-számot. Ezért a tárolónak
+> **nem kell megbízhatónak lennie — akár ellenség is lehet.** Ez a mag tárolását bizalmi
+> problémából **elérhetőségi** problémává alakítja, és az sokkal könnyebb.
+
+**Mikor kell bizonyíték?** Csak határhelyzetekben: tanúsításkor (nincs-e már regisztrálva),
+szavazat-számláláskor (valódi tag-e), később a pénznél (hitelesített-e a küldő). Ismerősöknél
+soha.
+
+**Ha senki nem válaszol:** ez **állapot, nem hiba** — *„jelenleg nem ellenőrizhető"*, pontosan
+a szellem-kártya logikája (N6/D14). Egy nem ellenőrizhető szavazat még nincs beszámolva; amint
+megjön a bizonyíték, beszámolódik. A hosszú döntési ablakok miatt (D16/D17) erre bőven van idő.
+
+#### A HÁROM TÁROLÁSI RÉTEG — Csaba támadás-felvetése nyomán
+
+> **Csaba:** *„a kizárólag önkéntes résszel az a bajom, hogy támadható… mi van, ha valaki
+> megkeresi az összes önkéntes tárolót, és egyidejűleg törli őket?"*
+
+**Jogos, és az első tervem hiányos volt.** A csúf összefüggés: *ahhoz, hogy egy tároló hasznos
+legyen, meg kell találni — amit meg lehet találni, azt meg lehet támadni.* Néhány tucat,
+nyilvánosan ismert önkéntes ellen egy elszánt (akár állami) támadó egyidejű akciója nem
+irreális — és a mag elvesztése a **gerinc** elvesztése (D17).
+
+| Réteg | Ki | Mire jó |
+|---|---|---|
+| **1. Önkéntes tárolók** | néhány tucat vállalkozó | a hétköznapi kiszolgálás — gyors, egyszerű, **holnap megépíthető** |
+| **2. MINDENKI TÁROLJA A SAJÁT LAPJÁT** | minden e-ember, ~1 KB | **az újjáépítés magja** — ez a valódi védelem |
+| **3. Szeletelés (DHT)** | később, méret szerint | kapacitás **és** ellenálló képesség |
+
+**A 2. réteg az igazi válasz:** ha mindenki tárolja a saját azonosság-rekordját és ellenőrző
+láncát, akkor a törléshez **gyakorlatilag minden tag készülékét** el kellene pusztítani. Az
+újjáépítés magától megy (mindenki hozza a lapját, a csúcs-szám igazolja a helyességet), aki
+pedig elveszíti a sajátját, **újra tanúsíttathatja magát** (D18) — **fokozatos romlás, nem
+összeomlás**. Az önkéntesek ettől nem az igazság forrásai, csak **kényelmi réteg**.
+
+> Filozófiailag is ez a helyes: **az azonosság-rekordod nálad lakik.**
+
+**Az 1. és 3. réteg egymást váltja, nem zárja ki:** a csúcs-szám mindkettőnél ugyanaz, ezért az
+átállás **semmi mást nem érint**. A tervezési alapelv szerint önkéntessel kezdünk.
+
+#### KÖTEGELÉS — a konszenzus-teher eltüntetése
+
+Minden regisztrációtól új csúcs-szám lesz, és hogy melyik az érvényes, abban mindenkinek egyet
+kell értenie (D17). **De a koinóban nincs azonnali véglegesség** (D16/D17) — egy új tag ráér
+órákat várni.
+
+> **Ezért a regisztrációk KÖTEGEKBEN rögzülnek.** Napi köteggel egy koino **évi ~365
+> konszenzus-eseményt** igényel az azonossághoz — akkor is, ha tízmillióan vannak.
+
+Ezzel a legdrágábbnak látszó teher gyakorlatilag eltűnik. **Alapérték: 1 nap** (Csaba) —
+egyben a belépés várakozási ideje. Közösségi paraméter (lásd D13/c).
+
+#### BOOTSTRAP: honnan tudja egy új készülék a helyes csúcs-számot?
+
+A koinóba **valaki meghív** (D1) — **tőle kapod meg a kiinduló ujjlenyomatot is**, és
+összevetheted másokéval.
+
+> **Ugyanaz a társas bizalom, ami beenged a közösségbe, alapozza meg a technikai bizalmadat
+> is.** Nem két rendszer, egy.
+
+### D13/c. A koino-szintű paraméterek is ENTITÁSOK (2026-08-25)
+
+A **D4** medián-mechanizmusa eddig **entitásonként** működött (egy tartalom küszöbeit annak a
+tulajdonosai adják). A kötegzárás, a tanúszám és „még jó pár dolog" viszont **koino-szintű,
+globális paraméter** — kinek a mediánja dönt róluk?
+
+> **Válasz: a paraméter is legyen entitás**, a fa tetején, a koino-verzió mellett (D12).
+> Akinek fontos, tudatpontot rendel hozzá, és ő tehet rá **érték javaslatot**.
+
+Ugyanaz a gépezet, megint egy szinttel feljebb — **nincs új mechanizmus**, és a globális
+paraméter nem adminisztratív dolog lesz, hanem **ugyanolyan látható, vitatható, módosítható
+tartalom, mint bármi más**.
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -1283,6 +1371,117 @@ regisztrációt?"):**
 
 ---
 
+## A FÁZIS 2 LÉPÉS-SORRENDJE (2026-08-25)
+
+> **A vezérelv: NE ÚJRAÍRÁS LEGYEN, HANEM FELOLDÓDÁS.**
+>
+> Nem egy nagy ugrással cseréljük le a központi szervert egy P2P rendszerre. Minden szakasz
+> **egy okkal kevesebbet ad arra, hogy a szervernek higgyünk** — amíg a végén már csak egy
+> csomópont lesz a sok közül. Így minden lépés önmagában is működő, élesíthető állapot, és
+> bármikor meg lehet állni.
+
+**A sorrendet a D17 szabja meg:** *a konszenzus biztonsága = az identitás-réteg biztonsága*
+→ **az identitás a gerinc, elsőként kell állnia.**
+
+### Szakasz 0 — Előkészítés a Fázis 1-ben (híd-feladatok)
+
+A jelenlegi kódbázisban, a mostani architektúrával. **H5** (entitások önhordozóvá tétele:
+export/import, stabil azonosítók) és **H6** (adat-osztályozás: mi tartalmi réteg, mi tartós
+mag) **valódi előfeltétel** — nélkülük a későbbi szakaszok utólagos szétszálazássá válnak.
+Mellettük: **H4** (identitás-réteg leválasztása modulként), **H8** (verzió-végpont + tükör),
+**H1–H3**.
+
+### Szakasz A — A GERINC: kulcsok és bizalmi háló *(még központi szerverrel!)*
+
+**Ez a legfontosabb felismerés a sorrendben: az identitás-réteg megépíthető P2P NÉLKÜL.**
+
+- Minden e-ember kap **kulcspárt**; a privát fele a készülékén marad.
+- A műveletek **aláírást** kapnak a meglévő bejelentkezés MELLETT (nem helyette).
+- **Tanúsítás-entitás** (D18/1): „valódi, külön ember, még nem regisztrált".
+- **Távolság-szabály** (D18/2): referensek, elérhetőség — a „csillag vagy háló" mérőszáma.
+- **Folytonos igazolás** (D18/3) — kockázati korlát, soha nem hang.
+- **Halál-bejelentés** (D18/7) + **D19** rendszer-tartalom + **D20** öröklés.
+
+| | |
+|---|---|
+| Mit lehet abbahagyni? | még semmit — de az adat **önmagát igazolóvá** válik |
+| Miért itt? | a D17 szerint ez a gerinc; és **valódi emberekkel kell kipróbálni**, mielőtt az architektúra változik |
+| Kipróbálható a mai 16 fővel? | ✅ **igen** — sőt, itt derül ki a bootstrap-tanulság (D18/10): *nem engem kell igazolni, hanem egymást* |
+| Kockázat | 🟡 a bizalmi háló csak **emberekkel** tesztelhető, nem kóddal |
+
+### Szakasz B — AZ ELLENŐRIZHETŐSÉG: a mag mint Merkle-fa
+
+- A szerver **építi** a fát, de a kliens megkapja a **csúcs-számot** (D21).
+- A kliens **bizonyítékot ellenőriz**, nem a szerver szavát hiszi el.
+- **Mindenki tárolja a saját lapját** (D21, 2. réteg) — az adat elkezd a szerveren kívül élni.
+- Megjelennek az **önkéntes tárolók** (1. réteg); **napi kötegelés**.
+
+| | |
+|---|---|
+| Mit lehet abbahagyni? | 🔓 **a szerver szavát arról, hogy KI REGISZTRÁLT** |
+| Miért itt? | ez az első valódi decentralizáció — a szerver **már nem tud hazudni** az azonosságról |
+| Kockázat | 🟢 alacsony — bevált technika (könnyű kliensek) |
+
+### Szakasz C — AZ ESEMÉNY-ALAPÚ ADATMODELL *(a legnagyobb átalakítás)*
+
+- Minden **aláírt eseménnyé** válik: tartalom-létrehozás, tudatpont-rendezés, szavazat.
+- **E-ember-láncok és entitás-láncok** (N8 DAG-ja): egy esemény két láncot köt össze.
+- Az eredmény **determinisztikus számítás** az eseményekből (D17), nem a szerver állítása.
+
+| | |
+|---|---|
+| Mit lehet abbahagyni? | 🔓 **a szerver szavát arról, hogy MI TÖRTÉNT** |
+| Kockázat | 🔴 **ez a nagy átírás** — a backend „vízvezeték" háromnegyede (repositories, models, controllers) itt cserélődik. A domain-logika (küszöb, bizonyossági mutató, javaslat-életciklus) viszont **átvihető**. |
+
+### Szakasz D — A HÁLÓZAT: eszközök egymás közt
+
+- **P2P átvitel** (libp2p vagy hasonló), felfedezés.
+- **A tudatpont mint tárolási térkép** (D3, N6) — aki pontot rendelt, az tárolja.
+- **Szellem-kártya** offline tartalomra.
+
+| | |
+|---|---|
+| Mit lehet abbahagyni? | 🔓 **a szerver LÉTEZÉSÉT** — egy csomópont lesz a sok közül |
+| Kockázat | 🟠 mérnökileg nehéz (NAT, mobil-háttérfutás, N11 hibrid hálózat), de **ismert terep** |
+
+### Szakasz E — KONSZENZUS: a köteg-gyökér elfogadása
+
+- **Személy-alapú érvényesítők** az identitás-rétegből (D17).
+- **Érvényesítő-kiválasztás** — befolyásolhatatlan véletlen.
+- Napi köteg-gyökér elfogadása.
+
+| | |
+|---|---|
+| Mit lehet abbahagyni? | 🔓 **bármely EGYETLEN szereplőt** |
+| Kockázat | 🔴 **itt ül az utolsó valódi kutatási kérdés** (N8 maradéka) |
+
+### Szakasz F — PÉNZ *(a D11 kapuja mögött)*
+
+Csak azután, hogy az identitás-réteg **élesben bizonyított** (D11). Tartalma: **D10**
+(alkotmányos kibocsátás, egyenlő osztalék), **D16** (lassú, megtámadható), **D18/8**
+(osztalék csak hitelesítettnek), **D20** (öröklés), **N10** paraméterei.
+
+### A szakaszok EGYBEN MENÜ IS
+
+**Nem minden koinónak kell mind a hat.** A D13 (a koino eszköz) és a D17 köztes-méret
+logikája szerint:
+
+| Koino | Meddig kell eljutnia |
+|---|---|
+| **család, osztály, munkahely** (ismeritek egymást) | **C vagy D** — konszenzus és pénz nélkül teljes értékű |
+| **nagy, nyílt közösség** | **E**, majd ha akar, **F** |
+
+Ez a **D13/b** paraméter-pluralizmus gyakorlati alakja: nem egy végállapot van, hanem
+**választható mélységek**.
+
+### Hol lesz a koino „P2P"?
+
+**A D szakasztól.** De az **A–B** már önmagában nagy nyereség: *ellenőrizhető központi
+rendszer*, ahol a szerver **nem tud hazudni az azonosságról** — ez ma sehol nem így van, és
+a jelenlegi kódbázisban megépíthető.
+
+---
+
 ## Híd-feladatok — amit a Fázis 1 készít elő a Fázis 2-höz
 
 *(Ezek a központi szerveres kódban készülnek el, amikor a kódolás-felfüggesztés
@@ -1430,3 +1629,24 @@ feloldódik; a [fejlesztesi_terv.md](fejlesztesi_terv.md)-be is átvezetendők a
     ami ritka és nem végzetes, azt felírjuk, de nem építjük meg.
   - **Új szakasz a dokumentum elején: „HOL TARTUNK"** — a Fázis 2 tervezés állapota
     egy helyen.
+- **2026-08-25 (7)** — **N1 LEZÁRVA → D21, és megszületett a FÁZIS 2 LÉPÉS-SORRENDJE.**
+  - **D21 (mag-replikáció):** ujjlenyomat + ellenőrizhető bizonyíték — *aki tárol, nem tud
+    hazudni*, ezért a tárolás **bizalmi helyett elérhetőségi** probléma. **Csaba támadás-
+    felvetése** („mi van, ha valaki egyszerre törli az összes önkéntes tárolót?") hiányosnak
+    mutatta az első tervet → **három réteg**, és a középső a valódi védelem: **mindenki
+    tárolja a saját lapját** (~1 KB), amiből a mag újjáépíthető. **Napi kötegelés** (Csaba
+    alapértéke): évi ~365 konszenzus-esemény, bármekkora koinónál. **Bootstrap:** a kiinduló
+    ujjlenyomatot attól kapod, aki meghívott — *ugyanaz a társas bizalom alapozza meg a
+    technikait is*.
+  - **D13/c:** a koino-szintű paraméterek (kötegzárás, tanúszám…) **maguk is entitások** a fa
+    tetején — nincs új mechanizmus, a D4 mediánja egy szinttel feljebb.
+  - **Fogalmi tisztázás Csaba kérdésére:** a döntési ablakok **nem** a lánc építése miatt
+    hosszúak — fordítva: társadalmi okból amúgy is lassúak, **ezért nem kell a technikának
+    gyorsnak lennie**. Plusz a DAG-terminológia: a **hálózati csomópont** egy készülék, a
+    **DAG-csomópont** egy esemény — a gráf pontjai események, nem eszközök.
+  - **A LÉPÉS-SORRSZAKASZOK (A–F) vezérelve: NEM ÚJRAÍRÁS, HANEM FELOLDÓDÁS** — minden
+    szakasz egy okkal kevesebbet ad arra, hogy a szervernek higgyünk. **A legfontosabb
+    felismerés: az identitás-réteg (A szakasz) megépíthető P2P NÉLKÜL**, a mostani
+    kódbázisban, és a mai 16 fővel kipróbálható. Az egyetlen valódi kutatási kérdés
+    (érvényesítő-kiválasztás) a legkésőbbi szakaszban (E) ül, tehát **semmi nem áll az első
+    három szakasz útjában**. A szakaszok **menüt** is alkotnak: kis koinónak a C/D elég.
