@@ -206,8 +206,13 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.html`](../koino/meres/esemenyProba.html) — **13/13 rendben** |
 | **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
 | **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **14/14 rendben** |
-| **6** | **Felület** — a pakli és a kártya ráültetése | a megszokott koino-kép | ugyanaz, mint ma, de helyi adatból |
-| **7** | **A teljes kör** — tartalom → tudatpont → javaslat → szavazat → **egyezmény** | **működő koino egy gépen** | végigjátszod magadnak |
+| **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.html`](../koino/meres/javaslatProba.html) — **15/15 rendben** |
+| **7** | **Felület** — a koino-kép a helyi adatból | végigjátszható magadnak | böngészőben, kézzel |
+
+> ⚠️ **A 6. és 7. lépés helyet cserélt** (2026-08-27, Csaba jóváhagyásával). Indok: a
+> döntéshozatal logikája próbaoldalon **felület nélkül is végigjátszható**; fordított
+> sorrendben viszont a felületet **kétszer** kellene megírni — egyszer a szűkebb modellre,
+> aztán újra, amikor a javaslat és a szavazás is bekerül.
 
 **A 7. lépés a szakasz vizsgája.** Ha az egyezmény megszületik pusztán aláírt eseményekből,
 szerver nélkül — akkor a Fázis 2 gerince áll.

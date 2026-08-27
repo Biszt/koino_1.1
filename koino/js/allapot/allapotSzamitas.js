@@ -161,8 +161,15 @@ export function allapotSzamitasa(esemenyek) {
       // ----- TUDATPONT-RENDEZÉS -----
       // „Az utolsó nyer" (e-ember + entitás párra). A tudatpont nem elköltött, hanem
       // ODARENDELT: bármikor átrendezhető, és az átrendezés csak egy újabb esemény.
+      //
+      // A SZEREP (aktív / passzív) itt dől el, és a döntéshozatalban lesz fontos: a
+      // részvételi arány nevezőjébe csak az AKTÍV tulajdonosok számítanak bele. Aki
+      // passzív figyelő, az nem korlátozza a döntést — ez a modell lényege.
       case 'TudatpontRendezes':
-        pontok.rogzit(e.szerzo + '|' + e.adat.entitas, e, e.adat.pont);
+        pontok.rogzit(e.szerzo + '|' + e.adat.entitas, e, {
+          pont: e.adat.pont,
+          szerep: e.adat.szerep === 'passziv' ? 'passziv' : 'aktiv'
+        });
         break;
 
       // ----- ÉRTÉK JAVASLAT (küszöbök) -----
@@ -201,10 +208,13 @@ export function allapotSzamitasa(esemenyek) {
     const [szerzo, entitasAzonosito] = kulcs.split('|');
     const entitas = entitasok.get(entitasAzonosito);
     if (!entitas) continue;                           // olyan entitásra mutat, amit nem ismerünk
-    if (bejegyzes.ertek <= 0) continue;               // a 0 pont = elvette a pontját
+    if (bejegyzes.ertek.pont <= 0) continue;          // a 0 pont = elvette a pontját
 
-    entitas.hozzajarulok.set(szerzo, bejegyzes.ertek);
-    entitas.osszesPont += bejegyzes.ertek;
+    entitas.hozzajarulok.set(szerzo, {
+      pont: bejegyzes.ertek.pont,
+      szerep: bejegyzes.ertek.szerep
+    });
+    entitas.osszesPont += bejegyzes.ertek.pont;
   }
 
   // ----- KÜSZÖBÖK: A TULAJDONOSOK MEDIÁNJA (D4) -----
@@ -311,7 +321,25 @@ function agMeretSzamitasa(azonosito, entitasok) {
 export function szetosztottPontok(allapot, szerzo) {
   let osszeg = 0;
   for (const entitas of allapot.entitasok.values()) {
-    osszeg += entitas.hozzajarulok.get(szerzo) ?? 0;
+    osszeg += entitas.hozzajarulok.get(szerzo)?.pont ?? 0;
   }
   return osszeg;
+}
+
+/**
+ * Egy entitás AKTÍV tudatpont-tulajdonosai.
+ *
+ * Csak ők számítanak a részvételi arány nevezőjébe: a passzív figyelők szándékosan
+ * kimaradnak, hogy ne korlátozzák a döntést azok, akik nem akarnak részt venni benne.
+ *
+ * @param {Object} entitas
+ * @returns {Set<string>} a szerzők halmaza
+ */
+export function aktivTulajdonosok(entitas) {
+  const halmaz = new Set();
+  if (!entitas) return halmaz;
+  for (const [szerzo, adat] of entitas.hozzajarulok) {
+    if (adat.szerep === 'aktiv') halmaz.add(szerzo);
+  }
+  return halmaz;
 }
