@@ -3,6 +3,19 @@
 // Felelősség: a javaslatok állapotának KISZÁMÍTÁSA az aláírt eseményekből — és ezzel
 // az EGYEZMÉNY megszületése.
 //
+// ===== KÉT FAJTA JAVASLAT, EGY GÉPEZET (D27) =====
+//
+//   SZERKESZTÉSI javaslat → egy entitás megváltoztatása (módosítás, áthelyezés,
+//     törlés, egyesítés). Elfogadáskor a koino VÉGREHAJTJA.
+//   ÁLTALÁNOS javaslat → a közösség álláspontja („fogadjuk el ezt az elvet"). Elfogadáskor
+//     NEM történik semmi automatikusan: az egyezmény MAGA az álláspont, a teljesítése
+//     emberi (D8). Az ilyen egyezmény ÉLŐ: később csatlakozni, tiltakozni, ütközést
+//     jelölni lehet hozzá.
+//
+// A SZAVAZÁS GÉPEZETE MINDKETTŐNÉL UGYANAZ — küszöbök, medián, részvételi arány,
+// bizonyossági mutató, döntési idő —, ezért egy `Javaslat` esemény van, `fajta` mezővel.
+// Csak a KÖVETKEZMÉNYE más. (Ezért nem két párhuzamos változatot tartunk karban.)
+//
 // ⭐ A LEGFONTOSABB ÁLLÍTÁS: az egyezmény nem esemény, hanem SZÁMÍTÁS EREDMÉNYE.
 // Senki nem „hozza létre", senki nem „mondja ki". Az elfogadott javaslatból következik,
 // és ugyanabból az eseményhalmazból mindenki ugyanarra jut (D17). Nincs kiváltságos
@@ -83,8 +96,11 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
   const javaslatok = new Map();
 
   for (const e of esemenyek) {
-    if (e.tipus !== 'JavaslatLetrehozas') continue;
+    if (e.tipus !== 'Javaslat') continue;
 
+    // A fajta dönti el, mi történik ELFOGADÁSKOR (D27). Ha hiányzik, szerkesztésinek
+    // vesszük — ez a mai koino összes javaslata.
+    const fajta = e.adat.fajta === 'altalanos' ? 'altalanos' : 'szerkesztesi';
     const erintettAzonosito = e.adat.erintett;
     const erintett = allapot.entitasok.get(erintettAzonosito);
 
@@ -157,6 +173,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // mert a szavazatok később elfelejtődhetnek alóla).
     const egyezmeny = statusz !== 'elfogadva' ? null : {
       javaslat: e.azonosito,
+      fajta,                                   // szerkesztési vagy általános (D27)
       erintett: erintettAzonosito,
       muvelet: e.adat.muvelet,
       valtozas: e.adat.valtozas ?? null,
@@ -170,6 +187,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
 
     javaslatok.set(e.azonosito, {
       azonosito: e.azonosito,
+      fajta,                                   // 'szerkesztesi' | 'altalanos' (D27)
       erintett: erintettAzonosito,
       muvelet: e.adat.muvelet,
       valtozas: e.adat.valtozas ?? null,

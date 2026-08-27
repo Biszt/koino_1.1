@@ -194,3 +194,218 @@ body {
 }
 
 .hibaSzoveg { color: var(--szin-hiba); }
+
+/* ===================================
+   A KOINO ÉLETE (Szakasz 1 / 7. lépés)
+   =================================== */
+
+/* ----- FEJLÉC-AZONOSSÁG ----- */
+
+.fejlec__azonossag {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+}
+
+.fejlec__cimke {
+  color: var(--szin-halvany);
+  margin-right: 0.35rem;
+}
+
+/* ----- ÁLLAPOTSÁV ----- */
+
+.doboz--sav { padding: 1rem 1.4rem; }
+
+.sav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.sav__elem {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.95rem;
+}
+
+.sav__cimke {
+  color: var(--szin-halvany);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ----- IDŐ-CSÚSZKA -----
+   Fejlesztői eszköz, de tanulságos: az állapot tiszta függvény, az idő BEMENET. */
+
+.idoutazas {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--szin-keret);
+  font-size: 0.9rem;
+}
+
+.idoutazas input[type="range"] {
+  width: 100%;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.idoutazas__magyarazat {
+  display: block;
+  color: var(--szin-halvany);
+  font-size: 0.83rem;
+}
+
+/* ----- LISTÁK ÉS KÁRTYÁK ----- */
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.kartya {
+  border: 1px solid var(--szin-keret);
+  border-left: 3px solid var(--szin-keret);
+  border-radius: 0.4rem;
+  padding: 0.85rem 1rem;
+  background: var(--szin-hatter);
+}
+
+.kartya--folyamatban { border-left-color: var(--szin-figyelem); }
+.kartya--elfogadva   { border-left-color: var(--szin-kiemelt); }
+.kartya--elvetve     { border-left-color: var(--szin-hiba); }
+.kartya--egyezmeny   { border-left-color: var(--szin-kiemelt); background: var(--szin-doboz); }
+
+.kartya__fejlec {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.kartya__cim {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.kartya__meret {
+  color: var(--szin-halvany);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.kartya__szoveg {
+  margin: 0.5rem 0 0;
+  font-size: 0.94rem;
+  white-space: pre-wrap;
+}
+
+.kartya__adatok {
+  margin: 0.45rem 0 0;
+  font-size: 0.86rem;
+  color: var(--szin-szoveg);
+}
+
+.kartya__adatok--halvany { color: var(--szin-halvany); }
+
+.kartya__allapot {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  white-space: nowrap;
+}
+
+.allapot--folyamatban { background: var(--szin-figyelem-hatter); color: var(--szin-figyelem); }
+.allapot--elfogadva   { background: var(--szin-kiemelt); color: #fff; }
+.allapot--elvetve     { background: var(--szin-hiba); color: #fff; }
+
+/* ----- ŰRLAPOK ----- */
+
+.urlap {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.urlap--fuggoleges {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0.8rem;
+}
+
+.mezo {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--szin-keret);
+  border-radius: 0.4rem;
+  background: var(--szin-hatter);
+  color: var(--szin-szoveg);
+  font: inherit;
+  font-size: 0.94rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.mezo--szuk { flex: 0 0 6rem; }
+
+textarea.mezo { resize: vertical; font-family: inherit; }
+
+/* ----- ÚJ ELEM (összecsukható) ----- */
+
+.ujElem {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--szin-keret);
+}
+
+.ujElem summary {
+  cursor: pointer;
+  font-size: 0.94rem;
+  color: var(--szin-kiemelt);
+  font-weight: 600;
+}
+
+/* ----- GOMBOK ----- */
+
+.gombsor--kicsi { margin-top: 0.7rem; gap: 0.45rem; }
+
+.gombsor--kicsi .gomb {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.87rem;
+}
+
+.gomb--kivalasztott {
+  background: var(--szin-kiemelt);
+  border-color: var(--szin-kiemelt);
+  color: #fff;
+}
+
+/* ----- MEGJEGYZÉSEK ÉS ÜZENETEK ----- */
+
+.megjegyzes {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--szin-halvany);
+}
+
+.uzenetSav {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 0.7rem 1.1rem;
+  border-radius: 0.5rem;
+  background: var(--szin-kiemelt);
+  color: #fff;
+  font-size: 0.92rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+}
+
+.uzenetSav--hiba { background: var(--szin-hiba); }

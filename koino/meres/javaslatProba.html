@@ -103,7 +103,8 @@ async function esetFelepitese({ szavazatok, kuszobok, szerepek = {}, kezdet = Da
   }
 
   // A javaslat
-  const javaslat = await letrehozo.tesz('JavaslatLetrehozas', {
+  const javaslat = await letrehozo.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
     erintett: tartalom.azonosito,
     muvelet: 'Modositas',
     valtozas: { cim: 'A javított cím' },

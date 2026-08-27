@@ -8,6 +8,23 @@
 
 ## Mit épít ez a szakasz — és mit nem
 
+> ## ✅ A SZAKASZ 1 ELKÉSZÜLT (2026-08-27)
+>
+> Mind a 7 lépés kész, **82 önpróba fut zölden**, és a teljes kör végigjátszható a
+> böngészőben. A vizsga lefutott:
+>
+> | Lépés a próbán | Eredmény |
+> |---|---|
+> | koino létrehozása | „Kispatak utcai szomszédok" |
+> | tartalom + tudatpont | 111 bájt (D26), 100 pont |
+> | szerkesztési javaslat | folyamatban, döntési idő **168 óra** |
+> | egy támogató szavazat | bizonyosság 100% → a döntési idő **24 órára rövidült** |
+> | idő +3 nap | **ELFOGADVA** |
+> | **egyezmény** | megszületett, a pillanatképpel |
+>
+> A **döntési idő 168 → 24 óra rövidülése** a bizonyossági mutató (D4) működése élőben:
+> minél egyértelműbb az eredmény, annál hamarabb zárul a döntés.
+
 **Épít:** egy működő koinót **egyetlen készüléken, hálózat nélkül**. A végén egy ember
 tartalmat hoz létre, tudatpontot rendez, javaslatot tesz, szavaz — és az egyezmény
 megszületik. **Minden művelet aláírva**, az adat a készüléken.
@@ -207,7 +224,7 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
 | **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **14/14 rendben** |
 | **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.html`](../koino/meres/javaslatProba.html) — **15/15 rendben** |
-| **7** | **Felület** — a koino-kép a helyi adatból | végigjátszható magadnak | böngészőben, kézzel |
+| **7** ✅ | **Felület** — a koino-kép a helyi adatból | végigjátszható magadnak | böngészőben, kézzel — **a teljes kör lefutott** |
 
 > ⚠️ **A 6. és 7. lépés helyet cserélt** (2026-08-27, Csaba jóváhagyásával). Indok: a
 > döntéshozatal logikája próbaoldalon **felület nélkül is végigjátszható**; fordított
