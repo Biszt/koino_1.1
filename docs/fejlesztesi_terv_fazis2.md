@@ -41,7 +41,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-26)
 
-**27 tervezési döntés (D1–D27) áll.** 2026-08-25-én három elméleti hidat építettünk
+**28 tervezési döntés (D1–D28) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
@@ -1668,6 +1668,63 @@ tartalmakban van.
 - **A prototípus (1.1) NEM kap átnevezést** — befagyasztva marad (D22/D24). Az
   elnevezés az új koinóban él.
 
+### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
+
+> „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
+> **kötelező adatokat, amit az adott koino elvár**. Az első koinót én fogom létrehozni, és
+> én szeretném, hogy megadják a **teljes nevüket és a lokációjukat is, település
+> szintig**." — Csaba
+
+#### 1. Az adatot nem „megadod egy szolgáltatónak", hanem ALÁÍROD MAGADRÓL
+
+| Ma | A Fázis 2-ben |
+|---|---|
+| kitöltesz egy űrlapot, a szerver eltárolja — az adat **nála** van | **te állítod magadról, aláírva**: *„én, ez a kulcs, azt mondom magamról, hogy…"* |
+
+#### 2. A valódiságát a TANÚSÍTÁS adja, nem az ellenőrzés
+
+A rendszer nem tudja és nem is akarja ellenőrizni, hogy tényleg úgy hívnak-e. **Aki
+behívott, az ismer** — és a D18 szerint ő tanúsítja, hogy valódi, külön ember vagy.
+
+> **Ez már ma is így működik:** a mai meghívónál a kibocsátó megadja a meghívott **teljes
+> nevét**, és a regisztrációs űrlap előre kitöltve nyílik meg. A séma kommentje ki is
+> mondja: *„a kibocsátó tanúsítása a névre is kiterjed."* A Fázis 2 ezt folytatja.
+
+#### 3. Koino-paraméter: mindegyik maga mondja meg, mit vár el
+
+Csaba első koinója: **teljes név + lokáció település szintig**. Egy másik koino kérhet
+mást, vagy semmit — ugyanaz a paraméter-szabadság, mint a küszöböknél (D13/b, D25).
+
+#### 4. ⭐ KÉT ESEMÉNY, NEM EGY
+
+```
+Belepes  { koino }                    → a tagság TÉNYE: „csatlakozom"
+Profil   { koino, nev, lokacio }      → az ADATAID: „ezt mondom magamról"
+```
+
+**Négy indok, amiért nem egyben:**
+
+| # | Indok |
+|---|---|
+| 1 | **A költözés ne hamisítsa meg a belépés dátumát.** Egy eseménnyel új „belépést" kellene aláírni — mintha most csatlakoztál volna |
+| 2 | **A tagság bizonyítéka ne tartalmazzon személyes adatot.** A létszám-rangsorhoz (D25) a tagságok bizonyítékai kellenek — ha a név bennük lenne, a létszám ellenőrzése egyben **a névsor kiadása** is volna |
+| 3 | **Törölhető legyen a név, a tagság elvesztése nélkül.** Egy üres Profil-esemény leveszi az adatokat (az utolsó számít), miközben tag maradsz |
+| 4 | **Koinónként külön profil** — az azonosság közös a térben, a megjelenés helyi (D25) |
+
+**A felületen ez nem látszik:** egy űrlap, egy „Belépés" gomb — a háttérben két aláírás.
+*(Pontosan úgy, ahogy ma is: tartalom létrehozásakor két esemény születik — a tartalom és
+a tudatpont —, de a felhasználó egy gombot nyom.)*
+
+#### 5. Az adat rétege (H6)
+
+| Adat | Réteg |
+|---|---|
+| `Belepes` (a tagság ténye) | `lanc` — aláírt cselekvés; ebből számolható a létszám |
+| `Profil` (név, lokáció) | `tartalom` · **`szemelyes`** |
+
+> **A D6 tehát sértetlen:** a tartós magban csak az van, hogy *„ez a kulcs egy valódi,
+> külön ember"* — a **nevedről ott egyetlen bit sincs**.
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -2439,3 +2496,29 @@ hanem egymást.*
   - **Nincs automatikus következmény:** sem a tiltakozók többsége, sem az ütközés-jelölés
     nem érvénytelenít magától — a rendszer **bejelent, nem bíró** (D19).
   - **A prototípus (1.1) NEM kap átnevezést** — befagyasztva marad.
+- **2026-08-27 (3)** — **D28: a BELÉPÉSI ADATOK.** Csaba elvárása: a koino kötelező
+  adatokat kérhet a belépéskor; az ő első koinója **teljes nevet és lokációt (település
+  szintig)** vár el.
+  - **Az adatot nem „megadod egy szolgáltatónak", hanem ALÁÍROD MAGADRÓL.** A valódiságát
+    nem ellenőrzés adja, hanem a **tanúsítás**: aki behívott, az ismer (D18). *Ez már ma is
+    így működik — a meghívó tartalmazza a meghívott teljes nevét, és a séma kommentje ki is
+    mondja, hogy „a kibocsátó tanúsítása a névre is kiterjed".*
+  - **Koino-paraméter**: mindegyik maga mondja meg, mit vár el (D13/b, D25).
+  - ⭐ **KÉT ESEMÉNY, nem egy:** `Belepes { koino }` (a tagság ténye) és
+    `Profil { koino, nev, lokacio }` (az adatok). Négy indok: a költözés ne hamisítsa meg a
+    belépés dátumát · **a tagság bizonyítéka ne tartalmazzon személyes adatot** (különben a
+    létszám ellenőrzése egyben a névsor kiadása volna) · a név törölhető legyen a tagság
+    elvesztése nélkül · koinónként külön profil. **A felületen ez nem látszik**: egy űrlap,
+    egy gomb, a háttérben két aláírás.
+  - **A D6 sértetlen:** a `Belepes` a `lanc` rétegbe tartozik, a `Profil` a `tartalom`-ba
+    `szemelyes` jelöléssel — a tartós magban a névről **egyetlen bit sincs**.
+- **2026-08-27 (4)** — **A FELÜLET ALAPELVE + a Szakasz 1 elkészülte.** Csaba a Szakasz 1
+  fejlesztői nézetét látva: *„Nem szeretnék ideiglenes, rögtönzött frontendet, még a
+  teszteléshez sem… de akkor még nem is akarom tesztelni a kliens oldalt."* → a felület a
+  prototípusból **öröklődik** (D22), és amíg a modell nem stabil, **nincs kliens-oldali
+  tesztelés**; a próbaoldalak elegendők. Új: [`felulet_terv.md`](felulet_terv.md), benne a
+  **belépő tér nézete** (pakli-stílus, koino-kártyák, **létszám szerinti lista**,
+  kártya-hamburger az adott koino opcióival + alsó sáv a tér opcióival).
+  **A Szakasz 1 (A HELYI KOINO) ELKÉSZÜLT:** 7/7 lépés, 82 önpróba zölden, és a teljes kör
+  végigjátszva — a döntési idő egyetlen támogató szavazattól **168 óráról 24-re rövidült**
+  (a D4 bizonyossági mutatója élőben), majd az **egyezmény megszületett**.
