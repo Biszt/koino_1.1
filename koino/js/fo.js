@@ -95,7 +95,7 @@ async function frissites() {
   // ha valaki két különböző szavazatot írt alá ugyanarról a pontról, az állapot-réteg
   // már eldöntötte determinisztikusan, melyik érvényes. Nyers eseményekkel a számlálás
   // a beérkezés sorrendjétől függne — vagyis két gép mást számolna.
-  const javaslatok = javaslatokSzamitasa(allapot.ervenyesek, allapot, most);
+  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
 
   // ----- VAN-E MÁR KOINO? -----
   const vanKoino = allapot.koino.nev !== null;
@@ -114,7 +114,7 @@ async function frissites() {
   ellentmondasokKiirasa(allapot);
   tartalmakRajzolasa(allapot);
   szuloValasztoFeltoltese(allapot);
-  javaslatokRajzolasa(javaslatok, allapot, allapot.ervenyesek);
+  javaslatokRajzolasa(javaslatok, allapot, allapot.szamitok);
   egyezmenyekRajzolasa(javaslatok, allapot);
 
   console.log('fo.frissites - VÉGE', {
@@ -147,6 +147,12 @@ function ellentmondasokKiirasa(allapot) {
   if (allapot.idoEllentmondasok.length) {
     darabok.push('⚠️ ' + allapot.idoEllentmondasok.length
       + ' visszafelé lépő idő: egy későbbi esemény korábbi időt visel, mint az előtte lévő.');
+  }
+  if (allapot.kivetelek.length) {
+    // Az okokat összevonjuk, hogy tíz azonos eset ne írjon tele egy sávot
+    const okok = [...new Set(allapot.kivetelek.map((k) => k.ok))];
+    darabok.push('⚠️ ' + allapot.kivetelek.length
+      + ' esemény nem számít bele (' + okok.join('; ') + ').');
   }
 
   sav.textContent = darabok.join(' ');

@@ -139,7 +139,7 @@ async function esetFelepitese({ szavazatok, kuszobok, szerepek = {}, kezdet = Da
 function javaslatAllapot(eset, most) {
   const allapot = allapotSzamitasa(eset.esemenyek);
   // Az ELÁGAZÁS-MENTESÍTETT eseményekkel számolunk — ahogy a felület is (fo.js).
-  const javaslatok = javaslatokSzamitasa(allapot.ervenyesek, allapot, most);
+  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
   return javaslatok.get(eset.javaslat.azonosito);
 }
 

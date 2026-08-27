@@ -10,15 +10,20 @@
 //
 // Használják: fo.js (a felület).
 
+import { TUDATPONT_KERET } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { esemenyMentese, lancVege } from './tar/esemenyTar.js';
 
 // ===== A TUDATPONT-KERET =====
 // Mindenkinek UGYANANNYI tudatpontja van: nem elkölthető, csak szétosztható és bármikor
-// átrendezhető. Ez nem szerver-szabály, hanem a koino alapelve — a felület azért
-// ellenőrzi, hogy ne írjunk alá olyan eseményt, ami sérti.
-export const TUDATPONT_KERET = 10000;
+// átrendezhető.
+//
+// ⚠️ AZ ELLENŐRZÉS ITT KÉNYELEM, NEM VÉDELEM. Azért van, hogy ne írjunk alá olyan
+// eseményt, ami sérti a keretet — de a VALÓDI őrzés a SZÁMÍTÁSBAN van (szabalyok.js),
+// mert a másik gép felülete semmitől nem véd meg. A keret értéke onnan jön, egy
+// példányban, hogy a kettő ne csúszhasson szét.
+export { TUDATPONT_KERET };
 
 // ===================================
 // SEGÉD: ESEMÉNY LÉTREHOZÁSA ÉS MENTÉSE

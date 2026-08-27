@@ -19,7 +19,9 @@
 // attól, milyen sorrendben érkeztek meg az események. Így nem kell sem globális
 // sorrend, sem ütközés-feloldó könyvtár (CRDT).
 //
-// Használják: fo.js és a felület; a következő lépésben a javaslat/szavazat számítása.
+// Használják: fo.js és a felület; a javaslat/szavazat számítása (javaslatSzamitas.js).
+
+import { szabalyokErvenyesitese } from './szabalyok.js';
 
 // ===================================
 // ELÁGAZÁS-FELOLDÁS
@@ -187,7 +189,15 @@ export function median(szamok) {
 export function allapotSzamitasa(esemenyek) {
   console.log('allapotSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
 
+  // ----- KÉT SZŰRŐ, EGYMÁS UTÁN -----
+  // 1. ELÁGAZÁS: ha valaki két eseményt írt alá ugyanarról a pontról, determinisztikusan
+  //    választunk (a kisebb azonosító).
+  // 2. SZABÁLYOK: a tudatpont-keret és a javaslat-jogosultság — mert amit a SZÁMÍTÁS nem
+  //    ellenőriz, az nem szabály, csak illemtan (szabalyok.js).
+  // Egyik szűrő sem töröl semmit: a kiesett esemény a tárban marad, és a listákban
+  // látható. A koino bejelent, nem büntet (D19).
   const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(esemenyek);
+  const { szamitok, kivetelek } = szabalyokErvenyesitese(ervenyesek);
 
   // ----- NYERSANYAG-GYŰJTÉS -----
   const koinoAdatok = { nev: null, leiras: null };
@@ -195,7 +205,7 @@ export function allapotSzamitasa(esemenyek) {
   const pontok = utolsoNyer();           // "szerzo|entitas" → pontszám
   const ertekJavaslatok = utolsoNyer();  // "szerzo|entitas" → küszöb-négyes
 
-  for (const e of ervenyesek) {
+  for (const e of szamitok) {
     switch (e.tipus) {
 
       // ----- A KOINO MAGA -----
@@ -321,24 +331,28 @@ export function allapotSzamitasa(esemenyek) {
   const allapot = {
     koino: koinoAdatok,
     entitasok,
-    // ⚠️ AZ ELÁGAZÁS-FELOLDÁS EREDMÉNYE — EGYETLEN FORRÁSBÓL.
-    // A döntéshozatal (javaslatSzamitas.js) EZT kapja, nem a nyers eseményeket. Ha
-    // ott külön oldanánk fel az elágazást, a két szabály előbb-utóbb szétcsúszna, és
-    // két gép ugyanabból a halmazból MÁS döntésre jutna — épp az, amiért az egész épül.
-    ervenyesek,
+    // ⚠️ A KÉT SZŰRŐ EREDMÉNYE — EGYETLEN FORRÁSBÓL.
+    // A döntéshozatal (javaslatSzamitas.js) EZT kapja, nem a nyers eseményeket. Ha ott
+    // külön oldanánk fel az elágazást vagy külön ellenőriznénk a szabályokat, a két
+    // változat előbb-utóbb szétcsúszna, és két gép ugyanabból a halmazból MÁS döntésre
+    // jutna — épp az, amiért az egész épül.
+    szamitok,
     ellentmondasok,
     // Visszafelé lépő idő a saját láncban (lásd fentebb) — jelzés, nem büntetés
     idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
+    // Szabályt sértő események (keret, jogosultság) — szintén jelzés, nem büntetés (D19)
+    kivetelek,
     elfelejtettek,
     esemenyDarab: esemenyek.length,
-    ervenyesDarab: ervenyesek.length
+    szamitoDarab: szamitok.length
   };
 
   console.log('allapotSzamitasa - VÉGE', {
     entitas: entitasok.size,
     elfelejtett: elfelejtettek.length,
     ellentmondas: ellentmondasok.length,
-    idoEllentmondas: allapot.idoEllentmondasok.length
+    idoEllentmondas: allapot.idoEllentmondasok.length,
+    kivetel: kivetelek.length
   });
   return allapot;
 }

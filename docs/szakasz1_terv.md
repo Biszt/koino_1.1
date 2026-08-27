@@ -10,7 +10,7 @@
 
 > ## ✅ A SZAKASZ 1 ELKÉSZÜLT (2026-08-27)
 >
-> Mind a 7 lépés kész, **76 önpróba fut zölden** *(az öt próbaoldal összege — 2026-08-28-i
+> Mind a 7 lépés kész, **88 önpróba fut zölden** *(a hat próbaoldal összege — 2026-08-28-i
 > újraszámolás; a korábban itt álló 82 nem volt visszakövethető)*, és a teljes kör
 > végigjátszható a böngészőben. A vizsga lefutott:
 >
@@ -38,7 +38,7 @@ megszületik. **Minden művelet aláírva**, az adat a készüléken.
 |---|---|
 | **Az elfogadott szerkesztési javaslat VÉGREHAJTÁSA** (a cím tényleg megváltozzon) | A szakasz vizsgája az volt, hogy **az egyezmény megszülessen** aláírt eseményekből — nem az, hogy a koino végre is hajtsa. A D27 szerinti végrehajtás külön lépés: ahhoz a javaslat-számítás eredményének **vissza kell hatnia** az entitásra, ami új szerkezet, nem új szabály. |
 | **Az érték javaslat felülete** | A küszöb-medián (D4) számítása kész és próbázott, de a fejlesztői nézetből nem hívható — a kártyák ezért „alapértelmezett" küszöböt mutatnak. |
-| **A szabályok kikényszerítése a SZÁMÍTÁSBAN** (jogosultság, tudatpont-keret) | Ma a felület őrzi őket, a számítás nem. Egy P2P-rendszerben ez fordítva helyes: a másik gép felülete nem véd semmitől. Külön szakaszt érdemel — lásd a nyitott kérdéseket. |
+| ~~**A szabályok kikényszerítése a SZÁMÍTÁSBAN**~~ | ✅ **Megépült** (2026-08-28, Csaba döntése: még a hálózat előtt) — lásd a 9. szakaszt. |
 
 > **Miért van értelme egy magányos koinónak?** Mert minden más ezen áll. Ha az esemény-modell
 > és az aláírás nem működik egy gépen, hálózaton sem fog. És mert **egyedül is
@@ -285,23 +285,51 @@ szerver nélkül — akkor a Fázis 2 gerince áll.
 
 ---
 
-## 9. AMIT A SZÁMÍTÁS MÉG NEM ŐRIZ (2026-08-28)
+## 9. A SZABÁLY-RÉTEG — amit a SZÁMÍTÁS őriz (2026-08-28, Csaba jóváhagyásával)
 
 > **Amit a számítás nem ellenőriz, az nem szabály, csak illemtan.**
 
-A prototípusban a szerver volt a kapuőr. Itt nincs kapuőr — csak számítás. Ma azonban
-két domain-szabályt még **csak a felület** őriz, a másik gép felülete pedig nem véd
+A prototípusban a szerver volt a kapuőr. Itt nincs kapuőr — csak számítás. A két
+domain-szabályt eddig **csak a felület** őrizte, a másik gép felülete viszont nem véd
 semmitől. Mérve (2026-08-28), kézzel aláírt eseményekkel:
 
-| Szabály | Mi történik ma |
+| Szabály | Mi történt a javítás előtt |
 |---|---|
-| „Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz" | Egy **teljesen idegen kulcs** javaslatot tehet a más tartalmára, megszavazhatja magának, és **az egyezmény megszületik** (1/1 = 100%). |
-| „Mindenkinek ugyanannyi tudatpontja van" (keret: 10 000) | Kézzel aláírva **999 999 pont** is átmegy: az állapot elfogadja. |
+| „Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz" | Egy **teljesen idegen kulcs** javaslatot tehetett más tartalmára, megszavazhatta magának, és **az egyezmény megszületett** (1/1 = 100%). |
+| „Mindenkinek ugyanannyi tudatpontja van" (keret: 10 000) | Kézzel aláírva **999 999 pont** is átment. |
 
-**Ez nem két hiba, hanem egy hiányzó réteg.** A javításnak egyetlen helyen kell
-eldöntenie, hogy egy esemény **számít-e** (jogosultság · keret · idő-monotonitás), és a
-nem-számító eseményt nem eltüntetnie, hanem **jelzetten** ott hagynia — ahogy az
-elágazással és a visszafelé lépő idővel is tesszük (D19).
+**Ez nem két hiba volt, hanem egy hiányzó réteg** — ma a
+[`js/allapot/szabalyok.js`](../koino/js/allapot/szabalyok.js), és az állapotszámítás
+első lépése. Csaba döntése alapján **még a hálózat előtt** épült meg: két gép között ez
+már valódi támadási felület, nem elméleti.
+
+**Két alapelv, amin áll:**
+
+1. **Nem törlünk és nem büntetünk.** A szabálysértő esemény a tárban marad, és a
+   `kivetelek` listában megjelenik, indoklással. A koino **bejelent** (D19) — az esemény
+   a szerző aláírásával van ellátva, tehát maga a **bizonyíték**: eldobni épp azt jelentené,
+   hogy elveszítjük.
+2. **A döntés a SAJÁT LÁNCBAN dől el, nem az órán.** A keret a szerző eseményeit sorszám
+   szerint követi; a javaslat-jogosultság pedig azt nézi, volt-e a javaslattevőnek pontja
+   az érintett tartalmon **a saját láncában a javaslat előtt**. Így nem hamisítható, és
+   utólag nem írható át — ahogy a lezárási szabálynál is.
+
+**Amit a keret helyesen NEM tilt:** az **átrendezést**. A tudatpont nem elkölthető, hanem
+odarendelt — ha ugyanarra az entitásra teszel újra pontot, a régi felszabadul. A keret az
+**összes kiosztott** pontra vonatkozik.
+
+**Ami szándékosan kimaradt** *(a szabalyok.js végén is ott áll)*:
+
+- **A szavazati jogosultság.** Ma bárki szavazhat, akinek van kulcsa — és ezt a Szakasz 1
+  **nem is tudja jobban**: hogy egy kulcs mögött valódi, egyetlen ember áll, azt a bizalmi
+  háló mondja meg (D1/D18, **Szakasz 3**). Addig egy kulcs-özön akárhány itteni szabályt
+  megkerülne. Ez a réteg **határa**, nem feledékenység.
+- **Az általános javaslat tágabb hatóköre** (D27: a jogosultság **lefelé** terjed, a
+  leszármazottakra is). Ma mindkét fajtánál a szűkebb szabály fut; ez itt fog bővülni,
+  egy helyen, amikor az általános javaslat felülete elkészül.
+
+Próba: [`szabalyProba.html`](../koino/meres/szabalyProba.html) — **12/12 rendben**, végig
+kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú másik gép tenné).
 
 ## 10. Nyitott kérdések — ezekre a kódolás előtt kell válasz
 
@@ -345,6 +373,8 @@ elágazással és a visszafelé lépő idővel is tesszük (D19).
   A szakasz „mit NEM épít" listája kiegészült azzal, ami eddig kimondatlanul maradt (a
   végrehajtás, az érték javaslat felülete), és külön szakaszt kapott az, hogy a
   **domain-szabályokat ma a felület őrzi, nem a számítás** (9. pont).
+  **Ugyanaznap, Csaba döntése alapján ez a réteg meg is épült** — még a hálózat előtt,
+  mert két gép között valódi támadási felület: `js/allapot/szabalyok.js`, 12/12 önpróbával.
 
 - **2026-08-26** — A terv létrejött, az előmérés után (Ed25519 natív, 0,058 ms/ellenőrzés,
   IndexedDB 2,5 GB, WebRTC elérhető). A legfontosabb szerkezeti felismerés: **a koino
