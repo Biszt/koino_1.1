@@ -41,7 +41,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-26)
 
-**26 tervezési döntés (D1–D26) áll.** 2026-08-25-én három elméleti hidat építettünk
+**27 tervezési döntés (D1–D27) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
@@ -1544,6 +1544,130 @@ illeszkedik a D13/b paraméter-pluralizmusához is.
 | a **fájl-hivatkozás** (lenyomat + méret) | `tartalom` |
 | az **ág teljes mérete** (leszármazottakkal) | `szamitott` — összeadható, nem tárolandó igazságként |
 
+### D27. SZERKESZTÉSI és ÁLTALÁNOS javaslat/egyezmény (2026-08-27, Csaba)
+
+> „A javaslat, egyezmény-t át szerettem volna nevezni **szerkesztési javaslatra** és
+> **szerkesztési egyezményre** már az 1.1-ben is… azért fontos, hogy **fenntartsuk a
+> helyet** azoknak a javaslatoknak, egyezményeknek, amik nem szerkesztésről szólnak
+> majd, hanem a közösség **általános** javaslatainak, egyezményeinek." — Csaba
+
+#### A két fajta
+
+| | **Szerkesztési** | **Általános** |
+|---|---|---|
+| Miről szól | egy entitás **megváltoztatása** (módosítás, áthelyezés, törlés, egyesítés) | a közösség **álláspontja** („fogadjuk el ezt az elvet", „szervezzünk találkozót") |
+| Mi történik elfogadáskor | a rendszer **végrehajtja** | **semmi automatikus** — az egyezmény maga az álláspont |
+| Az egyezmény élete | **egyszeri**: eldőlt, végrehajtódott, kész | **ÉLŐ**: csatlakozni, tiltakozni, ütközést jelölni lehet |
+| Teljesítés | a koino végzi | **emberi** (D8: a hatály a tartalmi rétegben él) |
+
+**A szavazás gépezete mindkettőnél UGYANAZ** — küszöbök, medián, részvételi arány,
+bizonyossági mutató, döntési idő. Csak a *következménye* más.
+
+#### 1. Az általános javaslat TARTALOMBÓL ágazik ki
+
+Nem a semmiből indul: **egy tartalom alatt keletkezik**, és onnan örökli a kereteit —
+a szavazók köre a tartalom tudatpont-tulajdonosai, a küszöbök az ő értékei.
+
+> **Az induló küszöbök a szülő tartalomtól öröklődnek, utána viszont SAJÁT érték
+> javaslatokkal formálhatók** (Csaba). Vagyis az egyezmény idővel önálló életet él,
+> ahogy kialakul a saját tulajdonosi köre.
+
+#### 2. ⭐ AZ ÁLTALÁNOS EGYEZMÉNY ÉLŐ — csatlakozás, tiltakozás, ütközés
+
+Ez az, ami a mai koinóban nincs, és ami a **D8-at gyakorlattá teszi**:
+
+| Művelet | Mit jelent |
+|---|---|
+| **Csatlakozás** | *„én is egyetértek ezzel"* — akár jóval a döntés után |
+| **Tiltakozás** | *„én már nem"* — a támogatás visszavonása, ellenkezés |
+| **Ütközés-jelölés** | *„ez a kettő ellentmond egymásnak"* |
+
+> **A TÉNY örök** (ez az egyezmény akkor, ott, érvényesen megszületett), **a HATÁLY
+> viszont él**: hányan állnak mögötte MOST.
+
+**Két dolgot old meg, amit eddig nem tudtunk:**
+
+- **A bootstrap-problémát.** Ha egy tízfős koino hoz egy megállapodást, és később ezren
+  lesznek, az újak **csatlakozhatnak** — nem kell újraszavazni, és nem marad „tíz ember
+  döntése" egy ezerfős közösségen.
+- **Az elavulást.** Egy egyezmény, ami mögül elfogynak az emberek, **magától elsorvad** —
+  nem kell „hatályon kívül helyezni". Ugyanaz a minta, mint a tudatpontnál (D14).
+
+#### 3. A csatlakozó AKTÍV résztvevő — és ez old meg egy feszültséget
+
+> „Aki csatlakozott egy egyezményhez támogatóan, és nem csak tudatpontot rakott rá
+> passzívként, az már eleve **aktív résztvevője**, és számít a részvételi aránynál." — Csaba
+
+**Ez old meg egy problémát, ami elsőre feloldhatatlannak látszott:** mi történik a
+csatlakozókkal, ha az egyezményt később **módosítják**? Ötven ember csatlakozott egy
+szöveghez, aztán a szöveg megváltozik — más szöveghez csatlakoztak?
+
+> **Nem. Mert aki csatlakozott, az aktív résztvevő — tehát ŐK SZAVAZNAK arról a
+> módosításról.** Nem kell se nullázni a csatlakozásokat, se változatokhoz kötni őket.
+
+*(Ugyanaz a minta, amit Csaba a **D26/5**-ben a méretnövekedésre mondott ki: nem
+történhet a hátuk mögött, mert javaslat és szavazás vezet oda.)*
+
+#### 4. ⭐ A HELY HATÁROZZA MEG A HATÓKÖRT — és lefelé terjed
+
+> „Attól függ, hol van az egyezmény: ha áthelyezik a gyökérbe, akkor **bárki**, amúgy meg
+> **az adott ágazat** tudatpont-tulajdonosai." — Csaba
+
+**A hatókör LEFELÉ terjed, nem felfelé** *(a felmenő ág értelmetlen lenne: akkor a gyökér
+tulajdonosai minden egyezményben benne lennének, és a pozíció nem jelentene semmit —
+Csaba jogosan javította ki ezt a felvetést)*:
+
+> Egy egyezmény hatóköre azok köre, akik tudatpontot tettek **arra az entitásra, ami alatt
+> az egyezmény áll — vagy annak bármely leszármazottjára.**
+
+| Hol áll az egyezmény | Kik foglalhatnak állást |
+|---|---|
+| egy mély tartalom alatt | az a kis ág — néhány ember |
+| egy nagy témakör alatt | az egész témakör tulajdonosai |
+| **a gyökérben** | **a koino MINDEN tagja** (Csaba pontosítása: mindenki, nem csak aki tett már valahova pontot) |
+
+**Amit ez ad:**
+
+- a *„gyökérben bárki"* nem külön szabály, hanem **ugyanannak a szabálynak a széle**;
+- a **pozíciónak valódi jelentése van**: minél feljebb viszik, annál többen szólhatnak
+  hozzá;
+- a feljebb vitel maga is javaslat → **a hatókör tágítása is közösségi döntés**.
+
+**És ehhez már van gépezet:** a *hierarchikus tudatpont* (a saját + az összes
+leszármazott pontja) pontosan ezt a lefelé terjedő kört méri. Eddig a **fontosság**
+mutatója volt; itt **jogosultsággá** válik. Megint: nincs új mechanizmus, csak egy
+meglévő, egy szinttel feljebb.
+
+#### 5. Az általános egyezmény TELJES ÉRTÉKŰ ENTITÁS
+
+> „Ezeket az egyezményeket lehet javaslattal **módosítani**, **áthelyezni**, **egyesíteni**
+> másik általános egyezménnyel, meg **törlési javaslattal törölni**." — Csaba
+> És: „az egyezménynek is lehetnek **gyerekei**, ahol az e-emberek megvitatják a témát."
+
+Vagyis nem kell külön „egyezmény-kezelés": **egy entitás a többi között** — tudatpontot
+lehet rá tenni, küszöbei vannak, gyerekei lehetnek, és mind a négy szerkesztési művelet
+vonatkozik rá. *(A mai prototípus szűkebb: ott az egyezményre csak áthelyezési javaslatot
+lehet indítani — ez tehát bővítés, nem átalakítás.)*
+
+#### 6. NINCS automatikus következmény (D19)
+
+> „Egyelőre csak látható lesz, hogy megfordult a közhangulat, és a következtetést az
+> emberek vonják le." — Csaba (a tiltakozásról)
+> „Az ütközés is csak láthatóvá teszi, hogy két egyezmény ellentmond egymásnak." — Csaba
+
+Sem a tiltakozók többsége, sem az ütközés-jelölés **nem érvénytelenít** semmit magától. A
+rendszer **bejelent, nem bíró** (D19) — a vita helye pedig az egyezmény alatti gyerek-
+tartalmakban van.
+
+#### Ami a megvalósításból még nyitott
+
+- **Egy javaslat-gépezet `fajta` mezővel, vagy külön esemény-típusok?** *(A közös
+  mechanika az előbbi mellett szól; eldöntendő a kódolás előtt.)*
+- **Az egyesítés csatlakozói:** ha két általános egyezményt egyesítenek, a csatlakozóik
+  összeadódnak-e.
+- **A prototípus (1.1) NEM kap átnevezést** — befagyasztva marad (D22/D24). Az
+  elnevezés az új koinóban él.
+
 ---
 
 ## Technológia-radar (jelöltek a Fázis 2 rétegeihez — 2026-07-17)
@@ -2285,3 +2409,33 @@ hanem egymást.*
     passzívak is megadhatnak — ez **pontosan a D4 küszöb-gépezete egy új paraméterrel**,
     nincs benne új mechanizmus. *„Ez már csak finomítás, meg még ezen nem is gondolkodtam
     eleget."*
+- **2026-08-27 (2)** — **D27: SZERKESZTÉSI és ÁLTALÁNOS javaslat/egyezmény.** Csaba régi,
+  elfelejtett átnevezési szándéka („szerkesztési javaslat", „szerkesztési egyezmény") —
+  azért fontos, hogy **helyet tartson** a közösség általános megállapodásainak.
+  - **A szavazás gépezete mindkét fajtánál ugyanaz**; csak a KÖVETKEZMÉNYE más: a
+    szerkesztési javaslat elfogadása **végrehajtódik**, az általánosé **nem csinál semmit
+    automatikusan** — ott az egyezmény maga az álláspont, a teljesítése emberi (D8).
+  - **Az általános javaslat TARTALOMBÓL ágazik ki**, és onnan örökli az induló küszöböket;
+    utána **saját érték javaslatokkal** formálható.
+  - ⭐ **AZ ÁLTALÁNOS EGYEZMÉNY ÉLŐ:** lehet hozzá **csatlakozni**, ellene **tiltakozni**,
+    és **ütközést jelölni** két egyezmény között. Ez teszi a **D8-at gyakorlattá**: a TÉNY
+    örök, a HATÁLY él. Két dolgot old meg: a **bootstrapet** (a később érkezők
+    csatlakozhatnak, nem marad „tíz ember döntése" egy ezerfős közösségen) és az
+    **elavulást** (ami mögül elfogynak az emberek, magától elsorvad — D14).
+  - **A csatlakozó AKTÍV résztvevő** (Csaba) — és ez old meg egy feszültséget, amit
+    feloldhatatlannak hittem: ha az egyezményt később módosítják, a csatlakozók nem
+    „más szöveghez csatlakoztak", mert **ŐK SZAVAZNAK a módosításról**. Ugyanaz a minta,
+    mint a D26/5-ben a méretnövekedésnél.
+  - ⭐ **A HELY HATÁROZZA MEG A HATÓKÖRT, és LEFELÉ terjed:** az egyezmény hatóköre azok
+    köre, akik az adott entitásra **vagy annak bármely leszármazottjára** tettek
+    tudatpontot. Így a „gyökérben bárki" nem külön szabály, hanem ugyanannak a **széle** —
+    és a pozíciónak valódi jelentése van. A feljebb vitel maga is javaslat, tehát **a
+    hatókör tágítása is közösségi döntés**. *(Az első felvetésem a FELMENŐ ágra szólt —
+    Csaba jogosan javította ki: az értelmetlen lenne, mert akkor minden egyezmény a
+    gyökérig érne.)* **Gépezet már van rá:** a hierarchikus tudatpont pontosan ezt a
+    lefelé terjedő kört méri — eddig a fontosság mutatója volt, itt jogosultsággá válik.
+  - **Az általános egyezmény TELJES ÉRTÉKŰ ENTITÁS:** módosítható, áthelyezhető,
+    egyesíthető, törölhető, és **gyerekei lehetnek** (ott folyik a vita).
+  - **Nincs automatikus következmény:** sem a tiltakozók többsége, sem az ütközés-jelölés
+    nem érvénytelenít magától — a rendszer **bejelent, nem bíró** (D19).
+  - **A prototípus (1.1) NEM kap átnevezést** — befagyasztva marad.
