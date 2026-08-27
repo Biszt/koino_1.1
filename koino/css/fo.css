@@ -409,3 +409,17 @@ textarea.mezo { resize: vertical; font-family: inherit; }
 }
 
 .uzenetSav--hiba { background: var(--szin-hiba); }
+
+/* ----- FEJLESZTŐI SÁV -----
+   Őszinte jelölés: ez a nézet a modell kipróbálására való, nem a koino felülete.
+   A valódi felület a prototípus pakli-nézetéből öröklődik (D22). */
+
+.fejlesztoiSav {
+  background: var(--szin-figyelem-hatter);
+  color: var(--szin-figyelem);
+  border-bottom: 1px solid var(--szin-figyelem);
+  padding: 0.55rem 1rem;
+  font-size: 0.87rem;
+  text-align: center;
+  margin: 0 -1rem;
+}
