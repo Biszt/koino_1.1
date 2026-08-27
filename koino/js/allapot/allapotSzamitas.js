@@ -73,6 +73,61 @@ export function elagazasokFeloldasa(esemenyek) {
 }
 
 // ===================================
+// IDŐ-MONOTONITÁS A SAJÁT LÁNCBAN (Csaba jóváhagyása, 2026-08-28)
+// ===================================
+//
+// MIÉRT KELL? A döntések lezárása időrendben történik (javaslatSzamitas.js), az `ido`
+// viszont a szerző órája — hazudható. Aki lemaradt egy szavazásról, VISSZADÁTUMOZHATNÁ
+// a szavazatát, hogy még beleférjen a határidőbe.
+//
+// AMIT ELLENŐRIZNI TUDUNK: a saját láncod a tiéd, és sorszámozott. Ha egy NAGYOBB
+// sorszámú eseményed KORÁBBI időt visel, mint az előtte lévő, az önellentmondás —
+// ugyanúgy, mint az elágazás, és ugyanúgy a saját aláírásoddal bizonyítva.
+//
+// ⚠️ MENNYIT ÉR? Csak a saját előző eseményedhez képest köt. Aki friss kulccsal jön
+// (sorszam: 1), vagy régóta nem tett semmit, az szabadon visszadátumoz. Tehát ez
+// DRÁGÍTJA a csalást, nem zárja ki — a teljes válasz a kötegelés (D21, Szakasz 4).
+// Ezt így is mondjuk ki, hogy később ne higgyük megoldottnak.
+//
+// ÉS AMIT NEM TESZÜNK: nem dobjuk el az eseményt. A koino BEJELENT, nem büntet (D19) —
+// az ellentmondás láthatóvá válik, a döntést a közösség hozza meg róla.
+
+/**
+ * Megkeresi azokat az eseményeket, amelyek visszafelé lépnek a saját láncuk idejében.
+ *
+ * @param {Array<Object>} ervenyesek - elágazás-mentesített események
+ * @returns {Array<Object>} { szerzo, sorszam, ido, elozoIdo, azonosito }
+ */
+export function idoEllentmondasokKeresese(ervenyesek) {
+  const szerzonkent = new Map();
+  for (const e of ervenyesek) {
+    if (!szerzonkent.has(e.szerzo)) szerzonkent.set(e.szerzo, []);
+    szerzonkent.get(e.szerzo).push(e);
+  }
+
+  const talalatok = [];
+  for (const lanc of szerzonkent.values()) {
+    // A lánc sorszám szerint; a hézag (hiányzó sorszám) itt NEM hiba — hálózaton
+    // természetes, hogy nem ismerjük valakinek minden eseményét.
+    const rendezett = [...lanc].sort((a, b) => a.sorszam - b.sorszam);
+    for (let i = 1; i < rendezett.length; i++) {
+      const elozo = rendezett[i - 1];
+      const mostani = rendezett[i];
+      if (mostani.ido < elozo.ido) {
+        talalatok.push({
+          szerzo: mostani.szerzo,
+          sorszam: mostani.sorszam,
+          ido: mostani.ido,
+          elozoIdo: elozo.ido,
+          azonosito: mostani.azonosito
+        });
+      }
+    }
+  }
+  return talalatok;
+}
+
+// ===================================
 // SEGÉD: „AZ UTOLSÓ NYER" NYILVÁNTARTÁS
 // ===================================
 
@@ -266,7 +321,14 @@ export function allapotSzamitasa(esemenyek) {
   const allapot = {
     koino: koinoAdatok,
     entitasok,
+    // ⚠️ AZ ELÁGAZÁS-FELOLDÁS EREDMÉNYE — EGYETLEN FORRÁSBÓL.
+    // A döntéshozatal (javaslatSzamitas.js) EZT kapja, nem a nyers eseményeket. Ha
+    // ott külön oldanánk fel az elágazást, a két szabály előbb-utóbb szétcsúszna, és
+    // két gép ugyanabból a halmazból MÁS döntésre jutna — épp az, amiért az egész épül.
+    ervenyesek,
     ellentmondasok,
+    // Visszafelé lépő idő a saját láncban (lásd fentebb) — jelzés, nem büntetés
+    idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
     elfelejtettek,
     esemenyDarab: esemenyek.length,
     ervenyesDarab: ervenyesek.length
@@ -275,7 +337,8 @@ export function allapotSzamitasa(esemenyek) {
   console.log('allapotSzamitasa - VÉGE', {
     entitas: entitasok.size,
     elfelejtett: elfelejtettek.length,
-    ellentmondas: ellentmondasok.length
+    ellentmondas: ellentmondasok.length,
+    idoEllentmondas: allapot.idoEllentmondasok.length
   });
   return allapot;
 }
@@ -327,10 +390,15 @@ export function szetosztottPontok(allapot, szerzo) {
 }
 
 /**
- * Egy entitás AKTÍV tudatpont-tulajdonosai.
+ * Egy entitás AKTÍV tudatpont-tulajdonosai — a MOSTANI állapot szerint.
  *
- * Csak ők számítanak a részvételi arány nevezőjébe: a passzív figyelők szándékosan
- * kimaradnak, hogy ne korlátozzák a döntést azok, akik nem akarnak részt venni benne.
+ * A passzív figyelők kimaradnak: aki nem akar részt venni a döntésben, ne is
+ * korlátozza azt.
+ *
+ * ⚠️ A DÖNTÉSHOZATAL NEM EZT HASZNÁLJA (2026-08-28 óta). Ott a nevezőt a LEZÁRÁS
+ * PILLANATÁIG feldolgozott tudatpont-eseményekből számoljuk (javaslatSzamitas.js) —
+ * különben egy utólagos tudatpont-rendezés visszamenőleg megmozdítaná egy már lezárt
+ * döntés határidejét. Ez a függvény a felületnek való: „kik a mai aktív tulajdonosok".
  *
  * @param {Object} entitas
  * @returns {Set<string>} a szerzők halmaza

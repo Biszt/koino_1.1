@@ -58,10 +58,10 @@ async function ujEember() {
 
   return {
     szerzo,
-    /** Új esemény a lánc végére. */
-    async tesz(tipus, adat) {
+    /** Új esemény a lánc végére. Az `ido` elhagyható (alapból: most). */
+    async tesz(tipus, adat, ido) {
       sorszam++;
-      const e = await esemenyLetrehozasa({ koino: KOINO, tipus, adat, elozo, sorszam }, kulcspar);
+      const e = await esemenyLetrehozasa({ koino: KOINO, tipus, adat, elozo, sorszam, ido }, kulcspar);
       elozo = e.azonosito;
       return e;
     },
@@ -215,6 +215,31 @@ proba('Az elágazás feloldása DETERMINISZTIKUS (mindkét sorrendben ugyanaz)',
   const p1 = a1.entitasok.get(t.azonosito)?.osszesPont;
   const p2 = a2.entitasok.get(t.azonosito)?.osszesPont;
   return p1 === p2 && a1.ellentmondasok.length === 1 && a2.ellentmondasok.length === 1;
+});
+
+// ===== IDŐ-MONOTONITÁS A SAJÁT LÁNCBAN (Csaba jóváhagyása, 2026-08-28) =====
+
+proba('A VISSZAFELÉ lépő idő ellentmondásként jelenik meg — de az esemény megmarad', async () => {
+  const kezdet = Date.UTC(2026, 0, 10);
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 }, kezdet + 60000);
+  // A 3. eseménye KORÁBBI időt visel, mint a 2. — visszadátumozás
+  const vissza = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 200 }, kezdet - 86400000);
+
+  const a = allapotSzamitasa([t, p, vissza]);
+  return a.idoEllentmondasok.length === 1
+      && a.idoEllentmondasok[0].sorszam === 3
+      && a.entitasok.get(t.azonosito).osszesPont === 200;   // az esemény ÉRVÉNYES marad
+});
+
+proba('A rendes (előre haladó) idő nem ad ellentmondást', async () => {
+  const kezdet = Date.UTC(2026, 0, 10);
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 }, kezdet + 1000);
+
+  return allapotSzamitasa([t, p]).idoEllentmondasok.length === 0;
 });
 
 // ===== D26: MÉRET ÉS ÁG-MÉRET =====

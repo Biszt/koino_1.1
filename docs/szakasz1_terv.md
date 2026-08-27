@@ -10,8 +10,9 @@
 
 > ## ✅ A SZAKASZ 1 ELKÉSZÜLT (2026-08-27)
 >
-> Mind a 7 lépés kész, **82 önpróba fut zölden**, és a teljes kör végigjátszható a
-> böngészőben. A vizsga lefutott:
+> Mind a 7 lépés kész, **76 önpróba fut zölden** *(az öt próbaoldal összege — 2026-08-28-i
+> újraszámolás; a korábban itt álló 82 nem volt visszakövethető)*, és a teljes kör
+> végigjátszható a böngészőben. A vizsga lefutott:
 >
 > | Lépés a próbán | Eredmény |
 > |---|---|
@@ -30,6 +31,14 @@ tartalmat hoz létre, tudatpontot rendez, javaslatot tesz, szavaz — és az egy
 megszületik. **Minden művelet aláírva**, az adat a készüléken.
 
 **Nem épít:** hálózatot. Két készülék még nem talál egymásra — az a Szakasz 2.
+
+**És szándékosan nem épít mást sem — ezt eddig nem mondtuk ki** *(pótolva 2026-08-28)*:
+
+| Ami kimarad | Miért |
+|---|---|
+| **Az elfogadott szerkesztési javaslat VÉGREHAJTÁSA** (a cím tényleg megváltozzon) | A szakasz vizsgája az volt, hogy **az egyezmény megszülessen** aláírt eseményekből — nem az, hogy a koino végre is hajtsa. A D27 szerinti végrehajtás külön lépés: ahhoz a javaslat-számítás eredményének **vissza kell hatnia** az entitásra, ami új szerkezet, nem új szabály. |
+| **Az érték javaslat felülete** | A küszöb-medián (D4) számítása kész és próbázott, de a fejlesztői nézetből nem hívható — a kártyák ezért „alapértelmezett" küszöböt mutatnak. |
+| **A szabályok kikényszerítése a SZÁMÍTÁSBAN** (jogosultság, tudatpont-keret) | Ma a felület őrzi őket, a számítás nem. Egy P2P-rendszerben ez fordítva helyes: a másik gép felülete nem véd semmitől. Külön szakaszt érdemel — lásd a nyitott kérdéseket. |
 
 > **Miért van értelme egy magányos koinónak?** Mert minden más ezen áll. Ha az esemény-modell
 > és az aláírás nem működik egy gépen, hálózaton sem fog. És mert **egyedül is
@@ -157,6 +166,28 @@ determinisztikusnak kell lennie** — különben két gép két különböző er
 | **Miért jó így?** | Mindenki **ugyanazt** az állapotot számolja, tehát a csalásnak **nincs haszna**: nem lehet két embernek két különböző eredményt mutatni. |
 | **És a felelősség?** | Az ellentmondás **látható marad** — a tár jelzi mentéskor, az állapot pedig felsorolja. **A koino bejelent, nem büntet** (D19). |
 
+### ⚠️ Döntés a döntéshozatalhoz: MIKOR ZÁRUL a szavazás? (2026-08-28, Csaba jóváhagyásával)
+
+A döntési idő a bizonyossági mutatóból számítódik, a bizonyosság a szavazatokból — a
+szavazatok viszont a határidő UTÁN is megérkezhetnek. Ettől a határidő **visszamenőleg
+mozgott**. Mérve: egy elvetett javaslat egy utólagos szavazattól **elfogadva** lett, majd
+egy továbbitól újra elvetve. **Az egyezmény megszületett, aztán megszűnt létezni.**
+
+**A megvalósított szabály:**
+
+> A javaslatot érintő eseményeket **idő szerint** (azonos időnél **azonosító szerint**)
+> sorba rendezzük, és lépésenként újraszámoljuk a határidőt az addigi állásból. Az első
+> esemény, aminek az ideje **túl van** az akkor érvényes határidőn, **már nem számít
+> bele** — és a lezárás ideje az a határidő.
+
+| Melyik esemény tartozik ide? | **Mindegyik, ami a határidőt mozdítja** — nem csak a szavazat: · **szavazat** → a részvétel számlálója · **tudatpont-rendezés** az érintett entitáson → a nevezője (és **az aktív ↔ passzív váltás** is, mert azt is ez az esemény hordozza) · **érték javaslat** az érintett entitáson → a küszöbök, köztük a **min/max döntési idő**. *A tudatpontot az önpróba buktatta le (a szavazatot már kizártuk, de egy utólagos tudatpont-rendezés még mindig újranyitotta a döntést); az érték javaslatot és a szerep-váltást **Csaba vette észre** — mindkettő ugyanaz a lyuk volt.* |
+|---|---|
+| **Mit jelent ez a küszöbökre?** | A javaslatra azok a küszöbök érvényesek, amik a **lezárás pillanatáig** kialakultak (a tulajdonosok akkori mediánja, D4) — nem az entitás **mai** mediánja. A kártyán látható „mai" küszöb ettől eltérhet: az a jelenlegi állapot, nem az, ami a döntést eldöntötte. |
+| **A visszadátumozás ellen** | A saját láncban az **idő legyen monoton**: ha egy nagyobb sorszámú eseményed korábbi időt visel, az **ellentmondás** — ugyanúgy, mint az elágazás, és ugyanúgy a saját aláírásoddal bizonyítva. |
+| **⚠️ Mennyit ér ez?** | Csak a **saját előző eseményedhez** képest köt. Aki friss kulccsal jön (`sorszam: 1`), vagy régóta nem tett semmit, az szabadon visszadátumoz. **Drágítja a csalást, nem zárja ki** — a teljes válasz a kötegelés (D21, Szakasz 4). Ezt így kell számon tartani, hogy később ne higgyük megoldottnak. |
+| **És ami NEM hiba** | Egy késve **megérkező**, de a határidőn belüli időbélyegű szavazat jogosan módosítja az eredményt. A követelmény nem az, hogy az eredmény soha ne változzon, hanem hogy **ugyanabból az eseményhalmazból mindenki ugyanazt kapja** (D17). |
+| **És a felelősség?** | Az ellentmondás **látható marad**: a lezárás után érkezett szavazatok száma a javaslaton, a visszafelé lépő idő pedig az állapotsávon. **A koino bejelent, nem büntet** (D19). |
+
 ## 4. A TÁROLÁS — mi kerül a készülékre
 
 A H6 besorolása közvetlenül megmondja ([`adat_osztalyozas.md`](adat_osztalyozas.md)):
@@ -222,8 +253,8 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.html`](../koino/meres/kanonikusProba.html) — **14/14 rendben** |
 | **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.html`](../koino/meres/esemenyProba.html) — **13/13 rendben** |
 | **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
-| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **14/14 rendben** |
-| **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.html`](../koino/meres/javaslatProba.html) — **15/15 rendben** |
+| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **16/16 rendben** |
+| **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.html`](../koino/meres/javaslatProba.html) — **22/22 rendben** |
 | **7** ✅ | **Felület** — a koino-kép a helyi adatból | végigjátszható magadnak | böngészőben, kézzel — **a teljes kör lefutott** |
 
 > ⚠️ **A 6. és 7. lépés helyet cserélt** (2026-08-27, Csaba jóváhagyásával). Indok: a
@@ -254,7 +285,25 @@ szerver nélkül — akkor a Fázis 2 gerince áll.
 
 ---
 
-## 9. Nyitott kérdések — ezekre a kódolás előtt kell válasz
+## 9. AMIT A SZÁMÍTÁS MÉG NEM ŐRIZ (2026-08-28)
+
+> **Amit a számítás nem ellenőriz, az nem szabály, csak illemtan.**
+
+A prototípusban a szerver volt a kapuőr. Itt nincs kapuőr — csak számítás. Ma azonban
+két domain-szabályt még **csak a felület** őriz, a másik gép felülete pedig nem véd
+semmitől. Mérve (2026-08-28), kézzel aláírt eseményekkel:
+
+| Szabály | Mi történik ma |
+|---|---|
+| „Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz" | Egy **teljesen idegen kulcs** javaslatot tehet a más tartalmára, megszavazhatja magának, és **az egyezmény megszületik** (1/1 = 100%). |
+| „Mindenkinek ugyanannyi tudatpontja van" (keret: 10 000) | Kézzel aláírva **999 999 pont** is átmegy: az állapot elfogadja. |
+
+**Ez nem két hiba, hanem egy hiányzó réteg.** A javításnak egyetlen helyen kell
+eldöntenie, hogy egy esemény **számít-e** (jogosultság · keret · idő-monotonitás), és a
+nem-számító eseményt nem eltüntetnie, hanem **jelzetten** ott hagynia — ahogy az
+elágazással és a visszafelé lépő idővel is tesszük (D19).
+
+## 10. Nyitott kérdések — ezekre a kódolás előtt kell válasz
 
 1. ✅ **EGY KULCS A BELÉPŐ TÉRBEN** *(Csaba, 2026-08-26)*. A D25-ből következik: ha az
    azonosság és a tanúsítások közösek a térben, akkor **egy kulcs viszi át mindet** —
@@ -275,6 +324,27 @@ szerver nélkül — akkor a Fázis 2 gerince áll.
 ---
 
 ## Napló
+
+- **2026-08-28** — **Átnézés és három javítás.** Egy teljes átolvasás (majd egy második
+  session ellenőrzése) három olyan hibát talált, amelyek a Szakasz 2-ben két gép közti
+  nézeteltéréshez vezettek volna:
+  1. **A lezárt döntés visszafordult** egy késői szavazattól → megvan a lezárási szabály
+     (fentebb, a 3. pont után), Csaba jóváhagyásával. A szabály **három** esemény-fajtára
+     terjedt ki, két lépésben: az önpróba írása közben derült ki, hogy a
+     **tudatpont-rendezés** ugyanígy újranyitotta a döntést, Csaba pedig rákérdezett az
+     **érték javaslatra** és a **passzív ↔ aktív váltásra** — az előbbi ugyanaz a lyuk
+     volt (az érték javaslat a min/max döntési időt is átírja), az utóbbi már benne volt.
+     *Tanulság: nem a szavazatot kellett időhöz kötni, hanem MINDENT, ami a határidőt
+     mozdítja.*
+  2. **Az elágazás sorrend-függő döntést adott**: a döntéshozatal a NYERS eseményeket
+     kapta, ezért a kettős szavazatnál a tömb sorrendje döntött (mérve: „támogat,
+     ellenez" → elfogadva, fordítva → elvetve). Az elágazás-feloldás mostantól **egy
+     forrásból** jön (`allapot.ervenyesek`).
+  3. **Idő-monotonitás** a saját láncban: a visszafelé lépő idő ellentmondás — bejelentve,
+     nem büntetve (D19).
+  A szakasz „mit NEM épít" listája kiegészült azzal, ami eddig kimondatlanul maradt (a
+  végrehajtás, az érték javaslat felülete), és külön szakaszt kapott az, hogy a
+  **domain-szabályokat ma a felület őrzi, nem a számítás** (9. pont).
 
 - **2026-08-26** — A terv létrejött, az előmérés után (Ed25519 natív, 0,058 ms/ellenőrzés,
   IndexedDB 2,5 GB, WebRTC elérhető). A legfontosabb szerkezeti felismerés: **a koino

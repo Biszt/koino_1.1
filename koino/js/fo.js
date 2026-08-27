@@ -90,7 +90,12 @@ async function frissites() {
   const most = Date.now() + idoEltolas * NAP;
 
   const allapot = allapotSzamitasa(esemenyek);
-  const javaslatok = javaslatokSzamitasa(esemenyek, allapot, most);
+
+  // A döntéshozatal az ELÁGAZÁS-MENTESÍTETT eseményekkel dolgozik (nem a nyersekkel):
+  // ha valaki két különböző szavazatot írt alá ugyanarról a pontról, az állapot-réteg
+  // már eldöntötte determinisztikusan, melyik érvényes. Nyers eseményekkel a számlálás
+  // a beérkezés sorrendjétől függne — vagyis két gép mást számolna.
+  const javaslatok = javaslatokSzamitasa(allapot.ervenyesek, allapot, most);
 
   // ----- VAN-E MÁR KOINO? -----
   const vanKoino = allapot.koino.nev !== null;
@@ -106,15 +111,46 @@ async function frissites() {
   document.getElementById('idoCimke').textContent =
     idoEltolas === 0 ? 'most' : idoEltolas + ' nap múlva';
 
+  ellentmondasokKiirasa(allapot);
   tartalmakRajzolasa(allapot);
   szuloValasztoFeltoltese(allapot);
-  javaslatokRajzolasa(javaslatok, allapot, esemenyek);
+  javaslatokRajzolasa(javaslatok, allapot, allapot.ervenyesek);
   egyezmenyekRajzolasa(javaslatok, allapot);
 
   console.log('fo.frissites - VÉGE', {
     entitas: allapot.entitasok.size,
     javaslat: javaslatok.size
   });
+}
+
+// ===================================
+// ELLENTMONDÁSOK — A KOINO BEJELENT, NEM BÜNTET (D19)
+// ===================================
+
+/**
+ * Kiírja, ha valaki két eseményt írt alá ugyanarról a pontról (elágazás), vagy
+ * visszafelé lépett a saját láncának idejében (visszadátumozás).
+ *
+ * Egyik esetben sem dobunk el semmit: az esemény a tárban marad, az állapot pedig
+ * determinisztikus. Csak LÁTHATÓVÁ tesszük — a döntés a közösségé.
+ *
+ * @param {Object} allapot
+ */
+function ellentmondasokKiirasa(allapot) {
+  const sav = document.getElementById('ellentmondasSav');
+  const darabok = [];
+
+  if (allapot.ellentmondasok.length) {
+    darabok.push('⚠️ ' + allapot.ellentmondasok.length
+      + ' elágazás: valaki két különböző eseményt írt alá ugyanarról a pontról.');
+  }
+  if (allapot.idoEllentmondasok.length) {
+    darabok.push('⚠️ ' + allapot.idoEllentmondasok.length
+      + ' visszafelé lépő idő: egy későbbi esemény korábbi időt visel, mint az előtte lévő.');
+  }
+
+  sav.textContent = darabok.join(' ');
+  sav.hidden = darabok.length === 0;
 }
 
 // ===================================
@@ -325,6 +361,15 @@ function javaslatokRajzolasa(javaslatok, allapot, esemenyek) {
         + ' (döntési idő: ' + Math.round(j.dontesiIdo / 3600) + ' óra)'
       : 'lezárult ' + new Date(j.lezarasIdeje).toLocaleString('hu-HU') + '-kor';
     elem.append(ido);
+
+    // ----- A LEZÁRÁS UTÁN ÉRKEZETT SZAVAZATOK -----
+    // Nem számítanak bele (a lezárás időrendben történik), de nem is titkoljuk el:
+    // aki lemaradt, lássa, hogy leadta — csak későn.
+    if (j.kesoiSzavazatok > 0) {
+      elem.append(cimke('p', 'megjegyzes',
+        j.kesoiSzavazatok + ' szavazat a lezárás UTÁN érkezett — nem számít bele, '
+        + 'mert különben a határidő utáni szavazat mozdítaná el a határidőt.'));
+    }
 
     // ----- SZAVAZÁS -----
     if (j.statusz === 'folyamatban') {

@@ -410,6 +410,20 @@ textarea.mezo { resize: vertical; font-family: inherit; }
 
 .uzenetSav--hiba { background: var(--szin-hiba); }
 
+/* ----- ELLENTMONDÁS-JELZÉS -----
+   A koino BEJELENT, nem büntet (D19): az elágazás és a visszafelé lépő idő látszik,
+   de semmit nem dobunk el miatta. Ezért figyelmeztető, nem hiba-színnel. */
+
+.ellentmondasSav {
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.4rem;
+  background: var(--szin-figyelem-hatter);
+  color: var(--szin-figyelem);
+  border: 1px solid var(--szin-figyelem);
+  font-size: 0.87rem;
+}
+
 /* ----- FEJLESZTŐI SÁV -----
    Őszinte jelölés: ez a nézet a modell kipróbálására való, nem a koino felülete.
    A valódi felület a prototípus pakli-nézetéből öröklődik (D22). */

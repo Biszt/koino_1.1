@@ -57,13 +57,27 @@ async function ujEember() {
   const szerzo = btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 
   let sorszam = 0, elozo = null;
+  let utolsoSorszam = 0, utolsoElozo = null;   // az UTOLSÓ esemény helye (az elágazáshoz)
+
   return {
     szerzo,
     async tesz(tipus, adat, ido) {
-      sorszam++;
+      utolsoElozo = elozo;
+      utolsoSorszam = ++sorszam;
       const e = await esemenyLetrehozasa({ koino: KOINO, tipus, adat, elozo, sorszam, ido }, kulcspar);
       elozo = e.azonosito;
       return e;
+    },
+    /**
+     * Egy MÁSODIK eseményt ír alá ugyanarról a pontról (azonos sorszám és `elozo`) —
+     * vagyis kettéágaztatja a saját láncát. Ez a kettős cselekvés: nem akadályozzuk
+     * meg, hanem LELEPLEZZÜK (D17/D19). A lánc végét nem mozdítja el.
+     */
+    async elagaztat(tipus, adat, ido) {
+      return esemenyLetrehozasa(
+        { koino: KOINO, tipus, adat, elozo: utolsoElozo, sorszam: utolsoSorszam, ido },
+        kulcspar
+      );
     }
   };
 }
@@ -124,7 +138,8 @@ async function esetFelepitese({ szavazatok, kuszobok, szerepek = {}, kezdet = Da
 /** Segéd: kiszámolja a javaslat állapotát egy adott időpontban. */
 function javaslatAllapot(eset, most) {
   const allapot = allapotSzamitasa(eset.esemenyek);
-  const javaslatok = javaslatokSzamitasa(eset.esemenyek, allapot, most);
+  // Az ELÁGAZÁS-MENTESÍTETT eseményekkel számolunk — ahogy a felület is (fo.js).
+  const javaslatok = javaslatokSzamitasa(allapot.ervenyesek, allapot, most);
   return javaslatok.get(eset.javaslat.azonosito);
 }
 
@@ -260,6 +275,116 @@ proba('Az egyezmény hordozza a SZÜLETÉSE körülményeit (pillanatkép)', asy
       && typeof e.megszuletett === 'number';
 });
 
+// ===== A LEZÁRÁS IDŐRENDBEN (Csaba jóváhagyása, 2026-08-28) =====
+//
+// Ez a három próba 2026-08-28-ig BUKOTT volna. Mérve: egy elvetett javaslat egy
+// utólagos szavazattól ELFOGADVA lett, majd egy továbbitól újra elvetve — vagyis az
+// egyezmény megszületett, aztán megszűnt létezni.
+
+/**
+ * Segéd: új e-ember, aki adott IDŐBEN tesz tudatpontot az entitásra, és ugyanakkor
+ * szavaz. Mindkét eseménye ugyanazt az időt viseli — így a késői érkezés mindkét
+ * fajtát próbára teszi (a szavazat a számlálót, a tudatpont a nevezőt mozdítaná).
+ */
+async function kesoiSzavazo(eset, szavazat, ido) {
+  const ember = await ujEember();
+  eset.esemenyek.push(await ember.tesz('TudatpontRendezes',
+    { entitas: eset.tartalom.azonosito, pont: 10, szerep: 'aktiv' }, ido));
+  eset.esemenyek.push(await ember.tesz('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat }, ido));
+  return ember;
+}
+
+proba('⭐ A HATÁRIDŐ UTÁN érkezett szavazat nem számít bele', async () => {
+  // Szavazat nélkül a döntési idő a maximum (7 nap), tehát a 8. napi szavazat késői
+  const eset = await esetFelepitese({ szavazatok: [] });
+  await kesoiSzavazo(eset, 'Tamogat', eset.kezdet + 8 * NAP);
+
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  return j.statusz === 'elvetve'        // a szavazat nélküli lezárás marad
+      && j.szavazok === 0               // a késői szavazat nem számít
+      && j.kesoiSzavazatok === 1        // de LÁTSZIK (D19: bejelent, nem büntet)
+      && j.egyezmeny === null;
+});
+
+proba('⭐ A lezárt ELFOGADÁS nem fordul vissza egy utólagos ellenszavazattól (és a hozzá tartozó tudatpont-rendezéstől sem)', async () => {
+  // Két korai támogató → magas bizonyosság → rövid döntési idő → elfogadva
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat'] });
+  const elfogadva = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  // Valaki a 9. napon ellenez — a döntés már lezárult
+  await kesoiSzavazo(eset, 'Ellenez', eset.kezdet + 9 * NAP);
+  const utana = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  return elfogadva.statusz === 'elfogadva'
+      && utana.statusz === 'elfogadva'
+      && utana.egyezmeny !== null
+      && utana.lezarasIdeje === elfogadva.lezarasIdeje;   // a határidő sem mozdult
+});
+
+proba('A határidőn BELÜL érkezett szavazat viszont számít (és rövidíti a döntést)', async () => {
+  const eset = await esetFelepitese({ szavazatok: [] });
+  const nelkule = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  await kesoiSzavazo(eset, 'Tamogat', eset.kezdet + 1 * NAP);   // jóval a 7 napon belül
+  const vele = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  return vele.szavazok === 1
+      && vele.kesoiSzavazatok === 0
+      && vele.statusz === 'elfogadva'
+      && vele.dontesiIdo < nelkule.dontesiIdo;   // a bizonyosság rövidítette
+});
+
+proba('⭐ A lezárás UTÁN beadott ÉRTÉK JAVASLAT nem írja át a döntés szabályát', async () => {
+  // A létrehozó tudatpontos tulajdonos, tehát az ő érték javaslata SZÁMÍTANA — de későn jön
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat'] });
+  const elfogadva = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  // A 9. napon valaki 90%-os küszöböt és 30 napos maximumot javasol
+  eset.esemenyek.push(await eset.letrehozo.tesz('ErtekJavaslat', {
+    entitas: eset.tartalom.azonosito,
+    ertekek: { elfogadasiKuszob: 90, reszveteliKuszob: 100,
+               minimumDontesiIdo: 86400, maximumDontesiIdo: 30 * 86400 }
+  }, eset.kezdet + 9 * NAP));
+
+  const utana = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  return utana.statusz === 'elfogadva'
+      && utana.egyezmeny !== null
+      && utana.kuszobok.elfogadasiKuszob === elfogadva.kuszobok.elfogadasiKuszob
+      && utana.lezarasIdeje === elfogadva.lezarasIdeje;
+});
+
+proba('A határidőn BELÜLI érték javaslat viszont érvényes (a küszöb a tulajdonosok mediánja)', async () => {
+  const eset = await esetFelepitese({
+    szavazatok: ['Tamogat', 'Ellenez'],
+    kuszobok: { elfogadasiKuszob: 90, reszveteliKuszob: 0,
+                minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 }
+  });
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  // 1 támogató / 2 szavazó = 50% < 90% → a magasabb küszöb tényleg érvényesült
+  return j.kuszobok.elfogadasiKuszob === 90 && j.statusz === 'elvetve';
+});
+
+proba('⭐ A lezárás UTÁNI passzív → aktív váltás nem nyitja újra a döntést', async () => {
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat'] });
+
+  // Egy PASSZÍV figyelő (nem számít a nevezőbe), aki a 9. napon aktívvá válna —
+  // ezzel megnőne a nevező, csökkenne a bizonyosság, és kitolódna a határidő
+  const figyelo = await ujEember();
+  eset.esemenyek.push(await figyelo.tesz('TudatpontRendezes',
+    { entitas: eset.tartalom.azonosito, pont: 10, szerep: 'passziv' }, eset.kezdet));
+  const elfogadva = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  eset.esemenyek.push(await figyelo.tesz('TudatpontRendezes',
+    { entitas: eset.tartalom.azonosito, pont: 10, szerep: 'aktiv' }, eset.kezdet + 9 * NAP));
+  const utana = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  return elfogadva.statusz === 'elfogadva'
+      && utana.statusz === 'elfogadva'
+      && utana.nevezo === elfogadva.nevezo
+      && utana.lezarasIdeje === elfogadva.lezarasIdeje;
+});
+
 // ===== DETERMINIZMUS =====
 
 proba('⭐ A szavazatok SORRENDJE nem számít', async () => {
@@ -270,6 +395,27 @@ proba('⭐ A szavazatok SORRENDJE nem számít', async () => {
   const forditva = javaslatAllapot(kevert, eset.kezdet + 10 * NAP);
 
   return JSON.stringify(eredeti) === JSON.stringify(forditva);
+});
+
+proba('⭐ ELÁGAZÁS: a kettős szavazatból EGY számít, és mindkét sorrend UGYANAZT adja', async () => {
+  // Ez a próba 2026-08-28-ig BUKOTT volna: a döntéshozatal a NYERS eseményeket kapta,
+  // ezért a kettős szavazatnál azt vette figyelembe, amelyik előbb szerepelt a tömbben.
+  // Mérve: „támogat, ellenez" sorrendnél ELFOGADVA, fordítva ELVETVE — vagyis két gép
+  // ugyanabból a halmazból MÁS döntésre jutott. Most az elágazás-mentesített listával
+  // számolunk (az azonosító szerint kisebb ág az érvényes).
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat'] });
+  const kettosSzavazo = eset.szavazok[0];
+
+  const masikAg = await kettosSzavazo.elagaztat('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat: 'Ellenez' }, eset.kezdet + 2000);
+
+  const egyik = javaslatAllapot(
+    { ...eset, esemenyek: [...eset.esemenyek, masikAg] }, eset.kezdet + 10 * NAP);
+  const masik = javaslatAllapot(
+    { ...eset, esemenyek: [masikAg, ...eset.esemenyek] }, eset.kezdet + 10 * NAP);
+
+  return JSON.stringify(egyik) === JSON.stringify(masik)   // a sorrend nem dönt
+      && egyik.szavazok === 1;                             // a két ágból csak EGY számít
 });
 
 proba('Ugyanaz az eseményhalmaz MÁS időpontban: más státusz, azonos számok', async () => {
