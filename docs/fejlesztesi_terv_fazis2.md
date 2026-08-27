@@ -1259,6 +1259,42 @@ Ez egybevág az N11 hibrid hálózatával (a telefon rossz P2P-polgár, kellenek
 tartós csomópontok) — azzal a különbséggel, hogy ezek a csomópontok **kényelmi réteg**,
 nem hatóság (pontosan a D21 1. tárolási rétegének logikája).
 
+#### Mit tud a böngésző, és mit nem — a Szakasz 2 alapjai (2026-08-27)
+
+*Csaba kérdésére: „a böngészők kiszolgálnak P2P rendszereket is? meg azoknak kell domain
+név is, nem?"*
+
+A **WebRTC** az a technológia, amivel a böngészők közvetlenül beszélnek egymással
+(eredetileg videohívásra készült). Adatot is tud küldeni, és **mérve elérhető** (2026-08-26:
+`RTCPeerConnection` + `DataChannel` + `WebSocket` mind rendben). **Három valódi korlát van**,
+és ezeket nem szabad elkenni:
+
+| # | Korlát | Mit jelent |
+|---|---|---|
+| **1** | **A bemutatkozás** | Két böngésző nem tud egymásról. Kell egy **jelzőpont**, ami összeismerteti őket („hol vagyok, hogyan érhetsz el"). Amint a kapcsolat létrejött, **a jelzőpont kiszállhat** — az adat közvetlenül megy. Ez **postás, nem hatóság**: nem látja a tartalmat, bárki üzemeltethet ilyet |
+| **2** | **A routerek mögötti rejtettség** | A legtöbb eszköz otthoni router mögött van, saját cím nélkül. A WebRTC ezt meg tudja kerülni, de az esetek egy részében (jellemzően 10–20%) nem sikerül — olyankor kell egy **továbbító**, ami átjátssza a forgalmat. Ez sávszélességet fogyaszt: **ez a P2P legdrágább része**, nem a tárolás |
+| **3** | **A böngésző nem fut a háttérben** | Ha bezárod a lapot, a csomópontod eltűnik. Ezért kellenek **önkéntes, mindig futó csomópontok** (N11) — nem azért, mert ők tudják az igazságot (nem tudják, az aláírás tudja), hanem mert **ott vannak, amikor te nem** |
+
+#### A domain kérdése — két külön dologra kell, és a válasz különbözik
+
+| Mihez? | Kell domain? |
+|---|---|
+| **A program letöltéséhez** | Kell egy hely, ahonnan először megszerzed — de ez lehet **fájl is**: a program egy mappa, elküldhető e-mailben, átvihető pendrive-on. **A program terjesztése és a hálózat működése két külön dolog.** |
+| **A csomópontok egymásra találásához** | **Nem domain kell, hanem KULCS.** A koinóban a címed a **nyilvános kulcsod** — nem egy név, amit bérelni kell valakitől, és nem vehető el. Domain csak a *jelzőpontoknak* kell (azokat meg kell találni induláskor), de ezekből több is lehet, cserélhetők, és nem birtokolják a hálózatot |
+
+> **A domain tehát kényelmi réteg, nem hatóság.** Ha a koino.hu holnap eltűnik, a program
+> megmarad mindenkinél, akinél már fut, és más jelzőponttal működik tovább.
+
+#### 🔗 A koino.hu jövője (Csaba, 2026-08-27)
+
+> „Ameddig a P2P el nem készül, üzemeltetném a koino.hu-t, **hátha kérdezne valaki
+> valamit**." — Csaba
+
+Ez illeszkedik a befagyasztási döntéshez, és a prototípus **kap egy második szerepet**:
+
+> Amikor a P2P koino elkészül, **a koino.hu lesz az egyik hely, ahonnan letölthető.**
+> A prototípus nem versenytársa lesz az újnak, hanem **a kapuja**.
+
 ### D23. A megvalósítás nyelve: JavaScript marad (2026-08-26, Csaba)
 
 A kérdés jogosan merült fel: a JS/HTML/CSS hármas eredetileg **a központi weboldalas
@@ -1430,6 +1466,11 @@ A D25 **nem hoz új mechanizmust**. Amit használ, az mind megvan:
 > **A belépő tér tehát a tartós mag MÁSODIK hasznosítása.** Ugyanaz az adat (ki valódi
 > ember, ki tanúsította), amit a csalás ellen amúgy is őriznünk kell — most a koinók közti
 > mozgást is ez teszi lehetővé, **külön ár nélkül**.
+
+#### A belépő tér KLIENS OLDALA
+
+A nézet terve — pakli-stílusú koino-kártyák, létszám szerinti lista, kártya-hamburger és
+alsó sáv — a **[`felulet_terv.md`](felulet_terv.md)**-ben van (Csaba, 2026-08-27).
 
 #### Nyitott kérdések a D25-höz
 

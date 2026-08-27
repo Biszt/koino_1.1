@@ -6,19 +6,43 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **Kollektív Intelligencia Online (koino)** — közösségi tér, amit a közösség irányít. A regisztrálók **e-emberek** (nem „felhasználók"): egyszerre tulajdonosok, fejlesztők, moderátorok és felelősök. A platform lényege a közösségi döntéshozatal: tartalmakból javaslatok, javaslatokból egyezmények születnek, központi szereplő nélkül.
 
+## ⚠️ KÉT PROGRAM VAN A REPÓBAN (2026-08-26 óta)
+
+| Mappa | Mi ez | Állapot |
+|---|---|---|
+| `backend/` + `frontend/` | **A PROTOTÍPUS** — központi szerveres koino (Fázis 1), ez fut a koino.hu-n | ⏸️ **befagyasztva** — üzemel, de **NEM fejlesztjük**. **NE nyúlj hozzá:** az éles deploy a repó gyökeréből épít, egy átrendezés némán eltörné |
+| **`koino/`** | **AZ ÚJ PROGRAM** — P2P koino (Fázis 2): a készüléken fut, aláírt eseményekkel, szerver nélkül | 🚧 **itt folyik a fejlesztés** |
+
+**A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
+
+**Olvasd el induláskor:** [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A 28 tervezési döntés (D1–D28) is ott van.
+
 ## Domain-fogalmak (kötelező terminológia)
 
 - **e-ember** — regisztrált tag; mindig így hivatkozunk rá, sosem „felhasználó"-ként.
 - **tudatpont** — mindenkinek ugyanannyi van; nem elkölthető, csak szétosztható és bármikor átrendezhető. Prioritást fejez ki, NEM szavazaterőt (szavazásnál mindenki egyenlő).
 - **tartalom** — a platform alapegysége; **kategóriák** és **tartalomtípusok** (kérdés, válasz, témakör, ismeret, feladat...) rendszerezik.
-- **javaslat** — entitástípus: módosítás, áthelyezés, törlés vagy egyesítés kezdeményezése egy tartalomra. Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz.
+- **javaslat** — entitástípus: módosítás, áthelyezés, törlés vagy egyesítés kezdeményezése egy tartalomra. Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz. ⚠️ **A Fázis 2-ben ez „szerkesztési javaslat"** (D27) — mellette lesz **általános javaslat** is (a közösség álláspontja, nem entitás-változtatás). A prototípusban marad a régi név.
 - **érték javaslat** — KÜLÖN fogalom, nem keverendő a javaslattal (entitástípus)! Mindig „érték javaslat"-ként hivatkozunk rá.
-- **egyezmény** — elfogadott javaslat eredménye.
+- **egyezmény** — elfogadott javaslat eredménye. ⚠️ A Fázis 2-ben **„szerkesztési egyezmény"** (D27), és **nem esemény, hanem SZÁMÍTÁS eredménye** (D17) — senki nem „mondja ki". Az **általános egyezmény** viszont **élő**: csatlakozni, tiltakozni, ütközést jelölni lehet hozzá.
 - **küszöbértékek** — tartalmanként meghatározzák, mekkora támogatottság és részvételi arány kell az elfogadáshoz; minimum/maximum döntési idővel együtt.
 - **bizonyossági mutató** — minél egyértelműbb az eredmény és magasabb a részvétel, annál hamarabb zárul a döntés (a min/max döntési idő között).
 - **pakli** — kártyák (entitások) listázott megjelenítése a frontenden.
 
 ## Futtatás
+
+### Az ÚJ program (`koino/` — Fázis 2, itt folyik a fejlesztés)
+
+```bash
+node koino/fejlesztoiSzerver.js      # → http://localhost:4000
+```
+
+Ez **csak statikus fájlokat ad ki**: nincs adatbázisa és nincs API-ja. Azért kell mégis, mert a böngésző az ES-modulokat `file://` alól nem tölti be, és a WebCrypto is csak biztonságos környezetben (`localhost` vagy `https`) működik. Az adat a **böngésző IndexedDB-jében** él.
+
+- **Önpróbák:** `koino/meres/*.html` (kanonikus alak, esemény, tár, állapot, döntéshozatal) — nincs teszt-könyvtár, a lap maga mutatja zölden/pirosan az eredményt.
+- ⚠️ A `koino/index.html` **fejlesztői nézet**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
+
+### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
 
 - **Fejlesztői környezet:** `docker-compose -f docker-compose.dev.yml up` — backend a 3000-es porton (a frontendet is ez szolgálja ki statikusan), MongoDB kívülről a 27018-as porton (konténeren belül 27017). CSAK localhost (a 8080-at már az éles stack viszi).
 - **Éles környezet (koino.hu):** `docker-compose -f docker-compose.prod.yml up -d --build` — a fejlesztőitől független stack UGYANAZON a gépen: `koino-backend-prod` a 8080-as porton (ide jön a koino.hu Cloudflare Tunnel / IP), külön `koino-mongodb-prod` adatbázis-kötettel, külön `backend/uploads-prod` feltöltés-mappával, saját `backend/.env.prod` titkokkal (gitből kizárva; minta: `backend/.env.prod.example`). A kód a képbe van égetve → csak ezzel a paranccsal (deploy) frissül. Részletek: [`docs/elesites.md`](docs/elesites.md).
@@ -27,6 +51,21 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 - Nincs automatizált teszt; a tesztelés böngészős, referenciája a [`docs/teszt.md`](docs/teszt.md).
 
 ## Architektúra
+
+### 🚧 Az ÚJ program (`koino/`) — P2P, a készüléken fut
+
+Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt esemény**, az állapot pedig ezekből **számítódik** (D17). Terv: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md).
+
+- `js/kulcs/kulcsTar.js` — a kulcspár (Ed25519, natív WebCrypto): létrehozás, tárolás, mentés, visszatöltés. **A kulcs a személyazonosság** (D15) — nincs jelszó, nincs bejelentkezés.
+- `js/esemeny/kanonikusAlak.js` — ⚠️ **a legveszélyesebb részlet**: ugyanaz az adat MINDIG ugyanazokat a bájtokat adja. Szabályok: rendezett mezőnevek · **csak egész szám** · NFC-normalizált szöveg. Ha ez elromlik, két gép sosem ért egyet.
+- `js/esemeny/esemeny.js` — aláírás és ellenőrzés; az esemény **neve a tartalmának lenyomata** (mint a gitben).
+- `js/tar/adatbazis.js`, `js/tar/esemenyTar.js` — IndexedDB. **Ellenőrizetlen esemény nem kerül a tárba**, és eseményt **soha nem módosítunk/törlünk**.
+- `js/allapot/allapotSzamitas.js` — események → entitások. „E-emberenként az utolsó nyer", ezért **nem kell globális sorrend**. A 0 tudatpontos entitás **nem létezik** (D14).
+- `js/allapot/javaslatSzamitas.js` — a döntéshozatal; **az egyezmény itt születik számításként**. Az összehasonlítások **egész aritmetikával** (kereszt-szorzás), hogy kerekítés soha ne dönthessen el szavazást.
+- `js/muveletek.js` — a hat művelet; mindegyik: lánc vége → aláírt esemény → mentés.
+- `js/fo.js` + `index.html` + `css/fo.css` — a **fejlesztői** nézet (lásd fentebb).
+
+### A PROTOTÍPUS architektúrája (befagyasztva)
 
 ### Backend (`backend/`) — Node.js + Express + Mongoose
 
