@@ -257,6 +257,40 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 
 ## Napló
 
+- **2026-08-28 (a 4. lépés első kísérlete)** — ⚠️ **KÉT HÁLÓZAT KÖZÖTT NEM JÖTT ÖSSZE — és
+  pontosan tudjuk, miért.** A telefon a szomszédban, a laptop itthon, `figyel 7373`.
+  Eredmény: **`A másik fél nem válaszol (10000 ms)`**, és **a laptophoz semmi nem érkezett
+  meg** (a figyelő naplója üres maradt).
+
+  **A behatárolás — mindkét oldal megmérve, nem feltételezve:**
+
+  | Amit megmértünk | Eredmény |
+  |---|---|
+  | van-e a **telefonnak** globális IPv6 a szomszédban | ✅ `2001:4c4e:25d3:a601:35:5dff:fe43:b16a` |
+  | van-e a **laptopnak** globális IPv6 itthon | ✅ `2001:4c4d:25cb:b200:7395:e583:5de6:5a1a` |
+  | engedi-e a **Windows tűzfal** a bejövő kapcsolatot | ✅ `node.exe` · Inbound · Public · **Allow** — és a hálózat kategóriája **Public**, tehát a szabály érvényes |
+  | megérkezett-e bármi a laptopig | ❌ **semmi** |
+
+  ⭐ **Marad egyetlen lehetőség: az otthoni router IPv6-tűzfala** (Telekom-059293) eldobja
+  a kéretlen bejövő kapcsolatot. Ez a legtöbb otthoni routeren **alapértelmezés**.
+
+  **Amit ez NEM jelent:** hogy a koino nem működik. A **D31** mércéje épp ezt az esetet
+  fogadja el: nem kell mindenkinek tudnia kapcsolatot *fogadni* — aki nem tud, az
+  **kifelé** kapcsolódik. A mérés így nem a koino sorsát döntötte el, hanem azt, hogy **ez
+  a laptop ma nem tud kaput nyitni a világ felé**, amíg a router beállítása meg nem
+  változik.
+
+  **A következő lépés:** az otthoni router IPv6-tűzfalán átengedni a 7373-as portot, majd
+  a mérés megismétlése. ⚠️ *Ehhez nem kell újra átsétálni: ha a szomszéd PC-jén futna a
+  koino, bármikor tudna kapcsolódni, és a router-beállítás azonnal próbálható lenne.*
+
+  **Két korábbi hiba, ami ebből tisztázódott:**
+  - a szomszédban kapott `EHOSTUNREACH` (a laptop helyi címére) **más hiba volt**, mint a
+    mostani `timeout` — az első azt jelenti, „nincs út", a második azt, „volt út, nem jött
+    válasz". A kettő nem keverendő.
+  - a laptop **állandó** IPv6-címe `…7395:e583:5de6:5a1a` — ez a napot és a
+    hálózatváltást is túlélte, tehát nem minden globális cím cserélődik naponta.
+
 - **2026-08-28 (két VALÓDI készülék)** — ⭐⭐ **AZ ELSŐ CSERE KÉT KÜLÖNBÖZŐ GÉP KÖZÖTT.**
   Nem két folyamat egy gépen, hanem **laptop (Windows / x86 / Node v22.16.0) ↔ telefon
   (Android / ARM64 / Node v26.3.1)**, valódi wifin. A laptop `figyel`, a telefon `csere`.
