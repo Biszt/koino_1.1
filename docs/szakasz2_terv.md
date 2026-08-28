@@ -193,7 +193,7 @@ Ezek nem kíváncsiságból kellenek — mindegyik **eldönt valamit**:
 
 | Szám | Mit dönt el | Mérve |
 |---|---|---|
-| **mennyi idő alatt ér körbe egy esemény** | a józan **minimum döntési időt** (D4), és a 4. pont „óvatosság"-ának árát | **9 ms helyben** (kapcsolatnyitás + két kör). Az alsó korlát tehát elhanyagolható — a valódi számot a hálózat adja majd (4. lépés). |
+| **mennyi idő alatt ér körbe egy esemény** | a józan **minimum döntési időt** (D4), és a 4. pont „óvatosság"-ának árát | **9 ms** a laptopon, **77 ms a telefonon** (kapcsolatnyitás + két kör, helyben). Az alsó korlát tehát a leglassabb készüléken is elhanyagolható — a valódi számot a hálózat adja majd (4. lépés). |
 | **összeér-e két készülék IPv6-on, STUN nélkül** | kell-e egyáltalán infrastruktúra | *(4. lépés)* — de a vonal `::1`-en már áll |
 | **hányszor NEM jön össze a közvetlen út** | kell-e **továbbító** — a P2P legdrágább része | *(4. lépés)* |
 | **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell | **162 bájt/fő** (50 fő, 3-3 esemény). 10 000 fős koinónál ~1,6 MB — **ez már szeletelést kíván**, felírva. |
@@ -256,6 +256,21 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 ---
 
 ## Napló
+
+- **2026-08-28 (a telefon)** — ⭐ **A KANONIKUS ALAK ÁTMENT EGY MÁSIK GÉPRE.** A `koino/`
+  lefutott egy **Android telefonon** (Termux, ARM64 / `aarch64`, **Node v26.3.1** — szemben
+  a laptop Windows / x86 / **v22.16.0** párosával): **mind a 124 önpróba rendben**.
+  **Miért ez a legfontosabb mérés eddig:** a `kanonikusProba.js` tartalmaz egy
+  **regressziós horgonyt** — rögzített bemenet → rögzített lenyomat. Ez a telefonon
+  ugyanazt adta. A koino egész terve azon áll, hogy két gép ugyanarra az adatra **bájtra
+  ugyanazt** számolja; eddig ez **egyetlen gépen bizonyított feltevés** volt, most **két
+  architektúrán mért tény**. *(Ráadásul a Node-verzió is különbözött, tehát nem csak a
+  processzor.)*
+  **Mérve a telefonon:** egy esemény körbeérése helyben **77 ms** (laptop: 9 ms) — a
+  telefon lassabb, de a nagyságrend így is elhanyagolható a napokban mérődő döntésekhez
+  képest. Az `ALLAS` mérete változatlanul **162 bájt/fő**.
+  ⚠️ **Melléktanulság:** a Termux a **Google Play Áruházból** települt és működik — a
+  „csak F-Droidból" óvatosság elavult volt. Előbb mérni, aztán állítani.
 
 - **2026-08-28 (a vizsga)** — **A 2. LÉPÉS KÉSZ: a jóslat igazolva.** Két készülék,
   **váltakozva szétosztott** események (tehát mindkét lánc lyukas), csere — és utána
