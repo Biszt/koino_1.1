@@ -19,9 +19,51 @@
 // attól, milyen sorrendben érkeztek meg az események. Így nem kell sem globális
 // sorrend, sem ütközés-feloldó könyvtár (CRDT).
 //
+// ⚠️ DE A FELSOROLÁSOK SORRENDJE MÁS KÉRDÉS (2026-08-28, a Szakasz 2 kézi próbája).
+// Az ÉRTÉKEK sorrend-függetlenek voltak — a LISTÁK viszont nem: az entitások, a
+// kivételek és az ellentmondások a fájlba érkezés sorrendjében jöttek, tehát a csere
+// után a két készülék ugyanazt az öt eseményt ismerte, ugyanazokat az entitásokat
+// számolta ki, de MÁS SORRENDBEN sorolta fel őket. Ma ez csak megjelenítés — a
+// pakli-nézetben viszont látszani fog, és a D17 ígérete az, hogy mindenki ugyanazt látja.
+// Ezért a bemenetet EGY HELYEN, itt rendezzük — lásd `rendezettBemenet`.
+//
 // Használják: koino.js (a parancssori arc) és a javaslat/szavazat számítása.
 
 import { szabalyokErvenyesitese } from './szabalyok.js';
+
+// ===================================
+// A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
+// ===================================
+
+/**
+ * Determinisztikus sorrendbe rakja az eseményeket, mielőtt bármit számolnánk.
+ *
+ * ⭐ MIÉRT ITT, ÉS MIÉRT EGY HELYEN? Mert innen lefelé MINDEN felsorolás ezt a sorrendet
+ * örökli: az entitás-lista, a hozzájárulók, a kivételek, az ellentmondások, a javaslatok.
+ * Ha helyette minden listát külön rendeznénk, előbb-utóbb az egyik lemaradna — és a
+ * kettő némán szétcsúszna. (Ugyanaz a hiba-minta, mint amikor két sorrendnek egymás
+ * tükörképének kellene lennie, de külön van leírva.)
+ *
+ * ⚠️ MIÉRT NEM AZ IDŐ SZERINT? Mert az `ido` a szerző órája — tájékoztató adat, sosem
+ * bizonyíték. Ha a felsorolás sorrendjét az óra döntené el, egy rossz (vagy hazug) óra
+ * átrendezhetné, amit mindenki lát. A `szerzo` + `sorszam` viszont a saját lánc, amit
+ * csak a szerző írhat, és amit nem lehet átírni: EZ a koino egyetlen hamisíthatatlan
+ * sorrendje. Az `azonosito` a végén csak a döntetlent zárja ki (elágazásnál).
+ *
+ * ⚠️ EZ NEM A MEGJELENÍTÉS SORRENDJE. Hogy a felületen mi legyen elöl (pl. a legtöbb
+ * tudatpontot kapott tartalom), az külön kérdés, és a felület dolga — ez itt csak azt
+ * garantálja, hogy KÉT GÉP UGYANAZT A SORRENDET kapja.
+ *
+ * @param {Array<Object>} esemenyek
+ * @returns {Array<Object>} ugyanazok, determinisztikus sorrendben
+ */
+export function rendezettBemenet(esemenyek) {
+  return [...esemenyek].sort((a, b) => {
+    if (a.szerzo !== b.szerzo) return a.szerzo < b.szerzo ? -1 : 1;
+    if (a.sorszam !== b.sorszam) return a.sorszam - b.sorszam;
+    return a.azonosito < b.azonosito ? -1 : a.azonosito > b.azonosito ? 1 : 0;
+  });
+}
 
 // ===================================
 // ELÁGAZÁS-FELOLDÁS
@@ -196,7 +238,11 @@ export function allapotSzamitasa(esemenyek) {
   //    ellenőriz, az nem szabály, csak illemtan (szabalyok.js).
   // Egyik szűrő sem töröl semmit: a kiesett esemény a tárban marad, és a listákban
   // látható. A koino bejelent, nem büntet (D19).
-  const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(esemenyek);
+  // 0. RENDEZÉS: innen lefelé minden felsorolás ezt a sorrendet örökli, tehát két gép
+  //    ugyanabból a halmazból ugyanazt a LISTÁT is kapja, nem csak ugyanazokat az értékeket.
+  const rendezettek = rendezettBemenet(esemenyek);
+
+  const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek);
   const { szamitok, kivetelek } = szabalyokErvenyesitese(ervenyesek);
 
   // ----- NYERSANYAG-GYŰJTÉS -----

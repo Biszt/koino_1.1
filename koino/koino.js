@@ -23,6 +23,7 @@
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
 //   node koino/koino.js csere <cím> [port]       — csere egy másik készülékkel
+//   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
 //
 // Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
 //
@@ -49,6 +50,9 @@ import {
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
+import { allasOsszeallitasa } from './js/csere/csere.js';
+import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
+import { lenyomat } from './js/esemeny/kanonikusAlak.js';
 
 // ===== ÁLLANDÓK =====
 
@@ -155,7 +159,13 @@ async function allapotKiirasa(napokMulva) {
   if (allapot.entitasok.size === 0) {
     kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
   }
-  for (const e of allapot.entitasok.values()) {
+  // A MEGJELENÍTÉS sorrendje: a legtöbb tudatpontot kapott elöl (holtversenynél az
+  // azonosító dönt, hogy két gép ugyanazt lássa). ⚠️ Ez a felület döntése, nem a
+  // számításé — az állapot maga determinisztikus sorrendben áll elő (allapotSzamitas.js).
+  const rangsor = [...allapot.entitasok.values()].sort((a, b) =>
+    b.osszesPont - a.osszesPont || (a.azonosito < b.azonosito ? -1 : 1));
+
+  for (const e of rangsor) {
     const sajat = e.hozzajarulok.get(szerzo)?.pont ?? 0;
     kiir('  ' + SZIN.halvany + e.azonosito.slice(0, 8) + SZIN.vege + '  ' + e.cim);
     kiir('      ' + SZIN.halvany + e.meret + ' bájt · összes pont: ' + e.osszesPont
@@ -302,6 +312,32 @@ try {
       break;
     }
 
+    case 'ujjlenyomat': {
+      // ⭐ „Ugyanazt látjuk-e?" — két készülék EGYETLEN SZÖVEG összehasonlításával.
+      // Ez kell majd a Szakasz 2 / 4. lépéséhez, ahol nincs közös program, ami összevesse
+      // a két gépet: a két ujjlenyomatot szemmel is össze lehet olvasni.
+      const napokMulva = parseInt(ervek[0], 10) || 0;
+      const { allapot, javaslatok } = await kepetKeszit(napokMulva);
+      const allas = await allasOsszeallitasa(tar, KOINO);
+
+      kiir(SZIN.vastag + 'TUDÁS' + SZIN.vege + SZIN.halvany
+        + '     (mely eseményeket ismerem — ezt egyenlíti ki a csere)' + SZIN.vege);
+      kiir('  ' + await lenyomat(allas.szerzok));
+      kiir(SZIN.halvany + '  ' + allas.szerzok.length + ' e-ember · '
+        + (await koinoEsemenyei(tar, KOINO)).length + ' esemény' + SZIN.vege);
+
+      kiir();
+      kiir(SZIN.vastag + 'ÁLLAPOT' + SZIN.vege + SZIN.halvany
+        + '   (ami ebből következik — ennek is egyeznie kell)' + SZIN.vege);
+      kiir('  ' + await allapotUjjlenyomata(allapot, javaslatok));
+      kiir(SZIN.halvany + '  ' + allapot.entitasok.size + ' entitás · '
+        + javaslatok.size + ' javaslat' + SZIN.vege);
+      kiir();
+      kiir(SZIN.halvany + '⚠ Az ÁLLAPOT ujjlenyomata IDŐFÜGGŐ (a döntések lezárulnak),'
+        + ' ezért csak azonos pillanatra hasonlítható össze.' + SZIN.vege);
+      break;
+    }
+
     // ===== A CSERE: két készülék között (Szakasz 2) =====
 
     case 'figyel': {
@@ -346,7 +382,7 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
-      kiir('           figyel [port] · csere <cím> [port]');
+      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok]');
       process.exit(2);
   }
 } catch (hiba) {

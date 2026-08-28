@@ -21,6 +21,7 @@ import allapot from './allapotProba.js';
 import javaslat from './javaslatProba.js';
 import szabaly from './szabalyProba.js';
 import csere from './csereProba.js';
+import vizsga from './vizsgaProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -29,7 +30,8 @@ const PROBAK = [
   { nev: 'allapot', futtat: allapot },
   { nev: 'javaslat', futtat: javaslat },
   { nev: 'szabaly', futtat: szabaly },
-  { nev: 'csere', futtat: csere }
+  { nev: 'csere', futtat: csere },
+  { nev: 'vizsga', futtat: vizsga }
 ];
 
 const szuro = process.argv[2];

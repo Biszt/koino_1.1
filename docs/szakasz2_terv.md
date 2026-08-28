@@ -177,7 +177,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 |---|---|---|---|
 | **1a** | ✅ **A csere LOGIKÁJA**, hálózat nélkül ([`js/csere/csere.js`](../koino/js/csere/csere.js)) | két tár kicseréli, amit tud | **kész: 19 önpróba** + három rontás-próba |
 | **1b** | ✅ **A vonal**: ugyanez sima TCP-n ([`js/csere/vonal.js`](../koino/js/csere/vonal.js)) | két folyamat kicseréli, amit tud | **kész: 5 önpróba + kézi próba** két adat-mappával, egy gépen |
-| **2** | **A vizsga:** két készülék, kevert események → **azonos állapot** | a jóslat igazolva | önpróba: mindkét oldalon ugyanaz az entitás-lista, javaslat-eredmény, jelzés-lista |
+| **2** | ✅ **A vizsga:** két készülék, kevert események → **azonos állapot** | a jóslat igazolva | **kész: 10 önpróba** ([`vizsgaProba.js`](../koino/meres/vizsgaProba.js)) + az `ujjlenyomat` parancs |
 | **3** | **Hézag és részleges tudás** | eldől a 4. pont kérdése | mérés: mennyi idő alatt ér körbe egy esemény; utána döntés + megvalósítás |
 | **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** |
 | **5** | *(csak ha a 4. megkívánja)* jelzőpont, majd továbbító | a hiányzó darab — de csak az, ami tényleg hiányzik | mérés alapján |
@@ -237,18 +237,37 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
    nincs újdonság. Kézenfekvő irány: előbb egy **összesített ujjlenyomat** megy át, és a
    részletes állás csak akkor, ha az eltér. *(Nem most: előbb legyen valódi hálózati
    mérésünk.)*
-7. 🆕 **AZ ENTITÁSOK SORRENDJE — a két gép MÁST mutat.** A kézi próbán (két folyamat, egy
-   gép) a csere után mindkét készülék **ugyanazt az öt eseményt és ugyanazokat az
-   entitásokat** számolta ki — de **más sorrendben** sorolta fel őket, mert a sorrend a
-   fájlban lévő beérkezési sorrend. Ma ez **csak megjelenítés**: minden számított érték
-   sorrend-független (az elágazás-feloldás azonosító szerint dönt, az „utolsó nyer"
-   sorszám szerint, a medián rendez). **De a pakli-nézetben már látszani fog**, és a D17
-   ígérete az, hogy mindenki ugyanazt látja. *Javaslat: az entitás-lista kapjon
-   determinisztikus rendezést a Szakasz 2 / 2. lépésben (a vizsgával együtt).*
+7. ✅ **AZ ENTITÁSOK SORRENDJE** *(felvetve és lezárva 2026-08-28)*. A kézi próbán a csere
+   után mindkét készülék ugyanazokat az entitásokat számolta ki — de **más sorrendben**
+   sorolta fel őket (a fájlba érkezés sorrendje). Az ÉRTÉKEK sorrend-függetlenek voltak, a
+   LISTÁK nem. **Megoldva:** az állapotszámítás a bemenetet **egy helyen** rendezi
+   (`rendezettBemenet`), és innen lefelé minden felsorolás ezt örökli.
+   *A sorrend `szerzo` + `sorszam` + `azonosito` — nem az idő szerint, mert az `ido` a
+   szerző órája; ha az óra döntené el a sorrendet, egy rossz óra átrendezhetné, amit
+   mindenki lát.* A megjelenítés sorrendje ettől külön kérdés (a parancssori arc a
+   tudatpont szerint rangsorol) — a felület dolga, nem a számításé.
 
 ---
 
 ## Napló
+
+- **2026-08-28 (a vizsga)** — **A 2. LÉPÉS KÉSZ: a jóslat igazolva.** Két készülék,
+  **váltakozva szétosztott** események (tehát mindkét lánc lyukas), csere — és utána
+  **azonos az állapot**: ugyanazok az entitások, tudatpontok, küszöbök, ugyanaz a
+  javaslat-eredmény, ugyanaz az egyezmény, ugyanazok a jelzések. 10 önpróba.
+  **A mérőeszköz:** az [állapot ujjlenyomata](../koino/js/allapot/osszehasonlitas.js) —
+  egyetlen 43 karakteres szöveg, ami mindent lefed, ami döntés. Ebből lett az
+  `ujjlenyomat` parancs is: a 4. lépésnél két készülék **szemmel** összeolvasható.
+  **Amit a vizsga külön bizonyít** (mert egy mindig-átmenő vizsga nem vizsga):
+  · csere ELŐTT a két gép ujjlenyomata **különbözik** · a csere utáni közös állapot
+  UGYANAZ, mint amit egy mindent tudó gép számolna (két hiányos gép **közös tévedésben**
+  is megegyezhetne) · **három** készülék láncolt cserével is ugyanoda jut · a **kettős
+  szavazat két készülékről** után is egyeznek, és mindkettő ugyanúgy jelzi az
+  ellentmondást · a **szabálysértő** esemény mindkét gépen ugyanúgy esik ki.
+  **Egy javítás a Szakasz 1 magjában:** a felsorolások sorrendje (9. pont / 7. kérdés) —
+  rontás-próbával igazolva.
+  *Egy próba elsőre bukott, és a hiba a PRÓBÁÉ volt, nem a kódé: a küszöböket ezrelékben
+  adtam meg, holott százalékban vannak. A kód végig helyesen számolt.*
 
 - **2026-08-28 (a vonal)** — **AZ 1b LÉPÉS KÉSZ: a csere valódi TCP-n.** A szállítás
   (`js/csere/vonal.js`) semmit nem tud a koinóról — csak a `csere.js` objektumait küldi
