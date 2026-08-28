@@ -110,6 +110,16 @@ hozzá."*
 4. **Az elismerés-rendszer és a kinevezés terve** *(N9)*
 5. **A pénz paraméterei** *(N10)* — de a **D13/b** szerint ezeket nem kell eltalálni
 6. **A teljes mérnöki munka** — ami nem elméleti kérdés
+7. 🆕 **A TERJESZTÉS: hogyan jut a program a készülékre.** *Csaba kérése (2026-08-28): a
+   végleges verzió legyen **telepíthető a koino.hu-ról** is.* Felírva követelményként.
+   ⚠️ Ez **nem mond ellent a D29-nek** (a koino nem böngészőben *fut*) — a letöltés
+   terjesztés, nem futtatás; a program utána a weboldal nélkül is működik. **De egy
+   feszültséget kimond:** egy weboldal központi terjesztési pont, és aki megszerzi, hamis
+   programot oszthatna. A választható válaszok (aláírt kiadás, nyilvános forrás,
+   több forrás, a D12 verzió-entitása) a
+   [`telepites_telefon.md`](telepites_telefon.md) 7. pontjában vannak — **a döntés még
+   nincs meg**. Ami mérnöki munka: Androidon ez **APK**-t jelent, amiben benne van a
+   Node-futtató is (ma ezt a Termux adja, végleges kiadásban nem várható el).
 
 **A lépés-sorrend** (lentebb, saját szakaszban) megmutatja, hogy ezek közül **egyik sem áll
 az első három szakasz útjában** — a helyi koino, a kapcsolat és a bizalmi háló megépíthető

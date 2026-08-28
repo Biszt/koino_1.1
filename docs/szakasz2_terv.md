@@ -179,7 +179,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 | **1b** | ✅ **A vonal**: ugyanez sima TCP-n ([`js/csere/vonal.js`](../koino/js/csere/vonal.js)) | két folyamat kicseréli, amit tud | **kész: 5 önpróba + kézi próba** két adat-mappával, egy gépen |
 | **2** | ✅ **A vizsga:** két készülék, kevert események → **azonos állapot** | a jóslat igazolva | **kész: 10 önpróba** ([`vizsgaProba.js`](../koino/meres/vizsgaProba.js)) + az `ujjlenyomat` parancs |
 | **3** | **Hézag és részleges tudás** | eldől a 4. pont kérdése | mérés: mennyi idő alatt ér körbe egy esemény; utána döntés + megvalósítás |
-| **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** |
+| **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** → **útmutató: [`telepites_telefon.md`](telepites_telefon.md)** |
 | **5** | *(csak ha a 4. megkívánja)* jelzőpont, majd továbbító | a hiányzó darab — de csak az, ami tényleg hiányzik | mérés alapján |
 
 **A 4. lépés a szakasz vizsgája.** Ha két készülék külön hálózatról, szolgáltató nélkül
@@ -214,6 +214,12 @@ Ezek nem kíváncsiságból kellenek — mindegyik **eldönt valamit**:
 **Ebből következik:** a telefonon **natívan** fusson a koino (Android + Termux + Node) —
 ami a D29 után amúgy is a természetes út. Így nincs se böngésző, se kábel, se alagút,
 és **a mérés azt méri, amit mérni akarunk**.
+
+📱 **A telepítés lépésről lépésre: [`telepites_telefon.md`](telepites_telefon.md)** — benne
+az Ed25519 ellenőrzése a telefonon, a kód átvitele a laptopról (a `koino/` **nincs fenn a
+GitHubon**, mert nem pusholtunk), a mérés menete, és a diagnosztikai létra, ha nem megy.
+⭐ **Ki figyeljen?** A **laptop**, mert otthon a te routered van — a szomszéd routerének
+tűzfalán nem múlhat a mérés.
 
 A **cím és a bemutatkozás** átvitelére: kézzel (kiírva, QR-kódként vagy üzenetben). Ez
 postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert a kérdés az, hogy az

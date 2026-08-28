@@ -39,6 +39,8 @@ node koino/koino.js allapot 3    # mi lesz 3 nap múlva (a döntési idő napokb
 node koino/meres/mind.js         # a 124 önpróba
 ```
 
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. ⚠️ A `koino/` **nincs fenn a GitHubon** (nem pusholtunk), ezért a kód a laptopról megy át. A `koino/` mappa **önmagában futtatható**: 73 KB, 26 fájl, nulla függőség.
+
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
 ```bash

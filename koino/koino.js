@@ -24,6 +24,7 @@
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
 //   node koino/koino.js csere <cím> [port]       — csere egy másik készülékkel
 //   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
+//   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //
 // Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
 //
@@ -312,6 +313,51 @@ try {
       break;
     }
 
+    case 'cimek': {
+      // ⭐ MIÉRT KELL EZ? A Szakasz 2 / 4. lépéséhez (két készülék, két hálózat) tudni
+      // kell a saját GLOBÁLIS IPv6-címünket — a másik ezen ér el. Androidon a szokásos
+      // rendszer-parancsok (`ip addr`) nem mindig adnak választ, mert a rendszer korlátozza
+      // őket; a program viszont a SAJÁT címeit mindig ismeri.
+      //
+      // ⚠️ Ez NEM a nyilvános cím felderítése. IPv6-nál nincs is rá szükség (nincs NAT):
+      // a globális cím maga a nyilvános cím. Épp ezt a mérést akarjuk elvégezni.
+      const halozat = (await import('node:os')).networkInterfaces();
+      const csoportok = { globalis: [], helyi: [], negyes: [] };
+
+      for (const [nev, cimek] of Object.entries(halozat)) {
+        for (const cim of cimek ?? []) {
+          if (cim.internal) continue;
+          if (cim.family === 'IPv6') {
+            const eleje = cim.address.slice(0, 2).toLowerCase();
+            const globalisE = eleje.startsWith('2') || eleje.startsWith('3');
+            (globalisE ? csoportok.globalis : csoportok.helyi).push({ nev, cim: cim.address });
+          } else {
+            csoportok.negyes.push({ nev, cim: cim.address });
+          }
+        }
+      }
+
+      kiir(SZIN.vastag + 'GLOBÁLIS IPv6' + SZIN.vege + SZIN.halvany
+        + '   ← EZT add meg a másik készüléknek' + SZIN.vege);
+      if (!csoportok.globalis.length) {
+        kiir(SZIN.nem + '  (nincs) — így a közvetlen kapcsolat két hálózat között nem megy'
+          + SZIN.vege);
+      }
+      for (const { nev, cim } of csoportok.globalis) {
+        kiir('  ' + cim + SZIN.halvany + '   (' + nev + ')' + SZIN.vege);
+      }
+
+      kiir();
+      kiir(SZIN.halvany + 'Helyi hálózat (IPv4): '
+        + (csoportok.negyes.map((c) => c.cim).join(', ') || '—') + SZIN.vege);
+      kiir(SZIN.halvany + 'Csak-link IPv6 (fe80…, nem használható kívülről): '
+        + csoportok.helyi.length + ' db' + SZIN.vege);
+      kiir();
+      kiir(SZIN.halvany + 'A másik készüléken:  node koino/koino.js csere <a fenti cím> 7373'
+        + SZIN.vege);
+      break;
+    }
+
     case 'ujjlenyomat': {
       // ⭐ „Ugyanazt látjuk-e?" — két készülék EGYETLEN SZÖVEG összehasonlításával.
       // Ez kell majd a Szakasz 2 / 4. lépéséhez, ahol nincs közös program, ami összevesse
@@ -382,7 +428,7 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
-      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok]');
+      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok] · cimek');
       process.exit(2);
   }
 } catch (hiba) {
