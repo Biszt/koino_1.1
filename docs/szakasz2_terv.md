@@ -257,6 +257,25 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 
 ## Napló
 
+- **2026-08-29 (a router megkérdezése)** — ⚠️ **AZ AUTOMATIKUS KAPUNYITÁS EZEN A ROUTEREN
+  NEM MEGY — megmérve.** A kézi port-szabály után az volt a kérdés, tud-e a koino **magától**
+  kaput kérni a routertől (ezt csinálják a játékok és a letöltőprogramok). Két szabvány
+  létezik ugyanazon az UDP-porton (5351):
+
+  | Protokoll | Mit tud | A Telekom Home Box |
+  |---|---|---|
+  | **NAT-PMP** (RFC 6886) | csak IPv4 | ✅ **válaszol** (megadta a CGNAT-címet: `100.97.184.76`) |
+  | **PCP** (RFC 6887) | **IPv6 tűzfal-rés** — ez kellene | ❌ `verzió=0, hibakód=1` = *„nem ismerem ezt a verziót"* |
+
+  **Vagyis a router csak a régi, IPv4-es szabványt tudja** — az viszont a szolgáltatói NAT
+  (CGNAT) miatt használhatatlan befelé. **Ez a router nem tud IPv6 tűzfal-rést nyitni.**
+
+  Az eszköz megmarad ([`js/csere/kapunyitas.js`](../koino/js/csere/kapunyitas.js), `kapu`
+  parancs): **más routereknél működhet**, és ha működik, az e-embernek semmit nem kell a
+  router felületén megkeresnie. ⚠️ **Segédeszköz, nem előfeltétel** (a platform-függetlenség
+  2. szabálya): ha a router nemet mond, a koino ugyanúgy megy tovább — csak ő kezdeményez
+  kifelé.
+
 - **2026-08-28 (a 4. lépés első kísérlete)** — ⚠️ **KÉT HÁLÓZAT KÖZÖTT NEM JÖTT ÖSSZE — és
   pontosan tudjuk, miért.** A telefon a szomszédban, a laptop itthon, `figyel 7373`.
   Eredmény: **`A másik fél nem válaszol (10000 ms)`**, és **a laptophoz semmi nem érkezett

@@ -25,6 +25,7 @@
 //   node koino/koino.js csere <cím> [port]       — csere egy másik készülékkel
 //   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
+//   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson kaput
 //
 // Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
 //
@@ -52,6 +53,7 @@ import {
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
+import { sajatIPv6, pcpKapuKerese } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
 
@@ -313,6 +315,49 @@ try {
       break;
     }
 
+    case 'kapu': {
+      // ⭐ Megkérdezi a routert, hajlandó-e MAGÁTÓL beengedni a kapcsolatot. Ha igen, nem
+      // kell kézzel szabályt írni a router felületén — ami a legtöbb e-embernek úgyis
+      // leküzdhetetlen akadály lenne.
+      // ⚠️ SEGÉDESZKÖZ, NEM ELŐFELTÉTEL: ha a router nemet mond, a koino ugyanúgy működik.
+      const port = parseInt(ervek[0], 10) || ALAP_PORT;
+      const atjaro = ervek[1];
+      const en = sajatIPv6();
+
+      if (!en) {
+        kiir(SZIN.nem + 'Nincs globális IPv6-címed — így nincs mit kinyittatni.' + SZIN.vege);
+        break;
+      }
+      kiir(SZIN.halvany + 'A saját címed: ' + en.cim + '  (' + en.kartya + ')' + SZIN.vege);
+
+      if (!atjaro) {
+        kiir();
+        kiir('Add meg a router helyi IPv6-címét is:');
+        kiir('  node koino/koino.js kapu ' + port + ' fe80::…');
+        kiir(SZIN.halvany + 'Windowson így kérdezhető le:' + SZIN.vege);
+        kiir(SZIN.halvany + '  Get-NetRoute -DestinationPrefix ::/0 | Select NextHop' + SZIN.vege);
+        break;
+      }
+
+      const eredmeny = await pcpKapuKerese({
+        atjaro, szakasz: en.szakasz, sajatCim: en.cim, port
+      });
+
+      if (eredmeny.sikeres) {
+        kiir(SZIN.jo + '✓ A router kinyitotta a ' + (eredmeny.port ?? port) + '-es kaput'
+          + SZIN.vege + SZIN.halvany + ' — ' + eredmeny.elettartam + ' másodpercre' + SZIN.vege);
+        kiir(SZIN.halvany + 'Most már fogadhatsz kapcsolatot: node koino/koino.js figyel '
+          + port + SZIN.vege);
+      } else {
+        kiir(SZIN.nem + '✗ Nem sikerült: ' + eredmeny.ok + SZIN.vege);
+        kiir();
+        kiir(SZIN.halvany + 'Ez nem baj — a koino enélkül is működik, csak nem tud kaput' + SZIN.vege);
+        kiir(SZIN.halvany + 'nyitni. Ilyenkor TE kezdeményezel kifelé (csere), vagy kézzel' + SZIN.vege);
+        kiir(SZIN.halvany + 'nyitsz portot a routeren.' + SZIN.vege);
+      }
+      break;
+    }
+
     case 'cimek': {
       // ⭐ MIÉRT KELL EZ? A Szakasz 2 / 4. lépéséhez (két készülék, két hálózat) tudni
       // kell a saját GLOBÁLIS IPv6-címünket — a másik ezen ér el. Androidon a szokásos
@@ -428,7 +473,7 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
-      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok] · cimek');
+      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
       process.exit(2);
   }
 } catch (hiba) {
