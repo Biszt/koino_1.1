@@ -1,0 +1,354 @@
+// koino/meres/csereProba.js — a csere-protokoll önpróbája (Szakasz 2 / 1. lépés)
+//
+// Azt bizonyítja, hogy két tár EGY KÖRBEN meg tudja mondani egymásnak, mit tud, el tudja
+// kérni, ami hiányzik, és a végén UGYANAZT ismeri. Hálózat nélkül: itt még csak a
+// protokoll LOGIKÁJA mérődik — a drót a következő lépés.
+//
+// A kérdés, amit ezek a próbák eldöntenek: elég-e szerzőnként a legnagyobb sorszám?
+// (A válasz: nem — a hézag és a rejtett elágazás miatt. Lásd az utolsó két szakaszt.)
+
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
+import { esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
+import { kanonikusSzoveg } from '../js/esemeny/kanonikusAlak.js';
+import {
+  allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa,
+  beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
+} from '../js/csere/csere.js';
+import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+
+const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
+
+const KOINO = 'proba';
+const mappak = [];
+
+/** Új, üres tár egy eldobható mappában — ez játssza az egyik „készüléket". */
+async function ujTar() {
+  const mappa = await mkdtemp(join(tmpdir(), 'koino-csere-'));
+  mappak.push(mappa);
+  return esemenyTarNyitasa(KOINO, mappa);
+}
+
+/** Elment több eseményt egy tárba. */
+async function ment(tar, esemenyek) {
+  for (const e of esemenyek) await esemenyMentese(tar, e);
+}
+
+/** Egy e-ember első N eseménye, elmentetlenül (hogy szabadon oszthassuk szét). */
+async function lanc(eember, hossz) {
+  const esemenyek = [];
+  for (let i = 1; i <= hossz; i++) {
+    esemenyek.push(await eember.tesz('TartalomLetrehozas', { cim: 'T' + i, meret: 10 * i }));
+  }
+  return esemenyek;
+}
+
+/** Egy szerző sora az állásban. */
+const sora = (allas, szerzo) => allas.szerzok.find((sz) => sz.szerzo === szerzo);
+
+/** Egy szerzőtől kért sorszámok. */
+const kertek = (kerelem, szerzo) =>
+  kerelem.szerzok.find((sz) => sz.szerzo === szerzo)?.sorszamok ?? [];
+
+// ===== AZ ÁLLÁS: „ezt tudom" =====
+
+proba('Az ÜRES tár állása üres (nincs kit felsorolni)', async () => {
+  const tar = await ujTar();
+  const allas = await allasOsszeallitasa(tar, KOINO);
+  return allas.koino === KOINO && allas.szerzok.length === 0;
+});
+
+proba('Az állás szerzőnként EGY sor, a legnagyobb sorszámmal', async () => {
+  const tar = await ujTar();
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  await ment(tar, await lanc(anna, 3));
+  await ment(tar, await lanc(bela, 1));
+
+  const allas = await allasOsszeallitasa(tar, KOINO);
+  return allas.szerzok.length === 2
+      && sora(allas, anna.szerzo).legnagyobb === 3
+      && sora(allas, bela.szerzo).legnagyobb === 1;
+});
+
+proba('⭐ UGYANAZ A TUDÁS = UGYANAZ AZ ÁLLÁS (a fájl sorrendje nem számít)', async () => {
+  // Ha az állás a mentés sorrendjétől függene, két gép fölöslegesen kérne egymástól —
+  // vagy ami rosszabb, azt hinné, eltérnek, holott nem.
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const annaE = await lanc(anna, 2);
+  const belaE = await lanc(bela, 2);
+
+  const egyik = await ujTar();
+  await ment(egyik, [annaE[0], annaE[1], belaE[0], belaE[1]]);
+  const masik = await ujTar();
+  await ment(masik, [belaE[1], annaE[1], belaE[0], annaE[0]]);   // fordítva
+
+  const a = await allasOsszeallitasa(egyik, KOINO);
+  const b = await allasOsszeallitasa(masik, KOINO);
+  return kanonikusSzoveg(a) === kanonikusSzoveg(b);
+});
+
+// ===== A KÉRÉS: „ez hiányzik nekem" =====
+
+proba('Aki UGYANAZT tudja, SEMMIT nem kér', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const egyik = await ujTar(); await ment(egyik, esemenyek);
+  const masik = await ujTar(); await ment(masik, esemenyek);
+
+  const a = await allasOsszeallitasa(egyik, KOINO);
+  const b = await allasOsszeallitasa(masik, KOINO);
+  return hianyokSzamitasa(a, b).szerzok.length === 0;
+});
+
+proba('⭐ Aki LE VAN MARADVA, csak a hiányzó tartományt kéri', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 5);
+  const lemaradt = await ujTar(); await ment(lemaradt, esemenyek.slice(0, 2));   // 1,2
+  const teljes = await ujTar();   await ment(teljes, esemenyek);                 // 1..5
+
+  const kerelem = hianyokSzamitasa(
+    await allasOsszeallitasa(lemaradt, KOINO),
+    await allasOsszeallitasa(teljes, KOINO)
+  );
+  return kertek(kerelem, anna.szerzo).join(',') === '3,4,5';
+});
+
+proba('Az ISMERETLEN szerző TELJES láncát kéri', async () => {
+  const anna = await ujEember(KOINO);
+  const ures = await ujTar();
+  const teljes = await ujTar(); await ment(teljes, await lanc(anna, 3));
+
+  const kerelem = hianyokSzamitasa(
+    await allasOsszeallitasa(ures, KOINO),
+    await allasOsszeallitasa(teljes, KOINO)
+  );
+  return kertek(kerelem, anna.szerzo).join(',') === '1,2,3';
+});
+
+proba('⭐ A HÉZAG NEM TŰNIK EL: azonos „legnagyobb" mellett is kéri a lyukat', async () => {
+  // EZ AZ A PRÓBA, AMI MIATT a legnagyobb sorszám ÖNMAGÁBAN kevés. Mindkét gép azt
+  // mondaná, „a 4-esig ismerem" — és a 3-as örökre hiányozna a lyukasnál.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 4);
+  const lyukas = await ujTar();
+  await ment(lyukas, [esemenyek[0], esemenyek[1], esemenyek[3]]);   // 1,2,_,4
+  const teljes = await ujTar(); await ment(teljes, esemenyek);      // 1,2,3,4
+
+  const sajat = await allasOsszeallitasa(lyukas, KOINO);
+  const kerelem = hianyokSzamitasa(sajat, await allasOsszeallitasa(teljes, KOINO));
+
+  return sora(sajat, anna.szerzo).hezagok.join(',') === '3'
+      && kertek(kerelem, anna.szerzo).join(',') === '3';
+});
+
+proba('Nem kérünk olyat, ami a MÁSIKNAK SINCS meg (az ő hézagát)', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 4);
+  const ures = await ujTar();
+  const lyukas = await ujTar();
+  await ment(lyukas, [esemenyek[0], esemenyek[1], esemenyek[3]]);   // 1,2,_,4
+
+  const kerelem = hianyokSzamitasa(
+    await allasOsszeallitasa(ures, KOINO),
+    await allasOsszeallitasa(lyukas, KOINO)
+  );
+  return kertek(kerelem, anna.szerzo).join(',') === '1,2,4';
+});
+
+// ===== AZ ELÁGAZÁS: a bizonyíték terjedése =====
+
+proba('⭐ A nála LÁTOTT elágazást CÉLZOTTAN kérjük el (a bizonyíték olcsón megy tovább)', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const masodik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'Neki mást', meret: 7 });
+
+  const tudja = await ujTar();   await ment(tudja, [...esemenyek, masodik3]);
+  const nemTudja = await ujTar(); await ment(nemTudja, esemenyek);
+
+  const kerelem = hianyokSzamitasa(
+    await allasOsszeallitasa(nemTudja, KOINO),
+    await allasOsszeallitasa(tudja, KOINO)
+  );
+  // ⚠️ CSAK a 3-ast kéri, és épp ez a lényeg. Az elágazásról az ujjlenyomat-tartalék is
+  // tudomást szerezne — de az a TELJES láncot kérné el. Egy 10 000 eseményes koinóban ez
+  // a különbség egyetlen esemény és az egész lánc újratöltése között.
+  return kertek(kerelem, anna.szerzo).join(',') === '3';
+});
+
+proba('⭐ A lánc KÖZEPÉN elrejtett elágazás is kiderül (ezért kell ujjlenyomat)', async () => {
+  // A támadó ugyanarról a pontról két eseményt ír alá, és az egyiket az egyik gépnek,
+  // a másikat a másiknak mutatja — majd MINDKETTŐN folytatja a láncot. Ilyenkor:
+  //   · a „legnagyobb" mindkét gépen azonos,
+  //   · egyik gép sem tud elágazásról,
+  //   · és a lánc FEJE is azonos lenne, ha a hamisítás nem az utolsó eseményt érinti.
+  // Egyedül a teljes láncot fedő ujjlenyomat árulja el, hogy nem ugyanazt tudják.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);                       // 1,2,3
+  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const negyedik = await lanc(anna, 1);                        // 4 (a 3-asra épül)
+
+  const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);        // 1,2,3,4
+  const masik = await ujTar(); await ment(masik, [esemenyek[0], esemenyek[1], masik3, ...negyedik]); // 1,2,3',4
+
+  const a = await allasOsszeallitasa(egyik, KOINO);
+  const b = await allasOsszeallitasa(masik, KOINO);
+
+  // A „legnagyobb" egyezik, elágazásról egyik sem tud — az ujjlenyomat mégis eltér
+  const megtevesztoenEgyforma =
+    sora(a, anna.szerzo).legnagyobb === sora(b, anna.szerzo).legnagyobb
+    && sora(a, anna.szerzo).elagazasok.length === 0
+    && sora(b, anna.szerzo).elagazasok.length === 0
+    && sora(a, anna.szerzo).ujjlenyomat !== sora(b, anna.szerzo).ujjlenyomat;
+
+  // …és a csere fel is deríti: a végén MINDKÉT gép ismeri MINDKÉT eseményt
+  const { egyezik } = await csereAmigKell(egyik, masik, KOINO);
+  const egyikE = await koinoEsemenyei(egyik, KOINO);
+  const mindketto = egyikE.filter((e) => e.sorszam === 3).length === 2;
+
+  return megtevesztoenEgyforma && egyezik && mindketto;
+});
+
+// ===== A VÁLASZ ÉS A BEOLVASZTÁS =====
+
+proba('A válasz CSAK a kért eseményeket adja', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const tar = await ujTar();
+  await ment(tar, await lanc(anna, 3));
+  await ment(tar, await lanc(bela, 2));
+
+  const valasz = await valaszOsszeallitasa(tar, {
+    koino: KOINO, szerzok: [{ szerzo: anna.szerzo, sorszamok: [2] }]
+  });
+  return valasz.length === 1 && valasz[0].szerzo === anna.szerzo && valasz[0].sorszam === 2;
+});
+
+proba('A beolvasztás: az ÚJ bekerül, a MEGLÉVŐ elnyelődik', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const tar = await ujTar(); await ment(tar, esemenyek.slice(0, 2));
+
+  const eredmeny = await beolvasztas(tar, esemenyek);   // 1,2 már megvan; 3 új
+  return eredmeny.uj === 1 && eredmeny.marMegvolt === 2 && eredmeny.elutasitva.length === 0;
+});
+
+proba('⭐ A HAMISÍTOTT esemény a HÁLÓZATRÓL SEM kerül be', async () => {
+  // A hálózat nem kap engedékenyebb kaput, mint a saját műveleteink: ugyanaz az
+  // `esemenyMentese` fut, tehát az aláírás-ellenőrzés itt is lefut.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 1);
+  const hamis = { ...esemenyek[0], adat: { cim: 'Átírva', meret: 10 } };
+
+  const tar = await ujTar();
+  const eredmeny = await beolvasztas(tar, [hamis]);
+  const bent = await koinoEsemenyei(tar, KOINO);
+  return eredmeny.uj === 0 && eredmeny.elutasitva.length === 1 && bent.length === 0;
+});
+
+// ===== A TELJES KÖR =====
+
+proba('⭐ EGY KÖR UTÁN a két tár UGYANAZT ismeri (mindkét irányban)', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const annaE = await lanc(anna, 3);
+  const belaE = await lanc(bela, 2);
+
+  const egyik = await ujTar(); await ment(egyik, annaE);   // csak Annát ismeri
+  const masik = await ujTar(); await ment(masik, belaE);   // csak Bélát ismeri
+
+  const { egyezik } = await csereKor(egyik, masik, KOINO);
+  const egyikE = await koinoEsemenyei(egyik, KOINO);
+  const masikE = await koinoEsemenyei(masik, KOINO);
+  return egyezik && egyikE.length === 5 && masikE.length === 5;
+});
+
+proba('⭐ A MÁSODIK kör már nem mozdít semmit (a csere idempotens)', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 4));
+  const masik = await ujTar();
+
+  await csereKor(egyik, masik, KOINO);
+  const masodik = await csereKor(egyik, masik, KOINO);
+  return masodik.egyikKapott.uj === 0 && masodik.masikKapott.uj === 0
+      && masodik.egyikKapott.marMegvolt === 0 && masodik.masikKapott.marMegvolt === 0;
+});
+
+proba('⭐ A SORREND NEM SZÁMÍT: fordított irányból indítva ugyanoda jutunk', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const annaE = await lanc(anna, 3);
+  const belaE = await lanc(bela, 3);
+
+  const a1 = await ujTar(); await ment(a1, annaE);
+  const b1 = await ujTar(); await ment(b1, belaE);
+  await csereKor(a1, b1, KOINO);
+
+  const a2 = await ujTar(); await ment(a2, annaE);
+  const b2 = await ujTar(); await ment(b2, belaE);
+  await csereKor(b2, a2, KOINO);   // fordítva kezdve
+
+  return await allasokEgyeznek(a1, a2, KOINO) && await allasokEgyeznek(a1, b2, KOINO);
+});
+
+proba('A LEMARADT fél egy körben behozza a hátrányát', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 10);
+  const lemaradt = await ujTar(); await ment(lemaradt, esemenyek.slice(0, 3));
+  const teljes = await ujTar();   await ment(teljes, esemenyek);
+
+  const { korok, egyezik } = await csereAmigKell(lemaradt, teljes, KOINO);
+  return egyezik && korok === 1;
+});
+
+proba('⭐ Az ELŐRÉBB TARTÓ fél nem kér vissza fölöslegesen', async () => {
+  // Aki hosszabb láncot ismer, annak az ujjlenyomat-eltérés MAGÁTÓL ÉRTETŐDŐ — nem szabad
+  // emiatt visszakérnie az egész láncot, amit már tud. Egy 10 000 eseményes koinóban ez
+  // különbség a „pár bájt" és a „töltsük le újra az egészet" között.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 10);
+  const lemaradt = await ujTar(); await ment(lemaradt, esemenyek.slice(0, 3));
+  const teljes = await ujTar();   await ment(teljes, esemenyek);
+
+  const kerelem = hianyokSzamitasa(
+    await allasOsszeallitasa(teljes, KOINO),
+    await allasOsszeallitasa(lemaradt, KOINO)
+  );
+  return kerelem.szerzok.length === 0;
+});
+
+// ===== MÉRÉS: mekkora az ÁLLÁS? =====
+//
+// A Szakasz 2 terve ezt a számot külön kéri: „az ÁLLÁS üzenet mérete N e-embernél" —
+// mert ez dönti el, szeletelni kell-e a csere-protokollt, vagy egyben marad.
+
+proba('MÉRÉS: az ÁLLÁS 50 e-embernél is 200 bájt/fő alatt marad', async () => {
+  const tar = await ujTar();
+  const LETSZAM = 50;
+  for (let i = 0; i < LETSZAM; i++) {
+    const valaki = await ujEember(KOINO);
+    await ment(tar, await lanc(valaki, 3));
+  }
+
+  const allas = await allasOsszeallitasa(tar, KOINO);
+  const bajt = new TextEncoder().encode(JSON.stringify(allas)).length;
+  const fejenkent = Math.round(bajt / LETSZAM);
+  process.stdout.write('           ↳ mérve: ' + bajt + ' bájt / ' + LETSZAM
+    + ' e-ember = ' + fejenkent + ' bájt/fő\n');
+
+  return allas.szerzok.length === LETSZAM && fejenkent < 200;
+});
+
+export async function takaritas() {
+  for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
+}
+
+export default async function (csendes) {
+  const eredmeny = await futtatas(csendes);
+  await takaritas();
+  return eredmeny;
+}

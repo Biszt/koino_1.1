@@ -46,8 +46,8 @@ eseményeket ismerjük: elég **szerzőnként a legnagyobb sorszám**.
 
 | Üzenet | Tartalma | Mérete |
 |---|---|---|
-| `ALLAS` | szerzőnként: a nyilvános kulcs + a legnagyobb ismert sorszám + a lánc feje | ~80 bájt / e-ember |
-| `KEREK` | mely szerző mely sorszám-tartományát kérem | pár bájt / hiány |
+| `ALLAS` | szerzőnként: a nyilvános kulcs + a legnagyobb ismert sorszám + **hézagok** + **elágazások** + a lánc **ujjlenyomata** | **162 bájt / e-ember** (mérve, 50 fő) |
+| `KEREK` | mely szerző mely sorszámait kérem | pár bájt / hiány |
 | `ESEMENY` | soronként egy aláírt esemény | ~400 bájt / esemény |
 
 **Három tulajdonsága van, ami miatt ez a jó alak:**
@@ -63,6 +63,29 @@ eseményeket ismerjük: elég **szerzőnként a legnagyobb sorszám**.
 **Amit a beérkezett eseménnyel teszünk:** semmi újat. Ugyanaz az `esemenyMentese` fut le,
 mint a sajátnál — **ellenőrizetlen esemény nem kerül a tárba** (aláírás + azonosító), és
 az elágazás mentéskor lelepleződik. Ez a Szakasz 1 óta kész.
+
+### ⚠️ AMIT A MEGÉPÍTÉS HELYESBÍTETT (2026-08-28, mérve)
+
+*A fenti terv azt mondta: „elég szerzőnként a legnagyobb sorszám". **Ez nem volt igaz** —
+a megvalósítás közben két lyuk derült ki, mindkettőt önpróba bizonyítja
+([`csereProba.js`](../koino/meres/csereProba.js), 19 próba).*
+
+| Ami hiányzott | Mi történt volna nélküle | Rontás-próba |
+|---|---|---|
+| **hézagok** | Az egyik gép 1,2,**_**,4-et ismer, a másik 1,2,3,4-et. Mindkettő azt mondja, „a 4-esig" — a **3-as örökre hiányozna**. A terv 4. pontja szerint a hézag hálózaton *normális*, tehát ez nem ritka eset. | a rontás elbuktatja a hézag-próbát |
+| **a lánc ujjlenyomata** (a „fej" helyett) | Ha a kettős aláírás a lánc **közepén** van, a legnagyobb sorszám azonos, elágazásról egyik gép sem tud, **és a fej is azonos** — a két gép némán azt hinné, egyetért. A teljes láncot fedő ujjlenyomat ugyanannyiba kerül (43 karakter), de ezt is megfogja. | a rontás elbuktatja a rejtett-elágazás próbát |
+| **elágazások** | Az ujjlenyomat enélkül is felderítené — de a **teljes lánc** elkérése árán. Így egyetlen sorszám elkérése elég. | a rontás elbuktatja a célzott-kérés próbát |
+
+**Egy finomítás, ami a pazarlást szünteti meg:** aki **hosszabb** láncot ismer a másiknál,
+annak az ujjlenyomat-eltérés magától értetődő (több eseményt tud) — ezért **nem kér vissza
+semmit**. E nélkül minden csere azzal indulna, hogy az előrébb tartó visszakéri az egész
+láncot, amit már ismer. *Ez a szabály egyben a leállást is garantálja: két gép közül
+legalább az egyik sosem „előrébb tartó", tehát a teljes-tartomány-kérés mindig lefut
+valamelyik oldalon.*
+
+⭐ **Módszertani jegyzet:** mindhárom mezőt **rontás-próbával** igazoltuk (elrontjuk a
+szabályt, és megnézzük, elbukik-e a próba). Az első körben az elágazás-mező rontása
+**átment** — vagyis a próba nem azt mérte, amit állított. A próbát élesítettük.
 
 ---
 
@@ -152,7 +175,8 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 
 | # | Lépés | Mi az eredménye | Hogyan próbáljuk ki |
 |---|---|---|---|
-| **1** | **Csere-protokoll** (`ALLAS` / `KEREK` / `ESEMENY`), sima TCP-n | két folyamat kicseréli, amit tud | két adat-mappa, két folyamat **egy gépen** (`KOINO_ADAT`), próbafájllal |
+| **1a** | ✅ **A csere LOGIKÁJA**, hálózat nélkül ([`js/csere/csere.js`](../koino/js/csere/csere.js)) | két tár kicseréli, amit tud | **kész: 19 önpróba** + három rontás-próba |
+| **1b** | **A vonal**: ugyanez sima TCP-n | két folyamat kicseréli, amit tud | két adat-mappa, két folyamat **egy gépen** (`KOINO_ADAT`) |
 | **2** | **A vizsga:** két készülék, kevert események → **azonos állapot** | a jóslat igazolva | önpróba: mindkét oldalon ugyanaz az entitás-lista, javaslat-eredmény, jelzés-lista |
 | **3** | **Hézag és részleges tudás** | eldől a 4. pont kérdése | mérés: mennyi idő alatt ér körbe egy esemény; utána döntés + megvalósítás |
 | **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** |
@@ -211,6 +235,17 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 ---
 
 ## Napló
+
+- **2026-08-28 (a megépítés)** — **AZ 1a LÉPÉS KÉSZ: a csere logikája, hálózat nélkül.**
+  A protokoll magja tiszta függvény (két állás → egy kérés), tehát önpróbával mérhető, két
+  gép és drót nélkül — **19 próba**, a teljes szám 90-ről **109-re** nőtt.
+  **A terv jóslata állja:** az összefésülés tényleg triviális (ugyanaz az `esemenyMentese`
+  fut a hálózatról jött eseményre is, a duplikátum magától elnyelődik), és egy kör után a
+  két tár ugyanazt ismeri, **fordított irányból indítva is**.
+  **De az összefoglaló alakja nem állta:** a „szerzőnként a legnagyobb sorszám" két lyukat
+  hagyott (hézag, a lánc közepén rejtett elágazás) — lásd a 2. szakasz helyesbítését.
+  *Tanulság a mai naphoz: a rontás-próba egyszer megbukott — az elágazás-mező elrontása
+  ÁTMENT, mert a próba egy másik úton is teljesült. A vak ellenőrzés mindig zöld.*
 
 - **2026-08-28** — A terv létrejött, a **D29** után: nem böngészőben, hanem két önálló
   program között. Az alapgondolat, ami a protokollt olcsóvá teszi: **szerzőnként elég a
