@@ -41,6 +41,33 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-28)
 
+> ### 🛑 BEFAGYASZTVA (2026-08-28) — D30: A PLATFORM-FÜGGETLENSÉG ELŐFELTÉTEL
+>
+> **Csaba döntése:** *„az, hogy a telefonoknak is legyen ugyanakkora függetlensége, mint a
+> pc-knek, az kulcsfontosságú. […] a technikai korlátozhatóságoknak nem szabad, hogy hatni
+> tudjanak a koinóra. Ez annyira fontos, hogy ameddig ezt elméletben nem orvosoljuk, addig
+> befagyasztok mindent a fejlesztéssel kapcsolatban."*
+>
+> **NE FOLYTASD A KÓDOLÁST.** A Szakasz 2 / 3–4. lépése (hézag, két hálózat) és a telefonos
+> telepítés is **áll**, amíg ez a kérdés elméletben nincs áthidalva.
+>
+> **Mi váltotta ki:** a Google 2026 szeptemberétől (globálisan 2027-től) megköveteli, hogy
+> minden tanúsított Android-készülékre telepített alkalmazás **azonosított, a Google-nél
+> regisztrált fejlesztőtől** származzon — a közvetlen (bolt nélküli) telepítésre is. Ez
+> pontosan azt a terjesztési utat szűkíti, amit Csaba egy nappal korábban követelményként
+> kimondott („legyen telepíthető a koino.hu-ról").
+>
+> ⚠️ **A VÉDELEM NEM LEHET JOGI.** Csaba: *„a jogi részek egyáltalán nem érdekelnek."*
+> Tehát az EU-s szabályozásra (DMA, versenyjogi döntések) **nem szabad tervezni** — a
+> válasznak **szerkezetinek** kell lennie. Ez tervezési korlát, nem vélemény.
+>
+> **A fenyegetés-modell:** Csaba abból indul ki, hogy *„ha a koino híre eljut a Google-hez,
+> akkor ő ahol tudja, gáncsolni fogja"* — vagyis nem véletlen mellékhatásra tervezünk,
+> hanem szándékos akadályozásra.
+>
+> **A megoldás helye:** külön elméleti híd, ugyanúgy, ahogy 2026-08-25-én a kulcskezelés,
+> a konszenzus és az identitás. Amíg nincs kész, a Szakasz 2 áll.
+
 > ### 🔀 MÁSODIK FORDULAT (2026-08-28): NINCS BÖNGÉSZŐ
 >
 > **D29** — *„Tulajdonképpen hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta
