@@ -1,160 +1,207 @@
-# A koino a telefonon — telepítés és mérés
+# A koino a telefonon — lépésről lépésre
 
 *Készült: 2026. 08. 28. — a [Szakasz 2](szakasz2_terv.md) **4. lépéséhez**: két készülék,
-két hálózat, szolgáltató nélkül. Ez a szakasz nagy kérdése.*
+két hálózat, szolgáltató nélkül.*
+
+> **Ez az útmutató feltételezi, hogy nem vagy otthon a telefonos és hálózati
+> beállításokban.** Minden lépésnél odaírom, **mit fogsz látni**, ha sikerült. Ha valahol
+> mást látsz, ott állj meg — nem kell találgatni.
 
 ---
 
-## Miért kell egyáltalán telefon?
+## Mit csinálunk, és miért
 
-Mert a mérés csak akkor ér valamit, ha a két készülék **külön hálózaton** van. Csaba
-korlátai (a Szakasz 2 terv 8. pontja) ezt jelölik ki:
+A koinónak **két külön készüléken, két külön hálózaton** kell megtalálnia egymást, hogy
+kiderüljön: működik-e szolgáltató nélkül. Ehhez a telefonra fel kell tenni ugyanazt a
+programot, ami a laptopon fut.
 
-| Korlát | Következmény |
-|---|---|
-| nincs mobilnet | a telefon **átvihető a szomszédba**, ott másik routerre csatlakozik → **külön nyilvános cím** |
-| nincs második laptop | a szomszédban nincs kábel és nincs port-továbbítás → **a telefonnak magának kell futtatnia a koinót** |
-| nem akarunk alagutat | épp azt a kérdést kerülné meg, amit mérni akarunk |
+**Három szakasz lesz, és mindegyik után meg lehet állni:**
 
-⚠️ **A koino natívan fut a telefonon, nem böngészőben** (D29). A telefon nem „kliens",
-hanem ugyanaz a program — csak egy másik készüléken.
+| Szakasz | Hol | Mennyi idő | Mit dönt el |
+|---|---|---|---|
+| **A** | otthon, a telefonon | ~30 perc | fut-e a koino a telefonon egyáltalán |
+| **B** | otthon, egy wifin | ~5 perc | működik-e a csere a két készülék között |
+| **C** | a szomszédban | ~10 perc | **a nagy kérdés:** két hálózat között is? |
+
+⚠️ **A `C` szakaszt csak akkor kezdd el, ha a `B` sikerült.** Így ha ott nem megy, tudni
+fogjuk, hogy a hálózat miatt — nem a program miatt.
 
 ---
 
-## 1. Termux — a Linux-környezet Androidon
+# 🅰️ SZAKASZ — a telefon előkészítése (otthon)
 
-**⚠️ NE a Google Play-ből.** Az ottani Termux 2020 óta nem frissül, és az újabb
-Androidokon nem működik (a rendszer nem engedi futtatni, amit a saját mappájába telepít).
+## Előkészület: hogyan írsz be hosszú parancsokat a telefonon
 
-**Innen töltsd:** [F-Droid](https://f-droid.org/packages/com.termux/) — vagy a Termux
-GitHub-kiadásai. (Az F-Droid maga is telepítendő alkalmazás; a telefonnak engednie kell
-az „ismeretlen forrásból" való telepítést.)
+Ez a legbosszantóbb rész, ezért kezdjük vele. A telefonon gépelni fárasztó, és **egyetlen
+elgépelt betű is elrontja a parancsot**.
 
-Telepítés után a Termuxban:
+**A trükk:** küldd el magadnak a parancsokat üzenetben (e-mail, Messenger, bármi), és a
+telefonon **másold ki** onnan, majd a Termuxban **hosszan nyomd meg a képernyőt → Paste
+(Beillesztés)**.
+
+Ezt az útmutatót is elküldheted magadnak — így minden parancs másolható lesz.
+
+## 1. lépés — F-Droid telepítése
+
+Az F-Droid egy „alkalmazásbolt", mint a Play Áruház, csak szabad programokat ad.
+⚠️ **A Termuxot NE a Play Áruházból töltsd le** — az ottani változat 2020 óta nem frissül,
+és újabb telefonokon nem működik.
+
+1. Nyisd meg a telefon böngészőjét, és menj ide: **f-droid.org**
+2. Nyomd meg a nagy **„Download F-Droid"** gombot. Letöltődik egy fájl.
+3. Nyisd meg a letöltött fájlt (a letöltések között találod).
+4. A telefon meg fogja kérdezni, hogy engedélyezed-e a telepítést ebből a forrásból.
+   **Engedélyezd** — ez azt jelenti, hogy nem a Play Áruházból telepítesz.
+5. Nyomd meg a **Telepítés** gombot.
+
+✅ **Ha sikerült:** megjelenik egy új, kék-fehér ikon a telefonon, „F-Droid" néven.
+
+## 2. lépés — Termux telepítése
+
+A Termux az, ami a telefonon egy **parancssort** ad — ugyanolyan fekete ablakot, mint a
+laptopon.
+
+1. Nyisd meg az F-Droidot. Először eltölt egy-két percet azzal, hogy letölti a listáját —
+   várd meg.
+2. Alul nyomd meg a **keresőt (nagyító)**, és írd be: `Termux`
+3. Válaszd a **Termux** nevűt (a fejlesztő: „Fredrik Fornwall"), és nyomd meg a
+   **Telepítés** gombot.
+
+✅ **Ha sikerült:** megjelenik egy fekete ikon, „Termux" néven.
+
+## 3. lépés — az első pillantás a Termuxra
+
+Nyisd meg a Termuxot.
+
+✅ **Amit látni fogsz:** fekete képernyő, néhány sor üdvözlő szöveg, és a legalján egy
+ilyesmi: `~ $` — utána villog a kurzor. **Ide lehet parancsokat írni.**
+
+**Két dolog, amit jó tudni:**
+
+- A billentyűzet fölött van egy extra sor gombokkal (`CTRL`, `ALT`, nyilak). Ha egy
+  program nem akar leállni, a **CTRL + C** állítja meg.
+- Hosszan nyomd a képernyőt → megjelenik a **Paste (Beillesztés)**.
+
+## 4. lépés — a Termux frissítése
+
+Írd be (vagy illeszd be) ezt, majd nyomj Entert:
 
 ```bash
-pkg update && pkg upgrade
+pkg update
 ```
+
+Kérdezni fog valamit — például hogy folytassa-e (`[Y/n]`). **Nyomj Entert.** Ha
+fájlokról kérdez, arra is elég az Enter.
+
+⏱ Ez eltarthat pár percig, sok szöveg fog gördülni. Ez normális.
+
+✅ **Ha sikerült:** a végén visszakapod a `$` jelet, és nem ír „error"-t.
+
+## 5. lépés — a két program telepítése
 
 ```bash
-pkg install nodejs
+pkg install nodejs git
 ```
 
-Ellenőrzés:
+Ez telepíti a **Node**-ot (ami a koinót futtatja) és a **git**-et (amivel letöltjük).
+Ha kérdez, Enter.
+
+✅ **Ha sikerült:** ellenőrizd ezzel:
 
 ```bash
 node -v
 ```
 
----
+Valami ilyesmit kell kiírnia: `v22.5.1` (a szám lehet más).
 
-## 2. ⚠️ Mérd meg, hogy az Ed25519 megvan-e — ne feltételezd
+## 6. lépés — ⭐ a legfontosabb ellenőrzés
 
-A koino **minden** eseménye Ed25519-cel van aláírva, és ezt a Node beépített
-WebCryptójából veszi (nincs npm-függőség). Ha ez a telefonon nem működik, semmi más nem
-számít. Egy parancs eldönti:
+A koino minden műveletet **aláír** — ez a lelke. Ha ez a telefonon nem működik, semmi más
+nem számít, ezért **most mérjük meg, és nem feltételezzük**.
 
 ```bash
 node -e "crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']).then(()=>console.log('Ed25519 RENDBEN')).catch(e=>console.log('NINCS MEG:',e.message))"
 ```
 
-Ha `Ed25519 RENDBEN`, a telefon alkalmas. (A Node 18.4 óta tudja; a Termux ennél újabbat
-telepít.)
+✅ **Ha sikerült:** kiírja, hogy `Ed25519 RENDBEN`.
 
----
+❌ **Ha azt írja, `NINCS MEG`:** állj meg és szólj. Ez nem a te hibád, és van rá megoldás,
+de akkor másképp kell folytatni.
 
-## 3. A koino átvitele a telefonra
-
-### a) Letöltés a GitHubról (ez a javasolt)
-
-*2026-08-28 óta a `koino/` fenn van a nyilvános repóban.*
-
-```bash
-pkg install git
-```
+## 7. lépés — a koino letöltése
 
 ```bash
 git clone --depth 1 https://github.com/Biszt/koino_1.1.git
 ```
 
-A `--depth 1` azért kell, mert a teljes történet **23 MB**, a mai állapot viszont csak
-**5,6 MB** — a telefonnak nincs szüksége a prototípus fejlődéstörténetére.
+*(A `--depth 1` azért van ott, hogy csak a mai állapot jöjjön le — 5,6 MB a 23 helyett.)*
 
-Utána a repó gyökeréből dolgozol:
+✅ **Ha sikerült:** néhány sort ír a letöltésről, és a végén visszakapod a `$` jelet.
 
-```bash
-cd koino_1.1
-```
+## 8. lépés — a rövidítés beállítása
 
-⚠️ **A repó a prototípust is tartalmazza** (`backend/`, `frontend/`) — azzal a telefonon
-semmi dolgunk, és nem is kell hozzá telepíteni semmit. A koinónak **nulla függősége van**:
-nincs `npm install`.
+Hogy ne kelljen minden alkalommal hosszú útvonalat gépelni, csinálunk egy **rövidítést**:
+mostantól elég lesz annyit írni, hogy `k`.
 
-### b) Átvitel a laptopról, wifin (ha nincs net, vagy gyors frissítés kell)
-
-Ez akkor hasznos, ha a laptopon van egy **még nem pusholt** változat, és azt akarod a
-telefonon kipróbálni. Ehhez a telefon és a laptop **ugyanazon a wifin** legyen.
-
-**A laptopon** (a repó gyökerében), csomagolás és egy egyszeri kiszolgáló:
+Írd be ezt a két sort, egyenként (mindkettő után Enter):
 
 ```bash
-tar -czf koino.tar.gz koino
+echo "alias k='KOINO_ADAT=\$HOME/koino-adat node \$HOME/koino_1.1/koino/koino.js'" >> ~/.bashrc
 ```
 
 ```bash
-node -e "require('http').createServer((q,v)=>require('fs').createReadStream('koino.tar.gz').pipe(v)).listen(8000,()=>console.log('http://<a laptop IPv4-címe>:8000'))"
+source ~/.bashrc
 ```
 
-A laptop IPv4-címét a `node koino/koino.js cimek` írja ki („Helyi hálózat" sor —
-`192.168.…`).
-
-**A telefonon** (Termux):
+✅ **Ha sikerült:** semmi látványos nem történik — visszakapod a `$` jelet. Próbáld ki:
 
 ```bash
-pkg install curl tar
+k kulcs
 ```
+
+Ki kell írnia egy hosszú betűsort (ez lesz a telefon azonossága a koinóban) és azt, hogy
+hol tárolja.
+
+## 9. lépés — ⭐ a telefon vizsgája
+
+Most kiderül, hogy a koino nemcsak **elindul** a telefonon, hanem **ugyanazt is számolja**,
+mint a laptop. Ez 124 önellenőrzés.
 
 ```bash
-curl -o koino.tar.gz http://192.168.1.134:8000/koino.tar.gz && tar -xzf koino.tar.gz
+cd ~/koino_1.1 && node koino/meres/mind.js
 ```
 
-*(A `192.168.1.134` helyére a laptop valódi címe kerül. A kiszolgáló minden útvonalra
-ugyanazt a fájlt adja — a `-o` azért kell, mert a `-O` nem tud nevet kitalálni.)* A
-laptopon a kiszolgálót utána `Ctrl+C`-vel állítsd le, a `koino.tar.gz`-t pedig törölheted.
+⏱ Fél-egy percig fut, sok sor gördül.
 
-⚠️ **A csomag 73 KB, 26 fájl, és semmi mást nem igényel.** Mérve a laptopon: a
-kicsomagolt mappa **önmagában lefuttatja mind a 124 próbát**, a repó többi része nélkül.
-*Ez a `koino/` mappa legfontosabb tulajdonsága: nincs mihez tartoznia.*
+✅ **Ha sikerült:** a legalsó sor ez lesz:
+
+```
+✅ Mind a 124 próba rendben
+```
+
+❌ **Ha bármi „BUKOTT":** másold ki a végét, és küldd el nekem. Ezt a mérés ELŐTT kell
+megérteni.
+
+**🎉 Ha idáig eljutottál, a telefon teljes értékű koino-készülék.** Innen már gyors lesz.
 
 ---
 
-## 4. ⚠️ A telefon vizsgája: fussanak le az önpróbák
+# 🅱️ SZAKASZ — az első csere otthon (mindkettő a te wifidén)
 
-Mielőtt bármit mérnénk, derüljön ki, hogy a koino **tényleg fut** Androidon. Nem
-„elindul" — hanem ugyanazt számolja, mint a laptop:
+⚠️ **A telefon és a laptop ugyanazon a wifin legyen.**
 
-```bash
-node koino/meres/mind.js
-```
+## 10. lépés — a laptop címének megkeresése
 
-**Ha mind a 124 próba zöld, a telefon teljes értékű koino-készülék.** Ha valami bukik,
-azt a mérés előtt kell megérteni — utána már nem lehetne szétválasztani, hogy a hálózat
-vagy a program hibás.
-
-Ezután hozz létre rajta egy azonosságot:
+**A laptopon** (a `C:\koino_1.1` mappában):
 
 ```bash
-node koino/koino.js kulcs
+node koino/koino.js cimek
 ```
 
----
+Keresd meg a **„Helyi hálózat (IPv4)"** sort. Valami ilyesmi lesz benne:
+`192.168.1.134`. **Ezt írd fel** (ez a laptop címe a lakáson belül).
 
-## 5. A mérés menete
-
-### 5.1. ⭐ Először OTTHON, egy wifin — a program próbája
-
-Ez még nem a nagy kérdés, de **el kell választani a két hibalehetőséget**: ha a
-szomszédban nem megy, tudni akarjuk, hogy a hálózat miatt-e vagy a program miatt.
+## 11. lépés — a laptop kaput nyit
 
 **A laptopon:**
 
@@ -162,84 +209,200 @@ szomszédban nem megy, tudni akarjuk, hogy a hálózat miatt-e vagy a program mi
 node koino/koino.js figyel 7373
 ```
 
-Windows először rákérdez a tűzfalnál — **engedélyezni kell** (privát hálózatra elég).
+⚠️ **A Windows fel fog ugrani egy tűzfal-kérdéssel** („Engedélyezi a Node.js
+kommunikációját?"). **Nyomd meg az Engedélyezés gombot** — a „Magánhálózatok" pipa elég.
 
-**A telefonon:** a laptop IPv4-címével
+✅ **Ha sikerült:** kiírja, hogy `A kapu nyitva: 7373-es port`. **Ezt az ablakot hagyd
+nyitva**, itt fog dolgozni.
+
+## 12. lépés — a telefon csatlakozik
+
+**A telefonon**, a saját címeddel a `192.168.1.134` helyén:
 
 ```bash
-node koino/koino.js csere 192.168.1.134 7373
+k csere 192.168.1.134 7373
 ```
 
-Ha lement, mindkét készüléken:
+✅ **Ha sikerült:** a telefon kiírja, hogy `Csere kész — kaptam ... eseményt`, a laptop
+ablakában pedig megjelenik egy zöld pipa és egy `✓ csere` sor.
+
+❌ **Ha azt írja, hogy nem tud csatlakozni:** a leggyakoribb ok, hogy a tűzfalnál nem
+Engedélyezést nyomtál. Zárd be a `figyel`-t (CTRL + C), és próbáld újra.
+
+## 13. lépés — ⭐ ugyanazt látja a két készülék?
+
+**Mindkét készüléken** futtasd le ezt (a telefonon `k ujjlenyomat`, a laptopon
+`node koino/koino.js ujjlenyomat`):
 
 ```bash
 node koino/koino.js ujjlenyomat
 ```
 
-**A két TUDÁS-ujjlenyomatnak bájtra egyeznie kell.** Ez a szemmel elvégezhető vizsga.
+✅ **Ha sikerült:** a **TUDÁS** alatti hosszú betűsor a két készüléken **betűre azonos**.
 
-### 5.2. ⭐⭐ Aztán a SZOMSZÉDBAN — a szakasz nagy kérdése
+Ez a vizsga, szemmel elvégezve: ha a két sor egyezik, a két készülék ugyanazt a koinót
+látja.
 
-**A laptop marad otthon és figyel; a telefon megy a szomszédba és csatlakozik.**
+---
 
-*Miért így, és nem fordítva?* Mert a bejövő kapcsolatot a **router tűzfala** engedi vagy
-tiltja — és otthon a te routered van, a szomszédban nem. Ha a telefon figyelne, egy idegen
-router beállításán múlna a mérés.
+# 🅲 SZAKASZ — a nagy kérdés (telefon a szomszédban)
 
-**Otthon, indulás előtt** — a laptop globális IPv6-címe:
+**Az elrendezés:** a **laptop marad otthon és figyel**, a **telefon megy a szomszédba és
+csatlakozik**.
+
+*Miért így?* Mert a bejövő kapcsolatot a **router** engedi vagy tiltja — és otthon a **te**
+routered van. Ha fordítva csinálnánk, egy idegen router beállításán múlna a mérés.
+
+## 14. lépés — otthon, indulás előtt
+
+**A laptopon:**
 
 ```bash
 node koino/koino.js cimek
 ```
 
-Írd fel a `2001:…` kezdetű címet (⚠️ **a Windows több ilyet is ad, és ezek naponta
-cserélődnek** — közvetlenül a mérés előtt kérdezd le újra), majd hagyd futni:
+Most a **„GLOBÁLIS IPv6"** rész kell — egy hosszú, kettőspontos cím, ami `2001:`-gyel
+kezdődik. Ha több is van, **az elsőt** vedd.
+
+⚠️ **Ezt a címet nem fogod tudni fejből** — és elgépelni is könnyű. **Küldd el magadnak
+üzenetben**, hogy a szomszédban a telefonon be tudd illeszteni.
+
+⚠️ **Ezek a címek naponta cserélődnek**, ezért közvetlenül indulás előtt kérdezd le,
+ne előző nap.
+
+## 15. lépés — a laptop figyel, és úgy is marad
+
+**A laptopon:**
 
 ```bash
 node koino/koino.js figyel 7373
 ```
 
-**A szomszédban, a telefonon** — előbb nézd meg, van-e ott egyáltalán globális IPv6:
+**Hagyd futni**, és úgy menj át a szomszédba. Ne zárd be az ablakot, és a laptop ne
+aludjon el.
+
+## 16. lépés — a szomszédban: van-e ott IPv6?
+
+Csatlakoztasd a telefont a szomszéd wifijére. Aztán:
 
 ```bash
-node koino/koino.js cimek
+k cimek
 ```
 
-Aztán a csere, a laptop IPv6-címével (szögletes zárójel **nem** kell):
+✅ **Ha van „GLOBÁLIS IPv6" sor** (`2001:`-gyel kezdődő cím), mehet tovább.
+
+❌ **Ha azt írja, hogy „(nincs)":** akkor a szomszéd internet-szolgáltatója nem ad IPv6-ot.
+**Ez is eredmény** — nem a koino hibája, és fontos tudni. Írd fel, és szólj.
+
+## 17. lépés — ⭐⭐ a csere két hálózat között
+
+A telefonon, a laptop `2001:`-es címével (amit üzenetben elküldtél magadnak):
 
 ```bash
-node koino/koino.js csere 2001:4c4d:25cb:b200:7395:e583:5de6:5a1a 7373
+k csere 2001:4c4d:25cb:b200:7395:e583:5de6:5a1a 7373
 ```
+
+*(Szögletes zárójel nem kell. A cím helyére a sajátodat illeszd be.)*
+
+✅ **Ha sikerült:** `Csere kész — ... (2 kör, ... ms)`. **Írd fel a ms-számot** — ez a
+mérés legfontosabb száma.
+
+❌ **Ha nem sikerül:** ez sem kudarc, hanem eredmény. Írd le, mit írt ki pontosan, és
+együtt megnézzük, melyik lépcsőn akadt el.
+
+## 18. lépés — az összevetés
+
+A telefonon:
+
+```bash
+k ujjlenyomat
+```
+
+És otthon a laptopon ugyanígy. **Ha a TUDÁS-sorok egyeznek, a koino két külön hálózat
+között, szolgáltató nélkül működik.**
 
 ---
 
-## 6. Amit a mérés eldönt — mindkét kimenet értékes
+## Ha bármelyik lépésnél elakadsz
+
+Nem kell találgatni. Írd le:
+
+1. **melyik lépésnél** vagy,
+2. **mit írtál be** pontosan,
+3. **mit írt ki** a gép (a végét elég).
+
+Ebből meg tudom mondani, mi történt.
+
+---
+---
+
+# Függelék — a technikai háttér
+
+*Ez a rész nem a telepítéshez kell, hanem hogy később is tudjuk, miért így csináltuk.*
+
+## Miért natívan fut a telefonon, és nem böngészőben?
+
+A **D29** szerint a koino önálló program. A böngésző korlátai nem a koino korlátai: egy
+lap nem tud portot nyitni, nem fogad kapcsolatot, és elrejti a saját címeit. Az egész
+infrastruktúra, amit a P2P-hez emlegetni szoktak (jelzőpont, STUN, továbbító), jórészt
+ebből következik.
+
+## Miért ez az elrendezés?
+
+A Szakasz 2 terv 8. pontja írja le Csaba korlátait, és mindegyikből következik valami:
+
+| Korlát | Következmény |
+|---|---|
+| nincs mobilnet | a telefon **átvihető a szomszédba** → külön router, külön nyilvános cím |
+| nincs második laptop | a szomszédban nincs kábel és port-továbbítás → **a telefon futtatja a koinót** |
+| nem akarunk alagutat | épp azt a kérdést kerülné meg, amit mérni akarunk |
+
+## Mit dönt el a mérés?
 
 | Eredmény | Mit jelent |
 |---|---|
 | **Összeér** | A koino a legszigorúbb értelemben is működik **szolgáltató nélkül**: se jelzőpont, se STUN, se továbbító. Az IPv6 nem NAT-ol, tehát a globális cím maga a nyilvános cím. |
-| **Nem ér össze** | Akkor pontosan tudni fogjuk, **mi hiányzik és miért** — nem sejtés alapján. A `cimek` megmondja, hogy a cím hiányzott-e, vagy a tűzfal fogta meg. |
+| **Nem ér össze** | Pontosan tudni fogjuk, **mi hiányzik és miért** — nem sejtés alapján. |
 
-**Jegyezd fel, mennyi idő alatt fut le a csere** (a `csere` parancs kiírja ms-ban). Ez a
-terv 7. pontjának legfontosabb száma: ebből jön a **józan minimum döntési idő** (D4) és a
-hézag-döntés ára. *A helyi alsó korlát 9 ms — a valódi számot ez a mérés adja.*
+A **ms-szám** a terv 7. pontjának legfontosabb mérendő értéke: ebből jön a józan
+**minimum döntési idő** (D4) és a hézag-döntés ára. *A helyi alsó korlát 9 ms.*
 
-### Ha nem megy: a diagnosztikai létra
+## Ha a `C` szakasz nem megy: a diagnosztikai létra
 
-1. **Van-e a telefonnak globális IPv6 a szomszédban?** (`cimek` → ha nincs, ott az ISP nem
-   ad IPv6-ot; a mérés nem a koinóról szól)
-2. **Windows tűzfal:** engedi-e a Node bejövő kapcsolatait — és **IPv6-ra** is?
-3. **A te routered:** a legtöbb otthoni router alapból **tiltja a bejövő IPv6-ot**. Ez az
-   a beállítás, amit engedni kell.
-4. **Fut-e még a `figyel`?** Az Android leállíthatja a háttérben futó Termuxot —
-   a `termux-wake-lock` parancs segít, ha a telefon oldalán kell sokáig futnia.
+1. **Van-e a telefonnak globális IPv6 a szomszédban?** (16. lépés — ha nincs, ott az ISP
+   nem ad IPv6-ot; a mérés nem a koinóról szól)
+2. **Windows tűzfal:** engedi-e a Node bejövő kapcsolatait, **IPv6-ra is**?
+3. **A saját routered:** a legtöbb otthoni router alapból **tiltja a bejövő IPv6-ot**.
+   Ez az a beállítás, amit engedni kell.
+4. **Fut-e még a `figyel`?** A laptop ne aludjon el.
 
----
+## Ha egy még nem pusholt változatot akarsz a telefonon
 
-## 7. A VÉGLEGES VERZIÓBAN: telepítés a koino.hu-ról
+A 7. lépés a GitHubról tölt le. Ha a laptopon van egy frissebb, még ki nem tett változat,
+akkor wifin is átvihető. **A laptopon:**
+
+```bash
+tar -czf koino.tar.gz koino
+```
+
+```bash
+node -e "require('http').createServer((q,v)=>require('fs').createReadStream('koino.tar.gz').pipe(v)).listen(8000,()=>console.log('fut'))"
+```
+
+**A telefonon** (a laptop IPv4-címével):
+
+```bash
+curl -o koino.tar.gz http://192.168.1.134:8000/koino.tar.gz && tar -xzf koino.tar.gz
+```
+
+⚠️ Mérve: a csomag **73 KB, 26 fájl**, és a kicsomagolt mappa **önmagában lefuttatja mind
+a 124 próbát**, a repó többi része nélkül. *Ez a `koino/` mappa legfontosabb tulajdonsága:
+nincs mihez tartoznia.*
+
+## A VÉGLEGES VERZIÓBAN: telepítés a koino.hu-ról
 
 *Csaba kérése (2026-08-28): „ezt a végleges verzióban majd a koino.hu-ról is szeretném,
-hogy telepíthető legyen."* — **Felírva követelményként.** Ami ehhez tudni való:
+hogy telepíthető legyen."* — **Felírva követelményként.**
 
 **Ez NEM mond ellent a D29-nek.** A D29 arról szól, hogy a koino nem a böngészőben *fut*;
 a koino.hu-ról való telepítés viszont **terjesztés**, nem futtatás. A letöltés után a
@@ -256,9 +419,8 @@ programot oszthatna. A választható válaszok (a döntés még nincs meg):
 | **Több forrás** | F-Droid, GitHub-kiadás, koino.hu — ne egyetlen ponton múljon |
 | **A koinón belüli verzió-entitás** (D12) | a közösség maga dönthessen róla, melyik verziót futtatja |
 
-**Ami technikailag hátravan** (ez már valódi mérnöki munka, nem tervezési kérdés):
-Androidon a webről telepítés **APK-t** jelent (nem Play Áruházat), és a felhasználónak
-engedélyeznie kell az „ismeretlen forrás" telepítést. Az APK-nak vinnie kell magával egy
-Node-futtatót — ezt ma a Termux adja, egy végleges kiadásban nem várható el.
+**Ami technikailag hátravan:** Androidon a webről telepítés **APK**-t jelent (nem Play
+Áruházat), és az APK-nak vinnie kell magával egy Node-futtatót — ezt ma a Termux adja, egy
+végleges kiadásban nem várható el a felhasználótól.
 
-*Amíg ez nincs meg, a Termux az út — és ez a mérésre tökéletesen elég.*
+*Amíg ez nincs meg, a Termux az út — és a méréshez tökéletesen elég.*
