@@ -15,7 +15,20 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-**Olvasd el induláskor:** [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (🚧 itt tartunk). A 29 tervezési döntés (D1–D29) is ott van.
+**Olvasd el induláskor:** [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (🚧 itt tartunk). A 32 tervezési döntés (D1–D32) is ott van.
+
+## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
+
+A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, böngésző-gyártó) megengedi a működését. Az indoklás és a teljes fenyegetés-elemzés: [`docs/platform_fuggetlenseg.md`](docs/platform_fuggetlenseg.md). **Ezek ellenőrizhető szabályok — kódolás közben tartsd be őket:**
+
+1. **A szállítás cserélhető marad.** A csere-logika (`js/csere/csere.js`) SOHA ne importáljon hálózati kódot; új szállítás a `vonal.js` MELLÉ kerül, ne bele a logikába.
+2. **Semmi ne múljon egyetlen címen vagy szolgáltatáson.** Nincs beégetett koino.hu, jelzőpont, STUN, továbbító. Ha ilyen kell, legyen cserélhető és elhagyható.
+3. **A bizalom sose a csatornából jöjjön.** Eseményt soha nem fogadunk el azért, mert „megbízható helyről jött" — egyetlen kapu van: `esemenyMentese`.
+4. **Legyen mindig kézi út.** Minden automatikus cseréhez tartozzon fájlba mentés / fájlból olvasás. **Ha egy funkció csak online tud működni, az fojtópont.**
+5. **Ne épüljön folyamatos kapcsolatra.** A döntések napokban mérődnek (D4); ami másodperces élő kapcsolatot kívánna, visszahozza a törékenységet.
+6. ⭐ **Nulla függőség, kis méret.** Ma 73 KB, 26 fájl, 0 npm-csomag. Ez **védelem, nem elegancia**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont.
+7. **A böngésző csak kliens lehet, sose előfeltétel** (a D29 pontosítása).
+8. **Ne tervezz jogi védelemre.** Ha egy érv így kezdődik: „ezt úgyis megtiltja a szabályozás" — az érv nem érvényes.
 
 ## Domain-fogalmak (kötelező terminológia)
 

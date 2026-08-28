@@ -41,32 +41,33 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-28)
 
-> ### 🛑 BEFAGYASZTVA (2026-08-28) — D30: A PLATFORM-FÜGGETLENSÉG ELŐFELTÉTEL
+> ### 🔓 D30–D32: A PLATFORM-FÜGGETLENSÉG — a híd kész, a fagyasztás feloldva (2026-08-28)
 >
-> **Csaba döntése:** *„az, hogy a telefonoknak is legyen ugyanakkora függetlensége, mint a
-> pc-knek, az kulcsfontosságú. […] a technikai korlátozhatóságoknak nem szabad, hogy hatni
-> tudjanak a koinóra. Ez annyira fontos, hogy ameddig ezt elméletben nem orvosoljuk, addig
-> befagyasztok mindent a fejlesztéssel kapcsolatban."*
+> **Teljes leírás: [`platform_fuggetlenseg.md`](platform_fuggetlenseg.md)** — a hat
+> beavatkozási pont, a sáv-létra, és a **8 ellenőrizhető szabály, amire kódolás közben
+> figyelni kell** (8. szakasz).
 >
-> **NE FOLYTASD A KÓDOLÁST.** A Szakasz 2 / 3–4. lépése (hézag, két hálózat) és a telefonos
-> telepítés is **áll**, amíg ez a kérdés elméletben nincs áthidalva.
+> **D30 — ELŐFELTÉTEL.** Csaba a Google fejlesztő-ellenőrzési szabálya miatt **befagyasztotta
+> a fejlesztést**, amíg ez elméletben nincs áthidalva: *„a technikai korlátozhatóságoknak
+> nem szabad, hogy hatni tudjanak a koinóra."* A híd elkészült, **a fagyasztás feloldva** —
+> de az előfeltétel megmarad: minden új funkciónak meg kell felelnie a 8 szabálynak.
 >
-> **Mi váltotta ki:** a Google 2026 szeptemberétől (globálisan 2027-től) megköveteli, hogy
-> minden tanúsított Android-készülékre telepített alkalmazás **azonosított, a Google-nél
-> regisztrált fejlesztőtől** származzon — a közvetlen (bolt nélküli) telepítésre is. Ez
-> pontosan azt a terjesztési utat szűkíti, amit Csaba egy nappal korábban követelményként
-> kimondott („legyen telepíthető a koino.hu-ról").
+> **D31 — A MÉRCE.** *Egy lezárt készülék tulajdonosa is teljes értékű e-ember lehet — de
+> ehhez szüksége van legalább egy elérhető társra a hálózatban.* Csaba: *„a pc-sek
+> segítségével ugyanúgy tud működni… már az is elég nekem, hogy a pc-sek fent tudják
+> tartani a koinót."* ⚠️ A függés **nem érdem, csak elfogadható ár** (Csaba helyesbítése).
 >
-> ⚠️ **A VÉDELEM NEM LEHET JOGI.** Csaba: *„a jogi részek egyáltalán nem érdekelnek."*
-> Tehát az EU-s szabályozásra (DMA, versenyjogi döntések) **nem szabad tervezni** — a
-> válasznak **szerkezetinek** kell lennie. Ez tervezési korlát, nem vélemény.
+> **D32 — SZÁLLÍTÁSI FÜGGÉS IGEN, IGAZSÁG-FÜGGÉS SOHA.** Amire a koino rászorul, az legyen
+> mindig csak **postás**: cserélhető (bárki más is lehet) és ellenőrizhető (ha kihagy, az
+> hézagként látszik). Ebből következik: **a bizalom az aláírásban van, nem a csatornában** —
+> ezért egy pendrive pontosan ugyanolyan megbízható, mint egy titkosított kapcsolat.
 >
-> **A fenyegetés-modell:** Csaba abból indul ki, hogy *„ha a koino híre eljut a Google-hez,
-> akkor ő ahol tudja, gáncsolni fogja"* — vagyis nem véletlen mellékhatásra tervezünk,
-> hanem szándékos akadályozásra.
->
-> **A megoldás helye:** külön elméleti híd, ugyanúgy, ahogy 2026-08-25-én a kulcskezelés,
-> a konszenzus és az identitás. Amíg nincs kész, a Szakasz 2 áll.
+> ⚠️ **KÉT TERVEZÉSI KORLÁT, ami ezzel érvénybe lép:**
+> - **A védelem nem lehet jogi.** *„A jogi részek egyáltalán nem érdekelnek."* Ha egy érv
+>   így kezdődik: „ezt úgyis megtiltja a szabályozás" — az érv nem érvényes.
+> - **A böngésző kényelmi sáv, nem híd.** A böngészők a Google motorján futnak, és a Safe
+>   Browsing egyetlen lista majdnem mindhez. A **D29 pontosul**: a böngésző kliens lehet,
+>   de semmi nem múlhat rajta.
 
 > ### 🔀 MÁSODIK FORDULAT (2026-08-28): NINCS BÖNGÉSZŐ
 >
