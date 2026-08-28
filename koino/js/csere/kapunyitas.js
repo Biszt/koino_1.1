@@ -209,6 +209,86 @@ export async function pcpKapuKerese({ atjaro, szakasz, sajatCim, port, elettarta
   return eredmeny;
 }
 
+// ===================================
+// UPnP — a harmadik szabvány
+// ===================================
+//
+// A legelterjedtebb a három közül, és a 2-es változata (IGDv2) elvileg tud IPv6
+// tűzfal-rést is — de CSAK akkor, ha a router külön kínálja hozzá a
+// `WANIPv6FirewallControl` szolgáltatást. Sok router az IGDv2-t enélkül valósítja meg.
+//
+// A menete: multicast kiáltás a hálózatra („ki itt az átjáró?") → a válaszban egy cím,
+// ahonnan letölthető a szolgáltatás-lista → abban keressük az IPv6-vezérlést.
+
+/**
+ * Megkérdezi a hálózatot, van-e UPnP-átjáró, és mit tud.
+ *
+ * ⚠️ CSAK OLVAS. Semmit nem állít be — azt külön kellene kérni.
+ *
+ * @returns {Promise<{talalt: boolean, leiras?: string, szolgaltatasok?: Array<string>, ipv6Tuzfal?: boolean}>}
+ */
+export async function upnpKorkerdes() {
+  console.log('upnpKorkerdes - KEZDÉS');
+
+  const kialtas = Buffer.from(
+    'M-SEARCH * HTTP/1.1\r\n' +
+    'HOST: 239.255.255.250:1900\r\n' +
+    'MAN: "ssdp:discover"\r\n' +
+    'MX: 2\r\n' +
+    'ST: urn:schemas-upnp-org:device:InternetGatewayDevice:2\r\n\r\n'
+  );
+
+  // ----- 1. KI ITT AZ ÁTJÁRÓ? -----
+  const hely = await new Promise((teljesites) => {
+    const halo = createSocket({ type: 'udp4', reuseAddr: true });
+    let kesz = false;
+    const vege = (ertek) => {
+      if (kesz) return;
+      kesz = true;
+      try { halo.close(); } catch { /* már zárva */ }
+      teljesites(ertek);
+    };
+    halo.on('message', (adat) => vege(/LOCATION:\s*(\S+)/i.exec(adat.toString())?.[1] ?? null));
+    halo.on('error', () => vege(null));
+    setTimeout(() => vege(null), VARAKOZAS);
+    halo.bind(() => halo.send(kialtas, 1900, '239.255.255.250'));
+  });
+
+  if (!hely) {
+    console.log('upnpKorkerdes - VÉGE (nincs UPnP-átjáró)');
+    return { talalt: false };
+  }
+
+  // ----- 2. MIT TUD? -----
+  const leiras = await new Promise((teljesites) => {
+    import('node:http').then(({ get }) => {
+      const keres = get(hely, (valasz) => {
+        let szoveg = '';
+        valasz.on('data', (darab) => { szoveg += darab; });
+        valasz.on('end', () => teljesites(szoveg));
+      });
+      keres.on('error', () => teljesites(null));
+      keres.setTimeout(VARAKOZAS, () => { keres.destroy(); teljesites(null); });
+    });
+  });
+
+  if (!leiras) return { talalt: true, leiras: hely };
+
+  const szolgaltatasok = [...leiras.matchAll(/<serviceType>([^<]+)<\/serviceType>/g)]
+    .map((egyezes) => egyezes[1]);
+
+  const eredmeny = {
+    talalt: true,
+    leiras: hely,
+    szolgaltatasok,
+    // EZ a lényeg: enélkül az UPnP sem tud IPv6 tűzfal-rést nyitni
+    ipv6Tuzfal: szolgaltatasok.some((sz) => sz.includes('WANIPv6FirewallControl'))
+  };
+
+  console.log('upnpKorkerdes - VÉGE', { szolgaltatas: szolgaltatasok.length, ipv6Tuzfal: eredmeny.ipv6Tuzfal });
+  return eredmeny;
+}
+
 /**
  * Egy IPv6-cím 16 bájtja. (Az IPv4-et is IPv6-alakban kell megadni a PCP-ben.)
  * @param {string} cim

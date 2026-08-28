@@ -53,7 +53,7 @@ import {
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
-import { sajatIPv6, pcpKapuKerese } from './js/csere/kapunyitas.js';
+import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
 
@@ -339,6 +339,22 @@ try {
         break;
       }
 
+      // ----- MI VAN A HÁLÓZATON? Mindhárom szabványt megkérdezzük -----
+      const upnp = await upnpKorkerdes();
+      kiir();
+      kiir(SZIN.vastag + 'UPnP' + SZIN.vege);
+      if (!upnp.talalt) {
+        kiir('  ✗ nincs UPnP-átjáró a hálózaton');
+      } else {
+        kiir('  ✓ van átjáró' + SZIN.halvany + ' — ' + (upnp.szolgaltatasok?.length ?? 0)
+          + ' szolgáltatás' + SZIN.vege);
+        kiir(upnp.ipv6Tuzfal
+          ? SZIN.jo + '  ✓ TUD IPv6 tűzfal-rést nyitni' + SZIN.vege
+          : SZIN.nem + '  ✗ nincs IPv6 tűzfal-vezérlés (WANIPv6FirewallControl)' + SZIN.vege);
+      }
+
+      kiir();
+      kiir(SZIN.vastag + 'PCP' + SZIN.vege);
       const eredmeny = await pcpKapuKerese({
         atjaro, szakasz: en.szakasz, sajatCim: en.cim, port
       });
