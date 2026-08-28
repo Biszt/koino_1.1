@@ -341,6 +341,68 @@ odarendelt — ha ugyanarra az entitásra teszel újra pontot, a régi felszabad
 Próba: [`szabalyProba.js`](../koino/meres/szabalyProba.js) — **12/12 rendben**, végig
 kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú másik gép tenné).
 
+### ⚠️ A RÉTEG ISMERT HATÁRAI — mit fog meg, és mit nem (2026-08-28, mérve)
+
+*Csaba kérdésére: „egy nagy szakértelemmel bíró hacker tud több szavazatot leadni, vagy
+átmenetileg irreális tudatpontot adni valamihez?"*
+
+**Amit bizonyítottan megfog** *(nem „nehezen törhető", hanem matematikailag zárt)*:
+
+| Támadás | Miért nem megy |
+|---|---|
+| más nevében aláírni | Ed25519 — 7 hamisítási próba (tartalom, szerző, idő, sorszám, azonosító, aláírás, idegen kulcs), mind bukik |
+| **kétszer szavazni egy kulccsal** | láncfolytatásnál **felülírás** (1 szavazat); elágazásnál a számítás **determinisztikusan egyet vesz**, és az ellentmondást kiírja |
+| keretet túllépő tudatpont | kizárva (mérve: 999 999 → nem számít) |
+| idegen (0 pontos) javaslata | kizárva |
+| határidő utáni szavazat / tudatpont / érték javaslat | nem számít bele |
+
+**Három rés, amit NEM fog meg:**
+
+1. **SOK KULCS (sybil).** Bárki generálhat ezret, és szavazhat ezerszer — ehhez nem kell
+   szakértelem, csak egy ciklus. **Ez a Szakasz 1 tudatos határa**; a választ a bizalmi
+   háló adja (D1/D18, **Szakasz 3**).
+
+2. **SZELEKTÍV MUTOGATÁS — ⚠️ ez a réteg valódi rése, mérve 2026-08-28.** Ha valaki a
+   SAJÁT láncából elrejt egy eseményt egyes gépek elől, azok nem tudják kiszámolni a
+   keretét, és **átmegy nekik az irreális tudatpont**:
+
+   ```
+   TELJES lánc:    A: 10000 · B: NEM LÉTEZIK · kivétel: 1 (túllépné a keretet: 20000/10000)
+   HIÁNYOS lánc:   B: 10000 · kivétel: 0        ← a #3 eseményt eltitkolta e gép elől
+   → a két gép MÁST lát.
+   ```
+
+   **Nem a D17 determinizmusa sérül** (ugyanabból a halmazból ma is mindenki ugyanazt
+   kapja) — a két gép **más halmazt** ismer. A csalás nyoma bennmarad: a láncban **hézag**
+   keletkezik (sorszámok 1, 2, **4**), és amint a hiányzó esemény megérkezik, a kép magától
+   helyreáll, a korábbi hamis kép pedig **bizonyítékká válik**. De ma **az állapot nem
+   jelzi a hézagot** — van rá eszköz (`lancEllenorzese` a tár-rétegben), csak a számítás
+   nem használja.
+
+   **A javasolt irány (Csaba jóváhagyta, hogy a Szakasz 2-ben döntsük el):** a szabály-réteg
+   legyen **óvatos** — ha a szerző láncában hézag van a vizsgált esemény ELŐTT, a keret nem
+   ellenőrizhető, tehát ne fogadjuk el csendben, hanem jelezzük (*„ezt nem tudjuk
+   igazolni"*, D19). ⚠️ **Ára van, és előre látni kell:** hálózaton a hézag **normális**
+   átmeneti állapot, tehát a választás nem „biztonságos vs. nem", hanem **melyik hibát
+   vállaljuk**:
+
+   | Ma | Ha óvatosak leszünk |
+   |---|---|
+   | a hiányos tudású gép **elhiszi** az igazolhatatlant | a hiányos tudású gép **nem számolja** az igazolhatatlant |
+   | a csalás átmenetileg működik | a becsületes ember eseménye átmenetileg nem látszik |
+
+   *Azért tartozik a Szakasz 2-re, mert a válasz attól függ, milyen gyorsan érnek körbe az
+   események — és azt előbb meg kell mérni.*
+
+3. **VISSZADÁTUMOZÁS FRISS KULCCSAL.** Az idő-monotonitás csak a saját előző eseményhez
+   képest köt; a teljes válasz a kötegelés (D21, Szakasz 4).
+
+> **A minta mindhárom résnél ugyanaz:** a koino nem a MEGAKADÁLYOZÁSRA épül, hanem a
+> LELEPLEZHETŐSÉGRE. Amit a támadó tesz, azt **aláírva** teszi — tehát bizonyíték marad
+> utána. A védelem három lábon áll: kriptográfia (hamisíthatatlanság) · determinisztikus
+> számítás (ugyanabból a halmazból nem lehet két embernek két eredményt mutatni) · és a
+> bizalmi háló (hogy a kulcsok mögött emberek legyenek).
+
 ## 10. Nyitott kérdések — ezekre a kódolás előtt kell válasz
 
 1. ✅ **EGY KULCS A BELÉPŐ TÉRBEN** *(Csaba, 2026-08-26)*. A D25-ből következik: ha az
@@ -362,6 +424,14 @@ kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú m
 ---
 
 ## Napló
+
+- **2026-08-28 (a szál vége)** — **A SZABÁLY-RÉTEG HATÁRAINAK VÉGIGMÉRÉSE.** Csaba
+  kérdésére („tud-e egy hacker több szavazatot leadni, vagy átmenetileg irreális
+  tudatpontot adni?") végigmértük a támadási felületet. A zárt részek zártak — de a
+  mérés **egy valódi rést talált: a szelektív mutogatást** (a saját láncból eltitkolt
+  esemény miatt a hiányos tudású gép elfogadja a keret-túllépést). Felírva a 9. szakasz
+  „ismert határai" közé; a döntés a Szakasz 2-re marad, mert a válasz attól függ, milyen
+  gyorsan érnek körbe az események.
 
 - **2026-08-28 (este)** — **D29: KIKÖLTÖZÉS A BÖNGÉSZŐBŐL.** Csaba: *„hagyjuk is el a
   böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* A Szakasz 2

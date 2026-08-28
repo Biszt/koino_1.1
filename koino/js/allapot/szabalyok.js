@@ -143,6 +143,16 @@ export function szabalyokErvenyesitese(esemenyek) {
 //   szavazást, akárhány szabályt írnánk ide. Ez tehát nem feledékenység, hanem a réteg
 //   határa — és felírva a Szakasz 3-hoz.
 //
+// - ⚠️ A SZELEKTÍV MUTOGATÁS (mérve 2026-08-28, a réteg valódi rése). Ha valaki a SAJÁT
+//   láncából elrejt egy eseményt egyes gépek elől, azok nem tudják kiszámolni a keretét,
+//   és átmegy nekik a túllépés — mert a lenti ciklus csak azt látja, amit ismer. A D17
+//   determinizmusa nem sérül (ugyanabból a halmazból mindenki ugyanazt kapja); a két gép
+//   MÁS halmazt ismer. A csalás nyoma bennmarad: HÉZAG keletkezik a láncban, és amint a
+//   hiányzó esemény megérkezik, a kép helyreáll, a hamis kép pedig bizonyíték lesz.
+//   A javasolt irány (döntés a Szakasz 2-ben): ha a szerző láncában hézag van a vizsgált
+//   esemény ELŐTT, a keret NEM ELLENŐRIZHETŐ → jelezzük, ne fogadjuk el csendben. Ára:
+//   hálózaton a hézag normális átmeneti állapot. Részletek: docs/szakasz1_terv.md, 9. pont.
+//
 // - AZ ÁLTALÁNOS JAVASLAT TÁGABB HATÓKÖRE. A D27 szerint az általános javaslatnál a
 //   jogosultság LEFELÉ terjed: aki az entitásra VAGY BÁRMELY LESZÁRMAZOTTJÁRA tett
 //   pontot. Ma mindkét fajtánál a szűkebb szabály fut (az entitáson kell pont legyen).
