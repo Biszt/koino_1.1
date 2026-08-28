@@ -18,6 +18,7 @@ import {
   allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa,
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
+import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -319,6 +320,87 @@ proba('⭐ Az ELŐRÉBB TARTÓ fél nem kér vissza fölöslegesen', async () =>
     await allasOsszeallitasa(lemaradt, KOINO)
   );
   return kerelem.szerzok.length === 0;
+});
+
+// ===== A VONAL: ugyanez valódi TCP-n =====
+//
+// Itt már drót van a két tár között — de a protokoll ugyanaz. Ha ezek a próbák mást
+// adnának, mint a fentiek, az SZÁLLÍTÁSI hiba lenne, nem protokoll-hiba.
+
+/** Két tár cseréje valódi TCP-kapcsolaton, a helyi gépen. */
+async function csereDroton(egyikTar, masikTar, hoszt = '127.0.0.1') {
+  const figyelo = await figyeloIndulasa(masikTar, KOINO, 0, { hoszt });
+  try {
+    return await csereVonalon(egyikTar, KOINO, hoszt, figyelo.port);
+  } finally {
+    await figyelo.bezar();
+  }
+}
+
+proba('⭐ A VONAL ugyanoda visz, mint a közvetlen kör', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const annaE = await lanc(anna, 3);
+  const belaE = await lanc(bela, 2);
+
+  const egyik = await ujTar(); await ment(egyik, annaE);
+  const masik = await ujTar(); await ment(masik, belaE);
+
+  await csereDroton(egyik, masik);
+  const egyikE = await koinoEsemenyei(egyik, KOINO);
+  const masikE = await koinoEsemenyei(masik, KOINO);
+  return egyikE.length === 5 && masikE.length === 5
+      && await allasokEgyeznek(egyik, masik, KOINO);
+});
+
+proba('⭐ A VONALON is kiderül a lánc közepén elrejtett elágazás', async () => {
+  // Ez az, amiért egy kapcsolaton TÖBB kör fut: a felderítés két körbe telik.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const negyedik = await lanc(anna, 1);
+
+  const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);
+  const masik = await ujTar();
+  await ment(masik, [esemenyek[0], esemenyek[1], masik3, ...negyedik]);
+
+  await csereDroton(egyik, masik);
+  const harmasok = (await koinoEsemenyei(egyik, KOINO)).filter((e) => e.sorszam === 3);
+  return harmasok.length === 2 && await allasokEgyeznek(egyik, masik, KOINO);
+});
+
+proba('A VONALON is idempotens: a második csatlakozás nem hoz újat', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 4));
+  const masik = await ujTar();
+
+  const elso = await csereDroton(egyik, masik);
+  const masodik = await csereDroton(egyik, masik);
+  return elso.kuldott === 4 && masodik.kuldott === 0 && masodik.uj === 0;
+});
+
+proba('A VONAL IPv6-on is áll (::1) — a Szakasz 2 nagy kérdésének előszobája', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
+  const masik = await ujTar();
+
+  await csereDroton(egyik, masik, '::1');
+  return (await koinoEsemenyei(masik, KOINO)).length === 2;
+});
+
+proba('MÉRÉS: mennyi idő alatt ér körbe egy esemény (helyben)', async () => {
+  // A Szakasz 2 terve ezt a számot külön kéri — ez dönti el a józan MINIMUM DÖNTÉSI IDŐT
+  // (D4), és a „hézag-óvatosság" árát. Ez itt a helyi alsó korlát: hálózat nélkül.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
+  const masik = await ujTar();
+
+  const kezdet = performance.now();
+  await csereDroton(egyik, masik);
+  const eltelt = Math.round(performance.now() - kezdet);
+  process.stdout.write('           ↳ mérve: ' + eltelt + ' ms (kapcsolatnyitás + két kör, helyben)\n');
+
+  return (await koinoEsemenyei(masik, KOINO)).length === 1 && eltelt < 1000;
 });
 
 // ===== MÉRÉS: mekkora az ÁLLÁS? =====

@@ -21,8 +21,19 @@
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
+//   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
+//   node koino/koino.js csere <cím> [port]       — csere egy másik készülékkel
 //
 // Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
+//
+// ===== KÉT KÉSZÜLÉK EGY GÉPEN (Szakasz 2 / 1. lépés) =====
+//
+// A `KOINO_ADAT` változóval két külön „készülék" játszható el ugyanazon a gépen:
+//
+//   1. ablak:  KOINO_ADAT=./adat-A node koino/koino.js figyel 7373
+//   2. ablak:  KOINO_ADAT=./adat-B node koino/koino.js csere 127.0.0.1 7373
+//
+// A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
 import { writeFile } from 'node:fs/promises';
 
@@ -37,12 +48,14 @@ import {
   koinoLetrehozasa, tartalomLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
+import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 
 // ===== ÁLLANDÓK =====
 
 const KOINO = process.env.KOINO_AZONOSITO ?? 'sajat';
 const KEZDO_PONT = 100;
 const NAP = 86400 * 1000;
+const ALAP_PORT = 7373;
 
 // A napló alapból néma (a koino minden metódusa naplóz) — KOINO_NAPLO=1 bekapcsolja
 const naplo = console.log;
@@ -289,11 +302,51 @@ try {
       break;
     }
 
+    // ===== A CSERE: két készülék között (Szakasz 2) =====
+
+    case 'figyel': {
+      const port = parseInt(ervek[0], 10) || ALAP_PORT;
+      const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        utana: (eredmeny) => {
+          if (eredmeny.hiba) {
+            kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
+            return;
+          }
+          kiir(SZIN.jo + '  ✓ csere ' + eredmeny.honnan + SZIN.vege + SZIN.halvany
+            + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
+            + ' (' + eredmeny.korok + ' kör)' + SZIN.vege);
+        }
+      });
+
+      kiir(SZIN.vastag + 'A kapu nyitva: ' + figyelo.port + '-es port' + SZIN.vege);
+      kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · adat: ' + alapHely() + SZIN.vege);
+      kiir(SZIN.halvany + 'A másik készüléken: node koino/koino.js csere <ez a cím> '
+        + figyelo.port + SZIN.vege);
+      kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
+      // Nem lépünk ki: a nyitott kapu életben tartja a folyamatot.
+      break;
+    }
+
+    case 'csere': {
+      const cim = ervek[0];
+      if (!cim) throw new Error('Kihez csatlakozzam? node koino/koino.js csere <cím> [port]');
+      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+
+      const kezdet = Date.now();
+      const eredmeny = await csereVonalon(tar, KOINO, cim, port);
+      kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
+        + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
+        + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+      kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
+      break;
+    }
+
     default:
       kiir('Ismeretlen parancs: ' + parancs);
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
+      kiir('           figyel [port] · csere <cím> [port]');
       process.exit(2);
   }
 } catch (hiba) {

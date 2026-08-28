@@ -176,7 +176,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 | # | Lépés | Mi az eredménye | Hogyan próbáljuk ki |
 |---|---|---|---|
 | **1a** | ✅ **A csere LOGIKÁJA**, hálózat nélkül ([`js/csere/csere.js`](../koino/js/csere/csere.js)) | két tár kicseréli, amit tud | **kész: 19 önpróba** + három rontás-próba |
-| **1b** | **A vonal**: ugyanez sima TCP-n | két folyamat kicseréli, amit tud | két adat-mappa, két folyamat **egy gépen** (`KOINO_ADAT`) |
+| **1b** | ✅ **A vonal**: ugyanez sima TCP-n ([`js/csere/vonal.js`](../koino/js/csere/vonal.js)) | két folyamat kicseréli, amit tud | **kész: 5 önpróba + kézi próba** két adat-mappával, egy gépen |
 | **2** | **A vizsga:** két készülék, kevert események → **azonos állapot** | a jóslat igazolva | önpróba: mindkét oldalon ugyanaz az entitás-lista, javaslat-eredmény, jelzés-lista |
 | **3** | **Hézag és részleges tudás** | eldől a 4. pont kérdése | mérés: mennyi idő alatt ér körbe egy esemény; utána döntés + megvalósítás |
 | **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** |
@@ -191,13 +191,13 @@ kicseréli az eseményeit, akkor a Fázis 2 gerince nemcsak áll, hanem **műkö
 
 Ezek nem kíváncsiságból kellenek — mindegyik **eldönt valamit**:
 
-| Szám | Mit dönt el |
-|---|---|
-| **mennyi idő alatt ér körbe egy esemény** | a józan **minimum döntési időt** (D4), és a 4. pont „óvatosság"-ának árát |
-| **összeér-e két készülék IPv6-on, STUN nélkül** | kell-e egyáltalán infrastruktúra |
-| **hányszor NEM jön össze a közvetlen út** | kell-e **továbbító** — a P2P legdrágább része |
-| **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell |
-| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek |
+| Szám | Mit dönt el | Mérve |
+|---|---|---|
+| **mennyi idő alatt ér körbe egy esemény** | a józan **minimum döntési időt** (D4), és a 4. pont „óvatosság"-ának árát | **9 ms helyben** (kapcsolatnyitás + két kör). Az alsó korlát tehát elhanyagolható — a valódi számot a hálózat adja majd (4. lépés). |
+| **összeér-e két készülék IPv6-on, STUN nélkül** | kell-e egyáltalán infrastruktúra | *(4. lépés)* — de a vonal `::1`-en már áll |
+| **hányszor NEM jön össze a közvetlen út** | kell-e **továbbító** — a P2P legdrágább része | *(4. lépés)* |
+| **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell | **162 bájt/fő** (50 fő, 3-3 esemény). 10 000 fős koinónál ~1,6 MB — **ez már szeletelést kíván**, felírva. |
+| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek | *(a 4. lépésnél, valódi forgalommal)* |
 
 ---
 
@@ -230,11 +230,39 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 4. **Mit tegyünk, ha a másik fél hazudik az állásáról** (azt mondja, nincs neki, holott
    van)? Ez a D21 „elérhetőségi probléma"-ága: nem tud hamisat mondani, csak **hallgatni**.
 5. **Meddig tartsuk a kapcsolatot?** Egyszeri csere, vagy nyitva maradó vonal, amin az új
-   események azonnal átfolynak? (Az utóbbi kell a gyors döntésekhez.)
+   események azonnal átfolynak? (Az utóbbi kell a gyors döntésekhez.) *Ma: a kapcsolat a
+   csendes körig él, aztán lezárul — több kört fut, de nem marad nyitva.*
+6. 🆕 **Az `ALLAS` szeletelése.** Mérve: 162 bájt/e-ember. Egy 10 000 fős koinóban ez
+   ~1,6 MB **minden csere elején** — ennyit nem küldünk el csak azért, hogy kiderüljön,
+   nincs újdonság. Kézenfekvő irány: előbb egy **összesített ujjlenyomat** megy át, és a
+   részletes állás csak akkor, ha az eltér. *(Nem most: előbb legyen valódi hálózati
+   mérésünk.)*
+7. 🆕 **AZ ENTITÁSOK SORRENDJE — a két gép MÁST mutat.** A kézi próbán (két folyamat, egy
+   gép) a csere után mindkét készülék **ugyanazt az öt eseményt és ugyanazokat az
+   entitásokat** számolta ki — de **más sorrendben** sorolta fel őket, mert a sorrend a
+   fájlban lévő beérkezési sorrend. Ma ez **csak megjelenítés**: minden számított érték
+   sorrend-független (az elágazás-feloldás azonosító szerint dönt, az „utolsó nyer"
+   sorszám szerint, a medián rendez). **De a pakli-nézetben már látszani fog**, és a D17
+   ígérete az, hogy mindenki ugyanazt látja. *Javaslat: az entitás-lista kapjon
+   determinisztikus rendezést a Szakasz 2 / 2. lépésben (a vizsgával együtt).*
 
 ---
 
 ## Napló
+
+- **2026-08-28 (a vonal)** — **AZ 1b LÉPÉS KÉSZ: a csere valódi TCP-n.** A szállítás
+  (`js/csere/vonal.js`) semmit nem tud a koinóról — csak a `csere.js` objektumait küldi
+  soronként egy JSON-üzenetként, vagyis **a vonal alakja ugyanaz, mint a táré**. A menet
+  szimmetrikus: egyetlen `parbeszed` fut mindkét oldalon, és **a csendes körnél állunk
+  meg** (ha egy körben se nem adtunk, se nem kaptunk) — ezt mindkét fél ugyanúgy számolja
+  ki, tehát nem kell hozzá „vége" üzenet.
+  **Kézi próba két folyamattal, egy gépen** (`KOINO_ADAT=./adat-A figyel` ↔
+  `KOINO_ADAT=./adat-B csere`): a két készülék kicserélte az eseményeit, és utána
+  **mindkettő ugyanazt a két tartalmat és ugyanazt a koino-nevet** számolta ki — a B gép
+  úgy tudta meg a koino nevét, hogy soha nem hozta létre. Új parancsok: `figyel` és
+  `csere`. A vonal `::1`-en (IPv6) is áll.
+  ⚠️ **Amit a kézi próba talált:** a két gép **más sorrendben** sorolja fel az entitásokat
+  (a fájlba érkezés sorrendje). Ma csak megjelenítés, de a 9. pont 7. kérdéseként felírva.
 
 - **2026-08-28 (a megépítés)** — **AZ 1a LÉPÉS KÉSZ: a csere logikája, hálózat nélkül.**
   A protokoll magja tiszta függvény (két állás → egy kérés), tehát önpróbával mérhető, két
