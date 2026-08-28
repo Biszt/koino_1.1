@@ -19,7 +19,7 @@
 // attól, milyen sorrendben érkeztek meg az események. Így nem kell sem globális
 // sorrend, sem ütközés-feloldó könyvtár (CRDT).
 //
-// Használják: fo.js és a felület; a javaslat/szavazat számítása (javaslatSzamitas.js).
+// Használják: koino.js (a parancssori arc) és a javaslat/szavazat számítása.
 
 import { szabalyokErvenyesitese } from './szabalyok.js';
 

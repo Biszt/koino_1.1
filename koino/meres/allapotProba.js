@@ -1,78 +1,15 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>koino — az állapotszámítás próbája</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
-         max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
-  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
-  p.alcim { margin-top: 0; opacity: .75; }
-  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.3); }
-  th { font-weight: 600; width: 4.5rem; }
-  .jo  { color: #167d3a; font-weight: 600; }
-  .nem { color: #b3261e; font-weight: 600; }
-  .osszegzes { font-size: 1.1rem; font-weight: 600; padding: .8rem 1rem; border-radius: .4rem;
-               background: rgba(128,128,128,.12); }
-</style>
-</head>
-<body>
-
-<h1>Az állapotszámítás próbája</h1>
-<p class="alcim">
-  A legfontosabb állítás, amit bizonyít: <strong>az események SORRENDJE nem számít</strong> —
-  ugyanabból a halmazból mindig ugyanaz az állapot jön ki (D17). Enélkül két gép soha nem
-  értene egyet.
-</p>
-
-<div class="osszegzes" id="osszegzes">Fut…</div>
-<table id="eredmeny"><tbody></tbody></table>
-
-<script type="module">
-// koino/meres/allapotProba.html — az állapot-réteg önpróbája (Szakasz 1 / 5. lépés)
+// koino/meres/allapotProba.js — az állapot-réteg önpróbája (Szakasz 1 / 5. lépés)
 //
-// Az allapotSzamitasa TISZTA FÜGGVÉNY: nem kell hozzá se tár, se hálózat. Ezért itt
-// csak eseményeket gyártunk (aláírva), és megnézzük, mi jön ki belőlük.
+// A legfontosabb állítás, amit bizonyít: az események SORRENDJE nem számít — ugyanabból a
+// halmazból mindig ugyanaz az állapot jön ki (D17). Enélkül két gép soha nem értene egyet.
 
-import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
 import { allapotSzamitasa, median, szetosztottPontok } from '../js/allapot/allapotSzamitas.js';
 
-const probak = [];
-function proba(nev, futtat) { probak.push({ nev, futtat }); }
+import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+
+const { proba, futtatas } = probaGyujtemeny('Az állapotszámítás próbája');
 
 const KOINO = 'proba';
-
-// ===== SEGÉD: LÁNC-ÉPÍTŐ =====
-// Minden „e-ember" egy kulcspár és egy saját sorszám-számláló.
-async function ujEember() {
-  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
-  const nyers = await crypto.subtle.exportKey('raw', kulcspar.publicKey);
-  let s = ''; for (const b of new Uint8Array(nyers)) s += String.fromCharCode(b);
-  const szerzo = btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-
-  let sorszam = 0;
-  let elozo = null;
-
-  return {
-    szerzo,
-    /** Új esemény a lánc végére. Az `ido` elhagyható (alapból: most). */
-    async tesz(tipus, adat, ido) {
-      sorszam++;
-      const e = await esemenyLetrehozasa({ koino: KOINO, tipus, adat, elozo, sorszam, ido }, kulcspar);
-      elozo = e.azonosito;
-      return e;
-    },
-    /** Elágazás előidézése: ugyanarra a sorszámra egy MÁSIK esemény. */
-    async agaztat(tipus, adat) {
-      const e = await esemenyLetrehozasa(
-        { koino: KOINO, tipus, adat, elozo, sorszam }, kulcspar);
-      return e;
-    }
-  };
-}
 
 // ===== ALAPESET =====
 
@@ -206,8 +143,8 @@ proba('AKINEK NINCS PONTJA, annak az érték javaslata nem számít', async () =
 proba('Az elágazás feloldása DETERMINISZTIKUS (mindkét sorrendben ugyanaz)', async () => {
   const anna = await ujEember();
   const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 });
-  const egyik = await anna.agaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
-  const masik = await anna.agaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
+  const egyik = await anna.elagaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
+  const masik = await anna.elagaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
 
   const a1 = allapotSzamitasa([t, egyik, masik]);
   const a2 = allapotSzamitasa([t, masik, egyik]);
@@ -282,39 +219,4 @@ proba('Az ISMERETLEN esemény-típus nem töri el a számítást', async () => {
   return a.entitasok.size === 1;
 });
 
-// ===== FUTTATÁS =====
-
-(async function futtatas() {
-  console.log('allapotProba - KEZDÉS', { darab: probak.length });
-  const tbody = document.querySelector('#eredmeny tbody');
-  let sikeres = 0;
-
-  for (const p of probak) {
-    let rendben = false, hibaSzoveg = '';
-    try { rendben = await p.futtat(); }
-    catch (hiba) { rendben = false; hibaSzoveg = ' — váratlan hiba: ' + hiba.message; }
-    if (rendben) sikeres++;
-
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.className = rendben ? 'jo' : 'nem';
-    th.textContent = rendben ? 'RENDBEN' : 'BUKOTT';
-    const td = document.createElement('td');
-    td.textContent = p.nev + hibaSzoveg;
-    tr.append(th, td);
-    tbody.append(tr);
-  }
-
-  const osszegzes = document.getElementById('osszegzes');
-  osszegzes.textContent = sikeres === probak.length
-    ? '✅ Mind a ' + probak.length + ' próba rendben'
-    : '❌ ' + (probak.length - sikeres) + ' próba BUKOTT (' + probak.length + '-ből)';
-  osszegzes.className = 'osszegzes ' + (sikeres === probak.length ? 'jo' : 'nem');
-
-  window.KOINO_PROBA = { osszes: probak.length, sikeres };
-  console.log('allapotProba - VÉGE', window.KOINO_PROBA);
-})();
-</script>
-
-</body>
-</html>
+export default futtatas;

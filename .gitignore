@@ -8,3 +8,4 @@ backend/uploads-prod/
 
 # Adatbázis biztonsági mentések (nem verziózzuk)
 backups/
+koino-adat/

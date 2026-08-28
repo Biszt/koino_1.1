@@ -1,0 +1,303 @@
+// koino/koino.js
+
+// Felelősség: a koino parancssori arca — ezzel lehet KÉZZEL végigjátszani a teljes kört
+// egyetlen készüléken, böngésző nélkül.
+//
+// ⭐ MIÉRT NEM BÖNGÉSZŐ? (D29, Csaba döntése 2026-08-28) Mert a böngésző korlátai nem a
+// koino korlátai: egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját
+// címeit, és bezáráskor eltűnik. A koino önálló program; a böngésző legfeljebb egy kliens
+// lehet később.
+//
+// ⚠️ EZ NEM A KOINO FELÜLETE. Ez fejlesztői eszköz, ugyanúgy, ahogy a korábbi böngészős
+// nézet is az volt: a modell kipróbálására való. A valódi felület a prototípus
+// pakli-nézetéből öröklődik (D22, docs/felulet_terv.md), amikor a modell megállapodott.
+//
+// Használat:
+//   node koino/koino.js                          — mi az állapot
+//   node koino/koino.js kulcs                    — ki vagyok, hol a kulcsom
+//   node koino/koino.js koino "A koino neve"     — koino létrehozása
+//   node koino/koino.js tartalom "Cím" "szöveg"  — új tartalom (+100 tudatpont)
+//   node koino/koino.js pont <azonosító> <pont> [passziv]
+//   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
+//   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
+//   node koino/koino.js mentes <fájl>            — a kulcs kimentése
+//
+// Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
+
+import { writeFile } from 'node:fs/promises';
+
+import { esemenyTarNyitasa, kulcsTarolo, alapHely } from './js/tar/fajlTar.js';
+import {
+  kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
+} from './js/kulcs/kulcsTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
+import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamitas.js';
+import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
+import {
+  koinoLetrehozasa, tartalomLetrehozasa, tudatpontRendezese,
+  javaslatLetrehozasa, szavazas, TUDATPONT_KERET
+} from './js/muveletek.js';
+
+// ===== ÁLLANDÓK =====
+
+const KOINO = process.env.KOINO_AZONOSITO ?? 'sajat';
+const KEZDO_PONT = 100;
+const NAP = 86400 * 1000;
+
+// A napló alapból néma (a koino minden metódusa naplóz) — KOINO_NAPLO=1 bekapcsolja
+const naplo = console.log;
+if (!process.env.KOINO_NAPLO) { console.log = () => {}; console.warn = () => {}; }
+const kiir = (szoveg = '') => process.stdout.write(szoveg + '\n');
+
+const SZIN = process.stdout.isTTY
+  ? { jo: '\x1b[32m', nem: '\x1b[31m', halvany: '\x1b[90m', vastag: '\x1b[1m', vege: '\x1b[0m' }
+  : { jo: '', nem: '', halvany: '', vastag: '', vege: '' };
+
+// ===================================
+// INDULÁS: kulcs + tár
+// ===================================
+
+const tarolo = kulcsTarolo();
+const { kulcspar, ujE } = await kulcsparBiztositasa(tarolo);
+const szerzo = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
+const tar = await esemenyTarNyitasa(KOINO);
+
+const kornyezet = { koino: KOINO, kulcspar, szerzo, tar };
+
+if (ujE) {
+  kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
+  kiir('  ' + rovidAzonosito(szerzo));
+  kiir(SZIN.halvany + '  A kulcs helye: ' + tarolo.fajl + SZIN.vege);
+  kiir(SZIN.halvany + '  Mentsd el: node koino/koino.js mentes <fájl>' + SZIN.vege);
+  kiir();
+}
+
+// ===================================
+// SEGÉD: AZONOSÍTÓ-RÖVIDÍTÉS FELOLDÁSA
+// ===================================
+
+/**
+ * Egy rövidített azonosítót teljesre egészít ki (mint a git).
+ * @param {string} toredek
+ * @param {Iterable<string>} lehetosegek
+ * @returns {string}
+ */
+function feloldas(toredek, lehetosegek) {
+  const talalatok = [...lehetosegek].filter((a) => a.startsWith(toredek));
+  if (talalatok.length === 1) return talalatok[0];
+  if (talalatok.length === 0) throw new Error('Nincs ilyen azonosító: ' + toredek);
+  throw new Error('Több azonosító is illik ide (' + talalatok.length + ') — írj többet belőle.');
+}
+
+/** A jelenlegi állapot és a javaslatok, adott időpontra. */
+async function kepetKeszit(napokMulva = 0) {
+  const esemenyek = await koinoEsemenyei(tar, KOINO);
+  const allapot = allapotSzamitasa(esemenyek);
+  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP);
+  return { esemenyek, allapot, javaslatok };
+}
+
+// ===================================
+// A PARANCSOK
+// ===================================
+
+const [parancs, ...ervek] = process.argv.slice(2);
+
+/** Ezrelék → olvasható százalék. */
+const szazalek = (ezrelek) => (ezrelek / 10).toFixed(1).replace('.0', '') + '%';
+
+async function allapotKiirasa(napokMulva) {
+  const { allapot, javaslatok, esemenyek } = await kepetKeszit(napokMulva);
+
+  if (!allapot.koino.nev) {
+    kiir('Még nincs koinód. Hozd létre:');
+    kiir('  node koino/koino.js koino "A koino neve"');
+    return;
+  }
+
+  kiir(SZIN.vastag + allapot.koino.nev + SZIN.vege
+    + SZIN.halvany + '   (te: ' + rovidAzonosito(szerzo) + ')' + SZIN.vege);
+  kiir(SZIN.halvany + 'tudatpontjaid: ' + szetosztottPontok(allapot, szerzo) + ' / ' + TUDATPONT_KERET
+    + ' · eseményeid: ' + (await sajatLancEsemenyei(tar, szerzo)).length
+    + ' · esemény összesen: ' + esemenyek.length
+    + (napokMulva ? ' · NÉZET: ' + napokMulva + ' nap múlva' : '') + SZIN.vege);
+
+  // ----- ELLENTMONDÁSOK (D19: bejelent, nem büntet) -----
+  if (allapot.ellentmondasok.length || allapot.idoEllentmondasok.length || allapot.kivetelek.length) {
+    kiir();
+    if (allapot.ellentmondasok.length) {
+      kiir(SZIN.nem + '⚠ ' + allapot.ellentmondasok.length + ' elágazás (két aláírás ugyanarról a pontról)' + SZIN.vege);
+    }
+    if (allapot.idoEllentmondasok.length) {
+      kiir(SZIN.nem + '⚠ ' + allapot.idoEllentmondasok.length + ' visszafelé lépő idő a saját láncban' + SZIN.vege);
+    }
+    for (const k of allapot.kivetelek) {
+      kiir(SZIN.nem + '⚠ nem számít: ' + k.tipus + ' — ' + k.ok + SZIN.vege);
+    }
+  }
+
+  // ----- TARTALMAK -----
+  kiir();
+  kiir(SZIN.vastag + 'TARTALMAK' + SZIN.vege);
+  if (allapot.entitasok.size === 0) {
+    kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
+  }
+  for (const e of allapot.entitasok.values()) {
+    const sajat = e.hozzajarulok.get(szerzo)?.pont ?? 0;
+    kiir('  ' + SZIN.halvany + e.azonosito.slice(0, 8) + SZIN.vege + '  ' + e.cim);
+    kiir('      ' + SZIN.halvany + e.meret + ' bájt · összes pont: ' + e.osszesPont
+      + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size + SZIN.vege);
+    if (e.szoveg) kiir('      ' + SZIN.halvany + e.szoveg + SZIN.vege);
+  }
+
+  // ----- JAVASLATOK -----
+  const folyamatban = [...javaslatok.values()];
+  kiir();
+  kiir(SZIN.vastag + 'JAVASLATOK' + SZIN.vege);
+  if (!folyamatban.length) kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
+  for (const j of folyamatban) {
+    const erintett = allapot.entitasok.get(j.erintett);
+    const szin = j.statusz === 'elfogadva' ? SZIN.jo : j.statusz === 'elvetve' ? SZIN.nem : '';
+    kiir('  ' + SZIN.halvany + j.azonosito.slice(0, 8) + SZIN.vege
+      + '  ' + szin + j.statusz.toUpperCase() + SZIN.vege
+      + '  ' + j.muvelet + ': „' + (j.valtozas?.cim ?? '—') + '"');
+    kiir('      ' + SZIN.halvany + 'érintett: ' + (erintett ? '„' + erintett.cim + '"' : 'ismeretlen')
+      + ' · 👍 ' + j.tamogatok + ' 👎 ' + j.ellenzok + ' 🤷 ' + j.tartozkodok
+      + ' (' + j.szavazok + '/' + j.nevezo + ')'
+      + ' · támogatottság ' + szazalek(j.tamogatottsagEzrelek)
+      + ' · bizonyosság ' + szazalek(j.bizonyossagiMutato) + SZIN.vege);
+    kiir('      ' + SZIN.halvany + (j.statusz === 'folyamatban' ? 'zárul: ' : 'lezárult: ')
+      + new Date(j.lezarasIdeje).toLocaleString('hu-HU')
+      + ' (döntési idő ' + Math.round(j.dontesiIdo / 3600) + ' óra)'
+      + (j.kesoiSzavazatok ? ' · ' + j.kesoiSzavazatok + ' késői szavazat nem számít' : '')
+      + SZIN.vege);
+    const enyem = sajatSzavazat(allapot.szamitok, j.azonosito, szerzo);
+    if (enyem) kiir('      ' + SZIN.halvany + 'a szavazatod: ' + enyem + SZIN.vege);
+  }
+
+  // ----- EGYEZMÉNYEK -----
+  const egyezmenyek = folyamatban.filter((j) => j.egyezmeny);
+  kiir();
+  kiir(SZIN.vastag + 'EGYEZMÉNYEK' + SZIN.vege);
+  if (!egyezmenyek.length) {
+    kiir(SZIN.halvany + '  (még nincs — akkor születik, ha egy javaslatot elfogadnak)' + SZIN.vege);
+  }
+  for (const j of egyezmenyek) {
+    const e = j.egyezmeny;
+    const p = e.pillanatkep;
+    kiir('  ' + SZIN.jo + '📜 ' + e.muvelet + ': „' + (e.valtozas?.cim ?? '—') + '"' + SZIN.vege);
+    kiir('      ' + SZIN.halvany + 'megszületett: ' + new Date(e.megszuletett).toLocaleString('hu-HU')
+      + ' · ' + p.tamogatok + '/' + p.szavazok + ' támogató (' + szazalek(p.tamogatottsagEzrelek) + ')'
+      + ' · részvétel ' + szazalek(p.reszveteliEzrelek) + SZIN.vege);
+  }
+}
+
+try {
+  switch (parancs) {
+
+    case undefined:
+    case 'allapot': {
+      // Előre nézés: `allapot 3` = mi lesz 3 nap múlva (a döntési idő napokban mérhető)
+      await allapotKiirasa(parseInt(ervek[0], 10) || 0);
+      break;
+    }
+
+    case 'kulcs': {
+      kiir('Az azonosságod (a nyilvános kulcsod):');
+      kiir('  ' + szerzo);
+      kiir(SZIN.halvany + 'A kulcs fájlja: ' + tarolo.fajl + SZIN.vege);
+      kiir(SZIN.halvany + 'Az adat helye:  ' + alapHely() + SZIN.vege);
+      break;
+    }
+
+    case 'mentes': {
+      const hova = ervek[0];
+      if (!hova) throw new Error('Hova mentsem? node koino/koino.js mentes <fájl>');
+      await writeFile(hova, await kulcsparKimentese(kulcspar), 'utf8');
+      kiir('Elmentve: ' + hova);
+      kiir(SZIN.nem + 'Aki ezt a fájlt megszerzi, a nevedben tud aláírni. Őrizd biztos helyen.' + SZIN.vege);
+      break;
+    }
+
+    case 'koino': {
+      const nev = ervek[0];
+      if (!nev) throw new Error('Mi legyen a koino neve?');
+      await koinoLetrehozasa(kornyezet, nev, ervek[1]);
+      kiir('A koino létrejött: ' + nev);
+      break;
+    }
+
+    case 'tartalom': {
+      const [cim, szoveg] = ervek;
+      if (!cim) throw new Error('Mi legyen a tartalom címe?');
+
+      const esemeny = await tartalomLetrehozasa(kornyezet, { cim, szoveg });
+      // Rögtön tudatpontot is rendelünk hozzá — enélkül nem is létezne (D14)
+      const { allapot } = await kepetKeszit();
+      await tudatpontRendezese(kornyezet, esemeny.azonosito, KEZDO_PONT, 'aktiv',
+        szetosztottPontok(allapot, szerzo));
+
+      kiir('Létrejött: ' + esemeny.azonosito.slice(0, 8) + '  „' + cim + '"');
+      kiir(SZIN.halvany + 'Kapott ' + KEZDO_PONT + ' tudatpontot tőled — enélkül a koino elfelejtené.' + SZIN.vege);
+      break;
+    }
+
+    case 'pont': {
+      const { allapot } = await kepetKeszit();
+      const azonosito = feloldas(ervek[0] ?? '', allapot.entitasok.keys());
+      const pont = parseInt(ervek[1], 10);
+      if (!Number.isInteger(pont)) throw new Error('Hány tudatpontot rendelsz hozzá?');
+      const szerep = ervek[2] === 'passziv' ? 'passziv' : 'aktiv';
+
+      let masholt = 0;
+      for (const e of allapot.entitasok.values()) {
+        if (e.azonosito !== azonosito) masholt += e.hozzajarulok.get(szerzo)?.pont ?? 0;
+      }
+      await tudatpontRendezese(kornyezet, azonosito, pont, szerep, masholt);
+      kiir(pont === 0
+        ? 'Elvetted a tudatpontodat. Ha senki másnak nincs rajta, a tartalom eltűnik.'
+        : 'Tudatpont beállítva: ' + pont + ' (' + szerep + ')');
+      break;
+    }
+
+    case 'javaslat': {
+      const { allapot } = await kepetKeszit();
+      const erintett = feloldas(ervek[0] ?? '', allapot.entitasok.keys());
+      const ujCim = ervek[1];
+      if (!ujCim) throw new Error('Mi legyen az új cím?');
+
+      const e = await javaslatLetrehozasa(kornyezet, {
+        fajta: 'szerkesztesi', erintett, muvelet: 'Modositas',
+        valtozas: { cim: ujCim }, indoklas: ervek[2] ?? null
+      });
+      kiir('Szerkesztési javaslat beadva: ' + e.azonosito.slice(0, 8));
+      kiir(SZIN.halvany + 'Most szavazhatsz rá: node koino/koino.js szavaz '
+        + e.azonosito.slice(0, 8) + ' tamogat' + SZIN.vege);
+      break;
+    }
+
+    case 'szavaz': {
+      const { javaslatok } = await kepetKeszit();
+      const javaslat = feloldas(ervek[0] ?? '', javaslatok.keys());
+      const valasztas = { tamogat: 'Tamogat', ellenez: 'Ellenez', tartozkodik: 'Tartozkodik' }[
+        (ervek[1] ?? '').toLowerCase()];
+      if (!valasztas) throw new Error('Hogyan szavazol? tamogat | ellenez | tartozkodik');
+
+      await szavazas(kornyezet, javaslat, valasztas);
+      kiir('Szavazat leadva: ' + valasztas + SZIN.halvany
+        + ' (bármikor megváltoztathatod, az utolsó számít)' + SZIN.vege);
+      break;
+    }
+
+    default:
+      kiir('Ismeretlen parancs: ' + parancs);
+      kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
+      kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
+      kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
+      process.exit(2);
+  }
+} catch (hiba) {
+  kiir(SZIN.nem + 'Nem sikerült: ' + hiba.message + SZIN.vege);
+  if (process.env.KOINO_NAPLO) naplo(hiba);
+  process.exit(1);
+}

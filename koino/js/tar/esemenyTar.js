@@ -1,6 +1,6 @@
 // koino/js/tar/esemenyTar.js
 
-// Felelősség: az aláírt események megőrzése a készüléken, és a SAJÁT LÁNC kezelése.
+// Felelősség: az aláírt események megőrzése, és a SAJÁT LÁNC kezelése.
 //
 // KÉT SZABÁLY, AMI SOHA NEM SÉRÜLHET:
 //   1. ELLENŐRIZETLEN ESEMÉNY NEM KERÜL A TÁRBA. Minden mentés előtt ellenőrizzük az
@@ -9,13 +9,17 @@
 //   2. AZ ESEMÉNYEKET NEM MÓDOSÍTJUK ÉS NEM TÖRÖLJÜK. Egy esemény megtörtént; ami
 //      „változik", az egy ÚJABB esemény a láncban (a szavazat módosítása is új esemény).
 //
+// ⚠️ A TÁROLÓT KÍVÜLRŐL KAPJA (D29, 2026-08-28). Ez a fájl csak a LOGIKÁT tudja; hogy
+// az adat fájlban, memóriában vagy máshol él, az a tároló dolga. Így a szabályok EGY
+// példányban léteznek: ha később más tárolót teszünk alá, a lánc-kezelés nem másolódik
+// és nem csúszhat szét. A tároló két műveletet ad: `betolt()` és `hozzafuz()`.
+//
 // A SAJÁT LÁNC: minden e-ember eseményei egymásra mutatnak (`elozo`), és sorszámozva
 // vannak. Ez adja a D17 „saját lánc-következetesség"-ét — és ezért lepleződik le itt,
 // MENTÉSKOR, ha valaki két különböző eseményt írt alá ugyanarról a pontról.
 //
-// Használják: fo.js és a következő lépésben az állapot-réteg.
+// Használják: muveletek.js és minden, ami eseményt olvas.
 
-import { TAR, adatbazisMegnyitasa, olvasas, iras } from './adatbazis.js';
 import { esemenyEllenorzese, elagazasE } from '../esemeny/esemeny.js';
 
 // ===================================
@@ -25,12 +29,13 @@ import { esemenyEllenorzese, elagazasE } from '../esemeny/esemeny.js';
 /**
  * Elment egy eseményt — ellenőrzés után.
  *
+ * @param {Object} tar - a tároló (betolt/hozzafuz)
  * @param {Object} esemeny
- * @returns {Promise<{mentve: boolean, ok?: string, elagazas?: Object}>}
+ * @returns {Promise<{mentve: boolean, ok?: string, marMegvolt?: boolean, elagazas?: Object}>}
  *   mentve=false + ok      → elutasítva (érvénytelen)
  *   mentve=true + elagazas → elmentve, DE ellentmondás derült ki (lásd lentebb)
  */
-export async function esemenyMentese(esemeny) {
+export async function esemenyMentese(tar, esemeny) {
   console.log('esemenyMentese - KEZDÉS', { azonosito: esemeny?.azonosito, tipus: esemeny?.tipus });
 
   // ----- 1. ELLENŐRZÉS -----
@@ -40,25 +45,24 @@ export async function esemenyMentese(esemeny) {
     return { mentve: false, ok: ellenorzes.ok };
   }
 
+  const meglevok = await tar.betolt();
+
   // ----- 2. MÁR MEGVAN? -----
   // Az azonosító a tartalom lenyomata, tehát ha már megvan, akkor BÁJTRA ugyanaz.
   // Ezért az ismételt mentés nem hiba, hanem semmit-nem-csinálás. (Ez teszi majd a
   // hálózati összefésülést triviálissá a Szakasz 2-ben.)
-  const meglevo = await olvasas(TAR.ESEMENYEK, esemeny.azonosito);
-  if (meglevo) {
+  if (meglevok.some((meglevo) => meglevo.azonosito === esemeny.azonosito)) {
     console.log('esemenyMentese - VÉGE (már megvolt)');
     return { mentve: true, marMegvolt: true };
   }
 
   // ----- 3. ELÁGAZÁS-KERESÉS: a kettős cselekvés leleplezése -----
-  // Van-e MÁS eseményem ugyanattól a szerzőtől, ugyanazzal a sorszámmal?
-  const azonosSorszamuak = await sorszamSzerint(esemeny.szerzo, esemeny.sorszam);
-  const utkozo = azonosSorszamuak.find((meglevoEsemeny) => elagazasE(meglevoEsemeny, esemeny));
+  const utkozo = meglevok.find((meglevo) => elagazasE(meglevo, esemeny));
 
   // ----- 4. MENTÉS -----
   // Az elágazást is elmentjük! A két esemény EGYÜTT a bizonyíték (D17/D19) — ha az
   // egyiket eldobnánk, épp a bizonyítékot dobnánk el.
-  await iras(TAR.ESEMENYEK, esemeny);
+  await tar.hozzafuz(esemeny);
 
   if (utkozo) {
     console.warn('esemenyMentese - ELÁGAZÁS! Ugyanaz a szerző két eseményt írt alá ugyanarról a pontról', {
@@ -81,67 +85,50 @@ export async function esemenyMentese(esemeny) {
 
 /**
  * Egy esemény lekérése az azonosítója alapján.
+ * @param {Object} tar
  * @param {string} azonosito
  * @returns {Promise<Object|undefined>}
  */
-export async function esemenyLekerese(azonosito) {
-  return olvasas(TAR.ESEMENYEK, azonosito);
+export async function esemenyLekerese(tar, azonosito) {
+  const esemenyek = await tar.betolt();
+  return esemenyek.find((e) => e.azonosito === azonosito);
 }
 
 /**
  * Egy szerző adott sorszámú eseményei.
  * (Rendes esetben legfeljebb egy — ha több, az elágazás.)
- * @param {string} szerzo - a nyilvános kulcs szöveges alakja
+ * @param {Object} tar
+ * @param {string} szerzo
  * @param {number} sorszam
  * @returns {Promise<Array<Object>>}
  */
-export async function sorszamSzerint(szerzo, sorszam) {
-  const db = await adatbazisMegnyitasa();
-  return new Promise((kesz, hiba) => {
-    const index = db.transaction(TAR.ESEMENYEK, 'readonly')
-      .objectStore(TAR.ESEMENYEK)
-      .index('szerzoSorszam');
-    const keres = index.getAll(IDBKeyRange.only([szerzo, sorszam]));
-    keres.onsuccess = () => kesz(keres.result || []);
-    keres.onerror = () => hiba(keres.error);
-  });
+export async function sorszamSzerint(tar, szerzo, sorszam) {
+  const esemenyek = await tar.betolt();
+  return esemenyek.filter((e) => e.szerzo === szerzo && e.sorszam === sorszam);
 }
 
 /**
  * Egy szerző ÖSSZES eseménye, sorszám szerint növekvő sorrendben.
+ * @param {Object} tar
  * @param {string} szerzo
  * @returns {Promise<Array<Object>>}
  */
-export async function sajatLancEsemenyei(szerzo) {
-  const db = await adatbazisMegnyitasa();
-  return new Promise((kesz, hiba) => {
-    const index = db.transaction(TAR.ESEMENYEK, 'readonly')
-      .objectStore(TAR.ESEMENYEK)
-      .index('szerzoSorszam');
-    // A [szerzo, 0] és [szerzo, végtelen] közötti tartomány = ennek a szerzőnek minden
-    // eseménye; az összetett index miatt eleve sorszám szerint jön.
-    const tartomany = IDBKeyRange.bound([szerzo, 0], [szerzo, Infinity]);
-    const keres = index.getAll(tartomany);
-    keres.onsuccess = () => kesz(keres.result || []);
-    keres.onerror = () => hiba(keres.error);
-  });
+export async function sajatLancEsemenyei(tar, szerzo) {
+  const esemenyek = await tar.betolt();
+  return esemenyek
+    .filter((e) => e.szerzo === szerzo)
+    .sort((a, b) => a.sorszam - b.sorszam);
 }
 
 /**
  * Egy koino összes eseménye (az állapotszámításhoz).
+ * @param {Object} tar
  * @param {string} koino
  * @returns {Promise<Array<Object>>}
  */
-export async function koinoEsemenyei(koino) {
-  const db = await adatbazisMegnyitasa();
-  return new Promise((kesz, hiba) => {
-    const keres = db.transaction(TAR.ESEMENYEK, 'readonly')
-      .objectStore(TAR.ESEMENYEK)
-      .index('koino')
-      .getAll(IDBKeyRange.only(koino));
-    keres.onsuccess = () => kesz(keres.result || []);
-    keres.onerror = () => hiba(keres.error);
-  });
+export async function koinoEsemenyei(tar, koino) {
+  const esemenyek = await tar.betolt();
+  return esemenyek.filter((e) => e.koino === koino);
 }
 
 // ===================================
@@ -151,13 +138,14 @@ export async function koinoEsemenyei(koino) {
 /**
  * Megmondja, hova fűzzük a következő saját eseményt.
  *
+ * @param {Object} tar
  * @param {string} szerzo
  * @returns {Promise<{elozo: string|null, sorszam: number}>}
  */
-export async function lancVege(szerzo) {
+export async function lancVege(tar, szerzo) {
   console.log('lancVege - KEZDÉS', { szerzo: szerzo.slice(0, 8) + '…' });
 
-  const esemenyek = await sajatLancEsemenyei(szerzo);
+  const esemenyek = await sajatLancEsemenyei(tar, szerzo);
   if (esemenyek.length === 0) {
     console.log('lancVege - VÉGE (üres lánc, ez lesz az első)');
     return { elozo: null, sorszam: 1 };
@@ -181,13 +169,14 @@ export async function lancVege(szerzo) {
  *   - ELÁGAZÁS: ugyanarra a sorszámra több esemény (ez CSALÁS, és bizonyított);
  *   - SZAKADÁS: az `elozo` nem a tényleges előző eseményre mutat.
  *
+ * @param {Object} tar
  * @param {string} szerzo
  * @returns {Promise<{ep: boolean, hosszu: number, hezagok: Array<number>, elagazasok: Array<number>, szakadasok: Array<number>}>}
  */
-export async function lancEllenorzese(szerzo) {
+export async function lancEllenorzese(tar, szerzo) {
   console.log('lancEllenorzese - KEZDÉS', { szerzo: szerzo.slice(0, 8) + '…' });
 
-  const esemenyek = await sajatLancEsemenyei(szerzo);
+  const esemenyek = await sajatLancEsemenyei(tar, szerzo);
   const hezagok = [];
   const elagazasok = [];
   const szakadasok = [];

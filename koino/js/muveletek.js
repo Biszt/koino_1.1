@@ -8,7 +8,7 @@
 // jóváhagyná. Amit aláírsz, az megtörtént; hogy MI KÖVETKEZIK belőle, azt a számítás
 // dönti el (D17).
 //
-// Használják: fo.js (a felület).
+// Használják: koino.js (a parancssori arc).
 
 import { TUDATPONT_KERET } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
@@ -31,7 +31,7 @@ export { TUDATPONT_KERET };
 
 /**
  * A közös váz: lánc vége → aláírt esemény → mentés.
- * @param {Object} kornyezet - { koino, kulcspar, szerzo }
+ * @param {Object} kornyezet - { koino, kulcspar, szerzo, tar }
  * @param {string} tipus
  * @param {Object} adat
  * @returns {Promise<Object>} a létrehozott esemény
@@ -39,13 +39,13 @@ export { TUDATPONT_KERET };
 async function esemenytTeszek(kornyezet, tipus, adat) {
   console.log('muveletek.esemenytTeszek - KEZDÉS', { tipus });
 
-  const veg = await lancVege(kornyezet.szerzo);
+  const veg = await lancVege(kornyezet.tar, kornyezet.szerzo);
   const esemeny = await esemenyLetrehozasa(
     { koino: kornyezet.koino, tipus, adat, ...veg },
     kornyezet.kulcspar
   );
 
-  const eredmeny = await esemenyMentese(esemeny);
+  const eredmeny = await esemenyMentese(kornyezet.tar, esemeny);
   if (!eredmeny.mentve) {
     throw new Error('Az esemény nem menthető: ' + eredmeny.ok);
   }

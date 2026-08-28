@@ -29,7 +29,7 @@
 // SOHA nem dönthet el egy szavazást. A megjelenítéshez számolt arányok kerekítettek —
 // azok viszont nem döntenek semmiről.
 //
-// Használják: fo.js és a felület; a próbaoldal.
+// Használják: koino.js (a parancssori arc) és az önpróbák.
 
 import { median } from './allapotSzamitas.js';
 

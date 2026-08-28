@@ -10,14 +10,15 @@
 // azonosít a tér minden koinójában, mert csak így „jönnek át" a tanúsítások. A
 // megjelenített NÉV viszont koinónként külön lehet.
 //
-// Ed25519-et használunk, natívan a böngésző WebCrypto szolgáltatásából — mérve
-// (2026-08-26): támogatott, 0,031 ms/aláírás, 0,058 ms/ellenőrzés, 32 bájtos nyilvános
-// kulcs. Így NINCS SZÜKSÉG külső kriptográfiai könyvtárra, ami egy olyan programnál,
+// Ed25519-et használunk, a futtatókörnyezet saját WebCryptójából — mérve: a böngészőben
+// és a Node-ban IS elérhető, külső kriptográfiai könyvtár nélkül. Ez egy olyan programnál,
 // aminek a lényege, hogy senkiben nem kell megbízni, több mint kényelem.
 //
-// Használják: fo.js (és a következő lépésben az esemény-réteg aláírás/ellenőrzés).
-
-import { TAR, olvasas, iras, tartosTarolasKerese } from '../tar/adatbazis.js';
+// ⚠️ A TÁROLÓT KÍVÜLRŐL KAPJA (D29, 2026-08-28). Ez a fájl a kulcs LOGIKÁJÁT tudja
+// (létrehozás, kimentés, visszatöltés); hogy hol lakik, azt a tároló dönti el
+// (`olvas`/`ir`). Így a kulcs-kezelés egy példányban él, futtatókörnyezettől függetlenül.
+//
+// Használják: a program indulása és minden művelet.
 
 // ===== ÁLLANDÓK =====
 
@@ -26,26 +27,21 @@ import { TAR, olvasas, iras, tartosTarolasKerese } from '../tar/adatbazis.js';
 // az Ed25519 egyik erénye).
 const ALGORITMUS = 'Ed25519';
 
-// A kulcsok tárában használt nevek
-const KULCS_NEV = {
-  PRIVAT: 'sajatPrivatKulcs',
-  NYILVANOS: 'sajatNyilvanosKulcs'
-};
-
 // ===================================
 // KULCSPÁR LÉTREHOZÁSA
 // ===================================
 
 /**
- * Új kulcspárt hoz létre, és elmenti a készülékre.
+ * Új kulcspárt hoz létre, és elmenti a tárolóba.
  *
  * A privát kulcs KIMENTHETŐ (`extractable: true`) — Csaba döntése (2026-08-26). Indok: a
- * böngésző kiürítheti a tárat, tehát a kulcsvesztés valós kockázat, és a mentés egy
- * kattintás, míg a több-tanús helyreállítás (D15) emberi és lassú.
+ * kulcsvesztés valós, hétköznapi kockázat, a mentés viszont egy lépés, míg a több-tanús
+ * helyreállítás (D15) emberi és lassú.
  *
+ * @param {Object} tarolo - { olvas, ir }
  * @returns {Promise<CryptoKeyPair>}
  */
-export async function kulcsparLetrehozasa() {
+export async function kulcsparLetrehozasa(tarolo) {
   console.log('kulcsparLetrehozasa - KEZDÉS');
 
   const kulcspar = await crypto.subtle.generateKey(
@@ -54,17 +50,9 @@ export async function kulcsparLetrehozasa() {
     ['sign', 'verify']    // aláírásra és ellenőrzésre használjuk
   );
 
-  // ----- MENTÉS A KÉSZÜLÉKRE -----
-  // A CryptoKey objektumot az IndexedDB közvetlenül tárolja: nem kell nyers bájtokká
-  // alakítani, így a privát kulcs sosem hever kicsomagolva a memóriában feleslegesen.
-  await iras(TAR.KULCSOK, kulcspar.privateKey, KULCS_NEV.PRIVAT);
-  await iras(TAR.KULCSOK, kulcspar.publicKey, KULCS_NEV.NYILVANOS);
+  await tarolo.ir(await kulcsparLeirasa(kulcspar));
 
-  // ----- TARTÓS TÁROLÁS -----
-  // Rögtön a létrehozáskor kérjük — ez az egyetlen pillanat, amikor biztosan érdemes.
-  const tartos = await tartosTarolasKerese();
-
-  console.log('kulcsparLetrehozasa - VÉGE', { tartosTarolas: tartos });
+  console.log('kulcsparLetrehozasa - VÉGE');
   return kulcspar;
 }
 
@@ -73,38 +61,39 @@ export async function kulcsparLetrehozasa() {
 // ===================================
 
 /**
- * Betölti a készüléken tárolt kulcspárt.
+ * Betölti a tárolóban lévő kulcspárt.
+ * @param {Object} tarolo
  * @returns {Promise<CryptoKeyPair|null>} null, ha még nincs kulcs
  */
-export async function kulcsparBetoltese() {
+export async function kulcsparBetoltese(tarolo) {
   console.log('kulcsparBetoltese - KEZDÉS');
 
-  const privateKey = await olvasas(TAR.KULCSOK, KULCS_NEV.PRIVAT);
-  const publicKey = await olvasas(TAR.KULCSOK, KULCS_NEV.NYILVANOS);
-
-  if (!privateKey || !publicKey) {
+  const leiras = await tarolo.olvas();
+  if (!leiras) {
     console.log('kulcsparBetoltese - VÉGE (még nincs kulcs)');
     return null;
   }
 
+  const kulcspar = await kulcsparLeirasbol(leiras);
   console.log('kulcsparBetoltese - VÉGE (megvan)');
-  return { privateKey, publicKey };
+  return kulcspar;
 }
 
 /**
  * Betölti a meglévő kulcspárt, vagy létrehoz egy újat, ha még nincs.
+ * @param {Object} tarolo
  * @returns {Promise<{kulcspar: CryptoKeyPair, ujE: boolean}>}
  */
-export async function kulcsparBiztositasa() {
+export async function kulcsparBiztositasa(tarolo) {
   console.log('kulcsparBiztositasa - KEZDÉS');
 
-  const meglevo = await kulcsparBetoltese();
+  const meglevo = await kulcsparBetoltese(tarolo);
   if (meglevo) {
     console.log('kulcsparBiztositasa - VÉGE (meglévő kulcs)');
     return { kulcspar: meglevo, ujE: false };
   }
 
-  const uj = await kulcsparLetrehozasa();
+  const uj = await kulcsparLetrehozasa(tarolo);
   console.log('kulcsparBiztositasa - VÉGE (ÚJ kulcs készült)');
   return { kulcspar: uj, ujE: true };
 }
@@ -117,8 +106,7 @@ export async function kulcsparBiztositasa() {
  * A nyilvános kulcs 32 bájtját szöveges azonosítóvá alakítja.
  *
  * base64url alakot használunk (43 karakter), mert rövidebb, mint a hexadecimális (64),
- * és biztonságosan szerepelhet URL-ben és fájlnévben is — a `+`, `/`, `=` karakterek
- * helyett `-`, `_` és semmi áll.
+ * és biztonságosan szerepelhet URL-ben és fájlnévben is.
  *
  * @param {CryptoKey} nyilvanosKulcs
  * @returns {Promise<string>}
@@ -143,7 +131,7 @@ export function bajtokBase64Url(bajtok) {
 }
 
 /**
- * Rövidített alak a felülethez: az azonosító eleje és vége.
+ * Rövidített alak a kiíráshoz: az azonosító eleje és vége.
  * (Az emberi szem így ismeri fel; a teljes alak mindig elérhető.)
  * @param {string} azonosito
  * @returns {string}
@@ -158,22 +146,20 @@ export function rovidAzonosito(azonosito) {
 // ===================================
 
 /**
- * A kulcspárt menthető szöveggé (JSON) alakítja.
+ * A kulcspár menthető leírása (sima objektum, JSON-ba írható).
  *
  * A privát kulcsot JWK alakban mentjük — ez a WebCrypto szabványos, szöveges formája,
- * amit vissza is tud olvasni. A fájl EGYETLEN dolgot tartalmaz, ami számít: a kulcsot.
- * Aki megszerzi, a nevedben tud aláírni — ezért a felület figyelmeztet rá.
+ * amit vissza is tud olvasni. A leírás EGYETLEN dolgot tartalmaz, ami számít: a kulcsot.
+ * Aki megszerzi, a nevedben tud aláírni.
  *
  * @param {CryptoKeyPair} kulcspar
- * @returns {Promise<string>} a mentendő fájl tartalma
+ * @returns {Promise<Object>}
  */
-export async function kulcsparKimentese(kulcspar) {
-  console.log('kulcsparKimentese - KEZDÉS');
-
+export async function kulcsparLeirasa(kulcspar) {
   const privatJwk = await crypto.subtle.exportKey('jwk', kulcspar.privateKey);
   const azonosito = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
 
-  const mentes = {
+  return {
     mi: 'koino-kulcs',
     valtozat: 1,
     algoritmus: ALGORITMUS,
@@ -182,41 +168,60 @@ export async function kulcsparKimentese(kulcspar) {
     figyelmeztetes: 'Aki ezt a fájlt megszerzi, a nevedben tud aláírni. Őrizd biztos helyen.',
     privatKulcs: privatJwk
   };
-
-  console.log('kulcsparKimentese - VÉGE', { azonosito });
-  return JSON.stringify(mentes, null, 2);
 }
 
 /**
- * Egy korábban kimentett kulcsfájl visszatöltése.
- * @param {string} fajlTartalom - a kimentett JSON
+ * Egy kulcs-leírásból visszaállítja a kulcspárt.
+ *
+ * A nyilvános kulcs a privátból származik: a JWK `x` mezője MAGA a nyilvános kulcs,
+ * ezért nem kell külön menteni — így a leírás kisebb, és nem tud „szétcsúszni".
+ *
+ * @param {Object} leiras
  * @returns {Promise<CryptoKeyPair>}
  */
-export async function kulcsparVisszatoltese(fajlTartalom) {
-  console.log('kulcsparVisszatoltese - KEZDÉS');
-
-  const mentes = JSON.parse(fajlTartalom);
-  if (mentes.mi !== 'koino-kulcs') {
-    throw new Error('Ez nem koino kulcsfájl.');
+export async function kulcsparLeirasbol(leiras) {
+  if (leiras?.mi !== 'koino-kulcs') {
+    throw new Error('Ez nem koino kulcs-leírás.');
   }
 
-  // A privát kulcs visszaolvasása JWK-ból
   const privateKey = await crypto.subtle.importKey(
-    'jwk', mentes.privatKulcs, { name: ALGORITMUS }, true, ['sign']
+    'jwk', leiras.privatKulcs, { name: ALGORITMUS }, true, ['sign']
   );
 
-  // A nyilvános kulcs a privátból származik: a JWK `x` mezője MAGA a nyilvános kulcs,
-  // ezért nem kell külön menteni — így a fájl kisebb, és nem tud „szétcsúszni".
-  const nyilvanosJwk = { kty: mentes.privatKulcs.kty, crv: mentes.privatKulcs.crv, x: mentes.privatKulcs.x };
+  const nyilvanosJwk = {
+    kty: leiras.privatKulcs.kty,
+    crv: leiras.privatKulcs.crv,
+    x: leiras.privatKulcs.x
+  };
   const publicKey = await crypto.subtle.importKey(
     'jwk', nyilvanosJwk, { name: ALGORITMUS }, true, ['verify']
   );
 
-  // Elmentjük a készülékre — ezzel átveszi a korábbi kulcs helyét
-  await iras(TAR.KULCSOK, privateKey, KULCS_NEV.PRIVAT);
-  await iras(TAR.KULCSOK, publicKey, KULCS_NEV.NYILVANOS);
-  await tartosTarolasKerese();
+  return { privateKey, publicKey };
+}
+
+/**
+ * Kimentés szövegként (ezt írjuk fájlba, ezt viszi el a felhasználó).
+ * @param {CryptoKeyPair} kulcspar
+ * @returns {Promise<string>}
+ */
+export async function kulcsparKimentese(kulcspar) {
+  return JSON.stringify(await kulcsparLeirasa(kulcspar), null, 2);
+}
+
+/**
+ * Egy korábban kimentett kulcsfájl visszatöltése — és elmentése a tárolóba.
+ * @param {Object} tarolo
+ * @param {string} fajlTartalom
+ * @returns {Promise<CryptoKeyPair>}
+ */
+export async function kulcsparVisszatoltese(tarolo, fajlTartalom) {
+  console.log('kulcsparVisszatoltese - KEZDÉS');
+
+  const leiras = JSON.parse(fajlTartalom);
+  const kulcspar = await kulcsparLeirasbol(leiras);
+  await tarolo.ir(leiras);
 
   console.log('kulcsparVisszatoltese - VÉGE');
-  return { privateKey, publicKey };
+  return kulcspar;
 }

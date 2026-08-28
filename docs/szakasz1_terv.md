@@ -10,9 +10,8 @@
 
 > ## ✅ A SZAKASZ 1 ELKÉSZÜLT (2026-08-27)
 >
-> Mind a 7 lépés kész, **88 önpróba fut zölden** *(a hat próbaoldal összege — 2026-08-28-i
-> újraszámolás; a korábban itt álló 82 nem volt visszakövethető)*, és a teljes kör
-> végigjátszható a böngészőben. A vizsga lefutott:
+> Mind a 7 lépés kész, **90 önpróba fut zölden** (`node koino/meres/mind.js`), és a teljes
+> kör végigjátszható. A vizsga lefutott:
 >
 > | Lépés a próbán | Eredmény |
 > |---|---|
@@ -194,35 +193,46 @@ A H6 besorolása közvetlenül megmondja ([`adat_osztalyozas.md`](adat_osztalyoz
 
 | Réteg | Hova kerül a Szakasz 1-ben |
 |---|---|
-| `mag` + `lanc` + `tartalom` | **IndexedDB, aláírt eseményként** |
+| `mag` + `lanc` + `tartalom` | **fájlban, aláírt eseményként** (D29 óta; korábban IndexedDB) |
 | `szamitott` | **nem tároljuk igazságként** — újraszámolható gyorsítótár |
 | `helyi` | a készüléken marad; nagy része **megszűnik** (jelszó, token: a kulcs hitelesít — D15) |
 
-**Három tár (IndexedDB „object store"):**
+**A tár (D29 óta fájl, nem IndexedDB):**
 
-1. **`esemenyek`** — kulcs: az esemény azonosítója. Indexek: `szerzo+sorszam` (a saját lánc
-   bejárásához), `koino` (D25: több koino egy készüléken).
-2. **`allapot`** — a kiszámolt entitások (gyorsítótár, bármikor eldobható).
-3. **`kulcsok`** — a saját kulcspár koinónként vagy közösen *(lásd a nyitott kérdéseket)*.
+1. **`koino-adat/<koino>/esemenyek.jsonl`** — soronként egy aláírt esemény. **Hozzáfűzhető,
+   soha nem módosított** fájl: pontosan az, amit a modell megkövetel. Emberi szemmel is
+   olvasható, és egy szövegszerkesztővel is menthető.
+2. **`koino-adat/kulcs.json`** — a saját kulcspár (egy kulcs az egész belépő térben, D25).
+3. **Gyorsítótár nincs**, és nem is hiányzik: a mérés szerint 10 000 esemény ellenőrzése
+   0,58 mp, ezen a méreten a „töltsd be az egészet" a legegyszerűbb helyes megoldás.
+   Amikor kevés lesz, a tár-illesztő mögött kicserélhető — a fölötte lévő rétegek
+   érintése nélkül.
+
+*A tárolónak szándékosan csak KÉT művelete van: `betolt()` és `hozzafuz()`. Nincs
+„módosít" és nincs „töröl" — nem lustaságból, hanem mert a modell szerint nem is
+létezhetnek.*
 
 ---
 
 ## 5. A KULCS — a legérzékenyebb pont
 
-A mérés kellemetlen ténye: **a böngésző kiürítheti a tárat**, és a tartós tárolás alapból
-nincs bekapcsolva. A kulcs elvesztése nem ritka határeset, hanem **hétköznapi kockázat**.
+A böngészős korszakban ez volt a legkellemetlenebb tény: **a böngésző bármikor kiüríthette
+a tárat** — a kulccsal együtt —, és a tartós tárolás kérése nem is teljesült. **A D29 ezt a
+kockázatot megszüntette**: a kulcs egy közönséges fájl a gépeden, amit senki nem törölhet
+magától. *(Ez a döntés egyik nem várt haszna volt.)*
 
-**Ezért a Szakasz 1 kötelező elemei:**
+**Ami viszont változatlanul kell:**
 
-1. **`navigator.storage.persist()` kérése rögtön a kulcs létrehozásakor** — ez kéri meg a
-   böngészőt, hogy magától ne törölje az adatot.
-2. **A kulcs kimenthető** legyen (fájlba), és a program **kérje is** a mentést az első
-   indításkor — nem elrejtett haladó funkcióként.
-3. **Őszinte szöveg a felületen:** *„ez a kulcs te vagy; ha elveszik, a
-   koino-azonosságodat a közösség tudja visszaadni (D15), de az lassabb, mint egy mentés."*
+1. **A kulcs kimenthető** (`node koino/koino.js mentes <fájl>`), és a program az első
+   indításkor **meg is mondja, hol a kulcs, és hogy mentsd el** — nem elrejtett haladó
+   funkcióként.
+2. **Őszinte szöveg:** *„ez a kulcs te vagy; ha elveszik, a koino-azonosságodat a közösség
+   tudja visszaadni (D15), de az lassabb, mint egy mentés."*
+3. **A kulcsfájl titkosítatlan.** Aki hozzáfér, a nevedben tud aláírni. Ez tudatos: a
+   kulcsvesztés hétköznapi kockázat, a jelszó pedig egy újabb elveszíthető dolog lenne.
 
 > A D15 (több tanús helyreállítás) így nem elméleti biztonsági háló, hanem **a Szakasz 3
-> egyik indoka** — de addig is kell a mentés, mert az egy kattintás.
+> egyik indoka** — de addig is kell a mentés, mert az egy lépés.
 
 ---
 
@@ -249,13 +259,13 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 
 | # | Lépés | Mi az eredménye | Hogyan próbáljuk ki |
 |---|---|---|---|
-| **1** ✅ | **Kulcs-réteg** — kulcspár létrehozása, tárolása, mentése, `persist()` | van azonosságod | a felületen látod a nyilvános kulcsod; újratöltés után is megvan |
-| **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.html`](../koino/meres/kanonikusProba.html) — **14/14 rendben** |
-| **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.html`](../koino/meres/esemenyProba.html) — **13/13 rendben** |
-| **4** ✅ | **Tár-réteg** — IndexedDB, a saját lánc | az események megmaradnak | [`tarProba.html`](../koino/meres/tarProba.html) — **11/11 rendben**, a megmaradás újratöltéssel igazolva |
-| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.html`](../koino/meres/allapotProba.html) — **16/16 rendben** |
-| **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.html`](../koino/meres/javaslatProba.html) — **22/22 rendben** |
-| **7** ✅ | **Felület** — a koino-kép a helyi adatból | végigjátszható magadnak | böngészőben, kézzel — **a teljes kör lefutott** |
+| **1** ✅ | **Kulcs-réteg** — kulcspár létrehozása, tárolása, mentése | van azonosságod | `node koino/koino.js kulcs` — újraindítás után is ugyanaz |
+| **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.js`](../koino/meres/kanonikusProba.js) — **14/14 rendben** |
+| **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.js`](../koino/meres/esemenyProba.js) — **13/13 rendben** |
+| **4** ✅ | **Tár-réteg** — a saját lánc | az események megmaradnak | [`tarProba.js`](../koino/meres/tarProba.js) — **13/13 rendben**; a megmaradást a tár-objektum eldobása és a fájl újranyitása igazolja |
+| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.js`](../koino/meres/allapotProba.js) — **16/16 rendben** |
+| **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.js`](../koino/meres/javaslatProba.js) — **22/22 rendben** |
+| **7** ✅ | **A koino arca** — a kép a helyi adatból | végigjátszható magadnak | `node koino/koino.js` — **a teljes kör lefutott** *(a D29 előtt böngészőben, utána parancssorban)* |
 
 > ⚠️ **A 6. és 7. lépés helyet cserélt** (2026-08-27, Csaba jóváhagyásával). Indok: a
 > döntéshozatal logikája próbaoldalon **felület nélkül is végigjátszható**; fordított
@@ -328,7 +338,7 @@ odarendelt — ha ugyanarra az entitásra teszel újra pontot, a régi felszabad
   leszármazottakra is). Ma mindkét fajtánál a szűkebb szabály fut; ez itt fog bővülni,
   egy helyen, amikor az általános javaslat felülete elkészül.
 
-Próba: [`szabalyProba.html`](../koino/meres/szabalyProba.html) — **12/12 rendben**, végig
+Próba: [`szabalyProba.js`](../koino/meres/szabalyProba.js) — **12/12 rendben**, végig
 kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú másik gép tenné).
 
 ## 10. Nyitott kérdések — ezekre a kódolás előtt kell válasz
@@ -352,6 +362,20 @@ kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú m
 ---
 
 ## Napló
+
+- **2026-08-28 (este)** — **D29: KIKÖLTÖZÉS A BÖNGÉSZŐBŐL.** Csaba: *„hagyjuk is el a
+  böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* A Szakasz 2
+  tervezése közben derült ki, hogy **minden akadály böngésző-korlát volt**, és a döntő az,
+  hogy egy lap **nem tud fogadni kapcsolatot** — ezért kell neki jelzőpont, STUN és
+  továbbító. Mérve: a koino **magja már ekkor is futott Node alatt, változtatás nélkül**
+  (kanonikus alak, Ed25519 aláírás+ellenőrzés, szabályok, állapot, döntéshozatal); a
+  böngésző-függés a **tárban** volt.
+  **Ami átalakult:** a tár → hozzáfűzhető fájl (`fajlTar.js`), a tároló a lánc-kezelésbe
+  **kívülről** megy be (nincs két másolat) · a kulcs → fájl (és ezzel megszűnt a
+  „böngésző kiüríti a tárat" kockázat) · a fejlesztői nézet → **parancssori arc**
+  (`koino/koino.js`) · a hat próbaoldal → **hat Node-fájl + `mind.js`**, 90 próbával.
+  Törölve: `index.html`, `css/fo.css`, `js/fo.js`, `fejlesztoiSzerver.js`,
+  `js/tar/adatbazis.js`, a `meres/*.html` lapok. *(A git történetében megmaradnak.)*
 
 - **2026-08-28** — **Átnézés és három javítás.** Egy teljes átolvasás (majd egy második
   session ellenőrzése) három olyan hibát talált, amelyek a Szakasz 2-ben két gép közti

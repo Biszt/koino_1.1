@@ -39,9 +39,24 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ---
 
-## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-26)
+## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-28)
 
-**28 tervezési döntés (D1–D28) áll.** 2026-08-25-én három elméleti hidat építettünk
+> ### 🔀 MÁSODIK FORDULAT (2026-08-28): NINCS BÖNGÉSZŐ
+>
+> **D29** — *„Tulajdonképpen hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta
+> P2P kapcsolatra koncentráljunk."* A koino **önálló program**, ami a készüléken fut; a
+> böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
+>
+> Indoka mérhető: a Szakasz 2 tervezésekor minden akadály **böngésző-korlát** volt, és a
+> döntő az, hogy **egy lap nem tud fogadni kapcsolatot** — ezért kell neki jelzőpont, STUN
+> és továbbító. A koino magja eközben **már ekkor is futott böngésző nélkül**, változtatás
+> nélkül; a böngésző-függés a tárban volt.
+>
+> **A Szakasz 1 ezzel átköltözött:** fájl-alapú tár, parancssori arc, és a 90 önpróba
+> `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
+> (a git történetében megmaradnak).
+
+**29 tervezési döntés (D1–D29) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
@@ -1765,6 +1780,57 @@ a tudatpont —, de a felhasználó egy gombot nyom.)*
 
 > **A D6 tehát sértetlen:** a tartós magban csak az van, hogy *„ez a kulcs egy valódi,
 > külön ember"* — a **nevedről ott egyetlen bit sincs**.
+
+
+### D29. A FUTTATÓKÖRNYEZET — a koino ÖNÁLLÓ PROGRAM, nem böngésző (2026-08-28, Csaba)
+
+> „Úgy érzem, hogy nagyon a böngészőkhöz akarunk igazodni. […] az elsődleges cél az, hogy
+> az se kelljen hozzá." — majd: „Tulajdonképpen hagyjuk is el a böngészős részt, mert csak
+> bezavar. **A tiszta P2P kapcsolatra koncentráljunk.**" — Csaba
+
+#### Mi váltotta ki
+
+A Szakasz 2 (a kapcsolat) tervezése közben derült ki, hogy **minden akadály, amibe
+belefutottunk, böngésző-korlát volt**, nem koino-probléma: a tartós tárolás kérése nem
+teljesült · a böngésző `.local` álnévre cseréli a saját címeit (amit másik hálózat nem tud
+feloldani) · a kriptográfia csak „biztonságos környezetben" megy · `file://`-ból nem
+tölthető modul · és a lap bezárásakor a csomópont eltűnik.
+
+**A döntő szempont:** a böngészőben egy lap **nem tud fogadni kapcsolatot** — nem figyelhet
+porton, és nem mutathat címet magáról. Ezért kell neki jelzőpont, STUN és továbbító.
+*Vagyis az az infrastruktúra, amitől a P2P-ben szabadulni akarunk, jórészt a böngésző
+korlátaiból következik, nem magából a P2P-ből.*
+
+#### Amit a mérés mutatott (2026-08-28)
+
+A koino **magja már ekkor is futott böngésző nélkül**, változtatás nélkül: kanonikus alak,
+SHA-256 lenyomat, **Ed25519 aláírás és ellenőrzés**, szabály-réteg, állapotszámítás,
+döntéshozatal — mind rendben Node alatt. A böngésző-függés **két fájlban** volt (a tár), és
+a fejlesztői nézetben. Ez nem szerencse: a domain-logikát végig tiszta függvényként írtuk,
+és az időt is bemenetnek vettük.
+
+#### A döntés
+
+| | |
+|---|---|
+| **A koino** | önálló program, ami a készüléken fut. Nincs telepítendő függősége (a kriptográfia a futtatókörnyezet WebCryptójából jön). |
+| **A tár** | hozzáfűzhető fájl, soronként egy aláírt esemény — a git mintájára: nem módosítunk és nem törlünk. |
+| **A böngésző** | később lehet **egy kliens**, de nem ő szabja meg, mire képes a koino. A Szakasz 1 böngészős nézete és próbaoldalai megszűntek (a git történetében megmaradnak). |
+| **A nyelv** | változatlanul JavaScript — **a D23 nem sérül**: ott a NYELVRŐL volt szó, itt a FUTTATÓKÖRNYEZETRŐL. |
+
+#### Mit jelent ez a Szakasz 2-re
+
+A natív futtatókörnyezetben a koino **kinyithat egy portot és figyelhet**. Ezzel a
+„szolgáltató nélkül" kérdés végre **mérhetővé** válik, három fokozatban:
+
+1. **jelzőpont** — a bemutatkozás átvitele; lehet akár egy ember is (QR-kód, üzenet). Nem
+   függés, csak postás;
+2. **STUN** — „mi a nyilvános címem?"; NAT mögött a készülék ezt magától nem tudja. Pár
+   csomag, tartalmat nem lát, bárki futtathat ilyet — **és kihagyható, ha van globális
+   IPv6** (a fejlesztő gépén mérve: van, a routertől);
+3. **továbbító (TURN)** — csak ha a közvetlen út nem jön össze. **Ez a drága függés**, és
+   a gyakoriságát meg kell mérni, nem megbecsülni.
+
 
 ---
 

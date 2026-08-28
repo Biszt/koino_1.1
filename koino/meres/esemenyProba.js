@@ -1,47 +1,12 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>koino — az aláírt esemény próbája</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
-         max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
-  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
-  p.alcim { margin-top: 0; opacity: .75; }
-  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.3); }
-  th { font-weight: 600; width: 4.5rem; }
-  .jo  { color: #167d3a; font-weight: 600; }
-  .nem { color: #b3261e; font-weight: 600; }
-  .osszegzes { font-size: 1.1rem; font-weight: 600; padding: .8rem 1rem; border-radius: .4rem;
-               background: rgba(128,128,128,.12); }
-  pre { background: rgba(128,128,128,.1); padding: .8rem; border-radius: .4rem;
-        overflow-x: auto; font-size: .85rem; }
-</style>
-</head>
-<body>
-
-<h1>Az aláírt esemény próbája</h1>
-<p class="alcim">
-  Azt bizonyítja, hogy egy esemény <strong>hamisíthatatlan</strong>: bármit írunk át benne,
-  az ellenőrzés bukik — és hogy a <strong>kettős cselekvés leleplezhető</strong>.
-</p>
-
-<div class="osszegzes" id="osszegzes">Fut…</div>
-<table id="eredmeny"><tbody></tbody></table>
-
-<h2 style="font-size:1.05rem">Egy valódi esemény</h2>
-<pre id="minta">…</pre>
-
-<script type="module">
-// koino/meres/esemenyProba.html — az esemény-réteg önpróbája (Szakasz 1 / 3. lépés)
+// koino/meres/esemenyProba.js — az esemény-réteg önpróbája (Szakasz 1 / 3. lépés)
+//
+// Azt bizonyítja, hogy egy esemény hamisíthatatlan: bármit írunk át benne, az ellenőrzés
+// bukik — és hogy a kettős cselekvés leleplezhető.
 
 import { esemenyLetrehozasa, esemenyEllenorzese, elagazasE } from '../js/esemeny/esemeny.js';
+import { probaGyujtemeny } from './probaFuttato.js';
 
-const probak = [];
-function proba(nev, futtat) { probak.push({ nev, futtat }); }
+const { proba, futtatas } = probaGyujtemeny('Az aláírt esemény próbája');
 
 // Két külön kulcspár: egy „sajátunk" és egy „idegen", a hamisítás próbájához
 const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
@@ -57,6 +22,13 @@ const alapLeiras = {
 };
 const esemeny = await esemenyLetrehozasa(alapLeiras, kulcspar);
 
+/** Segéd: egy nyilvános kulcs szöveges alakja. */
+async function szerzoje(kp) {
+  const nyers = await crypto.subtle.exportKey('raw', kp.publicKey);
+  let sz = ''; for (const b of new Uint8Array(nyers)) sz += String.fromCharCode(b);
+  return btoa(sz).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 // ===== A HELYES ESET =====
 
 proba('A frissen létrehozott esemény ellenőrzése RENDBEN', async () => {
@@ -68,17 +40,12 @@ proba('A frissen létrehozott esemény ellenőrzése RENDBEN', async () => {
 
 proba('A TARTALOM átírása bukik', async () => {
   const hamis = { ...esemeny, adat: { ...esemeny.adat, cim: 'Átírt cím' } };
-  const e = await esemenyEllenorzese(hamis);
-  return e.rendben === false;
+  return (await esemenyEllenorzese(hamis)).rendben === false;
 });
 
 proba('A SZERZŐ átírása bukik (más nevében nem lehet aláírni)', async () => {
-  const idegenNyers = await crypto.subtle.exportKey('raw', idegenKulcspar.publicKey);
-  let sz = ''; for (const b of new Uint8Array(idegenNyers)) sz += String.fromCharCode(b);
-  const idegenSzerzo = btoa(sz).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  const hamis = { ...esemeny, szerzo: idegenSzerzo };
-  const e = await esemenyEllenorzese(hamis);
-  return e.rendben === false;
+  const hamis = { ...esemeny, szerzo: await szerzoje(idegenKulcspar) };
+  return (await esemenyEllenorzese(hamis)).rendben === false;
 });
 
 proba('Az IDŐ átírása bukik', async () => {
@@ -104,12 +71,8 @@ proba('Az ALÁÍRÁS egyetlen karakterének átírása bukik', async () => {
 
 proba('IDEGEN kulccsal aláírt, de a mi nevünkre írt esemény bukik', async () => {
   // A támadó a saját kulcsával ír alá, de a `szerzo` mezőbe a MI kulcsunkat teszi
-  const sajatNyers = await crypto.subtle.exportKey('raw', kulcspar.publicKey);
-  let sz = ''; for (const b of new Uint8Array(sajatNyers)) sz += String.fromCharCode(b);
-  const sajatSzerzo = btoa(sz).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-
   const idegenEsemeny = await esemenyLetrehozasa(alapLeiras, idegenKulcspar);
-  const hamis = { ...idegenEsemeny, szerzo: sajatSzerzo };
+  const hamis = { ...idegenEsemeny, szerzo: await szerzoje(kulcspar) };
   return (await esemenyEllenorzese(hamis)).rendben === false;
 });
 
@@ -153,46 +116,8 @@ proba('TÖRT szám az adatban már a létrehozáskor hibát dob', async () => {
 
 proba('Egy esemény mérete ésszerű (< 1 KB)', async () => {
   const meret = new TextEncoder().encode(JSON.stringify(esemeny)).length;
-  console.log('Egy esemény mérete:', meret, 'bájt');
-  window.KOINO_ESEMENY_MERET = meret;
+  console.log('    (egy esemény mérete: ' + meret + ' bájt)');
   return meret < 1024;
 });
 
-// ===== FUTTATÁS =====
-
-(async function futtatas() {
-  console.log('esemenyProba - KEZDÉS', { darab: probak.length });
-  const tbody = document.querySelector('#eredmeny tbody');
-  let sikeres = 0;
-
-  for (const p of probak) {
-    let rendben = false, hibaSzoveg = '';
-    try { rendben = await p.futtat(); }
-    catch (hiba) { rendben = false; hibaSzoveg = ' — váratlan hiba: ' + hiba.message; }
-    if (rendben) sikeres++;
-
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.className = rendben ? 'jo' : 'nem';
-    th.textContent = rendben ? 'RENDBEN' : 'BUKOTT';
-    const td = document.createElement('td');
-    td.textContent = p.nev + hibaSzoveg;
-    tr.append(th, td);
-    tbody.append(tr);
-  }
-
-  const osszegzes = document.getElementById('osszegzes');
-  osszegzes.textContent = sikeres === probak.length
-    ? '✅ Mind a ' + probak.length + ' próba rendben'
-    : '❌ ' + (probak.length - sikeres) + ' próba BUKOTT (' + probak.length + '-ből)';
-  osszegzes.className = 'osszegzes ' + (sikeres === probak.length ? 'jo' : 'nem');
-
-  document.getElementById('minta').textContent = JSON.stringify(esemeny, null, 2);
-
-  window.KOINO_PROBA = { osszes: probak.length, sikeres };
-  console.log('esemenyProba - VÉGE', window.KOINO_PROBA);
-})();
-</script>
-
-</body>
-</html>
+export default futtatas;

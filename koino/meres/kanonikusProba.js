@@ -1,47 +1,13 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>koino — kanonikus alak próbája</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
-         max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
-  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
-  p.alcim { margin-top: 0; opacity: .75; }
-  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.3); }
-  th { font-weight: 600; width: 4.5rem; }
-  .jo  { color: #167d3a; font-weight: 600; }
-  .nem { color: #b3261e; font-weight: 600; }
-  code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; }
-  .osszegzes { font-size: 1.1rem; font-weight: 600; padding: .8rem 1rem; border-radius: .4rem;
-               background: rgba(128,128,128,.12); }
-</style>
-</head>
-<body>
-
-<h1>A kanonikus alak próbája</h1>
-<p class="alcim">
-  Azt bizonyítja, hogy <strong>ugyanaz a logikai adat mindig ugyanazt a lenyomatot adja</strong>
-  — és hogy a különböző adatok lenyomata tényleg különbözik.
-  <em>Ha ez a lap valaha pirosat mutat, a koino két gépe nem fog egyetérteni.</em>
-</p>
-
-<div class="osszegzes" id="osszegzes">Fut…</div>
-<table id="eredmeny"><tbody></tbody></table>
-
-<script type="module">
-// koino/meres/kanonikusProba.html — a kanonikus alak önpróbája
+// koino/meres/kanonikusProba.js — a kanonikus alak önpróbája (Szakasz 1 / 2. lépés)
 //
-// Nincs teszt-könyvtár: a próbák egyszerű függvények, az eredmény a lapon látszik.
-// Ez a Szakasz 1 / 2. lépésének „megnézhető eredménye".
+// Azt bizonyítja, hogy ugyanaz a logikai adat mindig ugyanazt a lenyomatot adja — és hogy
+// a különböző adatok lenyomata tényleg különbözik. Ha ez valaha pirosat mutat, a koino két
+// gépe nem fog egyetérteni.
 
 import { kanonikusSzoveg, lenyomat } from '../js/esemeny/kanonikusAlak.js';
+import { probaGyujtemeny } from './probaFuttato.js';
 
-const probak = [];
-function proba(nev, futtat) { probak.push({ nev, futtat }); }
+const { proba, futtatas } = probaGyujtemeny('A kanonikus alak próbája');
 
 // ===== AZONOSSÁG: ugyanaz az adat, másképp összerakva =====
 
@@ -58,8 +24,12 @@ proba('A beágyazott mezők sorrendje sem számít', async () => {
 });
 
 proba('Az „é" kétféle Unicode-alakja azonos', async () => {
-  const egyKarakter = { nev: 'kék' };            // é = U+00E9
-  const ketKarakter = { nev: 'kék' };           // e + kombináló ékezet
+  // ⚠️ SZÁNDÉKOSAN KÓDDAL írjuk le a két alakot, nem beírt betűvel: ha valaki
+  // újragépelné a fájlt, a szerkesztő némán azonossá tehetné a kettőt, és a próba
+  // MINDIG átmenne — vagyis semmit nem bizonyítana.
+  const egyKarakter = { nev: 'kék' };     // é = U+00E9 (előre összerakott)
+  const ketKarakter = { nev: 'kék' };    // e + kombináló ékezet (U+0301)
+  if (egyKarakter.nev === ketKarakter.nev) throw new Error('a két alak azonos — a próba vak');
   return await lenyomat(egyKarakter) === await lenyomat(ketKarakter);
 });
 
@@ -141,44 +111,4 @@ proba('REGRESSZIÓ: a rögzített lenyomat változatlan', async () => {
   return most === HORGONY_LENYOMAT;
 });
 
-// ===== FUTTATÁS =====
-
-(async function futtatas() {
-  console.log('kanonikusProba - KEZDÉS', { darab: probak.length });
-  const tbody = document.querySelector('#eredmeny tbody');
-  let sikeres = 0;
-
-  for (const p of probak) {
-    let rendben = false;
-    let hibaSzoveg = '';
-    try {
-      rendben = await p.futtat();
-    } catch (hiba) {
-      rendben = false;
-      hibaSzoveg = ' — váratlan hiba: ' + hiba.message;
-    }
-    if (rendben) sikeres++;
-
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.className = rendben ? 'jo' : 'nem';
-    th.textContent = rendben ? 'RENDBEN' : 'BUKOTT';
-    const td = document.createElement('td');
-    td.textContent = p.nev + hibaSzoveg;
-    tr.append(th, td);
-    tbody.append(tr);
-  }
-
-  const osszegzes = document.getElementById('osszegzes');
-  osszegzes.textContent = sikeres === probak.length
-    ? '✅ Mind a ' + probak.length + ' próba rendben'
-    : '❌ ' + (probak.length - sikeres) + ' próba BUKOTT (' + probak.length + '-ből)';
-  osszegzes.className = 'osszegzes ' + (sikeres === probak.length ? 'jo' : 'nem');
-
-  window.KOINO_PROBA = { osszes: probak.length, sikeres };
-  console.log('kanonikusProba - VÉGE', window.KOINO_PROBA);
-})();
-</script>
-
-</body>
-</html>
+export default futtatas;
