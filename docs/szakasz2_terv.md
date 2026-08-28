@@ -257,6 +257,26 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 
 ## Napló
 
+- **2026-08-28 (két VALÓDI készülék)** — ⭐⭐ **AZ ELSŐ CSERE KÉT KÜLÖNBÖZŐ GÉP KÖZÖTT.**
+  Nem két folyamat egy gépen, hanem **laptop (Windows / x86 / Node v22.16.0) ↔ telefon
+  (Android / ARM64 / Node v26.3.1)**, valódi wifin. A laptop `figyel`, a telefon `csere`.
+  - **Szimmetrikus volt:** a laptop 2 eseményt kapott és 3-at küldött, a telefon fordítva.
+  - **A telefon kiírta a koino nevét, amit soha nem hozott létre** — nem elhitte,
+    kiszámolta a kapott eseményekből.
+  - ⭐ **A két ujjlenyomat BETŰRE AZONOS** (`ujjlenyomat` parancs, kézzel összeolvasva):
+    TUDÁS `ER96chiJ…` · ÁLLAPOT `Z0hnDbhS…`. Ez a **D17 ígéretének első igazolása két
+    fizikailag különböző készüléken**.
+  - **A felsorolás sorrendje is azonos** — a `rendezettBemenet` (ugyanaznap épült) két
+    valódi gépen igazolva.
+  - ⚠️ **Nyitva maradt:** a szomszédban a telefon `EHOSTUNREACH`-et kapott a laptop helyi
+    címére, holott a laptop ott a szomszéd wifijén volt (`192.168.150.134`,
+    IPv6-előtag `2001:4c4e:25d3:a601`). **Az okot nem tudjuk** — vendég-hálózat, kliens-
+    elszigetelés vagy más. *Legközelebb a szomszédban ELŐSZÖR `cimek`-et kell futtatni a
+    telefonon, és csak utána cserét.* A C-szakaszos mérést ez valószínűleg nem érinti (ott
+    a telefon kifelé, IPv6-on kapcsolódik, nem a helyi hálózaton keres).
+  - *A két ház 150 méterre van, dombbal takarva — a szomszéd hálózata tehát valóban külön
+    hálózat, semmi nem mossa össze a kettőt. Ez a C szakasz szempontjából jó hír.*
+
 - **2026-08-28 (a telefon)** — ⭐ **A KANONIKUS ALAK ÁTMENT EGY MÁSIK GÉPRE.** A `koino/`
   lefutott egy **Android telefonon** (Termux, ARM64 / `aarch64`, **Node v26.3.1** — szemben
   a laptop Windows / x86 / **v22.16.0** párosával): **mind a 124 önpróba rendben**.
