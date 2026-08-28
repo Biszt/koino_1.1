@@ -162,10 +162,22 @@ k kulcs
 Ki kell írnia egy hosszú betűsort (ez lesz a telefon azonossága a koinóban) és azt, hogy
 hol tárolja.
 
-## 9. lépés — ⭐ a telefon vizsgája
+## 9. lépés — ⭐⭐ a telefon vizsgája (ez a legértékesebb mérés az egészben)
 
 Most kiderül, hogy a koino nemcsak **elindul** a telefonon, hanem **ugyanazt is számolja**,
 mint a laptop. Ez 124 önellenőrzés.
+
+> **Miért ez a legfontosabb, és miért nem a hálózat?**
+>
+> A koino egész működése azon áll, hogy **két gép ugyanarra az adatra bájtra ugyanazt a
+> lenyomatot adja** — ez a kanonikus alak, a legveszélyesebb részlet. Ha ez elromlik, két
+> gép SOHA nem ért egyet, méghozzá némán.
+>
+> Eddig ezt **csak egyetlen gépen, egyetlen processzoron** (Windows / x86) bizonyítottuk.
+> A telefon **ARM-processzor, más operációs rendszer, más Node-fordítás** — ez lesz az
+> **első független megerősítés**, hogy az ígéret nem csak egy gép sajátossága.
+>
+> Ez a mérés akkor is megéri a telepítést, ha a hálózati rész soha nem jön össze.
 
 ```bash
 cd ~/koino_1.1 && node koino/meres/mind.js
@@ -245,7 +257,17 @@ látja.
 
 ---
 
-# 🅲 SZAKASZ — a nagy kérdés (telefon a szomszédban)
+# 🅲 SZAKASZ — a hálózati mérés (telefon a szomszédban)
+
+> ⚠️ **Ez már nem életkérdés (D31, 2026-08-28).** Amíg a mérce az volt, hogy „két
+> készüléknek közvetlenül össze kell érnie", addig ezen múlt a koino sorsa. A
+> [platform-függetlenségi híd](platform_fuggetlenseg.md) óta a mérce elfogadja az
+> aszimmetriát: **nem kell mindenkinek tudnia kapcsolatot fogadni, elég, ha valakik
+> tudnak.** Ez a mérés tehát már nem azt dönti el, hogy *működik-e* a koino, hanem azt,
+> hogy **hányan tudnak kaput nyitni** — vagyis mennyire lesz kényelmes.
+>
+> ⚠️ **A Termux mérőeszköz, nem termék.** A végleges koino Androidon nem így fog települni,
+> és a koino kódja semmit nem tud a Termuxról — eltávolítása semmit nem változtat.
 
 **Az elrendezés:** a **laptop marad otthon és figyel**, a **telefon megy a szomszédba és
 csatlakozik**.
@@ -368,6 +390,25 @@ A **ms-szám** a terv 7. pontjának legfontosabb mérendő értéke: ebből jön
 **minimum döntési idő** (D4) és a hézag-döntés ára. *A helyi alsó korlát 9 ms.*
 
 ## Ha a `C` szakasz nem megy: a diagnosztikai létra
+
+0. ⭐ **Először válaszd szét: a HÁLÓZAT nem megy, vagy a PROGRAM?** Erre van egy trükk,
+   amihez semmit nem kell telepíteni. A telefon **böngészőjébe** írd be a laptop címét —
+   ⚠️ itt **szögletes zárójel kell**, mert ez URL (a `csere` parancsnál nem kellett):
+
+   ```
+   http://[2001:4c4d:25cb:b200:7395:e583:5de6:5a1a]:7373/
+   ```
+
+   A böngésző hibát fog mutatni — **ez várt**, mert a koino nem weboldalt szolgál ki. A jel
+   a **laptop oldalán** van: ha ott megjelenik egy ilyen sor, akkor a kapcsolat **átjutott
+   két hálózat között**, és a hiba nem a hálózaté:
+
+   ```
+   ✗ megszakadt (2001:...): A vonal lezárult, mielőtt a válasz megjött volna
+   ```
+
+   *(Kipróbálva 2026-08-28-án, helyben: a figyelő pontosan ezt írja ki egy böngésző-szerű
+   kérésre.)*
 
 1. **Van-e a telefonnak globális IPv6 a szomszédban?** (16. lépés — ha nincs, ott az ISP
    nem ad IPv6-ot; a mérés nem a koinóról szól)
