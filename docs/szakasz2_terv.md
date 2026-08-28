@@ -216,8 +216,8 @@ ami a D29 után amúgy is a természetes út. Így nincs se böngésző, se káb
 és **a mérés azt méri, amit mérni akarunk**.
 
 📱 **A telepítés lépésről lépésre: [`telepites_telefon.md`](telepites_telefon.md)** — benne
-az Ed25519 ellenőrzése a telefonon, a kód átvitele a laptopról (a `koino/` **nincs fenn a
-GitHubon**, mert nem pusholtunk), a mérés menete, és a diagnosztikai létra, ha nem megy.
+az Ed25519 ellenőrzése a telefonon, a kód letöltése (2026-08-28 óta **fenn van a nyilvános
+repóban**), a mérés menete, és a diagnosztikai létra, ha nem megy.
 ⭐ **Ki figyeljen?** A **laptop**, mert otthon a te routered van — a szomszéd routerének
 tűzfalán nem múlhat a mérés.
 

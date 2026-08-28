@@ -65,13 +65,35 @@ telepít.)
 
 ## 3. A koino átvitele a telefonra
 
-⚠️ **A `koino/` mappa NINCS fenn a GitHubon** — a fejlesztés commitolva van, de nem
-pusholtuk. Ezért a `git clone` **most nem járható út**. Két lehetőség van.
+### a) Letöltés a GitHubról (ez a javasolt)
 
-### a) Átvitel a laptopról, otthoni wifin (ez a javasolt)
+*2026-08-28 óta a `koino/` fenn van a nyilvános repóban.*
 
-Ehhez a telefon és a laptop **ugyanazon a wifin** legyen. Ez az előkészítés otthon
-történik; a szomszédba már kész telefont viszel.
+```bash
+pkg install git
+```
+
+```bash
+git clone --depth 1 https://github.com/Biszt/koino_1.1.git
+```
+
+A `--depth 1` azért kell, mert a teljes történet **23 MB**, a mai állapot viszont csak
+**5,6 MB** — a telefonnak nincs szüksége a prototípus fejlődéstörténetére.
+
+Utána a repó gyökeréből dolgozol:
+
+```bash
+cd koino_1.1
+```
+
+⚠️ **A repó a prototípust is tartalmazza** (`backend/`, `frontend/`) — azzal a telefonon
+semmi dolgunk, és nem is kell hozzá telepíteni semmit. A koinónak **nulla függősége van**:
+nincs `npm install`.
+
+### b) Átvitel a laptopról, wifin (ha nincs net, vagy gyors frissítés kell)
+
+Ez akkor hasznos, ha a laptopon van egy **még nem pusholt** változat, és azt akarod a
+telefonon kipróbálni. Ehhez a telefon és a laptop **ugyanazon a wifin** legyen.
 
 **A laptopon** (a repó gyökerében), csomagolás és egy egyszeri kiszolgáló:
 
@@ -102,16 +124,7 @@ laptopon a kiszolgálót utána `Ctrl+C`-vel állítsd le, a `koino.tar.gz`-t pe
 
 ⚠️ **A csomag 73 KB, 26 fájl, és semmi mást nem igényel.** Mérve a laptopon: a
 kicsomagolt mappa **önmagában lefuttatja mind a 124 próbát**, a repó többi része nélkül.
-
-### b) Ha mégis pusholunk
-
-Akkor a telefonon egyszerűen:
-
-```bash
-pkg install git && git clone https://github.com/Biszt/koino_1.1.git
-```
-
-Ez egyszerűbb — de a repó nyilvános, tehát a push **közzététel**. Ez Csaba döntése.
+*Ez a `koino/` mappa legfontosabb tulajdonsága: nincs mihez tartoznia.*
 
 ---
 
