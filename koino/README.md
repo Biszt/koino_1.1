@@ -92,7 +92,8 @@ futtatható: `node koino/meres/mind.js szabaly`.
 **Szakasz 1 — A HELYI KOINO** *(egy készülék, hálózat nélkül)*: ✅ **kész**. A teljes kör
 végigjátszható: koino → tartalom → tudatpont → javaslat → szavazat → **egyezmény**.
 
-**Szakasz 2 — A KAPCSOLAT**: két készülék egymásra talál és kicseréli az eseményeit.
+**Szakasz 2 — A KAPCSOLAT** *(itt tartunk)*: két készülék egymásra talál és kicseréli az
+eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 
 A teljes terv és a döntések: [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
 · a Szakasz 1 terve: [`../docs/szakasz1_terv.md`](../docs/szakasz1_terv.md)
