@@ -336,6 +336,55 @@ tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a
 
 ---
 
+### ⭐⭐⭐ ÁTFÚRTUK A PAJZSOT (2026-08-29, 21:46) — KÉT HÁZTARTÁS, SZOLGÁLTATÓ NÉLKÜL
+
+*Ez a Szakasz 2 nagy kérdésének a válasza, és igenlő.*
+
+```
+21:46:37 a fúró elindult (7373-es port)
+21:46:37 … fúrok (1. kopogás)
+  ✓ ŐK IS HALLANAK MINKET (145.236.111.251)
+
+⭐ A PAJZS ÁTFÚRVA — mindkét irány működik.
+  1 kopogás, 1 válasz, 232 ms alatt
+```
+
+**A két oldal:**
+
+| | Laptop (itthon) | Telefon (a szomszédban) |
+|---|---|---|
+| helyi port | 7373 | 7373 |
+| **külső cím és port** | `31.46.250.127:51967` | `145.236.111.251:7373` |
+| a NAT viselkedése | **átírja** a portot (CGNAT, kétszeres NAT) | **megtartja** a portot |
+
+⭐ **Amit ez bizonyít:** két **hétköznapi otthoni hálózat** — az egyik mögött **szolgáltatói
+CGNAT** — közvetlenül összeér. **Nincs továbbító, nincs port-továbbítási szabály, nincs
+szolgáltató az útban.** Egyik routeren sem állítottunk be semmit.
+
+**Miért működött, és miért nem korábban:**
+
+1. **Célfüggetlen NAT** (mérve két különböző kiszolgálóval): a laptop külső portja
+   ugyanaz, akárkihez szól — tehát a fúrás **célozható**. Ha szimmetrikus lett volna, ez
+   az egész út lezárult volna.
+2. **A külső portot meg kellett tudni.** Előtte vaktában a `7373`-ra kopogtunk, ahol a
+   laptop oldalán nincs semmi — a NAT az `51967`-esre írta át. *Egy este ment el arra,
+   hogy ezt nem mértük, hanem feltételeztük.*
+3. **Mindkét fél kifelé indult**, ugyanarról a helyi portról — így a két rés
+   egymásra illeszkedett (ez a pajzsfúrás lényege, D37).
+
+⚠️ **AMIT EZ MÉG NEM BIZONYÍT:** hogy a koino **cseréje** átmegy ezen az úton. A rés
+**UDP-s**, a csere ma **TCP-n** megy, és a router a kettőt külön tartja számon. A
+következő darab tehát: **UDP-szállítás a `vonal.js` mellé** — akkor a megnyílt résen
+azonnal mehet a csere.
+
+⚠️ **A STUN-ról őszintén:** a külső portot ma egy külső kiszolgálótól kérdeztük meg
+(`kulsoport` parancs). Ez **segédeszköz, nem előfeltétel** (D38): a kiszolgáló paraméter,
+bizalom nem jár vele, és hosszú távon **a koino saját tükre váltja ki** (`vonal.js`,
+`latlak`) — aki fogad, az amúgy is látja, honnan jövünk. Ma azért kellett, mert még nem
+volt kihez szólni; ez pontosan a D37 „első bemutatkozás" esete.
+
+---
+
 ### ⚠️ A 4. LÉPÉS ELSŐ VALÓDI MÉRÉSE (2026-08-29 este) — és amit rosszul hittünk
 
 *A telefon a szomszéd lakásba került, a laptop itthon maradt. Este többször is

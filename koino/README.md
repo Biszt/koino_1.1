@@ -133,7 +133,7 @@ eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 | **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **334 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
 | **C** postaláda-szerep kimondása (D34) | ✅ kész — **Anna és Béla soha nem beszélt, mégis mindent tud** |
 | **D** terjedő címjegyzék: a társ-lista bővüljön magától | ✅ kész — **B megtanulta Cili és Dóra címét A-tól**, gépelés nélkül |
-| **E** pajzsfúrás (UDP + TCP) | 🚧 magja kész, valódi mérésre vár |
+| **E** pajzsfúrás (UDP + TCP) | ⭐⭐ **ÁTFÚRVA** (2026-08-29 21:46): két háztartás, CGNAT mögül is, **1 kopogás / 232 ms**. ⚠️ A rés UDP-s — a csere TCP-n megy, tehát UDP-szállítás kell hozzá |
 
 ⚠️ **A lépés-sorrend 2026-08-29-én átíródott** (D33): nem az a kérdés, hogy egy adott gép
 **fogadni** tud-e, hanem hogy **a hálózat összefüggő marad-e**. A részletek a
