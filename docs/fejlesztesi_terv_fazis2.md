@@ -110,6 +110,50 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >    az lehet, aki **fogadni** tud; a többi „csak kifelé" — de ⭐ **ők is megkapnak mindent**,
 >    mert a csere kétirányú (mérve: a telefon kiszólt, és 3 eseményt kapott, 2-t küldött).
 
+> ### 🔀 NEGYEDIK FORDULAT (2026-08-29 éjjel): A BEJUTÁS — D36–D38
+>
+> *Az esti mérés után azt írtam: „kell egy második hálózat, ahol tényleg van IPv6". Csaba
+> ezt nem fogadta el: **„ha ezt elfogadom, akkor a p2p szerintem nem fog működni, mivel
+> mind kettő otthoni hálózat, és olyan standard, ami sok háztartásra igaz."** Igaza volt —
+> ez a hétköznapi eset, nem kivétel. A három döntés ebből született.*
+>
+> **D36 — A HARMADIK KÉSZÜLÉK NEM SZOLGÁLTATÁS, HANEM EGY E-EMBER.** Amikor a külső cím
+> megtudásához kell valaki kívülről, az **nem infrastruktúra**, hanem a közösség egy tagja,
+> aki történetesen tud fogadni. Amit ad — egy cím visszamondása —, azt **bárki más is
+> adhatja**. Csaba: *„ha már van egy kiterjedt hálózatunk, akkor egymás elérhetőségeit már
+> lehet közvetíteni az egész közösségnek."*
+> ⭐ **Ebből következik, hogy a TÜKÖR és a TERJEDŐ CÍMJEGYZÉK ugyanaz a dolog:** a saját
+> külső címed is csak egy cím, ami a közösségben terjed. Nem kell rá külön mechanizmus.
+>
+> **D37 — A FOGADÓKÉPESSÉG CSAK A BEMUTATKOZÁSHOZ KELL.** *(Csaba kérdése: „ez csak az első
+> kapcsoláskor szükséges?")* Három külön dolgot mostunk össze, és szét kell választani:
+>
+> | Mihez | Kell-e fogadóképes fél? |
+> |---|---|
+> | **maga a kapcsolat** (pajzsfúrás) | ❌ **nem** — mindkettő kifelé indul, a két rés a közepén találkozik |
+> | **a saját külső cím** (IPv4/NAT) | ismételten kell tükör — de az **első kapcsolat után a társak tükrözik egymást**; IPv6-on ez a lépés kimarad |
+> | **az első bemutatkozás** | ✅ igen — **VAGY a kézi út** (4. szabály): a cím elküldhető üzenetben, felolvasható, beírható |
+>
+> ⭐ **Vagyis a hálózatnak szerkezetileg NEM kell fogadóképes tag** — csak egy első
+> bemutatkozás, és az lehet emberi mozdulat is.
+>
+> **D38 — BEJÁRATI CÍMLISTA, BÖNGÉSZŐ NÉLKÜL.** Csaba felvetette, hogy a program az első
+> csatlakozáshoz használhatna böngészőt, utána nem. A szándékkal egyetértettünk, az
+> eszközzel nem: **a böngésző itt semmit nem ad hozzá** (a program maga is le tud tölteni
+> egy címlistát), viszont behozza a saját korlátait (D29, 7. szabály). Helyette:
+> - **több forrás, nem egy** — az e-ember sajátot is megadhat (2. szabály);
+> - **elhagyható** — kézi cím-megadással ugyanúgy be lehet lépni (4. szabály);
+> - **nem jár vele bizalom** — amit letölt, az *cím*, nem igazság (3. szabály, D32);
+> - a próba: *ha holnap a bejárat eltűnik, be tud-e még lépni valaki?*
+>
+> ⚠️ **A valódi kockázat nem a bizalom, hanem a megfigyelés:** egyetlen bejárati oldal
+> uralója **látja, ki lép be, és meg tudja akadályozni**. Ezért nem az a kérdés, meddig
+> használjuk, hanem hogy **hányan tudják adni ugyanezt.**
+>
+> ⚠️ **Ami őszintén bizonytalan marad:** a fejlesztő vonala **CGNAT** — a szolgáltatói NAT
+> kiszámíthatatlanabb egy házi routernél. Hogy a pajzsfúrás átmegy-e rajta, azt **csak
+> méréssel** lehet megtudni, nem levezetéssel.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -195,7 +239,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**29 tervezési döntés (D1–D29) áll.** 2026-08-25-én három elméleti hidat építettünk
+**38 tervezési döntés (D1–D38) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
