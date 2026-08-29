@@ -44,9 +44,102 @@
 // Használják: koino.js (`talalkozo` parancs) és a csereProba.js.
 
 import { createSocket } from 'node:dgram';
+import { connect } from 'node:net';
 
 const KOPOGAS_KOZ = 1000;      // ennyi ezredmásodpercenként kopogunk
 const IDOKORLAT = 60000;       // eddig próbálkozunk (0 = vég nélkül, amíg le nem állítják)
+
+// ===================================
+// TCP-PAJZSFÚRÁS — ugyanaz az elv, de a csere protokolljával
+// ===================================
+//
+// ⭐ MIÉRT KELL EZ AZ UDP MELLÉ? Mert az UDP-fúró csak MEGMÉRI, hogy a rés megnyílik-e —
+// a koino cseréje viszont TCP-n megy, és egy UDP-lyuk NEM nyit utat a TCP-nek (a router
+// külön tartja számon a kettőt). Ha viszont magával a TCP-vel fúrunk, akkor a megnyílt
+// kapcsolaton AZONNAL mehet a csere.
+//
+// ⭐ HOGYAN MŰKÖDIK (TCP „egyidejű nyitás"): mindkét fél a SAJÁT 7373-asáról hív a másik
+// 7373-asára. Így a két kapcsolat-kísérlet ugyanarra a négyesre (cím+port ↔ cím+port)
+// vonatkozik — a routerek ugyanazt a rést nyitják, és amikor a másik SYN-je megérkezik,
+// az operációs rendszer FELISMERI, hogy ez a mi kimenő kísérletünk párja, és összeköti
+// őket. Figyelő foglalat nem is kell hozzá.
+//
+// ⚠️ EZÉRT NEM MŰKÖDÖTT AZ ŐRJÁRAT ERRE: a `csere` véletlen helyi portról indul, tehát a
+// négyes nem egyezik, és a két rés elbeszél egymás mellett.
+//
+// ⚠️ MINDEN PRÓBÁLKOZÁST KIÍR (Csaba kérése). Nem csak a sikert: a néma nem-esemény
+// pontosan az, amiben ma este elvéreztünk.
+
+/**
+ * TCP-vel fúr: ismételten hív a rögzített helyi portról a másik ugyanolyan portjára.
+ *
+ * @param {number} sajatPort - a RÖGZÍTETT helyi port
+ * @param {string} tarsCim
+ * @param {number} tarsPort
+ * @param {{koz?: number, probaIdo?: number, utana?: Function}} [beallitas]
+ * @returns {Promise<{sikerult: boolean, kapcsolat: import('node:net').Socket|null, probak: number}>}
+ */
+export async function tcpPajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
+  console.log('tcpPajzsfuras - KEZDÉS', { sajatPort, tarsCim, tarsPort });
+
+  const koz = beallitas.koz ?? 15000;          // ennyi időnként új próbálkozás
+  const probaIdo = beallitas.probaIdo ?? Math.max(2000, koz - 2000);
+  const maxProba = beallitas.maxProba ?? Infinity;   // a próbák miatt: ne fusson örökké
+  const jelez = beallitas.utana ?? (() => {});
+
+  let probak = 0;
+
+  while (probak < maxProba) {
+    probak++;
+    const kezdet = Date.now();
+    jelez({ mi: 'PROBALOK', hanyadik: probak });
+
+    const eredmeny = await new Promise((teljesites) => {
+      // family: 0 → a rendszer válasszon IPv4/IPv6 között (a Szakasz 2 miatt fontos).
+      // localPort: EZ A LÉNYEG — enélkül véletlen portról indulnánk, és nem illeszkedne
+      // a másik oldal résével.
+      let kapcsolat;
+      try {
+        kapcsolat = connect({ host: tarsCim, port: tarsPort, localPort: sajatPort, family: 0 });
+      } catch (hiba) {
+        teljesites({ kesz: false, ok: hiba.message });
+        return;
+      }
+
+      const vege = (siker, ok) => {
+        kapcsolat.removeAllListeners('connect');
+        kapcsolat.removeAllListeners('error');
+        kapcsolat.setTimeout(0);
+        if (!siker) kapcsolat.destroy();
+        teljesites(siker ? { kesz: true, kapcsolat } : { kesz: false, ok });
+      };
+
+      kapcsolat.setTimeout(probaIdo, () => vege(false, 'nem válaszolt ' + probaIdo + ' ms alatt'));
+      kapcsolat.once('connect', () => vege(true));
+      kapcsolat.once('error', (hiba) => vege(false, hiba.code ?? hiba.message));
+    });
+
+    const eltelt = Date.now() - kezdet;
+
+    if (eredmeny.kesz) {
+      jelez({ mi: 'ATFURVA', hanyadik: probak, eltelt });
+      console.log('tcpPajzsfuras - VÉGE (átfúrva)', { probak });
+      return { sikerult: true, kapcsolat: eredmeny.kapcsolat, probak };
+    }
+
+    // ⭐ AZ ELTELT IDŐ ÖNMAGÁBAN NYOM. Az AZONNALI bukás azt jelenti, hogy valaki
+    // VÁLASZOLT (elutasítással) — tehát a csomagunk ODAÉRT. A hosszú csend viszont azt,
+    // hogy némán eldobták. A kettő teljesen más következő lépést kíván.
+    jelez({ mi: 'PROBA-BUKOTT', hanyadik: probak, ok: eredmeny.ok, eltelt });
+
+    // A maradék időt kivárjuk, hogy tényleg `koz` legyen két próbálkozás KEZDETE között.
+    const maradek = koz - (Date.now() - kezdet);
+    if (maradek > 0) await new Promise((t) => setTimeout(t, maradek));
+  }
+
+  console.log('tcpPajzsfuras - VÉGE (feladtuk)', { probak });
+  return { sikerult: false, kapcsolat: null, probak };
+}
 
 // ===================================
 // A KÉT ÜZENET

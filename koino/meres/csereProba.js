@@ -19,7 +19,8 @@ import {
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
 import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
-import { pajzsfuras } from '../js/csere/pajzsfuro.js';
+import { createServer } from 'node:net';
+import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -605,6 +606,38 @@ proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazo
   return egyik.sikerult && masik.sikerult
     && egyik.mindketIrany && masik.mindketIrany
     && egyik.kuldott > 0 && masik.kuldott > 0;
+});
+
+proba('⭐⭐ A TCP-fúró a RÖGZÍTETT helyi portról hív — EZEN MÚLIK AZ EGÉSZ', async () => {
+  // ⭐ MIÉRT EZ A LÉNYEG? A pajzsfúrás azért működhet, mert mindkét fél UGYANARRÓL a
+  // portról UGYANARRA a portra hív — így a két router ugyanazt a négyest (cím+port ↔
+  // cím+port) jegyzi fel, és a rések egymásra illeszkednek. A `csere` épp ezt nem
+  // csinálja: véletlen helyi portról indul, ezért nem tud átfúrni.
+  //
+  // ⚠️ AMIT ITT NEM LEHET MEGMÉRNI: magát az „egyidejű nyitást". A helyi hurkon a rendszer
+  // AZONNAL elutasít (ECONNREFUSED), ha nincs figyelő — így sosem alakul ki a függőben
+  // lévő hívás, ami ehhez kellene. Valódi hálózaton a SYN kimegy és VÁRAKOZIK, mert a
+  // router csendben eldobja. Ez tehát csak élesben, két hálózat között mérhető.
+  let honnanPort = null;
+  const kiszolgalo = createServer((k) => { honnanPort = k.remotePort; k.end(); });
+  await new Promise((t) => kiszolgalo.listen(7404, '::1', t));
+
+  try {
+    const eredmeny = await tcpPajzsfuras(7403, '::1', 7404, {
+      koz: 200, probaIdo: 500, maxProba: 3
+    });
+    eredmeny.kapcsolat?.destroy();
+    return eredmeny.sikerult && honnanPort === 7403;
+  } finally {
+    await new Promise((t) => kiszolgalo.close(t));
+  }
+});
+
+proba('⭐ A TCP-fúró FELADJA, ha nincs kit átfúrni (nem fut örökké a próbákban)', async () => {
+  const eredmeny = await tcpPajzsfuras(7405, '::1', 7406, {
+    koz: 100, probaIdo: 100, maxProba: 3
+  });
+  return eredmeny.sikerult === false && eredmeny.probak === 3 && eredmeny.kapcsolat === null;
 });
 
 proba('⭐⭐ RONTÁS-PRÓBA: a SAJÁT visszhang NEM siker (a mérés nem vak)', async () => {

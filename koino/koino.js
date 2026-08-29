@@ -56,10 +56,10 @@ import {
   koinoLetrehozasa, tartalomLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
-import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
+import { figyeloIndulasa, csereVonalon, parbeszed } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
-import { pajzsfuras } from './js/csere/pajzsfuro.js';
+import { pajzsfuras, tcpPajzsfuras } from './js/csere/pajzsfuro.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -138,6 +138,42 @@ const szazalek = (ezrelek) => (ezrelek / 10).toFixed(1).replace('.0', '') + '%';
 // olcsóvá tenni.
 // Az őrjárat sorai elé — hogy utólag látszódjon, mikor mi történt.
 const ora = () => new Date().toLocaleTimeString('hu-HU');
+
+// ⭐ NYOMOZATI SEGÉD A PAJZSFÚRÓHOZ (Csaba kérése: a sikertelen próbálkozás is mondjon
+// valamit). Egy hibakód önmagában semmit nem jelent annak, aki nem hálózatos — de
+// mindegyik MÁS következő lépést jelent, ezért érdemes kimondani.
+const HIBA_MAGYARAZAT = {
+  ENETUNREACH: 'nincs útvonal — EZEN a hálózaton nincs IPv6-kapcsolat (a csomag el sem indult)',
+  EHOSTUNREACH: 'van útvonal, de a cél gép nem érhető el',
+  ECONNREFUSED: '⭐ VALAKI VÁLASZOLT (elutasítással) — tehát a csomagunk ODAÉRT!',
+  ETIMEDOUT: 'némán eldobták — ez tűzfalra vall (a csomag elindult, de nem jött válasz)',
+  EADDRINUSE: 'a helyi port foglalt a SAJÁT gépünkön (fut még egy korábbi fúró?)',
+  EACCES: 'a rendszer nem engedi ezt a portot használni',
+  EPERM: 'a rendszer nem engedi ezt a portot használni',
+  EADDRNOTAVAIL: 'ez a helyi cím nem létezik ezen a gépen'
+};
+
+const hibaMagyarazat = (ok) => {
+  for (const [kod, szoveg] of Object.entries(HIBA_MAGYARAZAT)) {
+    if (String(ok).includes(kod)) return szoveg;
+  }
+  if (String(ok).includes('nem válaszolt')) return HIBA_MAGYARAZAT.ETIMEDOUT;
+  return null;
+};
+
+/** A saját globális IPv6-címeink — a fúró elé és a bukások mellé. */
+async function sajatGlobalisCimek() {
+  const halozat = (await import('node:os')).networkInterfaces();
+  const cimek = [];
+  for (const lista of Object.values(halozat)) {
+    for (const cim of lista ?? []) {
+      if (cim.internal || cim.family !== 'IPv6') continue;
+      const eleje = cim.address[0];
+      if (eleje === '2' || eleje === '3') cimek.push(cim.address);
+    }
+  }
+  return cimek;
+}
 
 const adatMennyiseg = (eredmeny) => {
   const bajt = (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
@@ -647,8 +683,71 @@ try {
       // futott mindkettőn egyszerre. Ha viszont mindkettő folyamatosan fúr, az átfedés
       // előbb-utóbb garantált, közös óra nélkül is. Leállítani Ctrl+C-vel lehet.
       const cim = ervek[0];
-      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js pajzsfuro <cím> [port]');
+      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js pajzsfuro <cím> [port] [tcp]');
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
+
+      // ===== TCP-VÁLTOZAT =====
+      // Ugyanaz az elv, de magával a csere protokolljával fúrunk — így ha átértünk, a
+      // csere AZONNAL mehet ugyanazon a kapcsolaton (az UDP-lyuk erre nem jó).
+      if ((ervek[2] ?? '').toLowerCase() === 'tcp') {
+        const mp = parseFloat(ervek[3]) || 15;
+
+        kiir(SZIN.vastag + 'PAJZSFÚRÓ — TCP' + SZIN.vege + SZIN.halvany
+          + '   (a ' + port + '-esről a ' + port + '-esre, ' + mp + ' másodpercenként)'
+          + SZIN.vege);
+        kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
+          + SZIN.vege);
+        kiir(SZIN.nem + '⚠ Közben NE fusson `orjarat` vagy `figyel` ugyanezen a porton —'
+          + ' a fúrónak kell a ' + port + '-es, és ütköznének (EADDRINUSE).' + SZIN.vege);
+        kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
+
+        // ⭐ NYOMOZATI ALAPADAT: van-e egyáltalán globális IPv6-unk INNEN indulva?
+        // Ha nincs, akkor a fúrásnak esélye sincs, és ezt jobb rögtön tudni.
+        const sajatjaim = await sajatGlobalisCimek();
+        if (sajatjaim.length) {
+          kiir(SZIN.halvany + 'A te globális IPv6-od: ' + sajatjaim.join(', ') + SZIN.vege);
+        } else {
+          kiir(SZIN.nem + '⚠ NINCS globális IPv6-od ezen a hálózaton — a fúrásnak így'
+            + ' esélye sincs.' + SZIN.vege);
+        }
+        kiir();
+
+        let elozoOk = null;
+        const furas = await tcpPajzsfuras(port, cim, port, {
+          koz: mp * 1000,
+          utana: (e) => {
+            // ⚠️ MINDEN próbálkozás látszik, nem csak a siker (Csaba kérése).
+            if (e.mi === 'PROBALOK') {
+              kiir(SZIN.halvany + '  ' + ora() + ' → ' + e.hanyadik + '. próbálkozás…'
+                + SZIN.vege);
+            }
+            if (e.mi === 'PROBA-BUKOTT') {
+              kiir(SZIN.nem + '     ✗ ' + e.ok + SZIN.vege
+                + SZIN.halvany + '  (' + e.eltelt + ' ms)' + SZIN.vege);
+              // A magyarázatot csak akkor ismételjük, ha VÁLTOZOTT — különben elárasztja.
+              if (e.ok !== elozoOk) {
+                const magyarazat = hibaMagyarazat(e.ok);
+                if (magyarazat) kiir(SZIN.halvany + '       → ' + magyarazat + SZIN.vege);
+                elozoOk = e.ok;
+              }
+            }
+            if (e.mi === 'ATFURVA') {
+              kiir(SZIN.jo + '     ⭐ ÁTFÚRVA a ' + e.hanyadik + '. próbálkozásra! ('
+                + e.eltelt + ' ms)' + SZIN.vege);
+            }
+          }
+        });
+
+        kiir();
+        kiir(SZIN.jo + '⭐ A PAJZS ÁTFÚRVA — most jön a csere ugyanezen a kapcsolaton.'
+          + SZIN.vege);
+        const csere = await parbeszed(furas.kapcsolat, tar, KOINO);
+        furas.kapcsolat.end();
+        kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
+          + ' — kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott
+          + ' (' + csere.korok + ' kör)' + SZIN.vege);
+        break;
+      }
 
       kiir(SZIN.vastag + 'PAJZSFÚRÓ' + SZIN.vege + SZIN.halvany
         + '   (a ' + port + '-es portról a ' + port + '-esre, másodpercenként)' + SZIN.vege);
