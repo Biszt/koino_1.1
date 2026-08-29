@@ -181,7 +181,11 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
 
   // Az `udp6` a globális IPv6-hoz kell. A `reuseAddr` azért, hogy egy félbehagyott
   // próbálkozás után azonnal újra lehessen indítani ugyanazon a porton.
-  const halo = createSocket({ type: 'udp6', reuseAddr: true });
+  // ⭐ IPv4 VAGY IPv6? A cím maga megmondja: ha van benne kettőspont, IPv6.
+  // Ez azért lett fontos, mert két hétköznapi háztartás közül az egyikben NINCS működő
+  // IPv6 — a közös nevező az IPv4. A fúrónak tehát mindkettőt tudnia kell.
+  const ipv6E = String(tarsCim).includes(':');
+  const halo = createSocket({ type: ipv6E ? 'udp6' : 'udp4', reuseAddr: true });
 
   // ⚠️ SAJÁT AZONOSÍTÓ — EZ NÉLKÜL A MÉRÉS VAK VOLT (mérve 2026-08-29).
   // Ha valaki a SAJÁT címére kopog (vagy a hálózat visszaveri a csomagot), akkor a saját

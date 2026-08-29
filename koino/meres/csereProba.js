@@ -608,6 +608,46 @@ proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazo
     && egyik.kuldott > 0 && masik.kuldott > 0;
 });
 
+proba('⭐⭐ A TÜKÖR: a másik megmondja, milyen címről lát minket', async () => {
+  // ⭐ EZ VÁLTJA KI A STUN-T. IPv4-en a router átírja a portot, tehát a készülék nem
+  // ismeri a saját külső címét — enélkül nem tudja megmondani, hova kopogjanak neki.
+  // A koinóban nem kell hozzá szolgáltatás: aki fogad, az látja, és visszamondja.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
+  const masik = await ujTar();
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    // Helyben a „külső" cím a hurok-cím, a port pedig a rendszer által adott forrás-port.
+    return !!eredmeny.kivulrolIgyLatszom
+      && typeof eredmeny.kivulrolIgyLatszom.port === 'number'
+      && eredmeny.kivulrolIgyLatszom.port > 0
+      && String(eredmeny.kivulrolIgyLatszom.cim).includes('127.0.0.1');
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐ A tükör NEM ad bizalmat: az esemény-kapu ugyanaz marad', async () => {
+  // ⚠️ A tükör megfigyelés, nem igazság. Attól, hogy valaki megmondja, hol lát minket,
+  // még egyetlen eseménye sem kap könnyebb utat — ezt a hamisítás-próba őrzi máshol,
+  // itt azt mérjük, hogy a tükör-mező NEM kerül be sehova az állapotba.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
+  const masik = await ujTar();
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    const nyers = await masik.betolt();
+    // Egyetlen elmentett esemény sem hordoz „latlak" mezőt: a tükör a vonalon marad.
+    return nyers.length === 2 && nyers.every((e) => e.latlak === undefined);
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
 proba('⭐⭐ A TCP-fúró a RÖGZÍTETT helyi portról hív — EZEN MÚLIK AZ EGÉSZ', async () => {
   // ⭐ MIÉRT EZ A LÉNYEG? A pajzsfúrás azért működhet, mert mindkét fél UGYANARRÓL a
   // portról UGYANARRA a portra hív — így a két router ugyanazt a négyest (cím+port ↔

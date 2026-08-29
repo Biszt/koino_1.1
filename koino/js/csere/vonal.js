@@ -155,6 +155,7 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
   };
 
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
+  let kivulrolIgyLatszom = null;
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -165,8 +166,26 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     // Ha egyezik, a kör azonnal véget ér — és a hétköznapi eset épp ez.
     const sajatAllas = await allasOsszeallitasa(tar, koino);
     const sajatLenyomat = await allasLenyomata(sajatAllas);
-    kuld({ uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat });
+
+    // ⭐ A TÜKÖR (2026-08-29, Csaba nyomán). Megmondjuk a másiknak, MILYEN CÍMRŐL LÁTJUK.
+    //
+    // MIÉRT KELL? Mert IPv4-en a router ÁTÍRJA a portot: a géped azt hiszi, a 7373-ról
+    // indult, kifelé viszont mondjuk a 51842-esen látszik. Így nem tudja megmondani a
+    // másiknak, hova kopogjon — nem ismeri a saját külső címét. Ezt szokás STUN-nal
+    // megtudni; a koinóban viszont NEM KELL külön szolgáltatás: aki fogadni tud, az ezt
+    // amúgy is látja. Elég visszamondania.
+    //
+    // ⚠️ EBBŐL SEMMILYEN BIZALOM NEM KÖVETKEZIK (3. szabály). Ez nem igazság, hanem
+    // megfigyelés: „innen láttalak". Ha a másik hazudik, legfeljebb nem jön össze a
+    // kapcsolat — eseményt ettől még nem tud hamisítani. És bárki lehet tükör, aki
+    // fogadni tud, tehát nem múlik egyetlen címen sem (2. szabály).
+    kuld({
+      uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat,
+      latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort }
+    });
     const oveLenyomat = await varj('LENYOMAT');
+
+    if (oveLenyomat.latlak?.cim) kivulrolIgyLatszom = oveLenyomat.latlak;
 
     // ----- MÁSIK KOINO? Akkor nincs miről beszélni -----
     //
@@ -233,8 +252,10 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     if (kuldendok.length === 0 && erkezett.length === 0) break;
   }
 
-  console.log('parbeszed - VÉGE', { korok, uj, kuldott, reszletesAllasok, masKoino });
-  return { korok, uj, kuldott, reszletesAllasok, masKoino };
+  console.log('parbeszed - VÉGE', {
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom
+  });
+  return { korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom };
 }
 
 // ===================================

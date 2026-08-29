@@ -58,6 +58,7 @@ node koino/koino.js
 | `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
 | `node koino/koino.js tars <hoszt> [port] [név]` | társ felvétele (levétel: `tars torol <hoszt> [port]`) |
+| `node koino/koino.js tukor <hoszt> [port]` | ⭐ **kívülről hogy látszom?** — a másik visszamondja, milyen címről/portról lát (STUN helyett) |
 | `node koino/koino.js cimek` | milyen címeken érhető el ez a készülék |
 | `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a kapcsolatot (NAT-PMP / PCP / UPnP) |
 
@@ -75,7 +76,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Kilenc próba-fájl, **165 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **167 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |
@@ -107,7 +108,7 @@ futtatható: `node koino/meres/mind.js szabaly`.
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben |
-| `js/csere/talalkozo.js` | **lyukfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
+| `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/muveletek.js` | a hat művelet |
 | `koino.js` | a parancssori arc |
 

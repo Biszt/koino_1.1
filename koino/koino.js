@@ -29,6 +29,7 @@
 //   node koino/koino.js tars <cím> [port] [név]  — társ felvétele
 //   node koino/koino.js tars torol <cím> [port]  — társ levétele
 //   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
+//   node koino/koino.js tukor <cím> [port]       — ⭐ kívülről hogy látszom? (STUN helyett)
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson kaput
 //
@@ -671,6 +672,41 @@ try {
       // ide nem jutunk el; a figyelőt a folyamat vége zárja
     }
 
+    case 'tukor': {
+      // ===== „KÍVÜLRŐL HOGY LÁTSZOM?" =====
+      //
+      // ⭐ MIÉRT KELL? Mert IPv4-en a router ÁTÍRJA a portot, tehát a készülék NEM ISMERI
+      // a saját külső címét — így nem tudja megmondani a másiknak, hova kopogjon. Ezt
+      // szokás STUN-nal megtudni.
+      //
+      // ⭐ DE ITT NINCS KÜLÖN SZOLGÁLTATÁS: aki fogadni tud (postaláda), az ezt amúgy is
+      // látja, és a csere első üzenetében visszamondja. Bárki lehet tükör — tehát nem
+      // múlik egyetlen címen (2. szabály), és semmilyen bizalom nem következik belőle
+      // (3. szabály): ez megfigyelés, nem igazság.
+      const cim = ervek[0];
+      if (!cim) throw new Error('Kitől kérdezzem meg? node koino/koino.js tukor <cím> [port]');
+      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+
+      const eredmeny = await csereVonalon(tar, KOINO, cim, port);
+
+      kiir(SZIN.vastag + 'KÍVÜLRŐL ÍGY LÁTSZOL' + SZIN.vege);
+      if (eredmeny.kivulrolIgyLatszom) {
+        kiir('  ' + SZIN.jo + eredmeny.kivulrolIgyLatszom.cim + '  port: '
+          + eredmeny.kivulrolIgyLatszom.port + SZIN.vege);
+        kiir(SZIN.halvany + '  (ezt látta rólad ' + cim + ')' + SZIN.vege);
+      } else {
+        kiir(SZIN.nem + '  (nem mondta meg — régi verziót futtat a másik oldal?)' + SZIN.vege);
+      }
+
+      kiir();
+      const sajatjaim = await sajatGlobalisCimek();
+      kiir(SZIN.halvany + 'A saját globális IPv6-od: '
+        + (sajatjaim.join(', ') || '(nincs)') + SZIN.vege);
+      kiir(SZIN.halvany + '⚠ Ha a fenti PORT nem a te helyi portod, akkor a router átírta —'
+        + ' ezt a külső portot kell megadni a másiknak.' + SZIN.vege);
+      break;
+    }
+
     case 'pajzsfuro': {
       // ===== PAJZSFÚRÁS (E. lépés) =====
       //
@@ -900,7 +936,8 @@ try {
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
-      kiir('           pajzsfuro <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
+      kiir('           ujjlenyomat [napok] · cimek · kapu');
       kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }
