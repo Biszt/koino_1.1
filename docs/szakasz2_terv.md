@@ -336,6 +336,39 @@ tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a
 
 ---
 
+### ⚠️ A 4. LÉPÉS ELSŐ VALÓDI MÉRÉSE (2026-08-29 este) — és amit rosszul hittünk
+
+*A telefon a szomszéd lakásba került, a laptop itthon maradt. Este többször is
+következtetést vontam le, és **kétszer is vissza kellett vonnom** — mindkétszer Csaba
+kérdése miatt. A végén ez maradt, bizonyítékkal:*
+
+| Mérés | Eredmény |
+|---|---|
+| laptop → nyilvános IPv6 (Google DNS) | ✅ 8 ms |
+| telefon (itthon, azonos wifi) → laptop 7373 | ✅ csere lefutott, 7 esemény |
+| telefon (szomszéd) → **Cloudflare** `2606:4700:4700::1111` | ❌ **ENETUNREACH** |
+| telefon (szomszéd) → **Google** `2001:4860:4860::8888` | ❌ **ENETUNREACH** |
+| telefon (szomszéd) → laptop | ❌ **ENETUNREACH** |
+
+⭐ **A TANULSÁG, ami az egész szakaszt érinti: A CÍM NEM UGYANAZ, MINT AZ ÚT.**
+A telefonnak **volt** globális IPv6-címe a szomszédnál (`2001:4c4e:25d2:8101:…`) — ezt
+korábban úgy jegyeztük fel, hogy „a telefonnak a szomszédban működő IPv6-a van". **Ez
+téves volt.** A router kiosztja az előtagot (ezért képez magának címet a készülék), de nem
+hirdeti magát kijáratnak, vagy a szolgáltató nem ad neki IPv6-ot. A cím megvan, az út nem.
+
+**Amit ezért NEM mértünk meg, pedig azt hittük:** egyik router tűzfalát sem. A csomagok
+oda sem jutottak. A korábbi „mindkét router zárja a bejövőt" következtetés **nem áll**.
+
+⚠️ **És amit ez a tervnek jelent:** abból indultunk ki, hogy az IPv6 általában elérhető, és
+erre épült a közvetlen kapcsolat terve (D31). Két hálózatból **egyben** volt működő IPv6.
+Ha ez az arány általános, akkor előbb-utóbb kell az **IPv4-es út** is — ahol viszont a
+router átírja a portot, tehát **STUN kellene**, épp az, amit eddig elkerültünk.
+
+**A 4. lépés tehát továbbra is NYITOTT.** Nem a koinón és nem a pajzsfúrón múlt — olyan
+második hálózat kell, ahol tényleg van IPv6.
+
+---
+
 ### 🕐 KELL-E EGYSZERRE KERESNIÜK A TÁRSAKAT? — és mit jelent ez a MEDIÁN-IDŐRE
 
 *Csaba kérdése (2026-08-29): „ha az időzítés fontos, hogy egyidőben keressék a társakat az
