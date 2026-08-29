@@ -13,7 +13,7 @@
 // hálózati séma, amit külön karban kellene tartani, és a forgalom emberi szemmel is
 // olvasható — egy `nc`-vel bele lehet nézni.
 //
-//   {"uzenet":"LENYOMAT","lenyomat":"…"} — az egész tudásom 43 karakterben
+//   {"uzenet":"LENYOMAT","koino":"…","lenyomat":"…"} — melyik koinóról, és mit tudok róla
 //   {"uzenet":"ALLAS","allas":{…}}      — ezt tudom (részletesen)
 //   {"uzenet":"KEREK","kerelem":{…}}    — ebből ez hiányzik nekem
 //   {"uzenet":"ESEMENY","esemeny":{…}}  — tessék, egy esemény
@@ -154,7 +154,7 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     return uzenet;
   };
 
-  let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0;
+  let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -165,8 +165,25 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     // Ha egyezik, a kör azonnal véget ér — és a hétköznapi eset épp ez.
     const sajatAllas = await allasOsszeallitasa(tar, koino);
     const sajatLenyomat = await allasLenyomata(sajatAllas);
-    kuld({ uzenet: 'LENYOMAT', lenyomat: sajatLenyomat });
+    kuld({ uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat });
     const oveLenyomat = await varj('LENYOMAT');
+
+    // ----- MÁSIK KOINO? Akkor nincs miről beszélni -----
+    //
+    // ⚠️ MÉRVE, 2026-08-29 — ezért került ide. E nélkül két KÜLÖNBÖZŐ koino készüléke is
+    // „cserélt": az eseményeik átkerültek egymás mappájába, és mivel az ÁLLÁS mindig csak
+    // a saját koinóra készül, a két lenyomat SOSEM konvergált — a kör-korlátig pörgött,
+    // ugyanazt küldve újra minden körben (mérve: 17,2 KB ~100 bájt helyett).
+    //
+    // Mindkét fél ugyanitt ismeri fel, tehát egyszerre lépnek ki. Nem hiba: két idegen
+    // koino találkozása teljesen rendes dolog egy nyitott hálózaton.
+    if (oveLenyomat.koino !== koino) {
+      console.warn('parbeszed - a másik fél MÁSIK koinóé', {
+        sajat: koino, ove: oveLenyomat.koino
+      });
+      masKoino = oveLenyomat.koino ?? '(ismeretlen)';
+      break;
+    }
 
     if (oveLenyomat.lenyomat === sajatLenyomat) {
       // Ugyanazt tudjuk. Nincs mit kérni és nincs mit adni — a részletes állást el sem
@@ -202,7 +219,9 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     }
 
     // ----- 5. BEOLVASZTÁS: ugyanaz a kapu, mint a saját műveleteinknél -----
-    const eredmeny = await beolvasztas(tar, erkezett);
+    // ⚠️ A koino-szűrés MÁSODIK rétege: fent az ŐSZINTE tévedést fogtuk meg (a másik
+    // bemondta, melyik koinóé), itt a HAZUGOT — aki a mi koinónkat mondta, de mást küld.
+    const eredmeny = await beolvasztas(tar, erkezett, koino);
     uj += eredmeny.uj;
 
     // ----- 6. CSENDES KÖR? -----
@@ -214,8 +233,8 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     if (kuldendok.length === 0 && erkezett.length === 0) break;
   }
 
-  console.log('parbeszed - VÉGE', { korok, uj, kuldott, reszletesAllasok });
-  return { korok, uj, kuldott, reszletesAllasok };
+  console.log('parbeszed - VÉGE', { korok, uj, kuldott, reszletesAllasok, masKoino });
+  return { korok, uj, kuldott, reszletesAllasok, masKoino };
 }
 
 // ===================================

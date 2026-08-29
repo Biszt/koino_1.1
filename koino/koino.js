@@ -479,6 +479,12 @@ try {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
             return;
           }
+          if (eredmeny.masKoino) {
+            // Egy nyitott hálózaton ez rendes dolog: bekopogott valaki, aki más koinóé.
+            kiir(SZIN.halvany + '  · ' + eredmeny.honnan + ' — MÁSIK koinóé ('
+              + eredmeny.masKoino + '), nem cseréltünk' + SZIN.vege);
+            return;
+          }
           beszelgetesek++;
           atvett += eredmeny.uj;
           tovabbadott += eredmeny.kuldott;
@@ -575,6 +581,17 @@ try {
         const port = parseInt(ervek[1], 10) || ALAP_PORT;
         const eredmeny = await csereVonalon(tar, KOINO, cim, port);
 
+        // ⚠️ MÁSIK KOINO: ez NEM hiba, csak nincs miről beszélni. Ki kell mondani, mert
+        // különben a „kaptam 0, küldtem 0" úgy néz ki, mintha minden rendben lenne.
+        if (eredmeny.masKoino) {
+          kiir(SZIN.nem + 'Ez a készülék egy MÁSIK koinóé: ' + eredmeny.masKoino + SZIN.vege);
+          kiir(SZIN.halvany + 'A tiéd: ' + KOINO + ' — nem cseréltünk semmit, és ez így helyes.'
+            + SZIN.vege);
+          kiir(SZIN.halvany + 'Ha ugyanabban a koinóban akartok lenni, a KOINO_AZONOSITO'
+            + ' változónak kell egyeznie.' + SZIN.vege);
+          break;
+        }
+
         kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
           + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
           + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms, '
@@ -607,6 +624,11 @@ try {
       const kor = await korbeCsere(lista, (t) => csereVonalon(tar, KOINO, t.hoszt, t.port), {
         utana: (e) => {
           const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
+          if (e.sikerult && e.masKoino) {
+            kiir(SZIN.halvany + '  · ' + cimke + ' — egy MÁSIK koinóé (' + e.masKoino
+              + '), nincs mit cserélni' + SZIN.vege);
+            return;
+          }
           kiir(e.sikerult
             ? SZIN.jo + '  ✓ ' + cimke + SZIN.vege + SZIN.halvany
               + ' — kaptam ' + e.uj + ', küldtem ' + e.kuldott

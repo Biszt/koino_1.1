@@ -266,18 +266,38 @@ export async function valaszOsszeallitasa(tar, kerelem) {
  * Ez a szakasz jóslatának a lényege: mivel az azonosító a tartalom lenyomata, a
  * duplikátum MAGÁTÓL elnyelődik, és az összefésüléshez nem kell ütközés-feloldó logika.
  *
+ * ⚠️ A KOINO-SZŰRÉS (2026-08-29, mérés után). A tár koinónként külön mappa, de az
+ * `esemenyMentese` nem tudja, MELYIK mappában áll — ő az aláírást és az azonosítót nézi,
+ * és jól teszi. Ezért a koino-egyezést ITT kell ellenőrizni.
+ *
+ * ⭐ MIÉRT KELL EGYÁLTALÁN? Mérve: ha egy másik koino készüléke szólt be, az eseményei
+ * BEKERÜLTEK a mappánkba. Az állapotot nem rontották el (a `koinoEsemenyei` szűr), de
+ * ott ültek — és egy rosszindulatú fél így korlátlanul tölthetné a lemezünket. A
+ * protokoll eleji koino-egyeztetés (lásd `vonal.js`) az ŐSZINTE tévedést fogja meg;
+ * ez itt a HAZUG felet. A kettő külön réteg, szándékosan.
+ *
  * @param {Object} tar
  * @param {Array<Object>} esemenyek
- * @returns {Promise<{uj: number, marMegvolt: number, elutasitva: Array<{azonosito: string, ok: string}>, elagazasok: Array<{szerzo: string, sorszam: number}>}>}
+ * @param {string} [koino] - ha megadott, CSAK ennek a koinónak az eseményeit vesszük be
+ * @returns {Promise<{uj: number, marMegvolt: number, idegen: number, elutasitva: Array<{azonosito: string, ok: string}>, elagazasok: Array<{szerzo: string, sorszam: number}>}>}
  */
-export async function beolvasztas(tar, esemenyek) {
-  console.log('beolvasztas - KEZDÉS', { erkezett: esemenyek.length });
+export async function beolvasztas(tar, esemenyek, koino) {
+  console.log('beolvasztas - KEZDÉS', { erkezett: esemenyek.length, koino });
 
-  let uj = 0, marMegvolt = 0;
+  let uj = 0, marMegvolt = 0, idegen = 0;
   const elutasitva = [];
   const elagazasok = [];
 
   for (const esemeny of esemenyek) {
+    // ----- IDEGEN KOINO: be sem visszük a kapuig -----
+    if (koino !== undefined && esemeny?.koino !== koino) {
+      idegen++;
+      console.warn('beolvasztas - IDEGEN koino eseménye, kihagyva', {
+        vart: koino, kapott: esemeny?.koino
+      });
+      continue;
+    }
+
     const eredmeny = await esemenyMentese(tar, esemeny);
 
     if (!eredmeny.mentve) {
@@ -293,9 +313,9 @@ export async function beolvasztas(tar, esemenyek) {
     }
   }
 
-  const osszegzes = { uj, marMegvolt, elutasitva, elagazasok };
+  const osszegzes = { uj, marMegvolt, idegen, elutasitva, elagazasok };
   console.log('beolvasztas - VÉGE', {
-    uj, marMegvolt, elutasitva: elutasitva.length, elagazasok: elagazasok.length
+    uj, marMegvolt, idegen, elutasitva: elutasitva.length, elagazasok: elagazasok.length
   });
   return osszegzes;
 }
@@ -336,8 +356,8 @@ export async function csereKor(egyikTar, masikTar, koino) {
 
   // ----- 4. MINDKETTŐ BEOLVASZTJA -----
   // A sorrend itt szándékosan mindegy: a beolvasztás nem függ attól, ki volt előbb.
-  const egyikKapott = await beolvasztas(egyikTar, egyiknekKuldjuk);
-  const masikKapott = await beolvasztas(masikTar, masiknakKuldjuk);
+  const egyikKapott = await beolvasztas(egyikTar, egyiknekKuldjuk, koino);
+  const masikKapott = await beolvasztas(masikTar, masiknakKuldjuk, koino);
 
   // ----- 5. EGYETÉRTÜNK-E MÁR? -----
   const egyezik = await allasokEgyeznek(egyikTar, masikTar, koino);

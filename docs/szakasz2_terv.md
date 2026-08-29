@@ -191,7 +191,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > | Új # | Lépés | Miért itt | Mennyi munka |
 > |---|---|---|---|
 > | **A** | ✅ **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | **kész (2026-08-29): 25 önpróba** — [`js/csere/tarsak.js`](../koino/js/csere/tarsak.js) |
-> | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 158 bájt a 16 158 helyett** |
+> | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 190 bájt a 16 158 helyett** |
 > | **C** | ✅ **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | **kész (2026-08-29): 3 önpróba + valódi három-készülékes mérés** |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
@@ -230,7 +230,7 @@ hibát és nem ad 1-es kilépési kódot — a koino helyben ugyanúgy működik
 | Mérve, 50 e-ember, „nincs újdonság" csere | Bájt |
 |---|---|
 | a régi protokoll (2× részletes állás, oda-vissza) | **16 158** |
-| a mai protokoll | **158** |
+| a mai protokoll | **190** |
 
 ⭐ **Ez 102-szeres különbség — és nem a hálózatot kíméli, hanem a mobilos e-ember
 számláját.** A D35 épp ezért nem optimalizálás: az 5 percenkénti csere egy 1000 fős
@@ -296,16 +296,43 @@ POSTALÁDA   (a kapu nyitva a 7575-es porton)
     összesen: 2 beszélgetés · 3 átvett · 3 továbbadott · 4.2 KB
 ```
 
-> ### ⚠️ EGY FELÍRT KORLÁT, amit a megépítés hozott elő
->
-> **A postaláda ma csak abban a koinóban postaláda, amelyikben ő maga is benne van.** A tár
-> koinónként külön mappa, és a csere a saját koinója eseményeit adja-veszi — egy idegen
-> koino forgalmát nem venné át.
->
-> Ez a **terjedés** szempontjából lesz kérdés: egy nagy koino tagja nem tudna postaláda
-> lenni egy kis családi koino számára, pedig épp az ilyen „erős" készülékek tudnának
-> segíteni. **Felírva, nem megépítve** — előbb a D. lépés (terjedő címjegyzék) mutassa meg,
-> mekkora a valódi hiány.
+### ⚠️ CSABA KÉRDÉSE, AMI EGY HIBÁT HOZOTT ELŐ (2026-08-29)
+
+*Az első feljegyzésem így szólt: „a postaláda csak abban a koinóban postaláda, amelyikben
+ő maga is benne van." Csaba rákérdezett: **„még akkor sem, ha a családinak is a tagja?"** —
+és a mérés kiderítette, hogy **rosszul fogalmaztam, és emellett egy valódi hiba is volt
+a kódban.***
+
+**A korlát nem a tagságról szól.** Az, hogy **egy `figyel` = egy koino**: a
+`KOINO_AZONOSITO` a folyamat indulásakor eldől. Aki két koinónak is tagja, két `figyel`-t
+futtat, két porton — nem elvi akadály, csak kényelmetlenség.
+
+**A hiba viszont valódi volt.** Megmérve, mi történt, ha egy MÁSIK koino készüléke szólt be:
+
+| | Előtte (mérve) | Utána (mérve) |
+|---|---|---|
+| a csere lefutása | **5 kör, 17,2 KB** | **1 kör, 191 bájt** |
+| Béla `nagy` mappája | `{nagy: 3, csaladi: 3}` | `{nagy: 3}` |
+| Cili `csaladi` mappája | `{csaladi: 3, nagy: 3}` | `{csaladi: 3}` |
+
+Két baj volt együtt: **(1)** az idegen koino eseményei bekerültek a mappába — az állapotot
+nem rontották el (a `koinoEsemenyei` szűr), de ott ültek, és egy hazug fél így korlátlanul
+tölthette volna a lemezt; **(2)** mivel az `ALLAS` mindig csak a saját koinóra készül, a
+két lenyomat **sosem konvergált** — a csere a kör-korlátig pörgött, ugyanazt küldve újra.
+
+**A javítás két rétegű, szándékosan:**
+
+1. a `LENYOMAT` üzenet megmondja, **melyik koinóról** beszélünk — eltérésnél a csere
+   azonnal, tisztán véget ér. Ez az **őszinte tévedést** fogja meg (két idegen koino
+   találkozása egy nyitott hálózaton teljesen rendes dolog);
+2. a **beolvasztás szűr** a koino szerint — ez a **hazugot** fogja meg, aki a mi koinónkat
+   mondja be, és mást küld. Az `esemenyMentese` szándékosan nem tud erről: ő az aláírást
+   és az azonosítót nézi, és jól teszi.
+
+⭐ **És amit ez megnyit:** mivel a protokoll mostantól **kimondja, melyik koinóról szól**,
+később egy `figyel` **több koinót is kiszolgálhat** — vagyis egy erős készülék tényleg
+tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a valódi tartalma.
+**Felírva, nem megépítve** — előbb a D. lépés mutassa meg, mekkora a valódi hiány.
 
 ---
 
@@ -362,7 +389,7 @@ Ezek nem kíváncsiságból kellenek — mindegyik **eldönt valamit**:
 | **összeér-e két készülék IPv6-on, STUN nélkül** | kell-e egyáltalán infrastruktúra | *(4. lépés)* — de a vonal `::1`-en már áll |
 | **hányszor NEM jön össze a közvetlen út** | kell-e **továbbító** — a P2P legdrágább része | *(4. lépés)* |
 | **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell | **162 bájt/fő** (50 fő, 3-3 esemény). 10 000 fős koinónál ~1,6 MB — **ez már szeletelést kíván**, felírva. ⚠️ A B. lépés óta ez csak akkor megy el, ha a tudás TÉNYLEG eltér. |
-| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek | ✅ **„nincs újdonság" csere: 158 bájt** oda-vissza, 50 e-embernél (a régi protokollban 16 158). Valódi hálózaton még mérendő (4. lépés). |
+| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek | ✅ **„nincs újdonság" csere: 190 bájt** oda-vissza, 50 e-embernél (a régi protokollban 16 158). Valódi hálózaton még mérendő (4. lépés). |
 
 ---
 

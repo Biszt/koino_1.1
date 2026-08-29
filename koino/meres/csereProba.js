@@ -499,6 +499,94 @@ proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-emberné
   return eredmeny.reszletesAllasok === 0 && osszes < 300 && osszes * 20 < allasBajt;
 });
 
+// ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====
+//
+// ⚠️ EZ EGY MEGMÉRT HIBÁRA ÍRÓDOTT. Csaba kérdése nyomán kipróbáltuk, mi történik, ha egy
+// MÁSIK koino készüléke szól be a portra. Kiderült:
+//
+//   · az eseményei BEKERÜLTEK a mappánkba (az állapotot nem rontották el, mert a
+//     `koinoEsemenyei` szűr — de ott ültek, és egy hazug fél így tölthetné a lemezünket),
+//   · és mivel az ÁLLÁS mindig csak a saját koinóra készül, a két lenyomat SOSEM
+//     konvergált: a csere a kör-korlátig pörgött, ugyanazt küldve újra. Mérve: 17,2 KB.
+//
+// A javítás két rétegű, szándékosan: a LENYOMAT megmondja, melyik koinóról beszélünk
+// (ez az ŐSZINTE tévedést fogja meg), a beolvasztás pedig szűr (ez a HAZUGOT).
+
+/** Külön tár egy MÁSIK koinónak — ugyanabban az eldobható mappa-rendszerben. */
+async function ujTarMasKoinonak(masKoino) {
+  const mappa = await mkdtemp(join(tmpdir(), 'koino-csere-'));
+  mappak.push(mappa);
+  return esemenyTarNyitasa(masKoino, mappa);
+}
+
+proba('⭐ MÁS KOINO: a csere azonnal véget ér, és nem keveredik semmi', async () => {
+  const MASIK = 'masik-koino';
+
+  const anna = await ujEember(KOINO);
+  const mienk = await ujTar(); await ment(mienk, await lanc(anna, 3));
+
+  const bela = await ujEember(MASIK);
+  const ove = await ujTarMasKoinonak(MASIK);
+  for (let i = 1; i <= 3; i++) {
+    await esemenyMentese(ove, await bela.tesz('TartalomLetrehozas', { cim: 'M' + i, meret: 10 }));
+  }
+
+  const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
+  let eredmeny;
+  try {
+    eredmeny = await csereVonalon(ove, MASIK, '127.0.0.1', figyelo.port);
+  } finally {
+    await figyelo.bezar();
+  }
+
+  return eredmeny.masKoino === KOINO            // felismerte, kivel beszélt
+    && eredmeny.korok === 1                     // EGY kör, nem öt
+    && eredmeny.uj === 0 && eredmeny.kuldott === 0
+    && eredmeny.reszletesAllasok === 0          // a részletes állás el sem indult
+    && (await koinoEsemenyei(mienk, KOINO)).length === 3        // a mi tárunk érintetlen
+    && (await koinoEsemenyei(ove, MASIK)).length === 3;         // az övé is
+});
+
+proba('⭐ A MAPPA is tiszta marad — nem csak a számított állapot', async () => {
+  // ⚠️ A korábbi viselkedésnél épp ez volt a baj: az állapot rendben volt, de a fájlban
+  // ott ültek az idegen események. Ezért a NYERS fájlt nézzük, nem a szűrt listát.
+  const MASIK = 'masik-koino';
+
+  const anna = await ujEember(KOINO);
+  const mienk = await ujTar(); await ment(mienk, await lanc(anna, 2));
+
+  const bela = await ujEember(MASIK);
+  const ove = await ujTarMasKoinonak(MASIK);
+  await esemenyMentese(ove, await bela.tesz('TartalomLetrehozas', { cim: 'M', meret: 10 }));
+
+  const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    await csereVonalon(ove, MASIK, '127.0.0.1', figyelo.port);
+  } finally {
+    await figyelo.bezar();
+  }
+
+  const nyers = await mienk.betolt();                       // a tár SZŰRETLEN tartalma
+  return nyers.length === 2 && nyers.every((e) => e.koino === KOINO);
+});
+
+proba('⭐ A HAZUG fél ellen is véd: idegen koino eseményét a beolvasztás kiszűri', async () => {
+  // A protokoll eleji egyeztetés az ŐSZINTE tévedést fogja meg — de aki HAZUDIK
+  // (a mi koinónkat mondja, és mást küld), azt csak ez a réteg állítja meg.
+  const tar = await ujTar();
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember('idegen-koino');
+
+  const mienk = await anna.tesz('TartalomLetrehozas', { cim: 'Miénk', meret: 10 });
+  const ideg = await bela.tesz('TartalomLetrehozas', { cim: 'Idegen', meret: 10 });
+
+  const eredmeny = await beolvasztas(tar, [mienk, ideg], KOINO);
+  const nyers = await tar.betolt();
+
+  return eredmeny.uj === 1 && eredmeny.idegen === 1
+    && nyers.length === 1 && nyers[0].adat.cim === 'Miénk';
+});
+
 export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }

@@ -73,7 +73,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Kilenc próba-fájl, **157 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **160 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |
@@ -126,7 +126,7 @@ eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 | **1b** a vonal (TCP) | ✅ kész |
 | **2** a vizsga: két készülék → azonos állapot | ✅ kész |
 | **A** több társ: a `csere` társ-listára menjen, ne egy címre | ✅ kész — **25 önpróba**, és két halott címmel is átment a valódi csere |
-| **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **158 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
+| **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **190 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
 | **C** postaláda-szerep kimondása (D34) | ✅ kész — **Anna és Béla soha nem beszélt, mégis mindent tud** |
 | **D** terjedő címjegyzék: a társ-lista bővüljön magától | 🚧 következik |
 
