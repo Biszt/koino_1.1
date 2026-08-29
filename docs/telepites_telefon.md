@@ -197,7 +197,7 @@ hol tárolja.
 ## 9. lépés — ⭐⭐ a telefon vizsgája (ez a legértékesebb mérés az egészben)
 
 Most kiderül, hogy a koino nemcsak **elindul** a telefonon, hanem **ugyanazt is számolja**,
-mint a laptop. Ez 171 önellenőrzés.
+mint a laptop. Ez 174 önellenőrzés.
 
 > **Miért ez a legfontosabb, és miért nem a hálózat?**
 >
@@ -220,7 +220,7 @@ cd ~/koino_1.1 && node koino/meres/mind.js
 ✅ **Ha sikerült:** a legalsó sor ez lesz:
 
 ```
-✅ Mind a 171 próba rendben
+✅ Mind a 174 próba rendben
 ```
 
 *(A szám nő, ahogy új próbák születnek — a lényeg, hogy a sor **✅**-tel kezdődjön, és ne

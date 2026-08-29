@@ -61,6 +61,7 @@ import { figyeloIndulasa, csereVonalon, parbeszed } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
+import { csereUdpResen } from './js/csere/udpVonal.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -875,6 +876,7 @@ try {
 
       const eredmeny = await pajzsfuras(helyiPort, cim, port, {
         idokorlat: 0,                 // 0 = vég nélkül
+        tartsdNyitva: true,           // siker után a résen AZONNAL cserélünk
         utana: (e) => {
           // ⚠️ MŰSZER A NÉMA NEM-ESEMÉNYRE. Az első változat CSAK a sikeres kopogást írta
           // ki — ezért amikor a telefonon a küldés elbukott, a képernyő egyszerűen ÜRES
@@ -912,7 +914,26 @@ try {
         kiir(SZIN.jo + '⭐ A PAJZS ÁTFÚRVA — mindkét irány működik.' + SZIN.vege);
         kiir(SZIN.halvany + '  ' + eredmeny.kuldott + ' kopogás, ' + eredmeny.kapott
           + ' válasz, ' + eredmeny.eltelt + ' ms alatt' + SZIN.vege);
-        kiir(SZIN.halvany + '  Most már a csere is átmehetne ezen az úton.' + SZIN.vege);
+
+        // ⭐ ÉS ITT A JUTALOM: a megnyílt résen AZONNAL megy a csere. Ugyanaz a
+        // `parbeszed` fut, mint TCP-n — csak a szállítás más (1. szabály).
+        const tarolo = tarsakTarolo();
+        kiir();
+        kiir(SZIN.vastag + 'CSERE A RÉSEN' + SZIN.vege);
+        const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO,
+          { hirdetettCimek: await hirdetendoCimek(tarolo) });
+        eredmeny.halo.close();
+
+        kiir(SZIN.jo + '  ✓ kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott
+          + SZIN.vege + SZIN.halvany + ' (' + csere.korok + ' kör, '
+          + adatMennyiseg({ bajtKuldott: csere.bajtKuldott, bajtKapott: csere.bajtKapott })
+          + ')' + SZIN.vege);
+        const tanult = await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
+        if (tanult) kiir(SZIN.jo + '  + ' + tanult + ' új társ-címet tanultam' + SZIN.vege);
+        if (csere.kivulrolIgyLatszom) {
+          kiir(SZIN.halvany + '  Kívülről így látszol: ' + csere.kivulrolIgyLatszom.cim
+            + ':' + csere.kivulrolIgyLatszom.port + SZIN.vege);
+        }
       } else if (eredmeny.sikerult) {
         // ⚠️ FÉL SIKER: az ő csomagjai átjönnek, a mieink nem. Ez is mérés, nem hiba.
         kiir(SZIN.nem + '⚠ FÉL SIKER: az ő kopogása átjött, a miénk nem.' + SZIN.vege);

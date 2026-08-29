@@ -21,6 +21,7 @@ import {
 import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
+import { csereUdpResen } from '../js/csere/udpVonal.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -789,6 +790,105 @@ proba('⭐ Ha NINCS ott senki, nem dob hibát — csak sikertelen lesz', async (
   const eredmeny = await pajzsfuras(7393, '::1', 7394, { idokorlat: 700, koz: 100 });
   return eredmeny.sikerult === false && eredmeny.mindketIrany === false
     && eredmeny.kuldott > 0 && eredmeny.kapott === 0;
+});
+
+// ===== A UDP-VONAL: a csere az ÁTFÚRT RÉSEN =====
+//
+// ⭐ MIÉRT KELL? A pajzsfúrás UDP-vel nyitja a rést, és a router a TCP-t meg az UDP-t
+// KÜLÖN tartja számon — az átfúrt lyukon csak UDP fér át. E nélkül a fúrás szép mérés
+// maradna, de esemény nem menne rajta.
+//
+// ⭐ ÉS AMIT BIZONYÍTANI KELL: hogy a PROTOKOLL VÁLTOZATLAN. Ugyanaz a `parbeszed` fut,
+// csak más alatta a szállítás — ez az 1. szabály gyakorlati haszna.
+
+/** Két UDP-foglalat, egymásnak címezve — ez játssza az „átfúrt rést". */
+async function udpParos(vesztesegAranya = 0) {
+  const { createSocket } = await import('node:dgram');
+  const egyik = createSocket({ type: 'udp4', reuseAddr: true });
+  const masik = createSocket({ type: 'udp4', reuseAddr: true });
+  await new Promise((t) => egyik.bind(0, '127.0.0.1', t));
+  await new Promise((t) => masik.bind(0, '127.0.0.1', t));
+
+  // ⚠️ CSOMAGVESZTÉS-UTÁNZAT: az UDP-nél ez a valóság, nem kivétel. Ha a próba csak
+  // tökéletes hálózaton menne át, semmit nem bizonyítana.
+  if (vesztesegAranya > 0) {
+    for (const halo of [egyik, masik]) {
+      const eredeti = halo.send.bind(halo);
+      halo.send = (...ervek) => {
+        if (Math.random() < vesztesegAranya) {
+          const visszahivas = ervek.find((e) => typeof e === 'function');
+          if (visszahivas) visszahivas(null);
+          return;                                  // a csomag „elveszett"
+        }
+        return eredeti(...ervek);
+      };
+    }
+  }
+
+  return {
+    egyik, masik,
+    egyikPort: egyik.address().port,
+    masikPort: masik.address().port,
+    bezar: () => { egyik.close(); masik.close(); }
+  };
+}
+
+proba('⭐⭐ A CSERE ÁTMEGY A UDP-RÉSEN — ugyanaz a protokoll, más szállítás', async () => {
+  const anna = await ujEember(KOINO);
+  const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 3));
+  const masikTar = await ujTar();
+
+  const p = await udpParos();
+  try {
+    const [a, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO)
+    ]);
+    return a.kuldott === 3 && b.uj === 3
+      && (await koinoEsemenyei(masikTar, KOINO)).length === 3
+      && await allasokEgyeznek(egyikTar, masikTar, KOINO);
+  } finally {
+    p.bezar();
+  }
+});
+
+proba('⭐⭐ CSOMAGVESZTÉS MELLETT IS ÁTMEGY (30% elveszik) — újraküldés + sorrend', async () => {
+  // ⚠️ EZ A LÉNYEG. A TCP-től ingyen kaptuk a megérkezést és a sorrendet; UDP-n nekünk
+  // kell pótolni. Ha ez a próba nem lenne, az első valódi csomagvesztésnél derülne ki,
+  // hogy a csere némán félbemarad.
+  const anna = await ujEember(KOINO);
+  const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 4));
+  const masikTar = await ujTar();
+
+  const p = await udpParos(0.3);
+  try {
+    const [, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO)
+    ]);
+    return b.uj === 4 && await allasokEgyeznek(egyikTar, masikTar, KOINO);
+  } finally {
+    p.bezar();
+  }
+});
+
+proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
+  const anna = await ujEember(KOINO);
+  const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 1));
+  const masikTar = await ujTar();
+
+  const p = await udpParos();
+  try {
+    const [a] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO,
+        { hirdetettCimek: [{ hoszt: '2001:db8::f', port: 7373 }] })
+    ]);
+    return a.kivulrolIgyLatszom?.port === p.egyikPort
+      && a.kapottCimek.length === 1 && a.kapottCimek[0].hoszt === '2001:db8::f';
+  } finally {
+    p.bezar();
+  }
 });
 
 export async function takaritas() {

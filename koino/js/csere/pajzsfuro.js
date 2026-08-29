@@ -272,8 +272,12 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
     const befejez = (sikerult) => {
       if (idozito) clearInterval(idozito);
       if (hatarido) clearTimeout(hatarido);
-      halo.close();
+      // ⭐ SIKER UTÁN NYITVA HAGYHATÓ a foglalat — mert épp az a rés, amit átfúrtunk.
+      // Ha most becsuknánk, a következő megnyitás ÚJ külső portot kaphatna, és kezdhetnénk
+      // elölről. A csere ezen a foglalaton megy tovább (udpVonal.js).
+      if (!(sikerult && beallitas.tartsdNyitva)) halo.close();
       const eredmeny = {
+        halo: sikerult && beallitas.tartsdNyitva ? halo : null,
         sikerult, mindketIrany, kuldott, kapott, honnan, sajatVisszhang, bukott,
         eltelt: Date.now() - kezdet
       };
