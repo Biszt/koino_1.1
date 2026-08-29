@@ -121,14 +121,24 @@ Nem kell hozzá semmi új: az aktív tudatpont-tulajdonosok listája adja a rés
 nevezőjét, a szavazatok pedig az eseményekből jönnek — a kettő különbsége a keresett
 halmaz. Determinisztikus (D17), új esemény-típus nélkül. **Megépíthető bármikor.**
 
-**2. ⭐⭐ „Ha a hiányzó szavazatok nem tudják befolyásolni az eredményt, lezárható."**
-*Csaba ötlete, és a legerősebb.* Ez **a várakozást bizonyítássá alakítja**: ma a döntés
-akkor zárul, amikor lejár egy óra; ezzel akkor zárulna, amikor **matematikailag már
-eldőlt** — akárhogy szavaznának a hiányzók. Ugyanaz az egész-aritmetika, amit már
-használunk (kereszt-szorzás). *A bizonyossági mutató szigorú változata.*
-⚠️ A fordítottja (halasztás, amíg el nem dől) csak **korláttal** épülhet meg — különben
-egyetlen hallgató ember örökre megállíthatna bármit. A maximum döntési idő (D4) ezt már
-lefedi.
+**2. ⭐⭐ A HATÁRIDŐKOR: lezárható-e tisztességesen?** *(Csaba ötlete, és a legerősebb.)*
+
+⚠️ **A határidő NEM rövidül ettől** — ez nem gyorsítás. *(Egy korábbi jegyzet tévesen
+korai lezárásként írta le; Csaba helyreigazította.)* A szabály **csak a döntési idő
+lejártakor** lép működésbe, és csak akkor, ha vannak **régóta néma aktív tulajdonosok**:
+
+| A határidőkor | Mi történik |
+|---|---|
+| mindenki szavazott, vagy a nem szavazókról tudjuk, hogy elérhetőek voltak | **lezárul**, ahogy ma |
+| vannak néma aktív tulajdonosok, **de a szavazatuk nem fordíthatná meg** az eredményt | **lezárul** — az eredmény biztos, akárhogy szavaztak volna |
+| vannak néma aktív tulajdonosok, **és a szavazatuk megfordíthatná** | ⚠️ **nem zárható le tisztességesen** → halasztás vagy jelzés |
+
+**Amit véd:** hogy ne mondjunk ki eredményt olyanok feje fölött, akik nem *nem akartak*
+szavazni, hanem **nem tudtak** — mert nem találtak postaládát. A számítás ugyanaz az
+egész-aritmetika, amit már használunk (legrosszabb és legjobb eset, kereszt-szorzással).
+
+⚠️ A halasztás csak **korláttal** épülhet meg — különben egyetlen hallgató ember örökre
+megállíthatna bármit. A maximum döntési idő (D4) ezt már lefedi.
 
 **3. 🆕 A „nem tudunk róla" halmaz szűkítése az események `ido` mezője alapján.**
 Aki nem szavazott, de a javaslat óta **más eseményt tett**, arról tudjuk, hogy aktív volt.
