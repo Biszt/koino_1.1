@@ -19,7 +19,7 @@ import {
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
 import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
-import { talalkozo } from '../js/csere/talalkozo.js';
+import { pajzsfuras } from '../js/csere/pajzsfuro.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -588,17 +588,17 @@ proba('⭐ A HAZUG fél ellen is véd: idegen koino eseményét a beolvasztás k
     && nyers.length === 1 && nyers[0].adat.cim === 'Miénk';
 });
 
-// ===== A TALÁLKOZÓ (lyukfúrás, E. lépés) =====
+// ===== A PAJZSFÚRÓ (E. lépés) =====
 //
-// ⚠️ Ez SZÁLLÍTÁS, nem protokoll — a `talalkozo.js` semmit nem tud a koinóról. Itt csak
+// ⚠️ Ez SZÁLLÍTÁS, nem protokoll — a `pajzsfuro.js` semmit nem tud a koinóról. Itt csak
 // azt mérjük, hogy a kopogás működik-e: két példány egymásra talál-e, és megkülönbözteti-e
 // a fél sikert (csak az egyik irány) a teljestől.
 
-proba('⭐ A TALÁLKOZÓ: két fél egymásra talál, és MINDKÉT irányt igazolja', async () => {
+proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazolja', async () => {
   const A = 7391, B = 7392;
   const [egyik, masik] = await Promise.all([
-    talalkozo(A, '::1', B, { idokorlat: 3000, koz: 100 }),
-    talalkozo(B, '::1', A, { idokorlat: 3000, koz: 100 })
+    pajzsfuras(A, '::1', B, { idokorlat: 3000, koz: 100 }),
+    pajzsfuras(B, '::1', A, { idokorlat: 3000, koz: 100 })
   ]);
   // A `mindketIrany` a lényeg: nem elég, hogy kaptunk valamit — az kell, hogy a MI
   // csomagunk is átjutott, mert a lyukfúrás csak így ér valamit.
@@ -610,7 +610,7 @@ proba('⭐ A TALÁLKOZÓ: két fél egymásra talál, és MINDKÉT irányt igazo
 proba('⭐⭐ RONTÁS-PRÓBA: a SAJÁT visszhang NEM siker (a mérés nem vak)', async () => {
   // ⚠️ Az első változat ezen elbukott: aki a saját címére kopogott, „teljes sikert"
   // kapott — pedig senkivel nem beszélt. Élesben ez hamis eredményt adott volna.
-  const eredmeny = await talalkozo(7397, '::1', 7397, { idokorlat: 700, koz: 100 });
+  const eredmeny = await pajzsfuras(7397, '::1', 7397, { idokorlat: 700, koz: 100 });
   return eredmeny.sikerult === false && eredmeny.mindketIrany === false
     && eredmeny.kapott === 0 && eredmeny.sajatVisszhang > 0;
 });
@@ -618,7 +618,7 @@ proba('⭐⭐ RONTÁS-PRÓBA: a SAJÁT visszhang NEM siker (a mérés nem vak)',
 proba('⭐ Ha NINCS ott senki, nem dob hibát — csak sikertelen lesz', async () => {
   // Ez a valódi eset a szomszédnál: kopogunk, és nem jön válasz. A koino ettől még
   // működik tovább (2. szabály), csak nem talált társat.
-  const eredmeny = await talalkozo(7393, '::1', 7394, { idokorlat: 700, koz: 100 });
+  const eredmeny = await pajzsfuras(7393, '::1', 7394, { idokorlat: 700, koz: 100 });
   return eredmeny.sikerult === false && eredmeny.mindketIrany === false
     && eredmeny.kuldott > 0 && eredmeny.kapott === 0;
 });

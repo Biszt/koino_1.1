@@ -59,7 +59,7 @@ import {
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
-import { talalkozo } from './js/csere/talalkozo.js';
+import { pajzsfuras } from './js/csere/pajzsfuro.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -635,26 +635,35 @@ try {
       // ide nem jutunk el; a figyelőt a folyamat vége zárja
     }
 
-    case 'talalkozo': {
-      // ===== LYUKFÚRÁS (E. lépés) =====
+    case 'pajzsfuro': {
+      // ===== PAJZSFÚRÁS (E. lépés) =====
       //
-      // ⭐ MIT MÉR? Azt, hogy két készülék össze tud-e érni ÚGY, hogy egyik routerén sem
-      // állítottunk be semmit. Mindkét félnek ugyanezt kell futtatnia, egymás címére —
-      // a kopogás ismétlődik, tehát nem kell egyszerre indítani.
+      // ⭐ A NÉV CSABÁTÓL: nem kívülről törünk át semmit, hanem MINDKÉT OLDAL BELÜLRŐL
+      // fúr — a saját routerén nyit rést, kifelé indulva —, és a két rés a közepén
+      // találkozik. Ezért pajzsfúró, nem „lyukfúró".
+      //
+      // ⚠️ VÉG NÉLKÜL FÚR (2026-08-29, Csaba észrevétele nyomán). Az első változat 60
+      // másodperc után feladta — de a két oldal nem indul egyszerre, és eddig SOHA nem
+      // futott mindkettőn egyszerre. Ha viszont mindkettő folyamatosan fúr, az átfedés
+      // előbb-utóbb garantált, közös óra nélkül is. Leállítani Ctrl+C-vel lehet.
       const cim = ervek[0];
-      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js talalkozo <cím> [port]');
+      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js pajzsfuro <cím> [port]');
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
 
-      kiir(SZIN.vastag + 'TALÁLKOZÓ' + SZIN.vege + SZIN.halvany
-        + '   (kopogás a ' + port + '-es portról a ' + port + '-esre)' + SZIN.vege);
+      kiir(SZIN.vastag + 'PAJZSFÚRÓ' + SZIN.vege + SZIN.halvany
+        + '   (a ' + port + '-es portról a ' + port + '-esre, másodpercenként)' + SZIN.vege);
       kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
         + SZIN.vege);
+      kiir(SZIN.halvany + 'Vég nélkül fúr, amíg össze nem ér. Kilépés: Ctrl+C' + SZIN.vege);
       kiir();
 
-      const eredmeny = await talalkozo(port, cim, port, {
+      const eredmeny = await pajzsfuras(port, cim, port, {
+        idokorlat: 0,                 // 0 = vég nélkül
         utana: (e) => {
-          if (e.mi === 'KOPOGTAM' && e.hanyadik % 5 === 1) {
-            kiir(SZIN.halvany + '  … kopogtam (' + e.hanyadik + '.)' + SZIN.vege);
+          // 15 másodpercenként egy sor — hogy látszódjon, hogy él, de ne árassza el.
+          if (e.mi === 'KOPOGTAM' && e.hanyadik % 15 === 1) {
+            kiir(SZIN.halvany + '  ' + ora() + ' … fúrok (' + e.hanyadik + '. kopogás)'
+              + SZIN.vege);
           }
           if (e.mi === 'KOPOG-ERKEZETT') {
             kiir(SZIN.jo + '  ← MEGJÖTT AZ Ő KOPOGÁSA (' + e.honnan + ')' + SZIN.vege);
@@ -667,7 +676,7 @@ try {
 
       kiir();
       if (eredmeny.mindketIrany) {
-        kiir(SZIN.jo + '⭐ A LYUK MEGNYÍLT — mindkét irány működik.' + SZIN.vege);
+        kiir(SZIN.jo + '⭐ A PAJZS ÁTFÚRVA — mindkét irány működik.' + SZIN.vege);
         kiir(SZIN.halvany + '  ' + eredmeny.kuldott + ' kopogás, ' + eredmeny.kapott
           + ' válasz, ' + eredmeny.eltelt + ' ms alatt' + SZIN.vege);
         kiir(SZIN.halvany + '  Most már a csere is átmehetne ezen az úton.' + SZIN.vege);
@@ -775,7 +784,7 @@ try {
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
-      kiir('           talalkozo <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           pajzsfuro <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }

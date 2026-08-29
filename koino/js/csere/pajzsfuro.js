@@ -1,7 +1,12 @@
-// koino/js/csere/talalkozo.js
+// koino/js/csere/pajzsfuro.js
 
-// Felelősség: LYUKFÚRÁS — két készülék úgy ér össze, hogy EGYIK ROUTERÉN SEM kell
+// Felelősség: PAJZSFÚRÁS — két készülék úgy ér össze, hogy EGYIK ROUTERÉN SEM kell
 // beállítani semmit.
+//
+// ⭐ A NÉV CSABÁTÓL VAN (2026-08-29): a szakirodalom „lyukfúrásnak" hívja, de ez félrevezet,
+// mert kívülről semmit nem törünk át. **BELÜLRŐL fúrunk**, mint a pajzsfúró gép: mindkét
+// oldal a saját routerén nyit rést, kifelé indulva — és a két rés találkozik a közepén.
+// Ezért a koinóban ez PAJZSFÚRÁS.
 //
 // ⭐ MIÉRT KELL? (mérve 2026-08-29, Csaba laptopja + telefonja két hálózaton)
 // Mindkét router zárja a BEFELÉ jövő kapcsolatot — a laptopé a port-továbbítási szabály
@@ -25,7 +30,7 @@
 //
 // ⭐ MIÉRT UDP, ÉS NEM TCP? Mert egyetlen UDP-foglalat egyszerre tud küldeni és fogadni
 // ugyanazon a porton. A TCP-nél a „figyelés" és a „hívás" két külön dolog, és ugyanazt a
-// portot nem lehet egyszerre mindkettőre használni — épp ezért használ minden lyukfúró
+// portot nem lehet egyszerre mindkettőre használni — épp ezért használ minden pajzsfúró
 // rendszer UDP-t. A koino cseréje ettől még TCP marad: ez a fájl csak a TALÁLKOZÁST méri.
 //
 // ⭐ ÉS AMI IPv6-ON EGYSZERŰBB: a NAT-os IPv4-nél a router a portot is ÁTÍRJA, ezért kell
@@ -41,7 +46,7 @@
 import { createSocket } from 'node:dgram';
 
 const KOPOGAS_KOZ = 1000;      // ennyi ezredmásodpercenként kopogunk
-const IDOKORLAT = 60000;       // eddig próbálkozunk, aztán feladjuk
+const IDOKORLAT = 60000;       // eddig próbálkozunk (0 = vég nélkül, amíg le nem állítják)
 
 // ===================================
 // A KÉT ÜZENET
@@ -63,7 +68,7 @@ const IDOKORLAT = 60000;       // eddig próbálkozunk, aztán feladjuk
  * Mindkét készüléken UGYANEZT kell futtatni, egymás címére. Nem baj, ha nem pontosan
  * egyszerre indulnak: a kopogás ismétlődik, tehát előbb-utóbb egybeesnek. ⚠️ Épp ezért
  * NEM kell hozzá közös óra — csak ütem. (Ez a különbség az „átfedés" és a „randevú"
- * között; a lyukfúrásnak az előbbi is elég, ha elég sűrűn próbálkozunk.)
+ * között; a pajzsfúrásnak az előbbi is elég, ha elég sűrűn próbálkozunk.)
  *
  * @param {number} sajatPort - a RÖGZÍTETT helyi port (ugyanaz, amire a másik kopog)
  * @param {string} tarsCim - a másik globális IPv6-címe
@@ -74,7 +79,7 @@ const IDOKORLAT = 60000;       // eddig próbálkozunk, aztán feladjuk
  * @param {Function} [beallitas.utana] - minden eseménynél meghívjuk (kiíráshoz)
  * @returns {Promise<{sikerult: boolean, mindketIrany: boolean, kuldott: number, kapott: number, honnan: string|null, eltelt: number}>}
  */
-export async function talalkozo(sajatPort, tarsCim, tarsPort, beallitas = {}) {
+export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
   console.log('talalkozo - KEZDÉS', { sajatPort, tarsCim, tarsPort });
 
   const idokorlat = beallitas.idokorlat ?? IDOKORLAT;
@@ -168,11 +173,19 @@ export async function talalkozo(sajatPort, tarsCim, tarsPort, beallitas = {}) {
 
       kopog();
       idozito = setInterval(kopog, koz);
-      hatarido = setTimeout(() => {
-        // ⚠️ Ha kaptunk KOPOG-ot, de HALLAK-ot nem, az FÉL siker: az ő csomagjai
-        // átjönnek, a mieink nem. Ez is értékes mérés, ezért külön jelezzük.
-        befejez(kapott > 0);
-      }, idokorlat);
+
+      // ⭐ IDŐKORLÁT 0 = VÉG NÉLKÜL FÚRUNK.
+      // Csaba észrevétele nyomán: a két oldal nem biztos, hogy egyszerre indul, és a
+      // rések néhány perc alatt bezáródnak. Ha viszont mindkettő FOLYAMATOSAN fúr, akkor
+      // az átfedés előbb-utóbb garantált — közös óra nélkül is. (Ez a különbség az
+      // „átfedés" és a „randevú" között: elég ütem, nem kell megbeszélt időpont.)
+      if (idokorlat > 0) {
+        hatarido = setTimeout(() => {
+          // ⚠️ Ha kaptunk KOPOG-ot, de HALLAK-ot nem, az FÉL siker: az ő csomagjai
+          // átjönnek, a mieink nem. Ez is értékes mérés, ezért külön jelezzük.
+          befejez(kapott > 0);
+        }, idokorlat);
+      }
     });
   });
 }
