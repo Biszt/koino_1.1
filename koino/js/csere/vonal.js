@@ -51,6 +51,12 @@ const SOR_KORLAT = 8 * 1024 * 1024;
 // járna, azt HIBAKÉNT akarjuk látni, nem végtelen ciklusként.
 const KOR_KORLAT = 5;
 
+// Egy beszélgetésben legfeljebb ennyi címet hirdetünk/fogadunk el. Nem szigor, hanem
+// olcsóság: a címjegyzék MINDEN cserén utazik, tehát a mérete a napi forgalomban jelenik
+// meg (D35). Tíz cím bőven elég ahhoz, hogy a gráf összefüggő maradjon (D33: ~14 kapcsolat
+// fejenként még egymillió főnél is).
+const CIM_KORLAT = 10;
+
 // ===================================
 // AZ ÜZENET-SOR — a bejövő sorok kiolvasása
 // ===================================
@@ -139,7 +145,9 @@ function uzenetSor(kapcsolat) {
  * @param {number} [korlat]
  * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
  */
-export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
+export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
+  const korlat = beallitas.korlat ?? KOR_KORLAT;
+  const hirdetettCimek = beallitas.hirdetettCimek ?? [];
   console.log('parbeszed - KEZDÉS', { koino });
 
   const sor = uzenetSor(kapcsolat);
@@ -155,7 +163,7 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
   };
 
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
-  let kivulrolIgyLatszom = null;
+  let kivulrolIgyLatszom = null, kapottCimek = [];
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -202,6 +210,27 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
       });
       masKoino = oveLenyomat.koino ?? '(ismeretlen)';
       break;
+    }
+
+    // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) -----
+    //
+    // ⭐ MIÉRT ITT, ÉS MIÉRT MINDIG? Csaba felismerése: a tükör és a terjedő címjegyzék
+    // UGYANAZ A DOLOG — a saját külső címed is csak egy cím, ami a közösségben terjed.
+    // Ezért a címcsere a lenyomat-egyezés ELŐTT megy: még egy „nincs újdonság" beszélgetés
+    // is terjessze a címeket, különben a hálózat nem tudna magától bővülni.
+    //
+    // ⚠️ EZEK NEM ESEMÉNYEK, ÉS SOHA NEM IS LESZNEK AZOK. A cím nem igazság, hanem
+    // múlandó körülmény: két hét múlva már másé. Egy aláírt esemény örökre megmaradna —
+    // ezért a címek csak a vonalon utaznak, és a hívó dönti el, mit kezd velük.
+    // Bizalom nem jár velük (3. szabály): ha valaki hazudik, legfeljebb nem jön össze
+    // egy kapcsolat.
+    if (kor === 1) {
+      kuld({ uzenet: 'CIMEK', cimek: hirdetettCimek.slice(0, CIM_KORLAT) });
+      const ove = await varj('CIMEK');
+      kapottCimek = (Array.isArray(ove.cimek) ? ove.cimek : [])
+        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
+          && c.port > 0 && c.port < 65536)
+        .slice(0, CIM_KORLAT);
     }
 
     if (oveLenyomat.lenyomat === sajatLenyomat) {
@@ -253,9 +282,12 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
   }
 
   console.log('parbeszed - VÉGE', {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom,
+    kapottCimek: kapottCimek.length
   });
-  return { korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom };
+  return {
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek
+  };
 }
 
 // ===================================
@@ -279,12 +311,12 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
  * @returns {Promise<{port: number, bezar: Function}>}
  */
 export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
-  const { hoszt = '::', utana } = beallitas;
+  const { hoszt = '::', utana, hirdetettCimek = [] } = beallitas;
   console.log('figyeloIndulasa - KEZDÉS', { koino, port, hoszt });
 
   const kiszolgalo = createServer((kapcsolat) => {
     const honnan = kapcsolat.remoteAddress;
-    parbeszed(kapcsolat, tar, koino)
+    parbeszed(kapcsolat, tar, koino, { hirdetettCimek })
       .then((eredmeny) => utana?.({
         ...eredmeny, honnan,
         bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead
@@ -324,7 +356,7 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
  * @param {number} [varakozasiIdo] - ennyi ezredmásodperc után feladjuk
  * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
  */
-export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000) {
+export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000, hirdetettCimek = []) {
   console.log('csereVonalon - KEZDÉS', { cim, port });
 
   // family: 0 → a rendszer maga válasszon IPv4 és IPv6 között. A Szakasz 2 mérése miatt
@@ -340,7 +372,7 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000)
   });
 
   try {
-    const eredmeny = await parbeszed(kapcsolat, tar, koino);
+    const eredmeny = await parbeszed(kapcsolat, tar, koino, { hirdetettCimek });
 
     // ⭐ MENNYI ADAT MENT EL? (D35) Ez nem kíváncsiság: a csere ára befogadási kérdés —
     // egy mobilos e-embernek a számláján jelenik meg. Ami nem mérhető, azt nem lehet

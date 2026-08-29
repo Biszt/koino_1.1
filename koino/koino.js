@@ -176,6 +176,26 @@ async function sajatGlobalisCimek() {
   return cimek;
 }
 
+// ⭐ A TERJEDŐ CÍMJEGYZÉK (D36–D38). Amit hirdetünk: a saját társaink címei. Ettől a
+// hálózat MAGÁTÓL bővül — nem kell tudnod senki címét ahhoz, hogy a koinód megtalálja a
+// közösséget. ⚠️ Ezek NEM események: a cím múlandó körülmény, nem igazság.
+async function hirdetendoCimek(tarolo) {
+  const lista = await tarolo.olvas();
+  return tarsakSorrendje(lista).map((t) => ({ hoszt: t.hoszt, port: t.port }));
+}
+
+/** A cserén kapott címeket felvesszük a listánkra — de sosem írjuk felül a sajátunkat. */
+async function kapottCimekBeolvasztasa(tarolo, kapott) {
+  if (!kapott?.length) return 0;
+  let lista = await tarolo.olvas();
+  const elotte = lista.length;
+  for (const c of kapott) {
+    try { lista = tarsHozzaadasa(lista, { hoszt: c.hoszt, port: c.port }); } catch { /* rossz cím: kihagyjuk */ }
+  }
+  if (lista.length !== elotte) await tarolo.ir(lista);
+  return lista.length - elotte;
+}
+
 const adatMennyiseg = (eredmeny) => {
   const bajt = (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
   return bajt < 1024 ? bajt + ' bájt' : (bajt / 1024).toFixed(1) + ' KB';
@@ -515,7 +535,12 @@ try {
       const port = parseInt(ervek[0], 10) || ALAP_PORT;
       let beszelgetesek = 0, atvett = 0, tovabbadott = 0, forgalom = 0;
 
+      // A postaláda a saját társait is hirdeti — így a hozzá bekopogók megtudják, kik
+      // vannak még a közösségben (D36–D38). Ettől bővül a háló magától.
+      const cimTarolo = tarsakTarolo();
+
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        hirdetettCimek: await hirdetendoCimek(cimTarolo),
         utana: (eredmeny) => {
           if (eredmeny.hiba) {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
@@ -634,6 +659,7 @@ try {
       const tarolo = tarsakTarolo();
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        hirdetettCimek: await hirdetendoCimek(tarolo),
         utana: (e) => {
           if (e.hiba) return;
           if (e.masKoino) return;
@@ -658,8 +684,20 @@ try {
           kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
             + SZIN.vege);
         } else {
-          const kor = await korbeCsere(lista, (t) => csereVonalon(tar, KOINO, t.hoszt, t.port));
+          const hirdetjuk = await hirdetendoCimek(tarolo);
+          const kor = await korbeCsere(lista,
+            (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk));
           await tarolo.ir(kor.lista);
+
+          // ⭐ AMIT A TÁRSAKTÓL HALLOTTUNK: új címek a listára. Ettől bővül magától.
+          const ujCimek = kor.eredmenyek
+            .filter((e) => e.sikerult)
+            .flatMap((e) => e.kapottCimek ?? []);
+          const hozzajott = await kapottCimekBeolvasztasa(tarolo, ujCimek);
+          if (hozzajott) {
+            kiir(SZIN.jo + '  + ' + ora() + ' ' + hozzajott
+              + ' új társ-cím a többiektől' + SZIN.vege);
+          }
 
           const jel = kor.sikeres ? SZIN.jo + '  ✓ ' : SZIN.halvany + '  · ';
           kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
@@ -855,7 +893,8 @@ try {
       if (ervek[0]) {
         const cim = ervek[0];
         const port = parseInt(ervek[1], 10) || ALAP_PORT;
-        const eredmeny = await csereVonalon(tar, KOINO, cim, port);
+        const eredmeny = await csereVonalon(tar, KOINO, cim, port, 10000,
+          await hirdetendoCimek(tarolo));
 
         // ⚠️ MÁSIK KOINO: ez NEM hiba, csak nincs miről beszélni. Ki kell mondani, mert
         // különben a „kaptam 0, küldtem 0" úgy néz ki, mintha minden rendben lenne.
@@ -883,6 +922,10 @@ try {
         if (!volt) kiir(SZIN.halvany + 'Felvettem a társak közé (levenni: tars torol '
           + cim + ' ' + port + ')' + SZIN.vege);
 
+        const tanult = await kapottCimekBeolvasztasa(tarolo, eredmeny.kapottCimek);
+        if (tanult) kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam tőle'
+          + SZIN.vege);
+
         kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
         break;
       }
@@ -897,7 +940,9 @@ try {
 
       kiir(SZIN.vastag + 'CSERE ' + lista.length + ' társsal' + SZIN.vege);
 
-      const kor = await korbeCsere(lista, (t) => csereVonalon(tar, KOINO, t.hoszt, t.port), {
+      const hirdetjuk = await hirdetendoCimek(tarolo);
+      const kor = await korbeCsere(lista,
+        (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk), {
         utana: (e) => {
           const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
           if (e.sikerult && e.masKoino) {
@@ -914,7 +959,14 @@ try {
       });
       await tarolo.ir(kor.lista);
 
+      const tanultCimek = kor.eredmenyek
+        .filter((e) => e.sikerult).flatMap((e) => e.kapottCimek ?? []);
+      const tanult = await kapottCimekBeolvasztasa(tarolo, tanultCimek);
+
       kiir();
+      if (tanult) {
+        kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam a többiektől' + SZIN.vege);
+      }
       // ⚠️ A NULLA SIKER SEM HIBA: a koino ettől még működik, csak most nem terjedt.
       // Ezért nem `throw`, és ezért nem 1-es kilépési kód (2. szabály).
       kiir((kor.sikeres ? SZIN.jo : SZIN.nem) + kor.sikeres + '/' + kor.eredmenyek.length

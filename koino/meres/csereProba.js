@@ -498,7 +498,10 @@ proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-emberné
   process.stdout.write('           ↳ mérve: ' + osszes + ' bájt oda-vissza — a régi'
     + ' protokoll legalább ' + (allasBajt * 2) + ' bájt volt (2× a részletes állás)\n');
 
-  return eredmeny.reszletesAllasok === 0 && osszes < 300 && osszes * 20 < allasBajt;
+  // ⚠️ A KÜSZÖB 300-ról 500-ra nőtt, és ez tudatos ár: a LENYOMAT azóta viszi a TÜKRÖT
+  // („innen látlak"), és minden kör visz egy CÍMJEGYZÉKET is. Ezekért cserébe a hálózat
+  // magától tud bővülni (D36–D38) — enélkül minden címet kézzel kellene begépelni.
+  return eredmeny.reszletesAllasok === 0 && osszes < 500 && osszes * 20 < allasBajt;
 });
 
 // ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====
@@ -606,6 +609,90 @@ proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazo
   return egyik.sikerult && masik.sikerult
     && egyik.mindketIrany && masik.mindketIrany
     && egyik.kuldott > 0 && masik.kuldott > 0;
+});
+
+proba('⭐⭐ A CÍMJEGYZÉK TERJED: a társak elmondják egymásnak, kiket ismernek', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
+  const masik = await ujTar();
+
+  const oveCimei = [{ hoszt: '2001:db8::b', port: 7373 }];
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: oveCimei
+  });
+  try {
+    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port, 10000,
+      [{ hoszt: '2001:db8::a', port: 7373 }]);
+    return eredmeny.kapottCimek.length === 1
+      && eredmeny.kapottCimek[0].hoszt === '2001:db8::b'
+      && eredmeny.kapottCimek[0].port === 7373;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐ A címek akkor is terjednek, ha NINCS újdonság (különben nem bővülne a háló)', async () => {
+  // ⚠️ Ezért megy a címcsere a lenyomat-egyezés ELŐTT. Ha utána menne, a hétköznapi
+  // „nincs újdonság" beszélgetés egyetlen címet sem vinne tovább.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 2);
+  const egyik = await ujTar(); await ment(egyik, esemenyek);
+  const masik = await ujTar(); await ment(masik, esemenyek);   // MINDKETTŐ ugyanazt tudja
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: [{ hoszt: '2001:db8::c', port: 7373 }]
+  });
+  try {
+    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    return eredmeny.uj === 0 && eredmeny.reszletesAllasok === 0    // tényleg nem volt újdonság
+      && eredmeny.kapottCimek.length === 1
+      && eredmeny.kapottCimek[0].hoszt === '2001:db8::c';
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐ A címek NEM lesznek események — a tár tiszta marad', async () => {
+  // ⚠️ A cím múlandó körülmény, nem igazság: két hét múlva már másé. Egy aláírt esemény
+  // örökre megmaradna, ezért a címek CSAK a vonalon utaznak.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
+  const masik = await ujTar();
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: [{ hoszt: '2001:db8::d', port: 7373 }]
+  });
+  try {
+    await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port, 10000,
+      [{ hoszt: '2001:db8::e', port: 7373 }]);
+    const egyikNyers = await egyik.betolt();
+    const masikNyers = await masik.betolt();
+    const vanBenneCim = (l) => l.some((e) => JSON.stringify(e).includes('2001:db8'));
+    return !vanBenneCim(egyikNyers) && !vanBenneCim(masikNyers) && masikNyers.length === 2;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐ A rossz címeket eldobjuk, és legfeljebb 10-et fogadunk el', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
+  const masik = await ujTar();
+
+  const sok = [];
+  for (let i = 0; i < 25; i++) sok.push({ hoszt: '2001:db8::' + i, port: 7373 });
+  sok.push({ hoszt: 'rossz', port: 0 }, { hoszt: 5, port: 7373 }, null);
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: sok
+  });
+  try {
+    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    return eredmeny.kapottCimek.length === 10
+      && eredmeny.kapottCimek.every((c) => typeof c.hoszt === 'string' && c.port === 7373);
+  } finally {
+    await figyelo.bezar();
+  }
 });
 
 proba('⭐⭐ A TÜKÖR: a másik megmondja, milyen címről lát minket', async () => {

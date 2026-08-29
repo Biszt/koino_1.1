@@ -191,7 +191,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > | Új # | Lépés | Miért itt | Mennyi munka |
 > |---|---|---|---|
 > | **A** | ✅ **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | **kész (2026-08-29): 25 önpróba** — [`js/csere/tarsak.js`](../koino/js/csere/tarsak.js) |
-> | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 190 bájt a 16 158 helyett** |
+> | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 334 bájt a 16 158 helyett** |
 > | **C** | ✅ **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | **kész (2026-08-29): 3 önpróba + valódi három-készülékes mérés** |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
