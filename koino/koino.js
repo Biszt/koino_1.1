@@ -131,6 +131,14 @@ const [parancs, ...ervek] = process.argv.slice(2);
 /** Ezrelék → olvasható százalék. */
 const szazalek = (ezrelek) => (ezrelek / 10).toFixed(1).replace('.0', '') + '%';
 
+// ⭐ MENNYI ADAT MENT EL? (D35) A csere ára befogadási kérdés: egy mobilos e-embernek a
+// számláján jelenik meg. Ezért minden csere kiírja — ami nem látszik, azt nem lehet
+// olcsóvá tenni.
+const adatMennyiseg = (eredmeny) => {
+  const bajt = (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
+  return bajt < 1024 ? bajt + ' bájt' : (bajt / 1024).toFixed(1) + ' KB';
+};
+
 async function allapotKiirasa(napokMulva) {
   const { allapot, javaslatok, esemenyek } = await kepetKeszit(napokMulva);
 
@@ -462,7 +470,7 @@ try {
           }
           kiir(SZIN.jo + '  ✓ csere ' + eredmeny.honnan + SZIN.vege + SZIN.halvany
             + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
-            + ' (' + eredmeny.korok + ' kör)' + SZIN.vege);
+            + ' (' + eredmeny.korok + ' kör, ' + adatMennyiseg(eredmeny) + ')' + SZIN.vege);
         }
       });
 
@@ -542,7 +550,8 @@ try {
 
         kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
           + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
-          + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+          + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms, '
+          + adatMennyiseg(eredmeny) + ')' + SZIN.vege);
 
         // Akivel egyszer sikerült, azt megjegyezzük — különben minden cserénél újra kézzel
         // kellene beírni a címet, és pont az nem épülne fel, ami a D33-hoz kell: a lista.
@@ -573,7 +582,8 @@ try {
           const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
           kiir(e.sikerult
             ? SZIN.jo + '  ✓ ' + cimke + SZIN.vege + SZIN.halvany
-              + ' — kaptam ' + e.uj + ', küldtem ' + e.kuldott + ' (' + e.korok + ' kör)' + SZIN.vege
+              + ' — kaptam ' + e.uj + ', küldtem ' + e.kuldott
+              + ' (' + e.korok + ' kör, ' + adatMennyiseg(e) + ')' + SZIN.vege
             : SZIN.halvany + '  · ' + cimke + ' — nem érhető el: ' + e.hiba + SZIN.vege);
         }
       });
@@ -585,7 +595,8 @@ try {
       kiir((kor.sikeres ? SZIN.jo : SZIN.nem) + kor.sikeres + '/' + kor.eredmenyek.length
         + ' társ vette fel' + SZIN.vege + SZIN.halvany
         + ' — összesen ' + kor.uj + ' új esemény, ' + kor.kuldott + ' küldött'
-        + ' (' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+        + ' (' + (Date.now() - kezdet) + ' ms, ' + adatMennyiseg({ bajtKuldott: kor.bajt })
+        + ')' + SZIN.vege);
       if (!kor.sikeres) {
         kiir(SZIN.halvany + 'Egy társ sem válaszolt. Ez nem hiba — később újra megy;'
           + ' addig is minden művelet mehet tovább helyben.' + SZIN.vege);

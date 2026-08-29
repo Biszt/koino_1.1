@@ -191,7 +191,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > | Új # | Lépés | Miért itt | Mennyi munka |
 > |---|---|---|---|
 > | **A** | ✅ **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | **kész (2026-08-29): 25 önpróba** — [`js/csere/tarsak.js`](../koino/js/csere/tarsak.js) |
-> | **B** | **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | kicsi |
+> | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 158 bájt a 16 158 helyett** |
 > | **C** | **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | apró |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
@@ -218,6 +218,42 @@ harmadik társ **soha** nem kapja meg az eseményeket. Ez volt a 2. szabály né
 
 ⚠️ **A nulla siker sem hiba**: ha egy társ sem válaszol, a parancs ezt kiírja, de nem dob
 hibát és nem ad 1-es kilépési kódot — a koino helyben ugyanúgy működik tovább.
+
+---
+
+### ✅ A B. LÉPÉS MEGVAN (2026-08-29) — a csere ára 102-ed részére esett
+
+**A változás egyetlen mondatban:** a kör már nem a részletes állással kezdődik, hanem egy
+**43 karakteres lenyomattal** (`LENYOMAT` üzenet). Ha a kettő egyezik, a kör azonnal véget
+ér — a részletes `ALLAS` el sem indul.
+
+| Mérve, 50 e-ember, „nincs újdonság" csere | Bájt |
+|---|---|
+| a régi protokoll (2× részletes állás, oda-vissza) | **16 158** |
+| a mai protokoll | **158** |
+
+⭐ **Ez 102-szeres különbség — és nem a hálózatot kíméli, hanem a mobilos e-ember
+számláját.** A D35 épp ezért nem optimalizálás: az 5 percenkénti csere egy 1000 fős
+koinónál 46 MB/nap volt, most ~4,5 MB — ennyi már belefér egy olcsó előfizetésbe is.
+
+**Két dolog, ami emiatt NEM változott meg — és próba őrzi mindkettőt:**
+
+1. **A lenyomat nem takar el semmit.** Ha a tudás eltér, a részletes állás ugyanúgy
+   elindul. Külön rontás-próba méri, hogy a **lánc közepén elrejtett elágazás** az olcsó
+   kezdés után is előjön — ez volt a legfontosabb kockázat.
+2. **A „csendes kör" feltétel megmaradt.** A lenyomat akkor állít meg, ha a két fél
+   *egyetért*. Ha a másik fél hibás vagy rosszindulatú, és nem adja meg, amit kérünk, a
+   lenyomat sosem egyezne — a csendes kör viszont kilép. A kettő **együtt** zárja ki a
+   végtelen ciklust.
+
+**Ami menet közben megszületett:** a csere mostantól **megmondja, hány bájt ment el**
+(`bajtKuldott` / `bajtKapott`), és a parancssor ki is írja. *Ami nem mérhető, azt nem lehet
+olcsóvá tenni* — a D35 száma így nem elmélet marad.
+
+⚠️ **A vonal-protokoll változott** (új `LENYOMAT` üzenet a kör elején). Régi és új
+készülék nem tud egymással cserélni: a telefonon frissíteni kell. Verzió-egyeztetést
+szándékosan **nem** építettünk — kiadás előtt vagyunk, és *ami ritka és nem végzetes, azt
+felírjuk, de nem építjük meg*.
 
 ---
 
@@ -273,8 +309,8 @@ Ezek nem kíváncsiságból kellenek — mindegyik **eldönt valamit**:
 | **mennyi idő alatt ér körbe egy esemény** | a józan **minimum döntési időt** (D4), és a 4. pont „óvatosság"-ának árát | **9 ms** a laptopon, **77 ms a telefonon** (kapcsolatnyitás + két kör, helyben). Az alsó korlát tehát a leglassabb készüléken is elhanyagolható — a valódi számot a hálózat adja majd (4. lépés). |
 | **összeér-e két készülék IPv6-on, STUN nélkül** | kell-e egyáltalán infrastruktúra | *(4. lépés)* — de a vonal `::1`-en már áll |
 | **hányszor NEM jön össze a közvetlen út** | kell-e **továbbító** — a P2P legdrágább része | *(4. lépés)* |
-| **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell | **162 bájt/fő** (50 fő, 3-3 esemény). 10 000 fős koinónál ~1,6 MB — **ez már szeletelést kíván**, felírva. |
-| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek | *(a 4. lépésnél, valódi forgalommal)* |
+| **az `ALLAS` üzenet mérete N e-embernél** | skálázódik-e a csere-protokoll, vagy szeletelni kell | **162 bájt/fő** (50 fő, 3-3 esemény). 10 000 fős koinónál ~1,6 MB — **ez már szeletelést kíván**, felírva. ⚠️ A B. lépés óta ez csak akkor megy el, ha a tudás TÉNYLEG eltér. |
+| **mennyi adat megy át egy csere alatt** | mit jelent a napi működés egy mobil-előfizetésnek | ✅ **„nincs újdonság" csere: 158 bájt** oda-vissza, 50 e-embernél (a régi protokollban 16 158). Valódi hálózaton még mérendő (4. lépés). |
 
 ---
 

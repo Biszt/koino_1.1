@@ -174,7 +174,10 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
     eredmenyek,
     sikeres: eredmenyek.filter((e) => e.sikerult).length,
     uj: eredmenyek.reduce((ossz, e) => ossz + (e.uj ?? 0), 0),
-    kuldott: eredmenyek.reduce((ossz, e) => ossz + (e.kuldott ?? 0), 0)
+    kuldott: eredmenyek.reduce((ossz, e) => ossz + (e.kuldott ?? 0), 0),
+    // ⭐ A kör TELJES adatforgalma (D35): ez az a szám, ami a mobilos e-ember számláján
+    // megjelenik — és ami miatt a kör `legfeljebb` korlátot kapott.
+    bajt: eredmenyek.reduce((ossz, e) => ossz + (e.bajtKuldott ?? 0) + (e.bajtKapott ?? 0), 0)
   };
 
   console.log('korbeCsere - VÉGE', {

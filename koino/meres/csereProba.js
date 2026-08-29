@@ -425,6 +425,80 @@ proba('MÉRÉS: az ÁLLÁS 50 e-embernél is 200 bájt/fő alatt marad', async (
   return allas.szerzok.length === LETSZAM && fejenkent < 200;
 });
 
+// ===== AZ OLCSÓ CSERE (D35, B. lépés) =====
+//
+// ⭐ MIT KELL ITT BIZONYÍTANI? Nem azt, hogy „gyorsabb" — hanem azt, hogy a hétköznapi
+// eset (KÉT CSERE KÖZÖTT SEMMI NEM TÖRTÉNT) nem küldi el a részletes állást. Ez azért
+// befogadási kérdés, mert az állás ára a LÉTSZÁMMAL nő: 162 bájt/fő, mindkét irányban.
+// Egy mobilos e-embernek ez a számláján jelenik meg.
+
+proba('⭐ A „NINCS ÚJDONSÁG" csere el sem küldi a részletes állást', async () => {
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 4));
+  const masik = await ujTar();
+
+  const elso = await csereDroton(egyik, masik);       // itt még kell a részletes állás
+  const masodik = await csereDroton(egyik, masik);    // itt már nem
+
+  return elso.reszletesAllasok >= 1 && masodik.reszletesAllasok === 0
+    && masodik.uj === 0 && masodik.kuldott === 0;
+});
+
+proba('⭐ ELTÉRŐ tudásnál viszont elindul a részletes állás (a lenyomat nem takar el semmit)', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 3));
+  const masik = await ujTar(); await ment(masik, await lanc(bela, 2));
+
+  const eredmeny = await csereDroton(egyik, masik);
+  return eredmeny.reszletesAllasok >= 1
+    && (await koinoEsemenyei(egyik, KOINO)).length === 5
+    && await allasokEgyeznek(egyik, masik, KOINO);
+});
+
+proba('⭐ A lánc közepén elrejtett elágazás az OLCSÓ kezdés után is kiderül', async () => {
+  // ⚠️ Ez a legfontosabb rontás-próba a B. lépéshez: a spórolás nem vakíthatja meg a
+  // cserét. A két félnek AZONOS a legnagyobb sorszáma, de más a 3. eseménye — a lenyomat
+  // ezért eltér, tehát a részletes állás elindul, és az elágazás előjön.
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const negyedik = await lanc(anna, 1);
+
+  const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);
+  const masik = await ujTar();
+  await ment(masik, [esemenyek[0], esemenyek[1], masik3, ...negyedik]);
+
+  await csereDroton(egyik, masik);
+  const harmasok = (await koinoEsemenyei(egyik, KOINO)).filter((e) => e.sorszam === 3);
+  return harmasok.length === 2 && await allasokEgyeznek(egyik, masik, KOINO);
+});
+
+proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-embernél', async () => {
+  // Ez a D35 száma. A régi protokollban a kör MINDIG a részletes állással kezdődött,
+  // tehát ez a csere legalább kétszer ~8 KB volt (oda-vissza, két körben).
+  const LETSZAM = 50;
+  const egyik = await ujTar();
+  const masik = await ujTar();
+  for (let i = 0; i < LETSZAM; i++) {
+    const valaki = await ujEember(KOINO);
+    const ove = await lanc(valaki, 3);
+    await ment(egyik, ove);
+    await ment(masik, ove);            // mindkettő MINDENT tud: nincs újdonság
+  }
+
+  const allas = await allasOsszeallitasa(egyik, KOINO);
+  const allasBajt = new TextEncoder().encode(JSON.stringify(allas)).length;
+
+  const eredmeny = await csereDroton(egyik, masik);
+  const osszes = eredmeny.bajtKuldott + eredmeny.bajtKapott;
+
+  process.stdout.write('           ↳ mérve: ' + osszes + ' bájt oda-vissza — a régi'
+    + ' protokoll legalább ' + (allasBajt * 2) + ' bájt volt (2× a részletes állás)\n');
+
+  return eredmeny.reszletesAllasok === 0 && osszes < 300 && osszes * 20 < allasBajt;
+});
+
 export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }

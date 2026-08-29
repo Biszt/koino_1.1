@@ -83,6 +83,32 @@ export async function allasOsszeallitasa(tar, koino) {
 }
 
 /**
+ * ⭐ AZ ÁLLÁS EGYETLEN LENYOMATBAN — 43 karakter (D35, Szakasz 2 / B. lépés).
+ *
+ * ⭐ MIÉRT KELL EZ? Mert az ÁLLÁS ára a létszámmal nő: **162 bájt/e-ember** (mérve, 50
+ * fővel). Egy 10 000 fős koinónál ez ~1,6 MB — és a csere KÉTIRÁNYÚ, tehát mindkét fél
+ * elküldi. Öt percenkénti cserével ez napi több száz megabájt.
+ *
+ * ⚠️ ÉS EZ NEM A HÁLÓZATOT TERHELNÉ MEG, HANEM A MOBILOS E-EMBER SZÁMLÁJÁT — vagyis épp
+ * azt zárná ki, akinek a legkevesebb pénze van. Ezért nem „optimalizálás", hanem
+ * BEFOGADÁSI KÉRDÉS: a koino olcsósága az, ami mindenkinek megnyitja.
+ *
+ * A javítás egyszerű: a csere ne a részletes állással kezdődjön, hanem ezzel az EGYETLEN
+ * lenyomattal. Ha a kettő egyezik, nincs miről beszélni — a hétköznapi eset (két csere
+ * között semmi nem történt) így 1,6 MB helyett néhány tíz bájt.
+ *
+ * ⚠️ MIÉRT ELÉG EZ? Mert az állás szerzőnként tartalmazza a teljes lánc ujjlenyomatát,
+ * és a lista SZERZŐ SZERINT RENDEZETT (lásd fent) — tehát azonos tudás mindig azonos
+ * lenyomatot ad, más tudás pedig mást. Ugyanaz a gondolat, mint a kanonikus alaknál.
+ *
+ * @param {Object} allas - allasOsszeallitasa eredménye
+ * @returns {Promise<string>} 43 karakteres lenyomat
+ */
+export async function allasLenyomata(allas) {
+  return lenyomat(allas.szerzok);
+}
+
+/**
  * Egy szerző láncának állása.
  *
  * ⚠️ A hézag és az elágazás fogalma UGYANAZ, mint a tár-réteg `lancEllenorzese`-ében —

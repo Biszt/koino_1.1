@@ -52,7 +52,10 @@ node koino/koino.js
 |---|---|
 | `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
 | `node koino/koino.js figyel [port]` | postaláda-szerep: várja, hogy valaki kapcsolódjon |
-| `node koino/koino.js csere <hoszt> <port>` | kapcsolódás a másik készülékhez, és teljes csere |
+| `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
+| `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
+| `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
+| `node koino/koino.js tars <hoszt> [port] [név]` | társ felvétele (levétel: `tars torol <hoszt> [port]`) |
 | `node koino/koino.js cimek` | milyen címeken érhető el ez a készülék |
 | `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a kapcsolatot (NAT-PMP / PCP / UPnP) |
 
@@ -70,7 +73,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Kilenc próba-fájl, **149 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **154 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |
@@ -123,7 +126,8 @@ eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 | **1b** a vonal (TCP) | ✅ kész |
 | **2** a vizsga: két készülék → azonos állapot | ✅ kész |
 | **A** több társ: a `csere` társ-listára menjen, ne egy címre | ✅ kész — **25 önpróba**, és két halott címmel is átment a valódi csere |
-| **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | 🚧 következik |
+| **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **158 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
+| **C** postaláda-szerep kimondása | 🚧 következik |
 
 ⚠️ **A lépés-sorrend 2026-08-29-én átíródott** (D33): nem az a kérdés, hogy egy adott gép
 **fogadni** tud-e, hanem hogy **a hálózat összefüggő marad-e**. A részletek a

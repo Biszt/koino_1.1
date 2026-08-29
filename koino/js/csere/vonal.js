@@ -13,10 +13,17 @@
 // hálózati séma, amit külön karban kellene tartani, és a forgalom emberi szemmel is
 // olvasható — egy `nc`-vel bele lehet nézni.
 //
-//   {"uzenet":"ALLAS","allas":{…}}      — ezt tudom
+//   {"uzenet":"LENYOMAT","lenyomat":"…"} — az egész tudásom 43 karakterben
+//   {"uzenet":"ALLAS","allas":{…}}      — ezt tudom (részletesen)
 //   {"uzenet":"KEREK","kerelem":{…}}    — ebből ez hiányzik nekem
 //   {"uzenet":"ESEMENY","esemeny":{…}}  — tessék, egy esemény
 //   {"uzenet":"KESZ"}                   — mindent elküldtem, amit kértél
+//
+// ⭐ A LENYOMAT AZ ELSŐ, ÉS EZ A LÉNYEG (D35, B. lépés). A részletes ÁLLÁS ára 162
+// bájt/e-ember — 10 000 fősnél ~1,6 MB, mindkét irányban. A hétköznapi eset viszont az,
+// hogy KÉT CSERE KÖZÖTT SEMMI NEM TÖRTÉNT. Ezért a kör a 43 karakteres lenyomattal
+// kezdődik: ha a kettő egyezik, azonnal végeztünk, és a részletes állás el sem indul.
+// Egy „nincs újdonság" csere így 1,6 MB helyett ~100 bájt.
 //
 // ===== SZIMMETRIKUS: NINCS KLIENS ÉS SZERVER =====
 //
@@ -33,7 +40,7 @@
 import { createServer, connect } from 'node:net';
 
 import {
-  allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
+  allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
 } from './csere.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
@@ -147,13 +154,29 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     return uzenet;
   };
 
-  let korok = 0, uj = 0, kuldott = 0;
+  let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0;
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
 
-    // ----- 1. MINDKETTŐ ELMONDJA, MIT TUD -----
+    // ----- 0. AZ OLCSÓ KÉRDÉS: „ugyanazt tudjuk?" (43 karakter, D35) -----
+    //
+    // ⭐ EZ A LÉPÉS SPÓROL. A részletes állás ára a létszámmal nő; ez a lenyomat nem.
+    // Ha egyezik, a kör azonnal véget ér — és a hétköznapi eset épp ez.
     const sajatAllas = await allasOsszeallitasa(tar, koino);
+    const sajatLenyomat = await allasLenyomata(sajatAllas);
+    kuld({ uzenet: 'LENYOMAT', lenyomat: sajatLenyomat });
+    const oveLenyomat = await varj('LENYOMAT');
+
+    if (oveLenyomat.lenyomat === sajatLenyomat) {
+      // Ugyanazt tudjuk. Nincs mit kérni és nincs mit adni — a részletes állást el sem
+      // küldjük. Mindkét fél ugyanezt számolja ki, tehát egyszerre lépnek ki.
+      console.log('parbeszed - egyező lenyomat, nincs mit cserélni', { kor });
+      break;
+    }
+
+    // ----- 1. MINDKETTŐ ELMONDJA, MIT TUD (részletesen) -----
+    reszletesAllasok++;
     kuld({ uzenet: 'ALLAS', allas: sajatAllas });
     const ove = await varj('ALLAS');
 
@@ -183,11 +206,16 @@ export async function parbeszed(kapcsolat, tar, koino, korlat = KOR_KORLAT) {
     uj += eredmeny.uj;
 
     // ----- 6. CSENDES KÖR? -----
+    //
+    // ⚠️ EZ MEGMARAD A LENYOMAT MELLETT IS, ÉS NEM FÖLÖSLEGES. A lenyomat akkor állít
+    // meg, ha a két fél EGYETÉRT. Ez a feltétel akkor is megáll, ha nem: ha a másik fél
+    // hibás vagy rosszindulatú, és nem adja meg, amit kérünk, a lenyomat sosem egyezne —
+    // a csendes kör viszont kilép. A kettő együtt zárja ki a végtelen ciklust.
     if (kuldendok.length === 0 && erkezett.length === 0) break;
   }
 
-  console.log('parbeszed - VÉGE', { korok, uj, kuldott });
-  return { korok, uj, kuldott };
+  console.log('parbeszed - VÉGE', { korok, uj, kuldott, reszletesAllasok });
+  return { korok, uj, kuldott, reszletesAllasok };
 }
 
 // ===================================
@@ -217,7 +245,10 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
   const kiszolgalo = createServer((kapcsolat) => {
     const honnan = kapcsolat.remoteAddress;
     parbeszed(kapcsolat, tar, koino)
-      .then((eredmeny) => utana?.({ ...eredmeny, honnan }))
+      .then((eredmeny) => utana?.({
+        ...eredmeny, honnan,
+        bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead
+      }))
       .catch((hiba) => {
         console.warn('figyeloIndulasa - a csere megszakadt', { honnan, ok: hiba.message });
         utana?.({ honnan, hiba: hiba.message });
@@ -270,8 +301,18 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000)
 
   try {
     const eredmeny = await parbeszed(kapcsolat, tar, koino);
-    console.log('csereVonalon - VÉGE', eredmeny);
-    return eredmeny;
+
+    // ⭐ MENNYI ADAT MENT EL? (D35) Ez nem kíváncsiság: a csere ára befogadási kérdés —
+    // egy mobilos e-embernek a számláján jelenik meg. Ami nem mérhető, azt nem lehet
+    // olcsóvá tenni, ezért a szám mostantól minden cserénél kijön.
+    const teljes = {
+      ...eredmeny,
+      bajtKuldott: kapcsolat.bytesWritten,
+      bajtKapott: kapcsolat.bytesRead
+    };
+
+    console.log('csereVonalon - VÉGE', teljes);
+    return teljes;
   } finally {
     kapcsolat.end();
   }

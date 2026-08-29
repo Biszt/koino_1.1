@@ -243,4 +243,12 @@ proba('A kör ÖSSZEGZI, mennyi eseményt kaptunk és küldtünk', async () => {
   return kor.uj === 6 && kor.kuldott === 10;
 });
 
+proba('A kör ÖSSZEGZI az ADATFORGALMAT is (D35 — ez a mobilos számlája)', async () => {
+  const kor = await korbeCsere(
+    [{ hoszt: 'a', port: 1 }, { hoszt: 'b', port: 1 }],
+    async () => ({ uj: 0, kuldott: 0, korok: 1, bajtKuldott: 79, bajtKapott: 79 })
+  );
+  return kor.bajt === 316;
+});
+
 export default futtatas;
