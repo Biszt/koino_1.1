@@ -461,21 +461,48 @@ try {
     // ===== A CSERE: két készülék között (Szakasz 2) =====
 
     case 'figyel': {
+      // ===== A POSTALÁDA-SZEREP (D34) =====
+      //
+      // ⭐ AKI FOGADNI TUD, AZ POSTALÁDA. Nem élő továbbító: nem kell egyszerre online
+      // tartania két felet (ez a TURN drágasága, és a koino épp ezt úszhatja meg). Elég,
+      // ha ÁTVESZI, ELTÁROLJA, és a következő beszélgetésnél TOVÁBBADJA.
+      //
+      // Anna és Béla egyike sem tud fogadni; mindketten ide szólnak ki — és teljesen
+      // kicserélik az eseményeiket, pedig soha nem beszéltek egymással. Mérve: a
+      // vizsgaProba.js „A POSTALÁDA" próbája.
       const port = parseInt(ervek[0], 10) || ALAP_PORT;
+      let beszelgetesek = 0, atvett = 0, tovabbadott = 0, forgalom = 0;
+
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         utana: (eredmeny) => {
           if (eredmeny.hiba) {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
             return;
           }
+          beszelgetesek++;
+          atvett += eredmeny.uj;
+          tovabbadott += eredmeny.kuldott;
+          forgalom += (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
+
           kiir(SZIN.jo + '  ✓ csere ' + eredmeny.honnan + SZIN.vege + SZIN.halvany
-            + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
+            + ' — átvettem ' + eredmeny.uj + ', továbbadtam ' + eredmeny.kuldott
             + ' (' + eredmeny.korok + ' kör, ' + adatMennyiseg(eredmeny) + ')' + SZIN.vege);
+          kiir(SZIN.halvany + '    összesen: ' + beszelgetesek + ' beszélgetés · '
+            + atvett + ' átvett · ' + tovabbadott + ' továbbadott · '
+            + adatMennyiseg({ bajtKuldott: forgalom }) + SZIN.vege);
         }
       });
 
-      kiir(SZIN.vastag + 'A kapu nyitva: ' + figyelo.port + '-es port' + SZIN.vege);
+      kiir(SZIN.vastag + 'POSTALÁDA' + SZIN.vege + SZIN.halvany
+        + '   (a kapu nyitva a ' + figyelo.port + '-es porton)' + SZIN.vege);
       kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · adat: ' + alapHely() + SZIN.vege);
+      kiir();
+      kiir(SZIN.halvany + 'Amit ez a készülék csinál: átveszi mások eseményeit, eltárolja,'
+        + SZIN.vege);
+      kiir(SZIN.halvany + 'és a következő beszélgetésnél továbbadja — így két olyan e-ember'
+        + SZIN.vege);
+      kiir(SZIN.halvany + 'is elér egymáshoz, aki egyikük sem tud kaput nyitni.' + SZIN.vege);
+      kiir();
       kiir(SZIN.halvany + 'A másik készüléken: node koino/koino.js csere <ez a cím> '
         + figyelo.port + SZIN.vege);
       kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);

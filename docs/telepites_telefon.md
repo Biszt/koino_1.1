@@ -28,6 +28,38 @@ fogjuk, hogy a hálózat miatt — nem a program miatt.
 
 ---
 
+## 🔄 HA MÁR FENT VAN A KOINO: frissítés
+
+*Erre akkor van szükség, ha a laptopon fejlesztettünk valamit, és a telefonnak is meg kell
+kapnia. A koino gyorsan változik, és **a két készüléknek ugyanazt a verziót kell futtatnia**
+— a csere-protokoll változhat.*
+
+**Nyisd meg a Termuxot, és illeszd be ezt az egy sort:**
+
+```bash
+cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js
+```
+
+Ez négy dolgot csinál egymás után: lemegy a koino mappájába, lehozza a legfrissebb
+változatot, ráállítja a telefont, és **rögtön le is futtatja az önpróbákat**.
+
+✅ **Ha sikerült:** a legalsó sor `✅ Mind a … próba rendben`.
+
+❌ **Ha bármi „BUKOTT":** másold ki a végét, és küldd el nekem.
+
+> ### ⚠️ Két dolog, ami elsőre ijesztő lehet, de nem az
+>
+> **1. A `git reset --hard` nem törli a koino-adatodat.** A kulcsod és az eseményeid a
+> `~/koino-adat` mappában vannak, ami **a program mappáján KÍVÜL** van — ezt a parancs nem
+> érinti. Csak a program frissül, az adat marad.
+>
+> **2. A régi és az új verzió nem tud egymással beszélni.** Ha a csere-protokoll változott,
+> a frissítés után a **laptopon is** frissnek kell lennie. Ezért jó, ha a két készüléket
+> mindig együtt frissítjük — különben olyan hibát látsz, mintha a hálózattal lenne baj,
+> pedig csak két különböző verzió próbál egyeztetni.
+
+---
+
 # 🅰️ SZAKASZ — a telefon előkészítése (otthon)
 
 ## Előkészület: hogyan írsz be hosszú parancsokat a telefonon
@@ -165,7 +197,7 @@ hol tárolja.
 ## 9. lépés — ⭐⭐ a telefon vizsgája (ez a legértékesebb mérés az egészben)
 
 Most kiderül, hogy a koino nemcsak **elindul** a telefonon, hanem **ugyanazt is számolja**,
-mint a laptop. Ez 154 önellenőrzés.
+mint a laptop. Ez 157 önellenőrzés.
 
 > **Miért ez a legfontosabb, és miért nem a hálózat?**
 >
@@ -188,7 +220,7 @@ cd ~/koino_1.1 && node koino/meres/mind.js
 ✅ **Ha sikerült:** a legalsó sor ez lesz:
 
 ```
-✅ Mind a 154 próba rendben
+✅ Mind a 157 próba rendben
 ```
 
 *(A szám nő, ahogy új próbák születnek — a lényeg, hogy a sor **✅**-tel kezdődjön, és ne

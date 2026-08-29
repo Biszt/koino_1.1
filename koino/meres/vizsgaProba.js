@@ -328,6 +328,111 @@ proba('⭐ HÁROM KÉSZÜLÉK: a harmadik is ugyanoda jut, láncolt cserével', 
   return egy === await ujjlenyomat(b) && egy === await ujjlenyomat(c);
 });
 
+// ===================================
+// A POSTALÁDA (D34, Szakasz 2 / C. lépés)
+// ===================================
+//
+// ⭐ MI A KÜLÖNBSÉG A FENTI „HÁROM KÉSZÜLÉK" PRÓBÁHOZ KÉPEST? Ott B **fogadott is és
+// hívott is**. Itt Anna és Béla EGYIKE SEM TUD FOGADNI — csak kifelé szólnak, Cilihez.
+// Ez a valódi helyzet: a fejlesztő routere mind a három szabvánnyal elutasította a
+// kapunyitást (NAT-PMP, PCP, UPnP), tehát a legtöbb e-ember pontosan ilyen lesz.
+//
+// ⭐ ÉS AMIT BIZONYÍT: Cilinek NEM kell egyszerre online tartania a két felet — ez a TURN
+// (élő továbbító) drágasága, és épp ez az, amit a koino megúszhat. Elég, ha ÁTVESZI,
+// ELTÁROLJA, és a következő beszélgetésnél TOVÁBBADJA. Anna és Béla soha nem beszélt
+// egymással, mégis mindent tudnak.
+//
+// ⚠️ A HATÁR, amit ez a próba NEM fed: Cili csak abban a koinóban postaláda, amelyikben
+// ő maga is benne van (a tára koinónként külön mappa). Egy idegen koino forgalmát ma nem
+// veszi át. Ez nem hiba, hanem felírt korlát — a terjedés szempontjából majd kérdés lesz.
+
+proba('⭐⭐ A POSTALÁDA (D34): Anna és Béla SOHA nem beszélt, mégis ugyanazt tudja', async () => {
+  const { esemenyek } = await teljesEset();
+  const fele = Math.ceil(esemenyek.length / 2);
+
+  const anna = await ujTar(); await ment(anna, esemenyek.slice(0, fele));
+  const bela = await ujTar(); await ment(bela, esemenyek.slice(fele));
+  const cili = await ujTar();                       // a postaláda: ÜRESEN indul
+
+  // ⭐ CSAK CILI FOGAD. Anna és Béla egyetlen portot sem nyit — végig ők hívnak.
+  let beszelgetesek = 0;
+  const postalada = await figyeloIndulasa(cili, KOINO, 0, {
+    hoszt: '127.0.0.1',
+    utana: () => { beszelgetesek++; }
+  });
+
+  try {
+    // ⚠️ EGYMÁS UTÁN, nem egyszerre: minden kapcsolat lezárul, mielőtt a következő nyílik.
+    // Épp ez a lényeg — Cilinek sosem kell két felet EGYSZERRE online tartania.
+    await csereVonalon(anna, KOINO, '127.0.0.1', postalada.port);   // Cili átveszi Annáét
+    await csereVonalon(bela, KOINO, '127.0.0.1', postalada.port);   // Béla megkapja, ad
+    await csereVonalon(anna, KOINO, '127.0.0.1', postalada.port);   // Anna megkapja Béláét
+  } finally {
+    await postalada.bezar();
+  }
+
+  const egy = await ujjlenyomat(anna);
+  return beszelgetesek === 3
+    && egy === await ujjlenyomat(bela)
+    && egy === await ujjlenyomat(cili);
+});
+
+proba('⭐ A postaláda TOVÁBBAD olyat is, amiről ő maga nem tud semmit', async () => {
+  // Cili üresen indul, és nem szerzője egyetlen eseménynek sem — mégis ő viszi át
+  // Béláékhoz Anna eseményeit. A továbbítás nem igényel „érdekeltséget".
+  const anna = await ujEember(KOINO);
+  const esemenyek = [];
+  for (let i = 1; i <= 3; i++) {
+    esemenyek.push(await anna.tesz('TartalomLetrehozas', { cim: 'T' + i, meret: 10 }, KEZDET));
+  }
+
+  const annaTar = await ujTar(); await ment(annaTar, esemenyek);
+  const belaTar = await ujTar();
+  const ciliTar = await ujTar();
+
+  const postalada = await figyeloIndulasa(ciliTar, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    await csereVonalon(annaTar, KOINO, '127.0.0.1', postalada.port);
+    await csereVonalon(belaTar, KOINO, '127.0.0.1', postalada.port);
+  } finally {
+    await postalada.bezar();
+  }
+
+  return (await koinoEsemenyei(belaTar, KOINO)).length === 3
+    && (await koinoEsemenyei(ciliTar, KOINO)).length === 3;
+});
+
+proba('⭐ A postaláda NEM kap engedékenyebb kaput: a hamisítottat nem adja tovább', async () => {
+  // ⚠️ EZ A LEGFONTOSABB RONTÁS-PRÓBA A POSTALÁDÁHOZ. Ha a továbbító át tudná engedni a
+  // hamisítványt, akkor a „bizalom az aláírásban van, nem a csatornában" (D32) elbukna —
+  // és a postaláda-szerep épp azt tenné veszélyessé, amit olcsóvá tesz.
+  const anna = await ujEember(KOINO);
+  const jo = await anna.tesz('TartalomLetrehozas', { cim: 'Igazi', meret: 10 }, KEZDET);
+  const hamis = { ...jo, adat: { ...jo.adat, cim: 'Átírva' } };   // az aláírás már nem passzol
+
+  const annaTar = await ujTar(); await ment(annaTar, [jo]);
+  await annaTar.hozzafuz(hamis);            // ⚠️ a kapu MEGKERÜLÉSÉVEL a fájlba írjuk
+
+  const belaTar = await ujTar();
+  const ciliTar = await ujTar();
+
+  const postalada = await figyeloIndulasa(ciliTar, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    await csereVonalon(annaTar, KOINO, '127.0.0.1', postalada.port);
+    await csereVonalon(belaTar, KOINO, '127.0.0.1', postalada.port);
+  } finally {
+    await postalada.bezar();
+  }
+
+  // A postaládába se, Bélához se juthatott el a hamisítvány — az igazi viszont igen.
+  const ciliE = await koinoEsemenyei(ciliTar, KOINO);
+  const belaE = await koinoEsemenyei(belaTar, KOINO);
+  const atirtat = (lista) => lista.some((e) => e.adat?.cim === 'Átírva');
+  return !atirtat(ciliE) && !atirtat(belaE)
+    && ciliE.length === 1 && belaE.length === 1        // CSAK az igazi ment át
+    && belaE.some((e) => e.adat?.cim === 'Igazi');
+});
+
 export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }

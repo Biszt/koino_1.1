@@ -51,7 +51,7 @@ node koino/koino.js
 | Parancs | Mit csinál |
 |---|---|
 | `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
-| `node koino/koino.js figyel [port]` | postaláda-szerep: várja, hogy valaki kapcsolódjon |
+| `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja |
 | `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
 | `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
@@ -73,7 +73,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Kilenc próba-fájl, **154 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **157 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |
@@ -86,7 +86,7 @@ futtatható: `node koino/meres/mind.js szabaly`.
 | `meres/szabalyProba.js` | a szabályokat a **számítás** őrzi, nem a felület |
 | `meres/csereProba.js` | a csere teljes: a hézag és a rejtett elágazás is kiderül, és a hálózat **nem kap engedékenyebb kaput** |
 | `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
-| `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — három készülékig |
+| `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
 
 ## A rétegek
 
@@ -127,7 +127,8 @@ eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 | **2** a vizsga: két készülék → azonos állapot | ✅ kész |
 | **A** több társ: a `csere` társ-listára menjen, ne egy címre | ✅ kész — **25 önpróba**, és két halott címmel is átment a valódi csere |
 | **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **158 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
-| **C** postaláda-szerep kimondása | 🚧 következik |
+| **C** postaláda-szerep kimondása (D34) | ✅ kész — **Anna és Béla soha nem beszélt, mégis mindent tud** |
+| **D** terjedő címjegyzék: a társ-lista bővüljön magától | 🚧 következik |
 
 ⚠️ **A lépés-sorrend 2026-08-29-én átíródott** (D33): nem az a kérdés, hogy egy adott gép
 **fogadni** tud-e, hanem hogy **a hálózat összefüggő marad-e**. A részletek a

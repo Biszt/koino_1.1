@@ -192,7 +192,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > |---|---|---|---|
 > | **A** | ✅ **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | **kész (2026-08-29): 25 önpróba** — [`js/csere/tarsak.js`](../koino/js/csere/tarsak.js) |
 > | **B** | ✅ **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | **kész (2026-08-29): mérve 158 bájt a 16 158 helyett** |
-> | **C** | **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | apró |
+> | **C** | ✅ **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | **kész (2026-08-29): 3 önpróba + valódi három-készülékes mérés** |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
 > | **F** | **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | kicsi |
@@ -254,6 +254,58 @@ olcsóvá tenni* — a D35 száma így nem elmélet marad.
 készülék nem tud egymással cserélni: a telefonon frissíteni kell. Verzió-egyeztetést
 szándékosan **nem** építettünk — kiadás előtt vagyunk, és *ami ritka és nem végzetes, azt
 felírjuk, de nem építjük meg*.
+
+---
+
+### ✅ A C. LÉPÉS MEGVAN (2026-08-29) — a postaláda kimondva és megmérve
+
+*A terv azt írta: „jórészt már ma is ezt csinálja, csak nincs kimondva." Ez igaz volt —
+de a **kimondás** nem csak szóhasználat: amíg nincs próba rá, addig csak reméljük.*
+
+**A mérés a D34 pontos alakjában** (Anna és Béla **egyike sem nyit kaput**, csak Cilihez
+szólnak ki; Cili üresen indul):
+
+| Lépés | Eredmény |
+|---|---|
+| 1. Anna → Cili | Cili átvett 3 eseményt |
+| 2. Béla → Cili | Béla megkapta Anna 3 eseményét |
+| 3. Béla létrehoz valamit, → Cili | Cili átvett 2-t |
+| 4. Anna → Cili | **Anna megkapta Béla tartalmát** |
+
+Anna állapotában ott van *„Bela tartalma"* — pedig **Anna és Béla soha nem beszélt
+egymással, és egyikük sem fogadott kapcsolatot.**
+
+⭐ **Amit ez bizonyít:** Cilinek **nem kell egyszerre online tartania** a két felet. Minden
+kapcsolat lezárult, mielőtt a következő nyílt. Ez a TURN (élő továbbító) drágasága, és a
+koino megúszta — nem okosságból, hanem mert a döntései nem másodpercesek.
+
+**Három önpróba őrzi** (`vizsgaProba.js`), és a harmadik a legfontosabb:
+
+1. a postaláda-kör: Anna és Béla azonos ujjlenyomatra jut, három beszélgetésből;
+2. a postaláda **olyat is továbbad, amiről ő maga nem tud semmit** — a továbbításhoz nem
+   kell „érdekeltség";
+3. ⚠️ **a postaláda NEM kap engedékenyebb kaput**: a hamisított eseményt nem veszi át és
+   nem is adja tovább. E nélkül a postaláda-szerep épp azt tenné veszélyessé, amit olcsóvá
+   tesz — a D32 („a bizalom az aláírásban van, nem a csatornában") itt dől el.
+
+**A `figyel` parancs mostantól kimondja a szerepet**, és vezeti a mérleget:
+
+```
+POSTALÁDA   (a kapu nyitva a 7575-es porton)
+  ✓ csere ::ffff:127.0.0.1 — átvettem 0, továbbadtam 3 (2 kör, 2.1 KB)
+    összesen: 2 beszélgetés · 3 átvett · 3 továbbadott · 4.2 KB
+```
+
+> ### ⚠️ EGY FELÍRT KORLÁT, amit a megépítés hozott elő
+>
+> **A postaláda ma csak abban a koinóban postaláda, amelyikben ő maga is benne van.** A tár
+> koinónként külön mappa, és a csere a saját koinója eseményeit adja-veszi — egy idegen
+> koino forgalmát nem venné át.
+>
+> Ez a **terjedés** szempontjából lesz kérdés: egy nagy koino tagja nem tudna postaláda
+> lenni egy kis családi koino számára, pedig épp az ilyen „erős" készülékek tudnának
+> segíteni. **Felírva, nem megépítve** — előbb a D. lépés (terjedő címjegyzék) mutassa meg,
+> mekkora a valódi hiány.
 
 ---
 
