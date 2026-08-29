@@ -182,8 +182,28 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 | **4** | **Két hálózat, IPv6-on** — laptop itthon, telefon a szomszédban | **a szakasz nagy kérdése** | valódi próba, kézzel átvitt címmel, **STUN és jelzőpont nélkül** → **útmutató: [`telepites_telefon.md`](telepites_telefon.md)** |
 | **5** | *(csak ha a 4. megkívánja)* jelzőpont, majd továbbító | a hiányzó darab — de csak az, ami tényleg hiányzik | mérés alapján |
 
-**A 4. lépés a szakasz vizsgája.** Ha két készülék külön hálózatról, szolgáltató nélkül
-kicseréli az eseményeit, akkor a Fázis 2 gerince nemcsak áll, hanem **működik is**.
+> ### 🔀 A LÉPÉS-SORREND ÁTÍRVA (2026-08-29, a D33–D35 után)
+>
+> A 4. lépés első kísérlete megbukott, és a hibakeresés során kiderült, hogy **rossz
+> feladatot oldottunk meg**: nem azt kell elérni, hogy egy adott gép **fogadni** tudjon,
+> hanem hogy **a hálózat összefüggő maradjon** (D33). Ettől a sorrend megváltozik:
+>
+> | Új # | Lépés | Miért itt | Mennyi munka |
+> |---|---|---|---|
+> | **A** | **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | kicsi |
+> | **B** | **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | kicsi |
+> | **C** | **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | apró |
+> | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
+> | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
+> | **F** | **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | kicsi |
+>
+> **Amit ez a sorrend kimond:** a 4. lépés (két hálózat, IPv6) **már nem vizsga, hanem
+> mérés** — a koino sorsa nem múlik rajta (D31), csak azt mondja meg, hányan tudnak
+> postaláda lenni.
+
+**A 4. lépés a szakasz vizsgája.** *(⚠️ A fenti átírás óta már nem — lásd ott.)* Ha két
+készülék külön hálózatról, szolgáltató nélkül kicseréli az eseményeit, akkor a Fázis 2
+gerince nemcsak áll, hanem **működik is**.
 
 ---
 
@@ -238,11 +258,22 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 5. **Meddig tartsuk a kapcsolatot?** Egyszeri csere, vagy nyitva maradó vonal, amin az új
    események azonnal átfolynak? (Az utóbbi kell a gyors döntésekhez.) *Ma: a kapcsolat a
    csendes körig él, aztán lezárul — több kört fut, de nem marad nyitva.*
-6. 🆕 **Az `ALLAS` szeletelése.** Mérve: 162 bájt/e-ember. Egy 10 000 fős koinóban ez
-   ~1,6 MB **minden csere elején** — ennyit nem küldünk el csak azért, hogy kiderüljön,
-   nincs újdonság. Kézenfekvő irány: előbb egy **összesített ujjlenyomat** megy át, és a
-   részletes állás csak akkor, ha az eltér. *(Nem most: előbb legyen valódi hálózati
-   mérésünk.)*
+6. ✅ **Az `ALLAS` ára** — **eldöntve: D35** (2026-08-29). Már nem optimalizálás, hanem
+   **befogadási feltétel**: 1000 fős koinónál 5 percenkénti cserével 46 MB/nap, ami egy
+   mobilos e-embert a **számlája** miatt zárna ki. Megoldás: összesített ujjlenyomat előbb,
+   részletes állás csak eltérésnél (1,6 MB → ~100 bájt). **Ez a B. lépés.**
+8. 🆕 **A SZÉTSZAKADÁS mérése.** A D33 óta nem az a kockázat, hogy „A nem éri el B-t",
+   hanem hogy a hálózat **két szigetre esik**. Az `ujjlenyomat` megmutatja, ha már
+   megtörtént — de **honnan tudja egy e-ember, hogy le van maradva?** Kell-e jelzés arról,
+   hogy „régen beszéltem bárkivel"?
+9. 🆕 **Rádió (LoRa) mint sáv.** 2–10 km, szolgáltató nélkül, ~400 bájtos eseményekhez
+   bőven elég; ⚠️ az EU-s szabad sávban **1% adásidő-korlát** (néhány száz üzenet/nap),
+   és külön eszköz kell (~8–10 ezer Ft). Kis közösségnek elég, nagynak nem. *Felírva, nem
+   tervezve.*
+10. 🆕 **Tor onion-cím.** ⭐ Ez ad **elérhető címet annak is, aki semmilyen kaput nem tud
+    nyitni** — vagyis bárkiből lehetne postaláda. A Briar bizonyítja, hogy Androidon
+    működik. Ára: lassabb, függ egy külső (önkéntes) hálózattól, és van, ahol tiltják.
+    *A platform-függetlenség 2. szabálya szerint: csak úgy, ha elhagyható.*
 7. ✅ **AZ ENTITÁSOK SORRENDJE** *(felvetve és lezárva 2026-08-28)*. A kézi próbán a csere
    után mindkét készülék ugyanazokat az entitásokat számolta ki — de **más sorrendben**
    sorolta fel őket (a fájlba érkezés sorrendje). Az ÉRTÉKEK sorrend-függetlenek voltak, a
@@ -256,6 +287,29 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 ---
 
 ## Napló
+
+- **2026-08-29 (a fordulat)** — 🔀 **ROSSZ FELADATOT OLDOTTUNK MEG — D33–D35.**
+  Négy estén át azon dolgoztunk, hogy a laptop **fogadni** tudjon kapcsolatot: kézi
+  router-szabály, NAT-PMP, PCP, UPnP — mind megbukott. Aztán Csaba feltette a kérdést, ami
+  a feladatot írta át: *„a koinóban nem konkrét címzetthez kell eljuttatni valamit, hanem
+  mindenkinek… mindegy, hogy kivel sikerül kapcsolódni, az már tudja továbbítani máshova."*
+
+  **A három döntés** (teljes leírás: [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)):
+  **D33** a cél az **összefüggőség**, nem az elérhetőség (egymillió főnél is ~14 kapcsolat
+  fejenként) · **D34** **postaláda**, nem élő továbbító (a koino nem valós idejű, tehát a
+  közvetítőnek nem kell két felet egyszerre online tartania) · **D35** a csere ára
+  **befogadási kérdés**, nem optimalizálás.
+
+  **Csaba két helyreigazítása, ami idevezetett:**
+  1. *„a döntések napokban mérődnek" — ez nem igaz*, lehet órákban is. **A lassúságra nem
+     szabad védelemként hivatkozni** (a CLAUDE.md 5. szabálya javítva).
+  2. *„nem lehet minden PC továbbító"* — ellentmondtam magamnak; igaza volt. Továbbító csak
+     az lehet, aki fogadni tud. ⭐ **De a „csak kifelé" gépek is megkapnak mindent**, mert a
+     csere kétirányú — ezt a saját mérésünk bizonyítja (a telefon kiszólt, és 3 eseményt
+     kapott, 2-t küldött).
+
+  **A lépés-sorrend átírva** (lásd a 6. szakaszban): előbb **több társ**, aztán **olcsó
+  csere**, és a lyukfúrás lecsúszott.
 
 - **2026-08-29 (a router megkérdezése)** — ⚠️ **AZ AUTOMATIKUS KAPUNYITÁS EZEN A ROUTEREN
   NEM MEGY — megmérve.** A kézi port-szabály után az volt a kérdés, tud-e a koino **magától**

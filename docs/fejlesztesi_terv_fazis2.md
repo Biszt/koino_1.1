@@ -69,6 +69,47 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >   Browsing egyetlen lista majdnem mindhez. A **D29 pontosul**: a böngésző kliens lehet,
 >   de semmi nem múlhat rajta.
 
+> ### 🔀 HARMADIK FORDULAT (2026-08-29): NEM ELÉRÉS, HANEM TERJEDÉS — D33–D35
+>
+> *Négy estén át azon dolgoztunk, hogy a laptop **fogadni** tudjon kapcsolatot. Mindhárom
+> szabvány (NAT-PMP, PCP, UPnP) megbukott a routeren, és a kézi szabály sem működött. Aztán
+> Csaba feltett egy kérdést, ami kiderítette, hogy **rossz feladatot oldottunk meg.***
+>
+> **D33 — A CÉL AZ ÖSSZEFÜGGŐSÉG, NEM AZ ELÉRHETŐSÉG.** Csaba: *„a koinóban nem konkrét
+> címzetthez kell eljuttatni valamit, hanem mindenkinek […] mindegy, hogy kivel sikerül
+> kapcsolódni, az már tudja továbbítani máshova is."*
+> A régi kérdés — *„el tud-e érni A a B-hez?"* — **N² kapcsolatot** követelne. Az új —
+> *„összefüggő-e a gráf?"* — **logaritmikusat**: 10 főnél 3, 100-nál 5, 1000-nél 7,
+> **egymilliónál ~14 kapcsolat fejenként**. Ezért működik a BitTorrent és a Bitcoin
+> évtizedek óta, NAT ide vagy oda.
+> **Amire ezzel NINCS többé szükség:** globális címtár · jelzőpont · garantált kézbesítés ·
+> hogy mindenki elérhető legyen.
+> ⚠️ **Az új kockázat: a SZÉTSZAKADÁS** — két sziget, ami soha nem érintkezik. Erre már van
+> eszközünk: az `ujjlenyomat` azonnal megmutatja.
+>
+> **D34 — POSTALÁDA, NEM ÉLŐ TOVÁBBÍTÓ.** Mivel a koino **nem valós idejű**, a
+> közvetítőnek nem kell egyszerre online tartania két felet (ez a TURN drágasága). Elég,
+> ha **átveszi, eltárolja, és a következő beszélgetésnél továbbadja.**
+> *Anna és Béla egyike sem tud fogadni; mindketten Cilihez szólnak ki — és teljesen
+> kicserélik az eseményeiket, pedig soha nem beszéltek egymással.*
+> ⭐ **A koino így megúszhatja a P2P legdrágább darabját** — nem okosságból, hanem mert a
+> döntései nem másodpercesek.
+>
+> **D35 — A CSERE ÁRA BEFOGADÁSI KÉRDÉS, NEM OPTIMALIZÁLÁS.** Az `ALLAS` mérve **162
+> bájt/e-ember**; 1000 fős koinónál 5 percenkénti cserével **46 MB/nap**, 10 000-nél
+> **460 MB/nap**. *Ez nem a hálózatot terheli meg, hanem a mobilos e-ember számláját
+> zárná ki — épp azt, akinek a legkevesebb pénze van.*
+> **A javítás:** a csere kezdődjön **egyetlen összesített ujjlenyomattal** (43 karakter);
+> a részletes állás csak akkor menjen, ha az eltér. Egy „nincs újdonság" csere így
+> **1,6 MB helyett ~100 bájt**.
+>
+> **Csaba két helyreigazítása, ami idevezetett:**
+> 1. *„a döntések napokban mérődnek" — ez nem igaz*, lehet órákban is, a tudatpont-változás
+>    még sűrűbben. **A lassúságra nem szabad védelemként hivatkozni.**
+> 2. *„nem lehet minden PC továbbító"* — igaza volt, ellentmondtam magamnak. Továbbító csak
+>    az lehet, aki **fogadni** tud; a többi „csak kifelé" — de ⭐ **ők is megkapnak mindent**,
+>    mert a csere kétirányú (mérve: a telefon kiszólt, és 3 eseményt kapott, 2-t küldött).
+
 > ### 🔀 MÁSODIK FORDULAT (2026-08-28): NINCS BÖNGÉSZŐ
 >
 > **D29** — *„Tulajdonképpen hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta

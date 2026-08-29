@@ -139,6 +139,42 @@ Négy tulajdonság, ami ezt biztosítja — és mindegyik **már ma is teljesül
 azért, mert okosabbak voltunk, hanem mert az aláírt esemény + számított állapot szerkezete
 eleve elveszi a közvetítő hatalmát.
 
+### ⭐ Csaba felismerése, ami átírta az egészet (2026-08-29)
+
+> *„a koinóban nem konkrét címzetthez kell eljuttatni valamit, hanem mindenkinek […]
+> mindegy, hogy kivel sikerül kapcsolódni, az már tudja továbbítani máshova is."*
+
+**Ez más feladat, mint amit a fenti rendszerek nagy része megold.** A WebRTC, a Signal, a
+Tailscale mind **konkrét címzettet** akar elérni — ezért kell nekik jelzőpont és élő
+továbbító. A koino nem: neki elég, ha **az esemény körbeér**, akárhány lépésben.
+
+**Két számszerű következménye van, és mindkettő nagy:**
+
+**1. A több társ szinte megszünteti a 70%-os korlátot.**
+
+| Hány társsal próbálkozik | Legalább egy sikerül |
+|---|---|
+| 1 | 70% |
+| 2 | 91% |
+| 3 | 97,3% |
+| 5 | **99,8%** |
+
+⚠️ *Egy fenntartással: a kudarcok nem függetlenek. Ha a **saját** hálózatod a rossz
+(szimmetrikus NAT), akkor hiába próbálsz százat. De ha a **társé**, akkor a következő
+társsal megy — és ez a gyakoribb eset.*
+
+**2. Az összefüggőséghez logaritmikusan kevés kapcsolat kell.**
+
+| Létszám | Elég kapcsolat fejenként |
+|---|---|
+| 10 | 3 |
+| 100 | 5 |
+| 1 000 | 7 |
+| 1 000 000 | **~14** |
+
+**Egymillió emberhez is elég fejenként tizennégy ismerős.** Ez a „kis világ" tulajdonság —
+és ez az, amiért a BitTorrent és a Bitcoin NAT ide vagy oda működik.
+
 ### A négy út, sorrendben
 
 | # | Út | Kit ér el | Mennyire kész |
