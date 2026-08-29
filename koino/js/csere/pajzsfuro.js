@@ -46,6 +46,72 @@
 import { createSocket } from 'node:dgram';
 import { connect } from 'node:net';
 
+// ===================================
+// A KÜLSŐ PORT MEGMÉRÉSE (STUN)
+// ===================================
+//
+// ⭐ MIÉRT KELL? IPv4-en a NAT ÁTÍRJA a kimenő port számát. Mérve a fejlesztő vonalán:
+// a helyi 7373 kívülről a 51967-esen látszik. Ha a másik a 7373-ra kopog, ott NINCS
+// semmi — ezért nem ért célba egyetlen csomag sem.
+//
+// ⚠️ EZ SEGÉDESZKÖZ, NEM ELŐFELTÉTEL (2. szabály, D38). A szerver PARAMÉTER, tehát
+// cserélhető; ha nem válaszol, a koino ugyanúgy működik, csak a fúrás nem célozható.
+// És semmilyen bizalom nem jár vele (3. szabály): egy portszámot mond, nem igazságot.
+//
+// ⭐ HOSSZÚ TÁVON EZT A SAJÁT TÜKRÜNK VÁLTJA KI: aki fogad, az amúgy is látja, honnan
+// jövünk (lásd `vonal.js`, `latlak`). Ez itt a BEMUTATKOZÁSHOZ kell, amíg nincs kihez
+// szólni — pontosan az az eset, amit a D37 „első bemutatkozás"-nak nevez.
+
+const SUTI = 0x2112A442;
+
+/**
+ * Megkérdezi egy STUN-kiszolgálótól, milyen CÍMEN ÉS PORTON látszunk kívülről.
+ *
+ * @param {number} helyiPort - erről a portról kérdezünk (a mérés csak erre érvényes!)
+ * @param {string} [szerver]
+ * @param {number} [szerverPort]
+ * @returns {Promise<{cim: string, port: number}>}
+ */
+export async function kulsoCim(helyiPort, szerver = 'stun.l.google.com', szerverPort = 19302) {
+  console.log('kulsoCim - KEZDÉS', { helyiPort, szerver });
+
+  const halo = createSocket({ type: 'udp4', reuseAddr: true });
+  const keres = Buffer.alloc(20);
+  keres.writeUInt16BE(0x0001, 0);
+  keres.writeUInt16BE(0, 2);
+  keres.writeUInt32BE(SUTI, 4);
+  for (let i = 8; i < 20; i++) keres[i] = Math.floor(Math.random() * 256);
+
+  return new Promise((teljesites, elutasitas) => {
+    const hatarido = setTimeout(() => {
+      halo.close();
+      elutasitas(new Error('a STUN-kiszolgáló nem válaszolt 5 mp alatt'));
+    }, 5000);
+
+    halo.on('message', (v) => {
+      let p = 20;
+      while (p + 4 <= v.length) {
+        const tipus = v.readUInt16BE(p), hossz = v.readUInt16BE(p + 2);
+        if (tipus === 0x0020) {              // XOR-MAPPED-ADDRESS
+          const port = v.readUInt16BE(p + 6) ^ 0x2112;
+          const cim = [0, 1, 2, 3]
+            .map((i) => v[p + 8 + i] ^ ((SUTI >> (24 - 8 * i)) & 0xff)).join('.');
+          clearTimeout(hatarido); halo.close();
+          console.log('kulsoCim - VÉGE', { cim, port });
+          teljesites({ cim, port });
+          return;
+        }
+        p += 4 + hossz + ((4 - (hossz % 4)) % 4);
+      }
+      clearTimeout(hatarido); halo.close();
+      elutasitas(new Error('a válasz nem tartalmazott címet'));
+    });
+
+    halo.on('error', (h) => { clearTimeout(hatarido); elutasitas(h); });
+    halo.bind(helyiPort, () => halo.send(keres, szerverPort, szerver));
+  });
+}
+
 const KOPOGAS_KOZ = 1000;      // ennyi ezredmásodpercenként kopogunk
 const IDOKORLAT = 60000;       // eddig próbálkozunk (0 = vég nélkül, amíg le nem állítják)
 

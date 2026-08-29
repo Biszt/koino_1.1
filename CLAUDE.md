@@ -26,7 +26,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 3. **A bizalom sose a csatornából jöjjön.** Eseményt soha nem fogadunk el azért, mert „megbízható helyről jött" — egyetlen kapu van: `esemenyMentese`.
 4. **Legyen mindig kézi út.** Minden automatikus cseréhez tartozzon fájlba mentés / fájlból olvasás. **Ha egy funkció csak online tud működni, az fojtópont.**
 5. **Ne épüljön folyamatos kapcsolatra.** ⚠️ *Csaba helyreigazítása (2026-08-29): a döntés NEM feltétlenül napokban mér — lehet órákban is, a tudatpont-változás még sűrűbben. **A lassúságra tehát nem szabad védelemként hivatkozni.*** A szabály viszont áll: ami **másodperces élő kapcsolatot** kívánna (mindkét fél egyszerre online), az visszahozza a törékenységet — ezért postaláda kell, nem élő továbbító (D34).
-6. ⭐ **Nulla függőség, kis méret.** Ma **30 fájl, 352 KB** a mappa (tömörítve ~80 KB), **0 npm-csomag**. Ez **védelem, nem elegancia**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont. ⚠️ *Ha új fájl kerül a `koino/`-ba, ezt a számot itt is vezesd át — a szabály attól ellenőrizhető, hogy a mércéje friss.*
+6. ⭐ **Nulla függőség, kis méret.** Ma **30 fájl, 357 KB** a mappa (tömörítve ~80 KB), **0 npm-csomag**. Ez **védelem, nem elegancia**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont. ⚠️ *Ha új fájl kerül a `koino/`-ba, ezt a számot itt is vezesd át — a szabály attól ellenőrizhető, hogy a mércéje friss.*
 7. **A böngésző csak kliens lehet, sose előfeltétel** (a D29 pontosítása).
 8. **Ne tervezz jogi védelemre.** Ha egy érv így kezdődik: „ezt úgyis megtiltja a szabályozás" — az érv nem érvényes.
 
@@ -54,7 +54,7 @@ node koino/meres/mind.js         # a 171 önpróba
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 30 fájl, 352 KB (a `tar.gz` csomag ~80 KB), nulla függőség.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 30 fájl, 357 KB (a `tar.gz` csomag ~80 KB), nulla függőség.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

@@ -60,7 +60,7 @@ import {
 import { figyeloIndulasa, csereVonalon, parbeszed } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
-import { pajzsfuras, tcpPajzsfuras } from './js/csere/pajzsfuro.js';
+import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -745,6 +745,39 @@ try {
       break;
     }
 
+    case 'kulsoport': {
+      // ===== MILYEN CÍMEN ÉS PORTON LÁTSZOM KÍVÜLRŐL? =====
+      //
+      // ⭐ MIÉRT KELL? Mérve a fejlesztő vonalán: a helyi 7373 kívülről az 51967-esen
+      // látszik. Ha a másik a 7373-ra kopog, ott NINCS SEMMI — ezért nem ért célba
+      // egyetlen csomag sem. IPv6-on ez a lépés nem létezik (nincs port-átírás).
+      //
+      // ⚠️ Segédeszköz, nem előfeltétel (D38): a kiszolgáló paraméter, tehát cserélhető,
+      // és bizalom nem jár vele — egy portszámot mond, nem igazságot.
+      const helyiPort = parseInt(ervek[0], 10) || ALAP_PORT;
+      const szerver = ervek[1];
+      const szerverPort = parseInt(ervek[2], 10) || undefined;
+
+      const elso = await kulsoCim(helyiPort, szerver, szerverPort);
+      kiir(SZIN.vastag + 'KÍVÜLRŐL ÍGY LÁTSZOL' + SZIN.vege);
+      kiir('  ' + SZIN.jo + elso.cim + ':' + elso.port + SZIN.vege
+        + SZIN.halvany + '   (a helyi ' + helyiPort + '-esről)' + SZIN.vege);
+      kiir();
+
+      if (elso.port === helyiPort) {
+        kiir(SZIN.jo + '⭐ A PORT MEGMARADT — a másik a ' + helyiPort + '-esre kopoghat.'
+          + SZIN.vege);
+      } else {
+        kiir(SZIN.nem + '⚠ A PORT ÁTÍRVA (' + helyiPort + ' → ' + elso.port + ')'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '  Ez normális IPv4-en. A másiknak a KÜLSŐ portra kell'
+          + ' kopognia:' + SZIN.vege);
+        kiir('  ' + SZIN.vastag + 'node koino/koino.js pajzsfuro ' + elso.cim + ' '
+          + elso.port + ' ' + ALAP_PORT + SZIN.vege);
+      }
+      break;
+    }
+
     case 'pajzsfuro': {
       // ===== PAJZSFÚRÁS (E. lépés) =====
       //
@@ -757,8 +790,17 @@ try {
       // futott mindkettőn egyszerre. Ha viszont mindkettő folyamatosan fúr, az átfedés
       // előbb-utóbb garantált, közös óra nélkül is. Leállítani Ctrl+C-vel lehet.
       const cim = ervek[0];
-      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js pajzsfuro <cím> [port] [tcp]');
+      if (!cim) {
+        throw new Error('Kihez kopogjak?'
+          + '\n  node koino/koino.js pajzsfuro <cím> <távoli port> [helyi port]'
+          + '\n  node koino/koino.js pajzsfuro <cím> <távoli port> tcp [mp]');
+      }
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
+      // ⚠️ A HELYI ÉS A TÁVOLI PORT KÜLÖNBÖZHET — és IPv4-en általában KÜLÖNBÖZIK is,
+      // mert a NAT átírja. A helyi portot MI választjuk (ezen fogadunk), a távolit a
+      // másik KÜLSŐ portja adja (oda kopogunk). A `kulsoport` parancs mondja meg.
+      const helyiPort = (ervek[2] && ervek[2].toLowerCase() !== 'tcp')
+        ? (parseInt(ervek[2], 10) || ALAP_PORT) : ALAP_PORT;
 
       // ===== TCP-VÁLTOZAT =====
       // Ugyanaz az elv, de magával a csere protokolljával fúrunk — így ha átértünk, a
@@ -767,8 +809,8 @@ try {
         const mp = parseFloat(ervek[3]) || 15;
 
         kiir(SZIN.vastag + 'PAJZSFÚRÓ — TCP' + SZIN.vege + SZIN.halvany
-          + '   (a ' + port + '-esről a ' + port + '-esre, ' + mp + ' másodpercenként)'
-          + SZIN.vege);
+          + '   (a helyi ' + helyiPort + '-esről a ' + port + '-esre, ' + mp
+          + ' másodpercenként)' + SZIN.vege);
         kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
           + SZIN.vege);
         kiir(SZIN.nem + '⚠ Közben NE fusson `orjarat` vagy `figyel` ugyanezen a porton —'
@@ -787,7 +829,7 @@ try {
         kiir();
 
         let elozoOk = null;
-        const furas = await tcpPajzsfuras(port, cim, port, {
+        const furas = await tcpPajzsfuras(helyiPort, cim, port, {
           koz: mp * 1000,
           utana: (e) => {
             // ⚠️ MINDEN próbálkozás látszik, nem csak a siker (Csaba kérése).
@@ -824,13 +866,14 @@ try {
       }
 
       kiir(SZIN.vastag + 'PAJZSFÚRÓ' + SZIN.vege + SZIN.halvany
-        + '   (a ' + port + '-es portról a ' + port + '-esre, másodpercenként)' + SZIN.vege);
+        + '   (a helyi ' + helyiPort + '-esről a ' + cim + ':' + port
+        + '-re, másodpercenként)' + SZIN.vege);
       kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
         + SZIN.vege);
       kiir(SZIN.halvany + 'Vég nélkül fúr, amíg össze nem ér. Kilépés: Ctrl+C' + SZIN.vege);
       kiir();
 
-      const eredmeny = await pajzsfuras(port, cim, port, {
+      const eredmeny = await pajzsfuras(helyiPort, cim, port, {
         idokorlat: 0,                 // 0 = vég nélkül
         utana: (e) => {
           // ⚠️ MŰSZER A NÉMA NEM-ESEMÉNYRE. Az első változat CSAK a sikeres kopogást írta
