@@ -139,3 +139,63 @@ export function kulcsTarolo(hely = alapHely()) {
     }
   };
 }
+
+// ===================================
+// A TÁRS-LISTA TÁROLÁSA
+// ===================================
+
+/**
+ * A társak listája: egyetlen JSON-fájl, KÉZZEL IS SZERKESZTHETŐ.
+ *
+ * ⭐ MIÉRT NEM ESEMÉNY? Mert a cím nem igazság, hanem múlandó körülmény. Egy aláírt
+ * esemény örökre megmarad — egy IP-cím két hét múlva már másé. A társ-lista ezért HELYI
+ * FELJEGYZÉS: nem terjed, nem kell rá egyetértés, és bárki átírhatja a saját gépén.
+ * *(A terjedő címjegyzék külön kérdés lesz — D. lépés, aláírt, de MULANDÓ üzenetekkel.)*
+ *
+ * ⭐ A 4. SZABÁLY ITT LÁTSZIK: mivel sima JSON-fájl egy ismert helyen, a társ-lista
+ * kézzel is összeállítható — egy szövegszerkesztővel, hálózat nélkül. Nincs olyan
+ * pont, ahol egy szolgáltatás kellene ahhoz, hogy a koino tudja, kikkel beszéljen.
+ *
+ * ⚠️ Készülék-szintű, nem koino-szintű (mint a kulcs): ugyanaz a társ jellemzően minden
+ * közös koinóban ugyanaz a társ, és a cím a készülékhez tartozik, nem a témához.
+ *
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function tarsakTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'tarsak.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Array<Object>>} a társak, vagy üres lista */
+    async olvas() {
+      let szoveg;
+      try {
+        szoveg = await readFile(fajl, 'utf8');
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return [];   // még nincs fájl: nincs társ
+        throw hiba;
+      }
+
+      try {
+        const adat = JSON.parse(szoveg);
+        // Kézzel írt fájlnál a puszta tömb is elfogadható — ne bosszantsuk azt, aki
+        // gyorsan beírt két címet.
+        const lista = Array.isArray(adat) ? adat : adat.tarsak;
+        return Array.isArray(lista) ? lista : [];
+      } catch {
+        // Egy elrontott társ-lista NE akadályozza meg a koino futását: a társ kényelem,
+        // nem előfeltétel (2. szabály).
+        console.warn('tarsakTarolo - olvashatatlan társ-lista, üresnek vesszük', { fajl });
+        return [];
+      }
+    },
+
+    /** @param {Array<Object>} lista */
+    async ir(lista) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify({ tarsak: lista }, null, 2), 'utf8');
+    }
+  };
+}

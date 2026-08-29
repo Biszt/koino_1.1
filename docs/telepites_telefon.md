@@ -188,8 +188,11 @@ cd ~/koino_1.1 && node koino/meres/mind.js
 ✅ **Ha sikerült:** a legalsó sor ez lesz:
 
 ```
-✅ Mind a 124 próba rendben
+✅ Mind a 149 próba rendben
 ```
+
+*(A szám nő, ahogy új próbák születnek — a lényeg, hogy a sor **✅**-tel kezdődjön, és ne
+legyen benne „BUKOTT".)*
 
 ❌ **Ha bármi „BUKOTT":** másold ki a végét, és küldd el nekem. Ezt a mérés ELŐTT kell
 megérteni.

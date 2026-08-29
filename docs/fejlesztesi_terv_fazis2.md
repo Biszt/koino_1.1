@@ -157,6 +157,16 @@ billenthető, szélsőértékkel nem"* (D4). **Ugyanez alkalmazható az időre**
 a résztvevők medián-ideje, egyetlen hazug óra nem mozdít semmit. *(A Bitcoin is a
 szomszédok idejének mediánját használja.)*
 
+> ⚠️ **PONTOSÍTÁS (2026-08-29): a medián-idő NEM a társkereséshez kell.** Csaba felvetette,
+> hogy ha az eszközöknek egyszerre kell keresniük a társakat, akkor a medián-időt előre
+> kellene venni. A megépítés közben kiderült, hogy **két különböző dolgot** hívunk
+> „egyidejűségnek": az **átfedéshez** (mindkét fél ébren van ugyanabban az ablakban) elég
+> egy ütem, közös óra nélkül — a **randevúhoz** (ugyanaz a másodperc) kellene közös óra,
+> de az csak a lyukfúrásnál (E. lépés) merül fel. Ráadásul a randevúnál a hazug óra csak a
+> hazudót bünteti, tehát nincs mit védeni. **Megmérve: a csere-réteg egyetlen óra-hivatkozást
+> sem tartalmaz.** A medián-idő tehát ott marad, ahol értéke van: a **lezárásnál**, ahol
+> valaki nyerhet a hazugsággal. Részletek: [`szakasz2_terv.md`](szakasz2_terv.md).
+
 **5. A jegyzőkönyv igen, az ítélet nem.**
 Késve érkező szavazat **megjelenhet** a jegyzőkönyvben („a lezárás után érkezett" —
 a `kesoiSzavazatok` mezőt már számoljuk), de **nem írhatja át a kimondott eredményt**.

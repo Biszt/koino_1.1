@@ -22,7 +22,11 @@
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
-//   node koino/koino.js csere <cím> [port]       — csere egy másik készülékkel
+//   node koino/koino.js csere                    — csere MINDEN társsal (a lista szerint)
+//   node koino/koino.js csere <cím> [port]       — csere egy megadott készülékkel
+//   node koino/koino.js tarsak                   — kik a társaim, és mikor sikerült
+//   node koino/koino.js tars <cím> [port] [név]  — társ felvétele
+//   node koino/koino.js tars torol <cím> [port]  — társ levétele
 //   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson kaput
@@ -40,7 +44,7 @@
 
 import { writeFile } from 'node:fs/promises';
 
-import { esemenyTarNyitasa, kulcsTarolo, alapHely } from './js/tar/fajlTar.js';
+import { esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, alapHely } from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
 } from './js/kulcs/kulcsTar.js';
@@ -53,6 +57,7 @@ import {
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
+import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -470,16 +475,121 @@ try {
       break;
     }
 
-    case 'csere': {
-      const cim = ervek[0];
-      if (!cim) throw new Error('Kihez csatlakozzam? node koino/koino.js csere <cím> [port]');
-      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+    case 'tarsak': {
+      // ⭐ D33: nem az a kérdés, hogy egy adott gépet elérünk-e, hanem hogy a hálózat
+      // összefüggő marad-e. Ez a lista az, amiből az összefüggőség lesz.
+      const tarolo = tarsakTarolo();
+      const lista = tarsakSorrendje(await tarolo.olvas());
 
+      kiir(SZIN.vastag + 'TÁRSAK' + SZIN.vege + SZIN.halvany
+        + '   (ebben a sorrendben próbálja a `csere`)' + SZIN.vege);
+      if (!lista.length) {
+        kiir(SZIN.halvany + '  (üres) — vegyél fel egyet: node koino/koino.js tars <cím> [port] [név]'
+          + SZIN.vege);
+      }
+      for (const t of lista) {
+        const allapotSzoveg = t.utoljara
+          ? SZIN.jo + 'sikerült ' + new Date(t.utoljara).toLocaleString('hu-HU') + SZIN.vege
+          : (t.sikertelen
+            ? SZIN.nem + t.sikertelen + '× nem sikerült' + SZIN.vege
+            : SZIN.halvany + 'még nem próbáltuk' + SZIN.vege);
+        kiir('  ' + t.hoszt + ' ' + t.port
+          + (t.nev ? SZIN.halvany + '  „' + t.nev + '"' + SZIN.vege : '')
+          + '  ' + allapotSzoveg);
+      }
+      kiir();
+      kiir(SZIN.halvany + 'A fájl kézzel is szerkeszthető: ' + tarolo.fajl + SZIN.vege);
+      break;
+    }
+
+    case 'tars': {
+      const tarolo = tarsakTarolo();
+      const lista = await tarolo.olvas();
+
+      if (ervek[0] === 'torol') {
+        const cim = ervek[1];
+        if (!cim) throw new Error('Kit vegyek le? node koino/koino.js tars torol <cím> [port]');
+        const port = parseInt(ervek[2], 10) || ALAP_PORT;
+        const { lista: maradt, torolt } = tarsTorlese(lista, cim, port);
+        await tarolo.ir(maradt);
+        kiir(torolt
+          ? SZIN.jo + 'Levéve: ' + cim + ' ' + port + SZIN.vege
+          : SZIN.nem + 'Nem volt a listán: ' + cim + ' ' + port + SZIN.vege);
+        break;
+      }
+
+      const cim = ervek[0];
+      if (!cim) throw new Error('Kit vegyek fel? node koino/koino.js tars <cím> [port] [név]');
+      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+      await tarolo.ir(tarsHozzaadasa(lista, { hoszt: cim, port, nev: ervek[2] }));
+      kiir(SZIN.jo + 'Felvéve: ' + cim + ' ' + port + (ervek[2] ? ' („' + ervek[2] + '")' : '')
+        + SZIN.vege);
+      kiir(SZIN.halvany + 'Csere mindenkivel: node koino/koino.js csere' + SZIN.vege);
+      break;
+    }
+
+    case 'csere': {
+      const tarolo = tarsakTarolo();
       const kezdet = Date.now();
-      const eredmeny = await csereVonalon(tar, KOINO, cim, port);
-      kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
-        + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
-        + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+
+      // ===== EGY MEGADOTT CÍM =====
+      // Marad, mert kell: az első társat valahonnan meg kell adni (kézzel átvitt címmel),
+      // és a mérésekhez is ez a legrövidebb út.
+      if (ervek[0]) {
+        const cim = ervek[0];
+        const port = parseInt(ervek[1], 10) || ALAP_PORT;
+        const eredmeny = await csereVonalon(tar, KOINO, cim, port);
+
+        kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
+          + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
+          + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+
+        // Akivel egyszer sikerült, azt megjegyezzük — különben minden cserénél újra kézzel
+        // kellene beírni a címet, és pont az nem épülne fel, ami a D33-hoz kell: a lista.
+        const lista = await tarolo.olvas();
+        const volt = lista.some((t) => t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port);
+        await tarolo.ir(tarsHozzaadasa(lista, { hoszt: cim, port }).map((t) =>
+          (t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port)
+            ? { ...t, utoljara: Date.now(), sikertelen: 0 } : t));
+        if (!volt) kiir(SZIN.halvany + 'Felvettem a társak közé (levenni: tars torol '
+          + cim + ' ' + port + ')' + SZIN.vege);
+
+        kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
+        break;
+      }
+
+      // ===== MINDENKI A LISTÁRÓL =====
+      const lista = await tarolo.olvas();
+      if (!lista.length) {
+        throw new Error('Nincs egyetlen társ sem. Vegyél fel egyet:'
+          + '\n  node koino/koino.js tars <cím> [port] [név]'
+          + '\nvagy adj meg most egy címet:  node koino/koino.js csere <cím> [port]');
+      }
+
+      kiir(SZIN.vastag + 'CSERE ' + lista.length + ' társsal' + SZIN.vege);
+
+      const kor = await korbeCsere(lista, (t) => csereVonalon(tar, KOINO, t.hoszt, t.port), {
+        utana: (e) => {
+          const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
+          kiir(e.sikerult
+            ? SZIN.jo + '  ✓ ' + cimke + SZIN.vege + SZIN.halvany
+              + ' — kaptam ' + e.uj + ', küldtem ' + e.kuldott + ' (' + e.korok + ' kör)' + SZIN.vege
+            : SZIN.halvany + '  · ' + cimke + ' — nem érhető el: ' + e.hiba + SZIN.vege);
+        }
+      });
+      await tarolo.ir(kor.lista);
+
+      kiir();
+      // ⚠️ A NULLA SIKER SEM HIBA: a koino ettől még működik, csak most nem terjedt.
+      // Ezért nem `throw`, és ezért nem 1-es kilépési kód (2. szabály).
+      kiir((kor.sikeres ? SZIN.jo : SZIN.nem) + kor.sikeres + '/' + kor.eredmenyek.length
+        + ' társ vette fel' + SZIN.vege + SZIN.halvany
+        + ' — összesen ' + kor.uj + ' új esemény, ' + kor.kuldott + ' küldött'
+        + ' (' + (Date.now() - kezdet) + ' ms)' + SZIN.vege);
+      if (!kor.sikeres) {
+        kiir(SZIN.halvany + 'Egy társ sem válaszolt. Ez nem hiba — később újra megy;'
+          + ' addig is minden művelet mehet tovább helyben.' + SZIN.vege);
+      }
       kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
       break;
     }
@@ -489,7 +599,8 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
-      kiir('           figyel [port] · csere <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           figyel [port] · csere [cím] [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }
 } catch (hiba) {

@@ -46,6 +46,16 @@ node koino/koino.js
 | `node koino/koino.js javaslat <azonosító> "Új cím"` | szerkesztési javaslat |
 | `node koino/koino.js szavaz <javaslat> tamogat\|ellenez\|tartozkodik` | szavazat |
 
+**A Szakasz 2 parancsai** — a csere két készülék között:
+
+| Parancs | Mit csinál |
+|---|---|
+| `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
+| `node koino/koino.js figyel [port]` | postaláda-szerep: várja, hogy valaki kapcsolódjon |
+| `node koino/koino.js csere <hoszt> <port>` | kapcsolódás a másik készülékhez, és teljes csere |
+| `node koino/koino.js cimek` | milyen címeken érhető el ez a készülék |
+| `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a kapcsolatot (NAT-PMP / PCP / UPnP) |
+
 Az azonosítókból elég a **rövidítés** (mint a gitben). Az adat helye alapból a
 `koino-adat/` mappa; máshová a `KOINO_ADAT` környezeti változóval tehető. A részletes
 napló `KOINO_NAPLO=1`-gyel kapcsolható be.
@@ -60,7 +70,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Hat próba-fájl, **90 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **149 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |
@@ -71,6 +81,9 @@ futtatható: `node koino/meres/mind.js szabaly`.
 | `meres/allapotProba.js` | a sorrend nem számít — ugyanaz a halmaz, ugyanaz az állapot |
 | `meres/javaslatProba.js` | a döntés kiszámítható, és **a lezárt döntés nem fordul vissza** |
 | `meres/szabalyProba.js` | a szabályokat a **számítás** őrzi, nem a felület |
+| `meres/csereProba.js` | a csere teljes: a hézag és a rejtett elágazás is kiderül, és a hálózat **nem kap engedékenyebb kaput** |
+| `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
+| `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — három készülékig |
 
 ## A rétegek
 
@@ -84,8 +97,17 @@ futtatható: `node koino/meres/mind.js szabaly`.
 | `js/allapot/szabalyok.js` | mely események **számítanak** (keret, jogosultság) |
 | `js/allapot/allapotSzamitas.js` | események → entitások |
 | `js/allapot/javaslatSzamitas.js` | a döntéshozatal; **az egyezmény mint számítás** |
+| `js/allapot/osszehasonlitas.js` | **„ugyanazt látjuk-e?"** — az állapot ujjlenyomata, és hol tér el |
+| `js/csere/csere.js` | a csere-protokoll **logikája, hálózat nélkül** (`ALLAS` → `KEREK` → `ESEMENY`) |
+| `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
+| `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
+| `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben |
 | `js/muveletek.js` | a hat művelet |
 | `koino.js` | a parancssori arc |
+
+⚠️ **Az 1. szabály itt látszik:** a `csere.js` **soha nem importál hálózati kódot** — a
+logika és a szállítás külön él, ezért cserélhető ki a vonal bármi másra (fájl, pendrive,
+rádió) anélkül, hogy a csere-protokollhoz hozzá kellene nyúlni.
 
 ## Hol tartunk
 
@@ -94,6 +116,18 @@ végigjátszható: koino → tartalom → tudatpont → javaslat → szavazat �
 
 **Szakasz 2 — A KAPCSOLAT** *(itt tartunk)*: két készülék egymásra talál és kicseréli az
 eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
+
+| Lépés | Állapot |
+|---|---|
+| **1a** a csere logikája, hálózat nélkül | ✅ kész |
+| **1b** a vonal (TCP) | ✅ kész |
+| **2** a vizsga: két készülék → azonos állapot | ✅ kész |
+| **A** több társ: a `csere` társ-listára menjen, ne egy címre | ✅ kész — **25 önpróba**, és két halott címmel is átment a valódi csere |
+| **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | 🚧 következik |
+
+⚠️ **A lépés-sorrend 2026-08-29-én átíródott** (D33): nem az a kérdés, hogy egy adott gép
+**fogadni** tud-e, hanem hogy **a hálózat összefüggő marad-e**. A részletek a
+[`szakasz2_terv.md`](../docs/szakasz2_terv.md) 6. pontjában.
 
 A teljes terv és a döntések: [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
 · a Szakasz 1 terve: [`../docs/szakasz1_terv.md`](../docs/szakasz1_terv.md)

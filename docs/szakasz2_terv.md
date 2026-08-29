@@ -190,7 +190,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 >
 > | Új # | Lépés | Miért itt | Mennyi munka |
 > |---|---|---|---|
-> | **A** | **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | kicsi |
+> | **A** | ✅ **TÖBB TÁRS** — a `csere` ne egy címre menjen, hanem egy **társ-listára**, és próbálja mindet | ez viszi a párban mért 70%-ot **99% fölé**, és minden más ettől függ | **kész (2026-08-29): 25 önpróba** — [`js/csere/tarsak.js`](../koino/js/csere/tarsak.js) |
 > | **B** | **OLCSÓ CSERE** — összesített ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél | **D35: befogadási feltétel**, nem optimalizálás | kicsi |
 > | **C** | **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | apró |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
@@ -200,6 +200,63 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > **Amit ez a sorrend kimond:** a 4. lépés (két hálózat, IPv6) **már nem vizsga, hanem
 > mérés** — a koino sorsa nem múlik rajta (D31), csak azt mondja meg, hányan tudnak
 > postaláda lenni.
+
+### ✅ AZ A. LÉPÉS MEGVAN (2026-08-29) — és amit a megépítése hozott
+
+**Amit bizonyít** (a legfontosabb próba: *„egy társ bukása nem dönti el a kört"*): három
+társ a listán, kettő **halott cím**, és a csere ettől még végigment — 1/3 vette fel, 3 új
+esemény, 28 ms. A régi `csere <cím>` az első elérhetetlen címnél elszállt volna, és a
+harmadik társ **soha** nem kapja meg az eseményeket. Ez volt a 2. szabály néma megsértése.
+
+**Három döntés, ami a megépítés közben született:**
+
+| Kérdés | Döntés | Miért |
+|---|---|---|
+| A társ-lista **esemény** legyen? | ❌ **Nem** — helyi JSON-fájl (`tarsak.json`) | A cím nem igazság, hanem múlandó körülmény. Egy aláírt esemény örökre megmarad; egy IP-cím két hét múlva már másé. *(A terjedő címjegyzék a D. lépés — ott lesznek aláírt, de MULANDÓ üzenetek.)* |
+| Megálljunk az **első sikernél**? | ❌ **Nem**, de van `legfeljebb` korlát | A D33 célja az összefüggőség: minél több társ, annál nehezebb kettészakadni. A korlát viszont kell, mert a csere ára **befogadási kérdés** (D35). |
+| A sokszor bukott társ **essen ki**? | ❌ **Nem**, csak hátrébb kerül | A hálózat változik: aki hetekig elérhetetlen volt, holnap visszajöhet. Törölni **csak kézzel** lehet (4. szabály). |
+
+⚠️ **A nulla siker sem hiba**: ha egy társ sem válaszol, a parancs ezt kiírja, de nem dob
+hibát és nem ad 1-es kilépési kódot — a koino helyben ugyanúgy működik tovább.
+
+---
+
+### 🕐 KELL-E EGYSZERRE KERESNIÜK A TÁRSAKAT? — és mit jelent ez a MEDIÁN-IDŐRE
+
+*Csaba kérdése (2026-08-29): „ha az időzítés fontos, hogy egyidőben keressék a társakat az
+eszközök, akkor a medián-időt lehet, hogy előre kell venni."*
+
+**A kérdés jó, és két különböző dolgot fed — érdemes szétválasztani:**
+
+| | **ÁTFEDÉS** | **RANDEVÚ** |
+|---|---|---|
+| Mit kíván | mindkét fél **ébren legyen** ugyanabban az ablakban | mindkét fél **ugyanabban a másodpercben** lépjen |
+| Kell hozzá közös óra? | ❌ **nem** — elég egy ütem | ✅ **igen** |
+| Hol fordul elő | a mai csere és a postaláda (D34) | a **lyukfúrás** (E. lépés), ahol egyszerre kell kifelé csomagot küldeni |
+
+⭐ **A mai működéshez ÁTFEDÉS kell, nem randevú** — és az átfedéshez nem kell egyetértés az
+időben. Ha mindenki mondjuk 5 percenként próbálkozik, az órák eltérhetnek akár egy órával
+is: a próbálkozások fázisa véletlen, tehát előbb-utóbb egybeesnek. **Épp ez a D34 haszna:**
+a postaláda azért volt jó ötlet, mert *megszünteti* az egyidejűség kényszerét — Anna és
+Béla soha nem beszél egymással, mégis mindent kicserélnek Cilin keresztül.
+
+**Ezért a medián-időt NEM vesszük előre — de nem azért, mert a kérdés téves:**
+
+1. **Az A. lépéshez nem kell óra.** Megmérve: a csere-réteg (`csere.js`, `vonal.js`,
+   `tarsak.js`) **egyetlen óra-hivatkozást sem tartalmaz** — a protokoll sorszámokkal
+   dolgozik, nem időbélyeggel. `grep "Date.now" js/csere/` → nincs találat.
+2. **A randevúnál sem az órák HAZUGSÁGA a probléma, hanem a CSÚSZÁSUK.** A medián-idő
+   viszont a hazug óra ellen való (a 4. irány) — ott van értelme, ahol valaki **nyerhet**
+   a hazugsággal: a szavazás lezárásánál. Egy randevúnál a hazug óra csak a hazudót bünteti
+   (lekési a találkozót), tehát nincs mit védeni.
+3. **A szavazási rendszerhez most nem nyúlunk** — ez a döntés áll (lásd az öt irányt).
+
+⚠️ **Amit viszont a kérdés helyesen jelez, és felírunk:** ha egyszer az **E. lépés**
+(lyukfúrás) sorra kerül, ott **valóban másodperces egyidejűség** kell. Ott lesz először
+tétje annak, hogy két készülék órája mennyire tér el — de akkor is elég a szokásos
+óra-pontosság; a medián-idő ott sem **szinkronizáló** eszköz, hanem **védelmi**.
+
+---
 
 **A 4. lépés a szakasz vizsgája.** *(⚠️ A fenti átírás óta már nem — lásd ott.)* Ha két
 készülék külön hálózatról, szolgáltató nélkül kicseréli az eseményeit, akkor a Fázis 2
