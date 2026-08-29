@@ -51,7 +51,9 @@ node koino/koino.js
 | Parancs | Mit csinál |
 |---|---|
 | `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
+| `node koino/koino.js orjarat [perc] [port]` | ⭐⭐ **a készülék magától dolgozik**: kaput tart nyitva ÉS időnként kiszól minden társnak. Ez a valódi üzemmód |
 | `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja |
+| `node koino/koino.js talalkozo <hoszt> [port]` | **lyukfúrás-mérés**: mindkét fél kopog, és kiderül, átjut-e ⚠️ ma még csak mérés |
 | `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
 | `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
@@ -105,6 +107,7 @@ futtatható: `node koino/meres/mind.js szabaly`.
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben |
+| `js/csere/talalkozo.js` | **lyukfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/muveletek.js` | a hat művelet |
 | `koino.js` | a parancssori arc |
 

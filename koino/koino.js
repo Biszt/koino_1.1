@@ -21,6 +21,7 @@
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
+//   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
 //   node koino/koino.js csere                    — csere MINDEN társsal (a lista szerint)
 //   node koino/koino.js csere <cím> [port]       — csere egy megadott készülékkel
@@ -135,6 +136,9 @@ const szazalek = (ezrelek) => (ezrelek / 10).toFixed(1).replace('.0', '') + '%';
 // ⭐ MENNYI ADAT MENT EL? (D35) A csere ára befogadási kérdés: egy mobilos e-embernek a
 // számláján jelenik meg. Ezért minden csere kiírja — ami nem látszik, azt nem lehet
 // olcsóvá tenni.
+// Az őrjárat sorai elé — hogy utólag látszódjon, mikor mi történt.
+const ora = () => new Date().toLocaleTimeString('hu-HU');
+
 const adatMennyiseg = (eredmeny) => {
   const bajt = (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
   return bajt < 1024 ? bajt + ' bájt' : (bajt / 1024).toFixed(1) + ' KB';
@@ -570,6 +574,67 @@ try {
       break;
     }
 
+    case 'orjarat': {
+      // ===== A KÉSZÜLÉK MAGÁTÓL DOLGOZIK =====
+      //
+      // ⭐ MIÉRT KELL? Csaba vette észre: eddig MINDEN csere kézi indítású volt — pedig a
+      // D33 egész terve arra épül, hogy a készülékek maguktól, időnként végigpróbálják a
+      // társaikat. Egy koino-készüléknek nem szabad arra várnia, hogy valaki parancsot
+      // gépeljen be.
+      //
+      // Két dolgot csinál egyszerre, mert egy valódi készülék is ezt teszi:
+      //   1. NYITVA TARTJA A KAPUT (postaláda, D34) — aki tud, az bekopoghat,
+      //   2. IDŐNKÉNT KISZÓL mindenkinek a társ-listáról (D33).
+      //
+      // ⚠️ EZ NEM „folyamatos kapcsolat" (5. szabály). A készülék a kör végén elenged
+      // mindent, és alszik a következőig. Épp ez a különbség a postaláda és az élő
+      // továbbító között.
+      //
+      // ⭐ ÉS EZÉRT KELLETT ELŐBB A B. LÉPÉS: egy „nincs újdonság" kör ~190 bájt, tehát
+      // sűrűn is mehet anélkül, hogy egy mobilos e-ember számláját megterhelné (D35).
+      const perc = parseFloat(ervek[0]) || 5;
+      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+      const tarolo = tarsakTarolo();
+
+      const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        utana: (e) => {
+          if (e.hiba) return;
+          if (e.masKoino) return;
+          kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
+            + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
+            + ' (' + adatMennyiseg(e) + ')' + SZIN.vege);
+        }
+      });
+
+      kiir(SZIN.vastag + 'ŐRJÁRAT' + SZIN.vege + SZIN.halvany
+        + '   (kapu nyitva a ' + figyelo.port + '-en · kör ' + perc + ' percenként)' + SZIN.vege);
+      kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · koino: ' + KOINO + SZIN.vege);
+      kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
+      kiir();
+
+      // Vég nélküli kör. A társ-listát MINDEN körben újraolvassuk, hogy egy közben
+      // felvett társ azonnal beleférjen (a `tars` parancs egy másik ablakban futhat).
+      for (;;) {
+        const lista = await tarolo.olvas();
+
+        if (!lista.length) {
+          kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
+            + SZIN.vege);
+        } else {
+          const kor = await korbeCsere(lista, (t) => csereVonalon(tar, KOINO, t.hoszt, t.port));
+          await tarolo.ir(kor.lista);
+
+          const jel = kor.sikeres ? SZIN.jo + '  ✓ ' : SZIN.halvany + '  · ';
+          kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
+            + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
+            + adatMennyiseg({ bajtKuldott: kor.bajt }) + SZIN.vege);
+        }
+
+        await new Promise((teljesites) => setTimeout(teljesites, perc * 60 * 1000));
+      }
+      // ide nem jutunk el; a figyelőt a folyamat vége zárja
+    }
+
     case 'talalkozo': {
       // ===== LYUKFÚRÁS (E. lépés) =====
       //
@@ -709,7 +774,8 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
-      kiir('           figyel [port] · csere [cím] [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
+      kiir('           talalkozo <cím> [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }
