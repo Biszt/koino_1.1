@@ -372,10 +372,38 @@ szolgáltató az útban.** Egyik routeren sem állítottunk be semmit.
 3. **Mindkét fél kifelé indult**, ugyanarról a helyi portról — így a két rés
    egymásra illeszkedett (ez a pajzsfúrás lényege, D37).
 
-⚠️ **AMIT EZ MÉG NEM BIZONYÍT:** hogy a koino **cseréje** átmegy ezen az úton. A rés
-**UDP-s**, a csere ma **TCP-n** megy, és a router a kettőt külön tartja számon. A
-következő darab tehát: **UDP-szállítás a `vonal.js` mellé** — akkor a megnyílt résen
-azonnal mehet a csere.
+### ⭐⭐⭐ ÉS UGYANAZON AZ ESTÉN: A CSERE IS ÁTMENT (2026-08-29, 22:54)
+
+*Az UDP-szállítás megépülte után, ugyanazzal a két készülékkel:*
+
+```
+⭐ A PAJZS ÁTFÚRVA — mindkét irány működik.
+  1 kopogás, 1 válasz, 83 ms alatt
+
+CSERE A RÉSEN
+  ✓ kaptam 2 új eseményt, küldtem 0 (2 kör, 3.7 KB)
+  + 1 új társ-címet tanultam
+  Kívülről így látszol: 145.236.111.251:7373
+```
+
+| | Laptop (itthon) | Telefon (a szomszédban) |
+|---|---|---|
+| **esemény** | küldött **2** | kapott **2** |
+| **címjegyzék** | +1 új társ-cím | +1 új társ-cím |
+| **tükör** | `31.46.250.127:51967` | `145.236.111.251:7373` |
+
+⭐⭐ **EZZEL A SZAKASZ 2 NAGY KÉRDÉSE MEGVÁLASZOLVA, ÉS A VÁLASZ IGEN.**
+Két hétköznapi otthoni hálózat — az egyik mögött szolgáltatói **CGNAT** — **koino-eseményt
+cserélt**, továbbító nélkül, port-továbbítási szabály nélkül, szolgáltató nélkül az útban.
+Egyik routeren sem állítottunk be semmit.
+
+És a csere mindent vitt, ami hozzá tartozik: az **eseményeket**, a **címjegyzéket** (a
+társ-lista magától bővült) és a **tükröt** (mindkét fél megtudta a saját külső címét).
+
+⚠️ **Ami ehhez kellett, és amit egy estén tanultunk meg:** a külső portot **meg kell
+mérni**, nem feltételezni (a laptopé 7373 → 51967); a NAT-nak **célfüggetlennek** kell
+lennie (mérve, az); és a UDP-n **pótolni kell**, amit a TCP ingyen ad (megérkezés, sorrend
+— 30%-os csomagvesztésre is van próba).
 
 ⚠️ **A STUN-ról őszintén:** a külső portot ma egy külső kiszolgálótól kérdeztük meg
 (`kulsoport` parancs). Ez **segédeszköz, nem előfeltétel** (D38): a kiszolgáló paraméter,
