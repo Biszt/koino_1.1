@@ -110,6 +110,56 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >    az lehet, aki **fogadni** tud; a többi „csak kifelé" — de ⭐ **ők is megkapnak mindent**,
 >    mert a csere kétirányú (mérve: a telefon kiszólt, és 3 eseményt kapott, 2-t küldött).
 
+### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
+
+*A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
+kezdjünk ezzel? A beszélgetésből öt irány maradt, egyik sem eldöntve. ⚠️ **A szavazási
+rendszerhez most NEM nyúlunk.***
+
+**1. ✅ „Kik nem szavaztak az aktív tulajdonosok közül" — ma is kiszámítható.**
+Nem kell hozzá semmi új: az aktív tudatpont-tulajdonosok listája adja a részvételi arány
+nevezőjét, a szavazatok pedig az eseményekből jönnek — a kettő különbsége a keresett
+halmaz. Determinisztikus (D17), új esemény-típus nélkül. **Megépíthető bármikor.**
+
+**2. ⭐⭐ „Ha a hiányzó szavazatok nem tudják befolyásolni az eredményt, lezárható."**
+*Csaba ötlete, és a legerősebb.* Ez **a várakozást bizonyítássá alakítja**: ma a döntés
+akkor zárul, amikor lejár egy óra; ezzel akkor zárulna, amikor **matematikailag már
+eldőlt** — akárhogy szavaznának a hiányzók. Ugyanaz az egész-aritmetika, amit már
+használunk (kereszt-szorzás). *A bizonyossági mutató szigorú változata.*
+⚠️ A fordítottja (halasztás, amíg el nem dől) csak **korláttal** épülhet meg — különben
+egyetlen hallgató ember örökre megállíthatna bármit. A maximum döntési idő (D4) ezt már
+lefedi.
+
+**3. 🆕 A „nem tudunk róla" halmaz szűkítése az események `ido` mezője alapján.**
+Aki nem szavazott, de a javaslat óta **más eseményt tett**, arról tudjuk, hogy aktív volt.
+⚠️ **Korábban tévesen azt írtam, hogy ez nem lehet determinisztikus** — de igen: az `ido`
+az **aláírt eseményben** van, tehát mindenki ugyanazt látja. *(Ami NEM használható: a
+„mikor kaptam meg" — az helyi megfigyelés, sehol nincs rögzítve.)*
+Hamisíthatatlanabb változat: **oksági bizonyíték** — nem lehet olyan eseményre hivatkozni,
+ami még nem létezik. ⚠️ De ez az **esemény szerkezetét** érintené (kanonikus alak) → **nem
+nyúlunk hozzá menet közben.**
+
+**4. ⭐ MEDIÁN-IDŐ a hazug óra ellen — ez új, és talán a legértékesebb.**
+Ma a határidőt **a javaslattevő órája** adja, és minden szavazatot **a saját szerzője
+órája** szerint ítélünk meg. Egyetlen hazug óra tehát számít.
+A koino a küszöböknél már **mediánt** használ, épp azért, mert *„csak létszámmal
+billenthető, szélsőértékkel nem"* (D4). **Ugyanez alkalmazható az időre**: ha a mérvadó idő
+a résztvevők medián-ideje, egyetlen hazug óra nem mozdít semmit. *(A Bitcoin is a
+szomszédok idejének mediánját használja.)*
+
+**5. A jegyzőkönyv igen, az ítélet nem.**
+Késve érkező szavazat **megjelenhet** a jegyzőkönyvben („a lezárás után érkezett" —
+a `kesoiSzavazatok` mezőt már számoljuk), de **nem írhatja át a kimondott eredményt**.
+E nélkül elesne a lezárási szabály (`e4cd10b`), és semmire nem lehetne támaszkodni.
+
+⚠️ **Ami továbbra is nyitott:** a visszadátumozás teljes válasza a **kötegelés** (D21,
+Szakasz 4). Addig friss kulccsal vagy hosszú tétlenség után szabadon lehet dátumozni —
+ez **drágítja** a csalást, nem zárja. A kód ezt ki is mondja a `javaslatSzamitas.js`-ben.
+
+⭐ **És egy tágabb haszon, amit Csaba emelt ki:** azt látni, **ki nem jelentkezett régóta**,
+nem csak a szavazásnál fontos — ez mutatná meg a **szétszakadást** is (a D33 új
+kockázata), a koino terjedésének egészségét, és emberi okból is érdekes.
+
 > ### 🔀 MÁSODIK FORDULAT (2026-08-28): NINCS BÖNGÉSZŐ
 >
 > **D29** — *„Tulajdonképpen hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta
