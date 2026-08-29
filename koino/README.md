@@ -139,6 +139,18 @@ eseményeit — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).
 **fogadni** tud-e, hanem hogy **a hálózat összefüggő marad-e**. A részletek a
 [`szakasz2_terv.md`](../docs/szakasz2_terv.md) 6. pontjában.
 
+### ▶️ A KÖVETKEZŐ MUNKA (2026-08-30-ra felírva)
+
+1. **A postaláda jegyezze fel a hívót** társként (a foglalatból amúgy is látja).
+2. **Mindenki hirdesse a saját külső címét is** — azt, amit a tükörtől tanult.
+   *Együtt: egy címváltozás magától végigfut a hálózaton (D39).*
+3. **F. lépés — helyi felfedezés**: azonos wifin lévő készülékek maguktól megtalálják
+   egymást (eltünteti a kézi cím-beírást otthon).
+
+⚠️ **D39 — a meleg rés:** minden újrakapcsolódáshoz kell legalább egy társ, akinek a rése
+éppen él — vagy mert fogadóképes, vagy mert **folyamatosan fut** (az `orjarat` kifelé
+szólása nyitva tartja a rést). Ez olcsóbb bármilyen router-beállításnál.
+
 A teljes terv és a döntések: [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
 · a Szakasz 1 terve: [`../docs/szakasz1_terv.md`](../docs/szakasz1_terv.md)
 · az adatmodell rétegei: [`../docs/adat_osztalyozas.md`](../docs/adat_osztalyozas.md)

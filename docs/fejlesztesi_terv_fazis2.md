@@ -154,6 +154,46 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > kiszámíthatatlanabb egy házi routernél. Hogy a pajzsfúrás átmegy-e rajta, azt **csak
 > méréssel** lehet megtudni, nem levezetéssel.
 
+> ### 🔁 D39 (2026-08-29 éjjel): A MELEG RÉS — a D37 pontosítása
+>
+> *Csaba kérdése: „ipv4-en időnként megváltozik a címe mindenkinek. Ha ez figyelmeztetés és
+> átfedés nélkül történik, hogyan tudja meg a többi készülék az új címét?"*
+>
+> **A válasz magja:** akinek megváltozott, annak **nem kell, hogy megtalálják** — a
+> társ-listája még érvényes, tehát **ő szól ki**. Amint kiszól, a másik a foglalatból látja
+> az új címét (minden csomag hordozza a feladóét), a tükör pedig visszamondja neki is.
+>
+> ⚠️ **DE EHHEZ KELL VALAKI, AKINEK A RÉSE ÉPPEN ÉL — és ez pontosítja a D37-et.**
+> Tegnap azt írtam: *„a fogadóképesség csak az első bemutatkozáshoz kell."* Ez pontatlan.
+> Helyesen:
+>
+> > **Minden újrakapcsolódáshoz kell legalább egy társ, akinek a rése éppen él** — vagy
+> > mert fogadóképes, vagy mert **folyamatosan fut**.
+>
+> ⭐ **A FELISMERÉS: egy folyamatosan futó készülék gyakorlatilag fogadóképes** — nem azért,
+> mert a routere beengedi, hanem mert az **`orjarat` percenként kifelé szól, és ettől a rése
+> nyitva marad**. Ez olcsóbb bármilyen router-beállításnál: csak áram és net kell hozzá.
+> Ezért az `orjarat` fontosabb, mint amilyennek látszott.
+>
+> **Két mozgékonyság, és a port a mozgékonyabb:** a cím ritkán változik (szolgáltatói
+> bérlet), a **NAT-leképezés viszont percek alatt elévül**, ha nincs forgalom. Egy órája
+> kikapcsolt készüléket a régi külső porton **soha nem** találsz meg — de ő megtalál téged.
+>
+> **Az elakadt eset, őszintén:** ha MINDENKI alszik, akit ismersz, nincs kihez szólni →
+> kézi bemutatkozás (4. szabály). Nagy hálózatban elhanyagolható (14 társból nem alszik
+> mind), két készüléknél viszont valós.
+>
+> ### 📌 KÉT APRÓ JAVÍTÁS, AMI EBBŐL KÖVETKEZIK (felírva, még nincs megépítve)
+>
+> A kód átnézve: ma **a saját külső címünket soha nem hirdetjük** (csak a társainkét), és a
+> **postaláda nem jegyzi fel, ki kopogott be hozzá** — pedig a foglalatból látja. Emiatt egy
+> címváltozás csak addig terjed, ameddig a gazdája maga elviszi.
+>
+> 1. **A postaláda jegyezze fel a hívót** társként.
+> 2. **Mindenki hirdesse a saját külső címét is** — azt, amit a tükörtől tanult.
+>
+> Ettől egy címváltozás **magától végigfutna a hálózaton**: elég egyvalakinek szólni.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
