@@ -73,7 +73,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Kilenc próba-fájl, **160 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Kilenc próba-fájl, **163 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`.
 
 | Fájl | Mit bizonyít |

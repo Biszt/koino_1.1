@@ -58,6 +58,7 @@ import {
 import { figyeloIndulasa, csereVonalon } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
+import { talalkozo } from './js/csere/talalkozo.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -566,6 +567,55 @@ try {
       kiir(SZIN.jo + 'Felvéve: ' + cim + ' ' + port + (ervek[2] ? ' („' + ervek[2] + '")' : '')
         + SZIN.vege);
       kiir(SZIN.halvany + 'Csere mindenkivel: node koino/koino.js csere' + SZIN.vege);
+      break;
+    }
+
+    case 'talalkozo': {
+      // ===== LYUKFÚRÁS (E. lépés) =====
+      //
+      // ⭐ MIT MÉR? Azt, hogy két készülék össze tud-e érni ÚGY, hogy egyik routerén sem
+      // állítottunk be semmit. Mindkét félnek ugyanezt kell futtatnia, egymás címére —
+      // a kopogás ismétlődik, tehát nem kell egyszerre indítani.
+      const cim = ervek[0];
+      if (!cim) throw new Error('Kihez kopogjak? node koino/koino.js talalkozo <cím> [port]');
+      const port = parseInt(ervek[1], 10) || ALAP_PORT;
+
+      kiir(SZIN.vastag + 'TALÁLKOZÓ' + SZIN.vege + SZIN.halvany
+        + '   (kopogás a ' + port + '-es portról a ' + port + '-esre)' + SZIN.vege);
+      kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
+        + SZIN.vege);
+      kiir();
+
+      const eredmeny = await talalkozo(port, cim, port, {
+        utana: (e) => {
+          if (e.mi === 'KOPOGTAM' && e.hanyadik % 5 === 1) {
+            kiir(SZIN.halvany + '  … kopogtam (' + e.hanyadik + '.)' + SZIN.vege);
+          }
+          if (e.mi === 'KOPOG-ERKEZETT') {
+            kiir(SZIN.jo + '  ← MEGJÖTT AZ Ő KOPOGÁSA (' + e.honnan + ')' + SZIN.vege);
+          }
+          if (e.mi === 'HALLAK-ERKEZETT') {
+            kiir(SZIN.jo + '  ✓ ŐK IS HALLANAK MINKET (' + e.honnan + ')' + SZIN.vege);
+          }
+        }
+      });
+
+      kiir();
+      if (eredmeny.mindketIrany) {
+        kiir(SZIN.jo + '⭐ A LYUK MEGNYÍLT — mindkét irány működik.' + SZIN.vege);
+        kiir(SZIN.halvany + '  ' + eredmeny.kuldott + ' kopogás, ' + eredmeny.kapott
+          + ' válasz, ' + eredmeny.eltelt + ' ms alatt' + SZIN.vege);
+        kiir(SZIN.halvany + '  Most már a csere is átmehetne ezen az úton.' + SZIN.vege);
+      } else if (eredmeny.sikerult) {
+        // ⚠️ FÉL SIKER: az ő csomagjai átjönnek, a mieink nem. Ez is mérés, nem hiba.
+        kiir(SZIN.nem + '⚠ FÉL SIKER: az ő kopogása átjött, a miénk nem.' + SZIN.vege);
+        kiir(SZIN.halvany + '  Vagyis a MI routerünk enged befelé, az övék nem.' + SZIN.vege);
+      } else {
+        kiir(SZIN.nem + '✗ Nem jött át semmi (' + eredmeny.kuldott + ' kopogás, '
+          + eredmeny.eltelt + ' ms).' + SZIN.vege);
+        kiir(SZIN.halvany + '  Vagy nem futott a másik oldalon, vagy mindkét router zár.'
+          + SZIN.vege);
+      }
       break;
     }
 
