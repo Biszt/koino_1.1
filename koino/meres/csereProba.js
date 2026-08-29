@@ -618,25 +618,33 @@ proba('⭐⭐ A TCP-fúró a RÖGZÍTETT helyi portról hív — EZEN MÚLIK AZ 
   // AZONNAL elutasít (ECONNREFUSED), ha nincs figyelő — így sosem alakul ki a függőben
   // lévő hívás, ami ehhez kellene. Valódi hálózaton a SYN kimegy és VÁRAKOZIK, mert a
   // router csendben eldobja. Ez tehát csak élesben, két hálózat között mérhető.
+  // ⚠️ VÉLETLEN PORTOK. Az első változat rögzített portot használt, és egy előző futás
+  // után a rendszer még fogta őket (EADDRINUSE) — a próba hol átment, hol nem. Egy
+  // ingadozó próba rosszabb a semminél: azt tanítja, hogy a piros szín néha hazudik.
+  const sajatPort = 20000 + Math.floor(Math.random() * 30000);
+
   let honnanPort = null;
   const kiszolgalo = createServer((k) => { honnanPort = k.remotePort; k.end(); });
-  await new Promise((t) => kiszolgalo.listen(7404, '::1', t));
+  await new Promise((t) => kiszolgalo.listen(0, '::1', t));
+  const celPort = kiszolgalo.address().port;
 
   try {
-    const eredmeny = await tcpPajzsfuras(7403, '::1', 7404, {
+    const eredmeny = await tcpPajzsfuras(sajatPort, '::1', celPort, {
       koz: 200, probaIdo: 500, maxProba: 3
     });
     eredmeny.kapcsolat?.destroy();
-    return eredmeny.sikerult && honnanPort === 7403;
+    return eredmeny.sikerult && honnanPort === sajatPort;
   } finally {
     await new Promise((t) => kiszolgalo.close(t));
   }
 });
 
 proba('⭐ A TCP-fúró FELADJA, ha nincs kit átfúrni (nem fut örökké a próbákban)', async () => {
-  const eredmeny = await tcpPajzsfuras(7405, '::1', 7406, {
-    koz: 100, probaIdo: 100, maxProba: 3
-  });
+  const eredmeny = await tcpPajzsfuras(
+    20000 + Math.floor(Math.random() * 30000), '::1',
+    20000 + Math.floor(Math.random() * 30000),
+    { koz: 100, probaIdo: 100, maxProba: 3 }
+  );
   return eredmeny.sikerult === false && eredmeny.probak === 3 && eredmeny.kapcsolat === null;
 });
 
