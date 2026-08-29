@@ -660,6 +660,23 @@ try {
       const eredmeny = await pajzsfuras(port, cim, port, {
         idokorlat: 0,                 // 0 = vég nélkül
         utana: (e) => {
+          // ⚠️ MŰSZER A NÉMA NEM-ESEMÉNYRE. Az első változat CSAK a sikeres kopogást írta
+          // ki — ezért amikor a telefonon a küldés elbukott, a képernyő egyszerűen ÜRES
+          // maradt, és órákig azt hihettük volna, hogy „fúr". Ami nem történik meg, azt
+          // is ki kell írni, különben nem mérés, csak remény.
+          if (e.mi === 'INDUL') {
+            kiir(SZIN.halvany + '  ' + ora() + ' a fúró elindult (' + e.port + '-es port)'
+              + SZIN.vege);
+          }
+          if (e.mi === 'KULDES-BUKOTT' && e.hanyadik % 15 === 1) {
+            kiir(SZIN.nem + '  ' + ora() + ' ✗ a KÜLDÉS bukott (' + e.hanyadik + '.): '
+              + e.ok + SZIN.vege);
+            kiir(SZIN.halvany + '    A csomag el sem indult — ez NEM a másik fél hibája.'
+              + SZIN.vege);
+          }
+          if (e.mi === 'HIBA') {
+            kiir(SZIN.nem + '  ' + ora() + ' ✗ hiba: ' + e.ok + SZIN.vege);
+          }
           // 15 másodpercenként egy sor — hogy látszódjon, hogy él, de ne árassza el.
           if (e.mi === 'KOPOGTAM' && e.hanyadik % 15 === 1) {
             kiir(SZIN.halvany + '  ' + ora() + ' … fúrok (' + e.hanyadik + '. kopogás)'

@@ -101,7 +101,7 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
 
   const kezdet = Date.now();
   let kuldott = 0, kapott = 0, honnan = null, mindketIrany = false;
-  let sajatVisszhang = 0;
+  let sajatVisszhang = 0, bukott = 0;
 
   return new Promise((teljesites) => {
     let idozito = null, hatarido = null;
@@ -111,7 +111,7 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
       if (hatarido) clearTimeout(hatarido);
       halo.close();
       const eredmeny = {
-        sikerult, mindketIrany, kuldott, kapott, honnan, sajatVisszhang,
+        sikerult, mindketIrany, kuldott, kapott, honnan, sajatVisszhang, bukott,
         eltelt: Date.now() - kezdet
       };
       console.log('talalkozo - VÉGE', eredmeny);
@@ -162,8 +162,10 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
         halo.send(JSON.stringify({ uzenet: 'KOPOG', tol: sajatAzonosito }),
           tarsPort, tarsCim, (hiba) => {
           if (hiba) {
-            // Egy sikertelen küldés nem hiba: a hálózat változik, megyünk tovább.
-            jelez({ mi: 'KULDES-BUKOTT', ok: hiba.message });
+            // Egy sikertelen küldés önmagában nem végzetes (a hálózat változik), de ha
+            // MINDEN küldés bukik, akkor a csomagjaink el sem indulnak — és ezt látni kell.
+            bukott++;
+            jelez({ mi: 'KULDES-BUKOTT', ok: hiba.message, hanyadik: bukott });
             return;
           }
           kuldott++;
