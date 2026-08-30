@@ -422,6 +422,89 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > **3. Egy „nincs újdonság" csere valódi, két hálózat közti résen: 739–961 bájt** (a
 > délelőtti 6,7 KB azért volt nagyobb, mert 9 esemény ment át).
 
+> ### 🧮 D42 (2026-08-31): A BEMONDOTT ÖSSZEG — a keret egyetlen eseményből ellenőrizhető
+>
+> *A 3. lépés („részleges tudás") átbeszélése közben Csaba egy olyan megoldást javasolt, ami
+> a problémát nem enyhíti, hanem áthelyezi: a hiányból BIZONYÍTÉKOT csinál.*
+>
+> #### A probléma, pontosan
+>
+> A tudatpont-keret (10 000) ellenőrzéséhez ma **egyetlen ember TELJES lánca** kell, mert az
+> összeg a lánc végigjárásából jön ([`szabalyok.js`](../koino/js/allapot/szabalyok.js)).
+> Anna lánca: `#1` · `#2` (A ← 6000) · `#3` (szavazat, pontot nem oszt) · `#4` (B ← 6000).
+>
+> | Aki mind a négyet ismeri | Akinél a `#2` hiányzik |
+> |---|---|
+> | a `#4`-nél 12 000 > 10 000 → **kivétel** | a `#4`-nél 0 + 6000 = 6000 → **átmegy** |
+>
+> ⚠️ **Anna nem hamisít semmit** — minden eseménye valódi és aláírt. Csak **elhallgat** egyet.
+> És a megírását semmi nem akadályozza: a `muveletek.js` keret-ellenőrzése csak udvariasság
+> (kézzel aláírva megkerülhető — 2026-08-28-án mérve), az `esemenyMentese` pedig szándékosan
+> nem nézi a keretet (D19: nem törlünk, nem büntetünk).
+>
+> ⭐ **A pontos megfogalmazás:** nem arról van szó, hogy a másik gép „még nem tudja
+> ellenőrizni". **Ellenőrzi — helyesen —, csak más adatból.** Az ellenőrzés nem késik;
+> **a tudáshoz képest ad eredményt.** Ezért ez nem oldható meg szigorúbb ellenőrzéssel:
+> nem a szigorúság hiányzik, hanem a tudás.
+>
+> #### A DÖNTÉS: minden pont-esemény vigye az „ÖSSZESEN KIOSZTVA" értéket
+>
+> *(Csaba: „mi lenne akkor, ha Anna nem csak az entitáshoz rendelt tudatpontját küldi el,
+> hanem a megmaradt tudatpontját is — kötelezően?")*
+>
+> **Amit megvesz:**
+>
+> 1. **A felső korlát egyetlen eseményből ellenőrizhető:** `kiosztva ≤ 10 000`. Nem kell hozzá
+>    a lánc többi része.
+> 2. ⭐⭐ **A csalás bizonyítéka POZITÍVVÁ válik.** Anna nyilván hazudik a bemondásban („összesen
+>    6000"), de akkor a `#2` és a `#4` **két saját aláírt állítása ellentmond egymásnak** —
+>    hiszen a `#4` egy MÁSIK entitásra ad 6000-et, tehát az összegnek nőnie kellett volna.
+>
+> | Ma | A bemondott összeggel |
+> |---|---|
+> | a bizonyíték egy **hiány** (hézag) | **két aláírt állítás ellentmondása** |
+> | kétértelmű: támadás vagy lemaradás? | egyértelmű: **hazudott** |
+> | ⚠️ **nem átadható** — nem tudom megmutatni másnak, hogy nekem valami hiányzik | ⭐ **átadható**: odaadom a két eseményt, bárki ellenőrzi |
+>
+> ⭐ Ez a koino máshol is használt mintája — *nem megakadályozzuk, hanem leleplezzük* (D17/D19),
+> és pontosan az, amit a **D26** csinál a fájlmérettel: *„a hamis méret bizonyíték, nem
+> szóbeszéd."*
+>
+> 3. **A hiányos gép is többet tud.** Ha ő 0-t számol, de a `#4` azt mondja, előtte 6000 volt,
+>    akkor nem csak azt látja, hogy „hiányzik valami", hanem hogy **pont-esemény hiányzik, és
+>    mennyi**. A sorszám-hézag ennél butább jel: a hiányzó `#2` lehetett volna szavazat is,
+>    ami a keretet nem érinti.
+>
+> **⚠️ MIÉRT „ÖSSZESEN KIOSZTVA", ÉS NEM „MARADÉK"?** *(Csaba döntése.)* A kettő ugyanaz az
+> információ, de az „összesen kiosztva" **közvetlenül összevethető** azzal, amit a gép maga
+> kiszámol a láncból. A maradékhoz előbb ki kellene vonni a keretből — egy fölösleges lépés,
+> ami a keret értékét is beleköti az összehasonlításba.
+>
+> #### ⚠️ AMIT NEM OLD MEG, ÉS AMIBE KERÜL
+>
+> - **Az átmeneti ablak megmarad:** a hiányos gép abban a pillanatban továbbra sem tudja
+>   eldönteni, hogy Anna hazudott-e, vagy ő van lemaradva. Amit nyerünk: **később
+>   bizonyíthatóvá válik**, és addig is pontosabb a jelzés.
+> - **Érinti a KANONIKUS ALAKOT** — a terv szerint „a legveszélyesebb részletet". Egy új mező
+>   **most olcsó** (nincs valódi adat), később nagyon drága. Ez érv a mielőbbi megépítés mellett.
+>
+> #### 🔗 A MÁSIK FÉL: farok-hézag vs. közép-hézag (felírva, nem eldöntve)
+>
+> A bemondott összeg a **pozitív** bizonyíték. Mellé kínálkozik egy **negatív** jel is, ami a
+> „legyünk óvatosak" szabály árát csökkentené:
+>
+> | Hol a lyuk | Mit jelent |
+> |---|---|
+> | **a lánc VÉGÉN** (`#1 #2 #3` van, a `#4` még nincs) | sima lemaradás — **teljesen normális**, két csere között mindig van |
+> | **a lánc KÖZEPÉN** (`#1 _ #3 #4`) | ⚠️ valaki későbbi eseményt adott, miközben egy korábbi hiányzik — **ez nem a lemaradás alakja** |
+>
+> Ha csak a **közép-hézagnál** vagyunk óvatosak, a becsületes ember friss eseménye nem tűnik
+> el (az farok-hézag), a rejtegetés viszont nem működik. ⚠️ **Ez még nincs eldöntve.**
+>
+> ⭐ **Ami már ma megvan hozzá:** a [`esemenyTar.js`](../koino/js/tar/esemenyTar.js)
+> `lancEllenorzese` már számol **hézagot, elágazást ÉS szakadást** (az `elozo` mező nem a
+> tényleges előzőre mutat). A jel tehát adott — csak a `szabalyok.js` nem kérdezi meg tőle.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -507,7 +590,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**41 tervezési döntés (D1–D41) áll.** 2026-08-25-én három elméleti hidat építettünk
+**42 tervezési döntés (D1–D42) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
