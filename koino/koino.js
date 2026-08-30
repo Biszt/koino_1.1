@@ -798,7 +798,10 @@ try {
             kiir(SZIN.halvany + '  → kikiáltottam ide: ' + e.cel + SZIN.vege);
           } else if (e.mi === 'KIALTAS-BUKOTT') {
             kiir(SZIN.nem + '  ✗ ide nem ment ki (' + e.cel + '): ' + e.ok + SZIN.vege);
-          } else if (e.mi === 'KOPOGOK-ERKEZETT' || e.mi === 'ITT-VAGYOK-ERKEZETT') {
+          } else if ((e.mi === 'KOPOGOK-ERKEZETT' || e.mi === 'ITT-VAGYOK-ERKEZETT') && e.uj) {
+            // ⚠️ CSAK AZ ÚJAT ÍRJUK KI. Ugyanaz a készülék többször is felel (a kiáltást
+            // ismételjük, és a válasz több úton jön) — mérve: EGY laptop 18 sort írt a
+            // telefon képernyőjére. Az információ ettől nem lett több.
             kiir(SZIN.jo + '  ← ' + e.tars.hoszt + ':' + e.tars.port + SZIN.vege
               + SZIN.halvany + ' (' + e.mi.replace('-ERKEZETT', '') + ')' + SZIN.vege);
           } else if (e.mi === 'ELDOBVA' && e.ok === 'mas-koino') {
@@ -830,7 +833,9 @@ try {
       }
 
       kiir(SZIN.jo + '⭐ ' + eredmeny.tarsak.length + ' készüléket találtam '
-        + eredmeny.eltelt + ' ms alatt.' + SZIN.vege);
+        + eredmeny.eltelt + ' ms alatt.' + SZIN.vege
+        + SZIN.halvany + ' (' + eredmeny.kialtasok + ' kiáltás, '
+        + eredmeny.kapottUzenetek + ' válasz)' + SZIN.vege);
 
       // ⭐ ÉS FEL IS ÍRJUK ŐKET — különben a felfedezés csak látvány lenne. Ez ugyanaz a
       // kapu, mint a terjedő címjegyzéké: cím kerül a listára, nem bizalom (3. szabály).

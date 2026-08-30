@@ -1136,6 +1136,33 @@ proba('⭐⭐ A DOLGOZÓ KÉSZÜLÉK FELEL a kiáltásra (nem kell egyszerre par
   }
 });
 
+proba('⭐⭐ A VÁLASZOLÓ FÉKEZ: nem felel minden egyes kopogásra', async () => {
+  // ⚠️ MÉRÉSBŐL JÖTT (2026-08-30, valódi telefonon): egyetlen laptop **18 sort** írt a
+  // képernyőre. A kereső fél másodpercenként ismétel, a válaszoló minden kopogásra felelt,
+  // a válasz pedig több úton is megérkezett — szorzat, nem összeg. Ez nem csak csúnya:
+  // minden fölös csomag egy mobilos e-ember számláján is megjelenik (D35).
+  //
+  // ⭐ A PRÓBA DETERMINISZTIKUS: a fékezés idejét 60 másodpercre állítjuk, tehát a
+  // válaszoló a keresés ALATT PONTOSAN EGYSZER felelhet, akárhányszor kiáltunk.
+  // (Egy válasz érkezik meg: a célzott. A csoportnak küldött másolat a RÖGZÍTETT
+  // felfedező portra megy, ami a próbában nem a keresőé.)
+  const VALASZOLO = 7393, KERESO = 7394;
+  const valaszolo = await felfedezoValaszolo({
+    koino: KOINO, sajatPort: 7373, figyeloPort: VALASZOLO, celok: ['127.0.0.1'],
+    valaszKoz: 60000
+  });
+  try {
+    const talalt = await helyiFelfedezes({ koino: KOINO, sajatPort: 7375,
+      figyeloPort: KERESO, celok: ['127.0.0.1'], celPort: VALASZOLO,
+      idokorlat: 1600, ismetlesKoz: 300 });
+    // Négy-öt kiáltás ment ki, és MÉGIS egyetlen válasz jött — a megtalálás viszont megvan.
+    return talalt.kialtasok >= 4 && talalt.kapottUzenetek === 1
+      && talalt.tarsak.length === 1 && talalt.tarsak[0].port === 7373;
+  } finally {
+    valaszolo.bezar();
+  }
+});
+
 proba('⭐ A válaszoló NEM felel a MÁSIK koino kiáltására', async () => {
   const VALASZOLO = 7391, KERESO = 7392;
   const valaszolo = await felfedezoValaszolo({

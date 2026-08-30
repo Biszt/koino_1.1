@@ -195,7 +195,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > | **C** | ✅ **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | **kész (2026-08-29): 3 önpróba + valódi három-készülékes mérés** |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
-> | **F** | ✅ **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | **kész (2026-08-30): 12 önpróba** — [`js/csere/helyiFelfedezes.js`](../koino/js/csere/helyiFelfedezes.js) |
+> | **F** | ✅ **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | **kész (2026-08-30): 13 önpróba** — [`js/csere/helyiFelfedezes.js`](../koino/js/csere/helyiFelfedezes.js) |
 >
 > **Amit ez a sorrend kimond:** a 4. lépés (két hálózat, IPv6) **már nem vizsga, hanem
 > mérés** — a koino sorsa nem múlik rajta (D31), csak azt mondja meg, hányan tudnak

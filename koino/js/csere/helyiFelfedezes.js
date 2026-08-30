@@ -65,6 +65,17 @@ export const ISMETLES_KOZ = 500;
 //   · 255.255.255.255 — a hálózati szórás, amit a legtöbb otthoni wifi ismer
 export const ALAP_CELOK = ['239.255.42.73', '255.255.255.255'];
 
+// ⚠️ UGYANANNAK A KIÁLTÓNAK LEGFELJEBB ENNYINKÉNT FELELÜNK — és ez is MÉRÉSBŐL jött.
+// A telefonon egyetlen laptop **18 sort** írt a képernyőre: a kereső fél másodpercenként
+// ismétel, a válaszoló minden egyes kopogásra felelt, a válasz pedig több úton is
+// megérkezett (célzott + csoport). Szorzat, nem összeg.
+//
+// ⭐ A FÉKEZÉS NEM RONTJA EL A MŰKÖDÉST: egy 2 másodperces keresés így is 2-3 választ kap,
+// tehát az elveszett csomag ellen megmarad a tartalék — csak a fölösleg tűnik el.
+// ⚠️ Nem képernyő-kozmetika: minden fölös csomag egy mobilos e-ember számláján is
+// megjelenik (D35). Ami mérhető, azt olcsóvá is kell tenni.
+export const VALASZ_KOZ = 1000;
+
 // ===================================
 // A TISZTA RÉSZ — hálózat nélkül is mérhető
 // ===================================
@@ -169,7 +180,7 @@ export function felfedezettekOsszefesulese(eddigiek, uj) {
  * @param {number} [beallitas.celPort] - a másik felfedező portja
  * @param {number} [beallitas.idokorlat] - meddig hallgatózunk (ms)
  * @param {Function} [beallitas.esemenyre] - minden lépésnél meghívjuk (műszer, nem napló)
- * @returns {Promise<{tarsak: Array, kialtasok: number, valaszok: number, eltelt: number}>}
+ * @returns {Promise<{tarsak: Array, kialtasok: number, valaszok: number, kapottUzenetek: number, eltelt: number}>}
  */
 export async function helyiFelfedezes(beallitas) {
   const {
@@ -188,7 +199,7 @@ export async function helyiFelfedezes(beallitas) {
   const jel = randomBytes(6).toString('hex');
   const kezdet = Date.now();
   let tarsak = [];
-  let kialtasok = 0, valaszok = 0;
+  let kialtasok = 0, valaszok = 0, kapottUzenetek = 0;
 
   const halo = createSocket({ type: 'udp4', reuseAddr: true });
 
@@ -202,9 +213,11 @@ export async function helyiFelfedezes(beallitas) {
       clearTimeout(hatarido);
       if (ismetlo) clearInterval(ismetlo);
       try { halo.close(); } catch { /* már zárva */ }
-      const eredmeny = { tarsak, kialtasok, valaszok, eltelt: Date.now() - kezdet };
+      const eredmeny = {
+        tarsak, kialtasok, valaszok, kapottUzenetek, eltelt: Date.now() - kezdet
+      };
       console.log('helyiFelfedezes - VÉGE', {
-        talalt: tarsak.length, kialtasok, valaszok, eltelt: eredmeny.eltelt
+        talalt: tarsak.length, kialtasok, valaszok, kapottUzenetek, eltelt: eredmeny.eltelt
       });
       teljesites(eredmeny);
     };
@@ -226,8 +239,17 @@ export async function helyiFelfedezes(beallitas) {
         return;
       }
 
+      kapottUzenetek++;
+
+      // ⭐ ÚJ-E? Enélkül a felület ugyanazt a készüléket hússzor írná ki: a kiáltást
+      // ismételjük, a válaszoló felel, és a válasz több úton is megérkezik. Mérve
+      // (2026-08-30, telefon): EGY készülék 18 sort írt a képernyőre.
+      const elotte = tarsak.length;
       tarsak = felfedezettekOsszefesulese(tarsak, [eredmeny.tars]);
-      esemenyre?.({ mi: eredmeny.mi + '-ERKEZETT', honnan: felado.address, tars: eredmeny.tars });
+      esemenyre?.({
+        mi: eredmeny.mi + '-ERKEZETT', honnan: felado.address, tars: eredmeny.tars,
+        uj: tarsak.length > elotte
+      });
 
       // ⭐ A KIÁLTÁSRA VISSZASZÓLUNK — CÉLZOTTAN. Így akkor is összejön az ismerkedés, ha a
       // szórás csak az egyik irányba megy át. A válaszra nem válaszolunk (nem gyűrűzik).
@@ -305,8 +327,12 @@ export async function helyiFelfedezes(beallitas) {
  */
 export async function felfedezoValaszolo(beallitas) {
   const {
-    koino, sajatPort, figyeloPort = FELFEDEZO_PORT, celok = ALAP_CELOK, esemenyre
+    koino, sajatPort, figyeloPort = FELFEDEZO_PORT, celok = ALAP_CELOK,
+    valaszKoz = VALASZ_KOZ, esemenyre
   } = beallitas;
+
+  // ⚠️ KI MIKOR KAPOTT MÁR VÁLASZT — a fékezéshez. Kulcs: a kiáltó futás-jele.
+  const utoljaraValaszoltam = new Map();
 
   console.log('felfedezoValaszolo - KEZDÉS', { koino, sajatPort, figyeloPort });
 
@@ -336,6 +362,13 @@ export async function felfedezoValaszolo(beallitas) {
       const e = kialtasFeldolgozasa(nyers, felado, koino, jel);
       // ⚠️ CSAK A KIÁLTÁSRA felelünk. A válaszra válaszolni gyűrűzést csinálna.
       if (!e.rendben || e.mi !== 'KOPOGOK') return;
+
+      // ⭐ FÉKEZÉS: ugyanannak a kiáltónak nem felelünk minden kopogására. Lásd a
+      // `VALASZ_KOZ` indoklását — mérve 18 válasz ment egyetlen keresőnek.
+      const most = Date.now();
+      const kie = String(JSON.parse(String(nyers)).jel);
+      if (most - (utoljaraValaszoltam.get(kie) ?? 0) < valaszKoz) return;
+      utoljaraValaszoltam.set(kie, most);
 
       const valasz = Buffer.from(felfedezoUzenet('ITT-VAGYOK', koino, sajatPort, jel));
 
