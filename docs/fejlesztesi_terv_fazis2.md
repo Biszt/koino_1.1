@@ -291,6 +291,115 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > ma a [`csere.js`](../koino/js/csere/csere.js) `koinoEsemenyei`-t hív, vagyis **mindenki
 > mindent replikál** — a D3 tudatpont-alapú válogatása még nincs megépítve.
 
+> ### 🔑 D41 (2026-08-30): A FOGADÓKÉPESSÉG VISZONY — és a címjegyzék ajtót is nyit
+>
+> *A mobilhálózatos mérés után Csaba végigvitt egy gondolatmenetet, ami négy állítássá állt
+> össze. Kettőnél az én megfogalmazásomat kellett helyesbíteni.*
+>
+> **1. A FOGADÓKÉPESSÉG NEM TULAJDONSÁG, HANEM VISZONY.** Csaba: *„azok az eszközök, amik
+> éppen kapcsolatban vannak egymással, azok addig fogadóképesek, még akkor is, ha amúgy meg
+> nem lennének azok."* Igaz — ma ezt mértük: a barátja telefonja mobilneten, CGNAT mögött,
+> semmilyen értelemben nem „elérhető", mégis oda-vissza ment a csere.
+> ⚠️ **DE PÁRRA SZÓL, NEM A VILÁGRA:** ha A rést nyitott B felé, attól C még nem jön be.
+> ⚠️ **ÉS EGY HELYESBÍTÉS (Csaba kifogása):** ezt túl általánosan írtam le. **Csak arra igaz,
+> aki nem tud kaput nyitni.** Akinek valódi elérhető címe van (nyitott kapu), az **mindenki
+> felé** fogadóképes — ő a postaláda (D34), és a D31 rá épül.
+>
+> **2. NEM KÖZÖS ÓRA KELL, HANEM KÖZÖS ÜTEM.** Én azt írtam, a fúrás „randevút kíván";
+> Csaba nem fogadta el, és igaza volt. **A fúró ismétel**, tehát nem az kell, hogy egyszerre
+> INDULJANAK, hanem hogy az ablakaik ÁTFEDJENEK.
+> ⭐ **Ezt a mai mérés már bizonyította, csak nem vontam le belőle:** a laptop **110 kopogás
+> / 110 297 ms**, a telefon **1 kopogás / 191 ms** — két perc csúszással indultak, mégis
+> összeértek.
+>
+> **3. ⭐ A CÍMJEGYZÉK NEM CSAK AZT MONDJA MEG, KIT HÍVJ — AZT IS, KINEK NYISS ELŐRE AJTÓT.**
+> *(Csaba ötlete, és ez a szakasz veleje.)* Ha a készülék előre tudja a társai címét,
+> **magától kiküldhet mindegyiknek** egy apró csomagot — ettől a router mindegyikükre nyit
+> egy rést, és amikor bármelyikük kopog, **már benne van az engedélyező listában**.
+> ⭐ **Ez kiváltja a „full cone" kérdést:** nem kell, hogy a router bárkit beengedjen — elég,
+> ha azokat engedi be, akiket mi már megszólítottunk. És a randevút is fölöslegessé teszi.
+>
+> **4. AZ ÉBREDÉS LEGYEN ÖSSZEHANGOLT — ez az akkumulátor miatt számít.**
+> *(Csaba kérdése: „és ha csak öt percenként áll fel a hálózat?")* Folyamatos melegítésnél a
+> fázis nem számít; ötperces ütemnél a leképezés közben **elévül** (mobilon fél-egy perc),
+> tehát **csak akkor működik, ha egyszerre állnak fel**. Ez ingyen megvan: a telefonok órája
+> NTP-pontos, elég a **percfordulóhoz igazítani**, és 20–30 mp-es ablakban elfér a csúszás.
+>
+> | Megoldás (14 társ) | Napi adat | Rádió-ébresztés |
+> |---|---|---|
+> | folyamatos melegítés, 30 mp | ~3 MB | 120×/óra |
+> | folyamatos melegítés, 60 mp | ~1,5 MB | 60×/óra |
+> | **összehangolt, 5 percenként** | **~300 KB** | **12×/óra** |
+>
+> *(A D35 akkor kongatott vészharangot, amikor 46 MB/nap jött ki — ez annak a századrésze.)*
+>
+> **5. ⭐⭐ EGY ABLAK = A TELJES TERJEDÉS, NEM EGY LÉPÉS.** *(Csaba helyesbítése, és ez a
+> szakasz legfontosabb pontja.)* Én úgy számoltam, hogy egy ablakban az esemény egyet lép,
+> és ezért „száz fősnél ~25 perc, mire körbeér". **Ez rossz volt.** Csaba modellje:
+>
+> > *„5 percenként végigviszi a teljes hálózat frissítését — az eszközök addig egyeztetnek
+> > egymással, ameddig ki nem cserélték azt, amit kell. Ez olyan lenne, mint egy buli:
+> > amikor a legforróbb a hangulat, akkor a legkönnyebb elérni egymást."*
+>
+> Ha egy ablakban mindenki mindenkijével cserél, az esemény **nemzedékenként** terjed:
+>
+> | Nemzedék | Hány készülék tudja (14 társnál) |
+> |---|---|
+> | 1. | ~15 |
+> | 2. | ~225 |
+> | 3. | ~3 400 |
+>
+> Egy valódi csere **mérve 189 ms** (2026-08-30, mobilhálózaton). Három nemzedék tehát
+> **10–30 másodperc** — **belefér egy ablakba**. A késleltetés így nem a hálózat átmérője,
+> hanem **legfeljebb a következő ablakig tartó várakozás**.
+> ⚠️ *A 189 ms mért; a nemzedék-számítás levezetett, nem mért.*
+>
+> ⭐ **A hasonlat pontos:** amikor mindenki egyszerre ébren van, a gráf **abban a pillanatban
+> teljesen összefüggő** — nem az korlátoz, hogy ki van épp fent. Ez a D33 összefüggőség-elve
+> IDŐBEN alkalmazva.
+>
+> ⭐ **ÉS AMI EBBŐL KÖVETKEZIK A KÓDRA:** az `orjarat` **már ma is ötperces ütemben jár**.
+> Három dolog hiányzik belőle:
+> 1. **igazítsa a kört a percfordulóhoz** (hogy a buli egyszerre kezdődjön);
+> 2. a kör elején **kopogjon rá minden társra** (ne csak arra, akivel cserélni akar);
+> 3. ⭐ **ismételje a kört, amíg van újdonság** — ma egyszer megy végig a listán, pedig amit
+>    az 5. társtól kapott, azt az 1. még nem tudja. A leállás magától adódik: a csere már ma
+>    is a „csendes körnél" áll meg.
+>
+> **AZ ÁRA (számolva, nem mérve):**
+>
+> | | |
+> |---|---|
+> | egy „nincs újdonság" csere | ~700 bájt oda-vissza (mérve: 334 bájt egy irányban) |
+> | 14 társ × 2–3 kör | ~25 KB / ablak |
+> | 5 percenként | **~7 MB/nap** |
+> | 15 percenként | ~2,4 MB/nap |
+> | akkumulátor | 12 ébredés/óra, ~30 mp-es ablak → a rádió az idő ~10%-ában aktív |
+>
+> ⚠️ A 7 MB/nap nem vészes (a D35 46-nál kongatott vészharangot), de **nem is elhanyagolható**
+> egy mobil-előfizetésen. Az ablak-gyakoriság az a csavar, amivel állítható — és ez
+> **befogadási kérdés**, nem technikai finomhangolás (D35).
+>
+> #### ⚠️ AMIT EZ NEM OLD MEG — és amiért a „kurbli" hasonlat pontos
+>
+> Csaba hasonlata: *„mint egy motor esetében, kurbli"* — a fúró csak az induláshoz kell.
+> **Így igaz**, de a mechanizmus nem az, amit először gondoltunk:
+>
+> - **az ELSŐ találkozás** marad kézi vagy összeismertetett (akinek a címét nem ismered, afelé
+>   nem tudsz előre nyitni) — **ez a kurbli**;
+> - utána az előre nyitott rések **fenntartják a járást**, ütem és randevú nélkül;
+> - ⚠️ **de alvó telefonon semmi ebből nem működik.** Az Android elaltatja a folyamatot; a
+>   fenti számítás ébren lévő készülékre igaz. **A flotta gerince ezért asztali gép legyen.**
+>
+> #### 🔓 AMIT MÉG NEM MÉRTÜNK
+>
+> **Full cone-e a vonal?** Ma csak a **leképezést** mértük (a külső port ugyanaz marad,
+> akárkinek küldünk). Hogy a résen **ki jöhet be** (a *szűrés*), az külön tulajdonság.
+> Ha véletlenül full cone, még az előre nyitogatás sem kell.
+> **A mérés meglévő paranccsal megy:** a laptop a semmibe fúr (`pajzsfuro 192.0.2.1 7373
+> 7373` — így soha nem küld a telefonnak), a telefon mobilnetről a laptop kiírt külső
+> portjára kopog. Ha a laptop `MEGJÖTT AZ Ő KOPOGÁSA`-t ír, akkor full cone.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -376,7 +485,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**40 tervezési döntés (D1–D40) áll.** 2026-08-25-én három elméleti hidat építettünk
+**41 tervezési döntés (D1–D41) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
