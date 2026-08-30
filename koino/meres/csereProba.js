@@ -872,6 +872,66 @@ proba('⭐⭐ CSOMAGVESZTÉS MELLETT IS ÁTMEGY (30% elveszik) — újraküldés
   }
 });
 
+proba('⭐⭐ RONTÁS-PRÓBA: a lezárás NEM dobhatja el az utolsó darabot (5× egymás után)', async () => {
+  // ⚠️ EZ EGY MEGTÖRTÉNT HOLTPONT ŐRE (2026-08-30). A fenti csomagvesztéses próba
+  // ÖNMAGÁBAN ÁTMENT — csak 6-ból 1-szer. A maradék 5-ben a teljes önpróba-készlet
+  // VÉGTELENÜL VÁRT, mert két őr hiányzott a `udpVonal.js`-ből:
+  //   · a `parbeszed` az utolsó LENYOMAT-ra már nem vár nyugtát, és ha közben a másik
+  //     válasza megjön, kilép — a régi `end()` pedig eldobta az úton lévő darabot;
+  //   · tétlenségi óra nem volt, tehát a másik fél örökre várhatott rá.
+  //
+  // ⭐ MIÉRT ÖTSZÖR? Mert ez VÉLETLEN-FÜGGŐ hiba: a régi kóddal egyetlen futás mérve
+  // 6-ból 1-szer akkor is ZÖLD volt, ha a kód rossz. Öt futásnak mind az ötje csak
+  // (1/6)^5 ≈ nyolcezred eséllyel sikerül — vagyis a hiba nem tud átcsúszni.
+  //
+  // ⚠️ ÉS MIÉRT 5000 ms A HATÁRIDŐ? Mérve: egy 30%-os vesztésű csere maga is 2,2–5,3
+  // MÁSODPERC (minden elveszett csomag egy 300 ms-os újraküldés-várás). De a határidő
+  // TÉTLENSÉGET mér, nem összidőt: két csomag között ~300 ms telik, tehát 5000 ms
+  // csendhez 16 egymás utáni vesztés kellene (0,3^16 — sosem). Egy visszatérő hiba
+  // viszont TELJES csendet csinál, tehát 5 másodperc múlva BUKÁS lesz, nem beragadás.
+  for (let i = 0; i < 5; i++) {
+    const anna = await ujEember(KOINO);
+    const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 4));
+    const masikTar = await ujTar();
+
+    const p = await udpParos(0.3);
+    try {
+      const [, b] = await Promise.all([
+        csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO,
+          { varakozasiIdo: 5000 }),
+        csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO,
+          { varakozasiIdo: 5000 })
+      ]);
+      if (b.uj !== 4) return false;
+      if (!(await allasokEgyeznek(egyikTar, masikTar, KOINO))) return false;
+    } finally {
+      p.bezar();
+    }
+  }
+  return true;
+});
+
+proba('⭐⭐ A NÉMA TÁRS: a csere HIBÁVAL zárul, nem ragad be örökre', async () => {
+  // ⚠️ A másik oldala ugyanannak: ha a társ egyáltalán nem válaszol (elment, lefagyott),
+  // a cserének VÉGE kell legyen. A `koino.js` őrjárata e nélkül egyetlen néma társon
+  // örökre megállna — és nem hibaüzenettel, hanem csenddel, ami a legrosszabb.
+  const anna = await ujEember(KOINO);
+  const tar = await ujTar(); await ment(tar, await lanc(anna, 1));
+
+  const p = await udpParos();          // a `masik` foglalat NYITVA van, de senki nem olvassa
+  const kezdet = Date.now();
+  try {
+    await csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tar, KOINO,
+      { varakozasiIdo: 1200 });
+    return false;                      // ha ez lefutott, nem volt őr
+  } catch {
+    // A tétlenségi órának kell elsülnie (1,2 mp), nem az újraküldés-korlátnak (6 mp).
+    return Date.now() - kezdet < 4000;
+  } finally {
+    p.bezar();
+  }
+});
+
 proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
   const anna = await ujEember(KOINO);
   const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 1));

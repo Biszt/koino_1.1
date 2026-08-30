@@ -29,6 +29,21 @@
 // cserébe ÁTLÁTHATÓ. Ha egyszer kevés lesz, itt kell javítani, a protokollhoz nem kell
 // hozzányúlni.
 //
+// ===== A KÉT ŐR, AMI ELŐSZÖR HIÁNYZOTT (2026-08-30) =====
+//
+// A TCP-től nem három dolgot kapunk ingyen, hanem ötöt — a maradék kettő először kimaradt
+// innen, és a 30%-os csomagvesztéses önpróba ettől 6-ból 5-ször VÉGTELENÜL VÁRT:
+//
+//   · KIÜRÍTÉS a lezáráskor — a TCP `end()` előbb kiírja a puffert, és csak utána küld
+//     FIN-t. A régi `end()` itt ELDOBTA a még nyugtázatlan darabot. Márpedig a
+//     `parbeszed` a saját utolsó üzenetét elküldi, és nem vár rá nyugtát: ha közben a
+//     másik válasza megjön, azonnal kilép. Ha épp az a csomagunk veszett el, a másik
+//     örökre várta. → `kiurites()`
+//   · TÉTLENSÉGI ÓRA — hogy a néma társ ne ragaszthasson be. → `setTimeout()`
+//
+// ⚠️ A TANULSÁG: a „megbízható folyam" nem attól megbízható, hogy újraküld, hanem attól,
+// hogy MINDEN kimenetele véges. A néma nem-esemény a legrosszabb hibafajta.
+//
 // A vonal alakja itt is emberi szemmel olvasható marad:
 //   {"sz":1,"a":"…szövegdarab…"}   — adat, sorszámmal
 //   {"ny":1}                        — nyugta: „az 1-est megkaptam"
@@ -45,6 +60,10 @@ const DARAB_MERET = 1000;
 const UJRAKULDES_KOZ = 300;
 // …és ennyi eredménytelen próbálkozás után feladjuk.
 const UJRAKULDES_KORLAT = 20;
+
+// Ennyi ideig tűrjük, hogy a másik fél NE SZÓLJON SEMMIT. Ugyanaz a 10 másodperc, amit a
+// `csereVonalon` használ TCP-n — a hívó felülírhatja (`beallitas.varakozasiIdo`).
+const TETLENSEG_ALAP = 10000;
 
 /**
  * TCP-foglalatnak látszó objektum, ami alatta UDP-t használ.
@@ -69,6 +88,46 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
 
   let bajtKuldott = 0, bajtKapott = 0;
 
+  // ----- A TÉTLENSÉGI ÓRA -----
+  //
+  // ⚠️ ITT KORÁBBAN EGY ÜRES `setTimeout` ÁLLT, ezzel az indoklással: „az újraküldés-korlát
+  // betölti ezt a szerepet". NEM tölti be. Az újraküldés-korlát csak akkor véd, ha van
+  // csomagunk ÚTON — amikor VÁRUNK a másikra, nincs se csomag, se időzítő, se határidő.
+  // TCP-n ezt a `kapcsolat.setTimeout(varakozasiIdo, …)` fogta meg; itt kézzel kell.
+  //
+  // ⭐ A MÉRCE: MIT SZÁMÍT ÉLETJELNEK? Csak azt, amit TŐLE KAPUNK. A saját újraküldésünk
+  // nem életjel — ha az nullázná az órát, egy halott társ mellett örökre pörögnénk.
+  let tetlensegHatar = 0;
+  let tetlensegOra = null;
+  let tetlensegVisszahivas = null;
+
+  const oratUjraindit = () => {
+    if (!tetlensegHatar || lezarva) return;
+    if (tetlensegOra) clearTimeout(tetlensegOra);
+    tetlensegOra = setTimeout(() => {
+      tetlensegOra = null;
+      if (tetlensegVisszahivas) tetlensegVisszahivas();
+    }, tetlensegHatar);
+  };
+
+  const oratMegallit = () => {
+    if (tetlensegOra) { clearTimeout(tetlensegOra); tetlensegOra = null; }
+  };
+
+  // ----- A KIÜRÍTÉS -----
+  //
+  // Aki a `kiurites()`-re vár, ezt a függvényt kapja vissza. Két helyen sül el: amikor az
+  // utolsó darab is nyugtázva lett (siker), és amikor feladtuk (kudarc) — harmadik eset
+  // nincs, ezért nem tud beragadni.
+  let uritesreVar = null;
+
+  const uritestJelez = (sikerult) => {
+    if (!uritesreVar) return;
+    const jelzo = uritesreVar;
+    uritesreVar = null;
+    jelzo(sikerult);
+  };
+
   const csomagot = (targy) => {
     const bajtok = Buffer.from(JSON.stringify(targy), 'utf8');
     bajtKuldott += bajtok.length;
@@ -90,6 +149,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
         clearInterval(idozito); idozito = null;
         jelez('error', new Error('a másik fél nem nyugtázta a ' + uton.sorszam
           + '. darabot (' + UJRAKULDES_KORLAT + ' próbálkozás után)'));
+        uritestJelez(false);            // aki a kiürítésre vár, itt is kapjon választ
         return;
       }
       csomagot({ sz: uton.sorszam, a: uton.szoveg });
@@ -106,6 +166,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     // csomag ne zavarja össze a sorszámozást.
     if (felado.address !== tarsCim || felado.port !== tarsPort) return;
 
+    oratUjraindit();                   // ÉLETJEL: tőle jött valami, tehát él
     bajtKapott += bajtok.length;
     let uzenet;
     try { uzenet = JSON.parse(bajtok.toString('utf8')); } catch { return; }
@@ -116,6 +177,8 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
         if (idozito) { clearInterval(idozito); idozito = null; }
         uton = null;
         kovetkezotKuld();
+        // Ha se úton, se sorban nincs több — mindent kiírtunk, a lezárás mehet.
+        if (!uton && !sor.length) uritestJelez(true);
       }
       return;
     }
@@ -146,7 +209,31 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     get bytesRead() { return bajtKapott; },
 
     setEncoding() { /* mi mindig szöveget adunk tovább */ },
-    setTimeout() { /* az újraküldés-korlát tölti be ezt a szerepet */ },
+
+    /**
+     * Tétlenségi határidő: ha ennyi ideig SEMMI nem jön a másiktól, szólunk.
+     * Úgy viselkedik, mint a `net.Socket.setTimeout` — a `csereUdpResen` ugyanúgy
+     * használja, mint a `csereVonalon` a TCP-set.
+     */
+    setTimeout(ezredmasodperc, visszahivas) {
+      tetlensegHatar = ezredmasodperc;
+      tetlensegVisszahivas = visszahivas;
+      oratUjraindit();
+      return this;
+    },
+
+    /**
+     * Megvárja, amíg minden elküldött darabot NYUGTÁZTAK.
+     *
+     * ⭐ Ez a TCP `end()`-jének kiírás-része, kézzel. A lezárás előtt ezt meg kell várni,
+     * különben az utolsó üzenetünk némán elveszhet — és a másik fél örökre várja.
+     *
+     * @returns {Promise<boolean>} igaz, ha minden kiment; hamis, ha feladtuk
+     */
+    kiurites() {
+      if (lezarva || (!uton && !sor.length)) return Promise.resolve(true);
+      return new Promise((teljesites) => { uritesreVar = teljesites; });
+    },
 
     on(nev, figyelo) {
       if (figyelok[nev]) figyelok[nev].push(figyelo);
@@ -164,8 +251,20 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
       return true;
     },
 
-    end() { lezarva = true; if (idozito) { clearInterval(idozito); idozito = null; } },
-    destroy() { this.end(); jelez('close'); }
+    // ⚠️ A LEZÁRÁS ELDOBJA, AMI MÉG ÚTON VAN — ezért kell ELŐTTE `kiurites()`.
+    end() {
+      lezarva = true;
+      if (idozito) { clearInterval(idozito); idozito = null; }
+      oratMegallit();
+      uritestJelez(false);             // ha valaki mégis a kiürítésre várna, ne ragadjon be
+    },
+
+    /** Mint a `net.Socket.destroy(hiba)`: előbb hiba, aztán close — a `parbeszed` így várja. */
+    destroy(hiba) {
+      this.end();
+      if (hiba) jelez('error', hiba);
+      jelez('close');
+    }
   };
 }
 
@@ -180,14 +279,34 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
  * @param {number} tarsPort
  * @param {Object} tar
  * @param {string} koino
- * @param {Object} [beallitas] - amit a `parbeszed` kap (pl. hirdetettCimek)
+ * @param {Object} [beallitas] - amit a `parbeszed` kap (pl. hirdetettCimek), és
+ *   `varakozasiIdo`: ennyi néma ezredmásodperc után feladjuk (alap: 10 000)
  */
 export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallitas = {}) {
-  console.log('csereUdpResen - KEZDÉS', { tarsCim, tarsPort, koino });
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  console.log('csereUdpResen - KEZDÉS', { tarsCim, tarsPort, koino, varakozasiIdo });
 
   const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+
+  // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE. Ha a másik elhallgat (elment, lefagyott, vagy csak
+  // elveszett a válasza), ez a határidő zárja le a párbeszédet — HIBÁVAL, nem csenddel.
+  // E nélkül a `koino.js` őrjárata is megállhatna örökre egyetlen csendes társon.
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+
   try {
     const eredmeny = await parbeszed(kapcsolat, tar, koino, beallitas);
+
+    // ⭐ ELŐBB KIÜRÍTÉS, CSAK UTÁNA ZÁRÁS. A párbeszéd akkor is véget érhet, amikor a MI
+    // utolsó üzenetünk még úton van (a `parbeszed` az utolsó LENYOMAT-ra már nem vár
+    // nyugtát). Ha itt azonnal zárnánk, azt a darabot eldobnánk — és a másik fél örökre
+    // várná. ⚠️ Pontosan ez volt a holtpont, amit a 30%-os önpróba 6-ból 5-ször elkapott.
+    const kiment = await kapcsolat.kiurites();
+    if (!kiment) {
+      console.warn('csereUdpResen - az utolsó darab nem lett nyugtázva', { tarsCim, tarsPort });
+    }
+
     const teljes = {
       ...eredmeny,
       bajtKuldott: kapcsolat.bytesWritten,

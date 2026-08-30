@@ -194,6 +194,76 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >
 > Ettől egy címváltozás **magától végigfutna a hálózaton**: elég egyvalakinek szólni.
 
+> ### 🔒 D40 (2026-08-30): A FOGADÓKÉPESSÉG-FÜGGÉS MINIMALIZÁLÁSA — sebesség árán is
+>
+> *Egy UDP-holtpont javítása közben oda jutottunk, hogy a koinóban lesz TÖMEGES forgalom is,
+> nem csak apró szinkron — Csaba vetette fel: „ha valaki tudatpont-tulajdonos lesz egy
+> entitáson, akkor azt le kell töltenie a hálózatról, mert ő tárolja onnantól kezdve."
+> Erre azt javasoltam, hogy a tömeges letöltés menjen TCP-n, ahol a másik fogadóképes.
+> Csaba ezt elutasította — és a javaslatom tényleg visszahozta azt a függést, amit a
+> D31–D33 ki akar zárni.*
+>
+> > „Minimalizálni akarom a fogadóképes (postaláda) függést, annyira amennyire csak lehet,
+> > **még akkor is, ha sebességet veszítünk vele**, mert szerintem az eszközök java nem lesz
+> > fogadóképes. Ezt azért gondolom, mert két háztartásból 2 nem volt az, és szerintem a
+> > mobilnetesek sem lesznek azok." — Csaba
+>
+> **A minta erősebb, mint „2 háztartás":** a router **mind a három** szabványt elutasította
+> (NAT-PMP, PCP, UPnP), a fejlesztői vonal **CGNAT**, a kézi portszabály sem működött. A
+> mobilneteseknél a CGNAT nem kivétel, hanem az alapállapot.
+>
+> **A DÖNTÉS:**
+> > **A tömeges letöltésnek is át kell mennie a résen. A TCP legyen ráadás, sose feltétel.**
+>
+> Ez ugyanaz a mondat, mint a 2. szabály („cserélhető és elhagyható"), csak most az
+> **entitás-tartalomra** is kiterjesztve. ⚠️ Ez **nem tiltja** a TCP-t: ahol van
+> fogadóképes társ, ott nyugodtan menjen azon — de semmi nem múlhat rajta.
+>
+> #### Amit ez KÖTELEZŐVÉ tesz: az ablak
+>
+> A mai `udpVonal.js` szándékosan **egyszerre egy darabot** enged útra (küldd — várd meg a
+> nyugtát — küldd a következőt). Ebből egy egyszerű képlet jön:
+>
+> > **sebesség ≈ ablak × 1000 bájt / oda-vissza idő**
+>
+> | Ablak | Sebesség 30 ms-nál | 5 MB alatta |
+> |---|---|---|
+> | **1** (a mai) | 33 KB/s | 2,5 perc |
+> | **8** | 267 KB/s | 19 mp |
+> | **16** | 533 KB/s | 9 mp |
+> | **64** | 2,1 MB/s | *már a vonal a szűk keresztmetszet, nem mi* |
+>
+> ⭐ **A cél nem a TCP hatékonysága, hanem A VONAL KAPACITÁSA.** Egy otthoni feltöltés
+> 1–2 MB/s körül van; egy **16-os ablak és mért újraküldési idő** (a mai fix 300 ms helyett)
+> ezt gyakorlatilag kimeríti. Nagyságrendileg 100–150 sor a `udpVonal.js`-ben — nem QUIC,
+> nem függőség, és a `parbeszed` egy karakterét sem érinti (1. szabály).
+>
+> #### ⭐ És a valódi válasz a sebességre: SOK TÁRS, nem egy gyors
+>
+> Itt a D33 logikája tér vissza, most a tartalomra. A **D26** miatt a letöltés előtt tudod a
+> fájl **lenyomatát és méretét** — ebből következik, amit a torrent évtizedek óta csinál:
+> a fájl **darabokra bontható, darabonként ellenőrizhető, és több társtól párhuzamosan
+> szedhető össze**. Ha 14 társad van, egyiküknek sem kell gyorsnak lennie — és egyiküknek
+> sem kell fogadóképesnek, mert **te szólsz ki mindegyikhez**, ugyanazon a résen.
+>
+> ⭐ Ráadásul így **megszakítható és folytatható**: nem kell egy hosszú kapcsolatban
+> végigvinni egy 40 MB-os entitást — az `orjarat` körönként hoz pár darabot, és a fájl
+> idővel összeáll. Ez fontos, mert az **5. szabály** épp a hosszú élő kapcsolatot tiltja.
+>
+> **Vagyis a sebességet nem a vonal minőségéből nyerjük, hanem a társak számából** —
+> pontosan úgy, ahogy az elérhetőség kérdését is a gráf összefüggőségére cseréltük.
+>
+> #### Az őszinte ár (felírva, még nincs megépítve)
+>
+> - **darab-címzés** — a fájlhoz lenyomat-fa kell (a **D21** Merkle-gondolata már itt van);
+> - **új üzenettípusok**: „megvan-e neked az X fájl Y darabja?";
+> - **folytatási állapot** — mit szedtem már össze; **helyi megfigyelés**, sosem terjed és
+>   semmit nem dönt el a koinóban (mint a `tarsak.js` `utoljara` mezője).
+>
+> ⚠️ **Mikor:** a Szakasz 2 / **3. lépés** (részleges tudás) UTÁN. Előbb nincs is mit mérni:
+> ma a [`csere.js`](../koino/js/csere/csere.js) `koinoEsemenyei`-t hív, vagyis **mindenki
+> mindent replikál** — a D3 tudatpont-alapú válogatása még nincs megépítve.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -279,7 +349,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**38 tervezési döntés (D1–D38) áll.** 2026-08-25-én három elméleti hidat építettünk
+**40 tervezési döntés (D1–D40) áll.** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
