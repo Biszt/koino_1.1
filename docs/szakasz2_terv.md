@@ -195,7 +195,7 @@ részletet (kanonikus alak). Előbb lássuk, hogyan szinkronizálnak a készül�
 > | **C** | ✅ **POSTALÁDA-SZEREP** kimondása — aki fogad, az tárol és továbbad | ⭐ **jórészt már ma is ezt csinálja**, csak nincs kimondva | **kész (2026-08-29): 3 önpróba + valódi három-készülékes mérés** |
 > | **D** | **TERJEDŐ CÍMJEGYZÉK** — aláírt, **mulandó** cím-üzenetek a meglévő cserén | ettől bővül a társ-lista magától | közepes |
 > | **E** | **LYUKFÚRÁS** (`talalkozo`) — rögzített helyi portról, kifelé, ismételve | ⚠️ **lecsúszott**: az A. lépés után már csak a maradékra kell | közepes |
-> | **F** | **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | kicsi |
+> | **F** | ✅ **HELYI FELFEDEZÉS** — azonos wifin lévő készülékek maguktól | eltünteti a kézi cím-beírást | **kész (2026-08-30): 12 önpróba** — [`js/csere/helyiFelfedezes.js`](../koino/js/csere/helyiFelfedezes.js) |
 >
 > **Amit ez a sorrend kimond:** a 4. lépés (két hálózat, IPv6) **már nem vizsga, hanem
 > mérés** — a koino sorsa nem múlik rajta (D31), csak azt mondja meg, hányan tudnak
@@ -333,6 +333,44 @@ két lenyomat **sosem konvergált** — a csere a kör-korlátig pörgött, ugya
 később egy `figyel` **több koinót is kiszolgálhat** — vagyis egy erős készülék tényleg
 tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a valódi tartalma.
 **Felírva, nem megépítve** — előbb a D. lépés mutassa meg, mekkora a valódi hiány.
+
+---
+
+### ✅ AZ F. LÉPÉS MEGVAN (2026-08-30) — és két hamis feltevést buktatott
+
+**Mit vált ki:** a kézi cím-beírást. Egy háztartáson belül fölösleges címeket olvasgatni —
+a két készülék ugyanazon a wifin van, elég egy kiáltás. **Két szerep:**
+
+- aki **keres**, az KIÁLT (`felfedez` parancs) — és megkapja a válaszokat;
+- aki **dolgozik** (`orjarat`, `figyel`), az FELEL — de magától soha nem szólal meg.
+
+⚠️ **Kényelem, nem előfeltétel** (2. és 4. szabály): ha a wifi tiltja a kliensek közti
+forgalmat, ez üres kézzel tér vissza, és a kézi `tars` út változatlanul megmarad. Ezért
+nem is fut magától — külön parancs. És **bizalom nem jár vele** (3. szabály): a cím a
+**foglalatból** jön, nem az üzenetből (aki hazug címet mond magáról, nem ér el semmit),
+és a felfedezett cím **sosem lesz esemény** — múlandó körülmény, mint a terjedő címjegyzéké.
+
+#### ⚠️ KÉT HAMIS FELTEVÉS, AMIT A VALÓDI MÉRÉS BUKTATOTT
+
+Mindkettőt **átvitte** az önpróba, és mindkettő **elbukott két valódi példánnyal**:
+
+| Amit feltételeztem | Mi történt valójában | A javítás |
+|---|---|---|
+| elég **egyszer** kiáltani, induláskor | félsiker: az egyik meghallotta a másikat, **visszafelé nem** — mert a másik egy másodperccel később indult, és az egyetlen kiáltás addigra elhangzott. **Két ember sosem nyom egyszerre entert.** | fél másodpercenként ismételünk (~70 bájt/kiáltás) |
+| elég, ha **mindkét fél a `felfedez`-t futtatja** | egy `figyel`-t futtató postaláda **meg sem hallotta** a kiáltást — pedig épp őt kellett volna megtalálni | `felfedezoValaszolo`: a dolgozó készülék felel |
+
+És egy harmadik, ami csak egy gépen jön elő: a felfedező port **rögzített**, tehát két
+példány ugyanazon a porton ül, és a **célzott** válasz a „rossz" foglalatra érkezhet.
+Ezért a válasz a **csoportnak is** elmegy. *(Válaszra senki nem válaszol → nem gyűrűzik.)*
+
+⚠️ **Módszertan:** az önpróbák szándékosan **nem multicasttal** mérnek, hanem célzott
+csomagokkal — különben a HÁLÓZATOT mérnék, nem a programot, és hol zöldek lennének, hol
+nem. A szórás valódi átmenetele **kézi mérés**.
+
+**MÉRVE (2026-08-30, valódi hálózaton, 192.168.1.134):** a postaláda elindult (semmit nem
+írtunk be neki) · a másik készülék `felfedez` → **1 készüléket találtam 3013 ms alatt,
++1 új társ a listán** · `csere` érv nélkül → **kaptam 2, küldtem 2** · és a két készülék
+**ujjlenyomata bájtra azonos** lett. **Egyetlen címet sem írtunk be.**
 
 ---
 

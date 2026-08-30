@@ -22,6 +22,10 @@ import { figyeloIndulasa, csereVonalon, parbeszed } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
+import {
+  helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
+  felfedezettekOsszefesulese
+} from '../js/csere/helyiFelfedezes.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -1018,6 +1022,152 @@ proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
   } finally {
     p.bezar();
   }
+});
+
+// ===== A HELYI FELFEDEZÉS (F. lépés) =====
+//
+// ⚠️ SZÁLLÍTÁS, NEM PROTOKOLL: a `helyiFelfedezes.js` semmit nem tud a koino tartalmáról,
+// csak címeket szerez. Ezért a bizalom-kérdés itt fel sem merül — de a szűrés igen: ki
+// tartozik ide, mi a saját visszhangunk, és mi a szemét.
+
+proba('A kiáltás alakja: apró és unalmas (koino, port, jel)', () => {
+  const u = JSON.parse(felfedezoUzenet('KOPOGOK', 'proba', 7373, 'abc123'));
+  return u.mi === 'KOPOGOK' && u.koino === 'proba' && u.port === 7373 && u.jel === 'abc123'
+    && Object.keys(u).length === 4;           // semmi több nem szivárog ki rólunk
+});
+
+proba('⭐ A SAJÁT VISSZHANGUNKAT kihagyjuk (a szórást mi is megkapjuk)', () => {
+  const sajat = felfedezoUzenet('KOPOGOK', 'proba', 7373, 'enjelem');
+  const e = kialtasFeldolgozasa(sajat, { address: '192.168.1.5', port: 7374 }, 'proba', 'enjelem');
+  return !e.rendben && e.ok === 'sajat-visszhang';
+});
+
+proba('⭐ MÁS KOINO kiáltása nem hiba, csak nem tartozik ránk', () => {
+  const ove = felfedezoUzenet('KOPOGOK', 'masik-koino', 7373, 'ojele');
+  const e = kialtasFeldolgozasa(ove, { address: '192.168.1.7', port: 7374 }, 'proba', 'enjelem');
+  return !e.rendben && e.ok === 'mas-koino';
+});
+
+proba('A szemét nem szakítja meg a felfedezést (mint a tárban)', () => {
+  const a = kialtasFeldolgozasa('nem json', { address: '192.168.1.7', port: 7374 }, 'proba', 'j');
+  const b = kialtasFeldolgozasa('{"mi":"VALAMI"}', { address: '192.168.1.7', port: 7374 }, 'proba', 'j');
+  const c = kialtasFeldolgozasa(felfedezoUzenet('KOPOGOK', 'proba', 0, 'x'),
+    { address: '192.168.1.7', port: 7374 }, 'proba', 'j');
+  return a.ok === 'ertelmezhetetlen' && b.ok === 'ismeretlen-uzenet' && c.ok === 'rossz-port';
+});
+
+proba('⭐⭐ A CÍM A FOGLALATBÓL JÖN, a PORT az üzenetből — és ez nem mindegy', () => {
+  // ⚠️ Ha a címet is az üzenetből vennénk, bárki bemondhatna egy IDEGEN címet, és a
+  // felfedezés őt írná a listánkra. A foglalat viszont nem hazudik: onnan tényleg
+  // megérkezett valami. A portot muszáj az üzenetből venni — a kiáltás a felfedező
+  // portról jött, cserélni pedig máshol hallgat.
+  const uzenet = JSON.stringify({ mi: 'KOPOGOK', koino: 'proba', port: 7373, jel: 'x',
+    hoszt: '10.0.0.66' });                    // ⬅ hazug cím az üzenetben
+  const e = kialtasFeldolgozasa(uzenet, { address: '192.168.1.9', port: 7374 }, 'proba', 'en');
+  return e.rendben && e.tars.hoszt === '192.168.1.9' && e.tars.port === 7373
+    && e.valaszCim.port === 7374;             // a válasz oda megy, ahonnan jött
+});
+
+proba('Ugyanaz a társ kétszer is jöhet (kiáltás + válasz) — egyszer kerül a listára', () => {
+  const egy = { hoszt: '192.168.1.5', port: 7373 };
+  const lista = felfedezettekOsszefesulese([egy], [egy, { hoszt: '192.168.1.6', port: 7373 }]);
+  return lista.length === 2;
+});
+
+proba('⭐⭐ KÉT KÉSZÜLÉK EGY HÁLÓZATON MEGTALÁLJA EGYMÁST — mindkét irányban', async () => {
+  // ⚠️ MIÉRT NEM MULTICASTTAL MÉRÜNK? Mert az a HÁLÓZATOT mérné, nem a programot: a
+  // multicast átmenetele gépről gépre és wifiről wifire változik, és egy ilyen próba
+  // hol zöld lenne, hol nem — pont az a fajta ingadozó mérés, ami semmit nem bizonyít.
+  // Itt a MENETET mérjük (kiáltás → válasz → mindkettő tudja a másikat); hogy a kiáltás
+  // átmegy-e egy valódi wifin, az külön, kézi mérés.
+  const A = 7381, B = 7382;
+  const [egyik, masik] = await Promise.all([
+    helyiFelfedezes({ koino: KOINO, sajatPort: 7373, figyeloPort: A,
+      celok: ['127.0.0.1'], celPort: B, idokorlat: 1500 }),
+    helyiFelfedezes({ koino: KOINO, sajatPort: 7375, figyeloPort: B,
+      celok: ['127.0.0.1'], celPort: A, idokorlat: 1500 })
+  ]);
+  // ⭐ A MÉRCE: nem elég, hogy az egyik megtalálta a másikat — MINDKETTŐNEK tudnia kell
+  // a másik CSERE-portját (nem a felfedezőét). Ez az, amiért az egész készült.
+  return egyik.tarsak.length === 1 && egyik.tarsak[0].port === 7375
+    && masik.tarsak.length === 1 && masik.tarsak[0].port === 7373;
+});
+
+proba('⭐⭐ RONTÁS-PRÓBA: a KÉSŐBB INDULÓT is megtaláljuk (nem nyomunk egyszerre entert)', async () => {
+  // ⚠️ EZ EGY MEGTÖRTÉNT BUKÁS ŐRE (2026-08-30). Az első változat EGYSZER kiáltott,
+  // induláskor — és két valódi „készülékkel" kipróbálva félsiker lett: az egyik meghallotta
+  // a másikat, visszafelé viszont NEM, mert a másik egy másodperccel később indult, és
+  // addigra az egyetlen kiáltás elhangzott. A hétköznapi eset épp ez: két ember sosem nyom
+  // egyszerre entert. Azóta fél másodpercenként ismételünk.
+  const A = 7387, B = 7388;
+  const elso = helyiFelfedezes({ koino: KOINO, sajatPort: 7373, figyeloPort: A,
+    celok: ['127.0.0.1'], celPort: B, idokorlat: 2500 });
+
+  // A MÁSIK CSAK MOST INDUL — jóval az első kiáltása után.
+  await new Promise((t) => setTimeout(t, 1200));
+  const masodik = await helyiFelfedezes({ koino: KOINO, sajatPort: 7375, figyeloPort: B,
+    celok: ['127.0.0.1'], celPort: A, idokorlat: 1000 });
+  const egyik = await elso;
+
+  // ⭐ A MÉRCE: a KÉSŐN INDULÓNAK is meg kell találnia a korábbit. Az egyszeri kiáltással
+  // ez a fele bukott.
+  return masodik.tarsak.length === 1 && masodik.tarsak[0].port === 7373
+    && egyik.tarsak.length === 1 && egyik.tarsak[0].port === 7375;
+});
+
+proba('⭐⭐ A DOLGOZÓ KÉSZÜLÉK FELEL a kiáltásra (nem kell egyszerre parancsot indítani)', async () => {
+  // ⚠️ EZ IS MÉRÉSBŐL JÖTT (2026-08-30). A felfedezés első változatában MINDKÉT félnek
+  // kiáltania kellett — vagyis csak akkor működött, ha a két ember egyszerre indítja a
+  // `felfedez` parancsot. Egy `figyel`-t futtató készülék meg sem hallotta a kiáltást,
+  // pedig épp őt kellett volna megtalálni. A válaszoló ezt oldja meg: aki dolgozik, felel.
+  const VALASZOLO = 7389, KERESO = 7390;
+  const valaszolo = await felfedezoValaszolo({
+    koino: KOINO, sajatPort: 7373, figyeloPort: VALASZOLO, celok: ['127.0.0.1']
+  });
+  try {
+    if (!valaszolo.mukodik) return false;
+    const talalt = await helyiFelfedezes({ koino: KOINO, sajatPort: 7375,
+      figyeloPort: KERESO, celok: ['127.0.0.1'], celPort: VALASZOLO, idokorlat: 1200 });
+    // A kereső megtalálja a dolgozót, ÉS a dolgozó CSERE-portját tudja meg (7373), nem a
+    // felfedezőét — ez az, amivel utána tényleg lehet kezdeni valamit.
+    return talalt.tarsak.length === 1 && talalt.tarsak[0].port === 7373;
+  } finally {
+    valaszolo.bezar();
+  }
+});
+
+proba('⭐ A válaszoló NEM felel a MÁSIK koino kiáltására', async () => {
+  const VALASZOLO = 7391, KERESO = 7392;
+  const valaszolo = await felfedezoValaszolo({
+    koino: 'egeszen-mas-koino', sajatPort: 7373, figyeloPort: VALASZOLO, celok: ['127.0.0.1']
+  });
+  try {
+    const talalt = await helyiFelfedezes({ koino: KOINO, sajatPort: 7375,
+      figyeloPort: KERESO, celok: ['127.0.0.1'], celPort: VALASZOLO, idokorlat: 1000 });
+    return talalt.tarsak.length === 0;
+  } finally {
+    valaszolo.bezar();
+  }
+});
+
+proba('⭐ Ha NINCS ott senki, nem hiba — üres eredmény, időben', async () => {
+  // ⚠️ „Nem találtam senkit" ÉRVÉNYES válasz. Ha ez hibát dobna, a felfedezés előfeltétellé
+  // válna, pedig kényelem (2. szabály).
+  const kezdet = Date.now();
+  const e = await helyiFelfedezes({ koino: KOINO, sajatPort: 7373, figyeloPort: 7383,
+    celok: ['127.0.0.1'], celPort: 7384, idokorlat: 600 });
+  return e.tarsak.length === 0 && Date.now() - kezdet < 3000;
+});
+
+proba('⭐ A MÁSIK KOINO készüléke ott sem kerül a listára (valódi foglalatokkal)', async () => {
+  const A = 7385, B = 7386;
+  const [mienk] = await Promise.all([
+    helyiFelfedezes({ koino: KOINO, sajatPort: 7373, figyeloPort: A,
+      celok: ['127.0.0.1'], celPort: B, idokorlat: 1200 }),
+    helyiFelfedezes({ koino: 'egeszen-mas-koino', sajatPort: 7375, figyeloPort: B,
+      celok: ['127.0.0.1'], celPort: A, idokorlat: 1200 })
+  ]);
+  return mienk.tarsak.length === 0;
 });
 
 export async function takaritas() {

@@ -62,6 +62,7 @@ import { allasOsszeallitasa } from './js/csere/csere.js';
 import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
+import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
 import { lenyomat } from './js/esemeny/kanonikusAlak.js';
@@ -608,8 +609,17 @@ try {
         }
       });
 
+      // ⭐ ÉS FELELÜNK A HELYI KIÁLTÁSOKRA (F. lépés). Aki ugyanezen a wifin a `felfedez`-t
+      // futtatja, cím beírása nélkül megtalál minket. ⚠️ Nem kiáltunk magunktól, csak
+      // válaszolunk — és ha nem megy, az őrjárat/postaláda ettől még dolgozik.
+      const valaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: figyelo.port });
+
       kiir(SZIN.vastag + 'POSTALÁDA' + SZIN.vege + SZIN.halvany
         + '   (a kapu nyitva a ' + figyelo.port + '-es porton)' + SZIN.vege);
+      kiir(valaszolo.mukodik
+        ? SZIN.halvany + 'A helyi hálózaton felfedezhető vagyok (felfedez)' + SZIN.vege
+        : SZIN.halvany + '⚠ A helyi felfedezésre nem tudok felelni — a kézi `tars` út marad'
+          + SZIN.vege);
       kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · adat: ' + alapHely() + SZIN.vege);
       kiir();
       kiir(SZIN.halvany + 'Amit ez a készülék csinál: átveszi mások eseményeit, eltárolja,'
@@ -716,8 +726,13 @@ try {
         }
       });
 
+      // ⭐ Felelünk a helyi kiáltásokra is (F. lépés) — így egy ugyanezen a wifin induló
+      // készülék cím beírása nélkül megtalál. Nem kiáltunk magunktól.
+      const orValaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: figyelo.port });
+
       kiir(SZIN.vastag + 'ŐRJÁRAT' + SZIN.vege + SZIN.halvany
-        + '   (kapu nyitva a ' + figyelo.port + '-en · kör ' + perc + ' percenként)' + SZIN.vege);
+        + '   (kapu nyitva a ' + figyelo.port + '-en · kör ' + perc + ' percenként'
+        + (orValaszolo.mukodik ? ' · helyben felfedezhető' : '') + ')' + SZIN.vege);
       kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · koino: ' + KOINO + SZIN.vege);
       kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
       kiir();
@@ -755,6 +770,78 @@ try {
         await new Promise((teljesites) => setTimeout(teljesites, perc * 60 * 1000));
       }
       // ide nem jutunk el; a figyelőt a folyamat vége zárja
+    }
+
+    case 'felfedez': {
+      // ===== HELYI FELFEDEZÉS (F. lépés) — „ki van még ezen a wifin?" =====
+      //
+      // ⭐ MIT VÁLT KI? A kézi cím-beírást. Egy háztartáson belül fölösleges címeket
+      // olvasgatni: a két készülék ugyanazon a hálózaton van, elég egy kiáltás.
+      //
+      // ⚠️ KÉNYELEM, NEM ELŐFELTÉTEL (2. és 4. szabály). Ha a wifi tiltja a kliensek közti
+      // forgalmat, ez üres kézzel tér vissza — és a koino ugyanúgy működik tovább a `tars`
+      // paranccsal. Ezért nem is fut magától: külön parancs, te indítod.
+      const masodperc = parseFloat(ervek[0]) || 2;
+      const sajatPort = parseInt(ervek[1], 10) || ALAP_PORT;
+      const tarolo = tarsakTarolo();
+
+      kiir(SZIN.vastag + 'HELYI FELFEDEZÉS' + SZIN.vege + SZIN.halvany
+        + '   (kiáltok a hálózatra, és ' + masodperc + ' mp-ig hallgatózom)' + SZIN.vege);
+      kiir(SZIN.halvany + 'Azt hirdetem, hogy a ' + sajatPort + '-on hallgatok · koino: '
+        + KOINO + SZIN.vege);
+      kiir();
+
+      const eredmeny = await helyiFelfedezes({
+        koino: KOINO, sajatPort, idokorlat: masodperc * 1000,
+        esemenyre: (e) => {
+          if (e.mi === 'KIALTOTTAM') {
+            kiir(SZIN.halvany + '  → kikiáltottam ide: ' + e.cel + SZIN.vege);
+          } else if (e.mi === 'KIALTAS-BUKOTT') {
+            kiir(SZIN.nem + '  ✗ ide nem ment ki (' + e.cel + '): ' + e.ok + SZIN.vege);
+          } else if (e.mi === 'KOPOGOK-ERKEZETT' || e.mi === 'ITT-VAGYOK-ERKEZETT') {
+            kiir(SZIN.jo + '  ← ' + e.tars.hoszt + ':' + e.tars.port + SZIN.vege
+              + SZIN.halvany + ' (' + e.mi.replace('-ERKEZETT', '') + ')' + SZIN.vege);
+          } else if (e.mi === 'ELDOBVA' && e.ok === 'mas-koino') {
+            kiir(SZIN.halvany + '  · ' + e.honnan + ' — MÁSIK koino, nem ránk tartozik'
+              + SZIN.vege);
+          }
+        }
+      });
+
+      kiir();
+      if (!eredmeny.tarsak.length) {
+        kiir(SZIN.nem + '✗ Nem találtam senkit ' + eredmeny.eltelt + ' ms alatt.' + SZIN.vege);
+        // ⚠️ MŰSZER, NEM VIGASZ: a néma eredménynek több oka lehet, és a különbség számít.
+        kiir(SZIN.halvany + '  Ez háromfélét jelenthet, és nem mindegy, melyiket:'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '   · nem fut másik koino ezen a hálózaton (ez a leggyakoribb);'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '   · fut, de MÁSIK koinóé — akkor fentebb kiírtam volna;'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '   · a wifi tiltja a kliensek közti forgalmat (vendéghálózat,'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '     „AP isolation") — ilyenkor a kézi út marad: tars <cím> <port>'
+          + SZIN.vege);
+        if (!eredmeny.kialtasok) {
+          kiir(SZIN.nem + '  ⚠ Egyetlen kiáltás sem ment ki — a hálózat már itt megállított.'
+            + SZIN.vege);
+        }
+        break;
+      }
+
+      kiir(SZIN.jo + '⭐ ' + eredmeny.tarsak.length + ' készüléket találtam '
+        + eredmeny.eltelt + ' ms alatt.' + SZIN.vege);
+
+      // ⭐ ÉS FEL IS ÍRJUK ŐKET — különben a felfedezés csak látvány lenne. Ez ugyanaz a
+      // kapu, mint a terjedő címjegyzéké: cím kerül a listára, nem bizalom (3. szabály).
+      const hozzajott = await kapottCimekBeolvasztasa(tarolo, eredmeny.tarsak);
+      kiir(SZIN.jo + '  + ' + hozzajott + ' új társ a listán' + SZIN.vege
+        + SZIN.halvany + (hozzajott < eredmeny.tarsak.length
+          ? ' (' + (eredmeny.tarsak.length - hozzajott) + ' már ismerős volt)' : '')
+        + SZIN.vege);
+      kiir();
+      kiir(SZIN.halvany + 'Most már mehet: node koino/koino.js csere' + SZIN.vege);
+      break;
     }
 
     case 'tukor': {
@@ -1103,7 +1190,7 @@ try {
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
-      kiir('           ujjlenyomat [napok] · cimek · kapu');
+      kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }
