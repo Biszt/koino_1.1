@@ -352,6 +352,18 @@ Két szolgáltatói NAT, egymással szemben, port-továbbítás nélkül.
 | az otthoni NAT célfüggetlen-e | ✅ igen — mindkettő `31.46.250.127:26359` |
 | **a pajzs átfúrható-e** | ⭐ **IGEN, mindkét irányban** |
 | **átmegy-e a csere a résen** | ⭐ **igen: 9 esemény, 6,7 KB, 2 kör** |
+| **ugyanazt számolja-e a két készülék** | ⭐⭐ **igen — az ujjlenyomat KARAKTERRE azonos** |
+
+⭐⭐⭐ **A VIZSGA ÉLESBEN.** A csere után mindkét készülék ugyanazt írta ki:
+
+```
+TUDÁS     bS0p3Cu2KiOA59GbnZp9H20h7RWvX41zg4EqmYItAuU   2 e-ember · 9 esemény
+ÁLLAPOT   SzGwPqybDFfFKMNAUE93zE1884KEuu5jUUHuqiRUfmA   4 entitás · 0 javaslat
+```
+
+Egy **idegen telefon**, **mobilhálózatról**, **két szolgáltatói NAT mögül** — ugyanaz a
+koino. Ez az 1. szakasz jóslata („ha két készülék kicseréli, amit tud, ugyanazt az állapotot
+számolják"), most nem önpróbában, hanem a valóságban.
 
 ⭐⭐ **ÉS AMI A LEGTÖBBET MONDJA — a két oldal ideje:**
 
