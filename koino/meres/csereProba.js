@@ -18,7 +18,7 @@ import {
   allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa,
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
-import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
+import { figyeloIndulasa, csereVonalon, parbeszed } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
@@ -624,9 +624,11 @@ proba('⭐⭐ A CÍMJEGYZÉK TERJED: a társak elmondják egymásnak, kiket isme
   try {
     const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port, 10000,
       [{ hoszt: '2001:db8::a', port: 7373 }]);
-    return eredmeny.kapottCimek.length === 1
-      && eredmeny.kapottCimek[0].hoszt === '2001:db8::b'
-      && eredmeny.kapottCimek[0].port === 7373;
+    // ⚠️ A D39 óta KÉT cím jön: a figyelő TÁRSÁÉ (ezt méri ez a próba) és a figyelő
+    // SAJÁTJA (azt a következő próba méri). Ezért nem darabszámra nézünk, hanem arra,
+    // hogy a társ címe TÉNYLEG átjött-e.
+    const tarse = eredmeny.kapottCimek.find((c) => c.hoszt === '2001:db8::b');
+    return !!tarse && tarse.port === 7373;
   } finally {
     await figyelo.bezar();
   }
@@ -646,8 +648,71 @@ proba('⭐ A címek akkor is terjednek, ha NINCS újdonság (különben nem bőv
   try {
     const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
     return eredmeny.uj === 0 && eredmeny.reszletesAllasok === 0    // tényleg nem volt újdonság
-      && eredmeny.kapottCimek.length === 1
-      && eredmeny.kapottCimek[0].hoszt === '2001:db8::c';
+      && eredmeny.kapottCimek.some((c) => c.hoszt === '2001:db8::c');
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐⭐ A FIGYELŐ A SAJÁT CÍMÉT IS HIRDETI — a tükörtől tanultat (D39)', async () => {
+  // ⚠️ EZ A HIÁNYZÓ LÁNCSZEM VOLT. Eddig mindenki CSAK a társai címeit adta tovább, a
+  // sajátját soha — ezért egy címváltozás csak addig terjedt, ameddig a gazdája maga
+  // elvitte. A figyelő viszont TUDJA a saját címét: a hívó visszamondja neki, hogy
+  // honnan látja. Innentől ezt is továbbadja.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
+  const masik = await ujTar();
+
+  // A figyelőnek NINCS egyetlen felvett társ-címe sem — így ami visszajön, csakis a
+  // sajátja lehet. (Ez teszi a próbát vakság-mentessé.)
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: []
+  });
+  try {
+    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    return eredmeny.kapottCimek.length === 1
+      && eredmeny.kapottCimek[0].hoszt === '127.0.0.1'
+      && eredmeny.kapottCimek[0].port === figyelo.port;   // épp az a kapu, amin bejöttünk
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐⭐ RONTÁS-PRÓBA: a KIFELÉ HÍVÓ nem hirdeti a megfigyelt címét (efemer port)', async () => {
+  // ⚠️ MIÉRT VOLNA HIBA? Mert a kifelé induló TCP-kapcsolat portját a rendszer adja, és a
+  // kapcsolat után elengedi. Ha ezt hirdetnénk, HALOTT címet terjesztenénk a hálózaton —
+  // és a hézag-kereső társak azt hinnék, van hova visszaszólni. A tükör tehát nem
+  // önmagában érték: csak annak, aki a megfigyelt portot nyitva is tartja.
+  const anna = await ujEember(KOINO);
+  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
+  const masik = await ujTar();
+
+  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
+    hoszt: '127.0.0.1', hirdetettCimek: []
+  });
+  try {
+    // A hívó oldalán gyűjtjük össze, mit küldött EL — ehhez a `parbeszed`-et közvetlenül
+    // futtatjuk egy foglalaton, alapbeállítással (tehát `sajatCimHirdetese` nélkül).
+    const { connect } = await import('node:net');
+    const kapcsolat = connect({ host: '127.0.0.1', port: figyelo.port });
+    await new Promise((t, e) => { kapcsolat.once('connect', t); kapcsolat.once('error', e); });
+
+    const elkuldott = [];
+    const eredetiIras = kapcsolat.write.bind(kapcsolat);
+    kapcsolat.write = (szoveg) => {
+      try {
+        const u = JSON.parse(String(szoveg).trim());
+        if (u.uzenet === 'CIMEK') elkuldott.push(...u.cimek);
+      } catch { /* nem CIMEK: nem érdekes */ }
+      return eredetiIras(szoveg);
+    };
+
+    try {
+      await parbeszed(kapcsolat, egyik, KOINO, { hirdetettCimek: [] });
+    } finally {
+      kapcsolat.end();
+    }
+    return elkuldott.length === 0;         // a hívó SEMMIT nem hirdetett magáról
   } finally {
     await figyelo.bezar();
   }
@@ -689,8 +754,12 @@ proba('⭐ A rossz címeket eldobjuk, és legfeljebb 10-et fogadunk el', async (
   });
   try {
     const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
+    // ⚠️ A D39 óta a figyelő SAJÁT címe is beleszámít a tízbe (és elöl van) — a korlát
+    // viszont ugyanúgy áll, és rossz cím továbbra sem jöhet át.
     return eredmeny.kapottCimek.length === 10
-      && eredmeny.kapottCimek.every((c) => typeof c.hoszt === 'string' && c.port === 7373);
+      && eredmeny.kapottCimek.every((c) =>
+        typeof c.hoszt === 'string' && Number.isInteger(c.port) && c.port > 0)
+      && !eredmeny.kapottCimek.some((c) => c.hoszt === 'rossz');
   } finally {
     await figyelo.bezar();
   }

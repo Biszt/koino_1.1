@@ -183,16 +183,43 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > kézi bemutatkozás (4. szabály). Nagy hálózatban elhanyagolható (14 társból nem alszik
 > mind), két készüléknél viszont valós.
 >
-> ### 📌 KÉT APRÓ JAVÍTÁS, AMI EBBŐL KÖVETKEZIK (felírva, még nincs megépítve)
+> ### ✅ KÉT APRÓ JAVÍTÁS, AMI EBBŐL KÖVETKEZIK — MEGÉPÍTVE (2026-08-30)
 >
-> A kód átnézve: ma **a saját külső címünket soha nem hirdetjük** (csak a társainkét), és a
-> **postaláda nem jegyzi fel, ki kopogott be hozzá** — pedig a foglalatból látja. Emiatt egy
-> címváltozás csak addig terjed, ameddig a gazdája maga elviszi.
+> A kód átnézve: ma **a saját külső címünket soha nem hirdettük** (csak a társainkét), és a
+> **postaláda nem jegyezte fel, kit hallott a hívótól**. Emiatt egy címváltozás csak addig
+> terjedt, ameddig a gazdája maga elvitte. Mindkettő kész:
 >
-> 1. **A postaláda jegyezze fel a hívót** társként.
-> 2. **Mindenki hirdesse a saját külső címét is** — azt, amit a tükörtől tanult.
+> 1. ✅ **A postaláda tanul a hívótól** — a bekopogó címjegyzékét eddig eldobtuk, pedig a
+>    postaláda beszél a legtöbb emberrel. *(`koino.js`, `figyel` és `orjarat`.)*
+> 2. ✅ **Mindenki hirdeti a saját külső címét is** — azt, amit a tükörtől tanult.
+>    ⭐ **Nem kell hozzá se fájl, se emlékezés:** a tükör a másik `LENYOMAT`-jával érkezik,
+>    ami ELŐBB jön, mint ahogy mi a `CIMEK`-et küldjük — tehát a frissen tanult cím még
+>    **ugyanabban a beszélgetésben** elmegy.
 >
-> Ettől egy címváltozás **magától végigfutna a hálózaton**: elég egyvalakinek szólni.
+> ⚠️ **AMIT A MEGÉPÍTÉS HELYESBÍTETT — a tükör nem mindenkinek érték.** A `latlak` azt
+> mondja meg, milyen címről ÉS PORTRÓL látnak minket. Ez csak akkor használható cím, ha azt
+> a portot **nyitva is tartjuk**:
+>
+> | Ki | Hirdetheti a tükröt? | Miért |
+> |---|---|---|
+> | **figyelő** (postaláda) | ✅ igen | a hívó épp arra a kapura csatlakozott — bizonyítottan működik |
+> | **UDP-rés** (pajzsfúrás után) | ✅ igen | a fúró RÖGZÍTETT helyi portról hív, a rés ott él |
+> | **kifelé hívó TCP** | ❌ **nem** | efemer portról indul, amit a rendszer utána elenged — **halott címet terjesztene** |
+>
+> Ezért a `parbeszed` opciója (`sajatCimHirdetese`) alapból **ki van kapcsolva**, és csak ott
+> kérjük, ahol igaz. Rontás-próba őrzi mindkét irányt.
+>
+> ⚠️ **ÉS EGY HIBA, AMIT EZ SZÜLT VOLNA:** ha a postaláda mindent felír, amit hall, akkor
+> **önmagát is felveszi társként** — a társak ugyanis MINKET is hirdetnek egymásnak (ez így
+> helyes). A készülék ettől minden körben önmagát hívogatná: nem végzetes (a lenyomat
+> egyezne, ~334 bájt), de néma pazarlás, és a lista élére kerülne, mert mindig „sikeres".
+> A beolvasztás ezért kiszűri azt a címet, aminek a másik épp minket lát (a tükröt).
+>
+> **Mérve, két adat-mappával (2026-08-30):** a postaláda senkit nem ismert; egy bekopogó
+> elmondta neki a két címét; a postaláda **egyet tanult meg** — a másikat, a sajátját,
+> helyesen kihagyta.
+>
+> Ettől egy címváltozás **magától végigfut a hálózaton**: elég egyvalakinek szólni.
 
 > ### 🔒 D40 (2026-08-30): A FOGADÓKÉPESSÉG-FÜGGÉS MINIMALIZÁLÁSA — sebesség árán is
 >

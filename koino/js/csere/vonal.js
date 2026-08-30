@@ -148,6 +148,9 @@ function uzenetSor(kapcsolat) {
 export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const korlat = beallitas.korlat ?? KOR_KORLAT;
   const hirdetettCimek = beallitas.hirdetettCimek ?? [];
+  // Hirdessük-e a tükörtől tanult SAJÁT címünket is? Alapból nem — lásd az indoklást
+  // a CIMEK küldésénél: csak az hirdetheti, aki a megfigyelt portot nyitva is tartja.
+  const sajatCimHirdetese = beallitas.sajatCimHirdetese ?? false;
   console.log('parbeszed - KEZDÉS', { koino });
 
   const sor = uzenetSor(kapcsolat);
@@ -225,7 +228,30 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // Bizalom nem jár velük (3. szabály): ha valaki hazudik, legfeljebb nem jön össze
     // egy kapcsolat.
     if (kor === 1) {
-      kuld({ uzenet: 'CIMEK', cimek: hirdetettCimek.slice(0, CIM_KORLAT) });
+      // ⭐ A SAJÁT KÜLSŐ CÍMÜNK IS MEGY (D39, 2026-08-30). Eddig CSAK a társainkét
+      // hirdettük — ezért egy címváltozás csak addig terjedt, ameddig a gazdája maga
+      // elvitte. Most: amit az imént tanultunk a tükörtől (`latlak`), azt továbbadjuk.
+      //
+      // ⚠️ ÉS EZÉRT CSAK KÉRÉSRE (`sajatCimHirdetese`). A tükör azt mondja meg, milyen
+      // címről ÉS PORTRÓL látnak minket — ez csak akkor használható cím, ha az a port
+      // olyan, amit nyitva is tartunk:
+      //   · FIGYELŐ (postaláda): igen — a hívó épp a mi kapunkra csatlakozott, tehát
+      //     amit ő lát, az pontosan az a cím, ahova vissza lehet jönni;
+      //   · UDP-RÉS: igen — a pajzsfúró RÖGZÍTETT helyi portról hív, a rés ott él;
+      //   · TCP-hívás kifelé: ⚠️ NEM — onnan efemer porttal indulunk, amit a rendszer
+      //     a kapcsolat után elenged. Azt hirdetni halott címet terjesztene.
+      //
+      // ⭐ Az időzítés stimmel: a tükröt a másik LENYOMAT-ja hozza, ami ELŐBB érkezik,
+      // mint ahogy mi a CIMEK-et küldjük — tehát a FRISSEN tanult cím megy el, még
+      // ugyanabban a beszélgetésben. Nem kell hozzá se fájl, se emlékezés.
+      const sajatCim = (sajatCimHirdetese && kivulrolIgyLatszom?.cim
+        && Number.isInteger(kivulrolIgyLatszom.port))
+        ? [{ hoszt: kivulrolIgyLatszom.cim, port: kivulrolIgyLatszom.port }]
+        : [];
+
+      // A sajátunk ELÖL: ha a korlátba nem fér bele minden, ez az egy cím az, amit a
+      // másik sehonnan máshonnan nem tudhat meg.
+      kuld({ uzenet: 'CIMEK', cimek: [...sajatCim, ...hirdetettCimek].slice(0, CIM_KORLAT) });
       const ove = await varj('CIMEK');
       kapottCimek = (Array.isArray(ove.cimek) ? ove.cimek : [])
         .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
@@ -316,7 +342,10 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
 
   const kiszolgalo = createServer((kapcsolat) => {
     const honnan = kapcsolat.remoteAddress;
-    parbeszed(kapcsolat, tar, koino, { hirdetettCimek })
+    // ⭐ A FIGYELŐ HIRDETHETI A SAJÁT CÍMÉT (D39). Amit a hívó tükröz vissza, az pontosan
+    // az a cím, amire ő az imént CSATLAKOZOTT — tehát bizonyítottan működik, és a kapunk
+    // utána is nyitva marad. (A kifelé hívónál ez nem így van, ott efemer a port.)
+    parbeszed(kapcsolat, tar, koino, { hirdetettCimek, sajatCimHirdetese: true })
       .then((eredmeny) => utana?.({
         ...eredmeny, honnan,
         bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead

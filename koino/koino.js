@@ -185,16 +185,48 @@ async function hirdetendoCimek(tarolo) {
   return tarsakSorrendje(lista).map((t) => ({ hoszt: t.hoszt, port: t.port }));
 }
 
-/** A cserén kapott címeket felvesszük a listánkra — de sosem írjuk felül a sajátunkat. */
-async function kapottCimekBeolvasztasa(tarolo, kapott) {
+/**
+ * A cserén kapott címeket felvesszük a listánkra — de sosem írjuk felül a sajátunkat.
+ *
+ * ⚠️ ÉS ÖNMAGUNKAT SEM VESSZÜK FEL (D39, 2026-08-30). A társak MINKET is hirdetnek
+ * egymásnak — ez így helyes —, de ha a saját címünket felírnánk társként, a készülék
+ * ONMAGÁT hívogatná minden körben. Nem végzetes (a lenyomat egyezne, ~334 bájt), de
+ * néma pazarlás, és a lista élére kerülne, mert mindig „sikeres".
+ *
+ * @param {Object} tarolo
+ * @param {Array} kapott
+ * @param {{cim: string, port: number}} [sajat] - aminek a másik LÁT minket (a tükör)
+ */
+async function kapottCimekBeolvasztasa(tarolo, kapott, sajat = null) {
   if (!kapott?.length) return 0;
   let lista = await tarolo.olvas();
   const elotte = lista.length;
+  const miVagyunk = (c) => sajat
+    && String(c.hoszt).toLowerCase() === String(sajat.cim).toLowerCase()
+    && Number(c.port) === Number(sajat.port);
+
   for (const c of kapott) {
+    if (miVagyunk(c)) continue;
     try { lista = tarsHozzaadasa(lista, { hoszt: c.hoszt, port: c.port }); } catch { /* rossz cím: kihagyjuk */ }
   }
   if (lista.length !== elotte) await tarolo.ir(lista);
   return lista.length - elotte;
+}
+
+// ⚠️ A társ-listát több helyről is ÍRJUK: az őrjárat köre, és külön minden bekopogó
+// kiszolgálása (D39). Két átfedő írásnál az egyik némán elveszne — ezért sorba tesszük
+// őket. Nem zár, csak sorrend: a fájl kicsi, egy írás ezredmásodperc.
+let cimIrasSor = Promise.resolve(0);
+
+/** Beolvasztás sorban, hibától védve — a cím-tanulás sose döntse el a cserét. */
+function cimeketTanul(tarolo, kapott, sajat = null) {
+  cimIrasSor = cimIrasSor
+    .then(() => kapottCimekBeolvasztasa(tarolo, kapott, sajat))
+    .catch((hiba) => {
+      console.warn('cimeketTanul - nem sikerült felírni', { ok: hiba.message });
+      return 0;
+    });
+  return cimIrasSor;
 }
 
 const adatMennyiseg = (eredmeny) => {
@@ -542,7 +574,7 @@ try {
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         hirdetettCimek: await hirdetendoCimek(cimTarolo),
-        utana: (eredmeny) => {
+        utana: async (eredmeny) => {
           if (eredmeny.hiba) {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
             return;
@@ -564,6 +596,15 @@ try {
           kiir(SZIN.halvany + '    összesen: ' + beszelgetesek + ' beszélgetés · '
             + atvett + ' átvett · ' + tovabbadott + ' továbbadott · '
             + adatMennyiseg({ bajtKuldott: forgalom }) + SZIN.vege);
+
+          // ⭐ A POSTALÁDA IS TANUL A HÍVÓTÓL (D39, 2026-08-30). Eddig a bekopogó
+          // elmondta, kiket ismer — és mi eldobtuk. Így a postaláda címjegyzéke csak
+          // kifelé menő cserékből bővült, pedig ő beszél a legtöbb emberrel.
+          const tanult = await cimeketTanul(cimTarolo, eredmeny.kapottCimek,
+            eredmeny.kivulrolIgyLatszom);
+          if (tanult) {
+            kiir(SZIN.jo + '    + ' + tanult + ' új társ-címet tanultam tőle' + SZIN.vege);
+          }
         }
       });
 
@@ -661,12 +702,17 @@ try {
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         hirdetettCimek: await hirdetendoCimek(tarolo),
-        utana: (e) => {
+        utana: async (e) => {
           if (e.hiba) return;
           if (e.masKoino) return;
+          // ⭐ A bekopogótól is tanulunk címet (D39) — ő ugyanúgy hoz újdonságot, mint
+          // akit mi hívunk. E nélkül a kapunkat nyitva tartó készülék, aki a legtöbb
+          // emberrel beszél, tanulna a legkevesebbet.
+          const tanult = await cimeketTanul(tarolo, e.kapottCimek, e.kivulrolIgyLatszom);
           kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
             + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
-            + ' (' + adatMennyiseg(e) + ')' + SZIN.vege);
+            + ' (' + adatMennyiseg(e) + ')'
+            + (tanult ? ' · +' + tanult + ' cím' : '') + SZIN.vege);
         }
       });
 
@@ -920,8 +966,12 @@ try {
         const tarolo = tarsakTarolo();
         kiir();
         kiir(SZIN.vastag + 'CSERE A RÉSEN' + SZIN.vege);
+        // ⭐ ITT HIRDETHETJÜK A SAJÁT CÍMÜNKET IS (D39): a pajzsfúró RÖGZÍTETT helyi
+        // portról hívott, tehát amit a másik tükröz vissza, az az ÉLŐ résünk — oda
+        // tényleg vissza lehet szólni. (A sima `csere` kifelé efemer portot használ,
+        // ott ez nem igaz, ezért ott nem is kérjük.)
         const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO,
-          { hirdetettCimek: await hirdetendoCimek(tarolo) });
+          { hirdetettCimek: await hirdetendoCimek(tarolo), sajatCimHirdetese: true });
         eredmeny.halo.close();
 
         kiir(SZIN.jo + '  ✓ kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott
