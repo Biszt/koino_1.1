@@ -616,6 +616,59 @@ proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazo
     && egyik.kuldott > 0 && masik.kuldott > 0;
 });
 
+proba('⭐⭐ A FÚRÓ MEGMÉRI A SAJÁT KÜLSŐ CÍMÉT — a saját foglalatáról', async () => {
+  // ⚠️ MÉRÉSBŐL JÖTT (2026-08-30, mobilhálózatos kísérlet). A `kulsoport` parancs KÜLÖN
+  // foglalatot nyit, mér, bezárja — a fúró viszont ÚJ foglalatot nyit, ami más NAT-
+  // leképezést kaphat. A bemondott szám tehát tippen múlt (akkor épp stimmelt).
+  // Ráadásul fúrás közben külön mérni sem lehet: a STUN-válasz a FÚRÓ foglalatára megy.
+  //
+  // ⭐ Itt nem STUN-kiszolgálót mérünk (az a hálózat lenne, nem a program), hanem azt,
+  // hogy a fúró a saját foglalatán KÉRDEZ, és a választ nem nézi kopogásnak.
+  const { createSocket } = await import('node:dgram');
+
+  // Hamis „tükör": bármilyen STUN-kérdésre ugyanazt a címet feleli.
+  const tukor = createSocket({ type: 'udp4', reuseAddr: true });
+  await new Promise((t) => tukor.bind(0, '127.0.0.1', t));
+  tukor.on('message', (keres, felado) => {
+    const valasz = Buffer.alloc(32);
+    valasz.writeUInt16BE(0x0101, 0);            // Binding Success Response
+    valasz.writeUInt16BE(12, 2);
+    keres.copy(valasz, 4, 4, 20);               // süti + tranzakció-azonosító
+    valasz.writeUInt16BE(0x0020, 20);           // XOR-MAPPED-ADDRESS
+    valasz.writeUInt16BE(8, 22);
+    valasz.writeUInt8(0, 24); valasz.writeUInt8(0x01, 25);
+    valasz.writeUInt16BE(9999 ^ 0x2112, 26);    // a „külső port": 9999
+    valasz.writeUInt8(203 ^ 0x21, 28); valasz.writeUInt8(0 ^ 0x12, 29);
+    valasz.writeUInt8(113 ^ 0xa4, 30); valasz.writeUInt8(7 ^ 0x42, 31);   // 203.0.113.7
+    tukor.send(valasz, felado.port, felado.address);
+  });
+
+  try {
+    const esemenyek = [];
+    const eredmeny = await pajzsfuras(7395, '127.0.0.1', 7396, {
+      idokorlat: 1500, koz: 200,
+      tukorSzerver: '127.0.0.1', tukorPort: tukor.address().port,
+      utana: (e) => esemenyek.push(e)
+    });
+
+    const merte = esemenyek.find((e) => e.mi === 'SAJAT-KULSO-CIM');
+    return !!merte && merte.cim === '203.0.113.7' && merte.port === 9999
+      && eredmeny.sajatKulso?.port === 9999
+      // ⭐ ÉS A LÉNYEG: a tükör válaszát NEM számolta beérkezett kopogásnak.
+      && eredmeny.kapott === 0;
+  } finally {
+    tukor.close();
+  }
+});
+
+proba('⭐ A STUN-válasz felismerhető — nem keverjük össze a kopogással', async () => {
+  const { stunValaszE } = await import('../js/csere/pajzsfuro.js');
+  const stun = Buffer.alloc(20);
+  stun.writeUInt32BE(0x2112A442, 4);
+  const kopogas = Buffer.from(JSON.stringify({ uzenet: 'KOPOG', tol: 'valaki' }));
+  return stunValaszE(stun) && !stunValaszE(kopogas) && !stunValaszE(Buffer.alloc(4));
+});
+
 proba('⭐⭐ A CÍMJEGYZÉK TERJED: a társak elmondják egymásnak, kiket ismernek', async () => {
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));

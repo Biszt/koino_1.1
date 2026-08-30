@@ -1077,6 +1077,21 @@ try {
             kiir(SZIN.halvany + '  ' + ora() + ' a fúró elindult (' + e.port + '-es port)'
               + SZIN.vege);
           }
+          // ⭐ EZ A SZÁM AZ, AMIT BE KELL MONDANI A MÁSIKNAK — és mostantól ANNAK a
+          // foglalatnak a portja, ami tényleg fúr. A `kulsoport` parancs külön foglalatot
+          // nyit, tehát MÁS portot mérhet; 2026-08-30-án csak a NAT jóindulatán múlt,
+          // hogy a bemondott szám stimmelt.
+          if (e.mi === 'SAJAT-KULSO-CIM') {
+            kiir(SZIN.jo + '  ⭐ KÍVÜLRŐL ÍGY LÁTSZOM: ' + e.cim + ':' + e.port + SZIN.vege);
+            kiir(SZIN.vastag + '     EZT MONDD BE A MÁSIKNAK:' + SZIN.vege + SZIN.halvany
+              + ' node koino/koino.js pajzsfuro ' + e.cim + ' ' + e.port + ' 7373'
+              + SZIN.vege);
+          }
+          if (e.mi === 'SAJAT-CIM-NEM-MEGY') {
+            // ⚠️ Nem végzetes: a fúrás megy tovább, csak nem tudjuk kiírni a számot.
+            kiir(SZIN.halvany + '  (a saját külső címemet nem tudtam megmérni: '
+              + e.ok + ')' + SZIN.vege);
+          }
           if (e.mi === 'KULDES-BUKOTT' && e.hanyadik % 15 === 1) {
             kiir(SZIN.nem + '  ' + ora() + ' ✗ a KÜLDÉS bukott (' + e.hanyadik + '.): '
               + e.ok + SZIN.vege);
@@ -1111,12 +1126,18 @@ try {
         const tarolo = tarsakTarolo();
         kiir();
         kiir(SZIN.vastag + 'CSERE A RÉSEN' + SZIN.vege);
-        // ⭐ ITT HIRDETHETJÜK A SAJÁT CÍMÜNKET IS (D39): a pajzsfúró RÖGZÍTETT helyi
-        // portról hívott, tehát amit a másik tükröz vissza, az az ÉLŐ résünk — oda
-        // tényleg vissza lehet szólni. (A sima `csere` kifelé efemer portot használ,
-        // ott ez nem igaz, ezért ott nem is kérjük.)
+        // ⚠️ A RÉS CÍMÉT NEM HIRDETJÜK (2026-08-30, mérésből). Tegnap még igen, azzal az
+        // indokkal, hogy „a fúró rögzített portról hív, a rés ott él". A valódi mérés
+        // megcáfolta: a másik fél felvette TARTÓS TÁRSNAK, és az őrjárata azóta TCP-vel
+        // hívogatja — a résen viszont csak UDP fér át, és a leképezés percek alatt
+        // elévül. Mérve: `1× nem sikerült` közvetlenül a sikeres csere után.
+        //
+        // ⭐ Ez nem a D39 visszavonása: aki KAPUT TART NYITVA (`figyel`), az továbbra is
+        // hirdeti a saját címét, mert az tartós és TCP-vel hívható. A rés nem az.
+        // Amikor az őrjárat majd maga is tud fúrni, ez visszakapcsolható — de akkor a
+        // társ-listának meg kell tanulnia, mi a múlandó UDP-rés és mi a tartós cím.
         const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO,
-          { hirdetettCimek: await hirdetendoCimek(tarolo), sajatCimHirdetese: true });
+          { hirdetettCimek: await hirdetendoCimek(tarolo) });
         eredmeny.halo.close();
 
         kiir(SZIN.jo + '  ✓ kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott

@@ -64,8 +64,97 @@ import { connect } from 'node:net';
 
 const SUTI = 0x2112A442;
 
+/** Egy STUN-kérdés bájtjai (véletlen tranzakció-azonosítóval). */
+function stunKeres() {
+  const keres = Buffer.alloc(20);
+  keres.writeUInt16BE(0x0001, 0);
+  keres.writeUInt16BE(0, 2);
+  keres.writeUInt32BE(SUTI, 4);
+  for (let i = 8; i < 20; i++) keres[i] = Math.floor(Math.random() * 256);
+  return keres;
+}
+
+/**
+ * STUN-válasz-e ez a csomag, vagy koino-üzenet?
+ *
+ * ⚠️ AZÉRT KELL, mert a fúró mostantól a SAJÁT foglalatán kérdez — és a STUN válasza
+ * ugyanoda érkezik, ahol a kopogásokat várjuk. E nélkül a mérés a STUN-választ
+ * „beérkezett kopogásnak" számolná, és a számok hazudnának.
+ */
+export function stunValaszE(adat) {
+  return adat.length >= 20 && adat.readUInt32BE(4) === SUTI;
+}
+
+/** Kiolvassa a leképezett címet egy STUN-válaszból (null, ha nincs benne). */
+function stunbolCim(v) {
+  let p = 20;
+  while (p + 4 <= v.length) {
+    const tipus = v.readUInt16BE(p), hossz = v.readUInt16BE(p + 2);
+    if (tipus === 0x0020) {                  // XOR-MAPPED-ADDRESS
+      const port = v.readUInt16BE(p + 6) ^ 0x2112;
+      const cim = [0, 1, 2, 3]
+        .map((i) => v[p + 8 + i] ^ ((SUTI >> (24 - 8 * i)) & 0xff)).join('.');
+      return { cim, port };
+    }
+    p += 4 + hossz + ((4 - (hossz % 4)) % 4);
+  }
+  return null;
+}
+
+/**
+ * Megkérdezi a külső címünket egy MÁR MEGNYITOTT foglalaton.
+ *
+ * ⭐ MIÉRT KELL EZ KÜLÖN (2026-08-30, mérésből)? Mert a NAT-leképezés a FOGLALATHOZ
+ * tartozik, nem a portszámhoz. Eddig a `kulsoport` parancs saját foglalatot nyitott, mért,
+ * és bezárta — a fúró viszont ÚJ foglalatot nyit, ami **más külső portot kaphat**. A
+ * mobilhálózatos mérésnél ez csak a NAT jóindulatán múlt, hogy egyezett (26359).
+ * Ráadásul fúrás közben külön mérni sem lehet: a STUN-válasz a FÚRÓ foglalatára megy.
+ *
+ * ⚠️ Segédeszköz marad (2. szabály): ha nem válaszol, a fúrás ugyanúgy megy tovább,
+ * csak nem tudjuk kiírni, mit mondjunk be a másiknak.
+ */
+export function kulsoCimFoglalaton(halo, szerver = 'stun.l.google.com',
+  szerverPort = 19302, idokorlat = 5000) {
+  const keres = stunKeres();
+
+  return new Promise((teljesites, elutasitas) => {
+    let kesz = false;
+
+    const figyelo = (v) => {
+      if (kesz || !stunValaszE(v)) return;    // a koino-kopogás nem nekünk szól
+      const cim = stunbolCim(v);
+      if (!cim) return;
+      kesz = true;
+      clearTimeout(hatarido);
+      halo.removeListener('message', figyelo);
+      teljesites(cim);
+    };
+
+    const hatarido = setTimeout(() => {
+      if (kesz) return;
+      kesz = true;
+      halo.removeListener('message', figyelo);
+      elutasitas(new Error('a STUN-kiszolgáló nem válaszolt '
+        + (idokorlat / 1000) + ' mp alatt'));
+    }, idokorlat);
+
+    halo.on('message', figyelo);
+    halo.send(keres, szerverPort, szerver, (hiba) => {
+      if (!hiba || kesz) return;
+      kesz = true;
+      clearTimeout(hatarido);
+      halo.removeListener('message', figyelo);
+      elutasitas(hiba);
+    });
+  });
+}
+
 /**
  * Megkérdezi egy STUN-kiszolgálótól, milyen CÍMEN ÉS PORTON látszunk kívülről.
+ *
+ * ⚠️ EZ SAJÁT FOGLALATOT NYIT, MÉR, ÉS BEZÁRJA. A mérés tehát ANNAK a foglalatnak szól,
+ * nem annak, amivel utána fúrni fogsz — a NAT-leképezés ugyanis a foglalathoz tartozik.
+ * Ha a fúró portját akarod tudni, azt a `pajzsfuras` mostantól magától kiírja.
  *
  * @param {number} helyiPort - erről a portról kérdezünk (a mérés csak erre érvényes!)
  * @param {string} [szerver]
@@ -76,39 +165,18 @@ export async function kulsoCim(helyiPort, szerver = 'stun.l.google.com', szerver
   console.log('kulsoCim - KEZDÉS', { helyiPort, szerver });
 
   const halo = createSocket({ type: 'udp4', reuseAddr: true });
-  const keres = Buffer.alloc(20);
-  keres.writeUInt16BE(0x0001, 0);
-  keres.writeUInt16BE(0, 2);
-  keres.writeUInt32BE(SUTI, 4);
-  for (let i = 8; i < 20; i++) keres[i] = Math.floor(Math.random() * 256);
 
   return new Promise((teljesites, elutasitas) => {
-    const hatarido = setTimeout(() => {
-      halo.close();
-      elutasitas(new Error('a STUN-kiszolgáló nem válaszolt 5 mp alatt'));
-    }, 5000);
-
-    halo.on('message', (v) => {
-      let p = 20;
-      while (p + 4 <= v.length) {
-        const tipus = v.readUInt16BE(p), hossz = v.readUInt16BE(p + 2);
-        if (tipus === 0x0020) {              // XOR-MAPPED-ADDRESS
-          const port = v.readUInt16BE(p + 6) ^ 0x2112;
-          const cim = [0, 1, 2, 3]
-            .map((i) => v[p + 8 + i] ^ ((SUTI >> (24 - 8 * i)) & 0xff)).join('.');
-          clearTimeout(hatarido); halo.close();
-          console.log('kulsoCim - VÉGE', { cim, port });
-          teljesites({ cim, port });
-          return;
-        }
-        p += 4 + hossz + ((4 - (hossz % 4)) % 4);
-      }
-      clearTimeout(hatarido); halo.close();
-      elutasitas(new Error('a válasz nem tartalmazott címet'));
+    halo.on('error', (h) => { try { halo.close(); } catch { /* már zárva */ } elutasitas(h); });
+    halo.bind(helyiPort, () => {
+      kulsoCimFoglalaton(halo, szerver, szerverPort)
+        .then((cim) => {
+          halo.close();
+          console.log('kulsoCim - VÉGE', cim);
+          teljesites(cim);
+        })
+        .catch((hiba) => { try { halo.close(); } catch { /* már zárva */ } elutasitas(hiba); });
     });
-
-    halo.on('error', (h) => { clearTimeout(hatarido); elutasitas(h); });
-    halo.bind(helyiPort, () => halo.send(keres, szerverPort, szerver));
   });
 }
 
@@ -265,6 +333,7 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
   const kezdet = Date.now();
   let kuldott = 0, kapott = 0, honnan = null, mindketIrany = false;
   let sajatVisszhang = 0, bukott = 0;
+  let sajatKulso = null;          // amit a tükör mond RÓLUNK, EZEN a foglalaton
 
   return new Promise((teljesites) => {
     let idozito = null, hatarido = null;
@@ -279,6 +348,7 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
       const eredmeny = {
         halo: sikerult && beallitas.tartsdNyitva ? halo : null,
         sikerult, mindketIrany, kuldott, kapott, honnan, sajatVisszhang, bukott,
+        sajatKulso,
         eltelt: Date.now() - kezdet
       };
       console.log('talalkozo - VÉGE', eredmeny);
@@ -286,6 +356,11 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
     };
 
     halo.on('message', (adat, felado) => {
+      // ⚠️ A SAJÁT KÜLSŐ CÍMÜNK MÉRÉSE UGYANEZEN A FOGLALATON megy (lásd lentebb), tehát
+      // a STUN válasza IDE érkezik. Ha ezt kopogásnak számolnánk, a mérés hazudna:
+      // „kaptam 1 csomagot" — pedig csak a saját kérdésünkre jött felelet.
+      if (stunValaszE(adat)) return;
+
       let uzenet;
       try { uzenet = JSON.parse(adat.toString('utf8')); } catch { uzenet = {}; }
 
@@ -324,6 +399,25 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
 
     halo.bind(sajatPort, () => {
       jelez({ mi: 'INDUL', port: sajatPort });
+
+      // ⭐ MEGMÉRJÜK A SAJÁT KÜLSŐ CÍMÜNKET — ERRŐL A FOGLALATRÓL (2026-08-30).
+      //
+      // ⚠️ MIÉRT ITT, ÉS NEM KÜLÖN PARANCSBÓL? Mert a NAT-leképezés a FOGLALATHOZ tartozik.
+      // A `kulsoport` parancs saját foglalatot nyitott, mért, bezárta — a fúró viszont ezt
+      // az ÚJ foglalatot használja, ami más külső portot kaphat. A mobilhálózatos mérésnél
+      // (2026-08-30) csak a NAT jóindulatán múlt, hogy a bemondott szám stimmelt.
+      // Innentől a szám, amit bemondasz, ANNAK A FOGLALATNAK a portja, ami tényleg fúr.
+      //
+      // ⚠️ IPv6-on kimarad: ott nincs port-átírás, a saját cím maga a külső cím.
+      // És ha nem megy, csak feljegyezzük — a fúrás ettől még megy (2. szabály).
+      if (!ipv6E && beallitas.sajatCimMerese !== false) {
+        kulsoCimFoglalaton(halo, beallitas.tukorSzerver, beallitas.tukorPort)
+          .then((cim) => {
+            sajatKulso = cim;
+            jelez({ mi: 'SAJAT-KULSO-CIM', cim: cim.cim, port: cim.port });
+          })
+          .catch((hiba) => jelez({ mi: 'SAJAT-CIM-NEM-MEGY', ok: hiba.message }));
+      }
 
       const kopog = () => {
         halo.send(JSON.stringify({ uzenet: 'KOPOG', tol: sajatAzonosito }),

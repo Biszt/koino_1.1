@@ -377,18 +377,26 @@ már nyitva volt — az **első** kopogása azonnal átment. Ez a **D39 felismer
 *„egy folyamatosan futó készülék gyakorlatilag fogadóképes"* — nem azért, mert a routere
 beengedi, hanem mert a kifelé szólás nyitva tartja a rését.
 
-⚠️ **KÉT HIBA, AMIT A MÉRÉS HOZOTT ELŐ (felírva, még nincs megépítve):**
+✅ **A MÉRÉS KÉT HIBÁT HOZOTT ELŐ — MINDKETTŐ MEGJAVÍTVA (2026-08-30):**
 
 1. **A rés címe NEM társ-cím.** A csere után a laptop felvette a `130.43.208.72:41933`-at a
    társ-listára — de az **UDP-only** (az `orjarat` TCP-vel hívja, tehát azonnal bukik), és
    **percek alatt elévül** (D39: „a port mozgékonyabb, mint a cím"). A lista ma nem tudja
    megkülönböztetni a tartós TCP-címet a múlandó UDP-réstől. *Mérve: `1× nem sikerült`
    közvetlenül a sikeres csere után.*
+   → ✅ **JAVÍTVA:** a rés címét **nem hirdetjük** többé. ⭐ Ez nem a D39 visszavonása: aki
+   KAPUT TART NYITVA (`figyel`), az továbbra is hirdeti a saját címét, mert az tartós és
+   TCP-vel hívható. A rés nem az. Visszakapcsolható, ha az őrjárat egyszer maga is tud
+   fúrni — de akkor a társ-listának meg kell tanulnia, mi múlandó és mi tartós.
 2. **A `pajzsfuro` nem tudja megmondani a saját külső portját.** A `kulsoport` KÜLÖN
    foglalatot nyit, méri, bezárja — a fúró viszont ÚJ foglalatot nyit, ami más leképezést
    kaphat. Most a NAT jóindulatán múlt, hogy ugyanazt adta (a tükör visszaigazolta:
    `26359`). Ráadásul **fúrás közben nem is lehet mérni**: a STUN-válasz a fúró
-   foglalatára megy. **A fúró mérje meg a SAJÁT foglalatáról, és írja ki induláskor.**
+   foglalatára megy.
+   → ✅ **JAVÍTVA:** a `pajzsfuras` a **saját foglalatáról** méri, és induláskor kiírja —
+   sőt a bemondandó parancsot is. *(Bizonyíték a volatilitásra: ugyanazon a délutánon a
+   külső port `26293 → 26359 → 6075` volt.)* A STUN-választ a fúró külön felismeri, hogy
+   ne számolja beérkezett kopogásnak — enélkül a mérés hazudna.
 
 ---
 
