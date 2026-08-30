@@ -59,7 +59,10 @@ import {
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
-import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from './js/csere/tarsak.js';
+import {
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
+  sajatCimekKiszurese, sajatCimE
+} from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
@@ -187,12 +190,32 @@ async function hirdetendoCimek(tarolo) {
 }
 
 /**
+ * A készülék ÖSSZES saját címe — ehhez mérjük, mi a „mi vagyunk".
+ *
+ * ⚠️ MIÉRT AZ ÖSSZES, ÉS NEM CSAK A TÜKÖR? Mert egy készüléknek több címe van (IPv4 a
+ * wifin, több IPv6, esetleg vezetékes), és a társak BÁRMELYIKET hirdethetik rólunk.
+ * Mérve (2026-08-30): a laptop saját IPv6-címe így került a listájára, majd a cserén
+ * TOVÁBB is terjedt a telefonra — a tükör (IPv4) alapján szűrő ezt nem fogta meg.
+ */
+async function sajatOsszesCim(tukor = null) {
+  const halozat = (await import('node:os')).networkInterfaces();
+  const cimek = [];
+  for (const lista of Object.values(halozat)) {
+    for (const cim of lista ?? []) cimek.push(cim.address);
+  }
+  if (tukor?.cim) cimek.push(tukor.cim);      // amit a másik lát belőlünk (NAT mögül)
+  return cimek;
+}
+
+/**
  * A cserén kapott címeket felvesszük a listánkra — de sosem írjuk felül a sajátunkat.
  *
- * ⚠️ ÉS ÖNMAGUNKAT SEM VESSZÜK FEL (D39, 2026-08-30). A társak MINKET is hirdetnek
- * egymásnak — ez így helyes —, de ha a saját címünket felírnánk társként, a készülék
- * ONMAGÁT hívogatná minden körben. Nem végzetes (a lenyomat egyezne, ~334 bájt), de
- * néma pazarlás, és a lista élére kerülne, mert mindig „sikeres".
+ * ⚠️ ÉS ÖNMAGUNKAT SEM VESSZÜK FEL. A társak MINKET is hirdetnek egymásnak — ez így
+ * helyes, sőt ez a terjedő címjegyzék lényege (D36–D39) —, de a HÍVÁSI listára a saját
+ * címünk nem való: a készülék önmagát hívogatná minden körben.
+ *
+ * ⭐ KÉT KÜLÖN DOLOG, ami eddig egy fájlban élt: „kit hívjak" (ez a lista) és „kiről
+ * meséljek" (a hirdetés). A sajátunkat TOVÁBBRA IS elmondjuk másoknak — csak nem hívjuk.
  *
  * @param {Object} tarolo
  * @param {Array} kapott
@@ -200,14 +223,11 @@ async function hirdetendoCimek(tarolo) {
  */
 async function kapottCimekBeolvasztasa(tarolo, kapott, sajat = null) {
   if (!kapott?.length) return 0;
+  const { cimek: idegenek } = sajatCimekKiszurese(kapott, await sajatOsszesCim(sajat));
+
   let lista = await tarolo.olvas();
   const elotte = lista.length;
-  const miVagyunk = (c) => sajat
-    && String(c.hoszt).toLowerCase() === String(sajat.cim).toLowerCase()
-    && Number(c.port) === Number(sajat.port);
-
-  for (const c of kapott) {
-    if (miVagyunk(c)) continue;
+  for (const c of idegenek) {
     try { lista = tarsHozzaadasa(lista, { hoszt: c.hoszt, port: c.port }); } catch { /* rossz cím: kihagyjuk */ }
   }
   if (lista.length !== elotte) await tarolo.ir(lista);
@@ -647,7 +667,16 @@ try {
         kiir(SZIN.halvany + '  (üres) — vegyél fel egyet: node koino/koino.js tars <cím> [port] [név]'
           + SZIN.vege);
       }
+      // ⭐ MEGJELÖLJÜK A SAJÁT CÍMÜNKET. Az új kód már nem TANULJA meg magát, de a régebben
+      // felvett bejegyzés ott marad — és magától nem tűnik el (4. szabály: törölni csak
+      // kézzel lehet). Enélkül a gazdájának esélye sincs észrevenni, hogy a készülék
+      // minden körben önmagát hívogatja.
+      const sajatak = await sajatOsszesCim();
+      let sajatDb = 0;
+
       for (const t of lista) {
+        const mienk = sajatCimE(t.hoszt, sajatak);
+        if (mienk) sajatDb++;
         const allapotSzoveg = t.utoljara
           ? SZIN.jo + 'sikerült ' + new Date(t.utoljara).toLocaleString('hu-HU') + SZIN.vege
           : (t.sikertelen
@@ -655,7 +684,15 @@ try {
             : SZIN.halvany + 'még nem próbáltuk' + SZIN.vege);
         kiir('  ' + t.hoszt + ' ' + t.port
           + (t.nev ? SZIN.halvany + '  „' + t.nev + '"' + SZIN.vege : '')
-          + '  ' + allapotSzoveg);
+          + '  ' + allapotSzoveg
+          + (mienk ? SZIN.nem + '  ⚠ EZ TE VAGY' + SZIN.vege : ''));
+      }
+
+      if (sajatDb) {
+        kiir();
+        kiir(SZIN.nem + '⚠ ' + sajatDb + ' bejegyzés a SAJÁT címed — a készülék önmagát hívja.'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '  Levétel: node koino/koino.js tars torol <cím> <port>' + SZIN.vege);
       }
       kiir();
       kiir(SZIN.halvany + 'A fájl kézzel is szerkeszthető: ' + tarolo.fajl + SZIN.vege);
@@ -681,6 +718,22 @@ try {
       const cim = ervek[0];
       if (!cim) throw new Error('Kit vegyek fel? node koino/koino.js tars <cím> [port] [név]');
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
+
+      // ⚠️ SZÓLUNK, HA MAGADAT VESZED FEL. Így csúszott be a hiba, ami napokig ott ült:
+      // a laptop saját IPv6-címe felkerült a listára, és a készülék minden körben ÖNMAGÁVAL
+      // cserélt (707 bájt, 0 esemény) — sőt a lista élére került, mert mindig „sikerült".
+      // ⭐ Nem TILTJUK, csak szólunk: lehet, hogy szándékos (két példány egy gépen, más
+      // adat-mappával). A tiltás itt hazugság lenne, a hallgatás viszont csapda.
+      if (sajatCimE(cim, await sajatOsszesCim())) {
+        kiir(SZIN.nem + '⚠ Ez a SAJÁT címed.' + SZIN.vege);
+        kiir(SZIN.halvany + '  A készülék így önmagát fogja hívogatni minden körben.'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '  (Ha két példányt futtatsz egy gépen külön KOINO_ADAT-tal,'
+          + SZIN.vege);
+        kiir(SZIN.halvany + '   akkor ez rendben van — akkor a PORT különbözteti meg őket.)'
+          + SZIN.vege);
+      }
+
       await tarolo.ir(tarsHozzaadasa(lista, { hoszt: cim, port, nev: ervek[2] }));
       kiir(SZIN.jo + 'Felvéve: ' + cim + ' ' + port + (ervek[2] ? ' („' + ervek[2] + '")' : '')
         + SZIN.vege);

@@ -46,6 +46,57 @@ function kulcs(hoszt, port) {
 }
 
 /**
+ * Egy cím összehasonlítható alakja.
+ *
+ * ⚠️ MIÉRT KELL? Mert UGYANAZ a gép több néven is leírható, és a puszta szöveg-egyezés
+ * ezt elszalasztaná:
+ *   · kis/nagybetű az IPv6 hexában — `2001:AB` és `2001:ab` ugyanaz;
+ *   · a zóna-utótag (`fe80::1%eth0`) helyi körülmény, nem a cím része;
+ *   · az IPv4-et IPv6-ba ágyazó alak (`::ffff:192.168.1.5`) ugyanaz a gép,
+ *     mint a `192.168.1.5` — és a foglalat hol így, hol úgy adja vissza.
+ */
+export function cimNormalizalasa(cim) {
+  let sz = String(cim ?? '').trim().toLowerCase();
+  const zona = sz.indexOf('%');
+  if (zona !== -1) sz = sz.slice(0, zona);
+  if (sz.startsWith('::ffff:') && sz.includes('.')) sz = sz.slice(7);
+  return sz;
+}
+
+/**
+ * MIÉNK-E EZ A CÍM? — hogy a készülék ne vegye fel önmagát társnak.
+ *
+ * ⚠️ EZ MÉRÉSBŐL SZÜLETETT (2026-08-30). A fejlesztő laptopja **minden körben önmagával
+ * cserélt** (707 bájt, 0 esemény), mert a saját IPv6-címe rákerült a társ-listára — és
+ * mivel a hívás mindig „sikerült", a rendezés a lista ÉLÉRE tette, a valódi társ elé.
+ * Sőt a cserén tovább is terjedt: a telefon is megörökölte.
+ *
+ * ⭐ A PORTOT SZÁNDÉKOSAN NEM NÉZZÜK. Egy korábbi, szűkebb szűrő csak a cím+port párost
+ * hasonlította a tükörhöz — az IPv6-os saját cím átcsúszott rajta, mert a tükör IPv4-et
+ * mondott. Ha a cím a miénk, a port nem számít: magunkat semmilyen porton nem hívjuk.
+ *
+ * ⚠️ AMI NEM VÁLTOZIK: a saját címünket TOVÁBBRA IS HIRDETJÜK másoknak (D39). Két külön
+ * dologról van szó — „kit hívjak" és „kiről meséljek". Ez a szűrő csak az elsőre hat.
+ *
+ * @param {string} hoszt - a vizsgált cím
+ * @param {string[]} sajatCimek - a saját címeink (interfészek + amit a tükör mond)
+ */
+export function sajatCimE(hoszt, sajatCimek = []) {
+  const mienk = new Set(sajatCimek.map(cimNormalizalasa).filter(Boolean));
+  return mienk.has(cimNormalizalasa(hoszt));
+}
+
+/**
+ * Kiszűri a kapott címek közül a sajátjainkat.
+ *
+ * @returns {{cimek: Array, kihagyott: number}}
+ */
+export function sajatCimekKiszurese(kapott, sajatCimek = []) {
+  const cimek = (kapott ?? []).filter((c) => c && !sajatCimE(c.hoszt, sajatCimek));
+  return { cimek, kihagyott: (kapott ?? []).length - cimek.length };
+}
+
+/**
  * Felvesz egy társat a listára. Ha már rajta van, nem duplikál — a nevet viszont
  * frissíti, mert az emberi címke elromolhat, és javítani kell tudni.
  *

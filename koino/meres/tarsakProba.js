@@ -19,7 +19,10 @@
 // Futtatás: node koino/meres/mind.js tarsak
 
 import { probaGyujtemeny } from './probaFuttato.js';
-import { tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere } from '../js/csere/tarsak.js';
+import {
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
+  cimNormalizalasa, sajatCimE, sajatCimekKiszurese
+} from '../js/csere/tarsak.js';
 
 const { proba, futtatas } = probaGyujtemeny('A társ-lista próbája');
 
@@ -249,6 +252,50 @@ proba('A kör ÖSSZEGZI az ADATFORGALMAT is (D35 — ez a mobilos számlája)', 
     async () => ({ uj: 0, kuldott: 0, korok: 1, bajtKuldott: 79, bajtKapott: 79 })
   );
   return kor.bajt === 316;
+});
+
+// ===== ÖNMAGUNK KISZŰRÉSE — hogy a készülék ne hívogassa saját magát =====
+//
+// ⚠️ MÉRÉSBŐL SZÜLETETT (2026-08-30). A fejlesztő laptopja minden körben ÖNMAGÁVAL cserélt
+// (707 bájt, 0 esemény), mert a saját IPv6-címe rákerült a társ-listára — és mivel a hívás
+// mindig „sikerült", a rendezés a lista ÉLÉRE tette, a valódi társ elé. A cserén tovább is
+// terjedt: a telefon is megörökölte.
+
+proba('A cím-alak normalizálva: kis/nagybetű és zóna-utótag nem különböztet meg', () => {
+  return cimNormalizalasa('2001:AB::1') === '2001:ab::1'
+    && cimNormalizalasa('fe80::1%eth0') === 'fe80::1'
+    && cimNormalizalasa('  192.168.1.5 ') === '192.168.1.5';
+});
+
+proba('⭐ Az IPv4-be ágyazott IPv6-alak UGYANAZ a gép', () => {
+  // A foglalat hol `192.168.1.5`-öt, hol `::ffff:192.168.1.5`-öt ad vissza ugyanarra.
+  return cimNormalizalasa('::ffff:192.168.1.5') === '192.168.1.5';
+});
+
+proba('⭐⭐ A SAJÁT CÍMÜNK nem kerül a hívási listára — PORTTÓL FÜGGETLENÜL', () => {
+  // ⚠️ A port szándékosan nem számít: magunkat semmilyen porton nem hívjuk. Egy korábbi,
+  // szűkebb szűrő cím+port párost hasonlított, és az IPv6-os saját cím átcsúszott rajta.
+  const sajat = ['192.168.1.134', '2001:4c4d:25cb:b200:7395:e583:5de6:5a1a'];
+  return sajatCimE('192.168.1.134', sajat)
+    && sajatCimE('2001:4C4D:25CB:B200:7395:E583:5DE6:5A1A', sajat)   // nagybetűvel is
+    && !sajatCimE('192.168.1.99', sajat);
+});
+
+proba('⭐⭐ A kapott címekből a sajátunk kiesik, az idegen bennmarad', () => {
+  const kapott = [
+    { hoszt: '2001:4c4d:25cb:b200:7395:e583:5de6:5a1a', port: 7373 },   // mi vagyunk
+    { hoszt: '192.168.1.134', port: 9999 },                              // mi, más porton
+    { hoszt: '192.168.1.50', port: 7373 }                                // valódi társ
+  ];
+  const { cimek, kihagyott } = sajatCimekKiszurese(kapott,
+    ['192.168.1.134', '2001:4c4d:25cb:b200:7395:e583:5de6:5a1a']);
+  return kihagyott === 2 && cimek.length === 1 && cimek[0].hoszt === '192.168.1.50';
+});
+
+proba('Ha nem tudjuk a saját címeinket, semmit nem szűrünk ki (nem találgatunk)', () => {
+  const kapott = [{ hoszt: '192.168.1.50', port: 7373 }];
+  return sajatCimekKiszurese(kapott, []).cimek.length === 1
+    && sajatCimekKiszurese(kapott).cimek.length === 1;
 });
 
 export default futtatas;
