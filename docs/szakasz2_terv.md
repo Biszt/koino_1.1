@@ -336,6 +336,50 @@ tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a
 
 ---
 
+### ⭐⭐⭐ MOBILHÁLÓZATRÓL IS ÁTMEGY (2026-08-30, 12:52) — a CGNAT-kérdés megválaszolva
+
+*A terv ezt nyitva hagyta: „Ami őszintén bizonytalan marad: a fejlesztő vonala **CGNAT** — a
+szolgáltatói NAT kiszámíthatatlanabb egy házi routernél. Hogy a pajzsfúrás átmegy-e rajta,
+azt **csak méréssel** lehet megtudni, nem levezetéssel." **Megmértük.***
+
+**A helyzet:** Csaba barátja átjött, a telefonján **mobilnet**. Nincs globális IPv6, a
+címei `10.7.54.67` és `10.88.16.117` — vagyis **CGNAT**. A laptop vonala szintén CGNAT.
+Két szolgáltatói NAT, egymással szemben, port-továbbítás nélkül.
+
+| Mérés | Eredmény |
+|---|---|
+| a mobil NAT **célfüggetlen-e** (két tükör) | ✅ **igen** — mindkettő `130.43.208.72:41933` |
+| az otthoni NAT célfüggetlen-e | ✅ igen — mindkettő `31.46.250.127:26359` |
+| **a pajzs átfúrható-e** | ⭐ **IGEN, mindkét irányban** |
+| **átmegy-e a csere a résen** | ⭐ **igen: 9 esemény, 6,7 KB, 2 kör** |
+
+⭐⭐ **ÉS AMI A LEGTÖBBET MONDJA — a két oldal ideje:**
+
+| | laptop (előbb kezdte) | telefon (később) |
+|---|---|---|
+| kopogás | **110** | **1** |
+| idő | **110 297 ms** | **191 ms** |
+
+A laptop két percig fúrt, és **melegen tartotta a rést**. Mire a telefon elindult, az ajtó
+már nyitva volt — az **első** kopogása azonnal átment. Ez a **D39 felismerésének mérése**:
+*„egy folyamatosan futó készülék gyakorlatilag fogadóképes"* — nem azért, mert a routere
+beengedi, hanem mert a kifelé szólás nyitva tartja a rését.
+
+⚠️ **KÉT HIBA, AMIT A MÉRÉS HOZOTT ELŐ (felírva, még nincs megépítve):**
+
+1. **A rés címe NEM társ-cím.** A csere után a laptop felvette a `130.43.208.72:41933`-at a
+   társ-listára — de az **UDP-only** (az `orjarat` TCP-vel hívja, tehát azonnal bukik), és
+   **percek alatt elévül** (D39: „a port mozgékonyabb, mint a cím"). A lista ma nem tudja
+   megkülönböztetni a tartós TCP-címet a múlandó UDP-réstől. *Mérve: `1× nem sikerült`
+   közvetlenül a sikeres csere után.*
+2. **A `pajzsfuro` nem tudja megmondani a saját külső portját.** A `kulsoport` KÜLÖN
+   foglalatot nyit, méri, bezárja — a fúró viszont ÚJ foglalatot nyit, ami más leképezést
+   kaphat. Most a NAT jóindulatán múlt, hogy ugyanazt adta (a tükör visszaigazolta:
+   `26359`). Ráadásul **fúrás közben nem is lehet mérni**: a STUN-válasz a fúró
+   foglalatára megy. **A fúró mérje meg a SAJÁT foglalatáról, és írja ki induláskor.**
+
+---
+
 ### ✅ AZ F. LÉPÉS MEGVAN (2026-08-30) — és két hamis feltevést buktatott
 
 **Mit vált ki:** a kézi cím-beírást. Egy háztartáson belül fölösleges címeket olvasgatni —

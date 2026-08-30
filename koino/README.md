@@ -54,7 +54,8 @@ node koino/koino.js
 | `node koino/koino.js orjarat [perc] [port]` | ⭐⭐ **a készülék magától dolgozik**: kaput tart nyitva ÉS időnként kiszól minden társnak. Ez a valódi üzemmód |
 | `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja |
 | `node koino/koino.js felfedez [mp] [port]` | ⭐ **ki van még ezen a wifin?** — cím beírása nélkül megtalálja a helyi készülékeket, és felveszi őket társnak |
-| `node koino/koino.js talalkozo <hoszt> [port]` | **lyukfúrás-mérés**: mindkét fél kopog, és kiderül, átjut-e ⚠️ ma még csak mérés |
+| `node koino/koino.js kulsoport [port]` | **hogy látszik kívülről a portom?** — a NAT átírja, ezt kell megmérni a fúrás előtt |
+| `node koino/koino.js pajzsfuro <cím> <port>` | ⭐⭐ **pajzsfúrás**: mindkét fél kifelé kopog, a két rés a közepén találkozik — és ha átjut, **azonnal cserél is** |
 | `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
 | `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
