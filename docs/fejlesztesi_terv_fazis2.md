@@ -391,14 +391,36 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > - ⚠️ **de alvó telefonon semmi ebből nem működik.** Az Android elaltatja a folyamatot; a
 >   fenti számítás ébren lévő készülékre igaz. **A flotta gerince ezért asztali gép legyen.**
 >
-> #### 🔓 AMIT MÉG NEM MÉRTÜNK
+> #### ✅ MEGMÉRVE (2026-08-30, 23:44): **NINCS FULL CONE** — az előre nyitogatás SZÜKSÉGES
 >
-> **Full cone-e a vonal?** Ma csak a **leképezést** mértük (a külső port ugyanaz marad,
-> akárkinek küldünk). Hogy a résen **ki jöhet be** (a *szűrés*), az külön tulajdonság.
-> Ha véletlenül full cone, még az előre nyitogatás sem kell.
-> **A mérés meglévő paranccsal megy:** a laptop a semmibe fúr (`pajzsfuro 192.0.2.1 7373
-> 7373` — így soha nem küld a telefonnak), a telefon mobilnetről a laptop kiírt külső
-> portjára kopog. Ha a laptop `MEGJÖTT AZ Ő KOPOGÁSA`-t ír, akkor full cone.
+> A laptop a semmibe fúrt (`pajzsfuro 192.0.2.1 7373 7373`), tehát **soha nem küldött a
+> telefonnak**; a telefon közben a szomszéd wifijéről a laptop külső portjára kopogott.
+> **14 146 kopogás alatt a laptop SEMMIT nem kapott meg tőle.**
+>
+> ⭐ **Vagyis a meleg rés NEM általános kapu:** a router csak attól enged be, akinek maga is
+> küldött. Ezzel a **3. pont (előre nyitogatás a címjegyzékből) nem opció, hanem az egyetlen
+> út** — Csaba ötlete nélkül nem lenne mivel megoldani.
+>
+> ⚠️ *A vonal kétszeres NAT mögött van (router + CGNAT), tehát azt nem tudjuk, melyik réteg
+> dobta el. A koino szempontjából a következmény ugyanaz.*
+>
+> #### 📏 ÉS AMIT UGYANEZ AZ ESTE MÉG MEGMUTATOTT
+>
+> **1. A két hálózat MÁSKÉPP viselkedik — ezért kell, hogy mindenki magát mérje.**
+>
+> | | Külső port |
+> |---|---|
+> | laptop (itthon, CGNAT) | `54915` → `60283` — **megváltozott** két perc alatt |
+> | telefon (a szomszédnál) | `7373` → `7373` — **változatlan** |
+>
+> A délutáni javítás (a fúró a saját foglalatáról mér) itt élesben mutatta meg magát: a
+> régi kóddal az elavult `54915`-öt mondtuk volna be, és kísértetet kergettünk volna.
+>
+> **2. HARMADSZOR ugyanaz a mintázat (a 2. pont igazolása):** laptop **295 kopogás**,
+> telefon **1 kopogás / 150 ms**. Aki előbb kezdi, melegen tartja a rést.
+>
+> **3. Egy „nincs újdonság" csere valódi, két hálózat közti résen: 739–961 bájt** (a
+> délelőtti 6,7 KB azért volt nagyobb, mert 9 esemény ment át).
 
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
