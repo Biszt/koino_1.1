@@ -41,6 +41,31 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-28)
 
+> ### 🧭 A SORREND KÜLÖN DOKUMENTUMBAN ÉL (2026-08-31): [`utiterv.md`](utiterv.md)
+>
+> *Ez a dokumentum a **döntések** helye, a szakasz-tervek a **részleteké**, a
+> [`skalazas_terv.md`](skalazas_terv.md) a **szerkezeté**. Ami eddig hiányzott: **a sorrend.***
+>
+> **Az újratervezés négy kiváltó oka:** a két réteg (DAG / kereső) · az entitás-központúság ·
+> az **S1 mérés** (a fal a **beírásnál** van, és **500 e-embernél**, nem a milliónál) · és a
+> ⛔ **kilencedik szabály** (*a skálázhatóság szempontjából az első verziónak is késznek kell
+> lennie*).
+>
+> **A szakaszok újrarendezve:** 1. A helyi modell ✅ · 2. **A szállítás** ✅ *(átnevezve —
+> a munka valójában erről szólt, és elkészült)* · 🚧 **3. A SZERKEZET** *(új, beékelődött)* ·
+> 4. Az identitás · 5. A felület · 6. A kereső-réteg *(elhagyható)* · 7. A pénz.
+>
+> ⚠️ **Ami látszólag ellentmond a D17-nek** (*„az identitás-réteg a gerinc, elsőként kell
+> állnia"*): az identitás **a bizalom** gerince, nem a **programé**. Az azonosság maga is
+> aláírt eseményekből áll, amiket a tár tárol és a csere továbbít — a hordozó tehát **az
+> identitás ALATT van**. A D17 helyes olvasata: az identitásnak azelőtt kell állnia, hogy
+> **bármi a bizalomra épülne** (valódi szavazás, pénz) — nem az esemény-hordozó előtt.
+>
+> ⭐ **És az első valódi használat nem a végén van:** a **D18/0** szerint kis közösségben
+> *„nem kell rendszer — tudod, ki valódi, mert ismered"*. Tehát a **Szakasz 3 + egy minimális
+> felület** után **egy család vagy egy osztály élesben használhatja** — helyes, milliárdos
+> szerkezettel, csak kevesebb emberrel. Ez pontosan a D22 mondata, nem kivétel alóla.
+
 > ### 📐 ÖTÖDIK FORDULAT (2026-08-31): KÉT RÉTEG — A DAG ÉS A KERESŐ
 >
 > **Terv: [`skalazas_terv.md`](skalazas_terv.md).** Csaba megfogalmazásában az irány:

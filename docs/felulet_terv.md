@@ -39,9 +39,24 @@ a pakli**, de a kártyákon nem tartalmak, hanem **koinók** állnak.
 - **Nem hierarchikus** (egyelőre) — sima **lista**;
 - **e-ember-szám szerint**, fentről lefelé csökkenő sorrendben.
 
-*(A D25 létszám-rangsora ez. Hamisítás ellen már van válasz: a tagság aláírt belépésekből
-áll, az emberek valódiságát pedig a téri mag igazolja — tehát a rangsor **ellenőrizhető**,
-nem a koino szava.)*
+*(A D25 létszám-rangsora ez.)*
+
+> ### ⚠️ ELAVULT LETT (2026-08-31) — a D25 módosítása miatt
+>
+> Itt eredetileg ez állt: *„az emberek valódiságát a **téri mag** igazolja — tehát a rangsor
+> ellenőrizhető."* **Ez már nem igaz: nincs téri mag.** Csaba 2026-08-31-én úgy döntött, hogy
+> **a tanúsítások nem jönnek át koinók között** — a belépő tér csak **böngészésre** közös —,
+> mert különben egy laza koino **tanúsítás-gyárrá** válhatna. Ezzel a **tartós mag
+> koino-helyi** lett.
+>
+> **Amit ez a nézetre jelent:** egy koino létszáma **abból a koinóból** ellenőrizhető, nem a
+> térből. A téren átnézve a szám **a koino állítása**, amit onnan nem lehet igazolni.
+> ⚠️ **Ezt a felületnek meg kell mondania** (D19: bejelent, nem bíráskodik) — különben a
+> rangsor pontosan olyan hamisítható toplistává válna, amilyet a tanúsító-rangsornál
+> elvetettünk.
+>
+> *Tisztázandó a Szakasz 5-ben: mit mutasson a kártya a létszám mellé, hogy a szám
+> súlya látszódjon.*
 
 ### Két menü-szint
 
