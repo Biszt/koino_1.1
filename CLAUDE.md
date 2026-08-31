@@ -15,7 +15,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-**Olvasd el induláskor:** [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (🚧 itt tartunk). A 42 tervezési döntés (D1–D42) is ott van.
+**Olvasd el induláskor:** [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (🚧 itt tartunk). A 42 tervezési döntés (D1–D42) is ott van. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

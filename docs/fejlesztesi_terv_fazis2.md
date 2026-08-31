@@ -41,6 +41,249 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 
 ## HOL TARTUNK — a Fázis 2 tervezés állapota (2026-08-28)
 
+> ### 📐 ÖTÖDIK FORDULAT (2026-08-31): KÉT RÉTEG — A DAG ÉS A KERESŐ
+>
+> **Terv: [`skalazas_terv.md`](skalazas_terv.md).** Csaba megfogalmazásában az irány:
+>
+> > **A DAG a hitelességé és offline is működik; a kereső-réteg a megtalálhatóságé és
+> > hálózatot kíván. Ez két külön probléma, és jó, hogy külön is marad.**
+>
+> | | **I. A DAG-réteg** | **II. A kereső-réteg** |
+> |---|---|---|
+> | Mire válaszol | *mi történt, milyen sorrendben?* | *hol van, amit keresek?* |
+> | Eszköz | aláírt események, lánc + kereszt-élek | elosztott, replikált mutató |
+> | Offline megy? | ✅ **igen, és muszáj** | ❌ nem |
+> | Elhagyható? | ❌ **soha** — ez maga a koino | ✅ **igen** (2. szabály) |
+>
+> ⭐ **A határvonal, ami ebből következik:** *ami DÖNT valamiről, az soha ne kívánjon élő
+> lekérdezést; csak a MEGTALÁLÁS kívánhat.* A két réteg összekeverése volt a terv két
+> korábbi változatának a bukása.
+>
+> ⭐⭐ **És egy felismerés a DAG-ról: a koino már ma is az, csak nem így hívtuk.** A
+> blokklánc **teljes** sorrendet kényszerít, és ezért drága (bányászat). A **D17** viszont
+> kimondta: *„e-emberenként az utolsó nyer, ezért nem kell globális sorrend"* — vagyis a
+> koino **részleges rendezésre** épül, ami a DAG-ok természetes világa. **A domainből
+> jutottunk oda, ahova mások a technológiából.** A `latott` mező (H7) csak kimondja, ami
+> már az alakzatban benne van.
+>
+> *(A részletek, a nyolc hitelességi feltétel, a mérési alap, a tizenegy lépés és a kilenc
+> döntést igénylő pont a tervben. Alább a levezetés, ahogy a két korábbi változat megbukott.)*
+
+> ### 📐 A LEVEZETÉS (2026-08-31): NEM SZINKRONIZÁLUNK, HANEM BEJÁRUNK
+>
+> **Terv: [`skalazas_terv.md`](skalazas_terv.md)** — a milliárdos lépték szerkezete. *A cél
+> eddig három helyen szerepelt (N11, D21, D22), de a koino **nagy része** — tartalom,
+> tudatpont, szavazás, egyezmény — sosem kapott skálázási szerkezetet.*
+>
+> **A terv első változata megbukott, és Csaba buktatta le:** *„az 5 percenkénti egyeztetés
+> nem jó, mivel böngészés közben az összes entitásnak elérhetőnek kell lennie… és legalább
+> az egyik tudatpont-tulajdonosnak elérhetőnek kell lennie."* Az első változat
+> **replikációnak** tekintette a koinót; a valóságban az ember **nézelődik**, és az nem tűri
+> a késleltetést. Hiába ér körbe minden esemény öt perc alatt, ha egy nem tárolt entitást
+> akarok megnyitni.
+>
+> ⭐ **CSABA JAVASLATA, AMI AZ ÚJ TERVET ADTA:** *„mi lenne, ha az entitások tárolnák a
+> tudatpont-tulajdonosaik címét, amit frissítünk?"* — és ez **nem új gépezet**: a `vonal.js`
+> `CIMEK` üzenete (D. lépés) ma **koino-szinten** kulcsolt címjegyzék; ez ugyanaz
+> **entitás-szinten**. *Ugyanaz a gépezet, egy szinttel odébb.*
+>
+> ⭐⭐ **És ebből következik a legfontosabb állítás:** ha minden entitás viszi a példányai
+> címeit, és felsorolja a gyerekeit, akkor **a tartalom gráfja MAGA az útvonal-gráf** — a
+> koino elvezet önmagához. **A BEJÁRÁSHOZ nem kell DHT, jelzőpont, sem globális
+> entitás-index.** ⚠️ *(A KERESÉSHEZ viszont kell — ez a II. réteg; korábban ezt tévesen úgy
+> fogalmaztam, hogy „nem kell DHT".)*
+>
+> ### 📐 …ÉS A MÁSODIK BUKÁS: „ágankénti mutató"
+>
+> A kereséshez mutató-réteg kell (metaadat, a tartalom törzse nélkül) — mert a bejárás és a
+> keresés **két különböző dolog**: a bejáráshoz tudni kell, **honnan indulj**, a kereséshez
+> nem. Kiszámoltam, hogy a mutató ~100 000 főnél nem fér el egy telefonon, és ebből azt
+> vezettem le, hogy **ágankénti** mutatókra kell bontani.
+>
+> **Csaba ezt is leszűkítettnek találta:** *„a kereső rétegnek nem egy eszközön kell rajta
+> lennie, hanem elosztva, mindig a kellő mennyiségűre replikálva."* — Igaza volt: **rossz
+> kérdést tettem fel.** Azt számoltam, elfér-e **egy** eszközön, holott soha nem kellett
+> volna egyen lennie. ⭐ **Elosztva a kapacitás-fal nem enyhül, hanem eltűnik:** egy
+> milliárdos koino teljes mutatója ~2,5 TB, 25 példányban 62,5 TB — **egymilliárd készülék
+> között fejenként ~62 KB.** Kisebb, mint egy fénykép.
+>
+> ⚠️ **A nehézség ettől nem tűnik el, csak áthelyeződik** a kapacitásból a *megtalálásba*, a
+> *fenntartásba* (a „mindig" szó egy órás ütemű karbantartó kört rejt) és az *elhallgatásba*
+> (szeletelve egy nagy kapuőr helyett sok kicsi van, és a kicsi olcsóbban elfoglalható).
+>
+> ⭐ **CSABA HARMADIK FELVETÉSE: kiválthatná-e a bizalmi háló a DHT-t?** *„meghíváskor,
+> tanúsításkor ők már tudnának is elérhetőséget cserélni."* Két kérdés van benne:
+> - **A belépéskori címcsere: egyértelmű igen, és független mindentől.** Nulla plusz munka
+>   (a két fél amúgy is kapcsolatban van), és megoldja a **D38 bejárati címlistáját** —
+>   mindenki attól kapja az első címeit, aki beengedte. Ez pontosan a D21 bootstrap-mondata.
+> - **A DHT kiváltása útvonal-szerkezetként: valódi irány, de nem egyszerűbb.** Van rá
+>   szakirodalom, épp ebből az érvből (Whānau, MIT ~2010 — Sybil-ellenálló DHT a társas
+>   gráfon). Megveszi a pozicionálás-védelmet (*„a darabszám hamisítható, a pozíció nem"*,
+>   D18/2), de a társas gráf **nem jó útvonal-szerkezet magától**, a magánélet **romlik**
+>   (ismerőseid látják a kérdéseidet), a terhelés a **hubokra torlódik**, és összeragasztja
+>   az identitás-réteget a hálózati réteggel.
+> - ⭐ **Javaslat: középút** — a bizalmi háló adja a **társakat**, a szelet-kiosztás maradjon
+>   **hash szerint**. És ez a döntés **ráér**: a kereső-réteg elhagyható, tehát semmit nem
+>   blokkol, és **méréssel** dőljön el (D17 módszertani figyelmeztetése).
+>
+> ⚠️ **EGY FESZÜLÉS, AMIT KI KELL MONDANI:** minden társas-gráf alapú Sybil-védelem azon áll,
+> hogy a támadó nem tud sok becsületes embert rávenni, hogy kezeskedjen érte. De a **D18/1
+> szándékosan gyengévé tette a tanúsítást** (*„létező, külön ember"* — nem ajánlólevél, nem
+> jár felelősséggel). Ez a belépést teszi emberségessé — de **olcsóbbá is a támadási éleket**.
+> A „bizalmi háló megvéd" érv csendben **erősebb tanúsítást feltételez, mint amilyet
+> választottunk.**
+>
+> **A tervet vivő gondolatok:** a hitelesség nyolc feltételéből **hat helyi** — a részvételi
+> arány nevezője már ma is **entitás-helyi** (`javaslatSzamitas.js:176`), tehát **a tárolás
+> határa egybeeshet a döntés határával**; a szelet felső korlátját pedig **a tudatpont-keret
+> adja**, nem kitalált paraméter.
+>
+> ⚠️ **Négy dolog, ami ITT is számít:**
+> 1. **A D42 az entitás-központú tárban az EGYETLEN mód a keret ellenőrzésére** — teljes
+>    láncot soha nem fogunk látni.
+> 2. **A hézag megszűnik jel lenni** (a más entitáson történt esemény jogosan hiányzik) →
+>    ezzel a H3/H4 védelme elveszik. Javasolt javítás: **`entitasSorszam`** mező.
+> 3. **A D35 megtakarítása mérettel elpárolog** *(számítás, mérendő)*: milliós koinóban a
+>    globális lenyomat soha nem egyezik → minden kör visszaesik a teljes ÁLLÁS-ra.
+> 4. Az `esemenyek.jsonl` **koino-szintű egyetlen fájlja** nem tartható.
+>
+> ⚠️ **Amit a terv NEM ígér, és nem is szabad:** hogy „minden entitás elérhető". Mérve tudjuk
+> (D40/D41), hogy a készülékek nagy része nem fogadóképes — egy három-tulajdonosos alvó
+> entitás elérhetetlen, és ezen semmilyen címjegyzék nem segít. A válasz a kör tágítása
+> (tulajdonosok → postaládák → **bárki, aki megnézte és megtartotta**, mert az aláírás miatt
+> a másolat ugyanolyan hiteles), plusz az őszinte *„jelenleg nem elérhető"* (D21 mintája).
+>
+> ### ✅ ÉS AMI EZUTÁN MEGOLDÓDOTT (2026-08-31 este)
+>
+> A tervben eredetileg **két** „nincs rá javaslatom" pont állt. **Mindkettő lezárult:**
+>
+> **1. A KERESÉS — Csaba döntése: elég a CÍM szerinti keresés.** *„az nem baj, elég a cím
+> szerinti keresés"* — és ez **egy teljes alrendszert töröl**: ha csak a cím kell, a
+> mutató-bejegyzés **teljes egészében SZÁMÍTOTT** (az entitás saját aláírt eseményeiből),
+> tehát **senki nem írja, nincs mit hamisítani, és nincs mit teleszemetelni**. A javasolt
+> címke-gépezet (kulcsszó-kapcsolatok, amikre tudatpontot lehet tenni) **elesett** — nem
+> kell. ⭐ *Ugyanaz a mozdulat, mint az egyezménynél: számítva, nem kimondva.*
+> **És a szemetelés magától korlátozott:** az entitás létezéséhez tudatpont kell (D14),
+> tudatpontból pedig **10 000 van, összesen** — aki csali-címekkel árasztana el, **a saját
+> keretét éli fel.** Beépített ár, moderálás és pénz nélkül.
+>
+> **2. A TÖMEGES ENTITÁS — van technikai válasz, és nem is új gépezet.** A 4,3 GB nem
+> architektúra-hiba, hanem **tízmillió aláírt szavazat**: a tömeges részvétel fizikai ára. A
+> kérdés csak az, **kinek kell elvinnie** — és a **D21 szerkezete** (ujjlenyomat +
+> bizonyíték) erre már megvan, egyetlen kiegészítéssel: **összegző Merkle-fa**, ahol a
+> csomópont a darabszámot és az összesítést is viszi. Mindenki **~1 KB**-ot tárol (gyökér +
+> a saját szavazata), a teljes halmazt csak aki vállalja — és **a tároló nem tud hazudni**.
+> ⭐⭐ **Az elhallgatás ellen itt a legjobb védelmünk:** *aki kimarad, pontosan az, aki
+> észreveszi* — és a kezében a bizonyíték, a saját aláírt szavazata.
+>
+> ⚠️ **VISSZAVONÁS:** korábban ide az volt írva, hogy a tömeges entitás miatt **a D17
+> táblázata módosul**. **Téves volt.** A tömeges entitás összesítése **entitás-helyi** — nagy,
+> de helyi. **A D17 érintetlen:** globális egyetértés továbbra is csak az azonossághoz és a
+> pénzhez kell.
+>
+> ⭐ **CSABA FELVETÉSE, ami ebből nőtt ki — LÁTHATÓSÁGI KÜSZÖB:** *„a trol támadások, vagy
+> illetlen tartalmak, csak akkor lesznek elérhetőek, ha legalább 2-en próbálják meg
+> közzétenni."* Strukturális védelem moderálás nélkül — de ⚠️ **a mechanizmus vak: ugyanúgy
+> elnyomja az egyedüli igazat mondót, ahogy a trollt**, és ha a küszöb közösségi paraméter
+> lesz, egy többség feljebb tolhatja → **letagadható cenzúra**.
+> **A feloldás a réteg-felosztás:** a küszöb **kizárólag a KERESŐ-RÉTEGEN** legyen, a
+> **létezésen soha**. Így semmi nincs elrejtve — csak nincs felkínálva. *(A terv 5.8; döntést
+> kér: K10.)*
+
+> ### 🧬 HATODIK FORDULAT (2026-08-31 este): A SYBIL-VÁLASZ NEM BIZONYÍTÁS, HANEM EVOLÚCIÓ
+>
+> *A skálázási terv záró kérdése az volt, hogy „az egész ezen áll: H2, a Sybil-védelem — és
+> az nincs meg". A beszélgetés végén Csaba nem bizonyítást adott rá, hanem **másfajta
+> választ**, és ez a Szakasz 3 keretét írja át.*
+>
+> **Két tévút, amit előbb ki kellett zárni:**
+> - ❌ *„a DAG megoldja: amiből több van, az az igaz"* — **ez épp az, amit a Sybil megtör.**
+>   Minden számolható dolog (csomópont, aláírás, másolat) **ingyen gyártható**; a támadó
+>   tízezer kulcsa **tökéletesen szabályos** DAG-ot ír. **A DAG a FORMÁT ellenőrzi, nem a
+>   NÉPESSÉGET.** Minden működő rendszer valami **szűköset** számol (energia, letét, ismert
+>   tagok listája) — a koino az energiát és a pénzt szándékosan kizárja, **tehát csak az
+>   ember maradt.** Ez a D17 mondata, és nincs más jelölt.
+> - ❌ *„a bizalmi háló biztosítja, hogy 1 ember = 1 e-ember"* — **nem biztosítja.** A D1
+>   őszinte-kommunikációs pontja ezt már ki is mondja: *„a duplikátum-kizárás nem abszolút —
+>   a szabályok valószínűtlenné teszik, nem a program ellenőrzi."* A tanúsító azt állítja,
+>   hogy a jelölt *„még nem regisztrált"* — de **kulcsot lehet keresni, embert nem**, mert a
+>   **D6** tiltja a személyes adatot a láncon. Faluban működik; kétmilliós koinóban Anna nem
+>   tudhatja, hogy Béla nem lépett-e be a munkahelyi körén át.
+>
+> ⭐⭐ **CSABA VÁLASZA:** *„a koino nem egy lapra tesz fel mindent, mivel több koino is
+> létezhet, egyedi megoldásokkal, biztonsági paraméterekkel… a közösségek addig
+> próbálkozhatnak, ameddig akarnak… és majd evolúciószerűen alakulhat ki, hogy mely
+> megoldások a legjobbak."*
+>
+> Ez a **D13/b** („a paramétereket nem eltaláljuk, hanem szétosztjuk") — eddig **kényelmi**
+> érv volt, most **biztonsági** érvvé vált. **És megváltoztatja, mit jelent a bukás:** egy
+> globális rendszerben a Sybil-áttörés végzetes és végleges; koinók családjában **helyi és
+> tanulságos.**
+>
+> **HÁROM FELTÉTEL, ami nélkül ez nem evolúció, csak sodródás:**
+>
+> **1. ⭐ Kell szelekciós jel — mert a bukás NÉMA.** Egy Sybil-lel elfoglalt koino nem néz ki
+> elromlottnak: továbbra is aláírt eseményeket állít elő és szabályosan számol. Ha kívülről
+> nem megkülönböztethető az egészségestől, a szelekciónak nincs mit szelektálnia.
+> **A megoldás a D18/2-ből jön** (*a hamis csomók alakja elárulja magát*): a koino tegye
+> **nyilvánossá a bizalmi hálója egészség-mutatóit** — nem az eredményeit hasonlítjuk össze,
+> hanem **a hálója alakját**.
+> ⭐ *Csaba: „én ezt alapból így gondoltam. Lesz majd egy térkép (tér), ahol a teljes hálózat
+> látszani fog, vizuálisan is."*
+>
+> ✅ **ÉS A TÉRKÉP ALAKOT MUTAT, NEM RANGSORT** *(Csaba, 2026-08-31: „nem fontos a sorba
+> rakás, a vizuális élmény a hálózatról elég.")* — Felmerült egy sorrend is (*„kiből mennyi
+> tanúsítás ágazik"*), és jó, hogy elesett: az **darabszám**, amiről a D18/2 azt mondja, hogy
+> épp **az a hamisítható**; egy nyilvános tanúsító-toplista ráadásul a D18/3 védőkorlátjába
+> ütközne (*az igazolás kockázati korlátot emeljen, soha nem hangot*) — rangsorrá, majd
+> státusszá válna.
+> ⭐ **A térkép ereje az ALAK: szigetek, hidak, klaszterek, távolság-eloszlás.** Ezt a hamis
+> csomó nem tudja utánozni — és vizuálisan sokkal beszédesebb, mint egy lista.
+>
+> **2. ⭐⭐ A bukás két iránya NEM szimmetrikus — ebből jön az alapértelmezés.**
+>
+> | | **Túl szigorú** | **Túl laza** |
+> |---|---|---|
+> | Hogyan bukik | nem nő | **elfoglalják** |
+> | Látszik? | ✅ azonnal | ❌ **néma** |
+> | Visszafordítható? | ✅ lazíts, és nő | ❌ **nem** — a hamis azonosságok eseményei beolvadnak és ott maradnak; **nincs többség, ami kiszavazhatná** |
+> | Van áldozata? | nincs | **van** |
+>
+> > **A szabály: szigorúan indulj, és bizonyíték alapján lazíts — soha ne fordítva.**
+> > *(Csaba: „egyetértek.")*
+>
+> **3. ⚠️ A közös belépő tér átszivárgása → a D25 MÓDOSÍTVA.** Egy laza koino
+> tanúsítás-gyárrá válhatott volna. **Csaba döntése: a tanúsítások NEM jönnek át koinók
+> között** — a belépő tér csak **böngészésre** közös. *(Részletek a D25-nél; ebből az is
+> következik, hogy a tartós mag koino-helyi lesz, és hogy a belépő tér a **kereső-réteg**
+> szintje, nem a DAG-rétegé.)*
+>
+> #### 🔁 A „VAK MECHANIZMUS" — egy alakzat, ami ma NÉGYSZER jött elő
+>
+> Érdemes külön felírni, mert minden jövőbeli szabálynál elő fog:
+>
+> > **Egy tartalom-vak szabály ugyanúgy sújtja a becsületest, mint a támadót.**
+>
+> | Hol jött elő | Kit sújt a támadón kívül |
+> |---|---|
+> | **láthatósági küszöb** (2 tulajdonos kell) | az **egyedüli igazat mondót** |
+> | **gyenge tanúsítás** (D18/1) | *fordítva*: emberségessé teszi a belépést, de olcsóvá a támadási éleket |
+> | **utólagos EUDI-követelmény** | a **menekültet, hontalant, papír nélkülit** (a D15 már írt erről a bizottságnál) |
+> | **koinónkénti újratanúsítás** (D25) | a **sokfelé mozgó, gyökértelen embert** |
+>
+> ⭐ **A visszatérő feloldás mindannyiszor ugyanaz volt:** a szabály **ne a létezésre**
+> hasson, hanem egy **elhagyható, felsőbb rétegre** (kereső-réteg), és **ne visszamenőleg**.
+>
+> #### Az EUDI helye ezek után
+>
+> *Csaba: „később a közösség kérhet EUDI azonosítást is, ha már elérhető lesz."* — A **D15**
+> ezt már opcionálisként sorolja be, és **három tulajdonságát meg kell tartani**:
+> **(a) opcionális** (amelyik koino megköveteli, kormány-alakú fojtópontot épít magába, D30);
+> **(b) koino-helyi**; **(c) csak előre hat** (a fenti D18/5-visszavonás szabálya szerint).
+> ⭐ És **látható paraméterként**, ne bejelentésként: egy be nem váltott fenyegetés elveszti
+> az erejét, egy folyamatosan látható követelmény-szint viszont **műszer** — a támadó látja,
+> ahogy emelkedik, a becsületes tag is tudja, mire számítson.
+
 > ### 🔓 D30–D32: A PLATFORM-FÜGGETLENSÉG — a híd kész, a fagyasztás feloldva (2026-08-28)
 >
 > **Teljes leírás: [`platform_fuggetlenseg.md`](platform_fuggetlenseg.md)** — a hat
@@ -1438,7 +1681,31 @@ lazábban indulhat, és a tét növekedésével szigorodhat.**
 | Tanúsítás lejárata | 2 év, megújítandó | ❌ **ELVETVE, pótlás nélkül** (lásd 5.) |
 | Tagság-megújítás | évente, különben kiesés | ❌ **ELVETVE** → helyette **TEVÉKENYSÉG = ÉLETJEL** (lásd 6.) |
 
-#### 5. A TANÚSÍTÁS NEM JÁR LE, ÉS NEM IS HALVÁNYUL (Csaba döntése, 2026-08-25)
+#### 5. ~~A TANÚSÍTÁS NEM JÁR LE, ÉS NEM IS HALVÁNYUL~~ — ⚠️ **VISSZAVONVA (2026-08-31)**
+
+> ### ⚠️ CSABA VISSZAVONTA EZT A DÖNTÉST (2026-08-31): *„ezt visszavonom."*
+>
+> **Ami ezzel újranyílik** — mert ezt a döntést hozta fel az érv ellenük:
+> - a Duniter **2 éves lejárata** (a fenti táblázatban „ELVETVE")
+> - a **tagság-megújítás** („ELVETVE → tevékenység = életjel")
+> - az **elhalványulás** (a tanúsítás súlya csökken az idővel)
+>
+> **Miért dőlt meg:** a Sybil-beszélgetés során kiderült, hogy egy későbbi szigorítás (pl.
+> EUDI-követelmény) **pontosan olyan visszamenőleges kiesést** okozna, mint egy lejárat —
+> csak nem idővel, hanem szabályváltozással. Az „a tanúsítás nem előfizetés" elv tehát nem
+> tartható úgy, ahogy meg volt fogalmazva.
+>
+> ⭐ **AMI VISZONT ÁLL, ÉS A HELYÉBE LÉP** *(a 2026-08-31-i megbeszélésből)*:
+> **a szigorítás ELŐRE hasson, soha visszamenőleg.**
+>
+> | Amire szabad | Amire nem |
+> |---|---|
+> | ✅ **új belépőktől** többet kérni | ❌ meglévő e-embert **kiléptetni** |
+> | ✅ **kockázati korlátot** emelni (D18/3) | ❌ a **hangját** elvenni (D18/3 védőkorlátja) |
+> | ✅ **új, nagy tétű** döntéstípust kapuzni | ❌ meglévő jogosultságot visszavonni |
+>
+> ⚠️ **Az alábbi szöveg TÖRTÉNETI** — a benne lévő érvelés (különösen az „egy ritka támadás
+> miatt mindenkit terhelnénk") továbbra is érvényes szempont, de már nem dönt.
 
 > „Akiről egyszer bebizonyosodott, hogy valódi ember, az tartson ki addig, ameddig meg nem
 > hal, és a környezete ezt jelzi." — Csaba
@@ -1947,10 +2214,58 @@ tér** alakot használja.)*
 
 #### ⭐ A D25 MAGVA: mi közös a térben, és mi koinónként külön
 
+> ### ⚠️ MÓDOSÍTVA (2026-08-31): A TANÚSÍTÁSOK NEM JÖNNEK ÁT
+>
+> **Csaba döntése:** *„inkább ne legyen közös belépő tér igazolásra, csak böngészésre, a
+> koinók között. De minden koinóba való bekerüléshez az adott koino igazolási rendszerén át
+> kell mennie mindenkinek, hiába azonosította magát máshol."*
+>
+> **Miért:** a közös tanúsítás-halmaz **átszivárgási utat** nyitott. Egy laza koino
+> **tanúsítás-gyárrá** válhatott volna: ott olcsón összeszedett tanúsítások átjönnek a
+> szigorú koinóba, és beleszámítanak a küszöbébe. A régi szöveg azt írta, *„egy szigorúbb
+> koino nem tudja felhígítani a lazábbat, és fordítva sem"* — ez a **küszöbökre** igaz volt,
+> de nem a tanúsítások **kínálatára**.
+>
+> ⭐ **Amit megvesz:** minden koino Sybil-ellenállása **kizárólag a saját hálóján** múlik.
+> Ezzel a D13/b „paraméter-evolúció" **valódi, független kísérletsorozat** lesz — korábban a
+> kísérletek a közös tanúsítás-készleten keresztül össze voltak kötve.
+>
+> **A KIVÉTEL — Csaba:** *„ez alól az az eset lehet kivétel, ha egy koino szétválik, mert
+> mondjuk nem mindenki fogadott el egy verziófrissítést."*
+>
+> **A kivétel alakja:** **születéskor örökölhet, utána soha.** A leszármazó koino a születése
+> pillanatában **pillanatképet** kap a szülő tanúsításaiból; ettől kezdve a két háló külön él
+> és széttart. A gyár-rést ez nem nyitja vissza: a gyárnak *folyamatos* kivitel kellene, egy
+> egyszeri, szülőtől kapott pillanatkép pedig nem ad új támadási felületet — a leszármazót
+> amúgy is az alapítói uralják.
+>
+> ⏸️ **NYITVA HAGYVA (Csaba, 2026-08-31): *„erre még nem tudom a választ, de ez maradhat
+> későbbre."*** A kérdés: a kivétel **csak a szétválásra** vonatkozzon (Csaba eredeti
+> megfogalmazása), vagy a **szándékos koino-alapításra is** (D25 1–2. módja)? Az utóbbi
+> mellett szól, hogy különben a *„egy közösség több koinót is létrehozhat"* mozdulat minden
+> alkalommal teljes újratanúsítást kívánna. **Amíg nincs döntés, a szűkebb olvasat érvényes:
+> csak a szétválás.** *(A „szigorúan indulj, bizonyíték alapján lazíts" szabály szerint ez az
+> alapértelmezés is a helyes irány.)*
+>
+> ⭐⭐ **KÉT KÖVETKEZMÉNY, ami máshol fizet:**
+> 1. **A tartós mag koino-helyi lesz.** A „ez az ember már regisztrált" állítás mostantól
+>    *ebben a koinóban* értendő — vagyis **a D21 magja kisebb**, és a globálisan egyeztetendő
+>    halmaz tovább zsugorodik (D14/D17 iránya).
+> 2. ⭐ **A belépő tér a KERESŐ-RÉTEG szintje, nem a DAG-rétegé** — megtalálhatóság bizalom
+>    nélkül, és **elhagyható**. *Ugyanaz a kétréteges felosztás, megint egy szinttel feljebb.*
+>
+> ⚠️ **Az ára, kimondva:** minden csatlakozásnál újra kell kezdeni a tanúsítás-gyűjtést. Ez
+> a **negyedik előfordulása** ma annak az alakzatnak, hogy *a vak mechanizmus ugyanúgy sújtja
+> a becsületest, mint a támadót* — itt a sokfelé mozgó, gyökértelen embert.
+>
+> ⚠️ **Az alábbi táblázat és szöveg a MÓDOSÍTÁS ELŐTTI állapotot írja le** (a „Tanúsítások
+> ✅ átjönnek" sor és a rá épülő „közös tanúsítások, helyi küszöb" szakasz **már nem
+> érvényes**).
+
 | | Közös a térben | Koinónként külön |
 |---|---|---|
 | **Azonosság (kulcs)** | ✅ | |
-| **Tanúsítások** (a bizalmi háló élei) | ✅ **átjönnek** | |
+| ~~**Tanúsítások** (a bizalmi háló élei)~~ | ⚠️ ~~✅ átjönnek~~ **VISSZAVONVA** | ✅ **koinónként** |
 | **A hitelesítettség KÜSZÖBE** | | ✅ |
 | **Belépési szabály** | | ✅ |
 | **Szabályrendszer, paraméterek** | | ✅ |
