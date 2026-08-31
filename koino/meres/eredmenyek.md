@@ -56,5 +56,106 @@
 
 - **MOBIL böngésző** (különösen iOS/Safari): az Ed25519-támogatás és a tárolási kvóta ott
   szűkebb lehet. A mérőoldal ugyanaz — csak el kell érni a telefonról.
-- **Nagyobb adathalmaz**: a mérés 200 aláírással dolgozott; a valódi terhelés (több tízezer
-  esemény betöltése IndexedDB-ből) külön mérendő, amikor már van mit betölteni.
+- ✅ ~~**Nagyobb adathalmaz**~~ — **MEGMÉRVE 2026-08-31**, lásd a következő szakaszt.
+
+---
+
+# SKÁLA-MÉRÉS — az S1 lépés (2026-08-31)
+
+*Eszköz: [`skalaMeres.js`](skalaMeres.js) · Node v22.16.0 · win32 · `--expose-gc`*
+
+> **Miért mértünk tervezés előtt (megint)?** Mert a [skálázási terv](../../docs/skalazas_terv.md)
+> három falat nevez meg, és **csak kettő volt mérve**. A harmadik — hogy a globális lenyomat
+> megtakarítása mérettel elpárolog — **számítás** volt. A projekt visszatérő tanulsága, hogy
+> az ilyet nem saccoljuk meg.
+
+**A szintetikus tár valódi:** valódi Ed25519 kulcsok, valódi aláírások, valódi kanonikus
+alak, valódi lánc, betartott tudatpont-keret (**a kivételek száma minden méretnél 0** —
+tehát valódi terhelést mérünk, nem egy szűrő sebességét). ⚠️ **Feltevés benne:** az
+esemény-keverék (60% tudatpont · 25% tartalom · 10% szavazat · 5% javaslat/érték) és a
+200 esemény/fő. Ha a valódi használat más, ezt kell először átírni.
+
+## Az eredmény
+
+| esemény | e-ember | fájl | **B/esemény** | betöltés | `allapotSzamitasa` | heap | **ÁLLÁS B/fő** | **1 kör ára** | ebből hasznos | **1 mentés** |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 000 | 5 | 469 KB | 480 | 5 ms | 9 ms | 0,9 MB | 170 | 2,6 KB | 20,05% | 6,4 ms |
+| 10 000 | 50 | 4,6 MB | 478 | 40 ms | 84 ms | 7,4 MB | 164 | 16,8 KB | 2,56% | 42 ms |
+| 20 000 | 100 | — | 478 | — | 280 ms | — | — | 32,7 KB | — | 103 ms |
+| 40 000 | 200 | — | 478 | — | 1 166 ms | — | — | 64,6 KB | — | 178 ms |
+| 60 000 | 300 | — | 477 | — | 1 770 ms | — | — | 96,4 KB | — | 263 ms |
+| **100 000** | **500** | **45,4 MB** | **476** | **595 ms** | **4 615 ms** | **72,5 MB** | **163** | **160,1 KB** | **0,27%** | **495 ms** |
+
+## Négy megállapítás
+
+### 1. ✅ A terv „C" állítása IGAZOLVA — a globális lenyomat nem ment meg
+
+A lenyomat **egyik méretnél sem egyezett**, tehát minden kör visszaesett a részletes
+ÁLLÁS-ra. És a kör ára **egyenesen arányos a koino méretével**:
+
+| | 1 000 | 10 000 | 100 000 |
+|---|---|---|---|
+| egy kör ára **egyetlen** eltérő eseményért | 2,6 KB | 16,8 KB | **160,1 KB** |
+| ebből hasznos adat | 20,05% | 2,56% | **0,27%** |
+| egy hasznos bájtra jutó forgalom | 5 B | 39 B | **372 B** |
+
+> ⭐ **Ez volt eddig számítás; most mérés.** A D35 megtakarítása kis közösségi hatás:
+> 100 000 eseménynél **372 bájt forgalom megy egyetlen hasznos bájtért**.
+
+### 2. ⭐⭐ A LEGKORÁBBI FAL NEM A TÁROLÁS, HANEM A BEÍRÁS — és ez nem volt a tervben
+
+Az `esemenyMentese` minden mentésnél végigolvassa és -elemzi az **egész** fájlt
+(`tar.betolt()`), a `lancVege` pedig még egyszer. Nincs gyorsítótár. Ezért **egy mentés ára
+a tár méretével nő** — és N esemény beírása **négyzetes**:
+
+| tár mérete | egy mentés | N esemény beírása ezen az úton |
+|---|---|---|
+| 1 000 | 6,4 ms | 3 mp |
+| 10 000 | 42 ms | 3,5 perc |
+| 100 000 | **495 ms** | **~6,9 óra** |
+
+> ⚠️ **Fél másodperc EGY esemény elmentése egy 100 000 eseményes koinóban** — és egy csere
+> több eseményt hoz. Ez **jóval a 43,5 GB-os tárolási fal ELŐTT** teszi használhatatlanná a
+> koinót. **A terv rossz falat nevezett meg elsőnek.**
+
+### 3. ⭐ ÚJ LELET: az `allapotSzamitasa` is négyzetes — de ez KÜLÖNÁLLÓ, JAVÍTHATÓ hiba
+
+Nem a skálázási szerkezetből következik, hanem egy konkrét függvényből:
+[`agMeretSzamitasa`](../js/allapot/allapotSzamitas.js:416) **minden entitásnál végigmegy az
+összes entitáson**, rekurzívan — 7 767 entitásnál ez ~60 millió lépés.
+
+| | 1 000 | 10 000 | 40 000 | 100 000 |
+|---|---|---|---|---|
+| `allapotSzamitasa` | 9 ms | 84 ms | 1 166 ms | **4 615 ms** |
+
+**A javítás szokásos és olcsó:** egyszer felépíteni egy „szülő → gyerekek" mutatót (O(n)),
+és egy utó-bejárással kiszámolni az összes ág-méretet (O(n)). ⚠️ **Felírva, még nincs
+megcsinálva.**
+
+### 4. ✅ A terv becsült számai tartják magukat
+
+| Amit a terv becsült | Amit a mérés ad |
+|---|---|
+| 435 B / esemény *(9 valódi eseményből)* | **476–480 B** — a terv **alábecsülte**, +10% |
+| 162 B / e-ember az ÁLLÁS-ban *(50 fővel)* | **163 B** 500 fővel — ⭐ **kiválóan tartja** |
+
+## Amit ez a tervre jelent
+
+> ⛔ **ELŐBB EGY KORLÁT, AMI A MÉRÉS ÉRTELMEZÉSÉRE VONATKOZIK** (Csaba, 2026-08-31).
+> A mérés után kézenfekvőnek látszott a következtetés: *„javítsuk a két rövidítést, indítsuk
+> az első koinót a mai szerkezettel, és cseréljük később."* **Ez nem járható** — a D21/D22
+> már kizárta: *„az első kiadás is milliárdra képes program, csak kevesebb emberrel"*, és
+> *„a szeletelés nem »később, ha a méret kikényszeríti«"*.
+> ⭐ **Tehát az alábbi javítások KARBANTARTÁSOK, nem mérföldkövek.** Részletek:
+> [`skalazas_terv.md`](../../docs/skalazas_terv.md) **0. szakasz**.
+
+1. **A lépés-sorrend változik** — de nem a javítások felé, hanem az **illesztés** felé. A
+   mérés legfontosabb szerkezeti tanulsága ugyanis nem a lassúság, hanem hogy a tár-illesztő
+   **`betolt()`** művelete az **összes** eseményt adja vissza: akármilyen tárolót teszünk
+   mögé, a felület kényszeríti a teljes betöltést. ⚠️ **A gyorsítótár ezt nem javítja meg —
+   csak gyorsabbá teszi a rossz kérdést.**
+2. **A 100 000 esemény nem sok.** 500 e-ember, 200 esemény fejenként — ez egy **falu vagy egy
+   iskola**, nem egy ország. A fal tehát nem „valamikor a milliárd felé", hanem **belátható
+   közelségben** van.
+3. **A 2. és 3. lelet külön kezelendő:** a 3. egy mai hiba, ami a mai koinóban is javítható,
+   a szeletelés kivárása nélkül.

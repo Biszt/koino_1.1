@@ -12,6 +12,56 @@ jelenlegi szerkezet az ő megfogalmazása:*
 
 ---
 
+## 0. ⛔ A SZABÁLY, AMI MINDEN MÁS FÖLÖTT ÁLL (Csaba, 2026-08-31)
+
+> **A skálázhatóság szempontjából az első verziónak IS késznek kell lennie.**
+
+*Ez a szakasz azért került ide, mert Claude az S1 mérése után azt javasolta: „az első koino
+elindítható a mai szerkezettel, a nagy átalakítás akkor kell, amikor kinövi". **Csaba
+elutasította — és egy álló döntésre hivatkozott, nem új szempontra:***
+
+| Döntés | Amit már kimondott |
+|---|---|
+| **D22** | *„Milliárdra tervezünk — és **az első kiadás is milliárdra képes program**, csak kevesebb emberrel."* |
+| **D21** | *„A szeletelés **nem »később, ha a méret kikényszeríti«**, hanem **az első naptól a tervben van** […] különben pontosan az a fajta »majd kicseréljük« adósság keletkezik, amit a milliárdos cél kizár."* |
+| **D22** | *„**A lefelé skálázás olcsó, a felfelé nem** — tehát a CÉL a milliárdos lépték."* |
+
+⚠️ **A D13 („nem kell az első verziónak tökéletesnek lennie") NEM vonatkozik erre.** A D13 a
+*paraméterekre* és a *funkciókra* igaz — ami hiányzik, azt egy későbbi verzió pótolja. A
+**szerkezetet** viszont nem lehet utólag beletenni.
+
+### ⭐ A KÜLÖNBSÉGTÉTEL, amitől ez betartható (a D21 saját megfogalmazása)
+
+> **A SZERKEZET és az ILLESZTÉS az első naptól milliárdos. A megvalósítás mögötte lehet
+> egyszerű.**
+>
+> *„Az illesztésnek eleve engednie kell a 3. réteget, még ha az első kiadás az 1.-et
+> használja is."* (D21)
+
+Vagyis nem az a baj, ha valami **egyszerűen** van megcsinálva — hanem az, ha az **illesztés**
+kizárja a nagy változatot.
+
+### 🔍 ELLENŐRIZHETŐ ALAK — ezt kell kérdezni minden új darabnál
+
+> **„Ez mit csinál egymilliárd e-embernél?"**
+> Ha a válasz **„akkor majd kicseréljük"** — a darab **nincs kész.**
+
+### ⭐⭐ AZ ELSŐ, AMIT EZ A SZABÁLY ELKAP: a `betolt()`
+
+A mai tár-illesztő két műveletet ad: `betolt()` és `hozzafuz()`. A `hozzafuz()` rendben van.
+De a **`betolt()` az ÖSSZES eseményt adja vissza** — vagyis:
+
+> ⚠️ **Nem a fájlformátum a probléma, hanem maga az ILLESZTÉS.** Akármilyen okos tárolót
+> teszünk mögé, ha a felület azt kérdezi, hogy „add ide mindet", akkor **minden
+> megvalósítás kénytelen mindet visszaadni.** A gyorsítótár (S1/b) ezt **nem** javítja meg —
+> csak gyorsabbá teszi a rossz kérdést.
+
+**Amit a szabály ebből következtet:** az S1/b és S1/c javítás **karbantartás, nem mérföldkő**.
+A tár-illesztőt **szeletelhetővé** kell tenni (entitás / szerző / tartomány szerint), és ez
+nem az S3 kényelmi része, hanem **az illesztés helyessége** — az első naptól.
+
+---
+
 ## 1. AZ ÚJ IRÁNY: két réteg, két természet
 
 | | **I. A DAG-réteg** | **II. A kereső-réteg** |
@@ -458,8 +508,36 @@ példány (4.5). ⚠️ **Ezért a küszöb ÚJ SZABÁLY lenne, nem a meglévő 
 
 ## 6. SZÁMOK
 
-**Mérési alap:** esemény **435 B** átlagosan (mérve, 9 valódi esemény, 347–507); ÁLLÁS **162
-B/e-ember** (mérve, D35); csendes kör **334 B** (mérve).
+> ### ✅ AZ S1 LEFUTOTT (2026-08-31) — teljes jegyzőkönyv: [`meres/eredmenyek.md`](../koino/meres/eredmenyek.md)
+>
+> **A terv „C" állítása igazolva:** a globális lenyomat **egyik méretnél sem egyezett**, tehát
+> minden kör visszaesett a részletes ÁLLÁS-ra. Egyetlen eltérő eseményért:
+>
+> | | 1 000 | 10 000 | 100 000 |
+> |---|---|---|---|
+> | egy kör ára | 2,6 KB | 16,8 KB | **160,1 KB** |
+> | ebből hasznos | 20,05% | 2,56% | **0,27%** |
+>
+> ⭐⭐ **ÉS EGY FAL, AMI NEM VOLT A TERVBEN — ez jön el ELSŐNEK:** az `esemenyMentese` minden
+> mentésnél végigolvassa az egész fájlt (`tar.betolt()`), a `lancVege` még egyszer. **Nincs
+> gyorsítótár.** Egy mentés ára: 1k-nál 6,4 ms · 10k-nál 42 ms · **100k-nál 495 ms**. Vagyis
+> **fél másodperc EGY esemény elmentése egy 100 000 eseményes koinóban** — és egy csere több
+> eseményt hoz. Ez **jóval a 43,5 GB-os tárolási fal előtt** teszi használhatatlanná a koinót.
+>
+> ⚠️ **És 100 000 esemény nem sok:** 500 e-ember, 200 esemény fejenként — ez egy **falu vagy
+> egy iskola.** A fal nem „valahol a milliárd felé" van, hanem **belátható közelségben**.
+>
+> ⭐ **Harmadik lelet, KÜLÖNÁLLÓ és javítható:** az `allapotSzamitasa` is négyzetes (100k-nál
+> 4 615 ms), de nem a szerkezet miatt — az [`agMeretSzamitasa`](../koino/js/allapot/allapotSzamitas.js:416)
+> minden entitásnál végigmegy az összes entitáson. **Ez a mai kódban is javítható**, a
+> szeletelés kivárása nélkül: „szülő → gyerekek" mutató + egy utó-bejárás.
+>
+> ✅ **A becsült számok tartják magukat:** 435 → **476 B/esemény** (a terv 10%-kal alábecsülte);
+> 162 → **163 B/e-ember** 500 fővel (⭐ kiválóan tartja).
+
+**Mérési alap:** esemény **476 B** átlagosan (⭐ **mérve 2026-08-31**, 100 000 eseményen; a
+korábbi 435 B kilenc eseményből jött); ÁLLÁS **163 B/e-ember** (⭐ mérve 500 fővel; a D35
+50 fővel 162-t adott); csendes kör **334 B** (mérve).
 
 **A mai fal** (minden készülék mindent tárol, 100 esemény/fő):
 
@@ -502,7 +580,10 @@ indexelni.
 
 | # | Lépés | Réteg | Mit bizonyít | Mérés |
 |---|---|---|---|---|
-| **S1** | ⭐ **A FAL MEGMÉRÉSE** — szintetikus tár 10 000 / 100 000 eseménnyel | I | a 6. szakasz számai igazak-e, és hol a fal | `meres/` váz, hálózat nélkül. **Ezzel kell kezdeni** |
+| **S1** | ✅ **A FAL MEGMÉRVE** (2026-08-31) — [`skalaMeres.js`](../koino/meres/skalaMeres.js) | I | ✅ a C állítás igaz; ⭐⭐ **és a BEÍRÁS a legkorábbi fal** | kész — [`eredmenyek.md`](../koino/meres/eredmenyek.md) |
+| **S1/b** | **A BEÍRÁSI ÚT** — gyorsítótár a tároló mögé | I | ⚠️ **KARBANTARTÁS, NEM MÉRFÖLDKŐ** (0. szakasz): a rossz kérdést gyorsítja, nem javítja | ugyanaz a mérő, újrafuttatva |
+| **S1/c** | **`agMeretSzamitasa` javítása** — „szülő → gyerekek" mutató + utó-bejárás | I | ⚠️ szintén **karbantartás** — de valódi hiba a mai kódban | ugyanaz a mérő |
+| **S2/a** | ⛔ **A TÁR-ILLESZTŐ SZELETELHETŐVÉ TÉTELE** — a `betolt()` ne „mindet" adjon, hanem entitás / szerző / tartomány szerint | I | ⭐ **ez az ILLESZTÉS helyessége**, nem kényelem — a 0. szakasz szabálya ezt kapja el elsőnek | a mérő: a betöltött bájt a **kért szelettel** arányos-e |
 | **S2** | ⭐ **A KANONIKUS ALAK BŐVÍTÉSE** (`kiosztva` + `entitasSorszam` [+ `latott`]) | I | a három önhordó bizonyíték | rontás-próbák: elhallgatott esemény → **kimutatható ellentmondás** |
 | **S3** | **Entitás-szintű tár** | I | a tárolás egysége az entitás | a betöltött bájt az entitás méretével arányos |
 | **S4** | **Entitás-szintű lenyomat és ÁLLÁS** | I | a csere ára a **közös szeletektől** függ | S1 tárával: 1 eltérés 100 000 esemény közt → hány bájt |
