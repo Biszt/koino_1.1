@@ -219,6 +219,33 @@ Csaba ütem-döntését a Szakasz 3 munkájával.
 
 ---
 
+### ✅ ÉS A LEGSÜRGŐSEBB ISMERETLEN MEGMÉRVE (2026-09-03)
+
+*A buli legkeményebb pontjának azt neveztük, hogy a mobil operációs rendszerek korlátozzák a
+háttérébresztést. Megmértük — [`eredmenyek.md`](../koino/meres/eredmenyek.md).*
+
+| szünet | ébredés csúszása | csere |
+|---|---|---|
+| 1 perc | **0 mp** | ✅ 610 B, 149 ms |
+| 5 perc | **0 mp** | ✅ 610 B, 554 ms |
+| **60 perc** | **0 mp** | ✅ 610 B, 339 ms |
+
+⭐ **Egy óra alvás után nulla csúszás, és a csere azonnal ment.** A Doze nem ütemezett át, a
+wifi visszatért, a folyamat túlélt. **Az ötperces ablak ára 176 KB/nap** — a D35 befogadási
+aggálya a csendes esetre **nem áll**.
+
+⚠️ **Amit nem bizonyít:** a Termux tartós értesítést és részleges ébrentartót használ, tehát
+valószínűleg **előtér-szolgáltatást** mértünk, nem háttérben alvó alkalmazást.
+⭐ **Ez tervezési következtetés, nem hiba:** az androidos koino is így fog futni — látható
+értesítéssel —, és **ilyen feltételek mellett a buli tartható**.
+
+⚠️ **A négyórás lépés ÉRVÉNYTELEN lett** (a mérés közben megnyitottuk a Termuxot, amitől a
+rendszer aktívnak vette a folyamatot) — **a hosszú alvás kérdése tehát nyitva maradt**. Az
+egyórás lépés viszont elég a folytatáshoz: ötperces ablaknál a kérdés úgyis az, bír-e öt
+percet — és bír egy órát is.
+
+---
+
 ## 7. A KÖVETKEZŐ HÁROM LÉPÉS — konkrétan
 
 *(Részletek és mérési mód: [`skalazas_terv.md`](skalazas_terv.md) 8. szakasz.)*

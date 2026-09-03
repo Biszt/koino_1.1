@@ -75,7 +75,7 @@ tehát valódi terhelést mérünk, nem egy szűrő sebességét). ⚠️ **Felt
 esemény-keverék (60% tudatpont · 25% tartalom · 10% szavazat · 5% javaslat/érték) és a
 200 esemény/fő. Ha a valódi használat más, ezt kell először átírni.
 
-## Az eredmény
+## Az eredmény *(a skála-mérésé — az ébredés-mérés lentebb)*
 
 | esemény | e-ember | fájl | **B/esemény** | betöltés | `allapotSzamitasa` | heap | **ÁLLÁS B/fő** | **1 kör ára** | ebből hasznos | **1 mentés** |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -159,3 +159,62 @@ megcsinálva.**
    közelségben** van.
 3. **A 2. és 3. lelet külön kezelendő:** a 3. egy mai hiba, ami a mai koinóban is javítható,
    a szeletelés kivárása nélkül.
+
+---
+
+# ÉBREDÉS-MÉRÉS — a „buli" ablaka (2026-09-03)
+
+*Eszköz: [`ebredesProba.js`](ebredesProba.js) `fut` üzemmód · Android telefon, Termux, Node ·
+azonos wifi, a laptop `figyel`-t futtat.*
+
+> **Miért ez volt a legsürgősebb ismeretlen?** Mert az összehangolt ablak (buli) terve azon
+> áll, hogy a készülékek egyszerre ébrednek — és ⚠️ az Android „Doze" módja **kötegeli** az
+> ébresztéseket, felfüggeszti az alkalmazásokat, és meg is ölheti a folyamatot. Erről nem
+> szabad emlékezetből dönteni.
+
+## Az eredmény
+
+| szünet | ébredés csúszása | csere | idő |
+|---|---|---|---|
+| 1 perc | **0 mp** | 1/3 társ · 610 B | 149 ms |
+| 5 perc | **0 mp** | 1/3 társ · 610 B | 554 ms |
+| **60 perc** | **0 mp** | 1/3 társ · 610 B | 339 ms |
+| ~~240 perc~~ | ⚠️ **ÉRVÉNYTELEN** | *a mérés közben megnyitottuk a Termuxot* | |
+
+⚠️ **A négyórás lépés elromlott, és ezt jelöljük, nem hallgatjuk el.** A mérés közben a
+Termuxot megnyitottuk (az előző kimenet kimásolásához), amitől a rendszer **aktívnak vette
+a folyamatot** — így az eredmény nem arról szólna, amiről akartuk. **A négyórás alvás
+kérdése tehát NYITVA MARADT.**
+
+⭐ **De az egyórás lépés önmagában is elég ahhoz, hogy a munka folytatódjon** (Csaba
+döntése): ötperces ablaknál a kérdés úgyis az, hogy öt percet bír-e — és bír egy órát is.
+
+*(A 3-ból 1 társ azért, mert kettő IPv6-cím, amire ezen a wifin nincs útvonal — `ENETUNREACH`,
+azonnali, nem lassít. ⭐ Mellékesen ez is mérés: **egy elérhetetlen társ nem dönti el a
+kört**, ahogy a D33 kívánja.)*
+
+## ⭐ Amit ez jelent
+
+**Egy óra alvás után NULLA másodperc csúszás, és a csere azonnal ment.** Ez három dolgot mond:
+
+1. **A Doze nem ütemezte át az ébredést** — sem öt percnél, sem egy óránál.
+2. **A wifi rádió visszatért**, és a koino ébredés után **azonnal tudott dolgozni** (339 ms).
+3. **A folyamat túlélt** több mint egy órát.
+
+⭐ **Az ötperces ablak ára is kijött:** egy csendes kör **610 bájt**, tehát 288 kör naponta
+≈ **176 KB/nap**. Elhanyagolható — a befogadási aggály (D35) a csendes esetre **nem áll**.
+
+## ⚠️ Amit ez NEM bizonyít — és ezt ki kell mondani
+
+**A Termux valószínűleg tartós értesítést és részleges ébrentartót használ**, amíg fut benne
+egy munkamenet. Vagyis lehet, hogy nem „egy háttérben alvó alkalmazást" mértünk, hanem egy
+**előtér-szolgáltatást**.
+
+⭐ **Ez a koino szempontjából nem baj, hanem TERVEZÉSI KÖVETKEZTETÉS:** az androidos koino is
+így fog futni — **előtér-szolgáltatásként, látható értesítéssel**. Ilyen feltételek mellett az
+ötperces ablak **tartható**. ⚠️ De az eredmény **nem általánosítható** egy szokásos,
+háttérben alvó alkalmazásra.
+
+**További korlátok, tisztességből:** egy készülék, egy Android-verzió, egy wifi; a töltés és a
+képernyő állapota nem volt rögzítve (a Doze akkumulátoron agresszívabb); és a **négyórás lépés
+még hátravan** — az „app standby" korlátai hosszabb tétlenség után lépnek életbe.
