@@ -155,6 +155,70 @@ képes program, csak kevesebb emberrel."*
 
 ---
 
+## 6/b. ⏸️ A 3.1 FELFÜGGESZTVE (2026-09-02) — és miért nem baj
+
+*Csaba a pihenőidő alatt írt gondolatai
+([`pihenosIdoAlattiGondolatok.md`](pihenosIdoAlattiGondolatok.md)) olyan irányt hoztak, ami a
+Szakasz 3 lépéseit is átrendezi. A 3.1 félbehagyva áll — a kód a munkafában van, nem
+commitolva.*
+
+**Ami a 3.1-ből MÁR MEGVAN (a kódban, commit nélkül):**
+
+- a burkolat három új mezője (`entitas`, `entitasSorszam`, `latott`) az `esemeny.js`-ben,
+  a `szelet()` szabállyal együtt;
+- a tár lekérdezései: `entitasEsemenyei`, `kovetkezoEntitasSorszam`, `horgonyok`;
+- a `muveletek.js` mind a hat művelete kitölti a mezőket, a tudatpont-rendezés pedig a
+  D42 `adat.kiosztva` értékét is;
+- a `szabalyok.js` D42-ellenőrzése, a harmadik kategóriával együtt („nem ellenőrizhető").
+
+**Ami hátra van:** az önpróbák igazítása (a régi alakú események elbuknak — szándékosan),
+rontás-próbák a bemondott összegre, és a `skalaMeres.js` újrafuttatása a bővített alakkal.
+
+⚠️ **Miért nem baj a felfüggesztés:** a 3.1 a **kanonikus alakot** rendezi, és épp most derült
+ki, hogy a keret-ellenőrzés a szeletelt világban **másképp is kiegészül** (összegző Merkle-fa
+a saját láncon — lásd lent). Jobb egyszerre bevinni, mint kétszer bontani fel a legveszélyesebb
+részletet.
+
+---
+
+## 6/c. 🎉 AZ ÚJ IRÁNY: A BULI — összehangolt ablak (Csaba, 2026-09-02)
+
+*Ez már szerepelt egyszer (D40 környéke, „az ébredés legyen összehangolt"), de eddig
+**energia-kérdésként**. Csaba füzete kimondja, hogy sokkal több annál.*
+
+> *„Az, hogy 1 adott időben szinte az egész közösség jelen van, bebiztosítja a maximális
+> elérhetőséget az eszközök között, és még energiatakarékos is."*
+
+**Amit ez átír a tervben:** a [`skalazas_terv.md`](skalazas_terv.md) 4.5 szakasza azt mondja,
+hogy *„a készülékek nagy része nem fogadóképes"* (D40/D41). ⭐ **Az összehangolt ablakban ez
+nem igaz** — mert mindenki egyszerre kopog kifelé, tehát a rések egyszerre nyílnak. Az
+elérhetőség nem a készülék tulajdonsága, hanem **az ablaké**.
+
+**Az ár, amit Csaba vállal:** nincs folyamatos, friss böngészés. Az első betöltésnél várni
+kell egy kört; utána offline is látszik minden, **színes dátummal jelezve, mikor frissült
+utoljára**. Ez tudatos csere, nem hiány.
+
+**És egy hiányzó darab, amit a füzet nevez meg — a KÉRELMEZÉSEK ADATCSOPORTJA:** a program
+jegyezze fel, mit akart a böngésző megnézni, és ez a lista terjedjen. Ekkor a buli alatt
+**mindkét fél tudja, ki felé kell fúrnia** — a kérelmező is, és az is, akinél az entitás van.
+⭐ Enélkül a böngésző-lekérés csak reménykedés; ezzel **célzott**.
+
+**Frissítési ütem — ✅ ELDÖNTVE (Csaba, 2026-09-02): ÖT PERC.** A füzet még percenkéntit írt;
+a kérdés az volt, hogy a percenkénti ablak nagyságrendekkel sűrűbb, mint amire az 5. szabályt
+(*„ne épüljön folyamatos kapcsolatra"*) írtuk. Csaba döntése: **legyen öt percenként** — ezzel
+a szabály és az ütem megfér egymással, és ez egybeesik azzal, amit az `orjarat` ma is csinál.
+⚠️ A napi szinkron mint elegendő ütem továbbra sem áll; bárki állíthat a saját készülékén
+ritkábbat, de az alapütem öt perc.
+
+⚠️ **És ebből következik egy kemény kötés:** öt percenként **288 kör naponta**. Egy csendes
+kör 334 bájt (mérve), tehát ha nincs újdonság, ez napi ~96 KB — semmi. **De ha a kör
+visszaesik a teljes ÁLLÁS-ra** (mérve: 160 KB száztizezer eseménynél), akkor **napi 46 MB**,
+havi ~1,4 GB — és ez a mobilos e-ember számlája, vagyis **befogadási kérdés** (D35).
+⭐ **Tehát az ötperces ütem CSAK entitás-szintű cserével engedhető meg** — ez köti össze
+Csaba ütem-döntését a Szakasz 3 munkájával.
+
+---
+
 ## 7. A KÖVETKEZŐ HÁROM LÉPÉS — konkrétan
 
 *(Részletek és mérési mód: [`skalazas_terv.md`](skalazas_terv.md) 8. szakasz.)*

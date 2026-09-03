@@ -1536,6 +1536,97 @@ visszafordíthatatlan**.
 **Nyitott paraméter** (→ D13/b): mekkora összeg fölött legyen késleltetés, milyen hosszú
 az ablak.
 
+### 🌓 KÉT KOINO INDUL, NEM EGY (Csaba döntése, 2026-09-02) — a D13/b első valódi alkalmazása
+
+> *„Eldöntöttem, hogy legalább 2 koinót fogok indítani. Ha lesz még ilyen morális kérdés,
+> akkor az egyik verzió megy az egyikbe, a másik a másikba."*
+
+**Mi váltotta ki:** a **valódi név** kérdése. A Sybil-védelem erősebb, ha a meghívás valódi
+néven történik — de ez ütközik a **D6**-tal (*személyes adat SOHA a láncra*), és pontosan
+azokat zárja ki, akiknek a legnagyobb szükségük lenne a koinóra (ellenséges kormány alatt
+élők, menekültek, papír nélküliek). ⚠️ Ez a **„vak mechanizmus"** újabb előfordulása.
+
+⭐ **A feloldás nem egységes szabály, hanem KÉT KOINO.** Ez a **D13/b** gyakorlatban: *a
+paramétereket nem eltaláljuk, hanem szétosztjuk* — és most először nem egy beállítást osztunk
+szét, hanem egy **erkölcsi kérdést**.
+
+**Az első koino:** ⛔ **kötelezően vállalt adat a TELEPÜLÉS és a TELJES NÉV.** Csaba: *„lehet,
+hogy sokak szerint ezzel sokat kér a koino, de ad is érte cserébe jövedelmet."*
+
+**A második koino:** a kevésbé szigorú változat, **még az indulás előtt** létrehozva — hogy
+ne utólagos engedmény legyen, hanem **egyenrangú kísérlet**.
+
+> ⭐⭐ **Ez a szerkezet ad választ a jövőbeli erkölcsi kérdésekre is:** ahol nincs egyértelműen
+> jó válasz, ott **nem választunk — kettéosztunk**, és a valóság dönt. Ez a D13 „a fork normál
+> üzemmód" elvének a legerősebb alakja: nem vésznyílás, hanem **munkamódszer**.
+
+⚠️ **Egy technikai megjegyzés a névhez, ami eldönti az egyik lehetőséget:** a név
+**lenyomatolása nem véd**. A nevek halmaza kicsi, végig lehet próbálni őket, amíg a lenyomat
+egyezik — vagyis egy hash-elt név **ugyanúgy azonosít**, mint a nyílt. Ha a név védve legyen,
+arra egyetlen működő út van: **helyben marad a meghívónál, és nem kerül láncra.**
+
+---
+
+### 💰 A PÉNZ ELSŐ KONKRÉT TERVE (Csaba, 2026-09-02 — a D10/D16 kitöltése)
+
+*Eddig a pénzről elvek voltak (D10: alkotmányos kibocsátás + egyenlő osztalék; D11: csak
+bizonyított identitás után; D16: lassú, nyilvános, megtámadható; D20: örökölhető). Csaba a
+pihenőidő alatt írt füzetében megírta az első **konkrét** változatot. ⚠️ **Ez javaslat, nem
+lezárt döntés — de a szerkezete egybevág a meglévő döntésekkel.***
+
+**A belső piac.** A koinón belül legyen piac, ahol a pénzzel kereskedni lehet, akár készpénzért
+is — *„csak az a lényeg, hogy jegyezve legyen"*. Vételi és eladási szándékot egyaránt lehet
+jelezni, tetszőleges áron; az érték a keresletből és kínálatból **kiderül**, nem meg van
+mondva. Az ettől eltérő ajánlat sem inkorrekt: *„mindenki annyiért adja, amennyiért akarja,
+így fog megmutatkozni az értéke."*
+
+**A létrehozás.** Pénzt legalább **3 e-ember** hozhat létre, és ők adják meg az első
+paramétereket; ezt később a közösség **2/3-os mediánnal** írhatja át. *(Ez a D4/D13-c mintája,
+egy szinttel odébb.)*
+
+**A kibocsátás két csatornája** — és ez a lényeg, hogy **két külön dolgot** csinálnak:
+
+1. **Az induló 10 koinos, egy év alatt** (napi 1/365). ⭐ Csaba indoka **nem ösztönzés**,
+   hanem monetáris: *„a forgalomban lévő pénznek és a közösség méretének arányosnak kéne
+   lennie."* Ez a csatorna a pénzmennyiséget **a létszámhoz** köti. A paraméter később **nem
+   módosítható**.
+2. **Évi 10% az összes pénzre, mindenkinek egyenlően szétosztva** — ⭐ *nem a saját tőkéjük
+   kamatozik.* Ez a D10 „egyenlő osztaléka", és helyesen kerüli el, hogy a meglévő
+   egyenlőtlenség sokszorozódjon. 2/3-dal módosítható.
+
+⚠️ **Amit érdemes tudni a kettőről: nem ugyanazt a munkát végzik.** Az 1. a **létszámhoz**
+köti a mennyiséget, a 2. az **időhöz** — évi 10% mellett a teljes mennyiség húsz év alatt
+~6,7-szeresére nő, függetlenül attól, hányan vannak. A 2. csatorna valódi hatása tehát nem a
+méret-arányosság, hanem egy **lassú újraelosztás a régi tulajdonosoktól mindenki felé** (a
+frissen belépők javára). Ez védhető cél — csak más cél, mint az 1. *(Előzmény, amit érdemes
+megnézni: a Duniter/Ğ1 „egyetemes osztaléka" pontosan ezt csinálja, és van rá képletük, hogy
+a dividendum a taglétszámhoz igazodjon.)*
+
+**Az online-feltétel — és Csaba pontosítása.** Az első megfogalmazás napi 6 óra online-létet
+kívánt a napi részhez. ⚠️ Claude ellenvetése: ez a pénzt a **készülék elérhetőségéhez** kötné,
+és pont azokat büntetné, akiket a D15/D31 védeni akar; ráadásul kijátszható egy bekapcsolva
+hagyott géppel, tehát nem a részvételt méri, hanem a hardvert.
+⭐ **Csaba pontosítása:** *„a pénze mindenképpen rá vár, nem veszíti el akkor sem, ha csak 5 év
+alatt teljesíti… de amúgy lehet, hogy nem is kell ösztönzés, és jobb érzés lenne, ha csak úgy
+a létezéséért járna a pénz."*
+
+✅ **ELDÖNTVE (Csaba, 2026-09-02): NINCS FELTÉTEL — „csak úgy, a létezéséért" jár.** Se online
+idő, se tevékenység. ⭐ Ez a legtisztább alak: nem méri a hardvert, nem bünteti a rossz
+kapcsolatút, nem játszható ki, és pontosan a D10 „egyenlő osztaléka". Az induló 10 koinos
+ütemezése (napi 1/365) így **kizárólag monetáris** szabály marad — a pénzmennyiséget a
+létszámhoz köti —, nem ösztönző.
+
+**Öröklés.** Az elhunyt pénze az általa megjelölt személyekhez kerül. ✅ Egybevág a **D20**-szal:
+*a pénz igen, a tudatpont és az azonosság soha.*
+
+**Nyitott kérdés, amit Csaba feltett:** *„tudnánk közös kripto kasszát létrehozni?"* —
+Technikailag igen (több-aláírásos tárca, küszöb-aláírás). ⚠️ De egy **konkrét külső lánchoz**
+kötné a koinót, azon keresztül pedig csomópont-szolgáltatókhoz és tőzsdékhez — vagyis egy
+egész függőségi sorhoz, aminek minden kapuőrét megörökölnénk (2. szabály, D32). **Külső
+ügyletekre kiegészítő eszközként elképzelhető; a koino BELSŐ pénze soha ne ezen álljon.**
+
+---
+
 ### D17. A konszenzus hatóköre és biztonsági alapja (2026-08-25 — az N8 áthidalása)
 
 *A D7 („személy-alapú konszenzus") folytatása. A **D14 megváltoztatta a feladatot**: az N8

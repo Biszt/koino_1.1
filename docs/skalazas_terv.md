@@ -62,6 +62,79 @@ nem az S3 kényelmi része, hanem **az illesztés helyessége** — az első nap
 
 ---
 
+## 0/b. ⭐ A KOINO SZERKEZETE — három dolog, három tárolási szabály (Csaba, 2026-09-02)
+
+*Ez a szakasz azért került ide, mert a kép a 4.7, a 4.9 és az 5.2 között volt szétszórva.
+Csaba egy mondatban összefoglalta, és így áll össze:*
+
+> *„A tartalmak — azoknál, akik tudatpontot rendeltek hozzájuk. A metaadatok — a magban, ami
+> mindig összeáll egy buli alkalmával. A láncok a hitelesítéshez — mindenkinél, Merkle
+> módon."*
+
+**1. A TARTALOM (a törzs).** Annál van, aki **tudatpontot tett rá** — és csak akkor mozog, ha
+rákoppintanak. Ez a legnagyobb adat és a legritkábban kell. *(Mérve: 200 entitás ≈ 4,4 MB.)*
+A **D14** teszi véglegessé: amit senki nem tart, az elfelejtődik.
+
+**2. A METAADAT (cím, típus, szülő, számértékek).** **Szétdarabolva** él, és **az ablakban áll
+össze**. Kicsi és sűrűn változik (a számai), ezért kell külön kezelni a törzstől.
+*(Számolva: ~250 B/entitás; egymilliárdos koinóban 25 példánnyal ~62 KB/készülék.)*
+
+**3. A LÁNC (a hitelesítés).** **Mindenkinél**, összenyomva — rekurzív Merkle-lenyomattal egy
+ember egész élete **~80 bájt**, akárhány eseménye van (4.9).
+
+> ### ⚠️ ÉS EGY SZÁM, AMIT NE ÍRJUNK IDE (2026-09-02 — Claude háromszor rontotta el)
+>
+> Kísértő a szorzás: *„egymilliárd ember × 80 bájt = 80 GB"*. **Ezt a számot SENKI nem
+> fizeti ki**, mert a tervben nincs olyan pont, ahol valakinek mindenki láncát tárolnia
+> kellene. Két dolog miatt:
+>
+> ⭐⭐ **(a) Egy esemény hitelesítése NULLA tárolt bájtba kerül.** Az esemény magával hozza a
+> tartalma lenyomatát és az aláírást, a szerző pedig maga a nyilvános kulcs — vagyis
+> bárki, bármikor, bármit ellenőrizhet **anélkül, hogy bármit tárolna** róla. Ezt a mai kód
+> már így csinálja (`esemenyEllenorzese`).
+>
+> ⭐ **(b) A lánc-gyökér EGYETLEN dologra kell:** hogy kiderüljön, ha valaki **elhallgatja
+> vagy kettéágaztatja a saját láncát**. És ezt csak azokról kell tudni, **akiknek az
+> eseményeit ténylegesen számolod** — vagyis akik a te szeleteidben szerepelnek. Ha 200
+> entitást tartasz, és mindegyiken 50 tulajdonos van, az legfeljebb ~10 000 ember:
+> **~800 KB.** A koino létszáma ebben sem szerepel.
+>
+> **Mikor kell mégis globális ellenőrzés?** Egyetlen helyzetben: **tanúsításkor**, hogy
+> *„ez az ember nem regisztrált-e már"* (D21). Ez viszont a **D14 tartós magjának** a
+> dolga — egy rekord személyenként —, és nem a láncoké.
+
+⭐ **Amiért ez a felosztás jó:** a három dolog **három különböző ütemben** változik, és a
+tárolási szabályuk ezt követi. A törzs ritkán és helyben; a metaadat sűrűn, de kicsiben; a
+lánc soha nem nő, mert összenyomódik.
+
+### ⚠️ EGY NÉVÜTKÖZÉS, AMIT TISZTÁZNI KELL
+
+A **„mag"** szó a tervben már foglalt: a **D14 tartós magja** a *csalás-elleni csontváz*
+(azonosság-egyszeriség, később a pénz) — az, **aminél a felejtés maga a csalás** —, és Csaba
+döntése róla az, hogy **legyen minél kisebb**.
+
+Az entitás-metaadat **nem ilyen**: ha egy entitást senki nem tart, a metaadatának is el kell
+halványulnia (D14, és 5.7). Vagyis amit itt „mag" néven emlegetünk, az valójában az, amit a
+terv **kereső-rétegnek** hív (5.1–5.2): szétdarabolt, replikált, csak metaadat.
+
+**Két út van, és tudatosan kell választani:** vagy **kereső-rétegnek** hívjuk (és a D14 magja
+érintetlen marad), vagy **kimondjuk, hogy a mag definíciója bővül** — de akkor a *„legyen
+minél kisebb"* elv sérül. ⭐ Az elsőt javaslom, mert a két dolognak **más az élettartama**.
+
+### ⚠️ EGY KÉRDÉS, AMI ELDÖNTETLEN
+
+*„a magban, ami mindig összeáll egy buli alkalmával"* — **mi áll össze pontosan?**
+
+- **(a) Minden készülék megkapja az ÖSSZES metaadatot** az ablakban. ⚠️ Egymilliós koinóban
+  ez ~2,5 GB — nem fér el.
+- **(b) A szeletek szinkronizálnak egymással**, és mindenki azt húzza le, ami neki kell.
+  ⭐ Ez fér el, és egybevág Csaba jegyzetével: *„a számértékei frissülnek a magból."*
+
+✅ **ELDÖNTVE (Csaba, 2026-09-02): a (b).** Nem mindenki kap meg mindent az ablakban — a
+**szeletek szinkronizálnak**, és mindenki azt húzza le, ami neki kell.
+
+---
+
 ## 1. AZ ÚJ IRÁNY: két réteg, két természet
 
 | | **I. A DAG-réteg** | **II. A kereső-réteg** |
@@ -184,6 +257,43 @@ minden lépésnél megkapod a következő lépés címeit.**
 | ⭐ **Magától frissül** | amikor E miatt cserélsz, mindkettő **a foglalatból** tanulja a másik friss címét (`latlak`, `vonal.js:195`). **Nincs külön frissítő forgalom** |
 | **Bizalom nem jár vele** | a cím **nem esemény**, nem megy az `esemenyMentese`-n, semmit nem dönt el (3. szabály). Ezért **aláírni sem kell**: hamis cím elérhetetlenséget okoz, nem hamisítást |
 
+### ⚠️ 4.2/b A RAJ NEM ELÉG — KELLENEK VÉLETLEN TÁRSAK IS (Csaba kérdéséből, 2026-09-02)
+
+> Csaba: *„lehet, hogy nem is DAG-ban kéne gondolkodni, hanem hálóban. A DAG-ban nincs kör,
+> tehát az ellenőrzési láncban lehet, hogy csak később — vagy milliárdos méretben soha —
+> találkoznak."*
+
+**A kérdés két külön gráfot mos össze, de a nyomán egy valódi hiányra derül fény.**
+
+**A DAG körmentessége nem tervezői döntés, hanem kényszer.** Egy esemény a **lenyomatával**
+hivatkozik a másikra — kör csak úgy lehetne, ha A tartalmazná B lenyomatát és B az A-ét,
+ami matematikailag lehetetlen. És épp ez a jó benne: **ettől nem írható át a múlt.**
+
+**A találkozás viszont nem a DAG-ban történik, hanem a HÁLÓZATBAN** — és az már ma is háló,
+nem fa (D33: ~14 kapcsolat fejenként). Két ellentmondó esemény terjedése pletyka-szerű: ~14
+társ mellett egymilliárd embernél **~8 kör**, ötperces ablakkal **~40 perc**. Vagyis a
+találkozás gyors — **ha mindkét ág terjed.**
+
+⚠️ **A valódi kockázat tehát nem a gráf alakja, hanem a szándékos szétválasztás:** ha valaki
+a #3a-t csak egy zárt körnek mutatja, a #3b-t egy másiknak, és a két kör soha nem cserél
+egymással, akkor **soha nem találkoznak**.
+
+> ### ⭐⭐ ÉS ITT A TERVEZÉSI KÖVETKEZMÉNY, AMIT EDDIG NEM MONDTUNK KI
+>
+> A 4.2 raj-elve (*„azok találkozzanak, akiknek ugyanarról a döntésről van dolguk"*)
+> **önmagában klaszterezi a hálózatot** — és pontosan olyan alakot ad, amiben két ág
+> elrejtőzhet egymás elől.
+>
+> **Ezért a társ-lista NE csak raj-társakból álljon.** Kell bele **véletlen társ** is, akihez
+> semmi közöd — mert a véletlen, hosszú kapcsolatok azok, amik a klasztereket összekötik és
+> a hálózat átmérőjét lenyomják. *(Ez a „kis világ" jelenség; a BitTorrent és a Bitcoin is
+> ezért választ véletlen társakat.)*
+>
+> **Ellenőrizhető alak:** a `tarsak.js` társ-választása tartalmazzon egy **kötelező véletlen
+> hányadot**, amit nem a szeletek határoznak meg.
+>
+> ✅ **ELFOGADVA (Csaba, 2026-09-02):** *„egyetértek a véletlen társban."*
+
 ## 4.3 ⚠️ AZ ÁR: a hézag megszűnik jel lenni
 
 Ez a legfontosabb figyelmeztetés az I. rétegben. Ma a `sorszam` **koino-szintű**, és a hézag
@@ -224,9 +334,19 @@ tartalmaz. Egy mező most **percek**; tízezer esemény után migráció vagy k�
 
 ## 4.5 ⚠️ Amit nem szabad megígérni: „minden entitás elérhető"
 
+> ### 🎉 PONTOSÍTÁS (2026-09-02): AZ ÖSSZEHANGOLT ABLAKBAN EZ MÁSKÉNT ÁLL
+>
+> Csaba füzete rámutat, hogy az alábbi „a készülékek nagy része nem fogadóképes" állítás
+> **a folyamatos működésre igaz, az összehangolt ablakra nem**. Ha mindenki egyszerre ébred
+> és egyszerre kopog kifelé, akkor **a rések egyszerre nyílnak** — az elérhetőség nem a
+> készülék tulajdonsága lesz, hanem **az ablaké**.
+> ⭐ Vagyis a lenti kör-tágítás (tulajdonos → postaláda → másolat-tartó) **továbbra is kell**,
+> de az alap sokkal jobb, mint amivel eddig számoltunk. Részletek:
+> [`utiterv.md`](utiterv.md) 6/c.
+
 Csaba feltétele így szólt: *„legalább az egyik tudatpont-tulajdonosnak elérhetőnek kell
 lennie."* **A szó szerinti ígéret nem tartható** — mérve tudjuk (D40/D41), hogy a készülékek
-nagy része **nem fogadóképes**. Egy három-tulajdonosos, alvó entitás elérhetetlen. Ha
+nagy része **nem fogadóképes** *(a folyamatos üzemben; lásd a fenti pontosítást)*. Egy három-tulajdonosos, alvó entitás elérhetetlen. Ha
 megígérjük, hazudunk; ha kikényszerítjük, fogadóképes „szerverek" kellenek, és **a koinónak
 megint lesz teteje** (D12 bukása).
 
@@ -300,6 +420,144 @@ továbbra is csak az **azonossághoz** és a **pénzhez** kell.
    amúgy is meg kell írni**: egy szerkezet, két haszon.
 3. **A kötelező különválás** (D25 mintája) megmarad **lehetőségként**, de már nem kényszer —
    szabad kormányzati döntés, nem a technika szorít rá.
+
+## 4.7 ⭐ HÁROM DOLOG, AMI KÜLÖN ÜTEMBEN VÁLTOZIK (Csaba, 2026-09-02)
+
+*Eddig végig „entitást" mondtam. Csaba füzete szétválasztja, és ez a füzet legerősebb
+mondata:*
+
+> *„Külön kell kezelni az entitás metaadatait, a címet, és a body-t."*
+
+Mindháromnak **más a frissítési üteme, és ezért más a helye is**:
+
+- **A metaadat** (cím, típus, szülő, számértékek) szinte sosem változik önmagában, viszont a
+  **számai** folyton — ezek a szétdarabolt magban élnek, és **az ablakban összeállnak**.
+  Ezért ezt könnyű frissen tartani.
+- **A hálózati cím** percenként változhat (NAT, wifi↔mobil). ⚠️ Ezt már egyszer szétválasztottuk
+  a mutató-rétegnél (5.1), most kiderül, hogy **ugyanez a szétválasztás kell az entitáson
+  belül is**.
+- **A body** csak akkor mozogjon, ha **rákoppintanak**. Ez a legnagyobb adat, és a
+  legritkábban kell.
+
+⭐ **Ez az, amitől a böngészés olcsó lehet:** a lista-nézet metaadatból él (kicsi, friss), és
+a nehéz rész csak igény szerint jön. Amit tartok (tudatpontot tettem rá), annak a body-ja
+magától frissül módosításkor; amit csak böngésztem, azé nem.
+
+⚠️ **És egy korlát, amit ez behoz.** A füzet azt is mondja, hogy kelljen **helyi tár azoknak
+az entitásoknak is, amikre nem tettem tudatpontot** (amiket csak megnéztem). Ez ésszerű — de
+ezzel **a tudatpont-keret megszűnik a szelet felső korlátja lenni** (lásd 4.1). Kell rá
+külön szabály: elévülés (mennyi ideig tartom meg, amit csak megnéztem) vagy méret-korlát.
+**Eldöntetlen — a 9. szakaszban K11-ként felírva.**
+
+## 4.8 ⚠️ A TUDATPONT-KERET A SZELETELT VILÁGBAN — a D42 nem elég önmagában
+
+*Csaba füzete: „**A tudatpontokhoz is kell a globális egyetértés.**" Ez a megfogalmazás
+erősebb a kelleténél, de valós hiányra mutat — és a hiány a 4.6-ban leírt szerkezettel
+pótolható.*
+
+**Amit a D42 megad:** a `kiosztva ≤ 10 000` **egyetlen eseményből** ellenőrizhető. Ez áll, és
+ez a felső korlát.
+
+⚠️ **Amit nem ad meg:** hogy a *bemondás igaz-e*. Az összevetéshez a szerző láncát
+**hézagtalanul** kellene ismerni — a szeletelt tárban viszont **a hézag a normális állapot**,
+hiszen csak a saját szeleteim eseményeit tartom. Vagyis a bemondás és a számított összeg
+eltérése **szinte sosem lesz bizonyított ellentmondás**, csak „nem ellenőrizhető".
+
+**A megoldás nem globális egyetértés, hanem ugyanaz a szerkezet, harmadszor:**
+
+> ⭐ **ÖSSZEGZŐ MERKLE-FA A SAJÁT LÁNCON.** A szerző eseményei fába rendeződnek, a csomópontok
+> viszik a futó összeget — így a `kiosztva` **log N adatból bizonyítható**, az egész lánc
+> nélkül. Nem kell hozzá globális egyetértés: **a fa az ő láncáról szól, nem a világról.**
+
+⭐⭐ **És ez harmadik előfordulása ugyanannak a kódnak:**
+a **tartós mag** (D21), a **tömeges entitás** (4.6), és most a **tudatpont-keret**.
+*Egy szerkezetet írunk meg, három helyen fizet* — erős jel arra, hogy jó irányban vagyunk.
+
+⚠️ **Ami ezzel sem oldódik meg: a kettős lánc.** A szerző aláírhat két különböző eseményt
+ugyanarról a pontról, és külön mutathatja őket. Mindkét ág önmagában hibátlan. Az egyetlen
+védelem az, hogy **a két ág valahol találkozik** — és akkor a két aláírás **együtt a
+bizonyíték**, bíró nélkül (ezt az `elagazasE`/`esemenyMentese` ma is elkapja). Ez tehát
+**terjesztési kérdés, nem konszenzus** — ugyanaz a határ, mint mindenhol a koinóban.
+
+⭐ **És itt fizet a buli:** minél többen cserélnek egyszerre és minél szélesebben, annál
+hamarabb találkozik a két ág. **Az összehangolt ablak közvetlenül erősíti a kettős-cselekvés
+leleplezését.**
+
+⚠️ **Amit viszont a szeletelés ront:** ha a két ág **külön szeletbe** kerül, és senki nem
+tartja mindkettőt, a találkozás **szerkezetileg** elmarad. Ebből következik egy felírandó
+igény: **a saját lánc kapjon tartókat a szeletektől függetlenül** — kézenfekvő jelölt a
+tanúsítóid köre (akik amúgy is kezeskedtek érted). **Eldöntetlen — K12.**
+
+## 4.9 ⭐ A LÁNC ÖSSZENYOMÁSA — mi kell HITELESÍTÉSHEZ, és mi kell ADATNAK (Csaba, 2026-09-02)
+
+> Csaba kérdése: *„Ez csak a hitelesítéshez kell, vagy konkrét adatok szállítására? Ha csak
+> hitelesítésre, akkor ezt a láncot egy bizonyos mérettartományban lehetne róla hash-t
+> csinálni, amiket ismét láncra fűzni, és így tovább. Ha nem kell visszafejteni, akkor
+> végtelent lehet tárolni."*
+
+**A válasz: mindkettőre kell — de a kettő SZÉTVÁLASZTHATÓ, és utána Csabának igaza van.**
+
+**Amit NEM lehet összenyomni:** a tartalom. A tudatpont-eloszlást meg kell mutatni, a
+szavazatokat meg kell számolni, a szöveget el kell olvasni. **Hashből nem lehet állapotot
+számolni.** Ez marad az, ami szeletelésre szorul.
+
+**Amit LEHET — és ez a nyeremény:** a **hitelesítési csontváz**. Egy e-ember globálisan
+érdekes lenyomata összenyomható arra, hogy *ki ő, meddig jutott a láncában, és mennyit
+osztott ki*:
+
+- a nyilvános kulcsa — **32 B**
+- a láncának Merkle-gyökere — **32 B**
+- a bemondott összeg és a sorszám — **~16 B**
+
+⭐ **Vagyis ~80 bájt annak a helyén, ami nyersen ~70 KB volt** (200 esemény × 350 B).
+**Nagyjából ezerszeres tömörítés** — és pontosan azt csinálja, amit Csaba leírt: a régi
+részek lenyomattá válnak, a lenyomatok láncra fűződnek.
+
+**Mit old meg ez, és mit nem:**
+
+- ⭐ **A tartós mag ezzel válik milliárdos léptéken életképessé.** Egymilliárd e-ember ×
+  80 B = 80 GB *levél* — ezt senki nem tárolja, de mindenki tárolja a **32 bájtos gyökeret**,
+  és ~1 KB bizonyítékkal bárkiről bármit ellenőriz (D21).
+- ⭐⭐ **És a kettős lánc bizonyítéka TÚLÉLI az összenyomást.** Ha valaki elágazik, két
+  különböző gyökeret kötelez el magára — és mivel a gyökér a saját, aláírt eseményében
+  utazik, **két aláírt állítása mond ellent egymásnak**. Nem kell hozzá megőrizni a két
+  eredeti eseményt.
+- ⚠️ **A szeletelést NEM váltja ki.** A tartalom nem nyomható össze, tehát az továbbra is
+  csak szeletelve fér el. Csaba észrevétele a **csontvázat** teszi olcsóvá, nem a húst.
+
+> ### ⚠️ KÉT SZÁM, AMIT NEM SZABAD ÖSSZEKEVERNI (2026-09-02, mert Claude összekeverte)
+>
+> A tervben szereplő nagy számok — *„egymilliárdnál ~70 TB"* — **az egész koino összes
+> eseményének összegére** vonatkoznak, nem arra, amit egy készüléknek tárolnia kell. Ez a
+> szám csak azt indokolja, **miért kell szeletelni** — nem maradék probléma.
+>
+> **Amit egy készülék ténylegesen tárol, a szeleteléssel:**
+> a saját szelete (mérve: 200 entitás ≈ **4,4 MB**) · a saját lánca · a mag gyökere
+> (**32 B**) · és amit csak megnézett *(K11: erre kell elévülési vagy méret-szabály,
+> különben ez az egy tétel hízik vissza)*.
+>
+> ⭐ **Vagyis szeletelés + összenyomás után nincs 70 TB-os probléma senkinél.** A 70 TB
+> szétoszlik egymilliárd készüléken — fejenként ~70 KB —, és minden esemény ott lakik, ahol
+> a gazdája (D14). Amit senki nem tart, az elfelejtődik — ez **szándék, nem hiba**.
+
+
+- ⚠️ **A találkozás követelménye megmarad.** Két ellentmondó gyökeret is látnia kell
+  valakinek — ez ugyanaz a terjesztési kérdés, mint mindenhol.
+
+### ⚠️ Két szabály, ami nélkül ez elromlik
+
+1. **Az összenyomás LEGYEN DETERMINISZTIKUS.** Ha én összenyomom a lánc egy szakaszát és te
+   nem, **más gyökeret számolunk ugyanarra a tudásra** — és a két gép némán eltérőnek látja
+   magát. Ez pontosan az a hibacsalád, amit a `rendezettBemenet`-nél már egyszer
+   megtanultunk. Kell egy kanonikus szabály arra, **mikor és meddig** nyomunk össze.
+2. **Csak azt szabad, aminek a hatása már lezárult.** Egy nyitott döntés bemenetét nem lehet
+   hasheltté tenni — a szavazatokat még számolni kell. Vagyis az összenyomás határa
+   legkorábban **a leghosszabb döntési ablak** után van.
+
+**Eldöntendő (K14):** hol lakjon a lánc-gyökér? Ha a **tartós magban**, akkor a napi
+kötegeléssel együtt mozog, és mindenki 32 bájtból ellenőrizhet bárkit — ez a legszebb
+megoldás. ⚠️ De a magot **állandóan változóvá** teszi, ami a D14 *„legyen minél kisebb"*
+elvével feszül.
 
 ---
 
@@ -609,7 +867,11 @@ indexelni.
 | **K6** | ~~Jó-e a „kereső-réteg" név?~~ | ✅ **ELDÖNTVE** — Csaba maga is így nevezte |
 | **K7** | A szelet-megtalálás **A) hash-DHT** vagy **B) bizalmi háló**? | ⭐ **középút** (5.3), de **méréssel**, és **ráér** |
 | **K8** | A **tömeges entitás** (10⁷ tulajdonos → ~4,3 GB) | ⭐ **VAN VÁLASZ (4.6):** összegző Merkle-fa — a D21 szerkezete másodszor. Mindenki ~1 KB-ot tárol. *(A korábbi „a D17 táblázata módosul" állítás visszavonva.)* |
-| **K10** | **Láthatósági küszöb** a keresőn (Csaba felvetése, 5.8): 2 független tulajdonos kelljen a keresőben való megjelenéshez? | ⭐ **igen, de KIZÁRÓLAG a kereső-rétegen** — a létezésen soha. ⚠️ **Új szabály, nem pontosítás** — a te döntésed, és a küszöb **ne legyen felfelé tolható** közösségi paraméter (cenzúra-kockázat) |
+| **K10** | **Láthatósági küszöb** a keresőn (Csaba felvetése, 5.8): 2 független tulajdonos kelljen a keresőben való megjelenéshez? | ⭐ **igen, de KIZÁRÓLAG a kereső-rétegen** — a létezésen soha. ⚠️ **Új szabály, nem pontosítás** — a te döntésed, és a küszöb **ne legyen felfelé tolható** közösségi paraméter (cenzúra-kockázat). 🔁 **Bővült (2026-09-02):** Csaba szerint a **síkidom nézet** ténylegesen használni fogja a láthatósági paramétereket, mert **az dönti el, mikről megy kérelem** — vagyis a küszöb nem csak „mi bukkan fel a keresőben", hanem **mit tölt be egy nézet**. Ez több, mint amiről az 5.8 szól. |
+| ~~**K11**~~ | ~~A csak megnézett entitások helyi tára: meddig tartsuk meg?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-02): tartsa meg nyugodtan.** Claude aggálya (korlátlan hízás) túlzott volt: egy ember véges sokat böngészik, és ⭐ **a megtartott másolat épp az elérhetőséget javítja** (4.5). Az egyetlen valódi követelmény, hogy **eldobható** legyen — ha kell a hely, a legrégebbi megy, és ez semmit nem ront el, mert a tartalom újra lekérhető és ellenőrizhető. |
+| **K12** | Ki tartja egy e-ember **teljes láncát**, ha a tár szeletelt? (4.8 — enélkül a kettős lánc szerkezetileg leleplezhetetlen) | ⭐ kézenfekvő jelölt: **a tanúsítói** — akik amúgy is kezeskedtek érte. A Szakasz 4-gyel együtt dől el |
+| **K13** | A **kérelmezések adatcsoportja** (utiterv 6/c): terjedjen-e a kérelmező kiléte? | ✅ **Csaba álláspontja:** *„a koino nem a magánéletről szól; azt kell megosztani, amit fel is vállalnak."* — a **kimondott** tettekre (pont, szavazat, javaslat) ez így is van. ⚠️ **De a KÉRELEM más kategória:** az olvasás még nem állásfoglalás (a képviselő szavazata nyilvános, a könyvtári olvasmánylistája nem), és a kockázat nem a kellemetlenség, hanem a **célzás** — ez az a lista, amit egy becstelen kormány kérne (D15). ⭐ **És ingyen megoldható:** a fúráshoz a **cím** kell, nem a név, tehát elég annyi, hogy „valaki kéri E-t". ✅ **ELDÖNTVE (Csaba, 2026-09-02): a név NE menjen vele.** |
+| **K14** | Hova kerüljön a **lánc-gyökér** (4.9)? A tartós magba (mindenki 32 B-ból ellenőriz bárkit), vagy külön? | ⚠️ a magban a legszebb, de **állandóan változóvá** teszi — feszül a D14 *„legyen minél kisebb"* elvével |
 | **K9** | Vállaljuk az `esemenyek.jsonl` átszervezését (4.1), vagy előbb csak mérünk? | ⭐ **előbb S1** — öt fájlt érint |
 
 ---

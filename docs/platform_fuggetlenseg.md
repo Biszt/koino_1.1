@@ -139,6 +139,19 @@ legvégső tartalék**, arra az esetre, ha egy készüléken a program egyáltal
 Ahol fut, ott minden automatikus, mert nincs mit engedélyeztetni (lásd az 1. pont 3-as
 sorát).
 
+> ### ⚠️ CSABA PONTOSÍTÁSA (2026-09-02): EZ MEGENGEDÉS, NEM CÉL
+>
+> *„Elfogadom, ha másképp nem megy, de fő cél az, hogy **készülék független** legyen a
+> működése."* — Az alábbi „a PC-k tartják fenn" tehát **tartalék-érv**, nem tervezési
+> alapállás. Amire a terv épül, az az **összehangolt ablak** (buli): ha mindenki egyszerre
+> ébred, akkor a telefonok is fogadóképesek abban a percben, és nem kell gerincnek egy
+> készülék-osztály. Lásd [`utiterv.md`](utiterv.md) 6/c.
+>
+> ⚠️ **És ugyanitt elesik egy másik érv:** *„a koino döntései napokban mérődnek… aki naponta
+> egyszer szinkronizál, semmiről nem marad le… a koino lassúsága itt védelem."* Csaba:
+> **„percenként kell frissülnie"** (a saját készülékén bárki állíthat ritkábbat). A lassúságra
+> **nem szabad védelemként hivatkozni** — ez már a második alkalom, hogy ezt helyre kell tenni.
+
 > ### ⭐ A koino folyamatos működését nem a telefonok tartják fenn, hanem a PC-k.
 >
 > PC-n semmi nem korlátozza a telepítést és a futtatást. Ott a csomópontok folyamatosan,
@@ -214,7 +227,7 @@ elkopik — ezek ellenőrizhetők.*
 | **3** | **A bizalom sose a csatornából jöjjön.** Eseményt soha nem fogadunk el azért, mert „megbízható helyről jött". Egyetlen kapu van: `esemenyMentese`. | a hálózati út ugyanazon a kapun megy be — próba van rá |
 | **4** | **Legyen mindig kézi út.** Minden automatikus cseréhez tartozzon fájlba kimentés / fájlból beolvasás. **Ha egy funkció csak online tud működni, az fojtópont.** | funkciónként: van-e kézi megfelelője |
 | **5** | **Ne épüljön folyamatos kapcsolatra.** A döntések napokban mérődnek; ami másodperces élő kapcsolatot kívánna, visszahozza a törékenységet. | tervezéskor: elromlik-e, ha naponta egyszer szinkronizál |
-| **6** | ⭐ **Nulla függőség, kis méret.** Ma **33 fájl, 463 KB** a mappa — **tömörítve ~85 KB**, ennyi megy át a telefonra —, **0 npm-csomag**. *(Mérve 2026-08-31; korábban 27 fájl / 257 KB állt itt — a szabály attól ellenőrizhető, hogy a mércéje friss.)* Ez már **nem elegancia, hanem védelem**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont (csomagtár, regisztráció, letiltás). | `find koino -type f \| wc -l`, `du -sh koino` — ⚠️ a **kicsomagolt** számot adja, ne a 73 KB-ot keresd benne |
+| **6** | ⭐ **Nulla függőség, kis méret.** Ma **34 fájl, 491 KB** a mappa — **tömörítve ~90 KB**, ennyi megy át a telefonra —, **0 npm-csomag**. *(Mérve 2026-08-31; korábban 27 fájl / 257 KB állt itt — a szabály attól ellenőrizhető, hogy a mércéje friss.)* Ez már **nem elegancia, hanem védelem**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont (csomagtár, regisztráció, letiltás). | `find koino -type f \| wc -l`, `du -sh koino` — ⚠️ a **kicsomagolt** számot adja, ne a 73 KB-ot keresd benne |
 | **7** | **A böngésző csak kliens lehet, sose előfeltétel.** (D29 pontosítása: nem tiltjuk, de nem is támaszkodunk rá.) | egyetlen működés se igényeljen böngészőt |
 | **8** | **Ne tervezzünk jogi védelemre.** Ha egy érv így kezdődik: „ezt úgyis megtiltja a szabályozás" — az érv nem érvényes. | átnézéskor: van-e ilyen feltevés |
 
@@ -258,7 +271,18 @@ hogy **a meglévő, idegen kézben lévő eszközökön is működjön.**
   1. **a jogi útra való támaszkodás** — kiesett, tervezési korlát lett belőle;
   2. **a böngésző mint mentőöv** — álbiztonság volt; a böngészők a Google motorján
      futnak, és a Safe Browsing egyetlen lista majdnem mindenhez;
-  3. **a kézi sáv mint üzemmód** — nem az; a kézi sáv tartalék, az automatizmust a PC-k
-     adják.
+  3. ~~**a kézi sáv mint üzemmód**~~ — ⚠️ **Csaba 2026-09-02-én ezt visszavonta:** *„ezt már
+     nem tartom. Egyelőre a készülék független hálózatot próbálunk kiépíteni."* A kézi út a
+     4. szabály miatt megmarad, de **nem azzal az indokkal**, hogy az automatizmust a PC-k
+     adják. *(Az eredeti szöveg így szólt: „a kézi sáv tartalék, az automatizmust a PC-k
+     adják".)*
+
   *Ez a negyedik és ötödik alkalom, hogy Csaba percekkel korábban leírt szabályban talált
   hibát. A minta változatlan: a friss levezetést nem szabad véglegesnek tekinteni.*
+
+- **2026-09-02** — Csaba pihenőidő alatt írt jegyzetei
+  ([`pihenosIdoAlattiGondolatok.md`](pihenosIdoAlattiGondolatok.md)) **három állítást
+  gyengítettek** ebben a dokumentumban: a PC-gerinc **megengedés lett, nem cél** (a fő cél a
+  készülék-független működés); a *„lassúság mint védelem"* érv **elesett** (percenkénti
+  frissítés a cél); és a kézi sáv indoklása **átíródott**. A helyükbe lépő szerkezet az
+  **összehangolt ablak** (buli): [`utiterv.md`](utiterv.md) 6/c.
