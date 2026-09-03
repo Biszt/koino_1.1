@@ -12,7 +12,13 @@
 // ⚠️ A TÁROLÓT KÍVÜLRŐL KAPJA (D29, 2026-08-28). Ez a fájl csak a LOGIKÁT tudja; hogy
 // az adat fájlban, memóriában vagy máshol él, az a tároló dolga. Így a szabályok EGY
 // példányban léteznek: ha később más tárolót teszünk alá, a lánc-kezelés nem másolódik
-// és nem csúszhat szét. A tároló két műveletet ad: `betolt()` és `hozzafuz()`.
+// és nem csúszhat szét.
+//
+// ⭐ A TÁROLÓ MŰVELETEI A 3.2 ÓTA KÉRDEZHETŐK (2026-09-03): `esemeny(azonosito)` ·
+// `szerzoLanca(szerzo)` · `szeletEsemenyei(entitas)` · `sorszamSzerint(szerzo, n)` ·
+// `hozzafuz(esemeny)`. A régi `betolt()` megmaradt, de **csak a próbák és a kis koino
+// állapotszámítása hívja** — a hétköznapi műveletek közül egyetlen sem.
+// *Ez a kilencedik szabály: az illesztés ne kényszerítse a teljes betöltést.*
 //
 // A SAJÁT LÁNC: minden e-ember eseményei egymásra mutatnak (`elozo`), és sorszámozva
 // vannak. Ez adja a D17 „saját lánc-következetesség"-ét — és ezért lepleződik le itt,
@@ -45,19 +51,24 @@ export async function esemenyMentese(tar, esemeny) {
     return { mentve: false, ok: ellenorzes.ok };
   }
 
-  const meglevok = await tar.betolt();
-
   // ----- 2. MÁR MEGVAN? -----
   // Az azonosító a tartalom lenyomata, tehát ha már megvan, akkor BÁJTRA ugyanaz.
-  // Ezért az ismételt mentés nem hiba, hanem semmit-nem-csinálás. (Ez teszi majd a
-  // hálózati összefésülést triviálissá a Szakasz 2-ben.)
-  if (meglevok.some((meglevo) => meglevo.azonosito === esemeny.azonosito)) {
+  // Ezért az ismételt mentés nem hiba, hanem semmit-nem-csinálás. (Ez teszi a hálózati
+  // összefésülést triviálissá.)
+  //
+  // ⭐ 3.2: EZ MÁR NEM OLVASSA VÉGIG A TÁRAT. Eddig `tar.betolt()` volt itt, ezért minden
+  // mentés ára a tár méretével nőtt — mérve: 100 000 eseménynél 495 ms EGYETLEN mentés,
+  // vagyis N esemény beírása négyzetes. Most azonosító szerint kérdezünk, ami O(1).
+  if (await tar.esemeny(esemeny.azonosito)) {
     console.log('esemenyMentese - VÉGE (már megvolt)');
     return { mentve: true, marMegvolt: true };
   }
 
   // ----- 3. ELÁGAZÁS-KERESÉS: a kettős cselekvés leleplezése -----
-  const utkozo = meglevok.find((meglevo) => elagazasE(meglevo, esemeny));
+  // Szintén célzott kérdés: elég a szerző láncának EGYETLEN pontját megnézni — oda
+  // ütközhet be egy második esemény.
+  const ottLevok = await tar.sorszamSzerint(esemeny.szerzo, esemeny.sorszam);
+  const utkozo = ottLevok.find((meglevo) => elagazasE(meglevo, esemeny));
 
   // ----- 4. MENTÉS -----
   // Az elágazást is elmentjük! A két esemény EGYÜTT a bizonyíték (D17/D19) — ha az
@@ -90,8 +101,7 @@ export async function esemenyMentese(tar, esemeny) {
  * @returns {Promise<Object|undefined>}
  */
 export async function esemenyLekerese(tar, azonosito) {
-  const esemenyek = await tar.betolt();
-  return esemenyek.find((e) => e.azonosito === azonosito);
+  return tar.esemeny(azonosito);
 }
 
 /**
@@ -103,8 +113,7 @@ export async function esemenyLekerese(tar, azonosito) {
  * @returns {Promise<Array<Object>>}
  */
 export async function sorszamSzerint(tar, szerzo, sorszam) {
-  const esemenyek = await tar.betolt();
-  return esemenyek.filter((e) => e.szerzo === szerzo && e.sorszam === sorszam);
+  return tar.sorszamSzerint(szerzo, sorszam);
 }
 
 /**
@@ -114,32 +123,36 @@ export async function sorszamSzerint(tar, szerzo, sorszam) {
  * @returns {Promise<Array<Object>>}
  */
 export async function sajatLancEsemenyei(tar, szerzo) {
-  const esemenyek = await tar.betolt();
-  return esemenyek
-    .filter((e) => e.szerzo === szerzo)
-    .sort((a, b) => a.sorszam - b.sorszam);
+  return (await tar.szerzoLanca(szerzo)).sort((a, b) => a.sorszam - b.sorszam);
 }
 
 /**
- * Egy koino összes eseménye (az állapotszámításhoz).
+ * Egy koino ÖSSZES eseménye (az állapotszámításhoz).
+ *
+ * ⚠️ **EZ AZ EGYETLEN MŰVELET, AMI NEM SKÁLÁZIK — és ez tudatos.** Az `allapotSzamitasa`
+ * tiszta függvény: azt számolja ki, amit kap. Kis koinóban ez a teljes halmaz, és úgy is
+ * kell; nagyban viszont a hívó **szeletet** ad neki (`entitasEsemenyei`), és akkor ez a
+ * függvény nem szerepel az útban.
+ *
+ * ⛔ **Új kódban ne ezt hívd** — kérdezz szeletet vagy láncot.
+ *
  * @param {Object} tar
  * @param {string} koino
  * @returns {Promise<Array<Object>>}
  */
 export async function koinoEsemenyei(tar, koino) {
-  const esemenyek = await tar.betolt();
-  return esemenyek.filter((e) => e.koino === koino);
+  return (await tar.betolt()).filter((e) => e.koino === koino);
 }
 
 // ===================================
 // A SZELET — egy entitás eseményei
 // ===================================
 //
-// ⚠️ EZ MÉG A LASSÚ ÚTON MEGY (`tar.betolt()`), és ez tudatos: a 3.1 lépés a KANONIKUS
-// ALAKOT teszi rendbe, a tár-illesztő szeletelhetővé tétele a 3.2. Ami itt most számít, az
-// a HELYES KÉRDÉS — hogy a fölötte lévő rétegek már ezt hívják, ne a `betolt()`-öt. A
-// megvalósítás mögötte kicserélhető anélkül, hogy bárki más változna (9. szabály: az
-// illesztés most kell, a mélység később).
+// ✅ 3.2 ÓTA EZ CÉLZOTT KÉRDÉS. A 3.1-ben még `tar.betolt()`-tel ment, azzal a
+// megjegyzéssel, hogy „ami itt most számít, az a HELYES KÉRDÉS — a megvalósítás mögötte
+// kicserélhető". Így is lett: a tároló azóta **szelet szerint tartja nyilván** az
+// eseményeket, és egyetlen hívó sem változott tőle. *(9. szabály: az illesztés az első
+// naptól milliárdos, a megvalósítás mögötte lehet egyszerű — és cserélhető.)*
 
 /**
  * Egy entitás (szelet) összes eseménye.
@@ -153,8 +166,10 @@ export async function koinoEsemenyei(tar, koino) {
  * @returns {Promise<Array<Object>>}
  */
 export async function entitasEsemenyei(tar, koino, entitas) {
-  const esemenyek = await tar.betolt();
-  return esemenyek.filter((e) => e.koino === koino && szelet(e) === entitas);
+  // ⭐ 3.2: célzott kérdés — a tároló szelet szerint tartja nyilván az eseményeket, tehát
+  // ez már NEM olvassa végig a tárat. A koino-szűrés csak biztonsági öv (a fájl amúgy is
+  // koinónként külön van).
+  return (await tar.szeletEsemenyei(entitas)).filter((e) => e.koino === koino);
 }
 
 /**

@@ -839,9 +839,9 @@ indexelni.
 | # | Lépés | Réteg | Mit bizonyít | Mérés |
 |---|---|---|---|---|
 | **S1** | ✅ **A FAL MEGMÉRVE** (2026-08-31) — [`skalaMeres.js`](../koino/meres/skalaMeres.js) | I | ✅ a C állítás igaz; ⭐⭐ **és a BEÍRÁS a legkorábbi fal** | kész — [`eredmenyek.md`](../koino/meres/eredmenyek.md) |
-| **S1/b** | **A BEÍRÁSI ÚT** — gyorsítótár a tároló mögé | I | ⚠️ **KARBANTARTÁS, NEM MÉRFÖLDKŐ** (0. szakasz): a rossz kérdést gyorsítja, nem javítja | ugyanaz a mérő, újrafuttatva |
-| **S1/c** | **`agMeretSzamitasa` javítása** — „szülő → gyerekek" mutató + utó-bejárás | I | ⚠️ szintén **karbantartás** — de valódi hiba a mai kódban | ugyanaz a mérő |
-| **S2/a** | ⛔ **A TÁR-ILLESZTŐ SZELETELHETŐVÉ TÉTELE** — a `betolt()` ne „mindet" adjon, hanem entitás / szerző / tartomány szerint | I | ⭐ **ez az ILLESZTÉS helyessége**, nem kényelem — a 0. szakasz szabálya ezt kapja el elsőnek | a mérő: a betöltött bájt a **kért szelettel** arányos-e |
+| ~~**S1/b**~~ | ~~A beírási út~~ | I | ✅ **MEGOLDVA az S2/a-val** — nem gyorsítótárral, hanem a helyes kérdéssel | mérve: **495 ms → 1,4 ms**, és **lapos** |
+| ~~**S1/c**~~ | ~~`agMeretSzamitasa` javítása~~ | I | ✅ **KÉSZ** (2026-09-03) — levelektől felfelé, egy menetben; a rejtett ciklus-veszély is elmúlt | mérve: **4 615 ms → 502 ms**, és **lineáris** |
+| ~~**S2/a**~~ | ~~A tár-illesztő szeletelhetővé tétele~~ | I | ✅ **KÉSZ** (2026-09-03) — `esemeny()` · `szerzoLanca()` · `szeletEsemenyei()` · `sorszamSzerint()`. A `betolt()` megmaradt, de **egyetlen hétköznapi művelet sem hívja** | 203 önpróba rendben |
 | **S2** | ⭐ **A KANONIKUS ALAK BŐVÍTÉSE** (`kiosztva` + `entitasSorszam` [+ `latott`]) | I | a három önhordó bizonyíték | rontás-próbák: elhallgatott esemény → **kimutatható ellentmondás** |
 | **S3** | **Entitás-szintű tár** | I | a tárolás egysége az entitás | a betöltött bájt az entitás méretével arányos |
 | **S4** | **Entitás-szintű lenyomat és ÁLLÁS** | I | a csere ára a **közös szeletektől** függ | S1 tárával: 1 eltérés 100 000 esemény közt → hány bájt |

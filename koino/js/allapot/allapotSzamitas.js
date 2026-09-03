@@ -370,9 +370,7 @@ export function allapotSzamitasa(esemenyek) {
   // ----- AZ ÁG TELJES MÉRETE (D26) -----
   // Tájékoztató adat: mekkora az egész ág, ha valaki az egészet akarná. A VÁLLALÁS
   // ettől függetlenül csak arra az egy entitásra szól, amire pontot tettél.
-  for (const entitas of entitasok.values()) {
-    entitas.agMeret = agMeretSzamitasa(entitas.azonosito, entitasok);
-  }
+  agMeretekSzamitasa(entitasok);
 
   const allapot = {
     koino: koinoAdatok,
@@ -408,22 +406,60 @@ export function allapotSzamitasa(esemenyek) {
 // ===================================
 
 /**
- * Egy entitás és minden leszármazottjának összesített mérete (D26 — tájékoztató adat).
- * @param {string} azonosito
- * @param {Map} entitasok
- * @returns {number} bájt
+ * MINDEN entitás ág-méretét kiszámolja: az entitás és összes leszármazottja együtt
+ * (D26 — tájékoztató adat).
+ *
+ * ===== ⚠️ MIÉRT ÍRTUK ÁT (2026-09-03, mérésből) =====
+ *
+ * A régi változat entitásonként végigment az ÖSSZES entitáson, rekurzívan — vagyis
+ * négyzetes volt. **Mérve: 7 767 entitásnál ~60 millió lépés, 4,6 másodperc.** Ez tette
+ * lassúvá az egész állapotszámítást, és semmi köze nem volt a skálázási szerkezethez:
+ * közönséges hiba volt egy közönséges függvényben.
+ *
+ * ⭐ AZ ÚJ VÁLTOZAT EGY MENETBEN, LEVELEKTŐL FELFELÉ dolgozik: minden entitás **egyszer**
+ * adja hozzá a saját ág-méretét a szülőjéhez, és a szülő akkor lép tovább, ha már minden
+ * gyereke beszámolt. Egy bejárás, rekurzió nélkül.
+ *
+ * ⭐⭐ ÉS EZZEL EGY REJTETT VESZÉLY IS ELTŰNT: a régi, rekurzív változatot egy KÖRBE
+ * mutató szülő-lánc (A szülője B, B szülője A — áthelyezési egyezmények után nem
+ * elképzelhetetlen) **végtelen rekurzióba** vitte volna. Itt a körben lévő entitások
+ * egyszerűen sosem érik el a „minden gyerekem beszámolt" állapotot, tehát kimaradnak —
+ * nincs se összeomlás, se végtelen ciklus.
+ *
+ * @param {Map} entitasok - azonosító → entitás (helyben kap `agMeret` mezőt)
  */
-function agMeretSzamitasa(azonosito, entitasok) {
-  const entitas = entitasok.get(azonosito);
-  if (!entitas) return 0;
-
-  let osszeg = entitas.meret;
-  for (const masik of entitasok.values()) {
-    if (masik.szulo === azonosito) {
-      osszeg += agMeretSzamitasa(masik.azonosito, entitasok);
+function agMeretekSzamitasa(entitasok) {
+  // ----- 1. SZÜLŐ → HÁNY GYEREKE VAN (egyetlen menet) -----
+  const hatralevoGyerek = new Map();
+  for (const e of entitasok.values()) {
+    e.agMeret = e.meret;                       // mindenki a sajátjával indul
+    hatralevoGyerek.set(e.azonosito, 0);
+  }
+  for (const e of entitasok.values()) {
+    if (e.szulo && hatralevoGyerek.has(e.szulo)) {
+      hatralevoGyerek.set(e.szulo, hatralevoGyerek.get(e.szulo) + 1);
     }
   }
-  return osszeg;
+
+  // ----- 2. A LEVELEKTŐL FELFELÉ -----
+  const sor = [];
+  for (const e of entitasok.values()) {
+    if (hatralevoGyerek.get(e.azonosito) === 0) sor.push(e);
+  }
+
+  while (sor.length) {
+    const e = sor.pop();
+    if (!e.szulo) continue;
+
+    const szulo = entitasok.get(e.szulo);
+    if (!szulo) continue;                      // a szülő nem létezik (elfelejtették)
+
+    szulo.agMeret += e.agMeret;
+
+    const maradt = hatralevoGyerek.get(szulo.azonosito) - 1;
+    hatralevoGyerek.set(szulo.azonosito, maradt);
+    if (maradt === 0) sor.push(szulo);
+  }
 }
 
 // ===================================

@@ -26,6 +26,8 @@
 import { mkdir, readFile, appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { szelet } from '../esemeny/esemeny.js';
+
 // ===================================
 // HOL LAKIK AZ ADAT
 // ===================================
@@ -45,15 +47,37 @@ export function alapHely() {
 /**
  * Megnyit (és ha kell, létrehoz) egy koino esemény-tárát.
  *
- * A visszaadott tárnak KÉT művelete van, szándékosan:
- *   - `betolt()`  — az összes esemény,
- *   - `hozzafuz()` — egy új esemény a végére.
- * Nincs „módosít" és nincs „töröl". Ami hiányzik belőle, az nem lustaság: a modell
- * szerint nem is létezhet.
+ * ===== ⛔ AZ ILLESZTÉS A 3.2 LÉPÉSBEN ÁTÍRÓDOTT (2026-09-03) =====
+ *
+ * A régi tároló **két** műveletet adott: `betolt()` és `hozzafuz()`. Ez elegáns volt, de a
+ * kilencedik szabály elkapta: **a `betolt()` az ÖSSZES eseményt adja vissza.** Akármilyen
+ * okos tárolót teszünk mögé, ha a FELÜLET azt kérdezi, hogy „add ide mindet", akkor minden
+ * megvalósítás **kénytelen** mindet visszaadni.
+ *
+ * ⚠️ **Nem a fájlformátum volt a hiba, hanem az illesztés.** Ezért nem gyorsítótárat tettünk
+ * alá (az csak a rossz kérdést gyorsította volna), hanem **kérdezhetővé** tettük:
+ *
+ *   esemeny(azonosito)          — EGY esemény, azonosító szerint
+ *   szerzoLanca(szerzo)         — EGY szerző lánca
+ *   szeletEsemenyei(entitas)    — EGY entitás (szelet) eseményei
+ *   sorszamSzerint(szerzo, n)   — egy pont a szerző láncán (az elágazás-kereséshez)
+ *   hozzafuz(esemeny)           — változatlan
+ *   ⚠️ betolt()                 — MEGMARADT, de ez az, ami NEM SKÁLÁZIK (lásd lent)
+ *
+ * ===== A MEGVALÓSÍTÁS SZÁNDÉKOSAN EGYSZERŰ (9. szabály) =====
+ *
+ * Mögötte most egy **memóriában tartott mutató** van, amit megnyitáskor egyszer építünk fel,
+ * és hozzáfűzéskor karbantartunk. Ez a *szerkezet* szempontjából már milliárdos —
+ * a hívók a helyes kérdéseket teszik fel —, a *mélység* pedig később cserélhető
+ * (lemezre írt index, részleges betöltés) **anélkül, hogy bárki más változna**.
+ *
+ * ⭐ ÉS EGY MÉRT MELLÉKHATÁS: ezzel az `esemenyMentese` is olcsó lett. Eddig MINDEN mentés
+ * végigolvasta az egész fájlt (mérve: 100 000 eseménynél **495 ms egyetlen mentés**, vagyis
+ * N esemény beírása négyzetes volt). A mutatóval a kettősség- és elágazás-keresés O(1).
  *
  * @param {string} koino - a koino azonosítója (ez lesz a mappa neve)
  * @param {string} [hely] - hol legyen az adat (alapból: alapHely())
- * @returns {Promise<{betolt: Function, hozzafuz: Function, fajl: string}>}
+ * @returns {Promise<Object>} a tároló
  */
 export async function esemenyTarNyitasa(koino, hely = alapHely()) {
   console.log('esemenyTarNyitasa - KEZDÉS', { koino, hely });
@@ -62,42 +86,100 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
   await mkdir(mappa, { recursive: true });
   const fajl = join(mappa, 'esemenyek.jsonl');
 
+  // ===== A MUTATÓ =====
+  // Négy nézet ugyanarra az eseményhalmazra. A `mind` a fájl sorrendjét őrzi — erre a
+  // csere és a próbák támaszkodnak.
+  const mind = [];
+  const azonositoSzerint = new Map();     // azonosító → esemény
+  const szerzoSzerint = new Map();        // szerző → események
+  const szeletSzerint = new Map();        // szelet-kulcs → események
+  const pontSzerint = new Map();          // szerző|sorszám → események (elágazásnál több)
+
+  /** Egy eseményt bevesz a mutatóba. */
+  const bejegyez = (e) => {
+    mind.push(e);
+    azonositoSzerint.set(e.azonosito, e);
+
+    const szerzoje = szerzoSzerint.get(e.szerzo);
+    if (szerzoje) szerzoje.push(e); else szerzoSzerint.set(e.szerzo, [e]);
+
+    // ⭐ A SZELET-KULCS type-független szabálya (`esemeny.js`): vagy meg van mondva, vagy
+    // az esemény a saját szeletét nyitja. A tárolónak ennyit kell tudnia a domainről —
+    // és pontosan ezért került a mező a burkolatba a 3.1-ben.
+    const kulcs = szelet(e);
+    const szelete = szeletSzerint.get(kulcs);
+    if (szelete) szelete.push(e); else szeletSzerint.set(kulcs, [e]);
+
+    const pont = e.szerzo + '|' + e.sorszam;
+    const ottLevok = pontSzerint.get(pont);
+    if (ottLevok) ottLevok.push(e); else pontSzerint.set(pont, [e]);
+  };
+
+  // ----- A MUTATÓ FELÉPÍTÉSE: egyetlen olvasás megnyitáskor -----
+  // ⚠️ Ez még O(fájl), de FUTÁSONKÉNT EGYSZER, nem műveletenként. A következő mélység
+  // (lemezre írt index) ezt is eltünteti — a hívók változtatása nélkül.
+  try {
+    const szoveg = await readFile(fajl, 'utf8');
+    let sorszam = 0;
+    for (const sor of szoveg.split('\n')) {
+      sorszam++;
+      if (!sor.trim()) continue;
+      try {
+        bejegyez(JSON.parse(sor));
+      } catch {
+        // Egy sérült sor nem teheti olvashatatlanná az egész tárat. Jelezzük, és megyünk
+        // tovább — az esemény aláírása úgyis minden sort külön igazol.
+        console.warn('esemenyTarNyitasa - sérült sor, kihagyva', { fajl, sorszam });
+      }
+    }
+  } catch (hiba) {
+    if (hiba.code !== 'ENOENT') throw hiba;   // még nincs fájl: üres tár
+  }
+
   const tar = {
     fajl,
 
-    /** Az összes esemény, a fájlban lévő sorrendben. */
+    /**
+     * ⚠️ AZ ÖSSZES ESEMÉNY — EZ AZ, AMI NEM SKÁLÁZIK.
+     *
+     * Szándékosan megmaradt, mert két helyen jogos: a **próbák** így nézik meg a tár nyers
+     * tartalmát, és a **kis koino** állapotszámítása így kapja meg a bemenetét. De a
+     * hétköznapi műveletek közül **egyetlen sem hívja** — és ez a 3.2 lényege.
+     *
+     * ⛔ Új kódban ne ezt használd: kérdezz szeletet, láncot vagy azonosítót.
+     */
     async betolt() {
-      let szoveg;
-      try {
-        szoveg = await readFile(fajl, 'utf8');
-      } catch (hiba) {
-        if (hiba.code === 'ENOENT') return [];   // még nincs fájl: üres tár
-        throw hiba;
-      }
-
-      const esemenyek = [];
-      let sorszam = 0;
-      for (const sor of szoveg.split('\n')) {
-        sorszam++;
-        if (!sor.trim()) continue;
-        try {
-          esemenyek.push(JSON.parse(sor));
-        } catch {
-          // Egy sérült sor nem teheti olvashatatlanná az egész tárat. Jelezzük, és
-          // megyünk tovább — az esemény aláírása úgyis minden sort külön igazol.
-          console.warn('esemenyTarNyitasa - sérült sor, kihagyva', { fajl, sorszam });
-        }
-      }
-      return esemenyek;
+      return [...mind];
     },
 
-    /** Egy új esemény a fájl végére. */
+    /** EGY esemény, azonosító szerint. O(1). */
+    async esemeny(azonosito) {
+      return azonositoSzerint.get(azonosito);
+    },
+
+    /** EGY szerző eseményei (a fájl sorrendjében). */
+    async szerzoLanca(szerzo) {
+      return [...(szerzoSzerint.get(szerzo) ?? [])];
+    },
+
+    /** EGY szelet (entitás) eseményei. */
+    async szeletEsemenyei(entitas) {
+      return [...(szeletSzerint.get(entitas) ?? [])];
+    },
+
+    /** Egy pont a szerző láncán — rendes esetben egy esemény, elágazásnál több. */
+    async sorszamSzerint(szerzo, sorszam) {
+      return [...(pontSzerint.get(szerzo + '|' + sorszam) ?? [])];
+    },
+
+    /** Egy új esemény a fájl végére — és a mutatóba. */
     async hozzafuz(esemeny) {
       await appendFile(fajl, JSON.stringify(esemeny) + '\n', 'utf8');
+      bejegyez(esemeny);
     }
   };
 
-  console.log('esemenyTarNyitasa - VÉGE', { fajl });
+  console.log('esemenyTarNyitasa - VÉGE', { fajl, esemeny: mind.length });
   return tar;
 }
 

@@ -162,6 +162,46 @@ megcsinálva.**
 
 ---
 
+# A 3.2 UTÁN — a két fal ledőlt (2026-09-03)
+
+*Ugyanaz a mérő, ugyanazok a méretek, a **kérdezhető tár-illesztő** és a javított
+**ág-méret** után. ⚠️ Az esemény közben nagyobb lett (478 → 611 B a 3.1 négy új mezőjétől),
+tehát ez az összevetés még **konzervatív** is.*
+
+| | 10 000 | 25 000 | 50 000 | 100 000 |
+|---|---|---|---|---|
+| `allapotSzamitasa` **előtte** | 84 ms | — | — | **4 615 ms** |
+| `allapotSzamitasa` **utána** | **45 ms** | 114 ms | 261 ms | **502 ms** |
+| `esemenyMentese` (1 db) **előtte** | 42 ms | — | — | **495 ms** |
+| `esemenyMentese` (1 db) **utána** | **2,1 ms** | 1,1 ms | 1,0 ms | **1,4 ms** |
+| tár megnyitása *(új tétel)* | 54 ms | 164 ms | 329 ms | 859 ms |
+
+## ⭐⭐ Amit ez mond
+
+**A görbe alakja változott meg, nem csak a szám.**
+
+- **`allapotSzamitasa`:** tízszeres adatra **tizenegyszeres idő** — lineáris. Korábban
+  ugyanez **ötvenötszörös** volt. *(Az ok egy közönséges hiba volt egy közönséges
+  függvényben: az `agMeretSzamitasa` entitásonként végigment az összes entitáson. Az új,
+  levelektől felfelé összegző változat egy menetben dolgozik — és mellesleg egy rejtett
+  veszélyt is megszüntet: egy körbe mutató szülő-lánc a régi, rekurzív változatot végtelen
+  rekurzióba vitte volna.)*
+- **`esemenyMentese`: LAPOS.** 2,1 → 1,1 → 1,0 → 1,4 ms — **nem nő a tár méretével.**
+  Vagyis a beírás **már nem négyzetes**: ami 100 000 eseménynél ~6,9 óra lett volna, az most
+  ~2 perc. *(Az ok: a mentés eddig `tar.betolt()`-tel kereste a kettősséget és az
+  elágazást; most azonosító és lánc-pont szerint kérdez, ami O(1).)*
+
+⚠️ **És egy tétel, ami nem tűnt el, csak áthelyeződött: a tár megnyitása.** A mutatót
+megnyitáskor építjük fel, tehát a fájl beolvasása oda került. **Futásonként egyszer**
+történik, nem műveletenként — de becsületesen külön mérjük, mert enélkül a „betöltés
+595 → 13 ms" javulás félrevezető lenne.
+
+⭐ **A következő mélység** (ha egyszer kell): lemezre írt index, hogy a megnyitás se
+olvassa végig a fájlt. **A hívók változtatása nélkül** cserélhető — pontosan ezért volt
+fontos, hogy a 3.2 az *illesztést* rendezte, ne csak a sebességet.
+
+---
+
 # ÉBREDÉS-MÉRÉS — a „buli" ablaka (2026-09-03)
 
 *Eszköz: [`ebredesProba.js`](ebredesProba.js) `fut` üzemmód · Android telefon, Termux, Node ·

@@ -300,13 +300,33 @@ Három mező, egyszerre, amíg **9 valódi esemény** van a tárban:
 
 **Mérés:** rontás-próbák — az elhallgatott esemény **kimutatható ellentmondássá** válik-e.
 
-### 3.2 ⛔ A TÁR-ILLESZTŐ SZELETELHETŐVÉ TÉTELE
+### 3.2 ✅ A TÁR-ILLESZTŐ SZELETELHETŐ (2026-09-03)
 
-A `betolt()` helyett **kérdezhető** felület: `entitasEsemenyei()`, `szerzoLanca()`,
-`tartomany()`. ⭐ **Ez az illesztés helyessége, nem teljesítmény** — a gyorsítótár csak a
-rossz kérdést gyorsítaná.
+A `betolt()` helyett **kérdezhető** felület: `esemeny(azonosito)` · `szerzoLanca(szerzo)` ·
+`szeletEsemenyei(entitas)` · `sorszamSzerint(szerzo, n)`. A `betolt()` megmaradt — a próbák
+és a kis koino állapotszámítása jogosan hívja —, de **a hétköznapi műveletek közül egyetlen
+sem**. ⭐ *Ez volt az illesztés helyessége, nem a teljesítmény: a gyorsítótár csak a rossz
+kérdést gyorsította volna.*
 
-**Mérés:** a betöltött bájt a **kért szelettel** arányos-e (ma: az egész fájllal).
+Mögötte **memóriában tartott mutató** — a legegyszerűbb megvalósítás, ami a helyes kérdéseket
+ki tudja szolgálni. A mélység (lemezre írt index) később cserélhető, **a hívók változtatása
+nélkül**.
+
+> ### ⭐⭐ ÉS EZZEL A KÉT MÉRT FAL LEDŐLT
+>
+> | | előtte | utána |
+> |---|---|---|
+> | `esemenyMentese` (1 db, 100k táron) | **495 ms** | **1,4 ms** — és **lapos**, nem nő a mérettel |
+> | `allapotSzamitasa` (100k) | **4 615 ms** | **502 ms** — és **lineáris** (10× adat → 11× idő) |
+>
+> Az elsőt a kérdezhető illesztés oldotta meg (a mentés már nem olvassa végig a tárat), a
+> másodikat az **`agMeretSzamitasa`** átírása: levelektől felfelé, egy menetben — ⭐ ami
+> mellesleg egy rejtett veszélyt is megszüntetett, mert egy **körbe mutató szülő-lánc** a
+> régi, rekurzív változatot végtelen rekurzióba vitte volna.
+>
+> ⚠️ **Egy tétel nem tűnt el, csak áthelyeződött:** a tár **megnyitása** most építi a
+> mutatót (859 ms 100k-nál) — **futásonként egyszer**, nem műveletenként. Külön mérjük,
+> mert enélkül a javulás félrevezető lenne.
 
 ### 3.3 AZ ENTITÁS-KÖZPONTÚ TÁR
 

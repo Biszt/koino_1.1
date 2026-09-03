@@ -371,7 +371,12 @@ async function egyMeret(darab, hely) {
   kiir('    ⭐ egy esemény átlag:  ' + kerekit(fajlMeret / darab, 0) + ' B'
     + '   (a terv 435 B-tal számol)');
 
-  const tar = await esemenyTarNyitasa(KOINO, hely);
+  // ⚠️ A MEGNYITÁS IDEJE KÜLÖN MÉRENDŐ (3.2 óta). A tároló megnyitáskor épít egy mutatót,
+  // tehát a fájl beolvasása IDE került át a `betolt()`-ből. Ha ezt nem mérnénk, a „betöltés"
+  // száma látszólag összeomlana — pedig a munka nem tűnt el, csak áthelyeződött, és
+  // futásonként EGYSZER történik, nem műveletenként.
+  const nyitas = await ido(() => esemenyTarNyitasa(KOINO, hely));
+  const tar = nyitas.eredmeny;
 
   // ===== A. BETÖLTÉS ÉS ÁLLAPOTSZÁMÍTÁS =====
   const heapElotte = heapMB();
@@ -389,6 +394,8 @@ async function egyMeret(darab, hely) {
 
   kiir('');
   kiir('  A. BETÖLTÉS ÉS SZÁMÍTÁS — „meddig bírja egy készülék?"');
+  kiir('    tár megnyitása (mutató):    ' + kerekit(nyitas.ms) + ' ms'
+    + '   ⚠️ futásonként EGYSZER');
   kiir('    betöltés (betolt + szűrés): ' + kerekit(betoltes.ms) + ' ms');
   kiir('    allapotSzamitasa:           ' + kerekit(allapotMeres.ms) + ' ms');
   kiir('    javaslatokSzamitasa:        ' + kerekit(javaslatMeres.ms) + ' ms');
