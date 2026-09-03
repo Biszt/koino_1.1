@@ -63,7 +63,9 @@ node koino/koino.js              # az állapot: tartalmak, javaslatok, egyezmén
 node koino/koino.js allapot 3    # mi lesz 3 nap múlva (a döntési idő napokban mérhető)
 node koino/meres/mind.js         # a 198 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
-node koino/meres/ebredesProba.js fut    # ÉBREDÉS-PRÓBA telefonon (a „buli" ablaka) — utána: olvas
+node koino/meres/ebredesProba.js fut    # ÉBREDÉS-PRÓBA egy hálózaton: engedi-e az OS az ébredést
+node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat között: összeér-e a rés
+                                        # (a fal órájához igazított ablakokban — ez a „buli"); utána: olvas
 ```
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.

@@ -23,14 +23,28 @@
 // ⭐ Ennek az a haszna, hogy **korán ad részeredményt**: hat perc után már tudod, működik-e
 // a rövid alvás, és nem kell órákat várni az első információért.
 //
+// ===== KÉT ÜZEMMÓD, KÉT KÜLÖN KÉRDÉSRE =====
+//
+// ⭐ `fut` — EGY HÁLÓZATON BELÜL, a KÉSZÜLÉKRŐL szól: engedi-e az operációs rendszer az
+//    ébredést, és meddig él a folyamat. Növekvő szünetekkel (1 → 5 → 60 → 240 perc), hogy
+//    korán adjon részeredményt.
+//
+// ⭐ `res` — KÉT HÁLÓZAT KÖZÖTT, a HÁLÓZATRÓL szól: hosszú alvás után újra összeér-e a rés.
+//    A fal órájához igazított ablakokban dolgozik, tehát a két készülék **üzenetváltás
+//    nélkül** találkozik. Ez a „buli" valódi szerkezete. (Részletek a rés-üzemmódnál.)
+//
 // ===== HOGYAN FUTTASD =====
 //
-// A MÁSIK készüléken (pl. a laptopon, otthon) fusson a kapu:
+// EGY HÁLÓZATON — a másik készüléken fusson a kapu:
 //   node koino/koino.js figyel
-//
-// A MÉRŐ készüléken (a telefonon, akár másik hálózaton) legyen felvéve a társ, majd:
+// a mérőn pedig:
 //   node koino/meres/ebredesProba.js fut              — 1, 5, 60, 240 perc
 //   node koino/meres/ebredesProba.js fut 1 5 15       — saját ütemterv
+//
+// KÉT HÁLÓZAT KÖZÖTT — MINDKÉT készüléken, a másik külső címével:
+//   node koino/meres/ebredesProba.js res 31.46.250.127 60283 7373 5
+//
+// Bármikor:
 //   node koino/meres/ebredesProba.js olvas            — összegzés
 //
 // ⭐ FUTTASD KÉTSZER: először csak úgy, aztán `termux-wake-lock` után. A kettő különbsége
@@ -48,6 +62,8 @@ import { join } from 'node:path';
 import { alapHely, esemenyTarNyitasa, tarsakTarolo } from '../js/tar/fajlTar.js';
 import { tarsakSorrendje, korbeCsere } from '../js/csere/tarsak.js';
 import { csereVonalon } from '../js/csere/vonal.js';
+import { pajzsfuras } from '../js/csere/pajzsfuro.js';
+import { csereUdpResen } from '../js/csere/udpVonal.js';
 
 // ===================================
 // ÁLLANDÓK
@@ -195,6 +211,147 @@ async function fut(utemterv) {
 }
 
 // ===================================
+// ⭐ A RÉS-ÜZEMMÓD — a buli VALÓDI szerkezete, két hálózat között
+// ===================================
+//
+// ===== MIÉRT KÜLÖN ÜZEMMÓD =====
+//
+// A `fut` üzemmód egy hálózaton belül mér, és a KÉSZÜLÉKRŐL szól: engedi-e az operációs
+// rendszer az ébredést. Ez viszont a HÁLÓZATRÓL: két külön háztartás, NAT mindkét oldalon,
+// és a kérdés az, hogy **hosszú alvás után újra összeér-e a rés**.
+//
+// Mérve (2026-08-29 és 2026-09-02): sima TCP-vel NEM megy — mindhárom port-nyitási
+// szabvány megbukott a routeren. Pajzsfúrással viszont igen, 150 ms alatt.
+//
+// ===== A FAL ÓRÁJÁHOZ IGAZÍTUNK — ÉS EZ A LÉNYEG =====
+//
+// ⭐ A két készülék NEM üzen egymásnak arról, mikor találkozzanak. Mindkettő ugyanabból a
+// szabályból számolja: **az ablak a fal óráján van, kerek időpontokban** (ötperces ablaknál
+// :00, :05, :10…). Így akárhány órával azelőtt indították őket, és akárhányszor aludtak
+// közben, **ugyanabban a másodpercben ébrednek**.
+//
+// Ez pontosan a „buli": nincs összehangoló, nincs jelzőpont, nincs üzenet — csak egy közös
+// szabály az óráról. *(A D40 ezt már kimondta: „NTP-pontos órák mellett ez ingyen van.")*
+//
+// ⚠️ EZÉRT NEM NÖVEKVŐ ÜTEMTERVET HASZNÁL, mint a `fut`: ha a két oldal más-más pillanatban
+// indul, a növekvő szünetek SOHA nem esnének egybe. Az igazítás az, ami a találkozást
+// üzenet nélkül garantálja.
+//
+// ===== MIT JEGYEZ FEL, AMIT A `fut` NEM =====
+//
+// ⭐ A SAJÁT KÜLSŐ CÍMÉT minden ablakban. Ha ez alvás után MEGVÁLTOZIK, az önmagában lelet:
+// azt jelenti, hogy a másik fél a régi porton kopogtat, és a címet minden ablakban újra
+// kell tanulni — vagyis a terjedő címjegyzéknek is ebben az ütemben kell dolgoznia.
+// *(2026-09-02-i mérés szerint a NAT MEGŐRIZTE a helyi portot — `…:7373` —, ami sokkal
+// könnyebbé teszi a dolgot. De ez nem törvény, csak az adott routeré.)*
+//
+// ===== HOGYAN FUTTASD =====
+//
+// MINDKÉT készüléken, egyszerre (a másik külső címével és portjával):
+//   node koino/meres/ebredesProba.js res 31.46.250.127 60283 7373 5
+//                                        ^cím          ^ő    ^én ^ablak perc
+//
+// ⚠️ Közben NE fusson `figyel` vagy `orjarat` ugyanezen a porton — a fúrónak kell.
+
+/**
+ * A következő ablak kezdete a FAL ÓRÁJÁN.
+ * @param {number} ablakMs
+ * @returns {number} ezredmásodperc
+ */
+function kovetkezoAblak(ablakMs) {
+  return Math.ceil((Date.now() + 1) / ablakMs) * ablakMs;
+}
+
+/**
+ * Ablakról ablakra fúr és cserél — vég nélkül, amíg le nem állítod.
+ *
+ * @param {string} cim - a másik fél külső címe
+ * @param {number} tavoliPort - a másik fél külső portja
+ * @param {number} helyiPort - a mi portunk (erről fúrunk, ide fogadunk)
+ * @param {number} ablakPerc
+ */
+async function resUzemmod(cim, tavoliPort, helyiPort, ablakPerc) {
+  const tar = await esemenyTarNyitasa(KOINO);
+  const tarolo = tarsakTarolo();
+  const ablakMs = Math.round(ablakPerc * 60 * 1000);
+
+  // Mennyi ideig fúrjunk EGY ablakban? Az ablak töredéke — a többi idő alvás.
+  const furasMs = Math.min(20000, Math.round(ablakMs / 3));
+
+  kiir('');
+  kiir('ÉBREDÉS-PRÓBA — RÉS-ÜZEMMÓD (a buli szerkezete)');
+  kiir('  koino:     ' + KOINO);
+  kiir('  cél:       ' + cim + ':' + tavoliPort + '   (a helyi ' + helyiPort + '-esről)');
+  kiir('  ablak:     ' + ablakPerc + ' perc, a FAL ÓRÁJÁHOZ igazítva');
+  kiir('  fúrás:     legfeljebb ' + Math.round(furasMs / 1000) + ' mp ablakonként');
+  kiir('  napló:     ' + NAPLO_FAJL);
+  kiir('');
+  kiir('⭐ UGYANEZT kell futtatni a másik készüléken is, a TE címeddel.');
+  kiir('   Nem kell egyszerre indítani — a fal órája hangolja össze őket.');
+  kiir('');
+
+  await feljegyez({
+    mi: 'res-indulas', ido: Date.now(), cim, tavoliPort, helyiPort, ablakMs
+  });
+
+  for (;;) {
+    const ablakKezdet = kovetkezoAblak(ablakMs);
+    await new Promise((kesz) => setTimeout(kesz, ablakKezdet - Date.now()));
+
+    const ebredes = Date.now();
+    const csuszasMp = Math.round((ebredes - ablakKezdet) / 1000);
+
+    let kulsoCim = null;
+    let furas = null, csere = null, hiba = null;
+
+    try {
+      furas = await pajzsfuras(helyiPort, cim, tavoliPort, {
+        idokorlat: furasMs,
+        tartsdNyitva: true,
+        utana: (e) => {
+          if (e.mi === 'SAJAT-KULSO-CIM') kulsoCim = e.cim + ':' + e.port;
+        }
+      });
+
+      if (furas.mindketIrany) {
+        const hirdetjuk = tarsakSorrendje(await tarolo.olvas())
+          .map((t) => ({ hoszt: t.hoszt, port: t.port }));
+        csere = await csereUdpResen(furas.halo, cim, tavoliPort, tar, KOINO,
+          { hirdetettCimek: hirdetjuk });
+      }
+    } catch (e) {
+      hiba = e.message;
+    } finally {
+      // ⚠️ A foglalatot MINDIG lezárjuk — különben a következő ablakban ütközne (EADDRINUSE).
+      try { furas?.halo?.close(); } catch { /* már zárva */ }
+    }
+
+    await feljegyez({
+      mi: 'ablak', ablakKezdet, ebredes, csuszasMp, kulsoCim,
+      furas: furas && {
+        mindketIrany: !!furas.mindketIrany, sikerult: !!furas.sikerult,
+        kuldott: furas.kuldott, kapott: furas.kapott, eltelt: furas.eltelt
+      },
+      csere: csere && {
+        uj: csere.uj, kuldott: csere.kuldott, korok: csere.korok,
+        bajt: (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0)
+      },
+      hiba
+    });
+
+    const allapot = hiba ? '⚠️ hiba: ' + hiba
+      : csere ? '✅ átment — +' + csere.uj + ' esemény, ' + csere.korok + ' kör'
+        : furas?.sikerult ? '⚠️ fél siker: az ő kopogása átjött, a miénk nem'
+          : '✗ nem ért össze (' + (furas?.kuldott ?? 0) + ' kopogás)';
+
+    kiir('  ' + new Date(ablakKezdet).toLocaleTimeString('hu-HU')
+      + '  csúszás ' + csuszasMp + ' mp'
+      + (kulsoCim ? '  · kívülről: ' + kulsoCim : '')
+      + '  · ' + allapot);
+  }
+}
+
+// ===================================
 // AZ ÖSSZEGZÉS
 // ===================================
 
@@ -209,10 +366,12 @@ async function olvas() {
 
   const sorok = szoveg.split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s));
 
-  // Futásokra bontás — a napló több futást is tartalmazhat (ha megölték és újraindítottad).
+  // Futásokra bontás — a napló több futást is tartalmazhat (ha megölték és újraindítottad),
+  // és kétféle üzemmódot is (`fut` és `res`).
   const futasok = [];
   for (const sor of sorok) {
-    if (sor.mi === 'indulas') futasok.push({ ...sor, lepesek: [], befejezte: false });
+    if (sor.mi === 'indulas') futasok.push({ ...sor, mod: 'fut', lepesek: [], befejezte: false });
+    else if (sor.mi === 'res-indulas') futasok.push({ ...sor, mod: 'res', lepesek: [], befejezte: false });
     else if (!futasok.length) continue;
     else if (sor.mi === 'vege') futasok[futasok.length - 1].befejezte = true;
     else futasok[futasok.length - 1].lepesek.push(sor);
@@ -224,6 +383,43 @@ async function olvas() {
   kiir('══════════════════════════════════════════════════════════════');
 
   for (const [i, f] of futasok.entries()) {
+    // ----- A RÉS-ÜZEMMÓD KÜLÖN NÉZETE -----
+    if (f.mod === 'res') {
+      kiir('');
+      kiir('  ' + (i + 1) + '. futás — RÉS-ÜZEMMÓD — ' + new Date(f.ido).toLocaleString('hu-HU'));
+      kiir('     cél: ' + f.cim + ':' + f.tavoliPort + ' · a helyi ' + f.helyiPort
+        + '-esről · ablak: ' + (f.ablakMs / 60000) + ' perc');
+      kiir('');
+
+      if (!f.lepesek.length) {
+        kiir('     ⚠️ EGYETLEN ABLAK SEM FUTOTT LE.');
+        continue;
+      }
+
+      kiir('     ablak    | csúszás | kívülről így látszom   | eredmény');
+      kiir('     ---------|---------|------------------------|--------------------------');
+      let atment = 0;
+      const cimek = new Set();
+      for (const l of f.lepesek) {
+        if (l.csere) atment++;
+        if (l.kulsoCim) cimek.add(l.kulsoCim);
+        const eredmeny = l.hiba ? '⚠️ ' + l.hiba
+          : l.csere ? '✅ +' + l.csere.uj + ' esemény, ' + l.csere.korok + ' kör'
+            : l.furas?.sikerult ? '⚠️ fél siker (csak ő hallott)'
+              : '✗ nem ért össze';
+        kiir('     ' + new Date(l.ablakKezdet).toLocaleTimeString('hu-HU') + ' | '
+          + (l.csuszasMp + ' mp').padStart(7) + ' | '
+          + (l.kulsoCim ?? '—').padEnd(22) + ' | ' + eredmeny);
+      }
+
+      kiir('');
+      kiir('     átment: ' + atment + ' / ' + f.lepesek.length + ' ablak');
+      kiir('     a külső címem ' + (cimek.size <= 1
+        ? '✅ VÉGIG UGYANAZ volt' + (cimek.size ? ' (' + [...cimek][0] + ')' : '')
+        : '⚠️ ' + cimek.size + '-FÉLE volt — a címet minden ablakban újra kell tanulni!'));
+      continue;
+    }
+
     kiir('');
     kiir('  ' + (i + 1) + '. futás — ' + new Date(f.ido).toLocaleString('hu-HU')
       + '   (ütemterv: ' + (f.utemterv ?? []).join(' → ') + ' perc · társ: ' + (f.tarsak ?? 0) + ')');
@@ -281,12 +477,32 @@ if (parancs === 'fut') {
     kiir('\nHIBA: ' + hiba.message + '\n');
     process.exit(1);
   });
+} else if (parancs === 'res') {
+  const cim = process.argv[3];
+  if (!cim) {
+    kiir('\nKihez fúrjak?');
+    kiir('  node koino/meres/ebredesProba.js res <cím> <távoli port> [helyi port] [ablak perc]');
+    kiir('\nA másik külső címét és portját a `pajzsfuro` vagy a `kulsoport` mondja meg.\n');
+    process.exit(1);
+  }
+  const tavoliPort = parseInt(process.argv[4], 10) || 7373;
+  const helyiPort = parseInt(process.argv[5], 10) || 7373;
+  const ablakPerc = Number(process.argv[6]) > 0 ? Number(process.argv[6]) : 5;
+
+  resUzemmod(cim, tavoliPort, helyiPort, ablakPerc).catch((hiba) => {
+    kiir('\nHIBA: ' + hiba.message + '\n');
+    process.exit(1);
+  });
 } else if (parancs === 'olvas') {
   olvas();
 } else {
   kiir('');
   kiir('Használat:');
-  kiir('  node koino/meres/ebredesProba.js fut [perc...]  — mérés (alap: 1 5 60 240)');
-  kiir('  node koino/meres/ebredesProba.js olvas          — összegzés');
+  kiir('  node koino/meres/ebredesProba.js fut [perc...]');
+  kiir('        — EGY hálózaton: engedi-e a rendszer az ébredést (alap: 1 5 60 240 perc)');
+  kiir('  node koino/meres/ebredesProba.js res <cím> <távoli port> [helyi port] [ablak perc]');
+  kiir('        — KÉT hálózat között: összeér-e a rés, a fal órájához igazított ablakokban');
+  kiir('  node koino/meres/ebredesProba.js olvas');
+  kiir('        — összegzés (mindkét üzemmódot külön mutatja)');
   kiir('');
 }
