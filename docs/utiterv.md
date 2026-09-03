@@ -155,7 +155,22 @@ képes program, csak kevesebb emberrel."*
 
 ---
 
-## 6/b. ⏸️ A 3.1 FELFÜGGESZTVE (2026-09-02) — és miért nem baj
+## 6/b. ✅ A 3.1 KÉSZ (2026-09-03) — *(a felfüggesztés története alább)*
+
+> **A kanonikus alak bővítése megvan**, mind a négy mezővel: `entitas` · `entitasSorszam` ·
+> `latott` · `lancGyoker` *(lefoglalt hely)*. Plusz a `szelet()` szabály, a tár három új
+> lekérdezése (`entitasEsemenyei`, `kovetkezoEntitasSorszam`, `horgonyok`), a `muveletek.js`
+> hat művelete és a `szabalyok.js` **D42-ellenőrzése** a harmadik kategóriával
+> („nem ellenőrizhető").
+>
+> **203 önpróba rendben** (198 + 5 új). ⭐ A próba-segéd (`ujEember`) **egy helyen** tanulta
+> meg az új mezőket — ezért kellett egyetlen javítás ahhoz, hogy a 198 régi próba újra
+> átmenjen. *(Ez maga is a szerkezet dicsérete: ha a próbák másolták volna a szabályt,
+> kilenc fájlt kellett volna átírni.)*
+>
+> Az ár mérve: **478 → 611 bájt** eseményenként (+28%) — lásd a 7. szakaszt.
+
+<details><summary>⏸️ A felfüggesztés története (2026-09-02)</summary>
 
 *Csaba a pihenőidő alatt írt gondolatai
 ([`pihenosIdoAlattiGondolatok.md`](pihenosIdoAlattiGondolatok.md)) olyan irányt hoztak, ami a
@@ -178,6 +193,11 @@ rontás-próbák a bemondott összegre, és a `skalaMeres.js` újrafuttatása a 
 ki, hogy a keret-ellenőrzés a szeletelt világban **másképp is kiegészül** (összegző Merkle-fa
 a saját láncon — lásd lent). Jobb egyszerre bevinni, mint kétszer bontani fel a legveszélyesebb
 részletet.
+
+*(Így is lett: a felfüggesztés alatt született meg a negyedik mező — a `lancGyoker` lefoglalt
+helye —, tehát a kanonikus alakot **egyszer** kellett felbontani, nem kétszer.)*
+
+</details>
 
 ---
 
@@ -258,7 +278,25 @@ Három mező, egyszerre, amíg **9 valódi esemény** van a tárban:
 |---|---|
 | `kiosztva` | **H4** — a tudatpont-keret **egy eseményből** ellenőrizhető (D42) |
 | `entitasSorszam` | **H3** — a hézag újra jel lesz, miután szeleteltünk |
-| `latott` *(csak a `Szavazat`-on)* | **H7** — a visszadátumozás bizonyíthatóvá válik; így az ár +31% helyett **~+11%** |
+| `latott` *(a határidőt mozgató eseményeken)* | **H7** — a visszadátumozás bizonyíthatóvá válik |
+| `lancGyoker` | ⏸️ **lefoglalt hely**, mindig `null` — a jelentése a Szakasz 4-ben dől el |
+
+> ### ✅ MEGÉPÍTVE ÉS MEGMÉRVE (2026-09-03)
+>
+> Mind a négy mező a helyén, **203 önpróba rendben** (198 + 5 új rontás-próba a D42-re).
+> ⭐ A legfontosabb, amit bizonyítanak: *a hazug bemondás lelepleződik* — két saját aláírt
+> esemény ellentmond egymásnak —, **de hézag esetén nem vád, hanem jelzés**, mert akkor a
+> hiány a MI lemaradásunk, nem az ő hazugsága.
+>
+> ⚠️ **AZ ÁR NAGYOBB, MINT A BECSLÉS VOLT:** Claude **+11%**-ot mondott, a mérés **+28%** —
+> az esemény **478 → 611 bájt**. *(A becslés csak a `latott` szűkítésével számolt, és
+> elfelejtette, hogy az `entitas` (~55 B), az `entitasSorszam` (~19 B) és a `lancGyoker`
+> (~18 B) **minden eseményen** ott van.)*
+>
+> **Amit érint és amit nem:** a tár 28%-kal nő · az **ÁLLÁS 164 B/e-ember maradt** ·
+> a **csendes kör ára változatlan** (az nem visz eseményt).
+> ⭐ **Így is megéri:** e mezők nélkül a szeletelt koino sem a keretet, sem a hézagot nem
+> tudná ellenőrizni — a 28% nem kényelem, hanem **a hitelesség ára**.
 
 **Mérés:** rontás-próbák — az elhallgatott esemény **kimutatható ellentmondássá** válik-e.
 

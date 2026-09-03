@@ -137,7 +137,8 @@ async function tarGyartasa(darab, hely) {
       elozo: null,          // a lánc vége, MEMÓRIÁBAN (ezért gyors)
       sorszam: 0,
       pontok: new Map(),    // entitás → a rá tett pontom
-      osszeg: 0             // mennyit osztottam ki eddig (a keret ellenőrzéséhez)
+      osszeg: 0,            // mennyit osztottam ki eddig (a keret ellenőrzéséhez)
+      entitasSorszamok: new Map()   // szelet → hányadik eseményem rajta (3.1)
     });
   }
 
@@ -152,9 +153,35 @@ async function tarGyartasa(darab, hely) {
   const javaslatok = [];   // a létrehozott javaslatok azonosítói
   const idoAlap = Date.now() - darab * 1000;
 
-  /** Egy esemény legyártása és a sorhoz fűzése — a valódi aláíró úton. */
+  /**
+   * A SZELET-KULCS — ugyanaz a szabály, amit a `muveletek.js` követ.
+   * *(A `Szavazat`-nál a javaslat azonosítója közelít; a mérés a MÉRETET nézi, nem a
+   * szeletelés helyességét.)*
+   */
+  function szeletKulcs(tipus, adat) {
+    if (tipus === 'TudatpontRendezes' || tipus === 'ErtekJavaslat') return adat?.entitas ?? null;
+    if (tipus === 'Javaslat') return adat?.erintett ?? null;
+    if (tipus === 'Szavazat') return adat?.javaslat ?? null;
+    return null;
+  }
+
+  /**
+   * Egy esemény legyártása és a sorhoz fűzése — a valódi aláíró úton.
+   *
+   * ⚠️ A BURKOLAT HÁROM ÚJ MEZŐJÉT IS KITÖLTI (3.1): enélkül a mérés a RÉGI alakot mérné,
+   * és a szabály-réteg minden tudatpont-eseményt kivételként szórna ki — vagyis nem valódi
+   * terhelést mérnénk, hanem egy szűrő sebességét.
+   */
   async function esemenyt(ember, tipus, adat, index) {
     ember.sorszam++;
+
+    const entitas = szeletKulcs(tipus, adat);
+    let entitasSorszam = 1;
+    if (entitas !== null) {
+      entitasSorszam = (ember.entitasSorszamok.get(entitas) ?? 0) + 1;
+      ember.entitasSorszamok.set(entitas, entitasSorszam);
+    }
+
     const esemeny = await esemenyLetrehozasa(
       {
         koino: KOINO,
@@ -162,7 +189,15 @@ async function tarGyartasa(darab, hely) {
         adat,
         elozo: ember.elozo,
         sorszam: ember.sorszam,
-        ido: idoAlap + index * 1000
+        ido: idoAlap + index * 1000,
+        entitas,
+        entitasSorszam,
+        // A horgony a határidő-mozgató eseményeken él (a `muveletek.js` szerint); itt egy
+        // hihető helykitöltő, hogy a MÉRET valósághű legyen.
+        latott: (tipus === 'Szavazat' || tipus === 'TudatpontRendezes' || tipus === 'ErtekJavaslat')
+          && entitasok.length
+          ? [entitasok[Math.floor(veletlen() * entitasok.length)]]
+          : []
       },
       ember.kulcspar
     );
@@ -226,7 +261,9 @@ async function tarGyartasa(darab, hely) {
       await esemenyt(ember, 'TudatpontRendezes', {
         entitas,
         pont,
-        szerep: veletlen() < 0.9 ? 'aktiv' : 'passziv'
+        szerep: veletlen() < 0.9 ? 'aktiv' : 'passziv',
+        // ⭐ A D42 BEMONDOTT ÖSSZEGE — a szabály-réteg ezt veti össze a számítottal.
+        kiosztva: ember.osszeg
       }, index);
       continue;
     }

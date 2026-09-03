@@ -26,7 +26,71 @@ const ALGORITMUS = 'Ed25519';
 // A tartalom mezői — EZEK és csakis ezek kerülnek a lenyomatba, ebben a sorrendben
 // (a sorrend valójában mindegy, mert a kanonikus alak úgyis rendez — de a lista
 // rögzítése azért fontos, hogy ne csússzon be véletlenül új mező a lenyomatba).
-const TARTALOM_MEZOK = ['koino', 'tipus', 'szerzo', 'elozo', 'sorszam', 'ido', 'adat'];
+//
+// ===== A BURKOLAT BŐVÜLT (2026-08-31, a Szakasz 3 / 3.1 lépése) =====
+//
+// Három mező került be, és MINDHÁROM ugyanazt a hiányt pótolja: ha a tárolást
+// szeleteljük (entitásonként), a készülék már NEM látja egy szerző teljes láncát — tehát
+// amit eddig a lánc végigjárásából tudtunk meg, azt ezentúl AZ ESEMÉNYNEK KELL HOZNIA.
+//
+//   entitas        — ⭐ A SZELET-KULCS. Melyik entitáshoz tartozik ez az esemény?
+//   entitasSorszam — hányadik eseményem EZEN AZ ENTITÁSON (a `sorszam` entitás-szintű párja)
+//   latott         — pár IDEGEN esemény azonosítója, amit már ismertem (horgony az időhöz)
+//   lancGyoker     — ⏸️ LEFOGLALT HELY, egyelőre MINDIG `null` (lásd lentebb)
+//
+// ⚠️ MIÉRT A BURKOLATBAN, ÉS NEM AZ `adat`-BAN? Mert a tár-illesztőnek szeletelnie kell,
+// és ehhez NEM SZABAD értenie a domaint. Ma az entitás típusonként más néven lapul az
+// adatban (`adat.entitas`, `adat.erintett`, a szavazatnál pedig csak közvetve, a javaslaton
+// keresztül). Egyetlen, típus-független szabály kell helyette:
+//
+//   ⭐ szelet(e) = e.entitas ?? e.azonosito
+//
+// A `null` jelentése tehát: „ez az esemény a SAJÁT szeletét nyitja" — így a tartalom-
+// létrehozás (ami maga hozza létre az entitást) és a koino-létrehozás is befér a szabályba,
+// külön eset nélkül. *(A saját azonosítót nem lehetne a mezőbe írni: önmagára hivatkozna.)*
+//
+// ⚠️ MIÉRT MOST? Mert a kanonikus alak bővítése KÉSŐBB NEM INGYENES: a régi eseményeket
+// nem lehet újra aláírni (az aláírás a régi bájtokra szól), tehát kétféle eseményalak
+// maradna örökre — és átállás közben két gép ugyanarra a tudásra MÁS ujjlenyomatot
+// számolna, NÉMÁN. A tárban 2026-08-31-én 9 valódi esemény volt.
+//
+// ⚠️ MINDIG JELEN VANNAK (`null`, illetve `[]`), soha nem hiányoznak. A kanonikus alak a
+// hiányzó mezőt kihagyja — ha hol lenne, hol nem, két majdnem-azonos esemény lenyomata
+// magyarázhatatlanul eltérne. Ugyanaz a megfontolás, mint az `elozo: null`-nál.
+//
+// ===== ⏸️ A NEGYEDIK MEZŐ: LEFOGLALT HELY (Csaba döntése, 2026-09-02) =====
+//
+// A `lancGyoker` a szerző EGÉSZ addigi láncára kötne el egyetlen lenyomattal — nagyjából
+// úgy, ahogy az `elozo` az előző eseményre mutat. ⭐ Ettől a kettős lánc bizonyítéka
+// TÚLÉLNÉ az összenyomást: aki elágazik, két különböző gyökeret kötelez el magára, és a
+// két aláírt állítása mond ellent egymásnak.
+//
+// ⚠️ DE MOST MÉG NINCS FOGYASZTÓJA. Ehhez az összegző Merkle-fa kell, ami a Szakasz 4
+// munkája — és egy mező, aminek nincs fogyasztója, ROSSZ DEFINÍCIÓT kap. A kanonikus
+// alakban pedig épp ez a drága hiba.
+//
+// ⭐ EZÉRT: a mező MOST bekerül, de MINDIG `null`. Amit később nem lehet olcsón megtenni,
+// az egy mező HOZZÁADÁSA vagy ELVÉTELE — mert attól kétféle eseményalak lenne, és átállás
+// közben két gép ugyanarra a tudásra MÁS ujjlenyomatot számolna, némán. Egy `null`-t
+// értelmes értékre cserélni NEM ilyen: az csak egy másik érték, mint bármelyik másikban.
+const TARTALOM_MEZOK = [
+  'koino', 'tipus', 'szerzo', 'elozo', 'sorszam', 'ido',
+  'entitas', 'entitasSorszam', 'latott', 'lancGyoker',
+  'adat'
+];
+
+/**
+ * ⭐ A SZELET-KULCS — melyik entitáshoz tartozik az esemény.
+ *
+ * Ez az egyetlen szabály, amit a tár-illesztőnek ismernie kell a szeleteléshez. Domain-
+ * tudást nem igényel: vagy meg van mondva, vagy az esemény a saját szeletét nyitja.
+ *
+ * @param {Object} esemeny
+ * @returns {string} az entitás azonosítója
+ */
+export function szelet(esemeny) {
+  return esemeny.entitas ?? esemeny.azonosito;
+}
 
 // ===================================
 // SEGÉD: A LENYOMATOLANDÓ RÉSZ KIEMELÉSE
@@ -59,6 +123,9 @@ function tartalomResz(esemeny) {
  * @param {string|null} leiras.elozo - az előző SAJÁT eseményem azonosítója (az első: null)
  * @param {number} leiras.sorszam - hányadik a saját láncomban (az első: 1)
  * @param {number} [leiras.ido] - a szerző órája szerint (alapból: most)
+ * @param {string|null} [leiras.entitas] - a SZELET-KULCS; null = az esemény a saját szeletét nyitja
+ * @param {number} [leiras.entitasSorszam] - hányadik eseményem ezen az entitáson (alap: 1)
+ * @param {Array<string>} [leiras.latott] - idegen események, amiket már ismertem (horgony)
  * @param {CryptoKeyPair} kulcspar - a saját kulcspár
  * @returns {Promise<Object>} az aláírt esemény
  */
@@ -79,6 +146,17 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
     // Az idő a SZERZŐ órája — tájékoztató adat, soha nem bizonyíték. A sorrendet a
     // saját láncban a `sorszam` adja, nem ez.
     ido: leiras.ido ?? Date.now(),
+
+    // ----- A HÁROM ÚJ MEZŐ (lásd a TARTALOM_MEZOK melletti magyarázatot) -----
+    // Mindhárom MINDIG jelen van, hogy a lenyomat kiszámítható maradjon.
+    entitas: leiras.entitas ?? null,
+    entitasSorszam: leiras.entitasSorszam ?? 1,
+    // A horgony: idegen események, amiket a szerző a sajátja előtt már ismert. Üres tömb
+    // is érvényes — akkor egyszerűen nincs mihez kötni az eseményt (D19: ez jelzés, nem vád).
+    latott: Array.isArray(leiras.latott) ? [...leiras.latott] : [],
+    // ⏸️ LEFOGLALT HELY — a jelentése a Szakasz 4-ben dől el (lásd fent). Addig `null`.
+    lancGyoker: leiras.lancGyoker ?? null,
+
     adat: leiras.adat
   };
 
@@ -127,10 +205,35 @@ export async function esemenyEllenorzese(esemeny) {
   if (!esemeny || typeof esemeny !== 'object') {
     return { rendben: false, ok: 'nem objektum' };
   }
-  for (const mezo of ['koino', 'tipus', 'szerzo', 'sorszam', 'ido', 'azonosito', 'alairas']) {
+  // ⚠️ A HÁROM ÚJ MEZŐ IS KÖTELEZŐ (2026-08-31). Ez szándékos szigor: a kanonikus alak a
+  // hiányzó mezőt kihagyja, tehát egy régi alakú esemény ÖNMAGÁBAN érvényesnek látszana —
+  // és akkor KÉTFÉLE eseményalak élne egymás mellett. Ki lehetne hagyni a mezőket, hogy a
+  // szabály-réteg ne tudjon rájuk támaszkodni. Egy alak van, nem kettő.
+  // (A `null` érvényes érték: az `entitas: null` azt jelenti, „a saját szeletét nyitja".)
+  for (const mezo of [
+    'koino', 'tipus', 'szerzo', 'sorszam', 'ido',
+    'entitas', 'entitasSorszam', 'latott', 'lancGyoker',
+    'azonosito', 'alairas'
+  ]) {
     if (esemeny[mezo] === undefined) {
       return { rendben: false, ok: 'hiányzó mező: ' + mezo };
     }
+  }
+
+  // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
+  if (esemeny.entitas !== null && typeof esemeny.entitas !== 'string') {
+    return { rendben: false, ok: 'az entitas csak azonosító vagy null lehet' };
+  }
+  if (!Number.isInteger(esemeny.entitasSorszam) || esemeny.entitasSorszam < 1) {
+    return { rendben: false, ok: 'az entitasSorszam csak 1-nél nem kisebb egész lehet' };
+  }
+  if (!Array.isArray(esemeny.latott) || esemeny.latott.some((a) => typeof a !== 'string')) {
+    return { rendben: false, ok: 'a latott csak azonosítók tömbje lehet' };
+  }
+  // ⏸️ A lánc-gyökér egyelőre MINDIG null (lefoglalt hely). Szövegként is átengedjük, hogy
+  // a Szakasz 4 bekapcsolása ne kívánjon itt újabb változtatást.
+  if (esemeny.lancGyoker !== null && typeof esemeny.lancGyoker !== 'string') {
+    return { rendben: false, ok: 'a lancGyoker csak lenyomat vagy null lehet' };
   }
 
   // ----- 1. AZ AZONOSÍTÓ A TARTALOM LENYOMATA-E? -----

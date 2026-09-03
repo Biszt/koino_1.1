@@ -20,7 +20,7 @@
 //
 // Használják: muveletek.js és minden, ami eseményt olvas.
 
-import { esemenyEllenorzese, elagazasE } from '../esemeny/esemeny.js';
+import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -129,6 +129,93 @@ export async function sajatLancEsemenyei(tar, szerzo) {
 export async function koinoEsemenyei(tar, koino) {
   const esemenyek = await tar.betolt();
   return esemenyek.filter((e) => e.koino === koino);
+}
+
+// ===================================
+// A SZELET — egy entitás eseményei
+// ===================================
+//
+// ⚠️ EZ MÉG A LASSÚ ÚTON MEGY (`tar.betolt()`), és ez tudatos: a 3.1 lépés a KANONIKUS
+// ALAKOT teszi rendbe, a tár-illesztő szeletelhetővé tétele a 3.2. Ami itt most számít, az
+// a HELYES KÉRDÉS — hogy a fölötte lévő rétegek már ezt hívják, ne a `betolt()`-öt. A
+// megvalósítás mögötte kicserélhető anélkül, hogy bárki más változna (9. szabály: az
+// illesztés most kell, a mélység később).
+
+/**
+ * Egy entitás (szelet) összes eseménye.
+ *
+ * A szelet-kulcs típus-független: `esemeny.entitas ?? esemeny.azonosito` — lásd az
+ * `esemeny.js` `szelet()` függvényét.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {string} entitas
+ * @returns {Promise<Array<Object>>}
+ */
+export async function entitasEsemenyei(tar, koino, entitas) {
+  const esemenyek = await tar.betolt();
+  return esemenyek.filter((e) => e.koino === koino && szelet(e) === entitas);
+}
+
+/**
+ * Hányadik lesz a következő eseményem EZEN AZ ENTITÁSON?
+ *
+ * ⭐ MIÉRT KELL EZ? Mert szeletelt tárban a koino-szintű `sorszam` hézagjai NORMÁLISSÁ
+ * válnak: ha csak azokat az eseményeket tárolom, amik az általam tartott entitásokra
+ * vonatkoznak, akkor a szerző láncából jogosan hiányoznak darabok. Ezzel a hézag megszűnne
+ * JEL lenni — pedig épp az volt a szelektív mutogatás nyoma.
+ *
+ * Az entitás-szintű sorszám visszaadja a jelet: az ENTITÁSON BELÜLI hézag újra gyanús, az
+ * entitások közti pedig várt és ártalmatlan.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {string} szerzo
+ * @param {string} entitas
+ * @returns {Promise<number>}
+ */
+export async function kovetkezoEntitasSorszam(tar, koino, szerzo, entitas) {
+  const sajatjai = (await entitasEsemenyei(tar, koino, entitas))
+    .filter((e) => e.szerzo === szerzo);
+  if (!sajatjai.length) return 1;
+  return Math.max(...sajatjai.map((e) => e.entitasSorszam ?? 1)) + 1;
+}
+
+/**
+ * ⭐ A HORGONY: pár IDEGEN esemény ebből a szeletből, amit már ismerünk.
+ *
+ * MIT OLD MEG? Az `ido` a szerző órája, tehát hazudható — egy visszadátumozott szavazat
+ * beférhetne egy már lezárt döntésbe (`javaslatSzamitas.js` figyelmeztetése). Ha viszont az
+ * eseményem hivatkozik egy MÁSIK ember eseményére, akkor bizonyíthatóan AZUTÁN keletkezett:
+ * nem hivatkozhatnék olyasmire, ami akkor még nem létezett.
+ *
+ * ⚠️ AMIT NEM OLD MEG: aki semmit nem horgonyoz, arról továbbra sem tudjuk, mikor írt. A
+ * horgony a hazugságot MEGDRÁGÍTJA és BIZONYÍTHATÓVÁ teszi, nem zárja ki — ugyanaz a szint,
+ * amit a D42 bemondott összege ad, és ugyanaz a filozófia (D19).
+ *
+ * ⚠️ MIÉRT CSAK EBBŐL A SZELETBŐL? Mert a szeletelt tárban csak ezt látjuk biztosan — és
+ * mert a döntés bemenete úgyis entitás-helyi. Egy másik szeletből vett horgonyt a másik gép
+ * esetleg nem tudná ellenőrizni.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {string} entitas
+ * @param {string} sajatSzerzo - a saját kulcsunk (a sajátjainkat kihagyjuk)
+ * @param {number} [darab] - hány horgony (alap: 1 — ennyi elég a „azután" bizonyításához)
+ * @returns {Promise<Array<string>>}
+ */
+export async function horgonyok(tar, koino, entitas, sajatSzerzo, darab = 1) {
+  const idegenek = (await entitasEsemenyei(tar, koino, entitas))
+    .filter((e) => e.szerzo !== sajatSzerzo);
+  if (!idegenek.length) return [];
+
+  // A LEGFRISSEBBEKET választjuk — azok kötik meg legszorosabban az időt. Az `ido` itt
+  // csak RENDEZÉSRE szolgál (a horgony ereje az azonosítóból jön, nem az órából), ezért
+  // ártalmatlan, hogy hazudható.
+  return [...idegenek]
+    .sort((a, b) => (b.ido - a.ido) || (a.azonosito < b.azonosito ? -1 : 1))
+    .slice(0, darab)
+    .map((e) => e.azonosito);
 }
 
 // ===================================

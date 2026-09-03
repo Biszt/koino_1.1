@@ -181,6 +181,84 @@ proba('A szabálysértés nem viszi magával a szerző TÖBBI eseményét', asyn
   return a.kivetelek.length === 1 && a.entitasok.get(egyik.azonosito).osszesPont === 100;
 });
 
+// ===================================
+// ⭐⭐ A D42: A BEMONDOTT ÖSSZEG — a hallgatásból ÁTADHATÓ bizonyíték lesz
+// ===================================
+//
+// A PROBLÉMA, AMIT MEGOLD. A keret ellenőrzéséhez eddig egy ember TELJES lánca kellett.
+// Anna lánca: #2 (A ← 6000) · #3 (B ← 6000). Aki mind a kettőt ismeri: 12 000 > 10 000 →
+// kivétel. Akinél a #2 hiányzik: 6000 → átmegy. ⚠️ Anna nem hamisít semmit — csak ELHALLGAT.
+//
+// A bemondott összeggel a bizonyíték HIÁNYBÓL ELLENTMONDÁSSÁ válik: ha hazudik a
+// bemondásban, akkor két SAJÁT, ALÁÍRT állítása mond ellent egymásnak — és ez már átadható:
+// odaadom a két eseményt, bárki ellenőrzi.
+
+proba('⭐ A BEMONDOTT ÖSSZEG EGYETLEN eseményből ellenőrizhető (a lánc többi része nélkül)', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Egyetlen', meret: 10 });
+  // Kézzel bemondott, keretet túllépő összeg — a többi eseményét NEM is ismerjük.
+  const p = await anna.tesz('TudatpontRendezes',
+    { entitas: t.azonosito, pont: 100, kiosztva: TUDATPONT_KERET + 1 });
+
+  // SZÁNDÉKOSAN csak ezt az egy pont-eseményt adjuk oda, lánc nélkül.
+  const { kivetelek } = szabalyokErvenyesitese([p]);
+  return kivetelek.length === 1 && kivetelek[0].ok.includes('bemondott összeg túllépi');
+});
+
+proba('⭐⭐ A HAZUG BEMONDÁS lelepleződik: két saját aláírt esemény ellentmond egymásnak', async () => {
+  const anna = await ujEember();
+  const a = await anna.tesz('TartalomLetrehozas', { cim: 'A', meret: 10 });
+  const b = await anna.tesz('TartalomLetrehozas', { cim: 'B', meret: 10 });
+  const p1 = await anna.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 6000 });
+  // Itt hazudik: valójában 12 000-nél tartana, de 6000-et mond be.
+  const p2 = await anna.tesz('TudatpontRendezes',
+    { entitas: b.azonosito, pont: 6000, kiosztva: 6000 });
+
+  const { kivetelek } = szabalyokErvenyesitese([a, b, p1, p2]);
+  return kivetelek.length === 1
+      && kivetelek[0].azonosito === p2.azonosito
+      && kivetelek[0].ok.includes('ellentmond a saját láncának');
+});
+
+proba('⚠️ DE HÉZAG ESETÉN NEM VÁD, HANEM JELZÉS — a lemaradás nem büntetendő', async () => {
+  const anna = await ujEember();
+  const a = await anna.tesz('TartalomLetrehozas', { cim: 'A', meret: 10 });
+  const b = await anna.tesz('TartalomLetrehozas', { cim: 'B', meret: 10 });
+  // ⚠️ KERETEN BELÜLI számok kellenek, különben a keret-ellenőrzés tüzel előbb, és nem azt
+  // mérnénk, amit akarunk. (Ez a próba első változatának a hibája volt.)
+  const p1 = await anna.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 3000 });
+  const p2 = await anna.tesz('TudatpontRendezes',
+    { entitas: b.azonosito, pont: 4000, kiosztva: 7000 });
+
+  // A `p1` HIÁNYZIK a halmazból — vagyis hézag van a láncban a `p2` előtt. A mi
+  // számításunk 4000-et adna, ő 7000-et mond — és IGAZAT MOND. Az eltérés a MI
+  // lemaradásunk, nem az ő hazugsága. Ilyenkor nem kivétel, hanem „nem ellenőrizhető".
+  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese([a, b, p2]);
+  return kivetelek.length === 0
+      && nemEllenorizhetok.length === 1
+      && nemEllenorizhetok[0].azonosito === p2.azonosito;
+});
+
+proba('A HIÁNYZÓ bemondott összeg is kivétel (nem lehet kihagyni a mezőt)', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Hiányos', meret: 10 });
+  const p = await anna.tesz('TudatpontRendezes',
+    { entitas: t.azonosito, pont: 100, kiosztva: null });
+
+  const { kivetelek } = szabalyokErvenyesitese([p]);
+  return kivetelek.length === 1 && kivetelek[0].ok.includes('bemondott összeg');
+});
+
+proba('A HELYES bemondás átmegy, és nem kerül a jelzések közé sem', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Rendes', meret: 10 });
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 4200 });
+
+  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese([t, p]);
+  return kivetelek.length === 0 && nemEllenorizhetok.length === 0
+      && p.adat.kiosztva === 4200;
+});
+
 // ===== DETERMINIZMUS =====
 
 proba('⭐ A SORREND NEM SZÁMÍT: kevert események, ugyanazok a kivételek', async () => {

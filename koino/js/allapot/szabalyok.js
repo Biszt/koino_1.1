@@ -47,16 +47,35 @@ export const TUDATPONT_KERET = 10000;
  * Szétválogatja az eseményeket: melyik SZÁMÍT, és melyik nem (indoklással).
  *
  * @param {Array<Object>} esemenyek - elágazás-mentesített események (lásd allapotSzamitas)
- * @returns {{szamitok: Array<Object>, kivetelek: Array<{azonosito: string, szerzo: string, tipus: string, ok: string}>}}
+ * @returns {{szamitok: Array<Object>, kivetelek: Array<Object>, nemEllenorizhetok: Array<Object>}}
  */
 export function szabalyokErvenyesitese(esemenyek) {
   const kivetelek = [];
+  const nemEllenorizhetok = [];
   const kiesettek = new Set();   // az azonosítók, amik nem számítanak
 
   /** Egy eseményt kivételnek jelöl — de nem dob el semmit (D19). */
   const kivetel = (esemeny, ok) => {
     kiesettek.add(esemeny.azonosito);
     kivetelek.push({
+      azonosito: esemeny.azonosito,
+      szerzo: esemeny.szerzo,
+      tipus: esemeny.tipus,
+      sorszam: esemeny.sorszam,
+      ok
+    });
+  };
+
+  /**
+   * ⚠️ NEM KIVÉTEL, HANEM JELZÉS: az esemény SZÁMÍT, csak valamit nem tudtunk ellenőrizni.
+   *
+   * Miért kell ez a harmadik kategória? Mert a szeletelt/hálózati működésben a HIÁNY a
+   * normális átmeneti állapot. Ha a nem-ellenőrizhetőt kivételnek vennénk, minden becsületes
+   * embert büntetnénk minden lemaradásért — épp azt a hibát követnénk el, amit a D18/5
+   * elhalványulás-javaslatánál Csaba már egyszer elutasított.
+   */
+  const nemEllenorizheto = (esemeny, ok) => {
+    nemEllenorizhetok.push({
       azonosito: esemeny.azonosito,
       szerzo: esemeny.szerzo,
       tipus: esemeny.tipus,
@@ -80,14 +99,40 @@ export function szabalyokErvenyesitese(esemenyek) {
     const pontok = new Map();            // entitás → a szerző jelenlegi pontja rajta
     let osszeg = 0;                      // mennyit osztott ki eddig összesen
 
+    // ⭐ ISMERJÜK-E A LÁNCOT HÉZAGTALANUL EDDIG A PONTIG?
+    // Ez dönti el, hogy egy eltérő bemondás BIZONYÍTOTT ellentmondás-e, vagy csak a mi
+    // lemaradásunk. Amint egyszer hézag támad, onnantól a lánc többi részéről sem
+    // állíthatunk semmit — ezért nem áll vissza igazra.
+    let folytonos = true;
+    let vartSorszam = 1;
+
     for (const e of rendezett) {
+      if (e.sorszam !== vartSorszam) folytonos = false;
+      vartSorszam = e.sorszam + 1;
 
       // ===== 1. SZABÁLY: A TUDATPONT-KERET =====
       if (e.tipus === 'TudatpontRendezes') {
         const pont = e.adat?.pont;
+        const kiosztva = e.adat?.kiosztva;
 
         if (!Number.isInteger(pont) || pont < 0) {
           kivetel(e, 'a tudatpont csak nemnegatív egész szám lehet');
+          continue;
+        }
+
+        // ----- ⭐ A BEMONDOTT ÖSSZEG (D42) -----
+        // A pont-esemény magával viszi, mennyi a szerzőnek ÖSSZESEN kiosztva ezután.
+        if (!Number.isInteger(kiosztva) || kiosztva < 0) {
+          kivetel(e, 'hiányzik vagy hibás a bemondott összeg (adat.kiosztva)');
+          continue;
+        }
+
+        // ⭐⭐ EZ A D42 LÉNYEGE: EGYETLEN ESEMÉNYBŐL ELDŐL, a lánc többi része nélkül.
+        // Szeletelt tárban ez az EGYETLEN mód a keret ellenőrzésére — teljes láncot soha
+        // többé nem fogunk látni.
+        if (kiosztva > TUDATPONT_KERET) {
+          kivetel(e, 'a bemondott összeg túllépi a keretet ('
+            + kiosztva + ' / ' + TUDATPONT_KERET + ')');
           continue;
         }
 
@@ -95,6 +140,26 @@ export function szabalyokErvenyesitese(esemenyek) {
         // kiadás. Ezért a régi értéket kivonjuk, mielőtt az újat hozzáadnánk.
         const regi = pontok.get(e.adat.entitas) ?? 0;
         const ujOsszeg = osszeg - regi + pont;
+
+        // ----- ⭐⭐ A BEMONDÁS ÖSSZEVETÉSE A SAJÁT LÁNCÁVAL -----
+        //
+        // ITT VÁLIK A HALLGATÁS ÁTADHATÓ BIZONYÍTÉKKÁ. Aki elhallgat egy pont-eseményt,
+        // annak a bemondott összege nem stimmel a többi SAJÁT, ALÁÍRT eseményével — és
+        // akkor két saját állítása mond ellent egymásnak. Ma a bizonyíték egy HIÁNY
+        // (kétértelmű: támadás vagy lemaradás?) és nem átadható; így viszont odaadom a két
+        // eseményt, és bárki ellenőrzi.
+        //
+        // ⚠️ DE CSAK AKKOR BIZONYÍTÉK, HA HÉZAGTALANUL ISMERJÜK A LÁNCOT. Hézag után a
+        // MI számításunk a hiányos — nem ő hazudott. Ilyenkor jelzünk, nem büntetünk (D19).
+        if (kiosztva !== ujOsszeg) {
+          if (folytonos) {
+            kivetel(e, 'a bemondott összeg ellentmond a saját láncának (bemondva '
+              + kiosztva + ', a láncából ' + ujOsszeg + ')');
+            continue;
+          }
+          nemEllenorizheto(e, 'a bemondott összeg (' + kiosztva
+            + ') nem egyezik a számítottal (' + ujOsszeg + '), de a láncában hézag van');
+        }
 
         if (ujOsszeg > TUDATPONT_KERET) {
           kivetel(e, 'túllépné a tudatpont-keretet (' + ujOsszeg + ' / ' + TUDATPONT_KERET + ')');
@@ -127,10 +192,11 @@ export function szabalyokErvenyesitese(esemenyek) {
 
   console.log('szabalyokErvenyesitese - VÉGE', {
     szamit: szamitok.length,
-    kivetel: kivetelek.length
+    kivetel: kivetelek.length,
+    nemEllenorizheto: nemEllenorizhetok.length
   });
 
-  return { szamitok, kivetelek };
+  return { szamitok, kivetelek, nemEllenorizhetok };
 }
 
 // ===================================

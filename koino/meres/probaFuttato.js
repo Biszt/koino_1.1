@@ -88,9 +88,36 @@ export function probaGyujtemeny(cim) {
 // másolják — és mert ha a lánc-építés szabálya változik, itt egy helyen kövessük.
 
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { TUDATPONT_KERET } from '../js/allapot/szabalyok.js';
+
+/**
+ * A SZELET-KULCS kitalálása a típusból — ugyanaz a szabály, amit a `muveletek.js` követ.
+ *
+ * ⚠️ EGY KÖZELÍTÉSSEL: a `Szavazat` szelete valójában a javaslat ÉRINTETT entitása, de azt
+ * csak a tárból lehetne kikeresni, ami a próba-segédnek nincs. Itt a javaslat azonosítóját
+ * használjuk. A próbák egyike sem vizsgálja a szeletet (a fogyasztója még nincs megépítve),
+ * tehát ez ma ártalmatlan — de ha egyszer szelet-próba születik, ITT kell rendbe tenni.
+ */
+function szeletKulcs(tipus, adat) {
+  if (tipus === 'TudatpontRendezes' || tipus === 'ErtekJavaslat') return adat?.entitas ?? null;
+  if (tipus === 'Javaslat') return adat?.erintett ?? null;
+  if (tipus === 'Szavazat') return adat?.javaslat ?? null;
+  return null;   // KoinoLetrehozas, TartalomLetrehozas: a saját szeletüket nyitják
+}
 
 /**
  * Új e-ember, aki eseményeket tud a saját lánca végére fűzni.
+ *
+ * ===== A HÁROM ÚJ MEZŐ (2026-08-31, a 3.1 lépés) =====
+ *
+ * A segéd ugyanazokat a mezőket tölti ki, amiket a `muveletek.js` — `entitas`,
+ * `entitasSorszam`, és a tudatpont-rendezésnél az `adat.kiosztva` (D42). Így a próbák nem
+ * másolják a szabályt, és ha az változik, EGY helyen kell követni.
+ *
+ * ⭐ DE A RONTÁS-PRÓBÁK FELÜLÍRHATJÁK. Ha a hívó maga ad `adat.kiosztva`-t, azt tiszteletben
+ * tartjuk — különben nem lehetne olyan eseményt gyártani, ami HAZUDIK a bemondott összegről,
+ * és épp az a D42 lényege, hogy azt le lehessen leplezni.
+ *
  * @param {string} [koino]
  * @returns {Promise<{szerzo: string, kulcspar: CryptoKeyPair, tesz: Function, elagaztat: Function}>}
  */
@@ -103,15 +130,58 @@ export async function ujEember(koino = 'proba') {
   let sorszam = 0, elozo = null;
   let utolsoSorszam = 0, utolsoElozo = null;   // az utolsó esemény helye (az elágazáshoz)
 
+  const entitasSorszamok = new Map();   // szelet → hányadik eseményem rajta
+  const pontok = new Map();             // entitás → a rá tett pontom
+  let kiosztottOsszeg = 0;              // mennyit osztottam ki eddig
+
+  /** A közös rész: a burkolat három mezőjének kitöltése. */
+  function burkolat(tipus, adat, beallitas) {
+    const entitas = beallitas?.entitas !== undefined
+      ? beallitas.entitas
+      : szeletKulcs(tipus, adat);
+
+    // Az entitás-sorszám csak akkor számol, ha van szelet; a saját szeletét nyitó
+    // eseménynél mindig 1.
+    let entitasSorszam = 1;
+    if (entitas !== null) {
+      entitasSorszam = (entitasSorszamok.get(entitas) ?? 0) + 1;
+      entitasSorszamok.set(entitas, entitasSorszam);
+    }
+
+    // ----- A D42 BEMONDOTT ÖSSZEGE -----
+    let vegsoAdat = adat;
+    if (tipus === 'TudatpontRendezes' && adat?.kiosztva === undefined
+        && Number.isInteger(adat?.pont)) {
+      const regi = pontok.get(adat.entitas) ?? 0;
+      const ujOsszeg = kiosztottOsszeg - regi + adat.pont;
+      // Ugyanaz a szabály, mint a szabalyok.js-ben: a keretet túllépő esemény nem számít,
+      // tehát a nyilvántartásunk sem mozdul tőle — de a bemondás akkor is a valós összeg.
+      if (ujOsszeg <= TUDATPONT_KERET) {
+        pontok.set(adat.entitas, adat.pont);
+        kiosztottOsszeg = ujOsszeg;
+      }
+      vegsoAdat = { ...adat, kiosztva: ujOsszeg };
+    }
+
+    return { entitas, entitasSorszam, adat: vegsoAdat };
+  }
+
   return {
     szerzo,
     kulcspar,
 
-    /** Új esemény a lánc végére. Az `ido` elhagyható (alapból: most). */
-    async tesz(tipus, adat, ido) {
+    /**
+     * Új esemény a lánc végére. Az `ido` elhagyható (alapból: most).
+     * @param {Object} [beallitas] - `{ entitas }` a szelet-kulcs felülírásához
+     */
+    async tesz(tipus, adat, ido, beallitas) {
       utolsoElozo = elozo;
       utolsoSorszam = ++sorszam;
-      const e = await esemenyLetrehozasa({ koino, tipus, adat, elozo, sorszam, ido }, kulcspar);
+      const { entitas, entitasSorszam, adat: vegsoAdat } = burkolat(tipus, adat, beallitas);
+      const e = await esemenyLetrehozasa(
+        { koino, tipus, adat: vegsoAdat, elozo, sorszam, ido, entitas, entitasSorszam, latott: [] },
+        kulcspar
+      );
       elozo = e.azonosito;
       return e;
     },
@@ -121,9 +191,13 @@ export async function ujEember(koino = 'proba') {
      * vagyis kettéágaztatja a saját láncát. Ez a kettős cselekvés: nem akadályozzuk
      * meg, hanem LELEPLEZZÜK (D17/D19). A lánc végét nem mozdítja el.
      */
-    async elagaztat(tipus, adat, ido) {
+    async elagaztat(tipus, adat, ido, beallitas) {
+      const { entitas, entitasSorszam, adat: vegsoAdat } = burkolat(tipus, adat, beallitas);
       return esemenyLetrehozasa(
-        { koino, tipus, adat, elozo: utolsoElozo, sorszam: utolsoSorszam, ido },
+        {
+          koino, tipus, adat: vegsoAdat, elozo: utolsoElozo, sorszam: utolsoSorszam, ido,
+          entitas, entitasSorszam, latott: []
+        },
         kulcspar
       );
     }
