@@ -21,7 +21,9 @@
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
-  cimNormalizalasa, sajatCimE, sajatCimekKiszurese
+  cimNormalizalasa, sajatCimE, sajatCimekKiszurese,
+  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
+  SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT
 } from '../js/csere/tarsak.js';
 
 const { proba, futtatas } = probaGyujtemeny('A társ-lista próbája');
@@ -296,6 +298,95 @@ proba('Ha nem tudjuk a saját címeinket, semmit nem szűrünk ki (nem találgat
   const kapott = [{ hoszt: '192.168.1.50', port: 7373 }];
   return sajatCimekKiszurese(kapott, []).cimek.length === 1
     && sajatCimekKiszurese(kapott).cimek.length === 1;
+});
+
+// ===================================
+// ⭐ A SZELET-CÍMJEGYZÉK — „kinél van ez az entitás?"
+// ===================================
+//
+// Csaba észrevételéből: *„böngészés közben az összes entitásnak elérhetőnek kell lennie,
+// vagy pontosan tudnunk kell, hogy az entitások hol vannak."* A társ-lista erre nem elég:
+// az azt mondja meg, KIKKEL beszélünk, nem azt, hogy KINÉL VAN egy adott tartalom.
+
+proba('Megjegyzett szelet-cím visszakérdezhető', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 1000);
+  const cimek = szeletCimei(j, 'E-1', 2000);
+  return cimek.length === 1 && cimek[0].hoszt === '192.168.1.50' && cimek[0].port === 7373;
+});
+
+proba('MÁSIK entitás címét nem adja vissza', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 1000);
+  return szeletCimei(j, 'E-2', 2000).length === 0;
+});
+
+proba('⭐ NÉV NINCS BENNE — csak cím, port és idő (D6)', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 1000);
+  const mezok = Object.keys(j[0]).sort().join(',');
+  // Ha ide valaha bekerülne egy `szerzo` vagy `nev` mező, ez a próba bukik — és jó, hogy
+  // bukik: a `tulajdonos → cím` pár PROFIL lenne.
+  return mezok === 'entitas,hoszt,mikor,port';
+});
+
+proba('Ugyanaz a cím kétszer: EGYSZER szerepel, a FRISS idővel', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 1000);
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 5000);
+  const cimek = szeletCimei(j, 'E-1', 6000);
+  return j.length === 1 && cimek.length === 1 && cimek[0].mikor === 5000;
+});
+
+proba('⚠️ AZ ELÉVÜLT CÍM NEM JÖN VISSZA — a cím múlandó körülmény, nem igazság', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 0);
+  const regen = szeletCimei(j, 'E-1', SZELET_CIM_ELEVULES + 1);
+  const meg = szeletCimei(j, 'E-1', SZELET_CIM_ELEVULES - 1);
+  return regen.length === 0 && meg.length === 1;
+});
+
+proba('A LEGFRISSEBB cím van elöl', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.1', 7373, 1000);
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.2', 7373, 3000);
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.3', 7373, 2000);
+  return szeletCimei(j, 'E-1', 4000).map((c) => c.hoszt).join(',') === '10.0.0.2,10.0.0.3,10.0.0.1';
+});
+
+proba('⭐ Az IPv4-be ágyazott IPv6-alak UGYANAZ a cím itt is', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '192.168.1.50', 7373, 1000);
+  j = szeletCimMegjegyzese(j, 'E-1', '::ffff:192.168.1.50', 7373, 2000);
+  // Ha ezt nem ismerné fel, KÉT bejegyzés lenne ugyanarra a gépre.
+  return j.length === 1 && szeletCimei(j, 'E-1', 3000)[0].mikor === 2000;
+});
+
+proba('Az érvénytelen cím vagy port nem kerül be', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '', 7373, 1000);
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.1', 0, 1000);
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.1', 99999, 1000);
+  return j.length === 0;
+});
+
+proba('A takarítás kidobja az elévülteket, a friss megmarad', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.1', 7373, 0);
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.2', 7373, SZELET_CIM_ELEVULES);
+  const tiszta = szeletJegyzekTakaritasa(j, SZELET_CIM_ELEVULES + 1);
+  return tiszta.length === 1 && tiszta[0].hoszt === '10.0.0.2';
+});
+
+proba('⚠️ A jegyzék NEM hízik korlátlanul: szeletenként legfeljebb a korlát marad', () => {
+  let j = [];
+  for (let i = 0; i < SZELET_CIM_KORLAT + 10; i++) {
+    j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.' + i, 7373, 1000 + i);
+  }
+  const tiszta = szeletJegyzekTakaritasa(j, 2000);
+  return j.length === SZELET_CIM_KORLAT + 10 && tiszta.length === SZELET_CIM_KORLAT
+    // A legfrissebbek maradnak meg.
+    && tiszta[0].mikor === 1000 + SZELET_CIM_KORLAT + 9;
 });
 
 export default futtatas;

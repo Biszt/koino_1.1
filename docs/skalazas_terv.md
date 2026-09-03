@@ -845,8 +845,8 @@ indexelni.
 | **S2** | ⭐ **A KANONIKUS ALAK BŐVÍTÉSE** (`kiosztva` + `entitasSorszam` [+ `latott`]) | I | a három önhordó bizonyíték | rontás-próbák: elhallgatott esemény → **kimutatható ellentmondás** |
 | **S3** | **Entitás-szintű tár** | I | a tárolás egysége az entitás | a betöltött bájt az entitás méretével arányos |
 | **S4** | **Entitás-szintű lenyomat és ÁLLÁS** | I | a csere ára a **közös szeletektől** függ | S1 tárával: 1 eltérés 100 000 esemény közt → hány bájt |
-| **S5** | **Címjegyzék az entitáson** (4.2) | I | egy nem tárolt entitás **elérhető** | önpróba + valódi két-készülékes próba |
-| **S6** | **Böngésző-lekérés** („add ide E-t") | I | a fa bejárható a szeleten kívül is | hány kör, hány bájt, hány ms |
+| ~~**S5**~~ | ~~Címjegyzék az entitáson~~ | I | ✅ **KÉSZ** (2026-09-03) — név nélkül, elévüléssel, szeletenkénti korláttal | 10 önpróba |
+| ~~**S6**~~ | ~~Böngésző-lekérés („add ide E-t")~~ | I | ✅ **KÉSZ** (2026-09-03) — `SZELETKEREK`, visszafelé kompatibilisen; a `hozd` parancs | 4 önpróba: ⭐ **csak a kért szeletet hozza** |
 | **S7** | **Másolat-tartás** (4.5) | I | az elérhetőség a népszerűséggel nő | találati arány |
 | **S8** | **Belépéskori címcsere** (5.4) | II | nincs szükség bejárati címlistára | önpróba |
 | **S9** | **Mutató-bejegyzés + szelet** (5.1–5.2) | II | a mutató mérete és a replikáció | szintetikus mérés |

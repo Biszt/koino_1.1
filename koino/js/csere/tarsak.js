@@ -236,3 +236,113 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
   });
   return osszegzes;
 }
+
+// ===================================
+// ⭐ A SZELET-CÍMJEGYZÉK — „kinél van ez az entitás?"
+// ===================================
+//
+// ===== MIÉRT KELL, ÉS MIÉRT KÜLÖN A TÁRS-LISTÁTÓL =====
+//
+// Csaba észrevétele indította el az egészet: *„böngészés közben az összes entitásnak
+// elérhetőnek kell lennie, vagy pontosan tudnunk kell, hogy az entitások hol vannak."*
+// A társ-lista erre nem elég: az azt mondja meg, **kikkel szoktunk beszélni**, nem azt,
+// hogy **kinél van egy adott tartalom**.
+//
+// ⭐ ÉS A JAVASLAT IS CSABÁÉ: *„mi lenne, ha az entitások tárolnák a tudatpont-tulajdonosaik
+// címét, amit frissítünk?"* — Ez nem új gépezet: a `vonal.js` `CIMEK` üzenete ma
+// KOINO-szinten kulcsolt címjegyzék; ez ugyanaz **entitás-szinten**.
+//
+// ===== HÁROM SZABÁLY, AMI NÉLKÜL ELROMLIK =====
+//
+// 1. ⭐ **NÉV NÉLKÜL.** Nem `tulajdonos → cím` párokat tartunk, hanem PUSZTA CÍMEKET. A
+//    döntéshez soha nem kell egy KONKRÉT embert elérni, csak *valakit, akinél megvan* — a
+//    név viszont **profil** lenne: elárulná, ki mi iránt érdeklődik és hol van (D6).
+//    *(Csaba döntése, 2026-09-02.)*
+//
+// 2. ⭐ **A HASZNÁLAT TARTJA KARBAN.** Nincs külön frissítő protokoll: amikor egy entitás
+//    miatt cserélünk valakivel, a címét a FOGLALATBÓL tudjuk meg — ugyanúgy, ahogy a
+//    `latlak` mező is teszi. Nulla plusz forgalom.
+//
+// 3. ⚠️ **BIZALOM NEM JÁR VELE** (3. szabály). A cím nem esemény, nem megy az
+//    `esemenyMentese` kapun, és SEMMIT nem dönt el. Ezért nem is kell aláírni: aki hamis
+//    címet ad, elérhetetlenséget okoz, nem hamisítást — a megkapott események ugyanúgy
+//    aláírtak, és az ujjlenyomat ugyanúgy összevethető.
+//
+// ⚠️ NINCS BENNE HÁLÓZAT (1. szabály): tiszta függvények egy sima listán, tehát ugyanúgy
+// önpróbázható, mint a társ-lista.
+
+/** Meddig hiszünk el egy szelet-címet? Utána elévül — a cím múlandó körülmény, nem igazság. */
+export const SZELET_CIM_ELEVULES = 24 * 60 * 60 * 1000;   // egy nap
+
+/** Legfeljebb ennyi címet tartunk EGY szeletre — a legfrissebbeket. */
+export const SZELET_CIM_KORLAT = 20;
+
+/**
+ * Megjegyzi, hogy ezen a címen megvan az entitás.
+ *
+ * @param {Array<Object>} jegyzek - a mai jegyzék (nem írjuk át)
+ * @param {string} entitas
+ * @param {string} hoszt
+ * @param {number} port
+ * @param {number} [most]
+ * @returns {Array<Object>} az ÚJ jegyzék
+ */
+export function szeletCimMegjegyzese(jegyzek, entitas, hoszt, port, most = Date.now()) {
+  const normalt = cimNormalizalasa(hoszt);
+  if (!normalt || !Number.isInteger(port) || port <= 0 || port >= 65536) return jegyzek;
+
+  // Ugyanaz a cím ugyanarra a szeletre csak egyszer szerepel — a friss idő felülírja.
+  const nelkule = jegyzek.filter(
+    (b) => !(b.entitas === entitas && cimNormalizalasa(b.hoszt) === normalt && b.port === port)
+  );
+
+  return [...nelkule, { entitas, hoszt, port, mikor: most }];
+}
+
+/**
+ * Kinél van ez az entitás? A legfrissebbek elöl.
+ *
+ * ⚠️ Az elévülteket KIHAGYJUK, de nem töröljük — a takarítás külön művelet (`szeletJegyzekTakaritasa`),
+ * hogy a lekérdezés tiszta függvény maradjon.
+ *
+ * @param {Array<Object>} jegyzek
+ * @param {string} entitas
+ * @param {number} [most]
+ * @param {number} [elevules]
+ * @returns {Array<{hoszt: string, port: number, mikor: number}>}
+ */
+export function szeletCimei(jegyzek, entitas, most = Date.now(), elevules = SZELET_CIM_ELEVULES) {
+  return jegyzek
+    .filter((b) => b.entitas === entitas && most - b.mikor <= elevules)
+    .sort((a, b) => b.mikor - a.mikor)
+    .slice(0, SZELET_CIM_KORLAT)
+    .map((b) => ({ hoszt: b.hoszt, port: b.port, mikor: b.mikor }));
+}
+
+/**
+ * Kidobja az elévült bejegyzéseket, és szeletenként a korlát fölöttieket.
+ *
+ * ⭐ MIÉRT KELL EGYÁLTALÁN TAKARÍTANI? Mert a jegyzék különben korlátlanul hízik — és a
+ * cím **múlandó**: egy fél éve látott IP-cím már másé. Az elévülés nem óvatosság, hanem a
+ * cím természete.
+ *
+ * @param {Array<Object>} jegyzek
+ * @param {number} [most]
+ * @param {number} [elevules]
+ * @returns {Array<Object>}
+ */
+export function szeletJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = SZELET_CIM_ELEVULES) {
+  const szeletenkent = new Map();
+  for (const b of jegyzek) {
+    if (most - b.mikor > elevules) continue;
+    const lista = szeletenkent.get(b.entitas);
+    if (lista) lista.push(b); else szeletenkent.set(b.entitas, [b]);
+  }
+
+  const eredmeny = [];
+  for (const lista of szeletenkent.values()) {
+    lista.sort((a, b) => b.mikor - a.mikor);
+    eredmeny.push(...lista.slice(0, SZELET_CIM_KORLAT));
+  }
+  return eredmeny;
+}

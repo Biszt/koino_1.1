@@ -18,7 +18,7 @@ import {
   allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa,
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
-import { figyeloIndulasa, csereVonalon, parbeszed } from '../js/csere/vonal.js';
+import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
@@ -1248,6 +1248,87 @@ proba('⭐ A MÁSIK KOINO készüléke ott sem kerül a listára (valódi foglal
       celok: ['127.0.0.1'], celPort: A, idokorlat: 1200 })
   ]);
   return mienk.tarsak.length === 0;
+});
+
+// ===================================
+// ⭐ A BÖNGÉSZŐ-LEKÉRÉS — „add ide EZT az egy entitást"
+// ===================================
+//
+// Csaba észrevételéből született: *„böngészés közben az összes entitásnak elérhetőnek kell
+// lennie."* A rendes csere MINDENT áthoz, amit a másik tud és mi nem — böngészéskor viszont
+// EGYETLEN entitás kell, most azonnal. Amit itt bizonyítani kell, az nem az, hogy „megy a
+// hálózat", hanem hogy **a lekérés VÁLOGAT**.
+
+/** Két külön szelet egy táron: két tartalom, mindkettőn egy-egy tudatponttal. */
+async function ketSzelet() {
+  const anna = await ujEember(KOINO);
+  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'Első', meret: 10 });
+  const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 100 });
+  const t2 = await anna.tesz('TartalomLetrehozas', { cim: 'Második', meret: 10 });
+  const p2 = await anna.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 200 });
+  return { esemenyek: [t1, p1, t2, p2], egyik: t1.azonosito, masik: t2.azonosito };
+}
+
+proba('⭐⭐ A BÖNGÉSZŐ-LEKÉRÉS CSAK A KÉRT SZELETET HOZZA', async () => {
+  const { esemenyek, egyik, masik } = await ketSzelet();
+  const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
+  const kero = await ujTar();
+
+  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
+  let eredmeny;
+  try {
+    eredmeny = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
+  } finally {
+    await figyelo.bezar();
+  }
+
+  const nalunk = await koinoEsemenyei(kero, KOINO);
+  // A kért szelet KÉT eseménye megvan…
+  const megvan = nalunk.length === 2 && eredmeny.uj === 2;
+  // …a MÁSIK szeletből viszont SEMMI. Ez a lényeg: a lekérés válogat, nem mindent hoz.
+  const nincsMas = !nalunk.some((e) => (e.entitas ?? e.azonosito) === masik);
+  return megvan && nincsMas;
+});
+
+proba('Ismeretlen entitás kérése: nulla esemény, de NEM hiba', async () => {
+  const { esemenyek } = await ketSzelet();
+  const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
+  const kero = await ujTar();
+
+  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    const e = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, 'nincs-ilyen');
+    return e.kapott === 0 && e.uj === 0;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⚠️ A KAPU UGYANAZ: másodszorra már nincs új esemény', async () => {
+  const { esemenyek, egyik } = await ketSzelet();
+  const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
+  const kero = await ujTar();
+
+  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    const elso = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
+    const masodik = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
+    // Ugyanannyit KAPTUNK, de másodszor egyik sem ÚJ — az `esemenyMentese` felismerte,
+    // hogy már megvannak (az azonosító a tartalom lenyomata).
+    return elso.uj === 2 && masodik.kapott === 2 && masodik.uj === 0;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+proba('⭐ A RENDES CSERE VÁLTOZATLAN — a szelet-kérés nem törte el', async () => {
+  // Visszafelé kompatibilitás: a párbeszéd LENYOMAT-tal kezd, mint eddig.
+  const { esemenyek } = await ketSzelet();
+  const egyik = await ujTar(); await ment(egyik, esemenyek);
+  const masik = await ujTar();
+
+  await csereDroton(masik, egyik);
+  return (await koinoEsemenyei(masik, KOINO)).length === 4;
 });
 
 export async function takaritas() {

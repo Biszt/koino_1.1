@@ -46,7 +46,9 @@
 
 import { writeFile } from 'node:fs/promises';
 
-import { esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, alapHely } from './js/tar/fajlTar.js';
+import {
+  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, alapHely
+} from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
 } from './js/kulcs/kulcsTar.js';
@@ -57,11 +59,12 @@ import {
   koinoLetrehozasa, tartalomLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
-import { figyeloIndulasa, csereVonalon, parbeszed } from './js/csere/vonal.js';
+import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
-  sajatCimekKiszurese, sajatCimE
+  sajatCimekKiszurese, sajatCimE,
+  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa
 } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
@@ -1160,6 +1163,85 @@ try {
         kiir(SZIN.halvany + '  Vagy nem futott a másik oldalon, vagy mindkét router zár.'
           + SZIN.vege);
       }
+      break;
+    }
+
+    case 'hozd': {
+      // ===== ⭐ BÖNGÉSZŐ-LEKÉRÉS: „add ide EZT az egy entitást" =====
+      //
+      // ⭐ MIÉRT KELL, HA VAN CSERE? Csaba észrevétele: *„böngészés közben az összes
+      // entitásnak elérhetőnek kell lennie."* A rendes csere MINDENT áthoz, amit a másik
+      // tud és mi nem — böngészéskor viszont EGYETLEN entitás kell, most azonnal. A
+      // periodikus csere erre elvileg alkalmatlan: hiába ér körbe minden esemény öt perc
+      // alatt, ha egy nem tárolt entitást akarok megnyitni.
+      const entitas = ervek[0];
+      if (!entitas) {
+        throw new Error('Melyik entitást hozzam?'
+          + '\n  node koino/koino.js hozd <azonosító> [cím] [port]');
+      }
+
+      const jegyzekTarolo = szeletJegyzekTarolo();
+      const tarolo = tarsakTarolo();
+
+      // ----- KIT KÉRDEZZÜNK MEG? -----
+      // 1. akit megadtak · 2. akinél KORÁBBAN LÁTTUK ezt az entitást · 3. a társak
+      let cimek;
+      if (ervek[1]) {
+        cimek = [{ hoszt: ervek[1], port: parseInt(ervek[2], 10) || ALAP_PORT }];
+      } else {
+        const jegyzek = await jegyzekTarolo.olvas();
+        const ismertek = szeletCimei(jegyzek, entitas);
+        const tarsak = tarsakSorrendje(await tarolo.olvas());
+        // A szelet-jegyzék ELÖL: ott biztosan megvolt egyszer.
+        cimek = [...ismertek, ...tarsak].map((c) => ({ hoszt: c.hoszt, port: c.port }));
+      }
+
+      if (!cimek.length) {
+        kiir(SZIN.nem + 'Nincs kit megkérdezni.' + SZIN.vege);
+        kiir(SZIN.halvany + 'Adj meg egy címet, vagy vegyél fel társat: node koino/koino.js tars <cím>'
+          + SZIN.vege);
+        break;
+      }
+
+      kiir(SZIN.vastag + 'HOZOM: ' + entitas.slice(0, 12) + '…' + SZIN.vege
+        + SZIN.halvany + '   (' + cimek.length + ' cím a listán)' + SZIN.vege);
+
+      // ⚠️ EGY ELÉRHETETLEN CÍM NEM HIBA, HANEM A NORMÁLIS MŰKÖDÉS (D33) — megyünk tovább.
+      let siker = null;
+      for (const c of cimek) {
+        try {
+          const e = await szeletHozatala(tar, KOINO, c.hoszt, c.port, entitas);
+          siker = { ...e, cim: c };
+          kiir(SZIN.jo + '  ✓ ' + c.hoszt + ' — ' + e.kapott + ' esemény, ebből ÚJ: ' + e.uj
+            + SZIN.vege + SZIN.halvany + ' (' + adatMennyiseg(e) + ')' + SZIN.vege);
+          break;
+        } catch (hiba) {
+          kiir(SZIN.halvany + '  · ' + c.hoszt + ' ' + c.port + ' — ' + hiba.message + SZIN.vege);
+        }
+      }
+
+      if (!siker) {
+        // ⭐ EZ NEM HIBA, HANEM ÁLLAPOT (D21 mintája): „jelenleg nem elérhető". A koino
+        // bejelent, nem bíráskodik (D19).
+        kiir();
+        kiir(SZIN.nem + 'Ez az entitás JELENLEG NEM ELÉRHETŐ.' + SZIN.vege);
+        kiir(SZIN.halvany + 'Vagy senki sem tartja már (D14: ami senkinek nem kell, elfelejtődik),'
+          + ' vagy a tartói épp alszanak. Kívülről a kettő nem különböztethető meg.' + SZIN.vege);
+        break;
+      }
+
+      // ----- ⭐ MEGJEGYEZZÜK, KINÉL VOLT MEG -----
+      // Név nélkül: csak cím, port és idő (D6). A döntéshez soha nem kell KONKRÉT embert
+      // elérni, csak valakit, akinél megvan.
+      if (siker.kapott > 0) {
+        const jegyzek = await jegyzekTarolo.olvas();
+        await jegyzekTarolo.ir(szeletJegyzekTakaritasa(
+          szeletCimMegjegyzese(jegyzek, entitas, siker.cim.hoszt, siker.cim.port)
+        ));
+      }
+
+      kiir();
+      kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
       break;
     }
 

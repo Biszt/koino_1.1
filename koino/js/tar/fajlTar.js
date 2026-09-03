@@ -281,3 +281,51 @@ export function tarsakTarolo(hely = alapHely()) {
     }
   };
 }
+
+// ===================================
+// A SZELET-CÍMJEGYZÉK TÁROLÁSA
+// ===================================
+
+/**
+ * „Kinél van ez az entitás?" — egyetlen JSON-fájl, a társ-listához hasonlóan.
+ *
+ * ⚠️ MIÉRT KÜLÖN FÁJL A TÁRS-LISTÁTÓL? Mert más a természete és más az élettartama. A
+ * társ-lista **készülék-szintű** és tartós („kikkel szoktunk beszélni"); ez **entitás-szintű**
+ * és **múlandó** („hol láttam ezt a tartalmat"). Egy fájlba téve a rövid életű bejegyzések
+ * kimosnák a tartósakat.
+ *
+ * ⭐ És ugyanaz igaz rá, mint a társ-listára: **nem esemény, nem terjed igazságként, és
+ * semmit nem dönt el a koinóban** (3. szabály). Kézzel is szerkeszthető, tehát a 4. szabály
+ * kézi útja itt is megvan.
+ *
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function szeletJegyzekTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'szeletcimek.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Array<Object>>} a bejegyzések, vagy üres lista */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        const lista = Array.isArray(adat) ? adat : adat.szeletek;
+        return Array.isArray(lista) ? lista : [];
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return [];
+        // Egy elrontott jegyzék NE akadályozza meg a koino futását: ez kényelem, nem
+        // előfeltétel (2. szabály). Üresnek vesszük, és újratanuljuk használat közben.
+        console.warn('szeletJegyzekTarolo - olvashatatlan jegyzék, üresnek vesszük', { fajl });
+        return [];
+      }
+    },
+
+    /** @param {Array<Object>} lista */
+    async ir(lista) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify({ szeletek: lista }, null, 2), 'utf8');
+    }
+  };
+}

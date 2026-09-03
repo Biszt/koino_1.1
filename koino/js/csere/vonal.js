@@ -42,6 +42,7 @@ import { createServer, connect } from 'node:net';
 import {
   allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
 } from './csere.js';
+import { entitasEsemenyei } from '../tar/esemenyTar.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
@@ -194,7 +195,45 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat,
       latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort }
     });
-    const oveLenyomat = await varj('LENYOMAT');
+    // ===== ⭐ A BÖNGÉSZŐ-LEKÉRÉS: „ADD IDE EZT AZ EGY ENTITÁST" =====
+    //
+    // ⭐ MIÉRT ITT ÁGAZIK EL? Mert így **visszafelé kompatibilis**: a párbeszéd szimmetrikus,
+    // mindkét fél LENYOMAT-tal kezd — egy régi kliens tehát SOHA nem küld `SZELETKEREK`-et,
+    // és a régi kód nem is változik tőle. Aki viszont csak EGY entitást akar (mert épp
+    // böngészi), az a kapott LENYOMAT-ot figyelmen kívül hagyja, és ezt kéri helyette.
+    //
+    // ⚠️ MIÉRT KELL EGYÁLTALÁN? Mert a rendes csere MINDENT áthoz, amit a másik tud és mi
+    // nem — böngészéskor viszont EGYETLEN entitás kell. Csaba észrevétele indította:
+    // *„böngészés közben az összes entitásnak elérhetőnek kell lennie."*
+    //
+    // ⚠️ ÉS A BIZALOM ITT SEM MÁS: amit így kapunk, ugyanazon az `esemenyMentese` kapun
+    // megy be, mint bármi más (3. szabály). A kérés nem ad jogot semmire.
+    const elsoUzenet = await sor.kovetkezo();
+
+    if (kor === 1 && elsoUzenet.uzenet === 'SZELETKEREK') {
+      const kertek = typeof elsoUzenet.entitas === 'string'
+        ? await entitasEsemenyei(tar, koino, elsoUzenet.entitas)
+        : [];
+
+      // Eseményenként külön üzenet — ahogy a rendes csere is teszi. Így egy nagy szelet
+      // sem ütközik a sorhossz-korlátba.
+      for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
+      kuld({ uzenet: 'KESZ' });
+
+      console.log('parbeszed - VÉGE (szelet kiszolgálva)', {
+        entitas: elsoUzenet.entitas, esemeny: kertek.length
+      });
+      return {
+        korok: 1, uj: 0, kuldott: kertek.length, reszletesAllasok: 0,
+        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: 0,
+        szeletKiszolgalva: elsoUzenet.entitas
+      };
+    }
+
+    if (elsoUzenet.uzenet !== 'LENYOMAT') {
+      throw new Error('Várt üzenet: LENYOMAT, érkezett: ' + elsoUzenet.uzenet);
+    }
+    const oveLenyomat = elsoUzenet;
 
     if (oveLenyomat.latlak?.cim) kivulrolIgyLatszom = oveLenyomat.latlak;
 
@@ -414,6 +453,83 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
 
     console.log('csereVonalon - VÉGE', teljes);
     return teljes;
+  } finally {
+    kapcsolat.end();
+  }
+}
+
+// ===================================
+// ⭐ BÖNGÉSZŐ-LEKÉRÉS — egyetlen entitás elhozása
+// ===================================
+
+/**
+ * Elkér EGY entitást (szeletet) egy társtól, és beolvasztja a saját tárunkba.
+ *
+ * ===== MIÉRT KELL, HA VAN CSERE? =====
+ *
+ * A rendes csere MINDENT áthoz, amit a másik tud és mi nem. Böngészéskor viszont **egyetlen
+ * entitás** kell — az, amire épp rákoppintottunk. Csaba észrevétele indította: *„böngészés
+ * közben az összes entitásnak elérhetőnek kell lennie"*; a periodikus csere erre elvileg
+ * alkalmatlan, mert hiába ér körbe minden esemény, ha egy nem tárolt entitást akarok
+ * megnyitni MOST.
+ *
+ * ===== A MENET =====
+ *
+ *   mi  → SZELETKEREK { entitas }
+ *   ő   → ESEMENY × N, majd KESZ
+ *
+ * ⭐ A másik fél LENYOMAT-tal kezd (a párbeszéd szimmetrikus) — azt egyszerűen átlépjük.
+ * Ettől lesz az egész **visszafelé kompatibilis**: a protokoll nem változott, csak egy új
+ * kérdést tettünk bele, amit a régi kliens sosem tesz fel.
+ *
+ * ⚠️ A KAPOTT ESEMÉNYEK UGYANAZON A KAPUN MENNEK BE (`esemenyMentese`, 3. szabály). Attól,
+ * hogy mi kértük, semmivel nem lesznek hitelesebbek.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {string} cim
+ * @param {number} port
+ * @param {string} entitas - melyik entitást kérjük
+ * @param {number} [varakozasiIdo]
+ * @returns {Promise<{kapott: number, uj: number, bajtKuldott: number, bajtKapott: number}>}
+ */
+export async function szeletHozatala(tar, koino, cim, port, entitas, varakozasiIdo = 10000) {
+  console.log('szeletHozatala - KEZDÉS', { cim, port, entitas });
+
+  const kapcsolat = connect({ host: cim, port, family: 0 });
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+
+  await new Promise((teljesites, elutasitas) => {
+    kapcsolat.once('connect', teljesites);
+    kapcsolat.once('error', elutasitas);
+  });
+
+  try {
+    const sor = uzenetSor(kapcsolat);
+    kapcsolat.write(JSON.stringify({ uzenet: 'SZELETKEREK', koino, entitas }) + '\n');
+
+    const erkezett = [];
+    for (;;) {
+      const uzenet = await sor.kovetkezo();
+      if (uzenet.uzenet === 'KESZ') break;
+      if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
+      // A LENYOMAT-ot (és bármi mást) átlépjük — lásd a fenti magyarázatot.
+    }
+
+    // ⚠️ UGYANAZ A KAPU, mint a rendes cserénél: ellenőrizetlen esemény innen sem kerül be.
+    const beolvasztva = await beolvasztas(tar, erkezett, koino);
+
+    const eredmeny = {
+      entitas,
+      kapott: erkezett.length,
+      uj: beolvasztva.uj,
+      bajtKuldott: kapcsolat.bytesWritten,
+      bajtKapott: kapcsolat.bytesRead
+    };
+    console.log('szeletHozatala - VÉGE', eredmeny);
+    return eredmeny;
   } finally {
     kapcsolat.end();
   }

@@ -328,7 +328,43 @@ nélkül**.
 > mutatót (859 ms 100k-nál) — **futásonként egyszer**, nem műveletenként. Külön mérjük,
 > mert enélkül a javulás félrevezető lenne.
 
-### 3.3 AZ ENTITÁS-KÖZPONTÚ TÁR
+### 3.4 ✅ A CÍMJEGYZÉK AZ ENTITÁSON ÉS A BÖNGÉSZŐ-LEKÉRÉS (2026-09-03)
+
+*Ez az, ami Csaba eredeti kifogására válaszol: „böngészés közben az összes entitásnak
+elérhetőnek kell lennie."*
+
+**A szelet-címjegyzék** (`tarsak.js`): „kinél van ez az entitás?" — a társ-listától külön,
+mert más a természete (az **készülék-szintű és tartós**, ez **entitás-szintű és múlandó**).
+⭐ **Név nélkül** (csak cím, port, idő — D6), **elévüléssel** (egy nap), és
+**szeletenként legfeljebb 20 címmel**, hogy ne hízzon korlátlanul.
+
+**A böngésző-lekérés** (`szeletHozatala`): új protokoll-kérdés, `SZELETKEREK` → `ESEMENY × N`
+→ `KESZ`. ⭐ **Visszafelé kompatibilis:** a párbeszéd szimmetrikus, mindkét fél
+`LENYOMAT`-tal kezd — egy régi kliens tehát sosem küld ilyet, és a régi kód nem változik.
+⚠️ A kapott események **ugyanazon az `esemenyMentese` kapun** mennek be (3. szabály).
+
+**A `hozd` parancs**: megkérdezi sorban a szelet-jegyzékben ismert címeket, aztán a társakat;
+⭐ **egy elérhetetlen cím nem hiba, hanem a normális működés** (D33) — megy tovább. Ha
+egyik sem válaszol, az őszinte válasz: *„jelenleg nem elérhető"* — és kimondja azt is, hogy
+kívülről nem lehet megkülönböztetni a „már senki nem tartja" esetet (D14) az „alszanak"
+esettől.
+
+**Mérve, valódi két-tárolós próbával:** a lekérés **csak a kért szeletet hozta** (2 esemény),
+a másik entitásból semmit; másodszorra 2 érkezett, de **0 új** (a kapu felismerte); és a
+rendes csere változatlanul működik. **217 önpróba rendben** (203 + 14).
+
+⚠️ **Egy ismert viselkedés:** a szelet-lekérés **az entitást hozza, nem a környezetet** — ha
+a koino-létrehozás eseménye nincs meg, a készülék azt mondja, „még nincs koinód". A
+gyakorlatban ez nem gond (böngészni azon belül szoktunk), de tudni kell róla.
+
+### 3.3 ⏸️ AZ ENTITÁS-KÖZPONTÚ TÁR — elhalasztva (2026-09-03)
+
+> ⏸️ **A 3.2 után ez már MÉLYSÉG, nem szerkezet.** Az illesztés kérdezhető, a mérés pedig
+> nem követeli a lemez-szintű szeletelést: a mentés lapos, az állapotszámítás lineáris.
+> A **9. szabály teljesül** — a szerkezet engedi, a megvalósítás egyszerű marad —, tehát ez
+> akkor jön, ha egy mérés megmondja, hogy kell. *(Az eredeti leírás alább.)*
+
+#### Az eredeti terv
 
 Entitásonként külön tár + a saját lánc külön. Mögötte **a legegyszerűbb megvalósítás** jó.
 
