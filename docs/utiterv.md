@@ -10,6 +10,21 @@
 
 ---
 
+> ## ▶️ HOL TARTUNK (2026-09-03) — a Szakasz 3 KÉSZ, a Szakasz 4 jön
+>
+> ✅ **3.1** a kanonikus alak négy új mezője (`entitas` · `entitasSorszam` · `latott` ·
+> ⏸️ `lancGyoker` lefoglalt hely) és a **D42 ellenőrzése** · ✅ **3.2** a kérdezhető
+> tár-illesztő — ⭐⭐ **két mért fal ledőlt**: a mentés **495 ms → 1,4 ms és lapos**, az
+> állapotszámítás **4 615 ms → 502 ms és lineáris** · ✅ **3.4** a szelet-címjegyzék és a
+> **böngésző-lekérés** (`hozd`) · ⏸️ **3.3** (entitás-központú lemez-tár) **elhalasztva** —
+> a 3.2 után ez már mélység, nem szerkezet.
+>
+> **217 önpróba rendben**, minden pusholva (`bc0d7d5`), tiszta munkafa.
+>
+> ▶️ **Következik a Szakasz 4 — AZ IDENTITÁS.** ⚠️ *A D17 mondata áll: a konszenzus
+> biztonsága = az identitás-réteg biztonsága, semmi más. Enélkül minden eddigi munka egy
+> hatékonyan skálázódó hamisítás-gépezet.*
+
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 
 Négy dolog változott meg két nap alatt, és mind a négy a sorrendet érinti:
@@ -105,7 +120,7 @@ identitás-réteg · tartós mag · felület · kereső-réteg · pénz
 |---|---|---|---|
 | **1** | **A helyi modell** — esemény, lánc, állapot, szabály, javaslat | ✅ **kész** | a koino gondolkodása |
 | **2** | **A szállítás** — hogy két készülék egyáltalán összeérjen | ✅ **kész** | ⭐ *(A neve eddig „csere" volt; a munka valójában a szállításról szólt, és az elkészült.)* |
-| **3** | ⛔ **A SZERKEZET** — az esemény alakja, a tár illesztése, az entitás-központúság, az elérés | 🚧 **most ez jön** | ettől lesz a koino skálázható **szerkezetében** |
+| **3** | **A SZERKEZET** — az esemény alakja, a tár illesztése, az elérés | ✅ **kész** (2026-09-03) | ettől lett a koino skálázható **szerkezetében** |
 | **4** | **AZ IDENTITÁS** — tanúsítás, távolság-szabály, tartós mag | ❌ | ettől lesz **hiteles** |
 | **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból | ❌ | ettől lesz **használható** |
 | **6** | **A KERESŐ-RÉTEG** — elosztott, replikált mutató | ❌ | ⭐ **elhagyható** (2. szabály) |
