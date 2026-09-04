@@ -26,13 +26,19 @@
 > mert *a számtan nem látja a különbséget valódi és hamis ember között*. A keret tehát
 > **fék és ütemszabályzó**, nem a Sybil-korlát hordozója.
 >
-> ⏳ **A szakasz fő kérdése ezért most:** ⛔ **K12 — a horgony-halmaz** és ⛔ **K13 — az
-> út-feltétel**, vagyis **a szerkezet**. *(Az „talán nem kell horgony" mondat visszavonva.)*
-> Mellettük: a bekapcsolási méret (K14) és a pótutak (K15).
+> ⭐⭐ **ÉS EBBŐL JÖTT A FORDULAT (Csaba, 2026-09-05, 8/c szakasz):** ha a szabálytól nem
+> kapható garancia, akkor **ne is garanciát kérjünk tőle.** Az identitás-réteg **egy
+> minimumon kívül nem TILT, hanem FELTÁR** — a gyanús minták és az, hogy kit hányan
+> ismernek személyesen, **legyen látható**, és a közösség dönt. Ez az az alakzat, ahogy a
+> koino minden más nehéz kérdést kezel: *lassú, nyilvános, megtámadható* (D19, D15, D16).
 >
-> ▶️ **A következő munka:** ⭐ **szimuláció, ne érvelés.** Írjuk meg a támadó-szimulátort
-> (10. szakasz), és **mérjük meg**, hol a szikla — a fenti két bukást is a számolás hozta
-> ki, nem a megérzés. *(Mérj, ne saccolj.)*
+> ⏳ **Ami nyitva marad:** ⛔ **K12 — a horgony-halmaz** és ⛔ **K13 — az út-feltétel**
+> *(a „talán nem kell horgony" mondat visszavonva)*, a bekapcsolási méret (K14), a pótutak
+> (K15) és a horgony-bootstrap (K16).
+>
+> ▶️ **A következő munka:** ⭐ **a jelzések kidolgozása és MEGMÉRÉSE** — egy jelzés akkor ér
+> valamit, ha a szimulált szigetre kigyullad, a becsületes közösségre viszont nem
+> (`szigetMeres.js`). *(Mérj, ne saccolj — a fenti két bukást is a számolás hozta ki.)*
 
 ---
 
@@ -485,6 +491,128 @@ igazolásra írta; **most kapott feladatot.**
   kasztot építettünk. A **D18/3** védőkorlátja szó szerint ide is kell: **mérce lehet, hang
   soha.**
 
+## 8/c. ⭐⭐ A FORDULAT — az identitás-réteg nem TILT, hanem FELTÁR
+
+*Csaba döntése, 2026-09-05, három megbukott kereső-nap után.*
+
+> **Csaba:** *„az identitás réteg, egy minimumon kívül nem tilt, hanem feltár. Szóval
+> legyenek kimutathatóak/láthatóak a gyanús minták, mint ahogy az is legyen látható, hogy
+> kit hányan ismernek személyesen. Az áttekinthetőséget és a jelzéseket dolgozzuk ki
+> alaposan. Aztán majd a közösség eldönti, hogyan tovább."*
+
+### Mit változtat
+
+Eddig **a szabálytól vártuk az igazságot**: döntse el, ki valódi. Ezért kerestünk olyan
+képletet, ami ezt hibátlanul tudja — és ezért ütköztünk mindig ugyanabba, hogy *a számtan
+nem látja a különbséget valódi és hamis ember között* (5.1/c).
+
+⭐ **A fordulat: a szabály csak egy minimumot tart, a többit a közösség látja és dönti el.**
+Ezzel az identitás abba a családba kerül, ahová a koino minden más nehéz kérdése:
+
+- a szabálysértő eseményt **nem töröljük, hanem kihagyjuk és felsoroljuk** (D19);
+- a döntés nem igen/nem, hanem **bizonyossági mutató**;
+- a halál (D18/7), a kulcsvesztés (D15) és a pénz (D16) mind **lassú, nyilvános,
+  megtámadható** — nem automatizmus.
+
+⚠️ **És ez nem a nehézség megkerülése.** A szakirodalom egésze (SybilGuard, SybilLimit,
+Whānau) ugyanoda érkezik: *a hamis azonosságok száma a támadó által szerzett becsületes
+kapcsolatok számától függ.* Aki mást ígér, az kilépett a gráfból valami másba — állami vagy
+biometrikus azonosításba (a papír nélküli embert kizárná), pénzbe vagy számítási erőbe
+(a **D7** tagadása), vagy kapuőrbe (a koino tagadása). **Nem azt nem találtuk meg, ami
+létezik; azt kerestük, ami nem létezik.**
+
+### ⛔ D49/a — A MINIMUM MARAD KEMÉNY SZABÁLY
+
+Ha minden jelzés lesz és semmi sem szabály, akkor **készülékenként más lesz, ki számít
+e-embernek** — és a szavazatszámlálás szétesik. Megdőlne az, amit a `vizsgaProba.js` a
+Szakasz 2 vizsgájaként bizonyít (⭐⭐ *ugyanaz a halmaz, ugyanaz az állapot*).
+
+A réteg tehát **két élesen elváló részre bomlik**:
+
+- **Amit a program ELDÖNT** — objektív, offline, minden gépen ugyanaz: megvan-e a `k`
+  tanúsítás (D43), és a befagyasztás (D47). ⭐ Kevés, de kemény.
+- **Amit a program MEGMUTAT** — minden más; és abból **ember von le következtetést**,
+  nem képlet.
+
+### ⭐ D49/b — A JELZÉS TÉNYT MUTAT, SOHA NEM ÍTÉLETET
+
+Egy jelzés, ami azt mondja: *„ez az e-ember gyanús"* — **ítélet**. Abból hírnév-rendszer
+lesz, kapuőrséggel: pontosan az, amit a **D18/1** kizárt (*„megbízom benne" → ❌*).
+Egy jelzés, ami azt mondja: *„négy egymást nem ismerő körből tanúsították"* — **tény**,
+amit bárki a láncból is kiszámolhat.
+
+> ⭐⭐ **És Csaba két mondata ugyanaz az egy szám, két irányból olvasva.** *„Legyenek
+> láthatóak a gyanús minták"* és *„legyen látható, kit hányan ismernek személyesen"* —
+> nem kell külön gyanú-mutatót építeni: aki sokfelől ismert, arról ez **melegen** hangzik;
+> aki egyetlen zárt foltból érkezett, arról ugyanez **hidegen**. **Egy mérce, nem kettő**
+> — és ezért nem lehet belőle megbélyegzés.
+
+### A jelzések — amit ki kell dolgozni
+
+**A koino kitettsége (rólunk, nem róla):**
+
+- **a horgony-kör vastagsága** — hányan vannak, és mennyire függetlenek egymástól;
+- **torlódás a tanúkon** — hány felvétel vezethető vissza ugyanarra a néhány emberre;
+- **az „egy körből született" arány** — hány e-ember jött be úgy, hogy minden tanúja
+  ugyanabból a foltból való;
+- **a legszűkebb átvágás** — hány ember kiesése szakítaná ketté a hálót.
+
+**Egy e-emberről (tény, nem ítélet):**
+
+- **hányan tanúsították** — a nyers szám;
+- ⭐ **hány FÜGGETLEN körből** — ez a *„hányan ismerik személyesen"* becsületes alakja: a
+  puszta darabszám hamisítható, ez sokkal nehezebben;
+- **milyen ütemben** — tizenkét tanúsítás egy órán belül egy foltból, vagy egy év alatt
+  négy városból;
+- **mennyire megállapodottak a tanúi** — régóta bent lévők, vagy szintén frissek.
+
+### ⛔ D49/c — HÁROM VÉDŐKORLÁT, mert ez boszorkányüldözéssé tud válni
+
+1. ⛔ **Nincs személyre szóló gyanú-pontszám, nincs rangsor, nincs piros jelzés a név
+   mellett.** Csak a fenti tények, mindenkinél ugyanúgy megjelenítve.
+2. ⛔ **A jelzés tájékoztat, nem jogosít** (N9). Attól, hogy valakinek vékony a hálója,
+   **semmilyen joga nem csökken** — nem esik ki, és nem lesz kevesebb a szavazata.
+3. ⛔ **Az összesített nézet a koinóról szóljon, ne emberekről.** *„Mennyire vagyunk
+   kitéve"* — nem *„kik a gyanúsak"*.
+
+### ⭐ És a kör bezárul — nem kell új mechanizmus
+
+Ha valaki mintát lát: **bizonytalanra jelöl**, és **létrehoz egy gondolatot**, amivel a
+felelősséget megosztja a közösséggel (**D46**). Onnan a rendes koino-út következik —
+javaslat, vita, egyezmény —, és a megjelölt események kihagyása a **szabály-rétegen**
+történik, ahogy a D19-ben. ⚠️ **A maradék kockázat** ugyanaz, mint mindenhol: a többség
+így elvileg kizárhat egy kisebbséget. Az ellensúly is ugyanaz: **lassú, nyilvános,
+megtámadható.**
+
+### 🔍 A mérce, amivel egy jelzés értékét eldöntjük
+
+> **Egy jelzés akkor ér valamit, ha a szimulált szigetre KIGYULLAD, egy valódi, gyorsan
+> növő közösségre viszont NEM.**
+
+⚠️ Egy jelzés, ami a becsületes közösségre is kigyullad, **rosszabb a semminél**:
+hozzászoknak, és megszűnik jelzés lenni. Ezt a `szigetMeres.js`-ben mérjük (10. szakasz).
+
+### ⛔ ÉS AZ ELSŐ MÉRÉS UTÁN (2026-09-05): AMIT FELTÁRUNK, AZT MÉG NEM TALÁLTUK MEG
+
+Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 3–8. szakasz.
+
+- ⭐ **Egy naiv és egy óvatos támadót a jelzések elkapnak** — és ez tanulságos: a **támadó
+  nem tud egyszerre halk és hangos lenni**. Ha keveset tanúsít, feltűnik, hogy az
+  azonosságait pontosan `k`-an ismerik (megállapodottság 6 a 96 helyett); ha sokat, csak a
+  saját hamisaiból meríthet, és az összefonódás **0,99**-re szalad.
+- ⛔ **De aki egész hamis TÁRSADALMAT épít, azt egyik személyes jelzés sem fogja meg.**
+  A szigeten belüli „találkozók" ingyen vannak neki, és utánozzák a valódi világ alakját.
+- ⛔⛔ **Az ösztönös jelzés HÁROMSZOR bukott meg.** A *„kevés kapcsolata van, tehát gyanús"*
+  rendre **31%, 41%, 45%** becsületes tagot jelölne meg tévesen — és épp azokat, akikért a
+  befogadás-gondolat szól.
+- ⛔⛔ **És a horgony-kört a támadó elfoglalja** (K12): a becsületes kör 30 kör alatt
+  **egyáltalán nem nőtt** (végig 20 = az alapítók), a hamisak viszont **mind a 880-an**
+  horgonnyá váltak. A *„több, egymást nem ismerő körből"* feltétel azt jutalmazza, aki
+  **tudatosan hálózatot épít** — és a támadó a legtudatosabb.
+
+> ⭐ **Az irány (feltárás tiltás helyett) ÁLL. De a jelzés nem lehet sem személyes
+> statisztika, sem a mai horgony-távolság** — mindkettőt megmértük, mindkettő elbukott.
+
 ## 9. ILLESZKEDÉS A MEGLÉVŐ GÉPHEZ
 
 ⭐ **A keret-szabály alá nem kell új gépezetet építeni — a Szakasz 3 három darabja pont ezt
@@ -533,8 +661,9 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 | # | Kérdés | Miért fontos |
 |---|---|---|
 | ~~**K11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
-| ⛔ **K12** | **Milyen legyen a horgony-halmaz** (tartós mag)? | ⚠️ **Ez lett a szakasz fő kérdése** (5.1/c): a gazdaság önmagában nem véd, tehát a szerkezet kell. Az ára a kiváltságos csoport — a védőkorlát: **mérce lehet, hang soha** (D18/3) |
+| ⛔⛔ **K12** | **Milyen legyen a horgony-halmaz** (tartós mag)? | ⛔ **A „m független horgony-tanú" alak MÉRVE ELBUKOTT** (2026-09-05, [`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületes körnek **nehéz** (30 kör alatt egyetlen új horgony sem), a támadónak **könnyű** (mind a 880 hamis horgonnyá vált) — mert a szabály azt jutalmazza, aki **tudatosan hálózatot épít**, és a támadó a legtudatosabb. A kérdés nyitva: **milyen legyen helyette** |
 | ⛔ **K13** | **Milyen út-feltétel** kerüljön a keret mellé (diszjunkt utak? távolság?) | Ugyanaz az ok. ⚠️ A 4.1 tanulsága áll: az út-feltétel **egy bizonyításon belül** tilt közös embert, a bizonyítások között nem — tehát önmagában ez sem elég |
+| ⛔ **K16** | **Hogyan indul el a horgony-kör?** Egyetlen alapítói klikkből **mérve nem tágul** (mindenki ismeri egymást, tehát egy csoportnak számít) | Négy kiút: több alapítói kör *(⚠️ ezt Claude tette hozzá, nem Csaba döntése — és feszül a D18/0-val)* · a szabály csak egy méret fölött kapcsoljon be (**K14**) · más nyomot keresünk a „több találkozó"-ra *(⚠️ az idő nem jó: a támadó ingyen szórja szét a saját tanúsításait)* · vagy egészen más horgony-feltétel |
 | **K14** | Mekkora méret fölött **kapcsoljon be** a szabály? | A **D18/0** szerint kicsiben a közvetlen ismeret véd. ⚠️ A 🔴 közepes zóna nem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
 | **K15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
 
@@ -552,6 +681,9 @@ javasolt számok — **D43–D47** — még nincsenek átvezetve.*
 - **D47** — az ellenőrzés az aláírás pillanatában történik, és befagy (8. szakasz)
 - ~~**D48**~~ — ⛔ **elvetve** (5.1/c): az ingyenes elismerés a szigetet ugyanúgy táplálja.
   **Nem kell átvezetni** — de a bukás okát igen, mert az egy egész megoldás-családot zár ki
+- ⭐⭐ **D49** — **az identitás-réteg egy minimumon kívül nem tilt, hanem feltár** (8/c),
+  három részben: **a** a minimum kemény szabály marad · **b** a jelzés tényt mutat, soha
+  nem ítéletet · **c** három védőkorlát a boszorkányüldözés ellen
 
 ⚠️ **És két meglévő döntést érint:**
 
@@ -582,3 +714,21 @@ javasolt számok — **D43–D47** — még nincsenek átvezetve.*
   lehet a védelem, mert a számtan nem látja a különbséget valódi és hamis ember között.*
   Ez egy **egész megoldás-családot zár ki** — és visszahozza a szerkezetet (K12, K13).
   ▶️ Innentől **szimulációval haladunk, nem érveléssel.**
+- **2026-09-05** — Megépült a **`szigetMeres.js`**, és rögtön háromszor tanított:
+  **(1)** a keret nélküli szabálynak nincs fala (97 kör alatt 1499 fő), a keretesnek van
+  (**104-nél megáll, örökre**) — a megmaradási csapda futás közben; **(2)** a keret **79%-a
+  olyanokra megy el, akik már tagok** — ez adja meg a súlyát az elismerés/támogatás
+  szétválasztásnak, amit Csaba javasolt; **(3)** ⛔ egyetlen alapítói klikkből a
+  **horgony-kör soha nem tágul** (K16) — és Claude erre először a *világot* írta át a
+  szabálya alatt, ráadásul Csabának tulajdonítva az ötletet. Csaba javította ki.
+  ⭐⭐ **És ebből született a fordulat (8/c):** *az identitás-réteg egy minimumon kívül nem
+  tilt, hanem feltár* — **D49**. ▶️ A következő munka a **jelzések** kidolgozása és
+  megmérése.
+- **2026-09-05 (még aznap, a jelzés-mérés után)** — Megépült a jelzés-mérés és **három
+  támadó**: hangos, óvatos, alapos. ⭐ Az első kettőt a jelzések elkapják, és kiderült,
+  **miért**: a támadó nem tud egyszerre halk és hangos lenni. ⛔ **De az alapos — aki egész
+  hamis társadalmat épít — mindet átugorja**, és ⛔⛔ **a horgony-kört elfoglalja** (880
+  hamis horgony a 20 valódi mellett, miközben a becsületes kör **egyáltalán nem nőtt**).
+  ⭐ A tanulság túlmutat a szabályon: *a „több független körből" feltétel azt jutalmazza,
+  aki tudatosan hálózatot épít — és a támadó a legtudatosabb hálózatépítő.*
+  ▶️ **A D49 iránya áll; azt kell megtalálni, amit feltárunk.**

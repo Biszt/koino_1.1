@@ -26,7 +26,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 3. **A bizalom sose a csatornából jöjjön.** Eseményt soha nem fogadunk el azért, mert „megbízható helyről jött" — egyetlen kapu van: `esemenyMentese`.
 4. **Legyen mindig kézi út.** Minden automatikus cseréhez tartozzon fájlba mentés / fájlból olvasás. **Ha egy funkció csak online tud működni, az fojtópont.**
 5. **Ne épüljön folyamatos kapcsolatra.** ⚠️ *Csaba helyreigazítása (2026-08-29): a döntés NEM feltétlenül napokban mér — lehet órákban is, a tudatpont-változás még sűrűbben. **A lassúságra tehát nem szabad védelemként hivatkozni.*** A szabály viszont áll: ami **másodperces élő kapcsolatot** kívánna (mindkét fél egyszerre online), az visszahozza a törékenységet — ezért postaláda kell, nem élő továbbító (D34).
-6. ⭐ **Nulla függőség, kis méret.** Ma **35 fájl, 576 KB** a mappa (tömörítve ~80 KB), **0 npm-csomag**. Ez **védelem, nem elegancia**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont. ⚠️ *Ha új fájl kerül a `koino/`-ba, ezt a számot itt is vezesd át — a szabály attól ellenőrizhető, hogy a mércéje friss.*
+6. ⭐ **Nulla függőség, kis méret.** Ma **35 fájl, 602 KB** a mappa (tömörítve ~80 KB), **0 npm-csomag**. Ez **védelem, nem elegancia**: elfér egy üzenetben, és bárki újraírhatja. Minden új függőség egy újabb fojtópont. ⚠️ *Ha új fájl kerül a `koino/`-ba, ezt a számot itt is vezesd át — a szabály attól ellenőrizhető, hogy a mércéje friss.*
 7. **A böngésző csak kliens lehet, sose előfeltétel** (a D29 pontosítása).
 8. **Ne tervezz jogi védelemre.** Ha egy érv így kezdődik: „ezt úgyis megtiltja a szabályozás" — az érv nem érvényes.
 

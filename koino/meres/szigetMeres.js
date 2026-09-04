@@ -92,6 +92,8 @@ const BEALLITAS = {
   ujakTalalkozon: 3,        // egy találkozóra ennyi kívülállót hívnak meg
   tamadasKezdete: 8,        // ettől a körtől lép színre a támadó
   hamisProbalkozas: 40,     // a támadó körönként ennyi hamis azonosságot próbál bevinni
+  ovatos: 0,                // ⭐ 1 = ÓVATOS támadó (lásd `tamadoKore`)
+  alapos: 0,                // ⭐⭐ 1 = ALAPOS támadó: egész hamis TÁRSADALMAT épít
 };
 
 /**
@@ -255,16 +257,89 @@ function tanusit(vilag, szabaly, tanu, kit) {
 // ⚠️ A független halmazt MOHÓN számoljuk: alsó korlát. Ez szándékos (D43) — és a valódi
 // koinóban is a jelentkező mutatja fel a független tanúit, nem a maximumot keresi.
 
-function fuggetlenHorgonyTanuk(vilag, i) {
+/**
+ * Hány EGYMÁST NEM ISMERŐ ember van a listában? (mohó, tehát alsó korlát — D43)
+ *
+ * ⭐ Ez a legfontosabb egyetlen szám az egész szakaszban: egy TALÁLKOZÓN mindenki ismer
+ * mindenkit, tehát egy találkozó ebből EGYET ér. Aki több különböző körből kapott
+ * tanúsítást, annál ez a szám nagy — és ez az, amit egy hamis sziget nehezen hamisít.
+ */
+function mohoFuggetlen(vilag, lista) {
   const valasztott = [];
-  for (const t of vilag.kapott[i]) {
-    if (!vilag.horgony[t]) continue;
+  for (const t of lista) {
     const ismeriValamelyiket = valasztott.some(
       (v) => vilag.adott[t].has(v) || vilag.adott[v].has(t)
     );
     if (!ismeriValamelyiket) valasztott.push(t);
   }
   return valasztott.length;
+}
+
+function fuggetlenHorgonyTanuk(vilag, i) {
+  const horgonyTanuk = [...vilag.kapott[i]].filter((t) => vilag.horgony[t]);
+  return mohoFuggetlen(vilag, horgonyTanuk);
+}
+
+// ===================================
+// A JELZÉSEK (D49) — nem tiltunk, hanem feltárunk
+// ===================================
+//
+// ⚠️ MINDEGYIK TÉNY, EGYIK SEM ÍTÉLET (D49/b). Nincs köztük „gyanú-pontszám": ugyanaz a
+// szám, ami egy valódi emberről melegen hangzik („négy külön körből ismerik"), egy zárt
+// foltból érkezőről hidegen. EGY mérce, két olvasat.
+//
+// 🔍 És a mérce, amivel egy jelzés értékét eldöntjük: akkor ér valamit, ha a SZIGETRE
+// kigyullad, a becsületes közösségre viszont NEM. Amelyik mindkettőre gyullad, az
+// rosszabb a semminél — hozzászoknak, és megszűnik jelzés lenni.
+
+/**
+ * ⭐ TORLÓDÁS — összesített jelzés a koinóról, NEM emberekről (D49/c, 3. védőkorlát).
+ *
+ * „Hány felvétel vezethető vissza ugyanarra a néhány tanúra?" Egy egészséges közösségben
+ * a tanúsítás sok ezer ember között oszlik el; egy szigetnél viszont ugyanaz a néhány
+ * megtévesztett ember szerepel minden felvételnél — akkor is, ha egyébként óvatos.
+ *
+ * @returns a legtöbbet tanúsító `hany` ember részesedése az összes tanúsításból
+ */
+function torlodas(vilag, hany) {
+  const szamlalo = new Map();
+  for (let i = 0; i < vilag.tag.length; i++) {
+    if (!vilag.tag[i]) continue;
+    for (const t of vilag.kapott[i]) {
+      szamlalo.set(t, (szamlalo.get(t) ?? 0) + 1);
+    }
+  }
+  const osszes = [...szamlalo.values()].reduce((a, c) => a + c, 0);
+  if (!osszes) return 0;
+  const legnagyobbak = [...szamlalo.values()].sort((a, c) => c - a).slice(0, hany);
+  return legnagyobbak.reduce((a, c) => a + c, 0) / osszes;
+}
+
+function szemelyJelzesek(vilag, i) {
+  const tanuk = [...vilag.kapott[i]].filter((t) => vilag.tag[t]);
+
+  // 1. hányan tanúsították (nyers szám — ez a könnyen hamisítható)
+  // 2. hány EGYMÁST NEM ISMERŐ körből (ez a nehezen hamisítható)
+  const fuggetlen = mohoFuggetlen(vilag, tanuk);
+
+  // 3. összefonódás: a tanú-párok hány százaléka ismeri egymást?
+  //    1.0 = mind egyetlen zárt társaság; 0.0 = csupa idegen egymásnak
+  let parok = 0;
+  let ismerosok = 0;
+  for (let a = 0; a < tanuk.length; a++) {
+    for (let b = a + 1; b < tanuk.length; b++) {
+      parok++;
+      if (vilag.adott[tanuk[a]].has(tanuk[b]) || vilag.adott[tanuk[b]].has(tanuk[a])) ismerosok++;
+    }
+  }
+  const osszefonodas = parok ? ismerosok / parok : 0;
+
+  // 4. mennyire megállapodottak a tanúi (ŐKET hányan ismerik, átlagosan)
+  const megallapodottsag = tanuk.length
+    ? tanuk.reduce((osszeg, t) => osszeg + vilag.kapott[t].size, 0) / tanuk.length
+    : 0;
+
+  return { tanuk: tanuk.length, fuggetlen, osszefonodas, megallapodottsag };
 }
 
 /**
@@ -445,6 +520,16 @@ function valodiakFelvetele(vilag, szabaly) {
 // választja: HORGONYOKAT, akik ráadásul EGYMÁST NEM ISMERIK — mert így ad a legtöbb
 // diszjunkt utat. Ha a szabály egy ilyen támadó ellen áll, akkor mond valamit.
 
+/** Lista összekeverése a világ magvetett véletlenjével (ismételhető marad). */
+function keverve(vilag, lista) {
+  const masolat = [...lista];
+  for (let i = masolat.length - 1; i > 0; i--) {
+    const j = Math.floor(vilag.veletlen() * (i + 1));
+    [masolat[i], masolat[j]] = [masolat[j], masolat[i]];
+  }
+  return masolat;
+}
+
 function megtevesztettekValasztasa(vilag, mennyit) {
   const jeloltek = [];
   for (let i = 0; i < vilag.b.valodiEmberek; i++) {
@@ -466,6 +551,46 @@ function megtevesztettekValasztasa(vilag, mennyit) {
   return valasztott;
 }
 
+/**
+ * ⭐⭐ AZ ALAPOS TÁMADÓ SAJÁT TALÁLKOZÓI — a hamis társadalom.
+ *
+ * Az óvatos támadó azért lepleződött le, mert az azonosságai TÚL CSUPASZAK voltak:
+ * pontosan `k` tanú, ismeretlen tanúk, nulla összefonódás. De semmi nem akadályozza meg
+ * abban, hogy a saját szigetén BELÜL is „találkozókat tartson" — a 880 azonosságot
+ * egymással is összekösse, helyi csoportokba rendezve, ugyanolyan alakúra, mint a valódi.
+ *
+ * ⚠️ EZ MIND INGYEN VAN NEKI, hiszen minden azonosság az övé. Ha ettől a személyes
+ * jelzések normálisnak látszanak, akkor a jelzések ÖNMAGUKBAN nem elegendők.
+ *
+ * A találkozók itt is HELYIEK (egy ablakból hívnak), mert a valódi világ összefonódását
+ * épp a helyi átfedés adja — globálisan szórt csoportokkal a támadó feltűnően ALACSONY
+ * összefonódást kapna, és attól megint kilógna.
+ */
+function hamisTalalkozok(vilag, szabaly) {
+  const b = vilag.b;
+  const hamisTagok = [];
+  for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
+    if (vilag.tag[i]) hamisTagok.push(i);
+  }
+  if (hamisTagok.length < b.talalkozoMeret) return;
+
+  for (let t = 0; t < b.talalkozoKorben; t++) {
+    const kozep = Math.floor(vilag.veletlen() * hamisTagok.length);
+    const ablak = Math.min(b.talalkozoSugar, hamisTagok.length);
+    const jelenlevok = [];
+    for (let probak = 0; probak < b.talalkozoMeret * 6; probak++) {
+      if (jelenlevok.length >= b.talalkozoMeret) break;
+      const eltolas = Math.floor((vilag.veletlen() - 0.5) * 2 * ablak);
+      const hely = (kozep + eltolas + hamisTagok.length) % hamisTagok.length;
+      const ki = hamisTagok[hely];
+      if (!jelenlevok.includes(ki)) jelenlevok.push(ki);
+    }
+    for (const a of jelenlevok) {
+      for (const c of jelenlevok) if (a !== c) tanusit(vilag, szabaly, a, c);
+    }
+  }
+}
+
 function tamadoKore(vilag, szabaly) {
   const b = vilag.b;
   const megtevesztettek = [...vilag.megtevesztett];
@@ -480,10 +605,30 @@ function tamadoKore(vilag, szabaly) {
   for (let p = 0; p < b.hamisProbalkozas; p++) {
     const uj = ujHamis(vilag);
 
-    // 1. a megtévesztettek tanúsítják
-    for (const mt of megtevesztettek) tanusit(vilag, szabaly, mt, uj);
-    // 2. és a már bent lévő hamisak is (ingyen, ha a szabály engedi)
-    for (const h of hamisak) tanusit(vilag, szabaly, h, uj);
+    if (b.ovatos || b.alapos) {
+      // ⭐⭐ AZ ÓVATOS TÁMADÓ — aki TUDJA, hogy nézzük a jelzéseket.
+      //
+      // Az „hangos" támadó azért bukott le, mert MINDENT túlteljesített: tömegesen
+      // tanúsított, és mindenkit mindenkivel összekötött. Ez a támadó ezt kerüli:
+      //   · PONTOSAN `k` tanúsítást szerez, egyet sem többet;
+      //   · a tanúkat VÉLETLENSZERŰEN válogatja a rendelkezésére állókból;
+      //   · és a hamisak NEM tanúsítják tömegesen egymást.
+      //
+      // ⚠️ ÉS EGY TANULSÁG A SAJÁT HIBÁMBÓL (2026-09-05): az első változat azt kérte a
+      // támadótól, hogy a tanúi EGYÁLTALÁN ne ismerjék egymást — és ettől nem tudott
+      // összeszedni ötöt, tehát „megvédtük" magunkat. Ez hamis siker volt: egy VALÓDI
+      // ember tanúi 53%-ban ismerik egymást, tehát a nulla összefonódás FELTŰNŐBB lenne.
+      // Az óvatos támadó nem a függetlenséget maximalizálja, hanem ÁTLAGOSNAK látszik.
+      //
+      // ⚠️ Ha a jelzések csak a hangosat fogják meg, akkor a csendest HITELESÍTJÜK velük.
+      const jeloltek = keverve(vilag, [...megtevesztettek, ...hamisak]);
+      for (const t of jeloltek.slice(0, b.k)) tanusit(vilag, szabaly, t, uj);
+    } else {
+      // 1. a megtévesztettek tanúsítják
+      for (const mt of megtevesztettek) tanusit(vilag, szabaly, mt, uj);
+      // 2. és a már bent lévő hamisak is (ingyen, ha a szabály engedi)
+      for (const h of hamisak) tanusit(vilag, szabaly, h, uj);
+    }
 
     if (szabaly.felveheto(vilag, uj)) {
       vilag.tag[uj] = true;
@@ -491,6 +636,10 @@ function tamadoKore(vilag, szabaly) {
       bejutott++;
     }
   }
+
+  // ⭐⭐ Az ALAPOS támadó a felvételek után megtartja a saját találkozóit is.
+  if (b.alapos) hamisTalalkozok(vilag, szabaly);
+
   return bejutott;
 }
 
@@ -535,7 +684,7 @@ function futtatas(szabaly, megtevesztettSzam, mag) {
   }
 
   return {
-    valodiTagok, horgonyok, hamisBent, hamisHorgony, gorbe,
+    valodiTagok, horgonyok, hamisBent, hamisHorgony, gorbe, vilag,
     maradekKeret: osszesKeret(vilag),
     elismeres: vilag.elismeres,
     tamogatas: vilag.tamogatas,
@@ -578,9 +727,175 @@ function gorbeKiiras(mag) {
   kiir('');
 }
 
+/**
+ * ⭐ A JELZÉSEK MÉRÉSE (D49) — a legfontosabb kérdés: KÜLÖNBÖZTETNEK-E?
+ *
+ * A leggyengébb szabállyal futtatunk (A), mert épp ez a D49 helyzete: a minimum
+ * szándékosan alacsony, a hamisak bejutnak — a kérdés az, hogy LÁTSZANAK-E.
+ */
+function jelzesekKiirasa(mag) {
+  const b = BEALLITAS;
+  const szabaly = SZABALYOK[0];
+  const e = futtatas(szabaly, Number(process.env.MEGTEVESZTETT ?? 8), mag);
+  const vilag = e.vilag;
+
+  const valodiak = [];
+  const hamisak = [];
+  for (let i = b.alapitok; i < b.valodiEmberek; i++) {
+    if (vilag.tag[i]) valodiak.push(szemelyJelzesek(vilag, i));
+  }
+  for (let i = vilag.hamisKezdet; i < vilag.valodi.length; i++) {
+    if (vilag.tag[i]) hamisak.push(szemelyJelzesek(vilag, i));
+  }
+
+  const atlag = (lista, mezo) =>
+    lista.length ? lista.reduce((o, j) => o + j[mezo], 0) / lista.length : 0;
+  const sz = (x) => (Math.round(x * 100) / 100).toString();
+
+  kiir('');
+  const stilus = b.alapos ? 'ALAPOS (hamis társadalmat épít)' : b.ovatos ? 'ÓVATOS' : 'hangos';
+  kiir(`  ${valodiak.length} valódi tag  ·  ${hamisak.length} bejutott hamis azonosság` +
+       `  ·  támadó: ${stilus}`);
+  // ⛔ A LEGFONTOSABB EGYETLEN SZÁM. Ha hamis azonosság bekerül a horgony-körbe, akkor a
+  // MÉRCE veszett el — és onnantól minden más szám érdektelen, mert a sziget önmagához
+  // képest méri a távolságot.
+  kiir(`  horgonyok: ${e.horgonyok} valódi  ·  ⛔ ${e.hamisHorgony} HAMIS`);
+  kiir('');
+  // ⭐ Összesített jelzés a koinóról (D49/c): a nyolc legtöbbet tanúsító ember
+  // részesedése az összes tanúsításból — támadóval és nélküle.
+  const tiszta = futtatas(szabaly, 0, mag);
+  kiir(`  TORLÓDÁS (a 8 legtöbbet tanúsító ember részesedése):  ` +
+       `támadó nélkül ${Math.round(torlodas(tiszta.vilag, 8) * 100)}%  ·  ` +
+       `támadóval ${Math.round(torlodas(vilag, 8) * 100)}%`);
+  kiir('');
+  kiir(sor(['jelzés', 'VALÓDI átlag', 'HAMIS átlag'], [26, 14, 14]));
+  kiir('-'.repeat(56));
+
+  const jelzesek = [
+    ['hányan tanúsították', 'tanuk'],
+    ['hány FÜGGETLEN körből', 'fuggetlen'],
+    ['tanúk összefonódása', 'osszefonodas'],
+    ['tanúk megállapodottsága', 'megallapodottsag'],
+  ];
+  for (const [nev, mezo] of jelzesek) {
+    kiir(sor([nev, sz(atlag(valodiak, mezo)), sz(atlag(hamisak, mezo))], [26, 14, 14]));
+  }
+
+  // ⭐⭐ A DÖNTŐ SZÁM. Egy jelzés akkor ér valamit, ha a szigetre kigyullad, a becsületes
+  // közösségre viszont NEM. Ezért minden jelzésnél megkeressük a LEGJOBB küszöböt, és
+  // kiírjuk MINDKÉT oldalt: hány hamisat kap el, és hány becsületest jelöl meg tévesen.
+  //
+  // ⚠️ A TÉVES MEGJELÖLÉS ITT NEM KELLEMETLENSÉG, HANEM A LÉNYEG. Épp azokat érinti,
+  // akikért az egész befogadás-gondolat szól: akinek kevés vagy egyszínű a kapcsolata —
+  // a magányost, a frissen érkezettet, a menekültet (D49/c).
+  kiir('');
+  kiir('  Ha egy jelzés alapján JELÖLNÉNK — a legjobb küszöbbel:');
+  kiir('');
+  kiir(sor(['jelzés', 'küszöb', 'hamis elkapva', 'becsületes tévesen'], [26, 10, 15, 18]));
+  kiir('-'.repeat(74));
+  for (const [nev, mezo] of jelzesek) {
+    let legjobb = null;
+    const ertekek = [...new Set([...valodiak, ...hamisak].map((j) => j[mezo]))].sort((a, c) => a - c);
+    for (const kuszob of ertekek) {
+      for (const irany of ['alatta', 'felette']) {
+        const talal = (j) => (irany === 'alatta' ? j[mezo] <= kuszob : j[mezo] >= kuszob);
+        const hamisAny = hamisak.length ? hamisak.filter(talal).length / hamisak.length : 0;
+        const valodiAny = valodiak.length ? valodiak.filter(talal).length / valodiak.length : 0;
+        const josag = hamisAny - valodiAny;
+        if (!legjobb || josag > legjobb.josag) {
+          legjobb = { josag, kuszob, irany, hamisAny, valodiAny };
+        }
+      }
+    }
+    const jel = legjobb.irany === 'alatta' ? '≤' : '≥';
+    kiir(sor([
+      nev,
+      `${jel} ${sz(legjobb.kuszob)}`,
+      `${Math.round(legjobb.hamisAny * 100)}%`,
+      `${Math.round(legjobb.valodiAny * 100)}%`,
+    ], [26, 10, 15, 18]));
+  }
+
+  // ===================================
+  // ⭐⭐ A SZERKEZETI JELZÉS — ami a személyes jelzések után marad
+  // ===================================
+  //
+  // A személyes jelzések mind arról szólnak, hogy MILYEN a jelölt környezete. Az alapos
+  // támadó ezeket mind utánozza, mert a saját szigetén belül bármit felépíthet ingyen.
+  //
+  // ⭐ Amit NEM tud utánozni: hogy a szigete mindössze néhány élen lóg a valódi világon.
+  // Ezt egyetlen szám méri: hány CSÚCS-DISZJUNKT út vezet a horgonyoktól hozzá.
+  //
+  // ⚠️ Mintavétellel, mert ez a számítás drága (személyenként több gráfbejárás).
+  const mintaMeret = Number(process.env.MINTA ?? 30);
+  // ⚠️ A korlátnak BŐVEN a megtévesztettek száma FÖLÖTT kell lennie, különben elrejti a
+  // különbséget: a sziget legfeljebb annyi külön úton érhető el, ahány megtévesztett
+  // embere van, a valódi ember viszont sokkal többön. (Először 8-cal mértem, ami épp
+  // annyi volt, mint a megtévesztettek száma — és „nincs különbség" jött ki. Nem volt.)
+  const utKorlat = Number(process.env.UT_KORLAT ?? 30);
+  const mintaVetel = (tol, ig, hamisE) => {
+    const talalt = [];
+    for (let i = tol; i < ig && talalt.length < mintaMeret * 12; i++) {
+      if (vilag.tag[i] && (hamisE || i >= b.alapitok)) talalt.push(i);
+    }
+    return keverve(vilag, talalt).slice(0, mintaMeret);
+  };
+  const vMinta = mintaVetel(b.alapitok, b.valodiEmberek, false);
+  const hMinta = mintaVetel(vilag.hamisKezdet, vilag.tag.length, true);
+  const utak = (lista) =>
+    lista.length
+      ? lista.reduce((o, i) => o + diszjunktUtak(vilag, i, b.maxUtHossz, utKorlat), 0) / lista.length
+      : 0;
+
+  kiir('');
+  kiir('  ⭐ SZERKEZETI JELZÉS — hány külön út vezet a horgonyoktól idáig?');
+  kiir(`     (${mintaMeret} fős minta mindkét oldalról, út ≤ ${b.maxUtHossz})`);
+  kiir('');
+  kiir(sor(['', 'átlag', 'legkisebb', 'legnagyobb'], [14, 12, 12, 12]));
+  kiir('-'.repeat(52));
+  const utErtekek = {};
+  for (const [nev, minta] of [['VALÓDI', vMinta], ['HAMIS', hMinta]]) {
+    const ertekek = minta.map((i) => diszjunktUtak(vilag, i, b.maxUtHossz, utKorlat));
+    utErtekek[nev] = ertekek;
+    const atl = ertekek.length ? ertekek.reduce((a, c) => a + c, 0) / ertekek.length : 0;
+    kiir(sor([nev, sz(atl), Math.min(...ertekek), Math.max(...ertekek)], [14, 12, 12, 12]));
+  }
+  if (utErtekek.HAMIS?.length) {
+    const hMax = Math.max(...utErtekek.HAMIS);
+    const vAlatta = utErtekek.VALODI ?? utErtekek['VALÓDI'];
+    const tevesen = vAlatta.filter((e) => e <= hMax).length / vAlatta.length;
+    kiir('');
+    kiir(`  Ha a küszöb „≤ ${hMax} út" lenne: 100% hamis elkapva, ` +
+         `${Math.round(tevesen * 100)}% becsületes tévesen.`);
+  }
+
+  // ⭐ A DÖNTŐ SZÁM: ha a „független körök" alapján jelölnénk, kit kapnánk el, és kit
+  // jelölnénk meg tévesen? Egy jelzés, ami a becsületesekre is gyullad, rosszabb a semminél.
+  kiir('');
+  kiir('  A „hány független körből" jelzés eloszlása:');
+  kiir('');
+  kiir(sor(['független körök', 'VALÓDI', 'HAMIS'], [20, 12, 12]));
+  kiir('-'.repeat(46));
+  for (let f = 1; f <= 5; f++) {
+    const cimke = f === 5 ? '5 vagy több' : String(f);
+    const v = valodiak.filter((j) => (f === 5 ? j.fuggetlen >= 5 : j.fuggetlen === f)).length;
+    const h = hamisak.filter((j) => (f === 5 ? j.fuggetlen >= 5 : j.fuggetlen === f)).length;
+    kiir(sor([cimke, v, h], [20, 12, 12]));
+  }
+  kiir('');
+}
+
 function main() {
   const mag = Number(process.argv[2] ?? 42);
   const b = kornyezetbol(BEALLITAS);
+
+  if (process.env.JELZESEK) {
+    kiir('');
+    kiir('A JELZÉSEK MÉRÉSE (D49) — különböztetnek-e valódi és hamis között?');
+    kiir('='.repeat(70));
+    jelzesekKiirasa(mag);
+    return;
+  }
 
   if (process.env.GORBE) {
     kiir('');

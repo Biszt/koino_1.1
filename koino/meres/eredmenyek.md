@@ -258,3 +258,215 @@ háttérben alvó alkalmazásra.
 **További korlátok, tisztességből:** egy készülék, egy Android-verzió, egy wifi; a töltés és a
 képernyő állapota nem volt rögzítve (a Doze akkumulátoron agresszívabb); és a **négyórás lépés
 még hátravan** — az „app standby" korlátai hosszabb tétlenség után lépnek életbe.
+
+---
+
+# A HAMIS SZIGET MÉRÉSE — a Szakasz 4 jelzései (D49)
+
+*Mérve: 2026-09-05. Eszköz: [`szigetMeres.js`](szigetMeres.js). Terv:
+[`docs/szakasz4_terv.md`](../../docs/szakasz4_terv.md).*
+
+> **Miért mérünk?** Mert a Szakasz 4 tervezésében három nap alatt KÉT javaslat bukott meg,
+> és mindkettőt a **számolás** buktatta ki, nem a megérzés. A harmadik irány (horgony,
+> táguló kör, jelzések) már túl összetett a fejben-ellenőrzéshez.
+
+## 1. A növekedés — és a megmaradási csapda
+
+1500 valódi ember, 12 alapító egyetlen körben, induló keret 60, `k = 5`, támadó nélkül.
+
+| Szabály | 30. kör | 97. kör | mikor állt meg |
+|---|---|---|---|
+| **A** — puszta darabszám (nincs keret) | 841 | **1499** | nem állt meg |
+| **B** — keret (D44) | 104 | **104** | ⛔ **a 24. körben, véglegesen** |
+
+⛔ **A „B" nem lassult, hanem elfogyott.** Az alapítók 720 egységnyi kerete: 720 → 474 →
+239 → 138 → 83 → … → **0**. Amikor nulla, senki nem tud tanúsítani, tehát senki nem tud
+belépni — soha többé. **Ez a megmaradási bizonyítás futás közben** (szakasz4_terv 5.1).
+
+⭐ **És hova ment a keret?** Megszámolva: **79%-a olyanokra, akik MÁR tagok** (elismerés),
+és csak **21%** olyanra, aki még kívül van (támogatás). Egy 12 fős találkozón a tagok
+132-szer tanúsítják egymást, és csak 36-szor a három vendéget. **Ez adja a súlyát az
+elismerés/támogatás szétválasztásnak** (Csaba, 2026-09-04).
+
+## 2. ⛔ A horgony-kör nem tágul egyetlen alapítói klikkből
+
+A horgony-feltétel `m` olyan horgony-tanút kér, akik **egymást nem ismerik**. Egy klikkben
+mindenki ismer mindenkit → **az egész alapítás egyetlen független csoportnak számít** →
+soha senki nem válik horgonnyá. Mérve: a horgonyok száma 30 körön át **végig 12**.
+*(Nyitott kérdés: K16.)*
+
+## 3. ⭐⭐ A JELZÉSEK — és a legfontosabb eredmény
+
+Leggyengébb szabály (A), 8 megtévesztett ember, 30 kör → **843 valódi tag, 880 bejutott
+hamis azonosság**. Ez a D49 helyzete: a minimum szándékosan alacsony, a hamisak bejutnak —
+a kérdés, hogy **látszanak-e**.
+
+| Jelzés | valódi átlag | hamis átlag |
+|---|---|---|
+| hányan tanúsították | 82 | **447** |
+| hány FÜGGETLEN körből | 5,44 | 4 |
+| tanúk összefonódása | 0,53 | **0,99** |
+| tanúk megállapodottsága | 94 | **225** |
+
+⭐ **A sziget nem attól látszik, hogy szegény, hanem hogy TÚL GAZDAG.**
+
+### És a döntő szám: kit kapna el, és kit jelölne meg tévesen?
+
+| Jelzés | legjobb küszöb | hamis elkapva | ⚠️ becsületes tévesen |
+|---|---|---|---|
+| hányan tanúsították | ≥ 184 | 80% | **0%** |
+| tanúk összefonódása | ≥ 0,83 | **99%** | 7% |
+| tanúk megállapodottsága | ≥ 142 | 69% | **0%** |
+| ⛔ kevés független kör | ≤ 4 | 100% | ⛔ **31%** |
+
+⛔ **AZ ÖSZTÖNÖS JELZÉS A LEGROSSZABB.** A *„kevés kapcsolata van, tehát gyanús"* a
+becsületes tagok **harmadát** is megjelölné — és az eloszlásból látszik, kiket: **56
+valódi embernek egyetlen köre van, 53-nak kettő, 66-nak három; hamisnak egynek sem.**
+Ezek a frissen érkezettek, az egy társaságban élők, a magányosak — **pontosan azok,
+akikért a befogadás-gondolat szól** (D49/c).
+
+> ⭐⭐ **A jó jelzés nem azt kérdezi, „elég beágyazott-e", hanem azt, hogy „nem túl sok-e,
+> túl egyforma-e".**
+
+### Egy negyedik jelzés, amit nem is terveztünk
+
+**Mind a 880 hamis azonosságnál pontosan 4 a független körök száma**, míg a valódiaknál
+1-től 5+-ig szóródik. **880 egyforma érték nem természetes eloszlás** — a valódi emberek
+szórnak, a gyár bélyegez. ⭐ És ez a koinóról szóló **összesített** jelzés, nem egy
+emberről: épp az, amit a D49/c harmadik védőkorlátja kér.
+
+## ⚠️ Amit ez NEM bizonyít
+
+**Ez EGY támadó, és ostoba.** Mindent túlteljesít: tömegesen tanúsít, mindenkit
+mindenkivel összeköt. Aki tudja, hogy nézzük, az **visszafogja magát** — tíz tanúsítás
+hamisanként, szórt értékek, kevés összefonódás. ⛔ **Ha a jelzés csak a hangosat fogja meg,
+akkor a csendest hitelesítjük vele.** A következő mérés egy **óvatos támadó** legyen.
+
+**További korlátok, tisztességből:** egy véletlen-mag; a „földrajz" egy kör, a találkozók
+szabályos méretűek; és a modellben nincs kulcs, aláírás, esemény és hálózat — ez
+**gráf-kísérlet, nem koino-kísérlet**.
+
+## 4. ⭐⭐ AZ ÓVATOS TÁMADÓ — és a szorítás két jelzés között
+
+*Ugyanaz a világ, de a támadó tudja, hogy nézzük a jelzéseket: pontosan `k` tanúsítást
+szerez azonosságonként, véletlenszerű tanúktól, és a hamisak nem tanúsítják tömegesen
+egymást.*
+
+**Ugyanúgy 880 hamis azonosság jutott be** — a szabály nem állította meg. **De a jelzések
+elkapták, csak az ELLENKEZŐ irányból:**
+
+| Jelzés | hangos támadó | óvatos támadó |
+|---|---|---|
+| hányan tanúsították | ≥ 184 → 80% / 0% téves | **≤ 5 → 100% / 1% téves** |
+| tanúk összefonódása | ≥ 0,83 → 99% / 7% téves | **≤ 0,3 → 98% / 0% téves** |
+| tanúk megállapodottsága | ≥ 142 → 69% / 0% téves | **≤ 37 → 100% / 1% téves** |
+| ⛔ kevés független kör | ≤ 4 → 100% / **31% téves** | ≤ 5 → 100% / **41% téves** |
+
+> ⭐⭐ **A TÁMADÓ NEM TUD EGYSZERRE MINDKETTŐ LENNI.** Ha keveset tanúsít, feltűnik, hogy
+> az azonosságait **pontosan `k`-an** ismerik, és a tanúik maguk is ismeretlenek
+> (megállapodottság **6** a **96** helyett). Ha sokat tanúsít, hogy ezt elfedje, **csak a
+> saját hamisaiból** meríthet — és attól az összefonódás **0,99**-re szalad.
+>
+> **A szorítás abból jön, hogy a megtévesztett emberek száma valóban véges.** Nyolc
+> emberrel nem lehet 880 azonosságot úgy körülvenni, hogy természetesnek látsszon.
+
+⛔ **Az ösztönös jelzés KÉTSZER bukott meg.** A *„kevés kapcsolata van, gyanús"* a hangos
+támadónál 31%, az óvatosnál **41%** becsületes tagot jelölne meg tévesen.
+
+## 5. Két mérés, ami NEM sikerült — és ezt is fel kell írni
+
+**A torlódás-jelzés megbukott.** *„A 8 legtöbbet tanúsító ember részesedése az összes
+tanúsításból":* támadó nélkül **2%**, támadóval is **2%**. Oka: a támadó a **saját
+hamisait is használja tanúnak**, és ezzel felhígítja a megtévesztettek súlyát. Megépítve,
+megmérve, nem működik.
+
+**És egy hamis siker, amit majdnem elhittünk.** Az óvatos támadó első változata azt kapta
+feladatul, hogy a tanúi **egyáltalán ne ismerjék egymást** — ettől nem tudott összeszedni
+`k`-t, és **0 hamis jutott be**. Ez nem védelem volt, hanem rossz támadó: egy valódi ember
+tanúi **53%-ban** ismerik egymást, tehát a nulla összefonódás **feltűnőbb** lenne, nem
+kevésbé. ⚠️ *Az óvatos támadó nem a függetlenséget maximalizálja, hanem átlagosnak látszik.*
+
+## 6. ⚠️ A KÖVETKEZŐ TÁMADÓ FOG DÖNTENI
+
+Az óvatos azért lepleződött le, mert az azonosságai **túl csupaszok** voltak. De semmi nem
+akadályozza meg abban, hogy **egy egész hamis társadalmat építsen**: a 880 azonosságot
+egymással is realisztikusan összekösse, klikkekbe rendezze, átlagosan 80 tanúsítást adjon
+mindegyiknek. **Ez mind ingyen van neki, hiszen mind az övé.**
+
+Akkor **mind a négy személyes jelzés normálisnak látszana** — és egyetlen dolog maradna,
+ami elárulja: **hogy ez az egész társadalom mindössze nyolc élen lóg a valódi világon.**
+
+⭐ Vagyis a **szerkezet** — ugyanaz a következtetés, mint a szakasz4_terv 5.1/c-ben, csak a
+másik irányból. Ha az „alapos" támadó átmegy a jelzéseken, akkor a jelzések önmagukban nem
+elegendők, és a **horgony visszakerül a középpontba**.
+
+## 7. ⛔⛔ AZ ALAPOS TÁMADÓ — a jelzések összeomlanak, és a horgony-kört elfoglalja
+
+*A harmadik támadó egész hamis TÁRSADALMAT épít: a szigeten belül is „találkozókat tart",
+helyi csoportokban, ugyanolyan alakúra, mint a valódi világ. Ez ingyen van neki, hiszen
+minden azonosság az övé.*
+
+### A személyes jelzések elvesztették az erejüket
+
+| Jelzés | valódi | hamis | legjobb küszöbbel |
+|---|---|---|---|
+| hányan tanúsították | 84,1 | 65,2 | 65% hamis / ⛔ **45% becsületes tévesen** |
+| hány független körből | 5,4 | **7,5** | 48% / 17% — ⚠️ a hamisaknak TÖBB van |
+| tanúk összefonódása | 0,53 | 0,36 | 66% / 10% |
+| tanúk megállapodottsága | 96,0 | 87,1 | 94% / ⛔ **75% becsületes tévesen** |
+
+⛔ **Egyik sem használható.** Az eloszlások átfednek; nincs olyan küszöb, ami a szigetet
+elkapja anélkül, hogy a becsületes tagok jelentős részét is megjelölné.
+
+### ⛔⛔ És a horgony-kört a támadó ELFOGLALJA
+
+| Támadó | valódi horgony | **hamis horgony** |
+|---|---|---|
+| hangos | 20 | ⛔ **880** |
+| óvatos | 20 | 6 |
+| alapos | 20 | ⛔ **880** |
+
+**Két külön baj, és mindkettő végzetes:**
+
+1. **A valódi horgony-kör NEM NŐTT — végig 20 maradt**, vagyis pontosan az alapítók,
+   négy különálló alapítói kör mellett is. Egyetlen becsületes ember sem vált horgonnyá 30
+   kör alatt: a helyi találkozókon **sosem kerül össze három ember három egymást nem ismerő
+   körből**. A hétköznapi ember a saját környékén találkozik.
+2. **A hamisak viszont MIND horgonnyá váltak.** A támadó **célzottan** választ: keres négy
+   alapítót négy különböző körből, akik egymást nem ismerik, megtéveszti őket — és onnantól
+   minden azonossága teljesíti a „három független horgony-tanú" feltételt. A hamis
+   horgonyok pedig újabb hamis horgonyokat szülnek.
+
+> ⛔⭐ **A SZABÁLY PONTOSAN FORDÍTVA MŰKÖDIK, MINT AHOGY TERVEZTÜK: nehéz a becsületesnek
+> és könnyű a támadónak.**
+>
+> Az ok mély, és túlmutat ezen a szabályon: a *„több, egymást nem ismerő körből ismerjenek"*
+> követelmény azt jutalmazza, aki **tudatosan hálózatot épít** — és a támadó a világ
+> legtudatosabb hálózatépítője. A hétköznapi ember nem stratégiázik, csak él a maga körében.
+
+⚠️ **És ezzel a szerkezeti jelzés is értelmét vesztette:** a „hány külön út vezet a
+horgonyoktól idáig" mérés a hamisaknál 30-at adott (a korlátot), a valódiaknál 11,1-et —
+de nem azért, mert a hamisak jobban kötődnek a valódi világhoz, hanem mert **a horgonyok
+nagy része már ők maguk voltak.** A sziget önmagához képest mérte a távolságot.
+
+### ⚠️ Két saját mérési hiba, felírva
+
+- **Először 8-as korláttal mértem** a diszjunkt utakat — épp annyival, ahány megtévesztett
+  ember volt. Így „nincs különbség" jött ki, holott a korlát rejtette el.
+- **A `hamisHorgony` oszlop végig ott volt a mérőeszközben**, a saját figyelmeztetésemmel
+  együtt (*„ha igen, a mérce elveszett"*) — de a jelzés-módban nem írattam ki, ezért három
+  mérésen át nem vettem észre.
+
+## 8. HOL TARTUNK A MÉRÉS UTÁN
+
+- ✅ **A keret-szabály (D44) áll**: a friss belépő kerete nulla, tehát a sziget nem
+  hitelesíti önmagát azonnal.
+- ⛔ **A gazdaság önmagában nem véd** (5.1/c) — mérve is.
+- ⛔ **A személyes jelzések egy alapos támadó ellen nem védenek** — és az ösztönös
+  („kevés kapcsolata van") háromszor mérve a legrosszabb: 31%, 41%, 45% téves megjelölés.
+- ⛔ **A horgony-szabály ebben az alakjában elbukott**: a becsületesnek nehéz, a támadónak
+  könnyű, és a kört elfoglalja.
+
+▶️ **Amit ez nem dönt le:** a **D49** iránya (feltárás tiltás helyett) áll — de kiderült,
+hogy **amit feltárunk, azt még nem találtuk meg.** A jelzés nem lehet sem személyes
+statisztika, sem a mai horgony-távolság.
