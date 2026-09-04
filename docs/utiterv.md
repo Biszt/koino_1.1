@@ -21,9 +21,21 @@
 >
 > **217 önpróba rendben**, minden pusholva (`bc0d7d5`), tiszta munkafa.
 >
-> ▶️ **Következik a Szakasz 4 — AZ IDENTITÁS.** ⚠️ *A D17 mondata áll: a konszenzus
-> biztonsága = az identitás-réteg biztonsága, semmi más. Enélkül minden eddigi munka egy
-> hatékonyan skálázódó hamisítás-gépezet.*
+> 🚧 **A Szakasz 4 — AZ IDENTITÁS — elkezdődött** (2026-09-04, tervezés):
+> [`szakasz4_terv.md`](szakasz4_terv.md). ⚠️ *A D17 mondata áll: a konszenzus biztonsága =
+> az identitás-réteg biztonsága, semmi más. Enélkül minden eddigi munka egy hatékonyan
+> skálázódó hamisítás-gépezet.*
+>
+> ⭐ **Ami áll:** a Duniter-féle távolság-szabály (80% / N^(1/5)) **elbukott a 9.
+> szabályon** — globális számokat kíván. Helyette **Csaba keret-szabálya** (D44): *annyi
+> tanúsítást adhatsz, amennyivel a minimum fölött vagy* — ez megöli a *„fizess egyszer,
+> arass örökké"* támadást, mert a friss belépő kerete nulla.
+>
+> ⛔ **De ami kiderült:** **a gazdaság önmagában nem lehet a védelem.** Ha a keret
+> megmaradó, a közösség nem tud nőni; ha teremthető, a hamis sziget is teremt — *a számtan
+> nem látja a különbséget valódi és hamis ember között.* A keret tehát **fék**, nem a
+> Sybil-korlát hordozója, és **a szerkezet (horgony, út-feltétel) visszakerül a tervbe.**
+> ▶️ **Innentől szimulációval haladunk, nem érveléssel.**
 
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 
@@ -121,7 +133,7 @@ identitás-réteg · tartós mag · felület · kereső-réteg · pénz
 | **1** | **A helyi modell** — esemény, lánc, állapot, szabály, javaslat | ✅ **kész** | a koino gondolkodása |
 | **2** | **A szállítás** — hogy két készülék egyáltalán összeérjen | ✅ **kész** | ⭐ *(A neve eddig „csere" volt; a munka valójában a szállításról szólt, és az elkészült.)* |
 | **3** | **A SZERKEZET** — az esemény alakja, a tár illesztése, az elérés | ✅ **kész** (2026-09-03) | ettől lett a koino skálázható **szerkezetében** |
-| **4** | **AZ IDENTITÁS** — tanúsítás, távolság-szabály, tartós mag | ❌ | ettől lesz **hiteles** |
+| **4** | **AZ IDENTITÁS** — tanúsítás, **keret**, bizonytalanra jelölés ([terv](szakasz4_terv.md)) | 🚧 **tervezés** | ettől lesz **hiteles** |
 | **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból | ❌ | ettől lesz **használható** |
 | **6** | **A KERESŐ-RÉTEG** — elosztott, replikált mutató | ❌ | ⭐ **elhagyható** (2. szabály) |
 | **7** | **A PÉNZ** | ❌ | D11: csak bizonyított identitás után |

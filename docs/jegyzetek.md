@@ -30,6 +30,23 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-09-04
+
+- 🆕 „a »tartalom« szót, le szeretném cserélni, »gondolatra«, mindenhol (tudom hogy ez nagy
+  munka, ezért most ne foglalkozz vele, csak írd be valamelyik dokumentumba)"
+  → Kontextus: a Szakasz 4 (identitás) megbeszélése közben merült fel, ott, ahol a
+  tanúsítás visszavonásáról volt szó — a tanú nem vonhat vissza, hanem **bizonytalanra
+  jelölhet**, és **létrehozhat egy gondolatot**, amivel megosztja a felelősséget a
+  közösséggel.
+  ⚠️ **A méret miatt külön feladat.** A `tartalom` szó ma egyszerre: domain-fogalom
+  (a platform alapegysége), entitástípus, adatosztály (`adat_osztalyozas.md`),
+  Mongoose-modell és útvonal a prototípusban (`models/tartalom.js`, `/api/tartalmak`),
+  frontend-komponens (`TartalomKartya.js`, `TartalomModal`), és megszámlálhatatlan
+  dokumentum-hivatkozás. ⛔ **A prototípus be van fagyasztva** (nem nyúlunk hozzá), tehát
+  az átnevezés a **Fázis 2-ben** végezhető el — legkésőbb a Szakasz 5-ben (a felület),
+  amikor a domain-szótár úgyis a képernyőre kerül. Addig mindkét szó ugyanazt jelenti.
+  → Felírva, **nem elvégezve**.
+
 ### 2026-07-22
 
 - ✅ „még az is eszembe jutott, hogy az új tartalom létrehozása modalban, a kategória
