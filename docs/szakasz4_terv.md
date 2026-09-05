@@ -665,11 +665,95 @@ teljesen elszigetelt közösségnél tehát a jelzés gyengébb; ezt külön kel
 
 ### Amit ki kell dolgozni
 
-- ⏳ **A bemutatkozás mint külön, könnyű esemény** — olcsóbb és sűrűbb, mint a tanúsítás:
-  *„találkoztunk"*, nem *„létező, külön ember"*. A mérés még a tanúsítási gráfon futott.
+- ⏳ **A bemutatkozás alakja** — olcsóbb és sűrűbb, mint a tanúsítás: *„találkoztunk"*, nem
+  *„létező, külön ember"*. A mérés még a tanúsítási gráfon futott. **A hordozó kérdését a
+  8/e szakasz zárja le.**
 - ⏳ **A séta paraméterei** (hány séta, hány lépés) — közösségi paraméterek (D13/c)?
-- ⏳ **A D6 ellenőrzése:** a bemutatkozás is esemény, tehát a láncra kerül. Milyen alakban,
-  hogy ne legyen belőle társas térkép mindenkiről? ⚠️ **Ez a legkomolyabb nyitott kérdés.**
+- ⏳ **Mi szivárog ki egy séta közben?** Külön végiggondolandó és mérendő (8/e).
+
+## 8/e. ⭐⭐ A TÉRKÉP NÉLKÜLI TENGER — a bemutatkozás hordozója
+
+*Csaba, 2026-09-05. Ez zárja le a 8/d legkomolyabb nyitott kérdését.*
+
+### A kifogás, ami a 8/d-ből következett
+
+Ha mindenki feljegyzi a láncra, kivel találkozott, akkor a koino **teljes, örök, nyilvános
+társas térképet** épít mindenkiről. Ez a **D6** tagadása (*„személyes adat SOHA a láncra"*)
+— és mivel a koino épp politikai döntésekre készül, ez pontosan az az adat, ami egy
+mozgalom elnyomásához a legértékesebb.
+
+### ⭐ Csaba válasza: ez nem megfigyelés, hanem közlés
+
+> *„nem a készülék méri önkényesen, hanem a résztvevők jelzik a bemutatkozásukat, tehát
+> engedélyezik. Persze mindent korrekt módon le kell írnia a programnak, hogy mi mivel jár."*
+
+**Ez helyes, és a gyűjtés jogosságát megoldja.** ⚠️ De három dolgot nem old meg, és ezeket
+ki kell mondani:
+
+- **A beleegyezés egyenkénti, a kár az összegben van.** Egy *„találkoztunk"* ártalmatlan;
+  tízezerből **térkép** lesz — abba senki nem egyezett bele, csak a pontokba.
+- **Örökre szól.** A koino nem felejt; amibe húszévesen beleegyezel, az hatvanévesen is ott
+  van. A **D14** szerint viszont a felejtés az alapállapot.
+- **A körülmények változnak.** Aki elmenekült valaki elől, vagy akinek a hazájában
+  veszélyessé válik egy társaság, annak a régi beleegyezése nem véd.
+
+### ⭐⭐ D50 — A JELZÉSHEZ NEM KELL A TÉRKÉP, CSAK AZ ÚT
+
+A feloldás abból jön, hogy **megnézzük, mire van szüksége egy sétának**:
+
+- az **első lépéshez** a saját ismerőseidet kell tudnod — azokat úgyis tudod, hiszen te
+  találkoztál velük;
+- a **második lépéshez** a te ismerősöd saját ismerőseit — **azokat meg ő tudja**;
+- és így tovább, tíz lépésen át.
+
+> ⭐ **Senkinek nem kell látnia az egészet. Mindenki csak azt tudja, amit amúgy is tud.**
+
+**Ebből következik a döntés:**
+
+> **A bemutatkozás NEM esemény a láncon, hanem HELYI LISTA** — és a séta nem lekérdezés,
+> hanem **üzenet, ami ugrál**.
+
+⭐ **Már van rá minta a programban:** a `js/csere/tarsak.js` társ-listája pontosan ilyen —
+*„helyi megfigyelés — sosem terjed, és semmit nem dönt el a koinóban."*
+
+**A séta a gyakorlatban:** küldök egy jelet az egyik ismerősömnek, ő továbbadja egy véletlen
+ismerősének, az is tovább; tíz ugrás után az utolsó visszaszól, hogy ide jutott.
+
+- **Senki nem látja az utat** — mindenki csak azt, kitől kapta és kinek adta.
+- **Nem áll össze térkép:** a kiinduló annyit tud meg, mely embereket éri el tíz lépésen
+  belül — nem azt, hogy ki kit ismer.
+- A két halmaz összevetése (*„hány ponton érünk össze?"*) elvégezhető úgy, hogy csak a
+  **darabszám** derüljön ki, a nevek ne.
+
+⭐ **Ez ugyanaz a szerkezet, mint a csere:** üzenet fut a hálón, nem adat áll egy helyen.
+
+### ⭐⭐ És ezzel a 9. szabály gondja is megoldódik
+
+Eddig ez állt: *ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést.* Egy séta viszont
+**élő embereket kíván**.
+
+⭐ **A D49 óta ez nem baj:** a tenger-jelzés **nem dönt semmiről**, csak megmutat. Ha most
+épp nem fut le, akkor nem látod a jelzést — és **semmi más nem áll meg**. Pontosan olyan,
+mint a **kereső-réteg**: hasznos és **elhagyható**.
+
+> **Vagyis a bemutatkozás nem a DAG-ba tartozik, hanem a MÁSODIK RÉTEGBE.** A láncon marad,
+> ami dönt (a `k` tanúsítás, D43/D47); a tenger fölötte úszik — élőben, elhagyhatóan,
+> térkép nélkül.
+
+⭐ **És egy egybeesés, ami nem véletlen:** a séták akkor tudnak végigfutni, amikor mindenki
+egyszerre ébren van — vagyis **a buliban**, az összehangolt ötperces ablakban (6/c szakasz).
+Az a szerkezet pontosan ehhez való.
+
+### ⏳ Amit ez még nem old meg
+
+- **Mi szivárog ki egy séta közben?** A kiinduló megtudja a végpontokat; a közbenső látja,
+  kitől kapta és kinek adta. Ez sokkal kevesebb egy térképnél, de **nem nulla** — külön
+  végig kell gondolni, és mérni.
+- **A séta üzenet-alakja** — új protokoll-kérdés a `vonal.js` mellé, a 3.4 mintájára.
+- **Mi van, ha a lista elvész?** A helyi lista nem terjed, tehát készülékcserénél odalesz —
+  ⚠️ *(a kulcsot mentjük, de ezt?)*
+- **És mérni kell:** a 8/d mérése a **tanúsítási** gráfon futott. A bemutatkozás sűrűbb és
+  olcsóbb; elvileg **erősíti** a jelzést, de ez feltevés, nem mérés.
 
 ## 9. ILLESZKEDÉS A MEGLÉVŐ GÉPHEZ
 
@@ -742,6 +826,9 @@ javasolt számok — **D43–D47** — még nincsenek átvezetve.*
 - ⭐⭐ **D49** — **az identitás-réteg egy minimumon kívül nem tilt, hanem feltár** (8/c),
   három részben: **a** a minimum kemény szabály marad · **b** a jelzés tényt mutat, soha
   nem ítéletet · **c** három védőkorlát a boszorkányüldözés ellen
+- ⭐⭐ **D50** — **a bemutatkozás helyi lista, nem lánc-esemény; a séta üzenet, nem
+  lekérdezés** (8/e). *A jelzéshez nem kell a térkép, csak az út.* Ezzel a tenger a
+  **második rétegbe** kerül: élő, elhagyható, és nem épít társas térképet
 
 ⚠️ **És két meglévő döntést érint:**
 
@@ -795,6 +882,12 @@ javasolt számok — **D43–D47** — még nincsenek átvezetve.*
   alaposabb a támadó, annál jobban működik. ⭐⭐⭐ **A satu bezárult:** a statisztika a ritka
   szigetet fogja meg, a tenger a sűrűt, és **a támadó nem lehet egyszerre mindkettő**.
   ⚠️ A mérés közben kiderült, hogy a modell világa (egy kör) rossz volt — **10% távoli
-  találkozó** kellett hozzá, hogy legyen egyáltalán „tenger". ▶️ Hátra van: a bemutatkozás
-  mint külön esemény, a séta-paraméterek, és ⚠️ **a D6 kérdése** (ne legyen belőle társas
-  térkép mindenkiről).
+  találkozó** kellett hozzá, hogy legyen egyáltalán „tenger".
+- **2026-09-05 (a nap vége)** — ⭐⭐ **A D6 kérdése lezárva (D50, 8/e).** Csaba: a
+  bemutatkozás **közlés, nem megfigyelés** — a résztvevők jelzik, tehát engedélyezik. Ehhez
+  jött a hordozó feloldása: **a jelzéshez nem kell a térkép, csak az út.** A bemutatkozás
+  **helyi lista** (mint a `tarsak.js` társ-listája), a séta pedig **ugráló üzenet** — így
+  senki nem lát többet, mint amit amúgy is tud. ⭐ És mivel a jelzés nem dönt (D49), szabad
+  élő kapcsolatot kívánnia: **a tenger a második rétegbe kerül**, a kereső-réteg mellé.
+  ▶️ Hátra van: mi szivárog egy séta közben · a séta üzenet-alakja · a lista elvesztése
+  készülékcserénél · és a mérés megismétlése egy valódi bemutatkozás-gráfon.

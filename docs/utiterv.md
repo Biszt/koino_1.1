@@ -44,6 +44,11 @@
 > **a támadó nem tud egyszerre sűrű és ritka lenni.** Mérve: **100% hamis elkapva, 0%
 > becsületes tévesen**, mind a három támadó ellen. ⭐ És a számítás helyi és korlátos, tehát
 > **átmegy a 9. szabályon.**
+>
+> ⭐⭐ **És a bemutatkozás nem épít társas térképet (D50):** helyi lista, mint a társ-lista —
+> a séta **ugráló üzenet**, nem lekérdezés, tehát *a jelzéshez nem kell a térkép, csak az
+> út.* Mivel a jelzés nem dönt, szabad élő kapcsolatot kívánnia: **a tenger a második
+> rétegbe kerül**, a kereső-réteg mellé — elhagyható.
 
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 
