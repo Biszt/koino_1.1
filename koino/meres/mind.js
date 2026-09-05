@@ -22,6 +22,7 @@ import javaslat from './javaslatProba.js';
 import szabaly from './szabalyProba.js';
 import csere from './csereProba.js';
 import tarsak from './tarsakProba.js';
+import identitas from './identitasProba.js';
 import vizsga from './vizsgaProba.js';
 
 const PROBAK = [
@@ -33,6 +34,7 @@ const PROBAK = [
   { nev: 'szabaly', futtat: szabaly },
   { nev: 'csere', futtat: csere },
   { nev: 'tarsak', futtat: tarsak },
+  { nev: 'identitas', futtat: identitas },
   { nev: 'vizsga', futtat: vizsga }
 ];
 

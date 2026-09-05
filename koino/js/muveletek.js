@@ -157,6 +157,62 @@ export function koinoLetrehozasa(kornyezet, nev, leiras) {
 }
 
 // ===================================
+// A BELÉPÉS ÉS A MEGHÍVÁS — az 1. lépcső (D56)
+// ===================================
+
+/**
+ * ⭐ BELÉPÉS: megnyitom a SAJÁT azonosság-szeletemet ebben a koinóban.
+ *
+ * Ez még nem tagság — csak annyit mond: *„ide szeretnék tartozni."* A tagság ebből és a
+ * kapott meghívásokból SZÁMÍTÓDIK (`allapot/identitas.js`), nem ez az esemény adja.
+ *
+ * ⭐ A szelet-kulcsa `null`, tehát a saját szeletét nyitja: a szelet neve maga az esemény
+ * azonosítója lesz. **Ez a horgonyom** — erre mutatnak majd a rólam szóló események
+ * (meghívás, később felhatalmazás és tanúsítás), és ettől lesz a „hányan hívtak be?”
+ * kérdés EGYETLEN szelet-lekérdezés.
+ *
+ * ⚠️ MIÉRT ÜRES AZ `adat`? Mert a **D28** szerint a tagság ténye és a személyes adatok KÉT
+ * KÜLÖN esemény: a `Belepes` a tagságé, a `Profil` a névé és a lakóhelyé. Így a tagság
+ * bizonyítéka nem tartalmaz személyes adatot — különben a létszám ellenőrzése egyben a
+ * névsor kiadása volna.
+ *
+ * @param {Object} kornyezet
+ */
+export function belepes(kornyezet) {
+  return esemenytTeszek(kornyezet, 'Belepes', {});
+}
+
+/**
+ * ⭐ MEGHÍVÁS: behívok valakit a koinóba.
+ *
+ * Az esemény a MEGHÍVOTT szeletébe kerül (`entitas` = az ő horgonya), nem az enyémbe —
+ * ettől lesz a „hányan hívták be X-et?” kérdés korlátos, akárhányan vagyunk.
+ *
+ * ⭐⭐ ÉS MAGÁVAL HOZZA A BIZONYÍTÉKÁT: az `adat.sajatBelepes` az ÉN horgonyomra mutat,
+ * hogy aki ellenőrzi, ne KERESSE a láncomat, hanem egyetlen lépéssel tovább tudjon menni
+ * visszafelé. Ugyanaz a minta, mint a D42 bemondott összegénél.
+ *
+ * ⚠️ A `kit` mező (a meghívott nyilvános kulcsa) sem díszlet: enélkül egy idegen szeletébe
+ * tett meghívás is beszámítana. Az ellenőrzés összeveti a horgony szerzőjével.
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adatok
+ * @param {string} adatok.kit - a meghívott nyilvános kulcsa
+ * @param {string} adatok.horgonya - a meghívott `Belepes` eseményének azonosítója
+ * @param {string} adatok.sajatBelepes - a SAJÁT horgonyom (alapítónál a koino-létrehozás)
+ */
+export function meghivas(kornyezet, { kit, horgonya, sajatBelepes }) {
+  if (typeof kit !== 'string' || typeof horgonya !== 'string') {
+    throw new Error('A meghíváshoz kell a meghívott kulcsa és a horgonya.');
+  }
+  if (typeof sajatBelepes !== 'string') {
+    throw new Error('A meghíváshoz meg kell adni a SAJÁT horgonyodat is — enélkül a másik '
+      + 'gép nem tudja ellenőrizni, hogy te magad tag vagy-e.');
+  }
+  return esemenytTeszek(kornyezet, 'Meghivas', { kit, sajatBelepes }, { entitas: horgonya });
+}
+
+// ===================================
 // TARTALOM LÉTREHOZÁSA
 // ===================================
 

@@ -102,7 +102,9 @@ function szeletKulcs(tipus, adat) {
   if (tipus === 'TudatpontRendezes' || tipus === 'ErtekJavaslat') return adat?.entitas ?? null;
   if (tipus === 'Javaslat') return adat?.erintett ?? null;
   if (tipus === 'Szavazat') return adat?.javaslat ?? null;
-  return null;   // KoinoLetrehozas, TartalomLetrehozas: a saját szeletüket nyitják
+  // ⭐ A MEGHÍVÁS a MEGHÍVOTT szeletébe kerül (D56) — a hívó `beallitas.entitas`-szal adja
+  // meg, mert a horgony azonosítója nem vezethető le az adatból.
+  return null;   // KoinoLetrehozas, TartalomLetrehozas, Belepes: a saját szeletüket nyitják
 }
 
 /**
