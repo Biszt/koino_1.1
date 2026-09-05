@@ -762,3 +762,55 @@ be, átmenetileg **harminc zsákutca-ismerőst** cipelne — pontosan úgy, mint
 ember. *(A modellben ez nem jön elő, mert a becsületesek nem csinálnak tömeges beléptetést.)*
 ⭐ A különbség idővel derül ki: a diákok **megismerik egymást**, tehát megszűnnek zsákutcák
 lenni; a hamisak nem. **Ezt külön kell mérni, mielőtt bárki ilyen jelzést beépít.**
+
+## 11.8 ⭐ AZ ISMÉTLŐDÉS — Csaba ötlete, és amit a mérés mondott (2026-09-06)
+
+> *„Egy kollégával kétszáz nap alatt kétszázszor találkozol; egy pályaudvari átutazóval
+> egyszer."* — a jelzés csak a **sokszor ismételt** bemutatkozást vegye figyelembe.
+
+### ⚠️ ELŐSZÖR A MÉRÉS BUKOTT MEG, NEM AZ ÖTLET
+
+Az első futás **100% hamis elkapva / 81–89% becsületes tévesen** volt — használhatatlan.
+Az ok a **modellben** volt: a világ csupa **egyszeri találkozásból** állt (a találkozók
+véletlen embereket hívnak egy környékről), tehát *„a sokszor ismételt él"* fogalma **üres**
+volt, és a szűrő mindenkit leszakított.
+
+⭐ **Ezért került a modellbe az ÁLLANDÓ TÁRSASÁG** (`allandoKorok`): család, munkahely,
+osztály — nyolc fő, körönként 50% eséllyel összejön, és **mindenki kettőhöz tartozik**
+(enélkül a sok-találkozású gráf szétesne külön szigetekre, és a séta a saját társaságában
+ragadna). ⚠️ *Ez a világ bővítése, tehát a 11.1–11.7 számai a régi világra érvényesek;
+a kettőt nem szabad összekeverni.*
+
+### Az eredmény — állandó társaságokkal, 3 megtévesztett
+
+| változat | séta szűrő nélkül | ⭐ csak a ≥3× ismételt élen | kitartó támadó ellen |
+|---|---|---|---|
+| V2 — 1 meghívó | **100% / 0%** | 100% / ⚠️ 17% | 100% / 17% |
+| V4 — 3 meghívó | **100% / 0%** | 100% / ⚠️ 34% | 100% / 34% |
+| V2b — 1 meghívó + jogosítás | 88% / 11% | ⭐ **100% / 9%** | 100% / 9% |
+| V3 — 2 meghívó + jogosítás | 90% / 15% | ⭐ **100% / 13%** | 100% / 14% |
+
+⭐⭐ **Ahol a séta vak volt, ott az ismétlődés megjavítja:** a V2b és a V3 — vagyis épp az a
+két eset, ahol a támadó minden hamisat egy valódi emberhez köt — **88–90%-ról 100%-ra** megy,
+és a téves megjelölés is **csökken** (11% → 9%, 15% → 13%).
+
+⛔ **De ahol a séta tökéletes volt, ott ront:** a V2 és a V4 **0%-ról 17%-ra, illetve
+34%-ra** rontja a téves megjelölést. Az ok kézenfekvő: a szűrő leszakítja azokat, akiknek
+**még nincs ismétlődő kapcsolatuk** — a frissen érkezettet és a magányost. Pontosan az a
+kör, akikért a D49/c 2. védőkorlátja szól.
+
+> ⭐ **Ebből az következik, hogy az ismétlődés nem HELYETTESÍTI a sima sétát, hanem egy
+> MÁSIK LENCSE.** Hogy a kettő együtt (mindkettőn leszakadt = erős jelzés) jobb-e
+> bármelyiknél külön, az **még nincs megmérve.**
+
+### ❓ ÉS EGY SZÁM, AMIT NEM TUDOK MEGMAGYARÁZNI
+
+A **kitartó támadó** — aki minden körben újra jelöli a bemutatkozásait, hogy az élei
+„sokszor ismételtnek" látszódjanak — **semmit nem nyert vele** (17% → 17%, 9% → 9%,
+13% → 14%). Ez ellentmond a várakozásnak: ha a jelölés puszta bejegyzés, a támadónak fel
+kellene tudnia pörgetni a számlálót.
+
+⚠️ **Nem tudom, miért nem nyert, és ezért ezt a sort NEM szabad védelemként olvasni.** A
+11.3/b esetében is előbb megmértük a hidat, és csak utána mondtuk ki az okot; itt ez a
+diagnosztika **még hiányzik**. Amíg nincs meg, a helyes olvasat: *a modell így viselkedett,
+az okát nem ismerjük.*

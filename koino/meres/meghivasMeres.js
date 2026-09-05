@@ -76,6 +76,11 @@ const BEALLITAS = {
   tamadasKezdete: 8,        // ettől a körtől lép színre a támadó
   hamisProbalkozas: 40,     // a támadó körönként ennyi hamis azonosságot próbál bevinni
   melegit: 0,               // ⭐ 1 = a hamisak egymásnak is bemutatkoznak (SŰRŰ sziget)
+  kitarto: 0,               // ⭐⭐ 1 = a támadó MINDEN KÖRBEN újra jelöli a bemutatkozásait
+  allandoKorok: 0,          // ⭐⭐ 1 = ÁLLANDÓ TÁRSASÁGOK (család, munkahely) — lásd lentebb
+  korMeret: 8,              // egy állandó társaság ekkora
+  korTalalkozas: 0.5,       // egy állandó társaság ekkora eséllyel jön össze körönként
+  elSuly: 1,                // ⭐⭐ a séta csak ennyiszer ismételt élen lép (1 = mindegyiken)
   setaDb: 200,              // egy jelzéshez ennyi séta indul
   setaHossz: 10,            // egy séta ennyi lépés
   minta: 30,                // ennyi fős minta mindkét oldalról a jelzés-méréshez
@@ -100,12 +105,14 @@ function ujVilag(b, veletlen) {
     belepes: [],            // melyik körben lett tag (az alapítóknál -1) — a „régebbi" ehhez kell
     elsoTalalkozas: [],     // melyik körben találkozott először taggal (az ÁR méréséhez)
     bemutatkozas: [],       // Set — KÖLCSÖNÖS, ingyenes, helyi. Ezen fut a séta.
+    suly: [],               // Map — hányszor találkoztak (az ismétlődés mérésére)
     meghivo: [],            // Set — kik hívták be. Lánc-adat, EZ dönt.
     kiadott: [],            // hány meghívót állított ki (a saját láncából ellenőrizhető)
     megtevesztett: new Set(),
     hamisKezdet: b.valodiEmberek,
     // ⭐ Az önellátás nyomon követése: bejutott hamisonként hány VALÓDI meghívó kellett.
     hamisMeghivoi: [],
+    allandoKorok: [],       // ⭐⭐ állandó társaságok (család, munkahely, osztály)
   };
 
   for (let i = 0; i < b.valodiEmberek; i++) {
@@ -115,6 +122,7 @@ function ujVilag(b, veletlen) {
     vilag.belepes.push(null);
     vilag.elsoTalalkozas.push(null);
     vilag.bemutatkozas.push(new Set());
+    vilag.suly.push(new Map());
     vilag.meghivo.push(new Set());
     vilag.kiadott.push(0);
   }
@@ -140,6 +148,36 @@ function ujVilag(b, veletlen) {
     bemutatkoznak(vilag, a * tavolsag, (a + 1) * tavolsag);
   }
 
+  // ===== ⭐⭐ ÁLLANDÓ TÁRSASÁGOK — a valódi élet alakja =====
+  //
+  // ⚠️ EZT A MÉRÉS KÖVETELTE KI (2026-09-06). Az ismétlődés-szűrő mérésekor kiderült, hogy
+  // az eredeti világ CSUPA EGYSZERI TALÁLKOZÁSBÓL áll: a találkozók véletlen embereket
+  // hívnak össze egy környékről, tehát ugyanazzal az emberrel ritkán találkozol kétszer.
+  // Ilyen világban „a sokszor ismételt él" fogalma üres — a szűrő MINDENKIT leszakít
+  // (mérve: 81–89% becsületes tévesen). ⭐ A valóságban viszont van család, munkahely,
+  // osztály: néhány ember, akivel hetente találkozol.
+  //
+  // Mindenki KÉT társasághoz tartozik — ettől lesz a „sok találkozású" gráf ÖSSZEFÜGGŐ
+  // (aki két körben is benne van, az köti össze a kettőt), különben a séta a saját
+  // társaságában ragadna.
+  if (b.allandoKorok) {
+    const hanyKor = Math.ceil((b.valodiEmberek * 2) / b.korMeret);
+    for (let c = 0; c < hanyKor; c++) {
+      const kor = [];
+      // A társaság fele helyi (szomszédok a „földrajzon"), és van pár távoli tagja is —
+      // a kis világ tulajdonság enélkül elveszne.
+      const kozep = Math.floor(veletlen() * b.valodiEmberek);
+      for (let t = 0; t < b.korMeret; t++) {
+        const tavoli = veletlen() < b.tavoliArany;
+        const eltolas = tavoli
+          ? Math.floor(veletlen() * b.valodiEmberek)
+          : Math.floor((veletlen() - 0.5) * 2 * b.talalkozoSugar);
+        kor.push((kozep + eltolas + b.valodiEmberek) % b.valodiEmberek);
+      }
+      vilag.allandoKorok.push([...new Set(kor)]);
+    }
+  }
+
   return vilag;
 }
 
@@ -152,6 +190,7 @@ function ujHamis(vilag) {
   vilag.belepes.push(null);
   vilag.elsoTalalkozas.push(null);
   vilag.bemutatkozas.push(new Set());
+  vilag.suly.push(new Map());
   vilag.meghivo.push(new Set());
   vilag.kiadott.push(0);
   return i;
@@ -161,11 +200,20 @@ function ujHamis(vilag) {
 // A KÉT ÉL
 // ===================================
 
-/** ⭐ BEMUTATKOZÁS — kölcsönös, ingyenes, tagság nélkül is. Ez a tenger. */
+/**
+ * ⭐ BEMUTATKOZÁS — kölcsönös, ingyenes, tagság nélkül is. Ez a tenger.
+ *
+ * ⭐⭐ AZ ISMÉTLŐDÉS (Csaba, 2026-09-06): minden él egy SÚLYT is gyűjt — hányszor
+ * találkoztak. Egy kollégával kétszáz nap alatt kétszázszor; egy pályaudvari átutazóval
+ * egyszer. A jelzés ezután futtatható úgy, hogy csak a sokszor ismételt él számítson
+ * (`elSuly`), és ez a mérés kérdése: élesíti-e ez a képet?
+ */
 function bemutatkoznak(vilag, a, b) {
   if (a === b) return;
   vilag.bemutatkozas[a].add(b);
   vilag.bemutatkozas[b].add(a);
+  vilag.suly[a].set(b, (vilag.suly[a].get(b) ?? 0) + 1);
+  vilag.suly[b].set(a, (vilag.suly[b].get(a) ?? 0) + 1);
 }
 
 /**
@@ -266,6 +314,17 @@ const VALTOZATOK = [
 
 function talalkozokKore(vilag, kor) {
   const b = vilag.b;
+
+  // ⭐⭐ ELŐBB AZ ÁLLANDÓ TÁRSASÁGOK: ezek adják az ISMÉTLŐDŐ éleket. Csak a TAGOK
+  // találkoznak így — a kívülállók a rendes találkozókon keresztül jönnek be.
+  for (const tarsasag of vilag.allandoKorok) {
+    if (vilag.veletlen() > b.korTalalkozas) continue;
+    const jelen = tarsasag.filter((i) => vilag.tag[i]);
+    for (let a = 0; a < jelen.length; a++) {
+      for (let c = a + 1; c < jelen.length; c++) bemutatkoznak(vilag, jelen[a], jelen[c]);
+    }
+  }
+
   const tagok = [];
   for (let i = 0; i < b.valodiEmberek; i++) if (vilag.tag[i]) tagok.push(i);
   if (!tagok.length) return;
@@ -436,6 +495,17 @@ function tamadoKore(vilag, valtozat) {
     }
   }
 
+  // ⭐⭐ A KITARTÓ TÁMADÓ: minden körben ÚJRA jelöli a meglévő bemutatkozásait, hogy az
+  // élei „sokszor ismételtnek" látszódjanak. Ez a válasz Csaba ismétlődés-ötletére: ha a
+  // jelölés puszta bejegyzés, akkor a támadó ugyanúgy fel tudja pörgetni a számlálót —
+  // csak IDŐT kell rászánnia. A mérés kérdése: mennyit ér az idő-költség egyedül.
+  if (b.kitarto) {
+    for (const h of hamisak) {
+      if (!vilag.tag[h]) continue;
+      for (const sz of [...vilag.bemutatkozas[h]]) bemutatkoznak(vilag, h, sz);
+    }
+  }
+
   // ⭐⭐ A MELEGÍTÉS: a hamisak egymásnak is bemutatkoznak — így a sziget SŰRŰ lesz.
   // Ez a satu másik pofája: aki a jelzés elől melegít, az sűrűvé válik; aki csupasz
   // marad, azt a séta soha nem éri el. Egyszerre nem lehet mindkettő.
@@ -460,7 +530,13 @@ function tamadoKore(vilag, valtozat) {
 
 function szomszedok(vilag, i) {
   const lista = [];
-  for (const sz of vilag.bemutatkozas[i]) if (vilag.tag[sz]) lista.push(sz);
+  const kell = vilag.b.elSuly;
+  for (const sz of vilag.bemutatkozas[i]) {
+    if (!vilag.tag[sz]) continue;
+    // ⭐⭐ AZ ISMÉTLŐDÉS SZŰRŐJE: az egyszeri találkozás nem visz tovább, ha `elSuly` > 1.
+    if (kell > 1 && (vilag.suly[i].get(sz) ?? 0) < kell) continue;
+    lista.push(sz);
+  }
   return lista;
 }
 
