@@ -547,3 +547,133 @@ nem jár ki) a jelzés gyengébb lenne. Ezt külön mérni kell.
 ⭐ **Amit viszont megad, és eddig semmi nem adott meg:** a számítás **helyi és korlátos**
 (400 séta × 10 lépés ≈ 4000 lépés, a közösség méretétől függetlenül), tehát **átmegy a
 9. szabályon** — nem kíván élő lekérdezést és nem kíván globális számot.
+
+---
+
+# 11. ⭐⭐ A MEGHÍVÁSOS BELÉPÉS MÉRÉSE — védelem ÉS ár (2026-09-06)
+
+*Eszköz: [`meghivasMeres.js`](meghivasMeres.js). Csaba kérése: „mi mekkora védelmet, és
+mekkora árat követel." A 2026-09-06-i beszélgetés hat változatát méri, **ugyanabban a
+világban**, tehát a számok összevethetők.*
+
+> ⚠️ **Ez más világ, mint a 3–10. szakaszé.** Ott a tanúsítás volt az egyetlen él. Itt
+> **két külön él** van: a **bemutatkozás** (kölcsönös, ingyenes, sok, HELYI — ezen fut a
+> séta) és a **meghívás** (irányított, kevés, LÁNC-esemény — ez dönt a tagságról).
+> A régi mérések ezért érvényben maradnak, nem cserélik le egymást.
+
+**A világ:** 1500 valódi ember egy körön · 20 alapító · 30 kör · 10% távoli találkozó ·
+4 mag átlagolva. A támadó a 8. körtől körönként 40 hamis azonosságot próbál bevinni, és a
+legtöbb bemutatkozású, teljes körű tagokat téveszti meg.
+
+## 11.1 ⛔ AZ ELSŐ EREDMÉNY: A MEGHÍVÁSI SZÁM NEM VÉDELEM, HANEM ÁRCÉDULA
+
+**3 megtévesztett valódi tag mellett**, korlátlan meghívás-számmal:
+
+| változat | valódi tag | HAMIS BENT | önellátó lett |
+|---|---|---|---|
+| V1 — nyílt (nincs kapu) | 1467 | **880** | a 0. hamistól |
+| V2 — 1 meghívó | 1466 | **880** | az 1. hamistól |
+| V2b — 1 meghívó, jogosítással | 1447 | **880** | soha (mindig kellett valódi) |
+| V3 — 2 meghívó + jogosítás | 1430 | **880** | soha |
+| V4 — 3 meghívó | 1237 | **880** | a 3. hamistól |
+| V5 — 5 meghívó | 693 | **0** | — |
+
+*(880 = a támadó MINDEN próbálkozása sikerült: 22 kör × 40.)*
+
+⭐⭐ **A fal pontosan ott van, ahol a megtévesztettek száma eléri a kívánt meghívó-számot** —
+és ezt külön megmértük: az öt-meghívós szabály **4 megtévesztettnél 0 hamisat** enged be,
+**5-nél 880-at** (és az 5. hamistól önellátó). Nincs átmenet, nincs lejtő: **kapcsoló**.
+
+> ⛔ **Amit ez kimond:** `n` meghívó nem azt jelenti, hogy a támadónak `n`-szer nehezebb.
+> Azt jelenti, hogy **`n` valódi tagot kell megvennie — EGYSZER**, és utána korlátlan. Ez
+> ugyanaz a *„fizess egyszer, arass örökké"* alakzat, ami ellen a D44 keret-szabálya
+> született (4.1) — csak most meghívásokkal.
+
+## 11.2 ⚠️ AZ ÁR — és egy fontos pontosítás a D48-hoz képest
+
+A szigorú kapu nem véd, viszont **fizettetni fizettet**: az öt-meghívós szabálynál 30 kör
+alatt **693 tag** lett az 1467 helyett, és **451 valódi ember maradt kívül**, pedig
+találkozott tagokkal. Az átlagos várakozás **9,7 kör**.
+
+⭐ **DE: ez lassúság, nem befagyás.** 60 körre nyújtva ugyanez **1308 tag** és már csak 94
+kívülálló. ⚠️ **Ez lényeges különbség a D48-hoz képest:** a keretes tanúsítás **104 főnél
+megállt, örökre** (a megmaradási csapda), a meghívásos kapu viszont **nem áll meg, csak
+lassít**. A meghívás tehát nem esik a D48 csapdájába — mert nem elfogyó készlet, hanem
+ismételhető cselekvés.
+
+## 11.3 ⭐⭐ A LEGMEGLEPŐBB: A JOGOSÍTÁS ELREJTI A SZIGETET
+
+A séta-jelzés, **csupasz** hamisak ellen (a hamisak nem mutatkoznak be egymásnak):
+
+| változat | hamis elkapva | becsületes tévesen |
+|---|---|---|
+| V2 — 1 meghívó | **100%** | **0%** |
+| V4 — 3 meghívó | **100%** | **0%** |
+| V2b — 1 meghívó, **jogosítással** | 91% | ⚠️ **16%** |
+| V3 — 2 meghívó + **jogosítás** | 90% | ⚠️ **11%** |
+
+**A magyarázat a mérésből jön, nem feltevésből:** a jogosítás miatt a hamisak **nem tudnak
+meghívót kiállítani** (nincs elég bemutatkozásuk régebbi tagoktól), tehát **minden egyes
+hamisat egy valódi, megtévesztett ember hív be** — ezt az „önellátó: soha" oszlop
+bizonyítja. Így minden hamis **egy valódi emberen lóg**, a sétái bejutnak a tengerbe, és
+**pont úgy néz ki, mint egy frissen érkezett becsületes ember.**
+
+Jogosítás nélkül viszont a hamisak egymást hívják be, a sziget **leszakad** a valódi
+világról — és onnantól **tökéletesen látszik**.
+
+> ⭐⭐ **A tanulság általánosabb a szabálynál:** *minden feltétel, ami arra kényszeríti a
+> támadót, hogy minden hamis azonosságot egy valódi emberhez kössön, egyben EL IS REJTI
+> azt.* Ez a 8/c mérés mondatának pontos megismétlődése: *„ha a jelzések csak a hangosat
+> fogják meg, akkor a csendest hitelesítjük velük."* **Egy teljesítendő küszöb egyben
+> hitelesítő pecsét is.**
+
+⭐ **És a satu áll:** ha a támadó **melegít** (a hamisak egymásnak is bemutatkoznak, hogy
+ne legyenek csupaszak), a séta **mind a hat változatnál 99–100% / 0%**-ot ad. Sűrűn is
+látszik, csupaszon is — **köztes csak akkor van, ha valódi emberek mögé bújik**, és annak
+ára van (lásd 11.4).
+
+## 11.4 ⭐ AMI TÉNYLEG KORLÁTOZ: A KIADHATÓ MEGHÍVÓK SZÁMA
+
+Ha egy tag **legfeljebb 10 meghívót** állíthat ki életében (3 megtévesztett mellett):
+
+| változat | HAMIS BENT (korlátlan → korlát 10) | valódi tag |
+|---|---|---|
+| V2 — 1 meghívó, jogosítás nélkül | 880 → **880** ⛔ | 1466 |
+| V2b — 1 meghívó + jogosítás | 880 → **17** | 1457 |
+| V3 — 2 meghívó + jogosítás | 880 → **2** | 1389 |
+| V4 — 3 meghívó | 880 → **0** | 1248 |
+
+⭐ **A korlát az egyetlen dolog, ami a kárt ténylegesen behatárolja** — a kár nagyságrendje
+`megtévesztett × korlát` lesz a korlátlan helyett.
+
+⛔ **De önmagában nem elég:** a jogosítás nélküli V2-nél **semmit nem ér** (880 marad),
+mert a bejutott hamisak **friss korlátot kapnak**, és exponenciálisan hívják egymást. A
+korlát tehát csak azzal együtt véd, ami megakadályozza, hogy **egy frissen belépő azonnal
+hívhasson**.
+
+⭐⭐ **És egy szerkezeti előny, ami eddig elkerülte a figyelmünket:** a kiadott meghívók
+száma **a saját láncból ellenőrizhető** — pontosan a **D42** mintája (bemondott összeg, és
+a hazugságnak a saját aláírt eseményei mondanak ellent). Vagyis a *„legfeljebb ennyi
+meghívó"* **objektív szabály lehet**, szemben a bemutatkozás-számmal, ami helyi és
+ellenőrizhetetlen.
+
+## 11.5 ⚠️ AMIT EZ A MÉRÉS NEM BIZONYÍT — és egy saját hiba
+
+⚠️⚠️ **A KORLÁTOS MÉRÉS ELŐSZÖR HAMIS SIKERT MUTATOTT.** Az első változat minden
+ismerősnek kiállított meghívót, ezért korláttal a becsületes tagok az **első körben
+elpazarolták a keretüket** olyanokra, akik úgysem érték el a küszöböt — és onnantól senki
+nem hívhatott. A mérés „tökéletes védelmet" mutatott (0 hamis mindenhol), ami valójában
+**befagyott koino** volt (V5: 20 tag az 1467-ből). ⭐ *A tanulság ugyanaz, mint a
+kör-alakú világnál: a jó eredmény gyanús, amíg meg nem nézzük, mitől jó.*
+
+**További korlátok, tisztességből:**
+
+- ez **gráf-kísérlet, nem koino-kísérlet**: nincs benne kulcs, aláírás, esemény, hálózat;
+- ⚠️ **a támadó nem tud versenyezni a becsületes belépőkkel** a megtévesztett emberek
+  meghívó-keretéért — a modellben a becsületesek hívnak előbb. Ezért a **11.4 korlátos
+  számai optimisták**; egy megvett ember a valóságban a támadót szolgálná ki előbb;
+- a séta paraméterei (200 séta, 10 lépés) a korábbi mérésből örököltek, nincsenek hangolva;
+- a kis mintás sorokat (2 és 17 hamis) **nem szabad a jelzés-táblázatban olvasni** — ott a
+  küszöb-kereső túlilleszt;
+- a világ „kis világ" (10% távoli találkozó) — **egy teljesen elszigetelt közösségnél a
+  séta-jelzés gyengébb lenne.**
