@@ -152,13 +152,55 @@ async function sajatKiosztott(kornyezet, entitas) {
  * @param {string} nev
  * @param {string} [leiras]
  */
-export function koinoLetrehozasa(kornyezet, nev, leiras) {
-  return esemenytTeszek(kornyezet, 'KoinoLetrehozas', { nev, leiras: leiras || null });
+export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok) {
+  // ⭐⭐ AZ ALAPÍTÓ KÖR — és miért nem elég egyetlen alapító.
+  //
+  // A 2. lépcsőhöz (pénztárca) három tanúsítás kell felhatalmazott tanúsítóktól. Egyetlen
+  // alapító viszont csak EGYET tud adni, és új tanúsító sem születhetne, mert ahhoz `N`
+  // felhatalmazás kellene 2. lépcsősöktől — akikből szintén csak egy van.
+  // ⚠️ **A koino tehát születésétől befagyna.** Ezért nevezhet meg a létrehozás egy alapító
+  // kört: ők a rekurzió ALAPESETE, nem kivétel.
+  //
+  // *(Ha nincs megadva, a lista üres, és csak a létrehozó alapító — a régi
+  // koino-létrehozások így is érvényesek maradnak.)*
+  return esemenytTeszek(kornyezet, 'KoinoLetrehozas', {
+    nev,
+    leiras: leiras || null,
+    alapitok: Array.isArray(alapitok) ? [...alapitok] : []
+  });
 }
 
 // ===================================
 // A BELÉPÉS ÉS A MEGHÍVÁS — az 1. lépcső (D56)
 // ===================================
+
+/**
+ * ⭐⭐ A KÖZÖS VÁZ: „állítok valamit VALAKI MÁSRÓL."
+ *
+ * A meghívás, a felhatalmazás és a tanúsítás **pontosan ugyanolyan alakú** — csak a
+ * jelentésük más. Ezért egy helyen írjuk le, és ha az alak változik, egy helyen változik.
+ *
+ * Két dolog teszi ellenőrizhetővé, és mindkettő szándékos:
+ *
+ *   · `entitas` = a MÁSIK horgonya → az esemény az ő szeletébe kerül, tehát a „hányan
+ *     állították ezt rólam?" kérdés **egyetlen szelet-lekérdezés** (3.2), akárhányan vagyunk;
+ *   · `adat.sajatBelepes` = az ÉN horgonyom → aki ellenőrzi, **ne keresse** a láncomat,
+ *     hanem egy lépéssel tovább tudjon menni visszafelé. *(A D42 mintája: ahol a tudás
+ *     elfogy, ott az esemény hozza a bizonyítékát.)*
+ *
+ * ⚠️ A `kit` mező sem díszlet: enélkül egy idegen szeletébe tett esemény is beszámítana.
+ * Az ellenőrzés összeveti a horgony szerzőjével.
+ */
+function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }) {
+  if (typeof kit !== 'string' || typeof horgonya !== 'string') {
+    throw new Error('Kell a másik fél kulcsa és a horgonya.');
+  }
+  if (typeof sajatBelepes !== 'string') {
+    throw new Error('Meg kell adni a SAJÁT horgonyodat is — enélkül a másik gép nem tudja '
+      + 'ellenőrizni, hogy te magad jogosult vagy-e rá.');
+  }
+  return esemenytTeszek(kornyezet, tipus, { kit, sajatBelepes }, { entitas: horgonya });
+}
 
 /**
  * ⭐ BELÉPÉS: megnyitom a SAJÁT azonosság-szeletemet ebben a koinóban.
@@ -177,9 +219,13 @@ export function koinoLetrehozasa(kornyezet, nev, leiras) {
  * névsor kiadása volna.
  *
  * @param {Object} kornyezet
+ * @param {string} [alapitas] - ⭐ CSAK ALAPÍTÓKNAK: a koino-létrehozás eseményének
+ *        azonosítója. Aki benne van a létrehozás `alapitok` listájában, ezzel mutatja meg,
+ *        hogy oda tartozik — és ő a rekurzió alapesete, meghívás nélkül.
  */
-export function belepes(kornyezet) {
-  return esemenytTeszek(kornyezet, 'Belepes', {});
+export function belepes(kornyezet, alapitas) {
+  const adat = typeof alapitas === 'string' ? { alapitas } : {};
+  return esemenytTeszek(kornyezet, 'Belepes', adat);
 }
 
 /**
@@ -201,15 +247,42 @@ export function belepes(kornyezet) {
  * @param {string} adatok.horgonya - a meghívott `Belepes` eseményének azonosítója
  * @param {string} adatok.sajatBelepes - a SAJÁT horgonyom (alapítónál a koino-létrehozás)
  */
-export function meghivas(kornyezet, { kit, horgonya, sajatBelepes }) {
-  if (typeof kit !== 'string' || typeof horgonya !== 'string') {
-    throw new Error('A meghíváshoz kell a meghívott kulcsa és a horgonya.');
-  }
-  if (typeof sajatBelepes !== 'string') {
-    throw new Error('A meghíváshoz meg kell adni a SAJÁT horgonyodat is — enélkül a másik '
-      + 'gép nem tudja ellenőrizni, hogy te magad tag vagy-e.');
-  }
-  return esemenytTeszek(kornyezet, 'Meghivas', { kit, sajatBelepes }, { entitas: horgonya });
+export function meghivas(kornyezet, adatok) {
+  return allitokRola(kornyezet, 'Meghivas', adatok);
+}
+
+/**
+ * ⭐ FELHATALMAZÁS: rábízom valakire a tanúsítást (D56, D60).
+ *
+ * ⭐⭐ **MEGBÍZÁS, NEM PONTSZÁM.** A felületen ez így jelenik meg: *„27-en bízták rá a
+ * tanúsítást"* — soha nem *„becsületesség: 27"*. A különbség nem szépészeti: egy nyilvános
+ * **jellem-szám** hírnév-rendszerré romlik (amit a D18/1 kizárt és a D49/b tilt), míg ez
+ * **tény**, és nem az emberről szól, hanem arról, amit **mások tettek**.
+ *
+ * ⚠️ Csak **2. lépcsős** felhatalmazása számít, és **emberenként egy** — a számítás
+ * (`identitas.js`) ezt érvényesíti, nem ez a művelet. *A zárt választótestület nélkül a
+ * támadó hamis azonosságai egymást hatalmaznák fel.*
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adatok - { kit, horgonya, sajatBelepes }
+ */
+export function felhatalmazas(kornyezet, adatok) {
+  return allitokRola(kornyezet, 'Felhatalmazas', adatok);
+}
+
+/**
+ * ⭐ TANÚSÍTÁS: a 2. lépcső — ettől lesz valakinek pénztárcája (D11, D56).
+ *
+ * ⚠️ **EGYETLEN, EGYFORMA MONDAT** (D45): *„létező, külön ember"*. Akárhogy győződött meg
+ * róla a tanú — ismeri, kérdezett másoktól, vagy igazolványt kért —, az esemény ugyanaz.
+ * **Nem lehet ráírni, hogy „igazolvánnyal ellenőrizve"**, mert akkor elkerülhetetlen volna
+ * a nyomás, hogy a fontos dolgokhoz csak az „erős" fajta számítson.
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adatok - { kit, horgonya, sajatBelepes }
+ */
+export function tanusitas(kornyezet, adatok) {
+  return allitokRola(kornyezet, 'Tanusitas', adatok);
 }
 
 // ===================================

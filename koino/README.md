@@ -79,12 +79,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tíz próba-fájl, **231 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tíz próba-fájl, **242 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **38 fájl, 731 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **38 fájl, 750 KB**, nulla
 npm-csomag.)*
 
 | Fájl | Mit bizonyít |
@@ -97,7 +97,7 @@ npm-csomag.)*
 | `meres/szabalyProba.js` | a szabályokat a **számítás** őrzi, nem a felület |
 | `meres/csereProba.js` | a csere teljes: a hézag és a rejtett elágazás is kiderül, és a hálózat **nem kap engedékenyebb kaput** |
 | `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
-| `meres/identitasProba.js` | ⭐ **ki TAG?** — a lánc visszavezet az alapítóig, a kör nem szül tagságot, és a hiány nem vád |
+| `meres/identitasProba.js` | ⭐ **a KÉT LÉPCSŐ** — a lánc visszavezet az alapítóig, a kör nem szül jogot, a választótestület zárt, és a hiány nem vád |
 | `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
 
 ⚠️ **Két mérőeszköz NEM önpróba** — nem igen/nem-et adnak, hanem számokat, ezért a
