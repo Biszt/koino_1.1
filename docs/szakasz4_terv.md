@@ -770,6 +770,31 @@ mint a **kereső-réteg**: hasznos és **elhagyható**.
 egyszerre ébren van — vagyis **a buliban**, az összehangolt ötperces ablakban (6/c szakasz).
 Az a szerkezet pontosan ehhez való.
 
+### ✅ A KÉSZÜLÉK-FELFEDEZÉS: SEGÉDESZKÖZ, NEM ADATFORRÁS (Csaba, 2026-09-06)
+
+*Csaba felvetése: a készülékek érzékeljék, ha koino-s készülék van a közelben, és
+jegyezzék fel a találkozást — technikailag ez láthatóbbá tenné a tengert.*
+
+⛔ **Megmérve, és a válasz nem.** Az automatikus közelség **pont azt adja ingyen a
+támadónak, ami ma a legdrágább neki**: egy készülék ezer azonosságot sugározhat, és egy
+pályaudvalon végigsétálva mind az ezer „találkozik" valódi emberekkel. A 11.3/b mérés
+szerint viszont **épp a valódi emberekhez kötés rejti el a szigetet** (100% / 0% helyett
+91% / 16%). A sűrűbb tenger tehát **tompítaná** a jelzést, nem élesítené.
+
+⛔ **És a D50 saját indoklása dől meg vele:** *„ez nem megfigyelés, hanem közlés — a
+résztvevők jelzik, tehát engedélyezik."* Az automatikus érzékelés **pontosan megfigyelés**,
+és a helyi lista ekkor már nem szándékos bemutatkozások listája, hanem **mozgás- és
+társaság-napló** — miközben a D14 szerint a felejtés az alapállapot. A
+[`helyiFelfedezes.js`](../koino/js/csere/helyiFelfedezes.js) ezt a határt egyszer már
+tudatosan meghúzta: *„bizalom nem jár vele (3. szabály) … és sosem lesz esemény."*
+
+> ### ✅ D54 (Csaba: „rendben, akkor nem kell, csak segédeszközként")
+>
+> A készülék-felfedezés **a kézi lépés segédje**, nem adatforrás: a készülék **javasol**
+> (*„ezek a koino-készülékek voltak a közelben — ismersz köztük valakit?"*), az **ember
+> dönt**. Így a bemutatkozás **közlés marad**, csak nem kell címet gépelni.
+> ⭐ Kockázat nélküli haszon, és a meglévő `helyiFelfedezes.js`-re épül.
+
 ### ⏳ Amit ez még nem old meg
 
 - **Mi szivárog ki egy séta közben?** A kiinduló megtudja a végpontokat; a közbenső látja,
