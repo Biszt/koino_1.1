@@ -896,6 +896,30 @@ támadás kifizetődik, és sehova máshova.*
 > - a szabály-rétegben: **emberenként egy** felhatalmazás számít, és a szerzőnek
 >   2. lépcsősnek kell lennie.
 
+> ### ⭐ D60 (2026-09-06) — A FELHATALMAZÁS MEGBÍZÁS, NEM PONTSZÁM
+>
+> *Csaba felvetése: „az emberek a felhatalmazást valószínűleg becsületesség ismeretében
+> fogják osztani. Talán még a neve is lehetne: becsületesség pont."*
+>
+> ⭐ **Amiben igaza van:** a név alakítja a viselkedést — a koino szótára amúgy is szándékos
+> (e-ember, tudatpont). És valóban ez fog történni: az emberek jellem alapján osztanak.
+>
+> ⛔ **De a „becsületesség pont" névvel a program ÍTÉLETET mondana egy emberről**, és ezzel
+> visszahozná azt, amit a **D18/1** kizárt (*„megbízom benne" → ❌*) és amit a **D49/b**
+> tilt (*a jelzés tényt mutasson, soha ne ítéletet*). Egy nyilvános jellem-szám
+> hírnév-rendszerré romlik: udvarolnak érte, kereskednek vele, büntetnek vele.
+>
+> ⭐⭐ **A feloldás ugyanaz a fogás, ami a „még nem értünk össze"-nél bevált** *(Csaba:
+> „igazad van, elfogadom")*:
+>
+> - ⛔ **nem** *„becsületesség: 27"* — ez ítélet a személyről;
+> - ✅ **hanem** *„27-en bízták rá a tanúsítást"* — ez **tény**, és nem róla szól, hanem
+>   arról, amit **mások tettek**.
+>
+> ⭐ És a lényegi különbség megmarad: ez **egy szerephez szóló megbízás**, nem általános
+> emberi érték-mérő — csak a tanúsításra vonatkozik, bármikor visszavonható, és nem tapad
+> az emberhez.
+
 > ### ⭐⭐⭐ D59 (Csaba, 2026-09-06) — AZ ELLENŐRZÉS MÉLYSÉGE KORLÁTOS
 >
 > *„Csak egy bizonyos lépésszámig kell ellenőrizni."*

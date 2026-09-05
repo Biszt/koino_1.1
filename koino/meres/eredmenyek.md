@@ -1105,3 +1105,63 @@ tanúsíthat**.
 tagságnál. De azt jelenti, hogy **a védelem itt is a jelzés**, nem a kapu: egy tanúsító,
 aki 293 embert tanúsított, akiknek **nincs más tanúsítójuk**, pontosan az a **kontraszt**,
 amit a 11.13-ban 100%-osnak mértünk. ⏳ *A tanúsítói torlódás mérése hátra van.*
+
+## 12.5 ⭐⭐⭐ A VISSZACSATOLÁS — és a törvény, ami kijött belőle
+
+*Csaba szerkezetének utolsó darabja: a felhatalmazás **visszavonható**. Ha a közösség
+látja, hogy egy tanúsító üres azonosságokat tanúsít, elveszi tőle a megbízást.*
+
+### ⚠️ ELŐBB EGY SAJÁT HIBA: ROSSZ GRÁFON MÉRTEM
+
+Az első változat a **bemutatkozási** gráfban kereste a mintát (`zsakutcaIsmerosok`) — de a
+megvett tanúsító **nem mutatkozik be** a hamisaknak, csak **tanúsítja** őket. A jelzés így
+**egyszer sem szólalt meg** (0 visszavonás, 880 hamis pénztárca).
+
+⭐ **A helyes kérdés:** *„azok közül, akiket TANÚSÍTOTTAM, hánynak nincs önálló élete a
+közösségben?"* A becsületes tanúsító olyanokat tanúsít, akikkel találkozott — azoknak van
+saját ismeretségük; a megvett tanúsító **üres azonosságokat**.
+
+### Az eredmény
+
+| | visszacsatolás nélkül | ⭐ visszacsatolással (2 kör késés) |
+|---|---|---|
+| hamis azonosság **pénztárcával** | 880 | **120** |
+| visszavont megbízás | — | **3** |
+| valódi 2. lépcsős | 1404 | **1404** |
+| tanúsítók | 333 | **330** |
+
+⭐⭐ **A kár 86%-kal csökken, és a visszavont három megbízás pontosan a három megvett
+tanúsítóé** — egyetlen becsületes sem veszítette el a szerepét, a hitelesítettek köre
+változatlan.
+
+### ⭐⭐⭐ ÉS A TÖRVÉNY: a kár = a támadó üteme × az ébredés ideje
+
+*Ugyanaz a világ, csak a közösség reakcióideje változik:*
+
+| a közösség ébredése | hamis pénztárca | visszavont megbízás |
+|---|---|---|
+| **azonnal** (0 kör) | **40** | 3 |
+| 2 kör | 120 | 3 |
+| 5 kör | 240 | 3 |
+| 10 kör | 440 | 3 |
+
+A támadó körönként 40 azonosságot próbál — és a kár **pontosan** `40 × (késés + 1)`.
+
+> ⭐⭐⭐ **Tökéletesen LINEÁRIS, nem exponenciális: a hurok mindig bezárul.** A támadó nem
+> tud elszaladni; csak annyit nyer, amennyi ideig a közösség nem néz oda. És a
+> **felismerés minden esetben megtörtént** (3 visszavonás mindig) — csak az **időzítés**
+> változott.
+
+### ⭐ Amit ez a TERVEZÉSRE mond
+
+Mivel a kár az **ébredés idejével** arányos, a gépi segítség értéke **az ÉSZREVÉTELBEN**
+van, nem a döntésben:
+
+- ⭐ **a program azonnal mutassa meg a jelzést** — ez olcsó, biztonságos, és a D49-cel
+  összefér (tényt mutat, nem ítéletet);
+- ⭐ **a döntés maradhat emberi** (D46: bizonytalanra jelölés + gondolat), mert ha a
+  felismerés azonnali, akkor a késés már csak a **megbeszélés** ideje, nem a felfedezésé.
+
+⚠️ **Amit ez a mérés NEM tartalmaz:** a támadó nem reagál a visszavonásra (nem szerez új
+tanúsítót a régiek helyett). Egy kitartó támadó **újra és újra** megvásárolna hármat — és
+akkor a kár nem egyszeri 120, hanem **ciklusonként** ennyi. Ezt külön kell mérni.

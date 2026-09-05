@@ -89,6 +89,10 @@ const BEALLITAS = {
   felhatalmazasKell: 5,     // ennyi felhatalmazás kell ahhoz, hogy valaki TANÚSÍTHASSON (N)
   felhatalmazasAd: 3,       // ⚠️ egy 2. lépcsős ENNYI embert hatalmaz fel összesen — a
                             //    választás nem véletlen: akit a legjobban ismer
+  visszavonas: 0,           // ⭐⭐ 1 = A VISSZACSATOLÁS: a közösség visszavonja a
+                            //    felhatalmazást attól, akinél a torlódás feltűnő
+  visszavonasKuszob: 10,    // ennyi zsákutca-tanúsítottnál lép működésbe (becsületes: ~0,3)
+  visszavonasKeses: 2,      // ⚠️ ennyi kört KÉSIK — mert ez emberi döntés, nem automatizmus
   setaDb: 200,              // egy jelzéshez ennyi séta indul
   setaHossz: 10,            // egy séta ennyi lépés
   minta: 30,                // ennyi fős minta mindkét oldalról a jelzés-méréshez
@@ -994,11 +998,71 @@ function felhatalmazasokKore(vilag) {
 
 /** Tanusithat-e? — a felhatalmazoi kozul hany 2. lepcsos, es eleri-e az N-t. */
 function tanusithat(vilag, i) {
+  // ⭐⭐ A VISSZACSATOLÁS: akitől a közösség visszavonta a megbízást, az nem tanúsíthat —
+  // akkor sem, ha alapító. Ez Csaba szerkezetének a lelke: nem a kapu véd, hanem az,
+  // hogy a rossz tanúsítót ELVESZÍTI a szerepét.
+  if (vilag.visszavont && vilag.visszavont.has(i)) return false;
   if (vilag.alapito[i]) return true;
   if (!vilag.lepcso2[i]) return false;
   let db = 0;
   for (const f of vilag.felhatalmazo[i]) if (vilag.lepcso2[f]) db++;
   return db >= vilag.b.felhatalmazasKell;
+}
+
+/**
+ * ⭐⭐ A TANÚSÍTÓI TORLÓDÁS — a jelzés, ami a MEGVETT TANÚSÍTÓT mutatja meg.
+ *
+ * ⚠️⚠️ AZ ELSŐ VÁLTOZATOM ROSSZ GRÁFON MÉRT, és ezért egyszer sem szólalt meg. A
+ * `zsakutcaIsmerosok` a BEMUTATKOZÁSI gráfot nézi — de a megvett tanúsító **nem mutatkozik
+ * be** a hamisaknak, csak **tanúsítja** őket. A mintázat tehát nem ott van, ahol kerestem.
+ *
+ * ⭐ A helyes kérdés: *„azok közül, akiket TANÚSÍTOTTAM, hánynak nincs önálló élete a
+ * közösségben?"* — a becsületes tanúsító olyanokat tanúsít, akikkel találkozott, tehát
+ * akiknek van saját ismeretségük; a megvett tanúsító üres azonosságokat.
+ */
+function tanusitottZsakutcak(vilag, i) {
+  const b = vilag.b;
+  const kik = vilag.tanusitottjai?.[i];
+  if (!kik) return 0;
+  let db = 0;
+  for (const k of kik) {
+    let ismerosok = 0;
+    for (const sz of vilag.bemutatkozas[k]) if (vilag.tag[sz]) ismerosok++;
+    if (ismerosok < 3) db++;
+  }
+  return db;
+}
+
+/**
+ * ⭐⭐ A VISSZAVONÁS KÖRE — a jelzésből következmény lesz, emberi késleltetéssel.
+ *
+ * A jelzés ugyanaz a KONTRASZT, amit a 11.6/11.13-ban 100%-osnak mértünk: hány olyan
+ * embert tanúsított, akinek nincs más ismerőse. A becsületes tanúsítónál ez ~0,3;
+ * a megvett tanúsítónál több száz.
+ *
+ * ⚠️ KÉSLELTETVE, mert ez EMBERI döntés: a közösségnek észre kell vennie, meg kell
+ * beszélnie, és újra kell osztania a megbízásokat. A `visszavonasKeses` ezt a lassúságot
+ * modellezi — enélkül a mérés hazudna, mert azonnali, automatikus védelmet mutatna.
+ */
+function visszavonasKore(vilag, kor) {
+  const b = vilag.b;
+  if (!b.visszavonas) return 0;
+  if (!vilag.visszavont) { vilag.visszavont = new Set(); vilag.gyanus = new Map(); }
+
+  let ujak = 0;
+  for (let i = 0; i < b.valodiEmberek; i++) {
+    if (vilag.visszavont.has(i)) continue;
+    if (!tanusithat(vilag, i)) continue;
+    const jel = tanusitottZsakutcak(vilag, i);
+    if (jel < b.visszavonasKuszob) { vilag.gyanus.delete(i); continue; }
+    // Feljegyezzük, MIKOR lett feltűnő — és csak a késleltetés után vonjuk vissza.
+    if (!vilag.gyanus.has(i)) vilag.gyanus.set(i, kor);
+    if (kor - vilag.gyanus.get(i) >= b.visszavonasKeses) {
+      vilag.visszavont.add(i);
+      ujak++;
+    }
+  }
+  return ujak;
 }
 
 /** A 2. lepcso kore: a felhatalmazott tanusitok tanusitjak, akikkel talalkoztak. */
@@ -1007,10 +1071,13 @@ function tanusitasokKore(vilag) {
   const tanusitok = [];
   for (let i = 0; i < b.valodiEmberek; i++) if (tanusithat(vilag, i)) tanusitok.push(i);
 
+  if (!vilag.tanusitottjai) vilag.tanusitottjai = [];
   for (const t of tanusitok) {
+    if (!vilag.tanusitottjai[t]) vilag.tanusitottjai[t] = new Set();
     for (const sz of vilag.bemutatkozas[t]) {
       if (!vilag.tag[sz] || vilag.lepcso2[sz]) continue;
       vilag.tanusitoi[sz].add(t);
+      vilag.tanusitottjai[t].add(sz);
     }
   }
   let ujak = 0;
@@ -1069,14 +1136,21 @@ function lepcsoFuttatas(megtevesztettSzam, mag) {
     if (kor === b.tamadasKezdete) megtevesztettekValasztasa(vilag, megtevesztettSzam);
     if (kor >= b.tamadasKezdete) {
       tamadoKore(vilag, valtozat);
-      // A tamado a 2. lepcsore is tor: a megtevesztett TANUSITOK tanusitjak a hamisait.
+      // A tamado a 2. lepcsore is tor: a megvett TANUSITOK tanusitjak a hamisait.
       const megtevTanusitok = [...vilag.megtevesztett].filter((m) => tanusithat(vilag, m));
       for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
         if (!vilag.tag[i] || vilag.lepcso2[i]) continue;
-        for (const t of megtevTanusitok) vilag.tanusitoi[i].add(t);
+        for (const t of megtevTanusitok) {
+          vilag.tanusitoi[i].add(t);
+          if (!vilag.tanusitottjai) vilag.tanusitottjai = [];
+          if (!vilag.tanusitottjai[t]) vilag.tanusitottjai[t] = new Set();
+          vilag.tanusitottjai[t].add(i);
+        }
         if (vilag.tanusitoi[i].size >= b.tanusitasKell) vilag.lepcso2[i] = true;
       }
     }
+    // ⭐⭐ A visszacsatolás a kör VÉGÉN fut — a támadó tehát mindig kap egy kört előnyt.
+    visszavonasKore(vilag, kor);
   }
   return vilag;
 }
@@ -1117,7 +1191,8 @@ function lepcsoMeres() {
     const atl = (mezo) => (mertek.length
       ? mertek.reduce((o, x) => o + x[mezo], 0) / mertek.length : 0);
     const max = (mezo) => (mertek.length ? Math.max(...mertek.map((x) => x[mezo])) : 0);
-    sorok.push({ mag, tag, lepcso2, tanusito, hamisTag, hamisLepcso2,
+    const visszavont = vilag.visszavont ? vilag.visszavont.size : 0;
+    sorok.push({ mag, tag, lepcso2, tanusito, hamisTag, hamisLepcso2, visszavont,
                  osAtl: atl('osHalmaz'), osMax: max('osHalmaz'),
                  melyAtl: atl('melyseg'), melyMax: max('melyseg') });
   }
@@ -1134,6 +1209,9 @@ function lepcsoMeres() {
   kiir(sor(['ebbol tanusithat', kerekit(atlag('tanusito'))], sz1));
   kiir(sor(['HAMIS 1. lepcsos', kerekit(atlag('hamisTag'))], sz1));
   kiir(sor(['HAMIS 2. lepcsos (penztarca)', kerekit(atlag('hamisLepcso2'))], sz1));
+  if (b.visszavonas) {
+    kiir(sor(['visszavont megbizas', kerekit(atlag('visszavont'))], sz1));
+  }
 
   kiir('');
   kiir('2. A LANC ALAKJA — mennyibe kerul a GYOKERIG meno ellenorzes?');

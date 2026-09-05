@@ -84,7 +84,7 @@ futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra il
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **36 fájl, 665 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **36 fájl, 706 KB**, nulla
 npm-csomag.)*
 
 | Fájl | Mit bizonyít |
