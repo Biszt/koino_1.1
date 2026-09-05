@@ -935,3 +935,45 @@ környezete elhamisodik"*) **abból él, hogy kevés ember hordoz sok hamisat**.
 ⛔ **Ha a támadónak sok megtévesztett embere volna, fejenként kevés hamissal, mindkét lencse
 gyengülne — egyszerre.** Vagyis a két „független" lencsének **közös töréspontja** van, és a
 100%-ot addig nem szabad elhinni, amíg ezt meg nem mértük. *(Következik: 11.12.)*
+
+## 11.12 ⭐⭐ AZ ARÁNY-PRÓBA — a félelmem NEM igazolódott
+
+*A 11.11 végén azt írtam, hogy mindkét megmaradó lencse ugyanazon az arányon áll (kevés
+ember hordoz sok hamisat), tehát közös töréspontjuk lehet. **Megmértük, és tévedtem.***
+
+**Rejtőzködő támadó, 3 → 20 → 50 megtévesztett emberrel** (a hamisak száma változatlanul
+880, tehát fejenként 293 → 44 → 18 jut):
+
+| lencse | 3 megtévesztett | 20 megtévesztett | 50 megtévesztett |
+|---|---|---|---|
+| 1. séta | 71–89% / 14–22% | ⛔ **39–68% / 25–57%** | ⛔ **48–68% / 39–51%** |
+| 2. ismétlés | **100% / 9–34%** | **100% / 9–34%** | **100% / 9–34%** |
+| 3. torlódás | **100% / 9–25%** | **100% / 9–25%** | **100% / 9–25%** |
+| ⭐ 2 a 3-ból | **100% / 2–12%** | **100% / 4–18%** | **100% / 7–23%** |
+
+⛔ **A SÉTA AZ, AMI ÖSSZEOMLIK** — 50 megtévesztettnél 48–68% elkapva és 39–51% tévesen,
+vagyis érdemben használhatatlan. *A „bemutatkozások tengere" önmagában tehát NEM a válasz;
+a sok kis híd feloldja a szigetet a tengerben.*
+
+⭐⭐ **De a másik két lencse meg sem rezdült.** És az ok, amit rosszul gondoltam:
+
+> **A torlódás-jelzésnek nem NAGY számra van szüksége, hanem arra, hogy a becsületes
+> alapvonal NULLA legyen.** A legrosszabb becsületes tag **0,3** zsákutca-ismerőst cipel —
+> tehát a 18 ugyanolyan feltűnő, mint a 293. A jelzés nem a mérettől él, hanem a
+> **kontraszttól**.
+
+⭐ **Az ismétlődés pedig azért nem gyengül, mert nem is az aránytól függ:** a hamisnak
+egyszerűen **nincsenek ismétlődő találkozásai** valódi emberekkel, akárhányan hordozzák.
+
+### Amit ez a három mérés együtt mond
+
+- ⛔ **A séta a leggyengébb láncszem**, nem a legerősebb — pedig eddig ő volt a főszereplő.
+- ⭐ **A torlódás a legerősebb**, és a legolcsóbb is: nem kell hozzá séta, csak a saját
+  ismerőseim ismerőseinek darabszáma.
+- ⭐⭐ **A „2 a 3-ból" olvasat mindhárom támadó-változat és mindhárom arány mellett
+  100% / 2–23%** — ez az egyetlen alak, ami eddig minden próbát kiállt.
+
+⚠️ **És ami MÉG NINCS megmérve:** a **rejtőzködő ÉS kitartó** támadó **sok megtévesztettel**
+— vagyis a három képesség együtt. Ott a 11.9 H2-mechanizmusa (a megtévesztett környezete
+elhamisodik) gyengül, miközben a kitartó a súlyokat felpörgeti. **Ez a legrosszabb eset, és
+ez a következő futás.**
