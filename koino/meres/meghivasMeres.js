@@ -528,9 +528,9 @@ function tamadoKore(vilag, valtozat) {
 // A séta a BEMUTATKOZÁS élein fut (nem a meghíváson): „én elindulok a saját ismerőseim
 // mentén, te a tieid mentén — összeérünk-e valahol?"
 
-function szomszedok(vilag, i) {
+function szomszedok(vilag, i, kellSuly) {
   const lista = [];
-  const kell = vilag.b.elSuly;
+  const kell = kellSuly ?? vilag.b.elSuly;
   for (const sz of vilag.bemutatkozas[i]) {
     if (!vilag.tag[sz]) continue;
     // ⭐⭐ AZ ISMÉTLŐDÉS SZŰRŐJE: az egyszeri találkozás nem visz tovább, ha `elSuly` > 1.
@@ -540,26 +540,26 @@ function szomszedok(vilag, i) {
   return lista;
 }
 
-function setaVege(vilag, kezdo, hossz) {
+function setaVege(vilag, kezdo, hossz, kellSuly) {
   let hol = kezdo;
   for (let l = 0; l < hossz; l++) {
-    const szomszed = szomszedok(vilag, hol);
+    const szomszed = szomszedok(vilag, hol, kellSuly);
     if (!szomszed.length) return hol;
     hol = szomszed[Math.floor(vilag.veletlen() * szomszed.length)];
   }
   return hol;
 }
 
-function setaHalmaz(vilag, kezdo, db, hossz) {
+function setaHalmaz(vilag, kezdo, db, hossz, kellSuly) {
   const hol = new Set();
-  for (let s = 0; s < db; s++) hol.add(setaVege(vilag, kezdo, hossz));
+  for (let s = 0; s < db; s++) hol.add(setaVege(vilag, kezdo, hossz, kellSuly));
   return hol;
 }
 
 /** A JELZÉS: hány ponton ér össze a két ember sétáinak halmaza? (0 = sehol) */
-function tengerTalalkozas(vilag, en, o, db, hossz) {
-  const enyem = setaHalmaz(vilag, en, db, hossz);
-  const ove = setaHalmaz(vilag, o, db, hossz);
+function tengerTalalkozas(vilag, en, o, db, hossz, kellSuly) {
+  const enyem = setaHalmaz(vilag, en, db, hossz, kellSuly);
+  const ove = setaHalmaz(vilag, o, db, hossz, kellSuly);
   let metszet = 0;
   for (const p of ove) if (enyem.has(p)) metszet++;
   return metszet;
@@ -705,7 +705,18 @@ function zsakutcaIsmerosok(vilag, i, fok = 1) {
   return db;
 }
 
-/** A séta-jelzés mérése: hamis elkapva / becsületes tévesen megjelölve. */
+/**
+ * ⭐⭐ A KÉT LENCSE — a sima séta és az ISMÉTLŐDÉS-szűrős séta, EGYÜTT.
+ *
+ * Csaba kérdése (2026-09-06): ér-e többet a kettő együtt, mint külön? És a mérce, amihez
+ * mérjük: *„ha nem növeli meg annyival a támadó lebukási esélyét, akkor ne bonyolítsunk."*
+ *
+ * Négy olvasatot adunk vissza, MINDET ugyanazon a világon, ugyanazokra a párokra:
+ *   · 1. lencse — a sima séta (minden élen lép)
+ *   · 2. lencse — csak a `elSuly`-szor ismételt élen lép
+ *   · MINDKETTŐ (ÉS) — óvatos: csak akkor jelöl, ha mindkét lencse leszakadtnak látja
+ *   · BÁRMELYIK (VAGY) — bátor: ha akármelyik leszakadtnak látja
+ */
 function jelzesMerese(e, mag) {
   const b = BEALLITAS;
   const vilag = e.vilag;
@@ -721,33 +732,110 @@ function jelzesMerese(e, mag) {
   if (!hMinta.length || !vMinta.length) return null;
 
   const kerdezok = keverve(vilag, vMinta).slice(0, 5);
-  const talalkozasok = (celok) => {
-    const ertekek = [];
+  // ⭐ FONTOS: mindkét lencse UGYANARRA a párra fut, hogy az ÉS/VAGY összevethető legyen.
+  const parok = (celok) => {
+    const lista = [];
     for (const cel of celok) {
       for (const kerdezo of kerdezok) {
         if (kerdezo === cel) continue;
-        ertekek.push(tengerTalalkozas(vilag, kerdezo, cel, b.setaDb, b.setaHossz));
+        lista.push({
+          egy: tengerTalalkozas(vilag, kerdezo, cel, b.setaDb, b.setaHossz, 1),
+          ket: tengerTalalkozas(vilag, kerdezo, cel, b.setaDb, b.setaHossz, b.elSuly),
+        });
       }
     }
-    return ertekek;
+    return lista;
   };
 
-  const vTal = talalkozasok(vMinta);
-  const hTal = talalkozasok(hMinta);
+  const vPar = parok(vMinta);
+  const hPar = parok(hMinta);
 
-  // ⭐⭐ A DÖNTŐ SZÁM: a legjobb küszöb mellett hány hamisat kapunk el, és hány
-  // becsületest jelölnénk meg TÉVESEN. A második nem kellemetlenség, hanem a lényeg —
-  // épp a magányost és a frissen érkezettet érinti (D49/c).
-  let legjobb = { josag: -1, elkapva: 0, tevesen: 1 };
-  const ertekek = [...new Set([...vTal, ...hTal])].sort((a, c) => a - c);
-  for (const kuszob of ertekek) {
-    const elkapva = hTal.filter((x) => x <= kuszob).length / hTal.length;
-    const tevesen = vTal.filter((x) => x <= kuszob).length / vTal.length;
-    if (elkapva - tevesen > legjobb.josag) {
-      legjobb = { josag: elkapva - tevesen, elkapva, tevesen, kuszob };
+  /** A legjobb küszöb egy lencséhez: a legnagyobb (elkapva − tévesen) különbség. */
+  const legjobbKuszob = (mezo) => {
+    let legjobb = { josag: -1, kuszob: 0 };
+    const ertekek = [...new Set([...vPar, ...hPar].map((x) => x[mezo]))].sort((a, c) => a - c);
+    for (const kuszob of ertekek) {
+      const elkapva = hPar.filter((x) => x[mezo] <= kuszob).length / hPar.length;
+      const tevesen = vPar.filter((x) => x[mezo] <= kuszob).length / vPar.length;
+      if (elkapva - tevesen > legjobb.josag) legjobb = { josag: elkapva - tevesen, kuszob };
+    }
+    return legjobb.kuszob;
+  };
+
+  const k1 = legjobbKuszob('egy');
+  const k2 = legjobbKuszob('ket');
+  const arany = (lista, felt) => (lista.length ? lista.filter(felt).length / lista.length : 0);
+
+  const jelol = {
+    egy: (x) => x.egy <= k1,
+    ket: (x) => x.ket <= k2,
+    es: (x) => x.egy <= k1 && x.ket <= k2,
+    vagy: (x) => x.egy <= k1 || x.ket <= k2,
+  };
+  const eredmeny = {};
+  for (const [nev, felt] of Object.entries(jelol)) {
+    eredmeny[nev] = { elkapva: arany(hPar, felt), tevesen: arany(vPar, felt) };
+  }
+  return eredmeny;
+}
+
+/**
+ * ⭐⭐ A KITARTÓ TÁMADÓ DIAGNOSZTIKÁJA — miért nem nyert az újrajelöléssel?
+ *
+ * ⚠️ Ez azért kell, mert a 11.8 mérésben a kitartó támadó SEMMIT nem nyert, és ezt nem
+ * tudtuk megmagyarázni. Egy szám, aminek nem ismerjük az okát, nem tudás — a projektben
+ * ez már többször megbosszulta magát. Két gyanú, mindkettő mérhető:
+ *
+ *   H1 — a hidak GYENGÉK maradnak: a legtöbb hamis későn születik, tehát az élük nem
+ *        gyűjt elég ismétlést a futás végéig.
+ *   H2 — ⭐ a hidak ERŐSEK, de hiába: a megtévesztett ember saját környezete is
+ *        elhamisodik (több száz hamis szomszéd), tehát a séta a hídon átlépve VISSZAESIK
+ *        a szigetbe. Ekkor a támadó saját tömege veri meg őt.
+ */
+function kitartoDiagnosztika(vilag) {
+  const b = vilag.b;
+  const kell = b.elSuly;
+  let hidak = 0;
+  let erosHidak = 0;
+  let hidSulyOsszeg = 0;
+  for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
+    if (!vilag.tag[i]) continue;
+    for (const sz of vilag.bemutatkozas[i]) {
+      if (sz >= b.valodiEmberek || !vilag.tag[sz]) continue;
+      hidak++;
+      const suly = vilag.suly[i].get(sz) ?? 0;
+      hidSulyOsszeg += suly;
+      if (suly >= kell) erosHidak++;
     }
   }
-  return legjobb;
+
+  // ⭐ H2: a megtévesztett emberek szomszédságának hányad része HAMIS?
+  let hamisArany = 0;
+  let erosHamisArany = 0;
+  let db = 0;
+  for (const m of vilag.megtevesztett) {
+    let osszes = 0;
+    let hamis = 0;
+    let erosOsszes = 0;
+    let erosHamis = 0;
+    for (const sz of vilag.bemutatkozas[m]) {
+      if (!vilag.tag[sz]) continue;
+      osszes++;
+      const eros = (vilag.suly[m].get(sz) ?? 0) >= kell;
+      if (eros) erosOsszes++;
+      if (sz >= b.valodiEmberek) { hamis++; if (eros) erosHamis++; }
+    }
+    if (osszes) { hamisArany += hamis / osszes; db++; }
+    if (erosOsszes) erosHamisArany += erosHamis / erosOsszes;
+  }
+  return {
+    hidak,
+    erosHidak,
+    atlagHidSuly: hidak ? hidSulyOsszeg / hidak : 0,
+    erosHidArany: hidak ? erosHidak / hidak : 0,
+    megtevHamisArany: db ? hamisArany / db : 0,
+    megtevErosHamisArany: db ? erosHamisArany / db : 0,
+  };
 }
 
 // ===================================
@@ -841,20 +929,28 @@ function main() {
   kiir('-'.repeat(84));
   kiir(`   (${b.setaDb} séta × ${b.setaHossz} lépés · melegítés: ${b.melegit ? 'IGEN — sűrű sziget' : 'nincs — csupasz hamisak'})`);
   kiir('');
-  const jelSzel = [30, 18, 22];
-  kiir(sor(['változat', 'hamis elkapva', 'becsületes tévesen'], jelSzel));
+  kiir(`   1. lencse: minden él · 2. lencse: csak a ≥${b.elSuly}× ismételt él`);
+  kiir('');
+  const jelSzel = [26, 13, 13, 15, 15];
+  kiir(sor(['változat', '1. lencse', '2. lencse', 'MINDKETTŐ (ÉS)', 'BÁRMELYIK (VAGY)'], jelSzel));
+  kiir('   ' + '(elkapva / tévesen)'.padStart(30));
+  const jelzesEredmeny = {};
   for (const v of VALTOZATOK) {
     const e = vedEredmeny[v.nev];
     const jelzesek = e.eredmenyek
       .map((r, i) => jelzesMerese(r, magok[i]))
       .filter((j) => j !== null);
+    jelzesEredmeny[v.nev] = jelzesek;
     if (!jelzesek.length) {
-      kiir(sor([v.nev, '— (nincs hamis)', '—'], jelSzel));
+      kiir(sor([v.nev, '— (nincs hamis)', '—', '—', '—'], jelSzel));
       continue;
     }
-    const atlElkapva = jelzesek.reduce((o, j) => o + j.elkapva, 0) / jelzesek.length;
-    const atlTevesen = jelzesek.reduce((o, j) => o + j.tevesen, 0) / jelzesek.length;
-    kiir(sor([v.nev, szazalek(atlElkapva), szazalek(atlTevesen)], jelSzel));
+    const par = (nev) => {
+      const el = jelzesek.reduce((o, j) => o + j[nev].elkapva, 0) / jelzesek.length;
+      const te = jelzesek.reduce((o, j) => o + j[nev].tevesen, 0) / jelzesek.length;
+      return `${szazalek(el)} / ${szazalek(te)}`;
+    };
+    kiir(sor([v.nev, par('egy'), par('ket'), par('es'), par('vagy')], jelSzel));
   }
 
   // ===== 4. MIÉRT? — a híd, ami a 3. táblázat számait megmagyarázza =====
@@ -926,6 +1022,30 @@ function main() {
   kiir('');
   kiir(`   Támadó NÉLKÜL (V3, alapvonal): a 8 legnagyobb része ` +
        `${szazalek(tisztaTor.reduce((a, c) => a + c, 0) / tisztaTor.length)}`);
+
+  // ===== 6. A KITARTÓ TÁMADÓ DIAGNOSZTIKÁJA =====
+  kiir('');
+  kiir('▶ 6. MIÉRT NEM NYERT A KITARTÓ TÁMADÓ? — a két gyanú megmérve');
+  kiir('-'.repeat(84));
+  kiir(`   H1: gyengék maradnak a hidak?  ·  H2: a megtévesztett környezete is elhamisodik?`);
+  kiir('');
+  const diagSzel = [26, 14, 16, 24];
+  kiir(sor(['változat', 'híd átl. súly', 'ebből ≥ küszöb', 'a megtév. szomszédai hamisak'], diagSzel));
+  for (const v of VALTOZATOK) {
+    const e = vedEredmeny[v.nev];
+    const d = e.eredmenyek.map((r) => kitartoDiagnosztika(r.vilag)).filter((x) => x.hidak > 0);
+    if (!d.length) {
+      kiir(sor([v.nev, '—', '—', '—'], diagSzel));
+      continue;
+    }
+    const atl = (mezo) => d.reduce((o, x) => o + x[mezo], 0) / d.length;
+    kiir(sor([
+      v.nev,
+      Math.round(atl('atlagHidSuly') * 10) / 10,
+      szazalek(atl('erosHidArany')),
+      `${szazalek(atl('megtevHamisArany'))} (erős élen: ${szazalek(atl('megtevErosHamisArany'))})`,
+    ], diagSzel));
+  }
 
   kiir('');
   kiir('='.repeat(84));

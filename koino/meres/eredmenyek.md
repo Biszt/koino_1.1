@@ -814,3 +814,70 @@ kellene tudnia pörgetni a számlálót.
 11.3/b esetében is előbb megmértük a hidat, és csak utána mondtuk ki az okot; itt ez a
 diagnosztika **még hiányzik**. Amíg nincs meg, a helyes olvasat: *a modell így viselkedett,
 az okát nem ismerjük.*
+
+## 11.9 ⭐⭐ MIÉRT NEM NYERT A KITARTÓ TÁMADÓ? — a rejtély megoldva
+
+*A 11.8-ban nyitva hagytunk egy számot: a kitartó támadó (aki minden körben újra jelöli a
+bemutatkozásait) semmit nem nyert. Két gyanút mértünk meg.*
+
+| | kitartó NÉLKÜL | ⭐ KITARTÓ támadóval |
+|---|---|---|
+| a híd-élek átlagos súlya | **1** | **12,5–23** |
+| ebből átmegy a ≥3-as szűrőn | **0%** | ⭐ **95–100%** |
+| a megtévesztett szomszédai közül hamis | 28–56% | 28–56% (**erős élen: 31–64%**) |
+
+⛔ **H1 megdőlt:** a hidak **nem maradnak gyengék** — a kitartó támadó sikeresen felpörgette
+a számlálót, az élei 95–100%-ban átmennek a szűrőn. Tehát *nem azért* bukott meg, mert nem
+sikerült neki.
+
+⭐⭐ **H2 IGAZOLVA — és ez a szakasz egyik legszebb eredménye:** a megtévesztett ember
+szomszédságának **28–56%-a hamis**, az **erős élein pedig 31–64%-a**. Vagyis amikor a séta
+átlép a hídon, a következő lépésnél **31–64% eséllyel visszaesik a szigetbe**. Tíz lépésen
+át ez újra és újra megtörténik, tehát a séta **nem jut ki a tengerbe**.
+
+> ⭐⭐⭐ **A TÁMADÓ SAJÁT TÖMEGE VERI MEG.** Ahhoz, hogy a hamisai kapcsoltnak látszódjanak,
+> mindet néhány emberre kell aggatnia — de ettől **azoknak az embereknek a környezete válik
+> szigetté**, és a séták onnan sem tudnak kijutni. **Minél több hamisat akar elrejteni,
+> annál erősebb a csapda.** Ugyanaz az alakzat, mint a satu: *a támadó nem tud egyszerre
+> sok és láthatatlan lenni.*
+
+⚠️ **A korlát, amit ez NEM mond meg:** a mérés **3 megtévesztett emberrel** futott, tehát
+fejenként ~293 hamis jutott. Ha a támadónak **sok** megtévesztett embere volna (mondjuk
+száz, fejenként 9 hamissal), azok környezete nagyrészt valódi maradna, és a séták kijutnának.
+⭐ **A védelem tehát a „hamis / megtévesztett ember" ARÁNYON áll, nem a darabszámon** — és
+ezt külön kell megmérni.
+
+## 11.10 ⭐⭐⭐ A KÉT LENCSE EGYÜTT — és a válasz Csaba mércéjére
+
+> **Csaba mércéje (2026-09-06):** *„ha nem növeli meg annyival a támadó lebukási esélyét,
+> akkor ne bonyolítsunk."*
+
+*Mindkét lencse UGYANAZON a világon, UGYANAZOKRA a párokra fut, hogy az ÉS/VAGY összevethető
+legyen. „elkapva / tévesen".*
+
+| változat | 1. lencse (sima séta) | 2. lencse (≥3× ismételt él) | ⭐ MINDKETTŐ (ÉS) | BÁRMELYIK (VAGY) |
+|---|---|---|---|---|
+| V1 — nyílt | 89% / 11% | 100% / 18% | **89% / 3%** | 100% / 27% |
+| V2 — 1 meghívó | 100% / 0% | 100% / 17% | **100% / 0%** | 100% / 17% |
+| V2b — 1 meghívó + jogosítás | 89% / 10% | 100% / 9% | ⭐ **89% / 1%** | 100% / 17% |
+| V3 — 2 meghívó + jogosítás | 89% / 8% | 100% / 13% | ⭐ **89% / 1%** | 100% / 20% |
+| V4 — 3 meghívó | 100% / 0% | 100% / 34% | **100% / 0%** | 100% / 34% |
+
+⭐⭐ **A második lencse NEM azzal érdemli ki a helyét, hogy többet kap el, hanem azzal, hogy
+CSENDESEBBÉ teszi a jelzést a becsületeseken.** Az „ÉS" olvasat a téves megjelölést
+**8–11%-ról 1–3%-ra** viszi — nyolcszoros-tízszeres javulás —, miközben az elkapás a
+gyengébb lencse szintjén marad (89%).
+
+Ez pontosan a projekt saját mércéje: *egy jelzés akkor ér valamit, ha a szigetre kigyullad,
+a becsületes közösségre viszont NEM.* A **VAGY** olvasat ezzel szemben mindent elkap (100%),
+de 17–34%-ot tévesen jelöl — ⚠️ **ez rosszabb a semminél**, mert hozzászoknak, és megszűnik
+jelzés lenni.
+
+> ✅ **A válasz Csaba mércéjére: MEGÉRI a bonyolítás — de nem úgy, ahogy vártuk.** Nem a
+> lebukási esélyt növeli (az marad 89–100%), hanem **a hamis riasztást csökkenti a
+> tizedére**. A koinóban ez fontosabb: a téves jelölés a magányost és a frissen érkezettet
+> érinti.
+
+⚠️ **Amit nem tudunk:** miért marad 11% a szigetből észrevétlen az „ÉS" olvasatnál — ezek
+azok a hamisak, amiket az egyik lencse átenged. A 11.9 alapján a gyanú az, hogy ezek a
+legkorábban létrehozott, legjobban beágyazott azonosságok, de **ez feltevés, nem mérés.**
