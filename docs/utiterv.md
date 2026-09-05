@@ -3,7 +3,7 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D42),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D50),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.

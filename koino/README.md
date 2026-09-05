@@ -200,7 +200,7 @@ Tanúsítás · távolság-szabály · tartós mag — a részletek az
 felület után **egy család vagy egy osztály élesben használhatja** — helyes, milliárdos
 szerkezettel, csak kevesebb emberrel (D22).
 
-A teljes terv és a döntések (D1–D42): [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
+A teljes terv és a döntések (D1–D50): [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
 · a sorrend: [`../docs/utiterv.md`](../docs/utiterv.md)
 · a milliárdos lépték szerkezete: [`../docs/skalazas_terv.md`](../docs/skalazas_terv.md)
 · a Szakasz 1 terve: [`../docs/szakasz1_terv.md`](../docs/szakasz1_terv.md)

@@ -52,8 +52,10 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > lennie*).
 >
 > **A szakaszok újrarendezve:** 1. A helyi modell ✅ · 2. **A szállítás** ✅ *(átnevezve —
-> a munka valójában erről szólt, és elkészült)* · 🚧 **3. A SZERKEZET** *(új, beékelődött)* ·
-> 4. Az identitás · 5. A felület · 6. A kereső-réteg *(elhagyható)* · 7. A pénz.
+> a munka valójában erről szólt, és elkészült)* · **3. A SZERKEZET** ✅ *(új, beékelődött;
+> kész 2026-09-03)* · 🚧 **4. AZ IDENTITÁS** *(tervezés — D43–D50,
+> [`szakasz4_terv.md`](szakasz4_terv.md))* · 5. A felület · 6. A kereső-réteg
+> *(elhagyható)* · 7. A pénz.
 >
 > ⚠️ **Ami látszólag ellentmond a D17-nek** (*„az identitás-réteg a gerinc, elsőként kell
 > állnia"*): az identitás **a bizalom** gerince, nem a **programé**. Az azonosság maga is
@@ -773,6 +775,209 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > `lancEllenorzese` már számol **hézagot, elágazást ÉS szakadást** (az `elozo` mező nem a
 > tényleges előzőre mutat). A jel tehát adott — csak a `szabalyok.js` nem kérdezi meg tőle.
 
+> ### 🪪 D43–D47 (2026-09-04): AZ IDENTITÁS-RÉTEG KEMÉNY MAGJA — a KERET-szabály
+>
+> *Részletes levezetés, mérésekkel: [`szakasz4_terv.md`](szakasz4_terv.md). Itt a döntések
+> állnak, mert ez a döntések helye.*
+>
+> ⚠️ **Az előzmény: a D18/2 alakja elbukott a 9. szabályon.** A Duniter-féle
+> távolság-szabály (*„a referens tagok legalább 80%-a 6 lépésen belül"*, `N^(1/5)`) **két
+> globális számot kíván** — a teljes referens-halmazt és `N`-et —, és egymilliárdnál
+> egyiket sem tudja egyetlen készülék sem. A válasz nem lehet *„majd lekérdezzük"*.
+> ⭐ **A D18/2 magva viszont áll:** *a darabszám hamisítható, a pozíció nem* — a keret is
+> pozíciót mér, csak **helyben ellenőrizhető alakban**.
+>
+> #### ✅ D43 — A BELÉPÉSI SZABÁLY ALSÓ KORLÁT, SOHA NEM LEFEDETTSÉG
+>
+> Minden identitás-szabályt úgy kell megfogalmazni, hogy **a teljesülése** legyen a
+> bizonyítandó, ne a hiánya. *(Csaba: „igen", 2026-09-03.)*
+>
+> ⭐ **Az ok — a bizonyíthatóság iránya nem szimmetrikus:** *„tőled hozzám vezet egy 5
+> lépéses tanúsítási út"* **odaadható** (öt aláírt esemény, bárki ellenőrzi, offline).
+> *„Elérem a tagok 80%-át"* **nem adható oda** — ahhoz a másiknak az egész halmazt ismernie
+> kellene. Az első bizonyíték-alakú, a második lekérdezés-alakú, tehát használhatatlan.
+>
+> #### ⭐⭐ D44 (Csaba, 2026-09-04) — A TANÚSÍTÁSI KERET = A MINIMUM FELETTI TANÚSÍTÁSOK SZÁMA
+>
+> > **Annyi tanúsítást adhatsz, amennyivel a kapott tanúsításaid száma a belépési minimum
+> > fölött van.** `keret(X) = kapott(X) − k − eddig_adott(X)`, nullára padlózva.
+>
+> A tanúsítás nem **teremt** jogot, hanem **továbbít**: aki ad, elkölti; aki kap,
+> gyarapszik. **A frissen felvett kerete nulla.**
+>
+> ⛔ **Amit megöl: a „fizess egyszer, arass örökké" támadást.** A korábbi javaslat (*„`k`
+> csúcs-diszjunkt út már felvett tagoktól"*) megkerülhető volt, mert a diszjunktság **egy
+> bizonyításon belül** tilt közös embert, a bizonyítások **között** nem: öt megvett ember
+> hat körben korlátlan hamis azonosságot enged be. A kerettel a 6. kör **meg sem születik**
+> — *csak az tud beengedni valakit, akit a közösség a szükségesnél jobban ismer.*
+>
+> ⭐ **Levezethető korlát:** ha `g` a szigetnek adott becsületes tanúsítások száma, `f` a
+> hamis azonosságoké, akkor **`f ≤ g / k`** — az ár **lineáris** lett, nem egyszeri.
+> ⚠️ *Ez levezetés, nem mérés* (rokon szakirodalom: SybilGuard / SybilLimit / Whānau).
+>
+> ⭐ **Két dolgot ingyen megold:** nem kell **időalapú érési idő** (a friss e-ember nem
+> időt vár, hanem elismerést), és a **kölcsönös gyűrű nem termel semmit** (aki tanúsít,
+> annyit veszít, amennyit a másik nyer — nettó nulla).
+>
+> #### ⛔ D45 — VÉDŐKORLÁT: AZ IGAZOLVÁNY SOHA NE LEGYEN RÖGZÍTHETŐ
+>
+> A tanúsítás **egyetlen, egyforma mondat** marad — *„létező, külön ember"* —, akárhogy
+> győződött meg róla a tanú. **Nem lehet ráírni, hogy „igazolvánnyal ellenőrizve".**
+>
+> ⚠️ **Miért kötelező:** ha kétféle tanúsítás lenne, elkerülhetetlen a nyomás, hogy a
+> fontos dolgokhoz csak az „erős" fajta számítson — és azzal pontosan azt zárnánk ki,
+> akiért az egész befogadás-gondolat szól: **a papír nélküli embert.**
+>
+> #### ✅ D46 (Csaba, 2026-09-04) — VISSZAVONÁS HELYETT BIZONYTALANRA JELÖLÉS + GONDOLAT
+>
+> **A tanú nem vonhat vissza, hanem BIZONYTALANRA JELÖLHET** — és mellé **létrehozhat egy
+> gondolatot** *(ma: „tartalom", lásd a [`jegyzetek.md`](jegyzetek.md) 2026-09-04-i
+> bejegyzését)*, **amivel megosztja a felelősséget a közösséggel**.
+>
+> A kérdés kényszere: ha a visszavonás kiléptet, akkor `k` ember összebeszélve **bárkit
+> kiléptethet** utólag; ha semmit nem ér, egy bevallottan csalárd tanúsítás örökre áll.
+> ⭐ **A jelölés nem automatizmus, hanem bizonyíték** — bemenet egy nyilvános, megtámadható
+> közösségi döntésbe: ugyanaz az alakzat, mint a **D15**, a **D16** és a **D19**.
+>
+> #### ✅ D47 — AZ ELLENŐRZÉS AZ ALÁÍRÁS PILLANATÁBAN TÖRTÉNIK, ÉS BEFAGY
+>
+> - A **felvételi esemény** magába fagyasztja az akkor érvényes paramétereket (`k`, és ami
+>   még lesz): a számítás nem azt kérdezi, *„megfelel-e a mai szabálynak"*, hanem hogy
+>   **„megfelelt-e az akkorinak"** — a válasz **örökre ugyanaz, minden készüléken**.
+> - A **kiadott tanúsítás** ugyanígy: ha `k` emelkedik, a korábbi aláírás nem válik
+>   érvénytelenné, és akit felvettek, **bent marad**.
+>
+> ⭐ Ez teszi tarthatóvá a **D18/5** felülvizsgálatát (*a szigorítás ELŐRE hasson, soha
+> visszamenőleg*), és ugyanaz a minta, mint a 3.1 `latott` mezője: **azt rögzítjük, mi volt
+> igaz akkor**. *(Csaba: „rendben", 2026-09-04.)*
+>
+> #### ⛔ D48 — ELVETVE, MÉG AZNAP (a bukás oka megőrizve)
+>
+> **A javaslat ez volt:** *az elismerés (egy már felvett tag tanúsítása) ne fogyasszon
+> keretet, ha a tanúnak magának van pozitív kerete.* ⛔ **De a gát nem lejtő, hanem
+> SZIKLA:** öt korrumpált, megállapodott ember elismeri Hamis #1-et → annak kerete pozitív
+> → ettől kezdve **az ő elismerése is számít, ingyen**, és az egész sziget kerete felszalad.
+>
+> ⛔⛔ **És ebből ÁLTALÁNOS EREDMÉNY lett — a gazdaság önmagában nem lehet a védelem:**
+>
+> - **ha a keret MEGMARADÓ**, a Sybil-korlát tökéletes (`f ≤ g/k`), de a közösség
+>   **bizonyíthatóan nem tud nőni** (az össz-keret `−k·N`, tehát mindig negatív);
+> - **ha a keret TEREMTHETŐ**, a közösség nő, de **a sziget ugyanazzal a mozdulattal
+>   ugyanúgy teremt.**
+>
+> > ⛔ **Nincs középút, mert a számtan nem látja a különbséget egy valódi és egy hamis
+> > ember között.** *(Végigpróbálva: fix alapítói készlet · ingyenes elismerés ·
+> > belépéskori juttatás · visszatérítéses kölcsön — mind elfogy, vagy a szigetet táplálja.)*
+>
+> ⭐ **Ami megmarad:** a keret **kiváló fék és ütemszabályzó** — csak nem hordja el egyedül
+> a Sybil-korlátot. **Ez egy egész megoldás-családot zár ki**, ezért maradt itt a bukás.
+
+> ### 🔀 HETEDIK FORDULAT (2026-09-05): D49 — AZ IDENTITÁS-RÉTEG NEM TILT, HANEM FELTÁR
+>
+> ⭐⭐ **Eddig a szabálytól vártuk az igazságot** — döntse el, ki valódi —, és ezért
+> ütköztünk mindig abba, hogy a számtan nem lát különbséget (D48). **A fordulat: a szabály
+> csak egy minimumot tart, a többit a közösség látja és dönti el.** Ezzel az identitás abba
+> a családba kerül, ahová a koino minden más nehéz kérdése: *lassú, nyilvános,
+> megtámadható* (D15, D16, D19).
+>
+> ⚠️ **És ez nem a nehézség megkerülése:** a szakirodalom egésze ugyanoda érkezik — *a
+> hamis azonosságok száma a támadó által szerzett becsületes kapcsolatoktól függ*. Aki mást
+> ígér, az kilépett a gráfból biometriába (a papír nélküli embert kizárná), pénzbe vagy
+> számítási erőbe (a **D7** tagadása), vagy kapuőrbe (a koino tagadása). **Nem azt nem
+> találtuk meg, ami létezik; azt kerestük, ami nem létezik.**
+>
+> - ⛔ **D49/a — A MINIMUM MARAD KEMÉNY SZABÁLY.** Ha minden jelzés lenne és semmi sem
+>   szabály, **készülékenként más lenne, ki számít e-embernek**, és a szavazatszámlálás
+>   szétesne (megdőlne, amit a `vizsgaProba.js` bizonyít). A réteg tehát kettéválik: amit a
+>   program **ELDÖNT** — megvan-e a `k` tanúsítás (D43) és a befagyasztás (D47), ⭐ *kevés,
+>   de kemény* —, és amit **MEGMUTAT**: minden más, amiből **ember** von le következtetést.
+> - ⭐ **D49/b — A JELZÉS TÉNYT MUTAT, SOHA NEM ÍTÉLETET.** *„Ez az e-ember gyanús"* ítélet,
+>   és hírnév-rendszer lesz belőle (amit a **D18/1** kizárt). *„Négy egymást nem ismerő
+>   körből tanúsították"* **tény**, amit bárki kiszámol a láncból. ⭐⭐ Csaba két kérése
+>   ugyanaz az **egy szám, két irányból olvasva** (*„legyenek láthatóak a gyanús minták"* és
+>   *„legyen látható, kit hányan ismernek személyesen"*): aki sokfelől ismert, arról melegen
+>   hangzik; aki egy zárt foltból jött, arról hidegen. **Egy mérce, nem kettő** — ezért nem
+>   lehet belőle megbélyegzés.
+> - ⛔ **D49/c — HÁROM VÉDŐKORLÁT**, mert ez boszorkányüldözéssé tud válni: **nincs**
+>   személyre szóló gyanú-pontszám, rangsor, piros jelzés · a jelzés **tájékoztat, nem
+>   jogosít** (N9) — vékony hálótól **semmilyen jog nem csökken** · az összesített nézet **a
+>   koinóról** szóljon (*„mennyire vagyunk kitéve"*), ne emberekről.
+>
+> 🔍 **A mérce, amivel egy jelzés értékét eldöntjük:** *akkor ér valamit, ha a szimulált
+> szigetre KIGYULLAD, egy valódi, gyorsan növő közösségre viszont NEM.* ⚠️ Ami a
+> becsületesre is kigyullad, **rosszabb a semminél** — hozzászoknak.
+>
+> #### ⛔ Négy irány, amit MÉRÉSSEL zártunk ki — ne induljon el rajtuk újra senki
+>
+> *Jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 3–10.*
+>
+> 1. a **Duniter-féle távolság-szabály** — globális számokat kíván (fent);
+> 2. az **ingyenes elismerés** (D48) — a szigetet ugyanúgy táplálja;
+> 3. **a gazdaság önmagában** — megmaradó → nem nő; teremthető → a sziget is teremt;
+> 4. ⛔ **a horgony-kör** — *a támadó elfoglalja*: **880 hamis horgony** a 20 valódi mellett,
+>    mert a *„több független körből"* feltétel a **tudatos hálózatépítőt** jutalmazza.
+>    Ezzel a **K12** (horgony-halmaz) és a **K13** (út-feltétel) tárgytalan lett.
+> 5. ⛔⛔ És külön: a *„kevés kapcsolata van, tehát gyanús"* jelzés **háromszor bukott** —
+>    **31 / 41 / 45%** becsületes tagot jelölne meg tévesen, épp **a magányost és a frissen
+>    érkezettet**, vagyis azokat, akikért az egész befogadás-gondolat szól.
+
+> ### ⭐⭐⭐ A SATU, ÉS D50 (2026-09-05): A BEMUTATKOZÁSOK TENGERE — TÉRKÉP NÉLKÜL
+>
+> **Csaba javaslata („BEMUTATKOZÁS"):** a tanúsítás mellé egy **olcsó, sűrű** réteg — akik
+> találkoztak, jelzik egymásnak. A jelzés pedig **véletlen séta**: *összeérünk-e?*
+>
+> ⭐⭐⭐ **És ezzel a satu bezárul, mert a két jelzés-család pontosan egymás hiányát fedi:**
+>
+> - a **személyes statisztika** a **ritka** hamis szigetet fogja meg (az óvatos támadó
+>   azonosságait pontosan `k`-an tanúsítják — ez 150 megtévesztett embernél is látszik);
+> - a **tenger-jelzés** a **sűrűt** (minél sűrűbb belül a hamis társadalom, annál kisebb az
+>   esély, hogy egy séta épp a kifelé vezető kevés élre lép).
+>
+> > ⭐⭐⭐ **A támadó nem tud egyszerre sűrű és ritka lenni.** Ha élethű társadalmat épít,
+> > hogy a statisztikát megverje, bezárja magát a saját tengerébe; ha ritka marad, hogy a
+> > séták kijussanak, csupasz azonosságait elkapja a statisztika.
+>
+> **Mérve: 100% hamis elkapva, 0% becsületes tévesen** — mind a három szimulált támadó ellen
+> (hangos · óvatos · alapos), négy különböző maggal. ⭐ És a számítás **helyi és korlátos**
+> (400 séta × 10 lépés, a közösség méretétől függetlenül) — tehát **átmegy a 9. szabályon**.
+>
+> #### ⭐⭐ D50 — A JELZÉSHEZ NEM KELL A TÉRKÉP, CSAK AZ ÚT
+>
+> ⚠️ **A gond, amit meg kellett oldani:** a bemutatkozás **társas térkép** — ki kivel
+> találkozott. A **D6** szerint személyes adat soha nem kerülhet a láncra, és Csaba
+> beleegyezés-alapú válasza (*„a résztvevők jelzik, tehát engedélyezik"*) a gyűjtés
+> jogosságát megoldja, de hármat nem: a beleegyezés **egyenkénti, a kár az összegben van** ·
+> **örökre szól** (a koino nem felejt, a D14 szerint viszont a felejtés az alapállapot) · és
+> **a körülmények változnak** (aki elmenekült valaki elől, azt a régi beleegyezése nem védi).
+>
+> ⭐ **A feloldás abból jött, hogy megnéztük, mire van szüksége egy SÉTÁNAK:** az első
+> lépéshez a saját ismerőseidet kell tudnod — azokat úgyis tudod; a másodikhoz a te
+> ismerősöd ismerőseit — **azokat meg ő tudja**. *Senkinek nem kell látnia az egészet.*
+>
+> > **A bemutatkozás NEM esemény a láncon, hanem HELYI LISTA** — és a séta nem lekérdezés,
+> > hanem **üzenet, ami ugrál**.
+>
+> ⭐ **Van rá minta a programban:** a [`tarsak.js`](../koino/js/csere/tarsak.js) társ-listája
+> pontosan ilyen — *„helyi megfigyelés — sosem terjed, és semmit nem dönt el a koinóban."*
+> Senki nem látja az utat (mindenki csak azt, kitől kapta és kinek adta), **nem áll össze
+> térkép**, és az összevetés elvégezhető úgy, hogy csak a **darabszám** derüljön ki.
+>
+> ⭐⭐ **És ezzel a 9. szabály gondja is megoldódik.** Egy séta **élő embereket kíván** —
+> de a D49 óta ez nem baj, mert **a tenger-jelzés nem dönt semmiről, csak megmutat**. Ha
+> most épp nem fut le, nem látod a jelzést, és **semmi más nem áll meg.**
+>
+> > **Vagyis a bemutatkozás nem a DAG-ba tartozik, hanem a MÁSODIK RÉTEGBE.** A láncon
+> > marad, ami dönt (a `k` tanúsítás — D43/D47); a tenger fölötte úszik: **élőben,
+> > elhagyhatóan, térkép nélkül** — pontosan úgy, mint a kereső-réteg.
+>
+> ⭐ **Egy egybeesés, ami nem véletlen:** a séták akkor futnak végig, amikor mindenki
+> egyszerre ébren van — vagyis **a buliban**, az összehangolt ötperces ablakban.
+>
+> ⏳ **Amit ez még nem old meg:** a séta **üzenet-alakja** (új protokoll-kérdés a `vonal.js`
+> mellé, a 3.4 böngésző-lekérés mintájára) · **mi szivárog ki egy séta közben** (kevesebb egy
+> térképnél, de **nem nulla**) · és a mérés megismétlése **valódi bemutatkozás-gráfon** —
+> eddig a tanúsítási gráfon futott.
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -858,7 +1063,8 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**42 tervezési döntés (D1–D42) áll.** 2026-08-25-én három elméleti hidat építettünk
+**49 tervezési döntés áll (D1–D50, a D48 kivételével — az elvetve, a bukása okával együtt
+megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*
 
@@ -1706,6 +1912,24 @@ logikája („pénz csak bizonyított identitás-réteg után") általánosítva
 *A **D17** kimondta: a konszenzus biztonsága = az identitás-réteg biztonsága. Ez a döntés
 tehát a Fázis 2 **gerince**. Épít a **D1**-re (meghívásos bizalmi háló + felhatalmazott
 kibocsátók), és lezárja az **N4**-et (a tanúsítási szabályok számszerűsítése).*
+
+> ⚠️ **AMIT A D43–D50 EBBŐL FELÜLÍR (2026-09-04/05)** — a Szakasz 4 tervezése közben,
+> [`szakasz4_terv.md`](szakasz4_terv.md):
+>
+> - **D18/2** — a Duniter-féle **távolság-szabály nem tartható** (80% / `N^(1/5)`: globális
+>   számokat kíván, elbukik a 9. szabályon). A helyébe a **keret** lép (**D44**).
+>   ⭐ *A magva viszont áll: a darabszám hamisítható, a pozíció nem.*
+> - **D18/4** — az *„időszakonként, nem élethosszig"* sor **felülvizsgálva**: nincs
+>   időszakos újratöltés. *(Csaba, 2026-09-04: „csak egymás tanúsítgatásával jusson
+>   mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt.")* Az a sor a
+>   Duniter fix 100-as korlátjára vonatkozott, nem a keretre.
+> - **D18/5** — a visszavonás helyébe a **bizonytalanra jelölés** lép (**D46**), és a
+>   *„szigorítás előre hasson"* elvet a **befagyasztás** (**D47**) teszi tarthatóvá.
+> - ⭐⭐ **És a réteg egésze átértelmeződik (D49):** a szabály **egy minimumon kívül nem
+>   tilt, hanem FELTÁR** — a többit a közösség látja és dönti el.
+>
+> ⚠️ **A D18/0 (a 🔴 közepes zóna) érintetlen és továbbra is áll** — sőt a D49 óta
+> **láthatóvá** válik ahelyett, hogy egy képlet eltakarná.
 
 #### 0. Pontosítás a D17-hez: miért a KÖZEPES méret a veszélyzóna
 

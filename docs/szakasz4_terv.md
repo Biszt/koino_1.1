@@ -10,9 +10,10 @@
 > ⚠️ **A koino kódja még nem változott.** Ez tervezés — az egyetlen megírt darab a
 > [`szigetMeres.js`](../koino/meres/szigetMeres.js) **mérőeszköz** (gráf-kísérlet, nem
 > koino-kísérlet: nincs benne kulcs, aláírás, esemény, hálózat).
-> ⛔ **A lezárt döntéseket (D43–D47, D49, D50) még ÁT KELL VEZETNI** a
-> [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)-be — az a döntések helye, ez
-> csak a részleteké.
+> ✅ **A lezárt döntések (D43–D47, D49, D50) ÁT VANNAK VEZETVE** a
+> [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)-be (2026-09-05) — az a
+> döntések helye, ez csak a részleteké. *(A **D48** is ott van, elvetve, mert a bukása oka
+> egy egész megoldás-családot zár ki.)*
 
 ---
 
@@ -843,12 +844,18 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 
 ---
 
-## 12. AMIT ÁT KELL VEZETNI A DÖNTÉSEK KÖZÉ
+## 12. ✅ AMI ÁT VAN VEZETVE A DÖNTÉSEK KÖZÉ (2026-09-05)
 
-*A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a döntések helye. Az itt
-javasolt számok — **D43–D47** — még nincsenek átvezetve.*
+*A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a döntések helye — **a
+D43–D50 oda bekerült**, három blokkban: a kemény mag (D43–D47 + a D48 bukása), a
+**hetedik fordulat** (D49), és a **satu + D50**. Ott a döntés áll, itt a levezetés.*
 
-*A **D48** kivételével mind érvényes; a D48 megbukott, de a bukása okát meg kell őrizni.*
+*A **D48** kivételével mind érvényes; a D48 megbukott, de a bukása okát megőriztük —
+mert egy egész megoldás-családot zár ki.*
+
+⭐ **És három meglévő döntés kapott ott jelzést arról, hogy ez felülírja:** a **D18/2**
+(a Duniter-szabály), a **D18/4** (az „időszakonként") és a **D18/5** (a visszavonás) —
+a `D18` szakasz elején.
 
 - **D43** — a belépési szabály alsó korlát, soha nem lefedettség (3. szakasz)
 - **D44** — a tanúsítási keret = a minimum feletti tanúsítások száma (4. szakasz)
