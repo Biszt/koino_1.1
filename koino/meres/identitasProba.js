@@ -28,6 +28,7 @@ import {
   tagE, tanusithatE, lepcso2E, ujIdentitasNezet,
   TANUSITAS_KELL, FELHATALMAZAS_KELL
 } from '../js/allapot/identitas.js';
+import { onalloSzalak, tanusitoiTorlodas } from '../js/allapot/jelzesek.js';
 
 const { proba, futtatas } = probaGyujtemeny('A tagság-számítás próbája');
 
@@ -490,6 +491,135 @@ proba('⭐ A HIÁNYZÓ TANÚSÍTÓI LÁNC is „nem ellenőrizhető", nem elutas
 
   const eredmeny = await lepcso2E(tar, KOINO, uj.horgony);
   return eredmeny.igen === false && eredmeny.ellenorizheto === false;
+});
+
+
+// ===================================
+// ⭐⭐⭐ A KONTRASZT-JELZÉS (9/c 4.4) — ez a valódi védelem
+// ===================================
+//
+// ⚠️ MIT KELL ITT BIZONYÍTANI? Nem azt, hogy „a jelzés kigyullad" — hanem hogy KÜLÖNBSÉGET
+// TESZ: a becsületes tanúsítóra NÉMA marad, a megvettre pedig megszólal. Egy jelzés, ami
+// mindkettőre kigyullad, rosszabb a semminél — hozzászoknak, és megszűnik jelzés lenni.
+
+proba('⭐ AZ ÖNÁLLÓ SZÁLAK: aki csak belépett, annak nulla; akit behívtak, annak több', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const maganyos = await belepo();
+  const behivott = await belepo();
+  await ment(tar, ...esemenyek, maganyos.esemeny, behivott.esemeny,
+    await meghivas(kor[0], behivott), await tanusitas(kor[1], behivott));
+
+  const a = await onalloSzalak(tar, KOINO, maganyos.horgony);
+  const b = await onalloSzalak(tar, KOINO, behivott.horgony);
+  return a.osszes === 0 && b.osszes === 2;
+});
+
+proba('⭐ AZ ÖNÁLLÓ SZÁLAK KÉT IRÁNYT számolnak: rólam és tőlem', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const uj = await belepo();
+  const masik = await belepo();
+  await ment(tar, ...esemenyek, uj.esemeny, masik.esemeny,
+    await meghivas(kor[0], uj),      // rólam: 1
+    await meghivas(uj, masik));      // tőlem: 1
+
+  const szalak = await onalloSzalak(tar, KOINO, uj.horgony);
+  return szalak.rolam === 1 && szalak.tole === 1 && szalak.osszes === 2;
+});
+
+proba('⭐⭐ A KONTRASZT: a BECSÜLETES tanúsítóra a jelzés NÉMA marad', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const mind = [...esemenyek];
+
+  // A becsületes tanúsító öt olyan embert tanúsít, akiknek van saját életük:
+  // mindegyiket behívta valaki más, és mindegyiket két másik alapító is tanúsította.
+  for (let i = 0; i < 5; i++) {
+    const uj = await belepo();
+    mind.push(uj.esemeny,
+      await meghivas(kor[1], uj),
+      await tanusitas(kor[0], uj),
+      await tanusitas(kor[2], uj),
+      await tanusitas(kor[3], uj));
+  }
+  await ment(tar, ...mind);
+
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, kor[0].horgony);
+  return jelzes.tanusitott === 5 && jelzes.magukbanAllok === 0;
+});
+
+proba('⭐⭐⭐ A KONTRASZT: a MEGVETT tanúsítónál a jelzés MEGSZÓLAL', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const mind = [...esemenyek];
+
+  // A megvett tanúsító húsz ÜRES azonosságot tanúsít: senki más nem állít róluk semmit.
+  for (let i = 0; i < 20; i++) {
+    const hamis = await belepo();
+    mind.push(hamis.esemeny, await tanusitas(kor[0], hamis));
+  }
+  await ment(tar, ...mind);
+
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, kor[0].horgony);
+  return jelzes.tanusitott === 20 && jelzes.magukbanAllok === 20;
+});
+
+proba('⭐ A JELZÉS A TANÚSÍTÓRA néz, nem a tanúsítottra — a frissen érkezett nem gyanús', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const friss = await belepo();
+  await ment(tar, ...esemenyek, friss.esemeny, await meghivas(kor[0], friss));
+
+  // A frissen érkezettnek EGY szála van — de a jelzés nem róla szól, hanem arról, aki
+  // sok ilyet cipel. Aki egyetlen embert hívott be, annál a szám 0 tanúsítás.
+  const rola = await onalloSzalak(tar, KOINO, friss.horgony);
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, kor[0].horgony);
+  return rola.osszes === 1 && jelzes.tanusitott === 0 && jelzes.magukbanAllok === 0;
+});
+
+proba('⭐ A HIÁNY itt sem vád: ismeretlen horgonynál „nem ellenőrizhető"', async () => {
+  const tar = await ujTar();
+  const ismeretlen = await belepo();
+  const szalak = await onalloSzalak(tar, KOINO, ismeretlen.horgony);
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, ismeretlen.horgony);
+  return szalak.ellenorizheto === false && jelzes.ellenorizheto === false;
+});
+
+proba('🔍 9. SZABÁLY: a jelzés ára a GYANÚVAL arányos, nem a koino méretével', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const mind = [...esemenyek];
+
+  // A megvett tanúsító tíz üres azonosságot tanúsít…
+  for (let i = 0; i < 10; i++) {
+    const hamis = await belepo();
+    mind.push(hamis.esemeny, await tanusitas(kor[0], hamis));
+  }
+  // …és MELLETTE ötven olyan e-ember él a koinóban, akihez semmi köze.
+  for (let i = 0; i < 50; i++) {
+    const idegen = await belepo();
+    mind.push(idegen.esemeny, await meghivas(kor[1], idegen));
+  }
+  await ment(tar, ...mind);
+
+  // ⭐ A jelzés a saját láncából és a tanúsítottak szeleteiből dolgozik — az ötven idegen
+  // nem növeli a munkát, és nem is jelenik meg a számban.
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, kor[0].horgony);
+  return jelzes.tanusitott === 10 && jelzes.magukbanAllok === 10;
+});
+
+proba('⛔ A JELZÉS NEM ÍTÉL: a visszatérés csak SZÁMOKAT tartalmaz (D49/b)', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  await ment(tar, ...esemenyek);
+
+  const jelzes = await tanusitoiTorlodas(tar, KOINO, kor[0].horgony);
+  const szalak = await onalloSzalak(tar, KOINO, kor[0].horgony);
+  const mezok = [...Object.keys(jelzes), ...Object.keys(szalak)];
+  // Se „gyanus", se „pontszam", se „rangsor" — csak tények és az ellenőrizhetőség.
+  const tiltott = mezok.some((m) => /gyan|pont|rang|itelet|bizalom/i.test(m));
+  return !tiltott;
 });
 
 // ===================================
