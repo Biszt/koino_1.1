@@ -714,3 +714,51 @@ bemutatkozással olyanok felé, akiknek nincs más ismerősük — ez **torlód�
 megtévesztett emberek oldalán feltűnő, nem a hamisakén. Ezt a jelzést a
 [`szigetMeres.js`](szigetMeres.js) már számolja a tanúsítási világban; a meghívásosban
 **még nem**. Ez a következő mérés.
+
+## 11.6 ⭐⭐⭐ A TORLÓDÁS — és a satu bezárul a meghívásos világban is
+
+*Csaba kérése (2026-09-06): mérjük meg azt a jelzést, amit a 11.3/b rése kikövetelt.*
+
+⭐ **A gondolat:** ha a támadó minden hamisat egy-két valódi emberhez köt (és ezzel elrejti
+őket a séta elől), akkor **azok a valódi emberek** viszik el az egészet. Nem a hamisat
+nézzük, hanem **akin lóg**.
+
+**Mérve (3 megtévesztett, „zsákutca" = akinek rajtam kívül 3-nál kevesebb ismerőse van):**
+
+| változat | séta (elkapva / tévesen) | a megtévesztett zsákutcái | ⚠️ a legrosszabb becsületes |
+|---|---|---|---|
+| V2 — 1 meghívó | **100% / 0%** | 0 | 0,3 |
+| V4 — 3 meghívó | **100% / 0%** | 0 | 0,3 |
+| V2b — 1 meghívó + jogosítás | 91% / 16% | ⭐ **293** | **0,3** |
+| V3 — 2 meghívó + jogosítás | 90% / 11% | ⭐ **587** | **0,3** |
+
+> ⭐⭐⭐ **A SATU BEZÁRUL, ÉS A TÁMADÓ MINDHÁROM ÚTJA FEDVE VAN:**
+>
+> - **a hamisak egymást hívják** (a legolcsóbb) → a sziget **leszakad** → a séta **100%**;
+> - **a hamisak néhány valódi emberen lógnak** → a séta megvakul (91%), de az a néhány
+>   ember **293–587 zsákutca-ismerőst** cipel, szemben a legrosszabb becsületes **0,3**-mal;
+> - **a hamisak egymást melegítik** (sűrű sziget) → a séta megint **99–100% / 0%**.
+
+⚠️ **A küszöb NEM részletkérdés, és ezt majdnem elrontottam.** Az első mérésnél a zsákutca
+azt jelentette, hogy „rajtam kívül **nincs** ismerőse" — ezzel a V3 jelzése **0** volt, mert
+ott minden hamis **két** valódi emberhez kötődik, tehát egyiknek sem „zsákutcája". A
+küszöböt 3-ra emelve a V3 jelzése **587** lett. *Egy jelzés, ami egyetlen küszöbön áll vagy
+bukik, törékeny — több küszöbbel kell mérni.*
+
+## 11.7 ⛔ ÉS A KELLEMETLEN EREDMÉNY: AMI MŰKÖDIK, AZT A D49/c TILTJA
+
+**A koino-szintű alak nem működik.** A „8 legtöbb bemutatkozású ember részesedése"
+támadóval **1–3%**, támadó nélkül **1%** — vagyis **nincs jelzés**. Ez az az alak, ami a
+**D49/c 3. védőkorlátjával** megférne (*„az összesített nézet a koinóról szóljon, ne
+emberekről"*).
+
+⛔ **Ami működik, az személyre szóló** — és ráadásul **egy becsületes emberre** mutat: arra a
+megtévesztettre, akit a támadó felhasznált. Ez két védőkorlátot is súrol: a D49/c
+1. pontját (*nincs személyre szóló gyanú-pontszám*) és a 2.-at (*a jelzés tájékoztat, nem
+jogosít*).
+
+⚠️ **És egy határeset, amit a modell NEM tartalmaz:** egy tanár, aki harminc diákot fogad
+be, átmenetileg **harminc zsákutca-ismerőst** cipelne — pontosan úgy, mint egy megtévesztett
+ember. *(A modellben ez nem jön elő, mert a becsületesek nem csinálnak tömeges beléptetést.)*
+⭐ A különbség idővel derül ki: a diákok **megismerik egymást**, tehát megszűnnek zsákutcák
+lenni; a hamisak nem. **Ezt külön kell mérni, mielőtt bárki ilyen jelzést beépít.**

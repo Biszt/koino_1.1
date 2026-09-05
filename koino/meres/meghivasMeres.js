@@ -579,6 +579,56 @@ function hidMerese(vilag) {
   return { hidElek, kapcsoltHamis, hamisTagok };
 }
 
+/**
+ * ⭐⭐ A TORLÓDÁS — a jelzés, ami NEM a hamisakat nézi, hanem azokat, akiken lógnak.
+ *
+ * A 11.3/b mérés mutatta meg, hogy hol a rés: ha a támadó minden hamisat egy valódi
+ * emberhez köt, a hamis pont úgy néz ki, mint egy frissen érkezett becsületes ember.
+ * ⭐ De akkor az a NÉHÁNY valódi ember visz el mindent — három ember, fejenként ~293
+ * bemutatkozással olyanok felé, akiknek nincs más ismerősük.
+ *
+ * Két alakban mérjük, mert a kettő nem ugyanaz:
+ *   · KOINO-SZINTŰ (D49/c-vel megfér): a bemutatkozások hányad része koncentrálódik a
+ *     `hany` legtöbbet bemutatkozó emberre? Ez a koinóról szól, nem emberekről.
+ *   · SZEMÉLYES (⚠️ D49/c-vel ÜTKÖZIK): hány „zsákutca-ismerőse" van valakinek — olyan,
+ *     akinek rajta kívül nincs más ismerőse. Ezt csak azért mérjük, hogy lássuk, ELVÁLNA-E
+ *     egyáltalán; a beépítése külön döntés, mert ez már személyre szóló jelzés.
+ */
+function torlodas(vilag, hany) {
+  const b = vilag.b;
+  const fokok = [];
+  let osszes = 0;
+  for (let i = 0; i < b.valodiEmberek; i++) {
+    if (!vilag.tag[i]) continue;
+    fokok.push(vilag.bemutatkozas[i].size);
+    osszes += vilag.bemutatkozas[i].size;
+  }
+  if (!osszes) return 0;
+  fokok.sort((a, c) => c - a);
+  const elso = fokok.slice(0, hany).reduce((a, c) => a + c, 0);
+  return elso / osszes;
+}
+
+/**
+ * Hány „zsákutca-ismerőse" van? — olyan, akinek rajta kívül legfeljebb `fok` ismerőse van.
+ *
+ * ⚠️ A `fok` küszöb NEM részletkérdés: `fok = 1`-nél a jelzés tökéletesen elválik ott, ahol
+ * a támadó minden hamisat EGY valódi emberhez köt — és teljesen elnémul, ha KETTŐHÖZ köti.
+ * Ezért mérjük több küszöbbel: egy jelzés, ami egy küszöbön áll vagy bukik, törékeny.
+ */
+function zsakutcaIsmerosok(vilag, i, fok = 1) {
+  let db = 0;
+  for (const sz of vilag.bemutatkozas[i]) {
+    if (!vilag.tag[sz]) continue;
+    let masIsmeros = 0;
+    for (const t of vilag.bemutatkozas[sz]) {
+      if (t !== i && vilag.tag[t]) masIsmeros++;
+    }
+    if (masIsmeros < fok) db++;
+  }
+  return db;
+}
+
 /** A séta-jelzés mérése: hamis elkapva / becsületes tévesen megjelölve. */
 function jelzesMerese(e, mag) {
   const b = BEALLITAS;
@@ -754,6 +804,52 @@ function main() {
       `${kerekit(atl('kapcsoltHamis'))} (${szazalek(atl('kapcsoltHamis') / atl('hamisTagok'))})`,
     ], hidSzel));
   }
+
+  // ===== 5. A TORLÓDÁS — a rés, amit a séta hagyott =====
+  kiir('');
+  kiir('▶ 5. TORLÓDÁS — feltűnik-e, hogy a hamisak KEVÉS valódi emberen lógnak?');
+  kiir('-'.repeat(84));
+  kiir('   (a séta a hamisat nézi; ez azt nézi, AKIN lóg — a megtévesztett embert)');
+  kiir('');
+  const zsFok = Number(process.env.ZSAKUTCA_FOK ?? 1);
+  kiir(`   (zsákutca-küszöb: akinek rajtam kívül < ${zsFok} ismerőse van)`);
+  kiir('');
+  const torSzel = [30, 14, 18, 20];
+  kiir(sor(['változat', 'a 8 legnagy.', 'megtév. zsákutcái', '⚠️ becsületes LEGTÖBB'], torSzel));
+  for (const v of VALTOZATOK) {
+    const e = vedEredmeny[v.nev];
+    const ertekek = e.eredmenyek.map((r) => {
+      const vilag = r.vilag;
+      const megtev = [...vilag.megtevesztett];
+      const mas = [];
+      for (let i = b.alapitok; i < b.valodiEmberek && mas.length < 300; i++) {
+        if (vilag.tag[i] && !vilag.megtevesztett.has(i)) mas.push(i);
+      }
+      const atlZs = (lista) => (lista.length
+        ? lista.reduce((o, i) => o + zsakutcaIsmerosok(vilag, i, zsFok), 0) / lista.length
+        : 0);
+      // ⚠️ A becsületesek LEGNAGYOBB értéke a lényeg, nem az átlaga: ha egyetlen
+      // becsületes ember is a megtévesztettek szintjére ér, a jelzés őt jelölné meg —
+      // és épp azt, aki a legtöbb új embert fogadja be.
+      const masMax = mas.length
+        ? Math.max(...mas.map((i) => zsakutcaIsmerosok(vilag, i, zsFok)))
+        : 0;
+      return { tor: torlodas(vilag, 8), megtevZs: atlZs(megtev), masMax };
+    });
+    const atl = (mezo) => ertekek.reduce((o, x) => o + x[mezo], 0) / ertekek.length;
+    kiir(sor([
+      v.nev,
+      szazalek(atl('tor')),
+      Math.round(atl('megtevZs') * 10) / 10,
+      Math.round(atl('masMax') * 10) / 10,
+    ], torSzel));
+  }
+  // Támadó nélküli alapvonal — enélkül a százalék önmagában semmit nem mond.
+  const tisztaTor = arEredmeny['V3 — 2 meghívó + jogosítás'].eredmenyek
+    .map((r) => torlodas(r.vilag, 8));
+  kiir('');
+  kiir(`   Támadó NÉLKÜL (V3, alapvonal): a 8 legnagyobb része ` +
+       `${szazalek(tisztaTor.reduce((a, c) => a + c, 0) / tisztaTor.length)}`);
 
   kiir('');
   kiir('='.repeat(84));
