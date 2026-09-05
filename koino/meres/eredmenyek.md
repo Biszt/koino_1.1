@@ -881,3 +881,57 @@ jelzés lenni.
 ⚠️ **Amit nem tudunk:** miért marad 11% a szigetből észrevétlen az „ÉS" olvasatnál — ezek
 azok a hamisak, amiket az egyik lencse átenged. A 11.9 alapján a gyanú az, hogy ezek a
 legkorábban létrehozott, legjobban beágyazott azonosságok, de **ez feltevés, nem mérés.**
+
+## 11.11 ⭐⭐⭐ A REJTŐZKÖDŐ TÁMADÓ ÉS A HÁROM LENCSE (2026-09-06)
+
+*Csaba kifogása a 11.10-re: „az »ÉS« olvasat 11%-os vakfoltja — ez nem tetszik." Két
+válasz született rá: egy **jobb támadó** (mert a régi számok kedvezőbbek voltak a
+valóságnál) és egy **harmadik lencse**.*
+
+### ⚠️ ELŐBB A SAJÁT MODELLEM JAVÍTÁSA: A REJTŐZKÖDŐ TÁMADÓ
+
+Eddig a támadó a **költségét** optimalizálta: a saját hamisait használta meghívónak, mert
+az ingyen van — és ettől a szigete **leszakadt**, tehát a séta tökéletesen látta. ⚠️ Ez
+kedvezőbb kép a valóságnál: egy okosabb támadó a **láthatatlanságát** optimalizálja, és
+**mindig valódi (megtévesztett) embereket használ**, akkor is, ha a szabály nem
+kényszeríti rá. Ez neki **semmivel nem kerül többe** — a megtévesztettek megvannak.
+
+⛔ **És tényleg működik:** az első lencse (sima séta) a V2-nél **100% / 0%-ról
+71% / 22%-ra**, a V4-nél **100% / 0%-ról 89% / 14%-ra** romlik. *A korábbi „tökéletes"
+számok tehát az olcsó támadót írták le, nem a legokosabbat.*
+
+### Az eredmény — három lencse, két támadó (`allandoKorok=1`, 3 megtévesztett)
+
+*„elkapva / tévesen". Az 1. és 2. lencsénél a KEVÉS a gyanús, a 3.-nál a SOK.*
+
+| változat | 1. séta | 2. ismétlés | 3. torlódás | ⭐ 2 A 3-BÓL | MIND A 3 |
+|---|---|---|---|---|---|
+| **olcsó támadó** | | | | | |
+| V2 — 1 meghívó | 100% / 0% | 100% / 17% | 100% / 0% | **100% / 0%** | 100% / 0% |
+| V2b — + jogosítás | 89% / 10% | 100% / 9% | 100% / 9% | **100% / 2%** | 89% / 0% |
+| V4 — 3 meghívó | 100% / 0% | 100% / 34% | 100% / 0% | **100% / 0%** | 100% / 0% |
+| **⭐ rejtőzködő támadó** | | | | | |
+| V2 — 1 meghívó | ⛔ 71% / 22% | 100% / 17% | 100% / 14% | **100% / 8%** | 71% / 0% |
+| V2b — + jogosítás | ⛔ 73% / 14% | 100% / 9% | 100% / 9% | ⭐ **100% / 2%** | 73% / 0% |
+| V3 — 2 + jogosítás | 78% / 8% | 100% / 13% | 100% / 25% | **100% / 6%** | 78% / 0% |
+| V4 — 3 meghívó | 89% / 14% | 100% / 34% | 100% / 22% | **100% / 12%** | 89% / 1% |
+
+> ⭐⭐⭐ **A VAKFOLT BEZÁRUL — a „2 a 3-ból" olvasattal: 100% elkapva, 0–12% tévesen**,
+> **mindkét támadó ellen**. Az egyhangúság („mind a 3") ennél rosszabb: kevesebbet kap el
+> (71–89%), cserébe majdnem nulla tévedésért.
+
+⭐ **Miért működik:** a rejtőzködő támadó **a séta ellen véd, de a másik kettőt ezzel
+kinyitja.** Ha minden hamisat valódi emberre aggat, akkor (a) azok az emberek
+zsákutca-tömeget cipelnek → a **torlódás** meglátja, és (b) a hamisak nem tudnak
+ismétlődő találkozásokat felmutatni → az **ismétlődés** meglátja. *Ugyanaz a satu-alakzat:
+amivel az egyik lencse elől rejtőzik, azzal a másik kettő elé lép.*
+
+### ⛔ ÉS A LEGFONTOSABB KORLÁT — mindkét megmaradó lencse UGYANAZON az arányon áll
+
+⚠️ **Ez a mérés 3 megtévesztett emberrel futott, fejenként ~293 hamissal.** Mind a torlódás
+(*„egy csapatnyi zsákutcát cipel"*), mind az ismétlődés-csapda (11.9 H2: *„a megtévesztett
+környezete elhamisodik"*) **abból él, hogy kevés ember hordoz sok hamisat**.
+
+⛔ **Ha a támadónak sok megtévesztett embere volna, fejenként kevés hamissal, mindkét lencse
+gyengülne — egyszerre.** Vagyis a két „független" lencsének **közös töréspontja** van, és a
+100%-ot addig nem szabad elhinni, amíg ezt meg nem mértük. *(Következik: 11.12.)*

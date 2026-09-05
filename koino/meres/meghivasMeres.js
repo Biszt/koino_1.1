@@ -77,6 +77,9 @@ const BEALLITAS = {
   hamisProbalkozas: 40,     // a támadó körönként ennyi hamis azonosságot próbál bevinni
   melegit: 0,               // ⭐ 1 = a hamisak egymásnak is bemutatkoznak (SŰRŰ sziget)
   kitarto: 0,               // ⭐⭐ 1 = a támadó MINDEN KÖRBEN újra jelöli a bemutatkozásait
+  rejtozo: 0,               // ⭐⭐ 1 = REJTŐZKÖDŐ támadó: a KÖLTSÉG helyett a LÁTHATATLANSÁGOT
+                            //    optimalizálja — valódi emberekre aggatja a hamisait akkor is,
+                            //    amikor a szabály nem kényszeríti rá (lásd `tamadoKore`)
   allandoKorok: 0,          // ⭐⭐ 1 = ÁLLANDÓ TÁRSASÁGOK (család, munkahely) — lásd lentebb
   korMeret: 8,              // egy állandó társaság ekkora
   korTalalkozas: 0.5,       // egy állandó társaság ekkora eséllyel jön össze körönként
@@ -463,16 +466,34 @@ function tamadoKore(vilag, valtozat) {
     const sajat = hamisak.filter((h) => hivhat(vilag, valtozat, h));
     const valodiJogosult = megtevesztettek.filter((m) => hivhat(vilag, valtozat, m));
 
+    // ⭐⭐ KÉT TÁMADÓI STRATÉGIA, ÉS EZ A MÉRÉS LÉNYEGE:
+    //
+    //   OLCSÓ (alap)      — a saját hamisait használja meghívónak, mert az ingyen van.
+    //                       Ettől viszont a szigete LESZAKAD a valódi világról, és a séta
+    //                       tökéletesen látja.
+    //   ⭐ REJTŐZKÖDŐ     — valódi (megtévesztett) embereket használ meghívónak MINDIG,
+    //                       akkor is, ha nem kötelező. Ez semmivel sem kerül többe (a
+    //                       megtévesztettek megvannak), viszont MINDEN hamisat egy valódi
+    //                       emberhez köt — és ettől a hamis úgy néz ki, mint egy frissen
+    //                       érkezett becsületes ember.
+    //
+    // ⚠️ Az első mérésekben CSAK az olcsó támadó szerepelt, ezért a V2/V4 „100% / 0%"
+    // eredménye kedvezőbb volt a valóságnál. Ez a kapcsoló javítja ki.
+    const sorrend = b.rejtozo ? [valodiJogosult, sajat] : [sajat, valodiJogosult];
+
     let valodiKellett = 0;
     const hivok = [];
-    for (const h of sajat) {
-      if (hivok.length >= valtozat.kellMeghivo) break;
-      hivok.push(h);
+    for (const lista of sorrend) {
+      for (const ki of lista) {
+        if (hivok.length >= valtozat.kellMeghivo) break;
+        hivok.push(ki);
+        if (ki < b.valodiEmberek) valodiKellett++;
+      }
     }
-    for (const m of valodiJogosult) {
-      if (hivok.length >= valtozat.kellMeghivo) break;
-      hivok.push(m);
-      valodiKellett++;
+    // ⭐ A rejtőzködő akkor is köt egy valódi embert a hamishoz, ha meghívó nem kellett
+    // tőle (pl. a nyílt változatban) — a láthatatlanság ára nála nulla.
+    if (b.rejtozo && valodiJogosult.length) {
+      bemutatkoznak(vilag, valodiJogosult[p % valodiJogosult.length], uj);
     }
 
     // A meghívás előtt bemutatkoznak vele (a meghívó ismeri, akit behív).
@@ -732,15 +753,41 @@ function jelzesMerese(e, mag) {
   if (!hMinta.length || !vMinta.length) return null;
 
   const kerdezok = keverve(vilag, vMinta).slice(0, 5);
-  // ⭐ FONTOS: mindkét lencse UGYANARRA a párra fut, hogy az ÉS/VAGY összevethető legyen.
+
+  // ⭐⭐ A HARMADIK LENCSE — a torlódás, személyre fordítva.
+  //
+  // A 11.6 azt mérte, hogy a MEGTÉVESZTETT ember sok zsákutca-ismerőst cipel. Ahhoz, hogy
+  // ez a másik két lencse mellé álljon, ugyanarra a személyre kell mondania valamit:
+  // ⭐ „azon lógok-e, aki egy csapatnyi zsákutcát cipel?" — vagyis a szomszédaim közül a
+  // legterheltebb hány zsákutca-ismerőst visz. Egy frissen érkezett becsületes ember egy
+  // normális tagon lóg (kevés zsákutca); egy hamis azon a néhány emberen, akire a támadó
+  // az egész szigetét aggatta.
+  const zsMemo = new Map();
+  const zsak = (i) => {
+    if (!zsMemo.has(i)) zsMemo.set(i, zsakutcaIsmerosok(vilag, i, 3));
+    return zsMemo.get(i);
+  };
+  const harmadik = (cel) => {
+    let legnagyobb = 0;
+    for (const sz of vilag.bemutatkozas[cel]) {
+      if (!vilag.tag[sz]) continue;
+      const ertek = zsak(sz);
+      if (ertek > legnagyobb) legnagyobb = ertek;
+    }
+    return legnagyobb;
+  };
+
+  // ⭐ FONTOS: mind a három lencse UGYANARRA a párra fut, hogy az ÉS/VAGY összevethető legyen.
   const parok = (celok) => {
     const lista = [];
     for (const cel of celok) {
+      const harom = harmadik(cel);
       for (const kerdezo of kerdezok) {
         if (kerdezo === cel) continue;
         lista.push({
           egy: tengerTalalkozas(vilag, kerdezo, cel, b.setaDb, b.setaHossz, 1),
           ket: tengerTalalkozas(vilag, kerdezo, cel, b.setaDb, b.setaHossz, b.elSuly),
+          harom,
         });
       }
     }
@@ -750,27 +797,39 @@ function jelzesMerese(e, mag) {
   const vPar = parok(vMinta);
   const hPar = parok(hMinta);
 
-  /** A legjobb küszöb egy lencséhez: a legnagyobb (elkapva − tévesen) különbség. */
-  const legjobbKuszob = (mezo) => {
+  /**
+   * A legjobb küszöb egy lencséhez: a legnagyobb (elkapva − tévesen) különbség.
+   * ⚠️ Az irány lencsénként más: a séta-lencséknél a KEVÉS a gyanús („nem értünk össze"),
+   * a torlódás-lencsénél a SOK („olyanon lóg, aki egy csapatnyi zsákutcát cipel").
+   */
+  const legjobbKuszob = (mezo, felfele) => {
     let legjobb = { josag: -1, kuszob: 0 };
     const ertekek = [...new Set([...vPar, ...hPar].map((x) => x[mezo]))].sort((a, c) => a - c);
+    const talal = (x, kuszob) => (felfele ? x[mezo] >= kuszob : x[mezo] <= kuszob);
     for (const kuszob of ertekek) {
-      const elkapva = hPar.filter((x) => x[mezo] <= kuszob).length / hPar.length;
-      const tevesen = vPar.filter((x) => x[mezo] <= kuszob).length / vPar.length;
+      const elkapva = hPar.filter((x) => talal(x, kuszob)).length / hPar.length;
+      const tevesen = vPar.filter((x) => talal(x, kuszob)).length / vPar.length;
       if (elkapva - tevesen > legjobb.josag) legjobb = { josag: elkapva - tevesen, kuszob };
     }
     return legjobb.kuszob;
   };
 
-  const k1 = legjobbKuszob('egy');
-  const k2 = legjobbKuszob('ket');
+  const k1 = legjobbKuszob('egy', false);
+  const k2 = legjobbKuszob('ket', false);
+  const k3 = legjobbKuszob('harom', true);
   const arany = (lista, felt) => (lista.length ? lista.filter(felt).length / lista.length : 0);
 
+  const l1 = (x) => x.egy <= k1;
+  const l2 = (x) => x.ket <= k2;
+  const l3 = (x) => x.harom >= k3;
   const jelol = {
-    egy: (x) => x.egy <= k1,
-    ket: (x) => x.ket <= k2,
-    es: (x) => x.egy <= k1 && x.ket <= k2,
-    vagy: (x) => x.egy <= k1 || x.ket <= k2,
+    egy: l1,
+    ket: l2,
+    harom: l3,
+    es: (x) => l1(x) && l2(x) && l3(x),
+    // ⭐ A KETTŐ A HÁROMBÓL: nem kell mindegyiknek egyetértenie, de egyedül egyik sem dönt.
+    tobbseg: (x) => [l1(x), l2(x), l3(x)].filter(Boolean).length >= 2,
+    vagy: (x) => l1(x) || l2(x) || l3(x),
   };
   const eredmeny = {};
   for (const [nev, felt] of Object.entries(jelol)) {
@@ -931,8 +990,9 @@ function main() {
   kiir('');
   kiir(`   1. lencse: minden él · 2. lencse: csak a ≥${b.elSuly}× ismételt él`);
   kiir('');
-  const jelSzel = [26, 13, 13, 15, 15];
-  kiir(sor(['változat', '1. lencse', '2. lencse', 'MINDKETTŐ (ÉS)', 'BÁRMELYIK (VAGY)'], jelSzel));
+  const jelSzel = [24, 12, 12, 12, 13, 13];
+  kiir(sor(['változat', '1. séta', '2. ismétlés', '3. torlódás',
+            '⭐ 2 A 3-BÓL', 'MIND A 3 (ÉS)'], jelSzel));
   kiir('   ' + '(elkapva / tévesen)'.padStart(30));
   const jelzesEredmeny = {};
   for (const v of VALTOZATOK) {
@@ -950,7 +1010,8 @@ function main() {
       const te = jelzesek.reduce((o, j) => o + j[nev].tevesen, 0) / jelzesek.length;
       return `${szazalek(el)} / ${szazalek(te)}`;
     };
-    kiir(sor([v.nev, par('egy'), par('ket'), par('es'), par('vagy')], jelSzel));
+    kiir(sor([v.nev, par('egy'), par('ket'), par('harom'),
+              par('tobbseg'), par('es')], jelSzel));
   }
 
   // ===== 4. MIÉRT? — a híd, ami a 3. táblázat számait megmagyarázza =====
