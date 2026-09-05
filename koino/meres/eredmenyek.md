@@ -1032,3 +1032,76 @@ meg, fejenként 2 hamissal, a 0,3-as alapvonal mellett a kontraszt elvékonyodna
 fős közösségben az 500 ember **a közösség harmada** — ott a D18/0 értelmében már nem
 Sybil-védelemről beszélünk. **A mért tartomány (3–50, azaz 0,2–3%) a valódi fenyegetés
 tartománya.**
+
+---
+
+# 12. ⭐⭐⭐ A KÉT LÉPCSŐ ÉS A LÁNC ALAKJA (2026-09-06)
+
+*Csaba szerkezete (D56–D59) és az állítása: „nem lenne annyira szerteágazó és mély, mivel
+nincsen szabad tanúsítgatás, ezért »középre« fognak mutatni a láncok, ahol meg már
+összefutások lesznek." — Eszköz: [`meghivasMeres.js`](meghivasMeres.js) `LEPCSO=1` móddal.*
+
+## 12.1 ⚠️ ELŐBB KÉT SAJÁT HIBA, MERT AZ ELSŐ FUTÁS ÉRVÉNYTELEN VOLT
+
+**(1) Mindenki felhatalmazott mindenkit**, akivel találkozott — ettől **1428 lett tanúsító
+az 1429-ből**, vagyis a mérendő mechanizmus **abban a világban nem is létezett**. A
+lánc-alak száma (296 ős) így értelmetlen volt.
+⭐ **Javítás:** egy 2. lépcsős **három** embert hatalmaz fel, és nem véletlenszerűen, hanem
+**akit a legjobban ismer** (a legtöbbször találkoztak — az ismétlődés-súly, ami Csaba
+korábbi ötletéből már a modellben volt).
+
+**(2) A 20 000 fős világ első futása „0,5 mélységet" adott** — csodálatos szám, ami
+valójában azt jelentette, hogy **a közösség fel sem nőtt**: 11 159 tagból csak 118 jutott a
+2. lépcsőre, tehát szinte mindenki alapító volt vagy egy lépésre tőle.
+⚠️ *A jó szám ugyanolyan gyanús, mint a rossz, amíg nem nézzük meg, mitől jó.*
+
+## 12.2 ⭐⭐⭐ AZ EREDMÉNY: A GYÖKÉRIG MENŐ ELLENŐRZÉS OLCSÓ
+
+*Az ős-halmaz = hány KÜLÖNBÖZŐ embert kell megnézni, ha mindenkit csak egyszer nézünk meg
+(gyorsítótár). Ez a valódi ár — nem a 3^mélység.*
+
+| közösség | ős-halmaz (átlag / legrosszabb) | mélység (átlag / max) | tanúsítók aránya |
+|---|---|---|---|
+| 1 500 | **17,7** / 62 | 2,9 / 5 | 23% |
+| 6 000 | **30,1** / 99 | 3,7 / 7 | 23% |
+| 20 000 | **40,7** / 171 | 4,3 / 8 | 24% |
+
+⭐⭐ **A növekedés LOGARITMIKUS, és feltűnően egyenletes: kettőzésenként ≈ +6 ős és
+≈ +0,37 szint.** *(1500→6000: +12,4 ős két kettőzésre; 6000→20000: +10,6 ős 1,74
+kettőzésre — vagyis 6,2 és 6,1 kettőzésenként.)*
+
+> ⭐⭐⭐ **Ha ez a vonal tartja magát, egymilliárd e-embernél ≈ 136 embert kell megnézni,
+> ≈ 10 szint mélyen.** Ez **semmi** — és Csabának igaza lett: *„a láncok középre mutatnak,
+> ahol már összefutások lesznek."*
+
+⚠️ **Ez EXTRAPOLÁCIÓ három pontból, 15 kettőzésen át.** A modell szerkezete (földrajz,
+találkozó-méret, 3 felhatalmazás fejenként) végig ugyanaz volt; egy valódi milliárdos
+közösség máshogy is alakulhat. **A vonal biztató, de nem bizonyíték.**
+
+## 12.3 ⭐ MIT JELENT EZ A D59-RE (a mélység-korlát)
+
+A **D59** azért született, hogy a rekurzió korlátos legyen. ⭐ **A mérés szerint magától is
+korlátos** — a gyorsítótár és a láncok összefutása elvégzi a munkát.
+
+- **A determinizmust nem a korlát adja:** ha mindenki a **gyökérig** ellenőriz, akkor is
+  mindenki ugyanoda jut — sőt **jobban**, mert nincs `D` paraméter, amiben eltérhetnének.
+- **A korlát haszna más lett:** ha valakinek **hiányoznak szeletek**, kevesebbet kell
+  látnia. Vagyis **adat-elérhetőségi tartalék**, nem számítási szükség.
+
+▶ **Javaslat:** menjen az ellenőrzés a **gyökérig** (Csaba ösztöne), és a `D` maradjon
+**elhagyható biztonsági szelep**. ⚠️ *A döntés Csabáé: a korlát BIZTOSAN olcsó, a mérés
+csak VALÓSZÍNŰSÍTI, hogy nem kell.*
+
+## 12.4 ⛔ ÉS AMI NEM JAVULT: A PÉNZTÁRCA KAPUJA UGYANOLYAN ALAKÚ
+
+**Minden hamis azonosság megkapta a pénztárcát** (1500-nál 880/880, 20 000-nél 2080/2080).
+Az ok: a megtévesztett emberek **tanúsítók is**, és egy megvett tanúsító **korlátlanul
+tanúsíthat**.
+
+> ⛔ **A 2. lépcső kapuja tehát ugyanaz az alakzat, mint az 1.-é (11.1): nem véd, hanem
+> ÁRAT SZAB** — *„vegyél meg három tanúsítót"*.
+
+⭐ **Ez nem cáfolja a D56-ot** — a D11 célja teljesül, mert a pénz drágább lett a
+tagságnál. De azt jelenti, hogy **a védelem itt is a jelzés**, nem a kapu: egy tanúsító,
+aki 293 embert tanúsított, akiknek **nincs más tanúsítójuk**, pontosan az a **kontraszt**,
+amit a 11.13-ban 100%-osnak mértünk. ⏳ *A tanúsítói torlódás mérése hátra van.*

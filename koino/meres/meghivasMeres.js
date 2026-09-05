@@ -84,6 +84,11 @@ const BEALLITAS = {
   korMeret: 8,              // egy állandó társaság ekkora
   korTalalkozas: 0.5,       // egy állandó társaság ekkora eséllyel jön össze körönként
   elSuly: 1,                // ⭐⭐ a séta csak ennyiszer ismételt élen lép (1 = mindegyiken)
+  // ⭐⭐ A KÉT LÉPCSŐ (D56–D59) — a `LEPCSO=1` móddal mérhető
+  tanusitasKell: 3,         // ennyi tanúsítás kell a 2. lépcsőhöz (a pénztárcához)
+  felhatalmazasKell: 5,     // ennyi felhatalmazás kell ahhoz, hogy valaki TANÚSÍTHASSON (N)
+  felhatalmazasAd: 3,       // ⚠️ egy 2. lépcsős ENNYI embert hatalmaz fel összesen — a
+                            //    választás nem véletlen: akit a legjobban ismer
   setaDb: 200,              // egy jelzéshez ennyi séta indul
   setaHossz: 10,            // egy séta ennyi lépés
   minta: 30,                // ennyi fős minta mindkét oldalról a jelzés-méréshez
@@ -116,6 +121,10 @@ function ujVilag(b, veletlen) {
     // ⭐ Az önellátás nyomon követése: bejutott hamisonként hány VALÓDI meghívó kellett.
     hamisMeghivoi: [],
     allandoKorok: [],       // ⭐⭐ állandó társaságok (család, munkahely, osztály)
+    // ===== A KÉT LÉPCSŐ =====
+    lepcso2: [],            // átment-e a 2. lépcsőn (van-e pénztárcája)
+    felhatalmazo: [],       // Set — kik hatalmazták fel (csak 2. lépcsősök számítanak)
+    tanusitoi: [],          // Set — kik tanúsították (ez a lánc, ezen megyünk vissza)
   };
 
   for (let i = 0; i < b.valodiEmberek; i++) {
@@ -128,6 +137,9 @@ function ujVilag(b, veletlen) {
     vilag.suly.push(new Map());
     vilag.meghivo.push(new Set());
     vilag.kiadott.push(0);
+    vilag.lepcso2.push(false);
+    vilag.felhatalmazo.push(new Set());
+    vilag.tanusitoi.push(new Set());
   }
 
   // ===== AZ ALAPÍTÁS — a rekurzió alapesete, nem kivétel =====
@@ -145,6 +157,8 @@ function ujVilag(b, veletlen) {
     vilag.alapito[i] = true;
     vilag.belepes[i] = -1;
     vilag.elsoTalalkozas[i] = -1;
+    // ⭐ Az alapítók a 2. lépcsőn is bent vannak — ez a rekurzió ALAPESETE, nem kivétel.
+    vilag.lepcso2[i] = true;
   }
   // Az alapítók a saját környezetükben ismerik egymást (párosával, nem mind-mindet).
   for (let a = 0; a + 1 < b.alapitok; a += 2) {
@@ -196,6 +210,9 @@ function ujHamis(vilag) {
   vilag.suly.push(new Map());
   vilag.meghivo.push(new Set());
   vilag.kiadott.push(0);
+  vilag.lepcso2.push(false);
+  vilag.felhatalmazo.push(new Set());
+  vilag.tanusitoi.push(new Set());
   return i;
 }
 
@@ -929,7 +946,223 @@ function atlagolva(valtozat, megtevesztett, magok) {
   };
 }
 
+
+// ===================================
+// A KET LEPCSO (D56-D59) — es a lanc alakja
+// ===================================
+//
+// Csaba szerkezete: az 1. lepcso olcso (egy meghivo, es minden mehet), a 2. lepcso draga
+// (harom tanusitas felhatalmazott tanusitotol) — mert ott van a penztarca.
+//
+// CSABA ALLITASA, AMIT EZ MER (2026-09-06): "nem lenne annyira szerteagazo es mely, mivel
+// nincsen szabad tanusitgatas, ezert kozepre fognak mutatni a lancok, ahol meg mar
+// osszefutasok lesznek." — vagyis a gyokerig meno ellenorzes talan nem is draga.
+// FIGYELEM: ez GRAF-ALLITAS, tehat merheto, nem vitathato.
+
+/** Felhatalmazas: 2. lepcsos e-emberek jelolik ki, kiben biznak tanusitokent. */
+function felhatalmazasokKore(vilag) {
+  const b = vilag.b;
+  if (!vilag.felhatalmazottjai) vilag.felhatalmazottjai = [];
+  for (let i = 0; i < b.valodiEmberek; i++) {
+    if (!vilag.lepcso2[i]) continue;
+    if (!vilag.felhatalmazottjai[i]) vilag.felhatalmazottjai[i] = new Set();
+    const sajat = vilag.felhatalmazottjai[i];
+    if (sajat.size >= b.felhatalmazasAd) continue;
+
+    // ⚠️ A VÁLASZTÁS NEM VÉLETLEN, ÉS NEM IS MINDENKI: azt hatalmazom fel, akit a
+    // LEGJOBBAN ismerek — akivel a legtöbbször találkoztam (a `suly`, amit már mérünk).
+    //
+    // ⚠️⚠️ AZ ELSŐ VÁLTOZAT EZT NEM KORLÁTOZTA: mindenki felhatalmazott mindenkit, akivel
+    // találkozott — és ettől MINDENKI tanúsító lett (1428 az 1429-ből). A mechanizmus,
+    // amit mérni akartunk, ebben a világban NEM IS LÉTEZETT. A lánc-alak mért száma is
+    // értelmetlen volt, mert egy olyan gráfban mértük, ahol nincs szűk tanúsítói kör.
+    const jeloltek = [];
+    for (const sz of vilag.bemutatkozas[i]) {
+      if (!vilag.tag[sz] || sz >= b.valodiEmberek) continue;
+      if (sajat.has(sz)) continue;
+      jeloltek.push([sz, vilag.suly[i].get(sz) ?? 0]);
+    }
+    jeloltek.sort((a, c) => c[1] - a[1]);
+    for (const [sz] of jeloltek) {
+      if (sajat.size >= b.felhatalmazasAd) break;
+      sajat.add(sz);
+      // Emberenként CSAK EGY — a Set gondoskodik róla.
+      vilag.felhatalmazo[sz].add(i);
+    }
+  }
+}
+
+/** Tanusithat-e? — a felhatalmazoi kozul hany 2. lepcsos, es eleri-e az N-t. */
+function tanusithat(vilag, i) {
+  if (vilag.alapito[i]) return true;
+  if (!vilag.lepcso2[i]) return false;
+  let db = 0;
+  for (const f of vilag.felhatalmazo[i]) if (vilag.lepcso2[f]) db++;
+  return db >= vilag.b.felhatalmazasKell;
+}
+
+/** A 2. lepcso kore: a felhatalmazott tanusitok tanusitjak, akikkel talalkoztak. */
+function tanusitasokKore(vilag) {
+  const b = vilag.b;
+  const tanusitok = [];
+  for (let i = 0; i < b.valodiEmberek; i++) if (tanusithat(vilag, i)) tanusitok.push(i);
+
+  for (const t of tanusitok) {
+    for (const sz of vilag.bemutatkozas[t]) {
+      if (!vilag.tag[sz] || vilag.lepcso2[sz]) continue;
+      vilag.tanusitoi[sz].add(t);
+    }
+  }
+  let ujak = 0;
+  for (let i = 0; i < vilag.tag.length; i++) {
+    if (vilag.lepcso2[i] || !vilag.tag[i]) continue;
+    if (vilag.tanusitoi[i].size >= b.tanusitasKell) { vilag.lepcso2[i] = true; ujak++; }
+  }
+  return ujak;
+}
+
+/**
+ * A LANC ALAKJA — ennyibe kerul VALOBAN a gyokerig meno ellenorzes.
+ *
+ * Visszafele jarjuk a tanusitoi lancot az alapitokig, es ket szamot merunk:
+ *   - OS-HALMAZ: hany KULONBOZO embert kell egyaltalan megnezni (gyorsitotarral,
+ *     vagyis mindenkit csak egyszer). EZ a valodi ar.
+ *   - MELYSEG: hany szint az alapitokig.
+ * A ketto kulonbsege a lenyeg: ha a lancok "kozepre" futnak ossze, az os-halmaz
+ * NAGYSAGRENDDEL kisebb, mint amit a 3^melyseg sejtetne.
+ */
+function lancMerese(vilag, kezdo) {
+  const latott = new Set([kezdo]);
+  let szint = [kezdo];
+  let melyseg = 0;
+  while (szint.length) {
+    const kovetkezo = [];
+    for (const i of szint) {
+      if (vilag.alapito[i]) continue;          // a gyoker: itt megall
+      for (const t of vilag.tanusitoi[i]) {
+        if (latott.has(t)) continue;           // a gyorsitotar: mindenkit egyszer
+        latott.add(t);
+        kovetkezo.push(t);
+      }
+    }
+    if (!kovetkezo.length) break;
+    szint = kovetkezo;
+    melyseg++;
+  }
+  return { osHalmaz: latott.size - 1, melyseg };
+}
+
+/** Egy teljes futas a ket lepcsovel. */
+function lepcsoFuttatas(megtevesztettSzam, mag) {
+  const b = BEALLITAS;
+  const vilag = ujVilag(b, veletlenGenerator(mag));
+  const valtozat = { nev: 'ket lepcso', kellMeghivo: 1, hivoFeltetel: 'tag' };
+
+  for (let kor = 0; kor < b.korok; kor++) {
+    vilag.aktualisKor = kor;
+    talalkozokKore(vilag, kor);
+    meghivasokKore(vilag, valtozat);
+    valodiakFelvetele(vilag, valtozat, kor);
+    felhatalmazasokKore(vilag);
+    tanusitasokKore(vilag);
+
+    if (kor === b.tamadasKezdete) megtevesztettekValasztasa(vilag, megtevesztettSzam);
+    if (kor >= b.tamadasKezdete) {
+      tamadoKore(vilag, valtozat);
+      // A tamado a 2. lepcsore is tor: a megtevesztett TANUSITOK tanusitjak a hamisait.
+      const megtevTanusitok = [...vilag.megtevesztett].filter((m) => tanusithat(vilag, m));
+      for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
+        if (!vilag.tag[i] || vilag.lepcso2[i]) continue;
+        for (const t of megtevTanusitok) vilag.tanusitoi[i].add(t);
+        if (vilag.tanusitoi[i].size >= b.tanusitasKell) vilag.lepcso2[i] = true;
+      }
+    }
+  }
+  return vilag;
+}
+
+function lepcsoMeres() {
+  const b = kornyezetbol(BEALLITAS);
+  const magok = (process.env.MAGOK ?? '1,2,3,4').split(',').map(Number);
+  const megtevesztett = Number(process.env.MEGTEVESZTETT ?? 3);
+
+  kiir('');
+  kiir('A KET LEPCSO MERESE (D56-D59) — a penztarca kapuja es a lanc alakja');
+  kiir('='.repeat(84));
+  kiir('');
+  kiir('  ' + b.valodiEmberek + ' ember - ' + b.alapitok + ' alapito - ' + b.korok +
+       ' kor - ' + magok.length + ' mag - ' + megtevesztett + ' megtevesztett');
+  kiir('  2. lepcso: ' + b.tanusitasKell + ' tanusitas - tanusithat: ' +
+       b.felhatalmazasKell + ' felhatalmazas 2. lepcsosoktol');
+  kiir('');
+
+  const sorok = [];
+  for (const mag of magok) {
+    const vilag = lepcsoFuttatas(megtevesztett, mag);
+    let tag = 0, lepcso2 = 0, tanusito = 0, hamisTag = 0, hamisLepcso2 = 0;
+    for (let i = 0; i < b.valodiEmberek; i++) {
+      if (vilag.tag[i]) tag++;
+      if (vilag.lepcso2[i]) lepcso2++;
+      if (tanusithat(vilag, i)) tanusito++;
+    }
+    for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
+      if (vilag.tag[i]) hamisTag++;
+      if (vilag.lepcso2[i]) hamisLepcso2++;
+    }
+
+    const jeloltek = [];
+    for (let i = b.alapitok; i < b.valodiEmberek; i++) if (vilag.lepcso2[i]) jeloltek.push(i);
+    const minta = keverve(vilag, jeloltek).slice(0, 40);
+    const mertek = minta.map((i) => lancMerese(vilag, i));
+    const atl = (mezo) => (mertek.length
+      ? mertek.reduce((o, x) => o + x[mezo], 0) / mertek.length : 0);
+    const max = (mezo) => (mertek.length ? Math.max(...mertek.map((x) => x[mezo])) : 0);
+    sorok.push({ mag, tag, lepcso2, tanusito, hamisTag, hamisLepcso2,
+                 osAtl: atl('osHalmaz'), osMax: max('osHalmaz'),
+                 melyAtl: atl('melyseg'), melyMax: max('melyseg') });
+  }
+
+  const atlag = (mezo) => sorok.reduce((o, x) => o + x[mezo], 0) / sorok.length;
+  const legnagyobb = (mezo) => Math.max(...sorok.map((x) => x[mezo]));
+
+  kiir('1. A KET LEPCSO — ki jut at, es bejut-e a tamado a penztarcahoz?');
+  kiir('-'.repeat(84));
+  const sz1 = [36, 14];
+  kiir(sor(['', 'atlag'], sz1));
+  kiir(sor(['valodi 1. lepcsos (tag)', kerekit(atlag('tag'))], sz1));
+  kiir(sor(['valodi 2. lepcsos (penztarca)', kerekit(atlag('lepcso2'))], sz1));
+  kiir(sor(['ebbol tanusithat', kerekit(atlag('tanusito'))], sz1));
+  kiir(sor(['HAMIS 1. lepcsos', kerekit(atlag('hamisTag'))], sz1));
+  kiir(sor(['HAMIS 2. lepcsos (penztarca)', kerekit(atlag('hamisLepcso2'))], sz1));
+
+  kiir('');
+  kiir('2. A LANC ALAKJA — mennyibe kerul a GYOKERIG meno ellenorzes?');
+  kiir('-'.repeat(84));
+  kiir('   (40 fos minta - a gyorsitotar miatt mindenkit csak EGYSZER nezunk meg)');
+  kiir('');
+  const sz2 = [36, 14, 14];
+  kiir(sor(['', 'atlag', 'legnagyobb'], sz2));
+  kiir(sor(['OS-HALMAZ (hany embert kell megnezni)',
+            Math.round(atlag('osAtl') * 10) / 10, legnagyobb('osMax')], sz2));
+  kiir(sor(['MELYSEG (hany szint az alapitokig)',
+            Math.round(atlag('melyAtl') * 10) / 10, legnagyobb('melyMax')], sz2));
+
+  kiir('');
+  kiir('='.repeat(84));
+  kiir('');
+  kiir('MIT KELL NEZNI:');
+  kiir('  - HAMIS 2. lepcsos: ha ez nem nulla, a penztarca kapuja lyukas.');
+  kiir('  - OS-HALMAZ: EZ a gyokerig meno ellenorzes valodi ara. Ha kicsi marad a');
+  kiir('    kozosseg meretehez kepest, akkor Csabanak igaza van: a lancok osszefutnak,');
+  kiir('    es NEM KELL melyseg-korlat (D59).');
+  kiir('  - valodi 2. lepcsos: no-e egyaltalan a hitelesitettek kore, vagy a');
+  kiir('    felhatalmazasi kuszob befagyasztja.');
+  kiir('');
+}
+
 function main() {
+  // A ket lepcso kulon mod, hogy a hat valtozat merese erintetlen maradjon.
+  if (process.env.LEPCSO) return lepcsoMeres();
   const b = kornyezetbol(BEALLITAS);
   const magok = (process.env.MAGOK ?? '1,2,3,4').split(',').map(Number);
   const megtevesztett = Number(process.env.MEGTEVESZTETT ?? 3);
