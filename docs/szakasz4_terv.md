@@ -49,10 +49,22 @@
 > elfoglalja: 880 hamis horgony) · ⛔ és a *„kevés kapcsolata van, tehát gyanús"* jelzés
 > (31/41/45% téves megjelölés, épp a magányosra és a frissen érkezettre).
 >
-> ▶️ **A KÖVETKEZŐ MUNKA:** a bemutatkozás **üzenet-alakja** (protokoll, a 3.4 mintájára) ·
-> **mi szivárog egy séta közben** · és a 8/d mérésének **megismétlése valódi
-> bemutatkozás-gráfon** (eddig a tanúsítási gráfon futott). ⚠️ Kód még nincs — a
-> `szigetMeres.js` gráf-kísérlet, nem koino-kísérlet.
+> ▶️ **A MEGÉPÍTÉS TERVE KÉSZ (2026-09-05): a 9/b szakasz** — tíz lépés (4.0–4.9), abban a
+> sorrendben, ahogy a 9. szabály diktálja, mindegyiknél az illesztéssel és a méréssel.
+> ⭐ **A vízválasztó a lépések közt:** a **4.1–4.4 a LÁNC** (kemény mag, offline dönt), a
+> **4.5–4.8 a MÁSODIK RÉTEG** (jelzés és bemutatkozás — élő és **elhagyható**), a 4.9 pedig
+> a `lancGyoker` lefoglalt helyét zárja le.
+>
+> ⚠️ **HÁROM DÖNTÉS VÁR CSABÁRA, mielőtt kód készül** (mind a 9/b-ben, javaslattal együtt):
+> **D51** — a `k` **paraméter**, nem méret-küszöb (`k = 0` a kis koinóban), mert a
+> *„mekkora méret fölött"* maga is globális szám lenne · **D52** — a tanúsítás **a
+> tanúsított szeletébe** kerül (ettől lesz a „kapott" oldal korlátos lekérdezés) · ⚠️ **D53**
+> — a keret **a kiadás oldalán kemény, a befogadás oldalán jelzés**; ez oldja fel a
+> rekurziót, *és ez a szakasz legfontosabb eldöntetlen pontja*, mert a HOL TARTUNK a keretet
+> a kemény magban sorolja, a D49/a viszont csak a `k`-t és a befagyasztást.
+>
+> ⚠️ **Kód még nincs** — a `szigetMeres.js` gráf-kísérlet, nem koino-kísérlet. A 8/d mérését
+> **valódi bemutatkozás-gráfon meg kell ismételni** (eddig a tanúsítási gráfon futott).
 
 ---
 
@@ -801,6 +813,313 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 
 ---
 
+## 9/b. ⭐ A MEGÉPÍTÉS TERVE — a lépések sorrendben (2026-09-05)
+
+*Eddig a szakasz a **miért**-ről szólt. Ez a rész a **mit és milyen sorrendben** — a Szakasz 2
+betűs lépéseinek és a Szakasz 3 számozott lépéseinek mintájára, hogy minden darab
+külön-külön kipróbálható legyen.*
+
+> ### A RENDEZŐELV, amit a 9. szabály diktál
+>
+> **Illesztés → megvalósítás → mélység.** Minden lépésnél ugyanaz a kérdés:
+> 🔍 *„Ez mit csinál egymilliárd e-embernél?"* — és ha a válasz *„akkor majd kicseréljük"*,
+> a lépés nincs kész. ⭐ A Szakasz 3 megtanított, hol bújik meg a hiba: **nem a
+> fájlformátumban, hanem a KÉRDÉSBEN**, amit a tárnak felteszünk.
+
+### ⭐ A rendezőelv második fele: mi kerül a LÁNCRA, és mi nem
+
+A D49 és a D50 után a szakasz **két, élesen elváló félre** bomlik, és ezt a sorrend is
+tükrözi:
+
+- **4.1–4.4 — a LÁNC (a kemény mag).** Aláírt események, offline eldönthető, minden gépen
+  ugyanaz. *Ez dönt, tehát soha nem kívánhat élő lekérdezést.*
+- **4.5–4.8 — a MÁSODIK RÉTEG (a feltárás).** Jelzés és bemutatkozás: helyi, élő,
+  **elhagyható**. *Ez nem dönt, tehát szabad élő kapcsolatot kívánnia.*
+
+⚠️ **A két fél között nincs átjárás lefelé:** a második réteg semmilyen eredménye nem
+befolyásolhatja azt, hogy ki e-ember. Ha valaki mintát lát, az útja a **D46** — bizonytalanra
+jelölés és gondolat —, nem egy automatikus következmény.
+
+---
+
+### 4.0 ⚠️ DÖNTÉS ELŐTT — két kérdés, ami nélkül nem lehet kódot írni
+
+**(a) Mennyi `k`, és ki állítja?** A **D13/c** szerint a koino-szintű paraméterek maguk is
+entitások, tehát a közösség állítja (medián, D4). ⚠️ De induláskor nincs közösség, aki
+állítsa — kell egy **alapítói érték**, amit a koino-létrehozás eseménye rögzít.
+
+**(b) A K14: mekkora méret fölött kapcsoljon be a szabály?** ⛔ **Ezt a kérdést így nem
+szabad feltenni** — mert *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a
+9. szabályon bukna el, mint a Duniter-alak. Egyetlen készülék sem tudja megmondani, hányan
+vagyunk.
+
+> #### ⭐ D51 (javasolt) — A BEKAPCSOLÁS NEM MÉRET-FÜGGVÉNY, HANEM PARAMÉTER: `k = 0`
+>
+> A kis koino nem *„kikapcsolja"* az identitás-réteget, hanem **`k = 0`-val futtatja** —
+> ugyanaz a kód, ugyanaz a szerkezet, csak a küszöb nulla. A **D18/0** ekkor pontosan igaz:
+> *tudod, ki valódi, mert ismered.* Amikor a koino nő, a közösség **felemeli a `k`-t** — és
+> a **D47** miatt ez **előre hat**: aki `k = 0` mellett lépett be, bent marad.
+>
+> ⭐ **Ezzel a K14 megszűnik nyitott kérdés lenni**, és a családi koino nem külön üzemmód
+> (a D22 *„egy program, ami nő"* mondata így lesz kódban is igaz).
+>
+> ⚠️ **Amit vállalunk vele:** a 🔴 **közepes zóna** nem tűnik el — a `k` emelése emberi
+> döntés, és el lehet késni vele. A D49 óta viszont **látszik**, hogy hol tartunk, ahelyett
+> hogy egy képlet eltakarná.
+
+---
+
+### 4.1 A TANÚSÍTÁS MINT ESEMÉNY — és hova kerül a szeletelt tárban
+
+**Ez a szakasz legveszélyesebb lépése**, ugyanabból az okból, amiért a 3.1 az volt: a
+kanonikus alakot érinti, és **utólag drága**.
+
+**Az új esemény-típus — `Tanusitas`:**
+
+- `szerzo` — a **tanú** (ő írja alá);
+- ⭐ `entitas` — **a tanúsított belépési eseményének azonosítója**, vagyis **a tanúsított
+  szelete**, NEM a tanúé;
+- `entitasSorszam` — hányadik eseményem ezen a szeleten *(a hézag itt is jel)*;
+- `latott` — a horgony: mit ismertem, amikor aláírtam *(ez a D47 befagyasztás alapja)*;
+- `adat: { kit, kiadott, k, keret }` — ahol `kit` a tanúsított nyilvános kulcsa, a többi
+  három **bemondott érték** (lásd lent).
+
+> #### ⭐⭐ D52 (javasolt) — A TANÚSÍTÁS A TANÚSÍTOTT SZELETÉBE KERÜL
+>
+> A tanúsítást a **tanú írja alá**, de az esemény **a tanúsított szeletében él**. Ettől lesz
+> a keret *kapott* fele **egyetlen, korlátos lekérdezés**: `szeletEsemenyei(koino, szelet)` —
+> pontosan az a kérdés, amit a **3.2** tett skálázhatóvá.
+>
+> 🔍 **Egymilliárd e-embernél:** a kérdés *„ki tanúsított engem?"* — a válasz **egy szelet**,
+> néhány tucat esemény. Soha nem kell végigolvasni sem a koinót, sem a tanúk láncait.
+>
+> ⚠️ **Amit ez a szerkezettől kap ingyen:** a szelet a **belépési eseményhez** kötődik, az
+> pedig **koinónként külön** (D25: *az azonosság közös, a jogosultság helyi*) — vagyis
+> ugyanaz a kulcs két koinóban két külön szeletet gyűjt, külön `k`-val. Ez nem külön
+> mechanizmus, hanem a meglévő szeletelés következménye.
+
+**A három bemondott érték — a D42 mintája, háromszor:**
+
+- `kiadott` — **hányadik tanúsítás ez tőlem** ebben a koinóban. Ettől lesz a keret *adott*
+  fele **egyetlen eseményből** ellenőrizhető, teljes lánc nélkül. Aki hazudik, annak két
+  saját aláírt eseménye mond ellent egymásnak → **átadható bizonyíték**, nem hiány.
+- `k` — **a belépési minimum, amit a tanú látott**. Ez fagyasztja be a D47-et: a számítás
+  nem azt kérdezi, *„megfelel-e a mai szabálynak"*, hanem hogy **megfelelt-e az akkorinak**.
+- `keret` — **mennyi volt a tanú kerete az aláíráskor**, saját bemondás szerint. ⚠️ Ez a
+  legvitatottabb a három közül — a 4.3 tárgyalja, miért kell mégis.
+
+⚠️ **Amit NEM tartalmaz** (D45): semmilyen jelzés arról, **hogyan** győződött meg a tanú.
+Egy mondat, egyforma mindenkinél — különben a papír nélküli ember kiszorul.
+
+**Mérés ehhez a lépéshez:** rontás-próbák a bemondott értékekre (a 10. szakasz 1–3. pontja),
+és a **méret** újramérése — a 3.1 tanulsága szerint a becslés alábecsül (`478 → 611` bájt
+volt a jóslat 11%-a helyett 28%).
+
+---
+
+### 4.2 A KERET ELLENŐRZÉSE — és a szabály-réteg illesztése
+
+⛔ **Itt van a lépés, ahol a 9. szabály elkapja a kényelmes megoldást.** A mai
+[`szabalyok.js`](../koino/js/allapot/szabalyok.js) **egy tömböt kap**, és szerzőnként
+csoportosít — mert eddig minden szabály a **saját láncban** dőlt el. A keret *kapott* fele
+viszont **más emberek eseményeiből** jön. Ha ezt úgy oldanánk meg, hogy a réteg megkapja az
+összes eseményt, azzal visszahoznánk a `betolt()`-öt — csak más néven.
+
+**Az illesztés, amit javaslok:**
+
+```
+szabalyokErvenyesitese(esemenyek, { szeletek })
+```
+
+— vagyis a szabály-réteg **előre lekérdezett szeleteket** kap, nem tárat és nem
+lekérdező-függvényt. Három okból:
+
+- **marad tiszta függvény** — szinkron, determinisztikus, próbázható, ahogy ma is;
+- **nem importál tár-kódot** — ugyanaz az elv, mint az 1. szabálynál a `csere.js`-nél;
+- ⭐ **a lekérdezés ott marad, ahol a mélység cserélhető** (a tár-illesztőben), tehát a
+  memóriában tartott mutató később indexre váltható **a szabály-réteg érintése nélkül**.
+
+**A szabály maga**, a tanú saját láncában (ahol minden mai szabály is eldől):
+
+`keret = kapott − k − eddig_adott`, nullára padlózva — és aki nulla kerettel tanúsít, annak
+**az az egy esemény** esik ki, semmi más (D19: nem törlünk, nem büntetünk).
+
+**Mérés:** a 10. szakasz **1–3/b** pontja, mind a négy rontás-próbával. ⚠️ *A 3. és a 3/b
+csak együtt érvényes:* az egyik a támadót fogja meg (a kölcsönös gyűrű nulla keretet
+termel), a másik azt bizonyítja, hogy **közben nem fagyasztottuk be a koinót** (ötven
+megállapodott tag tanúsít egy frisset → a kerete 50 legyen).
+
+---
+
+### 4.3 ⚠️ DÖNTÉS ELŐTT — a rekurzió, amit fel kell oldani
+
+**A probléma, pontosan.** Egy tanúsítás érvényessége a tanú keretén múlik. A tanú kerete a
+*neki* adott tanúsításokon. Azok érvényessége az ő tanúik keretén. **Ez visszafelé a
+láncon végig ugyanaz a kérdés** — egymilliárdnál nyilvánvalóan járhatatlan, de már ezernél
+is az, mert szeletelt tárban **a tanú szeletét nem is ismerjük feltétlenül**.
+
+⚠️ **És van egy második baj, ami súlyosabb:** ha a hiányzó szelet miatt nálam a tanúsítás
+kiesik, nálad meg nem, akkor **készülékenként más lesz, ki e-ember** — és megdől a **D49/a**,
+vagyis a szavazatszámlálás szétesik.
+
+> #### ⭐⭐ D53 (javasolt) — A KERET A KIADÁS OLDALÁN KEMÉNY, A BEFOGADÁS OLDALÁN JELZÉS
+>
+> - **Kemény, és a tagságról dönt:** van-e `k` érvényes aláírás a szeleten, olyan tanúktól,
+>   akik **akkor** tagok voltak, a **befagyasztott** `k` szerint (D43 + D47). ⭐ Ez
+>   **egy szint mély**, nem rekurzív: a szelet eseményeiből eldől.
+> - **Jelzés, és a tagságot nem dönti el:** a bemondott `keret` és `kiadott` értékek
+>   ellenőrzése. Ha a tanú szelete megvan és a bemondás ellentmond neki → ⭐ **bizonyított
+>   hazugság, átadható bizonyítékkal**. Ha nincs meg → **„nem ellenőrizhető"**, a
+>   `szabalyok.js` harmadik kategóriája — *nem vád, mert akkor a hiány a MI lemaradásunk.*
+>
+> ⚠️ **Ez így nem automatikus védelem, és ezt ki kell mondani.** A keret nem *akadályozza
+> meg* a túllépést, hanem **lelepleződővé teszi** — ami pontosan a D49 fordulata (*nem tilt,
+> hanem feltár*), a D17/D19 mintája, és ugyanaz, amit a **D26** csinál a fájlmérettel.
+> A leleplezett tanúsítás útja onnan a **D46**: bizonytalanra jelölés + gondolat.
+>
+> ⛔ **A megmaradó rés — nyíltan:** a **szelektív mutogatás**. Aki a saját láncából elrejt
+> eseményeket, annál a bemondás átmenetileg „nem ellenőrizhető" marad. Ez ugyanaz a rés,
+> amit a `szabalyok.js` a tudatpontnál már kimond — nem új, és nem is oldható meg
+> szigorúbb ellenőrzéssel, csak **több tudással** (a csere hozza).
+
+⚠️ **Ez a szakasz eddigi legfontosabb eldöntetlen pontja.** A HOL TARTUNK a **keretet a
+kemény magban** sorolja (D44), a D49/a viszont csak a `k` tanúsítást és a befagyasztást
+nevezi keménynek. **A kettő között a D53 választ** — és ez Csaba döntése, nem az enyém.
+
+---
+
+### 4.4 A TAGSÁG MINT SZÁMÍTÁS — és a bizonytalanra jelölés
+
+**Új darab:** `js/allapot/identitas.js` — *„ki e-ember ebben a koinóban?"*, tisztán a
+szeletekből számítva. ⚠️ **Nem esemény:** senki nem mondja ki, hogy valaki tag — ugyanúgy
+**számítás**, ahogy az egyezmény (D17).
+
+**És a `BizonytalanraJeloles` esemény (D46):** a tanú nem vonhat vissza, hanem jelölhet — az
+esemény **ugyanabba a szeletbe** kerül, mint a tanúsítás, és **létrehozhat mellé egy
+gondolatot** *(ma: „tartalom")*, amivel megosztja a felelősséget a közösséggel. A
+szabály-réteg **nem törli** tőle a tanúsítást: bemenet lesz egy nyilvános, megtámadható
+döntésbe.
+
+**Mérés:** a 10. szakasz **4.** (befagyasztás mindkét irányban) és **5.** (objektivitás).
+⭐ Az 5. a `vizsgaProba.js` mintája identitásra alkalmazva, és **ez a lépés vizsgája**:
+két készülék, eltérő szeletekkel, **ugyanazt mondja arról, ki e-ember** — miközben a
+*jelzésekben* szabad eltérniük.
+
+---
+
+### 4.5 A JELZÉSEK — a feltárás, tény-alakban
+
+*Innen kezdődik a második réteg: semmi, ami itt születik, nem dönt a tagságról.*
+
+**Amit egy e-emberről mutatunk** (mind **tény**, a láncból bárki újraszámolja): hányan
+tanúsították · milyen **ütemben** (tizenkét tanúsítás egy órán belül, vagy egy év alatt négy
+városból) · mennyire **megállapodottak a tanúi**. **Amit a koinóról:** torlódás a tanúkon ·
+az *„egy körből született"* arány · a legszűkebb átvágás.
+
+⛔ **A három védőkorlát (D49/c) itt válik kóddá, nem jószándékká:** nincs személyre szóló
+pontszám, nincs rangsor, nincs piros jelzés · a jelzés **tájékoztat, nem jogosít** (N9) ·
+az **összesített nézet a koinóról szól**, nem emberekről.
+
+⛔ **És egy jelzés, amit tilos beépíteni:** a *„kevés kapcsolata van, tehát gyanús"* —
+háromszor mérve **31 / 41 / 45%** becsületes tagot jelölne meg tévesen, épp a magányost és a
+frissen érkezettet.
+
+**A megvalósítás módja:** a `szigetMeres.js`-ben **már megmért** jelzések átemelése a valódi
+kódba, **ugyanazokkal a számokkal** — hogy a mérés és a program ne csússzon szét.
+
+---
+
+### 4.6 A BEMUTATKOZÁS HELYI LISTÁJA (D50)
+
+**Új darab:** `js/bemutatkozas/lista.js` — és **a mintája adott**: a
+[`tarsak.js`](../koino/js/csere/tarsak.js), amiről a saját kommentje mondja ki, hogy *„helyi
+megfigyelés — sosem terjed, és semmit nem dönt el a koinóban."*
+
+- **nem esemény**, nem megy a láncra, nem megy át a cserén (D6, D14);
+- a `koino-adat/` mappában él, a `tarsak.json` mellett;
+- **elévül** és **eldobható** — ha elvész, újra lehet mutatkozni *(Csaba: „ez könnyen
+  pótolható… viccesen")*; ⭐ a tréfás rész a komoly: a tengerben elfoglalt helyed **nem
+  tárolt vagyon**, hanem élő viszony.
+
+---
+
+### 4.7 A SÉTA ÜZENET-ALAKJA (K17) — az 1. szabály szerint kettéosztva
+
+⭐ **Ugyanaz a kettéosztás, ami a Szakasz 2-t megmentette:** a `csere.js` sosem importált
+hálózati kódot, ezért a UDP-re állás a **logikát** nem érintette. Itt is:
+
+- `js/bemutatkozas/seta.js` — **a séta logikája, hálózat nélkül**: hány lépés, hogyan
+  választ véletlen következőt, mikor szól vissza a végpont, hogyan áll össze a
+  **darabszám** a nevek nélkül. Önpróbázható TCP nélkül.
+- a **szállítás** a `vonal.js` **mellé** kerül, új üzenet-típusként — a 3.4
+  böngésző-lekérés (`SZELETKEREK`) mintájára, ami már bizonyította, hogy a szimmetrikus
+  párbeszéd **visszafelé kompatibilisen** bővíthető.
+
+⚠️ **Két dolog, amit itt nem szabad elrontani:**
+
+- ⛔ **A séta nem hoz bizalmat** (3. szabály). Nem esemény, nem megy az `esemenyMentese`
+  kapun — és semmi, ami a sétából jön, nem lehet bemenete egy döntésnek.
+- ⭐ **Elhagyható** (2. és 4. szabály): ha a séta nem fut le, **csak a jelzést nem látod**, és
+  semmi más nem áll meg. Ezt a próbának is bizonyítania kell — *futtassuk a koinót úgy, hogy
+  a séta ki van kapcsolva, és minden más menjen változatlanul.*
+
+⭐ **És egy egybeesés, ami nem véletlen:** a séták akkor futnak végig, amikor mindenki
+egyszerre ébren van — vagyis **a buliban**, az összehangolt ötperces ablakban. Az a
+szerkezet pontosan ehhez való.
+
+---
+
+### 4.8 MI SZIVÁROG EGY SÉTA KÖZBEN (K18) — mérés, nem kód
+
+A kiinduló megtudja a **végpontokat**; a közbenső látja, **kitől kapta és kinek adta**.
+Ez sokkal kevesebb egy térképnél, de **nem nulla**.
+
+**Javaslat, amit mérni kell:** a séta **ne vigye a kiinduló kilétét** — csak egy egyszer
+használatos jelet —, és a végpont **arra a jelre** feleljen. Így a *„hány ponton érünk
+össze"* kiszámolható úgy, hogy a nevek egyik oldalon se álljanak össze.
+
+⚠️ **És a 8/d feltétele is mérendő marad:** a jelzés azon áll, hogy a valódi társas háló
+**„kis világ"** — egy teljesen elszigetelt közösségnél gyengébb.
+
+---
+
+### 4.9 A `lancGyoker` — a lefoglalt hely kitöltése
+
+Az [`esemeny.js`](../koino/js/esemeny/esemeny.js) kommentje **név szerint erre a szakaszra**
+utalja a döntést: a mező ma mindig `null`, és *„egy mező, aminek nincs fogyasztója, ROSSZ
+DEFINÍCIÓT kap"*.
+
+**A jelölt jelentés:** összegző Merkle-gyökér a szerző egész addigi láncára. ⭐ Ettől a
+**kettős lánc** bizonyítéka túlélné az összenyomást: aki elágazik, két különböző gyökeret
+kötelez el magára, és **a két saját aláírt állítása mond ellent egymásnak** — ugyanaz az
+alakzat, mint a D42-nél.
+
+⚠️ **Ez a lépés a legkésőbbre való**, mert csak akkor szabad kitölteni, ha **van fogyasztója**
+— vagyis ha a 4.1–4.4 után látszik, hol kérdezi meg valaki. Ha nem lesz fogyasztó, a
+tisztességes válasz az, hogy **kimondjuk: nem kell** *(a mező akkor is maradhat `null`-on —
+kivenni drágább, mint bennhagyni)*.
+
+---
+
+### ⭐ A SORREND INDOKLÁSA — miért pont így
+
+- **4.1 az első**, mert a kanonikus alakot érinti, és az **utólag drága** (a 3.1 ezt már
+  megtanította). Amíg kevés a valódi esemény, most olcsó.
+- **4.2–4.3 közvetlenül utána**, mert az illesztés (nem a megvalósítás!) itt dől el — és a
+  9. szabály szerint az illesztésnek az első naptól milliárdosnak kell lennie.
+- **4.4 zárja a kemény magot**, és ez az a pont, ahol a szakasznak **vizsgája** van: két
+  készülék ugyanazt mondja arról, ki e-ember.
+- **4.5–4.8 a második réteg**, és **bármikor elhagyható**. ⭐ Ha itt megállnánk, a koino
+  akkor is működne — kevesebbet látnánk, semmi nem törne el.
+- **4.9 a legvégén**, mert csak a fogyasztója ismeretében definiálható helyesen.
+
+⭐ **És az első valódi mérföldkő nem a szakasz végén van:** a **4.4** után, `k = 0`-val
+(D51), **egy család vagy egy osztály élesben használhatja** — helyes, milliárdos
+szerkezettel, csak kevesebb emberrel (D22). A `k` felemelése onnantól a közösség döntése,
+és a D47 miatt **előre hat**.
+
+---
+
 ## 10. MÉRÉS — mit kell bizonyítani, mielőtt bármit elhiszünk
 
 *A projekt módszertana: minden állítás mellé mérés. Ezek a próbák még nincsenek megírva.*
@@ -836,10 +1155,10 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 | ~~**K11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
 | ~~**K12**~~ | ~~Milyen legyen a horgony-halmaz?~~ | ⛔ **TÁRGYTALAN.** A „m független horgony-tanú" alak **mérve elbukott** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületesnek nehéz, a támadónak könnyű, és **a kört elfoglalja** (880 hamis horgony). ⭐ **És már nem is kell:** a tenger-jelzés (8/d) **nem mér kitüntetett ponthoz** — épp ezért nem foglalható el |
 | ~~**K13**~~ | ~~Milyen út-feltétel kerüljön a keret mellé?~~ | ⛔ **TÁRGYTALAN**, ugyanezért. A helyére a **véletlen séta** lépett, ami nem egy ponthoz, hanem a **tengerhez** mér |
-| ⏳ **K17** | **A séta üzenet-alakja** — hogyan ugrik a jel készülékről készülékre? | Új protokoll-kérdés a `vonal.js` mellé, a 3.4 böngésző-lekérés mintájára (D50) |
-| ⏳ **K18** | **Mi szivárog ki egy séta közben?** | A kiinduló megtudja a végpontokat; a közbenső látja, kitől kapta és kinek adta. Sokkal kevesebb egy térképnél, de **nem nulla** — mérendő |
+| ⏳ **K17** | **A séta üzenet-alakja** — hogyan ugrik a jel készülékről készülékre? | Új protokoll-kérdés a `vonal.js` mellé, a 3.4 böngésző-lekérés mintájára (D50). ▶️ **A terve megvan: 9/b, 4.7 lépés** — a logika a hálózattól külön, az 1. szabály szerint |
+| ⏳ **K18** | **Mi szivárog ki egy séta közben?** | A kiinduló megtudja a végpontokat; a közbenső látja, kitől kapta és kinek adta. Sokkal kevesebb egy térképnél, de **nem nulla** — mérendő. ▶️ **9/b, 4.8 lépés**, javaslattal: a séta ne vigye a kiinduló kilétét, csak egy egyszer használatos jelet |
 | ~~**K16**~~ | ~~Hogyan indul el a horgony-kör?~~ | ⛔ **TÁRGYTALAN** — nincs horgony-kör (K12). *A kérdés maga hasznos maradt: ő buktatta ki, hogy a „több független körből" feltétel a tudatos hálózatépítőt jutalmazza.* |
-| **K14** | Mekkora méret fölött **kapcsoljon be** a szabály? | A **D18/0** szerint kicsiben a közvetlen ismeret véd. ⚠️ A 🔴 közepes zóna nem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
+| ~~**K14**~~ | ~~Mekkora méret fölött **kapcsoljon be** a szabály?~~ | ⛔ **A KÉRDÉS ROSSZ VOLT** (9/b, 4.0): a *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. ▶️ **Javaslat helyette (D51):** a `k` **paraméter**, a kis koino `k = 0`-val futtatja **ugyanazt a kódot** — nem külön üzemmód. ⚠️ A 🔴 közepes zóna így sem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
 | **K15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
 
 ---
@@ -856,6 +1175,20 @@ mert egy egész megoldás-családot zár ki.*
 ⭐ **És három meglévő döntés kapott ott jelzést arról, hogy ez felülírja:** a **D18/2**
 (a Duniter-szabály), a **D18/4** (az „időszakonként") és a **D18/5** (a visszavonás) —
 a `D18` szakasz elején.
+
+### ⏳ ÉS AMI MÉG NEM VEZETHETŐ ÁT — a megépítés három javaslata (9/b)
+
+*Ezek **nem döntések**, hanem javaslatok: Csaba jóváhagyásáig itt maradnak, és csak utána
+kapnak helyet a döntések közt. ⚠️ Kódot addig nem érdemes írni rájuk.*
+
+- **D51 (javasolt)** — a bekapcsolás **nem méret-függvény, hanem paraméter**: `k = 0` a kis
+  koinóban, ugyanaz a kód. *(Ez zárja le a **K14**-et — a kérdés maga volt rossz.)*
+- **D52 (javasolt)** — a tanúsítás **a tanúsított szeletébe** kerül, nem a tanúéba. Ettől
+  lesz a keret *kapott* fele **egyetlen korlátos lekérdezés** (`szeletEsemenyei`).
+- ⚠️ **D53 (javasolt)** — a keret **a kiadás oldalán kemény, a befogadás oldalán jelzés**.
+  Ez oldja fel a rekurziót (*a tanú kerete a tanúi keretén múlna*), **és ez a szakasz
+  legfontosabb eldöntetlen pontja**: a HOL TARTUNK a keretet a **kemény magban** sorolja
+  (D44), a **D49/a** viszont csak a `k` tanúsítást és a befagyasztást nevezi keménynek.
 
 - **D43** — a belépési szabály alsó korlát, soha nem lefedettség (3. szakasz)
 - **D44** — a tanúsítási keret = a minimum feletti tanúsítások száma (4. szakasz)
@@ -932,3 +1265,21 @@ a `D18` szakasz elején.
   élő kapcsolatot kívánnia: **a tenger a második rétegbe kerül**, a kereső-réteg mellé.
   ▶️ Hátra van: mi szivárog egy séta közben · a séta üzenet-alakja · a lista elvesztése
   készülékcserénél · és a mérés megismétlése egy valódi bemutatkozás-gráfon.
+- **2026-09-05 (a terv)** — ⭐ **MEGSZÜLETETT A MEGÉPÍTÉS TERVE (9/b szakasz):** tíz lépés,
+  4.0-tól 4.9-ig, mindegyiknél az **illesztéssel** (mit kérdezünk a tártól) és a **méréssel**
+  (melyik rontás-próba őrzi). ⭐ **A vízválasztó a lépések közt a D49/D50-ből jött:** a
+  4.1–4.4 a **LÁNC** (kemény mag, offline dönt), a 4.5–4.8 a **MÁSODIK RÉTEG** (jelzés és
+  bemutatkozás, élő és elhagyható), a 4.9 pedig a `lancGyoker` lefoglalt helyét zárja le —
+  azt a mezőt, amit az `esemeny.js` kommentje név szerint erre a szakaszra utal.
+  ⚠️ **A tervezés közben három dolog derült ki, ami eddig nem látszott:**
+  **(1)** a **K14 kérdése rossz volt** — a *„mekkora méret fölött kapcsoljon be"* maga is
+  globális szám, tehát ugyanazon a 9. szabályon bukna el, mint a Duniter-alak; helyette a
+  `k` legyen paraméter, `k = 0`-val a kis koinóban (**D51 javaslat**);
+  **(2)** a keret *kapott* fele csak akkor korlátos lekérdezés, ha a tanúsítás **a
+  tanúsított szeletébe** kerül, nem a tanúéba (**D52 javaslat**) — és ezzel a `szabalyok.js`
+  **illesztése is változik**, mert ma egyetlen tömböt kap és szerzőnként csoportosít;
+  **(3)** ⚠️ a keret ellenőrzése **rekurzióhoz vezet** (a tanú kerete a tanúi keretén
+  múlna), és a feloldás nem lehet „több számítás": a keret **a kiadás oldalán kemény, a
+  befogadás oldalán jelzés** (**D53 javaslat**). ⛔ **Ez a szakasz legfontosabb eldöntetlen
+  pontja**, mert a HOL TARTUNK a keretet a kemény magban sorolja (D44), a D49/a viszont csak
+  a `k` tanúsítást és a befagyasztást nevezi keménynek. **Kód addig nem készül.**

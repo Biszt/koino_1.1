@@ -49,6 +49,12 @@
 > a séta **ugráló üzenet**, nem lekérdezés, tehát *a jelzéshez nem kell a térkép, csak az
 > út.* Mivel a jelzés nem dönt, szabad élő kapcsolatot kívánnia: **a tenger a második
 > rétegbe kerül**, a kereső-réteg mellé — elhagyható.
+>
+> ▶️ **ÉS MEGVAN A MEGÉPÍTÉS TERVE (2026-09-05):** [`szakasz4_terv.md`](szakasz4_terv.md)
+> **9/b szakasz** — tíz lépés (4.0–4.9), a 9. szabály rendezőelve szerint: **4.1–4.4 a
+> LÁNC** (kemény mag, offline dönt) · **4.5–4.8 a MÁSODIK RÉTEG** (elhagyható) · 4.9 a
+> `lancGyoker`. ⚠️ **Kódolás előtt három döntés vár Csabára (D51–D53)**, köztük a szakasz
+> legfontosabb eldöntetlen pontja: **kemény szabály-e a keret, vagy jelzés?**
 
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 
