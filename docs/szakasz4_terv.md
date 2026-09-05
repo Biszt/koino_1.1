@@ -10,61 +10,68 @@
 > ⚠️ **A koino kódja még nem változott.** Ez tervezés — az egyetlen megírt darab a
 > [`szigetMeres.js`](../koino/meres/szigetMeres.js) **mérőeszköz** (gráf-kísérlet, nem
 > koino-kísérlet: nincs benne kulcs, aláírás, esemény, hálózat).
-> ✅ **A lezárt döntések (D43–D47, D49, D50) ÁT VANNAK VEZETVE** a
-> [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)-be (2026-09-05) — az a
-> döntések helye, ez csak a részleteké. *(A **D48** is ott van, elvetve, mert a bukása oka
-> egy egész megoldás-családot zár ki.)*
+> ⚠️⚠️ **A DOKUMENTUM KÉT RÉTEGŰ.** A 3–8/e szakaszok a 09-04/05-i **tanúsítás-alapú**
+> szerkezet levezetése — az 09-06-án **kiesett**, és a fejlécükben ott a ⛔ jel. **Ami ma
+> áll: a D54–D60 és a 9/c.** A történetet azért hagytuk meg, mert a bukások okai
+> megőrzendők (a projekt módszertana).
+> ✅ **Átvezetve a döntések közé:** D43–D50 (2026-09-05) és D54–D60 (2026-09-06).
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-05) — megvan az irány, a mérés áll mögötte
+> ## ▶️ HOL TARTUNK (2026-09-06) — A SZERKEZET ÁTÉPÜLT, ÉS CSABA LEZÁRTA
 >
-> **A SZERKEZET, egy mondatban:** a láncon marad az a **kevés, kemény szabály**, ami dönt
-> (`k` tanúsítás + befagyasztás); minden más **jelzés**, ami nem tilt, hanem feltár; és a
-> jelzések java **el sem jut a láncra** — helyi lista, amin **séta fut**, nem térkép.
+> ⚠️⚠️ **FIGYELEM, AKI EZT A DOKUMENTUMOT OLVASSA:** a 2026-09-04/05-i szakaszok (3–8/e)
+> egy **másik szerkezetet** írnak le — `k` tanúsítás, keret, horgony —, ami 09-06-án
+> **kiesett**. Azok a szakaszok **a levezetés története**, nem a terv. ⭐ **Ami ma áll, az
+> a D54–D60 és a 9/c szakasz.** A halott részek fejlécében ott a ⛔ jel.
 >
-> ✅ **A kemény mag (a láncon):** a belépés **alsó korlát**, nem lefedettség (**D43**) ·
-> a **keret** (**D44**, Csaba): *annyi tanúsítást adhatsz, amennyivel a minimum fölött vagy*
-> — ez öli meg a *„fizess egyszer, arass örökké"* támadást · **nincs időszak** (K11) · az
-> ellenőrzés az aláírás pillanatában **befagy** (**D47**) · az igazolvány soha nem
-> rögzíthető (**D45**) · visszavonás helyett **bizonytalanra jelölés + gondolat** (**D46**).
+> ⭐⭐⭐ **A SZERKEZET, EGY MONDATBAN (D56):** *az 1. lépcső olcsó, mert a kapu úgysem véd;
+> a 2. lépcső drága, mert ott a zsákmány; és a védelem egyikben sem a kapu, hanem hogy a
+> rossz tanúsító elveszíti a szerepét.*
 >
-> ⭐⭐ **A FORDULAT (D49):** *az identitás-réteg egy minimumon kívül nem tilt, hanem
-> FELTÁR.* A jelzés **tényt mutat, soha nem ítéletet**, és a közösség dönt — *lassú,
-> nyilvános, megtámadható*, mint a koino minden nehéz kérdése.
+> - **1. lépcső — a tagság:** **egy meghívó**, és minden mehet (tartalom, tudatpont,
+>   javaslat, szavazat). **D56**
+> - **2. lépcső — a pénztárca:** **három tanúsítás** felhatalmazott tanúsítótól — a **D11**
+>   megvalósulása. **D56**
+> - **A felhatalmazás:** 2. lépcsősök adják, **emberenként egyet**; a küszöb `N` **kimondott
+>   szám** (a 2. lépcsősök érték javaslatainak mediánja), nem mért rangsor. **D57, D57/b**
+>   ⭐ **Megbízás, nem pontszám:** *„27-en bízták rá a tanúsítást"*, soha nem
+>   *„becsületesség: 27"*. **D60**
+> - **Az ellenőrzés a gyökérig megy**, mert mérve olcsó (17,7 → 30,1 → 40,7 ős 1500 / 6000 /
+>   20 000 főnél — **logaritmikus**). A `D` mélység-korlát **elhagyható szelep**. **D59**
+> - **A jelzés: „MÉG NEM ÉRTÜNK ÖSSZE"** — tény, szimmetrikus, **önjavító**. **D55**
+> - **A készülék-felfedezés segédeszköz, nem adatforrás.** **D54**
+> - **A papír nélküli ember** az 1. lépcsőn teljes jogú e-ember; a 2. lépcsőn nem
+>   számolunk vele **ebben a verzióban**. **D58**
 >
-> ⭐⭐⭐ **A SATU (Csaba: „BEMUTATKOZÁS", 8/d):** a személyes statisztika a **ritka** hamis
-> szigetet fogja meg, a **bemutatkozások tengere** (véletlen séták: összeérünk-e?) a
-> **sűrűt** — és **a támadó nem tud egyszerre sűrű és ritka lenni.** Mérve: **100% hamis
-> elkapva, 0% becsületes tévesen**, mind a három szimulált támadó ellen.
+> ⛔⛔ **AMIT A 09-06-I MÉRÉSEK MEGDÖNTÖTTEK** ([`eredmenyek.md`](../koino/meres/eredmenyek.md)
+> 11–12. szakasz) — **ezeket ne hozd vissza:**
 >
-> ⭐⭐ **ÉS TÉRKÉP NÉLKÜL (D50, 8/e):** a bemutatkozás **helyi lista**, a séta **ugráló
-> üzenet** — *a jelzéshez nem kell a térkép, csak az út.* A tenger így a **második rétegbe**
-> kerül, a kereső mellé: élő, elhagyható, és nem épít társas térképet.
+> - **a belépési szám nem védelem, hanem árcédula**: a fal pontosan ott van, ahol a
+>   megtévesztettek száma eléri a kért meghívó-számot (4-nél 0 hamis, **5-nél 880**);
+> - **a jogosítási küszöb ELREJTI a szigetet** (100%/0% helyett 91%/16%), mert minden
+>   hamisat egy valódi emberhez kényszerít — *egy teljesítendő küszöb egyben hitelesítő
+>   pecsét is*;
+> - ⛔ **a SÉTA a leggyengébb láncszem, nem a legerősebb**: sok megtévesztettnél
+>   **43–74% / 31–61%**. A **D50** hordozó-döntése áll (helyi lista, ugráló üzenet), de
+>   **a tenger NEM a védelem**;
+> - ⛔ **a `k` tanúsítás + keret vonala (D44, D51, D53) tárgytalan** — a meghívás váltotta ki.
 >
-> ⛔ **Amit MÉRVE kizártunk** (ne induljon el rajtuk újra egy friss session —
-> [`eredmenyek.md`](../koino/meres/eredmenyek.md)): a Duniter-féle távolság-szabály
-> (globális szám) · az „ingyenes elismerés" (a szigetet táplálja) · **a gazdaság önmagában**
-> (megmaradó → nem nő; teremthető → a sziget is teremt) · **a horgony-kör** (a támadó
-> elfoglalja: 880 hamis horgony) · ⛔ és a *„kevés kapcsolata van, tehát gyanús"* jelzés
-> (31/41/45% téves megjelölés, épp a magányosra és a frissen érkezettre).
+> ⭐⭐ **A VÉDELEM A KONTRASZT:** *„hány olyan embert tanúsítottál/ismersz, akinek nincs
+> önálló élete a közösségben?"* — becsületes alapvonal **0,3**, megvett tanúsítóé több száz.
+> **100% / 9–25%**, mind a hét támadó-változat és mindhárom arány ellen. ⭐ És olcsó: nem
+> kell hozzá séta, se élő kapcsolat — a **D55** nyíltság teszi helyben kiszámíthatóvá.
 >
-> ▶️ **A MEGÉPÍTÉS TERVE KÉSZ (2026-09-05): a 9/b szakasz** — tíz lépés (4.0–4.9), abban a
-> sorrendben, ahogy a 9. szabály diktálja, mindegyiknél az illesztéssel és a méréssel.
-> ⭐ **A vízválasztó a lépések közt:** a **4.1–4.4 a LÁNC** (kemény mag, offline dönt), a
-> **4.5–4.8 a MÁSODIK RÉTEG** (jelzés és bemutatkozás — élő és **elhagyható**), a 4.9 pedig
-> a `lancGyoker` lefoglalt helyét zárja le.
+> ⭐⭐⭐ **ÉS A TÖRVÉNY:** a visszacsatolással (a közösség visszavonja a megbízást) a kár
+> **880 → 120**, és **kár = a támadó üteme × az ébredés ideje** (40 · 120 · 240 · 440 a
+> 0/2/5/10 körös késésnél). **Lineáris, nem exponenciális: a hurok mindig bezárul.**
+> ⭐ Ezért a gépi segítség értéke **az ÉSZREVÉTELBEN** van, nem a döntésben.
 >
-> ⚠️ **HÁROM DÖNTÉS VÁR CSABÁRA, mielőtt kód készül** (mind a 9/b-ben, javaslattal együtt):
-> **D51** — a `k` **paraméter**, nem méret-küszöb (`k = 0` a kis koinóban), mert a
-> *„mekkora méret fölött"* maga is globális szám lenne · **D52** — a tanúsítás **a
-> tanúsított szeletébe** kerül (ettől lesz a „kapott" oldal korlátos lekérdezés) · ⚠️ **D53**
-> — a keret **a kiadás oldalán kemény, a befogadás oldalán jelzés**; ez oldja fel a
-> rekurziót, *és ez a szakasz legfontosabb eldöntetlen pontja*, mert a HOL TARTUNK a keretet
-> a kemény magban sorolja, a D49/a viszont csak a `k`-t és a befagyasztást.
+> ✅ **CSABA LEZÁRTA A MÉRÉSEKET (2026-09-06):** *„eleget mértünk. Nekem ez így már
+> megfelel, első koinónak."*
 >
-> ⚠️ **Kód még nincs** — a `szigetMeres.js` gráf-kísérlet, nem koino-kísérlet. A 8/d mérését
-> **valódi bemutatkozás-gráfon meg kell ismételni** (eddig a tanúsítási gráfon futott).
+> ▶️ **A megépítés terve: a 9/c szakasz.** ⚠️ *A régi 9/b terv a `k` tanúsításra épült —
+> ⛔ elavult, és meg van jelölve.*
 
 ---
 
@@ -130,7 +137,14 @@ használhatatlan.
 
 ---
 
-## 4. ⭐⭐ A MAG: A KERET — Csaba szabálya
+## 4. ⛔ A MAG: A KERET — Csaba szabálya *(TÁRGYTALAN, 2026-09-06)*
+
+> ⛔ **EZ A SZAKASZ MÁR NEM A TERV.** A keret azért született, hogy a `k` tanúsításos
+> belépést fékezze — de a **D56** két lépcsője kiváltotta: az 1. lépcsőn **nincs mit
+> fékezni** (egy meghívó, és a mérés szerint a kapu úgysem véd), a 2. lépcsőn pedig a
+> **felhatalmazás + visszavonás** végzi a munkát. ⭐ *A levezetés viszont megmarad, mert a
+> 4.1 támadása (a „fizess egyszer, arass örökké" hatodik köre) a meghívásos világban is
+> ugyanígy jelent meg — és ezt 09-06-án meg is mértük.*
 
 > **Annyi tanúsítást adhatsz, amennyivel a kapott tanúsításaid száma a belépési minimum
 > fölött van.** *(Csaba, 2026-09-04.)*
@@ -205,7 +219,12 @@ tartomány közti ritka vágás; Whānau. Ellenőrizendő, mielőtt bármit ép�
 
 ---
 
-## 5. AZ ÁRA — amit vállalunk
+## 5. ⛔ AZ ÁRA — amit vállalunk *(a keret-vonal része, TÁRGYTALAN)*
+
+> ⛔ **A 4. szakasszal együtt esett ki.** ⭐ **De az 5.1/c általános eredménye ÁLL, és ez a
+> szakasz legfontosabb öröksége:** *a gazdaság önmagában nem lehet a védelem, mert a számtan
+> nem látja a különbséget egy valódi és egy hamis ember között.* Ez zárta ki a
+> keret-családot, és ez vezetett a D49-hez.
 
 ### 5.1 ⛔ A MEGMARADÁSI CSAPDA — és a feloldása
 
@@ -451,7 +470,11 @@ visszamenőleg.* Ez a keret-szabállyal együtt csak akkor tartható, ha:
 
 ---
 
-## 8/b. ⭐⭐ A HORGONY — mi ez, és miért KÖR
+## 8/b. ⛔ A HORGONY — mi ez, és miért KÖR *(MÉRVE ELBUKOTT)*
+
+> ⛔ **A horgony-kört a támadó elfoglalja: 880 hamis horgony a 20 valódi mellett.** A K12 és
+> a K13 tárgytalan. ⭐ A tanulság viszont általános, és azóta kétszer is visszaköszönt:
+> *minden kitüntetett halmaz, amit gráf-statisztika jelöl ki, ELFOGLALHATÓ.*
 
 *Ez a szakasz az 5.1/c bukása után született (2026-09-04), és ez a jelenlegi fő irány.*
 
@@ -643,7 +666,14 @@ Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 3–8. sza
 > statisztika a **ritka** szigetet fogja meg, a tenger-jelzés a **sűrűt** — és a támadó nem
 > tud egyszerre sűrű és ritka lenni. **Együtt 100% / 0% mind a három támadó ellen.**
 
-## 8/d. ⭐⭐⭐ A BEMUTATKOZÁSOK TENGERE — és a satu (Csaba, 2026-09-05)
+## 8/d. ⚠️ A BEMUTATKOZÁSOK TENGERE — és a satu *(FELÜLVIZSGÁLVA 2026-09-06)*
+
+> ⚠️ **AZ ITT LEÍRT SATU MÁSKÉNT ÁLL.** A tenger-jelzés 100% / 0%-os számai **három
+> megtévesztett emberre** igazak. Sok megtévesztettnél (20–50) a séta **összeomlik**:
+> 43–74% elkapva, 31–61% tévesen ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 11.12–11.13).
+> ⭐ **A satu gondolata áll — csak a másik pofa lett az erős:** nem a séta, hanem a
+> **KONTRASZT** (*„hány olyan embert ismersz, akinek nincs önálló élete?"*), ami 100% / 9–25%
+> minden támadó ellen. A tenger **megmarad, de mint kényelem, nem mint védelem.**
 
 > **Csaba:** *„egy szóban: BEMUTATKOZÁS. Bemutatkozás jelöléseket intéznek egymás felé,
 > amit mérünk. A nem létező e-emberek mindig szigeteket alkotnak, a létező e-emberek pedig
@@ -1008,7 +1038,12 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 
 ---
 
-## 9/b. ⭐ A MEGÉPÍTÉS TERVE — a lépések sorrendben (2026-09-05)
+## 9/b. ⛔ A MEGÉPÍTÉS RÉGI TERVE (2026-09-05) — ELAVULT
+
+> ⛔ **EZ A TERV A `k` TANÚSÍTÁSRA, A KERETRE ÉS A REKURZIÓRA ÉPÜLT** — mind a három kiesett
+> 2026-09-06-án. **Az érvényes terv a 9/c.** ⭐ *Ami belőle átment: a 4.1 „a kanonikus alakot
+> előbb" sorrend-elve, a szelet-illesztés (D52 → D57/b) és az, hogy a jelzés-réteg
+> elhagyható. A D51 és a D53 tárgytalan.*
 
 *Eddig a szakasz a **miért**-ről szólt. Ez a rész a **mit és milyen sorrendben** — a Szakasz 2
 betűs lépéseinek és a Szakasz 3 számozott lépéseinek mintájára, hogy minden darab
@@ -1315,7 +1350,124 @@ szerkezettel, csak kevesebb emberrel (D22). A `k` felemelése onnantól a közö
 
 ---
 
-## 10. MÉRÉS — mit kell bizonyítani, mielőtt bármit elhiszünk
+---
+
+## 9/c. ⭐⭐⭐ A MEGÉPÍTÉS TERVE (2026-09-06) — EZ AZ ÉRVÉNYES
+
+*A 09-06-i átépítés után. A régi 9/b elavult; ez a D54–D60 szerkezetére épül, és minden
+lépése mögött ott van a 11–12. mérés.*
+
+> ### ⭐ AMI EBBŐL A LEGJOBB HÍR: A KANONIKUS ALAK NEM VÁLTOZIK
+>
+> A régi terv első és legveszélyesebb lépése a **kanonikus alak bővítése** volt. ⭐ **Erre
+> most nincs szükség:** a meghívás, a felhatalmazás és a tanúsítás **mind belefér a meglévő
+> burkolatba** — új `tipus`, és az `entitas` mező a címzett szeletére mutat. *A 3.1-ben
+> megépített négy mező pontosan elég.* ⚠️ **A legveszélyesebb részletet tehát nem nyitjuk
+> fel újra.**
+
+### 4.1 A MEGHÍVÁS, ÉS A TAGSÁG MINT SZÁMÍTÁS
+
+**Új esemény:** `Meghivas` — szerzője tag, `entitas` a **meghívott** szelete,
+`adat: { kit }`.
+
+**A tagság nem esemény, hanem SZÁMÍTÁS** (D17): *van-e a szeletemben legalább egy meghívás
+olyantól, aki a meghívás pillanatában tag volt.* 🔍 **Egymilliárdnál:** egy
+`szeletEsemenyei` hívás — a 3.2 munkája.
+
+⭐ **Az alapító kör** a koino-létrehozás eseményéből jön: ők meghívás nélkül tagok. Ez a
+**rekurzió alapesete**, nem kivétel — nincs szükség méret-figyelésre.
+
+### 4.2 A LÁNC BEJÁRÁSA — a gyökérig, gyorsítótárral
+
+*„Tag volt-e a meghívó?"* visszafelé kérdés. ⭐ **Mérve olcsó** (12.2): 1500 főnél 17,7,
+20 000-nél 40,7 ős — **logaritmikus**, kettőzésenként ≈ +6.
+
+- **A gyorsítótár a lényeg:** mindenkit **egyszer** nézünk meg, és a **D47** miatt az
+  eredmény **örökre áll** — nem kell újraszámolni.
+- **A `D` mélység-korlát** (D59) marad **elhagyható szelepként**, arra az esetre, ha
+  szeletek hiányoznak.
+- ⚠️ Amit nem látunk, arra **nem mondunk vádat**: „nem ellenőrizhető" (a `szabalyok.js`
+  harmadik kategóriája), nem elutasítás.
+
+### 4.3 A FELHATALMAZÁS ÉS A TANÚSÍTÁS — a 2. lépcső
+
+**Két új esemény, mindkettő a CÍMZETT szeletében** (ettől lesz a számlálás korlátos):
+
+- `Felhatalmazas` — szerzője **2. lépcsős**; emberenként **egy** számít;
+- `Tanusitas` — szerzője **felhatalmazott tanúsító**; **három** kell a 2. lépcsőhöz.
+
+**Két számítás, nem esemény:**
+
+```
+tanusithat(X)  = |X szeletében a KÜLÖNBÖZŐ, 2. lépcsős felhatalmazók|  ≥  N
+lepcso2(X)     = |X szeletében a KÜLÖNBÖZŐ, tanúsítható tanúsítók|     ≥  3
+```
+
+`N` a **paraméter-entitásra** adott érték javaslatok mediánja (D57/b) — **kimondott szám,
+nem mért rangsor**. 🔍 *Egymilliárdnál:* egyik sem kíván globális tudást.
+
+⚠️ **A felületen a felhatalmazás TÉNYKÉNT jelenik meg** (D60): *„27-en bízták rá a
+tanúsítást"* — soha nem pontszámként.
+
+### 4.4 ⭐⭐ A KONTRASZT-JELZÉS — ez a valódi védelem
+
+**A legerősebb és a legolcsóbb darab** (11.13, 12.5): *„hány olyan embert tanúsítottál
+vagy ismersz, akinek nincs önálló élete a közösségben?"* — becsületes alapvonal **0,3**,
+megvett tanúsítóé **több száz**.
+
+- **Nem kell hozzá séta, se élő kapcsolat** — helyi számítás a saját és a szomszédos
+  szeletekből, amit a **D55** nyíltság tesz lehetővé;
+- **tény-alakban jelenik meg**, és a személyes változata a *„MÉG NEM ÉRTÜNK ÖSSZE"* (D55) —
+  szimmetrikus és **önjavító**;
+- 🔍 **Egymilliárdnál:** az ismerőseim ismerőseinek darabszáma — korlátos.
+
+### 4.5 A VISSZAVONÁS ÚTJA — és amit a programnak NEM szabad megtennie
+
+⭐ **A mérés törvénye** (12.5): *kár = a támadó üteme × az ébredés ideje* — **lineáris**.
+Ezért a program dolga **az ÉSZREVÉTEL gyorsítása**, nem a döntés:
+
+- ✅ **a program azonnal MUTASSA** a jelzést;
+- ⛔ **a program SOHA ne vonjon vissza magától** — az út a **D46**: bizonytalanra jelölés,
+  gondolat, javaslat, egyezmény. A felhatalmazás visszavonása **emberi döntés**;
+- ⭐ mérve: a visszacsatolás **880 → 120**-ra viszi a kárt, és **egyetlen becsületes**
+  tanúsító sem veszíti el a szerepét.
+
+### 4.6 A BEMUTATKOZÁS HELYI LISTÁJA + a készülék-felfedezés
+
+`js/bemutatkozas/lista.js`, a [`tarsak.js`](../koino/js/csere/tarsak.js) mintájára: helyi,
+sosem terjed, elévül, eldobható (D50). Mellette a **készülék-felfedezés mint segéd** (D54):
+*javasol*, az ember *dönt*.
+
+### 4.7 ⏸️ A SÉTA — leminősítve, elhagyható
+
+⚠️ **Nem védelem** (11.12–11.13): sok megtévesztettnél összeomlik. ⭐ **Kényelmi jelzés
+marad**, és **utolsóként épül meg, ha egyáltalán.** *Ez a nap legfájóbb tanulsága: a
+tenger-gondolat gyönyörű volt, de a mérés a kontrasztnak adott igazat.*
+
+### 4.8 A `lancGyoker` — dönteni kell róla
+
+Az [`esemeny.js`](../koino/js/esemeny/esemeny.js) erre a szakaszra utalja. **Jelölt
+jelentés:** összegző Merkle-gyökér a saját láncra, hogy a kettős lánc bizonyítéka túlélje az
+összenyomást. ⚠️ **Csak akkor töltsük ki, ha van fogyasztója** — különben maradjon `null`,
+és mondjuk ki, hogy nem kell.
+
+### ⭐ A SORREND INDOKLÁSA
+
+**4.1–4.3 a LÁNC** (offline dönt) · **4.4–4.5 a JELZÉS ÉS A KÖVETKEZMÉNY** (ez a valódi
+védelem) · **4.6–4.7 a KÉNYELEM** (elhagyható) · **4.8 a végén**, mert fogyasztó kell hozzá.
+
+⭐ **És az első valódi mérföldkő a 4.2 után van:** meghívásos tagság + a lánc ellenőrzése
+= **egy család vagy egy osztály élesben**, pénztárca nélkül. A 2. lépcső akkor jön, amikor
+a pénz is.
+
+## 10. ⚠️ MÉRÉS — a régi terv próbái *(nagyrészt TÁRGYTALAN)*
+
+> ⛔ **Az 1–5. pont a keret-szabályt bizonyította volna — az kiesett.** ⭐ **Amit a 09-06-i
+> mérések a helyükbe tettek** (11–12. szakasz): a belépési szám ára, a jogosítás rejtő
+> hatása, a három lencse, a lánc alakja és a visszacsatolás törvénye. **Csaba lezárta:**
+> *„eleget mértünk."*
+
+### A régi lista (megőrizve)
 
 *A projekt módszertana: minden állítás mellé mérés. Ezek a próbák még nincsenek megírva.*
 
@@ -1350,64 +1502,45 @@ szerkezettel, csak kevesebb emberrel (D22). A `k` felemelése onnantól a közö
 | ~~**K11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
 | ~~**K12**~~ | ~~Milyen legyen a horgony-halmaz?~~ | ⛔ **TÁRGYTALAN.** A „m független horgony-tanú" alak **mérve elbukott** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületesnek nehéz, a támadónak könnyű, és **a kört elfoglalja** (880 hamis horgony). ⭐ **És már nem is kell:** a tenger-jelzés (8/d) **nem mér kitüntetett ponthoz** — épp ezért nem foglalható el |
 | ~~**K13**~~ | ~~Milyen út-feltétel kerüljön a keret mellé?~~ | ⛔ **TÁRGYTALAN**, ugyanezért. A helyére a **véletlen séta** lépett, ami nem egy ponthoz, hanem a **tengerhez** mér |
-| ⏳ **K17** | **A séta üzenet-alakja** — hogyan ugrik a jel készülékről készülékre? | Új protokoll-kérdés a `vonal.js` mellé, a 3.4 böngésző-lekérés mintájára (D50). ▶️ **A terve megvan: 9/b, 4.7 lépés** — a logika a hálózattól külön, az 1. szabály szerint |
-| ⏳ **K18** | **Mi szivárog ki egy séta közben?** | A kiinduló megtudja a végpontokat; a közbenső látja, kitől kapta és kinek adta. Sokkal kevesebb egy térképnél, de **nem nulla** — mérendő. ▶️ **9/b, 4.8 lépés**, javaslattal: a séta ne vigye a kiinduló kilétét, csak egy egyszer használatos jelet |
+| ⏸️ ~~**K17**~~ | ~~A séta üzenet-alakja~~ | ⏸️ **LEMINŐSÍTVE (2026-09-06):** a séta **nem védelem** (11.12–11.13), tehát az üzenet-alakja már nem sürgős. **9/c, 4.7** — utolsóként, ha egyáltalán |
+| ⏸️ ~~**K18**~~ | ~~Mi szivárog ki egy séta közben?~~ | ⏸️ **A K17-tel együtt leminősítve.** ⚠️ A kérdés viszont **áthelyeződött**: a **D55** nyíltság-döntés után nem a séta szivárgása a kérdés, hanem hogy a **nyilvános bemutatkozás** lánc-esemény legyen-e vagy nyilvános-de-helyi (lásd D55 zárómondata) |
 | ~~**K16**~~ | ~~Hogyan indul el a horgony-kör?~~ | ⛔ **TÁRGYTALAN** — nincs horgony-kör (K12). *A kérdés maga hasznos maradt: ő buktatta ki, hogy a „több független körből" feltétel a tudatos hálózatépítőt jutalmazza.* |
-| ~~**K14**~~ | ~~Mekkora méret fölött **kapcsoljon be** a szabály?~~ | ⛔ **A KÉRDÉS ROSSZ VOLT** (9/b, 4.0): a *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. ▶️ **Javaslat helyette (D51):** a `k` **paraméter**, a kis koino `k = 0`-val futtatja **ugyanazt a kódot** — nem külön üzemmód. ⚠️ A 🔴 közepes zóna így sem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
+| ~~**K14**~~ | ~~Mekkora méret fölött **kapcsoljon be** a szabály?~~ | ⛔ **A KÉRDÉS ROSSZ VOLT** (9/b, 4.0): a *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. ▶️ **Javaslat helyette (D51):** a `k` **paraméter**, a kis koino `k = 0`-val futtatja **ugyanazt a kódot** — nem külön üzemmód. ⛔ **A D51 azóta TÁRGYTALAN** (nincs `k`); a kérdés valódi válasza a **D56 két lépcsője**: a kis koino ugyanazt a kódot futtatja, csak nincs pénztárcája. ⚠️ A 🔴 közepes zóna így sem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
 | **K15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
 
 ---
 
-## 12. ✅ AMI ÁT VAN VEZETVE A DÖNTÉSEK KÖZÉ (2026-09-05)
+## 12. ✅ AMI ÁT VAN VEZETVE A DÖNTÉSEK KÖZÉ
 
-*A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a döntések helye — **a
-D43–D50 oda bekerült**, három blokkban: a kemény mag (D43–D47 + a D48 bukása), a
-**hetedik fordulat** (D49), és a **satu + D50**. Ott a döntés áll, itt a levezetés.*
+*A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a döntések helye. Ott a
+döntés áll, itt a levezetés.*
 
-*A **D48** kivételével mind érvényes; a D48 megbukott, de a bukása okát megőriztük —
-mert egy egész megoldás-családot zár ki.*
+**2026-09-05 — D43–D50** (a kemény mag + a D48 bukása · a hetedik fordulat, D49 · a satu és
+a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **D18/2** (Duniter-szabály),
+**D18/4** (időszakonként), **D18/5** (visszavonás).
 
-⭐ **És három meglévő döntés kapott ott jelzést arról, hogy ez felülírja:** a **D18/2**
-(a Duniter-szabály), a **D18/4** (az „időszakonként") és a **D18/5** (a visszavonás) —
-a `D18` szakasz elején.
+**2026-09-06 — D54–D60**, az átépítés napja:
 
-### ⏳ ÉS AMI MÉG NEM VEZETHETŐ ÁT — a megépítés három javaslata (9/b)
+| # | Mi | Állapot |
+|---|---|---|
+| **D54** | a készülék-felfedezés **segédeszköz, nem adatforrás** | ✅ |
+| **D55** | ⭐⭐ **a nyíltság** — a D49/c 1. pontja felülírva; a jelölés *„még nem értünk össze"* | ✅ |
+| **D56** | ⭐⭐⭐ **a két lépcsős beléptetés**, és a felhatalmazók köre = a 2. lépcsősök | ✅ |
+| **D57** | a küszöb **abszolút szám, nem rangsor** | ✅ |
+| **D57/b** | `N` = a **2. lépcsősök érték javaslatainak mediánja**; a felhatalmazás a **címzett szeletében** | ✅ |
+| **D58** | ebben a verzióban a **papír nélküli emberrel a 2. lépcsőn nem számolunk** | ✅ |
+| **D59** | az ellenőrzés **mélysége korlátos** — ⚠️ *a 12.2 mérés szerint a korlát nem is kell: menjen a gyökérig* | ✅ (a korlát elhagyható szelep) |
+| **D60** | a felhatalmazás **megbízás, nem pontszám** | ✅ |
 
-*Ezek **nem döntések**, hanem javaslatok: Csaba jóváhagyásáig itt maradnak, és csak utána
-kapnak helyet a döntések közt. ⚠️ Kódot addig nem érdemes írni rájuk.*
+### ⛔ ÉS AMI TÁRGYTALAN LETT (2026-09-06)
 
-- **D51 (javasolt)** — a bekapcsolás **nem méret-függvény, hanem paraméter**: `k = 0` a kis
-  koinóban, ugyanaz a kód. *(Ez zárja le a **K14**-et — a kérdés maga volt rossz.)*
-- **D52 (javasolt)** — a tanúsítás **a tanúsított szeletébe** kerül, nem a tanúéba. Ettől
-  lesz a keret *kapott* fele **egyetlen korlátos lekérdezés** (`szeletEsemenyei`).
-- ⚠️ **D53 (javasolt)** — a keret **a kiadás oldalán kemény, a befogadás oldalán jelzés**.
-  Ez oldja fel a rekurziót (*a tanú kerete a tanúi keretén múlna*), **és ez a szakasz
-  legfontosabb eldöntetlen pontja**: a HOL TARTUNK a keretet a **kemény magban** sorolja
-  (D44), a **D49/a** viszont csak a `k` tanúsítást és a befagyasztást nevezi keménynek.
-
-- **D43** — a belépési szabály alsó korlát, soha nem lefedettség (3. szakasz)
-- **D44** — a tanúsítási keret = a minimum feletti tanúsítások száma (4. szakasz)
-- **D45** — védőkorlát: az igazolvány soha ne legyen rögzíthető (6.3)
-- **D46** — visszavonás helyett bizonytalanra jelölés + gondolat (7. szakasz)
-- **D47** — az ellenőrzés az aláírás pillanatában történik, és befagy (8. szakasz)
-- ~~**D48**~~ — ⛔ **elvetve** (5.1/c): az ingyenes elismerés a szigetet ugyanúgy táplálja.
-  **Nem kell átvezetni** — de a bukás okát igen, mert az egy egész megoldás-családot zár ki
-- ⭐⭐ **D49** — **az identitás-réteg egy minimumon kívül nem tilt, hanem feltár** (8/c),
-  három részben: **a** a minimum kemény szabály marad · **b** a jelzés tényt mutat, soha
-  nem ítéletet · **c** három védőkorlát a boszorkányüldözés ellen
-- ⭐⭐ **D50** — **a bemutatkozás helyi lista, nem lánc-esemény; a séta üzenet, nem
-  lekérdezés** (8/e). *A jelzéshez nem kell a térkép, csak az út.* Ezzel a tenger a
-  **második rétegbe** kerül: élő, elhagyható, és nem épít társas térképet
-
-⚠️ **És két meglévő döntést érint:**
-
-- **D18/2** — a Duniter-féle távolság-szabály (80% / N^(1/5)) **nem tartható**, mert
-  globális számokat kíván; a helyébe a keret lép. *A D18/2 magva („a darabszám
-  hamisítható, a pozíció nem") viszont **áll** — a keret is pozíciót mér, csak
-  helyben ellenőrizhető alakban.*
-- **D18/4** — az „időszakonként, nem élethosszig" sor felülvizsgálandó (lásd K11).
-
----
+- **D44** — a tanúsítási keret. *Kiváltotta a D56 két lépcsője; a mérés szerint a kapu úgysem véd.*
+- **D51** (javasolt volt) — `k = 0` paraméter. *Nincs `k`.*
+- **D53** (javasolt volt) — a keret kemény/jelzés kettőssége. *Nincs keret.*
+- ⭐ **D52** (javasolt volt) — **ÉL, más néven:** a „az esemény a címzett szeletébe kerül"
+  elv a **D57/b**-ben valósult meg, a felhatalmazásra és a tanúsításra alkalmazva.
+- ⚠️ **D50** — a hordozó-döntés **áll** (helyi lista, ugráló üzenet), de a **szerep
+  átértékelődött**: a tenger **nem védelem**, hanem kényelem.
 
 ## Napló
 
@@ -1478,3 +1611,27 @@ kapnak helyet a döntések közt. ⚠️ Kódot addig nem érdemes írni rájuk.
   befogadás oldalán jelzés** (**D53 javaslat**). ⛔ **Ez a szakasz legfontosabb eldöntetlen
   pontja**, mert a HOL TARTUNK a keretet a kemény magban sorolja (D44), a D49/a viszont csak
   a `k` tanúsítást és a befagyasztást nevezi keménynek. **Kód addig nem készül.**
+- **2026-09-06** — ⭐⭐⭐ **A SZAKASZ ÁTÉPÜLT, ÉS CSABA LEZÁRTA.** Csaba két mondata indította:
+  *„nem kell tanúsítás, csak a bemutatkozások"*, majd *„maradjunk a meghívásos rendszernél"*.
+  Innen tizenkét mérés következett ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 11–12.),
+  és a nap végére **a tanúsítás–keret–horgony vonal egésze kiesett**, helyette a **két
+  lépcsős beléptetés** (D56) áll.
+  **A négy legfontosabb, amit a mérés tanított — mindegyik ellentmond annak, amit reggel
+  hittünk:**
+  **(1)** ⛔ **a belépési szám nem védelem, hanem árcédula** — a fal pontosan ott van, ahol
+  a megtévesztettek száma eléri a kért meghívó-számot (4-nél 0, **5-nél 880**);
+  **(2)** ⛔ **a jogosítási küszöb ELREJTI a szigetet** (100%/0% helyett 91%/16%), mert
+  minden hamisat egy valódi emberhez kényszerít — *egy teljesítendő küszöb egyben
+  hitelesítő pecsét is*;
+  **(3)** ⛔⛔ **a SÉTA a leggyengébb láncszem**, nem a legerősebb: sok megtévesztettnél
+  43–74% / 31–61%. A **tenger-gondolat nem védelem** — a **kontraszt** az (100% / 9–25%);
+  **(4)** ⭐⭐⭐ **és a törvény:** a visszacsatolással a kár 880 → 120, és
+  **kár = a támadó üteme × az ébredés ideje** — lineáris, tehát **a hurok mindig bezárul**.
+  ⚠️ **Négy saját modell-hibát is elkövettem közben**, mind a jegyzőkönyvben: a korlátos
+  mérés befagyott koinót mutatott „tökéletes védelemként" · az ismétlődés-szűrőt olyan
+  világban mértem, amiben nincs ismétlődés · a felhatalmazást nem korlátoztam, ezért
+  mindenki tanúsító lett · és a visszavonás-jelzést **rossz gráfon** kerestem.
+  ⭐ *A tanulság mind a négyszer ugyanaz: a jó szám ugyanolyan gyanús, mint a rossz, amíg
+  nem nézzük meg, mitől jó.*
+  ✅ **Csaba lezárása:** *„eleget mértünk. Nekem ez így már megfelel, első koinónak."*
+  ▶️ Az érvényes megépítési terv: **9/c**. A régi 9/b ⛔ elavult, meg van jelölve.
