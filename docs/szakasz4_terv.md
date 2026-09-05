@@ -795,6 +795,43 @@ tudatosan meghúzta: *„bizalom nem jár vele (3. szabály) … és sosem lesz 
 > dönt**. Így a bemutatkozás **közlés marad**, csak nem kell címet gépelni.
 > ⭐ Kockázat nélküli haszon, és a meglévő `helyiFelfedezes.js`-re épül.
 
+### ⭐⭐ D55 (Csaba, 2026-09-06) — A NYÍLTSÁG: A D49/c 1. PONTJA FELÜLÍRVA
+
+*A D49/c első védőkorlátja ezt mondta: „nincs személyre szóló gyanú-pontszám, nincs
+rangsor, nincs piros jelzés a név mellett." A mérés viszont azt adta, hogy **csak a
+személyre szóló alak működik** — a koino-szintű összesítés semmit nem mutat (11.7).*
+
+> **Csaba döntése:** *„felülírom. Az első közösségben fel kell vállalnia mindenkinek a
+> nevét, a települését, a bemutatkozásait (nyilván ha titkolni akar egy találkozót, akkor
+> nem teszi). Mivel nincsen kormány-garancia arra, hogy 1 ember = 1 e-ember legyen, ezért
+> csak egymást tudjuk hitelesíteni, ahhoz meg elengedhetetlen, hogy közzétegyünk
+> »személyes« dolgokat is. A koino a nyíltságról szól."*
+
+⭐ **Az indoklás szerkezeti, nem hangulati:** a koino elutasítja az állami és a biometrikus
+azonosítást (D7, D18), tehát **nem marad más, mint hogy az emberek egymást hitelesítik** —
+és ahhoz látniuk kell egymást. A titkosság és az egymás-hitelesítés **nem fér össze**; a
+koino a másodikat választja.
+
+⭐ **És a megfogalmazás, amiben megegyeztünk:** a jelölés **soha ne azt mondja, hogy
+„gyanús"**, hanem hogy **„MÉG NEM ÉRTÜNK ÖSSZE"**. Ugyanaz a szám, de:
+
+- **tény, nem ítélet** — a D49/b sértetlen marad;
+- **a kapcsolatról szól, nem a személyről**, és **szimmetrikus**: ha te így látsz engem,
+  én is így látlak téged. Ezért **nem tud stigmává válni**;
+- ⭐⭐ **a cselekvés benne van, és a jelzés önjavító**: a következő lépés magától adódik —
+  *mutatkozzunk be* —, és ha megtörténik, a jelölés **eltűnik**. A hamis azonosságnál nem
+  tűnik el, mert nincs, aki valóban bemutatkozzon vele.
+
+⚠️ **A D49/c 2. és 3. pontja ÁLL:** a jelzés **tájékoztat, nem jogosít** (semmilyen jog nem
+csökken tőle), és az összesített nézet továbbra is a koinóról szóljon.
+
+⏳ **És egy kérdés, amit ez NYITVA HAGY:** a nyilvános bemutatkozás **nem ugyanaz**, mint a
+láncra tett bemutatkozás. Lehet *nyilvános, de helyi* (a személy készülékéről lekérhető),
+vagy *lánc-esemény* (mindenkinél ott van). A **D50** az utóbbit zárta ki — a különbség a
+léptéknél és a D6-nál dől el, tehát külön döntés kell rá.
+⭐ *A séta ettől függetlenül megmarad*: már nem a titkosság miatt, hanem mert **korlátos
+munkával** felel arra, amire a teljes gráf bejárása csak globálisan tudna (9. szabály).
+
 ### ⏳ Amit ez még nem old meg
 
 - **Mi szivárog ki egy séta közben?** A kiinduló megtudja a végpontokat; a közbenső látja,
