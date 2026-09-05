@@ -832,6 +832,62 @@ léptéknél és a D6-nál dől el, tehát külön döntés kell rá.
 ⭐ *A séta ettől függetlenül megmarad*: már nem a titkosság miatt, hanem mert **korlátos
 munkával** felel arra, amire a teljes gráf bejárása csak globálisan tudna (9. szabály).
 
+### ⭐⭐⭐ D56 (Csaba, 2026-09-06) — A KÉT LÉPCSŐS BELÉPTETÉS
+
+*Ez az a szerkezet, ami a nap összes mérését összefogja: a költség oda kerül, ahol a
+támadás kifizetődik, és sehova máshova.*
+
+> **1. lépcső — a tagság.** **Egy meghívó**, és kész. Ezzel **minden mehet**: tartalom,
+> tudatpont, javaslat, szavazat. ⭐ **Nincs kapu, mert a mérés szerint a kapu úgysem véd**
+> (11.1: a meghívási szám nem védelem, hanem árcédula — a támadó egyszer megveszi a kellő
+> embereket, és onnantól korlátlan).
+>
+> **2. lépcső — a pénztárca.** **Három tanúsítás**, amit **csak felhatalmazott tanúsító**
+> adhat. ⭐ Ez a **D11** szó szerinti megvalósulása: *a pénz csak bizonyított identitás
+> után.* Eddig elvi mondat volt, most szerkezet.
+>
+> **A felhatalmazás.** Mindenki annyi felhatalmazást oszt, amennyit akar, annak, akinek
+> akar — **de emberenként csak egyet**. Aki elér egy küszöböt, **tanúsíthat**. ⭐ Ez
+> **szerep, nem rang**: bármikor visszavonható, mert az emberek újraosztják.
+>
+> ⭐⭐ **A választótestület: CSAK aki már átment a 2. lépcsőn** *(Claude javaslata, Csaba:
+> „igen, igazad van, ez tetszik")*. ⚠️ **Enélkül a szerkezet megbukna**, és ezt mérve
+> tudjuk: ha bárki oszthat felhatalmazást, akkor a támadó 880 hamis azonossága **egymást
+> hatalmazza fel**, mind bekerül a küszöb fölé, saját tanúsítókat állít, és a pénztárcák
+> megnyílnak. Pontosan ez történt a horgony-körnél (**880 hamis horgony** a 20 valódi
+> mellett): *minden kitüntetett halmaz, amit gráf-statisztika jelöl ki, elfoglalható.*
+> ⭐ A hitelesített körre szűkítve viszont a sziget **hiába ezerfős — egyetlen szavazata
+> sincs**, és a kör csak személyes találkozással bővül. Az alapító kör indítja, ugyanúgy,
+> mint a meghívási láncot.
+
+> ### ⛔ D57 — A KÜSZÖB ABSZOLÚT SZÁM, NEM RANGSOR
+>
+> A *„felső medián 1/3"* alak **globális számot kíván** (mindenki felhatalmazás-száma), és
+> ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. Helyette: **„legalább N
+> felhatalmazás"** — a saját szeletből, offline ellenőrizhetően.
+>
+> ⭐⭐ **És a közösség így is állíthatja mediánnal**, mert a **D13/c** szerint a
+> koino-paraméter maga is **entitás**: az `N` értéke az *arra az entitásra* adott érték
+> javaslatok mediánja. **Nem veszítünk semmit — csak a rangsort, és épp az volt a globális.**
+>
+> ⭐ *Csaba kérdésére, hogy a medián gond-e milliárdos léptékben:* **nem a medián a gond,
+> hanem a sokaság, amin fut.** A mai küszöbök az **entitás tulajdonosain** futnak
+> ([`javaslatSzamitas.js`](../koino/js/allapot/javaslatSzamitas.js) `kuszobokMost`), ami
+> szelet-korlátos, és azt a szeletet a szavazatszámláláshoz úgyis végigolvassuk.
+
+> ### ⚠️ D58 (Csaba, 2026-09-06) — EBBEN A VERZIÓBAN A PAPÍR NÉLKÜLI EMBERREL NEM SZÁMOLUNK
+>
+> A felhatalmazott tanúsító **kérheti az igazolványt** — *„okkal, hiszen több embert is
+> képvisel"*. A **D45** betűje sértetlen (a tanúsítás egyetlen, egyforma mondat marad,
+> nincs ráírva, hogy „igazolvánnyal ellenőrizve"), de a gyakorlatban ez azt jelenti, hogy
+> **papír nélkül nem lesz pénztárca**.
+>
+> ⭐ **A hatóköre viszont SZŰK, és ezt fontos rögzíteni:** ez **csak a 2. lépcsőt** érinti.
+> A papír nélküli ember **teljes jogú e-ember marad** — tartalmat hoz létre, tudatpontot
+> oszt, javasol és **szavaz**. Csak pénztárcája nincs.
+> ⚠️ *A D45 eredeti indoka (a befogadás) tehát az 1. lépcsőn továbbra is teljesül; a
+> 2. lépcsőn tudatosan feladjuk.*
+
 ### ⏳ Amit ez még nem old meg
 
 - **Mi szivárog ki egy séta közben?** A kiinduló megtudja a végpontokat; a közbenső látja,
