@@ -875,6 +875,59 @@ támadás kifizetődik, és sehova máshova.*
 > ([`javaslatSzamitas.js`](../koino/js/allapot/javaslatSzamitas.js) `kuszobokMost`), ami
 > szelet-korlátos, és azt a szeletet a szavazatszámláláshoz úgyis végigolvassuk.
 
+> ### ⭐⭐ D57/b (Csaba, 2026-09-06) — A KÜSZÖB A 2. LÉPCSŐSÖK JAVASLATAINAK MEDIÁNJA
+>
+> `N` **nem mért érték, hanem kimondott**: a paraméter-entitásra adott **érték javaslatok
+> mediánja** — és javaslatot is **csak 2. lépcsős** e-ember tehet.
+>
+> ⚠️ **Claude tévedésének javítása:** azt írtam, hogy „a hitelesítettek köre jóval kisebb",
+> ezért ott a globális medián megoldható. **Nem igaz** — *(Csaba: „reményeim szerint több
+> milliárdan lesznek a 2. lépcsőfokon")*. ⭐ **De nem is számít**, mert nem a SZÁMOLÁS volt
+> a baj, hanem a **RANGSOR**: a *„felső harmadban vagy-e"* mindenki számát kívánja, a
+> *„van-e legalább N"* csak a **saját szeletemet**.
+>
+> **A program szintjén:**
+>
+> - új esemény: `Felhatalmazas` — szerzője 2. lépcsős, `entitas` a **felhatalmazott**
+>   szelete (nem a szerzőé), így a *„hányan hatalmazták fel X-et?"* **egyetlen
+>   szelet-lekérdezés** (`szeletEsemenyei`, a 3.2 munkája);
+> - a tanúsítói engedély **nem esemény, hanem SZÁMÍTÁS** (D17):
+>   `tanusithat(X) = |X szeletében a KÜLÖNBÖZŐ, 2. lépcsős felhatalmazók| ≥ N`;
+> - a szabály-rétegben: **emberenként egy** felhatalmazás számít, és a szerzőnek
+>   2. lépcsősnek kell lennie.
+
+> ### ⭐⭐⭐ D59 (Csaba, 2026-09-06) — AZ ELLENŐRZÉS MÉLYSÉGE KORLÁTOS
+>
+> *„Csak egy bizonyos lépésszámig kell ellenőrizni."*
+>
+> A *„2. lépcsős-e a felhatalmazó?"* kérdés rekurzív (az ő tanúsítói is ellenőrizendők, és
+> így tovább). ⭐ **A válasz: rögzített `D` mélységig ellenőrzünk, azon túl nem.**
+>
+> ⚠️ **DE CSAK RÖGZÍTETT MÉLYSÉGGEL — ez a döntő részlet.** Ha mindenki *„addig ellenőriz,
+> ameddig lát"*, akkor a kevesebb adattal rendelkező készülék MÁS eredményre jut, és
+> **megdől a D49/a** (készülékenként más lesz, ki 2. lépcsős → szétesik a szavazatszámlálás).
+> ⭐ Ha viszont `D` **közösségi paraméter** (érték javaslatok mediánja, mint `N`), akkor
+> **mindenki pontosan ugyanannyit ellenőriz, tehát ugyanoda jut.**
+>
+> ⭐⭐ **És amit ez megszüntet:** eddig nyitott kérdés volt, *„milyen mély a lánc
+> egymilliárdnál"* — **a korlát ezt tárgytalanná teszi.** A munka `D`-től függ, nem a
+> közösség méretétől: a 9. szabály közvetlenül teljesül.
+>
+> ⭐ **A költség ráadásul egyszeri** (D47): akiről egyszer megállapítottuk, hogy 2. lépcsős,
+> az **soha nem változik**, tehát a készülék eltárolja és nem számolja újra.
+>
+> #### ⚠️ Amit feladunk vele — és miért vállalható
+>
+> A `D`-nél mélyebben rejtőző csalás **véglegesen láthatatlan** marad. ⭐ **De ezt a D47-tel
+> már úgyis feladtuk:** a befagyasztás szerint a múltat nem tárgyaljuk újra. A korlátos
+> mélység ennek csak a **számítási megfelelője**, nem új engedmény.
+>
+> ⚠️ **A támadó ebből következő lépése:** *mélységet épít* — több generációnyi hamis
+> tanúsítót, hogy a hamisság `D` alá kerüljön. ⭐ Ez viszont **generációnként** kíván `N`
+> felhatalmazást 2. lépcsősöktől és **személyes, igazolvánnyal ellenőrzött találkozókat** —
+> vagyis **lassú, drága és nyilvános**, és közben a **torlódás-jelzés** (11.13: 100% / 9–25%)
+> végig látja. *A rétegzett védelem itt kapcsolódik össze.*
+
 > ### ⚠️ D58 (Csaba, 2026-09-06) — EBBEN A VERZIÓBAN A PAPÍR NÉLKÜLI EMBERREL NEM SZÁMOLUNK
 >
 > A felhatalmazott tanúsító **kérheti az igazolványt** — *„okkal, hiszen több embert is
