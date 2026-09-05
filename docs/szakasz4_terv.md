@@ -7,38 +7,51 @@
 > az [`utiterv.md`](utiterv.md) a **sorrendé**, a [`skalazas_terv.md`](skalazas_terv.md) a
 > **szerkezeté**. Ez itt a Szakasz 4 **részlete**: hogyan lesz a koinónak olyan
 > bizalmi hálója, ami az első naptól milliárdos.
-> ⚠️ **Kód még nincs.** Ez tervezés — a lezárt döntések alább külön szakaszban állnak, és
-> **át kell vezetni őket D43–D49-ként** a fázis-2 tervbe.
+> ⚠️ **A koino kódja még nem változott.** Ez tervezés — az egyetlen megírt darab a
+> [`szigetMeres.js`](../koino/meres/szigetMeres.js) **mérőeszköz** (gráf-kísérlet, nem
+> koino-kísérlet: nincs benne kulcs, aláírás, esemény, hálózat).
+> ⛔ **A lezárt döntéseket (D43–D47, D49, D50) még ÁT KELL VEZETNI** a
+> [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)-be — az a döntések helye, ez
+> csak a részleteké.
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-04)
+> ## ▶️ HOL TARTUNK (2026-09-05) — megvan az irány, a mérés áll mögötte
 >
-> ✅ **Ami áll:** a belépés **alsó korlát**, nem lefedettség (D43) · ⭐ **a keret Csaba
-> szabálya** (D44): *annyi tanúsítást adhatsz, amennyivel a minimum fölött vagy* — ez
-> **megöli a „fizess egyszer, arass örökké" támadást**, mert a friss belépő kerete nulla ·
-> **nincs időszak** (K11) · a paraméterek **befagynak** az aláírás pillanatában (D47) · a
-> visszavonás helyett **bizonytalanra jelölés + gondolat** (D46) · az igazolvány soha nem
-> rögzíthető (D45) · a **tanúsító találkozó** a szokásos út.
+> **A SZERKEZET, egy mondatban:** a láncon marad az a **kevés, kemény szabály**, ami dönt
+> (`k` tanúsítás + befagyasztás); minden más **jelzés**, ami nem tilt, hanem feltár; és a
+> jelzések java **el sem jut a láncra** — helyi lista, amin **séta fut**, nem térkép.
 >
-> ⛔ **ÉS AMI KIDERÜLT (2026-09-04, 5.1/c): A GAZDASÁG ÖNMAGÁBAN NEM LEHET A VÉDELEM.**
-> Ha a keret megmaradó, a közösség **nem tud nőni**; ha teremthető, **a sziget is teremt** —
-> mert *a számtan nem látja a különbséget valódi és hamis ember között*. A keret tehát
-> **fék és ütemszabályzó**, nem a Sybil-korlát hordozója.
+> ✅ **A kemény mag (a láncon):** a belépés **alsó korlát**, nem lefedettség (**D43**) ·
+> a **keret** (**D44**, Csaba): *annyi tanúsítást adhatsz, amennyivel a minimum fölött vagy*
+> — ez öli meg a *„fizess egyszer, arass örökké"* támadást · **nincs időszak** (K11) · az
+> ellenőrzés az aláírás pillanatában **befagy** (**D47**) · az igazolvány soha nem
+> rögzíthető (**D45**) · visszavonás helyett **bizonytalanra jelölés + gondolat** (**D46**).
 >
-> ⭐⭐ **ÉS EBBŐL JÖTT A FORDULAT (Csaba, 2026-09-05, 8/c szakasz):** ha a szabálytól nem
-> kapható garancia, akkor **ne is garanciát kérjünk tőle.** Az identitás-réteg **egy
-> minimumon kívül nem TILT, hanem FELTÁR** — a gyanús minták és az, hogy kit hányan
-> ismernek személyesen, **legyen látható**, és a közösség dönt. Ez az az alakzat, ahogy a
-> koino minden más nehéz kérdést kezel: *lassú, nyilvános, megtámadható* (D19, D15, D16).
+> ⭐⭐ **A FORDULAT (D49):** *az identitás-réteg egy minimumon kívül nem tilt, hanem
+> FELTÁR.* A jelzés **tényt mutat, soha nem ítéletet**, és a közösség dönt — *lassú,
+> nyilvános, megtámadható*, mint a koino minden nehéz kérdése.
 >
-> ⏳ **Ami nyitva marad:** ⛔ **K12 — a horgony-halmaz** és ⛔ **K13 — az út-feltétel**
-> *(a „talán nem kell horgony" mondat visszavonva)*, a bekapcsolási méret (K14), a pótutak
-> (K15) és a horgony-bootstrap (K16).
+> ⭐⭐⭐ **A SATU (Csaba: „BEMUTATKOZÁS", 8/d):** a személyes statisztika a **ritka** hamis
+> szigetet fogja meg, a **bemutatkozások tengere** (véletlen séták: összeérünk-e?) a
+> **sűrűt** — és **a támadó nem tud egyszerre sűrű és ritka lenni.** Mérve: **100% hamis
+> elkapva, 0% becsületes tévesen**, mind a három szimulált támadó ellen.
 >
-> ▶️ **A következő munka:** ⭐ **a jelzések kidolgozása és MEGMÉRÉSE** — egy jelzés akkor ér
-> valamit, ha a szimulált szigetre kigyullad, a becsületes közösségre viszont nem
-> (`szigetMeres.js`). *(Mérj, ne saccolj — a fenti két bukást is a számolás hozta ki.)*
+> ⭐⭐ **ÉS TÉRKÉP NÉLKÜL (D50, 8/e):** a bemutatkozás **helyi lista**, a séta **ugráló
+> üzenet** — *a jelzéshez nem kell a térkép, csak az út.* A tenger így a **második rétegbe**
+> kerül, a kereső mellé: élő, elhagyható, és nem épít társas térképet.
+>
+> ⛔ **Amit MÉRVE kizártunk** (ne induljon el rajtuk újra egy friss session —
+> [`eredmenyek.md`](../koino/meres/eredmenyek.md)): a Duniter-féle távolság-szabály
+> (globális szám) · az „ingyenes elismerés" (a szigetet táplálja) · **a gazdaság önmagában**
+> (megmaradó → nem nő; teremthető → a sziget is teremt) · **a horgony-kör** (a támadó
+> elfoglalja: 880 hamis horgony) · ⛔ és a *„kevés kapcsolata van, tehát gyanús"* jelzés
+> (31/41/45% téves megjelölés, épp a magányosra és a frissen érkezettre).
+>
+> ▶️ **A KÖVETKEZŐ MUNKA:** a bemutatkozás **üzenet-alakja** (protokoll, a 3.4 mintájára) ·
+> **mi szivárog egy séta közben** · és a 8/d mérésének **megismétlése valódi
+> bemutatkozás-gráfon** (eddig a tanúsítási gráfon futott). ⚠️ Kód még nincs — a
+> `szigetMeres.js` gráf-kísérlet, nem koino-kísérlet.
 
 ---
 
@@ -750,8 +763,20 @@ Az a szerkezet pontosan ehhez való.
   kitől kapta és kinek adta. Ez sokkal kevesebb egy térképnél, de **nem nulla** — külön
   végig kell gondolni, és mérni.
 - **A séta üzenet-alakja** — új protokoll-kérdés a `vonal.js` mellé, a 3.4 mintájára.
-- **Mi van, ha a lista elvész?** A helyi lista nem terjed, tehát készülékcserénél odalesz —
-  ⚠️ *(a kulcsot mentjük, de ezt?)*
+- ✅ **„Mi van, ha a lista elvész?" — Csaba válasza (2026-09-05):** *„ez könnyen pótolható,
+  újbóli bemutatkozással (viccesen). Vagy ha több készüléket is használ, akkor nem vész el.
+  Meg felrakhatja ingyenes felhő-szolgáltatásba is."*
+  ⭐ **És a tréfás rész a legkomolyabb:** a tengerben elfoglalt helyed **nem tárolt
+  jogosultság, hanem élő tény** arról, kiket ismersz. A lista elvesztése a **feljegyzést**
+  viszi el, nem a **kapcsolatokat** — és a feljegyzés újra keletkezik attól, hogy élsz.
+  *(Ellentétben a kulccsal, aminek az elvesztése a D15 egész helyreállítási gépezetét
+  igényli.)*
+  **Gyakorlatban:** a lista legyen **fájlba menthető**, mint a kulcs (`mentes kulcs.json`)
+  — és hogy a tulajdonos hova teszi a fájlt (másik készülék, pendrive, felhő), az **az ő
+  dolga**. ⚠️ Így a 2. szabály sem sérül: a koino nem függ semmilyen szolgáltatástól, csak
+  megengedi, hogy az e-ember használjon egyet.
+  ⚠️ *(Nyitva marad: a saját több készülék között kell-e szinkron — az a SAJÁT adat
+  másolása, nem terjesztés, tehát más kérdés, mint hogy a lista „sosem terjed".)*
 - **És mérni kell:** a 8/d mérése a **tanúsítási** gráfon futott. A bemutatkozás sűrűbb és
   olcsóbb; elvileg **erősíti** a jelzést, de ez feltevés, nem mérés.
 
@@ -779,6 +804,11 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 
 *A projekt módszertana: minden állítás mellé mérés. Ezek a próbák még nincsenek megírva.*
 
+> ⭐ **ÁLLAPOT (2026-09-05): az 1–5. pont MEGVAN**, a `szigetMeres.js`-ben, három támadóval
+> (hangos · óvatos · alapos) — jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md)
+> 1–10. szakasz. ⚠️ **A 6. (méret) még hátra van**, és hátra van a mérés megismétlése egy
+> **valódi bemutatkozás-gráfon** — eddig a tanúsítási gráfon futott.
+
 1. ⛔ **A szimulált sziget.** Egy támadó `g` becsületes tanúsítást szerez; a próba futtassa
    ki, hány hamis azonosságot tud felvetetni. **Az `f ≤ g/k` korlátnak tartania kell**
    — és a próba akkor jó, ha *előbb* megpróbálja megdönteni.
@@ -803,9 +833,11 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 | # | Kérdés | Miért fontos |
 |---|---|---|
 | ~~**K11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
-| ⛔⛔ **K12** | **Milyen legyen a horgony-halmaz** (tartós mag)? | ⛔ **A „m független horgony-tanú" alak MÉRVE ELBUKOTT** (2026-09-05, [`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületes körnek **nehéz** (30 kör alatt egyetlen új horgony sem), a támadónak **könnyű** (mind a 880 hamis horgonnyá vált) — mert a szabály azt jutalmazza, aki **tudatosan hálózatot épít**, és a támadó a legtudatosabb. A kérdés nyitva: **milyen legyen helyette** |
-| ⛔ **K13** | **Milyen út-feltétel** kerüljön a keret mellé (diszjunkt utak? távolság?) | Ugyanaz az ok. ⚠️ A 4.1 tanulsága áll: az út-feltétel **egy bizonyításon belül** tilt közös embert, a bizonyítások között nem — tehát önmagában ez sem elég |
-| ⛔ **K16** | **Hogyan indul el a horgony-kör?** Egyetlen alapítói klikkből **mérve nem tágul** (mindenki ismeri egymást, tehát egy csoportnak számít) | Négy kiút: több alapítói kör *(⚠️ ezt Claude tette hozzá, nem Csaba döntése — és feszül a D18/0-val)* · a szabály csak egy méret fölött kapcsoljon be (**K14**) · más nyomot keresünk a „több találkozó"-ra *(⚠️ az idő nem jó: a támadó ingyen szórja szét a saját tanúsításait)* · vagy egészen más horgony-feltétel |
+| ~~**K12**~~ | ~~Milyen legyen a horgony-halmaz?~~ | ⛔ **TÁRGYTALAN.** A „m független horgony-tanú" alak **mérve elbukott** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületesnek nehéz, a támadónak könnyű, és **a kört elfoglalja** (880 hamis horgony). ⭐ **És már nem is kell:** a tenger-jelzés (8/d) **nem mér kitüntetett ponthoz** — épp ezért nem foglalható el |
+| ~~**K13**~~ | ~~Milyen út-feltétel kerüljön a keret mellé?~~ | ⛔ **TÁRGYTALAN**, ugyanezért. A helyére a **véletlen séta** lépett, ami nem egy ponthoz, hanem a **tengerhez** mér |
+| ⏳ **K17** | **A séta üzenet-alakja** — hogyan ugrik a jel készülékről készülékre? | Új protokoll-kérdés a `vonal.js` mellé, a 3.4 böngésző-lekérés mintájára (D50) |
+| ⏳ **K18** | **Mi szivárog ki egy séta közben?** | A kiinduló megtudja a végpontokat; a közbenső látja, kitől kapta és kinek adta. Sokkal kevesebb egy térképnél, de **nem nulla** — mérendő |
+| ~~**K16**~~ | ~~Hogyan indul el a horgony-kör?~~ | ⛔ **TÁRGYTALAN** — nincs horgony-kör (K12). *A kérdés maga hasznos maradt: ő buktatta ki, hogy a „több független körből" feltétel a tudatos hálózatépítőt jutalmazza.* |
 | **K14** | Mekkora méret fölött **kapcsoljon be** a szabály? | A **D18/0** szerint kicsiben a közvetlen ismeret véd. ⚠️ A 🔴 közepes zóna nem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
 | **K15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
 
@@ -815,6 +847,8 @@ kell megmondani, mit jelent — vagy kimondani, hogy nem kell, és kivenni.
 
 *A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a döntések helye. Az itt
 javasolt számok — **D43–D47** — még nincsenek átvezetve.*
+
+*A **D48** kivételével mind érvényes; a D48 megbukott, de a bukása okát meg kell őrizni.*
 
 - **D43** — a belépési szabály alsó korlát, soha nem lefedettség (3. szakasz)
 - **D44** — a tanúsítási keret = a minimum feletti tanúsítások száma (4. szakasz)
