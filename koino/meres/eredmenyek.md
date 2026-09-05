@@ -677,3 +677,40 @@ kör-alakú világnál: a jó eredmény gyanús, amíg meg nem nézzük, mitől 
   küszöb-kereső túlilleszt;
 - a világ „kis világ" (10% távoli találkozó) — **egy teljesen elszigetelt közösségnél a
   séta-jelzés gyengébb lenne.**
+
+## 11.3/b ⭐⭐ ÉS MIÉRT ANNYI? — a HÍD, ami a séta számait megmagyarázza
+
+*Csaba kérdése (2026-09-06): „érdekes, hogy 100%-ban fel lehet deríteni a hamis
+regisztrációkat — hogy is működik ez?" A válasz nem a séta ügyessége, hanem a sziget
+alakja — és ezt külön megmértük, hogy ne feltevés maradjon.*
+
+⭐ **A séta nem azt méri, hogy valaki hamis-e, hanem hogy MEDDIG ÉR EL a tengerben.**
+
+| változat | hamis bent | híd-élek a valódi világhoz | ebből hamis, akinek van valódi ismerőse |
+|---|---|---|---|
+| V2 — 1 meghívó | 880 | ⭐ **1** | **1 (0%)** |
+| V4 — 3 meghívó | 880 | 6 | 3 (0%) |
+| V1 — nyílt | 880 | 880 | 880 (100%) |
+| V2b — 1 meghívó + jogosítás | 880 | 880 | 880 (100%) |
+| V3 — 2 meghívó + jogosítás | 880 | 1760 | 880 (100%) |
+
+> ⭐⭐ **A V2-nél a 880 hamis azonosság EGYETLEN bemutatkozáson lóg.** A támadó azért
+> építette így, mert ez a legolcsóbb: az első hamisat még egy megtévesztett ember hívja be,
+> onnantól viszont **a hamisak hívják egymást, ingyen**. Egy tízlépéses séta pedig
+> gyakorlatilag soha nem talál rá arra az egy élre — tehát a sziget lakói **sehol nem érnek
+> össze senkivel**. Innen a 100% / 0%.
+
+⚠️ **Vagyis a 100% nem a jelzés érdeme, hanem a támadó spórolásáé.** Ugyanez a jelzés
+**91% / 16%**-ra esik, amint minden hamis kap egy valódi ismerőst (V2b) — mert akkor
+**pontosan úgy néz ki, mint egy frissen érkezett becsületes ember**, akinek még egy
+ismerőse van. A séta a **leszakadást** látja, nem a hamisságot.
+
+⛔ **És a rossz hír: a leszakadás megszüntetése OLCSÓ.** A V2b-ben a 880 híd-él **három
+megtévesztett emberből** indul — fejenként ~293 bemutatkozás. A támadónak tehát nem kell
+több embert megvennie, csak többször kell ugyanazokat használnia.
+
+⭐ **Ami viszont ebből következik, és még nincs megmérve:** három ember, fejenként ~293
+bemutatkozással olyanok felé, akiknek nincs más ismerősük — ez **torlódás**, és épp a
+megtévesztett emberek oldalán feltűnő, nem a hamisakén. Ezt a jelzést a
+[`szigetMeres.js`](szigetMeres.js) már számolja a tanúsítási világban; a meghívásosban
+**még nem**. Ez a következő mérés.

@@ -553,6 +553,32 @@ function onellatasKuszobe(hamisMeghivoi) {
   return null;
 }
 
+/**
+ * ⭐⭐ A HÍD — hány szálon lóg a sziget a valódi világon?
+ *
+ * Ez magyarázza meg a séta-jelzés számait, és e nélkül a „100%" puszta babona volna.
+ * A séta ugyanis nem azt méri, hogy valaki hamis-e, hanem hogy MENNYIRE ÉR EL a tengerig.
+ * Ha az egész sziget egyetlen bemutatkozáson lóg, egy tízlépéses séta gyakorlatilag soha
+ * nem talál rá arra az egy élre — tehát a sziget lakói sehol nem érnek össze senkivel.
+ */
+function hidMerese(vilag) {
+  const b = vilag.b;
+  let hidElek = 0;
+  let kapcsoltHamis = 0;
+  let hamisTagok = 0;
+  for (let i = vilag.hamisKezdet; i < vilag.tag.length; i++) {
+    if (!vilag.tag[i]) continue;
+    hamisTagok++;
+    let vanValodi = 0;
+    for (const sz of vilag.bemutatkozas[i]) {
+      if (sz < b.valodiEmberek && vilag.tag[sz]) vanValodi++;
+    }
+    hidElek += vanValodi;
+    if (vanValodi > 0) kapcsoltHamis++;
+  }
+  return { hidElek, kapcsoltHamis, hamisTagok };
+}
+
 /** A séta-jelzés mérése: hamis elkapva / becsületes tévesen megjelölve. */
 function jelzesMerese(e, mag) {
   const b = BEALLITAS;
@@ -703,6 +729,30 @@ function main() {
     const atlElkapva = jelzesek.reduce((o, j) => o + j.elkapva, 0) / jelzesek.length;
     const atlTevesen = jelzesek.reduce((o, j) => o + j.tevesen, 0) / jelzesek.length;
     kiir(sor([v.nev, szazalek(atlElkapva), szazalek(atlTevesen)], jelSzel));
+  }
+
+  // ===== 4. MIÉRT? — a híd, ami a 3. táblázat számait megmagyarázza =====
+  kiir('');
+  kiir('▶ 4. MIÉRT ANNYI? — hány szálon lóg a sziget a valódi világon');
+  kiir('-'.repeat(84));
+  kiir('   (a séta nem azt méri, ki hamis, hanem hogy KI MEDDIG ÉR EL a tengerben)');
+  kiir('');
+  const hidSzel = [30, 14, 20, 22];
+  kiir(sor(['változat', 'hamis bent', 'híd-élek a valódihoz', 'ebből hamis kapcsolt'], hidSzel));
+  for (const v of VALTOZATOK) {
+    const e = vedEredmeny[v.nev];
+    const hidak = e.eredmenyek.map((r) => hidMerese(r.vilag));
+    const atl = (mezo) => hidak.reduce((o, h) => o + h[mezo], 0) / hidak.length;
+    if (!atl('hamisTagok')) {
+      kiir(sor([v.nev, '0', '—', '—'], hidSzel));
+      continue;
+    }
+    kiir(sor([
+      v.nev,
+      kerekit(atl('hamisTagok')),
+      kerekit(atl('hidElek')),
+      `${kerekit(atl('kapcsoltHamis'))} (${szazalek(atl('kapcsoltHamis') / atl('hamisTagok'))})`,
+    ], hidSzel));
   }
 
   kiir('');
