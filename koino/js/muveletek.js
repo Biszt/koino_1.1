@@ -26,7 +26,7 @@ import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import {
   esemenyMentese, lancVege, sajatLancEsemenyei,
-  kovetkezoEntitasSorszam, horgonyok, esemenyLekerese
+  kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei
 } from './tar/esemenyTar.js';
 
 // ===== A TUDATPONT-KERET =====
@@ -281,8 +281,69 @@ export function felhatalmazas(kornyezet, adatok) {
  * @param {Object} kornyezet
  * @param {Object} adatok - { kit, horgonya, sajatBelepes }
  */
-export function tanusitas(kornyezet, adatok) {
-  return allitokRola(kornyezet, 'Tanusitas', adatok);
+export async function tanusitas(kornyezet, adatok) {
+  // ⭐⭐ A BEMONDÁS (D42-minta): a tanúsítás magával viszi, MIRE TÁMASZKODOTT — azoknak a
+  // felhatalmazásoknak az azonosítóit, amik aláíráskor érvényben voltak.
+  //
+  // ⚠️ MIÉRT KELL? Mert a **visszavonás** (4.5) csak ELŐRE hat: aki elveszíti a megbízást,
+  // az többet nem tanúsíthat, de a **már kiadott tanúsításai érvényben maradnak** (D47).
+  // Globális óra nélkül ezt csak úgy lehet ellenőrizni, ha az esemény maga mondja meg, mi
+  // volt igaz akkor — és az események soha nem tűnnek el, tehát a bemondás örökre
+  // ellenőrizhető. *Enélkül néhány ember összebeszélve becsületes emberek tömegétől venné
+  // el a pénztárcát.*
+  const felhatalmazasok = adatok.felhatalmazasok
+    ?? await sajatFelhatalmazasaim(kornyezet, adatok.sajatBelepes);
+
+  return allitokRola(kornyezet, 'Tanusitas', { ...adatok, felhatalmazasok });
+}
+
+/**
+ * ⭐ VISSZAVONOM A FELHATALMAZÁST (9/c 4.5).
+ *
+ * A felhatalmazás **az enyém**: én adtam, én veszem vissza — egyoldalúan, indoklás nélkül.
+ * ⚠️ A tanúsítás NEM ilyen: az állítás a múltról, azt nem lehet visszavonni (D46) — mert
+ * ha lehetne, néhány ember összebeszélve bárkit kiléptethetne utólag.
+ *
+ * ⭐ A számítás „az utolsó nyer" mintát követi (mint a tudatpont): ha a legutóbbi
+ * állításom róla visszavonás, akkor nincs érvényben a felhatalmazásom.
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adatok - { kit, horgonya, sajatBelepes }
+ */
+export function felhatalmazasVisszavonasa(kornyezet, adatok) {
+  return allitokRola(kornyezet, 'FelhatalmazasVisszavonasa', adatok);
+}
+
+/**
+ * A saját, ÉRVÉNYBEN LÉVŐ felhatalmazásaim azonosítói — a tanúsítás bemondásához.
+ *
+ * ⚠️ „Az utolsó nyer": akinek a legutóbbi állítása rólam visszavonás, azt kihagyjuk.
+ * Ugyanaz a szabály, amit az `identitas.js` alkalmaz az ellenőrzéskor — és azért itt is
+ * leírjuk, mert a kettőnek egyeznie kell, különben a saját eseményünk mondana ellent
+ * önmagának (a D42 tanulsága).
+ */
+async function sajatFelhatalmazasaim(kornyezet, sajatBelepes) {
+  if (typeof sajatBelepes !== 'string') return [];
+  const szelet = await entitasEsemenyei(kornyezet.tar, kornyezet.koino, sajatBelepes);
+
+  const utolso = new Map();   // felhatalmazó → { sorszam, azonosito, vissza }
+  for (const e of szelet) {
+    if (e.tipus !== 'Felhatalmazas' && e.tipus !== 'FelhatalmazasVisszavonasa') continue;
+    if (e.adat?.kit !== kornyezet.szerzo) continue;
+    const sorszam = e.entitasSorszam ?? 1;
+    const eddigi = utolso.get(e.szerzo);
+    if (!eddigi || sorszam >= eddigi.sorszam) {
+      utolso.set(e.szerzo, {
+        sorszam,
+        azonosito: e.azonosito,
+        vissza: e.tipus === 'FelhatalmazasVisszavonasa'
+      });
+    }
+  }
+
+  const azonositok = [];
+  for (const [, allapot] of utolso) if (!allapot.vissza) azonositok.push(allapot.azonosito);
+  return azonositok;
 }
 
 // ===================================

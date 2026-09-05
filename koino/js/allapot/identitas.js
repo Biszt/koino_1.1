@@ -138,8 +138,32 @@ async function ervenyesAllitok(tar, koino, horgony, horgonyEsemeny, tipus, felte
   const allitok = new Set();
   let voltNemEllenorizheto = false;
 
+  // ⭐⭐ „AZ UTOLSÓ NYER" — a VISSZAVONÁS (9/c 4.5).
+  //
+  // A felhatalmazás **az enyém**: én adtam, én veszem vissza, egyoldalúan és indoklás
+  // nélkül. Ezért nem külön szabály kell hozzá, hanem ugyanaz a minta, amit a tudatpontnál
+  // már használunk: *e-emberenként az utolsó nyer.* Ha valakinek a LEGUTÓBBI állítása
+  // rólam egy visszavonás, akkor nincs érvényben a felhatalmazása.
+  //
+  // ⚠️ A sorrendet az `entitasSorszam` adja — az ÁLLÍTÓ saját sorszáma EZEN a szeleten.
+  // Ez azért elég, mert csak a SAJÁT állításait kell egymáshoz képest rendezni, és azt a
+  // láncát csak ő írhatja. Globális órára nincs szükség.
+  const visszavonva = new Map();   // állító → a visszavonásának entitás-sorszáma
+  if (tipus === 'Felhatalmazas') {
+    for (const e of szelet) {
+      if (e.tipus !== 'FelhatalmazasVisszavonasa') continue;
+      if (e.adat?.kit !== horgonyEsemeny.szerzo) continue;
+      const eddigi = visszavonva.get(e.szerzo) ?? 0;
+      visszavonva.set(e.szerzo, Math.max(eddigi, e.entitasSorszam ?? 1));
+    }
+  }
+
   for (const e of szelet) {
     if (e.tipus !== tipus) continue;
+
+    // ⭐ A visszavont felhatalmazás nincs érvényben — kivéve, ha UTÁNA újra megadták.
+    if (tipus === 'Felhatalmazas' && visszavonva.has(e.szerzo)
+        && (e.entitasSorszam ?? 1) < visszavonva.get(e.szerzo)) continue;
 
     // ----- 1. RÓLAM SZÓLJON -----
     // A `kit` mező a horgony szerzőjére mutasson. Enélkül egy idegen szeletébe tett
@@ -162,7 +186,9 @@ async function ervenyesAllitok(tar, koino, horgony, horgonyEsemeny, tipus, felte
     if (allitoEsemeny.szerzo !== e.szerzo || allitoEsemeny.koino !== koino) continue;
 
     // ----- 4. ÉS A REKURZIÓ: megfelel-e az állító a feltételnek? -----
-    const allapota = await feltetel(tar, koino, allitoHorgony, nezet);
+    // ⚠️ A feltétel MEGKAPJA az állítás eseményét is — a tanúsításnál ez dönti el, hogy a
+    // BEMONDOTT felhatalmazásokra nézünk-e (a múlt befagyasztása), nem a mai állapotra.
+    const allapota = await feltetel(tar, koino, allitoHorgony, nezet, e);
     if (!allapota.ellenorizheto) voltNemEllenorizheto = true;
     if (allapota.igen) allitok.add(e.szerzo);   // ⭐ emberenként EGY számít (Set)
   }
@@ -349,7 +375,7 @@ export function tanusithatE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
 export function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
   return kerdes('lepcso2', tar, koino, horgony, nezet, async (esemeny) => {
     const { db, voltNemEllenorizheto } =
-      await ervenyesAllitok(tar, koino, horgony, esemeny, 'Tanusitas', tanusithatE_, nezet);
+      await ervenyesAllitok(tar, koino, horgony, esemeny, 'Tanusitas', tanusitoJoga, nezet);
 
     if (db >= nezet.tanusitasKell) {
       return { igen: true, ok: db + ' tanúsítója van', ellenorizheto: true };
@@ -362,6 +388,92 @@ export function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
       ellenorizheto: !voltNemEllenorizheto
     };
   });
+}
+
+/**
+ * ⭐⭐ VOLT-E JOGA A TANÚSÍTÓNAK, AMIKOR ALÁÍRTA? — a múlt befagyasztása (D47, 9/c 4.5)
+ *
+ * *Csaba döntése (2026-09-06):* ha valakitől visszavonják a felhatalmazást, **a már kiadott
+ * tanúsításai érvényben maradnak**. A visszavonás csak azt éri el, hogy **innentől nem
+ * tanúsíthat többet**.
+ *
+ * ⚠️ ENÉLKÜL KIZÁRÁS-TÁMADÁS LENNE: néhány ember összebeszélve visszavonná a
+ * felhatalmazásokat egy tanúsítótól, és ezzel **becsületes emberek tömegétől** venné el a
+ * pénztárcát. Pontosan az, ami ellen a D46 megszületett.
+ *
+ * ⭐ ÉS HOGYAN TUDJUK MEG, MI VOLT IGAZ AKKOR, GLOBÁLIS ÓRA NÉLKÜL? A **D42 mintájával**:
+ * a tanúsítás **BEMONDJA**, mire támaszkodott — `adat.felhatalmazasok` a felhatalmazás-
+ * események azonosítói. Az események soha nem tűnnek el, tehát a bemondás **örökre
+ * ellenőrizhető** marad, akkor is, ha a felhatalmazást azóta visszavonták.
+ *
+ * ⚠️⚠️ ÉS AZ ŐSZINTE RÉS, AMIT EZ NYITVA HAGY: aki elveszítette a megbízását, **továbbra is
+ * hivatkozhat a régi, visszavont felhatalmazásokra**, és a szabály ezt nem tudja elkapni —
+ * globális sorrend nélkül nem eldönthető, hogy a visszavonás előbb volt-e. ⭐ **A JELZÉS
+ * viszont elkapja:** *„ennek a tanúsítónak most 2 érvényes felhatalmazása van, mégis 40
+ * tanúsítást adott"* — ez tény, kiszámítható, és a `jelzesek.js` meg is mutatja.
+ * *Ugyanaz a munkamegosztás, mint mindenhol: a szabály a minimumot tartja, a jelzés feltár.*
+ */
+async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny) {
+  const tanusito = await esemenyLekerese(tar, tanusitoHorgony);
+  nezet.olvasasok++;
+  if (!tanusito) {
+    return { igen: false, ok: 'nem ellenőrizhető: hiányzik a tanúsító horgonya', ellenorizheto: false };
+  }
+
+  // ⭐ AZ ALAPÍTÓ KÖR ELŐSZÖR — ő a rekurzió gyökere, és NINCS mire hivatkoznia.
+  //
+  // ⚠️ Ezt elsőre a bemondás-ellenőrzés MÖGÉ tettem, és három próba azonnal elbukott: az
+  // alapítók tanúsítása „nem mondta be, mire támaszkodott" indokkal esett ki. A gyökeret
+  // mindig a feltételek ELŐTT kell megnézni — különben a feltétel a gyökérre is vonatkozna.
+  if (await alapitoE(tar, koino, tanusitoHorgony, tanusito, nezet)) {
+    return { igen: true, ok: 'alapító kör', ellenorizheto: true };
+  }
+
+  const bemondott = tanusitasEsemeny?.adat?.felhatalmazasok;
+  if (!Array.isArray(bemondott) || !bemondott.length) {
+    return { igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true };
+  }
+
+  const adok = new Set();
+  let hianyzott = false;
+
+  for (const azonosito of bemondott) {
+    if (typeof azonosito !== 'string') continue;
+    const f = await esemenyLekerese(tar, azonosito);
+    nezet.olvasasok++;
+    if (!f) { hianyzott = true; continue; }
+
+    // A bemondott esemény tényleg RÓLA szóló felhatalmazás legyen — nem elég ráhivatkozni.
+    if (f.tipus !== 'Felhatalmazas' || f.koino !== koino) continue;
+    if (f.entitas !== tanusitoHorgony) continue;
+    if (f.adat?.kit !== tanusito.szerzo) continue;
+    if (f.szerzo === tanusito.szerzo) continue;      // magát senki nem hatalmazhatja fel
+
+    // A felhatalmazó horgonya: az esemény hozza magával.
+    const adoHorgony = f.adat?.sajatBelepes;
+    if (typeof adoHorgony !== 'string') continue;
+    const ado = await esemenyLekerese(tar, adoHorgony);
+    nezet.olvasasok++;
+    if (!ado) { hianyzott = true; continue; }
+    if (ado.szerzo !== f.szerzo || ado.koino !== koino) continue;
+
+    // ⚠️ ÉS A LÉNYEG: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt választótestület).
+    const allapota = await lepcso2E(tar, koino, adoHorgony, nezet);
+    if (!allapota.ellenorizheto) hianyzott = true;
+    if (allapota.igen) adok.add(f.szerzo);
+  }
+
+  if (adok.size >= nezet.felhatalmazasKell) {
+    return { igen: true, ok: adok.size + ' felhatalmazásra támaszkodott', ellenorizheto: true };
+  }
+  return {
+    igen: false,
+    ok: hianyzott
+      ? 'nem ellenőrizhető: a bemondott felhatalmazások egy része hiányzik'
+      : adok.size + ' érvényes felhatalmazást mondott be a szükséges '
+        + nezet.felhatalmazasKell + ' helyett',
+    ellenorizheto: !hianyzott
+  };
 }
 
 // ----- A közös váznak átadható alakok (a paraméter-sorrend miatt) -----

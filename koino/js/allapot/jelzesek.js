@@ -193,6 +193,78 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
 }
 
 // ===================================
+// 3. ⭐⭐ A MEGBÍZÁS ÉS A HASZNÁLATA — a visszavonás rését ez fedi le (9/c 4.5)
+// ===================================
+
+/**
+ * Hány felhatalmazása van MOST, és hány tanúsítást adott ÖSSZESEN?
+ *
+ * ⚠️⚠️ MIÉRT KELL EZ A JELZÉS? Mert a **visszavonás** (4.5) csak előre hat: a már kiadott
+ * tanúsítások érvényben maradnak (D47, Csaba döntése). Ez helyes — enélkül néhány ember
+ * összebeszélve becsületes emberek tömegétől venné el a pénztárcát.
+ *
+ * ⛔ **DE NYITVA HAGY EGY RÉST:** aki elveszítette a megbízását, továbbra is **hivatkozhat a
+ * régi, visszavont felhatalmazásokra**, és a szabály ezt nem tudja elkapni — globális
+ * sorrend nélkül nem eldönthető, hogy a visszavonás előbb volt-e.
+ *
+ * ⭐ **EZ A JELZÉS VISZONT ELKAPJA**, mert két számot állít egymás mellé:
+ *
+ *     „ennek a tanúsítónak MOST 2 érvényes felhatalmazása van, mégis 40 tanúsítást adott"
+ *
+ * Ez **tény**, kiszámítható, és ember dönt róla. *Ugyanaz a munkamegosztás, mint mindenhol:
+ * a szabály a minimumot tartja, a jelzés feltár.*
+ *
+ * @returns {Promise<{felhatalmazasok: number, visszavontak: number, tanusitasok: number,
+ *                    ellenorizheto: boolean}>}
+ */
+export async function megbizasAllapota(tar, koino, horgony) {
+  console.log('jelzesek.megbizasAllapota - KEZDÉS', { horgony });
+
+  const horgonyEsemeny = await esemenyLekerese(tar, horgony);
+  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+    return { felhatalmazasok: 0, visszavontak: 0, tanusitasok: 0, ellenorizheto: false };
+  }
+  const en = horgonyEsemeny.szerzo;
+
+  // ----- „KI BÍZTA RÁM A TANÚSÍTÁST, ÉS KI VETTE VISSZA?" — a saját szeletemből -----
+  // ⭐ „Az utolsó nyer": mindenkitől a LEGUTÓBBI állítás számít (ugyanaz a szabály, amit
+  // az `identitas.js` alkalmaz — a kettőnek egyeznie kell).
+  const szelet = await entitasEsemenyei(tar, koino, horgony);
+  const utolso = new Map();
+  for (const e of szelet) {
+    if (e.tipus !== 'Felhatalmazas' && e.tipus !== 'FelhatalmazasVisszavonasa') continue;
+    if (e.adat?.kit !== en || e.szerzo === en) continue;
+    const sorszam = e.entitasSorszam ?? 1;
+    const eddigi = utolso.get(e.szerzo);
+    if (!eddigi || sorszam >= eddigi.sorszam) {
+      utolso.set(e.szerzo, { sorszam, vissza: e.tipus === 'FelhatalmazasVisszavonasa' });
+    }
+  }
+
+  let felhatalmazasok = 0;
+  let visszavontak = 0;
+  for (const [, allapot] of utolso) allapot.vissza ? visszavontak++ : felhatalmazasok++;
+
+  // ----- „HÁNY TANÚSÍTÁST ADTAM?" — a saját láncomból -----
+  const sajat = (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+  const tanusitottak = new Set();
+  for (const e of sajat) {
+    if (e.tipus !== 'Tanusitas') continue;
+    const kit = e.adat?.kit;
+    if (typeof kit === 'string' && kit !== en) tanusitottak.add(kit);
+  }
+
+  const eredmeny = {
+    felhatalmazasok,
+    visszavontak,
+    tanusitasok: tanusitottak.size,
+    ellenorizheto: true
+  };
+  console.log('jelzesek.megbizasAllapota - VÉGE', eredmeny);
+  return eredmeny;
+}
+
+// ===================================
 // AMI SZÁNDÉKOSAN NINCS ITT
 // ===================================
 //
