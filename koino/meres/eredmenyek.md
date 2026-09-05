@@ -977,3 +977,58 @@ egyszerűen **nincsenek ismétlődő találkozásai** valódi emberekkel, akárh
 — vagyis a három képesség együtt. Ott a 11.9 H2-mechanizmusa (a megtévesztett környezete
 elhamisodik) gyengül, miközben a kitartó a súlyokat felpörgeti. **Ez a legrosszabb eset, és
 ez a következő futás.**
+
+## 11.13 ⛔⛔ A LEGROSSZABB ESET — és amit szét kell szedni belőle
+
+*A három támadói képesség EGYÜTT: rejtőzködő (valódi emberekre aggat) + kitartó (minden
+körben újrajelöl) + **50 megtévesztett** ember.*
+
+| lencse | 3 megtévesztett, rejtőzködő | ⛔ **a legrosszabb eset** |
+|---|---|---|
+| 1. séta | 71–89% / 14–22% | **43–74% / 31–61%** |
+| 2. ismétlés | **100% / 9–34%** | ⛔ **77–85% / 41–55%** |
+| 3. torlódás | **100% / 9–25%** | ⭐⭐ **100% / 9–25%** |
+| 2 a 3-ból | **100% / 2–12%** | ⛔ **82–95% / 21–38%** |
+| mind a 3 | 71–89% / 0–1% | 37–63% / 1–8% |
+
+### ⛔ AMIT VISSZA KELL VONNOM
+
+**A 11.11–11.12-ben azt írtam, hogy a „2 a 3-ból" olvasat minden próbát kiállt. NEM állja
+ki.** A legrosszabb esetben **82–95%-ra esik, 21–38% téves megjelöléssel** — mert a
+többségi szavazás **két megromlott lencsét** is beleszámol, és azok **lehúzzák** az
+egyetlen épet.
+
+> ⚠️ **A tanulság általánosabb a számnál:** *egy erős jelzés és két gyenge ÖSSZEVONÁSA
+> rosszabb, mint az erős jelzés egyedül.* A többségi olvasat csak addig jó, amíg a tagjai
+> egyenként is jók.
+
+### ⭐⭐ AMI VISZONT ÁLL, ÉS EGYEDÜL ÁLL: A TORLÓDÁS
+
+**100% / 9–25%, mind a hét eddigi támadó-változat és mindhárom arány mellett** — ez az
+egyetlen jelzés, amit semmi nem tört el.
+
+És a szerkezeti oka egyszerű: a támadónak **a hamisait valakikhez kötnie kell**, és bárkihez
+köti, azoknál **feltűnő lesz a zsákutca-tömeg** — mert a becsületes alapvonal **0,3**.
+⭐ **Nem tud olyan embert találni, akinél ez ne látszana**, hacsak nem szerez annyi valódi
+embert, hogy fejenként csak 1–2 hamis jusson — de az már nem Sybil-támadás, hanem
+**elfoglalt közösség**, és ott minden szám elveszti az értelmét.
+
+### ⛔ ÉS AMI ÖSSZEOMLOTT: A SÉTA — vagyis a D50 főszereplője
+
+A **séta** (a „bemutatkozások tengere") a **leggyengébb** láncszemnek bizonyult: sok
+megtévesztett embernél **43–74% / 31–61%**. A sok kis híd **feloldja a szigetet a
+tengerben** — és ezt nem lehet paraméterrel megjavítani, mert épp a jelzés lényege
+(„összeérünk-e?") válik igazzá a támadóra is.
+
+⚠️ **Ez a D50 és a 8/d satu-érv felülvizsgálatát kívánja.** A tenger-gondolat nem hibás —
+csak nem ő a védelem, hanem a **kontraszt-jelzés**, ami olcsóbb is nála: nem kell hozzá
+séta, se élő kapcsolat, csak az ismerőseim ismerőseinek darabszáma. ⭐ És a **D55**
+(nyíltság) pontosan ezt teszi helyben kiszámíthatóvá.
+
+### ⏳ A határ, amit nem mértünk
+
+880 hamis / 50 megtévesztett = fejenként **18**. Ha valaki **500** valódi embert szerezne
+meg, fejenként 2 hamissal, a 0,3-as alapvonal mellett a kontraszt elvékonyodna. ⚠️ De 1500
+fős közösségben az 500 ember **a közösség harmada** — ott a D18/0 értelmében már nem
+Sybil-védelemről beszélünk. **A mért tartomány (3–50, azaz 0,2–3%) a valódi fenyegetés
+tartománya.**
