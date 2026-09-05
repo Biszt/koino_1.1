@@ -470,3 +470,80 @@ nagy része már ők maguk voltak.** A sziget önmagához képest mérte a távo
 ▶️ **Amit ez nem dönt le:** a **D49** iránya (feltárás tiltás helyett) áll — de kiderült,
 hogy **amit feltárunk, azt még nem találtuk meg.** A jelzés nem lehet sem személyes
 statisztika, sem a mai horgony-távolság.
+
+## 9. ⭐⭐⭐ A BEMUTATKOZÁSOK TENGERE — és a satu bezárul
+
+*Csaba ötlete, 2026-09-05: „bemutatkozás jelöléseket intéznek egymás felé, amit mérünk. A
+nem létező e-emberek mindig szigeteket alkotnak, a létező e-emberek pedig beolvadnak a
+bemutatkozások tengerébe."*
+
+### Miért más ez, mint minden eddigi
+
+Minden korábbi jelzés **egy kitüntetett ponthoz** mért („milyen messze vagy a
+horgonyoktól") — és a támadó ezt úgy verte meg, hogy **elfoglalta a horgonyokat**, vagyis
+magát a mérőoszlopot. Ez nem ponthoz mér, hanem a **tengerhez**; azt nem lehet elfoglalni,
+mert nincs benne kitüntetett hely.
+
+⭐⭐ **És ami ezt lehetővé tette: ez a mérés SZUBJEKTÍV** („tőlem nézve"). Ilyet két nappal
+korábban elvetettünk, mert készülékenként más eredményt ad. De az akkor volt igaz, amikor a
+mérés **döntött**. A **D49** óta nem dönt, csak megmutat — **egy jelzés lehet szubjektív.**
+*(Vagyis a D49 nyitotta ki az ajtót e mérés előtt; ezt előre nem lehetett látni.)*
+
+**A mérés:** én elindulok véletlen sétákkal a saját kapcsolataim mentén, te a tieid mentén
+— **találkozunk-e valahol?** (200 séta, 10 lépés, irányítatlan gráf, 5 kérdező.)
+
+### Az eredmény, támadónként és a megtévesztettek száma szerint
+
+*„hamis elkapva / becsületes tévesen megjelölve", `k = 5`, 1500 fős világ.*
+
+| megtévesztett | hangos | óvatos | **alapos** |
+|---|---|---|---|
+| 5 | 100% / 0% | 100% / 0% | **100% / 0%** |
+| 8 | 100% / 0% | 100% / 0% | **100% / 0%** |
+| 20 | 77% / 36% | 97% / 6% | **100% / 0%** |
+| 60 | 5% / 2% | 93% / 16% | **100% / 0%** |
+| 150 | értelmetlen | 92% / 45% | **100% / 0%** |
+
+⭐⭐ **Minél ALAPOSABB a támadó, annál jobban működik a jelzés.** Aki minden más jelzést
+átugrott, azt ez fogja meg a legtisztábban, **még 150 megtévesztett emberrel is**: minél
+sűrűbb belül a hamis társadalom, annál kisebb az esély, hogy egy séta épp a kifelé vezető
+kevés élre lép.
+
+### ⭐⭐⭐ ÉS EZZEL A SATU BEZÁRUL
+
+A két jelzés-család **pontosan egymás hiányát fedi le**:
+
+- **A személyes statisztika** a *ritka* szigetet fogja meg. Az óvatos támadó azonosságait
+  pontosan `k`-an tanúsítják — ez **150 megtévesztett embernél is 100% / 0%**, mert ez a
+  szám nem attól függ, hány embert vett meg.
+- **A tenger-jelzés** a *sűrű* szigetet fogja meg — mert a sűrűség csapdába ejti a sétákat.
+
+> ⭐⭐⭐ **A támadó nem tud egyszerre sűrű és ritka lenni.** Ha élethű társadalmat épít, hogy
+> a statisztikát megverje, azzal bezárja magát a saját tengerébe. Ha ritka marad, hogy a
+> séták kijussanak, akkor az azonosságai csupaszak, és a statisztika elkapja.
+
+## 10. ⚠️ AMIT EZ NEM BIZONYÍT — és egy saját hiba
+
+**A modell világa először ROSSZ volt, és majdnem félrevezetett.** Az első mérés magonként
+0% és 46% közt szórta a téves megjelölést. Az ok nem a jelzés volt, hanem hogy a szimulált
+világ egy **kör**, ahol mindenki csak a szomszédaival találkozik — abban nincs is tenger,
+csak egy hosszú part, és két becsületes ember a kör átellenes pontjairól sosem ér össze.
+⭐ **10% „távoli találkozó"** (elköltözik valaki, más városban van rokona, utazik) — és az
+ingadozás **eltűnt**: négy különböző maggal egyaránt 100% / 0%.
+
+⚠️ **De ez egyben feltétel is:** a jelzés azon áll, hogy a valódi társas háló **„kis világ"**
+— van benne néhány távoli él. Egy **teljesen elszigetelt** közösségnél (falu, ahonnan senki
+nem jár ki) a jelzés gyengébb lenne. Ezt külön mérni kell.
+
+**További korlátok, tisztességből:**
+
+- ez **gráf-kísérlet, nem koino-kísérlet**: nincs benne kulcs, aláírás, esemény, hálózat;
+- a **bemutatkozás** még nincs külön modellezve — a meglévő tanúsítási gráfon mértünk. Egy
+  sűrűbb, olcsóbb bemutatkozás-réteg **elvileg csak erősítené**, de ez feltevés, nem mérés;
+- a séta paraméterei (200 séta, 10 lépés) **első választás**, nincsenek hangolva;
+- **150 megtévesztett ember** ~19%-a a közösségnek — ott már nem Sybil-támadásról van szó,
+  hanem elfoglalt közösségről, és minden szám elveszti az értelmét.
+
+⭐ **Amit viszont megad, és eddig semmi nem adott meg:** a számítás **helyi és korlátos**
+(400 séta × 10 lépés ≈ 4000 lépés, a közösség méretétől függetlenül), tehát **átmegy a
+9. szabályon** — nem kíván élő lekérdezést és nem kíván globális számot.

@@ -31,11 +31,19 @@
 > tanúsítást adhatsz, amennyivel a minimum fölött vagy* — ez megöli a *„fizess egyszer,
 > arass örökké"* támadást, mert a friss belépő kerete nulla.
 >
-> ⛔ **De ami kiderült:** **a gazdaság önmagában nem lehet a védelem.** Ha a keret
-> megmaradó, a közösség nem tud nőni; ha teremthető, a hamis sziget is teremt — *a számtan
-> nem látja a különbséget valódi és hamis ember között.* A keret tehát **fék**, nem a
-> Sybil-korlát hordozója, és **a szerkezet (horgony, út-feltétel) visszakerül a tervbe.**
-> ▶️ **Innentől szimulációval haladunk, nem érveléssel.**
+> ⛔ **De a gazdaság önmagában nem lehet a védelem** — ha a keret megmaradó, a közösség nem
+> tud nőni; ha teremthető, a hamis sziget is teremt. ⛔ **És a horgony-kört a támadó
+> elfoglalja** (mérve: 880 hamis horgony a 20 valódi mellett).
+>
+> ⭐⭐ **A FORDULAT (D49):** az identitás-réteg **egy minimumon kívül nem tilt, hanem
+> FELTÁR** — a közösség látja, mennyire kitett, és ő dönt. *Lassú, nyilvános, megtámadható*,
+> mint a koino minden más nehéz kérdése.
+>
+> ⭐⭐⭐ **ÉS A SATU (Csaba: „BEMUTATKOZÁS"):** a személyes statisztika a **ritka** szigetet
+> fogja meg, a **bemutatkozások tengere** (véletlen séták: összeérünk-e?) a **sűrűt** — és
+> **a támadó nem tud egyszerre sűrű és ritka lenni.** Mérve: **100% hamis elkapva, 0%
+> becsületes tévesen**, mind a három támadó ellen. ⭐ És a számítás helyi és korlátos, tehát
+> **átmegy a 9. szabályon.**
 
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 

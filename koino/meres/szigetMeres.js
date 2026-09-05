@@ -94,6 +94,7 @@ const BEALLITAS = {
   hamisProbalkozas: 40,     // a támadó körönként ennyi hamis azonosságot próbál bevinni
   ovatos: 0,                // ⭐ 1 = ÓVATOS támadó (lásd `tamadoKore`)
   alapos: 0,                // ⭐⭐ 1 = ALAPOS támadó: egész hamis TÁRSADALMAT épít
+  tavoliArany: 0.1,         // ⭐ a találkozók ennyied része NEM helyi (lásd `talalkozokKore`)
 };
 
 /**
@@ -315,6 +316,67 @@ function torlodas(vilag, hany) {
   return legnagyobbak.reduce((a, c) => a + c, 0) / osszes;
 }
 
+// ===================================
+// ⭐⭐ A BEMUTATKOZÁSOK TENGERE (Csaba, 2026-09-05)
+// ===================================
+//
+// „A nem létező e-emberek mindig szigeteket alkotnak, a létező e-emberek pedig beolvadnak
+// a bemutatkozások tengerébe."
+//
+// ⭐ MIÉRT MÁS EZ, MINT MINDEN EDDIGI? Minden korábbi jelzésünk egy KITÜNTETETT PONTHOZ
+// mért („milyen messze vagy a horgonyoktól"), és a támadó ezt úgy verte meg, hogy
+// ELFOGLALTA a horgonyokat — magát a mérőoszlopot. Ez itt nem ponthoz mér, hanem a
+// tengerhez; a tengert pedig nem lehet elfoglalni, mert nincs benne kitüntetett hely.
+//
+// ⭐⭐ ÉS AMI EZT MOST LEHETŐVÉ TESZI: ez a mérés SZUBJEKTÍV — „tőlem nézve". Két napja
+// elvetettük az ilyet, mert készülékenként más eredményt ad, és attól szétesne a
+// szavazatszámlálás. De az akkor volt igaz, amikor a mérés DÖNTÖTT. A D49 óta nem dönt,
+// csak megmutat — és egy jelzés nyugodtan lehet szubjektív, mert senkit nem zár ki vele.
+//
+// A mérés: én elindulok a saját kapcsolataim mentén, te a tieid mentén — TALÁLKOZUNK-E?
+// Két valódi ember sétái gyorsan összeérnek (ugyanaz a tenger); egy hamis azonosságé a
+// szigeten belül maradnak, mert kifelé csak a néhány megtévesztett emberen át vezet út.
+//
+// ⚠️ A gráfot IRÁNYÍTATLANUL nézzük: a bemutatkozás kölcsönös („találkoztunk"), nem
+// egyirányú állítás, mint a tanúsítás.
+
+function szomszedok(vilag, i) {
+  const lista = [];
+  for (const sz of vilag.adott[i]) if (vilag.tag[sz]) lista.push(sz);
+  for (const sz of vilag.kapott[i]) if (vilag.tag[sz]) lista.push(sz);
+  return lista;
+}
+
+/** Egy véletlen séta végpontja — `hossz` lépés a bemutatkozások mentén. */
+function setaVege(vilag, kezdo, hossz) {
+  let hol = kezdo;
+  for (let l = 0; l < hossz; l++) {
+    const szomszed = szomszedok(vilag, hol);
+    if (!szomszed.length) return hol;
+    hol = szomszed[Math.floor(vilag.veletlen() * szomszed.length)];
+  }
+  return hol;
+}
+
+/** Hova jutok el `db` darab `hossz` hosszú sétával? */
+function setaHalmaz(vilag, kezdo, db, hossz) {
+  const hol = new Set();
+  for (let s = 0; s < db; s++) hol.add(setaVege(vilag, kezdo, hossz));
+  return hol;
+}
+
+/**
+ * ⭐ A JELZÉS: hány ponton ér össze a két ember sétáinak halmaza?
+ * @returns a metszet mérete (0 = sehol nem találkoztunk)
+ */
+function tengerTalalkozas(vilag, en, o, db, hossz) {
+  const enyem = setaHalmaz(vilag, en, db, hossz);
+  const ove = setaHalmaz(vilag, o, db, hossz);
+  let metszet = 0;
+  for (const p of ove) if (enyem.has(p)) metszet++;
+  return metszet;
+}
+
 function szemelyJelzesek(vilag, i) {
   const tanuk = [...vilag.kapott[i]].filter((t) => vilag.tag[t]);
 
@@ -473,10 +535,20 @@ function talalkozokKore(vilag, szabaly) {
     const kozep = tagok[Math.floor(vilag.veletlen() * tagok.length)];
     const jelenlevok = [];
 
+    // ⭐ TÁVOLI TALÁLKOZÓ (2026-09-05, mérésből): a találkozók egy része NEM helyi —
+    // valaki elköltözik, más városban van rokona, utazik. Enélkül a modell világa egy
+    // hosszú KÖR, amiben nincs is „tenger", csak part: két becsületes ember a kör két
+    // átellenes pontjáról sosem ér össze, és attól a tenger-jelzés ingataggá vált
+    // (magonként 0% és 46% közt szórt a téves megjelölés). A valódi társas hálók
+    // „kis világ"-ok: kevés távoli él is elég, hogy minden mindennel összeérjen.
+    const sugar = vilag.veletlen() < b.tavoliArany
+      ? Math.floor(b.valodiEmberek / 2)
+      : b.talalkozoSugar;
+
     // meglévő tagok a környékről
     for (let probak = 0; probak < b.talalkozoMeret * 6; probak++) {
       if (jelenlevok.length >= b.talalkozoMeret) break;
-      const eltolas = Math.floor((vilag.veletlen() - 0.5) * 2 * b.talalkozoSugar);
+      const eltolas = Math.floor((vilag.veletlen() - 0.5) * 2 * sugar);
       const ki = (kozep + eltolas + b.valodiEmberek) % b.valodiEmberek;
       if (vilag.tag[ki] && !jelenlevok.includes(ki)) jelenlevok.push(ki);
     }
@@ -867,6 +939,53 @@ function jelzesekKiirasa(mag) {
     kiir('');
     kiir(`  Ha a küszöb „≤ ${hMax} út" lenne: 100% hamis elkapva, ` +
          `${Math.round(tevesen * 100)}% becsületes tévesen.`);
+  }
+
+  // ===================================
+  // ⭐⭐ A BEMUTATKOZÁSOK TENGERE — Csaba javaslata
+  // ===================================
+  const setaDb = Number(process.env.SETA_DB ?? 200);
+  const setaHossz = Number(process.env.SETA_HOSSZ ?? 10);
+  // Kérdezők: néhány véletlen VALÓDI tag. Ők azok, akik „ránéznek" valakire.
+  const kerdezok = keverve(vilag, vMinta).slice(0, 5);
+
+  const talalkozasok = (celok) => {
+    const ertekek = [];
+    for (const cel of celok) {
+      for (const kerdezo of kerdezok) {
+        if (kerdezo === cel) continue;
+        ertekek.push(tengerTalalkozas(vilag, kerdezo, cel, setaDb, setaHossz));
+      }
+    }
+    return ertekek;
+  };
+
+  const vTal = talalkozasok(vMinta);
+  const hTal = talalkozasok(hMinta);
+  const atl = (l) => (l.length ? l.reduce((a, c) => a + c, 0) / l.length : 0);
+  const nulla = (l) => (l.length ? l.filter((e) => e === 0).length / l.length : 0);
+
+  kiir('');
+  kiir('  ⭐⭐ A BEMUTATKOZÁSOK TENGERE — összeérnek-e a sétáink?');
+  kiir(`     (${setaDb} séta, ${setaHossz} lépés, 5 kérdező · irányítatlan gráf)`);
+  kiir('');
+  kiir(sor(['', 'átlagos metszet', 'SOHA nem ért össze'], [14, 18, 22]));
+  kiir('-'.repeat(56));
+  kiir(sor(['VALÓDI', sz(atl(vTal)), `${Math.round(nulla(vTal) * 100)}%`], [14, 18, 22]));
+  kiir(sor(['HAMIS', sz(atl(hTal)), `${Math.round(nulla(hTal) * 100)}%`], [14, 18, 22]));
+
+  // ⭐ És a döntő szám ennél is: a legjobb küszöb mindkét oldala.
+  let legjobbSeta = null;
+  for (const kuszob of [...new Set([...vTal, ...hTal])].sort((a, c) => a - c)) {
+    const h = hTal.filter((e) => e <= kuszob).length / (hTal.length || 1);
+    const v = vTal.filter((e) => e <= kuszob).length / (vTal.length || 1);
+    if (!legjobbSeta || h - v > legjobbSeta.josag) legjobbSeta = { josag: h - v, kuszob, h, v };
+  }
+  if (legjobbSeta) {
+    kiir('');
+    kiir(`  Ha a küszöb „a metszet ≤ ${legjobbSeta.kuszob}" lenne: ` +
+         `${Math.round(legjobbSeta.h * 100)}% hamis elkapva, ` +
+         `${Math.round(legjobbSeta.v * 100)}% becsületes tévesen.`);
   }
 
   // ⭐ A DÖNTŐ SZÁM: ha a „független körök" alapján jelölnénk, kit kapnánk el, és kit

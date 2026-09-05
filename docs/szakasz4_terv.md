@@ -611,7 +611,65 @@ Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 3–8. sza
   **tudatosan hálózatot épít** — és a támadó a legtudatosabb.
 
 > ⭐ **Az irány (feltárás tiltás helyett) ÁLL. De a jelzés nem lehet sem személyes
-> statisztika, sem a mai horgony-távolság** — mindkettőt megmértük, mindkettő elbukott.
+> statisztika ÖNMAGÁBAN, sem a mai horgony-távolság** — mindkettőt megmértük.
+>
+> ⭐⭐⭐ **ÉS MÉG AZNAP MEGLETT A HIÁNYZÓ FELE: a bemutatkozások tengere (8/d).** A személyes
+> statisztika a **ritka** szigetet fogja meg, a tenger-jelzés a **sűrűt** — és a támadó nem
+> tud egyszerre sűrű és ritka lenni. **Együtt 100% / 0% mind a három támadó ellen.**
+
+## 8/d. ⭐⭐⭐ A BEMUTATKOZÁSOK TENGERE — és a satu (Csaba, 2026-09-05)
+
+> **Csaba:** *„egy szóban: BEMUTATKOZÁS. Bemutatkozás jelöléseket intéznek egymás felé,
+> amit mérünk. A nem létező e-emberek mindig szigeteket alkotnak, a létező e-emberek pedig
+> beolvadnak a bemutatkozások tengerébe."*
+
+### Miért ez az első, ami átmegy a mérésen
+
+Minden korábbi jelzés **egy kitüntetett ponthoz** mért — és a támadó **elfoglalta a
+mérőoszlopot** (8/c mérés: 880 hamis horgony). Ez a tengerhez mér, és **a tengert nem lehet
+elfoglalni**, mert nincs benne kitüntetett hely.
+
+⭐⭐ **És amit a D49 nyitott ki:** ez a mérés **szubjektív** („tőlem nézve"). Ilyet két nappal
+korábban elvetettünk, mert készülékenként más eredményt ad — de az akkor volt igaz, amikor
+a mérés **döntött**. A D49 óta nem dönt, csak megmutat. **Csaba tegnapi döntése tette
+lehetővé a mai ötletét**, és ezt előre nem lehetett látni.
+
+**A mérés:** két ember elindul véletlen sétákkal a saját kapcsolatai mentén —
+**összeérnek-e valahol?**
+
+### ⭐⭐⭐ A SATU — és ez a szakasz eddigi legfontosabb eredménye
+
+*Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 9–10. szakasz.*
+
+- **A személyes statisztika a RITKA szigetet fogja meg.** Az óvatos támadó azonosságait
+  pontosan `k`-an tanúsítják — **100% elkapva / 0% téves, még 150 megtévesztett embernél
+  is**, mert ez a szám nem attól függ, hány embert vett meg.
+- **A tenger-jelzés a SŰRŰ szigetet fogja meg.** Az alapos támadó — aki minden személyes
+  jelzést átugrott — **100% / 0%**, szintén minden megtévesztés-szinten.
+
+> ⭐⭐⭐ **A támadó nem tud egyszerre sűrű és ritka lenni.** Ha élethű társadalmat épít, hogy
+> a statisztikát megverje, azzal **bezárja magát a saját tengerébe**. Ha ritka marad, hogy
+> a séták kijussanak, akkor az azonosságai csupaszak, és **a statisztika elkapja**.
+
+⭐ **És átmegy a 9. szabályon:** a számítás **helyi és korlátos** (≈4000 séta-lépés, a
+közösség méretétől függetlenül) — nem kíván élő lekérdezést és nem kíván globális számot.
+Ez az első jelzés, amiről ez elmondható.
+
+### ⚠️ A feltétel, amin áll
+
+A jelzés azon múlik, hogy a valódi társas háló **„kis világ"** — van benne néhány **távoli
+él** (elköltözik valaki, más városban van rokona, utazik). ⚠️ *Ezt a mérés tanította: az
+első futásban a modell világa egy KÖR volt, amiben nincs is tenger, csak part — és a jelzés
+magonként 0% és 46% közt szórt. **10% távoli találkozóval az ingadozás eltűnt.*** Egy
+teljesen elszigetelt közösségnél tehát a jelzés gyengébb; ezt külön kell mérni.
+
+### Amit ki kell dolgozni
+
+- ⏳ **A bemutatkozás mint külön, könnyű esemény** — olcsóbb és sűrűbb, mint a tanúsítás:
+  *„találkoztunk"*, nem *„létező, külön ember"*. A mérés még a tanúsítási gráfon futott.
+- ⏳ **A séta paraméterei** (hány séta, hány lépés) — közösségi paraméterek (D13/c)?
+- ⏳ **A D6 ellenőrzése:** a bemutatkozás is esemény, tehát a láncra kerül. Milyen alakban,
+  hogy ne legyen belőle társas térkép mindenkiről? ⚠️ **Ez a legkomolyabb nyitott kérdés.**
 
 ## 9. ILLESZKEDÉS A MEGLÉVŐ GÉPHEZ
 
@@ -731,4 +789,12 @@ javasolt számok — **D43–D47** — még nincsenek átvezetve.*
   hamis horgony a 20 valódi mellett, miközben a becsületes kör **egyáltalán nem nőtt**).
   ⭐ A tanulság túlmutat a szabályon: *a „több független körből" feltétel azt jutalmazza,
   aki tudatosan hálózatot épít — és a támadó a legtudatosabb hálózatépítő.*
-  ▶️ **A D49 iránya áll; azt kell megtalálni, amit feltárunk.**
+- **2026-09-05 (aznap este)** — ⭐⭐⭐ **CSABA: „BEMUTATKOZÁS"** (8/d). Nem ponthoz mérünk,
+  hanem a **tengerhez**; a tengert nem lehet elfoglalni. Mérve: **100% hamis elkapva, 0%
+  becsületes tévesen** az alapos támadó ellen, **minden megtévesztés-szinten** — és minél
+  alaposabb a támadó, annál jobban működik. ⭐⭐⭐ **A satu bezárult:** a statisztika a ritka
+  szigetet fogja meg, a tenger a sűrűt, és **a támadó nem lehet egyszerre mindkettő**.
+  ⚠️ A mérés közben kiderült, hogy a modell világa (egy kör) rossz volt — **10% távoli
+  találkozó** kellett hozzá, hogy legyen egyáltalán „tenger". ▶️ Hátra van: a bemutatkozás
+  mint külön esemény, a séta-paraméterek, és ⚠️ **a D6 kérdése** (ne legyen belőle társas
+  térkép mindenkiről).
