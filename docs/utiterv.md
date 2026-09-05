@@ -3,58 +3,51 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D50),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D60),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-03) — a Szakasz 3 KÉSZ, a Szakasz 4 jön
+> ## ▶️ HOL TARTUNK (2026-09-06) — a Szakasz 4 SZERKEZETE MEGVAN
 >
-> ✅ **3.1** a kanonikus alak négy új mezője (`entitas` · `entitasSorszam` · `latott` ·
-> ⏸️ `lancGyoker` lefoglalt hely) és a **D42 ellenőrzése** · ✅ **3.2** a kérdezhető
-> tár-illesztő — ⭐⭐ **két mért fal ledőlt**: a mentés **495 ms → 1,4 ms és lapos**, az
-> állapotszámítás **4 615 ms → 502 ms és lineáris** · ✅ **3.4** a szelet-címjegyzék és a
-> **böngésző-lekérés** (`hozd`) · ⏸️ **3.3** (entitás-központú lemez-tár) **elhalasztva** —
-> a 3.2 után ez már mélység, nem szerkezet.
+> ✅ **Szakasz 1–3 kész.** A 3. (a szerkezet) 2026-09-03-án zárult: a kanonikus alak négy
+> új mezője, a **kérdezhető tár-illesztő** (két mért fal ledőlt: mentés 495 ms → 1,4 ms,
+> állapotszámítás 4 615 ms → 502 ms), és a böngésző-lekérés. **217 önpróba rendben.**
 >
-> **217 önpróba rendben**, minden pusholva (`bc0d7d5`), tiszta munkafa.
+> 🚧 **Szakasz 4 — AZ IDENTITÁS: a szerkezet megvan, kód még nincs.**
+> Terv: [`szakasz4_terv.md`](szakasz4_terv.md) **9/c** szakasz.
+> ✅ **Csaba lezárta a méréseket (2026-09-06):** *„eleget mértünk. Nekem ez így már
+> megfelel, első koinónak."*
 >
-> 🚧 **A Szakasz 4 — AZ IDENTITÁS — elkezdődött** (2026-09-04, tervezés):
-> [`szakasz4_terv.md`](szakasz4_terv.md). ⚠️ *A D17 mondata áll: a konszenzus biztonsága =
-> az identitás-réteg biztonsága, semmi más. Enélkül minden eddigi munka egy hatékonyan
-> skálázódó hamisítás-gépezet.*
+> ⭐⭐⭐ **A SZERKEZET, EGY MONDATBAN (D56):** *az 1. lépcső olcsó, mert a kapu úgysem véd;
+> a 2. lépcső drága, mert ott a zsákmány; és a védelem egyikben sem a kapu, hanem hogy a
+> rossz tanúsító elveszíti a szerepét.*
 >
-> ⭐ **Ami áll:** a Duniter-féle távolság-szabály (80% / N^(1/5)) **elbukott a 9.
-> szabályon** — globális számokat kíván. Helyette **Csaba keret-szabálya** (D44): *annyi
-> tanúsítást adhatsz, amennyivel a minimum fölött vagy* — ez megöli a *„fizess egyszer,
-> arass örökké"* támadást, mert a friss belépő kerete nulla.
+> - **1. lépcső:** egy meghívó → tag, és **minden mehet** (tartalom, tudatpont, javaslat,
+>   szavazat).
+> - **2. lépcső:** három tanúsítás felhatalmazott tanúsítótól → **pénztárca**. Ez a **D11**.
+> - **A felhatalmazást csak 2. lépcsősök adják**, emberenként egyet; a küszöb **kimondott
+>   szám** (érték javaslatok mediánja), nem mért rangsor. ⭐ **Megbízás, nem pontszám**
+>   (D60): *„27-en bízták rá a tanúsítást"*.
+> - **Az ellenőrzés a gyökérig megy** — mérve olcsó: 17,7 → 30,1 → 40,7 ős 1500 / 6000 /
+>   20 000 főnél, **logaritmikus**.
 >
-> ⛔ **De a gazdaság önmagában nem lehet a védelem** — ha a keret megmaradó, a közösség nem
-> tud nőni; ha teremthető, a hamis sziget is teremt. ⛔ **És a horgony-kört a támadó
-> elfoglalja** (mérve: 880 hamis horgony a 20 valódi mellett).
+> ⛔⛔ **AMIT A MÉRÉS MEGDÖNTÖTT — ne induljon el rajta senki** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 11–12.):
+> **a belépési szám nem védelem, hanem árcédula** (4 megtévesztettnél 0 hamis, 5-nél 880) ·
+> **a jogosítási küszöb elrejti a szigetet** (100%/0% helyett 91%/16%) · ⛔ **és a SÉTA a
+> leggyengébb láncszem**, nem a legerősebb (43–74% / 31–61%). ⚠️ *A tenger-gondolat (D50)
+> megmarad, de nem ő a védelem.* ⛔ A `k` tanúsítás + keret vonala (**D44, D51, D53**)
+> **tárgytalan**.
 >
-> ⭐⭐ **A FORDULAT (D49):** az identitás-réteg **egy minimumon kívül nem tilt, hanem
-> FELTÁR** — a közösség látja, mennyire kitett, és ő dönt. *Lassú, nyilvános, megtámadható*,
-> mint a koino minden más nehéz kérdése.
+> ⭐⭐ **A VÉDELEM A KONTRASZT:** *„hány olyan embert ismersz, akinek nincs önálló élete a
+> közösségben?"* — becsületes alapvonal **0,3**, megvett tanúsítóé több száz.
+> **100% / 9–25%** minden támadó ellen, és **olcsó**: nincs séta, nincs élő kapcsolat.
 >
-> ⭐⭐⭐ **ÉS A SATU (Csaba: „BEMUTATKOZÁS"):** a személyes statisztika a **ritka** szigetet
-> fogja meg, a **bemutatkozások tengere** (véletlen séták: összeérünk-e?) a **sűrűt** — és
-> **a támadó nem tud egyszerre sűrű és ritka lenni.** Mérve: **100% hamis elkapva, 0%
-> becsületes tévesen**, mind a három támadó ellen. ⭐ És a számítás helyi és korlátos, tehát
-> **átmegy a 9. szabályon.**
->
-> ⭐⭐ **És a bemutatkozás nem épít társas térképet (D50):** helyi lista, mint a társ-lista —
-> a séta **ugráló üzenet**, nem lekérdezés, tehát *a jelzéshez nem kell a térkép, csak az
-> út.* Mivel a jelzés nem dönt, szabad élő kapcsolatot kívánnia: **a tenger a második
-> rétegbe kerül**, a kereső-réteg mellé — elhagyható.
->
-> ▶️ **ÉS MEGVAN A MEGÉPÍTÉS TERVE (2026-09-05):** [`szakasz4_terv.md`](szakasz4_terv.md)
-> **9/b szakasz** — tíz lépés (4.0–4.9), a 9. szabály rendezőelve szerint: **4.1–4.4 a
-> LÁNC** (kemény mag, offline dönt) · **4.5–4.8 a MÁSODIK RÉTEG** (elhagyható) · 4.9 a
-> `lancGyoker`. ⚠️ **Kódolás előtt három döntés vár Csabára (D51–D53)**, köztük a szakasz
-> legfontosabb eldöntetlen pontja: **kemény szabály-e a keret, vagy jelzés?**
+> ⭐⭐⭐ **ÉS A TÖRVÉNY:** a visszacsatolással a kár **880 → 120**, és
+> **kár = a támadó üteme × az ébredés ideje** — lineáris, tehát **a hurok mindig bezárul**.
+> ⭐ Ezért a program dolga **az ÉSZREVÉTEL**, a döntés a közösségé (D46).
 
 ## 0. MIÉRT KELLETT ÚJRATERVEZNI
 
@@ -122,7 +115,7 @@ hibát.
 | **A domain-logika** — tudatpont, javaslat, szavazás, küszöbök, egyezmény mint **számítás** | ✅ kész, és **nem változik** |
 | **A szabály-réteg** (`szabalyok.js`), a determinizmus, az egész aritmetika | ✅ kész |
 | **A szállítás** — TCP, UDP, **pajzsfúrás CGNAT-on át**, kapunyitás, postaláda, helyi felfedezés, társ-lista | ✅ kész, **és érintetlen marad** |
-| 198 önpróba | ✅ |
+| 217 önpróba | ✅ |
 
 > ⭐ **A szállítás azért marad érintetlen, mert az 1. szabályt betartottuk.** A
 > `csere.js` sosem importált hálózati kódot, ezért az entitás-szintű átállás a
@@ -152,7 +145,7 @@ identitás-réteg · tartós mag · felület · kereső-réteg · pénz
 | **1** | **A helyi modell** — esemény, lánc, állapot, szabály, javaslat | ✅ **kész** | a koino gondolkodása |
 | **2** | **A szállítás** — hogy két készülék egyáltalán összeérjen | ✅ **kész** | ⭐ *(A neve eddig „csere" volt; a munka valójában a szállításról szólt, és az elkészült.)* |
 | **3** | **A SZERKEZET** — az esemény alakja, a tár illesztése, az elérés | ✅ **kész** (2026-09-03) | ettől lett a koino skálázható **szerkezetében** |
-| **4** | **AZ IDENTITÁS** — tanúsítás, **keret**, bizonytalanra jelölés ([terv](szakasz4_terv.md)) | 🚧 **tervezés** | ettől lesz **hiteles** |
+| **4** | **AZ IDENTITÁS** — ⭐ **két lépcsős beléptetés**, kontraszt-jelzés, visszavonás ([terv](szakasz4_terv.md) 9/c) | 🚧 **a szerkezet kész, kód még nincs** | ettől lesz **hiteles** |
 | **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból | ❌ | ettől lesz **használható** |
 | **6** | **A KERESŐ-RÉTEG** — elosztott, replikált mutató | ❌ | ⭐ **elhagyható** (2. szabály) |
 | **7** | **A PÉNZ** | ❌ | D11: csak bizonyított identitás után |

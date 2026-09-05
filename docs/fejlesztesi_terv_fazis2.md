@@ -978,6 +978,147 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > térképnél, de **nem nulla**) · és a mérés megismétlése **valódi bemutatkozás-gráfon** —
 > eddig a tanúsítási gráfon futott.
 
+> ### ⛔⛔ ÉS EGY NAPPAL KÉSŐBB (2026-09-06): A FENTI SZERKEZET NAGY RÉSZE KIESETT
+>
+> ⚠️ **Aki a D43–D50-et olvassa, ezt olvassa el hozzá.** A `k` tanúsítás, a **keret**
+> (D44) és a **satu** séta-fele **méréssel megdőlt**. A helyükbe Csaba **két lépcsős
+> beléptetése** lépett (D56–D60, lentebb). ⭐ *A D43, D45, D46, D47 és a D49 áll; a D50
+> hordozó-döntése is áll, csak a szerepe változott.*
+
+> ### 🚪 D54–D58 (2026-09-06): A KÉT LÉPCSŐS BELÉPTETÉS — Csaba szerkezete
+>
+> *Részletes levezetés és mérés: [`szakasz4_terv.md`](szakasz4_terv.md) 9/c ·
+> [`eredmenyek.md`](../koino/meres/eredmenyek.md) 11–12.*
+>
+> ⛔ **AZ ELŐZMÉNY, AMI MINDENT ÁTRENDEZETT — mérve:** *a belépési szám nem védelmi
+> paraméter, hanem árcédula.* A fal pontosan ott van, ahol a megtévesztettek száma eléri a
+> kért meghívó-számot: az öt-meghívós szabály **4 megtévesztettnél 0 hamisat** enged be,
+> **5-nél 880-at**. Nincs átmenet — **kapcsoló**. Vagyis `n` meghívó azt jelenti, hogy a
+> támadónak `n` valódi tagot kell megvennie **egyszer**, és utána korlátlan.
+>
+> #### ⭐⭐⭐ D56 — A KÉT LÉPCSŐ
+>
+> - **1. lépcső, a tagság:** **egy meghívó**, és **minden mehet** — tartalom, tudatpont,
+>   javaslat, szavazat. ⭐ Nincs kapu, mert a kapu úgysem véd.
+> - **2. lépcső, a pénztárca:** **három tanúsítás** felhatalmazott tanúsítótól. ⭐ Ez a
+>   **D11** szó szerinti megvalósulása: *a pénz csak bizonyított identitás után* — eddig
+>   elvi mondat volt, most szerkezet.
+> - **A felhatalmazás:** mindenki annyit oszt, amennyit akar, **emberenként egyet**; aki
+>   elér egy küszöböt, tanúsíthat. **Szerep, nem rang** — bármikor visszavonható.
+> - ⭐⭐ **A választótestület: CSAK aki már átment a 2. lépcsőn.** ⚠️ Enélkül a szerkezet
+>   megbukna, és ezt mérve tudjuk: ha bárki oszthat felhatalmazást, a támadó hamis
+>   azonosságai **egymást hatalmazzák fel**, saját tanúsítókat állítanak, és a pénztárcák
+>   megnyílnak — ugyanaz, mint a **880 hamis horgony**. *Minden kitüntetett halmaz, amit
+>   gráf-statisztika jelöl ki, elfoglalható.*
+>
+> #### ⭐ D57 és D57/b — A KÜSZÖB KIMONDOTT SZÁM, NEM RANGSOR
+>
+> A *„felső harmadban vagy-e”* **globális számot** kíván (mindenki felhatalmazás-száma), és
+> ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. Helyette **„legalább N
+> felhatalmazás”**, a saját szeletből ellenőrizve.
+>
+> ⭐⭐ **És `N`-t a közösség így is mediánnal állítja**, mert a **D13/c** szerint a
+> koino-paraméter maga is **entitás**: az értéke az *arra az entitásra* adott érték
+> javaslatok mediánja — javaslatot pedig csak **2. lépcsős** tehet.
+>
+> ⭐ *Csaba kérdésére, hogy gond-e a medián milliárdos léptékben:* **nem a medián a gond,
+> hanem a sokaság, amin fut.** A mai küszöbök az **entitás tulajdonosain** futnak
+> (`javaslatSzamitas.js` → `kuszobokMost`), ami szelet-korlátos — a kódban ellenőrizve.
+>
+> **A program szintjén** (mindkettő a **címzett** szeletében él, ettől korlátos a számlálás):
+>
+> ```
+> Felhatalmazas — szerzője 2. lépcsős;  entitas = a felhatalmazott szelete
+> Tanusitas     — szerzője tanúsító;    entitas = a tanúsított szelete
+>
+> tanusithat(X) = |X szeletében a KÜLÖNBÖZŐ, 2. lépcsős felhatalmazók| >= N
+> lepcso2(X)    = |X szeletében a KÜLÖNBÖZŐ, tanúsítható tanúsítók|    >= 3
+> ```
+>
+> #### ⚠️ D58 — A PAPÍR NÉLKÜLI EMBER (ebben a verzióban)
+>
+> A felhatalmazott tanúsító **kérheti az igazolványt** — *„okkal, hiszen több embert is
+> képvisel”*. A **D45** betűje sértetlen (egyetlen, egyforma tanúsító-mondat), de a
+> gyakorlatban **papír nélkül nem lesz pénztárca**.
+> ⭐ **A hatóköre szűk:** ez **csak a 2. lépcső**. A papír nélküli ember **teljes jogú
+> e-ember marad** — alkot, tudatpontot oszt, javasol és **szavaz**.
+>
+> #### ✅ D54 — A KÉSZÜLÉK-FELFEDEZÉS SEGÉDESZKÖZ, NEM ADATFORRÁS
+>
+> ⛔ Az automatikus közelség-érzékelés **pont azt adná ingyen a támadónak, ami a legdrágább
+> neki** (egy készülék ezer azonosságot sugározhat), és a mérés szerint **épp a valódi
+> emberekhez kötés rejti el a szigetet**. ⭐ Marad: a készülék **javasol**, az ember **dönt**.
+
+> ### ⭐⭐ D55 (2026-09-06): A NYÍLTSÁG — a D49/c 1. pontja felülírva
+>
+> A **D49/c** első védőkorlátja tiltotta a személyre szóló jelzést. ⚠️ **De a mérés szerint
+> csak a személyre szóló alak működik:** a koino-szintű összesítés (a 8 legtöbb
+> bemutatkozású ember részesedése) támadóval **1–3%**, támadó nélkül **1%** — vagyis **nincs
+> jelzés**.
+>
+> > **Csaba döntése:** *„felülírom. Az első közösségben fel kell vállalnia mindenkinek a
+> > nevét, a települését, a bemutatkozásait… Mivel nincsen kormány-garancia arra, hogy
+> > 1 ember = 1 e-ember, ezért csak egymást tudjuk hitelesíteni, ahhoz meg elenged-
+> > hetetlen, hogy közzétegyünk »személyes« dolgokat is. A koino a nyíltságról szól.”*
+>
+> ⭐ **Az indoklás szerkezeti:** a koino elutasítja az állami és a biometrikus azonosítást
+> (D7, D18) — **nem marad más, mint hogy az emberek egymást hitelesítik**, ahhoz pedig
+> látniuk kell egymást.
+>
+> ⭐⭐ **A megfogalmazás, ami a tiltás lényegét megőrzi:** a jelölés **soha ne azt mondja,
+> hogy „gyanús”**, hanem hogy **„MÉG NEM ÉRTÜNK ÖSSZE”** — tény (D49/b sértetlen), a
+> **kapcsolatról** szól és **szimmetrikus** (nem tud stigmává válni), és ⭐ **önjavító**:
+> ha bemutatkoznak, eltűnik; hamis azonosságnál nem.
+> ⚠️ **A D49/c 2. és 3. pontja ÁLL:** a jelzés tájékoztat, nem jogosít.
+
+> ### ⭐⭐⭐ D59–D60 (2026-09-06): A LÁNC ÉS A MEGBÍZÁS
+>
+> #### D59 — az ellenőrzés a gyökérig megy, mert MÉRVE olcsó
+>
+> *„Tag/tanúsító volt-e a meghívó?”* rekurzív kérdés. Csaba állítása: *„nem lenne annyira
+> szterteágazó és mély, mivel nincsen szabad tanúsítgatás, ezért »középre« fognak mutatni
+> a láncok.”* ⭐⭐ **Megmérve — igaza lett:**
+>
+> | közösség | ős-halmaz (hány embert kell megnézni) | mélység |
+> |---|---|---|
+> | 1 500 | **17,7** | 2,9 |
+> | 6 000 | **30,1** | 3,7 |
+> | 20 000 | **40,7** | 4,3 |
+>
+> **Logaritmikus, kettőzésenként kb. +6 ős** — a láncok összefutnak. ⭐ És a költség
+> **egyszeri**: a **D47** befagyasztás miatt akiről egyszer eldőlt, az nem változik.
+> ▶️ **A `D` mélység-korlát tehát elhagyható szelep**, nem szükség — arra való, ha
+> szeletek hiányoznak.
+>
+> #### ⭐ D60 — a felhatalmazás MEGBÍZÁS, nem pontszám
+>
+> *(Csaba felvetette a „becsületesség pont” nevet.)* ⛔ Egy nyilvános **jellem-szám**
+> hírnév-rendszerré romlik — pontosan az, amit a **D18/1** kizárt és a **D49/b** tilt.
+> ⭐ **A feloldás ugyanaz a fogás, ami a „még nem értünk össze”-nél bevált:** ne
+> *„becsületesség: 27”*, hanem **„27-en bízták rá a tanúsítást”** — tény, és nem róla szól,
+> hanem arról, amit **mások tettek**.
+
+> ### ⛔⛔ ÉS AMIT A 2026-09-06-I MÉRÉSEK MEGDÖNTÖTTEK — ne induljon el rajtuk senki
+>
+> *Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 11–12.*
+>
+> - ⛔ **A `k` tanúsítás + keret vonala (D44) TÁRGYTALAN** — a két lépcső kiváltotta.
+> - ⛔ **A jogosítási küszöb ELREJTI a szigetet:** 100% / 0% helyett **91% / 16%**, mert
+>   minden hamisat egy valódi emberhez kényszerít. ⭐ *Egy teljesítendő küszöb egyben
+>   hitelesítő pecsét is* — ez a 8/c tanulságának megismétlődése.
+> - ⛔⛔ **A SÉTA (a „bemutatkozások tengere”) a LEGGYENGÉBB láncszem**, nem a legerősebb:
+>   sok megtévesztettnél **43–74% / 31–61%**. A **D50** hordozó-döntése áll, de **a tenger
+>   nem védelem** — a sok kis híd feloldja a szigetet a tengerben.
+> - ⭐⭐ **A VÉDELEM A KONTRASZT:** *„hány olyan embert tanúsítottál/ismersz, akinek nincs
+>   önálló élete a közösségben?”* — becsületes alapvonal **0,3**, megvett tanúsítóé több
+>   száz. **100% / 9–25%**, minden támadó-változat és arány ellen. ⭐ Olcsó is: nincs séta,
+>   nincs élő kapcsolat.
+> - ⭐⭐⭐ **ÉS A TÖRVÉNY:** a visszacsatolással (a közösség visszavonja a megbízást) a kár
+>   **880 → 120**, és **kár = a támadó üteme × az ébredés ideje** (40 · 120 · 240 · 440 a
+>   0/2/5/10 körös késésnél). **Lineáris, nem exponenciális — a hurok mindig bezárul.**
+>   ⭐ Ezért a gépi segítség értéke **az ÉSZREVÉTELBEN** van, nem a döntésben: a program
+>   **mutasson**, a **közösség döntsön** (D46).
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -1063,7 +1204,8 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**49 tervezési döntés áll (D1–D50, a D48 kivételével — az elvetve, a bukása okával együtt
+**57 tervezési döntés áll (D1–D60; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
+tárgytalanná vált — mindegyik okával együtt
 megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
 át a legkritikusabb problémákat, és csak utána jön a részletes terv és a kódolás.*

@@ -106,10 +106,14 @@ npm-csomag.)*
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
 - `node koino/meres/ebredesProba.js` — **ébredés-próba** telefonon: bír-e a készülék
   ötperces ablakot (mérve: egy óra alvás után is **nulla csúszás**);
-- `node koino/meres/szigetMeres.js` — ⭐ **a hamis sziget mérése** (Szakasz 4): egy
-  becsületes hálót és egy támadót szimulál, és megmondja, **hány hamis azonosság jut be**
-  szabályonként — **és hogy közben nő-e egyáltalán a közösség**. `GORBE=1`-gyel
-  körönkénti kimutatást ad.
+- `node koino/meres/szigetMeres.js` — ⭐ **a hamis sziget mérése** (Szakasz 4, a
+  **tanúsítási** világ): egy becsületes hálót és egy támadót szimulál, és megmondja, **hány
+  hamis azonosság jut be** szabályonként — **és hogy közben nő-e egyáltalán a közösség**.
+  ⚠️ *Ezt a világot a 2026-09-06-i átépítés felváltotta; a mérés a történet része.*
+- `node koino/meres/meghivasMeres.js` — ⭐⭐ **a MEGHÍVÁSOS világ mérése** (a mai szerkezet):
+  védelem ÉS ár hat változatban, három jelzés-lencse, és `LEPCSO=1`-gyel a **két lépcső**
+  (pénztárca-kapu + a tanúsítói lánc alakja). Kapcsolók: `MELEGIT` · `REJTOZO` · `KITARTO` ·
+  `ALLANDO_KOROK` · `VISSZAVONAS` · `MEGTEVESZTETT` · `MEGHIVO_KORLAT`.
 
 Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 
@@ -200,7 +204,7 @@ Tanúsítás · távolság-szabály · tartós mag — a részletek az
 felület után **egy család vagy egy osztály élesben használhatja** — helyes, milliárdos
 szerkezettel, csak kevesebb emberrel (D22).
 
-A teljes terv és a döntések (D1–D50): [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
+A teljes terv és a döntések (D1–D60): [`../docs/fejlesztesi_terv_fazis2.md`](../docs/fejlesztesi_terv_fazis2.md)
 · a sorrend: [`../docs/utiterv.md`](../docs/utiterv.md)
 · a milliárdos lépték szerkezete: [`../docs/skalazas_terv.md`](../docs/skalazas_terv.md)
 · a Szakasz 1 terve: [`../docs/szakasz1_terv.md`](../docs/szakasz1_terv.md)
