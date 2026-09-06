@@ -192,7 +192,7 @@ képes program, csak kevesebb emberrel."*
 | **Kereső-réteg** | ⭐ a 2. szabály szerint **elhagyható**: nélküle kevesebbet találsz, de minden működik | a Szakasz 6-ig |
 | **Téma szerinti keresés** | Csaba döntése: **elég a cím szerinti** | ⛔ **soha** — kihagyva |
 | **Pénz** | D11: csak bizonyított identitás-réteg után | a Szakasz 7-ig |
-| **DHT / bizalmi hálós útvonal** | a keresőhöz kell, és **méréssel** dől el (K7) | a Szakasz 6-ig |
+| **DHT / bizalmi hálós útvonal** | a keresőhöz kell, és **méréssel** dől el (SK7) | a Szakasz 6-ig |
 | **Tömeges entitás (összegző Merkle)** | ugyanaz a kód, mint a tartós magé | a Szakasz 4-gyel együtt |
 | **Böngésző** | D29: kliens lehet, előfeltétel soha | — |
 
@@ -422,9 +422,9 @@ a koino méretével.
 
 | # | Kérdés | Hol |
 |---|---|---|
-| **K3, K4** | `entitasSorszam` és `latott` bekerüljön-e a kanonikus alakba? | ⛔ **a 3.1 ezen áll** — skalazas_terv 9. |
-| **K10** | láthatósági küszöb a keresőn | Szakasz 6 |
-| **K7** | DHT vagy bizalmi hálós útvonal | Szakasz 6, **méréssel** |
+| **SK3, SK4** | `entitasSorszam` és `latott` bekerüljön-e a kanonikus alakba? | ⛔ **a 3.1 ezen áll** — skalazas_terv 9. |
+| **SK10** | láthatósági küszöb a keresőn | Szakasz 6 |
+| **SK7** | DHT vagy bizalmi hálós útvonal | Szakasz 6, **méréssel** |
 | **—** | a **születéskori tanúsítás-öröklés** csak szétváláskor, vagy szándékos alapításnál is? | ⏸️ Csaba: *„maradhat későbbre"* — Szakasz 4 |
 | **—** | ⚠️ **mi a felület futtatókörnyezete?** A D29 szerint a koino önálló program, nem böngésző — de a felület a prototípus böngészős paklijából öröklődik. Helyi kiszolgáló + böngésző mint kliens (7. szabály engedi), vagy natív felület? | **Szakasz 5, eldöntetlen** |
 

@@ -289,7 +289,7 @@ A D48 bukása nem megfogalmazás kérdése volt. Két eset van, és mindkettő e
 
 ⚠️ **És ezért kerül vissza a szerkezet.** Ha az aritmetika nem tud különbséget tenni,
 akkor a különbségnek **a gráf alakjából** kell jönnie: abból, hogy a sziget a becsületes
-hálóhoz **hol** kapcsolódik. A **K12** (horgony-halmaz) és a **K13** (út-feltétel) tehát
+hálóhoz **hol** kapcsolódik. A **AK12** (horgony-halmaz) és a **AK13** (út-feltétel) tehát
 **nem elhagyható dísz** — a 4.4 „talán nem kell horgony" mondata **visszavonva**.
 
 ### 5.1/b A közösségépítés valódi találkozásokat igényel — és ez cél, nem hiba
@@ -472,8 +472,8 @@ visszamenőleg.* Ez a keret-szabállyal együtt csak akkor tartható, ha:
 
 ## 8/b. ⛔ A HORGONY — mi ez, és miért KÖR *(MÉRVE ELBUKOTT)*
 
-> ⛔ **A horgony-kört a támadó elfoglalja: 880 hamis horgony a 20 valódi mellett.** A K12 és
-> a K13 tárgytalan. ⭐ A tanulság viszont általános, és azóta kétszer is visszaköszönt:
+> ⛔ **A horgony-kört a támadó elfoglalja: 880 hamis horgony a 20 valódi mellett.** A AK12 és
+> a AK13 tárgytalan. ⭐ A tanulság viszont általános, és azóta kétszer is visszaköszönt:
 > *minden kitüntetett halmaz, amit gráf-statisztika jelöl ki, ELFOGLALHATÓ.*
 
 *Ez a szakasz az 5.1/c bukása után született (2026-09-04), és ez a jelenlegi fő irány.*
@@ -654,7 +654,7 @@ Teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 3–8. sza
 - ⛔⛔ **Az ösztönös jelzés HÁROMSZOR bukott meg.** A *„kevés kapcsolata van, tehát gyanús"*
   rendre **31%, 41%, 45%** becsületes tagot jelölne meg tévesen — és épp azokat, akikért a
   befogadás-gondolat szól.
-- ⛔⛔ **És a horgony-kört a támadó elfoglalja** (K12): a becsületes kör 30 kör alatt
+- ⛔⛔ **És a horgony-kört a támadó elfoglalja** (AK12): a becsületes kör 30 kör alatt
   **egyáltalán nem nőtt** (végig 20 = az alapítók), a hamisak viszont **mind a 880-an**
   horgonnyá váltak. A *„több, egymást nem ismerő körből"* feltétel azt jutalmazza, aki
   **tudatosan hálózatot épít** — és a támadó a legtudatosabb.
@@ -1123,7 +1123,7 @@ jelölés és gondolat —, nem egy automatikus következmény.
 entitások, tehát a közösség állítja (medián, D4). ⚠️ De induláskor nincs közösség, aki
 állítsa — kell egy **alapítói érték**, amit a koino-létrehozás eseménye rögzít.
 
-**(b) A K14: mekkora méret fölött kapcsoljon be a szabály?** ⛔ **Ezt a kérdést így nem
+**(b) A AK14: mekkora méret fölött kapcsoljon be a szabály?** ⛔ **Ezt a kérdést így nem
 szabad feltenni** — mert *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a
 9. szabályon bukna el, mint a Duniter-alak. Egyetlen készülék sem tudja megmondani, hányan
 vagyunk.
@@ -1135,7 +1135,7 @@ vagyunk.
 > *tudod, ki valódi, mert ismered.* Amikor a koino nő, a közösség **felemeli a `k`-t** — és
 > a **D47** miatt ez **előre hat**: aki `k = 0` mellett lépett be, bent marad.
 >
-> ⭐ **Ezzel a K14 megszűnik nyitott kérdés lenni**, és a családi koino nem külön üzemmód
+> ⭐ **Ezzel a AK14 megszűnik nyitott kérdés lenni**, és a családi koino nem külön üzemmód
 > (a D22 *„egy program, ami nő"* mondata így lesz kódban is igaz).
 >
 > ⚠️ **Amit vállalunk vele:** a 🔴 **közepes zóna** nem tűnik el — a `k` emelése emberi
@@ -1318,7 +1318,7 @@ megfigyelés — sosem terjed, és semmit nem dönt el a koinóban."*
 
 ---
 
-### 4.7 A SÉTA ÜZENET-ALAKJA (K17) — az 1. szabály szerint kettéosztva
+### 4.7 A SÉTA ÜZENET-ALAKJA (AK17) — az 1. szabály szerint kettéosztva
 
 ⭐ **Ugyanaz a kettéosztás, ami a Szakasz 2-t megmentette:** a `csere.js` sosem importált
 hálózati kódot, ezért a UDP-re állás a **logikát** nem érintette. Itt is:
@@ -1344,7 +1344,7 @@ szerkezet pontosan ehhez való.
 
 ---
 
-### 4.8 MI SZIVÁROG EGY SÉTA KÖZBEN (K18) — mérés, nem kód
+### 4.8 MI SZIVÁROG EGY SÉTA KÖZBEN (AK18) — mérés, nem kód
 
 A kiinduló megtudja a **végpontokat**; a közbenső látja, **kitől kapta és kinek adta**.
 Ez sokkal kevesebb egy térképnél, de **nem nulla**.
@@ -1567,6 +1567,23 @@ eseményt tartjuk**, a szeletelés óta viszont gyakran csak egy darabot tartunk
 >
 > ⭐ **Ez pontosan a 9. szabály alakja:** a **szerkezet és az illesztés kész** (a mező ott
 > van, a jelentése rögzített), **a megvalósítás mérés alapján jön.**
+>
+> #### ⭐⭐ ÉS KÉT NYITOTT SKÁLÁZÁSI KÉRDÉSSEL FÜGG ÖSSZE — ezt a számozási ütközés elrejtette
+>
+> *(2026-09-06-án derült ki, amikor a `K`-számok előtagot kaptak.)*
+>
+> - ⭐ **SK12** *(nyitott)* — *„Ki tartja egy e-ember teljes láncát, ha a tár szeletelt?
+>   Enélkül a kettős lánc szerkezetileg leleplezhetetlen."* ⭐ **A D63 épp erre válasz-irány:**
+>   ha minden esemény elkötelezi magát az egész addigi láncra, akkor **senkinek nem kell a
+>   teljes láncot tartania** — a bizonyíték túléli a szeletelést.
+> - ⚠️ **SK14** *(nyitott)* — *„Hova kerüljön a lánc-gyökér? A tartós magba, vagy külön?"*
+>   ⛔ **EZ A D63 HIÁNYZÓ FELE.** Ma megmondtuk, **mit jelent** a `lancGyoker` — azt nem, hogy
+>   **hol lakik**. A felírt feszültség áll: a magban a legszebb (mindenki 32 bájtból
+>   ellenőriz bárkit), de attól **állandóan változóvá** válik, ami feszül a **D14**
+>   *„legyen minél kisebb"* elvével.
+>
+> ⚠️ **Tehát a D63 félkész, és ezt ki kell mondani:** a megvalósítás előtt az **SK14**-et is el
+> kell dönteni.
 
 ### ✅ A 9/c LEZÁRVA (2026-09-06)
 
@@ -1632,16 +1649,20 @@ a pénz is.
 
 ## 11. NYITOTT KÉRDÉSEK
 
+> ⚠️ **A SORSZÁMOK ELŐTAGOT KAPTAK (2026-09-06):** itt **`AK`** (azonosság), a
+> [`skalazas_terv.md`](skalazas_terv.md)-ben **`SK`** (skálázás). Mindkét lista 11-től
+> számozott, és emiatt egy valódi kapcsolat rejtve maradt — lásd a **D63**-at.
+
 | # | Kérdés | Miért fontos |
 |---|---|---|
-| ~~**K11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
-| ~~**K12**~~ | ~~Milyen legyen a horgony-halmaz?~~ | ⛔ **TÁRGYTALAN.** A „m független horgony-tanú" alak **mérve elbukott** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületesnek nehéz, a támadónak könnyű, és **a kört elfoglalja** (880 hamis horgony). ⭐ **És már nem is kell:** a tenger-jelzés (8/d) **nem mér kitüntetett ponthoz** — épp ezért nem foglalható el |
-| ~~**K13**~~ | ~~Milyen út-feltétel kerüljön a keret mellé?~~ | ⛔ **TÁRGYTALAN**, ugyanezért. A helyére a **véletlen séta** lépett, ami nem egy ponthoz, hanem a **tengerhez** mér |
-| ⏸️ ~~**K17**~~ | ~~A séta üzenet-alakja~~ | ⏸️ **LEMINŐSÍTVE (2026-09-06):** a séta **nem védelem** (11.12–11.13), tehát az üzenet-alakja már nem sürgős. **9/c, 4.7** — utolsóként, ha egyáltalán |
-| ⏸️ ~~**K18**~~ | ~~Mi szivárog ki egy séta közben?~~ | ⏸️ **A K17-tel együtt leminősítve.** ⚠️ A kérdés viszont **áthelyeződött**: a **D55** nyíltság-döntés után nem a séta szivárgása a kérdés, hanem hogy a **nyilvános bemutatkozás** lánc-esemény legyen-e vagy nyilvános-de-helyi (lásd D55 zárómondata) |
-| ~~**K16**~~ | ~~Hogyan indul el a horgony-kör?~~ | ⛔ **TÁRGYTALAN** — nincs horgony-kör (K12). *A kérdés maga hasznos maradt: ő buktatta ki, hogy a „több független körből" feltétel a tudatos hálózatépítőt jutalmazza.* |
-| ~~**K14**~~ | ~~Mekkora méret fölött **kapcsoljon be** a szabály?~~ | ⛔ **A KÉRDÉS ROSSZ VOLT** (9/b, 4.0): a *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. ▶️ **Javaslat helyette (D51):** a `k` **paraméter**, a kis koino `k = 0`-val futtatja **ugyanazt a kódot** — nem külön üzemmód. ⛔ **A D51 azóta TÁRGYTALAN** (nincs `k`); a kérdés valódi válasza a **D56 két lépcsője**: a kis koino ugyanazt a kódot futtatja, csak nincs pénztárcája. ⚠️ A 🔴 közepes zóna így sem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
-| **K15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
+| ~~**AK11**~~ | ~~A keret élethosszig szól, vagy időszakonként újratöltődik?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-04):** *„csak egymás tanúsítgatásával jusson mindenki tanúsítási lehetőséghez, 1-ért 1. Ne keverjük bele az időt."* — **nincs időszakos újratöltés**; a keret az elismerésből keletkezik, a **D48** szerint. ⚠️ Ez felülvizsgálja a **D18/4** „időszakonként, nem élethosszig" sorát, ami a Duniter fix 100-as korlátjára vonatkozott, nem erre |
+| ~~**AK12**~~ | ~~Milyen legyen a horgony-halmaz?~~ | ⛔ **TÁRGYTALAN.** A „m független horgony-tanú" alak **mérve elbukott** ([`eredmenyek.md`](../koino/meres/eredmenyek.md) 7.): a becsületesnek nehéz, a támadónak könnyű, és **a kört elfoglalja** (880 hamis horgony). ⭐ **És már nem is kell:** a tenger-jelzés (8/d) **nem mér kitüntetett ponthoz** — épp ezért nem foglalható el |
+| ~~**AK13**~~ | ~~Milyen út-feltétel kerüljön a keret mellé?~~ | ⛔ **TÁRGYTALAN**, ugyanezért. A helyére a **véletlen séta** lépett, ami nem egy ponthoz, hanem a **tengerhez** mér |
+| ⏸️ ~~**AK17**~~ | ~~A séta üzenet-alakja~~ | ⏸️ **LEMINŐSÍTVE (2026-09-06):** a séta **nem védelem** (11.12–11.13), tehát az üzenet-alakja már nem sürgős. **9/c, 4.7** — utolsóként, ha egyáltalán |
+| ⏸️ ~~**AK18**~~ | ~~Mi szivárog ki egy séta közben?~~ | ⏸️ **A AK17-tel együtt leminősítve.** ⚠️ A kérdés viszont **áthelyeződött**: a **D55** nyíltság-döntés után nem a séta szivárgása a kérdés, hanem hogy a **nyilvános bemutatkozás** lánc-esemény legyen-e vagy nyilvános-de-helyi (lásd D55 zárómondata) |
+| ~~**AK16**~~ | ~~Hogyan indul el a horgony-kör?~~ | ⛔ **TÁRGYTALAN** — nincs horgony-kör (AK12). *A kérdés maga hasznos maradt: ő buktatta ki, hogy a „több független körből" feltétel a tudatos hálózatépítőt jutalmazza.* |
+| ~~**AK14**~~ | ~~Mekkora méret fölött **kapcsoljon be** a szabály?~~ | ⛔ **A KÉRDÉS ROSSZ VOLT** (9/b, 4.0): a *„mekkora méret"* maga is **globális szám** (`N`), és ugyanazon a 9. szabályon bukna el, mint a Duniter-alak. ▶️ **Javaslat helyette (D51):** a `k` **paraméter**, a kis koino `k = 0`-val futtatja **ugyanazt a kódot** — nem külön üzemmód. ⛔ **A D51 azóta TÁRGYTALAN** (nincs `k`); a kérdés valódi válasza a **D56 két lépcsője**: a kis koino ugyanazt a kódot futtatja, csak nincs pénztárcája. ⚠️ A 🔴 közepes zóna így sem szűnik meg, csak láthatóvá válik — *Csaba ezt vállalta (2026-09-03)* |
+| **AK15** | Milyen **pótutak** legyenek a találkozó mellett, és mennyivel gyengébbek? | 4. szabály: legyen mindig kézi út — de ezt nem szabad letagadni |
 
 ---
 
@@ -1688,20 +1709,20 @@ a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **
 - **2026-09-04 (még aznap)** — ⚠️ **Javítás:** a „növekedés önfinanszírozó" állítás **hibás
   volt**, és a `k`-emelés átszámolása buktatta ki (Csaba korrekciója: találkozókon nem 8,
   hanem 50–100 tanúsítás gyűlik). A megmaradási bizonyítás szerint a szabály eredeti
-  alakja **nem tud növekedni**. A **K11 lezárva**: nincs időszak. ⭐ *A tanulság a hiba
+  alakja **nem tud növekedni**. A **AK11 lezárva**: nincs időszak. ⭐ *A tanulság a hiba
   alakja: az összeadást el kell végezni, nem elég, hogy jól hangzik.*
 - **2026-09-04 (harmadszor)** — ⛔ **A D48 is elbukott**, ugyanaznap: az ingyenes elismerés
   a hamis szigetet ugyanúgy táplálja, és nem lejtőn, hanem **sziklán** (öt korrumpált ember
   elég). ⭐ **Ebből viszont általános eredmény lett** (5.1/c): *a gazdaság önmagában nem
   lehet a védelem, mert a számtan nem látja a különbséget valódi és hamis ember között.*
-  Ez egy **egész megoldás-családot zár ki** — és visszahozza a szerkezetet (K12, K13).
+  Ez egy **egész megoldás-családot zár ki** — és visszahozza a szerkezetet (AK12, AK13).
   ▶️ Innentől **szimulációval haladunk, nem érveléssel.**
 - **2026-09-05** — Megépült a **`szigetMeres.js`**, és rögtön háromszor tanított:
   **(1)** a keret nélküli szabálynak nincs fala (97 kör alatt 1499 fő), a keretesnek van
   (**104-nél megáll, örökre**) — a megmaradási csapda futás közben; **(2)** a keret **79%-a
   olyanokra megy el, akik már tagok** — ez adja meg a súlyát az elismerés/támogatás
   szétválasztásnak, amit Csaba javasolt; **(3)** ⛔ egyetlen alapítói klikkből a
-  **horgony-kör soha nem tágul** (K16) — és Claude erre először a *világot* írta át a
+  **horgony-kör soha nem tágul** (AK16) — és Claude erre először a *világot* írta át a
   szabálya alatt, ráadásul Csabának tulajdonítva az ötletet. Csaba javította ki.
   ⭐⭐ **És ebből született a fordulat (8/c):** *az identitás-réteg egy minimumon kívül nem
   tilt, hanem feltár* — **D49**. ▶️ A következő munka a **jelzések** kidolgozása és
@@ -1735,7 +1756,7 @@ a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **
   bemutatkozás, élő és elhagyható), a 4.9 pedig a `lancGyoker` lefoglalt helyét zárja le —
   azt a mezőt, amit az `esemeny.js` kommentje név szerint erre a szakaszra utal.
   ⚠️ **A tervezés közben három dolog derült ki, ami eddig nem látszott:**
-  **(1)** a **K14 kérdése rossz volt** — a *„mekkora méret fölött kapcsoljon be"* maga is
+  **(1)** a **AK14 kérdése rossz volt** — a *„mekkora méret fölött kapcsoljon be"* maga is
   globális szám, tehát ugyanazon a 9. szabályon bukna el, mint a Duniter-alak; helyette a
   `k` legyen paraméter, `k = 0`-val a kis koinóban (**D51 javaslat**);
   **(2)** a keret *kapott* fele csak akkor korlátos lekérdezés, ha a tanúsítás **a

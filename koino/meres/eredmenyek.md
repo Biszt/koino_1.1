@@ -293,7 +293,7 @@ elismerés/támogatás szétválasztásnak** (Csaba, 2026-09-04).
 A horgony-feltétel `m` olyan horgony-tanút kér, akik **egymást nem ismerik**. Egy klikkben
 mindenki ismer mindenkit → **az egész alapítás egyetlen független csoportnak számít** →
 soha senki nem válik horgonnyá. Mérve: a horgonyok száma 30 körön át **végig 12**.
-*(Nyitott kérdés: K16.)*
+*(Nyitott kérdés: AK16.)*
 
 ## 3. ⭐⭐ A JELZÉSEK — és a legfontosabb eredmény
 

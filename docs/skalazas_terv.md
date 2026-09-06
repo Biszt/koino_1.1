@@ -317,8 +317,8 @@ bizonyítékát.** Mind a három a `kanonikusAlak.js`-t érinti — *„a legves
 | Mező | Mit old meg | Honnan | Státusz |
 |---|---|---|---|
 | **`kiosztva`** — összesen kiosztott tudatpont | **H4**: a keret **egy eseményből** ellenőrizhető | ⭐ Csaba, **D42** | ✅ eldöntve, nincs megépítve |
-| **`entitasSorszam`** — hányadik eseményem ezen az entitáson | **H3**: a hézag újra jel lesz (4.3) | e terv | ⚠️ K3 |
-| **`latott`** — pár idegen esemény azonosítója, amit már ismertem | **H7**: a visszadátumozás **bizonyíthatóvá** válik | e terv | ⚠️ K4 |
+| **`entitasSorszam`** — hányadik eseményem ezen az entitáson | **H3**: a hézag újra jel lesz (4.3) | e terv | ⚠️ SK3 |
+| **`latott`** — pár idegen esemény azonosítója, amit már ismertem | **H7**: a visszadátumozás **bizonyíthatóvá** válik | e terv | ⚠️ SK4 |
 
 > ⭐ **A `latott` az, amitől a koino lánca igazi DAG lesz.** Ma a szerzők láncai külön futnak;
 > a kereszt-élekkel bizonyítható sorrend keletkezik **óra nélkül**: aki visszadátumoz, annak
@@ -447,7 +447,7 @@ magától frissül módosításkor; amit csak böngésztem, azé nem.
 az entitásoknak is, amikre nem tettem tudatpontot** (amiket csak megnéztem). Ez ésszerű — de
 ezzel **a tudatpont-keret megszűnik a szelet felső korlátja lenni** (lásd 4.1). Kell rá
 külön szabály: elévülés (mennyi ideig tartom meg, amit csak megnéztem) vagy méret-korlát.
-**Eldöntetlen — a 9. szakaszban K11-ként felírva.**
+**Eldöntetlen — a 9. szakaszban SK11-ként felírva.**
 
 ## 4.8 ⚠️ A TUDATPONT-KERET A SZELETELT VILÁGBAN — a D42 nem elég önmagában
 
@@ -486,7 +486,7 @@ leleplezését.**
 ⚠️ **Amit viszont a szeletelés ront:** ha a két ág **külön szeletbe** kerül, és senki nem
 tartja mindkettőt, a találkozás **szerkezetileg** elmarad. Ebből következik egy felírandó
 igény: **a saját lánc kapjon tartókat a szeletektől függetlenül** — kézenfekvő jelölt a
-tanúsítóid köre (akik amúgy is kezeskedtek érted). **Eldöntetlen — K12.**
+tanúsítóid köre (akik amúgy is kezeskedtek érted). **Eldöntetlen — SK12.**
 
 ## 4.9 ⭐ A LÁNC ÖSSZENYOMÁSA — mi kell HITELESÍTÉSHEZ, és mi kell ADATNAK (Csaba, 2026-09-02)
 
@@ -533,7 +533,7 @@ részek lenyomattá válnak, a lenyomatok láncra fűződnek.
 >
 > **Amit egy készülék ténylegesen tárol, a szeleteléssel:**
 > a saját szelete (mérve: 200 entitás ≈ **4,4 MB**) · a saját lánca · a mag gyökere
-> (**32 B**) · és amit csak megnézett *(K11: erre kell elévülési vagy méret-szabály,
+> (**32 B**) · és amit csak megnézett *(SK11: erre kell elévülési vagy méret-szabály,
 > különben ez az egy tétel hízik vissza)*.
 >
 > ⭐ **Vagyis szeletelés + összenyomás után nincs 70 TB-os probléma senkinél.** A 70 TB
@@ -554,7 +554,7 @@ részek lenyomattá válnak, a lenyomatok láncra fűződnek.
    hasheltté tenni — a szavazatokat még számolni kell. Vagyis az összenyomás határa
    legkorábban **a leghosszabb döntési ablak** után van.
 
-**Eldöntendő (K14):** hol lakjon a lánc-gyökér? Ha a **tartós magban**, akkor a napi
+**Eldöntendő (SK14):** hol lakjon a lánc-gyökér? Ha a **tartós magban**, akkor a napi
 kötegeléssel együtt mozog, és mindenki 32 bájtból ellenőrizhet bárkit — ez a legszebb
 megoldás. ⚠️ De a magot **állandóan változóvá** teszi, ami a D14 *„legyen minél kisebb"*
 elvével feszül.
@@ -760,7 +760,7 @@ identitás-réteg miatt nem elég egy második kulcs).
 ⚠️ **Pontosítás a mai működésről:** ma **egy tulajdonos is elég a létezéshez** — a D14 a
 **nulla** pontos entitást tagadja, az egy pontosat nem. Egy egy-tulajdonosú tartalom tehát
 ott van a fában. Ami valóban gyenge nála, az az **elérhetőség**: egy tulajdonos = egy
-példány (4.5). ⚠️ **Ezért a küszöb ÚJ SZABÁLY lenne, nem a meglévő pontosítása** → K10.
+példány (4.5). ⚠️ **Ezért a küszöb ÚJ SZABÁLY lenne, nem a meglévő pontosítása** → SK10.
 
 ---
 
@@ -857,22 +857,28 @@ indexelni.
 
 ## 9. ⚠️ DÖNTÉST IGÉNYEL
 
+> ⚠️ **A SORSZÁMOK ELŐTAGOT KAPTAK (2026-09-06).** Az itteni kérdések **`SK`** (skálázás), a
+> [`szakasz4_terv.md`](szakasz4_terv.md)-éi **`AK`** (azonosság). ⭐ *Azért kellett, mert mindkét
+> lista 11-től számozott, és az ütközés **elrejtett egy kapcsolatot**: az `SK12` és az `SK14`
+> nyitva állt, miközben az azonosság-terv „K12"-je tárgytalan — így úgy nézett ki, mintha
+> mindkettő le volna zárva.*
+
 | # | Kérdés | A javaslatom |
 |---|---|---|
-| **K1** | Elfogadjuk a határvonalat: **„ami dönt, az offline is megy; csak a megtalálás kíván hálózatot"**? (5. szabály pontosítása) | ⭐ **igen** |
-| **K2** | A címjegyzék **név nélküli** legyen (csak címek)? | ⭐ **igen** — ugyanolyan hasznos, és nem épít profilt (D6) |
-| **K3** | Bekerüljön az **`entitasSorszam`** a kanonikus alakba? Enélkül a hézag megszűnik jel lenni (4.3). | ⭐ **igen, a D42-vel egyszerre** |
-| **K4** | A **`latott`** horgony most menjen be? | ⭐ **most** — a kanonikus alak bővítése később nagyon drága |
-| **K5** | **Megtarthatja-e bárki, amit megnézett**, és kiszolgálhatja-e? | ⭐ **igen** — az aláírás miatt veszélytelen, és ez adja a legtöbb elérhetőséget |
-| **K6** | ~~Jó-e a „kereső-réteg" név?~~ | ✅ **ELDÖNTVE** — Csaba maga is így nevezte |
-| **K7** | A szelet-megtalálás **A) hash-DHT** vagy **B) bizalmi háló**? | ⭐ **középút** (5.3), de **méréssel**, és **ráér** |
-| **K8** | A **tömeges entitás** (10⁷ tulajdonos → ~4,3 GB) | ⭐ **VAN VÁLASZ (4.6):** összegző Merkle-fa — a D21 szerkezete másodszor. Mindenki ~1 KB-ot tárol. *(A korábbi „a D17 táblázata módosul" állítás visszavonva.)* |
-| **K10** | **Láthatósági küszöb** a keresőn (Csaba felvetése, 5.8): 2 független tulajdonos kelljen a keresőben való megjelenéshez? | ⭐ **igen, de KIZÁRÓLAG a kereső-rétegen** — a létezésen soha. ⚠️ **Új szabály, nem pontosítás** — a te döntésed, és a küszöb **ne legyen felfelé tolható** közösségi paraméter (cenzúra-kockázat). 🔁 **Bővült (2026-09-02):** Csaba szerint a **síkidom nézet** ténylegesen használni fogja a láthatósági paramétereket, mert **az dönti el, mikről megy kérelem** — vagyis a küszöb nem csak „mi bukkan fel a keresőben", hanem **mit tölt be egy nézet**. Ez több, mint amiről az 5.8 szól. |
-| ~~**K11**~~ | ~~A csak megnézett entitások helyi tára: meddig tartsuk meg?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-02): tartsa meg nyugodtan.** Claude aggálya (korlátlan hízás) túlzott volt: egy ember véges sokat böngészik, és ⭐ **a megtartott másolat épp az elérhetőséget javítja** (4.5). Az egyetlen valódi követelmény, hogy **eldobható** legyen — ha kell a hely, a legrégebbi megy, és ez semmit nem ront el, mert a tartalom újra lekérhető és ellenőrizhető. |
-| **K12** | Ki tartja egy e-ember **teljes láncát**, ha a tár szeletelt? (4.8 — enélkül a kettős lánc szerkezetileg leleplezhetetlen) | ⭐ kézenfekvő jelölt: **a tanúsítói** — akik amúgy is kezeskedtek érte. A Szakasz 4-gyel együtt dől el |
-| **K13** | A **kérelmezések adatcsoportja** (utiterv 6/c): terjedjen-e a kérelmező kiléte? | ✅ **Csaba álláspontja:** *„a koino nem a magánéletről szól; azt kell megosztani, amit fel is vállalnak."* — a **kimondott** tettekre (pont, szavazat, javaslat) ez így is van. ⚠️ **De a KÉRELEM más kategória:** az olvasás még nem állásfoglalás (a képviselő szavazata nyilvános, a könyvtári olvasmánylistája nem), és a kockázat nem a kellemetlenség, hanem a **célzás** — ez az a lista, amit egy becstelen kormány kérne (D15). ⭐ **És ingyen megoldható:** a fúráshoz a **cím** kell, nem a név, tehát elég annyi, hogy „valaki kéri E-t". ✅ **ELDÖNTVE (Csaba, 2026-09-02): a név NE menjen vele.** |
-| **K14** | Hova kerüljön a **lánc-gyökér** (4.9)? A tartós magba (mindenki 32 B-ból ellenőriz bárkit), vagy külön? | ⚠️ a magban a legszebb, de **állandóan változóvá** teszi — feszül a D14 *„legyen minél kisebb"* elvével |
-| **K9** | Vállaljuk az `esemenyek.jsonl` átszervezését (4.1), vagy előbb csak mérünk? | ⭐ **előbb S1** — öt fájlt érint |
+| **SK1** | Elfogadjuk a határvonalat: **„ami dönt, az offline is megy; csak a megtalálás kíván hálózatot"**? (5. szabály pontosítása) | ⭐ **igen** |
+| **SK2** | A címjegyzék **név nélküli** legyen (csak címek)? | ⭐ **igen** — ugyanolyan hasznos, és nem épít profilt (D6) |
+| **SK3** | Bekerüljön az **`entitasSorszam`** a kanonikus alakba? Enélkül a hézag megszűnik jel lenni (4.3). | ⭐ **igen, a D42-vel egyszerre** |
+| **SK4** | A **`latott`** horgony most menjen be? | ⭐ **most** — a kanonikus alak bővítése később nagyon drága |
+| **SK5** | **Megtarthatja-e bárki, amit megnézett**, és kiszolgálhatja-e? | ⭐ **igen** — az aláírás miatt veszélytelen, és ez adja a legtöbb elérhetőséget |
+| **SK6** | ~~Jó-e a „kereső-réteg" név?~~ | ✅ **ELDÖNTVE** — Csaba maga is így nevezte |
+| **SK7** | A szelet-megtalálás **A) hash-DHT** vagy **B) bizalmi háló**? | ⭐ **középút** (5.3), de **méréssel**, és **ráér** |
+| **SK8** | A **tömeges entitás** (10⁷ tulajdonos → ~4,3 GB) | ⭐ **VAN VÁLASZ (4.6):** összegző Merkle-fa — a D21 szerkezete másodszor. Mindenki ~1 KB-ot tárol. *(A korábbi „a D17 táblázata módosul" állítás visszavonva.)* |
+| **SK10** | **Láthatósági küszöb** a keresőn (Csaba felvetése, 5.8): 2 független tulajdonos kelljen a keresőben való megjelenéshez? | ⭐ **igen, de KIZÁRÓLAG a kereső-rétegen** — a létezésen soha. ⚠️ **Új szabály, nem pontosítás** — a te döntésed, és a küszöb **ne legyen felfelé tolható** közösségi paraméter (cenzúra-kockázat). 🔁 **Bővült (2026-09-02):** Csaba szerint a **síkidom nézet** ténylegesen használni fogja a láthatósági paramétereket, mert **az dönti el, mikről megy kérelem** — vagyis a küszöb nem csak „mi bukkan fel a keresőben", hanem **mit tölt be egy nézet**. Ez több, mint amiről az 5.8 szól. |
+| ~~**SK11**~~ | ~~A csak megnézett entitások helyi tára: meddig tartsuk meg?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-02): tartsa meg nyugodtan.** Claude aggálya (korlátlan hízás) túlzott volt: egy ember véges sokat böngészik, és ⭐ **a megtartott másolat épp az elérhetőséget javítja** (4.5). Az egyetlen valódi követelmény, hogy **eldobható** legyen — ha kell a hely, a legrégebbi megy, és ez semmit nem ront el, mert a tartalom újra lekérhető és ellenőrizhető. |
+| **SK12** | Ki tartja egy e-ember **teljes láncát**, ha a tár szeletelt? (4.8 — enélkül a kettős lánc szerkezetileg leleplezhetetlen) | ⭐⭐ **VÁLASZ-IRÁNY: a D63** (2026-09-06). A `lancGyoker` épp azt oldja meg, hogy **senkinek ne kelljen a teljes láncot tartania**: minden esemény elkötelezi magát a szerző egész addigi láncára, tehát a **kettős lánc bizonyítéka túléli a szeletelést**. ⏸️ A jelentése rögzítve, a megvalósítás mérés alapján jön. *(A régi jelölt — „a tanúsítói tartják" — ezzel szükségtelenné válhat.)* |
+| **SK13** | A **kérelmezések adatcsoportja** (utiterv 6/c): terjedjen-e a kérelmező kiléte? | ✅ **Csaba álláspontja:** *„a koino nem a magánéletről szól; azt kell megosztani, amit fel is vállalnak."* — a **kimondott** tettekre (pont, szavazat, javaslat) ez így is van. ⚠️ **De a KÉRELEM más kategória:** az olvasás még nem állásfoglalás (a képviselő szavazata nyilvános, a könyvtári olvasmánylistája nem), és a kockázat nem a kellemetlenség, hanem a **célzás** — ez az a lista, amit egy becstelen kormány kérne (D15). ⭐ **És ingyen megoldható:** a fúráshoz a **cím** kell, nem a név, tehát elég annyi, hogy „valaki kéri E-t". ✅ **ELDÖNTVE (Csaba, 2026-09-02): a név NE menjen vele.** |
+| **SK14** | Hova kerüljön a **lánc-gyökér** (4.9)? A tartós magba (mindenki 32 B-ból ellenőriz bárkit), vagy külön? | ⚠️ a magban a legszebb, de **állandóan változóvá** teszi — feszül a D14 *„legyen minél kisebb"* elvével. ⭐ **NYITVA MARAD, és ez a D63 HIÁNYZÓ FELE:** 2026-09-06-án megmondtuk, **mit jelent** a `lancGyoker` — azt nem, hogy **hol lakik**. ⚠️ *A D63 enélkül félkész.* |
+| **SK9** | Vállaljuk az `esemenyek.jsonl` átszervezését (4.1), vagy előbb csak mérünk? | ⭐ **előbb S1** — öt fájlt érint |
 
 ---
 

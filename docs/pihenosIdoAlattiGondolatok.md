@@ -27,7 +27,7 @@ a bulis verzióban, szinte mindenki, fogadó képes, és a kérelmező adatcsoma
 > lesz, egy többség feljebb tolhatja → **letagadható cenzúra**.
 > **A feloldás a réteg-felosztás:** a küszöb **kizárólag a KERESŐ-RÉTEGEN** legyen, a
 > **létezésen soha**. Így semmi nincs elrejtve — csak nincs felkínálva. *(A terv 5.8; döntést
-> kér: K10.)*
+> kér: SK10.)*
 "
 ez is átalakúl. Síkoinom nézetben, ténylegessen fogjuk használni,a láthatósági paramétereket, mert abban a nézetben, azokról megy kérelem, amiket a síkidom nézet betőlt. Jobban átgondólva, külön kell kezelni az entitás meta adatait, a címet, és a bodyt. A metaadatok a széttőrdelt magban van(buliba összeál), szóval azokat könnyű frissíteni. A címekkel kapcsolatban, még át kell beszélni. a body, meg csak akkor, ha rákoppíntanak, adja ki, a kérelmet.
 

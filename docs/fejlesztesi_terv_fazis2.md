@@ -215,7 +215,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > lesz, egy többség feljebb tolhatja → **letagadható cenzúra**.
 > **A feloldás a réteg-felosztás:** a küszöb **kizárólag a KERESŐ-RÉTEGEN** legyen, a
 > **létezésen soha**. Így semmi nincs elrejtve — csak nincs felkínálva. *(A terv 5.8; döntést
-> kér: K10.)*
+> kér: SK10.)*
 
 > ### 🧬 HATODIK FORDULAT (2026-08-31 este): A SYBIL-VÁLASZ NEM BIZONYÍTÁS, HANEM EVOLÚCIÓ
 >
@@ -916,7 +916,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > 3. **a gazdaság önmagában** — megmaradó → nem nő; teremthető → a sziget is teremt;
 > 4. ⛔ **a horgony-kör** — *a támadó elfoglalja*: **880 hamis horgony** a 20 valódi mellett,
 >    mert a *„több független körből"* feltétel a **tudatos hálózatépítőt** jutalmazza.
->    Ezzel a **K12** (horgony-halmaz) és a **K13** (út-feltétel) tárgytalan lett.
+>    Ezzel az **AK12** (horgony-halmaz) és az **AK13** (út-feltétel) tárgytalan lett.
 > 5. ⛔⛔ És külön: a *„kevés kapcsolata van, tehát gyanús"* jelzés **háromszor bukott** —
 >    **31 / 41 / 45%** becsületes tagot jelölne meg tévesen, épp **a magányost és a frissen
 >    érkezettet**, vagyis azokat, akikért az egész befogadás-gondolat szól.
