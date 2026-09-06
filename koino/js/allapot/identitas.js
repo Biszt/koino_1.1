@@ -132,6 +132,8 @@ export function ujIdentitasNezet(beallitas = {}) {
  * @returns {Promise<{db: number, voltNemEllenorizheto: boolean}>}
  */
 async function ervenyesAllitok(tar, koino, horgony, horgonyEsemeny, tipus, feltetel, nezet) {
+  console.log('identitas.ervenyesAllitok - KEZDÉS', { tipus, horgony });
+
   const szelet = await entitasEsemenyei(tar, koino, horgony);
   nezet.olvasasok += szelet.length;
 
@@ -193,19 +195,39 @@ async function ervenyesAllitok(tar, koino, horgony, horgonyEsemeny, tipus, felte
     if (allapota.igen) allitok.add(e.szerzo);   // ⭐ emberenként EGY számít (Set)
   }
 
-  return { db: allitok.size, voltNemEllenorizheto };
+  const eredmeny = { db: allitok.size, voltNemEllenorizheto };
+  console.log('identitas.ervenyesAllitok - VÉGE', { tipus, ...eredmeny });
+  return eredmeny;
 }
+
+// A napló-nevek: a három kérdés úgy jelenjen meg a naplóban, ahogy a hívó ismeri —
+// nem a belső gyorsítótár-kulcsával.
+const KERDES_NEVE = { tag: 'tagE', tanusithat: 'tanusithatE', lepcso2: 'lepcso2E' };
 
 /**
  * A kérdés-váz: gyorsítótár, kör-védelem, horgony-betöltés, alapeset — mind a három
  * kérdéshez ugyanaz.
+ *
+ * ⭐ ÉS EZ A NAPLÓZÁS HELYE IS. Mind a három kérdés ezen megy át, tehát elég egy helyen
+ * leírni — a napló így minden kimenetet megmutat (gyorsítótár, kör, hiányzó horgony,
+ * alapító kör, végső döntés), és nem csak azt, hogy „hamis".
  */
 async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
+  const nev = 'identitas.' + (KERDES_NEVE[kulcs] ?? kulcs);
+  console.log(nev + ' - KEZDÉS', { horgony });
+
+  /** Minden kimenet ezen megy ki — így nem maradhat néma ág. */
+  const vege = (eredmeny, honnan) => {
+    console.log(nev + ' - VÉGE' + (honnan ? ' (' + honnan + ')' : ''),
+      { igen: eredmeny.igen, ok: eredmeny.ok, ellenorizheto: eredmeny.ellenorizheto });
+    return eredmeny;
+  };
+
   const gyorsKulcs = kulcs + '|' + horgony;
 
   // ----- 1. AMIT MÁR TUDUNK -----
   const kesz = nezet.igenek.get(gyorsKulcs);
-  if (kesz) return kesz;
+  if (kesz) return vege(kesz, 'gyorsítótárból');
 
   // ----- 2. ⭐ A KÖR ELLENI VÉDELEM -----
   //
@@ -214,7 +236,7 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
   // igazság: aki már a saját ellenőrzése KÖZBEN kerül elő, az ezen az ágon nem bizonyít
   // semmit. ⚠️ Ezt SOHA nem tároljuk el, mert csak erre az ágra igaz.
   if (nezet.folyamatban.has(gyorsKulcs)) {
-    return { igen: false, ok: 'kör a hivatkozási láncban', ellenorizheto: true };
+    return vege({ igen: false, ok: 'kör a hivatkozási láncban', ellenorizheto: true });
   }
   nezet.folyamatban.add(gyorsKulcs);
 
@@ -228,26 +250,26 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
     // hálózati működésben a HIÁNY a normális átmeneti állapot. Ha elutasításnak vennénk,
     // minden becsületes embert büntetnénk minden lemaradásért.
     if (!esemeny) {
-      return { igen: false, ok: 'nem ellenőrizhető: hiányzik a horgony-esemény', ellenorizheto: false };
+      return vege({ igen: false, ok: 'nem ellenőrizhető: hiányzik a horgony-esemény', ellenorizheto: false });
     }
     if (esemeny.koino !== koino) {
-      return { igen: false, ok: 'a horgony egy MÁSIK koinóhoz tartozik', ellenorizheto: true };
+      return vege({ igen: false, ok: 'a horgony egy MÁSIK koinóhoz tartozik', ellenorizheto: true });
     }
 
     // ----- ⭐ AZ ALAPESET: AZ ALAPÍTÓ KÖR -----
     // Mind a három kérdésre IGEN: az alapítók tagok, tanúsíthatnak, és 2. lépcsősök.
     // ⚠️ Enélkül a 2. lépcső EL SEM TUDNA INDULNI (lásd `alapitoE`).
     if (await alapitoE(tar, koino, horgony, esemeny, nezet)) {
-      return { igen: true, ok: 'alapító kör', ellenorizheto: true };
+      return vege({ igen: true, ok: 'alapító kör', ellenorizheto: true });
     }
 
     if (esemeny.tipus !== 'Belepes') {
-      return { igen: false, ok: 'a horgony nem belépési esemény', ellenorizheto: true };
+      return vege({ igen: false, ok: 'a horgony nem belépési esemény', ellenorizheto: true });
     }
 
     const eredmeny = await vizsgalat(esemeny);
     if (eredmeny.igen) nezet.igenek.set(gyorsKulcs, eredmeny);
-    return eredmeny;
+    return vege(eredmeny);
   } finally {
     nezet.folyamatban.delete(gyorsKulcs);
   }
@@ -414,10 +436,20 @@ export function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
  * *Ugyanaz a munkamegosztás, mint mindenhol: a szabály a minimumot tartja, a jelzés feltár.*
  */
 async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny) {
+  console.log('identitas.tanusitoJoga - KEZDÉS',
+    { tanusitoHorgony, tanusitas: tanusitasEsemeny?.azonosito });
+
+  /** Minden kimenet ezen megy ki — ugyanaz a minta, mint a `kerdes`-nél. */
+  const vege = (eredmeny) => {
+    console.log('identitas.tanusitoJoga - VÉGE',
+      { igen: eredmeny.igen, ok: eredmeny.ok, ellenorizheto: eredmeny.ellenorizheto });
+    return eredmeny;
+  };
+
   const tanusito = await esemenyLekerese(tar, tanusitoHorgony);
   nezet.olvasasok++;
   if (!tanusito) {
-    return { igen: false, ok: 'nem ellenőrizhető: hiányzik a tanúsító horgonya', ellenorizheto: false };
+    return vege({ igen: false, ok: 'nem ellenőrizhető: hiányzik a tanúsító horgonya', ellenorizheto: false });
   }
 
   // ⭐ AZ ALAPÍTÓ KÖR ELŐSZÖR — ő a rekurzió gyökere, és NINCS mire hivatkoznia.
@@ -426,12 +458,12 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
   // alapítók tanúsítása „nem mondta be, mire támaszkodott" indokkal esett ki. A gyökeret
   // mindig a feltételek ELŐTT kell megnézni — különben a feltétel a gyökérre is vonatkozna.
   if (await alapitoE(tar, koino, tanusitoHorgony, tanusito, nezet)) {
-    return { igen: true, ok: 'alapító kör', ellenorizheto: true };
+    return vege({ igen: true, ok: 'alapító kör', ellenorizheto: true });
   }
 
   const bemondott = tanusitasEsemeny?.adat?.felhatalmazasok;
   if (!Array.isArray(bemondott) || !bemondott.length) {
-    return { igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true };
+    return vege({ igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true });
   }
 
   // ⭐⭐ MEDDIG LÁTOTT A TANÚSÍTÓ? — a horgony kiolvasása (9/c 4.5)
@@ -478,12 +510,21 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
   }
 
   // A visszavonások a tanúsító saját szeletében.
-  const visszavonasok = new Map();   // szerző → a visszavonás entitás-sorszáma
+  //
+  // ⚠️⚠️ MINDEGYIKET MEGTARTJUK, NEM CSAK AZ ELSŐT — és ez nem részletkérdés. Egy
+  // felhatalmazó **meggondolhatja magát**: visszavesz, majd újra megad. Ha csak a legkorábbi
+  // visszavonást néznénk, akkor az ÚJRA MEGADOTT felhatalmazásra hivatkozó, tökéletesen
+  // becsületes tanúsítás is kiesne — sőt onnantól attól az embertől SOHA többé nem lehetne
+  // érvényesen hivatkozni, mert a `Lattam` (D61) egyszer s mindenkorra elkötné a látást.
+  // ⭐ Ugyanaz az „utolsó nyer" világ, mint az `ervenyesAllitok`-ban: a visszavonás nem
+  // örökre szóló bélyeg, csak egy állítás a lánc egy pontján.
+  const visszavonasok = new Map();   // szerző → a visszavonásainak entitás-sorszámai
   for (const e of await entitasEsemenyei(tar, koino, tanusitoHorgony)) {
     if (e.tipus !== 'FelhatalmazasVisszavonasa') continue;
     if (e.adat?.kit !== tanusito.szerzo) continue;
-    const eddigi = visszavonasok.get(e.szerzo) ?? Infinity;
-    visszavonasok.set(e.szerzo, Math.min(eddigi, e.entitasSorszam ?? 1));
+    const eddigiek = visszavonasok.get(e.szerzo) ?? [];
+    eddigiek.push(e.entitasSorszam ?? 1);
+    visszavonasok.set(e.szerzo, eddigiek);
   }
 
   const adok = new Set();
@@ -510,19 +551,34 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     if (!ado) { hianyzott = true; continue; }
     if (ado.szerzo !== f.szerzo || ado.koino !== koino) continue;
 
-    // ⚠️ ÉS A LÉNYEG: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt választótestület).
     // ⛔⛔ ÉS A LÉNYEG: LÁTTA-E A VISSZAVONÁST, MIELŐTT ALÁÍRT?
     //
     // Ha ettől a felhatalmazótól van visszavonás, ÉS a tanúsító horgonya ugyanettől az
     // embertől egy AZ UTÁNI (vagy ugyanolyan) pontot fog, akkor a tanúsító **tudta**, hogy
     // a felhatalmazása már nem él — mégis rá hivatkozott. Ez nem hiány, hanem a saját
     // aláírásából következő ellentmondás.
-    const visszavonva = visszavonasok.get(f.szerzo);
+    //
+    // ⚠️⚠️ DE CSAK AZ SZÁMÍT, AMI A HIVATKOZOTT FELHATALMAZÁS **UTÁN** JÖTT. Egy korábbi
+    // visszavonást ugyanez a felhatalmazás már felülírt („az utolsó nyer") — az tehát nem
+    // ellentmondás, hanem a történet egy lezárt fejezete. A rés akkor nyílik, ha a
+    // visszavonás **a hivatkozott felhatalmazás és a látott pont KÖZÉ** esik:
+    //
+    //     felhatalmazás sorszáma  <  visszavonás sorszáma  ≤  ameddig látott
+    //
+    // ⭐ Így a becsületes „meggondoltam magam" eset (visszavesz → újra megad → arra
+    // hivatkoznak) végig érvényes marad, a „tudtad, mégis aláírtad" eset viszont kiesik.
+    const felhatalmazasSorszam = f.entitasSorszam ?? 1;
     const latott = latottSorszam.get(f.szerzo);
-    if (visszavonva !== undefined && latott !== undefined && latott >= visszavonva) {
+    const kozbeesoVisszavonas = latott !== undefined
+      && (visszavonasok.get(f.szerzo) ?? [])
+        .some((v) => v > felhatalmazasSorszam && v <= latott);
+    if (kozbeesoVisszavonas) {
       tudottRola = true;
       continue;
     }
+
+    // ⚠️ ÉS A MÁSIK FELTÉTEL: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt
+    // választótestület).
 
     const allapota = await lepcso2E(tar, koino, adoHorgony, nezet);
     if (!allapota.ellenorizheto) hianyzott = true;
@@ -530,9 +586,9 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
   }
 
   if (adok.size >= nezet.felhatalmazasKell) {
-    return { igen: true, ok: adok.size + ' felhatalmazásra támaszkodott', ellenorizheto: true };
+    return vege({ igen: true, ok: adok.size + ' felhatalmazásra támaszkodott', ellenorizheto: true });
   }
-  return {
+  return vege({
     igen: false,
     ok: tudottRola
       ? '⛔ visszavont felhatalmazásra hivatkozott, pedig a horgonya szerint tudott róla'
@@ -543,13 +599,16 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     // ⭐ A bizonyított ellentmondás NEM „nem ellenőrizhető" — az a saját aláírásából
     // következik, tehát végleges (a D42 mintája).
     ellenorizheto: tudottRola ? true : !hianyzott
-  };
+  });
 }
 
 // ----- A közös váznak átadható alakok (a paraméter-sorrend miatt) -----
+//
+// ⚠️ CSAK KETTŐ VAN, ÉS EZ NEM HIÁNY. A harmadik kérdés (`tanusithatE`) SOHA nem feltétel:
+// a tanúsítás érvényességét nem a tanúsító MAI állapota dönti el, hanem az, amire aláíráskor
+// támaszkodott (`tanusitoJoga`, D47). Ha egyszer mégis kellene, itt van a helye.
 const tagE_ = (tar, koino, horgony, nezet) => tagE(tar, koino, horgony, nezet);
 const lepcso2E_ = (tar, koino, horgony, nezet) => lepcso2E(tar, koino, horgony, nezet);
-const tanusithatE_ = (tar, koino, horgony, nezet) => tanusithatE(tar, koino, horgony, nezet);
 
 // ===================================
 // AMI SZÁNDÉKOSAN NINCS ITT

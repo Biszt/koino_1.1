@@ -88,7 +88,9 @@ export async function onalloSzalak(tar, koino, horgony) {
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
   if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
     // ⚠️ A hiány nem vád (D19) — csak annyit mondunk, hogy nem tudjuk.
-    return { rolam: 0, tole: 0, osszes: 0, ellenorizheto: false };
+    const nemTudjuk = { rolam: 0, tole: 0, bemutatkozas: 0, osszes: 0, ellenorizheto: false };
+    console.log('jelzesek.onalloSzalak - VÉGE (nem ellenőrizhető)', nemTudjuk);
+    return nemTudjuk;
   }
   const en = horgonyEsemeny.szerzo;
 
@@ -169,7 +171,9 @@ export async function bemutatkozasok(tar, koino, horgony) {
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
   if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
-    return { kolcsonos: 0, egyoldalu: 0, ellenorizheto: false };
+    const nemTudjuk = { kolcsonos: 0, egyoldalu: 0, ellenorizheto: false };
+    console.log('jelzesek.bemutatkozasok - VÉGE (nem ellenőrizhető)', nemTudjuk);
+    return nemTudjuk;
   }
   const en = horgonyEsemeny.szerzo;
 
@@ -231,7 +235,9 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
   if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
-    return { tanusitott: 0, magukbanAllok: 0, ellenorizheto: false };
+    const nemTudjuk = { tanusitott: 0, magukbanAllok: 0, ellenorizheto: false };
+    console.log('jelzesek.tanusitoiTorlodas - VÉGE (nem ellenőrizhető)', nemTudjuk);
+    return nemTudjuk;
   }
   const en = horgonyEsemeny.szerzo;
 
@@ -303,7 +309,11 @@ export async function megbizasAllapota(tar, koino, horgony) {
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
   if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
-    return { felhatalmazasok: 0, visszavontak: 0, tanusitasok: 0, ellenorizheto: false };
+    const nemTudjuk = {
+      felhatalmazasok: 0, visszavontak: 0, tanusitasok: 0, elismeresek: 0, ellenorizheto: false
+    };
+    console.log('jelzesek.megbizasAllapota - VÉGE (nem ellenőrizhető)', nemTudjuk);
+    return nemTudjuk;
   }
   const en = horgonyEsemeny.szerzo;
 

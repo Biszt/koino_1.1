@@ -18,7 +18,8 @@
 >
 > ✅ **Szakasz 4 — AZ IDENTITÁS: A 9/c TERV MEGÉPÜLVE (2026-09-06).**
 > `js/allapot/identitas.js` (a három kérdés: tag · tanúsíthat · 2. lépcsős) ·
-> `js/allapot/jelzesek.js` (a kontraszt-jelzés) · hat új művelet · **50 önpróba**.
+> `js/allapot/jelzesek.js` (a kontraszt-jelzés) · hat új művelet · **52 önpróba**
+> *(2026-09-06: kód-átnézés — a horgony-szabály javítva, lásd a 4.5-öt a szakasz-tervben)*.
 > ⭐ **A kanonikus alakot nem kellett felbontani.**
 > ⛔ A **séta elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt) ·
 > ⏸️ a **`lancGyoker`** jelentése rögzítve (D63), a megvalósítás mérés alapján jön.

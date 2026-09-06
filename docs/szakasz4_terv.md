@@ -1599,8 +1599,42 @@ eseményt tartjuk**, a szeletelés óta viszont gyakran csak egy darabot tartunk
 | **4.8** a `lancGyoker` | ⏸️ **definiálva (D63), megvalósítás később** |
 
 **Megépült:** `js/allapot/identitas.js` (a három kérdés) · `js/allapot/jelzesek.js` (a
-jelzések) · hat új művelet a `muveletek.js`-ben · **50 önpróba** az
+jelzések) · hat új művelet a `muveletek.js`-ben · **52 önpróba** az
 `identitasProba.js`-ben. ⭐ **A kanonikus alakot nem kellett felbontani.**
+
+> ### ⛔ EGY VALÓDI HIBA, AMIT A KÓD-ÁTNÉZÉS TALÁLT (2026-09-06)
+>
+> **A tünet:** a két kérdés ellentmondott egymásnak. A `tanusithatE` szerint a tanúsítónak
+> öt érvényes felhatalmazása volt (*tanúsíthat*), a `lepcso2E` viszont eldobta a
+> tanúsítását — *„⛔ visszavont felhatalmazásra hivatkozott, pedig a horgonya szerint tudott
+> róla."*
+>
+> **A helyzet, ami előhozta:** a felhatalmazó **meggondolta magát** — visszavett, majd
+> **újra megadta**. A tanúsító becsületesen az ÚJ jegyre hivatkozott, és becsületesen arra
+> is horgonyzott.
+>
+> **Az ok:** a `tanusitoJoga` felhatalmazónként csak a **legkorábbi** visszavonást tartotta
+> meg (`Math.min`), és azt hasonlította a látott ponthoz — vagyis egy már felülírt
+> visszavonás is örökre ellentmondásnak számított. ⚠️ Ugyanez a fájl máshol
+> (`ervenyesAllitok`) helyesen „az utolsó nyer" szerint dolgozik; ez volt az egyetlen hely,
+> ahol az irány megfordult.
+>
+> ⚠️⚠️ **És a `Lattam` (D61) miatt ez nem apróság volt:** az elismerés örökre elköti a
+> látást, tehát a hibás alak attól a felhatalmazótól **soha többé** nem engedett volna
+> érvényes hivatkozást — akkor sem, ha ő maga adta vissza a megbízást.
+>
+> ⭐ **A javított szabály** — a visszavonás csak akkor ellentmondás, ha a hivatkozott
+> felhatalmazás UTÁN és a látott ponton BELÜL van:
+>
+>     felhatalmazás sorszáma  <  visszavonás sorszáma  ≤  ameddig látott
+>
+> Két új önpróba őrzi (50 → 52): a becsületes „meggondoltam magam" eset számít, **akkor is,
+> ha közben `Lattam`-mal elismerte, hogy látta a visszavonást** — a „tudtad, mégis
+> aláírtad" eset viszont változatlanul kiesik.
+>
+> ⭐ *A tanulság ugyanaz, mint a mérésekben: két kérdés, aminek egyet kellene mondania, és
+> nem mondott — ez volt a jel. A rontás-próbák mind átmentek; a hibát a **pozitív** eset
+> hiánya rejtette el.*
 
 ### ⭐ A SORREND INDOKLÁSA — és ami közben megváltozott
 
@@ -1792,7 +1826,7 @@ a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **
   ✅ **Csaba lezárása:** *„eleget mértünk. Nekem ez így már megfelel, első koinónak."*
   ▶️ Az érvényes megépítési terv: **9/c**. A régi 9/b ⛔ elavult, meg van jelölve.
 - **2026-09-06 (este)** — ⭐⭐⭐ **A 9/c MEGÉPÜLT, ÉS A SZAKASZ 4 KÓDDÁ VÁLT.** A 4.1–4.6
-  kész (`js/allapot/identitas.js`, `js/allapot/jelzesek.js`, hat új művelet, **50 önpróba**),
+  kész (`js/allapot/identitas.js`, `js/allapot/jelzesek.js`, hat új művelet, **52 önpróba**),
   a **4.7 elvetve**, a **4.8 definiálva** (D63). ⭐ **A kanonikus alakot nem kellett
   felbontani** — a régi terv legveszélyesebb lépése kiesett.
   **Négy dolog, amit a megépítés tanított, és a terv nem látott előre:**
@@ -1810,3 +1844,13 @@ a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **
   próbába (a lejárt megbízásnál és az egyoldalú bemutatkozásnál).
   ⭐ *Mind az öt ugyanazt tanította: a tiltó próbák önmagukban semmit nem bizonyítanak — a
   pozitív próbák nélkül a hiba észrevétlen marad.*
+- **2026-09-06 (kód-átnézés)** — ⛔ **ÉS PONTOSAN EZ TÖRTÉNT MEG A HATODIKKAL.** A
+  horgony-szabály (4.5) a **meggondoltam magam** esetet is ellentmondásnak vette: aki
+  visszavett, majd **újra megadott** felhatalmazásra hivatkozott, annak a tanúsítása
+  kiesett — pedig a `tanusithatE` szerint teljes jogú volt. Az ok: felhatalmazónként csak a
+  **legkorábbi** visszavonást tartottuk meg. ⭐ **A javítás:** csak az a visszavonás
+  ellentmondás, ami a hivatkozott felhatalmazás **után** és a látott ponton **belül** van.
+  **50 → 52 önpróba** (a teljes lánc: 267 → 269).
+  ⚠️ *A tíz rontás-próba mind átment fölötte — a hiba a hiányzó pozitív esetben lakott.*
+  🛠️ Ugyanekkor: a `tanusithatE_` holt kód törölve, és az `identitas.js` megkapta a
+  **naplózást** (4. konvenció) — minden kérdés minden kimenete látszik `KOINO_NAPLO=1`-gyel.

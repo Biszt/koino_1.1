@@ -831,6 +831,70 @@ proba('⭐ A HORGONY CSAK ARRA A FELHATALMAZÓRA hat, akitől való', async () =
   return eredmeny.igen === true;
 });
 
+// ⚠️⚠️ EZ A KETTŐ EGY VALÓDI HIBÁT RÖGZÍT (2026-09-06, kód-átnézés).
+//
+// A horgony-ellenőrzés elsőre felhatalmazónként CSAK A LEGKORÁBBI visszavonást tartotta meg,
+// és azt hasonlította a látott ponthoz. Ettől a **meggondoltam magam** eset — visszavesz,
+// majd újra megad — becsületes tanúsítását is eldobta: a tanúsító a friss felhatalmazásra
+// hivatkozott, becsületesen arra is horgonyzott, mégis „⛔ tudott róla" lett belőle.
+//
+// ⭐ A javított szabály: a visszavonás csak akkor ellentmondás, ha a hivatkozott
+// felhatalmazás UTÁN és a látott ponton BELÜL van:
+//
+//     felhatalmazás sorszáma  <  visszavonás sorszáma  ≤  ameddig látott
+//
+// ⚠️ A `Lattam` (D61) miatt ez nem apróság volt: az elismerés örökre elköti a látást, tehát
+// a hibás alak attól a felhatalmazótól **soha többé** nem engedett volna érvényes
+// hivatkozást — akkor sem, ha ő maga adta vissza a megbízást.
+
+proba('⭐⭐ MEGGONDOLTA MAGÁT: az ÚJRA MEGADOTT felhatalmazásra hivatkozó tanúsítás SZÁMÍT', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // A felhatalmazó visszaveszi… majd meggondolja magát, és ÚJRA megadja.
+  await ment(tar, await visszavonas(felhatalmazok[0], uj));
+  const ujra = await felhatalmazas(felhatalmazok[0], uj);
+  await ment(tar, ujra);
+
+  // A tanúsító BECSÜLETESEN jár el: az ÚJ jegyre hivatkozik, és arra is horgonyoz.
+  const ujJegyek = [ujra.azonosito, ...jegyek.slice(1)];
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: ujJegyek, latott: [ujra.azonosito] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // ⭐ A két kérdésnek egyet kell mondania: aki MOST tanúsíthat, annak a tanúsítása is
+  // számítson. (A hibás alaknál a `tanusithatE` igent mondott, a `lepcso2E` mégis nemet.)
+  const tanusithat = await tanusithatE(tar, KOINO, uj.horgony);
+  const eredmeny = await lepcso2E(tar, KOINO, jelolt.horgony);
+  return tanusithat.igen === true && eredmeny.igen === true;
+});
+
+proba('⭐ …AKKOR IS, HA KÖZBEN ELISMERTE, hogy látta a visszavonást (a `Lattam` nem bélyeg)', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // Visszavonás → a tanúsító a bulikörben ELISMERI, hogy látta → a felhatalmazó újra megadja.
+  const vissza = await visszavonas(felhatalmazok[0], uj);
+  await ment(tar, vissza);
+  await ment(tar, await lattam(uj, [vissza.azonosito]));
+  const ujra = await felhatalmazas(felhatalmazok[0], uj);
+  await ment(tar, ujra);
+
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: [ujra.azonosito, ...jegyek.slice(1)] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // ⭐ Nincs olyan visszavonás, ami az ÚJ felhatalmazás UTÁN jött volna — tehát nincs
+  // ellentmondás, és a tanúsítás számít.
+  return (await lepcso2E(tar, KOINO, jelolt.horgony)).igen === true;
+});
+
 
 // ===================================
 // ⭐⭐⭐ A BULI-ELISMERÉS (D61) — ez zárja be a „régi horgony" trükköt
