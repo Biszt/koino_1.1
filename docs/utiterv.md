@@ -3,7 +3,7 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D60),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D63),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
@@ -16,10 +16,14 @@
 > új mezője, a **kérdezhető tár-illesztő** (két mért fal ledőlt: mentés 495 ms → 1,4 ms,
 > állapotszámítás 4 615 ms → 502 ms), és a böngésző-lekérés. **217 önpróba rendben.**
 >
-> 🚧 **Szakasz 4 — AZ IDENTITÁS: a szerkezet megvan, kód még nincs.**
-> Terv: [`szakasz4_terv.md`](szakasz4_terv.md) **9/c** szakasz.
-> ✅ **Csaba lezárta a méréseket (2026-09-06):** *„eleget mértünk. Nekem ez így már
-> megfelel, első koinónak."*
+> ✅ **Szakasz 4 — AZ IDENTITÁS: A 9/c TERV MEGÉPÜLVE (2026-09-06).**
+> `js/allapot/identitas.js` (a három kérdés: tag · tanúsíthat · 2. lépcsős) ·
+> `js/allapot/jelzesek.js` (a kontraszt-jelzés) · hat új művelet · **50 önpróba**.
+> ⭐ **A kanonikus alakot nem kellett felbontani.**
+> ⛔ A **séta elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt) ·
+> ⏸️ a **`lancGyoker`** jelentése rögzítve (D63), a megvalósítás mérés alapján jön.
+> ✅ **Csaba lezárta a méréseket:** *„eleget mértünk. Nekem ez így már megfelel, első
+> koinónak."*
 >
 > ⭐⭐⭐ **A SZERKEZET, EGY MONDATBAN (D56):** *az 1. lépcső olcsó, mert a kapu úgysem véd;
 > a 2. lépcső drága, mert ott a zsákmány; és a védelem egyikben sem a kapu, hanem hogy a
@@ -145,7 +149,7 @@ identitás-réteg · tartós mag · felület · kereső-réteg · pénz
 | **1** | **A helyi modell** — esemény, lánc, állapot, szabály, javaslat | ✅ **kész** | a koino gondolkodása |
 | **2** | **A szállítás** — hogy két készülék egyáltalán összeérjen | ✅ **kész** | ⭐ *(A neve eddig „csere" volt; a munka valójában a szállításról szólt, és az elkészült.)* |
 | **3** | **A SZERKEZET** — az esemény alakja, a tár illesztése, az elérés | ✅ **kész** (2026-09-03) | ettől lett a koino skálázható **szerkezetében** |
-| **4** | **AZ IDENTITÁS** — ⭐ **két lépcsős beléptetés**, kontraszt-jelzés, visszavonás ([terv](szakasz4_terv.md) 9/c) | 🚧 **a szerkezet kész, kód még nincs** | ettől lesz **hiteles** |
+| **4** | **AZ IDENTITÁS** — ⭐ **két lépcsős beléptetés**, kontraszt-jelzés, visszavonás, bemutatkozás ([terv](szakasz4_terv.md) 9/c) | ✅ **megépítve** (2026-09-06) | ettől lesz **hiteles** |
 | **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból | ❌ | ettől lesz **használható** |
 | **6** | **A KERESŐ-RÉTEG** — elosztott, replikált mutató | ❌ | ⭐ **elhagyható** (2. szabály) |
 | **7** | **A PÉNZ** | ❌ | D11: csak bizonyított identitás után |

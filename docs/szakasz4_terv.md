@@ -1518,23 +1518,78 @@ volt, hogy ez **közlés, nem megfigyelés**, és a **D55** ezt meg is erősíte
 Mellette a **készülék-felfedezés mint segéd** (D54): *javasol*, az ember *dönt* — ez teszi a
 műveleteket használhatóvá, mert egy 43 karakteres horgonyt senki nem gépel be.
 
-### 4.7 ⏸️ A SÉTA — leminősítve, elhagyható
+### 4.7 ⛔ A SÉTA — ELVETVE (2026-09-06, Csabával közösen)
 
-⚠️ **Nem védelem** (11.12–11.13): sok megtévesztettnél összeomlik. ⭐ **Kényelmi jelzés
-marad**, és **utolsóként épül meg, ha egyáltalán.** *Ez a nap legfájóbb tanulsága: a
-tenger-gondolat gyönyörű volt, de a mérés a kontrasztnak adott igazat.*
+**Ne induljon el rajta újra egy friss session.** Két, egymástól független ok:
 
-### 4.8 A `lancGyoker` — dönteni kell róla
+1. ⛔ **Mérve gyenge** (11.12–11.13): sok megtévesztettnél **43–74% / 31–61%** — vagyis
+   érdemben használhatatlan. *A séta a leggyengébb láncszem, nem a legerősebb.*
+2. ⭐⭐ **És az eredeti szerepe megszűnt.** A séta azért létezett, hogy **térkép nélkül**
+   lehessen megmérni, összeérünk-e. A **D62** óta viszont a bemutatkozások **a láncon
+   vannak** — a kapcsolat-kérdés **közvetlenül kiszámítható, offline, séta nélkül.**
 
-Az [`esemeny.js`](../koino/js/esemeny/esemeny.js) erre a szakaszra utalja. **Jelölt
-jelentés:** összegző Merkle-gyökér a saját láncra, hogy a kettős lánc bizonyítéka túlélje az
-összenyomást. ⚠️ **Csak akkor töltsük ki, ha van fogyasztója** — különben maradjon `null`,
-és mondjuk ki, hogy nem kell.
+⚠️ **Ami maradna neki:** elérni olyanokat, akiknek a szeletét nem tartjuk. ⭐ De arra már van
+eszköz — a **3.4 böngésző-lekérés** (`hozd`) célzottan elhozza, amire ránézünk. A séta tehát
+nem az egyetlen út, csak a bonyolultabbik: **élő kapcsolatot kíván**, és gyengébb jelzést ad.
 
-### ⭐ A SORREND INDOKLÁSA
+> ⭐ **A gondolat mégsem volt hiába: a TENGERBŐL JÖTT A KONTRASZT.** Csaba
+> „BEMUTATKOZÁS"-ötlete (8/d) vezetett oda, hogy a sűrűséget kell nézni — és amikor a séta
+> elbukott a mérésen, a helyén ott maradt a **kontraszt-jelzés**, ami ma a védelem.
+> *A történet marad; a kód nem készül el.*
+
+### 4.8 ⏸️ A `lancGyoker` — A JELENTÉSE RÖGZÍTVE, A MEGVALÓSÍTÁS KÉSŐBB
+
+Az [`esemeny.js`](../koino/js/esemeny/esemeny.js) mezője ma mindig `null`, és a saját
+kommentje mondja ki, miért: *„egy mező, aminek nincs fogyasztója, ROSSZ DEFINÍCIÓT kap."*
+
+⭐⭐ **2026-09-06-tól van fogyasztója**, és épp a legfrissebb darab miatt. A **D61**
+(`Lattam`) egész ereje azon áll, hogy **a saját láncban van sorrend**: ha egyszer aláírtam,
+hogy látom a visszavonást, a későbbi eseményeim bizonyíthatóan utána vannak.
+
+⚠️ **Ezt egy dolog tudná megtörni: ha valaki KETTÉÁGAZTATJA a saját láncát.** Egyik ágon
+aláírja, hogy látta; a másikon nem. Ma ezt az `elagazasE` fogja meg — **de csak ha mindkét
+eseményt tartjuk**, a szeletelés óta viszont gyakran csak egy darabot tartunk.
+
+> ### ⏸️ D63 (2026-09-06) — A `lancGyoker` JELENTÉSE: gördülő elköteleződés a saját láncra
+>
+> Minden esemény egyetlen lenyomattal elkötelezi magát a szerző **egész addigi láncára**.
+> ⭐ Ettől a **kettős lánc bizonyítéka túléli a szeletelést**: két különböző ágból származó,
+> **későbbi** esemény is ellentmond egymásnak, akkor is, ha az elágazás pontját nem tartjuk.
+>
+> **De a megvalósítás NEM most jön**, három okból:
+>
+> - a mező **bennhagyása ingyen van**, a kivétele viszont drága (a kanonikus alak mindenkinél
+>   változna) — tehát semmit nem veszítünk a halasztással;
+> - a fogyasztója megvan, tehát a **definíció most már helyesen** megfogalmazható (épp ezt
+>   várta ki az `esemeny.js` kommentje);
+> - ⚠️ de **nincs mérésünk arról, hogy sürgős**, a megvalósítás pedig valódi munka (gördülő
+>   Merkle-gyökér a saját láncon, és az ellenőrzése).
+>
+> ⭐ **Ez pontosan a 9. szabály alakja:** a **szerkezet és az illesztés kész** (a mező ott
+> van, a jelentése rögzített), **a megvalósítás mérés alapján jön.**
+
+### ✅ A 9/c LEZÁRVA (2026-09-06)
+
+| lépés | állapot |
+|---|---|
+| **4.1** belépés, meghívás, tagság-számítás | ✅ megépítve |
+| **4.2** a lánc bejárása gyorsítótárral | ✅ megépítve |
+| **4.3** felhatalmazás, tanúsítás, 2. lépcső | ✅ megépítve |
+| **4.4** a kontraszt-jelzés | ✅ megépítve |
+| **4.5** a visszavonás + a horgony + a buli-elismerés (D61) | ✅ megépítve |
+| **4.6** a bemutatkozás lánc-eseményként (D62) | ✅ megépítve |
+| **4.7** a séta | ⛔ **elvetve** |
+| **4.8** a `lancGyoker` | ⏸️ **definiálva (D63), megvalósítás később** |
+
+**Megépült:** `js/allapot/identitas.js` (a három kérdés) · `js/allapot/jelzesek.js` (a
+jelzések) · hat új művelet a `muveletek.js`-ben · **50 önpróba** az
+`identitasProba.js`-ben. ⭐ **A kanonikus alakot nem kellett felbontani.**
+
+### ⭐ A SORREND INDOKLÁSA — és ami közben megváltozott
 
 **4.1–4.3 a LÁNC** (offline dönt) · **4.4–4.5 a JELZÉS ÉS A KÖVETKEZMÉNY** (ez a valódi
-védelem) · **4.6–4.7 a KÉNYELEM** (elhagyható) · **4.8 a végén**, mert fogyasztó kell hozzá.
+védelem) · **4.6 a bemutatkozás**, ami ⭐ **a tervezettnél többet ad**: a kontraszt-jelzés
+gráfját sűríti · ⛔ **4.7 elvetve** · ⏸️ **4.8 definiálva**.
 
 ⭐ **És az első valódi mérföldkő a 4.2 után van:** meghívásos tagság + a lánc ellenőrzése
 = **egy család vagy egy osztály élesben**, pénztárca nélkül. A 2. lépcső akkor jön, amikor
@@ -1715,3 +1770,22 @@ a D50). ⭐ Három meglévő döntés kapott ott jelzést a felülírásról: **
   nem nézzük meg, mitől jó.*
   ✅ **Csaba lezárása:** *„eleget mértünk. Nekem ez így már megfelel, első koinónak."*
   ▶️ Az érvényes megépítési terv: **9/c**. A régi 9/b ⛔ elavult, meg van jelölve.
+- **2026-09-06 (este)** — ⭐⭐⭐ **A 9/c MEGÉPÜLT, ÉS A SZAKASZ 4 KÓDDÁ VÁLT.** A 4.1–4.6
+  kész (`js/allapot/identitas.js`, `js/allapot/jelzesek.js`, hat új művelet, **50 önpróba**),
+  a **4.7 elvetve**, a **4.8 definiálva** (D63). ⭐ **A kanonikus alakot nem kellett
+  felbontani** — a régi terv legveszélyesebb lépése kiesett.
+  **Négy dolog, amit a megépítés tanított, és a terv nem látott előre:**
+  **(1)** ⭐ **a három kérdés UGYANAZ a mondat** (tag ← meghívás · tanúsíthat ←
+  felhatalmazás · 2. lépcsős ← tanúsítás), ezért egy közös váz írja le mindhármat;
+  **(2)** ⚠️ **egyetlen alapítóval a 2. lépcső befagy** — a pénztárcához három tanúsítás
+  kell, de egy alapító egyet ad; ezért nevezhet meg a koino-létrehozás **alapító kört**;
+  **(3)** ⭐⭐⭐ **a saját láncban VAN sorrend**, és ez adja meg a kézbesítési igazolást
+  globális óra nélkül (D61) — *ez Csaba buli-ötletéből lett kód*;
+  **(4)** ⭐⭐ **a bemutatkozás a kontraszt-jelzést élesíti**, nem a sétát — a lánc ritka
+  gráfján 1 vs 1 volt a különbség, most 5 vs 1 (D62).
+  ⚠️ **És öt saját hiba, mind a próbákkal megfogva:** a beállítást az `ido` helyére tettem ·
+  a bemondás-ellenőrzést az alapító-vizsgálat elé ·  a jelzést rossz gráfon kerestem · a
+  horgonyt nem továbbítottam a próba-segédben · és kétszer **rossz elvárást** írtam a
+  próbába (a lejárt megbízásnál és az egyoldalú bemutatkozásnál).
+  ⭐ *Mind az öt ugyanazt tanította: a tiltó próbák önmagukban semmit nem bizonyítanak — a
+  pozitív próbák nélkül a hiba észrevétlen marad.*

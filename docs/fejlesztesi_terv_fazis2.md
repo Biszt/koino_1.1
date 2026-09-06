@@ -1119,6 +1119,70 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >   ⭐ Ezért a gépi segítség értéke **az ÉSZREVÉTELBEN** van, nem a döntésben: a program
 >   **mutasson**, a **közösség döntsön** (D46).
 
+> ### 🔨 D61–D63 (2026-09-06 este): AMI A MEGÉPÍTÉS KÖZBEN SZÜLETETT
+>
+> *A Szakasz 4 kódolása közben három olyan kérdés merült fel, amit a terv nem látott előre.
+> Részletek: [`szakasz4_terv.md`](szakasz4_terv.md) 9/c.*
+>
+> #### ⭐⭐⭐ D61 — A BULI MINT KÉZBESÍTÉSI IGAZOLÁS (Csaba)
+>
+> **A kérdés, ami előhozta** *(Csaba)*: *„azt mondod, hogy aki már egyszer lehetett
+> tanúsító, azt a program mindig fogja engedni tanúsítani?"* — és igen, addig így volt.
+>
+> ⚠️ **Claude két hibája, amit Csaba javított ki:** ① a **lassúságra** hivatkoztam
+> védelemként, amit az 5. szabály jegyzete kifejezetten tilt; ② azt mondtam, hogy globális
+> óra sem segítene, mert *„nem az óra hiányzik, hanem a kézbesítési igazolás"* — az utolsó
+> fele igaz, **de a buli ÉPPEN kézbesítési igazolás**.
+>
+> **A megoldás — `Lattam` esemény:** a bulikörben mindenki **aláírja, meddig lát** a saját
+> szeletében. ⭐⭐⭐ **És ettől lesz erős: a saját láncban VAN sorrend** (a `sorszam`, amit
+> csak a szerző írhat). Ha egyszer aláírtam, hogy látom a visszavonást, **minden későbbi
+> saját eseményem bizonyíthatóan azután keletkezett — globális óra nélkül.**
+>
+> - **saját, aláírt állítás**, nem kívülről ráerőltetett igazság;
+> - aki offline volt, **nem írt alá semmit** → rá nem vonatkozik (D19);
+> - ⛔ **de a teljes állapot ujjlenyomata NEM lehet globális** (a szeletelés óta senki nem
+>   ismer minden eseményt) — az elismerés ezért **szeletenkénti**.
+>
+> #### ⭐⭐ D62 — A BEMUTATKOZÁS LÁNC-ESEMÉNY, ÉS CSAK KÖLCSÖNÖSEN SZÁMÍT (Csaba)
+>
+> ⚠️ **A D50 hordozó-döntése felülírva.** *Csaba: „miért probléma a társas térkép? Nem
+> mondtam olyat, hogy ezt el kell kerülni… épp az rajzolná ki a tengert."* — és igaza volt
+> abban is, hogy **ez az aggály nem tőle származott**, hanem Claude-tól (8/e).
+>
+> - **lánc-esemény**, a másik szeletébe — mint minden más állítás;
+> - ⭐⭐ **kölcsönös, vagy sehogy**: egyoldalúan a támadó **ingyen gyártana sűrűséget**, pont
+>   azt, amit a jelzés keres. Amíg a másik fél nem írta alá, **egyik oldalon sem** számít;
+> - ⭐ **a kölcsönösség ellenőrzése ingyen van** — két meglévő kérdés metszete: a szeletem és
+>   a saját láncom.
+>
+> ⚠️ **Amit tisztázni kellett:** a térkép **nem menti meg a sétát** (a hamisak sok
+> megtévesztettnél tényleg össze vannak kötve). ⭐ **A valódi haszon:** a kontraszt-jelzés
+> eddig a lánc RITKA gráfján futott — egy frissen érkezettnek 1-2 szála, egy üres
+> azonosságnak 1 —, és **épp ez volt a 9–25% téves megjelölés oka**. A bemutatkozásokkal a
+> valódi embernek több tucat szála lesz: **a különbség kinyílik.**
+>
+> #### ⏸️ D63 — A `lancGyoker` JELENTÉSE RÖGZÍTVE, A MEGVALÓSÍTÁS KÉSŐBB
+>
+> A 3.1-ben lefoglalt mező (ma mindig `null`) **most kapott fogyasztót**: a **D61** ereje azon
+> áll, hogy a saját láncban van sorrend — ⚠️ **ezt a saját lánc kettéágaztatása törné meg**.
+> Ma ezt az `elagazasE` fogja meg, de **csak ha mindkét eseményt tartjuk**; a szeletelés óta
+> gyakran csak egy darabot tartunk.
+>
+> **A jelentés:** minden esemény egyetlen lenyomattal elkötelezi magát a szerző **egész
+> addigi láncára** — ettől a **kettős lánc bizonyítéka túléli a szeletelést**.
+>
+> ⏸️ **De nem most épül meg:** a mező bennhagyása ingyen van, a kivétele drága, és **nincs
+> mérésünk arról, hogy sürgős**. ⭐ *Ez a 9. szabály alakja: a szerkezet és az illesztés
+> kész, a megvalósítás mérés alapján jön.*
+>
+> #### ⛔ ÉS AMIT ELVETETTÜNK: A SÉTA
+>
+> **Mérve gyenge** (43–74% / 31–61% sok megtévesztettnél), **és az eredeti szerepe megszűnt**:
+> a séta azért létezett, hogy térkép nélkül lehessen mérni — a D62 óta a bemutatkozások a
+> láncon vannak. ⭐ *A gondolat mégsem volt hiába: a tengerből jött a kontraszt-jelzés, ami
+> ma a védelem.*
+
 ### 🕐 AZ IDŐ ÉS A LEZÁRÁS — öt felírt irány (2026-08-29, Csaba ötleteiből)
 
 *A D33–D35 után Csaba felvetette: ha valaki nem talál postaládát, a szavazata késhet — mit
@@ -1204,7 +1268,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**57 tervezési döntés áll (D1–D60; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
+**60 tervezési döntés áll (D1–D63; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
 tárgytalanná vált — mindegyik okával együtt
 megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
