@@ -1,4 +1,4 @@
-// koino/meres/pakliProba.js — a KÉRDEZHETŐ PAKLI-LEKÉRDEZÉS önpróbája (Szakasz 5 / 5.2)
+﻿// koino/meres/pakliProba.js — a KÉRDEZHETŐ PAKLI-LEKÉRDEZÉS önpróbája (Szakasz 5 / 5.2)
 
 // Mit bizonyít ez a lap?
 //
@@ -16,7 +16,8 @@ import { join } from 'node:path';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import {
-  pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, MAX_DARAB, RENDEZESEK
+  pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja,
+  entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK
 } from '../js/allapot/pakli.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
@@ -613,7 +614,103 @@ proba('⚠️ A HIÁNYZÓ kategória nem hiba: a gondolat áll, a besorolás nem
   });
 
 // ===================================
-// 9. A GYORSÍTÓTÁR
+// 9. ⭐ A MODÁLOK KÉRDÉSEI (5.5)
+// ===================================
+
+proba('⭐ A RÉSZLETEK az egyezmény UTÁNI alakot adják, és a besorolást is', async () => {
+  const { tar, anna } = await ujKoino();
+  const kat = await besorolas(tar, anna, 'Kategoria', 'Természet', '🌲');
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Címe', szoveg: 'Szövege', meret: 10, kategoriak: [kat] });
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 400 }));
+
+  const r = await entitasReszletei(tar, KOINO, g.azonosito, { szerzo: anna.szerzo });
+  return r.data.cim === 'Címe'
+    && r.data.nev === 'Címe'                       // a kártya `nev`-et is olvashat
+    && r.data.eemberHozzajarulas === 400
+    && r.data.kategoriak[0].nev === 'Természet'
+    && r.data.hozzajarulok.length === 1;
+});
+
+proba('⭐⭐ A KÜSZÖBÖK a prototípus NEVEIVEL érkeznek (a modal így olvassa)', async () => {
+  const { tar, anna } = await ujKoino();
+  const azonosito = await gondolat(tar, anna, 'Küszöbös', 100);
+
+  const alap = await entitasKuszobei(tar, KOINO, azonosito, { szerzo: anna.szerzo });
+  // Még senki nem javasolt: az alapértelmezés jön, a saját javaslat üres.
+  const alapRendben = alap.aktualisErtekek.javaslatElfogadasiKuszob === 51
+    && alap.aktualisErtekek.aktualMinimumDontesiIdo === 86400
+    && alap.eemberJavaslat === null;
+
+  await esemenyMentese(tar, await anna.tesz('ErtekJavaslat', {
+    entitas: azonosito,
+    ertekek: { elfogadasiKuszob: 66, reszveteliKuszob: 10,
+               minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 }
+  }));
+
+  const uj = await entitasKuszobei(tar, KOINO, azonosito, { szerzo: anna.szerzo });
+  return alapRendben
+    && uj.aktualisErtekek.javaslatElfogadasiKuszob === 66
+    && uj.aktualisErtekek.reszveteliAranyKuszob === 10
+    && uj.eemberJavaslat.aktualMinimumDontesiIdo === 3600;
+});
+
+proba('⭐ A HIÁNYZÓ FELMENŐK: amelyik ősre nincs pontom, az felsorolódik', async () => {
+  const { tar, anna } = await ujKoino();
+  const nagyszulo = await gondolat(tar, anna, 'Nagyszülő', 100);
+
+  // A szülőt MÁSVALAKI tartja — nekem nincs rajta pontom.
+  const bela = await ujEember(KOINO);
+  const sz = await bela.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Szülő', meret: 10, szulo: nagyszulo });
+  await esemenyMentese(tar, sz);
+  await esemenyMentese(tar,
+    await bela.tesz('TudatpontRendezes', { entitas: sz.azonosito, pont: 100 }));
+
+  const gy = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Gyerek', meret: 10, szulo: sz.azonosito });
+  await esemenyMentese(tar, gy);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: gy.azonosito, pont: 100 }));
+
+  const f = await hianyzoFelmenok(tar, KOINO, gy.azonosito, { szerzo: anna.szerzo });
+  // ⭐ A Szülőre nincs pontom (Béláé), a Nagyszülőre van — tehát egy hiányzik.
+  return f.data.hianyzoDb === 1
+    && f.data.hianyzoFelmenok[0].nev === 'Szülő'
+    && f.data.eemberEgyenleg === 10000 - 200;      // két entitáson 100-100
+});
+
+proba('⛔⛔ KÖR a szülő-láncban a felmenő-felmérést sem akasztja meg', async () => {
+  const { tar, anna } = await ujKoino();
+  const a = await anna.tesz('GondolatLetrehozas', { tipus: 'Gondolat', cim: 'A', meret: 10 });
+  await esemenyMentese(tar, a);
+  const b = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'B', meret: 10, szulo: a.azonosito });
+  await esemenyMentese(tar, b);
+  const c = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'C', meret: 10, szulo: b.azonosito });
+  await esemenyMentese(tar, c);
+  for (const e of [a, b, c]) {
+    await esemenyMentese(tar,
+      await anna.tesz('TudatpontRendezes', { entitas: e.azonosito, pont: 100 }));
+  }
+
+  const f = await hianyzoFelmenok(tar, KOINO, c.azonosito, { szerzo: anna.szerzo });
+  return f.data.hianyzoDb === 0;      // mindegyiken van pontom, és nem fagyott le
+});
+
+proba('⛔ Ismeretlen entitás részletei/küszöbei: null, nem hiba', async () => {
+  const { tar, anna } = await ujKoino();
+  await gondolat(tar, anna, 'Egy', 100);
+  return (await entitasReszletei(tar, KOINO, 'nincs-ilyen')) === null
+    && (await entitasKuszobei(tar, KOINO, 'nincs-ilyen')) === null
+    && (await hianyzoFelmenok(tar, KOINO, 'nincs-ilyen')) === null;
+});
+
+// ===================================
+// 10. A GYORSÍTÓTÁR
 // ===================================
 
 proba('⭐ Egy lapozás alatt EGYSZER számol állapotot, nem oldalanként', async () => {

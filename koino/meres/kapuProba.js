@@ -274,7 +274,98 @@ proba('⭐⭐ CSAK A HUROK-CÍMRE kötünk — a helyi hálóról nem érhető e
   }));
 
 // ===================================
-// 5. ⭐ A RÉTEGZÉS — forrás-próba, nem kérés-próba
+// 5. ⭐⭐ AZ ÍRÁS ŐREI (5.5) — itt már a KULCSOM a tét
+// ===================================
+//
+// ⚠️ Az 5.5-ig minden kérés OLVASÁS volt. Innentől a lap **eseményt írat a kulcsommal**,
+// vagyis a tét már nem az adat kiszivárgása, hanem hogy valaki a NEVEMBEN cselekedjen.
+
+/** Egy kérés testtel — az íráshoz. */
+function irKeres(port, utvonal, adat, { fejlecek = {}, modszer = 'POST', tipus = 'application/json' } = {}) {
+  return new Promise((kesz, hiba) => {
+    const test = JSON.stringify(adat ?? {});
+    const k = request({
+      host: '127.0.0.1', port, path: utvonal, method: modszer,
+      headers: {
+        ...(tipus ? { 'content-type': tipus } : {}),
+        'content-length': Buffer.byteLength(test),
+        ...fejlecek
+      }
+    }, (v) => {
+      let valasz = '';
+      v.on('data', (d) => { valasz += d; });
+      v.on('end', () => kesz({ allapot: v.statusCode, test: valasz }));
+    });
+    k.on('error', hiba);
+    k.end(test);
+  });
+}
+
+proba('⭐ AZ ÍRÁS átmegy: a test eljut a kezelőhöz', () => kapuval(async (kapu) => {
+  const v = await irKeres(kapu.port, '/api/ir', { pont: 42 }, { fejlecek: jelszoval });
+  return v.allapot === 200 && JSON.parse(v.test).kapott === 42;
+}, { kezelo: async ({ modszer, test }) =>
+  modszer === 'POST' ? { adat: { kapott: test?.pont } } : null }));
+
+proba('⛔⛔ IDEGEN LAP NEM ÍRHAT — jó jelszóval sem (Origin-őr)', () => kapuval(async (kapu) => {
+  const v = await irKeres(kapu.port, '/api/ir', { pont: 42 },
+    { fejlecek: { ...jelszoval, origin: 'https://tamado.example' } });
+  return v.allapot === 403;
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⛔⛔ JELSZÓ NÉLKÜL sem írhat', () => kapuval(async (kapu) => {
+  const v = await irKeres(kapu.port, '/api/ir', { pont: 42 });
+  return v.allapot === 401;
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+// ⭐⭐ EZ A PRÓBA A LEGKEVÉSBÉ NYILVÁNVALÓ, ÉS A LEGFONTOSABB.
+//
+// Egy idegen lap `<form>`-mal vagy egyszerű `fetch`-csel küldhetne POST-ot ELŐELLENŐRZÉS
+// (preflight) NÉLKÜL — olyankor a böngésző nem kérdez rá előre, csak elküldi. A JSON
+// tartalomtípus viszont KÖTELEZŐVÉ teszi az előellenőrzést, amit a kapunk (CORS-fejlécek
+// híján) nem enged át. Ezért fogadunk el CSAK `application/json` testet: így a böngésző
+// maga állítja meg az idegen írást, még mielőtt ideérne.
+proba('⛔⛔ ŰRLAP-SZERŰ ÍRÁS (nem JSON) elutasítva — ez zárja ki az előellenőrzés kerülését',
+  () => kapuval(async (kapu) => {
+    const v = await irKeres(kapu.port, '/api/ir', { pont: 42 },
+      { fejlecek: jelszoval, tipus: 'application/x-www-form-urlencoded' });
+    return v.allapot === 415;
+  }, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⛔ TARTALOMTÍPUS NÉLKÜL sem', () => kapuval(async (kapu) => {
+  const v = await irKeres(kapu.port, '/api/ir', { pont: 42 },
+    { fejlecek: jelszoval, tipus: null });
+  return v.allapot === 415;
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⛔ ÉRTELMEZHETETLEN TEST: hiba, nem néma elfogadás', () => kapuval(async (kapu) => {
+  // Nyers, nem-JSON szöveg JSON tartalomtípussal.
+  const v = await new Promise((kesz, hiba) => {
+    const k = request({
+      host: '127.0.0.1', port: kapu.port, path: '/api/ir', method: 'POST',
+      headers: { 'content-type': 'application/json', ...jelszoval }
+    }, (r) => {
+      let t = ''; r.on('data', (d) => { t += d; }); r.on('end', () => kesz({ allapot: r.statusCode }));
+    });
+    k.on('error', hiba);
+    k.end('{ ez nem json');
+  });
+  return v.allapot === 413;
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⛔⛔ A TÚL NAGY TEST elakad — a memória nem tölthető meg', () => kapuval(async (kapu) => {
+  const nagy = { szemet: 'x'.repeat(300 * 1024) };     // a korlát 256 KB
+  try {
+    const v = await irKeres(kapu.port, '/api/ir', nagy, { fejlecek: jelszoval });
+    return v.allapot === 413;
+  } catch {
+    // A kapcsolat megszakítása is helyes viselkedés: nem olvassuk tovább.
+    return true;
+  }
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+// ===================================
+// 6. ⭐ A RÉTEGZÉS — forrás-próba, nem kérés-próba
 // ===================================
 
 proba('⭐⭐⭐ A PROGRAM SEHOL NEM IMPORTÁLJA A FELÜLETET (felulet_terv 3. pont, 1. szabály)',

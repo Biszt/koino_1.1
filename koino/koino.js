@@ -59,7 +59,7 @@ import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamita
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { egyezmenyekAlkalmazasa } from './js/allapot/egyezmenyVegrehajtas.js';
 import {
-  koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese,
+  koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
@@ -71,7 +71,10 @@ import {
 } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
-import { pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja } from './js/allapot/pakli.js';
+import {
+  pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
+  hianyzoFelmenok
+} from './js/allapot/pakli.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
@@ -1421,8 +1424,76 @@ try {
       // állapotot, nem oldalanként.
       const pakliNezet = ujPakliNezet();
 
-      const kezelo = async ({ modszer, utvonal, kereses }) => {
-        if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'csak GET, egyelőre' } };
+      const kezelo = async ({ modszer, utvonal, kereses, test }) => {
+
+        // ===================================
+        // ⭐⭐ ÍRÁS (5.5) — itt születik esemény a lapról
+        // ===================================
+        //
+        // ⚠️ MINDEN ÍRÁS EGY MŰVELET a `js/muveletek.js`-ből, ami EGY ALÁÍRT ESEMÉNYT hoz
+        // létre. Nincs „mentés az adatbázisba", és a felület nem kerülhet meg semmit: az
+        // esemény ugyanazon az `esemenyMentese` kapun megy be, mint a hálózatról érkező
+        // (3. szabály). ⭐ A szabályokat a SZÁMÍTÁS őrzi — ha a lap szabálysértőt küld, az
+        // esemény létrejön, de nem fog számítani. *A felület nem véd, és nem is kell.*
+        if (modszer === 'POST' || modszer === 'PUT') {
+
+          // ----- TUDATPONT-RENDEZÉS -----
+          if (utvonal === '/api/tudatpont/hozzarendeles') {
+            const { entitasId, pontok, szerep } = test ?? {};
+            if (typeof entitasId !== 'string' || !Number.isInteger(pontok)) {
+              return { allapot: 400, adat: { hiba: 'melyik entitásra hány tudatpont?' } };
+            }
+
+            // ⭐ A D42 BEMONDOTT ÖSSZEGE: a művelet a saját láncból számolja, de a
+            // jelenlegi képet meg kell kapnia — ezért kell a friss állapot.
+            const { allapot } = await kepetKeszit();
+            await tudatpontRendezese(kornyezet, entitasId, pontok,
+              szerep === 'passziv' ? 'passziv' : 'aktiv', szetosztottPontok(allapot, szerzo));
+
+            pakliNezet.horgony = null;      // a kép elavult: a következő kérés újraszámol
+            return { adat: { data: { entitasId, pontok } } };
+          }
+
+          // ----- RÉSZVÉTELI SZEREP -----
+          if (utvonal.startsWith('/api/tudatpont/szerep/')) {
+            const azonosito = utvonal.split('/')[5];
+            const szerep = test?.szerep === 'passziv' ? 'passziv' : 'aktiv';
+            if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitáson?' } };
+
+            // ⚠️ A szerep-váltás NEM nyúl a pontokhoz: a jelenlegit írjuk vissza, csak más
+            // szereppel. Ezért kell kiolvasni, mennyi van most rajta.
+            const { allapot } = await kepetKeszit();
+            const entitas = allapot.entitasok.get(azonosito);
+            const mostani = entitas?.hozzajarulok.get(szerzo)?.pont ?? 0;
+            if (mostani <= 0) {
+              return { allapot: 400, adat: { hiba: 'nincs tudatpontod ezen az entitáson' } };
+            }
+
+            await tudatpontRendezese(kornyezet, azonosito, mostani, szerep,
+              szetosztottPontok(allapot, szerzo));
+
+            pakliNezet.horgony = null;
+            return { adat: { data: { entitasId: azonosito, szerep } } };
+          }
+
+          // ----- ÉRTÉK JAVASLAT (küszöbök) -----
+          if (utvonal === '/api/ertekJavaslat') {
+            const { entitasId, ...ertekek } = test ?? {};
+            if (typeof entitasId !== 'string') {
+              return { allapot: 400, adat: { hiba: 'melyik entitás küszöbei?' } };
+            }
+            // ⚠️ A prototípus `entitasTipus`-t is küld; a koinóban az azonosító elég.
+            delete ertekek.entitasTipus;
+
+            await ertekJavaslat(kornyezet, entitasId, ertekek);
+            pakliNezet.horgony = null;
+            return { adat: { data: { entitasId } } };
+          }
+
+          return { allapot: 404, adat: { hiba: 'nincs ilyen írás-végpont' } };
+        }
+
+        if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'nem támogatott művelet' } };
 
         if (utvonal === '/api/en') {
           // Ki vagyok? Ez O(1): a helyi kulcs, számítás nélkül.
@@ -1471,6 +1542,46 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
           const talalat = await entitasTudatpontja(tar, KOINO, decodeURIComponent(azonosito),
+            { szerzo, nezet: pakliNezet });
+          if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
+          return { adat: talalat };
+        }
+
+        // ----- HIÁNYZÓ FELMENŐK (5.5) — a TudatpontModal kéri megnyitáskor -----
+        if (utvonal.startsWith('/api/tudatpont/hianyzo-felmenok/')) {
+          const azonosito = utvonal.split('/')[5];
+          if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás felmenői?' } };
+
+          const talalat = await hianyzoFelmenok(tar, KOINO, decodeURIComponent(azonosito),
+            { szerzo, nezet: pakliNezet });
+          if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
+          return { adat: talalat };
+        }
+
+        // ----- EGY ENTITÁS RÉSZLETEI (5.5) — a ReszletekModal kéri -----
+        // ⚠️ A prototípus típusonként külön útvonalat használ
+        // (/api/gondolat/:id/reszletek, /api/kategoria/:id/reszletek, …). A koinóban az
+        // azonosító egyértelmű, tehát a típus-előtagot nem is nézzük — de az útvonal
+        // alakját megtartjuk, hogy az örökölt modal változatlanul működjön.
+        if (utvonal.endsWith('/reszletek') && !utvonal.startsWith('/api/ertekJavaslat/')) {
+          const reszek = utvonal.split('/');       // ['', 'api', <tipus>, <id>, 'reszletek']
+          const azonosito = reszek[3];
+          if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
+
+          const talalat = await entitasReszletei(tar, KOINO, decodeURIComponent(azonosito),
+            { szerzo, nezet: pakliNezet });
+          if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
+          return { adat: talalat };
+        }
+
+        // ----- A KÜSZÖBÖK (5.5) — az ErtekJavaslatModal és a ReszletekModal kéri -----
+        if (utvonal.startsWith('/api/ertekJavaslat/reszletek/')
+            || utvonal.startsWith('/api/ertekJavaslat/aktualis/')) {
+          const reszek = utvonal.split('/');       // ['', 'api', 'ertekJavaslat', <mi>, <tipus>, <id>]
+          const azonosito = reszek[5];
+          if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás küszöbei?' } };
+
+          const talalat = await entitasKuszobei(tar, KOINO, decodeURIComponent(azonosito),
             { szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };

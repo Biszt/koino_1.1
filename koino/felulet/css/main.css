@@ -1,4 +1,4 @@
-/* koino/felulet/css/main.css */
+﻿/* koino/felulet/css/main.css */
 
 /* ⭐ A PROTOTÍPUS CSS-e VÁLTOZATLANUL. Ez a fájl csak a betöltési sorrendet adja meg —
    minden stílus-fájl bájtra ugyanaz, mint a `frontend/css/` alatt.
@@ -28,6 +28,13 @@
 
 @import './components/szoveg/szovegMezoMegjelenito.css';
 @import './components/modals/modal.css';
+@import './components/modals/szerepValasztoModal.css';
+@import './components/modals/hozzajarulokModal.css';
+@import './components/modals/ertekEloszlasModal.css';
+@import './components/modals/kuszobErtekMezok.css';
+@import './components/modals/tudatpontModal.css';
+@import './components/modals/reszletekModal.css';
+@import './components/modals/ertekJavaslatModal.css';
 
 /* ===== A LAP VÁZA — csak ami a prototípusban a foOldal.css dolga volt =====
    ⚠️ Szándékosan kevés: a főoldal vázát (fejléc, alsó sáv, menük) az 5.5/5.6 hozza. */

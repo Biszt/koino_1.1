@@ -45,7 +45,8 @@
 
 import { koinoEsemenyei } from '../tar/esemenyTar.js';
 import { allapotSzamitasa } from './allapotSzamitas.js';
-import { javaslatokSzamitasa } from './javaslatSzamitas.js';
+import { TUDATPONT_KERET } from './szabalyok.js';
+import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { egyezmenyekAlkalmazasa } from './egyezmenyVegrehajtas.js';
 
 // ===================================
@@ -430,6 +431,171 @@ export async function entitasTudatpontja(tar, koino, azonosito, beallitas = {}) 
   };
   console.log('pakli.entitasTudatpontja - VÉGE', eredmeny.data);
   return eredmeny;
+}
+
+// ===================================
+// A RÉSZLETEK (Szakasz 5.5)
+// ===================================
+
+// ⚠️ A KÜSZÖB-NEVEK ELTÉRNEK. A koino a `javaslatSzamitas.js` neveit használja
+// (`elfogadasiKuszob`, `reszveteliKuszob`, `minimumDontesiIdo`, `maximumDontesiIdo`), a
+// prototípus kártyái és modáljai viszont a régieket olvassák. ⭐ A fordítás ITT történik,
+// egy helyen — nem a lapon szétszórva, és nem úgy, hogy a koino átveszi az idegen neveket.
+const KUSZOB_KIFELE = {
+  elfogadasiKuszob: 'javaslatElfogadasiKuszob',
+  reszveteliKuszob: 'reszveteliAranyKuszob',
+  minimumDontesiIdo: 'aktualMinimumDontesiIdo',
+  maximumDontesiIdo: 'aktualMaximumDontesiIdo'
+};
+
+/** Küszöb-négyes a prototípus neveivel. */
+function kuszobokKifele(kuszobok) {
+  const ki = {};
+  for (const [belso, kulso] of Object.entries(KUSZOB_KIFELE)) ki[kulso] = kuszobok?.[belso];
+  return ki;
+}
+
+/**
+ * Egy entitás részletei — a `ReszletekModal` ezt kéri.
+ *
+ * ⚠️ A VÁLASZ `{ data: … }` alakú, mint a tudatpont-képnél: az örökölt modal így olvassa.
+ * *A hívó a régi; a válasz alkalmazkodik hozzá.*
+ */
+export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
+  console.log('pakli.entitasReszletei - KEZDÉS', { azonosito });
+
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const most = beallitas.most ?? Date.now();
+  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+
+  const e = kep.entitasok.get(azonosito);
+  if (!e) return null;
+
+  const agazati = agazatiPontok(kep.entitasok);
+  const en = beallitas.szerzo;
+
+  console.log('pakli.entitasReszletei - VÉGE');
+  return {
+    data: {
+      entitasId: e.azonosito,
+      entitasTipus: e.tipus,
+      // ⭐ A koinóban a `cim` a név MINDEN típusnál — a modal `nev`-et is olvashat.
+      cim: e.cim,
+      nev: e.cim,
+      szoveg: e.szoveg ?? null,
+      ikon: e.ikon ?? null,
+      szuloId: e.szulo ?? null,
+      letrehozva: e.letrehozva,
+      szerzo: e.szerzo,
+      meret: e.meret,
+      gondolatTipus: besorolas(kep.entitasok, e.gondolatTipus),
+      kategoriak: (e.kategoriak ?? [])
+        .map((k) => besorolas(kep.entitasok, k)).filter((k) => k !== null),
+      osszesPont: e.osszesPont,
+      agazatiPont: agazati.get(e.azonosito) ?? 0,
+      hozzajarulokSzama: e.hozzajarulok.size,
+      eemberHozzajarulas: en ? (e.hozzajarulok.get(en)?.pont ?? 0) : 0,
+      // ⭐ Ki adott rá pontot — a `HozzajarulokModal` ezt mutatja. ⚠️ Nevet nem tudunk
+      // mondani (D6: személyes adat nem megy a láncra), csak kulcs-azonosítót.
+      hozzajarulok: [...e.hozzajarulok.entries()]
+        .map(([ki, ertek]) => ({ szerzo: ki, pont: ertek.pont, szerep: ertek.szerep }))
+        .sort((a, b) => (b.pont - a.pont) || (a.szerzo < b.szerzo ? -1 : 1))
+    }
+  };
+}
+
+/**
+ * „Hány felmenőre kell még tudatpont?" — a `TudatpontModal` ezt kéri megnyitáskor.
+ *
+ * ⭐ MIT JELENT: ha egy gyerekre teszel pontot, a felmenőire is illik — különben az ág
+ * összesítése (`agazatiPont`) félrevezető lenne, és a gyerek „lebegne" a fában. A
+ * prototípus ugyanezt kérdezte; a modal ebből ajánlja fel, hogy kitöltse őket.
+ *
+ * ⚠️ EZ NEM SZABÁLY, HANEM SEGÍTSÉG. A koino nem tiltja, hogy csak a gyerekre tegyél
+ * pontot — a `szabalyok.js` nem is tud róla. *A program bejelent, nem bíráskodik (D19).*
+ *
+ * ⚠️⚠️ És a kör-őr itt is kell: a `szulo`-lánc körbe mutathat.
+ */
+export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
+  console.log('pakli.hianyzoFelmenok - KEZDÉS', { azonosito });
+
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const most = beallitas.most ?? Date.now();
+  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+
+  const e = kep.entitasok.get(azonosito);
+  if (!e) return null;
+
+  const en = beallitas.szerzo;
+  const hianyzok = [];
+  const latott = new Set([azonosito]);
+
+  let szulo = e.szulo;
+  while (szulo && kep.entitasok.has(szulo) && !latott.has(szulo)) {
+    latott.add(szulo);
+    const felmeno = kep.entitasok.get(szulo);
+    const sajat = en ? (felmeno.hozzajarulok.get(en)?.pont ?? 0) : 0;
+    if (sajat <= 0) {
+      hianyzok.push({
+        entitasId: felmeno.azonosito,
+        entitasTipus: felmeno.tipus,
+        nev: felmeno.cim
+      });
+    }
+    szulo = felmeno.szulo;
+  }
+
+  // Mennyi tudatpontom maradt még kiosztatlanul? (A keretből, ami már ki van osztva.)
+  let kiosztva = 0;
+  for (const entitas of kep.entitasok.values()) {
+    kiosztva += en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) : 0;
+  }
+
+  console.log('pakli.hianyzoFelmenok - VÉGE', { hianyzo: hianyzok.length });
+  return {
+    data: {
+      hianyzoFelmenok: hianyzok,
+      hianyzoDb: hianyzok.length,
+      eemberEgyenleg: TUDATPONT_KERET - kiosztva
+    }
+  };
+}
+
+/**
+ * Egy entitás küszöbei — az `ErtekJavaslatModal` és a `ReszletekModal` kéri.
+ *
+ * ⭐ A küszöb a tulajdonosok érték javaslatainak MEDIÁNJA (D4) — ez számítás, tehát a
+ * programé. A saját javaslatomat külön adjuk vissza, hogy a modal ki tudja tölteni a mezőket.
+ */
+export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
+  console.log('pakli.entitasKuszobei - KEZDÉS', { azonosito });
+
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const most = beallitas.most ?? Date.now();
+  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+
+  const e = kep.entitasok.get(azonosito);
+  if (!e) return null;
+
+  // A saját érték javaslatom — a szabály-réteg által elfogadott események közül az utolsó.
+  let sajat = null;
+  if (beallitas.szerzo) {
+    for (const esemeny of kep.szamitok ?? []) {
+      if (esemeny.tipus !== 'ErtekJavaslat') continue;
+      if (esemeny.szerzo !== beallitas.szerzo) continue;
+      if (esemeny.adat?.entitas !== azonosito) continue;
+      sajat = esemeny.adat.ertekek;      // az utolsó nyer
+    }
+  }
+
+  console.log('pakli.entitasKuszobei - VÉGE', { vanSajat: sajat !== null });
+  return {
+    aktualisErtekek: kuszobokKifele(e.kuszobok ?? ALAP_KUSZOBOK),
+    eemberJavaslat: sajat ? kuszobokKifele(sajat) : null
+  };
 }
 
 /**

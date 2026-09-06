@@ -331,7 +331,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.2** | ✅ ⭐ **A kérdezhető pakli-lekérdezés** — rendezés + kurzor + darab, **23 önpróba** (2026-09-06) | ⛔ **a 9. szabály itt dőlt el** |
 | **5.3** | ✅ **A kártyák** — az örökölt `Kartya.js` + Gondolat/Javaslat/Egyezmény, **változatlanul** (2026-09-06) | ettől lett mit nézni |
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
-| **5.5** | **A modálok** — tudatpont, érték javaslat, javaslat, részletek | a teljes pakli |
+| **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel (2026-09-06); ⏸️ javaslat + szavazás, gondolat-szerkesztés | a teljes pakli |
 | **5.6** | **A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
 | **5.7** | **A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
 
@@ -449,6 +449,78 @@ szabály, csak illemtan.*
 - ⏸️ **Egy új nyitott pont** (a 7. lista 8. tétele): *„hány gondolat használja ezt a
   kategóriát?"* — visszafelé mutató kérdés, amihez mutató kellene. Ma `null`, vagyis a hiány
   **látszik**, nem találunk ki számot.
+
+---
+
+## 13. 🚧 AZ 5.5 ELSŐ FELE (2026-09-06) — az ÍRÁS, és a tudatpont-csoport modáljai
+
+⭐⭐ **Ez a szakasz legnagyobb határátlépése: eddig MINDEN végpont olvasás volt.** Az 5.5-től
+a lap **eseményt írat a kulcsommal** — vagyis a tét már nem az adat kiszivárgása, hanem hogy
+valaki a **nevemben cselekedjen**.
+
+### ⛔⛔ A harmadik őr: csak `application/json` testet fogadunk
+
+A jelszó és az Origin mellé az írás kapott egy harmadik őrt, és ez a legkevésbé nyilvánvaló:
+
+> Egy idegen lap `<form>`-mal vagy egyszerű `fetch`-csel küldhetne POST-ot **előellenőrzés
+> (preflight) nélkül** — olyankor a böngésző nem kérdez rá előre, csak elküldi. A JSON
+> tartalomtípus viszont **kötelezővé teszi** az előellenőrzést, amit a kapunk (CORS-fejlécek
+> híján) nem enged át. ⭐ Így **a böngésző maga állítja meg** az idegen írást, még mielőtt
+> ideérne.
+
+Mellé egy **test-korlát** (256 KB): enélkül egy elszabadult lap végtelen testtel megtöltené a
+memóriát. ⚠️ A korlátot **menet közben** nézzük, nem a végén — a végén már késő volna.
+
+⭐ Mindkettő mérve: a kikapcsolásuk a hozzájuk tartozó próbát buktatja.
+
+### Az írás alakja
+
+**Minden írás EGY MŰVELET** a `js/muveletek.js`-ből, ami **egy aláírt eseményt** hoz létre.
+Nincs „mentés az adatbázisba", és a felület nem kerülhet meg semmit: az esemény ugyanazon az
+`esemenyMentese` kapun megy be, mint a hálózatról érkező (3. szabály).
+
+⭐ **A szabályokat a SZÁMÍTÁS őrzi.** Ha a lap szabálysértőt küld, az esemény létrejön, de nem
+fog számítani. *A felület nem véd, és nem is kell neki.*
+
+| Végpont | Művelet |
+|---|---|
+| `POST /api/tudatpont/hozzarendeles` | `tudatpontRendezese` (a D42 bemondott összegével) |
+| `PUT /api/tudatpont/szerep/:tipus/:id` | ugyanaz, más szereppel — a pontokhoz nem nyúl |
+| `POST /api/ertekJavaslat` | `ertekJavaslat` |
+
+### Négy modal jött át, változatlanul
+
+`TudatpontModal` · `ReszveteliBeallitasokModal` · `ReszletekModal` · `ErtekJavaslatModal`
+(+ a segédeik: `SzerepValasztoModal`, `HozzajarulokModal`, `ErtekEloszlasModal`,
+`kuszobErtekMezok`) — 8 JS, 5 HTML-sablon, 7 CSS, **mind bájtra ugyanaz**. A helyükön álló
+helyőrzőket egyszerűen felülírták. *Ez volt a 13 helyőrző ígérete, és beváltotta.*
+
+**Négy új olvasó végpont, mert a modálok kérték:**
+`…/:id/reszletek` · `ertekJavaslat/reszletek/…` · `tudatpont/hianyzo-felmenok/…` (⭐ *„hány
+felmenőre kell még pont?"* — segítség, nem szabály: a koino nem tiltja, hogy csak a gyerekre
+tegyél pontot) · és a már meglévő `tudatpont/entitas/…`.
+
+⚠️ **A küszöb-nevek eltérnek**, és a fordítás egy helyen van (`pakli.js`,
+`KUSZOB_KIFELE`): a koino `elfogadasiKuszob`-ot mond, a prototípus modálja
+`javaslatElfogadasiKuszob`-ot olvas. *A koino nem veszi át az idegen neveket; a válasz
+alkalmazkodik.*
+
+### Mérve, valódi böngészőben és HTTP-n
+
+A `TudatpontModal` megnyílik a kártya menüjéből, betölti a jelenlegi pontot, és a mentés
+**valódi aláírt eseményt** ír a tárba. Végigmérve HTTP-n: a tudatpont 100 → 700 (és a pakli
+azonnal ezt mutatja), a szerep passzívra vált, a küszöbök 51/0/86400/604800 → 66/10/3600/7200.
+⭐ **A parancssor ugyanazt látja** — és a tárban `TudatpontRendezes` + `ErtekJavaslat`
+események állnak, aláírással.
+
+### ⏸️ Ami az 5.5-ből még hátra van
+
+- **`JavaslatModal`** (66 KB) + a szavazás — ez a legnagyobb, saját darabnak való;
+- **`GondolatModal`** / **`KategoriaModal`** / **`GondolatTipusModal`** — létrehozás és
+  szerkesztés; ⚠️ **a szövegszerkesztőn múlnak (5.7)**;
+- **`ErtesitesekModal`**, **`ErtesitesiBeallitasModal`** — ⛔ nincs mögöttük réteg;
+- **`KeresesModal`** (Szakasz 6), **`StrukturaModal`**, **`SikidomModal`** (felfüggesztve),
+  **`RendezesModal`** (a lapon már van rendezés-választó).
 
 ---
 

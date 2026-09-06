@@ -295,10 +295,40 @@ async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
   if (apiKeres) {
     if (!kezelo) return kuld(404, 'application/json; charset=utf-8', '{"hiba":"nincs kezelő"}');
 
+    // ===== ⭐⭐ AZ ÍRÁS (Szakasz 5.5) =====
+    //
+    // ⚠️ EDDIG MINDEN KÉRÉS OLVASÁS VOLT. Az 5.5-től a lap **eseményt írat a te
+    // kulcsoddal** — vagyis innentől nem az adat kiszivárgása a tét, hanem hogy valaki a
+    // NEVEDBEN cselekedjen. Ezért kap az írás egy HARMADIK őrt a jelszó és az Origin mellé:
+    //
+    // ⛔ **Csak `application/json` testet fogadunk el.** Ez nem formaság: egy idegen lap
+    // `<form>`-mal vagy egyszerű `fetch`-csel küldhetne POST-ot **előellenőrzés
+    // (preflight) nélkül** — a JSON tartalomtípus viszont KÖTELEZŐVÉ teszi az
+    // előellenőrzést, amit a mi kapunk (CORS-fejlécek híján) nem enged át. Így a
+    // böngésző maga állítja meg az idegen írást, még mielőtt ideérne.
+    let test = null;
+    if (keres.method !== 'GET' && keres.method !== 'HEAD') {
+      const tipus = (keres.headers['content-type'] ?? '').split(';')[0].trim();
+      if (tipus !== 'application/json') {
+        console.warn('kapu - ÍRÁS rossz tartalomtípussal elutasítva', { tipus });
+        return kuld(415, 'application/json; charset=utf-8',
+          JSON.stringify({ hiba: 'az íráshoz application/json test kell' }));
+      }
+
+      try {
+        test = await testBeolvasas(keres);
+      } catch (hiba) {
+        console.warn('kapu - a test beolvasása nem sikerült', { hiba: hiba.message });
+        return kuld(413, 'application/json; charset=utf-8',
+          JSON.stringify({ hiba: hiba.message }));
+      }
+    }
+
     const eredmeny = await kezelo({
       modszer: keres.method,
       utvonal: cim.pathname,
-      kereses
+      kereses,
+      test
     });
 
     if (!eredmeny) {
@@ -309,6 +339,45 @@ async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
   }
 
   await fajlKiszolgalas(cim.pathname, gyoker, kuld);
+}
+
+// A kérés-test felső korlátja. ⚠️ Nem díszítés: enélkül egy elszabadult (vagy
+// rosszindulatú) lap végtelen testtel megtöltené a memóriát. Egy művelet adata néhány száz
+// bájt — a 256 KB tehát bőven elég, de a végtelen már nem fér bele.
+const TEST_KORLAT = 256 * 1024;
+
+/**
+ * A kérés testének beolvasása és értelmezése.
+ *
+ * ⚠️ A KORLÁTOT MENET KÖZBEN nézzük, nem a végén: ha a végén néznénk, a memória már
+ * megtelt volna, mire kiderül.
+ */
+function testBeolvasas(keres) {
+  return new Promise((kesz, hiba) => {
+    let nyers = '';
+    let meret = 0;
+
+    keres.on('data', (darab) => {
+      meret += darab.length;
+      if (meret > TEST_KORLAT) {
+        hiba(new Error('a kérés teste túl nagy (max ' + (TEST_KORLAT / 1024) + ' KB)'));
+        keres.destroy();
+        return;
+      }
+      nyers += darab;
+    });
+
+    keres.on('end', () => {
+      if (!nyers) return kesz(null);
+      try {
+        kesz(JSON.parse(nyers));
+      } catch {
+        hiba(new Error('a kérés teste nem értelmezhető JSON'));
+      }
+    });
+
+    keres.on('error', hiba);
+  });
 }
 
 /**
