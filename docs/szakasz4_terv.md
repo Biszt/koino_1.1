@@ -962,7 +962,14 @@ támadás kifizetődik, és sehova máshova.*
 > értékhez igazodott. Enélkül két készülék eltérő tudással MÁS szabályt alkalmazna ugyanarra
 > az eseményre — és az a D49/a-t törné.
 >
-> ⏳ **Megépítve: a horgony (4.5). A buli-elismerés eseménye még nincs — az a következő.**
+> ✅ **MEGÉPÍTVE (2026-09-06):** a horgony ÉS a buli-elismerés (`Lattam` esemény) is.
+> ⭐⭐⭐ **És a megépítés közben derült ki, mitől lesz igazán erős:** a `Lattam` nem
+> önmagában bizonyít, hanem azzal, hogy **a saját láncban VAN sorrend** (a `sorszam`, amit
+> csak a szerző írhat). Ha egyszer aláírtam, hogy látom a visszavonást, akkor minden
+> **későbbi** saját eseményem bizonyíthatóan azután keletkezett — **globális óra nélkül**.
+> Ettől a „szándékosan régi horgonyt választok" trükk sem működik: horgony nélkül is
+> elkapjuk. *(4 önpróba őrzi, köztük az, hogy a KÉSŐBBI elismerés nem hat a KORÁBBI
+> tanúsításra — a (b) döntés sértetlen.)*
 
 > ### ⭐ D60 (2026-09-06) — A FELHATALMAZÁS MEGBÍZÁS, NEM PONTSZÁM
 >

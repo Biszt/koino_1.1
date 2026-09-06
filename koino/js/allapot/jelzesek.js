@@ -254,10 +254,20 @@ export async function megbizasAllapota(tar, koino, horgony) {
     if (typeof kit === 'string' && kit !== en) tanusitottak.add(kit);
   }
 
+  // ----- ⭐ „MIKOR ISMERTE EL UTOLJÁRA, HOGY LÁT?" (D61) -----
+  //
+  // A buli-elismerés (`Lattam`) az, ami a tanúsítót elköti amellett, hogy tud a rá
+  // vonatkozó visszavonásokról. ⚠️ Aki SOHA nem ismeri el, hogy lát, az nem szeg meg
+  // szabályt — de **kilóg a ritmusból**, amit mindenki más tart. Ez tény, és a közösség
+  // dönt róla.
+  let elismeresek = 0;
+  for (const e of sajat) if (e.tipus === 'Lattam') elismeresek++;
+
   const eredmeny = {
     felhatalmazasok,
     visszavontak,
     tanusitasok: tanusitottak.size,
+    elismeresek,
     ellenorizheto: true
   };
   console.log('jelzesek.megbizasAllapota - VÉGE', eredmeny);

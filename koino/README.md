@@ -79,12 +79,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tíz próba-fájl, **258 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tíz próba-fájl, **262 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **39 fájl, 791 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **39 fájl, 799 KB**, nulla
 npm-csomag.)*
 
 | Fájl | Mit bizonyít |

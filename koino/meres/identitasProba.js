@@ -829,6 +829,98 @@ proba('⭐ A HORGONY CSAK ARRA A FELHATALMAZÓRA hat, akitől való', async () =
   return eredmeny.igen === true;
 });
 
+
+// ===================================
+// ⭐⭐⭐ A BULI-ELISMERÉS (D61) — ez zárja be a „régi horgony" trükköt
+// ===================================
+//
+// ⚠️ A HORGONY EGYMAGÁBAN NEM ELÉG: aki tudja, hogy figyelik, egyszerűen **elavult
+// horgonyt** választ, vagy egyáltalán nem horgonyoz. Csaba ötlete (a buli) erre a válasz:
+// ha rendszeresen aláírom, hogy **meddig látok**, akkor a SAJÁT LÁNCOM SORRENDJE elárul.
+//
+// ⭐⭐⭐ Mert a saját láncomban van sorrend — a `sorszam`, amit csak én írhatok. Ha egyszer
+// elismertem, hogy egy visszavonást láttam, akkor minden KÉSŐBBI saját eseményem
+// bizonyíthatóan azután keletkezett. **Globális óra nélkül.**
+
+/** A buli-elismerés: „a saját szeletemben eddig látok." */
+function lattam(ki, latott) {
+  return ki.eember.tesz('Lattam', {}, undefined, { entitas: ki.horgony, latott });
+}
+
+proba('⭐⭐⭐ A BULI-ELISMERÉS BEZÁRJA A RÉST: horgony nélkül is elkapjuk', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // A felhatalmazó visszaveszi a megbízást…
+  const vissza = await visszavonas(felhatalmazok[0], uj);
+  await ment(tar, vissza);
+
+  // …a tanúsító a bulikörben ELISMERI, hogy látta…
+  await ment(tar, await lattam(uj, [vissza.azonosito]));
+
+  // …majd KÉSŐBB tanúsít, és a „régi horgony" trükkel él: egyáltalán nem horgonyoz.
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // ⭐ Mégis elkapjuk: a korábbi elismerése a SAJÁT LÁNCÁBAN előbb van, mint a tanúsítás.
+  const eredmeny = await lepcso2E(tar, KOINO, jelolt.horgony);
+  return eredmeny.igen === false && eredmeny.ellenorizheto === true;
+});
+
+proba('⭐ DE AZ ELISMERÉS UTÁN érkező visszavonásról nem tudhatott — az nem hat rá', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // Elismeri, hogy a FELHATALMAZÁSIG lát — a visszavonás még nem is létezik.
+  await ment(tar, await lattam(uj, [jegyek[0]]));
+  await ment(tar, await visszavonas(felhatalmazok[0], uj));
+
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // ⚠️ Nem büntetjük: sosem ismerte el, hogy a visszavonást látta.
+  return (await lepcso2E(tar, KOINO, jelolt.horgony)).igen === true;
+});
+
+proba('⭐ A KÉSŐBBI elismerés nem hat a KORÁBBI tanúsításra (a lánc sorrendje számít)', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+  const vissza = await visszavonas(felhatalmazok[0], uj);
+  await ment(tar, vissza);
+
+  // ELŐBB tanúsít (még nem tudott róla), és CSAK UTÁNA ismeri el, hogy látja.
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+  await ment(tar, await lattam(uj, [vissza.azonosito]));
+
+  // ⭐ A tanúsítás érvényben marad — ez a (b) döntés: a múlt befagy.
+  return (await lepcso2E(tar, KOINO, jelolt.horgony)).igen === true;
+});
+
+proba('⭐ A JELZÉS MUTATJA, hányszor ismerte el, hogy lát (a ritmusból kilógás ténye)', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+  await ment(tar, await lattam(uj, [jegyek[0]]), await lattam(uj, [jegyek[1]]));
+
+  const allapot = await megbizasAllapota(tar, KOINO, uj.horgony);
+  const soha = await megbizasAllapota(tar, KOINO, kor[1].horgony);
+  return allapot.elismeresek === 2 && soha.elismeresek === 0;
+});
+
 // ===================================
 // TAKARÍTÁS
 // ===================================

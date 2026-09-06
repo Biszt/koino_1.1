@@ -48,6 +48,10 @@ const HORGONY_DARAB = 1;
 // friss pontot fognunk. Az ár ~50 bájt horgonyonként.
 const TANUSITAS_HORGONY = 5;
 
+// ⭐ A BULI-ELISMERÉSNÉL többet fogunk, mert ez a rendszeres, „hivatalos" pont: ez köti el a
+// legszorosabban, meddig látok. Az ára ~50 bájt horgonyonként, körönként egyszer.
+const ELISMERES_HORGONY = 12;
+
 // ===================================
 // SEGÉD: ESEMÉNY LÉTREHOZÁSA ÉS MENTÉSE
 // ===================================
@@ -318,6 +322,37 @@ export async function tanusitas(kornyezet, adatok) {
   // hanem kilóg egy ritmusból, amit mindenki más tart.
   return allitokRola(kornyezet, 'Tanusitas', { ...adatok, felhatalmazasok },
     { horgonySzelet: adatok.sajatBelepes, horgonyDarab: TANUSITAS_HORGONY });
+}
+
+/**
+ * ⭐⭐ „ESZERINT LÁTOK" — a buli-elismerés (D61, Csaba ötlete).
+ *
+ * A bulikörben mindenki aláírja, **meddig lát** a saját szeletében: a `latott` mezőbe a
+ * rólam szóló legfrissebb események kerülnek (felhatalmazások, visszavonások, tanúsítások).
+ *
+ * ⭐⭐⭐ MIÉRT EZ ZÁRJA BE A RÉST? Mert a **saját láncomban VAN sorrend** (a `sorszam`, amit
+ * csak én írhatok). Ha egyszer aláírtam, hogy egy visszavonást láttam, akkor minden KÉSŐBBI
+ * saját eseményem — a lánc sorszáma szerint — **bizonyíthatóan azután** keletkezett. Nincs
+ * szükség globális órára: elég a saját láncom rendje.
+ *
+ * ⚠️ ÉS EZ NEM KÜLSŐ IGAZSÁG, HANEM SAJÁT ÁLLÍTÁS. Senki nem kényszerít rám semmit: én
+ * mondom meg, meddig látok. Aki offline volt, nem ír alá semmit — rá nem vonatkozik, és nem
+ * is büntetjük érte (D19). ⭐ Aki viszont SOHA nem ír alá ilyet, miközben mindenki más
+ * minden körben igen, az **kilóg a ritmusból** — és azt a jelzés mutatja meg, nem a szabály.
+ *
+ * @param {Object} kornyezet
+ * @param {string} sajatBelepes - a saját horgonyom
+ */
+export function lattam(kornyezet, sajatBelepes) {
+  if (typeof sajatBelepes !== 'string') {
+    throw new Error('Az elismeréshez meg kell adni a saját horgonyodat.');
+  }
+  return esemenytTeszek(kornyezet, 'Lattam', {}, {
+    entitas: sajatBelepes,
+    horgonyozzunk: true,
+    horgonySzelet: sajatBelepes,
+    horgonyDarab: ELISMERES_HORGONY
+  });
 }
 
 /**

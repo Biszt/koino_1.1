@@ -49,7 +49,7 @@
 //
 // Használják: az állapot-számítás és a felület (később a szabály-réteg is).
 
-import { esemenyLekerese, entitasEsemenyei } from '../tar/esemenyTar.js';
+import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 
 // ===================================
 // A PARAMÉTEREK
@@ -443,12 +443,38 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
   // ⚠️ Ez nem globális óra, hanem OKSÁGI bizonyíték: nem azt mondja meg, mikor, hanem hogy
   // MI UTÁN. És nem a hiányból következtet (D19), hanem a tanúsító SAJÁT elköteleződéséből.
   const latottSorszam = new Map();   // szerző → a legnagyobb entitás-sorszám, amit látott
-  for (const azonosito of (tanusitasEsemeny?.latott ?? [])) {
-    const h = await esemenyLekerese(tar, azonosito);
-    nezet.olvasasok++;
-    if (!h || h.koino !== koino || h.entitas !== tanusitoHorgony) continue;
-    const eddigi = latottSorszam.get(h.szerzo) ?? 0;
-    latottSorszam.set(h.szerzo, Math.max(eddigi, h.entitasSorszam ?? 1));
+
+  /** Egy horgony-lista beolvasása a „meddig láttam" képbe. */
+  const horgonyokBeolvasasa = async (azonositok) => {
+    for (const azonosito of (azonositok ?? [])) {
+      const h = await esemenyLekerese(tar, azonosito);
+      nezet.olvasasok++;
+      if (!h || h.koino !== koino || h.entitas !== tanusitoHorgony) continue;
+      const eddigi = latottSorszam.get(h.szerzo) ?? 0;
+      latottSorszam.set(h.szerzo, Math.max(eddigi, h.entitasSorszam ?? 1));
+    }
+  };
+
+  // 1. A tanúsítás SAJÁT horgonya.
+  await horgonyokBeolvasasa(tanusitasEsemeny?.latott);
+
+  // 2. ⭐⭐⭐ ÉS A KORÁBBI BULI-ELISMERÉSEI (D61) — ez zárja be a rést.
+  //
+  // A tanúsító SAJÁT LÁNCÁBAN van sorrend (a `sorszam`, amit csak ő írhat). Ha egyszer
+  // aláírta, hogy egy visszavonást látott, akkor minden KÉSŐBBI saját eseménye
+  // bizonyíthatóan azután keletkezett — globális óra nélkül.
+  //
+  // ⭐ Ettől nem működik többé a „szándékosan régi horgonyt választok" trükk: a `Lattam` egy
+  // KÜLÖN, rendszeres állítás, amit nem lehet eseményenként visszadátumozni. Aki elkerülné,
+  // annak SOHA nem szabadna elismernie, hogy lát — és az már a ritmusból lóg ki.
+  if (Number.isInteger(tanusitasEsemeny?.sorszam)) {
+    const lanc = (await sajatLancEsemenyei(tar, tanusito.szerzo))
+      .filter((e) => e.koino === koino
+                  && e.tipus === 'Lattam'
+                  && e.entitas === tanusitoHorgony
+                  && e.sorszam < tanusitasEsemeny.sorszam);
+    nezet.olvasasok += lanc.length;
+    for (const e of lanc) await horgonyokBeolvasasa(e.latott);
   }
 
   // A visszavonások a tanúsító saját szeletében.
