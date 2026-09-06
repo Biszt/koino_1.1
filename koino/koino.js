@@ -1506,8 +1506,18 @@ try {
                 || !['Tamogat', 'Ellenez', 'Tartozkodik'].includes(szavazatTipus)) {
               return { allapot: 400, adat: { hiba: 'melyik javaslatra hogyan szavazol?' } };
             }
-            // ⚠️ A kulonvalasIgeny a prototípus fogalma — a koinóban nincs megfelelője,
-            // ezért figyelmen kívül hagyjuk (nem hazudunk róla: nem is tároljuk).
+            // ⚠️⚠️ A kulonvalasIgeny MOST ELVESZIK — de NEM azért, mert nincs megfelelője.
+            // *(2026-09-06-án ezt írtam ide, és tévedtem.)*
+            //
+            // A KÜLÖNVÁLÁS a prototípus egyik legkidolgozottabb mechanizmusa
+            // (`megismeres/18-kulonvalas.md` + `javaslatVegrehajtasiService.js` 3.A–3.E):
+            // aki ellenezte a javaslatot ÉS kérte a külön ágat, az a döntés után a saját
+            // álláspontja szerinti változattal él tovább — **a tudatpontjait és az érték
+            // javaslatait is magával viszi**. ⭐ *„Aki elmegy, viszi a súlyát."*
+            //
+            // ⛔ A koinóban ez MÉG NINCS MEGÉPÍTVE (leltár: `docs/javaslat_atultetes.md`
+            // 2.1). Amíg nincs, a szavazat nem hordozza a kérést — de ez **hiány, nem
+            // döntés**. A régi megjegyzés azt sugallta, hogy a kérdés le van zárva.
 
             await szavazas(kornyezet, javaslatId, szavazatTipus);
             pakliNezet.horgony = null;
