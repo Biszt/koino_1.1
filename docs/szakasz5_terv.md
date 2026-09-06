@@ -1,4 +1,4 @@
-# Szakasz 5 — A FELÜLET: a végpont-térkép
+﻿# Szakasz 5 — A FELÜLET: a végpont-térkép
 
 *Létrehozva: 2026-09-06. A döntések, amikre épül: [`felulet_terv.md`](felulet_terv.md)
 3–4. pont (futtatókörnyezet, vékony lap, teljes pakli).*
@@ -331,7 +331,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.2** | ✅ ⭐ **A kérdezhető pakli-lekérdezés** — rendezés + kurzor + darab, **23 önpróba** (2026-09-06) | ⛔ **a 9. szabály itt dőlt el** |
 | **5.3** | ✅ **A kártyák** — az örökölt `Kartya.js` + Gondolat/Javaslat/Egyezmény, **változatlanul** (2026-09-06) | ettől lett mit nézni |
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
-| **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel (2026-09-06); ⏸️ javaslat + szavazás, gondolat-szerkesztés | a teljes pakli |
+| **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | **A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
 | **5.7** | **A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
 
@@ -513,9 +513,54 @@ azonnal ezt mutatja), a szerep passzívra vált, a küszöbök 51/0/86400/604800
 ⭐ **A parancssor ugyanazt látja** — és a tárban `TudatpontRendezes` + `ErtekJavaslat`
 események állnak, aláírással.
 
+---
+
+## 14. ✅ A SZAVAZÁS (2026-09-06) — a kör bezárul a felületen
+
+**Mérve, kattintással:** a szavazás-fülön a „Támogatom" gombra kattintva **aláírt esemény**
+születik, és az állapot azonnal átfordul (1000‰ ellenzés → 1000‰ támogatás). A tárban három
+`Szavazat` esemény áll egymás után: `Tamogat` → `Ellenez` → `Tamogat` — *az utolsó nyer.*
+
+⭐ **Ezzel a koino fő köre a lapon is teljes:** javaslat → **szavazás** → egyezmény →
+az egyezmény rávezetése az entitásra.
+
+### A javaslat mint KÁRTYA
+
+A javaslatok eddig nem szerepeltek a pakliban (csak az entitások). Most igen — ahogy a
+prototípus paklija is együtt mutatja őket.
+
+⚠️ **A rendezési értékük az ÉRINTETT entitásé.** A javaslatnak magának nincs tudatpontja
+(nem is lehet: nem entitás, hanem döntés). Ha nullát adnánk, minden javaslat a lista végére
+süllyedne, **elszakadva attól a gondolattól, amiről szól**. ⭐ Így viszont a gondolata mellé
+kerül — próbával igazolva, hogy **szomszédosak**.
+
+### ⛔ A szavazat visszavonása: őszinte nem
+
+A `SzavazasFul`-on ott a „Szavazat visszavonása" gomb — a koinóban viszont **nincs ilyen
+művelet** (5.4 döntés). ⚠️ Nem némán nyeljük el: a végpont **400-at ad, indoklással** —
+*„a szavazat nem vonható vissza, csak megváltoztatható; ha nem akarsz állást foglalni,
+szavazz Tartózkodom-ra."*
+
+🔍 **Ez most vált láthatóvá**, ezért érdemes Csabának újra megnéznie: a döntés ára az, hogy
+egy véletlen szavazat véglegesen beleszámít a **részvételi arányba** (megváltoztatni lehet,
+kivenni nem).
+
+### ⚠️ Két dolog, amit megint csak a böngésző mondott meg
+
+1. ⛔ **Az én 5.3-as lap-kódom hibája:** a body-t a `bodyFrissitese()` tölti fel, de én csak
+   akkor hívtam, **ha volt szöveg elkérve**. A gondolat-kártyáknál ez működött — a
+   javaslat-kártyának viszont nincs szövege, így **a body üresen maradt**, és vele a fülsáv
+   meg a szavazás-fül is. *A szöveg csak EGY dolog a body-ban; a feltöltést nem szabad hozzá
+   kötni.*
+2. ⚠️ **A státusz szavai eltérnek**, és ez nem kozmetika: a `JavaslatKartya` a
+   **szavazás-fület kifejezetten az `'Aktiv'` státuszhoz köti**, a koino viszont
+   `'folyamatban'`-t mond — fordítás nélkül **a szavazás soha nem jelent volna meg**. A
+   leképezés az adapterben van (`STATUSZ_KIFELE`).
+
 ### ⏸️ Ami az 5.5-ből még hátra van
 
-- **`JavaslatModal`** (66 KB) + a szavazás — ez a legnagyobb, saját darabnak való;
+- **`JavaslatModal`** (66 KB) — ⚠️ **importálja a `SzovegSzerkeszto`-t**, tehát ugyanaz a
+  függés, mint a létrehozó modáloknál: **az 5.7 után jön**. *(A szavazás nem várt rá.)*
 - **`GondolatModal`** / **`KategoriaModal`** / **`GondolatTipusModal`** — létrehozás és
   szerkesztés; ⚠️ **a szövegszerkesztőn múlnak (5.7)**;
 - **`ErtesitesekModal`**, **`ErtesitesiBeallitasModal`** — ⛔ nincs mögöttük réteg;

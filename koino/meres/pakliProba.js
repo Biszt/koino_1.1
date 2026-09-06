@@ -404,13 +404,17 @@ proba('⭐⭐⭐ A PAKLI a MEGVÁLTOZOTT címet mutatja az egyezmény után', as
   await esemenyMentese(tar, await anna.tesz('Szavazat',
     { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet + 2000));
 
+  // ⚠️ A GONDOLAT kártyáját keressük, nem a nulladikat: az 5.5 óta a JAVASLAT is kártya a
+  // pakliban, és a rendezési értéke az érintettével azonos — tehát bármelyik lehet elöl.
+  const gondolatKartya = (oldal) => oldal.kartyak.find((k) => k.tipus === 'Gondolat');
+
   // Közvetlenül a javaslat után: még a RÉGI cím (a döntés folyamatban).
   const korai = await pakliOldal(tar, KOINO, { most: kezdet + 3000 });
   // Jóval később: az egyezmény megszületett, a cím megváltozott.
   const kesoi = await pakliOldal(tar, KOINO, { most: kezdet + 30 * 24 * 3600 * 1000 });
 
-  return korai.kartyak[0].cim === 'EREDETI CÍM'
-    && kesoi.kartyak[0].cim === 'MEGVÁLTOZOTT CÍM';
+  return gondolatKartya(korai).cim === 'EREDETI CÍM'
+    && gondolatKartya(kesoi).cim === 'MEGVÁLTOZOTT CÍM';
 });
 
 proba('⭐⭐ …és a LAPOZÁS akkor sem csúszik el, ha közben LEJÁR egy döntés', async () => {
@@ -710,7 +714,111 @@ proba('⛔ Ismeretlen entitás részletei/küszöbei: null, nem hiba', async () 
 });
 
 // ===================================
-// 10. A GYORSÍTÓTÁR
+// 10. ⭐ A JAVASLAT MINT KÁRTYA (5.5)
+// ===================================
+
+/** Gondolat + rá adott javaslat + szavazat. */
+async function javaslatosEset(tar, anna, { szavazat = 'Tamogat', kezdet = Date.UTC(2026, 0, 1) } = {}) {
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'EREDETI', meret: 10 }, kezdet);
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+    { entitas: g.azonosito, pont: 400 }, kezdet));
+  await esemenyMentese(tar, await anna.tesz('ErtekJavaslat',
+    { entitas: g.azonosito,
+      ertekek: { elfogadasiKuszob: 51, reszveteliKuszob: 0,
+                 minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 } }, kezdet));
+
+  const j = await anna.tesz('Javaslat',
+    { fajta: 'szerkesztesi', erintett: g.azonosito, muvelet: 'Modositas',
+      valtozas: { cim: 'JAVASOLT CÍM' }, indoklas: 'Mert jobb.' }, kezdet + 1000);
+  await esemenyMentese(tar, j);
+  await esemenyMentese(tar, await anna.tesz('Szavazat',
+    { javaslat: j.azonosito, szavazat }, kezdet + 2000));
+
+  return { gondolat: g, javaslat: j, kezdet };
+}
+
+proba('⭐⭐ A JAVASLAT megjelenik a pakliban, saját kártyaként', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  const oldal = await pakliOldal(tar, KOINO,
+    { most: kezdet + 3000, szerzo: anna.szerzo });
+  const k = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito);
+
+  return k !== undefined
+    && k.tipus === 'Javaslat'
+    && k.cim === 'JAVASOLT CÍM'
+    && k.javaslat.muvelet === 'Modositas'
+    && k.javaslat.erintettCim === 'EREDETI'
+    && k.javaslat.indoklas === 'Mert jobb.';
+});
+
+proba('⭐ A javaslat a GONDOLATA MELLÉ rendeződik (az érintett pontjaival)', async () => {
+  const { tar, anna } = await ujKoino();
+  // Egy erős és egy gyenge gondolat; a javaslat a gyengére vonatkozik.
+  await gondolat(tar, anna, 'Erős', 900);
+  const { javaslat, gondolat: gyenge, kezdet } = await javaslatosEset(tar, anna);
+
+  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 3000 });
+  const sorrend = oldal.kartyak.map((k) => k.azonosito);
+  // ⭐ A javaslat és az érintettje SZOMSZÉDOS — nem süllyed a lista végére.
+  return Math.abs(sorrend.indexOf(javaslat.azonosito)
+                - sorrend.indexOf(gyenge.azonosito)) === 1;
+});
+
+proba('⭐ A SZAVAZÁS ÁLLÁSA a kártyán van — ezrelékben, egész számként', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 3000, szerzo: anna.szerzo });
+  const j = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito).javaslat;
+
+  return j.tamogatottsagEzrelek === 1000        // egyetlen támogató szavazat
+    && Number.isInteger(j.tamogatottsagEzrelek)  // ⭐ SOHA nem tört (egész aritmetika)
+    && j.szavazok === 1
+    && j.statusz === 'folyamatban'
+    && j.szavazhatok === true;                   // van tudatpontom az érintetten
+});
+
+proba('⛔ AKINEK NINCS TUDATPONTJA az érintetten, az nem szavazhat', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  // Egy másik kulcs: neki nincs pontja a gondolaton.
+  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 3000, szerzo: 'valaki-mas' });
+  const j = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito).javaslat;
+  return j.szavazhatok === false;
+});
+
+proba('⭐⭐ AZ EGYEZMÉNY megszületése a kártyán is látszik', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  const kesobb = kezdet + 30 * 24 * 3600 * 1000;
+  const oldal = await pakliOldal(tar, KOINO, { most: kesobb, szerzo: anna.szerzo });
+  const j = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito).javaslat;
+
+  return j.statusz === 'elfogadva' && j.egyezmeny !== null;
+});
+
+proba('⚠️ A GAZDÁTLAN javaslat nem kerül a pakliba (az érintettjét elfelejtették, D14)',
+  async () => {
+    const { tar, anna } = await ujKoino();
+    const { gondolat: g, javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+    // A gazda elveszi a tudatpontját → az entitás megszűnik létezni.
+    await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+      { entitas: g.azonosito, pont: 0 }, kezdet + 3000));
+
+    const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 4000 });
+    return oldal.osszes === 0
+      && !oldal.kartyak.some((k) => k.azonosito === javaslat.azonosito);
+  });
+
+// ===================================
+// 11. A GYORSÍTÓTÁR
 // ===================================
 
 proba('⭐ Egy lapozás alatt EGYSZER számol állapotot, nem oldalanként', async () => {

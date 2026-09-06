@@ -1490,7 +1490,34 @@ try {
             return { adat: { data: { entitasId } } };
           }
 
+          // ----- ⭐ SZAVAZAT (5.5) — ezzel zárul be a kör a felületen -----
+          if (utvonal === '/api/javaslat/szavazat') {
+            const { javaslatId, szavazatTipus } = test ?? {};
+            if (typeof javaslatId !== 'string'
+                || !['Tamogat', 'Ellenez', 'Tartozkodik'].includes(szavazatTipus)) {
+              return { allapot: 400, adat: { hiba: 'melyik javaslatra hogyan szavazol?' } };
+            }
+            // ⚠️ A kulonvalasIgeny a prototípus fogalma — a koinóban nincs megfelelője,
+            // ezért figyelmen kívül hagyjuk (nem hazudunk róla: nem is tároljuk).
+
+            await szavazas(kornyezet, javaslatId, szavazatTipus);
+            pakliNezet.horgony = null;
+            return { adat: { data: { javaslatId, szavazatTipus } } };
+          }
+
           return { allapot: 404, adat: { hiba: 'nincs ilyen írás-végpont' } };
+        }
+
+        // ⛔ A SZAVAZAT VISSZAVONÁSA — a koinóban NINCS ilyen művelet, és ez döntés (5.4).
+        //
+        // A meggondolást az „utolsó nyer" fedi (szavazz újra), a semleges állást pedig a
+        // Tartozkodik. Egy harmadik, „mégsem szavaztam" állapot csak a részvételi arányt
+        // tenné kétértelművé. ⚠️ A prototípus gombja megmaradt a fülön — ezért NEM némán
+        // nyeljük el, hanem megmondjuk, mit tegyen helyette.
+        if (modszer === 'DELETE' && utvonal === '/api/javaslat/szavazat') {
+          return { allapot: 400, adat: { hiba:
+            'A koinóban a szavazat nem vonható vissza, csak megváltoztatható. '
+            + 'Ha nem akarsz állást foglalni: szavazz Tartózkodom-ra.' } };
         }
 
         if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'nem támogatott művelet' } };
@@ -1545,6 +1572,23 @@ try {
             { szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
+        }
+
+        // ----- ⭐ A SAJÁT SZAVAZATOM (5.5) — a SzavazasFul kéri megnyitáskor -----
+        if (utvonal.startsWith('/api/javaslat/') && utvonal.endsWith('/sajat-szavazat')) {
+          const javaslatId = utvonal.split('/')[3];
+          const { javaslatok } = await kepetKeszit();
+          if (!javaslatok.has(javaslatId)) {
+            return { allapot: 404, adat: { hiba: 'nincs ilyen javaslat' } };
+          }
+          // ⚠️ NULL, ha még nem szavaztam — a fül ebből tudja, hogy egyik gomb sem aktív.
+          //
+          // ⭐ A koinóban a szavazat SOSEM tűnik el, csak felülíródik („az utolsó nyer"),
+          // ezért a `sajatSzavazat` mindig a jelenlegi állásomat adja — nem kell külön
+          // nyilvántartás róla.
+          const { allapot: kep } = await kepetKeszit();
+          const enyem = sajatSzavazat(kep.szamitok, javaslatId, szerzo);
+          return { adat: { data: enyem ? { szavazatTipus: enyem } : null } };
         }
 
         // ----- HIÁNYZÓ FELMENŐK (5.5) — a TudatpontModal kéri megnyitáskor -----

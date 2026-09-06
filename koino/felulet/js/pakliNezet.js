@@ -183,7 +183,18 @@ export class PakliNezet {
         k.kartya._kivalasztottAllapotBeallitasa();
       }
 
-      if (most) await this._szovegPotlasa(k);
+      // ⚠️⚠️ A BODY-T MINDIG A `bodyFrissitese()` TÖLTI FEL — és ez nem részletkérdés.
+      //
+      // ⛔ Az 5.3-ban ezt csak akkor hívtuk, ha volt szöveg elkérve. A gondolat-kártyáknál
+      // ez működött, de az 5.5-ben kiderült, hogy **a javaslat-kártya body-ja üresen
+      // maradt**: nincs szövege, tehát a hívás elmaradt — és vele a fülsáv és a SZAVAZÁS-FÜL
+      // is. *A szöveg csak EGY dolog a body-ban; a feltöltést nem szabad hozzá kötni.*
+      if (most) {
+        await this._szovegPotlasa(k);
+        if (typeof k.kartya.bodyFrissitese === 'function') {
+          k.kartya.bodyFrissitese(k.entitas.adatok.szoveg ?? null);
+        }
+      }
     }
 
     this.kivalasztott = this.kivalasztott === azonosito ? null : azonosito;
@@ -201,8 +212,8 @@ export class PakliNezet {
       k.entitas.adatok.szoveg = valasz.szoveg;
       k.entitas.adatok.szovegMezo = valasz.szoveg;
       k.szovegMegvan = true;
-
-      if (typeof k.kartya.bodyFrissitese === 'function') k.kartya.bodyFrissitese(valasz.szoveg);
+      // ⚠️ A `bodyFrissitese`-t a hívó (`_kivalasztas`) hívja meg — MINDEN kártyára,
+      // nem csak azokra, amiknek van szövege. Lásd az ottani megjegyzést.
     } catch (hiba) {
       console.warn('PakliNezet._szovegPotlasa - nem sikerült', { hiba: hiba.message });
     }

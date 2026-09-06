@@ -41,6 +41,15 @@
 //                                     tárol — ⭐ és a `SzovegMezoMegjelenito` ezt **kezeli**
 //                                     („3. sima string"), ezért nem kell átalakítani
 
+// A javaslat státuszának szavai. ⚠️ A koino a saját szótárát használja
+// (`javaslatSzamitas.js`), a prototípus kártyái a magukét — és a `JavaslatKartya` a
+// **szavazás-fület** kifejezetten az `'Aktiv'` értékhez köti.
+const STATUSZ_KIFELE = {
+  folyamatban: 'Aktiv',
+  elfogadva: 'Elfogadva',
+  elvetve: 'Elvetve'
+};
+
 /**
  * Egy `/api/pakli` kártya → a prototípus kártya-alakja.
  *
@@ -83,6 +92,39 @@ export function kartyaAdatta(k) {
       // a feloldás keresés az állapotban, tehát számítás, tehát a programé.
       gondolatTipus: k.gondolatTipus ?? null,
       kategoriak: k.kategoriak ?? [],
+
+      // ----- ⭐ A JAVASLAT MEZŐI (5.5) -----
+      //
+      // ⚠️ AZ ARÁNYOK EZRELÉKBEN ÉRKEZNEK, és ez nem szeszély: a koino **egész
+      // aritmetikával** számol, hogy kerekítés soha ne dönthessen el szavazást. A kártya
+      // százalékot ír ki — a váltás tehát itt, a felületen történik, ahol már csak
+      // megjelenítés. *A programban egyetlen tört szám sem születik.*
+      ...(k.javaslat ? {
+        javaslatTipus: k.javaslat.muvelet,
+
+        // ⚠️⚠️ A STÁTUSZ SZAVAI ELTÉRNEK — és ez nem kozmetika: a `JavaslatKartya` a
+        // **szavazás-fület** csak `'Aktiv'` státusznál rajzolja ki. A koino
+        // `'folyamatban'`-t mond, tehát fordítás nélkül **a szavazás soha nem jelenne meg**.
+        // ⭐ Ezt is a böngésző mondta meg, nem a kód olvasása.
+        statusz: STATUSZ_KIFELE[k.javaslat.statusz] ?? k.javaslat.statusz,
+        szavazhat: k.javaslat.szavazhatok,
+        dontesiIdo: k.javaslat.dontesiIdo,
+        modositottGondolat: k.javaslat.erintettCim,
+        indoklas: k.javaslat.indoklas,
+
+        tamogatotsagiArany: (k.javaslat.tamogatottsagEzrelek ?? 0) / 10,
+        ellenzoiArany: (k.javaslat.ellenzoiEzrelek ?? 0) / 10,
+        tartozkodoiArany: (k.javaslat.tartozkodoiEzrelek ?? 0) / 10,
+        reszveteliArany: (k.javaslat.reszveteliEzrelek ?? 0) / 10,
+
+        // ⭐ A koino saját mezői, hogy a részletek-nézet is hozzájuk férjen.
+        szavazok: k.javaslat.szavazok,
+        nevezo: k.javaslat.nevezo,
+        bizonyossagiMutato: k.javaslat.bizonyossagiMutato,
+        kesoiSzavazatok: k.javaslat.kesoiSzavazatok,
+        fajta: k.javaslat.fajta,
+        egyezmeny: k.javaslat.egyezmeny
+      } : {}),
 
       // ⏸️ „Hány gondolat használja ezt a kategóriát?" — a besorolás-kártyák mutatnák.
       // Ma nincs meg: ez visszafelé mutató kérdés (ki hivatkozik rám?), amihez a

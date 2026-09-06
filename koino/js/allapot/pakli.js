@@ -139,6 +139,81 @@ function kartya(entitas, agazatiPont, en, entitasok) {
   };
 }
 
+/**
+ * Egy JAVASLAT kártya-adata (Szakasz 5.5).
+ *
+ * ⭐ MIÉRT KERÜL A PAKLIBA? Mert a prototípus paklija is együtt mutatja a gondolatokat, a
+ * javaslatokat és az egyezményeket — a `kartyaGyar` épp ezért típus szerint választ
+ * kártya-osztályt. A javaslat nem külön nézet, hanem **kártya a többi közt**.
+ *
+ * ⚠️ A RENDEZÉSI ÉRTÉKE AZ ÉRINTETT ENTITÁSÉ. A javaslatnak magának nincs tudatpontja
+ * (nem is lehet: nem entitás, hanem döntés). Ha nullát adnánk, minden javaslat a lista
+ * végére süllyedne, elszakadva attól a gondolattól, amiről szól. ⭐ Így viszont **a
+ * gondolata mellé kerül**, ami az olvasónak is ezt jelenti.
+ */
+function javaslatKartya(j, entitasok, en) {
+  const erintett = entitasok.get(j.erintett);
+
+  return {
+    azonosito: j.azonosito,
+    tipus: 'Javaslat',
+    // A javaslat „címe" az, amit javasol — ezt látja az ember a kártyán.
+    cim: j.valtozas?.cim ?? j.muvelet,
+    szulo: null,
+    ikon: null,
+    gondolatTipus: null,
+    kategoriak: [],
+    szerzo: j.letrehozo,
+    letrehozva: j.letrehozva,
+
+    // ⚠️ Az érintett pontjai — a rendezéshez, hogy a gondolata mellé kerüljön.
+    osszesPont: erintett?.osszesPont ?? 0,
+    agazatiPont: erintett?.osszesPont ?? 0,
+    hozzajarulok: erintett?.hozzajarulok.size ?? 0,
+    sajatPont: en ? (erintett?.hozzajarulok.get(en)?.pont ?? 0) : 0,
+
+    // ----- AMI CSAK A JAVASLATÉ -----
+    javaslat: {
+      fajta: j.fajta,                       // 'szerkesztesi' | 'altalanos' (D27)
+      muvelet: j.muvelet,
+      erintett: j.erintett,
+      erintettCim: erintett?.cim ?? null,
+      valtozas: j.valtozas ?? null,
+      indoklas: j.indoklas ?? null,
+      statusz: j.statusz,                   // folyamatban | elfogadva | elvetve
+      dontesiIdo: j.dontesiIdo,
+      lezarasIdeje: j.lezarasIdeje,
+
+      // ⭐ EZRELÉKBEN, mert a koino egész aritmetikával számol (kerekítés soha ne
+      // dönthessen el szavazást). A százalékra váltás a felület dolga.
+      tamogatottsagEzrelek: j.tamogatottsagEzrelek,
+      ellenzoiEzrelek: j.ellenzoiEzrelek,
+      tartozkodoiEzrelek: j.tartozkodoiEzrelek,
+      reszveteliEzrelek: j.reszveteliEzrelek,
+      bizonyossagiMutato: j.bizonyossagiMutato,
+
+      tamogatok: j.tamogatok,
+      ellenzok: j.ellenzok,
+      tartozkodok: j.tartozkodok,
+      szavazok: j.szavazok,
+      nevezo: j.nevezo,
+      kesoiSzavazatok: j.kesoiSzavazatok,
+
+      // ⭐ SZAVAZHATOK-E? A döntés bemenete az AKTÍV tulajdonosok köre: akinek van
+      // tudatpontja az érintett entitáson, és aktív szerepben van.
+      szavazhatok: en
+        ? ((erintett?.hozzajarulok.get(en)?.pont ?? 0) > 0
+           && erintett?.hozzajarulok.get(en)?.szerep !== 'passziv')
+        : false,
+
+      // Megszületett-e már az egyezmény? (D17: számítás, nem esemény.)
+      egyezmeny: j.egyezmeny ? { megszuletett: j.egyezmeny.megszuletett } : null
+    },
+
+    vanSzoveg: false
+  };
+}
+
 // ===================================
 // AZ ÁGAZATI PONT — a fa alulról felfelé
 // ===================================
@@ -313,6 +388,19 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   for (const e of kep.entitasok.values()) {
     mind.push({ azonosito: e.azonosito, ertek: ertekhez(e), entitas: e });
   }
+
+  // ⭐ ÉS A JAVASLATOK (5.5) — a prototípus paklija is együtt mutatja őket a gondolatokkal.
+  // ⚠️ A rendezési értékük az ÉRINTETT entitásé, hogy a gondolatuk mellé kerüljenek.
+  for (const j of kep.javaslatok?.values() ?? []) {
+    const erintett = kep.entitasok.get(j.erintett);
+    // A gazdátlan javaslat (az érintettet elfelejtették, D14) nem kerül a pakliba.
+    if (!erintett) continue;
+    mind.push({
+      azonosito: j.azonosito,
+      ertek: rendezes === 'ido' ? (j.letrehozva ?? 0) : ertekhez(erintett),
+      javaslat: j
+    });
+  }
   mind.sort((a, b) => sorrendben(a, b, irany));
 
   // ----- A KURZOR UTÁNI RÉSZ -----
@@ -329,8 +417,9 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const utolso = oldal[oldal.length - 1];
 
   const eredmeny = {
-    kartyak: oldal.map((elem) =>
-      kartya(elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok)),
+    kartyak: oldal.map((elem) => elem.javaslat
+      ? javaslatKartya(elem.javaslat, kep.entitasok, beallitas.szerzo)
+      : kartya(elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok)),
     // Csak akkor van következő oldal, ha maradt még valami.
     kovetkezoKurzor: (utolso && innen + darab < mind.length)
       ? kurzorKodolas({ horgony, most, ertek: utolso.ertek, azonosito: utolso.azonosito })
@@ -619,6 +708,10 @@ function kepetKerni(nezet, koino, horgony, most, esemenyek) {
   // a hiba, amit a Szakasz 5.3 első órájában mértünk.
   const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most);
   egyezmenyekAlkalmazasa(kep, javaslatok);
+
+  // ⭐ A javaslatok is kártyák (5.5) — a képpel együtt tartjuk, hogy ne kelljen kétszer
+  // kiszámolni őket.
+  kep.javaslatok = javaslatok;
 
   nezet.horgony = kulcs;
   nezet.kep = kep;
