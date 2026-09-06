@@ -92,12 +92,37 @@ export function ujPakliNezet() {
  * adat-csomag utazik, a program nem). A szöveget a `GET /api/pakli/szoveg/:tipus/:id`
  * hozza, kártyánként, amikor tényleg kell.
  */
-function kartya(entitas, agazatiPont, en) {
+/**
+ * Egy besorolás-hivatkozás feloldása: azonosító → { azonosito, nev, ikon }.
+ *
+ * ⭐ MIÉRT ITT, ÉS NEM A LAPON? Mert ez **keresés az állapotban**, vagyis számítás — a
+ * vékony lap elve szerint a programé. A lap csak rajzol.
+ *
+ * ⚠️ A HIÁNY NEM HIBA (D19): ha a kategória még nem érkezett meg hozzánk, `null`-t adunk,
+ * és a kártya egyszerűen nem mutat besorolást. Nem találunk ki nevet, és nem is jelezzük
+ * vádként.
+ */
+function besorolas(entitasok, azonosito) {
+  if (typeof azonosito !== 'string') return null;
+  const e = entitasok.get(azonosito);
+  if (!e) return null;
+  return { azonosito, nev: e.cim ?? null, ikon: e.ikon ?? null };
+}
+
+function kartya(entitas, agazatiPont, en, entitasok) {
   return {
     azonosito: entitas.azonosito,
     tipus: entitas.tipus,
     cim: entitas.cim,
     szulo: entitas.szulo,
+
+    // ----- A BESOROLÁS, FELOLDVA (5.4) -----
+    // A kártya nevet és ikont mutat, nem azonosítót — tehát a feloldás ide tartozik.
+    ikon: entitas.ikon ?? null,
+    gondolatTipus: besorolas(entitasok, entitas.gondolatTipus),
+    kategoriak: (entitas.kategoriak ?? [])
+      .map((k) => besorolas(entitasok, k))
+      .filter((k) => k !== null),
     szerzo: entitas.szerzo,
     letrehozva: entitas.letrehozva,
     osszesPont: entitas.osszesPont,
@@ -304,7 +329,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
 
   const eredmeny = {
     kartyak: oldal.map((elem) =>
-      kartya(elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo)),
+      kartya(elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok)),
     // Csak akkor van következő oldal, ha maradt még valami.
     kovetkezoKurzor: (utolso && innen + darab < mind.length)
       ? kurzorKodolas({ horgony, most, ertek: utolso.ertek, azonosito: utolso.azonosito })

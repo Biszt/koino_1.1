@@ -448,21 +448,87 @@ async function sajatFelhatalmazasaim(kornyezet, sajatBelepes) {
  * esemény azonosítója lesz. (A saját azonosítót nem lehetne a mezőbe írni — önmagára
  * hivatkozna —, ezért mondja ki a `szelet()` szabály, hogy a `null` ezt jelenti.)
  *
+ * ⭐ BESOROLÁS (5.4): a gondolat megkaphat EGY gondolattípust és LEGFELJEBB HÁROM
+ * kategóriát. Mindkettő önálló entitásra mutató azonosító — a korlátot a `szabalyok.js`
+ * érvényesíti, nem ez a függvény. *A művelet-réteg kényelmet ad, a szabály-réteg véd.*
+ *
  * @param {Object} kornyezet
- * @param {Object} adatok - { cim, szoveg, szulo }
+ * @param {Object} adatok - { cim, szoveg, szulo, gondolatTipus, kategoriak }
  */
-export async function gondolatLetrehozasa(kornyezet, { cim, szoveg, szulo }) {
+export async function gondolatLetrehozasa(
+  kornyezet, { cim, szoveg, szulo, gondolatTipus, kategoriak }
+) {
   const gondolat = {
     tipus: 'Gondolat',
     cim,
     szoveg: szoveg || null,
-    szulo: szulo || null
+    szulo: szulo || null,
+    gondolatTipus: gondolatTipus || null,
+    kategoriak: Array.isArray(kategoriak) ? kategoriak : []
   };
 
   // A méret a gondolat SAJÁT adatára vonatkozik (a burkolat és az aláírás nélkül)
   gondolat.meret = kanonikusBajtok(gondolat).length;
 
   return esemenytTeszek(kornyezet, 'GondolatLetrehozas', gondolat);
+}
+
+// ===================================
+// KATEGÓRIA ÉS GONDOLATTÍPUS (Szakasz 5.4)
+// ===================================
+//
+// ⭐⭐ EZ A KÉT TÍPUS 2026-09-06-IG NEM LÉTEZETT A KOINÓBAN — a végpont-térkép találata
+// volt (`docs/szakasz5_terv.md` 7. szakasz, 2. pont): a prototípus tíz végpontja mögött
+// nem volt esemény. A domain-fogalom viszont mindig is megvolt: *„a kategóriák és a
+// gondolattípusok rendszerezik a gondolatokat."*
+//
+// ⚠️ MIÉRT NINCS ÚJ ESEMÉNY-FAJTA? Mert a `GondolatLetrehozas` az ÁLTALÁNOS entitás-
+// létrehozás, és az `adat.tipus` különbözteti meg a fajtákat — ez a szerkezet a Szakasz 1
+// óta így van (`allapotSzamitas.js`: `adat.tipus ?? 'Gondolat'`). Új esemény-név
+// bevezetése minden meglévő tárat érvénytelenítene, cserébe semmit nem adna.
+//
+// ⭐ ÉS MIÉRT ÖNÁLLÓ ENTITÁS, NEM MEZŐ? Mert így ugyanaz jár nekik, mint bármely más
+// entitásnak: tudatpont, javaslat, küszöbök, egyezmény. Egy kategória neve is
+// **közösségi döntéssel** változik — nem egy mező átírásával.
+
+/**
+ * A közös váz: kategória és gondolattípus ugyanaz, csak a `tipus` más.
+ *
+ * ⚠️ A NÉV a `cim` mezőbe kerül. Ez szándékos: a koinóban MINDEN entitásnak `cim`-e van,
+ * és így az állapot-számítás, a rendezés, a keresés és az egyezmény-végrehajtás
+ * változtatás nélkül működik rajtuk. A prototípus kártyái `nev`-et olvasnak — azt a
+ * felület fordítja (`felulet/js/kartyaAdat.js`).
+ */
+function besorolasLetrehozasa(kornyezet, tipus, { nev, leiras, ikon, szulo }) {
+  const entitas = {
+    tipus,
+    cim: nev,
+    szoveg: leiras || null,
+    szulo: szulo || null,
+    // ⭐ Az ikon lehet EMOJI vagy URL — az örökölt kártya mindkettőt kezeli (URL-nél képet
+    // rak ki, egyébként szöveget). Emojival tehát nem kell hozzá feltöltés, ami a P2P-ben
+    // amúgy sincs megoldva (D3).
+    ikon: ikon || null
+  };
+
+  entitas.meret = kanonikusBajtok(entitas).length;
+  return esemenytTeszek(kornyezet, 'GondolatLetrehozas', entitas);
+}
+
+/**
+ * Új kategória.
+ * @param {Object} adatok - { nev, leiras, ikon, szulo }
+ */
+export function kategoriaLetrehozasa(kornyezet, adatok) {
+  return besorolasLetrehozasa(kornyezet, 'Kategoria', adatok);
+}
+
+/**
+ * Új gondolattípus (kérdés, válasz, témakör, ismeret, feladat…).
+ * @param {Object} adatok - { nev, leiras, ikon, szulo }
+ */
+export function gondolatTipusLetrehozasa(kornyezet, adatok) {
+  return besorolasLetrehozasa(kornyezet, 'GondolatTipus', adatok);
 }
 
 // ===================================

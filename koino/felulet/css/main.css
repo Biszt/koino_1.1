@@ -19,6 +19,8 @@
 
 @import './components/kartya/kartya.css';
 @import './components/kartya/gondolatKartya.css';
+@import './components/kartya/kategoriaKartya.css';
+@import './components/kartya/gondolatTipusKartya.css';
 @import './components/kartya/javaslatKartya.css';
 @import './components/kartya/egyezmenyKartya.css';
 @import './components/kartya/kartyaFulsav.css';

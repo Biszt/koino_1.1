@@ -1,4 +1,4 @@
-// koino/js/allapot/szabalyok.js
+﻿// koino/js/allapot/szabalyok.js
 
 // Felelősség: EGY HELYEN eldönteni, mely események SZÁMÍTANAK — és melyek nem.
 //
@@ -38,6 +38,18 @@
 // átrendezhető. Ez itt lakik, EGY példányban — a művelet-réteg és a felület is innen
 // veszi, hogy ne csúszhasson szét kétféle igazságra.
 export const TUDATPONT_KERET = 10000;
+
+// ⭐ Hány kategóriába sorolható EGY gondolat? A prototípus is hármat engedett
+// (`Maximum 3 különböző kategória rendelhető egy gondolathoz`), és a korlát ott
+// Mongoose-validátorban élt. A P2P koinóban nincs szerver, ami visszautasítsa — ezért a
+// korlát a SZÁMÍTÁSBAN van (2. szabály lent), és a felület nem tudja kijátszani.
+export const KATEGORIA_KORLAT = 3;
+
+// A koino entitás-típusai. ⚠️ Ezek NEM külön esemény-fajták: mindegyiket ugyanaz a
+// `GondolatLetrehozas` esemény hozza létre, és az `adat.tipus` különbözteti meg őket
+// (ezért van az `allapotSzamitas.js`-ben `?? 'Gondolat'` alapérték). *Az esemény neve
+// történeti; a típust az adat mondja meg.*
+export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 
 // ===================================
 // A SZABÁLYOK ÉRVÉNYESÍTÉSE
@@ -171,7 +183,51 @@ export function szabalyokErvenyesitese(esemenyek) {
         continue;
       }
 
-      // ===== 2. SZABÁLY: JAVASLATOT CSAK A GAZDA TEHET =====
+      // ===== 2. SZABÁLY: A BESOROLÁS KORLÁTAI (Szakasz 5.4) =====
+      //
+      // ⭐ MIÉRT ITT, ÉS NEM A FELÜLETEN? Mert *„amit a számítás nem ellenőriz, az nem
+      // szabály, csak illemtan"* — a felület a másik gépen nem véd semmitől. A prototípus
+      // ezt Mongoose-validátorral tartotta (`Maximum 3 különböző kategória`); a P2P
+      // koinóban nincs szerver, ami visszautasítsa, tehát a SZÁMÍTÁSNAK kell kihagynia.
+      //
+      // ⚠️ A hivatkozott kategória/típus LÉTEZÉSÉT itt NEM nézzük: az a hiány esete
+      // (D19) — lehet, hogy csak még nem érkezett meg hozzánk. Ilyenkor a besorolás
+      // egyszerűen nem oldódik fel, de az esemény érvényes marad.
+      if (e.tipus === 'GondolatLetrehozas') {
+        const kategoriak = e.adat?.kategoriak;
+
+        if (kategoriak !== undefined && kategoriak !== null) {
+          if (!Array.isArray(kategoriak)) {
+            kivetel(e, 'a kategóriák csak listában adhatók meg');
+            continue;
+          }
+          if (kategoriak.length > KATEGORIA_KORLAT) {
+            kivetel(e, 'legfeljebb ' + KATEGORIA_KORLAT + ' kategória rendelhető egy '
+              + 'gondolathoz (itt ' + kategoriak.length + ')');
+            continue;
+          }
+          if (kategoriak.some((k) => typeof k !== 'string')) {
+            kivetel(e, 'a kategória-hivatkozás csak azonosító lehet');
+            continue;
+          }
+          // ⭐ KÜLÖNBÖZŐ kategória — a prototípus is ezt írta elő. Ugyanaz háromszor
+          // felsorolva nem három besorolás.
+          if (new Set(kategoriak).size !== kategoriak.length) {
+            kivetel(e, 'ugyanaz a kategória többször szerepel');
+            continue;
+          }
+        }
+
+        const gondolatTipus = e.adat?.gondolatTipus;
+        if (gondolatTipus !== undefined && gondolatTipus !== null
+            && typeof gondolatTipus !== 'string') {
+          kivetel(e, 'a gondolattípus-hivatkozás csak azonosító lehet');
+          continue;
+        }
+        continue;
+      }
+
+      // ===== 3. SZABÁLY: JAVASLATOT CSAK A GAZDA TEHET =====
       // „Csak az tehet javaslatot, aki tudatpontot rendelt a gondolathoz." A kérdés,
       // hogy MIKORI állapot szerint — és a válasz a saját lánc: a javaslat előtti
       // eseményei szerint. Így az sem számít, mi történik később máshol: a jogosultság

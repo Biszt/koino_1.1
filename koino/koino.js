@@ -59,7 +59,7 @@ import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamita
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { egyezmenyekAlkalmazasa } from './js/allapot/egyezmenyVegrehajtas.js';
 import {
-  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese,
+  koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
@@ -397,11 +397,52 @@ try {
       break;
     }
 
+    // ===================================
+    // KATEGÓRIA ÉS GONDOLATTÍPUS (5.4)
+    // ===================================
+    //
+    // ⭐ A 4. SZABÁLY: amit a lapon meg lehet csinálni, azt a parancssorból is. Ha a
+    // böngésző egyszer nem elérhető, a koino ettől még teljes.
+    case 'kategoria':
+    case 'gondolattipus': {
+      const [nev, ikon, leiras] = ervek;
+      if (!nev) throw new Error('Mi legyen a neve?');
+
+      const kategoriaE = parancs === 'kategoria';
+      const esemeny = await (kategoriaE ? kategoriaLetrehozasa : gondolatTipusLetrehozasa)(
+        kornyezet, { nev, ikon, leiras });
+
+      // ⭐ Tudatpont nélkül ez sem létezne (D14) — ugyanaz a szabály, mint a gondolatnál.
+      const { allapot } = await kepetKeszit();
+      await tudatpontRendezese(kornyezet, esemeny.azonosito, KEZDO_PONT, 'aktiv',
+        szetosztottPontok(allapot, szerzo));
+
+      kiir((kategoriaE ? 'Kategória' : 'Gondolattípus') + ' létrejött: '
+        + esemeny.azonosito.slice(0, 8) + '  ' + (ikon ? ikon + ' ' : '') + '„' + nev + '"');
+      kiir(SZIN.halvany + 'Az ikon lehet emoji vagy kép-cím; mindkettőt kezeli a kártya.'
+        + SZIN.vege);
+      break;
+    }
+
     case 'gondolat': {
-      const [cim, szoveg] = ervek;
+      const [cim, szoveg, tipusToredek, ...kategoriaToredekek] = ervek;
       if (!cim) throw new Error('Mi legyen a gondolat címe?');
 
-      const esemeny = await gondolatLetrehozasa(kornyezet, { cim, szoveg });
+      // ⭐ A besorolás elhagyható, és rövidítéssel is megadható — mint minden azonosító.
+      let gondolatTipus = null;
+      const kategoriak = [];
+      if (tipusToredek || kategoriaToredekek.length) {
+        const { allapot: kep } = await kepetKeszit();
+        const besorolasok = [...kep.entitasok.values()]
+          .filter((e) => e.tipus === 'Kategoria' || e.tipus === 'GondolatTipus')
+          .map((e) => e.azonosito);
+
+        if (tipusToredek) gondolatTipus = feloldas(tipusToredek, besorolasok);
+        for (const t of kategoriaToredekek) kategoriak.push(feloldas(t, besorolasok));
+      }
+
+      const esemeny = await gondolatLetrehozasa(kornyezet,
+        { cim, szoveg, gondolatTipus, kategoriak });
       // Rögtön tudatpontot is rendelünk hozzá — enélkül nem is létezne (D14)
       const { allapot } = await kepetKeszit();
       await tudatpontRendezese(kornyezet, esemeny.azonosito, KEZDO_PONT, 'aktiv',
@@ -1468,6 +1509,8 @@ try {
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
+      kiir('           kategoria <név> [ikon] [leírás] · gondolattipus <név> [ikon] [leírás]');
+      kiir('           gondolat <cím> [szöveg] [típus] [kategória...] · felulet [port]');
       kiir('           tarsak · tars <cím> [port] [név] · tars torol <cím> [port]');
       process.exit(2);
   }

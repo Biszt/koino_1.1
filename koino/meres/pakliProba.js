@@ -498,7 +498,122 @@ proba('⭐ A kártya SAJÁT pontja a pakliban is ott van', async () => {
 });
 
 // ===================================
-// 8. A GYORSÍTÓTÁR
+// 8. ⭐ A BESOROLÁS — kategória és gondolattípus (5.4)
+// ===================================
+//
+// ⛔ 2026-09-06-ig ez a két entitástípus NEM LÉTEZETT a koinóban: a végpont-térkép találata
+// volt (tíz prototípus-végpont mögött nem volt esemény). Itt azt mérjük, hogy megvan — és
+// hogy a korlátot a SZÁMÍTÁS tartja, nem a felület.
+
+/** Egy besorolás-entitás (kategória vagy gondolattípus) a tárba. */
+async function besorolas(tar, ki, tipus, nev, ikon) {
+  const e = await ki.tesz('GondolatLetrehozas', { tipus, cim: nev, ikon, meret: 10 });
+  await esemenyMentese(tar, e);
+  await esemenyMentese(tar,
+    await ki.tesz('TudatpontRendezes', { entitas: e.azonosito, pont: 100 }));
+  return e.azonosito;
+}
+
+proba('⭐ A KATEGÓRIA és a GONDOLATTÍPUS önálló entitás — saját kártyával', async () => {
+  const { tar, anna } = await ujKoino();
+  await besorolas(tar, anna, 'Kategoria', 'Természet', '🌲');
+  await besorolas(tar, anna, 'GondolatTipus', 'Kérdés', '❓');
+
+  const oldal = await pakliOldal(tar, KOINO, {});
+  const tipusok = oldal.kartyak.map((k) => k.tipus).sort();
+  return oldal.osszes === 2
+    && tipusok.join(',') === 'GondolatTipus,Kategoria'
+    && oldal.kartyak.find((k) => k.cim === 'Természet').ikon === '🌲';
+});
+
+proba('⭐⭐ A gondolat besorolása FELOLDVA érkezik (név + ikon, nem azonosító)', async () => {
+  const { tar, anna } = await ujKoino();
+  const tipus = await besorolas(tar, anna, 'GondolatTipus', 'Kérdés', '❓');
+  const kat = await besorolas(tar, anna, 'Kategoria', 'Természet', '🌲');
+
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Miért zöld a levél?', meret: 10,
+      gondolatTipus: tipus, kategoriak: [kat] });
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 900 }));
+
+  const oldal = await pakliOldal(tar, KOINO, {});
+  const kartya = oldal.kartyak.find((k) => k.cim === 'Miért zöld a levél?');
+
+  return kartya.gondolatTipus.nev === 'Kérdés'
+    && kartya.gondolatTipus.ikon === '❓'
+    && kartya.kategoriak.length === 1
+    && kartya.kategoriak[0].nev === 'Természet';
+});
+
+proba('⛔⛔ NÉGY KATEGÓRIA nem megy át — és a SZÁMÍTÁS tartja, nem a felület', async () => {
+  const { tar, anna } = await ujKoino();
+  const katak = [];
+  for (let i = 0; i < 4; i++) katak.push(await besorolas(tar, anna, 'Kategoria', 'K' + i, '🌲'));
+
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Túl sok kategória', meret: 10, kategoriak: katak });
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 900 }));
+
+  const oldal = await pakliOldal(tar, KOINO, {});
+  // ⭐ A négy kategória bent van; a szabálysértő GONDOLAT nincs — nem jött létre az entitás.
+  return oldal.osszes === 4
+    && !oldal.kartyak.some((k) => k.cim === 'Túl sok kategória');
+});
+
+proba('⭐ HÁROM kategória viszont rendben (a korlát pontosan ott van)', async () => {
+  const { tar, anna } = await ujKoino();
+  const katak = [];
+  for (let i = 0; i < 3; i++) katak.push(await besorolas(tar, anna, 'Kategoria', 'K' + i, '🌲'));
+
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Pont három', meret: 10, kategoriak: katak });
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 900 }));
+
+  const oldal = await pakliOldal(tar, KOINO, {});
+  const kartya = oldal.kartyak.find((k) => k.cim === 'Pont három');
+  return kartya !== undefined && kartya.kategoriak.length === 3;
+});
+
+proba('⛔ UGYANAZ a kategória háromszor nem három besorolás', async () => {
+  const { tar, anna } = await ujKoino();
+  const kat = await besorolas(tar, anna, 'Kategoria', 'Egy', '🌲');
+
+  const g = await anna.tesz('GondolatLetrehozas',
+    { tipus: 'Gondolat', cim: 'Ismétlés', meret: 10, kategoriak: [kat, kat, kat] });
+  await esemenyMentese(tar, g);
+  await esemenyMentese(tar,
+    await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 900 }));
+
+  const oldal = await pakliOldal(tar, KOINO, {});
+  return !oldal.kartyak.some((k) => k.cim === 'Ismétlés');
+});
+
+proba('⚠️ A HIÁNYZÓ kategória nem hiba: a gondolat áll, a besorolás nem oldódik fel (D19)',
+  async () => {
+    const { tar, anna } = await ujKoino();
+    const g = await anna.tesz('GondolatLetrehozas',
+      { tipus: 'Gondolat', cim: 'Ismeretlen kategóriával', meret: 10,
+        kategoriak: ['meg-nem-erkezett-kategoria'] });
+    await esemenyMentese(tar, g);
+    await esemenyMentese(tar,
+      await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 900 }));
+
+    const oldal = await pakliOldal(tar, KOINO, {});
+    const kartya = oldal.kartyak[0];
+    // ⭐ A gondolat LÉTEZIK, csak a besorolása üres — nem találunk ki nevet hozzá.
+    return oldal.osszes === 1
+      && kartya.cim === 'Ismeretlen kategóriával'
+      && kartya.kategoriak.length === 0;
+  });
+
+// ===================================
+// 9. A GYORSÍTÓTÁR
 // ===================================
 
 proba('⭐ Egy lapozás alatt EGYSZER számol állapotot, nem oldalanként', async () => {

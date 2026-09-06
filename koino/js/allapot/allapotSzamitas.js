@@ -304,6 +304,20 @@ export function allapotSzamitasa(esemenyek) {
       tipus: letrehozoEsemeny.adat.tipus ?? 'Gondolat',
       cim: letrehozoEsemeny.adat.cim,
       szoveg: letrehozoEsemeny.adat.szoveg ?? null,
+
+      // ----- ⭐ A BESOROLÁS (Szakasz 5.4) -----
+      // A kategória és a gondolattípus ÖNÁLLÓ ENTITÁS (saját tudatponttal, javaslattal,
+      // küszöbökkel) — itt csak a rájuk mutató hivatkozás áll. A feloldásuk a
+      // megjelenítés dolga (`pakli.js`), nem az állapoté.
+      //
+      // ⚠️ A `cim` MINDEN típusnál a megjelenő név: a kategóriának is az a neve. Így nincs
+      // párhuzamos `nev` mező, amit külön kellene karbantartani — a felület fordít, ha a
+      // kártya mást vár.
+      ikon: letrehozoEsemeny.adat.ikon ?? null,
+      gondolatTipus: letrehozoEsemeny.adat.gondolatTipus ?? null,
+      kategoriak: Array.isArray(letrehozoEsemeny.adat.kategoriak)
+        ? [...letrehozoEsemeny.adat.kategoriak]
+        : [],
       szulo: letrehozoEsemeny.adat.szulo ?? null,
       meret: letrehozoEsemeny.adat.meret ?? 0,       // D26: a tárolási vállalás mértéke
       szerzo: letrehozoEsemeny.szerzo,

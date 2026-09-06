@@ -9,26 +9,26 @@
 // MEGJEGYZÉS: a Pakli egyelőre saját, azonos szerkezetű `kartyaPeldanyositasa`
 // metódust használ — az ő átállítása külön, óvatos lépés (a pakli a fő nézet).
 
-// ⚠️⚠️ AZ EGYETLEN ELTÉRÉS A PROTOTÍPUSTÓL (Szakasz 5.3): a KategoriaKartya és a
-// GondolatTipusKartya kimaradt.
+// ✅ A PROTOTÍPUSSAL AZONOS (Szakasz 5.4 óta).
 //
-// ⭐ Nem takarékosságból: **a koinóban ez a két entitástípus nem létezik.** A `muveletek.js`
-// tizenhárom művelete közül egy sem tud kategóriát vagy gondolattípust létrehozni — a
-// végpont-térkép 2. találata épp ez (`docs/szakasz5_terv.md` 7. szakasz). Egy kártya, aminek
-// soha nem lehet adata, csak halott import volna.
-//
-// ⏸️ Amikor a két entitástípus megszületik (5.4), ez a fájl **két sorral** lesz kész — a
-// kártya-osztályok a prototípusban készen állnak.
+// ⏸️ Az 5.3-ban a `KategoriaKartya` és a `GondolatTipusKartya` még kimaradt, mert **a
+// koinóban ez a két entitástípus nem létezett** — a végpont-térkép 2. találata. Az 5.4-ben
+// megszülettek (`muveletek.js`: `kategoriaLetrehozasa`, `gondolatTipusLetrehozasa`), ezért
+// a leképezés visszakerült. *A jóslat bevált: tényleg két sor volt.*
 
 // ===== IMPORTOK =====
 import Kartya from './Kartya.js';
 import GondolatKartya from './GondolatKartya.js';
+import KategoriaKartya from './KategoriaKartya.js';
+import GondolatTipusKartya from './GondolatTipusKartya.js';
 import JavaslatKartya from './JavaslatKartya.js';
 import EgyezmenyKartya from './EgyezmenyKartya.js';
 
 // Entitástípus → kártya-osztály
 const TIPUS_KARTYA = {
   Gondolat:      GondolatKartya,
+  Kategoria:     KategoriaKartya,
+  GondolatTipus: GondolatTipusKartya,
   Javaslat:      JavaslatKartya,
   Egyezmeny:     EgyezmenyKartya
 };

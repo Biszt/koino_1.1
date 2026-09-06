@@ -41,7 +41,9 @@ node koino/koino.js
 | `node koino/koino.js kulcs` | ki vagyok, hol a kulcsom és az adatom |
 | `node koino/koino.js mentes kulcs.json` | a kulcs kimentése (ez te vagy — mentsd el) |
 | `node koino/koino.js koino "Név"` | koino létrehozása |
-| `node koino/koino.js gondolat "Cím" "szöveg"` | új gondolat (+100 tudatpont, enélkül nem létezne) |
+| `node koino/koino.js gondolat "Cím" "szöveg" [típus] [kategória...]` | új gondolat (+100 tudatpont, enélkül nem létezne); a besorolás elhagyható, rövidítéssel is megadható |
+| `node koino/koino.js kategoria "Név" [ikon] [leírás]` | ⭐ **új kategória** (5.4) — önálló entitás, saját tudatponttal. Az ikon lehet **emoji** vagy kép-cím |
+| `node koino/koino.js gondolattipus "Név" [ikon] [leírás]` | ⭐ **új gondolattípus** (kérdés, válasz, témakör, ismeret, feladat…) |
 | `node koino/koino.js pont <azonosító> <pont> [passziv]` | tudatpont-rendezés |
 | `node koino/koino.js javaslat <azonosító> "Új cím"` | szerkesztési javaslat |
 | `node koino/koino.js szavaz <javaslat> tamogat\|ellenez\|tartozkodik` | szavazat |
@@ -92,12 +94,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tizenhárom próba-fájl, **340 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tizenhárom próba-fájl, **346 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **102 fájl, 1331,5 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **107 fájl, 1387,4 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**

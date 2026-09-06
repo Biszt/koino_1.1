@@ -64,8 +64,31 @@ export function kartyaAdatta(k) {
     entitasSajatTudatpont: k.osszesPont ?? 0,
     hierarchikusOsszesPont: k.agazatiPont ?? 0,
 
+    // A kategória/gondolattípus kártya a szülőt a legfelső szinten olvassa.
+    szuloId: k.szulo ?? null,
+
     adatok: {
       cim: k.cim ?? '',
+
+      // ⭐⭐ A BESOROLÁS-KÁRTYÁK `nev`-et olvasnak, nem `cim`-et (5.4).
+      //
+      // ⚠️ A koinóban MINDEN entitásnak `cim`-e van — a kategóriának is az a neve. Ez
+      // szándékos: így az állapot-számítás, a rendezés és az egyezmény-végrehajtás
+      // változtatás nélkül működik rajtuk, nincs párhuzamos `nev` mező. A prototípus
+      // kártyái más szót használnak, tehát **itt fordítunk** — ez a fájl dolga.
+      nev: k.cim ?? '',
+      ikon: k.ikon ?? null,
+
+      // ⭐ FELOLDVA érkezik a programtól ({ azonosito, nev, ikon }), nem azonosítóként —
+      // a feloldás keresés az állapotban, tehát számítás, tehát a programé.
+      gondolatTipus: k.gondolatTipus ?? null,
+      kategoriak: k.kategoriak ?? [],
+
+      // ⏸️ „Hány gondolat használja ezt a kategóriát?" — a besorolás-kártyák mutatnák.
+      // Ma nincs meg: ez visszafelé mutató kérdés (ki hivatkozik rám?), amihez a
+      // szeletelt tárban külön mutató kellene. ⚠️ Nem találunk ki számot: a hiány
+      // látszódjon. *(A kereső-réteg kérdése — Szakasz 6.)*
+      hasznaloGondolatokSzama: null,
 
       // ⭐ A koino sima szöveget tárol; a megjelenítő ezt az alakot ismeri.
       // ⚠️ A LISTA NEM HOZZA a szöveget (9. szabály — lásd `js/allapot/pakli.js`), ezért

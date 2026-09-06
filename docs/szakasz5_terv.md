@@ -296,14 +296,26 @@ helye. *A „vékony lap" a SZÁMÍTÁSRÓL szól, nem az elnevezésekről.*
    végrehajtója — de azokat ma **egyetlen művelet sem tudja előállítani**.
 1. ✅ **A pakli-lekérdezés kérdezhető alakja** — *kész az 5.2-ben.* Ez volt az utolsó
    `betolt()`-alakú út; ha elrontottuk volna, a felület bebetonozza.
-2. ⛔ **A kategória és a gondolattípus nem létezik a P2P koinóban** — 10 végpont mögött
-   nincs esemény. Új műveletek kellenek.
-3. ⚠️ **A `PATCH` értelme tisztázandó** — közvetlen módosítás, vagy mindig javaslat-út (D27)?
-4. ⚠️ **A szavazat visszavonása** — kell-e külön művelet, vagy „az utolsó nyer" elég?
-5. ⚠️ **A meghívás visszavonása** — a D46 logikája szerint alighanem nincs ilyen.
+2. ✅ **A kategória és a gondolattípus** — *megépítve az 5.4-ben* (12. szakasz).
+3. ✅ **A `PATCH` értelme** — *eldőlt (5.4):* nincs közvetlen módosítás. A koinóban a
+   szerkesztés **javaslat → szavazás → egyezmény** (D27), és az egyezményt azóta rá is
+   vezetjük az entitásra. ⭐ A prototípus `PATCH`-ének tehát **nincs megfelelője, és nem is
+   lesz** — ez nem hiány, hanem a modell.
+4. ✅ **A szavazat visszavonása** — *eldőlt (5.4):* nem kell külön művelet. A meggondolást az
+   „utolsó nyer" fedi (a `szavazas` erre épül), a „jelen vagyok, de nem foglalok állást"
+   pedig a **`Tartozkodik`**. ⭐ Egy harmadik, „mégsem szavaztam" állapot csak a részvételi
+   arányt tenné kétértelművé.
+5. ✅ **A meghívás visszavonása** — *eldőlt (5.4):* nincs ilyen. A **D46** szerint a
+   tanúsítás **állítás a múltról**, azt nem lehet visszavonni — és a meghívás ugyanilyen
+   állítás („behívtam"). ⚠️ Amit vissza lehet vonni, az a **felhatalmazás**, mert az jog,
+   nem állítás — és az meg is van (`felhatalmazasVisszavonasa`).
 6. ⏸️ **A képek és fájlok helye** (`KepBlokk`, `FajlBlokk`) — a prototípusban szerver-mappa,
    a P2P-ben **eldöntetlen** (D3, tartalmi réteg). ⭐ *A pakli ezen fog először elakadni.*
-7. ⏸️ **A helyi kapu védelme** — origin-ellenőrzés + indításkor generált jelszó.
+7. ✅ **A helyi kapu védelme** — *megépítve az 5.1-ben*, öt őrrel.
+8. ⏸️ **„Hány gondolat használja ezt a kategóriát?"** — *új, az 5.4-ből.* A besorolás-kártya
+   mutatná (`hasznaloGondolatokSzama`), de ez **visszafelé mutató kérdés** (ki hivatkozik
+   rám?), amihez a szeletelt tárban külön mutató kellene. ⚠️ Ma `null`, vagyis **a hiány
+   látszik** — nem találunk ki számot. *A kereső-réteg kérdése (Szakasz 6).*
 
 ---
 
@@ -318,7 +330,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.1** | ✅ **A helyi kapu** — HTTP a `127.0.0.1`-en, négy őr, **23 önpróba** (2026-09-06) | ettől beszél a lap a programmal |
 | **5.2** | ✅ ⭐ **A kérdezhető pakli-lekérdezés** — rendezés + kurzor + darab, **23 önpróba** (2026-09-06) | ⛔ **a 9. szabály itt dőlt el** |
 | **5.3** | ✅ **A kártyák** — az örökölt `Kartya.js` + Gondolat/Javaslat/Egyezmény, **változatlanul** (2026-09-06) | ettől lett mit nézni |
-| **5.4** | **A hiányzó műveletek** — kategória, gondolattípus, és ami a 7. pontból eldől | a felület alatti lyukak betömése |
+| **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
 | **5.5** | **A modálok** — tudatpont, érték javaslat, javaslat, részletek | a teljes pakli |
 | **5.6** | **A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
 | **5.7** | **A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
@@ -386,6 +398,57 @@ A `koino/` **46 fájl / 915 KB → 102 fájl / 1331 KB** lett; ebből a `felulet
 408 KB**. ⭐ A **6. szabály** 2026-09-06 óta a program méretét **lágy** preferenciának
 tekinti (a kemény korlát az adat-csomagon van), tehát ez rendben van — de érdemes tudni,
 hogy a növekmény **majdnem teljes egészében örökölt, változatlan kód**.
+
+---
+
+## 12. ✅ AZ 5.4 ELKÉSZÜLT (2026-09-06) — a kategória és a gondolattípus
+
+A végpont-térkép 2. találata volt: *„a koinóban ez a két entitástípus nem létezik"* — tíz
+prototípus-végpont mögött nem volt esemény, pedig a domain-fogalom mindig megvolt
+(*a kategóriák és a gondolattípusok rendszerezik a gondolatokat*).
+
+**Mérve, végponttól végpontig:** a parancssorból létrehozott 🌲 Természet kategória és
+❓ Kérdés gondolattípus saját kártyaként jelenik meg, a hozzájuk sorolt gondolat kártyáján
+pedig **feloldva** látszik a két ikon — nem azonosítóként.
+
+### ⭐ Miért NEM új esemény-fajta
+
+A `GondolatLetrehozas` az **általános entitás-létrehozás**, és az `adat.tipus` különbözteti
+meg a fajtákat — ez a szerkezet a Szakasz 1 óta így van (`allapotSzamitas.js`:
+`adat.tipus ?? 'Gondolat'`). Új esemény-név bevezetése **minden meglévő tárat
+érvénytelenítene**, cserébe semmit nem adna. *Az esemény neve történeti; a típust az adat
+mondja meg.*
+
+### ⭐ Miért ÖNÁLLÓ ENTITÁS, és miért `cim` a neve
+
+**Önálló entitás**, mert így ugyanaz jár neki, mint bármely másnak: tudatpont, javaslat,
+küszöbök, egyezmény. ⭐ *Egy kategória neve is közösségi döntéssel változik — nem egy mező
+átírásával.* (És mivel az egyezmény-végrehajtás az 5.3 előtt elkészült, ez már működik is.)
+
+A név a **`cim` mezőbe** kerül, nem egy külön `nev`-be: a koinóban minden entitásnak `cim`-e
+van, így az állapot-számítás, a rendezés és az egyezmény-végrehajtás **változtatás nélkül**
+működik rajtuk. A prototípus kártyái `nev`-et olvasnak — azt a felület fordítja
+(`felulet/js/kartyaAdat.js`). *Nincs párhuzamos mező, amit külön kellene karbantartani.*
+
+### ⛔⛔ A max-3 korlát a SZÁMÍTÁSBAN van, nem a felületen
+
+A prototípus Mongoose-validátorral tartotta (*„Maximum 3 különböző kategória"*). A P2P
+koinóban **nincs szerver, ami visszautasítsa** — ezért a korlát a `szabalyok.js`-be került
+(`KATEGORIA_KORLAT`), a duplikátum-szűréssel együtt. *Amit a számítás nem ellenőriz, az nem
+szabály, csak illemtan.*
+
+⭐ Mérve: a szabály kikapcsolásával a hozzá tartozó próba bukik — mindhárom mechanizmusnál
+(korlát · ismétlés-szűrés · feloldás).
+
+### Ami ebből következett
+
+- **A `kartyaGyar.js` visszaállt a prototípus alakjára** — az 5.3-ban ideiglenesen kihagyott
+  két kártya visszakerült. *A jóslat bevált: tényleg két sor volt.*
+- **Az ikon lehet emoji.** Az örökölt kártya URL-nél képet rak ki, egyébként szöveget —
+  tehát nem kell hozzá feltöltés, ami a P2P-ben amúgy sincs megoldva (D3).
+- ⏸️ **Egy új nyitott pont** (a 7. lista 8. tétele): *„hány gondolat használja ezt a
+  kategóriát?"* — visszafelé mutató kérdés, amihez mutató kellene. Ma `null`, vagyis a hiány
+  **látszik**, nem találunk ki számot.
 
 ---
 
