@@ -1,0 +1,76 @@
+/* frontend/css/base/variables.css */
+
+/* Fix erdő téma – nincs sötét/világos váltás */
+
+:root {
+
+  /* --- FELÜLETEK --- */
+  --color-bg:               #5e7b55;
+  --color-surface:          #f7f3ec;
+  --color-surface-2:        #faf8f4;
+  --color-surface-offset:   #ede7de;
+  --color-surface-offset-2: #e6dfd5;
+  --color-surface-dynamic:  #ddd6cb;
+  --color-divider:          #d4cdc3;
+  --color-border:           #c8c0b5;
+
+  /* --- SZÖVEG --- */
+  --color-text:             #2b2318;
+  --color-text-muted:       #211306;
+  --color-text-faint:       #b5aca0;
+  --color-text-inverse:     #f7f3ec;
+
+  /* --- ELSŐDLEGES SZÍN (erdőzöld) --- */
+  --color-primary:          #2d5a27;
+  --color-primary-hover:    #234a1e;
+  --color-primary-active:   #1a3815;
+  --color-primary-highlight:#ccdec9;
+
+  /* --- HIBA --- */
+  --color-error:            #8c3a1e;
+  --color-error-highlight:  #e0cfc8;
+
+  /* --- BETŰTÍPUSOK --- */
+  --font-display: 'Zodiak', 'Georgia', serif;
+  --font-body:    'General Sans', 'Helvetica Neue', sans-serif;
+
+  /* --- FLUID BETŰMÉRET SKÁLA --- */
+  --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
+  --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
+  --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
+  --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
+  --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
+
+  /* --- 4PX SPACING --- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* --- LEKEREKÍTÉS --- */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-full: 9999px;
+
+  /* --- ÁTMENETEK --- */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- ÁRNYÉKOK (meleg, barna tónusú) --- */
+  --shadow-sm: 0 1px 2px rgba(43, 35, 24, 0.07);
+  --shadow-md: 0 4px 12px rgba(43, 35, 24, 0.10);
+  --shadow-lg: 0 12px 32px rgba(43, 35, 24, 0.14);
+
+  /* --- TARTALOMSZÉLESSÉGEK --- */
+  --content-narrow:  420px;
+  --content-default: 960px;
+  --content-wide:    1200px;
+}

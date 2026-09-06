@@ -1,0 +1,43 @@
+<!-- frontend/templates/kartya.html -->
+<div class="pakli-kartya" aria-selected="false">
+
+  <!-- Segéd lap: a szülő kártya lekerekített sarkát "tölti ki" felülről.
+       Csak akkor látható, ha a kártyán rajta van a pakli-kartya--gyerek-felette osztály.
+       Azért van a belső wrapperen kívül, hogy a border-radius ne hasson rá. -->
+  <div class="pakli-kartya__segedelap" aria-hidden="true"></div>
+
+  <!-- Belső wrapper: ez kapja az overflow: hidden + border-radius értékeket,
+       hogy a fejléc és body gondolat szépen le legyen kerekítve,
+       de a segéd lap érintetlen maradjon. -->
+  <div class="pakli-kartya__belso">
+
+    <!-- Fejléc: három vízszintes sáv (elválasztó vonalak nélkül).
+         Felső sáv = cím/név/megnevezés. Alsó két sáv = bal négyzet (hamburger)
+         + jobb oldali ikon-terület (ikon+szám blokkok két sorban, jobbra igazítva). -->
+    <div class="pakli-kartya__fejlec">
+
+      <!-- Felső sáv: cím-terület – típus-specifikus szöveg, leszármazott tölti fel -->
+      <div class="pakli-kartya__fejlec-cim">
+        <!-- leszármazott osztály tölti fel -->
+      </div>
+
+      <!-- Alsó rész: bal négyzet hamburger + jobb oldali ikon-terület -->
+      <div class="pakli-kartya__fejlec-also">
+        <div class="pakli-kartya__hamburger-kontener">
+          <!-- HamburgerMenu.js tölti fel -->
+        </div>
+        <div class="pakli-kartya__fejlec-ikonok">
+          <!-- típus-specifikus ikon+szám blokkok – leszármazott osztályok töltik fel -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Body: csak kiválasztott kártyán jelenik meg, hidden attribútummal indul -->
+    <div class="pakli-kartya__body" hidden>
+      <!-- típus-specifikus body gondolat – leszármazott osztályok töltik fel -->
+    </div>
+
+  </div><!-- /.pakli-kartya__belso -->
+
+</div><!-- /.pakli-kartya -->

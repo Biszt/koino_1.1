@@ -19,6 +19,7 @@
 > ✅ **Szakasz 4 — AZ IDENTITÁS: A 9/c TERV MEGÉPÜLVE (2026-09-06).**
 > `js/allapot/identitas.js` (a három kérdés: tag · tanúsíthat · 2. lépcsős) ·
 > `js/allapot/jelzesek.js` (a kontraszt-jelzés) · hat új művelet · **52 önpróba**
+> *(a fenti 217 a Szakasz 3 záró száma volt — **ma összesen 269**)*
 > *(2026-09-06: kód-átnézés — a horgony-szabály javítva, lásd a 4.5-öt a szakasz-tervben)*.
 > ⭐ **A kanonikus alakot nem kellett felbontani.**
 > ⛔ A **séta elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt) ·
@@ -113,33 +114,53 @@ hibát.
 
 ## 3. HOL TARTUNK VALÓJÁBAN — őszinte leltár
 
+*Frissítve: 2026-09-06. ⚠️ **Ez a szakasz a §4 táblázatának a részletezése — a kettő soha ne
+mondjon mást.** (Egyszer már megtörtént: a leltár 2026-08-31-i **jóslat** maradt, miközben a
+Szakasz 3 és 4 elkészült, és a §3 azt írta, „az identitás-réteg sehol nincs", miközben a §4
+két táblázattal lejjebb „megépítve". Aki szakaszt zár, ezt a szakaszt is vezesse át.)*
+
 ### ✅ Ami kész és megmarad
 
 | Mi | Állapot |
 |---|---|
 | **A domain-logika** — tudatpont, javaslat, szavazás, küszöbök, egyezmény mint **számítás** | ✅ kész, és **nem változik** |
 | **A szabály-réteg** (`szabalyok.js`), a determinizmus, az egész aritmetika | ✅ kész |
-| **A szállítás** — TCP, UDP, **pajzsfúrás CGNAT-on át**, kapunyitás, postaláda, helyi felfedezés, társ-lista | ✅ kész, **és érintetlen marad** |
-| 217 önpróba | ✅ |
+| **A szállítás** — TCP, UDP, **pajzsfúrás CGNAT-on át**, kapunyitás, postaláda, helyi felfedezés, társ-lista | ✅ kész, **és érintetlen maradt** |
+| **A szerkezet** (Szakasz 3) — kanonikus alak 4 mezővel, **kérdezhető tár-illesztő**, böngésző-lekérés | ✅ kész (2026-09-03) |
+| **Az identitás** (Szakasz 4) — `identitas.js`, `jelzesek.js`, hat művelet, két lépcső | ✅ kész (2026-09-06) |
+| **269 önpróba** (217 + 52) | ✅ |
 
-> ⭐ **A szállítás azért marad érintetlen, mert az 1. szabályt betartottuk.** A
-> `csere.js` sosem importált hálózati kódot, ezért az entitás-szintű átállás a
-> **logikát** írja át, nem a drótot. A legnehezebben megszerzett darab — hogy két
-> hétköznapi otthoni hálózat CGNAT mögül összeér — **megmarad.**
+> ⭐ **A szállítás azért maradt érintetlen, mert az 1. szabályt betartottuk.** A
+> `csere.js` sosem importált hálózati kódot, ezért az entitás-szintű bővítés a
+> **logikát** érintette, nem a drótot. A legnehezebben megszerzett darab — hogy két
+> hétköznapi otthoni hálózat CGNAT mögül összeér — **megmaradt.**
 
-### 🔧 Ami átalakul (nem vész el, de átíródik)
+### ✅ Ami átalakult — és mi lett belőle
 
-| Mi | Miért |
+*Ez a lista 2026-08-31-én még jóslat volt („ami átíródik"). A Szakasz 3 mind az ötöt
+lezárta, de **kettőt másképp**, mint ahogy vártuk — ezért maradt itt, mért számokkal.*
+
+| Mi | Mi lett belőle |
 |---|---|
-| `fajlTar.js` — a tár-**illesztés** | a `betolt()` mindent ad → ⛔ a 9. szabály elkapja |
-| `esemenyTar.js` — a mentési út | minden mentés végigolvassa a fájlt (mérve: **495 ms** 100k-nál) |
-| `csere.js` — a csere **logikája** | koino-szintű → **entitás-szintű** |
-| `vonal.js` — a **párbeszéd** (nem a foglalat) | az új üzenet-sorrend miatt |
-| `allapotSzamitas.js` — `agMeretSzamitasa` | négyzetes (mérve: **4,6 mp** 100k-nál) |
+| `fajlTar.js` — a tár-**illesztés** | ✅ **kérdezhető lett** (`esemeny` · `szerzoLanca` · `szeletEsemenyei` · `sorszamSzerint`). A `betolt()` megmaradt, de a hétköznapi műveletek közül **egy sem hívja** |
+| `esemenyTar.js` — a mentési út | ✅ **495 ms → 1,4 ms** (100k-nál); a kettősség- és elágazás-keresés O(1) |
+| `allapotSzamitas.js` — `agMeretSzamitasa` | ✅ **4 615 ms → 502 ms**; a rekurzió helyett iteráció — a körbe mutató szülő-lánc veszélye is megszűnt |
+| `csere.js` — a csere logikája | ⭐ **másképp:** nem íródott át entitás-szintűvé. A **rendes csere koino-szintű maradt**, és mellé jött az entitás-szintű **böngésző-lekérés** (`szeletHozatala`) |
+| `vonal.js` — a párbeszéd | ⭐ **másképp:** nem íródott át, hanem **visszafelé kompatibilisen bővült** (`SZELETKEREK` → `ESEMENY × N` → `KESZ`); a régi kliens sosem küld ilyet |
+
+> ⏸️ **És egy tétel szándékosan NEM készült el:** a **3.3 entitás-központú tár**. A 3.2 után
+> ez már **mélység, nem szerkezet** — a 9. szabály teljesül (a szerkezet engedi, a
+> megvalósítás egyszerű marad), tehát akkor jön, ha egy **mérés** megmondja, hogy kell.
 
 ### ❌ Ami még sehol nincs
 
-identitás-réteg · tartós mag · felület · kereső-réteg · pénz
+**felület** · **kereső-réteg** · **pénz** · a **tartós mag** tárolási fele (szeletelés,
+összegző Merkle — a `lancGyoker` jelentése rögzítve a **D63**-ban, a megvalósítás mérés
+alapján jön)
+
+> ⚠️ *Az „identitás-réteg" 2026-09-06-ig ebben a sorban állt — a Szakasz 4-gyel kikerült
+> innen. A **tartós mag** viszont csak félig: az azonosság-egyszeriség (D14 gerince) megvan,
+> a replikációja (D21) nincs.*
 
 ---
 
@@ -151,7 +172,7 @@ identitás-réteg · tartós mag · felület · kereső-réteg · pénz
 | **2** | **A szállítás** — hogy két készülék egyáltalán összeérjen | ✅ **kész** | ⭐ *(A neve eddig „csere" volt; a munka valójában a szállításról szólt, és az elkészült.)* |
 | **3** | **A SZERKEZET** — az esemény alakja, a tár illesztése, az elérés | ✅ **kész** (2026-09-03) | ettől lett a koino skálázható **szerkezetében** |
 | **4** | **AZ IDENTITÁS** — ⭐ **két lépcsős beléptetés**, kontraszt-jelzés, visszavonás, bemutatkozás ([terv](szakasz4_terv.md) 9/c) | ✅ **megépítve** (2026-09-06) | ettől lesz **hiteles** |
-| **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból | ❌ | ettől lesz **használható** |
+| **5** | **A FELÜLET** — a pakli és a belépő tér a prototípusból ([döntések](felulet_terv.md) · [végpont-térkép](szakasz5_terv.md)) | 🚧 **tervezés alatt** (2026-09-06): futtatókörnyezet ✅, hatókör ✅ (**teljes pakli**), végpont-térkép ✅ — kód még nincs | ettől lesz **használható** |
 | **6** | **A KERESŐ-RÉTEG** — elosztott, replikált mutató | ❌ | ⭐ **elhagyható** (2. szabály) |
 | **7** | **A PÉNZ** | ❌ | D11: csak bizonyított identitás után |
 
@@ -427,12 +448,17 @@ a koino méretével.
 | **SK10** | láthatósági küszöb a keresőn | Szakasz 6 |
 | **SK7** | DHT vagy bizalmi hálós útvonal | Szakasz 6, **méréssel** |
 | **—** | a **születéskori tanúsítás-öröklés** csak szétváláskor, vagy szándékos alapításnál is? | ⏸️ Csaba: *„maradhat későbbre"* — Szakasz 4 |
-| **—** | ⚠️ **mi a felület futtatókörnyezete?** A D29 szerint a koino önálló program, nem böngésző — de a felület a prototípus böngészős paklijából öröklődik. Helyi kiszolgáló + böngésző mint kliens (7. szabály engedi), vagy natív felület? | **Szakasz 5, eldöntetlen** |
+| **—** | ⚠️ **mi a felület futtatókörnyezete?** A D29 szerint a koino önálló program, nem böngésző — de a felület a prototípus böngészős paklijából öröklődik. Helyi kiszolgáló + böngésző mint kliens (7. szabály engedi), vagy natív felület? | ✅ **ELDŐLT (2026-09-06):** helyi kiszolgáló + böngésző mint kliens, **vékony lappal**. A natív elesett (mind függőség → 6. szabály kemény fele), a „lap futtatja a koinót" a D29 miatt. ⭐ A böngésző **cserélhető rajzoló**: a program nem importálja a felületet, és a CLI teljes út marad — [`felulet_terv.md`](felulet_terv.md) 3. pont |
 
 ---
 
 ## Napló
 
+- **2026-09-06** — ⭐ **A §3 „őszinte leltár" szinkronba hozva a §4-gyel** (a Szakasz 3 és 4
+  addig hiányzott belőle, és a §3 „az identitás-réteg sehol nincs"-et mondott, miközben a §4
+  „megépítve"-t). ⭐ **És eldőlt a Szakasz 5 futtatókörnyezete:** helyi kiszolgáló + böngésző
+  mint kliens, vékony lappal — a részletek és a két ellenőrizhető szabály a
+  [`felulet_terv.md`](felulet_terv.md)-ben.
 - **2026-08-31** — A dokumentum létrejött. Kiváltó ok: a két réteg, az entitás-központúság,
   az S1 mérés és a **kilencedik szabály**. A Szakasz 2 átnevezve („csere" → **„szállítás"**),
   mert a munka valójában arról szólt és elkészült; új **Szakasz 3: A SZERKEZET** ékelődött be

@@ -1,0 +1,311 @@
+// koino/meres/kapuProba.js — a HELYI KAPU önpróbája (Szakasz 5 / 5.1 lépés)
+
+// Mit bizonyít ez a lap?
+//
+// A kapu az egyetlen pont, ahol a koino **kifelé nyit a saját gépén** — és a kulcsfájl
+// (`koino-adat/kulcs.json`) néhány könyvtárnyira van tőle. Ezért itt a RONTÁS-PRÓBÁK a
+// fontosak: nem az érdekel, hogy egy jó kérés átmegy-e, hanem hogy a **rossz elakad-e**.
+//
+// ⭐ ÉS EGY PRÓBA, AMI NEM KÉRÉST MÉR: az utolsó a FORRÁST olvassa, és azt állítja, hogy a
+// program sehol nem importálja a felületet. Ez a `felulet_terv.md` 3. pontjának első
+// szabálya — így **ellenőrizhető szabály lett, nem ígéret**.
+
+import { mkdtemp, writeFile, mkdir, readFile, readdir } from 'node:fs/promises';
+import { tmpdir, networkInterfaces } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { request } from 'node:http';
+import { connect } from 'node:net';
+
+import { probaGyujtemeny } from './probaFuttato.js';
+import { kapuNyitasa, biztonsagosUt } from '../js/felulet/kapu.js';
+
+const { proba, futtatas } = probaGyujtemeny('A HELYI KAPU (Szakasz 5 / 5.1)');
+
+const JELSZO = 'proba-jelszo-csak-a-mereshez-1234567890';
+
+// ===================================
+// SEGÉDEK
+// ===================================
+
+/**
+ * Egy HTTP-kérés — ⚠️ `node:http`-vel, nem `fetch`-csel. Azért, mert a `fetch` NEM engedi
+ * beállítani a `Host` fejlécet (tiltott fejlécnév), a DNS-visszakötés próbájához viszont
+ * pont arra van szükség.
+ */
+function keres(port, utvonal, { fejlecek = {}, modszer = 'GET' } = {}) {
+  return new Promise((kesz, hiba) => {
+    const k = request(
+      { host: '127.0.0.1', port, path: utvonal, method: modszer, headers: fejlecek },
+      (v) => {
+        let test = '';
+        v.on('data', (d) => { test += d; });
+        v.on('end', () => kesz({ allapot: v.statusCode, test, fejlecek: v.headers }));
+      }
+    );
+    k.on('error', hiba);
+    k.end();
+  });
+}
+
+/** Eldobható mappa egy `index.html`-lel — és MELLETTE egy „kulcsfájl", amit el kell rejteni. */
+async function probaMappa() {
+  const alap = await mkdtemp(join(tmpdir(), 'koino-kapu-'));
+  const felulet = join(alap, 'felulet');
+  await mkdir(felulet);
+  await writeFile(join(felulet, 'index.html'), '<h1>koino</h1>', 'utf8');
+  await writeFile(join(felulet, 'kod.js'), 'export const a = 1;', 'utf8');
+  // ⚠️ EZ A LÉNYEG: a „kulcs" a felület mappáján KÍVÜL van, egy szinttel feljebb —
+  // pontosan úgy, ahogy élesben a `koino-adat/kulcs.json`.
+  await writeFile(join(alap, 'kulcs.json'), '{"privatKulcs":"EZ_A_SZEMELYAZONOSSAGOD"}', 'utf8');
+  return { alap, felulet };
+}
+
+/** Kaput nyit a próbához, lefuttatja a törzset, aztán MINDIG bezárja. */
+async function kapuval(torzs, { kezelo } = {}) {
+  const { alap, felulet } = await probaMappa();
+  // port: 0 → az operációs rendszer ad szabadot (nem ütközünk semmivel)
+  const kapu = await kapuNyitasa({ mappa: felulet, kezelo, port: 0, jelszo: JELSZO });
+  try {
+    return await torzs(kapu, { alap, felulet });
+  } finally {
+    await kapu.zar();
+  }
+}
+
+const jelszoval = { 'x-koino-kulcs': JELSZO };
+
+// ===================================
+// 1. AMI MŰKÖDIK
+// ===================================
+
+proba('A kapu kiszolgálja a lapot — jelszóval', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/', { fejlecek: jelszoval });
+  return v.allapot === 200 && v.test.includes('koino');
+}));
+
+proba('⭐ A jelszó a CÍMSORBÓL is jó — ezt tudod kézzel átadni', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/?kulcs=' + JELSZO);
+  return v.allapot === 200 && v.test.includes('koino');
+}));
+
+proba('A kiírt cím önmagában működik (jelszó benne)', () => kapuval(async (kapu) => {
+  const utvonal = kapu.cim.slice(kapu.cim.indexOf('/', 'http://'.length));
+  const v = await keres(kapu.port, utvonal);
+  return v.allapot === 200;
+}));
+
+proba('A fájltípus a kiterjesztésből jön (a .js nem text/plain)', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/kod.js', { fejlecek: jelszoval });
+  return v.allapot === 200 && v.fejlecek['content-type'].startsWith('text/javascript');
+}));
+
+proba('⭐ A /api/… a KÍVÜLRŐL kapott kezelőhöz megy', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en', { fejlecek: jelszoval });
+  return v.allapot === 200 && JSON.parse(v.test).en === 'ez-a-kezelo-valasza';
+}, {
+  kezelo: async ({ utvonal }) =>
+    utvonal === '/api/en' ? { adat: { en: 'ez-a-kezelo-valasza' } } : null
+}));
+
+proba('Az ismeretlen végpont 404 — a kezelő nemet mondhat', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/nincs-ilyen', { fejlecek: jelszoval });
+  return v.allapot === 404;
+}, { kezelo: async () => null }));
+
+// ===================================
+// 2. ⛔ RONTÁS-PRÓBÁK — a négy őr
+// ===================================
+
+// ⚠️⚠️ A JELSZÓ HATÁRA 2026-09-06-án AZ `/api/`-RA TOLÓDOTT (5.3) — és a próbák ezt
+// követik. Az ok: az örökölt kártyák sima `fetch('./html/…')`-lel töltik a sablonjukat, a
+// CSS `<link>`-kel jön; **egyik sem küld fejlécet**. A választás nem a kártyák átírása volt
+// (elveszne, hogy változatlanul jönnek) és nem is süti (az minden kéréssel automatikusan
+// menne — épp a CSRF-et hozná vissza), hanem: **a jelszó oda kerül, ahol az ADAT van.**
+//
+// ⭐ A kiszolgált fájlok a koino nyílt felülete — nincs bennük titok. Adatot csak az
+// `/api/`-n át lehet olvasni, és (később) csak ott lehet a kulcsommal írni.
+
+proba('⛔⛔ JELSZÓ NÉLKÜL az /api/ nem ad semmit', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en');
+  return v.allapot === 401 && !v.test.includes('ez-a-kezelo-valasza');
+}, { kezelo: async () => ({ adat: { en: 'ez-a-kezelo-valasza' } }) }));
+
+proba('⛔ ROSSZ JELSZÓVAL sem', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en',
+    { fejlecek: { 'x-koino-kulcs': 'nem-ez-a-jelszo-hanem-mas-1234' } });
+  return v.allapot === 401;
+}, { kezelo: async () => ({ adat: { en: 'x' } }) }));
+
+proba('⛔ A JÓ JELSZÓ ELEJE sem elég (nem előtag-egyezés)', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en', { fejlecek: { 'x-koino-kulcs': JELSZO.slice(0, 10) } });
+  return v.allapot === 401;
+}, { kezelo: async () => ({ adat: { en: 'x' } }) }));
+
+proba('⭐ A LAP jelszó nélkül is betölt — de üres váz marad (az /api/ elakad)',
+  () => kapuval(async (kapu) => {
+    const lap = await keres(kapu.port, '/');
+    const adat = await keres(kapu.port, '/api/en');
+    return lap.allapot === 200 && adat.allapot === 401;
+  }, { kezelo: async () => ({ adat: { en: 'x' } }) }));
+
+proba('⛔⛔ …ÉS A KULCSFÁJL EKKOR SEM érhető el (az útvonal-őr a jelszótól független)',
+  () => kapuval(async (kapu) => {
+    const v = await keres(kapu.port, '/%2e%2e%2fkulcs.json');   // jelszó NÉLKÜL
+    return v.allapot !== 200 && !v.test.includes('EZ_A_SZEMELYAZONOSSAGOD');
+  }));
+
+proba('⛔⛔ IDEGEN OLDAL fetch-e elakad, JÓ JELSZÓVAL IS (Origin-őr)', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en', {
+    fejlecek: { ...jelszoval, origin: 'https://tamado.example' }
+  });
+  return v.allapot === 403;
+}, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⭐ …de a SAJÁT lap Originje átmegy', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/en', {
+    fejlecek: { ...jelszoval, origin: 'http://127.0.0.1:' + kapu.port }
+  });
+  return v.allapot === 200;
+}, { kezelo: async () => ({ adat: { en: 'ok' } }) }));
+
+proba('⛔⛔ DNS-VISSZAKÖTÉS elakad: idegen domain a 127.0.0.1-re mutatva (Host-őr)',
+  () => kapuval(async (kapu) => {
+    // A támadó domainje a 127.0.0.1-re mutat, tehát az ő lapja AZONOS EREDETŰNEK látszik —
+    // az Origin-őr átengedné. A Host fejléc viszont az ő nevét hozza.
+    const v = await keres(kapu.port, '/api/en', {
+      fejlecek: { ...jelszoval, host: 'tamado.example:' + kapu.port }
+    });
+    return v.allapot === 403;
+  }, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+// ===================================
+// 3. ⛔⛔ AZ ÚTVONAL-ŐR — itt a kulcsfájl a tét
+// ===================================
+
+// ⚠️⚠️ EZ A CSOPORT EGYSZER MÁR VAK VOLT — és ez a megjegyzés azért van itt, hogy ne
+// legyen újra az.
+//
+// Elsőre a `/../kulcs.json`, a `/%2e%2e/kulcs.json` és a `/a/b/../../../kulcs.json`
+// alakokat mértük. Mind a három átment — **de akkor is átment, amikor az útvonal-őrt
+// KIKAPCSOLTUK.** Vagyis nem bizonyítottak semmit.
+//
+// ⭐ AZ OK, MÉRVE (2026-09-06): a WHATWG URL-elemző a `..` szegmenst — és a
+// százalék-kódolt változatait (`%2e%2e`, `.%2e`) — **maga normalizálja**, még mielőtt a
+// kódunk látná. Mind a három `/kulcs.json`-ra egyszerűsödött, ami a mappán BELÜL van, és
+// csak azért lett 404, mert ott nincs ilyen fájl. *A próba a mappa tartalmát mérte, nem az
+// őrt.*
+//
+// ⭐⭐ AMI VISZONT ÁTJUT AZ ELEMZŐN: a kódolt PER JEL. A `%2f` az `URL.pathname`-ben
+// kódolva marad (nem szegmens-határ), a mi `decodeURIComponent`-ünk viszont `/`-t csinál
+// belőle — így lesz a `/%2e%2e%2fkulcs.json`-ból `/../kulcs.json` a dekódolás UTÁN.
+// **Ezek az igazi vektorok, és ezeket fogja az őr.**
+//
+// 🔍 A módszer, ami ezt kihozta: nem a próbát néztük, hanem KIKAPCSOLTUK az őrt, és
+// megnéztük, bukik-e valami. Amelyik őrnél nem bukott semmi, ott a próba volt a hibás.
+
+proba('⛔⛔ A KULCSFÁJL nem szerezhető meg kódolt per-jellel (%2e%2e%2f)',
+  () => kapuval(async (kapu) => {
+    const v = await keres(kapu.port, '/%2e%2e%2fkulcs.json', { fejlecek: jelszoval });
+    return v.allapot !== 200 && !v.test.includes('EZ_A_SZEMELYAZONOSSAGOD');
+  }));
+
+proba('⛔⛔ …és a másik alakjával sem (..%2f)', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/..%2fkulcs.json', { fejlecek: jelszoval });
+  return v.allapot !== 200 && !v.test.includes('EZ_A_SZEMELYAZONOSSAGOD');
+}));
+
+proba('⛔ Mély kilógás kódolt per-jelekkel sem visz ki', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/a%2f..%2f..%2fkulcs.json', { fejlecek: jelszoval });
+  return v.allapot !== 200 && !v.test.includes('EZ_A_SZEMELYAZONOSSAGOD');
+}));
+
+proba('⭐ A sima ../ alakot már az URL-elemző elintézi (dokumentálva, nem az őr érdeme)',
+  () => kapuval(async (kapu) => {
+    const v = await keres(kapu.port, '/../kulcs.json', { fejlecek: jelszoval });
+    return v.allapot !== 200 && !v.test.includes('EZ_A_SZEMELYAZONOSSAGOD');
+  }));
+
+proba('⛔⛔ …és az ŐR MAGA is fogja, elemző nélkül (a függvényt közvetlenül mérve)', () => {
+  return biztonsagosUt('/alap/felulet', '/../kulcs.json') === null
+      && biztonsagosUt('/alap/felulet', '/a/b/../../../kulcs.json') === null;
+});
+
+proba('⛔ Az útvonal-őr a NULLA BÁJTOT is elutasítja', () => {
+  return biztonsagosUt('/alap/felulet', '/index.html\0.png') === null;
+});
+
+proba('⭐ Az útvonal-őr a RENDES utat átengedi', () => {
+  const ut = biztonsagosUt('/alap/felulet', '/js/kod.js');
+  return typeof ut === 'string' && ut.includes('kod.js');
+});
+
+proba('⛔ Az útvonal-őr a hibás kódolást is elutasítja (nem találgat)', () => {
+  return biztonsagosUt('/alap/felulet', '/%zz') === null;
+});
+
+// ===================================
+// 4. AZ ŐRÖK SORRENDJE ÉS A KÖTÉS
+// ===================================
+
+proba('⭐⭐ AZ ŐRÖK A KEZELŐ ELŐTT futnak — rossz jelszónál a kezelő meg sem hívódik',
+  () => kapuval(async (kapu) => {
+    const v = await keres(kapu.port, '/api/en', { fejlecek: { 'x-koino-kulcs': 'rossz-jelszo-ami-hosszu-eleg' } });
+    return v.allapot === 401;   // ha a kezelő lefutott volna, 500-at kapnánk
+  }, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
+
+proba('⭐⭐ CSAK A HUROK-CÍMRE kötünk — a helyi hálóról nem érhető el',
+  () => kapuval(async (kapu) => {
+    // Megkeressük a gép saját LAN-címét. Ha nincs (elszigetelt gép), nincs mit mérni.
+    const cimek = Object.values(networkInterfaces()).flat()
+      .filter((c) => c && c.family === 'IPv4' && !c.internal);
+    if (!cimek.length) return true;
+
+    // ⚠️ A próba CSAK akkor bukik, ha a kapcsolat TÉNYLEG létrejön. Az elutasítás és az
+    // időtúllépés egyaránt azt jelenti: nem érhető el — tehát ez sosem lehet szeszélyes.
+    const elerheto = await new Promise((kesz) => {
+      const f = connect({ host: cimek[0].address, port: kapu.port });
+      const vege = (eredmeny) => { f.destroy(); kesz(eredmeny); };
+      f.setTimeout(700, () => vege(false));
+      f.once('connect', () => vege(true));
+      f.once('error', () => vege(false));
+    });
+    return elerheto === false;
+  }));
+
+// ===================================
+// 5. ⭐ A RÉTEGZÉS — forrás-próba, nem kérés-próba
+// ===================================
+
+proba('⭐⭐⭐ A PROGRAM SEHOL NEM IMPORTÁLJA A FELÜLETET (felulet_terv 3. pont, 1. szabály)',
+  async () => {
+    const jsGyoker = join(dirname(fileURLToPath(import.meta.url)), '..', 'js');
+
+    /** Minden .js fájl a `js/` alatt, a `js/felulet/` KIVÉTELÉVEL. */
+    async function fajlok(mappa) {
+      const talalt = [];
+      for (const bejegyzes of await readdir(mappa, { withFileTypes: true })) {
+        const ut = join(mappa, bejegyzes.name);
+        if (bejegyzes.isDirectory()) {
+          if (bejegyzes.name === 'felulet') continue;      // ő maga a felület
+          talalt.push(...await fajlok(ut));
+        } else if (bejegyzes.name.endsWith('.js')) {
+          talalt.push(ut);
+        }
+      }
+      return talalt;
+    }
+
+    for (const ut of await fajlok(jsGyoker)) {
+      const forras = await readFile(ut, 'utf8');
+      // Csak a VALÓDI import-sorokat nézzük, nem a kommentekben említett neveket.
+      for (const sor of forras.split('\n')) {
+        const tiszta = sor.trim();
+        if (!tiszta.startsWith('import ')) continue;
+        if (tiszta.includes('felulet/')) return false;
+      }
+    }
+    return true;
+  });
+
+export default futtatas;

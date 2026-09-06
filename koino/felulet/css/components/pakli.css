@@ -1,0 +1,177 @@
+/* frontend/css/components/pakli.css */
+
+
+
+/* ---------------------------------------- */
+/* PAKLI WRAPPER                            */
+/* ---------------------------------------- */
+
+/* A kártyákat tartalmazó függőleges oszlop.
+   Flex column, fordított sorrendben kapja a
+   kártyákat a JS-től: gyökér legalul, levél legfelül. */
+.pakli-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* A kártyák a wrapper teljes szélességét kitöltik (width: 100%) —
+     a pakli a wrapper paddingjén belül a képernyő szélességét követi
+     (2026-07-19, Csaba döntése) */
+  align-items: center;
+  gap: 0;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-12) + var(--space-4));
+  flex: 1;       /* kitölti a szülő teljes magasságát */
+  min-height: 0; /* flex gyerekeknél min-height: 100% helyett ez kell */
+
+  /* ÉRINTÉSES TESTVÉR-HÚZÁS (2026-08-03, Csaba jelezte: mobilon nem működött).
+     Alapból (touch-action: auto) a böngésző MAGÁNAK foglalja le az oldalirányú
+     mozdulatot görgetésre: ilyenkor 'pointercancel'-t küld, és onnantól NEM kapunk
+     több pointermove/pointerup-ot → a húzásos testvérváltás sosem fejeződik be.
+     A 'pan-y' azt mondja: a FÜGGŐLEGES görgetés maradjon a böngészőé, a
+     VÍZSZINTES mozdulat viszont a miénk (Pakli.esemenyekBekotese kezeli).
+     A második sor progresszív ráadás: ahol támogatott, a csippentős nagyítás is
+     megmarad; ahol nem, ott érvénytelen → az első sor marad érvényben. */
+  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Nagyobb képernyőn csak a padding nő — szélesség-korlát NINCS,
+   a pakli a teljes képernyő-szélességet követi (2026-07-19, Csaba döntése;
+   a korábbi max-width: kártya + padding korlát megszűnt) */
+@media (min-width: 768px) {
+  .pakli-wrapper {
+    padding: var(--space-6);
+    padding-bottom: calc(var(--space-12) + var(--space-6));
+  }
+}
+
+
+
+/* ---------------------------------------- */
+/* BETÖLTÉSI ÁLLAPOT                        */
+/* ---------------------------------------- */
+
+/* Amíg az API hívás fut */
+.pakli-betoltes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+}
+
+/* Shimmer animáció a betöltés jelzőn */
+@keyframes pakli-shimmer {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 0.3; }
+}
+
+.pakli-betoltes__jelzo {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  animation: pakli-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Csökkentett mozgás – shimmer kikapcsolva */
+@media (prefers-reduced-motion: reduce) {
+  .pakli-betoltes__jelzo {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+
+
+/* ---------------------------------------- */
+/* HIBA ÁLLAPOT                             */
+/* ---------------------------------------- */
+
+.pakli-hiba {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.pakli-hiba__szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 36ch;
+}
+
+/* ---------------------------------------- */
+/* ÜRES ÁLLAPOT (friss adatbázis)           */
+/* ---------------------------------------- */
+
+.pakli-ures {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.pakli-ures__ikon {
+  font-size: 40px;
+}
+
+.pakli-ures__szoveg {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 36ch;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------- */
+/* PAKLI WRAPPER ANIMÁCIÓ                   */
+/* ---------------------------------------- */
+
+/* Beúszás jobbról – következő testvér esetén */
+@keyframes pakliBeuszasJobbrol {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Beúszás balról – előző testvér esetén */
+@keyframes pakliBeuszasBalrol {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Alapértelmezett: jobbról jön (következő) */
+.pakli-wrapper[data-irany="kovetkezo"] {
+  animation: pakliBeuszasJobbrol 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Balról jön (előző) */
+.pakli-wrapper[data-irany="elozo"] {
+  animation: pakliBeuszasBalrol 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Csökkentett mozgás – animáció kikapcsolva */
+@media (prefers-reduced-motion: reduce) {
+  .pakli-wrapper[data-irany="kovetkezo"],
+  .pakli-wrapper[data-irany="elozo"] {
+    animation: none;
+  }
+}

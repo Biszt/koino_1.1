@@ -1,4 +1,4 @@
-# koino — a P2P program
+﻿# koino — a P2P program
 
 *Ez a mappa a **Fázis 2** koinója: a készüléken futó, aláírt eseményekre épülő,
 központi szerver nélküli program.*
@@ -65,6 +65,19 @@ node koino/koino.js
 | `node koino/koino.js cimek` | milyen címeken érhető el ez a készülék |
 | `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a kapcsolatot (NAT-PMP / PCP / UPnP) |
 
+**A Szakasz 5 parancsa** — a felület:
+
+| Parancs | Mit csinál |
+|---|---|
+| `node koino/koino.js felulet [port]` | ⭐ **a helyi kapu** (5.1): kiszolgálja a felületet a `127.0.0.1`-en, és kiír egy címet, amiben benne van az **indításkor generált jelszó**. ⚠️ **NE keverd a `kapu` paranccsal** — az a ROUTERT kéri meg, hogy engedjen be kívülről; ez a saját gépeden nyit ajtót a böngészőnek |
+
+⛔ **Négy őr védi**, mert a kulcsod itt van a gépen: **csak a hurok-címre kötünk** ·
+**jelszó** · **Origin-ellenőrzés** (idegen weboldal `fetch`-e ne jusson be) ·
+**Host-ellenőrzés** (DNS-visszakötés ellen) — és egy ötödik a fájloknál: **útvonal-őr**,
+hogy a `koino-adat/kulcs.json` ne legyen elkérhető. ⚠️ *A jelszó NEM a koino biztonsági
+rétege (3. szabály): a kapu változatlanul az `esemenyMentese`. Egyetlen dolgot véd — hogy
+egy másik weboldal ne írhasson eseményt **a te kulcsoddal**.*
+
 Az azonosítókból elég a **rövidítés** (mint a gitben). Az adat helye alapból a
 `koino-adat/` mappa; máshová a `KOINO_ADAT` környezeti változóval tehető. A részletes
 napló `KOINO_NAPLO=1`-gyel kapcsolható be.
@@ -79,13 +92,24 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tíz próba-fájl, **269 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tizenhárom próba-fájl, **340 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **39 fájl, 816 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **102 fájl, 1331,5 KB**, nulla
 npm-csomag.)*
+
+⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
+került (6. szabály, `../CLAUDE.md`). A szám itt attól hasznos, hogy tudjuk, hol tartunk.*
+
+⚠️⚠️ **A méret mércéje: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino`
+ugyanerre a mappára **920 KB**-ot mond, mert lemezblokkokat számol, nem bájtokat. A kettő
+nem ellentmondás, csak két különböző kérdés — de „egy üzenetben elfér" csak az egyikre igaz:
+
+```bash
+find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f KB\n", n, s/1024}'
+```
 
 | Fájl | Mit bizonyít |
 |---|---|
@@ -98,6 +122,9 @@ npm-csomag.)*
 | `meres/csereProba.js` | a csere teljes: a hézag és a rejtett elágazás is kiderül, és a hálózat **nem kap engedékenyebb kaput** |
 | `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
 | `meres/identitasProba.js` | ⭐ **a KÉT LÉPCSŐ és a KONTRASZT-JELZÉS** — a lánc visszavezet az alapítóig, a kör nem szül jogot, a választótestület zárt, a hiány nem vád, és a jelzés a becsületesre néma, a megvettre megszólal |
+| `meres/kapuProba.js` | ⭐ **a helyi kapu** (5.1): a négy őr + az útvonal-őr — ⛔ a kulcsfájl nem szerezhető meg, idegen oldal nem jut be, és **a program sehol nem importálja a felületet** (forrás-próba) |
+| `meres/egyezmenyProba.js` | ⭐⭐ **a hurok bezárul**: az elfogadott szerkesztési egyezmény ÁTÍRJA az entitást — a folyamatban lévő és az általános (D27) nem; a sorrend a **lejárat** szerint dől el; ⛔ a kört csináló áthelyezés kimarad |
+| `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
 | `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
 
 ⚠️ **Két mérőeszköz NEM önpróba** — nem igen/nem-et adnak, hanem számokat, ezért a

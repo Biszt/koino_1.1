@@ -1,4 +1,4 @@
-// koino/meres/mind.js
+﻿// koino/meres/mind.js
 
 // Felelősség: az ÖSSZES önpróba lefuttatása egy paranccsal.
 //
@@ -23,6 +23,9 @@ import szabaly from './szabalyProba.js';
 import csere from './csereProba.js';
 import tarsak from './tarsakProba.js';
 import identitas from './identitasProba.js';
+import kapu from './kapuProba.js';
+import pakli from './pakliProba.js';
+import egyezmeny from './egyezmenyProba.js';
 import vizsga from './vizsgaProba.js';
 
 const PROBAK = [
@@ -35,6 +38,9 @@ const PROBAK = [
   { nev: 'csere', futtat: csere },
   { nev: 'tarsak', futtat: tarsak },
   { nev: 'identitas', futtat: identitas },
+  { nev: 'kapu', futtat: kapu },
+  { nev: 'pakli', futtat: pakli },
+  { nev: 'egyezmeny', futtat: egyezmeny },
   { nev: 'vizsga', futtat: vizsga }
 ];
 

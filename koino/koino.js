@@ -1,4 +1,4 @@
-// koino/koino.js
+﻿// koino/koino.js
 
 // Felelősség: a koino parancssori arca — ezzel lehet KÉZZEL végigjátszani a teljes kört
 // egyetlen készüléken, böngésző nélkül.
@@ -45,6 +45,8 @@
 // A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
 import { writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 import {
   esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, alapHely
@@ -55,6 +57,7 @@ import {
 import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
+import { egyezmenyekAlkalmazasa } from './js/allapot/egyezmenyVegrehajtas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
@@ -67,6 +70,8 @@ import {
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa
 } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
+import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
+import { pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja } from './js/allapot/pakli.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
@@ -130,6 +135,13 @@ async function kepetKeszit(napokMulva = 0) {
   const esemenyek = await koinoEsemenyei(tar, KOINO);
   const allapot = allapotSzamitasa(esemenyek);
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP);
+
+  // ⭐ A HARMADIK FÁZIS (2026-09-06): az elfogadott szerkesztési egyezményeket RÁVEZETJÜK az
+  // entitásokra. ⚠️ Eddig ez hiányzott: a javaslat elfogadódott, az egyezmény megszületett,
+  // a gondolat címe mégis a régi maradt. A `pakli.js` ugyanezt a három fázist futtatja —
+  // így a parancssor és a lap **ugyanazt** mondja.
+  egyezmenyekAlkalmazasa(allapot, javaslatok);
+
   return { esemenyek, allapot, javaslatok };
 }
 
@@ -1341,6 +1353,110 @@ try {
           + ' addig is minden művelet mehet tovább helyben.' + SZIN.vege);
       }
       kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
+      break;
+    }
+
+    // ===================================
+    // A FELÜLET (Szakasz 5 / 5.1) — a helyi kapu
+    // ===================================
+    //
+    // ⚠️ NE KEVERD a `kapu` paranccsal: az a ROUTERT kéri meg, hogy engedjen be kívülről;
+    // ez itt a SAJÁT GÉPEN nyit egy ajtót a böngészőnek. A kettőnek semmi köze egymáshoz.
+    //
+    // ⭐ A 4. SZABÁLY ITT LÁTSZIK: ez a parancs KÉNYELEM. Amit a lapon meg lehet csinálni,
+    // azt a parancssorból is meg lehet — ha a böngésző egyszer nem elérhető, a koino
+    // ugyanúgy működik, csak kevésbé kényelmesen.
+    case 'felulet': {
+      const port = parseInt(ervek[0], 10) || FELULET_PORT;
+
+      // ⭐ A KEZELŐ ITT SZÜLETIK, NEM A KAPUBAN. A kapu semmit nem tud a koinóról; a
+      // domain-tudás mind ezen az egy függvényen megy át. Ez tartja a nyilat
+      // „felület → program" irányba (felulet_terv 3. pont).
+      //
+      // ⏸️ MA KÉT VÉGPONT VAN (5.1: `en`, 5.2: `pakli`). A többi a `szakasz5_terv.md`
+      // térképe szerint jön — de a LÉNYEG már itt eldőlt: a lap SOSE kérhet „mindent".
+      //
+      // ⭐ A pakli-nézet a FOLYAMATRA szól, nem kérésre: egy lapozás így egyszer számol
+      // állapotot, nem oldalanként.
+      const pakliNezet = ujPakliNezet();
+
+      const kezelo = async ({ modszer, utvonal, kereses }) => {
+        if (modszer !== 'GET') return { allapot: 405, adat: { hiba: 'csak GET, egyelőre' } };
+
+        if (utvonal === '/api/en') {
+          // Ki vagyok? Ez O(1): a helyi kulcs, számítás nélkül.
+          return { adat: { azonosito: szerzo, rovid: rovidAzonosito(szerzo), koino: KOINO } };
+        }
+
+        // ⛔⛔ A PAKLI — EGY OLDAL, SOHA NEM AZ EGÉSZ (9. szabály).
+        // A `darab` felülről korlátos, a lapozás kurzoros, a szövegek nincsenek benne.
+        if (utvonal === '/api/pakli') {
+          const darab = parseInt(kereses.get('darab'), 10);
+          try {
+            return {
+              adat: await pakliOldal(tar, KOINO, {
+                rendezes: kereses.get('rendezes') ?? undefined,
+                irany: kereses.get('irany') ?? undefined,
+                kurzor: kereses.get('kurzor') ?? undefined,
+                darab: Number.isInteger(darab) ? darab : undefined,
+                szerzo,          // ⭐ hogy a kártya a SAJÁT tudatpontodat is mutathassa
+                nezet: pakliNezet
+              })
+            };
+          } catch (hiba) {
+            // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+        }
+
+        // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért
+        // a kártya külön kéri el — kártyánként, amikor tényleg kell.
+        if (utvonal.startsWith('/api/pakli/szoveg/')) {
+          const reszek = utvonal.split('/');            // ['', 'api', 'pakli', 'szoveg', tipus, id]
+          const azonosito = reszek[5];
+          if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás szövege?' } };
+
+          const talalat = await entitasSzovege(tar, KOINO, decodeURIComponent(azonosito),
+            { nezet: pakliNezet });
+          if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
+          return { adat: talalat };
+        }
+
+        // ⭐ EGY entitás tudatpont-képe — a kártya ebből dönti el, hogy a tudatpont-függő
+        // menüpontok elérhetők-e (aki nem tett rá pontot, nem tehet rá javaslatot sem).
+        if (utvonal.startsWith('/api/tudatpont/entitas/')) {
+          const reszek = utvonal.split('/');       // ['', 'api', 'tudatpont', 'entitas', tipus, id]
+          const azonosito = reszek[5];
+          if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
+
+          const talalat = await entitasTudatpontja(tar, KOINO, decodeURIComponent(azonosito),
+            { szerzo, nezet: pakliNezet });
+          if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
+          return { adat: talalat };
+        }
+
+        return null;   // nincs ilyen végpont → a kapu 404-et ad
+      };
+
+      const felulet = await kapuNyitasa({
+        // ⚠️ A program MELLETT lakik a felület, nem a futtatás helyén — különben másik
+        // mappából indítva üres lapot adnánk. (`fileURLToPath`: Windowson is helyes út.)
+        mappa: join(dirname(fileURLToPath(import.meta.url)), 'felulet'),
+        kezelo,
+        port
+      });
+
+      kiir(SZIN.vastag + 'A felület fut. Nyisd meg ezt a címet:' + SZIN.vege);
+      kiir('  ' + SZIN.jo + felulet.cim + SZIN.vege);
+      kiir(SZIN.halvany + 'A jelszó minden indításkor ÚJ, és sehol nincs eltárolva.' + SZIN.vege);
+      kiir(SZIN.halvany + 'Csak erről a gépről érhető el (127.0.0.1). Kilépés: Ctrl+C' + SZIN.vege);
+
+      process.on('SIGINT', async () => {
+        kiir('\nA felület bezárt.');
+        await felulet.zar();
+        process.exit(0);
+      });
+      await new Promise(() => {});   // fut, amíg meg nem szakítják
       break;
     }
 

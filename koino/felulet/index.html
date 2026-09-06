@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>koino</title>
+<link rel="stylesheet" href="./css/main.css">
+
+<!--
+  koino/felulet/index.html
+
+  A koino felülete — a Szakasz 5.3-tól az ÖRÖKÖLT kártyákkal.
+
+  ⭐ A kártyák (`js/components/kartya/`), a hamburger menü, a szövegmegjelenítő és a CSS
+  **változatlanul** a prototípusból jöttek (`frontend/`), amihez nem nyúltunk: az éles
+  rendszer onnan épül. Amit át kellett írni: az `apiHelper.js` (a helyi kapuhoz) és az
+  `authHelper.js` (a koinóban nincs bejelentkezés — D15).
+
+  ⏸️ Ami még hiányzik: a modálok (5.5) — helyükön helyőrző áll, ami megmondja, hogy még
+  nem készültek el —, a belépő tér (5.6) és a szövegszerkesztő (5.7).
+-->
+</head>
+<body>
+
+<header class="koino-fejlec">
+  <h1>koino</h1>
+  <span class="azonossag" id="azonossag"></span>
+</header>
+
+<div class="koino-sav">
+  <label for="rendezes">Rendezés</label>
+  <select id="rendezes">
+    <option value="sajatPont">🌟 Saját tudatpont</option>
+    <option value="agazatiPont">🌿 Ágazati tudatpont</option>
+    <option value="hierarchikus">🌳 Hierarchikus</option>
+    <option value="ido">🕒 Időrend</option>
+  </select>
+
+  <select id="irany">
+    <option value="csokkeno">csökkenő</option>
+    <option value="novekvo">növekvő</option>
+  </select>
+
+  <button type="button" id="frissites">Frissítés</button>
+</div>
+
+<p class="allapot" id="allapot">Betöltés…</p>
+
+<main id="pakli" class="pakli"></main>
+
+<div class="tovabb-sav">
+  <button type="button" id="tovabb" hidden>További kártyák</button>
+</div>
+
+<!-- A lap-szintű modálok konténere (a kártyák sajátot kapnak, kártyánként) -->
+<div id="modal-kontener"></div>
+
+<script type="module">
+import { PakliNezet } from './js/pakliNezet.js';
+
+const nezet = new PakliNezet(document.getElementById('pakli'), {
+  allapotElem: document.getElementById('allapot'),
+  tovabbGomb: document.getElementById('tovabb'),
+  azonossagElem: document.getElementById('azonossag')
+});
+
+document.getElementById('tovabb').addEventListener('click', () => nezet.kovetkezoOldal());
+document.getElementById('frissites').addEventListener('click', () => nezet.ujratoltes());
+
+document.getElementById('rendezes').addEventListener('change', (e) => {
+  nezet.rendezes = e.target.value;
+  nezet.ujratoltes();
+});
+document.getElementById('irany').addEventListener('change', (e) => {
+  nezet.irany = e.target.value;
+  nezet.ujratoltes();
+});
+
+await nezet.init();
+</script>
+
+</body>
+</html>

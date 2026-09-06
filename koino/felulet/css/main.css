@@ -1,0 +1,70 @@
+/* koino/felulet/css/main.css */
+
+/* ⭐ A PROTOTÍPUS CSS-e VÁLTOZATLANUL. Ez a fájl csak a betöltési sorrendet adja meg —
+   minden stílus-fájl bájtra ugyanaz, mint a `frontend/css/` alatt.
+
+   ⚠️ A prototípus `main.css`-e 35 fájlt importál; itt csak az van, ami a KÁRTYÁKHOZ kell.
+   A többi a modal-parkkal együtt jön (5.5). Egy hiányzó CSS néma törést okozna, ezért
+   érdemes tudni, mi van benne és mi nincs. */
+
+/* ===== ALAPOK ===== */
+@import './base/variables.css';
+@import './base/base.css';
+
+/* ===== A KÁRTYA-RÉTEG ===== */
+@import './components/pakli.css';
+@import './components/hamburgerMenu.css';
+@import './components/fejlesztesreVar.css';
+@import './components/szovegSzerkeszto.css';
+
+@import './components/kartya/kartya.css';
+@import './components/kartya/gondolatKartya.css';
+@import './components/kartya/javaslatKartya.css';
+@import './components/kartya/egyezmenyKartya.css';
+@import './components/kartya/kartyaFulsav.css';
+@import './components/kartya/szavazasFul.css';
+
+@import './components/szoveg/szovegMezoMegjelenito.css';
+@import './components/modals/modal.css';
+
+/* ===== A LAP VÁZA — csak ami a prototípusban a foOldal.css dolga volt =====
+   ⚠️ Szándékosan kevés: a főoldal vázát (fejléc, alsó sáv, menük) az 5.5/5.6 hozza. */
+
+.koino-fejlec {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  flex-wrap: wrap;
+  padding: .75rem 1rem .5rem;
+}
+
+.koino-fejlec h1 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.koino-fejlec .azonossag {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: .8rem;
+  opacity: .7;
+}
+
+.koino-sav {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  padding: 0 1rem .75rem;
+}
+
+.koino-sav label { font-size: .85rem; opacity: .8; }
+
+.allapot {
+  padding: .25rem 1rem .75rem;
+  font-size: .85rem;
+  opacity: .75;
+}
+
+.allapot.nem { color: #c1121f; opacity: 1; }
+
+.tovabb-sav { padding: 1rem; text-align: center; }
