@@ -330,8 +330,10 @@ function allitas(tipus) {
     // ⭐ A TANÚSÍTÁS BEMONDJA, mire támaszkodott (D42-minta, 9/c 4.5) — az alapító körnek
     // nincs mit bemondania, ezért ott elmarad.
     if (beallitas.felhatalmazasok) adat.felhatalmazasok = beallitas.felhatalmazasok;
+    // ⭐ A tanúsítás horgonya a SAJÁT szeletébe mutat (9/c 4.5) — a próbák maguk adják meg,
+    // hogy a rontás-eseteket is le lehessen írni.
     return allito.eember.tesz(tipus, adat, undefined,
-      { entitas: beallitas.entitas ?? rola.horgony });
+      { entitas: beallitas.entitas ?? rola.horgony, latott: beallitas.latott });
   };
 }
 const felhatalmazas = allitas('Felhatalmazas');
@@ -751,6 +753,80 @@ proba('⛔ RONTÁS: a MÁSRÓL szóló visszavonás nem törli az én felhatalma
   await ment(tar, await visszavonas(felhatalmazok[0], uj, { kit: masik.eember.szerzo }));
 
   return (await tanusithatE(tar, KOINO, uj.horgony)).igen === true;
+});
+
+
+// ===================================
+// ⭐⭐ A HORGONY (9/c 4.5 szigorítás) — „tudtad, mégis aláírtad"
+// ===================================
+//
+// ⚠️ CSABA KÉRDÉSE HOZTA ELŐ (2026-09-06): *„azt mondod, hogy aki már egyszer lehetett
+// tanúsító, azt a program mindig fogja engedni tanúsítani?"* — igen, addig így volt. A
+// bemondás önmagában nem elég: a régi felhatalmazásokra hivatkozva bárki tovább
+// tanúsíthatott volna.
+//
+// ⭐ A megoldás nem globális óra, hanem OKSÁGI bizonyíték: a tanúsítás lehorgonyoz a SAJÁT
+// szeletébe, és ezzel elköti, meddig látott. Ha a visszavonás ezen belülre esik, akkor
+// **bizonyíthatóan tudott róla** — és ez a saját aláírásából következik, nem a hiányból.
+
+proba('⛔⛔ A HORGONY ELKAPJA: aki LÁTTA a visszavonást, mégis rá hivatkozott', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // Az egyik felhatalmazó visszaveszi a megbízást.
+  const vissza = await visszavonas(felhatalmazok[0], uj);
+  await ment(tar, vissza);
+
+  // A tanúsító a VISSZAVONÁSRA horgonyoz — tehát elismeri, hogy látta —, és mégis a régi
+  // felhatalmazásokra hivatkozva tanúsít.
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [vissza.azonosito] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // Csak KETTŐ érvényes tanúsítója marad (a kettő alapító) — a harmadik kiesett.
+  const eredmeny = await lepcso2E(tar, KOINO, jelolt.horgony);
+  return eredmeny.igen === false && eredmeny.ellenorizheto === true;
+});
+
+proba('⭐ DE A BECSÜLETEST NEM BÜNTETI: aki a visszavonás ELŐTTI pontra horgonyzott, számít', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+  await ment(tar, await visszavonas(felhatalmazok[0], uj));
+
+  // A tanúsító a FELHATALMAZÁSRA horgonyzott — vagyis a visszavonás még nem jutott el
+  // hozzá. ⭐ Ez a normális eset egy P2P hálózaton, és nem szabad büntetni érte.
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [jegyek[0]] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  return (await lepcso2E(tar, KOINO, jelolt.horgony)).igen === true;
+});
+
+proba('⭐ A HORGONY CSAK ARRA A FELHATALMAZÓRA hat, akitől való', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(FELHATALMAZAS_KELL + 1);
+  const { uj, allitasok, felhatalmazok, jegyek } = await ujTanusito(kor);
+  await ment(tar, ...esemenyek, uj.esemeny, ...allitasok);
+
+  // A MÁSODIK felhatalmazó vonja vissza, de a horgony az ELSŐ eseményére mutat —
+  // abból nem következik, hogy a másodikét is látta.
+  await ment(tar, await visszavonas(felhatalmazok[1], uj));
+  const jelolt = await belepo();
+  await ment(tar, jelolt.esemeny,
+    await tanusitas(uj, jelolt, { felhatalmazasok: jegyek, latott: [jegyek[0]] }),
+    await tanusitas(kor[1], jelolt), await tanusitas(kor[2], jelolt));
+
+  // ⭐ A tanúsítás SZÁMÍT: a horgony az első felhatalmazóé, a visszavonás a másodiké —
+  // ebből nem következik, hogy a tanúsító látta. ⚠️ Ez a (b) döntés működés közben: a
+  // bemondott felhatalmazások érvényben maradnak, hacsak nem bizonyított, hogy tudott róla.
+  const eredmeny = await lepcso2E(tar, KOINO, jelolt.horgony);
+  return eredmeny.igen === true;
 });
 
 // ===================================

@@ -181,7 +181,12 @@ export async function ujEember(koino = 'proba') {
       utolsoSorszam = ++sorszam;
       const { entitas, entitasSorszam, adat: vegsoAdat } = burkolat(tipus, adat, beallitas);
       const e = await esemenyLetrehozasa(
-        { koino, tipus, adat: vegsoAdat, elozo, sorszam, ido, entitas, entitasSorszam, latott: [] },
+        {
+          koino, tipus, adat: vegsoAdat, elozo, sorszam, ido, entitas, entitasSorszam,
+          // ⭐ A horgony a hívótól jöhet — a 9/c 4.5 rontás-próbáihoz kell, hogy le lehessen
+          // írni azt az esetet is, amikor a tanúsító BIZONYÍTHATÓAN látta a visszavonást.
+          latott: beallitas?.latott ?? []
+        },
         kulcspar
       );
       elozo = e.azonosito;

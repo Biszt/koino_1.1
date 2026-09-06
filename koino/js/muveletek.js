@@ -43,6 +43,11 @@ export { TUDATPONT_KERET };
 // bizonyíthatóan „azután" keletkezzen — és minden további horgony ~50 bájt.
 const HORGONY_DARAB = 1;
 
+// ⭐ A TANÚSÍTÁSNÁL TÖBB HORGONY KELL. Nem az időt kötjük meg vele, hanem azt bizonyítjuk,
+// *kitől meddig láttam* a rólam szóló eseményeket — és ehhez több felhatalmazótól kell
+// friss pontot fognunk. Az ár ~50 bájt horgonyonként.
+const TANUSITAS_HORGONY = 5;
+
 // ===================================
 // SEGÉD: ESEMÉNY LÉTREHOZÁSA ÉS MENTÉSE
 // ===================================
@@ -74,8 +79,14 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
 
   // A horgony csak ott ér valamit, ahol van mihez kötni: a saját szeletét nyitó eseménynél
   // a szelet még üres.
-  const latott = (horgonyozzunk && entitas !== null)
-    ? await horgonyok(kornyezet.tar, kornyezet.koino, entitas, kornyezet.szerzo, HORGONY_DARAB)
+  //
+  // ⭐⭐ ÉS EGY MÁSODIK HORGONY-CÉL (9/c 4.5): a tanúsításnál NEM a másik szeletébe
+  // horgonyzunk, hanem a SAJÁTUNKBA — mert ott van az, amit bizonyítani kell: *meddig
+  // láttam a rólam szóló felhatalmazásokat és visszavonásokat.*
+  const horgonySzelet = beallitas.horgonySzelet ?? entitas;
+  const latott = (horgonyozzunk && horgonySzelet)
+    ? await horgonyok(kornyezet.tar, kornyezet.koino, horgonySzelet, kornyezet.szerzo,
+                      beallitas.horgonyDarab ?? HORGONY_DARAB)
     : [];
 
   const esemeny = await esemenyLetrehozasa(
@@ -191,7 +202,7 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok) {
  * ⚠️ A `kit` mező sem díszlet: enélkül egy idegen szeletébe tett esemény is beszámítana.
  * Az ellenőrzés összeveti a horgony szerzőjével.
  */
-function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }) {
+function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }, beallitas = {}) {
   if (typeof kit !== 'string' || typeof horgonya !== 'string') {
     throw new Error('Kell a másik fél kulcsa és a horgonya.');
   }
@@ -199,7 +210,8 @@ function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }) {
     throw new Error('Meg kell adni a SAJÁT horgonyodat is — enélkül a másik gép nem tudja '
       + 'ellenőrizni, hogy te magad jogosult vagy-e rá.');
   }
-  return esemenytTeszek(kornyezet, tipus, { kit, sajatBelepes }, { entitas: horgonya });
+  return esemenytTeszek(kornyezet, tipus, { kit, sajatBelepes },
+    { entitas: horgonya, horgonyozzunk: !!beallitas.horgonySzelet, ...beallitas });
 }
 
 /**
@@ -294,7 +306,18 @@ export async function tanusitas(kornyezet, adatok) {
   const felhatalmazasok = adatok.felhatalmazasok
     ?? await sajatFelhatalmazasaim(kornyezet, adatok.sajatBelepes);
 
-  return allitokRola(kornyezet, 'Tanusitas', { ...adatok, felhatalmazasok });
+  // ⭐⭐ ÉS A HORGONY A SAJÁT SZELETEMBE (9/c 4.5, Csaba kérdése nyomán).
+  //
+  // A bemondás önmagában nem elég: aki elveszítette a megbízását, a RÉGI felhatalmazásokra
+  // hivatkozva tovább tanúsíthatna. Ezért az esemény azt is elköti, **meddig láttam a
+  // rólam szóló eseményeket** — és ha egy visszavonás ezen belülre esik, akkor
+  // **bizonyíthatóan tudtam róla**, mégis aláírtam.
+  //
+  // ⚠️ Amit ez NEM zár le: aki szándékosan RÉGI horgonyt választ. ⭐ Azt a **buli** teszi
+  // feltűnővé (D61): ha mindenki minden körben horgonyoz, az elavult horgony nem „gyanús",
+  // hanem kilóg egy ritmusból, amit mindenki más tart.
+  return allitokRola(kornyezet, 'Tanusitas', { ...adatok, felhatalmazasok },
+    { horgonySzelet: adatok.sajatBelepes, horgonyDarab: TANUSITAS_HORGONY });
 }
 
 /**

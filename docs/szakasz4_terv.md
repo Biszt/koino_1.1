@@ -926,6 +926,44 @@ támadás kifizetődik, és sehova máshova.*
 > - a szabály-rétegben: **emberenként egy** felhatalmazás számít, és a szerzőnek
 >   2. lépcsősnek kell lennie.
 
+> ### ⭐⭐ D61 (Csaba, 2026-09-06) — A BULI MINT KÉZBESÍTÉSI IGAZOLÁS
+>
+> *Csaba két mondata hozta:* **„ne tervezzük a koinót lassúra"** — és: *„nem mondtam le
+> arról, hogy a buli alkalmával a közösség globálisan tudjon értékekben megegyezni, amit a
+> készülékek szabályként fogadnak el."*
+>
+> ⚠️ **Claude ellenvetése részben hibás volt.** Azt mondtam, hogy a visszavonást azért nem
+> lehet kemény szabállyá tenni, mert a lassú terjedés miatt nem tudjuk, ki mit kapott meg —
+> és hogy ezen egy globális óra sem segítene, mert *„nem az óra hiányzik, hanem a
+> kézbesítési igazolás"*. ⭐ **Az utolsó mondat igaz, de a következtetés nem: a buli
+> ÉPPEN kézbesítési igazolás.**
+>
+> **A szerkezet, amiben ez működik:**
+>
+> - a bulikörben mindenki **aláírja, meddig lát** — ez **saját, aláírt állítás**, nem kívülről
+>   ráerőltetett igazság;
+> - ha a visszavonás **belül van** azon, amit valaki elismert, hogy látott, akkor a későbbi
+>   ellentétes cselekedete **bizonyíthatóan hazug** → ⭐ **kemény szabály lehet**;
+> - aki offline volt, **nem írt alá semmit** → rá nem vonatkozik, és nem is büntetjük
+>   („nem ellenőrizhető", D19).
+>
+> ⛔ **AMI VISZONT NEM LEHET GLOBÁLIS: a teljes állapot ujjlenyomata.** A szeletelés
+> (Szakasz 3) óta egyetlen készülék sem ismer minden eseményt, tehát „a közösség
+> állapotának lenyomata" milliárdnál nem is számítható ki — arra építeni a 9. szabályt
+> sértené. ⭐ **De nem is kell:** az elismerés **szeletenkénti** (*„a saját szeletemet eddig
+> a pontig láttam"*), és pontosan az kell a tanúsításnál.
+>
+> ⭐⭐ **ÉS EZ AZ, AMI A HORGONYT ERŐSSÉ TESZI (9/c 4.5).** A horgony megmondja, meddig
+> láttam; a **buli teszi rendszeressé és frissé**. Az elavult horgony így nem „gyanús",
+> hanem **kilóg egy ritmusból, amit mindenki más tart** — egy kimaradás semmi, húsz kör
+> kimaradása tanúsítgatás közben ordít.
+>
+> ⚠️ **Egy őrrel, amit a D47 már megad:** az esemény fagyassza magába, melyik paraméter-
+> értékhez igazodott. Enélkül két készülék eltérő tudással MÁS szabályt alkalmazna ugyanarra
+> az eseményre — és az a D49/a-t törné.
+>
+> ⏳ **Megépítve: a horgony (4.5). A buli-elismerés eseménye még nincs — az a következő.**
+
 > ### ⭐ D60 (2026-09-06) — A FELHATALMAZÁS MEGBÍZÁS, NEM PONTSZÁM
 >
 > *Csaba felvetése: „az emberek a felhatalmazást valószínűleg becsületesség ismeretében

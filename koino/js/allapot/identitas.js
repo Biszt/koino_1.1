@@ -434,8 +434,35 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     return { igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true };
   }
 
+  // ⭐⭐ MEDDIG LÁTOTT A TANÚSÍTÓ? — a horgony kiolvasása (9/c 4.5)
+  //
+  // A tanúsítás `latott` mezője a tanúsító SAJÁT szeletéből fog pontokat. Ebből kiderül,
+  // kitől meddig látta a rólam… illetve a RÓLA szóló állításokat. Ha egy visszavonás ezen
+  // belülre esik, akkor **bizonyíthatóan tudott róla**, mégis aláírt.
+  //
+  // ⚠️ Ez nem globális óra, hanem OKSÁGI bizonyíték: nem azt mondja meg, mikor, hanem hogy
+  // MI UTÁN. És nem a hiányból következtet (D19), hanem a tanúsító SAJÁT elköteleződéséből.
+  const latottSorszam = new Map();   // szerző → a legnagyobb entitás-sorszám, amit látott
+  for (const azonosito of (tanusitasEsemeny?.latott ?? [])) {
+    const h = await esemenyLekerese(tar, azonosito);
+    nezet.olvasasok++;
+    if (!h || h.koino !== koino || h.entitas !== tanusitoHorgony) continue;
+    const eddigi = latottSorszam.get(h.szerzo) ?? 0;
+    latottSorszam.set(h.szerzo, Math.max(eddigi, h.entitasSorszam ?? 1));
+  }
+
+  // A visszavonások a tanúsító saját szeletében.
+  const visszavonasok = new Map();   // szerző → a visszavonás entitás-sorszáma
+  for (const e of await entitasEsemenyei(tar, koino, tanusitoHorgony)) {
+    if (e.tipus !== 'FelhatalmazasVisszavonasa') continue;
+    if (e.adat?.kit !== tanusito.szerzo) continue;
+    const eddigi = visszavonasok.get(e.szerzo) ?? Infinity;
+    visszavonasok.set(e.szerzo, Math.min(eddigi, e.entitasSorszam ?? 1));
+  }
+
   const adok = new Set();
   let hianyzott = false;
+  let tudottRola = false;
 
   for (const azonosito of bemondott) {
     if (typeof azonosito !== 'string') continue;
@@ -458,6 +485,19 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     if (ado.szerzo !== f.szerzo || ado.koino !== koino) continue;
 
     // ⚠️ ÉS A LÉNYEG: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt választótestület).
+    // ⛔⛔ ÉS A LÉNYEG: LÁTTA-E A VISSZAVONÁST, MIELŐTT ALÁÍRT?
+    //
+    // Ha ettől a felhatalmazótól van visszavonás, ÉS a tanúsító horgonya ugyanettől az
+    // embertől egy AZ UTÁNI (vagy ugyanolyan) pontot fog, akkor a tanúsító **tudta**, hogy
+    // a felhatalmazása már nem él — mégis rá hivatkozott. Ez nem hiány, hanem a saját
+    // aláírásából következő ellentmondás.
+    const visszavonva = visszavonasok.get(f.szerzo);
+    const latott = latottSorszam.get(f.szerzo);
+    if (visszavonva !== undefined && latott !== undefined && latott >= visszavonva) {
+      tudottRola = true;
+      continue;
+    }
+
     const allapota = await lepcso2E(tar, koino, adoHorgony, nezet);
     if (!allapota.ellenorizheto) hianyzott = true;
     if (allapota.igen) adok.add(f.szerzo);
@@ -468,11 +508,15 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
   }
   return {
     igen: false,
-    ok: hianyzott
-      ? 'nem ellenőrizhető: a bemondott felhatalmazások egy része hiányzik'
-      : adok.size + ' érvényes felhatalmazást mondott be a szükséges '
-        + nezet.felhatalmazasKell + ' helyett',
-    ellenorizheto: !hianyzott
+    ok: tudottRola
+      ? '⛔ visszavont felhatalmazásra hivatkozott, pedig a horgonya szerint tudott róla'
+      : hianyzott
+        ? 'nem ellenőrizhető: a bemondott felhatalmazások egy része hiányzik'
+        : adok.size + ' érvényes felhatalmazást mondott be a szükséges '
+          + nezet.felhatalmazasKell + ' helyett',
+    // ⭐ A bizonyított ellentmondás NEM „nem ellenőrizhető" — az a saját aláírásából
+    // következik, tehát végleges (a D42 mintája).
+    ellenorizheto: tudottRola ? true : !hianyzott
   };
 }
 
