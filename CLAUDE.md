@@ -80,7 +80,9 @@ prototípus kódjában, az API-útvonalakon (`/api/gondolat`, `/api/gondolatTipu
 `gondolatertekhisztograms`), a tárolt típus-értékekben (`entitasTipus: 'Gondolat'`) és a
 dokumentációban.
 
-⛔ **Öt helyen viszont a régi szó maradt, mert ott NEM a domain-fogalmat jelenti — ezeket ne írd át:**
+⭐ **A FELÜLETEN sehol nem jelenik meg a „tartalom" szó** — se felirat, se üzenet, se e-mail-sablon; amit az e-ember lát, az mindenhol **gondolat**. *(Ellenőrizve 2026-09-06.)*
+
+⛔ **Öt helyen viszont a régi szó maradt a kód belsejében, mert ott NEM a domain-fogalmat jelenti. ✅ Csaba megnézte és úgy döntött (2026-09-06), hogy maradjanak — ezeket ne írd át:**
 
 1. **A „tartalmaz" ige** (`tartalmazza`, `tartalmazó`) és a **„tartalék"** — más szavak.
 2. **A doboz belseje a felületen:** a `Modal` `{ cim, tartalom }` beállítása, a `.modal-tartalom` /
