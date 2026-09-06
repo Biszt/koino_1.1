@@ -20,6 +20,25 @@
 //
 // Használják: a program indulása és minden művelet.
 
+// ⚠️⚠️ A `bajtokBase64Url` ITT EGYSZER MÁR MÁSODPÉLDÁNYBAN ÉLT (2026-09-06-ig). Kívülről
+// ártalmatlannak látszott — nyolc sor, és bájtra ugyanaz, mint a `kanonikusAlak.js`-beli.
+// ⭐ De MINDKETTŐ AZONOSÍTÓT GYÁRT: ez itt a nyilvános kulcs nevét, az ott az esemény nevét.
+// Ha valaha egyetlen karakterben eltérnek, két gép NÉMÁN ad más nevet ugyanannak — pontosan
+// az a hibafajta, ami ellen a `kanonikusAlak.js` fejléce figyelmeztet. Egy kommentár erre
+// nem védelem, csak illemtan; ezért nem megjegyzés került ide, hanem az egyik példány
+// megszűnt. *Egy azonosító-számítás, egy helyen.*
+//
+// ⚠️ ÉS AMIÉRT EZ NEM SÉRTI A RÉTEGZÉST: a `kanonikusAlak.js` a fa LEGALSÓ modulja — ő maga
+// SEMMIT nem importál, és ugyanazokra a futtatókörnyezeti alapokra épül (`btoa`,
+// `TextEncoder`), mint ez a fájl. Nem az „esemény-réteget" hozzuk be, hanem a bájt-szintű
+// alapot, ami alatta van.
+
+import { bajtokBase64Url } from '../esemeny/kanonikusAlak.js';
+
+// ⭐ Változatlanul innen is elérhető marad: aki a kulcs-réteget használja, tipikusan a
+// kulcs olvasható alakja miatt nyúl a bájt-átalakítóhoz is. Egy megvalósítás, két kapu.
+export { bajtokBase64Url };
+
 // ===== ÁLLANDÓK =====
 
 // Az algoritmus neve — a WebCrypto Ed25519-nél se kulcsgeneráláshoz, se aláíráshoz nem
@@ -114,20 +133,6 @@ export async function kulcsparBiztositasa(tarolo) {
 export async function nyilvanosKulcsSzovegesen(nyilvanosKulcs) {
   const nyersBajtok = await crypto.subtle.exportKey('raw', nyilvanosKulcs);
   return bajtokBase64Url(new Uint8Array(nyersBajtok));
-}
-
-/**
- * Bájtok → base64url szöveg.
- * @param {Uint8Array} bajtok
- * @returns {string}
- */
-export function bajtokBase64Url(bajtok) {
-  let szoveg = '';
-  for (const b of bajtok) szoveg += String.fromCharCode(b);
-  return btoa(szoveg)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
 }
 
 /**
