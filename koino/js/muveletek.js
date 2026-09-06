@@ -325,6 +325,35 @@ export async function tanusitas(kornyezet, adatok) {
 }
 
 /**
+ * ⭐⭐ BEMUTATKOZÁS: „találkoztunk" (9/c 4.6, D62).
+ *
+ * Olcsóbb és sűrűbb állítás, mint a tanúsítás: nem azt mondja, hogy *„létező, külön ember"*,
+ * csak azt, hogy **találkoztunk**. Ettől a közösség társas hálója **láthatóvá** válik — és
+ * ez az, ami a kontraszt-jelzést élessé teszi.
+ *
+ * ⭐⭐ MIÉRT KELL KÖLCSÖNÖSNEK LENNIE? Mert **egyoldalúan bárki bármit állíthat**: ha az én
+ * puszta bejegyzésem számítana, a támadó **ingyen gyártana sűrűséget** — pont azt, amit a
+ * jelzés keres. Ezért egy bemutatkozás csak akkor számít, ha **mindkét fél aláírta**.
+ *
+ * ⭐ ÉS A KÖLCSÖNÖSSÉG ELLENŐRZÉSÉHEZ NEM KELL ÚJ LEKÉRDEZÉS. Két meglévő kérdés metszete:
+ *
+ *     „ki állította, hogy találkozott velem?"  → az én SZELETEM (3.2)
+ *     „kiről állítottam én ugyanezt?"          → a saját LÁNCOM
+ *
+ * ⚠️ EZ LÁNC-ESEMÉNY, NEM HELYI LISTA — *Csaba döntése (2026-09-06), a **D50** felülírása.*
+ * A korábbi „ne legyen belőle társas térkép" aggály **nem Csabáé volt**, hanem Claude-é; a
+ * **D55** (nyíltság) óta a bemutatkozás vállalt dolog. ⭐ És a szeletelés (Szakasz 3) miatt
+ * a lépték sem esik el: fejenként pár száz esemény a SAJÁT szeletben, és senki nem tárolja
+ * az egészet — csak azt kéred le, akire ránézel.
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adatok - { kit, horgonya, sajatBelepes }
+ */
+export function bemutatkozas(kornyezet, adatok) {
+  return allitokRola(kornyezet, 'Bemutatkozas', adatok);
+}
+
+/**
  * ⭐⭐ „ESZERINT LÁTOK" — a buli-elismerés (D61, Csaba ötlete).
  *
  * A bulikörben mindenki aláírja, **meddig lát** a saját szeletében: a `latott` mezőbe a

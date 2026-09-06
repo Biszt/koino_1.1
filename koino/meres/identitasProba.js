@@ -28,7 +28,9 @@ import {
   tagE, tanusithatE, lepcso2E, ujIdentitasNezet,
   TANUSITAS_KELL, FELHATALMAZAS_KELL
 } from '../js/allapot/identitas.js';
-import { onalloSzalak, tanusitoiTorlodas, megbizasAllapota } from '../js/allapot/jelzesek.js';
+import {
+  onalloSzalak, tanusitoiTorlodas, megbizasAllapota, bemutatkozasok
+} from '../js/allapot/jelzesek.js';
 
 const { proba, futtatas } = probaGyujtemeny('A tagság-számítás próbája');
 
@@ -919,6 +921,111 @@ proba('⭐ A JELZÉS MUTATJA, hányszor ismerte el, hogy lát (a ritmusból kil�
   const allapot = await megbizasAllapota(tar, KOINO, uj.horgony);
   const soha = await megbizasAllapota(tar, KOINO, kor[1].horgony);
   return allapot.elismeresek === 2 && soha.elismeresek === 0;
+});
+
+
+// ===================================
+// ⭐⭐ A BEMUTATKOZÁS (9/c 4.6, D62) — kölcsönösen, vagy sehogy
+// ===================================
+//
+// ⚠️ MIT KELL ITT BIZONYÍTANI? EGYETLEN dolgot, és az minden más fölött áll:
+//
+//   ⭐⭐ AZ EGYOLDALÚ BEMUTATKOZÁS NEM SZÁMÍT.
+//
+// Mert ha számítana, a támadó **ingyen gyártana sűrűséget** — pont azt, amit a
+// kontraszt-jelzés keres —, és az egész védelem elveszne. A kölcsönösség itt nem
+// udvariasság, hanem a jelzés létfeltétele.
+
+const bemutatkozik = allitas('Bemutatkozas');
+
+proba('⛔⛔ AZ EGYOLDALÚ bemutatkozás NEM számít — enélkül a támadó ingyen gyártana sűrűséget', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const hamis = await belepo();
+  const aldozat = await belepo();
+
+  // A hamis azonosság ötven emberrel „találkozik" — egyoldalúan.
+  const allitasok = [];
+  for (let i = 0; i < 5; i++) allitasok.push(await bemutatkozik(hamis, kor[i]));
+  allitasok.push(await bemutatkozik(hamis, aldozat));
+
+  await ment(tar, ...esemenyek, hamis.esemeny, aldozat.esemeny, ...allitasok);
+
+  // ⭐ A saját szeletében NULLA kölcsönös — hiába írta alá mind a hatot.
+  const sajat = await bemutatkozasok(tar, KOINO, hamis.horgony);
+  // És azoknál sem keletkezett szál, akikről állította.
+  const aldozate = await bemutatkozasok(tar, KOINO, aldozat.horgony);
+
+  return sajat.kolcsonos === 0 && sajat.egyoldalu === 6
+      && aldozate.kolcsonos === 0 && aldozate.egyoldalu === 1;
+});
+
+proba('⭐ A KÖLCSÖNÖS bemutatkozás számít — mindkét fél aláírta', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const anna = await belepo();
+
+  await ment(tar, ...esemenyek, anna.esemeny,
+    await bemutatkozik(kor[0], anna), await bemutatkozik(anna, kor[0]),
+    await bemutatkozik(kor[1], anna), await bemutatkozik(anna, kor[1]));
+
+  const eredmeny = await bemutatkozasok(tar, KOINO, anna.horgony);
+  return eredmeny.kolcsonos === 2 && eredmeny.egyoldalu === 0;
+});
+
+proba('⭐⭐ ÉS EZTŐL ÉLES A KONTRASZT: a valódi embernek sok szála lesz, a hamisnak nem', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const valodi = await belepo();
+  const hamis = await belepo();
+
+  const allitasok = [await meghivas(kor[0], valodi), await meghivas(kor[0], hamis)];
+  // A valódi ember mindenkivel KÖLCSÖNÖSEN bemutatkozik…
+  for (let i = 0; i < 5; i++) {
+    allitasok.push(await bemutatkozik(kor[i], valodi), await bemutatkozik(valodi, kor[i]));
+  }
+  // …a hamis azonosság csak EGYOLDALÚAN próbálkozik.
+  for (let i = 0; i < 5; i++) allitasok.push(await bemutatkozik(hamis, kor[i]));
+
+  await ment(tar, ...esemenyek, valodi.esemeny, hamis.esemeny, ...allitasok);
+
+  const v = await onalloSzalak(tar, KOINO, valodi.horgony);
+  const h = await onalloSzalak(tar, KOINO, hamis.horgony);
+
+  // ⭐ A lánc identitás-eseményein mindkettőnek 1 szála volna (egy meghívó) — a
+  // bemutatkozásokkal a valódié ötre nő, a hamisé marad egy.
+  return v.bemutatkozas === 5 && v.osszes === 5
+      && h.bemutatkozas === 0 && h.osszes === 1;
+});
+
+proba('⭐ AZ EGYOLDALÚ állítás MINDKÉT oldalon FÜGGŐBEN látszik — és egyik oldalon sem számít', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const anna = await belepo();
+  await ment(tar, ...esemenyek, anna.esemeny, await bemutatkozik(kor[0], anna));
+
+  // ⚠️ Ezt elsőre rosszul vártam: azt hittem, az állító oldalán semmi nem látszik. De a
+  // saját láncában ott van, amit ő állított — tehát nála is FÜGGŐBEN van, amíg Anna nem
+  // válaszol. ⭐ Ez helyes: az egyoldalúság mindkettőjük dolga, és egyik oldalon sem
+  // számít szálnak.
+  const annanal = await bemutatkozasok(tar, KOINO, anna.horgony);
+  const alapitonal = await bemutatkozasok(tar, KOINO, kor[0].horgony);
+  return annanal.kolcsonos === 0 && annanal.egyoldalu === 1
+      && alapitonal.kolcsonos === 0 && alapitonal.egyoldalu === 1;
+});
+
+proba('⛔ RONTÁS: a MÁSRÓL szóló bemutatkozás nem ad szálat annak, akinek a szeletébe került', async () => {
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const anna = await belepo();
+  const bela = await belepo();
+
+  // Az esemény Anna szeletébe kerül, de BÉLÁRÓL szól — nem számíthat Annának.
+  await ment(tar, ...esemenyek, anna.esemeny, bela.esemeny,
+    await bemutatkozik(kor[0], anna, { kit: bela.eember.szerzo }),
+    await bemutatkozik(anna, kor[0]));
+
+  return (await bemutatkozasok(tar, KOINO, anna.horgony)).kolcsonos === 0;
 });
 
 // ===================================

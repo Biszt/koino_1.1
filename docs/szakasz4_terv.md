@@ -1477,11 +1477,46 @@ Ezért a program dolga **az ÉSZREVÉTEL gyorsítása**, nem a döntés:
 - ⭐ mérve: a visszacsatolás **880 → 120**-ra viszi a kárt, és **egyetlen becsületes**
   tanúsító sem veszíti el a szerepét.
 
-### 4.6 A BEMUTATKOZÁS HELYI LISTÁJA + a készülék-felfedezés
+### 4.6 ✅ A BEMUTATKOZÁS — LÁNC-ESEMÉNY, KÖLCSÖNÖSEN (D62, 2026-09-06)
 
-`js/bemutatkozas/lista.js`, a [`tarsak.js`](../koino/js/csere/tarsak.js) mintájára: helyi,
-sosem terjed, elévül, eldobható (D50). Mellette a **készülék-felfedezés mint segéd** (D54):
-*javasol*, az ember *dönt*.
+> ⚠️ **A TERV EREDETI ALAKJA (helyi lista, sosem terjed) MEGVÁLTOZOTT.** Így szólt: *„a
+> `tarsak.js` mintájára: helyi, sosem terjed, elévül, eldobható (D50)."*
+
+⭐⭐ **Csaba felülírta (2026-09-06):** *„miért probléma a társas térkép? Nem mondtam olyat,
+hogy ezt el kell kerülni… épp az rajzolná ki a tengert."*
+
+⚠️ **És igaza volt abban is, hogy ez nem az ő korlátja volt:** a *„ne legyen belőle társas
+térkép"* aggály a **8/e-ben Claude-tól** származik, nem tőle — az ő álláspontja végig az
+volt, hogy ez **közlés, nem megfigyelés**, és a **D55** ezt meg is erősítette.
+
+> ### ⭐⭐ D62 (Csaba, 2026-09-06) — A BEMUTATKOZÁS LÁNC-ESEMÉNY, ÉS CSAK KÖLCSÖNÖSEN SZÁMÍT
+>
+> - **Lánc-esemény**, a másik szeletébe — mint minden más állítás (D52/D57/b mintája). Ezzel
+>   a **D50** hordozó-döntése **felülírva**.
+> - ⭐⭐ **KÖLCSÖNÖS, vagy sehogy.** Egyoldalúan bárki bármit állíthat — ha az számítana, a
+>   támadó **ingyen gyártana sűrűséget**, pont azt, amit a kontraszt-jelzés keres. Amíg a
+>   másik fél nem írta alá, az állítás **függőben** van, és **egyik oldalon sem** számít.
+> - ⭐ **A kölcsönösség ellenőrzéséhez nem kell új lekérdezés** — két meglévő kérdés
+>   metszete: *„ki állította, hogy találkozott velem?"* (a szeletem) és *„kiről állítottam
+>   én ugyanezt?"* (a saját láncom).
+>
+> #### ⚠️ Amit tisztázni kellett: a térkép nem menti meg a sétát
+>
+> A séta nem azért omlott össze (11.12–11.13), mert pontatlanul mintavételez, hanem mert sok
+> megtévesztettnél a hamisak **tényleg össze vannak kötve** a valódi világgal. Egy pontos
+> térkép ugyanazt mondaná. ⭐ **A valódi haszon máshol van:** a **kontraszt-jelzés** eddig a
+> lánc RITKA gráfján futott (1-2 szál egy frissen érkezettnek, 1 egy üres azonosságnak — és
+> épp ez volt a 9–25% téves megjelölés oka). A bemutatkozásokkal a valódi embernek **több
+> tucat** szála lesz, a hamisnak nem: **a különbség kinyílik.**
+>
+> #### ⭐ És a lépték nem esik el
+>
+> A **Szakasz 3 szeletelése** miatt fejenként pár száz esemény a **saját szeletben** (pár
+> száz kilobájt), és **senki nem tárolja az egészet** — csak azt kéred le, akire ránézel.
+> *Ez a szeletelés haszna, most először egy új adatfajtán.*
+
+Mellette a **készülék-felfedezés mint segéd** (D54): *javasol*, az ember *dönt* — ez teszi a
+műveleteket használhatóvá, mert egy 43 karakteres horgonyt senki nem gépel be.
 
 ### 4.7 ⏸️ A SÉTA — leminősítve, elhagyható
 

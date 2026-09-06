@@ -111,13 +111,94 @@ export async function onalloSzalak(tar, koino, horgony) {
     if (typeof kit === 'string' && kit !== en) tole.add(kit);
   }
 
+  // ----- ⭐⭐ ÉS A BEMUTATKOZÁSOK (D62) — ettől lesz éles a kontraszt -----
+  //
+  // A lánc identitás-eseményei RITKA gráfot adnak: egy frissen érkezett becsületes embernek
+  // 1-2 szála van, egy üres azonosságnak 1 — a kettő közel van egymáshoz, és épp ez volt a
+  // 9–25% téves megjelölés oka. ⭐ A bemutatkozásokkal a valódi embernek több TUCAT szála
+  // lesz, a hamisnak továbbra sem — a különbség kinyílik.
+  //
+  // ⚠️ CSAK A KÖLCSÖNÖS SZÁMÍT: egyoldalúan a támadó ingyen gyártana sűrűséget.
+  const talalkozok = new Set();
+  for (const e of szelet) {
+    if (e.tipus !== 'Bemutatkozas' || e.adat?.kit !== en || e.szerzo === en) continue;
+    talalkozok.add(e.szerzo);
+  }
+  const sajatTalalkozok = new Set();
+  for (const e of sajat) {
+    if (e.tipus !== 'Bemutatkozas') continue;
+    const kit = e.adat?.kit;
+    if (typeof kit === 'string' && kit !== en) sajatTalalkozok.add(kit);
+  }
+  const kolcsonos = new Set();
+  for (const a of talalkozok) if (sajatTalalkozok.has(a)) kolcsonos.add(a);
+
   const eredmeny = {
     rolam: rolam.size,
     tole: tole.size,
-    osszes: new Set([...rolam, ...tole]).size,
+    bemutatkozas: kolcsonos.size,
+    osszes: new Set([...rolam, ...tole, ...kolcsonos]).size,
     ellenorizheto: true
   };
   console.log('jelzesek.onalloSzalak - VÉGE', eredmeny);
+  return eredmeny;
+}
+
+// ===================================
+// 1/b. ⭐⭐ A BEMUTATKOZÁSOK — kölcsönösen, vagy sehogy (9/c 4.6, D62)
+// ===================================
+
+/**
+ * Hány KÖLCSÖNÖS bemutatkozása van ennek a személynek?
+ *
+ * ⭐⭐ A KÖLCSÖNÖSSÉG NEM FORMASÁG, HANEM A LÉNYEG. Egyoldalúan bárki bármit állíthat — ha az
+ * számítana, a támadó **ingyen gyártana sűrűséget**, pont azt, amit a jelzés keres. Ezért
+ * csak az számít, amit **mindkét fél aláírt**.
+ *
+ * ⭐ ÉS NEM KELL HOZZÁ ÚJ LEKÉRDEZÉS — két meglévő kérdés metszete:
+ *
+ *     „ki állította, hogy találkozott velem?"  → a SZELETEM (egy lekérdezés, 3.2)
+ *     „kiről állítottam én ugyanezt?"          → a saját LÁNCOM (a tevékenységemmel arányos)
+ *
+ * 🔍 *Egymilliárd e-embernél is ennyi: egy szelet és egy lánc.*
+ *
+ * @returns {Promise<{kolcsonos: number, egyoldalu: number, ellenorizheto: boolean}>}
+ */
+export async function bemutatkozasok(tar, koino, horgony) {
+  console.log('jelzesek.bemutatkozasok - KEZDÉS', { horgony });
+
+  const horgonyEsemeny = await esemenyLekerese(tar, horgony);
+  if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
+    return { kolcsonos: 0, egyoldalu: 0, ellenorizheto: false };
+  }
+  const en = horgonyEsemeny.szerzo;
+
+  // „Ki állította, hogy találkozott velem?" — a szeletemből.
+  const felem = new Set();
+  for (const e of await entitasEsemenyei(tar, koino, horgony)) {
+    if (e.tipus !== 'Bemutatkozas') continue;
+    if (e.adat?.kit !== en || e.szerzo === en) continue;
+    felem.add(e.szerzo);
+  }
+
+  // „Kiről állítottam én ugyanezt?" — a saját láncomból.
+  const tolem = new Set();
+  for (const e of (await sajatLancEsemenyei(tar, en))) {
+    if (e.koino !== koino || e.tipus !== 'Bemutatkozas') continue;
+    const kit = e.adat?.kit;
+    if (typeof kit === 'string' && kit !== en) tolem.add(kit);
+  }
+
+  // ⭐ A metszet a KÖLCSÖNÖS; ami csak az egyik oldalon van, az FÜGGŐBEN marad.
+  let kolcsonos = 0;
+  for (const a of felem) if (tolem.has(a)) kolcsonos++;
+
+  const eredmeny = {
+    kolcsonos,
+    egyoldalu: (felem.size - kolcsonos) + (tolem.size - kolcsonos),
+    ellenorizheto: true
+  };
+  console.log('jelzesek.bemutatkozasok - VÉGE', eredmeny);
   return eredmeny;
 }
 
