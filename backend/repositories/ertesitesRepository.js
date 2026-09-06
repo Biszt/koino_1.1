@@ -261,7 +261,7 @@ const torolE_EmberOsszes = async (eEmberId) => {
 
 // --- METÓDUS KEZDETE: torolEntitasOsszes ---
 // Egy entitáshoz kapcsolódó összes értesítés törlése
-// Pl. ha egy Tartalom vagy Kategoria törlődik, a rá vonatkozó értesítések is törlődnek
+// Pl. ha egy Gondolat vagy Kategoria törlődik, a rá vonatkozó értesítések is törlődnek
 // Paraméterek: entitasId, entitasTipus
 // Visszatérés: törlési eredmény
 const torolEntitasOsszes = async (entitasId, entitasTipus) => {

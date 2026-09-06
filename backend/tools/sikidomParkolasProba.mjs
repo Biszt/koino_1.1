@@ -203,7 +203,7 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
     return {
       id, szuloId, relR, relX: 0, relY: 0,
       pont: extra.pont ?? 1, letrehozva: extra.letrehozva ?? null,
-      entitasTipus: 'Tartalom', cim: id, vanGyereke: false,
+      entitasTipus: 'Gondolat', cim: id, vanGyereke: false,
       kategoriaIkonok: [], tipusIkon: null, javaslatTipus: null,
       gyerekIdk: [], varolista: [], visszaszedettek: [], varolistaRelTerulet: 0,
       helyezettIdk: new Set(), helyezettPont: 0,
@@ -241,14 +241,14 @@ naplo('===== A VALÓDI TÁR-MODUL (sikidomTar.js) =====');
   for (let szint = 0; szint <= MELYSEG - 1 - FOLYOSO_SZINT; szint++) {
     const os = tar.get(`sz${szint}`);
     for (let i = 0; i < 30; i++) {
-      os.varolista.push({ id: `${os.id}v${i}`, entitasTipus: 'Tartalom', cim: 'v',
+      os.varolista.push({ id: `${os.id}v${i}`, entitasTipus: 'Gondolat', cim: 'v',
         pont: 30 - i, relR: 0.01, letrehozva: null, vanGyereke: false });
     }
     for (let i = 0; i < 20; i++) {
-      os.visszaszedettek.push({ id: `${os.id}vsz${i}`, entitasTipus: 'Tartalom', cim: 'vsz',
+      os.visszaszedettek.push({ id: `${os.id}vsz${i}`, entitasTipus: 'Gondolat', cim: 'vsz',
         pont: 20 - i, relR: 0.03, letrehozva: null, vanGyereke: false });
     }
-    os.betoltesiPlafon = 25_000;      // mintha többször koppintottak volna a „további tartalmak"-ra
+    os.betoltesiPlafon = 25_000;      // mintha többször koppintottak volna a „további gondolatok"-ra
     os.tovabbiKert = true;
     os.osszesGyerekPont = 9_999;
     os.betoltottKuszob = 1.5;

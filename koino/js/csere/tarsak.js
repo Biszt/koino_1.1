@@ -246,7 +246,7 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
 // Csaba észrevétele indította el az egészet: *„böngészés közben az összes entitásnak
 // elérhetőnek kell lennie, vagy pontosan tudnunk kell, hogy az entitások hol vannak."*
 // A társ-lista erre nem elég: az azt mondja meg, **kikkel szoktunk beszélni**, nem azt,
-// hogy **kinél van egy adott tartalom**.
+// hogy **kinél van egy adott gondolat**.
 //
 // ⭐ ÉS A JAVASLAT IS CSABÁÉ: *„mi lenne, ha az entitások tárolnák a tudatpont-tulajdonosaik
 // címét, amit frissítünk?"* — Ez nem új gépezet: a `vonal.js` `CIMEK` üzenete ma

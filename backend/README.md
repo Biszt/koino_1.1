@@ -40,7 +40,7 @@ végigkövetett példa: [`../docs/architektura.md`](../docs/architektura.md).
 
 ## Mappák
 
-| Mappa | Tartalom |
+| Mappa | Gondolat |
 |-------|----------|
 | `routes/` | Express Router-ek, HTTP-útvonalak |
 | `controllers/` | Kérés-értelmezés, válasz-formázás, hibakódok |

@@ -15,22 +15,22 @@ const egyezmenySchema = new mongoose.Schema({
   // ----- JAVASLAT REFERENCIA -----
   // Az eredeti javaslat, amely végrehajtásra került
   javaslatId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Javaslat',                        // Referencia a Javaslat modellre
     required: true                          // Kötelező mező
     // Index: lásd egyezmenySchema.index({ javaslatId: 1 }) lejjebb
   },
 
-  // Melyik tartalom alatt van ez az egyezmény
+  // Melyik gondolat alatt van ez az egyezmény
   // A javaslat egyezmenyTarhelyId mezőjéből származik.
   // MÓDOSÍTVA: lehet null is — ha a tárhely entitást éppen a végrehajtott
   // (Törlés) javaslat törölte és annak nem volt szülője, az egyezmény
   // gyökér elemként jön létre (átveszi a törölt entitás helyét)
   szuloId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
-    refPath: 'szuloTipus',                  // Polimorf referencia (Tartalom/Kategoria/TartalomTipus)
+    refPath: 'szuloTipus',                  // Polimorf referencia (Gondolat/Kategoria/GondolatTipus)
     required: false,                        // Gyökér egyezménynél null
     default: null                           // Alapértelmezett: nincs szülő
     // Index: lásd egyezmenySchema.index({ szuloId: 1 }) lejjebb
@@ -39,16 +39,16 @@ const egyezmenySchema = new mongoose.Schema({
   // ----- SZÜLŐ TÍPUSA -----
   // Az egyezmény szülőjének típusa; gyökér egyezménynél null.
   szuloTipus: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,                                           // Szöveges típus
-    default: 'Tartalom',                                    // Alapértelmezett: Tartalom
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', null]  // Polimorf, vagy null (gyökér egyezmény)
+    default: 'Gondolat',                                    // Alapértelmezett: Gondolat
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus', null]  // Polimorf, vagy null (gyökér egyezmény)
   },
 
   // ----- JAVASLAT TÍPUSA (SNAPSHOT) -----
   // A javaslat típusa végrehajtáskor
   javaslatTipus: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,                                                          // Szöveges típus
     required: true,                                                        // Kötelező mező
     enum: ['Torles', 'Modositas', 'Egyesites', 'Athelyezes', 'Csomag'],   // Engedélyezett értékek
@@ -58,7 +58,7 @@ const egyezmenySchema = new mongoose.Schema({
   // ----- ÉRINTETT ENTITÁSOK (SNAPSHOT) -----
   // A javaslat által érintett entitások végrehajtáskor
   erintettEntitasok: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: [
       {
         // Entitás MongoDB ObjectId-ja
@@ -70,7 +70,7 @@ const egyezmenySchema = new mongoose.Schema({
         entitasTipus: {
           type: String,                                        // Szöveges típus
           required: true,                                      // Kötelező mező
-          enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],   // Engedélyezett típusok
+          enum: ['Gondolat', 'Kategoria', 'GondolatTipus'],   // Engedélyezett típusok
           trim: true
         },
         // Művelet típusa ezen az entitáson
@@ -96,7 +96,7 @@ const egyezmenySchema = new mongoose.Schema({
   // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
   // komponens egy JSON blokkokból álló tömböt tárol ide
   indoklas: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.Mixed,  // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: true,                     // Kötelező mező
     default: null                       // Alapértelmezett: null
@@ -134,7 +134,7 @@ const egyezmenySchema = new mongoose.Schema({
   // ----- SZAVAZÁSI SNAPSHOT ADATOK -----
   // Támogatók száma végrehajtáskor
   tamogatokSzama: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -143,7 +143,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Ellenzők száma végrehajtáskor
   ellenzokSzama: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -152,7 +152,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Tartózkodók száma végrehajtáskor
   tartozkodokSzama: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -161,7 +161,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Részvételi arány % végrehajtáskor
   reszveteliArany: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -171,7 +171,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Támogatottsági arány % végrehajtáskor (MODELL A – tiszta szelet: támogatók/szavazók)
   tamogatotsagiArany: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -181,7 +181,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Ellenzői arány % végrehajtáskor (MODELL A – tiszta szelet: ellenzők/szavazók)
   ellenzoiArany: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     min: 0,         // Minimum érték
     max: 100,       // Maximum érték
@@ -191,7 +191,7 @@ const egyezmenySchema = new mongoose.Schema({
   // Tartózkodói arány % végrehajtáskor (MODELL A – tiszta szelet: tartózkodók/szavazók)
   // A támogatottsági + ellenzői + tartózkodói arány együtt 100%.
   tartozkodoiArany: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     min: 0,         // Minimum érték
     max: 100,       // Maximum érték
@@ -200,7 +200,7 @@ const egyezmenySchema = new mongoose.Schema({
 
   // Bizonyossági mutató végrehajtáskor
   bizonyossagiMutato: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Number,   // Számérték típus
     required: true, // Kötelező mező
     min: 0,         // Minimum érték
@@ -213,9 +213,9 @@ const egyezmenySchema = new mongoose.Schema({
   egyesitesAdatok: {
     // Az új entitás típusa, ami létrejött az egyesítésből
     ujEntitasTipus: {
-      reteg: 'tartalom',  // H6
+      reteg: 'gondolat',  // H6
       type: String,                                        // Szöveges típus
-      enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],   // Engedélyezett típusok
+      enum: ['Gondolat', 'Kategoria', 'GondolatTipus'],   // Engedélyezett típusok
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
         return this.javaslatTipus === 'Egyesites';
@@ -223,7 +223,7 @@ const egyezmenySchema = new mongoose.Schema({
     },
     // Az új entitás ObjectId-ja
     ujEntitasId: {
-      reteg: 'tartalom',  // H6
+      reteg: 'gondolat',  // H6
       type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
@@ -233,7 +233,7 @@ const egyezmenySchema = new mongoose.Schema({
     // Az új entitás adatai (snapshot)
     // Object típus: befogadja a szövegszerkesztő JSON tömbjét is
     ujEntitasAdatok: {
-      reteg: 'tartalom',  // H6
+      reteg: 'gondolat',  // H6
       type: Object,   // Objektum típus - Mixed-ként viselkedik, bármit elfogad
       required: function() {
         // Csak akkor kötelező, ha Egyesites típus
@@ -242,7 +242,7 @@ const egyezmenySchema = new mongoose.Schema({
     },
     // Forrás entitások ID-i, amelyek egyesültek
     forrasEntitasok: {
-      reteg: 'tartalom',  // H6
+      reteg: 'gondolat',  // H6
       type: [mongoose.Schema.Types.ObjectId],   // MongoDB ObjectId tömb
       default: []                               // Alapértelmezett: üres tömb
     }
@@ -252,7 +252,7 @@ const egyezmenySchema = new mongoose.Schema({
   // Csak "Modositas" típusú javaslat esetén van kitöltve
   // Object típus: befogadja a szövegszerkesztő JSON tömbjét is (pl. szoveg mező módosításakor)
   modositasAdatok: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Object,   // Objektum típus - flexibilis struktúra
     default: {}     // Alapértelmezett: üres objektum
   }
@@ -289,11 +289,11 @@ egyezmenySchema.index({
 });
 
 // szuloId indexelése
-// Gyors keresés: "Egy tartalom alatti összes egyezmény"
+// Gyors keresés: "Egy gondolat alatti összes egyezmény"
 egyezmenySchema.index({ szuloId: 1 });
 
 // Compound index: szuloId + vegrehajtva
-// Gyors keresés: "Egy tartalom legújabb egyezményei"
+// Gyors keresés: "Egy gondolat legújabb egyezményei"
 egyezmenySchema.index({ szuloId: 1, vegrehajtva: -1 });
 // ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
 // A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
@@ -301,7 +301,7 @@ egyezmenySchema.index({ szuloId: 1, vegrehajtva: -1 });
 // nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
 // A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
 // Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
-egyezmenySchema.options.retegAlapertelmezes = 'tartalom';
+egyezmenySchema.options.retegAlapertelmezes = 'gondolat';
 
 // =====================================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA

@@ -15,7 +15,7 @@ const SZAVAZAT_FELIRATOK = {
 // SZAVAZÁS FÜL
 // =============================================
 // Felelősség:
-// - A Javaslat-kártya „Szavazás" fülének tartalma: a három szavazó gomb
+// - A Javaslat-kártya „Szavazás" fülének gondolata: a három szavazó gomb
 //   (Támogatom / Ellenzem / Tartózkodom) + visszavonás + állapot/hiba üzenet.
 // - A SzavazatModal-lal AZONOS backend-végpontokat használja:
 //     GET    javaslat/:id/sajat-szavazat   → a saját korábbi szavazat
@@ -52,7 +52,7 @@ class SzavazasFul {
     this.javaslatId  = beallitasok.javaslatId ?? null;
     this.token       = beallitasok.token ?? null;
     this.szavazhat   = beallitasok.szavazhat === true;
-    this.tiltvaIndok = beallitasok.tiltvaIndok ?? 'Ehhez az érintett tartalmon kell tudatpont.';
+    this.tiltvaIndok = beallitasok.tiltvaIndok ?? 'Ehhez az érintett gondolaton kell tudatpont.';
 
     // A szerveren tárolt saját szavazat ('Tamogat' | 'Ellenez' | 'Tartozkodik' | null)
     this.jelenlegiSzavazat = null;

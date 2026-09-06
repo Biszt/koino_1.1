@@ -5,7 +5,7 @@
 const mongoose = require('mongoose');
 
 // ===== TUDATPONT ALLOKÁCIÓ SÉMA DEFINIÁLÁSA =====
-// Ez a séma tárolja, hogy egy entitásra (tartalom/kategória/típus/javaslat/egyezmény)
+// Ez a séma tárolja, hogy egy entitásra (gondolat/kategória/típus/javaslat/egyezmény)
 // összesen mennyi tudatpont van allokálva
 const tudatpontAllokaciSchema = new mongoose.Schema({
 
@@ -19,7 +19,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
   },
 
   // ----- ENTITÁS TÍPUS -----
-  // Milyen típusú az entitás (tartalom, kategória, stb.)
+  // Milyen típusú az entitás (gondolat, kategória, stb.)
   // Az 'Egyezmeny' 2026-08-25 óta szerepel itt — ugyanaz a hiány, mint a
   // tudatpontHozzarendeles-nél: a rendszer már írt ilyen sorokat, a séma nem tudott róluk.
   // A három tudatpont-modell enumja mostantól egységes.
@@ -27,7 +27,7 @@ const tudatpontAllokaciSchema = new mongoose.Schema({
     reteg: 'szamitott',  // H6
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
     trim: true                             // Levágja a felesleges szóközöket
   },
 
@@ -96,7 +96,7 @@ tudatpontAllokaciSchema.index(
 );
 
 // Összes pont indexelése - csökkenő sorrend
-// Használat: "Top 100 legnépszerűbb tartalom" rangsorolás gyors lekérdezéséhez
+// Használat: "Top 100 legnépszerűbb gondolat" rangsorolás gyors lekérdezéséhez
 tudatpontAllokaciSchema.index({ osszesPont: -1 });
 
 // Entitás típus indexelése

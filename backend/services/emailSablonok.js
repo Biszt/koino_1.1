@@ -5,7 +5,7 @@
 // =============================================
 //
 // Felelősség: minden kimenő levél SZÖVEGE itt készül el. A küldést nem ez végzi
-// (arra való az emailKuldoService), csak a tartalmat állítja elő két alakban:
+// (arra való az emailKuldoService), csak a gondolatot állítja elő két alakban:
 //   - `szoveg`: sima szöveg. EZ A FONTOSABB — sok levelezőprogram (és a szűrők) ezt
 //               olvassák, és mindig megjelenik, akkor is, ha a HTML nem töltődik be.
 //   - `html`:   egyszerű, INLINE stílusozott HTML. A levelezőkliensek nem ismerik a
@@ -47,7 +47,7 @@ const LAB_SZOVEGEK = {
 
   proba:
     'Ez egy fejlesztői próbalevél a koino levélküldésének ellenőrzésére. ' +
-    'E-embereknek szóló tartalmat nem hordoz.',
+    'E-embereknek szóló gondolatot nem hordoz.',
 };
 
 // ===== SEGÉD: HTML-BE KERÜLŐ SZÖVEG BIZTONSÁGOSSÁ TÉTELE =====
@@ -219,7 +219,7 @@ const ERTESITES_TIPUS_SZOVEG = {
   szavazatErkezett:  'Szavazat érkezett',
   szavazasiHatarido: 'Szavazási határidő közeleg',
   tudatpontValtozas: 'Tudatpont-változás',
-  ujGyerekEntitas:   'Új tartalom jött létre',
+  ujGyerekEntitas:   'Új gondolat jött létre',
   kuszobValtozas:    'Küszöbváltozás',
 };
 

@@ -432,11 +432,11 @@ class RegiPakolasTesztOldal {
   }
 
   _blokk(cim, sorok, extraOsztaly = '') {
-    const tartalom = sorok
+    const gondolat = sorok
       .map(([nev, ertek]) => `<div class="regi-szam__sor"><span>${nev}</span><code>${ertek}</code></div>`)
       .join('');
     return `<div class="regi-szam__blokk ${extraOsztaly}">
-      <div class="regi-szam__cim">${cim}</div>${tartalom}
+      <div class="regi-szam__cim">${cim}</div>${gondolat}
     </div>`;
   }
 

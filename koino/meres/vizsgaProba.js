@@ -79,7 +79,7 @@ async function csereDroton(egyikTar, masikTar) {
 // A TELJES ESET — egy koino teljes köre
 // ===================================
 //
-// Minden esemény-fajta szerepel benne, amit a Szakasz 1 ismer: koino, tartalom,
+// Minden esemény-fajta szerepel benne, amit a Szakasz 1 ismer: koino, gondolat,
 // tudatpont-rendezés, érték javaslat, javaslat, szavazat. Ha a vizsga ezen átmegy, akkor
 // nem egy leegyszerűsített esetre megy át.
 
@@ -92,20 +92,20 @@ async function teljesEset() {
   esemenyek.push(await anna.tesz('KoinoLetrehozas',
     { nev: 'Vizsga koino', leiras: 'a Szakasz 2 vizsgájához' }, KEZDET));
 
-  // ----- KÉT TARTALOM, KÉT SZERZŐTŐL -----
-  const elso = await anna.tesz('TartalomLetrehozas',
-    { cim: 'Anna tartalma', szoveg: 'az A gépen', meret: 120 }, KEZDET);
+  // ----- KÉT GONDOLAT, KÉT SZERZŐTŐL -----
+  const elso = await anna.tesz('GondolatLetrehozas',
+    { cim: 'Anna gondolata', szoveg: 'az A gépen', meret: 120 }, KEZDET);
   esemenyek.push(elso);
   esemenyek.push(await anna.tesz('TudatpontRendezes',
     { entitas: elso.azonosito, pont: 300, szerep: 'aktiv' }, KEZDET));
 
-  const masodik = await bela.tesz('TartalomLetrehozas',
-    { cim: 'Béla tartalma', szoveg: 'a B gépen', meret: 80 }, KEZDET);
+  const masodik = await bela.tesz('GondolatLetrehozas',
+    { cim: 'Béla gondolata', szoveg: 'a B gépen', meret: 80 }, KEZDET);
   esemenyek.push(masodik);
   esemenyek.push(await bela.tesz('TudatpontRendezes',
     { entitas: masodik.azonosito, pont: 200, szerep: 'aktiv' }, KEZDET));
 
-  // ----- MINDKETTEN AZ ELSŐ TARTALOMRA IS TESZNEK PONTOT -----
+  // ----- MINDKETTEN AZ ELSŐ GONDOLATRA IS TESZNEK PONTOT -----
   esemenyek.push(await bela.tesz('TudatpontRendezes',
     { entitas: elso.azonosito, pont: 50, szerep: 'aktiv' }, KEZDET));
   esemenyek.push(await cili.tesz('TudatpontRendezes',
@@ -125,7 +125,7 @@ async function teljesEset() {
   // ----- JAVASLAT ÉS SZAVAZATOK -----
   const javaslat = await anna.tesz('Javaslat', {
     fajta: 'szerkesztesi', erintett: elso.azonosito, muvelet: 'Modositas',
-    valtozas: { cim: 'Anna javított tartalma' }, indoklas: 'Pontosabb így.'
+    valtozas: { cim: 'Anna javított gondolata' }, indoklas: 'Pontosabb így.'
   }, KEZDET + 1000);
   esemenyek.push(javaslat);
 
@@ -383,7 +383,7 @@ proba('⭐ A postaláda TOVÁBBAD olyat is, amiről ő maga nem tud semmit', asy
   const anna = await ujEember(KOINO);
   const esemenyek = [];
   for (let i = 1; i <= 3; i++) {
-    esemenyek.push(await anna.tesz('TartalomLetrehozas', { cim: 'T' + i, meret: 10 }, KEZDET));
+    esemenyek.push(await anna.tesz('GondolatLetrehozas', { cim: 'T' + i, meret: 10 }, KEZDET));
   }
 
   const annaTar = await ujTar(); await ment(annaTar, esemenyek);
@@ -407,7 +407,7 @@ proba('⭐ A postaláda NEM kap engedékenyebb kaput: a hamisítottat nem adja t
   // hamisítványt, akkor a „bizalom az aláírásban van, nem a csatornában" (D32) elbukna —
   // és a postaláda-szerep épp azt tenné veszélyessé, amit olcsóvá tesz.
   const anna = await ujEember(KOINO);
-  const jo = await anna.tesz('TartalomLetrehozas', { cim: 'Igazi', meret: 10 }, KEZDET);
+  const jo = await anna.tesz('GondolatLetrehozas', { cim: 'Igazi', meret: 10 }, KEZDET);
   const hamis = { ...jo, adat: { ...jo.adat, cim: 'Átírva' } };   // az aláírás már nem passzol
 
   const annaTar = await ujTar(); await ment(annaTar, [jo]);

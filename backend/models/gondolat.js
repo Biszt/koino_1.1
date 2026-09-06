@@ -1,4 +1,4 @@
-// backend/models/tartalom.js
+// backend/models/gondolat.js
 
 // ===== MONGOOSE IMPORTÁLÁSA =====
 // Mongoose: MongoDB adatbázis kezelésére szolgáló library
@@ -10,43 +10,43 @@ const szerkesztoResz = require('./szerkesztoResz');
 // A különválás-elem közös al-sémája (testverId + agSzerep + forrás-javaslat/egyezmény)
 const kulonvalasResz = require('./kulonvalasResz');
 
-// ===== TARTALOM SÉMA DEFINIÁLÁSA =====
-// A Schema meghatározza a tartalom adatszerkezetét és validációs szabályokat
-const tartalomSchema = new mongoose.Schema({
+// ===== GONDOLAT SÉMA DEFINIÁLÁSA =====
+// A Schema meghatározza a gondolat adatszerkezetét és validációs szabályokat
+const gondolatSchema = new mongoose.Schema({
 
 // ----- CÍM MEZŐ -----
-// A tartalom címe (kötelező)
+// A gondolat címe (kötelező)
 cim: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: String,       // Szöveges típus
     required: true,     // Kötelező mező
     trim: true          // Levágja a felesleges szóközöket elejéről és végéről
 },
 
 // ----- SZÖVEG MEZŐ -----
-// A tartalom gazdag szöveges tartalma (opcionális)
+// A gondolat gazdag szöveges gondolata (opcionális)
 // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
 // komponens egy JSON blokkokból álló tömböt tárol ide
 szoveg: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.Mixed, // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: false,                   // Nem kötelező mező
     default: null                      // Alapértelmezett érték: null (üres string helyett)
 },
 
-// ----- TARTALOM TÍPUS AZONOSÍTÓ -----
-// Referencia a TartalomTipus modellre (pl. poszt, komment, stb.)
-tartalomTipusId: {
-  reteg: 'tartalom',  // H6
+// ----- GONDOLAT TÍPUS AZONOSÍTÓ -----
+// Referencia a GondolatTipus modellre (pl. poszt, komment, stb.)
+gondolatTipusId: {
+  reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
-    ref: 'TartalomTipus',                 // Referencia a TartalomTipus modellre
+    ref: 'GondolatTipus',                 // Referencia a GondolatTipus modellre
     required: false                        // Nem kötelező mező
 },
 
 // ----- KATEGÓRIA AZONOSÍTÓK (MAXIMUM 3) -----
 // Tömb, amely maximum 3 kategória referenciát tárolhat
 kategoriaIds: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: [{                                  // ObjectId tömb típus
         type: mongoose.Schema.Types.ObjectId, // Tömb elemek típusa: ObjectId
         ref: 'Kategoria'                      // Referencia a Kategoria modellre
@@ -62,25 +62,25 @@ kategoriaIds: {
             const egyediKategoriak = new Set(kategoriak.map(k => k.toString()));
             return egyediKategoriak.size === kategoriak.length;
         },
-        message: 'Maximum 3 különböző kategória rendelhető egy tartalomhoz.'
+        message: 'Maximum 3 különböző kategória rendelhető egy gondolathoz.'
     }
 },
 
-// ----- SZÜLŐ TARTALOM AZONOSÍTÓ -----
-// MÓDOSÍTVA: Bármelyik entitástípus lehet szülő – Tartalom, Javaslat, Egyezmény,
-// valamint Kategória és Tartalomtípus is (az „Új tartalom létrehozása ebből”
+// ----- SZÜLŐ GONDOLAT AZONOSÍTÓ -----
+// MÓDOSÍTVA: Bármelyik entitástípus lehet szülő – Gondolat, Javaslat, Egyezmény,
+// valamint Kategória és Gondolattípus is (az „Új gondolat létrehozása ebből”
 // menüpont mind az öt kártyatípusról ágaztathat).
 szuloId: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus - bármilyen entitás lehet
-    default: null                          // Alapértelmezett: nincs szülő (főtartalom)
+    default: null                          // Alapértelmezett: nincs szülő (főgondolat)
 },
 
 // ----- SZÜLŐ TÍPUSA -----
 szuloTipus: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: String,                                                          // Szöveges típus
-    enum: ['Tartalom', 'Javaslat', 'Egyezmeny', 'Kategoria', 'TartalomTipus'], // Engedélyezett értékek
+    enum: ['Gondolat', 'Javaslat', 'Egyezmeny', 'Kategoria', 'GondolatTipus'], // Engedélyezett értékek
     default: null,                                                         // Alapértelmezett: nincs szülő típus
     validate: {
         validator: function(value) {
@@ -121,9 +121,9 @@ szuloTipus: {
 },
 
 // ----- SZERKESZTŐK -----
-// Kik szerkesztették ezt a tartalmat. Egy tartalomnak TÖBB szerkesztője lehet:
+// Kik szerkesztették ezt a gondolatot. Egy gondolatnak TÖBB szerkesztője lehet:
 // az eredeti létrehozó + mindenki, akinek elfogadott MÓDOSÍTÁSI javaslata
-// ténylegesen módosította a tartalmat.
+// ténylegesen módosította a gondolatot.
 // Sorrend: időrendben VISSZAFELÉ — a 0. elem a LEGUTOLSÓ szerkesztő,
 // a lista vége felé az eredeti létrehozó (kivéve ha ő módosított utoljára).
 // (A régi egyszeres `letrehozo` mező helyére lépett.)
@@ -134,9 +134,9 @@ szerkesztok: {
 },
 
 // ----- KÜLÖNVÁLÁSOK -----
-// Ha ez a tartalom valamikor kettévált (vagy egy szétválásból született), itt
-// vannak a testvér-ágai — eseményenként egy bejegyzés. Üres tömb = ez a tartalom
-// még sosem vált szét, és nem is szétválásból származik (a legtöbb tartalom ilyen).
+// Ha ez a gondolat valamikor kettévált (vagy egy szétválásból született), itt
+// vannak a testvér-ágai — eseményenként egy bejegyzés. Üres tömb = ez a gondolat
+// még sosem vált szét, és nem is szétválásból származik (a legtöbb gondolat ilyen).
 //
 // Egy szétváláskor MINDKÉT entitás kap egy bejegyzést, egymásra mutatva; az elem
 // `agSzerep` mezője mondja meg, melyik oldalon állunk (főág vagy különvált ág).
@@ -146,15 +146,15 @@ szerkesztok: {
 // lépésben épül (docs/fejlesztesi_terv.md „Különválás — megvalósítási terv").
 // Ez a lépés csak a HELYET készíti elő.
 kulonvalasok: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: [kulonvalasResz],   // A közös különválás al-séma tömbje
     default: []               // Alap: üres tömb (nincs testvér-ág)
 },
 
 // ----- LÉTREHOZÁS DÁTUMA -----
-// Amikor a tartalom létrejött
+// Amikor a gondolat létrejött
 letrehozva: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: Date,         // Dátum típus
     default: Date.now   // Alapértelmezett: jelenlegi időpont
 },
@@ -166,7 +166,7 @@ letrehozva: {
 // VAGY utolsó módosítás" egyetlen mezővel lefedve); a gyerek↔szülő összevetés ebből
 // dönti el, elavulhat-e a gyerek (piros = régebbi, zöld = újabb).
 modositva: {
-  reteg: 'tartalom',  // H6
+  reteg: 'gondolat',  // H6
     type: Date,
     default: Date.now
 }
@@ -176,38 +176,38 @@ modositva: {
 // ===== INDEXEK LÉTREHOZÁSA =====
 // Az indexek gyorsítják az adatbázis lekérdezéseket
 
-// Tartalom típus indexelése - gyors szűrés típus szerint
-tartalomSchema.index({ tartalomTipusId: 1 });
+// Gondolat típus indexelése - gyors szűrés típus szerint
+gondolatSchema.index({ gondolatTipusId: 1 });
 
-// Szülő tartalom indexelése - gyors lekérdezés válaszok/kommentek esetén
-tartalomSchema.index({ szuloId: 1 });
+// Szülő gondolat indexelése - gyors lekérdezés válaszok/kommentek esetén
+gondolatSchema.index({ szuloId: 1 });
 
-// Gyors keresés: "Egy javaslat alatti összes tartalom"
-tartalomSchema.index({ szuloId: 1, szuloTipus: 1 });
+// Gyors keresés: "Egy javaslat alatti összes gondolat"
+gondolatSchema.index({ szuloId: 1, szuloTipus: 1 });
 
-// Szerkesztő indexelése - gyors keresés "mely tartalmakat szerkesztette egy e-ember"
-tartalomSchema.index({ 'szerkesztok.eemberId': 1 });
+// Szerkesztő indexelése - gyors keresés "mely gondolatokat szerkesztette egy e-ember"
+gondolatSchema.index({ 'szerkesztok.eemberId': 1 });
 
-// Testvér-ág indexelése - gyors keresés "melyik tartalom mutat erre az entitásra"
+// Testvér-ág indexelése - gyors keresés "melyik gondolat mutat erre az entitásra"
 // Használat: a másik ág felől visszakeresés (pl. törléskor a testvér bejegyzésének
 // karbantartása), és a szétválás-láncok bejárása. Ritka lekérdezés, de index nélkül
 // teljes kollekció-bejárás lenne — több millió entitásra tervezünk.
-tartalomSchema.index({ 'kulonvalasok.testverId': 1 });
+gondolatSchema.index({ 'kulonvalasok.testverId': 1 });
 
 // Kategória indexelése - gyors kategória szerinti szűrés (tömb elemek indexelése)
-tartalomSchema.index({ kategoriaIds: 1 });
+gondolatSchema.index({ kategoriaIds: 1 });
 // ===== H6 — ADAT-OSZTÁLYOZÁS: ALAPÉRTELMEZETT RÉTEG =====
 // A mezők a saját `reteg` opciójukban hordozzák a besorolásukat (lásd fentebb).
 // A Mongoose által AUTOMATIKUSAN felvett mezőkre (_id, createdAt, updatedAt) viszont
 // nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
 // A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
 // Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
-tartalomSchema.options.retegAlapertelmezes = 'tartalom';
+gondolatSchema.options.retegAlapertelmezes = 'gondolat';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 // A model a séma alapján létrehozott adatbázis kollekció
-// 'Tartalom' = model neve, tartalomSchema = séma definíció
-const Tartalom = mongoose.model('Tartalom', tartalomSchema);
+// 'Gondolat' = model neve, gondolatSchema = séma definíció
+const Gondolat = mongoose.model('Gondolat', gondolatSchema);
 
 // Model exportálása, hogy más fájlokban is használható legyen
-module.exports = Tartalom;
+module.exports = Gondolat;

@@ -20,7 +20,7 @@
 
   padding: var(--space-1) var(--space-2);
   /* ÁTTETSZŐ megjelenés (Csaba kérése, 2026-07-19): a gomb ne takarja ki
-     teljesen a body tartalmát ott, ahol rálóg — a háttér és a keret félig
+     teljesen a body gondolatát ott, ahol rálóg — a háttér és a keret félig
      átlátszó (a --color-surface #f7f3ec és a --color-border #c8c0b5 rgba
      változata), rámutatáskor sűrűsödik vissza. */
   border: 1px solid rgba(200, 192, 181, 0.6);

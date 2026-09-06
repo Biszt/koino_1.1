@@ -306,7 +306,7 @@ proba('Ha nem tudjuk a saját címeinket, semmit nem szűrünk ki (nem találgat
 //
 // Csaba észrevételéből: *„böngészés közben az összes entitásnak elérhetőnek kell lennie,
 // vagy pontosan tudnunk kell, hogy az entitások hol vannak."* A társ-lista erre nem elég:
-// az azt mondja meg, KIKKEL beszélünk, nem azt, hogy KINÉL VAN egy adott tartalom.
+// az azt mondja meg, KIKKEL beszélünk, nem azt, hogy KINÉL VAN egy adott gondolat.
 
 proba('Megjegyzett szelet-cím visszakérdezhető', () => {
   let j = [];

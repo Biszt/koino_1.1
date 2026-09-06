@@ -18,7 +18,7 @@ A KOINO-ban az e-eemberek nem névtelen tömegként működnek. A cél az, hogy 
 
  A KOINO-ban mindenkinek lesznek tudatpontjai. Ez egy fix mennyiség, amit nem „elköltesz”, hanem elosztasz. Úgy képzeld el, mint a figyelmedet:
 
-A tudatpont azt mutatja meg: mi fontos neked. Hozzárendeled témákhoz, tartalmakhoz, közösségi részekhez. És ami a legfontosabb: bármikor visszavonhatod és átrendezheted.
+A tudatpont azt mutatja meg: mi fontos neked. Hozzárendeled témákhoz, gondolatokhoz, közösségi részekhez. És ami a legfontosabb: bármikor visszavonhatod és átrendezheted.
 
 Ez azért lényeges, mert a KOINO nem akarja jutalmazni azt, hogy valaki egész nap a telefonját nyomkodja. Egy csendes, ritkán jelenlévő eembernek is ugyanakkora alapereje van a prioritások kijelölésében, mint mondjuk egy digitális harcosnak.
 Szavazás: mindenki egyenlő
@@ -28,7 +28,7 @@ A közösség szavazással dönthet például arról:
 mit módosítsunk, mit töröljünk, hogyan rendeződjön át egy téma, 
 milyen szabályokat szeretnénk.
 
-És a moderáció sem egy „főnök” kezében van. Tőrlési javaslattal, a töbség, bármilyen tartalmat tuf törőlni. Ha valaki folyamatosan tiltott tartalmakat hoz létre, a közösség hozhat rá döntést, például ideiglenes korlátozást („kis pad”), időzítetten és átláthatóan. A kis pad funkció, még nem része a programnak, és még az is lehet, hogy nem lesz rá szükség.
+És a moderáció sem egy „főnök” kezében van. Tőrlési javaslattal, a töbség, bármilyen gondolatot tuf törőlni. Ha valaki folyamatosan tiltott gondolatokat hoz létre, a közösség hozhat rá döntést, például ideiglenes korlátozást („kis pad”), időzítetten és átláthatóan. A kis pad funkció, még nem része a programnak, és még az is lehet, hogy nem lesz rá szükség.
 
 Amint elindul, én is csak egy e-eember leszek.
 A KOINO-t én kezdtem építeni, mert valakinek el kell kezdenie. De amint elkészül a kezdeti verzió, és belép az első közösség, én sem leszek több, mint bárki más.
@@ -51,10 +51,10 @@ Ha a közösség ezt soha nem akarja, akkor soha nem lesz belőle semmi. Ez nem 
 
 Üzenet a programozóknak, és azoknak, akik mélyebben szeretnék megismerni a programot
  Nyilván tudod, hogy a világ nagy platformjai néhány eember kezeiben vannak, és ők irányítják azokat. Az első üzenetben már beszéltem arról, hogy a KOINO-nál ez másképp van. Itt e-eemberek vannak, nem felhasználók, mivel itt a regisztráló egyben felhasználó, tulajdonos, moderátor, fejlesztő, haszonélvező  és felelős. Most szeretném jobban bemutatni a program jelenlegi állapotát, és az elképzeléseimet a további fejlesztésről.
-A backend már képes arra, hogy bemutassa, ahogy teszt e-eemberek közös nevezőre jutnak, központi szereplők nélkül, de optimalizációra és hiányosságok pótlására szüksége van. A frontend elkészülte után az első közösség már képes lesz tartalmakat létrehozni, melyekhez általuk létrehozott kategóriákat tudnak rendelni, például tudomány, természetvédelem, politika, programfejlesztés. További rendszerezést az általuk létrehozott tartalomtípusok adnak, mint például kérdés, válasz, témakör, ismeret, feladat, feladatvállalás.
+A backend már képes arra, hogy bemutassa, ahogy teszt e-eemberek közös nevezőre jutnak, központi szereplők nélkül, de optimalizációra és hiányosságok pótlására szüksége van. A frontend elkészülte után az első közösség már képes lesz gondolatokat létrehozni, melyekhez általuk létrehozott kategóriákat tudnak rendelni, például tudomány, természetvédelem, politika, programfejlesztés. További rendszerezést az általuk létrehozott gondolattípusok adnak, mint például kérdés, válasz, témakör, ismeret, feladat, feladatvállalás.
 
 
-A létrehozott tartalmak felett azok rendelkeznek, akik tudatpontot rendeltek hozzájuk. Ők képesek javaslatot tenni módosításra, áthelyezésre, törlésre, vagy több tartalom egyesítésére, például hasonlóság miatt. Minden tartalomnak vannak küszöbértékei, amelyek meghatározzák, mekkora támogatottság és mekkora részvételi arány szükséges ahhoz, hogy egy javaslat elfogadásra kerüljön, és egyezmény legyen belőle. Továbbá minimum és maximum döntési idővel is rendelkeznek. Ezek az értékek határolják be egy javaslat döntési idejét.
+A létrehozott gondolatok felett azok rendelkeznek, akik tudatpontot rendeltek hozzájuk. Ők képesek javaslatot tenni módosításra, áthelyezésre, törlésre, vagy több gondolat egyesítésére, például hasonlóság miatt. Minden gondolatnak vannak küszöbértékei, amelyek meghatározzák, mekkora támogatottság és mekkora részvételi arány szükséges ahhoz, hogy egy javaslat elfogadásra kerüljön, és egyezmény legyen belőle. Továbbá minimum és maximum döntési idővel is rendelkeznek. Ezek az értékek határolják be egy javaslat döntési idejét.
 
 
 Azt, hogy a minimum vagy a maximum időhöz közelít-e a döntés, a bizonyossági mutató határozza meg. Ha egy javaslatnak jóval nagyobb a támogatottsági aránya, mint az ellenzői aránya, vagy fordítva, és a részvételi arány is magas, akkor hamarabb eljön a döntés ideje. Ha viszont közel egyenlő a támogatás és az ellenzés, és a részvétel is alacsony, akkor tovább tart a döntés. Az értékeket is közösen határozzák meg a tulajdonosok.
@@ -64,7 +64,7 @@ A program még nyers, van rajta mit finomítani. Tudom, hogy ez még nem sok, de
 
 Üzenet a Tisza Pártnak
  Kedves Tisza közösség! Köszönöm, hogy felébresztettétek a magyar eemberek hitét abban, hogy teremthetünk egy sokkal élhetőbb országot. Nekem eddig szimpatikus mindenki, aki ott összegyűlt, és a Tisza programja is nagyon tetszik. Többek között ezért is váltottam arra az elképzelésre, hogy a Tisza Párt kormánypárti minőségében sokat tudna segíteni a KOINO-nak azzal, hogy biztosítja a hiteles regisztrációt Magyarországon. Az első üzenetben beszéltem arról, hogy a KOINO-ban e-eemberek vannak, nem felhasználók, és ehhez nagyon fontos, hogy a regisztrálók valódi eemberek legyenek.
-A KOINO működéséhez a nyílt adatbázis kulcsfontosságú: a tartalmak, szavazások, javaslatok mind nyilvánosak, ez biztosítja az átláthatóságot. De tudom, hogy vannak érzékeny adatok, amelyekről a társadalmi többség nem szeretné, hogy nyilvánosak legyenek, például személyazonosító adatok, pontos lakcím. Ezért szeretnélek titeket megkérni arra, hogy ezeket az adatokat kormánypártként, Magyarországon, ti kezeljétek. Ti lennétek azok, akik garantálják, hogy egy eember = egy e-eember. Minden más nyilvános, de a személyes adatok nálatok maradnak, biztonságban.
+A KOINO működéséhez a nyílt adatbázis kulcsfontosságú: a gondolatok, szavazások, javaslatok mind nyilvánosak, ez biztosítja az átláthatóságot. De tudom, hogy vannak érzékeny adatok, amelyekről a társadalmi többség nem szeretné, hogy nyilvánosak legyenek, például személyazonosító adatok, pontos lakcím. Ezért szeretnélek titeket megkérni arra, hogy ezeket az adatokat kormánypártként, Magyarországon, ti kezeljétek. Ti lennétek azok, akik garantálják, hogy egy eember = egy e-eember. Minden más nyilvános, de a személyes adatok nálatok maradnak, biztonságban.
  Nagyon örülök annak, hogy ilyen jó a kapcsolat a Tisza Párt és az Európai Unió között, mert a következő üzenetem nekik szól.
 
 Üzenet Brüsszelnek

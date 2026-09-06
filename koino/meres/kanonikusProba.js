@@ -92,14 +92,25 @@ proba('A kanonikus szöveg rendezett és tömör', async () => {
 // kanonikus alak szabályait, ez a próba AZONNAL bukik — ami épp a lényeg: a szabály
 // megváltoztatása minden korábbi esemény azonosítóját érvénytelenítené.
 
+// ⚠️⚠️ EZ A BEMENET SZÁNDÉKOSAN BEFAGYASZTOTT SZÖVEG — NE „javítsd ki".
+//
+// A „tartalom" → „gondolat" átnevezéskor (2026-09-06) ez a próba elbukott, mert az
+// átnevező a horgony BEMENETÉT is átírta. ⭐ És épp ez bizonyítja, hogy a horgony működik:
+// a lenyomat minden bájtra érzékeny. *(Másodszor is megtörtént, egy fölösleges újrafuttatás
+// miatt — ezért került a fájl az átnevező kihagyandó-listájára.)*
+//
+// A horgony dolga a KANONIKUS ALAK SZABÁLYAIT őrizni (mezőrendezés, egész számok, NFC),
+// nem a szóhasználatunkat. Ezért itt a régi szavak maradnak: így a lenyomat 2026-08-27 óta
+// összehasonlítható marad. Ha a szavakat is átírnánk, a horgony minden átnevezéskor
+// „elszakadna", és a végén már senki nem tudná, mit is őriz.
 const HORGONY_ADAT = {
   koino: 'proba',
-  tipus: 'TartalomLetrehozas',
+  tipus: 'TartalomLetrehozas',                        // ⚠️ befagyasztott szöveg (lásd fent)
   szerzo: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
   elozo: null,
   sorszam: 1,
   ido: 1756252800000,
-  adat: { cim: 'Első tartalom', szoveg: 'Árvíztűrő tükörfúrógép' }
+  adat: { cim: 'Első tartalom', szoveg: 'Árvíztűrő tükörfúrógép' }   // ⚠️ ugyanígy
 };
 const HORGONY_LENYOMAT = 'lmeSv52X_ekE-RGg-0hGaCVtPl80E4awmXtNSnZ8xIY';  // mérve: 2026-08-27
 

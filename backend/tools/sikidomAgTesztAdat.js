@@ -3,11 +3,11 @@
 // ===== SÍKIDOM TESZT-ADAT: KÉT PRÓBA-ÁG =====
 //
 // Felelősség: két, egymástól élesen különböző ágat építeni a Síkidom nézet
-// próbájához — mindkettő SAJÁT gyökér-tartalom alá, hogy a meglévő 10 400
+// próbájához — mindkettő SAJÁT gyökér-gondolat alá, hogy a meglévő 10 400
 // gyökeret ne zavarja, és a böngészőben egyértelműen megtalálható legyen.
 //
 //   A) A TESTVÉR-MEZŐ — egy gyökér alatt 5 000 gyerek, VÁLTOZATOS pont-eloszlással.
-//      Mire jó: a lapozás („további tartalmak" koppintás) itt látszik igazán. A mai
+//      Mire jó: a lapozás („további gondolatok" koppintás) itt látszik igazán. A mai
 //      gyökér-szinten 10 405-ből 10 005 egypontos, csupa holtverseny — ott az új adag
 //      a KÜLSŐ gyűrűbe kerül, és a kép közepén látszólag nem történik semmi (lásd
 //      `fejlesztesi_terv.md`, „A lapozás KÉTFÉLE arca"). Zipf-eloszlású pontokkal
@@ -27,7 +27,7 @@
 // a fölöttük lévő arányt nyomná le. Az egy pont tehát nem takarékosság, hanem a
 // legnagyobb elérhető láncszem-méret.
 //
-// A tartalmakat a rendes service-en át hozzuk létre (`tartalomLetrehozasa`), NEM
+// A gondolatokat a rendes service-en át hozzuk létre (`gondolatLetrehozasa`), NEM
 // közvetlen adatbázis-írással — így minden származtatott rekord (tudatpont-
 // hozzárendelés, allokáció, hierarchikus allokáció, ős-lánc, érték-hisztogram)
 // konzisztensen létrejön.
@@ -49,10 +49,10 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const tartalomService = require('../services/tartalomService');
+const gondolatService = require('../services/gondolatService');
 const jelszoHelper = require('../utils/jelszoHelper');
 const Eember = require('../models/eember');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const HierarchikusAllokacio = require('../models/hierarchikusTudatpontAllokacio');
 
 // ===== A KÉT ÁG GYÖKERE =====
@@ -90,7 +90,7 @@ const TOLTO_JELSZO = 'jelszo123';
 
 // ===== A CÍMEK ÖSSZETEVŐI =====
 // 20 jelző × 25 témakör × 25 helyszín = 12 500 kombináció. A helyszín forog
-// leggyorsabban, így az egymás után létrejövő tartalmak témakörei keverednek.
+// leggyorsabban, így az egymás után létrejövő gondolatok témakörei keverednek.
 const JELZOK = [
   'Helyi', 'Regionális', 'Országos', 'Városi', 'Falusi',
   'Közösségi', 'Fenntartható', 'Digitális', 'Önkéntes', 'Kísérleti',
@@ -223,7 +223,7 @@ async function toltoEemberekBiztositasa(szuksegesPont, szarazFutas) {
     }
   }
 
-  // A NAGYOK előre: a legerősebb tartalmakat a legnagyobb keretű e-ember hozza,
+  // A NAGYOK előre: a legerősebb gondolatokat a legnagyobb keretű e-ember hozza,
   // így nem akad el a szétosztás egy apró maradékon
   keretek.sort((a, b) => b.szabad - a.szabad);
 
@@ -251,13 +251,13 @@ function keretFoglalas(keretek, pont) {
 }
 
 // ===== GYÖKÉR BIZTOSÍTÁSA =====
-// Megkeresi vagy létrehozza az ág gyökér-tartalmát.
+// Megkeresi vagy létrehozza az ág gyökér-gondolatát.
 //
 // @returns {Promise<{id: string, uj: boolean}>}
 async function gyokerBiztositasa(cim, keretek, szarazFutas) {
   console.log('sikidomAgTesztAdat.gyokerBiztositasa - KEZDÉS', { cim });
 
-  const mar = await Tartalom.findOne({ cim, szuloId: null }).select('_id').lean();
+  const mar = await Gondolat.findOne({ cim, szuloId: null }).select('_id').lean();
   if (mar) {
     console.log('sikidomAgTesztAdat.gyokerBiztositasa - VÉGE (már létezik)', { id: mar._id.toString() });
     return { id: mar._id.toString(), uj: false };
@@ -271,8 +271,8 @@ async function gyokerBiztositasa(cim, keretek, szarazFutas) {
     return { id: null, uj: true };
   }
 
-  const uj = await tartalomService.tartalomLetrehozasa(
-    { cim, szoveg: `${cim} — a Síkidom nézet próbájához létrehozott gyökér-tartalom.` },
+  const uj = await gondolatService.gondolatLetrehozasa(
+    { cim, szoveg: `${cim} — a Síkidom nézet próbájához létrehozott gyökér-gondolat.` },
     eember.id.toString(),
     GYOKER_SAJAT_PONT
   );
@@ -295,7 +295,7 @@ async function mezoEpitese(gyokerId, darab, keretek, szarazFutas, naplo) {
   // Egyetlen lekérdezéssel derítjük ki, mi van már meg — címenként az N+1
   // ötezernél percekbe kerülne
   const mar = gyokerId
-    ? await Tartalom.find({ cim: { $in: osszesCim }, szuloId: gyokerId }).select('cim').lean()
+    ? await Gondolat.find({ cim: { $in: osszesCim }, szuloId: gyokerId }).select('cim').lean()
     : [];
   const marHalmaz = new Set(mar.map(t => t.cim));
   allapot.kihagyott = marHalmaz.size;
@@ -335,12 +335,12 @@ async function mezoEpitese(gyokerId, darab, keretek, szarazFutas, naplo) {
     }
 
     try {
-      await tartalomService.tartalomLetrehozasa(
+      await gondolatService.gondolatLetrehozasa(
         {
           cim,
-          szoveg: `${cim} — a Síkidom nézet ötezres testvér-próbájához létrehozott tartalom.`,
+          szoveg: `${cim} — a Síkidom nézet ötezres testvér-próbájához létrehozott gondolat.`,
           szuloId: gyokerId,
-          szuloTipus: 'Tartalom'
+          szuloTipus: 'Gondolat'
         },
         eember.id.toString(),
         pont
@@ -386,7 +386,7 @@ async function lancEpitese(gyokerId, melyseg, keretek, szarazFutas, naplo) {
     const cim = `${szint}. szint — mély lánc`;
 
     // Már létezik? Akkor csak lelépünk bele (folytatható futás)
-    const mar = await Tartalom.findOne({ cim, szuloId }).select('_id').lean();
+    const mar = await Gondolat.findOne({ cim, szuloId }).select('_id').lean();
     if (mar) {
       szuloId = mar._id.toString();
       allapot.kihagyott++;
@@ -401,13 +401,13 @@ async function lancEpitese(gyokerId, melyseg, keretek, szarazFutas, naplo) {
     }
 
     try {
-      const uj = await tartalomService.tartalomLetrehozasa(
+      const uj = await gondolatService.gondolatLetrehozasa(
         {
           cim,
           szoveg: `${cim} — a Síkidom nézet MÉLYSÉGI próbájához létrehozott láncszem ` +
                   `(${szint} / ${melyseg}).`,
           szuloId,
-          szuloTipus: 'Tartalom'
+          szuloTipus: 'Gondolat'
         },
         eember.id.toString(),
         LANCSZEM_PONT
@@ -468,7 +468,7 @@ async function futtatas() {
     process.exit(1);
   }
 
-  // A service bőségesen naplóz; ötezer tartalomnál ez önmagában percekbe kerülne,
+  // A service bőségesen naplóz; ötezer gondolatnál ez önmagában percekbe kerülne,
   // ezért az építés idejére elnémítjuk — a saját üzeneteink a `naplo`-n mennek ki.
   const eredetiLog = console.log;
   const naplo = (...e) => eredetiLog(...e);
@@ -526,10 +526,10 @@ async function futtatas() {
     naplo(`  ${nev} gyökér hierarchikus pontja: ${a?.hierarchikusOsszesPont ?? '?'}  (${id})`);
   }
 
-  const gyokerDarab = await Tartalom.countDocuments({ szuloId: null });
-  const osszDarab = await Tartalom.countDocuments({});
+  const gyokerDarab = await Gondolat.countDocuments({ szuloId: null });
+  const osszDarab = await Gondolat.countDocuments({});
   naplo('');
-  naplo(`Gyökér tartalmak: ${gyokerDarab} · összes tartalom: ${osszDarab}`);
+  naplo(`Gyökér gondolatok: ${gyokerDarab} · összes gondolat: ${osszDarab}`);
 
   const hibak = [...mezo.hibak, ...lanc.hibak];
   if (hibak.length) {

@@ -1,13 +1,13 @@
 // backend/tools/sikidomTesztAdat.js
 
-// ===== SÍKIDOM TESZT-ADAT: GYÖKÉR TARTALMAK LÉTREHOZÁSA =====
+// ===== SÍKIDOM TESZT-ADAT: GYÖKÉR GONDOLATOK LÉTREHOZÁSA =====
 //
-// Felelősség: a Síkidom nézet böngészős próbájához elegendő gyökér-tartalmat
+// Felelősség: a Síkidom nézet böngészős próbájához elegendő gyökér-gondolatot
 // létrehozni, ELTÉRŐ tudatpontokkal — hogy látszódjon a méret-arány (a síkidom
 // TERÜLETE arányos a tudatponttal) és a spirális elrendezés.
 //
-// FONTOS: a tartalmakat a rendes service-en át hozzuk létre
-// (`tartalomService.tartalomLetrehozasa`), NEM közvetlen adatbázis-írással.
+// FONTOS: a gondolatokat a rendes service-en át hozzuk létre
+// (`gondolatService.gondolatLetrehozasa`), NEM közvetlen adatbázis-írással.
 // Így minden származtatott rekord (tudatpont-hozzárendelés, allokáció,
 // hierarchikus allokáció, ős-lánc) is konzisztensen létrejön.
 //
@@ -18,17 +18,17 @@
 //   docker exec koino-backend node tools/sikidomTesztAdat.js 5      → csak 5 db
 //   docker exec koino-backend node tools/sikidomTesztAdat.js 30 tesztEmber4
 //
-// A létrehozott tartalmak azonosítása (ha törölni kell): a szkript a végén
+// A létrehozott gondolatok azonosítása (ha törölni kell): a szkript a végén
 // kiírja az ID-ket, és mindegyik címe szerepel a lenti CIMEK listában.
 
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const tartalomService = require('../services/tartalomService');
+const gondolatService = require('../services/gondolatService');
 const Eember = require('../models/eember');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 
-// ===== A LÉTREHOZANDÓ TARTALMAK =====
+// ===== A LÉTREHOZANDÓ GONDOLATOK =====
 // Cím + kezdő tudatpont, CSÖKKENŐ sorrendben, 900-tól 1-ig.
 //
 // Miért ez az eloszlás: mivel a síkidom TERÜLETE arányos a ponttal, az átmérő a
@@ -43,7 +43,7 @@ const Tartalom = require('../models/tartalom');
 //
 // Összesen ~13 460 pont, de a szkript csak a hiányzókat hozza létre, és a
 // tudatpont-keretet előre ellenőrzi.
-const TARTALMAK = [
+const GONDOLATOK = [
   ['Közösségi döntéshozatal',            900],
   ['Alkotmány',                          810],
   ['Oktatás és tudásmegosztás',          720],
@@ -148,7 +148,7 @@ const TARTALMAK = [
 
 // ===== FŐ FOLYAMAT =====
 async function futtatas() {
-  const darab = parseInt(process.argv[2], 10) || TARTALMAK.length;
+  const darab = parseInt(process.argv[2], 10) || GONDOLATOK.length;
   const kertEemberNev = process.argv[3] || null;
 
   console.log('sikidomTesztAdat - KEZDÉS', { darab, kertEemberNev });
@@ -181,8 +181,8 @@ async function futtatas() {
   const lista = [];
   const kihagyott = [];
 
-  for (const [cim, pont] of TARTALMAK.slice(0, darab)) {
-    const mar = await Tartalom.findOne({ cim, szuloId: null }).select('_id').lean();
+  for (const [cim, pont] of GONDOLATOK.slice(0, darab)) {
+    const mar = await Gondolat.findOne({ cim, szuloId: null }).select('_id').lean();
     if (mar) kihagyott.push({ cim, id: mar._id.toString() });
     else lista.push([cim, pont]);
   }
@@ -209,12 +209,12 @@ async function futtatas() {
 
   for (const [cim, pont] of lista) {
     try {
-      const tartalom = await tartalomService.tartalomLetrehozasa(
-        { cim, szoveg: `${cim} — a Síkidom nézet próbájához létrehozott gyökér tartalom.` },
+      const gondolat = await gondolatService.gondolatLetrehozasa(
+        { cim, szoveg: `${cim} — a Síkidom nézet próbájához létrehozott gyökér gondolat.` },
         eember._id.toString(),
         pont
       );
-      letrejott.push({ cim, pont, id: tartalom?._id?.toString() ?? '(ismeretlen)' });
+      letrejott.push({ cim, pont, id: gondolat?._id?.toString() ?? '(ismeretlen)' });
     } catch (hiba) {
       hibak.push({ cim, pont, uzenet: hiba.message });
     }

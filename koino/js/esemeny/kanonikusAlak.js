@@ -1,10 +1,10 @@
 // koino/js/esemeny/kanonikusAlak.js
 
 // Felelősség: egy adatot MINDIG UGYANAZOKKÁ A BÁJTOKKÁ alakítani — és ezekből
-// kiszámolni az esemény azonosítóját (a tartalmának lenyomatát).
+// kiszámolni az esemény azonosítóját (a gondolatának lenyomatát).
 //
 // MIÉRT EZ A LEGVESZÉLYESEBB RÉSZLET AZ EGÉSZ SZAKASZBAN?
-// A koinóban egy esemény NEVE a tartalmának lenyomata (hash) — pontosan úgy, ahogy a
+// A koinóban egy esemény NEVE a gondolatának lenyomata (hash) — pontosan úgy, ahogy a
 // git nevezi el az objektumait. Ez adja azt a három tulajdonságot, amin minden más áll:
 //   - két gép ugyanarra az eseményre UGYANAZT a nevet adja → az összefésülés triviális,
 //   - egyetlen bájt változása MÁS nevet ad → a hamisítás nem rejthető el,

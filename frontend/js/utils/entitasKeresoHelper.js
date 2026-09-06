@@ -20,16 +20,16 @@ export const OBJECTID_MINTA = /^[0-9a-fA-F]{24}$/;
 // Entitás típus → API útvonal és válaszmező megfeleltetés (nyers ID ellenőrzéshez).
 // CSAK a három cím-viselő típus — a keresés is ezekre terjed ki.
 const TIPUS_KONFIGURACIO = {
-  Tartalom:      { utvonal: 'tartalom',      valaszMezo: 'tartalom',      cimMezo: 'cim' },
+  Gondolat:      { utvonal: 'gondolat',      valaszMezo: 'gondolat',      cimMezo: 'cim' },
   Kategoria:     { utvonal: 'kategoria',     valaszMezo: 'kategoria',     cimMezo: 'nev' },
-  TartalomTipus: { utvonal: 'tartalomTipus', valaszMezo: 'tartalomTipus', cimMezo: 'nev' },
+  GondolatTipus: { utvonal: 'gondolatTipus', valaszMezo: 'gondolatTipus', cimMezo: 'nev' },
 };
 
 // =============================================
 // CÍM/NÉV ALAPÚ KERESÉS
 // =============================================
 // @param {string} kifejezes - A keresett cím/név-részlet
-// @param {Array<string>} tipusok - Melyik típusokon keressen (pl. ['Tartalom'])
+// @param {Array<string>} tipusok - Melyik típusokon keressen (pl. ['Gondolat'])
 // @param {string} token - JWT token
 // @returns {Promise<Array>} [{ entitasId, entitasTipus, cim }] (hiba esetén üres tömb)
 export async function entitasKereses(kifejezes, tipusok, token) {
@@ -109,13 +109,13 @@ export async function entitasEllenorzes(id, tipusok, token) {
 // TÍPUS FELIRAT (megjelenítéshez)
 // =============================================
 // A találati listában és a megerősítő sorban emberi olvasható típusnevet mutatunk.
-// @param {string} tipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus' | egyéb
+// @param {string} tipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus' | egyéb
 // @returns {string} Megjelenítendő felirat
 export function tipusFelirat(tipus) {
   const feliratok = {
-    Tartalom:      'Tartalom',
+    Gondolat:      'Gondolat',
     Kategoria:     'Kategória',
-    TartalomTipus: 'Tartalomtípus',
+    GondolatTipus: 'Gondolattípus',
     Egyezmeny:     'Egyezmény',
     Javaslat:      'Javaslat',
   };

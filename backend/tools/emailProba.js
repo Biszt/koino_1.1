@@ -18,7 +18,7 @@
 //   docker exec koino-backend-prod node tools/emailProba.js sajat.cimem@pelda.hu
 //
 // Napló módban (ez az alapértelmezés, és a fejlesztői környezetben ez fut) a levél NEM
-// hagyja el a gépet: a teljes tartalma a konzolra íródik. Valódi küldéshez a
+// hagyja el a gépet: a teljes gondolata a konzolra íródik. Valódi küldéshez a
 // backend/.env.prod-ban be kell állítani: EMAIL_SZOLGALTATO, EMAIL_API_KULCS, EMAIL_FELADO.
 
 // ===== IMPORTOK =====

@@ -2,7 +2,7 @@
 
 
 /* ===== KATEGÓRIA MODAL FORM ===== */
-/* Mezők egymás alá rendeződnek – azonos a tartalomModal.css struktúrájával */
+/* Mezők egymás alá rendeződnek – azonos a gondolatModal.css struktúrájával */
 .k-modal-form {
   display: flex;
   flex-direction: column;

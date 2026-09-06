@@ -36,7 +36,7 @@ class FeltoltesKezelo {
 
   // HALASZTOTT FELTÖLTÉS tárolója.
   // Kulcs: a helyi előnézeti 'blob:'-URL; érték: { fajl, tipus }.
-  // A képet/fájlt NEM töltjük fel azonnal a szerverre – csak a tartalom
+  // A képet/fájlt NEM töltjük fel azonnal a szerverre – csak a gondolat
   // MENTÉSEKOR (lásd SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese).
   this.fuggoFeltoltesek = new Map();
 
@@ -170,7 +170,7 @@ class FeltoltesKezelo {
     // HALASZTOTT FELTÖLTÉS:
     // NEM töltjük fel most a szerverre. A fájlt helyben tartjuk, és egy
     // 'blob:' object URL-t adunk a blokknak, amivel a böngésző azonnal meg
-    // tudja jeleníteni az előnézetet. A tényleges feltöltés csak a tartalom
+    // tudja jeleníteni az előnézetet. A tényleges feltöltés csak a gondolat
     // mentésekor történik (SzovegSzerkeszto.fuggoFeltoltesekVeglegesitese).
     const objectUrl = URL.createObjectURL(fajl);
     this.fuggoFeltoltesek.set(objectUrl, { fajl, tipus: 'kep' });
@@ -205,7 +205,7 @@ class FeltoltesKezelo {
 
     // HALASZTOTT FELTÖLTÉS (mint a képnél): a fájlt helyben tartjuk, és egy
     // 'blob:' object URL-t adunk a blokknak. A tényleges feltöltés csak a
-    // tartalom mentésekor történik.
+    // gondolat mentésekor történik.
     const objectUrl = URL.createObjectURL(fajl);
     this.fuggoFeltoltesek.set(objectUrl, { fajl, tipus: 'fajl' });
 

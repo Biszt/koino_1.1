@@ -10,9 +10,9 @@ kattintással oda is ugorhatsz.
 2. Kezdj el gépelni a keresőmezőbe — a találati lista **gépelés közben**
    frissül.
 3. Szűkítsd a **típus-pipákkal**, mit keresel:
-   - 📄 Tartalom
+   - 📄 Gondolat
    - 🏷️ Kategória
-   - 🧩 Tartalomtípus
+   - 🧩 Gondolattípus
 4. Kattints egy találatra — a keresés bezárul, és a pakli az adott entitásra
    **navigál**.
 

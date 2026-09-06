@@ -2,7 +2,7 @@
 
 **Mire való?**
 A bizonyossági mutató azt fejezi ki, mennyire **egyértelmű** egy javaslat
-kimenetele. Ez dönti el, **mikor zárul** a szavazás — a tartalomhoz beállított
+kimenetele. Ez dönti el, **mikor zárul** a szavazás — a gondolathoz beállított
 **minimum és maximum döntési idő** között. Nem neked kell állítanod: a rendszer
 folyamatosan számolja a szavazatokból.
 

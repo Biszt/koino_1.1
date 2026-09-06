@@ -1,14 +1,14 @@
-// backend/repositories/tartalomErtekHisztogramRepository.js
+// backend/repositories/gondolatErtekHisztogramRepository.js
 
 // ===== MODEL IMPORTÁLÁSA =====
-// A TartalomErtekHisztogram Mongoose model (mostantól bármely entitástípusra)
-const TartalomErtekHisztogram = require('../models/tartalomErtekHisztogram');
+// A GondolatErtekHisztogram Mongoose model (mostantól bármely entitástípusra)
+const GondolatErtekHisztogram = require('../models/gondolatErtekHisztogram');
 
 // ===== ENTITÁS ÉRTÉK HISZTOGRAM REPOSITORY OSZTÁLY =====
 // Ez a réteg felelős az adatbázis műveletekért (CRUD)
 // Csak technikai adatbázis hívások, NINCS üzleti logika!
 // Az érték-rendszer entitás-polimorf: entitasId + entitasTipus azonosít.
-class TartalomErtekHisztogramRepository {
+class GondolatErtekHisztogramRepository {
 
   // ===== LÉTREHOZÁS =====
 
@@ -19,7 +19,7 @@ class TartalomErtekHisztogramRepository {
    * @returns {Promise<Object>} Létrehozott hisztogram dokumentum
    */
   async create(adatok) {
-    const hisztogram = new TartalomErtekHisztogram(adatok);
+    const hisztogram = new GondolatErtekHisztogram(adatok);
     return await hisztogram.save();
   }
 
@@ -34,7 +34,7 @@ class TartalomErtekHisztogramRepository {
    */
   async findByEntitas(entitasId, entitasTipus) {
     // Egy entitáshoz csak egy hisztogram van
-    return await TartalomErtekHisztogram.findOne({ entitasId: entitasId, entitasTipus: entitasTipus });
+    return await GondolatErtekHisztogram.findOne({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
   // ----- HISZTOGRAM KERESÉSE ID ALAPJÁN -----
@@ -44,7 +44,7 @@ class TartalomErtekHisztogramRepository {
    * @returns {Promise<Object|null>} Hisztogram dokumentum vagy null
    */
   async findById(id) {
-    return await TartalomErtekHisztogram.findById(id);
+    return await GondolatErtekHisztogram.findById(id);
   }
 
   // ----- LÉTEZIK-E HISZTOGRAM EGY ENTITÁSHOZ -----
@@ -55,7 +55,7 @@ class TartalomErtekHisztogramRepository {
    * @returns {Promise<boolean>} true ha létezik, false ha nem
    */
   async existsByEntitas(entitasId, entitasTipus) {
-    const result = await TartalomErtekHisztogram.exists({ entitasId: entitasId, entitasTipus: entitasTipus });
+    const result = await GondolatErtekHisztogram.exists({ entitasId: entitasId, entitasTipus: entitasTipus });
     return result !== null;
   }
 
@@ -70,7 +70,7 @@ class TartalomErtekHisztogramRepository {
    */
   async updateById(id, frissitesek) {
     frissitesek.utolsoFrissites = new Date();
-    return await TartalomErtekHisztogram.findByIdAndUpdate(
+    return await GondolatErtekHisztogram.findByIdAndUpdate(
       id,
       frissitesek,
       { new: true, runValidators: true }
@@ -87,7 +87,7 @@ class TartalomErtekHisztogramRepository {
    */
   async updateByEntitas(entitasId, entitasTipus, frissitesek) {
     frissitesek.utolsoFrissites = new Date();
-    return await TartalomErtekHisztogram.findOneAndUpdate(
+    return await GondolatErtekHisztogram.findOneAndUpdate(
       { entitasId: entitasId, entitasTipus: entitasTipus },
       frissitesek,
       { new: true, runValidators: true }
@@ -104,7 +104,7 @@ class TartalomErtekHisztogramRepository {
    */
   async createOrUpdate(entitasId, entitasTipus, adatok) {
     adatok.utolsoFrissites = new Date();
-    return await TartalomErtekHisztogram.findOneAndUpdate(
+    return await GondolatErtekHisztogram.findOneAndUpdate(
       { entitasId: entitasId, entitasTipus: entitasTipus },
       adatok,
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
@@ -120,7 +120,7 @@ class TartalomErtekHisztogramRepository {
    * @returns {Promise<Object|null>} Törölt hisztogram vagy null
    */
   async deleteById(id) {
-    return await TartalomErtekHisztogram.findByIdAndDelete(id);
+    return await GondolatErtekHisztogram.findByIdAndDelete(id);
   }
 
   // ----- HISZTOGRAM TÖRLÉSE ENTITÁS ALAPJÁN -----
@@ -132,11 +132,11 @@ class TartalomErtekHisztogramRepository {
    * @returns {Promise<Object|null>} Törölt hisztogram vagy null
    */
   async deleteByEntitas(entitasId, entitasTipus) {
-    return await TartalomErtekHisztogram.findOneAndDelete({ entitasId: entitasId, entitasTipus: entitasTipus });
+    return await GondolatErtekHisztogram.findOneAndDelete({ entitasId: entitasId, entitasTipus: entitasTipus });
   }
 
 }
 
 // ===== EXPORTÁLÁS =====
 // Repository osztály SINGLETON példány exportálása
-module.exports = new TartalomErtekHisztogramRepository();
+module.exports = new GondolatErtekHisztogramRepository();

@@ -41,7 +41,7 @@ kell: egy szerver, és hogy **megbízz benne**.
 A koinóban nincs szerver, akinek elmondhatnád. De nem is kell:
 
 > **Nem „belépsz, és utána elhiszik, hogy te vagy" — hanem minden egyes tettedet külön
-> aláírod.** Minden tartalom, minden tudatpont, minden szavazat magában hordozza a
+> aláírod.** Minden gondolat, minden tudatpont, minden szavazat magában hordozza a
 > bizonyítékot, hogy tőled származik.
 
 Ez **erősebb**, mint a jelszó: egy ellopott jelszóval bármit tehetnek a nevedben; itt
@@ -67,7 +67,7 @@ koinónként külön, és ott dől el, mennyire számítasz hitelesnek.
 |---|---|
 | jelszó | **elfogy** — a kulcs hitelesít (D15) |
 | e-mail | legfeljebb **értesítésre** marad, azonosításra nem |
-| név, település | **tartalom**: amit magadról mondasz, aláírva (D28) |
+| név, település | **gondolat**: amit magadról mondasz, aláírva (D28) |
 
 ### A belépés két eseménye (D28)
 
@@ -113,6 +113,6 @@ Ha a telefonodon is használni akarod, **át kell vinni** oda a mentett kulcsfá
 
 ## Napló
 
-- **2026-08-27** — A dokumentum létrejött, Csaba kérdésére. Tartalma a beszélgetésben
+- **2026-08-27** — A dokumentum létrejött, Csaba kérdésére. Gondolata a beszélgetésben
   elhangzott magyarázat rögzítése: a kulcspár működése, miért nincs bejelentkezés, mi lesz
   a regisztrációból (D28), és a két gyakorlati következmény (kulcsvesztés, több készülék).

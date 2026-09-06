@@ -20,7 +20,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
   },
 
   // ----- ENTITÁS AZONOSÍTÓ -----
-  // Melyik entitásra (tartalom/kategória/típus/javaslat/egyezmény) rendelte hozzá a pontokat
+  // Melyik entitásra (gondolat/kategória/típus/javaslat/egyezmény) rendelte hozzá a pontokat
   entitasId: { 
     reteg: 'lanc',  // H6
     type: mongoose.Schema.Types.ObjectId,  // MongoDB ObjectId típus
@@ -40,7 +40,7 @@ const tudatpontHozzarendelesSchema = new mongoose.Schema({
     reteg: 'lanc',  // H6
     type: String,                          // Szöveges típus
     required: true,                        // Kötelező mező
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'],  // Engedélyezett értékek
     trim: true                             // Levágja a felesleges szóközöket
   },
 
@@ -103,7 +103,7 @@ tudatpontHozzarendelesSchema.index(
 );
 
 // Entitás index - egy entitás összes hozzájárulójának lekérdezéséhez
-// Használat: "Kik adtak pontot erre a tartalomra?"
+// Használat: "Kik adtak pontot erre a gondolatra?"
 tudatpontHozzarendelesSchema.index({ 
   entitasId: 1, 
   entitasTipus: 1 

@@ -1,46 +1,46 @@
-// backend/services/tartalomService.js
+// backend/services/gondolatService.js
 
 // ===================================
 // REPOSITORY IMPORTÁLÁSA
 // ===================================
 
-const TartalomRepository = require('../repositories/tartalomRepository');
+const GondolatRepository = require('../repositories/gondolatRepository');
 const KategoriaRepository = require('../repositories/kategoriaRepository');
 const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
-const ErtesitesService = require('./ertesitesService'); // Új gyerek-tartalomkor értesítjük a szülő figyelőit
+const ErtesitesService = require('./ertesitesService'); // Új gyerek-gondolatkor értesítjük a szülő figyelőit
 const FajlKezeloService = require('./fajlKezeloService'); // Szöveg-módosításkor a kieső (lecserélt/törölt) fájlok törlése
 
 // ===================================
-// TARTALOM SERVICE OSZTÁLY
+// GONDOLAT SERVICE OSZTÁLY
 // ===================================
 
 // Ez a réteg tartalmazza az üzleti logikát
-class TartalomService {
+class GondolatService {
 
   // =====================================
-  // ----- ÚJ TARTALOM LÉTREHOZÁSA -----
+  // ----- ÚJ GONDOLAT LÉTREHOZÁSA -----
   // =====================================
 
   /**
-   * Új tartalom létrehozása validációval ÉS tudatpont hozzárendeléssel
-   * @param {Object} adatok - A tartalom adatai
-   * @param {string} adatok.cim - A tartalom címe (kötelező)
-   * @param {string} adatok.szoveg - A tartalom szövege (opcionális)
-   * @param {string} adatok.tartalomTipusId - Tartalom típus ID (kötelező)
+   * Új gondolat létrehozása validációval ÉS tudatpont hozzárendeléssel
+   * @param {Object} adatok - A gondolat adatai
+   * @param {string} adatok.cim - A gondolat címe (kötelező)
+   * @param {string} adatok.szoveg - A gondolat szövege (opcionális)
+   * @param {string} adatok.gondolatTipusId - Gondolat típus ID (kötelező)
    * @param {Array} adatok.kategoriaIds - Kategória ID-k tömbje (opcionális, maximum 3)
-   * @param {string} adatok.szuloId - Szülő tartalom ID (opcionális)
+   * @param {string} adatok.szuloId - Szülő gondolat ID (opcionális)
    * @param {number} adatok.javaslatElfogadasiKuszob - Érték javaslat elfogadási küszöb (51-100)
    * @param {number} adatok.reszveteliAranyKuszob - Részvételi arány küszöb (0-100)
    * @param {number} adatok.minimumDontesiIdo - Minimum döntési idő másodpercben (0-31536000)
    * @param {number} adatok.maximumDontesiIdo - Maximum döntési idő másodpercben (0-315360000)
    * @param {string} eemberId - A létrehozó eember ID-ja
    * @param {number} kezdoTudatpont - Kezdő tudatpont mennyiség (minimum 1)
-   * @returns {Promise} A létrehozott tartalom
+   * @returns {Promise} A létrehozott gondolat
    */
-  async tartalomLetrehozasa(adatok, eemberId, kezdoTudatpont) {
-    console.log("=================================== tartalomLetrehozasa: ", {
+  async gondolatLetrehozasa(adatok, eemberId, kezdoTudatpont) {
+    console.log("=================================== gondolatLetrehozasa: ", {
       adatok: adatok,
       eemberId: eemberId,
       kezdoTudatpont: kezdoTudatpont
@@ -64,7 +64,7 @@ class TartalomService {
     
     // Ellenőrizzük, hogy legalább 1
     if (kezdoTudatpont < 1) {
-      throw new Error('Minimum 1 tudatpont szükséges a tartalom létrehozásához');
+      throw new Error('Minimum 1 tudatpont szükséges a gondolat létrehozásához');
     }
     
     // Ellenőrizzük, hogy egész szám-e
@@ -147,7 +147,7 @@ class TartalomService {
       console.log("adatok.kategoriaIds: ", adatok.kategoriaIds);
       
       if (adatok.kategoriaIds.length > 3) {
-        throw new Error('Maximum 3 kategória rendelhető egy tartalomhoz');
+        throw new Error('Maximum 3 kategória rendelhető egy gondolathoz');
       }
 
       // 6.2 - Üres stringek és null értékek kiszűrése
@@ -162,7 +162,7 @@ class TartalomService {
       // 6.4 - Ellenőrizzük, hogy minden kategória létezik-e az adatbázisban
       for (const kategoriaId of szurtKategoriaIds) {
 
-        console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> KategoriaRepository.findById", {
+        console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> KategoriaRepository.findById", {
           kategoriaId: kategoriaId
         });
         
@@ -176,11 +176,11 @@ class TartalomService {
       }
     }
 
-    // ===== 7. LÉPÉS - TARTALOM OBJEKTUM ÖSSZEÁLLÍTÁSA =====
-    const tartalomAdatok = {
+    // ===== 7. LÉPÉS - GONDOLAT OBJEKTUM ÖSSZEÁLLÍTÁSA =====
+    const gondolatAdatok = {
       cim: tisztitottCim,
       szoveg: tisztitottSzoveg,           // null vagy JSON tömb a szövegszerkesztőtől
-      tartalomTipusId: adatok.tartalomTipusId || null,
+      gondolatTipusId: adatok.gondolatTipusId || null,
       kategoriaIds: validaltKategoriaIds,
       szuloId: adatok.szuloId || null,
       szuloTipus: adatok.szuloTipus || null,
@@ -194,41 +194,41 @@ class TartalomService {
 
     // ===== 8. LÉPÉS - REPOSITORY HÍVÁS - MENTÉS ADATBÁZISBA =====
 
-    console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> TartalomRepository.create", {
-          tartalomAdatok: tartalomAdatok
+    console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> GondolatRepository.create", {
+          gondolatAdatok: gondolatAdatok
         });
-    const ujTartalom = await TartalomRepository.create(tartalomAdatok);
+    const ujGondolat = await GondolatRepository.create(gondolatAdatok);
 
     // ===== 9. LÉPÉS - TUDATPONT HOZZÁRENDELÉSE =====
-    // A tartalom létrejött, most hozzárendeljük a kezdő tudatpontot
+    // A gondolat létrejött, most hozzárendeljük a kezdő tudatpontot
     try {
 
-      console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese",);
+      console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese",);
       await TudatpontService.tudatpontHozzarendelese(
         eemberId,           // Ki adja a tudatpontot
-        ujTartalom._id,          // Melyik entitásra (az új tartalom ID-ja)
-        'Tartalom',              // Entitás típusa
+        ujGondolat._id,          // Melyik entitásra (az új gondolat ID-ja)
+        'Gondolat',              // Entitás típusa
         kezdoTudatpont           // Mennyi tudatpontot
       );
     } catch (error) {
       // ===== HIBAKEZELÉS - HA NINCS ELÉG TUDATPONT =====
-      // Ha nem sikerült a tudatpont hozzárendelés, töröljük a tartalmat
+      // Ha nem sikerült a tudatpont hozzárendelés, töröljük a gondolatot
 
-      console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> TartalomRepository.deleteById", {
-        ujTartalom: ujTartalom.id
+      console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> GondolatRepository.deleteById", {
+        ujGondolat: ujGondolat.id
       });
-      await TartalomRepository.deleteById(ujTartalom._id);
+      await GondolatRepository.deleteById(ujGondolat._id);
       
       // Hibát dobunk a megfelelő üzenettel
-      throw new Error(`Tartalom létrehozása sikertelen: ${error.message}`);
+      throw new Error(`Gondolat létrehozása sikertelen: ${error.message}`);
     }
 
     // ===== 10. LÉPÉS - ÉRTÉK JAVASLAT LÉTREHOZÁSA =====
     // A létrehozó automatikusan érték javaslatot ad az általa megadott értékekre
     try {
 
-      console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> ErtekJavaslatRepository.create", {
-        tartalomId: ujTartalom._id,
+      console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> ErtekJavaslatRepository.create", {
+        gondolatId: ujGondolat._id,
         eemberId: eemberId,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
@@ -236,8 +236,8 @@ class TartalomService {
         maximumDontesiIdo: maximumDontesiIdo
       });
       await ErtekJavaslatRepository.create({
-        entitasId: ujTartalom._id,
-        entitasTipus: 'Tartalom',
+        entitasId: ujGondolat._id,
+        entitasTipus: 'Gondolat',
         eemberId: eemberId,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
@@ -247,7 +247,7 @@ class TartalomService {
       
       console.log('Érték javaslat létrehozva létrehozónak');
     } catch (error) {
-      // Ha nem sikerült, logoljuk de nem döntjük meg a tartalmat
+      // Ha nem sikerült, logoljuk de nem döntjük meg a gondolatot
       console.error('Érték javaslat létrehozási hiba:', error.message);
     }
 
@@ -255,16 +255,16 @@ class TartalomService {
     // Létrehozzuk a kezdeti hisztogramot a létrehozó értékeivel
     try {
 
-      console.log("tartalomLetrehozasa >>>>>>>>>>>>>>>>> ErtekSzamitasService.hisztogramLetrehozasa", {
-        ujTartalom: ujTartalom._id,
+      console.log("gondolatLetrehozasa >>>>>>>>>>>>>>>>> ErtekSzamitasService.hisztogramLetrehozasa", {
+        ujGondolat: ujGondolat._id,
         javaslatElfogadasiKuszob: javaslatElfogadasiKuszob,
         reszveteliAranyKuszob: reszveteliAranyKuszob,
         minimumDontesiIdo: minimumDontesiIdo,
         maximumDontesiIdo: maximumDontesiIdo
       });
       await ErtekSzamitasService.hisztogramLetrehozasa(
-        ujTartalom._id,
-        'Tartalom',
+        ujGondolat._id,
+        'Gondolat',
         javaslatElfogadasiKuszob,
         reszveteliAranyKuszob,
         minimumDontesiIdo,
@@ -273,155 +273,155 @@ class TartalomService {
       
       console.log('Hisztogram inicializálva');
     } catch (error) {
-      // Ha nem sikerült, logoljuk de nem döntjük meg a tartalmat
+      // Ha nem sikerült, logoljuk de nem döntjük meg a gondolatot
       console.error('Hisztogram inicializálási hiba:', error.message);
     }
 
     // ===== 11/b. LÉPÉS - A LÉTREHOZÓ AKTÍVVÁ TÉTELE =====
     // A létrehozó kezdő értékjavaslatot adott (a küszöbök beállítása) → döntés-alakító
-    // tett, ezért AKTÍV szerepet kap az új tartalmon (bekerül a részvételi arány
+    // tett, ezért AKTÍV szerepet kap az új gondolaton (bekerül a részvételi arány
     // nevezőjébe). Best-effort: a hibája nem döntheti meg a létrehozást.
     try {
-      await TudatpontService.szerepAktivalasa(eemberId, ujTartalom._id, 'Tartalom');
+      await TudatpontService.szerepAktivalasa(eemberId, ujGondolat._id, 'Gondolat');
     } catch (error) {
       console.error('A létrehozó aktívvá tétele sikertelen (nem blokkoló):', error.message);
     }
 
     // ===== 11.C - ÉRTESÍTÉS: ÚJ GYEREK ENTITÁS a szülőnek =====
-    // Ha az új tartalom SZÜLŐ alá jött létre, a szülő FIGYELŐit értesítjük (a létrehozót
+    // Ha az új gondolat SZÜLŐ alá jött létre, a szülő FIGYELŐit értesítjük (a létrehozót
     // kihagyva). BEST-EFFORT: a küldés hibája nem érinti a létrehozást.
-    if (ujTartalom.szuloId && ujTartalom.szuloTipus) {
+    if (ujGondolat.szuloId && ujGondolat.szuloTipus) {
       try {
         await ErtesitesService.ertesitesKuldes(
-          ujTartalom.szuloId,
-          ujTartalom.szuloTipus,
+          ujGondolat.szuloId,
+          ujGondolat.szuloTipus,
           'ujGyerekEntitas',
-          { gyerekId: ujTartalom._id, gyerekTipus: 'Tartalom' },
+          { gyerekId: ujGondolat._id, gyerekTipus: 'Gondolat' },
           eemberId // a létrehozót NEM értesítjük magát
         );
       } catch (ertesitesHiba) {
-        console.error('tartalomLetrehozasa - ujGyerekEntitas ertesites HIBA (nem blokkolo)', {
+        console.error('gondolatLetrehozasa - ujGyerekEntitas ertesites HIBA (nem blokkolo)', {
           hiba: ertesitesHiba.message
         });
       }
     }
 
-    // ===== 12. LÉPÉS - LÉTREHOZOTT TARTALOM VISSZAADÁSA =====
-    console.log("<<<<<<<<<<<<<<<<<<<<<< tartalomLetrehozasa====ujTartalom: ", {
-      ujTartalom: ujTartalom
+    // ===== 12. LÉPÉS - LÉTREHOZOTT GONDOLAT VISSZAADÁSA =====
+    console.log("<<<<<<<<<<<<<<<<<<<<<< gondolatLetrehozasa====ujGondolat: ", {
+      ujGondolat: ujGondolat
     });
-    return ujTartalom;
+    return ujGondolat;
   }
 
   // =====================================
-  // ----- TARTALOM LEKÉRÉSE ID ALAPJÁN -----
+  // ----- GONDOLAT LEKÉRÉSE ID ALAPJÁN -----
   // =====================================
 
   /**
-   * Egy tartalom lekérése jogosultság ellenőrzéssel
-   * @param {string} id - A tartalom ID-ja
+   * Egy gondolat lekérése jogosultság ellenőrzéssel
+   * @param {string} id - A gondolat ID-ja
    * @param {string} eemberId - A lekérést végző eember ID-ja
-   * @returns {Promise} A tartalom objektum
+   * @returns {Promise} A gondolat objektum
    */
-  async tartalomLekerese(id, eemberId) {
-    console.log("=================================== tartalomLekerese:: ", {
+  async gondolatLekerese(id, eemberId) {
+    console.log("=================================== gondolatLekerese:: ", {
       id: id,
       eemberId: eemberId
     });
 
     // 1. LÉPÉS - ID validálás
     if (!id) {
-      throw new Error('A tartalom ID megadása kötelező');
+      throw new Error('A gondolat ID megadása kötelező');
     }
 
-    // 2. LÉPÉS - Repository hívás - tartalom lekérése
+    // 2. LÉPÉS - Repository hívás - gondolat lekérése
 
-    console.log("tartalomLekerese >>>>>>>>>>>>>>>>>> TartalomRepository.findById", {
+    console.log("gondolatLekerese >>>>>>>>>>>>>>>>>> GondolatRepository.findById", {
       id: id
     });
     
-    const tartalom = await TartalomRepository.findById(id);
+    const gondolat = await GondolatRepository.findById(id);
 
     // 3. LÉPÉS - Létezés ellenőrzése
-    if (!tartalom) {
-      throw new Error('A tartalom nem található');
+    if (!gondolat) {
+      throw new Error('A gondolat nem található');
     }
 
-    console.log("<<<<<<<<<<<<<<<<< tartalomLekerese=====tartalom: ", {
-      tartalom: tartalom
+    console.log("<<<<<<<<<<<<<<<<< gondolatLekerese=====gondolat: ", {
+      gondolat: gondolat
     });
-    return tartalom;
+    return gondolat;
   }
 
   // =====================================
-  // ----- TARTALMAK LISTÁZÁSA -----
+  // ----- GONDOLATOK LISTÁZÁSA -----
   // =====================================
 
   /**
-   * Tartalmak listázása szűrőkkel
+   * Gondolatok listázása szűrőkkel
    * @param {Object} szurok - Szűrési feltételek
    * @param {string} eemberId - A lekérést végző eember ID-ja
-   * @returns {Promise} Tartalmak tömb
+   * @returns {Promise} Gondolatok tömb
    */
-  async tartalomListazasa(szurok = {}, eemberId) {
-    console.log("===================================  tartalomListazasa:: ", {
+  async gondolatListazasa(szurok = {}, eemberId) {
+    console.log("===================================  gondolatListazasa:: ", {
       szurok: szurok,
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Repository hívás - tartalmak lekérése
+    // 1. LÉPÉS - Repository hívás - gondolatok lekérése
 
-    console.log("tartalomListazasa >>>>>>>>>>>>>>>>> TartalomRepository.findAll", { 
+    console.log("gondolatListazasa >>>>>>>>>>>>>>>>> GondolatRepository.findAll", { 
       szurok: szurok
     });
     
-    const tartalmak = await TartalomRepository.findAll(szurok);
+    const gondolatok = await GondolatRepository.findAll(szurok);
 
-    // 2. LÉPÉS - Visszaadás (nincs láthatóság-szűrés – minden tartalom látható)
-    console.log("<<<<<<<<<<<<<<<<<<<<< tartalomListazasa === tartalmak", {
-      tartalmakSzama: tartalmak.length
+    // 2. LÉPÉS - Visszaadás (nincs láthatóság-szűrés – minden gondolat látható)
+    console.log("<<<<<<<<<<<<<<<<<<<<< gondolatListazasa === gondolatok", {
+      gondolatokSzama: gondolatok.length
     });
-    return tartalmak;
+    return gondolatok;
   }
 
   // =====================================
-  // ----- TARTALOM ModositasA -----
+  // ----- GONDOLAT ModositasA -----
   // =====================================
 
   /**
-   * Egy tartalom módosítása validációval és jogosultság ellenőrzéssel
-   * @param {string} id - A tartalom ID-ja
+   * Egy gondolat módosítása validációval és jogosultság ellenőrzéssel
+   * @param {string} id - A gondolat ID-ja
    * @param {Object} frissitesek - A frissítendő mezők
    * @param {string} eemberId - A módosítást végző eember ID-ja
-   * @returns {Promise} A frissített tartalom
+   * @returns {Promise} A frissített gondolat
    */
-  async tartalomModositasa(id, frissitesek, eemberId) {
-    console.log("=================================== tartalomModositasa:: ", {
+  async gondolatModositasa(id, frissitesek, eemberId) {
+    console.log("=================================== gondolatModositasa:: ", {
       id: id,
       frissitesek: frissitesek,
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Tartalom létezésének ellenőrzése
+    // 1. LÉPÉS - Gondolat létezésének ellenőrzése
 
-    console.log("tartalomModositasa >>>>>>>>>>>>>>>>>>>>> TartalomRepository.findById", {
+    console.log("gondolatModositasa >>>>>>>>>>>>>>>>>>>>> GondolatRepository.findById", {
       id: id
     });
     
-    const tartalom = await TartalomRepository.findById(id);
+    const gondolat = await GondolatRepository.findById(id);
     
-    if (!tartalom) {
-      throw new Error('A tartalom nem található');
+    if (!gondolat) {
+      throw new Error('A gondolat nem található');
     }
 
     // 2. LÉPÉS - Jogosultság ellenőrzése
-    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját tartalmát.
+    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját gondolatát.
     // (A szerkesztok tömbben ő az `eredeti: true` jelölésű elem; az eemberId
     //  populate-olva jön, ezért az ._id-t hasonlítjuk.)
-    const eredetiSzerkeszto = (tartalom.szerkesztok || []).find(sz => sz.eredeti);
+    const eredetiSzerkeszto = (gondolat.szerkesztok || []).find(sz => sz.eredeti);
     const eredetiId = eredetiSzerkeszto?.eemberId?._id ?? eredetiSzerkeszto?.eemberId;
     if (!eredetiId || eredetiId.toString() !== eemberId.toString()) {
-      throw new Error('Nincs jogosultságod módosítani ezt a tartalmat');
+      throw new Error('Nincs jogosultságod módosítani ezt a gondolatot');
     }
 
     // 3. LÉPÉS - Engedélyezett mezők szűrése
@@ -457,7 +457,7 @@ class TartalomService {
       if (Array.isArray(tisztitottFrissitesek.kategoriaIds) && tisztitottFrissitesek.kategoriaIds.length > 0) {
         // 7.1 - Ellenőrizzük, hogy maximum 3 kategória van-e
         if (tisztitottFrissitesek.kategoriaIds.length > 3) {
-          throw new Error('Maximum 3 kategória rendelhető egy tartalomhoz');
+          throw new Error('Maximum 3 kategória rendelhető egy gondolathoz');
         }
 
         // 7.2 - Üres stringek és null értékek kiszűrése
@@ -485,15 +485,15 @@ class TartalomService {
 
     // 8. LÉPÉS - Repository hívás - frissítés
 
-    console.log("tartalomModositasa >>>>>>>>>>>>>>>>>>> TartalomRepository.updateById", {
+    console.log("gondolatModositasa >>>>>>>>>>>>>>>>>>> GondolatRepository.updateById", {
       id: id,
       tisztitottFrissitesek: tisztitottFrissitesek
     });
     
-    const frissitettTartalom = await TartalomRepository.updateById(id, tisztitottFrissitesek);
+    const frissitettGondolat = await GondolatRepository.updateById(id, tisztitottFrissitesek);
 
-    console.log("<<<<<<<<<<<<<<<<<<<< tartalomModositasa====frissitettTartalom: ", {
-      frissitettTartalom: frissitettTartalom
+    console.log("<<<<<<<<<<<<<<<<<<<< gondolatModositasa====frissitettGondolat: ", {
+      frissitettGondolat: frissitettGondolat
     });
 
     // 9. LÉPÉS - ELAVULT FÁJLOK TÖRLÉSE (ha a szöveg változott)
@@ -503,54 +503,54 @@ class TartalomService {
     // töröljük a lemezről. Best-effort: hibát csak naplózunk, nem dobunk.
     if (tisztitottFrissitesek.szoveg !== undefined) {
       try {
-        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(tartalom, 'Tartalom');
-        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettTartalom, 'Tartalom');
+        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(gondolat, 'Gondolat');
+        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettGondolat, 'Gondolat');
         await FajlKezeloService.elavultFajlokTorlese(regiUrlek, ujUrlek);
       } catch (hiba) {
-        console.warn('tartalomModositasa - Elavult fájlok törlése sikertelen', { id, hiba: hiba.message });
+        console.warn('gondolatModositasa - Elavult fájlok törlése sikertelen', { id, hiba: hiba.message });
       }
     }
 
-    return frissitettTartalom;
+    return frissitettGondolat;
   }
 
   // =====================================
-  // ----- TARTALOM RÉSZLETES ADATAI TUDATPONTTAL -----
+  // ----- GONDOLAT RÉSZLETES ADATAI TUDATPONTTAL -----
   // =====================================
 
   /**
-   * Tartalom részletes adatainak lekérése tudatpont allokációval együtt
-   * @param {string} id - A tartalom ID-ja
+   * Gondolat részletes adatainak lekérése tudatpont allokációval együtt
+   * @param {string} id - A gondolat ID-ja
    * @param {string} eemberId - A lekérést végző eember ID-ja
-   * @returns {Promise} Tartalom + tudatpont adatok
+   * @returns {Promise} Gondolat + tudatpont adatok
    */
-  async tartalomReszleteinekLekerese(id, eemberId) {
-    console.log("=================================== tartalomReszleteinekLekerese: ", {
+  async gondolatReszleteinekLekerese(id, eemberId) {
+    console.log("=================================== gondolatReszleteinekLekerese: ", {
       id: id,
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Tartalom alapadatainak lekérése (jogosultság ellenőrzéssel)
+    // 1. LÉPÉS - Gondolat alapadatainak lekérése (jogosultság ellenőrzéssel)
 
-    console.log("tartalomReszleteinekLekerese >>>>>>>>>>>>>>>>>>> this.tartalomLekerese");
+    console.log("gondolatReszleteinekLekerese >>>>>>>>>>>>>>>>>>> this.gondolatLekerese");
     
-    const tartalom = await this.tartalomLekerese(id, eemberId);
+    const gondolat = await this.gondolatLekerese(id, eemberId);
 
     // 2. LÉPÉS - Tudatpont allokáció lekérése
     const tudatpontAdatok = await TudatpontService.entitasAllokaciLekerese(
       id,
-      'Tartalom',
+      'Gondolat',
       eemberId
     );
 
     // 3. LÉPÉS - Összesített objektum visszaadása
-    console.log("<<<<<<<<<<<<<<<<< tartalomReszleteinekLekerese====Eredmény:", {
-      tartalom: tartalom,
+    console.log("<<<<<<<<<<<<<<<<< gondolatReszleteinekLekerese====Eredmény:", {
+      gondolat: gondolat,
       tudatpont: tudatpontAdatok
     });
     
     return {
-      tartalom: tartalom,
+      gondolat: gondolat,
       tudatpont: tudatpontAdatok
     };
   }
@@ -559,7 +559,7 @@ class TartalomService {
   // ===== Torles METÓDUS NINCS! =====
   // =====================================
   //
-  // A tartalmak NEM törölhetők direkt Service metódus híváson keresztül.
+  // A gondolatok NEM törölhetők direkt Service metódus híváson keresztül.
   //
   // Törlés csak automatikusan történik:
   //
@@ -567,12 +567,12 @@ class TartalomService {
   // - Ha minden eember, vagy egy egyezmény visszavonja a tudatpontjait
   // - És az osszesPont 0-ra csökken
   // - Automatikusan meghívódik: tudatpontService.js → entitasTorlese0PontNal()
-  // - Az entitás törlése: tartalomRepository.deleteById()
+  // - Az entitás törlése: gondolatRepository.deleteById()
   //
-  // A tartalomRepository.deleteById() metódus MARAD,
+  // A gondolatRepository.deleteById() metódus MARAD,
   // mert azt használják a fenti automatikus törlési mechanizmusok!
 
 }
 
 // Service exportálása
-module.exports = new TartalomService();
+module.exports = new GondolatService();

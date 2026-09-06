@@ -264,7 +264,7 @@ class JavaslatRepository {
   /**
    * Egy adott entitásra vonatkozó javaslatok keresése
    * @param {string} entitasId - Az entitás MongoDB ObjectId-ja
-   * @param {string} entitasTipus - Az entitás típusa ('Tartalom', 'Kategoria', stb.)
+   * @param {string} entitasTipus - Az entitás típusa ('Gondolat', 'Kategoria', stb.)
    * @returns {Promise<Array>} Javaslatok tömb
    */
   async findByErintettEntitas(entitasId, entitasTipus) {
@@ -419,7 +419,7 @@ class JavaslatRepository {
   /**
    * Egy adott entitásra vonatkozó javaslatok keresése státusz szerint
    * @param {string} entitasId - Az entitás MongoDB ObjectId-ja
-   * @param {string} entitasTipus - Az entitás típusa ('Tartalom', 'Kategoria', stb.)
+   * @param {string} entitasTipus - Az entitás típusa ('Gondolat', 'Kategoria', stb.)
    * @param {string} statusz - Javaslat státusz (alapértelmezett: 'Aktiv')
    * @returns {Promise<Array>} Javaslat ID-k tömbje
    */
@@ -472,8 +472,8 @@ class JavaslatRepository {
 
   /**
  * ----- JAVASLAT KERESÉSE SZÜLŐ ALAPJÁN -----
- * ÚJ FÜGGVÉNY: Egy tartalom alatti javaslatok lekérése
- * @param {string} szuloId - Szülő tartalom MongoDB ObjectId-ja
+ * ÚJ FÜGGVÉNY: Egy gondolat alatti javaslatok lekérése
+ * @param {string} szuloId - Szülő gondolat MongoDB ObjectId-ja
  * @param {string|null} statusz - Javaslat státusza (opcionális szűrés)
  * @returns {Promise<Array>} Javaslatok tömb
  */

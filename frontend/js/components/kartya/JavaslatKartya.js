@@ -4,7 +4,7 @@
 import Kartya from './Kartya.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
-import TartalomModal from '../modals/TartalomModal.js';
+import GondolatModal from '../modals/GondolatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 import { masodpercFelirat } from '../../utils/idoFormazo.js';
@@ -27,7 +27,7 @@ import SzavazasFul from './SzavazasFul.js';
 //    támogatottsági arány, ellenzői arány, bizonyossági mutató,
 //    döntési idő, töredék jelzés (pl. "2 / 6") – ha töredék javaslat
 // 3. Feltölti a body-t (csak kiválasztott kártyán): töredék részletek + külső fülsáv
-//    (Módosításnál Indoklás / Módosított tartalom), egyébként csak indoklás
+//    (Módosításnál Indoklás / Módosított gondolat), egyébként csak indoklás
 // 4. Megadja a hamburger menü opcióit
 class JavaslatKartya extends Kartya {
 
@@ -51,8 +51,8 @@ class JavaslatKartya extends Kartya {
     // ÚJ - Megjelenítő példányok + külső fülsáv referenciái
     // =============================================
     // A body-ban több SzovegMezoMegjelenito is lehet (indoklás + módosított
-    // tartalom), ezért tömbben tartjuk őket a destroy()-hoz. A KartyaFulsav a
-    // külső fül-réteg (Indoklás / Módosított tartalom).
+    // gondolat), ezért tömbben tartjuk őket a destroy()-hoz. A KartyaFulsav a
+    // külső fül-réteg (Indoklás / Módosított gondolat).
     this.megjelenitok = [];
     this.kartyaFulsav = null;
     this.szavazasFul  = null;
@@ -136,15 +136,15 @@ class JavaslatKartya extends Kartya {
 
   // ----- BODY FELTÖLTÉSE -----
   // =============================================
-  // MÓDOSÍTVA - külső fülsáv (Indoklás / Módosított tartalom / Szavazás)
+  // MÓDOSÍTVA - külső fülsáv (Indoklás / Módosított gondolat / Szavazás)
   // =============================================
   // A body-t egységesen egy KÜLSŐ fülsáv (KartyaFulsav) tölti fel, a lehetséges
   // fülek listájából:
   //   1. Indoklás           — ha van szöveg (adatok.szovegMezo)
-  //   2. Módosított tartalom — Módosítás-javaslatnál (adatok.modositottTartalom):
-  //      a tartalom címe a két fülsáv közé, alatta a tartalom SAJÁT belső fülsávja
+  //   2. Módosított gondolat — Módosítás-javaslatnál (adatok.modositottGondolat):
+  //      a gondolat címe a két fülsáv közé, alatta a gondolat SAJÁT belső fülsávja
   //   3. Szavazás           — AKTÍV javaslatnál (adatok.statusz === 'Aktiv')
-  // Egyetlen fülnél a KartyaFulsav nem rajzol fülsávot, csak a tartalmat mutatja
+  // Egyetlen fülnél a KartyaFulsav nem rajzol fülsávot, csak a gondolatot mutatja
   // (pl. lezárt, nem módosítási javaslat: csak az indoklás).
   // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
@@ -176,30 +176,30 @@ class JavaslatKartya extends Kartya {
       fulek.push({ id: 'indoklas', felirat: 'Indoklás', tartalomElem: indoklasElem });
     }
 
-    // --- 2. fül — MÓDOSÍTOTT TARTALOM (Módosítás-javaslatnál) ---
-    // A tartalom leképezése a címével együtt (cím a két fülsáv közé, alatta a body).
+    // --- 2. fül — MÓDOSÍTOTT GONDOLAT (Módosítás-javaslatnál) ---
+    // A gondolat leképezése a címével együtt (cím a két fülsáv közé, alatta a body).
     // A body akkor is megjelenik, ha csak a cím változott (a backend a jelenlegi
-    // tartalommal olvassa össze); ha a tartalom body-ja eleve üres, itt is üres.
-    const modositottTartalom = adatok.modositottTartalom;
-    if (modositottTartalom) {
+    // gondolattal olvassa össze); ha a gondolat body-ja eleve üres, itt is üres.
+    const modositottGondolat = adatok.modositottGondolat;
+    if (modositottGondolat) {
       const modElem = document.createElement('div');
       modElem.className = 'javaslat-kartya__modositott-kontener';
 
-      if (modositottTartalom.cim) {
+      if (modositottGondolat.cim) {
         const cimElem = document.createElement('span');
         cimElem.className   = 'kartya-fulsav__cim';
-        cimElem.textContent = modositottTartalom.cim;
+        cimElem.textContent = modositottGondolat.cim;
         modElem.appendChild(cimElem);
       }
 
       const szovegKontener = document.createElement('div');
       modElem.appendChild(szovegKontener);
       this.megjelenitok.push(new SzovegMezoMegjelenito(szovegKontener, {
-        blokkok:              modositottTartalom.szoveg,
+        blokkok:              modositottGondolat.szoveg,
         onEntitasKivalasztas: this._entitasHivatkozasKezelo()
       }));
 
-      fulek.push({ id: 'modositas', felirat: 'Módosított tartalom', tartalomElem: modElem });
+      fulek.push({ id: 'modositas', felirat: 'Módosított gondolat', tartalomElem: modElem });
     }
 
     // --- 3. fül — SZAVAZÁS (csak AKTÍV javaslatnál) ---
@@ -212,7 +212,7 @@ class JavaslatKartya extends Kartya {
         javaslatId:  this.entitas.entitasId,
         token:       this.token,
         szavazhat:   adatok.szavazhat === true,
-        tiltvaIndok: 'Ehhez az érintett tartalmon kell tudatpont (a javaslaton magán nem szükséges).'
+        tiltvaIndok: 'Ehhez az érintett gondolaton kell tudatpont (a javaslaton magán nem szükséges).'
       });
       // A saját szavazat lekérése + kiemelés (async, nem blokkoló)
       this.szavazasFul.betoltes();
@@ -287,7 +287,7 @@ class JavaslatKartya extends Kartya {
       this.kartyaFulsav = null;
     }
 
-    // Minden SzovegMezoMegjelenito (indoklás + módosított tartalom) felszabadítása
+    // Minden SzovegMezoMegjelenito (indoklás + módosított gondolat) felszabadítása
     if (Array.isArray(this.megjelenitok)) {
       this.megjelenitok.forEach((m) => m?.destroy?.());
       this.megjelenitok = [];
@@ -338,16 +338,16 @@ class JavaslatKartya extends Kartya {
   }
 
   // =============================================
-  // ÚJ - ÚJ TARTALOM LÉTREHOZÁSA EBBŐL ÁGAZTATVA
+  // ÚJ - ÚJ GONDOLAT LÉTREHOZÁSA EBBŐL ÁGAZTATVA
   // =============================================
-  // A közös TartalomModal-t nyitja meg létrehozás módban, a javaslatot
+  // A közös GondolatModal-t nyitja meg létrehozás módban, a javaslatot
   // szülőként átadva (szuloId + szuloTipus: 'Javaslat').
-  async _ujTartalomLetrehozasa(entitas) {
-    console.log('JavaslatKartya._ujTartalomLetrehozasa - KEZDÉS', {
+  async _ujGondolatLetrehozasa(entitas) {
+    console.log('JavaslatKartya._ujGondolatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    const tartalomModal = new TartalomModal(this.modalKontenerAzon, {
+    const gondolatModal = new GondolatModal(this.modalKontenerAzon, {
       mod: 'letrehozas',
       szuloAdatok: {
         szuloId:    entitas.entitasId,
@@ -358,10 +358,10 @@ class JavaslatKartya extends Kartya {
       }
     });
 
-    await tartalomModal.init();
-    tartalomModal.megnyitas();
+    await gondolatModal.init();
+    gondolatModal.megnyitas();
 
-    console.log('JavaslatKartya._ujTartalomLetrehozasa - VÉGE', {
+    console.log('JavaslatKartya._ujGondolatLetrehozasa - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
@@ -433,11 +433,11 @@ class JavaslatKartya extends Kartya {
     const opciok = [
       {
         ikon:           '✏️',
-        felirat:        'Új tartalom létrehozása ebből',
+        felirat:        'Új gondolat létrehozása ebből',
         // Ágaztatás ebből az entitásból → tudatpont kell rá
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => this._ujTartalomLetrehozasa(entitas)
+        akcio:          () => this._ujGondolatLetrehozasa(entitas)
       },
       {
         ikon:       '🌟',

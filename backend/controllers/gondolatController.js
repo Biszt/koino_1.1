@@ -1,27 +1,27 @@
-// backend/controllers/tartalomController.js
+// backend/controllers/gondolatController.js
 
 // ===================================
 // IMPORTOK
 // ===================================
 // Service - üzleti logika kezelése
-const TartalomService = require('../services/tartalomService');
+const GondolatService = require('../services/gondolatService');
 
 // ===================================
-// TARTALOM CONTROLLER OSZTÁLY
+// GONDOLAT CONTROLLER OSZTÁLY
 // ===================================
 // Ez a réteg kezeli a HTTP kéréseket és válaszokat
 // Fogadja a request-et, átadja a Service-nek, visszaküldi a response-t
-class TartalomController {
+class GondolatController {
 
   /**
-   * ----- ÚJ TARTALOM LÉTREHOZÁSA -----
+   * ----- ÚJ GONDOLAT LÉTREHOZÁSA -----
    * MÓDOSÍTVA: szuloId + szuloTipus fogadása request-ben
-   * Új tartalom létrehozása
-   * POST /api/tartalom
+   * Új gondolat létrehozása
+   * POST /api/gondolat
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
-  async tartalomLetrehozasa(req, res) {
+  async gondolatLetrehozasa(req, res) {
     try {
       // 1. LÉPÉS - eEmber ID kiolvassa JWT middleware-ből
       // Az authMiddleware már beállította a req.user objektumot
@@ -39,10 +39,10 @@ class TartalomController {
       // {
       //   cim: string,
       //   szoveg: string,
-      //   tartalomTipusId: ObjectId,
+      //   gondolatTipusId: ObjectId,
       //   kategoriaIds: [ObjectId],
       //   szuloId: ObjectId,           // ← ÚJ
-      //   szuloTipus: string,          // ← ÚJ ('Tartalom', 'Javaslat', 'Egyezmeny')
+      //   szuloTipus: string,          // ← ÚJ ('Gondolat', 'Javaslat', 'Egyezmeny')
       //   kezdoTudatpont: number
       // }
       const adatok = req.body;
@@ -63,7 +63,7 @@ class TartalomController {
       // ÉS hozzárendel tudatpontot
       // Service ellenőrzi a kategoriaIds tömb validitását (max 3, léteznek-e, duplikáció)
       // Service ellenőrzi a szuloId + szuloTipus konzisztenciát
-      const ujTartalom = await TartalomService.tartalomLetrehozasa(
+      const ujGondolat = await GondolatService.gondolatLetrehozasa(
         adatok,           // ← Tartalmazza: szuloId, szuloTipus
         eemberId,
         kezdoTudatpont
@@ -73,13 +73,13 @@ class TartalomController {
       // 201 Created - Új erőforrás sikeresen létrehozva
       res.status(201).json({
         success: true,
-        message: 'Tartalom sikeresen létrehozva',
-        tartalom: ujTartalom
+        message: 'Gondolat sikeresen létrehozva',
+        gondolat: ujGondolat
       });
       
     } catch (error) {
       // HIBAKEZELÉS - Ha bármi hiba történik
-      console.error('Tartalom létrehozása hiba:', error);
+      console.error('Gondolat létrehozása hiba:', error);
       
       // 400 Bad Request - Kliens oldali hiba (validációs hiba)
       res.status(400).json({
@@ -91,37 +91,37 @@ class TartalomController {
 
 
   // =====================================
-  // ----- TARTALOM LEKÉRÉSE ID ALAPJÁN -----
+  // ----- GONDOLAT LEKÉRÉSE ID ALAPJÁN -----
   // =====================================
   /**
-   * Egy tartalom lekérése
-   * GET /api/tartalom/:id
+   * Egy gondolat lekérése
+   * GET /api/gondolat/:id
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
-  async tartalomLekerese(req, res) {
+  async gondolatLekerese(req, res) {
     try {
-      // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
-      const tartalomId = req.params.id;
+      // 1. LÉPÉS - Gondolat ID kiolvasása URL paraméterből
+      const gondolatId = req.params.id;
 
       // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből (opcionális)
       const eemberId = req.user?.id || null;
 
-      // 3. LÉPÉS - Service hívás - tartalom lekérése jogosultság ellenőrzéssel
-      const tartalom = await TartalomService.tartalomLekerese(tartalomId, eemberId);
+      // 3. LÉPÉS - Service hívás - gondolat lekérése jogosultság ellenőrzéssel
+      const gondolat = await GondolatService.gondolatLekerese(gondolatId, eemberId);
 
       // 4. LÉPÉS - Sikeres válasz küldése
       // 200 OK - Sikeres lekérés
       res.status(200).json({
         success: true,
-        tartalom: tartalom
+        gondolat: gondolat
       });
 
     } catch (error) {
       // HIBAKEZELÉS
-      console.error('Tartalom lekérése hiba:', error);
+      console.error('Gondolat lekérése hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom
+      // 404 Not Found - Ha nem található a gondolat
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -140,28 +140,28 @@ class TartalomController {
       // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
-        message: 'Szerver hiba történt a tartalom lekérése során'
+        message: 'Szerver hiba történt a gondolat lekérése során'
       });
     }
   }
 
   // =====================================
-  // ----- TARTALMAK LISTÁZÁSA -----
+  // ----- GONDOLATOK LISTÁZÁSA -----
   // =====================================
   /**
-   * Tartalmak listázása szűrőkkel
-   * GET /api/tartalom
-   * Query paraméterek: tartalomTipusId, szuloId, kategoriaId
+   * Gondolatok listázása szűrőkkel
+   * GET /api/gondolat
+   * Query paraméterek: gondolatTipusId, szuloId, kategoriaId
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
-  async tartalomokListazasa(req, res) {
+  async gondolatokListazasa(req, res) {
     try {
-        console.log('===== TARTALMAK LISTÁZÁSA KEZDŐDIK =====');
+        console.log('===== GONDOLATOK LISTÁZÁSA KEZDŐDIK =====');
         
         // 1. LÉPÉS - Szűrők kiolvasása query paraméterekből
         const szurok = {
-            tartalomTipusId: req.query.tartalomTipusId,
+            gondolatTipusId: req.query.gondolatTipusId,
             szuloId: req.query.szuloId,
             kategoriaId: req.query.kategoriaId // EGY kategória ID szűréshez (bármelyik a 3 közül)
         };
@@ -171,20 +171,20 @@ class TartalomController {
         const eemberId = req.user?.id || null;
         console.log('2. eEmber ID:', eemberId);
         
-        // 3. LÉPÉS - Service hívás - tartalmak lekérése szűrőkkel
+        // 3. LÉPÉS - Service hívás - gondolatok lekérése szűrőkkel
         console.log('3. Service hívás ELŐTT...');
-        const tartalmak = await TartalomService.tartalomListazasa(szurok, eemberId);
-        console.log('3. Service hívás UTÁN - Tartalmak száma:', tartalmak.length);
+        const gondolatok = await GondolatService.gondolatListazasa(szurok, eemberId);
+        console.log('3. Service hívás UTÁN - Gondolatok száma:', gondolatok.length);
         
         // 4. LÉPÉS - Sikeres válasz küldése
         // 200 OK - Sikeres lekérés
         res.status(200).json({
             success: true,
-            count: tartalmak.length,
-            tartalmak: tartalmak
+            count: gondolatok.length,
+            gondolatok: gondolatok
         });
         
-        console.log('===== TARTALMAK LISTÁZÁSA VÉGE - SIKER =====');
+        console.log('===== GONDOLATOK LISTÁZÁSA VÉGE - SIKER =====');
         
     } catch (error) {
         // HIBAKEZELÉS
@@ -197,24 +197,24 @@ class TartalomController {
         // 500 Internal Server Error
         res.status(500).json({
             success: false,
-            message: 'Szerver hiba történt a tartalmak lekérése során'
+            message: 'Szerver hiba történt a gondolatok lekérése során'
         });
     }
   }
 
   // =====================================
-  // ----- TARTALOM ModositasA -----
+  // ----- GONDOLAT ModositasA -----
   // =====================================
   /**
-   * Egy tartalom módosítása
-   * PATCH /api/tartalom/:id
+   * Egy gondolat módosítása
+   * PATCH /api/gondolat/:id
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
-  async tartalomModositasa(req, res) {
+  async gondolatModositasa(req, res) {
     try {
-      // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
-      const tartalomId = req.params.id;
+      // 1. LÉPÉS - Gondolat ID kiolvasása URL paraméterből
+      const gondolatId = req.params.id;
 
       // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
       const eemberId = req.user?.id;
@@ -232,8 +232,8 @@ class TartalomController {
 
       // 4. LÉPÉS - Service hívás - módosítás jogosultság ellenőrzéssel
       // Service validálja a kategoriaIds tömböt (max 3, léteznek-e, duplikáció)
-      const frissitettTartalom = await TartalomService.tartalomModositasa(
-        tartalomId,
+      const frissitettGondolat = await GondolatService.gondolatModositasa(
+        gondolatId,
         frissitesek,
         eemberId
       );
@@ -242,15 +242,15 @@ class TartalomController {
       // 200 OK - Sikeres módosítás
       res.status(200).json({
         success: true,
-        message: 'Tartalom sikeresen módosítva',
-        tartalom: frissitettTartalom
+        message: 'Gondolat sikeresen módosítva',
+        gondolat: frissitettGondolat
       });
 
     } catch (error) {
       // HIBAKEZELÉS
-      console.error('Tartalom módosítása hiba:', error);
+      console.error('Gondolat módosítása hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom
+      // 404 Not Found - Ha nem található a gondolat
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -280,31 +280,31 @@ class TartalomController {
       // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
-        message: 'Szerver hiba történt a tartalom módosítása során'
+        message: 'Szerver hiba történt a gondolat módosítása során'
       });
     }
   }
 
   // =====================================
-  // ----- TARTALOM RÉSZLETES ADATAI -----
+  // ----- GONDOLAT RÉSZLETES ADATAI -----
   // =====================================
   /**
-   * Tartalom részletes adatainak lekérése tudatpont adatokkal
-   * GET /api/tartalom/:id/reszletek
+   * Gondolat részletes adatainak lekérése tudatpont adatokkal
+   * GET /api/gondolat/:id/reszletek
    * @param {Object} req - Express request objektum
    * @param {Object} res - Express response objektum
    */
-  async tartalomReszleteinekLekerese(req, res) {
+  async gondolatReszleteinekLekerese(req, res) {
     try {
-      // 1. LÉPÉS - Tartalom ID kiolvasása URL paraméterből
-      const tartalomId = req.params.id;
+      // 1. LÉPÉS - Gondolat ID kiolvasása URL paraméterből
+      const gondolatId = req.params.id;
 
       // 2. LÉPÉS - eEmber ID kiolvasása JWT middleware-ből
       const eemberId = req.user?.id || null;
 
       // 3. LÉPÉS - Service hívás - részletes adatok lekérése
-      const reszletek = await TartalomService.tartalomReszleteinekLekerese(
-        tartalomId,
+      const reszletek = await GondolatService.gondolatReszleteinekLekerese(
+        gondolatId,
         eemberId
       );
 
@@ -317,9 +317,9 @@ class TartalomController {
 
     } catch (error) {
       // HIBAKEZELÉS
-      console.error('Tartalom részleteinek lekérése hiba:', error);
+      console.error('Gondolat részleteinek lekérése hiba:', error);
 
-      // 404 Not Found - Ha nem található a tartalom
+      // 404 Not Found - Ha nem található a gondolat
       if (error.message.includes('nem található')) {
         return res.status(404).json({
           success: false,
@@ -338,7 +338,7 @@ class TartalomController {
       // 500 Internal Server Error - Egyéb szerver hiba
       res.status(500).json({
         success: false,
-        message: 'Szerver hiba történt a tartalom részleteinek lekérése során'
+        message: 'Szerver hiba történt a gondolat részleteinek lekérése során'
       });
     }
   }
@@ -347,7 +347,7 @@ class TartalomController {
   // ===== Torles METÓDUS NINCS! =====
   // =====================================
   // 
-  // A tartalmak NEM törölhetők direkt API híváson keresztül.
+  // A gondolatok NEM törölhetők direkt API híváson keresztül.
   // 
   // Törlés csak automatikusan történik:
   // 
@@ -358,4 +358,4 @@ class TartalomController {
 }
 
 // Controller exportálása
-module.exports = new TartalomController();
+module.exports = new GondolatController();

@@ -7,9 +7,9 @@
 // Repository importálása - adatbázis műveletek
 const JavaslatRepository = require('../../repositories/javaslatRepository');
 const SzavazatRepository = require('../../repositories/szavazatRepository');
-const TartalomRepository = require('../../repositories/tartalomRepository'); 
+const GondolatRepository = require('../../repositories/gondolatRepository'); 
 const KategoriaRepository = require('../../repositories/kategoriaRepository'); 
-const TartalomTipusRepository = require('../../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../../repositories/gondolatTipusRepository');
 const EgyezmenyRepository = require('../../repositories/egyezmenyRepository');
 const TudatpontRepository = require('../../repositories/tudatpontRepository');
 // Ős-lánc építő — az egyesítésnél az új entitás alap-szülőjének (legközelebbi közös ős) számításához
@@ -31,7 +31,7 @@ const ErtesitesService = require('../ertesitesService');
 // ===================================
 // SEGÉDFÜGGVÉNY: indoklasUres
 // ===================================
-// Igaz, ha az indoklás gyakorlatilag ÜRES (nincs érdemi tartalom). A szövegszerkesztő
+// Igaz, ha az indoklás gyakorlatilag ÜRES (nincs érdemi gondolat). A szövegszerkesztő
 // blokk-tömböt VAGY több oldalas objektumot ad. Üres = nincs blokk, vagy csak üres
 // szöveges blokk(ok). Bármely nem-szöveg blokk (kép/fájl/link/entitás) → NEM üres.
 // (A javaslat indoklása KÖTELEZŐ, de nincs minimum karakterszám – csak nem lehet üres.)
@@ -48,7 +48,7 @@ function indoklasUres(indoklas) {
 
   for (const blokk of blokkok) {
     if (!blokk || typeof blokk !== 'object') continue;
-    // Bármi, ami nem szöveg (kép, fájl, link, entitás-hivatkozás) → tartalom van
+    // Bármi, ami nem szöveg (kép, fájl, link, entitás-hivatkozás) → gondolat van
     if (blokk.tipus && blokk.tipus !== 'szoveg') return false;
     // Szöveg blokk: HTML-tagek nélkül van-e nem-üres szöveg?
     const nyers = (blokk.tartalom ?? blokk.szoveg ?? '').toString();
@@ -87,35 +87,35 @@ class JavaslatService {
       if (e.entitasTipus === 'Egyezmeny' && e.muvelet !== 'Athelyezes' && e.muvelet !== 'Torles') {
         throw new Error('Egyezményre csak áthelyezési vagy törlési javaslat indítható.');
       }
-      // Kategóriát és Tartalomtípust nem lehet áthelyezni
-      if ((e.entitasTipus === 'Kategoria' || e.entitasTipus === 'TartalomTipus') && e.muvelet === 'Athelyezes') {
-        throw new Error('Kategóriát és tartalomtípust nem lehet áthelyezni.');
+      // Kategóriát és Gondolattípust nem lehet áthelyezni
+      if ((e.entitasTipus === 'Kategoria' || e.entitasTipus === 'GondolatTipus') && e.muvelet === 'Athelyezes') {
+        throw new Error('Kategóriát és gondolattípust nem lehet áthelyezni.');
       }
-      // Tartalomtípust nem lehet egyesíteni (csak törölni vagy módosítani)
-      if (e.entitasTipus === 'TartalomTipus' && e.muvelet === 'Egyesites') {
-        throw new Error('Tartalomtípust nem lehet egyesíteni — csak törölni vagy módosítani.');
+      // Gondolattípust nem lehet egyesíteni (csak törölni vagy módosítani)
+      if (e.entitasTipus === 'GondolatTipus' && e.muvelet === 'Egyesites') {
+        throw new Error('Gondolattípust nem lehet egyesíteni — csak törölni vagy módosítani.');
       }
     }
 
     // --- 2. Egyesítés-specifikus szabály: AZONOS típusúak egyesíthetők ---
-    // Tartalmat csak Tartalommal, Kategóriát csak Kategóriával; Tartalomtípust
+    // Gondolatot csak Gondolattal, Kategóriát csak Kategóriával; Gondolattípust
     // egyáltalán nem (azt a fenti per-entitás szabály már kizárta). Az eredmény
     // típusa is a résztvevők közös típusa.
     if (javaslatAdatok.javaslatTipus === 'Egyesites') {
       const tipusok = new Set(erintettek.map(e => e.entitasTipus));
       if (tipusok.size > 1) {
-        throw new Error('Egyesíteni csak azonos típusú entitásokat lehet: Tartalmat Tartalommal, Kategóriát Kategóriával.');
+        throw new Error('Egyesíteni csak azonos típusú entitásokat lehet: Gondolatot Gondolattal, Kategóriát Kategóriával.');
       }
 
       const kozosTipus = erintettek[0]?.entitasTipus;
-      if (kozosTipus !== 'Tartalom' && kozosTipus !== 'Kategoria') {
-        throw new Error('Egyesíteni csak Tartalmat vagy Kategóriát lehet.');
+      if (kozosTipus !== 'Gondolat' && kozosTipus !== 'Kategoria') {
+        throw new Error('Egyesíteni csak Gondolatot vagy Kategóriát lehet.');
       }
 
       const ujTipus = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus;
       if (ujTipus && ujTipus !== kozosTipus) {
-        const nev = kozosTipus === 'Kategoria' ? 'Kategóriák' : 'Tartalmak';
-        const ered = kozosTipus === 'Kategoria' ? 'kategória' : 'tartalom';
+        const nev = kozosTipus === 'Kategoria' ? 'Kategóriák' : 'Gondolatok';
+        const ered = kozosTipus === 'Kategoria' ? 'kategória' : 'gondolat';
         throw new Error(`${nev} egyesítéséből csak ${ered} jöhet létre.`);
       }
     }
@@ -208,7 +208,7 @@ class JavaslatService {
 
    // ----- JAVASLAT LÉTREHOZÁSA -----
   // Töredék javaslatok létrehozása egy logikai javaslatból
-  // Minden érintett tartalomhoz külön töredék javaslat jön létre
+  // Minden érintett gondolathoz külön töredék javaslat jön létre
   async javaslatLetrehozas(javaslatAdatok, eEmberId, kezdoTudatpont) { // Aszinkron metódus a javaslatok létrehozására
 
     // Log metódus kezdete
@@ -286,15 +286,15 @@ class JavaslatService {
         console.log('javaslatLetrehozas - Egyezmény tárhely eeeee...0001 - új entitás lesz az egyezmény tárhelye'); // Log üzenet a speciális esetről
       } else { // Ha nem speciális érték
         // Normál egyezmény tárhely validálása
-        console.log('javaslatLetrehozas - TartalomRepository.findById (egyezmény tárhely)', { // Logoljuk a lekérést
+        console.log('javaslatLetrehozas - GondolatRepository.findById (egyezmény tárhely)', { // Logoljuk a lekérést
           egyezmenyTarhelyId: javaslatAdatok.egyezmenyTarhelyId // Megadjuk az egyezmény tárhely azonosítót
         }); // Log üzenet vége
 
-        const egyezmenyTarhely = await TartalomRepository.findById(javaslatAdatok.egyezmenyTarhelyId); // Lekérjük az egyezmény tárhely tartalmat
+        const egyezmenyTarhely = await GondolatRepository.findById(javaslatAdatok.egyezmenyTarhelyId); // Lekérjük az egyezmény tárhely gondolatot
 
         if (!egyezmenyTarhely) { // Ha nem található
-          // Ha nincs ilyen tartalom, hiba
-          throw new Error('A megadott egyezmény tárhely tartalom nem található'); // Hiba dobása
+          // Ha nincs ilyen gondolat, hiba
+          throw new Error('A megadott egyezmény tárhely gondolat nem található'); // Hiba dobása
         } // Egyezmény tárhely létezik
 
         console.log('javaslatLetrehozas - Egyezmény tárhely validálva', { // Logoljuk az érvényes egyezmény tárhelyet
@@ -327,18 +327,18 @@ class JavaslatService {
     for (const entitas of javaslatAdatok.erintettEntitasok) { // Végigmegyünk minden érintett entitáson
       let entitasLetezik = false; // Kezdetben úgy vesszük, hogy nem létezik
 
-      if (entitas.entitasTipus === 'Tartalom') { // Ha az entitás típusa Tartalom
-        // Ha az entitás típusa Tartalom, tartalom repository-t használunk
-        const tartalom = await TartalomRepository.findById(entitas.entitasId); // Lekérjük a tartalmat
-        entitasLetezik = !!tartalom; // Boolean értékké alakítjuk
+      if (entitas.entitasTipus === 'Gondolat') { // Ha az entitás típusa Gondolat
+        // Ha az entitás típusa Gondolat, gondolat repository-t használunk
+        const gondolat = await GondolatRepository.findById(entitas.entitasId); // Lekérjük a gondolatot
+        entitasLetezik = !!gondolat; // Boolean értékké alakítjuk
       } else if (entitas.entitasTipus === 'Kategoria') { // Ha Kategoria típus
         // Ha kategória, kategória repository-t használunk
         const kategoria = await KategoriaRepository.findById(entitas.entitasId); // Lekérjük a kategóriát
         entitasLetezik = !!kategoria; // Boolean értékké alakítjuk
-      } else if (entitas.entitasTipus === 'TartalomTipus') { // Ha TartalomTipus típus
-        // Ha tartalom típus, tartalom típus repository-t használunk
-        const tartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId); // Lekérjük a tartalom típust
-        entitasLetezik = !!tartalomTipus; // Boolean értékké alakítjuk
+      } else if (entitas.entitasTipus === 'GondolatTipus') { // Ha GondolatTipus típus
+        // Ha gondolat típus, gondolat típus repository-t használunk
+        const gondolatTipus = await GondolatTipusRepository.findById(entitas.entitasId); // Lekérjük a gondolat típust
+        entitasLetezik = !!gondolatTipus; // Boolean értékké alakítjuk
       } else if (entitas.entitasTipus === 'Egyezmeny') { // Ha Egyezmeny típus
         // Egyezményre áthelyezési vagy törlési javaslat indítható (lásd a szabály-validációt lentebb)
         const egyezmeny = await EgyezmenyRepository.findById(entitas.entitasId); // Lekérjük az egyezményt
@@ -354,8 +354,8 @@ class JavaslatService {
     // 4.AA LÉPÉS - JAVASLAT-TÍPUS KORLÁTOK ENTITÁSTÍPUS SZERINT (DOMAIN-SZABÁLY)
     // A közösségi szabályok szerint nem minden művelet indítható minden entitáson:
     //   • Egyezményre csak áthelyezés vagy törlés (módosítás/egyesítés TILTOTT).
-    //   • Kategóriát és Tartalomtípust NEM lehet áthelyezni.
-    //   • Tartalomtípust NEM lehet egyesíteni (csak törölni vagy módosítani).
+    //   • Kategóriát és Gondolattípust NEM lehet áthelyezni.
+    //   • Gondolattípust NEM lehet egyesíteni (csak törölni vagy módosítani).
     //   • Kategóriát csak MÁSIK KATEGÓRIÁVAL lehet egyesíteni (az eredmény is kategória).
     // Ezt érintett-entitásonként ellenőrizzük, így a Csomag tételeire is érvényes.
     this._javaslatTipusKorlatokValidalasa(javaslatAdatok);
@@ -372,7 +372,7 @@ class JavaslatService {
 
       // Cél megadása kötelező
       if (!ujSzuloId) {
-        throw new Error('Áthelyezéshez az új szülő tartalom (ujSzuloId) megadása kötelező');
+        throw new Error('Áthelyezéshez az új szülő gondolat (ujSzuloId) megadása kötelező');
       }
 
       // Önmaga alá helyezés tiltása
@@ -380,24 +380,24 @@ class JavaslatService {
         throw new Error('Az entitás nem helyezhető saját maga alá');
       }
 
-      // A cél tartalomnak léteznie kell
-      const celTartalom = await TartalomRepository.findById(ujSzuloId);
-      if (!celTartalom) {
-        throw new Error('Az áthelyezés cél tartalma nem található');
+      // A cél gondolatnak léteznie kell
+      const celGondolat = await GondolatRepository.findById(ujSzuloId);
+      if (!celGondolat) {
+        throw new Error('Az áthelyezés cél gondolata nem található');
       }
 
       // Leszármazott-ellenőrzés: a cél ős-láncán felfelé sétálva
       // a mozgatott entitás nem szerepelhet — áthelyezéskor a
       // leszármazottak együtt mozognak, ezért ez kört hozna létre
-      let vizsgaltSzuloId = celTartalom.szuloId ? celTartalom.szuloId.toString() : null;
+      let vizsgaltSzuloId = celGondolat.szuloId ? celGondolat.szuloId.toString() : null;
       let lepesVedelem = 0; // Végtelen ciklus elleni védelem
       while (vizsgaltSzuloId && lepesVedelem < 100) {
         lepesVedelem++;
         if (vizsgaltSzuloId === entitas.entitasId.toString()) {
           throw new Error('Az entitás nem helyezhető a saját leszármazottja alá, mert áthelyezéskor a leszármazottai együtt mozognak vele');
         }
-        const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltSzuloId);
-        vizsgaltSzuloId = vizsgaltTartalom?.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+        const vizsgaltGondolat = await GondolatRepository.findById(vizsgaltSzuloId);
+        vizsgaltSzuloId = vizsgaltGondolat?.szuloId ? vizsgaltGondolat.szuloId.toString() : null;
       }
     } // Áthelyezési célok validálva
 
@@ -430,10 +430,10 @@ class JavaslatService {
 
       // A szülő kollekciója az egyesítés EREDMÉNY-típusához igazodik: kategória-
       // egyesítésnél az eredmény kategória, így a szülője is kategória (a
-      // kategória-hierarchia szabálya). Egyébként a szülő Tartalom.
+      // kategória-hierarchia szabálya). Egyébként a szülő Gondolat.
       const ujTipus = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus;
-      const szuloRepo = ujTipus === 'Kategoria' ? KategoriaRepository : TartalomRepository;
-      const szuloMegnevezes = ujTipus === 'Kategoria' ? 'szülő kategória' : 'szülő tartalom';
+      const szuloRepo = ujTipus === 'Kategoria' ? KategoriaRepository : GondolatRepository;
+      const szuloMegnevezes = ujTipus === 'Kategoria' ? 'szülő kategória' : 'szülő gondolat';
 
       // Az érintett (egyesítendő) entitások azonosítói
       const erintettIdk = new Set(
@@ -522,7 +522,7 @@ class JavaslatService {
       const toredekSorszam = index + 1; // 1-alapú sorszám
 
       // A JAVASLAT SZÜLŐJE: mindig az érintett entitás maga (a javaslat annak
-      // a gyereke). Polimorf: lehet Tartalom, Kategória vagy Tartalomtípus.
+      // a gyereke). Polimorf: lehet Gondolat, Kategória vagy Gondolattípus.
       const szuloIdToredek    = entitas.entitasId;    // A töredék szülője az érintett entitás
       const szuloTipusToredek = entitas.entitasTipus; // ...és annak típusa
 
@@ -544,10 +544,10 @@ class JavaslatService {
       let egyezmenyTarhelyTipusErtek;
       if (toredekJavaslatTipus === 'Egyesites') {
         egyezmenyTarhelyIdErtek    = EGYESITES_PLACEHOLDER;
-        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus || 'Tartalom';
+        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyesitesAdatok?.ujEntitasTipus || 'Gondolat';
       } else if (javaslatAdatok.javaslatTipus === 'Csomag') {
         egyezmenyTarhelyIdErtek    = javaslatAdatok.egyezmenyTarhelyId;
-        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyezmenyTarhelyTipus || 'Tartalom';
+        egyezmenyTarhelyTipusErtek = javaslatAdatok.egyezmenyTarhelyTipus || 'Gondolat';
       } else {
         egyezmenyTarhelyIdErtek    = entitas.entitasId;
         egyezmenyTarhelyTipusErtek = entitas.entitasTipus;

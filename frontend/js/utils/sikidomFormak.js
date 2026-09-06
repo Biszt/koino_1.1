@@ -3,7 +3,7 @@
 // ===== SÍKIDOM-FORMÁK (entitástípus → forma) =====
 // Felelősség: melyik entitástípus melyik síkidomként jelenjen meg a Síkidom
 // nézetben, milyen színnel. Csaba döntése (2026-07-20):
-//   Tartalom = kör, Kategória = háromszög (3), Tartalomtípus = négyzet (4),
+//   Gondolat = kör, Kategória = háromszög (3), Gondolattípus = négyzet (4),
 //   Javaslat = ötszög (5), Egyezmény = hatszög (6).
 // A modul TISZTA (nincs DOM-függése): leírókat és pont-listát ad; az SVG-elemet
 // a SikidomModal építi ezekből.
@@ -15,9 +15,9 @@
 //   szin: kitöltés/keret alapszíne
 //   nev: emberi név (tooltiphez)
 const TIPUS_FORMA = {
-  Tartalom:      { forma: 'kor',     oldalak: 0, kezdoSzogFok: 0,   szin: '#2d5a27', nev: 'Tartalom' },
+  Gondolat:      { forma: 'kor',     oldalak: 0, kezdoSzogFok: 0,   szin: '#2d5a27', nev: 'Gondolat' },
   Kategoria:     { forma: 'sokszog', oldalak: 3, kezdoSzogFok: -90, szin: '#7d5ba6', nev: 'Kategória' },
-  TartalomTipus: { forma: 'sokszog', oldalak: 4, kezdoSzogFok: -45, szin: '#b07d2a', nev: 'Tartalomtípus' },
+  GondolatTipus: { forma: 'sokszog', oldalak: 4, kezdoSzogFok: -45, szin: '#b07d2a', nev: 'Gondolattípus' },
   Javaslat:      { forma: 'sokszog', oldalak: 5, kezdoSzogFok: -90, szin: '#1f6e8c', nev: 'Javaslat' },
   Egyezmeny:     { forma: 'sokszog', oldalak: 6, kezdoSzogFok: -90, szin: '#6d6a62', nev: 'Egyezmény' },
 };

@@ -29,7 +29,7 @@ amíg ő meg nem szólal.
 | Kérdés | Ezen múlik minden |
 |---|---|
 | **Ki lehet fogadó csomópont?** | egy cég — vagy bárki |
-| **Mit lát a fogadó?** | a tartalmat is — vagy csak titkosított bájtokat |
+| **Mit lát a fogadó?** | a gondolatot is — vagy csak titkosított bájtokat |
 | **Cserélhető-e?** | egy címre kell menni — vagy bármelyikre |
 | **Kap-e hatalmat tőle?** | dönthet, mi igaz — vagy csak továbbít |
 

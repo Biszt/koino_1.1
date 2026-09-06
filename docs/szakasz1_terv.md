@@ -16,7 +16,7 @@
 > | Lépés a próbán | Eredmény |
 > |---|---|
 > | koino létrehozása | „Kispatak utcai szomszédok" |
-> | tartalom + tudatpont | 111 bájt (D26), 100 pont |
+> | gondolat + tudatpont | 111 bájt (D26), 100 pont |
 > | szerkesztési javaslat | folyamatban, döntési idő **168 óra** |
 > | egy támogató szavazat | bizonyosság 100% → a döntési idő **24 órára rövidült** |
 > | idő +3 nap | **ELFOGADVA** |
@@ -26,7 +26,7 @@
 > minél egyértelműbb az eredmény, annál hamarabb zárul a döntés.
 
 **Épít:** egy működő koinót **egyetlen készüléken, hálózat nélkül**. A végén egy ember
-tartalmat hoz létre, tudatpontot rendez, javaslatot tesz, szavaz — és az egyezmény
+gondolatot hoz létre, tudatpontot rendez, javaslatot tesz, szavaz — és az egyezmény
 megszületik. **Minden művelet aláírva**, az adat a készüléken.
 
 **Nem épít:** hálózatot. Két készülék még nem talál egymásra — az a Szakasz 2.
@@ -47,7 +47,7 @@ megszületik. **Minden művelet aláírva**, az adat a készüléken.
 
 ## 1. Az ESEMÉNY — a program atomja
 
-A prototípusban az adat **állapot**: egy tartalom-dokumentum, amit a szerver módosít. Itt az
+A prototípusban az adat **állapot**: egy gondolat-dokumentum, amit a szerver módosít. Itt az
 adat **esemény**: *„én, ekkor, ezt tettem"* — aláírva. Az állapot ebből **számítódik** (D17).
 
 ### Egy esemény mezői
@@ -55,24 +55,24 @@ adat **esemény**: *„én, ekkor, ezt tettem"* — aláírva. Az állapot ebbő
 | Mező | Mi ez | Miért kell |
 |---|---|---|
 | `koino` | melyik koinóhoz tartozik | **D25**: egy ember több koinóban is tag lehet — az eseménynek tudnia kell, hol érvényes |
-| `tipus` | mi történt (pl. `TartalomLetrehozas`) | ez dönti el, hogyan hat az állapotra |
+| `tipus` | mi történt (pl. `GondolatLetrehozas`) | ez dönti el, hogyan hat az állapotra |
 | `szerzo` | a nyilvános kulcs (32 bájt) | **ez a személyazonosság** — nem név, nem fiók |
 | `elozo` | az előző **saját** eseményem azonosítója | ez fűzi láncba a cselekedeteimet |
 | `sorszam` | hányadik a saját láncomban | emberi olvashatóság + a lánc hézagai látszanak |
 | `ido` | a szerző órája szerint | **tájékoztató, nem bizonyíték** — lásd a 6. pontot |
-| `adat` | a művelet tartalma (típusfüggő) | |
-| `azonosito` | a fentiek **hash-e** (SHA-256) | az esemény neve = a tartalma |
+| `adat` | a művelet gondolata (típusfüggő) | |
+| `azonosito` | a fentiek **hash-e** (SHA-256) | az esemény neve = a gondolata |
 | `alairas` | a szerző aláírása az azonosítón (64 bájt) | **ez teszi hamisíthatatlanná** |
 
 **Az entitást létrehozó és módosító események `adat` részében kötelező a MÉRET** (D26):
 a tudatpont-hozzárendelés tárolási vállalás is, ezért **tudni kell, mit vállalsz, mielőtt
 vállalod** — és ehhez a méretnek a *hivatkozásban* kell utaznia, nem csak a letöltött
-tartalomban. A csatolt fájlok külön objektumok: a rájuk mutató hivatkozás hordozza a
+gondolatban. A csatolt fájlok külön objektumok: a rájuk mutató hivatkozás hordozza a
 **lenyomatukat és a méretüket**.
 
-### Az azonosító = a tartalom lenyomata
+### Az azonosító = a gondolat lenyomata
 
-Az esemény **neve a tartalmából származik** — pontosan úgy, ahogy a git nevezi el az
+Az esemény **neve a gondolatából származik** — pontosan úgy, ahogy a git nevezi el az
 objektumait (lásd a fázis 2 terv „A git mint minta" szakaszát). Ennek három haszna van:
 
 - két gép **ugyanarra az eseményre ugyanazt a nevet** adja → az összefésülés triviális;
@@ -122,7 +122,7 @@ szavazatot ír alá ugyanarra a javaslatra, akkor vagy
 
 ## 3. Az ÁLLAPOTSZÁMÍTÁS — és a jó hír, hogy nem kell sorrend
 
-Az állapot (mely tartalmak léteznek, kinek hány tudatpontja van hol, mi a szavazás állása)
+Az állapot (mely gondolatok léteznek, kinek hány tudatpontja van hol, mi a szavazás állása)
 **az eseményekből számítódik**. A kérdés, ami minden ilyen rendszert meg szokott fogni:
 *milyen sorrendben?* — mert hálózaton az események összevissza érkeznek.
 
@@ -134,7 +134,7 @@ tulajdonsága: **a műveletek túlnyomó része „e-emberenként az utolsó nye
 | Tudatpont-rendezés | ❌ | (e-ember, entitás) párra **a saját láncod utolsója** érvényes — a sorszám dönt, nem a beérkezés |
 | Szavazat | ❌ | ugyanígy: (e-ember, javaslat) párra az utolsó |
 | Érték javaslat | ❌ | ugyanígy: (e-ember, entitás) párra az utolsó |
-| Tartalom létrehozása | ❌ | egyszeri esemény, saját azonosítóval |
+| Gondolat létrehozása | ❌ | egyszeri esemény, saját azonosítóval |
 | Javaslat, egyezmény | ❌ | az eredmény **számítás** a szavazatokból (D17), nem külön állítás |
 
 > **Vagyis nincs szükség globális sorrendre, és nincs szükség ütközés-feloldó könyvtárra
@@ -193,7 +193,7 @@ A H6 besorolása közvetlenül megmondja ([`adat_osztalyozas.md`](adat_osztalyoz
 
 | Réteg | Hova kerül a Szakasz 1-ben |
 |---|---|
-| `mag` + `lanc` + `tartalom` | **fájlban, aláírt eseményként** (D29 óta; korábban IndexedDB) |
+| `mag` + `lanc` + `gondolat` | **fájlban, aláírt eseményként** (D29 óta; korábban IndexedDB) |
 | `szamitott` | **nem tároljuk igazságként** — újraszámolható gyorsítótár |
 | `helyi` | a készüléken marad; nagy része **megszűnik** (jelszó, token: a kulcs hitelesít — D15) |
 
@@ -263,7 +263,7 @@ Minden lépés végén **legyen valami, ami megnézhető**. A sorrend a függős
 | **2** ✅ | **Kanonikus alak + hash** | két azonos esemény **ugyanazt** az azonosítót kapja | [`kanonikusProba.js`](../koino/meres/kanonikusProba.js) — **14/14 rendben** |
 | **3** ✅ | **Esemény-réteg** — aláírás, ellenőrzés | hamisíthatatlan esemény | [`esemenyProba.js`](../koino/meres/esemenyProba.js) — **13/13 rendben** |
 | **4** ✅ | **Tár-réteg** — a saját lánc | az események megmaradnak | [`tarProba.js`](../koino/meres/tarProba.js) — **13/13 rendben**; a megmaradást a tár-objektum eldobása és a fájl újranyitása igazolja |
-| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy tartalmam"* | [`allapotProba.js`](../koino/meres/allapotProba.js) — **16/16 rendben** |
+| **5** ✅ | **Állapot-réteg** — események → entitások | *„van egy gondolatom"* | [`allapotProba.js`](../koino/meres/allapotProba.js) — **16/16 rendben** |
 | **6** ✅ | **A döntéshozatal** — javaslat, szavazat, és az **egyezmény mint számítás** | az egyezmény megszületik | [`javaslatProba.js`](../koino/meres/javaslatProba.js) — **22/22 rendben** |
 | **7** ✅ | **A koino arca** — a kép a helyi adatból | végigjátszható magadnak | `node koino/koino.js` — **a teljes kör lefutott** *(a D29 előtt böngészőben, utána parancssorban)* |
 
@@ -283,7 +283,7 @@ szerver nélkül — akkor a Fázis 2 gerince áll.
 |---|---|
 | **Domain-logika**: küszöb-medián (D4), bizonyossági mutató, javaslat-életciklus, különválás | **átemelhető** — ezek tiszta számítások, nem függenek a szervertől. A `services/` mappa érdemi része. |
 | **Felület**: kártyák, pakli, szövegszerkesztő, struktúra/síkidom nézet | **átemelhető** — vanilla JS, build nélkül, ahogy ma is |
-| **Fogalmak és nevek**: e-ember, tudatpont, tartalom, javaslat, egyezmény | változatlan |
+| **Fogalmak és nevek**: e-ember, tudatpont, gondolat, javaslat, egyezmény | változatlan |
 | **Konvenciók**: magyar nevek, fájl-fejléc komment, bőséges magyarázat | változatlan |
 
 | Amit NEM viszünk | Miért |
@@ -305,7 +305,7 @@ semmitől. Mérve (2026-08-28), kézzel aláírt eseményekkel:
 
 | Szabály | Mi történt a javítás előtt |
 |---|---|
-| „Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz" | Egy **teljesen idegen kulcs** javaslatot tehetett más tartalmára, megszavazhatta magának, és **az egyezmény megszületett** (1/1 = 100%). |
+| „Csak az tehet javaslatot, aki tudatpontot rendelt a gondolathoz" | Egy **teljesen idegen kulcs** javaslatot tehetett más gondolatára, megszavazhatta magának, és **az egyezmény megszületett** (1/1 = 100%). |
 | „Mindenkinek ugyanannyi tudatpontja van" (keret: 10 000) | Kézzel aláírva **999 999 pont** is átment. |
 
 **Ez nem két hiba volt, hanem egy hiányzó réteg** — ma a
@@ -321,7 +321,7 @@ már valódi támadási felület, nem elméleti.
    hogy elveszítjük.
 2. **A döntés a SAJÁT LÁNCBAN dől el, nem az órán.** A keret a szerző eseményeit sorszám
    szerint követi; a javaslat-jogosultság pedig azt nézi, volt-e a javaslattevőnek pontja
-   az érintett tartalmon **a saját láncában a javaslat előtt**. Így nem hamisítható, és
+   az érintett gondolaton **a saját láncában a javaslat előtt**. Így nem hamisítható, és
    utólag nem írható át — ahogy a lezárási szabálynál is.
 
 **Amit a keret helyesen NEM tilt:** az **átrendezést**. A tudatpont nem elkölthető, hanem
@@ -350,7 +350,7 @@ kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú m
 
 | Támadás | Miért nem megy |
 |---|---|
-| más nevében aláírni | Ed25519 — 7 hamisítási próba (tartalom, szerző, idő, sorszám, azonosító, aláírás, idegen kulcs), mind bukik |
+| más nevében aláírni | Ed25519 — 7 hamisítási próba (gondolat, szerző, idő, sorszám, azonosító, aláírás, idegen kulcs), mind bukik |
 | **kétszer szavazni egy kulccsal** | láncfolytatásnál **felülírás** (1 szavazat); elágazásnál a számítás **determinisztikusan egyet vesz**, és az ellentmondást kiírja |
 | keretet túllépő tudatpont | kizárva (mérve: 999 999 → nem számít) |
 | idegen (0 pontos) javaslata | kizárva |
@@ -415,8 +415,8 @@ kézzel aláírt eseményekkel (vagyis pontosan úgy, ahogy egy rosszindulatú m
    hétköznapi** kockázat; a mentés egy kattintás, a D15 több-tanús helyreállítása lassabb.
    *Vállalt ára: egy rosszindulatú kód elvileg ellophatná a mentett fájlt.*
 3. **Mi az esemény-típusok első köre?** Javaslat a legszűkebb, ami a 7. lépéshez elég:
-   `TartalomLetrehozas`, `TudatpontRendezes`, `ErtekJavaslat`, `JavaslatLetrehozas`,
-   `Szavazat`. *(Kategória és tartalomtípus később — azok is „tartalom" típusúak.)*
+   `GondolatLetrehozas`, `TudatpontRendezes`, `ErtekJavaslat`, `JavaslatLetrehozas`,
+   `Szavazat`. *(Kategória és gondolattípus később — azok is „gondolat" típusúak.)*
 4. **Hogyan születik meg maga a koino?** A D25 szerint a koino entitás a térben. A Szakasz
    1-ben elég egy `KoinoLetrehozas` esemény — de a mezőit a D25 alapján kell kitalálni
    (név, paraméterek, belépési szabály, hitelesítési küszöb).

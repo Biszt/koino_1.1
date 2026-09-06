@@ -1,17 +1,17 @@
-<!-- frontend/html/components/modals/tartalomModal.html -->
+<!-- frontend/html/components/modals/gondolatModal.html -->
 
-<!-- A TartalomModal.js tölti be ezt a template-et fetch()-csel.
+<!-- A GondolatModal.js tölti be ezt a template-et fetch()-csel.
      A Modal alap struktúrája (overlay, panel, fejléc) a modal.html-ben van –
-     ez csak a modal törzsének tartalmát, a formot adja meg. -->
+     ez csak a modal törzsének gondolatát, a formot adja meg. -->
 
-<form class="t-modal-form" id="tartalom-modal-form" novalidate>
+<form class="t-modal-form" id="gondolat-modal-form" novalidate>
 
   <!-- ── CÍM ── -->
-  <!-- Kötelező mező – TartalomModal._validalas() ellenőrzi -->
+  <!-- Kötelező mező – GondolatModal._validalas() ellenőrzi -->
   <div class="t-modal-mezo">
     <input
       type="text"
-      id="tartalom-cim"
+      id="gondolat-cim"
       name="cim"
       class="t-modal-input"
       placeholder="Cím *"
@@ -23,7 +23,7 @@
 
   <!-- ── SZÖVEG (SzovegSzerkeszto) ── -->
   <!-- A régi textarea helyett ez a div várja a SzovegSzerkeszto.js példányát.
-       A TartalomModal._szovegSzerkesztoLetrehozasa() getElementById('szoveg-szerkeszto-kontener')
+       A GondolatModal._szovegSzerkesztoLetrehozasa() getElementById('szoveg-szerkeszto-kontener')
        segítségével keresi meg ezt az elemet, és ide építi be a szerkesztőt. -->
   <div class="t-modal-mezo">
     <div
@@ -33,16 +33,16 @@
     ></div>
   </div>
 
-  <!-- ── TARTALOM TÍPUS ── -->
+  <!-- ── GONDOLAT TÍPUS ── -->
   <!-- JS tölti fel a _tipusSelectFeltoltese() metódussal -->
   <div class="t-modal-mezo">
     <select
-      id="tartalom-tipus"
-      name="tartalomTipusId"
+      id="gondolat-tipus"
+      name="gondolatTipusId"
       class="t-modal-select"
-      aria-label="Tartalom típus"
+      aria-label="Gondolat típus"
     >
-      <option value="">Tartalom típus (opcionális)</option>
+      <option value="">Gondolat típus (opcionális)</option>
     </select>
   </div>
 
@@ -58,7 +58,7 @@
 
     <!-- Kategória hozzáadó lenyíló – JS tölti fel a _kategoriaSelectFeltoltese()-vel -->
     <select
-      id="tartalom-kategoria-valaszto"
+      id="gondolat-kategoria-valaszto"
       class="t-modal-select"
       aria-label="Kategória hozzáadása (max. 3)"
     >
@@ -68,7 +68,7 @@
   </div>
 
   <!-- ── KÜSZÖBÉRTÉKEK (döntéshozatal) ── -->
-  <!-- Alapból rejtett – TartalomModal.init() mutatja meg, ha mód = 'letrehozas'.
+  <!-- Alapból rejtett – GondolatModal.init() mutatja meg, ha mód = 'letrehozas'.
        A négy mezőt a kuszobErtekMezok.js segédmodul injektálja a konténerbe,
        alapértelmezett értékekkel kitöltve. -->
   <div class="t-modal-mezo t-modal-kuszob-szakasz" id="kuszob-mezok-szakasz" hidden>
@@ -81,14 +81,14 @@
   </div>
 
   <!-- ── KEZDŐ TUDATPONT ── -->
-  <!-- Alapból rejtett – TartalomModal.init() mutatja meg, ha mód = 'letrehozas' -->
+  <!-- Alapból rejtett – GondolatModal.init() mutatja meg, ha mód = 'letrehozas' -->
   <div class="t-modal-mezo" id="kezdo-tudatpont-mezo" hidden>
-    <label class="kuszob-mezo__cimke" for="tartalom-kezdo-tudatpont">
+    <label class="kuszob-mezo__cimke" for="gondolat-kezdo-tudatpont">
       Kezdő tudatpont (min. 1) *
     </label>
     <input
       type="number"
-      id="tartalom-kezdo-tudatpont"
+      id="gondolat-kezdo-tudatpont"
       name="kezdoTudatpont"
       class="t-modal-input"
       min="1"

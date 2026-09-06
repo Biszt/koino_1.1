@@ -17,7 +17,7 @@ const ERTESITES_TIPUSOK = [
 ];
 
 // Az engedélyezett entitás típusok – szintén azonos az ErtesitesiBeallitas modellel
-const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'];
+const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'];
 
 // Az Ertesites séma definiálása
 // Minden rekord egy konkrét, már kiküldött értesítést jelent egy adott eEmbernek

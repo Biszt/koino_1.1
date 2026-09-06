@@ -6,7 +6,7 @@ import { apiGet } from '../../utils/apiHelper.js';
 import { tokenLekerese } from '../../utils/authHelper.js';
 
 // A beágyazott (második szintű) modal SAJÁT konténere. A Modal.js felülírja a
-// konténer tartalmát, ezért a Hozzájárulók modal nem használhatja ugyanazt a
+// konténer gondolatát, ezért a Hozzájárulók modal nem használhatja ugyanazt a
 // 'modal-kontener'-t, mint a szülő Részletek modal – különben felülírná azt.
 // Ehelyett a body-hoz fűzött külön konténerben nyílik meg, a szülő felett.
 const ALMODAL_KONTENER_ID = 'almodal-kontener';

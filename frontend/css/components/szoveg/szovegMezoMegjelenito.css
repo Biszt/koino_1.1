@@ -7,7 +7,7 @@
    A kártya body-jában lévő, csak olvasható
    blokk megjelenítő wrapper eleme.
    Nincs keret, nincs eszköztár – tisztán
-   a tartalom jelenik meg a kártya stílusán belül.
+   a gondolat jelenik meg a kártya stílusán belül.
    ============================================= */
 .szoveg-mezo-megjelenito {
   display: flex;
@@ -23,7 +23,7 @@
 
 
 /* =============================================
-   FÜLSÁV – TÖBB OLDALAS TARTALOM (csak olvasható)
+   FÜLSÁV – TÖBB OLDALAS GONDOLAT (csak olvasható)
    =============================================
    A szerkesztő oldal-navigációjának egyszerűsített
    párja: nincs + gomb, csak az oldalak közti váltás.
@@ -146,7 +146,7 @@
    A fő konténer (.szoveg-mezo-megjelenito) display: flex, ezért a blokk-
    wrapperek FLEX-ELEMEK. A flex-elemek alapértelmezett `min-height: auto`
    a szerkesztőben beállított (és inline height-ként visszaállított) magasságot
-   FELFÚJJA a tartalom min-content méretére – így a link-/fájlblokk a kártyán
+   FELFÚJJA a gondolat min-content méretére – így a link-/fájlblokk a kártyán
    mindig magasabb lett, mint a szerkesztőben (ott a wrapper sima block elem).
    A `min-height: 0` visszaadja a beállított pontos magasságot. */
 .szoveg-mezo-megjelenito .link-blokk-wrapper,

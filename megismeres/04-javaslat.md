@@ -1,13 +1,13 @@
 # Javaslat
 
 **Mire való?**
-A javaslattal kezdeményezed egy entitás megváltoztatását (tartalom, kategória,
-tartalomtípus vagy egyezmény). A közösség szavaz róla; ha elfogadják, **egyezmény**
+A javaslattal kezdeményezed egy entitás megváltoztatását (gondolat, kategória,
+gondolattípus vagy egyezmény). A közösség szavaz róla; ha elfogadják, **egyezmény**
 lesz belőle, és a változás életbe lép.
 
 **A javaslat típusai**
 
-- **Módosítás** — az entitás megváltoztatása (tartalomnál pl. a cím, a szöveg,
+- **Módosítás** — az entitás megváltoztatása (gondolatnál pl. a cím, a szöveg,
   a kategória vagy a típus).
 - **Áthelyezés** — az entitás másik szülő alá helyezése.
 - **Törlés** — az entitás megszüntetése.
@@ -18,9 +18,9 @@ Nem minden típus indítható mindenen (a felület csak az engedélyezetteket mu
 
 | Entitás | Indítható javaslat |
 |---|---|
-| Tartalom | mind |
+| Gondolat | mind |
 | Kategória | Törlés, Módosítás, Egyesítés |
-| Tartalomtípus | Törlés, Módosítás |
+| Gondolattípus | Törlés, Módosítás |
 | Egyezmény | Törlés, Áthelyezés |
 
 **Hogyan teszel javaslatot?**

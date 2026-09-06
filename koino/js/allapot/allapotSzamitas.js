@@ -4,7 +4,7 @@
 // léteznek, ki hova rendelt tudatpontot, mik az érvényes küszöbök.
 //
 // EZ A KOINO SZÍVE A FÁZIS 2-BEN. A prototípusban az állapot ÁLLÍTÁS volt: a szerver
-// azt mondta, „ez a tartalom így néz ki", és el kellett hinni. Itt az állapot
+// azt mondta, „ez a gondolat így néz ki", és el kellett hinni. Itt az állapot
 // SZÁMÍTÁS: ugyanabból az eseményhalmazból mindenki ugyanazt kapja (D17). Nincs mit
 // elhinni — utána lehet számolni.
 //
@@ -51,7 +51,7 @@ import { szabalyokErvenyesitese } from './szabalyok.js';
  * sorrendje. Az `azonosito` a végén csak a döntetlent zárja ki (elágazásnál).
  *
  * ⚠️ EZ NEM A MEGJELENÍTÉS SORRENDJE. Hogy a felületen mi legyen elöl (pl. a legtöbb
- * tudatpontot kapott tartalom), az külön kérdés, és a felület dolga — ez itt csak azt
+ * tudatpontot kapott gondolat), az külön kérdés, és a felület dolga — ez itt csak azt
  * garantálja, hogy KÉT GÉP UGYANAZT A SORRENDET kapja.
  *
  * @param {Array<Object>} esemenyek
@@ -264,8 +264,8 @@ export function allapotSzamitasa(esemenyek) {
 
       // ----- ENTITÁS LÉTREHOZÁSA -----
       // Az entitás AZONOSÍTÓJA a létrehozó esemény azonosítója: az entitás neve is a
-      // tartalmából származik, nem egy kiosztott sorszám.
-      case 'TartalomLetrehozas':
+      // gondolatából származik, nem egy kiosztott sorszám.
+      case 'GondolatLetrehozas':
         letrehozasok.set(e.azonosito, e);
         break;
 
@@ -301,7 +301,7 @@ export function allapotSzamitasa(esemenyek) {
   for (const [entitasAzonosito, letrehozoEsemeny] of letrehozasok) {
     entitasok.set(entitasAzonosito, {
       azonosito: entitasAzonosito,
-      tipus: letrehozoEsemeny.adat.tipus ?? 'Tartalom',
+      tipus: letrehozoEsemeny.adat.tipus ?? 'Gondolat',
       cim: letrehozoEsemeny.adat.cim,
       szoveg: letrehozoEsemeny.adat.szoveg ?? null,
       szulo: letrehozoEsemeny.adat.szulo ?? null,

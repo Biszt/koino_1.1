@@ -281,7 +281,7 @@ class TudatpontRepository {
   // Entitáshoz tartozó tudatpont hozzárendelések lekérése
   // ✅ POPULATE-TAL - eembernevek betöltése (frontend megjelenítéshez)
   // @param {string} entitasId - Az entitás azonosítója
-  // @param {string} entitasTipus - Az entitás típusa (Tartalom, Kategoria, TartalomTipus, Javaslat)
+  // @param {string} entitasTipus - Az entitás típusa (Gondolat, Kategoria, GondolatTipus, Javaslat)
   // @param {number} limit - Maximum ennyi dokumentumot ad vissza
   // @param {number} skip - Ennyi dokumentumot ugorjon át (lapozáshoz)
   // @returns {Promise<Array>} Hozzárendelések listája (eembernevekkel)
@@ -305,7 +305,7 @@ class TudatpontRepository {
   // ✅ POPULATE NÉLKÜL - csak tiszta ObjectId-k (backend logikához)
   // Használat: tudatpontokVisszaosztasa, egyesítés, törlés (amikor csak ID kell, név nem)
   // @param {string} entitasId - Az entitás azonosítója
-  // @param {string} entitasTipus - Az entitás típusa (Tartalom, Kategoria, TartalomTipus, Javaslat)
+  // @param {string} entitasTipus - Az entitás típusa (Gondolat, Kategoria, GondolatTipus, Javaslat)
   // @param {number} limit - Maximum ennyi dokumentumot ad vissza
   // @param {number} skip - Ennyi dokumentumot ugorjon át (lapozáshoz)
   // @returns {Promise<Array>} Hozzárendelések listája (tiszta ObjectId-kkal)

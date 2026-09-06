@@ -3,7 +3,7 @@
 // ===================================
 // KÜLÖNVÁLÁS SERVICE
 // ===================================
-// Felelősség: egy lezárt módosítási döntés után KETTÉVÁLASZTANI egy tartalmat —
+// Felelősség: egy lezárt módosítási döntés után KETTÉVÁLASZTANI egy gondolatot —
 //   a főágra és a különvált ágra —, és a tudatpontokat a két ág között SZÉTOSZTANI.
 // Használják: (később) a javaslatVegrehajtasiService és a javaslatIdozitesService;
 //   most még csak a fejlesztői próba-eszköz (tools/kulonvalasProba.js).
@@ -20,13 +20,13 @@
 // A teljes modell és a döntések: docs/fejlesztesi_terv.md „Különválás" szakaszai.
 //
 // ===== A MŰVELET KÉT FELE =====
-//  3/a: a GYÖKÉR szétválasztása — az érintett tartalom kettéválik, és a különválók
+//  3/a: a GYÖKÉR szétválasztása — az érintett gondolat kettéválik, és a különválók
 //       tudatpontjai átkerülnek az új ágra.
 //  3/b: a LESZÁRMAZOTTAK szétosztása — minden leszármazottnál három kimenet lehet
 //       (marad / átköltözik / megkettőződik), az egységes szabály szerint.
 //
-// ===== HATÓKÖR: CSAK TARTALOM =====
-// A bejárás kizárólag TARTALOM-leszármazottakat oszt szét (C döntés). Az entitás alatt
+// ===== HATÓKÖR: CSAK GONDOLAT =====
+// A bejárás kizárólag GONDOLAT-leszármazottakat oszt szét (C döntés). Az entitás alatt
 // élő javaslatok és egyezmények a helyükön maradnak: a javaslat egy FOLYAMATBAN lévő
 // döntés (mozgatása félbevágná), az egyezmény pedig a `tudatpontHozzarendeles`
 // entitás-típus enumjának hiánya miatt még nem mozgatható biztonságosan.
@@ -41,7 +41,7 @@
 // ===== IMPORTOK =====
 
 // Repository-k
-const TartalomRepository = require('../repositories/tartalomRepository');
+const GondolatRepository = require('../repositories/gondolatRepository');
 const TudatpontRepository = require('../repositories/tudatpontRepository');
 // A pakli-fa (hierarchikus) allokáció — a leszármazottak átkötéséhez
 const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
@@ -49,7 +49,7 @@ const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarc
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 
 // Service-ek
-const TartalomService = require('./tartalomService');
+const GondolatService = require('./gondolatService');
 const TudatpontService = require('./tudatpontService');
 // Hierarchikus pont-újraszámítás és ős-lánc karbantartás az átkötések után
 const HierarchikusFrissitesService = require('./hierarchikusFrissitesService');
@@ -66,11 +66,11 @@ class KulonvalasService {
   // A GYÖKÉR SZÉTVÁLASZTÁSA
   // ===================================
   /**
-   * Egy tartalom kettéválasztása: a különválók viszik a saját tudatpontjukat egy ÚJ ágra.
+   * Egy gondolat kettéválasztása: a különválók viszik a saját tudatpontjukat egy ÚJ ágra.
    *
    * @param {Object} parameterek
    * @param {string} parameterek.forrasEntitasId    - A szétváló (fő)ág azonosítója
-   * @param {string} [parameterek.forrasEntitasTipus='Tartalom'] - Egyelőre CSAK 'Tartalom'
+   * @param {string} [parameterek.forrasEntitasTipus='Gondolat'] - Egyelőre CSAK 'Gondolat'
    * @param {Array<string>} parameterek.kulonvaloEemberIdk - Kik válnak külön
    * @param {Object} parameterek.ujAgAdatok         - { cim, szoveg } — amit a különválók visznek
    * @param {string} parameterek.forrasJavaslatId   - A kiváltó javaslat (mindig kell)
@@ -82,7 +82,7 @@ class KulonvalasService {
    */
   async kulonvalasVegrehajtasa({
     forrasEntitasId,
-    forrasEntitasTipus = 'Tartalom',
+    forrasEntitasTipus = 'Gondolat',
     kulonvaloEemberIdk,
     ujAgAdatok,
     forrasJavaslatId,
@@ -106,10 +106,10 @@ class KulonvalasService {
       throw new Error('A forrás entitás azonosítója kötelező');
     }
 
-    // Az első kör hatóköre: CSAK tartalom (C döntés, 2026-08-25). A kategória és a
-    // tartalomtípus különválása külön kör — ott saját hierarchia-szabályok vannak.
-    if (forrasEntitasTipus !== 'Tartalom') {
-      throw new Error(`A különválás egyelőre csak Tartalom entitásra működik (kapott: ${forrasEntitasTipus})`);
+    // Az első kör hatóköre: CSAK gondolat (C döntés, 2026-08-25). A kategória és a
+    // gondolattípus különválása külön kör — ott saját hierarchia-szabályok vannak.
+    if (forrasEntitasTipus !== 'Gondolat') {
+      throw new Error(`A különválás egyelőre csak Gondolat entitásra működik (kapott: ${forrasEntitasTipus})`);
     }
 
     if (!Array.isArray(kulonvaloEemberIdk) || kulonvaloEemberIdk.length === 0) {
@@ -125,16 +125,16 @@ class KulonvalasService {
     }
 
     // ============================================================
-    // ===== 2. LÉPÉS - A FORRÁS TARTALOM BETÖLTÉSE =====
+    // ===== 2. LÉPÉS - A FORRÁS GONDOLAT BETÖLTÉSE =====
     // ============================================================
     // A szülőt, a kategóriákat és a típust az új ág is átveszi: a két ág TESTVÉR
-    // lesz a fában (ugyanaz a szülő), hiszen ugyanannak a tartalomnak a két útja.
+    // lesz a fában (ugyanaz a szülő), hiszen ugyanannak a gondolatnak a két útja.
 
-    console.log('kulonvalasVegrehajtasa >>>>> TartalomRepository.findById', { forrasEntitasId });
-    const forrasTartalom = await TartalomRepository.findById(forrasEntitasId);
+    console.log('kulonvalasVegrehajtasa >>>>> GondolatRepository.findById', { forrasEntitasId });
+    const forrasGondolat = await GondolatRepository.findById(forrasEntitasId);
 
-    if (!forrasTartalom) {
-      throw new Error(`A forrás tartalom nem található: ${forrasEntitasId}`);
+    if (!forrasGondolat) {
+      throw new Error(`A forrás gondolat nem található: ${forrasEntitasId}`);
     }
 
     // ============================================================
@@ -149,7 +149,7 @@ class KulonvalasService {
 
     const osszesHozzarendeles = await TudatpontRepository.findHozzarendelesekByEntitasNyers(
       forrasEntitasId,
-      'Tartalom',
+      'Gondolat',
       999999,  // Nagy limit - az ÖSSZES tudatpont-tulajdonos kell
       0
     );
@@ -191,7 +191,7 @@ class KulonvalasService {
 
     // ----- 3.A - VAN-E EGYÁLTALÁN MIT SZÉTVÁLASZTANI? -----
     if (viszik.length === 0) {
-      throw new Error('Egyetlen különválónak sincs tudatpontja ezen a tartalmon — nincs mit átvinni');
+      throw new Error('Egyetlen különválónak sincs tudatpontja ezen a gondolaton — nincs mit átvinni');
     }
 
     // ----- 3.B - A FŐÁG NEM ESHET 0-RA -----
@@ -210,8 +210,8 @@ class KulonvalasService {
     // ============================================================
     // ===== 4. LÉPÉS - AZ ALAPÍTÓ KIVÁLASZTÁSA =====
     // ============================================================
-    // Az új tartalom létrehozásához KELL egy létrehozó, mégpedig legalább 1 tudatponttal
-    // (TartalomService.tartalomLetrehozasa megköveteli). Az „alapító" a legtöbb pontot
+    // Az új gondolat létrehozásához KELL egy létrehozó, mégpedig legalább 1 tudatponttal
+    // (GondolatService.gondolatLetrehozasa megköveteli). Az „alapító" a legtöbb pontot
     // vivő különváló. Ez technikai szerep: nem ad neki többletjogot a döntésekben —
     // szavazásnál mindenki egyenlő.
 
@@ -227,7 +227,7 @@ class KulonvalasService {
     // ============================================================
     // ===== 5. LÉPÉS - AZ ALAPÍTÓ PONTJÁNAK LEVÉTELE A FORRÁSRÓL =====
     // ============================================================
-    // KÉNYSZERŰ SORREND: az új tartalom létrehozásához az alapítónak SZABAD pontja kell.
+    // KÉNYSZERŰ SORREND: az új gondolat létrehozásához az alapítónak SZABAD pontja kell.
     // A pont viszont most a forráson ül. Előbb tehát le kell venni onnan (ilyenkor
     // visszakerül az e-ember egyenlegére), és csak utána lehet az új ágra tenni.
     // Ugyanezt a kényszert kezeli az egyesítési végrehajtó is (4. → 5. lépés).
@@ -244,40 +244,40 @@ class KulonvalasService {
     await TudatpontService.tudatpontHozzarendelese(
       alapito.eemberIdStr,
       forrasEntitasId,
-      'Tartalom',
+      'Gondolat',
       0   // 0 = visszavonás → a pont visszakerül az e-emberhez
     );
 
     // ============================================================
     // ===== 6. LÉPÉS - AZ ÚJ ÁG LÉTREHOZÁSA =====
     // ============================================================
-    // Az új tartalom a forrás TESTVÉRE lesz (ugyanaz a szülő), és átveszi a forrás
-    // besorolását (kategóriák, tartalomtípus). A CÍM és a SZÖVEG viszont az, amit a
+    // Az új gondolat a forrás TESTVÉRE lesz (ugyanaz a szülő), és átveszi a forrás
+    // besorolását (kategóriák, gondolattípus). A CÍM és a SZÖVEG viszont az, amit a
     // különválók visznek magukkal — elfogadott javaslatnál a RÉGI, elvetettnél a
     // MÓDOSÍTOTT állapot.
     //
     // KÜSZÖBÉRTÉKEK: az új ág egyelőre az ALAPÉRTELMEZETT küszöbökkel indul. A
     // különválók saját érték javaslatainak átvitele külön lépés (a terv 6. lépése) —
-    // ott derül ki, hogy a `tartalomLetrehozasa` által az alapítónak létrehozott
+    // ott derül ki, hogy a `gondolatLetrehozasa` által az alapítónak létrehozott
     // kezdő érték javaslatot FRISSÍTENI kell majd, nem újat létrehozni mellé.
 
     const ujAgLetrehozasiAdatok = {
       cim: String(ujAgAdatok.cim).trim(),
       szoveg: ujAgAdatok.szoveg !== undefined ? ujAgAdatok.szoveg : null,
-      szuloId: forrasTartalom.szuloId ?? null,
-      szuloTipus: forrasTartalom.szuloTipus ?? null,
-      tartalomTipusId: forrasTartalom.tartalomTipusId ?? null,
+      szuloId: forrasGondolat.szuloId ?? null,
+      szuloTipus: forrasGondolat.szuloTipus ?? null,
+      gondolatTipusId: forrasGondolat.gondolatTipusId ?? null,
       // A findById populate-eli a kategóriákat, ezért lehet objektum is — csak az ID kell
-      kategoriaIds: (forrasTartalom.kategoriaIds ?? []).map((k) => (k?._id ?? k).toString())
+      kategoriaIds: (forrasGondolat.kategoriaIds ?? []).map((k) => (k?._id ?? k).toString())
     };
 
-    console.log('kulonvalasVegrehajtasa >>>>> TartalomService.tartalomLetrehozasa', {
+    console.log('kulonvalasVegrehajtasa >>>>> GondolatService.gondolatLetrehozasa', {
       cim: ujAgLetrehozasiAdatok.cim,
       szuloId: ujAgLetrehozasiAdatok.szuloId,
       alapitoPontjai: alapito.pontok
     });
 
-    const ujAg = await TartalomService.tartalomLetrehozasa(
+    const ujAg = await GondolatService.gondolatLetrehozasa(
       ujAgLetrehozasiAdatok,
       alapito.eemberIdStr,
       alapito.pontok
@@ -314,7 +314,7 @@ class KulonvalasService {
         await TudatpontService.tudatpontHozzarendelese(
           kulonvalo.eemberIdStr,
           forrasEntitasId,
-          'Tartalom',
+          'Gondolat',
           0   // Levétel a főágról
         );
 
@@ -327,7 +327,7 @@ class KulonvalasService {
         await TudatpontService.tudatpontHozzarendelese(
           kulonvalo.eemberIdStr,
           ujAg._id.toString(),
-          'Tartalom',
+          'Gondolat',
           kulonvalo.pontok   // Ugyanannyi pont az új ágon
         );
 
@@ -357,22 +357,22 @@ class KulonvalasService {
     // ============================================================
     // ===== 7/0. LÉPÉS - A SZERKESZTŐK ÁTVITELE (7. döntés) =====
     // ============================================================
-    // A tartalmat alakító emberek az új ágon is szerkesztők maradnak — de az ÁG
+    // A gondolatot alakító emberek az új ágon is szerkesztők maradnak — de az ÁG
     // SZEMPONTJÁBÓL nézve. Lásd a metódus magyarázatát.
 
     const ujSzerkesztok = this._szerkesztokOsszeallitasa(
-      forrasTartalom.szerkesztok ?? [],
+      forrasGondolat.szerkesztok ?? [],
       alapito.eemberIdStr,
       szavazatok,
       kulonvaloOldalSzavazata
     );
 
     if (ujSzerkesztok.length > 0) {
-      console.log('kulonvalasVegrehajtasa >>>>> TartalomRepository.updateById (szerkesztők)', {
+      console.log('kulonvalasVegrehajtasa >>>>> GondolatRepository.updateById (szerkesztők)', {
         ujAgId: ujAg._id.toString(),
         szerkesztokSzama: ujSzerkesztok.length
       });
-      await TartalomRepository.updateById(ujAg._id, { szerkesztok: ujSzerkesztok });
+      await GondolatRepository.updateById(ujAg._id, { szerkesztok: ujSzerkesztok });
     }
 
     // ============================================================
@@ -413,28 +413,28 @@ class KulonvalasService {
 
     const kulonvalasIdeje = new Date();
 
-    console.log('kulonvalasVegrehajtasa >>>>> TartalomRepository.kulonvalasHozzaadasa (főág)', {
+    console.log('kulonvalasVegrehajtasa >>>>> GondolatRepository.kulonvalasHozzaadasa (főág)', {
       foagId: forrasEntitasId,
       testverId: ujAg._id.toString()
     });
 
-    await TartalomRepository.kulonvalasHozzaadasa(forrasEntitasId, {
+    await GondolatRepository.kulonvalasHozzaadasa(forrasEntitasId, {
       testverId: ujAg._id,
-      testverTipus: 'Tartalom',
+      testverTipus: 'Gondolat',
       agSzerep: 'foag',            // Ő tartotta meg az eredeti azonosítót
       forrasJavaslatId,
       forrasEgyezmenyId,
       kulonvalasIdeje
     });
 
-    console.log('kulonvalasVegrehajtasa >>>>> TartalomRepository.kulonvalasHozzaadasa (különvált ág)', {
+    console.log('kulonvalasVegrehajtasa >>>>> GondolatRepository.kulonvalasHozzaadasa (különvált ág)', {
       kulonvaltAgId: ujAg._id.toString(),
       testverId: forrasEntitasId
     });
 
-    await TartalomRepository.kulonvalasHozzaadasa(ujAg._id, {
-      testverId: forrasTartalom._id,
-      testverTipus: 'Tartalom',
+    await GondolatRepository.kulonvalasHozzaadasa(ujAg._id, {
+      testverId: forrasGondolat._id,
+      testverTipus: 'Gondolat',
       agSzerep: 'kulonvalt',       // Ő a szétváláskor jött létre
       forrasJavaslatId,
       forrasEgyezmenyId,
@@ -449,7 +449,7 @@ class KulonvalasService {
       siker: true,
       foag: {
         id: forrasEntitasId.toString(),
-        cim: forrasTartalom.cim,
+        cim: forrasGondolat.cim,
         megmaradtPontok: maradoPontok
       },
       kulonvaltAg: {
@@ -478,7 +478,7 @@ class KulonvalasService {
    *
    * ===== A DÖNTÉS =====
    * „A szerkesztők átkerülnek, és a MEGLÉVŐ szín-szabály jelzi az egyet nem értést."
-   * Vagyis: aki alakította a tartalmat, az új ágon is szerkesztő — de a neve az ÁG
+   * Vagyis: aki alakította a gondolatot, az új ágon is szerkesztő — de a neve az ÁG
    * SZEMPONTJÁBÓL kap színt. Nem kellett új mechanizmus: a `szerkesztok[].allapot`
    * és a ReszletekModal szín-logikája változatlan marad.
    *
@@ -568,16 +568,16 @@ class KulonvalasService {
    * ===== MIÉRT KELL EZT KÜLÖN KEZELNI? =====
    * Az egységes szabály („minden oda kerül, ahol tudatpontja van a különválónak") érték
    * javaslatra NEM alkalmazható, mert érték javaslatra nem lehet tudatpontot tenni (a
-   * `tudatpontHozzarendeles` entitás-típusai: Tartalom / Kategoria / TartalomTipus /
+   * `tudatpontHozzarendeles` entitás-típusai: Gondolat / Kategoria / GondolatTipus /
    * Javaslat). Ezért mondtuk ki külön (8. döntés): aki elmegy, viszi a magáét.
    *
    * ===== A KÜSZÖBÖK MINDKÉT ÁGON ÚJRASZÁMOLÓDNAK =====
-   * A tartalom tényleges küszöbei az érték javaslatok MEDIÁNJAI. Ha valaki elviszi a
+   * A gondolat tényleges küszöbei az érték javaslatok MEDIÁNJAI. Ha valaki elviszi a
    * sajátját, mindkét oldal küszöbe elmozdulhat — ezért a forrás hisztogramjából ki kell
    * VONNI (`hisztogramCsokkentese`), az új ágon pedig be kell írni.
    *
    * ===== AZ ALAPÍTÓ KÜLÖN ESETE =====
-   * A `tartalomLetrehozasa` az alapítónak MÁR létrehozott egy érték javaslatot az ÚJ ágon,
+   * A `gondolatLetrehozasa` az alapítónak MÁR létrehozott egy érték javaslatot az ÚJ ágon,
    * ALAPÉRTELMEZETT küszöbökkel. Ezért a célon `ertekJavaslatLetrehozasaVagyModositasa`-t
    * hívunk (createOrUpdate): az alapítónál FELÜLÍRJA az alapértelmezettet a sajátjával,
    * a többieknél újat hoz létre. Így nem keletkezik két sor ugyanattól az e-embertől.
@@ -600,7 +600,7 @@ class KulonvalasService {
       try {
         // ----- 1. VAN-E EGYÁLTALÁN ÉRTÉK JAVASLATA A FORRÁSON? -----
         const regi = await ErtekJavaslatRepository.findByeEmberAndEntitas(
-          eemberIdStr, forrasEntitasId, 'Tartalom'
+          eemberIdStr, forrasEntitasId, 'Gondolat'
         );
 
         if (!regi) {
@@ -620,11 +620,11 @@ class KulonvalasService {
         console.log('_ertekJavaslatokAtvitele >>>>> ErtekJavaslatRepository.deleteByeEmberAndEntitas', {
           eemberIdStr, forrasEntitasId
         });
-        await ErtekJavaslatRepository.deleteByeEmberAndEntitas(eemberIdStr, forrasEntitasId, 'Tartalom');
+        await ErtekJavaslatRepository.deleteByeEmberAndEntitas(eemberIdStr, forrasEntitasId, 'Gondolat');
 
         // A hisztogramból is ki kell vonni, különben a főág küszöbe olyan véleményt is
         // számolna, ami már nem tartozik hozzá
-        await ErtekSzamitasService.hisztogramCsokkentese(forrasEntitasId, 'Tartalom', ertekek);
+        await ErtekSzamitasService.hisztogramCsokkentese(forrasEntitasId, 'Gondolat', ertekek);
 
         // ----- 3. FELTÉTEL AZ ÚJ ÁGRA -----
         // A createOrUpdate miatt az alapító alapértelmezett sora FELÜLÍRÓDIK, nem duplázódik
@@ -634,7 +634,7 @@ class KulonvalasService {
         await ErtekSzamitasService.ertekJavaslatLetrehozasaVagyModositasa(
           eemberIdStr,
           ujAgId,
-          'Tartalom',
+          'Gondolat',
           ertekek.javaslatElfogadasiKuszob,
           ertekek.reszveteliAranyKuszob,
           ertekek.minimumDontesiIdo,
@@ -663,7 +663,7 @@ class KulonvalasService {
   // PRIVÁT - A LESZÁRMAZOTTAK SZÉTOSZTÁSA (3/b)
   // ===================================
   /**
-   * A forrás alatti TARTALOM-részfa szétosztása a két ág között.
+   * A forrás alatti GONDOLAT-részfa szétosztása a két ág között.
    *
    * ===== AZ EGYSÉGES SZABÁLY =====
    * Minden leszármazottnál azt nézzük, KIKNEK van rajta tudatpontja:
@@ -688,7 +688,7 @@ class KulonvalasService {
    * (Ugyanezt a leckét őrzi az egyesítési végrehajtó 3.5 lépése.)
    *
    * @param {Object} p
-   * @param {string} p.forrasGyokerId - a szétvált tartalom (főág)
+   * @param {string} p.forrasGyokerId - a szétvált gondolat (főág)
    * @param {string} p.ujGyokerId - a különvált ág gyökere
    * @param {Set<string>} p.kulonvalokHalmaz - a különváló e-emberek azonosítói
    * @returns {Promise<Object>} a szétosztás összegzése
@@ -712,7 +712,7 @@ class KulonvalasService {
       lepesVedelem++;
       const aktualisSzuloId = sorban.shift();
 
-      const gyerekek = await TartalomRepository.findBySzuloId(aktualisSzuloId, 'Tartalom');
+      const gyerekek = await GondolatRepository.findBySzuloId(aktualisSzuloId, 'Gondolat');
 
       for (const gyerek of gyerekek) {
         const gyerekId = gyerek._id.toString();
@@ -726,7 +726,7 @@ class KulonvalasService {
 
         // Ki mennyi pontot tart ezen a leszármazotton?
         const hozzarendelesek = await TudatpontRepository.findHozzarendelesekByEntitasNyers(
-          gyerekId, 'Tartalom', 999999, 0
+          gyerekId, 'Gondolat', 999999, 0
         );
 
         const viszik = [];
@@ -762,7 +762,7 @@ class KulonvalasService {
           szuloId: aktualisSzuloId,
           cim: gyerek.cim,
           szoveg: gyerek.szoveg ?? null,
-          tartalomTipusId: gyerek.tartalomTipusId ? (gyerek.tartalomTipusId._id ?? gyerek.tartalomTipusId).toString() : null,
+          gondolatTipusId: gyerek.gondolatTipusId ? (gyerek.gondolatTipusId._id ?? gyerek.gondolatTipusId).toString() : null,
           kategoriaIds: (gyerek.kategoriaIds ?? []).map((k) => (k?._id ?? k).toString()),
           kimenet,
           viszik,
@@ -859,15 +859,15 @@ class KulonvalasService {
         const tobbiek = elem.viszik.slice(1);
 
         // Ugyanaz a kényszerű sorrend, mint a gyökérnél: előbb levétel, aztán létrehozás
-        await TudatpontService.tudatpontHozzarendelese(alapito.eemberIdStr, elem.id, 'Tartalom', 0);
+        await TudatpontService.tudatpontHozzarendelese(alapito.eemberIdStr, elem.id, 'Gondolat', 0);
 
-        const masolat = await TartalomService.tartalomLetrehozasa(
+        const masolat = await GondolatService.gondolatLetrehozasa(
           {
             cim: elem.cim,
             szoveg: elem.szoveg,
             szuloId: ujSzulo,
-            szuloTipus: 'Tartalom',
-            tartalomTipusId: elem.tartalomTipusId,
+            szuloTipus: 'Gondolat',
+            gondolatTipusId: elem.gondolatTipusId,
             kategoriaIds: elem.kategoriaIds
           },
           alapito.eemberIdStr,
@@ -875,9 +875,9 @@ class KulonvalasService {
         );
 
         for (const kulonvalo of tobbiek) {
-          await TudatpontService.tudatpontHozzarendelese(kulonvalo.eemberIdStr, elem.id, 'Tartalom', 0);
+          await TudatpontService.tudatpontHozzarendelese(kulonvalo.eemberIdStr, elem.id, 'Gondolat', 0);
           await TudatpontService.tudatpontHozzarendelese(
-            kulonvalo.eemberIdStr, masolat._id.toString(), 'Tartalom', kulonvalo.pontok
+            kulonvalo.eemberIdStr, masolat._id.toString(), 'Gondolat', kulonvalo.pontok
           );
         }
 
@@ -933,12 +933,12 @@ class KulonvalasService {
       melysegek.sort((a, b) => b.melyseg - a.melyseg);   // legmélyebb előre
 
       for (const m of melysegek) {
-        await this._hierarchiaPontokFelfele(m.id, 'Tartalom');
+        await this._hierarchiaPontokFelfele(m.id, 'Gondolat');
       }
 
       // A két gyökér a végén (ők vannak legfelül)
-      await this._hierarchiaPontokFelfele(forrasGyokerId, 'Tartalom');
-      await this._hierarchiaPontokFelfele(ujGyokerId, 'Tartalom');
+      await this._hierarchiaPontokFelfele(forrasGyokerId, 'Gondolat');
+      await this._hierarchiaPontokFelfele(ujGyokerId, 'Gondolat');
     }
 
     const eredmeny = {
@@ -962,26 +962,26 @@ class KulonvalasService {
   //   (2) a hierarchikus (pakli-fa) allokációban (ebből navigál a pont-számítás felfelé),
   //   (3) az ős-láncban, a teljes RÉSZFÁRA (ebből szűr az ág-nézet).
   // Ugyanez a hármas az egyesítési végrehajtó 7. lépésében is.
-  // @param {string} entitasId - az átkötendő tartalom
-  // @param {string} ujSzuloId - az új szülő (mindig Tartalom ebben a körben)
+  // @param {string} entitasId - az átkötendő gondolat
+  // @param {string} ujSzuloId - az új szülő (mindig Gondolat ebben a körben)
   async _entitasAtkotese(entitasId, ujSzuloId) {
     console.log('_entitasAtkotese - KEZDÉS', { entitasId, ujSzuloId });
 
     // (1) Az entitás dokumentuma
-    await TartalomRepository.updateById(entitasId, {
+    await GondolatRepository.updateById(entitasId, {
       szuloId: ujSzuloId,
-      szuloTipus: 'Tartalom'
+      szuloTipus: 'Gondolat'
     });
 
     // (2) A hierarchikus (pakli-fa) szülő
     await HierarchikusTudatpontAllokaciRepository.updateSzuloId(
-      entitasId, 'Tartalom', ujSzuloId, 'Tartalom'
+      entitasId, 'Gondolat', ujSzuloId, 'Gondolat'
     );
 
     // (3) Az ős-lánc a teljes részfára — best-effort: a lánc hibája ne akassza meg az
     // átkötést (a hiányzó láncot a `tools/entitasOsLancPotlas.js` pótolni tudja)
     try {
-      await OsLancKarbantartoService.reszfaOsLancUjraepitese(entitasId, 'Tartalom');
+      await OsLancKarbantartoService.reszfaOsLancUjraepitese(entitasId, 'Gondolat');
     } catch (osLancHiba) {
       console.error('_entitasAtkotese - osLanc HIBA (nem blokkoló)', {
         entitasId, hiba: osLancHiba.message
@@ -1002,7 +1002,7 @@ class KulonvalasService {
   async _melysegLekerese(entitasId) {
     let melyseg = 0;
     let aktId = entitasId;
-    let aktTipus = 'Tartalom';
+    let aktTipus = 'Gondolat';
     let lepesVedelem = 0;
 
     while (aktId && lepesVedelem < 100) {
@@ -1011,7 +1011,7 @@ class KulonvalasService {
       if (!allokacio || !allokacio.szuloId) break;   // elértük a gyökeret
       melyseg++;
       aktId = allokacio.szuloId;
-      aktTipus = allokacio.szuloTipus || 'Tartalom';
+      aktTipus = allokacio.szuloTipus || 'Gondolat';
     }
 
     return melyseg;
@@ -1046,7 +1046,7 @@ class KulonvalasService {
       if (!allokacio || !allokacio.szuloId) break;   // elértük a gyökeret
 
       aktId = allokacio.szuloId;
-      aktTipus = allokacio.szuloTipus || 'Tartalom';
+      aktTipus = allokacio.szuloTipus || 'Gondolat';
     }
 
     console.log('_hierarchiaPontokFelfele - VÉGE', { lepesek: lepesVedelem });

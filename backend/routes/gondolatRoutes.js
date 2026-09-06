@@ -1,4 +1,4 @@
-// backend/routes/tartalomRoutes.js
+// backend/routes/gondolatRoutes.js
 
 // ===================================
 // EXPRESS ROUTER IMPORTÁLÁSA
@@ -13,7 +13,7 @@ const router = express.Router();
 // ===================================
 // CONTROLLER IMPORTÁLÁSA
 // ===================================
-const tartalomController = require('../controllers/tartalomController');
+const gondolatController = require('../controllers/gondolatController');
 
 // ===================================
 // MIDDLEWARE IMPORTÁLÁSA
@@ -27,48 +27,48 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // -------------------------------------
 // KOLLEKCIÓ SZINTŰ ÚTVONALAK
-// (útvonalak, amelyek az összes tartalomra vonatkoznak)
+// (útvonalak, amelyek az összes gondolatra vonatkoznak)
 // -------------------------------------
 
-// Új tartalom létrehozása
-// POST /api/tartalom
+// Új gondolat létrehozása
+// POST /api/gondolat
 // VÉDETT - csak bejelentkezett eemberek
-router.post('/', authMiddleware, tartalomController.tartalomLetrehozasa);
+router.post('/', authMiddleware, gondolatController.gondolatLetrehozasa);
 
-// Tartalmak listázása szűrőkkel
-// GET /api/tartalom
+// Gondolatok listázása szűrőkkel
+// GET /api/gondolat
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/', authMiddleware, tartalomController.tartalomokListazasa);
+router.get('/', authMiddleware, gondolatController.gondolatokListazasa);
 
 // -------------------------------------
 // SPECIFIKUS ERŐFORRÁS ÚTVONALAK
 // (Részletesebb, többszegmensű útvonalak előbb!)
 // -------------------------------------
 
-// Tartalom részletes adatainak lekérése tudatpont adatokkal
-// GET /api/tartalom/:id/reszletek
+// Gondolat részletes adatainak lekérése tudatpont adatokkal
+// GET /api/gondolat/:id/reszletek
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/:id/reszletek', authMiddleware, tartalomController.tartalomReszleteinekLekerese);
+router.get('/:id/reszletek', authMiddleware, gondolatController.gondolatReszleteinekLekerese);
 
 // -------------------------------------
 // ÁLTALÁNOS ERŐFORRÁS ÚTVONALAK
 // (Egyszegmensű dinamikus útvonalak később!)
 // -------------------------------------
 
-// Egy tartalom lekérése ID alapján
-// GET /api/tartalom/:id
+// Egy gondolat lekérése ID alapján
+// GET /api/gondolat/:id
 // VÉDETT - csak bejelentkezett eemberek
-router.get('/:id', authMiddleware, tartalomController.tartalomLekerese);
+router.get('/:id', authMiddleware, gondolatController.gondolatLekerese);
 
-// Tartalom módosítása ID alapján
-// PATCH /api/tartalom/:id
+// Gondolat módosítása ID alapján
+// PATCH /api/gondolat/:id
 // VÉDETT - csak bejelentkezett eemberek
-router.patch('/:id', authMiddleware, tartalomController.tartalomModositasa);
+router.patch('/:id', authMiddleware, gondolatController.gondolatModositasa);
 
 // ===================================
 // Torles ENDPOINT NINCS!
 // ===================================
-// A tartalmak NEM törölhetők direkt DELETE kéréssel.
+// A gondolatok NEM törölhetők direkt DELETE kéréssel.
 // 
 // Törlés csak automatikusan történik a következő esetekben:
 // 

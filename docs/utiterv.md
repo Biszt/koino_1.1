@@ -30,7 +30,7 @@
 > a 2. lépcső drága, mert ott a zsákmány; és a védelem egyikben sem a kapu, hanem hogy a
 > rossz tanúsító elveszíti a szerepét.*
 >
-> - **1. lépcső:** egy meghívó → tag, és **minden mehet** (tartalom, tudatpont, javaslat,
+> - **1. lépcső:** egy meghívó → tag, és **minden mehet** (gondolat, tudatpont, javaslat,
 >   szavazat).
 > - **2. lépcső:** három tanúsítás felhatalmazott tanúsítótól → **pénztárca**. Ez a **D11**.
 > - **A felhatalmazást csak 2. lépcsősök adják**, emberenként egyet; a küszöb **kimondott

@@ -34,7 +34,7 @@ function _kerekit(szam) {
 // A döntési időt a backend másodpercben tárolja, de az e-embernek egy
 // szám + egység párost mutatunk (pl. „1 év”). Ez a lista adja az egységeket,
 // a legnagyobbtól a legkisebbig – a `masodperc` a váltószám mp-be.
-// Használják: a küszöbérték-mezők (ErtekJavaslatModal, TartalomModal).
+// Használják: a küszöbérték-mezők (ErtekJavaslatModal, GondolatModal).
 export const IDO_EGYSEGEK = [
   { kulcs: 'ev',   felirat: 'év',   masodperc: 31536000 }, // 365 nap
   { kulcs: 'nap',  felirat: 'nap',  masodperc: 86400 },

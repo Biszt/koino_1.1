@@ -19,7 +19,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
     reteg: 'szamitott',  // H6
     type: String,
     required: true,
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'],
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'],
     trim: true
   },
 
@@ -38,7 +38,7 @@ const hierarchikusTudatpontAllokaciSchema = new mongoose.Schema({
   szuloTipus: {
     reteg: 'szamitott',  // H6
     type: String,
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny', null],
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny', null],
     default: null
   },
 

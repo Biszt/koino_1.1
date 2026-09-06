@@ -41,7 +41,7 @@ class EntitasKeresoMezo {
     this.kontener    = kontener;
     this.cimke       = beallitasok.cimke       ?? 'Entitás';
     this.placeholder = beallitasok.placeholder ?? 'Keress cím alapján, vagy írj be ID-t';
-    this.tipusok     = beallitasok.tipusok     ?? ['Tartalom', 'Kategoria', 'TartalomTipus'];
+    this.tipusok     = beallitasok.tipusok     ?? ['Gondolat', 'Kategoria', 'GondolatTipus'];
     this.token       = beallitasok.token       ?? null;
     this.onValtozas  = beallitasok.onValtozas  ?? null;
 

@@ -16,7 +16,7 @@
 //   node koino/koino.js                          — mi az állapot
 //   node koino/koino.js kulcs                    — ki vagyok, hol a kulcsom
 //   node koino/koino.js koino "A koino neve"     — koino létrehozása
-//   node koino/koino.js tartalom "Cím" "szöveg"  — új tartalom (+100 tudatpont)
+//   node koino/koino.js gondolat "Cím" "szöveg"  — új gondolat (+100 tudatpont)
 //   node koino/koino.js pont <azonosító> <pont> [passziv]
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
@@ -56,7 +56,7 @@ import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import {
-  koinoLetrehozasa, tartalomLetrehozasa, tudatpontRendezese,
+  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
@@ -288,9 +288,9 @@ async function allapotKiirasa(napokMulva) {
     }
   }
 
-  // ----- TARTALMAK -----
+  // ----- GONDOLATOK -----
   kiir();
-  kiir(SZIN.vastag + 'TARTALMAK' + SZIN.vege);
+  kiir(SZIN.vastag + 'GONDOLATOK' + SZIN.vege);
   if (allapot.entitasok.size === 0) {
     kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
   }
@@ -385,11 +385,11 @@ try {
       break;
     }
 
-    case 'tartalom': {
+    case 'gondolat': {
       const [cim, szoveg] = ervek;
-      if (!cim) throw new Error('Mi legyen a tartalom címe?');
+      if (!cim) throw new Error('Mi legyen a gondolat címe?');
 
-      const esemeny = await tartalomLetrehozasa(kornyezet, { cim, szoveg });
+      const esemeny = await gondolatLetrehozasa(kornyezet, { cim, szoveg });
       // Rögtön tudatpontot is rendelünk hozzá — enélkül nem is létezne (D14)
       const { allapot } = await kepetKeszit();
       await tudatpontRendezese(kornyezet, esemeny.azonosito, KEZDO_PONT, 'aktiv',
@@ -413,7 +413,7 @@ try {
       }
       await tudatpontRendezese(kornyezet, azonosito, pont, szerep, masholt);
       kiir(pont === 0
-        ? 'Elvetted a tudatpontodat. Ha senki másnak nincs rajta, a tartalom eltűnik.'
+        ? 'Elvetted a tudatpontodat. Ha senki másnak nincs rajta, a gondolat eltűnik.'
         : 'Tudatpont beállítva: ' + pont + ' (' + szerep + ')');
       break;
     }
@@ -1346,7 +1346,7 @@ try {
 
     default:
       kiir('Ismeretlen parancs: ' + parancs);
-      kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · tartalom <cím> [szöveg]');
+      kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · gondolat <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');

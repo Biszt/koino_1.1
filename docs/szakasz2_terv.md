@@ -18,15 +18,15 @@ koinót látja — anélkül, hogy bármelyikük „a szerver" lenne.
 |---|---|
 | **Jelzőpont-szolgáltatás** | Előbb megmérjük, kell-e egyáltalán. Ha két készülék IPv6-on összeér, a bemutatkozást kézzel is át lehet vinni. *Előbb mérünk, aztán építünk infrastruktúrát.* |
 | **Felfedezés** (hogyan találod meg azt, akinek nem tudod a címét) | Ez a bizalmi hálóval együtt lesz értelmes (Szakasz 3). Itt a címet **kézzel** adjuk meg. |
-| **Titkosított csatorna** | A koino tartalma a közösségé, és minden esemény **aláírt** — a hitelesség nem a csatornán múlik. ⚠️ De a **metaadat** (ki kivel beszél, mikor) így látható a hálózaton. Tudatos halasztás, felírva a nyitott kérdések közé. |
+| **Titkosított csatorna** | A koino gondolata a közösségé, és minden esemény **aláírt** — a hitelesség nem a csatornán múlik. ⚠️ De a **metaadat** (ki kivel beszél, mikor) így látható a hálózaton. Tudatos halasztás, felírva a nyitott kérdések közé. |
 | **Mindig futó csomópontok** | A D21 harmadik rétege; ahhoz előbb működő csere kell. |
 
 ---
 
 ## 1. A JÓSLAT, amit igazolni kell
 
-> **Az összefésülés triviális**, mert az azonos tartalmú események **azonos nevet** kapnak
-> (a név a tartalom lenyomata), és a duplikátumok maguktól elnyelődnek.
+> **Az összefésülés triviális**, mert az azonos gondolatú események **azonos nevet** kapnak
+> (a név a gondolat lenyomata), és a duplikátumok maguktól elnyelődnek.
 
 Ez nem remény: a mentés **már ma is idempotens** — ha egy esemény megvan, a második mentés
 `marMegvolt`-ot ad vissza, és nem csinál semmit. A hálózaton ugyanez fut le, csak nem a
@@ -44,7 +44,7 @@ hálózati megfelelője, és ez a szakasz **vizsgája**.
 A lánc szerkezete egy nagyon olcsó összefoglalót enged meg. Nem kell felsorolni, mely
 eseményeket ismerjük: elég **szerzőnként a legnagyobb sorszám**.
 
-| Üzenet | Tartalma | Mérete |
+| Üzenet | Gondolata | Mérete |
 |---|---|---|
 | `ALLAS` | szerzőnként: a nyilvános kulcs + a legnagyobb ismert sorszám + **hézagok** + **elágazások** + a lánc **ujjlenyomata** | **162 bájt / e-ember** (mérve, 50 fő) |
 | `KEREK` | mely szerző mely sorszámait kérem | pár bájt / hiány |
@@ -97,7 +97,7 @@ kapcsolódni szolgáltató nélkül."*
 | Szerep | Kell-e? | Függés-e? |
 |---|---|---|
 | **Jelzőpont** (a cím/bemutatkozás átvitele) | Kell valamilyen csatorna — akár **egy ember**, kézzel | **Nem.** Postás, nem hatóság. |
-| **STUN** („mi a nyilvános címem?") | NAT mögött a készülék nem tudja a saját külső címét | Fél-függés: pár csomag, tartalmat nem lát, bárki futtathat ilyet. **Kihagyható, ha van globális IPv6.** |
+| **STUN** („mi a nyilvános címem?") | NAT mögött a készülék nem tudja a saját külső címét | Fél-függés: pár csomag, gondolatot nem lát, bárki futtathat ilyet. **Kihagyható, ha van globális IPv6.** |
 | **Továbbító (TURN)** | Csak ha a közvetlen út nem jön össze | **Ez a drága függés** — a gyakoriságát meg kell mérni, nem megbecsülni. |
 
 ### Amit már megmértünk (2026-08-28, a fejlesztő laptopján)
@@ -270,9 +270,9 @@ szólnak ki; Cili üresen indul):
 | 1. Anna → Cili | Cili átvett 3 eseményt |
 | 2. Béla → Cili | Béla megkapta Anna 3 eseményét |
 | 3. Béla létrehoz valamit, → Cili | Cili átvett 2-t |
-| 4. Anna → Cili | **Anna megkapta Béla tartalmát** |
+| 4. Anna → Cili | **Anna megkapta Béla gondolatát** |
 
-Anna állapotában ott van *„Bela tartalma"* — pedig **Anna és Béla soha nem beszélt
+Anna állapotában ott van *„Bela gondolata"* — pedig **Anna és Béla soha nem beszélt
 egymással, és egyikük sem fogadott kapcsolatot.**
 
 ⭐ **Amit ez bizonyít:** Cilinek **nem kell egyszerre online tartania** a két felet. Minden
@@ -331,7 +331,7 @@ két lenyomat **sosem konvergált** — a csere a kör-korlátig pörgött, ugya
 
 ⭐ **És amit ez megnyit:** mivel a protokoll mostantól **kimondja, melyik koinóról szól**,
 később egy `figyel` **több koinót is kiszolgálhat** — vagyis egy erős készülék tényleg
-tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a valódi tartalma.
+tudna postaláda lenni egy kis családi koinónak. Ez volt Csaba kérdésének a valódi gondolata.
 **Felírva, nem megépítve** — előbb a D. lépés mutassa meg, mekkora a valódi hiány.
 
 ---
@@ -635,7 +635,7 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
 
 1. **A hézag kezelése** — 4. pont. *Mérés után döntjük el.*
 2. **Egy ember, két készülék** — 5. pont. *A csere megismerése után döntjük el.*
-3. **Titkosítás és metaadat.** A tartalom nyílt (a közösségé), de „ki kivel beszél" ma
+3. **Titkosítás és metaadat.** A gondolat nyílt (a közösségé), de „ki kivel beszél" ma
    látható a hálózaton. Mikor kell csatorna-titkosítás, és milyen?
 4. **Mit tegyünk, ha a másik fél hazudik az állásáról** (azt mondja, nincs neki, holott
    van)? Ez a D21 „elérhetőségi probléma"-ága: nem tud hamisat mondani, csak **hallgatni**.
@@ -809,7 +809,7 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
   ki, tehát nem kell hozzá „vége" üzenet.
   **Kézi próba két folyamattal, egy gépen** (`KOINO_ADAT=./adat-A figyel` ↔
   `KOINO_ADAT=./adat-B csere`): a két készülék kicserélte az eseményeit, és utána
-  **mindkettő ugyanazt a két tartalmat és ugyanazt a koino-nevet** számolta ki — a B gép
+  **mindkettő ugyanazt a két gondolatot és ugyanazt a koino-nevet** számolta ki — a B gép
   úgy tudta meg a koino nevét, hogy soha nem hozta létre. Új parancsok: `figyel` és
   `csere`. A vonal `::1`-en (IPv6) is áll.
   ⚠️ **Amit a kézi próba talált:** a két gép **más sorrendben** sorolja fel az entitásokat

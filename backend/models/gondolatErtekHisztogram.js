@@ -1,4 +1,4 @@
-// backend/models/tartalomErtekHisztogram.js
+// backend/models/gondolatErtekHisztogram.js
 
 // ===================================
 // MONGOOSE IMPORTÁLÁSA
@@ -10,14 +10,14 @@ const mongoose = require('mongoose');
 // TÁMOGATOTT ENTITÁSTÍPUSOK
 // ===================================
 // A hisztogram (érték-rendszer) ezekre az entitásokra működik.
-const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 
 // ===================================
 // ENTITÁS ÉRTÉK HISZTOGRAM SÉMA DEFINÍCIÓJA
 // ===================================
 // Aggregált adatok tárolása - hány eember javasol adott értéket egy entitáshoz
-// (tartalom / kategória / tartalomtípus). Cache réteg a medián számításhoz.
-const tartalomErtekHisztogramSchema = new mongoose.Schema({
+// (gondolat / kategória / gondolattípus). Cache réteg a medián számításhoz.
+const gondolatErtekHisztogramSchema = new mongoose.Schema({
 
   // ----- ENTITÁS AZONOSÍTÓ -----
   // Melyik entitáshoz tartoznak ezek az aggregált adatok
@@ -35,7 +35,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
     type: String,
     enum: ENTITAS_TIPUSOK,
     required: true,
-    default: 'Tartalom'
+    default: 'Gondolat'
   },
 
   // ----- ERTEK JAVASLAT ELFOGADÁSI KÜSZÖB HISZTOGRAM -----
@@ -164,7 +164,7 @@ const tartalomErtekHisztogramSchema = new mongoose.Schema({
 // ===================================
 // Egy entitáshoz csak EGY hisztogram tartozhat → egyedi compound index az
 // (entitasId, entitasTipus) páron.
-tartalomErtekHisztogramSchema.index(
+gondolatErtekHisztogramSchema.index(
   { entitasId: 1, entitasTipus: 1 },
   { unique: true }
 );
@@ -180,7 +180,7 @@ tartalomErtekHisztogramSchema.index(
  * @param {string} ertek - a keresett érték (string)
  * @returns {number} A bucket értéke (vagy 0 ha nincs)
  */
-tartalomErtekHisztogramSchema.methods.getBucket = function(hisztogramNev, ertek) {
+gondolatErtekHisztogramSchema.methods.getBucket = function(hisztogramNev, ertek) {
   const hisztogram = this[hisztogramNev]; // Map lekérése
   return hisztogram.get(ertek.toString()) || 0; // Érték lekérése, vagy 0 ha nincs
 };
@@ -192,7 +192,7 @@ tartalomErtekHisztogramSchema.methods.getBucket = function(hisztogramNev, ertek)
  * @param {string} ertek - a százalék/érték (string)
  * @param {number} darabszam - hány eember (number)
  */
-tartalomErtekHisztogramSchema.methods.setBucket = function(hisztogramNev, ertek, darabszam) {
+gondolatErtekHisztogramSchema.methods.setBucket = function(hisztogramNev, ertek, darabszam) {
   const hisztogram = this[hisztogramNev]; // Map lekérése
   hisztogram.set(ertek.toString(), darabszam); // Érték beállítása
 };
@@ -203,7 +203,7 @@ tartalomErtekHisztogramSchema.methods.setBucket = function(hisztogramNev, ertek,
  * @param {string} hisztogramNev - 'javaslatElfogadasiKuszobHisztogram' vagy 'reszveteliAranyKuszobHisztogram' stb.
  * @param {string} ertek - a százalék/érték (string)
  */
-tartalomErtekHisztogramSchema.methods.novelBucket = function(hisztogramNev, ertek) {
+gondolatErtekHisztogramSchema.methods.novelBucket = function(hisztogramNev, ertek) {
   const jelenlegi = this.getBucket(hisztogramNev, ertek); // Jelenlegi érték
   this.setBucket(hisztogramNev, ertek, jelenlegi + 1); // +1
 };
@@ -214,7 +214,7 @@ tartalomErtekHisztogramSchema.methods.novelBucket = function(hisztogramNev, erte
  * @param {string} hisztogramNev - 'javaslatElfogadasiKuszobHisztogram' vagy 'reszveteliAranyKuszobHisztogram' stb.
  * @param {string} ertek - a százalék/érték (string)
  */
-tartalomErtekHisztogramSchema.methods.csokkentBucket = function(hisztogramNev, ertek) {
+gondolatErtekHisztogramSchema.methods.csokkentBucket = function(hisztogramNev, ertek) {
   const jelenlegi = this.getBucket(hisztogramNev, ertek); // Jelenlegi érték
   // Csak akkor csökkentjük, ha nagyobb mint 0 (nem lehet negatív)
   if (jelenlegi > 0) {
@@ -227,18 +227,18 @@ tartalomErtekHisztogramSchema.methods.csokkentBucket = function(hisztogramNev, e
 // nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
 // A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
 // Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
-tartalomErtekHisztogramSchema.options.retegAlapertelmezes = 'szamitott';
+gondolatErtekHisztogramSchema.options.retegAlapertelmezes = 'szamitott';
 
 // ===================================
 // MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA
 // ===================================
 
 // A model a séma alapján létrehozott adatbázis kollekció
-// 'TartalomErtekHisztogram' = model neve, tartalomErtekHisztogramSchema = séma definíció
-const TartalomErtekHisztogram = mongoose.model('TartalomErtekHisztogram', tartalomErtekHisztogramSchema);
+// 'GondolatErtekHisztogram' = model neve, gondolatErtekHisztogramSchema = séma definíció
+const GondolatErtekHisztogram = mongoose.model('GondolatErtekHisztogram', gondolatErtekHisztogramSchema);
 
 // A támogatott típusokat is exportáljuk
-TartalomErtekHisztogram.ENTITAS_TIPUSOK = ENTITAS_TIPUSOK;
+GondolatErtekHisztogram.ENTITAS_TIPUSOK = ENTITAS_TIPUSOK;
 
 // Model exportálása, hogy más fájlokban is használható legyen
-module.exports = TartalomErtekHisztogram;
+module.exports = GondolatErtekHisztogram;

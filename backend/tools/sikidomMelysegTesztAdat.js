@@ -19,8 +19,8 @@
 // gyerekek között, Zipf-szerű eloszlásban — így lesz egy-két nagy és sok kicsi,
 // pont mint az éles adatban.
 //
-// FONTOS: a tartalmakat a rendes service-en át hozzuk létre
-// (`tartalomService.tartalomLetrehozasa`), NEM közvetlen adatbázis-írással —
+// FONTOS: a gondolatokat a rendes service-en át hozzuk létre
+// (`gondolatService.gondolatLetrehozasa`), NEM közvetlen adatbázis-írással —
 // így minden származtatott rekord (tudatpont-hozzárendelés, allokáció,
 // hierarchikus allokáció, ős-lánc) konzisztensen létrejön.
 //
@@ -36,9 +36,9 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const tartalomService = require('../services/tartalomService');
+const gondolatService = require('../services/gondolatService');
 const Eember = require('../models/eember');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 
 // ===== PARAMÉTEREK =====
 const MELYSEG = Number(process.argv[2]) || 3;      // hány szint a gyökér ALATT
@@ -91,7 +91,7 @@ async function agEpites(szulo, szint, eemberId, allapot) {
     }
 
     // Már létezik? (újrafuttathatóság)
-    const mar = await Tartalom.findOne({ cim, szuloId: szulo.id }).select('_id').lean();
+    const mar = await Gondolat.findOne({ cim, szuloId: szulo.id }).select('_id').lean();
     let gyerekId;
 
     if (mar) {
@@ -99,12 +99,12 @@ async function agEpites(szulo, szint, eemberId, allapot) {
       allapot.kihagyott++;
     } else {
       try {
-        const t = await tartalomService.tartalomLetrehozasa(
+        const t = await gondolatService.gondolatLetrehozasa(
           {
             cim,
-            szoveg: `${cim} — a Síkidom nézet MÉLYSÉGI próbájához létrehozott tartalom (${szint + 1}. szint).`,
+            szoveg: `${cim} — a Síkidom nézet MÉLYSÉGI próbájához létrehozott gondolat (${szint + 1}. szint).`,
             szuloId: szulo.id,
-            szuloTipus: 'Tartalom'
+            szuloTipus: 'Gondolat'
           },
           eemberId,
           pont
@@ -135,11 +135,11 @@ async function futtat() {
   await mongoose.connect(process.env.MONGODB_URI);
 
   // ----- A GYÖKÉR -----
-  const gyoker = await Tartalom.findOne({ cim: GYOKER_CIM, szuloId: null })
+  const gyoker = await Gondolat.findOne({ cim: GYOKER_CIM, szuloId: null })
     .select('_id cim').lean();
 
   if (!gyoker) {
-    console.error(`HIBA: nincs ilyen gyökér tartalom: "${GYOKER_CIM}".`);
+    console.error(`HIBA: nincs ilyen gyökér gondolat: "${GYOKER_CIM}".`);
     console.error('Előbb futtasd: docker exec koino-backend node tools/sikidomTesztAdat.js');
     await mongoose.disconnect();
     process.exit(1);

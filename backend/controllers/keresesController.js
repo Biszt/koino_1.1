@@ -16,7 +16,7 @@ class KeresesController {
   // ===================================
   // ENTITÁS KERESÉSE
   // ===================================
-  // GET /api/kereses?q=<szoveg>&tipusok=Tartalom,Kategoria,TartalomTipus&limit=10
+  // GET /api/kereses?q=<szoveg>&tipusok=Gondolat,Kategoria,GondolatTipus&limit=10
   async entitasKereses(req, res) {
     console.log('KeresesController.entitasKereses - KEZDÉS', { query: req.query });
 
@@ -33,7 +33,7 @@ class KeresesController {
       // 2. LÉPÉS - Query paraméterek kiolvasása
       const kifejezes = req.query.q ?? '';
 
-      // A tipusok vesszővel elválasztott lista (pl. "Tartalom,Kategoria"); ha nincs, null
+      // A tipusok vesszővel elválasztott lista (pl. "Gondolat,Kategoria"); ha nincs, null
       const tipusok = req.query.tipusok
         ? req.query.tipusok.split(',').map(t => t.trim()).filter(Boolean)
         : null;

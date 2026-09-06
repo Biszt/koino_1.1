@@ -143,7 +143,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
      * ⚠️ AZ ÖSSZES ESEMÉNY — EZ AZ, AMI NEM SKÁLÁZIK.
      *
      * Szándékosan megmaradt, mert két helyen jogos: a **próbák** így nézik meg a tár nyers
-     * tartalmát, és a **kis koino** állapotszámítása így kapja meg a bemenetét. De a
+     * gondolatát, és a **kis koino** állapotszámítása így kapja meg a bemenetét. De a
      * hétköznapi műveletek közül **egyetlen sem hívja** — és ez a 3.2 lényege.
      *
      * ⛔ Új kódban ne ezt használd: kérdezz szeletet, láncot vagy azonosítót.
@@ -291,7 +291,7 @@ export function tarsakTarolo(hely = alapHely()) {
  *
  * ⚠️ MIÉRT KÜLÖN FÁJL A TÁRS-LISTÁTÓL? Mert más a természete és más az élettartama. A
  * társ-lista **készülék-szintű** és tartós („kikkel szoktunk beszélni"); ez **entitás-szintű**
- * és **múlandó** („hol láttam ezt a tartalmat"). Egy fájlba téve a rövid életű bejegyzések
+ * és **múlandó** („hol láttam ezt a gondolatot"). Egy fájlba téve a rövid életű bejegyzések
  * kimosnák a tartósakat.
  *
  * ⭐ És ugyanaz igaz rá, mint a társ-listára: **nem esemény, nem terjed igazságként, és

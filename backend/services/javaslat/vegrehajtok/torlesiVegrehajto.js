@@ -8,9 +8,9 @@
 const TudatpontService = require('../../tudatpontService');
 
 // Repository-k importálása - a törlendő entitás szülőjének kiolvasásához
-const TartalomRepository = require('../../../repositories/tartalomRepository');
+const GondolatRepository = require('../../../repositories/gondolatRepository');
 const KategoriaRepository = require('../../../repositories/kategoriaRepository');
-const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../../../repositories/gondolatTipusRepository');
 const EgyezmenyRepository = require('../../../repositories/egyezmenyRepository');
 
 // ===================================
@@ -55,12 +55,12 @@ class TorlesiVegrehajto {
       let eredetiSzuloTipus = null;
       try {
         let torlendoEntitas = null;
-        if (entitas.entitasTipus === 'Tartalom') {
-          torlendoEntitas = await TartalomRepository.findById(entitas.entitasId);
+        if (entitas.entitasTipus === 'Gondolat') {
+          torlendoEntitas = await GondolatRepository.findById(entitas.entitasId);
         } else if (entitas.entitasTipus === 'Kategoria') {
           torlendoEntitas = await KategoriaRepository.findById(entitas.entitasId);
-        } else if (entitas.entitasTipus === 'TartalomTipus') {
-          torlendoEntitas = await TartalomTipusRepository.findById(entitas.entitasId);
+        } else if (entitas.entitasTipus === 'GondolatTipus') {
+          torlendoEntitas = await GondolatTipusRepository.findById(entitas.entitasId);
         } else if (entitas.entitasTipus === 'Egyezmeny') {
           torlendoEntitas = await EgyezmenyRepository.findById(entitas.entitasId);
         }

@@ -9,7 +9,7 @@
 //
 // ===== A SZERKEZET, AMIT EZ MEGVALÓSÍT (D56, 2026-09-06) =====
 //
-//   1. lépcső — a TAGSÁG:    EGY meghívó, és minden mehet (tartalom, tudatpont, szavazat).
+//   1. lépcső — a TAGSÁG:    EGY meghívó, és minden mehet (gondolat, tudatpont, szavazat).
 //   2. lépcső — a PÉNZTÁRCA: három tanúsítás felhatalmazott tanúsítótól. Ez a D11.
 //
 // ⚠️ MIÉRT ILYEN OLCSÓ AZ ELSŐ LÉPCSŐ? Mert megmértük, hogy a kapu ÚGYSEM VÉD: a belépési

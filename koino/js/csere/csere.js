@@ -263,7 +263,7 @@ export async function valaszOsszeallitasa(tar, kerelem) {
  *
  * ⭐ NINCS BENNE SEMMI ÚJ. Ugyanaz az `esemenyMentese` fut, mint amikor mi magunk
  * cselekszünk: ellenőrzés (aláírás + azonosító), duplikátum-elnyelés, elágazás-jelzés.
- * Ez a szakasz jóslatának a lényege: mivel az azonosító a tartalom lenyomata, a
+ * Ez a szakasz jóslatának a lényege: mivel az azonosító a gondolat lenyomata, a
  * duplikátum MAGÁTÓL elnyelődik, és az összefésüléshez nem kell ütközés-feloldó logika.
  *
  * ⚠️ A KOINO-SZŰRÉS (2026-08-29, mérés után). A tár koinónként külön mappa, de az

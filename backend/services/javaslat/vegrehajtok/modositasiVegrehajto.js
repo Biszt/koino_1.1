@@ -5,9 +5,9 @@
 // ===================================
 
 // Repository-k importálása - entitások módosításához
-const TartalomRepository = require('../../../repositories/tartalomRepository');
+const GondolatRepository = require('../../../repositories/gondolatRepository');
 const KategoriaRepository = require('../../../repositories/kategoriaRepository');
-const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../../../repositories/gondolatTipusRepository');
 
 // Szerkesztő szerviz - az elfogadott módosítás után frissíti az entitás szerkesztő-listáját
 const SzerkesztoService = require('../../szerkesztoService');
@@ -66,32 +66,32 @@ class ModositasiVegrehajto {
       // === 4. LÉPÉS: ENTITÁS MÓDOSÍTÁSA TÍPUS ALAPJÁN ===
       let modositva = false;
       let hibaUzenet = null;
-      // A LECSERÉLT (régi) tartalom pillanatképe — a felülírás ELŐTT olvassuk ki,
-      // hogy az egyezmény meg tudja őrizni (a kártya „Lecserélt tartalom" fülének).
-      // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras.
+      // A LECSERÉLT (régi) gondolat pillanatképe — a felülírás ELŐTT olvassuk ki,
+      // hogy az egyezmény meg tudja őrizni (a kártya „Lecserélt gondolat" fülének).
+      // Mezőnév-eltérés: Gondolat → cim/szoveg, Kategoria/GondolatTipus → nev/leiras.
       let regiAdatok = null;
 
       try {
 
-        if (entitas.entitasTipus === 'Tartalom') {
-          // A régi tartalom kiolvasása a felülírás előtt
-          const regiTartalom = await TartalomRepository.findById(entitas.entitasId);
+        if (entitas.entitasTipus === 'Gondolat') {
+          // A régi gondolat kiolvasása a felülírás előtt
+          const regiGondolat = await GondolatRepository.findById(entitas.entitasId);
           regiAdatok = {
-            cim:    regiTartalom?.cim ?? null,
-            szoveg: regiTartalom?.szoveg ?? null
+            cim:    regiGondolat?.cim ?? null,
+            szoveg: regiGondolat?.szoveg ?? null
           };
 
-          // Tartalom módosítása
-          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> TartalomRepository.updateById: ", {
+          // Gondolat módosítása
+          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> GondolatRepository.updateById: ", {
            entitasId: entitas.entitasId,
            modositasAdatok: entitas.modositasAdatok
           });
 
-          const frissitettTartalom = await TartalomRepository.updateById(
+          const frissitettGondolat = await GondolatRepository.updateById(
             entitas.entitasId,
             { ...entitas.modositasAdatok, modositva: modositasIdo }  // tartalmi módosítás → modositva frissül
           );
-          modositva = !!frissitettTartalom;
+          modositva = !!frissitettGondolat;
 
         } else if (entitas.entitasTipus === 'Kategoria') {
           // A régi kategória kiolvasása a felülírás előtt
@@ -113,25 +113,25 @@ class ModositasiVegrehajto {
           );
           modositva = !!frissitettKategoria;
 
-        } else if (entitas.entitasTipus === 'TartalomTipus') {
-          // A régi tartalomtípus kiolvasása a felülírás előtt
-          const regiTartalomTipus = await TartalomTipusRepository.findById(entitas.entitasId);
+        } else if (entitas.entitasTipus === 'GondolatTipus') {
+          // A régi gondolattípus kiolvasása a felülírás előtt
+          const regiGondolatTipus = await GondolatTipusRepository.findById(entitas.entitasId);
           regiAdatok = {
-            nev:    regiTartalomTipus?.nev ?? null,
-            leiras: regiTartalomTipus?.leiras ?? null
+            nev:    regiGondolatTipus?.nev ?? null,
+            leiras: regiGondolatTipus?.leiras ?? null
           };
 
-          // Tartalom típus módosítása
-          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> TartalomTipusRepository.updateById: ", {
+          // Gondolat típus módosítása
+          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>> GondolatTipusRepository.updateById: ", {
            entitasId: entitas.entitasId,
            modositasAdatok: entitas.modositasAdatok
           });
 
-          const frissitettTartalomTipus = await TartalomTipusRepository.updateById(
+          const frissitettGondolatTipus = await GondolatTipusRepository.updateById(
             entitas.entitasId,
             { ...entitas.modositasAdatok, modositva: modositasIdo }  // tartalmi módosítás → modositva frissül
           );
-          modositva = !!frissitettTartalomTipus;
+          modositva = !!frissitettGondolatTipus;
 
         } else {
           // Ismeretlen entitás típus
@@ -169,7 +169,7 @@ class ModositasiVegrehajto {
         entitasTipus: entitas.entitasTipus,
         modositva: modositva,
         modositasAdatok: entitas.modositasAdatok,
-        regiAdatok: regiAdatok,   // A lecserélt (régi) tartalom pillanatképe
+        regiAdatok: regiAdatok,   // A lecserélt (régi) gondolat pillanatképe
         hiba: hibaUzenet
       });
     }

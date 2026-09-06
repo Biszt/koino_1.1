@@ -67,11 +67,11 @@ nem az S3 kényelmi része, hanem **az illesztés helyessége** — az első nap
 *Ez a szakasz azért került ide, mert a kép a 4.7, a 4.9 és az 5.2 között volt szétszórva.
 Csaba egy mondatban összefoglalta, és így áll össze:*
 
-> *„A tartalmak — azoknál, akik tudatpontot rendeltek hozzájuk. A metaadatok — a magban, ami
+> *„A gondolatok — azoknál, akik tudatpontot rendeltek hozzájuk. A metaadatok — a magban, ami
 > mindig összeáll egy buli alkalmával. A láncok a hitelesítéshez — mindenkinél, Merkle
 > módon."*
 
-**1. A TARTALOM (a törzs).** Annál van, aki **tudatpontot tett rá** — és csak akkor mozog, ha
+**1. A GONDOLAT (a törzs).** Annál van, aki **tudatpontot tett rá** — és csak akkor mozog, ha
 rákoppintanak. Ez a legnagyobb adat és a legritkábban kell. *(Mérve: 200 entitás ≈ 4,4 MB.)*
 A **D14** teszi véglegessé: amit senki nem tart, az elfelejtődik.
 
@@ -89,7 +89,7 @@ ember egész élete **~80 bájt**, akárhány eseménye van (4.9).
 > kellene. Két dolog miatt:
 >
 > ⭐⭐ **(a) Egy esemény hitelesítése NULLA tárolt bájtba kerül.** Az esemény magával hozza a
-> tartalma lenyomatát és az aláírást, a szerző pedig maga a nyilvános kulcs — vagyis
+> gondolata lenyomatát és az aláírást, a szerző pedig maga a nyilvános kulcs — vagyis
 > bárki, bármikor, bármit ellenőrizhet **anélkül, hogy bármit tárolna** róla. Ezt a mai kód
 > már így csinálja (`esemenyEllenorzese`).
 >
@@ -244,7 +244,7 @@ szűnne meg, amikor a legnagyobb szükség lenne rá.** Entitás-szintű lenyoma
 példányai címeit **és** felsorolja a gyerekeit, akkor **a böngészés = a fa bejárása, és
 minden lépésnél megkapod a következő lépés címeit.**
 
-> ### 🎯 A TARTALOM GRÁFJA MAGA AZ ÚTVONAL-GRÁF.
+> ### 🎯 A GONDOLAT GRÁFJA MAGA AZ ÚTVONAL-GRÁF.
 > A **bejáráshoz** nem kell külön felfedező réteg: se DHT, se jelzőpont, se globális index.
 > ⚠️ **A KERESÉSHEZ kell** — az a II. réteg dolga (5. szakasz). Ezt korábban tévesen úgy
 > fogalmaztam, hogy „nem kell DHT"; az csak a bejárásra igaz.
@@ -390,7 +390,7 @@ kerüljük el, hanem: **kinek kell ténylegesen elvinnie?**
 | **a tároló hazudhat?** | ❌ nem | ❌ nem |
 
 **Egyetlen kiegészítés kell: ÖSSZEGZŐ Merkle-fa** (lásd 11. szakasz) — a csomópontok vigyék
-az alattuk lévő **darabszámot és a szavazat-összesítést** is, a hasított tartalmon belül.
+az alattuk lévő **darabszámot és a szavazat-összesítést** is, a hasított gondolaton belül.
 Ekkor nemcsak az bizonyítható log N adatból, hogy *„az én szavazatom benne van"*, hanem az
 is, hogy **„a végösszeg tényleg ennyi"**.
 
@@ -497,7 +497,7 @@ tanúsítóid köre (akik amúgy is kezeskedtek érted). **Eldöntetlen — SK12
 
 **A válasz: mindkettőre kell — de a kettő SZÉTVÁLASZTHATÓ, és utána Csabának igaza van.**
 
-**Amit NEM lehet összenyomni:** a tartalom. A tudatpont-eloszlást meg kell mutatni, a
+**Amit NEM lehet összenyomni:** a gondolat. A tudatpont-eloszlást meg kell mutatni, a
 szavazatokat meg kell számolni, a szöveget el kell olvasni. **Hashből nem lehet állapotot
 számolni.** Ez marad az, ami szeletelésre szorul.
 
@@ -522,7 +522,7 @@ részek lenyomattá válnak, a lenyomatok láncra fűződnek.
   különböző gyökeret kötelez el magára — és mivel a gyökér a saját, aláírt eseményében
   utazik, **két aláírt állítása mond ellent egymásnak**. Nem kell hozzá megőrizni a két
   eredeti eseményt.
-- ⚠️ **A szeletelést NEM váltja ki.** A tartalom nem nyomható össze, tehát az továbbra is
+- ⚠️ **A szeletelést NEM váltja ki.** A gondolat nem nyomható össze, tehát az továbbra is
   csak szeletelve fér el. Csaba észrevétele a **csontvázat** teszi olcsóvá, nem a húst.
 
 > ### ⚠️ KÉT SZÁM, AMIT NEM SZABAD ÖSSZEKEVERNI (2026-09-02, mert Claude összekeverte)
@@ -565,7 +565,7 @@ elvével feszül.
 
 ## 5.1 Mi ez, és mi nem
 
-> **Mutató a tartalomhoz, nem a tartalom.** Mint egy könyv tárgymutatója: *cím → hol van.*
+> **Mutató a gondolathoz, nem a gondolat.** Mint egy könyv tárgymutatója: *cím → hol van.*
 
 ### ⭐ CSABA DÖNTÉSE (2026-08-31): elég a CÍM szerinti keresés
 
@@ -589,14 +589,14 @@ rajta lennie (D14), tudatpontból pedig **10 000 van, összesen**. Aki ezer csal
 árasztaná el a keresőt, **a saját szűkös keretét éli fel** — abból, amit tényleg fontosnak
 tart. ⭐ **Beépített ár, pénz és moderálás nélkül.**
 
-⚠️ **Amit ezzel elfogadunk:** ha az „iskolabusz" szó nem szerepel a **címben**, a tartalom
+⚠️ **Amit ezzel elfogadunk:** ha az „iskolabusz" szó nem szerepel a **címben**, a gondolat
 nem található meg szó szerint. A téma szerinti keresés **kimarad** — tudatosan.
 
-### A bejegyzés tartalma
+### A bejegyzés gondolata
 
 | Benne van | **Nincs benne** |
 |---|---|
-| azonosító, szülő, **cím**, típus, létrehozó, idő, tulajdonos-szám | ❌ **a tartalom törzse** — az az entitásnál él |
+| azonosító, szülő, **cím**, típus, létrehozó, idő, tulajdonos-szám | ❌ **a gondolat törzse** — az az entitásnál él |
 | | ❌ **a hálózati cím** — az is az entitásnál (4.2) |
 | | ❌ **kulcsszó/címke** — nincs ilyen (lásd fent) |
 
@@ -727,8 +727,8 @@ valakinél megvan maga az entitás.
 
 ## 5.8 ⭐ LÁTHATÓSÁGI KÜSZÖB — a keresőn, soha a létezésen (Csaba felvetése, 2026-08-31)
 
-> Csaba: *„az nem probléma, hogy ha csak 1 tulajdonosa van egy tartalomnak, akkor az nem
-> látszik… a trol támadások, vagy illetlen tartalmak, csak akkor lesznek elérhetőek, ha
+> Csaba: *„az nem probléma, hogy ha csak 1 tulajdonosa van egy gondolatnak, akkor az nem
+> látszik… a trol támadások, vagy illetlen gondolatok, csak akkor lesznek elérhetőek, ha
 > legalább 2-en próbálják meg közzétenni."*
 
 **Amit megvesz:** a küszöb 1-ről 2-re emelése **strukturális védelem, moderálás nélkül** —
@@ -742,7 +742,7 @@ identitás-réteg miatt nem elég egy második kulcs).
 > pontot.
 >
 > ⚠️ **És ha a küszöb közösségi paraméter lesz** (D13/c), egy többség **feljebb tolhatja** —
-> ezzel a kisebbségi tartalom szerkezetileg láthatatlanná válik. **Cenzúra anélkül, hogy
+> ezzel a kisebbségi gondolat szerkezetileg láthatatlanná válik. **Cenzúra anélkül, hogy
 > bárkinek cenzúráznia kellene** — rosszabb a nyílt tiltásnál, mert letagadható.
 
 **⭐ A feloldás: a két réteg szétválasztása** — pontosan a most elfogadott felosztás mentén.
@@ -758,7 +758,7 @@ identitás-réteg miatt nem elég egy második kulcs).
 > a küszöb nem is létezik.
 
 ⚠️ **Pontosítás a mai működésről:** ma **egy tulajdonos is elég a létezéshez** — a D14 a
-**nulla** pontos entitást tagadja, az egy pontosat nem. Egy egy-tulajdonosú tartalom tehát
+**nulla** pontos entitást tagadja, az egy pontosat nem. Egy egy-tulajdonosú gondolat tehát
 ott van a fában. Ami valóban gyenge nála, az az **elérhetőség**: egy tulajdonos = egy
 példány (4.5). ⚠️ **Ezért a küszöb ÚJ SZABÁLY lenne, nem a meglévő pontosítása** → SK10.
 
@@ -874,7 +874,7 @@ indexelni.
 | **SK7** | A szelet-megtalálás **A) hash-DHT** vagy **B) bizalmi háló**? | ⭐ **középút** (5.3), de **méréssel**, és **ráér** |
 | **SK8** | A **tömeges entitás** (10⁷ tulajdonos → ~4,3 GB) | ⭐ **VAN VÁLASZ (4.6):** összegző Merkle-fa — a D21 szerkezete másodszor. Mindenki ~1 KB-ot tárol. *(A korábbi „a D17 táblázata módosul" állítás visszavonva.)* |
 | **SK10** | **Láthatósági küszöb** a keresőn (Csaba felvetése, 5.8): 2 független tulajdonos kelljen a keresőben való megjelenéshez? | ⭐ **igen, de KIZÁRÓLAG a kereső-rétegen** — a létezésen soha. ⚠️ **Új szabály, nem pontosítás** — a te döntésed, és a küszöb **ne legyen felfelé tolható** közösségi paraméter (cenzúra-kockázat). 🔁 **Bővült (2026-09-02):** Csaba szerint a **síkidom nézet** ténylegesen használni fogja a láthatósági paramétereket, mert **az dönti el, mikről megy kérelem** — vagyis a küszöb nem csak „mi bukkan fel a keresőben", hanem **mit tölt be egy nézet**. Ez több, mint amiről az 5.8 szól. |
-| ~~**SK11**~~ | ~~A csak megnézett entitások helyi tára: meddig tartsuk meg?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-02): tartsa meg nyugodtan.** Claude aggálya (korlátlan hízás) túlzott volt: egy ember véges sokat böngészik, és ⭐ **a megtartott másolat épp az elérhetőséget javítja** (4.5). Az egyetlen valódi követelmény, hogy **eldobható** legyen — ha kell a hely, a legrégebbi megy, és ez semmit nem ront el, mert a tartalom újra lekérhető és ellenőrizhető. |
+| ~~**SK11**~~ | ~~A csak megnézett entitások helyi tára: meddig tartsuk meg?~~ | ✅ **LEZÁRVA (Csaba, 2026-09-02): tartsa meg nyugodtan.** Claude aggálya (korlátlan hízás) túlzott volt: egy ember véges sokat böngészik, és ⭐ **a megtartott másolat épp az elérhetőséget javítja** (4.5). Az egyetlen valódi követelmény, hogy **eldobható** legyen — ha kell a hely, a legrégebbi megy, és ez semmit nem ront el, mert a gondolat újra lekérhető és ellenőrizhető. |
 | **SK12** | Ki tartja egy e-ember **teljes láncát**, ha a tár szeletelt? (4.8 — enélkül a kettős lánc szerkezetileg leleplezhetetlen) | ⭐⭐ **VÁLASZ-IRÁNY: a D63** (2026-09-06). A `lancGyoker` épp azt oldja meg, hogy **senkinek ne kelljen a teljes láncot tartania**: minden esemény elkötelezi magát a szerző egész addigi láncára, tehát a **kettős lánc bizonyítéka túléli a szeletelést**. ⏸️ A jelentése rögzítve, a megvalósítás mérés alapján jön. *(A régi jelölt — „a tanúsítói tartják" — ezzel szükségtelenné válhat.)* |
 | **SK13** | A **kérelmezések adatcsoportja** (utiterv 6/c): terjedjen-e a kérelmező kiléte? | ✅ **Csaba álláspontja:** *„a koino nem a magánéletről szól; azt kell megosztani, amit fel is vállalnak."* — a **kimondott** tettekre (pont, szavazat, javaslat) ez így is van. ⚠️ **De a KÉRELEM más kategória:** az olvasás még nem állásfoglalás (a képviselő szavazata nyilvános, a könyvtári olvasmánylistája nem), és a kockázat nem a kellemetlenség, hanem a **célzás** — ez az a lista, amit egy becstelen kormány kérne (D15). ⭐ **És ingyen megoldható:** a fúráshoz a **cím** kell, nem a név, tehát elég annyi, hogy „valaki kéri E-t". ✅ **ELDÖNTVE (Csaba, 2026-09-02): a név NE menjen vele.** |
 | **SK14** | Hova kerüljön a **lánc-gyökér** (4.9)? A tartós magba (mindenki 32 B-ból ellenőriz bárkit), vagy külön? | ⚠️ a magban a legszebb, de **állandóan változóvá** teszi — feszül a D14 *„legyen minél kisebb"* elvével. ⭐ **NYITVA MARAD, és ez a D63 HIÁNYZÓ FELE:** 2026-09-06-án megmondtuk, **mit jelent** a `lancGyoker` — azt nem, hogy **hol lakik**. ⚠️ *A D63 enélkül félkész.* |
@@ -954,7 +954,7 @@ tényleg benne van. **Három szám nyolc levélhez** — `log₂(8) = 3`.
 ugyanabból a halmazból **más fát épít**. Ugyanaz a lecke, mint a `rendezettBemenet`-nél.
 
 **Az ÖSSZEGZŐ változat** (4.6): a csomópont vigye a darabszámot és az összesítést is, a
-hasított tartalmon belül —
+hasított gondolaton belül —
 
 ```
 A = h(L1,L2) + { darab: 2, támogat: 1, ellenez: 1 }
@@ -970,7 +970,7 @@ klienst ellenőrizni a teljes lánc nélkül.)*
 **A probléma:** honnan tudjuk, mi történt előbb, **ha nincs közös óra**? (A koinóban az `ido`
 a szerző órája, tehát hazudható.)
 
-**Az alkatrész — a koino már használja:** az esemény neve **a tartalmának lenyomata**, és
+**Az alkatrész — a koino már használja:** az esemény neve **a gondolatának lenyomata**, és
 magában hordozza az előzője nevét (`elozo`). ⚠️ Az irány **visszafelé** megy: az új mutat a
 régire — ettől hamisíthatatlan, mert egy régi esemény átírása **minden rá mutató mutatót
 elrontana** (a Git így működik).

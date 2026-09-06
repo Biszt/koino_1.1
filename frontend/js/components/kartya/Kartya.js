@@ -22,7 +22,7 @@ import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js'; // Közös 
 // 4. Kezeli a kiválasztott állapotot (fejléc + body láthatóság)
 // 5. Koppintás eseményt delegál a Pakli.js-nek callback-en keresztül
 // 6. Kezeli a body kibővítés / összezárás logikáját (... gomb)
-// A típus-specifikus fejléc és body tartalmát a leszármazott osztályok töltik fel.
+// A típus-specifikus fejléc és body gondolatát a leszármazott osztályok töltik fel.
 class Kartya {
 
 // ----- KONSTRUKTOR -----
@@ -223,7 +223,7 @@ async init() {
     // A cím-sáv referenciáját eltároljuk, hogy a Pakli a kártya DOM-ba illesztése
     // UTÁN pontosan a rendelkezésre álló szélességhez tudja igazítani a betűméretet.
     this.cimSavElem = cimSav;
-    // Dinamikus címméret CSAK a Tartalom kártyán (lásd _cimDinamikusMeretu). A többi
+    // Dinamikus címméret CSAK a Gondolat kártyán (lásd _cimDinamikusMeretu). A többi
     // kártyatípus címe FIX méretű (a CSS adja) – ott nem méretezünk.
     if (this._cimDinamikusMeretu()) {
       // Első, DURVA becslés a betűméretre: a kártya ekkor még NINCS a DOM-ban, így a
@@ -236,14 +236,14 @@ async init() {
 
   // 8. LÉPÉS – Body elem referenciájának eltárolása és feltöltése, ha kiválasztott
   // A body elem mindig jelen van a sablonban, hidden attribútummal.
-  // Kiválasztott állapotban eltávolítjuk a hidden-t és feltöltjük a tartalmat,
+  // Kiválasztott állapotban eltávolítjuk a hidden-t és feltöltjük a gondolatot,
   // majd ellenőrizzük, hogy kell-e kibővítő gomb.
-  // Nem kiválasztott állapotban a hidden megmarad – nincs felesleges DOM tartalom.
+  // Nem kiválasztott állapotban a hidden megmarad – nincs felesleges DOM gondolat.
   this.bodyElem = this.domElem.querySelector('.pakli-kartya__body');
 
-  // Dupla koppintás a body-n → a teljes tartalom ki/be nyitása (a „..." gombbal
+  // Dupla koppintás a body-n → a teljes gondolat ki/be nyitása (a „..." gombbal
   // egyenértékű). A _kibovitesValtasa magától nem csinál semmit, ha nincs mit
-  // kinyitni (nincs kibővítő gomb, mert a tartalom elfér).
+  // kinyitni (nincs kibővítő gomb, mert a gondolat elfér).
   if (this.bodyElem) {
     this.bodyElem.addEventListener('dblclick', (e) => {
       e.stopPropagation(); // ne váltson kártyát a dupla koppintás
@@ -255,7 +255,7 @@ async init() {
   if (this.kivalasztott && this.bodyElem) {
     this.bodyElem.removeAttribute('hidden');
     this._bodyFeltoltese(this.bodyElem);
-    // Kibővítő gomb hozzáadása a bodyhoz, ha a tartalom túlnyúlik
+    // Kibővítő gomb hozzáadása a bodyhoz, ha a gondolat túlnyúlik
     this._kibovitöGombFrissitese();
   }
 
@@ -596,17 +596,17 @@ bodyFrissitese(szoveg) {
   if (!this.entitas.adatok) this.entitas.adatok = {};
   this.entitas.adatok.szovegMezo = szoveg ?? null;
 
-  // Body megjelenítése és tartalmának feltöltése
+  // Body megjelenítése és gondolatának feltöltése
   this.bodyElem.innerHTML = '';
   this.bodyElem.removeAttribute('hidden');
 
-  // Kibővítés állapot visszaállítása – új tartalom mindig zárt állapotból indul
+  // Kibővítés állapot visszaállítása – új gondolat mindig zárt állapotból indul
   this.kibovitettE = false;
   this.bodyElem.classList.remove('pakli-kartya__body--kibovitett');
 
   this._bodyFeltoltese(this.bodyElem);
 
-  // Kibővítő gomb frissítése az új tartalomhoz
+  // Kibővítő gomb frissítése az új gondolathoz
   this._kibovitöGombFrissitese();
 
   console.log('Kartya.bodyFrissitese - VÉGE', { entitasId: this.entitas?.entitasId });
@@ -720,10 +720,10 @@ _ikonElem(emoji, ertek, cimke, extraOsztaly = '') {
 // A `modositva` dátumát mutatja NAP pontossággal (induláskor = létrehozás, később az
 // utolsó tartalmi módosítás — egyetlen mező mindkét esetre). A SZÍN jelzi, elavulhat-e
 // a gyerek a SZÜLŐ utolsó módosításához képest, MÁSODPERC pontossággal összevetve:
-//   • gyerek régebbi → piros (--elavult): a tartalom a szülő módosítása ELŐTTRŐL való;
+//   • gyerek régebbi → piros (--elavult): a gondolat a szülő módosítása ELŐTTRŐL való;
 //   • gyerek újabb   → zöld  (--friss);
 //   • egyenlő vagy nincs szülő → semleges (nincs plusz osztály).
-// CSAK a tartalom/kategória/tartalomtípus kártya hívja (a Javaslat/Egyezmény marad a
+// CSAK a gondolat/kategória/gondolattípus kártya hívja (a Javaslat/Egyezmény marad a
 // saját dátumánál). A cím szándékosan NEM jelzi „létrehozás/módosítás" — az a
 // Részletes adatokban derül ki.
 // @param {Object} adatok - a kártya adatai (modositva, szuloModositva)
@@ -784,7 +784,7 @@ _sajatTudatpontChip(ertek, cimke) {
 
 // ----- TÍPUS-ELŐTAG IKON (a 2. ikonsávban az egyedi ikon elé) -----
 // Kis emoji-jelző, ami megmondja, MILYEN entitás egyedi ikonja következik:
-// 🏷️ kategória, 🧩 tartalomtípus. A hívó egy szoros „csoport" konténerbe teszi az
+// 🏷️ kategória, 🧩 gondolattípus. A hívó egy szoros „csoport" konténerbe teszi az
 // előtagot és az egyedi ikon(oka)t (pakli-kartya__tipus-ikon-csoport).
 // @param {string} emoji - a típus-jelző emoji
 // @param {string} cimke - a típus neve (aria-label + tooltip)
@@ -819,7 +819,7 @@ _szazalekElem(emoji, ertek, cimke) {
 
 // ----- DINAMIKUS CÍMMÉRET? (leszármazott felülírhatja) -----
 // Alapból NEM: a legtöbb kártyatípus címe FIX méretű (a CSS adja). Csak a
-// TartalomKartya írja felül igazra, mert a tartalom címe tetszőleges hosszú lehet,
+// GondolatKartya írja felül igazra, mert a gondolat címe tetszőleges hosszú lehet,
 // ezért ott a betűméretet a szöveg hosszához / a rendelkezésre álló helyhez igazítjuk.
 // @returns {boolean}
 _cimDinamikusMeretu() {
@@ -882,7 +882,7 @@ _cimBetumeretBecsles(cimSav) {
 //       cél = MAX × (elérhető × MAX_SOR × kihasználtság) / természetes, [MIN, MAX] közé vágva.
 //     A maradékot (ha MIN-en sem fér 3 sorba) a CSS line-clamp ellipszise vágja.
 cimBetumeretHozzaigazitasa() {
-  // Csak a dinamikus című kártyán (Tartalom) méretezünk; a többi FIX (CSS) → kilépünk.
+  // Csak a dinamikus című kártyán (Gondolat) méretezünk; a többi FIX (CSS) → kilépünk.
   if (!this._cimDinamikusMeretu()) return;
 
   const cimSav = this.cimSavElem;
@@ -962,7 +962,7 @@ _bodyFeltoltese(body) {
 // ----- BODY ELREJTÉSE -----
 // Pakli.js kivalasztottCsakCssValt() hívja a korábban kiválasztott kártyán,
 // amikor egy másik kártya veszi át a kiválasztott szerepet.
-// Elrejti a body-t, törli a tartalmát, és visszaállítja a kibővítés állapotot.
+// Elrejti a body-t, törli a gondolatát, és visszaállítja a kibővítés állapotot.
 bodyElrejtes() {
   console.log('Kartya.bodyElrejtes - KEZDÉS', { entitasId: this.entitas?.entitasId });
 
@@ -971,11 +971,11 @@ bodyElrejtes() {
 
   if (this.bodyElem) {
     this.bodyElem.setAttribute('hidden', ''); // elrejti a body-t
-    this.bodyElem.innerHTML = ''; // törli a tartalmat – nincs felesleges DOM
+    this.bodyElem.innerHTML = ''; // törli a gondolatot – nincs felesleges DOM
     this.bodyElem.classList.remove('pakli-kartya__body--kibovitett'); // CSS visszaállítás
   }
 
-  // Kibővítő gomb referencia törlése – a body új tartalom esetén újra létrejön
+  // Kibővítő gomb referencia törlése – a body új gondolat esetén újra létrejön
   this.kibovitöGomb = null;
 
   console.log('Kartya.bodyElrejtes - VÉGE', { entitasId: this.entitas?.entitasId });
@@ -985,11 +985,11 @@ bodyElrejtes() {
 // A Javaslat/Egyezmény kártya body-ja fülekből áll (KartyaFulsav). Minden fül más
 // magasságú lehet, ezért a „..." gomb (túlnyúlás) fülenként KÜLÖN kérdés. A
 // KartyaFulsav minden fülváltáskor ide szól vissza (onFulValtas): összecsukott
-// kiindulásból újramérünk az ÚJ aktív fül tartalmára.
+// kiindulásból újramérünk az ÚJ aktív fül gondolatára.
 //
 // MIÉRT KELL: a fülváltás csak `display:none`-t kapcsolgat, a body magassága klampolt
 // marad (overflow:hidden), így a body-t figyelő ResizeObserver NEM indul újra.
-// Enélkül csak az ELSŐ (kezdő) fül tartalmát mértük, és egy hosszabb második fülnél
+// Enélkül csak az ELSŐ (kezdő) fül gondolatát mértük, és egy hosszabb második fülnél
 // sosem jelent meg a gomb — így a dupla-koppintásos kinyitás sem működött (annak is
 // kell a gomb). Lásd KartyaFulsav._fulValtas → onFulValtas.
 _kibovitesUjraertekeles() {
@@ -1007,7 +1007,7 @@ _kibovitesUjraertekeles() {
   this.kibovitettE = false;
   this.bodyElem.classList.remove('pakli-kartya__body--kibovitett');
 
-  // Újramérés az új aktív fül tartalmára
+  // Újramérés az új aktív fül gondolatára
   this._kibovitöGombFrissitese();
 
   console.log('Kartya._kibovitesUjraertekeles - VÉGE', {
@@ -1016,7 +1016,7 @@ _kibovitesUjraertekeles() {
 }
 
 // ----- KIBŐVÍTŐ GOMB FRISSÍTÉSE -----
-// A body feltöltése után ellenőrzi, hogy a tartalom túlnyúlik-e a fix magasságon.
+// A body feltöltése után ellenőrzi, hogy a gondolat túlnyúlik-e a fix magasságon.
 // Ha igen, hozzáadja a kibővítő gombot a body aljára.
 // Ha nem nyúlik túl, nem tesz semmit (nincs szükség gombra).
 _kibovitöGombFrissitese() {
@@ -1041,7 +1041,7 @@ _kibovitöGombFrissitese() {
   }
 
   // ----- KIÉRTÉKELÉS (CSAK HOZZÁAD) -----
-  // Megnézi, túlnyúlik-e a tartalom a látható body-n; ha igen, kiteszi a „..." gombot.
+  // Megnézi, túlnyúlik-e a gondolat a látható body-n; ha igen, kiteszi a „..." gombot.
   // CSAK hozzáad: egy korai/téves mérés SOHA nem vesz le egy már jó gombot.
   // @returns {boolean} true, ha kész (van gomb, vagy nem is kell) – ekkor a próbálkozás leáll
   const ertekeles = () => {
@@ -1083,7 +1083,7 @@ _kibovitöGombFrissitese() {
 _kibovitoGombLetrehozasa() {
   const gomb = document.createElement('button');
   gomb.className = 'pakli-kartya__kibovito-gomb';
-  gomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése'); // akadálymentesség
+  gomb.setAttribute('aria-label', 'Teljes gondolat megjelenítése'); // akadálymentesség
   gomb.setAttribute('type', 'button'); // form submit elkerülése
   gomb.textContent = '...'; // alapállapot: csonkított
 
@@ -1099,8 +1099,8 @@ _kibovitoGombLetrehozasa() {
 }
 
 // ----- TÚLNYÚLIK-E A BODY? -----
-// Igaz, ha a tartalom magasabb, mint a látható (klampolt) body — tehát van értelme a
-// „..." kibővítésnek. A body scrollHeight-ja mellett a TARTALOM-elem saját magasságát
+// Igaz, ha a gondolat magasabb, mint a látható (klampolt) body — tehát van értelme a
+// „..." kibővítésnek. A body scrollHeight-ja mellett a GONDOLAT-elem saját magasságát
 // is nézzük: a body flex-elrendezése miatt a scrollHeight nem mindig tükrözi a gyerek
 // magasságát. EGYETLEN forrás, hogy a kezdő mérő-ciklus (_kibovitöGombFrissitese) és a
 // dupla-koppintásos kinyitás (_kibovitesValtasa) PONTOSAN ugyanazt lássa.
@@ -1109,7 +1109,7 @@ _bodyTulnyulikE() {
 
   const bodyClient = this.bodyElem.clientHeight;
 
-  // A body EGYETLEN közvetlen gyereke a teljes tartalom (TartalomKartyánál a
+  // A body EGYETLEN közvetlen gyereke a teljes gondolat (GondolatKartyánál a
   // szöveg-megjelenítő, Javaslat/Egyezménynél a fülsáv). Ez a gyerek a TELJES
   // magasságában rendeződik el — a body csak levágja (overflow:hidden) —, ezért a
   // magassága a legmegbízhatóbb jel a túlnyúlásra.
@@ -1120,14 +1120,14 @@ _bodyTulnyulikE() {
   // adott, főleg MOBILON, ahol a body scrollHeight-ja is megbízhatatlanabb
   // (overflow:hidden flexnél). A közvetlen gyerek magassága ettől mentes.
   const tartalomElem = this.bodyElem.firstElementChild;
-  const tartalomMagassag = tartalomElem
+  const gondolatMagassag = tartalomElem
     ? Math.max(tartalomElem.scrollHeight, tartalomElem.offsetHeight)
     : 0;
 
   const bodyScroll = this.bodyElem.scrollHeight;
 
   // +1 px tűrés a kerekítésre
-  return (tartalomMagassag > bodyClient + 1) || (bodyScroll > bodyClient + 1);
+  return (gondolatMagassag > bodyClient + 1) || (bodyScroll > bodyClient + 1);
 }
 
 // ----- KIBŐVÍTÉS VÁLTÁSA -----
@@ -1156,7 +1156,7 @@ _kibovitesValtasa() {
     // A gomb feliratának visszaállítása „..."-ra (ha van gomb)
     if (this.kibovitöGomb) {
       this.kibovitöGomb.textContent = '...';
-      this.kibovitöGomb.setAttribute('aria-label', 'Teljes tartalom megjelenítése');
+      this.kibovitöGomb.setAttribute('aria-label', 'Teljes gondolat megjelenítése');
     }
   } else {
     // --- KIBŐVÍTÉS ---
@@ -1171,13 +1171,13 @@ _kibovitesValtasa() {
       }
       this._kibovitoGombLetrehozasa();
     }
-    // CSS modifier hozzáadása – overflow: visible, flex: none, tartalom szabja a magasságot
+    // CSS modifier hozzáadása – overflow: visible, flex: none, gondolat szabja a magasságot
     this.bodyElem.classList.add('pakli-kartya__body--kibovitett');
     this.kibovitettE = true;
     // Gomb felirat váltása összezárás jelre
     if (this.kibovitöGomb) {
       this.kibovitöGomb.textContent = '∧';
-      this.kibovitöGomb.setAttribute('aria-label', 'Tartalom összecsukása');
+      this.kibovitöGomb.setAttribute('aria-label', 'Gondolat összecsukása');
     }
   }
 

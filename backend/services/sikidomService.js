@@ -24,7 +24,7 @@
 const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const { entitasCimekFeltoltese } = require('./ertesitesService');
 // A MELLÉK-IKONOK a Struktúra nézettel KÖZÖS forrásból jönnek (nem másoljuk a
-// logikát): Tartalomnál a kategóriák + a tartalomtípus ikonja, Javaslatnál és
+// logikát): Gondolatnál a kategóriák + a gondolattípus ikonja, Javaslatnál és
 // Egyezménynél a művelet-típus. Típusonként EGY csoportos lekérdezés, nincs N+1.
 const strukturaService = require('./strukturaService');
 

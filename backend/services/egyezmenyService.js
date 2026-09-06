@@ -130,8 +130,8 @@ class EgyezmenyService {
     // 4. LÉPÉS - EGYEZMÉNY SZÜLŐ ID MEGHATÁROZÁSA
     let egyezmenySzuloId = javaslat.egyezmenyTarhelyId || null; // Alapértelmezetten a javaslat egyezmény tárhelye lesz az egyezmény szülője
     // A szülő típusa a javaslat egyezmenyTarhelyTipus mezőjéből jön (polimorf:
-    // Tartalom/Kategoria/TartalomTipus); régi javaslatoknál a default 'Tartalom'.
-    let egyezmenySzuloTipus = egyezmenySzuloId ? (javaslat.egyezmenyTarhelyTipus || 'Tartalom') : null;
+    // Gondolat/Kategoria/GondolatTipus); régi javaslatoknál a default 'Gondolat'.
+    let egyezmenySzuloTipus = egyezmenySzuloId ? (javaslat.egyezmenyTarhelyTipus || 'Gondolat') : null;
 
 
     if (javaslat.egyezmenyTarhelyId === 'eeeeeeeeeeeeeeeeeeee0001') { // Speciális placeholder eset kezelése
@@ -152,7 +152,7 @@ class EgyezmenyService {
         } // Új entitás ID ellenőrzés vége
 
 
-        const ujEntitasTipus = vegrehajatasEredmeny.ujEntitas.tipus || 'Tartalom'; // Meghatározzuk az új entitás típusát
+        const ujEntitasTipus = vegrehajatasEredmeny.ujEntitas.tipus || 'Gondolat'; // Meghatározzuk az új entitás típusát
 
 
         egyezmenySzuloId = ujEntitasId; // Az egyezmény szülője az új entitás lesz
@@ -172,7 +172,7 @@ class EgyezmenyService {
 
     // 4.A LÉPÉS - TÖRÖLT TÁRHELY KEZELÉSE
     // Ha az egyezmény tárhelye éppen a most végrehajtott javaslat által
-    // TÖRÖLT entitás (tipikus Törlés eset: az egyezmény a törölt tartalom
+    // TÖRÖLT entitás (tipikus Törlés eset: az egyezmény a törölt gondolat
     // alatt jött volna létre), az egyezmény a törölt entitás EREDETI
     // szülője alá kerül — átveszi a törölt entitás helyét a hierarchiában.
     if (egyezmenySzuloId) { // Csak akkor vizsgáljuk, ha van kijelölt tárhely
@@ -205,7 +205,7 @@ class EgyezmenyService {
 
         egyezmenySzuloId = toroltTarhely.eredetiSzuloId ?? null; // Továbblépés az eredeti szülőre
         // Gyökér entitás törlésekor nincs szülő — az egyezmény lesz az új gyökér (szuloId: null)
-        egyezmenySzuloTipus = egyezmenySzuloId ? (toroltTarhely.eredetiSzuloTipus ?? 'Tartalom') : null;
+        egyezmenySzuloTipus = egyezmenySzuloId ? (toroltTarhely.eredetiSzuloTipus ?? 'Gondolat') : null;
       }
     }
 

@@ -8,9 +8,9 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 // ===== ENTITÁSTÍPUS → IKON =====
 // A találat-sorokban jelöljük, milyen típusú entitás a találat.
 const TIPUS_IKON = {
-  Tartalom:      '📄',
+  Gondolat:      '📄',
   Kategoria:     '🏷️',
-  TartalomTipus: '🧩',
+  GondolatTipus: '🧩',
 };
 
 // Gépelés közbeni késleltetés (ms): csak akkor kérdezzük a backendet, ha a
@@ -23,7 +23,7 @@ const TALALAT_LIMIT = 20;
 // ===== KERESÉS MODAL =====
 // Felelősség: cím/név alapú entitás-keresés és navigálás a találatra.
 //   1. keresőmező — gépelés közben (debounce-szal) frissülő találati lista,
-//   2. típus-szűrő pipák (Tartalom / Kategória / Tartalomtípus),
+//   2. típus-szűrő pipák (Gondolat / Kategória / Gondolattípus),
 //   3. találatra kattintva a modal bezárul és a pakli az entitásra navigál.
 //   ÁG-SZŰRT módban (agEntitasId megadva) csak az adott entitás ága alatti
 //   találatok jönnek — a kártya-hamburgerek „Keresés" pontja használja.
@@ -87,7 +87,7 @@ class KeresesModal {
     }
 
     // Típus-pipák: változásra azonnali új keresés (a mezőben lévő szöveggel)
-    for (const azonosito of ['kereses-tipus-tartalom', 'kereses-tipus-kategoria', 'kereses-tipus-tartalomtipus']) {
+    for (const azonosito of ['kereses-tipus-gondolat', 'kereses-tipus-kategoria', 'kereses-tipus-gondolattipus']) {
       const pipa = document.getElementById(azonosito);
       if (pipa) pipa.addEventListener('change', () => this._kereses());
     }
@@ -154,9 +154,9 @@ class KeresesModal {
 
     // A bepipált típusok összegyűjtése
     const tipusok = [];
-    if (document.getElementById('kereses-tipus-tartalom')?.checked)      tipusok.push('Tartalom');
+    if (document.getElementById('kereses-tipus-gondolat')?.checked)      tipusok.push('Gondolat');
     if (document.getElementById('kereses-tipus-kategoria')?.checked)     tipusok.push('Kategoria');
-    if (document.getElementById('kereses-tipus-tartalomtipus')?.checked) tipusok.push('TartalomTipus');
+    if (document.getElementById('kereses-tipus-gondolattipus')?.checked) tipusok.push('GondolatTipus');
 
     if (tipusok.length === 0) {
       this._uzenetMegjelenitese('Pipálj be legalább egy típust.');

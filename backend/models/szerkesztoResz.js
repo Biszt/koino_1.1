@@ -4,8 +4,8 @@
 // SZERKESZTŐ AL-SÉMA (közös rész)
 // ===================================
 // Felelősség: egyetlen szerkesztő-bejegyzés szerkezetének leírása egy entitáson
-//   (tartalom / kategória / tartalomtípus).
-// Használják: models/tartalom.js, models/kategoria.js, models/tartalomTipus.js
+//   (gondolat / kategória / gondolattípus).
+// Használják: models/gondolat.js, models/kategoria.js, models/gondolatTipus.js
 //
 // Miért közös fájl? Mert három modell is UGYANEZT a szerkezetet használja,
 // és ha külön-külön másolnánk be, a másolatok idővel szétcsúszhatnának.

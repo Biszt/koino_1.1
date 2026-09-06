@@ -2,7 +2,7 @@
 
 // ===== SÍKIDOM TESZT-ADAT: TÍZEZER GYÖKÉR =====
 //
-// Felelősség: NAGYSÁGRENDDEL több gyökér-tartalmat létrehozni, mint a
+// Felelősség: NAGYSÁGRENDDEL több gyökér-gondolatot létrehozni, mint a
 // `sikidomSokGyokerTesztAdat.js` (az 300-ig megy) — a Síkidom nézet 2026-08-09-i
 // modelljének éles próbájához.
 //
@@ -13,17 +13,17 @@
 //
 // ===== A TUDATPONT-KORLÁT ÉS A MEGOLDÁSA =====
 // A koino domain-szabálya szerint 0 tudatpontos entitás nem létezik, tehát 10 000
-// tartalomhoz legalább 10 000 tudatpont kell. Egy e-embernek 10 000 tudatpontja
+// gondolathoz legalább 10 000 tudatpont kell. Egy e-embernek 10 000 tudatpontja
 // van összesen (`eember.js` alapértelmezése), és a meglévőknek ennek nagy része már
 // ki van osztva. Ezért ez a szerszám — és CSAK ez különbözteti meg a 300-astól —
 // annyi „töltő" e-embert hoz létre, amennyi a kerethez kell, és szétosztja köztük a
-// tartalmakat.
+// gondolatokat.
 //
 // A töltő e-emberek neve `tesztTolto1`, `tesztTolto2`, … a jelszavuk `jelszo123`
 // (ugyanaz, mint a `docs/teszt.md` teszt-fiókjaié). Bejelentkezésre alkalmasak.
 // Újrafuttatáskor a meglévőket használja, nem hoz létre újakat fölöslegesen.
 //
-// AZ ELOSZLÁS: minden tartalom kap 1 alap-pontot (ez a domain-minimum), a maradék
+// AZ ELOSZLÁS: minden gondolat kap 1 alap-pontot (ez a domain-minimum), a maradék
 // keretet pedig Zipf-szerűen osztjuk szét (`C / sorszám`). Így a tényleges összeg
 // SOSEM lépi túl a keretet — a 300-as szerszám ezt úgy oldotta meg, hogy a
 // Zipf-értéket 1-re vágta felfelé, ami tízezer elemnél messze túllőne a kereten.
@@ -43,15 +43,15 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const tartalomService = require('../services/tartalomService');
+const gondolatService = require('../services/gondolatService');
 const jelszoHelper = require('../utils/jelszoHelper');
 const Eember = require('../models/eember');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 
 // ===== A CÍMEK ÖSSZETEVŐI =====
 // Három tényező, hogy tízezer EGYEDI, olvasható magyar cím álljon elő:
 //   20 jelző × 25 témakör × 25 helyszín = 12 500 kombináció.
-// A helyszín forog leggyorsabban, így az egymás után létrejövő tartalmak
+// A helyszín forog leggyorsabban, így az egymás után létrejövő gondolatok
 // témakörei is keverednek — a nézetben nem egy tömbben állnak a hasonlók.
 const JELZOK = [
   'Helyi', 'Regionális', 'Országos', 'Városi', 'Falusi',
@@ -100,7 +100,7 @@ function cimekEloallitasa(darab) {
 }
 
 // ===== A PONTOK SZÉTOSZTÁSA =====
-// Minden tartalom kap 1 alap-pontot (domain-minimum), a maradékot Zipf-szerint
+// Minden gondolat kap 1 alap-pontot (domain-minimum), a maradékot Zipf-szerint
 // osztjuk. Így a végösszeg BIZTOSAN nem lépi túl a keretet.
 //
 // @param {Array<string>} cimek
@@ -216,7 +216,7 @@ async function futtatas() {
   const osszesCim = cimekEloallitasa(darab);
 
   // Egyetlen lekérdezéssel, nem címenként (tízezernél az N+1 percekbe kerülne)
-  const mar = await Tartalom.find({ cim: { $in: osszesCim }, szuloId: null })
+  const mar = await Gondolat.find({ cim: { $in: osszesCim }, szuloId: null })
     .select('cim').lean();
   const marHalmaz = new Set(mar.map(t => t.cim));
   const cimek = osszesCim.filter(c => !marHalmaz.has(c));
@@ -247,7 +247,7 @@ async function futtatas() {
 
   // ----- 4. LÉPÉS: KI MELYIKET HOZZA LÉTRE? -----
   // Sorban töltjük fel az e-embereket: amíg az elsőnek van kerete, ő hozza létre.
-  // A NAGYOK kerülnek előre, tehát a legerősebb tartalmakat a legnagyobb keretű
+  // A NAGYOK kerülnek előre, tehát a legerősebb gondolatokat a legnagyobb keretű
   // e-ember hozza — így nem akad el a szétosztás.
   const hozzarendeles = [];
   let mutato = 0;
@@ -271,7 +271,7 @@ async function futtatas() {
   if (szarazFutas) {
     console.log('');
     console.log('=== SZÁRAZ FUTÁS — semmi nem került az adatbázisba ===');
-    console.log(`Létrehozandó: ${lista.length} gyökér-tartalom, ${szuksegesPont} tudatpontból`);
+    console.log(`Létrehozandó: ${lista.length} gyökér-gondolat, ${szuksegesPont} tudatpontból`);
     console.log(`E-emberek (${keretek.length}):`);
     for (const e of keretek) console.log(`  ${e.nev}: ${e.szabad} pont kerete`);
     console.log('Az első 10:');
@@ -290,7 +290,7 @@ async function futtatas() {
   // hozzárendelés, allokáció, hierarchikus allokáció, ős-lánc). Ezért lassabb, de
   // ez az egyetlen helyes út.
   //
-  // A service bőségesen naplóz; tízezer tartalomnál ez önmagában percekbe kerülne,
+  // A service bőségesen naplóz; tízezer gondolatnál ez önmagában percekbe kerülne,
   // ezért a létrehozás idejére elnémítjuk.
   const eredetiLog = console.log;
   const naplo = (...e) => eredetiLog(...e);
@@ -303,8 +303,8 @@ async function futtatas() {
   for (let i = 0; i < hozzarendeles.length; i++) {
     const { cim, pont, eember } = hozzarendeles[i];
     try {
-      await tartalomService.tartalomLetrehozasa(
-        { cim, szoveg: `${cim} — a Síkidom nézet tízezres próbájához létrehozott tartalom.` },
+      await gondolatService.gondolatLetrehozasa(
+        { cim, szoveg: `${cim} — a Síkidom nézet tízezres próbájához létrehozott gondolat.` },
         eember.id.toString(),
         pont
       );
@@ -324,14 +324,14 @@ async function futtatas() {
   console.log = eredetiLog;
 
   // ----- 6. LÉPÉS: ÖSSZEGZÉS -----
-  const gyokerDarab = await Tartalom.countDocuments({ szuloId: null });
+  const gyokerDarab = await Gondolat.countDocuments({ szuloId: null });
 
   naplo('');
   naplo('=================== EREDMÉNY ===================');
   naplo(`Létrejött: ${letrejott} / ${hozzarendeles.length}` +
     (marHalmaz.size ? `  (${marHalmaz.size} már létezett, kihagyva)` : ''));
   naplo(`Időtartam: ${Math.round((Date.now() - kezdet) / 1000)} s`);
-  naplo(`Gyökér tartalmak száma összesen: ${gyokerDarab}`);
+  naplo(`Gyökér gondolatok száma összesen: ${gyokerDarab}`);
 
   if (hibak.length) {
     naplo('');

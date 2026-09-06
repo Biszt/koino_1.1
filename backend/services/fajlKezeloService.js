@@ -8,7 +8,7 @@
 //   entitás megszűnésekor (törlés) vagy fájl-cserekor ne maradjanak árva
 //   fájlok a lemezen.
 // Használják: a törlési lánc (tudatpontService) és a módosítási pontok
-//   (kategória/típus ikon-csere, tartalom szöveg-frissítés).
+//   (kategória/típus ikon-csere, gondolat szöveg-frissítés).
 //
 // FONTOS: ez a szolgáltatás önmagában csak eszközöket ad. A tényleges
 //   bekötés (mikor, honnan hívjuk) a hívó rétegek feladata.
@@ -37,11 +37,11 @@ class FajlKezeloService {
   // ENTITÁSBÓL FÁJL-URL-EK KIGYŰJTÉSE
   // ===================================
   // Egy entitásból összeszedi az összes hozzá tartozó /uploads/... URL-t.
-  //  - Kategória / Tartalomtípus: az 'ikon' mező.
-  //  - Tartalom: a 'szoveg' mező (Mixed) rekurzív bejárása — a szöveg lehet
+  //  - Kategória / Gondolattípus: az 'ikon' mező.
+  //  - Gondolat: a 'szoveg' mező (Mixed) rekurzív bejárása — a szöveg lehet
   //    sík blokk-tömb VAGY oldalakra bontott objektum, ezt a bejárás lefedi.
   // @param {Object} entitas - a (még nem törölt) entitás dokumentum
-  // @param {string} entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus' | ...
+  // @param {string} entitasTipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus' | ...
   // @returns {string[]} az egyedi /uploads/... URL-ek tömbje
   entitasbolFajlUrlek(entitas, entitasTipus) {
     console.log('fajlKezeloService.entitasbolFajlUrlek - KEZDÉS', { entitasTipus });
@@ -53,12 +53,12 @@ class FajlKezeloService {
       return [];
     }
 
-    if (entitasTipus === 'Kategoria' || entitasTipus === 'TartalomTipus') {
+    if (entitasTipus === 'Kategoria' || entitasTipus === 'GondolatTipus') {
       // Ezeknek egyetlen fájl-mezőjük van: az ikon
       if (typeof entitas.ikon === 'string' && entitas.ikon.startsWith(UPLOADS_URL_PREFIX)) {
         urlek.add(entitas.ikon);
       }
-    } else if (entitasTipus === 'Tartalom') {
+    } else if (entitasTipus === 'Gondolat') {
       // A szöveg tetszőleges mélységű JSON — rekurzív bejárás gyűjti az URL-eket
       this._urlekGyujtese(entitas.szoveg, urlek);
     }

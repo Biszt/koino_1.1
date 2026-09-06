@@ -2,7 +2,7 @@
 
 **Mire való?**
 A struktúra nézet a teljes entitás-fa **áttekintő, teljes képernyős** nézete.
-Egyben látod, hogyan kapcsolódnak egymáshoz a kategóriák és tartalmak, és
+Egyben látod, hogyan kapcsolódnak egymáshoz a kategóriák és gondolatok, és
 gyorsan odaugorhatsz bármelyikhez.
 
 **Hogyan használod?**

@@ -7,9 +7,9 @@
 // hogy a felhasználó ne is lásson tiltott opciót.
 //
 // Szabályok (Csaba, 2026-07-22):
-//   • Tartalom      → mindegyik (Törlés, Módosítás, Áthelyezés, Egyesítés, Csomag)
+//   • Gondolat      → mindegyik (Törlés, Módosítás, Áthelyezés, Egyesítés, Csomag)
 //   • Kategória     → Törlés, Módosítás, Egyesítés (áthelyezés TILTOTT; egyesítés csak kategóriával)
-//   • Tartalomtípus → Törlés, Módosítás (áthelyezés és egyesítés TILTOTT)
+//   • Gondolattípus → Törlés, Módosítás (áthelyezés és egyesítés TILTOTT)
 //   • Egyezmény     → Törlés, Áthelyezés (módosítás/egyesítés TILTOTT) [Törlés: Csaba, 2026-08-01]
 //   • Javaslat      → mindegyik (nincs külön korlát)
 
@@ -18,16 +18,16 @@ const OSSZES_TIPUS = ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag'
 
 // Entitástípus → engedélyezett javaslat-típusok
 const ENGEDELYEZETT_TIPUSOK = {
-  Tartalom:      ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag'],
+  Gondolat:      ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag'],
   Kategoria:     ['Torles', 'Modositas', 'Egyesites'],
-  TartalomTipus: ['Torles', 'Modositas'],
+  GondolatTipus: ['Torles', 'Modositas'],
   Egyezmeny:     ['Torles', 'Athelyezes'],
   Javaslat:      ['Torles', 'Modositas', 'Athelyezes', 'Egyesites', 'Csomag']
 };
 
 /**
  * Egy entitástípuson elindítható javaslat-típusok listája.
- * @param {string} entitasTipus - Tartalom | Kategoria | TartalomTipus | Egyezmeny | Javaslat
+ * @param {string} entitasTipus - Gondolat | Kategoria | GondolatTipus | Egyezmeny | Javaslat
  * @returns {string[]} az engedélyezett típusok (ismeretlen típusnál: mind)
  */
 export function engedelyezettJavaslatTipusok(entitasTipus) {
@@ -36,18 +36,18 @@ export function engedelyezettJavaslatTipusok(entitasTipus) {
 
 /**
  * Az egyesítés EREDMÉNY-típusa (és egyben a résztvevők közös típusa) a kártya
- * entitástípusából: Tartalmat csak Tartalommal, Kategóriát csak Kategóriával lehet
- * egyesíteni (Tartalomtípust egyáltalán nem — arra nincs is Egyesítés gomb).
+ * entitástípusából: Gondolatot csak Gondolattal, Kategóriát csak Kategóriával lehet
+ * egyesíteni (Gondolattípust egyáltalán nem — arra nincs is Egyesítés gomb).
  * @param {string} entitasTipus - a kártya (indító) entitás típusa
- * @returns {string} 'Kategoria' vagy 'Tartalom'
+ * @returns {string} 'Kategoria' vagy 'Gondolat'
  */
 export function egyesitesEredmenyTipus(entitasTipus) {
-  return entitasTipus === 'Kategoria' ? 'Kategoria' : 'Tartalom';
+  return entitasTipus === 'Kategoria' ? 'Kategoria' : 'Gondolat';
 }
 
 /**
  * Egyesítésnél a FORRÁS entitások engedélyezett típusai az adott kártyáról indítva.
- * A résztvevők típusa AZONOS kell legyen: Tartalom csak Tartalommal, Kategória csak
+ * A résztvevők típusa AZONOS kell legyen: Gondolat csak Gondolattal, Kategória csak
  * Kategóriával. Így a forrás-mező is csak az eredmény-típust engedi.
  * @param {string} entitasTipus - a kártya (indító) entitás típusa
  * @returns {string[]} a keresőmezőben engedett forrás-típusok (egyelemű)

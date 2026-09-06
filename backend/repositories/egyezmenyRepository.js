@@ -235,7 +235,7 @@ class EgyezmenyRepository {
  * ----- EGYEZMÉNYEK KERESÉSE ÉRINTETT ENTITÁS ALAPJÁN -----
  * Egy adott entitásra vonatkozó egyezmények keresése
  * @param {string} entitasId - Az entitás MongoDB ObjectId-ja
- * @param {string} entitasTipus - Az entitás típusa (Tartalom, Kategoria, stb.)
+ * @param {string} entitasTipus - Az entitás típusa (Gondolat, Kategoria, stb.)
  * @param {number} limit - Maximum ennyi egyezmény (opcionális)
  * @param {number} skip - Ennyi egyezmény kihagyása (lapozás)
  * @returns {Promise<Array>} Egyezmények tömb
@@ -270,8 +270,8 @@ async findByErintettEntitas(entitasId, entitasTipus, limit = 20, skip = 0) {
 
 /**
  * ----- EGYEZMÉNY KERESÉSE SZÜLŐ ALAPJÁN -----
- * ÚJ FÜGGVÉNY: Egy tartalom alatti egyezmények lekérése
- * @param {string} szuloId - Szülő tartalom MongoDB ObjectId-ja
+ * ÚJ FÜGGVÉNY: Egy gondolat alatti egyezmények lekérése
+ * @param {string} szuloId - Szülő gondolat MongoDB ObjectId-ja
  * @param {number} limit - Maximum ennyi egyezmény (alapértelmezett: 20)
  * @param {number} skip - Ennyi egyezmény kihagyása (lapozás)
  * @returns {Promise<Array>} Egyezmények tömb
@@ -304,7 +304,7 @@ async findBySzuloId(szuloId, limit = 20, skip = 0) {
  * ----- EGYEZMÉNYEK KERESÉSE ÉRINTETT ENTITÁS ALAPJÁN -----
  * ÚJ FÜGGVÉNY: Egy adott entitásra vonatkozó egyezmények keresése
  * @param {string} entitasId - Az entitás MongoDB ObjectId-ja
- * @param {string} entitasTipus - Az entitás típusa (Tartalom, Kategoria, stb.)
+ * @param {string} entitasTipus - Az entitás típusa (Gondolat, Kategoria, stb.)
  * @param {number} limit - Maximum ennyi egyezmény (opcionális)
  * @param {number} skip - Ennyi egyezmény kihagyása (lapozás)
  * @returns {Promise<Array>} Egyezmények tömb

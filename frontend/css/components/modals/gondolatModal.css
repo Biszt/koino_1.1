@@ -1,8 +1,8 @@
-/* frontend/css/components/modals/tartalomModal.css */
+/* frontend/css/components/modals/gondolatModal.css */
 
 
 
-/* ===== TARTALOM MODAL FORM ===== */
+/* ===== GONDOLAT MODAL FORM ===== */
 /* Mezők egymás alá rendeződnek – gap és struktúra azonos a regisztrációs formmal */
 .t-modal-form {
   display: flex;

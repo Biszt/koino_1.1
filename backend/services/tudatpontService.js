@@ -3,9 +3,9 @@
 // ===== REPOSITORY IMPORTÁLÁSA =====
 const mongoose = require('mongoose');
 const TudatpontRepository = require('../repositories/tudatpontRepository');
-const TartalomRepository = require('../repositories/tartalomRepository');
+const GondolatRepository = require('../repositories/gondolatRepository');
 const KategoriaRepository = require('../repositories/kategoriaRepository');
-const TartalomTipusRepository = require('../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../repositories/gondolatTipusRepository');
 const JavaslatRepository = require('../repositories/javaslatRepository');
 const EgyezmenyRepository = require('../repositories/egyezmenyRepository'); 
 const HierarchikusTudatpontAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
@@ -22,7 +22,7 @@ class TudatpontService {
 
   // ----- TUDATPONTOK HOZZÁRENDELÉSE -----
   /**
-   * Tudatpontok hozzárendelése egy entitáshoz (tartalom/kategória/típus/javaslat/egyezmény)
+   * Tudatpontok hozzárendelése egy entitáshoz (gondolat/kategória/típus/javaslat/egyezmény)
    * Transaction használatával biztosítja a konzisztenciát
    * MÓDOSÍTVA: Hierarchikus tudatpont frissítés hozzáadva
    * @param {string} eemberId - A eember azonosítója
@@ -57,7 +57,7 @@ class TudatpontService {
     }
 
     // 1.D - Entitás típus validálása
-    const megengedettTipusok = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'];
+    const megengedettTipusok = ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'];
     if (!megengedettTipusok.includes(entitasTipus)) {
       throw new Error(`Érvénytelen entitás típus. Megengedett értékek: ${megengedettTipusok.join(', ')}`);
     }
@@ -70,18 +70,18 @@ class TudatpontService {
 
     let entitasLetezik = false;
 
-    if (entitasTipus === 'Tartalom') {
-      console.log('tudatpontHozzarendelese - TartalomRepository.findById', { entitasId: entitasId });
-      const tartalom = await TartalomRepository.findById(entitasId);
-      entitasLetezik = !!tartalom;
+    if (entitasTipus === 'Gondolat') {
+      console.log('tudatpontHozzarendelese - GondolatRepository.findById', { entitasId: entitasId });
+      const gondolat = await GondolatRepository.findById(entitasId);
+      entitasLetezik = !!gondolat;
     } else if (entitasTipus === 'Kategoria') {
       console.log('tudatpontHozzarendelese - KategoriaRepository.findById', { entitasId: entitasId });
       const kategoria = await KategoriaRepository.findById(entitasId);
       entitasLetezik = !!kategoria;
-    } else if (entitasTipus === 'TartalomTipus') {
-      console.log('tudatpontHozzarendelese - TartalomTipusRepository.findById', { entitasId: entitasId });
-      const tartalomTipus = await TartalomTipusRepository.findById(entitasId);
-      entitasLetezik = !!tartalomTipus;
+    } else if (entitasTipus === 'GondolatTipus') {
+      console.log('tudatpontHozzarendelese - GondolatTipusRepository.findById', { entitasId: entitasId });
+      const gondolatTipus = await GondolatTipusRepository.findById(entitasId);
+      entitasLetezik = !!gondolatTipus;
     } else if (entitasTipus === 'Javaslat') {
       console.log('tudatpontHozzarendelese - JavaslatRepository.findById', { entitasId: entitasId });
       const javaslat = await JavaslatRepository.findById(entitasId);
@@ -478,16 +478,16 @@ class TudatpontService {
     // nem olvasható ki a szöveg/ikon. Magukat a fájlokat a függvény VÉGÉN
     // töröljük (a lemezes törlés nem tranzakcionális — csak a DB-műveletek után).
     // Csak azoknak a típusoknak van feltöltött fájljuk, amelyeknek ikon vagy
-    // szöveg mezőjük van (Tartalom, Kategoria, TartalomTipus).
+    // szöveg mezőjük van (Gondolat, Kategoria, GondolatTipus).
     let torlendoFajlUrlek = [];
     try {
       let fajlForrasEntitas = null;
-      if (entitasTipus === 'Tartalom') {
-        fajlForrasEntitas = await TartalomRepository.findById(entitasId);
+      if (entitasTipus === 'Gondolat') {
+        fajlForrasEntitas = await GondolatRepository.findById(entitasId);
       } else if (entitasTipus === 'Kategoria') {
         fajlForrasEntitas = await KategoriaRepository.findById(entitasId);
-      } else if (entitasTipus === 'TartalomTipus') {
-        fajlForrasEntitas = await TartalomTipusRepository.findById(entitasId);
+      } else if (entitasTipus === 'GondolatTipus') {
+        fajlForrasEntitas = await GondolatTipusRepository.findById(entitasId);
       }
       torlendoFajlUrlek = FajlKezeloService.entitasbolFajlUrlek(fajlForrasEntitas, entitasTipus);
       console.log('entitasTorleseEllenorzese - Törlendő fájlok kigyűjtve', {
@@ -504,10 +504,10 @@ class TudatpontService {
     let toroltEntitasSzuloId = null;
     let toroltEntitasSzuloTipus = null;
 
-    if (entitasTipus === 'Tartalom') {
-      const tartalom = await TartalomRepository.findById(entitasId);
-      toroltEntitasSzuloId = tartalom?.szuloId || null;
-      toroltEntitasSzuloTipus = tartalom?.szuloTipus || null;
+    if (entitasTipus === 'Gondolat') {
+      const gondolat = await GondolatRepository.findById(entitasId);
+      toroltEntitasSzuloId = gondolat?.szuloId || null;
+      toroltEntitasSzuloTipus = gondolat?.szuloTipus || null;
     } else if (entitasTipus === 'Javaslat') {
       const javaslat = await JavaslatRepository.findById(entitasId);
       toroltEntitasSzuloId = javaslat?.szuloId || null;
@@ -525,17 +525,17 @@ class TudatpontService {
     // 4. LÉPÉS - Gyerekek lekérése és frissítése (KASZKÁD)
     // MINDEN GYEREKNÉL: frissítjük az entitás szuloId-ját ÉS a hierarchikus allokáció szuloId-ját
 
-    // 4.A - Tartalom gyerekek
-    console.log('entitasTorleseEllenorzese - TartalomRepository.findBySzuloId', { szuloId: entitasId });
-    const tartalomGyerekek = await TartalomRepository.findBySzuloId(entitasId);
-    console.log('entitasTorleseEllenorzese - Tartalom gyerekek', { count: tartalomGyerekek.length });
+    // 4.A - Gondolat gyerekek
+    console.log('entitasTorleseEllenorzese - GondolatRepository.findBySzuloId', { szuloId: entitasId });
+    const gondolatGyerekek = await GondolatRepository.findBySzuloId(entitasId);
+    console.log('entitasTorleseEllenorzese - Gondolat gyerekek', { count: gondolatGyerekek.length });
 
-    for (const gyerek of tartalomGyerekek) {
+    for (const gyerek of gondolatGyerekek) {
       // Entitás szuloId frissítése
-      console.log('entitasTorleseEllenorzese - TartalomRepository.updateSzuloId', {
+      console.log('entitasTorleseEllenorzese - GondolatRepository.updateSzuloId', {
         gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
       });
-      await TartalomRepository.updateSzuloId(
+      await GondolatRepository.updateSzuloId(
         gyerek._id,
         toroltEntitasSzuloId,
         toroltEntitasSzuloTipus
@@ -544,17 +544,17 @@ class TudatpontService {
       // VÁLTOZÁS: Hierarchikus allokáció szuloId frissítése is!
       // Indok: a hierarchikusFrissitesService.js a HierarchikusTudatpontAllokacio.szuloId
       // alapján navigál felfelé, tehát ennek is aktuálisnak kell lennie
-      console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.updateSzuloId (Tartalom gyerek)', {
+      console.log('entitasTorleseEllenorzese - HierarchikusTudatpontAllokaciRepository.updateSzuloId (Gondolat gyerek)', {
         gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId, ujSzuloTipus: toroltEntitasSzuloTipus
       });
       await HierarchikusTudatpontAllokaciRepository.updateSzuloId(
         gyerek._id,
-        'Tartalom',
+        'Gondolat',
         toroltEntitasSzuloId,
         toroltEntitasSzuloTipus
       );
 
-      console.log('entitasTorleseEllenorzese - Tartalom gyerek frissítve', {
+      console.log('entitasTorleseEllenorzese - Gondolat gyerek frissítve', {
         gyerekId: gyerek._id, ujSzuloId: toroltEntitasSzuloId
       });
     }
@@ -623,39 +623,39 @@ class TudatpontService {
 
     // 5. LÉPÉS - SPECIÁLIS ESET: Kategória törlése
     if (entitasTipus === 'Kategoria') {
-      console.log('entitasTorleseEllenorzese - Kategória törlése - Tartalmak tisztítása', {
+      console.log('entitasTorleseEllenorzese - Kategória törlése - Gondolatok tisztítása', {
         kategoriaId: entitasId
       });
-      console.log('entitasTorleseEllenorzese - TartalomRepository.removeCategoriaFromAll');
-      await TartalomRepository.removeCategoriaFromAll(entitasId);
-      console.log('entitasTorleseEllenorzese - Kategória eltávolítva minden tartalom kategoriaIds tömbjéből');
+      console.log('entitasTorleseEllenorzese - GondolatRepository.removeCategoriaFromAll');
+      await GondolatRepository.removeCategoriaFromAll(entitasId);
+      console.log('entitasTorleseEllenorzese - Kategória eltávolítva minden gondolat kategoriaIds tömbjéből');
     }
 
-    // 6. LÉPÉS - SPECIÁLIS ESET: TartalomTípus törlése
-    if (entitasTipus === 'TartalomTipus') {
-      console.log('entitasTorleseEllenorzese - TartalomTípus törlése - Tartalmak tisztítása', {
-        tartalomTipusId: entitasId
+    // 6. LÉPÉS - SPECIÁLIS ESET: GondolatTípus törlése
+    if (entitasTipus === 'GondolatTipus') {
+      console.log('entitasTorleseEllenorzese - GondolatTípus törlése - Gondolatok tisztítása', {
+        gondolatTipusId: entitasId
       });
-      console.log('entitasTorleseEllenorzese - TartalomRepository.removeTartalomTipusFromAll');
-      await TartalomRepository.removeTartalomTipusFromAll(entitasId);
-      console.log('entitasTorleseEllenorzese - TartalomTípus eltávolítva minden tartalomból');
+      console.log('entitasTorleseEllenorzese - GondolatRepository.removeGondolatTipusFromAll');
+      await GondolatRepository.removeGondolatTipusFromAll(entitasId);
+      console.log('entitasTorleseEllenorzese - GondolatTípus eltávolítva minden gondolatból');
     }
 
     // 7. LÉPÉS - Entitás törlése típus szerint
-    if (entitasTipus === 'Tartalom') {
-      console.log('entitasTorleseEllenorzese - TartalomRepository.deleteById', { entitasId });
-      await TartalomRepository.deleteById(entitasId);
-      console.log('entitasTorleseEllenorzese - Tartalom törölve', { entitasId });
+    if (entitasTipus === 'Gondolat') {
+      console.log('entitasTorleseEllenorzese - GondolatRepository.deleteById', { entitasId });
+      await GondolatRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - Gondolat törölve', { entitasId });
 
     } else if (entitasTipus === 'Kategoria') {
       console.log('entitasTorleseEllenorzese - KategoriaRepository.deleteById', { entitasId });
       await KategoriaRepository.deleteById(entitasId);
       console.log('entitasTorleseEllenorzese - Kategória törölve', { entitasId });
 
-    } else if (entitasTipus === 'TartalomTipus') {
-      console.log('entitasTorleseEllenorzese - TartalomTipusRepository.deleteById', { entitasId });
-      await TartalomTipusRepository.deleteById(entitasId);
-      console.log('entitasTorleseEllenorzese - TartalomTípus törölve', { entitasId });
+    } else if (entitasTipus === 'GondolatTipus') {
+      console.log('entitasTorleseEllenorzese - GondolatTipusRepository.deleteById', { entitasId });
+      await GondolatTipusRepository.deleteById(entitasId);
+      console.log('entitasTorleseEllenorzese - GondolatTípus törölve', { entitasId });
 
     } else if (entitasTipus === 'Javaslat') {
       console.log('entitasTorleseEllenorzese - JavaslatRepository.deleteById', { entitasId });
@@ -806,10 +806,10 @@ class TudatpontService {
     // 1. LÉPÉS - Entitás lekérése típus szerint
     let entitas = null;
 
-    if (entitasTipus === 'Tartalom') {
-      // Tartalom szülője lehet Tartalom, Javaslat vagy Egyezmeny
-      console.log('getSzuloEntitas - TartalomRepository.findById');
-      entitas = await TartalomRepository.findById(entitasId);
+    if (entitasTipus === 'Gondolat') {
+      // Gondolat szülője lehet Gondolat, Javaslat vagy Egyezmeny
+      console.log('getSzuloEntitas - GondolatRepository.findById');
+      entitas = await GondolatRepository.findById(entitasId);
     } else if (entitasTipus === 'Kategoria') {
       // Kategória szülője lehet másik Kategória (ALKATEGÓRIA) vagy null (gyökér).
       // Korábban itt fixen null-t adtunk vissza („nincs szülő") — ez a
@@ -817,16 +817,16 @@ class TudatpontService {
       // alkategória a fában a gyökérbe került. Most a valódi szuloId-t olvassuk.
       console.log('getSzuloEntitas - KategoriaRepository.findById');
       entitas = await KategoriaRepository.findById(entitasId);
-    } else if (entitasTipus === 'TartalomTipus') {
-      // TartalomTípusnak NINCS szülője
-      console.log('getSzuloEntitas - TartalomTipus - nincs szülő');
+    } else if (entitasTipus === 'GondolatTipus') {
+      // GondolatTípusnak NINCS szülője
+      console.log('getSzuloEntitas - GondolatTipus - nincs szülő');
       return null;
     } else if (entitasTipus === 'Javaslat') {
-      // Javaslat szülője mindig Tartalom
+      // Javaslat szülője mindig Gondolat
       console.log('getSzuloEntitas - JavaslatRepository.findById');
       entitas = await JavaslatRepository.findById(entitasId);
     } else if (entitasTipus === 'Egyezmeny') {
-      // Egyezmény szülője lehet Tartalom vagy null
+      // Egyezmény szülője lehet Gondolat vagy null
       console.log('getSzuloEntitas - EgyezmenyRepository.findById');
       entitas = await EgyezmenyRepository.findById(entitasId);
     } else {
@@ -871,7 +871,7 @@ class TudatpontService {
 
   // ----- ENTITÁS MEGJELENÍTŐ NEVÉNEK LEKÉRÉSE -----
   /**
-   * Egy entitás emberi olvasható neve (Tartalom → cim, Kategória/TartalomTípus → nev).
+   * Egy entitás emberi olvasható neve (Gondolat → cim, Kategória/GondolatTípus → nev).
    * A felmérés ezzel tudja megnevezni a hiányzó felmenőket a felhasználónak.
    * @param {string} entitasId
    * @param {string} entitasTipus
@@ -881,19 +881,19 @@ class TudatpontService {
     console.log('getEntitasNev - KEZDÉS', { entitasId, entitasTipus });
 
     let entitas = null;
-    if (entitasTipus === 'Tartalom') {
-      entitas = await TartalomRepository.findById(entitasId);
+    if (entitasTipus === 'Gondolat') {
+      entitas = await GondolatRepository.findById(entitasId);
     } else if (entitasTipus === 'Kategoria') {
       entitas = await KategoriaRepository.findById(entitasId);
-    } else if (entitasTipus === 'TartalomTipus') {
-      entitas = await TartalomTipusRepository.findById(entitasId);
+    } else if (entitasTipus === 'GondolatTipus') {
+      entitas = await GondolatTipusRepository.findById(entitasId);
     } else if (entitasTipus === 'Javaslat') {
       entitas = await JavaslatRepository.findById(entitasId);
     } else if (entitasTipus === 'Egyezmeny') {
       entitas = await EgyezmenyRepository.findById(entitasId);
     }
 
-    // Tartalomnál cim, Kategória/TartalomTípusnál nev; ha egyik sincs, semleges felirat
+    // Gondolatnál cim, Kategória/GondolatTípusnál nev; ha egyik sincs, semleges felirat
     const nev = entitas?.cim ?? entitas?.nev ?? '(névtelen)';
     console.log('getEntitasNev - VÉGE', { nev });
     return nev;
@@ -1205,7 +1205,7 @@ class TudatpontService {
     }
 
     // 4. LÉPÉS - ENTITÁS-CÍMEK FELTÖLTÉSE
-    // Közös segéd az ertesitesService-ből: Tartalom → cim, Kategoria/TartalomTipus
+    // Közös segéd az ertesitesService-ből: Gondolat → cim, Kategoria/GondolatTipus
     // → nev, Javaslat/Egyezmeny → null (`entitasCim` mező kerül minden elemre).
     const cimmelEllatva = await ErtesitesService.entitasCimekFeltoltese(hozzarendelesek);
 
@@ -1354,12 +1354,12 @@ class TudatpontService {
     let entitasTorolve = false;
     try {
       let entitas = null;
-      if (entitasTipus === 'Tartalom') {
-        entitas = await TartalomRepository.findById(entitasId);
+      if (entitasTipus === 'Gondolat') {
+        entitas = await GondolatRepository.findById(entitasId);
       } else if (entitasTipus === 'Kategoria') {
         entitas = await KategoriaRepository.findById(entitasId);
-      } else if (entitasTipus === 'TartalomTipus') {
-        entitas = await TartalomTipusRepository.findById(entitasId);
+      } else if (entitasTipus === 'GondolatTipus') {
+        entitas = await GondolatTipusRepository.findById(entitasId);
       } else if (entitasTipus === 'Javaslat') {
         entitas = await JavaslatRepository.findById(entitasId);
       } else if (entitasTipus === 'Egyezmeny') {

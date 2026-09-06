@@ -136,7 +136,7 @@ class HierarchikusFrissitesService {
     console.log('Saját tudatpontok', { sajatOsszesPont, sajatHozzajarulokSzama });
 
     // 2. LÉPÉS - Gyerekek hierarchikus pontjainak összesítése
-    // VÁLTOZÁS: Korábban típusonként külön repository-t hívtunk (Tartalom, Javaslat, Egyezmény)
+    // VÁLTOZÁS: Korábban típusonként külön repository-t hívtunk (Gondolat, Javaslat, Egyezmény)
     // MOST: Egyetlen HierarchikusTudatpontAllokaciRepository.findBySzuloId() hívás elég,
     // mert a szuloId mező már minden entitástípus allokációjában benne van
     let gyerekekHierarchikusPontja = 0;

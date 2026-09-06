@@ -10,7 +10,7 @@ const eemberSchema = new mongoose.Schema({
 
 // ----- EMBERNÉV MEZŐ -----
 eemberNev: { 
-  reteg: 'tartalom', szemelyes: true,  // H6
+  reteg: 'gondolat', szemelyes: true,  // H6
   type: String,       // Szöveges típus
   required: true,     // Kötelező mező 
   unique: true,       // Egyedi érték 
@@ -101,7 +101,7 @@ jelszo: {
 // ----- NÉV MEZŐ -----
 // A eember valódi neve 
 nev: { 
-  reteg: 'tartalom', szemelyes: true,  // H6
+  reteg: 'gondolat', szemelyes: true,  // H6
   type: String,       // Szöveges típus
   required: true,     // Kötelező mező
   trim: true          // Levágja a felesleges szóközöket
@@ -111,17 +111,17 @@ nev: {
 // Földrajzi elhelyezkedés tárolása (3 szintű: ország/régió/település)
 lokacio: {
   orszag: {           // Ország mező
-    reteg: 'tartalom', szemelyes: true,  // H6
+    reteg: 'gondolat', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   },
   regio: {            // Régió/megye mező
-    reteg: 'tartalom', szemelyes: true,  // H6
+    reteg: 'gondolat', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   },
   telepules: {        // Település/város mező
-    reteg: 'tartalom', szemelyes: true,  // H6
+    reteg: 'gondolat', szemelyes: true,  // H6
     type: String,     // Szöveges típus
     required: true    // Kötelező mező
   }

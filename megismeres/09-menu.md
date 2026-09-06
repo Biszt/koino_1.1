@@ -19,9 +19,9 @@ A jobb felső ☰ gombbal nyílik. Csoportokba rendezve:
 - 🔔 **Értesítési beállítások** — mikről kapj értesítést
 
 **Létrehozás**
-- ✏️ **Új tartalom létrehozása**
+- ✏️ **Új gondolat létrehozása**
 - 🏷️ **Új kategória létrehozása**
-- 🧩 **Új tartalom típus létrehozása**
+- 🧩 **Új gondolat típus létrehozása**
 
 **Fiók**
 - ✉️ **Meghívóim** — meghívók kiadása és kezelése
@@ -34,7 +34,7 @@ A jobb felső ☰ gombbal nyílik. Csoportokba rendezve:
 ## Kártya-menük
 
 Minden entitás-kártyának saját menüje (☰) van a rajta végezhető műveletekkel.
-Ezek entitástól függően változnak, de tartalomnál például:
+Ezek entitástól függően változnak, de gondolatnál például:
 
 - 🌿 Javaslat létrehozása
 - 🌟 Tudatpont módosítás

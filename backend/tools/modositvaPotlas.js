@@ -1,16 +1,16 @@
 // backend/tools/modositvaPotlas.js
 
 // EGYSZERI MIGRÁCIÓ: a `modositva` (utolsó tartalmi módosítás dátuma) pótlása a régi
-// (a mező bevezetése ELŐTT létrejött) tartalmaknál / kategóriáknál / tartalomtípusoknál.
+// (a mező bevezetése ELŐTT létrejött) gondolatoknál / kategóriáknál / gondolattípusoknál.
 //
 // Háttér: 2026-08-19-én bekerült a `modositva` mező (a kártya-fejléc dátumához és a
 // gyerek↔szülő „elavulhat-e" szín-jelzéshez). A korábban keletkezett dokumentumokban
 // ez a mező nincs a DB-ben. Fontos: mivel a séma `default: Date.now`-ot ad rá, egy
 // hiányzó mezőt a Mongoose beolvasáskor a MOSTANI időre töltene — ami hibásan „épp most
-// módosítva"-nak mutatná a régi tartalmakat. Ezért kell a mezőt a helyes értékre írni.
+// módosítva"-nak mutatná a régi gondolatokat. Ezért kell a mezőt a helyes értékre írni.
 //
 // Mit csinál? Minden `modositva` nélküli dokumentumnál beállítja: modositva = letrehozva
-// (ha valamiért nincs letrehozva, akkor a mostani idő). Így a régi tartalom dátuma a
+// (ha valamiért nincs letrehozva, akkor a mostani idő). Így a régi gondolat dátuma a
 // létrehozása marad, amíg egy valódi módosítás nem frissíti.
 //
 // Futtatás (Docker dev):  docker exec koino-backend      node tools/modositvaPotlas.js
@@ -24,12 +24,12 @@
 try { require('dotenv').config(); } catch (_) { /* prod: env_file adja a változókat */ }
 
 const mongoose = require('mongoose');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 
 // ===== EGY KOLLEKCIÓ FELDOLGOZÁSA =====
-// @param {mongoose.Model} Model - a feldolgozandó modell (Tartalom/Kategoria/TartalomTipus)
+// @param {mongoose.Model} Model - a feldolgozandó modell (Gondolat/Kategoria/GondolatTipus)
 // @param {string} nev - emberi név a naplóhoz
 // @returns {Promise<number>} a frissített dokumentumok száma
 async function egyKollekcio(Model, nev) {
@@ -65,15 +65,15 @@ async function futtatas() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('modositvaPotlas - MongoDB kapcsolat él');
 
-  const tartalom      = await egyKollekcio(Tartalom, 'Tartalom');
+  const gondolat      = await egyKollekcio(Gondolat, 'Gondolat');
   const kategoria     = await egyKollekcio(Kategoria, 'Kategoria');
-  const tartalomTipus = await egyKollekcio(TartalomTipus, 'TartalomTipus');
+  const gondolatTipus = await egyKollekcio(GondolatTipus, 'GondolatTipus');
 
   console.log('modositvaPotlas - VÉGE', {
-    tartalom,
+    gondolat,
     kategoria,
-    tartalomTipus,
-    osszes: tartalom + kategoria + tartalomTipus
+    gondolatTipus,
+    osszes: gondolat + kategoria + gondolatTipus
   });
 
   await mongoose.disconnect();

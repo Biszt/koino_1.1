@@ -10,7 +10,7 @@
 // A felület ellenőrzései a saját készülékünkön futnak — a másik gép felülete viszont
 // semmitől nem véd meg. Mérve (2026-08-28), kézzel aláírt eseményekkel:
 //
-//   - egy TELJESEN IDEGEN kulcs (0 tudatpont) javaslatot tehetett más tartalmára,
+//   - egy TELJESEN IDEGEN kulcs (0 tudatpont) javaslatot tehetett más gondolatára,
 //     megszavazhatta magának, és az EGYEZMÉNY megszületett (1/1 = 100%);
 //   - kézzel aláírva 999 999 tudatpont is átment, holott a keret 10 000.
 //
@@ -172,7 +172,7 @@ export function szabalyokErvenyesitese(esemenyek) {
       }
 
       // ===== 2. SZABÁLY: JAVASLATOT CSAK A GAZDA TEHET =====
-      // „Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz." A kérdés,
+      // „Csak az tehet javaslatot, aki tudatpontot rendelt a gondolathoz." A kérdés,
       // hogy MIKORI állapot szerint — és a válasz a saját lánc: a javaslat előtti
       // eseményei szerint. Így az sem számít, mi történik később máshol: a jogosultság
       // a javaslat pillanatában eldőlt, és utólag nem írható át.
@@ -181,7 +181,7 @@ export function szabalyokErvenyesitese(esemenyek) {
         const sajatPont = pontok.get(erintett) ?? 0;
 
         if (sajatPont <= 0) {
-          kivetel(e, 'a javaslattevőnek nincs tudatpontja az érintett tartalmon');
+          kivetel(e, 'a javaslattevőnek nincs tudatpontja az érintett gondolaton');
         }
         continue;
       }

@@ -7,7 +7,7 @@
    fülsávja. Vizuálisan erősebb, mint a belső
    (szoveg-mezo-megjelenito__fulsav) fülsáv, hogy a
    két réteg elkülönüljön: a KÜLSŐ a kártya szerkezetét
-   tagolja, a BELSŐ egy tartalom saját oldalait.
+   tagolja, a BELSŐ egy gondolat saját oldalait.
    ============================================= */
 .kartya-fulsav {
   display: flex;
@@ -65,7 +65,7 @@
   border-bottom-color: var(--color-primary);
 }
 
-/* ----- TARTALOM-TERÜLET ----- */
+/* ----- GONDOLAT-TERÜLET ----- */
 .kartya-fulsav__tartalom {
   width: 100%;
 }
@@ -80,9 +80,9 @@
 /* =============================================
    CÍM A KÉT FÜLSÁV KÖZÖTT
    =============================================
-   A „Módosított tartalom" (és később a „Lecserélt
-   tartalom") fülben a tartalom CÍME a KÜLSŐ fülsáv és
-   a tartalom saját BELSŐ fülsávja KÖZÉ kerül.
+   A „Módosított gondolat" (és később a „Lecserélt
+   gondolat") fülben a gondolat CÍME a KÜLSŐ fülsáv és
+   a gondolat saját BELSŐ fülsávja KÖZÉ kerül.
    ============================================= */
 .kartya-fulsav__cim {
   display: block;
@@ -95,7 +95,7 @@
   word-break: break-word;
 }
 
-/* Üres-állapot felirat (pl. régi egyezménynél nincs megőrzött tartalom) */
+/* Üres-állapot felirat (pl. régi egyezménynél nincs megőrzött gondolat) */
 .kartya-fulsav__ures {
   display: block;
   width: 100%;

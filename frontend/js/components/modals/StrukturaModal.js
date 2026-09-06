@@ -10,27 +10,27 @@ import { dinamikusCimBetumeret } from '../../utils/cimBetumeret.js';
 // ===== ENTITÁSTÍPUS → IKON / SZÍN / FELIRAT =====
 // Az ikonok a platform egységes ikon-készletét követik (kategória 🏷️ stb.).
 const TIPUS_IKON = {
-  Tartalom:      '📄',
+  Gondolat:      '📄',
   Kategoria:     '🏷️',
-  TartalomTipus: '🧩',
+  GondolatTipus: '🧩',
   Javaslat:      '📋',
   Egyezmeny:     '🤝',
 };
 
 // A Canvas-pöttyök és az SVG-csomópontok típus-színei (erdő-témához igazítva)
 const TIPUS_SZIN = {
-  Tartalom:      '#2d5a27', // erdőzöld (elsődleges szín)
+  Gondolat:      '#2d5a27', // erdőzöld (elsődleges szín)
   Kategoria:     '#7d5ba6', // lila
-  TartalomTipus: '#b07d2a', // okker
+  GondolatTipus: '#b07d2a', // okker
   Javaslat:      '#1f6e8c', // kékeszöld
   Egyezmeny:     '#6d6a62', // szürkésbarna
 };
 
 // Cím nélküli entitások (Javaslat/Egyezmény) felirata a csomóponton
 const TIPUS_FELIRAT = {
-  Tartalom:      'Tartalom',
+  Gondolat:      'Gondolat',
   Kategoria:     'Kategória',
-  TartalomTipus: 'Tartalomtípus',
+  GondolatTipus: 'Gondolattípus',
   Javaslat:      'Javaslat',
   Egyezmeny:     'Egyezmény',
 };
@@ -41,8 +41,8 @@ const OSSZPONT_IKON = '🌿🌟';
 
 // ===== MELLÉK-IKONOK (KÖZELI NÉZET) =====
 // A közeli (3.) szinten a fő ikon MELLETT kis körökben extra típus-infó jelenik meg:
-//   - Tartalom: a kategóriái BALRA (kategória-színnel), a tartalomtípusa JOBBRA
-//     (tartalomtípus-színnel) — a kör belsejében a kategória/típus saját ikonja
+//   - Gondolat: a kategóriái BALRA (kategória-színnel), a gondolattípusa JOBBRA
+//     (gondolattípus-színnel) — a kör belsejében a kategória/típus saját ikonja
 //     (emoji vagy feltöltött kép);
 //   - Javaslat/Egyezmény: a művelet-típusa JOBBRA (a saját típus-színével).
 // A Javaslat/Egyezmény művelet-típusához (javaslatTipus enum) tartozó emojik:
@@ -746,7 +746,7 @@ class StrukturaModal {
   // ===== MELLÉK-IKONOK EGY CSOMÓPONTHOZ =====
   // A fő ikon melletti kis körök (a csomópont LOKÁLIS koordinátáiban, tehát a
   // csomópont scale-jével együtt nagyítódnak):
-  //   - Tartalom: tartalomtípus JOBBRA, kategóriák BALRA (kifelé sorolva);
+  //   - Gondolat: gondolattípus JOBBRA, kategóriák BALRA (kifelé sorolva);
   //   - Javaslat/Egyezmény: a művelet-típus (javaslatTipus) JOBBRA.
   // @param {Object} cs - a csomópont (entitasTipus, tipusIkon, kategoriaIkonok, javaslatTipus)
   // @returns {string} az összefűzött mellék-ikon SVG-csoportok
@@ -755,10 +755,10 @@ class StrukturaModal {
     const lepes = 2 * MELLEK_SUGAR + MELLEK_KOZ;              // szomszédos mellékek távolsága
     const darabok = [];
 
-    if (cs.entitasTipus === 'Tartalom') {
-      // Tartalomtípus JOBBRA (ha van hozzárendelve)
+    if (cs.entitasTipus === 'Gondolat') {
+      // Gondolattípus JOBBRA (ha van hozzárendelve)
       if (cs.tipusIkon?.ikon) {
-        darabok.push(this._egyMellekIkon(jobbX, TIPUS_SZIN.TartalomTipus, cs.tipusIkon.ikon, cs.tipusIkon.nev));
+        darabok.push(this._egyMellekIkon(jobbX, TIPUS_SZIN.GondolatTipus, cs.tipusIkon.ikon, cs.tipusIkon.nev));
       }
       // Kategóriák BALRA (ahány van, kifelé sorolva)
       (cs.kategoriaIkonok ?? []).forEach((kat, i) => {

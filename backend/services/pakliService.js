@@ -9,9 +9,9 @@ const tudatpontService = require('./tudatpontService');
 // A „saját összpont" rendezés a denormalizált osszesPont mezőn megy (indexelt),
 // a tudatpontAllokacio kollekción — ezt a repository közvetlenül adja.
 const tudatpontRepository = require('../repositories/tudatpontRepository');
-const tartalomRepository = require('../repositories/tartalomRepository');
+const gondolatRepository = require('../repositories/gondolatRepository');
 const kategoriaRepository = require('../repositories/kategoriaRepository');
-const tartalomTipusRepository = require('../repositories/tartalomTipusRepository');
+const gondolatTipusRepository = require('../repositories/gondolatTipusRepository');
 const javaslatRepository = require('../repositories/javaslatRepository');
 const egyezmenyRepository = require('../repositories/egyezmenyRepository');
 // A szavazati jogosultság a backend SAJÁT szabályát használja (érintett entitások
@@ -395,10 +395,10 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
 
   // Entitástípus-specifikus adatok lekérése
   let adatok;
-  if (elem.entitasTipus === 'Tartalom') {
-    const tartalom = await tartalomRepository.findById(elem.entitasId);
+  if (elem.entitasTipus === 'Gondolat') {
+    const gondolat = await gondolatRepository.findById(elem.entitasId);
     const kategoriak = await Promise.all(
-      (tartalom?.kategoriaIds ?? []).map(async kategoriaId => {
+      (gondolat?.kategoriaIds ?? []).map(async kategoriaId => {
         const kategoria = await kategoriaRepository.findById(kategoriaId.toString());
         return {
           id: kategoriaId,
@@ -407,21 +407,21 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
         };
       })
     );
-    const tartalomTipus = tartalom?.tartalomTipusId
-      ? await tartalomTipusRepository.findById(tartalom.tartalomTipusId.toString())
+    const gondolatTipus = gondolat?.gondolatTipusId
+      ? await gondolatTipusRepository.findById(gondolat.gondolatTipusId.toString())
       : null;
     // ----- KÜLÖNVÁLÁSOK (a kártya „Másik ág" fülének) -----
-    // Ha ez a tartalom valaha kettévált (vagy szétválásból született), itt vannak a
+    // Ha ez a gondolat valaha kettévált (vagy szétválásból született), itt vannak a
     // testvér-ágai. A kártyának a testvér CÍME is kell (hogy legyen mit kiírni), ezért
     // egy-egy plusz lekérdezés — csak akkor, ha tényleg van szétválás (ritka).
     // FIGYELEM: a findById `.lean()`-nel olvas, ezért a RÉGI (2026-08-25 előtti)
-    // tartalmaknál a mező nem üres tömb, hanem HIÁNYZIK — innen a `?? []`.
+    // gondolatoknál a mező nem üres tömb, hanem HIÁNYZIK — innen a `?? []`.
     const kulonvalasok = await Promise.all(
-      (tartalom?.kulonvalasok ?? []).map(async (k) => {
-        const testver = await tartalomRepository.findById(k.testverId.toString());
+      (gondolat?.kulonvalasok ?? []).map(async (k) => {
+        const testver = await gondolatRepository.findById(k.testverId.toString());
         return {
           testverId: k.testverId,
-          testverTipus: k.testverTipus ?? 'Tartalom',
+          testverTipus: k.testverTipus ?? 'Gondolat',
           // null, ha a testvér-ág időközben megszűnt (0 tudatpontra esett)
           testverCim: testver?.cim ?? null,
           agSzerep: k.agSzerep,
@@ -433,42 +433,42 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
     );
 
     adatok = {
-      cim: tartalom?.cim ?? null,
+      cim: gondolat?.cim ?? null,
       kategoriak,
-      tartalomTipus: {
-        id: tartalom?.tartalomTipusId ?? null,
-        nev: tartalomTipus?.nev ?? null,
-        ikon: tartalomTipus?.ikon ?? null
+      gondolatTipus: {
+        id: gondolat?.gondolatTipusId ?? null,
+        nev: gondolatTipus?.nev ?? null,
+        ikon: gondolatTipus?.ikon ?? null
       },
       // A kártya-fejléc dátumához: a saját utolsó (tartalmi) módosítás — induláskor
       // = létrehozás. A szülő referencia-dátuma a szín-jelzéshez (elavulhat-e).
-      modositva: tartalom?.modositva ?? tartalom?.letrehozva ?? null,
-      szuloModositva: await this._szuloModositasReferencia(tartalom?.szuloId, tartalom?.szuloTipus),
+      modositva: gondolat?.modositva ?? gondolat?.letrehozva ?? null,
+      szuloModositva: await this._szuloModositasReferencia(gondolat?.szuloId, gondolat?.szuloTipus),
       kulonvalasok
     };
   } else if (elem.entitasTipus === 'Kategoria') {
     const kategoria = await kategoriaRepository.findById(elem.entitasId);
-    // Hány tartalom használja ezt a kategóriát – a fejléc 2. sorához
-    const hasznaloTartalmakSzama = await tartalomRepository.countByKategoriaId(elem.entitasId);
+    // Hány gondolat használja ezt a kategóriát – a fejléc 2. sorához
+    const hasznaloGondolatokSzama = await gondolatRepository.countByKategoriaId(elem.entitasId);
     adatok = {
       nev: kategoria?.nev ?? null,
       ikon: kategoria?.ikon ?? null,
-      hasznaloTartalmakSzama,
-      // Kártya-fejléc dátum + szín-referencia (lásd Tartalom ág)
+      hasznaloGondolatokSzama,
+      // Kártya-fejléc dátum + szín-referencia (lásd Gondolat ág)
       modositva: kategoria?.modositva ?? kategoria?.letrehozva ?? null,
       szuloModositva: await this._szuloModositasReferencia(kategoria?.szuloId, kategoria?.szuloTipus)
     };
-  } else if (elem.entitasTipus === 'TartalomTipus') {
-    const tartalomTipus = await tartalomTipusRepository.findById(elem.entitasId);
-    // Hány tartalom használja ezt a tartalomtípust – a fejléc 2. sorához
-    const hasznaloTartalmakSzama = await tartalomRepository.countByTartalomTipusId(elem.entitasId);
+  } else if (elem.entitasTipus === 'GondolatTipus') {
+    const gondolatTipus = await gondolatTipusRepository.findById(elem.entitasId);
+    // Hány gondolat használja ezt a gondolattípust – a fejléc 2. sorához
+    const hasznaloGondolatokSzama = await gondolatRepository.countByGondolatTipusId(elem.entitasId);
     adatok = {
-      nev: tartalomTipus?.nev ?? null,
-      ikon: tartalomTipus?.ikon ?? null,
-      hasznaloTartalmakSzama,
-      // Kártya-fejléc dátum + szín-referencia (lásd Tartalom ág)
-      modositva: tartalomTipus?.modositva ?? tartalomTipus?.letrehozva ?? null,
-      szuloModositva: await this._szuloModositasReferencia(tartalomTipus?.szuloId, tartalomTipus?.szuloTipus)
+      nev: gondolatTipus?.nev ?? null,
+      ikon: gondolatTipus?.ikon ?? null,
+      hasznaloGondolatokSzama,
+      // Kártya-fejléc dátum + szín-referencia (lásd Gondolat ág)
+      modositva: gondolatTipus?.modositva ?? gondolatTipus?.letrehozva ?? null,
+      szuloModositva: await this._szuloModositasReferencia(gondolatTipus?.szuloId, gondolatTipus?.szuloTipus)
     };
   } else if (elem.entitasTipus === 'Javaslat') {
     const javaslat = await javaslatRepository.findById(elem.entitasId);
@@ -567,7 +567,7 @@ async egyElemAdatainakFeltoltese(elem, eemberId = null) {
 * A gyerek kártya dátumának SZÍNE attól függ, régebbi-e a gyerek `modositva`-ja a
 * SZÜLŐ utolsó (tartalmi) módosításánál (piros = elavulhat, zöld = frissebb). Ez a
 * segéd a szülő megfelelő referencia-dátumát adja vissza, típusonként:
-*  - Tartalom/Kategoria/TartalomTipus → `modositva` (a valódi utolsó tartalmi módosítás)
+*  - Gondolat/Kategoria/GondolatTipus → `modositva` (a valódi utolsó tartalmi módosítás)
 *  - Javaslat  → `letrehozva` (nem módosul; a létrehozása a mérce)
 *  - Egyezmeny → `vegrehajtva` (a döntés pillanata)
 * Best-effort: hiba vagy ismeretlen típus esetén null (a kártya semleges színt kap).
@@ -579,16 +579,16 @@ async _szuloModositasReferencia(szuloId, szuloTipus) {
   if (!szuloId || !szuloTipus) return null;
   const id = szuloId.toString();
   try {
-    if (szuloTipus === 'Tartalom') {
-      const sz = await tartalomRepository.findById(id);
+    if (szuloTipus === 'Gondolat') {
+      const sz = await gondolatRepository.findById(id);
       return sz?.modositva ?? sz?.letrehozva ?? null;
     }
     if (szuloTipus === 'Kategoria') {
       const sz = await kategoriaRepository.findById(id);
       return sz?.modositva ?? sz?.letrehozva ?? null;
     }
-    if (szuloTipus === 'TartalomTipus') {
-      const sz = await tartalomTipusRepository.findById(id);
+    if (szuloTipus === 'GondolatTipus') {
+      const sz = await gondolatTipusRepository.findById(id);
       return sz?.modositva ?? sz?.letrehozva ?? null;
     }
     if (szuloTipus === 'Javaslat') {
@@ -648,7 +648,7 @@ async olvasatlanBadgeFeltoltese(elemek, eemberId = null) {
 // ----- ENTITÁS SZÖVEG LEKÉRÉSE -----
 /**
 * Csak a kiválasztott entitás szöveg/leírás/indoklás mezőjét kéri le.
-* Típusonként eltérő mezőnév: Tartalom→szoveg, Kategoria/TartalomTipus→leiras,
+* Típusonként eltérő mezőnév: Gondolat→szoveg, Kategoria/GondolatTipus→leiras,
 * Javaslat/Egyezmeny→indoklas
 * @param {string} entitasId - Az entitás azonosítója
 * @param {string} entitasTipus - Az entitás típusa
@@ -659,15 +659,15 @@ console.log('entitasSzovegLekerese - KEZDÉS', { entitasId, entitasTipus });
 
 let szoveg = null;
 
-if (entitasTipus === 'Tartalom') {
-    const tartalom = await tartalomRepository.findById(entitasId);
-    szoveg = tartalom?.szoveg ?? null;
+if (entitasTipus === 'Gondolat') {
+    const gondolat = await gondolatRepository.findById(entitasId);
+    szoveg = gondolat?.szoveg ?? null;
 } else if (entitasTipus === 'Kategoria') {
     const kategoria = await kategoriaRepository.findById(entitasId);
     szoveg = kategoria?.leiras ?? null;
-} else if (entitasTipus === 'TartalomTipus') {
-    const tartalomTipus = await tartalomTipusRepository.findById(entitasId);
-    szoveg = tartalomTipus?.leiras ?? null;
+} else if (entitasTipus === 'GondolatTipus') {
+    const gondolatTipus = await gondolatTipusRepository.findById(entitasId);
+    szoveg = gondolatTipus?.leiras ?? null;
 } else if (entitasTipus === 'Javaslat') {
     const javaslat = await javaslatRepository.findById(entitasId);
     szoveg = javaslat?.indoklas ?? null;
@@ -682,27 +682,27 @@ console.log('entitasSzovegLekerese - VÉGE', { entitasId, szoveg: szoveg ? 'van 
 return szoveg;
 }
 
-// ----- JAVASLAT MÓDOSÍTOTT (JAVASOLT ÚJ) TARTALMA -----
+// ----- JAVASLAT MÓDOSÍTOTT (JAVASOLT ÚJ) GONDOLATA -----
 /**
-* Egy MÓDOSÍTÁSI javaslat EREDMÉNY-tartalmát adja vissza a kártya „Módosított
-* tartalom" füléhez: azt, AMILYEN a tartalom LENNE a módosítás után (cím + body).
+* Egy MÓDOSÍTÁSI javaslat EREDMÉNY-gondolatát adja vissza a kártya „Módosított
+* gondolat" füléhez: azt, AMILYEN a gondolat LENNE a módosítás után (cím + body).
 * A javaslat `modositasAdatok`-ja csak a VÁLTOZOTT mezőket tartalmazza, ezért a
 * nem változott mezőket (pl. a body, ha csak a cím módosult) az érintett entitás
-* JELENLEGI tartalmából vesszük — a kettőt összeolvassuk. Így a fül mindig a teljes
-* tartalmat mutatja; ha a body eleve üres, ott is üres marad.
+* JELENLEGI gondolatából vesszük — a kettőt összeolvassuk. Így a fül mindig a teljes
+* gondolatot mutatja; ha a body eleve üres, ott is üres marad.
 * Csak 'Modositas' típusnál ad vissza adatot; minden más típusnál null
 * (a többi típus body-ját később bontjuk fülekre).
 * @param {string} javaslatId - A javaslat azonosítója
 * @returns {Promise<{cim: string|null, szoveg: any, entitasTipus: string|null}|null>}
 */
-async javaslatModositottTartalom(javaslatId) {
-  console.log('javaslatModositottTartalom - KEZDÉS', { javaslatId });
+async javaslatModositottGondolat(javaslatId) {
+  console.log('javaslatModositottGondolat - KEZDÉS', { javaslatId });
 
   const javaslat = await javaslatRepository.findById(javaslatId);
 
-  // Csak módosítási javaslatnál van „módosított tartalom"
+  // Csak módosítási javaslatnál van „módosított gondolat"
   if (!javaslat || javaslat.javaslatTipus !== 'Modositas') {
-    console.log('javaslatModositottTartalom - VÉGE (nem Módosítás, null)');
+    console.log('javaslatModositottGondolat - VÉGE (nem Módosítás, null)');
     return null;
   }
 
@@ -711,62 +711,62 @@ async javaslatModositottTartalom(javaslatId) {
     (e) => e.muvelet === 'Modositas'
   );
   if (!erintett) {
-    console.log('javaslatModositottTartalom - VÉGE (nincs érintett entitás, null)');
+    console.log('javaslatModositottGondolat - VÉGE (nincs érintett entitás, null)');
     return null;
   }
 
   const ma = erintett.modositasAdatok || {};
 
   // Az érintett entitás JELENLEGI címe és body-ja (a nem változott mezőkhöz).
-  // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras.
+  // Mezőnév-eltérés: Gondolat → cim/szoveg, Kategoria/GondolatTipus → nev/leiras.
   let jelenlegiCim    = null;
   let jelenlegiSzoveg = null;
-  if (erintett.entitasTipus === 'Tartalom') {
-    const t = await tartalomRepository.findById(erintett.entitasId);
+  if (erintett.entitasTipus === 'Gondolat') {
+    const t = await gondolatRepository.findById(erintett.entitasId);
     jelenlegiCim    = t?.cim ?? null;
     jelenlegiSzoveg = t?.szoveg ?? null;
   } else if (erintett.entitasTipus === 'Kategoria') {
     const k = await kategoriaRepository.findById(erintett.entitasId);
     jelenlegiCim    = k?.nev ?? null;
     jelenlegiSzoveg = k?.leiras ?? null;
-  } else if (erintett.entitasTipus === 'TartalomTipus') {
-    const tt = await tartalomTipusRepository.findById(erintett.entitasId);
+  } else if (erintett.entitasTipus === 'GondolatTipus') {
+    const tt = await gondolatTipusRepository.findById(erintett.entitasId);
     jelenlegiCim    = tt?.nev ?? null;
     jelenlegiSzoveg = tt?.leiras ?? null;
   }
 
   // A módosítás EREDMÉNYE: a változott mezők felülírják a jelenlegit
-  const modositottTartalom = {
+  const modositottGondolat = {
     cim:          (ma.cim ?? ma.nev) ?? jelenlegiCim,
     szoveg:       (ma.szoveg ?? ma.szovegMezo) ?? jelenlegiSzoveg,
     entitasTipus: erintett.entitasTipus ?? null
   };
 
-  console.log('javaslatModositottTartalom - VÉGE', {
-    vanCim:    !!modositottTartalom.cim,
-    vanSzoveg: !!modositottTartalom.szoveg
+  console.log('javaslatModositottGondolat - VÉGE', {
+    vanCim:    !!modositottGondolat.cim,
+    vanSzoveg: !!modositottGondolat.szoveg
   });
-  return modositottTartalom;
+  return modositottGondolat;
 }
 
-// ----- EGYEZMÉNY LECSERÉLT (RÉGI) TARTALMA -----
+// ----- EGYEZMÉNY LECSERÉLT (RÉGI) GONDOLATA -----
 /**
-* Egy MÓDOSÍTÁSI egyezmény által LECSERÉLT (régi) tartalmat adja vissza a kártya
-* „Lecserélt tartalom" füléhez. A régi állapotot a végrehajtáskor mentettük el az
+* Egy MÓDOSÍTÁSI egyezmény által LECSERÉLT (régi) gondolatot adja vissza a kártya
+* „Lecserélt gondolat" füléhez. A régi állapotot a végrehajtáskor mentettük el az
 * egyezmény vegrehajatasEredmeny.modositottEntitasok[].regiAdatok mezőjébe (a
 * modositasiVegrehajto a felülírás előtt olvassa ki). Régi (a mentés bevezetése
 * előtti) egyezményeknél nincs ilyen adat → null (a fül üresen jelzi).
 * @param {string} egyezmenyId - Az egyezmény azonosítója
 * @returns {Promise<{cim: string|null, szoveg: any, entitasTipus: string|null}|null>}
 */
-async egyezmenyLecsereltTartalom(egyezmenyId) {
-  console.log('egyezmenyLecsereltTartalom - KEZDÉS', { egyezmenyId });
+async egyezmenyLecsereltGondolat(egyezmenyId) {
+  console.log('egyezmenyLecsereltGondolat - KEZDÉS', { egyezmenyId });
 
   const egyezmeny = await egyezmenyRepository.findById(egyezmenyId);
 
-  // Csak módosítási egyezménynél van „lecserélt tartalom"
+  // Csak módosítási egyezménynél van „lecserélt gondolat"
   if (!egyezmeny || egyezmeny.javaslatTipus !== 'Modositas') {
-    console.log('egyezmenyLecsereltTartalom - VÉGE (nem Módosítás, null)');
+    console.log('egyezmenyLecsereltGondolat - VÉGE (nem Módosítás, null)');
     return null;
   }
 
@@ -778,22 +778,22 @@ async egyezmenyLecsereltTartalom(egyezmenyId) {
   const ra           = elso?.regiAdatok;
 
   if (!ra) {
-    console.log('egyezmenyLecsereltTartalom - VÉGE (nincs megőrzött régi tartalom, null)');
+    console.log('egyezmenyLecsereltGondolat - VÉGE (nincs megőrzött régi gondolat, null)');
     return null;
   }
 
-  // Mezőnév-eltérés: Tartalom → cim/szoveg, Kategoria/TartalomTipus → nev/leiras
-  const lecsereltTartalom = {
+  // Mezőnév-eltérés: Gondolat → cim/szoveg, Kategoria/GondolatTipus → nev/leiras
+  const lecsereltGondolat = {
     cim:          ra.cim ?? ra.nev ?? null,
     szoveg:       ra.szoveg ?? ra.leiras ?? null,
     entitasTipus: elso.entitasTipus ?? null
   };
 
-  console.log('egyezmenyLecsereltTartalom - VÉGE', {
-    vanCim:    !!lecsereltTartalom.cim,
-    vanSzoveg: !!lecsereltTartalom.szoveg
+  console.log('egyezmenyLecsereltGondolat - VÉGE', {
+    vanCim:    !!lecsereltGondolat.cim,
+    vanSzoveg: !!lecsereltGondolat.szoveg
   });
-  return lecsereltTartalom;
+  return lecsereltGondolat;
 }
 }
 

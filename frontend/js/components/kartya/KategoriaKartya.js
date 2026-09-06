@@ -6,7 +6,7 @@ import { API_ALAP_URL } from '../../utils/apiHelper.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
-import TartalomModal from '../modals/TartalomModal.js';
+import GondolatModal from '../modals/GondolatModal.js';
 import KategoriaModal from '../modals/KategoriaModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
@@ -14,7 +14,7 @@ import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 // =============================================
 // ÚJ - SzovegMezoMegjelenito importja
 // =============================================
-// A blokk alapú szöveg tartalom renderelésért felelős segédosztály
+// A blokk alapú szöveg gondolat renderelésért felelős segédosztály
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 
 // --- KATEGÓRIA KÁRTYA OSZTÁLY ---
@@ -26,7 +26,7 @@ import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 class KategoriaKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  // MÓDOSÍTVA: a TartalomKartya-val azonos paraméterezés,
+  // MÓDOSÍTVA: a GondolatKartya-val azonos paraméterezés,
   // hogy a javaslat modal innen is elérhető legyen
   // @param {Object}   entitas           - A pakli kategória eleme a backend válaszából
   // @param {boolean}  kivalasztott      - Igaz, ha ez a kiválasztott kártya
@@ -94,7 +94,7 @@ class KategoriaKartya extends Kartya {
     });
 
     const adatok = this.entitas.adatok ?? {};
-    // A második sorba (típus-specifikus) kerül az ikon (F4-ben: „hány tartalom használja").
+    // A második sorba (típus-specifikus) kerül az ikon (F4-ben: „hány gondolat használja").
     // A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
     const fejlecTartalom = masodikSor;
 
@@ -111,9 +111,9 @@ class KategoriaKartya extends Kartya {
     this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'kategoria-kartya');
     fejlecTartalom.appendChild(ikonCsoport);
 
-    // Hány tartalom használja ezt a kategóriát (2. sor)
+    // Hány gondolat használja ezt a kategóriát (2. sor)
     fejlecTartalom.appendChild(
-      this._ikonElem('📄', adatok.hasznaloTartalmakSzama, 'Ezt a kategóriát használó tartalmak száma')
+      this._ikonElem('📄', adatok.hasznaloGondolatokSzama, 'Ezt a kategóriát használó gondolatok száma')
     );
 
     // --- DÁTUM (létrehozás / utolsó módosítás, szín-jelzéssel) — a 2. sor végén ---
@@ -199,15 +199,15 @@ class KategoriaKartya extends Kartya {
     });
   }
 
-  // ----- ÚJ TARTALOM LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
-  // A közös TartalomModal-t nyitja meg létrehozás módban, a kategóriát
+  // ----- ÚJ GONDOLAT LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
+  // A közös GondolatModal-t nyitja meg létrehozás módban, a kategóriát
   // szülőként átadva (szuloId + szuloTipus: 'Kategoria').
-  async _ujTartalomLetrehozasa(entitas) {
-    console.log('KategoriaKartya._ujTartalomLetrehozasa - KEZDÉS', {
+  async _ujGondolatLetrehozasa(entitas) {
+    console.log('KategoriaKartya._ujGondolatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    const tartalomModal = new TartalomModal(this.modalKontenerAzon, {
+    const gondolatModal = new GondolatModal(this.modalKontenerAzon, {
       mod: 'letrehozas',
       szuloAdatok: {
         szuloId:    entitas.entitasId,
@@ -218,10 +218,10 @@ class KategoriaKartya extends Kartya {
       }
     });
 
-    await tartalomModal.init();
-    tartalomModal.megnyitas();
+    await gondolatModal.init();
+    gondolatModal.megnyitas();
 
-    console.log('KategoriaKartya._ujTartalomLetrehozasa - VÉGE', {
+    console.log('KategoriaKartya._ujGondolatLetrehozasa - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
@@ -341,11 +341,11 @@ class KategoriaKartya extends Kartya {
     const opciok = [
       {
         ikon:           '✏️',
-        felirat:        'Új tartalom létrehozása ebből',
+        felirat:        'Új gondolat létrehozása ebből',
         // Ágaztatás ebből az entitásból → tudatpont kell rá
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => this._ujTartalomLetrehozasa(entitas)
+        akcio:          () => this._ujGondolatLetrehozasa(entitas)
       },
       {
         // Ugyanaz az ikon (🏷️), mint a fő menü „Új kategória létrehozása" pontja,
@@ -403,9 +403,9 @@ class KategoriaKartya extends Kartya {
   }
 
   // ----- JAVASLAT LÉTREHOZÁSA -----
-  // A TartalomKartya mintájára: a JavaslatModal-t nyitja meg.
-  // A javaslat szülő tartalma a kategória szülője (a pakli hierarchiában
-  // felette álló tartalom) — a backend ellenőrzi, hogy létező tartalom-e.
+  // A GondolatKartya mintájára: a JavaslatModal-t nyitja meg.
+  // A javaslat szülő gondolata a kategória szülője (a pakli hierarchiában
+  // felette álló gondolat) — a backend ellenőrzi, hogy létező gondolat-e.
   async _javaslatLetrehozasa(entitas) {
     console.log('KategoriaKartya._javaslatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId,
@@ -420,7 +420,7 @@ class KategoriaKartya extends Kartya {
       },
       szuloAdatok: {
         szuloId:    entitas.szuloId,
-        szuloTipus: 'Tartalom'
+        szuloTipus: 'Gondolat'
       },
       onSiker: (ujJavaslat) => {
         console.log('KategoriaKartya._javaslatLetrehozasa - onSiker', {

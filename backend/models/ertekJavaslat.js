@@ -10,8 +10,8 @@ const mongoose = require('mongoose');
 // TÁMOGATOTT ENTITÁSTÍPUSOK
 // ===================================
 // Az érték javaslat rendszer ezekre az entitásokra működik. Korábban CSAK
-// tartalomra volt kötve; mostantól kategóriára és tartalomtípusra is.
-const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+// gondolatra volt kötve; mostantól kategóriára és gondolattípusra is.
+const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 
 // ===================================
 // ÉRTÉK JAVASLAT SÉMA DEFINÍCIÓJA
@@ -20,7 +20,7 @@ const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
 const ertekJavaslatSchema = new mongoose.Schema({
 
   // ----- ENTITÁS AZONOSÍTÓ -----
-  // Melyik entitáshoz tartozik ez az érték javaslat (tartalom / kategória / tartalomtípus).
+  // Melyik entitáshoz tartozik ez az érték javaslat (gondolat / kategória / gondolattípus).
   // A refPath miatt a populate a helyes modellt tölti be az entitasTipus alapján.
   entitasId: {
     reteg: 'lanc',  // H6
@@ -36,7 +36,7 @@ const ertekJavaslatSchema = new mongoose.Schema({
     type: String,             // Szöveges típus
     enum: ENTITAS_TIPUSOK,    // Csak a támogatott típusok engedélyezettek
     required: true,           // Kötelező mező
-    default: 'Tartalom'       // Visszafelé kompatibilis alapérték
+    default: 'Gondolat'       // Visszafelé kompatibilis alapérték
   },
 
   // ----- EMBER AZONOSÍTÓ -----

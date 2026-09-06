@@ -1,4 +1,4 @@
-// backend/routes/tartalomTipusRoutes.js
+// backend/routes/gondolatTipusRoutes.js
 
 // ===================================
 // EXPRESS ROUTER IMPORTÁLÁSA
@@ -13,7 +13,7 @@ const router = express.Router();
 // ===================================
 // CONTROLLER IMPORTÁLÁSA
 // ===================================
-const tartalomTipusController = require('../controllers/tartalomTipusController');
+const gondolatTipusController = require('../controllers/gondolatTipusController');
 
 // ===================================
 // MIDDLEWARE IMPORTÁLÁSOK
@@ -34,54 +34,54 @@ const { ikonFeltoltes } = require('../middlewares/uploadMiddleware');
 // KOLLEKCIÓ SZINTŰ ÚTVONALAK
 // -------------------------------------
 
-// Új tartalom típus létrehozása
-// POST /api/tartalomTipus
+// Új gondolat típus létrehozása
+// POST /api/gondolatTipus
 // VÉDETT - csak bejelentkezett eemberek
 // VÁLTOZÁS: ikonFeltoltes middleware hozzáadva –
 // lefut az authMiddleware után, a controller előtt;
 // a feltöltött fájl adatait req.file-ba helyezi
-router.post('/', authMiddleware, ikonFeltoltes, tartalomTipusController.tartalomTipusLetrehozasa);
+router.post('/', authMiddleware, ikonFeltoltes, gondolatTipusController.gondolatTipusLetrehozasa);
 
-// Tartalom típusok listázása szűrőkkel
-// GET /api/tartalomTipus
+// Gondolat típusok listázása szűrőkkel
+// GET /api/gondolatTipus
 // VÉDETT - csak bejelentkezett eemberek
 // Nem változott: listázáshoz nem kell fájlfeltöltés
-router.get('/', authMiddleware, tartalomTipusController.tartalomTipusokListazasa);
+router.get('/', authMiddleware, gondolatTipusController.gondolatTipusokListazasa);
 
 // -------------------------------------
 // SPECIFIKUS ERŐFORRÁS ÚTVONALAK
 // (Részletesebb, többszegmensű útvonalak előbb!)
 // -------------------------------------
 
-// Tartalom típus részletes adatainak lekérése tudatpont adatokkal
-// GET /api/tartalomTipus/:id/reszletek
+// Gondolat típus részletes adatainak lekérése tudatpont adatokkal
+// GET /api/gondolatTipus/:id/reszletek
 // VÉDETT - csak bejelentkezett eemberek
 // Nem változott: lekéréshez nem kell fájlfeltöltés
-router.get('/:id/reszletek', authMiddleware, tartalomTipusController.tartalomTipusReszleteinekLekerese);
+router.get('/:id/reszletek', authMiddleware, gondolatTipusController.gondolatTipusReszleteinekLekerese);
 
 // -------------------------------------
 // ÁLTALÁNOS ERŐFORRÁS ÚTVONALAK
 // (Egyszegmensű dinamikus útvonalak később!)
 // -------------------------------------
 
-// Egy tartalom típus lekérése ID alapján
-// GET /api/tartalomTipus/:id
+// Egy gondolat típus lekérése ID alapján
+// GET /api/gondolatTipus/:id
 // VÉDETT - csak bejelentkezett eemberek
 // Nem változott: lekéréshez nem kell fájlfeltöltés
-router.get('/:id', authMiddleware, tartalomTipusController.tartalomTipusLekerese);
+router.get('/:id', authMiddleware, gondolatTipusController.gondolatTipusLekerese);
 
-// Tartalom típus módosítása ID alapján
-// PATCH /api/tartalomTipus/:id
+// Gondolat típus módosítása ID alapján
+// PATCH /api/gondolatTipus/:id
 // VÉDETT - csak bejelentkezett eemberek
 // VÁLTOZÁS: ikonFeltoltes middleware hozzáadva –
 // ha az eember új ikont tölt fel módosításkor, azt is kezeli;
 // ha nem küld fájlt, req.file undefined lesz (a controller kezeli)
-router.patch('/:id', authMiddleware, ikonFeltoltes, tartalomTipusController.tartalomTipusModositasa);
+router.patch('/:id', authMiddleware, ikonFeltoltes, gondolatTipusController.gondolatTipusModositasa);
 
 // ===================================
 // Torles ENDPOINT NINCS!
 // ===================================
-// A tartalom típusok NEM törölhetők direkt DELETE kéréssel.
+// A gondolat típusok NEM törölhetők direkt DELETE kéréssel.
 //
 // Törlés csak automatikusan történik a következő esetekben:
 //

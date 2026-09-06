@@ -173,7 +173,7 @@ export function gerincLanc(tar, horgonyId, korlat = GERINC_MAX) {
 }
 
 // ===== EGY CSOMÓPONT ALATTI RÉSZFA TÖRLÉSE (a csomópont marad) =====
-// A szülő visszaáll „még nem töltöttük be" állapotba, tehát a tartalma nem vész
+// A szülő visszaáll „még nem töltöttük be" állapotba, tehát a gondolata nem vész
 // el: legközelebb újra letöltődik.
 //
 // @param {Map} tar
@@ -375,7 +375,7 @@ function szintUjratoltesre(tar, cs, megtartottId, alapPlafon) {
   cs.kurzorPont = null;
   cs.kurzorId = null;
 
-  // A LAPOZÁS PLAFONJA IS VISSZAÁLL. Enélkül a „további tartalmak" koppintásokkal
+  // A LAPOZÁS PLAFONJA IS VISSZAÁLL. Enélkül a „további gondolatok" koppintásokkal
   // felhizlalt plafon (adagonként +5 000) örökre a csomóponton maradna, és
   // visszatéréskor újra annyit töltene le — vagyis a felhalmozódás egy másik
   // úton térne vissza.
@@ -383,7 +383,7 @@ function szintUjratoltesre(tar, cs, megtartottId, alapPlafon) {
   cs.tovabbiKert = false;
 
   // A backend ÖSSZES-pontja is újra kérdés lesz. Ez nem csak takarítás: ha közben
-  // változott a csoport (tudatpont-átrendezés, új tartalom), a visszatéréskor a
+  // változott a csoport (tudatpont-átrendezés, új gondolat), a visszatéréskor a
   // FRISS állapotot kapjuk — a régi modellben a `visszaszedettek`-ből töltöttünk
   // vissza, tehát az adat egy hosszú munkamenetben véglegesen elavult.
   cs.osszesGyerekPont = 0;

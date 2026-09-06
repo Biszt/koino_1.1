@@ -21,7 +21,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ----- PLATFORM STATISZTIKA LEKÉRÉSE -----
 // GET kérés: /api/platform/statisztika
 // Védett – csak bejelentkezett eemberek érhetik el
-// Visszaadja: eemberekSzama, tartalmakSzama (főoldal statisztika sávhoz)
+// Visszaadja: eemberekSzama, gondolatokSzama (főoldal statisztika sávhoz)
 router.get('/platform/statisztika', authMiddleware, platformStatisztikaController.platformStatisztikaLekereses);
 
 // ===== ROUTER EXPORTÁLÁSA =====

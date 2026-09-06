@@ -1,11 +1,11 @@
-/* frontend/css/components/kartya/tartalomKartya.css */
+/* frontend/css/components/kartya/gondolatKartya.css */
 
 /* ---------------------------------------- */
 /* CÍM                                      */
 /* ---------------------------------------- */
 
-/* Tartalom cím – a fejléc legfontosabb eleme, kitölti a rendelkezésre álló helyet */
-.tartalom-kartya__cim {
+/* Gondolat cím – a fejléc legfontosabb eleme, kitölti a rendelkezésre álló helyet */
+.gondolat-kartya__cim {
   flex: 1;                              /* Kitölti a maradék helyet az ikonok előtt */
   font-size: var(--text-sm);            /* Kompakt, de olvasható */
   font-weight: 600;                     /* Kiemelkedik a többi elemtől */
@@ -18,15 +18,15 @@
 /* TÍPUS ÉS KATEGÓRIA IKONOK                */
 /* ---------------------------------------- */
 
-/* TartalomTípus ikon – a cím után, jobb oldalon */
-.tartalom-kartya__tipus-ikon {
+/* GondolatTípus ikon – a cím után, jobb oldalon */
+.gondolat-kartya__tipus-ikon {
   font-size: var(--text-base);          /* Természetes emoji méret */
   flex-shrink: 0;                       /* Nem zsugorodik el */
   cursor: default;                      /* Nem kattintható önmagában */
 }
 
 /* Kategória ikonok konténere – egymás mellett, rés nélkül */
-.tartalom-kartya__kategoriak {
+.gondolat-kartya__kategoriak {
   display: flex;
   align-items: center;
   gap: var(--space-1);                  /* Minimális rés az ikonok között */
@@ -34,7 +34,7 @@
 }
 
 /* Egyetlen kategória ikon */
-.tartalom-kartya__kategoria-ikon {
+.gondolat-kartya__kategoria-ikon {
   font-size: var(--text-sm);            /* Kicsit kisebb mint a típus ikon */
   cursor: default;
 }
@@ -44,7 +44,7 @@
 /* ---------------------------------------- */
 
 /* Saját és hierarchikus tudatpont konténere – jobb szélen, egymás mellett */
-.tartalom-kartya__tudatpont-sor {
+.gondolat-kartya__tudatpont-sor {
   display: flex;
   align-items: center;
   gap: var(--space-2);                  /* Kis rés a két érték között */
@@ -53,19 +53,19 @@
 }
 
 /* Mindkét tudatpont elem közös stílusa */
-.tartalom-kartya__tudatpont {
+.gondolat-kartya__tudatpont {
   font-size: var(--text-xs);            /* Kompakt – másodlagos adat */
   font-weight: 500;
   white-space: nowrap;                  /* Egy sorban marad */
 }
 
 /* Saját tudatpont – kevésbé hangsúlyos */
-.tartalom-kartya__tudatpont--sajat {
+.gondolat-kartya__tudatpont--sajat {
   color: var(--color-text-muted);       /* Muted szín – nem elsődleges info */
 }
 
 /* Hierarchikus tudatpont – erősebb, ez mutatja az ág erejét */
-.tartalom-kartya__tudatpont--hierarchikus {
+.gondolat-kartya__tudatpont--hierarchikus {
   color: var(--color-primary);          /* Erdőzöld – a hierarchia ereje */
   font-weight: 600;
 }
@@ -74,8 +74,8 @@
 /* BODY – SZÖVEG                            */
 /* ---------------------------------------- */
 
-/* A kiválasztott kártya szöveg tartalma */
-.tartalom-kartya__szoveg {
+/* A kiválasztott kártya szöveg gondolata */
+.gondolat-kartya__szoveg {
   font-size: var(--text-sm);
   color: var(--color-text);
   line-height: 1.6;
@@ -89,11 +89,11 @@
 /* ---------------------------------------- */
 /* BODY – „MÁSIK ÁG" FÜL (KÜLÖNVÁLÁS)       */
 /* ---------------------------------------- */
-/* A fül akkor jelenik meg, ha a tartalom valaha kettévált (vagy szétválásból
-   született). Tartalma: egy magyarázó mondat + koppintható hivatkozás a testvér-ágra.
+/* A fül akkor jelenik meg, ha a gondolat valaha kettévált (vagy szétválásból
+   született). Gondolata: egy magyarázó mondat + koppintható hivatkozás a testvér-ágra.
    Lásd: docs/fejlesztesi_terv.md „Különválás" szakaszai. */
 
-.tartalom-kartya__masik-ag {
+.gondolat-kartya__masik-ag {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -102,7 +102,7 @@
 }
 
 /* A magyarázó mondat – halkabb, mint maga a hivatkozás */
-.tartalom-kartya__masik-ag-magyarazat {
+.gondolat-kartya__masik-ag-magyarazat {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: 1.6;
@@ -110,7 +110,7 @@
 }
 
 /* Ha a testvér-ág időközben megszűnt (0 tudatpontra esett és törlődött) */
-.tartalom-kartya__masik-ag-megszunt {
+.gondolat-kartya__masik-ag-megszunt {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   font-style: italic;

@@ -1,7 +1,7 @@
 /* frontend/css/components/modals/tudatpontModal.css */
 
 /* A tudatpont modal a standard modal-stílust követi (t-modal-* osztályok,
-   lásd tartalomModal.css). Itt csak a tudatpont-specifikus elemek stílusa van. */
+   lásd gondolatModal.css). Itt csak a tudatpont-specifikus elemek stílusa van. */
 
 /* ===== ENTITÁS MEGNEVEZÉSE ===== */
 .tudatpont-modal__entitas {

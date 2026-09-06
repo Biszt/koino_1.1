@@ -32,7 +32,7 @@ class PlatformStatisztikaController {
       }
 
       // === 2. LÉPÉS: SERVICE HÍVÁS ===
-      // A service lekéri az eemberek és tartalmak számát az adatbázisból
+      // A service lekéri az eemberek és gondolatok számát az adatbázisból
       const statisztika = await platformStatisztikaService.platformStatisztikaLekereses();
 
       // === 3. LÉPÉS: SIKERES VÁLASZ KÜLDÉSE ===

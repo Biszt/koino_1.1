@@ -316,7 +316,7 @@ return eredmeny; // Visszaadjuk a végrehajtás összesített eredményét
    *
    * ===== HONNAN JÖN A RÉGI ÁLLAPOT? =====
    * A `modositasiVegrehajto` a felülírás ELŐTT elmenti (`regiAdatok`), és ez a
-   * végrehajtási eredményen át az egyezménybe is bekerül („Lecserélt tartalom" fül).
+   * végrehajtási eredményen át az egyezménybe is bekerül („Lecserélt gondolat" fül).
    * Nem kell tehát semmit visszafejteni — a vesztes verzió adata készen áll.
    *
    * ===== TÖREDÉKCSOPORT =====
@@ -388,9 +388,9 @@ return eredmeny; // Visszaadjuk a végrehajtás összesített eredményét
       for (const erintett of (forrasJavaslat.erintettEntitasok ?? [])) {
         const entitasId = erintett.entitasId.toString();
 
-        // Az első kör csak tartalomra terjed ki
-        if (erintett.entitasTipus !== 'Tartalom') {
-          kihagyottak.push({ entitasId, ok: `Nem Tartalom (${erintett.entitasTipus})` });
+        // Az első kör csak gondolatra terjed ki
+        if (erintett.entitasTipus !== 'Gondolat') {
+          kihagyottak.push({ entitasId, ok: `Nem Gondolat (${erintett.entitasTipus})` });
           continue;
         }
 
@@ -420,7 +420,7 @@ return eredmeny; // Visszaadjuk a végrehajtás összesített eredményét
 
           const eredmeny = await KulonvalasService.kulonvalasVegrehajtasa({
             forrasEntitasId: entitasId,
-            forrasEntitasTipus: 'Tartalom',
+            forrasEntitasTipus: 'Gondolat',
             kulonvaloEemberIdk: kulonvalokIdk,
             // A különválók a RÉGI (módosítás előtti) állapotot viszik magukkal
             ujAgAdatok: { cim: regiAdatok.cim, szoveg: regiAdatok.szoveg },

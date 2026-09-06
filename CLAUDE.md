@@ -4,7 +4,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## A projekt
 
-**Kollektív Intelligencia Online (koino)** — közösségi tér, amit a közösség irányít. A regisztrálók **e-emberek** (nem „felhasználók"): egyszerre tulajdonosok, fejlesztők, moderátorok és felelősök. A platform lényege a közösségi döntéshozatal: tartalmakból javaslatok, javaslatokból egyezmények születnek, központi szereplő nélkül.
+**Kollektív Intelligencia Online (koino)** — közösségi tér, amit a közösség irányít. A regisztrálók **e-emberek** (nem „felhasználók"): egyszerre tulajdonosok, fejlesztők, moderátorok és felelősök. A platform lényege a közösségi döntéshozatal: gondolatokból javaslatok, javaslatokból egyezmények születnek, központi szereplő nélkül.
 
 ## ⚠️ KÉT PROGRAM VAN A REPÓBAN (2026-08-26 óta)
 
@@ -64,25 +64,52 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
 - **e-ember** — regisztrált tag; mindig így hivatkozunk rá, sosem „felhasználó"-ként.
 - **tudatpont** — mindenkinek ugyanannyi van; nem elkölthető, csak szétosztható és bármikor átrendezhető. Prioritást fejez ki, NEM szavazaterőt (szavazásnál mindenki egyenlő).
-- **tartalom** — a platform alapegysége; **kategóriák** és **tartalomtípusok** (kérdés, válasz, témakör, ismeret, feladat...) rendszerezik.
-- **javaslat** — entitástípus: módosítás, áthelyezés, törlés vagy egyesítés kezdeményezése egy tartalomra. Csak az tehet javaslatot, aki tudatpontot rendelt a tartalomhoz. ⚠️ **A Fázis 2-ben ez „szerkesztési javaslat"** (D27) — mellette lesz **általános javaslat** is (a közösség álláspontja, nem entitás-változtatás). A prototípusban marad a régi név.
+- **gondolat** — a platform alapegysége; **kategóriák** és **gondolattípusok** (kérdés, válasz, témakör, ismeret, feladat...) rendszerezik.
+- **javaslat** — entitástípus: módosítás, áthelyezés, törlés vagy egyesítés kezdeményezése egy gondolatra. Csak az tehet javaslatot, aki tudatpontot rendelt a gondolathoz. ⚠️ **A Fázis 2-ben ez „szerkesztési javaslat"** (D27) — mellette lesz **általános javaslat** is (a közösség álláspontja, nem entitás-változtatás). A prototípusban marad a régi név.
 - **érték javaslat** — KÜLÖN fogalom, nem keverendő a javaslattal (entitástípus)! Mindig „érték javaslat"-ként hivatkozunk rá.
 - **egyezmény** — elfogadott javaslat eredménye. ⚠️ A Fázis 2-ben **„szerkesztési egyezmény"** (D27), és **nem esemény, hanem SZÁMÍTÁS eredménye** (D17) — senki nem „mondja ki". Az **általános egyezmény** viszont **élő**: csatlakozni, tiltakozni, ütközést jelölni lehet hozzá.
-- **küszöbértékek** — tartalmanként meghatározzák, mekkora támogatottság és részvételi arány kell az elfogadáshoz; minimum/maximum döntési idővel együtt.
+- **küszöbértékek** — gondolatonként meghatározzák, mekkora támogatottság és részvételi arány kell az elfogadáshoz; minimum/maximum döntési idővel együtt.
 - **bizonyossági mutató** — minél egyértelműbb az eredmény és magasabb a részvétel, annál hamarabb zárul a döntés (a min/max döntési idő között).
 - **pakli** — kártyák (entitások) listázott megjelenítése a frontenden.
+
+### ⚠️ „tartalom" → „gondolat" (2026-09-06) — és ami SZÁNDÉKOSAN nem változott
+
+A fogalom átnevezése **mindenhol** megtörtént: a P2P koinóban (`GondolatLetrehozas` esemény), a
+prototípus kódjában, az API-útvonalakon (`/api/gondolat`, `/api/gondolatTipus`), a Mongo-modellekben
+(`Gondolat`, `GondolatTipus`, `GondolatErtekHisztogram` → `gondolats`, `gondolattipus`,
+`gondolatertekhisztograms`), a tárolt típus-értékekben (`entitasTipus: 'Gondolat'`) és a
+dokumentációban.
+
+⛔ **Öt helyen viszont a régi szó maradt, mert ott NEM a domain-fogalmat jelenti — ezeket ne írd át:**
+
+1. **A „tartalmaz" ige** (`tartalmazza`, `tartalmazó`) és a **„tartalék"** — más szavak.
+2. **A doboz belseje a felületen:** a `Modal` `{ cim, tartalom }` beállítása, a `.modal-tartalom` /
+   `#fooldal-tartalom` / `kartya-fulsav__tartalom` osztályok, a `tartalomHtml`, `tartalomDiv`,
+   `tartalomElem`, `fejlecTartalom`, `tartalomFrissitese`. Ezek bármilyen modal törzsét jelentik,
+   nem a gondolatot. *(A `Modal.js`-ben egyetlen domain-jelentésű „tartalom" sincs.)*
+3. **A szerkesztő blokk-mezője:** `blokk.tartalom` — *a blokk szövege*. ⭐ Ez **tárolt adat** is
+   (`szoveg[].tartalom` minden gondolatban), és a `SzovegSzerkeszto.get/setTartalom()` ugyanez.
+4. **Az esemény lenyomatolt része** a P2P koinóban: `TARTALOM_MEZOK`, `tartalomResz` — ez MINDEN
+   esemény „tartalma", nem csak a gondolatoké.
+5. **A `kanonikusProba.js` regressziós horgonya** — ⚠️ **befagyasztott bemenet**: ha átírod, a
+   lenyomat elszakad a 2026-08-27-i mérésétől, és a próba értelmét veszti. *(Az átnevezéskor kétszer
+   is elbukott — helyesen.)*
+
+⏸️ **És egy nyitott kérdés:** a **D3 „tartalmi réteg"** (adatosztály: tudatpont-replikált, elveszhet)
+maradt a régi néven, mert nem csak gondolatokat tartalmaz — nevek és személyes adatok is ott élnek.
+A „tartalmi módosítás" (a módosítás fajtája, szemben az áthelyezéssel) szintén maradt.
 
 ## Futtatás
 
 ### Az ÚJ program (`koino/` — Fázis 2, itt folyik a fejlesztés)
 
 ```bash
-node koino/koino.js              # az állapot: tartalmak, javaslatok, egyezmények
+node koino/koino.js              # az állapot: gondolatok, javaslatok, egyezmények
 node koino/koino.js allapot 3    # mi lesz 3 nap múlva (a döntési idő napokban mérhető)
 node koino/koino.js hozd <azonosító> [cím] [port]   # ⭐ BÖNGÉSZŐ-LEKÉRÉS: EGY entitás elhozása
                                  # (a rendes csere mindent hoz; ez válogat — a szelet-címjegyzékből
                                  #  vagy a társ-listából keres, és megjegyzi, kinél volt meg)
-node koino/meres/mind.js         # a 267 önpróba
+node koino/meres/mind.js         # a 269 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/meghivasMeres.js       # ⭐ A MEGHÍVÁSOS BELÉPÉS: védelem ÉS ár, hat változatban
                                  # (MELEGIT=1 · MEGTEVESZTETT=8 · MEGHIVO_KORLAT=10 · KOROK=60)
@@ -135,7 +162,7 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 
 - `js/kulcs/kulcsTar.js` — a kulcspár (Ed25519, natív WebCrypto): létrehozás, tárolás, mentés, visszatöltés. **A kulcs a személyazonosság** (D15) — nincs jelszó, nincs bejelentkezés.
 - `js/esemeny/kanonikusAlak.js` — ⚠️ **a legveszélyesebb részlet**: ugyanaz az adat MINDIG ugyanazokat a bájtokat adja. Szabályok: rendezett mezőnevek · **csak egész szám** · NFC-normalizált szöveg. Ha ez elromlik, két gép sosem ért egyet.
-- `js/esemeny/esemeny.js` — aláírás és ellenőrzés; az esemény **neve a tartalmának lenyomata** (mint a gitben).
+- `js/esemeny/esemeny.js` — aláírás és ellenőrzés; az esemény **neve a gondolatának lenyomata** (mint a gitben).
 - `js/tar/fajlTar.js` — a tár: **hozzáfűzhető fájl** (`esemenyek.jsonl`), soronként egy esemény. Nincs adatbázis-motor és nincs séma-migráció; a tároló csak `betolt()`-öt és `hozzafuz()`-t tud — „módosít" és „töröl" nincs, mert a modell szerint nem is létezhet.
 - `js/tar/esemenyTar.js` — a lánc kezelése; a tárolót **kívülről kapja** (első paraméter), így a szabályok egy példányban élnek. **Ellenőrizetlen esemény nem kerül a tárba**, és eseményt **soha nem módosítunk/törlünk**.
 - `js/allapot/szabalyok.js` — **a szabály-réteg**: egy helyen dönti el, mely események **számítanak** (tudatpont-keret, javaslat-jogosultság). *Amit a számítás nem ellenőriz, az nem szabály, csak illemtan* — a felület a másik gépen nem véd semmitől. A szabálysértő eseményt **nem törli**, csak kihagyja és felsorolja (D19).
@@ -162,7 +189,7 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 
 Rétegek: `routes` → `controllers` → `services` → `repositories` → `models`. Belépési pont: `server.js` (route-regisztráció, statikus frontend-kiszolgálás, MongoDB-kapcsolat, cron indítás).
 
-- `models/` — Mongoose sémák: eember, tartalom, kategoria, tartalomTipus, javaslat, ertekJavaslat, egyezmeny, szavazat, tudatpontAllokacio/Hozzarendeles, ertesites...
+- `models/` — Mongoose sémák: eember, gondolat, kategoria, gondolatTipus, javaslat, ertekJavaslat, egyezmeny, szavazat, tudatpontAllokacio/Hozzarendeles, ertesites...
 - `services/javaslat/` — a javaslat-életciklus magja; a `vegrehajtok/` almappában művelet-típusonkénti végrehajtók (athelyezesi, egyesitesi, torlesi, csomag), amiket a `javaslatVegrehajtasiService` fog össze.
 - `jobs/javaslatCronJob.js` — node-cron: lejáró javaslatok időzített lezárása.
 - `services/hierarchikusFrissitesService.js` — hierarchikus (szülő-gyerek) frissítések; a sorrend kritikus (lásd git history).
@@ -171,7 +198,7 @@ Rétegek: `routes` → `controllers` → `services` → `repositories` → `mode
 
 ES-modulok, komponens-osztályok. Belépés: `index.html` + `js/main.js`, nézetek a `js/components/foOldal.js`-ből.
 
-- `js/components/kartya/` — entitás-kártyák (TartalomKartya, JavaslatKartya, EgyezmenyKartya...), a `Pakli.js` listázza őket.
+- `js/components/kartya/` — entitás-kártyák (GondolatKartya, JavaslatKartya, EgyezmenyKartya...), a `Pakli.js` listázza őket.
 - `js/components/szovegSzerkeszto/` — blokk-alapú szerkesztő: `blokkok/` (SzovegBlokk, KepBlokk, FajlBlokk, LinkBlokk, EntitasHivatkozasBlokk), `eszkoztar/`, BlokkLista, OldalNavigacio.
 - `js/components/modals/` — Modal alaposztály + specifikus modálok (JavaslatModal); a hozzájuk tartozó HTML a `html/components/modals/` alatt.
 - CSS komponensenként külön fájlban a `css/components/` alatt, a `css/main.css` importálja őket.

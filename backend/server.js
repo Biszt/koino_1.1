@@ -19,10 +19,10 @@ require('dotenv').config();
 
 const eemberRoutes = require('./routes/eemberRoutes');
 const lokacioRoutes = require('./routes/lokacioRoutes');
-const tartalomRoutes = require('./routes/tartalomRoutes');
+const gondolatRoutes = require('./routes/gondolatRoutes');
 const tudatpontRoutes = require('./routes/tudatpontRoutes');
 const kategoriaRoutes = require('./routes/kategoriaRoutes');
-const tartalomTipusRoutes = require('./routes/tartalomTipusRoutes');
+const gondolatTipusRoutes = require('./routes/gondolatTipusRoutes');
 const javaslatRoutes = require('./routes/javaslatRoutes');
 const ertekJavaslatRoutes = require('./routes/ertekJavaslatRoutes');
 const egyezmenyRoutes = require('./routes/egyezmenyRoutes');
@@ -100,7 +100,7 @@ if (process.env.NODE_ENV === 'production') {
 // A böngésző CACHE-ELHETI a fájlt, de HASZNÁLAT ELŐTT mindig egyeztetnie kell a
 // szerverrel (feltételes kérés az ETag / Last-Modified alapján). Ha a fájl nem
 // változott, a szerver olcsó „304 Not Modified"-ot ad (nincs újraletöltés); ha
-// változott (pl. új deploy után), friss „200"-at a friss tartalommal.
+// változott (pl. új deploy után), friss „200"-at a friss gondolattal.
 // MIÉRT KELL (Csaba, 2026-08-19): enélkül a mobil böngészők agresszíven cache-elik
 // az ES-modulokat, és deploy után is a RÉGI kódot futtatják — órákig félrevezető
 // „nem működik" tüneteket okozva, holott a kód rég jó. (Nem `no-store`: azzal minden
@@ -134,10 +134,10 @@ app.use('/uploads', (req, res, next) => {
 
 app.use('/api', eemberRoutes);
 app.use('/api', lokacioRoutes);
-app.use('/api/tartalom', tartalomRoutes);
+app.use('/api/gondolat', gondolatRoutes);
 app.use('/api/tudatpont', tudatpontRoutes);
 app.use('/api/kategoria', kategoriaRoutes);
-app.use('/api/tartalomTipus', tartalomTipusRoutes);
+app.use('/api/gondolatTipus', gondolatTipusRoutes);
 app.use('/api/javaslat', javaslatRoutes);
 app.use('/api', ertekJavaslatRoutes);
 app.use('/api/egyezmeny', egyezmenyRoutes);

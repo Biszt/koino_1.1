@@ -5,12 +5,12 @@
 // ===================================
 // Felelősség: egy létrehozási kérés adataiból (adatok) kiolvassa a négy
 //   küszöbértéket, és egész számmá alakítja őket. Ha egy érték hiányzik vagy
-//   nem szám, az alapértéket használja. A kategória/tartalomtípus létrehozás
+//   nem szám, az alapértéket használja. A kategória/gondolattípus létrehozás
 //   multipart (ikon-feltöltés) kérés, ezért az értékek stringként érkeznek –
 //   itt egységesen parseInt-eljük őket.
-// Használják: kategoriaService, tartalomTipusService.
+// Használják: kategoriaService, gondolatTipusService.
 
-// Alapértelmezett küszöbértékek (azonosak a tartalomService alapértékeivel)
+// Alapértelmezett küszöbértékek (azonosak a gondolatService alapértékeivel)
 const KUSZOB_ALAPERTEKEK = {
   javaslatElfogadasiKuszob: 51,        // támogatottsági küszöb (%)
   reszveteliAranyKuszob:    51,        // részvételi arány küszöb (%)

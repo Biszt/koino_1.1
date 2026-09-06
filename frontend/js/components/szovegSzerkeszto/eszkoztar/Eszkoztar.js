@@ -129,7 +129,7 @@ return kontener;
 // PUBLIKUS API - TELJES ÁLLAPOT FRISSÍTÉSE
 // =============================================
 // A SzovegSzerkeszto hívja meg, amikor az aktív blokk megváltozik
-// (fókuszváltás, típusváltás, tartalom változás)
+// (fókuszváltás, típusváltás, gondolat változás)
 // @param {Object} blokk - Az aktív blokk adatobjektuma a BlokkListából
 // @param {Object} kozosAllapot - A közös sáv gombjainak állapota
 // @param {boolean} kozosAllapot.visszavonLehetseges

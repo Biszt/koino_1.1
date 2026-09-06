@@ -1,4 +1,4 @@
-// frontend/js/components/modal/TartalomModal.js
+// frontend/js/components/modal/GondolatModal.js
 
 // ===== IMPORTOK =====
 // Alap modal komponens – ez kezeli a megjelenítést, gombokat, hibákat
@@ -24,44 +24,44 @@ import {
 // A küszöbmezők egyedi id-előtagja ebben a modálban (nem ütközik az ErtekJavaslatModal 'ej'-jével)
 const KUSZOB_PREFIX = 'uj';
 
-// ===== TARTALOM MODAL OSZTÁLY =====
+// ===== GONDOLAT MODAL OSZTÁLY =====
 // Két módban működik:
-//   'letrehozas' → POST /api/tartalom (kezdoTudatpont kötelező)
-//   'modositas'  → PATCH /api/tartalom/:id
-class TartalomModal {
+//   'letrehozas' → POST /api/gondolat (kezdoTudatpont kötelező)
+//   'modositas'  → PATCH /api/gondolat/:id
+class GondolatModal {
 
   // ===== KONSTRUKTOR =====
   // @param {string}   kontenerAzonosito              – a div ID-ja, ahova a modal kerül
   // @param {Object}   beallitasok                    – a modal viselkedése
   // @param {string}   beallitasok.mod                – 'letrehozas' | 'modositas'
-  // @param {Object}   beallitasok.tartalomAdatok     – meglévő tartalom (csak módosításnál)
+  // @param {Object}   beallitasok.gondolatAdatok     – meglévő gondolat (csak módosításnál)
   // @param {Object}   beallitasok.szuloAdatok        – { szuloId, szuloTipus } (opcionális)
   // @param {Function} beallitasok.onSiker            – sikeres mentés után hívódik meg
   constructor(kontenerAzonosito, beallitasok = {}) {
-    console.log('TartalomModal.constructor - KEZDÉS', {
+    console.log('GondolatModal.constructor - KEZDÉS', {
       mod:        beallitasok?.mod,
-      tartalomId: beallitasok?.tartalomAdatok?._id
+      gondolatId: beallitasok?.gondolatAdatok?._id
     });
 
     this.kontenerAzonosito = kontenerAzonosito;
     this.token             = tokenLekerese();
     this.mod               = beallitasok.mod || 'letrehozas';
-    this.tartalomAdatok    = beallitasok.tartalomAdatok || null;
+    this.gondolatAdatok    = beallitasok.gondolatAdatok || null;
     this.szuloAdatok       = beallitasok.szuloAdatok    || null;
     this.onSiker           = beallitasok.onSiker        || null;
 
     this.modal    = null;
-    this.tartalomTipusok = [];
+    this.gondolatTipusok = [];
     this.kategoriak      = [];
     this.kivalasztottKategoriaIds = [];
 
     // =============================================
     // ÚJ - SzovegSzerkeszto példány referencia
     // =============================================
-    // A szövegmező helyett ez kezeli a rich text tartalmat
+    // A szövegmező helyett ez kezeli a rich text gondolatot
     this.szovegSzerkeszto = null;
 
-    console.log('TartalomModal.constructor - VÉGE', {
+    console.log('GondolatModal.constructor - VÉGE', {
       mod:      this.mod,
       vanToken: !!this.token
     });
@@ -69,14 +69,14 @@ class TartalomModal {
 
   // ===== INICIALIZÁLÁS =====
   async init() {
-    console.log('TartalomModal.init - KEZDÉS');
+    console.log('GondolatModal.init - KEZDÉS');
 
     const formHtml = await this._templateBetoltese();
     if (!formHtml) return;
 
     const cim = this.mod === 'letrehozas'
-      ? 'Új tartalom létrehozása'
-      : 'Tartalom szerkesztése';
+      ? 'Új gondolat létrehozása'
+      : 'Gondolat szerkesztése';
 
     this.modal = new Modal(this.kontenerAzonosito, {
       cim,
@@ -86,13 +86,13 @@ class TartalomModal {
         {
           felirat:   this.mod === 'letrehozas' ? 'Létrehozás' : 'Mentés',
           tipus:     'elsodleges',
-          azonosito: 'tartalom-modal-mentes-gomb',
+          azonosito: 'gondolat-modal-mentes-gomb',
           akcio:     () => this._mentes()
         },
         {
           felirat:   'Mégse',
           tipus:     'masodlagos',
-          azonosito: 'tartalom-modal-megse-gomb',
+          azonosito: 'gondolat-modal-megse-gomb',
           akcio:     () => this.modal.bezaras()
         }
       ],
@@ -102,7 +102,7 @@ class TartalomModal {
         // =============================================
         // Memóriaszivárgás elkerülése érdekében
         this._szerkesztoMegsemmisitese();
-        console.log('TartalomModal - modal bezárva');
+        console.log('GondolatModal - modal bezárva');
       }
     });
 
@@ -134,11 +134,11 @@ class TartalomModal {
 
     await this._lenyiloAdatokBetoltese();
 
-    if (this.mod === 'modositas' && this.tartalomAdatok) {
+    if (this.mod === 'modositas' && this.gondolatAdatok) {
       this._formAdatokKitoltese();
     }
 
-    console.log('TartalomModal.init - VÉGE');
+    console.log('GondolatModal.init - VÉGE');
   }
 
   // =============================================
@@ -149,13 +149,13 @@ class TartalomModal {
   // A textarea elem el van rejtve – nem töröljük, mert a
   // template-be beégetett elem, csak nem használjuk.
   _szovegSzerkesztoLetrehozasa() {
-    console.log('TartalomModal._szovegSzerkesztoLetrehozasa - KEZDÉS');
+    console.log('GondolatModal._szovegSzerkesztoLetrehozasa - KEZDÉS');
 
     // A template-ben egy üres div várja a szerkesztőt:
     // <div id="szoveg-szerkeszto-kontener"></div>
     const kontener = document.getElementById('szoveg-szerkeszto-kontener');
     if (!kontener) {
-      console.warn('TartalomModal._szovegSzerkesztoLetrehozasa - kontener nem található');
+      console.warn('GondolatModal._szovegSzerkesztoLetrehozasa - kontener nem található');
       return;
     }
 
@@ -169,7 +169,7 @@ class TartalomModal {
       // Entitás hivatkozásra koppintáskor:
       // a modal bezárul, és az adott entitás lesz a kiválasztott
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
-        console.log('TartalomModal - entitás hivatkozás koppintva:', { entitasId, entitasTipus });
+        console.log('GondolatModal - entitás hivatkozás koppintva:', { entitasId, entitasTipus });
         // Modal bezárása, majd a Pakli értesítése
         this.modal.bezaras();
         // A Pakli globálisan elérhető példányán keresztül váltunk
@@ -180,7 +180,7 @@ class TartalomModal {
       }
     });
 
-    console.log('TartalomModal._szovegSzerkesztoLetrehozasa - VÉGE');
+    console.log('GondolatModal._szovegSzerkesztoLetrehozasa - VÉGE');
   }
 
   // =============================================
@@ -188,25 +188,25 @@ class TartalomModal {
   // =============================================
   // Modal bezárásakor hívjuk meg – felszabadítja a memóriát
   _szerkesztoMegsemmisitese() {
-    console.log('TartalomModal._szerkesztoMegsemmisitese - KEZDÉS');
+    console.log('GondolatModal._szerkesztoMegsemmisitese - KEZDÉS');
 
     if (this.szovegSzerkeszto) {
       this.szovegSzerkeszto.destroy();
       this.szovegSzerkeszto = null;
     }
 
-    console.log('TartalomModal._szerkesztoMegsemmisitese - VÉGE');
+    console.log('GondolatModal._szerkesztoMegsemmisitese - VÉGE');
   }
 
   // ===== TEMPLATE BETÖLTÉSE =====
   async _templateBetoltese() {
-    console.log('TartalomModal._templateBetoltese - KEZDÉS');
+    console.log('GondolatModal._templateBetoltese - KEZDÉS');
 
     try {
-      const valasz = await fetch('./html/components/modals/tartalomModal.html');
+      const valasz = await fetch('./html/components/modals/gondolatModal.html');
 
       if (!valasz.ok) {
-        console.error('TartalomModal._templateBetoltese - HIBA: template nem található', {
+        console.error('GondolatModal._templateBetoltese - HIBA: template nem található', {
           statusz: valasz.status
         });
         return null;
@@ -214,71 +214,71 @@ class TartalomModal {
 
       const htmlSzoveg = await valasz.text();
 
-      console.log('TartalomModal._templateBetoltese - VÉGE: sikeres betöltés');
+      console.log('GondolatModal._templateBetoltese - VÉGE: sikeres betöltés');
       return htmlSzoveg;
 
     } catch (hiba) {
-      console.error('TartalomModal._templateBetoltese - VÉGE: kivétel', hiba.message);
+      console.error('GondolatModal._templateBetoltese - VÉGE: kivétel', hiba.message);
       return null;
     }
   }
 
   // ===== MEGNYITÁS =====
   megnyitas() {
-    console.log('TartalomModal.megnyitas - KEZDÉS');
+    console.log('GondolatModal.megnyitas - KEZDÉS');
     this.modal?.megnyitas();
-    console.log('TartalomModal.megnyitas - VÉGE');
+    console.log('GondolatModal.megnyitas - VÉGE');
   }
 
   // ===== BEZÁRÁS =====
   bezaras() {
-    console.log('TartalomModal.bezaras - KEZDÉS');
+    console.log('GondolatModal.bezaras - KEZDÉS');
     this.modal?.bezaras();
-    console.log('TartalomModal.bezaras - VÉGE');
+    console.log('GondolatModal.bezaras - VÉGE');
   }
 
   // ===== LENYÍLÓ ADATOK BETÖLTÉSE =====
   async _lenyiloAdatokBetoltese() {
-    console.log('TartalomModal._lenyiloAdatokBetoltese - KEZDÉS');
+    console.log('GondolatModal._lenyiloAdatokBetoltese - KEZDÉS');
 
     try {
       const [tipusValasz, kategoriaValasz] = await Promise.all([
-        apiGet('tartalomTipus', this.token),
+        apiGet('gondolatTipus', this.token),
         apiGet('kategoria',     this.token)
       ]);
 
-      this.tartalomTipusok = tipusValasz?.tartalomTipusok || [];
+      this.gondolatTipusok = tipusValasz?.gondolatTipusok || [];
       this._tipusSelectFeltoltese();
 
       this.kategoriak = kategoriaValasz?.kategoriak || [];
       this._kategoriaSelectFeltoltese();
 
-      console.log('TartalomModal._lenyiloAdatokBetoltese - VÉGE', {
-        tipusokSzama:    this.tartalomTipusok.length,
+      console.log('GondolatModal._lenyiloAdatokBetoltese - VÉGE', {
+        tipusokSzama:    this.gondolatTipusok.length,
         kategoriakSzama: this.kategoriak.length
       });
 
     } catch (hiba) {
-      console.error('TartalomModal._lenyiloAdatokBetoltese - HIBA', { hiba: hiba.message });
+      console.error('GondolatModal._lenyiloAdatokBetoltese - HIBA', { hiba: hiba.message });
     }
   }
 
   // ===== TÍPUS SELECT FELTÖLTÉSE =====
   _tipusSelectFeltoltese() {
-    console.log('TartalomModal._tipusSelectFeltoltese - KEZDÉS');
+    console.log('GondolatModal._tipusSelectFeltoltese - KEZDÉS');
 
-    const selectElem = document.getElementById('tartalom-tipus');
+    const selectElem = document.getElementById('gondolat-tipus');
     if (!selectElem) return;
 
-    this.tartalomTipusok.forEach(tipus => {
+    this.gondolatTipusok.forEach(tipus => {
       const option       = document.createElement('option');
       option.value       = tipus._id;
       option.textContent = tipus.nev;
       selectElem.appendChild(option);
     });
 
-    console.log('TartalomModal._tipusSelectFeltoltese - VÉGE', {
-      tipusokSzama: this.tartalomTipusok.length
+    console.log('GondolatModal._tipusSelectFeltoltese - VÉGE', {
+      tipusokSzama: this.gondolatTipusok.length
     });
   }
 
@@ -291,7 +291,7 @@ class TartalomModal {
   // szülője épp ki van választva.
   // @returns {Array<{kat: Object, melyseg: number}>} fa-sorrendű lista mélységgel
   _kategoriakFaSorrendbe() {
-    console.log('TartalomModal._kategoriakFaSorrendbe - KEZDÉS', {
+    console.log('GondolatModal._kategoriakFaSorrendbe - KEZDÉS', {
       osszes: this.kategoriak.length
     });
 
@@ -328,7 +328,7 @@ class TartalomModal {
       }
     });
 
-    console.log('TartalomModal._kategoriakFaSorrendbe - VÉGE', {
+    console.log('GondolatModal._kategoriakFaSorrendbe - VÉGE', {
       rendezett: eredmeny.length
     });
     return eredmeny;
@@ -336,9 +336,9 @@ class TartalomModal {
 
   // ===== KATEGÓRIA SELECT FELTÖLTÉSE =====
   _kategoriaSelectFeltoltese() {
-    console.log('TartalomModal._kategoriaSelectFeltoltese - KEZDÉS');
+    console.log('GondolatModal._kategoriaSelectFeltoltese - KEZDÉS');
 
-    const selectElem = document.getElementById('tartalom-kategoria-valaszto');
+    const selectElem = document.getElementById('gondolat-kategoria-valaszto');
     if (!selectElem) return;
 
     // Fa-sorrend (mélységgel), majd a MÁR kiválasztottakat kihagyjuk a legördülőből
@@ -364,7 +364,7 @@ class TartalomModal {
 
     selectElem.disabled = this.kivalasztottKategoriaIds.length >= 3;
 
-    console.log('TartalomModal._kategoriaSelectFeltoltese - VÉGE', {
+    console.log('GondolatModal._kategoriaSelectFeltoltese - VÉGE', {
       szabad:       szabadSzam,
       kivalasztott: this.kivalasztottKategoriaIds.length
     });
@@ -372,10 +372,10 @@ class TartalomModal {
 
   // ===== KATEGÓRIA VÁLASZTÓ BEKÖTÉSE =====
   _kategoriaValasztoBekotese() {
-    console.log('TartalomModal._kategoriaValasztoBekotese - KEZDÉS');
+    console.log('GondolatModal._kategoriaValasztoBekotese - KEZDÉS');
 
     const kontener   = document.getElementById(this.kontenerAzonosito);
-    const selectElem = kontener?.querySelector('#tartalom-kategoria-valaszto');
+    const selectElem = kontener?.querySelector('#gondolat-kategoria-valaszto');
     if (!selectElem) return;
 
     selectElem.addEventListener('change', (esemeny) => {
@@ -385,7 +385,7 @@ class TartalomModal {
       if (!kivalasztottId) return;
 
       if (this.kivalasztottKategoriaIds.length >= 3) {
-        console.warn('TartalomModal - max 3 kategória adható meg');
+        console.warn('GondolatModal - max 3 kategória adható meg');
         esemeny.target.value = '';
         return;
       }
@@ -396,12 +396,12 @@ class TartalomModal {
       esemeny.target.value = '';
     });
 
-    console.log('TartalomModal._kategoriaValasztoBekotese - VÉGE');
+    console.log('GondolatModal._kategoriaValasztoBekotese - VÉGE');
   }
 
   // ===== KATEGÓRIA CHIP HOZZÁADÁSA =====
   _kategoriaChipHozzaadasa(id, nev) {
-    console.log('TartalomModal._kategoriaChipHozzaadasa - KEZDÉS', { id, nev });
+    console.log('GondolatModal._kategoriaChipHozzaadasa - KEZDÉS', { id, nev });
 
     const chipKontener = document.getElementById('kategoria-chipek');
     if (!chipKontener) return;
@@ -428,12 +428,12 @@ class TartalomModal {
     chip.appendChild(torloGomb);
     chipKontener.appendChild(chip);
 
-    console.log('TartalomModal._kategoriaChipHozzaadasa - VÉGE', { id, nev });
+    console.log('GondolatModal._kategoriaChipHozzaadasa - VÉGE', { id, nev });
   }
 
   // ===== KATEGÓRIA ELTÁVOLÍTÁSA =====
   _kategoriaEltavolitasa(id, chip) {
-    console.log('TartalomModal._kategoriaEltavolitasa - KEZDÉS', { id });
+    console.log('GondolatModal._kategoriaEltavolitasa - KEZDÉS', { id });
 
     this.kivalasztottKategoriaIds = this.kivalasztottKategoriaIds.filter(
       kId => kId !== id
@@ -442,7 +442,7 @@ class TartalomModal {
     chip.remove();
     this._kategoriaSelectFeltoltese();
 
-    console.log('TartalomModal._kategoriaEltavolitasa - VÉGE', {
+    console.log('GondolatModal._kategoriaEltavolitasa - VÉGE', {
       maradtSzama: this.kivalasztottKategoriaIds.length
     });
   }
@@ -452,15 +452,15 @@ class TartalomModal {
   // MÓDOSÍTVA - szöveg betöltése SzovegSzerkesztőbe
   // =============================================
   _formAdatokKitoltese() {
-    console.log('TartalomModal._formAdatokKitoltese - KEZDÉS', {
-      tartalomId: this.tartalomAdatok?._id
+    console.log('GondolatModal._formAdatokKitoltese - KEZDÉS', {
+      gondolatId: this.gondolatAdatok?._id
     });
 
-    const adatok = this.tartalomAdatok;
+    const adatok = this.gondolatAdatok;
     if (!adatok) return;
 
     // Cím mező – változatlan
-    const cimInput = document.getElementById('tartalom-cim');
+    const cimInput = document.getElementById('gondolat-cim');
     if (cimInput) cimInput.value = adatok.cim || '';
 
     // =============================================
@@ -484,9 +484,9 @@ class TartalomModal {
     }
 
     // Típus select – változatlan
-    const tipusSelect = document.getElementById('tartalom-tipus');
-    if (tipusSelect && adatok.tartalomTipusId) {
-      tipusSelect.value = adatok.tartalomTipusId;
+    const tipusSelect = document.getElementById('gondolat-tipus');
+    if (tipusSelect && adatok.gondolatTipusId) {
+      tipusSelect.value = adatok.gondolatTipusId;
     }
 
     // Kategóriák – változatlan
@@ -501,42 +501,42 @@ class TartalomModal {
       this._kategoriaSelectFeltoltese();
     }
 
-    console.log('TartalomModal._formAdatokKitoltese - VÉGE');
+    console.log('GondolatModal._formAdatokKitoltese - VÉGE');
   }
 
   // ===== VALIDÁLÁS =====
   _validalas() {
-    console.log('TartalomModal._validalas - KEZDÉS');
+    console.log('GondolatModal._validalas - KEZDÉS');
 
-    const cim = document.getElementById('tartalom-cim')?.value?.trim();
+    const cim = document.getElementById('gondolat-cim')?.value?.trim();
     if (!cim) {
-      console.log('TartalomModal._validalas - VÉGE (hiba: cím hiányzik)');
+      console.log('GondolatModal._validalas - VÉGE (hiba: cím hiányzik)');
       return 'A cím megadása kötelező.';
     }
 
     if (cim.length > 200) {
-      console.log('TartalomModal._validalas - VÉGE (hiba: cím túl hosszú)');
+      console.log('GondolatModal._validalas - VÉGE (hiba: cím túl hosszú)');
       return 'A cím maximum 200 karakter lehet.';
     }
 
     if (this.mod === 'letrehozas') {
       const kezdoTudatpont = parseInt(
-        document.getElementById('tartalom-kezdo-tudatpont')?.value
+        document.getElementById('gondolat-kezdo-tudatpont')?.value
       );
       if (!kezdoTudatpont || kezdoTudatpont < 1) {
-        console.log('TartalomModal._validalas - VÉGE (hiba: érvénytelen tudatpont)');
+        console.log('GondolatModal._validalas - VÉGE (hiba: érvénytelen tudatpont)');
         return 'Legalább 1 kezdő tudatpontot meg kell adni.';
       }
 
       // Küszöbértékek ellenőrzése (a közös segéddel, a backend szabályaival azonos)
       const kuszobHiba = kuszobMezokValidalasa(kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
       if (kuszobHiba) {
-        console.log('TartalomModal._validalas - VÉGE (hiba: küszöbérték)', { kuszobHiba });
+        console.log('GondolatModal._validalas - VÉGE (hiba: küszöbérték)', { kuszobHiba });
         return kuszobHiba;
       }
     }
 
-    console.log('TartalomModal._validalas - VÉGE (sikeres)');
+    console.log('GondolatModal._validalas - VÉGE (sikeres)');
     return null;
   }
 
@@ -545,10 +545,10 @@ class TartalomModal {
   // MÓDOSÍTVA - szöveg lekérése SzovegSzerkesztőből
   // =============================================
   _adatokOsszegyujtese() {
-    console.log('TartalomModal._adatokOsszegyujtese - KEZDÉS');
+    console.log('GondolatModal._adatokOsszegyujtese - KEZDÉS');
 
-    const cim     = document.getElementById('tartalom-cim')?.value?.trim();
-    const tipusId = document.getElementById('tartalom-tipus')?.value || null;
+    const cim     = document.getElementById('gondolat-cim')?.value?.trim();
+    const tipusId = document.getElementById('gondolat-tipus')?.value || null;
 
     // =============================================
     // ÚJ - Szöveg lekérése a SzovegSzerkesztőből
@@ -561,7 +561,7 @@ class TartalomModal {
     const adatok = {
       cim,
       szoveg,              // Már nem string, hanem blokkok tömbje
-      tartalomTipusId: tipusId || undefined,
+      gondolatTipusId: tipusId || undefined,
       kategoriaIds:    [...this.kivalasztottKategoriaIds]
     };
 
@@ -572,15 +572,15 @@ class TartalomModal {
 
     if (this.mod === 'letrehozas') {
       adatok.kezdoTudatpont = parseInt(
-        document.getElementById('tartalom-kezdo-tudatpont')?.value
+        document.getElementById('gondolat-kezdo-tudatpont')?.value
       );
 
-      // A négy küszöbérték hozzáfűzése – a backend tartalomLetrehozasa ezekből
+      // A négy küszöbérték hozzáfűzése – a backend gondolatLetrehozasa ezekből
       // hozza létre a létrehozó érték javaslatát és a kezdeti hisztogramot.
       Object.assign(adatok, kuszobMezokOsszegyujtese(KUSZOB_PREFIX));
     }
 
-    console.log('TartalomModal._adatokOsszegyujtese - VÉGE', {
+    console.log('GondolatModal._adatokOsszegyujtese - VÉGE', {
       cim,
       szovegBlokkokSzama: szoveg.length,
       kategoriaIdsSzama:  adatok.kategoriaIds.length
@@ -590,7 +590,7 @@ class TartalomModal {
 
   // ===== MENTÉS =====
   async _mentes() {
-    console.log('TartalomModal._mentes - KEZDÉS', { mod: this.mod });
+    console.log('GondolatModal._mentes - KEZDÉS', { mod: this.mod });
 
     const hibaUzenet = this._validalas();
     if (hibaUzenet) {
@@ -615,26 +615,26 @@ class TartalomModal {
 
       let eredmeny;
       if (this.mod === 'letrehozas') {
-        eredmeny = await apiPost('tartalom', adatok, this.token);
+        eredmeny = await apiPost('gondolat', adatok, this.token);
       } else {
-        const tartalomId = this.tartalomAdatok._id;
-        eredmeny = await apiPatch(`tartalom/${tartalomId}`, adatok, this.token);
+        const gondolatId = this.gondolatAdatok._id;
+        eredmeny = await apiPatch(`gondolat/${gondolatId}`, adatok, this.token);
       }
 
       this.modal.betoltesBeallitasa(false);
       this.modal.bezaras();
 
       if (typeof this.onSiker === 'function') {
-        this.onSiker(eredmeny?.tartalom);
+        this.onSiker(eredmeny?.gondolat);
       }
 
-      console.log('TartalomModal._mentes - VÉGE (sikeres)', {
+      console.log('GondolatModal._mentes - VÉGE (sikeres)', {
         mod:        this.mod,
-        tartalomId: eredmeny?.tartalom?._id
+        gondolatId: eredmeny?.gondolat?._id
       });
 
     } catch (hiba) {
-      console.error('TartalomModal._mentes - HIBA', { hiba: hiba.message });
+      console.error('GondolatModal._mentes - HIBA', { hiba: hiba.message });
       // A betöltés-jelző leállítása, hogy hiba (pl. sikertelen kép-feltöltés)
       // után se ragadjon be a pörgő spinner.
       this.modal.betoltesBeallitasa(false);
@@ -647,4 +647,4 @@ class TartalomModal {
 }
 
 // ===== EXPORTÁLÁS =====
-export default TartalomModal;
+export default GondolatModal;

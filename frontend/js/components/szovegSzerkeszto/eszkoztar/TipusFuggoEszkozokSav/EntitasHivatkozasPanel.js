@@ -134,9 +134,9 @@ class EntitasHivatkozasPanel {
 
     // Elérhető entitástípusok — ikonnal és névvel
     const tipusok = [
-      { ertek: 'Tartalom',      felirat: '📄 Tartalom' },
+      { ertek: 'Gondolat',      felirat: '📄 Gondolat' },
       { ertek: 'Kategoria',     felirat: '🏷️ Kategória' },
-      { ertek: 'TartalomTipus', felirat: '🧩 Tartalom típus' },
+      { ertek: 'GondolatTipus', felirat: '🧩 Gondolat típus' },
       { ertek: 'Egyezmeny',     felirat: '🤝 Egyezmény' },
       { ertek: 'Javaslat',      felirat: '💡 Javaslat' },
     ];
@@ -185,7 +185,7 @@ class EntitasHivatkozasPanel {
       const idInput     = this.eszkozReferenciák['entitasId'];
       const entitasId   = idInput ? idInput.value.trim() : '';
       const selectElem  = this.eszkozReferenciák['entitasTipus'];
-      const entitasTipus = selectElem ? selectElem.value : 'Tartalom';
+      const entitasTipus = selectElem ? selectElem.value : 'Gondolat';
 
       // Validáció: az entitásId nem lehet üres
       if (!entitasId) {
@@ -347,9 +347,9 @@ _betumeretGombokatFrissit(aktivMeret) {
   // =============================================
   // PRIVÁT - KERESÉS FUTTATÁSA
   // =============================================
-  // A három cím-viselő típuson keres (Tartalom/Kategória/Tartalomtípus); a kiválasztás
+  // A három cím-viselő típuson keres (Gondolat/Kategória/Gondolattípus); a kiválasztás
   // állítja a típus-selectet. Az Egyezmény/Javaslat típus a nyers ID úttal érhető el.
-  // @param {string} szoveg - A keresőmező tartalma
+  // @param {string} szoveg - A keresőmező gondolata
   async _keresesFuttatasa(szoveg) {
     const tisztitott = (szoveg ?? '').trim();
     console.log('EntitasHivatkozasPanel._keresesFuttatasa - KEZDÉS', { tisztitott });
@@ -368,7 +368,7 @@ _betumeretGombokatFrissit(aktivMeret) {
 
     const talalatok = await entitasKereses(
       tisztitott,
-      ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      ['Gondolat', 'Kategoria', 'GondolatTipus'],
       token
     );
     if (sorszam !== this._keresSorszam) return; // közben új keresés indult

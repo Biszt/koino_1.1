@@ -11,9 +11,9 @@ import { masodpercFelirat } from '../../utils/idoFormazo.js';
 // Entitástípus → API útvonal a /reszletek végponthoz.
 // A backend mind az öt típusnak biztosít részletek-végpontot.
 const UTVONAL_TIPUSHOZ = {
-  Tartalom:      'tartalom',
+  Gondolat:      'gondolat',
   Kategoria:     'kategoria',
-  TartalomTipus: 'tartalomTipus',
+  GondolatTipus: 'gondolatTipus',
   Javaslat:      'javaslat',
   Egyezmeny:     'egyezmeny'
 };
@@ -44,9 +44,9 @@ const SZAVAZAT_FELIRAT = {
 
 // Az érintett entitások típus-feliratai.
 const ENTITAS_TIPUS_FELIRAT = {
-  Tartalom:      'Tartalom',
+  Gondolat:      'Gondolat',
   Kategoria:     'Kategória',
-  TartalomTipus: 'Tartalomtípus'
+  GondolatTipus: 'Gondolattípus'
 };
 
 // ===== RÉSZLETEK MODAL OSZTÁLY =====
@@ -54,7 +54,7 @@ const ENTITAS_TIPUS_FELIRAT = {
 //  1. Megnyitáskor lekéri az entitás `/reszletek` adatait a backendről.
 //  2. Entitástípusonként „címke: érték" sorokban jeleníti meg.
 // Használják: a kártyák „Részletes adatok" menüpontja.
-// Jelenleg a Tartalom típus teljes; a többi típus fokozatosan bővül.
+// Jelenleg a Gondolat típus teljes; a többi típus fokozatosan bővül.
 class ReszletekModal {
 
   // ===== KONSTRUKTOR =====
@@ -174,7 +174,7 @@ class ReszletekModal {
       // típusnál lekérjük (nem kritikus: ha nincs adat vagy hibázik, a küszöb
       // szakasz egyszerűen kimarad – pl. ha az entitáshoz még nincs hisztogram).
       let ertekAdatok = null;
-      if (['Tartalom', 'Kategoria', 'TartalomTipus'].includes(this.entitasTipus)) {
+      if (['Gondolat', 'Kategoria', 'GondolatTipus'].includes(this.entitasTipus)) {
         try {
           const ertekValasz = await apiGet(`ertekJavaslat/reszletek/${this.entitasTipus}/${this.entitasId}`, this.token);
           ertekAdatok = ertekValasz?.aktualisErtekek ?? null;
@@ -207,14 +207,14 @@ class ReszletekModal {
       return;
     }
 
-    // A Tartalom, Kategória és Tartalomtípus típusok teljesek;
+    // A Gondolat, Kategória és Gondolattípus típusok teljesek;
     // a Javaslat és Egyezmény nézet fokozatosan bővül.
-    if (this.entitasTipus === 'Tartalom') {
-      this._renderTartalom(lista, data, ertekAdatok);
+    if (this.entitasTipus === 'Gondolat') {
+      this._renderGondolat(lista, data, ertekAdatok);
     } else if (this.entitasTipus === 'Kategoria') {
       this._renderKategoria(lista, data, ertekAdatok);
-    } else if (this.entitasTipus === 'TartalomTipus') {
-      this._renderTartalomTipus(lista, data, ertekAdatok);
+    } else if (this.entitasTipus === 'GondolatTipus') {
+      this._renderGondolatTipus(lista, data, ertekAdatok);
     } else if (this.entitasTipus === 'Javaslat') {
       this._renderJavaslat(lista, data);
     } else if (this.entitasTipus === 'Egyezmeny') {
@@ -226,22 +226,22 @@ class ReszletekModal {
     console.log('ReszletekModal._render - VÉGE');
   }
 
-  // ===== TARTALOM RÉSZLETEI =====
-  // A backend válasza: { tartalom, tudatpont }.
+  // ===== GONDOLAT RÉSZLETEI =====
+  // A backend válasza: { gondolat, tudatpont }.
   // A típus/kategória NEVEKET a kártya adataiból vesszük (a /reszletek nyers ID-kat ad).
-  _renderTartalom(lista, data, ertekAdatok = null) {
-    const tartalom  = data.tartalom  ?? {};
+  _renderGondolat(lista, data, ertekAdatok = null) {
+    const gondolat  = data.gondolat  ?? {};
     const tudatpont = data.tudatpont ?? {};
     const adatok    = this.entitas?.adatok ?? {};
 
     // --- ALAPADATOK ---
-    this._sor(lista, 'Cím',            adatok.cim ?? tartalom.cim ?? '—');
-    this._sor(lista, 'Tartalomtípus',  this._tipusFelirat(adatok));
+    this._sor(lista, 'Cím',            adatok.cim ?? gondolat.cim ?? '—');
+    this._sor(lista, 'Gondolattípus',  this._tipusFelirat(adatok));
     this._sor(lista, 'Kategóriák',     this._kategoriakFelirat(adatok));
-    this._szerkesztokSor(lista,        tartalom.szerkesztok);
-    this._sor(lista, 'Létrehozva',     this._datumFelirat(tartalom.letrehozva));
+    this._szerkesztokSor(lista,        gondolat.szerkesztok);
+    this._sor(lista, 'Létrehozva',     this._datumFelirat(gondolat.letrehozva));
     // Itt (és CSAK itt) jelezzük a különbséget: a kártyán csak egy dátum van.
-    this._sor(lista, 'Módosítva',      this._datumFelirat(tartalom.modositva ?? tartalom.letrehozva));
+    this._sor(lista, 'Módosítva',      this._datumFelirat(gondolat.modositva ?? gondolat.letrehozva));
 
     // --- TUDATPONT ---
     this._szakaszCim(lista, 'Tudatpont');
@@ -273,18 +273,18 @@ class ReszletekModal {
     this._renderNevesEntitas(lista, kategoria, tudatpont, 'Kategória', ertekAdatok);
   }
 
-  // ===== TARTALOMTÍPUS RÉSZLETEI =====
-  // A backend válasza: { tartalomTipus, tudatpont }.
-  _renderTartalomTipus(lista, data, ertekAdatok = null) {
-    const tartalomTipus = data.tartalomTipus ?? {};
+  // ===== GONDOLATTÍPUS RÉSZLETEI =====
+  // A backend válasza: { gondolatTipus, tudatpont }.
+  _renderGondolatTipus(lista, data, ertekAdatok = null) {
+    const gondolatTipus = data.gondolatTipus ?? {};
     const tudatpont     = data.tudatpont     ?? {};
-    this._renderNevesEntitas(lista, tartalomTipus, tudatpont, 'Tartalomtípus', ertekAdatok);
+    this._renderNevesEntitas(lista, gondolatTipus, tudatpont, 'Gondolattípus', ertekAdatok);
   }
 
   // ===== KÖZÖS: NÉVVEL RENDELKEZŐ EGYSZERŰ ENTITÁS =====
-  // A Kategória és a Tartalomtípus szerkezete azonos (név, ikon, leírás,
+  // A Kategória és a Gondolattípus szerkezete azonos (név, ikon, leírás,
   // létrehozó, dátum, tudatpont), ezért közös metódus rendereli mindkettőt.
-  // @param {Object} entitasObj   - a backend kategoria / tartalomTipus objektuma
+  // @param {Object} entitasObj   - a backend kategoria / gondolatTipus objektuma
   // @param {Object} tudatpont    - { eemberHozzajarulas, osszesPont, hozzajarulokSzama }
   // @param {string} tipusFelirat - emberi típusnév a „Típus" sorba
   _renderNevesEntitas(lista, entitasObj, tudatpont, tipusFelirat, ertekAdatok = null) {
@@ -350,7 +350,7 @@ class ReszletekModal {
     this._sor(lista, 'Szavazatod',  SZAVAZAT_FELIRAT[sajatSzavazat?.szavazatTipus] ?? 'Még nem szavaztál');
 
     // Az indoklás (rich text) szándékosan NEM jelenik meg itt: a kártya
-    // body-jában úgyis látszik, és összetett tartalom is lehet.
+    // body-jában úgyis látszik, és összetett gondolat is lehet.
 
     // --- AZONOSÍTÓ ---
     this._szakaszCim(lista, 'Azonosító');
@@ -395,7 +395,7 @@ class ReszletekModal {
     this._sor(lista, 'Hierarchikus összes', this._szam(this.entitas?.hierarchikusOsszesPont));
 
     // Az indoklás (rich text) szándékosan NEM jelenik meg itt: a kártya
-    // body-jában úgyis látszik, és összetett tartalom is lehet.
+    // body-jában úgyis látszik, és összetett gondolat is lehet.
 
     // --- AZONOSÍTÓ ---
     this._szakaszCim(lista, 'Azonosító');
@@ -441,7 +441,7 @@ class ReszletekModal {
   }
 
   // ===== SEGÉD: SZERKESZTŐK SORA (több név, színezve) =====
-  // Egy entitásnak (tartalom / kategória / tartalomtípus) több szerkesztője lehet.
+  // Egy entitásnak (gondolat / kategória / gondolattípus) több szerkesztője lehet.
   // A neveket egymás ALÁ írjuk:
   //   - a LEGFELSŐ (0.) az utolsó szerkesztő → mindig ZÖLD,
   //   - az alatta lévők színe a szerint, hogy az UTOLJÁRA elfogadott módosításnál
@@ -545,8 +545,8 @@ class ReszletekModal {
 
   // ===== KÜSZÖBÉRTÉK SZAKASZ (MEDIÁN) =====
   // A négy küszöb aktuális (medián) értéke; mindegyik mellett „részletek" gomb,
-  // ami az érték-javaslatok eloszlását nyitja meg. Közös a Tartalom, Kategória
-  // és Tartalomtípus nézethez. Ha nincs ertekAdatok (pl. nincs hisztogram), kimarad.
+  // ami az érték-javaslatok eloszlását nyitja meg. Közös a Gondolat, Kategória
+  // és Gondolattípus nézethez. Ha nincs ertekAdatok (pl. nincs hisztogram), kimarad.
   _kuszobSzakasz(lista, ertekAdatok) {
     if (!ertekAdatok) return;
 
@@ -613,7 +613,7 @@ class ReszletekModal {
 
   // ===== SEGÉD: TÍPUS FELIRAT =====
   _tipusFelirat(adatok) {
-    const tipus = adatok?.tartalomTipus;
+    const tipus = adatok?.gondolatTipus;
     if (!tipus || !tipus.nev) return '—';
     return tipus.ikon ? `${tipus.ikon} ${tipus.nev}` : tipus.nev;
   }

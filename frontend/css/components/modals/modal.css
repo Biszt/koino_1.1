@@ -40,7 +40,7 @@
   /* Maximális magasság – ne lógjon ki a képernyőből */
   max-height: 85dvh;
 
-  /* Tartalom görgethetősége, ha a form hosszú */
+  /* Gondolat görgethetősége, ha a form hosszú */
   overflow-y: auto;
 
   /* Krémszín háttér – a platform surface színe */
@@ -83,7 +83,7 @@
   width: clamp(300px, 90vw, 480px);
 }
 
-/* Széles – tartalomModal, kategóriaModal, részletes formokhoz */
+/* Széles – gondolatModal, kategóriaModal, részletes formokhoz */
 .modal-panel--szeles {
   width: clamp(300px, 92vw, 640px);
 }
@@ -97,7 +97,7 @@
 }
 
 /* Teljes – teljes képernyős nézetekhez (Struktúra nézet, Síkidom nézet).
-   A tartalom (a modal-tartalom) tölti ki a fejléc alatti egész területet;
+   A gondolat (a modal-tartalom) tölti ki a fejléc alatti egész területet;
    a nézetkomponens gondoskodik a saját belső elrendezéséről. */
 .modal-panel--teljes {
   width: 100vw;
@@ -135,7 +135,7 @@
 
   padding: var(--space-5) var(--space-6);
 
-  /* Elválasztó vonal a tartalom előtt */
+  /* Elválasztó vonal a gondolat előtt */
   border-bottom: 1px solid var(--color-divider);
 }
 
@@ -216,8 +216,8 @@
   border-bottom: 1px solid var(--color-error);
 }
 
-/* ===== MODAL TARTALOM ===== */
-/* Az átadott form vagy egyéb tartalom helye */
+/* ===== MODAL GONDOLAT ===== */
+/* Az átadott form vagy egyéb gondolat helye */
 .modal-tartalom {
   padding: var(--space-6);
 }
@@ -233,7 +233,7 @@
 
   padding: var(--space-4) var(--space-6);
 
-  /* Elválasztó vonal a tartalom alatt */
+  /* Elválasztó vonal a gondolat alatt */
   border-top: 1px solid var(--color-divider);
 }
 

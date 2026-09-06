@@ -32,13 +32,13 @@ const path = require('path');
 const MODELL_MAPPA = path.join(__dirname, '..', 'models');
 
 // Az öt érvényes réteg (docs/adat_osztalyozas.md). Más érték HIBA.
-const ERVENYES_RETEGEK = ['mag', 'lanc', 'tartalom', 'szamitott', 'helyi'];
+const ERVENYES_RETEGEK = ['mag', 'lanc', 'gondolat', 'szamitott', 'helyi'];
 
 // Rövid emlékeztető a rétegekhez — a kimenetben segít, hogy ne kelljen a doksit nyitni
 const RETEG_LEIRAS = {
   mag:       'tartós mag — az elfelejtése maga a csalás (D14)',
   lanc:      'saját aláírt eseménylánc — nem kell globális egyetértés (D17)',
-  tartalom:  'tudatpont-replikált, elfelejthető (D3/D14)',
+  gondolat:  'tudatpont-replikált, elfelejthető (D3/D14)',
   szamitott: 'determinisztikusan újraszámolható — nem igazságforrás (D17)',
   helyi:     'soha nem hagyja el a szervert/készüléket'
 };

@@ -69,7 +69,7 @@ router.get(
       next();
     }
   },
-  ertekJavaslatController.tartalomErtekReszletei
+  ertekJavaslatController.gondolatErtekReszletei
 );
 
 // ===== ROUTER EXPORTÁLÁSA =====

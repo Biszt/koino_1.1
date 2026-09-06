@@ -31,8 +31,8 @@ class ErtekJavaslatRepository {
   /**
    * Egy eember érték javaslatának lekérése egy adott entitáshoz
    * @param {string} eemberId - eEmber ID
-   * @param {string} entitasId - Entitás ID (tartalom/kategória/tartalomtípus)
-   * @param {string} entitasTipus - Entitás típusa ('Tartalom' | 'Kategoria' | 'TartalomTipus')
+   * @param {string} entitasId - Entitás ID (gondolat/kategória/gondolattípus)
+   * @param {string} entitasTipus - Entitás típusa ('Gondolat' | 'Kategoria' | 'GondolatTipus')
    * @returns {Promise<Object|null>}Érték javaslat dokumentum vagy null
    */
   async findByeEmberAndEntitas(eemberId, entitasId, entitasTipus) {

@@ -15,8 +15,8 @@
 class TortenetKezelo {
 
   // --- KONSTRUKTOR ---
-  // @param {Function} snapshotKeszito - SzovegSzerkeszto.getTartalom
-  // @param {Function} allapotVisszaall - SzovegSzerkeszto._tartalomVisszaallitasa
+  // @param {Function} snapshotKeszito - SzovegSzerkeszto.getGondolat
+  // @param {Function} allapotVisszaall - SzovegSzerkeszto._gondolatVisszaallitasa
   // @param {HTMLElement} teruletElem - A szerkesztő területe, itt figyelünk Ctrl+Z/Y-ra
   // @param {Object} opciak - Opcionális beállítások
   // @param {Function} opciak.allapotFrissites - Visszavonás/újra után hívódik, frissíti az Eszköztár gombjait

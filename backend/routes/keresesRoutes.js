@@ -21,7 +21,7 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ===================================
 
 // Cím/név alapú entitás-keresés
-// GET /api/kereses?q=<szoveg>&tipusok=Tartalom,Kategoria,TartalomTipus&limit=10
+// GET /api/kereses?q=<szoveg>&tipusok=Gondolat,Kategoria,GondolatTipus&limit=10
 // VÉDETT - csak bejelentkezett eemberek
 router.get('/kereses', authMiddleware, keresesController.entitasKereses);
 

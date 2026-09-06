@@ -7,7 +7,7 @@ döntésként, a nyitott kérdések itt válnak tervezési feladattá.*
 ## A két fázis
 
 - **Fázis 1 — központi szerveres koino** (a jelenlegi koino_1.1: Node/Express/MongoDB,
-  vanilla JS frontend). Célja: a döntéshozatali mechanika (tartalom → javaslat →
+  vanilla JS frontend). Célja: a döntéshozatali mechanika (gondolat → javaslat →
   szavazás → egyezmény; tudatpont; küszöbértékek; bizonyossági mutató) kifejlesztése és
   élesben bizonyítása az első közösséggel. Fejlesztését a
   [fejlesztesi_terv.md](fejlesztesi_terv.md) vezeti.
@@ -99,7 +99,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > ### 📐 A LEVEZETÉS (2026-08-31): NEM SZINKRONIZÁLUNK, HANEM BEJÁRUNK
 >
 > **Terv: [`skalazas_terv.md`](skalazas_terv.md)** — a milliárdos lépték szerkezete. *A cél
-> eddig három helyen szerepelt (N11, D21, D22), de a koino **nagy része** — tartalom,
+> eddig három helyen szerepelt (N11, D21, D22), de a koino **nagy része** — gondolat,
 > tudatpont, szavazás, egyezmény — sosem kapott skálázási szerkezetet.*
 >
 > **A terv első változata megbukott, és Csaba buktatta le:** *„az 5 percenkénti egyeztetés
@@ -115,14 +115,14 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > **entitás-szinten**. *Ugyanaz a gépezet, egy szinttel odébb.*
 >
 > ⭐⭐ **És ebből következik a legfontosabb állítás:** ha minden entitás viszi a példányai
-> címeit, és felsorolja a gyerekeit, akkor **a tartalom gráfja MAGA az útvonal-gráf** — a
+> címeit, és felsorolja a gyerekeit, akkor **a gondolat gráfja MAGA az útvonal-gráf** — a
 > koino elvezet önmagához. **A BEJÁRÁSHOZ nem kell DHT, jelzőpont, sem globális
 > entitás-index.** ⚠️ *(A KERESÉSHEZ viszont kell — ez a II. réteg; korábban ezt tévesen úgy
 > fogalmaztam, hogy „nem kell DHT".)*
 >
 > ### 📐 …ÉS A MÁSODIK BUKÁS: „ágankénti mutató"
 >
-> A kereséshez mutató-réteg kell (metaadat, a tartalom törzse nélkül) — mert a bejárás és a
+> A kereséshez mutató-réteg kell (metaadat, a gondolat törzse nélkül) — mert a bejárás és a
 > keresés **két különböző dolog**: a bejáráshoz tudni kell, **honnan indulj**, a kereséshez
 > nem. Kiszámoltam, hogy a mutató ~100 000 főnél nem fér el egy telefonon, és ebből azt
 > vezettem le, hogy **ágankénti** mutatókra kell bontani.
@@ -209,7 +209,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > pénzhez kell.
 >
 > ⭐ **CSABA FELVETÉSE, ami ebből nőtt ki — LÁTHATÓSÁGI KÜSZÖB:** *„a trol támadások, vagy
-> illetlen tartalmak, csak akkor lesznek elérhetőek, ha legalább 2-en próbálják meg
+> illetlen gondolatok, csak akkor lesznek elérhetőek, ha legalább 2-en próbálják meg
 > közzétenni."* Strukturális védelem moderálás nélkül — de ⚠️ **a mechanizmus vak: ugyanúgy
 > elnyomja az egyedüli igazat mondót, ahogy a trollt**, és ha a küszöb közösségi paraméter
 > lesz, egy többség feljebb tolhatja → **letagadható cenzúra**.
@@ -289,7 +289,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >
 > Érdemes külön felírni, mert minden jövőbeli szabálynál elő fog:
 >
-> > **Egy tartalom-vak szabály ugyanúgy sújtja a becsületest, mint a támadót.**
+> > **Egy gondolat-vak szabály ugyanúgy sújtja a becsületest, mint a támadót.**
 >
 > | Hol jött elő | Kit sújt a támadón kívül |
 > |---|---|
@@ -513,7 +513,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > > **A tömeges letöltésnek is át kell mennie a résen. A TCP legyen ráadás, sose feltétel.**
 >
 > Ez ugyanaz a mondat, mint a 2. szabály („cserélhető és elhagyható"), csak most az
-> **entitás-tartalomra** is kiterjesztve. ⚠️ Ez **nem tiltja** a TCP-t: ahol van
+> **entitás-gondolatra** is kiterjesztve. ⚠️ Ez **nem tiltja** a TCP-t: ahol van
 > fogadóképes társ, ott nyugodtan menjen azon — de semmi nem múlhat rajta.
 >
 > #### Amit ez KÖTELEZŐVÉ tesz: az ablak
@@ -537,7 +537,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >
 > #### ⭐ És a valódi válasz a sebességre: SOK TÁRS, nem egy gyors
 >
-> Itt a D33 logikája tér vissza, most a tartalomra. A **D26** miatt a letöltés előtt tudod a
+> Itt a D33 logikája tér vissza, most a gondolatra. A **D26** miatt a letöltés előtt tudod a
 > fájl **lenyomatát és méretét** — ebből következik, amit a torrent évtizedek óta csinál:
 > a fájl **darabokra bontható, darabonként ellenőrizhető, és több társtól párhuzamosan
 > szedhető össze**. Ha 14 társad van, egyiküknek sem kell gyorsnak lennie — és egyiküknek
@@ -831,7 +831,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > #### ✅ D46 (Csaba, 2026-09-04) — VISSZAVONÁS HELYETT BIZONYTALANRA JELÖLÉS + GONDOLAT
 >
 > **A tanú nem vonhat vissza, hanem BIZONYTALANRA JELÖLHET** — és mellé **létrehozhat egy
-> gondolatot** *(ma: „tartalom", lásd a [`jegyzetek.md`](jegyzetek.md) 2026-09-04-i
+> gondolatot** *(ma: „gondolat", lásd a [`jegyzetek.md`](jegyzetek.md) 2026-09-04-i
 > bejegyzését)*, **amivel megosztja a felelősséget a közösséggel**.
 >
 > A kérdés kényszere: ha a visszavonás kiléptet, akkor `k` ember összebeszélve **bárkit
@@ -998,7 +998,7 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 >
 > #### ⭐⭐⭐ D56 — A KÉT LÉPCSŐ
 >
-> - **1. lépcső, a tagság:** **egy meghívó**, és **minden mehet** — tartalom, tudatpont,
+> - **1. lépcső, a tagság:** **egy meghívó**, és **minden mehet** — gondolat, tudatpont,
 >   javaslat, szavazat. ⭐ Nincs kapu, mert a kapu úgysem véd.
 > - **2. lépcső, a pénztárca:** **három tanúsítás** felhatalmazott tanúsítótól. ⭐ Ez a
 >   **D11** szó szerinti megvalósulása: *a pénz csak bizonyított identitás után* — eddig
@@ -1282,12 +1282,12 @@ megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 >   kell lenniük"*. Ezzel a *„ne újraírás legyen, hanem feloldódás"* vezérelv elesett, és
 >   helyébe lépett: **a régi koino a prototípus, az új a készüléken kezdődik.**
 > - **D23** — a nyelv **JavaScript marad**; a nyelvhatárt a H6 réteg-besorolása jelöli ki
->   (a `mag` 8 mező, a `tartalom` 73 — nem a programot kell nyelvre választani, legfeljebb
+>   (a `mag` 8 mező, a `gondolat` 73 — nem a programot kell nyelvre választani, legfeljebb
 >   a magot).
 > - **D24** — a meglévő adat sem költözik: **új regisztráció** lesz. Ezzel a **Szakasz 0
 >   (híd-feladatok) lezárult**, egyetlen elkészült termékkel: a **H6 adat-osztályozással**.
 > - **D25** — **A BELÉPŐ TÉR**: a koinók családfája. Az azonosság és a tanúsítások
->   **közösek a térben**, a küszöbök, szabályok, tartalom és a pénz **koinónként külön**.
+>   **közösek a térben**, a küszöbök, szabályok, gondolat és a pénz **koinónként külön**.
 >   *Az azonosság közös, a jogosultság helyi.* A tér a **tartós mag második hasznosítása**
 >   — új mechanizmus nélkül.
 >
@@ -1390,7 +1390,7 @@ működő közösség adja majd.*
 | D16 | Pénz-tempó | Az irreverzibilitás DÖNTÉS, nem törvény: a nagyobb átutalás késleltetve, nyilvánosan, az ablakban megtámadhatóan megy — értesítéssel, **külön csatornán**. A kulcslopás így túlélhető. |
 | D17 | Konszenzus | A globális egyetértés hatóköre = a tartós mag (D14), semmi más; minden egyéb saját lánc-következetesség + determinisztikus számítás. **A konszenzus biztonsága = az identitás-réteg biztonsága** → az identitás a gerinc, elsőként kell állnia. |
 | D18 | Identitás | **Pozíció, nem darabszám** (távolság-szabály, Duniter-precedens) + **folytonos igazolás** (kockázati korlát, SOHA nem hang). Megújítás helyett **tevékenység = életjel**; a halál megtámadható tanúsítás. ⚠️ Az aláírás a KULCS használatát bizonyítja, nem az EMBER életét (kulcs-öröklés) → a védelem a D20 ösztönző-szerkezete. **Osztalék csak hitelesítettnek** — birtoklás, keresés, befektetés mindenkinek. |
-| D19 | Rendszer-tartalom | A program **BEJELENTŐ, nem BÍRÓ**: ellentmondásnál tartalmat hoz létre, a közösség dönt, egyezmény zárja. Ez adja meg a D15/D16/D18 hiányzó „hol"-ját. Zárt lista, felismerhető, gazdát kap, határidőre alapértelmezett kimenet. A **vita** a tartalmi rétegben marad, csak a **kimenet** megy a magba. |
+| D19 | Rendszer-gondolat | A program **BEJELENTŐ, nem BÍRÓ**: ellentmondásnál gondolatot hoz létre, a közösség dönt, egyezmény zárja. Ez adja meg a D15/D16/D18 hiányzó „hol"-ját. Zárt lista, felismerhető, gazdát kap, határidőre alapértelmezett kimenet. A **vita** a tartalmi rétegben marad, csak a **kimenet** megy a magba. |
 | D20 | Öröklés | **Pénz igen; tudatpont és azonosság soha.** Nem csak méltányosság: **ösztönző-védelem a kulcs-öröklés ellen** — a családot cinkosból egymás őrzőjévé alakítja. Az egyenlő osztalék miatt a dinasztikus koncentráció magától gyengül. |
 | D21 | Mag-replikáció | **Ujjlenyomat + bizonyíték** (a tároló nem tud hazudni → bizalmi helyett elérhetőségi probléma). **Három réteg:** önkéntesek · **mindenki tárolja a saját lapját** (~1 KB — az újjáépítés magja) · szeletelés később. **Napi kötegelés** → évi ~365 konszenzus-esemény, bármekkora koinónál. |
 
@@ -1440,7 +1440,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   - **Tartalmi réteg** — tudatpont-replikált, elveszhet, közösségi felejtés.
   - **Tartós mag** — NEM veszhet el: regisztrációk (duplikátum-védelem), szavazási
     eredmények, EGYEZMÉNYEK (az egyezmény attól egyezmény, hogy kötelez). Mindig,
-    mindenhol replikált — lényegében a blokklánc-szerű réteg. (Pontos tartalma és
+    mindenhol replikált — lényegében a blokklánc-szerű réteg. (Pontos gondolata és
     működése NYITOTT — lásd N1.)
 - Törlés-szemantika P2P-ben: BEST-EFFORT — „nem szolgáljuk ki és nem replikáljuk tovább,
   a példányok elsorvadnak"; fizikai megsemmisülés nem ígérhető. Kimondva kommunikáljuk.
@@ -1545,7 +1545,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   Eddig egy „kutatás-közeli" problémának látszott. Valójában **kettő**, és a kettő
   természete gyökeresen más:
   - 🔴 **KIS szavazásoknál a titkosság ELVILEG lehetetlen** — és ennek semmi köze a
-    kriptográfiához. Ha egy tartalomnak 3 tudatpont-tulajdonosa van és az eredmény 2:1,
+    kriptográfiához. Ha egy gondolatnak 3 tudatpont-tulajdonosa van és az eredmény 2:1,
     mindenki tudja, ki hogyan szavazott: **nincs elég ember, aki mögé el lehetne bújni.**
     Információelméleti korlát, amit semmilyen zk-technológia nem javít meg. **És a koino
     szavazásainak túlnyomó többsége ilyen lesz** (entitásonként csak a tulajdonosok
@@ -1579,7 +1579,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   **felfedezési formátum** részletei (N1-gyel együtt vizsgálandó).
 - **N6. Elérhetőség és replikáció-padló** — 🟡 **A FELE LEZÁRVA (2026-08-25, Csaba).**
   - ✅ **A replikáció-padló KIVÁLTVA a tartalmi rétegre — nem kell megépíteni.** Csaba
-    szabálya: *„ha egyik tudatpont-tulajdonos sem elérhető, akkor a tartalom sem lesz
+    szabálya: *„ha egyik tudatpont-tulajdonos sem elérhető, akkor a gondolat sem lesz
     elérhető — egy szellem-kártya, offline státusszal, és kész. Ami sok mindenkinek
     fontos, az sok készüléken lesz rajta."* Az elérhetőség tehát **a tényleges
     törődéshez kötött**, nem külön alrendszerhez. Egybevág a meglévő invariánssal
@@ -1657,7 +1657,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   válik — a szavazatok az entitás körében maradnak, felfelé csak az eredmény + a
   bizonyíték megy.
   - *Tárolás:* a tagokkal skálázódik (minden új tag készüléket hoz); a szöveg-alapú
-    tartalom triviális teher (1 mrd entitás × 50 KB × 20 replika ≈ 1 PB globálisan,
+    gondolat triviális teher (1 mrd entitás × 50 KB × 20 replika ≈ 1 PB globálisan,
     8 mrd készülék közt elosztva elenyésző); a kép/fájl érdeklődés-arányos.
   - *Útvonal/felfedezés:* DHT — logaritmikus skála; a BitTorrent-DHT tízmilliós
     élő bizonyíték, a mélység 8 milliárdnál is csak ~33 lépés nagyságrend.
@@ -1738,7 +1738,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   több létezhet egyszerre.
 - **Ez nem hiányosság, hanem a garancia:** ha a legfelső szinten kormányzat lenne, a
   koinónak lenne TETEJE — aminek pedig teteje van, azt egyetlen ponton el lehet foglalni.
-- **A különválás és a fork ugyanaz a művelet**, két szinten: tartalom-szinten egy gondolat
+- **A különválás és a fork ugyanaz a művelet**, két szinten: gondolat-szinten egy gondolat
   válik szét, verzió-szinten egy világ. A Fázis 1-ben megépített különválás (2026-08-25)
   ennek a főpróbája — és empirikus választ ad a kérdésre, amire a blokklánc-világ csak
   anekdotákkal felel: **mi történik, ha az elválás olcsó?**
@@ -1756,7 +1756,7 @@ Az 1. fázisra háruló feladatok: [fejlesztesi_terv.md](fejlesztesi_terv.md) V1
   megosztja a közösséget → az adatbázis LEMÁSOLÓDIK, a regisztráltakon is osztoznak, a múlt
   közös) és **új alapítás** (üres, teljesen külön adatbázis, nincs közös múlt). A szétválás
   akkor is így megy, ha valaki csak TESZTELÉSRE rak fel egy verziót.
-- **Verzió-szinten a szétosztás TELJES, nem arányos** (szemben a tartalom-szintűvel) — mert
+- **Verzió-szinten a szétosztás TELJES, nem arányos** (szemben a gondolat-szintűvel) — mert
   a verzió nem csomópont, hanem **talaj**: programból nem lehet „felet" elvinni. Az e-ember
   kezdetben mindkét ágon létezik.
 - **A koinók közti kapcsolat választható**: lehetnek szigetek, lehetnek összekapcsolva.
@@ -1838,8 +1838,8 @@ A D5 határa **rossz helyen volt**. Nem „tartalmi réteg vs. tartós mag" a t�
 
 | | Amit valaki **fontosnak tart** | Amit senki nem tart fontosnak, de nélküle a rendszer **csalható** |
 |---|---|---|
-| Példa | tartalom, javaslat, **egyezmény** | „ez az ember már regisztrált"; „ez a pénz már el lett költve" |
-| Ki tenne rá tudatpontot? | akit érdekel | **senki** — ez nem tartalom, hanem csontváz |
+| Példa | gondolat, javaslat, **egyezmény** | „ez az ember már regisztrált"; „ez a pénz már el lett költve" |
+| Ki tenne rá tudatpontot? | akit érdekel | **senki** — ez nem gondolat, hanem csontváz |
 | Elfelejthető? | ✅ igen | ❌ nem — **a felejtés maga a csalás** |
 
 - **A tartós mag tehát az azonosság egyszeriségére és (később) a pénzre szűkül.** Minden
@@ -1858,7 +1858,7 @@ alapállapota** — nem kell „törlés" funkciót építeni a megmásíthatatl
 
 **A kulcsnak a koinóban egyetlen dolga van.** Egy kulcspár kétféle munkát végezhet:
 **hitelesítés** („ez tényleg ő") és **titkosítás** („csak ő olvashatja"). A koino
-**szándékosan nyilvános** — a tartalom, a tudatpont, a név mind az —, ezért a titkosítási
+**szándékosan nyilvános** — a gondolat, a tudatpont, a név mind az —, ezért a titkosítási
 munkából alig marad valami (egyedül a szavazat, D2).
 
 > **A kulcs nem páncélszekrény, hanem aláírás.** Aki ellopja, nem megtud rólad valamit,
@@ -1872,7 +1872,7 @@ munkából alig marad valami (egyedül a szavazat, D2).
 | Átrendezi a tudatpontjaidat | 🟡 újra kiosztható |
 | Szavaz a nevedben | ✅ a szavazat módosítható |
 | Javaslatot tesz a nevedben | ✅ visszavonható |
-| Tartalmat ír a nevedben | 🟡 törölhető, de olvasták |
+| Gondolatot ír a nevedben | 🟡 törölhető, de olvasták |
 
 **Egyetlen visszafordíthatatlan sor van, és az a pénz.** Minden más feljegyzés, amit a
 koino amúgy is folyamatosan felülír.
@@ -2048,7 +2048,7 @@ egész függőségi sorhoz, aminek minden kapuőrét megörökölnénk (2. szab�
 
 | Művelet | Globális egyetértés? | Mi elég helyette |
 |---|---|---|
-| Tartalom létrehozása | ❌ | senki nem ütközik senkivel |
+| Gondolat létrehozása | ❌ | senki nem ütközik senkivel |
 | Tudatpont-hozzárendelés | ❌ | **saját lánc-következetesség** — a saját keretedből osztasz, bárki utánaszámolhat |
 | Szavazás | ❌ | ugyanaz — a kettős szavazás a SAJÁT láncod ellentmondása |
 | Egy javaslat eredménye | ❌ | **determinisztikus számítás** — ugyanabból a bemenetből mindenki ugyanazt kapja |
@@ -2276,7 +2276,7 @@ normális esetet, hanem **akkor néz oda, amikor tényleg ellentmondás van** (7
 
 Minden művelet a koinóban **aláírt** (a privát kulcs matematikai bizonyítékot ad arról,
 hogy te állítottad elő). Ezért **nincs szükség külön „még élek" gombra**: aki szavaz,
-tudatpontot rendez, tartalmat ír — az él.
+tudatpontot rendez, gondolatot ír — az él.
 
 Az aktív e-ember **soha nem találkozik ezzel a szabállyal.** Aki évek óta nincs sehol, az
 **alvó** lesz (nem törölt): az azonossága megmarad (a D14 szerint a helye úgyis örökre
@@ -2323,7 +2323,7 @@ hanem tömeges.
    az emberek; egy örökölt kulcs nem tud embereket előállítani.
 2. **A PÉNZ BEFAGY az ellentmondás idejére** (Csaba). Ha egyszerre van halál-bejelentés és
    kulcshasználat, a **pénzmozgás megáll**, amíg a közösség nem dönt. A többi (szavazás,
-   tartalom) mehet — az mind visszafordítható (D15 táblája). **Csak azt fagyasztjuk, ami
+   gondolat) mehet — az mind visszafordítható (D15 táblája). **Csak azt fagyasztjuk, ami
    nem az.** A vita helye: **D19**.
 3. **A FŐ VÉDELEM AZ ÖRÖKLÉS → D20.** Nem technikai, hanem **ösztönző-szerkezeti**: ha van
    tisztességes út a nagymama pénzéhez, akkor a tisztességtelennek versenytársa támad. A
@@ -2428,7 +2428,7 @@ mind ugyanazt mondja: *„lassú, nyilvános, megtámadható"*. Egyikük sem mon
 Hol látja meg bárki? Hol tiltakozik? Hol vitatkoznak róla?
 
 > **A válasz: a koinóban magában.** Ellentmondás vagy döntést igénylő kivétel esetén **a
-> program létrehoz egy TARTALMAT**, ami jelzi a helyzetet; a közösség megvitatja, és
+> program létrehoz egy GONDOLATOT**, ami jelzi a helyzetet; a közösség megvitatja, és
 > **egyezmény zárja le.**
 
 Ettől a koino olyat csinál, amit kevés rendszer: **nem eldönti a kivételes eseteket, hanem
@@ -2447,14 +2447,14 @@ megkérdezi.** A program nem bíró, hanem bejelentő.
 
 | Mi | Hova | Miért |
 |---|---|---|
-| **A vita** (a tartalom, a hozzászólások, az érvek) | ❌ **normál tartalmi réteg** | ha lezárult és senkit nem érdekel, elfelejthető (D14) |
+| **A vita** (a gondolat, a hozzászólások, az érvek) | ❌ **normál tartalmi réteg** | ha lezárult és senkit nem érdekel, elfelejthető (D14) |
 | **A kimenet** („ez az azonosság halott") | ✅ **a magba** | de **nem új adatfajtaként**: néhány mező az azonosság-rekordon, ami eddig is a magban élt (állapot, mikor változott, kik tanúsították, a lezáró egyezmény azonosítója) |
 
 *(Nagyságrend: egy vitatott halál kimenete ~100 bájt. Halál ritka, vitatott halál még
 ritkább — elhanyagolható.)*
 
 **Ez ma nem létezik:** a koino ma értesítést tud létrehozni, és a cron le tud zárni
-javaslatokat — de **tartalmat semmi nem hoz létre magától**. Valódi új képesség.
+javaslatokat — de **gondolatot semmi nem hoz létre magától**. Valódi új képesség.
 
 **Alkalmazási esetek (a zárt lista jelöltjei):** vitatott halál-bejelentés (D18),
 kulcs-helyreállítási kérelem (D15), megtámadott pénzmozgás (D16). További jelöltek később
@@ -2576,7 +2576,7 @@ A koinóba **valaki meghív** (D1) — **tőle kapod meg a kiinduló ujjlenyomat
 
 ### D13/c. A koino-szintű paraméterek is ENTITÁSOK (2026-08-25)
 
-A **D4** medián-mechanizmusa eddig **entitásonként** működött (egy tartalom küszöbeit annak a
+A **D4** medián-mechanizmusa eddig **entitásonként** működött (egy gondolat küszöbeit annak a
 tulajdonosai adják). A kötegzárás, a tanúszám és „még jó pár dolog" viszont **koino-szintű,
 globális paraméter** — kinek a mediánja dönt róluk?
 
@@ -2585,7 +2585,7 @@ globális paraméter** — kinek a mediánja dönt róluk?
 
 Ugyanaz a gépezet, megint egy szinttel feljebb — **nincs új mechanizmus**, és a globális
 paraméter nem adminisztratív dolog lesz, hanem **ugyanolyan látható, vitatható, módosítható
-tartalom, mint bármi más**.
+gondolat, mint bármi más**.
 
 ### D22. P2P AZ ELSŐ KIADÁSTÓL — nincs központi szerveres kiadás (2026-08-26, Csaba)
 
@@ -2643,7 +2643,7 @@ A **WebRTC** az a technológia, amivel a böngészők közvetlenül beszélnek e
 
 | # | Korlát | Mit jelent |
 |---|---|---|
-| **1** | **A bemutatkozás** | Két böngésző nem tud egymásról. Kell egy **jelzőpont**, ami összeismerteti őket („hol vagyok, hogyan érhetsz el"). Amint a kapcsolat létrejött, **a jelzőpont kiszállhat** — az adat közvetlenül megy. Ez **postás, nem hatóság**: nem látja a tartalmat, bárki üzemeltethet ilyet |
+| **1** | **A bemutatkozás** | Két böngésző nem tud egymásról. Kell egy **jelzőpont**, ami összeismerteti őket („hol vagyok, hogyan érhetsz el"). Amint a kapcsolat létrejött, **a jelzőpont kiszállhat** — az adat közvetlenül megy. Ez **postás, nem hatóság**: nem látja a gondolatot, bárki üzemeltethet ilyet |
 | **2** | **A routerek mögötti rejtettség** | A legtöbb eszköz otthoni router mögött van, saját cím nélkül. A WebRTC ezt meg tudja kerülni, de az esetek egy részében (jellemzően 10–20%) nem sikerül — olyankor kell egy **továbbító**, ami átjátssza a forgalmat. Ez sávszélességet fogyaszt: **ez a P2P legdrágább része**, nem a tárolás |
 | **3** | **A böngésző nem fut a háttérben** | Ha bezárod a lapot, a csomópontod eltűnik. Ezért kellenek **önkéntes, mindig futó csomópontok** (N11) — nem azért, mert ők tudják az igazságot (nem tudják, az aláírás tudja), hanem mert **ott vannak, amikor te nem** |
 
@@ -2692,7 +2692,7 @@ A H6 adat-osztályozás mellékterméke egy váratlanul hasznos térkép:
 |---|---|---|
 | `mag` | **8** | determinizmus-kritikus, ritkán változik |
 | `lanc` | 36 | aláírt cselekvés |
-| `tartalom` | **73** | gyakran változik, **nem** konszenzus-kritikus |
+| `gondolat` | **73** | gyakran változik, **nem** konszenzus-kritikus |
 | `szamitott` | 56 | eldobható gyorsítótár |
 | `helyi` | 51 | soha nem hagyja el a készüléket |
 
@@ -2710,7 +2710,7 @@ későbbi kérdés, és csak akkor kerül elő, ha mérés indokolja.
 
 A **H5** (entitások önhordozóvá tétele, export/import) eddig a *„valódi előfeltétel"*
 minősítést viselte, mert a meglévő adat átmentését szolgálta. A D24 ezt megszünteti: a
-16 fő **újra regisztrál**, és az eddigi tartalom nem költözik.
+16 fő **újra regisztrál**, és az eddigi gondolat nem költözik.
 
 **Ez a befagyasztási döntés egyenes folytatása** (⏸️ üzemi döntés, 2026-08-25): ha az adat
 úgyis eldobható, akkor nemcsak a *gyarapítása* értelmetlen, hanem a *költöztetése* is.
@@ -2723,7 +2723,7 @@ minősítést viselte, mert a meglévő adat átmentését szolgálta. A D24 ezt
 | **A Szakasz 0 lezárul** | a H6 volt az utolsó élő híd-feladat |
 | **A régi kódbázis szerepe** | nem forrás, hanem **örökség**: domain-logika + felület (D22) |
 
-> ⚠️ **Ki kell mondani a veszteséget is:** a mai koino tartalma (kategóriák, tartalmak,
+> ⚠️ **Ki kell mondani a veszteséget is:** a mai koino gondolata (kategóriák, gondolatok,
 > javaslatok, egyezmények, tudatpont-elrendezések) ezzel **elvész**. Ez vállalt ár —
 > pontosan azért tartottuk kicsiben a közösséget, hogy ez az ár alacsony maradjon.
 
@@ -2815,7 +2815,7 @@ tér** alakot használja.)*
 | **A hitelesítettség KÜSZÖBE** | | ✅ |
 | **Belépési szabály** | | ✅ |
 | **Szabályrendszer, paraméterek** | | ✅ |
-| **Tartalom, javaslatok, egyezmények** | | ✅ |
+| **Gondolat, javaslatok, egyezmények** | | ✅ |
 | **Pénz** | | ✅ (de **átvihető** — lásd lentebb) |
 | **Tudatpont** | | ⚠️ *feltehetően koinónként — megerősítendő* |
 
@@ -2929,10 +2929,10 @@ tárolási vállalás is, akkor **tudni kell, mit vállalsz, mielőtt vállalod.
 #### 1. A méretet a DÖNTÉS ELŐTT kell tudni
 
 Ez a kulcs, és ez határozza meg, hova kerül az adat. Ha a méret csak az entitás
-*tartalmában* lenne benne, akkor **le kellene tölteni ahhoz, hogy kiderüljön, megéri-e
+*gondolatában* lenne benne, akkor **le kellene tölteni ahhoz, hogy kiderüljön, megéri-e
 letölteni**. Ezért:
 
-> **A méret a HIVATKOZÁSBAN utazik, nem (csak) a tartalomban** — ugyanúgy, ahogy egy
+> **A méret a HIVATKOZÁSBAN utazik, nem (csak) a gondolatban** — ugyanúgy, ahogy egy
 > torrent-leíró tartalmazza a méretet és az ellenőrző összeget, mielőtt bármit letöltenél.
 
 #### 2. Ki mondja meg — és mi van, ha hazudik?
@@ -2943,7 +2943,7 @@ kiderül, és mivel **aláírta**, a hamis méret **bizonyíték**, nem szóbesz
 
 #### 3. A fájlok külön objektumok
 
-A szöveges tartalom mérete számítható; a képek és csatolt fájlok viszont nem folyhatnak
+A szöveges gondolat mérete számítható; a képek és csatolt fájlok viszont nem folyhatnak
 bele az esemény törzsébe. **A rájuk mutató hivatkozás hordozza a lenyomatukat ÉS a
 méretüket** — így a fájl letöltése is ellenőrizhető és előre mérlegelhető.
 
@@ -2966,7 +2966,7 @@ gépüket. **Ez pontatlan volt**, és Csaba kijavította:*
 
 > „Egy entitás mérete **csak módosítási javaslat mentén tud nőni**, amiről **szavazás
 > történik** az aktív tudatpont-tulajdonosok között, és a javaslatban benne van a
-> módosított tartalom, aminek tartalmaznia kell **az új méretét is**." — Csaba
+> módosított gondolat, aminek tartalmaznia kell **az új méretét is**." — Csaba
 
 **Vagyis a rendes eset már védve van, méghozzá a koino saját gépezetével:**
 
@@ -3001,8 +3001,8 @@ illeszkedik a D13/b paraméter-pluralizmusához is.
 
 | Adat | Réteg |
 |---|---|
-| az entitás **saját mérete** (az aláírt eseményben) | `tartalom` |
-| a **fájl-hivatkozás** (lenyomat + méret) | `tartalom` |
+| az entitás **saját mérete** (az aláírt eseményben) | `gondolat` |
+| a **fájl-hivatkozás** (lenyomat + méret) | `gondolat` |
 | az **ág teljes mérete** (leszármazottakkal) | `szamitott` — összeadható, nem tárolandó igazságként |
 
 ### D27. SZERKESZTÉSI és ÁLTALÁNOS javaslat/egyezmény (2026-08-27, Csaba)
@@ -3024,12 +3024,12 @@ illeszkedik a D13/b paraméter-pluralizmusához is.
 **A szavazás gépezete mindkettőnél UGYANAZ** — küszöbök, medián, részvételi arány,
 bizonyossági mutató, döntési idő. Csak a *következménye* más.
 
-#### 1. Az általános javaslat TARTALOMBÓL ágazik ki
+#### 1. Az általános javaslat GONDOLATBÓL ágazik ki
 
-Nem a semmiből indul: **egy tartalom alatt keletkezik**, és onnan örökli a kereteit —
-a szavazók köre a tartalom tudatpont-tulajdonosai, a küszöbök az ő értékei.
+Nem a semmiből indul: **egy gondolat alatt keletkezik**, és onnan örökli a kereteit —
+a szavazók köre a gondolat tudatpont-tulajdonosai, a küszöbök az ő értékei.
 
-> **Az induló küszöbök a szülő tartalomtól öröklődnek, utána viszont SAJÁT érték
+> **Az induló küszöbök a szülő gondolattól öröklődnek, utána viszont SAJÁT érték
 > javaslatokkal formálhatók** (Csaba). Vagyis az egyezmény idővel önálló életet él,
 > ahogy kialakul a saját tulajdonosi köre.
 
@@ -3083,7 +3083,7 @@ Csaba jogosan javította ki ezt a felvetést)*:
 
 | Hol áll az egyezmény | Kik foglalhatnak állást |
 |---|---|
-| egy mély tartalom alatt | az a kis ág — néhány ember |
+| egy mély gondolat alatt | az a kis ág — néhány ember |
 | egy nagy témakör alatt | az egész témakör tulajdonosai |
 | **a gyökérben** | **a koino MINDEN tagja** (Csaba pontosítása: mindenki, nem csak aki tett már valahova pontot) |
 
@@ -3118,7 +3118,7 @@ lehet indítani — ez tehát bővítés, nem átalakítás.)*
 
 Sem a tiltakozók többsége, sem az ütközés-jelölés **nem érvénytelenít** semmit magától. A
 rendszer **bejelent, nem bíró** (D19) — a vita helye pedig az egyezmény alatti gyerek-
-tartalmakban van.
+gondolatokban van.
 
 #### Ami a megvalósításból még nyitott
 
@@ -3173,7 +3173,7 @@ Profil   { koino, nev, lokacio }      → az ADATAID: „ezt mondom magamról"
 | 4 | **Koinónként külön profil** — az azonosság közös a térben, a megjelenés helyi (D25) |
 
 **A felületen ez nem látszik:** egy űrlap, egy „Belépés" gomb — a háttérben két aláírás.
-*(Pontosan úgy, ahogy ma is: tartalom létrehozásakor két esemény születik — a tartalom és
+*(Pontosan úgy, ahogy ma is: gondolat létrehozásakor két esemény születik — a gondolat és
 a tudatpont —, de a felhasználó egy gombot nyom.)*
 
 #### 5. Az adat rétege (H6)
@@ -3181,7 +3181,7 @@ a tudatpont —, de a felhasználó egy gombot nyom.)*
 | Adat | Réteg |
 |---|---|
 | `Belepes` (a tagság ténye) | `lanc` — aláírt cselekvés; ebből számolható a létszám |
-| `Profil` (név, lokáció) | `tartalom` · **`szemelyes`** |
+| `Profil` (név, lokáció) | `gondolat` · **`szemelyes`** |
 
 > **A D6 tehát sértetlen:** a tartós magban csak az van, hogy *„ez a kulcs egy valódi,
 > külön ember"* — a **nevedről ott egyetlen bit sincs**.
@@ -3231,7 +3231,7 @@ A natív futtatókörnyezetben a koino **kinyithat egy portot és figyelhet**. E
 1. **jelzőpont** — a bemutatkozás átvitele; lehet akár egy ember is (QR-kód, üzenet). Nem
    függés, csak postás;
 2. **STUN** — „mi a nyilvános címem?"; NAT mögött a készülék ezt magától nem tudja. Pár
-   csomag, tartalmat nem lát, bárki futtathat ilyet — **és kihagyható, ha van globális
+   csomag, gondolatot nem lát, bárki futtathat ilyet — **és kihagyható, ha van globális
    IPv6** (a fejlesztő gépén mérve: van, a routertől);
 3. **továbbító (TURN)** — csak ha a közvetlen út nem jön össze. **Ez a drága függés**, és
    a gyakoriságát meg kell mérni, nem megbecsülni.
@@ -3259,7 +3259,7 @@ elosztott adat-alapot.*
 - **libp2p** — a P2P hálózati alapréteg (kapcsolatok, felfedezés, NAT) — bármelyik
   fenti alatt ez van/lehet.
 - **git** *(2026-08-25)* — nem adat-jelölt, hanem **működő precedens** és a KÓD-terjesztés
-  jelöltje: tartalom-címzett objektum-DAG, natív merge, teljes replikáció, hash-ellenőrzött
+  jelöltje: gondolat-címzett objektum-DAG, natív merge, teljes replikáció, hash-ellenőrzött
   történet — mindez központi hatóság nélkül, világméretben bizonyítva. A D9 ellenőrzési
   fele gyakorlatilag kész technológia (az egyezmény megnevez egy commit-hasht). **Nem ad
   konszenzust, identitást és jogosultságot** — a nehéz felét nem. Részletes elemzés lentebb:
@@ -3305,7 +3305,7 @@ hatóság nélkül — évekkel a blokklánc divatja előtt.
 | **DAG entitás-láncokból** (N8) | a commit-történet pontosan egy DAG; a merge-commitnak több szülője van | az N8 „kutatási terep" — de a DAG-alakzat maga bizonyított |
 | **Az egyesítés legyen natív** — lineáris láncban rémálom | a `merge` alapművelet | egybevág az N8 megállapításával |
 | **Fork: a teljes történet lemásolódik, közös múlt + külön jövő** (D13) | szó szerint ez a `clone` + saját ág | a D13 nem újdonság a világban, csak a koinóban |
-| **Hamisíthatatlan történet hash-ellenőrzéssel** (D9) | minden objektum a TARTALMA lenyomatával azonosított — a múlt átírása minden leszármazott azonosítót megváltoztat | **tartalom-címzés = ingyen manipuláció-bizonyíték** |
+| **Hamisíthatatlan történet hash-ellenőrzéssel** (D9) | minden objektum a GONDOLATA lenyomatával azonosított — a múlt átírása minden leszármazott azonosítót megváltoztat | **gondolat-címzés = ingyen manipuláció-bizonyíték** |
 | **TÉNY örök ↔ HATÁLY elavulhat** (D8) | a git szétválasztja a **megváltoztathatatlan objektum-DAG-ot** a **mozgatható mutatóktól** (branch/tag) | a D8-at magunktól találtuk ki — a git implementálja |
 | **Tudatpont = tárolási vállalás, érdeklődés-vezérelt replikáció** (D3) | `partial clone`, `sparse checkout`, `shallow clone` — részleges másolat ismert kompromisszumokkal | a D3 „csak azt tárolom, ami érdekel" mérnökileg megoldott terep |
 | **Csomópontok szinkronizálása** | a fetch-protokoll alkudozása („mim van / mi kell") a minimális átvitelről | P2P-ben ugyanez a probléma, kipróbált megoldással |
@@ -3330,8 +3330,8 @@ változtatott (három-utas összefésülés). Ami csak az egyik oldalon változo
 > `kulonvalasIdeje` hármasa **pontosan azt mondja meg, honnan indult a szétválás**.
 > Ez akaratlanul készült el — de amikor az újraegyesítést tervezzük, ez lesz a horgony.
 
-**3. A tartalom-címzés csökkentheti, mi kerül a láncra (D5/N1).** Ha egy entitás
-azonosítója a tartalmának + előzményének lenyomata, akkor az entitás-lánc **önmagát
+**3. A gondolat-címzés csökkentheti, mi kerül a láncra (D5/N1).** Ha egy entitás
+azonosítója a gondolatának + előzményének lenyomata, akkor az entitás-lánc **önmagát
 igazolja** — nem kell a lánc ahhoz, hogy bizonyítsuk, senki nem írta át a múltat. A lánc
 szerepe így **horgonyzásra** szűkül (az N8 már ezt mondja: „az entitás-láncok időnként
 bele-pecsételik az állapot-ujjlenyomatukat"). A git bizonyítja, hogy a horgony lehet
@@ -3344,7 +3344,7 @@ bele-pecsételik az állapot-ujjlenyomatukat"). A git bizonyítja, hogy a horgon
 | **Konszenzust** | a git SOHA nem dönti el, melyik ág az igazság — azt ember dönti el, kézzel. **A koino lényege épp a közös döntés.** A git a HORDOZÓT adja, a KORMÁNYZÁST soha. Aki azt mondja, „használjatok gitet", az a nehéz felét hagyta ki. |
 | **Identitást** | a commit szerző-mezője szabad szöveg — bárki bárkinek kiadhatja magát (az aláírás segít, de a git nem tud „egy ember = egy fiók"-ról). A D1/N4 teljesen a git hatókörén kívül van. |
 | **Jogosultságot** | a git nem ismer hozzáférés-vezérlést — **pontosan ezért létezik a GitHub üzletként**. A tudatpont-alapú jogosultság külön réteg marad. |
-| **Jelentés-szintű összefésülést** | a git SOROKAT fésül össze. A koino **jelentést** egyesít: két tartalom egyesítése emberi ítélet, nem szöveg-diff. **A közös-ős GONDOLATA átvihető, az ALGORITMUS nem.** |
+| **Jelentés-szintű összefésülést** | a git SOROKAT fésül össze. A koino **jelentést** egyesít: két gondolat egyesítése emberi ítélet, nem szöveg-diff. **A közös-ős GONDOLATA átvihető, az ALGORITMUS nem.** |
 | **A koino DAG-ja gazdagabb** | a git-commit csak a saját előzményére mutat, egy repón belül. A koinóban egy esemény **két láncot köt össze** (cselekvő + entitás, N8) — ez inkább több-láncú főkönyv, mint git. |
 
 ### A SHA-1 csapda (mérve, 2026-08-25)
@@ -3423,7 +3423,7 @@ regisztrációt?"):**
 > ⚠️ **EZT A SORRENDET A D22 ÁTÍRTA.** Az eredeti terv a központi szerver **fokozatos
 > feloldódására** épült, és az identitás-réteget „még központi szerverrel" építette volna
 > meg. A D22 (P2P az első kiadástól) ezt a feltevést megszüntette. A régi A–F szakaszok
-> **tartalma érvényes marad** — a dokumentum sok helyen hivatkozik rájuk —, de a
+> **gondolata érvényes marad** — a dokumentum sok helyen hivatkozik rájuk —, de a
 > **végrehajtási sorrendjük** és a keretük megváltozott. A leképezés minden szakasznál ott
 > áll.
 
@@ -3450,12 +3450,12 @@ A híd-feladatok legnagyobb része **elesett** a D22 (nincs központi kiadás) �
 (nincs adat-költöztetés, új regisztráció lesz) nyomán. Ami elkészült és érvényes marad:
 
 - **H6 — adat-osztályozás** ✅ *(2026-08-26)*: 224 mező besorolva öt rétegbe
-  (`mag` / `lanc` / `tartalom` / `szamitott` / `helyi`) + `szemelyes` jelölés.
+  (`mag` / `lanc` / `gondolat` / `szamitott` / `helyi`) + `szemelyes` jelölés.
   Termék: [`adat_osztalyozas.md`](adat_osztalyozas.md) — **nyelv- és
   architektúra-független**, ezért a P2P-fordulat után is teljes értékű.
 
 **Amit a H6 az új sorrendnek ad:** megmondja, **mi kerül a készülékre** (`mag` + `lanc` +
-`tartalom`), mi számolható újra (`szamitott` — nem kell tárolni, nem kell terjeszteni), és
+`gondolat`), mi számolható újra (`szamitott` — nem kell tárolni, nem kell terjeszteni), és
 mi nem hagyhatja el a készüléket (`helyi`). Ez a Szakasz 1 adatmodelljének kiindulása.
 
 ### Szakasz 1 — A HELYI KOINO *(egy készülék, hálózat nélkül)*
@@ -3465,7 +3465,7 @@ Hálózat nélkül, szerver nélkül — és ez nem játék-üzemmód, hanem a v
 
 - **Kulcspár a készüléken** (D15): a privát fele soha nem hagyja el; a kulcs **hitelesít,
   nem titkol**.
-- **Minden művelet aláírt esemény**: tartalom-létrehozás, tudatpont-rendezés, érték
+- **Minden művelet aláírt esemény**: gondolat-létrehozás, tudatpont-rendezés, érték
   javaslat, szavazat (a H6 `lanc` rétege).
 - **Helyi tár**: az adat a készüléken él (a böngésző tárában), nem egy szerveren.
 - **Az állapot determinisztikus számítás** az eseményekből (D17) — a `szamitott` réteg
@@ -3475,7 +3475,7 @@ Hálózat nélkül, szerver nélkül — és ez nem játék-üzemmód, hanem a v
 
 | | |
 |---|---|
-| Mit tud a végén? | egy ember, egy készülék: teljes koino — tartalom, javaslat, szavazás, egyezmény, **aláírva** |
+| Mit tud a végén? | egy ember, egy készülék: teljes koino — gondolat, javaslat, szavazás, egyezmény, **aláírva** |
 | Miért ELSŐ? | mert minden más ezen áll, és mert **egyedül is kipróbálható** — nem kell hozzá se hálózat, se másik ember |
 | Kockázat | 🟠 ez a legnagyobb építés (az esemény-modell + a felület ráültetése), de **ismert terep**, és minden darabja kipróbálható |
 
@@ -3531,7 +3531,7 @@ Hálózat nélkül, szerver nélkül — és ez nem játék-üzemmód, hanem a v
 
 ### Szakasz 6 — PÉNZ *(a D11 kapuja mögött)*
 
-Csak azután, hogy az identitás-réteg **élesben bizonyított** (D11). Tartalma: **D10**
+Csak azután, hogy az identitás-réteg **élesben bizonyított** (D11). Gondolata: **D10**
 (alkotmányos kibocsátás, egyenlő osztalék), **D16** (lassú, megtámadható), **D18/8**
 (osztalék csak hitelesítettnek), **D20** (öröklés), **N10** paraméterei.
 
@@ -3664,7 +3664,7 @@ kiadásra** vonatkozik, nem a közösség növelésére. Az élesítés és a n�
 **Egy dolog viszont EMBEREKET fog igényelni:** az **A szakasz** (bizalmi háló) az egyetlen
 réteg, amit **nem lehet kóddal tesztelni** — csak azzal, hogy valódi emberek tanúsítják
 egymást. Ez viszont pontosan olyan **kicsi, konkrét kérés**, amilyet Csaba a 16 főtől
-meg tud tenni (és a re-regisztrációnál amúgy is meg fog). **Nem tartalom-gyarapítás,
+meg tud tenni (és a re-regisztrációnál amúgy is meg fog). **Nem gondolat-gyarapítás,
 hanem néhány koppintás** — a D18/10 bootstrap-tanulsága szerint: *nem engem kell igazolni,
 hanem egymást.*
 
@@ -3774,7 +3774,7 @@ hanem egymást.*
   (vállalja a kockázatot; a védjegy hatóságot igényelne → visszahozná a „tetőt"), és **a
   pénz szétváláskor nem duplázódik** (külön név, 0 értékről). A repó **nyilvános lett**
   (AGPL-3.0 licenccel, `0b9c996`). Csaba kérdésére új szakasz: **„A git mint minta"** — a
-  git nem analógia, hanem működő precedens (tartalom-címzett DAG, natív merge, teljes
+  git nem analógia, hanem működő precedens (gondolat-címzett DAG, natív merge, teljes
   replikáció); a **D9 ellenőrzési fele gyakorlatilag kész technológia** (az egyezmény
   megnevez egy commit-hasht), a különvált ágak újraegyesítéséhez pedig **a merge base már
   rögzítve van** a `kulonvalasResz`-ben. De a git **nem ad konszenzust, identitást és
@@ -3836,7 +3836,7 @@ hanem egymást.*
     jobb volt: az elhalványulás **az összes felhasználót terhelte volna egy ritka támadás
     miatt**, és filozófiailag is téves (a személy-mivolt tény, nem előfizetés).
   - **Helyette: kivétel-alapú védelem.** Ellentmondásnál (halál-bejelentés + kulcshasználat)
-    a **pénz befagy**, és a rendszer **tartalmat hoz létre** a vitának → **D19**.
+    a **pénz befagy**, és a rendszer **gondolatot hoz létre** a vitának → **D19**.
   - **D20 (öröklés)** — Csaba ötlete, és ez a fő védelem a kulcs-öröklés ellen: ösztönző-
     szerkezeti, nem technikai. A pénz örökölhető (rendelkezés szerint, vagy egyenlően a
     közvetlen leszármazottak közt), a **tudatpont és az azonosság soha**. A család
@@ -3892,7 +3892,7 @@ hanem egymást.*
     amint áll.**
 - **2026-08-26** — **A SZAKASZ 0 LEZÁRULT, ÉS A VÉGREHAJTÁS TERVE ÁTFORDULT.**
   - **H6 elkészült** (az egyetlen befejezett híd-feladat): a mai adatmodell **224 mezője**
-    besorolva öt rétegbe — `mag` (8) / `lanc` (36) / `tartalom` (73) / `szamitott` (56) /
+    besorolva öt rétegbe — `mag` (8) / `lanc` (36) / `gondolat` (73) / `szamitott` (56) /
     `helyi` (51) —, mellette `szemelyes` jelölés a D6-hoz (8 mező). Termék:
     [`adat_osztalyozas.md`](adat_osztalyozas.md); a kódban séma-opcióként (`reteg`), és
     egy ellenőrző eszközzel (`backend/tools/retegEllenorzes.js`), hogy a besorolás **ne
@@ -3915,7 +3915,7 @@ hanem egymást.*
     legfeljebb a `mag`-ot — az néhány száz sor, nem 200 fájl.
   - **D24 — a meglévő adat sem költözik**, új regisztráció lesz (*„ez sem fontos"*). Ezzel
     a **H5 elesett**, és vele a Szakasz 0 utolsó élő feladata. A veszteség kimondva: a mai
-    tartalom elvész — vállalt ár, épp ezért tartottuk kicsiben a közösséget.
+    gondolat elvész — vállalt ár, épp ezért tartottuk kicsiben a közösséget.
   - **A LÉPÉS-SORREND ÁTÍRVA** hat szakaszra, a régi A–F leképezésével: **1. A helyi koino**
     (egy készülék, hálózat nélkül — A kulcs-rész + C) · **2. A kapcsolat** (D) ·
     **3. A bizalmi háló** (A többi) · **4. A lépték** (B) · **5. Konszenzus** (E) ·
@@ -3958,7 +3958,7 @@ hanem egymást.*
 - **2026-08-27** — **D26: az entitás MÉRETE** (Csaba felvetése a Szakasz 1 kodolasa kozben).
   A D3 egyenes következménye, amit eddig nem vezettünk le a végéig: *ha a tudatpont
   tárolási vállalás is, akkor tudni kell, mit vállalsz, MIELŐTT vállalod.*
-  - **A méret a HIVATKOZÁSBAN utazik**, nem csak a tartalomban — különben le kellene
+  - **A méret a HIVATKOZÁSBAN utazik**, nem csak a gondolatban — különben le kellene
     tölteni ahhoz, hogy kiderüljön, megéri-e letölteni (a torrent-leíró mintája).
   - **A szerző állítja, aláírva** → a hamis méret **bizonyíték**, nem szóbeszéd
     (ugyanaz a minta, mint mindenhol: nem megakadályozzuk, hanem leleplezzük).
@@ -3984,7 +3984,7 @@ hanem egymást.*
   - **A szavazás gépezete mindkét fajtánál ugyanaz**; csak a KÖVETKEZMÉNYE más: a
     szerkesztési javaslat elfogadása **végrehajtódik**, az általánosé **nem csinál semmit
     automatikusan** — ott az egyezmény maga az álláspont, a teljesítése emberi (D8).
-  - **Az általános javaslat TARTALOMBÓL ágazik ki**, és onnan örökli az induló küszöböket;
+  - **Az általános javaslat GONDOLATBÓL ágazik ki**, és onnan örökli az induló küszöböket;
     utána **saját érték javaslatokkal** formálható.
   - ⭐ **AZ ÁLTALÁNOS EGYEZMÉNY ÉLŐ:** lehet hozzá **csatlakozni**, ellene **tiltakozni**,
     és **ütközést jelölni** két egyezmény között. Ez teszi a **D8-at gyakorlattá**: a TÉNY
@@ -4022,7 +4022,7 @@ hanem egymást.*
     létszám ellenőrzése egyben a névsor kiadása volna) · a név törölhető legyen a tagság
     elvesztése nélkül · koinónként külön profil. **A felületen ez nem látszik**: egy űrlap,
     egy gomb, a háttérben két aláírás.
-  - **A D6 sértetlen:** a `Belepes` a `lanc` rétegbe tartozik, a `Profil` a `tartalom`-ba
+  - **A D6 sértetlen:** a `Belepes` a `lanc` rétegbe tartozik, a `Profil` a `gondolat`-ba
     `szemelyes` jelöléssel — a tartós magban a névről **egyetlen bit sincs**.
 - **2026-08-27 (4)** — **A FELÜLET ALAPELVE + a Szakasz 1 elkészülte.** Csaba a Szakasz 1
   fejlesztői nézetét látva: *„Nem szeretnék ideiglenes, rögtönzött frontendet, még a

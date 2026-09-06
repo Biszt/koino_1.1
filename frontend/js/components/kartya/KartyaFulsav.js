@@ -5,25 +5,25 @@
 // =============================================
 // Felelősség:
 // - A Javaslat- és Egyezmény-kártya body-jának KÜLSŐ fülsávja: több, előre
-//   megépített tartalom-elem közti váltás (pl. „Indoklás" / „Módosított tartalom"
+//   megépített gondolat-elem közti váltás (pl. „Indoklás" / „Módosított gondolat"
 //   / „Szavazás").
 // - Ez a KÜLSŐ réteg — tőle FÜGGETLEN a belső fülsáv, amit a
-//   SzovegMezoMegjelenito rajzol egy-egy tartalom saját oldalaihoz. Egy külső fül
-//   tartalma tehát maga is tartalmazhat belső fülsávot (két réteg fül).
+//   SzovegMezoMegjelenito rajzol egy-egy gondolat saját oldalaihoz. Egy külső fül
+//   gondolata tehát maga is tartalmazhat belső fülsávot (két réteg fül).
 //
 // Használat:
 //   new KartyaFulsav(kontener, {
 //     fulek: [
 //       { id: 'indoklas', felirat: 'Indoklás',           tartalomElem: <div> },
-//       { id: 'modositas', felirat: 'Módosított tartalom', tartalomElem: <div> }
+//       { id: 'modositas', felirat: 'Módosított gondolat', tartalomElem: <div> }
 //     ],
 //     aktivFulId: 'indoklas'   // opcionális; alapból az első fül
 //   });
 //
-// FONTOS: a tartalom-elemeket a HÍVÓ (a kártya) építi és birtokolja — ez a
+// FONTOS: a gondolat-elemeket a HÍVÓ (a kártya) építi és birtokolja — ez a
 // komponens csak MEGJELENÍTI és VÁLTOGATJA őket (mutat/rejt), nem hoz létre és nem
 // semmisít meg SzovegMezoMegjelenito példányt. A váltás így nem épít újra semmit,
-// tehát nincs szivárgás; a tartalom-elemek életciklusát (destroy) a kártya intézi.
+// tehát nincs szivárgás; a gondolat-elemek életciklusát (destroy) a kártya intézi.
 // =============================================
 
 class KartyaFulsav {
@@ -64,8 +64,8 @@ class KartyaFulsav {
   }
 
   // ----- RENDERELÉS -----
-  // Felépíti a fülsávot (gombok) és a tartalom-területet (az összes
-  // tartalom-elem egymás alatt; a nem-aktívak elrejtve).
+  // Felépíti a fülsávot (gombok) és a gondolat-területet (az összes
+  // gondolat-elem egymás alatt; a nem-aktívak elrejtve).
   _render() {
     console.log('KartyaFulsav._render - KEZDÉS', {
       fulekSzama: this.fulek.length
@@ -75,7 +75,7 @@ class KartyaFulsav {
     this.kontener.innerHTML = '';
     this.fulGombok = {};
 
-    // Egyetlen fülnél nincs értelme fülsávnak — csak a tartalmat mutatjuk
+    // Egyetlen fülnél nincs értelme fülsávnak — csak a gondolatot mutatjuk
     if (this.fulek.length <= 1) {
       const egyetlen = this.fulek[0]?.tartalomElem;
       if (egyetlen) this.kontener.appendChild(egyetlen);
@@ -111,7 +111,7 @@ class KartyaFulsav {
 
     this.kontener.appendChild(fulsav);
 
-    // === TARTALOM-TERÜLET (minden elem; a nem-aktívak elrejtve) ===
+    // === GONDOLAT-TERÜLET (minden elem; a nem-aktívak elrejtve) ===
     const tartalomTerulet = document.createElement('div');
     tartalomTerulet.className = 'kartya-fulsav__tartalom';
 
@@ -155,7 +155,7 @@ class KartyaFulsav {
 
     this.aktivFulId = fulId;
 
-    // A kártya értesítése: mérje újra a túlnyúlást az új aktív fül tartalmára.
+    // A kártya értesítése: mérje újra a túlnyúlást az új aktív fül gondolatára.
     if (typeof this.onFulValtas === 'function') {
       this.onFulValtas(fulId);
     }
@@ -164,7 +164,7 @@ class KartyaFulsav {
   }
 
   // ----- MEGSEMMISÍTÉS -----
-  // Üríti a konténert és elvágja a referenciákat. FONTOS: a tartalom-elemekben
+  // Üríti a konténert és elvágja a referenciákat. FONTOS: a gondolat-elemekben
   // lévő SzovegMezoMegjelenito példányokat NEM semmisíti meg — azokat a kártya
   // birtokolja, a kártya destroy()-ja takarítja.
   destroy() {

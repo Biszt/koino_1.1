@@ -29,23 +29,23 @@ A menü CSOPORTOKBA rendezve, közöttük elválasztó vonallal (2026-07-22): (1
 | 1. Nézetek | Rendezés | ✅ | Pakli rendezés-választó (15. pont): hierarchikus/időrend/saját/ágazati pont; fő menü = globális |
 | 2. Értesítések | Értesítések | ✅ | ErtesitesekModal + olvasatlan badge |
 | 2. Értesítések | Értesítési beállítások | ✅ | Globális ErtesitesiBeallitasModal |
-| 3. Létrehozás | Új tartalom létrehozása | ✅ | TartalomModal |
+| 3. Létrehozás | Új gondolat létrehozása | ✅ | GondolatModal |
 | 3. Létrehozás | Új kategória létrehozása | ✅ | KategoriaModal |
-| 3. Létrehozás | Új tartalomtípus létrehozása | ✅ | TartalomTipusModal |
+| 3. Létrehozás | Új gondolattípus létrehozása | ✅ | GondolatTipusModal |
 | 4. Fiók | Meghívóim | ✅ | Meghívó rendszer |
 | 4. Fiók | Tudatpontok | ✅ | Saját aktív tudatpont-hozzárendelések (7. pont) |
 | 4. Fiók | eember beállítások | ✅ | EemberBeallitasokModal (8. pont) |
 | 5. Kilépés | Kijelentkezés | ✅ | |
 
-### 2. Tartalom kártya menü (`TartalomKartya.js`)
+### 2. Gondolat kártya menü (`GondolatKartya.js`)
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal |
+| Új gondolat létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal |
 | Javaslat létrehozása | ✅ | JavaslatModal |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal |
-| Küszöb érték javaslat | ✅ | ErtekJavaslatModal — támogatottsági/részvételi %, min/max döntési idő; a Tartalom létrehozó modál is bekéri az értékeket (alapértékekkel). Csak tartalomra! |
+| Küszöb érték javaslat | ✅ | ErtekJavaslatModal — támogatottsági/részvételi %, min/max döntési idő; a Gondolat létrehozó modál is bekéri az értékeket (alapértékekkel). Csak gondolatra! |
 
 **Közös kártya-menü rész (minden kártyán, a `Kartya` alaposztály adja hozzá — 2026-07-22 óta csoportosítva):**
 a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a) INFO: 🔔 Értesítések (ág-szűrt, badge) · 🌟 Tudatpontok (ág-szűrt); (b) NAVIGÁCIÓ: 🔍 Keresés · 🗺️ Struktúra nézet · 🚧 **Világtérkép** (fejlesztésre vár) · ↕️ Rendezés — mind ág-szűrt módban.
@@ -55,16 +55,16 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
 | Szavazat leadása | ✅ | SzavazatModal — támogat/ellenez/tartózkodik, korábbi szavazat kiemelve, visszavonás |
-| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
+| Új gondolat létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (GondolatModal, szuloTipus) |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal (típus, státusz, érintett entitások, szavazás állása, saját szavazat) |
 | ~~Törlés~~ | ❌ | Nem része a tervnek (a törlés javaslat/szavazás útján történik) — a tulajdonos jóváhagyta a törlését |
 
-### 4. Tartalomtípus kártya menü (`TartalomTipusKartya.js`)
+### 4. Gondolattípus kártya menü (`GondolatTipusKartya.js`)
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
+| Új gondolat létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (GondolatModal, szuloTipus) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal (név, típus, létrehozó, tudatpont, leírás) |
@@ -74,7 +74,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
+| Új gondolat létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (GondolatModal, szuloTipus) |
 | Új kategória létrehozása ebből | ✅ | Az így létrehozott kategória ALKATEGÓRIA lesz (a kategória lesz a szülő). A `KategoriaModal` `szuloAdatok`-ot fogad; a backend (modell + `kategoriaService`) már kezelte a `szuloId`/`szuloTipus`-t — csak frontend-munka volt. Böngészős teszt hátra (teszt.md 55) |
 | Javaslat létrehozása | ✅ | |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
@@ -85,7 +85,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
 | Menüpont | Állapot | Megjegyzés |
 |---|---|---|
-| Új tartalom létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (TartalomModal, szuloTipus) |
+| Új gondolat létrehozása ebből | ✅ | Ágaztatás szülő-adatokkal (GondolatModal, szuloTipus) |
 | Javaslat létrehozása | ✅ | 🌿 `tudatpontFuggo`; JavaslatModal. Egyezményre a domain szerint KIZÁRÓLAG áthelyezési javaslat indítható (frontend gombszűrés + backend kikényszerítés) |
 | Tudatpont módosítás | ✅ | TudatpontModal — saját pont módosítása + felmenő-szabály |
 | Részletes adatok | ✅ | Közös ReszletekModal (típus, létrehozó, érintett entitások, szavazás pillanatképe, tudatpont) |
@@ -104,9 +104,9 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
 1. [x] **Szavazat leadása** (Javaslat kártya) — ez zárja be a döntéshozatali kört: javaslat → szavazás → egyezmény. SzavazatModal + `GET /api/javaslat/:id/sajat-szavazat` végpont; szavazás, módosítás, visszavonás.
 2. [x] **Tudatpont módosítás** (minden kártya) — közös `TudatpontModal` (standard modal-stílus), mind a négy kártyatípus használja. A meglévő `POST /api/tudatpont/hozzarendeles` végpontra épül. ÚJ felmenő-szabály: pont hozzárendelésekor a teljes szülőláncon kell legalább 1 pont; a backend kikényszeríti (`GET /api/tudatpont/hianyzo-felmenok/...` felmérés + `felmenoketAutomatikusan` flag), a frontend a megnyitáskor felméri és hozzájárulás után automatikusan kitölti a hiányzó felmenőket.
-3. [x] **Részletes adatok** (minden kártya) — közös `ReszletekModal`, entitástípusonkénti nézettel (Tartalom, Kategória, Tartalomtípus, Javaslat, Egyezmény).
-4. [x] **Új tartalom létrehozása ebből** kiterjesztése (javaslat-, kategória-, tartalomtípus- és egyezmény-kártyára) — mind az öt kártyatípus a közös `TartalomModal`-t nyitja, az entitást szülőként átadva (`szuloTipus`). Backend: a Tartalom modell `szuloTipus` enumja bővítve — most már `Kategoria` és `TartalomTipus` is lehet szülő (a korábbi `['Tartalom','Javaslat','Egyezmeny']` mellett). A menüpont mindenhol `tudatpontFuggo`.
-5. [x] **Küszöb érték javaslat — KÉSZ mind a három típusra** (2026. 07. 09.): közös `ErtekJavaslatModal` a Tartalom-, Kategória- és Tartalomtípus-kártyán (aktuális medián + saját javaslat betöltése, mentés `POST /api/ertekJavaslat`), és mindhárom **létrehozó modál** (Tartalom, Kategória, Tartalomtípus) bekéri a négy küszöbértéket alapértékekkel. Közös segédek: `kuszobErtekMezok.js` (frontend mezők) + `idoFormazo.js` idő-egység átváltás + `backend/utils/kuszobErtekParser.js` (multipart értékek). A menüpontok `tudatpontFuggo`-k. **Backend általánosítás:** az érték-rendszer entitás-polimorf lett — `ertekJavaslat` és `tartalomErtekHisztogram` modellben `tartalomId` → `entitasId` + `entitasTipus` (enum: Tartalom/Kategoria/TartalomTipus); a repository-k, `ertekSzamitasService`, a controller és az útvonalak (`/api/ertekJavaslat/.../:entitasTipus/:entitasId`) mind entitás-alapúak. A régi (csak tartalom) érték-adatokat eldobtuk; a meglévő entitások első érték javaslatuknál kapják meg a hisztogramjukat. (Böngészős élő teszt még hátra.)
+3. [x] **Részletes adatok** (minden kártya) — közös `ReszletekModal`, entitástípusonkénti nézettel (Gondolat, Kategória, Gondolattípus, Javaslat, Egyezmény).
+4. [x] **Új gondolat létrehozása ebből** kiterjesztése (javaslat-, kategória-, gondolattípus- és egyezmény-kártyára) — mind az öt kártyatípus a közös `GondolatModal`-t nyitja, az entitást szülőként átadva (`szuloTipus`). Backend: a Gondolat modell `szuloTipus` enumja bővítve — most már `Kategoria` és `GondolatTipus` is lehet szülő (a korábbi `['Gondolat','Javaslat','Egyezmeny']` mellett). A menüpont mindenhol `tudatpontFuggo`.
+5. [x] **Küszöb érték javaslat — KÉSZ mind a három típusra** (2026. 07. 09.): közös `ErtekJavaslatModal` a Gondolat-, Kategória- és Gondolattípus-kártyán (aktuális medián + saját javaslat betöltése, mentés `POST /api/ertekJavaslat`), és mindhárom **létrehozó modál** (Gondolat, Kategória, Gondolattípus) bekéri a négy küszöbértéket alapértékekkel. Közös segédek: `kuszobErtekMezok.js` (frontend mezők) + `idoFormazo.js` idő-egység átváltás + `backend/utils/kuszobErtekParser.js` (multipart értékek). A menüpontok `tudatpontFuggo`-k. **Backend általánosítás:** az érték-rendszer entitás-polimorf lett — `ertekJavaslat` és `gondolatErtekHisztogram` modellben `gondolatId` → `entitasId` + `entitasTipus` (enum: Gondolat/Kategoria/GondolatTipus); a repository-k, `ertekSzamitasService`, a controller és az útvonalak (`/api/ertekJavaslat/.../:entitasTipus/:entitasId`) mind entitás-alapúak. A régi (csak gondolat) érték-adatokat eldobtuk; a meglévő entitások első érték javaslatuknál kapják meg a hisztogramjukat. (Böngészős élő teszt még hátra.)
     - Mellékesen javítva: az `ertekJavaslatController` `/reszletek` és `/aktualis` végpontja rossz mezőnevet (`osszesJavaslat`) olvasott a service `osszesErtekJavaslat` helyett → `undefined` volt, most helyes.
 6. [x] **Értesítések** (főmenü) — KÉSZ (2026-07-14–15): beállítás-cascade, postafiók
    (`ErtesitesekModal`), app- és kártya-badge-ek, ág-szűrt kártya-postafiók (A1–A3 + B
@@ -159,27 +159,27 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       lehet.** (1) `kategoria` modell `szuloTipus` enum SZŰKÍTVE `['Kategoria', null]`-ra;
       (2) `kategoriaService._szuloKategoriaEllenorzese` (típus = 'Kategoria' + a szülő
       LÉTEZIK) — bekötve létrehozáskor és módosításkor is.
-    - ✅ **Leírás-szerkesztő (Csaba kérése): a `KategoriaModal` ÉS a `TartalomTipusModal`
-      most a blokk-alapú `SzovegSzerkeszto`-t használja** (mint a `TartalomModal`).
+    - ✅ **Leírás-szerkesztő (Csaba kérése): a `KategoriaModal` ÉS a `GondolatTipusModal`
+      most a blokk-alapú `SzovegSzerkeszto`-t használja** (mint a `GondolatModal`).
       Korábban mindkettőben holt kód volt: a JS a `leiras-szerkeszto-kontener`-t kereste,
       de a HTML sima `<textarea>`-t tartalmazott + hiányzott az import → a LEÍRÁS nem
       mentődött. Javítás: import + a `<textarea>` cseréje a szerkesztő-konténerre mindkét
       modal HTML-jében.
     - 🔴→✅ **Kártya nem jelenítette meg a blokk-szerkezetet — JAVÍTVA (2026-07-22).**
-      Ok: a Kategoria/TartalomTipus modálja MULTIPART FormData-t küld (ikon-fájl), ahol a
+      Ok: a Kategoria/GondolatTipus modálja MULTIPART FormData-t küld (ikon-fájl), ahol a
       `leiras` csak stringként mehet → `JSON.stringify`-olt stringként tárolódott, és a
-      kártya megjelenítője „legacy sima szövegként" a NYERS JSON-t mutatta. (A Tartalom
+      kártya megjelenítője „legacy sima szövegként" a NYERS JSON-t mutatta. (A Gondolat
       JSON-body-t küld → ott a `szoveg` tömbként tárolódik, ezért jó.) Javítás: új
       `backend/utils/leirasParser.js` (`leirasParse`) a FormData-ból jött JSON-stringet
-      tömbbé alakítja — bekötve a `kategoriaService` és a `tartalomTipusService`
+      tömbbé alakítja — bekötve a `kategoriaService` és a `gondolatTipusService`
       létrehozás- ÉS módosítás-ágába. A már meglévő string-leírásokat egyszeri
       DB-javítással tömbbé alakítottuk (mongosh, csak érvényes JSON-t konvertálva).
-    - ✅ **Kategória-választó a Tartalom modálban HIERARCHIKUS (Csaba kérése, a
-      jegyzetek.md 2026-07-22 ötletéből).** A `TartalomModal` legördülője fa-sorrendben,
+    - ✅ **Kategória-választó a Gondolat modálban HIERARCHIKUS (Csaba kérése, a
+      jegyzetek.md 2026-07-22 ötletéből).** A `GondolatModal` legördülője fa-sorrendben,
       mélység szerinti behúzással mutatja a kategóriákat (alkategória a szülője alatt,
       nem törő szóközök + „└ " jel). Új `_kategoriakFaSorrendbe()` (DFS, mélység a teljes
       fából, árva-söprés, kör-védelem); a `findAll` úgyis küldi a `szuloId`-t.
-10. [x] **Jogosultság-függő menüpontok** — a kártya-menük megnyitáskor jelzik a jogosultságot: a tudatpontot igénylő menüpontok (Javaslat létrehozása, Szavazat leadása, valamint „Új tartalom/kategória létrehozása ebből") inaktívak (halvány + magyarázó tipp), ha az eembernek nincs tudatpontja az entitáson. Megvalósítás: a menüpont `tudatpontFuggo: true` jelölést kap; a `Kartya` alaposztály a menü megnyitásakor a `GET /api/tudatpont/entitas/:tipus/:id → eemberHozzajarulas` (eemberenkénti `tudatponthozzarendeles.tudatPontok`) alapján tiltja/engedi. A backend a védelmet külön kikényszeríti (javaslatService, szavazatService).
+10. [x] **Jogosultság-függő menüpontok** — a kártya-menük megnyitáskor jelzik a jogosultságot: a tudatpontot igénylő menüpontok (Javaslat létrehozása, Szavazat leadása, valamint „Új gondolat/kategória létrehozása ebből") inaktívak (halvány + magyarázó tipp), ha az eembernek nincs tudatpontja az entitáson. Megvalósítás: a menüpont `tudatpontFuggo: true` jelölést kap; a `Kartya` alaposztály a menü megnyitásakor a `GET /api/tudatpont/entitas/:tipus/:id → eemberHozzajarulas` (eemberenkénti `tudatponthozzarendeles.tudatPontok`) alapján tiltja/engedi. A backend a védelmet külön kikényszeríti (javaslatService, szavazatService).
     - **Döntés (2026-07-10) — a backend szabálya a mérvadó:** a szavazati jogosultságot MINDIG az érintett entitás(ok)on lévő tudatpont dönti el (`erintettEntitasok`, ahogy a backend teszi); a javaslaton magán lévő tudatpont hiánya NEM akadály, attól még lehet szavazni. A frontendet ehhez igazítjuk. **Választott megoldás:** a **pakli e-ember-tudatossá tétele** — a `pakliService` megkapja a néző e-ember azonosítóját (a pakli útvonal már `authMiddleware`-es, a `req.user.id` rendelkezésre áll), és a javaslat-kártya adataihoz kiszámolja a `szavazhat` jelzést a backend saját szabályával (`javaslatJogosultsagService`). A frontend a „Szavazat leadása" pontot ez alapján engedi/tiltja (nem a javaslat saját tudatpontja alapján). Ez foundational: az e-ember-tudatos pakli más funkciókhoz is kell (lásd a fejléc saját-tudatpont jelzés jegyzete, [jegyzetek.md](jegyzetek.md), 2026-07-10).
     - **Egyezmény** kártya „Javaslat létrehozása" pontja ✅ KÉSZ (2026-07-22) — `tudatpontFuggo`,
       a JavaslatModal-t nyitja. Lásd a lenti **„Javaslat-típus domain-szabályok"** szakaszt.
@@ -188,21 +188,21 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
 | Entitás | Törlés | Módosítás | Áthelyezés | Egyesítés | Csomag |
 |---|---|---|---|---|---|
-| Tartalom | ✅ | ✅ | ✅ | ✅ *(csak Tartalommal → Tartalom)* | ✅ |
+| Gondolat | ✅ | ✅ | ✅ | ✅ *(csak Gondolattal → Gondolat)* | ✅ |
 | Kategória | ✅ | ✅ | ❌ | ✅ *(csak Kategóriával → Kategória)* | — |
-| Tartalomtípus | ✅ | ✅ | ❌ | ❌ | — |
+| Gondolattípus | ✅ | ✅ | ❌ | ❌ | — |
 | Egyezmény | ❌ | ❌ | ✅ | ❌ | ❌ |
 
-- **Egyesítés — AZONOS típus (2026-07-22, Csaba finomítás):** Tartalmat csak Tartalommal,
-  Kategóriát csak Kategóriával lehet egyesíteni; Tartalomtípust egyáltalán nem. Az „új entitás
+- **Egyesítés — AZONOS típus (2026-07-22, Csaba finomítás):** Gondolatot csak Gondolattal,
+  Kategóriát csak Kategóriával lehet egyesíteni; Gondolattípust egyáltalán nem. Az „új entitás
   típusa" a kártya típusából KÖVETKEZIK (nincs szabad választás), a forrás-mezők is csak ezt a
   típust engedik. Backend: a résztvevők típusa AZONOS kell legyen (`Set(erintettek).size===1`) és
-  Tartalom/Kategória; az eredmény-típus egyezik.
+  Gondolat/Kategória; az eredmény-típus egyezik.
 - **Az új entitás szülője OPCIONÁLIS (Csaba, 2026-07-22):** üresen hagyva az alap-szülő a források
   **LEGKÖZELEBBI KÖZÖS ŐSE** (`javaslatService._legkozelebbiKozosSzulo` — forrásonkénti ős-lánc az
   `osLancFelepitese`-ből, a legmélyebb mindegyikben szereplő ős), vagy null (gyökér), ha nincs közös
   ős. A számítás a javaslat LÉTREHOZÁSAKOR történik és bekerül a javaslatba. Ha megadják a szülőt:
-  Tartalom-eredménynél Tartalom, Kategória-eredménynél Kategória; nem lehet érintett entitás vagy
+  Gondolat-eredménynél Gondolat, Kategória-eredménynél Kategória; nem lehet érintett entitás vagy
   annak leszármazottja (service + végrehajtó). Kategória-eredménynél a közös ős úgyis kategória
   (a kategória-hierarchia enumja miatt), de defenzíven ellenőrizzük.
 - **Egyezmény tárhely egyesítésnél:** üresen hagyva az ÚJ entitás (a `…0001` placeholder → a
@@ -215,7 +215,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
   (így a Csomag tételeire is), a `javaslat` modell `erintettEntitasok.entitasTipus` enumja bővült
   `Egyezmeny`-nyel, a létezés-ellenőrzés is.
 - **Egyezmény áthelyezése VÉGREHAJTÁS is:** az `athelyezesiVegrehajto` Egyezményt is mozgat
-  (repository típus szerint; a cél mindig Tartalom). Az egyezmény-tárhely áthelyezésnél opcionális (null=gyökér).
+  (repository típus szerint; a cél mindig Gondolat). Az egyezmény-tárhely áthelyezésnél opcionális (null=gyökér).
 - **Kategória-egyesítés:** a szülő-validáció (service) és a végrehajtó (create + kör-ellenőrzés) az
   eredmény-típushoz igazodó repository-t használ (kategóriánál `KategoriaRepository`).
 - ✅ **Egyesített entitás GYEREKEI az ÚJ entitás alá kerülnek (Csaba döntése, 2026-07-22).** Korábban
@@ -225,21 +225,21 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
   (a hierarchikus fából, bármely típus, a magukat-is-forrás entitások kihagyva), a **7. lépés** pedig
   az ÚJ entitás alá köti őket — entitás-doc + hierarchikus fa (`updateSzuloId`) + osLanc-részfa
   (`reszfaOsLancUjraepitese`) + hierarchikus pont-újraszámítás felfelé (`_hierarchiaPontokFelfele`).
-  Ez EGYSZERRE javítja a Tartalom-egyesítést (eddig a nagyszülőhöz kerültek) és valósítja meg a
+  Ez EGYSZERRE javítja a Gondolat-egyesítést (eddig a nagyszülőhöz kerültek) és valósítja meg a
   kategóriát. Típus-inkompatibilis gyerek (enum) esetén az adott gyerek átugorva, a merge nem hiúsul meg.
 
 11. [ ] **Kártya-fejléc átalakítása (folyamatban, 2026-07-11)** — a fejléc három vízszintes sávra oszlik (elválasztó vonalak nélkül): **felső sor** = cím/név/megnevezés (dinamikus betűméret — [jegyzetek.md](jegyzetek.md)); **bal négyzet** = lejjebb hozott hamburger; **jobb oldali két sor** = ikon+szám blokkok (jobbra igazítva). Entitástípusonként:
     - **Közös 1. sor:** entitás saját tudatpont + hierarchikus tudatpont + hozzájárulók száma (mindig), a néző e-ember saját pontja (csak ha >0).
-    - **2. sor:** Tartalom → kategória + tartalomtípus ikon; Kategória/Tartalomtípus → hány tartalom használja; Javaslat → részvételi/támogatottsági/ellenzői/tartózkodói % + döntési idő; Egyezmény → részvételi/támogatottsági/ellenzői/tartózkodói % + döntés dátuma.
+    - **2. sor:** Gondolat → kategória + gondolattípus ikon; Kategória/Gondolattípus → hány gondolat használja; Javaslat → részvételi/támogatottsági/ellenzői/tartózkodói % + döntési idő; Egyezmény → részvételi/támogatottsági/ellenzői/tartózkodói % + döntés dátuma.
     - **Felső sor szövege:** Javaslat → „Módosítási/Törlési/Áthelyezési/Egyesítési javaslat", csomag → „Javaslat csomag"; Egyezmény → ugyanígy „… egyezmény" / „Egyezmény csomag".
-    - **Backend KÉSZ (B1–B5):** `sajatTudatpont` → `entitasSajatTudatpont` átnevezés; a pakli küldi a `hozzajarulokSzama` és `eemberSajatTudatpontEntitason` mezőket (közös forrás: `TudatpontService.entitasAllokaciLekerese`); Kategória/Tartalomtípus `hasznaloTartalmakSzama` (új `tartalomRepository.countByKategoriaId` / `countByTartalomTipusId`); a javaslat/egyezmény küldi a `tartozkodoiArany`-t, az egyezmény az `ellenzoiArany`/`tartozkodoiArany`/`dontesDatum` (=`vegrehajtva`) mezőket.
+    - **Backend KÉSZ (B1–B5):** `sajatTudatpont` → `entitasSajatTudatpont` átnevezés; a pakli küldi a `hozzajarulokSzama` és `eemberSajatTudatpontEntitason` mezőket (közös forrás: `TudatpontService.entitasAllokaciLekerese`); Kategória/Gondolattípus `hasznaloGondolatokSzama` (új `gondolatRepository.countByKategoriaId` / `countByGondolatTipusId`); a javaslat/egyezmény küldi a `tartozkodoiArany`-t, az egyezmény az `ellenzoiArany`/`tartozkodoiArany`/`dontesDatum` (=`vegrehajtva`) mezőket.
     - **Szavazási matek — Modell A (2026-07-11):** a támogatottsági/ellenzői/**tartózkodói** arány tiszta szelet (mind = szavazat-szám/összes szavazó × 100), együtt 100%. A tartózkodás már nem „fél-támogatás" (a korábbi `tk/2` szétosztás megszűnt) → csökkenti a támogatottságot, így nehezíti az elfogadást (az elfogadási küszöb a tiszta támogató%-ot nézi). A **bizonyossági mutató** matematikailag változatlan: `(|támogató% − ellenző%| + részvételi%) / 2`. Érintett: `javaslatSzamitasService`, `javaslat`+`egyezmeny` modell (új `tartozkodoiArany`, egyezménynél `ellenzoiArany` is), `egyezmenyService` snapshot, `pakliService`.
-    - **Frontend KÉSZ (F1–F4, 2026-07-11, böngészőben MÉG NEM tesztelve):** `kartya.html` + `kartya.css` háromsávos váz (elválasztó vonalak nélkül, hamburger 60×60 bal négyzet, ikon-terület jobbra igazítva); `Kartya.js` a két slotot (cím / ikon-terület) adja át. **F2:** közös `javaslatMegnevezes.js` (Módosítási javaslat / Javaslat csomag / … egyezmény) + dinamikus címbetűméret **kétlépcsősen** (2026-07-12): `_cimBetumeretBecsles` karakterszám-becslés az `init()`-ben (a kártya még nincs a DOM-ban), majd `cimBetumeretHozzaigazitasa()` a valódi cím-sáv-szélességhez arányosítva (a Pakli `paklitRendel` rAF-jében hívja; MIN 8 – MAX 24px). A cím LEGFELJEBB 3 SORBA tördel (CSS `-webkit-line-clamp: 3`), balra igazítva, a méretezés a 3-soros helyhez arányosít. A mezőnév-egyértelműsítés (`entitasSajatTudatpont` vs. `eemberSajatTudatpontEntitason`) ellenőrizve, kész. **F3:** közös tudatpont-sor a base-ben (`_kozosTudatpontSorFeltoltese` + `_ikonElem`) mind az 5 kártyán: 🌿 entitás saját · 🌲 hierarchikus · 👥 hozzájárulók (mindig) · ⭐ néző saját (csak >0); a régi per-kártya tudatpont-sorok törölve. **F4:** típusfüggő 2. sor — Tartalom: típus+kategória ikon; Kat/Típus: 📄 „hány tartalom használja" (az entitás saját ikonja is marad); Javaslat/Egyezmény: 👥✅❌➖ (részvételi/támogatottsági/ellenzői/tartózkodói %, **egészre kerekítve**) + ⏱ döntési idő (`masodpercFelirat`) / 📅 döntés dátuma. **Döntés:** a bizonyossági mutató (🎯) lekerült a fejlécről (a Részletek modálban marad).
+    - **Frontend KÉSZ (F1–F4, 2026-07-11, böngészőben MÉG NEM tesztelve):** `kartya.html` + `kartya.css` háromsávos váz (elválasztó vonalak nélkül, hamburger 60×60 bal négyzet, ikon-terület jobbra igazítva); `Kartya.js` a két slotot (cím / ikon-terület) adja át. **F2:** közös `javaslatMegnevezes.js` (Módosítási javaslat / Javaslat csomag / … egyezmény) + dinamikus címbetűméret **kétlépcsősen** (2026-07-12): `_cimBetumeretBecsles` karakterszám-becslés az `init()`-ben (a kártya még nincs a DOM-ban), majd `cimBetumeretHozzaigazitasa()` a valódi cím-sáv-szélességhez arányosítva (a Pakli `paklitRendel` rAF-jében hívja; MIN 8 – MAX 24px). A cím LEGFELJEBB 3 SORBA tördel (CSS `-webkit-line-clamp: 3`), balra igazítva, a méretezés a 3-soros helyhez arányosít. A mezőnév-egyértelműsítés (`entitasSajatTudatpont` vs. `eemberSajatTudatpontEntitason`) ellenőrizve, kész. **F3:** közös tudatpont-sor a base-ben (`_kozosTudatpontSorFeltoltese` + `_ikonElem`) mind az 5 kártyán: 🌿 entitás saját · 🌲 hierarchikus · 👥 hozzájárulók (mindig) · ⭐ néző saját (csak >0); a régi per-kártya tudatpont-sorok törölve. **F4:** típusfüggő 2. sor — Gondolat: típus+kategória ikon; Kat/Típus: 📄 „hány gondolat használja" (az entitás saját ikonja is marad); Javaslat/Egyezmény: 👥✅❌➖ (részvételi/támogatottsági/ellenzői/tartózkodói %, **egészre kerekítve**) + ⏱ döntési idő (`masodpercFelirat`) / 📅 döntés dátuma. **Döntés:** a bizonyossági mutató (🎯) lekerült a fejlécről (a Részletek modálban marad).
 
 12. [x] **Keresés (fő menü + ág-szűrt kártya-menük)** — KÉSZ (2026-07-18; böngészős
-    teszt hátra: teszt.md 43). Csaba döntései: v1 = **cím/név alapú** (a tartalmak
-    szövegében keresés későbbi bővítés); **típus-pipák** vannak (Tartalom/Kategória/
-    Tartalomtípus); tudatpontos rangsor NEM kell. Új `KeresesModal` (keresőmező
+    teszt hátra: teszt.md 43). Csaba döntései: v1 = **cím/név alapú** (a gondolatok
+    szövegében keresés későbbi bővítés); **típus-pipák** vannak (Gondolat/Kategória/
+    Gondolattípus); tudatpontos rangsor NEM kell. Új `KeresesModal` (keresőmező
     ~300 ms debounce-szal, pipa-váltásra újrakeresés, találatra kattintva
     pakli-navigálás); fő menü 🔍 pont (teljes keresés) + MINDEN kártya-hamburgerben
     közös 🔍 pont ÁG-SZŰRT módban. Backend: a meglévő `GET /api/kereses` bővítve
@@ -276,7 +276,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       a Struktúra nézethez mint navigációs-vizualizációs irány. A leírás alább a
       megvalósult állapotot rögzíti. Teljes képernyős, interaktív nézet
       az entitás-fáról. **Hibrid felépítés** (Csaba döntése: több tízezer
-      tartalomra kell készülni, de a részletes interakció is fontos):
+      gondolatra kell készülni, de a részletes interakció is fontos):
       **Canvas alapréteg** rajzolja a TELJES fát (élek + típus-színű pöttyök),
       fölötte **SVG fedőréteg** CSAK a látható csomópontokra és legfeljebb 250
       darabig (ikon + rövid cím + tooltip + kattintás) — távolról a canvas-kép,
@@ -360,13 +360,13 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
         - **13/b-6. Mellék-ikonok a közeli nézetben (2026-07-20, Csaba kérése).**
           A legközelebbi (3.) LOD-szinten a fő ikon MELLETT kis körökben extra
           típus-infó jelenik meg (a fő ikonnál kisebben, ugyanaz a dizájn):
-          Tartalomnál a KATEGÓRIÁI balra (kategória-szín), a TARTALOMTÍPUSA jobbra
-          (tartalomtípus-szín) — a körben az adott kategória/típus saját `ikon`-ja
+          Gondolatnál a KATEGÓRIÁI balra (kategória-szín), a GONDOLATTÍPUSA jobbra
+          (gondolattípus-szín) — a körben az adott kategória/típus saját `ikon`-ja
           (emoji vagy feltöltött kép, utóbbi körre vágva `<image>`-dzsel), csak ha
           van hozzárendelve. Javaslat/Egyezménynél a `javaslatTipus` szerinti
           művelet-emoji jobbra (Törlés 🗑️ · Módosítás ✏️ · Egyesítés 🔗 ·
           Áthelyezés ➡️ · Csomag 📦), a csomópont saját színével. Kategóriának és
-          Tartalomtípusnak nincs mellék-ikonja. **Backend:** a `strukturaService`
+          Gondolattípusnak nincs mellék-ikonja. **Backend:** a `strukturaService`
           új `mellekIkonokFeltoltese` segéde típusonként EGY-EGY csoportos
           lekérdezéssel (N+1 nélkül) tölti a `/api/struktura` sorait a
           `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel; a
@@ -376,7 +376,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
           képkockán újraépült a teljes SVG-fedőréteg (`innerHTML`), ami az emoji-
           raszterizálás miatt kis adatnál is akadt. Megoldás (`StrukturaModal.js`):
           mozgás közben csak az OLCSÓ canvas-réteg rajzolódik újra képkockánként,
-          az SVG-réteg pedig egyetlen közös `<g id="struktura-svg-tartalom">`-en át
+          az SVG-réteg pedig egyetlen közös `<g id="struktura-svg-gondolat">`-en át
           egy TRANSZFORMMAL követi a nézetet (pontos pozíció/méret, GPU-gyors); a
           teljes SVG-újraépítés csak a mozgás megállása után fut (settle-debounce,
           150 ms), ekkor frissül a LOD-szint, a láthatóság és a feliratok.
@@ -445,12 +445,12 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     egy síkidom, területe a hierarchikus össztudatponttal arányos; a leszármazottak
     a szülőn BELÜL (containment), minden szinttel a terület 1/20-ára (sugár
     1/√20 ≈ 4,47) csökken → egy körbe ~20 gyerek. Végtelen zoom; egyszerre ~3-4
-    szint; „képernyőt kitöltő" tartalomnál átlép rá — EZ okozza a kifogásolt
+    szint; „képernyőt kitöltő" gondolatnál átlép rá — EZ okozza a kifogásolt
     PISLANTÁST (teljes DOM teardown+rebuild).
 
     **Közös tervezési döntések (Csaba, 2026-07-20):**
-    - **Formák ENTITÁSTÍPUS szerint** (nem tartalomtípus szerint, mint 1.0):
-      Tartalom = kör, Kategória = háromszög (3), Tartalomtípus = négyzet (4),
+    - **Formák ENTITÁSTÍPUS szerint** (nem gondolattípus szerint, mint 1.0):
+      Gondolat = kör, Kategória = háromszög (3), Gondolattípus = négyzet (4),
       Javaslat = ötszög (5), Egyezmény = hatszög (6). Oldalszám-progresszió.
     - **Skálázhatóság a lényeg** (milliárd+ ember, több entitás) → NEM lehet a
       teljes fát letölteni. Bounded, lazy betöltés mélységben ÉS szélességben.
@@ -461,7 +461,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
       kapacitásból KÖVETKEZIK. Első nézet: az összes gyökeret a megfelelő
       TÁVOLSÁGBÓL; csak a legnagyobb össz-pontúak lépik át a küszöböt.
     - **A globális nézet az ÖSSZES gyökeret mutatja** (egymás mellé pakolva, a
-      legnagyobb középen) — így teljesül a „az összes gyökér tartalmat kéne
+      legnagyobb középen) — így teljesül a „az összes gyökér gondolatot kéne
       megjelenítenie" igény; a pakli indul a legerősebb gyökértől, a síkidom a
       szélesebb rálátást adja. (2026-07-20; a korábbi „csak a legerősebb gyökér"
       megfogalmazás javítva, mert az egy levél-gyökérnél üres nézetet adott.)
@@ -836,7 +836,7 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
 
     **MEGSZŰNT AZ ADATHIÁNY.** Új eszköz: `backend/tools/sikidomMelysegTesztAdat.js`
     — TÖBB SZINTŰ fát épít egy meglévő gyökér alá (a rendes service-en át, tehát
-    minden származtatott rekord konzisztens). Futtatva: 155 tartalom 3 szinten.
+    minden származtatott rekord konzisztens). Futtatva: 155 gondolat 3 szinten.
     Erre azért volt szükség, mert a fejlesztői adatbázisban 105 gyökér mellett
     mindössze 3 nem-gyökér entitás volt — **a horgony szintje mérve végig −1
     maradt**, vagyis a drill-down esetet hetekig nem is teszteltük.
@@ -1023,8 +1023,8 @@ a kártya-specifikus műveletek után két csoport, elválasztó vonallal — (a
     **Csaba döntései (2026-07-20):**
     - „saját tudatpont" = az **entitás saját összpontja** (`entitasSajatTudatpont`),
       NEM a néző e-emberé és NEM a hierarchikus összpont.
-    - a lapos lista **minden entitástípust** felsorol (Kategória, TartalomTípus,
-      Tartalom, Javaslat, Egyezmény).
+    - a lapos lista **minden entitástípust** felsorol (Kategória, GondolatTípus,
+      Gondolat, Javaslat, Egyezmény).
     - „ágazat" = **a fa egy ága (részfa)**: egy csomópont + minden leszármazottja.
     - hatókör: **fő menüből → GLOBÁLIS**; **kártya-menüből → az a kártya az
       ágazat-gyökér** (csak a részfáját rendezi) — a Keresés/Tudatpontok/Struktúra nézet
@@ -1150,7 +1150,7 @@ frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
   került. Mind a 8 típus él (2026-07-20-i ellenőrzés): `ujJavaslat`
   (`javaslatService`), `javaslatElfogadas`/`javaslatElvetve` (`javaslatIdozitesService._lezarasErtesites`),
   `szavazasiHatarido` (`javaslatIdozitesService`, cron), `tudatpontValtozas`
-  (`tudatpontService`), `ujGyerekEntitas` (`tartalomService`), `kuszobValtozas`
+  (`tudatpontService`), `ujGyerekEntitas` (`gondolatService`), `kuszobValtozas`
   (`ertekSzamitasService`, V2). A **`szavazatErkezett`** külön eset (lásd lentebb).
 - [~] ⏸️ **`szavazatErkezett` — FÜGGŐBEN (2026-07-20, a tulajdonos döntése).** A backend
   TERMELŐ be van kötve (`szavazatService.szavazatLeadasa`, nem-töredék + töredék ág,
@@ -1171,7 +1171,7 @@ frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
 - [x] 🟡→✅ **Feliratkozás/beállítás felület KÉSZ (2026-07-20-i ellenőrzés).**
   A közös `ErtesitesiBeallitasModal` be van kötve a fő menübe („Értesítési beállítások" =
   GLOBÁLIS alapbeállítás, a cascade legvégső visszaesése) ÉS MINDEN kártya-hamburgerbe
-  (entitásonkénti beállítás) — Tartalom/Kategória/Tartalomtípus/Javaslat/Egyezmény. Az opt-in
+  (entitásonkénti beállítás) — Gondolat/Kategória/Gondolattípus/Javaslat/Egyezmény. Az opt-in
   így teljes: az e-ember globálisan vagy entitásonként feliratkozhat a típusokra. A beállítás-API
   (`PUT/GET/DELETE /api/ertesitesi-beallitasok/...`) mögötte működik.
 - [~] 🟡 **Takarító metódusok — RÉSZBEN kész (2026-07-20-i ellenőrzés).** Az ENTITÁS-törlési
@@ -1212,7 +1212,7 @@ frontend-nézet ráépíthető. A talált hiányosságok fontossági sorrendben:
     (a régi `IdEllenorzoMezo` helyett, azonos API + kereső dropdown + ID-fallback). Bevezetve a
     `JavaslatModal` **összes** ID-mezőjébe és a szövegszerkesztő `EntitasHivatkozasPanel`-jébe.
     A régi `IdEllenorzoMezo(.js/.css)` törölve.
-- [x] **Javaslat szülő + egyezmény hely általánosítása** (2026. 07. 09.): a javaslat MINDIG az érintett entitás gyereke — a szülő polimorf lett (Tartalom/Kategoria/TartalomTipus), a felső szintű `szuloId`-kötelezőség eltávolítva (controller + service + modell). Ezzel megszűnt a „szülő tartalom megadása kötelező" hiba, és **kategórián/tartalomtípuson is lehet javaslatot tenni** (eddig a „csak Tartalom" korlát miatt hibára futott). Az **egyezmény helye** (`egyezmenyTarhelyId`) típusonként auto-levezetve: Törlés → az érintett entitás (a végrehajtó fallback az eredeti szülőre viszi), Módosítás/Áthelyezés → az érintett entitás, Egyesítés → placeholder → az új entitás. Új polimorf mezők: `javaslat.egyezmenyTarhelyTipus`, valamint `javaslat.szuloTipus` / `egyezmeny.szuloId`+`szuloTipus` polimorfra bővítve. A Csomag felső szintű csomagolása külön, későbbi feladat.
+- [x] **Javaslat szülő + egyezmény hely általánosítása** (2026. 07. 09.): a javaslat MINDIG az érintett entitás gyereke — a szülő polimorf lett (Gondolat/Kategoria/GondolatTipus), a felső szintű `szuloId`-kötelezőség eltávolítva (controller + service + modell). Ezzel megszűnt a „szülő gondolat megadása kötelező" hiba, és **kategórián/gondolattípuson is lehet javaslatot tenni** (eddig a „csak Gondolat" korlát miatt hibára futott). Az **egyezmény helye** (`egyezmenyTarhelyId`) típusonként auto-levezetve: Törlés → az érintett entitás (a végrehajtó fallback az eredeti szülőre viszi), Módosítás/Áthelyezés → az érintett entitás, Egyesítés → placeholder → az új entitás. Új polimorf mezők: `javaslat.egyezmenyTarhelyTipus`, valamint `javaslat.szuloTipus` / `egyezmeny.szuloId`+`szuloTipus` polimorfra bővítve. A Csomag felső szintű csomagolása külön, későbbi feladat.
 
 ---
 
@@ -1273,7 +1273,7 @@ a többi V-feladat és a régi terv-sorrend (7–9. pont) ezek után.
   üzemeltetői láthatóság őszinte kimondása: ÚJ [adatkezeles.md](adatkezeles.md).
 - [x] **V4. E-mail privát** (H3) — ✅ KÉSZ (2026-07-18). Audit-eredmény: a
   `letrehozo` és szavazat populate-ok 20+ helyen az e-mailt is kiadták
-  (javaslat/egyezmény/tartalom/szavazat válaszokban) → mind `eemberNev`-re szűkítve;
+  (javaslat/egyezmény/gondolat/szavazat válaszokban) → mind `eemberNev`-re szűkítve;
   curl-lel igazolva, hogy a javaslat/egyezmény/pakli válaszokban nincs e-mail.
   E-mailt csak a SAJÁT regisztráció/bejelentkezés válasza tartalmaz.
 - [ ] **V6. Identitás-réteg modulba** (H4) — a regisztráció leválasztása külön modulba,
@@ -1389,7 +1389,7 @@ A menük (fő hamburger, alsó sáv, kártya-hamburgerek) és a modálok változ
 (Böngészős teszt: teszt.md 49.)
 
 Az új modalok és menük stílusa a **standard vonalat** kövesse:
-- **Irányadó:** a tartalom (entitás) létrehozása modal (`TartalomModal`), a fő hamburger menü, és a kártyák hamburger menüi.
+- **Irányadó:** a gondolat (entitás) létrehozása modal (`GondolatModal`), a fő hamburger menü, és a kártyák hamburger menüi.
 - **Kivétel (szándékosan eltér):** a javaslat-típus választó menü és a `JavaslatModal` — ezt NE vegyük mintának új felületekhez.
 
 ---
@@ -1397,7 +1397,7 @@ Az új modalok és menük stílusa a **standard vonalat** kövesse:
 ## Nyitott kérdések
 
 1. A menühálózat később bővül — a bővítéseket ebbe a dokumentumba vezetjük át.
-2. A „Részletes adatok" és a „Tudatpont módosítás" pontos tartalmát/felületét az adott feladat megkezdésekor tervezzük meg.
+2. A „Részletes adatok" és a „Tudatpont módosítás" pontos gondolatát/felületét az adott feladat megkezdésekor tervezzük meg.
 
 ---
 
@@ -1653,7 +1653,7 @@ DOM-sugárnál kisebbeket, és a viewport-körön kívülieket.
    **Ez nálunk hibajavítás is volt:** `URES_MAG = false` óta a középpontban a
    LEGKISEBB GYEREK ül, tehát a középre írt felirat rátakart — a kód kommentje
    viszont még azt állította, hogy ott üres mag van.
-2. **Mellék-ikonok a síkidomon.** Kategória-ikonok balra, tartalomtípus jobbra, a
+2. **Mellék-ikonok a síkidomon.** Kategória-ikonok balra, gondolattípus jobbra, a
    felirat alatt, 96 px látszó átmérő fölött. Backend: a `sikidomService` a
    Struktúra nézettel KÖZÖS `mellekIkonokFeltoltese`-t hívja (nincs duplikált
    logika, típusonként egy csoportos lekérdezés). Frontend: `_ikonTar` kép-gyorsítótár,
@@ -2272,11 +2272,11 @@ vagyis a holtverseny a tipikus eset, nem a kivétel.
 
 ### Teszt-adat: `tools/sikidomTizezerGyokerTesztAdat.js`
 
-10 000 gyökér-tartalom. Mivel 0 tudatpontos entitás nem létezik, ehhez legalább
+10 000 gyökér-gondolat. Mivel 0 tudatpontos entitás nem létezik, ehhez legalább
 10 000 tudatpont kell — a szerszám ezért annyi „töltő" e-embert hoz létre
 (`tesztTolto1…`, jelszó `jelszo123`), amennyi a kerethez kell.
 
-*Lefuttatva 2026-08-09-én: 10 000 tartalom 337 másodperc alatt, 0 hiba. A gyökér-
+*Lefuttatva 2026-08-09-én: 10 000 gondolat 337 másodperc alatt, 0 hiba. A gyökér-
 allokációk száma **10 405**, összpont 28 025, a legerősebb 2243, és **9 910
 egypontos** (a keret szűk volt, ezért az eloszlás farka lapos).*
 
@@ -2435,7 +2435,7 @@ A megoldás: a betöltés ELŐTT megjelöljük a legkisebb entitást (még a ré
 lepakolásban), és a következő lepakolásnál **ugyanakkora legyen a területe**, mint
 előtte. A helye változhat, a mérete nem — a szem ezt érzékeli mélységként.
 
-**Vizuálisan is megjelöljük:** az a tartalom, ami eddig (majdnem) középen volt, most
+**Vizuálisan is megjelöljük:** az a gondolat, ami eddig (majdnem) középen volt, most
 valahol a gyűrűben lesz, ezért fontos, hogy az e-ember lássa, **hol maradt abba az
 előző lepakolás**.
 
@@ -2446,7 +2446,7 @@ előző lepakolás**.
    lyuk, és a legkisebb síkidom a középpontban, láthatóan. Böngésző nélkül mérve
    (9 állítás áll); böngészős teszt: [teszt.md](teszt.md), „a PAKOLÁSI MAG mint jelzés".
 2. [x] **A feltétel** (2026-08-11) — `magbanRejtett === 0` (a kijelző-mag már EGYETLEN
-   lerakott síkidomot sem takar) ÉS van még le nem töltött testvér → „további tartalmak"
+   lerakott síkidomot sem takar) ÉS van még le nem töltött testvér → „további gondolatok"
    felirat a magban. CSAK A HORGONYON, hogy egy egyértelmű koppintási cél legyen.
    Új: `TOVABBI_FELIRAT_MIN_SUGAR`, `_feliratSzin()`. A felirat a MÉRT ürességhez
    (a pakolási lyukhoz) méretezi magát, nem a kijelző-maghoz.
@@ -2568,7 +2568,7 @@ képernyő közepén, a mező üres közepe pedig elmozdult — az új adag fogl
 ### Az adag: 10 000 → 5 000
 
 `SikidomModal.ELORETOLTES_DARAB` 10 000 → **5 000**. A szám kettős szerepű: ez az
-ELSŐ adag mérete ÉS a „további tartalmak" koppintásával kért következő adagé is
+ELSŐ adag mérete ÉS a „további gondolatok" koppintásával kért következő adagé is
 (a `betoltesiPlafon` növekménye). A feleződéssel tehát a megnyitás és minden egyes
 lapozás is fürgébb — a 2026-08-09-i mérés szerint (~6 500 testvér/s internetes
 sebességgel) egy adag másfél-két másodpercről nagyjából fél másodpercre esik.
@@ -2893,7 +2893,7 @@ testvér. Egy láncszemnél az egyetlen gyerek a szülő PONTOS középpontjába
 (nincs pakolási lyuk, mert nincs mire várni), tehát a középponttól mért távolsága
 nulla — és a kijelző-mag elrejtette, amíg túl nem nőtte a ~31 képpontos kört.
 
-*(Csaba felvetése, hogy a gyökereknél maradt betöltetlen tartalom „öröklődött volna
+*(Csaba felvetése, hogy a gyökereknél maradt betöltetlen gondolat „öröklődött volna
 tovább": ez nem így van — a feltétel csomópontonként külön dől el.)*
 
 ### A KÉT ÜZEMMÓD
@@ -3292,7 +3292,7 @@ másolatán, most a VALÓDI kódot futtatja.
 
 A szemrevételezés valódi adaton — a rajzolást és az események bekötését gép nem
 tudja igazolni. Amit érdemes végignézni: feliratok · mellék-ikonok · üres mag és a
-„további tartalmak" ajánlat · a megjelölt gyűrűje · egy/kétujjas gesztusok ·
+„további gondolatok" ajánlat · a megjelölt gyűrűje · egy/kétujjas gesztusok ·
 görgő és csippentés · koppintás → adatlap → „Pakli nézet" · mély nagyítás.
 
 ---
@@ -3300,7 +3300,7 @@ görgő és csippentés · koppintás → adatlap → „Pakli nézet" · mély 
 ## ✅ Síkidom nézet — AZ ADAT-FELHALMOZÓDÁS MEGSZÜNTETÉSE (Csaba, 2026-08-12)
 
 Csaba megfigyelése: „amikor ráközelítek az 5 000 gyerekes síkidomra, amitől
-pozicionálja 5 000-ig a tartalmakat, akkor miután kizoomolok belőle, újra csak
+pozicionálja 5 000-ig a gondolatokat, akkor miután kizoomolok belőle, újra csak
 250-et kéne pozicionálni." Majd a lényeg: **„a végtelen böngészés ne okozzon
 végtelen felhalmozódást az adatokban."**
 
@@ -3313,7 +3313,7 @@ a keret kiszámítása MINDKETTŐ mögött állt. A zsugorítás kódja megvolt,
 elérhetetlen.
 
 **2. AZ ADATNAK NEM VOLT KIVEZETŐ ÚTJA.** A három tár — `_tar`, `varolista`,
-`visszaszedettek` — csak egymásnak adogatta a tartalmát:
+`visszaszedettek` — csak egymásnak adogatta a gondolatát:
 
 | honnan | hova | mikor |
 |---|---|---|
@@ -3353,7 +3353,7 @@ elő.
 
 Ez nem mellékhatás, hanem önálló indok. Eddig egy hosszú munkamenetben a letöltött
 adat **véglegesen elavult**: ha közben valaki tudatpontot rendezett át vagy új
-tartalmat hozott létre abban a csoportban, a nézet soha nem vette észre, mert a
+gondolatot hozott létre abban a csoportban, a nézet soha nem vette észre, mert a
 `visszaszedettek`-ből töltött vissza, nem a backendről. A törlés + újratöltés ezt
 magától megoldja.
 
@@ -3371,7 +3371,7 @@ nyesés viszont kevesebb munkát jelent, nem többet.
 **2. commit `81b7bfa` — az ős-söprés töröl, nem parkoltat.** A folyosón kívül a
 csomópontok részfástul mennek, a szint pedig újratölthető állapotba áll
 (`szintUjratoltesre`): kurzor a rangsor elejére, küszöb vissza, **a lapozás plafonja
-is** (különben a „további tartalmak" koppintásokkal felhizlalt plafon azon az úton
+is** (különben a „további gondolatok" koppintásokkal felhizlalt plafon azon az úton
 halmozna tovább), az össz-pont újra kérdés.
 
 Ezzel a **parkolás gépezete feleslegessé vált**: `kiparkolas`, a `parkolt` mező és a
@@ -3435,7 +3435,7 @@ néma maradt.*
 
 A lapozás lépcsője visszafelé (2026-08-16) azt csinálja, amit Csaba kért: ha valaki
 annyira kizoomol egy szintről, hogy már nem látja a részleteit, a `betoltesiPlafon`
-visszalép egy adagot, a fölösleg a várólistára kerül, és a „további tartalmak" mag
+visszalép egy adagot, a fölösleg a várólistára kerül, és a „további gondolatok" mag
 ismét megjelenik. Mérve is működött: **15 000 → 10 000 → 5 000**, a tár 10 692-ről
 5 262-re, a memória 14 MB-ról 9-re.
 
@@ -3512,12 +3512,12 @@ bekötni, soha nem az `_alaphelyzet` belsejében.
 A `PLAFON_LEPCSO_BEKAPCSOLVA` már `true`. A nézet a konzolról figyelhető
 (`window._debug_sikidom`), a lépcső pedig minden lépésnél naplóz.
 
-1. **A regresszió, ami miatt kikapcsoltuk.** Koppints a „további tartalmak"-ra, és
+1. **A regresszió, ami miatt kikapcsoltuk.** Koppints a „további gondolatok"-ra, és
    **ne csinálj semmit** 5–10 másodpercig. A konzolban NEM szabad megjelennie
    `_plafonLepcsoVisszafele` sornak. (Régen itt vette vissza az adagot.)
 2. **A lépcső lefelé.** Lapozz kétszer (5 000 → 10 000 → 15 000), majd görgővel
    zoomolj kifelé. Két `_plafonLepcsoVisszafele` sort várunk, `kizoomolas ≈ 0,5`
-   értékkel, és a „további tartalmak" magnak vissza kell jönnie.
+   értékkel, és a „további gondolatok" magnak vissza kell jönnie.
 3. **A szorzó tükre.** Zoomolj be és pontosan ugyanannyit vissza:
    `window._debug_sikidom._gesztusSzorzo` térjen vissza a kiindulóhoz (±pár ezred).
 4. **Az illesztés NE lépjen.** Lapozz, majd nyomd meg a ⛶-t. A lépcsőnek **nem**
@@ -3544,7 +3544,7 @@ if (cs.tovabbiKert && mennyiVanMar >= plafon) cs.tovabbiKert = false;
 ```
 
 Ez a feltétel **csak egyfajta teljesülést ismert**: amikor a kért adag hiánytalanul
-megérkezik. De van egy másik is — **elfogyott a tartalom**. Csaba adatán 10 407 gyökér
+megérkezik. De van egy másik is — **elfogyott a gondolat**. Csaba adatán 10 407 gyökér
 van; a második lapozás 15 000-re emeli a plafont, amit a `mennyiVanMar` **soha nem
 ér el**. A `tovabbiKert` így örökre igaz marad, a lépcső pedig a kapunál minden
 menetben kilép. **A második lapozás után a visszalépés soha többé nem tud elsülni.**
@@ -3594,7 +3594,7 @@ mérőpróbák igazolták őket.*
 
 ### A mérés
 
-Dev környezet, 15 611 tartalom / 10 407 gyökér. Csaba megnyitotta a Síkidom nézetet,
+Dev környezet, 15 611 gondolat / 10 407 gyökér. Csaba megnyitotta a Síkidom nézetet,
 lement az `Ötven szintű mély lánc (síkidom próba)` ágon, majd ugyanazon az úton
 vissza. A nézetet kívülről mértük (képkockánkénti horgony-figyelés + a napló-sorok
 elkapása), **a kódhoz nem kellett hozzányúlni**.
@@ -3677,21 +3677,21 @@ nyitott igazolás.
 ## Javaslat- és Egyezmény-kártya — fülekre osztott body (2026-08-18, Csaba)
 
 **A probléma.** A módosítási javaslat kártyája jelenleg CSAK az indoklást mutatja,
-a javasolt ÚJ (módosított) tartalmat nem — így nem lehet érdemben szavazni. Az
-egyezmény kártyája a lecserélt (régi) tartalmat nem őrzi meg, a body-ja pedig a
+a javasolt ÚJ (módosított) gondolatot nem — így nem lehet érdemben szavazni. Az
+egyezmény kártyája a lecserélt (régi) gondolatot nem őrzi meg, a body-ja pedig a
 részvételi arányt DUPLIKÁLTAN mutatja (a fejléc már közli).
 
-**A megoldás.** A két kártya body-ja **külső fülsávot** kap (ahogy a tartalom
-fülekre osztható, csak eggyel feljebb): egy fül tartalma maga egy tartalom, aminek
+**A megoldás.** A két kártya body-ja **külső fülsávot** kap (ahogy a gondolat
+fülekre osztható, csak eggyel feljebb): egy fül gondolata maga egy gondolat, aminek
 LEHET saját belső fülsávja — ezért két réteg fül kell. A belső réteg MÁR KÉSZ: a
 `SzovegMezoMegjelenito` a „több oldalas" formátumnál magától kirajzolja a belső
 fülsávot. Építeni a KÜLSŐ réteget kell.
 
 **Adat-helyzet (megvizsgálva).**
-- Javaslat → módosított tartalom: az adat LÉTEZIK (`javaslat.erintettEntitasok[]
+- Javaslat → módosított gondolat: az adat LÉTEZIK (`javaslat.erintettEntitasok[]
   .modositasAdatok` = `{ cim/nev, szoveg/szovegMezo, ... }`), de a `pakliService`
   jelenleg nem küldi ki a kártyának. → csak kiszállítani kell.
-- Egyezmény → lecserélt tartalom: NEM létezik sehol — a `modositasiVegrehajto`
+- Egyezmény → lecserélt gondolat: NEM létezik sehol — a `modositasiVegrehajto`
   `updateById`-dal felülír, a régit előtte nem menti. → a végrehajtáskor
   snapshotolni kell. **A legegyszerűbb út (választott):** a `modositasiVegrehajto`
   a felülírás ELŐTT `findById`-dal kiolvassa a régi `cim`/`szoveg`-et, és a
@@ -3705,18 +3705,18 @@ fülsávot. Építeni a KÜLSŐ réteget kell.
 1. A külső fülsáv KÖZÖS, újrahasznált komponens (Javaslat + Egyezmény).
 2. Most CSAK a **Módosítás** típust csináljuk meg; a többi típus (Törlés/
    Áthelyezés/Egyesítés/Csomag) body-ját később bontjuk fülekre.
-3. Az egyezménynek egyelőre CSAK KÉT füle van: (1) lecserélt tartalom, (2) indoklás.
+3. Az egyezménynek egyelőre CSAK KÉT füle van: (1) lecserélt gondolat, (2) indoklás.
    (A „részletes adatok" fület most kihagyjuk.)
-4. A régi egyezmények üres „lecserélt tartalom" füle elfogadott (a legegyszerűbb út).
+4. A régi egyezmények üres „lecserélt gondolat" füle elfogadott (a legegyszerűbb út).
 
 **A javaslat-kártya terve (Módosítás):** külső fülsáv 3 füllel —
-(1) **Indoklás** (a mai body), (2) **Módosított tartalom** (a `modositasAdatok`-ból:
-a cím a KÉT fülsáv KÖZÉ, alatta a tartalom saját belső fülsávja + blokkjai),
+(1) **Indoklás** (a mai body), (2) **Módosított gondolat** (a `modositasAdatok`-ból:
+a cím a KÉT fülsáv KÖZÉ, alatta a gondolat saját belső fülsávja + blokkjai),
 (3) **Szavazás** (a szavazógombok a `SzavazatModal` logikájával; a hamburgerből
 ide kerül; csak `statusz==='Aktiv'`-nál, `!szavazhat`-nál tiltva).
 
 **Az egyezmény-kártya terve:** a duplikált részvételi-arány sor törlése, majd külső
-fülsáv 2 füllel — (1) **Lecserélt tartalom** (a `regiAdatok`-ból; ha nincs: „nincs
+fülsáv 2 füllel — (1) **Lecserélt gondolat** (a `regiAdatok`-ból; ha nincs: „nincs
 megőrzött adat"), (2) **Indoklás** (a mai body).
 
 **Érintett fájlok.** Új: `KartyaFulsav.js` + CSS. Módosul: `JavaslatKartya.js`,
@@ -3724,47 +3724,47 @@ megőrzött adat"), (2) **Indoklás** (a mai body).
 újrahasznált: `SzovegMezoMegjelenito.js`, `SzavazatModal.js`.
 
 **Sorrend.** (A) közös komponens + backend Javaslat-adat + JavaslatKártya fülek
-(Indoklás + Módosított tartalom) → böngészős teszt; (B) Javaslat szavazás-fül;
+(Indoklás + Módosított gondolat) → böngészős teszt; (B) Javaslat szavazás-fül;
 (C) backend `regiAdatok` snapshot + Egyezmény-adat + EgyezményKártya fülek.
 
-### ✅ (A) lépés — Javaslat: Indoklás / Módosított tartalom fülek (2026-08-18)
+### ✅ (A) lépés — Javaslat: Indoklás / Módosított gondolat fülek (2026-08-18)
 
 Elkészült, böngészős teszt hátra. Amit tartalmaz:
 - **Új közös komponens:** `frontend/js/components/kartya/KartyaFulsav.js` + CSS
   (`css/components/kartya/kartyaFulsav.css`, importálva a `main.css`-ben). Külső
-  fül-réteg, előre megépített tartalom-elemek közti váltással (mutat/rejt, nem épít
-  újra → nincs szivárgás); a tartalom-elemek életciklusát a kártya birtokolja. Egy
+  fül-réteg, előre megépített gondolat-elemek közti váltással (mutat/rejt, nem épít
+  újra → nincs szivárgás); a gondolat-elemek életciklusát a kártya birtokolja. Egy
   fülnél nincs fülsáv. Közös `kartya-fulsav__cim` (cím a két fülsáv közé) és
   `kartya-fulsav__ures` (üres-állapot) osztály.
-- **Backend adat-kiszállítás (lusta úton):** `pakliService.javaslatModositottTartalom`
+- **Backend adat-kiszállítás (lusta úton):** `pakliService.javaslatModositottGondolat`
   a Módosítás-javaslat első Módosítás-műveletű érintett entitásának
-  `modositasAdatok`-jából ad `{ cim, szoveg, entitasTipus }`-t (Tartalom→cim/szoveg,
+  `modositasAdatok`-jából ad `{ cim, szoveg, entitasTipus }`-t (Gondolat→cim/szoveg,
   egyéb→nev/szovegMezo). A `pakliController.entitasSzovegLekerese` (GET
-  `/api/pakli/szoveg/:tipus/:id`) Javaslatnál a válaszba teszi `modositottTartalom`
-  néven; a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.modositottTartalom`-ra
+  `/api/pakli/szoveg/:tipus/:id`) Javaslatnál a válaszba teszi `modositottGondolat`
+  néven; a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.modositottGondolat`-ra
   (siker- és hiba-ágon is). Nem-Módosítás típusnál / más entitásnál null.
-- **JavaslatKártya:** ha van `adatok.modositottTartalom`, a body külső fülsávot kap —
-  1. Indoklás, 2. Módosított tartalom (cím a két sáv közé, alatta a belső fülsáv +
+- **JavaslatKártya:** ha van `adatok.modositottGondolat`, a body külső fülsávot kap —
+  1. Indoklás, 2. Módosított gondolat (cím a két sáv közé, alatta a belső fülsáv +
   blokkok). Ha csak a cím módosult (nincs szöveg): „Ehhez a módosításhoz nincs
-  szöveges tartalom." Egyéb esetben a body a régi módon csak az indoklást mutatja.
+  szöveges gondolat." Egyéb esetben a body a régi módon csak az indoklást mutatja.
   A single `szovegMezoMegjelenito` → `megjelenitok` tömb + `kartyaFulsav`; a
   `destroy` mindet felszabadítja.
 
 **Böngészős visszajelzés utáni javítások (2026-08-18, Csaba):**
 - A body-ból KIKERÜLT a töredékcsoport-azonosító sor (a fejléc „2/6" badge-e elég).
-- **Fül-átfedés javítva:** a „Módosított tartalom" fül az indoklást is mutatta, mert a
+- **Fül-átfedés javítva:** a „Módosított gondolat" fül az indoklást is mutatta, mert a
   `SzovegMezoMegjelenito` közvetlenül a fül-panelre került → a panel megkapta a
   `szoveg-mezo-megjelenito` (display:flex) osztályt, ami a CSS import-sorrend miatt
   felülírta a rejtő `display:none`-t. Javítás: a megjelenítő külön gyerek-konténerbe
   kerül + a rejtő szabály leszármazott-szelektoros (magasabb specifikusság).
-- **A 2. fül a teljes EREDMÉNY-tartalmat képezi le** (cím + body): a
-  `javaslatModositottTartalom` a `modositasAdatok`-ot ráolvassa az érintett entitás
-  JELENLEGI tartalmára, így a body akkor is látszik, ha csak a cím változott; ha a
-  tartalom body-ja eleve üres, ott is üres. (Az „nincs szöveges tartalom" üzenet
+- **A 2. fül a teljes EREDMÉNY-gondolatot képezi le** (cím + body): a
+  `javaslatModositottGondolat` a `modositasAdatok`-ot ráolvassa az érintett entitás
+  JELENLEGI gondolatára, így a body akkor is látszik, ha csak a cím változott; ha a
+  gondolat body-ja eleve üres, ott is üres. (Az „nincs szöveges gondolat" üzenet
   megszűnt.)
 
 Hátra: (B) Javaslat szavazás-fül; (C) Egyezmény (backend `regiAdatok` snapshot +
-Lecserélt tartalom / Indoklás fülek).
+Lecserélt gondolat / Indoklás fülek).
 
 ### ✅ (B) lépés — Javaslat: Szavazás fül (2026-08-18)
 
@@ -3780,39 +3780,39 @@ fülébe költözött. Amit tartalmaz:
   false) a gombok tiltva, indokkal.
 - **A body-építés EGYSÉGESÍTVE:** a `JavaslatKartya._bodyFeltoltese` mindig
   fül-listát épít és a KartyaFulsav-ra bízza. Fülek: Indoklás (ha van szöveg) ·
-  Módosított tartalom (Módosításnál) · Szavazás (AKTÍV javaslatnál). Egyetlen
-  fülnél nincs fülsáv, csak a tartalom. Így a szavazás MINDEN aktív javaslaton
+  Módosított gondolat (Módosításnál) · Szavazás (AKTÍV javaslatnál). Egyetlen
+  fülnél nincs fülsáv, csak a gondolat. Így a szavazás MINDEN aktív javaslaton
   elérhető (nem csak Módosításnál) — nem esett ki a nem-módosítási javaslatoknál.
 - **A hamburger menüből a „Szavazat leadása" pont KIKERÜLT**; a `_szavazatLeadasa`
   metódus és a `SzavazatModal` import törölve a JavaslatKártyából. (A
   `SzavazatModal.js` fájl megmarad, csak innen nem hivatkozzuk.)
 
-Hátra: (C) Egyezmény (backend `regiAdatok` snapshot + Lecserélt tartalom /
+Hátra: (C) Egyezmény (backend `regiAdatok` snapshot + Lecserélt gondolat /
 Indoklás fülek).
 
-### ✅ (C) lépés — Egyezmény: Lecserélt tartalom / Indoklás fülek (2026-08-18)
+### ✅ (C) lépés — Egyezmény: Lecserélt gondolat / Indoklás fülek (2026-08-18)
 
 Elkészült, böngészős teszt hátra. Amit tartalmaz:
 - **Backend — a régi állapot MENTÉSE végrehajtáskor:** a `modositasiVegrehajto` a
   `updateById` (felülírás) ELŐTT `findById`-dal kiolvassa az érintett entitás régi
   cím/body-ját, és a végrehajtási eredménybe teszi
-  (`modositottEntitasok[].regiAdatok`; Tartalom→cim/szoveg, Kat/Típus→nev/leiras).
+  (`modositottEntitasok[].regiAdatok`; Gondolat→cim/szoveg, Kat/Típus→nev/leiras).
   Ez az `egyezmenyLetrehozasa` révén MAGÁTÓL bekerül az egyezmény
   `vegrehajatasEredmeny`-ébe — **séma-módosítás nélkül**. Csak a mostantól
   létrejövő egyezményekre hat; a régieknél nincs `regiAdatok`.
-- **Backend — kiszállítás (lusta úton):** `pakliService.egyezmenyLecsereltTartalom`
+- **Backend — kiszállítás (lusta úton):** `pakliService.egyezmenyLecsereltGondolat`
   a Módosítás-egyezmény `vegrehajatasEredmeny.modositottEntitasok[].regiAdatok`-jából
   ad `{ cim, szoveg, entitasTipus }`-t. A `pakliController` (GET
-  `/api/pakli/szoveg/...`) Egyezménynél a válaszba teszi `lecsereltTartalom` néven;
-  a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.lecsereltTartalom`-ra.
+  `/api/pakli/szoveg/...`) Egyezménynél a válaszba teszi `lecsereltGondolat` néven;
+  a `Pakli.kivalasztottSzovegFrissitese` ráírja az `adatok.lecsereltGondolat`-ra.
 - **EgyezményKártya:** a duplikált „Részvételi arány" body-sor KIKERÜLT (a fejléc
-  mutatja). A body külső fülsávot kap: 1. Lecserélt tartalom (ha van `lecsereltTartalom`
+  mutatja). A body külső fülsávot kap: 1. Lecserélt gondolat (ha van `lecsereltGondolat`
   — cím a két sáv közé, alatta a régi body), 2. Indoklás. Egyetlen fülnél (régi vagy
   nem-módosítási egyezmény) nincs sáv, csak az indoklás. `megjelenitok` tömb +
   `kartyaFulsav`; a `destroy` mindet felszabadítja.
 
 **A teljes feladat (Javaslat + Egyezmény kártya fülek) KÉSZ** — böngészős teszt
-mindhárom lépésre. A „Lecserélt tartalom" fül csak a MOSTANTÓL létrejövő módosítási
+mindhárom lépésre. A „Lecserélt gondolat" fül csak a MOSTANTÓL létrejövő módosítási
 egyezményeknél jelenik meg (a régieknél nincs elmentve a régi állapot).
 
 ## E-mail: értesítés-kézbesítés + elfelejtett jelszó (2026-08-24, Csaba döntései)
@@ -3994,7 +3994,7 @@ mindkettőhöz kell, és valódi levélküldés nélkül is tesztelhető.
 A fork-jog eddig **hálózat-szintű** fogalomként szerepelt (D9, `vizio_kritikak.md`):
 a teljes koino kettéválik, a kód forkolódik, a közösség két hálózatra szakad — vésznyílás.
 
-Ez itt **entitás-szintű** és **működés közbeni**: egyetlen tartalom válik ketté, a koinón
+Ez itt **entitás-szintű** és **működés közbeni**: egyetlen gondolat válik ketté, a koinón
 BELÜL, egy módosítási javaslat kapcsán. Nem szakadás, hanem a mindennapi működés része.
 
 ### AZ ALAPELV: a szimmetria
@@ -4002,20 +4002,20 @@ BELÜL, egy módosítási javaslat kapcsán. Nem szakadás, hanem a mindennapi m
 Ma egy módosítási javaslatnak egy nyertese van. A különválással **mindkét oldal azt viszi
 magával, amit ő akart**:
 
-| A szavazás vége | Akik különválhatnak | Az új ág tartalma |
+| A szavazás vége | Akik különválhatnak | Az új ág gondolata |
 |---|---|---|
 | **Elfogadva** | az ellenzők | a **régi** (módosítás előtti) állapot |
 | **Elvetve** | a támogatók | a **módosított** (javasolt) állapot |
 
 Ettől igaz, hogy „mindenki megkapja, amit szeretne". A vesztes verzió adata mindkét
 irányban rendelkezésre áll: a `modositasiVegrehajto` már MOST elmenti a régi állapotot
-(`modositottEntitasok[].regiAdatok` → az Egyezmény-kártya „Lecserélt tartalom" füle).
+(`modositottEntitasok[].regiAdatok` → az Egyezmény-kártya „Lecserélt gondolat" füle).
 
 ### AZ EGYETLEN SZABÁLY, ami mindent levezet
 
 > **Minden kapcsolódó entitás oda kerül, ahol tudatpontja van annak, aki különválik.**
 
-Ez vonatkozik a leszármazott tartalmakra, a javaslatokra ÉS az egyezményekre — nincs
+Ez vonatkozik a leszármazott gondolatokra, a javaslatokra ÉS az egyezményekre — nincs
 külön szabály típusonként. Következménye, hogy a művelet **NEM másolás, hanem szétosztás
 a súlyok mentén**. Minden kapcsolódó entitásnál három kimenet lehet:
 
@@ -4025,7 +4025,7 @@ a súlyok mentén**. Minden kapcsolódó entitásnál három kimenet lehet:
 - **marad, ahol van** — a különválóknak nincs rajta pontja.
 
 A fa tehát nem „megkettőződik", hanem szétválik. És ez magától arányos: aki egyetlen
-tartalomhoz szólt hozzá, egyetlen tartalmat visz, nem az ágat.
+gondolathoz szólt hozzá, egyetlen gondolatot visz, nem az ágat.
 
 ### CSABA DÖNTÉSEI (2026-08-24, pontonként)
 
@@ -4054,13 +4054,13 @@ foglaltak állást, tehát nem különválnak. Szavazat MÓDOSÍTÁSAKOR a kül�
 
 **6. A két ág nem veszíti szem elől egymást.** A különvált entitás (és a testvére) egy
 PLUSZ FÜLSÁVOT kap — ugyanúgy, ahogy a Javaslat- és Egyezmény-kártya body-ja már most
-fülekre van osztva (`KartyaFulsav`). Az első fül maga a tartalom, a második fülben egy
+fülekre van osztva (`KartyaFulsav`). Az első fül maga a gondolat, a második fülben egy
 **entitás-hivatkozás** (a szövegszerkesztő `EntitasHivatkozasBlokk`-ja már létezik) a
 másik ágra. Így a különválás nem nyomtalan, és a két ág később ÚJRA EGYESÍTHETŐ a
 meglévő egyesítési javaslattal — a kör zárul: szétválni és visszatalálni is lehet.
 
 **7. Szerkesztők: átkerülnek, a MEGLÉVŐ szín-szabály jelzi az egyet nem értést.**
-Ha az eredeti szerkesztő a módosításra szavazott, a különvált (régi tartalmú) ágon is ő
+Ha az eredeti szerkesztő a módosításra szavazott, a különvált (régi gondolatú) ágon is ő
 a szerkesztő — de a neve PIROS. Ehhez nem kell új mechanizmus: a `szerkesztok[].allapot`
 (Tamogatja / Ellenzi / Tartozkodik / NemSzavazott) és a `ReszletekModal` szín-logikája
 már működik, csak AZ ÁG SZEMPONTJÁBÓL kell kiszámolni. Ugyanaz az adat, két nézőpontból.
@@ -4068,14 +4068,14 @@ már működik, csak AZ ÁG SZEMPONTJÁBÓL kell kiszámolni. Ugyanaz az adat, k
 **8. Érték javaslatok: a különválók sajátjai ÁTVÁNDOROLNAK.** Ha emiatt valamelyik ágnak
 nem marad értéke, az az ALAPÉRTELMEZETT küszöbre áll, amíg valaki nem tesz rá új érték
 javaslatot. (Ez azért kellett külön kimondani, mert érték javaslatra NEM lehet
-tudatpontot tenni — a `tudatpontHozzarendeles` enum csak Tartalom / Kategoria /
-TartalomTipus / Javaslat —, tehát rájuk az egységes szabály nem alkalmazható. A megoldás
+tudatpontot tenni — a `tudatpontHozzarendeles` enum csak Gondolat / Kategoria /
+GondolatTipus / Javaslat —, tehát rájuk az egységes szabály nem alkalmazható. A megoldás
 konzisztens az 1-essel: aki elmegy, viszi a magáét.)
 
-**9. Az azonosító a FŐÁGÉ.** Elfogadott javaslatnál tehát a RÉGI tartalom kap új
+**9. Az azonosító a FŐÁGÉ.** Elfogadott javaslatnál tehát a RÉGI gondolat kap új
 azonosítót, pedig ő a folytonos. Ezt tudatosan vállaljuk (az egyezmény ott született).
-Következménye: **a hivatkozás a HELYHEZ tapad, nem a tartalomhoz** — aki a régi
-tartalomra hivatkozott, annak a hivatkozása a módosított változatra fog mutatni.
+Következménye: **a hivatkozás a HELYHEZ tapad, nem a gondolathoz** — aki a régi
+gondolatra hivatkozott, annak a hivatkozása a módosított változatra fog mutatni.
 Csaba ezt így akarja; a jelölésre külön ötlet van (lásd a nyitott szálaknál).
 
 ### A NYELV (Csaba kérésére: ne „vereség" és ne „győztes")
@@ -4114,12 +4114,12 @@ tehát „eltérő álláspont", nem vereség. Senki nem veszít, csak külön �
 ### NYITOTT SZÁLAK (nem blokkolók)
 
 1. **Hivatkozás-jelölés** (Csaba: „ezzel most nem kell foglalkozni"): ha egy
-   entitás-hivatkozás RÉGEBBI, mint a hivatkozott tartalom módosítása, azt valahogy
+   entitás-hivatkozás RÉGEBBI, mint a hivatkozott gondolat módosítása, azt valahogy
    jelölni kellene — így látszana, hogy a hivatkozó nem a mostani szöveget ismerte.
 2. **Az adatmodell konkrét mezői** még nincsenek kitalálva. Vázlatosan kelleni fog:
    a szavazatra egy különválási szándék jelölés; az entitásra a testvér-ág mutatója
    (melyik entitásból vált ki, melyik egyezmény kapcsán).
-3. **Kategória / tartalomtípus különválás?** Eddig végig TARTALOMRÓL beszéltünk.
+3. **Kategória / gondolattípus különválás?** Eddig végig GONDOLATRÓL beszéltünk.
 4. **Többszörös különválás**: a különvált ágon is lehet javaslat és újabb különválás —
    a fülsáv és a testvér-nyilvántartás ezt bírja-e láncban.
 5. **Mikor fut le** — az egyezmény létrejöttével egy tranzakcióban, vagy külön lépésben.
@@ -4163,7 +4163,7 @@ gyakorlatban CSAK a leszármazottakra vonatkozik — ott viszont valóban előfo
 
 **4. Az `egyesitesiVegrehajto` tényleg a tükörkép, de a sorrendje kényszer, nem stílus.**
 Ott előbb ki kell üríteni a forrásokat, és csak utána lehet létrehozni az új entitást —
-mert a `TartalomService.tartalomLetrehozasa` legalább 1 tudatpontot követel a
+mert a `GondolatService.gondolatLetrehozasa` legalább 1 tudatpontot követel a
 létrehozótól, az pedig csak akkor szabad, ha már levettük a forrásról. A különválásnál
 UGYANEZ a kényszer áll fenn: előbb a különváló „alapító" pontjának nullázása a forráson,
 utána az új ág létrehozása. Nincs adatbázis-tranzakció (a MongoDB önálló példányként fut),
@@ -4171,11 +4171,11 @@ ezért a motornak **újrafuttathatónak** kell lennie: félbeszakadás esetén a
 el (visszakerül az e-emberhez), de a művelet befejezetlen marad.
 
 **5. A `KartyaFulsav` ma CSAK a Javaslat- és az Egyezmény-kártyán van bekötve.** A
-6. döntéshez (testvér-ág fül) tehát a `TartalomKartya`-ba is be kell vezetni — ez nem új
+6. döntéshez (testvér-ág fül) tehát a `GondolatKartya`-ba is be kell vezetni — ez nem új
 komponens, de nem is puszta konfigurálás.
 
 **6. Ismert csapda a tudatpont-modellben. ✅ RENDBE TÉVE (2026-08-25).** A
-`tudatpontHozzarendeles.entitasTipus` enum értékei: `Tartalom | Kategoria | TartalomTipus |
+`tudatpontHozzarendeles.entitasTipus` enum értékei: `Gondolat | Kategoria | GondolatTipus |
 Javaslat` — az **`Egyezmeny` hiányzott**, holott a rendszer ma is ír rá ilyet (a fenti
 1. pont átrendezése). A hozzárendelés upserttel megy, ezért a séma-ellenőrzés nem csapott
 le rá.
@@ -4202,8 +4202,8 @@ elvetésnél az `javaslatIdozitesService` `Elvetve` ágán. A külön try/catch 
 mintája (így véd a `modositasiVegrehajto` a szerkesztő-lista frissítésénél): ha a
 különválás elhasal, a MÁR megszületett döntés érvényes marad.
 
-**C) Az első kör hatóköre: csak `Modositas` típusú javaslat, csak `Tartalom` entitáson.**
-A tervező szakasz is végig tartalomról beszél; a kategória/tartalomtípus (3. nyitott szál)
+**C) Az első kör hatóköre: csak `Modositas` típusú javaslat, csak `Gondolat` entitáson.**
+A tervező szakasz is végig gondolatról beszél; a kategória/gondolattípus (3. nyitott szál)
 és a láncolt különválás (4. nyitott szál) külön kör.
 
 ### A LÉPÉSEK
@@ -4221,7 +4221,7 @@ A `SzavazatModal`-ban a Támogatom/Ellenzem mellé egy jelölőnégyzet: *„Ha 
 **Ellenőrzés:** leadás / módosítás / visszavonás után a mező értéke az adatbázisban.
 A működés még változatlan: a jelölés csak gyűlik.
 
-**2. lépés — A testvér-nyilvántartás helye. ✅ KÉSZ (2026-08-25).** A `tartalom` sémába
+**2. lépés — A testvér-nyilvántartás helye. ✅ KÉSZ (2026-08-25).** A `gondolat` sémába
 `kulonvalasok` mező kerül, a `models/kulonvalasResz.js` közös al-sémával (a
 `szerkesztoResz.js` mintájára). Elemenként: `testverId`, `testverTipus`, `agSzerep`
 (`foag` / `kulonvalt`), `forrasJavaslatId`, `forrasEgyezmenyId`, `kulonvalasIdeje`.
@@ -4235,8 +4235,8 @@ Index: `kulonvalasok.testverId`. Logika még nincs.
 > kerül semmibe, később viszont megspórol egy migrációt.
 >
 > **Az `agSzerep` a 9. döntés hordozója**: a főág az, aki megtartotta az EREDETI azonosítót.
-> Elfogadott javaslatnál tehát a módosított tartalom a főág (a régi kap új azonosítót),
-> elvetettnél a változatlan tartalom a főág (a módosított kap újat).
+> Elfogadott javaslatnál tehát a módosított gondolat a főág (a régi kap új azonosítót),
+> elvetettnél a változatlan gondolat a főág (a módosított kap újat).
 
 **3. lépés — A szétosztás motorja (felület nélkül).** Új service:
 `services/kulonvalasService.js` (nem javaslat-végrehajtó: nem egy javaslat-TÍPUS
@@ -4248,13 +4248,13 @@ a különválók e-ember-listája, és hogy melyik állapotot viszik (a régit v
 A metódus sorrendje — a 4. felfedezés kényszere szerint:
 1. felmérés (ki mennyi pontot visz, mennyi marad) — MIELŐTT bármit módosítanánk,
 2. az „alapító" (a legtöbb pontot adó különváló) pontjának nullázása a forráson,
-3. az új ág létrehozása `TartalomService.tartalomLetrehozasa`-val, ezekkel a pontokkal,
+3. az új ág létrehozása `GondolatService.gondolatLetrehozasa`-val, ezekkel a pontokkal,
 4. a többi különváló pontjának átvitele (forráson 0, célon a régi érték),
 5. a testvér-mezők beírása mindkét oldalra.
 
 Amit menet közben ki kellett mondani:
 - **Az „alapító" technikai szerep**, nem többletjog: a legtöbb pontot vivő különváló, mert
-  a tartalom létrehozásához kell egy létrehozó, legalább 1 ponttal. Holtversenynél az
+  a gondolat létrehozásához kell egy létrehozó, legalább 1 ponttal. Holtversenynél az
   azonosító dönt — kimondva, hogy ugyanaz a bemenet mindig ugyanazt adja.
 - **Védőkorlát: a főág nem eshet 0-ra.** Ha mégis oda vezetne, a service hangosan elakad.
   Nem óvatoskodás: valódi szavazásból ez nem következhet (a győztes oldalon szükségszerűen
@@ -4266,7 +4266,7 @@ Amit menet közben ki kellett mondani:
   minden pont-mozgásnál magától lépked felfelé a szülő-láncon.
 
 **A mérés (`backend/tools/kulonvalasProba.js`, 2026-08-25, dev adat):** két esetben,
-gyökér tartalmon és gyerek tartalmon is. Mind a hat ellenőrzés RENDBEN:
+gyökér gondolaton és gyerek gondolaton is. Mind a hat ellenőrzés RENDBEN:
 a rendszerben lévő összes tudatpont változatlan (40000 → 40000); a két ág pontja kiadja az
 eredetit (901+15=916, illetve 20+8=28); a szülő hierarchikus összpontja változatlan
 (2276 → 2276); a testvér-bejegyzés mindkét oldalon helyes `agSzerep`-pel; a két ág
@@ -4330,7 +4330,7 @@ egyezménybe is bekerül.
 - **A „nincs mit átvinni" nem hiba:** ha az ellenző időközben elvette a pontját az
   entitásról, kihagyásként naplózzuk, nem hibaként. Így a napló nem riogat feleslegesen.
 
-**Végponttól végpontig mérve (2026-08-25, dev):** tartalom A=100 / B=50 / C=5 pontokkal,
+**Végponttól végpontig mérve (2026-08-25, dev):** gondolat A=100 / B=50 / C=5 pontokkal,
 módosítási javaslat, A és C támogat, B ellenez + külön ágat kér. Támogatottság 66,67%,
 részvétel 100% → elfogadva. Eredmény: a **főág** a MÓDOSÍTOTT címet viseli 105 ponttal
 (A+C), a **különvált ág** az EREDETI címet 50 ponttal (B), mindkét oldalon helyes
@@ -4354,7 +4354,7 @@ az elvetett javaslat, a `forrasEgyezmenyId` pedig **mindig null**.
 
 **Egy különbség, ami csak itt derült ki:** elfogadásnál a régi állapotot KÉSZEN kapjuk
 (`regiAdatok` pillanatkép). Elvetésnél nincs ilyen — a módosítás végre sem hajtódott —,
-ezért a módosított állapotot ÖSSZE KELL RAKNI: a tartalom MOSTANI cím/szöveg mezőire
+ezért a módosított állapotot ÖSSZE KELL RAKNI: a gondolat MOSTANI cím/szöveg mezőire
 ráterítjük a javaslat `modositasAdatok` mezőit. Ha a javaslat csak a címet változtatta
 volna, a szöveg a mostani marad — pontosan az az állapot, ami elfogadás esetén létrejött
 volna.
@@ -4363,7 +4363,7 @@ volna.
 külön ágat. Ha a beadó tartalék-ágat szeretne arra az esetre, ha megbukik a javaslata,
 azt külön be kell pipálnia (újraszavazással).
 
-**Végponttól végpontig mérve (2026-08-25, dev):** tartalom A=50 / B=100 / C=3 pontokkal,
+**Végponttól végpontig mérve (2026-08-25, dev):** gondolat A=50 / B=100 / C=3 pontokkal,
 A módosítási javaslatot tesz és bepipálja a külön ágat, B és C ellenzi. Támogatottság
 33,33% → **elvetve**. Eredmény: a **főág** változatlan címmel és szöveggel él tovább
 103 ponttal (B+C), a **különvált ág** a MÓDOSÍTOTT címmel és az EREDETI szöveggel
@@ -4378,17 +4378,17 @@ A módosítási javaslatot tesz és bepipálja a külön ágat, B és C ellenzi.
 **6. lépés — Az érték javaslatok átvándorlása (8. döntés). ✅ KÉSZ (2026-08-25).** A különválók saját
 `ertekJavaslat` sorai átíródnak az új entitásra. Ha az egyik ágon nem marad egy sem, az az
 ág az alapértelmezett küszöbre áll — ez magától teljesül, mert a
-`tartalomLetrehozasa` úgyis alapértéket ad.
+`gondolatLetrehozasa` úgyis alapértéket ad.
 
-**7. lépés — A fülsáv és a testvér-hivatkozás (frontend). ✅ KÉSZ (2026-08-25).** A `TartalomKartya`-ba
-bekötjük a `KartyaFulsav`-ot (5. felfedezés): első fül a tartalom, második a „Másik ág" —
+**7. lépés — A fülsáv és a testvér-hivatkozás (frontend). ✅ KÉSZ (2026-08-25).** A `GondolatKartya`-ba
+bekötjük a `KartyaFulsav`-ot (5. felfedezés): első fül a gondolat, második a „Másik ág" —
 benne egy `EntitasHivatkozasBlokk` a testvérre, és egy mondat arról, melyik döntés kapcsán
 váltak szét. A „..." túlnyúlás-gomb újramérése fülváltáskor már megoldott
 (`Kartya._kibovitesUjraertekeles` ↔ `KartyaFulsav.onFulValtas`), ehhez nem kell semmi új.
-> **Csapda, amit a 2. lépésnél mértünk ki:** a `tartalomRepository.findById` `.lean()`-nel
-> olvas, ezért a RÉGI (2026-08-25 előtti) tartalmaknál a `kulonvalasok` mező egyszerűen
+> **Csapda, amit a 2. lépésnél mértünk ki:** a `gondolatRepository.findById` `.lean()`-nel
+> olvas, ezért a RÉGI (2026-08-25 előtti) gondolatoknál a `kulonvalasok` mező egyszerűen
 > HIÁNYZIK a válaszból — nem üres tömb, hanem `undefined`. A frontend tehát ne
-> `tartalom.kulonvalasok.length`-t nézzen, hanem `(tartalom.kulonvalasok ?? [])`-t.
+> `gondolat.kulonvalasok.length`-t nézzen, hanem `(gondolat.kulonvalasok ?? [])`-t.
 > (Mongoose-dokumentumként olvasva `[]`-t kapnánk — a `.lean()` az, ami ezt elrejti.)
 
 **8. lépés — A szerkesztők ág-szempontú színe (7. döntés). ✅ KÉSZ (2026-08-25).** A `szerkesztok[].allapot` és
@@ -4402,7 +4402,7 @@ e-embereknek, és a `CHANGELOG.md`.
 
 ### AMIT A 6–8. LÉPÉS HOZZÁTETT
 
-**6. — Az érték javaslatok.** Két dolgot kellett kimondani. (1) A `tartalomLetrehozasa`
+**6. — Az érték javaslatok.** Két dolgot kellett kimondani. (1) A `gondolatLetrehozasa`
 az ALAPÍTÓNAK már létrehozott egy érték javaslatot az új ágon, ALAPÉRTELMEZETT
 küszöbökkel — ezért a célon `ertekJavaslatLetrehozasaVagyModositasa`-t hívunk
 (createOrUpdate), ami felülírja, nem duplikálja. (2) A forrásból nem elég törölni a sort:
@@ -4413,10 +4413,10 @@ Szétválás után a főág 51/51-re állt vissza, az új ágon pontosan 1 sor v
 duplikátum nélkül.
 
 **7. — A fülsáv.** A `KartyaFulsav` eddig csak a Javaslat- és Egyezmény-kártyán volt
-bekötve; most a `TartalomKartya` is használja. Fontos: ha nincs szétválás, a fülsáv
+bekötve; most a `GondolatKartya` is használja. Fontos: ha nincs szétválás, a fülsáv
 EGYETLEN füllel épül fel, és olyankor nem rajzol sávot — a régi kártyák megjelenése tehát
 változatlan. A testvérre a szövegszerkesztő `EntitasHivatkozasBlokk`-ja mutat,
-megjelenítés módban. A `pakliService` Tartalom-ága mostantól átadja a `kulonvalasok`
+megjelenítés módban. A `pakliService` Gondolat-ága mostantól átadja a `kulonvalasok`
 tömböt, a testvér CÍMÉVEL kiegészítve (plusz lekérdezés, de csak ott, ahol tényleg van
 szétválás). Ha a testvér-ág időközben megszűnt, a fül ezt írja ki.
 
@@ -4433,7 +4433,7 @@ létre ezt az entitást; a forrás eredeti létrehozója lehet, hogy át sem lé
 
 ### AMI EBBE A KÖRBE NEM FÉR BELE
 
-- kategória / tartalomtípus különválása (3. nyitott szál),
+- kategória / gondolattípus különválása (3. nyitott szál),
 - láncolt, többszörös különválás (4. nyitott szál),
 - az elavult entitás-hivatkozások jelölése (1. nyitott szál — Csaba: „ezzel most nem kell
   foglalkozni"),

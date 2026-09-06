@@ -18,31 +18,31 @@ proba('Üres eseményhalmazból üres állapot', async () => {
   return a.entitasok.size === 0;
 });
 
-proba('Tartalom + tudatpont → az entitás LÉTEZIK', async () => {
+proba('Gondolat + tudatpont → az entitás LÉTEZIK', async () => {
   const anna = await ujEember();
-  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Első tartalom', meret: 120 });
-  const pont = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 500 });
+  const gondolat = await anna.tesz('GondolatLetrehozas', { cim: 'Első gondolat', meret: 120 });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: gondolat.azonosito, pont: 500 });
 
-  const a = allapotSzamitasa([tartalom, pont]);
-  const e = a.entitasok.get(tartalom.azonosito);
-  return e?.cim === 'Első tartalom' && e.osszesPont === 500 && e.meret === 120;
+  const a = allapotSzamitasa([gondolat, pont]);
+  const e = a.entitasok.get(gondolat.azonosito);
+  return e?.cim === 'Első gondolat' && e.osszesPont === 500 && e.meret === 120;
 });
 
 proba('Tudatpont NÉLKÜL az entitás nem létezik (közösségi felejtés)', async () => {
   const anna = await ujEember();
-  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Senkinek nem kell', meret: 50 });
+  const gondolat = await anna.tesz('GondolatLetrehozas', { cim: 'Senkinek nem kell', meret: 50 });
 
-  const a = allapotSzamitasa([tartalom]);
+  const a = allapotSzamitasa([gondolat]);
   return a.entitasok.size === 0 && a.elfelejtettek.length === 1;
 });
 
 proba('A pont ELVÉTELE (0) után az entitás eltűnik', async () => {
   const anna = await ujEember();
-  const tartalom = await anna.tesz('TartalomLetrehozas', { cim: 'Meggondoltam', meret: 50 });
-  const ad = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 300 });
-  const elvesz = await anna.tesz('TudatpontRendezes', { entitas: tartalom.azonosito, pont: 0 });
+  const gondolat = await anna.tesz('GondolatLetrehozas', { cim: 'Meggondoltam', meret: 50 });
+  const ad = await anna.tesz('TudatpontRendezes', { entitas: gondolat.azonosito, pont: 300 });
+  const elvesz = await anna.tesz('TudatpontRendezes', { entitas: gondolat.azonosito, pont: 0 });
 
-  const a = allapotSzamitasa([tartalom, ad, elvesz]);
+  const a = allapotSzamitasa([gondolat, ad, elvesz]);
   return a.entitasok.size === 0;
 });
 
@@ -50,7 +50,7 @@ proba('A pont ELVÉTELE (0) után az entitás eltűnik', async () => {
 
 proba('Két pont-rendezésből az UTOLSÓ számít', async () => {
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Átrendezés', meret: 10 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Átrendezés', meret: 10 });
   const elso = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
   const masodik = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
 
@@ -64,9 +64,9 @@ proba('⭐ A SORREND NEM SZÁMÍT — kevert események, azonos állapot', async
   const anna = await ujEember();
   const bela = await ujEember();
 
-  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'Egyik', meret: 100 });
+  const t1 = await anna.tesz('GondolatLetrehozas', { cim: 'Egyik', meret: 100 });
   const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 200 });
-  const t2 = await bela.tesz('TartalomLetrehozas', { cim: 'Másik', meret: 300 });
+  const t2 = await bela.tesz('GondolatLetrehozas', { cim: 'Másik', meret: 300 });
   const p2 = await bela.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 400 });
   const p3 = await bela.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 50 });
   const p4 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 700 });
@@ -92,7 +92,7 @@ proba('⭐ A SORREND NEM SZÁMÍT — kevert események, azonos állapot', async
 
 proba('Kétszer számolva ugyanaz jön ki (determinizmus)', async () => {
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Kétszer', meret: 1 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Kétszer', meret: 1 });
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 5 });
   const jellemzo = (a) => JSON.stringify([...a.entitasok.values()].map((e) => [e.cim, e.osszesPont]));
   return jellemzo(allapotSzamitasa([t, p])) === jellemzo(allapotSzamitasa([t, p]));
@@ -109,7 +109,7 @@ proba('A küszöb a TULAJDONOSOK érték javaslatainak mediánja', async () => {
   const bela = await ujEember();
   const cecil = await ujEember();
 
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Küszöbös', meret: 10 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Küszöbös', meret: 10 });
   const pA = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
   const pB = await bela.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
   const pC = await cecil.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
@@ -127,7 +127,7 @@ proba('AKINEK NINCS PONTJA, annak az érték javaslata nem számít', async () =
   const anna = await ujEember();
   const kivulallo = await ujEember();
 
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Védett', meret: 10 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Védett', meret: 10 });
   const pA = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
   const eA = await anna.tesz('ErtekJavaslat', { entitas: t.azonosito, ertekek: { elfogadasiKuszob: 51 } });
   // A kívülálló szélsőséges értéket javasol, de nincs tudatpontja az entitáson
@@ -142,7 +142,7 @@ proba('AKINEK NINCS PONTJA, annak az érték javaslata nem számít', async () =
 
 proba('Az elágazás feloldása DETERMINISZTIKUS (mindkét sorrendben ugyanaz)', async () => {
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 });
   const egyik = await anna.elagaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
   const masik = await anna.elagaztat('TudatpontRendezes', { entitas: t.azonosito, pont: 900 });
 
@@ -159,7 +159,7 @@ proba('Az elágazás feloldása DETERMINISZTIKUS (mindkét sorrendben ugyanaz)',
 proba('A VISSZAFELÉ lépő idő ellentmondásként jelenik meg — de az esemény megmarad', async () => {
   const kezdet = Date.UTC(2026, 0, 10);
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 }, kezdet + 60000);
   // A 3. eseménye KORÁBBI időt visel, mint a 2. — visszadátumozás
   const vissza = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 200 }, kezdet - 86400000);
@@ -173,7 +173,7 @@ proba('A VISSZAFELÉ lépő idő ellentmondásként jelenik meg — de az esemé
 proba('A rendes (előre haladó) idő nem ad ellentmondást', async () => {
   const kezdet = Date.UTC(2026, 0, 10);
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 }, kezdet);
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 }, kezdet + 1000);
 
   return allapotSzamitasa([t, p]).idoEllentmondasok.length === 0;
@@ -183,9 +183,9 @@ proba('A rendes (előre haladó) idő nem ad ellentmondást', async () => {
 
 proba('Az ág mérete a leszármazottakkal együtt számítódik (D26)', async () => {
   const anna = await ujEember();
-  const szulo = await anna.tesz('TartalomLetrehozas', { cim: 'Szülő', meret: 100 });
+  const szulo = await anna.tesz('GondolatLetrehozas', { cim: 'Szülő', meret: 100 });
   const pSz = await anna.tesz('TudatpontRendezes', { entitas: szulo.azonosito, pont: 10 });
-  const gyerek = await anna.tesz('TartalomLetrehozas', { cim: 'Gyerek', meret: 250, szulo: szulo.azonosito });
+  const gyerek = await anna.tesz('GondolatLetrehozas', { cim: 'Gyerek', meret: 250, szulo: szulo.azonosito });
   const pGy = await anna.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 10 });
 
   const a = allapotSzamitasa([szulo, pSz, gyerek, pGy]);
@@ -198,9 +198,9 @@ proba('Az ág mérete a leszármazottakkal együtt számítódik (D26)', async (
 
 proba('A szétosztott pontok összege lekérdezhető', async () => {
   const anna = await ujEember();
-  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'A', meret: 1 });
+  const t1 = await anna.tesz('GondolatLetrehozas', { cim: 'A', meret: 1 });
   const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 300 });
-  const t2 = await anna.tesz('TartalomLetrehozas', { cim: 'B', meret: 1 });
+  const t2 = await anna.tesz('GondolatLetrehozas', { cim: 'B', meret: 1 });
   const p2 = await anna.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 700 });
 
   const a = allapotSzamitasa([t1, p1, t2, p2]);
@@ -211,7 +211,7 @@ proba('A szétosztott pontok összege lekérdezhető', async () => {
 
 proba('Az ISMERETLEN esemény-típus nem töri el a számítást', async () => {
   const anna = await ujEember();
-  const t = await anna.tesz('TartalomLetrehozas', { cim: 'Ismert', meret: 10 });
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Ismert', meret: 10 });
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10 });
   const jovobeli = await anna.tesz('ValamiUjTipus2030', { barmi: 'amit ma még nem ismerünk' });
 

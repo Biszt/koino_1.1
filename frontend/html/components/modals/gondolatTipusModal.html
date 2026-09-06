@@ -1,29 +1,29 @@
-<!-- frontend/html/components/modals/tartalomTipusModal.html -->
+<!-- frontend/html/components/modals/gondolatTipusModal.html -->
 
-<!-- A TartalomTipusModal.js tölti be ezt a template-et fetch()-csel.
+<!-- A GondolatTipusModal.js tölti be ezt a template-et fetch()-csel.
      A Modal alap struktúrája (overlay, panel, fejléc) a modal.html-ben van –
-     ez csak a modal törzsének tartalmát, a formot adja meg. -->
+     ez csak a modal törzsének gondolatát, a formot adja meg. -->
 
-<form class="tt-modal-form" id="tartalomTipus-modal-form" novalidate>
+<form class="tt-modal-form" id="gondolatTipus-modal-form" novalidate>
 
   <!-- ── NÉV ── -->
-  <!-- Kötelező mező – TartalomTipusModal.validalas() ellenőrzi -->
+  <!-- Kötelező mező – GondolatTipusModal.validalas() ellenőrzi -->
   <div class="tt-modal-mezo">
     <input
       type="text"
-      id="tartalomTipus-nev"
+      id="gondolatTipus-nev"
       name="nev"
       class="tt-modal-input"
-      placeholder="Tartalom típus neve *"
+      placeholder="Gondolat típus neve *"
       maxlength="100"
       autocomplete="off"
-      aria-label="Tartalom típus neve – kötelező"
+      aria-label="Gondolat típus neve – kötelező"
     />
   </div>
 
   <!-- ── LEÍRÁS (blokk-alapú szövegszerkesztő) ── -->
-  <!-- A TartalomTipusModal._szovegSzerkesztoLetrehozasa() ide példányosítja a
-       SzovegSzerkeszto komponenst (mint a TartalomModal-ban). A korábbi sima
+  <!-- A GondolatTipusModal._szovegSzerkesztoLetrehozasa() ide példányosítja a
+       SzovegSzerkeszto komponenst (mint a GondolatModal-ban). A korábbi sima
        <textarea> holt kód volt (a JS a szerkesztő-konténert kereste, ami hiányzott),
        ezért a leírás nem mentődött — most a valódi szerkesztő kerül ide. -->
   <div class="tt-modal-mezo">
@@ -31,14 +31,14 @@
   </div>
 
   <!-- ── IKON FELTÖLTÉS ── -->
-  <!-- Kötelező fájl mező – TartalomTipusModal.validalas() ellenőrzi -->
+  <!-- Kötelező fájl mező – GondolatTipusModal.validalas() ellenőrzi -->
   <!-- accept: csak képfájlokat enged, a Multer is csak ezeket fogadja el -->
   <div class="tt-modal-mezo">
 
     <!-- Fájlválasztó input – vizuálisan elrejtve, a gomb aktiválja -->
     <input
       type="file"
-      id="tartalomTipus-ikon-input"
+      id="gondolatTipus-ikon-input"
       name="ikon"
       class="tt-modal-fajl-input"
       accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
@@ -49,7 +49,7 @@
     <button
       type="button"
       class="tt-modal-fajl-gomb"
-      id="tartalomTipus-ikon-gomb"
+      id="gondolatTipus-ikon-gomb"
       aria-label="Ikon fájl kiválasztása"
     >
       🌿 Ikon kiválasztása
@@ -58,7 +58,7 @@
     <!-- Kiválasztott fájl neve – JS írja ki ide, alapból üres -->
     <span
       class="tt-modal-fajl-nev"
-      id="tartalomTipus-ikon-nev"
+      id="gondolatTipus-ikon-nev"
       aria-live="polite"
     >Nincs kiválasztott fájl</span>
 
@@ -66,9 +66,9 @@
 
   <!-- ── IKON ELŐNÉZET ── -->
   <!-- Alapból rejtett – JS mutatja meg fájlválasztás után -->
-  <div class="tt-modal-mezo tt-modal-elonezet-kontener" id="tartalomTipus-ikon-elonezet" hidden>
+  <div class="tt-modal-mezo tt-modal-elonezet-kontener" id="gondolatTipus-ikon-elonezet" hidden>
     <img
-      id="tartalomTipus-ikon-elonezet-kep"
+      id="gondolatTipus-ikon-elonezet-kep"
       class="tt-modal-elokezet-kep"
       src=""
       alt="Ikon előnézet"
@@ -78,25 +78,25 @@
   </div>
 
   <!-- ── KÜSZÖBÉRTÉKEK (döntéshozatal) ── -->
-  <!-- Alapból rejtett – TartalomTipusModal.init() mutatja meg, ha mód = 'letrehozas'.
+  <!-- Alapból rejtett – GondolatTipusModal.init() mutatja meg, ha mód = 'letrehozas'.
        A négy mezőt a kuszobErtekMezok.js segédmodul injektálja alapértékekkel. -->
-  <div class="tt-modal-mezo t-modal-kuszob-szakasz" id="tartalomTipus-kuszob-szakasz" hidden>
+  <div class="tt-modal-mezo t-modal-kuszob-szakasz" id="gondolatTipus-kuszob-szakasz" hidden>
     <p class="t-modal-kuszob-cim">Küszöbértékek (a döntéshozatalhoz)</p>
     <p class="t-modal-kuszob-magyarazat">
       Ezek a Te javaslataid – a tényleges küszöb az összes érték javaslat mediánja.
     </p>
-    <div id="tartalomTipus-kuszob-mezok-kontener"></div>
+    <div id="gondolatTipus-kuszob-mezok-kontener"></div>
   </div>
 
   <!-- ── KEZDŐ TUDATPONT ── -->
-  <!-- Alapból rejtett – TartalomTipusModal.init() mutatja meg, ha mód = 'letrehozas' -->
-  <div class="tt-modal-mezo" id="tartalomTipus-kezdo-tudatpont-mezo" hidden>
-    <label class="kuszob-mezo__cimke" for="tartalomTipus-kezdo-tudatpont">
+  <!-- Alapból rejtett – GondolatTipusModal.init() mutatja meg, ha mód = 'letrehozas' -->
+  <div class="tt-modal-mezo" id="gondolatTipus-kezdo-tudatpont-mezo" hidden>
+    <label class="kuszob-mezo__cimke" for="gondolatTipus-kezdo-tudatpont">
       Kezdő tudatpont (min. 1) *
     </label>
     <input
       type="number"
-      id="tartalomTipus-kezdo-tudatpont"
+      id="gondolatTipus-kezdo-tudatpont"
       name="kezdoTudatpont"
       class="tt-modal-input"
       min="1"

@@ -64,7 +64,7 @@ const ELISMERES_HORGONY = 12;
  * @param {Object} adat
  * @param {Object} [beallitas]
  * @param {string|null} [beallitas.entitas] - a SZELET-KULCS; null = az esemény a saját
- *        szeletét nyitja (koino- és tartalom-létrehozás)
+ *        szeletét nyitja (koino- és gondolat-létrehozás)
  * @param {boolean} [beallitas.horgonyozzunk] - kérünk-e horgonyt (a határidőt mozgató
  *        eseményeknél igen: szavazat, tudatpont-rendezés, érték javaslat)
  * @returns {Promise<Object>} a létrehozott esemény
@@ -434,35 +434,35 @@ async function sajatFelhatalmazasaim(kornyezet, sajatBelepes) {
 }
 
 // ===================================
-// TARTALOM LÉTREHOZÁSA
+// GONDOLAT LÉTREHOZÁSA
 // ===================================
 
 /**
- * Új tartalmat hoz létre.
+ * Új gondolatot hoz létre.
  *
- * A MÉRET (D26) itt születik meg: a tartalom kanonikus alakjának bájthossza. Ez az az
+ * A MÉRET (D26) itt születik meg: a gondolat kanonikus alakjának bájthossza. Ez az az
  * adat, ami a hivatkozásban utazik majd — hogy aki tudatpontot akar rá tenni, előre
  * tudja, mekkora tárolást vállal.
  *
- * ⭐ A szelet-kulcsa `null`: a tartalom MAGA hozza létre a szeletét, és a szelet neve az
+ * ⭐ A szelet-kulcsa `null`: a gondolat MAGA hozza létre a szeletét, és a szelet neve az
  * esemény azonosítója lesz. (A saját azonosítót nem lehetne a mezőbe írni — önmagára
  * hivatkozna —, ezért mondja ki a `szelet()` szabály, hogy a `null` ezt jelenti.)
  *
  * @param {Object} kornyezet
  * @param {Object} adatok - { cim, szoveg, szulo }
  */
-export async function tartalomLetrehozasa(kornyezet, { cim, szoveg, szulo }) {
-  const tartalom = {
-    tipus: 'Tartalom',
+export async function gondolatLetrehozasa(kornyezet, { cim, szoveg, szulo }) {
+  const gondolat = {
+    tipus: 'Gondolat',
     cim,
     szoveg: szoveg || null,
     szulo: szulo || null
   };
 
-  // A méret a tartalom SAJÁT adatára vonatkozik (a burkolat és az aláírás nélkül)
-  tartalom.meret = kanonikusBajtok(tartalom).length;
+  // A méret a gondolat SAJÁT adatára vonatkozik (a burkolat és az aláírás nélkül)
+  gondolat.meret = kanonikusBajtok(gondolat).length;
 
-  return esemenytTeszek(kornyezet, 'TartalomLetrehozas', tartalom);
+  return esemenytTeszek(kornyezet, 'GondolatLetrehozas', gondolat);
 }
 
 // ===================================

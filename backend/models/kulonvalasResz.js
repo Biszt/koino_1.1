@@ -5,13 +5,13 @@
 // ===================================
 // Felelősség: EGYETLEN különválás-esemény leírása egy entitás szemszögéből —
 //   „ki a testvér-ágam, és melyik döntés kapcsán váltunk szét".
-// Használják: models/tartalom.js (később kategória / tartalomtípus is, ha odáig
+// Használják: models/gondolat.js (később kategória / gondolattípus is, ha odáig
 //   kiterjesztjük — ezért van külön fájlban, a szerkesztoResz.js mintájára).
 //
 // ===== A FOGALOM =====
 // Egy módosítási javaslat lezárásakor MINDKÉT oldal viheti magával, amit akart:
-//   - a javaslatot ELFOGADTÁK → az ELLENZŐK válhatnak külön, a RÉGI tartalommal,
-//   - a javaslatot ELVETETTÉK → a TÁMOGATÓK válhatnak külön, a MÓDOSÍTOTT tartalommal.
+//   - a javaslatot ELFOGADTÁK → az ELLENZŐK válhatnak külön, a RÉGI gondolattal,
+//   - a javaslatot ELVETETTÉK → a TÁMOGATÓK válhatnak külön, a MÓDOSÍTOTT gondolattal.
 // A szándékot a szavazatra tett `kulonvalasIgeny` jelöli (lásd models/szavazat.js).
 // Részletes modell és döntések: docs/fejlesztesi_terv.md „Különválás" szakaszai.
 //
@@ -39,19 +39,19 @@ const kulonvalasResz = new mongoose.Schema({
   // A másik entitás, amivel ez a szétválás összeköt. Ide mutat a kártya
   // „Másik ág" fülének entitás-hivatkozása.
   testverId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     required: true                          // Testvér nélkül nincs értelme a bejegyzésnek
   },
 
   // ----- A TESTVÉR TÍPUSA -----
-  // Polimorf: ma mindig 'Tartalom' (az első kör csak tartalomra terjed ki),
-  // de a mező készen áll a kategória / tartalomtípus különválásra is.
+  // Polimorf: ma mindig 'Gondolat' (az első kör csak gondolatra terjed ki),
+  // de a mező készen áll a kategória / gondolattípus különválásra is.
   testverTipus: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,                                        // Szöveges típus
-    enum: ['Tartalom', 'Kategoria', 'TartalomTipus'],    // Engedélyezett típusok
-    default: 'Tartalom'                                  // Alapértelmezett: tartalom
+    enum: ['Gondolat', 'Kategoria', 'GondolatTipus'],    // Engedélyezett típusok
+    default: 'Gondolat'                                  // Alapértelmezett: gondolat
   },
 
   // ----- MELYIK OLDALON ÁLLUNK -----
@@ -59,12 +59,12 @@ const kulonvalasResz = new mongoose.Schema({
   //                 itt maradtak a tartózkodók és a passzív tudatpont-tulajdonosok.
   //   'kulonvalt' → ez az entitás a KÜLÖNVÁLT ág: a szétváláskor jött létre.
   // (9. döntés: az azonosító mindig a főágé — elfogadott javaslatnál tehát a RÉGI
-  // tartalom kap új azonosítót, pedig tartalmilag ő a folytonos.)
+  // gondolat kap új azonosítót, pedig tartalmilag ő a folytonos.)
   //
   // NYELVI SZABÁLY: sehol nem beszélünk „győztesről" és „vesztesről" — csak
   // főágról és különválókról. Senki nem veszít, csak külön útra lép.
   agSzerep: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,                      // Szöveges típus
     enum: ['foag', 'kulonvalt'],       // Csak e két érték engedélyezett
     required: true                     // Enélkül nem tudnánk, melyik oldalt nézzük
@@ -76,7 +76,7 @@ const kulonvalasResz = new mongoose.Schema({
   // olyankor egyezmény NEM születik (az egyezmény kizárólag elfogadott javaslat
   // eredménye). Az elvetett javaslat entitásként megmarad `Elvetve` státusszal.
   forrasJavaslatId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Javaslat',                        // Referencia a Javaslat modellre
     required: true                          // Kötelező: mindig van kiváltó javaslat
@@ -86,7 +86,7 @@ const kulonvalasResz = new mongoose.Schema({
   // Csak akkor van kitöltve, ha a javaslatot ELFOGADTÁK (ilyenkor születik egyezmény).
   // Elvetett javaslatnál null — ilyenkor a forrasJavaslatId a hivatkozási pont.
   forrasEgyezmenyId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId,   // MongoDB ObjectId típus
     ref: 'Egyezmeny',                       // Referencia az Egyezmeny modellre
     default: null                           // Alapértelmezett: nincs (elvetett ág)
@@ -95,7 +95,7 @@ const kulonvalasResz = new mongoose.Schema({
   // ----- A SZÉTVÁLÁS IDŐPONTJA -----
   // Mikor vált szét a két ág. A kártya „Másik ág" fülén ezt mutatjuk meg.
   kulonvalasIdeje: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Date,          // Dátum típus
     default: Date.now    // Alapértelmezett: a bejegyzés keletkezésének ideje
   }

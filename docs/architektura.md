@@ -3,7 +3,7 @@
 Ez a dokumentum a **fejlesztőknek** szól, akik meg akarják érteni, *hogyan*
 épül fel és *hogyan működik* a koino kódja. Feltételezi, hogy a
 [`CLAUDE.md`](../CLAUDE.md) domain-fogalmait már elolvastad (e-ember,
-tudatpont, tartalom, javaslat, egyezmény, küszöbérték, bizonyossági mutató).
+tudatpont, gondolat, javaslat, egyezmény, küszöbérték, bizonyossági mutató).
 
 ## Tartalomjegyzék
 
@@ -119,16 +119,16 @@ Ez a projekt **szíve**. A logika a `services/javaslat/` alatt lakik:
 A `vegrehajtok/` almappa a művelet-típusonkénti végrehajtókat tartalmazza,
 amelyeket a `javaslatVegrehajtasiService.js` fog össze:
 
-- `modositasiVegrehajto.js` — tartalom módosítása
-- `athelyezesiVegrehajto.js` — tartalom áthelyezése másik szülő alá
-- `torlesiVegrehajto.js` — tartalom (vagy egyezmény) törlése
-- `egyesitesiVegrehajto.js` — több tartalom egyesítése
+- `modositasiVegrehajto.js` — gondolat módosítása
+- `athelyezesiVegrehajto.js` — gondolat áthelyezése másik szülő alá
+- `torlesiVegrehajto.js` — gondolat (vagy egyezmény) törlése
+- `egyesitesiVegrehajto.js` — több gondolat egyesítése
 - `csomagVegrehajto.js` — összetett, több lépéses csomag
 
 **A teljes életciklus lépésről lépésre:**
 
 ```
-1. LÉTREHOZÁS   e-ember javaslatot tesz egy tartalomra
+1. LÉTREHOZÁS   e-ember javaslatot tesz egy gondolatra
                 (feltétel: tudatpontot rendelt hozzá → jogosultságService)
         │
         ▼
@@ -150,9 +150,9 @@ amelyeket a `javaslatVegrehajtasiService.js` fog össze:
 A Mongoose sémák a `models/` alatt vannak. A legfontosabbak és kapcsolataik:
 
 ```
-   eember ──rendel──► tudatpont ──kötődik──► tartalom
+   eember ──rendel──► tudatpont ──kötődik──► gondolat
      │                                          │
-     │ tehet                          kategorizál│ (kategoria, tartalomTipus)
+     │ tehet                          kategorizál│ (kategoria, gondolatTipus)
      ▼                                          ▼
    javaslat ──────► szavazat            ertekJavaslat (KÜLÖN fogalom!)
      │  (elfogadva)
@@ -161,9 +161,9 @@ A Mongoose sémák a `models/` alatt vannak. A legfontosabbak és kapcsolataik:
 ```
 
 - **`eember.js`** — a regisztrált tag (auth-adatok, profil).
-- **`tartalom.js`** — a platform alapegysége; kategória + tartalomtípus
+- **`gondolat.js`** — a platform alapegysége; kategória + gondolattípus
   rendszerezi, saját küszöbértékei vannak.
-- **`kategoria.js`, `tartalomTipus.js`** — rendszerező dimenziók; a kategóriák
+- **`kategoria.js`, `gondolatTipus.js`** — rendszerező dimenziók; a kategóriák
   hierarchikusak (al-kategóriák).
 - **`tudatpontAllokacio.js`, `tudatpontHozzarendeles.js`,
   `hierarchikusTudatpontAllokacio.js`** — a tudatpont-szétosztás nyilvántartása.
@@ -171,13 +171,13 @@ A Mongoose sémák a `models/` alatt vannak. A legfontosabbak és kapcsolataik:
 - **`szavazat.js`** — egy e-ember szavazata egy javaslaton (támogat / ellenez /
   tartózkodik).
 - **`egyezmeny.js`** — az elfogadott javaslat eredménye.
-- **`ertekJavaslat.js` + `tartalomErtekHisztogram.js`** — az **érték javaslat**
+- **`ertekJavaslat.js` + `gondolatErtekHisztogram.js`** — az **érték javaslat**
   (KÜLÖN entitástípus, nem keverendő a `javaslat`-tal!) és annak eloszlása.
 - **`meghivo.js`** — meghívásos regisztráció (éles környezetben kötelező lehet).
 - **`ertesites.js`, `ertesitesiBeallitas.js`** — értesítési rendszer.
 
-> ⚠️ **Domain-invariáns:** nincs 0-tudatpontos entitás — ha egy tartalomhoz
-> rendelt összes tudatpont elfogy, a tartalom törlődik.
+> ⚠️ **Domain-invariáns:** nincs 0-tudatpontos entitás — ha egy gondolathoz
+> rendelt összes tudatpont elfogy, a gondolat törlődik.
 
 ## Időzített feladatok (cron)
 
@@ -202,7 +202,7 @@ Nincs React/Vue — komponens-**osztályok** vannak, minden komponens egy JS-fá
 
 - **Belépés:** `index.html` betölti a `js/main.js`-t, ami elindítja az
   alkalmazást. A fő nézeteket a `js/components/foOldal.js` szervezi.
-- **`js/components/kartya/`** — az entitás-**kártyák** (TartalomKartya,
+- **`js/components/kartya/`** — az entitás-**kártyák** (GondolatKartya,
   JavaslatKartya, EgyezmenyKartya…). A `Pakli.js` listázza őket („pakli" =
   kártyák listás megjelenítése).
 - **`js/components/szovegSzerkeszto/`** — blokk-alapú szerkesztő: `blokkok/`

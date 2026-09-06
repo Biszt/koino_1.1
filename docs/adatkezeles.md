@@ -61,7 +61,7 @@ Aki nem kapcsol be semmit, annak a helyzete pontosan ugyanaz, mint a változás 
 
 **Amit a levélküldés szükségszerűen jelent:** a leveleket egy külső szolgáltató
 (Resend, EU-s régió) kézbesíti, tehát a címzett e-mail címe és a levél tárgya
-áthalad rajta. A levelekbe **nem kerül** koino-tartalom a címeknél és az esemény
+áthalad rajta. A levelekbe **nem kerül** koino-gondolat a címeknél és az esemény
 megnevezésénél több (pl. „Új javaslat — <entitás címe>"), és nem kerül bele
 szavazat, tudatpont-adat vagy jelszó.
 

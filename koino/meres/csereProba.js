@@ -49,7 +49,7 @@ async function ment(tar, esemenyek) {
 async function lanc(eember, hossz) {
   const esemenyek = [];
   for (let i = 1; i <= hossz; i++) {
-    esemenyek.push(await eember.tesz('TartalomLetrehozas', { cim: 'T' + i, meret: 10 * i }));
+    esemenyek.push(await eember.tesz('GondolatLetrehozas', { cim: 'T' + i, meret: 10 * i }));
   }
   return esemenyek;
 }
@@ -173,7 +173,7 @@ proba('Nem kérünk olyat, ami a MÁSIKNAK SINCS meg (az ő hézagát)', async (
 proba('⭐ A nála LÁTOTT elágazást CÉLZOTTAN kérjük el (a bizonyíték olcsón megy tovább)', async () => {
   const anna = await ujEember(KOINO);
   const esemenyek = await lanc(anna, 3);
-  const masodik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'Neki mást', meret: 7 });
+  const masodik3 = await anna.elagaztat('GondolatLetrehozas', { cim: 'Neki mást', meret: 7 });
 
   const tudja = await ujTar();   await ment(tudja, [...esemenyek, masodik3]);
   const nemTudja = await ujTar(); await ment(nemTudja, esemenyek);
@@ -197,7 +197,7 @@ proba('⭐ A lánc KÖZEPÉN elrejtett elágazás is kiderül (ezért kell ujjle
   // Egyedül a teljes láncot fedő ujjlenyomat árulja el, hogy nem ugyanazt tudják.
   const anna = await ujEember(KOINO);
   const esemenyek = await lanc(anna, 3);                       // 1,2,3
-  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const masik3 = await anna.elagaztat('GondolatLetrehozas', { cim: 'A másik arc', meret: 9 });
   const negyedik = await lanc(anna, 1);                        // 4 (a 3-asra épül)
 
   const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);        // 1,2,3,4
@@ -364,7 +364,7 @@ proba('⭐ A VONALON is kiderül a lánc közepén elrejtett elágazás', async 
   // Ez az, amiért egy kapcsolaton TÖBB kör fut: a felderítés két körbe telik.
   const anna = await ujEember(KOINO);
   const esemenyek = await lanc(anna, 3);
-  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const masik3 = await anna.elagaztat('GondolatLetrehozas', { cim: 'A másik arc', meret: 9 });
   const negyedik = await lanc(anna, 1);
 
   const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);
@@ -469,7 +469,7 @@ proba('⭐ A lánc közepén elrejtett elágazás az OLCSÓ kezdés után is kid
   // ezért eltér, tehát a részletes állás elindul, és az elágazás előjön.
   const anna = await ujEember(KOINO);
   const esemenyek = await lanc(anna, 3);
-  const masik3 = await anna.elagaztat('TartalomLetrehozas', { cim: 'A másik arc', meret: 9 });
+  const masik3 = await anna.elagaztat('GondolatLetrehozas', { cim: 'A másik arc', meret: 9 });
   const negyedik = await lanc(anna, 1);
 
   const egyik = await ujTar(); await ment(egyik, [...esemenyek, ...negyedik]);
@@ -538,7 +538,7 @@ proba('⭐ MÁS KOINO: a csere azonnal véget ér, és nem keveredik semmi', asy
   const bela = await ujEember(MASIK);
   const ove = await ujTarMasKoinonak(MASIK);
   for (let i = 1; i <= 3; i++) {
-    await esemenyMentese(ove, await bela.tesz('TartalomLetrehozas', { cim: 'M' + i, meret: 10 }));
+    await esemenyMentese(ove, await bela.tesz('GondolatLetrehozas', { cim: 'M' + i, meret: 10 }));
   }
 
   const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
@@ -567,7 +567,7 @@ proba('⭐ A MAPPA is tiszta marad — nem csak a számított állapot', async (
 
   const bela = await ujEember(MASIK);
   const ove = await ujTarMasKoinonak(MASIK);
-  await esemenyMentese(ove, await bela.tesz('TartalomLetrehozas', { cim: 'M', meret: 10 }));
+  await esemenyMentese(ove, await bela.tesz('GondolatLetrehozas', { cim: 'M', meret: 10 }));
 
   const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
   try {
@@ -576,7 +576,7 @@ proba('⭐ A MAPPA is tiszta marad — nem csak a számított állapot', async (
     await figyelo.bezar();
   }
 
-  const nyers = await mienk.betolt();                       // a tár SZŰRETLEN tartalma
+  const nyers = await mienk.betolt();                       // a tár SZŰRETLEN gondolata
   return nyers.length === 2 && nyers.every((e) => e.koino === KOINO);
 });
 
@@ -587,8 +587,8 @@ proba('⭐ A HAZUG fél ellen is véd: idegen koino eseményét a beolvasztás k
   const anna = await ujEember(KOINO);
   const bela = await ujEember('idegen-koino');
 
-  const mienk = await anna.tesz('TartalomLetrehozas', { cim: 'Miénk', meret: 10 });
-  const ideg = await bela.tesz('TartalomLetrehozas', { cim: 'Idegen', meret: 10 });
+  const mienk = await anna.tesz('GondolatLetrehozas', { cim: 'Miénk', meret: 10 });
+  const ideg = await bela.tesz('GondolatLetrehozas', { cim: 'Idegen', meret: 10 });
 
   const eredmeny = await beolvasztas(tar, [mienk, ideg], KOINO);
   const nyers = await tar.betolt();
@@ -1079,7 +1079,7 @@ proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
 
 // ===== A HELYI FELFEDEZÉS (F. lépés) =====
 //
-// ⚠️ SZÁLLÍTÁS, NEM PROTOKOLL: a `helyiFelfedezes.js` semmit nem tud a koino tartalmáról,
+// ⚠️ SZÁLLÍTÁS, NEM PROTOKOLL: a `helyiFelfedezes.js` semmit nem tud a koino gondolatáról,
 // csak címeket szerez. Ezért a bizalom-kérdés itt fel sem merül — de a szűrés igen: ki
 // tartozik ide, mi a saját visszhangunk, és mi a szemét.
 
@@ -1259,12 +1259,12 @@ proba('⭐ A MÁSIK KOINO készüléke ott sem kerül a listára (valódi foglal
 // EGYETLEN entitás kell, most azonnal. Amit itt bizonyítani kell, az nem az, hogy „megy a
 // hálózat", hanem hogy **a lekérés VÁLOGAT**.
 
-/** Két külön szelet egy táron: két tartalom, mindkettőn egy-egy tudatponttal. */
+/** Két külön szelet egy táron: két gondolat, mindkettőn egy-egy tudatponttal. */
 async function ketSzelet() {
   const anna = await ujEember(KOINO);
-  const t1 = await anna.tesz('TartalomLetrehozas', { cim: 'Első', meret: 10 });
+  const t1 = await anna.tesz('GondolatLetrehozas', { cim: 'Első', meret: 10 });
   const p1 = await anna.tesz('TudatpontRendezes', { entitas: t1.azonosito, pont: 100 });
-  const t2 = await anna.tesz('TartalomLetrehozas', { cim: 'Második', meret: 10 });
+  const t2 = await anna.tesz('GondolatLetrehozas', { cim: 'Második', meret: 10 });
   const p2 = await anna.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 200 });
   return { esemenyek: [t1, p1, t2, p2], egyik: t1.azonosito, masik: t2.azonosito };
 }
@@ -1314,7 +1314,7 @@ proba('⚠️ A KAPU UGYANAZ: másodszorra már nincs új esemény', async () =>
     const elso = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
     const masodik = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
     // Ugyanannyit KAPTUNK, de másodszor egyik sem ÚJ — az `esemenyMentese` felismerte,
-    // hogy már megvannak (az azonosító a tartalom lenyomata).
+    // hogy már megvannak (az azonosító a gondolat lenyomata).
     return elso.uj === 2 && masodik.kapott === 2 && masodik.uj === 0;
   } finally {
     await figyelo.bezar();

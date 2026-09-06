@@ -3,10 +3,10 @@
 // ===== IMPORTOK =====
 
 // Repository-k importálása
-const TartalomRepository = require('../../../repositories/tartalomRepository');
+const GondolatRepository = require('../../../repositories/gondolatRepository');
 // Kategória repository — kategória-egyesítésnél az új entitás szülője kategória
 const KategoriaRepository = require('../../../repositories/kategoriaRepository');
-const TartalomTipusRepository = require('../../../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../../../repositories/gondolatTipusRepository');
 const EgyezmenyRepository = require('../../../repositories/egyezmenyRepository');
 const TudatpontRepository = require('../../../repositories/tudatpontRepository');
 // Hierarchikus (pakli-fa) allokáció repo — a gyerekek fa-szülőjének átkötéséhez
@@ -14,9 +14,9 @@ const HierarchikusTudatpontAllokaciRepository = require('../../../repositories/h
 
 // Service-k importálása
 const TudatpontService = require('../../tudatpontService');
-const TartalomService = require('../../tartalomService');
+const GondolatService = require('../../gondolatService');
 const KategoriaService = require('../../kategoriaService');
-const TartalomTipusService = require('../../tartalomTipusService');
+const GondolatTipusService = require('../../gondolatTipusService');
 // Hierarchikus pont-újraszámítás + osLanc karbantartás a gyerek-átkötés után
 const HierarchikusFrissitesService = require('../../hierarchikusFrissitesService');
 const OsLancKarbantartoService = require('../../osLancKarbantartoService');
@@ -28,7 +28,7 @@ const OsLancKarbantartoService = require('../../osLancKarbantartoService');
 // - Forrás entitások kiürítése (pontok visszaosztása)
 // - Új entitás létrehozása (Service használatával - kezdő tudatpont kezelés)
 // - Többi eember tudatpontjainak hozzárendelése (új entitásra)
-// - Gyerekek átállítása (CSAK Tartalom entitásoknál!)
+// - Gyerekek átállítása (CSAK Gondolat entitásoknál!)
 class EgyesitesiVegrehajto {
 
   // ===== VÉGREHAJTÁS =====
@@ -38,7 +38,7 @@ class EgyesitesiVegrehajto {
   // 2. Forrás entitások kiürítése (eemberek visszakapják a pontjaikat)
   // 3. Új entitás létrehozása (létrehozó pontjaival)
   // 4. Többi eember pontjainak hozzárendelése (most már van nekik pont!)
-  // 5. Gyerekek átállítása (ha Tartalom)
+  // 5. Gyerekek átállítása (ha Gondolat)
   // @param {Object} javaslat - A javaslat objektum
   // @returns {Promise<Object>} Végrehajtás eredménye
   async vegrehajtas(javaslat) {
@@ -75,7 +75,7 @@ class EgyesitesiVegrehajto {
       // A szülő kollekciója az eredmény-típushoz igazodik (kategória-egyesítésnél kategória)
       const szuloRepo = egyesitesAdatok.ujEntitasTipus === 'Kategoria'
         ? KategoriaRepository
-        : TartalomRepository;
+        : GondolatRepository;
 
       const ujSzulo = await szuloRepo.findById(ujSzuloId);
       if (!ujSzulo) {
@@ -150,7 +150,7 @@ class EgyesitesiVegrehajto {
     // gyerekeket a NAGYSZÜLŐHÖZ kötné át. Ezért MÉG a törlés előtt összegyűjtjük a
     // forrás-entitások közvetlen gyerekeit, hogy a 7. lépésben az ÚJ egyesített entitás
     // alá köthessük őket (Csaba döntése, 2026-07-22). A hierarchikus (pakli-fa)
-    // kollekcióból kérdezünk, így BÁRMELY gyerek-típus (Tartalom/Kategória/…) bekerül.
+    // kollekcióból kérdezünk, így BÁRMELY gyerek-típus (Gondolat/Kategória/…) bekerül.
     // A magukat is egyesítendő entitásokat kihagyjuk (azok törlődnek).
     const forrasIdHalmaz = new Set(javaslat.erintettEntitasok.map(e => e.entitasId.toString()));
     const atkotendoGyerekek = [];
@@ -202,11 +202,11 @@ class EgyesitesiVegrehajto {
 
     let ujEntitas = null;
 
-    if (egyesitesAdatok.ujEntitasTipus === 'Tartalom') {
-      // Tartalom létrehozása Service-szel
-      console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>> TartalomService.tartalomLetrehozasa");
+    if (egyesitesAdatok.ujEntitasTipus === 'Gondolat') {
+      // Gondolat létrehozása Service-szel
+      console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>> GondolatService.gondolatLetrehozasa");
       
-      ujEntitas = await TartalomService.tartalomLetrehozasa(
+      ujEntitas = await GondolatService.gondolatLetrehozasa(
         ujEntitasAdatok,
         letrehozoId,
         letrehozoPontjai
@@ -220,11 +220,11 @@ class EgyesitesiVegrehajto {
         letrehozoId,
         letrehozoPontjai
       );
-    } else if (egyesitesAdatok.ujEntitasTipus === 'TartalomTipus') {
-      // Tartalom típus létrehozása Service-szel
-      console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>> TartalomTipusService.tartalomTipusLetrehozasa");
+    } else if (egyesitesAdatok.ujEntitasTipus === 'GondolatTipus') {
+      // Gondolat típus létrehozása Service-szel
+      console.log("vegrehajtas >>>>>>>>>>>>>>>>>>>>>>>>>> GondolatTipusService.gondolatTipusLetrehozasa");
 
-      ujEntitas = await TartalomTipusService.tartalomTipusLetrehozasa(
+      ujEntitas = await GondolatTipusService.gondolatTipusLetrehozasa(
         ujEntitasAdatok,
         letrehozoId,
         letrehozoPontjai
@@ -325,9 +325,9 @@ class EgyesitesiVegrehajto {
     let atallitottGyerekek = 0;
     const ujTipus = egyesitesAdatok.ujEntitasTipus;
     const gyerekRepoTipusSzerint = {
-      Tartalom:      TartalomRepository,
+      Gondolat:      GondolatRepository,
       Kategoria:     KategoriaRepository,
-      TartalomTipus: TartalomTipusRepository,
+      GondolatTipus: GondolatTipusRepository,
       Egyezmeny:     EgyezmenyRepository
     };
 
@@ -416,7 +416,7 @@ class EgyesitesiVegrehajto {
       const allokacio = await HierarchikusTudatpontAllokaciRepository.findByEntitas(aktId, aktTipus);
       if (!allokacio || !allokacio.szuloId) break; // gyökér
       aktId = allokacio.szuloId;
-      aktTipus = allokacio.szuloTipus || 'Tartalom';
+      aktTipus = allokacio.szuloTipus || 'Gondolat';
     }
 
     console.log('_hierarchiaPontokFelfele - VÉGE', { lepesek: lepesVedelem });

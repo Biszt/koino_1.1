@@ -164,11 +164,11 @@ szóhasználat („a részt vevők hitelesített szándéka") a 8. pont levél-�
 
 ## 🔴 3. Teljes nyilvánosság vs. titkos szavazás
 
-**Az állítás a levélben:** „a nyílt adatbázis kulcsfontosságú: a tartalmak, szavazások,
+**Az állítás a levélben:** „a nyílt adatbázis kulcsfontosságú: a gondolatok, szavazások,
 javaslatok mind nyilvánosak, ez biztosítja az átláthatóságot."
 
 **A kritika:**
-- Tartalmaknál és javaslatoknál a nyilvánosság rendben van. A NÉV SZERINT nyilvános
+- Gondolatoknál és javaslatoknál a nyilvánosság rendben van. A NÉV SZERINT nyilvános
   szavazat politikai/érzékeny témákban viszont súlyos probléma: nyomásgyakorlást,
   szavazatvásárlást, munkahelyi/családi megfélemlítést tesz lehetővé — a titkos
   szavazást pontosan ezért vezették be ~150 éve.
@@ -267,7 +267,7 @@ DE három réteg kritika:
 1. **A GDPR törléshez való joga EGYÉNI jog** („a RÓLAM szóló adat törlését követelhetem"),
    nem az, hogy „az adat elveszhet". A tudatpont-replikáció pont fordítva működik: minél
    fontosabb a közösségnek egy adat, annál több példányban él → a rendszer aktívan
-   ellenáll az egyéni törlési kérésnek a közösségileg védett tartalmaknál. (Jogi
+   ellenáll az egyéni törlési kérésnek a közösségileg védett gondolatoknál. (Jogi
    mozgástér van — közérdekű kivételek —, de tervezést igényel.)
 2. **Két adatosztály következik a modellből** (Csaba utolsó mondata maga mondja ki):
    (a) TARTALMI réteg — tudatpont-replikált, elveszhet, közösségi felejtés → erre a
@@ -306,7 +306,7 @@ engedelmeskedik".
 **A kritika:**
 - A blokklánc a MÚLT meghamisítása ellen véd (ami leírásra került, utólag nem írható át).
 - NEM véd az igazi támadási felületek ellen: hamis identitások szavazása (→ 1. pont),
-  botok általi tartalom-elárasztás, összehangolt csoportok napirend-manipulációja,
+  botok általi gondolat-elárasztás, összehangolt csoportok napirend-manipulációja,
   a szavazók megfélemlítése (→ 3. pont).
 - Tehát a „manipuláció ellen biztosított" állítás a blokklánctól önmagában nem
   következik; a manipuláció-védelem több, egymástól független rétegből állna össze.
@@ -639,7 +639,7 @@ kezelése; hibás/rosszindulatú frissítés elleni védelem). A blokklánc-vil�
    nézhet ki — auditált kódot is törtek már fel (The DAO, 2016: ~60M$ auditált kódon
    keresztül). Szakértői réteg kell — DE a szakértői kapuőrség elit-képződés, ami a
    „mindenki egyenlő" elvvel feszül. Középút-jelölt: a szakértői vélemény LÁTHATÓ
-   tartalom (a fában), de a szavazat egyenlő marad.
+   gondolat (a fában), de a szavazat egyenlő marad.
 3. **Döntés** — a koino szavazás-mechanizmusa. ✔
 4. **Bevezetés/kikényszerítés — A LEGNEHEZEBB.** P2P-ben SENKI nem kényszerítheti a
    csomópontokat az új kód futtatására; a frissítés minden csomópont-üzemeltető saját
@@ -663,7 +663,7 @@ az utóbbit kezelné); reprodukálható build + hash-ellenőrzés (a TELJESÜLÉ
 — Csaba korábbi pontja); tesztháló + fokozatos bevezetés.
 
 **Claude 4 kérdése Csabához:** (1) az értékelés-aszimmetria kezelése — elfogadja-e a
-„szakértői vélemény látható tartalom, de a szavazat egyenlő" középutat? (2) elfogad-e
+„szakértői vélemény látható gondolat, de a szavazat egyenlő" középutat? (2) elfogad-e
 időkorlátos, nyilvános, utólag jóváhagyandó VÉSZHELYZETI utat? (3) elfogadja-e, hogy
 P2P-ben a végső garancia a FORK-JOG — a „hivatalos koino" társadalmi konszenzus, nem
 egyetlen kanonikus kód? (4) mi a BOOTSTRAP-terv — mikor és milyen lépcsőkben adja át
@@ -849,7 +849,7 @@ előtt is vállalható. A 8. pont (levelek átdolgozása) közvetlen alapanyaga.
   **4. pont: Csaba tudatpont-alapú tárolási modellje** (tudatpont = tárolási vállalás,
   entitás annyi helyen él, ahány tulajdonosa; közösségi felejtés) — Claude: elegáns,
   részleges válasz a skálázásra, DE (1) a GDPR-törlés egyéni jog, a replikáció pont a
-  védett tartalmaknál áll ellen; (2) két adatosztály következik: tartalmi réteg (jól
+  védett gondolatoknál áll ellen; (2) két adatosztály következik: tartalmi réteg (jól
   működik) + TARTÓS MAG (regisztrációk, eredmények, egyezmények — itt él tovább a jogi
   ütközés; ÚJ alkérdés: kilépési jog kontra örök elszámoltathatóság); (3) a P2P-törlés
   kikényszeríthetetlen — becsületes ígéret: „nem replikáljuk tovább", nem „megsemmisült".

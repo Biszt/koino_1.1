@@ -129,7 +129,7 @@ class KategoriaService {
 
     // ===== 6. LÉPÉS - LEÍRÁS KEZELÉSE HA VAN =====
     // A leiras a FormData-ból JSON-stringként érkezik (blokk-tömb) → tömbbé parse-oljuk,
-    // hogy a Mixed mezőben tömbként tárolódjon (mint a Tartalom szoveg-e).
+    // hogy a Mixed mezőben tömbként tárolódjon (mint a Gondolat szoveg-e).
     const tisztitottLeiras = leirasParse(adatok.leiras);
 
     // ===== 7. LÉPÉS - IKON ÚTVONAL TISZTÍTÁSA =====

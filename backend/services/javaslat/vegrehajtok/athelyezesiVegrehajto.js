@@ -4,8 +4,8 @@
 // IMPORTOK
 // ===================================
 
-// Tartalom repository importálása
-const TartalomRepository = require('../../../repositories/tartalomRepository');
+// Gondolat repository importálása
+const GondolatRepository = require('../../../repositories/gondolatRepository');
 
 // Egyezmény repository — az egyezmény ÁTHELYEZÉSE (a domain szerint egyezményre
 // kizárólag áthelyezés indítható) a saját kollekcióját frissíti.
@@ -24,7 +24,7 @@ const OsLancKarbantartoService = require('../../osLancKarbantartoService');
 // ÁTHELYEZÉSI VÉGREHAJTÓ OSZTÁLY
 // ===================================
 // Ez az osztály felelős az áthelyezési javaslatok végrehajtásáért
-// Felelősség: Tartalom szülőjének megváltoztatása, tudatpontok MEGMARADNAK
+// Felelősség: Gondolat szülőjének megváltoztatása, tudatpontok MEGMARADNAK
 class AthelyezesiVegrehajto {
 
   // ===================================
@@ -32,7 +32,7 @@ class AthelyezesiVegrehajto {
   // ===================================
   /**
    * Áthelyezési javaslat végrehajtása
-   * Megváltoztatja a tartalom szülőjét (szuloId mező)
+   * Megváltoztatja a gondolat szülőjét (szuloId mező)
    * A tudatpontok MEGMARADNAK az entitáson (nem osztódnak vissza)
    * 
    * @param {Object} javaslat - A javaslat objektum
@@ -52,28 +52,28 @@ class AthelyezesiVegrehajto {
 
     const athelyezesiEredmenyek = [];
 
-    // === 2. LÉPÉS: MINDEN ÉRINTETT TARTALOM FELDOLGOZÁSA ===
+    // === 2. LÉPÉS: MINDEN ÉRINTETT GONDOLAT FELDOLGOZÁSA ===
     for (const entitas of javaslat.erintettEntitasok) {
 
       // === 3. LÉPÉS: TÍPUS ELLENŐRZÉSE ===
-      // Áthelyezés Tartalom VAGY Egyezmény típusra támogatott. (Kategóriát és
-      // Tartalomtípust a javaslatService már a beküldéskor kizárja az áthelyezésből.)
-      if (entitas.entitasTipus !== 'Tartalom' && entitas.entitasTipus !== 'Egyezmeny') {
+      // Áthelyezés Gondolat VAGY Egyezmény típusra támogatott. (Kategóriát és
+      // Gondolattípust a javaslatService már a beküldéskor kizárja az áthelyezésből.)
+      if (entitas.entitasTipus !== 'Gondolat' && entitas.entitasTipus !== 'Egyezmeny') {
         athelyezesiEredmenyek.push({
           entitasId: entitas.entitasId,
           entitasTipus: entitas.entitasTipus,
           athelyezve: false,
-          hiba: 'Áthelyezés csak Tartalom vagy Egyezmény típusra támogatott'
+          hiba: 'Áthelyezés csak Gondolat vagy Egyezmény típusra támogatott'
         });
         continue;
       }
 
       // A mozgatott entitás saját kollekciója típus szerint (a szülő-lánc
-      // bejárás/kör-ellenőrzés továbbra is a Tartalom-fán megy, mert az áthelyezés
-      // célja mindig Tartalom).
+      // bejárás/kör-ellenőrzés továbbra is a Gondolat-fán megy, mert az áthelyezés
+      // célja mindig Gondolat).
       const mozgatottRepo = entitas.entitasTipus === 'Egyezmeny'
         ? EgyezmenyRepository
-        : TartalomRepository;
+        : GondolatRepository;
 
       // === 4. LÉPÉS: ÚJ SZÜLŐ ID ELLENŐRZÉSE ===
       if (!entitas.modositasAdatok || !entitas.modositasAdatok.hasOwnProperty('ujSzuloId')) {
@@ -87,7 +87,7 @@ class AthelyezesiVegrehajto {
       }
 
       const ujSzuloId = entitas.modositasAdatok.ujSzuloId;
-      const ujSzuloTipus = entitas.modositasAdatok.ujSzuloTipus || 'Tartalom';
+      const ujSzuloTipus = entitas.modositasAdatok.ujSzuloTipus || 'Gondolat';
 
       // 5. LÉPÉS - ÁTHELYEZÉSI TRANZAKCIÓ
       let athelyezve = false;
@@ -103,12 +103,12 @@ class AthelyezesiVegrehajto {
 
         // 5.B - A MOZGATOTT ENTITÁS EREDETI SZÜLŐJÉNEK FELJEGYZÉSE
         // A kör-feloldáshoz és a hierarchia újraszámításhoz is kell
-        const mozgatottTartalom = await mozgatottRepo.findById(entitas.entitasId);
-        if (!mozgatottTartalom) {
+        const mozgatottGondolat = await mozgatottRepo.findById(entitas.entitasId);
+        if (!mozgatottGondolat) {
           throw new Error('Az áthelyezendő entitás nem található');
         }
-        const eredetiSzuloId = mozgatottTartalom.szuloId ?? null;
-        const eredetiSzuloTipus = mozgatottTartalom.szuloTipus ?? null;
+        const eredetiSzuloId = mozgatottGondolat.szuloId ?? null;
+        const eredetiSzuloTipus = mozgatottGondolat.szuloTipus ?? null;
 
         // 5.C - KÖR-HIERARCHIA ELLENŐRZÉSE (ELUTASÍTÁS)
         // Áthelyezéskor az entitás a teljes leszármazott-ágával együtt mozog,
@@ -127,20 +127,20 @@ class AthelyezesiVegrehajto {
             );
           }
 
-          const vizsgaltTartalom = await TartalomRepository.findById(vizsgaltId);
-          if (!vizsgaltTartalom) break;
+          const vizsgaltGondolat = await GondolatRepository.findById(vizsgaltId);
+          if (!vizsgaltGondolat) break;
 
-          vizsgaltId = vizsgaltTartalom.szuloId ? vizsgaltTartalom.szuloId.toString() : null;
+          vizsgaltId = vizsgaltGondolat.szuloId ? vizsgaltGondolat.szuloId.toString() : null;
         }
 
         // 5.D - A MOZGATOTT ENTITÁS ÁTHELYEZÉSE (szuloId ÉS szuloTipus)
-        console.log('vegrehajtas >>> TartalomRepository.updateById (szuloId + szuloTipus)', {
+        console.log('vegrehajtas >>> GondolatRepository.updateById (szuloId + szuloTipus)', {
           entitasId: entitas.entitasId,
           ujSzuloId: ujSzuloId,
           ujSzuloTipus: ujSzuloTipus
         });
 
-        const frissitettTartalom = await mozgatottRepo.updateById(
+        const frissitettGondolat = await mozgatottRepo.updateById(
           entitas.entitasId,
           {
             szuloId: ujSzuloId,
@@ -161,10 +161,10 @@ class AthelyezesiVegrehajto {
         // szülő-lánc — így a szülők már a friss gyerek-értékeket összesítik
         await this._hierarchiaLancUjraszamitasa(entitas.entitasId, entitas.entitasTipus);
         if (ujSzuloId) {
-          await this._hierarchiaLancUjraszamitasa(ujSzuloId, 'Tartalom');
+          await this._hierarchiaLancUjraszamitasa(ujSzuloId, 'Gondolat');
         }
         if (eredetiSzuloId && eredetiSzuloId.toString() !== (ujSzuloId ?? '').toString()) {
-          await this._hierarchiaLancUjraszamitasa(eredetiSzuloId, eredetiSzuloTipus || 'Tartalom');
+          await this._hierarchiaLancUjraszamitasa(eredetiSzuloId, eredetiSzuloTipus || 'Gondolat');
         }
 
         // ŐS-LÁNC (3b): az áthelyezett entitás ÉS teljes részfája osLanc-jának újraépítése.
@@ -178,7 +178,7 @@ class AthelyezesiVegrehajto {
           });
         }
 
-        athelyezve = !!frissitettTartalom;
+        athelyezve = !!frissitettGondolat;
         console.log('✅ ÁTHELYEZÉS SIKERES');
 
       } catch (error) {
@@ -266,7 +266,7 @@ class AthelyezesiVegrehajto {
       if (!allokacio || !allokacio.szuloId) break; // Elértük a gyökeret
 
       aktualisId = allokacio.szuloId;
-      aktualisTipus = allokacio.szuloTipus || 'Tartalom';
+      aktualisTipus = allokacio.szuloTipus || 'Gondolat';
     }
 
     console.log('_hierarchiaLancUjraszamitasa - VÉGE', { lepesek: lepesVedelem });

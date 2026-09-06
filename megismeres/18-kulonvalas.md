@@ -1,4 +1,4 @@
-# Különválás — amikor egy tartalom kettéválik
+# Különválás — amikor egy gondolat kettéválik
 
 Egy módosítási javaslatnak eddig egy nyertese volt: vagy átment a módosítás, vagy nem.
 A **különválás** ezen változtat — mindkét oldal magával viheti azt, amit szeretett volna.
@@ -15,8 +15,8 @@ Ha bepipálod, és a döntés végül nem szerinted alakul, a te álláspontod s
 
 | A szavazás vége | Ki válhat külön | Mit visz magával |
 |---|---|---|
-| A javaslat **elfogadva** | az ellenzők | a **régi**, módosítás előtti tartalmat |
-| A javaslat **elvetve** | a támogatók | a **módosított** tartalmat |
+| A javaslat **elfogadva** | az ellenzők | a **régi**, módosítás előtti gondolatot |
+| A javaslat **elvetve** | a támogatók | a **módosított** gondolatot |
 
 Tartózkodásnál a kérdés meg sem jelenik: aki nem foglal állást, a **főágon** marad.
 
@@ -29,20 +29,20 @@ csak máshol áll.
 Ez a szétválás „ára": aki elmegy, viszi a súlyát. Cserébe nem kell nulláról felépítenie
 ugyanazt — a különválás nem ad új jogot, csak olcsóvá teszi azt, amit amúgy is megtehetne.
 
-## Mi lesz az alatta lévő tartalmakkal?
+## Mi lesz az alatta lévő gondolatokkal?
 
 Egyetlen szabály dönt: **minden oda kerül, ahol tudatpontja van annak, aki különválik.**
 
-- Ha egy alatta lévő tartalomra **csak a különválóknak** van pontja → **átköltözik** az új ágra.
+- Ha egy alatta lévő gondolatra **csak a különválóknak** van pontja → **átköltözik** az új ágra.
 - Ha **mindkét oldalnak** van rajta pontja → **mindkét ágon megmarad**.
 - Ha a különválóknak **nincs rajta pontja** → marad, ahol van.
 
-Ettől arányos: aki egyetlen tartalomhoz szólt hozzá, egyetlen tartalmat visz, nem az
+Ettől arányos: aki egyetlen gondolathoz szólt hozzá, egyetlen gondolatot visz, nem az
 egész ágat.
 
 ## Hogyan találom meg a másik ágat?
 
-A kettévált tartalom kártyáján megjelenik egy **„Másik ág"** fül. Benne egy mondat arról,
+A kettévált gondolat kártyáján megjelenik egy **„Másik ág"** fül. Benne egy mondat arról,
 mikor és melyik oldalon vált szét, alatta koppintható hivatkozás a testvér-ágra.
 
 A két ág tehát nem veszíti szem elől egymást — és később **újra egyesíthető** a szokásos
@@ -63,7 +63,7 @@ sem, az az ág az alapértelmezett küszöbökre áll, amíg valaki új érték 
 ## Az azonosító
 
 A **főág** tartja meg az eredeti azonosítót — elfogadott javaslatnál tehát a *módosított*
-tartalom, elvetettnél a *változatlan*. Ennek az a következménye, hogy a régi hivatkozások
+gondolat, elvetettnél a *változatlan*. Ennek az a következménye, hogy a régi hivatkozások
 a főágra mutatnak tovább.
 
 ## A szavakról

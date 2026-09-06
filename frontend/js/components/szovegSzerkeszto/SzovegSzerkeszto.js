@@ -194,7 +194,7 @@ constructor(kontener, opciak = {}) {
   // Az allapotFrissites-t NEM adjuk át — a _visszaallitasUtaniFokusz() kezeli
   this.tortenetKezelo = new TortenetKezelo(
     () => this.getTartalom(),
-    (snapshot) => this._tartalomVisszaallitasa(snapshot),
+    (snapshot) => this._gondolatVisszaallitasa(snapshot),
     this.teruletElem,
     {} // allapotFrissites szándékosan üres — lásd _visszaallitasUtaniFokusz()
   );
@@ -250,7 +250,7 @@ constructor(kontener, opciak = {}) {
 }
 
 // =============================================
-// PUBLIKUS API - TARTALOM LEKÉRÉSE
+// PUBLIKUS API - GONDOLAT LEKÉRÉSE
 // =============================================
 // MÓDOSÍTVA: az aktivFulId is bekerül a snapshotba,
 // hogy visszaállításkor tudjuk, melyik fül volt aktív.
@@ -263,9 +263,9 @@ getTartalom() {
   // --- NAVIGÁCIÓ NÉLKÜLI eset: még nincs egy fül sem ---
   if (this.oldalNavigacio.getFulek().length === 0) {
     this._szovegesBlokkokSzinkronizalasa();
-    const tartalom = this.blokkLista.exportalas();
-    console.log('SzovegSzerkeszto.getTartalom - VÉGE (navigáció nélkül)', { tartalom });
-    return tartalom;
+    const gondolat = this.blokkLista.exportalas();
+    console.log('SzovegSzerkeszto.getTartalom - VÉGE (navigáció nélkül)', { gondolat });
+    return gondolat;
   }
 
   // --- NAVIGÁCIÓVAL: van legalább egy fül ---
@@ -299,7 +299,7 @@ getTartalom() {
 // =============================================
 // PUBLIKUS API - FÜGGŐ FELTÖLTÉSEK VÉGLEGESÍTÉSE
 // =============================================
-// A HALASZTOTT FELTÖLTÉS lelke – a tartalom mentése ELŐTT kell meghívni.
+// A HALASZTOTT FELTÖLTÉS lelke – a gondolat mentése ELŐTT kell meghívni.
 // Végigmegy a mentendő blokkokon, és minden helyben tárolt (blob:-URL-es)
 // kép/fájl blokkot MOST tölt fel a szerverre, majd a blob:-URL-t lecseréli
 // a kapott VALÓDI szerver-URL-re a blokk adatában. Így a getTartalom() már
@@ -353,10 +353,10 @@ async fuggoFeltoltesekVeglegesitese(token) {
 }
 
 // =============================================
-// PUBLIKUS API - TARTALOM BEÁLLÍTÁSA
+// PUBLIKUS API - GONDOLAT BEÁLLÍTÁSA
 // =============================================
-// Külső tartalom betöltésére szolgál (pl. szerkesztés módban megnyitáskor).
-// NEM a visszaállítás hívja — arra a _tartalomVisszaallitasa() van.
+// Külső gondolat betöltésére szolgál (pl. szerkesztés módban megnyitáskor).
+// NEM a visszaállítás hívja — arra a _gondolatVisszaallitasa() van.
 // @param {Array|Object} blokkok - A betöltendő adatok
 setTartalom(blokkok) {
   console.log('SzovegSzerkeszto.setTartalom - KEZDÉS', { blokkok });
@@ -508,12 +508,12 @@ _blokkokBetoltese(adatok) {
 }
 
 // =============================================
-// PRIVÁT - TARTALOM VISSZAÁLLÍTÁSA SNAPSHOTBÓL
+// PRIVÁT - GONDOLAT VISSZAÁLLÍTÁSA SNAPSHOTBÓL
 // =============================================
 // A TortenetKezelo hívja visszavon() és ujra() esetén.
 // @param {Array|Object} snapshot - A TortenetKezelo által átadott deep copy
-_tartalomVisszaallitasa(snapshot) {
-  console.log('SzovegSzerkeszto._tartalomVisszaallitasa - KEZDÉS', { snapshot });
+_gondolatVisszaallitasa(snapshot) {
+  console.log('SzovegSzerkeszto._gondolatVisszaallitasa - KEZDÉS', { snapshot });
 
   // --- RÉGI FORMÁTUM: egyszerű tömb ---
   if (Array.isArray(snapshot)) {
@@ -536,7 +536,7 @@ _tartalomVisszaallitasa(snapshot) {
 
     this._visszaallitasUtaniFokusz();
 
-    console.log('SzovegSzerkeszto._tartalomVisszaallitasa - VÉGE (navigáció nélkül)');
+    console.log('SzovegSzerkeszto._gondolatVisszaallitasa - VÉGE (navigáció nélkül)');
     return;
   }
 
@@ -602,17 +602,17 @@ _tartalomVisszaallitasa(snapshot) {
 
     this._visszaallitasUtaniFokusz();
 
-    console.log('SzovegSzerkeszto._tartalomVisszaallitasa - VÉGE (navigációval)', { celFulId, fulekMegvaltoztak });
+    console.log('SzovegSzerkeszto._gondolatVisszaallitasa - VÉGE (navigációval)', { celFulId, fulekMegvaltoztak });
     return;
   }
 
-  console.warn('SzovegSzerkeszto._tartalomVisszaallitasa - ismeretlen snapshot formátum', { snapshot });
+  console.warn('SzovegSzerkeszto._gondolatVisszaallitasa - ismeretlen snapshot formátum', { snapshot });
 }
 
 // =============================================
 // PRIVÁT - VISSZAÁLLÍTÁS UTÁNI FÓKUSZ + ESZKÖZTÁR FRISSÍTÉS
 // =============================================
-// A _tartalomVisszaallitasa() hívja minden visszaállítás után.
+// A _gondolatVisszaallitasa() hívja minden visszaállítás után.
 // Feladatai sorrendben:
 // 1. Megkeresi az aktív blokkot (vagy az elsőt, ha nincs aktív)
 // 2. Fókuszt ad a blokk DOM elemének
@@ -643,7 +643,7 @@ _visszaallitasUtaniFokusz() {
           const selection = window.getSelection();
           const range = document.createRange();
           range.selectNodeContents(domElem);
-          range.collapse(false); // false = kurzor a tartalom végére
+          range.collapse(false); // false = kurzor a gondolat végére
           selection.removeAllRanges();
           selection.addRange(range);
         } catch (e) {
@@ -690,7 +690,7 @@ _ujFulBlokkListaLetrehozasa(fulId, felirat) {
 // PRIVÁT - FÜL VÁLTÁS
 // =============================================
 // Az OldalNavigacio onFulValtas callbackje hívja.
-// Fülváltás NEM ment snapshotot — csak nézetváltás, nem tartalomváltozás.
+// Fülváltás NEM ment snapshotot — csak nézetváltás, nem gondolatváltozás.
 // @param {string} fulId - Az új aktív fül ID-ja
 _fulValtas(fulId) {
   console.log('SzovegSzerkeszto._fulValtas - KEZDÉS', { fulId });
@@ -733,8 +733,8 @@ _blokkRenderelese(blokk) {
         onFokusz:   (id) => this._blokkFokuszba(id),
         onUjBlokk:  (id) => this._ujSzovegesBlokkHozzaadasa(id),
         onTorles:   (id) => this._blokkTorlese(id),
-        onValtozas: (id, tartalom) => {
-          this.blokkLista.frissites(id, { tartalom });
+        onValtozas: (id, gondolat) => {
+          this.blokkLista.frissites(id, { gondolat });
           // Gépelés közbeni debounce snapshot mentés
           this.tortenetKezelo.mentesDebounce();
           this._valtozasJelzese();
@@ -1265,7 +1265,7 @@ _aktivBlokkBetumeretValtozas(meret) {
   const kozosAllapot = this._kozosAllapotOsszeallitasa();
   this.eszkoztar.allapotFrissites(aktivBlokk, kozosAllapot, null);
 
-  // Betűméret változás tartalom-változásnak minősül — azonnali snapshot mentés
+  // Betűméret változás gondolat-változásnak minősül — azonnali snapshot mentés
   this.tortenetKezelo.mentes();
   this._valtozasJelzese();
 

@@ -9,11 +9,11 @@ import EntitasHivatkozasBlokk from '../szovegSzerkeszto/blokkok/EntitasHivatkoza
 // =============================================
 // SZÖVEG MEZŐ MEGJELENÍTŐ
 // Felelősség:
-// - Blokk tartalom csak olvasható renderelése a kártyák body-jában
+// - Blokk gondolat csak olvasható renderelése a kártyák body-jában
 // - MINDHÁROM mentett formátum kezelése:
-//   1. blokk tömb (egyszerű, navigáció nélküli tartalom)
+//   1. blokk tömb (egyszerű, navigáció nélküli gondolat)
 //   2. { oldalNavigacio: { fulek }, aktivFulId, blokkok: { fulId: [...] } }
-//      (több oldalas tartalom — csak olvasható fülsáv is renderelődik)
+//      (több oldalas gondolat — csak olvasható fülsáv is renderelődik)
 //   3. sima string (régi, migráció előtti rekordok)
 // - Entitás hivatkozás koppintás kezelése a Pakli.js felé
 // - A meglévő blokk osztályok letrehozasMegjelenitesMod() / letrehozas()
@@ -142,7 +142,7 @@ class SzovegMezoMegjelenito {
     // Konténer ürítése (újra-renderelés esetére)
     this.kontener.innerHTML = '';
 
-    // Fülsáv — csak több oldalas tartalomnál
+    // Fülsáv — csak több oldalas gondolatnál
     if (this.fulek && this.fulek.length > 0) {
       this.kontener.appendChild(this._fulsavLetrehozasa());
     }
@@ -198,7 +198,7 @@ class SzovegMezoMegjelenito {
   // =============================================
   // PRIVÁT - FÜLVÁLTÁS
   // =============================================
-  // Az aktív fül átállítása és a teljes tartalom újrarenderelése.
+  // Az aktív fül átállítása és a teljes gondolat újrarenderelése.
   // @param {string} fulId - Az új aktív fül ID-ja
   _fulValtas(fulId) {
     console.log('SzovegMezoMegjelenito._fulValtas - KEZDÉS', { fulId });

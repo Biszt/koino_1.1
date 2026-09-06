@@ -32,16 +32,16 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 ### 2026-09-04
 
-- 🆕 „a »tartalom« szót, le szeretném cserélni, »gondolatra«, mindenhol (tudom hogy ez nagy
+- 🆕 „a »gondolat« szót, le szeretném cserélni, »gondolatra«, mindenhol (tudom hogy ez nagy
   munka, ezért most ne foglalkozz vele, csak írd be valamelyik dokumentumba)"
   → Kontextus: a Szakasz 4 (identitás) megbeszélése közben merült fel, ott, ahol a
   tanúsítás visszavonásáról volt szó — a tanú nem vonhat vissza, hanem **bizonytalanra
   jelölhet**, és **létrehozhat egy gondolatot**, amivel megosztja a felelősséget a
   közösséggel.
-  ⚠️ **A méret miatt külön feladat.** A `tartalom` szó ma egyszerre: domain-fogalom
+  ⚠️ **A méret miatt külön feladat.** A `gondolat` szó ma egyszerre: domain-fogalom
   (a platform alapegysége), entitástípus, adatosztály (`adat_osztalyozas.md`),
-  Mongoose-modell és útvonal a prototípusban (`models/tartalom.js`, `/api/tartalmak`),
-  frontend-komponens (`TartalomKartya.js`, `TartalomModal`), és megszámlálhatatlan
+  Mongoose-modell és útvonal a prototípusban (`models/gondolat.js`, `/api/gondolatok`),
+  frontend-komponens (`GondolatKartya.js`, `GondolatModal`), és megszámlálhatatlan
   dokumentum-hivatkozás. ⛔ **A prototípus be van fagyasztva** (nem nyúlunk hozzá), tehát
   az átnevezés a **Fázis 2-ben** végezhető el — legkésőbb a Szakasz 5-ben (a felület),
   amikor a domain-szótár úgyis a képernyőre kerül. Addig mindkét szó ugyanazt jelenti.
@@ -49,10 +49,10 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 ### 2026-07-22
 
-- ✅ „még az is eszembe jutott, hogy az új tartalom létrehozása modalban, a kategória
+- ✅ „még az is eszembe jutott, hogy az új gondolat létrehozása modalban, a kategória
   választó, legyen képes a legördülő menüben, jelezni, (mondjuk eltolással), hogy ha
   valamelyik, alkategóriája, a másiknak."
-  → MEGVALÓSÍTVA (2026-07-22): a `TartalomModal` kategória-választó legördülője most
+  → MEGVALÓSÍTVA (2026-07-22): a `GondolatModal` kategória-választó legördülője most
   fa-sorrendben, MÉLYSÉG szerinti behúzással jeleníti meg a kategóriákat (az alkategória
   a szülője alatt, nem törő szóközökkel + „└ " jellel). Új `_kategoriakFaSorrendbe()`
   segéd (DFS, árva-söprés, kör-védelem), a mélységet a teljes fából számolja.
@@ -112,19 +112,19 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
   a ragadt sorvégek miatt); a méréskor ideiglenesen `inline-block` + `nowrap` a tiszta
   szövegszélességhez.
   → **Javítás (2026-07-12):** első próbára MÉGSEM tördelt, mert MIND az 5 per-kártya
-  cím-osztály (`tartalom-kartya__cim`, `kategoria/tartalom-tipus __nev`, `javaslat/egyezmeny __tipus`)
+  cím-osztály (`gondolat-kartya__cim`, `kategoria/gondolat-tipus __nev`, `javaslat/egyezmeny __tipus`)
   saját `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`-t tartalmazott
   (a régi egysoros dizájn maradványa), ami felülírta a tördelést. Megoldás: a közös
   `kartya.css` cím-szabály explicit `white-space: normal`-t állít (magasabb specificitás →
   győz), és kitakarítottam az elavult egysoros tulajdonságokat mind az 5 per-kártya CSS-ből
   (a `flex: 1` és `min-width: 0` maradt a szélességhez/tördeléshez). Csaba megfigyelése
   alapján a min. betűméretnél 3 sor is elfér.
-  → **Megszorítás (2026-07-12, Csaba kérése):** a DINAMIKUS méretezés CSAK a Tartalom
-  kártya címére vonatkozik; a többi kártyatípus (Kategória/Tartalomtípus/Javaslat/Egyezmény)
+  → **Megszorítás (2026-07-12, Csaba kérése):** a DINAMIKUS méretezés CSAK a Gondolat
+  kártya címére vonatkozik; a többi kártyatípus (Kategória/Gondolattípus/Javaslat/Egyezmény)
   címe FIX 16px. Megvalósítás: base `Kartya._cimDinamikusMeretu()` → `false`, a
-  `TartalomKartya` felülírja `true`-ra; az `init()`-beli becslés és a
+  `GondolatKartya` felülírja `true`-ra; az `init()`-beli becslés és a
   `cimBetumeretHozzaigazitasa()` csak akkor fut. A CSS közös cím-szabály 16px-e a fix méret.
-  (A max. 3 soros tördelés + balra igazítás MINDEN kártyán marad, csak a méretezés Tartalom-only.)
+  (A max. 3 soros tördelés + balra igazítás MINDEN kártyán marad, csak a méretezés Gondolat-only.)
 
 ### 2026-07-10
 
@@ -156,19 +156,19 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
   magassága]"
   → **Elvégezve (2026-07-10):** flexbox-csapda. A megjelenítő fő konténere
   `display: flex`, így a blokk-wrapperek flex-elemek, és a default
-  `min-height: auto` felfújta a beállított magasságot a tartalom min-content
+  `min-height: auto` felfújta a beállított magasságot a gondolat min-content
   méretére. Javítás: `szovegMezoMegjelenito.css`-ben a `.link-blokk-wrapper` és
   `.fajl-blokk-wrapper` `min-height: 0`. Frontend-only.
 
 - ✅ „[a tátható/láthatatlan/takart státusz, teljes egészben, törőlhető, a
-  tartalom létrhozása modalból is.]"
-  → **Elvégezve (2026-07-10):** a tartalom `statusz` mezője (Lathato/Lathatatlan/
-  Takart) teljesen eltávolítva. Backend: `tartalom` modell (mező + 2 index),
-  `tartalomService` (create/update validáció, `tartalomLekerese` és
-  `tartalomListazasa` láthatóság-szűrése – most minden tartalom látható),
-  `tartalomRepository` (`findAll` + `findBySzuloId` szűrés/param), `tartalomController`
-  (query-param), `tools/teszt.js`. Frontend: `tartalomModal.html` (legördülő),
-  `TartalomModal.js` (kiolvasás/kitöltés), `JavaslatModal.js` (egyesítés
+  gondolat létrhozása modalból is.]"
+  → **Elvégezve (2026-07-10):** a gondolat `statusz` mezője (Lathato/Lathatatlan/
+  Takart) teljesen eltávolítva. Backend: `gondolat` modell (mező + 2 index),
+  `gondolatService` (create/update validáció, `gondolatLekerese` és
+  `gondolatListazasa` láthatóság-szűrése – most minden gondolat látható),
+  `gondolatRepository` (`findAll` + `findBySzuloId` szűrés/param), `gondolatController`
+  (query-param), `tools/teszt.js`. Frontend: `gondolatModal.html` (legördülő),
+  `GondolatModal.js` (kiolvasás/kitöltés), `JavaslatModal.js` (egyesítés
   `statusz:'Lathato'`). A **javaslat** statusz-a (Aktiv/…) érintetlen.
 
 - 🆕 „[fejlécnek, mutatnia kéne majd az eember, saját tudatpontját is, az
@@ -187,7 +187,7 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
   sorrend 10. pontja („Jogosultság-függő menüpontok").
 
 - ✅ „Ami a modalok, és a menük stílusát illeti, az irányadók, a pl.
-  tartalom(entitás) létrehozása modal, menübe, meg a fő menü, és a kártyák
+  gondolat(entitás) létrehozása modal, menübe, meg a fő menü, és a kártyák
   hamburger menüi. A javaslat típusok menüje, már eltér ettől, és a modaljai is."
   → **Átvezetve:** [fejlesztesi_terv.md](fejlesztesi_terv.md), a „Stílus-irányelvek"
   szakasz.

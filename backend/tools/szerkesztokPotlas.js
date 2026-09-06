@@ -1,7 +1,7 @@
 // backend/tools/szerkesztokPotlas.js
 
 // EGYSZERI MIGRÁCIÓ: a `szerkesztok` tömb pótlása a régi (átnevezés ELŐTT létrejött)
-// tartalmaknál / kategóriáknál / tartalomtípusoknál.
+// gondolatoknál / kategóriáknál / gondolattípusoknál.
 //
 // Háttér: 2026-08-18-án az egyszeres `letrehozo` mező `szerkesztok` tömbbé alakult.
 // Az AZ ELŐTT keletkezett dokumentumokban csak a régi `letrehozo` van, `szerkesztok`
@@ -23,12 +23,12 @@
 try { require('dotenv').config(); } catch (_) { /* prod: env_file adja a változókat */ }
 
 const mongoose = require('mongoose');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 
 // ===== EGY KOLLEKCIÓ FELDOLGOZÁSA =====
-// @param {mongoose.Model} Model - a feldolgozandó modell (Tartalom/Kategoria/TartalomTipus)
+// @param {mongoose.Model} Model - a feldolgozandó modell (Gondolat/Kategoria/GondolatTipus)
 // @param {string} nev - emberi név a naplóhoz
 // @returns {Promise<number>} a frissített dokumentumok száma
 async function egyKollekcio(Model, nev) {
@@ -64,15 +64,15 @@ async function futtatas() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('szerkesztokPotlas - MongoDB kapcsolat él');
 
-  const tartalom      = await egyKollekcio(Tartalom, 'Tartalom');
+  const gondolat      = await egyKollekcio(Gondolat, 'Gondolat');
   const kategoria     = await egyKollekcio(Kategoria, 'Kategoria');
-  const tartalomTipus = await egyKollekcio(TartalomTipus, 'TartalomTipus');
+  const gondolatTipus = await egyKollekcio(GondolatTipus, 'GondolatTipus');
 
   console.log('szerkesztokPotlas - VÉGE', {
-    tartalom,
+    gondolat,
     kategoria,
-    tartalomTipus,
-    osszes: tartalom + kategoria + tartalomTipus
+    gondolatTipus,
+    osszes: gondolat + kategoria + gondolatTipus
   });
 
   await mongoose.disconnect();

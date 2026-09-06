@@ -173,7 +173,7 @@ body.teljes-nezet-nyitva .modal-panel--teljes.latható {
   stroke-width: 3;
 }
 
-/* ----- MELLÉK-IKONOK (kategória / tartalomtípus / művelet) ----- */
+/* ----- MELLÉK-IKONOK (kategória / gondolattípus / művelet) ----- */
 /* A fő ikon melletti kis körök (3. LOD-szinttől). Ugyanaz a dizájn, mint a fő
    csomópont-kör (típus-szín + halvány keret), csak kisebb. */
 .struktura-modal__mellek-kor {

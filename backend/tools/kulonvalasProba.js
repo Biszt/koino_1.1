@@ -12,11 +12,11 @@
 //
 // ===== FUTTATÁS =====
 //
-// 1) FELMÉRÉS (nem módosít semmit) — kiírja a tartalom tudatpont-tulajdonosait:
-//      docker exec koino-backend node tools/kulonvalasProba.js <tartalomId>
+// 1) FELMÉRÉS (nem módosít semmit) — kiírja a gondolat tudatpont-tulajdonosait:
+//      docker exec koino-backend node tools/kulonvalasProba.js <gondolatId>
 //
 // 2) SZÉTVÁLASZTÁS — a felsorolt e-emberek különválnak:
-//      docker exec koino-backend node tools/kulonvalasProba.js <tartalomId> <eemberId1,eemberId2> "Az új ág címe" [javaslatId]
+//      docker exec koino-backend node tools/kulonvalasProba.js <gondolatId> <eemberId1,eemberId2> "Az új ág címe" [javaslatId]
 //
 // A javaslatId elhagyható; ilyenkor az eszköz egy PRÓBA-azonosítót használ, és a
 // „Másik ág" hivatkozás egy nem létező javaslatra fog mutatni (dev-ben ez rendben van).
@@ -39,7 +39,7 @@ try { require('dotenv').config(); } catch (_) { /* prod: env_file adja a változ
 
 const mongoose = require('mongoose');
 
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const eEmber = require('../models/eember');
 const TudatpontHozzarendeles = require('../models/tudatpontHozzarendeles');
 const TudatpontAllokacio = require('../models/tudatpontAllokacio');
@@ -51,7 +51,7 @@ const KulonvalasService = require('../services/kulonvalasService');
 // A RENDSZER ÁLLAPOTÁNAK FELVÉTELE
 // ===================================
 // Azokat a számokat gyűjti össze, amiknek a szétválás UTÁN is stimmelniük kell.
-// @param {string} forrasId - a szétváló tartalom azonosítója
+// @param {string} forrasId - a szétváló gondolat azonosítója
 // @param {string|null} szuloId - a szülője (ha van)
 // @param {string|null} ujAgId - az új ág azonosítója (a szétválás után)
 // @returns {Promise<Object>} a mért értékek
@@ -70,12 +70,12 @@ async function allapotFelvetele(forrasId, szuloId, ujAgId = null) {
 
   // A forrás (főág) saját pontja
   const forrasAllokacio = await TudatpontAllokacio.findOne({
-    entitasId: forrasId, entitasTipus: 'Tartalom'
+    entitasId: forrasId, entitasTipus: 'Gondolat'
   });
 
   // Az új ág saját pontja (ha már létezik)
   const ujAgAllokacio = ujAgId
-    ? await TudatpontAllokacio.findOne({ entitasId: ujAgId, entitasTipus: 'Tartalom' })
+    ? await TudatpontAllokacio.findOne({ entitasId: ujAgId, entitasTipus: 'Gondolat' })
     : null;
 
   // A szülő hierarchikus összpontja (a részfa teljes súlya)
@@ -111,16 +111,16 @@ async function futtatas() {
 
   // ----- 1. LÉPÉS: PARAMÉTEREK KIOLVASÁSA -----
   // process.argv[0] = node, [1] = a script útvonala, [2]-től a valódi paraméterek
-  const tartalomId    = process.argv[2];
+  const gondolatId    = process.argv[2];
   const kulonvalokNyers = process.argv[3];
   const ujCim         = process.argv[4];
   const javaslatId    = process.argv[5];
 
-  if (!tartalomId) {
+  if (!gondolatId) {
     console.log('');
     console.log('Használat:');
-    console.log('  Felmérés:        node tools/kulonvalasProba.js <tartalomId>');
-    console.log('  Szétválasztás:   node tools/kulonvalasProba.js <tartalomId> <eemberId1,eemberId2> "Új cím" [javaslatId]');
+    console.log('  Felmérés:        node tools/kulonvalasProba.js <gondolatId>');
+    console.log('  Szétválasztás:   node tools/kulonvalasProba.js <gondolatId> <eemberId1,eemberId2> "Új cím" [javaslatId]');
     console.log('');
     process.exit(1);
   }
@@ -129,26 +129,26 @@ async function futtatas() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('kulonvalasProba - adatbázis-kapcsolat rendben');
 
-  // ----- 3. LÉPÉS: A TARTALOM ÉS A TULAJDONOSAI -----
-  const tartalom = await Tartalom.findById(tartalomId);
-  if (!tartalom) {
-    console.error(`kulonvalasProba - HIBA: nincs ilyen tartalom: ${tartalomId}`);
+  // ----- 3. LÉPÉS: A GONDOLAT ÉS A TULAJDONOSAI -----
+  const gondolat = await Gondolat.findById(gondolatId);
+  if (!gondolat) {
+    console.error(`kulonvalasProba - HIBA: nincs ilyen gondolat: ${gondolatId}`);
     await mongoose.disconnect();
     process.exit(1);
   }
 
   const tulajdonosok = await TudatpontHozzarendeles.find({
-    entitasId: tartalomId,
-    entitasTipus: 'Tartalom',
+    entitasId: gondolatId,
+    entitasTipus: 'Gondolat',
     tudatPontok: { $gt: 0 }
   }).sort({ tudatPontok: -1 });
 
   console.log('');
-  console.log('========== A TARTALOM ==========');
-  console.log('  Cím:            ', tartalom.cim);
-  console.log('  Azonosító:      ', tartalom._id.toString());
-  console.log('  Szülő:          ', tartalom.szuloId ? `${tartalom.szuloId} (${tartalom.szuloTipus})` : 'nincs (gyökér)');
-  console.log('  Korábbi szétválásai:', tartalom.kulonvalasok?.length ?? 0);
+  console.log('========== A GONDOLAT ==========');
+  console.log('  Cím:            ', gondolat.cim);
+  console.log('  Azonosító:      ', gondolat._id.toString());
+  console.log('  Szülő:          ', gondolat.szuloId ? `${gondolat.szuloId} (${gondolat.szuloTipus})` : 'nincs (gyökér)');
+  console.log('  Korábbi szétválásai:', gondolat.kulonvalasok?.length ?? 0);
   console.log('');
   console.log('  TUDATPONT-TULAJDONOSOK:');
   for (const t of tulajdonosok) {
@@ -167,14 +167,14 @@ async function futtatas() {
   }
 
   // ----- 5. LÉPÉS: ÁLLAPOT A SZÉTVÁLASZTÁS ELŐTT -----
-  const elotte = await allapotFelvetele(tartalomId, tartalom.szuloId, null);
+  const elotte = await allapotFelvetele(gondolatId, gondolat.szuloId, null);
 
   console.log('========== ÁLLAPOT ELŐTTE ==========');
   console.log('  E-embereknél szabad pont: ', elotte.eembereknelSzabad);
   console.log('  Entitásokon kiosztott:    ', elotte.entitasokonKiosztott);
   console.log('  RENDSZER ÖSSZESEN:        ', elotte.rendszerOsszesen);
-  console.log('  A tartalom saját pontja:  ', elotte.foagSajatPont);
-  console.log('  A tartalom hierarchikus p:', elotte.foagHierarchikusPont, '(a részfájával együtt)');
+  console.log('  A gondolat saját pontja:  ', elotte.foagSajatPont);
+  console.log('  A gondolat hierarchikus p:', elotte.foagHierarchikusPont, '(a részfájával együtt)');
   console.log('  A szülő hierarchikus p.:  ', elotte.szuloHierarchikusPont ?? '(nincs szülő)');
   console.log('====================================');
   console.log('');
@@ -193,16 +193,16 @@ async function futtatas() {
   console.log('kulonvalasProba - szétválasztás indul...', { kulonvalok, ujCim });
 
   const eredmeny = await KulonvalasService.kulonvalasVegrehajtasa({
-    forrasEntitasId: tartalomId,
-    forrasEntitasTipus: 'Tartalom',
+    forrasEntitasId: gondolatId,
+    forrasEntitasTipus: 'Gondolat',
     kulonvaloEemberIdk: kulonvalok,
-    ujAgAdatok: { cim: ujCim, szoveg: tartalom.szoveg },
+    ujAgAdatok: { cim: ujCim, szoveg: gondolat.szoveg },
     forrasJavaslatId: hasznaltJavaslatId,
     forrasEgyezmenyId: null
   });
 
   // ----- 7. LÉPÉS: ÁLLAPOT A SZÉTVÁLASZTÁS UTÁN -----
-  const utana = await allapotFelvetele(tartalomId, tartalom.szuloId, eredmeny.kulonvaltAg.id);
+  const utana = await allapotFelvetele(gondolatId, gondolat.szuloId, eredmeny.kulonvaltAg.id);
 
   console.log('');
   console.log('========== ÁLLAPOT UTÁNA ==========');
@@ -250,14 +250,14 @@ async function futtatas() {
   }
 
   // A testvér-hivatkozások mindkét oldalon
-  const foagFrissen = await Tartalom.findById(tartalomId);
-  const ujAgFrissen = await Tartalom.findById(eredmeny.kulonvaltAg.id);
+  const foagFrissen = await Gondolat.findById(gondolatId);
+  const ujAgFrissen = await Gondolat.findById(eredmeny.kulonvaltAg.id);
 
   const foagBejegyzes = (foagFrissen.kulonvalasok ?? []).find(
     (k) => k.testverId?.toString() === eredmeny.kulonvaltAg.id
   );
   const ujAgBejegyzes = (ujAgFrissen.kulonvalasok ?? []).find(
-    (k) => k.testverId?.toString() === tartalomId
+    (k) => k.testverId?.toString() === gondolatId
   );
 
   ellenorzesek.push({

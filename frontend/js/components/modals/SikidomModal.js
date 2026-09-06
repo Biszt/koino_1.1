@@ -161,7 +161,7 @@ const MAG_ATMERO_ARANY = 0.12;
 // (nem látszana, csak zajt csinálna)
 const MAG_MIN_ATMERO = 10;
 
-// A „további tartalmak" ajánlat küszöbét (`TOVABBI_FELIRAT_MIN_SUGAR`) a
+// A „további gondolatok" ajánlat küszöbét (`TOVABBI_FELIRAT_MIN_SUGAR`) a
 // `sikidomRajzolo.js` tartja: ott dől el, kirajzoljuk-e a feliratot, és a
 // koppintás-találat (`_ajanlatKoppintas`) ugyanabból a számból dolgozik.
 
@@ -183,7 +183,7 @@ const MAG_MIN_ATMERO = 10;
 // ===== AZ ALAP A CSOMÓPONT SAJÁT PLAFONJA (Csaba mérése, 2026-08-12) =====
 // Az alap eddig a fix `ELORETOLTES_DARAB` volt, és ettől A LAPOZÁS NEM MŰKÖDÖTT:
 // a horgony szintjén a keret (5 000/20⁰ = 5 000) PONT ugyanaz a szám, mint a kezdő
-// `betoltesiPlafon`. A „további tartalmak" koppintás 10 000-re emelte a plafont, a
+// `betoltesiPlafon`. A „további gondolatok" koppintás 10 000-re emelte a plafont, a
 // `Math.min(plafon, keret)` viszont azonnal visszanyomta 5 000-re — tehát a
 // koppintás után SEMMI nem történt. (Csaba a gyökér-testvéreknél vette észre, de
 // minden szinten így volt.)
@@ -243,7 +243,7 @@ const TAKARITAS_KEPKOCKANKENT = 180;
 //
 //   2. PAKOLÁSI MAG (ez itt) — VALÓDI lyuk az adat-térben: a pakoló üresen hagyja a
 //      közepet. NEM zsugorodik nagyításkor, tehát bármilyen mélységben üres marad.
-//      Ez ad tiszta helyet a „további tartalmak" feliratnak, és önmagában is jelzi,
+//      Ez ad tiszta helyet a „további gondolatok" feliratnak, és önmagában is jelzi,
 //      hogy van még le nem töltött testvér.
 //
 // MIÉRT NEM A HÁTRALÉVŐ TUDATPONTBÓL MÉRETEZZÜK (Csaba, 2026-08-10):
@@ -282,21 +282,21 @@ const PAKOLASI_MAG_ARANY = 6;
 // 2026-08-11-en 10 000 → 5 000 (Csaba): egy adag így nagyjából FÉL MÁSODPERC
 // hálózat internetes sebességgel, tehát a megnyitás és minden egyes lapozás is
 // észrevehetően gyorsabb. A szám kettős szerepű — ez az ELSŐ adag mérete ÉS a
-// „további tartalmak" koppintásával kért következő adagé is (`betoltesiPlafon`
+// „további gondolatok" koppintásával kért következő adagé is (`betoltesiPlafon`
 // növekménye) —, tehát a lapozás lépésköze is feleződik: több, de fürgébb lépés.
 // A `MEGTARTOTT_DARAB` (12 000) érintetlen marad: az vészfék, nem lépésköz, és
 // most még nagyobb a ráhagyása az adag fölött.
 const ELORETOLTES_DARAB = 5_000;
 
 // ===== A LAPOZÁS VISSZAFELÉ IS JÁR (Csaba, 2026-08-16) =====
-// A `betoltesiPlafon` eddig EGYIRÁNYÚ RACSNI volt: a „további tartalmak" koppintás
+// A `betoltesiPlafon` eddig EGYIRÁNYÚ RACSNI volt: a „további gondolatok" koppintás
 // emelte egy adaggal (5 000 → 10 000 → 15 000), lefelé viszont soha nem lépett. Emiatt
 // a lerakott mennyiség a BEJÁRÁS TÖRTÉNETÉT követte, nem a mostani nézetet: aki egyszer
 // lelapozott 15 000-ig, annál 15 000 maradt lent akkor is, ha utána teljesen kizoomolt —
-// és a „további tartalmak" mag sem jött vissza, hiszen minden le volt töltve.
+// és a „további gondolatok" mag sem jött vissza, hiszen minden le volt töltve.
 //
 // Csaba szabálya: „ha annyira kizoomol a használó a spirálból, vissza kéne állnia az
-// 5 000-es limitre, amiben a további tartalmak mag ismét visszajön. Ez persze szintenként
+// 5 000-es limitre, amiben a további gondolatok mag ismét visszajön. Ez persze szintenként
 // kell érteni." Vagyis a lapozás lépcsőjén VISSZAFELÉ is lépünk, csomópontonként.
 //
 // MIKOR LÉPÜNK VISSZA: ha az e-ember a FELÉRE kizoomolt ahhoz képest, ahol az adagot
@@ -309,7 +309,7 @@ const ELORETOLTES_DARAB = 5_000;
 // csomópont SAJÁT plafonjából számol, tehát a plafon csökkenésétől a keret magától
 // zsugorodik, a fölösleg visszakerül a várólistára (lásd `_ujrapakolas`), a
 // `_vanMegBetoltetlen` újra igaz lesz, ettől a pakolási mag visszanő, és vele a
-// „további tartalmak" ajánlat is. A lépcső tehát csak ELINDÍTJA a meglévő gépezetet.
+// „további gondolatok" ajánlat is. A lépcső tehát csak ELINDÍTJA a meglévő gépezetet.
 const PLAFON_VISSZALEPES_ARANY = 0.5;
 
 // ===== A KIOLDÁS: A VALÓDI GESZTUS, NEM A MÉRT SUGÁR (2026-08-17) =====
@@ -572,7 +572,7 @@ class SikidomModal {
 
     // ----- ÁLLAPOT -----
     this._kivalasztottId = null;
-    // A „további tartalmak" koppintáskor megjelölt síkidom: hol maradt abba az
+    // A „további gondolatok" koppintáskor megjelölt síkidom: hol maradt abba az
     // előző lepakolás (`_jeloltId` — végig látszik), és mekkora volt a látszó
     // sugara (`_jeloltHelyzet` — egyszer használatos, a mélység visszaállításához).
     this._jeloltId = null;
@@ -755,7 +755,7 @@ class SikidomModal {
     }
 
     // „Nincs adat" csak a VILÁG-nézetnél értelmes — ág-indításnál a horgony maga a
-    // tartalom (lehet levél is, gyerekek nélkül; a szülei akkor is látszanak).
+    // gondolat (lehet levél is, gyerekek nélkül; a szülei akkor is látszanak).
     const uresVilag = this._illesztesHorgony === VILAG
       && !kezdoCsomopont.varolista.length && !kezdoCsomopont.gyerekIdk.length;
     if (uresVilag) {
@@ -927,7 +927,7 @@ class SikidomModal {
   // A mentett kamera (`this.kezdoKamera` = { horgony, skala, eltolasX, eltolasY })
   // alapján felépíti a tárat, és a horgonyt a mentett horgonyra állítja. A tényleges
   // nézetet (nezet) a `megnyitas` állítja pontosan a mentett értékre; itt csak a
-  // tartalmat építjük fel. Ha a mentett horgony a VILÁG, nincs ős-lánc — csak a
+  // gondolatot építjük fel. Ha a mentett horgony a VILÁG, nincs ős-lánc — csak a
   // gyökereket töltjük.
   // @returns {Promise<Object|null>} a horgony csomópontja, vagy null hiba esetén
   async _kameraVisszaallitas() {
@@ -1029,7 +1029,7 @@ class SikidomModal {
 
       // Mellék-ikonok: { ikon, nev } objektumok (az `ikon` kép-URL vagy emoji).
       // A síkidom formája/színe csak az ENTITÁSTÍPUST mutatja — a kategóriát és
-      // a tartalomtípust ezek az ikonok hordozzák.
+      // a gondolattípust ezek az ikonok hordozzák.
       kategoriaIkonok: adatok.kategoriaIkonok ?? [],
       tipusIkon: adatok.tipusIkon ?? null,
       javaslatTipus: adatok.javaslatTipus ?? null,
@@ -1095,7 +1095,7 @@ class SikidomModal {
       mindenLetoltve: false,
 
       // ===== A LAPOZÁS PLAFONJA (Csaba, 2026-08-11) =====
-      // Ennyi testvért töltünk le ELŐRE, kérés nélkül. A „további tartalmak"
+      // Ennyi testvért töltünk le ELŐRE, kérés nélkül. A „további gondolatok"
       // koppintás EMELI ezt egy újabb adaggal — így jelenítünk meg tetszőlegesen
       // sok testvért anélkül, hogy az első megnyitás lassú lenne.
       betoltesiPlafon: ELORETOLTES_DARAB,
@@ -1196,7 +1196,7 @@ class SikidomModal {
   //
   // Ha MINDEN testvér letöltve, 0-t ad — ilyenkor a pakoló a legkisebb síkidomot a
   // KÖZÉPPONTBA teszi (lásd `sikidomPakolas.pakolas`), és a közép üressége megszűnik:
-  // ez maga az üzenet, hogy nincs több tartalom.
+  // ez maga az üzenet, hogy nincs több gondolat.
   //
   // @param {Object} cs - a szülő csomópont
   // @param {Array} mind - a most lerakandó teljes sor [{ id, sugar }]
@@ -1206,7 +1206,7 @@ class SikidomModal {
     // ===== MEGMUTATNIVALÓ, NEM LETÖLTENIVALÓ — DE CSAK A NÉZETT SZINTEN =====
     // A NÉZETT szinten (`melyseg === 0`) a mag akkor is jár, ha a testvérek adata már
     // itt van, csak a VÁRÓLISTÁN vár lerakásra — enélkül a lapozás visszalépése után
-    // nem jött volna vissza a „további tartalmak" mag (Csaba kérése, 2026-08-16).
+    // nem jött volna vissza a „további gondolatok" mag (Csaba kérése, 2026-08-16).
     //
     // ⚠️ MÉLYEBBEN MARAD A RÉGI SZABÁLY. Ott a pozicionálási keret eleve szűk (1 szinttel
     // lejjebb 250, 2-vel lejjebb 12), tehát MINDIG van kereten kívüli testvér — a lyuk
@@ -1625,7 +1625,7 @@ class SikidomModal {
     //
     // Ha már minden testvér letöltve, 0 — ilyenkor a pakoló a legkisebbet a
     // KÖZÉPPONTBA teszi, és a közép nem üres többé: ez maga az üzenet, hogy
-    // nincs több tartalom.
+    // nincs több gondolat.
     //
     // NINCS KÖRNYEZET: üres lapra pakolunk. A következő adag betöltésekor is így
     // lesz — az egész elrendezés újraépül, ezért nincs mit „megvédeni".
@@ -1644,7 +1644,7 @@ class SikidomModal {
     let athelyezett = 0;
     let ujonnan = 0;
 
-    // ===== FOLYTONOSSÁG: A NÉZETT TARTALOM MARADJON A HELYÉN (2026-08-17) =====
+    // ===== FOLYTONOSSÁG: A NÉZETT GONDOLAT MARADJON A HELYÉN (2026-08-17) =====
     // A pakolás minden gyereknek ÚJ relX/relY-t ad (üres lapra épít, `kornyezet: []`).
     // A rendes nézetnél ez rejtve marad — a teljes klaszterre illesztünk —, de
     // ág-indítás után KIZOOMOLÁSKOR a nézet EGY gyerekre (a gerincre) van
@@ -2245,10 +2245,10 @@ class SikidomModal {
       //
       // Ez egyben helyreállítja a 2026-08-10-i modell ígéretét is: „ha nincs több
       // le nem töltött testvér → nincs lyuk, és a legkisebb síkidom a középpontban,
-      // LÁTHATÓAN. Ez maga az üzenet, hogy nincs több tartalom." Eddig ezt a
+      // LÁTHATÓAN. Ez maga az üzenet, hogy nincs több gondolat." Eddig ezt a
       // pakolás teljesítette, a rajzolás viszont elrontotta.
       //
-      // (Csaba felvetése, hogy a gyökereknél maradt betöltetlen tartalom „öröklődött
+      // (Csaba felvetése, hogy a gyökereknél maradt betöltetlen gondolat „öröklődött
       // volna tovább a többi horgonyon": ez nem így van — a feltétel csomópontonként
       // külön dől el, nincs átöröklés. Az ok kizárólag az volt, hogy a rejtési
       // szabály meg sem kérdezte.)
@@ -2334,7 +2334,7 @@ class SikidomModal {
       // Ilyenkor a szaggatott kör félrevezető — azt ígérné, hogy van még mit várni.
       if (magonKivuli > 0 && magnakVanDolga) {
         if (magSugarPx * 2 >= MAG_MIN_ATMERO) {
-          // ===== A „TOVÁBBI TARTALMAK" AJÁNLAT FELTÉTELE (Csaba, 2026-08-10) =====
+          // ===== A „TOVÁBBI GONDOLATOK" AJÁNLAT FELTÉTELE (Csaba, 2026-08-10) =====
           // „amikor a legbelső, már pozicionált síkidom is előbukkant" — ezt nem kell
           // külön nyilvántartani: pontosan azt jelenti, hogy a KIJELZŐ-MAG már
           // EGYETLEN síkidomot sem takar el (`magbanRejtett === 0`). Ilyenkor a
@@ -2438,7 +2438,7 @@ class SikidomModal {
         // A PLAFON = A KERET (2026-08-12). Fölösleges 5 000-et letölteni oda, ahol
         // úgyis csak 250 (vagy 12) kap helyet — ezért a letöltés korlátja maga a
         // pozicionálási keret. A keret pedig a csomópont SAJÁT `betoltesiPlafon`-jából
-        // számol, tehát a „további tartalmak" koppintás mindkettőt együtt emeli.
+        // számol, tehát a „további gondolatok" koppintás mindkettőt együtt emeli.
         //
         // ⚠️ ITT KORÁBBAN `Math.min(cs.betoltesiPlafon, pozicionalasiKeret(...))` állt,
         // és ettől A LAPOZÁS NEM MŰKÖDÖTT: a horgony szintjén a keret pont ugyanaz a
@@ -2457,7 +2457,7 @@ class SikidomModal {
         // kérés-mód örökre nyitva maradna.
         //
         // ⚠️ A MÁSODIK MÓD, AHOGY A KÉRÉS TELJESÜL (Csaba mérése, 2026-08-17): ELFOGYOTT
-        // A TARTALOM. A fenti feltétel csak azt az esetet ismerte, amikor a kért adag
+        // A GONDOLAT. A fenti feltétel csak azt az esetet ismerte, amikor a kért adag
         // hiánytalanul MEGÉRKEZIK. Ha a csomópontnak kevesebb gyereke van, mint a
         // megemelt plafon (10 407 gyökér a 15 000-es plafonhoz), a `mennyiVanMar` SOHA
         // nem éri el a plafont → a `tovabbiKert` ÖRÖKRE igaz marad. Márpedig a lapozás
@@ -2600,7 +2600,7 @@ class SikidomModal {
     }
 
     this._utolsoLathatoak = lathatoak;
-    // A koppintás ebből dönti el, hogy „további tartalmak"-ra kattintottak-e
+    // A koppintás ebből dönti el, hogy „további gondolatok"-ra kattintottak-e
     this._utolsoMagok = magok;
 
     if (this._kepkocka % TAKARITAS_KEPKOCKANKENT === 0) {
@@ -2703,7 +2703,7 @@ class SikidomModal {
   // Lásd `PLAFON_VISSZALEPES_ARANY`. Végigmegy a táron, és ahol lapoztak, megnézi:
   // a csomópont képernyő-sugara a megjegyzett FELÉRE csökkent-e. Ha igen, a
   // `betoltesiPlafon` egy adaggal visszalép — a szűkítés többi részét a meglévő
-  // gépezet végzi (keret → várólista → visszatérő pakolási mag → „további tartalmak").
+  // gépezet végzi (keret → várólista → visszatérő pakolási mag → „további gondolatok").
   //
   // SZINTENKÉNT, ahogy Csaba kérte: minden csomópontnak saját plafonja ÉS saját
   // lépcső-emléke van, tehát a gyökér-szint meg egy mély ág egymástól függetlenül lépked.
@@ -3175,7 +3175,7 @@ class SikidomModal {
     this._zoom(szorzo, (this._szelesseg || 0) / 2, (this._magassag || 0) / 2);
   }
 
-  // ===== KOPPINTÁS A „TOVÁBBI TARTALMAK" AJÁNLATRA =====
+  // ===== KOPPINTÁS A „TOVÁBBI GONDOLATOK" AJÁNLATRA =====
   // Felelősség: a következő adag elkérése, ÉS a mélység megőrzése.
   //
   // A MÉLYSÉG MEGŐRZÉSE (Csaba, 2026-08-11): „a betöltés előtt a legkisebb entitást
@@ -3275,7 +3275,7 @@ class SikidomModal {
   // az dupla — különben az ablak végén lefut az egyszeres. Ezért az egyszeres fókusz
   // enyhén (a dupla-ablaknyival) késik — ez a dupla-koppintás felismerésének ára.
   _koppintas(kepX, kepY) {
-    // ===== ELŐBB A „TOVÁBBI TARTALMAK" AJÁNLAT =====
+    // ===== ELŐBB A „TOVÁBBI GONDOLATOK" AJÁNLAT =====
     // Ez sosem entitás, hanem LAPOZÁS — MINDIG azonnal, egy koppintásra hat, nem
     // tartozik az egyszeres/dupla megkülönböztetéshez.
     //

@@ -7,7 +7,7 @@
   bottom: 0;       /* Képernyő aljára rögzítve */
   left: 0;         /* Teljes szélességű */
   right: 0;        /* Teljes szélességű */
-  z-index: 100;    /* Minden tartalom felett, de hamburger menü (200) alatt */
+  z-index: 100;    /* Minden gondolat felett, de hamburger menü (200) alatt */
 
   /* Erdőzöld háttér – a platform fő színe */
   background-color: var(--color-primary);
@@ -133,8 +133,8 @@
   cursor: default;
 }
 
-/* ===== FŐOLDAL TARTALOM TERÜLET ===== */
-/* Az alsó sáv magassága (~56px) miatt a tartalom ne csússzon alá */
+/* ===== FŐOLDAL GONDOLAT TERÜLET ===== */
+/* Az alsó sáv magassága (~56px) miatt a gondolat ne csússzon alá */
 /* calc: alsó sáv tényleges magassága + egy kis légköz */
 .fooldal-tartalom {
   padding-bottom: calc(var(--space-12) + var(--space-4));

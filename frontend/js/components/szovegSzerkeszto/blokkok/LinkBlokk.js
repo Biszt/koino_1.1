@@ -68,7 +68,7 @@ letrehozas() {
     if (this.onFokusz) this.onFokusz(this.blokk.id);
   });
 
-  // Ha már van url (pl. betöltött tartalom szerkesztés módban),
+  // Ha már van url (pl. betöltött gondolat szerkesztés módban),
   // azonnal megjelenítjük a linket, egyébként placeholdert
   let belsoElem = null;
   if (this.blokk.url) {

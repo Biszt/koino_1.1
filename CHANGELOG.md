@@ -97,7 +97,7 @@ részeként (ez nem a hálózat-szintű „fork-jog", ami vésznyílás).
   Tartózkodásnál nem jelenik meg — aki nem foglal állást, a **főágon** marad. A szándék
   nem „ragad be": minden szavazat-módosításkor újra meg kell adni.
 - **Szimmetria:** elfogadott javaslatnál az **ellenzők** válhatnak külön a RÉGI
-  tartalommal; elvetettnél a **támogatók** a MÓDOSÍTOTTAL.
+  gondolattal; elvetettnél a **támogatók** a MÓDOSÍTOTTAL.
 - **A tudatpont ÁTKERÜL, nem duplázódik.** Aki elmegy, viszi a súlyát; a rendszerben
   lévő összes tudatpont nem változik. A főág sosem eshet 0-ra — ez nem védőkorlát,
   hanem levezethető: szavazni csak pont-tulajdonos tud.
@@ -109,11 +109,11 @@ részeként (ez nem a hálózat-szintű „fork-jog", ami vésznyílás).
 - **A két ág nem veszíti szem elől egymást:** a kártya „Másik ág" fülén hivatkozás mutat
   a testvérre. Így később **újra egyesíthetők** a meglévő egyesítési javaslattal.
 - **A szerkesztők átkerülnek**, és a nevük színe az ÁG szempontjából számolódik: aki a
-  módosítást támogatta, a különvált (régi tartalmú) ágon pirosan jelenik meg. Ugyanaz az
+  módosítást támogatta, a különvált (régi gondolatú) ágon pirosan jelenik meg. Ugyanaz az
   adat, két nézőpontból.
 - **Az érték javaslatok is átvándorolnak** a különválókkal, ezért a két ág küszöbei
   eltérhetnek.
-- **Az azonosító a főágé** — elfogadott javaslatnál tehát a régi tartalom kap újat.
+- **Az azonosító a főágé** — elfogadott javaslatnál tehát a régi gondolat kap újat.
 - **Elvetéskor nincs egyezmény** (az egyezmény kizárólag elfogadott javaslat eredménye),
   ezért ott a különvált ág horgonya maga az elvetett javaslat.
 - Új e-embereknek szóló leírás: [`megismeres/18-kulonvalas.md`](megismeres/18-kulonvalas.md).
@@ -127,8 +127,8 @@ részeként (ez nem a hálózat-szintű „fork-jog", ami vésznyílás).
   egységes. Nem viselkedés-változás: a meglévő adatot legalizálja, a nem létező típusokat
   a validátor továbbra is elutasítja.
 
-**Hatókör (első kör):** csak `Modositas` típusú javaslat, csak `Tartalom` entitás. A
-kategória/tartalomtípus különválása és a láncolt (többszörös) szétválás külön kör.
+**Hatókör (első kör):** csak `Modositas` típusú javaslat, csak `Gondolat` entitás. A
+kategória/gondolattípus különválása és a láncolt (többszörös) szétválás külön kör.
 
 ## 2026-08-24 — E-mail: értesítés levélben és elfelejtett jelszó
 
@@ -164,7 +164,7 @@ funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
 - **„Létrehozó" → „Szerkesztő":** egy entitásnak több szerkesztője lehet (az eredeti
   létrehozó + akinek elfogadott módosítási javaslata módosította). A Részletes
   adatokban a nevek a szavazatuk szerinti színnel jelennek meg.
-- **Kártya-fejléc dátum + elavulás-jelző szín:** a tartalom/kategória/tartalomtípus
+- **Kártya-fejléc dátum + elavulás-jelző szín:** a gondolat/kategória/gondolattípus
   kártyán 📅 dátum, a szülő utolsó módosításához mérve (piros = elavulhat).
 - **Hozzájárulók:** a Részletes adatok → Hozzájárulók listájában látszik minden
   e-ember **részvételi szerepe** (aktív / passzív).
@@ -176,7 +176,7 @@ funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
 
 - **A lapozás lépcsője a valódi gesztushoz kötve.** Ha egy szintről kizoomolsz, a
   lerakott mennyiség visszalép egy adaggal (15 000 → 10 000 → 5 000), és a
-  „további tartalmak" mag újra megjelenik. A kioldás mércéje a valódi nagyítási
+  „további gondolatok" mag újra megjelenik. A kioldás mércéje a valódi nagyítási
   gesztusok futó szorzata (görgő, csippentés, +/− gomb) — nem a mért képernyő-sugár,
   amit az illesztés, a fókusz-animáció és az újrapakolás is elmozdít. Ezzel együtt
   javítva a kérés-mód, ami kifogyott szinten örökre nyitva maradt és némán elnyelte
@@ -194,7 +194,7 @@ funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
 - **Mélység szerinti ős-söprés:** a megtartási folyosón kívüli szintek elengedése.
   Az ős-söprés **töröl, nem parkoltat** — a parkoltatás csak vándoroltatta az adatot,
   a memória nem szabadult fel. A megtartási folyosó 6 → 4.
-- **Végtelen testvér:** lapozás a „további tartalmak" koppintással, 5000-es adagokban.
+- **Végtelen testvér:** lapozás a „további gondolatok" koppintással, 5000-es adagokban.
 - **A horgony arra vált, amire nézel** (pozíció-feltétellel), a pozicionálási keret
   pedig zsugorodni is tud.
 - Biztonsági frissítés: 12 sebezhetőség → 0.
@@ -215,7 +215,7 @@ funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
 
 ## 2026-08-08 — Megismerés
 
-- **E-embereknek szóló használati leírások** (`megismeres/`, 16 dokumentum): tartalom,
+- **E-embereknek szóló használati leírások** (`megismeres/`, 16 dokumentum): gondolat,
   kategória, javaslat, szavazás, bizonyossági mutató, keresés, értesítés és a többi.
 
 ## 2026-08-03 — Struktúra nézet és testvér-navigáció
@@ -278,7 +278,7 @@ funkcióval bővült, de az alapelv szigorúbb lett, nem lazább.
 - Szavazat-láthatóság szűkítése (az egyéni szavazat nem nyilvános; csak az
   összesített eredmény az).
 - E-mail priváttá tétele.
-- Küszöb-hiba javítás: a kategória/tartalomtípus javaslatok saját küszöbe
+- Küszöb-hiba javítás: a kategória/gondolattípus javaslatok saját küszöbe
   érvényesül.
 
 ---

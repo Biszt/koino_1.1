@@ -18,7 +18,7 @@ const ERTESITES_TIPUSOK = [
 
 // Az engedélyezett entitás típusok listája
 // Ezek azok az entitástípusok, amelyeken értesítési beállítást lehet elhelyezni
-const ENTITAS_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny' ];
+const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny' ];
 
 // Az ErtesitesiBeallitas séma definiálása
 // Ez írja le, hogy egy adatbázis rekord milyen mezőkből áll
@@ -37,7 +37,7 @@ const ertesitesiBeallitasSchema = new mongoose.Schema(
       reteg: 'helyi',  // H6
       type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
       required: [true, 'Az entitás azonosítója kötelező'], // Kötelező mező
-      // Nincs 'ref', mert különböző típusú entitásokra mutathat (Tartalom, Kategoria stb.)
+      // Nincs 'ref', mert különböző típusú entitásokra mutathat (Gondolat, Kategoria stb.)
     },
 
     // Az entitás típusa – ez mondja meg, melyik kollekcióban kell keresni az entitasId-t

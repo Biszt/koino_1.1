@@ -12,7 +12,7 @@ class SzovegBlokk {
   // @param {Function} callbacks.onFokusz - Fókuszba kerüléskor hívódik (blokkId)
   // @param {Function} callbacks.onUjBlokk - Enter leütésekor hívódik (blokkId)
   // @param {Function} callbacks.onTorles - Backspace üres blokkon hívódik (blokkId)
-  // @param {Function} callbacks.onValtozas - Gépeléskor hívódik (blokkId, tartalom)
+  // @param {Function} callbacks.onValtozas - Gépeléskor hívódik (blokkId, gondolat)
   constructor(blokk, callbacks = {}) {
     console.log('SzovegBlokk.constructor - KEZDÉS', { blokk });
 
@@ -58,7 +58,7 @@ class SzovegBlokk {
     elem.dataset.tipus = 'szoveg';
     elem.setAttribute('data-placeholder', 'Írj valamit...');
 
-    // Előre betöltött tartalom beállítása (szerkesztés módban)
+    // Előre betöltött gondolat beállítása (szerkesztés módban)
     // sanitizeRichText szűri az engedélyezetlen tageket/attribútumokat (XSS védelem)
     if (this.blokk.tartalom) {
       elem.innerHTML = sanitizeRichText(this.blokk.tartalom);
@@ -99,7 +99,7 @@ class SzovegBlokk {
 
     this.elem.focus();
 
-    // Kurzor a tartalom végére helyezése
+    // Kurzor a gondolat végére helyezése
     const range = document.createRange();
     const selection = window.getSelection();
     range.selectNodeContents(this.elem);
@@ -109,10 +109,10 @@ class SzovegBlokk {
   }
 
   // =============================================
-  // AKTUÁLIS TARTALOM LEKÉRÉSE
+  // AKTUÁLIS GONDOLAT LEKÉRÉSE
   // =============================================
-  // @returns {string} A blokk aktuális HTML tartalma
-  getTartalom() {
+  // @returns {string} A blokk aktuális HTML gondolata
+  getGondolat() {
     if (!this.elem) return '';
     return this.elem.innerHTML;
   }
@@ -361,7 +361,7 @@ getAktualisFormatas() {
 
     const range = selection.getRangeAt(0);
 
-    // Ha volt kijelölés, először töröljük a kijelölt tartalmat
+    // Ha volt kijelölés, először töröljük a kijelölt gondolatot
     range.deleteContents();
 
     // Új <div> sor létrehozása — ez önálló BFC, a nagy méret nem terjed át rá
@@ -476,7 +476,7 @@ elem.addEventListener('keydown', (e) => {
     // Új blokk létrehozása az eszköztár "Új blokk" gombjával lehetséges.
     e.preventDefault();
     this._sortoresBeillesztese();
-    // Változás jelzése a szülőnek, hogy a tartalom frissüljön
+    // Változás jelzése a szülőnek, hogy a gondolat frissüljön
     if (this.onValtozas) this.onValtozas(this.blokk.id, elem.innerHTML);
   }
 
@@ -501,15 +501,15 @@ elem.addEventListener('keydown', (e) => {
 
 });
 
-    // Input esemény — tartalom változásakor jelezzük a szülőnek
+    // Input esemény — gondolat változásakor jelezzük a szülőnek
     elem.addEventListener('input', () => {
       if (this.onValtozas) this.onValtozas(this.blokk.id, elem.innerHTML);
     });
 
-    // Beillesztés (paste) — a vágólap tartalmát NEM nyersen szúrjuk be, hanem
+    // Beillesztés (paste) — a vágólap gondolatát NEM nyersen szúrjuk be, hanem
     // előbb átengedjük a sanitizálón (engedélyezőlista + biztonságos linkek).
     // Így: (1) amit a szerkesztőben látsz, az EGYEZIK a mentett és a kártyán
-    // megjelenő tartalommal, (2) a hosszú sorok nem lógnak ki (a nyers beillesztés
+    // megjelenő gondolattal, (2) a hosszú sorok nem lógnak ki (a nyers beillesztés
     // white-space: pre stílusa nem jut be), (3) egy beillesztett <img onerror=...>
     // payload sem kerülhet kezeletlenül a DOM-ba.
     elem.addEventListener('paste', (e) => {

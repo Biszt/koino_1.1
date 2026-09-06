@@ -13,7 +13,7 @@ const ErtesitesService = require('../ertesitesService'); // Javaslat lezárásak
 // (docs/fejlesztesi_terv.md „Különválás" szakaszai, 5. lépés)
 const KulonvalasService = require('../kulonvalasService');
 const SzavazatRepository = require('../../repositories/szavazatRepository');
-const TartalomRepository = require('../../repositories/tartalomRepository');
+const GondolatRepository = require('../../repositories/gondolatRepository');
 
 // === JAVASLAT IDŐZÍTÉS SERVICE OSZTÁLY ===
 // Ez az osztály felelős a javaslatok időzítési logikájáért
@@ -39,7 +39,7 @@ class JavaslatIdozitesService {
    * ===== A MÓDOSÍTOTT ÁLLAPOTOT ÖSSZE KELL RAKNI =====
    * Elfogadásnál készen kaptuk a régi állapotot (`regiAdatok` pillanatkép). Itt nincs
    * ilyen: a módosítás VÉGRE SEM HAJTÓDOTT. A módosított állapotot tehát nekünk kell
-   * előállítani: a tartalom MOSTANI cím/szöveg mezőire ráterítjük a javaslat
+   * előállítani: a gondolat MOSTANI cím/szöveg mezőire ráterítjük a javaslat
    * `modositasAdatok` mezőit. (Ha a javaslat csak a címet változtatta volna, a szöveg
    * a mostani marad — pontosan az az állapot, ami elfogadás esetén létrejött volna.)
    *
@@ -82,9 +82,9 @@ class JavaslatIdozitesService {
       for (const erintett of (javaslat.erintettEntitasok ?? [])) {
         const entitasId = erintett.entitasId.toString();
 
-        // Az első kör csak tartalomra terjed ki (C döntés)
-        if (erintett.entitasTipus !== 'Tartalom') {
-          kihagyottak.push({ entitasId, ok: `Nem Tartalom (${erintett.entitasTipus})` });
+        // Az első kör csak gondolatra terjed ki (C döntés)
+        if (erintett.entitasTipus !== 'Gondolat') {
+          kihagyottak.push({ entitasId, ok: `Nem Gondolat (${erintett.entitasTipus})` });
           continue;
         }
 
@@ -95,10 +95,10 @@ class JavaslatIdozitesService {
           continue;
         }
 
-        // A MÓDOSÍTOTT állapot összerakása: a mostani tartalomra ráterítjük a javaslatot
-        const jelenlegi = await TartalomRepository.findById(entitasId);
+        // A MÓDOSÍTOTT állapot összerakása: a mostani gondolatra ráterítjük a javaslatot
+        const jelenlegi = await GondolatRepository.findById(entitasId);
         if (!jelenlegi) {
-          kihagyottak.push({ entitasId, ok: 'A tartalom időközben megszűnt' });
+          kihagyottak.push({ entitasId, ok: 'A gondolat időközben megszűnt' });
           continue;
         }
 
@@ -115,7 +115,7 @@ class JavaslatIdozitesService {
 
           const eredmeny = await KulonvalasService.kulonvalasVegrehajtasa({
             forrasEntitasId: entitasId,
-            forrasEntitasTipus: 'Tartalom',
+            forrasEntitasTipus: 'Gondolat',
             kulonvaloEemberIdk: kulonvalokIdk,
             ujAgAdatok: modositottAllapot,   // A támogatók a MÓDOSÍTOTT állapotot viszik
             forrasJavaslatId: javaslatId,    // A horgony: maga az elvetett javaslat
@@ -260,11 +260,11 @@ class JavaslatIdozitesService {
  // ----- ÉRINTETT ENTITÁSOK KÜSZÖBÉRTÉKEINEK LEKÉRÉSE -----
  /**
    * Érintett entitások küszöbértékeinek átlagolása.
-   * JAVÍTÁS (2026-07-18): korábban csak a "Tartalom" típusú érintetteket vette
-   * figyelembe, ezért kategórián/tartalomtípuson tett javaslat a SAJÁT beállított
+   * JAVÍTÁS (2026-07-18): korábban csak a "Gondolat" típusú érintetteket vette
+   * figyelembe, ezért kategórián/gondolattípuson tett javaslat a SAJÁT beállított
    * küszöbei helyett az alapértelmezett 51%/0%-kal dőlt el. Az érték-rendszer
    * (aktulisErtekekLekerese) entitás-polimorf, ezért mostantól MINDHÁROM
-   * érték-képes típus (Tartalom, Kategoria, TartalomTipus) beleszámít.
+   * érték-képes típus (Gondolat, Kategoria, GondolatTipus) beleszámít.
    * Ha egyik sincs az érintettek között, alapértelmezett értékeket ad vissza.
    * @param {Array} erintettEntitasok - Érintett entitások tömbje
    * @returns {Promise<Object>} Átlagolt küszöbértékek
@@ -275,7 +275,7 @@ class JavaslatIdozitesService {
    });
 
    // 1. LÉPÉS - Az érték-képes típusú entitások kiszűrése (van/lehet hisztogramjuk)
-   const ERTEK_KEPES_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+   const ERTEK_KEPES_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
    const ertekKepesek = erintettEntitasok.filter(e => ERTEK_KEPES_TIPUSOK.includes(e.entitasTipus));
    console.log('Érték-képes érintettek száma:', ertekKepesek.length);
 

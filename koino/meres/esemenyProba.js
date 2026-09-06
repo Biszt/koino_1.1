@@ -15,8 +15,8 @@ const idegenKulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true
 // Egy minta-esemény, amivel a legtöbb próba dolgozik
 const alapLeiras = {
   koino: 'proba-koino',
-  tipus: 'TartalomLetrehozas',
-  adat: { cim: 'Az első tartalom', szoveg: 'Árvíztűrő tükörfúrógép' },
+  tipus: 'GondolatLetrehozas',
+  adat: { cim: 'Az első gondolat', szoveg: 'Árvíztűrő tükörfúrógép' },
   elozo: null,
   sorszam: 1
 };
@@ -38,7 +38,7 @@ proba('A frissen létrehozott esemény ellenőrzése RENDBEN', async () => {
 
 // ===== HAMISÍTÁSI KÍSÉRLETEK — mindegyiknek BUKNIA kell =====
 
-proba('A TARTALOM átírása bukik', async () => {
+proba('A GONDOLAT átírása bukik', async () => {
   const hamis = { ...esemeny, adat: { ...esemeny.adat, cim: 'Átírt cím' } };
   return (await esemenyEllenorzese(hamis)).rendben === false;
 });
@@ -87,7 +87,7 @@ proba('A lánc FOLYTATÁSA nem ellentmondás (a szavazat módosítható)', async
 });
 
 proba('A lánc ELÁGAZÁSA ellentmondás (kettős cselekvés lelepleződik)', async () => {
-  // Ugyanaz a szerző, ugyanaz a sorszám, MÁS tartalom → két aláírás ugyanarról a pontról
+  // Ugyanaz a szerző, ugyanaz a sorszám, MÁS gondolat → két aláírás ugyanarról a pontról
   const masik = await esemenyLetrehozasa(
     { ...alapLeiras, adat: { cim: 'Titokban másik' } },
     kulcspar

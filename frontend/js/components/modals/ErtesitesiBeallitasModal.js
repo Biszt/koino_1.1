@@ -16,7 +16,7 @@ const ERTESITES_TIPUSOK = [
   { ertek: 'javaslatElvetve',   felirat: 'Javaslat elvetve',   magyarazat: 'Ha egy javaslat nem lép hatályba.' },
   { ertek: 'szavazasiHatarido', felirat: 'Szavazási határidő', magyarazat: 'Ha egy javaslat döntési ideje hamarosan lejár ebben az ágazatban.' },
   { ertek: 'tudatpontValtozas', felirat: 'Tudatpont-változás', magyarazat: 'Ha a tudatpont-eloszlás változik az entitáson.' },
-  { ertek: 'ujGyerekEntitas',   felirat: 'Új gyerek entitás',  magyarazat: 'Ha új tartalom/entitás jön létre ez alatt.' },
+  { ertek: 'ujGyerekEntitas',   felirat: 'Új gyerek entitás',  magyarazat: 'Ha új gondolat/entitás jön létre ez alatt.' },
   { ertek: 'kuszobValtozas',    felirat: 'Küszöbváltozás',     magyarazat: 'Ha az entitás érvényes küszöbértékei (mediánjai) változnak.' },
 ];
 
@@ -44,7 +44,7 @@ class ErtesitesiBeallitasModal {
   // @param {string} kontenerAzonosito - a modal konténer div ID-ja
   // @param {Object} beallitasok
   // @param {string} beallitasok.entitasId    - az entitás azonosítója
-  // @param {string} beallitasok.entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus' | 'Javaslat' | 'Egyezmeny'
+  // @param {string} beallitasok.entitasTipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus' | 'Javaslat' | 'Egyezmeny'
   // @param {string} beallitasok.entitasCim   - az entitás címe/neve (a fejléc alatt jelenik meg, opcionális)
   // @param {string} beallitasok.token        - JWT token (opcionális)
   // @param {Function} beallitasok.onSiker    - sikeres mentés/visszaállítás után (opcionális)

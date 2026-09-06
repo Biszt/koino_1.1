@@ -11,7 +11,7 @@ pontot.
 
 **Mit látsz?** (az entitás típusától függően)
 
-**Tartalom / kategória / tartalomtípus**
+**Gondolat / kategória / gondolattípus**
 - Név/cím, típus, **szerkesztő(k)**, létrehozás ideje
   - Egy entitásnak **több szerkesztője** is lehet: az eredeti létrehozó, és
     mindenki, akinek elfogadott **módosítási** javaslata módosította az entitást.

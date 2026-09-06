@@ -3,7 +3,7 @@
 // ===================================
 // SZERKESZTŐ SZERVIZ
 // ===================================
-// Felelősség: egy entitás (tartalom / kategória / tartalomtípus) SZERKESZTŐ-listájának
+// Felelősség: egy entitás (gondolat / kategória / gondolattípus) SZERKESZTŐ-listájának
 //   karbantartása, miután egy MÓDOSÍTÁSI javaslatot elfogadtak és végrehajtottak.
 //
 // Használják: services/javaslat/vegrehajtok/modositasiVegrehajto.js
@@ -23,9 +23,9 @@
 // IMPORTOK
 // ===================================
 const Szavazat = require('../models/szavazat');                                  // Egyéni szavazatok kiolvasása
-const TartalomRepository = require('../repositories/tartalomRepository');         // Tartalom betöltése/mentése
+const GondolatRepository = require('../repositories/gondolatRepository');         // Gondolat betöltése/mentése
 const KategoriaRepository = require('../repositories/kategoriaRepository');       // Kategória betöltése/mentése
-const TartalomTipusRepository = require('../repositories/tartalomTipusRepository'); // Tartalomtípus betöltése/mentése
+const GondolatTipusRepository = require('../repositories/gondolatTipusRepository'); // Gondolattípus betöltése/mentése
 
 class SzerkesztoService {
 
@@ -35,9 +35,9 @@ class SzerkesztoService {
   // Entitás-típus alapján visszaadja a hozzá tartozó repository-t (vagy null-t).
   _repository(entitasTipus) {
     switch (entitasTipus) {
-      case 'Tartalom':      return TartalomRepository;
+      case 'Gondolat':      return GondolatRepository;
       case 'Kategoria':     return KategoriaRepository;
-      case 'TartalomTipus': return TartalomTipusRepository;
+      case 'GondolatTipus': return GondolatTipusRepository;
       default:              return null;
     }
   }
@@ -63,7 +63,7 @@ class SzerkesztoService {
   // FŐ METÓDUS: SZERKESZTŐK FRISSÍTÉSE EGY ELFOGADOTT MÓDOSÍTÁS UTÁN
   // ===================================
   /**
-   * @param {string} entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus'
+   * @param {string} entitasTipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus'
    * @param {string} entitasId    - a módosított entitás azonosítója
    * @param {Object} javaslat     - a végrehajtott (módosítási) javaslat objektum
    *                                 (tartalmazza: _id, letrehozo, esetleg eredetiToredekJavaslatok)

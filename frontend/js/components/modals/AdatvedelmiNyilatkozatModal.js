@@ -7,7 +7,7 @@ import Modal from './Modal.js';
 // Felelősség: az adatvédelmi nyilatkozat megjelenítése felugró ablakban.
 // A bejelentkezés (és regisztráció) oldalon lévő „Adatvédelmi nyilatkozat"
 // link nyitja meg. A szöveg statikus HTML-sablon, amit a Modal alaposztály
-// `tartalom`-ként jelenít meg. A MeghivoModal template-betöltő mintáját követi,
+// `gondolat`-ként jelenít meg. A MeghivoModal template-betöltő mintáját követi,
 // a saját (dinamikusan létrehozott) konténerbe (Modal.megerosites mintája),
 // hogy a bejelentkezés-oldalon is működjön, ahol csak az #app div van.
 class AdatvedelmiNyilatkozatModal {

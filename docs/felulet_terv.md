@@ -28,7 +28,7 @@ prototípusból, csak az alatta lévő réteg cserélődik (szerver helyett alá
 ## A BELÉPŐ TÉR NÉZETE (Csaba, 2026-08-27)
 
 A **D25** belépő tere kap egy saját nézetet — **ugyanazzal a stílussal és logikával, mint
-a pakli**, de a kártyákon nem tartalmak, hanem **koinók** állnak.
+a pakli**, de a kártyákon nem gondolatok, hanem **koinók** állnak.
 
 > „A belépő tér is követné ugyanazt a stílust meg logikát, mint a pakli nézet, annyi
 > különbséggel, hogy itt a kártyákon a **koinók** (közösségek saját adatbázissal) kapnak

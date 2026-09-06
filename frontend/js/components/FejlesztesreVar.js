@@ -12,7 +12,7 @@ import Modal from './modals/Modal.js';
 // - A szöveg és a megjelenés EGY helyen módosítható minden menühöz
 //
 // Használják: foOldal főmenüje és az összes kártya hamburger menüje
-// (TartalomKartya, JavaslatKartya, KategoriaKartya, TartalomTipusKartya,
+// (GondolatKartya, JavaslatKartya, KategoriaKartya, GondolatTipusKartya,
 // EgyezmenyKartya)
 // =============================================
 

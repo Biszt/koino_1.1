@@ -77,9 +77,9 @@ A szélesség az alap .pakli-kartya-ról öröklődik. */
 
 /* Kibővített body esetén a belső wrapper fix magassága feloldódik –
 a :has() detektálja, hogy a body kibővített állapotban van,
-és engedi a kártyát a tartalom méretéhez igazodni */
+és engedi a kártyát a gondolat méretéhez igazodni */
 .pakli-kartya--kivalasztott:has(.pakli-kartya__body--kibovitett) .pakli-kartya__belso {
-  height: auto; /* fix magasság feloldása – tartalom szabja meg */
+  height: auto; /* fix magasság feloldása – gondolat szabja meg */
   overflow: visible; /* ne vágja le a kibővült body-t */
 }
 
@@ -140,7 +140,7 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
 
 /* Felső sáv: cím-terület – a cím BALRA igazítva (minden kártyatípuson).
    position: relative a jobbra kilógó státuszhoz. A cím max. 3 sorba tördelhet,
-   ezért a sáv magassága a tartalommal nőhet (min-height az alsó korlát). */
+   ezért a sáv magassága a gondolattal nőhet (min-height az alsó korlát). */
 .pakli-kartya__fejlec-cim {
   min-height: var(--fejlec-sav-magassag);
   display: flex;
@@ -156,7 +156,7 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
    3. sor után sem fér el, azt a böngésző ellipszissel vágja (line-clamp). A státusz-
    konténert KIZÁRJUK (:not), mert az saját megjelenésű badge. Magasabb specificitás
    (a __belso ősön át), hogy a típus-specifikus cím-osztályok színét/vastagságát
-   EGYSÉGESÍTSE. Az itteni font-size (16px) a FIX méret – ezt a Kartya CSAK a Tartalom
+   EGYSÉGESÍTSE. Az itteni font-size (16px) a FIX méret – ezt a Kartya CSAK a Gondolat
    kártyán írja felül dinamikusan (inline): előbb becslés (_cimBetumeretBecsles), majd
    a DOM-ba illesztés után pontos hozzáigazítás (cimBetumeretHozzaigazitasa) úgy, hogy a
    cím ~3 sorba elférjen. A többi kártyatípus címe ezt a 16px-et tartja. */
@@ -267,7 +267,7 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
   white-space: nowrap;
 }
 
-/* A gyerek RÉGEBBI a szülő utolsó módosításánál → a tartalom elavulhat.
+/* A gyerek RÉGEBBI a szülő utolsó módosításánál → a gondolat elavulhat.
    Fallbackkel (a --color-danger nincs a token-készletben; a projekt mintája szerint
    fallback-értéket adunk, mint a reszletekModal.css / entitasKeresoMezo.css). */
 .pakli-kartya__datum--elavult {
@@ -296,7 +296,7 @@ overflow: hidden-je levágná a pszeudo-elem szögletes sarkait. */
 }
 
 /* ===== ELVÁLASZTÓ VONAL A FEJLÉC ADAT-CSOPORTJAI KÖZÖTT ===== */
-/* A fejléc mindkét ikon-sorában (1. = tudatpont-adatok, 2. = tartalomtípus +
+/* A fejléc mindkét ikon-sorában (1. = tudatpont-adatok, 2. = gondolattípus +
    kategóriák) az egymás mellett álló adat-csoportok közé vékony, SZOLID
    függőleges vonal kerül. Így jól látható, meddig tart az egyik adat és hol
    kezdődik a másik – vagyis melyik ikon melyik adathoz tartozik.
@@ -371,11 +371,11 @@ abszolút pozicionálásához. */
 
 /* Kibővített body – overflow engedélyezve, magasság szabad */
 .pakli-kartya__body--kibovitett {
-  overflow: visible; /* kibővített állapotban látható a teljes tartalom */
-  flex: none; /* ne töltse ki a fix magasságot, tartalom szabja meg */
+  overflow: visible; /* kibővített állapotban látható a teljes gondolat */
+  flex: none; /* ne töltse ki a fix magasságot, gondolat szabja meg */
 }
 
-/* Gradiens maszk a body alján – vizuálisan jelzi, hogy több tartalom van.
+/* Gradiens maszk a body alján – vizuálisan jelzi, hogy több gondolat van.
 A szöveg fokozatosan elhalványul, a kibővítő gomb erre a sávra ül rá.
 Csak zárt állapotban aktív – kibővítve eltűnik. */
 .pakli-kartya--kivalasztott .pakli-kartya__body:not(.pakli-kartya__body--kibovitett)::after {
@@ -390,14 +390,14 @@ Csak zárt állapotban aktív – kibővítve eltűnik. */
     transparent,
     var(--color-surface-2) 80%
   );
-  pointer-events: none; /* kattintást nem blokkol – az alatta lévő tartalom elérhető marad */
+  pointer-events: none; /* kattintást nem blokkol – az alatta lévő gondolat elérhető marad */
 }
 
 /* ---------------------------------------- */
-/* SZÖVEGES TARTALOM */
+/* SZÖVEGES GONDOLAT */
 /* ---------------------------------------- */
 
-/* Szöveges tartalom — a kártya teljes szélességét követi
+/* Szöveges gondolat — a kártya teljes szélességét követi
    (a korábbi 72ch olvashatósági korlát 2026-07-19-én megszűnt,
    mert a kártya már a képernyő szélességéhez igazodik) */
 .pakli-kartya__szoveg {

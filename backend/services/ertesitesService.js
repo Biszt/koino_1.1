@@ -10,9 +10,9 @@ const ertesitesiBeallitasService = require('./ertesitesiBeallitasService');
 
 // Entitás-modellek – a postafiók-megjelenítéshez az értesítésekhez feltöltjük a cím-viselő
 // entitások címét/nevét (a Javaslat/Egyezmény típusnak nincs címe → ott null marad).
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 
 // A tudatpont-tulajdonossági szűrőhöz (tudatpontSzuro beállítás): az esemény entitásának
 // tudatpont-tulajdonosait kérjük le vele (kik tettek rá 0-nál több pontot).
@@ -23,21 +23,21 @@ const tudatpontRepository = require('../repositories/tudatpontRepository');
 // Az értesítésekhez feltölti az érintett entitás címét/nevét (`entitasCim`), típusonként
 // EGY csoportos lekérdezéssel (nincs N+1). A nem cím-viselő típusoknál `entitasCim: null`.
 const entitasCimekFeltoltese = async (ertesitesek) => {
-  const idkTipusonkent = { Tartalom: [], Kategoria: [], TartalomTipus: [] };
+  const idkTipusonkent = { Gondolat: [], Kategoria: [], GondolatTipus: [] };
   for (const e of ertesitesek) {
     if (idkTipusonkent[e.entitasTipus]) idkTipusonkent[e.entitasTipus].push(e.entitasId);
   }
 
-  const [tartalmak, kategoriak, tipusok] = await Promise.all([
-    idkTipusonkent.Tartalom.length ? Tartalom.find({ _id: { $in: idkTipusonkent.Tartalom } }).select('cim') : [],
+  const [gondolatok, kategoriak, tipusok] = await Promise.all([
+    idkTipusonkent.Gondolat.length ? Gondolat.find({ _id: { $in: idkTipusonkent.Gondolat } }).select('cim') : [],
     idkTipusonkent.Kategoria.length ? Kategoria.find({ _id: { $in: idkTipusonkent.Kategoria } }).select('nev') : [],
-    idkTipusonkent.TartalomTipus.length ? TartalomTipus.find({ _id: { $in: idkTipusonkent.TartalomTipus } }).select('nev') : [],
+    idkTipusonkent.GondolatTipus.length ? GondolatTipus.find({ _id: { $in: idkTipusonkent.GondolatTipus } }).select('nev') : [],
   ]);
 
   const cimMap = new Map(); // `${tipus}:${id}` -> cím/név
-  for (const t of tartalmak) cimMap.set(`Tartalom:${t._id}`, t.cim);
+  for (const t of gondolatok) cimMap.set(`Gondolat:${t._id}`, t.cim);
   for (const k of kategoriak) cimMap.set(`Kategoria:${k._id}`, k.nev);
-  for (const tt of tipusok) cimMap.set(`TartalomTipus:${tt._id}`, tt.nev);
+  for (const tt of tipusok) cimMap.set(`GondolatTipus:${tt._id}`, tt.nev);
 
   return ertesitesek.map((e) => ({
     ...(typeof e.toObject === 'function' ? e.toObject() : e),

@@ -565,7 +565,7 @@ function monotoniaEllenorzes(lerakottak) {
 // A SZABÁLY: az üres mag ÁTMÉRŐJE nem nőheti túl a képernyő kisebbik oldalának a
 // FELÉT. Miért a fele, és nem az egésze: a tünet nem akkor kezdődik, amikor a lyuk
 // már kitölti a képernyőt, hanem amikor URALJA — fél képernyőnyi üresség fölött a
-// kép már inkább lyuk, mint tartalom. (Az „egész képernyő" határ ráadásul vak
+// kép már inkább lyuk, mint gondolat. (Az „egész képernyő" határ ráadásul vak
 // maradna egy 700 px-es lyukra, ami nyilvánvalóan hibás.)
 //
 // A NÖVEKEDÉST MÉRJÜK, DE NEM BUKTATJUK EL RAJTA. Az utolsó commit ígérete az volt,

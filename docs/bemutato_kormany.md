@@ -36,7 +36,7 @@ párbeszéd.
   haszonélvező is. Mindenki egyenlő tudatponttal indul (10 000): mindenkinek vannak
   tudatpontjai, és mindenkinek ugyanannyi. A tudatpontokat nem lehet elkölteni, csak
   szétosztani. A tudatpont mutatja meg, mi fontos egy embernek és a közösségnek.
-  Hozzárendelhetik tartalmakhoz, közösségi részekhez, de ami a legfontosabb: bármikor
+  Hozzárendelhetik gondolatokhoz, közösségi részekhez, de ami a legfontosabb: bármikor
   visszarendelhetik és átszervezhetik őket.
 
   Ez azért lényeges, mert a koino nem szeretné jutalmazni azt, hogy az emberek
@@ -62,15 +62,15 @@ határozom meg.
 
 A koino már képes arra, hogy bemutassa, ahogy teszt e-emberek közös nevezőre jutnak
 központi szereplők nélkül, de optimalizációra és a hiányosságok pótlására még szüksége
-van. A frontend elkészülte után az első közösség már képes lesz tartalmakat létrehozni,
+van. A frontend elkészülte után az első közösség már képes lesz gondolatokat létrehozni,
 amelyekhez általuk létrehozott kategóriákat tudnak rendelni — például tudomány,
 természetvédelem, politika, programfejlesztés. További rendszerezést az általuk
-létrehozott tartalomtípusok adnak, mint például kérdés, válasz, témakör, ismeret,
+létrehozott gondolattípusok adnak, mint például kérdés, válasz, témakör, ismeret,
 feladat, feladatvállalás. A regisztráció meghívásos alapon működik.
 
-A létrehozott tartalmak felett azok rendelkeznek, akik tudatpontot rendeltek hozzájuk.
-Ők képesek javaslatot tenni módosításra, áthelyezésre, törlésre vagy több tartalom
-egyesítésére, például hasonlóság miatt. Minden tartalomnak vannak küszöbértékei,
+A létrehozott gondolatok felett azok rendelkeznek, akik tudatpontot rendeltek hozzájuk.
+Ők képesek javaslatot tenni módosításra, áthelyezésre, törlésre vagy több gondolat
+egyesítésére, például hasonlóság miatt. Minden gondolatnak vannak küszöbértékei,
 amelyek meghatározzák, mekkora támogatottság és mekkora részvételi arány szükséges
 ahhoz, hogy egy javaslat elfogadásra kerüljön, és egyezmény legyen belőle. Továbbá
 minimum és maximum döntési idővel is rendelkeznek — ezek az értékek határolják be egy

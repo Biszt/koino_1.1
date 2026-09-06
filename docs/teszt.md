@@ -88,14 +88,14 @@ a `localStorage`-ba menti.
 > A frontenden ezeket a **létrehozó modálok** kérik be. Itt a *kötelező* mezők és a
 > megkötések láthatók, hogy tudd, mit muszáj kitölteni, és mi az érvényes tartomány.
 
-### 3.1. Tartalom — `POST /api/tartalom` (auth)
+### 3.1. Gondolat — `POST /api/gondolat` (auth)
 | Mező | Kötelező | Megjegyzés |
 |---|---|---|
 | `cim` | ✅ | szöveg |
 | `szoveg` | ❌ | a szövegszerkesztő JSON blokk-tömbje |
-| `tartalomTipusId` | ❌ | egy TartalomTipus ObjectId-ja |
+| `gondolatTipusId` | ❌ | egy GondolatTipus ObjectId-ja |
 | `kategoriaIds` | ❌ | max. 3, egyediek |
-| `szuloId` + `szuloTipus` | ❌ | ágaztatásnál; ha az egyik van, a másik is kell. `szuloTipus` ∈ `Tartalom, Javaslat, Egyezmeny, Kategoria, TartalomTipus` |
+| `szuloId` + `szuloTipus` | ❌ | ágaztatásnál; ha az egyik van, a másik is kell. `szuloTipus` ∈ `Gondolat, Javaslat, Egyezmeny, Kategoria, GondolatTipus` |
 | (küszöbértékek) | ❌ | a létrehozó modál is bekéri, alapértékekkel — lásd 4. szakasz |
 
 ### 3.2. Kategória — `POST /api/kategoria` (auth, **multipart**, ikon-feltöltés)
@@ -106,7 +106,7 @@ a `localStorage`-ba menti.
 | `leiras` | ❌ | szövegszerkesztő JSON |
 | `szuloId` + `szuloTipus` | ❌ | ágaztatásnál |
 
-### 3.3. Tartalomtípus — `POST /api/tartalomTipus` (auth, **multipart**, ikon-feltöltés)
+### 3.3. Gondolattípus — `POST /api/gondolatTipus` (auth, **multipart**, ikon-feltöltés)
 | Mező | Kötelező | Megjegyzés |
 |---|---|---|
 | `nev` | ✅ | 2–50 karakter |
@@ -118,7 +118,7 @@ a `localStorage`-ba menti.
 | Mező | Kötelező | Megjegyzés |
 |---|---|---|
 | `javaslatTipus` | ✅ | `Torles, Modositas, Egyesites, Athelyezes, Csomag` |
-| `erintettEntitasok[]` | ✅ | min. 1; elemenként `entitasId`, `entitasTipus` (`Tartalom/Kategoria/TartalomTipus`), `muvelet` |
+| `erintettEntitasok[]` | ✅ | min. 1; elemenként `entitasId`, `entitasTipus` (`Gondolat/Kategoria/GondolatTipus`), `muvelet` |
 | `indoklas` | ✅ | szövegszerkesztő JSON; **kötelező** (nem lehet üres), de **nincs min. karakterszám** (2026-07-14) |
 | `kezdoTudatpont` | ✅ | a controller kötelezővé teszi (a javaslattevő induló pontja) |
 | `szuloId` | — | **NEM a frontend adja** — a service teszi az érintett entitás alá |
@@ -144,7 +144,7 @@ Body: `{ entitasId, entitasTipus, pontok, felmenoketAutomatikusan?, szerep? }`
 - **Szerep utólagos módosítása:** `PUT /api/tudatpont/szerep/:entitasTipus/:entitasId`,
   body: `{ szerep }` (a kártya „Részvételi beállítások" menüje).
 - **`entitasTipus` értékkészlete** (2026-08-25 óta egységes mind a három tudatpont-modellben):
-  `Tartalom / Kategoria / TartalomTipus / Javaslat / Egyezmeny`. Az `Egyezmeny` korábban
+  `Gondolat / Kategoria / GondolatTipus / Javaslat / Egyezmeny`. Az `Egyezmeny` korábban
   hiányzott a `tudatpontAllokacio` és a `tudatpontHozzarendeles` sémájából, pedig a rendszer
   írt ilyen sorokat (az egyezmény létrejöttekor a támogatók pontja a javaslatról az
   egyezményre költözik) — a hozzárendelés upserttel megy, ezért a validátor nem csapott le rá.
@@ -191,26 +191,26 @@ hivatkozás-panelje használja).
 | Paraméter | Kötelező | Megjegyzés |
 |---|---|---|
 | `q` | ✅ | keresőszöveg (cím/név-részlet, kis/nagybetű független, részleges egyezés) |
-| `tipusok` | ❌ | vesszős lista: `Tartalom,Kategoria,TartalomTipus` (alap: mind a három) |
+| `tipusok` | ❌ | vesszős lista: `Gondolat,Kategoria,GondolatTipus` (alap: mind a három) |
 | `limit` | ❌ | típusonkénti max. találat, 1–50, alap 10 |
 | `agEntitasId` | ❌ | ÁG-SZŰRŐ (2026-07-18 óta): csak az adott entitás ága alatti találatok (ős-lánc bejárás; a kártya-menük Keresés pontja használja) |
 
 **Válasz:** `{ success: true, talalatok: [{ entitasId, entitasTipus, cim }] }`.
-Csak a **cím-viselő** három típusra keres (Tartalom címe = `cim`, Kategória/Tartalomtípus = `nev`).
+Csak a **cím-viselő** három típusra keres (Gondolat címe = `cim`, Kategória/Gondolattípus = `nev`).
 Egyezmény/Javaslat típus a keresőben nincs — azok a nyers ID-fallbackkal érhetők el.
 
 ---
 
 ## 4. Küszöb érték javaslat (a mostani teszt fókusza)
 
-**Végpont:** `POST /api/ertekJavaslat` (auth). **Entitás-polimorf** — Tartalomra,
-Kategóriára és Tartalomtípusra is működik.
+**Végpont:** `POST /api/ertekJavaslat` (auth). **Entitás-polimorf** — Gondolatra,
+Kategóriára és Gondolattípusra is működik.
 
 **Body / mezők és tartományok:**
 | Mező | Kötelező | Tartomány | Alapérték |
 |---|---|---|---|
 | `entitasId` | ✅ | ObjectId | — |
-| `entitasTipus` | ✅ | `Tartalom / Kategoria / TartalomTipus` | `Tartalom` |
+| `entitasTipus` | ✅ | `Gondolat / Kategoria / GondolatTipus` | `Gondolat` |
 | `javaslatElfogadasiKuszob` | ✅ | egész **51–100** (%) | — |
 | `reszveteliAranyKuszob` | ✅ | egész **0–100** (%) | — |
 | `minimumDontesiIdo` | ✅ | egész **≥ 0** mp | 0 |
@@ -255,9 +255,9 @@ Minden lépésnél párhuzamosan figyeljük:
 > **Fontos a döntéshez** ([javaslatIdozitesService.js:235](../backend/services/javaslat/javaslatIdozitesService.js)):
 > a hatályba lépéskor `Elfogadva`, ha **támogatottság ≥ elfogadási küszöb** ÉS
 > **részvétel ≥ részvételi küszöb**; különben **`Elvetve`**. A küszöböket **csak a
-> `Tartalom` típusú** érintettekből átlagolja — kategória/tartalomtípus javaslatnál
+> `Gondolat` típusú** érintettekből átlagolja — kategória/gondolattípus javaslatnál
 > alapértelmezett **51% / 0%** él (lásd 6. buktatók). Ezért mindkét döntési ág
-> **Tartalmon** fut.
+> **Gondolaton** fut.
 
 ### 0. Előkészület
 1. ⬜ `docker-compose -f docker-compose.dev.yml up` → http://localhost:3000 megnyílik.
@@ -267,41 +267,41 @@ Minden lépésnél párhuzamosan figyeljük:
      ```
      (majd böngésző hard refresh — Ctrl+F5; a kijelentkezéshez töröld a `localStorage` tokent is, ha bent ragadt.)
 2. ⬜ Regisztrálj **3 e-embert**: `tesztAnna`, `tesztBela`, `tesztCili` (mind 10 000 tudatpont — DB-ben ellenőrizhető).
-3. ⬜ `tesztAnna`-val hozz létre egy **Kategóriát** és egy **Tartalomtípust** (mindkettőhöz **ikon-feltöltés** kell).
+3. ⬜ `tesztAnna`-val hozz létre egy **Kategóriát** és egy **Gondolattípust** (mindkettőhöz **ikon-feltöltés** kell).
 
 ### 1. Alapentitások + küszöbök a létrehozó modálban
-4. ⬜ Hozz létre **Tartalom-A**-t (elfogadás-ág): a létrehozó modál küszöb-mezőit állítsd
+4. ⬜ Hozz létre **Gondolat-A**-t (elfogadás-ág): a létrehozó modál küszöb-mezőit állítsd
    **elfogadás 60 / részvétel 60 / min 0 / max 3 perc**.
-5. ⬜ Hozz létre **Tartalom-B**-t (elutasítás-ág): **elfogadás 60 / részvétel 90 / min 0 / max 3 perc**.
-   - *Elvárt:* mindkét kártya megjelenik a pakliban; DB-ben a `tartalomertekhisztograms` létrejön (első érték javaslat).
+5. ⬜ Hozz létre **Gondolat-B**-t (elutasítás-ág): **elfogadás 60 / részvétel 90 / min 0 / max 3 perc**.
+   - *Elvárt:* mindkét kártya megjelenik a pakliban; DB-ben a `gondolatertekhisztograms` létrejön (első érték javaslat).
 
 ### 2. Tudatpont-hozzárendelés + részvételi szerep (felmenő már NEM kötelező)
-6. ⬜ **Mind a 3 e-emberrel** rendelj tudatpontot **Tartalom-A**-ra és **Tartalom-B**-re
+6. ⬜ **Mind a 3 e-emberrel** rendelj tudatpontot **Gondolat-A**-ra és **Gondolat-B**-re
    (ehhez ki/bejelentkezés a 3 e-ember közt). Az ELSŐ allokáláskor a szerepválasztó
    felugrik (alapból **passzív**); tegyél legalább egy e-embert **aktív**-ra.
    - *Elvárt:* a felmenő-figyelmeztetés NEM blokkol (mentés kitöltés nélkül is megy);
      DB-ben a `tudatpont`-hozzárendelések látszanak a `szerep` mezővel. A részvételi
      arány **nevezője csak az AKTÍV** tulajdonosok (∪ a szavazók) — nem mind a 3.
 
-### 3. Ágaztatás („Új tartalom létrehozása ebből")
-7. ⬜ Egy kártya menüjéből *Új tartalom létrehozása ebből* → a `TartalomModal` szülő-adatokkal nyílik.
-   - *Elvárt:* az új tartalom `szuloId` + `szuloTipus` az ág-adott entitásra mutat (DB-ben ellenőrizhető).
+### 3. Ágaztatás („Új gondolat létrehozása ebből")
+7. ⬜ Egy kártya menüjéből *Új gondolat létrehozása ebből* → a `GondolatModal` szülő-adatokkal nyílik.
+   - *Elvárt:* az új gondolat `szuloId` + `szuloTipus` az ág-adott entitásra mutat (DB-ben ellenőrizhető).
 
 ### 4. Küszöb érték javaslat — mindhárom típuson (utólag is)
-8. ⬜ Nyisd meg a **Tartalom** / **Kategória** / **Tartalomtípus** kártya *Küszöb érték javaslat* pontját.
+8. ⬜ Nyisd meg a **Gondolat** / **Kategória** / **Gondolattípus** kártya *Küszöb érték javaslat* pontját.
    - *Elvárt:* betölti az aktuális mediánt + a saját javaslatot; mentés után újranyitva **visszatöltődik**.
 9. ⬜ Határeset: elfogadás **50**/**101** vagy tört szám → **elutasítás**; ugyanarra kétszer mentve → **felülír** (nem hibázik).
 
 ### 5. Javaslat létrehozása — polimorf (a B) fókusz)
-10. ⬜ **Kategórián** és **Tartalomtípuson** is *Javaslat létrehozása* → **NEM** fut „szülő tartalom kötelező" hibára.
-11. ⬜ **Tartalom-A**-ra hozz létre egy **Módosítás** javaslatot (indoklással); ez lesz az **elfogadás-ág** javaslata.
-12. ⬜ **Tartalom-B**-re hozz létre egy **Módosítás** javaslatot; ez lesz az **elutasítás-ág** javaslata.
-    - *Elvárt:* DB `javaslats`: `statusz: Aktiv`, `szuloId/szuloTipus` az érintett tartalomra, `hatalybaLepesIdeje` a ~3 perces ablakban.
+10. ⬜ **Kategórián** és **Gondolattípuson** is *Javaslat létrehozása* → **NEM** fut „szülő gondolat kötelező" hibára.
+11. ⬜ **Gondolat-A**-ra hozz létre egy **Módosítás** javaslatot (indoklással); ez lesz az **elfogadás-ág** javaslata.
+12. ⬜ **Gondolat-B**-re hozz létre egy **Módosítás** javaslatot; ez lesz az **elutasítás-ág** javaslata.
+    - *Elvárt:* DB `javaslats`: `statusz: Aktiv`, `szuloId/szuloTipus` az érintett gondolatra, `hatalybaLepesIdeje` a ~3 perces ablakban.
 
 ### 6. Szavazás (a két ág szétválik)
-13. ⬜ **Elfogadás-ág (Tartalom-A javaslata):** mind a 3 e-ember **Támogat**.
+13. ⬜ **Elfogadás-ág (Gondolat-A javaslata):** mind a 3 e-ember **Támogat**.
     - *Elvárt:* részvétel 100% ≥ 60% ✓, támogatottság 100% ≥ 60% ✓. A magas BM miatt a döntési idő lerövidül → **hamar Elfogadva**.
-14. ⬜ **Elutasítás-ág (Tartalom-B javaslata):** **csak 1** e-ember (pl. tesztAnna) szavaz (Támogat).
+14. ⬜ **Elutasítás-ág (Gondolat-B javaslata):** **csak 1** e-ember (pl. tesztAnna) szavaz (Támogat).
     - *Elvárt:* részvétel 33% < 90% → a küszöb sosem teljesül; alacsony BM → a döntési idő kifut a **max 3 percig**.
 15. ⬜ Közben: korábbi szavazat **kiemelése**, **módosítása**, **visszavonása** működik; a kártyán a
     szavazás állása, **bizonyossági mutató** és **döntési idő** frissül.
@@ -314,7 +314,7 @@ Minden lépésnél párhuzamosan figyeljük:
 
 ### 7. A kör lezárása (cron, percenként)
 16. ⬜ **Elfogadás-ág:** figyeld a backend naplót (`⏰` + `Küszöbök ellenőrzése` + `Elfogadva`).
-    - *Elvárt:* a javaslat `Elfogadva`, és **egyezmény jön létre** az érintett tartalomnál (Módosítás → érintett entitás).
+    - *Elvárt:* a javaslat `Elfogadva`, és **egyezmény jön létre** az érintett gondolatnál (Módosítás → érintett entitás).
       UI-ban megjelenik az **egyezmény kártya**; DB `egyezmenys` új dokumentum a helyes `szuloId/szuloTipus`-szal.
 17. ⬜ **Elutasítás-ág:** ~3 perc után a cron lezárja.
     - *Elvárt:* a javaslat **`Elvetve`** (napló: `Elvetve`), **nincs egyezmény**, a tudatpontok visszaosztódnak.
@@ -324,7 +324,7 @@ Minden lépésnél párhuzamosan figyeljük:
 19. ⬜ Jogosultság: olyan entitáson, ahol nincs tudatpontod, a tudatpont-függő menüpontok **halványak** + tooltip;
     tudatpont adása után **aktívak**.
 20. ⬜ Pakli: a javaslatok/egyezmény az érintett entitás alatt jelennek meg.
-21. ⬜ **Fejléc-dátum (2026-08-19):** a **Tartalom / Kategória / Tartalomtípus** kártya
+21. ⬜ **Fejléc-dátum (2026-08-19):** a **Gondolat / Kategória / Gondolattípus** kártya
     fejlécének 2. sorában megjelenik a 📅 dátum (a `modositva` = létrehozás, amíg nincs
     tartalmi módosítás). **Szín** a szülő utolsó módosításához mérve (másodperc pontosság):
     **piros** = a gyerek régebbi (elavulhat), **zöld** = újabb, **semleges** = egyenlő
@@ -343,7 +343,7 @@ docker exec koino-mongodb-dev mongosh koino --eval "db.eembers.find({},{eemberNe
 
 # Egy entitás érték javaslatai (polimorf) + a hisztogram megléte
 docker exec koino-mongodb-dev mongosh koino --eval "db.ertekjavaslats.find().pretty()"
-docker exec koino-mongodb-dev mongosh koino --eval "db.tartalomertekhisztograms.find().pretty()"
+docker exec koino-mongodb-dev mongosh koino --eval "db.gondolatertekhisztograms.find().pretty()"
 
 # Javaslatok státusza, számított értékei, hatályba lépés
 docker exec koino-mongodb-dev mongosh koino --eval "db.javaslats.find({},{javaslatTipus:1,statusz:1,tamogatotsagiArany:1,ellenzoiArany:1,tartozkodoiArany:1,reszveteliArany:1,bizonyossagiMutato:1,dontesiIdo:1,hatalybaLepesIdeje:1,szuloTipus:1,egyezmenyTarhelyTipus:1}).pretty()"
@@ -365,17 +365,17 @@ docker logs -f koino-backend
 ### Előkészület
 1. ⬜ `docker-compose -f docker-compose.dev.yml up`, majd http://localhost:3000 megnyílik.
 2. ⬜ Regisztrálj `tesztAnna`-t (10 000 tudatpont jár).
-3. ⬜ Hozz létre egy **Kategóriát** (ikon-feltöltéssel) és egy **Tartalomtípust** (ikon-feltöltéssel).
-4. ⬜ Hozz létre egy **Tartalmat** (cím kötelező); a létrehozó modál a **küszöbértékeket** is bekéri.
+3. ⬜ Hozz létre egy **Kategóriát** (ikon-feltöltéssel) és egy **Gondolattípust** (ikon-feltöltéssel).
+4. ⬜ Hozz létre egy **Gondolatot** (cím kötelező); a létrehozó modál a **küszöbértékeket** is bekéri.
 
 ### A) Küszöb érték javaslat — mindhárom entitástípuson
-5. ⬜ **Tartalom** kártya → menü → *Küszöb érték javaslat*: az `ErtekJavaslatModal` megnyílik,
+5. ⬜ **Gondolat** kártya → menü → *Küszöb érték javaslat*: az `ErtekJavaslatModal` megnyílik,
    betölti az aktuális mediánt és a saját javaslatot (első alkalommal üres).
 6. ⬜ Adj meg érvényes értékeket (pl. elfogadás **60**, részvétel **30**, min **0**, max **1 év**) → **mentés** sikeres.
 7. ⬜ Nyisd meg újra: a **saját** érték javaslat visszatöltődik.
 8. ⬜ Ismételd a **Kategória** kártyán (menüpont csak akkor aktív, ha van tudatpontod rajta).
-9. ⬜ Ismételd a **Tartalomtípus** kártyán.
-10. ⬜ **Létrehozó modál teszt:** új Tartalom/Kategória/Tartalomtípus létrehozásakor a
+9. ⬜ Ismételd a **Gondolattípus** kártyán.
+10. ⬜ **Létrehozó modál teszt:** új Gondolat/Kategória/Gondolattípus létrehozásakor a
     négy küszöbérték-mező megjelenik alapértékekkel, és menthető.
 
 **Határeset-ellenőrzések (A):**
@@ -383,11 +383,11 @@ docker logs -f koino-backend
 12. ⬜ Nem egész szám → elutasítás.
 13. ⬜ Ugyanarra az entitásra **másodszor** is menteni → **felülírja**, nem hibázik.
 
-### B) Polimorf általánosítás — javaslat kategórián / tartalomtípuson
-14. ⬜ **Kategória** kártya → menü → *Javaslat létrehozása*: **NEM** fut „szülő tartalom
+### B) Polimorf általánosítás — javaslat kategórián / gondolattípuson
+14. ⬜ **Kategória** kártya → menü → *Javaslat létrehozása*: **NEM** fut „szülő gondolat
     kötelező" hibára (ez volt a régi bug), a javaslat elkészül.
-15. ⬜ **Tartalomtípus** kártyán ugyanígy: *Javaslat létrehozása* működik.
-16. ⬜ **Tartalom** kártyán is működik (regresszió-ellenőrzés).
+15. ⬜ **Gondolattípus** kártyán ugyanígy: *Javaslat létrehozása* működik.
+16. ⬜ **Gondolat** kártyán is működik (regresszió-ellenőrzés).
 17. ⬜ A létrejött javaslat a **pakliban** az érintett entitás alatt jelenik meg (a javaslat
     az érintett entitás gyereke).
 
@@ -400,7 +400,7 @@ docker logs -f koino-backend
 
 ### C) Jogosultság-függő menüpontok (regresszió)
 21. ⬜ Olyan entitáson, ahol **nincs** tudatpontod: a *Javaslat létrehozása*, *Szavazat leadása*,
-    *Új tartalom/kategória létrehozása ebből* menüpontok **halványak** és magyarázó tippet adnak.
+    *Új gondolat/kategória létrehozása ebből* menüpontok **halványak** és magyarázó tippet adnak.
 22. ⬜ *Tudatpont módosítás*sal adj pontot → a fenti menüpontok **aktívvá** válnak (a felmenő-szabály
     a szülőláncot is kitölti).
 
@@ -409,9 +409,9 @@ docker logs -f koino-backend
 24. ⬜ *Részletes adatok* modál minden kártyatípuson megnyílik és a helyes adatokat mutatja.
 
 ### E) Cím-alapú kereső + csomag kötelező egyezmény-tárhely (ÚJ, 2026-07-12)
-25. ⬜ **Kereső — JavaslatModal:** indíts pl. *Áthelyezés* javaslatot; az „Új szülő tartalom"
+25. ⬜ **Kereső — JavaslatModal:** indíts pl. *Áthelyezés* javaslatot; az „Új szülő gondolat"
     mezőbe **cím-részletet** gépelve legördül a találati lista, kiválasztás után a mező **zöld
-    megerősítést** ad („✓ Tartalom: …"). Ellenőrizd a Network fülön: `GET /api/kereses?q=…`.
+    megerősítést** ad („✓ Gondolat: …"). Ellenőrizd a Network fülön: `GET /api/kereses?q=…`.
 26. ⬜ **Nyers ID fallback:** ugyanabba a mezőbe egy **24-hex ObjectId**-t beírva közvetlenül
     feloldódik (nincs szükség keresésre).
 27. ⬜ **Csomag — kötelező tárhely:** *Csomag* javaslatnál a 3. lépésen az „Egyezmény tárhely"
@@ -444,12 +444,12 @@ docker logs -f koino-backend
 > ```bash
 > docker exec koino-mongodb-dev mongosh koino --eval "db.ertesites.insertOne({
 >   eEmberId: ObjectId('<eember_id>'), tipus: 'ujJavaslat',
->   entitasId: ObjectId('<tartalom_id>'), entitasTipus: 'Tartalom',
->   osLanc: [ { entitasId: ObjectId('<tartalom_id>'), entitasTipus: 'Tartalom' } ],
+>   entitasId: ObjectId('<gondolat_id>'), entitasTipus: 'Gondolat',
+>   osLanc: [ { entitasId: ObjectId('<gondolat_id>'), entitasTipus: 'Gondolat' } ],
 >   adatok: {}, olvasva: false, olvasvaIdopont: null,
 >   createdAt: new Date(), updatedAt: new Date() })"
 > ```
-> (Ha a tartalomnak van szülője, a szülőt is fűzd az `osLanc` végére — így a szülő
+> (Ha a gondolatnak van szülője, a szülőt is fűzd az `osLanc` végére — így a szülő
 > kártyáján is megjelenik majd a részfa-badge.)
 
 30. ⬜ **Badge betöltéskor:** legyen ≥1 olvasatlan értesítésed → belépés/frissítés után a
@@ -535,7 +535,7 @@ docker logs -f koino-backend
     Végpont: `GET /api/tudatpont/aktiv-hozzarendelesek?limit=&skip=&agEntitasId=`
     (auth; `entitasCim` mezővel).
 43. ⬜ **Keresés (2026-07-18 óta):** fő menü → **🔍 Keresés** → keresőmező +
-    3 típus-pipa (📄 Tartalom / 🏷️ Kategória / 🧩 Tartalomtípus, alapból mind
+    3 típus-pipa (📄 Gondolat / 🏷️ Kategória / 🧩 Gondolattípus, alapból mind
     bepipálva). Gépelés közben (~300 ms késleltetéssel) frissül a találati lista
     (típus-ikon + cím); pipa-váltásra azonnal újrakeres; minden pipa kivéve →
     „Pipálj be legalább egy típust." Találatra kattintva a modal bezárul és a
@@ -545,11 +545,11 @@ docker logs -f koino-backend
     találatok. API-ellenőrzés (curl, 2026-07-18, lefutott): teljes keresés,
     típus-szűrés, ág-szűrt találat (Gyerek C a Szulo P ágában), ágon kívüli
     kizárás (0 találat) — mind helyes. A keresés cím/név alapú (v1); a
-    tartalmak szövegében keresés későbbi bővítés.
+    gondolatok szövegében keresés későbbi bővítés.
 44. ⬜ **Üres-pakli barátságos állapot (2026-07-18 óta):** TELJESEN ÜRES (friss)
     adatbázisnál a főoldal már nem hibázik el: a pakli helyén 🌱 útmutató
-    jelenik meg („Még nincs tartalom a koino-n. Hozd létre az elsőt...").
-    Az első tartalom létrehozása után a pakli normálisan betölt. Ha a MENTETT
+    jelenik meg („Még nincs gondolat a koino-n. Hozd létre az elsőt...").
+    Az első gondolat létrehozása után a pakli normálisan betölt. Ha a MENTETT
     aktív entitás nem található (pl. törölték), a pakli automatikusan gyökérről
     próbál újra (a null-védelem most már a backend üres válaszát is kezeli).
     Kipróbálás: friss DB (docker volume törlés) mellett belépés.
@@ -568,7 +568,7 @@ docker logs -f koino-backend
     törlődik (tudatpontokVisszaosztasa → 0 pont → auto-törlés, pl. Törlési
     javaslat végrehajtásakor), a KÖZVETLENÜL rá vonatkozó értesítések is
     törlődnek (ertesitesRepository.torolEntitasOsszes, best-effort).
-    2026-07-18: teljes mini-folyamattal igazolva (eldobható tartalom + 3
+    2026-07-18: teljes mini-folyamattal igazolva (eldobható gondolat + 3
     értesítés → törlés után entitás és értesítések is eltűntek).
 47. ⬜ **eember beállítások (terv 8. pont, 2026-07-18 óta):** fő menü → **⚙️
     eember beállítások** → felül az azonosító (e-embernév — nem módosítható),
@@ -632,7 +632,7 @@ docker logs -f koino-backend
     magassága NEM nő az ablak szélességével (a régi kártya-arány szerinti fix
     magasság marad, mobilon pixelre a korábbi); (c) mobilon (keskeny ablak) a
     megjelenés gyakorlatilag a korábbi; (d) a cím-betűméret a szélesebb
-    kártyához igazodik (Tartalom-kártyán dinamikus); (e) a kártya-body szövege
+    kártyához igazodik (Gondolat-kártyán dinamikus); (e) a kártya-body szövege
     a teljes szélességet használja (a 72 karakteres sor-korlát megszűnt);
     (f) a testvér-kacsacsőrök (48.) a széles kártya szélein is jó helyen vannak.
 50. ⬜ **Struktúra nézet (terv 13/b pont, 2026-07-19 óta):** teljes képernyős, interaktív
@@ -678,12 +678,12 @@ docker logs -f koino-backend
     a Struktúra nézet épp az alsó sáv fölött ér véget, és a hamburger menü is használható
     marad (2026-07-20);
     (i) a LEGKÖZELEBBI szinten (a tudatponttal együtt) MELLÉK-IKONOK bukkannak elő
-    kis körökben, a fő ikonnál kisebben (2026-07-20): Tartalomnál a KATEGÓRIÁI
-    balra (lila kör), a TARTALOMTÍPUSA jobbra (okker kör) — a körben a kategória/
+    kis körökben, a fő ikonnál kisebben (2026-07-20): Gondolatnál a KATEGÓRIÁI
+    balra (lila kör), a GONDOLATTÍPUSA jobbra (okker kör) — a körben a kategória/
     típus saját ikonja (emoji vagy feltöltött kép), csak ha van hozzárendelve;
     Javaslat/Egyezménynél a MŰVELET-TÍPUS jobbra (a saját típus-színével): Törlés
     🗑️ · Módosítás ✏️ · Egyesítés 🔗 · Áthelyezés ➡️ · Csomag 📦; Kategóriának és
-    Tartalomtípusnak NINCS mellék-ikonja. (Backend: a `/api/struktura` sorai
+    Gondolattípusnak NINCS mellék-ikonja. (Backend: a `/api/struktura` sorai
     `kategoriaIkonok`, `tipusIkon`, `javaslatTipus` mezőkkel bővültek.)
     API: GET `/api/struktura/darabszam` (globális összes; `?agEntitasId=` → az ág
     mérete — 2026-07-23 óta egyetlen indexelt `osLanc`-lekérdezés, nem szintenkénti
@@ -702,7 +702,7 @@ docker logs -f koino-backend
 
     Ellenőrzés:
     (a) rövid töltő után megjelenik a nézet; a síkidomok **entitástípus szerinti
-    formák** — Tartalom = kör, Kategória = háromszög, Tartalomtípus = négyzet,
+    formák** — Gondolat = kör, Kategória = háromszög, Gondolattípus = négyzet,
     Javaslat = ötszög, Egyezmény = hatszög (halvány kitöltés, típus-színű keret);
     (b) **átfedés SEHOL** — sem testvérek között, sem szülőből kilógó gyerek;
     (b2) **ÜRES MAG szaggatott körrel:** minden kibontott síkidom közepén
@@ -760,10 +760,10 @@ docker logs -f koino-backend
       kártyán, több sorba tördelve (legfeljebb 3 sor, az utolsón „…"). NEM takarhatja
       a középpontba pakolt legkisebb gyereket.
     - **Mellék-ikonok:** 96 px látszó átmérő fölött a felirat ALATT egy sorban
-      megjelennek a kategória-ikonok (balra) és a tartalomtípus ikonja (jobbra).
+      megjelennek a kategória-ikonok (balra) és a gondolattípus ikonja (jobbra).
       Csak azoknál, akiknek van ilyenje. *(A `tools/sikidomTesztAdat.js` gyökerei
       kategória és típus NÉLKÜL jönnek létre — ott jogosan nincs ikon; kézzel
-      felvett, kategóriás tartalommal érdemes próbálni.)*
+      felvett, kategóriás gondolattal érdemes próbálni.)*
     - **Elhalványodás:** befelé nagyítva a túlnőtt szülő kitöltése ÉS kerete is
       fokozatosan halványul; a kerete nem vághatja át a képernyőt.
     - **Illesztés:** az „illesztés" gomb ANIMÁLVA áll rá a nézetre (~0,4 s), nem ugrik.
@@ -832,7 +832,7 @@ docker logs -f koino-backend
 
     **Teszt-adat a próbához** (csak fejlesztői környezetben):
     `docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér
-    tartalmat hoz létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már
+    gondolatot hoz létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már
     létező címeket kihagyja).
 
     **SOK gyökér (2026-08-08):** `docker exec koino-backend node tools/sikidomSokGyokerTesztAdat.js`
@@ -843,7 +843,7 @@ docker logs -f koino-backend
     - Paraméterek: `<darab> <eemberNev> proba` — a `proba` SZÁRAZ FUTÁS (csak
       kiírja, mit hozna létre, semmit nem ír az adatbázisba).
     - A pontokat a választott e-ember **szabad tudatpontjának 90%-ára** skálázza,
-      és előre ellenőrzi, hogy belefér-e. Minden tartalom legalább 1 pontot kap.
+      és előre ellenőrzi, hogy belefér-e. Minden gondolat legalább 1 pontot kap.
     - Újrafuttatható (a már létező címeket kihagyja).
     - *Lefuttatva 2026-08-08-án: 300 db jött létre 2423 pontból; a gyökér-allokációk
       száma ezzel **405**, összpontjuk 17 235, a legerősebb 2243, és 62 db 1 pontos.
@@ -988,32 +988,32 @@ docker logs -f koino-backend
     létrehozása" továbbra is GYÖKÉR kategóriát hoz létre — ez ne változzon.
     **Domain-szabály (backend):** kategória szülője csak másik kategória lehet — ezt a
     modell enum + a service kikényszeríti (kézzel/API-ból erőltetett más szülő-típus → hiba).
-    **Kapcsolódó — leírás-szerkesztő a TartalomTípusnál is:** a fő menü „Új tartalomtípus
+    **Kapcsolódó — leírás-szerkesztő a GondolatTípusnál is:** a fő menü „Új gondolattípus
     létrehozása" modáljában is a blokk-szerkesztő van, és a leírás elmentődik/visszatöltődik.
-    (g) **Kártya-megjelenítés:** a kategória (és tartalomtípus) kártyát kiválasztva a body
+    (g) **Kártya-megjelenítés:** a kategória (és gondolattípus) kártyát kiválasztva a body
     a BLOKK-szerkezetet mutassa (formázott szöveg/kép), NE nyers JSON-t. (A backend a
     FormData-ból jött leírást tömbbé parse-olja — `leirasParser`.)
-    (h) **Hierarchikus kategória-választó:** a fő menü „Új tartalom létrehozása" modál
+    (h) **Hierarchikus kategória-választó:** a fő menü „Új gondolat létrehozása" modál
     kategória-legördülőjében az alkategóriák a szülőjük alatt, BEHÚZVA jelenjenek meg
     („└ " jellel, mélység szerint); gyökér-kategóriák behúzás nélkül.
 
-56. ⬜ **Alkategória a Tartalom kategória-választójában (terv 9. pont záró-ellenőrzés):**
-    hozz létre egy alkategóriát (55. pont), majd nyisd meg az „Új tartalom létrehozása"
+56. ⬜ **Alkategória a Gondolat kategória-választójában (terv 9. pont záró-ellenőrzés):**
+    hozz létre egy alkategóriát (55. pont), majd nyisd meg az „Új gondolat létrehozása"
     modált → a kategória-legördülőben az alkategória a szülője alatt, behúzva látszik;
     kiválasztva chip lesz belőle, és a legördülőből kikerül, de a többi behúzása marad jó.
 
 57. ⬜ **Javaslat-típus domain-szabályok (terv 10. pont bővítés, 2026-07-22 óta):** a kártya-
     hamburger „Javaslat létrehozása" pontja (tudatpont kell rá). Nyisd meg minden entitástípuson,
-    és nézd az 1. lépés TÍPUSGOMBJAIT: (a) **Tartalom** → mind az 5 (Törlés/Módosítás/Áthelyezés/
+    és nézd az 1. lépés TÍPUSGOMBJAIT: (a) **Gondolat** → mind az 5 (Törlés/Módosítás/Áthelyezés/
     Egyesítés/Csomag); (b) **Kategória** → Törlés/Módosítás/Egyesítés (NINCS Áthelyezés, nincs Csomag);
-    (c) **Tartalomtípus** → csak Törlés/Módosítás; (d) **Egyezmény** → CSAK Áthelyezés (az Egyezmény
+    (c) **Gondolattípus** → csak Törlés/Módosítás; (d) **Egyezmény** → CSAK Áthelyezés (az Egyezmény
     kártyán a menüpont most már működik, nem „fejlesztésre vár"). **Egyesítés — azonos típus:**
-    Tartalmat CSAK Tartalommal, Kategóriát CSAK Kategóriával (az „új entitás típusa" a kártyából
+    Gondolatot CSAK Gondolattal, Kategóriát CSAK Kategóriával (az „új entitás típusa" a kártyából
     következik, nem választható; a forrás-mezők is csak ezt a típust engedik). **Az új entitás
     szülője OPCIONÁLIS** — üresen hagyva GYÖKÉR lesz (ez volt a „nem tudok egyesíteni" hiba oka).
     **Egyezmény tárhely:** alapból az új entitás.
     **Backend-kikényszerítés (a lényeg):** ha API-ból erőltetsz tiltott kombinációt (pl. Egyezményre
-    Módosítás/Egyesítés, vagy Kategóriára Áthelyezés, vagy Tartalomtípus Egyesítés, vagy kategória+tartalom
+    Módosítás/Egyesítés, vagy Kategóriára Áthelyezés, vagy Gondolattípus Egyesítés, vagy kategória+gondolat
     egyesítés), a `POST /api/javaslat` **400**-at ad, magyar hibaüzenettel. **Egyezmény javaslat-típusok
     (2026-08-01):** Egyezményre mostantól **Törlés ÉS Áthelyezés** is indítható (módosítás/egyesítés továbbra
     is tiltott). A JavaslatModalban Egyezmény-kártyáról a **Törlés** és **Áthelyezés** gomb látszik, a többi
@@ -1022,15 +1022,15 @@ docker logs -f koino-backend
     eredeti szülője alá kerül. **Egyezmény áthelyezés
     végrehajtás:** ha egy egyezmény-áthelyezési javaslat elfogadásra kerül, az egyezmény tényleg
     átkerül az új szülő alá. **Egyesítés — gyerekek:** ha az egyesített (forrás) entitásoknak
-    GYEREKEIK vannak (tartalmak/alkategóriák), az egyesítés elfogadása után a gyerekek az ÚJ
+    GYEREKEIK vannak (gondolatok/alkategóriák), az egyesítés elfogadása után a gyerekek az ÚJ
     egyesített entitás alá kerülnek (nem a nagyszülőhöz) — a pakliban lefelé navigálva ellenőrizhető.
-    Ez a Tartalom-egyesítésre és a Kategória-egyesítésre is áll.
+    Ez a Gondolat-egyesítésre és a Kategória-egyesítésre is áll.
 58. ⬜ **Alsó sáv — entitástípus-darabszámok (2026-07-23):** a főoldal alsó statisztika-sávja
-    mostantól MIND AZ 5 entitástípus darabszámát mutatja (nem csak a tartalmakét): koino · e-embernév ·
-    🌟 tudatpont · 🧑‍🤝‍🧑 e-emberek · 📄 tartalmak · 🏷️ kategóriák · 🧩 tartalomtípusok · 📋 javaslatok ·
+    mostantól MIND AZ 5 entitástípus darabszámát mutatja (nem csak a gondolatokét): koino · e-embernév ·
+    🌟 tudatpont · 🧑‍🤝‍🧑 e-emberek · 📄 gondolatok · 🏷️ kategóriák · 🧩 gondolattípusok · 📋 javaslatok ·
     🤝 egyezmények. Ellenőrzés: a számok betöltődnek (nem „…" marad), és megegyeznek a tényleges
     darabszámmal; kis képernyőn a sáv több sorba tördhet, de minden elem látszik. Végpont:
-    GET `/api/platform/statisztika` — a válasz most `kategoriakSzama`, `tartalomTipusokSzama`,
+    GET `/api/platform/statisztika` — a válasz most `kategoriakSzama`, `gondolatTipusokSzama`,
     `javaslatokSzama`, `egyezmenyekSzama` mezőkkel is bővült. Service-teszt (2026-07-23, lefutott):
     mind a 6 darabszám visszajön.
 
@@ -1041,12 +1041,12 @@ docker logs -f koino-backend
     - **Entitás-lánc:** navigálj több entitáson (kártya-koppintás, testvér-ugrás, kereső/struktúra nézet/
       értesítés/tudatpont ugrás – akár a fő menüből, akár egy kártya menüjéből) → ↩ visszalépeget,
       ↪ előre. (A rögzítés közös pontja: `aktivEntitasMentese` → `koino:aktivEntitasValtozas` esemény.)
-    - **Rendezés mint lépés:** menj be egy tartalomba → **rendezz** (kártya- vagy fő menü) → ↩ kilép a
+    - **Rendezés mint lépés:** menj be egy gondolatba → **rendezz** (kártya- vagy fő menü) → ↩ kilép a
       rendezett (lapos) nézetből, vissza az entitásra; ↪ újra alkalmazza a rendezést.
     - **Struktúra nézet mint lépés:** nyisd meg a **Struktúra nézetet** (fő menüből VAGY kártya-menüből) → ↩ bezárja és
       visszalép; ↪ újranyitja ugyanazt (teljes vagy ág-szűrt) struktúra nézetet. A ↩ ↪ a teljes képernyős
       struktúra nézet fölött is kattintható (az alsó sáv a struktúra nézet fölé emelkedik).
-    - **Modál-védelem:** nyitott MÓDOSÍTÓ modálnál (pl. új tartalom, javaslat) a ↩ / `Alt+←` először
+    - **Modál-védelem:** nyitott MÓDOSÍTÓ modálnál (pl. új gondolat, javaslat) a ↩ / `Alt+←` először
       csak bezárja a modált (mint az Esc), nem navigál alatta.
     - Böngésző-konzol: `_debug_tortenet.allapotLekeres()` mutatja a `{visszaLehetseges, eloreLehetseges}`
       állapotot. Architektúra: `FoOldalTortenetKezelo` (két-veremes), a nézet-állapotok típusai:
@@ -1069,7 +1069,7 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 ### G) Feltöltött fájlok élettartama — árva-fájl kezelés (ÚJ, 2026-07-30)
 
 > **Cél:** az `uploads/` mappában NE gyűljenek árva fájlok. Két mechanizmus véd:
-> **(1) halasztott feltöltés** — a szövegszerkesztő kép/fájl blokkjai csak a tartalom
+> **(1) halasztott feltöltés** — a szövegszerkesztő kép/fájl blokkjai csak a gondolat
 > MENTÉSEKOR kerülnek a szerverre (előtte `blob:`-URL-lel helyi előnézet); **(2) törlés
 > és csere takarítása** — entitás törlésekor és ikon/kép cserekor a lemezes fájl is
 > törlődik (`fajlKezeloService`).
@@ -1084,21 +1084,21 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 
 **Fontos:** minden kép/fájl-teszt előtt **hard refresh** (Ctrl+Shift+R), különben a régi JS fut.
 
-40. ⬜ **Halasztott feltöltés — normál mentés:** új tartalom → szúrj be képet → az
+40. ⬜ **Halasztott feltöltés — normál mentés:** új gondolat → szúrj be képet → az
     előnézet látszik, de a *Network* fülön **nincs** `/feltoltes` hívás → Mentés → **ekkor**
-    fut a `/feltoltes/kep`, majd a `/tartalom` POST; a kép mentés után is megvan (valódi
+    fut a `/feltoltes/kep`, majd a `/gondolat` POST; a kép mentés után is megvan (valódi
     `/uploads/...` URL, nem `blob:`).
-41. ⬜ **Halasztott feltöltés — elvetés (a lényeg):** új tartalom → szúrj be képet →
+41. ⬜ **Halasztott feltöltés — elvetés (a lényeg):** új gondolat → szúrj be képet →
     zárd be **mentés nélkül** → az `uploads/kepek` (és `fajlok`) **üres marad**
     (semmi nem került fel).
-42. ⬜ **Törlés takarítása:** tartalom képpel/csatolmánnyal, majd told **0 tudatpontra**
+42. ⬜ **Törlés takarítása:** gondolat képpel/csatolmánnyal, majd told **0 tudatpontra**
     (automatikus törlés) → a hozzá tartozó fájl **eltűnik** az `uploads/`-ból.
 43. ⬜ **Ikon-csere takarítása:** szerkessz egy kategóriát/típust, tölts fel **új** ikont →
     a régi `uploads/icons/...` fájl **eltűnik**, csak az új marad.
-44. ⬜ **Szöveg-csere takarítása:** meglévő tartalom szerkesztése → cserélj le egy képet a
+44. ⬜ **Szöveg-csere takarítása:** meglévő gondolat szerkesztése → cserélj le egy képet a
     szerkesztőben → Mentés → a **régi** kép eltűnik, a megmaradók megvannak.
 
-> **Ismert él:** ha a képek feltöltése sikerül, de a rá következő tartalom-mentés maga
+> **Ismert él:** ha a képek feltöltése sikerül, de a rá következő gondolat-mentés maga
 > hibázik (ritka szerverhiba), a feltöltött képek árván maradhatnak. Ritka; szükség
 > esetén később egy vékony söprögető (nem hivatkozott + régi fájlok) biztonsági háló.
 
@@ -1107,7 +1107,7 @@ meghívás (1 tanúsító). A kódot a kibocsátó maga juttatja el a meghívott
 *A modell: a részvételi arány NEVEZŐJE csak az AKTÍV tudatpont-tulajdonosokat számolja
 (∪ a szavazókat) — a passzív figyelők nem korlátozzák a döntést. A szerep alapból
 `passziv`; bármely döntés-alakító tett (szavazás, érték javaslat, javaslattétel,
-tartalom/kategória/típus LÉTREHOZÁS) automatikusan aktívvá tesz. Részletek: fejlesztési
+gondolat/kategória/típus LÉTREHOZÁS) automatikusan aktívvá tesz. Részletek: fejlesztési
 terv „Részvételi modell" szakasz. Backend-változás után **`docker restart koino-backend`**!*
 
 45. ⬜ **Első allokáláskori szerepválasztó:** tegyél pontot egy entitásra, ahol még nincs
@@ -1117,28 +1117,28 @@ terv „Részvételi modell" szakasz. Backend-változás után **`docker restart
 47. ⬜ **Felmenő NEM blokkol:** olyan entitás, aminek a felmenőin nincs pontod → a
     figyelmeztetés látszik, de a **Mentés kitöltés nélkül is** végbemegy. A „Felmenők
     kitöltése" gomb → **felmenőnként sorban** felugrik a szerepválasztó.
-48. ⬜ **Létrehozó automatikusan aktív:** hozz létre egy ÚJ tartalmat/kategóriát/típust →
+48. ⬜ **Létrehozó automatikusan aktív:** hozz létre egy ÚJ gondolatot/kategóriát/típust →
     a kártya **🙋 Részvételi beállítások** pontja → **aktív**-ot mutat (a kezdő értékjavaslat miatt).
 49. ⬜ **„Részvételi beállítások" menü:** ahol van pontod, a menüpont aktív; nyisd meg →
     a jelenlegi szerep van kiválasztva → válts → Mentés → újranyitva a váltott érték látszik.
     Ahol nincs pontod → a menüpont **inaktív**.
-50. ⬜ **Nevező-hatás (a lényeg):** A és B is tegyen pontot egy tartalomra; A **passzív**,
+50. ⬜ **Nevező-hatás (a lényeg):** A és B is tegyen pontot egy gondolatra; A **passzív**,
     B tegyen rá **törlési javaslatot** (a beadó auto-„Támogat" szavazatot kap + aktívvá válik).
     - *Elvárt:* a részvételi arány **100%** (nevező = {B}), NEM 50%. Ha a meglévő javaslatot
       nézed, a friss számhoz vagy új javaslat kell, vagy egy szavazat-változás (elavultra jelöl → cron).
 51. ⬜ **≤100% szavazás után passzívra váltva:** B szavazzon egy javaslaton, majd a
     „Részvételi beállítások"-ban állítsa magát **passzív**-ra → az arány **nem** lép 100% fölé
     (a szavazó-unió miatt B a nevezőben marad).
-52. ⬜ **Módosítási javaslat — kategória + tartalomtípus is (2026-07-31):** egy **Tartalom**
+52. ⬜ **Módosítási javaslat — kategória + gondolattípus is (2026-07-31):** egy **Gondolat**
     kártyán indíts **Módosítás** javaslatot. A 2. lépés formájában a Cím és a Szöveg alatt
-    mostantól **két új mező** is van: (a) **Tartalom típusa** legördülő — a tartalom jelenlegi
+    mostantól **két új mező** is van: (a) **Gondolat típusa** legördülő — a gondolat jelenlegi
     típusa **előre kiválasztva**, első opciója „– Nincs típus –"; (b) **Kategóriák (max. 3)** —
     a jelenlegi kategóriák **chipként** megjelenítve (✕-szel törölhetők), a legördülő behúzva
     mutatja a hierarchiát, és a **4. kategóriát már nem enged** hozzáadni (letiltott legördülő).
     Változtass a típuson és a kategóriákon, tedd meg a javaslatot, majd **fogadtasd el** (szavazás/
-    cron). *Elvárt:* elfogadás után a tartalom kártyáján a **típus-ikon (jobb, okker kör)** és a
-    **kategória-ikonok (bal, lila kör)** az új értékeket mutatják. **Csak Tartalomnál** jelenik meg
-    a két mező — **Kategória** és **Tartalomtípus** entitás módosításánál NINCS (nekik nincs ilyen
+    cron). *Elvárt:* elfogadás után a gondolat kártyáján a **típus-ikon (jobb, okker kör)** és a
+    **kategória-ikonok (bal, lila kör)** az új értékeket mutatják. **Csak Gondolatnál** jelenik meg
+    a két mező — **Kategória** és **Gondolattípus** entitás módosításánál NINCS (nekik nincs ilyen
     mezőjük). Megjegyzés: **backend-módosítás nem történt** (a `modositasAdatok` már generikusan
     alkalmazódik `updateById`-vel, a „max 3 kategória" a szerveren is érvényes) → elég a böngésző
     **hard-refresh**-e, `docker restart` nem kell.
@@ -1254,7 +1254,7 @@ lapok között megtört a folytonosság.)*
 ```json
 { "success": true, "osszesGyerekPont": 13469, "vanTovabb": false,
   "kurzor": { "pont": 1, "id": "…" },
-  "gyerekek": [ { "entitasId": "…", "entitasTipus": "Tartalom", "cim": "…",
+  "gyerekek": [ { "entitasId": "…", "entitasTipus": "Gondolat", "cim": "…",
                   "hierarchikusOsszesPont": 8400, "vanGyereke": true } ] }
 ```
 
@@ -1276,7 +1276,7 @@ lapok között megtört a folytonosság.)*
   `{ ikon, nev }` alakban; az `ikon` feltöltött kép-URL VAGY emoji. A Struktúra
   nézettel KÖZÖS forrásból (`strukturaService.mellekIkonokFeltoltese`), típusonként
   egy csoportos lekérdezéssel. A síkidom FORMÁJA az entitástípust mutatja, ezek az
-  ikonok pedig azt, amit a forma nem tud: a kategóriát és a tartalomtípust.
+  ikonok pedig azt, amit a forma nem tud: a kategóriát és a gondolattípust.
 - Indexek: `{ szuloId, hierarchikusOsszesPont, _id }` — a szűrés és a rendezés is
   teljesen indexelt (nincs memóriabeli rendezés).
 - Backend-változás → **`docker restart koino-backend`**.
@@ -1285,7 +1285,7 @@ lapok között megtört a folytonosság.)*
   adagokban 105 egyedi elemet ad, duplikátum és kimaradás nélkül.
 
 **Teszt-adat a próbához** (csak fejlesztői környezetben):
-`docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér tartalmat hoz
+`docker exec koino-backend node tools/sikidomTesztAdat.js` — 100 gyökér gondolatot hoz
 létre 900-tól 1-ig terjedő tudatponttal. Újrafuttatható (a már létező címeket kihagyja).
 
 *Al-entitások (2026-08-03): a síkidomokon BELÜL ugyanez a spirál ismétlődik — a legnagyobb
@@ -1298,11 +1298,11 @@ al-síkidomja közül egy sem lóg ki a szülőjéből.*
 
 ## 6. Ismert megjegyzések / buktatók
 
-- **✅ Küszöb csak Tartalomból — JAVÍTVA (2026-07-18):** a döntéskor a küszöböket
-  korábban csak a `Tartalom` típusú érintettekből átlagolta a rendszer; kategórián/
-  tartalomtípuson tett javaslat az alapértelmezett 51%/0%-kal dőlt el. A javított
+- **✅ Küszöb csak Gondolatból — JAVÍTVA (2026-07-18):** a döntéskor a küszöböket
+  korábban csak a `Gondolat` típusú érintettekből átlagolta a rendszer; kategórián/
+  gondolattípuson tett javaslat az alapértelmezett 51%/0%-kal dőlt el. A javított
   `erintettEntitasokKuszobertekenekLekerese` mostantól **mindhárom érték-képes
-  típusból** (Tartalom, Kategoria, TartalomTipus) átlagol; ha egyik sincs az
+  típusból** (Gondolat, Kategoria, GondolatTipus) átlagol; ha egyik sincs az
   érintettek között, marad az alapértelmezett 51%/0%.
 - **Nyitott finomság (terv 10. pont):** a szavazás backend-szabálya a javaslat
   *érintett entitásait* nézi, a frontend viszont a javaslat entitásán ellenőriz.
@@ -1315,7 +1315,7 @@ al-síkidomja közül egy sem lóg ki a szülőjéből.*
   a ⏱-t mutatják. *(Ekkor javítva egy régi hiba is: a közös időzítés `findAll({toredekCsoportId})`-val
   a DB összes javaslatán számolt — most `findByToredekCsoportId` szűr helyesen a csoportra.)*
 - **Egyezmény kártya „Javaslat létrehozása"** menüpont még 🚧 (nincs kész).
-- Régi (csak tartalom) érték-adatokat a polimorf átállásnál eldobtuk; a meglévő
+- Régi (csak gondolat) érték-adatokat a polimorf átállásnál eldobtuk; a meglévő
   entitások az **első** érték javaslatnál kapják meg a hisztogramjukat.
 - **V3–V4 API-változások (2026-07-18):** a `GET /api/javaslat/:id/szavazatok`
   végpont TÖRÖLVE (egyéni szavazatokat adott ki — D2 sértés); a
@@ -1339,21 +1339,21 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
 
 ### ✅ Igazolt (működik)
 - **Regisztráció + bejelentkezés** (UI): 3 e-ember, mind 10 000 tudatpont.
-- **Tartalom létrehozása küszöbökkel** (UI): Tartalom-A (60/60/0/3perc) és Tartalom-B
+- **Gondolat létrehozása küszöbökkel** (UI): Gondolat-A (60/60/0/3perc) és Gondolat-B
   (60/**90**/0/3perc); a `3 perc → 180 mp` időátváltás a DB-ben helyes.
 - **Küszöb érték javaslat entitás-polimorf**: az első érték javaslatnál **létrejön a
-  hisztogram mind a 3 típusra** (Tartalom, Kategória, Tartalomtípus).
+  hisztogram mind a 3 típusra** (Gondolat, Kategória, Gondolattípus).
 - **Kezdő tudatpont**: a létrehozó egyenlege helyesen csökken (Anna 10000 → 9600 = 4×100).
 - **Tudatpont-hozzárendelés** (API): Béla+Cili 100-100 pontja A-ra és B-re → 3 tulajdonos.
-- **Javaslat polimorf** (a fő B) fókusz): **kategórián és tartalomtípuson is 201**,
-  „szülő tartalom kötelező" hiba **nélkül**.
-- **Döntési kör – ELFOGADÁS-ág** (Tartalom-A): 3 Támogat → részvétel 100% ≥ 60%,
-  támogatottság 100% ≥ 60% → **Elfogadva** → **egyezmény a Tartalomnál**, és a Módosítás
-  végrehajtva (a cím „Tartalom-A ELFOGADVA" lett). A UI is tükrözi.
-- **Döntési kör – ELUTASÍTÁS-ág** (Tartalom-B): csak a létrehozó szavazata → részvétel
+- **Javaslat polimorf** (a fő B) fókusz): **kategórián és gondolattípuson is 201**,
+  „szülő gondolat kötelező" hiba **nélkül**.
+- **Döntési kör – ELFOGADÁS-ág** (Gondolat-A): 3 Támogat → részvétel 100% ≥ 60%,
+  támogatottság 100% ≥ 60% → **Elfogadva** → **egyezmény a Gondolatnál**, és a Módosítás
+  végrehajtva (a cím „Gondolat-A ELFOGADVA" lett). A UI is tükrözi.
+- **Döntési kör – ELUTASÍTÁS-ág** (Gondolat-B): csak a létrehozó szavazata → részvétel
   33% < 90% → a döntési idő lejártakor **Elvetve**, nincs egyezmény. ✅ (épp a kért eset)
 - **Egyezmény helye polimorf**: Módosítás → az érintett entitásnál jön létre; igazolva
-  **Tartalmon** és **Kategórián** is (`szuloTipus` helyes).
+  **Gondolaton** és **Kategórián** is (`szuloTipus` helyes).
 - **A cron** percenként lezárja a lejáró javaslatokat; az elfogadott Módosítás
   javaslatból egyezmény lesz (a javaslat „átalakul", nem marad Aktiv listában).
 
@@ -1362,9 +1362,9 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
    null-ellenőrzés nélkül olvassa a `eredmeny.kivalasztottEntitas.entitasId`-t, miközben
    a backend üres paklinál `kivalasztottEntitas: null`-t ad ([`pakliService.js:40`](../backend/services/pakliService.js:40)).
    Hibaüzenet: „Cannot read properties of null (reading 'entitasId')". Kerülő út: az első
-   tartalom létrehozása (a menü a hiba ellenére működik) feloldja. → **JAVÍTVA
+   gondolat létrehozása (a menü a hiba ellenére működik) feloldja. → **JAVÍTVA
    (2026-07-18):** null-védelem + 🌱 barátságos üres állapot (lásd 44. forgatókönyv).
-2. ~~**⚠️ Kategória/tartalomtípus javaslat a saját küszöbét figyelmen kívül hagyja.**~~
+2. ~~**⚠️ Kategória/gondolattípus javaslat a saját küszöbét figyelmen kívül hagyja.**~~
    → **JAVÍTVA (2026-07-18):** a küszöb-lekérés kiterjesztve mindhárom érték-képes
    típusra (`erintettEntitasokKuszobertekenekLekerese` — lásd a 6. szakasz jegyzetét).
    Az itteni eredeti találat: a kereszt-teszt igazolta, hogy a kategória-javaslat 51/0-val
@@ -1380,7 +1380,7 @@ Böngészős + API/DB hibrid menet, 3 e-emberrel (tesztAnna/Bela/Cili), tiszta D
 ### ⬜ Böngészőben még nem ellenőrzött (API/DB-vel igen)
 - Szavazat-UI (SzavazatModal): korábbi szavazat kiemelése, módosítás, visszavonás.
 - Jogosultság-függő menük halványítása olyan entitáson, ahol nincs tudatpont.
-- „Részletes adatok" modál tartalma; egyezmény-kártya külön megjelenítése a pakliban.
+- „Részletes adatok" modál gondolata; egyezmény-kártya külön megjelenítése a pakliban.
 
 ### Síkidom nézet — MÉLYSÉGI teszt-adat (2026-08-06)
 
@@ -1395,7 +1395,7 @@ docker exec koino-backend node tools/sikidomMelysegTesztAdat.js 3 5
 
 (mélység, gyerek/csomópont) — a `Közösségi döntéshozatal` gyökér alá épít fát a
 rendes service-en át, tehát minden származtatott rekord konzisztens. Újrafuttatható
-(a már létező című gyerekeket kihagyja). Futtatva: 155 tartalom 3 szinten.
+(a már létező című gyerekeket kihagyja). Futtatva: 155 gondolat 3 szinten.
 
 **Amit a mélységi próbán nézni kell:**
 
@@ -1434,7 +1434,7 @@ koppintás — csak a lyuk maga.
    amíg van le nem töltött testvér.
 4. **Kis adathalmazon** (ahol minden testvér letöltve): a `magSugar` **0**, és a
    legkisebb síkidom a KÖZÉPPONTBAN ül, láthatóan. Ez maga az üzenet, hogy nincs
-   több tartalom.
+   több gondolat.
 5. A beágyazás nem sérülhet: ha mégis, a konzol azonnal szól
    (`BEÁGYAZÁS SÉRÜL: gyerek a szülőn kívül`).
 
@@ -1449,7 +1449,7 @@ legkisebb pontosan a (0,0)-ba kerül. Kevés, nagy gyereknél a felső határ é
 harap: mag 0,56 = 1 − 2×0,22, külső sugár pont 1,0000.*
 
 
-### Síkidom nézet — a „további tartalmak" AJÁNLAT megjelenése (2026-08-11, 2. lépés)
+### Síkidom nézet — a „további gondolatok" AJÁNLAT megjelenése (2026-08-11, 2. lépés)
 
 Az 1. lépés (pakolási mag) folytatása. A koppintás MÉG NEM működik — az a 3. lépés;
 most csak azt nézzük, a felirat a helyes pillanatban jelenik-e meg, és jól néz-e ki.
@@ -1463,10 +1463,10 @@ belenagyítottál) — nem minden látható szülő közepén.
 1. A 10 405 gyökeres adaton nyisd meg a Síkidom nézetet, és nagyíts befelé.
 2. Kezdetben a „— nagyíts befelé —" súgó szól: van még mit előhívni nagyítással.
 3. Nagyjából az **illesztett nézet ötszörösénél** (telefonon a nyolcszorosánál) a
-   súgó helyét átveszi a **„további tartalmak"** felirat, rendes (nem halvány)
+   súgó helyét átveszi a **„további gondolatok"** felirat, rendes (nem halvány)
    szövegszínnel. A kettő SOSEM látszik egyszerre.
 4. Kis adathalmazon (minden testvér letöltve) a felirat **soha nem jelenik meg** —
-   nincs több tartalom, és lyuk sincs.
+   nincs több gondolat, és lyuk sincs.
 
 5. **TOVÁBB KÖZELÍTVE a feliratnak OTT KELL MARADNIA.** Ez 2026-08-11-en hiba volt
    (eltűnt, amikor a kijelző-mag belecsúszott a pakolási lyukba) — a feltétel azóta
@@ -1497,7 +1497,7 @@ Ezzel teljes a „végtelen testvér" kör: a felirat mostantól működik.
 
 **Amit nézni kell:**
 
-1. Nagyíts befelé, amíg megjelenik a „további tartalmak" felirat, majd **koppints rá**.
+1. Nagyíts befelé, amíg megjelenik a „további gondolatok" felirat, majd **koppints rá**.
    A konzolban `SikidomModal._ajanlatKoppintas` sor jelenik meg (`ujPlafon`, `jelolt`).
 2. Megérkezik a következő adag, és az **egész elrendezés újraépül**. A folyamatjelző
    közben látszik — az adag több körben jön (150-esével), ez eltarthat pár másodpercig.
@@ -1554,7 +1554,7 @@ képernyő közepétől. Mind a 4 állítás áll.*
 **Amit a böngészőben nézni kell:**
 
 1. Nagyíts MÉLYEN bele az üres magba (annyira, hogy a szaggatott kör se látszódjon),
-   és koppints a „további tartalmak"-ra. A lepakolás után a megjelölt síkidomnak a
+   és koppints a „további gondolatok"-ra. A lepakolás után a megjelölt síkidomnak a
    **képernyő közepén** kell lennie, a szaggatott határjelölő gyűrűvel körülvéve.
 2. A konzolban `FÓKUSZ a megjelöltre` sor. Ha `FÓKUSZ: kihagyva (közben nagyított)`,
    akkor a letöltés alatt magad mozgattad a nézetet — ilyenkor a te szándékod győz.
@@ -1591,7 +1591,7 @@ gyökér-szinten 10 405-ből 9 910 egypontos, tehát ott a lapozás után az új
 külső gyűrűbe kerül, és a kép közepén látszólag nem történik semmi. Itt viszont a
 pontok érdemben szórnak, tehát:
 
-1. Nagyíts bele a mezőbe, amíg megjelenik a „további tartalmak" felirat, és koppints rá.
+1. Nagyíts bele a mezőbe, amíg megjelenik a „további gondolatok" felirat, és koppints rá.
 2. **Az új adagnak KÖZÉPRE kell érkeznie** — a megjelölt síkidom kifelé tolódik, a
    határjelölő gyűrű a képernyő közepén marad, és körülötte megjelennek az újak.
 3. A megjelölt síkidom LÁTSZÓ MÉRETE közben nem változhat (a mélység megmarad).
@@ -1740,7 +1740,7 @@ korlátlanul halmozott. Mostantól a folyosón kívül minden törlődik, a szin
 3. **Visszafelé ÚJRALETÖLTÉS INDUL** — ez most már a helyes viselkedés (korábban
    hiba lett volna). A hálózaton `sikidom/gyerekek` kérés megy ugyanarra a szülőre,
    és a kép ugyanaz lesz, mint lefelé menet.
-4. **A pakolási lyuk és a „további tartalmak" ajánlat** ugyanúgy viselkedjen, mint
+4. **A pakolási lyuk és a „további gondolatok" ajánlat** ugyanúgy viselkedjen, mint
    eddig — a söprés nem érintheti a folyosón belüli szinteket.
 5. **HOSSZÚ BÖNGÉSZÉS (ÚJ):** járj be 10-15 KÜLÖNBÖZŐ ágat oda-vissza, majd térj
    vissza az elsőhöz. A nézetnek ugyanolyan fürgének kell lennie, mint az elején —
@@ -1775,7 +1775,7 @@ A nézet mostantól mélység szerint fokozza a részletességet, és csomópont
    csak a mélyebb szinteken szűr.
 3. **Ha minden testvér helyet kapott, nincs szaggatott kör** és nincs rejtés a
    közepén — a legkisebb síkidom ott ül, láthatóan. Ez az üzenet, hogy nincs több
-   tartalom. Egy entitásos síkidomban a gyereknek azonnal látszania kell.
+   gondolat. Egy entitásos síkidomban a gyereknek azonnal látszania kell.
 4. **Szintváltáskor átrendeződik a kép** (250 → 5 000). Ez TERVEZETT: végtelen
    testvérrel nem lehet megúszni az újrapakolást, csak ritkítani. Ha zavaróan
    erősnek érzed, jelezd — az időzítésen lehet állítani.
@@ -1814,7 +1814,7 @@ képernyő; a horgony a szülő; 0 hiba.*
 javításával együtt a visszalépcsőzés működik.*
 
 Ha egy szintről kizoomolsz, a lerakott mennyiség **visszalép egy adaggal**
-(15 000 → 10 000 → 5 000), és a „további tartalmak" mag újra megjelenik. A kioldás
+(15 000 → 10 000 → 5 000), és a „további gondolatok" mag újra megjelenik. A kioldás
 2026-08-17 óta a **valódi nagyítási gesztushoz** kötött (görgő, csippentés, +/− gomb),
 nem a mért képernyő-sugárhoz. Részletek:
 [fejlesztesi_terv.md](fejlesztesi_terv.md).
@@ -1839,21 +1839,21 @@ oszlopban megmondja: ⛔ kérés-mód nyitva · ⛔ nincs mérce · ⏳ még nem
 
 **Amit nézni kell:**
 
-1. **A lapozás NE egye meg önmagát.** Koppints a „további tartalmak"-ra, és utána
+1. **A lapozás NE egye meg önmagát.** Koppints a „további gondolatok"-ra, és utána
    **ne csinálj semmit** 5–10 másodpercig. A konzolban NEM szabad megjelennie
    `SikidomModal._plafonLepcsoVisszafele` sornak. *(Ez volt a hiba, ami miatt
    2026-08-16-án kikapcsoltuk: a lapozás saját fókusz-animációja oldotta ki, és
    három másodperccel a koppintás után visszavette a kért adagot.)*
 
-   ⚠️ **A KIFOGYOTT SZINT.** Ha a plafont a rendelkezésre álló tartalom FÖLÉ emeled
+   ⚠️ **A KIFOGYOTT SZINT.** Ha a plafont a rendelkezésre álló gondolat FÖLÉ emeled
    (pl. 10 407 gyökérnél a második lapozás 15 000-re), a kért adag sosem „érkezik meg"
    hiánytalanul. 2026-08-17-ig ettől a kérés-mód örökre nyitva maradt, és a lépcső
    **egyáltalán nem szólalt meg többé**. Javítva — de ez az az eset, amit érdemes
-   külön kipróbálni: lapozz addig, amíg elfogy a tartalom, és a `_lepcsoAllapot()`
+   külön kipróbálni: lapozz addig, amíg elfogy a gondolat, és a `_lepcsoAllapot()`
    `miert` oszlopában NEM szabad „kérés-mód nyitva"-t látnod.
 2. **A lépcső lefelé.** Lapozz kétszer (5 000 → 10 000 → 15 000), majd **görgővel**
    zoomolj kifelé. Két `_plafonLepcsoVisszafele` sort várunk, mindkettőnél
-   `kizoomolas ≈ 0,5`, és a „további tartalmak" magnak vissza kell jönnie.
+   `kizoomolas ≈ 0,5`, és a „további gondolatok" magnak vissza kell jönnie.
    Egyszerre **csak egy** adagot lép vissza — a többlépcsős visszaút magától áll össze.
 3. **A gesztus-szorzó tükre.** Zoomolj be, majd pontosan ugyanannyit vissza:
    `window._debug_sikidom._gesztusSzorzo` térjen vissza a kiinduló értékhez
@@ -2057,9 +2057,9 @@ fiókra vonatkozik, nem egy ágra.
     eseménytípus-pipák **nem vesznek el** (a mentés a teljes alapbeállítást cseréli).
 
 77. ⬜ 🔴 **A levél tényleg kimegy:** kapcsold be, majd válts ki egy olyan eseményt,
-    amire fel vagy iratkozva (pl. hozz létre egy tartalmat egy figyelt entitás alá egy
+    amire fel vagy iratkozva (pl. hozz létre egy gondolatot egy figyelt entitás alá egy
     MÁSIK e-emberrel). A naplóban megjelenik a levél, tárgya a felülettel egyező
-    megnevezéssel: `koino — Új tartalom jött létre — <entitás címe>`.
+    megnevezéssel: `koino — Új gondolat jött létre — <entitás címe>`.
 
 78. ⬜ **Alapból NEM megy semmi:** egy olyan e-embernél, aki NEM kapcsolta be, ugyanez
     az esemény felületi értesítést ad, de **levelet nem**. (Service-szinten mérve:
@@ -2106,7 +2106,7 @@ időköze. Így egyetlen ütemezés kiszolgál bármilyen időközt. Kézi futta
     LEGRÉGEBBI várakozó értesítés kora dönt — így a bekapcsolás után nem csap be
     azonnal egy levél. **Üres összefoglalót sosem küldünk.**
 
-86. ⬜ **A levél tartalma:** egy levél, tárgya `koino — N új értesítésed van`, benne
+86. ⬜ **A levél gondolata:** egy levél, tárgya `koino — N új értesítésed van`, benne
     felsorolva az értesítések (ugyanazokkal a megnevezésekkel, mint a felületen).
     Kiküldés után mind `emailKikuldve: true`, tehát a következő összefoglalóba
     már nem kerülnek bele.
@@ -2125,14 +2125,14 @@ felület mellett, külön is a mérlegre tehető. Akkor hasznos, ha a szétoszt�
 akarod ellenőrizni (ki mit visz, mi kettőződik meg) anélkül, hogy egy teljes szavazást
 végig kellene játszanod.
 
-**Felmérés (nem módosít semmit) — kiírja a tartalom tudatpont-tulajdonosait:**
+**Felmérés (nem módosít semmit) — kiírja a gondolat tudatpont-tulajdonosait:**
 ```
-docker exec koino-backend node tools/kulonvalasProba.js <tartalomId>
+docker exec koino-backend node tools/kulonvalasProba.js <gondolatId>
 ```
 
 **Szétválasztás — a felsorolt e-emberek különválnak:**
 ```
-docker exec koino-backend node tools/kulonvalasProba.js <tartalomId> <eemberId1,eemberId2> "Az új ág címe" [javaslatId]
+docker exec koino-backend node tools/kulonvalasProba.js <gondolatId> <eemberId1,eemberId2> "Az új ág címe" [javaslatId]
 ```
 
 A `javaslatId` elhagyható; ilyenkor próba-azonosító kerül a bejegyzésbe, és a „Másik ág"
@@ -2160,9 +2160,9 @@ ne futtasd.**
 
 Köztes szint nem másolódik üresen: ami átmegy, a legközelebbi ÁTKERÜLT ősre csatlakozik.
 
-Hasznos ellenőrző lekérdezés — melyik tartalmon van elég tulajdonos a próbához:
+Hasznos ellenőrző lekérdezés — melyik gondolaton van elég tulajdonos a próbához:
 ```
-docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tudatponthozzarendeles.aggregate([{ $match: { entitasTipus: "Tartalom", tudatPontok: { $gt: 0 } } }, { $group: { _id: "$entitasId", tulajdonosok: { $sum: 1 } } }, { $match: { tulajdonosok: { $gte: 2 } } }]).forEach(d => print(d._id + "  " + d.tulajdonosok))'
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tudatponthozzarendeles.aggregate([{ $match: { entitasTipus: "Gondolat", tudatPontok: { $gt: 0 } } }, { $group: { _id: "$entitasId", tulajdonosok: { $sum: 1 } } }, { $match: { tulajdonosok: { $gte: 2 } } }]).forEach(d => print(d._id + "  " + d.tulajdonosok))'
 ```
 
 **Szándékos védőkorlát:** ha MINDEN tulajdonos szerepel a különválók listájában, az eszköz
@@ -2170,7 +2170,7 @@ hibával elakad („A főág 0 tudatpontra esne"), MIELŐTT bármit módosítana
 hanem a modell ellenőrzése: valódi szavazásból ez nem következhet be.
 
 **Ami még nincs benne:** a motor az ELVETETT ágon még nincs bekötve (5. lépés), és a
-bejárás csak TARTALOM-leszármazottakat oszt szét. A tartalom alatti javaslatok és
+bejárás csak GONDOLAT-leszármazottakat oszt szét. A gondolat alatti javaslatok és
 egyezmények a helyükön maradnak — a javaslat folyamatban lévő döntés, az egyezményt pedig
 a `tudatpontHozzarendeles` enum-hiánya miatt még nem mozgatjuk.
 
@@ -2189,25 +2189,25 @@ gyökér        A=100, B=50
 
 Az eredmény ellenőrzése (a fa alakja mindkét ágon):
 ```
-docker exec koino-mongodb-dev mongosh koino --quiet --eval 'function fa(id,sz){const t=db.tartaloms.findOne({_id:ObjectId(id)});const a=db.tudatpontallokacios.findOne({entitasId:ObjectId(id),entitasTipus:"Tartalom"});print("  ".repeat(sz)+"- "+t.cim+"   ["+(a?a.osszesPont:0)+" pont]");db.tartaloms.find({szuloId:ObjectId(id)}).forEach(gy=>fa(gy._id.toString(),sz+1));} fa("<agGyokerId>",1)'
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'function fa(id,sz){const t=db.gondolats.findOne({_id:ObjectId(id)});const a=db.tudatpontallokacios.findOne({entitasId:ObjectId(id),entitasTipus:"Gondolat"});print("  ".repeat(sz)+"- "+t.cim+"   ["+(a?a.osszesPont:0)+" pont]");db.gondolats.find({szuloId:ObjectId(id)}).forEach(gy=>fa(gy._id.toString(),sz+1));} fa("<agGyokerId>",1)'
 ```
 
 ## Különválás: elfogadott módosítás után (2026-08-25, a 4. lépés)
 
 **Ez már a valódi menet — böngészőből is végigjátszható.** A forgatókönyv:
 
-1. Egy tartalomra **három** e-embernek legyen tudatpontja (A, B, C).
+1. Egy gondolatra **három** e-embernek legyen tudatpontja (A, B, C).
 2. **A** tegyen rá **módosítási javaslatot** (a beadó automatikusan „Támogat"-ot kap).
 3. **C** szavazzon *Támogatom*, **B** *Ellenzem* — és B **pipálja be** a külön ág kérdését.
 4. Várd meg a lezárást (cron, percenként), vagy told múltba a hatályba lépést.
 
-**Amit látnod kell:** a javaslat elfogadva → az eredeti tartalom a **módosított** címmel él
-tovább (ez a főág, ő tartotta meg az azonosítót), és **létrejön egy új tartalom az EREDETI
+**Amit látnod kell:** a javaslat elfogadva → az eredeti gondolat a **módosított** címmel él
+tovább (ez a főág, ő tartotta meg az azonosítót), és **létrejön egy új gondolat az EREDETI
 címmel**, rajta B tudatpontjával. A főág elveszti B pontjait.
 
 Ellenőrzés adatbázisban (a testvér-bejegyzés mindkét oldalon):
 ```
-docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tartaloms.find({"kulonvalasok.0": {$exists: true}}, {cim:1, kulonvalasok:1}).forEach(t => print(t.cim + "  ->  agSzerep: " + t.kulonvalasok[0].agSzerep + ", testver: " + t.kulonvalasok[0].testverId))'
+docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.gondolats.find({"kulonvalasok.0": {$exists: true}}, {cim:1, kulonvalasok:1}).forEach(t => print(t.cim + "  ->  agSzerep: " + t.kulonvalasok[0].agSzerep + ", testver: " + t.kulonvalasok[0].testverId))'
 ```
 
 **Amit külön érdemes megnézni:**
@@ -2216,7 +2216,7 @@ docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tartaloms.find({"
 |---|---|
 | Senki nem pipálja be | Nem jön létre új ág; a főág viszi az összes pontot |
 | Csak tartózkodó „kérné" | A pipa meg sem jelenik; a mentett érték `false` |
-| Az ellenző időközben elveszi a pontját a tartalomról | Nincs szétválás; a naplóban „kihagyva", NEM hiba |
+| Az ellenző időközben elveszi a pontját a gondolatról | Nincs szétválás; a naplóban „kihagyva", NEM hiba |
 | A javaslat nem Módosítás (Törlés/Áthelyezés/Egyesítés) | A különválás meg sem indul (első kör hatóköre) |
 
 > A különválás **külön try/catch-ben** fut, az egyezmény létrejötte UTÁN. Ha elhasal, a
@@ -2224,7 +2224,7 @@ docker exec koino-mongodb-dev mongosh koino --quiet --eval 'db.tartaloms.find({"
 
 > ⚠️ **Ismert, még eldöntetlen:** minden pont-mozgatás `tudatpontValtozas` értesítést küld
 > a figyelőknek, így egy több fős különválás sok értesítést szór szét ugyanarról az
-> egyetlen eseményről. Figyelt tartalommal tesztelve ez látszani fog.
+> egyetlen eseményről. Figyelt gondolattal tesztelve ez látszani fog.
 
 ## Különválás: ELVETETT módosítás után (2026-08-25, az 5. lépés)
 
@@ -2235,8 +2235,8 @@ A tükörkép: ha a javaslat **megbukik**, a főágon minden marad a régiben �
 javaslatot **és pipálja be** a külön ágat, **B** és **C** pedig *Ellenzem* (így a
 támogatottság 33% marad, a javaslat elbukik).
 
-**Amit látnod kell:** a javaslat `Elvetve` → az eredeti tartalom **változatlan** (cím és
-szöveg is), és létrejön egy új tartalom a **módosított** címmel, rajta A tudatpontjával.
+**Amit látnod kell:** a javaslat `Elvetve` → az eredeti gondolat **változatlan** (cím és
+szöveg is), és létrejön egy új gondolat a **módosított** címmel, rajta A tudatpontjával.
 
 | Amit ellenőrizni kell | Elvárt |
 |---|---|
@@ -2263,11 +2263,11 @@ javaslatot (kártya menü → *Küszöb érték javaslat*), és nézd meg szétv
 | Az új ágon hány érték javaslat sor van | **1** — az alapító alapértelmezett sora FELÜLÍRÓDIK, nem duplázódik |
 | Ha a különválónak nem volt érték javaslata | az új ág alapértelmezett küszöbökkel indul |
 
-**A „Másik ág" fül (7. lépés).** A kettévált tartalom kártyáján megjelenik egy fülsáv:
-első fül a tartalom, második a *Másik ág*. Amit nézni kell:
+**A „Másik ág" fül (7. lépés).** A kettévált gondolat kártyáján megjelenik egy fülsáv:
+első fül a gondolat, második a *Másik ág*. Amit nézni kell:
 
 - **Ahol NINCS szétválás, a kártya megjelenése változatlan** — egyetlen fülnél a fülsáv
-  nem rajzol sávot. Ezt a régi tartalmakon is ellenőrizd, ez a legfontosabb regresszió.
+  nem rajzol sávot. Ezt a régi gondolatokon is ellenőrizd, ez a legfontosabb regresszió.
 - A *Másik ág* fülön: mondat a szétválásról + dátum, alatta **koppintható hivatkozás** a
   testvérre → a pakli odanavigál.
 - **Mindkét** kártyán megjelenik (a főágon és a különvált ágon is), más szöveggel.

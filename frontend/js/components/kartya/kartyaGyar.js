@@ -11,17 +11,17 @@
 
 // ===== IMPORTOK =====
 import Kartya from './Kartya.js';
-import TartalomKartya from './TartalomKartya.js';
+import GondolatKartya from './GondolatKartya.js';
 import KategoriaKartya from './KategoriaKartya.js';
-import TartalomTipusKartya from './TartalomTipusKartya.js';
+import GondolatTipusKartya from './GondolatTipusKartya.js';
 import JavaslatKartya from './JavaslatKartya.js';
 import EgyezmenyKartya from './EgyezmenyKartya.js';
 
 // Entitástípus → kártya-osztály
 const TIPUS_KARTYA = {
-  Tartalom:      TartalomKartya,
+  Gondolat:      GondolatKartya,
   Kategoria:     KategoriaKartya,
-  TartalomTipus: TartalomTipusKartya,
+  GondolatTipus: GondolatTipusKartya,
   Javaslat:      JavaslatKartya,
   Egyezmeny:     EgyezmenyKartya
 };

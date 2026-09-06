@@ -11,9 +11,9 @@ velük. (Ugyanaz az ikon néha más helyen más dolgot jelöl — a környezet m
 | 🗺️ | Struktúra nézet |
 | ↕️ | Rendezés |
 | 🔔 | Értesítések / értesítési beállítások |
-| ✏️ | Új tartalom létrehozása |
+| ✏️ | Új gondolat létrehozása |
 | 🏷️ | Új kategória létrehozása |
-| 🧩 | Új tartalom típus létrehozása |
+| 🧩 | Új gondolat típus létrehozása |
 | ✉️ | Meghívóim |
 | 🌟 | Tudatpontok |
 | ⚙️ | eember beállítások |
@@ -30,15 +30,15 @@ velük. (Ugyanaz az ikon néha más helyen más dolgot jelöl — a környezet m
 | ℹ️ | Részletes adatok |
 | ⚖️ | Küszöb érték javaslat |
 | 🔔 | Értesítési beállítások |
-| ✏️ | Új tartalom létrehozása (az adott entitás alá) |
+| ✏️ | Új gondolat létrehozása (az adott entitás alá) |
 
 ## Entitástípusok
 
 | Ikon | Jelentés |
 |---|---|
-| 📄 | Tartalom |
+| 📄 | Gondolat |
 | 🏷️ | Kategória |
-| 🧩 | Tartalomtípus |
+| 🧩 | Gondolattípus |
 
 ## Javaslat mutatói (a kártyán)
 

@@ -4,9 +4,9 @@
 // MÉRETEZÉS KEZELŐ
 // Felelősség:
 // - Méretezési mód be/ki kapcsolása egy blokkon
-// - Szöveges blokk: szabad x+y méretezés, minimum a tartalom természetes mérete
+// - Szöveges blokk: szabad x+y méretezés, minimum a gondolat természetes mérete
 // - Képblokk: kötelezően arányos méretezés
-// - Fájl, link, entitás: szabad x+y méretezés, tartalom font-size-a is skálázódik
+// - Fájl, link, entitás: szabad x+y méretezés, gondolat font-size-a is skálázódik
 // - Egéreseményfigyelők kezelése (szivárgásmentes)
 // =============================================
 
@@ -80,7 +80,7 @@ class MeretezesKezelo {
     }
 
     if (blokk.tipus === 'szoveg') {
-      // Szöveges blokk: szabad x+y, minimum a tartalom természetes mérete
+      // Szöveges blokk: szabad x+y, minimum a gondolat természetes mérete
       this.szovegMeretezesInditas(blokkId, domElem);
     } else {
       // Kép: arányos — fájl/link/entitás: szabad x+y, font-size skálázással
@@ -149,9 +149,9 @@ class MeretezesKezelo {
 
   // =============================================
   // PRIVÁT - SZÖVEG BLOKK MÉRETEZÉS INDÍTÁSA
-  // Szabad x+y méretezés, minimum a tartalom természetes mérete:
+  // Szabad x+y méretezés, minimum a gondolat természetes mérete:
   // - scrollWidth: a leghosszabb szó szélessége
-  // - scrollHeight: a tartalom magassága az aktuális szélességen
+  // - scrollHeight: a gondolat magassága az aktuális szélességen
   // Mindkét értéket mousedown-ban olvassuk le EGYSZER — nincs layout thrashing.
   // @param {string}      blokkId - A méretezendő blokk ID-ja
   // @param {HTMLElement} domElem - A blokk DOM eleme
@@ -191,16 +191,16 @@ class MeretezesKezelo {
       const deltaY = e.clientY - induloPontY;
 
       // MÓDOSÍTÁS: a minimális szélesség dinamikus —
-      // a scrollWidth megadja a tartalom természetes szélességét
+      // a scrollWidth megadja a gondolat természetes szélességét
       // (azaz a leghosszabb szó szélességét padding nélkül).
       // Ha az új szélesség kisebb lenne, megállítjuk a kicsinyítést,
       // így a blokk soha nem lesz szűkebb a leghosszabb szónál.
-      const tartalomMinSzelesseg = domElem.scrollWidth;
-      const ujSzelesseg = Math.max(tartalomMinSzelesseg, induloSzelesseg + deltaX);
+      const gondolatMinSzelesseg = domElem.scrollWidth;
+      const ujSzelesseg = Math.max(gondolatMinSzelesseg, induloSzelesseg + deltaX);
 
 
-      const tartalomMinMagassag = domElem.scrollHeight;
-      const ujMagassag = Math.max(tartalomMinMagassag, induloMagassag + deltaY);
+      const gondolatMinMagassag = domElem.scrollHeight;
+      const ujMagassag = Math.max(gondolatMinMagassag, induloMagassag + deltaY);
 
       domElem.style.width  = ujSzelesseg + 'px';
       domElem.style.height = ujMagassag  + 'px';
@@ -252,7 +252,7 @@ class MeretezesKezelo {
   //   Szabad x+y méretezés — szélesség és magasság
   //   egymástól függetlenül változik, mint a szöveg blokknál.
   //   A belső elem font-size-a a szélességi delta arányában skálázódik,
-  //   így a tartalom valóban kitölti a blokkot.
+  //   így a gondolat valóban kitölti a blokkot.
   //
   // @param {string}      blokkId    - A méretezendő blokk ID-ja
   // @param {HTMLElement} domElem    - A wrapper DOM eleme
@@ -267,7 +267,7 @@ class MeretezesKezelo {
     let induloMagassag  = 0;
     let arany           = 1; // csak képnél használjuk
     let induloFontSize  = 0; // belső elem induló font-size-a px-ben
-    let belsoElem       = null; // a belső tartalom DOM eleme
+    let belsoElem       = null; // a belső gondolat DOM eleme
 
     // Blokktípusonként más CSS szelektorral érjük el a belső elemet
     const belsoElemSzelektor = {

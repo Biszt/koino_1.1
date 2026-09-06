@@ -70,7 +70,7 @@ letrehozas() {
     if (this.onFokusz) this.onFokusz(this.blokk.id);
   }, true); // capture: true, hogy a belső elemek fókusza is elkapható legyen
 
-  // Ha már van entitasId (pl. betöltött tartalom szerkesztés módban),
+  // Ha már van entitasId (pl. betöltött gondolat szerkesztés módban),
   // azonnal megjelenítjük a hivatkozást, egyébként placeholdert
   let belsoElem = null;
   if (this.blokk.entitasId) {
@@ -265,9 +265,9 @@ letrehozas() {
 // @returns {string} Emoji karakter
 _tipusIkon() {
   const ikonTerkep = {
-    'Tartalom':      '📄',
+    'Gondolat':      '📄',
     'Kategoria':     '🏷️',
-    'TartalomTipus': '🧩',
+    'GondolatTipus': '🧩',
     'Egyezmeny':     '🤝',
     'Javaslat':      '💡',
   };

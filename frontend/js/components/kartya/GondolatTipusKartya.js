@@ -1,11 +1,11 @@
-// frontend/js/components/kartya/TartalomTipusKartya.js
+// frontend/js/components/kartya/GondolatTipusKartya.js
 
 // --- IMPORTOK ---
 import Kartya from './Kartya.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
-import TartalomModal from '../modals/TartalomModal.js';
+import GondolatModal from '../modals/GondolatModal.js';
 import ErtekJavaslatModal from '../modals/ErtekJavaslatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 
@@ -14,19 +14,19 @@ import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 // =============================================
 import SzovegMezoMegjelenito from '../szoveg/SzovegMezoMegjelenito.js';
 
-// --- TARTALOM TÍPUS KÁRTYA OSZTÁLY ---
+// --- GONDOLAT TÍPUS KÁRTYA OSZTÁLY ---
 // Felelőssége:
 // 1. Örökli a Kartya.js teljes váz logikáját (hamburger, koppintás, állapot)
 // 2. Feltölti a fejlécet: ikon, név, saját tudatpont, hierarchikus tudatpont
 // 3. Feltölti a body-t (csak kiválasztott kártyán): leírás blokkok megjelenítése
 // 4. Megadja a hamburger menü opcióit
-class TartalomTipusKartya extends Kartya {
+class GondolatTipusKartya extends Kartya {
 
   // ----- KONSTRUKTOR -----
-  // MÓDOSÍTVA: a TartalomKartya-val azonos paraméterezés,
+  // MÓDOSÍTVA: a GondolatKartya-val azonos paraméterezés,
   // hogy a javaslat modal innen is elérhető legyen
   constructor(entitas, kivalasztott, onKivalasztas, token, modalKontenerAzon, onUjratoltes, onHamburgerMegnyitas) {
-    console.log('TartalomTipusKartya.constructor - KEZDÉS', {
+    console.log('GondolatTipusKartya.constructor - KEZDÉS', {
       entitasId: entitas?.entitasId,
       nev:       entitas?.adatok?.nev
     });
@@ -42,16 +42,16 @@ class TartalomTipusKartya extends Kartya {
     // =============================================
     this.szovegMezoMegjelenito = null;
 
-    console.log('TartalomTipusKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
+    console.log('GondolatTipusKartya.constructor - VÉGE', { entitasId: entitas?.entitasId });
   }
 
   // ----- IKON MEGJELENÍTÉSE -----
   // Változatlan
   _ikonMegjelenites(kontener, ikonErtek, cssAlapOsztaly) {
-    console.log('TartalomTipusKartya._ikonMegjelenites - KEZDÉS', { ikonErtek });
+    console.log('GondolatTipusKartya._ikonMegjelenites - KEZDÉS', { ikonErtek });
 
     if (!ikonErtek) {
-      console.log('TartalomTipusKartya._ikonMegjelenites - VÉGE: nincs ikon érték');
+      console.log('GondolatTipusKartya._ikonMegjelenites - VÉGE: nincs ikon érték');
       return;
     }
 
@@ -72,44 +72,44 @@ class TartalomTipusKartya extends Kartya {
       kontener.appendChild(ikonElem);
     }
 
-    console.log('TartalomTipusKartya._ikonMegjelenites - VÉGE', { ikonErtek });
+    console.log('GondolatTipusKartya._ikonMegjelenites - VÉGE', { ikonErtek });
   }
 
   // ----- FEJLÉC FELTÖLTÉSE -----
   // Változatlan
   _fejlecFeltoltese(cimSav, masodikSor) {
-    console.log('TartalomTipusKartya._fejlecFeltoltese - KEZDÉS', {
+    console.log('GondolatTipusKartya._fejlecFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
     const adatok = this.entitas.adatok ?? {};
-    // A második sorba (típus-specifikus) kerül az ikon (F4-ben: „hány tartalom használja").
+    // A második sorba (típus-specifikus) kerül az ikon (F4-ben: „hány gondolat használja").
     // A közös tudatpont-sort (1. sor) a Kartya alaposztály már megépítette.
     const fejlecTartalom = masodikSor;
 
     // --- NÉV (a felső sávba) ---
     const nevElem = document.createElement('span');
-    nevElem.className   = 'tartalom-tipus-kartya__nev';
+    nevElem.className   = 'gondolat-tipus-kartya__nev';
     nevElem.textContent = adatok.nev ?? '(név nélkül)';
     cimSav.appendChild(nevElem);
 
-    // A tartalomtípus saját ikonja 🧩 típus-előtaggal (a 2. sorban)
+    // A gondolattípus saját ikonja 🧩 típus-előtaggal (a 2. sorban)
     const ikonCsoport = document.createElement('span');
     ikonCsoport.className = 'pakli-kartya__tipus-ikon-csoport';
-    ikonCsoport.appendChild(this._tipusElotag('🧩', 'Tartalom típus'));
-    this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'tartalom-tipus-kartya');
+    ikonCsoport.appendChild(this._tipusElotag('🧩', 'Gondolat típus'));
+    this._ikonMegjelenites(ikonCsoport, adatok.ikon, 'gondolat-tipus-kartya');
     fejlecTartalom.appendChild(ikonCsoport);
 
-    // Hány tartalom használja ezt a tartalomtípust (2. sor)
+    // Hány gondolat használja ezt a gondolattípust (2. sor)
     fejlecTartalom.appendChild(
-      this._ikonElem('📄', adatok.hasznaloTartalmakSzama, 'Ezt a tartalomtípust használó tartalmak száma')
+      this._ikonElem('📄', adatok.hasznaloGondolatokSzama, 'Ezt a gondolattípust használó gondolatok száma')
     );
 
     // --- DÁTUM (létrehozás / utolsó módosítás, szín-jelzéssel) — a 2. sor végén ---
     const datumElem = this._datumFejlecElem(adatok);
     if (datumElem) fejlecTartalom.appendChild(datumElem);
 
-    console.log('TartalomTipusKartya._fejlecFeltoltese - VÉGE', {
+    console.log('GondolatTipusKartya._fejlecFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,
       nev:       adatok.nev
     });
@@ -120,7 +120,7 @@ class TartalomTipusKartya extends Kartya {
   // MÓDOSÍTVA - blokk alapú szöveg renderelés
   // =============================================
   _bodyFeltoltese(body) {
-    console.log('TartalomTipusKartya._bodyFeltoltese - KEZDÉS', {
+    console.log('GondolatTipusKartya._bodyFeltoltese - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
@@ -132,13 +132,13 @@ class TartalomTipusKartya extends Kartya {
       const blokkok = adatok.szovegMezo;
 
       const szovegKontener = document.createElement('div');
-      szovegKontener.className = 'tartalom-tipus-kartya__szoveg-kontener';
+      szovegKontener.className = 'gondolat-tipus-kartya__szoveg-kontener';
       body.appendChild(szovegKontener);
 
       this.szovegMezoMegjelenito = new SzovegMezoMegjelenito(szovegKontener, {
         blokkok,
         onEntitasKivalasztas: (entitasId, entitasTipus) => {
-          console.log('TartalomTipusKartya - entitás hivatkozás koppintva', {
+          console.log('GondolatTipusKartya - entitás hivatkozás koppintva', {
             entitasId,
             entitasTipus
           });
@@ -149,7 +149,7 @@ class TartalomTipusKartya extends Kartya {
       });
     }
 
-    console.log('TartalomTipusKartya._bodyFeltoltese - VÉGE', {
+    console.log('GondolatTipusKartya._bodyFeltoltese - VÉGE', {
       entitasId: this.entitas?.entitasId,
       vanSzoveg: !!adatok.szovegMezo
     });
@@ -159,7 +159,7 @@ class TartalomTipusKartya extends Kartya {
   // ÚJ - MEGSEMMISÍTÉS
   // =============================================
   destroy() {
-    console.log('TartalomTipusKartya.destroy - KEZDÉS', {
+    console.log('GondolatTipusKartya.destroy - KEZDÉS', {
       entitasId: this.entitas?.entitasId
     });
 
@@ -170,44 +170,44 @@ class TartalomTipusKartya extends Kartya {
 
     super.destroy?.();
 
-    console.log('TartalomTipusKartya.destroy - VÉGE', {
+    console.log('GondolatTipusKartya.destroy - VÉGE', {
       entitasId: this.entitas?.entitasId
     });
   }
 
   // ----- HAMBURGER MENÜ OPCIÓK -----
-  // ----- ÚJ TARTALOM LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
-  // A közös TartalomModal-t nyitja meg létrehozás módban, a tartalomtípust
-  // szülőként átadva (szuloId + szuloTipus: 'TartalomTipus').
-  async _ujTartalomLetrehozasa(entitas) {
-    console.log('TartalomTipusKartya._ujTartalomLetrehozasa - KEZDÉS', {
+  // ----- ÚJ GONDOLAT LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
+  // A közös GondolatModal-t nyitja meg létrehozás módban, a gondolattípust
+  // szülőként átadva (szuloId + szuloTipus: 'GondolatTipus').
+  async _ujGondolatLetrehozasa(entitas) {
+    console.log('GondolatTipusKartya._ujGondolatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    const tartalomModal = new TartalomModal(this.modalKontenerAzon, {
+    const gondolatModal = new GondolatModal(this.modalKontenerAzon, {
       mod: 'letrehozas',
       szuloAdatok: {
         szuloId:    entitas.entitasId,
-        szuloTipus: 'TartalomTipus'
+        szuloTipus: 'GondolatTipus'
       },
       onSiker: () => {
         if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
       }
     });
 
-    await tartalomModal.init();
-    tartalomModal.megnyitas();
+    await gondolatModal.init();
+    gondolatModal.megnyitas();
 
-    console.log('TartalomTipusKartya._ujTartalomLetrehozasa - VÉGE', {
+    console.log('GondolatTipusKartya._ujGondolatLetrehozasa - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 
   // ----- RÉSZLETES ADATOK -----
-  // Megnyitja a közös ReszletekModal-t erre a tartalomtípusra.
+  // Megnyitja a közös ReszletekModal-t erre a gondolattípusra.
   // A modal maga kéri le a /reszletek adatokat és jeleníti meg őket.
   async _reszletesAdatok(entitas) {
-    console.log('TartalomTipusKartya._reszletesAdatok - KEZDÉS', {
+    console.log('GondolatTipusKartya._reszletesAdatok - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
@@ -225,21 +225,21 @@ class TartalomTipusKartya extends Kartya {
     await reszletekModal.init();
     await reszletekModal.megnyitas();
 
-    console.log('TartalomTipusKartya._reszletesAdatok - VÉGE', {
+    console.log('GondolatTipusKartya._reszletesAdatok - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 
   // ----- KÜSZÖB ÉRTÉK JAVASLAT -----
-  // Megnyitja a közös ErtekJavaslatModal-t erre a tartalomtípusra.
+  // Megnyitja a közös ErtekJavaslatModal-t erre a gondolattípusra.
   async _kuszobErtekJavaslat(entitas) {
-    console.log('TartalomTipusKartya._kuszobErtekJavaslat - KEZDÉS', {
+    console.log('GondolatTipusKartya._kuszobErtekJavaslat - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
     const ertekJavaslatModal = new ErtekJavaslatModal(this.modalKontenerAzon, {
       entitasId:    entitas.entitasId,
-      entitasTipus: 'TartalomTipus',
+      entitasTipus: 'GondolatTipus',
       token:        this.token,
       onSiker: () => {
         if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
@@ -249,22 +249,22 @@ class TartalomTipusKartya extends Kartya {
     await ertekJavaslatModal.init();
     await ertekJavaslatModal.megnyitas();
 
-    console.log('TartalomTipusKartya._kuszobErtekJavaslat - VÉGE', {
+    console.log('GondolatTipusKartya._kuszobErtekJavaslat - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 
   // ----- ÉRTESÍTÉSI BEÁLLÍTÁSOK -----
-  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a tartalomtípusra. A modal maga
+  // Megnyitja a közös ErtesitesiBeallitasModal-t erre a gondolattípusra. A modal maga
   // kéri le az érvényes (örökölt vagy saját) beállítást és menti a változást.
   async _ertesitesiBeallitasok(entitas) {
-    console.log('TartalomTipusKartya._ertesitesiBeallitasok - KEZDÉS', {
+    console.log('GondolatTipusKartya._ertesitesiBeallitasok - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
     const ertesitesiBeallitasModal = new ErtesitesiBeallitasModal(this.modalKontenerAzon, {
       entitasId:    entitas.entitasId,
-      entitasTipus: 'TartalomTipus',
+      entitasTipus: 'GondolatTipus',
       entitasCim:   entitas.adatok?.nev ?? '',
       token:        this.token
     });
@@ -272,26 +272,26 @@ class TartalomTipusKartya extends Kartya {
     await ertesitesiBeallitasModal.init();
     await ertesitesiBeallitasModal.megnyitas();
 
-    console.log('TartalomTipusKartya._ertesitesiBeallitasok - VÉGE', {
+    console.log('GondolatTipusKartya._ertesitesiBeallitasok - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 
   // Változatlan
   _hamburgerOpciok(entitas) {
-    console.log('TartalomTipusKartya._hamburgerOpciok - KEZDÉS', {
+    console.log('GondolatTipusKartya._hamburgerOpciok - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    // A Tartalomtípus kártya menüpontjai élő funkcióhoz vezetnek (nincs 🚧).
+    // A Gondolattípus kártya menüpontjai élő funkcióhoz vezetnek (nincs 🚧).
     const opciok = [
       {
         ikon:           '✏️',
-        felirat:        'Új tartalom létrehozása ebből',
+        felirat:        'Új gondolat létrehozása ebből',
         // Ágaztatás ebből az entitásból → tudatpont kell rá
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => this._ujTartalomLetrehozasa(entitas)
+        akcio:          () => this._ujGondolatLetrehozasa(entitas)
       },
       {
         ikon:           '🌿',
@@ -331,7 +331,7 @@ class TartalomTipusKartya extends Kartya {
       }
     ];
 
-    console.log('TartalomTipusKartya._hamburgerOpciok - VÉGE', {
+    console.log('GondolatTipusKartya._hamburgerOpciok - VÉGE', {
       opciokSzama: opciok.length
     });
 
@@ -339,11 +339,11 @@ class TartalomTipusKartya extends Kartya {
   }
 
   // ----- JAVASLAT LÉTREHOZÁSA -----
-  // A TartalomKartya mintájára: a JavaslatModal-t nyitja meg.
-  // A javaslat szülő tartalma a tartalom típus szülője (a pakli
-  // hierarchiában felette álló tartalom) — a backend ellenőrzi.
+  // A GondolatKartya mintájára: a JavaslatModal-t nyitja meg.
+  // A javaslat szülő gondolata a gondolat típus szülője (a pakli
+  // hierarchiában felette álló gondolat) — a backend ellenőrzi.
   async _javaslatLetrehozasa(entitas) {
-    console.log('TartalomTipusKartya._javaslatLetrehozasa - KEZDÉS', {
+    console.log('GondolatTipusKartya._javaslatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId,
       szuloId:   entitas?.szuloId
     });
@@ -351,15 +351,15 @@ class TartalomTipusKartya extends Kartya {
     const javaslatModal = new JavaslatModal(this.modalKontenerAzon, {
       entitasAdatok: {
         entitasId:    entitas.entitasId,
-        entitasTipus: 'TartalomTipus',
+        entitasTipus: 'GondolatTipus',
         adatok:       entitas.adatok
       },
       szuloAdatok: {
         szuloId:    entitas.szuloId,
-        szuloTipus: 'Tartalom'
+        szuloTipus: 'Gondolat'
       },
       onSiker: (ujJavaslat) => {
-        console.log('TartalomTipusKartya._javaslatLetrehozasa - onSiker', {
+        console.log('GondolatTipusKartya._javaslatLetrehozasa - onSiker', {
           javaslatId: ujJavaslat?._id
         });
         if (typeof this.onUjratoltes === 'function') this.onUjratoltes();
@@ -369,22 +369,22 @@ class TartalomTipusKartya extends Kartya {
     await javaslatModal.init();
     javaslatModal.megnyitas();
 
-    console.log('TartalomTipusKartya._javaslatLetrehozasa - VÉGE', {
+    console.log('GondolatTipusKartya._javaslatLetrehozasa - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 
   // ----- TUDATPONT MÓDOSÍTÁS -----
-  // Megnyitja a TudatpontModal-t erre a tartalomtípusra.
+  // Megnyitja a TudatpontModal-t erre a gondolattípusra.
   async _tudatpontModositas(entitas) {
-    console.log('TartalomTipusKartya._tudatpontModositas - KEZDÉS', {
+    console.log('GondolatTipusKartya._tudatpontModositas - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
     const tudatpontModal = new TudatpontModal(this.modalKontenerAzon, {
       entitasAdatok: {
         entitasId:    entitas.entitasId,
-        entitasTipus: entitas.entitasTipus ?? 'TartalomTipus',
+        entitasTipus: entitas.entitasTipus ?? 'GondolatTipus',
         adatok:       entitas.adatok
       },
       onSiker: () => {
@@ -395,11 +395,11 @@ class TartalomTipusKartya extends Kartya {
     await tudatpontModal.init();
     await tudatpontModal.megnyitas();
 
-    console.log('TartalomTipusKartya._tudatpontModositas - VÉGE', {
+    console.log('GondolatTipusKartya._tudatpontModositas - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
 }
 
 // --- EXPORTÁLÁS ---
-export default TartalomTipusKartya;
+export default GondolatTipusKartya;

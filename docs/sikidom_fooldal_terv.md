@@ -14,11 +14,11 @@ A koino három nézetben mutatja ugyanazt:
 
 - **Síkidom nézet** — a hierarchia, terület ∝ tudatpont
 - **Térkép nézet** — a földrajz (még nem létezik)
-- **Pakli nézet** — **NEM egyenrangú**: ez egy *eszköz*, ami a tartalmakat
+- **Pakli nézet** — **NEM egyenrangú**: ez egy *eszköz*, ami a gondolatokat
   megjeleníti mindkét nézetben. Modálként nyílik, ✕-szel bezárható.
 
 Csaba szavai: „a pakli nézetet nem szeretném egyenrangúnak venni, hanem egy
-eszköznek, ami segít megjeleníteni a tartalmakat mindkét nézetben."
+eszköznek, ami segít megjeleníteni a gondolatokat mindkét nézetben."
 
 ### A két szűrő-dimenzió (későbbi fázis)
 
@@ -132,7 +132,7 @@ miért nem azzal kezdjük, hogy a síkidom a főoldal?
 - **A valódi akadály a KIÚT.** A fő menü 14 pontja között nincs „Pakli nézet" (a terv
   5. pontja szerint nem is lesz), tehát a pakli egyetlen elérési útja a koppintás. Ha
   a síkidom előbb lesz belépő nézet, mint a koppintás-útvonal, nincs használható út a
-  tartalomhoz: a „Keresés" és a „Rendezés" navigálná ugyan a paklit, de takarva.
+  gondolathoz: a „Keresés" és a „Rendezés" navigálná ugyan a paklit, de takarva.
 
 Ezért került a kiút (3.) a főoldallá tétel (4.) elé. Mellékhaszon: az 1. lépés
 ideiglenes ✕ gombja így egyetlen commitnál tovább nem él.
@@ -149,7 +149,7 @@ előbb azt zárjuk". Ha a síkidom mindig nyitott modál, ez **örökre igaz** �
 vissza-gomb soha többé nem navigál. Ki kell venni a modal-gépezetből, saját
 rétegre. (Az ESC és a háttérre kattintás bekötése is innen jön.)
 
-**2. Három réteg kell, nem kettő.** A `Modal` felülírja a konténere tartalmát:
+**2. Három réteg kell, nem kettő.** A `Modal` felülírja a konténere gondolatát:
 
 ```
 alapnézet-réteg  →  síkidom                     (saját konténer)
@@ -178,7 +178,7 @@ az ős-láncát (a méretezéshez kell a szülők pontja). Az `osLanc` indexelt.
 
 ---
 
-## 3. Mérési eredmények (2026-08-16, dev, 15 611 tartalom / 10 407 gyökér)
+## 3. Mérési eredmények (2026-08-16, dev, 15 611 gondolat / 10 407 gyökér)
 
 ### Kezdő fázis: **1,73 másodperc**
 
@@ -254,16 +254,16 @@ zoom-függő részletesség, `mergeThoughts` (közeli pontok összevonása),
 **A síkidom motorja fogalmilag ugyanaz** (küszöb-vezérelt letöltés, LOD,
 látómező-nyesés) — nem két motort építünk, egy mintát alkalmazunk kétszer.
 
-### A lyuk: a tartalomnak nincs helye
+### A lyuk: a gondolatnak nincs helye
 
 | | van-e lokációja ma |
 |---|---|
 | **e-ember** | igen: `lokacio { orszag, regio, telepules }` — kötelező, **három szabad szöveg, koordináta nélkül** |
-| **tartalom** | **nincs, semmilyen** |
+| **gondolat** | **nincs, semmilyen** |
 | `/api/lokacio/*` | csak legördülő javaslat a regisztrációs űrlaphoz |
 
-Három út: (a) saját lokáció-mező a tartalmon; (b) **a hely a tudatpontból jön** —
-egy tartalom ott van jelen, ahol a tudatpontot rendelő e-emberek élnek, tehát a
+Három út: (a) saját lokáció-mező a gondolaton; (b) **a hely a tudatpontból jön** —
+egy gondolat ott van jelen, ahol a tudatpontot rendelő e-emberek élnek, tehát a
 térkép azt mutatja, **hol van rá figyelem**; (c) vegyes.
 
 **(b) a javasolt alap** (ez adja Csaba „egy ágazat lokális eloszlása" kérését),

@@ -5,7 +5,7 @@ import Kartya from './Kartya.js';
 import JavaslatModal from '../modals/JavaslatModal.js';
 import TudatpontModal from '../modals/TudatpontModal.js';
 import ReszletekModal from '../modals/ReszletekModal.js';
-import TartalomModal from '../modals/TartalomModal.js';
+import GondolatModal from '../modals/GondolatModal.js';
 import ErtesitesiBeallitasModal from '../modals/ErtesitesiBeallitasModal.js';
 import { javaslatMegnevezes } from '../../utils/javaslatMegnevezes.js';
 
@@ -20,7 +20,7 @@ import KartyaFulsav from './KartyaFulsav.js';
 // 1. Örökli a Kartya.js teljes váz logikáját (hamburger, koppintás, állapot)
 // 2. Feltölti a fejlécet: javaslatTípus, támogatottsági arány, bizonyossági mutató
 // 3. Feltölti a body-t (csak kiválasztott kártyán): külső fülsáv — Lecserélt
-//    tartalom (Módosításnál) / Indoklás. (A részvételi arány sor kikerült: a fejléc mutatja.)
+//    gondolat (Módosításnál) / Indoklás. (A részvételi arány sor kikerült: a fejléc mutatja.)
 // 4. Megadja a hamburger menü opcióit
 class EgyezmenyKartya extends Kartya {
 
@@ -43,9 +43,9 @@ class EgyezmenyKartya extends Kartya {
     // =============================================
     // ÚJ - Megjelenítő példányok + külső fülsáv referenciái
     // =============================================
-    // A body-ban több SzovegMezoMegjelenito is lehet (lecserélt tartalom +
+    // A body-ban több SzovegMezoMegjelenito is lehet (lecserélt gondolat +
     // indoklás), ezért tömbben tartjuk őket a destroy()-hoz. A KartyaFulsav a
-    // külső fül-réteg (Lecserélt tartalom / Indoklás).
+    // külső fül-réteg (Lecserélt gondolat / Indoklás).
     this.megjelenitok = [];
     this.kartyaFulsav = null;
 
@@ -110,15 +110,15 @@ class EgyezmenyKartya extends Kartya {
 
   // ----- BODY FELTÖLTÉSE -----
   // =============================================
-  // MÓDOSÍTVA - külső fülsáv (Lecserélt tartalom / Indoklás)
+  // MÓDOSÍTVA - külső fülsáv (Lecserélt gondolat / Indoklás)
   // =============================================
   // A body-t egy KÜLSŐ fülsáv (KartyaFulsav) tölti fel:
-  //   1. Lecserélt tartalom — Módosítás-egyezménynél (adatok.lecsereltTartalom):
-  //      a régi tartalom címe a két fülsáv közé, alatta a régi body
+  //   1. Lecserélt gondolat — Módosítás-egyezménynél (adatok.lecsereltGondolat):
+  //      a régi gondolat címe a két fülsáv közé, alatta a régi body
   //   2. Indoklás           — a lezárt javaslat szövegmezőjének pillanatképe
   // A korábbi „Részvételi arány" body-sor KIKERÜLT: a fejléc már mutatja (👥 %),
   // ott duplikáció volt. Egyetlen fülnél a KartyaFulsav nem rajzol sávot (pl. régi
-  // vagy nem-módosítási egyezménynél nincs lecserélt tartalom → csak az indoklás).
+  // vagy nem-módosítási egyezménynél nincs lecserélt gondolat → csak az indoklás).
   // @param {HTMLElement} body - A .pakli-kartya__body elem
   _bodyFeltoltese(body) {
     console.log('EgyezmenyKartya._bodyFeltoltese - KEZDÉS', {
@@ -132,30 +132,30 @@ class EgyezmenyKartya extends Kartya {
 
     const fulek = [];
 
-    // --- 1. fül — LECSERÉLT TARTALOM (Módosítás-egyezménynél) ---
-    // A régi tartalom leképezése a címével együtt (cím a két fülsáv közé, alatta a
+    // --- 1. fül — LECSERÉLT GONDOLAT (Módosítás-egyezménynél) ---
+    // A régi gondolat leképezése a címével együtt (cím a két fülsáv közé, alatta a
     // régi body). Csak akkor jelenik meg, ha a régi állapotot elmentettük a
     // végrehajtáskor (régi vagy nem-módosítási egyezménynél nincs → nem lesz fül).
-    const lecsereltTartalom = adatok.lecsereltTartalom;
-    if (lecsereltTartalom) {
+    const lecsereltGondolat = adatok.lecsereltGondolat;
+    if (lecsereltGondolat) {
       const lecsereltElem = document.createElement('div');
       lecsereltElem.className = 'egyezmeny-kartya__lecserelt-kontener';
 
-      if (lecsereltTartalom.cim) {
+      if (lecsereltGondolat.cim) {
         const cimElem = document.createElement('span');
         cimElem.className   = 'kartya-fulsav__cim';
-        cimElem.textContent = lecsereltTartalom.cim;
+        cimElem.textContent = lecsereltGondolat.cim;
         lecsereltElem.appendChild(cimElem);
       }
 
       const szovegKontener = document.createElement('div');
       lecsereltElem.appendChild(szovegKontener);
       this.megjelenitok.push(new SzovegMezoMegjelenito(szovegKontener, {
-        blokkok:              lecsereltTartalom.szoveg,
+        blokkok:              lecsereltGondolat.szoveg,
         onEntitasKivalasztas: this._entitasHivatkozasKezelo()
       }));
 
-      fulek.push({ id: 'lecserelt', felirat: 'Lecserélt tartalom', tartalomElem: lecsereltElem });
+      fulek.push({ id: 'lecserelt', felirat: 'Lecserélt gondolat', tartalomElem: lecsereltElem });
     }
 
     // --- 2. fül — INDOKLÁS ---
@@ -187,7 +187,7 @@ class EgyezmenyKartya extends Kartya {
 
     console.log('EgyezmenyKartya._bodyFeltoltese - VÉGE', {
       entitasId:      this.entitas?.entitasId,
-      vanLecserelt:   !!lecsereltTartalom,
+      vanLecserelt:   !!lecsereltGondolat,
       vanSzoveg:      !!adatok.szovegMezo,
       fulekSzama:     fulek.length
     });
@@ -223,7 +223,7 @@ class EgyezmenyKartya extends Kartya {
       this.kartyaFulsav = null;
     }
 
-    // Minden SzovegMezoMegjelenito (lecserélt tartalom + indoklás) felszabadítása
+    // Minden SzovegMezoMegjelenito (lecserélt gondolat + indoklás) felszabadítása
     if (Array.isArray(this.megjelenitok)) {
       this.megjelenitok.forEach((m) => m?.destroy?.());
       this.megjelenitok = [];
@@ -236,15 +236,15 @@ class EgyezmenyKartya extends Kartya {
     });
   }
 
-  // ----- ÚJ TARTALOM LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
-  // A közös TartalomModal-t nyitja meg létrehozás módban, az egyezményt
+  // ----- ÚJ GONDOLAT LÉTREHOZÁSA EBBŐL ÁGAZTATVA -----
+  // A közös GondolatModal-t nyitja meg létrehozás módban, az egyezményt
   // szülőként átadva (szuloId + szuloTipus: 'Egyezmeny').
-  async _ujTartalomLetrehozasa(entitas) {
-    console.log('EgyezmenyKartya._ujTartalomLetrehozasa - KEZDÉS', {
+  async _ujGondolatLetrehozasa(entitas) {
+    console.log('EgyezmenyKartya._ujGondolatLetrehozasa - KEZDÉS', {
       entitasId: entitas?.entitasId
     });
 
-    const tartalomModal = new TartalomModal(this.modalKontenerAzon, {
+    const gondolatModal = new GondolatModal(this.modalKontenerAzon, {
       mod: 'letrehozas',
       szuloAdatok: {
         szuloId:    entitas.entitasId,
@@ -255,10 +255,10 @@ class EgyezmenyKartya extends Kartya {
       }
     });
 
-    await tartalomModal.init();
-    tartalomModal.megnyitas();
+    await gondolatModal.init();
+    gondolatModal.megnyitas();
 
-    console.log('EgyezmenyKartya._ujTartalomLetrehozasa - VÉGE', {
+    console.log('EgyezmenyKartya._ujGondolatLetrehozasa - VÉGE', {
       entitasId: entitas?.entitasId
     });
   }
@@ -303,11 +303,11 @@ class EgyezmenyKartya extends Kartya {
     const opciok = [
       {
         ikon:           '✏️',
-        felirat:        'Új tartalom létrehozása ebből',
+        felirat:        'Új gondolat létrehozása ebből',
         // Ágaztatás ebből az entitásból → tudatpont kell rá
         tudatpontFuggo: true,
         tiltvaIndok:    'Ehhez tudatpont kell ezen az entitáson. Előbb rendelj hozzá tudatpontot.',
-        akcio:          () => this._ujTartalomLetrehozasa(entitas)
+        akcio:          () => this._ujGondolatLetrehozasa(entitas)
       },
       {
         ikon:           '🌿',

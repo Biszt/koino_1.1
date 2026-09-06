@@ -101,10 +101,10 @@
       ]
     },
     {
-      "name": "Tartalom típus",
+      "name": "Gondolat típus",
       "item": [
         {
-          "name": "POST TartalomTipus letrehozasa",
+          "name": "POST GondolatTipus letrehozasa",
           "request": {
             "method": "GET",
             "header": []
@@ -114,10 +114,10 @@
       ]
     },
     {
-      "name": "Tartalom",
+      "name": "Gondolat",
       "item": [
         {
-          "name": "POST Tartalom letrehozasa",
+          "name": "POST Gondolat letrehozasa",
           "request": {
             "method": "GET",
             "header": []

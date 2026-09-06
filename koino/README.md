@@ -36,12 +36,12 @@ node koino/koino.js
 
 | Parancs | Mit csinál |
 |---|---|
-| `node koino/koino.js` | mi az állapot (tartalmak, javaslatok, egyezmények) |
+| `node koino/koino.js` | mi az állapot (gondolatok, javaslatok, egyezmények) |
 | `node koino/koino.js allapot 3` | **mi lesz 3 nap múlva** — a döntési idő napokban mérhető |
 | `node koino/koino.js kulcs` | ki vagyok, hol a kulcsom és az adatom |
 | `node koino/koino.js mentes kulcs.json` | a kulcs kimentése (ez te vagy — mentsd el) |
 | `node koino/koino.js koino "Név"` | koino létrehozása |
-| `node koino/koino.js tartalom "Cím" "szöveg"` | új tartalom (+100 tudatpont, enélkül nem létezne) |
+| `node koino/koino.js gondolat "Cím" "szöveg"` | új gondolat (+100 tudatpont, enélkül nem létezne) |
 | `node koino/koino.js pont <azonosító> <pont> [passziv]` | tudatpont-rendezés |
 | `node koino/koino.js javaslat <azonosító> "Új cím"` | szerkesztési javaslat |
 | `node koino/koino.js szavaz <javaslat> tamogat\|ellenez\|tartozkodik` | szavazat |
@@ -123,7 +123,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | Fájl | Felelősség |
 |---|---|
 | `js/esemeny/kanonikusAlak.js` | ⚠️ a legveszélyesebb részlet: ugyanaz az adat = ugyanazok a bájtok |
-| `js/esemeny/esemeny.js` | aláírás és ellenőrzés; az esemény neve a tartalma lenyomata |
+| `js/esemeny/esemeny.js` | aláírás és ellenőrzés; az esemény neve a gondolata lenyomata |
 | `js/tar/fajlTar.js` | a tár: **hozzáfűzhető** fájl, soronként egy esemény — ⭐ 3.2 óta **kérdezhető** (`esemeny`, `szerzoLanca`, `szeletEsemenyei`, `sorszamSzerint`), nem csak `betolt()` |
 | `js/tar/esemenyTar.js` | a lánc kezelése — ellenőrizetlen esemény nem kerül be |
 | `js/kulcs/kulcsTar.js` | a kulcs = a személyazonosság (D15) |
@@ -151,7 +151,7 @@ rádió) anélkül, hogy a csere-protokollhoz hozzá kellene nyúlni.
 > *mit építünk, milyen sorrendben, és miért*. Ez itt csak a rövid leltár.
 
 **Szakasz 1 — A HELYI MODELL** *(egy készülék, hálózat nélkül)*: ✅ **kész**. A teljes kör
-végigjátszható: koino → tartalom → tudatpont → javaslat → szavazat → **egyezmény**.
+végigjátszható: koino → gondolat → tudatpont → javaslat → szavazat → **egyezmény**.
 
 **Szakasz 2 — A SZÁLLÍTÁS** *(hogy két készülék egyáltalán összeérjen)*: ✅ **kész**
 — terv: [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md).

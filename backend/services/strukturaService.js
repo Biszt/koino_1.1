@@ -18,11 +18,11 @@
 // --- IMPORTÁLÁSOK ---
 const hierarchikusAllokaciRepository = require('../repositories/hierarchikusTudatpontAllokaciRepository');
 const { entitasCimekFeltoltese } = require('./ertesitesService');
-// A mellék-ikonokhoz (Struktúra nézet közeli nézet): a Tartalom típusa/kategóriái, illetve
+// A mellék-ikonokhoz (Struktúra nézet közeli nézet): a Gondolat típusa/kategóriái, illetve
 // a Javaslat/Egyezmény művelet-típusa a forrás-kollekciókból.
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 const Javaslat = require('../models/javaslat');
 const Egyezmeny = require('../models/egyezmeny');
 
@@ -90,7 +90,7 @@ async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null)
       hierarchikusOsszesPont: sor.hierarchikusOsszesPont ?? 0,
       letrehozva:             sor.letrehozva ?? null,
       cim:                    sor.entitasCim ?? null,
-      // Mellék-ikonok: Tartalomnál a kategóriák (bal) + tartalomtípus (jobb),
+      // Mellék-ikonok: Gondolatnál a kategóriák (bal) + gondolattípus (jobb),
       // Javaslat/Egyezménynél a művelet-típus (jobb). Máshol üres/null.
       kategoriaIkonok:        mellek.kategoriaIkonok ?? [],
       tipusIkon:              mellek.tipusIkon ?? null,
@@ -116,9 +116,9 @@ async lapLekerese(kurzorId = null, lapMeret = MAX_LAP_MERET, agEntitasId = null)
 /**
 * A Struktúra nézet közeli nézetének mellék-ikonjaihoz gyűjti össze — típusonként EGY-EGY
 * csoportos lekérdezéssel, N+1 nélkül — az entitások extra adatait:
-*   - Tartalom → a tartalomtípusa ({nev, ikon}) és a kategóriái ([{nev, ikon}]);
+*   - Gondolat → a gondolattípusa ({nev, ikon}) és a kategóriái ([{nev, ikon}]);
 *   - Javaslat / Egyezmény → a művelet-típusa (javaslatTipus enum);
-*   - Kategória / Tartalomtípus → semmi (nincs mellék-ikonjuk).
+*   - Kategória / Gondolattípus → semmi (nincs mellék-ikonjuk).
 * Az `ikon` mező emoji VAGY feltöltött kép-URL is lehet — a frontend dönti el.
 * @param {Array} sorok - a hierarchikus sorok ({ entitasId, entitasTipus, ... })
 * @returns {Promise<Map>} kulcs `${entitasTipus}:${entitasId}` → { tipusIkon, kategoriaIkonok, javaslatTipus }
@@ -127,30 +127,30 @@ async mellekIkonokFeltoltese(sorok) {
   console.log('StrukturaService.mellekIkonokFeltoltese - KEZDÉS', { sorokSzama: sorok.length });
 
   // Entitás-azonosítók típusonként
-  const tartalomIdk  = [];
+  const gondolatIdk  = [];
   const javaslatIdk  = [];
   const egyezmenyIdk = [];
   for (const sor of sorok) {
-    if (sor.entitasTipus === 'Tartalom')       tartalomIdk.push(sor.entitasId);
+    if (sor.entitasTipus === 'Gondolat')       gondolatIdk.push(sor.entitasId);
     else if (sor.entitasTipus === 'Javaslat')  javaslatIdk.push(sor.entitasId);
     else if (sor.entitasTipus === 'Egyezmeny') egyezmenyIdk.push(sor.entitasId);
   }
 
-  // A Tartalmak típus- és kategória-hivatkozásai (a további lekérdezésekhez)
-  const tartalmak = tartalomIdk.length
-    ? await Tartalom.find({ _id: { $in: tartalomIdk } }).select('tartalomTipusId kategoriaIds').lean()
+  // A Gondolatok típus- és kategória-hivatkozásai (a további lekérdezésekhez)
+  const gondolatok = gondolatIdk.length
+    ? await Gondolat.find({ _id: { $in: gondolatIdk } }).select('gondolatTipusId kategoriaIds').lean()
     : [];
 
   const tipusIdk     = new Set();
   const kategoriaIdk = new Set();
-  for (const t of tartalmak) {
-    if (t.tartalomTipusId) tipusIdk.add(t.tartalomTipusId.toString());
+  for (const t of gondolatok) {
+    if (t.gondolatTipusId) tipusIdk.add(t.gondolatTipusId.toString());
     for (const k of (t.kategoriaIds ?? [])) kategoriaIdk.add(k.toString());
   }
 
   // Minden hivatkozott adat EGY-EGY csoportos lekérdezéssel, párhuzamosan
   const [tipusok, kategoriak, javaslatok, egyezmenyek] = await Promise.all([
-    tipusIdk.size     ? TartalomTipus.find({ _id: { $in: [...tipusIdk] } }).select('nev ikon').lean() : [],
+    tipusIdk.size     ? GondolatTipus.find({ _id: { $in: [...tipusIdk] } }).select('nev ikon').lean() : [],
     kategoriaIdk.size ? Kategoria.find({ _id: { $in: [...kategoriaIdk] } }).select('nev ikon').lean() : [],
     javaslatIdk.length  ? Javaslat.find({ _id: { $in: javaslatIdk } }).select('javaslatTipus').lean() : [],
     egyezmenyIdk.length ? Egyezmeny.find({ _id: { $in: egyezmenyIdk } }).select('javaslatTipus').lean() : []
@@ -159,7 +159,7 @@ async mellekIkonokFeltoltese(sorok) {
   // Gyors kikeresők
   const tipusMap     = new Map(tipusok.map(x => [x._id.toString(), { nev: x.nev ?? '', ikon: x.ikon ?? null }]));
   const kategoriaMap = new Map(kategoriak.map(x => [x._id.toString(), { nev: x.nev ?? '', ikon: x.ikon ?? null }]));
-  const tartalomMap  = new Map(tartalmak.map(t => [t._id.toString(), t]));
+  const gondolatMap  = new Map(gondolatok.map(t => [t._id.toString(), t]));
   const javaslatMap  = new Map(javaslatok.map(j => [j._id.toString(), j.javaslatTipus ?? null]));
   const egyezmenyMap = new Map(egyezmenyek.map(e => [e._id.toString(), e.javaslatTipus ?? null]));
 
@@ -168,13 +168,13 @@ async mellekIkonokFeltoltese(sorok) {
   for (const sor of sorok) {
     const id = sor.entitasId.toString();
 
-    if (sor.entitasTipus === 'Tartalom') {
-      const t = tartalomMap.get(id);
-      const tipusIkon = t?.tartalomTipusId ? (tipusMap.get(t.tartalomTipusId.toString()) ?? null) : null;
+    if (sor.entitasTipus === 'Gondolat') {
+      const t = gondolatMap.get(id);
+      const tipusIkon = t?.gondolatTipusId ? (tipusMap.get(t.gondolatTipusId.toString()) ?? null) : null;
       const kategoriaIkonok = (t?.kategoriaIds ?? [])
         .map(k => kategoriaMap.get(k.toString()))
         .filter(Boolean);
-      eredmeny.set(`Tartalom:${id}`, { tipusIkon, kategoriaIkonok, javaslatTipus: null });
+      eredmeny.set(`Gondolat:${id}`, { tipusIkon, kategoriaIkonok, javaslatTipus: null });
 
     } else if (sor.entitasTipus === 'Javaslat') {
       eredmeny.set(`Javaslat:${id}`, { tipusIkon: null, kategoriaIkonok: [], javaslatTipus: javaslatMap.get(id) ?? null });
@@ -182,11 +182,11 @@ async mellekIkonokFeltoltese(sorok) {
     } else if (sor.entitasTipus === 'Egyezmeny') {
       eredmeny.set(`Egyezmeny:${id}`, { tipusIkon: null, kategoriaIkonok: [], javaslatTipus: egyezmenyMap.get(id) ?? null });
     }
-    // Kategória / Tartalomtípus: nincs mellék-ikon
+    // Kategória / Gondolattípus: nincs mellék-ikon
   }
 
   console.log('StrukturaService.mellekIkonokFeltoltese - VÉGE', {
-    tartalom: tartalomIdk.length, javaslat: javaslatIdk.length, egyezmeny: egyezmenyIdk.length
+    gondolat: gondolatIdk.length, javaslat: javaslatIdk.length, egyezmeny: egyezmenyIdk.length
   });
   return eredmeny;
 }

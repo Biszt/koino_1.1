@@ -6,7 +6,7 @@ import { IDO_EGYSEGEK, legjobbIdoEgyseg, atvaltMasodpercre } from '../../utils/i
 // ===== KÜSZÖBÉRTÉK-MEZŐK SEGÉDMODUL =====
 // Felelősség: a négy küszöbérték szerkeszthető űrlapmezőjét EGY helyen
 //   definiálja (HTML felépítés + kitöltés + visszaolvasás + validálás), hogy
-//   ugyanaz a kód szolgálja ki a Küszöb érték javaslat modált és a Tartalom
+//   ugyanaz a kód szolgálja ki a Küszöb érték javaslat modált és a Gondolat
 //   létrehozó modált is.
 // A négy küszöb:
 //   - javaslatElfogadasiKuszob  – támogatottsági küszöb (51–100 %)
@@ -15,10 +15,10 @@ import { IDO_EGYSEGEK, legjobbIdoEgyseg, atvaltMasodpercre } from '../../utils/i
 //   - maximumDontesiIdo         – maximum döntési idő (mp)
 // Az időket az e-embernek szám + egység párként mutatjuk, a backendnek
 // másodpercben küldjük (lásd idoFormazo.js).
-// Használják: ErtekJavaslatModal, TartalomModal.
+// Használják: ErtekJavaslatModal, GondolatModal.
 
 // ----- ALAPÉRTELMEZETT KÜSZÖBÉRTÉKEK -----
-// Ugyanazok, mint a backend tartalomService alapértékei, hogy a felület és a
+// Ugyanazok, mint a backend gondolatService alapértékei, hogy a felület és a
 // szerver ugyanazt az alaphelyzetet mutassa.
 export const KUSZOB_ALAPERTEKEK = {
   javaslatElfogadasiKuszob: 51,          // egyszerű többség (51 %)

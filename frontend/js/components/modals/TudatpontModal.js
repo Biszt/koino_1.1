@@ -16,7 +16,7 @@ import { tokenLekerese } from '../../utils/authHelper.js';
 //  3. Mentéskor az ELSŐ allokáláskor felugró szerep-választóval bekéri a részvételi
 //     szerepet (passzív/aktív), majd a POST /api/tudatpont/hozzarendeles-t hívja.
 // Használják: minden kártyatípus „Tudatpont módosítás" menüpontja.
-// A standard modal-stílust követi (t-modal-* osztályok), mint a TartalomModal.
+// A standard modal-stílust követi (t-modal-* osztályok), mint a GondolatModal.
 class TudatpontModal {
 
   // ===== KONSTRUKTOR =====

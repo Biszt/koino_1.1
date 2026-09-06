@@ -100,7 +100,7 @@ Ha a végpont teszteléshez érint egy útvonalat, kötelező mezőt vagy
 
 - A **`main`** branchre dolgozunk. A commit-üzenetek **magyarul**.
 - A commit-üzenet mondja el **mit és miért** — a projekt eddigi üzenetei jó
-  minták (pl. *„Küszöb-hiba javítás: kategória/tartalomtípus javaslatok saját
+  minták (pl. *„Küszöb-hiba javítás: kategória/gondolattípus javaslatok saját
   küszöbe érvényesül"*).
 - Módosítás után a **dev környezetben** (http://localhost:3000) ellenőrizd a
   működést. Backend-módosítás után Windows alatt a nodemon nem mindig tölt újra

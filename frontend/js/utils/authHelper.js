@@ -105,7 +105,7 @@ function beVanJelentkezve() {
 // Elmenti a legutóbb kiválasztott entitás azonosítóját és típusát localStorage-ba,
 // hogy oldalfrissítés után vissza lehessen tölteni.
 // @param {string} entitasId   – az entitás azonosítója
-// @param {string} entitasTipus – pl. 'Tartalom', 'Kategoria'
+// @param {string} entitasTipus – pl. 'Gondolat', 'Kategoria'
 function aktivEntitasMentese(entitasId, entitasTipus) {
   console.log('authHelper.aktivEntitasMentese - KEZDÉS', { entitasId, entitasTipus });
 
@@ -129,6 +129,24 @@ function aktivEntitasMentese(entitasId, entitasTipus) {
   console.log('authHelper.aktivEntitasMentese - VÉGE', { mentve: !!(entitasId && entitasTipus) });
 }
 
+// ===== RÉGI ENTITÁS-TÍPUSOK ÁTVÁLTÁSA (2026-09-06) =====
+//
+// ⚠️ MIÉRT KELL EZ? A „tartalom" → „gondolat" átnevezéskor az adatbázist megvándoroltattuk,
+// a KÖDÖNGŐ BÖNGÉSZŐKET viszont nem lehet: minden e-ember gépén ott maradt a legutóbb
+// megnyitott entitás típusa a localStorage-ban. Az első betöltésnél a régi érték ment ki a
+// szerverre (`entitasTipus=Tartalom`), amit az új backend jogosan utasított vissza — 400.
+//
+// ⭐ A javítás nem az, hogy „töröld a böngésző-tárad", hanem hogy a program ÖNJAVÍTÓ legyen:
+// olvasáskor átváltjuk a régi nevet, és rögtön VISSZA IS ÍRJUK. Így egyetlen e-embernek sem
+// kell tudnia arról, hogy a fogalmat átneveztük.
+//
+// ⚠️ Ez átmeneti darab. Akkor törölhető, ha már biztosan senkinek nincs régi érték a
+// böngészőjében — de amíg itt van, semmit nem ront: csak két szót cserél.
+const REGI_ENTITAS_TIPUSOK = {
+  Tartalom: 'Gondolat',
+  TartalomTipus: 'GondolatTipus'
+};
+
 // ===== AKTÍV ENTITÁS LEKÉRÉSE =====
 // Visszaadja a localStorage-ban tárolt entitás azonosítóját és típusát,
 // vagy null értékeket, ha nincs mentett adat.
@@ -136,8 +154,16 @@ function aktivEntitasMentese(entitasId, entitasTipus) {
 function aktivEntitasLekerese() {
   console.log('authHelper.aktivEntitasLekerese - KEZDÉS');
 
-  const entitasId    = localStorage.getItem('koino_aktiv_entitas_id')    ?? null;
-  const entitasTipus = localStorage.getItem('koino_aktiv_entitas_tipus') ?? null;
+  const entitasId = localStorage.getItem('koino_aktiv_entitas_id') ?? null;
+  let entitasTipus = localStorage.getItem('koino_aktiv_entitas_tipus') ?? null;
+
+  // Régi név a böngésző tárában? Átváltjuk, és vissza is írjuk (lásd fent).
+  if (entitasTipus && REGI_ENTITAS_TIPUSOK[entitasTipus]) {
+    const ujTipus = REGI_ENTITAS_TIPUSOK[entitasTipus];
+    console.log('authHelper.aktivEntitasLekerese - régi típus átváltva', { regi: entitasTipus, uj: ujTipus });
+    entitasTipus = ujTipus;
+    localStorage.setItem('koino_aktiv_entitas_tipus', ujTipus);
+  }
 
   console.log('authHelper.aktivEntitasLekerese - VÉGE', { entitasId, entitasTipus });
   return { entitasId, entitasTipus };

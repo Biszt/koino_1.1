@@ -4,7 +4,7 @@
 // rádiógombokkal: rendezési MÓD (hierarchikus / időrend / saját tudatpont) és
 // SORREND (csökkenő / növekvő). Az „Alkalmaz" gomb az onAlkalmaz(mod, irany)
 // callbacket hívja — a tényleges átváltást a hívó végzi (Pakli.rendezesBeallitasa).
-// A Modal alaposztályra épül; a tartalmat JS-ben építi (nincs külön HTML-fájl).
+// A Modal alaposztályra épül; a gondolatot JS-ben építi (nincs külön HTML-fájl).
 //
 // Használják: FoOldal._rendezesMegnyitasa (globális) és a kártya-menük (ág-szűrt).
 
@@ -46,7 +46,7 @@ class RendezesModal {
   async init() {
     console.log('RendezesModal.init - KEZDÉS');
 
-    this._tartalomElem = this._tartalomEpitese();
+    this._tartalomElem = this._gondolatEpitese();
 
     // Ág-szűrt esetben a cím jelzi, melyik ágon belül rendezünk
     const cim = this.agazatCim
@@ -75,8 +75,8 @@ class RendezesModal {
     this.modal?.megnyitas();
   }
 
-  // ===== TARTALOM FELÉPÍTÉSE =====
-  _tartalomEpitese() {
+  // ===== GONDOLAT FELÉPÍTÉSE =====
+  _gondolatEpitese() {
     const div = document.createElement('div');
     div.className = 'rendezes-modal';
 

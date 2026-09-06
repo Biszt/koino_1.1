@@ -13,7 +13,7 @@ const kategoriaSchema = new mongoose.Schema({
   // ----- NÉV MEZŐ -----
   // A kategória neve (kötelező, egyedi)
   nev: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező
     unique: true,           // Egyedi érték - nem lehet két azonos nevű kategória
@@ -27,7 +27,7 @@ const kategoriaSchema = new mongoose.Schema({
   // MÓDOSÍTVA: String helyett Mixed típus, mert a SzovegSzerkeszto
   // komponens egy JSON blokkokból álló tömböt tárol ide
   leiras: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.Mixed, // Vegyes típus: JSON tömböt fogad a szövegszerkesztőtől
     required: false,                   // Nem kötelező mező
     default: null                      // Alapértelmezett érték: null (üres string helyett)
@@ -38,9 +38,9 @@ const kategoriaSchema = new mongoose.Schema({
   // Pl: '/uploads/icons/kategoria-1234567890-987654321.png'
   // VÁLTOZÁS: a korábbi 'szin' (hexadecimális színkód) mező
   // helyett most 'ikon' (fájl útvonal) mező szerepel,
-  // hogy egységes legyen a TartalomTipus modellel
+  // hogy egységes legyen a GondolatTipus modellel
   ikon: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,           // Szöveges típus
     required: true,         // Kötelező mező - minden kategóriának kell legyen ikonja
     trim: true              // Levágja a felesleges szóközöket
@@ -53,7 +53,7 @@ const kategoriaSchema = new mongoose.Schema({
   // (alkategória-hierarchia). Ezért a szuloId mindig egy Kategoria _id-ra mutat,
   // vagy null (gyökér). Lásd a szuloTipus enumját is.
   szuloId: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: mongoose.Schema.Types.ObjectId, // MongoDB ObjectId típus
     default: null                          // Alapértelmezetten nincs szülő (gyökér elem)
   },
@@ -65,7 +65,7 @@ const kategoriaSchema = new mongoose.Schema({
   // kategória-hierarchia előtti, téves feltevés volt. Kötelező, ha szuloId
   // meg van adva — különben null (gyökér kategória).
   szuloTipus: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: String,           // Szöveges típus
     enum: [                 // Csak ezek az értékek engedélyezettek
       'Kategoria',          // Egyetlen megengedett szülő-típus (alkategória)
@@ -89,7 +89,7 @@ const kategoriaSchema = new mongoose.Schema({
   // ----- LÉTREHOZÁS DÁTUMA -----
   // Amikor a kategória létrejött
   letrehozva: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Date,             // Dátum típus
     default: Date.now       // Alapértelmezett: jelenlegi időpont
   },
@@ -100,7 +100,7 @@ const kategoriaSchema = new mongoose.Schema({
   // áthelyezés/egyesítés/tudatpont NEM. A kártya ezt mutatja, a gyerek↔szülő
   // összevetés ebből dönti el, elavulhat-e a gyerek (piros = régebbi, zöld = újabb).
   modositva: {
-    reteg: 'tartalom',  // H6
+    reteg: 'gondolat',  // H6
     type: Date,
     default: Date.now
   }
@@ -127,7 +127,7 @@ kategoriaSchema.index({ szuloTipus: 1 });
 // nem tudunk mező-opciót tenni — rájuk ez az alapértelmezés vonatkozik.
 // A működésre nincs hatása: a Mongoose ezt az opciót megőrzi, de nem használja.
 // Magyarázat és a teljes besorolás: docs/adat_osztalyozas.md (H6 híd-feladat).
-kategoriaSchema.options.retegAlapertelmezes = 'tartalom';
+kategoriaSchema.options.retegAlapertelmezes = 'gondolat';
 
 // ===== MODEL LÉTREHOZÁSA ÉS EXPORTÁLÁSA =====
 const Kategoria = mongoose.model('Kategoria', kategoriaSchema);

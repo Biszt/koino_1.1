@@ -172,7 +172,7 @@ class BlokkLista {
   }
 
   // =============================================
-  // TARTALOM EXPORTÁLÁSA MENTÉSHEZ
+  // GONDOLAT EXPORTÁLÁSA MENTÉSHEZ
   // =============================================
   // Visszaadja a blokkok szűrt, mentésre kész tömbjét
   // Az üres szöveges blokkokat kiszűri

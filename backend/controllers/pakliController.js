@@ -35,7 +35,7 @@ class PakliController {
             }
 
             // 3. LÉPÉS - ENTITÁSTÍPUS VALIDÁLÁSA (ha meg van adva)
-            const megengedettTipusok = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'];
+            const megengedettTipusok = ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'];
             if (entitasTipus && !megengedettTipusok.includes(entitasTipus)) {
                 return res.status(400).json({
                     message: `Érvénytelen entitástípus. Megengedett értékek: ${megengedettTipusok.join(', ')}`
@@ -157,7 +157,7 @@ async entitasSzovegLekerese(req, res) {
     const { entitasId, entitasTipus } = req.params;
 
     // 2. LÉPÉS - ENTITÁSTÍPUS VALIDÁLÁSA
-    const megengedettTipusok = ['Tartalom', 'Kategoria', 'TartalomTipus', 'Javaslat', 'Egyezmeny'];
+    const megengedettTipusok = ['Gondolat', 'Kategoria', 'GondolatTipus', 'Javaslat', 'Egyezmeny'];
     if (!megengedettTipusok.includes(entitasTipus)) {
       return res.status(400).json({
         message: `Érvénytelen entitástípus. Megengedett értékek: ${megengedettTipusok.join(', ')}`
@@ -167,26 +167,26 @@ async entitasSzovegLekerese(req, res) {
     // 3. LÉPÉS - SERVICE HÍVÁS (indoklás / leírás / szöveg)
     const szoveg = await pakliService.entitasSzovegLekerese(entitasId, entitasTipus);
 
-    // 3/b. LÉPÉS - MÓDOSÍTÁSI JAVASLAT: a JAVASOLT ÚJ tartalom is (a kártya
-    // „Módosított tartalom" füléhez). Más típusnál / entitásnál null marad.
-    let modositottTartalom = null;
+    // 3/b. LÉPÉS - MÓDOSÍTÁSI JAVASLAT: a JAVASOLT ÚJ gondolat is (a kártya
+    // „Módosított gondolat" füléhez). Más típusnál / entitásnál null marad.
+    let modositottGondolat = null;
     if (entitasTipus === 'Javaslat') {
-      modositottTartalom = await pakliService.javaslatModositottTartalom(entitasId);
+      modositottGondolat = await pakliService.javaslatModositottGondolat(entitasId);
     }
 
-    // 3/c. LÉPÉS - MÓDOSÍTÁSI EGYEZMÉNY: a LECSERÉLT (régi) tartalom is (a kártya
-    // „Lecserélt tartalom" füléhez). Más típusnál / entitásnál null marad.
-    let lecsereltTartalom = null;
+    // 3/c. LÉPÉS - MÓDOSÍTÁSI EGYEZMÉNY: a LECSERÉLT (régi) gondolat is (a kártya
+    // „Lecserélt gondolat" füléhez). Más típusnál / entitásnál null marad.
+    let lecsereltGondolat = null;
     if (entitasTipus === 'Egyezmeny') {
-      lecsereltTartalom = await pakliService.egyezmenyLecsereltTartalom(entitasId);
+      lecsereltGondolat = await pakliService.egyezmenyLecsereltGondolat(entitasId);
     }
 
     // 4. LÉPÉS - SIKERES VÁLASZ
     console.log('entitasSzovegLekerese endpoint hívás - VÉGE', {
       entitasId,
       entitasTipus,
-      vanModositottTartalom: !!modositottTartalom,
-      vanLecsereltTartalom:  !!lecsereltTartalom
+      vanModositottGondolat: !!modositottGondolat,
+      vanLecsereltGondolat:  !!lecsereltGondolat
     });
 
     return res.status(200).json({
@@ -194,8 +194,8 @@ async entitasSzovegLekerese(req, res) {
       entitasId,
       entitasTipus,
       szoveg,
-      modositottTartalom,
-      lecsereltTartalom
+      modositottGondolat,
+      lecsereltGondolat
     });
 
   } catch (error) {

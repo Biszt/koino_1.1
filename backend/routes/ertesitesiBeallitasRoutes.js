@@ -25,7 +25,7 @@ router.put('/globalis', authMiddleware, ertesitesiBeallitasController.globalisMe
 // GET /api/ertesitesi-beallitasok/entitas/:entitasTipus/:entitasId
 // Egy konkrét entitáson lévő beállítás lekérése
 // Az entitasTipus az URL-ben van, mert az entitasId önmagában nem egyedi
-// (pl. egy Tartalom és egy Kategoria is lehet ugyanolyan ObjectId-vel)
+// (pl. egy Gondolat és egy Kategoria is lehet ugyanolyan ObjectId-vel)
 router.get(
   '/entitas/:entitasTipus/:entitasId',
   authMiddleware,

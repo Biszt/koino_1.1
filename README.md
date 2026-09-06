@@ -4,7 +4,7 @@
 
 A **koino** egy közösségi platform, ahol a regisztrálók nem „felhasználók", hanem
 **e-emberek**: egyszerre tulajdonosok, fejlesztők, moderátorok és felelősök. A
-platform lényege a **közösségi döntéshozatal**: a tartalmakból *javaslatok*, a
+platform lényege a **közösségi döntéshozatal**: a gondolatokból *javaslatok*, a
 javaslatokból *egyezmények* születnek — mindezt egy átlátható, mindenki számára
 egyenlő szavazási mechanika vezérli.
 
@@ -45,14 +45,14 @@ Részletek: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
 
 ## A központi ötlet dióhéjban
 
-1. Egy e-ember **tartalmat** hoz létre (kérdés, válasz, ismeret, feladat…), amit
-   **kategóriák** és **tartalomtípusok** rendszereznek.
+1. Egy e-ember **gondolatot** hoz létre (kérdés, válasz, ismeret, feladat…), amit
+   **kategóriák** és **gondolattípusok** rendszereznek.
 2. Mindenkinek ugyanannyi **tudatpontja** van. Ez nem elkölthető, csak
    szétosztható és bármikor átrendezhető — a **prioritást** fejezi ki, NEM a
    szavazaterőt (szavazásnál mindenki egyenlő).
-3. Aki tudatpontot rendelt egy tartalomhoz, az tehet rá **javaslatot**
+3. Aki tudatpontot rendelt egy gondolathoz, az tehet rá **javaslatot**
    (módosítás, áthelyezés, törlés, egyesítés).
-4. A javaslatról **szavaznak**. Minden tartalomnak vannak **küszöbértékei**
+4. A javaslatról **szavaznak**. Minden gondolatnak vannak **küszöbértékei**
    (mekkora támogatottság és részvétel kell az elfogadáshoz) és min/max
    döntési ideje.
 5. A **bizonyossági mutató** dönti el, mikor zárul a szavazás: minél

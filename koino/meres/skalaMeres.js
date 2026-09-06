@@ -65,7 +65,7 @@ const KOINO = 'skalameres';
 // használat más, EZT A TÁBLÁZATOT kell először átírni — és a mérést megismételni.
 const KEVEREK = {
   TudatpontRendezes: 60,
-  TartalomLetrehozas: 25,
+  GondolatLetrehozas: 25,
   Szavazat: 10,
   Javaslat: 3,
   ErtekJavaslat: 2
@@ -149,7 +149,7 @@ async function tarGyartasa(darab, hely) {
   }
 
   const sorok = [];
-  const entitasok = [];    // a létrehozott tartalmak azonosítói
+  const entitasok = [];    // a létrehozott gondolatok azonosítói
   const javaslatok = [];   // a létrehozott javaslatok azonosítói
   const idoAlap = Date.now() - darab * 1000;
 
@@ -209,27 +209,27 @@ async function tarGyartasa(darab, hely) {
   // ----- 1. A KOINO LÉTREHOZÁSA (az első esemény) -----
   await esemenyt(emberek[0], 'KoinoLetrehozas', { nev: 'Skála-mérés', leiras: null }, 0);
 
-  // ----- 2. EGY ADAG TARTALOM ELŐRE -----
+  // ----- 2. EGY ADAG GONDOLAT ELŐRE -----
   // Kell néhány entitás, amire a többi esemény hivatkozhat.
   const elolegDarab = Math.min(Math.max(10, Math.floor(darab / 20)), 2000);
   for (let i = 0; i < elolegDarab && sorok.length < darab; i++) {
     const ember = emberek[Math.floor(veletlen() * fok)];
-    const e = await tartalmat(ember, sorok.length);
+    const e = await gondolatot(ember, sorok.length);
     entitasok.push(e.azonosito);
   }
 
-  /** Egy tartalom-esemény (a méret a valódi módon, a kanonikus alak hosszából). */
-  async function tartalmat(ember, index) {
-    const tartalom = {
-      tipus: 'Tartalom',
+  /** Egy gondolat-esemény (a méret a valódi módon, a kanonikus alak hosszából). */
+  async function gondolatot(ember, index) {
+    const gondolat = {
+      tipus: 'Gondolat',
       cim: cimetGyartok(veletlen),
       szoveg: veletlen() < 0.5 ? cimetGyartok(veletlen) + '.' : null,
       szulo: entitasok.length && veletlen() < 0.7
         ? entitasok[Math.floor(veletlen() * entitasok.length)]
         : null
     };
-    tartalom.meret = kanonikusBajtok(tartalom).length;
-    return esemenyt(ember, 'TartalomLetrehozas', tartalom, index);
+    gondolat.meret = kanonikusBajtok(gondolat).length;
+    return esemenyt(ember, 'GondolatLetrehozas', gondolat, index);
   }
 
   // ----- 3. A TÖBBI, A KEVERÉK SZERINT -----
@@ -238,8 +238,8 @@ async function tarGyartasa(darab, hely) {
     const ember = emberek[Math.floor(veletlen() * fok)];
     const tipus = sorsolo[Math.floor(veletlen() * sorsolo.length)];
 
-    if (tipus === 'TartalomLetrehozas' || entitasok.length === 0) {
-      const e = await tartalmat(ember, index);
+    if (tipus === 'GondolatLetrehozas' || entitasok.length === 0) {
+      const e = await gondolatot(ember, index);
       entitasok.push(e.azonosito);
       continue;
     }
@@ -465,8 +465,8 @@ async function egyMeret(darab, hely) {
   // jön el.
   const ujEmber = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
   const ujEsemeny = await esemenyLetrehozasa(
-    { koino: KOINO, tipus: 'TartalomLetrehozas', elozo: null, sorszam: 1,
-      adat: { tipus: 'Tartalom', cim: 'mérő esemény', szoveg: null, szulo: null, meret: 42 } },
+    { koino: KOINO, tipus: 'GondolatLetrehozas', elozo: null, sorszam: 1,
+      adat: { tipus: 'Gondolat', cim: 'mérő esemény', szoveg: null, szulo: null, meret: 42 } },
     ujEmber
   );
   const mentes = await ido(() => esemenyMentese(tar, ujEsemeny));

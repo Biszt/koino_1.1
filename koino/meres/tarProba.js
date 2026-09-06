@@ -31,7 +31,7 @@ let s = ''; for (const b of new Uint8Array(nyersKulcs)) s += String.fromCharCode
 const SZERZO = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /** Segéd: a lánc végére fűz egy eseményt (mentés nélkül). */
-async function ujEsemeny(adat, tipus = 'TartalomLetrehozas') {
+async function ujEsemeny(adat, tipus = 'GondolatLetrehozas') {
   const veg = await lancVege(tar, SZERZO);
   return esemenyLetrehozasa({ koino: KOINO, tipus, adat, ...veg }, kulcspar);
 }
@@ -39,13 +39,13 @@ async function ujEsemeny(adat, tipus = 'TartalomLetrehozas') {
 // ===== ALAPMŰKÖDÉS =====
 
 proba('Az esemény elmentődik és visszaolvasható', async () => {
-  const e = await ujEsemeny({ cim: 'Első tartalom', meret: 128 });
+  const e = await ujEsemeny({ cim: 'Első gondolat', meret: 128 });
   const eredmeny = await esemenyMentese(tar, e);
   const vissza = await esemenyLekerese(tar, e.azonosito);
   return eredmeny.mentve === true && vissza?.azonosito === e.azonosito;
 });
 
-proba('Az ISMÉTELT mentés nem hiba (ugyanaz a tartalom = ugyanaz a név)', async () => {
+proba('Az ISMÉTELT mentés nem hiba (ugyanaz a gondolat = ugyanaz a név)', async () => {
   const elso = (await sajatLancEsemenyei(tar, SZERZO))[0];
   const eredmeny = await esemenyMentese(tar, elso);
   return eredmeny.mentve === true && eredmeny.marMegvolt === true;
@@ -98,9 +98,9 @@ proba('ELÁGAZÁS: a mentés jelzi az ellentmondást', async () => {
   // mutatna két különböző embernek
   const veg = await lancVege(tar, SZERZO);
   const egyik = await esemenyLetrehozasa(
-    { koino: KOINO, tipus: 'TartalomLetrehozas', adat: { cim: 'Neked ezt', meret: 10 }, ...veg }, kulcspar);
+    { koino: KOINO, tipus: 'GondolatLetrehozas', adat: { cim: 'Neked ezt', meret: 10 }, ...veg }, kulcspar);
   const masik = await esemenyLetrehozasa(
-    { koino: KOINO, tipus: 'TartalomLetrehozas', adat: { cim: 'Neki azt', meret: 10 }, ...veg }, kulcspar);
+    { koino: KOINO, tipus: 'GondolatLetrehozas', adat: { cim: 'Neki azt', meret: 10 }, ...veg }, kulcspar);
 
   await esemenyMentese(tar, egyik);
   const eredmeny = await esemenyMentese(tar, masik);
@@ -147,7 +147,7 @@ proba('A SÉRÜLT sor nem teszi olvashatatlanná a tárat', async () => {
   const kulon = await mkdtemp(join(tmpdir(), 'koino-serult-'));
   const serultTar = await esemenyTarNyitasa('proba', kulon);
   const e = await esemenyLetrehozasa(
-    { koino: 'proba', tipus: 'TartalomLetrehozas', adat: { cim: 'Ép', meret: 4 },
+    { koino: 'proba', tipus: 'GondolatLetrehozas', adat: { cim: 'Ép', meret: 4 },
       elozo: null, sorszam: 1 }, kulcspar);
   await esemenyMentese(serultTar, e);
 

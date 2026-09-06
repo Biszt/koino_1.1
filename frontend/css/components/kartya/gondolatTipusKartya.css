@@ -1,4 +1,4 @@
-/* frontend/css/components/kartya/tartalomTipusKartya.css */
+/* frontend/css/components/kartya/gondolatTipusKartya.css */
 
 
 /* ---------------------------------------- */
@@ -6,8 +6,8 @@
 /* ---------------------------------------- */
 
 
-/* TartalomTípus neve – a fejléc fő szöveges eleme */
-.tartalom-tipus-kartya__nev {
+/* GondolatTípus neve – a fejléc fő szöveges eleme */
+.gondolat-tipus-kartya__nev {
   flex: 1;                              /* Kitölti a maradék helyet */
   font-size: var(--text-sm);            /* Kompakt, de olvasható */
   font-weight: 600;                     /* Kiemelkedik a többi elemtől */
@@ -23,7 +23,7 @@
 
 
 /* Saját és hierarchikus tudatpont konténere – egymás mellett */
-.tartalom-tipus-kartya__tudatpont-sor {
+.gondolat-tipus-kartya__tudatpont-sor {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -33,7 +33,7 @@
 
 
 /* Mindkét tudatpont elem közös stílusa */
-.tartalom-tipus-kartya__tudatpont {
+.gondolat-tipus-kartya__tudatpont {
   font-size: var(--text-xs);            /* Kompakt – másodlagos adat */
   font-weight: 500;
   white-space: nowrap;
@@ -41,13 +41,13 @@
 
 
 /* Saját tudatpont – kevésbé hangsúlyos */
-.tartalom-tipus-kartya__tudatpont--sajat {
+.gondolat-tipus-kartya__tudatpont--sajat {
   color: var(--color-text-muted);
 }
 
 
 /* Hierarchikus tudatpont – erősebb, ez mutatja az ág erejét */
-.tartalom-tipus-kartya__tudatpont--hierarchikus {
+.gondolat-tipus-kartya__tudatpont--hierarchikus {
   color: var(--color-primary);          /* Erdőzöld – a hierarchia ereje */
   font-weight: 600;
 }
@@ -59,7 +59,7 @@
 
 
 /* Emoji ikon – a fejléc jobb szélén, a tudatpont sor után */
-.tartalom-tipus-kartya__ikon {
+.gondolat-tipus-kartya__ikon {
   font-size: var(--text-base);          /* Természetes emoji méret */
   flex-shrink: 0;                       /* Nem zsugorodik el */
   cursor: default;                      /* Nem kattintható önmagában */
@@ -68,7 +68,7 @@
 
 
 /* Feltöltött képfájl ikon – ugyanott, jobb szélén */
-.tartalom-tipus-kartya__ikon-kep {
+.gondolat-tipus-kartya__ikon-kep {
   width: 32px;
   height: 32px;
   object-fit: contain;                  /* Arányok megőrzése */
@@ -84,7 +84,7 @@
 
 
 /* A kiválasztott kártya leírás szövege */
-.tartalom-tipus-kartya__leiras {
+.gondolat-tipus-kartya__leiras {
   font-size: var(--text-sm);
   color: var(--color-text-muted);       /* Muted – kiegészítő információ */
   line-height: 1.6;

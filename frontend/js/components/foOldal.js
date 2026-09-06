@@ -15,9 +15,9 @@ import {
 import HamburgerMenu from './HamburgerMenu.js';
 import Modal from './modals/Modal.js';
 import fejlesztesreVarMegjelenitese from './FejlesztesreVar.js';
-import TartalomModal from './modals/TartalomModal.js';
+import GondolatModal from './modals/GondolatModal.js';
 import KategoriaModal from './modals/KategoriaModal.js';
-import TartalomTipusModal from './modals/TartalomTipusModal.js';
+import GondolatTipusModal from './modals/GondolatTipusModal.js';
 import ErtesitesiBeallitasModal from './modals/ErtesitesiBeallitasModal.js';
 import ErtesitesekModal from './modals/ErtesitesekModal.js';
 import MeghivoModal from './modals/MeghivoModal.js';
@@ -51,9 +51,9 @@ class FoOldal {
     this.eemberNev      = '...';
     this.tudatpontok    = '...';
     this.eemberekSzama        = '...';
-    this.tartalmakSzama       = '...';
+    this.gondolatokSzama       = '...';
     this.kategoriakSzama      = '...';
-    this.tartalomTipusokSzama = '...';
+    this.gondolatTipusokSzama = '...';
     this.javaslatokSzama      = '...';
     this.egyezmenyekSzama     = '...';
     console.log('FoOldal.constructor - VÉGE', {
@@ -487,9 +487,9 @@ init() {
       // — 3) Létrehozás —
       {
         ikon:       '✏️',
-        felirat:    'Új tartalom létrehozása',
+        felirat:    'Új gondolat létrehozása',
         elvalaszto: true,
-        akcio:      () => this._ujTartalomModalMegnyitasa()
+        akcio:      () => this._ujGondolatModalMegnyitasa()
       },
       {
         ikon:    '🏷️',
@@ -498,8 +498,8 @@ init() {
       },
       {
         ikon:    '🧩',
-        felirat: 'Új tartalom típus létrehozása',
-        akcio:   () => this._ujTartalomTipusModalMegnyitasa()
+        felirat: 'Új gondolat típus létrehozása',
+        akcio:   () => this._ujGondolatTipusModalMegnyitasa()
       },
       // — 4) Fiók —
       {
@@ -533,19 +533,19 @@ init() {
 
 
   // =====================================
-  // ÚJ TARTALOM MODAL MEGNYITÁSA
+  // ÚJ GONDOLAT MODAL MEGNYITÁSA
   // =====================================
-  async _ujTartalomModalMegnyitasa() {
-    console.log('FoOldal._ujTartalomModalMegnyitasa - KEZDÉS');
+  async _ujGondolatModalMegnyitasa() {
+    console.log('FoOldal._ujGondolatModalMegnyitasa - KEZDÉS');
 
     this.hamburgerMenu?.bezaras();
 
-    const tartalomModal = new TartalomModal('modal-kontener', {
+    const gondolatModal = new GondolatModal('modal-kontener', {
       mod: 'letrehozas',
-      onSiker: (ujTartalom) => {
-        console.log('FoOldal._ujTartalomModalMegnyitasa - onSiker KEZDÉS', {
-          tartalomId: ujTartalom?._id,
-          cim:        ujTartalom?.cim
+      onSiker: (ujGondolat) => {
+        console.log('FoOldal._ujGondolatModalMegnyitasa - onSiker KEZDÉS', {
+          gondolatId: ujGondolat?._id,
+          cim:        ujGondolat?.cim
         });
 
         // VÁLTOZÁS: _pakliInditasa-t használjuk itt is a biztonságos újratöltéshez
@@ -553,14 +553,14 @@ init() {
         this._pakliInditasa(entitasId, entitasTipus);
 
         this.adatokBetoltese();
-        console.log('FoOldal._ujTartalomModalMegnyitasa - onSiker VÉGE');
+        console.log('FoOldal._ujGondolatModalMegnyitasa - onSiker VÉGE');
       }
     });
 
-    await tartalomModal.init();
-    tartalomModal.megnyitas();
+    await gondolatModal.init();
+    gondolatModal.megnyitas();
 
-    console.log('FoOldal._ujTartalomModalMegnyitasa - VÉGE');
+    console.log('FoOldal._ujGondolatModalMegnyitasa - VÉGE');
   }
 
 
@@ -591,28 +591,28 @@ init() {
 
 
   // =====================================
-  // ÚJ TARTALOM TÍPUS MODAL MEGNYITÁSA
+  // ÚJ GONDOLAT TÍPUS MODAL MEGNYITÁSA
   // =====================================
-  async _ujTartalomTipusModalMegnyitasa() {
-    console.log('FoOldal._ujTartalomTipusModalMegnyitasa - KEZDÉS');
+  async _ujGondolatTipusModalMegnyitasa() {
+    console.log('FoOldal._ujGondolatTipusModalMegnyitasa - KEZDÉS');
 
     this.hamburgerMenu?.bezaras();
 
-    const tartalomTipusModal = new TartalomTipusModal('modal-kontener', {
+    const gondolatTipusModal = new GondolatTipusModal('modal-kontener', {
       mod: 'letrehozas',
-      onSiker: (ujTartalomTipus) => {
-        console.log('FoOldal._ujTartalomTipusModalMegnyitasa - onSiker KEZDÉS', {
-          tartalomTipusId:  ujTartalomTipus?.id,
-          tartalomTipusNev: ujTartalomTipus?.nev
+      onSiker: (ujGondolatTipus) => {
+        console.log('FoOldal._ujGondolatTipusModalMegnyitasa - onSiker KEZDÉS', {
+          gondolatTipusId:  ujGondolatTipus?.id,
+          gondolatTipusNev: ujGondolatTipus?.nev
         });
-        console.log('FoOldal._ujTartalomTipusModalMegnyitasa - onSiker VÉGE');
+        console.log('FoOldal._ujGondolatTipusModalMegnyitasa - onSiker VÉGE');
       }
     });
 
-    await tartalomTipusModal.init();
-    tartalomTipusModal.megnyitas();
+    await gondolatTipusModal.init();
+    gondolatTipusModal.megnyitas();
 
-    console.log('FoOldal._ujTartalomTipusModalMegnyitasa - VÉGE');
+    console.log('FoOldal._ujGondolatTipusModalMegnyitasa - VÉGE');
   }
 
 
@@ -939,10 +939,10 @@ init() {
   // =====================================
   // ÁLTALÁNOS MODAL MEGNYITÁSA
   // =====================================
-  _modalMegnyitasa(cim, tartalom) {
+  _modalMegnyitasa(cim, gondolat) {
     console.log('FoOldal._modalMegnyitasa - KEZDÉS', { cim });
     this.modal.cimBeallitasa(cim);
-    this.modal.tartalomBeallitasa(tartalom);
+    this.modal.gondolatBeallitasa(gondolat);
     this.modal.megnyitas();
     console.log('FoOldal._modalMegnyitasa - VÉGE', { cim });
   }
@@ -974,9 +974,9 @@ init() {
       this.eemberNev      = sajatAdatok.eemberNev;
       this.tudatpontok    = sajatAdatok.tudatpontok.toLocaleString();
       this.eemberekSzama        = platformStatisztika.eemberekSzama.toLocaleString();
-      this.tartalmakSzama       = platformStatisztika.tartalmakSzama.toLocaleString();
+      this.gondolatokSzama       = platformStatisztika.gondolatokSzama.toLocaleString();
       this.kategoriakSzama      = (platformStatisztika.kategoriakSzama ?? 0).toLocaleString();
-      this.tartalomTipusokSzama = (platformStatisztika.tartalomTipusokSzama ?? 0).toLocaleString();
+      this.gondolatTipusokSzama = (platformStatisztika.gondolatTipusokSzama ?? 0).toLocaleString();
       this.javaslatokSzama      = (platformStatisztika.javaslatokSzama ?? 0).toLocaleString();
       this.egyezmenyekSzama     = (platformStatisztika.egyezmenyekSzama ?? 0).toLocaleString();
 
@@ -986,7 +986,7 @@ init() {
         eemberNev:      this.eemberNev,
         tudatpontok:    this.tudatpontok,
         eemberekSzama:  this.eemberekSzama,
-        tartalmakSzama: this.tartalmakSzama
+        gondolatokSzama: this.gondolatokSzama
       });
 
     } catch (hiba) {
@@ -1027,10 +1027,10 @@ init() {
       'info-tudatpont':       `🌟 ${this.tudatpontok}`,
       'info-eemberek-szama':       `🧑‍🤝‍🧑 ${this.eemberekSzama}`,
       // Az entitás-ikonok a platform egységes készletét követik (mint a Struktúra nézeten):
-      // Tartalom 📄 · Kategória 🏷️ · Tartalomtípus 🧩 · Javaslat 📋 · Egyezmény 🤝
-      'info-tartalmak-szama':      `📄 ${this.tartalmakSzama}`,
+      // Gondolat 📄 · Kategória 🏷️ · Gondolattípus 🧩 · Javaslat 📋 · Egyezmény 🤝
+      'info-gondolatok-szama':      `📄 ${this.gondolatokSzama}`,
       'info-kategoriak-szama':     `🏷️ ${this.kategoriakSzama}`,
-      'info-tartalomtipusok-szama':`🧩 ${this.tartalomTipusokSzama}`,
+      'info-gondolattipusok-szama':`🧩 ${this.gondolatTipusokSzama}`,
       'info-javaslatok-szama':     `📋 ${this.javaslatokSzama}`,
       'info-egyezmenyek-szama':    `🤝 ${this.egyezmenyekSzama}`
     };
@@ -1059,9 +1059,9 @@ init() {
       'info-eembernev',
       'info-tudatpont',
       'info-eemberek-szama',
-      'info-tartalmak-szama',
+      'info-gondolatok-szama',
       'info-kategoriak-szama',
-      'info-tartalomtipusok-szama',
+      'info-gondolattipusok-szama',
       'info-javaslatok-szama',
       'info-egyezmenyek-szama'
     ];

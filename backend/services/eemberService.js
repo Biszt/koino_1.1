@@ -32,9 +32,9 @@ const ErtesitesRepository = require('../repositories/ertesitesRepository');
 const ErtesitesiBeallitasRepository = require('../repositories/ertesitesiBeallitasRepository');
 // A megmaradó (mások által is támogatott) entitásoknál a létrehozó anonimizálásához.
 // A modellek közvetlen elérése bevált minta ebben a rétegben (lásd strukturaService).
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 const Javaslat = require('../models/javaslat');
 const Egyezmeny = require('../models/egyezmeny');
 
@@ -388,7 +388,7 @@ class eEmberService {
   //   1. A tudatpontok VISSZAOSZTÁSA: minden aktív hozzárendelést 0-ra állítunk.
   //      Ez a tudatpontService bevált, tranzakciós útja — a 0-ra esett entitásokat
   //      a „nincs 0-tudatpontos entitás" láncreakció automatikusan törli (a gyerekek
-  //      átszülőzésével). Amit MÁSOK is támogatnak, megmarad (a tartalom közösségi).
+  //      átszülőzésével). Amit MÁSOK is támogatnak, megmarad (a gondolat közösségi).
   //   2. A kapcsolódó „árva" adatok törlése: 0 értékű hozzárendelés-rekordok,
   //      szavazatok, érték-javaslatok, értesítések, értesítési beállítások.
   //   3. A megmaradó entitásoknál a létrehozó anonimizálása (null = „törölt e-ember").
@@ -474,14 +474,14 @@ class eEmberService {
     // === 4. LÉPÉS: LÉTREHOZÓ/SZERKESZTŐ ANONIMIZÁLÁSA A MEGMARADÓ ENTITÁSOKON ===
     // A még létező (mások által is támogatott) entitásoknál a személyes kötést
     // null-ra állítjuk → a felület „törölt e-embert" mutat.
-    // - Tartalom / Kategória / Tartalomtípus: a SZERKESZTŐK tömbösödtek, ezért
+    // - Gondolat / Kategória / Gondolattípus: a SZERKESZTŐK tömbösödtek, ezért
     //   minden olyan szerkesztő-elem eemberId-ját nullázzuk, ami erre az e-emberre
     //   mutat (arrayFilters). A bejegyzés MEGMARAD (allapot/eredeti sértetlen),
     //   csak a név válik „törölt e-emberré".
     // - Javaslat / Egyezmény: itt egyszeres `letrehozo` maradt, azt nullázzuk.
     // updateMany: nem fut rá a séma-validáció, de a mezők megengedik a null-t.
     await Promise.all([
-      Tartalom.updateMany(
+      Gondolat.updateMany(
         { 'szerkesztok.eemberId': eemberId },
         { $set: { 'szerkesztok.$[elem].eemberId': null } },
         { arrayFilters: [{ 'elem.eemberId': eemberId }] }
@@ -491,7 +491,7 @@ class eEmberService {
         { $set: { 'szerkesztok.$[elem].eemberId': null } },
         { arrayFilters: [{ 'elem.eemberId': eemberId }] }
       ),
-      TartalomTipus.updateMany(
+      GondolatTipus.updateMany(
         { 'szerkesztok.eemberId': eemberId },
         { $set: { 'szerkesztok.$[elem].eemberId': null } },
         { arrayFilters: [{ 'elem.eemberId': eemberId }] }

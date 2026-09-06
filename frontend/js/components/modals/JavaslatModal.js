@@ -48,11 +48,11 @@ class JavaslatModal {
     // =============================================
     // ÚJ - ID-ellenőrző mezők referenciái
     // =============================================
-    // Áthelyezés: új szülő tartalom mezője
+    // Áthelyezés: új szülő gondolat mezője
     this.ujSzuloMezo = null;
     // Egyesítés: forrás entitás mezők (dinamikus lista)
     this.forrasMezok = [];
-    // Egyesítés: az új entitás szülő tartalmának mezője (KÖTELEZŐ)
+    // Egyesítés: az új entitás szülő gondolatának mezője (KÖTELEZŐ)
     this.egyesitesSzuloMezo = null;
     // 3. lépés: opcionális egyezmény tárhely mező
     this.egyezmenyTarhelyMezo = null;
@@ -60,11 +60,11 @@ class JavaslatModal {
     this.csomagTetelek = [];
 
     // =============================================
-    // ÚJ - MÓDOSÍTÁS: kategória + tartalomtípus választó adatai
+    // ÚJ - MÓDOSÍTÁS: kategória + gondolattípus választó adatai
     // =============================================
-    // Csak Tartalom entitás módosításánál használjuk. A listákat az init()
+    // Csak Gondolat entitás módosításánál használjuk. A listákat az init()
     // tölti be a szerverről (apiGet), a kiválasztott kategóriákat menet közben követjük.
-    this.tartalomTipusok         = []; // az összes választható tartalomtípus
+    this.gondolatTipusok         = []; // az összes választható gondolattípus
     this.kategoriak              = []; // az összes választható kategória (fához is)
     this.kivalasztottKategoriaIds = []; // a módosítás után érvényes kategória-ID-k (max 3)
 
@@ -116,12 +116,12 @@ class JavaslatModal {
     this._egyezmenyTarhelyMezoLetrehozasa();
 
     // =============================================
-    // ÚJ - MÓDOSÍTÁS választó-listák előtöltése (csak Tartalomnál)
+    // ÚJ - MÓDOSÍTÁS választó-listák előtöltése (csak Gondolatnál)
     // =============================================
-    // A módosítási forma a 2. lépésben épül fel; a tartalomtípus- és
+    // A módosítási forma a 2. lépésben épül fel; a gondolattípus- és
     // kategória-legördülőhöz szükséges listákat itt, előre lekérjük, hogy
     // a forma felépülésekor már rendelkezésre álljanak.
-    if ((this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom') {
+    if ((this.entitasAdatok?.entitasTipus ?? 'Gondolat') === 'Gondolat') {
       await this._modositasLenyilokBetoltese();
     }
 
@@ -134,7 +134,7 @@ class JavaslatModal {
   // A 3. lépés statikus HTML-jében lévő #egyezmeny-tarhely-kontener-be
   // építi az opcionális ID-ellenőrző mezőt. Üresen hagyva a mentés
   // az alapértelmezést használja (Egyesítés: új entitás placeholder,
-  // más típus: a javaslat szülő tartalma).
+  // más típus: a javaslat szülő gondolata).
   _egyezmenyTarhelyMezoLetrehozasa() {
     console.log('JavaslatModal._egyezmenyTarhelyMezoLetrehozasa - KEZDÉS');
 
@@ -147,7 +147,7 @@ class JavaslatModal {
     this.egyezmenyTarhelyMezo = new EntitasKeresoMezo(kontener, {
       cimke:       'Egyezmény tárhely (opcionális)', // A 3. lépésre lépéskor típusfüggően frissül (Csomagnál kötelező)
       placeholder: 'Keress cím alapján a tárhelynek',
-      tipusok:     ['Tartalom'], // Az egyezmény tárhelye mindig tartalom
+      tipusok:     ['Gondolat'], // Az egyezmény tárhelye mindig gondolat
       token:       this.token
     });
 
@@ -170,7 +170,7 @@ class JavaslatModal {
     }
 
     // Indoklásnál entitás hivatkozás is releváns lehet
-    // (pl. hivatkozhat egy másik tartalomra, ami alátámasztja a javaslatot)
+    // (pl. hivatkozhat egy másik gondolatra, ami alátámasztja a javaslatot)
     this.indoklasSzerkeszto = new SzovegSzerkeszto(kontener, {
       valtozasKezelo: null,
       onEntitasKivalasztas: (entitasId, entitasTipus) => {
@@ -204,13 +204,13 @@ class JavaslatModal {
     }
 
     // Módosítás szöveg szerkesztőjébe betöltjük az aktuális szöveget
-    // Tartalom entitásnál a mező neve szoveg, Kategória/TartalomTípusnál szovegMezo
+    // Gondolat entitásnál a mező neve szoveg, Kategória/GondolatTípusnál szovegMezo
     const meglevoSzoveg = this.entitasAdatok?.adatok?.szoveg
       ?? this.entitasAdatok?.adatok?.szovegMezo
       ?? null;
 
     // A SzovegSzerkeszto a blokk-tömböt ÉS a több oldalas formátumot is felismeri —
-    // csak a régi, sima string tartalmat kell blokkba csomagolni
+    // csak a régi, sima string gondolatot kell blokkba csomagolni
     this.modositasSzovegSzerkeszto = new SzovegSzerkeszto(szovegKontener, {
       valtozasKezelo:       null,
       onEntitasKivalasztas: null, // Módosítás formában nem kell hivatkozás koppintás
@@ -316,7 +316,7 @@ class JavaslatModal {
 
     // Az entitástípuson engedélyezett javaslat-típusok (domain-szabály).
     // A tiltott típusok gombjait elrejtjük — a backend külön is kikényszeríti.
-    const entitasTipus = this.entitasAdatok?.entitasTipus ?? 'Tartalom';
+    const entitasTipus = this.entitasAdatok?.entitasTipus ?? 'Gondolat';
     const engedett = engedelyezettJavaslatTipusok(entitasTipus);
     console.log('JavaslatModal._tipusGombokBekotese - engedélyezett típusok', { entitasTipus, engedett });
 
@@ -511,17 +511,17 @@ class JavaslatModal {
     const adatok = this.entitasAdatok?.adatok ?? {};
 
     // Az entitás típusától függ, mit hívnak a mezők:
-    // Tartalom → cim + szoveg; Kategória/TartalomTípus → nev + szovegMezo
-    const tartalomE = (this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom';
+    // Gondolat → cim + szoveg; Kategória/GondolatTípus → nev + szovegMezo
+    const gondolatE = (this.entitasAdatok?.entitasTipus ?? 'Gondolat') === 'Gondolat';
 
     // Cím/név mező – sima input marad (nem rich text)
     const cimCsoport = this._mezoCsoportLetrehozasa(
       'javaslat-modositas-cim',
-      tartalomE ? 'Új cím' : 'Új név',
+      gondolatE ? 'Új cím' : 'Új név',
       'input',
       {
-        placeholder: tartalomE ? 'Tartalom új címe' : 'Új név',
-        ertek: (tartalomE ? adatok.cim : adatok.nev) ?? ''
+        placeholder: gondolatE ? 'Gondolat új címe' : 'Új név',
+        ertek: (gondolatE ? adatok.cim : adatok.nev) ?? ''
       }
     );
     kontener.appendChild(cimCsoport);
@@ -550,11 +550,11 @@ class JavaslatModal {
     this._modositasSzovegSzerkesztoLetrehozasa(szovegSzerkesztoKontener);
 
     // =============================================
-    // ÚJ - Tartalomtípus + kategória mezők (CSAK Tartalomnál)
+    // ÚJ - Gondolattípus + kategória mezők (CSAK Gondolatnál)
     // =============================================
-    // Kategória és tartalomtípus csak a Tartalom entitásra értelmezett
-    // (a Kategória és a Tartalomtípus entitásoknak nincs ilyen mezőjük).
-    if (tartalomE) {
+    // Kategória és gondolattípus csak a Gondolat entitásra értelmezett
+    // (a Kategória és a Gondolattípus entitásoknak nincs ilyen mezőjük).
+    if (gondolatE) {
       this._modositasTipusMezoEpitese(kontener, adatok);
       this._modositasKategoriaMezoEpitese(kontener, adatok);
     }
@@ -562,15 +562,15 @@ class JavaslatModal {
     console.log('JavaslatModal._modositasFormaEpitese - VÉGE');
   }
 
-  // ===== MÓDOSÍTÁS: TARTALOMTÍPUS MEZŐ ÉPÍTÉSE =====
+  // ===== MÓDOSÍTÁS: GONDOLATTÍPUS MEZŐ ÉPÍTÉSE =====
   // =============================================
-  // ÚJ - egyszerű legördülő a tartalom típusához
+  // ÚJ - egyszerű legördülő a gondolat típusához
   // =============================================
-  // A listát az init() már betöltötte (this.tartalomTipusok). Az aktuális
-  // típust előre kiválasztjuk az adatok.tartalomTipus.id alapján.
+  // A listát az init() már betöltötte (this.gondolatTipusok). Az aktuális
+  // típust előre kiválasztjuk az adatok.gondolatTipus.id alapján.
   _modositasTipusMezoEpitese(kontener, adatok) {
     console.log('JavaslatModal._modositasTipusMezoEpitese - KEZDÉS', {
-      tipusokSzama: this.tartalomTipusok.length
+      tipusokSzama: this.gondolatTipusok.length
     });
 
     const csoport = document.createElement('div');
@@ -579,29 +579,29 @@ class JavaslatModal {
     const cimke = document.createElement('label');
     cimke.className   = 'javaslat-modal__cimke';
     cimke.htmlFor     = 'javaslat-modositas-tipus';
-    cimke.textContent = 'Tartalom típusa';
+    cimke.textContent = 'Gondolat típusa';
 
     const select = document.createElement('select');
     select.id        = 'javaslat-modositas-tipus';
     select.name      = 'javaslat-modositas-tipus';
-    select.className = 't-modal-select'; // a TartalomModal-ból örökölt közös stílus
+    select.className = 't-modal-select'; // a GondolatModal-ból örökölt közös stílus
 
-    // Első, „nincs típus" opció — a tartalomTipusId nem kötelező mező
+    // Első, „nincs típus" opció — a gondolatTipusId nem kötelező mező
     const uresOpcio = document.createElement('option');
     uresOpcio.value       = '';
     uresOpcio.textContent = '– Nincs típus –';
     select.appendChild(uresOpcio);
 
     // A választható típusok feltöltése
-    this.tartalomTipusok.forEach(tipus => {
+    this.gondolatTipusok.forEach(tipus => {
       const opcio       = document.createElement('option');
       opcio.value       = tipus._id;
       opcio.textContent = tipus.nev;
       select.appendChild(opcio);
     });
 
-    // Aktuális típus előre kiválasztása (a kártya adatok.tartalomTipus.id-jából)
-    const jelenlegiTipusId = adatok?.tartalomTipus?.id ?? adatok?.tartalomTipusId ?? '';
+    // Aktuális típus előre kiválasztása (a kártya adatok.gondolatTipus.id-jából)
+    const jelenlegiTipusId = adatok?.gondolatTipus?.id ?? adatok?.gondolatTipusId ?? '';
     if (jelenlegiTipusId) select.value = jelenlegiTipusId.toString();
 
     csoport.appendChild(cimke);
@@ -615,7 +615,7 @@ class JavaslatModal {
 
   // ===== MÓDOSÍTÁS: KATEGÓRIA MEZŐ ÉPÍTÉSE =====
   // =============================================
-  // ÚJ - chip-es, maximum 3 kategóriás választó (a TartalomModal mintájára)
+  // ÚJ - chip-es, maximum 3 kategóriás választó (a GondolatModal mintájára)
   // =============================================
   // A már kiválasztott kategóriák „chip"-ként jelennek meg (✕-szel törölhetők),
   // a legördülőben pedig csak a MÉG nem választott kategóriák maradnak.
@@ -673,9 +673,9 @@ class JavaslatModal {
 
   // ===== MÓDOSÍTÁS: VÁLASZTÓ-LISTÁK BETÖLTÉSE =====
   // =============================================
-  // ÚJ - a tartalomtípusok és kategóriák lekérése a szerverről
+  // ÚJ - a gondolattípusok és kategóriák lekérése a szerverről
   // =============================================
-  // Az init() hívja meg (csak Tartalom entitásnál). Hiba esetén üres listákkal
+  // Az init() hívja meg (csak Gondolat entitásnál). Hiba esetén üres listákkal
   // folytatunk — ilyenkor a mezők egyszerűen üresek lesznek, a javaslat többi
   // része (cím, szöveg) továbbra is működik.
   async _modositasLenyilokBetoltese() {
@@ -683,20 +683,20 @@ class JavaslatModal {
 
     try {
       const [tipusValasz, kategoriaValasz] = await Promise.all([
-        apiGet('tartalomTipus', this.token),
+        apiGet('gondolatTipus', this.token),
         apiGet('kategoria',     this.token)
       ]);
 
-      this.tartalomTipusok = tipusValasz?.tartalomTipusok || [];
+      this.gondolatTipusok = tipusValasz?.gondolatTipusok || [];
       this.kategoriak      = kategoriaValasz?.kategoriak   || [];
 
       console.log('JavaslatModal._modositasLenyilokBetoltese - VÉGE', {
-        tipusokSzama:    this.tartalomTipusok.length,
+        tipusokSzama:    this.gondolatTipusok.length,
         kategoriakSzama: this.kategoriak.length
       });
     } catch (hiba) {
       console.error('JavaslatModal._modositasLenyilokBetoltese - HIBA', { hiba: hiba.message });
-      this.tartalomTipusok = [];
+      this.gondolatTipusok = [];
       this.kategoriak      = [];
     }
   }
@@ -707,7 +707,7 @@ class JavaslatModal {
   // =============================================
   // Minden kategória a szülője után jön, és megkapja a MÉLYSÉGÉT (0 = gyökér),
   // hogy a legördülőben az alkategóriák a szülőjük alatt, behúzva jelenjenek meg.
-  // (A TartalomModal azonos logikájának másolata — apró, önálló segéd.)
+  // (A GondolatModal azonos logikájának másolata — apró, önálló segéd.)
   // @returns {Array<{kat: Object, melyseg: number}>}
   _modositasKategoriakFaSorrendbe() {
     // Gyerekek csoportosítása szülő szerint (kulcs: szuloId string, gyökérnél 'null')
@@ -838,11 +838,11 @@ class JavaslatModal {
     mezoKontener.className = 'javaslat-modal__mezo-csoport';
     kontener.appendChild(mezoKontener);
 
-    // Áthelyezés célja csak Tartalom lehet (a backend végrehajtó korlátja)
+    // Áthelyezés célja csak Gondolat lehet (a backend végrehajtó korlátja)
     this.ujSzuloMezo = new EntitasKeresoMezo(mezoKontener, {
-      cimke:       'Új szülő tartalom',
-      placeholder: 'Az új szülő tartalom ID-ja',
-      tipusok:     ['Tartalom'],
+      cimke:       'Új szülő gondolat',
+      placeholder: 'Az új szülő gondolat ID-ja',
+      tipusok:     ['Gondolat'],
       token:       this.token
     });
 
@@ -866,12 +866,12 @@ class JavaslatModal {
     tipusSelect.className = 'javaslat-modal__select';
     tipusSelect.id        = 'javaslat-egyesites-uj-tipus';
 
-    // Az egyesítés eredmény-típusa a kártya entitástípusából KÖVETKEZIK: Tartalmat csak
-    // Tartalommal, Kategóriát csak Kategóriával lehet egyesíteni (a backend is ezt
+    // Az egyesítés eredmény-típusa a kártya entitástípusából KÖVETKEZIK: Gondolatot csak
+    // Gondolattal, Kategóriát csak Kategóriával lehet egyesíteni (a backend is ezt
     // kényszeríti ki). Ezért egyetlen, előre kiválasztott opciót kínálunk.
-    const eredmenyTipus = egyesitesEredmenyTipus(this.entitasAdatok?.entitasTipus ?? 'Tartalom');
+    const eredmenyTipus = egyesitesEredmenyTipus(this.entitasAdatok?.entitasTipus ?? 'Gondolat');
     const csakKategoria = (eredmenyTipus === 'Kategoria');
-    const eredmenyFelirat = csakKategoria ? 'Kategória' : 'Tartalom';
+    const eredmenyFelirat = csakKategoria ? 'Kategória' : 'Gondolat';
 
     const option       = document.createElement('option');
     option.value       = eredmenyTipus;
@@ -892,9 +892,9 @@ class JavaslatModal {
     kontener.appendChild(nevCsoport);
 
     // =============================================
-    // ÚJ - Az új entitás szülő tartalma (KÖTELEZŐ)
+    // ÚJ - Az új entitás szülő gondolata (KÖTELEZŐ)
     // =============================================
-    // Az egyesített entitás ez alá a tartalom alá kerül. Nem lehet
+    // Az egyesített entitás ez alá a gondolat alá kerül. Nem lehet
     // egyesítésben érintett entitás vagy annak leszármazottja —
     // ezt a backend a beküldéskor ÉS a végrehajtáskor is ellenőrzi.
     const szuloMezoKontener = document.createElement('div');
@@ -903,11 +903,11 @@ class JavaslatModal {
 
     // A szülő OPCIONÁLIS. Üresen hagyva az alap-szülő a források LEGKÖZELEBBI KÖZÖS ŐSE
     // lesz (vagy gyökér, ha nincs közös ős) — ezt a backend számolja. Ha megadod:
-    // kategória-eredménynél kategória, egyébként tartalom a szülő típusa.
+    // kategória-eredménynél kategória, egyébként gondolat a szülő típusa.
     this.egyesitesSzuloMezo = new EntitasKeresoMezo(szuloMezoKontener, {
-      cimke:       csakKategoria ? 'Az új kategória szülő kategóriája (opcionális)' : 'Az új entitás szülő tartalma (opcionális)',
+      cimke:       csakKategoria ? 'Az új kategória szülő kategóriája (opcionális)' : 'Az új entitás szülő gondolata (opcionális)',
       placeholder: csakKategoria ? 'Üres = legközelebbi közös ős / gyökér' : 'Üres = legközelebbi közös ős / gyökér',
-      tipusok:     csakKategoria ? ['Kategoria'] : ['Tartalom'],
+      tipusok:     csakKategoria ? ['Kategoria'] : ['Gondolat'],
       token:       this.token
     });
 
@@ -965,7 +965,7 @@ class JavaslatModal {
       placeholder: 'Az egyesítendő entitás ID-ja',
       // A forrás-típusok a kártya entitásától függnek: kategóriát csak másik
       // kategóriával lehet egyesíteni (domain-szabály). Egyébként bármelyik lehet.
-      tipusok:     egyesitesForrasTipusok(this.entitasAdatok?.entitasTipus ?? 'Tartalom'),
+      tipusok:     egyesitesForrasTipusok(this.entitasAdatok?.entitasTipus ?? 'Gondolat'),
       token:       this.token
     });
 
@@ -1015,7 +1015,7 @@ class JavaslatModal {
   // ÚJ - CSOMAG TÉTEL HOZZÁADÁSA
   // =============================================
   // Egy tétel: entitás ID-mező + művelet választó + műveletfüggő mezők
-  // (Módosítás: új cím/név; Áthelyezés: cél tartalom ID-mező)
+  // (Módosítás: új cím/név; Áthelyezés: cél gondolat ID-mező)
   // @param {HTMLElement} listaElem - A tételek konténere
   // @returns {Object} A létrehozott tétel objektum
   _csomagTetelHozzaadasa(listaElem) {
@@ -1034,7 +1034,7 @@ class JavaslatModal {
     const idMezo = new EntitasKeresoMezo(idMezoKontener, {
       cimke:       `${this.csomagTetelek.length + 1}. tétel entitása`,
       placeholder: 'Az érintett entitás ID-ja',
-      tipusok:     ['Tartalom', 'Kategoria', 'TartalomTipus'],
+      tipusok:     ['Gondolat', 'Kategoria', 'GondolatTipus'],
       token:       this.token
     });
 
@@ -1067,7 +1067,7 @@ class JavaslatModal {
       idMezo,
       muveletSelect,
       cimInput: null, // Módosításnál: új cím/név input
-      celMezo:  null  // Áthelyezésnél: cél tartalom ID-mező
+      celMezo:  null  // Áthelyezésnél: cél gondolat ID-mező
     };
 
     // Művelet váltásakor a műveletfüggő mezők újraépülnek
@@ -1100,7 +1100,7 @@ class JavaslatModal {
   // ÚJ - CSOMAG TÉTEL MŰVELETFÜGGŐ MEZŐI
   // =============================================
   // A kiválasztott művelethez tartozó mezőket építi fel:
-  // Törlés: nincs mező; Módosítás: új cím/név; Áthelyezés: cél tartalom
+  // Törlés: nincs mező; Módosítás: új cím/név; Áthelyezés: cél gondolat
   // @param {Object} tetel - A tétel objektum
   // @param {HTMLElement} kontener - A műveletfüggő mezők konténere
   _csomagMuveletMezokEpitese(tetel, kontener) {
@@ -1135,9 +1135,9 @@ class JavaslatModal {
       kontener.appendChild(celKontener);
 
       tetel.celMezo = new EntitasKeresoMezo(celKontener, {
-        cimke:       'Új szülő tartalom',
-        placeholder: 'A cél tartalom ID-ja',
-        tipusok:     ['Tartalom'],
+        cimke:       'Új szülő gondolat',
+        placeholder: 'A cél gondolat ID-ja',
+        tipusok:     ['Gondolat'],
         token:       this.token
       });
     }
@@ -1227,7 +1227,7 @@ class JavaslatModal {
   // MÓDOSÍTVA - indoklás ellenőrzése szerkesztőből
   // =============================================
   // ===== INDOKLÁS ÜRES-E =====
-  // Igaz, ha az indoklás gyakorlatilag üres (nincs érdemi tartalom). A szerkesztő
+  // Igaz, ha az indoklás gyakorlatilag üres (nincs érdemi gondolat). A szerkesztő
   // blokk-tömböt VAGY több oldalas objektumot ad. Bármely nem-szöveg blokk
   // (kép/fájl/link/entitás) → NEM üres. (Kötelező, de nincs minimum karakter.)
   _indoklasUres(indoklas) {
@@ -1273,7 +1273,7 @@ class JavaslatModal {
     if (this.kivalasztottTipus === 'Athelyezes') {
       const ujSzuloId = this.ujSzuloMezo?.getId();
       if (!ujSzuloId) {
-        return 'Az áthelyezéshez érvényes, létező új szülő tartalmat kell megadni.';
+        return 'Az áthelyezéshez érvényes, létező új szülő gondolatot kell megadni.';
       }
       if (ujSzuloId === this.entitasAdatok?.entitasId) {
         return 'Az entitás nem helyezhető saját maga alá.';
@@ -1317,7 +1317,7 @@ class JavaslatModal {
           return 'A csomag módosítási tételéhez add meg az új címet/nevet.';
         }
         if (muvelet === 'Athelyezes' && !tetel.celMezo?.getId()) {
-          return 'A csomag áthelyezési tételéhez érvényes cél tartalmat kell megadni.';
+          return 'A csomag áthelyezési tételéhez érvényes cél gondolatot kell megadni.';
         }
       }
 
@@ -1347,12 +1347,12 @@ class JavaslatModal {
   // A SzovegSzerkeszto.getTartalom() blokk-tömböt (nincs oldal navigáció)
   // vagy { oldalNavigacio, blokkok: { fulId: [...] } } objektumot ad vissza.
   // Validáláshoz az összes blokkot egyetlen tömbbe gyűjtjük.
-  // @param {Array|Object} tartalom - A szerkesztő kimenete
+  // @param {Array|Object} gondolat - A szerkesztő kimenete
   // @returns {Array} Az összes blokk egy tömbben
-  _blokkokKinyerese(tartalom) {
-    if (Array.isArray(tartalom)) return tartalom;
-    if (tartalom && typeof tartalom === 'object' && tartalom.blokkok) {
-      return Object.values(tartalom.blokkok).flat();
+  _blokkokKinyerese(gondolat) {
+    if (Array.isArray(gondolat)) return gondolat;
+    if (gondolat && typeof gondolat === 'object' && gondolat.blokkok) {
+      return Object.values(gondolat.blokkok).flat();
     }
     return [];
   }
@@ -1385,11 +1385,11 @@ class JavaslatModal {
     // =============================================
     // 1. Ha a felhasználó megadott érvényes tárhelyet, azt használjuk
     // 2. Egyesítésnél az alapértelmezés a placeholder: az új entitás lesz a tárhely
-    // 3. Más típusnál az alapértelmezés a javaslat szülő tartalma
+    // 3. Más típusnál az alapértelmezés a javaslat szülő gondolata
     // A kiválasztott tárhely-entitás (id + típus) — a keresőből jön
     const valasztottTarhely = this.egyezmenyTarhelyMezo?.getEntitas() ?? null;
     let egyezmenyTarhelyId    = valasztottTarhely?.entitasId    ?? null;
-    let egyezmenyTarhelyTipus = valasztottTarhely?.entitasTipus ?? 'Tartalom';
+    let egyezmenyTarhelyTipus = valasztottTarhely?.entitasTipus ?? 'Gondolat';
     if (!egyezmenyTarhelyId) {
       egyezmenyTarhelyId = this.kivalasztottTipus === 'Egyesites'
         ? UJ_ENTITAS_TARHELY_PLACEHOLDER
@@ -1435,7 +1435,7 @@ class JavaslatModal {
 
     const sajatEntitas = {
       entitasId:    this.entitasAdatok?.entitasId,
-      entitasTipus: this.entitasAdatok?.entitasTipus ?? 'Tartalom'
+      entitasTipus: this.entitasAdatok?.entitasTipus ?? 'Gondolat'
     };
 
     let erintettek = [];
@@ -1493,9 +1493,9 @@ class JavaslatModal {
             };
 
             if (muvelet === 'Modositas') {
-              // Tartalomnál cim, Kategória/TartalomTípusnál nev a mező neve
+              // Gondolatnál cim, Kategória/GondolatTípusnál nev a mező neve
               const ujCim = tetel.cimInput?.value?.trim();
-              bejegyzes.modositasAdatok = entitas.entitasTipus === 'Tartalom'
+              bejegyzes.modositasAdatok = entitas.entitasTipus === 'Gondolat'
                 ? { cim: ujCim }
                 : { nev: ujCim };
             }
@@ -1503,7 +1503,7 @@ class JavaslatModal {
             if (muvelet === 'Athelyezes') {
               bejegyzes.modositasAdatok = {
                 ujSzuloId:    tetel.celMezo?.getId(),
-                ujSzuloTipus: 'Tartalom'
+                ujSzuloTipus: 'Gondolat'
               };
             }
 
@@ -1535,12 +1535,12 @@ class JavaslatModal {
     const modositasAdatok = {};
 
     // Az entitás típusa dönti el a mezőneveket:
-    // Tartalom → cim + szoveg; Kategória/TartalomTípus → nev + szovegMezo
-    const tartalomE = (this.entitasAdatok?.entitasTipus ?? 'Tartalom') === 'Tartalom';
+    // Gondolat → cim + szoveg; Kategória/GondolatTípus → nev + szovegMezo
+    const gondolatE = (this.entitasAdatok?.entitasTipus ?? 'Gondolat') === 'Gondolat';
 
     const ujCim = kontener?.querySelector('#javaslat-modositas-cim')?.value?.trim();
     if (ujCim) {
-      if (tartalomE) modositasAdatok.cim = ujCim;
+      if (gondolatE) modositasAdatok.cim = ujCim;
       else           modositasAdatok.nev = ujCim;
     }
 
@@ -1550,24 +1550,24 @@ class JavaslatModal {
     // Blokk-tömb vagy több oldalas objektum — mindkettőt nyersen küldjük
     if (this.modositasSzovegSzerkeszto) {
       const szoveg = this.modositasSzovegSzerkeszto.getTartalom();
-      const vanTartalom = this._blokkokKinyerese(szoveg).length > 0;
-      if (vanTartalom) {
-        if (tartalomE) modositasAdatok.szoveg     = szoveg;
+      const vanGondolat = this._blokkokKinyerese(szoveg).length > 0;
+      if (vanGondolat) {
+        if (gondolatE) modositasAdatok.szoveg     = szoveg;
         else           modositasAdatok.szovegMezo = szoveg;
       }
     }
 
     // =============================================
-    // ÚJ - Tartalomtípus + kategóriák (CSAK Tartalomnál)
+    // ÚJ - Gondolattípus + kategóriák (CSAK Gondolatnál)
     // =============================================
     // Ezeket MINDIG beletesszük (a mezők előre ki vannak töltve a jelenlegi
     // értékekkel), így a javaslat a típus és a kategóriák KÍVÁNT végállapotát
     // rögzíti — és a törlésük is kifejezhető (üres típus / üres kategória-lista).
-    if (tartalomE) {
+    if (gondolatE) {
       const tipusSelect = kontener?.querySelector('#javaslat-modositas-tipus');
       if (tipusSelect) {
         // Üres opció → null (nincs típus); egyébként a kiválasztott ID
-        modositasAdatok.tartalomTipusId = tipusSelect.value || null;
+        modositasAdatok.gondolatTipusId = tipusSelect.value || null;
       }
 
       // A chipekből felépített kiválasztott kategória-ID lista (0–3 elem)
@@ -1586,19 +1586,19 @@ class JavaslatModal {
     const ujTipus = kontener?.querySelector('#javaslat-egyesites-uj-tipus')?.value;
     const ujNev   = kontener?.querySelector('#javaslat-egyesites-uj-nev')?.value?.trim();
 
-    // Az új entitás adatai — Tartalomnál cim, más típusnál nev a mező neve.
+    // Az új entitás adatai — Gondolatnál cim, más típusnál nev a mező neve.
     // Az új entitás a felhasználó által KÖTELEZŐEN megadott, ellenőrzött
-    // szülő tartalom alá kerül (nem lehet érintett entitás vagy annak
+    // szülő gondolat alá kerül (nem lehet érintett entitás vagy annak
     // leszármazottja — a backend kétszeresen ellenőrzi).
-    const ujEntitasAdatok = ujTipus === 'Tartalom'
+    const ujEntitasAdatok = ujTipus === 'Gondolat'
       ? { cim: ujNev }
       : { nev: ujNev };
 
     const ujSzuloId = this.egyesitesSzuloMezo?.getId();
     if (ujSzuloId) {
       ujEntitasAdatok.szuloId    = ujSzuloId;
-      // Kategória-eredménynél a szülő is kategória (domain-szabály), egyébként Tartalom.
-      ujEntitasAdatok.szuloTipus = ujTipus === 'Kategoria' ? 'Kategoria' : 'Tartalom';
+      // Kategória-eredménynél a szülő is kategória (domain-szabály), egyébként Gondolat.
+      ujEntitasAdatok.szuloTipus = ujTipus === 'Kategoria' ? 'Kategoria' : 'Gondolat';
     }
 
     const egyesitesAdatok = {

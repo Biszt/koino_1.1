@@ -3,9 +3,9 @@
 // --- IMPORTOK ---
 import { apiGet } from '../utils/apiHelper.js'; // GET kéréshez
 import Kartya from './kartya/Kartya.js'; // Alap kártya osztály
-import TartalomKartya from './kartya/TartalomKartya.js'; // Tartalom típusú kártya
+import GondolatKartya from './kartya/GondolatKartya.js'; // Gondolat típusú kártya
 import KategoriaKartya from './kartya/KategoriaKartya.js'; // Kategória típusú kártya
-import TartalomTipusKartya from './kartya/TartalomTipusKartya.js'; // TartalomTípus kártya
+import GondolatTipusKartya from './kartya/GondolatTipusKartya.js'; // GondolatTípus kártya
 import JavaslatKartya from './kartya/JavaslatKartya.js'; // Javaslat típusú kártya
 import EgyezmenyKartya from './kartya/EgyezmenyKartya.js'; // Egyezmény típusú kártya
 import TestverJelzo from './TestverJelzo.js'; // ‹ N / N › kacsacsőrök a kiválasztott kártyán
@@ -232,7 +232,7 @@ async kivalasztottSzovegFrissitese() {
 
 // ----- EGY ENTITÁS SZÖVEG-MEZŐINEK BETÖLTÉSE -----
 // Lekéri a megadott entitás (pakli-elem VAGY kártya.entitas) szöveg/leírás/indoklás
-// mezőit, és RÁÍRJA a kapott objektum `adatok` mezőjére (szovegMezo + a fül-tartalmak).
+// mezőit, és RÁÍRJA a kapott objektum `adatok` mezőjére (szovegMezo + a fül-gondolatok).
 // FONTOS: közvetlenül a KAPOTT objektumon dolgozik, nem a megosztott
 // kivalasztottEntitasId-indexből olvas — így a fejléc és a body sosem csúszhat szét
 // (a kártya mindig a SAJÁT entitását rendereli). Ezt a szétcsúszást okozta korábban,
@@ -253,18 +253,18 @@ async _entitasSzovegBetoltese(entitas) {
       this.token
     );
     entitas.adatok.szovegMezo = eredmeny.szoveg ?? null;
-    // Módosítási javaslatnál a javasolt ÚJ tartalom (a „Módosított tartalom"
+    // Módosítási javaslatnál a javasolt ÚJ gondolat (a „Módosított gondolat"
     // fülhöz); más típusnál / entitásnál a backend null-t küld
-    entitas.adatok.modositottTartalom = eredmeny.modositottTartalom ?? null;
-    // Módosítási egyezménynél a LECSERÉLT (régi) tartalom (a „Lecserélt
-    // tartalom" fülhöz); más típusnál / entitásnál null
-    entitas.adatok.lecsereltTartalom = eredmeny.lecsereltTartalom ?? null;
+    entitas.adatok.modositottGondolat = eredmeny.modositottGondolat ?? null;
+    // Módosítási egyezménynél a LECSERÉLT (régi) gondolat (a „Lecserélt
+    // gondolat" fülhöz); más típusnál / entitásnál null
+    entitas.adatok.lecsereltGondolat = eredmeny.lecsereltGondolat ?? null;
     return entitas.adatok.szovegMezo;
   } catch (hiba) {
     console.error('Pakli._entitasSzovegBetoltese - HIBA', hiba);
     entitas.adatok.szovegMezo = null;
-    entitas.adatok.modositottTartalom = null;
-    entitas.adatok.lecsereltTartalom = null;
+    entitas.adatok.modositottGondolat = null;
+    entitas.adatok.lecsereltGondolat = null;
     return null;
   }
 }
@@ -679,7 +679,7 @@ kartyaPeldanyositasa(entitas, kivalasztottE, onKivalasztas, modalKontenerAzon, o
   console.log('Pakli.kartyaPeldanyositasa - KEZDÉS', { entitasTipus: entitas?.entitasTipus, kivalasztottE });
 
   // Központosított újratöltő callback – minden kártyatípus ezt kapja.
-  // Ha a hívó (pl. TartalomKartya.onSiker) nem ad át entitasId-t,
+  // Ha a hívó (pl. GondolatKartya.onSiker) nem ad át entitasId-t,
   // az authHelper mentett értékéből dolgozunk, nem null-lal indulunk újra.
   const ujratoltesCb = (entitasId, entitasTipus) => {
     if (entitasId && entitasTipus) {
@@ -694,8 +694,8 @@ kartyaPeldanyositasa(entitas, kivalasztottE, onKivalasztas, modalKontenerAzon, o
 
   let kartya;
   switch (entitas.entitasTipus) {
-    case 'Tartalom':
-      kartya = new TartalomKartya(
+    case 'Gondolat':
+      kartya = new GondolatKartya(
         entitas,
         kivalasztottE,
         onKivalasztas,
@@ -716,8 +716,8 @@ kartyaPeldanyositasa(entitas, kivalasztottE, onKivalasztas, modalKontenerAzon, o
         onHamburgerMegnyitas
       );
       break;
-    case 'TartalomTipus':
-      kartya = new TartalomTipusKartya(
+    case 'GondolatTipus':
+      kartya = new GondolatTipusKartya(
         entitas,
         kivalasztottE,
         onKivalasztas,
@@ -1293,7 +1293,7 @@ betoltesAllapotMegjelenites() {
 
 // ----- ÜRES ÁLLAPOT MEGJELENÍTÉSE -----
 // Friss/üres adatbázisnál (nincs egyetlen entitás sem) barátságos útmutató
-// jelenik meg hibaüzenet helyett — az első tartalom a fő menüből hozható létre.
+// jelenik meg hibaüzenet helyett — az első gondolat a fő menüből hozható létre.
 uresAllapotMegjelenites() {
   console.log('Pakli.uresAllapotMegjelenites - KEZDÉS');
   const kontener = document.getElementById(this.tartalmKontenerAzonosito);
@@ -1302,8 +1302,8 @@ uresAllapotMegjelenites() {
     <div class="pakli-ures">
       <span class="pakli-ures__ikon" aria-hidden="true">🌱</span>
       <span class="pakli-ures__szoveg">
-        Még nincs tartalom a koino-n.<br>
-        Hozd létre az elsőt a fő menü <strong>✏️ Új tartalom létrehozása</strong> pontjával!
+        Még nincs gondolat a koino-n.<br>
+        Hozd létre az elsőt a fő menü <strong>✏️ Új gondolat létrehozása</strong> pontjával!
       </span>
     </div>
   `;
@@ -1318,7 +1318,7 @@ hibaAllapotMegjelenites(uzenet) {
   if (!kontener) return;
   kontener.innerHTML = `
     <div class="pakli-hiba">
-      <span class="pakli-hiba__szoveg">${uzenet} Nem sikerült betölteni a tartalmat.</span>
+      <span class="pakli-hiba__szoveg">${uzenet} Nem sikerült betölteni a gondolatot.</span>
     </div>
   `;
   console.log('Pakli.hibaAllapotMegjelenites - VÉGE', { uzenet });

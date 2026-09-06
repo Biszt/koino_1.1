@@ -21,7 +21,7 @@ function ervenyesEntitasTipus(entitasTipus) {
 // ===================================
 // Felelősség: request/response kezelés, validáció, hibakezelés.
 // Az érték-rendszer entitás-polimorf: minden végpont (entitasId + entitasTipus)
-// párral azonosít (tartalom / kategória / tartalomtípus).
+// párral azonosít (gondolat / kategória / gondolattípus).
 class ErtekJavaslatController {
 
   // ===================================
@@ -243,9 +243,9 @@ class ErtekJavaslatController {
    * GET /api/ertekJavaslat/reszletek/:entitasTipus/:entitasId
    * Aktuális (medián) értékek + a eember saját javaslata (ha be van jelentkezve).
    */
-  async tartalomErtekReszletei(req, res) {
+  async gondolatErtekReszletei(req, res) {
     try {
-      console.log('tartalomErtekReszletei endpoint hívás');
+      console.log('gondolatErtekReszletei endpoint hívás');
 
       const eemberId = req.user?.id || null;
       const { entitasTipus, entitasId } = req.params;

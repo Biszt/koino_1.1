@@ -4,7 +4,7 @@
 //
 // KÉT SZABÁLY, AMI SOHA NEM SÉRÜLHET:
 //   1. ELLENŐRIZETLEN ESEMÉNY NEM KERÜL A TÁRBA. Minden mentés előtt ellenőrizzük az
-//      aláírást és az azonosítót — akkor is, ha „a sajátunk". Így a tár tartalma
+//      aláírást és az azonosítót — akkor is, ha „a sajátunk". Így a tár gondolata
 //      önmagában bizonyíték, és soha nem kell utólag megbízni benne.
 //   2. AZ ESEMÉNYEKET NEM MÓDOSÍTJUK ÉS NEM TÖRÖLJÜK. Egy esemény megtörtént; ami
 //      „változik", az egy ÚJABB esemény a láncban (a szavazat módosítása is új esemény).
@@ -52,7 +52,7 @@ export async function esemenyMentese(tar, esemeny) {
   }
 
   // ----- 2. MÁR MEGVAN? -----
-  // Az azonosító a tartalom lenyomata, tehát ha már megvan, akkor BÁJTRA ugyanaz.
+  // Az azonosító a gondolat lenyomata, tehát ha már megvan, akkor BÁJTRA ugyanaz.
   // Ezért az ismételt mentés nem hiba, hanem semmit-nem-csinálás. (Ez teszi a hálózati
   // összefésülést triviálissá.)
   //

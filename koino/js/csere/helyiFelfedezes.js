@@ -102,7 +102,7 @@ export function felfedezoUzenet(mi, koino, port, jel) {
  * abból nem derül ki, hogy senki nincs ott, vagy hogy a hálózat nyelte el, vagy hogy a
  * másik egy másik koinóé. A néma nem-esemény a legrosszabb hibafajta.
  *
- * @param {Buffer|string} nyers - a csomag tartalma
+ * @param {Buffer|string} nyers - a csomag gondolata
  * @param {Object} felado - { address, port } — akitől jött
  * @param {string} sajatKoino
  * @param {string} sajatJel - a saját futásunk jele

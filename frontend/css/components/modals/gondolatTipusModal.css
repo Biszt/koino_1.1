@@ -1,7 +1,7 @@
-/* frontend/css/components/modal/tartalomTipusModal.css */
+/* frontend/css/components/modal/gondolatTipusModal.css */
 
 
-/* ===== TARTALOM TÍPUS MODAL FORM ===== */
+/* ===== GONDOLAT TÍPUS MODAL FORM ===== */
 /* Mezők egymás alá rendeződnek – azonos a kategoriaModal.css struktúrájával */
 .tt-modal-form {
   display: flex;

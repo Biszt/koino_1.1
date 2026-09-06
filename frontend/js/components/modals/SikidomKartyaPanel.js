@@ -21,7 +21,7 @@ import { apiGet } from '../../utils/apiHelper.js';
 import { kartyaLetrehozasa } from '../kartya/kartyaGyar.js';
 
 // A kártya SAJÁT modáljainak (javaslat, tudatpont, részletek…) konténere. NEM
-// lehet ugyanaz, mint a Síkidom nézeté: a Modal felülírja a konténere tartalmát,
+// lehet ugyanaz, mint a Síkidom nézeté: a Modal felülírja a konténere gondolatát,
 // tehát a kártya egy modálja kilőné alóla a nézetet. Ugyanaz a minta, mint a
 // HozzajarulokModal / MeghivoModal al-modaljainál.
 export const ALMODAL_KONTENER_ID = 'almodal-kontener';

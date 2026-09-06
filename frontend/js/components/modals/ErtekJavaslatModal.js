@@ -17,20 +17,20 @@ import {
 const MEZO_PREFIX = 'ej';
 
 // ===== KÜSZÖB ÉRTÉK JAVASLAT MODAL OSZTÁLY =====
-// Felelősség: egy tartalom küszöbértékeire ad/módosít érték javaslatot az
+// Felelősség: egy gondolat küszöbértékeire ad/módosít érték javaslatot az
 //   e-ember. Megnyitáskor lekéri az aktuális (medián) értékeket és a saját
 //   javaslatot, kitölti a mezőket, mentéskor POST-tal küldi a backendnek.
 // A négy küszöb: támogatottsági %, részvételi arány %, min/max döntési idő.
-// Használják: a Tartalom kártya „Küszöb érték javaslat” menüpontja.
-// Megjegyzés: ma CSAK tartalomra működik (a backend érték-rendszer tartalom-
-//   központú); a kategória/tartalomtípus később, backend-bővítés után jön.
+// Használják: a Gondolat kártya „Küszöb érték javaslat” menüpontja.
+// Megjegyzés: ma CSAK gondolatra működik (a backend érték-rendszer gondolat-
+//   központú); a kategória/gondolattípus később, backend-bővítés után jön.
 class ErtekJavaslatModal {
 
   // ===== KONSTRUKTOR =====
   // @param {string} kontenerAzonosito - a modal konténer div ID-ja
   // @param {Object} beallitasok
   // @param {string} beallitasok.entitasId    - az entitás azonosítója
-  // @param {string} beallitasok.entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus'
+  // @param {string} beallitasok.entitasTipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus'
   // @param {string} beallitasok.token        - JWT token (opcionális)
   // @param {Function} beallitasok.onSiker    - sikeres mentés után hívódik meg
   constructor(kontenerAzonosito, beallitasok = {}) {
@@ -41,7 +41,7 @@ class ErtekJavaslatModal {
 
     this.kontenerAzonosito = kontenerAzonosito;
     this.entitasId         = beallitasok.entitasId ?? null;
-    this.entitasTipus      = beallitasok.entitasTipus ?? 'Tartalom';
+    this.entitasTipus      = beallitasok.entitasTipus ?? 'Gondolat';
     this.token             = beallitasok.token ?? tokenLekerese();
     this.onSiker           = beallitasok.onSiker ?? null;
 
@@ -131,7 +131,7 @@ class ErtekJavaslatModal {
   // aktuális mediánnal, végső esetben az alapértékekkel.
   async _adatokBetoltese() {
     console.log('ErtekJavaslatModal._adatokBetoltese - KEZDÉS', {
-      tartalomId: this.tartalomId
+      gondolatId: this.gondolatId
     });
 
     if (!this.entitasId) {
@@ -187,7 +187,7 @@ class ErtekJavaslatModal {
     if (!doboz) return;
 
     if (!aktualis) {
-      doboz.textContent = 'Erről a tartalomról még nincs érték javaslat.';
+      doboz.textContent = 'Erről a gondolatról még nincs érték javaslat.';
       return;
     }
 

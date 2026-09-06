@@ -104,7 +104,7 @@ function szeletKulcs(tipus, adat) {
   if (tipus === 'Szavazat') return adat?.javaslat ?? null;
   // ⭐ A MEGHÍVÁS a MEGHÍVOTT szeletébe kerül (D56) — a hívó `beallitas.entitas`-szal adja
   // meg, mert a horgony azonosítója nem vezethető le az adatból.
-  return null;   // KoinoLetrehozas, TartalomLetrehozas, Belepes: a saját szeletüket nyitják
+  return null;   // KoinoLetrehozas, GondolatLetrehozas, Belepes: a saját szeletüket nyitják
 }
 
 /**

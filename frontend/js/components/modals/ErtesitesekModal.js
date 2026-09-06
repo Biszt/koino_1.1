@@ -14,7 +14,7 @@ const TIPUS_SZOVEG = {
   javaslatElvetve:    'Javaslat elvetve',
   szavazasiHatarido:  'Szavazási határidő közeleg',
   tudatpontValtozas:  'Tudatpont-változás',
-  ujGyerekEntitas:    'Új tartalom jött létre',
+  ujGyerekEntitas:    'Új gondolat jött létre',
   kuszobValtozas:     'Küszöbváltozás',
 };
 

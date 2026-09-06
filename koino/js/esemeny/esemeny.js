@@ -3,27 +3,27 @@
 // Felelősség: egy ESEMÉNY létrehozása (aláírással) és ellenőrzése.
 //
 // A koino adata nem állapot, hanem esemény: „én, ekkor, ezt tettem" — aláírva. Az
-// állapot (mely tartalmak léteznek, ki hova rendelt tudatpontot, mi a szavazás állása)
+// állapot (mely gondolatok léteznek, ki hova rendelt tudatpontot, mi a szavazás állása)
 // ebből SZÁMÍTÓDIK (D17), nem a szerver állítja.
 //
 // EGY ESEMÉNY KÉT RÉSZBŐL ÁLL:
-//   1. a TARTALOM (koino, tipus, szerzo, elozo, sorszam, ido, adat) — ezt írjuk alá,
-//   2. a BURKOLAT (azonosito, alairas) — ez a tartalomból SZÁRMAZIK.
-// Az azonosító a tartalom lenyomata, tehát nem külön adat, hanem a tartalom neve. Ezért
+//   1. a GONDOLAT (koino, tipus, szerzo, elozo, sorszam, ido, adat) — ezt írjuk alá,
+//   2. a BURKOLAT (azonosito, alairas) — ez a gondolatból SZÁRMAZIK.
+// Az azonosító a gondolat lenyomata, tehát nem külön adat, hanem a gondolat neve. Ezért
 // nem szerepelhet a lenyomatolt részben (önmagára hivatkozna).
 //
-// MIT ÍRUNK ALÁ? Az azonosítót — vagyis a tartalom lenyomatát. Így az aláírás
-// ellenőrzéséhez elég az azonosító, az azonosító pedig igazolja a teljes tartalmat.
-// (Ugyanaz a szerkezet, amit a git használ: a commit neve a tartalma lenyomata, az
+// MIT ÍRUNK ALÁ? Az azonosítót — vagyis a gondolat lenyomatát. Így az aláírás
+// ellenőrzéséhez elég az azonosító, az azonosító pedig igazolja a teljes gondolatot.
+// (Ugyanaz a szerkezet, amit a git használ: a commit neve a gondolata lenyomata, az
 // aláírás pedig arra a névre megy.)
 //
-// Használják: a tár-réteg és minden művelet (tartalom, tudatpont, javaslat, szavazat).
+// Használják: a tár-réteg és minden művelet (gondolat, tudatpont, javaslat, szavazat).
 
 import { lenyomat, base64UrlBajtok, bajtokBase64Url } from './kanonikusAlak.js';
 
 const ALGORITMUS = 'Ed25519';
 
-// A tartalom mezői — EZEK és csakis ezek kerülnek a lenyomatba, ebben a sorrendben
+// A gondolat mezői — EZEK és csakis ezek kerülnek a lenyomatba, ebben a sorrendben
 // (a sorrend valójában mindegy, mert a kanonikus alak úgyis rendez — de a lista
 // rögzítése azért fontos, hogy ne csússzon be véletlenül új mező a lenyomatba).
 //
@@ -45,7 +45,7 @@ const ALGORITMUS = 'Ed25519';
 //
 //   ⭐ szelet(e) = e.entitas ?? e.azonosito
 //
-// A `null` jelentése tehát: „ez az esemény a SAJÁT szeletét nyitja" — így a tartalom-
+// A `null` jelentése tehát: „ez az esemény a SAJÁT szeletét nyitja" — így a gondolat-
 // létrehozás (ami maga hozza létre az entitást) és a koino-létrehozás is befér a szabályba,
 // külön eset nélkül. *(A saját azonosítót nem lehetne a mezőbe írni: önmagára hivatkozna.)*
 //
@@ -118,8 +118,8 @@ function tartalomResz(esemeny) {
  *
  * @param {Object} leiras
  * @param {string} leiras.koino - melyik koinóhoz tartozik (D25: több koino egy készüléken)
- * @param {string} leiras.tipus - pl. 'TartalomLetrehozas'
- * @param {Object} leiras.adat - a művelet tartalma (típusfüggő)
+ * @param {string} leiras.tipus - pl. 'GondolatLetrehozas'
+ * @param {Object} leiras.adat - a művelet gondolata (típusfüggő)
  * @param {string|null} leiras.elozo - az előző SAJÁT eseményem azonosítója (az első: null)
  * @param {number} leiras.sorszam - hányadik a saját láncomban (az első: 1)
  * @param {number} [leiras.ido] - a szerző órája szerint (alapból: most)
@@ -137,7 +137,7 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
   const nyersKulcs = await crypto.subtle.exportKey('raw', kulcspar.publicKey);
   const szerzo = bajtokBase64Url(new Uint8Array(nyersKulcs));
 
-  const tartalom = {
+  const gondolat = {
     koino: leiras.koino,
     tipus: leiras.tipus,
     szerzo,
@@ -160,10 +160,10 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
     adat: leiras.adat
   };
 
-  // ----- AZ AZONOSÍTÓ: a tartalom lenyomata -----
-  // Ha a tartalomban tört szám vagy más tiltott érték van, ez itt HIBÁT DOB — jobb
+  // ----- AZ AZONOSÍTÓ: a gondolat lenyomata -----
+  // Ha a gondolatban tört szám vagy más tiltott érték van, ez itt HIBÁT DOB — jobb
   // most kiderülnie, mint akkor, amikor két gép már nem ért egyet.
-  const azonosito = await lenyomat(tartalom);
+  const azonosito = await lenyomat(gondolat);
 
   // ----- AZ ALÁÍRÁS: az azonosítóra -----
   const alairasBajtok = await crypto.subtle.sign(
@@ -173,7 +173,7 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
   );
 
   const esemeny = {
-    ...tartalom,
+    ...gondolat,
     azonosito,
     alairas: bajtokBase64Url(new Uint8Array(alairasBajtok))
   };
@@ -190,9 +190,9 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
  * Ellenőriz egy eseményt: valóban az állítólagos szerzőtől való-e, és változatlan-e.
  *
  * KÉT DOLGOT NÉZ MEG:
- *   1. az azonosító tényleg a tartalom lenyomata-e (nem babráltak a tartalomba),
+ *   1. az azonosító tényleg a gondolat lenyomata-e (nem babráltak a gondolatba),
  *   2. az aláírás a szerző kulcsával készült-e (tényleg ő írta alá).
- * A kettő együtt: a tartalom egyetlen bájtja sem változhatott a szerző óta.
+ * A kettő együtt: a gondolat egyetlen bájtja sem változhatott a szerző óta.
  *
  * FONTOS, MIT NEM NÉZ: hogy a szerző jogosult-e a műveletre, hogy a lánc folytonos-e,
  * és hogy az idő igaz-e. Azok külön kérdések (tár-réteg, állapot-réteg).
@@ -236,15 +236,15 @@ export async function esemenyEllenorzese(esemeny) {
     return { rendben: false, ok: 'a lancGyoker csak lenyomat vagy null lehet' };
   }
 
-  // ----- 1. AZ AZONOSÍTÓ A TARTALOM LENYOMATA-E? -----
+  // ----- 1. AZ AZONOSÍTÓ A GONDOLAT LENYOMATA-E? -----
   let ujraszamolt;
   try {
     ujraszamolt = await lenyomat(tartalomResz(esemeny));
   } catch (hiba) {
-    return { rendben: false, ok: 'a tartalom nem hozható kanonikus alakra: ' + hiba.message };
+    return { rendben: false, ok: 'a gondolat nem hozható kanonikus alakra: ' + hiba.message };
   }
   if (ujraszamolt !== esemeny.azonosito) {
-    return { rendben: false, ok: 'az azonosító nem a tartalom lenyomata (a tartalom megváltozott)' };
+    return { rendben: false, ok: 'az azonosító nem a gondolat lenyomata (a gondolat megváltozott)' };
   }
 
   // ----- 2. AZ ALÁÍRÁS A SZERZŐ KULCSÁVAL KÉSZÜLT-E? -----

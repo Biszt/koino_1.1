@@ -97,7 +97,7 @@ router.get(
 // Endpoint: GET /api/tudatpont/hozzajarulok/:entitasTipus/:entitasId?limit=100&skip=0
 // URL paraméterek: entitasTipus, entitasId
 // Query paraméterek: limit (max 200), skip (lapozás)
-// Nyilvános: Bárki lekérdezheti (ki adott pontokat egy tartalomra)
+// Nyilvános: Bárki lekérdezheti (ki adott pontokat egy gondolatra)
 router.get(
   '/hozzajarulok/:entitasTipus/:entitasId',
   (req, res) => TudatpontController.entitasHozzajaruloinakLekerese(req, res)

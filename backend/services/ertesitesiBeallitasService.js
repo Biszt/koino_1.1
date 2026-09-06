@@ -5,9 +5,9 @@ const ertesitesiBeallitasRepository = require('../repositories/ertesitesiBeallit
 
 // Entitás-modellek – a szülő lekéréséhez kellenek (a cascade felfelé lépéséhez).
 // Minden entitástípusnak lehet szülője (szuloId + szuloTipus), ezért mind az öt kell.
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 const Kategoria = require('../models/kategoria');
-const TartalomTipus = require('../models/tartalomTipus');
+const GondolatTipus = require('../models/gondolatTipus');
 const Javaslat = require('../models/javaslat');
 const Egyezmeny = require('../models/egyezmeny');
 
@@ -39,12 +39,12 @@ const szuloKereses = async (entitasId, entitasTipus) => {
   // A megfelelő modellből olvassuk ki a szülő-mezőket (minden típusnál ugyanaz a két mező)
   let entitas = null;
 
-  if (entitasTipus === 'Tartalom') {
-    entitas = await Tartalom.findById(entitasId).select('szuloId szuloTipus');
+  if (entitasTipus === 'Gondolat') {
+    entitas = await Gondolat.findById(entitasId).select('szuloId szuloTipus');
   } else if (entitasTipus === 'Kategoria') {
     entitas = await Kategoria.findById(entitasId).select('szuloId szuloTipus');
-  } else if (entitasTipus === 'TartalomTipus') {
-    entitas = await TartalomTipus.findById(entitasId).select('szuloId szuloTipus');
+  } else if (entitasTipus === 'GondolatTipus') {
+    entitas = await GondolatTipus.findById(entitasId).select('szuloId szuloTipus');
   } else if (entitasTipus === 'Javaslat') {
     entitas = await Javaslat.findById(entitasId).select('szuloId szuloTipus');
   } else if (entitasTipus === 'Egyezmeny') {

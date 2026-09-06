@@ -81,14 +81,14 @@ async function futtatas() {
   });
   const token1 = bejelentkezes1.token; // JWT token elmentése
 
-  // 3 tartalom létrehozása tesztEmber1 tokenével
-  console.log('\n── 3 tartalom létrehozása (tesztEmber1) ──');
+  // 3 gondolat létrehozása tesztEmber1 tokenével
+  console.log('\n── 3 gondolat létrehozása (tesztEmber1) ──');
 
-  // Segédfüggvény: tartalom adatok összeállítása sorszám alapján
-  const tartalomAdat = (sorszam) => ({
+  // Segédfüggvény: gondolat adatok összeállítása sorszám alapján
+  const gondolatAdat = (sorszam) => ({
     cim: `A klímaváltozás hatásai${sorszam}`,
     szoveg: 'Részletes leírás a klímaváltozás következményeiről és a lehetséges megoldásokról.',
-    tartalomTipusId: '',    // Nem kötelező mező
+    gondolatTipusId: '',    // Nem kötelező mező
     kategoriaIds: [],       // Üres tömb – nincs kategória
     javaslatElfogadasiKuszob: 81,
     reszveteliAranyKuszob: 31,
@@ -99,34 +99,34 @@ async function futtatas() {
     szuloTipus: '',
   });
 
-  // 1. tartalom – MongoDB _id elmentése
-  const tartalom1Valasz = await keres('/tartalom', {
+  // 1. gondolat – MongoDB _id elmentése
+  const gondolat1Valasz = await keres('/gondolat', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token1}` },
-    body: JSON.stringify(tartalomAdat(1)),
+    body: JSON.stringify(gondolatAdat(1)),
   });
-  const tartalom1Id = tartalom1Valasz.tartalom._id;
+  const gondolat1Id = gondolat1Valasz.gondolat._id;
 
-  // 2. tartalom – MongoDB _id elmentése
-  const tartalom2Valasz = await keres('/tartalom', {
+  // 2. gondolat – MongoDB _id elmentése
+  const gondolat2Valasz = await keres('/gondolat', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token1}` },
-    body: JSON.stringify(tartalomAdat(2)),
+    body: JSON.stringify(gondolatAdat(2)),
   });
-  const tartalom2Id = tartalom2Valasz.tartalom._id;
+  const gondolat2Id = gondolat2Valasz.gondolat._id;
 
-  // 3. tartalom – MongoDB _id elmentése
-  const tartalom3Valasz = await keres('/tartalom', {
+  // 3. gondolat – MongoDB _id elmentése
+  const gondolat3Valasz = await keres('/gondolat', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token1}` },
-    body: JSON.stringify(tartalomAdat(3)),
+    body: JSON.stringify(gondolatAdat(3)),
   });
-  const tartalom3Id = tartalom3Valasz.tartalom._id;
+  const gondolat3Id = gondolat3Valasz.gondolat._id;
 
-  console.log('\n  ✔ Létrehozott tartalom ID-k:');
-  console.log(`     Tartalom1: ${tartalom1Id}`);
-  console.log(`     Tartalom2: ${tartalom2Id}`);
-  console.log(`     Tartalom3: ${tartalom3Id}`);
+  console.log('\n  ✔ Létrehozott gondolat ID-k:');
+  console.log(`     Gondolat1: ${gondolat1Id}`);
+  console.log(`     Gondolat2: ${gondolat2Id}`);
+  console.log(`     Gondolat3: ${gondolat3Id}`);
 
   // ╔══════════════════════════════════════════╗
   // ║  2. SZAKASZ – tesztEmber2 MŰVELETEI     ║
@@ -141,67 +141,67 @@ async function futtatas() {
   });
   const token2 = bejelentkezes2.token; // JWT token elmentése
 
-  // Tudatpont hozzárendelések – egyenként 12 pont mindhárom tartalomhoz
-  console.log('\n── Tudatpont hozzárendelések (tesztEmber2, 12 pont/tartalom) ──');
+  // Tudatpont hozzárendelések – egyenként 12 pont mindhárom gondolathoz
+  console.log('\n── Tudatpont hozzárendelések (tesztEmber2, 12 pont/gondolat) ──');
 
-  // Tartalom1-hez 12 pont
+  // Gondolat1-hez 12 pont
   await keres('/tudatpont/hozzarendeles', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token2}` },
-    body: JSON.stringify({ entitasId: tartalom1Id, entitasTipus: 'Tartalom', pontok: 12 }),
+    body: JSON.stringify({ entitasId: gondolat1Id, entitasTipus: 'Gondolat', pontok: 12 }),
   });
 
-  // Tartalom2-höz 12 pont
+  // Gondolat2-höz 12 pont
   await keres('/tudatpont/hozzarendeles', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token2}` },
-    body: JSON.stringify({ entitasId: tartalom2Id, entitasTipus: 'Tartalom', pontok: 12 }),
+    body: JSON.stringify({ entitasId: gondolat2Id, entitasTipus: 'Gondolat', pontok: 12 }),
   });
 
-  // Tartalom3-hoz 12 pont
+  // Gondolat3-hoz 12 pont
   await keres('/tudatpont/hozzarendeles', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token2}` },
-    body: JSON.stringify({ entitasId: tartalom3Id, entitasTipus: 'Tartalom', pontok: 12 }),
+    body: JSON.stringify({ entitasId: gondolat3Id, entitasTipus: 'Gondolat', pontok: 12 }),
   });
 
   // Csomag javaslat létrehozása – tesztEmber2 tokenével
-  // (jogosult, mert mindhárom tartalomhoz adott már tudatpontot)
+  // (jogosult, mert mindhárom gondolathoz adott már tudatpontot)
   console.log('\n── Csomag javaslat létrehozása (tesztEmber2) ──');
   const javaslatValasz = await keres('/javaslat', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token2}` },
     body: JSON.stringify({
       javaslatTipus: 'Csomag',
-      szuloId: tartalom1Id,            // A javaslat szülő entitása
-      egyezmenyTarhelyId: tartalom1Id, // Az egyezmény tárolási helye
+      szuloId: gondolat1Id,            // A javaslat szülő entitása
+      egyezmenyTarhelyId: gondolat1Id, // Az egyezmény tárolási helye
       indoklas:
         'Ez egy komplex átszervezési javaslat, amely három különböző műveletet tartalmaz: ' +
-        'egy tartalmat át kell helyezni másik szülő alá, egy másikat frissíteni kell, ' +
+        'egy gondolatot át kell helyezni másik szülő alá, egy másikat frissíteni kell, ' +
         'és egy harmadikat törölni kell, mert elavult.',
       erintettEntitasok: [
         {
-          // Tartalom1 → áthelyezés Tartalom2 alá
-          entitasId: tartalom1Id,
-          entitasTipus: 'Tartalom',
+          // Gondolat1 → áthelyezés Gondolat2 alá
+          entitasId: gondolat1Id,
+          entitasTipus: 'Gondolat',
           muvelet: 'Athelyezes',
-          modositasAdatok: { ujSzuloId: tartalom2Id, ujSzuloTipus: 'Tartalom' },
+          modositasAdatok: { ujSzuloId: gondolat2Id, ujSzuloTipus: 'Gondolat' },
         },
         {
-          // Tartalom2 → cím és szöveg frissítése
-          entitasId: tartalom2Id,
-          entitasTipus: 'Tartalom',
+          // Gondolat2 → cím és szöveg frissítése
+          entitasId: gondolat2Id,
+          entitasTipus: 'Gondolat',
           muvelet: 'Modositas',
           modositasAdatok: {
             cim: 'Frissített cím a csomagban',
-            szoveg: 'Ez a tartalom most frissült egy csomag javaslat részeként.',
+            szoveg: 'Ez a gondolat most frissült egy csomag javaslat részeként.',
             kategoriaIds: [],
           },
         },
         {
-          // Tartalom3 → törlés
-          entitasId: tartalom3Id,
-          entitasTipus: 'Tartalom',
+          // Gondolat3 → törlés
+          entitasId: gondolat3Id,
+          entitasTipus: 'Gondolat',
           muvelet: 'Torles',
         },
       ],

@@ -2,16 +2,16 @@
 
 // Felelősség: a multipart FormData-ból érkező `leiras` mező NORMALIZÁLÁSA.
 //
-// Miért kell? A blokk-alapú SzovegSzerkeszto egy blokk-TÖMBöt ad. A Tartalom
+// Miért kell? A blokk-alapú SzovegSzerkeszto egy blokk-TÖMBöt ad. A Gondolat
 // modálja ezt JSON-body-ként küldi, így a tömb tömbként érkezik és tömbként
-// tárolódik. A Kategoria és a TartalomTipus modálja viszont MULTIPART FormData-t
+// tárolódik. A Kategoria és a GondolatTipus modálja viszont MULTIPART FormData-t
 // küld (mert ikon-fájlt is tölt fel), és a FormData csak STRINGET tud → ott a
 // leírás `JSON.stringify`-olt stringként érkezik. Ha ezt stringként mentenénk,
 // a kártya megjelenítője „legacy sima szövegként" kezelné, és a NYERS JSON-t
 // mutatná. Ezért itt visszaparse-oljuk tömbbé, hogy a Mixed mezőben ugyanúgy
-// TÖMBként tárolódjon, mint a Tartalom `szoveg`-e.
+// TÖMBként tárolódjon, mint a Gondolat `szoveg`-e.
 //
-// Használják: kategoriaService, tartalomTipusService (létrehozás + módosítás).
+// Használják: kategoriaService, gondolatTipusService (létrehozás + módosítás).
 
 /**
  * A nyers `leiras` értéket normalizálja tárolható formára.

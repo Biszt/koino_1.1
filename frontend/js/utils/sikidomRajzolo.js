@@ -62,15 +62,15 @@ const CIMKE_FELETT_ARANY = 0.6;     // a kártya közepe ennyiszer a sugárral a
 const CIMKE_SOR_SZELESSEG = 1.3;    // a sor legnagyobb szélessége a sugár arányában
 const CIMKE_HATTER = 'rgba(255, 255, 255, 0.78)';
 
-// ===== MELLÉK-IKONOK: KATEGÓRIA ÉS TARTALOMTÍPUS =====
+// ===== MELLÉK-IKONOK: KATEGÓRIA ÉS GONDOLATTÍPUS =====
 // A síkidom FORMÁJA az entitástípust mutatja (kör / háromszög / …), a SZÍNE
-// ugyanazt — de arról, hogy egy Tartalom MELYIK kategóriába tartozik és milyen
+// ugyanazt — de arról, hogy egy Gondolat MELYIK kategóriába tartozik és milyen
 // TÍPUSÚ, eddig semmi nem árulkodott. A koino_1.0 ezt a kategória SZÍNÉVEL és a
 // típus FORMÁJÁVAL oldotta meg; nálunk ez nem járható, mert a színek és a formák
 // száma korlátozott, az ikonoké viszont nem (Csaba, 2026-08-08).
 //
 // Ezért a Struktúra nézet mintáját követjük: a felirat alatt egy sorban a
-// kategória-ikonok BALRA, a tartalomtípus ikonja JOBBRA.
+// kategória-ikonok BALRA, a gondolattípus ikonja JOBBRA.
 const IKON_MIN_ATMERO = 96;         // ekkora látszó átmérő alatt nincs mellék-ikon
 const IKON_ALATT_ARANY = 0.5;       // az ikon-sor a középpont ALATT, a sugár arányában
 const IKON_SUGAR_ARANY = 0.10;      // egy ikon sugara a síkidom sugarának arányában
@@ -95,7 +95,7 @@ const HALVANYODAS_MARADEK = 0.06;   // teljesen sosem tűnik el: ennyi marad a k
 // A gyökér-szint üres magjába ekkora sugár fölött írjuk ki a „nagyíts befelé" súgót
 const MAG_FELIRAT_MIN_SUGAR = 62;
 
-// A „további tartalmak" AJÁNLAT ekkora ÜRES sugár (képpont) fölött fér ki. Kisebb,
+// A „további gondolatok" AJÁNLAT ekkora ÜRES sugár (képpont) fölött fér ki. Kisebb,
 // mint a fenti súgó küszöbe, mert ez nem díszítés: működő ajánlatnak telefonon is
 // meg kell jelennie. Nem is a kijelző-maghoz mérjük, hanem a valódi, MÉRT
 // ürességhez (a pakolási lyukhoz) — az nagyításkor korlátlanul nő, tehát az ajánlat
@@ -233,7 +233,7 @@ export class SikidomRajzolo {
   }
 
   // ===== A HATÁRJELÖLŐ: HOL MARADT ABBA AZ ELŐZŐ LEPAKOLÁS =====
-  // Csaba, 2026-08-11: a „további tartalmak" koppintás előtti legkisebb síkidom
+  // Csaba, 2026-08-11: a „további gondolatok" koppintás előtti legkisebb síkidom
   // eddig (majdnem) középen ült, az újrapakolás után viszont máshol lehet. Ha nem
   // jelölnénk meg, az e-ember elveszítené a fonalat.
   //
@@ -302,7 +302,7 @@ export class SikidomRajzolo {
     c.stroke();
     c.restore();
 
-    // ===== A „TOVÁBBI TARTALMAK" AJÁNLAT =====
+    // ===== A „TOVÁBBI GONDOLATOK" AJÁNLAT =====
     // Akkor kerül ide, ha a kijelző-mag már senkit nem takar, de van még le nem
     // töltött testvér (lásd `_lathatoLista`). A két felirat SOSEM ütközik: amíg van
     // mit előhívni nagyítással, a „nagyíts befelé" súgó szól; amikor már nincs, ez.
@@ -318,7 +318,7 @@ export class SikidomRajzolo {
       c.textBaseline = 'middle';
       // Két sorban: körbe így fér ki a legjobban (egy hosszú sor kilógna a peremen).
       c.fillText('további', mag.kepX, mag.kepY - betu * 0.6);
-      c.fillText('tartalmak', mag.kepX, mag.kepY + betu * 0.6);
+      c.fillText('gondolatok', mag.kepX, mag.kepY + betu * 0.6);
       c.restore();
       return;
     }
@@ -388,7 +388,7 @@ export class SikidomRajzolo {
     c.restore();
   }
 
-  // ===== MELLÉK-IKONOK: KATEGÓRIA (BALRA) + TARTALOMTÍPUS (JOBBRA) =====
+  // ===== MELLÉK-IKONOK: KATEGÓRIA (BALRA) + GONDOLATTÍPUS (JOBBRA) =====
   // A forma és a szín az entitástípust mondja meg; ezek az ikonok azt, amit a
   // forma nem tud: melyik kategóriába tartozik és milyen típusú. A Struktúra
   // nézet ugyanezt a rendezést használja, hogy a két nézet egyformán olvasható.
@@ -420,7 +420,7 @@ export class SikidomRajzolo {
       this._egyIkonRajzolasa(kep.kepX - (i + 0.5) * lepes, y, sugar, k.ikon, TIPUS_FORMA.Kategoria.szin);
     });
     jobbra.forEach((t, i) => {
-      this._egyIkonRajzolasa(kep.kepX + (i + 0.5) * lepes, y, sugar, t.ikon, TIPUS_FORMA.TartalomTipus.szin);
+      this._egyIkonRajzolasa(kep.kepX + (i + 0.5) * lepes, y, sugar, t.ikon, TIPUS_FORMA.GondolatTipus.szin);
     });
 
     c.restore();

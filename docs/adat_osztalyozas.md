@@ -34,11 +34,11 @@ egy már meglévő, végiggondolt címkézés végrehajtása.
 | **D5** | a lánc hatóköre CSAK a tartós mag | a tartalmi rétegnek nem kell lánc |
 | **D6** | **személyes adat SOHA a láncra** | kell egy **második dimenzió**, a rétegtől függetlenül |
 | **D14** | a tartós mag **az azonosság egyszeriségére és (később) a pénzre szűkül** — az egyezményeket is beleértve minden más a tudatpontot követi | **a mag drámaian kicsi lett** |
-| **D17** | a tartalom, a tudatpont-hozzárendelés és a szavazás NEM igényel globális egyetértést — elég a **saját lánc-következetesség**; egy javaslat eredménye **determinisztikus számítás** | ezért kell a **LÁNC** és a **SZÁMÍTOTT** réteg |
+| **D17** | a gondolat, a tudatpont-hozzárendelés és a szavazás NEM igényel globális egyetértést — elég a **saját lánc-következetesség**; egy javaslat eredménye **determinisztikus számítás** | ezért kell a **LÁNC** és a **SZÁMÍTOTT** réteg |
 | **D21** | a mag Merkle-fa: mindenki tárolja a saját lapját, ~1 KB | a MAG-ba sorolt mezők mérete **valódi korlát** |
 
 **A D14 a legfontosabb, mert visszamenőleg átrendezte a D3-at:** a törésvonal nem
-„tartalom vs. mag", hanem *„amit valaki fontosnak tart"* ↔ *„amit senki nem tart fontosnak,
+„gondolat vs. mag", hanem *„amit valaki fontosnak tart"* ↔ *„amit senki nem tart fontosnak,
 de nélküle a rendszer csalható"*.
 
 ---
@@ -79,12 +79,12 @@ Ha igen: **nem igazságforrás, hanem gyorsítótár.** A Fázis 2-ben ezek nem 
 hanem függvények (D17: determinisztikus számítás). Ma azért tároljuk őket, mert a MongoDB-s
 lekérdezés gyorsabb — de **eldobhatók, és ez a lényeg**.
 
-### 4. kérdés → `tartalom`
+### 4. kérdés → `gondolat`
 
 > **Rendelhet hozzá valaki tudatpontot?**
 
 Ha igen: tudatpont-replikált, és **elfelejthető** — ha senki nem tart rá pontot, eltűnik
-(D3/D14). Ez a koino érdemi része: tartalom, javaslat, **egyezmény**, kategória.
+(D3/D14). Ez a koino érdemi része: gondolat, javaslat, **egyezmény**, kategória.
 
 ### 5. kérdés → `helyi`
 
@@ -97,7 +97,7 @@ Ha igen: tudatpont-replikált, és **elfelejthető** — ha senki nem tart rá p
 
 A rétegtől **függetlenül** jelöljük, ha a mező azonosítható személyre vonatkozik (D6).
 
-Egy mező lehet `tartalom` **és** `szemelyes` egyszerre (pl. a `nev`) — ez azt jelenti:
+Egy mező lehet `gondolat` **és** `szemelyes` egyszerre (pl. a `nev`) — ez azt jelenti:
 tudatpont-replikált, de **kriptográfiai bizonyítékon kívül semmi nem kerülhet róla a
 láncra**, és a törlésének kezelhetőnek kell maradnia.
 
@@ -117,8 +117,8 @@ láncra**, és a törlésének kezelhetőnek kell maradnia.
 | `_id` | **mag** | az azonosság horgonya; a Fázis 2-ben a **nyilvános kulcs** veszi át a szerepét |
 | `letrehozva` | **mag** | a regisztráció ténye és ideje — a D21 kötegelésének bemenete |
 | `meghivoEemberId` | **mag** | **a bizalmi gráf éle** (a séma kommentje is így nevezi) — a D18 tanúsítás-gráfjának előképe |
-| `eemberNev` | tartalom · *személyes* | ⚠️ az **egyedisége** ma index-kényszer, a Fázis 2-ben nem a mag része — lásd a határeseteket |
-| `nev`, `lokacio.*` | tartalom · *személyes* | a nyilvános profil (D6: a név a tartalmi rétegben él) |
+| `eemberNev` | gondolat · *személyes* | ⚠️ az **egyedisége** ma index-kényszer, a Fázis 2-ben nem a mag része — lásd a határeseteket |
+| `nev`, `lokacio.*` | gondolat · *személyes* | a nyilvános profil (D6: a név a tartalmi rétegben él) |
 | `tudatpontok` | szamitott | mindenkinek **ugyanannyi** (10 000) — ez globális paraméter (D13/c), nem személyes adat; a mező ennek másolata |
 | `email` | helyi · *személyes* | soha nem megy ki nyilvános válaszban (H3) |
 | `jelszo` | helyi | bcrypt-hash — a Fázis 2-ben **megszűnik** (a kulcs hitelesít, D15) |
@@ -159,18 +159,18 @@ láncra**, és a törlésének kezelhetőnek kell maradnia.
 |---|---|---|
 | mind | **lanc** | aláírt érték javaslat; a mediánt ezekből számolja bárki (D4) |
 
-### `tartalom`, `kategoria`, `tartalomTipus`
+### `gondolat`, `kategoria`, `gondolatTipus`
 
 | Mező | Réteg | Megjegyzés |
 |---|---|---|
-| `cim`/`nev`, `szoveg`/`leiras`, `ikon`, `tartalomTipusId`, `kategoriaIds`, `szuloId`, `szuloTipus`, `kulonvalasok`, `letrehozva`, `modositva` | tartalom | a koino érdemi anyaga; tudatpont-replikált, elfelejthető |
+| `cim`/`nev`, `szoveg`/`leiras`, `ikon`, `gondolatTipusId`, `kategoriaIds`, `szuloId`, `szuloTipus`, `kulonvalasok`, `letrehozva`, `modositva` | gondolat | a koino érdemi anyaga; tudatpont-replikált, elfelejthető |
 | `szerkesztok[]` (`eemberId`, `allapot`, `eredeti`) | **lanc** | ki hozta létre / ki szerkeszti — aláírt cselekvés |
 
 ### `javaslat`
 
 | Mező | Réteg | Megjegyzés |
 |---|---|---|
-| `javaslatTipus`, `erintettEntitasok`, `szuloId`, `szuloTipus`, `indoklas`, `egyesitesAdatok.*`, `egyezmenyTarhelyId`, `egyezmenyTarhelyTipus`, `toredek*` | tartalom | a javaslat érdemi törzse |
+| `javaslatTipus`, `erintettEntitasok`, `szuloId`, `szuloTipus`, `indoklas`, `egyesitesAdatok.*`, `egyezmenyTarhelyId`, `egyezmenyTarhelyTipus`, `toredek*` | gondolat | a javaslat érdemi törzse |
 | `letrehozo`, `letrehozva` | **lanc** | a létrehozás eseménye |
 | `statusz`, `hatalybaLepesIdeje`, `dontesiIdo`, `reszveteliArany`, `tamogatotsagiArany`, `ellenzoiArany`, `tartozkodoiArany`, `bizonyossagiMutato`, `javaslat*Szama`, `*TudatpontTulajdonosokSzama`, `utolsoSzamitas`, `ertekekElavultak` | szamitott | **a szavazatokból + küszöbökből újraszámolható** (D17) |
 | `hataridoErtesitesElkuldve` | helyi | üzemi jelző (ne küldjünk kétszer) |
@@ -179,12 +179,12 @@ láncra**, és a törlésének kezelhetőnek kell maradnia.
 
 | Mező | Réteg | Megjegyzés |
 |---|---|---|
-| `javaslatId`, `szuloId`, `szuloTipus`, `javaslatTipus`, `erintettEntitasok`, `indoklas`, `egyesitesAdatok.*`, `modositasAdatok` | tartalom | **D14: az egyezmény is a tudatpontot követi** |
+| `javaslatId`, `szuloId`, `szuloTipus`, `javaslatTipus`, `erintettEntitasok`, `indoklas`, `egyesitesAdatok.*`, `modositasAdatok` | gondolat | **D14: az egyezmény is a tudatpontot követi** |
 | `letrehozo` | lanc | átvett a javaslatból |
-| `tamogatokSzama`, `ellenzokSzama`, `tartozkodokSzama`, az arányok, `bizonyossagiMutato` | tartalom | ⚠️ **PILLANATKÉP, nem számított** — lásd a határeseteket |
+| `tamogatokSzama`, `ellenzokSzama`, `tartozkodokSzama`, az arányok, `bizonyossagiMutato` | gondolat | ⚠️ **PILLANATKÉP, nem számított** — lásd a határeseteket |
 | `vegrehajtva`, `vegrehajatasEredmeny` | szamitott | a rendszer determinisztikus lépése, nem egy e-ember cselekvése |
 
-### `tudatpontAllokacio`, `hierarchikusTudatpontAllokacio`, `tartalomErtekHisztogram`
+### `tudatpontAllokacio`, `hierarchikusTudatpontAllokacio`, `gondolatErtekHisztogram`
 
 | Mező | Réteg | Megjegyzés |
 |---|---|---|
@@ -212,7 +212,7 @@ A `javaslat` arányai **újraszámolhatók** (a szavazatok megvannak). Az `egyez
 **nem** — mert a D14 óta a szavazatok maguk is elfelejtődhetnek alóluk, ha a javaslatot
 senki nem tartja tudatponttal.
 
-**Döntés: `tartalom`, nem `szamitott`.** Ezek az egyezmény elidegeníthetetlen részei — a
+**Döntés: `gondolat`, nem `szamitott`.** Ezek az egyezmény elidegeníthetetlen részei — a
 „hogyan született" bizonyítéka. Ha az egyezmény megmarad (mert valaki tartja), a
 születésének körülményei is vele maradnak.
 
@@ -272,7 +272,7 @@ A magba a Fázis 2-ben ezek kerülnek, és ma **egyik sem létezik**:
 > **nőtt**, mert most azt mondja meg, mi kerül egyáltalán a készülékre.
 
 - **Szakasz 1 — A helyi koino:** a besorolás megmondja, mit tárol a készülék, és mit nem:
-  - `mag` + `lanc` + `tartalom` → **a készüléken él, aláírva**
+  - `mag` + `lanc` + `gondolat` → **a készüléken él, aláírva**
   - `szamitott` → **nem tárolandó és nem terjesztendő** — az eseményekből számítódik (D17);
     ez ma **56 mező**, ami a Fázis 2-ben adatból **függvénnyé** alakul
   - `helyi` → a jelentős része **megszűnik** (jelszó, token, e-mail-token: a kulcs
@@ -283,10 +283,10 @@ A magba a Fázis 2-ben ezek kerülnek, és ma **egyik sem létezik**:
   ~1 KB/e-ember nagyságrendben tartja a D21 „mindenki tárolja a saját lapját" rétegét.
 - **A nyelvhatár (D23):** a besorolás egyben azt is megmutatja, hol lenne értelme valaha
   más nyelvet (Rust/WASM) használni: a determinizmus-kritikus `mag` **8 mező**, míg a
-  gyakran változó `tartalom` **73** — nem a programot kell nyelvre választani, legfeljebb
+  gyakran változó `gondolat` **73** — nem a programot kell nyelvre választani, legfeljebb
   a magot.
 - **A tartalmi réteg érintetlen marad** — ez a besorolás legjobb híre: a koino érdemi
-  anyaga (tartalom, javaslat, egyezmény, kategória) **nem kerül lánc-kényszer alá**.
+  anyaga (gondolat, javaslat, egyezmény, kategória) **nem kerül lánc-kényszer alá**.
 
 ---
 
@@ -298,7 +298,7 @@ Minden séma-mező Mongoose-definíciója kap két opciót:
 cim: {
   type: String,
   required: true,
-  reteg: 'tartalom',    // H6 — adat-osztályozás
+  reteg: 'gondolat',    // H6 — adat-osztályozás
   szemelyes: false      // csak ott kiírva, ahol true
 }
 ```
@@ -319,13 +319,13 @@ node backend/tools/retegEllenorzes.js
 ## Napló
 
 - **2026-08-26** — A dokumentum létrejött: a **H6** híd-feladat első lépése (a Fázis 2
-  **Szakasz 0** kezdete). Csaba döntései: **öt réteg** (`mag` / `lanc` / `tartalom` /
+  **Szakasz 0** kezdete). Csaba döntései: **öt réteg** (`mag` / `lanc` / `gondolat` /
   `szamitott` / `helyi`) + külön `szemelyes` jelölés; a jelölés helye a **séma-opció**,
   mellette ellenőrző eszközzel. A besorolás 15 modell + 2 al-séma ~150 mezőjét fedi le.
   Négy határeset kimondva (egyezmény-pillanatkép, `eemberNev`-egyediség, `meghivottNev`,
   a `jelszo` megszűnése), és rögzítve a legfontosabb felismerés: **a mai adatmodellben a
   tartós mag majdnem üres.**
-- **2026-08-26 (2)** — **A P2P-fordulat átvezetve** (D22/D23/D24). A dokumentum tartalma
+- **2026-08-26 (2)** — **A P2P-fordulat átvezetve** (D22/D23/D24). A dokumentum gondolata
   változatlan; a „mit jelent ez a következő lépésekre" szakasz átírva: a H5 export elesett,
   helyette a besorolás a **Szakasz 1 (helyi koino)** adatmodelljének kiindulása. Új
-  megfigyelés: a réteg-számok (`mag` 8 ↔ `tartalom` 73) **a nyelvhatár térképe** is (D23).
+  megfigyelés: a réteg-számok (`mag` 8 ↔ `gondolat` 73) **a nyelvhatár térképe** is (D23).

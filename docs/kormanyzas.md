@@ -67,7 +67,7 @@ Ahhoz, hogy a 4. lépcső megoldódjon, szét kell választani három dolgot, am
 
 | Szint | Mit kormányoz | Ki kormányozza | Van-e döntés? |
 |---|---|---|---|
-| **1. Tartalom** | egy gondolatot | a koino közössége | ✅ tudatpont + küszöb + szavazás |
+| **1. Gondolat** | egy gondolatot | a koino közössége | ✅ tudatpont + küszöb + szavazás |
 | **2. Koino-verzió** | magát a programot | **ugyanaz a közösség, ugyanazzal a gépezettel** | ✅ ugyanaz |
 | **3. A koinók sokasága** | — | **senki** | ❌ **nincs mit eldönteni** |
 
@@ -87,7 +87,7 @@ mechanizmus, magasabb magasságban.
 
 > Ez azt is jelenti, hogy a **különválás** (a Fázis 1-ben 2026-08-25-én megépített
 > funkció) és a **fork** nem hasonlítanak egymásra: **ugyanaz a művelet**, két különböző
-> szinten. Tartalom-szinten szétválik egy gondolat; verzió-szinten szétválik egy világ.
+> szinten. Gondolat-szinten szétválik egy gondolat; verzió-szinten szétválik egy világ.
 
 ### Miért nem indul ettől végtelen regresszus
 
@@ -214,7 +214,7 @@ keletkezhet:
 A szétválás akkor is így megy, ha valaki **csak tesztelésre** rak fel egy verziót —
 nincs külön „próba" üzemmód, a mechanizmus ugyanaz.
 
-> **Eltérés a tartalom-szintű különválástól, és ez szándékos.** Tartalom-szinten a
+> **Eltérés a gondolat-szintű különválástól, és ez szándékos.** Gondolat-szinten a
 > szétosztás **arányos**: mindenki azt viszi, amihez tudatpontot rendelt. Verzió-szinten
 > **teljes**: minden lemásolódik. Az ok szerkezeti — a verzió nem csomópont a fában,
 > hanem **talaj**. Egy programból nem lehet „felet" elvinni, és a rajta álló világot sem
@@ -290,7 +290,7 @@ mechanizmus már megvan: **az olcsó kilépés.**
 
 | | Zárt platform | koino |
 |---|---|---|
-| Ha a működtető elveszi a hatalmat | nincs hova menni — a tartalmad, a kapcsolataid ott maradnak | **elmész, és viszed a súlyodat** (különválás / fork) |
+| Ha a működtető elveszi a hatalmat | nincs hova menni — a gondolatod, a kapcsolataid ott maradnak | **elmész, és viszed a súlyodat** (különválás / fork) |
 | Mit ér az elfoglalás | mindent | **semmit — az emberek elmennek, marad az üres kód** |
 
 Ezért gyengék a „gyeplős" verziók: aki átveszi az irányítást egy koino felett, **pontosan
@@ -299,7 +299,7 @@ hogy nincs benne nyereség.
 
 **Ez ugyanaz a tétel, amire az egész platform épül.** A **D4 felelősség-elve** szerint
 amit a tulajdonosok nem védenek be, azt a rendszer nem védi helyettük — a koino a
-tartalmaknál sem cenzúrával véd, hanem éberséggel és kilépéssel. Egy szinttel feljebb:
+gondolatoknál sem cenzúrával véd, hanem éberséggel és kilépéssel. Egy szinttel feljebb:
 
 > **Amit a közösség a koino lényegéből nem véd meg, azt semmilyen mechanizmus nem védi
 > meg helyette.**
@@ -355,7 +355,7 @@ szétválás.
 **Ami mindebből megmarad kockázatnak:**
 - **A szétválás mindkét ág pénzét gyengíti** (kisebb közösség, kisebb elfogadottság) —
   ez viszont *egészséges* fék a komolytalan fork ellen, ugyanaz a logika, mint
-  tartalom-szinten a tudatpont elvitele: **a szétválásnak ára van.**
+  gondolat-szinten a tudatpont elvitele: **a szétválásnak ára van.**
 - **A különvált ág kész identitás-hálót örököl** (a D11 szerint a pénz csak bizonyított
   identitás-réteg után indulhat — a fork ezt másolja). Hogy ez Sybil-kockázat-e, a
   D11-gyel együtt vizsgálandó.
@@ -378,7 +378,7 @@ Hogy a fenti tervből ne látsszon több késznek, mint amennyi:
 | Elem | Állapot |
 |---|---|
 | Licenc (a fork jogi alapja) | ✅ **AGPL-3.0**, 2026-08-25 — lásd [`LICENSE`](../LICENSE) |
-| Különválás tartalom-szinten (a fork „főpróbája") | ✅ élesben, 2026-08-25 |
+| Különválás gondolat-szinten (a fork „főpróbája") | ✅ élesben, 2026-08-25 |
 | Küszöb-rendszer (az „alkotmányosság" hordozója) | ✅ működik |
 | Koino-verzió mint entitás | ❌ nincs |
 | Konszenzuális önfrissítés (D9) | ❌ nincs |
@@ -397,4 +397,4 @@ Hogy a fenti tervből ne látsszon több késznek, mint amennyi:
   **D12–D13** (ez a dokumentum), **N9** (elismerés + kinevezés), **H7** (kormányzási ígéret)
 - [`../LICENSE`](../LICENSE) és a [`../README.md`](../README.md) Licenc szakasza
 - [`../megismeres/18-kulonvalas.md`](../megismeres/18-kulonvalas.md) — a különválás
-  e-embereknek elmagyarázva (a fork tartalom-szintű megfelelője)
+  e-embereknek elmagyarázva (a fork gondolat-szintű megfelelője)

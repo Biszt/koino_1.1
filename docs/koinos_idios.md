@@ -159,7 +159,7 @@ egyenletesebben oszlik el, mint a földbirtok.
 
 A **tudatpont** a modern megfelelője annak, hogy megjelensz a gyűlésen: azt
 mutatja meg, mi fontos neked, mire fordítod az odafigyelésedet. És mint a
-gyűlésen való megjelenés, ez is kaput nyit — javaslatot csak arra a tartalomra
+gyűlésen való megjelenés, ez is kaput nyit — javaslatot csak arra a gondolatra
 tehetsz, ahová tudatpontot rendeltél.
 
 De itt jön a két különbség, ami az egészet eldönti:
@@ -185,15 +185,15 @@ hatalommá**, mert a szavazat személyenként egy, vagyontól függetlenül.
 központi gyűlés**. Nincs az az egy padsor, amit ha valaki elfoglal, mindent
 eldöntött.
 
-Minden tartalom a maga szintjén dől el: a maga résztvevőivel, akik odarendelték
-a tudatpontjukat, és a maga **küszöbértékeivel** — amelyek tartalmanként
+Minden gondolat a maga szintjén dől el: a maga résztvevőivel, akik odarendelték
+a tudatpontjukat, és a maga **küszöbértékeivel** — amelyek gondolatonként
 határozzák meg, mekkora támogatottság és részvétel kell az elfogadáshoz, és
 mennyi idő alatt. A **bizonyossági mutató** pedig annál hamarabb zárja le a
 döntést, minél egyértelműbb az eredmény és minél magasabb a részvétel.
 
 Ez a *sympoliteia* elve, egészen az aljáig levezetve. Amit az ókor a városok
 között megcsinált — hogy a döntés ott lakjon, ahol a tárgya —, azt itt a
-legkisebb egységig visszük: **magáig a tartalomig**.
+legkisebb egységig visszük: **magáig a gondolatig**.
 
 ---
 

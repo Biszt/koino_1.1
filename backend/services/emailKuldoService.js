@@ -193,14 +193,14 @@ async function kuldes({ cimzett, targy, szoveg, html = null, indok }) {
     return { sikeres: false, mod: 'nincs', ok: 'ismeretlen indok', hiba: `Ismeretlen indok: ${indok}` };
   }
 
-  // ----- 2. ŐR: A KÖTELEZŐ TARTALOM -----
+  // ----- 2. ŐR: A KÖTELEZŐ GONDOLAT -----
   if (!cimErvenyesE(cimzett)) {
     console.error('emailKuldoService.kuldes - VÉGE: ELUTASÍTVA (érvénytelen cím)');
     return { sikeres: false, mod: 'nincs', ok: 'érvénytelen cím', hiba: 'Érvénytelen e-mail cím' };
   }
   if (!targy || !szoveg) {
     console.error('emailKuldoService.kuldes - VÉGE: ELUTASÍTVA (hiányzó tárgy vagy szöveg)');
-    return { sikeres: false, mod: 'nincs', ok: 'hiányzó tartalom', hiba: 'Hiányzó tárgy vagy szöveg' };
+    return { sikeres: false, mod: 'nincs', ok: 'hiányzó gondolat', hiba: 'Hiányzó tárgy vagy szöveg' };
   }
 
   // ----- 3. ŐR: A BEÁLLÍTÁSOK -----

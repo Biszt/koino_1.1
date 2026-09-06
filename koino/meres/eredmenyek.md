@@ -72,7 +72,7 @@
 **A szintetikus tár valódi:** valódi Ed25519 kulcsok, valódi aláírások, valódi kanonikus
 alak, valódi lánc, betartott tudatpont-keret (**a kivételek száma minden méretnél 0** —
 tehát valódi terhelést mérünk, nem egy szűrő sebességét). ⚠️ **Feltevés benne:** az
-esemény-keverék (60% tudatpont · 25% tartalom · 10% szavazat · 5% javaslat/érték) és a
+esemény-keverék (60% tudatpont · 25% gondolat · 10% szavazat · 5% javaslat/érték) és a
 200 esemény/fő. Ha a valódi használat más, ezt kell először átírni.
 
 ## Az eredmény *(a skála-mérésé — az ébredés-mérés lentebb)*

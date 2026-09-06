@@ -13,7 +13,7 @@ egy gondolkodó ember **komolyan vehesse** — a víziót és a korlátait egyar
 ## 1. A koino egy mondatban
 
 **Közösségi tér, amit a közösség irányít, központi szereplő nélkül** — ahol a
-tartalmakból javaslatok, a javaslatokból közös döntéssel egyezmények születnek,
+gondolatokból javaslatok, a javaslatokból közös döntéssel egyezmények születnek,
 és ahol a részvétel jutalma soha nem sűrűsödhet kevesek hatalmává.
 
 ## 2. A probléma, amit megold — egy 2400 éves bug
@@ -48,10 +48,10 @@ magva.
 - **tudatpont** — mindenkinek ugyanannyi; nem elkölthető, csak szétosztható és
   bármikor átrendezhető. Azt fejezi ki, *mi fontos* egy embernek — **prioritás,
   NEM szavazaterő**.
-- **tartalom → javaslat → egyezmény** — a tartalom az alapegység; aki tudatpontot
+- **gondolat → javaslat → egyezmény** — a gondolat az alapegység; aki tudatpontot
   rendel hozzá, javaslatot tehet (módosítás, áthelyezés, törlés, egyesítés); az
   elfogadott javaslatból egyezmény lesz.
-- **küszöbértékek + bizonyossági mutató** — tartalmanként meghatározzák, mekkora
+- **küszöbértékek + bizonyossági mutató** — gondolatonként meghatározzák, mekkora
   támogatottság és részvétel kell az elfogadáshoz; minél tisztább az állás és
   magasabb a részvétel, annál hamarabb zárul a döntés (a min/max döntési idő közt).
 - **szavazás: egy e-ember = egy szavazat** — a tudatpont mennyisége itt nem számít.
@@ -66,7 +66,7 @@ részesedés jár. Ez a méltóság alapállapota: senki nem esik a padló alá.
 Fontos azonban a **kétféle teremtés** megkülönböztetése, mert ezen áll vagy bukik
 a bőség hitele:
 
-- **A teremtés valóban korlátlan** — tartalomból, tudásból, egyezményből,
+- **A teremtés valóban korlátlan** — gondolatból, tudásból, egyezményből,
   kultúrából, együttműködésből **végtelen sok** születhet. Itt nincs plafon: minél
   többen alkotnak, annál gazdagabb a közös.
 - **A pénzkibocsátás viszont fegyelmezett** — épp azért, hogy a bőség ne forduljon
@@ -115,7 +115,7 @@ pénz" — valójában a vízió erőssége: **korlátlanul teremtünk értéket
   egy ember egy szavazat — az egyenlőség nem utólagos toldás, hanem a szerkezet
   alapja.
 - **Kultúra-megőrzés (a honfoglalás logikája):** a koino **nem homogenizál**. A
-  közösségek maguk hozzák létre a kategóriáikat és tartalomtípusaikat; ha egy csoport
+  közösségek maguk hozzák létre a kategóriáikat és gondolattípusaikat; ha egy csoport
   másképp akar dönteni, ott a **fork joga** — párhuzamos koinók, amelyek a közös
   múltat megőrzik, de külön jövőt választanak. Ez a *sympoliteia* logikája: közös
   kötelék, megtartott saját arc. **Egység uniformitás nélkül.**
@@ -180,12 +180,12 @@ múltat.
 A döntés **strukturált**: küszöbértékek szabják meg, mekkora támogatás és részvétel
 kell; a bizonyossági mutató a tiszta, magas részvételű ügyeket gyorsan lezárja, a
 megosztott, alacsony részvételűeket tovább érleli. Nem népszavazás mindenről —
-rétegzett, tartalmanként hangolt folyamat.
+rétegzett, gondolatonként hangolt folyamat.
 
 **„Végtelen a pénz? Akkor nem lesz értéktelen?”**
 Nem végtelen és nem eseti döntésre keletkezik. A kibocsátás **alkotmányos szabály**
 (nehezen módosítható), a keletkezés **egyenlő és áramló**. Korlátlanul *értéket*
-teremtünk (tartalom, kultúra, munka) — de a *pénzt* fegyelmezetten, hogy hű mérték
+teremtünk (gondolat, kultúra, munka) — de a *pénzt* fegyelmezetten, hogy hű mérték
 maradjon.
 
 **„Meggazdagodhatok vele?”**

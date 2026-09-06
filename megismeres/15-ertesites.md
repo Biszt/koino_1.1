@@ -20,7 +20,7 @@ kártya menüjéből (csak arra az ágra). Válaszd ki, **mely eseményekről** 
 - **Javaslat elvetve** — ha egy javaslat nem lép hatályba.
 - **Szavazási határidő** — ha egy javaslat döntési ideje hamarosan lejár.
 - **Tudatpont-változás** — ha változik a tudatpont-eloszlás az entitáson.
-- **Új gyerek entitás** — ha új tartalom jön létre alatta.
+- **Új gyerek entitás** — ha új gondolat jön létre alatta.
 - **Küszöbváltozás** — ha az entitás érvényes küszöbértékei változnak.
 
 **Csak ahol tudatpontom van** — ezt bekapcsolva csak akkor kapsz értesítést, ha

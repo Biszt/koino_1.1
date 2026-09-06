@@ -31,7 +31,7 @@ const ENGEDELYEZETT_STYLE_TULAJDONSAGOK = new Set([
 ]);
 
 // Engedélyezett style tulajdonságok BEILLESZTÉSKOR.
-// Cél: a beillesztett tartalom MEGTARTSA a formázását (méret, vastagság, szín,
+// Cél: a beillesztett gondolat MEGTARTSA a formázását (méret, vastagság, szín,
 // háttérszín) — a „hűen a forráshoz” (B) elv szerint. A méretet a _betumeretPxRe
 // valós px-re oldja fel és 144px-re vágja (lásd MAX_BETUMERET_PX); a háttérszínből
 // az átlátszót (a forrás alapértéke, nem valódi kiemelés) eldobjuk. A 'line-height'-ot
@@ -44,8 +44,8 @@ const BEILLESZTES_STYLE_TULAJDONSAGOK = new Set([
 // maximuma is ennyi) — efölött a beillesztett méretet erre a plafonra vágjuk.
 const MAX_BETUMERET_PX = 144;
 
-// Tagek, amelyeket a TELJES tartalmukkal EGYÜTT eldobunk (nem engedélyezett tagnél
-// egyébként a szöveges tartalmat megtartjuk — de a <style>/<script> CSS/JS szövege
+// Tagek, amelyeket a TELJES gondolatukkal EGYÜTT eldobunk (nem engedélyezett tagnél
+// egyébként a szöveges gondolatot megtartjuk — de a <style>/<script> CSS/JS szövege
 // NEM kerülhet be látható szövegként a blokkba; ez Word-beillesztésnél gyakori).
 const TELJESEN_ELDOBANDO_TAGEK = new Set([
   'STYLE', 'SCRIPT', 'HEAD', 'META', 'TITLE', 'LINK', 'BASE', 'NOSCRIPT'
@@ -77,7 +77,7 @@ function _biztonsagosHref(href) {
 // =============================================
 // A forrás gyakran 'transparent'/'rgba(0,0,0,0)' hátteret tesz minden elemre —
 // ez nem valódi kiemelés, csak alapérték, ezért NEM tartjuk meg (különben minden
-// beillesztett szöveg „üres” háttérstílust kapna, ami zajt visz a tartalomba).
+// beillesztett szöveg „üres” háttérstílust kapna, ami zajt visz a gondolatba).
 // @param {string} ertek - A background-color érték
 // @returns {boolean} true, ha átlátszó/üres (eldobandó)
 function _atlatszoHatterE(ertek) {
@@ -130,7 +130,7 @@ function _fatMasolasaSzurve(forrasElem, celElem, engedelyezettStilusok, meretPxR
     }
 
     if (!ENGEDELYEZETT_TAGEK.has(gyerek.tagName)) {
-      // Nem engedélyezett tag: a szöveges tartalmát megtartjuk, a taget eldobjuk
+      // Nem engedélyezett tag: a szöveges gondolatát megtartjuk, a taget eldobjuk
       _fatMasolasaSzurve(gyerek, celElem, engedelyezettStilusok, meretPxRe);
       return;
     }

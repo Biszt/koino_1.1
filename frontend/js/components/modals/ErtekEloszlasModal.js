@@ -12,7 +12,7 @@ import { masodpercFelirat } from '../../utils/idoFormazo.js';
 const ALMODAL_KONTENER_ID = 'almodal-kontener';
 
 // ===== ÉRTÉK-ELOSZLÁS MODAL OSZTÁLY =====
-// Felelősség: egy tartalom EGY küszöbének érték-javaslat eloszlását mutatja
+// Felelősség: egy gondolat EGY küszöbének érték-javaslat eloszlását mutatja
 // (melyik értékből hány javaslat van), vízszintes sávokkal.
 // Használják: a ReszletekModal küszöbérték-sorainak „részletek" gombjai.
 class ErtekEloszlasModal {
@@ -20,7 +20,7 @@ class ErtekEloszlasModal {
   // ===== KONSTRUKTOR =====
   // @param {Object} beallitasok
   // @param {string} beallitasok.entitasId    - az entitás azonosítója
-  // @param {string} beallitasok.entitasTipus - 'Tartalom' | 'Kategoria' | 'TartalomTipus'
+  // @param {string} beallitasok.entitasTipus - 'Gondolat' | 'Kategoria' | 'GondolatTipus'
   // @param {string} beallitasok.mezo         - melyik küszöb (pl. 'minimumDontesiIdo')
   // @param {string} beallitasok.cimke        - emberi felirat (pl. 'Min. döntési idő')
   // @param {string} beallitasok.formatum     - 'ido' | 'szazalek' | 'szam' (érték-formázás)
@@ -31,7 +31,7 @@ class ErtekEloszlasModal {
     });
 
     this.entitasId    = beallitasok.entitasId    ?? null;
-    this.entitasTipus = beallitasok.entitasTipus ?? 'Tartalom';
+    this.entitasTipus = beallitasok.entitasTipus ?? 'Gondolat';
     this.mezo       = beallitasok.mezo       ?? null;
     this.cimke      = beallitasok.cimke      ?? 'Eloszlás';
     this.formatum   = beallitasok.formatum   ?? 'szam';

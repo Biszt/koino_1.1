@@ -4,7 +4,7 @@
 // REPOSITORY IMPORTÁLÁSA
 // ===================================
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
-const TartalomErtekHisztogramRepository = require('../repositories/tartalomErtekHisztogramRepository');
+const GondolatErtekHisztogramRepository = require('../repositories/gondolatErtekHisztogramRepository');
 const TudatpontRepository = require('../repositories/tudatpontRepository');
 const JavaslatRepository = require('../repositories/javaslatRepository');
 
@@ -23,7 +23,7 @@ const tudatpontService = require('./tudatpontService');
 // Ez a réteg tartalmazza a MEDIÁN SZÁMÍTÁSI LOGIKÁT
 // Felelősség: hisztogram alapú medián számítás, hisztogram frissítés
 // Az érték-rendszer entitás-polimorf: minden művelet (entitasId + entitasTipus)
-// párral dolgozik, így tartalomra, kategóriára és tartalomtípusra is működik.
+// párral dolgozik, így gondolatra, kategóriára és gondolattípusra is működik.
 class ErtekJavaslatSzamitasService {
 
   // ===================================
@@ -185,7 +185,7 @@ class ErtekJavaslatSzamitasService {
   // ----- HISZTOGRAM LÉTREHOZÁSA ENTITÁSHOZ -----
   /**
    * Új hisztogram létrehozása egy entitáshoz a létrehozó érték javaslatával.
-   * Akkor hívódik, amikor egy új entitás (tartalom/kategória/tartalomtípus) jön létre.
+   * Akkor hívódik, amikor egy új entitás (gondolat/kategória/gondolattípus) jön létre.
    * @param {string} entitasId - Entitás ID
    * @param {string} entitasTipus - Entitás típusa
    * @param {number} javaslatElfogadasiKuszob - 51-100
@@ -220,7 +220,7 @@ class ErtekJavaslatSzamitasService {
     maximumDontesiIdoMap.set(this.idoHezBucketKulcs(maximumDontesiIdo), 1);
 
     // 3. LÉPÉS - Mentés
-    const hisztogram = await TartalomErtekHisztogramRepository.create({
+    const hisztogram = await GondolatErtekHisztogramRepository.create({
       entitasId: entitasId,
       entitasTipus: entitasTipus,
       javaslatElfogadasiKuszobHisztogram: ertekJavaslatElfogadasiMap,
@@ -256,7 +256,7 @@ class ErtekJavaslatSzamitasService {
     console.log("=== hisztogramFrissitese:", { entitasId, entitasTipus });
 
     // 1. LÉPÉS - Hisztogram lekérése
-    const hisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    const hisztogram = await GondolatErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
     if (!hisztogram) {
       throw new Error('Az entitás hisztogramja nem található');
     }
@@ -306,7 +306,7 @@ class ErtekJavaslatSzamitasService {
     const ujMaxMedian  = this.szamitIdoMedian(maximumDontesiIdoMap, ujOsszesErtekJavaslat, 31536000);
 
     // 7. LÉPÉS - Mentés
-    const frissitettHisztogram = await TartalomErtekHisztogramRepository.updateByEntitas(
+    const frissitettHisztogram = await GondolatErtekHisztogramRepository.updateByEntitas(
       entitasId,
       entitasTipus,
       {
@@ -357,7 +357,7 @@ class ErtekJavaslatSzamitasService {
   async hisztogramCsokkentese(entitasId, entitasTipus, ertekJavaslat) {
     console.log("=== hisztogramCsokkentese:", { entitasId, entitasTipus });
 
-    const hisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    const hisztogram = await GondolatErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
     if (!hisztogram) {
       console.log("hisztogramCsokkentese - nincs hisztogram (entitás törölve?), kihagyva");
       return null;
@@ -390,7 +390,7 @@ class ErtekJavaslatSzamitasService {
     const ujMinMedian  = this.szamitIdoMedian(minimumDontesiIdoMap, ujOsszesErtekJavaslat, 0);
     const ujMaxMedian  = this.szamitIdoMedian(maximumDontesiIdoMap, ujOsszesErtekJavaslat, 31536000);
 
-    const frissitettHisztogram = await TartalomErtekHisztogramRepository.updateByEntitas(
+    const frissitettHisztogram = await GondolatErtekHisztogramRepository.updateByEntitas(
       entitasId,
       entitasTipus,
       {
@@ -489,7 +489,7 @@ class ErtekJavaslatSzamitasService {
     // értékeket: ha van hisztogram, annak aktuális mediánjait; ha nincs, akkor
     // az alapértelmezett küszöböket (mert eddig azok voltak érvényben — lásd
     // aktulisErtekekLekerese fallback).
-    const meglevoHisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    const meglevoHisztogram = await GondolatErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
     const hisztogramLetezik = !!meglevoHisztogram;
     const regiErvenyesErtekek = hisztogramLetezik
       ? {
@@ -618,7 +618,7 @@ class ErtekJavaslatSzamitasService {
   async aktulisErtekekLekerese(entitasId, entitasTipus) {
     console.log("=== aktulisErtekekLekerese:", { entitasId, entitasTipus });
 
-    const hisztogram = await TartalomErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
+    const hisztogram = await GondolatErtekHisztogramRepository.findByEntitas(entitasId, entitasTipus);
     if (!hisztogram) {
       // Nincs még hisztogram az entitáshoz (pl. a rendszer bővítése előtt jött
       // létre, vagy még senki nem javasolt értéket) → az ALAPÉRTELMEZETT

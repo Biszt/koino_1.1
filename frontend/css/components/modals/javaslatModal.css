@@ -112,7 +112,7 @@
 }
 
 /* ===== 2. LÉPÉS: FORMA KONTÉNER ===== */
-/* A JS-ben épülő tartalom helye — nem kap külön stílust,
+/* A JS-ben épülő gondolat helye — nem kap külön stílust,
    a benne lévő elemek a mezo-csoport osztályt kapják */
 .javaslat-modal__forma-kontener {
   display: flex;

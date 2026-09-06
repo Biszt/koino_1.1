@@ -4,10 +4,10 @@
 // IMPORTOK
 // ===================================
 // A három cím-viselő entitástípus repository-ja. A kereső CSAK ezekre terjed ki
-// (Tartalom címe = `cim`, Kategória/Tartalomtípus címe = `nev`).
-const TartalomRepository = require('../repositories/tartalomRepository');
+// (Gondolat címe = `cim`, Kategória/Gondolattípus címe = `nev`).
+const GondolatRepository = require('../repositories/gondolatRepository');
 const KategoriaRepository = require('../repositories/kategoriaRepository');
-const TartalomTipusRepository = require('../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../repositories/gondolatTipusRepository');
 
 // Az ág-szűréshez (agEntitasId): az ős-lánc bejárása a szuloKereses-sel — ugyanaz
 // a minta, mint a Tudatpontok nézet ág-szűrésénél (tudatpontService).
@@ -24,7 +24,7 @@ class KeresesService {
 
   // A kereső által támogatott entitástípusok (cím-viselők).
   // Ha a hívó nem ad meg típust, mind a hármon keresünk.
-  static TAMOGATOTT_TIPUSOK = ['Tartalom', 'Kategoria', 'TartalomTipus'];
+  static TAMOGATOTT_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 
   // ===================================
   // REGEX-BIZTOS KIFEJEZÉS
@@ -72,11 +72,11 @@ class KeresesService {
     // Típusonkénti keresés PÁRHUZAMOSAN, majd egységes alakra hozva
     const reszEredmenyek = await Promise.all(
       kertTipusok.map(async (tipus) => {
-        if (tipus === 'Tartalom') {
-          const talalatok = await TartalomRepository.searchByCim(biztonsagosKifejezes, jeloltLimit);
+        if (tipus === 'Gondolat') {
+          const talalatok = await GondolatRepository.searchByCim(biztonsagosKifejezes, jeloltLimit);
           return talalatok.map(t => ({
             entitasId:    t._id.toString(),
-            entitasTipus: 'Tartalom',
+            entitasTipus: 'Gondolat',
             cim:          t.cim ?? '(cím nélkül)'
           }));
         }
@@ -88,11 +88,11 @@ class KeresesService {
             cim:          k.nev ?? '(név nélkül)'
           }));
         }
-        if (tipus === 'TartalomTipus') {
-          const talalatok = await TartalomTipusRepository.searchByNev(biztonsagosKifejezes, jeloltLimit);
+        if (tipus === 'GondolatTipus') {
+          const talalatok = await GondolatTipusRepository.searchByNev(biztonsagosKifejezes, jeloltLimit);
           return talalatok.map(tt => ({
             entitasId:    tt._id.toString(),
-            entitasTipus: 'TartalomTipus',
+            entitasTipus: 'GondolatTipus',
             cim:          tt.nev ?? '(név nélkül)'
           }));
         }

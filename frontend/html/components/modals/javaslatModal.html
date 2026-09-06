@@ -1,6 +1,6 @@
 <!-- frontend/html/components/modals/javaslatModal.html -->
 
-<!-- ===== JAVASLAT MODAL TARTALOM ===== -->
+<!-- ===== JAVASLAT MODAL GONDOLAT ===== -->
 <!-- Ez a fájl a Modal.js .modal-tartalom elemébe töltődik be fetch()-csel. -->
 <!-- A három lépés egyszerre van a DOM-ban, de csak az aktív látható. -->
 <div class="javaslat-modal">
@@ -50,7 +50,7 @@
   </div>
 
   <!-- ===== 2. LÉPÉS: TÍPUS-SPECIFIKUS FORM ===== -->
-  <!-- Alapból rejtve. A JS tölti fel tartalommal a kiválasztott típus alapján. -->
+  <!-- Alapból rejtve. A JS tölti fel gondolattal a kiválasztott típus alapján. -->
   <div class="javaslat-modal__lepes javaslat-modal__lepes--rejtett" data-lepes="2">
 
     <!-- Vissza gomb az 1. lépéshez -->
@@ -58,7 +58,7 @@
       ← Vissza
     </button>
 
-    <!-- A típus-specifikus form tartalma JS-ben épül ide -->
+    <!-- A típus-specifikus form gondolata JS-ben épül ide -->
     <div class="javaslat-modal__forma-kontener" id="javaslat-forma-kontener">
       <!-- JS tölti fel -->
     </div>
@@ -101,7 +101,7 @@
 
     <!-- Egyezmény tárhely (opcionális) — a JavaslatModal ide építi az ID-ellenőrző mezőt.
          Üresen hagyva: Egyesítésnél az új entitás lesz a tárhely,
-         más típusnál a javaslat szülő tartalma. -->
+         más típusnál a javaslat szülő gondolata. -->
     <div class="javaslat-modal__mezo-csoport" id="egyezmeny-tarhely-kontener"></div>
 
   </div>

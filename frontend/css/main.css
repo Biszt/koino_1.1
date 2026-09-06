@@ -28,14 +28,14 @@
 /* Az alap kártya váz stílusa – minden típus-specifikus CSS erre épül */
 @import './components/kartya/kartya.css';
 /* Típus-specifikus kártya stílusok */
-@import './components/kartya/tartalomKartya.css';
+@import './components/kartya/gondolatKartya.css';
 @import './components/kartya/kategoriaKartya.css';
-@import './components/kartya/tartalomTipusKartya.css';
+@import './components/kartya/gondolatTipusKartya.css';
 @import './components/kartya/javaslatKartya.css';
 @import './components/kartya/egyezmenyKartya.css';
 /* Közös külső fülsáv a Javaslat- és Egyezmény-kártya body-jához */
 @import './components/kartya/kartyaFulsav.css';
-/* A Javaslat-kártya „Szavazás" fülének tartalma */
+/* A Javaslat-kártya „Szavazás" fülének gondolata */
 @import './components/kartya/szavazasFul.css';
 
 
@@ -53,9 +53,9 @@
 
 /* ── MODAL SPECIFIKUS STÍLUSOK ── */
 /* A modal/ almappa: minden specifikus modal form stílusa ide kerül */
-@import './components/modals/tartalomModal.css';
+@import './components/modals/gondolatModal.css';
 @import './components/modals/kategoriaModal.css';
-@import './components/modals/tartalomTipusModal.css';
+@import './components/modals/gondolatTipusModal.css';
 @import './components/modals/javaslatModal.css';
 @import './components/modals/szavazatModal.css';
 @import './components/modals/tudatpontModal.css';
@@ -71,7 +71,7 @@
 @import './components/modals/sikidomModal.css';
 @import './components/modals/eemberBeallitasokModal.css';
 @import './components/modals/ertekEloszlasModal.css';
-/* Küszöbmezők közös stílusa (ErtekJavaslatModal + TartalomModal) – a modálok ELŐTT,
+/* Küszöbmezők közös stílusa (ErtekJavaslatModal + GondolatModal) – a modálok ELŐTT,
    hogy azok felül tudják írni, ha kell */
 @import './components/modals/kuszobErtekMezok.css';
 @import './components/modals/ertekJavaslatModal.css';

@@ -21,7 +21,7 @@ a bulis verzióban, szinte mindenki, fogadó képes, és a kérelmező adatcsoma
 
 "
 ⭐ **CSABA FELVETÉSE, ami ebből nőtt ki — LÁTHATÓSÁGI KÜSZÖB:** *„a trol támadások, vagy
-> illetlen tartalmak, csak akkor lesznek elérhetőek, ha legalább 2-en próbálják meg
+> illetlen gondolatok, csak akkor lesznek elérhetőek, ha legalább 2-en próbálják meg
 > közzétenni."* Strukturális védelem moderálás nélkül — de ⚠️ **a mechanizmus vak: ugyanúgy
 > elnyomja az egyedüli igazat mondót, ahogy a trollt**, és ha a küszöb közösségi paraméter
 > lesz, egy többség feljebb tolhatja → **letagadható cenzúra**.

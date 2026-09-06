@@ -23,45 +23,45 @@ class JavaslatSzamitasService {
   // SEGÉDFÜGGVÉNYEK
   // ===================================
 
-  // ----- ÉRINTETT TARTALMAK ÁTLAG ÉRTÉKEINEK LEKÉRÉSE -----
+  // ----- ÉRINTETT GONDOLATOK ÁTLAG ÉRTÉKEINEK LEKÉRÉSE -----
   /**
-   * Érintett tartalmak döntési idő paramétereinek átlagolása
-   * Csak Tartalom típusú entitásokat vesz figyelembe
-   * Ha nincs tartalom az érintettek között, alapértelmezett értékeket ad vissza
+   * Érintett gondolatok döntési idő paramétereinek átlagolása
+   * Csak Gondolat típusú entitásokat vesz figyelembe
+   * Ha nincs gondolat az érintettek között, alapértelmezett értékeket ad vissza
    * @param {Array} erintettEntitasok - Érintett entitások tömbje
    * @returns {Promise<Object>} Átlagolt értékek
    */
-  async erintettTartalmakAtlagErtekeinekLekerese(erintettEntitasok) {
-    console.log("=================================== erintettTartalmakAtlagErtekeinekLekerese::", {
+  async erintettGondolatokAtlagErtekeinekLekerese(erintettEntitasok) {
+    console.log("=================================== erintettGondolatokAtlagErtekeinekLekerese::", {
       erintettEntitasok: erintettEntitasok
     });
 
-    // 1. LÉPÉS - Csak tartalom típusú entitásokat szűrjük ki
-    const tartalmak = erintettEntitasok.filter(e => e.entitasTipus === 'Tartalom');
+    // 1. LÉPÉS - Csak gondolat típusú entitásokat szűrjük ki
+    const gondolatok = erintettEntitasok.filter(e => e.entitasTipus === 'Gondolat');
     
-    console.log("Szűrt tartalmak száma:", tartalmak.length);
+    console.log("Szűrt gondolatok száma:", gondolatok.length);
 
-    // Ha nincs tartalom az érintettek között, alapértelmezett értékeket adunk vissza
-    if (tartalmak.length === 0) {
-      console.log("Nincs tartalom az érintettek között, alapértelmezett értékek visszaadása");
+    // Ha nincs gondolat az érintettek között, alapértelmezett értékeket adunk vissza
+    if (gondolatok.length === 0) {
+      console.log("Nincs gondolat az érintettek között, alapértelmezett értékek visszaadása");
       return {
         aktualMinimumDontesiIdo: 0,
         aktualMaximumDontesiIdo: 31536000
       };
     }
 
-    // 2. LÉPÉS - Minden tartalom értékeinek lekérése
+    // 2. LÉPÉS - Minden gondolat értékeinek lekérése
     let osszegMinimum = 0;
     let osszegMaximum = 0;
 
-    for (const tartalom of tartalmak) {
+    for (const gondolat of gondolatok) {
 
-      console.log("erintettTartalmakAtlagErtekeinekLekerese >>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
+      console.log("erintettGondolatokAtlagErtekeinekLekerese >>>>>>>>>>>>>>>>>>>>>>>> ErtekSzamitasService.aktulisErtekekLekerese");
       
-      const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(tartalom.entitasId, tartalom.entitasTipus);
+      const ertekek = await ErtekSzamitasService.aktulisErtekekLekerese(gondolat.entitasId, gondolat.entitasTipus);
 
-      console.log("Tartalom értékei:", {
-        tartalomId: tartalom.entitasId,
+      console.log("Gondolat értékei:", {
+        gondolatId: gondolat.entitasId,
         minimumDontesiIdo: ertekek.aktualMinimumDontesiIdo,
         maximumDontesiIdo: ertekek.aktualMaximumDontesiIdo
       });
@@ -71,10 +71,10 @@ class JavaslatSzamitasService {
     }
 
     // 3. LÉPÉS - Átlagolás és kerekítés
-    const atlagMinimum = Math.round(osszegMinimum / tartalmak.length);
-    const atlagMaximum = Math.round(osszegMaximum / tartalmak.length);
+    const atlagMinimum = Math.round(osszegMinimum / gondolatok.length);
+    const atlagMaximum = Math.round(osszegMaximum / gondolatok.length);
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<<<< erintettTartalmakAtlagErtekeinekLekerese====Átlagolt értékek:", {
+    console.log("<<<<<<<<<<<<<<<<<<<<<<<< erintettGondolatokAtlagErtekeinekLekerese====Átlagolt értékek:", {
       aktualMinimumDontesiIdo: atlagMinimum,
       aktualMaximumDontesiIdo: atlagMaximum
     });
@@ -190,26 +190,26 @@ class JavaslatSzamitasService {
     
 
     // 9. LÉPÉS - DÖNTÉSI IDő SZÁMÍTÁSA 
-    // Érintett tartalmak átlag értékeinek lekérése 
-    // (Az átag számítás lehet hogy nem jó, mivel megsértheti a tartalmak köszöb értékit.
-    //  Jobb lenne, ha csak az időt átlagólnánk, de a javaslat elfogadási küszöb és a részvételi arány küszöbnek tartalmakra lebontva is teljesűlniük kellene)
-    console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>>>>>>>>>>> erintettTartalmakAtlagErtekeinekLekerese", {
+    // Érintett gondolatok átlag értékeinek lekérése 
+    // (Az átag számítás lehet hogy nem jó, mivel megsértheti a gondolatok köszöb értékit.
+    //  Jobb lenne, ha csak az időt átlagólnánk, de a javaslat elfogadási küszöb és a részvételi arány küszöbnek gondolatokra lebontva is teljesűlniük kellene)
+    console.log("szamitottErtekekFrissitese >>>>>>>>>>>>>>>>>>>>>>>>>>>> erintettGondolatokAtlagErtekeinekLekerese", {
       erintettEntitasok: javaslat.erintettEntitasok
     });
     
-    const tartalmakErtekei = await this.erintettTartalmakAtlagErtekeinekLekerese(javaslat.erintettEntitasok);
+    const gondolatokErtekei = await this.erintettGondolatokAtlagErtekeinekLekerese(javaslat.erintettEntitasok);
     
     // Tartomány kiszámítása
-    const tartomany = tartalmakErtekei.aktualMaximumDontesiIdo - tartalmakErtekei.aktualMinimumDontesiIdo;
+    const tartomany = gondolatokErtekei.aktualMaximumDontesiIdo - gondolatokErtekei.aktualMinimumDontesiIdo;
 
     console.log("tartomany:::::::::::::::::::::::", tartomany);
 
-    console.log("tartalmakErtekei.aktualMinimumDontesiIdo::::::::::::::::::", tartalmakErtekei.aktualMinimumDontesiIdo);
+    console.log("gondolatokErtekei.aktualMinimumDontesiIdo::::::::::::::::::", gondolatokErtekei.aktualMinimumDontesiIdo);
     
     
     
     // Döntési idő képlet (LINEÁRIS): minimum + (tartomány * (1 - BM/100))
-    const dontesiIdo = tartalmakErtekei.aktualMinimumDontesiIdo + 
+    const dontesiIdo = gondolatokErtekei.aktualMinimumDontesiIdo + 
                       (tartomany * (1 - bizonyossagiMutato / 100));
 
     console.log("dontesiIdo::::::::::::::::::::::::", dontesiIdo);

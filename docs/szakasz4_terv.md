@@ -29,7 +29,7 @@
 > a 2. lépcső drága, mert ott a zsákmány; és a védelem egyikben sem a kapu, hanem hogy a
 > rossz tanúsító elveszíti a szerepét.*
 >
-> - **1. lépcső — a tagság:** **egy meghívó**, és minden mehet (tartalom, tudatpont,
+> - **1. lépcső — a tagság:** **egy meghívó**, és minden mehet (gondolat, tudatpont,
 >   javaslat, szavazat). **D56**
 > - **2. lépcső — a pénztárca:** **három tanúsítás** felhatalmazott tanúsítótól — a **D11**
 >   megvalósulása. **D56**
@@ -436,7 +436,7 @@ mindhárom a tanú saját döntése:
 > ### ✅ D46 (javasolt) — Csaba válasza (2026-09-04)
 >
 > **A tanú nem vonhat vissza, hanem BIZONYTALANRA JELÖLHET** — és mellé **létrehozhat egy
-> gondolatot** *(ma: „tartalom", lásd a [`jegyzetek.md`](jegyzetek.md) 2026-09-04-i
+> gondolatot** *(ma: „gondolat", lásd a [`jegyzetek.md`](jegyzetek.md) 2026-09-04-i
 > bejegyzését)*, **amivel megosztja a felelősséget a közösséggel**.
 
 ⭐ **Miért helyes ez:** a jelölés **nem automatizmus, hanem bizonyíték** — bemenet egy
@@ -867,7 +867,7 @@ munkával** felel arra, amire a teljes gráf bejárása csak globálisan tudna (
 *Ez az a szerkezet, ami a nap összes mérését összefogja: a költség oda kerül, ahol a
 támadás kifizetődik, és sehova máshova.*
 
-> **1. lépcső — a tagság.** **Egy meghívó**, és kész. Ezzel **minden mehet**: tartalom,
+> **1. lépcső — a tagság.** **Egy meghívó**, és kész. Ezzel **minden mehet**: gondolat,
 > tudatpont, javaslat, szavazat. ⭐ **Nincs kapu, mert a mérés szerint a kapu úgysem véd**
 > (11.1: a meghívási szám nem védelem, hanem árcédula — a támadó egyszer megveszi a kellő
 > embereket, és onnantól korlátlan).
@@ -1035,7 +1035,7 @@ támadás kifizetődik, és sehova máshova.*
 > **papír nélkül nem lesz pénztárca**.
 >
 > ⭐ **A hatóköre viszont SZŰK, és ezt fontos rögzíteni:** ez **csak a 2. lépcsőt** érinti.
-> A papír nélküli ember **teljes jogú e-ember marad** — tartalmat hoz létre, tudatpontot
+> A papír nélküli ember **teljes jogú e-ember marad** — gondolatot hoz létre, tudatpontot
 > oszt, javasol és **szavaz**. Csak pénztárcája nincs.
 > ⚠️ *A D45 eredeti indoka (a befogadás) tehát az 1. lépcsőn továbbra is teljesül; a
 > 2. lépcsőn tudatosan feladjuk.*
@@ -1271,7 +1271,7 @@ szeletekből számítva. ⚠️ **Nem esemény:** senki nem mondja ki, hogy vala
 
 **És a `BizonytalanraJeloles` esemény (D46):** a tanú nem vonhat vissza, hanem jelölhet — az
 esemény **ugyanabba a szeletbe** kerül, mint a tanúsítás, és **létrehozhat mellé egy
-gondolatot** *(ma: „tartalom")*, amivel megosztja a felelősséget a közösséggel. A
+gondolatot** *(ma: „gondolat")*, amivel megosztja a felelősséget a közösséggel. A
 szabály-réteg **nem törli** tőle a tanúsítást: bemenet lesz egy nyilvános, megtámadható
 döntésbe.
 

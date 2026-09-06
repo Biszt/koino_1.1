@@ -19,7 +19,7 @@
 
 /* Az eszközsávok RAGADNAK a görgetési terület (a modál) tetejéhez, és követik a
    lefelé görgetést, amíg a szerkesztő body-ján belül vagyunk — így hosszú
-   tartalomnál is a képben maradnak. A tömör háttér (surface-offset) eltakarja a
+   gondolatnál is a képben maradnak. A tömör háttér (surface-offset) eltakarja a
    mögötte felgörgő szöveget; a z-index a blokkok fölé emeli. */
 .szoveg-szerkeszto > .eszkoztar {
   position: sticky;
@@ -667,7 +667,7 @@
    ============================================= */
 .blokk--meretezesi-mod {
   outline: 2px dashed var(--color-primary); /* szaggatott keret, jól látható */
-  outline-offset: 3px;                      /* ne fedje a tartalmat */
+  outline-offset: 3px;                      /* ne fedje a gondolatot */
   cursor: move;                             /* jelzi, hogy húzható */
   user-select: none;                        /* húzás közben ne jelöljön szöveget */
   -webkit-user-select: none;

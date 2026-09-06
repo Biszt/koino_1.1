@@ -15,7 +15,7 @@ egy JS-fájl + egy CSS-fájl. A frontendet a backend szolgálja ki statikusan
 
 ## Mappák
 
-| Mappa | Tartalom |
+| Mappa | Gondolat |
 |-------|----------|
 | `js/main.js` | Alkalmazás-indító |
 | `js/components/` | Komponens-osztályok (lásd lentebb) |
@@ -24,7 +24,7 @@ egy JS-fájl + egy CSS-fájl. A frontendet a backend szolgálja ki statikusan
 
 ### Fontosabb komponensek
 
-- `components/kartya/` — entitás-**kártyák** (TartalomKartya, JavaslatKartya,
+- `components/kartya/` — entitás-**kártyák** (GondolatKartya, JavaslatKartya,
   EgyezmenyKartya…). A `Pakli.js` listázza őket („pakli" = kártyák listás
   megjelenítése).
 - `components/szovegSzerkeszto/` — blokk-alapú szerkesztő: `blokkok/`

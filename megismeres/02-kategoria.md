@@ -1,8 +1,8 @@
 # Kategória
 
 **Mire való?**
-A kategória téma szerint rendszerezi a tartalmakat (pl. tudomány,
-természetvédelem, politika). Egy tartalom akár több kategóriába is tartozhat,
+A kategória téma szerint rendszerezi a gondolatokat (pl. tudomány,
+természetvédelem, politika). Egy gondolat akár több kategóriába is tartozhat,
 és a kategóriák egymásba is ágyazhatók (alkategória).
 
 **Hogyan hozol létre egyet?**

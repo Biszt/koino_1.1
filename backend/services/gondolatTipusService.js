@@ -1,9 +1,9 @@
-// backend/services/tartalomTipusService.js
+// backend/services/gondolatTipusService.js
 
 // ===================================
 // REPOSITORY IMPORTÁLÁSA
 // ===================================
-const TartalomTipusRepository = require('../repositories/tartalomTipusRepository');
+const GondolatTipusRepository = require('../repositories/gondolatTipusRepository');
 const TudatpontService = require('./tudatpontService');
 const ErtekJavaslatRepository = require('../repositories/ertekJavaslatRepository');
 const ErtekSzamitasService = require('./ertekSzamitasService');
@@ -12,29 +12,29 @@ const { leirasParse } = require('../utils/leirasParser');
 const FajlKezeloService = require('./fajlKezeloService'); // Ikon-cserekor a régi ikon-fájl törlése
 
 // ===================================
-// TARTALOM TÍPUS SERVICE OSZTÁLY
+// GONDOLAT TÍPUS SERVICE OSZTÁLY
 // ===================================
 // Ez a réteg tartalmazza az üzleti logikát
-class TartalomTipusService {
+class GondolatTipusService {
 
   // =====================================
-  // ----- ÚJ TARTALOM TÍPUS LÉTREHOZÁSA -----
+  // ----- ÚJ GONDOLAT TÍPUS LÉTREHOZÁSA -----
   // =====================================
   /**
-   * Új tartalom típus létrehozása validációval ÉS tudatpont hozzárendeléssel
-   * @param {Object} adatok - A tartalom típus adatai
-   * @param {string} adatok.nev - A tartalom típus neve (kötelező)
-   * @param {string} adatok.leiras - A tartalom típus leírása (opcionális)
+   * Új gondolat típus létrehozása validációval ÉS tudatpont hozzárendeléssel
+   * @param {Object} adatok - A gondolat típus adatai
+   * @param {string} adatok.nev - A gondolat típus neve (kötelező)
+   * @param {string} adatok.leiras - A gondolat típus leírása (opcionális)
    * @param {string} adatok.ikon - Az ikon fájl útvonala (kötelező)
    * @param {string} adatok.szuloId - A szülő entitás ID-ja (opcionális)
    * @param {string} adatok.szuloTipus - A szülő entitás típusa (opcionális)
    * @param {string} eemberId - A létrehozó eember ID-ja
    * @param {number} kezdoTudatpont - Kezdő tudatpont mennyiség (minimum 1)
-   * @returns {Promise<Object>} A létrehozott tartalom típus
+   * @returns {Promise<Object>} A létrehozott gondolat típus
    */
-  async tartalomTipusLetrehozasa(adatok, eemberId, kezdoTudatpont) {
+  async gondolatTipusLetrehozasa(adatok, eemberId, kezdoTudatpont) {
 
-    console.log("=================================== tartalomTipusLetrehozasa:: ", {
+    console.log("=================================== gondolatTipusLetrehozasa:: ", {
       adatok: adatok,
       eemberId: eemberId,
       kezdoTudatpont: kezdoTudatpont
@@ -43,7 +43,7 @@ class TartalomTipusService {
     // ===== 1. LÉPÉS - KÖTELEZŐ MEZŐK VALIDÁLÁSA =====
     // Név ellenőrzése - kötelező mező
     if (!adatok.nev || !adatok.nev.trim()) {
-      throw new Error('A tartalom típus neve kötelező');
+      throw new Error('A gondolat típus neve kötelező');
     }
 
     // Ikon ellenőrzése - kötelező mező
@@ -64,7 +64,7 @@ class TartalomTipusService {
 
     // Minimum 1 tudatpont ellenőrzése
     if (kezdoTudatpont < 1) {
-      throw new Error('Minimum 1 tudatpont szükséges a tartalom típus létrehozásához');
+      throw new Error('Minimum 1 tudatpont szükséges a gondolat típus létrehozásához');
     }
 
     // Egész szám ellenőrzése
@@ -86,28 +86,28 @@ class TartalomTipusService {
     const tisztitottNev = adatok.nev.trim();
 
     // ===== 5. LÉPÉS - NÉV EGYEDISÉG ELLENŐRZÉSE =====
-    // ÜZLETI SZABÁLY: Egy tartalom típus név csak egyszer használható
-    console.log("tartalomTipusLetrehozasa >>>>>>>>>>>>>>>> TartalomTipusRepository.findByNev", {
+    // ÜZLETI SZABÁLY: Egy gondolat típus név csak egyszer használható
+    console.log("gondolatTipusLetrehozasa >>>>>>>>>>>>>>>> GondolatTipusRepository.findByNev", {
       tisztitottNev: tisztitottNev
     });
 
-    const letezikE = await TartalomTipusRepository.findByNev(tisztitottNev);
+    const letezikE = await GondolatTipusRepository.findByNev(tisztitottNev);
     if (letezikE) {
-      throw new Error('Ez a tartalom típus név már létezik');
+      throw new Error('Ez a gondolat típus név már létezik');
     }
 
     // ===== 6. LÉPÉS - LEÍRÁS KEZELÉSE HA VAN =====
     // MÓDOSÍTVA: Mixed típus - nem hívunk trim()-et, JSON tömböt fogad a szövegszerkesztőtől
     // Ha nincs megadva, null marad (üres string helyett)
     // A leiras a FormData-ból JSON-stringként érkezik (blokk-tömb) → tömbbé parse-oljuk,
-    // hogy a Mixed mezőben tömbként tárolódjon (mint a Tartalom szoveg-e).
+    // hogy a Mixed mezőben tömbként tárolódjon (mint a Gondolat szoveg-e).
     const tisztitottLeiras = leirasParse(adatok.leiras);
 
     // ===== 7. LÉPÉS - IKON ÚTVONAL TISZTÍTÁSA =====
     const tisztitottIkon = adatok.ikon.trim();
 
-    // ===== 8. LÉPÉS - TARTALOM TÍPUS OBJEKTUM ÖSSZEÁLLÍTÁSA =====
-    const tartalomTipusAdatok = {
+    // ===== 8. LÉPÉS - GONDOLAT TÍPUS OBJEKTUM ÖSSZEÁLLÍTÁSA =====
+    const gondolatTipusAdatok = {
       nev:        tisztitottNev,
       leiras:     tisztitottLeiras,          // null vagy JSON tömb a szövegszerkesztőtől
       ikon:       tisztitottIkon,
@@ -120,32 +120,32 @@ class TartalomTipusService {
     };
 
     // ===== 9. LÉPÉS - REPOSITORY HÍVÁS - MENTÉS ADATBÁZISBA =====
-    console.log("tartalomTipusLetrehozasa >>>>>>>>>>>>>>>> TartalomTipusRepository.create", {
-      tartalomTipusAdatok: tartalomTipusAdatok
+    console.log("gondolatTipusLetrehozasa >>>>>>>>>>>>>>>> GondolatTipusRepository.create", {
+      gondolatTipusAdatok: gondolatTipusAdatok
     });
 
-    const ujTartalomTipus = await TartalomTipusRepository.create(tartalomTipusAdatok);
+    const ujGondolatTipus = await GondolatTipusRepository.create(gondolatTipusAdatok);
 
     // ===== 10. LÉPÉS - TUDATPONT HOZZÁRENDELÉSE =====
-    // A tartalom típus létrejött, most hozzárendeljük a kezdő tudatpontot
+    // A gondolat típus létrejött, most hozzárendeljük a kezdő tudatpontot
     try {
 
-      console.log("tartalomTipusLetrehozasa >>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese");
+      console.log("gondolatTipusLetrehozasa >>>>>>>>>>>>>>>> TudatpontService.tudatpontHozzarendelese");
       await TudatpontService.tudatpontHozzarendelese(
         eemberId,            // Ki adja a tudatpontot
-        ujTartalomTipus._id, // Melyik entitásra (az új tartalom típus ID-ja)
-        'TartalomTipus',     // Entitás típusa
+        ujGondolatTipus._id, // Melyik entitásra (az új gondolat típus ID-ja)
+        'GondolatTipus',     // Entitás típusa
         kezdoTudatpont       // Mennyi tudatpontot
       );
 
     } catch (error) {
-      // Ha a tudatpont hozzárendelés sikertelen, töröljük a tartalom típust is
-      console.log("tartalomTipusLetrehozasa >>>>>>>>>>>>>>>>>>>> TartalomTipusRepository.deleteById", {
-        ujTartalomTipus: ujTartalomTipus.id
+      // Ha a tudatpont hozzárendelés sikertelen, töröljük a gondolat típust is
+      console.log("gondolatTipusLetrehozasa >>>>>>>>>>>>>>>>>>>> GondolatTipusRepository.deleteById", {
+        ujGondolatTipus: ujGondolatTipus.id
       });
 
-      await TartalomTipusRepository.deleteById(ujTartalomTipus._id);
-      throw new Error(`Tartalom típus létrehozása sikertelen: ${error.message}`);
+      await GondolatTipusRepository.deleteById(ujGondolatTipus._id);
+      throw new Error(`Gondolat típus létrehozása sikertelen: ${error.message}`);
     }
 
     // ===== 10.5 LÉPÉS - KÜSZÖBÉRTÉKEK INICIALIZÁLÁSA =====
@@ -154,134 +154,134 @@ class TartalomTipusService {
     const kuszobErtekek = kuszobertekekParse(adatok);
     try {
       await ErtekJavaslatRepository.create({
-        entitasId:    ujTartalomTipus._id,
-        entitasTipus: 'TartalomTipus',
+        entitasId:    ujGondolatTipus._id,
+        entitasTipus: 'GondolatTipus',
         eemberId:     eemberId,
         ...kuszobErtekek
       });
       await ErtekSzamitasService.hisztogramLetrehozasa(
-        ujTartalomTipus._id,
-        'TartalomTipus',
+        ujGondolatTipus._id,
+        'GondolatTipus',
         kuszobErtekek.javaslatElfogadasiKuszob,
         kuszobErtekek.reszveteliAranyKuszob,
         kuszobErtekek.minimumDontesiIdo,
         kuszobErtekek.maximumDontesiIdo
       );
-      console.log('Tartalomtípus küszöbérték-hisztogram inicializálva');
+      console.log('Gondolattípus küszöbérték-hisztogram inicializálva');
 
       // A LÉTREHOZÓ AKTÍVVÁ TÉTELE: kezdő értékjavaslatot adott → döntés-alakító tett,
-      // ezért AKTÍV szerepet kap az új tartalomtípuson (bekerül a részvételi arány nevezőjébe).
+      // ezért AKTÍV szerepet kap az új gondolattípuson (bekerül a részvételi arány nevezőjébe).
       try {
-        await TudatpontService.szerepAktivalasa(eemberId, ujTartalomTipus._id, 'TartalomTipus');
+        await TudatpontService.szerepAktivalasa(eemberId, ujGondolatTipus._id, 'GondolatTipus');
       } catch (szerepHiba) {
         console.error('A létrehozó aktívvá tétele sikertelen (nem blokkoló):', szerepHiba.message);
       }
     } catch (error) {
-      // Nem kritikus: logoljuk, de nem döntjük meg a tartalomtípust
-      console.error('Tartalomtípus küszöbérték inicializálási hiba:', error.message);
+      // Nem kritikus: logoljuk, de nem döntjük meg a gondolattípust
+      console.error('Gondolattípus küszöbérték inicializálási hiba:', error.message);
     }
 
-    // ===== 11. LÉPÉS - LÉTREHOZOTT TARTALOM TÍPUS VISSZAADÁSA =====
-    console.log("<<<<<<<<<<<<<<< tartalomTipusLetrehozasa====ujTartalomTipus: ", {
-      ujTartalomTipus: ujTartalomTipus
+    // ===== 11. LÉPÉS - LÉTREHOZOTT GONDOLAT TÍPUS VISSZAADÁSA =====
+    console.log("<<<<<<<<<<<<<<< gondolatTipusLetrehozasa====ujGondolatTipus: ", {
+      ujGondolatTipus: ujGondolatTipus
     });
 
-    return ujTartalomTipus;
+    return ujGondolatTipus;
   }
 
   // =====================================
-  // ----- TARTALOM TÍPUS LEKÉRÉSE ID ALAPJÁN -----
+  // ----- GONDOLAT TÍPUS LEKÉRÉSE ID ALAPJÁN -----
   // =====================================
   /**
-   * Egy tartalom típus lekérése
-   * @param {string} id - A tartalom típus ID-ja
-   * @returns {Promise<Object>} A tartalom típus objektum
+   * Egy gondolat típus lekérése
+   * @param {string} id - A gondolat típus ID-ja
+   * @returns {Promise<Object>} A gondolat típus objektum
    */
-  async tartalomTipusLekerese(id) {
+  async gondolatTipusLekerese(id) {
 
-    console.log("=================================== tartalomTipusLekerese:: ", { id: id });
+    console.log("=================================== gondolatTipusLekerese:: ", { id: id });
 
     // 1. LÉPÉS - ID validálás
     if (!id) {
-      throw new Error('A tartalom típus ID megadása kötelező');
+      throw new Error('A gondolat típus ID megadása kötelező');
     }
 
-    // 2. LÉPÉS - Repository hívás - tartalom típus lekérése
-    console.log("tartalomTipusLekerese >>>>>>>>>>>>>>>>>> TartalomTipusRepository.findById", { id: id });
+    // 2. LÉPÉS - Repository hívás - gondolat típus lekérése
+    console.log("gondolatTipusLekerese >>>>>>>>>>>>>>>>>> GondolatTipusRepository.findById", { id: id });
 
-    const tartalomTipus = await TartalomTipusRepository.findById(id);
+    const gondolatTipus = await GondolatTipusRepository.findById(id);
 
     // 3. LÉPÉS - Létezés ellenőrzése
-    if (!tartalomTipus) {
-      throw new Error('A tartalom típus nem található');
+    if (!gondolatTipus) {
+      throw new Error('A gondolat típus nem található');
     }
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<< tartalomTipusLekerese===tartalomTipus: ", {
-      tartalomTipus: tartalomTipus
+    console.log("<<<<<<<<<<<<<<<<<<<<<< gondolatTipusLekerese===gondolatTipus: ", {
+      gondolatTipus: gondolatTipus
     });
 
-    return tartalomTipus;
+    return gondolatTipus;
   }
 
   // =====================================
-  // ----- TARTALOM TÍPUSOK LISTÁZÁSA -----
+  // ----- GONDOLAT TÍPUSOK LISTÁZÁSA -----
   // =====================================
   /**
-   * Tartalom típusok listázása szűrőkkel
+   * Gondolat típusok listázása szűrőkkel
    * @param {Object} szurok - Szűrési feltételek
    * @param {string} szurok.letrehozo - Létrehozó eember ID
    * @param {string} szurok.nev - Név szerinti keresés
    * @param {string} szurok.szuloId - Szülő ID szerinti szűrés (opcionális)
    * @param {string} szurok.szuloTipus - Szülő típus szerinti szűrés (opcionális)
-   * @returns {Promise<Array>} Tartalom típusok tömb
+   * @returns {Promise<Array>} Gondolat típusok tömb
    */
-  async tartalomTipusListazasa(szurok = {}) {
+  async gondolatTipusListazasa(szurok = {}) {
 
-    console.log("=================================== tartalomTipusListazasa: ", { szurok: szurok });
+    console.log("=================================== gondolatTipusListazasa: ", { szurok: szurok });
 
-    // Repository hívás - tartalom típusok lekérése szűrőkkel
-    console.log("tartalomTipusListazasa >>>>>>>>>>>>>>>>>> TartalomTipusRepository.findAll", {
+    // Repository hívás - gondolat típusok lekérése szűrőkkel
+    console.log("gondolatTipusListazasa >>>>>>>>>>>>>>>>>> GondolatTipusRepository.findAll", {
       szurok: szurok
     });
 
-    const tartalomTipusok = await TartalomTipusRepository.findAll(szurok);
+    const gondolatTipusok = await GondolatTipusRepository.findAll(szurok);
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<tartalomTipusListazasa====tartalomTipusok: ", {
-      tartalomTipusok
+    console.log("<<<<<<<<<<<<<<<<<<<<<gondolatTipusListazasa====gondolatTipusok: ", {
+      gondolatTipusok
     });
 
-    return tartalomTipusok;
+    return gondolatTipusok;
   }
 
   // =====================================
-  // ----- TARTALOM TÍPUS MÓDOSÍTÁSA -----
+  // ----- GONDOLAT TÍPUS MÓDOSÍTÁSA -----
   // =====================================
   /**
-   * Egy tartalom típus módosítása validációval és jogosultság ellenőrzéssel
-   * @param {string} id - A tartalom típus ID-ja
+   * Egy gondolat típus módosítása validációval és jogosultság ellenőrzéssel
+   * @param {string} id - A gondolat típus ID-ja
    * @param {Object} frissitesek - A frissítendő mezők
    * @param {string} eemberId - A módosítást végző eember ID-ja
-   * @returns {Promise<Object>} A frissített tartalom típus
+   * @returns {Promise<Object>} A frissített gondolat típus
    */
-  async tartalomTipusModositasa(id, frissitesek, eemberId) {
+  async gondolatTipusModositasa(id, frissitesek, eemberId) {
 
-    console.log("=================================== tartalomTipusModositasa:: ", {
+    console.log("=================================== gondolatTipusModositasa:: ", {
       id: id,
       frissitesek: frissitesek,
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Tartalom típus létezésének ellenőrzése
-    console.log("tartalomTipusModositasa >>>>>>>>>>>>>>>>>>>> this.tartalomTipusLekerese");
+    // 1. LÉPÉS - Gondolat típus létezésének ellenőrzése
+    console.log("gondolatTipusModositasa >>>>>>>>>>>>>>>>>>>> this.gondolatTipusLekerese");
 
-    const tartalomTipus = await this.tartalomTipusLekerese(id);
+    const gondolatTipus = await this.gondolatTipusLekerese(id);
 
     // 2. LÉPÉS - Jogosultság ellenőrzése
-    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját tartalom típusát.
-    const eredetiSzerkeszto = (tartalomTipus.szerkesztok || []).find(sz => sz.eredeti);
+    // Csak az EREDETI létrehozó szerkesztheti közvetlenül a saját gondolat típusát.
+    const eredetiSzerkeszto = (gondolatTipus.szerkesztok || []).find(sz => sz.eredeti);
     const eredetiId = eredetiSzerkeszto?.eemberId?._id ?? eredetiSzerkeszto?.eemberId;
     if (!eredetiId || eredetiId.toString() !== eemberId.toString()) {
-      throw new Error('Nincs jogosultságod módosítani ezt a tartalom típust');
+      throw new Error('Nincs jogosultságod módosítani ezt a gondolat típust');
     }
 
     // 3. LÉPÉS - ENGEDÉLYEZETT MEZŐK SZŰRÉSE
@@ -324,13 +324,13 @@ class TartalomTipusService {
       const tisztitottNev = tisztitottFrissitesek.nev.trim();
 
       if (!tisztitottNev) {
-        throw new Error('A tartalom típus neve nem lehet üres');
+        throw new Error('A gondolat típus neve nem lehet üres');
       }
 
       // Ellenőrizzük, hogy a név nem foglalt-e már (kivéve saját magát)
-      const letezikE = await TartalomTipusRepository.findByNev(tisztitottNev);
+      const letezikE = await GondolatTipusRepository.findByNev(tisztitottNev);
       if (letezikE && letezikE._id.toString() !== id.toString()) {
-        throw new Error('Ez a tartalom típus név már létezik');
+        throw new Error('Ez a gondolat típus név már létezik');
       }
 
       tisztitottFrissitesek.nev = tisztitottNev;
@@ -354,15 +354,15 @@ class TartalomTipusService {
     }
 
     // 8. LÉPÉS - Repository hívás - frissítés
-    console.log("tartalomTipusModositasa >>>>>>>>>>>>>>>>>>>> TartalomTipusRepository.updateById", {
+    console.log("gondolatTipusModositasa >>>>>>>>>>>>>>>>>>>> GondolatTipusRepository.updateById", {
       id: id,
       tisztitottFrissitesek: tisztitottFrissitesek
     });
 
-    const frissitettTartalomTipus = await TartalomTipusRepository.updateById(id, tisztitottFrissitesek);
+    const frissitettGondolatTipus = await GondolatTipusRepository.updateById(id, tisztitottFrissitesek);
 
-    console.log("<<<<<<<<<<<<<<<<<<<<<<tartalomTipusModositasa===frissitettTartalomTipus: ", {
-      frissitettTartalomTipus
+    console.log("<<<<<<<<<<<<<<<<<<<<<<gondolatTipusModositasa===frissitettGondolatTipus: ", {
+      frissitettGondolatTipus
     });
 
     // 9. LÉPÉS - RÉGI IKON TÖRLÉSE (ha az ikont lecserélték)
@@ -371,55 +371,55 @@ class TartalomTipusService {
     // eltérnek, a régit töröljük. Ha az ikon nem változott, a diff üres.
     if (tisztitottFrissitesek.ikon) {
       try {
-        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(tartalomTipus, 'TartalomTipus');
-        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettTartalomTipus, 'TartalomTipus');
+        const regiUrlek = FajlKezeloService.entitasbolFajlUrlek(gondolatTipus, 'GondolatTipus');
+        const ujUrlek = FajlKezeloService.entitasbolFajlUrlek(frissitettGondolatTipus, 'GondolatTipus');
         await FajlKezeloService.elavultFajlokTorlese(regiUrlek, ujUrlek);
       } catch (hiba) {
-        console.warn('tartalomTipusModositasa - Régi ikon törlése sikertelen', { id, hiba: hiba.message });
+        console.warn('gondolatTipusModositasa - Régi ikon törlése sikertelen', { id, hiba: hiba.message });
       }
     }
 
-    return frissitettTartalomTipus;
+    return frissitettGondolatTipus;
   }
 
   // =====================================
-  // ----- TARTALOM TÍPUS RÉSZLETES ADATAI TUDATPONTTAL -----
+  // ----- GONDOLAT TÍPUS RÉSZLETES ADATAI TUDATPONTTAL -----
   // =====================================
   /**
-   * Tartalom típus részletes adatainak lekérése tudatpont allokációval együtt
-   * @param {string} id - A tartalom típus ID-ja
+   * Gondolat típus részletes adatainak lekérése tudatpont allokációval együtt
+   * @param {string} id - A gondolat típus ID-ja
    * @param {string} eemberId - A lekérést végző eember ID-ja
-   * @returns {Promise<Object>} Tartalom típus + tudatpont adatok
+   * @returns {Promise<Object>} Gondolat típus + tudatpont adatok
    */
-  async tartalomTipusReszleteinekLekerese(id, eemberId) {
+  async gondolatTipusReszleteinekLekerese(id, eemberId) {
 
-    console.log("=================================== tartalomTipusReszleteinekLekerese:: ", {
+    console.log("=================================== gondolatTipusReszleteinekLekerese:: ", {
       id: id,
       eemberId: eemberId
     });
 
-    // 1. LÉPÉS - Tartalom típus alapadatainak lekérése
-    console.log("tartalomTipusReszleteinekLekerese >>>>>>>>>>>>>>>>>>>>> this.tartalomTipusLekerese");
+    // 1. LÉPÉS - Gondolat típus alapadatainak lekérése
+    console.log("gondolatTipusReszleteinekLekerese >>>>>>>>>>>>>>>>>>>>> this.gondolatTipusLekerese");
 
-    const tartalomTipus = await this.tartalomTipusLekerese(id);
+    const gondolatTipus = await this.gondolatTipusLekerese(id);
 
     // 2. LÉPÉS - Tudatpont allokáció lekérése
-    console.log("tartalomTipusReszleteinekLekerese >>>>>>>>>>>>>>>>>>>>> TudatpontService.entitasAllokaciLekerese");
+    console.log("gondolatTipusReszleteinekLekerese >>>>>>>>>>>>>>>>>>>>> TudatpontService.entitasAllokaciLekerese");
 
     const tudatpontAdatok = await TudatpontService.entitasAllokaciLekerese(
       id,
-      'TartalomTipus',
+      'GondolatTipus',
       eemberId
     );
 
     // 3. LÉPÉS - Összesített objektum visszaadása
-    console.log("<<<<<<<<<<<<<<<<< tartalomTipusReszleteinekLekerese====Eredmény:", {
-      tartalomTipus: tartalomTipus,
+    console.log("<<<<<<<<<<<<<<<<< gondolatTipusReszleteinekLekerese====Eredmény:", {
+      gondolatTipus: gondolatTipus,
       tudatpont:     tudatpontAdatok
     });
 
     return {
-      tartalomTipus: tartalomTipus,
+      gondolatTipus: gondolatTipus,
       tudatpont:     tudatpontAdatok
     };
   }
@@ -428,7 +428,7 @@ class TartalomTipusService {
   // ===== Torles METÓDUS NINCS! =====
   // =====================================
   //
-  // A tartalom típusok NEM törölhetők direkt Service metódus híváson keresztül.
+  // A gondolat típusok NEM törölhetők direkt Service metódus híváson keresztül.
   //
   // Törlés csak automatikusan történik:
   //
@@ -436,19 +436,19 @@ class TartalomTipusService {
   //    - Ha minden eember visszavonja a tudatpontjait
   //    - És az osszesPont 0-ra csökken
   //    - Automatikusan meghívódik: tudatpontService.js → entitasTorlese0PontNal()
-  //    - Az entitás törlése: tartalomTipusRepository.deleteById()
+  //    - Az entitás törlése: gondolatTipusRepository.deleteById()
   //
   // 2. KÖZÖSSÉGI Torles - Javaslat alapján (jövőbeli funkció)
   //    - Törlési javaslat indítása (külön endpoint)
   //    - Közösségi szavazás
   //    - Hatályba lépési idő után automatikus törlés
   //    - Tudatpontok automatikus visszautalása a hozzájárulóknek
-  //    - Törlés végrehajtása: tartalomTipusRepository.deleteById()
+  //    - Törlés végrehajtása: gondolatTipusRepository.deleteById()
   //    - (Külön javaslatService.js vagy kozossegService.js fogja kezelni)
   //
-  // A tartalomTipusRepository.deleteById() metódus MARAD,
+  // A gondolatTipusRepository.deleteById() metódus MARAD,
   // mert azt használják a fenti automatikus törlési mechanizmusok!
 }
 
 // Service exportálása
-module.exports = new TartalomTipusService();
+module.exports = new GondolatTipusService();

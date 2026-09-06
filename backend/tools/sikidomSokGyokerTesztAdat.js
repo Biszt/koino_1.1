@@ -2,8 +2,8 @@
 
 // ===== SÍKIDOM TESZT-ADAT: SOK GYÖKÉR (alapból 300) =====
 //
-// Felelősség: NAGY számú gyökér-tartalmat létrehozni a Síkidom nézet
-// próbájához — a `sikidomTesztAdat.js` 100 kézzel írt tartalmának KIEGÉSZÍTÉSE,
+// Felelősség: NAGY számú gyökér-gondolatot létrehozni a Síkidom nézet
+// próbájához — a `sikidomTesztAdat.js` 100 kézzel írt gondolatának KIEGÉSZÍTÉSE,
 // nem helyettesítése.
 //
 // MIÉRT KELL: a 100 gyökér kevés ahhoz, hogy a nézet mai szabályai éles adaton
@@ -19,8 +19,8 @@
 //
 // A CÍMEK generáltak (jelző × témakör), ezért determinisztikusak és ütközésmentesek.
 //
-// FONTOS: a tartalmakat a rendes service-en át hozzuk létre
-// (`tartalomService.tartalomLetrehozasa`), NEM közvetlen adatbázis-írással — így
+// FONTOS: a gondolatokat a rendes service-en át hozzuk létre
+// (`gondolatService.gondolatLetrehozasa`), NEM közvetlen adatbázis-írással — így
 // minden származtatott rekord (tudatpont-hozzárendelés, allokáció, hierarchikus
 // allokáció, ős-lánc) is konzisztensen létrejön.
 //
@@ -40,9 +40,9 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const tartalomService = require('../services/tartalomService');
+const gondolatService = require('../services/gondolatService');
 const Eember = require('../models/eember');
-const Tartalom = require('../models/tartalom');
+const Gondolat = require('../models/gondolat');
 
 // ===== A CÍMEK ÖSSZETEVŐI =====
 // 10 jelző × 30 témakör = 300 egyedi, olvasható magyar cím. A témakörök
@@ -71,7 +71,7 @@ const ZIPF_KITEVO = 1;
 // pedig a sorszám szerint osztjuk. Így minden témakörből jut egy nagy, egy közepes
 // és több apró síkidom: a méretek nem egy témakör köré csoportosulnak.
 //
-// @param {number} darab - hány tartalom kell
+// @param {number} darab - hány gondolat kell
 // @param {number} keret - mennyi tudatpont áll rendelkezésre (ehhez skálázunk)
 // @returns {Array<[string, number]>} [cím, kezdő tudatpont] párok
 function listaEloallitasa(darab, keret) {
@@ -87,7 +87,7 @@ function listaEloallitasa(darab, keret) {
 
   // 2. A Zipf-súlyok és a keretre skálázás.
   //    A `C` együtthatót úgy választjuk, hogy az ÖSSZEG épp beleférjen a keretbe.
-  //    Minden tartalom legalább 1 pontot kap (0 tudatpontos entitás nem létezhet).
+  //    Minden gondolat legalább 1 pontot kap (0 tudatpontos entitás nem létezhet).
   let sulyOsszeg = 0;
   for (let i = 1; i <= darab; i++) sulyOsszeg += 1 / Math.pow(i, ZIPF_KITEVO);
 
@@ -153,7 +153,7 @@ async function futtatas() {
   const keret = Math.floor(szabad * 0.9);
 
   if (keret < darab) {
-    console.error('HIBA: a szabad tudatpont ennyi tartalomra sem elég (fejenként 1 pont a minimum)', {
+    console.error('HIBA: a szabad tudatpont ennyi gondolatra sem elég (fejenként 1 pont a minimum)', {
       eemberNev: eember.eemberNev, szabad, keret, darab
     });
     await mongoose.disconnect();
@@ -167,7 +167,7 @@ async function futtatas() {
   const kihagyott = [];
 
   for (const [cim, pont] of teljesLista) {
-    const mar = await Tartalom.findOne({ cim, szuloId: null }).select('_id').lean();
+    const mar = await Gondolat.findOne({ cim, szuloId: null }).select('_id').lean();
     if (mar) kihagyott.push(cim);
     else lista.push([cim, pont]);
   }
@@ -210,17 +210,17 @@ async function futtatas() {
   for (let i = 0; i < lista.length; i++) {
     const [cim, pont] = lista[i];
     try {
-      const tartalom = await tartalomService.tartalomLetrehozasa(
-        { cim, szoveg: `${cim} — a Síkidom nézet sok-gyökeres próbájához létrehozott tartalom.` },
+      const gondolat = await gondolatService.gondolatLetrehozasa(
+        { cim, szoveg: `${cim} — a Síkidom nézet sok-gyökeres próbájához létrehozott gondolat.` },
         eember._id.toString(),
         pont
       );
-      letrejott.push({ cim, pont, id: tartalom?._id?.toString() ?? '(ismeretlen)' });
+      letrejott.push({ cim, pont, id: gondolat?._id?.toString() ?? '(ismeretlen)' });
     } catch (hiba) {
       hibak.push({ cim, pont, uzenet: hiba.message });
     }
 
-    // Haladás-jelzés: 300 tartalomnál jó tudni, hogy halad
+    // Haladás-jelzés: 300 gondolatnál jó tudni, hogy halad
     if ((i + 1) % 25 === 0) {
       console.log(`  … ${i + 1} / ${lista.length} feldolgozva`);
     }
@@ -246,11 +246,11 @@ async function futtatas() {
     if (hibak.length > 20) console.log(`  … és még ${hibak.length - 20}`);
   }
 
-  const gyokerDarab = await Tartalom.countDocuments({ szuloId: null });
+  const gyokerDarab = await Gondolat.countDocuments({ szuloId: null });
   const frissEember = await Eember.findById(eember._id).select('tudatpontok').lean();
 
   console.log('');
-  console.log(`Gyökér tartalmak száma összesen: ${gyokerDarab}`);
+  console.log(`Gyökér gondolatok száma összesen: ${gyokerDarab}`);
   console.log(`${eember.eemberNev} maradék szabad tudatpontja: ${frissEember?.tudatpontok}`);
 
   await mongoose.disconnect();
