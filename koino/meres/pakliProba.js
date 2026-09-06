@@ -733,6 +733,12 @@ async function javaslatosEset(tar, anna, { szavazat = 'Tamogat', kezdet = Date.U
     { fajta: 'szerkesztesi', erintett: g.azonosito, muvelet: 'Modositas',
       valtozas: { cim: 'JAVASOLT CÍM' }, indoklas: 'Mert jobb.' }, kezdet + 1000);
   await esemenyMentese(tar, j);
+
+  // ⭐⭐ A JAVASLAT IS ENTITÁS (2026-09-06), tehát tudatpont nélkül a D14 szerint NEM
+  // LÉTEZNE — ugyanúgy, ahogy a gondolat sem. A parancssor is ezt teszi.
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+    { entitas: j.azonosito, pont: 100 }, kezdet + 1500));
+
   await esemenyMentese(tar, await anna.tesz('Szavazat',
     { javaslat: j.azonosito, szavazat }, kezdet + 2000));
 
@@ -755,17 +761,34 @@ proba('⭐⭐ A JAVASLAT megjelenik a pakliban, saját kártyaként', async () =
     && k.javaslat.indoklas === 'Mert jobb.';
 });
 
-proba('⭐ A javaslat a GONDOLATA MELLÉ rendeződik (az érintett pontjaival)', async () => {
+// ⭐⭐ EZ A PRÓBA MÁS LETT, ÉS AZ OKA TANULSÁGOS.
+//
+// Korábban a javaslat rendezési értékét KÉZZEL kölcsönöztük az érintettétől, mert magának
+// nem volt tudatpontja — és a próba azt mérte, hogy a kényszer-megoldás működik-e. Mióta a
+// javaslat **entitás**, és a **szülője az érintett** (D27/1: „gondolatból ágazik ki"), ez a
+// szerkezetből következik: a hierarchikus rendezés amúgy is a szülő UTÁN teszi.
+//
+// *A jó szerkezet elvette a szabály dolgát.*
+proba('⭐⭐ A javaslat a GONDOLATA GYEREKE — a hierarchikus rendezés mellé teszi', async () => {
   const { tar, anna } = await ujKoino();
-  // Egy erős és egy gyenge gondolat; a javaslat a gyengére vonatkozik.
   await gondolat(tar, anna, 'Erős', 900);
-  const { javaslat, gondolat: gyenge, kezdet } = await javaslatosEset(tar, anna);
+  const { javaslat, gondolat: g, kezdet } = await javaslatosEset(tar, anna);
 
-  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 3000 });
+  const oldal = await pakliOldal(tar, KOINO,
+    { most: kezdet + 3000, rendezes: 'hierarchikus', irany: 'novekvo' });
   const sorrend = oldal.kartyak.map((k) => k.azonosito);
-  // ⭐ A javaslat és az érintettje SZOMSZÉDOS — nem süllyed a lista végére.
-  return Math.abs(sorrend.indexOf(javaslat.azonosito)
-                - sorrend.indexOf(gyenge.azonosito)) === 1;
+
+  // A javaslat KÖZVETLENÜL az érintettje után áll — mert a gyereke.
+  return sorrend.indexOf(javaslat.azonosito) - sorrend.indexOf(g.azonosito) === 1;
+});
+
+proba('⭐ És a javaslatnak SAJÁT tudatpontja van, mint bármely entitásnak', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 3000, szerzo: anna.szerzo });
+  const k = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito);
+  return k.osszesPont === 100 && k.sajatPont === 100 && k.hozzajarulok === 1;
 });
 
 proba('⭐ A SZAVAZÁS ÁLLÁSA a kártyán van — ezrelékben, egész számként', async () => {
@@ -803,19 +826,44 @@ proba('⭐⭐ AZ EGYEZMÉNY megszületése a kártyán is látszik', async () =>
   return j.statusz === 'elfogadva' && j.egyezmeny !== null;
 });
 
-proba('⚠️ A GAZDÁTLAN javaslat nem kerül a pakliba (az érintettjét elfelejtették, D14)',
+// ⚠️⚠️ EZ A PRÓBA MEGFORDULT, ÉS A MODELL FORDÍTOTTA MEG.
+//
+// Amíg a javaslat nem volt entitás, az érintettjével EGYÜTT tűnt el (a rendezési értékét is
+// tőle kölcsönözte). Mióta **saját tudatpontja van**, a **D14 rá is külön vonatkozik**: attól
+// létezik, hogy valaki áll mögötte — nem attól, hogy a tárgya még megvan.
+//
+// ⭐ És ez következetes: a `szulo`-ja egy elfelejtett entitásra mutat, tehát a fa-bejárások
+// (ágazati pont, hierarchikus út) átugorják — gyökér-szintű kártya lesz belőle. Az
+// egyezmény-végrehajtás pedig már eddig is tudta kezelni: *„az érintett entitás nem
+// létezik"* — kihagyva, indoklással (D19).
+proba('⭐⭐ A javaslat TÚLÉLI az érintettje elfelejtését — mert SAJÁT tudatpontja van (D14)',
   async () => {
     const { tar, anna } = await ujKoino();
     const { gondolat: g, javaslat, kezdet } = await javaslatosEset(tar, anna);
 
-    // A gazda elveszi a tudatpontját → az entitás megszűnik létezni.
+    // A gazda elveszi a tudatpontját a GONDOLATRÓL → az az entitás megszűnik létezni.
     await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
       { entitas: g.azonosito, pont: 0 }, kezdet + 3000));
 
     const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 4000 });
-    return oldal.osszes === 0
-      && !oldal.kartyak.some((k) => k.azonosito === javaslat.azonosito);
+    const k = oldal.kartyak.find((x) => x.azonosito === javaslat.azonosito);
+
+    return oldal.osszes === 1                 // a gondolat eltűnt, a javaslat maradt
+      && k !== undefined
+      && k.osszesPont === 100
+      && k.javaslat.erintettCim === null;      // az érintettje már nem oldható fel
   });
+
+proba('⭐ …DE ha a javaslatról is elveszik a pontot, ő is elfelejtődik', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+    { entitas: javaslat.azonosito, pont: 0 }, kezdet + 3000));
+
+  const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 4000 });
+  return !oldal.kartyak.some((k) => k.azonosito === javaslat.azonosito);
+});
 
 // ===================================
 // 11. A GYORSÍTÓTÁR

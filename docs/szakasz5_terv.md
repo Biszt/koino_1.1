@@ -557,6 +557,109 @@ kivenni nem).
    `'folyamatban'`-t mond — fordítás nélkül **a szavazás soha nem jelent volna meg**. A
    leképezés az adapterben van (`STATUSZ_KIFELE`).
 
+---
+
+## 15. ⭐⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) — és ez javított egy hibás modellt
+
+> *„Kell neki tudatpont, akárcsak a többi entitásnak. Az egyezmény is entitás. És még annyi,
+> hogy hívjuk szerkesztési javaslatnak, és szerkesztési egyezménynek."* — Csaba
+
+⚠️ **A 14. szakaszban azt írtam, hogy „a javaslatnak nincs tudatpontja (nem is lehet: nem
+entitás, hanem döntés)". Ez tévedés volt** — és a **D27/5** ki is mondja az ellenkezőjét:
+*„nem kell külön egyezmény-kezelés: **egy entitás a többi között** — tudatpontot lehet rá
+tenni, küszöbei vannak, gyerekei lehetnek."*
+
+### KÉT RÉTEG, EGY AZONOSÍTÓ
+
+A javaslat mostantól **egyszerre** kettő, ugyanazon az azonosítón:
+
+| Réteg | Ki számolja | Mit ad |
+|---|---|---|
+| **entitás** | `allapotSzamitas.js` | tudatpont, küszöbök, szülő, gyerekek, cím |
+| **döntés** | `javaslatSzamitas.js` | szavazatok, státusz, egyezmény |
+
+⭐⭐ **És a szülője az ÉRINTETT entitás** — ez a **D27/1** („az általános javaslat
+gondolatból ágazik ki") szerkezeti megvalósítása. Három dolgot old meg egyszerre:
+
+1. **Megszüntetett egy kényszer-megoldást.** Előtte a javaslat rendezési értékét *kézzel*
+   kölcsönöztük az érintettétől, hogy ne süllyedjen a lista végére. Most nem kell: a
+   hierarchikus rendezés amúgy is a szülő után teszi. ⭐ *A jó szerkezet elvette a szabály
+   dolgát.*
+2. Az **ágazati tudatpont** helyesen folyik felfelé.
+3. A **D27/4** hatóköre („a hely határozza meg, lefelé terjed") ugyanezen a fán mérhető —
+   amikor az általános rendszer megépül.
+
+### ⚠️ ÉS EGY KÖVETKEZMÉNY, AMIT A PRÓBA FORDÍTOTT MEG
+
+Amíg a javaslat nem volt entitás, az érintettjével **együtt tűnt el**. Mióta saját
+tudatpontja van, a **D14 rá is külön vonatkozik**: attól létezik, hogy valaki áll mögötte —
+nem attól, hogy a tárgya még megvan.
+
+⭐ Ez következetes: a `szulo`-ja ilyenkor egy elfelejtett entitásra mutat, tehát a
+fa-bejárások átugorják (gyökér-szintű kártya lesz), az egyezmény-végrehajtás pedig már eddig
+is tudta kezelni — *„az érintett entitás nem létezik"*, kihagyva, indoklással (D19).
+
+⚠️ **A parancssor is változott:** a `javaslat` parancs mostantól **tudatpontot is rendel**
+a javaslathoz — enélkül a D14 szerint meg sem születne. Ugyanaz a lépés, mint a gondolatnál.
+
+### Az elnevezés
+
+A felületen és a parancssorban mostantól **SZERKESZTÉSI JAVASLATOK** és **SZERKESZTÉSI
+EGYEZMÉNYEK** áll (D27). A `fajta` mező (`'szerkesztesi' | 'altalanos'`) már eddig is ott
+volt a `muveletek.js`-ben — a név most követte.
+
+---
+
+## 16. ⏸️ AZ ÁLTALÁNOS JAVASLAT ÉS EGYEZMÉNY — a D27 feljegyzései, és mi hiányzik
+
+*Csaba kérésére megkeresve: a teljes leírás a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) **D27** szakaszában áll
+(2026-08-27). Itt csak az összefoglaló és a hiánylista.*
+
+**A szavazás gépezete mindkét fajtánál UGYANAZ** — küszöbök, medián, részvételi arány,
+bizonyossági mutató, döntési idő. **Csak a következménye más:**
+
+| | Szerkesztési | Általános |
+|---|---|---|
+| Miről szól | egy entitás megváltoztatása | a közösség **álláspontja** |
+| Elfogadáskor | a rendszer **végrehajtja** | **semmi automatikus** — az egyezmény maga az álláspont |
+| Az egyezmény élete | egyszeri: eldőlt, kész | ⭐ **ÉLŐ**: csatlakozni, tiltakozni, ütközést jelölni lehet |
+
+### Mi van már meg belőle
+
+- ✅ a `fajta` mező (`'szerkesztesi' \| 'altalanos'`) a `muveletek.js`-ben és a döntés-rétegben;
+- ✅ az egyezmény-végrehajtás **kizárja** az általánost (*„az általánosból nem következik
+  entitás-változás"*) — próbával igazolva;
+- ✅ **a javaslat entitás** (15. szakasz) — a D27/5 alapja;
+- ✅ a **hierarchikus tudatpont**, amit a D27/4 hatókörré emel.
+
+### ⛔ Mi hiányzik
+
+1. **Az élő egyezmény három művelete:** `Csatlakozas`, `Tiltakozas`, `UtkozesJeloles`.
+   ⭐ *A TÉNY örök, a HATÁLY él: hányan állnak mögötte MOST.*
+2. **A csatlakozó mint aktív résztvevő** — a D27/3 szerint számít a részvételi arányban, és
+   ezért ő szavaz a későbbi módosításokról is. *(Ez old meg egy feszültséget: nem kell se
+   nullázni a csatlakozásokat, se változatokhoz kötni őket.)*
+3. **A hatókör a HELYBŐL** (D27/4): aki az entitásra **vagy annak bármely leszármazottjára**
+   tett pontot. A gyökérben ez „mindenki". ⚠️ *A hierarchikus tudatpont eddig a fontosság
+   mutatója volt — itt jogosultsággá válik.*
+4. **Az egyezmény mint önálló entitás.** ⚠️⚠️ **És itt van egy VALÓDI FESZÜLTSÉG, amit el
+   kell dönteni:** a **D17** szerint az egyezmény **számítás, nem esemény** — de egy
+   entitásnak azonosító kell, amire tudatpontot lehet tenni. Két út:
+   - **(a)** az egyezmény azonosítója **származtatott** (a javaslatéból) — a számítás marad,
+     de lesz stabil neve, amire lehet pontot tenni;
+   - **(b)** az elfogadáskor **születik egy esemény** — ez viszont felülírná a D17-et, és
+     kellene valaki, aki „kimondja".
+   ⭐ *Az (a) őrzi meg a D17-et; ezt javaslom, de ez Csaba döntése.*
+5. **A négy szerkesztési művelet az egyezményre** (módosítás, áthelyezés, egyesítés,
+   törlés) — ehhez a `Torles` és az `Egyesites` végrehajtója is kell (ma nincs).
+
+⏸️ **A D27 maga is nyitva hagyott kettőt:** az egyesítéskor összeadódnak-e a csatlakozók, és
+`fajta` mező vagy külön esemény-típusok legyenek-e. ⭐ *A második eldőlt: a `fajta` mező —
+a közös mechanika mellette szól, és a kód is így épült.*
+
+---
+
 ### ⏸️ Ami az 5.5-ből még hátra van
 
 - **`JavaslatModal`** (66 KB) — ⚠️ **importálja a `SzovegSzerkeszto`-t**, tehát ugyanaz a

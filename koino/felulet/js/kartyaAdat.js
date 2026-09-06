@@ -1,4 +1,4 @@
-// koino/felulet/js/kartyaAdat.js
+﻿// koino/felulet/js/kartyaAdat.js
 
 // Felelősség: a koino adat-alakjából a KÁRTYÁK által várt alakot előállítani.
 //
@@ -100,7 +100,10 @@ export function kartyaAdatta(k) {
       // százalékot ír ki — a váltás tehát itt, a felületen történik, ahol már csak
       // megjelenítés. *A programban egyetlen tört szám sem születik.*
       ...(k.javaslat ? {
+        // ⭐ A D27 SZERINT A NEVE: SZERKESZTÉSI javaslat. A "fajta" mező mondja meg, melyikről
+        // van szó — az általános javaslat majd más feliratot kap.
         javaslatTipus: k.javaslat.muvelet,
+        javaslatFajta: k.javaslat.fajta === 'altalanos' ? 'Általános' : 'Szerkesztési',
 
         // ⚠️⚠️ A STÁTUSZ SZAVAI ELTÉRNEK — és ez nem kozmetika: a `JavaslatKartya` a
         // **szavazás-fület** csak `'Aktiv'` státusznál rajzolja ki. A koino

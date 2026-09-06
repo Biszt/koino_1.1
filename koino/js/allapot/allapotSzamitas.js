@@ -269,6 +269,31 @@ export function allapotSzamitasa(esemenyek) {
         letrehozasok.set(e.azonosito, e);
         break;
 
+      // ----- ⭐⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) -----
+      //
+      // *„Kell neki tudatpont, akárcsak a többi entitásnak."*
+      //
+      // Eddig a javaslat csak DÖNTÉS volt (`javaslatSzamitas.js`), nem entitás — így nem
+      // lehetett rá tudatpontot tenni, nem volt küszöbe, nem lehettek gyerekei. A **D27**
+      // viszont kimondja, hogy az általános egyezmény *„teljes értékű entitás… egy entitás
+      // a többi között"*, és ugyanez áll a javaslatra.
+      //
+      // ⭐⭐ ÉS A SZÜLŐJE AZ ÉRINTETT ENTITÁS. Ez nem kényelmi döntés: a **D27/1** szerint
+      // *„az általános javaslat GONDOLATBÓL ágazik ki… onnan örökli a kereteit."* Így lesz
+      // igaz szerkezetileg is, amit eddig külön szabállyal pótoltunk:
+      //
+      //   · a javaslat a gondolata MELLETT jelenik meg (hierarchikus rendezés — magától);
+      //   · az ágazati tudatpont helyesen folyik felfelé;
+      //   · és a **D27/4** hatóköre (a hely határozza meg, lefelé terjed) ugyanezen a
+      //     fa-szerkezeten mérhető.
+      //
+      // ⚠️ A DÖNTÉS-RÉTEG VÁLTOZATLAN: a szavazatokat, küszöböket, státuszt továbbra is a
+      // `javaslatSzamitas.js` számolja. Ez a sor csak annyit mond, hogy a javaslat **létezik
+      // entitásként is** — a kettő ugyanarra az azonosítóra vonatkozik.
+      case 'Javaslat':
+        letrehozasok.set(e.azonosito, e);
+        break;
+
       // ----- TUDATPONT-RENDEZÉS -----
       // „Az utolsó nyer" (e-ember + entitás párra). A tudatpont nem elköltött, hanem
       // ODARENDELT: bármikor átrendezhető, és az átrendezés csak egy újabb esemény.
@@ -299,11 +324,16 @@ export function allapotSzamitasa(esemenyek) {
   const entitasok = new Map();
 
   for (const [entitasAzonosito, letrehozoEsemeny] of letrehozasok) {
+    // ⭐ A JAVASLAT MÁS MEZŐKBŐL ÉPÜL, mint a gondolat — de ugyanolyan entitás lesz.
+    // A címe az, amit javasol; a szövege az indoklás; a szülője az érintett entitás.
+    const javaslatE = letrehozoEsemeny.tipus === 'Javaslat';
+    const adat = letrehozoEsemeny.adat;
+
     entitasok.set(entitasAzonosito, {
       azonosito: entitasAzonosito,
-      tipus: letrehozoEsemeny.adat.tipus ?? 'Gondolat',
-      cim: letrehozoEsemeny.adat.cim,
-      szoveg: letrehozoEsemeny.adat.szoveg ?? null,
+      tipus: javaslatE ? 'Javaslat' : (adat.tipus ?? 'Gondolat'),
+      cim: javaslatE ? (adat.valtozas?.cim ?? adat.muvelet ?? 'Javaslat') : adat.cim,
+      szoveg: javaslatE ? (adat.indoklas ?? null) : (adat.szoveg ?? null),
 
       // ----- ⭐ A BESOROLÁS (Szakasz 5.4) -----
       // A kategória és a gondolattípus ÖNÁLLÓ ENTITÁS (saját tudatponttal, javaslattal,
@@ -318,7 +348,10 @@ export function allapotSzamitasa(esemenyek) {
       kategoriak: Array.isArray(letrehozoEsemeny.adat.kategoriak)
         ? [...letrehozoEsemeny.adat.kategoriak]
         : [],
-      szulo: letrehozoEsemeny.adat.szulo ?? null,
+      // ⭐⭐ A JAVASLAT SZÜLŐJE AZ ÉRINTETT ENTITÁS (D27/1: „gondolatból ágazik ki").
+      // Ettől kerül a gondolata mellé a hierarchikus rendezésben — külön szabály nélkül —,
+      // és ettől folyik helyesen felfelé az ágazati tudatpont.
+      szulo: javaslatE ? (adat.erintett ?? null) : (adat.szulo ?? null),
       meret: letrehozoEsemeny.adat.meret ?? 0,       // D26: a tárolási vállalás mértéke
       szerzo: letrehozoEsemeny.szerzo,
       letrehozva: letrehozoEsemeny.ido,

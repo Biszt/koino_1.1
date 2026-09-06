@@ -326,7 +326,7 @@ async function allapotKiirasa(napokMulva) {
   // ----- JAVASLATOK -----
   const folyamatban = [...javaslatok.values()];
   kiir();
-  kiir(SZIN.vastag + 'JAVASLATOK' + SZIN.vege);
+  kiir(SZIN.vastag + 'SZERKESZTÉSI JAVASLATOK' + SZIN.vege);
   if (!folyamatban.length) kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
   for (const j of folyamatban) {
     const erintett = allapot.entitasok.get(j.erintett);
@@ -351,9 +351,9 @@ async function allapotKiirasa(napokMulva) {
   // ----- EGYEZMÉNYEK -----
   const egyezmenyek = folyamatban.filter((j) => j.egyezmeny);
   kiir();
-  kiir(SZIN.vastag + 'EGYEZMÉNYEK' + SZIN.vege);
+  kiir(SZIN.vastag + 'SZERKESZTÉSI EGYEZMÉNYEK' + SZIN.vege);
   if (!egyezmenyek.length) {
-    kiir(SZIN.halvany + '  (még nincs — akkor születik, ha egy javaslatot elfogadnak)' + SZIN.vege);
+    kiir(SZIN.halvany + '  (még nincs — akkor születik, ha egy szerkesztési javaslatot elfogadnak)' + SZIN.vege);
   }
   for (const j of egyezmenyek) {
     const e = j.egyezmeny;
@@ -484,7 +484,16 @@ try {
         fajta: 'szerkesztesi', erintett, muvelet: 'Modositas',
         valtozas: { cim: ujCim }, indoklas: ervek[2] ?? null
       });
+
+      // ⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) — tehát tudatpont nélkül a D14 szerint
+      // NEM LÉTEZNE. Ugyanaz a lépés, mint a gondolatnál: aki beadja, az áll mögé.
+      const { allapot: kepUtan } = await kepetKeszit();
+      await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
+        szetosztottPontok(kepUtan, szerzo));
+
       kiir('Szerkesztési javaslat beadva: ' + e.azonosito.slice(0, 8));
+      kiir(SZIN.halvany + 'Kapott ' + KEZDO_PONT + ' tudatpontot tőled — a javaslat is '
+        + 'entitás, enélkül a koino elfelejtené.' + SZIN.vege);
       kiir(SZIN.halvany + 'Most szavazhatsz rá: node koino/koino.js szavaz '
         + e.azonosito.slice(0, 8) + ' tamogat' + SZIN.vege);
       break;

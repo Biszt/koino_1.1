@@ -110,7 +110,7 @@ function besorolas(entitasok, azonosito) {
   return { azonosito, nev: e.cim ?? null, ikon: e.ikon ?? null };
 }
 
-function kartya(entitas, agazatiPont, en, entitasok) {
+function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
   return {
     azonosito: entitas.azonosito,
     tipus: entitas.tipus,
@@ -134,83 +134,53 @@ function kartya(entitas, agazatiPont, en, entitasok) {
     // ki vagy. ⚠️ A `pakli.js` ezt nem találhatja ki: a hívó adja meg (`beallitas.szerzo`),
     // mert a személyazonosság a kulcs-rétegé, nem az állapoté.
     sajatPont: en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) : 0,
-    // ⚠️ Nincs `szoveg` — lásd fent.
-    vanSzoveg: entitas.szoveg !== null && entitas.szoveg !== undefined
-  };
-}
 
-/**
- * Egy JAVASLAT kártya-adata (Szakasz 5.5).
- *
- * ⭐ MIÉRT KERÜL A PAKLIBA? Mert a prototípus paklija is együtt mutatja a gondolatokat, a
- * javaslatokat és az egyezményeket — a `kartyaGyar` épp ezért típus szerint választ
- * kártya-osztályt. A javaslat nem külön nézet, hanem **kártya a többi közt**.
- *
- * ⚠️ A RENDEZÉSI ÉRTÉKE AZ ÉRINTETT ENTITÁSÉ. A javaslatnak magának nincs tudatpontja
- * (nem is lehet: nem entitás, hanem döntés). Ha nullát adnánk, minden javaslat a lista
- * végére süllyedne, elszakadva attól a gondolattól, amiről szól. ⭐ Így viszont **a
- * gondolata mellé kerül**, ami az olvasónak is ezt jelenti.
- */
-function javaslatKartya(j, entitasok, en) {
-  const erintett = entitasok.get(j.erintett);
-
-  return {
-    azonosito: j.azonosito,
-    tipus: 'Javaslat',
-    // A javaslat „címe" az, amit javasol — ezt látja az ember a kártyán.
-    cim: j.valtozas?.cim ?? j.muvelet,
-    szulo: null,
-    ikon: null,
-    gondolatTipus: null,
-    kategoriak: [],
-    szerzo: j.letrehozo,
-    letrehozva: j.letrehozva,
-
-    // ⚠️ Az érintett pontjai — a rendezéshez, hogy a gondolata mellé kerüljön.
-    osszesPont: erintett?.osszesPont ?? 0,
-    agazatiPont: erintett?.osszesPont ?? 0,
-    hozzajarulok: erintett?.hozzajarulok.size ?? 0,
-    sajatPont: en ? (erintett?.hozzajarulok.get(en)?.pont ?? 0) : 0,
-
-    // ----- AMI CSAK A JAVASLATÉ -----
-    javaslat: {
-      fajta: j.fajta,                       // 'szerkesztesi' | 'altalanos' (D27)
-      muvelet: j.muvelet,
-      erintett: j.erintett,
-      erintettCim: erintett?.cim ?? null,
-      valtozas: j.valtozas ?? null,
-      indoklas: j.indoklas ?? null,
-      statusz: j.statusz,                   // folyamatban | elfogadva | elvetve
-      dontesiIdo: j.dontesiIdo,
-      lezarasIdeje: j.lezarasIdeje,
+    // ----- ⭐ A DÖNTÉS, HA EZ EGY JAVASLAT -----
+    //
+    // ⚠️ KÉT RÉTEG, EGY AZONOSÍTÓ. A javaslat **entitás** (tudatpont, küszöbök, gyerekek —
+    // ez a fenti rész) ÉS **döntés** (szavazatok, státusz, egyezmény — ez itt). A kettő
+    // ugyanarra az azonosítóra vonatkozik, de más réteg számolja: az entitást az
+    // `allapotSzamitas.js`, a döntést a `javaslatSzamitas.js`.
+    javaslat: dontes ? {
+      fajta: dontes.fajta,                  // 'szerkesztesi' | 'altalanos' (D27)
+      muvelet: dontes.muvelet,
+      erintett: dontes.erintett,
+      erintettCim: entitasok.get(dontes.erintett)?.cim ?? null,
+      valtozas: dontes.valtozas ?? null,
+      indoklas: dontes.indoklas ?? null,
+      statusz: dontes.statusz,
+      dontesiIdo: dontes.dontesiIdo,
+      lezarasIdeje: dontes.lezarasIdeje,
 
       // ⭐ EZRELÉKBEN, mert a koino egész aritmetikával számol (kerekítés soha ne
       // dönthessen el szavazást). A százalékra váltás a felület dolga.
-      tamogatottsagEzrelek: j.tamogatottsagEzrelek,
-      ellenzoiEzrelek: j.ellenzoiEzrelek,
-      tartozkodoiEzrelek: j.tartozkodoiEzrelek,
-      reszveteliEzrelek: j.reszveteliEzrelek,
-      bizonyossagiMutato: j.bizonyossagiMutato,
+      tamogatottsagEzrelek: dontes.tamogatottsagEzrelek,
+      ellenzoiEzrelek: dontes.ellenzoiEzrelek,
+      tartozkodoiEzrelek: dontes.tartozkodoiEzrelek,
+      reszveteliEzrelek: dontes.reszveteliEzrelek,
+      bizonyossagiMutato: dontes.bizonyossagiMutato,
 
-      tamogatok: j.tamogatok,
-      ellenzok: j.ellenzok,
-      tartozkodok: j.tartozkodok,
-      szavazok: j.szavazok,
-      nevezo: j.nevezo,
-      kesoiSzavazatok: j.kesoiSzavazatok,
+      tamogatok: dontes.tamogatok,
+      ellenzok: dontes.ellenzok,
+      tartozkodok: dontes.tartozkodok,
+      szavazok: dontes.szavazok,
+      nevezo: dontes.nevezo,
+      kesoiSzavazatok: dontes.kesoiSzavazatok,
 
-      // ⭐ SZAVAZHATOK-E? A döntés bemenete az AKTÍV tulajdonosok köre: akinek van
-      // tudatpontja az érintett entitáson, és aktív szerepben van.
-      szavazhatok: en
-        ? ((erintett?.hozzajarulok.get(en)?.pont ?? 0) > 0
-           && erintett?.hozzajarulok.get(en)?.szerep !== 'passziv')
-        : false,
+      // ⭐ SZAVAZHATOK-E? A döntés bemenete az ÉRINTETT entitás aktív tulajdonosainak
+      // köre — nem a javaslaté. (Aki a gondolatot tartja, az dönt a sorsáról.)
+      szavazhatok: (() => {
+        if (!en) return false;
+        const erintett = entitasok.get(dontes.erintett);
+        const sajat = erintett?.hozzajarulok.get(en);
+        return (sajat?.pont ?? 0) > 0 && sajat?.szerep !== 'passziv';
+      })(),
 
-      // Megszületett-e már az egyezmény? (D17: számítás, nem esemény.)
-      egyezmeny: j.egyezmeny ? { megszuletett: j.egyezmeny.megszuletett } : null
-    },
+      egyezmeny: dontes.egyezmeny ? { megszuletett: dontes.egyezmeny.megszuletett } : null
+    } : null,
 
-    vanSzoveg: false
+    // ⚠️ Nincs `szoveg` — lásd fent.
+    vanSzoveg: entitas.szoveg !== null && entitas.szoveg !== undefined
   };
 }
 
@@ -389,18 +359,14 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
     mind.push({ azonosito: e.azonosito, ertek: ertekhez(e), entitas: e });
   }
 
-  // ⭐ ÉS A JAVASLATOK (5.5) — a prototípus paklija is együtt mutatja őket a gondolatokkal.
-  // ⚠️ A rendezési értékük az ÉRINTETT entitásé, hogy a gondolatuk mellé kerüljenek.
-  for (const j of kep.javaslatok?.values() ?? []) {
-    const erintett = kep.entitasok.get(j.erintett);
-    // A gazdátlan javaslat (az érintettet elfelejtették, D14) nem kerül a pakliba.
-    if (!erintett) continue;
-    mind.push({
-      azonosito: j.azonosito,
-      ertek: rendezes === 'ido' ? (j.letrehozva ?? 0) : ertekhez(erintett),
-      javaslat: j
-    });
-  }
+  // ⭐⭐ A JAVASLATOK MÁR NINCSENEK KÜLÖN (2026-09-06): mióta a javaslat is ENTITÁS
+  // (llapotSzamitas.js), a fenti ciklus **magától** hozza őket — saját tudatponttal,
+  // saját rendezési értékkel, és a szülőjük az érintett entitás.
+  //
+  // ⚠️ Ez egy KÉNYSZER-MEGOLDÁST szüntetett meg: előtte a javaslat rendezési értékét
+  // kézzel az érintettétől kölcsönöztük, mert magának nem volt. Most nem kell — a
+  // szerkezet megoldotta. *A javaslat a gondolata GYEREKE, tehát a hierarchikus rendezés
+  // amúgy is mellé teszi.*
   mind.sort((a, b) => sorrendben(a, b, irany));
 
   // ----- A KURZOR UTÁNI RÉSZ -----
@@ -417,9 +383,9 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const utolso = oldal[oldal.length - 1];
 
   const eredmeny = {
-    kartyak: oldal.map((elem) => elem.javaslat
-      ? javaslatKartya(elem.javaslat, kep.entitasok, beallitas.szerzo)
-      : kartya(elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok)),
+    kartyak: oldal.map((elem) => kartya(
+      elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok,
+      kep.javaslatok?.get(elem.azonosito) ?? null)),
     // Csak akkor van következő oldal, ha maradt még valami.
     kovetkezoKurzor: (utolso && innen + darab < mind.length)
       ? kurzorKodolas({ horgony, most, ertek: utolso.ertek, azonosito: utolso.azonosito })
