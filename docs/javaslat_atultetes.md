@@ -93,11 +93,31 @@ egyezmény ugyanaz az entitás, mint a javaslat, akkor a helye a javaslat helye 
 érintett entitás alatt van. Ez:
 
 - ✅ **Módosításnál és áthelyezésnél PONTOSAN a prototípus válasza** — nincs teendő;
-- ⚠️ **Törlésnél HIBÁS**: az érintett megszűnik, tehát az egyezménynek **fel kell lépnie**
-  eggyel (az érintett szülőjéhez), különben nem létező entitás alatt lógna;
-- ⚠️ **Egyesítésnél HIBÁS**: az egyezménynek az **új** entitás alá kell kerülnie.
+- ✅ **Törlésnél MEGOLDVA (2026-09-07), és külön szabály NÉLKÜL.** Az érintett megszűnik,
+  tehát az egyezmény árva lesz — az **árva-szabály** pedig felviszi a legközelebbi élő
+  felmenőhöz, ami épp a törölt entitás szülője. *Pontosan a prototípus válasza, csak nem
+  külön eset, hanem egy általánosabb szabály következménye.*
+- ⏸️ **Egyesítésnél még nyitva**: az egyezménynek az **új** entitás alá kell kerülnie —
+  ez az `Egyesites` végrehajtójával együtt jön (2.6).
 
-*Vagyis a végrehajtásnak a `Torles` és az `Egyesites` esetén a szülőt is igazítania kell.*
+### 2.2/b ⭐⭐ ÉS AMI EBBŐL KIDERÜLT: az árvák felkerülése (2026-09-07)
+
+A prototípus `entitasTorleseEllenorzese`-je a 0 pontos entitás törlésekor **minden gyerekének
+átírja a `szuloId`-ját a törölt entitás szülőjére** — a „KASZKÁD" itt **felkerülést** jelent,
+nem törlést. *A gondolat nem tűnhet el csak azért, mert a szülőjét elfelejtették.*
+
+⛔ **A koino ezt eddig nem tette meg**, és ez mérhető kár volt: a gyerek egy nem létező
+szülőre mutatott, ezért az ág-összesítés ott **megszakadt** (`if (!szulo) continue`), és a
+hierarchikus rendezés elveszítette az egész alsó ágat. ✅ Megépítve (`arvakFelkerulese`), és
+**nem csak a törlésre**: a D14 szerinti felejtésre is — az a gyakoribb eset, és a prototípusban
+is ugyanaz a függvény intézi.
+
+⚠️⚠️ **Egy különbségtétel viszont kellett, ami a prototípusban nem létezhetett:** ott minden
+entitás megvolt az adatbázisban, itt a hiányzó szülő **kétféle** lehet. Ha **ismertük és
+elfelejtették** → felkerülés. Ha **soha nem láttuk** (a létrehozó eseménye még nem érkezett
+meg) → **nem nyúlunk hozzá**: az hiány, nem tény (D19). Különben egy lemaradt készüléken fél
+pakli ugrana a gyökérre, majd a hiányzó esemény megérkezésekor vissza — vagyis két gép mást
+mutatna ugyanarról.
 
 ### 2.3 ✅ `erintettEntitasok` — TÖMB, nem egy — **MEGÉPÍTVE (2026-09-07)**
 
@@ -223,11 +243,35 @@ a kódban is — különben olyat „ültetünk át", ami ott sincs.*
 egyezményt a `kihagyottak` listába teszi, a javaslat státusza pedig „elfogadva" marad. Ez a
 prototípussal **egyezik** — de érdemes lehet többet mutatni, mint amennyit ő tudott.
 
-### 2.6 🟡 Két végrehajtó hiányzik
+### 2.6 ✅ TÖRLÉS — megépítve (2026-09-07) · ⏸️ EGYESÍTÉS — hátravan
 
-`Torles` és `Egyesites` — a prototípusban `torlesiVegrehajto.js` (5 KB) és
-`egyesitesiVegrehajto.js` (19,9 KB). ⚠️ Az egyesítés a legnagyobb végrehajtó, és a
-`egyesitesAdatok` mező is hozzá tartozik.
+⭐⭐ **A törlés a prototípusban NEM „törlés".** A `torlesiVegrehajto.js` egyetlen érdemi
+lépést tesz: `tudatpontokVisszaosztasa` — mindenki visszakapja a pontjait az entitásról, és
+**az entitás ettől szűnik meg létezni**, mert 0 pontnál a modell szerint nincs is (D14).
+*A törlés tehát nem külön mechanizmus, hanem a felejtés kiváltása.* ✅ Megépítve
+(`szerkesztesiVegrehajtas.js`: `torles`), a `torol` paranccsal együtt.
+
+⚠️⚠️ **ÉS EGY VALÓDI ELTÉRÉS, amit ki kell mondani.** A prototípus szervere **mások nevében**
+állította nullára a pontokat. A koinóban ez **lehetetlen és nem is szabad**: a
+tudatpont-rendezés ALÁÍRT esemény, és senki nem írhat alá helyettem (D15). Ezért:
+
+- az entitás **megszűnik létezni** — ez a prototípus eredménye, és ez a lényeg;
+- a pontok viszont a gazdájuk keretében **lekötve maradnak**, amíg ő maga vissza nem veszi
+  őket (`pont <azonosító> 0`) — ez a **kézi út** (4. szabály), és a `torol` parancs ki is
+  írja. A felület fel fogja ajánlani.
+
+⏸️ **Az `Egyesites` maradt utoljára, és jó okkal: ez az EGYETLEN művelet, ami ÚJ ENTITÁST
+SZÜL.** A prototípus `egyesitesiVegrehajto.js`-e (19,9 KB) hét lépésben: összesíti
+emberenként a pontokat MINDEN forrásról → kiüríti a forrásokat (azok eltűnnek) → **létrehoz
+egy új entitást** az `egyesitesAdatok.ujEntitasAdatok` szerint → ráteszi az összesített
+pontokat → a források gyerekeit **az ÚJ entitás alá köti** (⭐ szándékosan NEM a nagyszülőhöz
+— ezért gyűjti össze őket a törlés ELŐTT, Csaba döntése 2026-07-22) → és az egyezmény
+placeholder-tárhelyét az új entitásra oldja fel.
+
+⛔ **A nyitott kérdés a koinóban:** az új entitásnak **azonosító kell**, de nincs esemény, ami
+létrehozná — ahogy az egyezménynek sem. A javaslat azonosítója foglalt (az az egyezményé),
+tehát **egy második származtatott azonosító** kell. *Ezt Csabával kell eldönteni, mert
+identitás-kérdés, nem részletkérdés.*
 
 ---
 

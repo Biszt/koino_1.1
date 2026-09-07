@@ -1,4 +1,4 @@
-﻿// koino/js/allapot/allapotSzamitas.js
+// koino/js/allapot/allapotSzamitas.js
 
 // Felelősség: az aláírt eseményekből KISZÁMOLNI a jelenlegi állapotot — mely entitások
 // léteznek, ki hova rendelt tudatpontot, mik az érvényes küszöbök.
@@ -425,6 +425,11 @@ export function allapotSzamitasa(esemenyek) {
   // Domain-invariáns, ami a prototípusban is él: aminek nincs gazdája, az nem létezik.
   // A D14 szerint ez nem takarítás, hanem ALAPÁLLAPOT: „ami fontos a közösségnek, arra
   // rakjanak tudatpontot" — amire senki nem rak, azt a koino elfelejti.
+  // ⭐ A szülőket a TÖRLÉS ELŐTT jegyezzük fel — utána már nem olvashatók ki. (Ugyanez a
+  // lépés a prototípusban is megvan: „a törlés UTÁN már nem olvasható ki".)
+  const eredetiSzulok = new Map();
+  for (const [azonosito, entitas] of entitasok) eredetiSzulok.set(azonosito, entitas.szulo ?? null);
+
   const elfelejtettek = [];
   for (const [azonosito, entitas] of entitasok) {
     if (entitas.osszesPont <= 0) {
@@ -433,10 +438,17 @@ export function allapotSzamitasa(esemenyek) {
     }
   }
 
+  // ----- ⭐⭐ ÉS A GYEREKEK FELKERÜLNEK A NAGYSZÜLŐHÖZ (2026-09-07) -----
+  // A prototípus `entitasTorleseEllenorzese`-je pontosan ezt teszi: a 0 pontos entitás
+  // törlésekor **minden gyerekének átírja a `szuloId`-ját a törölt entitás szülőjére**
+  // („KASZKÁD" — de nem törlés, hanem FELKERÜLÉS). ⛔ A koino eddig nem tette meg, és ez
+  // mérhető kár volt: a gyerekek egy nem létező szülőre mutattak, ezért az ág-összesítés
+  // ott MEGSZAKADT (`if (!szulo) continue`), a hierarchikus rendezés pedig elveszítette
+  // őket. *A gondolat nem tűnhet el csak azért, mert a szülőjét elfelejtették.*
   // ----- AZ ÁG TELJES MÉRETE (D26) -----
   // Tájékoztató adat: mekkora az egész ág, ha valaki az egészet akarná. A VÁLLALÁS
   // ettől függetlenül csak arra az egy entitásra szól, amire pontot tettél.
-  agMeretekSzamitasa(entitasok);
+  szerkezetIgazitasa(entitasok, eredetiSzulok);
 
   const allapot = {
     koino: koinoAdatok,
@@ -499,6 +511,61 @@ export function allapotSzamitasa(esemenyek) {
  *
  * @param {Map} entitasok - azonosító → entitás (helyben kap `agMeret` mezőt)
  */
+/**
+ * ⭐ A SZERKEZET ÚJRAIGAZÍTÁSA, miután entitások TŰNTEK EL.
+ *
+ * Két lépés, mindig együtt: az árvák felkerülnek a legközelebbi élő felmenőhöz, és az
+ * ág-méretek újraszámolódnak. ⚠️ A **harmadik fázis** (`szerkesztesiVegrehajtas.js`) is
+ * ezt hívja a `Torles`/`Egyesites` után — így a felejtés és a törlés UGYANAZT a szerkezetet
+ * hagyja maga után, nem kétfélét.
+ *
+ * @param {Map} entitasok - a megmaradt entitások (helyben módosul)
+ * @param {Map} eredetiSzulok - azonosító → szülő, MÉG az eltűnés előtti állapotból
+ */
+export function szerkezetIgazitasa(entitasok, eredetiSzulok) {
+  arvakFelkerulese(entitasok, eredetiSzulok);
+  agMeretekSzamitasa(entitasok);
+}
+
+/**
+ * ⭐⭐ AZ ÁRVÁK FELKERÜLÉSE — a prototípus törlési kaszkádja (2026-09-07).
+ *
+ * Ha egy entitást elfelejtettek (0 tudatpont, D14), a gyerekei **nem tűnnek el vele**:
+ * a **legközelebbi még létező felmenőhöz** kerülnek. Ha nincs ilyen, a gyökérre.
+ *
+ * ⚠️⚠️ ÉS EGY KÜLÖNBSÉGTÉTEL, AMI A PROTOTÍPUSBAN NEM LÉTEZHETETT: a hiányzó szülő itt
+ * KÉTFÉLE lehet. Ha ISMERTÜK és elfelejtették → felkerülés. Ha SOHA NEM LÁTTUK (a
+ * létrehozó eseménye még nem érkezett meg) → **nem nyúlunk hozzá**: az hiány, nem tény
+ * (D19). Különben egy lemaradt készüléken a fél pakli a gyökérre ugrana, és a hiányzó
+ * esemény megérkezésekor visszaugrana — vagyis két gép mást mutatna ugyanarról.
+ *
+ * @param {Map} entitasok - azonosító → entitás (helyben módosul a `szulo` mezője)
+ * @param {Map} eredetiSzulok - azonosító → szülő, MÉG A FELEJTÉS ELŐTTI állapotból
+ */
+function arvakFelkerulese(entitasok, eredetiSzulok) {
+  /** A legközelebbi LÉTEZŐ felmenő — az elfelejtetteken átlépve. */
+  const legkozelebbiLetezo = (azonosito) => {
+    const latott = new Set();
+    let jaro = azonosito;
+    while (jaro !== null && !entitasok.has(jaro)) {
+      // ⛔ Kör-őr: elvileg nem lehet, de egy kör itt végtelen ciklus lenne.
+      if (latott.has(jaro)) return null;
+      latott.add(jaro);
+      // ⚠️ Csak az ELFELEJTETT szülőn lépünk át. Amit sosem ismertünk, ott megállunk.
+      if (!eredetiSzulok.has(jaro)) return undefined;
+      jaro = eredetiSzulok.get(jaro) ?? null;
+    }
+    return jaro;
+  };
+
+  for (const entitas of entitasok.values()) {
+    if (entitas.szulo === null || entitasok.has(entitas.szulo)) continue;
+    const uj = legkozelebbiLetezo(entitas.szulo);
+    if (uj === undefined) continue;             // nem ismerjük — hiány, nem tény (D19)
+    entitas.szulo = uj;
+  }
+}
+
 function agMeretekSzamitasa(entitasok) {
   // ----- 1. SZÜLŐ → HÁNY GYEREKE VAN (egyetlen menet) -----
   const hatralevoGyerek = new Map();

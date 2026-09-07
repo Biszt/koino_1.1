@@ -253,13 +253,84 @@ proba('⛔⛔ ÁTHELYEZÉS, AMI KÖRT CSINÁLNA: kihagyva, és megmondja, miért
 // 5. ⛔ AMI NINCS MEGÉPÍTVE — de LÁTSZIK
 // ===================================
 
-proba('⛔ ISMERT, de végrehajtó nélküli művelet (Torles): kihagyva, nem néma', async () => {
-  const e = await eset({ muvelet: 'Torles', valtozas: null });
+proba('⛔ ISMERT, de végrehajtó nélküli művelet (Egyesites): kihagyva, nem néma', async () => {
+  // ⚠️ 2026-09-07-ig a `Torles` volt itt a példa; azóta annak VAN végrehajtója. Az
+  // `Egyesites` maradt: az az egyetlen, ami ÚJ ENTITÁST szül.
+  const e = await eset({ muvelet: 'Egyesites', valtozas: null });
   const k = kep(e.esemenyek);
   return k.alkalmazottak.length === 0
     && k.kihagyottak.length === 1
-    && k.kihagyottak[0].muvelet === 'Torles'
+    && k.kihagyottak[0].muvelet === 'Egyesites'
     && k.kihagyottak[0].ok.includes('még nincs végrehajtó');
+});
+
+// ===================================
+// ⭐⭐ TÖRLÉS (2026-09-07)
+// ===================================
+//
+// A prototípusban a törlés NEM külön mechanizmus: `tudatpontokVisszaosztasa` — mindenki
+// visszakapja a pontjait, és az entitás ettől szűnik meg létezni (D14). A koinóban a
+// visszaosztást nem tehetjük meg más nevében (aláírt esemény), de az EREDMÉNY ugyanaz.
+
+proba('⭐⭐ A TÖRLÉSI egyezmény MEGSZÜNTETI az entitást', async () => {
+  const e = await eset({ muvelet: 'Torles', valtozas: null });
+  const k = kep(e.esemenyek);
+
+  return k.allapot.entitasok.has(e.gondolat.azonosito) === false
+    && k.allapot.elfelejtettek.includes(e.gondolat.azonosito)
+    && k.alkalmazottak.length === 1
+    && k.alkalmazottak[0].muvelet === 'Torles';
+});
+
+proba('⛔ …DE CSAK ELFOGADÁS UTÁN — a folyamatban lévő törlés nem tüntet el semmit', async () => {
+  const e = await eset({ muvelet: 'Torles', valtozas: null });
+  const k = kep(e.esemenyek, KEZDET + 3000);        // a döntési idő még nem telt le
+  return k.allapot.entitasok.has(e.gondolat.azonosito) === true
+    && k.alkalmazottak.length === 0;
+});
+
+proba('⭐⭐⭐ A TÖRÖLT ENTITÁS GYEREKEI FELKERÜLNEK A NAGYSZÜLŐHÖZ (a prototípus kaszkádja)', async () => {
+  const gazda = await ujEember();
+  const esemenyek = [];
+
+  // nagyszülő → szülő (ezt töröljük) → gyerek
+  const nagyszulo = await gazda.tesz('GondolatLetrehozas', { cim: 'NAGYSZÜLŐ', meret: 10 }, KEZDET);
+  esemenyek.push(nagyszulo);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: nagyszulo.azonosito, pont: 10 }, KEZDET));
+
+  const szulo = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'SZÜLŐ', meret: 10, szulo: nagyszulo.azonosito }, KEZDET);
+  esemenyek.push(szulo);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: szulo.azonosito, pont: 10 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: szulo.azonosito, ertekek: KUSZOBOK }, KEZDET));
+
+  const gyerek = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'GYEREK', meret: 10, szulo: szulo.azonosito }, KEZDET);
+  esemenyek.push(gyerek);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 10 }, KEZDET));
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: szulo.azonosito, muvelet: 'Torles', valtozas: null }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  // ⚠️ A javaslat IS entitás: tudatpont nélkül a D14 szerint nem létezne, és akkor az
+  // „egyezmény helye" kérdésnek sem lenne alanya.
+  esemenyek.push(await gazda.tesz('TudatpontRendezes',
+    { entitas: javaslat.azonosito, pont: 10 }, KEZDET + 1500));
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+
+  const k = kep(esemenyek);
+
+  return k.allapot.entitasok.has(szulo.azonosito) === false
+    // ⭐ A gyerek NEM tűnt el, és NEM lóg a semmiben: a nagyszülőhöz került.
+    && k.allapot.entitasok.get(gyerek.azonosito)?.szulo === nagyszulo.azonosito
+    // ⭐ …és ettől az ág-méret is helyes: a nagyszülő ága tartalmazza a gyereket.
+    && k.allapot.entitasok.get(nagyszulo.azonosito).agMeret === 20
+    // ⭐⭐ ÉS AZ EGYEZMÉNY HELYE: a javaslat-entitás szülője az érintett volt — az eltűnt,
+    // tehát ő is a nagyszülőhöz került. Ez a leltár 2.2 pontja, külön szabály nélkül.
+    && k.allapot.entitasok.get(javaslat.azonosito)?.szulo === nagyszulo.azonosito;
 });
 
 proba('⛔ ISMERETLEN művelet: szintén kihagyva, megnevezve', async () => {
@@ -354,8 +425,8 @@ proba('⭐⭐ KÉT ÉRINTETT, KÉT KÜLÖNBÖZŐ MŰVELET — mindkettő végreh
 proba('⛔⛔ EGY ELEM ELAKADÁSA NEM DÖNTI EL A TÖBBIT — és megmondja, melyik akadt el', async () => {
   const e = await csomagEset(([a, b]) => [
     { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } },
-    // ⚠️ Ez elakad: a művelet ismert, de nincs végrehajtója (Torles).
-    { entitas: b.azonosito, muvelet: 'Torles', valtozas: null }
+    // ⚠️ Ez elakad: nem létező szülő alá helyezné (a másik elemnek ehhez semmi köze).
+    { entitas: b.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: 'nincs-ilyen-entitas' } }
   ]);
   const k = kep(e.esemenyek);
   const [a, b] = e.gondolatok;
@@ -365,7 +436,7 @@ proba('⛔⛔ EGY ELEM ELAKADÁSA NEM DÖNTI EL A TÖBBIT — és megmondja, mel
     && k.allapot.entitasok.get(a.azonosito).cim === 'ÁTÍRVA'
     && k.kihagyottak.length === 1
     && k.kihagyottak[0].erintett === b.azonosito
-    && k.kihagyottak[0].muvelet === 'Torles';
+    && k.kihagyottak[0].muvelet === 'Athelyezes';
 });
 
 proba('⭐ A RÉGI ALAK (egyetlen `erintett`) VÁLTOZATLANUL fut — az aláírás nem írható át', async () => {

@@ -1,4 +1,4 @@
-﻿// koino/js/allapot/szerkesztesiVegrehajtas.js
+// koino/js/allapot/szerkesztesiVegrehajtas.js
 
 // Felelősség: RÁVEZETNI az elfogadott egyezményeket az entitásokra.
 //
@@ -36,21 +36,18 @@
 //
 // Használják: a `koino.js` állapot-képe és a `pakli.js`.
 
+import { szerkezetIgazitasa } from './allapotSzamitas.js';
+
 // ===================================
 // A MŰVELETEK
 // ===================================
 //
 // A domain négy szerkesztési műveletet ismer: módosítás, áthelyezés, törlés, egyesítés.
 //
-// ⚠️⚠️ MA KETTŐ VAN MEGÉPÍTVE, ÉS EZ TUDATOS. Javaslatot ma csak `Modositas` művelettel
-// lehet létrehozni (`muveletek.js` alapértéke, és a parancssor is azt adja) — a másik három
-// eseményt **semmi nem tudja előállítani**. Az `Athelyezes` mégis bekerült, mert néhány sor
-// és van benne egy valódi csapda (a kör); a `Torles` és az `Egyesites` viszont NEM
-// részletkérdés: a törlés a tudatpontok visszaosztását kívánja, az egyesítés két szelet
-// összefésülését. ⭐ Ezeket akkor építjük meg, amikor a hozzájuk tartozó művelet is
-// megszületik — addig a váz megvan, és **a hiány LÁTSZIK** (a `kihagyottak` listában),
-// nem néma.
-export const VEGREHAJTHATO = ['Modositas', 'Athelyezes'];
+// ⭐ 2026-09-07 óta HÁROM van megépítve — a `Torles` is. Az `Egyesites` maradt utoljára,
+// mert az az egyetlen, ami **ÚJ ENTITÁST SZÜL**: kell hozzá egy azonosító, amit senki nem
+// írt alá. ⚠️ Amíg nincs kész, a hiány **LÁTSZIK** (a `kihagyottak` listában), nem néma.
+export const VEGREHAJTHATO = ['Modositas', 'Athelyezes', 'Torles'];
 export const ISMERT_MUVELETEK = ['Modositas', 'Athelyezes', 'Torles', 'Egyesites'];
 
 // ===================================
@@ -118,6 +115,49 @@ function athelyezes(entitas, valtozas, entitasok) {
   return { rendben: true, mezok: ['szulo'] };
 }
 
+/**
+ * ⭐⭐ TÖRLÉS — és a prototípusban ez NEM „törlés", hanem VISSZAOSZTÁS.
+ *
+ * A `torlesiVegrehajto.js` egyetlen érdemi lépést tesz: `tudatpontokVisszaosztasa` —
+ * mindenkinek visszaadja a pontjait az entitásról, és **az entitás ettől szűnik meg
+ * létezni**, mert 0 pontnál a modell szerint nincs is (D14). *A törlés tehát nem külön
+ * mechanizmus, hanem a felejtés kiváltása.*
+ *
+ * ⚠️⚠️ ÉS ITT EGY VALÓDI ELTÉRÉS, AMIT KI KELL MONDANI. A prototípus szervere **mások
+ * nevében** állította nullára a pontokat. A koinóban ez **lehetetlen és nem is szabad**: a
+ * tudatpont-rendezés ALÁÍRT esemény, és senki nem írhat alá helyettem (D15). Ezért:
+ *
+ *   · az entitás **megszűnik létezni** — ez a prototípus eredménye, és ez a fontos;
+ *   · a pontok viszont a gazdájuk keretében **maradnak lekötve**, amíg ő maga vissza nem
+ *     veszi őket egy `TudatpontRendezes(entitás, 0)` eseménnyel — ez a **kézi út**
+ *     (4. szabály), és a felület fel is ajánlhatja.
+ *
+ * ⭐ A gyerekek NEM tűnnek el: a `szerkezetIgazitasa` felviszi őket a legközelebbi élő
+ * felmenőhöz — pontosan a prototípus kaszkádja.
+ *
+ * ⭐ És ezzel **az egyezmény helye is megoldódik magától** (a leltár 2.2 pontja: *„Törlés →
+ * az érintett szülője"*): a szerkesztési egyezmény ugyanaz az entitás, mint a javaslat, a
+ * szülője pedig az érintett — ha az érintett eltűnik, az árva-szabály **felviszi a törölt
+ * entitás szülőjéhez**. Külön eset nélkül, ugyanabból a szabályból.
+ */
+function torles(entitas, allapot) {
+  allapot.entitasok.delete(entitas.azonosito);
+
+  // ⭐ FELSOROLJUK, MI TŰNT EL — ugyanabban a listában, ahol a felejtés is látszik (D19).
+  // Így a felület egy helyről tudja megmondani: „ez az entitás már nincs".
+  if (Array.isArray(allapot.elfelejtettek) && !allapot.elfelejtettek.includes(entitas.azonosito)) {
+    allapot.elfelejtettek.push(entitas.azonosito);
+  }
+
+  return {
+    rendben: true,
+    eltunt: true,
+    mezok: ['torolve'],
+    // A gazdák, akiknek a pontja lekötve maradt — a felület ebből ajánlhatja a visszavételt.
+    lekotottGazdak: [...entitas.hozzajarulok.keys()]
+  };
+}
+
 // ===================================
 // AZ ALKALMAZÁS
 // ===================================
@@ -163,13 +203,30 @@ export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
   // művelettel** — a prototípus `erintettEntitasok` tömbje minden elemen saját `muvelet`-et
   // hordoz. Ezért a lista minden elemét külön hajtjuk végre, és külön is számoljuk be az
   // alkalmazottak/kihagyottak közé: egy elem elakadása nem dönti el a többit.
+  //
+  // ⭐ A SZÜLŐKET ELŐRE FELJEGYEZZÜK, mert a `Torles` után már nem olvashatók ki — pontosan
+  // úgy, ahogy a prototípus `torlesiVegrehajto`-ja is a törlés ELŐTT olvassa ki a szülőt
+  // (*„a törlés UTÁN már nem olvasható ki"*).
+  const eredetiSzulok = new Map();
+  for (const [azonosito, e] of allapot.entitasok) eredetiSzulok.set(azonosito, e.szulo ?? null);
+  let eltunt = false;
+
   for (const egyezmeny of sorban) {
     const kik = Array.isArray(egyezmeny.erintettek) && egyezmeny.erintettek.length
       ? egyezmeny.erintettek
       : [{ entitas: egyezmeny.erintett, muvelet: egyezmeny.muvelet, valtozas: egyezmeny.valtozas }];
 
-    for (const resz of kik) egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak);
+    for (const resz of kik) {
+      const eredmeny = egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak);
+      if (eredmeny?.eltunt) eltunt = true;
+    }
   }
+
+  // ----- 4. ⭐ A SZERKEZET ÚJRAIGAZÍTÁSA, HA TŰNT EL ENTITÁS -----
+  // A törlés és az egyesítés entitásokat vesz ki a térképből — az árváknak fel kell
+  // kerülniük a legközelebbi élő felmenőhöz, és az ág-méretek elavultak. ⭐ Ugyanaz a
+  // lépés, mint a felejtésnél (D14): egy forrásból, hogy a kettő ne csúszhasson szét.
+  if (eltunt) szerkezetIgazitasa(allapot.entitasok, eredetiSzulok);
 
   // ⭐ A KIHAGYOTTAKAT FELSOROLJUK, NEM ELHALLGATJUK — ugyanaz a minta, mint a
   // `szabalyok.js` szabálysértő eseményeinél (D19): a program bejelent, nem bíráskodik.
@@ -207,6 +264,8 @@ function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyotta
     eredmeny = modositas(entitas, resz.valtozas);
   } else if (muvelet === 'Athelyezes') {
     eredmeny = athelyezes(entitas, resz.valtozas, allapot.entitasok);
+  } else if (muvelet === 'Torles') {
+    eredmeny = torles(entitas, allapot);
   } else if (ISMERT_MUVELETEK.includes(muvelet)) {
     // ⭐ ISMERT, DE MÉG NINCS VÉGREHAJTÓJA — és ez LÁTSZIK, nem néma.
     eredmeny = { rendben: false, ok: 'ehhez a művelethez még nincs végrehajtó' };
@@ -225,4 +284,5 @@ function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyotta
       muvelet, ok: eredmeny.ok
     });
   }
+  return eredmeny;
 }

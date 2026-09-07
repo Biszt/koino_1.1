@@ -19,6 +19,8 @@
 //   node koino/koino.js gondolat "Cím" "szöveg"  — új gondolat (+100 tudatpont)
 //   node koino/koino.js pont <azonosító> <pont> [passziv]
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
+//   node koino/koino.js torol <azonosító> ["indoklás"]
+//   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
@@ -340,8 +342,13 @@ async function allapotKiirasa(napokMulva) {
     // rész buktatja el az egészet.
     for (const r of (j.reszek ?? [])) {
       const jel = r.kuszobTeljesul ? SZIN.jo + '✔' : SZIN.nem + '✘';
+      // ⚠️ KÉTFÉLE HIÁNY, KÉTFÉLE SZÓ: amit ismertünk és eltűnt (törlés vagy felejtés),
+      // az „már nincs"; amiről sosem hallottunk, az „ismeretlen". A kettő összemosása
+      // pont azt a különbséget tüntetné el, amit a D19 véd.
+      const cel = allapot.entitasok.get(r.entitas)?.cim
+        ?? (allapot.elfelejtettek.includes(r.entitas) ? '— már nincs —' : 'ismeretlen');
       kiir('      ' + SZIN.halvany + '↳ ' + jel + SZIN.vege + SZIN.halvany + ' ' + r.muvelet + ': '
-        + '„' + (allapot.entitasok.get(r.entitas)?.cim ?? 'ismeretlen') + '"'
+        + '„' + cel + '"'
         + (r.valtozas?.cim ? ' → „' + r.valtozas.cim + '"' : '')
         + '  👍 ' + r.tamogatok + ' 👎 ' + r.ellenzok + ' 🤷 ' + r.tartozkodok
         + ' (' + r.szavazok + '/' + r.nevezo + ')'
@@ -488,15 +495,39 @@ try {
       break;
     }
 
-    case 'javaslat': {
+    // ⭐ HÁROM PARANCS, EGY ÚT. A `javaslat`, a `torol` és az `athelyez` ugyanazt teszi —
+    // csak a MŰVELET más az érintetten. ⚠️ A 4. szabály miatt kell mindháromnak kézi út:
+    // ami csak a felületről indítható, az fojtópont.
+    case 'javaslat':
+    case 'torol':
+    case 'athelyez': {
       const { allapot } = await kepetKeszit();
       const erintett = feloldas(ervek[0] ?? '', allapot.entitasok.keys());
-      const ujCim = ervek[1];
-      if (!ujCim) throw new Error('Mi legyen az új cím?');
+
+      let muvelet, valtozas, indoklas;
+      if (parancs === 'javaslat') {
+        if (!ervek[1]) throw new Error('Mi legyen az új cím?');
+        muvelet = 'Modositas';
+        valtozas = { cim: ervek[1] };
+        indoklas = ervek[2] ?? null;
+      } else if (parancs === 'torol') {
+        muvelet = 'Torles';
+        valtozas = null;
+        indoklas = ervek[1] ?? null;
+      } else {
+        // ⭐ A „gyoker" szó a gyökérre helyezést jelenti — a `null` szülőt a parancssorban
+        // nem lehet leírni, és az üres érv félreérthető lenne.
+        const hova = ervek[1];
+        if (!hova) throw new Error('Hova helyezzük? (azonosító vagy „gyoker")');
+        muvelet = 'Athelyezes';
+        valtozas = { szulo: hova === 'gyoker' ? null : feloldas(hova, allapot.entitasok.keys()) };
+        indoklas = ervek[2] ?? null;
+      }
 
       const e = await javaslatLetrehozasa(kornyezet, {
-        fajta: 'szerkesztesi', erintett, muvelet: 'Modositas',
-        valtozas: { cim: ujCim }, indoklas: ervek[2] ?? null
+        fajta: 'szerkesztesi',
+        erintettek: [{ entitas: erintett, muvelet, valtozas }],
+        indoklas
       });
 
       // ⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) — tehát tudatpont nélkül a D14 szerint
@@ -505,9 +536,14 @@ try {
       await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
         szetosztottPontok(kepUtan, szerzo));
 
-      kiir('Szerkesztési javaslat beadva: ' + e.azonosito.slice(0, 8));
+      kiir('Szerkesztési javaslat beadva (' + muvelet + '): ' + e.azonosito.slice(0, 8));
       kiir(SZIN.halvany + 'Kapott ' + KEZDO_PONT + ' tudatpontot tőled — a javaslat is '
         + 'entitás, enélkül a koino elfelejtené.' + SZIN.vege);
+      if (muvelet === 'Torles') {
+        // ⚠️ A KÉZI ÚT KIMONDVA: a koino nem veheti vissza más nevében a pontokat.
+        kiir(SZIN.halvany + 'Ha elfogadják, a gondolat megszűnik létezni — a rátett '
+          + 'tudatpontodat te magad veheted vissza: pont <azonosító> 0' + SZIN.vege);
+      }
       kiir(SZIN.halvany + 'Most szavazhatsz rá: node koino/koino.js szavaz '
         + e.azonosito.slice(0, 8) + ' tamogat' + SZIN.vege);
       break;
@@ -1693,6 +1729,7 @@ try {
       kiir('Ismeretlen parancs: ' + parancs);
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · gondolat <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
+      kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');

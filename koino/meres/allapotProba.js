@@ -36,6 +36,83 @@ proba('Tudatpont NÉLKÜL az entitás nem létezik (közösségi felejtés)', as
   return a.entitasok.size === 0 && a.elfelejtettek.length === 1;
 });
 
+// ===== ⭐⭐ AZ ÁRVÁK FELKERÜLÉSE (2026-09-07) =====
+//
+// A prototípus `entitasTorleseEllenorzese`-je a 0 pontos entitás törlésekor **minden
+// gyerekének átírja a szülőjét a törölt entitás szülőjére** (kaszkád = FELKERÜLÉS, nem
+// törlés). ⛔ A koino ezt eddig nem tette meg: a gyerek egy nem létező szülőre mutatott,
+// ezért az ág-összesítés ott MEGSZAKADT.
+
+/** nagyszülő → szülő → gyerek, tetszőleges pontokkal. */
+async function harmasLanc(ki, szuloPont) {
+  const ev = [];
+  const nagy = await ki.tesz('GondolatLetrehozas', { cim: 'NAGY', meret: 10 });
+  ev.push(nagy, await ki.tesz('TudatpontRendezes', { entitas: nagy.azonosito, pont: 10 }));
+
+  const kozep = await ki.tesz('GondolatLetrehozas', { cim: 'KÖZÉP', meret: 10, szulo: nagy.azonosito });
+  ev.push(kozep, await ki.tesz('TudatpontRendezes', { entitas: kozep.azonosito, pont: szuloPont }));
+
+  const also = await ki.tesz('GondolatLetrehozas', { cim: 'ALSÓ', meret: 10, szulo: kozep.azonosito });
+  ev.push(also, await ki.tesz('TudatpontRendezes', { entitas: also.azonosito, pont: 10 }));
+
+  return { ev, nagy, kozep, also };
+}
+
+proba('⭐⭐ AZ ELFELEJTETT SZÜLŐ GYEREKE A NAGYSZÜLŐHÖZ KERÜL — nem lóg a semmiben', async () => {
+  const anna = await ujEember();
+  const { ev, nagy, kozep, also } = await harmasLanc(anna, 0);   // a közép 0 pontos → elfelejtve
+
+  const a = allapotSzamitasa(ev);
+  return a.entitasok.has(kozep.azonosito) === false
+      && a.entitasok.get(also.azonosito).szulo === nagy.azonosito
+      // ⭐ …és az ÁG-MÉRET is helyes: eddig itt megszakadt az összesítés.
+      && a.entitasok.get(nagy.azonosito).agMeret === 20;
+});
+
+proba('⭐ …ÉS A PRÓBA NEM VAK: ha a közép megmarad, a gyerek NEM ugrik fel', async () => {
+  const anna = await ujEember();
+  const { ev, kozep, also } = await harmasLanc(anna, 10);        // ⭐ EGYETLEN különbség
+
+  const a = allapotSzamitasa(ev);
+  return a.entitasok.has(kozep.azonosito) === true
+      && a.entitasok.get(also.azonosito).szulo === kozep.azonosito;
+});
+
+proba('⭐⭐ TÖBB SZINT is átugorható: két elfelejtett felmenőn keresztül is felér', async () => {
+  const anna = await ujEember();
+  const ev = [];
+  const gyoker = await anna.tesz('GondolatLetrehozas', { cim: 'GYÖKÉR', meret: 10 });
+  ev.push(gyoker, await anna.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 10 }));
+
+  // Két egymás utáni 0 pontos szint
+  const a1 = await anna.tesz('GondolatLetrehozas', { cim: 'A1', meret: 10, szulo: gyoker.azonosito });
+  ev.push(a1);
+  const a2 = await anna.tesz('GondolatLetrehozas', { cim: 'A2', meret: 10, szulo: a1.azonosito });
+  ev.push(a2);
+
+  const also = await anna.tesz('GondolatLetrehozas', { cim: 'ALSÓ', meret: 10, szulo: a2.azonosito });
+  ev.push(also, await anna.tesz('TudatpontRendezes', { entitas: also.azonosito, pont: 10 }));
+
+  const a = allapotSzamitasa(ev);
+  return a.entitasok.size === 2 && a.entitasok.get(also.azonosito).szulo === gyoker.azonosito;
+});
+
+proba('⛔⛔ AMIT SOHA NEM LÁTTUNK, AHHOZ NEM NYÚLUNK — a hiány nem tény (D19)', async () => {
+  // ⚠️ Ez a KÜLÖNBSÉGTÉTEL, ami a prototípusban nem létezhetett: ott minden entitás
+  // megvolt az adatbázisban. Itt a hiányzó szülő KÉTFÉLE lehet — elfelejtett vagy még
+  // meg nem érkezett. Ha az utóbbit is felvinnénk a gyökérre, egy lemaradt készüléken
+  // fél pakli ugrana át, majd a hiányzó esemény megérkezésekor vissza — vagyis két gép
+  // MÁST mutatna ugyanarról.
+  const anna = await ujEember();
+  const ismeretlenSzulo = 'meg-nem-erkezett-entitas';
+  const gyerek = await anna.tesz('GondolatLetrehozas',
+    { cim: 'GYEREK', meret: 10, szulo: ismeretlenSzulo });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 10 });
+
+  const a = allapotSzamitasa([gyerek, pont]);
+  return a.entitasok.get(gyerek.azonosito).szulo === ismeretlenSzulo;
+});
+
 proba('A pont ELVÉTELE (0) után az entitás eltűnik', async () => {
   const anna = await ujEember();
   const gondolat = await anna.tesz('GondolatLetrehozas', { cim: 'Meggondoltam', meret: 50 });
