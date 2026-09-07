@@ -329,3 +329,47 @@ export function szeletJegyzekTarolo(hely = alapHely()) {
     }
   };
 }
+
+// ===================================
+// A FELSZABADÍTÁSI FELJEGYZÉS TÁROLÁSA
+// ===================================
+
+/**
+ * „Mikor láttam ELŐSZÖR töröltnek?" — entitásonként egy időpont.
+ *
+ * ⭐ MIRE VALÓ? A törölt gondolatra tett tudatpontomat a készülékem magától visszaveszi —
+ * de **csak megülepedés után** (`js/allapot/felszabaditas.js`), mert egy késve érkező, de
+ * határidőn belüli szavazat még visszafordíthatja a döntést. Ez a fájl tartja az órát.
+ *
+ * ⚠️ **Helyi feljegyzés, nem esemény** (3. szabály): sosem terjed, két készüléken mást
+ * jelent, és semmit nem dönt el a koinóban — csak azt, hogy MIKOR könyvelek. Ha elveszik,
+ * az óra újraindul: legrosszabb esetben egy nappal később szabadul fel a pont.
+ *
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function felszabaditasTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'felszabaditas.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Object>} entitás → mikor láttuk először töröltnek */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        return (adat && typeof adat === 'object' && !Array.isArray(adat)) ? adat : {};
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return {};
+        console.warn('felszabaditasTarolo - olvashatatlan feljegyzés, üresnek vesszük', { fajl });
+        return {};
+      }
+    },
+
+    /** @param {Object} jegyzet */
+    async ir(jegyzet) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify(jegyzet, null, 2), 'utf8');
+    }
+  };
+}

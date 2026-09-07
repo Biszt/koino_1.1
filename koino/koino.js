@@ -22,6 +22,7 @@
 //   node koino/koino.js torol <azonosító> ["indoklás"]
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
+//   node koino/koino.js felszabadit
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
@@ -52,15 +53,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import {
-  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, alapHely
+  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely
 } from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
 } from './js/kulcs/kulcsTar.js';
 import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
-import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamitas.js';
+import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
+import { felszabaditas, MEGULEPEDES } from './js/allapot/felszabaditas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
@@ -109,6 +111,9 @@ const { kulcspar, ujE } = await kulcsparBiztositasa(tarolo);
 const szerzo = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
 const tar = await esemenyTarNyitasa(KOINO);
 
+// ⭐ Az elakadt tudatpontok órája — HELYI feljegyzés, nem esemény (3. szabály).
+const felszabaditasJegyzet = felszabaditasTarolo();
+
 const kornyezet = { koino: KOINO, kulcspar, szerzo, tar };
 
 if (ujE) {
@@ -149,6 +154,52 @@ async function kepetKeszit(napokMulva = 0) {
   szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
 
   return { esemenyek, allapot, javaslatok };
+}
+
+// ===================================
+// ⭐⭐ AZ ELAKADT TUDATPONT FELSZABADÍTÁSA
+// ===================================
+
+/**
+ * A készülék MAGÁTÓL visszaveszi a pontot a törölt gondolatokról — megülepedés után.
+ *
+ * ⭐ MIÉRT SZABAD EZT A KÉSZÜLÉKNEK? Mert a koino **az én készülékemen fut, az én
+ * kulcsommal**: nem más ír alá helyettem, hanem a saját készülékem könyvel. A `javaslat`
+ * parancs ma is aláír egy második eseményt magától (a tudatpontot a javaslatra).
+ *
+ * ⚠️ ÉS AMIÉRT NEM AZONNAL: egy késve érkező, de határidőn belüli szavazat még
+ * visszafordíthatja a törlést — ilyenkor a gondolat a pontom NÉLKÜL térne vissza.
+ * Részletek és próbák: `js/allapot/felszabaditas.js`.
+ *
+ * @param {boolean} [hangos] - írja-e ki, mit tett
+ * @returns {Promise<number>} hány pontot szabadított fel
+ */
+async function elakadtPontokFelszabaditasa(hangos = false, varakozas = MEGULEPEDES) {
+  const { allapot } = await kepetKeszit();
+  const jegyzet = await felszabaditasJegyzet.olvas();
+  const terv = felszabaditas(allapot, szerzo, jegyzet, Date.now(), varakozas);
+
+  // A feljegyzést AKKOR is írjuk, ha még nincs mit felszabadítani — az óra ilyenkor indul.
+  await felszabaditasJegyzet.ir(terv.jegyzet);
+
+  // ⭐ A BEMONDOTT ÖSSZEGET NEM MI ADJUK: a `tudatpontRendezese` a SAJÁT LÁNCBÓL számolja
+  // (`sajatKiosztott`) — épp azért, hogy ne csúszhasson el attól, amit az ellenőrző számol.
+  // A `felszabaditoLepesek` ugyanezt az aritmetikát mondja ki tisztán, a felület kedvéért.
+  let osszesen = 0;
+  for (const tetel of terv.feloldhato) {
+    await tudatpontRendezese(kornyezet, tetel.entitas, 0);
+    osszesen += tetel.pont;
+  }
+
+  if (hangos && osszesen > 0) {
+    kiir(SZIN.halvany + '↩ ' + osszesen + ' tudatpont felszabadult törölt gondolatokról ('
+      + terv.lepesek.length + ' db) — a keretedbe visszakerült.' + SZIN.vege);
+  }
+  if (hangos && terv.varakozok.length) {
+    kiir(SZIN.halvany + '⏳ ' + terv.varakozok.reduce((s, v) => s + v.pont, 0)
+      + ' tudatpont törölt gondolaton áll — megülepedés után magától felszabadul.' + SZIN.vege);
+  }
+  return osszesen;
 }
 
 // ===================================
@@ -291,6 +342,18 @@ async function allapotKiirasa(napokMulva) {
     + ' · eseményeid: ' + (await sajatLancEsemenyei(tar, szerzo)).length
     + ' · esemény összesen: ' + esemenyek.length
     + (napokMulva ? ' · NÉZET: ' + napokMulva + ' nap múlva' : '') + SZIN.vege);
+
+  // ----- ⭐ ELAKADT TUDATPONT (2026-09-07) -----
+  // A törölt gondolatra tett pontom a keretemben marad, amíg vissza nem veszem. ⚠️ Ezt
+  // KI KELL ÍRNI, különben a szám (`tudatpontjaid`) érthetetlen: „miért van 300-am
+  // kiosztva, ha csak két gondolatot látok?" *A koino bejelent, nem hallgat (D19).*
+  const elakadt = elakadtPontok(allapot, szerzo);
+  if (elakadt.length) {
+    const osszeg = elakadt.reduce((s, e) => s + e.pont, 0);
+    kiir(SZIN.halvany + '↩ ebből ' + osszeg + ' pont törölt gondolaton áll ('
+      + elakadt.length + ' db) — a készülék magától visszaveszi, vagy: felszabadit'
+      + SZIN.vege);
+  }
 
   // ----- ELLENTMONDÁSOK (D19: bejelent, nem büntet) -----
   if (allapot.ellentmondasok.length || allapot.idoEllentmondasok.length || allapot.kivetelek.length) {
@@ -500,6 +563,57 @@ try {
     // ⭐ HÁROM PARANCS, EGY ÚT. A `javaslat`, a `torol` és az `athelyez` ugyanazt teszi —
     // csak a MŰVELET más az érintetten. ⚠️ A 4. szabály miatt kell mindháromnak kézi út:
     // ami csak a felületről indítható, az fojtópont.
+    // ⭐ A KÉZI ÚT a felszabadításhoz (4. szabály): ami magától megy, azt kézzel is
+    // el lehessen indítani — és lássam, mi van még várakozáson.
+    // ⭐ A KÜSZÖBÖK KÉZI ÚTJA (4. szabály). ⚠️ Ez eddig HIÁNYZOTT: az érték javaslatot
+    // csak a felület tudta beadni (`POST /api/ertekJavaslat`) — vagyis a küszöb-állítás
+    // böngésző-függő volt, pedig *„ha egy funkció csak online tud működni, az fojtópont"*.
+    // A hiányra a felszabadítás próbája világított rá: rövid döntési időt akartam
+    // beállítani, és nem volt mivel.
+    case 'ertek': {
+      const { allapot } = await kepetKeszit();
+      const entitas = feloldas(ervek[0] ?? '', allapot.entitasok.keys());
+
+      const szam = (ertek, nev) => {
+        const n = Number(ertek);
+        if (!Number.isInteger(n) || n < 0) throw new Error(nev + ': egész szám kell (kaptam: ' + ertek + ')');
+        return n;
+      };
+      if (ervek.length < 5) {
+        throw new Error('ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
+      }
+
+      const ertekek = {
+        elfogadasiKuszob: szam(ervek[1], 'elfogadási küszöb'),
+        reszveteliKuszob: szam(ervek[2], 'részvételi küszöb'),
+        minimumDontesiIdo: szam(ervek[3], 'minimum döntési idő'),
+        maximumDontesiIdo: szam(ervek[4], 'maximum döntési idő')
+      };
+      if (ertekek.maximumDontesiIdo < ertekek.minimumDontesiIdo) {
+        throw new Error('A maximum döntési idő nem lehet kisebb a minimumnál.');
+      }
+
+      await ertekJavaslat(kornyezet, entitas, ertekek);
+      kiir('Érték javaslat beadva: ' + rovidAzonosito(entitas));
+      kiir(SZIN.halvany + '⚠️ Ez JAVASLAT, nem parancs: az érvényes küszöb a tulajdonosok '
+        + 'érték javaslatainak MEDIÁNJA (D4).' + SZIN.vege);
+      break;
+    }
+
+    case 'felszabadit': {
+      // ⭐ A KÉZI ÚT TÜRELMETLENEBB LEHET, ÉS EZ SZÁNDÉKOS: az automata azért vár egy
+      // napot, mert nem tudhatja, megérkezett-e már minden szavazat. Aki KIMONDJA, hogy
+      // most, az tudja, mit vállal — ezért az óraszám itt megadható (0 = azonnal).
+      const oraban = ervek[0] === undefined ? null : parseFloat(ervek[0]);
+      const varakozas = oraban === null ? MEGULEPEDES : Math.max(0, oraban) * 3600 * 1000;
+      const felszabadult = await elakadtPontokFelszabaditasa(true, varakozas);
+      if (!felszabadult) {
+        kiir(SZIN.halvany + 'Most nincs felszabadítható pont.'
+          + (oraban === null ? ' (Türelmetlenül: felszabadit 0)' : '') + SZIN.vege);
+      }
+      break;
+    }
+
     case 'javaslat':
     case 'torol':
     case 'egyesit':
@@ -972,6 +1086,17 @@ try {
           kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
             + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
             + adatMennyiseg({ bajtKuldott: kor.bajt }) + SZIN.vege);
+        }
+
+        // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
+        // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
+        // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
+        // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
+        try {
+          await elakadtPontokFelszabaditasa(true);
+        } catch (hiba) {
+          // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
+          kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
         }
 
         await new Promise((teljesites) => setTimeout(teljesites, perc * 60 * 1000));
@@ -1767,6 +1892,8 @@ try {
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
+      kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
+      kiir('           felszabadit [óra]   (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');

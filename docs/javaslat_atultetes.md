@@ -257,13 +257,57 @@ lépést tesz: `tudatpontokVisszaosztasa` — mindenki visszakapja a pontjait az
 (`szerkesztesiVegrehajtas.js`: `torles`), a `torol` paranccsal együtt.
 
 ⚠️⚠️ **ÉS EGY VALÓDI ELTÉRÉS, amit ki kell mondani.** A prototípus szervere **mások nevében**
-állította nullára a pontokat. A koinóban ez **lehetetlen és nem is szabad**: a
-tudatpont-rendezés ALÁÍRT esemény, és senki nem írhat alá helyettem (D15). Ezért:
+állította nullára a pontokat. A koinóban más nem írhat alá helyettem (D15). Ezért az entitás
+**megszűnik létezni** — ez a prototípus eredménye, és ez a lényeg —, a pontok viszont a
+gazdájuk keretében maradnak, amíg vissza nem veszi őket.
 
-- az entitás **megszűnik létezni** — ez a prototípus eredménye, és ez a lényeg;
-- a pontok viszont a gazdájuk keretében **lekötve maradnak**, amíg ő maga vissza nem veszi
-  őket (`pont <azonosító> 0`) — ez a **kézi út** (4. szabály), és a `torol` parancs ki is
-  írja. A felület fel fogja ajánlani.
+### 2.6/b ⛔⛔ Csaba kérdése: *„ha nem veszi vissza, akkor az entitás hogyan törlődik?"*
+
+⭐ **Törlődik.** Az eltűnés **számítás az egyezményből**, nem a pontok nullázódásának
+következménye — minden készülék ugyanazt számolja, tehát a gondolat annak a paklijából is
+eltűnik, aki 100 pontot tart rajta. Amit „lekötve marad"-nak neveztem, az **csak a keret
+könyvelése**.
+
+⛔ **De a kérdés egy valódi hibát takart, és rosszabbat, mint amit mondtam.** Mérve:
+
+```
+a törölt entitás létezik-e?          false     (jó)
+szetosztottPontok (élő entitásokból)   100
+a szabály-réteg a saját láncból        200
+KIVÉTEL: "a bemondott összeg ellentmond a saját láncának"
+az új gondolat NEM jött létre
+```
+
+Vagyis a törlés után a készülék **következő tudatpont-eseménye elbukott**, és onnantól semmi
+újat nem tudott létrehozni. A gyökér: **két különböző definíció ugyanarra a számra** — a
+kettő eddig egyezett, mert egy entitás csak úgy tűnhetett el, ha mindenki 0-ra állt rajta.
+✅ Javítva: az állapot vezet egy **kiosztási főkönyvet**, és a „mennyit osztottam ki" abból
+számol (D42: *mit mondtam ki a saját láncomban*).
+
+### 2.6/c ⭐⭐ A FELSZABADÍTÁS AUTOMATIKUS — megülepedés után (Csaba döntése)
+
+Azt írtam, „nem lehet automatizálni", mert más nem írhat alá helyettem. Igaz — de **rossz
+következtetés**: a koino **az én készülékemen fut, az én kulcsommal**. Amikor a készülékem
+aláírja, hogy „leveszem a pontomat egy gondolatról, ami már nem létezik", az nem helyettem ír
+alá, hanem a saját készülékem könyvel. *(Precedens: a `javaslat` parancs ma is aláír egy
+második eseményt magától.)*
+
+⚠️ **Miért nem azonnal:** a koino szerint *„a késve MEGÉRKEZŐ, de a határidőn belüli
+időbélyegű szavazat jogosan módosítja az eredményt"* — tehát **egy törlés vissza is
+fordulhat**. Ha addigra felszabadítottunk, a gondolat a pontom nélkül térne vissza; ha csak
+az enyém volt rajta, a felszabadításom **maga törölné el**. ⭐ Ezért megülepedés
+(`js/allapot/felszabaditas.js`, alapból 1 nap): az óra a törlés első meglátásakor indul, és
+**újraindul, ha a döntés visszafordul**. A várakozás ingyen van — a 2.6/b javítás után a
+koino az elakadt ponttal is hibátlanul működik.
+
+⛔ **Egy csapdát is ki kellett kerülni:** a **beolvasztott** (egyesített) forrás ugyanúgy
+„eltűnt", de ott a pont **átment az elnyelőbe**. Ha a felszabadítás a puszta `elfelejtettek`
+listát nézné, ráírna egy `pont: 0`-t — és a következő számításnál az egyesítés **nem találná
+meg a pontjaimat**, vagyis a felszabadítás **elvenné, amit megőrizni akar**. Ezért a törlés
+külön listát vezet (`allapot.torlesek`). *Ugyanaz a szó, két ellentétes következmény.*
+
+Az `orjarat` minden körben elvégzi; a kézi út a `felszabadit [óra]` (0 = azonnal), és az
+állapot kiírja, mennyi pont áll még törölt gondolaton.
 
 ✅ **AZ `Egyesites` IS MEGÉPÜLT (2026-09-07)** — ez volt az utolsó, és jó okkal: ez az
 EGYETLEN művelet, ami entitásokat von össze. A prototípus `egyesitesiVegrehajto.js`-e
