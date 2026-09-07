@@ -381,8 +381,14 @@ export function allapotSzamitasa(esemenyek) {
   }
 
   // ----- TUDATPONTOK BEÍRÁSA -----
+  // ⭐ MENET KÖZBEN A KIOSZTÁSI FŐKÖNYVET IS VEZETJÜK — az entitás létezésétől
+  // függetlenül. Ez a D42 bemondott összegének forrása (lásd `szetosztottPontok`).
+  const kiosztasok = new Map();
+
   for (const [kulcs, bejegyzes] of pontok.ertekek) {
     const [szerzo, entitasAzonosito] = kulcs.split('|');
+    if (bejegyzes.ertek.pont > 0) kiosztasok.set(kulcs, bejegyzes.ertek.pont);
+
     const entitas = entitasok.get(entitasAzonosito);
     if (!entitas) continue;                           // olyan entitásra mutat, amit nem ismerünk
     if (bejegyzes.ertek.pont <= 0) continue;          // a 0 pont = elvette a pontját
@@ -462,6 +468,12 @@ export function allapotSzamitasa(esemenyek) {
     ellentmondasok,
     // Visszafelé lépő idő a saját láncban (lásd fentebb) — jelzés, nem büntetés
     idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
+    // ⭐⭐ A KIOSZTÁSI FŐKÖNYV: "szerző|entitás" → pont, FÜGGETLENÜL attól, hogy az entitás
+    // létezik-e még. Ez a D42 bemondott összegének forrása — ugyanaz, amit a szabály-réteg
+    // számol a láncból. ⚠️ Külön kell az entitások `hozzajarulok` térképétől: az arra
+    // válaszol, hogy „ki tartja EZT a gondolatot", ez pedig arra, hogy „mit mondtam ki a
+    // saját láncomban". *Két kérdés, két válasz.*
+    kiosztasok,
     // Szabályt sértő események (keret, jogosultság) — szintén jelzés, nem büntetés (D19)
     kivetelek,
     // ⚠️ A HARMADIK KATEGÓRIA: az esemény SZÁMÍT, csak valamit nem tudtunk ellenőrizni
@@ -611,16 +623,65 @@ function agMeretekSzamitasa(entitasok) {
  * szétosztható), és ezt ellenőrizni kell: aki többet oszt ki, mint amennyije van,
  * az szabálysértő eseményt írt alá — és ez, mint minden más, BIZONYÍTHATÓ.
  *
+ * ⛔⛔ ÉS A SAJÁT LÁNCBÓL SZÁMOL, NEM AZ ÉLŐ ENTITÁSOKBÓL (2026-09-07, mérve).
+ *
+ * Eddig az élő entitások `hozzajarulok` térképeit összegezte — és ez **nem ugyanaz**, mint
+ * amit a szabály-réteg számol a D42 bemondott összegéhez. A kettő szétvált abban a
+ * pillanatban, amikor egy entitás **eltűnhetett úgy, hogy pont volt rajta** (törlési
+ * egyezmény). ⚠️ A következmény mérve: a bemondott összeg 100 lett, a láncból 200 —
+ * *„a bemondott összeg ellentmond a saját láncának"* —, vagyis a készülék **következő
+ * tudatpont-eseménye elbukott**, és onnantól semmi újat nem tudott létrehozni.
+ *
+ * ⭐ A helyes jelentés: *„mennyit mondtam ki a SAJÁT láncomban"* — ez a D42 kérdése, és ez
+ * egyetlen eseményből ellenőrizhető. Hogy az entitás létezik-e még, az **más kérdés**.
+ * *Két kérdésnek nem lehet egy válasza.*
+ *
  * @param {Object} allapot
  * @param {string} szerzo
  * @returns {number}
  */
 export function szetosztottPontok(allapot, szerzo) {
   let osszeg = 0;
-  for (const entitas of allapot.entitasok.values()) {
-    osszeg += entitas.hozzajarulok.get(szerzo)?.pont ?? 0;
+  for (const [kulcs, pont] of allapot.kiosztasok ?? []) {
+    if (kulcs.slice(0, kulcs.lastIndexOf('|')) === szerzo) osszeg += pont;
   }
   return osszeg;
+}
+
+/**
+ * ⚠️ MI AZ, AMI ELAKADT? Az entitások, amikre van pontom, de már NEM LÉTEZNEK.
+ *
+ * Ez a törlési egyezmény utóélete: a gondolat megszűnt, a pontom viszont a keretemben
+ * marad, amíg magam vissza nem veszem — mert a tudatpont-rendezés ALÁÍRT esemény, és
+ * senki nem írhat alá helyettem (D15).
+ *
+ * ⛔⛔ CSAK A TÖRLÉS SZÁMÍT ELAKADÁSNAK — az `allapot.torlesek` listát nézzük, nem a
+ * tágabb `elfelejtettek`-et. Három eset van, és csak az első elakadás:
+ *
+ *   · **TÖRÖLTÉK** (elfogadott törlési egyezmény) → a pontom a semmin ül: elakadt;
+ *   · **BEOLVASZTOTTÁK** (egyesítés) → a pontom ÁTMENT az elnyelőbe; ha „visszavenném",
+ *     a következő számításnál a forrás már 0 ponttal jönne létre, és az egyesítés **nem
+ *     találná meg a pontjaimat** — vagyis a felszabadítás ELVENNÉ, amit megőrizni akar;
+ *   · **SOSEM LÁTTUK** (a létrehozó eseménye nem érkezett meg) → hiány, nem tény (D19):
+ *     a pont továbbra is értelmes, csak nem látjuk, mire.
+ *
+ * @param {Object} allapot
+ * @param {string} szerzo
+ * @returns {Array<{entitas: string, pont: number}>}
+ */
+export function elakadtPontok(allapot, szerzo) {
+  const eltunt = new Set(allapot.torlesek ?? []);
+  const lista = [];
+  for (const [kulcs, pont] of allapot.kiosztasok ?? []) {
+    if (pont <= 0) continue;
+    const hatar = kulcs.lastIndexOf('|');
+    if (kulcs.slice(0, hatar) !== szerzo) continue;
+    const entitas = kulcs.slice(hatar + 1);
+    if (allapot.entitasok.has(entitas)) continue;
+    if (!eltunt.has(entitas)) continue;              // nem törölték — beolvadt vagy sosem láttuk
+    lista.push({ entitas, pont });
+  }
+  return lista;
 }
 
 /**

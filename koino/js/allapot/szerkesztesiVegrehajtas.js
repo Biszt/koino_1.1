@@ -150,6 +150,19 @@ function torles(entitas, allapot) {
     allapot.elfelejtettek.push(entitas.azonosito);
   }
 
+  // ⛔⛔ ÉS KÜLÖN IS: EZ TÖRLÉS VOLT, NEM BEOLVASZTÁS. A kettő ugyanúgy „eltűnés", de a
+  // TUDATPONT sorsa ellentétes:
+  //
+  //   · TÖRLÉSNÉL a pontom a semmin ül — el van akadva, vissza kell vennem;
+  //   · EGYESÍTÉSNÉL a pontom ÁTMENT az elnyelőbe — ha „visszavenném", elveszne.
+  //
+  // ⚠️ Ez nem elméleti: ha a felszabadítás a puszta `elfelejtettek` listát nézné, a
+  // beolvasztott forrásra is ráírna egy `pont: 0`-t — és a következő számításnál a
+  // forrás már 0 ponttal jönne létre, tehát az egyesítés **nem találná meg a pontjaimat**.
+  // *Ugyanaz a szó, két ellentétes következmény: külön listát kíván.*
+  if (!Array.isArray(allapot.torlesek)) allapot.torlesek = [];
+  allapot.torlesek.push(entitas.azonosito);
+
   return {
     rendben: true,
     eltunt: true,

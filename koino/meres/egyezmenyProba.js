@@ -9,7 +9,7 @@
 // ⭐ Itt azt mérjük, hogy a hurok BEZÁRUL: az elfogadott szerkesztési egyezmény rákerül az
 // entitásra — és **csak az**, csak akkor, és determinisztikus sorrendben.
 
-import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
+import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
 
@@ -259,6 +259,42 @@ proba('⛔⛔ ÁTHELYEZÉS, AMI KÖRT CSINÁLNA: kihagyva, és megmondja, miért
 // újabb változat új műveletet vezet be, a régebbi készülék azt fogja felsorolni.)*
 
 // ===================================
+// ⛔⛔ AZ ELAKADT PONTOK (2026-09-07, Csaba kérdéséből)
+// ===================================
+//
+// *„Ha nem veszi vissza, akkor az entitás hogyan törlődik, hiszen rajta van a készülékén
+// tudatponttal?"* — a válasz: az entitás **törlődik**, mert az eltűnés SZÁMÍTÁS az
+// egyezményből, nem a pontok nullázódásának következménye. A pont viszont a keretben marad.
+
+proba('⭐⭐ A TÖRLÉS UTÁN A KIOSZTOTT ÖSSZEG NEM CSÖKKEN — a pont elakad, nem tűnik el', async () => {
+  const e = await eset({ muvelet: 'Torles', valtozas: null });
+  const k = kep(e.esemenyek);
+
+  // ⛔ EZ VOLT A MÉRT HIBA: a „mennyit osztottam ki" az ÉLŐ entitásokból számolt (0), a
+  // szabály-réteg viszont a saját láncból (100) — és a következő tudatpont-eseményem
+  // „hazugságként" bukott el. A kettőnek UGYANAZT kell mondania.
+  return szetosztottPontok(k.allapot, e.gazda.szerzo) === 100
+    && elakadtPontok(k.allapot, e.gazda.szerzo).length === 1
+    && elakadtPontok(k.allapot, e.gazda.szerzo)[0].pont === 100;
+});
+
+proba('⭐ …ÉS A TÖRLÉS UTÁN IS LEHET ÚJ GONDOLATOT LÉTREHOZNI (a lánc és a bemondás egyezik)', async () => {
+  const e = await eset({ muvelet: 'Torles', valtozas: null });
+  const k = kep(e.esemenyek);
+
+  // A készülék a `szetosztottPontok`-ból mondja be az összeget — ahogy a `koino.js` teszi.
+  const uj = await e.gazda.tesz('GondolatLetrehozas', { cim: 'ÚJ', meret: 10 }, KESOBB);
+  const pont = await e.gazda.tesz('TudatpontRendezes', {
+    entitas: uj.azonosito, pont: 50,
+    kiosztva: szetosztottPontok(k.allapot, e.gazda.szerzo) + 50
+  }, KESOBB);
+
+  const utana = kep([...e.esemenyek, uj, pont]);
+  return utana.allapot.kivetelek.length === 0
+    && utana.allapot.entitasok.has(uj.azonosito);
+});
+
+// ===================================
 // ⭐⭐⭐ EGYESÍTÉS (2026-09-07)
 // ===================================
 //
@@ -370,6 +406,23 @@ proba('⭐ AZ EGYESÍTETT GONDOLAT A LEGKÖZELEBBI KÖZÖS ŐS ALÁ KERÜL', asy
   // ⭐ A BAL-FORRÁS a BAL alatt volt; egyesítés után a KÖZÖS ŐS alá kerül.
   return k.allapot.entitasok.get(forrasok[0].azonosito).szulo === kozos.azonosito
     && k.allapot.entitasok.has(forrasok[1].azonosito) === false;
+});
+
+proba('⛔⛔ A BEOLVASZTOTT FORRÁS NEM „ELAKADT PONT" — a pontja átment, nem veszett el', async () => {
+  // ⚠️ EZ EGY CSAPDA, amit a felszabadítás tervezése hozott elő. A beolvasztott forrás
+  // ugyanúgy „eltűnt", mint a törölt — de a pont sorsa ELLENTÉTES. Ha a felszabadítás a
+  // puszta „eltűnt" listát nézné, ráírna egy `pont: 0`-t a forrásra, és a következő
+  // számításnál az egyesítés **már nem találná meg a pontjaimat**. *Ugyanaz a szó, két
+  // ellentétes következmény.*
+  const e = await egyesitesEset();
+  const k = kep(e.esemenyek);
+
+  return elakadtPontok(k.allapot, e.gazda.szerzo).length === 0
+    && elakadtPontok(k.allapot, e.masik.szerzo).length === 0
+    // ⭐ …és a kiosztott összeg is stimmel: a pont ott van, csak az elnyelőn.
+    && szetosztottPontok(k.allapot, e.gazda.szerzo)
+       === k.allapot.entitasok.get(e.forrasok[0].azonosito).hozzajarulok.get(e.gazda.szerzo).pont
+        + k.allapot.entitasok.get(e.javaslat.azonosito).hozzajarulok.get(e.gazda.szerzo).pont;
 });
 
 proba('⭐ HÁROM FORRÁS is összevonható, egy lépésben', async () => {

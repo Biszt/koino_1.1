@@ -44,7 +44,7 @@
 // Használják: a felület kezelője (`koino.js`), és bármely másik kliens.
 
 import { koinoEsemenyei } from '../tar/esemenyTar.js';
-import { allapotSzamitasa } from './allapotSzamitas.js';
+import { allapotSzamitasa, szetosztottPontok } from './allapotSzamitas.js';
 import { TUDATPONT_KERET } from './szabalyok.js';
 import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
@@ -641,10 +641,11 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
   }
 
   // Mennyi tudatpontom maradt még kiosztatlanul? (A keretből, ami már ki van osztva.)
-  let kiosztva = 0;
-  for (const entitas of kep.entitasok.values()) {
-    kiosztva += en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) : 0;
-  }
+  // ⚠️ A SAJÁT LÁNCBÓL, nem az élő entitásokból — ugyanaz a szám, amit a szabály-réteg
+  // a D42 bemondott összegéhez számol. Ha itt az élő entitásokat összegeznénk, a felület
+  // TÖBB szabad pontot mutatna, mint amennyi van (egy törölt gondolatra tett pont ott
+  // marad a keretben), és a lap olyan műveletet ajánlana fel, amit a számítás elutasít.
+  const kiosztva = en ? szetosztottPontok(kep, en) : 0;
 
   console.log('pakli.hianyzoFelmenok - VÉGE', { hianyzo: hianyzok.length });
   return {
