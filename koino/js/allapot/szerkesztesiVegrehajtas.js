@@ -176,7 +176,17 @@ function torles(entitas, allapot, egyezmeny) {
     javaslat: egyezmeny.javaslat,
     megszuletett: egyezmeny.megszuletett,
     allas: [egyezmeny.javaslat, egyezmeny.megszuletett,
-      p.tamogatok, p.ellenzok, p.tartozkodok, p.szavazok, p.nevezo].join('|')
+      p.tamogatok, p.ellenzok, p.tartozkodok, p.szavazok, p.nevezo].join('|'),
+    // ⭐⭐ ÉS KIK VOLTAK A GAZDÁI — a felszabadítás BIZONYÍTÉKÁHOZ (2026-09-08).
+    //
+    // Ők azok, akik ezt a döntést még megfordíthatnák egy késve érkező, de határidőn
+    // belüli szavazattal. ⭐ Ha MINDEGYIKÜK láncát ismerem a lezárás UTÁNI pontig, akkor
+    // egyikük sem tud már visszamenőleg beszavazni — az a saját láncában visszafelé lépő
+    // idő lenne, amit a koino felsorol. *Bizonyíték, nem valószínűség.*
+    //
+    // ⚠️ A törlés UTÁN már nem olvasható ki, ezért itt kell feljegyezni — ugyanaz a
+    // sorrend-kényszer, mint a prototípus `torlesiVegrehajto`-jánál a szülővel.
+    gazdak: [...entitas.hozzajarulok.keys()]
   });
 
   return {

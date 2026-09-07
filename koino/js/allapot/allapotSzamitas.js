@@ -468,6 +468,8 @@ export function allapotSzamitasa(esemenyek) {
     ellentmondasok,
     // Visszafelé lépő idő a saját láncban (lásd fentebb) — jelzés, nem büntetés
     idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
+    // ⭐⭐ MEDDIG ISMEREM KINEK A LÁNCÁT — a felszabadítás bizonyítékához (lásd lentebb).
+    lancVegek: lancVegekSzamitasa(szamitok),
     // ⭐⭐ A KIOSZTÁSI FŐKÖNYV: "szerző|entitás" → pont, FÜGGETLENÜL attól, hogy az entitás
     // létezik-e még. Ez a D42 bemondott összegének forrása — ugyanaz, amit a szabály-réteg
     // számol a láncból. ⚠️ Külön kell az entitások `hozzajarulok` térképétől: az arra
@@ -523,6 +525,33 @@ export function allapotSzamitasa(esemenyek) {
  *
  * @param {Map} entitasok - azonosító → entitás (helyben kap `agMeret` mezőt)
  */
+/**
+ * ⭐⭐ MEDDIG ISMEREM KINEK A LÁNCÁT? — szerzőnként az utolsó pont (2026-09-08).
+ *
+ * MIRE VALÓ? A **felszabadítás bizonyítékához**. Ha egy törlési döntés lezárult `T`-kor, és
+ * a döntés minden jogosult szavazójától van olyan eseményem, aminek az ideje `T` UTÁN van,
+ * akkor **egyikük sem tud már visszamenőleg beszavazni**: egy határidőn belüli időbélyeg a
+ * saját láncukban **visszafelé lépő idő** lenne, amit a koino felsorol
+ * (`idoEllentmondasok`). ⭐ *Ez bizonyíték, nem valószínűség.*
+ *
+ * ⚠️ A `max` ideje kell, nem az utolsó sorszámé: ha valakinél VAN idő-ellentmondás, a
+ * nagyobb sorszámú eseménye korábbi időt viselhet. A maximum az óvatos válasz — azt mondja
+ * meg, meddig látjuk BIZONYOSAN a láncát.
+ *
+ * @param {Array<Object>} esemenyek - elágazás-mentesített, szabály-szerint számító események
+ * @returns {Map<string, {sorszam: number, ido: number}>}
+ */
+function lancVegekSzamitasa(esemenyek) {
+  const vegek = new Map();
+  for (const e of esemenyek) {
+    const eddigi = vegek.get(e.szerzo);
+    if (!eddigi) { vegek.set(e.szerzo, { sorszam: e.sorszam, ido: e.ido }); continue; }
+    if (e.sorszam > eddigi.sorszam) eddigi.sorszam = e.sorszam;
+    if (e.ido > eddigi.ido) eddigi.ido = e.ido;
+  }
+  return vegek;
+}
+
 /**
  * ⭐ A SZERKEZET ÚJRAIGAZÍTÁSA, miután entitások TŰNTEK EL.
  *
@@ -674,9 +703,7 @@ export function elakadtPontok(allapot, szerzo) {
   // megülepedés ebből tudja meg, hogy UGYANARRÓL a döntésről van-e szó: ha egy késve
   // érkező szavazat átírja a lezárás idejét, a `megszuletett` változik, és az óra újraindul.
   const torlesek = new Map();
-  for (const t of allapot.torlesek ?? []) {
-    torlesek.set(t.entitas, t.allas ?? (t.javaslat + '|' + t.megszuletett));
-  }
+  for (const t of allapot.torlesek ?? []) torlesek.set(t.entitas, t);
 
   const lista = [];
   for (const [kulcs, pont] of allapot.kiosztasok ?? []) {
@@ -687,7 +714,15 @@ export function elakadtPontok(allapot, szerzo) {
     if (allapot.entitasok.has(entitas)) continue;
     // nem törölték — beolvadt (a pont átment) vagy sosem láttuk (hiány, nem tény)
     if (!torlesek.has(entitas)) continue;
-    lista.push({ entitas, pont, allas: torlesek.get(entitas) });
+    const t = torlesek.get(entitas);
+    lista.push({
+      entitas, pont,
+      allas: t.allas ?? (t.javaslat + '|' + t.megszuletett),
+      // ⭐ A BIZONYÍTÉKHOZ: mikor zárult a döntés, és kik voltak a gazdái — vagyis kik
+      // fordíthatnák még meg egy késve érkező, de határidőn belüli szavazattal.
+      lezarult: t.megszuletett ?? null,
+      gazdak: t.gazdak ?? []
+    });
   }
   return lista;
 }

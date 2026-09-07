@@ -168,7 +168,26 @@ egy próbából jött: egy késve érkező szavazat, ami a bizonyosságot nem mo
 változtatja meg a lezárás idejét** — pedig épp azt jelzi, hogy még mindig érkeznek késői
 események. *Amit mérni akarunk, az nem a döntés stabilitása, hanem a CSEND.*
 
-⚠️⚠️ **A szükséges buli-szám (ma 3) MÉG NINCS MEGMÉRVE.**
+### ⭐⭐⭐ ÉS A FŐ JEL MÁR NEM A BULI — hanem a láncok vége (2026-09-08)
+
+A buli-számot **megmértük**, és a mérés megcáfolta (`meres/eredmenyek.md` 13.): a hálózat
+lassúsága ellen olcsón véd (mindenki ébren: K=2 → 0%), de **az alvó készülék ellen semmilyen
+véges szám nem véd** (20 kör alvásnál K=8 mellett is 100% a korai felszabadítás). ⭐ *Rossz
+dolgot számoltunk: a hálózat terjedési idejét, nem azt, hogy az érintett emberek megszólaltak-e.*
+
+```mermaid
+flowchart TD
+    T["törölt gondolat<br/>rajta a pontom"] --> G["KIK a gazdái?<br/>ők fordíthatnák meg"]
+    G --> Q{"MINDEGYIKÜK láncát<br/>ismerem a lezárás UTÁNI pontig?"}
+    Q -->|"igen"| BIZ["BIZONYÍTÉK<br/>egyikük sem tud visszamenőleg szavazni<br/>-- az visszafelé lépő idő lenne<br/>a saját láncában"]
+    Q -->|"nem"| NEMA["megnevezzük a NÉMA gazdákat<br/>és marad a buli-szám<br/>mint olcsó heurisztika"]
+    BIZ --> FEL["felszabadítás"]
+    NEMA --> BULI{"elég tiszta buli?"}
+    BULI -->|"igen"| FEL
+```
+
+⭐ **Elég az egyik** — de a kettő nem egyenrangú: a lánc-igazolás **állítás a döntésről**, a
+buli-szám csak **jel a hálózatról**. Ezért a terv megmondja, melyik alapján szabadított fel.
 
 ---
 

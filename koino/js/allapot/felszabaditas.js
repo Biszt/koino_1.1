@@ -109,6 +109,41 @@ export function buliVolt(jegyzet, sikeresTarsak) {
 }
 
 /**
+ * ⭐⭐⭐ A BIZONYÍTÉK: ismerem-e MINDEN jogosult szavazó láncát a lezárás UTÁNI pontig?
+ *
+ * Ha igen, akkor **egyikük sem tud már visszamenőleg beszavazni**: egy határidőn belüli
+ * időbélyeg a saját láncában **visszafelé lépő idő** lenne, amit a koino felsorol
+ * (`allapotSzamitas.js`, `idoEllentmondasok`). ⭐ *Nem valószínűség, hanem bizonyíték* — és
+ * pont abból áll, amit a csere úgyis megmond (`ALLAS`: szerzőnként a legnagyobb sorszám),
+ * illetve amit a `Lattam` esemény (D61) kifejezetten aláír.
+ *
+ * ⚠️⚠️ EZ VÁLTOTTA FEL A BULI-SZÁMOT FŐ JELKÉNT — mert a mérés megcáfolta amazt
+ * (`meres/eredmenyek.md` 13.): a buli-szám a **hálózat terjedési idejét** méri, nem azt,
+ * hogy a döntésben ÉRINTETT emberek megszólaltak-e. Az alvó készülék ellen semmilyen
+ * véges buli-szám nem védett.
+ *
+ * ⚠️ AMIT EZ SEM TUD: akitől a lezárás óta SEMMI nem érkezett, arról nem állíthatunk
+ * semmit. Ezért marad a buli-szám **másodlagos, olcsó heurisztikának**: a kettő közül
+ * elég az EGYIK. *A bizonyíték gyors, ha megvan; a heurisztika akkor is halad, ha nincs.*
+ *
+ * @param {{lezarult: number|null, gazdak: Array<string>}} tetel
+ * @param {Map<string, {ido: number}>} lancVegek
+ * @returns {{igazolt: boolean, nemaGazdak: Array<string>}}
+ */
+export function lancokIgazoljak(tetel, lancVegek) {
+  const lezarult = tetel?.lezarult;
+  const gazdak = tetel?.gazdak ?? [];
+
+  // ⚠️ Ha nem tudjuk, mikor zárult, vagy nem ismerjük a gazdák körét, nem állítunk semmit.
+  if (typeof lezarult !== 'number' || !gazdak.length) {
+    return { igazolt: false, nemaGazdak: gazdak };
+  }
+
+  const nemaGazdak = gazdak.filter((g) => !((lancVegek?.get(g)?.ido ?? -Infinity) > lezarult));
+  return { igazolt: nemaGazdak.length === 0, nemaGazdak };
+}
+
+/**
  * Frissíti a helyi feljegyzést, és megmondja, MI SZABADÍTHATÓ FEL MÁR.
  *
  * ⭐ HÁROM DOLGOT TESZ, ÉS MIND A HÁROM FONTOS:
@@ -129,6 +164,7 @@ export function felszabaditasiTerv(allapot, szerzo, jegyzet = ujJegyzet(),
                                    kellBuli = MEGULEPEDES_BULIK) {
   const j = jegyzetNormalizalas(jegyzet);
   const elakadt = elakadtPontok(allapot, szerzo);
+  const lancVegek = allapot.lancVegek ?? new Map();
 
   const ujTetelek = {};
   const feloldhato = [];
@@ -143,8 +179,15 @@ export function felszabaditasiTerv(allapot, szerzo, jegyzet = ujJegyzet(),
     ujTetelek[tetel.entitas] = { ota, allas: tetel.allas };
 
     const tisztaBulik = j.bulik - ota;
-    if (tisztaBulik >= kellBuli) feloldhato.push({ ...tetel, tisztaBulik });
-    else varakozok.push({ ...tetel, tisztaBulik, kell: kellBuli });
+
+    // ⭐⭐⭐ ELŐSZÖR A BIZONYÍTÉK, UTÁNA A HEURISZTIKA. Elég az egyik — de a kettő nem
+    // egyenrangú: a lánc-igazolás **állítás a döntésről**, a buli-szám csak jel a
+    // hálózatról. Ezért mondjuk meg, MELYIK alapján szabadítunk fel.
+    const { igazolt, nemaGazdak } = lancokIgazoljak(tetel, lancVegek);
+
+    if (igazolt) feloldhato.push({ ...tetel, tisztaBulik, indok: 'lancok' });
+    else if (tisztaBulik >= kellBuli) feloldhato.push({ ...tetel, tisztaBulik, indok: 'bulik' });
+    else varakozok.push({ ...tetel, tisztaBulik, kell: kellBuli, nemaGazdak });
   }
 
   // ⚠️ Ami kikerült az elakadtak közül, az a jegyzetből is kikerül (2. pont) — a `ujTetelek`

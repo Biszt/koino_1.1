@@ -15,7 +15,7 @@ import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from '../js/allapo
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
 import { felszabaditasiTerv, felszabaditoLepesek, felszabaditas, buliVolt, ujJegyzet,
-         MEGULEPEDES_BULIK } from '../js/allapot/felszabaditas.js';
+         lancokIgazoljak, MEGULEPEDES_BULIK } from '../js/allapot/felszabaditas.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -261,6 +261,94 @@ proba('⭐ TÖBB ELAKADT PONT: a bemondott összeg lépésenként csökken', asy
   return lepesek.length === 2
     && lepesek[0].kiosztva === 70
     && lepesek[1].kiosztva === 50;
+});
+
+
+// ===================================
+// 4. ⭐⭐⭐ A BIZONYÍTÉK: A LÁNCOK VÉGE
+// ===================================
+//
+// A mérés (eredmenyek.md 13.) megcáfolta a buli-számot mint fő jelet: az a HÁLÓZAT
+// terjedési idejét méri, nem azt, hogy a döntésben érintett emberek megszólaltak-e.
+// ⭐ A jobb jel: ismerem-e MINDEN jogosult szavazó láncát a lezárás UTÁNI pontig.
+
+proba('⭐⭐⭐ HA MINDEN GAZDA LÁNCÁT ISMEREM A LEZÁRÁS UTÁNIG: azonnal, buli nélkül', async () => {
+  const e = await torlesEset();
+
+  // A gazda a lezárás UTÁN is aláír valamit — ettől tudjuk, hogy a láncát idáig látjuk.
+  // ⭐ Innentől egy határidőn belüli szavazata VISSZAFELÉ LÉPŐ IDŐ lenne a saját láncában.
+  const kesobbi = await e.gazda.tesz('GondolatLetrehozas',
+    { cim: 'VALAMI KÉSŐBB', meret: 10 }, KESOBB);
+
+  const a = kep([...e.esemenyek, kesobbi]);
+  const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());   // NULLA buli
+
+  return terv.feloldhato.length === 1
+    && terv.feloldhato[0].indok === 'lancok'
+    && terv.feloldhato[0].tisztaBulik === 0
+    && terv.varakozok.length === 0;
+});
+
+proba('⛔ EGY NÉMA GAZDA ELÉG A VÁRAKOZÁSHOZ — és megnevezzük, kire várunk', async () => {
+  // Két gazda: az egyik megszólalt a lezárás után, a másik nem.
+  const e = await torlesEset();
+  const masik = await ujEember();
+
+  const masikPont = await masik.tesz('TudatpontRendezes',
+    { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);
+  const kesobbi = await e.gazda.tesz('GondolatLetrehozas',
+    { cim: 'VALAMI KÉSŐBB', meret: 10 }, KESOBB);
+
+  const a = kep([...e.esemenyek, masikPont, kesobbi]);
+  const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());
+
+  return terv.feloldhato.length === 0
+    && terv.varakozok.length === 1
+    && terv.varakozok[0].nemaGazdak.length === 1
+    && terv.varakozok[0].nemaGazdak[0] === masik.szerzo;
+});
+
+proba('⭐ …ÉS HA A NÉMA IS MEGSZÓLAL, azonnal igazolt lesz — a próba nem vak', async () => {
+  const e = await torlesEset();
+  const masik = await ujEember();
+
+  const masikPont = await masik.tesz('TudatpontRendezes',
+    { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);
+  const kesobbi = await e.gazda.tesz('GondolatLetrehozas',
+    { cim: 'VALAMI KÉSŐBB', meret: 10 }, KESOBB);
+  // ⭐ EGYETLEN különbség az előző próbához képest.
+  const masikKesobb = await masik.tesz('GondolatLetrehozas',
+    { cim: 'Ő IS SZÓLT', meret: 10 }, KESOBB);
+
+  const a = kep([...e.esemenyek, masikPont, kesobbi, masikKesobb]);
+  const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());
+
+  return terv.feloldhato.length === 1 && terv.feloldhato[0].indok === 'lancok';
+});
+
+proba('⚠️ A LEZÁRÁS ELŐTTI utolsó esemény NEM igazol — a határ szigorú', async () => {
+  const e = await torlesEset();
+  const a1 = kep(e.esemenyek);
+  const lezarult = elakadtPontok(a1, e.gazda.szerzo)[0].lezarult;
+
+  // Egy ezredmásodperccel a lezárás ELŐTT — innen még beférne egy szavazat.
+  const eppelotte = await e.gazda.tesz('GondolatLetrehozas',
+    { cim: 'ÉPP ELŐTTE', meret: 10 }, lezarult - 1);
+
+  const a2 = kep([...e.esemenyek, eppelotte]);
+  return felszabaditasiTerv(a2, e.gazda.szerzo, ujJegyzet()).feloldhato.length === 0;
+});
+
+proba('⭐ A KÉT ÚT EGYENÉRTÉKŰ EREDMÉNYT AD, de megmondja, MELYIK alapján', async () => {
+  // Ugyanaz az eset: lánc-igazolás nélkül, elég bulival is felszabadul — csak lassabban.
+  const e = await torlesEset();
+  const a = kep(e.esemenyek);
+
+  let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
+  for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
+
+  const terv = felszabaditasiTerv(a, e.gazda.szerzo, jegyzet);
+  return terv.feloldhato.length === 1 && terv.feloldhato[0].indok === 'bulik';
 });
 
 export default futtatas;
