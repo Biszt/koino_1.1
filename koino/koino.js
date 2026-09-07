@@ -22,7 +22,7 @@
 //   node koino/koino.js torol <azonosító> ["indoklás"]
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
-//   node koino/koino.js felszabadit
+//   node koino/koino.js felszabadit [buli]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
@@ -62,7 +62,7 @@ import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
-import { felszabaditas, MEGULEPEDES } from './js/allapot/felszabaditas.js';
+import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
@@ -174,12 +174,16 @@ async function kepetKeszit(napokMulva = 0) {
  * @param {boolean} [hangos] - írja-e ki, mit tett
  * @returns {Promise<number>} hány pontot szabadított fel
  */
-async function elakadtPontokFelszabaditasa(hangos = false, varakozas = MEGULEPEDES) {
+async function elakadtPontokFelszabaditasa(hangos = false, kellBuli = MEGULEPEDES_BULIK,
+                                          sikeresTarsak = 0) {
   const { allapot } = await kepetKeszit();
-  const jegyzet = await felszabaditasJegyzet.olvas();
-  const terv = felszabaditas(allapot, szerzo, jegyzet, Date.now(), varakozas);
 
-  // A feljegyzést AKKOR is írjuk, ha még nincs mit felszabadítani — az óra ilyenkor indul.
+  // ⭐ ELŐBB A BULI, AZTÁN A TERV. Ha ez a hívás egy csere-kör után jött, és felelt valaki,
+  // az egy bulival több — a terv már ezzel számol.
+  const jegyzet = buliVolt(await felszabaditasJegyzet.olvas(), sikeresTarsak);
+  const terv = felszabaditas(allapot, szerzo, jegyzet, kellBuli);
+
+  // A feljegyzést AKKOR is írjuk, ha még nincs mit felszabadítani — a számláló ilyenkor indul.
   await felszabaditasJegyzet.ir(terv.jegyzet);
 
   // ⭐ A BEMONDOTT ÖSSZEGET NEM MI ADJUK: a `tudatpontRendezese` a SAJÁT LÁNCBÓL számolja
@@ -196,8 +200,10 @@ async function elakadtPontokFelszabaditasa(hangos = false, varakozas = MEGULEPED
       + terv.lepesek.length + ' db) — a keretedbe visszakerült.' + SZIN.vege);
   }
   if (hangos && terv.varakozok.length) {
-    kiir(SZIN.halvany + '⏳ ' + terv.varakozok.reduce((s, v) => s + v.pont, 0)
-      + ' tudatpont törölt gondolaton áll — megülepedés után magától felszabadul.' + SZIN.vege);
+    const v = terv.varakozok[0];
+    kiir(SZIN.halvany + '⏳ ' + terv.varakozok.reduce((s, x) => s + x.pont, 0)
+      + ' tudatpont törölt gondolaton áll — ' + v.tisztaBulik + '/' + v.kell
+      + ' buli telt el azóta; ha nem jön újabb hír, magától felszabadul.' + SZIN.vege);
   }
   return osszesen;
 }
@@ -601,15 +607,15 @@ try {
     }
 
     case 'felszabadit': {
-      // ⭐ A KÉZI ÚT TÜRELMETLENEBB LEHET, ÉS EZ SZÁNDÉKOS: az automata azért vár egy
-      // napot, mert nem tudhatja, megérkezett-e már minden szavazat. Aki KIMONDJA, hogy
-      // most, az tudja, mit vállal — ezért az óraszám itt megadható (0 = azonnal).
-      const oraban = ervek[0] === undefined ? null : parseFloat(ervek[0]);
-      const varakozas = oraban === null ? MEGULEPEDES : Math.max(0, oraban) * 3600 * 1000;
-      const felszabadult = await elakadtPontokFelszabaditasa(true, varakozas);
+      // ⭐ A KÉZI ÚT TÜRELMETLENEBB LEHET, ÉS EZ SZÁNDÉKOS: az automata azért vár néhány
+      // bulit, mert nem tudhatja, megérkezett-e már minden szavazat. Aki KIMONDJA, hogy
+      // most, az tudja, mit vállal — ezért a buli-szám itt megadható (0 = azonnal).
+      const kert = ervek[0] === undefined ? null : parseInt(ervek[0], 10);
+      const kellBuli = kert === null || Number.isNaN(kert) ? MEGULEPEDES_BULIK : Math.max(0, kert);
+      const felszabadult = await elakadtPontokFelszabaditasa(true, kellBuli);
       if (!felszabadult) {
         kiir(SZIN.halvany + 'Most nincs felszabadítható pont.'
-          + (oraban === null ? ' (Türelmetlenül: felszabadit 0)' : '') + SZIN.vege);
+          + (kert === null ? ' (Türelmetlenül: felszabadit 0)' : '') + SZIN.vege);
       }
       break;
     }
@@ -1062,6 +1068,7 @@ try {
       // felvett társ azonnal beleférjen (a `tars` parancs egy másik ablakban futhat).
       for (;;) {
         const lista = await tarolo.olvas();
+        let sikeresEbbenAKorben = 0;    // ⭐ hányan feleltek — ettől lesz a körből BULI
 
         if (!lista.length) {
           kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
@@ -1082,6 +1089,8 @@ try {
               + ' új társ-cím a többiektől' + SZIN.vege);
           }
 
+          sikeresEbbenAKorben = kor.sikeres;
+
           const jel = kor.sikeres ? SZIN.jo + '  ✓ ' : SZIN.halvany + '  · ';
           kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
             + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
@@ -1093,7 +1102,9 @@ try {
         // határidőn belüli szavazat még visszafordíthatja a törlést. ⚠️ A csere UTÁN
         // fut, nem előtte: így a friss események már beleszámítanak a döntésbe.
         try {
-          await elakadtPontokFelszabaditasa(true);
+          // ⭐ A KÖR EREDMÉNYE DÖNTI EL, HOGY VOLT-E BULI: ha egyetlen társ sem felelt, ez
+          // a kör nem bizonyít semmit — a néma kör nem buli.
+          await elakadtPontokFelszabaditasa(true, MEGULEPEDES_BULIK, sikeresEbbenAKorben);
         } catch (hiba) {
           // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
           kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
@@ -1893,7 +1904,7 @@ try {
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
-      kiir('           felszabadit [óra]   (a törölt gondolatokra tett pontod visszavétele)');
+      kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');

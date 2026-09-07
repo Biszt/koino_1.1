@@ -18,82 +18,127 @@
 // volt. Más tényleg nem írhat alá helyettem, de a koino **az ÉN készülékemen fut, az ÉN
 // kulcsommal**. Amikor a készülékem aláírja, hogy „leveszem a pontomat egy gondolatról, ami
 // már nem létezik", az nem helyettem ír alá — az a saját készülékem könyvel. ⭐ És van rá
-// precedens: a `javaslat` parancs ma is aláír egy második eseményt magától (a tudatpontot a
-// javaslatra).
+// precedens: a `javaslat` parancs ma is aláír egy második eseményt magától.
 //
-// ===== ⭐⭐ ÉS AMIÉRT MÉGSEM AZONNAL: A MEGÜLEPEDÉS (Csaba döntése) =====
+// ===== ⭐⭐⭐ ÉS AMIÉRT MÉGSEM AZONNAL: A MEGÜLEPEDÉS BULIKBAN MÉRVE =====
 //
 // A koino szabálya szerint *„a késve MEGÉRKEZŐ, de a határidőn belüli időbélyegű szavazat
 // jogosan módosítja az eredményt"* (`javaslatSzamitas.js`). Vagyis **egy törlés vissza is
-// fordulhat**, ha később megérkezik egy addig hiányzó szavazat.
+// fordulhat**. ⛔ Ha a készülék azonnal felszabadítana, a gondolat a pontom NÉLKÜL térne
+// vissza — és ha csak az én pontom volt rajta, a felszabadításom **maga törölné el** azt,
+// amit a közösség épp nem akart törölni. *A könyvelés nem dönthet el olyat, amit a szavazás
+// nem döntött el.*
 //
-// ⛔ Ha a készülék azonnal felszabadítana, a gondolat a pontom NÉLKÜL térne vissza — és ha
-// csak az én pontom volt rajta, a felszabadításom **maga törölné el** azt, amit a közösség
-// épp nem akart törölni. *A könyvelés nem dönthet el olyat, amit a szavazás nem döntött el.*
+// ⛔⛔ **ÉS AZ ÓRA NEM JÓ MÉRCE ERRE (Csaba, 2026-09-07).** Először naphoz kötöttem, de az
+// idő múlása **semmit nem bizonyít**: egy hétvégén kikapcsolt készülék mellett három nap
+// alatt sem érkezik semmi, egy sűrűn cserélő mellett viszont öt perc alatt körbeér minden.
+// ⭐ Amit mérni akarunk, az nem idő, hanem **egyeztetés**: hányszor beszéltem azóta
+// másokkal úgy, hogy nem hoztak semmi újat erről a döntésről.
 //
-// ⭐ A várakozás ingyen van: 2026-09-07 óta a kiosztott összeg a saját láncból számít
-// (`szetosztottPontok`), tehát a koino az elakadt ponttal is **hibátlanul működik** — csak a
-// keretből hiányzik annyi. Nincs miért kapkodni.
+// ⭐⭐ EZÉRT A MÉRCE A **BULI**: egy csere-kör, amiben **legalább egy társ tényleg felelt**.
+// A néma kör nem bizonyít semmit — attól, hogy senki nem vette fel, még nem ért körbe.
 //
-// ⚠️ A feljegyzés, hogy mikor láttuk először a törlést, **HELYI** — sosem terjed, és semmit
-// nem dönt el a koinóban (3. szabály). Ugyanaz a fajta, mint a `tarsak.js` `utoljara`
-// mezője vagy a pakli horgonya.
+// ⭐⭐ ÉS A MÁSIK FELE, AMI NÉLKÜL A SZÁMLÁLÁS CSALÓKA LENNE: a döntés **jele**. Minden
+// tételhez eltesszük, MELYIK egyezmény, és MIKORRA született (`javaslat|megszuletett`). Ha
+// ez megváltozik — mert egy késve érkező szavazat átírta a lezárás idejét —, a számláló
+// **nulláról indul**. *Nem a bulik gyűlnek, hanem a MOSTANI döntés melletti bulik.*
 //
-// Használják: `koino.js` (őrjárat és az írás-parancsok előtt), és a felület.
+// ⚠️ És ez SEM bizonyíték, csak ár: egy hónapja offline készülék bármikor felbukkanhat. De
+// a buli-szám **azt méri, ami történik** (egyeztetés), nem azt, ami csak telik (idő) — és a
+// várakozás ingyen van: 2026-09-07 óta a kiosztott összeg a saját láncból számít, tehát a
+// koino az elakadt ponttal is hibátlanul működik.
+//
+// ⚠️ A feljegyzés **HELYI** — sosem terjed, és semmit nem dönt el a koinóban (3. szabály).
+// Ugyanaz a fajta, mint a `tarsak.js` `utoljara` mezője vagy a pakli horgonya.
+//
+// Használják: `koino.js` (őrjárat és a kézi parancs), és a felület.
 
 import { elakadtPontok, szetosztottPontok } from './allapotSzamitas.js';
 
-// ⭐ MENNYIT VÁRUNK? Egy nap. Nem szent szám: annyi, hogy egy naponta egyszer szinkronizáló
-// készülék is beérjen a döntéssel, mielőtt könyvelünk. ⚠️ A saját óránk szerint mérjük, és
-// ez rendben van: ez HELYI könyvelési döntés, nem állítás a világról.
-export const MEGULEPEDES = 24 * 3600 * 1000;
+// ⚠️⚠️ EZ A SZÁM MÉG NINCS MEGMÉRVE. Csaba kérése: *„mégjobb lenne ezt az értéket méréssel
+// meghatározni."* A `meres/felszabaditasMeres.js` adja hozzá a görbét — addig ez egy
+// óvatos alapérték, nem állítás. ⭐ A mérés nem „igen/nem"-et fog adni, hanem azt, hogy K
+// tiszta buli után az esetek hány százalékában nem érkezik már döntést módosító esemény.
+export const MEGULEPEDES_BULIK = 3;
+
+/**
+ * Üres feljegyzés — a buli-számlálóval együtt.
+ *
+ * ⭐ A számláló KÉSZÜLÉK-SZINTŰ (hány bulin voltam összesen), a tételek pedig azt jegyzik,
+ * MELYIK buli-számnál láttuk először ezt a törlést. A kettő különbsége a „tiszta bulik".
+ */
+export function ujJegyzet() {
+  return { bulik: 0, tetelek: {} };
+}
+
+/** Egy régi (vagy sérült) feljegyzés egységes alakra hozása. */
+function jegyzetNormalizalas(jegyzet) {
+  if (!jegyzet || typeof jegyzet !== 'object') return ujJegyzet();
+  return {
+    bulik: Number.isInteger(jegyzet.bulik) ? jegyzet.bulik : 0,
+    tetelek: (jegyzet.tetelek && typeof jegyzet.tetelek === 'object') ? { ...jegyzet.tetelek } : {}
+  };
+}
+
+/**
+ * Egy BULI: a készülék egy csere-körön volt, ahol legalább egy társ felelt.
+ *
+ * ⚠️ Miért nem a sikeres társak SZÁMA? Mert egy kör során ugyanaz a hír jár körbe: öt
+ * társtól hallani ugyanazt a „nincs újdonság"-ot nem öt bizonyíték. A körök viszont
+ * időben elválnak — közben új esemény születhetett és terjedhetett.
+ *
+ * @param {Object} jegyzet
+ * @param {number} sikeresTarsak - hány társsal sikerült a csere ebben a körben
+ * @returns {Object} az új jegyzet
+ */
+export function buliVolt(jegyzet, sikeresTarsak) {
+  const j = jegyzetNormalizalas(jegyzet);
+  if (sikeresTarsak > 0) j.bulik += 1;
+  return j;
+}
 
 /**
  * Frissíti a helyi feljegyzést, és megmondja, MI SZABADÍTHATÓ FEL MÁR.
  *
- * A feljegyzés alakja: `{ [entitás]: mikor láttuk ELŐSZÖR töröltnek }`.
- *
  * ⭐ HÁROM DOLGOT TESZ, ÉS MIND A HÁROM FONTOS:
  *
- *   1. az ÚJ törléseket felveszi a feljegyzésbe (megkezdi az órát);
- *   2. amit a feljegyzés ismer, de **már nem törölt** — mert a döntés visszafordult, vagy
- *      a gazda magától visszavette a pontját —, azt **kiveszi**: az óra újraindul, ha
- *      megint törlik. *A megülepedés nem gyűlik, hanem a MOSTANI törlésre vonatkozik.*
- *   3. és felsorolja, aminek az órája letelt.
+ *   1. az ÚJ törléseket felveszi (a számláló ettől a buli-számtól indul);
+ *   2. amit a jegyzet ismer, de **már nem elakadt** — mert a döntés visszafordult, vagy a
+ *      gazda magától visszavette a pontját —, azt **kiveszi**; és amelyiknél a döntés
+ *      **jele megváltozott** (más lezárási idő), ott **nulláról indítja** a számlálót;
+ *   3. felsorolja, aminek megvan a kellő számú tiszta bulija.
  *
  * @param {Object} allapot - a HÁROM FÁZIS után (a `torlesek` lista onnan jön)
  * @param {string} szerzo - én
- * @param {Object} jegyzet - a helyi feljegyzés (helyben módosul)
- * @param {number} [most]
- * @param {number} [varakozas]
- * @returns {{jegyzet: Object, feloldhato: Array<{entitas: string, pont: number}>,
- *            varakozok: Array<{entitas: string, pont: number, meddig: number}>}}
+ * @param {Object} jegyzet - a helyi feljegyzés
+ * @param {number} [kellBuli]
+ * @returns {{jegyzet: Object, feloldhato: Array, varakozok: Array}}
  */
-export function felszabaditasiTerv(allapot, szerzo, jegyzet = {}, most = Date.now(),
-                                   varakozas = MEGULEPEDES) {
+export function felszabaditasiTerv(allapot, szerzo, jegyzet = ujJegyzet(),
+                                   kellBuli = MEGULEPEDES_BULIK) {
+  const j = jegyzetNormalizalas(jegyzet);
   const elakadt = elakadtPontok(allapot, szerzo);
-  const elakadtAzonositok = new Set(elakadt.map((e) => e.entitas));
 
-  // ----- 2. AMI MÁR NEM ELAKADT: kivesszük (az óra újraindul) -----
-  const ujJegyzet = {};
-  for (const [entitas, mikor] of Object.entries(jegyzet)) {
-    if (elakadtAzonositok.has(entitas)) ujJegyzet[entitas] = mikor;
-  }
-
+  const ujTetelek = {};
   const feloldhato = [];
   const varakozok = [];
 
   for (const tetel of elakadt) {
-    // ----- 1. ÚJ TÖRLÉS: itt indul az óra -----
-    if (ujJegyzet[tetel.entitas] === undefined) ujJegyzet[tetel.entitas] = most;
+    const regi = j.tetelek[tetel.entitas];
 
-    // ----- 3. LETELT-E? -----
-    const meddig = ujJegyzet[tetel.entitas] + varakozas;
-    if (most >= meddig) feloldhato.push(tetel);
-    else varakozok.push({ ...tetel, meddig });
+    // ⭐ UGYANARRÓL A DÖNTÉSRŐL VAN SZÓ? Ha nem (más lezárási idő), a számláló újraindul.
+    const folytatas = regi && regi.allas === tetel.allas;
+    const ota = folytatas ? regi.ota : j.bulik;
+    ujTetelek[tetel.entitas] = { ota, allas: tetel.allas };
+
+    const tisztaBulik = j.bulik - ota;
+    if (tisztaBulik >= kellBuli) feloldhato.push({ ...tetel, tisztaBulik });
+    else varakozok.push({ ...tetel, tisztaBulik, kell: kellBuli });
   }
 
-  return { jegyzet: ujJegyzet, feloldhato, varakozok };
+  // ⚠️ Ami kikerült az elakadtak közül, az a jegyzetből is kikerül (2. pont) — a `ujTetelek`
+  // csak a MOSTANI elakadtakat tartalmazza.
+  return { jegyzet: { bulik: j.bulik, tetelek: ujTetelek }, feloldhato, varakozok };
 }
 
 /**
@@ -119,16 +164,10 @@ export function felszabaditoLepesek(feloldhato, kiindulasiOsszeg) {
 
 /**
  * Kényelmi burkoló: terv + lépések egy hívásban.
- *
- * @param {Object} allapot
- * @param {string} szerzo
- * @param {Object} jegyzet
- * @param {number} [most]
- * @param {number} [varakozas]
  */
-export function felszabaditas(allapot, szerzo, jegyzet = {}, most = Date.now(),
-                              varakozas = MEGULEPEDES) {
-  const terv = felszabaditasiTerv(allapot, szerzo, jegyzet, most, varakozas);
+export function felszabaditas(allapot, szerzo, jegyzet = ujJegyzet(),
+                              kellBuli = MEGULEPEDES_BULIK) {
+  const terv = felszabaditasiTerv(allapot, szerzo, jegyzet, kellBuli);
   return {
     ...terv,
     lepesek: felszabaditoLepesek(terv.feloldhato, szetosztottPontok(allapot, szerzo))

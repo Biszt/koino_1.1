@@ -670,7 +670,14 @@ export function szetosztottPontok(allapot, szerzo) {
  * @returns {Array<{entitas: string, pont: number}>}
  */
 export function elakadtPontok(allapot, szerzo) {
-  const eltunt = new Set(allapot.torlesek ?? []);
+  // ⭐ A TÖRLÉS MELLÉ A DÖNTÉS JELE IS KELL — melyik egyezmény, és mikor született. A
+  // megülepedés ebből tudja meg, hogy UGYANARRÓL a döntésről van-e szó: ha egy késve
+  // érkező szavazat átírja a lezárás idejét, a `megszuletett` változik, és az óra újraindul.
+  const torlesek = new Map();
+  for (const t of allapot.torlesek ?? []) {
+    torlesek.set(t.entitas, t.allas ?? (t.javaslat + '|' + t.megszuletett));
+  }
+
   const lista = [];
   for (const [kulcs, pont] of allapot.kiosztasok ?? []) {
     if (pont <= 0) continue;
@@ -678,8 +685,9 @@ export function elakadtPontok(allapot, szerzo) {
     if (kulcs.slice(0, hatar) !== szerzo) continue;
     const entitas = kulcs.slice(hatar + 1);
     if (allapot.entitasok.has(entitas)) continue;
-    if (!eltunt.has(entitas)) continue;              // nem törölték — beolvadt vagy sosem láttuk
-    lista.push({ entitas, pont });
+    // nem törölték — beolvadt (a pont átment) vagy sosem láttuk (hiány, nem tény)
+    if (!torlesek.has(entitas)) continue;
+    lista.push({ entitas, pont, allas: torlesek.get(entitas) });
   }
   return lista;
 }

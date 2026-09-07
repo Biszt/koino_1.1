@@ -141,7 +141,7 @@ function athelyezes(entitas, valtozas, entitasok) {
  * szülője pedig az érintett — ha az érintett eltűnik, az árva-szabály **felviszi a törölt
  * entitás szülőjéhez**. Külön eset nélkül, ugyanabból a szabályból.
  */
-function torles(entitas, allapot) {
+function torles(entitas, allapot, egyezmeny) {
   allapot.entitasok.delete(entitas.azonosito);
 
   // ⭐ FELSOROLJUK, MI TŰNT EL — ugyanabban a listában, ahol a felejtés is látszik (D19).
@@ -160,8 +160,24 @@ function torles(entitas, allapot) {
   // beolvasztott forrásra is ráírna egy `pont: 0`-t — és a következő számításnál a
   // forrás már 0 ponttal jönne létre, tehát az egyesítés **nem találná meg a pontjaimat**.
   // *Ugyanaz a szó, két ellentétes következmény: külön listát kíván.*
+  //
+  // ⭐⭐ ÉS A DÖNTÉS JELÉT IS ELTESSZÜK. A felszabadítás ebből tudja meg, hogy UGYANARRÓL
+  // a döntésről van-e szó — ha nem, a megülepedés számlálója nulláról indul.
+  //
+  // ⚠️ A jel a lezárás idejénél TÖBB: benne van a **szavazás állása** is. Egy próba
+  // mutatott rá, hogy ez kell: egy késve érkező szavazat, ami a bizonyosságot nem mozdítja
+  // (mert az eredmény úgyis egyöntetű volt), **nem változtatja meg a lezárás idejét** —
+  // pedig épp azt jelzi, hogy MÉG MINDIG ÉRKEZNEK késői események erről a döntésről.
+  // *Amit mérni akarunk, az nem a döntés stabilitása, hanem a csend.*
   if (!Array.isArray(allapot.torlesek)) allapot.torlesek = [];
-  allapot.torlesek.push(entitas.azonosito);
+  const p = egyezmeny.pillanatkep ?? {};
+  allapot.torlesek.push({
+    entitas: entitas.azonosito,
+    javaslat: egyezmeny.javaslat,
+    megszuletett: egyezmeny.megszuletett,
+    allas: [egyezmeny.javaslat, egyezmeny.megszuletett,
+      p.tamogatok, p.ellenzok, p.tartozkodok, p.szavazok, p.nevezo].join('|')
+  });
 
   return {
     rendben: true,
@@ -439,7 +455,7 @@ function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyotta
   } else if (muvelet === 'Athelyezes') {
     eredmeny = athelyezes(entitas, resz.valtozas, allapot.entitasok);
   } else if (muvelet === 'Torles') {
-    eredmeny = torles(entitas, allapot);
+    eredmeny = torles(entitas, allapot, egyezmeny);
   } else if (ISMERT_MUVELETEK.includes(muvelet)) {
     // ⭐ ISMERT, DE MÉG NINCS VÉGREHAJTÓJA — és ez LÁTSZIK, nem néma.
     eredmeny = { rendben: false, ok: 'ehhez a művelethez még nincs végrehajtó' };

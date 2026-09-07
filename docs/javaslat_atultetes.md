@@ -292,11 +292,21 @@ aláírja, hogy „leveszem a pontomat egy gondolatról, ami már nem létezik",
 alá, hanem a saját készülékem könyvel. *(Precedens: a `javaslat` parancs ma is aláír egy
 második eseményt magától.)*
 
+⚠️⚠️ **És a mérce NEM az idő, hanem a BULI (Csaba, 2026-09-07).** Először naphoz kötöttem —
+de az idő múlása **semmit nem bizonyít**: egy hétvégén kikapcsolt készülék mellett három nap
+alatt sem érkezik semmi, egy sűrűn cserélő mellett viszont öt perc alatt körbeér minden. ⭐
+Amit mérni akarunk, az nem idő, hanem **egyeztetés**: hányszor beszéltem azóta másokkal úgy,
+hogy nem hoztak semmi újat erről a döntésről. ⛔ **A néma kör nem buli** — csak az számít,
+amiben legalább egy társ felelt. ⚠️ És mellé kell a **döntés jele** (egyezmény + lezárás + a
+szavazás állása): ha az változik, a számláló nulláról indul. *Nem a bulik gyűlnek, hanem a
+MOSTANI döntés melletti bulik.* ⚠️⚠️ **A szám (ma 3) még nincs megmérve** — Csaba kérése:
+*„mégjobb lenne ezt az értéket méréssel meghatározni."*
+
 ⚠️ **Miért nem azonnal:** a koino szerint *„a késve MEGÉRKEZŐ, de a határidőn belüli
 időbélyegű szavazat jogosan módosítja az eredményt"* — tehát **egy törlés vissza is
 fordulhat**. Ha addigra felszabadítottunk, a gondolat a pontom nélkül térne vissza; ha csak
 az enyém volt rajta, a felszabadításom **maga törölné el**. ⭐ Ezért megülepedés
-(`js/allapot/felszabaditas.js`, alapból 1 nap): az óra a törlés első meglátásakor indul, és
+(`js/allapot/felszabaditas.js`, bulikban mérve): a számláló a törlés első meglátásakor indul, és
 **újraindul, ha a döntés visszafordul**. A várakozás ingyen van — a 2.6/b javítás után a
 koino az elakadt ponttal is hibátlanul működik.
 
@@ -306,7 +316,7 @@ listát nézné, ráírna egy `pont: 0`-t — és a következő számításnál 
 meg a pontjaimat**, vagyis a felszabadítás **elvenné, amit megőrizni akar**. Ezért a törlés
 külön listát vezet (`allapot.torlesek`). *Ugyanaz a szó, két ellentétes következmény.*
 
-Az `orjarat` minden körben elvégzi; a kézi út a `felszabadit [óra]` (0 = azonnal), és az
+Az `orjarat` minden körben elvégzi; a kézi út a `felszabadit [buli]` (0 = azonnal), és az
 állapot kiírja, mennyi pont áll még törölt gondolaton.
 
 ✅ **AZ `Egyesites` IS MEGÉPÜLT (2026-09-07)** — ez volt az utolsó, és jó okkal: ez az
