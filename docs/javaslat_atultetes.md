@@ -80,6 +80,55 @@ fogalma — a koinóban nincs megfelelője"). Valójában **teljes, kidolgozott 
 🔍 *Ez a D14-gyel és a tudatpont-modellel tökéletesen összefér — nem új mechanizmus, hanem a
 meglévők átrendezése. De egyetlen sora sincs meg a koinóban.*
 
+### ✅ 2.1/b MEGÉPÍTVE: a MÓDOSÍTÁSI különválás (2026-09-08)
+
+A prototípus `_kulonvalasokVegrehajtasa` + `kulonvalasService` első köre átjött — a **hatóköre
+is ugyanaz**: `Modositas`, elfogadott javaslat, az **ellenzők** viszik a **régi** változatot.
+
+| Lépés | A koinóban |
+|---|---|
+| **Ki válik külön** | aki `Ellenez`-t szavazott **ÉS** kért külön ágat (`kulonvalasIgeny`) |
+| **Tartózkodó** | ⛔ SOHA — a művelet hamisra állítja, **és a számítás is ellenőrzi** |
+| **Mit visz** | a módosítás **ELŐTTI** cím és szöveg (a végrehajtás a felülírás előtt elteszi) |
+| **A tudatpont** | **átkerül, nem duplázódik** — a főág prioritása ennyivel csökken |
+| **A két ág** | össze van kötve: `kulonvalasok: [{ testverId, testverTipus, testverCim, agSzerep, kulonvalasIdeje }]` |
+
+⭐ **Az összekötés alakját nem kellett kitalálni**: a prototípus `GondolatKartya.js`
+„Másik ág" füle pontosan ezt olvassa.
+
+⛔⛔ **A FŐÁG NEM ESHET NULLÁRA.** Ha a végrehajtáskor már mindenki a különválók közt van, a
+szétválás **nem történik meg** — különben a főág gazdátlanul eltűnne (D14), vagyis a
+„szétválás" valójában elvinné az egészet. ⭐ A kihagyás **látszik** (`kihagyottak`, D19).
+
+⚠️⚠️ **És ezt a próbát először VAKRA írtam:** elvetett javaslattal, ami el sem jut az őrig —
+a rontás-próba buktatta le (az őrt kikapcsolva semmi nem bukott). A valódi eset ravaszabb: a
+**támogatók a szavazás UTÁN veszik el a pontjaikat**, tehát a döntés elfogadva marad (a
+lezárás pillanata szerint), de a végrehajtáskor már csak a különválni akaró ellenző a gazda.
+
+### ⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ — és mibe került
+
+A különvált ág **új entitás**, amihez nem tartozik esemény. Az azonosítója
+`lenyomat({ fajta: 'kulonvalas', forras, egyezmeny })` — vagyis **ugyanolyan alakú, 43
+karakteres lenyomat**, mint bármelyik másik; a különbség az, hogy **nincs mögötte aláírás,
+csak levezetés**. Ez Csaba 2026-09-07-i kimondása: *minden azonosító aláírt eseményekből
+számítható; a lenyomat ennek a különleges esete.*
+
+⚠️ **Az ára: a harmadik fázis ASZINKRON lett**, mert a `lenyomat` a WebCryptót hívja. A másik
+út (kézzel összefűzött név) elkerülte volna ezt, de akkor a koinóban **kétféle
+azonosító-alak** lenne. A hívók amúgy is aszinkronok voltak, tehát az ár kicsi
+(`kepetKerni`, `kepetKeszit`, a próbák `kep()`-je), a nyereség pedig **egységes
+azonosító-modell**.
+
+### ⏸️ Ami a különválásból még hátravan
+
+- **A tükör-eset**: elvetett javaslatnál a **TÁMOGATÓK** viszik a módosított változatot. A
+  prototípusban ez „másik belépési pont" — a koinóban is az lesz, mert **elvetett
+  javaslatnál nincs egyezmény**, amiből a végrehajtás indulhatna.
+- **A leszármazottak szétosztása** (`_leszarmazottakSzetosztasa`): marad / költözik /
+  **duplázódik**. Ez Csaba fejszám-szabályával együtt jön (`gepezet.md` 5. ábra).
+- **Az érték javaslatok átvándorlása** — a két ág küszöbei ezért térhetnek el.
+- **Az egyesítés-változat** (a vesztes gondolat megmarad, ha van radikális ellenzője).
+
 ### 2.2 ⛔ Az egyezmény HELYE — `egyezmenyTarhelyId`
 
 `javaslat.js`: *„Hol jön létre az EGYEZMÉNY, ha a javaslatot elfogadják **(nem a javaslat

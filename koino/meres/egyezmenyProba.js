@@ -66,10 +66,10 @@ async function eset({ muvelet = 'Modositas', valtozas = { cim: 'ÚJ CÍM' },
 }
 
 /** A három fázis — ugyanaz, amit a `koino.js` és a `pakli.js` futtat. */
-function kep(esemenyek, most = KESOBB) {
+async function kep(esemenyek, most = KESOBB) {
   const allapot = allapotSzamitasa(esemenyek);
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
-  const eredmeny = szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
+  const eredmeny = await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
   return { allapot, javaslatok, ...eredmeny };
 }
 
@@ -81,26 +81,26 @@ const cime = (k, gondolat) => k.allapot.entitasok.get(gondolat.azonosito)?.cim;
 
 proba('⭐⭐⭐ AZ ELFOGADOTT egyezmény ÁTÍRJA a címet — ez volt a mért rés', async () => {
   const e = await eset();
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return cime(k, e.gondolat) === 'ÚJ CÍM' && k.alkalmazottak.length === 1;
 });
 
 proba('⛔ A FOLYAMATBAN lévő javaslat NEM ír át semmit (nem hat előre)', async () => {
   const e = await eset();
   // Közvetlenül a javaslat után: a döntési idő még nem telt le.
-  const k = kep(e.esemenyek, KEZDET + 3000);
+  const k = await kep(e.esemenyek, KEZDET + 3000);
   return cime(k, e.gondolat) === 'EREDETI CÍM' && k.alkalmazottak.length === 0;
 });
 
 proba('⛔ Az ELVETETT javaslat nem ír át semmit', async () => {
   const e = await eset({ szavazat: 'Ellenez' });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return cime(k, e.gondolat) === 'EREDETI CÍM' && k.alkalmazottak.length === 0;
 });
 
 proba('⛔⛔ Az ÁLTALÁNOS egyezményből nem következik entitás-változás (D27)', async () => {
   const e = await eset({ fajta: 'altalanos' });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   // Az egyezmény MEGSZÜLETIK — csak nem hajtódik végre.
   const j = k.javaslatok.get(e.javaslat.azonosito);
   return j.egyezmeny !== null
@@ -114,21 +114,21 @@ proba('⛔⛔ Az ÁLTALÁNOS egyezményből nem következik entitás-változás 
 
 proba('A szöveg is átírható', async () => {
   const e = await eset({ valtozas: { szoveg: 'ÚJ SZÖVEG' } });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const entitas = k.allapot.entitasok.get(e.gondolat.azonosito);
   return entitas.szoveg === 'ÚJ SZÖVEG' && entitas.cim === 'EREDETI CÍM';
 });
 
 proba('⭐ CSAK a megnevezett mező változik — a cím-csere nem törli a szöveget', async () => {
   const e = await eset({ valtozas: { cim: 'ÚJ CÍM' } });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const entitas = k.allapot.entitasok.get(e.gondolat.azonosito);
   return entitas.cim === 'ÚJ CÍM' && entitas.szoveg === 'eredeti szöveg';
 });
 
 proba('⛔ A mezőt nem nevező változás kihagyva, indoklással', async () => {
   const e = await eset({ valtozas: { valamiMas: 'x' } });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return k.alkalmazottak.length === 0
     && k.kihagyottak.length === 1
     && k.kihagyottak[0].ok.includes('nem nevezett meg mezőt');
@@ -140,7 +140,7 @@ proba('⛔ A mezőt nem nevező változás kihagyva, indoklással', async () => 
 
 proba('⭐ KÉT egyezmény ugyanarra: a KÉSŐBBI nyer', async () => {
   const e = await eset({ valtozas: { cim: 'ELSŐ' }, masodik: { cim: 'MÁSODIK' } });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return cime(k, e.gondolat) === 'MÁSODIK' && k.alkalmazottak.length === 2;
 });
 
@@ -149,8 +149,8 @@ proba('⭐⭐ …ÉS EZ NEM A BEJÁRÁSI SORRENDTŐL FÜGG: kevert bemenettel is
 
   // Ugyanaz a halmaz, más sorrendben — mint két gépen a csere után.
   const kevert = [...e.esemenyek].reverse();
-  const a = kep(e.esemenyek);
-  const b = kep(kevert);
+  const a = await kep(e.esemenyek);
+  const b = await kep(kevert);
   return cime(a, e.gondolat) === cime(b, e.gondolat) && cime(b, e.gondolat) === 'MÁSODIK';
 });
 
@@ -190,7 +190,7 @@ proba('⭐⭐⭐ A SORREND a LEJÁRAT szerint dől el, nem a bejárás szerint',
   esemenyek.push(await gazda.tesz('Szavazat',
     { javaslat: korai.azonosito, szavazat: 'Tamogat' }, KEZDET + 1000));
 
-  const k = kep(esemenyek);
+  const k = await kep(esemenyek);
 
   // ⭐ A helyes eredmény a KÉSŐBB lejáró változása — a bejárási sorrend a másikat adná.
   return k.alkalmazottak.length === 2
@@ -233,14 +233,14 @@ async function faEset(ujSzulo) {
 
 proba('⭐ ÁTHELYEZÉS: a gyökérre helyezés végrehajtódik', async () => {
   const e = await faEset('gyoker');
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return k.allapot.entitasok.get(e.szulo.azonosito).szulo === null
     && k.alkalmazottak.length === 1;
 });
 
 proba('⛔⛔ ÁTHELYEZÉS, AMI KÖRT CSINÁLNA: kihagyva, és megmondja, miért', async () => {
   const e = await faEset('gyerek');
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return k.alkalmazottak.length === 0
     && k.kihagyottak.length === 1
     && k.kihagyottak[0].ok.includes('KÖRT')
@@ -268,7 +268,7 @@ proba('⛔⛔ ÁTHELYEZÉS, AMI KÖRT CSINÁLNA: kihagyva, és megmondja, miért
 
 proba('⭐⭐ A TÖRLÉS UTÁN A KIOSZTOTT ÖSSZEG NEM CSÖKKEN — a pont elakad, nem tűnik el', async () => {
   const e = await eset({ muvelet: 'Torles', valtozas: null });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   // ⛔ EZ VOLT A MÉRT HIBA: a „mennyit osztottam ki" az ÉLŐ entitásokból számolt (0), a
   // szabály-réteg viszont a saját láncból (100) — és a következő tudatpont-eseményem
@@ -280,7 +280,7 @@ proba('⭐⭐ A TÖRLÉS UTÁN A KIOSZTOTT ÖSSZEG NEM CSÖKKEN — a pont elaka
 
 proba('⭐ …ÉS A TÖRLÉS UTÁN IS LEHET ÚJ GONDOLATOT LÉTREHOZNI (a lánc és a bemondás egyezik)', async () => {
   const e = await eset({ muvelet: 'Torles', valtozas: null });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   // A készülék a `szetosztottPontok`-ból mondja be az összeget — ahogy a `koino.js` teszi.
   const uj = await e.gazda.tesz('GondolatLetrehozas', { cim: 'ÚJ', meret: 10 }, KESOBB);
@@ -289,7 +289,7 @@ proba('⭐ …ÉS A TÖRLÉS UTÁN IS LEHET ÚJ GONDOLATOT LÉTREHOZNI (a lánc 
     kiosztva: szetosztottPontok(k.allapot, e.gazda.szerzo) + 50
   }, KESOBB);
 
-  const utana = kep([...e.esemenyek, uj, pont]);
+  const utana = await kep([...e.esemenyek, uj, pont]);
   return utana.allapot.kivetelek.length === 0
     && utana.allapot.entitasok.has(uj.azonosito);
 });
@@ -350,7 +350,7 @@ async function egyesitesEset({ szulok = [null, null], gyerekhez = null } = {}) {
 
 proba('⭐⭐⭐ AZ ELSŐ FORRÁS ELNYELI A MÁSODIKAT — és a pontok EMBERENKÉNT összeadódnak', async () => {
   const e = await egyesitesEset();
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const elnyelo = k.allapot.entitasok.get(e.forrasok[0].azonosito);
 
   return k.allapot.entitasok.has(e.forrasok[1].azonosito) === false   // a második beolvadt
@@ -369,7 +369,7 @@ proba('⭐⭐ A BEOLVASZTOTT GONDOLAT GYEREKE AZ ELNYELŐHÖZ KERÜL — nem a n
   // árva-szabály már felvitte volna őket a nagyszülőhöz. A prototípus épp ezért gyűjt
   // a törlés ELŐTT (Csaba döntése, 2026-07-22).
   const e = await egyesitesEset({ gyerekhez: 1 });     // a gyerek a MÁSODIK forrás alatt
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   return k.allapot.entitasok.get(e.gyerek.azonosito).szulo === e.forrasok[0].azonosito
     // ⭐ …és ettől az ág-méret is helyes: az elnyelő ága tartalmazza a gyereket.
@@ -402,7 +402,7 @@ proba('⭐ AZ EGYESÍTETT GONDOLAT A LEGKÖZELEBBI KÖZÖS ŐS ALÁ KERÜL', asy
   esemenyek.push(await gazda.tesz('Szavazat',
     { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
 
-  const k = kep(esemenyek);
+  const k = await kep(esemenyek);
   // ⭐ A BAL-FORRÁS a BAL alatt volt; egyesítés után a KÖZÖS ŐS alá kerül.
   return k.allapot.entitasok.get(forrasok[0].azonosito).szulo === kozos.azonosito
     && k.allapot.entitasok.has(forrasok[1].azonosito) === false;
@@ -415,7 +415,7 @@ proba('⛔⛔ A BEOLVASZTOTT FORRÁS NEM „ELAKADT PONT" — a pontja átment, 
   // számításnál az egyesítés **már nem találná meg a pontjaimat**. *Ugyanaz a szó, két
   // ellentétes következmény.*
   const e = await egyesitesEset();
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   return elakadtPontok(k.allapot, e.gazda.szerzo).length === 0
     && elakadtPontok(k.allapot, e.masik.szerzo).length === 0
@@ -427,7 +427,7 @@ proba('⛔⛔ A BEOLVASZTOTT FORRÁS NEM „ELAKADT PONT" — a pontja átment, 
 
 proba('⭐ HÁROM FORRÁS is összevonható, egy lépésben', async () => {
   const e = await egyesitesEset({ szulok: [null, null, null] });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   return k.allapot.entitasok.has(e.forrasok[1].azonosito) === false
     && k.allapot.entitasok.has(e.forrasok[2].azonosito) === false
@@ -444,7 +444,7 @@ proba('⭐ HÁROM FORRÁS is összevonható, egy lépésben', async () => {
 
 proba('⭐⭐ A TÖRLÉSI egyezmény MEGSZÜNTETI az entitást', async () => {
   const e = await eset({ muvelet: 'Torles', valtozas: null });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
 
   return k.allapot.entitasok.has(e.gondolat.azonosito) === false
     && k.allapot.elfelejtettek.includes(e.gondolat.azonosito)
@@ -454,7 +454,7 @@ proba('⭐⭐ A TÖRLÉSI egyezmény MEGSZÜNTETI az entitást', async () => {
 
 proba('⛔ …DE CSAK ELFOGADÁS UTÁN — a folyamatban lévő törlés nem tüntet el semmit', async () => {
   const e = await eset({ muvelet: 'Torles', valtozas: null });
-  const k = kep(e.esemenyek, KEZDET + 3000);        // a döntési idő még nem telt le
+  const k = await kep(e.esemenyek, KEZDET + 3000);        // a döntési idő még nem telt le
   return k.allapot.entitasok.has(e.gondolat.azonosito) === true
     && k.alkalmazottak.length === 0;
 });
@@ -491,7 +491,7 @@ proba('⭐⭐⭐ A TÖRÖLT ENTITÁS GYEREKEI FELKERÜLNEK A NAGYSZÜLŐHÖZ (a 
   esemenyek.push(await gazda.tesz('Szavazat',
     { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
 
-  const k = kep(esemenyek);
+  const k = await kep(esemenyek);
 
   return k.allapot.entitasok.has(szulo.azonosito) === false
     // ⭐ A gyerek NEM tűnt el, és NEM lóg a semmiben: a nagyszülőhöz került.
@@ -505,7 +505,7 @@ proba('⭐⭐⭐ A TÖRÖLT ENTITÁS GYEREKEI FELKERÜLNEK A NAGYSZÜLŐHÖZ (a 
 
 proba('⛔ ISMERETLEN művelet: szintén kihagyva, megnevezve', async () => {
   const e = await eset({ muvelet: 'Elkobzas', valtozas: { cim: 'x' } });
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return k.kihagyottak.length === 1 && k.kihagyottak[0].ok.includes('ismeretlen művelet');
 });
 
@@ -520,7 +520,7 @@ proba('⚠️ A HIÁNYZÓ entitás nem hiba, csak „nem hajtható végre" (D14/
   // (a végrehajtáskor hiányzó entitást), hanem némán a szavazás-szabályt.
   const elvesz = await e.gazda.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 0 }, KEZDET + 3 * 3600 * 1000);
-  const k = kep([...e.esemenyek, elvesz]);
+  const k = await kep([...e.esemenyek, elvesz]);
 
   return k.allapot.entitasok.size === 0
     && k.kihagyottak.length === 1
@@ -533,7 +533,7 @@ proba('⚠️ A HIÁNYZÓ entitás nem hiba, csak „nem hajtható végre" (D14/
 
 proba('⭐ Az alkalmazások és a kihagyások az ÁLLAPOTBAN is ott vannak (D19)', async () => {
   const e = await eset();
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   return Array.isArray(k.allapot.szerkesztesiAlkalmazasok)
     && k.allapot.szerkesztesiAlkalmazasok.length === 1
     && Array.isArray(k.allapot.szerkesztesiKihagyasok)
@@ -581,7 +581,7 @@ proba('⭐⭐ KÉT ÉRINTETT, KÉT KÜLÖNBÖZŐ MŰVELET — mindkettő végreh
     { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } },
     { entitas: b.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: a.azonosito } }
   ]);
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const [a, b] = e.gondolatok;
 
   return k.alkalmazottak.length === 2
@@ -598,7 +598,7 @@ proba('⛔⛔ EGY ELEM ELAKADÁSA NEM DÖNTI EL A TÖBBIT — és megmondja, mel
     // ⚠️ Ez elakad: nem létező szülő alá helyezné (a másik elemnek ehhez semmi köze).
     { entitas: b.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: 'nincs-ilyen-entitas' } }
   ]);
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const [a, b] = e.gondolatok;
 
   return k.alkalmazottak.length === 1
@@ -614,7 +614,7 @@ proba('⭐ A RÉGI ALAK (egyetlen `erintett`) VÁLTOZATLANUL fut — az aláír�
   // visszafelé-olvasás amúgy is mérve van. Itt azt fogjuk meg, hogy a KETTŐ UGYANAZ:
   // a régi alakból számolt egyezmény ugyanúgy egy elemű listát mutat.
   const e = await eset();
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const j = k.javaslatok.get(e.javaslat.azonosito);
 
   return j.erintettek.length === 1
@@ -631,13 +631,157 @@ proba('⛔ ISMERETLEN MŰVELET A TÖMB EGYIK ELEMÉN: csak AZ az elem esik ki', 
     { entitas: a.azonosito, muvelet: 'Elkobzas', valtozas: { cim: 'x' } },
     { entitas: b.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } }
   ]);
-  const k = kep(e.esemenyek);
+  const k = await kep(e.esemenyek);
   const [, b] = e.gondolatok;
 
   return k.kihagyottak.length === 1
     && k.kihagyottak[0].ok.includes('ismeretlen művelet')
     && k.alkalmazottak.length === 1
     && k.allapot.entitasok.get(b.azonosito).cim === 'ÁTÍRVA';
+});
+
+
+// ===================================
+// ⭐⭐⭐ KÜLÖNVÁLÁS (2026-09-08)
+// ===================================
+//
+// *„Aki elmegy, viszi a súlyát."* A módosítás átment, tehát a főágon a MÓDOSÍTOTT szöveg
+// él tovább — aki viszont ellenezte ÉS kért külön ágat, az elviszi a RÉGI változatot.
+
+/**
+ * Egy gondolat két gazdával + módosítási javaslat + szavazatok.
+ * @param {Array} szavazok - [{ szavazat, kulonvalasIgeny, pont }]
+ */
+async function kulonvalasEset(szavazok) {
+  const gazda = await ujEember();
+  const esemenyek = [];
+
+  const g = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'EREDETI', szoveg: 'régi szöveg', meret: 100 }, KEZDET);
+  esemenyek.push(g);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes',
+    { entitas: g.azonosito, pont: 60 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat',
+    { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+
+  // ⭐ EGY MÁSODIK TÁMOGATÓ: enélkül egyetlen ellenszavazat már 50%-ra viszi az arányt, és
+  // a javaslat elvetve — akkor pedig nincs egyezmény, amiből különválás lehetne.
+  const masodik = await ujEember();
+  esemenyek.push(await masodik.tesz('TudatpontRendezes',
+    { entitas: g.azonosito, pont: 20 }, KEZDET));
+
+  const emberek = [];
+  for (const sz of szavazok) {
+    const ember = await ujEember();
+    emberek.push(ember);
+    esemenyek.push(await ember.tesz('TudatpontRendezes',
+      { entitas: g.azonosito, pont: sz.pont ?? 10 }, KEZDET));
+  }
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÚJ CÍM' } }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: false }, KEZDET + 2000));
+  esemenyek.push(await masodik.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: false }, KEZDET + 2000));
+
+  for (let i = 0; i < szavazok.length; i++) {
+    esemenyek.push(await emberek[i].tesz('Szavazat', {
+      javaslat: javaslat.azonosito,
+      szavazat: szavazok[i].szavazat,
+      kulonvalasIgeny: szavazok[i].kulonvalasIgeny === true
+    }, KEZDET + 2000));
+  }
+
+  return { esemenyek, gondolat: g, javaslat, gazda, masodik, emberek };
+}
+
+proba('⭐⭐⭐ AZ ELLENZŐ KÜLÖN ÁGRA LÉP A RÉGI VÁLTOZATTAL — a pontjával együtt', async () => {
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: true, pont: 10 }]);
+  const k = await kep(e.esemenyek);
+
+  const foag = k.allapot.entitasok.get(e.gondolat.azonosito);
+  const ujId = k.kulonvalasok[0]?.kulonvaltAg;
+  const ujAg = k.allapot.entitasok.get(ujId);
+
+  return k.kulonvalasok.length === 1
+    && foag.cim === 'ÚJ CÍM'                       // a főágon a módosítás
+    && ujAg !== undefined
+    && ujAg.cim === 'EREDETI'                      // ⭐ a különváló a RÉGIT viszi
+    && ujAg.szoveg === 'régi szöveg'
+    // ⭐⭐ A PONT ÁTKERÜL, NEM DUPLÁZÓDIK: a főág prioritása ennyivel csökken.
+    && ujAg.osszesPont === 10
+    && foag.osszesPont === 80
+    && foag.hozzajarulok.has(e.emberek[0].szerzo) === false;
+});
+
+proba('⭐⭐ A KÉT ÁG ÖSSZE VAN KÖTVE — a kártya „Másik ág" fülének alakjában', async () => {
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: true }]);
+  const k = await kep(e.esemenyek);
+
+  const foag = k.allapot.entitasok.get(e.gondolat.azonosito);
+  const ujAg = k.allapot.entitasok.get(k.kulonvalasok[0].kulonvaltAg);
+
+  return foag.kulonvalasok?.length === 1
+    && foag.kulonvalasok[0].testverId === ujAg.azonosito
+    && foag.kulonvalasok[0].agSzerep === 'foag'
+    && ujAg.kulonvalasok[0].testverId === foag.azonosito
+    && ujAg.kulonvalasok[0].agSzerep === 'mellekag'
+    && ujAg.kulonvalasok[0].testverCim === 'ÚJ CÍM';
+});
+
+proba('⛔ AKI NEM KÉRT KÜLÖN ÁGAT, AZ MARAD — az ellenzés önmagában nem elég', async () => {
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: false }]);
+  const k = await kep(e.esemenyek);
+  return k.kulonvalasok.length === 0
+    && k.allapot.entitasok.get(e.gondolat.azonosito).osszesPont === 90;
+});
+
+proba('⛔⛔ A TARTÓZKODÓ SOHA NEM VÁLIK KÜLÖN — akkor sem, ha az esemény azt mondja', async () => {
+  // ⚠️ A `muveletek.js` már hamisra állítja, de egy KÉZZEL ÍRT esemény hazudhat — és a
+  // számításnak akkor is helyesen kell döntenie. *Amit a számítás nem ellenőriz, az nem
+  // szabály, csak illemtan.*
+  const e = await kulonvalasEset([{ szavazat: 'Tartozkodik', kulonvalasIgeny: true }]);
+  const k = await kep(e.esemenyek);
+  return k.kulonvalasok.length === 0;
+});
+
+proba('⛔⛔ HA MINDENKI KÜLÖN VÁLNA, NEM TÖRTÉNIK SZÉTVÁLÁS — és ez LÁTSZIK', async () => {
+  // ⚠️⚠️ EZT A PRÓBÁT ELŐSZÖR VAKRA ÍRTAM: elvetett javaslattal, ami el sem jut az őrig.
+  // A rontás-próba buktatta le (az őrt kikapcsolva semmi nem bukott). ⭐ A valódi eset
+  // ravaszabb: a TÁMOGATÓK a szavazás UTÁN veszik el a pontjaikat, tehát a döntés
+  // elfogadva marad (a lezárás pillanata szerint), de a végrehajtáskor már CSAK a
+  // különválni akaró ellenző a gazda. Ha ilyenkor is szétválna, a főág gazdátlanul
+  // eltűnne (D14) — vagyis a „szétválás" valójában elvinné az egészet.
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: true }]);
+
+  // A lezárás UTÁN mindkét támogató elveszi a pontját.
+  const utana = KEZDET + 30 * 24 * 3600 * 1000 - 1000;
+  e.esemenyek.push(await e.gazda.tesz('TudatpontRendezes',
+    { entitas: e.gondolat.azonosito, pont: 0 }, utana));
+  e.esemenyek.push(await e.masodik.tesz('TudatpontRendezes',
+    { entitas: e.gondolat.azonosito, pont: 0 }, utana));
+
+  const k = await kep(e.esemenyek);
+
+  return k.javaslatok.get(e.javaslat.azonosito).statusz === 'elfogadva'   // a döntés áll
+    && k.kulonvalasok.length === 0                                        // de nincs szétválás
+    && k.kihagyottak.some((x) => x.muvelet === 'Kulonvalas'
+         && x.ok.includes('nem maradna főág'))                            // ⭐ és LÁTSZIK
+    && k.allapot.entitasok.has(e.gondolat.azonosito);                     // a gondolat megvan
+});
+
+proba('⭐ A SZÁRMAZTATOTT AZONOSÍTÓ MINDEN GÉPEN UGYANAZ — kevert bemenettel is', async () => {
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: true }]);
+  const a = await kep(e.esemenyek);
+  const b = await kep([...e.esemenyek].reverse());
+
+  return a.kulonvalasok[0].kulonvaltAg === b.kulonvalasok[0].kulonvaltAg
+    // ⭐ …és ugyanolyan ALAKÚ, mint bármelyik másik azonosító: 43 karakteres lenyomat.
+    && a.kulonvalasok[0].kulonvaltAg.length === 43;
 });
 
 export default futtatas;

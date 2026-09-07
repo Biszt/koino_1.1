@@ -670,22 +670,31 @@ export function javaslatLetrehozasa(kornyezet, adatok) {
 // ===================================
 
 /**
- * Szavaz egy javaslatra. A szavazat MÓDOSÍTHATÓ: egy újabb szavazat-esemény felülírja a
- * korábbit (a saját láncodban az utolsó számít). Ez nem kijátszás, hanem szabály — a
- * meggondolás joga.
+ * Szavazás egy javaslatra.
  *
- * ⭐ A SZELET-KULCS AZ ÉRINTETT ENTITÁS, NEM A JAVASLAT. Ez szándékos: a döntés bemenete
- * (szavazatok + tudatpont-rendezések + érték javaslatok) így EGY szeletben van együtt.
- * Aki tartja az entitást, definíció szerint tartja a döntés teljes bemenetét.
+ * ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY (2026-09-08, a prototípus `kulonvalasIgeny` mezője).
+ *
+ * *„Ha a döntés nem a te álláspontodat követi, szeretnél külön ágat?"* — aki ezt kéri, és a
+ * vesztes oldalon marad, az a **saját változatával** léphet külön ágra, a tudatpontjával
+ * együtt. *„Aki elmegy, viszi a súlyát."*
+ *
+ * ⛔ TARTÓZKODÁSNÁL A SZÁNDÉK MINDIG HAMIS, és ezt ITT kényszerítjük ki — pontosan úgy,
+ * ahogy a prototípus `szavazatService`-e (1/b lépés): *„aki nem foglalt állást, nem válik
+ * külön, ő a főágon marad."* ⭐ Egy helyen döntjük el, hogy ne csúszhasson szét kétféle
+ * igazságra: a felület kérdése csak kérdés, a szabály itt van.
  *
  * @param {Object} kornyezet
- * @param {string} javaslat
+ * @param {string} javaslat - a javaslat azonosítója
  * @param {string} szavazat - 'Tamogat' | 'Ellenez' | 'Tartozkodik'
+ * @param {boolean} [kulonvalasIgeny] - kér-e külön ágat, ha a döntés ellene megy
  */
-export async function szavazas(kornyezet, javaslat, szavazat) {
+export async function szavazas(kornyezet, javaslat, szavazat, kulonvalasIgeny = false) {
   if (!['Tamogat', 'Ellenez', 'Tartozkodik'].includes(szavazat)) {
     throw new Error('Érvénytelen szavazat: ' + szavazat);
   }
+
+  // ⛔ A tartózkodó SOSEM válik külön (lásd fent).
+  const igeny = szavazat === 'Tartozkodik' ? false : !!kulonvalasIgeny;
 
   // Melyik entitásról szól a javaslat? Ez adja a szelet-kulcsot.
   const javaslatEsemeny = await esemenyLekerese(kornyezet.tar, javaslat);
@@ -697,7 +706,8 @@ export async function szavazas(kornyezet, javaslat, szavazat) {
   const entitas = elsoErintett(javaslatEsemeny.adat);
 
   return esemenytTeszek(
-    kornyezet, 'Szavazat', { javaslat, szavazat },
+    kornyezet, 'Szavazat', { javaslat, szavazat, kulonvalasIgeny: igeny },
     { entitas, horgonyozzunk: true }
   );
 }
+

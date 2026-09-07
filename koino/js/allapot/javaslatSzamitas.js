@@ -342,6 +342,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   const tulajdonosok = uresen();      // entitás → (szerző → { pont, szerep, sorszam })
   const ertekJavaslatok = uresen();   // entitás → (szerző → { ertekek, sorszam })
   const reszSzavazatok = uresen();    // entitás → (szerző → 'Tamogat' | …)
+  const kulonAgot = uresen();         // entitás → (szerző → kért-e külön ágat)
   const szavazatSorszam = new Map();  // szerző → az eddig figyelembe vett szavazat-sorszám
 
   /**
@@ -393,6 +394,21 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       muvelet: r.muvelet,
       valtozas: r.valtozas ?? null,
       kuszobok,
+      // ⭐⭐ A KÜLÖNVÁLÓK — akik ELLENEZTÉK és kértek külön ágat.
+      //
+      // ⛔ A TARTÓZKODÓ SOHA — akkor sem, ha az esemény azt mondja. A `muveletek.js` már
+      // hamisra állítja, de egy kézzel írt esemény hazudhat: *amit a számítás nem
+      // ellenőriz, az nem szabály, csak illemtan.*
+      //
+      // ⚠️ A prototípus szimmetriája: elfogadott javaslatnál az ELLENZŐK viszik a RÉGI
+      // állapotot; elvetettnél a TÁMOGATÓK a módosítottat. ⏸️ Ma az elsőt építjük.
+      //
+      // ⭐ SORBA RENDEZETT lista (nem `Map`), mert ez az egyezménybe kerül: minden gépen
+      // ugyanúgy kell kinéznie, és sorosíthatónak kell lennie.
+      kulonvalok: [...reszSzavazatok.get(r.entitas)]
+        .filter(([szerzo, sz]) => sz === 'Ellenez' && kulonAgot.get(r.entitas).get(szerzo))
+        .map(([szerzo]) => szerzo)
+        .sort(),
       allas: allasSzamitasa(javaslatEsemeny, reszSzavazatok.get(r.entitas),
         aktivHalmazItt(r.entitas), kuszobok)
     };
@@ -432,6 +448,11 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       for (const entitas of entitasok) {
         if ((tulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
         reszSzavazatok.get(entitas).set(esemeny.szerzo, esemeny.adat.szavazat);
+        // ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY IS ELTEVŐDIK (2026-09-08) — a különválás ebből tudja
+        // meg, ki lép külön ágra, ha a döntés ellene megy. ⛔ Tartózkodásnál a művelet
+        // már hamisra állította (`muveletek.js`), de a SZÁMÍTÁS is ellenőrzi lentebb:
+        // egy kézzel írt esemény hazudhat.
+        kulonAgot.get(entitas).set(esemeny.szerzo, esemeny.adat.kulonvalasIgeny === true);
       }
 
     } else if (esemeny.tipus === 'TudatpontRendezes') {
@@ -551,6 +572,9 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       fajta,                                   // szerkesztési vagy általános (D27)
       erintett: erintettAzonosito,
       erintettek: kik,
+      // ⭐⭐ ÉS KI VÁLIK KÜLÖN, ÉRINTETTENKÉNT (2026-09-08). A végrehajtás ebből tudja
+      // meg, kinek kell külön ágat nyitni a régi változattal.
+      kulonvalok: Object.fromEntries(reszek.map((r) => [r.entitas, r.kulonvalok ?? []])),
       // ⚠️ A `muvelet`/`valtozas` az ELSŐ érintetté — összefoglaló, nem az igazság.
       // A végrehajtás az `erintettek` tömböt járja, mert a művelet ENTITÁSONKÉNTI.
       muvelet: kik[0]?.muvelet ?? null,
@@ -599,6 +623,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
         muvelet: r.muvelet,
         valtozas: r.valtozas,
         kuszobok: r.kuszobok,
+        kulonvalok: r.kulonvalok ?? [],
         ...r.allas
       })),
 

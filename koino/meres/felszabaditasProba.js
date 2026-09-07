@@ -65,10 +65,10 @@ async function torlesEset({ szavazat = 'Tamogat', masodikGondolat = false } = {}
 }
 
 /** A három fázis — ugyanaz, amit a `koino.js` és a `pakli.js` futtat. */
-function kep(esemenyek, most = KESOBB) {
+async function kep(esemenyek, most = KESOBB) {
   const allapot = allapotSzamitasa(esemenyek);
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
-  szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
+  await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
   return allapot;
 }
 
@@ -78,7 +78,7 @@ function kep(esemenyek, most = KESOBB) {
 
 proba('⭐⭐ AZ ELSŐ LÁTÁSKOR CSAK A SZÁMLÁLÓ INDUL EL — még nem szabadítunk fel', async () => {
   const e = await torlesEset();
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());
 
@@ -91,7 +91,7 @@ proba('⭐⭐ AZ ELSŐ LÁTÁSKOR CSAK A SZÁMLÁLÓ INDUL EL — még nem szaba
 
 proba('⭐⭐ ELÉG BULI UTÁN felszabadítható — és a bulit a CSERE adja, nem az óra', async () => {
   const e = await torlesEset();
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   // Az első látás, majd MEGULEPEDES_BULIK darab csere-kör, amiben felelt valaki.
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
@@ -107,7 +107,7 @@ proba('⭐⭐ ELÉG BULI UTÁN felszabadítható — és a bulit a CSERE adja, n
 proba('⛔⛔ A NÉMA KÖR NEM BULI — akire senki nem felelt, az nem ért körbe', async () => {
   // ⚠️ Ez a lényeg: attól, hogy elindítottam egy kört, még nem beszéltem senkivel.
   const e = await torlesEset();
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK * 5; i++) jegyzet = buliVolt(jegyzet, 0);  // senki nem felelt
@@ -117,7 +117,7 @@ proba('⛔⛔ A NÉMA KÖR NEM BULI — akire senki nem felelt, az nem ért kör
 
 proba('⛔ EGGYEL KEVESEBB BULI még nem elég — a próba nem vak', async () => {
   const e = await torlesEset();
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK - 1; i++) jegyzet = buliVolt(jegyzet, 1);
@@ -137,7 +137,7 @@ proba('⛔⛔ HA A DÖNTÉS VISSZAFORDUL, AZ ÓRA ÚJRAINDUL — és nem szabad�
   // szavazat jogosan módosítja az eredményt" — tehát egy törlés VISSZA IS FORDULHAT.
   // Ha addigra már felszabadítottunk volna, a gondolat a pontom NÉLKÜL térne vissza.
   const e = await torlesEset();
-  const a1 = kep(e.esemenyek);
+  const a1 = await kep(e.esemenyek);
 
   // A számláló elindult: láttuk töröltnek, és volt utána elég buli is.
   let jegyzet = felszabaditasiTerv(a1, e.gazda.szerzo, ujJegyzet()).jegyzet;
@@ -150,7 +150,7 @@ proba('⛔⛔ HA A DÖNTÉS VISSZAFORDUL, AZ ÓRA ÚJRAINDUL — és nem szabad�
   const ellen = await ellenzo.tesz('Szavazat',
     { javaslat: e.javaslat.azonosito, szavazat: 'Ellenez' }, KEZDET + 2500);
 
-  const a2 = kep([...e.esemenyek, pont, ellen]);
+  const a2 = await kep([...e.esemenyek, pont, ellen]);
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
 
   return a2.entitasok.has(e.gondolat.azonosito) === true      // ⭐ a gondolat visszatért
@@ -163,7 +163,7 @@ proba('⛔⛔ HA A DÖNTÉS JELE VÁLTOZIK, A SZÁMLÁLÓ NULLÁRÓL INDUL', asy
   // ugyanaz a döntés áll megülepedve, mint amire a bulikat számoltuk. *Nem a bulik
   // gyűlnek, hanem a MOSTANI döntés melletti bulik.*
   const e = await torlesEset();
-  const a1 = kep(e.esemenyek);
+  const a1 = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a1, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
@@ -176,7 +176,7 @@ proba('⛔⛔ HA A DÖNTÉS JELE VÁLTOZIK, A SZÁMLÁLÓ NULLÁRÓL INDUL', asy
   const igen = await tamogato.tesz('Szavazat',
     { javaslat: e.javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2500);
 
-  const a2 = kep([...e.esemenyek, pont, igen]);
+  const a2 = await kep([...e.esemenyek, pont, igen]);
   const regiAllas = elakadtPontok(a1, e.gazda.szerzo)[0].allas;
   const ujAllas = elakadtPontok(a2, e.gazda.szerzo)[0].allas;
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
@@ -188,14 +188,14 @@ proba('⛔⛔ HA A DÖNTÉS JELE VÁLTOZIK, A SZÁMLÁLÓ NULLÁRÓL INDUL', asy
 
 proba('⛔ AZ ELVETETT törlésnél nincs mit felszabadítani', async () => {
   const e = await torlesEset({ szavazat: 'Ellenez' });
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
   return elakadtPontok(a, e.gazda.szerzo).length === 0
     && felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).varakozok.length === 0;
 });
 
 proba('⭐ A GAZDA MAGÁTÓL IS VISSZAVEHETI — akkor a jegyzetből is kikerül', async () => {
   const e = await torlesEset();
-  const a1 = kep(e.esemenyek);
+  const a1 = await kep(e.esemenyek);
   let jegyzet = felszabaditasiTerv(a1, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
 
@@ -203,7 +203,7 @@ proba('⭐ A GAZDA MAGÁTÓL IS VISSZAVEHETI — akkor a jegyzetből is kikerül
   const vissza = await e.gazda.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 0, kiosztva: 0 }, KESOBB);
 
-  const a2 = kep([...e.esemenyek, vissza]);
+  const a2 = await kep([...e.esemenyek, vissza]);
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
 
   return terv.feloldhato.length === 0
@@ -217,7 +217,7 @@ proba('⭐ A GAZDA MAGÁTÓL IS VISSZAVEHETI — akkor a jegyzetből is kikerül
 
 proba('⭐⭐ A FELSZABADÍTÓ LÉPÉS BEMONDOTT ÖSSZEGE HELYES — enélkül a saját eseményem bukna', async () => {
   const e = await torlesEset({ masodikGondolat: true });
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
@@ -234,7 +234,7 @@ proba('⭐⭐ ÉS A KÉSZÜLÉK ESEMÉNYE TÉNYLEG ÁTMEGY A SZABÁLY-RÉTEGEN',
   // ⛔ Ez a próba a valódi tétel: a bemondott összeg ellenőrizhető a saját láncból. Ha
   // elcsúszna, a szabály-réteg kivételnek venné („a bemondott összeg ellentmond…").
   const e = await torlesEset({ masodikGondolat: true });
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
@@ -247,7 +247,7 @@ proba('⭐⭐ ÉS A KÉSZÜLÉK ESEMÉNYE TÉNYLEG ÁTMEGY A SZABÁLY-RÉTEGEN',
       KESOBB + 1000));
   }
 
-  const utana = kep(esemenyek);
+  const utana = await kep(esemenyek);
   return utana.kivetelek.length === 0
     && szetosztottPontok(utana, e.gazda.szerzo) === 40
     && elakadtPontok(utana, e.gazda.szerzo).length === 0;
@@ -280,7 +280,7 @@ proba('⭐⭐⭐ HA MINDEN GAZDA LÁNCÁT ISMEREM A LEZÁRÁS UTÁNIG: azonnal, 
   const kesobbi = await e.gazda.tesz('GondolatLetrehozas',
     { cim: 'VALAMI KÉSŐBB', meret: 10 }, KESOBB);
 
-  const a = kep([...e.esemenyek, kesobbi]);
+  const a = await kep([...e.esemenyek, kesobbi]);
   const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());   // NULLA buli
 
   return terv.feloldhato.length === 1
@@ -299,7 +299,7 @@ proba('⛔ EGY NÉMA GAZDA ELÉG A VÁRAKOZÁSHOZ — és megnevezzük, kire vá
   const kesobbi = await e.gazda.tesz('GondolatLetrehozas',
     { cim: 'VALAMI KÉSŐBB', meret: 10 }, KESOBB);
 
-  const a = kep([...e.esemenyek, masikPont, kesobbi]);
+  const a = await kep([...e.esemenyek, masikPont, kesobbi]);
   const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());
 
   return terv.feloldhato.length === 0
@@ -320,7 +320,7 @@ proba('⭐ …ÉS HA A NÉMA IS MEGSZÓLAL, azonnal igazolt lesz — a próba ne
   const masikKesobb = await masik.tesz('GondolatLetrehozas',
     { cim: 'Ő IS SZÓLT', meret: 10 }, KESOBB);
 
-  const a = kep([...e.esemenyek, masikPont, kesobbi, masikKesobb]);
+  const a = await kep([...e.esemenyek, masikPont, kesobbi, masikKesobb]);
   const terv = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet());
 
   return terv.feloldhato.length === 1 && terv.feloldhato[0].indok === 'lancok';
@@ -328,21 +328,21 @@ proba('⭐ …ÉS HA A NÉMA IS MEGSZÓLAL, azonnal igazolt lesz — a próba ne
 
 proba('⚠️ A LEZÁRÁS ELŐTTI utolsó esemény NEM igazol — a határ szigorú', async () => {
   const e = await torlesEset();
-  const a1 = kep(e.esemenyek);
+  const a1 = await kep(e.esemenyek);
   const lezarult = elakadtPontok(a1, e.gazda.szerzo)[0].lezarult;
 
   // Egy ezredmásodperccel a lezárás ELŐTT — innen még beférne egy szavazat.
   const eppelotte = await e.gazda.tesz('GondolatLetrehozas',
     { cim: 'ÉPP ELŐTTE', meret: 10 }, lezarult - 1);
 
-  const a2 = kep([...e.esemenyek, eppelotte]);
+  const a2 = await kep([...e.esemenyek, eppelotte]);
   return felszabaditasiTerv(a2, e.gazda.szerzo, ujJegyzet()).feloldhato.length === 0;
 });
 
 proba('⭐ A KÉT ÚT EGYENÉRTÉKŰ EREDMÉNYT AD, de megmondja, MELYIK alapján', async () => {
   // Ugyanaz az eset: lánc-igazolás nélkül, elég bulival is felszabadul — csak lassabban.
   const e = await torlesEset();
-  const a = kep(e.esemenyek);
+  const a = await kep(e.esemenyek);
 
   let jegyzet = felszabaditasiTerv(a, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);

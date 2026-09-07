@@ -379,7 +379,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   // kártya címét — vagyis a rendezési értékét is. ⚠️ Az „első N esemény" önmagában tehát már
   // nem elég befagyasztott bemenet; a pillanat is kell hozzá.
   const most = honnan?.most ?? beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, horgony, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek);
 
   // ----- A RENDEZÉSI ÉRTÉK -----
   const agazati = agazatiPontok(kep.entitasok);
@@ -468,7 +468,7 @@ export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
   const most = beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
 
   const entitas = kep.entitasok.get(azonosito);
   if (!entitas) {
@@ -504,7 +504,7 @@ export async function entitasTudatpontja(tar, koino, azonosito, beallitas = {}) 
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
   const most = beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
 
   const entitas = kep.entitasok.get(azonosito);
   if (!entitas) {
@@ -560,7 +560,7 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
   const most = beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -616,7 +616,7 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
   const most = beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -669,7 +669,7 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
   const nezet = beallitas.nezet ?? ujPakliNezet();
   const esemenyek = await koinoEsemenyei(tar, koino);
   const most = beallitas.most ?? Date.now();
-  const kep = kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -699,7 +699,7 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
  * darab eseményt kapja. **Egy lapozás alatt EGYSZER fut le**, nem oldalanként — a további
  * oldalak a gyorsítótárból jönnek.
  */
-function kepetKerni(nezet, koino, horgony, most, esemenyek) {
+async function kepetKerni(nezet, koino, horgony, most, esemenyek) {
   const kulcs = koino + '|' + horgony + '|' + most;
   if (nezet.horgony === kulcs && nezet.kep) return nezet.kep;
 
@@ -712,7 +712,7 @@ function kepetKerni(nezet, koino, horgony, most, esemenyek) {
   // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az
   // a hiba, amit a Szakasz 5.3 első órájában mértünk.
   const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most);
-  szerkesztesiEgyezmenyekAlkalmazasa(kep, javaslatok);
+  await szerkesztesiEgyezmenyekAlkalmazasa(kep, javaslatok);
 
   // ⭐ A javaslatok is kártyák (5.5) — a képpel együtt tartjuk, hogy ne kelljen kétszer
   // kiszámolni őket.

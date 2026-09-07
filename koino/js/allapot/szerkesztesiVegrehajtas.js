@@ -37,6 +37,32 @@
 // Használják: a `koino.js` állapot-képe és a `pakli.js`.
 
 import { szerkezetIgazitasa } from './allapotSzamitas.js';
+import { lenyomat } from '../esemeny/kanonikusAlak.js';
+
+// ===================================
+// ⭐⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ
+// ===================================
+//
+// A különváláskor **új entitás születik**, amihez nem tartozik esemény — se a
+// különválóknak, se senkinek. Kell tehát egy név, amit **minden készülék ugyanúgy számol
+// ki**.
+//
+// ⭐ A KIMONDÁS (Csaba, 2026-09-07): *minden azonosító aláírt eseményekből SZÁMÍTHATÓ; a
+// lenyomat ennek a különleges esete.* Itt a számítás bemenete két aláírt esemény
+// azonosítója (a forrás entitásé és az egyezményé) — a kimenet ugyanolyan alakú, 43
+// karakteres lenyomat, mint bármelyik másik. *Ránézésre nem különbözik; a különbség az,
+// hogy nincs mögötte aláírás, csak levezetés.*
+//
+// ⚠️ EZÉRT LETT A HARMADIK FÁZIS ASZINKRON: a `lenyomat` a WebCryptót hívja, ami
+// aszinkron. A másik út (kézzel gyártott, összefűzött név) elkerülte volna ezt, de akkor
+// a koinóban kétféle azonosító-alak lenne — a hívók viszont amúgy is aszinkronok, tehát
+// az ár kicsi, a nyereség pedig egységes azonosító-modell.
+//
+// ⚠️ A `kulonvalas` címke azért van benne, hogy a levezetés **ne ütközhessen** más,
+// későbbi származtatással (pl. egyesítésnél): más címke, más név.
+async function szarmaztatottAzonosito(forras, egyezmeny) {
+  return lenyomat({ fajta: 'kulonvalas', forras, egyezmeny });
+}
 
 // ===================================
 // A MŰVELETEK
@@ -114,6 +140,96 @@ function athelyezes(entitas, valtozas, entitasok) {
 
   entitas.szulo = ujSzulo;
   return { rendben: true, mezok: ['szulo'] };
+}
+
+/**
+ * ⭐⭐⭐ KÜLÖNVÁLÁS — az ellenzők külön ágra léphetnek a RÉGI változattal.
+ *
+ * *„Aki elmegy, viszi a súlyát."* A módosítás átment, tehát a főágon a MÓDOSÍTOTT szöveg
+ * él tovább. Aki viszont **ellenezte ÉS kérte a külön ágat**, az elviszi magával a
+ * **régi** állapotot egy új ágra — a tudatpontjával együtt.
+ *
+ * ⚠️ A TUDATPONT ÁTKERÜL, NEM DUPLÁZÓDIK: a főág prioritása ennyivel csökken. *Ez a
+ * szétválás ára.*
+ *
+ * ⭐ ÉS A KÉT ÁG ÖSSZE VAN KÖTVE: mindkettő jegyzi, melyik egyezményből vált szét, és hol a
+ * testvére (`kulonvalasok`). ⚠️ Ez a mező **a prototípus kártyájának alakja** — a
+ * `GondolatKartya.js` „Másik ág" füle pontosan ezt olvassa. *Nem kell kitalálni.*
+ *
+ * @param {Object} entitas - a főág (MÁR módosítva)
+ * @param {Object} regi - a módosítás ELŐTTI állapot: { cim, szoveg }
+ * @param {Array<string>} kulonvalok - akik ellenezték és külön ágat kértek
+ * @param {Object} egyezmeny
+ * @param {Object} allapot
+ * @returns {Promise<Object|null>} a különválás összegzése, vagy null
+ */
+async function kulonvalas(entitas, regi, kulonvalok, egyezmeny, allapot) {
+  // ⭐ Csak az számít, akinek TÉNYLEG van pontja az entitáson. Aki időközben elvette,
+  // annak nincs mit vinnie — ez nem hiba, csak nincs teendő (a prototípus is így kezeli).
+  const viszik = kulonvalok
+    .map((szerzo) => ({ szerzo, adat: entitas.hozzajarulok.get(szerzo) }))
+    .filter((x) => (x.adat?.pont ?? 0) > 0);
+
+  if (!viszik.length) return null;
+
+  // ⛔⛔ A FŐÁG NEM ESHET NULLÁRA. Ha MINDENKI külön akar válni, akkor nincs kettéválás —
+  // az „új ág" maga a gondolat lenne, a régi pedig gazdátlanul eltűnne (D14). Ilyenkor a
+  // helyes válasz: nem történik semmi, és ez LÁTSZIK. *A szétválás két oldalt kíván.*
+  const maradok = [...entitas.hozzajarulok.keys()].filter(
+    (sz) => !viszik.some((v) => v.szerzo === sz));
+  if (!maradok.length) return { rendben: false, ok: 'mindenki külön válna — nem maradna főág' };
+
+  const ujAzonosito = await szarmaztatottAzonosito(entitas.azonosito, egyezmeny.javaslat);
+
+  // ----- AZ ÚJ ÁG -----
+  // ⭐ A RÉGI változatot viszi, a különválók pontjaival. A szerzője és a létrehozás ideje
+  // az EREDETIÉ: az új ág nem új gondolat, hanem a réginek a folytatása.
+  const ujAg = {
+    azonosito: ujAzonosito,
+    tipus: entitas.tipus,
+    cim: regi.cim,
+    szoveg: regi.szoveg,
+    szulo: entitas.szulo,
+    ikon: entitas.ikon ?? null,
+    gondolatTipus: entitas.gondolatTipus ?? null,
+    kategoriak: [...(entitas.kategoriak ?? [])],
+    meret: entitas.meret,
+    agMeret: entitas.meret,
+    szerzo: entitas.szerzo,
+    letrehozva: entitas.letrehozva,
+    osszesPont: 0,
+    hozzajarulok: new Map(),
+    kuszobok: entitas.kuszobok
+  };
+
+  // ----- A PONTOK ÁTVITELE -----
+  for (const { szerzo, adat } of viszik) {
+    ujAg.hozzajarulok.set(szerzo, { pont: adat.pont, szerep: adat.szerep });
+    ujAg.osszesPont += adat.pont;
+    entitas.osszesPont -= adat.pont;
+    entitas.hozzajarulok.delete(szerzo);
+  }
+
+  allapot.entitasok.set(ujAzonosito, ujAg);
+
+  // ----- A KÉT ÁG ÖSSZEKÖTÉSE (a kártya „Másik ág" füle) -----
+  const mikor = egyezmeny.megszuletett;
+  entitas.kulonvalasok = [...(entitas.kulonvalasok ?? []), {
+    testverId: ujAzonosito, testverTipus: ujAg.tipus, testverCim: ujAg.cim,
+    agSzerep: 'foag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+  }];
+  ujAg.kulonvalasok = [{
+    testverId: entitas.azonosito, testverTipus: entitas.tipus, testverCim: entitas.cim,
+    agSzerep: 'mellekag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+  }];
+
+  return {
+    rendben: true,
+    foag: entitas.azonosito,
+    kulonvaltAg: ujAzonosito,
+    atvittEmberek: viszik.length,
+    atvittPontok: viszik.reduce((ossz, v) => ossz + v.adat.pont, 0)
+  };
 }
 
 /**
@@ -363,11 +479,13 @@ function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak) {
  * @param {Map} javaslatok - a `javaslatokSzamitasa` eredménye
  * @returns {{alkalmazottak: Array, kihagyottak: Array}}
  */
-export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
+export async function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
   console.log('szerkesztesiEgyezmenyekAlkalmazasa - KEZDÉS', { javaslat: javaslatok?.size ?? 0 });
 
   const alkalmazottak = [];
   const kihagyottak = [];
+  // ⭐ A KÜLÖNVÁLÁSOK is felsorolódnak — ugyanaz a minta (D19): ami történt, az látszik.
+  const kulonvalasok = [];
 
   // ----- 1. AMIK EGYÁLTALÁN SZÁMÍTANAK -----
   const sorban = [];
@@ -417,7 +535,8 @@ export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
     }
 
     for (const resz of kik) {
-      const eredmeny = egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak);
+      const eredmeny = await egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak,
+        kihagyottak, kulonvalasok);
       if (eredmeny?.eltunt) eltunt = true;
     }
   }
@@ -432,10 +551,12 @@ export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
   // `szabalyok.js` szabálysértő eseményeinél (D19): a program bejelent, nem bíráskodik.
   allapot.szerkesztesiAlkalmazasok = alkalmazottak;
   allapot.szerkesztesiKihagyasok = kihagyottak;
+  allapot.kulonvalasok = kulonvalasok;
 
   console.log('szerkesztesiEgyezmenyekAlkalmazasa - VÉGE',
-    { alkalmazott: alkalmazottak.length, kihagyott: kihagyottak.length });
-  return { alkalmazottak, kihagyottak };
+    { alkalmazott: alkalmazottak.length, kihagyott: kihagyottak.length,
+      kulonvalas: kulonvalasok.length });
+  return { alkalmazottak, kihagyottak, kulonvalasok };
 }
 
 /**
@@ -445,7 +566,8 @@ export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
  * entitás módosul, a másik áthelyeződik. Ha egy elem elakad, a többi attól még mehet — és
  * a `kihagyottak` megmondja, melyik akadt el és miért.
  */
-function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak) {
+async function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak,
+                                   kulonvalasok = []) {
   const muvelet = resz.muvelet ?? 'Modositas';
   const entitas = allapot.entitasok.get(resz.entitas);
 
@@ -461,7 +583,24 @@ function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyotta
 
   let eredmeny;
   if (muvelet === 'Modositas') {
+    // ⭐ A RÉGI ÁLLAPOT A MÓDOSÍTÁS ELŐTT — ezt viszik a különválók. A prototípus is a
+    // felülírás ELŐTT menti el (`regiAdatok`); utána már nem lenne visszafejthető.
+    const regi = { cim: entitas.cim, szoveg: entitas.szoveg };
     eredmeny = modositas(entitas, resz.valtozas);
+
+    // ⭐⭐ ÉS AKI ELLENEZTE, DE KÜLÖN ÁGAT KÉRT, AZ MOST LÉP KI (2026-09-08).
+    // ⚠️ Csak SIKERES módosítás után: ha nem változott semmi, nincs miről különválni.
+    const kik = egyezmeny.kulonvalok?.[resz.entitas] ?? [];
+    if (eredmeny.rendben && kik.length) {
+      const kv = await kulonvalas(entitas, regi, kik, egyezmeny, allapot);
+      if (kv?.rendben) kulonvalasok.push({ javaslat: egyezmeny.javaslat, ...kv });
+      else if (kv) {
+        kihagyottak.push({
+          javaslat: egyezmeny.javaslat, erintett: resz.entitas,
+          muvelet: 'Kulonvalas', ok: kv.ok
+        });
+      }
+    }
   } else if (muvelet === 'Athelyezes') {
     eredmeny = athelyezes(entitas, resz.valtozas, allapot.entitasok);
   } else if (muvelet === 'Torles') {

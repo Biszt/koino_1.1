@@ -23,7 +23,7 @@
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
 //   node koino/koino.js felszabadit [buli]
-//   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
+//   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
@@ -151,7 +151,7 @@ async function kepetKeszit(napokMulva = 0) {
   // entitásokra. ⚠️ Eddig ez hiányzott: a javaslat elfogadódott, az egyezmény megszületett,
   // a gondolat címe mégis a régi maradt. A `pakli.js` ugyanezt a három fázist futtatja —
   // így a parancssor és a lap **ugyanazt** mondja.
-  szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
+  await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
 
   return { esemenyek, allapot, javaslatok };
 }
@@ -435,6 +435,26 @@ async function allapotKiirasa(napokMulva) {
     if (enyem) kiir('      ' + SZIN.halvany + 'a szavazatod: ' + enyem + SZIN.vege);
   }
 
+  // ----- ⭐ KÜLÖNVÁLÁSOK (2026-09-08) -----
+  // *„Aki elmegy, viszi a súlyát."* Ez nem mellékes esemény: egy gondolat kettévált, és
+  // mindkét ág él tovább. ⚠️ Ki kell írni, különben a pakliban csak egy „új" gondolat
+  // bukkanna fel magyarázat nélkül.
+  if (allapot.kulonvalasok?.length) {
+    kiir();
+    kiir(SZIN.vastag + 'KÜLÖNVÁLÁSOK' + SZIN.vege);
+    for (const kv of allapot.kulonvalasok) {
+      const foag = allapot.entitasok.get(kv.foag);
+      const ag = allapot.entitasok.get(kv.kulonvaltAg);
+      kiir('  ⑂ ' + SZIN.halvany + kv.foag.slice(0, 8) + SZIN.vege
+        + ' „' + (foag?.cim ?? '—') + '"'
+        + SZIN.halvany + '  ⟶  ' + SZIN.vege
+        + SZIN.halvany + kv.kulonvaltAg.slice(0, 8) + SZIN.vege
+        + ' „' + (ag?.cim ?? '—') + '"');
+      kiir('      ' + SZIN.halvany + kv.atvittEmberek + ' ember vitte a régi változatot, '
+        + kv.atvittPontok + ' tudatponttal' + SZIN.vege);
+    }
+  }
+
   // ----- EGYEZMÉNYEK -----
   const egyezmenyek = folyamatban.filter((j) => j.egyezmeny);
   kiir();
@@ -712,9 +732,20 @@ try {
         (ervek[1] ?? '').toLowerCase()];
       if (!valasztas) throw new Error('Hogyan szavazol? tamogat | ellenez | tartozkodik');
 
-      await szavazas(kornyezet, javaslat, valasztas);
+      // ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY: „ha a döntés nem a te álláspontodat követi, kérsz külön
+      // ágat?" ⛔ Tartózkodásnál a művelet úgyis hamisra állítja — egy helyen dől el.
+      const kulonAg = (ervek[2] ?? '').toLowerCase() === 'kulonag';
+
+      await szavazas(kornyezet, javaslat, valasztas, kulonAg);
       kiir('Szavazat leadva: ' + valasztas + SZIN.halvany
         + ' (bármikor megváltoztathatod, az utolsó számít)' + SZIN.vege);
+      if (kulonAg && valasztas !== 'Tartozkodik') {
+        kiir(SZIN.halvany + '⑂ Külön ágat kértél: ha a döntés ellened megy, a SAJÁT '
+          + 'változatoddal léphetsz külön ágra — a tudatpontoddal együtt.' + SZIN.vege);
+      } else if (kulonAg) {
+        kiir(SZIN.halvany + '⚠️ Tartózkodásnál nincs külön ág: aki nem foglal állást, '
+          + 'a főágon marad.' + SZIN.vege);
+      }
       break;
     }
 
@@ -1723,7 +1754,7 @@ try {
 
           // ----- ⭐ SZAVAZAT (5.5) — ezzel zárul be a kör a felületen -----
           if (utvonal === '/api/javaslat/szavazat') {
-            const { javaslatId, szavazatTipus } = test ?? {};
+            const { javaslatId, szavazatTipus, kulonvalasIgeny } = test ?? {};
             if (typeof javaslatId !== 'string'
                 || !['Tamogat', 'Ellenez', 'Tartozkodik'].includes(szavazatTipus)) {
               return { allapot: 400, adat: { hiba: 'melyik javaslatra hogyan szavazol?' } };
@@ -1741,7 +1772,7 @@ try {
             // 2.1). Amíg nincs, a szavazat nem hordozza a kérést — de ez **hiány, nem
             // döntés**. A régi megjegyzés azt sugallta, hogy a kérdés le van zárva.
 
-            await szavazas(kornyezet, javaslatId, szavazatTipus);
+            await szavazas(kornyezet, javaslatId, szavazatTipus, kulonvalasIgeny === true);
             pakliNezet.horgony = null;
             return { adat: { data: { javaslatId, szavazatTipus } } };
           }
@@ -1905,7 +1936,7 @@ try {
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
-      kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
+      kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
