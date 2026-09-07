@@ -105,6 +105,34 @@ a rontás-próba buktatta le (az őrt kikapcsolva semmi nem bukott). A valódi e
 **támogatók a szavazás UTÁN veszik el a pontjaikat**, tehát a döntés elfogadva marad (a
 lezárás pillanata szerint), de a végrehajtáskor már csak a különválni akaró ellenző a gazda.
 
+
+### ✅ 2.1/c ÉS A LESZÁRMAZOTTAK SZÉTOSZTÁSA (2026-09-08)
+
+A prototípus `_leszarmazottakSzetosztasa`-ja, **három kimenettel, leszármazottanként külön**:
+
+| Kimenet | Feltétel | Mi történik |
+|---|---|---|
+| **MARAD** | a különválók közül senkinek nincs rajta pontja | a főágon marad — ⚠️ ha a szülője elköltözött, a **legközelebbi megmaradt ősre** kötjük át |
+| **KÖLTÖZIK** | csak a különválóknak van rajta pontja | az egész entitás átvándorol, **a pontjaival együtt** (nincs pont-mozgatás, csak a szülője változik) |
+| **DUPLÁZÓDIK** | mindkét oldalnak van rajta pontja | mindkét ágon kell egy példány |
+
+⭐⭐ **ÉS A DUPLÁZÓDÁSNÁL A FEJSZÁM DÖNT (Csaba, 2026-09-08):** *„ha többen vannak valahol a
+radikális ellenzők, mint a többiek, akkor ők tarthatják meg az id-t."* Az eredeti azonosítót
+**az az oldal viszi, ahol több ember áll**; a másik kapja a származtatott nevet. ⭐ **A szerző
+másolódik**, attól függetlenül, hogy tulajdonos-e még.
+
+⚠️ **Egyenlőségnél a főág tartja** — valamit dönteni kell, és ez determinisztikus, senkit nem
+jutalmazó választás (ugyanaz a mintázat, mint az elágazás-feloldásnál).
+
+⚠️ **A GYÖKÉRNÉL viszont NEM a fejszám dönt**, hanem a főág tartja az azonosítót: ez a
+prototípus viselkedése, és Csaba a fejszám-szabályt a **duplázódó leszármazottakra** mondta
+ki. ⏸️ Ha a gyökérre is ki kell terjeszteni, az külön döntés.
+
+⚠️⚠️ **ÉS EGY MÁSODIK VAK PRÓBA UGYANEBBEN A MENETBEN:** az **árva-átkötés** ága méretlen volt
+— kikapcsolva semmi nem bukott, mert az összes próbám egyszintű ágat használt. A valódi eset
+**két szintet** kíván: a középső elköltözik, az alsó marad — és ilyenkor az alsó egy olyan
+szülőre mutatna, ami már a másik ágon van.
+
 ### ⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ — és mibe került
 
 A különvált ág **új entitás**, amihez nem tartozik esemény. Az azonosítója
@@ -124,8 +152,7 @@ azonosító-modell**.
 - **A tükör-eset**: elvetett javaslatnál a **TÁMOGATÓK** viszik a módosított változatot. A
   prototípusban ez „másik belépési pont" — a koinóban is az lesz, mert **elvetett
   javaslatnál nincs egyezmény**, amiből a végrehajtás indulhatna.
-- **A leszármazottak szétosztása** (`_leszarmazottakSzetosztasa`): marad / költözik /
-  **duplázódik**. Ez Csaba fejszám-szabályával együtt jön (`gepezet.md` 5. ábra).
+- ✅ **A leszármazottak szétosztása** — **KÉSZ (2026-09-08)**, lásd 2.1/c.
 - **Az érték javaslatok átvándorlása** — a két ág küszöbei ezért térhetnek el.
 - **Az egyesítés-változat** (a vesztes gondolat megmarad, ha van radikális ellenzője).
 

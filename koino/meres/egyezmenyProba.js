@@ -784,4 +784,183 @@ proba('⭐ A SZÁRMAZTATOTT AZONOSÍTÓ MINDEN GÉPEN UGYANAZ — kevert bemenet
     && a.kulonvalasok[0].kulonvaltAg.length === 43;
 });
 
+
+// ===================================
+// ⭐⭐ A LESZÁRMAZOTTAK SZÉTOSZTÁSA (2026-09-08)
+// ===================================
+//
+// Három kimenet, leszármazottanként külön: MARAD · KÖLTÖZIK · DUPLÁZÓDIK.
+// ⭐ És a duplázódásnál a FEJSZÁM dönti el, ki tartja az eredeti azonosítót (Csaba).
+
+/**
+ * Gyökér + egy leszármazott, megadható tulajdonosokkal.
+ * @param {Array<string>} gyerekGazdai - 'gazda' | 'masodik' | 'ellenzo'
+ */
+async function agEset(gyerekGazdai, extraEllenzok = 0) {
+  const gazda = await ujEember();
+  const masodik = await ujEember();
+  // ⭐ HÁROM támogató, hogy két ellenszavazat mellett is átmenjen az 51%-os küszöb.
+  const harmadik = await ujEember();
+  const ellenzok = [];
+  for (let i = 0; i < 1 + extraEllenzok; i++) ellenzok.push(await ujEember());
+  const esemenyek = [];
+
+  const gyoker = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'GYÖKÉR', szoveg: 'régi', meret: 100 }, KEZDET);
+  esemenyek.push(gyoker);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 60 }, KEZDET));
+  esemenyek.push(await masodik.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 20 }, KEZDET));
+  esemenyek.push(await harmadik.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 20 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: gyoker.azonosito, ertekek: KUSZOBOK }, KEZDET));
+  for (const el of ellenzok) {
+    esemenyek.push(await el.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 10 }, KEZDET));
+  }
+
+  // A leszármazott — a megadott emberek tesznek rá pontot.
+  const nevek = { gazda, masodik, harmadik };
+  ellenzok.forEach((e, i) => { nevek['ellenzo' + (i || '')] = e; });
+  const gyerek = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'GYEREK', meret: 50, szulo: gyoker.azonosito }, KEZDET);
+  esemenyek.push(gyerek);
+  for (const nev of gyerekGazdai) {
+    esemenyek.push(await nevek[nev].tesz('TudatpontRendezes',
+      { entitas: gyerek.azonosito, pont: 5 }, KEZDET));
+  }
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: gyoker.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÚJ' } }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await masodik.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await harmadik.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  for (const el of ellenzok) {
+    esemenyek.push(await el.tesz('Szavazat',
+      { javaslat: javaslat.azonosito, szavazat: 'Ellenez', kulonvalasIgeny: true }, KEZDET + 2000));
+  }
+
+  return { esemenyek, gyoker, gyerek, javaslat, gazda, masodik, harmadik, ellenzok };
+}
+
+proba('⭐ MARAD: akin a különválóknak nincs pontja, az a főágon marad', async () => {
+  const e = await agEset(['gazda']);
+  const k = await kep(e.esemenyek);
+  const gyerek = k.allapot.entitasok.get(e.gyerek.azonosito);
+
+  return k.kulonvalasok[0].leszarmazottak.marad === 1
+    && gyerek.szulo === e.gyoker.azonosito;     // a főág gyökere alatt maradt
+});
+
+proba('⭐⭐ KÖLTÖZIK: akin CSAK a különválónak van pontja, az átvándorol — a pontjaival', async () => {
+  const e = await agEset(['ellenzo']);
+  const k = await kep(e.esemenyek);
+  const gyerek = k.allapot.entitasok.get(e.gyerek.azonosito);
+  const ujAg = k.kulonvalasok[0].kulonvaltAg;
+
+  return k.kulonvalasok[0].leszarmazottak.koltozott === 1
+    && gyerek.szulo === ujAg                    // ⭐ az ÚJ ág alá került
+    && gyerek.osszesPont === 5;                 // a pontja vele ment
+});
+
+proba('⭐⭐⭐ DUPLÁZÓDIK: mindkét oldalnak van pontja → mindkét ágon kell egy példány', async () => {
+  const e = await agEset(['gazda', 'ellenzo']);
+  const k = await kep(e.esemenyek);
+
+  const eredeti = k.allapot.entitasok.get(e.gyerek.azonosito);
+  const uj = k.kulonvalasok[0].leszarmazottak.ujak[0];
+  const masolat = k.allapot.entitasok.get(uj.masolat);
+
+  return k.kulonvalasok[0].leszarmazottak.duplazodott === 1
+    && masolat !== undefined
+    && masolat.cim === 'GYEREK'
+    // ⭐ A pontok szétosztva: egy-egy ember mindkét oldalon.
+    && eredeti.osszesPont === 5 && masolat.osszesPont === 5
+    // ⭐ A SZERZŐ MÁSOLÓDIK (Csaba)
+    && masolat.szerzo === eredeti.szerzo
+    // ⭐ …és a két példány testvér, a kártya „Másik ág" fülének alakjában
+    && eredeti.kulonvalasok.some((x) => x.testverId === masolat.azonosito);
+});
+
+proba('⭐⭐⭐ A FEJSZÁM DÖNT: ha a különválók TÖBBEN vannak, ŐK tartják az azonosítót', async () => {
+  // Egy maradó (gazda) és KÉT különváló az adott leszármazotton.
+  const e = await agEset(['gazda', 'ellenzo', 'ellenzo1'], 1);
+  const k = await kep(e.esemenyek);
+
+  const uj = k.kulonvalasok[0].leszarmazottak.ujak[0];
+  const eredeti = k.allapot.entitasok.get(e.gyerek.azonosito);
+  const masolat = k.allapot.entitasok.get(uj.masolat);
+  const ujAg = k.kulonvalasok[0].kulonvaltAg;
+
+  return uj.eredetiOldal === 'kulonvalok'          // ⭐ az EREDETI a különválóké lett
+    && uj.fejszam.viszik === 2 && uj.fejszam.maradok === 1
+    && eredeti.szulo === ujAg                      // az eredeti a különvált ágon
+    && eredeti.osszesPont === 10                   // két különváló pontja
+    && masolat.szulo === e.gyoker.azonosito        // a másolat a főágon
+    && masolat.osszesPont === 5;
+});
+
+proba('⭐ …ÉS EGYENLŐSÉGNÉL A FŐÁG TARTJA — a próba nem vak', async () => {
+  // ⭐ EGYETLEN különbség az előzőhöz képest: egy különválóval kevesebb ezen a gyereken.
+  const e = await agEset(['gazda', 'ellenzo'], 1);
+  const k = await kep(e.esemenyek);
+  const uj = k.kulonvalasok[0].leszarmazottak.ujak[0];
+
+  return uj.eredetiOldal === 'foag'
+    && uj.fejszam.viszik === 1 && uj.fejszam.maradok === 1
+    && k.allapot.entitasok.get(e.gyerek.azonosito).szulo === e.gyoker.azonosito;
+});
+
+proba('⭐⭐ ÁRVA-ÁTKÖTÉS: ha a szülő ELKÖLTÖZIK, a maradó gyereke a főágon kap új szülőt', async () => {
+  // ⚠️ Ezt a próbát a rontás-próba hiánya követelte ki: az árva-átkötés ága addig
+  // MÉRETLEN volt (kikapcsolva semmi nem bukott). Kell hozzá KÉT szint: a középső
+  // elköltözik (csak a különválónak van rajta pontja), az alsó marad (csak a gazdának).
+  // ⛔ Enélkül az alsó egy olyan szülőre mutatna, ami már a MÁSIK ágon van.
+  const gazda = await ujEember();
+  const masodik = await ujEember();
+  const ellenzo = await ujEember();
+  const esemenyek = [];
+
+  const gyoker = await gazda.tesz('GondolatLetrehozas', { cim: 'GYÖKÉR', meret: 100 }, KEZDET);
+  esemenyek.push(gyoker);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 60 }, KEZDET));
+  esemenyek.push(await masodik.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 20 }, KEZDET));
+  esemenyek.push(await ellenzo.tesz('TudatpontRendezes', { entitas: gyoker.azonosito, pont: 10 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: gyoker.azonosito, ertekek: KUSZOBOK }, KEZDET));
+
+  // KÖZÉP: csak az ellenzőnek van rajta pontja → KÖLTÖZIK
+  const kozep = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'KÖZÉP', meret: 10, szulo: gyoker.azonosito }, KEZDET);
+  esemenyek.push(kozep);
+  esemenyek.push(await ellenzo.tesz('TudatpontRendezes', { entitas: kozep.azonosito, pont: 5 }, KEZDET));
+
+  // ALSÓ: csak a gazdának van rajta pontja → MARAD (de a szülője elköltözik!)
+  const also = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'ALSÓ', meret: 10, szulo: kozep.azonosito }, KEZDET);
+  esemenyek.push(also);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: also.azonosito, pont: 5 }, KEZDET));
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: gyoker.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÚJ' } }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await masodik.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await ellenzo.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Ellenez', kulonvalasIgeny: true }, KEZDET + 2000));
+
+  const k = await kep(esemenyek);
+  const ujAg = k.kulonvalasok[0].kulonvaltAg;
+
+  return k.allapot.entitasok.get(kozep.azonosito).szulo === ujAg      // a közép átment
+    // ⭐ …és az alsó NEM ment vele: a legközelebbi MEGMARADT őshöz került.
+    && k.allapot.entitasok.get(also.azonosito).szulo === gyoker.azonosito
+    && k.kulonvalasok[0].leszarmazottak.koltozott === 1
+    && k.kulonvalasok[0].leszarmazottak.marad === 1;
+});
+
 export default futtatas;

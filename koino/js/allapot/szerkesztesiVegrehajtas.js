@@ -143,6 +143,156 @@ function athelyezes(entitas, valtozas, entitasok) {
 }
 
 /**
+ * ⭐⭐⭐ A LESZÁRMAZOTTAK SZÉTOSZTÁSA — egyenként, három kimenettel.
+ *
+ * A prototípus `_leszarmazottakSzetosztasa`-ja: minden leszármazottnál külön megnézzük, kinek
+ * van rajta pontja, és ebből három eset lehet:
+ *
+ *   · **MARAD** — a különválók közül senkinek nincs rajta pontja. ⚠️ Ha a szülője elköltözött,
+ *     ez árván maradna: a legközelebbi MEGMARADT ősre kötjük át (Csaba, 2026-08-25).
+ *   · **KÖLTÖZIK** — csak a különválóknak van rajta pontja: az egész entitás átvándorol,
+ *     a pontjaival együtt. Nincs pont-mozgatás, csak a szülője változik.
+ *   · **DUPLÁZÓDIK** — mindkét oldalnak van rajta pontja, tehát mindkét ágon kell egy példány.
+ *
+ * ⭐⭐ ÉS A DUPLÁZÓDÁSNÁL A FEJSZÁM DÖNT (Csaba, 2026-09-08): *„ha többen vannak valahol a
+ * radikális ellenzők, mint a többiek, akkor ők tarthatják meg az id-t."* Vagyis **az eredeti
+ * azonosítót az az oldal viszi, ahol TÖBB EMBER áll** — a másik oldal kapja a származtatott
+ * nevet. ⚠️ Egyenlőségnél a **főág** tartja: valamit dönteni kell, és ez a determinisztikus,
+ * senkit nem jutalmazó választás (ugyanaz a mintázat, mint az elágazás-feloldásnál).
+ *
+ * ⚠️ **A gyökérnél NEM a fejszám dönt, hanem a főág tartja az azonosítót** — ez a prototípus
+ * viselkedése, és Csaba a fejszám-szabályt a duplázódó leszármazottakra mondta ki. ⏸️ Ha a
+ * gyökérre is ki kell terjeszteni, az külön döntés.
+ *
+ * @returns {Promise<{marad: number, koltozott: number, duplazodott: number, ujak: Array}>}
+ */
+async function leszarmazottakSzetosztasa(allapot, foag, ujAg, kulonvalok, egyezmeny) {
+  const entitasok = allapot.entitasok;
+
+  // ----- A GYEREK-TÉRKÉP, DETERMINISZTIKUS SORRENDBEN -----
+  // ⚠️ A sorrend nem mindegy: a duplázódásnál új entitások születnek, és két gépnek
+  // ugyanazokat a neveket kell adnia. Az azonosító szerinti rendezés ezt garantálja.
+  const gyerekek = new Map();
+  for (const e of entitasok.values()) {
+    if (!e.szulo) continue;
+    if (!gyerekek.has(e.szulo)) gyerekek.set(e.szulo, []);
+    gyerekek.get(e.szulo).push(e);
+  }
+  for (const lista of gyerekek.values()) {
+    lista.sort((a, b) => (a.azonosito < b.azonosito ? -1 : a.azonosito > b.azonosito ? 1 : 0));
+  }
+
+  // A két „legközelebbi ős" nyilvántartás — a gyökér mindkettőben önmaga párja.
+  const ujAgSzuloje = new Map([[foag.azonosito, ujAg.azonosito]]);
+  const foagSzuloje = new Map([[foag.azonosito, foag.azonosito]]);
+
+  const eredmeny = { marad: 0, koltozott: 0, duplazodott: 0, ujak: [] };
+
+  // ----- BEJÁRÁS: SZÜLŐ ELŐBB, MINT A GYEREK -----
+  // ⛔ Kör-őrrel: egy kör itt végtelen ciklus lenne.
+  const sor = [...(gyerekek.get(foag.azonosito) ?? [])];
+  const latott = new Set([foag.azonosito]);
+
+  while (sor.length) {
+    const e = sor.shift();
+    if (latott.has(e.azonosito)) continue;
+    latott.add(e.azonosito);
+    for (const gy of (gyerekek.get(e.azonosito) ?? [])) sor.push(gy);
+
+    const viszik = kulonvalok.filter((sz) => (e.hozzajarulok.get(sz)?.pont ?? 0) > 0);
+    const maradok = [...e.hozzajarulok.keys()].filter((sz) => !viszik.includes(sz));
+
+    // ----- (1) MARAD -----
+    if (!viszik.length) {
+      const hova = foagSzuloje.get(e.szulo) ?? foag.azonosito;
+      if (e.szulo !== hova) e.szulo = hova;          // árva lett → átkötés
+      foagSzuloje.set(e.azonosito, e.azonosito);
+      ujAgSzuloje.set(e.azonosito, ujAgSzuloje.get(e.szulo) ?? ujAg.azonosito);
+      eredmeny.marad++;
+      continue;
+    }
+
+    // ----- (2) KÖLTÖZIK -----
+    if (!maradok.length) {
+      e.szulo = ujAgSzuloje.get(e.szulo) ?? ujAg.azonosito;
+      ujAgSzuloje.set(e.azonosito, e.azonosito);
+      foagSzuloje.set(e.azonosito, foagSzuloje.get(e.szulo) ?? foag.azonosito);
+      eredmeny.koltozott++;
+      continue;
+    }
+
+    // ----- (3) DUPLÁZÓDIK — és a FEJSZÁM dönti el, ki tartja az azonosítót -----
+    const kulonvaloTartja = viszik.length > maradok.length;
+    const masolatAzonosito = await szarmaztatottAzonosito(e.azonosito, egyezmeny.javaslat);
+
+    // Az EREDETI példány azé az oldalé, ahol többen vannak; a MÁSOLAT a másiké.
+    const eredetiOldalon = kulonvaloTartja ? viszik : maradok;
+    const masolatOldalon = kulonvaloTartja ? maradok : viszik;
+
+    const masolat = {
+      azonosito: masolatAzonosito,
+      tipus: e.tipus,
+      cim: e.cim,
+      szoveg: e.szoveg,
+      // A másolat a MÁSIK ágra kerül, mint az eredeti.
+      szulo: kulonvaloTartja
+        ? (foagSzuloje.get(e.szulo) ?? foag.azonosito)
+        : (ujAgSzuloje.get(e.szulo) ?? ujAg.azonosito),
+      ikon: e.ikon ?? null,
+      gondolatTipus: e.gondolatTipus ?? null,
+      kategoriak: [...(e.kategoriak ?? [])],
+      meret: e.meret,
+      agMeret: e.meret,
+      // ⭐ A SZERZŐ MÁSOLÓDIK (Csaba) — attól függetlenül, hogy tulajdonos-e még.
+      szerzo: e.szerzo,
+      letrehozva: e.letrehozva,
+      osszesPont: 0,
+      hozzajarulok: new Map(),
+      kuszobok: e.kuszobok
+    };
+
+    for (const sz of masolatOldalon) {
+      const adat = e.hozzajarulok.get(sz);
+      masolat.hozzajarulok.set(sz, { pont: adat.pont, szerep: adat.szerep });
+      masolat.osszesPont += adat.pont;
+      e.osszesPont -= adat.pont;
+      e.hozzajarulok.delete(sz);
+    }
+
+    // Az eredeti a saját oldalán marad — a szülője a megfelelő ághoz kötve.
+    e.szulo = kulonvaloTartja
+      ? (ujAgSzuloje.get(e.szulo) ?? ujAg.azonosito)
+      : (foagSzuloje.get(e.szulo) ?? foag.azonosito);
+
+    entitasok.set(masolatAzonosito, masolat);
+
+    // ⭐ A KÉT PÉLDÁNY IS TESTVÉR — ugyanaz a „Másik ág" fül, mint a gyökérnél.
+    const mikor = egyezmeny.megszuletett;
+    e.kulonvalasok = [...(e.kulonvalasok ?? []), {
+      testverId: masolatAzonosito, testverTipus: masolat.tipus, testverCim: masolat.cim,
+      agSzerep: 'foag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+    }];
+    masolat.kulonvalasok = [{
+      testverId: e.azonosito, testverTipus: e.tipus, testverCim: e.cim,
+      agSzerep: 'mellekag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+    }];
+
+    // A két ág horgonyai: melyik példány folytatja hol.
+    ujAgSzuloje.set(e.azonosito, kulonvaloTartja ? e.azonosito : masolatAzonosito);
+    foagSzuloje.set(e.azonosito, kulonvaloTartja ? masolatAzonosito : e.azonosito);
+
+    eredmeny.duplazodott++;
+    eredmeny.ujak.push({
+      eredeti: e.azonosito, masolat: masolatAzonosito,
+      eredetiOldal: kulonvaloTartja ? 'kulonvalok' : 'foag',
+      fejszam: { viszik: viszik.length, maradok: maradok.length }
+    });
+  }
+
+  return eredmeny;
+}
+
+/**
  * ⭐⭐⭐ KÜLÖNVÁLÁS — az ellenzők külön ágra léphetnek a RÉGI változattal.
  *
  * *„Aki elmegy, viszi a súlyát."* A módosítás átment, tehát a főágon a MÓDOSÍTOTT szöveg
@@ -223,12 +373,18 @@ async function kulonvalas(entitas, regi, kulonvalok, egyezmeny, allapot) {
     agSzerep: 'mellekag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
   }];
 
+  // ----- ⭐⭐ ÉS A LESZÁRMAZOTTAK, EGYENKÉNT -----
+  // ⚠️ A gyökér szétválasztása UTÁN, mert a leszármazottak a két ág horgonyaihoz kötődnek.
+  const leszarmazottak = await leszarmazottakSzetosztasa(
+    allapot, entitas, ujAg, viszik.map((v) => v.szerzo), egyezmeny);
+
   return {
     rendben: true,
     foag: entitas.azonosito,
     kulonvaltAg: ujAzonosito,
     atvittEmberek: viszik.length,
-    atvittPontok: viszik.reduce((ossz, v) => ossz + v.adat.pont, 0)
+    atvittPontok: viszik.reduce((ossz, v) => ossz + v.adat.pont, 0),
+    leszarmazottak
   };
 }
 
@@ -539,6 +695,8 @@ export async function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
         kihagyottak, kulonvalasok);
       if (eredmeny?.eltunt) eltunt = true;
     }
+    // ⭐ A különválás új entitásokat szül és szülőket köt át — az ág-méretek elavulnak.
+    if (kulonvalasok.length) eltunt = true;
   }
 
   // ----- 4. ⭐ A SZERKEZET ÚJRAIGAZÍTÁSA, HA TŰNT EL ENTITÁS -----
