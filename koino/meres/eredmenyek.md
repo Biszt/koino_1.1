@@ -1165,3 +1165,61 @@ van, nem a döntésben:
 ⚠️ **Amit ez a mérés NEM tartalmaz:** a támadó nem reagál a visszavonásra (nem szerez új
 tanúsítót a régiek helyett). Egy kitartó támadó **újra és újra** megvásárolna hármat — és
 akkor a kár nem egyszeri 120, hanem **ciklusonként** ennyi. Ezt külön kell mérni.
+
+---
+
+## 13. A FELSZABADÍTÁS MEGÜLEPEDÉSE — hány „tiszta buli" kell? (2026-09-08)
+
+**A kérdés (Csaba):** *„ne időhöz kössük, hanem a bulik számához… és mégjobb lenne ezt az
+értéket méréssel meghatározni."* A kódban addig egy tippelt `3` állt.
+
+**A mérés:** `node koino/meres/felszabaditasMeres.js` — N készülék, T társ, körönként
+kölcsönös csere az ébren lévőkkel. Egy „késő" készülék tart egy határidőn belüli szavazatot,
+és `alvasKorok`-ig nem ébred. A hiba a **KORAI** felszabadítás: a hír a felszabadítás UTÁN ér
+hozzánk. *(A késői nem hiba: addig csak a keretből hiányzik a pont.)*
+
+### Az eredmény — 50 készülék, 3 társ, 200 ismétlés
+
+| ébrenlét | a késő alszik | a hír terjedése (medián / 90%) | K=2 | K=3 | K=6 | K=8 |
+|---|---|---|---|---|---|---|
+| 100% | 0 kör | 1 / 2 | **0%** | 0% | 0% | 0% |
+| 100% | 5 kör | 1 / 2 | 100% | 100% | 11% | **0%** |
+| 100% | **20 kör** | 1 / 2 | 100% | 100% | 100% | **100%** |
+| 60% | 0 kör | 2 / 4 | 27,5% | 15,5% | 1,5% | 0,5% |
+| 60% | 5 kör | 2 / 4 | 100% | 100% | 65,5% | 14,5% |
+| 30% | 0 kör | 6 / 12 | 82,5% | 68,5% | 35% | 16,5% |
+| 30% | **20 kör** | 5 / 11 | 100% | 100% | 100% | **100%** |
+
+*(200 készülék / 6 társ mellett a terjedés medián 1 kör, és 100%-os ébrenlétnél már K=2-nél
+0% a korai — a hálózat mérete nem rontja el, sőt.)*
+
+### ⛔⛔ AMIT A MÉRÉS MEGCÁFOLT
+
+> **A buli-szám a HÁLÓZAT terjedési idejét méri — nem azt, hogy a döntésben érintett emberek
+> megszólaltak-e.**
+
+- ✅ **A hálózat lassúsága ellen véd, és olcsón**: ha mindenki ébren van, **K=2** már 0%-ra
+  viszi a korai felszabadítást (200 fősnél is).
+- ⛔ **Az ALVÓ készülék ellen viszont SEMMILYEN véges szám nem véd**: 20 kör alvásnál K=8
+  mellett is **100%** a korai felszabadítás. És ez nem a modell hibája, hanem a helyzeté —
+  a mi számlálónk fut, miközben a másik ember telefonja ki van kapcsolva.
+
+⭐ **A tanulság nem az, hogy melyik szám a jó, hanem hogy ROSSZ DOLGOT SZÁMOLUNK.** A
+kockázat nem „a hálózat lassú", hanem *„van, aki még nem szólalt meg, pedig még
+megszólalhat."*
+
+### ⭐⭐ AMIT EHELYETT ÉRDEMES MÉRNI — javaslat
+
+A döntés választóköre **ismert** (az érintett entitás tulajdonosai — a saját eseményeinkből
+kiszámoljuk). A megülepedés akkor teljes, ha **minden jogosult szavazó láncát ismerjük a
+lezárás utáni pontig**: aki ezután írt alá bármit, az már nem tud visszamenőleg beszavazni —
+egy határidőn belüli időbélyeg a saját láncában **visszafelé lépő idő** lenne, amit a koino
+már ma is felsorol (`idoEllentmondasok`).
+
+⭐ Ez nem valószínűség, hanem **bizonyíték** — és pont abból áll, amit a csere úgyis
+megmond (`ALLAS`: szerzőnként a legnagyobb sorszám), illetve amit a `Lattam` esemény (D61)
+kifejezetten aláír.
+
+⚠️ Akitől semmi nem érkezett a lezárás óta, arról továbbra sem tudunk semmit — ott marad a
+buli-szám mint **másodlagos, olcsó heurisztika**. *De a fő jel a láncok vége legyen, ne a
+körök száma.*

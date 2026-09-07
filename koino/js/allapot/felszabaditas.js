@@ -55,10 +55,21 @@
 
 import { elakadtPontok, szetosztottPontok } from './allapotSzamitas.js';
 
-// ⚠️⚠️ EZ A SZÁM MÉG NINCS MEGMÉRVE. Csaba kérése: *„mégjobb lenne ezt az értéket méréssel
-// meghatározni."* A `meres/felszabaditasMeres.js` adja hozzá a görbét — addig ez egy
-// óvatos alapérték, nem állítás. ⭐ A mérés nem „igen/nem"-et fog adni, hanem azt, hogy K
-// tiszta buli után az esetek hány százalékában nem érkezik már döntést módosító esemény.
+// ⭐⭐ MEGMÉRVE (2026-09-08) — és a mérés MÁST MONDOTT, mint amit kerestünk. A `meres/felszabaditasMeres.js` eredménye (`meres/eredmenyek.md` 13.):
+//
+//   · a HÁLÓZAT lassúsága ellen a buli-szám olcsón véd: mindenki ébren, K=2 → 0% korai;
+//   · ⛔ az ALVÓ készülék ellen viszont SEMMILYEN véges szám nem véd: 20 kör alvásnál
+//     K=8 mellett is 100% a korai felszabadítás.
+//
+// ⭐⭐ A tanulság tehát nem az, hogy melyik szám a jó, hanem hogy **rossz dolgot számolunk**:
+// a buli-szám a hálózat terjedési idejét méri, nem azt, hogy a döntésben ÉRINTETT emberek
+// megszólaltak-e. A jobb jel: **ismerem-e minden jogosult szavazó láncát a lezárás utáni
+// pontig** — aki utána bármit aláírt, az már nem tud visszamenőleg beszavazni (az a saját
+// láncában visszafelé lépő idő lenne, amit a koino ma is felsorol). *Az bizonyíték, nem
+// valószínűség.* ⏸️ Amíg az nincs megépítve, ez a szám marad — olcsó heurisztikaként.
+//
+// ⭐ A 3-at a mérés annyiban igazolja, hogy a tipikus (ébren lévő) hálózaton bőven elég;
+// a valódi kockázat ellen viszont nem ez a védelem.
 export const MEGULEPEDES_BULIK = 3;
 
 /**
