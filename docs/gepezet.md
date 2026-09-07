@@ -195,12 +195,65 @@ flowchart TD
 ```mermaid
 flowchart TD
     L["egy leszármazott"] --> Q{"van rajta pont<br/>RADIKÁLIS ellenzőtől?"}
-    Q -->|"nincs"| EL["eltűnik<br/>(a győztes ágán él tovább)"]
+    Q -->|"nincs"| EL["eltűnik<br/>a győztes ágán él tovább"]
     Q -->|"van"| MA["MEGMARAD"]
     MA --> R{"van rajta pont<br/>a győztes ágáról is?"}
-    R -->|"nincs"| CSAK["csak a vesztes ágon van"]
-    R -->|"van"| DUP["DUPLÁZÓDIK<br/>az EREDETI tartja az azonosítót<br/>a MÁSOLAT kap újat<br/>a szerző másolódik"]
+    R -->|"nincs"| CSAK["csak a vesztes ágon van<br/>tartja az azonosítóját"]
+    R -->|"van"| DUP{"DUPLÁZÓDIK<br/>melyik ág tartja<br/>az EREDETI azonosítót?"}
+    DUP -->|"az erősebb oldal ITT"| ID["az kapja az eredetit<br/>a másik ág MÁSOLAT<br/>SZÁMÍTOTT azonosítóval"]
+    ID --> SZE["mindkét ág JEGYZI a szétválást:<br/>melyik egyezményből,<br/>és hol a testvér-ága"]
 ```
+
+### ⭐ „A láncok tudnak ennyire rugalmasak lenni?" — igen, és megnéztem, miért
+
+Csaba kérdése (2026-09-07): *lehet, hogy jobb lenne, ha leszármazottanként az erősebb oldal
+tartaná meg az azonosítót — számít ez technikailag?*
+
+**Technikailag semmi nem áll az útjában, és ennek pontos oka van:** a láncokat **soha nem
+írjuk át**. Egy aláírt esemény, ami az `X` azonosítóra hivatkozik (`adat.entitas`,
+`adat.szulo`, `adat.javaslat`), örökre `X`-re fog hivatkozni. ⭐ **Nem a hivatkozásokat
+mozgatjuk, hanem azt SZÁMÍTJUK ki, melyik ág viseli melyik nevet** — és mivel ez számítás
+aláírt eseményekből, minden készüléken ugyanaz jön ki. *A rugalmasság nem a láncokban van,
+hanem abban, hogy az állapot amúgy sem tárolt, hanem levezetett.*
+
+Ugyanez a gépezet már ma is dolgozik: az egyesítésnél a **pontok** is átkerülnek egy másik
+entitásra anélkül, hogy bárki láncát átírnánk — a láncod továbbra is azt mondja, „X: 100", az
+állapot pedig azt, hogy ez a 100 pont most az elnyelőn ül.
+
+⚠️ **Két valódi következménye viszont van, és ezeket ki kell mondani:**
+
+1. **Az azonosító a TÖRTÉNETET is hozza.** Aki az eredeti azonosítót kapja, az örökli az
+   összes már aláírt hivatkozást: a tudatpontokat, az érték javaslatokat, a rá mutató
+   gyerekeket, a róla szóló javaslatokat. A másolat **üresen indul**, és csak azt kapja, amit
+   a számítás kifejezetten átad neki.
+2. ⛔ **Az eredeti azonosító ELHOZHATÓ, a számított nem.** A `hozd <azonosító>` a társaktól
+   kéri el az *eseményt* — az eredeti azonosítóhoz tartozik ilyen, a számítotthoz nem. A
+   másolathoz **a forrásokat és az egyezményt** kell elhozni, és utána kiszámolni. *A `hozd`-nak
+   ezt meg kell tanulnia; ez nem akadály, hanem feladat.*
+
+### ⭐⭐ És a kérdés, ami emiatt NEM technikai, hanem jelentésbeli
+
+Ha valaki egy éve hivatkozott `X`-re, és ma `X` a **radikális ellenzők** változatát jelöli,
+akkor a régi hivatkozás némán az ellenvéleményhez visz — anélkül, hogy a hivatkozó bármit
+tett volna. Fordítva ugyanez igaz.
+
+⭐ **A javaslatom, ami mindkét utat biztonságossá teszi:** ne azon múljon a folytonosság,
+hogy eltaláljuk, ki „érdemli" az azonosítót, hanem azon, hogy **a szétválás LÁTSZIK**. Mindkét
+ág jegyezze, hogy szétválásból származik: **melyik egyezményből**, és **hol a testvér-ága**.
+Akkor a régi hivatkozás odaér, és ott azt látja: *„ez a szétválás egyik ága, a másik itt van."*
+Ugyanaz a minta, mint a `kihagyottak` listánál: **bejelent, nem hallgat** (D19).
+
+### ⏸️ Amit még el kell dönteni
+
+⚠️ **Mivel mérjük, hogy „többen vannak"?** A **győztes** az ágazati (hierarchikus)
+**tudatpont** szerint dől el — de a leszármazottaknál Csaba *„többen vannak"*-ot írt, ami
+**fejszámot** sugall. ⛔ Két különböző mérce egy gépezetben csapda: ugyanaz a szétválás
+másképp dőlne el a tetején és a levelein. Két tiszta út van:
+
+- **egységesen ágazati tudatpont** — a „ki tartja jobban" mércéje végig ugyanaz;
+- **egységesen fejszám** — a „hányan akarják" mércéje végig ugyanaz.
+
+*(A mai koinóban mindkettő kiszámítható; a döntés jelentésbeli, nem technikai.)*
 
 ### A három döntés, amit ez a kép rögzít (Csaba, 2026-09-07)
 
@@ -310,6 +363,49 @@ minden entitásra jó általánosítás, nem csak az egyezményre.
 semmit. A rendszer **bejelent, nem bíráskodik** (D19) — a vita helye az egyezmény alatti
 gyerek-gondolatokban van.
 
+### ⭐⭐ A FELFELÉ VITEL — a hatókör tágítása maga is szavazás (Csaba, 2026-09-07)
+
+> *„Ezeket az egyezményeket áthelyezési javaslattal lehetne felfelé vinni az ágazatában…
+> úgy, hogy ott ismét javaslat lesz belőle, amiről már szélesebb körben történik egy újabb
+> szavazás. Ha elvetik, akkor visszakerül az eredeti szülője alá, ha támogatják, akkor ott
+> maradhat. Az új szavazás a felmenő értékeivel történik."*
+
+Ez teszi a D27/4-et gyakorlattá: a **pozíciónak jelentése van** (minél feljebb, annál
+többen szólhatnak hozzá), és a feljebb vitel **nem adminisztratív lépés, hanem döntés** — de
+nem azé, aki kezdeményezi, hanem **azé a köré, ahova érkezik**.
+
+```mermaid
+flowchart TD
+    E["ÁLTALÁNOS EGYEZMÉNY<br/>egy mély gondolat alatt<br/>szűk hatókör"] --> AJ["ÁTHELYEZÉSI javaslat<br/>egy FELMENŐ alá"]
+    AJ --> SZ1{"a mostani kör<br/>elfogadja?"}
+    SZ1 -->|"nem"| M["marad, ahol volt"]
+    SZ1 -->|"igen"| FEL["FELKERÜL a felmenő alá<br/>és ott ÚJRA JAVASLAT lesz belőle"]
+
+    FEL --> SZ2["ÚJ SZAVAZÁS<br/>a felmenő tudatpont-tulajdonosai<br/>a FELMENŐ küszöbeivel"]
+    SZ2 -->|"támogatják"| OTT["ott MARAD<br/>tágabb hatókörrel"]
+    SZ2 -->|"elvetik"| VISSZA["VISSZAKERÜL<br/>az eredeti szülője alá"]
+```
+
+**Amit ez megold — és amiért szép:**
+
+- ⭐ **A hatókört nem lehet egyoldalúan tágítani.** Hiába viszi valaki feljebb az
+  álláspontját, a tágabb kör **maga dönt** arról, hogy magára veszi-e. *Nem lehet egy nagy
+  közösség nyakába varrni egy kis ág döntését.*
+- ⭐ **Az új szavazás a FELMENŐ értékeivel megy** — ott az ő küszöbei, az ő részvételi
+  aránya érvényes. Vagyis nem viszi magával a régi, szűk kör mércéjét.
+- ⭐ **Az elvetés nem büntetés, hanem visszahelyezés**: az egyezmény érvényes marad ott, ahol
+  eddig is volt. *Csak a hatóköre nem nőtt meg.*
+
+⏸️ **Amit ehhez el kell dönteni:**
+
+- **A csatlakozók a költözéssel maradnak?** Javaslom: igen — a **tény örök**, a hatály él;
+  aki csatlakozott, az az álláspont mögött áll, nem a helye mögött. (De akkor a tágabb körben
+  ők már „meglévő támogatók", ami befolyásolja az új szavazás részvételi arányát.)
+- **Mi történik, amíg az új szavazás fut?** Két olvasat: (a) az egyezmény **már fent van**, és
+  a szavazás arról szól, maradhat-e — ez Csaba szövegéből következik; (b) csak akkor költözik,
+  ha elfogadták. ⭐ Az (a) mellett szól, hogy így a felmenő köre **látja is, amiről szavaz**.
+- **Lehet-e egy lépésben több szintet ugrani**, vagy csak a közvetlen szülőig?
+
 ### ⏸️ Ami még eldöntendő
 
 - **Az egyesítés csatlakozói** (D27 nyitva hagyta): ha két általános egyezményt egyesítenek,
@@ -317,6 +413,7 @@ gyerek-gondolatokban van.
   emberenként adódnak össze —, de ez külön kimondást kíván.
 - **Az ütközés-jelölés iránya**: kölcsönös-e (A ütközik B-vel ⇒ B ütközik A-val), vagy
   irányított állítás marad.
+- **A felfelé vitel** három nyitott pontja (fent).
 
 ---
 
