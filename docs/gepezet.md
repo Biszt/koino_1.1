@@ -243,17 +243,52 @@ hogy eltaláljuk, ki „érdemli" az azonosítót, hanem azon, hogy **a szétvá
 Akkor a régi hivatkozás odaér, és ott azt látja: *„ez a szétválás egyik ága, a másik itt van."*
 Ugyanaz a minta, mint a `kihagyottak` listánál: **bejelent, nem hallgat** (D19).
 
+### ✅ ÉS A MEGJELENÍTÉS MÁR MEGVAN — a kártya örökli (Csaba, 2026-09-08)
+
+*„Azt hiszem a módosítási javaslat esetében létrejövő szétválásnál már van is erre egy fül a
+kártyán, amibe a másik verziójának a hivatkozása van."* — **Így van**, és nem kell kitalálni:
+a `frontend/js/components/kartya/GondolatKartya.js` **„Másik ág" füle** pontosan ezt teszi.
+
+Amit a kártya vár — ez tehát a **kötelező alak**, amit a számításnak elő kell állítania:
+
+```
+kulonvalasok: [{ testverId, testverTipus, testverCim, agSzerep, kulonvalasIdeje }]
+```
+
+- **`agSzerep: 'foag'`** — *„a főág tartotta meg az eredeti azonosítót"* (a prototípus saját
+  kommentje). ⭐ A koinóban ez a mező mostantól **azt jelenti, hogy ez az ág viseli az
+  eredeti azonosítót** — így a Csaba-féle leszármazottankénti szabállyal is helyes marad,
+  akkor is, ha az eredetit nem a „győztes" oldal kapja.
+- A fül **két mondat közül** választ: *„Ez a gondolat kettévált: egy részük külön ágon
+  folytatta"* vagy *„Ez a gondolat egy szétválásból született: egy másik ágból vált ki."*
+- ⭐ És kezeli azt is, hogy **a testvér időközben megszűnt** — *„A másik ág időközben
+  megszűnt."* (D14: a szétvált ág is elfelejtődhet, ha elfogy alóla a tudatpont.)
+
+*Megint ugyanaz a tanulság, mint az egész átültetésnél: a prototípus kártyája megmondja, mit
+kell a számításnak kiszámolnia.*
+
+### ✅ A MÉRCE: FEJSZÁM, MINDENHOL (Csaba, 2026-09-08)
+
+> *„legyen csak fej szám."*
+
+⚠️ **Ez felülírja a korábbi döntést**, ami a győztest az **ágazati tudatpont** szerint
+határozta meg. Egy gépezetben egy mérce: **hány EMBER áll mögötte**, se a tetején, se a
+levelein nem más.
+
+- **A győztes** az egyesítésnél: amelyik entitásnak **több tudatpont-tulajdonosa van**.
+- **A leszármazottaknál**: ahol a **radikális ellenzők többen vannak**, mint a többiek, ott
+  ők tartják az eredeti azonosítót.
+- ⭐ **A hierarchikus változat** (ha az ágra kell nézni, nem csak az entitásra): az ágban
+  előforduló **KÜLÖNBÖZŐ emberek száma** — pontosan az „ágazati tudatpont" megfelelője, csak
+  pont helyett fővel. *(Ez az én olvasatom; ha az entitásra magára gondoltál, az egyszerűbb.)*
+
+⏸️ **Holtverseny**: ha a két oldal egyenlő, kell egy döntő. Javaslat: az azonosító szerint
+kisebb kapja az eredetit — ugyanaz a mintázat, mint az elágazás-feloldásnál. *Determinisztikus,
+és nem jutalmaz senkit.*
+
 ### ⏸️ Amit még el kell dönteni
 
-⚠️ **Mivel mérjük, hogy „többen vannak"?** A **győztes** az ágazati (hierarchikus)
-**tudatpont** szerint dől el — de a leszármazottaknál Csaba *„többen vannak"*-ot írt, ami
-**fejszámot** sugall. ⛔ Két különböző mérce egy gépezetben csapda: ugyanaz a szétválás
-másképp dőlne el a tetején és a levelein. Két tiszta út van:
-
-- **egységesen ágazati tudatpont** — a „ki tartja jobban" mércéje végig ugyanaz;
-- **egységesen fejszám** — a „hányan akarják" mércéje végig ugyanaz.
-
-*(A mai koinóban mindkettő kiszámítható; a döntés jelentésbeli, nem technikai.)*
+✅ **Eldőlt (2026-09-08): FEJSZÁM, mindenhol** — lásd fentebb. Ami még nyitva: a holtverseny döntője.
 
 ### A három döntés, amit ez a kép rögzít (Csaba, 2026-09-07)
 
@@ -396,15 +431,15 @@ flowchart TD
 - ⭐ **Az elvetés nem büntetés, hanem visszahelyezés**: az egyezmény érvényes marad ott, ahol
   eddig is volt. *Csak a hatóköre nem nőtt meg.*
 
-⏸️ **Amit ehhez el kell dönteni:**
+✅ **És a három nyitott pont is eldőlt (Csaba, 2026-09-08): mindegyikre IGEN.**
 
-- **A csatlakozók a költözéssel maradnak?** Javaslom: igen — a **tény örök**, a hatály él;
-  aki csatlakozott, az az álláspont mögött áll, nem a helye mögött. (De akkor a tágabb körben
-  ők már „meglévő támogatók", ami befolyásolja az új szavazás részvételi arányát.)
-- **Mi történik, amíg az új szavazás fut?** Két olvasat: (a) az egyezmény **már fent van**, és
-  a szavazás arról szól, maradhat-e — ez Csaba szövegéből következik; (b) csak akkor költözik,
-  ha elfogadták. ⭐ Az (a) mellett szól, hogy így a felmenő köre **látja is, amiről szavaz**.
-- **Lehet-e egy lépésben több szintet ugrani**, vagy csak a közvetlen szülőig?
+- ✅ **A csatlakozók a költözéssel MARADNAK** — a **tény örök**, a hatály él; aki csatlakozott,
+  az az álláspont mögött áll, nem a helye mögött. ⚠️ Következmény: a tágabb körben ők már
+  **meglévő támogatók**, tehát beleszámítanak az új szavazás részvételi arányába.
+- ✅ **Az egyezmény MÁR FENT VAN, amíg az új szavazás fut** — így a felmenő köre **látja is,
+  amiről szavaz**. Elvetéskor visszakerül az eredeti szülője alá.
+- ✅ **Több szintet is lehet ugrani egy lépésben** — a javaslat bármelyik felmenőt
+  megnevezheti. *(Így a hatókör tágítása egy döntés, nem szintenkénti szavazás-sorozat.)*
 
 ### ⏸️ Ami még eldöntendő
 
