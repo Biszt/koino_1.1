@@ -57,7 +57,7 @@ import {
 import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok } from './js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
-import { egyezmenyekAlkalmazasa } from './js/allapot/egyezmenyVegrehajtas.js';
+import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, TUDATPONT_KERET
@@ -143,7 +143,7 @@ async function kepetKeszit(napokMulva = 0) {
   // entitásokra. ⚠️ Eddig ez hiányzott: a javaslat elfogadódott, az egyezmény megszületett,
   // a gondolat címe mégis a régi maradt. A `pakli.js` ugyanezt a három fázist futtatja —
   // így a parancssor és a lap **ugyanazt** mondja.
-  egyezmenyekAlkalmazasa(allapot, javaslatok);
+  szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
 
   return { esemenyek, allapot, javaslatok };
 }
@@ -334,18 +334,21 @@ async function allapotKiirasa(napokMulva) {
     kiir('  ' + SZIN.halvany + j.azonosito.slice(0, 8) + SZIN.vege
       + '  ' + szin + j.statusz.toUpperCase() + SZIN.vege
       + '  ' + (kik.length > 1 ? kik.length + ' entitás' : j.muvelet + ': „' + (j.valtozas?.cim ?? '—') + '"'));
-    // ⭐ MINDEN ÉRINTETT SORONKÉNT — a művelet entitásonkénti, tehát nem lehet
-    // egyetlen szóval összefoglalni („Modositas" + „Athelyezes" egy javaslatban).
-    for (const r of kik) {
-      kiir('      ' + SZIN.halvany + '↳ ' + r.muvelet + ': '
+    // ⭐⭐ MINDEN ÉRINTETT SORONKÉNT, A SAJÁT DÖNTÉSÉVEL — a művelet entitásonkénti, ÉS a
+    // döntés is: minden résznek teljesítenie kell a SAJÁT küszöbeit (töredék-modell).
+    // Ezért nem lehet egyetlen sorral összefoglalni; a rész-sorok mutatják meg, MELYIK
+    // rész buktatja el az egészet.
+    for (const r of (j.reszek ?? [])) {
+      const jel = r.kuszobTeljesul ? SZIN.jo + '✔' : SZIN.nem + '✘';
+      kiir('      ' + SZIN.halvany + '↳ ' + jel + SZIN.vege + SZIN.halvany + ' ' + r.muvelet + ': '
         + '„' + (allapot.entitasok.get(r.entitas)?.cim ?? 'ismeretlen') + '"'
-        + (r.valtozas?.cim ? ' → „' + r.valtozas.cim + '"' : '') + SZIN.vege);
+        + (r.valtozas?.cim ? ' → „' + r.valtozas.cim + '"' : '')
+        + '  👍 ' + r.tamogatok + ' 👎 ' + r.ellenzok + ' 🤷 ' + r.tartozkodok
+        + ' (' + r.szavazok + '/' + r.nevezo + ')'
+        + ' · ' + szazalek(r.tamogatottsagEzrelek) + SZIN.vege);
     }
     kiir('      ' + SZIN.halvany
-      + '👍 ' + j.tamogatok + ' 👎 ' + j.ellenzok + ' 🤷 ' + j.tartozkodok
-      + ' (' + j.szavazok + '/' + j.nevezo + ')'
-      + ' · támogatottság ' + szazalek(j.tamogatottsagEzrelek)
-      + ' · bizonyosság ' + szazalek(j.bizonyossagiMutato) + SZIN.vege);
+      + 'bizonyosság ' + szazalek(j.bizonyossagiMutato) + SZIN.vege);
     kiir('      ' + SZIN.halvany + (j.statusz === 'folyamatban' ? 'zárul: ' : 'lezárult: ')
       + new Date(j.lezarasIdeje).toLocaleString('hu-HU')
       + ' (döntési idő ' + Math.round(j.dontesiIdo / 3600) + ' óra)'

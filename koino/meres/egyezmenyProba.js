@@ -11,7 +11,7 @@
 
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
-import { egyezmenyekAlkalmazasa } from '../js/allapot/egyezmenyVegrehajtas.js';
+import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -69,7 +69,7 @@ async function eset({ muvelet = 'Modositas', valtozas = { cim: 'ÚJ CÍM' },
 function kep(esemenyek, most = KESOBB) {
   const allapot = allapotSzamitasa(esemenyek);
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
-  const eredmeny = egyezmenyekAlkalmazasa(allapot, javaslatok);
+  const eredmeny = szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
   return { allapot, javaslatok, ...eredmeny };
 }
 
@@ -293,10 +293,10 @@ proba('⚠️ A HIÁNYZÓ entitás nem hiba, csak „nem hajtható végre" (D14/
 proba('⭐ Az alkalmazások és a kihagyások az ÁLLAPOTBAN is ott vannak (D19)', async () => {
   const e = await eset();
   const k = kep(e.esemenyek);
-  return Array.isArray(k.allapot.egyezmenyAlkalmazasok)
-    && k.allapot.egyezmenyAlkalmazasok.length === 1
-    && Array.isArray(k.allapot.egyezmenyKihagyasok)
-    && k.allapot.egyezmenyAlkalmazasok[0].mezok.includes('cim');
+  return Array.isArray(k.allapot.szerkesztesiAlkalmazasok)
+    && k.allapot.szerkesztesiAlkalmazasok.length === 1
+    && Array.isArray(k.allapot.szerkesztesiKihagyasok)
+    && k.allapot.szerkesztesiAlkalmazasok[0].mezok.includes('cim');
 });
 
 // ===================================

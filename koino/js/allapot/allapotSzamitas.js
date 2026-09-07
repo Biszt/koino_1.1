@@ -262,7 +262,7 @@ export function allapotSzamitasa(esemenyek) {
   const rendezettek = rendezettBemenet(esemenyek);
 
   const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek);
-  const { szamitok, kivetelek } = szabalyokErvenyesitese(ervenyesek);
+  const { szamitok, kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese(ervenyesek);
 
   // ----- NYERSANYAG-GYŰJTÉS -----
   const koinoAdatok = { nev: null, leiras: null };
@@ -452,6 +452,11 @@ export function allapotSzamitasa(esemenyek) {
     idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
     // Szabályt sértő események (keret, jogosultság) — szintén jelzés, nem büntetés (D19)
     kivetelek,
+    // ⚠️ A HARMADIK KATEGÓRIA: az esemény SZÁMÍT, csak valamit nem tudtunk ellenőrizni
+    // (hézagos lánc, még meg nem érkezett létrehozó esemény). ⭐ Eddig a szabály-réteg
+    // előállította, de az állapot eldobta — pedig épp ez a D19 lényege: *bejelent, nem
+    // bíráskodik*. Amit nem adunk tovább, arról a felület sem tud beszélni.
+    nemEllenorizhetok,
     elfelejtettek,
     esemenyDarab: esemenyek.length,
     szamitoDarab: szamitok.length

@@ -213,7 +213,7 @@ koinóban ez a réteg nincs megépítve.**
 egyezmény után a **régit** mutatná — és a legrosszabb kimenet az volna, ha ezt a felületen
 „javítanánk ki". *Ami DÖNT valamiről, az a számítás, nem a rajzolás.*
 
-> ### ✅ MEGÉPÍTVE: `js/allapot/egyezmenyVegrehajtas.js` (2026-09-06, **16 önpróba**)
+> ### ✅ MEGÉPÍTVE: `js/allapot/szerkesztesiVegrehajtas.js` (2026-09-06, **16 önpróba**)
 >
 > *Csaba döntése: „csináld úgy, ahogy a fejlesztés szempontjából a legpraktikusabb; nem baj,
 > ha eltérsz a sorrendtől."* — ezért a végrehajtás **a kártyák ELÉ** került, új lépésként.
@@ -291,7 +291,7 @@ helye. *A „vékony lap" a SZÁMÍTÁSRÓL szól, nem az elnevezésekről.*
 *Ez a dokumentum haszna: nem az derült ki, mit kell átrajzolni, hanem **mi hiányzik**.*
 
 0. ✅ **AZ EGYEZMÉNY VÉGREHAJTÁSA** — *mérve hiányzónak, majd megépítve 2026-09-06 (6/b.
-   szakasz)*. `js/allapot/egyezmenyVegrehajtas.js`, **16 önpróba**; a `koino.js` és a
+   szakasz)*. `js/allapot/szerkesztesiVegrehajtas.js`, **16 önpróba**; a `koino.js` és a
    `pakli.js` is a három fázist futtatja. ⏸️ Nyitva: a `Torles` és az `Egyesites`
    végrehajtója — de azokat ma **egyetlen művelet sem tudja előállítani**.
 1. ✅ **A pakli-lekérdezés kérdezhető alakja** — *kész az 5.2-ben.* Ez volt az utolsó

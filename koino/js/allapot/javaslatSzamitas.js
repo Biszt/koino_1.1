@@ -142,9 +142,29 @@ function tudatpontokGyujtese(esemenyek) {
  * @returns {Array<Object>}
  */
 function idorendbe(szavazatok) {
-  return [...szavazatok].sort((a, b) =>
-    a.ido !== b.ido ? a.ido - b.ido : (a.azonosito < b.azonosito ? -1 : 1)
-  );
+  return [...szavazatok].sort((a, b) => {
+    if (a.ido !== b.ido) return a.ido - b.ido;
+    // ⭐⭐ AZONOS IDŐ → SZERZŐ, majd A SAJÁT LÁNC SORRENDJE (2026-09-07).
+    //
+    // ⚠️ Ez nem szépészet, hanem KÉT hiba javítása, amit ugyanaz a próba buktatott le:
+    //
+    // 1. Aki egyszerre teszi rá a tudatpontját ÉS szavaz (ugyanaz az ezredmásodperc — a
+    //    felületen ez a normális eset), annál a puszta azonosító-döntő **fordítva is
+    //    sorolhatta**: előbb a szavazat, aztán a pont. Mivel a szavazat jogosultsága a
+    //    LEADÁS pillanatában dől el, a szavazata némán kiesett volna. A saját láncban
+    //    viszont VAN sorrend, és azt csak a szerző írhatja: a `sorszam`.
+    //
+    // 2. ⛔⛔ ÉS A CSAPDA, AMI EBBŐL LETT: ha csak AZONOS SZERZŐNÉL néznénk a sorszámot,
+    //    egyébként az azonosítót, a rendezés **nem lenne tranzitív** — X < Y (sorszám),
+    //    Y < Z és Z < X (azonosító) egyszerre igaz lehet. Egy ilyen körnél a `sort`
+    //    eredménye tetszőleges, vagyis **két gép más sorrendet kapna ugyanabból a
+    //    halmazból**. Mérve: ugyanaz a próba hol átment, hol elbukott, a kulcsoktól
+    //    függően. ⭐ Ezért a szerző az ELSŐ döntő: így minden szerző eseményei egyben
+    //    maradnak, a láncsorrend érvényesül, és a reláció totális.
+    if (a.szerzo !== b.szerzo) return a.szerzo < b.szerzo ? -1 : 1;
+    if (a.sorszam !== b.sorszam) return a.sorszam - b.sorszam;
+    return a.azonosito < b.azonosito ? -1 : 1;
+  });
 }
 
 // ===================================
@@ -167,33 +187,26 @@ function idorendbe(szavazatok) {
 function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
   // ----- 1. SZAVAZATOK MEGSZÁMOLÁSA -----
   //
-  // ⛔⛔ CSAK A JOGOSULT SZAVAZAT SZÁMÍT (2026-09-07, mérésből derült ki).
-  //
-  // Eddig MINDEN szavazat beleszámolt, és a jogosultságot csak a felület nézte
-  // (`pakli.js`, `szavazhatok`). ⚠️ De *amit a számítás nem ellenőriz, az nem szabály,
-  // csak illemtan* — a másik gépen futó felület nem véd semmitől: egy kézzel írt
-  // `Szavazat` eseménnyel bárki dönthetett volna olyan gondolat sorsáról, amihez semmi
-  // köze. A prototípus `javaslatJogosultsagService.js`-e ugyanezt a feltételt kéri a
-  // szavazáshoz, mint a javaslattételhez.
-  //
-  // ⭐ A halmazt a hívó számolja MINDEN érintett entitásra (metszet), és menet közben
-  // újra — vagyis a jogosultság a LEZÁRÁS pillanatában érvényes állapot szerint dől el,
-  // ugyanúgy, mint a küszöböké. Aki közben kiszállt a gondolatból, annak a szavazata
-  // sem marad ott. *A szavazat NEM tűnik el: csak nem számít* (D19) — a `nevezo` és a
-  // felület továbbra is megmutatja, ki hol áll.
+  // ⭐ Ide MÁR CSAK JOGOSULT szavazat érkezik: a hívó (`reszekSzamitasa`) a LEADÁS
+  // pillanatában dönti el, beleszámít-e — pontosan úgy, ahogy a prototípus a
+  // `szavazatService`-ben a leadáskor ellenőriz, és a tárolt szavazatot később már nem
+  // kérdőjelezi meg. ⛔ Ez fontos: ha a lezáráskori állapot döntene, akkor a tudatpontom
+  // elvételével **visszavonhatnám a szavazatomat** — pedig a szabály az, hogy
+  // *„megváltoztatható, de nem vonható vissza"*.
   let tamogatok = 0, ellenzok = 0, tartozkodok = 0;
-  for (const [szerzo, tipus] of emberenkent) {
-    if (!aktivHalmaz.has(szerzo)) continue;
+  for (const tipus of emberenkent.values()) {
     if (tipus === 'Tamogat') tamogatok++;
     else if (tipus === 'Ellenez') ellenzok++;
     else if (tipus === 'Tartozkodik') tartozkodok++;
   }
   const szavazok = tamogatok + ellenzok + tartozkodok;
 
-  // ----- 2. A RÉSZVÉTELI ARÁNY NEVEZŐJE: AZ AKTÍV TULAJDONOSOK -----
-  // A passzív figyelők kimaradnak (nem korlátozzák a döntést). ⭐ Unióra már nincs
-  // szükség: mivel csak a jogosult szavazat számít, a számláló amúgy is ⊆ a nevező —
-  // és aki nem jogosult, azzal nem is szabad rontani a részvételi arányt.
+  // ----- 2. A RÉSZVÉTELI ARÁNY NEVEZŐJE: AKTÍV TULAJDONOSOK ∪ SZAVAZÓK -----
+  // A passzív figyelők kimaradnak (nem korlátozzák a döntést), de aki szavazott, az
+  // résztvevő — ezért az unió; így a számláló mindig ⊆ a nevező. ⭐ A prototípus ezt
+  // kétszeresen biztosítja: a szavazás maga **aktívvá billenti** a szavazót minden
+  // érintett entitáson (`szerepAktivalasa`: *„minden döntés-alakító tett"*), az unió
+  // pedig azt is elkapja, aki a szavazása UTÁN vált passzívra. A halmazt a hívó adja.
   const nevezo = aktivHalmaz.size;
 
   // ----- 3. AZ ELFOGADÁS FELTÉTELE — EGÉSZ ARITMETIKÁVAL -----
@@ -268,9 +281,39 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
 // jogosan módosítja az eredményt. A követelmény nem az, hogy az eredmény soha ne
 // változzon, hanem hogy UGYANABBÓL AZ ESEMÉNYHALMAZBÓL mindenki ugyanazt kapja (D17).
 
+// ===================================
+// ⭐⭐⭐ A TÖREDÉK-MODELL: ÉRINTETTENKÉNT KÜLÖN ÁLLÁS (2026-09-07)
+// ===================================
+//
+// ⛔⛔ EZ A PROTOTÍPUS LEGFONTOSABB LOGIKAI KAPCSOLATA, amit elsőre elrontottam.
+//
+// Egy több entitást érintő javaslat a prototípusban **nem egy szavazás**. A
+// `javaslatService.js` minden érintetthez KÜLÖN TÖREDÉK-JAVASLATOT hoz létre, és onnantól:
+//
+//   - a töredék típusa **az adott entitás művelete**, a szülője **az adott entitás**;
+//   - **szavazni töredékenként lehet**, és a jogosultság ott már csak arra az EGY
+//     entitásra kérdez rá (`szavazatService.js`: végigmegy a csoport töredékein, a
+//     jogosultakra leadja, a többit **átugorja** — hibát csak akkor dob, ha egyikre sem);
+//   - a **küszöb és a részvételi arány is töredékenként** számítódik, az adott entitás
+//     saját tulajdonosaival és saját érték javaslataival;
+//   - a **lezárás ideje közös**: a leghosszabb döntési idő (`kozosDontesiIdo` = MAX);
+//   - és a csoport **akkor és csak akkor elfogadott, ha MINDEN töredék teljesíti a SAJÁT
+//     küszöbeit** (`javaslatIdozitesService.js`).
+//
+// ⭐ A METSZET tehát CSAK A JAVASLAT BEADÁSÁRA vonatkozik (`szabalyok.js`) — a döntés
+// entitásonként külön dől el, és **ÉS**-sel áll össze. *Aki a gondolatot tartja, az dönt a
+// sorsáról — akkor is, ha a javaslat egy másik gondolatot is érint.*
+//
+// ⚠️ AMIT ÁT KELLETT ALAKÍTANI: a koinóban NINCS N darab tárolt töredék, mert egy aláírt
+// `Javaslat` esemény van. A töredék a Mongo tárolási kényszere volt; a **logikai kapcsolat**
+// viszont átjön: N tárolt rekord helyett N SZÁMÍTOTT RÉSZ. Ugyanaz a minta, mint a D17-nél
+// — ami ott adatbázis-sor, az itt számítás. És a szavazat is egy esemény: a prototípus
+// „minden jogosult töredékre leadja" lépése itt annyi, hogy a szavazat **abban a részben**
+// számít, ahol a szavazónak van pontja.
+
 /**
- * Végigmegy a javaslatot érintő eseményeken IDŐRENDBEN a lezárásig, és visszaadja a
- * végállást.
+ * Végigmegy a javaslatot érintő eseményeken IDŐRENDBEN a közös lezárásig, és
+ * érintettenként külön állást ad vissza.
  *
  * HÁROM ESEMÉNY-FAJTA SZÁMÍT, és mind ugyanazon a szabályon megy át:
  *   - a SZAVAZAT (a részvétel számlálója),
@@ -281,75 +324,53 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
  * kívül kell hagyni — különben a döntés újranyílik.
  *
  * @param {Object} javaslatEsemeny
+ * @param {Array<{entitas: string, muvelet: string, valtozas: Object|null}>} kik - az érintettek
  * @param {Array<Object>} szavazatok - a javaslat szavazat-eseményei (szűretlenül)
- * ===== ⭐⭐ TÖBB ÉRINTETT: A JOGOSULTSÁG METSZET (2026-09-07) =====
- *
- * A prototípus `javaslatJogosultsagService.js`-e szó szerint ezt mondja: *„Ellenőrzi, hogy
- * a eember rendelkezik-e tudatponttal **MINDEN érintett entitáson**. Ha mindenhol van
- * tudatpontja, jogosult **szavazni/javaslatot létrehozni**."*
- *
- * ⭐ Vagyis a szavazók köre a METSZET, nem az unió — és ugyanaz a feltétel, mint a
- * javaslattételnél (`szabalyok.js`). Enélkül egy egyesítésnél az szavazhatna a másik
- * gondolat sorsáról, akinek ahhoz semmi köze.
- *
  * @param {Array<Object>} tudatpontok - az érintett entitások tudatpont-eseményei
  * @param {Array<Object>} ertekJavaslatEsemenyek - az érintett entitások érték javaslatai
- * @param {Array<string>} erintettAzonositok - MINDEN érintett entitás azonosítója
- * @returns {{allas: Object, kuszobok: Object, kesoiSzavazatok: number}}
+ * @returns {{reszek: Array<Object>, lezarasIdeje: number, dontesiIdo: number,
+ *            kuszobTeljesul: boolean, kesoiSzavazatok: number}}
  */
-function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavaslatEsemenyek,
-                           erintettAzonositok) {
+function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek) {
+  const entitasok = kik.map((r) => r.entitas);
   const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek]);
 
-  const emberenkent = new Map();      // szerző → a szavazata (a lezárás pillanatáig)
+  // ----- ENTITÁSONKÉNT KÜLÖN KÖNYVELÉS -----
+  // ⭐ Külön térkép entitásonként (nem összetett kulcs): így a „ki tulajdonos ITT?"
+  // kérdés egy lépés, és a rész-állások egymástól függetlenül olvashatók.
+  const uresen = () => new Map(entitasok.map((az) => [az, new Map()]));
+  const tulajdonosok = uresen();      // entitás → (szerző → { pont, szerep, sorszam })
+  const ertekJavaslatok = uresen();   // entitás → (szerző → { ertekek, sorszam })
+  const reszSzavazatok = uresen();    // entitás → (szerző → 'Tamogat' | …)
   const szavazatSorszam = new Map();  // szerző → az eddig figyelembe vett szavazat-sorszám
-  // ⭐⭐ SZERZŐ + ENTITÁS a kulcs (2026-09-07), mert egy javaslat TÖBB entitást is érinthet.
-  const tulajdonosok = new Map();     // "szerző|entitás" → { pont, szerep, sorszam }
-  const ertekJavaslatok = new Map();  // szerző → { ertekek, sorszam }
-
-  /** Aktív tulajdonos-e valaki EGY adott entitáson? */
-  const aktivItt = (szerzo, entitas) => {
-    const adat = tulajdonosok.get(szerzo + '|' + entitas);
-    // Ugyanaz a szabály, mint az állapot-rétegben: 0 pont = nincs ott, a passzív
-    // figyelő pedig nem korlátozza a döntést.
-    return !!adat && adat.pont > 0 && adat.szerep === 'aktiv';
-  };
 
   /**
-   * ⭐⭐ AZ AKTÍV TULAJDONOSOK — MINDEN érintett entitáson (a METSZET).
-   *
-   * A prototípus jogosultság-szabálya: *„rendelkezik-e tudatponttal MINDEN érintett
-   * entitáson"*. Egyetlen érintettnél ez pontosan a régi viselkedés; többnél a metszet.
+   * ⭐ A NEVEZŐ EGY RÉSZBEN: az entitás aktív tulajdonosai ∪ az itt számító szavazók.
+   * A passzív figyelő kimarad (nem korlátozza a döntést), de a szavazás **aktívvá tesz**
+   * — a prototípusban ez tényleges szerep-billentés (`szerepAktivalasa`), itt az unió.
    */
-  const aktivHalmaz = () => {
-    const jeloltek = new Set();
-    for (const kulcs of tulajdonosok.keys()) jeloltek.add(kulcs.slice(0, kulcs.indexOf('|')));
-
+  const aktivHalmazItt = (entitas) => {
     const halmaz = new Set();
-    for (const szerzo of jeloltek) {
-      if (erintettAzonositok.every((entitas) => aktivItt(szerzo, entitas))) halmaz.add(szerzo);
+    for (const [szerzo, adat] of tulajdonosok.get(entitas)) {
+      if (adat.pont > 0 && adat.szerep === 'aktiv') halmaz.add(szerzo);
     }
+    for (const szerzo of reszSzavazatok.get(entitas).keys()) halmaz.add(szerzo);
     return halmaz;
   };
 
   /**
-   * Az érvényes küszöbök: a TULAJDONOSOK érték javaslatainak mediánja (D4).
+   * Az érvényes küszöbök EGY RÉSZBEN: az entitás TULAJDONOSAINAK érték javaslat-mediánja
+   * (D4) — pontosan az, amit a prototípus az adott entitás hisztogramjából olvas ki.
    *
    * Az érték javaslatokat akkor is megjegyezzük, ha a szerzőjüknek épp nincs pontja —
    * csak a SZÁMOLÁSKOR szűrünk. Így mindegy, hogy egy azonos időpontú tudatpont és
-   * érték javaslat közül melyik kerül előre a sorban.
+   * érték javaslat közül melyik kerül előre a sorban. ⭐ A szerep itt nem számít: a
+   * passzív figyelőnek is van véleménye a küszöbről.
    */
-  const kuszobokMost = () => {
+  const kuszobokItt = (entitas) => {
     const ervenyesek = [];
-    for (const [szerzo, bejegyzes] of ertekJavaslatok) {
-      // ⭐ A küszöbökbe annak a javaslata számít, aki TULAJDONOS — mindegy, aktív-e
-      // (a passzív figyelőnek is van véleménye a küszöbről). Több érintettnél itt is a
-      // metszet dönt: aki mindegyiken tulajdonos.
-      const tulajdonosMind = erintettAzonositok.every((entitas) => {
-        const adat = tulajdonosok.get(szerzo + '|' + entitas);
-        return !!adat && adat.pont > 0;
-      });
-      if (tulajdonosMind) ervenyesek.push(bejegyzes.ertekek);
+    for (const [szerzo, bejegyzes] of ertekJavaslatok.get(entitas)) {
+      if ((tulajdonosok.get(entitas).get(szerzo)?.pont ?? 0) > 0) ervenyesek.push(bejegyzes.ertekek);
     }
 
     const eredmeny = { ...ALAP_KUSZOBOK };
@@ -364,8 +385,26 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
     return eredmeny;
   };
 
-  let kuszobok = kuszobokMost();
-  let allas = allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz(), kuszobok);
+  /** A pillanatnyi rész-állások — entitásonként egy. */
+  const allasokMost = () => kik.map((r) => {
+    const kuszobok = kuszobokItt(r.entitas);
+    return {
+      entitas: r.entitas,
+      muvelet: r.muvelet,
+      valtozas: r.valtozas ?? null,
+      kuszobok,
+      allas: allasSzamitasa(javaslatEsemeny, reszSzavazatok.get(r.entitas),
+        aktivHalmazItt(r.entitas), kuszobok)
+    };
+  });
+
+  // ⭐⭐ A KÖZÖS LEZÁRÁS: a LEGHOSSZABB rész-döntési idő (a prototípus `kozosDontesiIdo`
+  // MAX-a). Amíg a leglassabb rész nyitva van, addig a többire is lehet szavazni — a
+  // csoport egyben dől el.
+  const kozosLezaras = (reszek) => Math.max(...reszek.map((r) => r.allas.lezarasIdeje));
+
+  let reszek = allasokMost();
+  let lezarasIdeje = kozosLezaras(reszek);
   let index = 0;
   let kesoiSzavazatok = 0;
 
@@ -374,7 +413,7 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
 
     // A HATÁRIDŐ UTÁN érkezett esemény nem számít — és mivel időrendben megyünk,
     // innentől MINDEGYIK késői. Itt zárul a döntés.
-    if (esemeny.ido > allas.lezarasIdeje) break;
+    if (esemeny.ido > lezarasIdeje) break;
 
     // A saját láncban az utolsó számít: egy kisebb sorszámú esemény nem írhatja felül
     // a nagyobbat (a meggondolás joga előre él, nem visszafelé).
@@ -382,31 +421,43 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
       const eddigi = szavazatSorszam.get(esemeny.szerzo);
       if (eddigi !== undefined && esemeny.sorszam <= eddigi) continue;
       szavazatSorszam.set(esemeny.szerzo, esemeny.sorszam);
-      emberenkent.set(esemeny.szerzo, esemeny.adat.szavazat);
+
+      // ⭐⭐ EGY SZAVAZÁS → MINDEN JOGOSULT RÉSZRE, a többi ÁTUGORVA. Szó szerint a
+      // prototípus `szavazatService`-e: „jogosultToredekek" / „atugrottToredekek".
+      // ⛔ A jogosultság a LEADÁS pillanatában dől el, és utólag nem íródik felül —
+      // különben a tudatpontom elvétele a szavazatom visszavonása lenne.
+      // ⚠️ A szerep itt NEM számít: a prototípus jogosultság-ellenőrzése csak pontot néz
+      // (`eemberHozzajarulasaEntitason`), a passzív figyelő szavazhat — sőt a szavazással
+      // épp aktívvá válik.
+      for (const entitas of entitasok) {
+        if ((tulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
+        reszSzavazatok.get(entitas).set(esemeny.szerzo, esemeny.adat.szavazat);
+      }
 
     } else if (esemeny.tipus === 'TudatpontRendezes') {
-      // ⭐ A kulcs szerző + entitás: több érintettnél ugyanaz az ember mindegyiken külön
-      // tulajdonos, és mindegyiken külön „az utolsó nyer".
-      const kulcs = esemeny.szerzo + '|' + esemeny.adat.entitas;
-      const eddigi = tulajdonosok.get(kulcs);
+      const terkep = tulajdonosok.get(esemeny.adat.entitas);
+      if (!terkep) continue;                       // nem a mi érintettünkről szól
+      const eddigi = terkep.get(esemeny.szerzo);
       if (eddigi !== undefined && esemeny.sorszam <= eddigi.sorszam) continue;
-      tulajdonosok.set(kulcs, {
+      terkep.set(esemeny.szerzo, {
         pont: esemeny.adat.pont,
         szerep: esemeny.adat.szerep === 'passziv' ? 'passziv' : 'aktiv',
         sorszam: esemeny.sorszam
       });
 
     } else {
-      const eddigi = ertekJavaslatok.get(esemeny.szerzo);
+      const terkep = ertekJavaslatok.get(esemeny.adat.entitas);
+      if (!terkep) continue;                       // nem a mi érintettünkről szól
+      const eddigi = terkep.get(esemeny.szerzo);
       if (eddigi !== undefined && esemeny.sorszam <= eddigi.sorszam) continue;
-      ertekJavaslatok.set(esemeny.szerzo, {
+      terkep.set(esemeny.szerzo, {
         ertekek: esemeny.adat.ertekek,
         sorszam: esemeny.sorszam
       });
     }
 
-    kuszobok = kuszobokMost();
-    allas = allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz(), kuszobok);
+    reszek = allasokMost();
+    lezarasIdeje = kozosLezaras(reszek);
   }
 
   // Hány SZAVAZAT maradt a lezáráson kívül (a késői tudatpont-rendezés nem „szavazat")
@@ -414,7 +465,15 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
     if (sor[i].tipus === 'Szavazat') kesoiSzavazatok++;
   }
 
-  return { allas, kuszobok, kesoiSzavazatok };
+  return {
+    reszek,
+    lezarasIdeje,
+    dontesiIdo: Math.max(...reszek.map((r) => r.allas.dontesiIdo)),
+    // ⛔⛔ ÉS ITT AZ „ÉS": a csoport csak akkor elfogadott, ha MINDEN rész teljesíti a
+    // SAJÁT küszöbeit. Egyetlen elbukó rész az egész javaslatot elveti.
+    kuszobTeljesul: reszek.every((r) => r.allas.kuszobTeljesul),
+    kesoiSzavazatok
+  };
 }
 
 // ===================================
@@ -449,29 +508,33 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     const kik = erintettek(e.adat);
     const erintettAzonositok = kik.map((r) => r.entitas);
     const erintettAzonosito = erintettAzonositok[0] ?? null;
-    const erintett = allapot.entitasok.get(erintettAzonosito);
 
-    // ----- 1. ⭐ A LEZÁRÁSIG SZÁMOLT ÁLLÁS -----
+    // ----- 1. ⭐⭐ ÉRINTETTENKÉNT KÜLÖN ÁLLÁS, KÖZÖS LEZÁRÁSSAL -----
     // Az események időrendben mennek, és a határidő utániak kimaradnak (lásd fentebb).
     // A KÜSZÖBÖK is innen jönnek: azok érvényesek, amik a LEZÁRÁS PILLANATÁIG
-    // kialakultak — nem az entitás mai mediánja (az az `erintett.kuszobok`, a
+    // kialakultak — nem az entitás mai mediánja (az az entitás `kuszobok` mezője, a
     // felületnek). Különben egy utólagos érték javaslat átírná a lezárt döntés
     // szabályát, akár visszamenőleg a döntési idejét is.
-    // ⭐ MINDEN érintett tudatpont- és érték javaslat-eseménye bemegy — a jogosultság
-    // metszetét a `lezarasigSzamitas` számolja belőlük.
-    const { allas, kuszobok, kesoiSzavazatok } = lezarasigSzamitas(
+    const csoport = reszekSzamitasa(
       e,
+      kik,
       szavazatok.get(e.azonosito) ?? [],
       erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
-      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
-      erintettAzonositok
+      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? [])
     );
+    const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok } = csoport;
+
+    // ⚠️ A FELÜLETNEK ÉS A PARANCSSORNAK EGY SZÁM KELL, a döntésnek viszont N.
+    // Az összefoglaló számok az ELSŐ részé — ugyanúgy, ahogy az `erintett` és a
+    // `muvelet` is az első érintetté. Egyetlen érintettnél ez pontosan a régi
+    // viselkedés; többnél a teljes igazság a `reszek` tömbben van, és a döntést
+    // (`kuszobTeljesul`) mindig az ÉS adja, nem ez az összefoglaló.
+    const { kuszobok } = reszek[0] ?? { kuszobok: { ...ALAP_KUSZOBOK } };
     const {
       tamogatok, ellenzok, tartozkodok, szavazok, nevezo,
       tamogatottsagEzrelek, ellenzoiEzrelek, tartozkodoiEzrelek, reszveteliEzrelek,
-      bizonyossagiMutato, tamogatottsagTeljesul, reszvetelTeljesul, kuszobTeljesul,
-      dontesiIdo, lezarasIdeje
-    } = allas;
+      bizonyossagiMutato, tamogatottsagTeljesul, reszvetelTeljesul
+    } = reszek[0]?.allas ?? {};
 
     // ----- 2. STÁTUSZ -----
     let statusz;
@@ -496,7 +559,15 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       megszuletett: lezarasIdeje,
       pillanatkep: {
         tamogatok, ellenzok, tartozkodok, szavazok, nevezo,
-        tamogatottsagEzrelek, reszveteliEzrelek, bizonyossagiMutato
+        tamogatottsagEzrelek, reszveteliEzrelek, bizonyossagiMutato,
+        // ⭐ ÉS RÉSZENKÉNT IS — mert a döntés részenként dőlt el. *Ki mit fogadott el, és
+        // hol.* Az összefoglaló fenti számok az elsőé; ez a teljes kép.
+        reszek: reszek.map((r) => ({
+          entitas: r.entitas, muvelet: r.muvelet,
+          tamogatok: r.allas.tamogatok, szavazok: r.allas.szavazok, nevezo: r.allas.nevezo,
+          tamogatottsagEzrelek: r.allas.tamogatottsagEzrelek,
+          reszveteliEzrelek: r.allas.reszveteliEzrelek
+        }))
       }
     };
 
@@ -518,7 +589,18 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       kuszobok,
       tamogatottsagTeljesul,
       reszvetelTeljesul,
+      // ⛔⛔ A CSOPORT DÖNTÉSE: minden résznek teljesítenie kell a SAJÁT küszöbeit.
       kuszobTeljesul,
+
+      // ⭐⭐ A RÉSZEK — érintettenként egy: saját szavazói kör, saját küszöbök, saját
+      // döntési idő. Ez a teljes igazság; a fenti összefoglaló számok az ELSŐ részé.
+      reszek: reszek.map((r) => ({
+        entitas: r.entitas,
+        muvelet: r.muvelet,
+        valtozas: r.valtozas,
+        kuszobok: r.kuszobok,
+        ...r.allas
+      })),
 
       dontesiIdo,
       lezarasIdeje,

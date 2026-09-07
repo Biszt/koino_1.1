@@ -1,4 +1,4 @@
-﻿// koino/js/allapot/egyezmenyVegrehajtas.js
+﻿// koino/js/allapot/szerkesztesiVegrehajtas.js
 
 // Felelősség: RÁVEZETNI az elfogadott egyezményeket az entitásokra.
 //
@@ -21,7 +21,7 @@
 //
 //   1. `allapotSzamitasa`      → az entitások ÚGY, AHOGY LÉTREJÖTTEK
 //   2. `javaslatokSzamitasa`   → a döntések, és belőlük az EGYEZMÉNYEK (D17: számítás)
-//   3. **`egyezmenyekAlkalmazasa`** ← EZ A FÁJL: az egyezmények rávezetése
+//   3. **`szerkesztesiEgyezmenyekAlkalmazasa`** ← EZ A FÁJL: az egyezmények rávezetése
 //
 // ⚠️ A sorrend nem cserélhető fel: a döntéshez kell az állapot (küszöbök, tudatpontok), az
 // entitás végleges alakjához pedig kell a döntés. Ezért három fázis, nem kettő.
@@ -132,8 +132,8 @@ function athelyezes(entitas, valtozas, entitasok) {
  * @param {Map} javaslatok - a `javaslatokSzamitasa` eredménye
  * @returns {{alkalmazottak: Array, kihagyottak: Array}}
  */
-export function egyezmenyekAlkalmazasa(allapot, javaslatok) {
-  console.log('egyezmenyekAlkalmazasa - KEZDÉS', { javaslat: javaslatok?.size ?? 0 });
+export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
+  console.log('szerkesztesiEgyezmenyekAlkalmazasa - KEZDÉS', { javaslat: javaslatok?.size ?? 0 });
 
   const alkalmazottak = [];
   const kihagyottak = [];
@@ -173,10 +173,10 @@ export function egyezmenyekAlkalmazasa(allapot, javaslatok) {
 
   // ⭐ A KIHAGYOTTAKAT FELSOROLJUK, NEM ELHALLGATJUK — ugyanaz a minta, mint a
   // `szabalyok.js` szabálysértő eseményeinél (D19): a program bejelent, nem bíráskodik.
-  allapot.egyezmenyAlkalmazasok = alkalmazottak;
-  allapot.egyezmenyKihagyasok = kihagyottak;
+  allapot.szerkesztesiAlkalmazasok = alkalmazottak;
+  allapot.szerkesztesiKihagyasok = kihagyottak;
 
-  console.log('egyezmenyekAlkalmazasa - VÉGE',
+  console.log('szerkesztesiEgyezmenyekAlkalmazasa - VÉGE',
     { alkalmazott: alkalmazottak.length, kihagyott: kihagyottak.length });
   return { alkalmazottak, kihagyottak };
 }

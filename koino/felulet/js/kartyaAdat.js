@@ -118,6 +118,10 @@ export function kartyaAdatta(k) {
         // mégis meg tudja mutatni, mi minden van a javaslatban.
         modositottGondolat: k.javaslat.erintettCim,
         erintettek: k.javaslat.erintettek ?? [],
+        // ⭐⭐ A RÉSZ-DÖNTÉSEK: a szerkesztési javaslat érintettenként külön dől el
+        // (töredék-modell), és **minden résznek teljesítenie kell a sajátját**. A kártya
+        // az elsőt mutatja; a részletek-nézet megmutathatja, melyik rész buktatja el.
+        reszek: k.javaslat.reszek ?? [],
         indoklas: k.javaslat.indoklas,
 
         tamogatotsagiArany: (k.javaslat.tamogatottsagEzrelek ?? 0) / 10,

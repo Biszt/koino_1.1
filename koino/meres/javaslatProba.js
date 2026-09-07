@@ -328,6 +328,40 @@ proba('⭐ A szavazatok SORRENDJE nem számít', async () => {
   return JSON.stringify(eredeti) === JSON.stringify(forditva);
 });
 
+proba('⛔⛔ AZONOS IDŐBÉLYEGŰ ESEMÉNYEK: a rendezés TOTÁLIS, nem ciklikus', async () => {
+  // ⚠️ Ez a próba egy VALÓDI hibát fogott (2026-09-07). A holtverseny-döntő először így
+  // szólt: „azonos szerzőnél a sorszám, egyébként az azonosító" — és ez **nem tranzitív**:
+  // X < Y (sorszám), Y < Z és Z < X (azonosító) egyszerre állhat. Egy ilyen körnél a
+  // `sort` eredménye tetszőleges, vagyis KÉT GÉP MÁS SORRENDET KAP ugyanabból a halmazból.
+  // Mérve: ugyanaz az eset hol átment, hol elbukott — a generált kulcsoktól függően.
+  //
+  // ⭐ Ezért kell MINDEN eseményt UGYANARRA az ezredmásodpercre tenni, és a bemenetet
+  // sokszor megkeverni: egyetlen futás nem bizonyít semmit.
+  const eset = await esetFelepitese({ szavazatok: [] });
+
+  // Öt e-ember, mindegyik UGYANABBAN a pillanatban tesz pontot és szavaz.
+  for (let i = 0; i < 5; i++) {
+    const ember = await ujEember();
+    eset.esemenyek.push(await ember.tesz('TudatpontRendezes',
+      { entitas: eset.gondolat.azonosito, pont: 10, szerep: 'aktiv' }, eset.kezdet));
+    eset.esemenyek.push(await ember.tesz('Szavazat',
+      { javaslat: eset.javaslat.azonosito, szavazat: i % 2 ? 'Ellenez' : 'Tamogat' },
+      eset.kezdet));
+  }
+
+  const vart = JSON.stringify(javaslatAllapot(eset, eset.kezdet + 10 * NAP));
+
+  for (let kor = 0; kor < 30; kor++) {
+    const kevert = [...eset.esemenyek].sort(() => Math.random() - 0.5);
+    if (JSON.stringify(javaslatAllapot({ ...eset, esemenyek: kevert }, eset.kezdet + 10 * NAP)) !== vart) {
+      return false;
+    }
+  }
+  // ⭐ És a próba NEM VAK: mind az öt szavazatnak számítania kell (ha a rendezés a
+  // szavazatot a tudatpont elé tenné, a szavazat kiesne).
+  return JSON.parse(vart).szavazok === 5;
+});
+
 proba('⭐ ELÁGAZÁS: a kettős szavazatból EGY számít, és mindkét sorrend UGYANAZT adja', async () => {
   // Ez a próba 2026-08-28-ig BUKOTT volna: a döntéshozatal a NYERS eseményeket kapta,
   // ezért a kettős szavazatnál azt vette figyelembe, amelyik előbb szerepelt a tömbben.
@@ -393,8 +427,14 @@ proba('⭐ …ÉS A PRÓBA NEM VAK: ugyanez tudatponttal ELFOGADÁSSÁ fordul', 
   return j.szavazok === 2 && j.tamogatok === 1 && j.ellenzok === 1;
 });
 
-proba('⛔ A PASSZÍV figyelő szavazata sem számít (ő nem korlátozza a döntést)', async () => {
+proba('⭐⭐ A PASSZÍV FIGYELŐ SZAVAZHAT — és a szavazásával aktívvá válik', async () => {
+  // ⚠️ Ezt először fordítva írtam meg. A prototípus jogosultság-ellenőrzése CSAK PONTOT
+  // néz (`eemberHozzajarulasaEntitason`: `tudatPontok > 0`), a szerepet nem — sőt a
+  // szavazás kifejezetten **aktívvá billenti** a szavazót (`szerepAktivalasa`:
+  // *„ezt hívja minden döntés-alakító tett"*). ⭐ A passzív szerep tehát azt jelenti,
+  // hogy „nem korlátozom a döntést", nem azt, hogy „nem szólhatok bele".
   const eset = await esetFelepitese({ szavazatok: ['Tamogat'] });
+  const elotte = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
 
   const figyelo = await ujEember();
   eset.esemenyek.push(await figyelo.tesz('TudatpontRendezes',
@@ -403,13 +443,15 @@ proba('⛔ A PASSZÍV figyelő szavazata sem számít (ő nem korlátozza a dön
     { javaslat: eset.javaslat.azonosito, szavazat: 'Ellenez' }, eset.kezdet + 2000));
 
   const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
-  return j.szavazok === 1 && j.ellenzok === 0 && j.nevezo === 2;   // létrehozó + szavazó
+  // ⭐ A szavazata SZÁMÍT, és a nevezőbe is bekerül — a figyelése előtte NEM növelte azt.
+  return elotte.nevezo === 2 && j.szavazok === 2 && j.ellenzok === 1 && j.nevezo === 3;
 });
 
-proba('⚠️ AKI A DÖNTÉS ALATT KISZÁLL, annak a szavazata sem marad ott', async () => {
-  // ⭐ A jogosultság a LEZÁRÁS pillanatában érvényes állapot szerint dől el — ugyanaz az
-  // elv, mint a küszöböknél. *Aki elmegy, viszi a súlyát.* A szavazat NEM tűnik el
-  // (a tárban ott van), csak nem számít (D19).
+proba('⛔⛔ AKI A DÖNTÉS ALATT KISZÁLL, annak a szavazata OTT MARAD', async () => {
+  // ⚠️ Ezt is fordítva írtam meg elsőre, és az rossz volt: a prototípus a LEADÁSKOR
+  // ellenőriz, a tárolt szavazatot később nem kérdőjelezi meg. ⛔ Ha a lezáráskori
+  // állapot döntene, a tudatpont elvétele **a szavazat visszavonása** lenne — pedig a
+  // koino szabálya: *„megváltoztatható, de nem vonható vissza."*
   const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat'] });
   const elozetes = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
 
@@ -417,7 +459,25 @@ proba('⚠️ AKI A DÖNTÉS ALATT KISZÁLL, annak a szavazata sem marad ott', a
     { entitas: eset.gondolat.azonosito, pont: 0 }, eset.kezdet + 3000));
   const utana = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
 
-  return elozetes.szavazok === 2 && utana.szavazok === 1;
+  // A szavazata marad; a nevezőben is benne van (aktív tulajdonosok ∪ szavazók).
+  return elozetes.szavazok === 2 && utana.szavazok === 2 && utana.tamogatok === 2;
+});
+
+proba('⭐ EGYSZERRE tesz pontot és szavaz: a saját lánc sorrendje dönt, nem az azonosító', async () => {
+  // ⚠️ Ezt egy BUKOTT próba hozta ki (2026-09-07): a tudatpont és a szavazat ugyanabban
+  // az ezredmásodpercben születik (a felületen ez a normális), és az azonosító szerinti
+  // holtverseny-döntő fordítva is sorolhatta — ilyenkor a szavazat némán kiesett.
+  const eset = await esetFelepitese({ szavazatok: [] });
+
+  const belepo = await ujEember();
+  const egyIdo = eset.kezdet + 1000;
+  eset.esemenyek.push(await belepo.tesz('TudatpontRendezes',
+    { entitas: eset.gondolat.azonosito, pont: 10, szerep: 'aktiv' }, egyIdo));
+  eset.esemenyek.push(await belepo.tesz('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat: 'Tamogat' }, egyIdo));
+
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  return j.szavazok === 1 && j.tamogatok === 1;
 });
 
 // ===== ALAPÉRTELMEZÉS =====

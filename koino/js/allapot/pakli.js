@@ -47,7 +47,7 @@ import { koinoEsemenyei } from '../tar/esemenyTar.js';
 import { allapotSzamitasa } from './allapotSzamitas.js';
 import { TUDATPONT_KERET } from './szabalyok.js';
 import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
-import { egyezmenyekAlkalmazasa } from './egyezmenyVegrehajtas.js';
+import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
 
 // ===================================
 // A PARAMÉTEREK
@@ -176,22 +176,43 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
       nevezo: dontes.nevezo,
       kesoiSzavazatok: dontes.kesoiSzavazatok,
 
-      // ⭐ SZAVAZHATOK-E? A döntés bemenete az ÉRINTETT entitás aktív tulajdonosainak
-      // köre — nem a javaslaté. (Aki a gondolatot tartja, az dönt a sorsáról.)
-      // ⛔⛔ TÖBB ÉRINTETTNÉL METSZET, nem unió — a prototípus jogosultság-rétege is ezt
-      // mondja: *„rendelkezik-e tudatponttal MINDEN érintett entitáson"*. Ha egy csomagban
-      // csak az egyik gondolat az enyém, a másik sorsáról nem dönthetek.
+      // ⭐ SZAVAZHATOK-E? A döntés bemenete az ÉRINTETT entitás tulajdonosainak köre —
+      // nem a javaslaté. (Aki a gondolatot tartja, az dönt a sorsáról.)
+      //
+      // ⛔⛔ TÖBB ÉRINTETTNÉL: ELÉG AZ EGYIKEN BENT LENNI. A döntés ugyanis
+      // érintettenként külön dől el (töredék-modell), és a prototípus `szavazatService`-e
+      // is így csinálja: végigmegy a töredékeken, a jogosultakra leadja a szavazatot, a
+      // többit **átugorja** — hibát csak akkor dob, ha egyikre sem jogosult.
+      // ⚠️ A SZEREP nem számít: a prototípus jogosultság-ellenőrzése csak pontot néz, és
+      // a szavazás maga billenti aktívvá a szavazót. A passzív figyelő tehát szavazhat.
       // ⚠️ Ez CSAK a felület előzetes jelzése; a valódi szabály a számításban van
-      // (`javaslatSzamitas.js` metszete) — a felület a másik gépen nem véd semmitől.
+      // (`javaslatSzamitas.js`) — a felület a másik gépen nem véd semmitől.
       szavazhatok: (() => {
         if (!en) return false;
         const kik = (dontes.erintettek ?? []).map((r) => r.entitas);
         const lista = kik.length ? kik : [dontes.erintett];
-        return lista.every((az) => {
-          const sajat = entitasok.get(az)?.hozzajarulok.get(en);
-          return (sajat?.pont ?? 0) > 0 && sajat?.szerep !== 'passziv';
-        });
+        return lista.some((az) => (entitasok.get(az)?.hozzajarulok.get(en)?.pont ?? 0) > 0);
       })(),
+
+      // ⭐⭐ A RÉSZEK — érintettenként egy döntés, saját küszöbökkel és szavazói körrel.
+      // A kártya a fenti összefoglaló számokat mutatja (az ELSŐ részé), a részletek-nézet
+      // viszont meg tudja mutatni, hol hogyan áll — és melyik rész buktatja el az egészet.
+      reszek: (dontes.reszek ?? []).map((r) => ({
+        entitas: r.entitas,
+        muvelet: r.muvelet,
+        cim: entitasok.get(r.entitas)?.cim ?? null,
+        tamogatok: r.tamogatok,
+        ellenzok: r.ellenzok,
+        tartozkodok: r.tartozkodok,
+        szavazok: r.szavazok,
+        nevezo: r.nevezo,
+        tamogatottsagEzrelek: r.tamogatottsagEzrelek,
+        reszveteliEzrelek: r.reszveteliEzrelek,
+        kuszobTeljesul: r.kuszobTeljesul,
+        lezarasIdeje: r.lezarasIdeje,
+        // ⭐ Szavazhatok-e EBBEN a részben? (A felület megmutathatja, mi az, amiben nem.)
+        szavazhatok: en ? (entitasok.get(r.entitas)?.hozzajarulok.get(en)?.pont ?? 0) > 0 : false
+      })),
 
       egyezmeny: dontes.egyezmeny ? { megszuletett: dontes.egyezmeny.megszuletett } : null
     } : null,
@@ -433,7 +454,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
  * Ettől marad a válasz mérete korlátos, akárhány kártya van a pakliban.
  *
  * ⚠️ MIÉRT A KÉPBŐL, ÉS NEM A NYERS LÉTREHOZÓ ESEMÉNYBŐL? Mert egy elfogadott
- * **egyezmény átírhatta** (`egyezmenyVegrehajtas.js`). A szeletből olvasva a régi szöveget
+ * **egyezmény átírhatta** (`szerkesztesiVegrehajtas.js`). A szeletből olvasva a régi szöveget
  * kapnánk — pontosan az a hiba, amit 2026-09-06-án mértünk a címnél.
  *
  * ⏸️ A megvalósítás ma a pakli képét használja újra (tehát meleg gyorsítótárnál ingyen van);
@@ -690,7 +711,7 @@ function kepetKerni(nezet, koino, horgony, most, esemenyek) {
   // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az
   // a hiba, amit a Szakasz 5.3 első órájában mértünk.
   const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most);
-  egyezmenyekAlkalmazasa(kep, javaslatok);
+  szerkesztesiEgyezmenyekAlkalmazasa(kep, javaslatok);
 
   // ⭐ A javaslatok is kártyák (5.5) — a képpel együtt tartjuk, hogy ne kelljen kétszer
   // kiszámolni őket.

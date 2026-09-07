@@ -65,8 +65,15 @@ export function allapotOsszefoglaloja(allapot, javaslatok = new Map()) {
     // ⭐⭐ MINDEN ÉRINTETT, sorrendhelyesen (2026-09-07). ⚠️ Nem elég az elsőt bevenni:
     // egy csomag-javaslat második entitásán eltérhetne a két gép, és az ujjlenyomat
     // **hallgatna róla** — pedig épp az az egy kérdése, hogy „ugyanazt látjuk-e?".
-    erintettek: (j.erintettek ?? []).map((r) => ({
-      entitas: r.entitas, muvelet: r.muvelet ?? null
+    // ⭐ És a RÉSZ-DÖNTÉSEK is bejönnek: a döntés érintettenként dől el, tehát két gép
+    // ott is elcsúszhat, miközben az összefoglaló szám még egyezne.
+    reszek: (j.reszek ?? []).map((r) => ({
+      entitas: r.entitas,
+      muvelet: r.muvelet ?? null,
+      tamogatok: r.tamogatok, ellenzok: r.ellenzok, tartozkodok: r.tartozkodok,
+      szavazok: r.szavazok, nevezo: r.nevezo,
+      kuszobTeljesul: r.kuszobTeljesul,
+      lezarasIdeje: r.lezarasIdeje
     })),
     statusz: j.statusz,
     tamogatok: j.tamogatok,

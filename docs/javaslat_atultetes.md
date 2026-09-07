@@ -38,7 +38,12 @@ az egyezmény **NEM ott jön létre, ahol a javaslat áll**.
 | Négy szerkesztési művelet | `javaslatTipus` enum | 🟡 a **név** megvan mind a négyre; végrehajtója kettőnek van (`Modositas`, `Athelyezes`) |
 | A döntés gépezete (küszöb, medián, részvétel, bizonyosság) | `javaslatSzamitasService.js` | ✅ `javaslatSzamitas.js` |
 | Az egyezmény a **pillanatképet** viszi magával | `egyezmeny.js`: `tamogatokSzama`, arányok, `bizonyossagiMutato` | ✅ `javaslatSzamitas.js` → `egyezmeny.pillanatkep` |
-| Az egyezmény **végrehajtódik** | `vegrehajtok/` | ✅ `egyezmenyVegrehajtas.js` (2026-09-06) |
+| Az egyezmény **végrehajtódik** | `vegrehajtok/` | ✅ `szerkesztesiVegrehajtas.js` (2026-09-06) |
+| **Az érintettek TÖMBJE**, entitásonkénti művelettel | `javaslat.js`: `erintettEntitasok` | ✅ 2026-09-07 (2.3) |
+| **A jogosultság metszet a beadásnál** | `javaslatJogosultsagService.js` | ✅ `szabalyok.js` (2026-09-07) |
+| **A döntés érintettenként, ÉS-sel** (töredék-modell) | `javaslatService` + `javaslatIdozitesService` | ✅ `javaslatSzamitas.js`: `reszekSzamitasa` (2026-09-07, 2.3/c) |
+| **Típus-alapú tiltások** (egyezmény/kategória/gondolattípus) | `javaslatService.js:87–113` | ✅ `szabalyok.js`: `TILTOTT_MUVELETEK` (2026-09-07) |
+| **Az egyesítés nem keverhető** más művelettel | `javaslat.js` Csomag-validátor | ✅ `szabalyok.js` (2026-09-07) |
 
 ---
 
@@ -108,11 +113,12 @@ Eddig a koinóban **egy** `erintett` string volt. ⚠️ Az **egyesítéshez** l
   csomagban az egyik gondolat módosul, a másik áthelyeződik. A végrehajtás ezért **elemenként**
   fut (`egyReszVegrehajtasa`), és egy elem elakadása **nem dönti el a többit**: a `kihagyottak`
   megnevezi, melyik akadt el és miért (D19).
-- ⛔⛔ **A jogosultság METSZET, nem unió** — `javaslatJogosultsagService.js`: *„rendelkezik-e
-  tudatponttal MINDEN érintett entitáson… jogosult szavazni/javaslatot létrehozni"*. Ugyanaz a
-  feltétel a javaslattételre (`szabalyok.js`) és a szavazásra (`javaslatSzamitas.js`). Enélkül
-  egy egyesítést be lehetne adni úgy, hogy a másik gondolathoz semmi közöd — pedig az is
-  megszűnne tőle.
+- ⛔⛔ **A BEADÁSHOZ a jogosultság METSZET, nem unió** — `javaslatJogosultsagService.js`:
+  *„rendelkezik-e tudatponttal MINDEN érintett entitáson"*, és a `javaslatService.js:494` a
+  **teljes listával** hívja. Enélkül egy egyesítést be lehetne adni úgy, hogy a másik
+  gondolathoz semmi közöd — pedig az is megszűnne tőle. (`szabalyok.js`)
+  ⚠️ **A SZAVAZÁSRA viszont NEM ez vonatkozik** — azt először tévesen ide is átvettem; ott a
+  töredék dönt, lásd 2.3/c.
 - ⚠️ **A RÉGI ESEMÉNYEK ÉRVÉNYESEK MARADNAK.** Az aláírás a régi bájtokra szól: a `erintett`
   (string) alak **egy elemű listaként** olvasódik be (`szabalyok.js`, `erintettek()`), és a
   próbák nagy része továbbra is a régi alakot használja — vagyis a visszafelé-olvasás **mérve
@@ -131,13 +137,59 @@ A metszet próbáját megírva kiderült, hogy a koino **minden szavazatot beles
 jogosultságot csak a **felület** nézte (`pakli.js`, `szavazhatok`). ⚠️ *Amit a számítás nem
 ellenőriz, az nem szabály, csak illemtan:* a másik gépen futó felület nem véd semmitől, egy
 kézzel írt `Szavazat` eseménnyel bárki dönthetett volna olyan gondolat sorsáról, amihez semmi
-köze. **Javítva** (`allasSzamitasa`): csak az aktív tulajdonos szavazata számít, és a nevező is
-ez a halmaz (unió már nem kell — a számláló amúgy is részhalmaz).
+köze. **Javítva** — de a javítás első változata **túllőtt a prototípuson**, és a részletes
+összevetés (2.3/c) három ponton igazította ki.
 
-⭐ Két következmény, mindkettő szándékos: a **passzív** figyelő szavazata sem számít (ő nem
-korlátozza a döntést), és aki a döntés alatt **kiszáll** (0 tudatpont), annak a szavazata sem
-marad ott — a jogosultság a **lezárás pillanatában** érvényes állapot szerint dől el, ugyanúgy,
-mint a küszöböké. *A szavazat nem tűnik el, csak nem számít* (D19).
+### 2.3/c ⭐⭐⭐ A TÖREDÉK-MODELL — a tömb átültetésének MÁSODIK fele (2026-09-07)
+
+Az első átültetés a metszetet a **döntésre** is ráhúzta: egy szavazás, aminek a választóköre
+az érintettek metszete. ⛔ **Ez nem a prototípus.** Ott egy több entitást érintő javaslat
+`javaslatService.js:519` szerint **töredékekre bomlik — érintettenként egyre**, és onnantól:
+
+- a töredék `javaslatTipus`-a **az adott entitás művelete**, a `szuloId`-ja **az adott entitás**;
+- **szavazni töredékenként lehet**: a `szavazatService` végigmegy a csoport töredékein, a
+  jogosultakra leadja ugyanazt a szavazatot, a többit **átugorja** (`atugrottToredekek`), és
+  hibát csak akkor dob, ha egyikre sem jogosult;
+- a **küszöb és a részvételi arány töredékenként** számítódik, az adott entitás saját
+  tulajdonosaival és saját érték javaslat-hisztogramjával;
+- a **lezárás ideje közös**: `kozosDontesiIdo` = a töredékek döntési idejének **MAX**-a, és a
+  `hatalybaLepesiIdoBeallitasa` ezt írja rá mindegyikre;
+- és a csoport **akkor és csak akkor elfogadott, ha MINDEN töredék teljesíti a SAJÁT
+  küszöbeit** (`javaslatIdozitesService.js:566`).
+
+⭐ **A metszet tehát CSAK A BEADÁSRA vonatkozik** (`javaslatJogosultsagService` a teljes
+listával, `javaslatService.js:494`) — a **döntés** entitásonként dől el, és **ÉS**-sel áll
+össze. *Aki a gondolatot tartja, az dönt a sorsáról — akkor is, ha a javaslat egy másikat is
+érint.*
+
+⚠️ **Amit át kellett alakítani:** a koinóban nincs N tárolt töredék, mert **egy aláírt
+`Javaslat` esemény** van. A töredék a Mongo tárolási kényszere volt; a logikai kapcsolat
+viszont átjön: **N tárolt rekord helyett N SZÁMÍTOTT RÉSZ** (`reszekSzamitasa`). Ugyanaz a
+minta, mint a D17-nél — ami ott adatbázis-sor, az itt számítás. A szavazat is egy esemény: a
+prototípus „minden jogosult töredékre leadja" lépése itt annyi, hogy a szavazat **abban a
+részben** számít, ahol a szavazónak van pontja.
+
+**A három igazítás a tegnapi javításon** (mindhárom a prototípus szerint):
+
+- **Az időzítés.** A jogosultság a **LEADÁS** pillanatában dől el, nem a lezárásén. ⛔ Különben
+  a tudatpontom elvétele **a szavazatom visszavonása** lenne — pedig a szabály:
+  *„megváltoztatható, de nem vonható vissza."*
+- **A passzív szerep.** A prototípus jogosultság-ellenőrzése **csak pontot néz**
+  (`eemberHozzajarulasaEntitason`: `tudatPontok > 0`), a szerepet nem — sőt a szavazás
+  **aktívvá billenti** a szavazót (`szerepAktivalasa`: *„ezt hívja minden döntés-alakító
+  tett"*). A passzív figyelő tehát szavazhat, és a szavazásával belép a döntésbe.
+- **A nevező.** Aktív tulajdonosok **∪ szavazók** — a prototípus szándékosan uniózik, arra az
+  esetre, ha valaki a szavazása után passzívra vált.
+
+### 2.3/d ⛔⛔ ÉS EGY MÁSODIK VALÓDI HIBA: a rendezés nem volt tranzitív
+
+A töredék-modell próbája hol átment, hol elbukott — **a generált kulcsoktól függően**. Az ok:
+az azonos időbélyegű események holtverseny-döntője így szólt, hogy *„azonos szerzőnél a
+sorszám, egyébként az azonosító"*. ⚠️ Ez **nem tranzitív**: X < Y (sorszám), Y < Z és Z < X
+(azonosító) egyszerre állhat, és egy ilyen körnél a `sort` eredménye tetszőleges — vagyis **két
+gép más sorrendet kap ugyanabból a halmazból**, ami épp a D17-et dönti meg. ✅ Javítva: a
+sorrend `ido → szerzo → sorszam → azonosito`; így a saját lánc sorrendje érvényesül (azt csak a
+szerző írhatja alá), és a reláció totális. Próba őrzi: 30 kevert bemenet, azonos eredmény.
 
 ### 2.4 ⛔ `Csomag` javaslat és a TÖREDÉKEK
 
@@ -167,7 +219,7 @@ A koino három státusza tehát **pontosan azt tudja, amit a prototípus valój�
 🔍 *Tanulság a leltárhoz: a séma nem a viselkedés. Amit a modell felsorol, azt meg kell nézni
 a kódban is — különben olyat „ültetünk át", ami ott sincs.*
 
-⏸️ Ami viszont **valódi kérdés** marad: ma az `egyezmenyVegrehajtas.js` a végre nem hajtható
+⏸️ Ami viszont **valódi kérdés** marad: ma az `szerkesztesiVegrehajtas.js` a végre nem hajtható
 egyezményt a `kihagyottak` listába teszi, a javaslat státusza pedig „elfogadva" marad. Ez a
 prototípussal **egyezik** — de érdemes lehet többet mutatni, mint amennyit ő tudott.
 
@@ -198,10 +250,11 @@ kettőt érdemes együtt átgondolni, mert ugyanaz a tudatpont-mozgatás van ala
 
 *A `Hiba` státusz kikerült a listáról: megmérve nem hiány (2.5).*
 
-1. ✅ **`erintettEntitasok` tömbbé** (2.3) — **KÉSZ (2026-09-07)**. Ez volt a legalsó kő:
-   enélkül az egyesítés meg sem fogalmazható, és a D27/5 („egyezmény is lehet érintett") sem.
-   A régi, egy-`erintett`-es események **változatlanul érvényesek**. ⭐ Mellékesen egy valódi
-   rést is javított: a szavazat jogosultsága eddig csak a felületen élt (2.3/b).
+1. ✅ **`erintettEntitasok` tömbbé** (2.3) — **KÉSZ (2026-09-07)**, a **töredék-modellel**
+   (2.3/c) és a **típus-tiltásokkal** együtt. Ez volt a legalsó kő: enélkül az egyesítés meg
+   sem fogalmazható, és a D27/5 („egyezmény is lehet érintett") sem. A régi, egy-`erintett`-es
+   események **változatlanul érvényesek**. ⭐ Mellékesen **két valódi hibát** is kihozott: a
+   szavazat jogosultsága csak a felületen élt (2.3/b), és a rendezés nem volt tranzitív (2.3/d).
    ⏸️ *Ami tudatosan kimaradt:* a többérintettes javaslat **kézi útja** (4. szabály) — a
    `javaslat` parancs ma egy entitást vesz. A csomag-alak a **Csomag/töredék** (2.4) lépéssel
    együtt kap parancssori arcot, mert ott dől el, hogyan írja le az ember egy mondatban.

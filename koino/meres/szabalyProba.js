@@ -174,9 +174,11 @@ async function ketGazda(kezdet) {
   return { gazdaA, gazdaB, a, b, alap: [a, pA, b, pB] };
 }
 
+// ⚠️ Egyesítéssel NEM lehet: az nem keverhető más művelettel egy javaslatban (a
+// prototípus Csomag-validátora). Egy érvényes vegyes csomag: módosítás + áthelyezés.
 const ketErintett = (a, b) => [
-  { entitas: a.azonosito, muvelet: 'Egyesites', valtozas: null },
-  { entitas: b.azonosito, muvelet: 'Modositas', valtozas: { cim: 'X' } }
+  { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'X' } },
+  { entitas: b.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: null } }
 ];
 
 proba('⛔⛔ CSAK AZ EGYIKEN VAN PONTOM: a két entitást érintő javaslatom NEM számít', async () => {
@@ -232,31 +234,238 @@ proba('⛔ UGYANAZ AZ ENTITÁS KÉTSZER: nem két érintett — a művelet kéts
   return all.kivetelek.length === 1 && all.kivetelek[0].ok.includes('többször');
 });
 
-proba('⭐⭐ ÉS A SZAVAZÁS UGYANEZT KÉRI: aki csak az egyiken van bent, annak a szavazata sem számít', async () => {
-  const kezdet = Date.UTC(2026, 0, 1);
-  const { gazdaA, gazdaB, a, b, alap } = await ketGazda(kezdet);
+// ===== ⭐⭐⭐ A TÖREDÉK-MODELL: A DÖNTÉS ÉRINTETTENKÉNT DŐL EL =====
+//
+// A metszet CSAK a beadásra vonatkozik. Szavazni a prototípusban töredékenként lehet, és
+// ott már csak az adott entitásra kérdez rá a jogosultság — *aki a gondolatot tartja, az
+// dönt a sorsáról, akkor is, ha a javaslat egy másikat is érint.*
 
-  // A javaslatot olyan teszi, akinek MINDKETTŐN van pontja.
+/** A két gazda + egy „mindkettőn bent lévő" javaslattevő, közös küszöbökkel. */
+async function csomagEset(kezdet) {
+  const { gazdaA, gazdaB, a, b, alap } = await ketGazda(kezdet);
   const jogos = await ujEember();
-  const p1 = await jogos.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 10 }, kezdet);
-  const p2 = await jogos.tesz('TudatpontRendezes', { entitas: b.azonosito, pont: 10 }, kezdet);
-  const kuszob = await jogos.tesz('ErtekJavaslat', {
-    entitas: a.azonosito,
-    ertekek: { elfogadasiKuszob: 51, reszveteliKuszob: 0, minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 }
-  }, kezdet);
+  const ertekek = { elfogadasiKuszob: 51, reszveteliKuszob: 0,
+                    minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 };
+
+  const esemenyek = [...alap];
+  esemenyek.push(await jogos.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 10 }, kezdet));
+  esemenyek.push(await jogos.tesz('TudatpontRendezes', { entitas: b.azonosito, pont: 10 }, kezdet));
+  // ⭐ MINDKÉT entitásnak SAJÁT küszöbei vannak — a döntés is külön dől el rajtuk.
+  esemenyek.push(await jogos.tesz('ErtekJavaslat', { entitas: a.azonosito, ertekek }, kezdet));
+  esemenyek.push(await jogos.tesz('ErtekJavaslat', { entitas: b.azonosito, ertekek }, kezdet));
+
   const j = await jogos.tesz('Javaslat',
     { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
+  esemenyek.push(j);
 
-  // gazdaA CSAK A-n van bent → nem szavazhat; gazdaB CSAK B-n → ő sem.
-  const szA = await gazdaA.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Ellenez' }, kezdet);
-  const szB = await gazdaB.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Ellenez' }, kezdet);
-  const szJ = await jogos.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet);
+  return { gazdaA, gazdaB, jogos, a, b, j, esemenyek, kezdet };
+}
 
-  const all = allapotSzamitasa([...alap, p1, p2, kuszob, j, szA, szB, szJ]);
-  const d = javaslatokSzamitasa(all.szamitok, all, kezdet + 10 * NAP).get(j.azonosito);
+const dontes = (e) => {
+  const all = allapotSzamitasa(e.esemenyek);
+  return javaslatokSzamitasa(all.szamitok, all, e.kezdet + 10 * NAP).get(e.j.azonosito);
+};
 
-  // ⭐ Egyetlen szavazó (a jogosult), és a nevező is EGY — a két gazda ki sem látszik.
-  return d.szavazok === 1 && d.tamogatok === 1 && d.ellenzok === 0 && d.nevezo === 1;
+proba('⭐⭐ AKI CSAK AZ EGYIKEN VAN BENT, CSAK OTT SZAVAZ — a többi rész átugorva', async () => {
+  const e = await csomagEset(Date.UTC(2026, 0, 1));
+
+  // Mindhárman támogatnak — de gazdaA csak A-ban, gazdaB csak B-ben számít.
+  for (const [ki, mit] of [[e.gazdaA, 'Tamogat'], [e.gazdaB, 'Tamogat'], [e.jogos, 'Tamogat']]) {
+    e.esemenyek.push(await ki.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: mit }, e.kezdet));
+  }
+
+  const d = dontes(e);
+  const [reszA, reszB] = d.reszek;
+
+  return d.reszek.length === 2
+      && reszA.entitas === e.a.azonosito && reszB.entitas === e.b.azonosito
+      // ⭐ Részenként KÉT szavazó: a gazda + a javaslattevő. Nem három, és nem egy.
+      && reszA.szavazok === 2 && reszB.szavazok === 2
+      && reszA.nevezo === 2 && reszB.nevezo === 2
+      && d.statusz === 'elfogadva';
+});
+
+proba('⛔⛔ EGY RÉSZ ELBUKÁSA AZ EGÉSZ JAVASLATOT ELVETI (ÉS, nem VAGY)', async () => {
+  const e = await csomagEset(Date.UTC(2026, 0, 1));
+
+  // A-ban egyöntetű támogatás, B-ben viszont a gazda ellenzi → B megbukik 50%-on.
+  e.esemenyek.push(await e.gazdaA.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(await e.jogos.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(await e.gazdaB.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Ellenez' }, e.kezdet));
+
+  const d = dontes(e);
+  const [reszA, reszB] = d.reszek;
+
+  return reszA.kuszobTeljesul === true          // A rendben van…
+      && reszB.kuszobTeljesul === false         // …B viszont nem
+      && d.kuszobTeljesul === false             // …és ez dönt: az EGÉSZ elbukik
+      && d.statusz === 'elvetve'
+      && d.egyezmeny === null;
+});
+
+proba('⭐ A KÖZÖS LEZÁRÁS a LEGHOSSZABB rész-döntési idő (a csoport egyben dől el)', async () => {
+  const e = await csomagEset(Date.UTC(2026, 0, 1));
+
+  // Csak A-ban szavaznak → ott nagy a bizonyosság, tehát RÖVID a döntési idő;
+  // B-ben senki, tehát ott a maximum marad. A közös lezárás a hosszabbik.
+  e.esemenyek.push(await e.gazdaA.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(await e.jogos.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
+
+  const d = dontes(e);
+  const [reszA, reszB] = d.reszek;
+
+  return reszA.dontesiIdo < reszB.dontesiIdo
+      && d.dontesiIdo === reszB.dontesiIdo
+      && d.lezarasIdeje === reszB.lezarasIdeje;
+});
+
+// ===== ⛔⛔ MELYIK MŰVELET MELYIK TÍPUSON — a prototípus három tiltása =====
+//
+//   1. „Egyezményre csak áthelyezési vagy törlési javaslat indítható."
+//   2. „Kategóriát és gondolattípust nem lehet áthelyezni."
+//   3. „Gondolattípust nem lehet egyesíteni — csak törölni vagy módosítani."
+//
+// ⭐ A koino az entitás SZÁMÍTOTT típusát nézi (a létrehozó eseményéből), nem egy
+// bemondott mezőt — ezért ezt a szabályt nem lehet hazudni.
+
+/** Egy entitás adott típussal + a szerző tudatpontja rajta. */
+async function entitas(ki, tipus, cim, kezdet) {
+  const e = await ki.tesz('GondolatLetrehozas', { cim, tipus, meret: 10 }, kezdet);
+  const p = await ki.tesz('TudatpontRendezes', { entitas: e.azonosito, pont: 10 }, kezdet);
+  return { e, esemenyek: [e, p] };
+}
+
+/** Egy javaslat kivétele (ha van) — a szabály-réteg szerint. */
+async function javaslatKivetel(ki, erintettek, alap, kezdet) {
+  const j = await ki.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek }, kezdet);
+  const all = allapotSzamitasa([...alap, j]);
+  return all.kivetelek.find((k) => k.tipus === 'Javaslat') ?? null;
+}
+
+proba('⛔ KATEGÓRIÁT NEM LEHET ÁTHELYEZNI', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const k = await entitas(ki, 'Kategoria', 'Egy kategória', kezdet);
+
+  const kivetel = await javaslatKivetel(ki,
+    [{ entitas: k.e.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: null } }],
+    k.esemenyek, kezdet);
+
+  return kivetel !== null && kivetel.ok.includes('Kategoria');
+});
+
+proba('⭐ …DE MÓDOSÍTANI IGEN — a próba nem vak', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const k = await entitas(ki, 'Kategoria', 'Egy kategória', kezdet);
+
+  // ⭐ EGYETLEN különbség: a művelet.
+  const kivetel = await javaslatKivetel(ki,
+    [{ entitas: k.e.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Új név' } }],
+    k.esemenyek, kezdet);
+
+  return kivetel === null;
+});
+
+proba('⛔ GONDOLATTÍPUST NEM LEHET EGYESÍTENI (se áthelyezni)', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const t1 = await entitas(ki, 'GondolatTipus', 'Kérdés', kezdet);
+  const t2 = await entitas(ki, 'GondolatTipus', 'Válasz', kezdet);
+  const alap = [...t1.esemenyek, ...t2.esemenyek];
+
+  const egyesites = await javaslatKivetel(ki, [
+    { entitas: t1.e.azonosito, muvelet: 'Egyesites', valtozas: null },
+    { entitas: t2.e.azonosito, muvelet: 'Egyesites', valtozas: null }
+  ], alap, kezdet);
+
+  const athelyezes = await javaslatKivetel(ki,
+    [{ entitas: t1.e.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: null } }],
+    alap, kezdet);
+
+  return egyesites !== null && athelyezes !== null;
+});
+
+proba('⛔⛔ A SZERKESZTÉSI JAVASLAT/EGYEZMÉNY SZÖVEGÉT NEM LEHET ÁTÍRNI (csak mozgatni)', async () => {
+  // A prototípus: „Egyezményre csak áthelyezési vagy törlési javaslat indítható."
+  // ⭐ A koinóban a szerkesztési egyezmény UGYANAZ az entitás, mint a szerkesztési
+  // javaslat (azonos azonosító, más státusz) — a típusa `Javaslat`. Így a szabály egy
+  // fokkal többet is véd: a szavazás alatt álló javaslat szövege sem írható át.
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const g = await entitas(ki, 'Gondolat', 'Alap', kezdet);
+
+  const j = await ki.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: g.e.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Jobb' } }]
+  }, kezdet);
+  const pontJavaslaton = await ki.tesz('TudatpontRendezes',
+    { entitas: j.azonosito, pont: 10 }, kezdet);
+  const alap = [...g.esemenyek, j, pontJavaslaton];
+
+  const modositas = await javaslatKivetel(ki,
+    [{ entitas: j.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Átírva' } }], alap, kezdet);
+  const athelyezes = await javaslatKivetel(ki,
+    [{ entitas: j.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: null } }], alap, kezdet);
+
+  return modositas !== null && modositas.ok.includes('Javaslat') && athelyezes === null;
+});
+
+proba('⛔ EGYESÍTENI CSAK AZONOS TÍPUSÚT lehet', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const g = await entitas(ki, 'Gondolat', 'Egy gondolat', kezdet);
+  const k = await entitas(ki, 'Kategoria', 'Egy kategória', kezdet);
+  const alap = [...g.esemenyek, ...k.esemenyek];
+
+  const vegyes = await javaslatKivetel(ki, [
+    { entitas: g.e.azonosito, muvelet: 'Egyesites', valtozas: null },
+    { entitas: k.e.azonosito, muvelet: 'Egyesites', valtozas: null }
+  ], alap, kezdet);
+
+  // ⭐ Két gondolat egyesítése viszont rendben van — a próba így nem vak.
+  const g2 = await entitas(ki, 'Gondolat', 'Másik gondolat', kezdet);
+  const azonos = await javaslatKivetel(ki, [
+    { entitas: g.e.azonosito, muvelet: 'Egyesites', valtozas: null },
+    { entitas: g2.e.azonosito, muvelet: 'Egyesites', valtozas: null }
+  ], [...alap, ...g2.esemenyek], kezdet);
+
+  return vegyes !== null && vegyes.ok.includes('azonos típusú') && azonos === null;
+});
+
+proba('⛔ AZ EGYESÍTÉS NEM KEVERHETŐ más művelettel egy javaslatban', async () => {
+  // A prototípus Csomag-validátora: „Csomag típusban nem lehet Egyesites művelet,
+  // használd az Egyesites típust." Az egyesítés ÚJ entitást szül a régiek helyén.
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const g1 = await entitas(ki, 'Gondolat', 'Egy', kezdet);
+  const g2 = await entitas(ki, 'Gondolat', 'Kettő', kezdet);
+  const alap = [...g1.esemenyek, ...g2.esemenyek];
+
+  const kivetel = await javaslatKivetel(ki, [
+    { entitas: g1.e.azonosito, muvelet: 'Egyesites', valtozas: null },
+    { entitas: g2.e.azonosito, muvelet: 'Modositas', valtozas: { cim: 'X' } }
+  ], alap, kezdet);
+
+  return kivetel !== null && kivetel.ok.includes('nem keverhető');
+});
+
+proba('⚠️ AZ ISMERETLEN TÍPUS NEM VÁD, HANEM JELZÉS (D19)', async () => {
+  // A létrehozó eseményt nem ismerjük (még nem érkezett meg) — ilyenkor a típus-tiltásokat
+  // nem tudjuk ellenőrizni. ⛔ Ez NEM szabálysértés: különben minden lemaradás annak
+  // látszana. A javaslat érvényes marad, de a nem-ellenőrizhetők közt LÁTSZIK.
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const ismeretlen = 'nem-letezo-entitas-azonosito';
+  const p = await ki.tesz('TudatpontRendezes', { entitas: ismeretlen, pont: 10 }, kezdet);
+  const j = await ki.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: ismeretlen, muvelet: 'Athelyezes', valtozas: { szulo: null } }]
+  }, kezdet);
+
+  const all = allapotSzamitasa([p, j]);
+  return all.kivetelek.length === 0
+      && all.nemEllenorizhetok.some((n) => n.tipus === 'Javaslat' && n.ok.includes('típusa ismeretlen'));
 });
 
 // ===== D19: BEJELENT, NEM BÜNTET =====

@@ -78,6 +78,60 @@ export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 /** A négy szerkesztési művelet — a prototípus enumja. */
 export const JAVASLAT_MUVELETEK = ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'];
 
+// ===================================
+// ⛔⛔ MELYIK MŰVELET MELYIK TÍPUSON — a prototípus tiltásai (2026-09-07)
+// ===================================
+//
+// A prototípus `javaslatService.js`-e három tiltást mond ki, entitás-típusonként:
+//
+//   1. „Egyezményre csak áthelyezési vagy törlési javaslat indítható."
+//   2. „Kategóriát és gondolattípust nem lehet áthelyezni."
+//   3. „Gondolattípust nem lehet egyesíteni — csak törölni vagy módosítani."
+//
+// ⭐ ÉS ITT LÁTSZIK, MIÉRT VOLT HELYES AZ `entitasTipus`-t KIHAGYNI az eseményből: a
+// szabály a VALÓDI típusra vonatkozik, nem a bemondottra. A koino az entitás számított
+// típusát nézi (a létrehozó eseményéből), tehát ezt a szabályt **nem lehet hazudni**. A
+// prototípusban a bemondás azért volt elég, mert a rossz típus rossz kollekciót jelentett,
+// és a keresés amúgy is elbukott — vagyis ott is a valódi típus döntött, csak kerülőúton.
+//
+// ⚠️ EGY LEKÉPEZÉS KELLETT HOZZÁ. A prototípus négy célt ismer: `Gondolat`, `Kategoria`,
+// `GondolatTipus`, `Egyezmeny`. A koinóban a szerkesztési egyezmény **ugyanaz az entitás**,
+// mint a szerkesztési javaslat (azonos azonosító, más státusz — Csaba, 2026-09-07), tehát a
+// típusa `Javaslat`. Az „Egyezmeny" sort ezért a `Javaslat` viszi — és ez ⭐ **egy fokkal
+// többet is véd**: a szavazás alatt álló javaslat szövegét sem lehet átírni, pedig épp arról
+// szavaznak. *(Az `Egyezmeny` kulcs itt marad arra az esetre, ha az általános egyezmény
+// önálló típust kap.)*
+const TILTOTT_MUVELETEK = {
+  // Az egyezmény a KÖZÖSSÉG DÖNTÉSE: a szövegét nem lehet utólag átírni (az meghamisítaná,
+  // mire szavaztak), és nem lehet beolvasztani máshova. Elmozdítani vagy visszavonni igen.
+  Javaslat: ['Modositas', 'Egyesites'],
+  Egyezmeny: ['Modositas', 'Egyesites'],
+  // A kategória és a gondolattípus BESOROLÁS, nem a fában lógó gondolat — nincs értelmes
+  // „új szülője".
+  Kategoria: ['Athelyezes'],
+  GondolatTipus: ['Athelyezes', 'Egyesites']
+};
+
+/** Egyesíteni CSAK ezeket lehet (a prototípus: „Gondolatot Gondolattal, Kategóriát Kategóriával"). */
+const EGYESITHETO_TIPUSOK = ['Gondolat', 'Kategoria'];
+
+/**
+ * A javaslat SZÁRMAZTATOTT fajtája — a prototípus `javaslatTipus` mezőjének megfelelője.
+ *
+ * ⚠️ A koinóban ez NEM tárolt mező, hanem **számítás**: az érintettek műveleteiből
+ * következik. A prototípusnak azért kellett külön oszlop, mert a Mongo szerint kellett
+ * végrehajtót választani; itt viszont egy második, aláírt, de **hazudható** forrás lenne
+ * ugyanarról — ugyanaz az érv, mint az `entitasTipus`-nál.
+ *
+ * @param {Array<{muvelet: string}>} kik
+ * @returns {string|null} 'Torles' | 'Modositas' | 'Egyesites' | 'Athelyezes' | 'Csomag'
+ */
+export function javaslatFajtaja(kik) {
+  if (!kik.length) return null;
+  const elso = kik[0].muvelet;
+  return kik.every((r) => r.muvelet === elso) ? elso : 'Csomag';
+}
+
 /**
  * Egy javaslat-esemény érintettjei, EGYSÉGES alakban — akármelyik korban íródott.
  *
@@ -140,6 +194,17 @@ export function szabalyokErvenyesitese(esemenyek) {
   const kivetelek = [];
   const nemEllenorizhetok = [];
   const kiesettek = new Set();   // az azonosítók, amik nem számítanak
+
+  // ----- ⭐ AZ ENTITÁSOK TÍPUSA (a típus-alapú tiltásokhoz) -----
+  //
+  // Csak a LÉTREHOZÓ eseményből olvassuk ki — nem kell hozzá a teljes állapot-számítás,
+  // és nem is szabad: ez a réteg fut előbb. ⚠️ Ha a létrehozó eseményt még nem ismerjük,
+  // a típus ISMERETLEN marad — és az nem vád, hanem hiány (D19).
+  const entitasTipusok = new Map();
+  for (const e of esemenyek) {
+    if (e.tipus === 'GondolatLetrehozas') entitasTipusok.set(e.azonosito, e.adat?.tipus ?? 'Gondolat');
+    else if (e.tipus === 'Javaslat') entitasTipusok.set(e.azonosito, 'Javaslat');
+  }
 
   /** Egy eseményt kivételnek jelöl — de nem dob el semmit (D19). */
   const kivetel = (esemeny, ok) => {
@@ -334,7 +399,7 @@ export function szabalyokErvenyesitese(esemenyek) {
         // újabbon meg ott állna — vagyis a két gép **más javaslat-halmazt látna**, és épp
         // ezt tiltja a szerkezet. ⭐ A koino inkább megmutatja a javaslatot, szavazni is
         // lehet rá, és a végrehajtásnál mondja meg őszintén: *„ismeretlen művelet"*
-        // (`egyezmenyVegrehajtas.js`, `kihagyottak`) — **bejelent, nem bíráskodik** (D19).
+        // (`szerkesztesiVegrehajtas.js`, `kihagyottak`) — **bejelent, nem bíráskodik** (D19).
         // A `JAVASLAT_MUVELETEK` így nem kapu, hanem a MAI lista: azt mondja meg, mit
         // tudunk végrehajtani.
 
@@ -353,6 +418,55 @@ export function szabalyokErvenyesitese(esemenyek) {
         const hianyzo = kik.find((r) => (pontok.get(r.entitas) ?? 0) <= 0);
         if (hianyzo) {
           kivetel(e, 'a javaslattevőnek nincs tudatpontja az egyik érintett entitáson');
+          continue;
+        }
+
+        // ----- ⛔ AZ EGYESÍTÉS NEM KEVEREDHET (a prototípus Csomag-validátora) -----
+        // *„Csomag típusban nem lehet Egyesites művelet, használd az Egyesites típust."*
+        // Az egyesítés ÚJ entitást szül a régiek helyén — nem fér bele egy vegyes
+        // csomagba, ahol a többi elem a saját helyén marad.
+        const fajta = javaslatFajtaja(kik);
+        if (fajta === 'Csomag' && kik.some((r) => r.muvelet === 'Egyesites')) {
+          kivetel(e, 'az egyesítés nem keverhető más művelettel egy javaslatban');
+          continue;
+        }
+
+        // ----- ⛔⛔ TÍPUS-ALAPÚ TILTÁSOK (a prototípus három szabálya) -----
+        // ⚠️ Az ISMERETLEN típus (még nem érkezett meg a létrehozó esemény) NEM vád:
+        // jelezzük, de az esemény érvényes marad (D19) — különben minden lemaradás
+        // szabálysértésnek látszana.
+        let tiltott = null;
+        let ismeretlenTipus = null;
+        for (const r of kik) {
+          const tipus = entitasTipusok.get(r.entitas);
+          if (tipus === undefined) { ismeretlenTipus = r; continue; }
+          if ((TILTOTT_MUVELETEK[tipus] ?? []).includes(r.muvelet)) { tiltott = { r, tipus }; break; }
+        }
+        if (tiltott) {
+          kivetel(e, tiltott.tipus + ' entitáson nem indítható ' + tiltott.r.muvelet
+            + ' javaslat (a prototípus tiltása)');
+          continue;
+        }
+
+        // ----- ⛔ EGYESÍTÉS: AZONOS TÍPUS, ÉS CSAK GONDOLAT VAGY KATEGÓRIA -----
+        // *„Egyesíteni csak azonos típusú entitásokat lehet: Gondolatot Gondolattal,
+        // Kategóriát Kategóriával."*
+        if (fajta === 'Egyesites') {
+          const tipusok = new Set(kik.map((r) => entitasTipusok.get(r.entitas)).filter(Boolean));
+          if (tipusok.size > 1) {
+            kivetel(e, 'egyesíteni csak azonos típusú entitásokat lehet');
+            continue;
+          }
+          const kozos = [...tipusok][0];
+          if (kozos !== undefined && !EGYESITHETO_TIPUSOK.includes(kozos)) {
+            kivetel(e, kozos + ' entitást nem lehet egyesíteni');
+            continue;
+          }
+        }
+
+        if (ismeretlenTipus) {
+          nemEllenorizheto(e, 'az érintett entitás típusa ismeretlen (a létrehozó eseménye '
+            + 'még nem érkezett meg), ezért a típus-tiltásokat nem tudtuk ellenőrizni');
         }
         continue;
       }
