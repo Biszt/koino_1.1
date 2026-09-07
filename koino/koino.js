@@ -21,6 +21,7 @@
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
 //   node koino/koino.js torol <azonosító> ["indoklás"]
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
+//   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
@@ -378,7 +379,8 @@ async function allapotKiirasa(napokMulva) {
     const kik = e.erintettek ?? [];
     kiir('  ' + SZIN.jo + '📜 '
       + (kik.length > 1
-        ? kik.map((r) => r.muvelet + ' „' + (allapot.entitasok.get(r.entitas)?.cim ?? '?') + '"').join(' + ')
+        ? kik.map((r) => r.muvelet + ' „' + (allapot.entitasok.get(r.entitas)?.cim
+            ?? (allapot.elfelejtettek.includes(r.entitas) ? '— már nincs —' : '?')) + '"').join(' + ')
         : e.muvelet + ': „' + (e.valtozas?.cim ?? '—') + '"') + SZIN.vege);
     kiir('      ' + SZIN.halvany + 'megszületett: ' + new Date(e.megszuletett).toLocaleString('hu-HU')
       + ' · ' + p.tamogatok + '/' + p.szavazok + ' támogató (' + szazalek(p.tamogatottsagEzrelek) + ')'
@@ -500,8 +502,42 @@ try {
     // ami csak a felületről indítható, az fojtópont.
     case 'javaslat':
     case 'torol':
+    case 'egyesit':
     case 'athelyez': {
       const { allapot } = await kepetKeszit();
+
+      // ⭐⭐ AZ EGYESÍTÉS AZ EGYETLEN, AMI TÖBB ENTITÁST NEVEZ MEG — vesszővel elválasztva.
+      // ⚠️ Az ELSŐ a különleges: ő az, aki a többit BEOLVASZTJA (megtartja az azonosítóját,
+      // és ő veszi fel az egyesített címet). Csaba döntése, 2026-09-07.
+      if (parancs === 'egyesit') {
+        const azonositok = (ervek[0] ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+        if (azonositok.length < 2) throw new Error('Melyik kettőt (vagy többet) egyesítsük? <az1>,<az2>');
+        const ujCim = ervek[1];
+        if (!ujCim) throw new Error('Mi legyen az egyesített gondolat címe?');
+
+        const feloldva = azonositok.map((a) => feloldas(a, allapot.entitasok.keys()));
+        const e = await javaslatLetrehozasa(kornyezet, {
+          fajta: 'szerkesztesi',
+          erintettek: feloldva.map((entitas, i) => ({
+            entitas, muvelet: 'Egyesites', valtozas: i === 0 ? { cim: ujCim } : null
+          })),
+          indoklas: ervek[2] ?? null
+        });
+
+        const { allapot: kepUtan } = await kepetKeszit();
+        await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
+          szetosztottPontok(kepUtan, szerzo));
+
+        kiir('Szerkesztési javaslat beadva (Egyesites, ' + feloldva.length + ' forrás): '
+          + e.azonosito.slice(0, 8));
+        kiir(SZIN.halvany + 'Ha elfogadják, az ELSŐ gondolat („'
+          + (allapot.entitasok.get(feloldva[0])?.cim ?? '?') + '") olvasztja be a többit — '
+          + 'megtartja az azonosítóját, és a rá mutató hivatkozások megmaradnak.' + SZIN.vege);
+        kiir(SZIN.halvany + 'Most szavazhatsz rá: node koino/koino.js szavaz '
+          + e.azonosito.slice(0, 8) + ' tamogat' + SZIN.vege);
+        break;
+      }
+
       const erintett = feloldas(ervek[0] ?? '', allapot.entitasok.keys());
 
       let muvelet, valtozas, indoklas;
@@ -1730,6 +1766,7 @@ try {
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · gondolat <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
+      kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');

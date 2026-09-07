@@ -44,10 +44,11 @@ import { szerkezetIgazitasa } from './allapotSzamitas.js';
 //
 // A domain négy szerkesztési műveletet ismer: módosítás, áthelyezés, törlés, egyesítés.
 //
-// ⭐ 2026-09-07 óta HÁROM van megépítve — a `Torles` is. Az `Egyesites` maradt utoljára,
-// mert az az egyetlen, ami **ÚJ ENTITÁST SZÜL**: kell hozzá egy azonosító, amit senki nem
-// írt alá. ⚠️ Amíg nincs kész, a hiány **LÁTSZIK** (a `kihagyottak` listában), nem néma.
-export const VEGREHAJTHATO = ['Modositas', 'Athelyezes', 'Torles'];
+// ✅ 2026-09-07 óta MIND A NÉGY meg van építve. Az `Egyesites` jött utoljára, mert az az
+// egyetlen, ami entitásokat von össze — és mert azonosító-kérdést vetett fel: Csaba
+// döntése szerint **nem születik új azonosító, az ELSŐ érintett olvasztja be a többit**
+// (lásd az `egyesites` függvénynél).
+export const VEGREHAJTHATO = ['Modositas', 'Athelyezes', 'Torles', 'Egyesites'];
 export const ISMERT_MUVELETEK = ['Modositas', 'Athelyezes', 'Torles', 'Egyesites'];
 
 // ===================================
@@ -158,6 +159,157 @@ function torles(entitas, allapot) {
   };
 }
 
+/**
+ * A LEGKÖZELEBBI KÖZÖS ŐS — a prototípus `_legkozelebbiKozosSzulo`-ja.
+ *
+ * *„Minden forráshoz felépítjük az ős-láncot (a forrásokat kihagyva), és az első olyan őst
+ * választjuk, ami MINDEGYIK láncban szerepel (a legmélyebbet)."* Ha nincs közös ős, a
+ * gyökér (`null`).
+ *
+ * ⭐ Ide kerül az egyesített gondolat, ha a javaslat nem mond mást. Ha a források egy
+ * szülő alatt vannak, ez pontosan az a szülő — vagyis a szokásos esetben **semmi nem
+ * mozdul**.
+ */
+function legkozelebbiKozosOs(entitasok, forrasAzonositok) {
+  const lancok = [];
+  for (const azonosito of forrasAzonositok) {
+    const lanc = [];
+    const latott = new Set([azonosito]);
+    let jaro = entitasok.get(azonosito)?.szulo ?? null;
+    while (jaro !== null && entitasok.has(jaro)) {
+      if (latott.has(jaro)) break;                       // ⛔ kör-őr
+      latott.add(jaro);
+      if (!forrasAzonositok.has(jaro)) lanc.push(jaro);  // a forrásokat kihagyjuk
+      jaro = entitasok.get(jaro).szulo ?? null;
+    }
+    lancok.push(lanc);
+  }
+  if (!lancok.length) return null;
+
+  const [elso, ...tobbi] = lancok;
+  for (const os of elso) {
+    if (tobbi.every((lanc) => lanc.includes(os))) return os;
+  }
+  return null;
+}
+
+/**
+ * ⭐⭐⭐ EGYESÍTÉS — és ez az EGYETLEN művelet, ami entitásokat von össze.
+ *
+ * A prototípus `egyesitesiVegrehajto.js`-e hét lépésben dolgozik: összesíti emberenként a
+ * pontokat MINDEN forrásról → kiüríti a forrásokat (azok eltűnnek) → **létrehoz egy új
+ * entitást** → ráteszi az összesített pontokat → a források gyerekeit **az ÚJ entitás alá**
+ * köti (⭐ szándékosan NEM a nagyszülőhöz — ezért gyűjti össze őket a törlés ELŐTT) → és
+ * az egyezményt is oda helyezi.
+ *
+ * ⚠️⚠️ EGY DOLGOT VÁLTOZTATTUNK, ÉS EZ CSABA DÖNTÉSE (2026-09-07): **nem születik új
+ * azonosító — az ELSŐ érintett olvasztja be a többit.**
+ *
+ * Miért: a koinóban **minden azonosító egy aláírt esemény lenyomata**, és ezen áll az egész
+ * ellenőrizhetőség. Egy „új" entitáshoz nem tartozna esemény (a javaslaté már foglalt — az
+ * az egyezményé), tehát egy **második származtatott azonosítót** kellene bevezetni, amit
+ * senki nem írt alá. ⭐ Az elnyelés ezt elkerüli, és ráadásul **több logikai kapcsolatot
+ * old meg magától**:
+ *
+ *   · a rá mutató RÉGI HIVATKOZÁSOK megmaradnak — ugyanaz az elv, mint a különválásnál:
+ *     *„a főág tartja meg az azonosítót"*;
+ *   · az EGYEZMÉNY HELYE is jó lesz külön szabály nélkül (a javaslat szülője úgyis az első
+ *     érintett), pedig a prototípusban ehhez placeholder-feloldás kellett.
+ *
+ * ⚠️ Az ára: az egyesített gondolat az elnyelő **történetét folytatja** (szerző, létrehozás
+ * ideje, mérete), nem a javaslattevőét — a prototípusban új entitás születik új szerzővel.
+ */
+function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak) {
+  const entitasok = allapot.entitasok;
+  const elnyelo = entitasok.get(kik[0].entitas);
+
+  if (!elnyelo) {
+    kihagyottak.push({
+      javaslat: egyezmeny.javaslat, erintett: kik[0].entitas, muvelet: 'Egyesites',
+      ok: 'az elnyelő entitás nem létezik (elfelejtették, vagy még nem ismerjük)'
+    });
+    return { rendben: false };
+  }
+
+  // ----- 1. A FORRÁSOK -----
+  const forrasAzonositok = new Set(kik.map((r) => r.entitas));
+  const forrasok = [];
+  for (const r of kik.slice(1)) {
+    const e = entitasok.get(r.entitas);
+    if (e) forrasok.push(e);
+    else {
+      // ⚠️ A hiányzó forrás nem hiba (D19) — a többit attól még összevonjuk.
+      kihagyottak.push({
+        javaslat: egyezmeny.javaslat, erintett: r.entitas, muvelet: 'Egyesites',
+        ok: 'ez a forrás nem létezik (elfelejtették, vagy még nem ismerjük)'
+      });
+    }
+  }
+
+  // ----- 2. ⭐ A GYEREKEK ÖSSZEGYŰJTÉSE — MÉG A FORRÁSOK ELTŰNÉSE ELŐTT -----
+  // ⛔ A SORREND ITT LÉNYEG: ha később gyűjtenénk, az árva-szabály már felvitte volna őket
+  // a NAGYSZÜLŐHÖZ — a prototípus épp ezért gyűjti a törlés előtt. Az egyesítésnél a
+  // gyerekek helye az ELNYELŐ, nem a nagyszülő: *ami a beolvasztott gondolat alatt volt,
+  // az az egyesített gondolat alá tartozik.*
+  const atkotendok = [];
+  for (const e of entitasok.values()) {
+    if (e.szulo && forrasAzonositok.has(e.szulo) && !forrasAzonositok.has(e.azonosito)) {
+      atkotendok.push(e);
+    }
+  }
+
+  // ----- 3. A HELY: a legközelebbi közös ős (vagy amit a javaslat mond) -----
+  const kimondottSzulo = kik[0].valtozas?.szulo;
+  const ujSzulo = kimondottSzulo !== undefined
+    ? kimondottSzulo
+    : legkozelebbiKozosOs(entitasok, forrasAzonositok);
+
+  // ----- 4. ⭐ A PONTOK ÖSSZEOLVADNAK -----
+  // ⚠️ Ez SZÁMÍTÁS a már aláírt eseményekből, nem új aláírás: a pont ugyanannyi marad
+  // emberenként, csak arra az entitásra mutat, amivé a gondolat lett. *A gondolat
+  // beolvad, a rátett súly vele megy.*
+  for (const forras of forrasok) {
+    for (const [szerzo, adat] of forras.hozzajarulok) {
+      const meglevo = elnyelo.hozzajarulok.get(szerzo);
+      if (!meglevo) elnyelo.hozzajarulok.set(szerzo, { pont: adat.pont, szerep: adat.szerep });
+      else {
+        meglevo.pont += adat.pont;
+        // ⭐ Aki BÁRMELYIK forráson aktív volt, az az egyesítettben is aktív: a
+        // részvételt nem veheti el tőle, hogy máshol csak figyelt.
+        if (adat.szerep === 'aktiv') meglevo.szerep = 'aktiv';
+      }
+    }
+  }
+  elnyelo.osszesPont = [...elnyelo.hozzajarulok.values()].reduce((ossz, a) => ossz + a.pont, 0);
+
+  // ----- 5. A FORRÁSOK ELTŰNNEK -----
+  for (const forras of forrasok) {
+    entitasok.delete(forras.azonosito);
+    if (Array.isArray(allapot.elfelejtettek)) allapot.elfelejtettek.push(forras.azonosito);
+  }
+
+  // ----- 6. A GYEREKEK AZ ELNYELŐHÖZ -----
+  for (const gyerek of atkotendok) {
+    if (!entitasok.has(gyerek.szulo)) gyerek.szulo = elnyelo.azonosito;
+  }
+
+  // ----- 7. AZ EGYESÍTETT CÍM ÉS SZÖVEG, ÉS A HELY -----
+  const mezok = ['pontok'];
+  const cimCsere = modositas(elnyelo, kik[0].valtozas);
+  if (cimCsere.rendben) mezok.push(...cimCsere.mezok);
+  if (ujSzulo !== elnyelo.szulo && ujSzulo !== elnyelo.azonosito) {
+    elnyelo.szulo = ujSzulo ?? null;
+    mezok.push('szulo');
+  }
+
+  alkalmazottak.push({
+    javaslat: egyezmeny.javaslat, erintett: elnyelo.azonosito,
+    muvelet: 'Egyesites', mezok,
+    beolvasztott: forrasok.map((f) => f.azonosito)
+  });
+  return { rendben: true, eltunt: forrasok.length > 0 };
+}
+
 // ===================================
 // AZ ALKALMAZÁS
 // ===================================
@@ -215,6 +367,15 @@ export function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
     const kik = Array.isArray(egyezmeny.erintettek) && egyezmeny.erintettek.length
       ? egyezmeny.erintettek
       : [{ entitas: egyezmeny.erintett, muvelet: egyezmeny.muvelet, valtozas: egyezmeny.valtozas }];
+
+    // ⭐⭐ AZ EGYESÍTÉS AZ EGYETLEN, AMI NEM ELEMENKÉNTI: a források EGY entitássá válnak,
+    // tehát egyben kell végrehajtani. ⚠️ A szabály-réteg garantálja, hogy az egyesítés nem
+    // keveredhet más művelettel (a prototípus Csomag-validátora), ezért elég az `every`.
+    if (kik.length && kik.every((r) => r.muvelet === 'Egyesites')) {
+      const eredmeny = egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak);
+      if (eredmeny?.eltunt) eltunt = true;
+      continue;
+    }
 
     for (const resz of kik) {
       const eredmeny = egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak);

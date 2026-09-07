@@ -253,15 +253,132 @@ proba('⛔⛔ ÁTHELYEZÉS, AMI KÖRT CSINÁLNA: kihagyva, és megmondja, miért
 // 5. ⛔ AMI NINCS MEGÉPÍTVE — de LÁTSZIK
 // ===================================
 
-proba('⛔ ISMERT, de végrehajtó nélküli művelet (Egyesites): kihagyva, nem néma', async () => {
-  // ⚠️ 2026-09-07-ig a `Torles` volt itt a példa; azóta annak VAN végrehajtója. Az
-  // `Egyesites` maradt: az az egyetlen, ami ÚJ ENTITÁST szül.
-  const e = await eset({ muvelet: 'Egyesites', valtozas: null });
+// ⚠️ ITT ÁLLT a „⛔ ISMERT, de végrehajtó nélküli művelet" próba. 2026-09-07 óta **mind a
+// négy műveletnek van végrehajtója**, tehát a próbának elfogyott az alanya — nem töröltük
+// szó nélkül, hanem ide írjuk, hogy miért nincs. *(Az ág maga megmaradt a kódban: ha egy
+// újabb változat új műveletet vezet be, a régebbi készülék azt fogja felsorolni.)*
+
+// ===================================
+// ⭐⭐⭐ EGYESÍTÉS (2026-09-07)
+// ===================================
+//
+// Csaba döntése: **nem születik új azonosító — az ELSŐ érintett olvasztja be a többit.**
+// Így minden azonosító egy aláírt esemény lenyomata marad.
+
+/** N gondolat közös szülő alatt, mindegyiken a gazda pontjaival. */
+async function egyesitesEset({ szulok = [null, null], gyerekhez = null } = {}) {
+  const gazda = await ujEember();
+  const masik = await ujEember();
+  const esemenyek = [];
+  const forrasok = [];
+
+  for (let i = 0; i < szulok.length; i++) {
+    const g = await gazda.tesz('GondolatLetrehozas',
+      { cim: 'FORRÁS ' + (i + 1), meret: 10, szulo: szulok[i] }, KEZDET);
+    esemenyek.push(g);
+    esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
+    // ⭐ A MÁSODIK forráson EGY MÁSIK ember is tart pontot — így mérhető, hogy a pontok
+    // emberenként összeadódnak, nem összemosódnak.
+    if (i === 1) {
+      esemenyek.push(await masik.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 7 }, KEZDET));
+    }
+    esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+    forrasok.push(g);
+  }
+
+  // Elhagyható gyerek a MÁSODIK forrás alatt (az átkötés méréséhez).
+  let gyerek = null;
+  if (gyerekhez !== null) {
+    gyerek = await gazda.tesz('GondolatLetrehozas',
+      { cim: 'GYEREK', meret: 10, szulo: forrasok[gyerekhez].azonosito }, KEZDET);
+    esemenyek.push(gyerek);
+    esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 5 }, KEZDET));
+  }
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: forrasok.map((f, i) => ({
+      entitas: f.azonosito,
+      muvelet: 'Egyesites',
+      valtozas: i === 0 ? { cim: 'EGYESÍTETT' } : null
+    }))
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes',
+    { entitas: javaslat.azonosito, pont: 5 }, KEZDET + 1500));
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+
+  return { esemenyek, forrasok, gyerek, javaslat, gazda, masik };
+}
+
+proba('⭐⭐⭐ AZ ELSŐ FORRÁS ELNYELI A MÁSODIKAT — és a pontok EMBERENKÉNT összeadódnak', async () => {
+  const e = await egyesitesEset();
   const k = kep(e.esemenyek);
-  return k.alkalmazottak.length === 0
-    && k.kihagyottak.length === 1
-    && k.kihagyottak[0].muvelet === 'Egyesites'
-    && k.kihagyottak[0].ok.includes('még nincs végrehajtó');
+  const elnyelo = k.allapot.entitasok.get(e.forrasok[0].azonosito);
+
+  return k.allapot.entitasok.has(e.forrasok[1].azonosito) === false   // a második beolvadt
+    && elnyelo !== undefined                                          // az első megmaradt
+    && elnyelo.cim === 'EGYESÍTETT'
+    // ⭐ A gazda 10 + 10 = 20 pontja EGY bejegyzés lett, a másiké külön marad.
+    && elnyelo.hozzajarulok.get(e.gazda.szerzo).pont === 20
+    && elnyelo.hozzajarulok.get(e.masik.szerzo).pont === 7
+    && elnyelo.osszesPont === 27
+    && k.alkalmazottak[0].muvelet === 'Egyesites'
+    && k.alkalmazottak[0].beolvasztott.length === 1;
+});
+
+proba('⭐⭐ A BEOLVASZTOTT GONDOLAT GYEREKE AZ ELNYELŐHÖZ KERÜL — nem a nagyszülőhöz', async () => {
+  // ⛔ EZ A SORREND-CSAPDA: ha a gyerekeket a források eltűnése UTÁN gyűjtenénk, az
+  // árva-szabály már felvitte volna őket a nagyszülőhöz. A prototípus épp ezért gyűjt
+  // a törlés ELŐTT (Csaba döntése, 2026-07-22).
+  const e = await egyesitesEset({ gyerekhez: 1 });     // a gyerek a MÁSODIK forrás alatt
+  const k = kep(e.esemenyek);
+
+  return k.allapot.entitasok.get(e.gyerek.azonosito).szulo === e.forrasok[0].azonosito
+    // ⭐ …és ettől az ág-méret is helyes: az elnyelő ága tartalmazza a gyereket.
+    && k.allapot.entitasok.get(e.forrasok[0].azonosito).agMeret === 20;
+});
+
+proba('⭐ AZ EGYESÍTETT GONDOLAT A LEGKÖZELEBBI KÖZÖS ŐS ALÁ KERÜL', async () => {
+  // Két külön ágban lévő forrás: a közös ős a gyökér alatti közös felmenő.
+  const gazda = await ujEember();
+  const esemenyek = [];
+
+  const kozos = await gazda.tesz('GondolatLetrehozas', { cim: 'KÖZÖS ŐS', meret: 10 }, KEZDET);
+  esemenyek.push(kozos, await gazda.tesz('TudatpontRendezes', { entitas: kozos.azonosito, pont: 10 }, KEZDET));
+
+  const forrasok = [];
+  for (const nev of ['BAL', 'JOBB']) {
+    const ag = await gazda.tesz('GondolatLetrehozas', { cim: nev, meret: 10, szulo: kozos.azonosito }, KEZDET);
+    esemenyek.push(ag, await gazda.tesz('TudatpontRendezes', { entitas: ag.azonosito, pont: 10 }, KEZDET));
+    const f = await gazda.tesz('GondolatLetrehozas', { cim: nev + '-FORRÁS', meret: 10, szulo: ag.azonosito }, KEZDET);
+    esemenyek.push(f, await gazda.tesz('TudatpontRendezes', { entitas: f.azonosito, pont: 10 }, KEZDET));
+    esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: f.azonosito, ertekek: KUSZOBOK }, KEZDET));
+    forrasok.push(f);
+  }
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: forrasok.map((f) => ({ entitas: f.azonosito, muvelet: 'Egyesites', valtozas: null }))
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+
+  const k = kep(esemenyek);
+  // ⭐ A BAL-FORRÁS a BAL alatt volt; egyesítés után a KÖZÖS ŐS alá kerül.
+  return k.allapot.entitasok.get(forrasok[0].azonosito).szulo === kozos.azonosito
+    && k.allapot.entitasok.has(forrasok[1].azonosito) === false;
+});
+
+proba('⭐ HÁROM FORRÁS is összevonható, egy lépésben', async () => {
+  const e = await egyesitesEset({ szulok: [null, null, null] });
+  const k = kep(e.esemenyek);
+
+  return k.allapot.entitasok.has(e.forrasok[1].azonosito) === false
+    && k.allapot.entitasok.has(e.forrasok[2].azonosito) === false
+    && k.allapot.entitasok.get(e.forrasok[0].azonosito).osszesPont === 37;   // 10+10+7+10
 });
 
 // ===================================

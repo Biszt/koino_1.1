@@ -35,7 +35,10 @@ az egyezmény **NEM ott jön létre, ahol a javaslat áll**.
 |---|---|---|
 | **A javaslat az érintett entitás GYEREKE** | `javaslat.js`: *„A javaslat MINDIG az érintett entitás gyereke… ezért kötelező"* | ✅ `allapotSzamitas.js`: `szulo = adat.erintett` (2026-09-06) |
 | **A javaslat entitás** — tudatpont, küszöb, gyerekek | `javaslat.js` séma + a pakli kártyái | ✅ 2026-09-06 |
-| Négy szerkesztési művelet | `javaslatTipus` enum | 🟡 a **név** megvan mind a négyre; végrehajtója kettőnek van (`Modositas`, `Athelyezes`) |
+| Négy szerkesztési művelet | `javaslatTipus` enum | ✅ **mind a négynek van végrehajtója** (2026-09-07) |
+| A törlés = **tudatpont-visszaosztás**, az entitás 0 pontnál szűnik meg | `torlesiVegrehajto.js` | ✅ `szerkesztesiVegrehajtas.js`: `torles` (2.6) |
+| A törölt entitás gyerekei **FELKERÜLNEK** a szülőjéhez | `entitasTorleseEllenorzese` kaszkádja | ✅ `allapotSzamitas.js`: `arvakFelkerulese` (2.2/b) |
+| Egyesítés: pontok emberenként, gyerekek az egyesítetthez, közös ős | `egyesitesiVegrehajto.js` | ✅ `szerkesztesiVegrehajtas.js`: `egyesites` (2.6) |
 | A döntés gépezete (küszöb, medián, részvétel, bizonyosság) | `javaslatSzamitasService.js` | ✅ `javaslatSzamitas.js` |
 | Az egyezmény a **pillanatképet** viszi magával | `egyezmeny.js`: `tamogatokSzama`, arányok, `bizonyossagiMutato` | ✅ `javaslatSzamitas.js` → `egyezmeny.pillanatkep` |
 | Az egyezmény **végrehajtódik** | `vegrehajtok/` | ✅ `szerkesztesiVegrehajtas.js` (2026-09-06) |
@@ -97,8 +100,10 @@ egyezmény ugyanaz az entitás, mint a javaslat, akkor a helye a javaslat helye 
   tehát az egyezmény árva lesz — az **árva-szabály** pedig felviszi a legközelebbi élő
   felmenőhöz, ami épp a törölt entitás szülője. *Pontosan a prototípus válasza, csak nem
   külön eset, hanem egy általánosabb szabály következménye.*
-- ⏸️ **Egyesítésnél még nyitva**: az egyezménynek az **új** entitás alá kell kerülnie —
-  ez az `Egyesites` végrehajtójával együtt jön (2.6).
+- ✅ **Egyesítésnél is MEGOLDVA (2026-09-07), szintén külön szabály nélkül.** Csaba döntése
+  szerint nem születik új entitás: az **első érintett olvasztja be a többit** — és a javaslat
+  szülője úgyis az első érintett, tehát az egyezmény pontosan ott van, ahol lennie kell. ⭐ A
+  prototípusnak ehhez placeholder-feloldás kellett (2.6).
 
 ### 2.2/b ⭐⭐ ÉS AMI EBBŐL KIDERÜLT: az árvák felkerülése (2026-09-07)
 
@@ -260,18 +265,40 @@ tudatpont-rendezés ALÁÍRT esemény, és senki nem írhat alá helyettem (D15)
   őket (`pont <azonosító> 0`) — ez a **kézi út** (4. szabály), és a `torol` parancs ki is
   írja. A felület fel fogja ajánlani.
 
-⏸️ **Az `Egyesites` maradt utoljára, és jó okkal: ez az EGYETLEN művelet, ami ÚJ ENTITÁST
-SZÜL.** A prototípus `egyesitesiVegrehajto.js`-e (19,9 KB) hét lépésben: összesíti
-emberenként a pontokat MINDEN forrásról → kiüríti a forrásokat (azok eltűnnek) → **létrehoz
-egy új entitást** az `egyesitesAdatok.ujEntitasAdatok` szerint → ráteszi az összesített
-pontokat → a források gyerekeit **az ÚJ entitás alá köti** (⭐ szándékosan NEM a nagyszülőhöz
-— ezért gyűjti össze őket a törlés ELŐTT, Csaba döntése 2026-07-22) → és az egyezmény
-placeholder-tárhelyét az új entitásra oldja fel.
+✅ **AZ `Egyesites` IS MEGÉPÜLT (2026-09-07)** — ez volt az utolsó, és jó okkal: ez az
+EGYETLEN művelet, ami entitásokat von össze. A prototípus `egyesitesiVegrehajto.js`-e
+(19,9 KB) hét lépésben: összesíti emberenként a pontokat MINDEN forrásról → kiüríti a
+forrásokat (azok eltűnnek) → **létrehoz egy új entitást** → ráteszi az összesített pontokat →
+a források gyerekeit **az ÚJ entitás alá köti** (⭐ szándékosan NEM a nagyszülőhöz — ezért
+gyűjti össze őket a törlés ELŐTT, Csaba döntése 2026-07-22) → és az egyezmény
+placeholder-tárhelyét az új entitásra oldja fel. A hely alapból a források
+**legközelebbi közös őse** (`_legkozelebbiKozosSzulo`).
 
-⛔ **A nyitott kérdés a koinóban:** az új entitásnak **azonosító kell**, de nincs esemény, ami
-létrehozná — ahogy az egyezménynek sem. A javaslat azonosítója foglalt (az az egyezményé),
-tehát **egy második származtatott azonosító** kell. *Ezt Csabával kell eldönteni, mert
-identitás-kérdés, nem részletkérdés.*
+⭐⭐ **CSABA DÖNTÉSE (2026-09-07): nem születik új azonosító — az ELSŐ érintett olvasztja be
+a többit.**
+
+A kérdés az volt, hogy az új entitás honnan kapjon azonosítót: a koinóban **minden azonosító
+egy aláírt esemény lenyomata**, és ezen áll az egész ellenőrizhetőség. Az egyesítettnek nem
+tartozna eseménye (a javaslaté már foglalt — az az egyezményé), tehát egy **második
+származtatott azonosítót** kellett volna bevezetni, amit senki nem írt alá.
+
+⭐ Az elnyelés ezt elkerüli, és **több logikai kapcsolatot old meg magától**:
+
+- a rá mutató **régi hivatkozások megmaradnak** — ugyanaz az elv, mint a különválásnál:
+  *„a főág tartja meg az azonosítót"*;
+- **az egyezmény helye is jó lesz külön szabály nélkül** (a javaslat szülője úgyis az első
+  érintett), pedig a prototípusban ehhez placeholder-feloldás kellett — a 2.2 utolsó nyitott
+  pontja is ezzel zárult;
+- és a **közös ős** számítása is átjött: ha a források külön ágban vannak, az egyesített
+  gondolat a legközelebbi közös őshöz kerül; ha egy szülő alatt voltak, **semmi nem mozdul**.
+
+⚠️ **Az ára, kimondva:** az egyesített gondolat az **elnyelő történetét folytatja** (szerző,
+létrehozás ideje, mérete), nem a javaslattevőét — a prototípusban új entitás születik új
+szerzővel. ⭐ A pontok viszont ugyanúgy **emberenként összeadódnak**, és aki bármelyik
+forráson aktív volt, az az egyesítettben is aktív marad.
+
+Új parancs: `egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]` — ⭐ az **első** a
+különleges: ő nyeli be a többit.
 
 ---
 
@@ -305,7 +332,9 @@ kettőt érdemes együtt átgondolni, mert ugyanaz a tudatpont-mozgatás van ala
 2. **Az egyezmény helyének igazítása** törlésnél és egyesítésnél (2.2) — ez teszi az
    azonos-azonosítós döntést teljessé. *Csak a hozzájuk tartozó végrehajtóval együtt van
    értelme.*
-3. **`Torles` és `Egyesites` végrehajtó** (2.6).
+3. ✅ **`Torles` és `Egyesites` végrehajtó** (2.6) — **KÉSZ (2026-09-07)**, és velük az
+   egyezmény helye is (2.), meg az árvák felkerülése (2.2/b). ⭐ Mind a négy művelethez van
+   **kézi út** is: `javaslat` · `torol` · `athelyez` · `egyesit`.
 4. **Különválás** (2.1) — a legnagyobb, és a legszebb; a 1–3. után áll össze, mert
    tudatpont- és érték javaslat-mozgatásra épül.
 5. **Csomag/töredék** (2.4).
