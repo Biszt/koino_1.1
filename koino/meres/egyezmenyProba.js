@@ -271,8 +271,14 @@ proba('⛔ ISMERETLEN művelet: szintén kihagyva, megnevezve', async () => {
 proba('⚠️ A HIÁNYZÓ entitás nem hiba, csak „nem hajtható végre" (D14/D19)', async () => {
   const e = await eset();
   // A gazda elveszi a tudatpontját → az entitás megszűnik létezni (D14), a javaslat marad.
+  //
+  // ⚠️⚠️ A LEZÁRÁS UTÁN veszi el, és ez nem részletkérdés: 2026-09-07 óta csak a
+  // JOGOSULT szavazat számít, és a jogosultság a lezárás pillanatában érvényes állapot
+  // szerint dől el. Ha a döntési időn BELÜL szállna ki, a saját szavazata sem számítana,
+  // az egyezmény meg sem születne — és ez a próba **nem azt mérné, amit ígér**
+  // (a végrehajtáskor hiányzó entitást), hanem némán a szavazás-szabályt.
   const elvesz = await e.gazda.tesz('TudatpontRendezes',
-    { entitas: e.gondolat.azonosito, pont: 0 }, KEZDET + 3000);
+    { entitas: e.gondolat.azonosito, pont: 0 }, KEZDET + 3 * 3600 * 1000);
   const k = kep([...e.esemenyek, elvesz]);
 
   return k.allapot.entitasok.size === 0
@@ -291,6 +297,106 @@ proba('⭐ Az alkalmazások és a kihagyások az ÁLLAPOTBAN is ott vannak (D19)
     && k.allapot.egyezmenyAlkalmazasok.length === 1
     && Array.isArray(k.allapot.egyezmenyKihagyasok)
     && k.allapot.egyezmenyAlkalmazasok[0].mezok.includes('cim');
+});
+
+// ===================================
+// 7. ⭐⭐ TÖBB ÉRINTETT ENTITÁS (2026-09-07)
+// ===================================
+//
+// A prototípus javaslata `erintettEntitasok` TÖMBÖT hordoz, és **minden elemen saját
+// `muvelet` van** — egy csomagban az egyik gondolat módosul, a másik áthelyeződik.
+// Itt azt mérjük, hogy a végrehajtás ezt a tömböt járja, elemenként.
+
+/**
+ * KÉT gondolat + EGY javaslat, ami mindkettőt érinti — elemenként más művelettel.
+ * @param {Array} erintettek - a javaslat `adat.erintettek` tömbje (a hívó építi föl)
+ */
+async function csomagEset(epit) {
+  const gazda = await ujEember();
+  const esemenyek = [];
+  const gondolatok = [];
+
+  for (const cim of ['ELSŐ', 'MÁSODIK']) {
+    const g = await gazda.tesz('GondolatLetrehozas', { cim, szoveg: 'sz', meret: 100 }, KEZDET);
+    esemenyek.push(g);
+    esemenyek.push(await gazda.tesz('TudatpontRendezes',
+      { entitas: g.azonosito, pont: 50 }, KEZDET));
+    esemenyek.push(await gazda.tesz('ErtekJavaslat',
+      { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+    gondolatok.push(g);
+  }
+
+  const javaslat = await gazda.tesz('Javaslat',
+    { fajta: 'szerkesztesi', erintettek: epit(gondolatok), indoklas: null }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+
+  return { esemenyek, gondolatok, javaslat, gazda };
+}
+
+proba('⭐⭐ KÉT ÉRINTETT, KÉT KÜLÖNBÖZŐ MŰVELET — mindkettő végrehajtódik', async () => {
+  const e = await csomagEset(([a, b]) => [
+    { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } },
+    { entitas: b.azonosito, muvelet: 'Athelyezes', valtozas: { szulo: a.azonosito } }
+  ]);
+  const k = kep(e.esemenyek);
+  const [a, b] = e.gondolatok;
+
+  return k.alkalmazottak.length === 2
+    && k.allapot.entitasok.get(a.azonosito).cim === 'ÁTÍRVA'
+    && k.allapot.entitasok.get(b.azonosito).szulo === a.azonosito
+    // ⭐ ÉS MEGNEVEZI, MELYIK ELEM MIT CSINÁLT — nem egy összevont sor.
+    && k.alkalmazottak.some((x) => x.erintett === a.azonosito && x.muvelet === 'Modositas')
+    && k.alkalmazottak.some((x) => x.erintett === b.azonosito && x.muvelet === 'Athelyezes');
+});
+
+proba('⛔⛔ EGY ELEM ELAKADÁSA NEM DÖNTI EL A TÖBBIT — és megmondja, melyik akadt el', async () => {
+  const e = await csomagEset(([a, b]) => [
+    { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } },
+    // ⚠️ Ez elakad: a művelet ismert, de nincs végrehajtója (Torles).
+    { entitas: b.azonosito, muvelet: 'Torles', valtozas: null }
+  ]);
+  const k = kep(e.esemenyek);
+  const [a, b] = e.gondolatok;
+
+  return k.alkalmazottak.length === 1
+    && k.alkalmazottak[0].erintett === a.azonosito
+    && k.allapot.entitasok.get(a.azonosito).cim === 'ÁTÍRVA'
+    && k.kihagyottak.length === 1
+    && k.kihagyottak[0].erintett === b.azonosito
+    && k.kihagyottak[0].muvelet === 'Torles';
+});
+
+proba('⭐ A RÉGI ALAK (egyetlen `erintett`) VÁLTOZATLANUL fut — az aláírás nem írható át', async () => {
+  // ⚠️ Ez a lap TÖBBI próbája mind a régi alakot használja (`eset()`), tehát a
+  // visszafelé-olvasás amúgy is mérve van. Itt azt fogjuk meg, hogy a KETTŐ UGYANAZ:
+  // a régi alakból számolt egyezmény ugyanúgy egy elemű listát mutat.
+  const e = await eset();
+  const k = kep(e.esemenyek);
+  const j = k.javaslatok.get(e.javaslat.azonosito);
+
+  return j.erintettek.length === 1
+    && j.erintettek[0].entitas === e.gondolat.azonosito
+    && j.erintettek[0].muvelet === 'Modositas'
+    && j.egyezmeny.erintettek.length === 1
+    && k.alkalmazottak[0].erintett === e.gondolat.azonosito;
+});
+
+proba('⛔ ISMERETLEN MŰVELET A TÖMB EGYIK ELEMÉN: csak AZ az elem esik ki', async () => {
+  // ⭐ A szabály-réteg NEM dobja el a javaslatot (újabb program-változat is lehet) —
+  // a végrehajtás mondja meg őszintén, hogy ezt nem tudja.
+  const e = await csomagEset(([a, b]) => [
+    { entitas: a.azonosito, muvelet: 'Elkobzas', valtozas: { cim: 'x' } },
+    { entitas: b.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÁTÍRVA' } }
+  ]);
+  const k = kep(e.esemenyek);
+  const [, b] = e.gondolatok;
+
+  return k.kihagyottak.length === 1
+    && k.kihagyottak[0].ok.includes('ismeretlen művelet')
+    && k.alkalmazottak.length === 1
+    && k.allapot.entitasok.get(b.azonosito).cim === 'ÁTÍRVA';
 });
 
 export default futtatas;

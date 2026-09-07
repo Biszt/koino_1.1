@@ -112,7 +112,12 @@ export function kartyaAdatta(k) {
         statusz: STATUSZ_KIFELE[k.javaslat.statusz] ?? k.javaslat.statusz,
         szavazhat: k.javaslat.szavazhatok,
         dontesiIdo: k.javaslat.dontesiIdo,
+        // ⚠️ A prototípus kártyája EGY nevet ír ki („módosított gondolat"), a koino
+        // viszont **több entitást** is érinthet (2026-09-07). Az elsőt adjuk neki, a
+        // teljes listát külön — így a kártya változatlan maradhat, és a részletek-nézet
+        // mégis meg tudja mutatni, mi minden van a javaslatban.
         modositottGondolat: k.javaslat.erintettCim,
+        erintettek: k.javaslat.erintettek ?? [],
         indoklas: k.javaslat.indoklas,
 
         tamogatotsagiArany: (k.javaslat.tamogatottsagEzrelek ?? 0) / 10,

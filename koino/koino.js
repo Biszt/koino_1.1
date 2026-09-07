@@ -329,13 +329,20 @@ async function allapotKiirasa(napokMulva) {
   kiir(SZIN.vastag + 'SZERKESZTÉSI JAVASLATOK' + SZIN.vege);
   if (!folyamatban.length) kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
   for (const j of folyamatban) {
-    const erintett = allapot.entitasok.get(j.erintett);
+    const kik = j.erintettek ?? [];
     const szin = j.statusz === 'elfogadva' ? SZIN.jo : j.statusz === 'elvetve' ? SZIN.nem : '';
     kiir('  ' + SZIN.halvany + j.azonosito.slice(0, 8) + SZIN.vege
       + '  ' + szin + j.statusz.toUpperCase() + SZIN.vege
-      + '  ' + j.muvelet + ': „' + (j.valtozas?.cim ?? '—') + '"');
-    kiir('      ' + SZIN.halvany + 'érintett: ' + (erintett ? '„' + erintett.cim + '"' : 'ismeretlen')
-      + ' · 👍 ' + j.tamogatok + ' 👎 ' + j.ellenzok + ' 🤷 ' + j.tartozkodok
+      + '  ' + (kik.length > 1 ? kik.length + ' entitás' : j.muvelet + ': „' + (j.valtozas?.cim ?? '—') + '"'));
+    // ⭐ MINDEN ÉRINTETT SORONKÉNT — a művelet entitásonkénti, tehát nem lehet
+    // egyetlen szóval összefoglalni („Modositas" + „Athelyezes" egy javaslatban).
+    for (const r of kik) {
+      kiir('      ' + SZIN.halvany + '↳ ' + r.muvelet + ': '
+        + '„' + (allapot.entitasok.get(r.entitas)?.cim ?? 'ismeretlen') + '"'
+        + (r.valtozas?.cim ? ' → „' + r.valtozas.cim + '"' : '') + SZIN.vege);
+    }
+    kiir('      ' + SZIN.halvany
+      + '👍 ' + j.tamogatok + ' 👎 ' + j.ellenzok + ' 🤷 ' + j.tartozkodok
       + ' (' + j.szavazok + '/' + j.nevezo + ')'
       + ' · támogatottság ' + szazalek(j.tamogatottsagEzrelek)
       + ' · bizonyosság ' + szazalek(j.bizonyossagiMutato) + SZIN.vege);
@@ -358,7 +365,11 @@ async function allapotKiirasa(napokMulva) {
   for (const j of egyezmenyek) {
     const e = j.egyezmeny;
     const p = e.pillanatkep;
-    kiir('  ' + SZIN.jo + '📜 ' + e.muvelet + ': „' + (e.valtozas?.cim ?? '—') + '"' + SZIN.vege);
+    const kik = e.erintettek ?? [];
+    kiir('  ' + SZIN.jo + '📜 '
+      + (kik.length > 1
+        ? kik.map((r) => r.muvelet + ' „' + (allapot.entitasok.get(r.entitas)?.cim ?? '?') + '"').join(' + ')
+        : e.muvelet + ': „' + (e.valtozas?.cim ?? '—') + '"') + SZIN.vege);
     kiir('      ' + SZIN.halvany + 'megszületett: ' + new Date(e.megszuletett).toLocaleString('hu-HU')
       + ' · ' + p.tamogatok + '/' + p.szavazok + ' támogató (' + szazalek(p.tamogatottsagEzrelek) + ')'
       + ' · részvétel ' + szazalek(p.reszveteliEzrelek) + SZIN.vege);

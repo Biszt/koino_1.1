@@ -1,4 +1,4 @@
-// koino/js/muveletek.js
+﻿// koino/js/muveletek.js
 
 // Felelősség: a koino MŰVELETEI — amit egy e-ember tehet. Mindegyik ugyanazt a három
 // lépést végzi: megkeresi a saját lánca végét, létrehoz egy ALÁÍRT eseményt, és elmenti.
@@ -21,7 +21,7 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET } from './allapot/szabalyok.js';
+import { TUDATPONT_KERET, elsoErintett } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import {
@@ -610,24 +610,58 @@ export function ertekJavaslat(kornyezet, entitas, ertekek) {
  *   'szerkesztesi' → a koino végrehajtja a változást
  *   'altalanos'    → nem történik semmi automatikusan; az egyezmény MAGA az álláspont
  *
- * A szelet-kulcs az ÉRINTETT entitás — így a javaslat és a rá adott szavazatok ugyanabban
- * a szeletben lesznek, mint a döntés többi bemenete (tudatpontok, érték javaslatok).
+ * A szelet-kulcs az ELSŐ érintett entitás — így a javaslat és a rá adott szavazatok
+ * ugyanabban a szeletben lesznek, mint a döntés többi bemenete (tudatpontok, érték
+ * javaslatok).
+ *
+ * ===== ⭐⭐ TÖBB ÉRINTETT, ENTITÁSONKÉNTI MŰVELETTEL (2026-09-07) =====
+ *
+ * A prototípus `erintettEntitasok`-ja **tömb**, és minden eleme **saját műveletet** hordoz
+ * (`javaslat.js`). Ez teszi lehetővé az **egyesítést** (két forrás, egy eredmény) és a
+ * `Csomag` javaslatot (vegyes műveletek egy döntésben). A koino ezt most átveszi.
+ *
+ * ⚠️ A RÉGI HÍVÁSI ALAK IS MŰKÖDIK (`{ erintett, muvelet, valtozas }`) — egy elemű listává
+ * alakul. Nem kényelemből: a **régi események** is ilyenek, és azokat nem lehet újraírni
+ * (az aláírás a régi bájtokra szól). Ha a hívó alakja eltérne az esemény alakjától, a kettő
+ * előbb-utóbb szétcsúszna.
  *
  * @param {Object} kornyezet
- * @param {Object} adatok - { erintett, muvelet, valtozas, indoklas, fajta }
+ * @param {Object} adatok - { erintettek: [{entitas, muvelet, valtozas}], indoklas, fajta }
+ *        vagy a RÉGI alak: { erintett, muvelet, valtozas, indoklas, fajta }
  */
-export function javaslatLetrehozasa(kornyezet, { erintett, muvelet, valtozas, indoklas, fajta }) {
+export function javaslatLetrehozasa(kornyezet, adatok) {
+  const { erintett, muvelet, valtozas, indoklas, fajta } = adatok;
+
+  // A régi, egy-érintettes hívás listává alakul — így egyetlen alak megy az eseménybe.
+  const lista = Array.isArray(adatok.erintettek)
+    ? adatok.erintettek
+    : (typeof erintett === 'string'
+        ? [{ entitas: erintett, muvelet: muvelet || 'Modositas', valtozas: valtozas || null }]
+        : []);
+
+  if (!lista.length) {
+    throw new Error('A javaslatnak legalább egy érintett entitást meg kell neveznie.');
+  }
+
+  // ⭐ Minden elem TELJES: entitás + művelet + változás. A hiányzó mezőt itt töltjük ki, nem
+  // az olvasóknál — így a kanonikus alak sem lesz hol ilyen, hol olyan.
+  const erintettek = lista.map((r) => ({
+    entitas: r.entitas,
+    muvelet: r.muvelet || 'Modositas',
+    valtozas: r.valtozas ?? null
+  }));
+
   return esemenytTeszek(
     kornyezet,
     'Javaslat',
     {
       fajta: fajta === 'altalanos' ? 'altalanos' : 'szerkesztesi',
-      erintett,
-      muvelet: muvelet || 'Modositas',
-      valtozas: valtozas || null,
+      erintettek,
       indoklas: indoklas || null
     },
-    { entitas: erintett }
+    // ⚠️ A szelet-kulcs az ELSŐ érintett (`szabalyok.js`: `elsoErintett`) — a szeletnek
+    // egyetlen gazdája lehet.
+    { entitas: erintettek[0].entitas }
   );
 }
 
@@ -658,7 +692,9 @@ export async function szavazas(kornyezet, javaslat, szavazat) {
   if (!javaslatEsemeny) {
     throw new Error('Nem ismerem ezt a javaslatot: ' + javaslat);
   }
-  const entitas = javaslatEsemeny.adat?.erintett ?? null;
+  // ⭐ Az ELSŐ érintett — ugyanaz a szabály, mint a javaslat szelet-kulcsánál. Így a
+  // szavazat oda kerül, ahol a javaslat és a döntés többi bemenete van.
+  const entitas = elsoErintett(javaslatEsemeny.adat);
 
   return esemenytTeszek(
     kornyezet, 'Szavazat', { javaslat, szavazat },

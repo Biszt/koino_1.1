@@ -94,13 +94,50 @@ egyezmény ugyanaz az entitás, mint a javaslat, akkor a helye a javaslat helye 
 
 *Vagyis a végrehajtásnak a `Torles` és az `Egyesites` esetén a szülőt is igazítania kell.*
 
-### 2.3 ⛔ `erintettEntitasok` — TÖMB, nem egy
+### 2.3 ✅ `erintettEntitasok` — TÖMB, nem egy — **MEGÉPÍTVE (2026-09-07)**
 
 `javaslat.js`: *„Egy vagy több entitás, amelyekre a javaslat vonatkozik"*, típusonként
 `['Gondolat','Kategoria','GondolatTipus','Egyezmeny']`.
 
-A koinóban ma **egy** `erintett` string. ⚠️ Az **egyesítéshez** legalább kettő kell (a két
-forrás), és a **D27/5** szerint egy **egyezmény is lehet érintett**.
+Eddig a koinóban **egy** `erintett` string volt. ⚠️ Az **egyesítéshez** legalább kettő kell
+(a két forrás), és a **D27/5** szerint egy **egyezmény is lehet érintett**.
+
+⭐ **Amit a prototípus alakja megmondott, és amit ebből átvettünk:**
+
+- **A művelet ENTITÁSONKÉNTI.** A tömb minden eleme `{ entitas, muvelet, valtozas }` — egy
+  csomagban az egyik gondolat módosul, a másik áthelyeződik. A végrehajtás ezért **elemenként**
+  fut (`egyReszVegrehajtasa`), és egy elem elakadása **nem dönti el a többit**: a `kihagyottak`
+  megnevezi, melyik akadt el és miért (D19).
+- ⛔⛔ **A jogosultság METSZET, nem unió** — `javaslatJogosultsagService.js`: *„rendelkezik-e
+  tudatponttal MINDEN érintett entitáson… jogosult szavazni/javaslatot létrehozni"*. Ugyanaz a
+  feltétel a javaslattételre (`szabalyok.js`) és a szavazásra (`javaslatSzamitas.js`). Enélkül
+  egy egyesítést be lehetne adni úgy, hogy a másik gondolathoz semmi közöd — pedig az is
+  megszűnne tőle.
+- ⚠️ **A RÉGI ESEMÉNYEK ÉRVÉNYESEK MARADNAK.** Az aláírás a régi bájtokra szól: a `erintett`
+  (string) alak **egy elemű listaként** olvasódik be (`szabalyok.js`, `erintettek()`), és a
+  próbák nagy része továbbra is a régi alakot használja — vagyis a visszafelé-olvasás **mérve
+  van**, nem ígéret.
+- ⚠️ **Az `entitasTipus` mezőt szándékosan NEM vettük át**: a prototípusnak a polimorf
+  Mongo-hivatkozás miatt kellett; a koinóban a típus **magában az entitásban** van. Egy második,
+  aláírt, de **hazudható** forrás ugyanarról nem érték, hanem kockázat.
+- ⭐ **Az ismeretlen műveletet a szabály-réteg NEM dobja el.** Először megírtam (a prototípusban
+  Mongoose-enum őrizte), de rossz: az ismeretlen művelet legvalószínűbben **egy újabb
+  program-változat**, és ha a régebbi készülék kidobná, a két gép **más javaslat-halmazt látna**.
+  Így a `JAVASLAT_MUVELETEK` nem kapu, hanem a MAI lista: azt mondja meg, mit tudunk végrehajtani.
+
+### 2.3/b ⛔⛔ ÉS EGY VALÓDI RÉS, AMIT A PRÓBA TALÁLT: a szavazat jogosultsága
+
+A metszet próbáját megírva kiderült, hogy a koino **minden szavazatot beleszámolt** — a
+jogosultságot csak a **felület** nézte (`pakli.js`, `szavazhatok`). ⚠️ *Amit a számítás nem
+ellenőriz, az nem szabály, csak illemtan:* a másik gépen futó felület nem véd semmitől, egy
+kézzel írt `Szavazat` eseménnyel bárki dönthetett volna olyan gondolat sorsáról, amihez semmi
+köze. **Javítva** (`allasSzamitasa`): csak az aktív tulajdonos szavazata számít, és a nevező is
+ez a halmaz (unió már nem kell — a számláló amúgy is részhalmaz).
+
+⭐ Két következmény, mindkettő szándékos: a **passzív** figyelő szavazata sem számít (ő nem
+korlátozza a döntést), és aki a döntés alatt **kiszáll** (0 tudatpont), annak a szavazata sem
+marad ott — a jogosultság a **lezárás pillanatában** érvényes állapot szerint dől el, ugyanúgy,
+mint a küszöböké. *A szavazat nem tűnik el, csak nem számít* (D19).
 
 ### 2.4 ⛔ `Csomag` javaslat és a TÖREDÉKEK
 
@@ -161,11 +198,13 @@ kettőt érdemes együtt átgondolni, mert ugyanaz a tudatpont-mozgatás van ala
 
 *A `Hiba` státusz kikerült a listáról: megmérve nem hiány (2.5).*
 
-1. **`erintettEntitasok` tömbbé** (2.3) — ez a legalsó kő: **enélkül az egyesítés meg sem
-   fogalmazható**, és a D27/5 („egyezmény is lehet érintett") sem.
-   ⚠️ *Esemény-alak változás:* a meglévő `Javaslat` események `erintett` (string) mezőt
-   hordoznak, tehát a számításnak **mindkettőt** olvasnia kell — a régi tárak nem
-   érvényteleníthetők.
+1. ✅ **`erintettEntitasok` tömbbé** (2.3) — **KÉSZ (2026-09-07)**. Ez volt a legalsó kő:
+   enélkül az egyesítés meg sem fogalmazható, és a D27/5 („egyezmény is lehet érintett") sem.
+   A régi, egy-`erintett`-es események **változatlanul érvényesek**. ⭐ Mellékesen egy valódi
+   rést is javított: a szavazat jogosultsága eddig csak a felületen élt (2.3/b).
+   ⏸️ *Ami tudatosan kimaradt:* a többérintettes javaslat **kézi útja** (4. szabály) — a
+   `javaslat` parancs ma egy entitást vesz. A csomag-alak a **Csomag/töredék** (2.4) lépéssel
+   együtt kap parancssori arcot, mert ott dől el, hogyan írja le az ember egy mondatban.
 2. **Az egyezmény helyének igazítása** törlésnél és egyesítésnél (2.2) — ez teszi az
    azonos-azonosítós döntést teljessé. *Csak a hozzájuk tartozó végrehajtóval együtt van
    értelme.*

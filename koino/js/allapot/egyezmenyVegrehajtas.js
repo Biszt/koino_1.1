@@ -159,42 +159,16 @@ export function egyezmenyekAlkalmazasa(allapot, javaslatok) {
     || (a.javaslat < b.javaslat ? -1 : a.javaslat > b.javaslat ? 1 : 0));
 
   // ----- 3. VÉGREHAJTÁS -----
+  // ⭐⭐ EGY EGYEZMÉNY TÖBB ENTITÁST IS ÉRINTHET (2026-09-07), és **entitásonként más
+  // művelettel** — a prototípus `erintettEntitasok` tömbje minden elemen saját `muvelet`-et
+  // hordoz. Ezért a lista minden elemét külön hajtjuk végre, és külön is számoljuk be az
+  // alkalmazottak/kihagyottak közé: egy elem elakadása nem dönti el a többit.
   for (const egyezmeny of sorban) {
-    const entitas = allapot.entitasok.get(egyezmeny.erintett);
+    const kik = Array.isArray(egyezmeny.erintettek) && egyezmeny.erintettek.length
+      ? egyezmeny.erintettek
+      : [{ entitas: egyezmeny.erintett, muvelet: egyezmeny.muvelet, valtozas: egyezmeny.valtozas }];
 
-    // ⚠️ A HIÁNYZÓ ENTITÁS NEM HIBA (D14/D19): lehet, hogy időközben elfelejtették (0
-    // tudatpont), vagy még nem érkezett meg hozzánk. Nem vád, csak „nem hajtható végre".
-    if (!entitas) {
-      kihagyottak.push({
-        javaslat: egyezmeny.javaslat, muvelet: egyezmeny.muvelet,
-        ok: 'az érintett entitás nem létezik (elfelejtették, vagy még nem ismerjük)'
-      });
-      continue;
-    }
-
-    let eredmeny;
-    if (egyezmeny.muvelet === 'Modositas') {
-      eredmeny = modositas(entitas, egyezmeny.valtozas);
-    } else if (egyezmeny.muvelet === 'Athelyezes') {
-      eredmeny = athelyezes(entitas, egyezmeny.valtozas, allapot.entitasok);
-    } else if (ISMERT_MUVELETEK.includes(egyezmeny.muvelet)) {
-      // ⭐ ISMERT, DE MÉG NINCS VÉGREHAJTÓJA — és ez LÁTSZIK, nem néma.
-      eredmeny = { rendben: false, ok: 'ehhez a művelethez még nincs végrehajtó' };
-    } else {
-      eredmeny = { rendben: false, ok: 'ismeretlen művelet: ' + egyezmeny.muvelet };
-    }
-
-    if (eredmeny.rendben) {
-      alkalmazottak.push({
-        javaslat: egyezmeny.javaslat, erintett: egyezmeny.erintett,
-        muvelet: egyezmeny.muvelet, mezok: eredmeny.mezok
-      });
-    } else {
-      kihagyottak.push({
-        javaslat: egyezmeny.javaslat, erintett: egyezmeny.erintett,
-        muvelet: egyezmeny.muvelet, ok: eredmeny.ok
-      });
-    }
+    for (const resz of kik) egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak);
   }
 
   // ⭐ A KIHAGYOTTAKAT FELSOROLJUK, NEM ELHALLGATJUK — ugyanaz a minta, mint a
@@ -205,4 +179,50 @@ export function egyezmenyekAlkalmazasa(allapot, javaslatok) {
   console.log('egyezmenyekAlkalmazasa - VÉGE',
     { alkalmazott: alkalmazottak.length, kihagyott: kihagyottak.length });
   return { alkalmazottak, kihagyottak };
+}
+
+/**
+ * Egy egyezmény EGY érintettjének végrehajtása.
+ *
+ * ⚠️ Külön függvény, mert a művelet **entitásonkénti**: egy csomag-javaslatban az egyik
+ * entitás módosul, a másik áthelyeződik. Ha egy elem elakad, a többi attól még mehet — és
+ * a `kihagyottak` megmondja, melyik akadt el és miért.
+ */
+function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kihagyottak) {
+  const muvelet = resz.muvelet ?? 'Modositas';
+  const entitas = allapot.entitasok.get(resz.entitas);
+
+  // ⚠️ A HIÁNYZÓ ENTITÁS NEM HIBA (D14/D19): lehet, hogy időközben elfelejtették (0
+  // tudatpont), vagy még nem érkezett meg hozzánk. Nem vád, csak „nem hajtható végre".
+  if (!entitas) {
+    kihagyottak.push({
+      javaslat: egyezmeny.javaslat, erintett: resz.entitas, muvelet,
+      ok: 'az érintett entitás nem létezik (elfelejtették, vagy még nem ismerjük)'
+    });
+    return;
+  }
+
+  let eredmeny;
+  if (muvelet === 'Modositas') {
+    eredmeny = modositas(entitas, resz.valtozas);
+  } else if (muvelet === 'Athelyezes') {
+    eredmeny = athelyezes(entitas, resz.valtozas, allapot.entitasok);
+  } else if (ISMERT_MUVELETEK.includes(muvelet)) {
+    // ⭐ ISMERT, DE MÉG NINCS VÉGREHAJTÓJA — és ez LÁTSZIK, nem néma.
+    eredmeny = { rendben: false, ok: 'ehhez a művelethez még nincs végrehajtó' };
+  } else {
+    eredmeny = { rendben: false, ok: 'ismeretlen művelet: ' + muvelet };
+  }
+
+  if (eredmeny.rendben) {
+    alkalmazottak.push({
+      javaslat: egyezmeny.javaslat, erintett: resz.entitas,
+      muvelet, mezok: eredmeny.mezok
+    });
+  } else {
+    kihagyottak.push({
+      javaslat: egyezmeny.javaslat, erintett: resz.entitas,
+      muvelet, ok: eredmeny.ok
+    });
+  }
 }

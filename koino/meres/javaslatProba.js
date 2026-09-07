@@ -358,6 +358,68 @@ proba('Ugyanaz az eseményhalmaz MÁS időpontban: más státusz, azonos számok
       && korai.bizonyossagiMutato === kesoi.bizonyossagiMutato;
 });
 
+// ===== ⛔⛔ A SZAVAZÁS JOGOSULTSÁGA — A SZÁMÍTÁSBAN (2026-09-07) =====
+//
+// ⚠️ Ez a szakasz egy VALÓDI rés miatt született: a jogosultságot eddig csak a felület
+// nézte (`pakli.js`, `szavazhatok`), a számítás minden szavazatot beleszámolt. *Amit a
+// számítás nem ellenőriz, az nem szabály, csak illemtan* — a másik gépen futó felület
+// nem véd semmitől; egy kézzel írt `Szavazat` eseménnyel bárki dönthetett volna.
+
+proba('⛔⛔ AKINEK NINCS TUDATPONTJA a gondolaton, annak a szavazata NEM SZÁMÍT', async () => {
+  const eset = await esetFelepitese({ szavazatok: ['Ellenez'] });
+
+  // Egy kívülálló — soha nem tett pontot a gondolatra — támogat.
+  const kivulallo = await ujEember();
+  eset.esemenyek.push(await kivulallo.tesz('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat: 'Tamogat' }, eset.kezdet + 2000));
+
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  // A létrehozó nem szavazott; egyetlen jogosult szavazat van, és az ELLENZ.
+  return j.szavazok === 1 && j.tamogatok === 0 && j.ellenzok === 1
+      && j.statusz === 'elvetve';
+});
+
+proba('⭐ …ÉS A PRÓBA NEM VAK: ugyanez tudatponttal ELFOGADÁSSÁ fordul', async () => {
+  const eset = await esetFelepitese({ szavazatok: ['Ellenez'] });
+
+  const belepo = await ujEember();
+  // ⭐ EGYETLEN különbség az előző próbához képest: előbb tesz rá tudatpontot.
+  eset.esemenyek.push(await belepo.tesz('TudatpontRendezes',
+    { entitas: eset.gondolat.azonosito, pont: 10, szerep: 'aktiv' }, eset.kezdet));
+  eset.esemenyek.push(await belepo.tesz('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat: 'Tamogat' }, eset.kezdet + 2000));
+
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  return j.szavazok === 2 && j.tamogatok === 1 && j.ellenzok === 1;
+});
+
+proba('⛔ A PASSZÍV figyelő szavazata sem számít (ő nem korlátozza a döntést)', async () => {
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat'] });
+
+  const figyelo = await ujEember();
+  eset.esemenyek.push(await figyelo.tesz('TudatpontRendezes',
+    { entitas: eset.gondolat.azonosito, pont: 10, szerep: 'passziv' }, eset.kezdet));
+  eset.esemenyek.push(await figyelo.tesz('Szavazat',
+    { javaslat: eset.javaslat.azonosito, szavazat: 'Ellenez' }, eset.kezdet + 2000));
+
+  const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+  return j.szavazok === 1 && j.ellenzok === 0 && j.nevezo === 2;   // létrehozó + szavazó
+});
+
+proba('⚠️ AKI A DÖNTÉS ALATT KISZÁLL, annak a szavazata sem marad ott', async () => {
+  // ⭐ A jogosultság a LEZÁRÁS pillanatában érvényes állapot szerint dől el — ugyanaz az
+  // elv, mint a küszöböknél. *Aki elmegy, viszi a súlyát.* A szavazat NEM tűnik el
+  // (a tárban ott van), csak nem számít (D19).
+  const eset = await esetFelepitese({ szavazatok: ['Tamogat', 'Tamogat'] });
+  const elozetes = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  eset.esemenyek.push(await eset.szavazok[0].tesz('TudatpontRendezes',
+    { entitas: eset.gondolat.azonosito, pont: 0 }, eset.kezdet + 3000));
+  const utana = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
+
+  return elozetes.szavazok === 2 && utana.szavazok === 1;
+});
+
 // ===== ALAPÉRTELMEZÉS =====
 
 proba('Érték javaslat nélkül az alapértelmezett küszöbök érvényesek', async () => {

@@ -146,6 +146,15 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
       muvelet: dontes.muvelet,
       erintett: dontes.erintett,
       erintettCim: entitasok.get(dontes.erintett)?.cim ?? null,
+      // ⭐⭐ MINDEN ÉRINTETT (2026-09-07) — a fenti kettő az ELSŐ érintett összefoglalója,
+      // hogy a régi kártya-kód ne törjön; a teljes igazság ez a lista. ⚠️ A művelet
+      // entitásonkénti: egy csomagban az egyik módosul, a másik áthelyeződik.
+      erintettek: (dontes.erintettek ?? []).map((r) => ({
+        entitas: r.entitas,
+        muvelet: r.muvelet,
+        cim: entitasok.get(r.entitas)?.cim ?? null,
+        valtozas: r.valtozas ?? null
+      })),
       valtozas: dontes.valtozas ?? null,
       indoklas: dontes.indoklas ?? null,
       statusz: dontes.statusz,
@@ -169,11 +178,19 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
 
       // ⭐ SZAVAZHATOK-E? A döntés bemenete az ÉRINTETT entitás aktív tulajdonosainak
       // köre — nem a javaslaté. (Aki a gondolatot tartja, az dönt a sorsáról.)
+      // ⛔⛔ TÖBB ÉRINTETTNÉL METSZET, nem unió — a prototípus jogosultság-rétege is ezt
+      // mondja: *„rendelkezik-e tudatponttal MINDEN érintett entitáson"*. Ha egy csomagban
+      // csak az egyik gondolat az enyém, a másik sorsáról nem dönthetek.
+      // ⚠️ Ez CSAK a felület előzetes jelzése; a valódi szabály a számításban van
+      // (`javaslatSzamitas.js` metszete) — a felület a másik gépen nem véd semmitől.
       szavazhatok: (() => {
         if (!en) return false;
-        const erintett = entitasok.get(dontes.erintett);
-        const sajat = erintett?.hozzajarulok.get(en);
-        return (sajat?.pont ?? 0) > 0 && sajat?.szerep !== 'passziv';
+        const kik = (dontes.erintettek ?? []).map((r) => r.entitas);
+        const lista = kik.length ? kik : [dontes.erintett];
+        return lista.every((az) => {
+          const sajat = entitasok.get(az)?.hozzajarulok.get(en);
+          return (sajat?.pont ?? 0) > 0 && sajat?.szerep !== 'passziv';
+        });
       })(),
 
       egyezmeny: dontes.egyezmeny ? { megszuletett: dontes.egyezmeny.megszuletett } : null

@@ -62,8 +62,12 @@ export function allapotOsszefoglaloja(allapot, javaslatok = new Map()) {
   // ----- JAVASLATOK ÉS EGYEZMÉNYEK -----
   const javaslatLista = rendez([...javaslatok.values()], (j) => j.azonosito).map((j) => ({
     azonosito: j.azonosito,
-    erintett: j.erintett ?? null,
-    muvelet: j.muvelet ?? null,
+    // ⭐⭐ MINDEN ÉRINTETT, sorrendhelyesen (2026-09-07). ⚠️ Nem elég az elsőt bevenni:
+    // egy csomag-javaslat második entitásán eltérhetne a két gép, és az ujjlenyomat
+    // **hallgatna róla** — pedig épp az az egy kérdése, hogy „ugyanazt látjuk-e?".
+    erintettek: (j.erintettek ?? []).map((r) => ({
+      entitas: r.entitas, muvelet: r.muvelet ?? null
+    })),
     statusz: j.statusz,
     tamogatok: j.tamogatok,
     ellenzok: j.ellenzok,

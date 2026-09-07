@@ -1,4 +1,4 @@
-// koino/js/allapot/allapotSzamitas.js
+﻿// koino/js/allapot/allapotSzamitas.js
 
 // Felelősség: az aláírt eseményekből KISZÁMOLNI a jelenlegi állapotot — mely entitások
 // léteznek, ki hova rendelt tudatpontot, mik az érvényes küszöbök.
@@ -29,7 +29,7 @@
 //
 // Használják: koino.js (a parancssori arc) és a javaslat/szavazat számítása.
 
-import { szabalyokErvenyesitese } from './szabalyok.js';
+import { szabalyokErvenyesitese, erintettek, elsoErintett } from './szabalyok.js';
 
 // ===================================
 // A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
@@ -57,6 +57,25 @@ import { szabalyokErvenyesitese } from './szabalyok.js';
  * @param {Array<Object>} esemenyek
  * @returns {Array<Object>} ugyanazok, determinisztikus sorrendben
  */
+/**
+ * Egy javaslat-entitás megjelenő címe.
+ *
+ * ⭐ Egy érintettnél: amit javasol (az új cím), vagy a művelet neve. Többnél a művelet és a
+ * darabszám — mert egy egyesítésnek nincs „egy" új címe.
+ *
+ * ⚠️ Ez MEGJELENÍTÉS, nem döntés: a végrehajtás mindig az `erintettek` listát olvassa.
+ */
+function javaslatCime(adat) {
+  const kik = erintettek(adat);
+  if (!kik.length) return 'Javaslat';
+  if (kik.length === 1) return kik[0].valtozas?.cim ?? kik[0].muvelet;
+
+  // Több érintett: a művelet(ek) és a darabszám. Ha vegyes, „Csomag"-ként olvasható.
+  const muveletek = [...new Set(kik.map((r) => r.muvelet))];
+  const nev = muveletek.length === 1 ? muveletek[0] : 'Csomag';
+  return nev + ' (' + kik.length + ' entitás)';
+}
+
 export function rendezettBemenet(esemenyek) {
   return [...esemenyek].sort((a, b) => {
     if (a.szerzo !== b.szerzo) return a.szerzo < b.szerzo ? -1 : 1;
@@ -332,7 +351,7 @@ export function allapotSzamitasa(esemenyek) {
     entitasok.set(entitasAzonosito, {
       azonosito: entitasAzonosito,
       tipus: javaslatE ? 'Javaslat' : (adat.tipus ?? 'Gondolat'),
-      cim: javaslatE ? (adat.valtozas?.cim ?? adat.muvelet ?? 'Javaslat') : adat.cim,
+      cim: javaslatE ? javaslatCime(adat) : adat.cim,
       szoveg: javaslatE ? (adat.indoklas ?? null) : (adat.szoveg ?? null),
 
       // ----- ⭐ A BESOROLÁS (Szakasz 5.4) -----
@@ -351,7 +370,7 @@ export function allapotSzamitasa(esemenyek) {
       // ⭐⭐ A JAVASLAT SZÜLŐJE AZ ÉRINTETT ENTITÁS (D27/1: „gondolatból ágazik ki").
       // Ettől kerül a gondolata mellé a hierarchikus rendezésben — külön szabály nélkül —,
       // és ettől folyik helyesen felfelé az ágazati tudatpont.
-      szulo: javaslatE ? (adat.erintett ?? null) : (adat.szulo ?? null),
+      szulo: javaslatE ? elsoErintett(adat) : (adat.szulo ?? null),
       meret: letrehozoEsemeny.adat.meret ?? 0,       // D26: a tárolási vállalás mértéke
       szerzo: letrehozoEsemeny.szerzo,
       letrehozva: letrehozoEsemeny.ido,

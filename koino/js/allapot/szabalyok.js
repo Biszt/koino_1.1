@@ -52,6 +52,81 @@ export const KATEGORIA_KORLAT = 3;
 export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 
 // ===================================
+// ⭐⭐ AZ ÉRINTETT ENTITÁSOK — TÖBB, NEM EGY (2026-09-07)
+// ===================================
+//
+// A prototípus `javaslat.js`-e így írja le: **`erintettEntitasok` egy TÖMB**, és minden
+// eleme `{ entitasId, entitasTipus, muvelet, modositasAdatok }`. ⭐⭐ Vagyis **a MŰVELET
+// ENTITÁSONKÉNTI**, nem javaslatonkénti — ez teszi lehetővé az egyesítést (két forrás, egy
+// eredmény) és a `Csomag` javaslatot (vegyes műveletek egy döntésben).
+//
+// A koino eddig EGY `erintett`-et ismert. Ez a fájl mostantól **mindkét alakot** olvassa.
+//
+// ⚠️⚠️ EGY MEZŐT SZÁNDÉKOSAN NEM VESZÜNK ÁT: az `entitasTipus`-t.
+//
+// A prototípusnak kellett, mert a Mongo-hivatkozás polimorf: a `refPath` abból tudja meg,
+// melyik kollekcióban keresse. ⭐ A koinóban viszont **a típus magában az entitásban van**
+// (`allapotSzamitas.js`) — ha az eseménybe is beírnánk, az egy MÁSODIK, aláírt, de
+// **hazudható** forrás lenne ugyanarról. *Ahol egy igazságnak két helye van, ott előbb-utóbb
+// két igazság lesz.* Ezt jelenti a „módosítsd, amit kell": a logikai kapcsolat átjön, a
+// tárolási kényszer nem.
+//
+// ⚠️ A RÉGI ESEMÉNYEK ÉRVÉNYESEK MARADNAK. Az aláírás a régi bájtokra szól — nem lehet
+// újraírni őket, és nem is szabad. A régi alak (`adat.erintett` + `adat.muvelet` +
+// `adat.valtozas`) ezért egy elemű listaként olvasódik be.
+
+/** A négy szerkesztési művelet — a prototípus enumja. */
+export const JAVASLAT_MUVELETEK = ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'];
+
+/**
+ * Egy javaslat-esemény érintettjei, EGYSÉGES alakban — akármelyik korban íródott.
+ *
+ * @param {Object} adat - a `Javaslat` esemény `adat` mezője
+ * @returns {Array<{entitas: string, muvelet: string, valtozas: Object|null}>}
+ */
+export function erintettek(adat) {
+  // ----- AZ ÚJ ALAK: lista -----
+  if (Array.isArray(adat?.erintettek)) {
+    return adat.erintettek
+      .filter((r) => typeof r?.entitas === 'string')
+      .map((r) => ({
+        entitas: r.entitas,
+        muvelet: r.muvelet ?? 'Modositas',
+        valtozas: r.valtozas ?? null
+      }));
+  }
+
+  // ----- A RÉGI ALAK: egyetlen érintett a legfelső szinten -----
+  if (typeof adat?.erintett === 'string') {
+    return [{
+      entitas: adat.erintett,
+      muvelet: adat.muvelet ?? 'Modositas',
+      valtozas: adat.valtozas ?? null
+    }];
+  }
+
+  return [];
+}
+
+/**
+ * Az ELSŐ érintett — a javaslat „gazdája".
+ *
+ * ⭐ MIÉRT KELL KIEMELNI EGYET? Mert két dolognak egyetlen értékre van szüksége:
+ *
+ *   · a **szelet-kulcs** (hova kerül az esemény a tárban) — az csak egy lehet;
+ *   · a **szülő**: a prototípus szerint *„a javaslat MINDIG az érintett entitás gyereke"*.
+ *
+ * ⚠️ A prototípus ezt töredékenként oldja meg (`Csomag` javaslatnál minden töredéknek saját
+ * szülője van). Amíg a töredék nincs megépítve, **az első érintett az elsődleges** — és ez
+ * a szabály itt van kimondva, nem szétszórva a hívókban.
+ *
+ * @returns {string|null}
+ */
+export function elsoErintett(adat) {
+  return erintettek(adat)[0]?.entitas ?? null;
+}
+
+// ===================================
 // A SZABÁLYOK ÉRVÉNYESÍTÉSE
 // ===================================
 
@@ -233,11 +308,51 @@ export function szabalyokErvenyesitese(esemenyek) {
       // eseményei szerint. Így az sem számít, mi történik később máshol: a jogosultság
       // a javaslat pillanatában eldőlt, és utólag nem írható át.
       if (e.tipus === 'Javaslat') {
-        const erintett = e.adat?.erintett;
-        const sajatPont = pontok.get(erintett) ?? 0;
+        const kik = erintettek(e.adat);
 
-        if (sajatPont <= 0) {
-          kivetel(e, 'a javaslattevőnek nincs tudatpontja az érintett gondolaton');
+        // ----- ⭐ LEGALÁBB EGY ÉRINTETT KELL -----
+        // A prototípus séma-validátora: *„Legalább egy érintett entitás megadása kötelező."*
+        if (!kik.length) {
+          kivetel(e, 'a javaslat nem nevezett meg érintett entitást');
+          continue;
+        }
+
+        // ----- ⭐ MINDEN ÉRINTETT KÜLÖNBÖZŐ -----
+        // Ugyanaz az entitás kétszer felsorolva nem két érintett — és a végrehajtásnál
+        // kétszer futna le rajta a művelet.
+        if (new Set(kik.map((r) => r.entitas)).size !== kik.length) {
+          kivetel(e, 'ugyanaz az entitás többször szerepel az érintettek közt');
+          continue;
+        }
+
+        // ⛔⛔ AZ ISMERETLEN MŰVELETET ITT SZÁNDÉKOSAN NEM DOBJUK EL.
+        //
+        // Kézenfekvő lenne (a prototípusban Mongoose-enum őrizte), és először meg is
+        // írtam — de **rossz**: az ismeretlen művelet nem szabálysértés, hanem a
+        // legvalószínűbben **egy újabb program-változat**, amit én még nem ismerek. Ha a
+        // szabály-réteg kidobná, a régebbi készüléken a javaslat **létre sem jönne**, az
+        // újabbon meg ott állna — vagyis a két gép **más javaslat-halmazt látna**, és épp
+        // ezt tiltja a szerkezet. ⭐ A koino inkább megmutatja a javaslatot, szavazni is
+        // lehet rá, és a végrehajtásnál mondja meg őszintén: *„ismeretlen művelet"*
+        // (`egyezmenyVegrehajtas.js`, `kihagyottak`) — **bejelent, nem bíráskodik** (D19).
+        // A `JAVASLAT_MUVELETEK` így nem kapu, hanem a MAI lista: azt mondja meg, mit
+        // tudunk végrehajtani.
+
+        // ----- ⭐⭐ ÉS A JOGOSULTSÁG: MINDEN ÉRINTETTEN KELL TUDATPONT -----
+        //
+        // A prototípus `javaslatJogosultsagService.js`-e szó szerint ezt mondja:
+        // *„Ellenőrzi, hogy a eember rendelkezik-e tudatponttal MINDEN érintett entitáson.
+        // Ha mindenhol van tudatpontja, jogosult szavazni/javaslatot létrehozni."*
+        //
+        // ⭐ Tehát ÉS, nem VAGY. Enélkül egy egyesítési javaslatot be lehetne adni úgy, hogy
+        // a másik gondolathoz semmi közöd — pedig az is megszűnne tőle.
+        //
+        // ⚠️ A „MIKORI állapot szerint?" kérdésre változatlan a válasz: a saját lánc, a
+        // javaslat ELŐTTI eseményei szerint. A jogosultság a javaslat pillanatában eldőlt,
+        // és utólag nem írható át.
+        const hianyzo = kik.find((r) => (pontok.get(r.entitas) ?? 0) <= 0);
+        if (hianyzo) {
+          kivetel(e, 'a javaslattevőnek nincs tudatpontja az egyik érintett entitáson');
         }
         continue;
       }

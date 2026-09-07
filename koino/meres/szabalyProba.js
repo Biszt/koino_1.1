@@ -156,6 +156,109 @@ proba('A pontját ELVEVŐ (0 pontos) sem tehet javaslatot', async () => {
   return a.kivetelek.length === 1 && a.kivetelek[0].tipus === 'Javaslat';
 });
 
+// ===== ⭐⭐ TÖBB ÉRINTETT: A JOGOSULTSÁG METSZET, NEM UNIÓ (2026-09-07) =====
+//
+// A prototípus `javaslatJogosultsagService.js`-e szó szerint ezt mondja: *„Ellenőrzi, hogy a
+// eember rendelkezik-e tudatponttal MINDEN érintett entitáson."* ⭐ Tehát ÉS, nem VAGY —
+// különben egy egyesítési javaslatot be lehetne adni úgy, hogy a másik gondolathoz semmi
+// közöd, pedig az is megszűnne tőle.
+
+/** Két gondolat, mindkettőnek MÁS gazdája — és egy javaslat, ami mindkettőt érinti. */
+async function ketGazda(kezdet) {
+  const gazdaA = await ujEember();
+  const gazdaB = await ujEember();
+  const a = await gazdaA.tesz('GondolatLetrehozas', { cim: 'A', meret: 10 }, kezdet);
+  const pA = await gazdaA.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 100 }, kezdet);
+  const b = await gazdaB.tesz('GondolatLetrehozas', { cim: 'B', meret: 10 }, kezdet);
+  const pB = await gazdaB.tesz('TudatpontRendezes', { entitas: b.azonosito, pont: 100 }, kezdet);
+  return { gazdaA, gazdaB, a, b, alap: [a, pA, b, pB] };
+}
+
+const ketErintett = (a, b) => [
+  { entitas: a.azonosito, muvelet: 'Egyesites', valtozas: null },
+  { entitas: b.azonosito, muvelet: 'Modositas', valtozas: { cim: 'X' } }
+];
+
+proba('⛔⛔ CSAK AZ EGYIKEN VAN PONTOM: a két entitást érintő javaslatom NEM számít', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const { gazdaA, a, b, alap } = await ketGazda(kezdet);
+
+  // A gazdája A-nak — B-hez semmi köze, mégis róla is döntene.
+  const j = await gazdaA.tesz('Javaslat',
+    { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
+
+  const all = allapotSzamitasa([...alap, j]);
+  return all.kivetelek.length === 1
+      && all.kivetelek[0].tipus === 'Javaslat'
+      && all.kivetelek[0].ok.includes('tudatpont');
+});
+
+proba('⭐ …ÉS HA MINDKETTŐN VAN, akkor számít — ez különbözteti meg a próbát a vaktól', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const { gazdaA, a, b, alap } = await ketGazda(kezdet);
+
+  // Ugyanaz az eset, EGYETLEN különbséggel: A gazdája B-re is tesz pontot.
+  const beszall = await gazdaA.tesz('TudatpontRendezes',
+    { entitas: b.azonosito, pont: 30 }, kezdet);
+  const j = await gazdaA.tesz('Javaslat',
+    { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
+
+  const all = allapotSzamitasa([...alap, beszall, j]);
+  const javaslatok = javaslatokSzamitasa(all.szamitok, all, kezdet + 10 * NAP);
+  return all.kivetelek.length === 0 && javaslatok.size === 1;
+});
+
+proba('⛔ ÜRES érintett-lista: nincs miről dönteni', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const { gazdaA, alap } = await ketGazda(kezdet);
+  const j = await gazdaA.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek: [] }, kezdet);
+
+  const all = allapotSzamitasa([...alap, j]);
+  return all.kivetelek.length === 1 && all.kivetelek[0].ok.includes('nem nevezett meg');
+});
+
+proba('⛔ UGYANAZ AZ ENTITÁS KÉTSZER: nem két érintett — a művelet kétszer futna rajta', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const { gazdaA, a, alap } = await ketGazda(kezdet);
+  const j = await gazdaA.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [
+      { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'X' } },
+      { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Y' } }
+    ]
+  }, kezdet);
+
+  const all = allapotSzamitasa([...alap, j]);
+  return all.kivetelek.length === 1 && all.kivetelek[0].ok.includes('többször');
+});
+
+proba('⭐⭐ ÉS A SZAVAZÁS UGYANEZT KÉRI: aki csak az egyiken van bent, annak a szavazata sem számít', async () => {
+  const kezdet = Date.UTC(2026, 0, 1);
+  const { gazdaA, gazdaB, a, b, alap } = await ketGazda(kezdet);
+
+  // A javaslatot olyan teszi, akinek MINDKETTŐN van pontja.
+  const jogos = await ujEember();
+  const p1 = await jogos.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 10 }, kezdet);
+  const p2 = await jogos.tesz('TudatpontRendezes', { entitas: b.azonosito, pont: 10 }, kezdet);
+  const kuszob = await jogos.tesz('ErtekJavaslat', {
+    entitas: a.azonosito,
+    ertekek: { elfogadasiKuszob: 51, reszveteliKuszob: 0, minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 }
+  }, kezdet);
+  const j = await jogos.tesz('Javaslat',
+    { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
+
+  // gazdaA CSAK A-n van bent → nem szavazhat; gazdaB CSAK B-n → ő sem.
+  const szA = await gazdaA.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Ellenez' }, kezdet);
+  const szB = await gazdaB.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Ellenez' }, kezdet);
+  const szJ = await jogos.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet);
+
+  const all = allapotSzamitasa([...alap, p1, p2, kuszob, j, szA, szB, szJ]);
+  const d = javaslatokSzamitasa(all.szamitok, all, kezdet + 10 * NAP).get(j.azonosito);
+
+  // ⭐ Egyetlen szavazó (a jogosult), és a nevező is EGY — a két gazda ki sem látszik.
+  return d.szavazok === 1 && d.tamogatok === 1 && d.ellenzok === 0 && d.nevezo === 1;
+});
+
 // ===== D19: BEJELENT, NEM BÜNTET =====
 
 proba('⭐ A szabálysértő esemény NEM tűnik el — a kivételek felsorolják, indoklással', async () => {

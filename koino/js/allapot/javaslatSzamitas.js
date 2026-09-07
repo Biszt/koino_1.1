@@ -1,4 +1,4 @@
-// koino/js/allapot/javaslatSzamitas.js
+﻿// koino/js/allapot/javaslatSzamitas.js
 
 // Felelősség: a javaslatok állapotának KISZÁMÍTÁSA az aláírt eseményekből — és ezzel
 // az EGYEZMÉNY megszületése.
@@ -32,6 +32,7 @@
 // Használják: koino.js (a parancssori arc) és az önpróbák.
 
 import { median } from './allapotSzamitas.js';
+import { erintettek } from './szabalyok.js';
 
 // ===================================
 // ALAPÉRTELMEZETT KÜSZÖBÖK
@@ -165,20 +166,35 @@ function idorendbe(szavazatok) {
  */
 function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
   // ----- 1. SZAVAZATOK MEGSZÁMOLÁSA -----
+  //
+  // ⛔⛔ CSAK A JOGOSULT SZAVAZAT SZÁMÍT (2026-09-07, mérésből derült ki).
+  //
+  // Eddig MINDEN szavazat beleszámolt, és a jogosultságot csak a felület nézte
+  // (`pakli.js`, `szavazhatok`). ⚠️ De *amit a számítás nem ellenőriz, az nem szabály,
+  // csak illemtan* — a másik gépen futó felület nem véd semmitől: egy kézzel írt
+  // `Szavazat` eseménnyel bárki dönthetett volna olyan gondolat sorsáról, amihez semmi
+  // köze. A prototípus `javaslatJogosultsagService.js`-e ugyanezt a feltételt kéri a
+  // szavazáshoz, mint a javaslattételhez.
+  //
+  // ⭐ A halmazt a hívó számolja MINDEN érintett entitásra (metszet), és menet közben
+  // újra — vagyis a jogosultság a LEZÁRÁS pillanatában érvényes állapot szerint dől el,
+  // ugyanúgy, mint a küszöböké. Aki közben kiszállt a gondolatból, annak a szavazata
+  // sem marad ott. *A szavazat NEM tűnik el: csak nem számít* (D19) — a `nevezo` és a
+  // felület továbbra is megmutatja, ki hol áll.
   let tamogatok = 0, ellenzok = 0, tartozkodok = 0;
-  for (const tipus of emberenkent.values()) {
+  for (const [szerzo, tipus] of emberenkent) {
+    if (!aktivHalmaz.has(szerzo)) continue;
     if (tipus === 'Tamogat') tamogatok++;
     else if (tipus === 'Ellenez') ellenzok++;
     else if (tipus === 'Tartozkodik') tartozkodok++;
   }
   const szavazok = tamogatok + ellenzok + tartozkodok;
 
-  // ----- 2. A RÉSZVÉTELI ARÁNY NEVEZŐJE: AKTÍV TULAJDONOSOK ∪ SZAVAZÓK -----
-  // A passzív figyelők kimaradnak (nem korlátozzák a döntést), de aki szavazott, az
-  // résztvevő — ezért az unió. Így a számláló mindig ⊆ a nevező.
-  const nevezoHalmaz = new Set(aktivHalmaz);
-  for (const szerzo of emberenkent.keys()) nevezoHalmaz.add(szerzo);
-  const nevezo = nevezoHalmaz.size;
+  // ----- 2. A RÉSZVÉTELI ARÁNY NEVEZŐJE: AZ AKTÍV TULAJDONOSOK -----
+  // A passzív figyelők kimaradnak (nem korlátozzák a döntést). ⭐ Unióra már nincs
+  // szükség: mivel csak a jogosult szavazat számít, a számláló amúgy is ⊆ a nevező —
+  // és aki nem jogosult, azzal nem is szabad rontani a részvételi arányt.
+  const nevezo = aktivHalmaz.size;
 
   // ----- 3. AZ ELFOGADÁS FELTÉTELE — EGÉSZ ARITMETIKÁVAL -----
   // Ahelyett, hogy százalékot számolnánk és kerekítenénk, kereszt-szorzunk:
@@ -266,25 +282,52 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
  *
  * @param {Object} javaslatEsemeny
  * @param {Array<Object>} szavazatok - a javaslat szavazat-eseményei (szűretlenül)
- * @param {Array<Object>} tudatpontok - az érintett entitás tudatpont-eseményei
- * @param {Array<Object>} ertekJavaslatEsemenyek - az érintett entitás érték javaslatai
+ * ===== ⭐⭐ TÖBB ÉRINTETT: A JOGOSULTSÁG METSZET (2026-09-07) =====
+ *
+ * A prototípus `javaslatJogosultsagService.js`-e szó szerint ezt mondja: *„Ellenőrzi, hogy
+ * a eember rendelkezik-e tudatponttal **MINDEN érintett entitáson**. Ha mindenhol van
+ * tudatpontja, jogosult **szavazni/javaslatot létrehozni**."*
+ *
+ * ⭐ Vagyis a szavazók köre a METSZET, nem az unió — és ugyanaz a feltétel, mint a
+ * javaslattételnél (`szabalyok.js`). Enélkül egy egyesítésnél az szavazhatna a másik
+ * gondolat sorsáról, akinek ahhoz semmi köze.
+ *
+ * @param {Array<Object>} tudatpontok - az érintett entitások tudatpont-eseményei
+ * @param {Array<Object>} ertekJavaslatEsemenyek - az érintett entitások érték javaslatai
+ * @param {Array<string>} erintettAzonositok - MINDEN érintett entitás azonosítója
  * @returns {{allas: Object, kuszobok: Object, kesoiSzavazatok: number}}
  */
-function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavaslatEsemenyek) {
+function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavaslatEsemenyek,
+                           erintettAzonositok) {
   const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek]);
 
   const emberenkent = new Map();      // szerző → a szavazata (a lezárás pillanatáig)
   const szavazatSorszam = new Map();  // szerző → az eddig figyelembe vett szavazat-sorszám
-  const tulajdonosok = new Map();     // szerző → { pont, szerep, sorszam }
+  // ⭐⭐ SZERZŐ + ENTITÁS a kulcs (2026-09-07), mert egy javaslat TÖBB entitást is érinthet.
+  const tulajdonosok = new Map();     // "szerző|entitás" → { pont, szerep, sorszam }
   const ertekJavaslatok = new Map();  // szerző → { ertekek, sorszam }
 
-  /** Az AKTÍV tulajdonosok az eddig feldolgozott tudatpont-eseményekből. */
+  /** Aktív tulajdonos-e valaki EGY adott entitáson? */
+  const aktivItt = (szerzo, entitas) => {
+    const adat = tulajdonosok.get(szerzo + '|' + entitas);
+    // Ugyanaz a szabály, mint az állapot-rétegben: 0 pont = nincs ott, a passzív
+    // figyelő pedig nem korlátozza a döntést.
+    return !!adat && adat.pont > 0 && adat.szerep === 'aktiv';
+  };
+
+  /**
+   * ⭐⭐ AZ AKTÍV TULAJDONOSOK — MINDEN érintett entitáson (a METSZET).
+   *
+   * A prototípus jogosultság-szabálya: *„rendelkezik-e tudatponttal MINDEN érintett
+   * entitáson"*. Egyetlen érintettnél ez pontosan a régi viselkedés; többnél a metszet.
+   */
   const aktivHalmaz = () => {
+    const jeloltek = new Set();
+    for (const kulcs of tulajdonosok.keys()) jeloltek.add(kulcs.slice(0, kulcs.indexOf('|')));
+
     const halmaz = new Set();
-    for (const [szerzo, adat] of tulajdonosok) {
-      // Ugyanaz a szabály, mint az állapot-rétegben: 0 pont = nincs ott, a passzív
-      // figyelő pedig nem korlátozza a döntést.
-      if (adat.pont > 0 && adat.szerep === 'aktiv') halmaz.add(szerzo);
+    for (const szerzo of jeloltek) {
+      if (erintettAzonositok.every((entitas) => aktivItt(szerzo, entitas))) halmaz.add(szerzo);
     }
     return halmaz;
   };
@@ -299,8 +342,14 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
   const kuszobokMost = () => {
     const ervenyesek = [];
     for (const [szerzo, bejegyzes] of ertekJavaslatok) {
-      const tulajdonos = tulajdonosok.get(szerzo);
-      if (tulajdonos && tulajdonos.pont > 0) ervenyesek.push(bejegyzes.ertekek);
+      // ⭐ A küszöbökbe annak a javaslata számít, aki TULAJDONOS — mindegy, aktív-e
+      // (a passzív figyelőnek is van véleménye a küszöbről). Több érintettnél itt is a
+      // metszet dönt: aki mindegyiken tulajdonos.
+      const tulajdonosMind = erintettAzonositok.every((entitas) => {
+        const adat = tulajdonosok.get(szerzo + '|' + entitas);
+        return !!adat && adat.pont > 0;
+      });
+      if (tulajdonosMind) ervenyesek.push(bejegyzes.ertekek);
     }
 
     const eredmeny = { ...ALAP_KUSZOBOK };
@@ -336,9 +385,12 @@ function lezarasigSzamitas(javaslatEsemeny, szavazatok, tudatpontok, ertekJavasl
       emberenkent.set(esemeny.szerzo, esemeny.adat.szavazat);
 
     } else if (esemeny.tipus === 'TudatpontRendezes') {
-      const eddigi = tulajdonosok.get(esemeny.szerzo);
+      // ⭐ A kulcs szerző + entitás: több érintettnél ugyanaz az ember mindegyiken külön
+      // tulajdonos, és mindegyiken külön „az utolsó nyer".
+      const kulcs = esemeny.szerzo + '|' + esemeny.adat.entitas;
+      const eddigi = tulajdonosok.get(kulcs);
       if (eddigi !== undefined && esemeny.sorszam <= eddigi.sorszam) continue;
-      tulajdonosok.set(esemeny.szerzo, {
+      tulajdonosok.set(kulcs, {
         pont: esemeny.adat.pont,
         szerep: esemeny.adat.szerep === 'passziv' ? 'passziv' : 'aktiv',
         sorszam: esemeny.sorszam
@@ -392,7 +444,11 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // A fajta dönti el, mi történik ELFOGADÁSKOR (D27). Ha hiányzik, szerkesztésinek
     // vesszük — ez a mai koino összes javaslata.
     const fajta = e.adat.fajta === 'altalanos' ? 'altalanos' : 'szerkesztesi';
-    const erintettAzonosito = e.adat.erintett;
+    // ⭐⭐ TÖBB ÉRINTETT (2026-09-07). Az ELSŐ az elsődleges — a szelet gazdája és a
+    // javaslat szülője (`szabalyok.js`: `elsoErintett`) —, de a döntés bemenete MINDEGYIK.
+    const kik = erintettek(e.adat);
+    const erintettAzonositok = kik.map((r) => r.entitas);
+    const erintettAzonosito = erintettAzonositok[0] ?? null;
     const erintett = allapot.entitasok.get(erintettAzonosito);
 
     // ----- 1. ⭐ A LEZÁRÁSIG SZÁMOLT ÁLLÁS -----
@@ -401,11 +457,14 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // kialakultak — nem az entitás mai mediánja (az az `erintett.kuszobok`, a
     // felületnek). Különben egy utólagos érték javaslat átírná a lezárt döntés
     // szabályát, akár visszamenőleg a döntési idejét is.
+    // ⭐ MINDEN érintett tudatpont- és érték javaslat-eseménye bemegy — a jogosultság
+    // metszetét a `lezarasigSzamitas` számolja belőlük.
     const { allas, kuszobok, kesoiSzavazatok } = lezarasigSzamitas(
       e,
       szavazatok.get(e.azonosito) ?? [],
-      tudatpontok.get(erintettAzonosito) ?? [],
-      ertekJavaslatok.get(erintettAzonosito) ?? []
+      erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
+      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
+      erintettAzonositok
     );
     const {
       tamogatok, ellenzok, tartozkodok, szavazok, nevezo,
@@ -428,8 +487,11 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       javaslat: e.azonosito,
       fajta,                                   // szerkesztési vagy általános (D27)
       erintett: erintettAzonosito,
-      muvelet: e.adat.muvelet,
-      valtozas: e.adat.valtozas ?? null,
+      erintettek: kik,
+      // ⚠️ A `muvelet`/`valtozas` az ELSŐ érintetté — összefoglaló, nem az igazság.
+      // A végrehajtás az `erintettek` tömböt járja, mert a művelet ENTITÁSONKÉNTI.
+      muvelet: kik[0]?.muvelet ?? null,
+      valtozas: kik[0]?.valtozas ?? null,
       letrehozo: e.szerzo,
       megszuletett: lezarasIdeje,
       pillanatkep: {
@@ -442,8 +504,9 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       azonosito: e.azonosito,
       fajta,                                   // 'szerkesztesi' | 'altalanos' (D27)
       erintett: erintettAzonosito,
-      muvelet: e.adat.muvelet,
-      valtozas: e.adat.valtozas ?? null,
+      erintettek: kik,
+      muvelet: kik[0]?.muvelet ?? null,        // összefoglaló (lásd az egyezménynél)
+      valtozas: kik[0]?.valtozas ?? null,
       indoklas: e.adat.indoklas ?? null,
       letrehozo: e.szerzo,
       letrehozva: e.ido,
