@@ -133,6 +133,36 @@ ki. ⏸️ Ha a gyökérre is ki kell terjeszteni, az külön döntés.
 **két szintet** kíván: a középső elköltözik, az alsó marad — és ilyenkor az alsó egy olyan
 szülőre mutatna, ami már a másik ágon van.
 
+
+### ✅ 2.1/d A TÜKÖR-ESET ÉS AZ ÉRTÉK JAVASLATOK (2026-09-08) — a különválás KEREK
+
+**A szimmetria bezárult.** A prototípus: *„Elfogadott javaslatnál az ELLENZŐK viszik a RÉGI
+állapotot; elvetettnél a TÁMOGATÓK a MÓDOSÍTOTTAT."*
+
+| A szavazás vége | Ki léphet külön | Mit visz | A főág |
+|---|---|---|---|
+| **elfogadva** | az **ellenzők** (akik kérték) | a **régi** cím/szöveg | a módosított |
+| **elvetve** | a **támogatók** (akik kérték) | a **módosított** cím/szöveg | ⛔ **változatlan** |
+
+⚠️ **Ez MÁSIK BELÉPÉSI PONT, nem elágazás a meglévőben:** az elvetett javaslatnak **nincs
+egyezménye**, tehát a végrehajtás nem indulhat abból. ⭐ A megoldás: a végrehajtás sora
+mostantól **az elvetett szerkesztési javaslatokat is** tartalmazza — ha van támogató, aki
+külön ágat kért. A sorrend közös: a **lezárás ideje** szerint, elfogadott és elvetett
+egyformán. *Ami korábban dőlt el, előbb hat.*
+
+⛔ **Amit az elvetett eset NEM tesz:** nem ír át semmit. A főág marad, ami volt — csak azok
+lépnek ki, akik a módosítást akarták.
+
+### ⭐⭐ ÉS AZ ÉRTÉK JAVASLATOK IS ÁTVÁNDOROLNAK
+
+*„Az érték javaslatok is mennek — ezért térhetnek el a két ág küszöbei."* A prototípus a
+pont-átvitel **után** viszi őket, mert érték javaslatot csak az adhat, akinek van tudatpontja
+az entitáson. A koinóban ugyanez **számítás**: az új ág küszöbei a **különválók** érték
+javaslatainak mediánja, a főágé pedig **újraszámolódik nélkülük**.
+
+⚠️ Ha a különválóknak nincs saját érték javaslata, az új ág a **forrás küszöbeit örökli** —
+jobb, mint az alapértelmezésre esni: abból indul, amit eddig ismert.
+
 ### ⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ — és mibe került
 
 A különvált ág **új entitás**, amihez nem tartozik esemény. Az azonosítója
@@ -149,11 +179,9 @@ azonosító-modell**.
 
 ### ⏸️ Ami a különválásból még hátravan
 
-- **A tükör-eset**: elvetett javaslatnál a **TÁMOGATÓK** viszik a módosított változatot. A
-  prototípusban ez „másik belépési pont" — a koinóban is az lesz, mert **elvetett
-  javaslatnál nincs egyezmény**, amiből a végrehajtás indulhatna.
+- ✅ **A tükör-eset** — **KÉSZ (2026-09-08)**, lásd 2.1/d.
 - ✅ **A leszármazottak szétosztása** — **KÉSZ (2026-09-08)**, lásd 2.1/c.
-- **Az érték javaslatok átvándorlása** — a két ág küszöbei ezért térhetnek el.
+- ✅ **Az érték javaslatok átvándorlása** — **KÉSZ (2026-09-08)**, lásd 2.1/d.
 - **Az egyesítés-változat** (a vesztes gondolat megmarad, ha van radikális ellenzője).
 
 ### 2.2 ⛔ Az egyezmény HELYE — `egyezmenyTarhelyId`

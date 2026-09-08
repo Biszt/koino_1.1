@@ -963,4 +963,131 @@ proba('⭐⭐ ÁRVA-ÁTKÖTÉS: ha a szülő ELKÖLTÖZIK, a maradó gyereke a f
     && k.kulonvalasok[0].leszarmazottak.marad === 1;
 });
 
+// ===================================
+// ⭐⭐⭐ A TÜKÖR-ESET: ELVETETT JAVASLAT (2026-09-08)
+// ===================================
+//
+// *„Elfogadott javaslatnál az ELLENZŐK viszik a RÉGI állapotot; elvetettnél a TÁMOGATÓK a
+// MÓDOSÍTOTTAT."* ⚠️ Az elvetett javaslatnak nincs egyezménye — ez MÁSIK belépési pont
+// ugyanabba a gépezetbe.
+
+/** Egy gondolat, ahol a javaslat ELBUKIK, és a támogató külön ágat kért. */
+async function tukorEset({ tamogatoKer = true } = {}) {
+  const gazda = await ujEember();         // ő ellenzi (és nyer)
+  const masodik = await ujEember();       // ő is ellenzi
+  const tamogato = await ujEember();      // ő javasol és támogat
+  const esemenyek = [];
+
+  const g = await gazda.tesz('GondolatLetrehozas',
+    { cim: 'EREDETI', szoveg: 'régi szöveg', meret: 100 }, KEZDET);
+  esemenyek.push(g);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 60 }, KEZDET));
+  esemenyek.push(await masodik.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 20 }, KEZDET));
+  esemenyek.push(await tamogato.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+
+  const javaslat = await tamogato.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas',
+                   valtozas: { cim: 'AMIT ŐK AKARTAK' } }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+
+  esemenyek.push(await tamogato.tesz('Szavazat', {
+    javaslat: javaslat.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: tamogatoKer
+  }, KEZDET + 2000));
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Ellenez' }, KEZDET + 2000));
+  esemenyek.push(await masodik.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Ellenez' }, KEZDET + 2000));
+
+  return { esemenyek, gondolat: g, javaslat, gazda, masodik, tamogato };
+}
+
+proba('⭐⭐⭐ ELVETETT JAVASLAT: a TÁMOGATÓ viszi a MÓDOSÍTOTT változatot külön ágra', async () => {
+  const e = await tukorEset();
+  const k = await kep(e.esemenyek);
+
+  const foag = k.allapot.entitasok.get(e.gondolat.azonosito);
+  const ujAg = k.allapot.entitasok.get(k.kulonvalasok[0]?.kulonvaltAg);
+
+  return k.javaslatok.get(e.javaslat.azonosito).statusz === 'elvetve'
+    && k.kulonvalasok.length === 1
+    && k.kulonvalasok[0].elvetett === true
+    // ⛔ A FŐÁG NEM VÁLTOZOTT: az elvetett javaslat nem ír át semmit.
+    && foag.cim === 'EREDETI'
+    && foag.osszesPont === 80
+    // ⭐ A támogató viszi, AMIT AKART — és a pontját is.
+    && ujAg.cim === 'AMIT ŐK AKARTAK'
+    && ujAg.szoveg === 'régi szöveg'
+    && ujAg.osszesPont === 10;
+});
+
+proba('⛔ HA A TÁMOGATÓ NEM KÉRT KÜLÖN ÁGAT, nem történik semmi', async () => {
+  const e = await tukorEset({ tamogatoKer: false });
+  const k = await kep(e.esemenyek);
+  return k.kulonvalasok.length === 0
+    && k.allapot.entitasok.get(e.gondolat.azonosito).osszesPont === 90;
+});
+
+proba('⛔⛔ A FOLYAMATBAN LÉVŐ javaslatnál MÉG NINCS különválás — a döntés nem dőlt el', async () => {
+  const e = await tukorEset();
+  const k = await kep(e.esemenyek, KEZDET + 3000);    // a döntési idő még nem telt le
+  return k.javaslatok.get(e.javaslat.azonosito).statusz === 'folyamatban'
+    && k.kulonvalasok.length === 0;
+});
+
+proba('⭐⭐ AZ ÉRTÉK JAVASLATOK IS ÁTVÁNDOROLNAK — ezért lehet más a két ág küszöbe', async () => {
+  // ⚠️ A prototípus a pont-átvitel UTÁN viszi át őket, mert érték javaslatot csak az adhat,
+  // akinek van tudatpontja az entitáson. Itt ugyanez számításként.
+  const gazda = await ujEember();
+  const masodik = await ujEember();
+  const ellenzo = await ujEember();
+  const esemenyek = [];
+
+  const g = await gazda.tesz('GondolatLetrehozas', { cim: 'EREDETI', meret: 100 }, KEZDET);
+  esemenyek.push(g);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 60 }, KEZDET));
+  esemenyek.push(await masodik.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 20 }, KEZDET));
+  esemenyek.push(await ellenzo.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
+
+  // ⭐ KÉT KÜLÖNBÖZŐ KÜSZÖB-ELKÉPZELÉS: a maradóké 51%, az ellenzőé 90%.
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+  esemenyek.push(await masodik.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+  esemenyek.push(await ellenzo.tesz('ErtekJavaslat', {
+    entitas: g.azonosito,
+    ertekek: { ...KUSZOBOK, elfogadasiKuszob: 90 }
+  }, KEZDET));
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÚJ' } }]
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await masodik.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await ellenzo.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Ellenez', kulonvalasIgeny: true }, KEZDET + 2000));
+
+  const k = await kep(esemenyek);
+  const foag = k.allapot.entitasok.get(g.azonosito);
+  const ujAg = k.allapot.entitasok.get(k.kulonvalasok[0].kulonvaltAg);
+
+  // ⭐ Az ellenző 90%-os elképzelése VELE MEGY; a főágon a két maradó 51%-a marad.
+  return ujAg.kuszobok.elfogadasiKuszob === 90
+    && ujAg.kuszobErtekelokSzama === 1
+    && foag.kuszobok.elfogadasiKuszob === 51
+    && foag.kuszobErtekelokSzama === 2;
+});
+
+proba('⭐ HA A KÜLÖNVÁLÓNAK NINCS ÉRTÉK JAVASLATA, a forrás küszöbeit örökli', async () => {
+  // ⚠️ Jobb, mint az alapértelmezésre esni: az új ág abból indul, amit eddig ismert.
+  const e = await kulonvalasEset([{ szavazat: 'Ellenez', kulonvalasIgeny: true }]);
+  const k = await kep(e.esemenyek);
+  const ujAg = k.allapot.entitasok.get(k.kulonvalasok[0].kulonvaltAg);
+
+  return ujAg.kuszobok.elfogadasiKuszob === KUSZOBOK.elfogadasiKuszob
+    && ujAg.kuszobok.minimumDontesiIdo === KUSZOBOK.minimumDontesiIdo;
+});
+
 export default futtatas;

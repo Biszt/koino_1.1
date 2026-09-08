@@ -36,7 +36,7 @@
 //
 // Használják: a `koino.js` állapot-képe és a `pakli.js`.
 
-import { szerkezetIgazitasa } from './allapotSzamitas.js';
+import { szerkezetIgazitasa, median } from './allapotSzamitas.js';
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
 
 // ===================================
@@ -140,6 +140,38 @@ function athelyezes(entitas, valtozas, entitasok) {
 
   entitas.szulo = ujSzulo;
   return { rendben: true, mezok: ['szulo'] };
+}
+
+/**
+ * ⭐ A KÜSZÖBÖK ÚJRASZÁMOLÁSA egy adott gazda-körre — a különváláshoz.
+ *
+ * *„Az érték javaslatok is mennek — ezért térhetnek el a két ág küszöbei."* A prototípus a
+ * pont-átvitel UTÁN viszi át a különválók érték javaslatait, mert **érték javaslatot csak
+ * az adhat, akinek van tudatpontja az entitáson**. Itt ugyanez számításként: az adott
+ * entitásra tett érték javaslatokból csak azoké számít, akik a megadott körbe tartoznak.
+ *
+ * ⚠️ Ha egyiküknek sincs érték javaslata, `null`-t adunk — a hívó ilyenkor a forrás
+ * küszöbeit örökíti tovább (jobb, mint az alapértelmezésre esni).
+ */
+function kuszobokKorre(allapot, entitasAzonosito, kor) {
+  const KUSZOB_NEVEK = ['elfogadasiKuszob', 'reszveteliKuszob', 'minimumDontesiIdo', 'maximumDontesiIdo'];
+  const halmaz = new Set(kor);
+  const ertekek = [];
+
+  for (const [kulcs, ertek] of allapot.ertekJavaslatok ?? []) {
+    const hatar = kulcs.lastIndexOf('|');
+    if (kulcs.slice(hatar + 1) !== entitasAzonosito) continue;
+    if (!halmaz.has(kulcs.slice(0, hatar))) continue;
+    ertekek.push(ertek);
+  }
+  if (!ertekek.length) return null;
+
+  const eredmeny = {};
+  for (const nev of KUSZOB_NEVEK) {
+    const szamok = ertekek.map((e) => e?.[nev]).filter((sz) => typeof sz === 'number');
+    if (szamok.length) eredmeny[nev] = median(szamok);
+  }
+  return { kuszobok: eredmeny, ertekelok: ertekek.length };
 }
 
 /**
@@ -358,6 +390,20 @@ async function kulonvalas(entitas, regi, kulonvalok, egyezmeny, allapot) {
     ujAg.osszesPont += adat.pont;
     entitas.osszesPont -= adat.pont;
     entitas.hozzajarulok.delete(szerzo);
+  }
+
+  // ----- ⭐ ÉS AZ ÉRTÉK JAVASLATOK IS ÁTVÁNDOROLNAK -----
+  // A különválók küszöb-elképzelései az ÚJ ágra; a főágé pedig újraszámolódik NÉLKÜLÜK.
+  // *Ettől lehet a két ágnak más küszöbe — és ez a lényeg, nem mellékhatás.*
+  const ujKuszobok = kuszobokKorre(allapot, entitas.azonosito, viszik.map((v) => v.szerzo));
+  if (ujKuszobok) {
+    ujAg.kuszobok = ujKuszobok.kuszobok;
+    ujAg.kuszobErtekelokSzama = ujKuszobok.ertekelok;
+  }
+  const foagKuszobok = kuszobokKorre(allapot, entitas.azonosito, maradok);
+  if (foagKuszobok) {
+    entitas.kuszobok = foagKuszobok.kuszobok;
+    entitas.kuszobErtekelokSzama = foagKuszobok.ertekelok;
   }
 
   allapot.entitasok.set(ujAzonosito, ujAg);
@@ -646,9 +692,34 @@ export async function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
   // ----- 1. AMIK EGYÁLTALÁN SZÁMÍTANAK -----
   const sorban = [];
   for (const j of javaslatok?.values() ?? []) {
-    if (!j.egyezmeny) continue;                        // nincs elfogadva
     if (j.fajta !== 'szerkesztesi') continue;          // ⭐ az általánosból nem következik semmi (D27)
-    sorban.push(j.egyezmeny);
+
+    if (j.egyezmeny) { sorban.push(j.egyezmeny); continue; }
+
+    // ⭐⭐ A TÜKÖR-ESET (2026-09-08): az ELVETETT javaslat is „végrehajtandó" lehet.
+    //
+    // *„Elfogadott javaslatnál az ELLENZŐK viszik a RÉGI állapotot; elvetettnél a TÁMOGATÓK
+    // a módosítottat"* — a prototípus szimmetriája. ⚠️ Csakhogy az elvetett javaslatnak
+    // **nincs egyezménye**, tehát a végrehajtás nem indulhat abból: ez egy MÁSIK belépési
+    // pont, ugyanabba a gépezetbe.
+    //
+    // ⛔ Ami itt NEM történik: az entitás nem változik. A főág marad, ami volt — csak
+    // azok lépnek ki, akik a módosítást akarták, és kértek külön ágat.
+    if (j.statusz !== 'elvetve') continue;             // még folyamatban: nincs teendő
+    const vannak = Object.values(j.erintettekKulonvaloi ?? {})
+      .some((x) => (x?.tamogatok ?? []).length);
+    if (!vannak) continue;
+
+    sorban.push({
+      javaslat: j.azonosito,
+      fajta: j.fajta,
+      erintettek: j.erintettek,
+      // ⭐ A „megszületett" itt a LEZÁRÁS ideje — ugyanaz a szám, amit az egyezmény visz,
+      // tehát a közös sorrendezés változatlanul működik.
+      megszuletett: j.lezarasIdeje,
+      kulonvalok: j.erintettekKulonvaloi,
+      elvetett: true
+    });
   }
 
   // ----- 2. ⭐ DETERMINISZTIKUS SORREND -----
@@ -740,6 +811,36 @@ async function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kiha
   }
 
   let eredmeny;
+
+  // ⭐⭐ AZ ELVETETT JAVASLAT TÜKÖR-ESETE: nincs módosítás, csak különválás.
+  // A TÁMOGATÓK viszik a MÓDOSÍTOTT változatot — azt, amit meg akartak szavaztatni.
+  if (egyezmeny.elvetett) {
+    if (muvelet !== 'Modositas') return { rendben: true, csendben: true };
+    const kik = egyezmeny.kulonvalok?.[resz.entitas]?.tamogatok ?? [];
+    if (!kik.length) return { rendben: true, csendben: true };
+
+    // ⭐ Az „új" változat: az entitás mai alakja + a javasolt változás. ⚠️ Ha a változás
+    // nem nevez meg mezőt, nincs miben különbözni — akkor nincs is miről különválni.
+    const ujValtozat = {
+      cim: typeof resz.valtozas?.cim === 'string' ? resz.valtozas.cim : entitas.cim,
+      szoveg: (typeof resz.valtozas?.szoveg === 'string' || resz.valtozas?.szoveg === null)
+        ? resz.valtozas.szoveg : entitas.szoveg
+    };
+    if (ujValtozat.cim === entitas.cim && ujValtozat.szoveg === entitas.szoveg) {
+      return { rendben: true, csendben: true };
+    }
+
+    const kv = await kulonvalas(entitas, ujValtozat, kik, egyezmeny, allapot);
+    if (kv?.rendben) kulonvalasok.push({ javaslat: egyezmeny.javaslat, elvetett: true, ...kv });
+    else if (kv) {
+      kihagyottak.push({
+        javaslat: egyezmeny.javaslat, erintett: resz.entitas,
+        muvelet: 'Kulonvalas', ok: kv.ok
+      });
+    }
+    return { rendben: true, csendben: true };
+  }
+
   if (muvelet === 'Modositas') {
     // ⭐ A RÉGI ÁLLAPOT A MÓDOSÍTÁS ELŐTT — ezt viszik a különválók. A prototípus is a
     // felülírás ELŐTT menti el (`regiAdatok`); utána már nem lenne visszafejthető.
@@ -748,7 +849,7 @@ async function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kiha
 
     // ⭐⭐ ÉS AKI ELLENEZTE, DE KÜLÖN ÁGAT KÉRT, AZ MOST LÉP KI (2026-09-08).
     // ⚠️ Csak SIKERES módosítás után: ha nem változott semmi, nincs miről különválni.
-    const kik = egyezmeny.kulonvalok?.[resz.entitas] ?? [];
+    const kik = egyezmeny.kulonvalok?.[resz.entitas]?.ellenzok ?? [];
     if (eredmeny.rendben && kik.length) {
       const kv = await kulonvalas(entitas, regi, kik, egyezmeny, allapot);
       if (kv?.rendben) kulonvalasok.push({ javaslat: egyezmeny.javaslat, ...kv });
@@ -769,6 +870,8 @@ async function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kiha
   } else {
     eredmeny = { rendben: false, ok: 'ismeretlen művelet: ' + muvelet };
   }
+
+  if (eredmeny.csendben) return eredmeny;
 
   if (eredmeny.rendben) {
     alkalmazottak.push({

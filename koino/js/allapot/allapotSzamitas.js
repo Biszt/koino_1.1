@@ -470,6 +470,10 @@ export function allapotSzamitasa(esemenyek) {
     idoEllentmondasok: idoEllentmondasokKeresese(ervenyesek),
     // ⭐⭐ MEDDIG ISMEREM KINEK A LÁNCÁT — a felszabadítás bizonyítékához (lásd lentebb).
     lancVegek: lancVegekSzamitasa(szamitok),
+    // ⭐ A NYERS ÉRTÉK JAVASLATOK: "szerző|entitás" → küszöb-négyes. ⚠️ A KÜLÖNVÁLÁSHOZ
+    // kell: a különválók saját küszöb-elképzelései átvándorolnak az új ágra, a maradókéi
+    // pedig újraszámolódnak nélkülük — *ezért térhetnek el a két ág küszöbei.*
+    ertekJavaslatok: new Map([...ertekJavaslatok.ertekek].map(([k, b]) => [k, b.ertek])),
     // ⭐⭐ A KIOSZTÁSI FŐKÖNYV: "szerző|entitás" → pont, FÜGGETLENÜL attól, hogy az entitás
     // létezik-e még. Ez a D42 bemondott összegének forrása — ugyanaz, amit a szabály-réteg
     // számol a láncból. ⚠️ Külön kell az entitások `hozzajarulok` térképétől: az arra

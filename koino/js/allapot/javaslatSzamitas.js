@@ -331,6 +331,22 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
  * @returns {{reszek: Array<Object>, lezarasIdeje: number, dontesiIdo: number,
  *            kuszobTeljesul: boolean, kesoiSzavazatok: number}}
  */
+/**
+ * Egy oldal különválói: akik így szavaztak ÉS kértek külön ágat.
+ *
+ * ⛔ A TARTÓZKODÓ SOHA nem szerepelhet — de erre külön szűrni sem kell: a hívó mindig
+ * `'Ellenez'`-t vagy `'Tamogat'`-ot ad. ⚠️ A `muveletek.js` a tartózkodónál amúgy is
+ * hamisra állítja az igényt; itt a **szavazat fajtája** zárja ki.
+ *
+ * ⭐ SORBA RENDEZVE, mert ez az egyezménybe kerül: minden gépen ugyanúgy kell kinéznie.
+ */
+function kulonvaloOldal(szavazatok, igenyek, fajta) {
+  return [...szavazatok]
+    .filter(([szerzo, sz]) => sz === fajta && igenyek.get(szerzo))
+    .map(([szerzo]) => szerzo)
+    .sort();
+}
+
 function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek) {
   const entitasok = kik.map((r) => r.entitas);
   const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek]);
@@ -405,10 +421,15 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       //
       // ⭐ SORBA RENDEZETT lista (nem `Map`), mert ez az egyezménybe kerül: minden gépen
       // ugyanúgy kell kinéznie, és sorosíthatónak kell lennie.
-      kulonvalok: [...reszSzavazatok.get(r.entitas)]
-        .filter(([szerzo, sz]) => sz === 'Ellenez' && kulonAgot.get(r.entitas).get(szerzo))
-        .map(([szerzo]) => szerzo)
-        .sort(),
+      // ⭐⭐ MINDKÉT OLDAL — mert a szimmetria a döntés kimenetétől függ:
+      //   · ELFOGADOTT javaslatnál az ELLENZŐK viszik a RÉGI változatot;
+      //   · ELVETETTNÉL a TÁMOGATÓK viszik a MÓDOSÍTOTTAT.
+      // ⭐ A döntés-réteg mindkét listát megadja, a végrehajtás a kimenet szerint választ:
+      // *a vesztes oldal léphet külön ágra.*
+      kulonvalok: {
+        ellenzok: kulonvaloOldal(reszSzavazatok.get(r.entitas), kulonAgot.get(r.entitas), 'Ellenez'),
+        tamogatok: kulonvaloOldal(reszSzavazatok.get(r.entitas), kulonAgot.get(r.entitas), 'Tamogat')
+      },
       allas: allasSzamitasa(javaslatEsemeny, reszSzavazatok.get(r.entitas),
         aktivHalmazItt(r.entitas), kuszobok)
     };
@@ -574,7 +595,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       erintettek: kik,
       // ⭐⭐ ÉS KI VÁLIK KÜLÖN, ÉRINTETTENKÉNT (2026-09-08). A végrehajtás ebből tudja
       // meg, kinek kell külön ágat nyitni a régi változattal.
-      kulonvalok: Object.fromEntries(reszek.map((r) => [r.entitas, r.kulonvalok ?? []])),
+      kulonvalok: Object.fromEntries(reszek.map((r) => [r.entitas, r.kulonvalok])),
       // ⚠️ A `muvelet`/`valtozas` az ELSŐ érintetté — összefoglaló, nem az igazság.
       // A végrehajtás az `erintettek` tömböt járja, mert a művelet ENTITÁSONKÉNTI.
       muvelet: kik[0]?.muvelet ?? null,
@@ -623,13 +644,16 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
         muvelet: r.muvelet,
         valtozas: r.valtozas,
         kuszobok: r.kuszobok,
-        kulonvalok: r.kulonvalok ?? [],
+        kulonvalok: r.kulonvalok,
         ...r.allas
       })),
 
       dontesiIdo,
       lezarasIdeje,
       statusz,
+      // ⭐ AZ ELVETETT javaslatnak nincs egyezménye — a tükör-eset (a TÁMOGATÓK
+      // különválása) ezért innen, a javaslatból indul.
+      erintettekKulonvaloi: Object.fromEntries(reszek.map((r) => [r.entitas, r.kulonvalok])),
       // Hány szavazat érkezett a lezárás UTÁN (nem számít bele). Nem büntetés és nem
       // vád: a koino bejelent, nem bíráskodik (D19) — a felület megmutathatja.
       kesoiSzavazatok,
