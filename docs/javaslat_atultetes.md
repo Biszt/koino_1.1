@@ -163,6 +163,31 @@ javaslatainak mediánja, a főágé pedig **újraszámolódik nélkülük**.
 ⚠️ Ha a különválóknak nincs saját érték javaslata, az új ág a **forrás küszöbeit örökli** —
 jobb, mint az alapértelmezésre esni: abból indul, amit eddig ismert.
 
+
+### ✅ 2.1/e AZ EGYESÍTÉS-VÁLTOZAT (2026-09-08) — a különválás TELJES
+
+Csaba modellje (`gepezet.md` 5. ábra) megépült, és ezzel a különválás minden ága kész.
+
+**A győztes: a FEJSZÁM dönt** — az az entitás viszi tovább az azonosítót, amelyiknek **több
+tudatpont-tulajdonosa van**. ⚠️ Ez **felváltotta** a korábbi „az első érintett nyeli be a
+többit" szabályt. ⭐ Holtversenynél az **első érintett** nyer: az a javaslattevő kimondott
+elsődlegese, minden gépen ugyanaz, és nem jutalmaz senkit.
+
+**Vesztesenként két út:**
+
+| | Mi történik |
+|---|---|
+| **nincs radikális ellenző** | a vesztes azonosítója **már nem kell**: minden tulajdonos pontja átvándorol, az entitás eltűnik |
+| **van radikális ellenző** | a vesztes **megmarad EREDETIBEN** — de csak a **radikálisok** pontjával; a támogatók, tartózkodók és **minden passzív** pontja a győztesre kerül |
+
+⭐⭐ **És a leszármazottak ugyanezzel a szabállyal, egyenként** — ehhez a
+`leszarmazottakSzetosztasa` **változtatás nélkül újrahasznosult**: akin nincs radikális pont,
+az a győzteshez megy; akin van, marad; ha mindkettő, **duplázódik** — és ott is a **fejszám**
+dönti el, ki tartja az eredeti azonosítót. *Ugyanaz a gépezet, két bemenettel.*
+
+⭐ A két ág itt is **össze van kötve** (`kulonvalasok`), tehát a kártya „Másik ág" füle az
+egyesítésnél is működik — külön munka nélkül.
+
 ### ⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ — és mibe került
 
 A különvált ág **új entitás**, amihez nem tartozik esemény. Az azonosítója
@@ -182,7 +207,7 @@ azonosító-modell**.
 - ✅ **A tükör-eset** — **KÉSZ (2026-09-08)**, lásd 2.1/d.
 - ✅ **A leszármazottak szétosztása** — **KÉSZ (2026-09-08)**, lásd 2.1/c.
 - ✅ **Az érték javaslatok átvándorlása** — **KÉSZ (2026-09-08)**, lásd 2.1/d.
-- **Az egyesítés-változat** (a vesztes gondolat megmarad, ha van radikális ellenzője).
+- ✅ **Az egyesítés-változat** — **KÉSZ (2026-09-08)**, lásd 2.1/e. ⭐ **A különválás ezzel teljes.**
 
 ### 2.2 ⛔ Az egyezmény HELYE — `egyezmenyTarhelyId`
 

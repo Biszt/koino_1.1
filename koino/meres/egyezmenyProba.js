@@ -313,9 +313,9 @@ async function egyesitesEset({ szulok = [null, null], gyerekhez = null } = {}) {
       { cim: 'FORRÁS ' + (i + 1), meret: 10, szulo: szulok[i] }, KEZDET);
     esemenyek.push(g);
     esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
-    // ⭐ A MÁSODIK forráson EGY MÁSIK ember is tart pontot — így mérhető, hogy a pontok
-    // emberenként összeadódnak, nem összemosódnak.
-    if (i === 1) {
+    // ⭐ AZ ELSŐ forráson EGY MÁSIK ember is tart pontot — így (a) mérhető, hogy a pontok
+    // emberenként összeadódnak, és (b) a FEJSZÁM szerint ez a forrás a győztes.
+    if (i === 0) {
       esemenyek.push(await masik.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 7 }, KEZDET));
     }
     esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
@@ -348,7 +348,7 @@ async function egyesitesEset({ szulok = [null, null], gyerekhez = null } = {}) {
   return { esemenyek, forrasok, gyerek, javaslat, gazda, masik };
 }
 
-proba('⭐⭐⭐ AZ ELSŐ FORRÁS ELNYELI A MÁSODIKAT — és a pontok EMBERENKÉNT összeadódnak', async () => {
+proba('⭐⭐⭐ A TÖBB GAZDÁJÚ FORRÁS NYER — és a pontok EMBERENKÉNT összeadódnak', async () => {
   const e = await egyesitesEset();
   const k = await kep(e.esemenyek);
   const elnyelo = k.allapot.entitasok.get(e.forrasok[0].azonosito);
@@ -1088,6 +1088,104 @@ proba('⭐ HA A KÜLÖNVÁLÓNAK NINCS ÉRTÉK JAVASLATA, a forrás küszöbeit 
 
   return ujAg.kuszobok.elfogadasiKuszob === KUSZOBOK.elfogadasiKuszob
     && ujAg.kuszobok.minimumDontesiIdo === KUSZOBOK.minimumDontesiIdo;
+});
+
+// ===================================
+// ⭐⭐⭐ EGYESÍTÉS: A FEJSZÁM ÉS A RADIKÁLIS ELLENZŐ (2026-09-08)
+// ===================================
+
+/**
+ * Két gondolat egyesítése, ahol megadható, kinek hány gazdája van, és ki ellenzi.
+ */
+async function egyesitesFejszamEset({ masodikGazdai = 1, radikalisEllenzo = false } = {}) {
+  const gazda = await ujEember();
+  const tamogato = await ujEember();
+  const ellenzo = await ujEember();
+  const tovabbiak = [];
+  for (let i = 0; i < masodikGazdai; i++) tovabbiak.push(await ujEember());
+  const esemenyek = [];
+
+  const forrasok = [];
+  for (const cim of ['ELSŐ', 'MÁSODIK']) {
+    const g = await gazda.tesz('GondolatLetrehozas', { cim, meret: 10 }, KEZDET);
+    esemenyek.push(g);
+    esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
+    esemenyek.push(await tamogato.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 10 }, KEZDET));
+    esemenyek.push(await ellenzo.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 5 }, KEZDET));
+    esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+    forrasok.push(g);
+  }
+  // ⭐ A MÁSODIK forrásra további gazdák — ettől lehet ő a fejszám-győztes.
+  for (const t of tovabbiak) {
+    esemenyek.push(await t.tesz('TudatpontRendezes',
+      { entitas: forrasok[1].azonosito, pont: 3 }, KEZDET));
+  }
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: forrasok.map((f, i) => ({
+      entitas: f.azonosito, muvelet: 'Egyesites',
+      valtozas: i === 0 ? { cim: 'EGYESÍTETT' } : null
+    }))
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await tamogato.tesz('Szavazat', { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(await ellenzo.tesz('Szavazat', {
+    javaslat: javaslat.azonosito, szavazat: 'Ellenez', kulonvalasIgeny: radikalisEllenzo
+  }, KEZDET + 2000));
+
+  return { esemenyek, forrasok, javaslat, gazda, tamogato, ellenzo, tovabbiak };
+}
+
+proba('⭐⭐⭐ A FEJSZÁM DÖNTI EL, MELYIK AZONOSÍTÓ MARAD — nem a felsorolás sorrendje', async () => {
+  // A MÁSODIK forrásnak több gazdája van (3+1=4 vs 3) → ő a győztes, pedig ő a második.
+  const e = await egyesitesFejszamEset({ masodikGazdai: 1 });
+  const k = await kep(e.esemenyek);
+
+  return k.allapot.entitasok.has(e.forrasok[0].azonosito) === false   // az ELSŐ olvadt be
+    && k.allapot.entitasok.get(e.forrasok[1].azonosito) !== undefined
+    // ⭐ …és a győztes viseli az egyesített címet, amit a javaslat mondott.
+    && k.allapot.entitasok.get(e.forrasok[1].azonosito).cim === 'EGYESÍTETT';
+});
+
+proba('⭐ …ÉS HOLTVERSENYNÉL AZ ELSŐ ÉRINTETT nyer — a próba nem vak', async () => {
+  // ⭐ EGYETLEN különbség: nincs plusz gazda a másodikon → 3 : 3 → az első nyer.
+  const e = await egyesitesFejszamEset({ masodikGazdai: 0 });
+  const k = await kep(e.esemenyek);
+
+  return k.allapot.entitasok.get(e.forrasok[0].azonosito) !== undefined
+    && k.allapot.entitasok.has(e.forrasok[1].azonosito) === false;
+});
+
+proba('⭐⭐⭐ RADIKÁLIS ELLENZŐVEL a VESZTES gondolat MEGMARAD — eredetiben', async () => {
+  // Csaba modellje: *„Ha voltak olyan ellenzők, akik meg szeretnék tartani az eredeti
+  // gondolatot, akkor megmarad a vesztes gondolat eredetiben, de a támogatók, tartózkodók
+  // és az összes passzív tulajdonos tudatpontjai átkerülnek a győztes gondolatra."*
+  const e = await egyesitesFejszamEset({ masodikGazdai: 0, radikalisEllenzo: true });
+  const k = await kep(e.esemenyek);
+
+  const gyoztes = k.allapot.entitasok.get(e.forrasok[0].azonosito);
+  const vesztes = k.allapot.entitasok.get(e.forrasok[1].azonosito);
+
+  return vesztes !== undefined                       // ⭐ NEM tűnt el
+    && vesztes.cim === 'MÁSODIK'                     // ⭐ …és EREDETIBEN maradt
+    // ⭐ Csak a radikális ellenző pontja maradt rajta.
+    && vesztes.osszesPont === 5
+    && vesztes.hozzajarulok.size === 1
+    && vesztes.hozzajarulok.has(e.ellenzo.szerzo)
+    // ⭐ A többiek pontja a győztesre került (10+10 a sajátja + 10+10 a vesztesről).
+    && gyoztes.cim === 'EGYESÍTETT'
+    && gyoztes.osszesPont === 45                     // 10+10+5 + 10+10
+    // ⭐ …és a két ág össze van kötve
+    && gyoztes.kulonvalasok?.some((x) => x.testverId === vesztes.azonosito);
+});
+
+proba('⛔ RADIKÁLIS IGÉNY NÉLKÜL viszont teljesen beolvad — a próba nem vak', async () => {
+  const e = await egyesitesFejszamEset({ masodikGazdai: 0, radikalisEllenzo: false });
+  const k = await kep(e.esemenyek);
+  return k.allapot.entitasok.has(e.forrasok[1].azonosito) === false
+    && k.allapot.entitasok.get(e.forrasok[0].azonosito).osszesPont === 50;   // minden pont
 });
 
 export default futtatas;

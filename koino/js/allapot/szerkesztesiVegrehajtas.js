@@ -576,24 +576,14 @@ function legkozelebbiKozosOs(entitasok, forrasAzonositok) {
  * ⚠️ Az ára: az egyesített gondolat az elnyelő **történetét folytatja** (szerző, létrehozás
  * ideje, mérete), nem a javaslattevőét — a prototípusban új entitás születik új szerzővel.
  */
-function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak) {
+async function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak, kulonvalasok = []) {
   const entitasok = allapot.entitasok;
-  const elnyelo = entitasok.get(kik[0].entitas);
 
-  if (!elnyelo) {
-    kihagyottak.push({
-      javaslat: egyezmeny.javaslat, erintett: kik[0].entitas, muvelet: 'Egyesites',
-      ok: 'az elnyelő entitás nem létezik (elfelejtették, vagy még nem ismerjük)'
-    });
-    return { rendben: false };
-  }
-
-  // ----- 1. A FORRÁSOK -----
-  const forrasAzonositok = new Set(kik.map((r) => r.entitas));
-  const forrasok = [];
-  for (const r of kik.slice(1)) {
+  // ----- 1. A JELENLÉVŐ FORRÁSOK -----
+  const jelenlevok = [];
+  for (const r of kik) {
     const e = entitasok.get(r.entitas);
-    if (e) forrasok.push(e);
+    if (e) jelenlevok.push(e);
     else {
       // ⚠️ A hiányzó forrás nem hiba (D19) — a többit attól még összevonjuk.
       kihagyottak.push({
@@ -602,12 +592,29 @@ function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak) {
       });
     }
   }
+  if (!jelenlevok.length) return { rendben: false };
 
-  // ----- 2. ⭐ A GYEREKEK ÖSSZEGYŰJTÉSE — MÉG A FORRÁSOK ELTŰNÉSE ELŐTT -----
+  // ----- 2. ⭐⭐ A GYŐZTES: A FEJSZÁM DÖNT (Csaba, 2026-09-08) -----
+  //
+  // *„Egyesítéskor az őrizze meg az id-jét, amelyiknek… — legyen csak fejszám."* Vagyis az
+  // az entitás viszi tovább az azonosítót, amelyiknek **több tudatpont-tulajdonosa van**.
+  // ⚠️ Ez felváltotta a korábbi „az ELSŐ érintett nyeli be a többit" szabályt.
+  //
+  // ⭐ HOLTVERSENYNÉL AZ ELSŐ ÉRINTETT nyer: az a javaslattevő kimondott elsődlegese, és
+  // minden gépen ugyanaz. *Valamit dönteni kell, és ez nem jutalmaz senkit.*
+  const elso = entitasok.get(kik[0].entitas);
+  let gyoztes = elso ?? jelenlevok[0];
+  for (const e of jelenlevok) {
+    if (e.hozzajarulok.size > gyoztes.hozzajarulok.size) gyoztes = e;
+  }
+
+  const forrasAzonositok = new Set(kik.map((r) => r.entitas));
+  const vesztesek = jelenlevok.filter((e) => e !== gyoztes);
+
+  // ----- 3. ⭐ A GYEREKEK ÖSSZEGYŰJTÉSE — MÉG A FORRÁSOK ELTŰNÉSE ELŐTT -----
   // ⛔ A SORREND ITT LÉNYEG: ha később gyűjtenénk, az árva-szabály már felvitte volna őket
-  // a NAGYSZÜLŐHÖZ — a prototípus épp ezért gyűjti a törlés előtt. Az egyesítésnél a
-  // gyerekek helye az ELNYELŐ, nem a nagyszülő: *ami a beolvasztott gondolat alatt volt,
-  // az az egyesített gondolat alá tartozik.*
+  // a NAGYSZÜLŐHÖZ. Az egyesítésnél a gyerekek helye a GYŐZTES: *ami a beolvasztott
+  // gondolat alatt volt, az az egyesített gondolat alá tartozik.*
   const atkotendok = [];
   for (const e of entitasok.values()) {
     if (e.szulo && forrasAzonositok.has(e.szulo) && !forrasAzonositok.has(e.azonosito)) {
@@ -615,56 +622,105 @@ function egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak) {
     }
   }
 
-  // ----- 3. A HELY: a legközelebbi közös ős (vagy amit a javaslat mond) -----
+  // ----- 4. A HELY: a legközelebbi közös ős (vagy amit a javaslat mond) -----
   const kimondottSzulo = kik[0].valtozas?.szulo;
   const ujSzulo = kimondottSzulo !== undefined
     ? kimondottSzulo
     : legkozelebbiKozosOs(entitasok, forrasAzonositok);
 
-  // ----- 4. ⭐ A PONTOK ÖSSZEOLVADNAK -----
-  // ⚠️ Ez SZÁMÍTÁS a már aláírt eseményekből, nem új aláírás: a pont ugyanannyi marad
-  // emberenként, csak arra az entitásra mutat, amivé a gondolat lett. *A gondolat
-  // beolvad, a rátett súly vele megy.*
-  for (const forras of forrasok) {
-    for (const [szerzo, adat] of forras.hozzajarulok) {
-      const meglevo = elnyelo.hozzajarulok.get(szerzo);
-      if (!meglevo) elnyelo.hozzajarulok.set(szerzo, { pont: adat.pont, szerep: adat.szerep });
-      else {
-        meglevo.pont += adat.pont;
-        // ⭐ Aki BÁRMELYIK forráson aktív volt, az az egyesítettben is aktív: a
-        // részvételt nem veheti el tőle, hogy máshol csak figyelt.
-        if (adat.szerep === 'aktiv') meglevo.szerep = 'aktiv';
-      }
+  /** Egy ember pontjának hozzáadása a győzteshez. */
+  const gyozteshez = (szerzo, adat) => {
+    const meglevo = gyoztes.hozzajarulok.get(szerzo);
+    if (!meglevo) gyoztes.hozzajarulok.set(szerzo, { pont: adat.pont, szerep: adat.szerep });
+    else {
+      meglevo.pont += adat.pont;
+      // ⭐ Aki BÁRMELYIK forráson aktív volt, az az egyesítettben is aktív: a részvételt
+      // nem veheti el tőle, hogy máshol csak figyelt.
+      if (adat.szerep === 'aktiv') meglevo.szerep = 'aktiv';
     }
-  }
-  elnyelo.osszesPont = [...elnyelo.hozzajarulok.values()].reduce((ossz, a) => ossz + a.pont, 0);
+  };
 
-  // ----- 5. A FORRÁSOK ELTŰNNEK -----
-  for (const forras of forrasok) {
-    entitasok.delete(forras.azonosito);
-    if (Array.isArray(allapot.elfelejtettek)) allapot.elfelejtettek.push(forras.azonosito);
+  // ----- 5. ⭐⭐⭐ VESZTESENKÉNT: BEOLVAD, VAGY MEGMARAD A RADIKÁLISOKKAL -----
+  //
+  // Csaba modellje (2026-09-07): *„Ha nem volt ellenzője, akkor a vesztes gondolat id-je
+  // már nem kell, és minden tudatpont-tulajdonos tudatpontja átvándorol a győztesre. Ha
+  // voltak olyan ellenzők, akik meg szeretnék tartani az eredeti gondolatot, akkor megmarad
+  // a vesztes gondolat eredetiben, de a támogatók, tartózkodók és az összes passzív
+  // tulajdonos tudatpontjai átkerülnek a győztes gondolatra."*
+  const beolvadtak = [];
+  const megmaradtak = [];
+
+  for (const vesztes of vesztesek) {
+    // A radikális ellenzők EZEN a forráson: ellenezték ÉS külön ágat kértek — és van is
+    // még pontjuk rajta.
+    const radikalisok = (egyezmeny.kulonvalok?.[vesztes.azonosito]?.ellenzok ?? [])
+      .filter((sz) => (vesztes.hozzajarulok.get(sz)?.pont ?? 0) > 0);
+
+    // ⭐ NINCS RADIKÁLIS ELLENZŐ → a vesztes azonosítója már nem kell.
+    if (!radikalisok.length) {
+      for (const [szerzo, adat] of vesztes.hozzajarulok) gyozteshez(szerzo, adat);
+      entitasok.delete(vesztes.azonosito);
+      if (Array.isArray(allapot.elfelejtettek)) allapot.elfelejtettek.push(vesztes.azonosito);
+      beolvadtak.push(vesztes.azonosito);
+      continue;
+    }
+
+    // ⭐ VAN RADIKÁLIS ELLENZŐ → a vesztes MEGMARAD EREDETIBEN, de csak az ő pontjaikkal.
+    const koltozok = [...vesztes.hozzajarulok.keys()].filter((sz) => !radikalisok.includes(sz));
+    for (const szerzo of koltozok) {
+      gyozteshez(szerzo, vesztes.hozzajarulok.get(szerzo));
+      vesztes.hozzajarulok.delete(szerzo);
+    }
+    vesztes.osszesPont = [...vesztes.hozzajarulok.values()].reduce((o, a) => o + a.pont, 0);
+
+    // ⭐ A leszármazottak ugyanezzel a szabállyal, EGYENKÉNT: akin nincs radikális pont, az
+    // a győzteshez megy; akin van, marad; ha mindkettő, DUPLÁZÓDIK (és ott a fejszám dönt).
+    const leszarmazottak = await leszarmazottakSzetosztasa(
+      allapot, vesztes, gyoztes, koltozok, egyezmeny);
+
+    // ⭐ A két ág össze van kötve — ugyanaz a „Másik ág" fül, mint a különválásnál.
+    const mikor = egyezmeny.megszuletett;
+    vesztes.kulonvalasok = [...(vesztes.kulonvalasok ?? []), {
+      testverId: gyoztes.azonosito, testverTipus: gyoztes.tipus, testverCim: gyoztes.cim,
+      agSzerep: 'mellekag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+    }];
+    gyoztes.kulonvalasok = [...(gyoztes.kulonvalasok ?? []), {
+      testverId: vesztes.azonosito, testverTipus: vesztes.tipus, testverCim: vesztes.cim,
+      agSzerep: 'foag', kulonvalasIdeje: mikor, egyezmeny: egyezmeny.javaslat
+    }];
+
+    megmaradtak.push({ entitas: vesztes.azonosito, radikalisok: radikalisok.length,
+      atkoltozott: koltozok.length, leszarmazottak });
+    kulonvalasok.push({
+      javaslat: egyezmeny.javaslat, egyesitesnel: true,
+      foag: gyoztes.azonosito, kulonvaltAg: vesztes.azonosito,
+      atvittEmberek: koltozok.length, leszarmazottak
+    });
   }
 
-  // ----- 6. A GYEREKEK AZ ELNYELŐHÖZ -----
+  gyoztes.osszesPont = [...gyoztes.hozzajarulok.values()].reduce((ossz, a) => ossz + a.pont, 0);
+
+  // ----- 6. A GYEREKEK A GYŐZTESHEZ (csak a teljesen beolvadt forrásoké) -----
   for (const gyerek of atkotendok) {
-    if (!entitasok.has(gyerek.szulo)) gyerek.szulo = elnyelo.azonosito;
+    if (!entitasok.has(gyerek.szulo)) gyerek.szulo = gyoztes.azonosito;
   }
 
   // ----- 7. AZ EGYESÍTETT CÍM ÉS SZÖVEG, ÉS A HELY -----
   const mezok = ['pontok'];
-  const cimCsere = modositas(elnyelo, kik[0].valtozas);
+  const cimCsere = modositas(gyoztes, kik[0].valtozas);
   if (cimCsere.rendben) mezok.push(...cimCsere.mezok);
-  if (ujSzulo !== elnyelo.szulo && ujSzulo !== elnyelo.azonosito) {
-    elnyelo.szulo = ujSzulo ?? null;
+  if (ujSzulo !== gyoztes.szulo && ujSzulo !== gyoztes.azonosito) {
+    gyoztes.szulo = ujSzulo ?? null;
     mezok.push('szulo');
   }
 
   alkalmazottak.push({
-    javaslat: egyezmeny.javaslat, erintett: elnyelo.azonosito,
+    javaslat: egyezmeny.javaslat, erintett: gyoztes.azonosito,
     muvelet: 'Egyesites', mezok,
-    beolvasztott: forrasok.map((f) => f.azonosito)
+    beolvasztott: beolvadtak,
+    megmaradt: megmaradtak.map((m) => m.entitas)
   });
-  return { rendben: true, eltunt: forrasok.length > 0 };
+  return { rendben: true, eltunt: beolvadtak.length > 0 || megmaradtak.length > 0 };
 }
 
 // ===================================
@@ -756,7 +812,8 @@ export async function szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok) {
     // tehát egyben kell végrehajtani. ⚠️ A szabály-réteg garantálja, hogy az egyesítés nem
     // keveredhet más művelettel (a prototípus Csomag-validátora), ezért elég az `every`.
     if (kik.length && kik.every((r) => r.muvelet === 'Egyesites')) {
-      const eredmeny = egyesites(allapot, egyezmeny, kik, alkalmazottak, kihagyottak);
+      const eredmeny = await egyesites(allapot, egyezmeny, kik, alkalmazottak,
+        kihagyottak, kulonvalasok);
       if (eredmeny?.eltunt) eltunt = true;
       continue;
     }
