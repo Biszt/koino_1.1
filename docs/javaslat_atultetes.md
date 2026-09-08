@@ -500,6 +500,59 @@ kettőt érdemes együtt átgondolni, mert ugyanaz a tudatpont-mozgatás van ala
 
 ---
 
+---
+
+## 5. ✅ AZ ÁLTALÁNOS EGYEZMÉNY ÉLŐ HATÁLYA — MEGÉPÍTVE (2026-09-08)
+
+A D27 óta nyitott tétel, és ⚠️ **ez volt az egyetlen, amihez a prototípusban sem volt kód** —
+tervezés, nem átültetés. A terv a [`gepezet.md`](gepezet.md) 6. ábráján áll; ebből most a
+**gépezet magja** épült meg.
+
+### Amit megépült
+
+**Egy esemény-alak, három jelentés** — ugyanaz az érv, mint a
+`meghivas`/`felhatalmazas`/`tanusitas` hármasnál:
+
+```
+Allasfoglalas → adat: { egyezmeny, allas, masik, indoklas }
+                allas: 'csatlakozik' | 'tiltakozik' | 'utkozik'
+                masik: csak ütközésnél — a másik egyezmény azonosítója
+```
+
+⭐⭐ **„Az utolsó nyer", e-emberenként.** Aki csatlakozott, majd tiltakozik, annál a
+tiltakozás számít. *Ettől lesz a hatály élő — külön visszavonás-mechanizmus nélkül*, ugyanúgy,
+ahogy a tudatpontnál. **A tényt a `pillanatkep` őrzi, a hatályt ez.**
+
+⛔⛔ **A HATÓKÖR A HELYBŐL (D27/4).** Állást az foglalhat, akinek tudatpontja van azon az
+entitáson, ami alatt az egyezmény áll — **vagy annak bármely leszármazottján**. A gyökérben:
+**bárki**, és ez nem külön szabály, hanem ugyanennek a széle.
+
+⭐⭐ **És itt a hierarchikus tudatpont JOGOSULTSÁGGÁ válik**: eddig a *fontosság* mutatója
+volt (mekkora egy ág súlya), most azt mondja meg, **ki szólhat hozzá**. *Nincs új
+mechanizmus, csak egy meglévő egy szinttel feljebb.*
+
+⛔ **Semmi nem következik belőle automatikusan** (D27/6): sem a tiltakozók többsége, sem az
+ütközés nem érvénytelenít semmit. **Bejelent, nem bíráskodik** (D19).
+
+⚠️ **A szerkesztési egyezménynek NINCS hatálya** — az egyszeri: eldőlt, végrehajtódott, kész.
+
+Kézi út: `allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]`.
+
+### ⏸️ Ami az általánosból még hátravan
+
+- **A csatlakozó mint AKTÍV résztvevő** (D27/3): aki csatlakozott, az döntés-alakító tettet
+  tett, tehát számítson a részvételi arányban — és **ő szavazzon** az egyezmény későbbi
+  módosításáról. *Ma a hatály kiszámolódik, de a döntés-réteg még nem veszi be.*
+- **Az örökölt küszöbök** (D27/1): ha egy entitásnak nincs saját érték javaslata, a
+  **szülőjéé** legyen érvényes, és csak azon túl az alapérték. ⭐ Ez minden entitásra jó
+  általánosítás, nem csak az egyezményre.
+- **A felfelé vitel** (Csaba, 2026-09-07): áthelyezési javaslattal egy felmenő alá, ahol
+  **újra javaslat lesz belőle**, és a tágabb kör **a saját küszöbeivel** szavaz róla.
+- **Az ütközés iránya**: ma **irányított állítás** („szerintem ez a kettő ellentmond").
+  Kölcsönösnek vegyük-e, még eldöntendő.
+
+---
+
 ## 4. Javasolt sorrend
 
 *A `Hiba` státusz kikerült a listáról: megmérve nem hiány (2.5).*

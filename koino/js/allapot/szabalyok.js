@@ -78,6 +78,9 @@ export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 /** A négy szerkesztési művelet — a prototípus enumja. */
 export const JAVASLAT_MUVELETEK = ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'];
 
+/** A három állásfoglalás (D27) — a `muveletek.js` ugyanezt használja. */
+export const ALLASOK = ['csatlakozik', 'tiltakozik', 'utkozik'];
+
 // ===================================
 // ⛔⛔ MELYIK MŰVELET MELYIK TÍPUSON — a prototípus tiltásai (2026-09-07)
 // ===================================
@@ -190,6 +193,25 @@ export function elsoErintett(adat) {
  * @param {Array<Object>} esemenyek - elágazás-mentesített események (lásd allapotSzamitas)
  * @returns {{szamitok: Array<Object>, kivetelek: Array<Object>, nemEllenorizhetok: Array<Object>}}
  */
+/**
+ * Leszármazottja-e `entitas` az `os`-nek — vagy maga az `os`?
+ *
+ * ⛔ Kör-őrrel: egy kör itt végtelen ciklus lenne. ⚠️ Csak a LÉTREHOZÁSKORI szülőkkel
+ * dolgozik (áthelyezés utáni állapotot nem lát) — ez tudatos: a szabály-réteg a
+ * **számítás előtt** fut, tehát nem tudhat a végrehajtás eredményéről.
+ */
+function leszarmazottE(entitas, os, szulok) {
+  const latott = new Set();
+  let jaro = entitas;
+  while (typeof jaro === 'string') {
+    if (jaro === os) return true;
+    if (latott.has(jaro)) return false;
+    latott.add(jaro);
+    jaro = szulok.get(jaro) ?? null;
+  }
+  return false;
+}
+
 export function szabalyokErvenyesitese(esemenyek) {
   const kivetelek = [];
   const nemEllenorizhetok = [];
@@ -201,9 +223,17 @@ export function szabalyokErvenyesitese(esemenyek) {
   // és nem is szabad: ez a réteg fut előbb. ⚠️ Ha a létrehozó eseményt még nem ismerjük,
   // a típus ISMERETLEN marad — és az nem vád, hanem hiány (D19).
   const entitasTipusok = new Map();
+  // ⭐ ÉS A SZÜLŐK — az állásfoglalás hatóköréhez (D27/4). Ugyanabból a forrásból: a
+  // létrehozó eseményből. ⚠️ A javaslat/egyezmény szülője az ELSŐ ÉRINTETT entitás.
+  const szulok = new Map();
   for (const e of esemenyek) {
-    if (e.tipus === 'GondolatLetrehozas') entitasTipusok.set(e.azonosito, e.adat?.tipus ?? 'Gondolat');
-    else if (e.tipus === 'Javaslat') entitasTipusok.set(e.azonosito, 'Javaslat');
+    if (e.tipus === 'GondolatLetrehozas') {
+      entitasTipusok.set(e.azonosito, e.adat?.tipus ?? 'Gondolat');
+      szulok.set(e.azonosito, e.adat?.szulo ?? null);
+    } else if (e.tipus === 'Javaslat') {
+      entitasTipusok.set(e.azonosito, 'Javaslat');
+      szulok.set(e.azonosito, elsoErintett(e.adat));
+    }
   }
 
   /** Egy eseményt kivételnek jelöl — de nem dob el semmit (D19). */
@@ -467,6 +497,61 @@ export function szabalyokErvenyesitese(esemenyek) {
         if (ismeretlenTipus) {
           nemEllenorizheto(e, 'az érintett entitás típusa ismeretlen (a létrehozó eseménye '
             + 'még nem érkezett meg), ezért a típus-tiltásokat nem tudtuk ellenőrizni');
+        }
+        continue;
+      }
+
+      // ===== 4. SZABÁLY: ÁLLÁSFOGLALÁS — A HELY HATÁROZZA MEG A HATÓKÖRT (D27/4) =====
+      //
+      // *„Egy egyezmény hatóköre azok köre, akik tudatpontot tettek arra az entitásra, ami
+      // alatt az egyezmény áll — vagy annak bármely leszármazottjára."*
+      //
+      // ⭐ EZ AZ, AMITŐL A POZÍCIÓNAK JELENTÉSE VAN: minél feljebb viszik az egyezményt,
+      // annál többen szólhatnak hozzá. A gyökérben **bárki** — és ez nem külön szabály,
+      // hanem ugyanennek a szabálynak a széle.
+      //
+      // ⭐⭐ ÉS ITT A HIERARCHIKUS TUDATPONT JOGOSULTSÁGGÁ VÁLIK: eddig a **fontosság**
+      // mutatója volt (mekkora egy ág súlya), most azt mondja meg, **ki szólhat hozzá**.
+      // *Nincs új mechanizmus, csak egy meglévő egy szinttel feljebb.*
+      if (e.tipus === 'Allasfoglalas') {
+        const allas = e.adat?.allas;
+        if (!ALLASOK.includes(allas)) {
+          kivetel(e, 'ismeretlen állás: ' + allas);
+          continue;
+        }
+        if (allas === 'utkozik' && typeof e.adat?.masik !== 'string') {
+          kivetel(e, 'az ütközés-jelölés nem nevezte meg a másik egyezményt');
+          continue;
+        }
+
+        const egyezmeny = e.adat?.egyezmeny;
+        if (typeof egyezmeny !== 'string') {
+          kivetel(e, 'az állásfoglalás nem nevezett meg egyezményt');
+          continue;
+        }
+
+        // ⚠️ A HELY: az egyezmény entitásának a SZÜLŐJE alatt van a hatókör. Ha még nem
+        // ismerjük az egyezmény létrehozó eseményét, nem tudunk ítélni — az hiány, nem
+        // tény (D19).
+        if (!szulok.has(egyezmeny)) {
+          nemEllenorizheto(e, 'nem ismerjük az egyezményt, ezért a hatókört sem tudtuk '
+            + 'ellenőrizni');
+          continue;
+        }
+
+        const hatokorGyokere = szulok.get(egyezmeny);
+
+        // ⭐ A GYÖKÉRBEN BÁRKI: ha az egyezmény nem lóg semmi alatt, a hatókör a teljes koino.
+        if (hatokorGyokere === null) continue;
+
+        // Van-e pontom a hatókör gyökerén VAGY bármely leszármazottján?
+        let jogosult = false;
+        for (const [entitas, pont] of pontok) {
+          if (pont <= 0) continue;
+          if (leszarmazottE(entitas, hatokorGyokere, szulok)) { jogosult = true; break; }
+        }
+        if (!jogosult) {
+          kivetel(e, 'nincs tudatpontod ezen az ágon, tehát nem foglalhatsz állást róla');
         }
         continue;
       }

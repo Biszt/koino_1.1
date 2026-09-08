@@ -518,6 +518,57 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   };
 }
 
+/**
+ * ⭐⭐⭐ AZ ÁLTALÁNOS EGYEZMÉNY HATÁLYA — hányan állnak mögötte MOST (D27/2).
+ *
+ * *„A TÉNY örök (ez az egyezmény akkor, ott, érvényesen megszületett), a HATÁLY viszont
+ * él."* A tényt a `pillanatkep` őrzi; ez itt a másik fele.
+ *
+ * ⭐ „AZ UTOLSÓ NYER", e-emberenként: aki csatlakozott, majd tiltakozik, annál a tiltakozás
+ * számít. *Ettől lesz a hatály élő, külön visszavonás-mechanizmus nélkül* — ugyanaz a
+ * minta, mint a tudatpontnál.
+ *
+ * ⛔ ÉS SEMMI NEM KÖVETKEZIK BELŐLE AUTOMATIKUSAN (D27/6): a tiltakozók többsége nem
+ * érvénytelenít, az ütközés nem old fel. **Bejelent, nem bíráskodik** (D19).
+ *
+ * ⚠️ Az ÜTKÖZÉS itt IRÁNYÍTOTT állítás: „szerintem ez a kettő ellentmond egymásnak."
+ * ⏸️ Hogy kölcsönösnek vegyük-e, még eldöntendő (`docs/gepezet.md` 6. ábra).
+ *
+ * @param {Array<Object>} esemenyek - a szabály szerint SZÁMÍTÓ események
+ * @returns {Map<string, Object>} egyezmény azonosító → { csatlakozok, tiltakozok, utkozesek }
+ */
+function hatalyokSzamitasa(esemenyek) {
+  // ⭐ Emberenként az utolsó: a saját láncban a nagyobb sorszám nyer — nem az óra.
+  const utolso = new Map();      // "szerző|egyezmény" → esemény
+  for (const e of esemenyek) {
+    if (e.tipus !== 'Allasfoglalas') continue;
+    const kulcs = e.szerzo + '|' + e.adat.egyezmeny;
+    const eddigi = utolso.get(kulcs);
+    if (!eddigi || e.sorszam > eddigi.sorszam) utolso.set(kulcs, e);
+  }
+
+  const hatalyok = new Map();
+  const uj = () => ({ csatlakozok: [], tiltakozok: [], utkozesek: [] });
+
+  for (const e of utolso.values()) {
+    const az = e.adat.egyezmeny;
+    if (!hatalyok.has(az)) hatalyok.set(az, uj());
+    const h = hatalyok.get(az);
+
+    if (e.adat.allas === 'csatlakozik') h.csatlakozok.push(e.szerzo);
+    else if (e.adat.allas === 'tiltakozik') h.tiltakozok.push(e.szerzo);
+    else h.utkozesek.push({ szerzo: e.szerzo, masik: e.adat.masik, indoklas: e.adat.indoklas ?? null });
+  }
+
+  // ⭐ SORBA RENDEZVE — a felsorolásoknak minden gépen ugyanúgy kell kinézniük.
+  for (const h of hatalyok.values()) {
+    h.csatlakozok.sort();
+    h.tiltakozok.sort();
+    h.utkozesek.sort((a, b) => (a.szerzo < b.szerzo ? -1 : a.szerzo > b.szerzo ? 1 : 0));
+  }
+  return hatalyok;
+}
+
 // ===================================
 // A JAVASLATOK KISZÁMÍTÁSA
 // ===================================
@@ -537,6 +588,8 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
   const szavazatok = szavazatokGyujtese(esemenyek);
   const tudatpontok = tudatpontokGyujtese(esemenyek);
   const ertekJavaslatok = ertekJavaslatokGyujtese(esemenyek);
+  // ⭐ AZ ÁLTALÁNOS EGYEZMÉNY HATÁLYA — hányan állnak mögötte MOST (D27/2).
+  const hatalyok = hatalyokSzamitasa(esemenyek);
   const javaslatok = new Map();
 
   for (const e of esemenyek) {
@@ -602,6 +655,11 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       valtozas: kik[0]?.valtozas ?? null,
       letrehozo: e.szerzo,
       megszuletett: lezarasIdeje,
+      // ⭐⭐ A HATÁLY — csak az ÁLTALÁNOS egyezménynél él (D27). A szerkesztésinél
+      // értelmetlen: az egyszeri, eldőlt és végrehajtódott.
+      hataly: fajta === 'altalanos'
+        ? (hatalyok.get(e.azonosito) ?? { csatlakozok: [], tiltakozok: [], utkozesek: [] })
+        : null,
       pillanatkep: {
         tamogatok, ellenzok, tartozkodok, szavazok, nevezo,
         tamogatottsagEzrelek, reszveteliEzrelek, bizonyossagiMutato,

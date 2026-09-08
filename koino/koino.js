@@ -65,7 +65,7 @@ import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVeg
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
-  javaslatLetrehozasa, szavazas, TUDATPONT_KERET
+  javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET
 } from './js/muveletek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
@@ -623,6 +623,26 @@ try {
       kiir('Érték javaslat beadva: ' + rovidAzonosito(entitas));
       kiir(SZIN.halvany + '⚠️ Ez JAVASLAT, nem parancs: az érvényes küszöb a tulajdonosok '
         + 'érték javaslatainak MEDIÁNJA (D4).' + SZIN.vege);
+      break;
+    }
+
+    // ⭐⭐ ÁLLÁSFOGLALÁS egy ÁLTALÁNOS egyezményről (D27). A tény örök, a hatály él.
+    case 'allast': {
+      const { javaslatok } = await kepetKeszit();
+      const egyezmeny = feloldas(ervek[0] ?? '', javaslatok.keys());
+      const allas = (ervek[1] ?? '').toLowerCase();
+      if (!['csatlakozik', 'tiltakozik', 'utkozik'].includes(allas)) {
+        throw new Error('Milyen állás? csatlakozik | tiltakozik | utkozik');
+      }
+      const masik = allas === 'utkozik'
+        ? feloldas(ervek[2] ?? '', javaslatok.keys())
+        : null;
+
+      await allasfoglalas(kornyezet, egyezmeny, allas, { masik, indoklas: ervek[3] ?? null });
+      kiir('Állásfoglalás rögzítve: ' + allas + SZIN.halvany
+        + ' (bármikor megváltoztathatod, az utolsó számít)' + SZIN.vege);
+      kiir(SZIN.halvany + '⚠️ Ebből semmi nem következik automatikusan — csak LÁTSZIK, '
+        + 'hányan állnak mögötte most.' + SZIN.vege);
       break;
     }
 
@@ -1935,6 +1955,7 @@ try {
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
+      kiir('           allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]');
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');

@@ -1188,4 +1188,130 @@ proba('⛔ RADIKÁLIS IGÉNY NÉLKÜL viszont teljesen beolvad — a próba nem 
     && k.allapot.entitasok.get(e.forrasok[0].azonosito).osszesPont === 50;   // minden pont
 });
 
+// ===================================
+// ⭐⭐⭐ AZ ÁLTALÁNOS EGYEZMÉNY ÉLŐ HATÁLYA (D27, 2026-09-08)
+// ===================================
+//
+// *„A TÉNY örök — a HATÁLY viszont él: hányan állnak mögötte MOST."*
+
+/** Egy gondolat + egy ELFOGADOTT általános javaslat alatta. */
+async function altalanosEset() {
+  const gazda = await ujEember();
+  const esemenyek = [];
+
+  const g = await gazda.tesz('GondolatLetrehozas', { cim: 'A TÉMA', meret: 10 }, KEZDET);
+  esemenyek.push(g);
+  esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 50 }, KEZDET));
+  esemenyek.push(await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET));
+
+  const javaslat = await gazda.tesz('Javaslat', {
+    fajta: 'altalanos',
+    erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas', valtozas: { cim: 'FOGADJUK EL EZT AZ ELVET' } }],
+    indoklas: 'mert így jó'
+  }, KEZDET + 1000);
+  esemenyek.push(javaslat);
+  esemenyek.push(await gazda.tesz('Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+
+  return { esemenyek, gondolat: g, javaslat, gazda };
+}
+
+proba('⭐⭐ A CSATLAKOZÁS ÉS A TILTAKOZÁS SZÁMÍT — a hatály él', async () => {
+  const e = await altalanosEset();
+  const csatlakozo = await ujEember();
+  const tiltakozo = await ujEember();
+
+  // ⭐ Mindkettőnek van pontja a témán → a hatókörbe tartoznak (D27/4).
+  for (const ki of [csatlakozo, tiltakozo]) {
+    e.esemenyek.push(await ki.tesz('TudatpontRendezes',
+      { entitas: e.gondolat.azonosito, pont: 5 }, KEZDET));
+  }
+  e.esemenyek.push(await csatlakozo.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'csatlakozik' }, KESOBB));
+  e.esemenyek.push(await tiltakozo.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'tiltakozik' }, KESOBB));
+
+  const k = await kep(e.esemenyek);
+  const h = k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly;
+
+  return h.csatlakozok.length === 1 && h.csatlakozok[0] === csatlakozo.szerzo
+    && h.tiltakozok.length === 1 && h.tiltakozok[0] === tiltakozo.szerzo
+    // ⛔ …és az entitás NEM változott: az általánosból nem következik semmi (D27).
+    && k.allapot.entitasok.get(e.gondolat.azonosito).cim === 'A TÉMA';
+});
+
+proba('⭐⭐ AZ UTOLSÓ NYER: aki csatlakozott, majd tiltakozik, az TILTAKOZÓ', async () => {
+  const e = await altalanosEset();
+  const ember = await ujEember();
+  e.esemenyek.push(await ember.tesz('TudatpontRendezes',
+    { entitas: e.gondolat.azonosito, pont: 5 }, KEZDET));
+  e.esemenyek.push(await ember.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'csatlakozik' }, KESOBB));
+  e.esemenyek.push(await ember.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'tiltakozik' }, KESOBB + 1000));
+
+  const k = await kep(e.esemenyek);
+  const h = k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly;
+
+  // ⭐ Egy ember, egy állás — nem gyűlnek, hanem felülírják egymást.
+  return h.csatlakozok.length === 0 && h.tiltakozok.length === 1;
+});
+
+proba('⛔⛔ A HATÓKÖR A HELYBŐL: akinek nincs pontja ezen az ágon, nem foglalhat állást', async () => {
+  const e = await altalanosEset();
+  const kivulallo = await ujEember();           // ⛔ semmi pontja ezen az ágon
+  e.esemenyek.push(await kivulallo.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'csatlakozik' }, KESOBB));
+
+  const k = await kep(e.esemenyek);
+  const h = k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly;
+
+  return h.csatlakozok.length === 0
+    && k.allapot.kivetelek.some((x) => x.tipus === 'Allasfoglalas'
+         && x.ok.includes('nincs tudatpontod'));
+});
+
+proba('⭐ …ÉS A LESZÁRMAZOTTON LÉVŐ PONT IS ELÉG — a hatókör LEFELÉ terjed', async () => {
+  // ⭐ EGYETLEN különbség: a pontja nem a témán, hanem annak egy GYEREKÉN van.
+  const e = await altalanosEset();
+  const ember = await ujEember();
+
+  const gyerek = await e.gazda.tesz('GondolatLetrehozas',
+    { cim: 'RÉSZKÉRDÉS', meret: 10, szulo: e.gondolat.azonosito }, KEZDET);
+  e.esemenyek.push(gyerek);
+  e.esemenyek.push(await ember.tesz('TudatpontRendezes',
+    { entitas: gyerek.azonosito, pont: 5 }, KEZDET));
+  e.esemenyek.push(await ember.tesz('Allasfoglalas',
+    { egyezmeny: e.javaslat.azonosito, allas: 'csatlakozik' }, KESOBB));
+
+  const k = await kep(e.esemenyek);
+  return k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly.csatlakozok.length === 1
+    && k.allapot.kivetelek.length === 0;
+});
+
+proba('⭐ AZ ÜTKÖZÉS-JELÖLÉS megnevezi a másikat — és semmit nem érvénytelenít (D19)', async () => {
+  const e = await altalanosEset();
+  const masik = await altalanosEset();
+  const esemenyek = [...e.esemenyek, ...masik.esemenyek];
+
+  esemenyek.push(await e.gazda.tesz('Allasfoglalas', {
+    egyezmeny: e.javaslat.azonosito, allas: 'utkozik',
+    masik: masik.javaslat.azonosito, indoklas: 'ez a kettő kizárja egymást'
+  }, KESOBB));
+
+  const k = await kep(esemenyek);
+  const h = k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly;
+
+  return h.utkozesek.length === 1
+    && h.utkozesek[0].masik === masik.javaslat.azonosito
+    // ⛔ A MÁSIK egyezmény érintetlen: az ütközés csak LÁTHATÓVÁ tesz.
+    && k.javaslatok.get(masik.javaslat.azonosito).egyezmeny !== null;
+});
+
+proba('⛔ A SZERKESZTÉSI egyezménynek NINCS hatálya — az egyszeri, eldőlt, végrehajtódott', async () => {
+  const e = await eset();
+  const k = await kep(e.esemenyek);
+  return k.javaslatok.get(e.javaslat.azonosito).egyezmeny.hataly === null;
+});
+
 export default futtatas;

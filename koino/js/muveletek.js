@@ -579,6 +579,65 @@ export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'akt
   );
 }
 
+
+// ===================================
+// ⭐⭐⭐ ÁLLÁSFOGLALÁS — az ÁLTALÁNOS egyezmény ÉLŐ marad (D27)
+// ===================================
+//
+// *„A TÉNY örök (ez az egyezmény akkor, ott, érvényesen megszületett), a HATÁLY viszont
+// él: hányan állnak mögötte MOST."*
+//
+// ⭐ HÁROM MŰVELET, EGY ALAK — ugyanaz az érv, mint a `meghivas`/`felhatalmazas`/`tanusitas`
+// hármasnál: közös váz, más jelentés. Ha az alak változik, egy helyen változik.
+//
+//   · **csatlakozik** — *„én is egyetértek ezzel"*, akár jóval a döntés után;
+//   · **tiltakozik** — *„én már nem"*: a támogatás visszavonása, ellenkezés;
+//   · **utkozik**    — *„ez a kettő ellentmond egymásnak"* (ilyenkor kell a `masik`).
+//
+// ⭐⭐ ÉS „AZ UTOLSÓ NYER", e-emberenként: aki csatlakozott, majd tiltakozik, annál a
+// tiltakozás számít. *Ettől lesz a hatály élő — külön visszavonás-mechanizmus nélkül*,
+// ugyanúgy, ahogy a tudatpontnál.
+//
+// ⛔ ÉS SEMMI AUTOMATIKUS NEM KÖVETKEZIK BELŐLE (D27/6): sem a tiltakozók többsége, sem az
+// ütközés nem érvénytelenít semmit. A rendszer **bejelent, nem bíráskodik** (D19) — a vita
+// helye az egyezmény alatti gyerek-gondolatokban van.
+//
+// ⚠️ A JOGOSULTSÁGOT a `szabalyok.js` őrzi: állást az foglalhat, akinek tudatpontja van
+// azon az entitáson, ami alatt az egyezmény áll — vagy annak bármely leszármazottján
+// (D27/4). *A hely határozza meg a hatókört.*
+
+/** A három állás — a `szabalyok.js` is innen veszi. */
+export const ALLASOK = ['csatlakozik', 'tiltakozik', 'utkozik'];
+
+/**
+ * Állást foglal egy általános egyezményről.
+ *
+ * @param {Object} kornyezet
+ * @param {string} egyezmeny - az egyezmény (= a javaslat) azonosítója
+ * @param {string} allas - 'csatlakozik' | 'tiltakozik' | 'utkozik'
+ * @param {Object} [beallitas] - { masik, indoklas }
+ */
+export async function allasfoglalas(kornyezet, egyezmeny, allas, beallitas = {}) {
+  if (!ALLASOK.includes(allas)) {
+    throw new Error('Érvénytelen állás: ' + allas + ' (csatlakozik | tiltakozik | utkozik)');
+  }
+  const { masik = null, indoklas = null } = beallitas;
+  if (allas === 'utkozik' && typeof masik !== 'string') {
+    throw new Error('Az ütközés-jelöléshez meg kell nevezni a MÁSIK egyezményt.');
+  }
+
+  const esemeny = await esemenyLekerese(kornyezet.tar, egyezmeny);
+  if (!esemeny) throw new Error('Nem ismerem ezt az egyezményt: ' + egyezmeny);
+
+  // ⭐ A szelet-kulcs maga az egyezmény: az állásfoglalások oda kerülnek, ahol az
+  // egyezmény és a döntés többi bemenete van.
+  return esemenytTeszek(
+    kornyezet, 'Allasfoglalas',
+    { egyezmeny, allas, masik: allas === 'utkozik' ? masik : null, indoklas },
+    { entitas: egyezmeny, horgonyozzunk: true }
+  );
+}
+
 // ===================================
 // ÉRTÉK JAVASLAT (küszöbök)
 // ===================================
