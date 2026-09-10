@@ -75,10 +75,29 @@ export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
 // újraírni őket, és nem is szabad. A régi alak (`adat.erintett` + `adat.muvelet` +
 // `adat.valtozas`) ezért egy elemű listaként olvasódik be.
 
-/** A négy szerkesztési művelet — a prototípus enumja. */
+/** A négy SZERKESZTÉSI művelet — a prototípus enumja. */
 export const JAVASLAT_MUVELETEK = ['Torles', 'Modositas', 'Egyesites', 'Athelyezes'];
 
-/** A három állásfoglalás (D27) — a `muveletek.js` ugyanezt használja. */
+// ⭐⭐ ÉS AZ ÖTÖDIK, AMI NEM SZERKESZTÉSI: az `Allaspont` (2026-09-10).
+//
+// Az ÁLTALÁNOS javaslat (D27) ugyanabban a `Javaslat` eseményben utazik, de **nem
+// változtat entitást** — az egyezmény MAGA az álláspont. Az érintett-eleme a **helyet**
+// nevezi meg (D27/1: „gondolatból ágazik ki"), a `valtozas.cim` pedig magát az álláspontot.
+//
+// ⚠️ MIÉRT NEM `Modositas`-ként adjuk be? Mert az **hazugság lenne a saját eseményünkben**:
+// azt mondaná, „írd át ennek a gondolatnak a címét", és csak a `fajta` mező akadályozná meg,
+// hogy végre is hajtódjon. *Ahol egy mező mást mond, mint amit teszünk, ott előbb-utóbb
+// valaki a mezőt hiszi el.* ⭐ És egy gyakorlati következménye is van: a `TILTOTT_MUVELETEK`
+// a SZERKESZTÉSRŐL szól (egyezményt nem lehet átírni, kategóriát nem lehet áthelyezni) —
+// egy álláspontot viszont **bármi alatt** fel lehet vetni, egy egyezmény alatt is. Külön
+// kivétel nélkül megoldja, hogy a művelet neve más.
+//
+// ⛔ Ezért NEM tesszük bele a `JAVASLAT_MUVELETEK`-be sem: az a lista azt mondja meg, mi
+// hajtódik VÉGRE. Az `Allaspont` sosem hajtódik végre — a harmadik fázis a `fajta` alapján
+// amúgy is átugorja az általánost (`szerkesztesiVegrehajtas.js`).
+export const ALLASPONT_MUVELET = 'Allaspont';
+
+/** A három állásfoglalás (D27) — ⭐ EZ AZ EGYETLEN FORRÁS; a `muveletek.js` innen importálja. */
 export const ALLASOK = ['csatlakozik', 'tiltakozik', 'utkozik'];
 
 // ===================================

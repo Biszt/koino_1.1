@@ -12,6 +12,7 @@
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
+import { ALLASPONT_MUVELET } from '../js/allapot/szabalyok.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -1206,7 +1207,7 @@ async function altalanosEset() {
 
   const javaslat = await gazda.tesz('Javaslat', {
     fajta: 'altalanos',
-    erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas', valtozas: { cim: 'FOGADJUK EL EZT AZ ELVET' } }],
+    erintettek: [{ entitas: g.azonosito, muvelet: ALLASPONT_MUVELET, valtozas: { cim: 'FOGADJUK EL EZT AZ ELVET' } }],
     indoklas: 'mert így jó'
   }, KEZDET + 1000);
   esemenyek.push(javaslat);

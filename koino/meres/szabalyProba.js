@@ -411,6 +411,39 @@ proba('⛔⛔ A SZERKESZTÉSI JAVASLAT/EGYEZMÉNY SZÖVEGÉT NEM LEHET ÁTÍRNI 
   return modositas !== null && modositas.ok.includes('Javaslat') && athelyezes === null;
 });
 
+proba('⭐⭐ …DE ÁLLÁSPONTOT FEL LEHET VETNI EGY EGYEZMÉNY ALATT (D27/4)', async () => {
+  // ⛔⛔ EZ A KÜLÖNBSÉG INDOKOLJA AZ `Allaspont` MŰVELETET (2026-09-10).
+  //
+  // A típus-tiltás a SZERKESZTÉSRŐL szól: egy egyezmény szövegét nem lehet átírni. Egy
+  // ÁLLÁSPONTOT viszont bármi alatt fel lehet vetni — egy egyezmény alatt is (a hatókör a
+  // helyből jön, D27/4), és az általánosból amúgy sem következik entitás-változás.
+  //
+  // ⚠️ Ha az általános javaslatot `Modositas`-ként adnánk be (ahogy először terveztem), ez
+  // az eset **kivételre futna**: a koino nem engedné, hogy a közösség állást foglaljon egy
+  // már megszületett egyezményről. *A hazug művelet-név nem csak csúnya lett volna — hibás.*
+  const kezdet = Date.UTC(2026, 0, 1);
+  const ki = await ujEember();
+  const g = await entitas(ki, 'Gondolat', 'Alap', kezdet);
+
+  const j = await ki.tesz('Javaslat', {
+    fajta: 'szerkesztesi',
+    erintettek: [{ entitas: g.e.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Jobb' } }]
+  }, kezdet);
+  const pontJavaslaton = await ki.tesz('TudatpontRendezes',
+    { entitas: j.azonosito, pont: 10 }, kezdet);
+  const alap = [...g.esemenyek, j, pontJavaslaton];
+
+  // Egyetlen különbség a fenti bukó esethez képest: a MŰVELET neve.
+  const allaspont = await ki.tesz('Javaslat', {
+    fajta: 'altalanos',
+    erintettek: [{ entitas: j.azonosito, muvelet: 'Allaspont', valtozas: { cim: 'EZT TARTSUK BE' } }]
+  }, kezdet);
+  const kivetel = allapotSzamitasa([...alap, allaspont])
+    .kivetelek.find((k) => k.azonosito === allaspont.azonosito) ?? null;
+
+  return kivetel === null;
+});
+
 proba('⛔ EGYESÍTENI CSAK AZONOS TÍPUSÚT lehet', async () => {
   const kezdet = Date.UTC(2026, 0, 1);
   const ki = await ujEember();

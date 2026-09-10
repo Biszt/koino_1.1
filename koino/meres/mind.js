@@ -27,6 +27,7 @@ import kapu from './kapuProba.js';
 import pakli from './pakliProba.js';
 import egyezmeny from './egyezmenyProba.js';
 import felszabaditas from './felszabaditasProba.js';
+import parancssor from './parancssorProba.js';
 import vizsga from './vizsgaProba.js';
 
 const PROBAK = [
@@ -43,6 +44,7 @@ const PROBAK = [
   { nev: 'pakli', futtat: pakli },
   { nev: 'egyezmeny', futtat: egyezmeny },
   { nev: 'felszabaditas', futtat: felszabaditas },
+  { nev: 'parancssor', futtat: parancssor },
   { nev: 'vizsga', futtat: vizsga }
 ];
 

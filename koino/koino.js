@@ -22,6 +22,8 @@
 //   node koino/koino.js torol <azonosító> ["indoklás"]
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
+//   node koino/koino.js altalanos "Az álláspont" <hely> ["indoklás"]  — ÁLTALÁNOS javaslat
+//   node koino/koino.js allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]
 //   node koino/koino.js felszabadit [buli]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
@@ -60,6 +62,7 @@ import {
 } from './js/kulcs/kulcsTar.js';
 import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
+import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
@@ -396,11 +399,12 @@ async function allapotKiirasa(napokMulva) {
   }
 
   // ----- JAVASLATOK -----
+  //
+  // ⭐⭐ KÉT FEJLÉC, mert KÉT FAJTA VAN (D27, és a CLAUDE.md névszabálya: „a javaslat szó
+  // önmagában gyűjtőnév"). A számok és a rész-sorok ugyanazok — a **gépezet ugyanaz** —,
+  // csak a következmény más, ezért egy rajzoló szolgálja ki mindkettőt.
   const folyamatban = [...javaslatok.values()];
-  kiir();
-  kiir(SZIN.vastag + 'SZERKESZTÉSI JAVASLATOK' + SZIN.vege);
-  if (!folyamatban.length) kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
-  for (const j of folyamatban) {
+  const javaslatKiirasa = (j) => {
     const kik = j.erintettek ?? [];
     const szin = j.statusz === 'elfogadva' ? SZIN.jo : j.statusz === 'elvetve' ? SZIN.nem : '';
     kiir('  ' + SZIN.halvany + j.azonosito.slice(0, 8) + SZIN.vege
@@ -433,6 +437,22 @@ async function allapotKiirasa(napokMulva) {
       + SZIN.vege);
     const enyem = sajatSzavazat(allapot.szamitok, j.azonosito, szerzo);
     if (enyem) kiir('      ' + SZIN.halvany + 'a szavazatod: ' + enyem + SZIN.vege);
+  };
+
+  const szerkesztesiek = folyamatban.filter((j) => j.fajta !== 'altalanos');
+  const altalanosak = folyamatban.filter((j) => j.fajta === 'altalanos');
+
+  kiir();
+  kiir(SZIN.vastag + 'SZERKESZTÉSI JAVASLATOK' + SZIN.vege);
+  if (!szerkesztesiek.length) kiir(SZIN.halvany + '  (még nincs)' + SZIN.vege);
+  for (const j of szerkesztesiek) javaslatKiirasa(j);
+
+  // ⭐⭐⭐ ÁLTALÁNOS JAVASLATOK (D27) — a közösség álláspontja. ⚠️ Ha elfogadják, **semmi
+  // nem hajtódik végre**; az egyezmény MAGA az álláspont, és él tovább (állásfoglalások).
+  if (altalanosak.length) {
+    kiir();
+    kiir(SZIN.vastag + 'ÁLTALÁNOS JAVASLATOK' + SZIN.vege);
+    for (const j of altalanosak) javaslatKiirasa(j);
   }
 
   // ----- ⭐ KÜLÖNVÁLÁSOK (2026-09-08) -----
@@ -456,13 +476,7 @@ async function allapotKiirasa(napokMulva) {
   }
 
   // ----- EGYEZMÉNYEK -----
-  const egyezmenyek = folyamatban.filter((j) => j.egyezmeny);
-  kiir();
-  kiir(SZIN.vastag + 'SZERKESZTÉSI EGYEZMÉNYEK' + SZIN.vege);
-  if (!egyezmenyek.length) {
-    kiir(SZIN.halvany + '  (még nincs — akkor születik, ha egy szerkesztési javaslatot elfogadnak)' + SZIN.vege);
-  }
-  for (const j of egyezmenyek) {
+  const egyezmenyKiirasa = (j) => {
     const e = j.egyezmeny;
     const p = e.pillanatkep;
     const kik = e.erintettek ?? [];
@@ -471,9 +485,47 @@ async function allapotKiirasa(napokMulva) {
         ? kik.map((r) => r.muvelet + ' „' + (allapot.entitasok.get(r.entitas)?.cim
             ?? (allapot.elfelejtettek.includes(r.entitas) ? '— már nincs —' : '?')) + '"').join(' + ')
         : e.muvelet + ': „' + (e.valtozas?.cim ?? '—') + '"') + SZIN.vege);
-    kiir('      ' + SZIN.halvany + 'megszületett: ' + new Date(e.megszuletett).toLocaleString('hu-HU')
+    kiir('      ' + SZIN.halvany + j.azonosito.slice(0, 8)
+      + ' · megszületett: ' + new Date(e.megszuletett).toLocaleString('hu-HU')
       + ' · ' + p.tamogatok + '/' + p.szavazok + ' támogató (' + szazalek(p.tamogatottsagEzrelek) + ')'
       + ' · részvétel ' + szazalek(p.reszveteliEzrelek) + SZIN.vege);
+
+    // ⭐⭐ A HATÁLY — csak az ÁLTALÁNOSNÁL van (D27). *A TÉNY örök (fent, a pillanatképben),
+    // a HATÁLY viszont ÉL: hányan állnak mögötte MOST.* ⚠️ Enélkül az `allast` parancs
+    // eredménye sehol nem látszana — a koino pedig **bejelent, nem hallgat** (D19).
+    if (e.hataly) {
+      const h = e.hataly;
+      kiir('      ' + SZIN.halvany + 'hatály MOST: ' + SZIN.vege
+        + SZIN.jo + '🤝 ' + h.csatlakozok.length + SZIN.vege + SZIN.halvany + ' csatlakozó · ' + SZIN.vege
+        + SZIN.nem + '✋ ' + h.tiltakozok.length + SZIN.vege + SZIN.halvany + ' tiltakozó' + SZIN.vege
+        + (h.utkozesek.length
+          ? SZIN.halvany + ' · ⚡ ' + h.utkozesek.length + ' ütközés-jelölés' + SZIN.vege
+          : ''));
+      for (const u of h.utkozesek) {
+        kiir('        ' + SZIN.halvany + '⚡ ütközik ezzel: ' + (u.masik ?? '?').slice(0, 8)
+          + (u.indoklas ? ' — ' + u.indoklas : '') + SZIN.vege);
+      }
+      kiir('      ' + SZIN.halvany + '⚠️ Ebből semmi nem következik automatikusan (D27/6) — '
+        + 'csak látszik, hányan állnak mögötte.' + SZIN.vege);
+    }
+  };
+
+  const szerkesztesiEgyezmenyek = szerkesztesiek.filter((j) => j.egyezmeny);
+  const altalanosEgyezmenyek = altalanosak.filter((j) => j.egyezmeny);
+
+  kiir();
+  kiir(SZIN.vastag + 'SZERKESZTÉSI EGYEZMÉNYEK' + SZIN.vege);
+  if (!szerkesztesiEgyezmenyek.length) {
+    kiir(SZIN.halvany + '  (még nincs — akkor születik, ha egy szerkesztési javaslatot elfogadnak)' + SZIN.vege);
+  }
+  for (const j of szerkesztesiEgyezmenyek) egyezmenyKiirasa(j);
+
+  if (altalanosEgyezmenyek.length) {
+    kiir();
+    kiir(SZIN.vastag + 'ÁLTALÁNOS EGYEZMÉNYEK' + SZIN.vege);
+    for (const j of altalanosEgyezmenyek) egyezmenyKiirasa(j);
+    kiir(SZIN.halvany + '  Állást foglalni: node koino/koino.js allast <egyezmény> '
+      + 'csatlakozik|tiltakozik|utkozik' + SZIN.vege);
   }
 }
 
@@ -657,6 +709,50 @@ try {
         kiir(SZIN.halvany + 'Most nincs felszabadítható pont.'
           + (kert === null ? ' (Türelmetlenül: felszabadit 0)' : '') + SZIN.vege);
       }
+      break;
+    }
+
+    // ⭐⭐⭐ ÁLTALÁNOS JAVASLAT (D27) — a KÖZÖSSÉG ÁLLÁSPONTJA, nem entitás-változtatás.
+    //
+    // ⚠️⚠️ EZ EGY 4. SZABÁLY-HIÁNY VOLT (megtalálva 2026-09-10, kód-átnézéssel): megépült az
+    // általános egyezmény élő hatálya és az `allast` parancs, de **nem volt mivel létrehozni
+    // azt az egyezményt, amiről állást lehet foglalni** — a `koino.js` mindkét javaslat-útja
+    // beégetve `fajta: 'szerkesztesi'`-t küldött. *„Legyen mindig kézi út."*
+    //
+    // ⛔ A HELY KÖTELEZŐ, és ez nem szigor, hanem a D27/4: **a hely határozza meg a
+    // hatókört** — az foglalhat állást, akinek tudatpontja van azon az entitáson, ami alatt
+    // az egyezmény áll, vagy annak bármely leszármazottján. Hely nélkül nem lenne kör, aki
+    // dönt róla; a javaslat szülője amúgy is az érintett entitás.
+    case 'altalanos': {
+      const { allapot } = await kepetKeszit();
+      const cim = ervek[0];
+      if (!cim) throw new Error('Mi az álláspont? altalanos <cím> <hely> [indoklás]');
+      if (!ervek[1]) {
+        throw new Error('Hol álljon? (azonosító) — a hely határozza meg, kik dönthetnek '
+          + 'róla és kik foglalhatnak állást (D27/4).');
+      }
+      const hely = feloldas(ervek[1], allapot.entitasok.keys());
+
+      const e = await javaslatLetrehozasa(kornyezet, {
+        fajta: 'altalanos',
+        erintettek: [{ entitas: hely, muvelet: ALLASPONT_MUVELET, valtozas: { cim } }],
+        indoklas: ervek[2] ?? null
+      });
+
+      // ⭐ Ugyanaz a lépés, mint a szerkesztésinél: a javaslat is entitás (D27/5), tudatpont
+      // nélkül a D14 szerint nem létezne.
+      const { allapot: kepUtan } = await kepetKeszit();
+      await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
+        szetosztottPontok(kepUtan, szerzo));
+
+      kiir('Általános javaslat beadva: ' + e.azonosito.slice(0, 8));
+      kiir(SZIN.halvany + 'Helye: „' + (allapot.entitasok.get(hely)?.cim ?? '?')
+        + '" — innen örökli a szavazói kört és a küszöbeit.' + SZIN.vege);
+      kiir(SZIN.halvany + '⚠️ Ha elfogadják, SEMMI nem hajtódik végre — az egyezmény MAGA '
+        + 'az álláspont, és ÉL: csatlakozni, tiltakozni, ütközést jelölni lehet hozzá.'
+        + SZIN.vege);
+      kiir(SZIN.halvany + 'Most szavazhatsz rá: node koino/koino.js szavaz '
+        + e.azonosito.slice(0, 8) + ' tamogat' + SZIN.vege);
       break;
     }
 
@@ -1955,6 +2051,7 @@ try {
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
+      kiir('           altalanos <álláspont> <hely> [indoklás]  (ÁLTALÁNOS javaslat — D27)');
       kiir('           allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]');
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');

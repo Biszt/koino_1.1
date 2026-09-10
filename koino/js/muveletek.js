@@ -21,7 +21,7 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET, elsoErintett } from './allapot/szabalyok.js';
+import { TUDATPONT_KERET, elsoErintett, ALLASOK } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import {
@@ -606,8 +606,12 @@ export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'akt
 // azon az entitáson, ami alatt az egyezmény áll — vagy annak bármely leszármazottján
 // (D27/4). *A hely határozza meg a hatókört.*
 
-/** A három állás — a `szabalyok.js` is innen veszi. */
-export const ALLASOK = ['csatlakozik', 'tiltakozik', 'utkozik'];
+// ⚠️⚠️ ITT KORÁBBAN EGY MÁSODIK DEFINÍCIÓ ÁLLT (javítva 2026-09-10). A komment azt
+// állította, hogy „a `szabalyok.js` is innen veszi" — a `szabalyok.js`-ben pedig ugyanez a
+// mondat állt fordítva. **Két lista, két komment, egyik sem igaz.** A szabályt a SZÁMÍTÁS
+// őrzi, ezért a forrás is ott van; ez a fájl onnan importálja, és tovább is adja, hogy a
+// hívóknak (`koino.js`) ne kelljen két helyről szedniük.
+export { ALLASOK };
 
 /**
  * Állást foglal egy általános egyezményről.
