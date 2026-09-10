@@ -349,125 +349,191 @@ ezért írjuk le, ne csússzon be észrevétlenül.*
 
 ---
 
-## 6. ⏸️ TERV: AZ ÁLTALÁNOS JAVASLAT → EGYEZMÉNY
+## 6. ⏸️ TERV: AZ ALKOTMÁNY — a közösség álláspontja, saját entitás-típussal
 
-> A D27 leírja, mit kell tudnia; kód nincs hozzá **sem a prototípusban** — ez tervezés, nem
-> átültetés. Az alábbi a javaslatom, a fenti gépezetre ráépítve.
+> ⛔⛔ **EZ FELVÁLTJA A KORÁBBI „ÁLTALÁNOS JAVASLAT → EGYEZMÉNY" TERVET (Csaba, 2026-09-10):**
+> *„Az általános javaslat teljesen más, mint a szerkesztési javaslat, ezért legyen külön
+> entitás típus. Legyen inkább **alkotmány** a neve."*
+>
+> A D27 **szerkesztési** ága érvényes marad; az **általános** ága ezzel tárgytalan.
+
+### A) A KÉT GÉPEZET — és miért nem lehet egy
+
+A koinóban mostantól **kétféle igazság** van, és a különbség nem árnyalat:
+
+| | **Szerkesztési javaslat** | **Alkotmány** |
+|---|---|---|
+| Mifajta állítás | **esemény**: megtörtént, egy pillanatban, véglegesen | **állapot**: igaz MOST, ameddig igaz |
+| Lezárás | van (min/max döntési idő, bizonyossági mutató) | ⛔ **nincs** |
+| Küszöb | a tulajdonosok érték javaslatainak **mediánja** (D4) | ⛔ **rögzített**: 2/3 és 1/3 |
+| Nevező | aktív tulajdonosok ∪ szavazók | **a szülő ÖSSZES tulajdonosa, a passzívak is** |
+| A hallgatás | nem korlátoz | ⛔ **NEM-et jelent** |
+| Elfogadás után | végrehajtódik, és kész | **él**: a státusz bármikor visszafordulhat |
+
+⭐⭐ **És ettől nem lesz idegen test a koinóban, mert van már pontosan ilyen gépezet: a
+TUDATPONT.** „Emberenként az utolsó nyer, az állapot a mostani összeg, nincs határidő, mindig
+ideiglenes." **Az alkotmány ugyanez, egy 2/3-os próbával a tetején** — nem új gépezet, hanem
+egy meglévő új szerepben. *(Ugyanaz a minta, mint amikor a hierarchikus tudatpont
+jogosultsággá vált.)*
+
+⭐ **A típus olcsó:** az `Alkotmany` ugyanúgy a `GondolatLetrehozas` eseményből születik, mint
+a `Kategoria` és a `GondolatTipus` — az `adat.tipus` különbözteti meg (`szabalyok.js`:
+`ENTITAS_TIPUSOK`). **Nem kell új esemény-fajta**, tehát egyetlen meglévő tár sem évül el.
+
+### B) A STÁTUSZ — egyetlen mérce, két küszöb
+
+⭐ **Az ellenzők száma NEM szerepel a számításban.** Csaba javította a saját első
+megfogalmazását (*„azt írtam korábban, hogy akkor változik vissza, ha 2/3-ad ellenzést kap, de
+az 1/3 alatti támogatási küszöb átfogóbban kezeli az eseteket"*) — így **egy szám dönt**: a
+támogatottság a teljes körhöz mérve.
+
+```mermaid
+stateDiagram-v2
+    state "ALKOTMÁNYI JAVASLAT" as J
+    state "ALKOTMÁNY" as A
+
+    [*] --> J: létrehozás (Alkotmany típus) + tudatpont
+    J --> A: a támogatottság eléri a 2/3-ot
+    A --> J: a támogatottság 1/3 ALÁ esik
+    J --> J: 1/3 és 2/3 között HELYBEN marad, ami volt
+    A --> A: 1/3 és 2/3 között HELYBEN marad, ami volt
+    J --> [*]: senki nem tart rajta tudatpontot (D14)
+```
+
+⚠️ **A sáv (1/3 – 2/3) HISZTERÉZIS, és ára van:** az állapot **út-függő** lesz — nem elég a
+mai számokat összeadni, végig kell játszani, mikor lépte át a küszöböket. Determinisztikus
+(a sorrend rögzített), tehát két gép ugyanoda jut — de **újrajátszás kell, nem összeadás**.
+⭐ Csaba ezt vállalta, és jó okkal: enélkül egy alkotmány a küszöb körül **oda-vissza
+billegne**, és minden billenés hír lenne.
+
+⛔ **A sáv CSAK HELYBEN véd.** Áthelyezés után nincs hiszterézis: ott a szigorú 2/3-os próba
+fut újra (lásd D).
+
+### C) A KÖR — ki számít, és ki nem
+
+⛔⛔ **A nevező a MOSTANI szülő SAJÁT tudatpont-tulajdonosai** (Csaba: *„csak a szülő
+sajátjai"*) — **nem** a leszármazottaké. ⭐ Ez felváltja a D27/4 „lefelé terjedő hatókör"
+szabályát, és egy csapdát is bezár: **ugyanaz a halmaz adja a számlálót és a nevezőt**, tehát
+nem lehet két kör egy gépezetben.
+
+⛔ **A passzívak IS beleszámítanak** — Csaba kimondása: *„egy alkotmánynak akkor lesz súlya, ha
+a passzívak is beleszámolódnak."* ⚠️ Ez **megfordít** egy eddigi elvet (*„a passzív figyelő nem
+korlátozza a döntést"*) — de csak itt, és ez a megfordítás **maga a súly**: az alkotmányt nem
+lehet csendben megszavazni.
+
+⛔ **Tartózkodás nincs** (Csaba: *„nem látom értelmét, azt akár ki is vehetjük innen"*) — a
+nem-támogatás úgyis a 2/3 ellen van, tehát a „Tartózkodom" csak azt a látszatot keltené, hogy
+tettünk valamit.
 
 ```mermaid
 flowchart TD
-    G["egy GONDOLAT alatt"] --> J["ÁLTALÁNOS javaslat<br/>fajta: altalanos"]
-    J --> SZAV["SZAVAZÁS<br/>ugyanaz a gépezet:<br/>küszöb, medián, részvétel,<br/>bizonyosság, döntési idő"]
-    SZAV -->|"elfogadva"| EGY["ÁLTALÁNOS EGYEZMÉNY<br/>SEMMI nem hajtódik végre<br/>az egyezmény MAGA az álláspont"]
+    SZ["A MOSTANI SZÜLŐ"] --> T["a szülő SAJÁT<br/>tudatpont-tulajdonosai"]
+    T --> AK["aktív"]
+    T --> PA["passzív"]
+    AK --> N["A NEVEZŐ<br/>MIND, a passzívak is"]
+    PA --> N
 
-    EGY --> ELO["és ÉLŐ marad"]
-    ELO --> CS["csatlakozás<br/>én is egyetértek"]
-    ELO --> TI["tiltakozás<br/>én már nem"]
-    ELO --> UT["ütközés-jelölés<br/>ez a kettő ellentmond"]
+    V["SZAVAZATOK<br/>támogat vagy ellenez"] --> SZUR{"a szavazó a MOSTANI<br/>szülőn is tulajdonos?"}
+    SZUR -->|"nem"| KI["nem számít<br/>de a szavazat MEGMARAD"]
+    SZUR -->|"igen"| SZAML["A SZÁMLÁLÓ:<br/>csak a TÁMOGATÓK"]
 
-    CS --> H["A HATÁLY:<br/>hányan állnak mögötte MOST"]
-    TI --> H
-    UT --> H
-    H --> L["csak LÁTHATÓVÁ tesz<br/>semmi automatikus (D19)"]
+    SZAML --> AR["TÁMOGATOTTSÁG<br/>támogatók osztva a teljes körrel"]
+    N --> AR
 ```
 
-### Ami már MEGVAN belőle
+⚠️ **A nevező MOZOG.** Aki egyetlen tudatpontot tesz a szülő gondolatra — akár úgy, hogy soha
+nem hallott az alkotmányról —, azzal **hígítja a támogatottságot**. ⭐ Ez részben a lényeg: így
+oldódik meg magától a bootstrap-probléma (*tíz ember döntése nem marad érvényben ezer emberen*),
+és ezért kell a hiszterézis: a hígulás **1/3-ig nem dönt el semmit**.
 
-- a `fajta` mező (`szerkesztesi` / `altalanos`) és hogy **az általánosból nem következik
-  entitás-változás** — kemény szabály, próba őrzi;
-- a szavazás teljes gépezete, változatlanul;
-- **az egyezmény teljes értékű entitás** (D27/5): azonos azonosító, tudatpont, küszöbök,
-  gyerekek — és mind a négy szerkesztési művelet vonatkozik rá. *(A prototípusnál ez
-  bővítés: ott az egyezményre csak áthelyezés indítható.)*
+### D) AZ ÁTHELYEZÉS — nincs külön „újraszavazás"
 
-### Amit meg kell építeni — és a javaslatom rá
-
-**a) A három élő művelet: EGY esemény-alak.**
-
-```
-Allasfoglalas  →  adat: { egyezmeny, allas, masik?, indoklas? }
-                  allas: 'csatlakozik' | 'tiltakozik' | 'utkozik'
-                  masik: csak ütközésnél — a másik egyezmény azonosítója
-```
-
-⭐ Miért egy alak három helyett: ugyanaz az érv, mint a `meghivas`/`felhatalmazas`/`tanusitas`
-hármasnál (`allitokRola`) — **közös váz, más jelentés**; ha az alak változik, egy helyen
-változik. És **„az utolsó nyer"** e-emberenként: aki csatlakozott, majd tiltakozik, annál a
-tiltakozás számít. *Ettől lesz a hatály élő, külön visszavonás-mechanizmus nélkül.*
-
-**b) A csatlakozó AKTÍV résztvevő** (D27/3). Nem külön szabály: a csatlakozás **döntés-alakító
-tett**, tehát ugyanúgy aktívvá tesz, ahogy a szavazás (`szerepAktivalasa` mintája). ⭐ Ez old
-meg egy feszültséget: ha az egyezményt később módosítani akarják, **a csatlakozók szavaznak
-róla** — nem kell se nullázni a csatlakozásokat, se változatokhoz kötni őket.
-
-**c) A hatókör a HELYBŐL** (D27/4). Aki állást foglalhat: akinek tudatpontja van **az entitáson,
-ami alatt az egyezmény áll — vagy annak bármely leszármazottján**. A gyökérben: **minden tag**.
-
-⚠️ **Ehhez a hierarchikus tudatpont JOGOSULTSÁGGÁ válik** — eddig a fontosság mutatója volt.
-Nincs új mechanizmus, csak egy meglévő egy szinttel feljebb. ⭐ És a hatókör tágítása
-(feljebb helyezés) maga is javaslat → **közösségi döntés**.
-
-**d) Az örökölt küszöbök.** D27/1: *„az induló küszöbök a szülő gondolattól öröklődnek, utána
-viszont saját érték javaslatokkal formálhatók."* ⚠️ Ma a koino az entitás **saját** érték
-javaslataiból számol, és ha nincs, az `ALAP_KUSZOBOK`-ot veszi. A javaslat: ha egy entitásnak
-nincs saját érték javaslata, **a szülőjéé** érvényes, és csak azon túl az alapérték. ⭐ Ez
-minden entitásra jó általánosítás, nem csak az egyezményre.
-
-**e) Semmi automatikus** (D27/6). Sem a tiltakozók többsége, sem az ütközés **nem érvénytelenít**
-semmit. A rendszer **bejelent, nem bíráskodik** (D19) — a vita helye az egyezmény alatti
-gyerek-gondolatokban van.
-
-### ⭐⭐ A FELFELÉ VITEL — a hatókör tágítása maga is szavazás (Csaba, 2026-09-07)
-
-> *„Ezeket az egyezményeket áthelyezési javaslattal lehetne felfelé vinni az ágazatában…
-> úgy, hogy ott ismét javaslat lesz belőle, amiről már szélesebb körben történik egy újabb
-> szavazás. Ha elvetik, akkor visszakerül az eredeti szülője alá, ha támogatják, akkor ott
-> maradhat. Az új szavazás a felmenő értékeivel történik."*
-
-Ez teszi a D27/4-et gyakorlattá: a **pozíciónak jelentése van** (minél feljebb, annál
-többen szólhatnak hozzá), és a feljebb vitel **nem adminisztratív lépés, hanem döntés** — de
-nem azé, aki kezdeményezi, hanem **azé a köré, ahova érkezik**.
+⭐⭐⭐ **Ez a modell legszebb következménye.** A korábbi terv külön mechanizmust írt le
+(*„felkerül, ott újra javaslat lesz belőle, a felmenő köre újra szavaz, elvetéskor visszakerül"*).
+**Ebből semmi nem kell.** Csaba szabálya: *„a szavazatok átjönnek, de csak azok számítanak bele,
+akik az új szülőn is tudatpont-tulajdonosok."* Vagyis a szavazat akkor számít, ha a szavazó a
+**mostani** szülő tulajdonosa — és az áthelyezés csak **kicseréli a nevezőt**. A státusz ennek a
+következménye, nem külön döntés.
 
 ```mermaid
 flowchart TD
-    E["ÁLTALÁNOS EGYEZMÉNY<br/>egy mély gondolat alatt<br/>szűk hatókör"] --> AJ["ÁTHELYEZÉSI javaslat<br/>egy FELMENŐ alá"]
-    AJ --> SZ1{"a mostani kör<br/>elfogadja?"}
-    SZ1 -->|"nem"| M["marad, ahol volt"]
-    SZ1 -->|"igen"| FEL["FELKERÜL a felmenő alá<br/>és ott ÚJRA JAVASLAT lesz belőle"]
-
-    FEL --> SZ2["ÚJ SZAVAZÁS<br/>a felmenő tudatpont-tulajdonosai<br/>a FELMENŐ küszöbeivel"]
-    SZ2 -->|"támogatják"| OTT["ott MARAD<br/>tágabb hatókörrel"]
-    SZ2 -->|"elvetik"| VISSZA["VISSZAKERÜL<br/>az eredeti szülője alá"]
+    A["ALKOTMÁNY<br/>egy mély gondolat alatt"] --> AJ["ÁTHELYEZÉSI javaslat<br/>alkotmány-státuszban 2/3<br/>javaslat-státuszban 51 százalék"]
+    AJ --> UJ["ÚJ SZÜLŐ<br/>akár a gyökér"]
+    UJ --> NEV["a NEVEZŐ kicserélődik:<br/>az új szülő tulajdonosai"]
+    NEV --> KOV{"a régi támogatók közül<br/>hányan tulajdonosok ITT?"}
+    KOV -->|"legalább 2/3"| MARAD["ALKOTMÁNY marad,<br/>tágabb körben"]
+    KOV -->|"kevesebb"| VISSZA["ALKOTMÁNYI JAVASLAT lesz<br/>a költözés ÚJ KÉRDÉS:<br/>a hiszterézis nem jön vele"]
 ```
 
-**Amit ez megold — és amiért szép:**
+⭐ **A hatókört így sem lehet egyoldalúan tágítani** — de nem azért, mert egy új szavazás
+megakadályozza, hanem mert **a tágabb körben egyszerűen nincs meg a 2/3**. *A szabály dolgát
+megint elvette a szerkezet.*
 
-- ⭐ **A hatókört nem lehet egyoldalúan tágítani.** Hiába viszi valaki feljebb az
-  álláspontját, a tágabb kör **maga dönt** arról, hogy magára veszi-e. *Nem lehet egy nagy
-  közösség nyakába varrni egy kis ág döntését.*
-- ⭐ **Az új szavazás a FELMENŐ értékeivel megy** — ott az ő küszöbei, az ő részvételi
-  aránya érvényes. Vagyis nem viszi magával a régi, szűk kör mércéjét.
-- ⭐ **Az elvetés nem büntetés, hanem visszahelyezés**: az egyezmény érvényes marad ott, ahol
-  eddig is volt. *Csak a hatóköre nem nőtt meg.*
+⭐ **És a szavazat a HELYEN túl is érvényes** (Csaba: *„a jó elv az jó elv, mindenhol; ha
+mégsem jó valakinek máshol, akkor majd módosítja a támogatását"*). A szavazat nem évül el a
+költözéstől — csak akkor kerül a számlálóba, ha a szavazó ott is tulajdonos.
 
-✅ **És a három nyitott pont is eldőlt (Csaba, 2026-09-08): mindegyikre IGEN.**
+### E) A GYÖKÉR — a majdnem elérhetetlen alkotmány
 
-- ✅ **A csatlakozók a költözéssel MARADNAK** — a **tény örök**, a hatály él; aki csatlakozott,
-  az az álláspont mögött áll, nem a helye mögött. ⚠️ Következmény: a tágabb körben ők már
-  **meglévő támogatók**, tehát beleszámítanak az új szavazás részvételi arányába.
-- ✅ **Az egyezmény MÁR FENT VAN, amíg az új szavazás fut** — így a felmenő köre **látja is,
-  amiről szavaz**. Elvetéskor visszakerül az eredeti szülője alá.
-- ✅ **Több szintet is lehet ugrani egy lépésben** — a javaslat bármelyik felmenőt
-  megnevezheti. *(Így a hatókör tágítása egy döntés, nem szintenkénti szavazás-sorozat.)*
+A gyökérben a kör **az egész koino közösség**, tehát 2/3-hoz egymilliárd e-embernél **666 millió
+támogató** kellene. ⭐ Csaba döntése: **ez szándékos** — *„egy globális alkotmány lehet majdnem
+elérhetetlen, ez fogja adni a súlyát."*
+
+⛔⛔ **És ebből MEGJELENÍTÉSI követelmény lesz, nem csak filozófia.** Csaba: *„egy magasan
+támogatott alkotmányi javaslatnak is lehet súlya, ha magas a támogatottsága, elenyésző az
+ellenzése, és csak a passzivitás miatt nem lett alkotmány belőle."* Vagyis a kártyán **a három
+szám külön látszik** — támogat · ellenez · **néma** —, nem csak a státusz. *A koino bejelent,
+nem ítél (D19); a puszta státusz elhallgatná a különbséget aközött, amit elutasítottak, és
+amiről nem szóltak.*
+
+### F) A SÚLY A STÁTUSSZAL ÉRKEZIK — szerkesztési javaslat az alkotmányon
+
+Az `Alkotmany` entitást ugyanúgy lehet **módosítani, áthelyezni, törölni** — de a mérce a
+célpont **mostani státuszától** függ (Csaba): javaslat-státuszban **51%, a passzívak nélkül**
+(vagyis a szokásos koino-nevező); alkotmány-státuszban **2/3, a teljes körrel**.
+
+⭐ *Amíg alkotmányi javaslat, addig sima entitás; amint alkotmány lesz, nehezebb hozzányúlni.*
+
+### G) AMIT EZ A MODELL MEGSZÜNTET
+
+Ez a lista a legfőbb érv mellette — **több gépezetet vesz el, mint amennyit hoz**:
+
+- ⛔ a `fajta: 'altalanos'` mező második jelentése és a 2026-09-10-én bevezetett **`Allaspont`
+  művelet**;
+- ⛔ az `Allasfoglalas` esemény **csatlakozik/tiltakozik** ága — ezek határidő nélkül
+  egyszerűen **szavazatok** *(⭐ ami megmarad belőle: az **`utkozik`**, mert az nem támogatás,
+  hanem **két alkotmány viszonya**)*;
+- ⛔ a felfelé vitel **külön újraszavazása** és a **visszahelyezés** szabálya;
+- ⛔ a D27/4 **lefelé terjedő hatóköre** (egy körre szűkül);
+- ⛔ a **tartózkodás** az alkotmányon;
+- ⛔ az **ellenzők száma** a státusz-számításból;
+- ⛔ és az alkotmányon **tárgytalan**: a döntési idő, a bizonyossági mutató, a medián-küszöb és
+  az **érték javaslat**.
+
+⚠️ *Amit hozzátesz, az egyetlen dolog: az **újrajátszás** a hiszterézis miatt.*
 
 ### ⏸️ Ami még eldöntendő
 
-- **Az egyesítés csatlakozói** (D27 nyitva hagyta): ha két általános egyezményt egyesítenek,
-  a csatlakozóik **összeadódnak-e**. ⭐ Az 5. ábra modellje szerint igen — a pontok is
-  emberenként adódnak össze —, de ez külön kimondást kíván.
-- **Az ütközés-jelölés iránya**: kölcsönös-e (A ütközik B-vel ⇒ B ütközik A-val), vagy
-  irányított állítás marad.
-- **A felfelé vitel** három nyitott pontja (fent).
+- ⛔⛔ **A módosítás: ÉLŐ vagy EGYSZERI?** Ha az alkotmány élő, akkor a szövege logikusan az
+  lenne, amelyik módosítás **most** tartja a 2/3-ot — de ez frontálisan ütközik a **harmadik
+  fázissal**, ami egyszeri átírás, a lezárás ideje szerint sorba rakva. Ha viszont a módosítás
+  határidős marad, **egy gépezetben két mérce lesz**. *Ez a legnehezebb nyitott pont.*
+- **Mi ér véget egy alkotmányi javaslattal, amit senki nem akar?** A korábbi „>1/3 ellenzés →
+  eltűnik" szabály a B) pont után **tárgytalan** (az ellenzés nem szerepel a számításban).
+  ⭐ Javaslat: **a D14** — ha senki nem tart rajta tudatpontot, elfelejtődik. Nem kell hozzá új
+  szabály, és **nem termel elakadt pontot** (amit lezárás híján nem is tudnánk bizonyítékkal
+  felszabadítani).
+- **Ha áthelyezés után visszaesik javaslatba, a helye is visszaugrik?** Javaslat: **nem** —
+  marad, ahova vitték, csak a státusza esett vissza. *Egy eseménynek egy következménye legyen.*
+- **A kör dönt, de mire vonatkozik az alkotmány?** Ha csak a szülő saját tulajdonosai
+  szavaznak, a leszármazottak tulajdonosaira is szól-e. *(A D27/6 szerint semmi nem következik
+  belőle automatikusan, tehát lehet, hogy ez nem is kérdés.)*
+- **`Tartozkodik` szavazat egy alkotmányra:** kivétel legyen (a szabály-réteg megnevezi), vagy
+  néma nem?
+- **Az ütközés-jelölés iránya:** kölcsönös-e, vagy irányított állítás marad.
+- **Értesítés** *(Csaba mellékesen: „értesítést majd tud majd kérni rá")* — ha egy alkotmány
+  költözik vagy státuszt vált, a támogatói **megtudják-e**. A modell enélkül is működik, de a
+  „majd módosítja a támogatását" csak akkor igaz, ha **értesül róla**.
 
 ---
 
