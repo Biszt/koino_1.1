@@ -32,6 +32,32 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 ### 2026-09-11
 
+- 🆕 „a »normál entitások« értékjavaslatai rendszerét, nem kell módosítani, hanem majd a
+  jövőben, az igazán fontos, programot, vagy pénzt módosító, ügyek, kapnának alap
+  értékjavaslatot(67% részvétel, 67% támogatottság) mindenkitől. ezek a program által megírt
+  javaslatok lennének, amit e-ember indít, rak is rá tudatpontot. de most még nincs koforva
+  a fejemben, a legjobb mególdás, csak ötletelek."
+  → Kontextus: az alkotmány (D64) elhalasztása után, a „mitől lesz súlya egy ügynek" kérdés
+  harmadik változataként. ⚠️ Claude előbb túl szélesre vette (az egész küszöb-rendszer
+  átállítása), Csaba kijavította: **a hétköznapi entitás marad, ahogy van**.
+  ⭐ **Amit ez összeköt:** ez ugyanaz a mechanizmus, mint a **D65** (program szintű szabály a
+  közösség döntéséből) és a **globális passzív/aktív** ötlet — csak három oldalról nézve. A
+  „program által megírt javaslat" egyszerre hoz **kötött mezőkészletet** (amit a számítás
+  ellenőrizni tud) **és kötött döntési keretet** (67/67).
+  ⭐⭐ **És entrenchment MENEKÜLŐÚTTAL:** a 67/67 nem beégetett állandó (amit csak programozó
+  mozdíthat) és nem is új gépezet (mint az alkotmány) — a közösség el tudja mozdítani, de
+  csak úgy, ha az emberek fele tényleg bead egy másik érték javaslatot. *A menekülőút
+  pontosan olyan nehéz, mint amit véd.*
+  ⛔ **Két éle, ami eldöntendő** (a [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md)
+  14. szakaszában részletesen): **(1)** „mindenkitől" = a koino minden tagjától vagy az
+  entitás tulajdonosaitól? **(2)** 67% RÉSZVÉTEL egymilliárdnál 670 millió szavazó — a
+  „nehéz" és a „lehetetlen" két különböző terv; a válasz valószínűleg a saját globális
+  passzív/aktív ötlete.
+  ⚠️ Megmérve (14. mérés): **ma a koinóban sehol nincs olyan mechanizmus, hogy egy hallgató
+  ember „tart" egy alapértéket** — az `ALAP_KUSZOBOK` csak tartalék. A szűk változat is
+  ugyanazt a kódrészt kívánja (`kuszobokItt`), csak **javaslat-fajtára kapuzva**.
+  → Felírva, **nem elvégezve**. *(Csaba: „csak ötletelek.")*
+
 - 🆕 „(itt eszembe jutott valami. a globális döntéseknél, is lehetnének passzív/aktív
   e-emberek, annyi eltéréssel az entitás szinttütől, hogy itt az alap eset aktív és
   beállítás után passzív(akár témák szerint(pénzügy, program frissítés)))"

@@ -1261,33 +1261,49 @@ hogy ne legyen vak).
 
 ### ⭐ Mit jelent ez
 
-**Csaba modellje ma nem működik — de a modell jó, és egy függvénynyi változás választja el
-a működéstől:** a mediánt a **teljes tulajdonosi körön** kellene számolni, ahol az érték
-javaslatot nem adó tulajdonos az **alapértékkel** szerepel.
+⚠️⚠️ **ELŐSZÖR TÚL SZÉLESRE VETTEM, ÉS CSABA KIJAVÍTOTTA (ugyanaznap):** azt írtam, hogy az
+egész küszöb-rendszert át kellene állítani (a medián a teljes tulajdonosi körön, a hallgatók
+az `ALAP_KUSZOBOK`-kal). ⛔ **Nem ez a terv.** Csaba pontosítása:
 
-⭐⭐ **És ez orvosolna egy valódi gyengeséget, amit a D64 vitája talált:** ma a küszöb
-választóköre **önmagát választja** (aki beadott egy értéket), ezért tíz újonnan érkező
-ember egy-egy tudatponttal és egy érték javaslattal átbillenthet egy kilenc tulajdonosú
-gondolat mediánját. Ha a hallgatók is szerepelnek, a billentéshez **a tulajdonosok felét**
-kell meggyőzni — *és ez pont az a „súly", amit az alkotmánytól vártunk, új entitás-típus,
-státusz-gépezet és hiszterézis nélkül.*
+> *„A »normál entitások« érték javaslatai rendszerét nem kell módosítani, hanem majd a
+> jövőben az igazán fontos, **programot vagy pénzt módosító** ügyek kapnának alap érték
+> javaslatot (**67% részvétel, 67% támogatottság**) **mindenkitől**. Ezek a **program által
+> megírt javaslatok** lennének, amit egy e-ember indít, és rak is rá tudatpontot."*
 
-### ⚠️ Amit előbb el kell dönteni, mert nem mellékhatás
+⭐ Vagyis a változás **nem a küszöb-rendszeré, hanem EGY JAVASLAT-FAJTÁÉ**: a hétköznapi
+entitás marad, ahogy van, és csak a **sablonból született, program- vagy pénz-ügyű** javaslat
+viszi magával a saját döntési keretét — úgy, hogy **mindenki alapból 67/67-et tart**, amit
+egyenként felül lehet írni saját érték javaslattal.
 
-- ⛔ **Az `ALAP_KUSZOBOK` megszűnne tartalék lenni, és a koino NYUGALMI ÁLLAPOTA lenne.**
-  A mai alapérték **megengedő** (51% / 0% részvétel / 1–7 nap) — ha a hallgatók ezzel
-  szavaznak, az a részvételi követelményt **lefelé** húzná, nem felfelé. Vagyis a modell
-  bevezetése együtt jár az `ALAP_KUSZOBOK` újragondolásával.
-- ⚠️ **A hallgatás az ALAPÉRTÉK felé húz, nem a mostani érték felé.** Ha egy közösség
-  67-re vitte a küszöböt, az újonnan érkező hallgatók visszahúzzák az alapérték felé.
-  *Tulajdonság, nem hiba — de ki kell mondani.*
-- ⚠️ **Minden meglévő küszöb jelentése megváltozna** a koinóban (ma: „amit a beadók
-  mediánja mond"; utána: „amit a teljes tulajdonosi kör mediánja mond").
-- ⭐⭐ **És ettől a D65 nagyobb lesz, nem kisebb:** ha az alapérték a hallgató többség
-  súlyát viszi, akkor **aki az `ALAP_KUSZOBOK`-ot állítja, az állítja a koino küszöbeit**.
-  Csaba példája (*„a pénz esetében alap 2/3"*) **típusonkénti alapértéket** jelent — erre a
-  `KATEGORIA_KORLAT` a precedens: a korlát a **számításban** van, nem a mediánban.
-- ⏸️ **És egy régi ismerős:** a hallgató tömeg egy része **elhagyta a koinót**, csak a
-  tudatpontja maradt. A néma készülék problémáját egyszer már megoldottuk
-  (`allapot.lancVegek`, 13. mérés) — ha az alapérték súlyt kap, itt is felmerül, hogy az
-  évek óta néma tulajdonos meddig szavazzon.
+⭐⭐ **A mérés ettől nem lesz kevesebb — ez a mérés a FUNDAMENTUMA:** a 14. mérés azt mondja
+ki, hogy **a koinóban ma SEHOL nincs olyan mechanizmus, hogy egy hallgató ember „tart" egy
+alapértéket**. Tehát a szűk változat is ugyanezt a kódrészt kívánja (`kuszobokItt`), csak
+**javaslat-fajtára kapuzva** — nem repó-szinten.
+
+⭐⭐⭐ **És ami szép benne: ez ENTRENCHMENT MENEKÜLŐÚTTAL.** A 67/67 nem beégetett
+állandó, amit csak programozó mozdíthat (mint a `KATEGORIA_KORLAT`), és nem is új gépezet
+(mint az alkotmány): **a közösség el tudja mozdítani — de csak úgy, ha az emberek fele
+tényleg bead egy másik értéket.** *A menekülőút pontosan olyan nehéz, mint amit véd.*
+
+### ⚠️ Amit el kell dönteni, mielőtt kód lesz belőle
+
+- ⚠️⚠️ **„Mindenkitől" — kitől pontosan?** A koino **minden tagjától** (`identitas.js`), vagy
+  annak az entitásnak a tulajdonosaitól, ahol a javaslat áll? Program- és pénz-ügynél a
+  „mindenki" a természetes olvasat — és ⭐ **akkor ez ugyanaz a globális választókör, amit a
+  D65 és a globális passzív/aktív ötlet is kíván**. *Három oldalról ugyanaz a mechanizmus.*
+- ⛔⛔ **67% RÉSZVÉTEL egymilliárdnál = 670 millió szavazó.** A 9. szabály próbája: a
+  globális alkotmánynál Csaba **szándékosan** választotta a majdnem-elérhetetlent
+  (*„ez fogja adni a súlyát"*) — itt viszont a pénz **kereteinek** módosításáról van szó, és
+  ha az gyakorlatilag lehetetlen, a keret **örökre befagy**. *A „nehéz" és a „lehetetlen"
+  két különböző terv.* ⭐ **És a saját globális passzív/aktív ötleted a válasz rá:** ha a
+  témában passzívvá nyilvánítottak kimaradnak a nevezőből, a 67% azok közt mérődik, akik
+  **kérték, hogy számítsanak** — így lesz nehéz anélkül, hogy lehetetlen lenne.
+- ⚠️ **A „program által megírt javaslat" két dolgot hoz egyszerre:** kötött **mezőkészletet**
+  (amit a számítás ellenőrizni tud) **és** kötött **döntési keretet** (a 67/67). Ma a keret
+  mindig a CÉL entitásból jön; itt a **sablonból** jönne. Új tengely, de kicsi.
+- ⏸️ **És az évek óta néma tulajdonos**: ha az alapérték súlyt kap, az is szavaz, aki rég
+  elhagyta a koinót. A néma készülék problémáját egyszer már megoldottuk
+  (`allapot.lancVegek`, 13. mérés).
+
+⚠️ *Csaba kimondta, hogy ez még nem kiforrott: „most még nincs kiforrva a fejemben a legjobb
+megoldás, csak ötletelek." Ez a szakasz tehát **irány**, nem terv.*
