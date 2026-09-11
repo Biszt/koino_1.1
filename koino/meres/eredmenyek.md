@@ -1307,3 +1307,58 @@ tényleg bead egy másik értéket.** *A menekülőút pontosan olyan nehéz, mi
 
 ⚠️ *Csaba kimondta, hogy ez még nem kiforrott: „most még nincs kiforrva a fejemben a legjobb
 megoldás, csak ötletelek." Ez a szakasz tehát **irány**, nem terv.*
+
+---
+
+## 15. A PROGRAM-VERZIÓ MINT AZ ÁLLAPOT BEMENETE (2026-09-11)
+
+`node koino/meres/verzioMeres.js ir` → a `szabalyok.js` állandójának átírása → `… olvas`
+
+**A kérdés** a „hogyan lehetne dinamikus a program" beszélgetésből jött. A koino alapmondata
+*„ugyanazokból az eseményekből ugyanaz jön ki"* (D17) — de a `TUDATPONT_KERET`, a
+`KATEGORIA_KORLAT` és az `ALAP_KUSZOBOK` a **programban** van, nem az eseményekben. ⭐ Ez a
+mérés azt dönti el, hogy ez **elméleti aggodalom-e vagy mérhető kár**.
+
+**A bemenet mindkét oldalon BÁJTRA UGYANAZ:** 8 aláírt esemény — négy gondolat, egyenként
+2000 tudatponttal (összesen 8000). Csak a **programot** cseréltük alatta.
+
+| | keret = 10 000 | keret = 5 000 |
+|---|---:|---:|
+| létező entitás | **4** | **2** |
+| összes tudatpont | **8000** | **4000** |
+| kivétel (kihagyott esemény) | 0 | **2** |
+| **állapot-ujjlenyomat** | `taeExu20HCLplFGwbhixvpo1HnLXUlajbrOWkD1GA3c` | `H_ZcH6Z4oP4HNtWKMU8MIJGv0zsU2ublnvzz_gySc30` |
+
+### ⛔⛔ Az eredmény: a koino KETTÉHASAD, és egyik gép sem tudja
+
+Nem „kicsit mást mutat": a második készüléken **a gondolatok fele nem létezik**, és a rájuk
+tett tudatpont sincs sehol. A kivétel-indok a saját naplójában is becsületes
+(*„a bemondott összeg túllépi a keretet (6000 / 5000)"*) — ⚠️ **csak épp nem igaz**: a szerző
+nem lépte túl a keretet, az olvasó programja ismer más keretet.
+
+⛔ **És a csere ezt nem veszi észre.** A csere a **lánc** ujjlenyomatát veti össze (ki hány
+eseményt írt alá), nem az **állapotét**. A két készülék tökéletesen szinkronban lesz —
+ugyanaz a 8 esemény mindkettőnél —, miközben **mást számol belőle**. *A csere azt méri, hogy
+ugyanazt TUDJUK-e; nem azt, hogy ugyanazt SZÁMOLJUK-e.*
+
+### ⭐ Mit bizonyít ez
+
+1. **A D65 aggodalma nem elméleti.** A program verziója **ma is bemenete az állapotnak**, és
+   az eltérés **csendes**.
+2. ⭐⭐ **A javítás iránya megerősítve:** ami **paraméter** (szám, amit a közösség dönt), az az
+   **eseményekbe** tartozik; ami **gépezet** (algoritmus, képesség-lista), az a **programba**.
+   A leltár szerint (`koino/js/` 54 konstans) mindössze **hat** befolyásolja az állapotot:
+   `TUDATPONT_KERET` · `ALAP_KUSZOBOK` · `KATEGORIA_KORLAT` · `MEGHIVO_KELL` ·
+   `TANUSITAS_KELL` · `FELHATALMAZAS_KELL`. ⭐ Az utolsó három a **D57/b és D60** szerint
+   amúgy is mediánná válna — vagyis a valódi új munka **három szám**.
+3. ⚠️ **A többi 48 konstans ártalmatlan** (portok, időzítések, `MAX_DARAB`, a felfedezés): a
+   3. szabály szerint sosem terjednek és semmit nem döntenek el — eltérésnél legfeljebb
+   lassabb, de **az állapot ugyanaz**. *(Az `ONALLO_KUSZOB` is ide tartozik: a `jelzesek.js`-t
+   a döntés-réteg nem importálja.)*
+4. ⭐ **És egy külön tétel, amit ez a mérés hozott ki:** a cserének **szabály-lenyomatot** is
+   össze kellene vetnie, nem csak lánc-lenyomatot. Az állapot-ujjlenyomat **már létezik**
+   (`osszehasonlitas.js`) — ma csak kézzel, az `ujjlenyomat` paranccsal használjuk.
+
+⚠️ **Amit ez a mérés NEM mond meg:** hogy a szabály-lenyomat mennyibe kerülne egy csere-körben
+(ma egy „nincs újdonság" kör 334 bájt), és hogy eltérésnél mit tegyen a készülék a
+bejelentésen túl. *Az külön döntés — a koino bejelent, nem bíráskodik (D19).*
