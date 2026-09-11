@@ -349,7 +349,50 @@ ezért írjuk le, ne csússzon be észrevétlenül.*
 
 ---
 
-## 6. ⏸️ TERV: AZ ALKOTMÁNY — a közösség álláspontja, saját entitás-típussal
+## 6. ⏸️ ELHALASZTVA: AZ ALKOTMÁNY — a terv áll, a megépítés vár
+
+> ⛔⛔ **CSABA DÖNTÉSE (2026-09-11): EGYELŐRE NEM ÉPÍTJÜK MEG.**
+> *„Mivel ez még nem építőköve semminek, ezért bele lehet rakni később is."*
+>
+> ⭐ **Az indok mérhető, nem vélemény:** az `Alkotmany` **tisztán additív** lenne —
+> `GondolatLetrehozas` + `adat.tipus` (mint a `Kategoria`), a szavazás a meglévő
+> `Szavazat`, a státusz pedig **számítás**. Nincs új esemény-fajta, **egyetlen meglévő tár
+> sem évül el, egyetlen régi esemény sem lesz érvénytelen.** Később ugyanannyiba kerül,
+> mint most, tehát a **9. szabály** próbája (*„a szerkezetet nem lehet utólag beletenni"*)
+> nem fogja meg: ez **funkció, nem szerkezet**.
+>
+> ⭐ És a legdrágább darabja — a hiszterézis miatti **újrajátszás** — pont az, aminek ma
+> nincs használója.
+>
+> ⛔⛔ **DE EGY DOLGOT NE HIGGYÜNK EL KÖZBEN: az ÉRTÉK JAVASLAT NEM AD STATIKUSSÁGOT.**
+> Felmerült, hogy *„az értékjavaslatokkal bármelyik entitást statikussá lehet tenni"* —
+> **a kód szerint nem.** A küszöb a tulajdonosok érték javaslatainak **mediánja**, minden
+> számításnál újra (`javaslatSzamitas.js`, `kuszobokItt`), és az `ErtekJavaslat` **nem
+> javaslat**: nincs mögötte szavazás, küszöb vagy döntési idő. Vagyis a 67%-os küszöb
+> **felállításához** semmi nem kell, és a **visszavételéhez sem** — elég, ha a medián
+> arrébb csúszik. ⛔ Sőt: a küszöb választóköre **önmagát választja**, mert a `kuszobokItt`
+> azokat veszi be, akiknek van tudatpontjuk az entitáson — tudatpontot pedig **bárki tehet
+> bárhova**. Tíz ember egy-egy ponttal és egy 51-es érték javaslattal átbillenti egy
+> kilenc tulajdonosú gondolat 67-es mediánját. *A lakat kulcsa a lakaton lóg.*
+> ⭐ **Ez nem hiba** (a D4 pontosan ezt akarja: *„a medián matematikailag is szavazás"*) —
+> de azt jelenti, hogy amit az érték javaslat ad, az nem statikusság, hanem **lassúság**.
+>
+> ⚠️ **És amiért a pénzhez az alkotmány NEM is lett volna jó eszköz:** a **D27/6** a
+> D64-ben is áll — *az alkotmány szövegéből semmi nem következik automatikusan*. Egy
+> „alkotmány a pénzről" nem korlátozta volna a pénz-kiállítást, csak **látszott** volna
+> mellette. A helyes eszköz ott a **kötött mezőkészletű javaslat**, amit a **számítás**
+> tud ellenőrizni (Csaba: *„nem olyan szabad formában, hanem megírt forma szerint, amiben
+> az értékeket kell meghatároznia"*) — erre a `KATEGORIA_KORLAT` a precedens: a korlát a
+> **számításban** van, nem a mediánban.
+>
+> ⭐⭐ **Az alkotmány valódi helye tehát nem a „statikus szöveg", hanem a D65 rése:** az a
+> mechanizmus, amivel a közösség a **saját állandóit** állítja. Amíg az nincs meg, a
+> koino kemény szabályait az állítja, aki a programot írja.
+>
+> **Az alábbi terv ÉRVÉNYES marad** — a gondolatmenet nem évül el, és a megépítés bármikor
+> ráülhet. Csak nem most.
+
+### A TERV (2026-09-10): az alkotmány — a közösség álláspontja, saját entitás-típussal
 
 > ⛔⛔ **EZ FELVÁLTJA A KORÁBBI „ÁLTALÁNOS JAVASLAT → EGYEZMÉNY" TERVET (Csaba, 2026-09-10):**
 > *„Az általános javaslat teljesen más, mint a szerkesztési javaslat, ezért legyen külön

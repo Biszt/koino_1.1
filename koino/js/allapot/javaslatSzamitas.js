@@ -383,6 +383,31 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
    * csak a SZÁMOLÁSKOR szűrünk. Így mindegy, hogy egy azonos időpontú tudatpont és
    * érték javaslat közül melyik kerül előre a sorban. ⭐ A szerep itt nem számít: a
    * passzív figyelőnek is van véleménye a küszöbről.
+   *
+   * ===== ⛔⛔ AMIT EZ NEM AD: STATIKUSSÁGOT (2026-09-11, Csaba kérdése nyomán) =====
+   *
+   * Felmerült, hogy *„az érték javaslatokkal bármelyik entitást statikussá lehet tenni"* —
+   * egy magas elfogadási küszöbbel „levédeni" valamit. ⛔ **A kód szerint nem.** Aki ezt
+   * hiszi, azt hiszi, hogy a koinóban van rögzíthető szabály; nincs.
+   *
+   * Két ok, és mindkettő ebben a függvényben látszik:
+   *
+   *   1. A küszöb **medián**, és **minden számításnál újra** kiszámolódik. Az `ErtekJavaslat`
+   *      NEM javaslat a szavazás értelmében: nincs mögötte szavazás, küszöb, döntési idő —
+   *      ugyanaz az „emberenként az utolsó nyer" alak, mint a tudatpontnál. Vagyis a 67%-os
+   *      küszöb **felállításához** nem kell döntés, és a **visszavételéhez sem**.
+   *
+   *   2. ⛔ A küszöb választóköre **ÖNMAGÁT VÁLASZTJA**: az alábbi szűrő azokat veszi be,
+   *      akiknek van tudatpontjuk az entitáson — tudatpontot pedig **bárki tehet bárhova**,
+   *      a saját keretéből. Tíz ember egy-egy ponttal és egy 51-es érték javaslattal
+   *      átbillenti egy kilenc tulajdonosú gondolat 67-es mediánját.
+   *
+   * ⭐ **Ez NEM hiba** — a D4 pontosan ezt akarja (*„a medián matematikailag is szavazás:
+   * csak létszámmal billenthető, szélsőértékkel nem"*). De amit ad, az nem statikusság,
+   * hanem **lassúság**. *A lakat kulcsa a lakaton lóg.*
+   *
+   * ⏸️ A rögzíthető szabály kérdése a **D64** (alkotmány — elhalasztva) és a **D65**
+   * (program szintű szabály, a teljes közösség döntéséből) alatt áll.
    */
   const kuszobokItt = (entitas) => {
     const ervenyesek = [];

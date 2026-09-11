@@ -30,6 +30,31 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-09-11
+
+- 🆕 „(itt eszembe jutott valami. a globális döntéseknél, is lehetnének passzív/aktív
+  e-emberek, annyi eltéréssel az entitás szinttütől, hogy itt az alap eset aktív és
+  beállítás után passzív(akár témák szerint(pénzügy, program frissítés)))"
+  → Kontextus: az alkotmány elhalasztásának lezárásakor merült fel, abban a mondatban,
+  ahol a **program szintű szabályozásról** volt szó (D65): a kemény szabályt a teljes
+  közösség döntése alapján kell a programba építeni — és akkor kell egy globális
+  választókör is.
+  ⭐ **Miért MÁS, mint az entitás-szintű passzív:** entitás szinten az számít bele a
+  nevezőbe, aki **maga döntött úgy, hogy tudatpontot tesz rá** — a körbe lépés maga egy
+  tett. Globálisan **nincs ilyen tett**: mindenki tag. Ezért fordul meg az alapértelmezés:
+  alapból aktív, és a passzivitás **kimondás** (*„ez a téma ne rajtam múljon"*).
+  ⚠️ **És egy feszültség, amit el kell dönteni, mielőtt kód lesz belőle:** a D64-ben az
+  alkotmányról épp az ellenkezője áll — *„egy alkotmánynak akkor lesz súlya, ha a
+  passzívak is beleszámolódnak"*, ott a hallgatás **NEM**-et jelent. Globálisan viszont a
+  passzivitás **kilépés a nevezőből**. A kettő megfér egymás mellett, de **ki kell
+  mondani, melyik hol érvényes** — különben két mérce lesz egy gépezetben.
+  ⭐ **Egy javaslat hozzá, a koino meglévő gépezetéből:** a globális nevezőnél a néma
+  készülék ugyanaz a probléma, mint a felszabadításnál — és ott **már megoldottuk**
+  (`allapot.lancVegek`: aki évek óta nem írt alá semmit, arról nem állítunk semmit).
+  Vagyis a globális nevező lehetne: *tag ÉS nem nyilvánította magát passzívvá ebben a
+  témában ÉS a lánca él.* Nem hit, hanem a saját láncából olvasható.
+  → Felírva, **nem elvégezve**.
+
 ### 2026-09-04
 
 - 🆕 „a »gondolat« szót, le szeretném cserélni, »gondolatra«, mindenhol (tudom hogy ez nagy

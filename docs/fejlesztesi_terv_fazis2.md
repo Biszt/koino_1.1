@@ -1268,7 +1268,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**61 tervezési döntés áll (D1–D64; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
+**62 tervezési döntés áll (D1–D65; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
 tárgytalanná vált — mindegyik okával együtt
 megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
@@ -3136,6 +3136,16 @@ gondolatokban van.
 
 ### D64. AZ ALKOTMÁNY — az általános javaslat/egyezmény helyére (2026-09-10, Csaba)
 
+> ⏸️⏸️ **ELHALASZTVA (Csaba, 2026-09-11):** *„Mivel ez még nem építőköve semminek, ezért
+> bele lehet rakni később is."* ⭐ Az indok **mérhető**: az `Alkotmany` tisztán **additív**
+> lenne (`GondolatLetrehozas` + `adat.tipus`, a meglévő `Szavazat`, a státusz számítás) —
+> **nincs új esemény-fajta, egyetlen meglévő tár sem évül el**, tehát később ugyanannyiba
+> kerül. A **9. szabály** próbája nem fogja meg: ez **funkció, nem szerkezet**.
+> ⛔ **De NE azzal az indokkal halasszuk, hogy „az érték javaslat megoldja" — nem oldja
+> meg** (lásd a D65 rését és a `gepezet.md` 6. szakaszát): a küszöb **mediánja** szavazás
+> nélkül mozdul, és a küszöb választóköre **önmagát választja**.
+> ⭐ Az alábbi terv **érvényes marad**; a megépítés bármikor ráülhet.
+
 > „Az általános javaslat, teljesen más, mint a szerkesztési javaslat, ezért legyen külön
 > entitás típus. Legyen inkább **alkotmány** a neve. Létrehozáskor még csak alkotmányi
 > javaslat, és csak akkor lesz belőle alkotmány, ha a szülőjének az összes tudatpont
@@ -3257,6 +3267,88 @@ küszöbe medián lenne, a közösség **leszállíthatná a saját alkotmány-k
 - **Az ütközés-jelölés iránya:** kölcsönös vagy irányított.
 - **Értesítés** *(Csaba mellékesen: „értesítést majd tud majd kérni rá")* — a „majd módosítja a
   támogatását" csak akkor igaz, ha a támogató **értesül** a költözésről/státuszváltásról.
+
+### D65. A PROGRAM SZINTŰ SZABÁLY IS A KÖZÖSSÉGÉ (2026-09-11, Csaba)
+
+> „Igen, szerintem szükség lesz program szintű szabályozásra, de a koino **teljes
+> közössége** által hozott döntést kell majd program szintjére beépíteni." — Csaba
+
+#### A rés, amire ez a válasz
+
+Az alkotmány elhalasztásakor (D64) kiderült, hogy a koinóban **kétféle kemény szabály**
+lesz, és egyiket sem lehet azzá tenni, ami kellene:
+
+- amit a **medián** állít (küszöbök, D4) → a **közösségé**, de ⛔ **nem rögzíthető**: az
+  `ErtekJavaslat` mögött nincs szavazás, és a küszöb választóköre önmagát választja;
+- amit a **program** állít (`KATEGORIA_KORLAT`, `TUDATPONT_KERET`, `TILTOTT_MUVELETEK`,
+  `ALAP_KUSZOBOK`) → **rögzített**, de ⛔ **nem a közösségé** — csak program-változtatással
+  mozdul.
+
+⭐ **Csaba válasza: a második is legyen a közösségé.** A kemény szabály a programban marad
+(mert ott ellenőrizhető és nem hígítható), de **a döntést a teljes közösség hozza**, és a
+program csak **végrehajtja**.
+
+#### ⚠️ Ami ebből következik: a beépítés fojtópont-alakú
+
+A döntés és a hatálya közé bekerül egy ember, aki beépíti. Ez a **2. szabály** alakja
+(*„semmi ne múljon egyetlen szolgáltatáson"*) — csak itt nem szolgáltatás, hanem ember.
+
+⭐ **És a koino válasza ugyanaz, mint mindenhol: nem a kapu véd, hanem hogy a rossz
+beépítő elveszíti a szerepét.** Ezt a **6. szabály** teszi lehetővé: *„ekkora program
+elfér egy üzenetben, és bárki újraírhatja — ez a fojtópont-védelem másik fele."* Ha a
+beépítő nem azt építi be, amit a közösség döntött, a közösség **lecserélheti a
+programot**. (Ugyanaz a minta, mint a tanúsítónál: D46/D47.)
+
+⭐⭐ **Ellenőrizhető alak, a D42 mintájára:** minden kemény állandó **mondja be, melyik
+koino-döntésből származik** — ahogy a tanúsítás bemondja, mire támaszkodott. Akkor bárki
+összevetheti a programban lévő számot a döntéssel, és a *„nem azt építette be"* **állítás
+helyett mérés** lesz.
+
+#### ⛔⛔ ÉS EGY DOLOG, AMIT EDDIG NEM MONDTUNK KI: a program verziója MÁR MA is bemenete az állapotnak
+
+A koino alapmondata eddig ez volt: *ugyanazokból az eseményekből ugyanaz jön ki.* ⚠️ **Ez
+csak azonos program-verzió mellett igaz.** A `TUDATPONT_KERET`, a `KATEGORIA_KORLAT`, a
+`TILTOTT_MUVELETEK` és az `ALAP_KUSZOBOK` mind a **programban** van — ha két készülék mást
+ismer, **ugyanabból az esemény-halmazból más állapotot számol**, és nem tudják, melyikük
+téved.
+
+⛔ A legélesebb a `TUDATPONT_KERET`: eltérésnél az egyik gép a másik tudatpont-eseményeit
+**szabálysértőnek** látja (a D42 bemondott összege ellentmondana a saját láncának) — vagyis
+nem „kicsit mást mutat", hanem **kettéhasad a koino**.
+
+⭐ **A 9. szabály próbája itt élesen szól:** egymilliárd e-embernél **soha nem lesz
+egyszerre mindenki ugyanazon a verzión**. Tehát a verzió-eltérés nem kivétel, hanem az
+**alapállapot** — és ezért a **láthatóvá tétele szerkezeti kérdés**, nem funkció. *(Az
+alkotmány elhalasztható volt, mert additív; ez nem ugyanaz a fajta.)*
+
+⭐ **Javaslat, és van hozzá kész hely:** a csere már ma egy 43 karakteres `LENYOMAT`-tal
+kezdődik (a koino azonossága, D35). Ugyanoda elfér egy **szabály-lenyomat** is: *ugyanazokkal
+az állandókkal számolunk-e?* Eltérésnél **jelzés, nem vád** (D19) — de **látszik**, mielőtt
+két készülék hetekig más igazságot számolna. Az ára néhány tíz bájt körönként.
+⏸️ Megépítés előtt mérjük meg, mi történik ma egy eltérő `TUDATPONT_KERET` mellett — *a
+zöld próba nem bizonyíték, amíg ki nem kapcsoltad, amit mér.*
+
+#### ⏸️ És a globális választókör (Csaba mellékes ötlete, ugyanebben a mondatban)
+
+> „A globális döntéseknél is lehetnének passzív/aktív e-emberek, annyi eltéréssel az
+> entitás szintűtől, hogy itt az alap eset **aktív**, és beállítás után **passzív** (akár
+> témák szerint: pénzügy, program frissítés)."
+
+Szó szerint felvezetve: [`docs/jegyzetek.md`](jegyzetek.md), 2026-09-11.
+
+⭐ **Miért más, mint az entitás-szintű passzív:** entitás szinten az számít a nevezőbe, aki
+**maga döntött úgy, hogy tudatpontot tesz rá** — a körbe lépés maga egy tett. Globálisan
+**nincs ilyen tett**: mindenki tag. Ezért fordul meg az alapértelmezés.
+
+⚠️ **És egy feszültség, amit el kell dönteni, mielőtt kód lesz belőle:** a D64-ben az
+alkotmányról épp az ellenkezője áll — *„egy alkotmánynak akkor lesz súlya, ha a passzívak
+is beleszámolódnak"*, ott a hallgatás **NEM**-et jelent; globálisan viszont a passzivitás
+**kilépés a nevezőből**. A kettő megfér, de **ki kell mondani, melyik hol érvényes**.
+
+⭐ **Egy javaslat a koino meglévő gépezetéből:** a néma készülék ugyanaz a probléma, mint a
+felszabadításnál — és ott **már megoldottuk** (`allapot.lancVegek`). A globális nevező tehát
+lehetne: *tag **ÉS** nem nyilvánította magát passzívvá ebben a témában **ÉS** a lánca él.*
+Nem hit, hanem a saját láncából olvasható.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
