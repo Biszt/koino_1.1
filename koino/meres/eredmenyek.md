@@ -1223,3 +1223,71 @@ kifejezetten aláír.
 ⚠️ Akitől semmi nem érkezett a lezárás óta, arról továbbra sem tudunk semmit — ott marad a
 buli-szám mint **másodlagos, olcsó heurisztika**. *De a fő jel a láncok vége legyen, ne a
 körök száma.*
+
+---
+
+## 14. AZ ALAPÉRTÉK SÚLYA — számít-e a hallgató tulajdonos? (2026-09-11)
+
+`node koino/meres/kuszobMeres.js`
+
+**A kérdés** Csaba felvetéséből jött, az alkotmány (D64) elhalasztása után: *„A fontosabb
+ügyek súlyosabbá tételét elegendő az ALAPÉRTÉK meghatározásával elérni. Pl. a pénz esetében
+alap 2/3-os érték javaslatok, amik módosíthatók, de attól lesz nehéz, hogy a program
+használatában **passzív** e-emberek érték javaslatai teszik nehézzé a döntési keretek
+módosítását."*
+
+⚠️ „Passzív" itt **nem** a `szerep: 'passziv'` mező, hanem a program használatában passzív
+tömeg: tulajdonos, de sosem nyúl a küszöbökhöz.
+
+### Az eredmény
+
+N tulajdonos egy gondolaton, közülük **egy** ad be érték javaslatot, a többi hallgat.
+Az alapérték 51.
+
+| tulajdonos | a hangos értéke | **MA érvényes** | Csaba modellje szerint |
+|---:|---:|---:|---:|
+| 2 | 90 | **90** | 51 |
+| 3 | 90 | **90** | 51 |
+| 9 | 90 | **90** | 51 |
+| 21 | 90 | **90** | 51 |
+| 9 | 20 | **20** | 51 |
+| 21 | 20 | **20** | 51 |
+
+⛔⛔ **A hallgató tulajdonos MA NEM SZÁMÍT.** A `kuszobokItt` (`javaslatSzamitas.js`) a
+**beadott érték javaslatokon** megy végig, nem a tulajdonosokon — tehát az `ALAP_KUSZOBOK`
+**nem súly, hanem tartalék**: csak akkor él, ha *senki* nem szólt. **Huszonegy tulajdonos
+küszöbét egyetlen ember állítja**, mindkét irányban (a mérés felfelé és lefelé is nézi,
+hogy ne legyen vak).
+
+### ⭐ Mit jelent ez
+
+**Csaba modellje ma nem működik — de a modell jó, és egy függvénynyi változás választja el
+a működéstől:** a mediánt a **teljes tulajdonosi körön** kellene számolni, ahol az érték
+javaslatot nem adó tulajdonos az **alapértékkel** szerepel.
+
+⭐⭐ **És ez orvosolna egy valódi gyengeséget, amit a D64 vitája talált:** ma a küszöb
+választóköre **önmagát választja** (aki beadott egy értéket), ezért tíz újonnan érkező
+ember egy-egy tudatponttal és egy érték javaslattal átbillenthet egy kilenc tulajdonosú
+gondolat mediánját. Ha a hallgatók is szerepelnek, a billentéshez **a tulajdonosok felét**
+kell meggyőzni — *és ez pont az a „súly", amit az alkotmánytól vártunk, új entitás-típus,
+státusz-gépezet és hiszterézis nélkül.*
+
+### ⚠️ Amit előbb el kell dönteni, mert nem mellékhatás
+
+- ⛔ **Az `ALAP_KUSZOBOK` megszűnne tartalék lenni, és a koino NYUGALMI ÁLLAPOTA lenne.**
+  A mai alapérték **megengedő** (51% / 0% részvétel / 1–7 nap) — ha a hallgatók ezzel
+  szavaznak, az a részvételi követelményt **lefelé** húzná, nem felfelé. Vagyis a modell
+  bevezetése együtt jár az `ALAP_KUSZOBOK` újragondolásával.
+- ⚠️ **A hallgatás az ALAPÉRTÉK felé húz, nem a mostani érték felé.** Ha egy közösség
+  67-re vitte a küszöböt, az újonnan érkező hallgatók visszahúzzák az alapérték felé.
+  *Tulajdonság, nem hiba — de ki kell mondani.*
+- ⚠️ **Minden meglévő küszöb jelentése megváltozna** a koinóban (ma: „amit a beadók
+  mediánja mond"; utána: „amit a teljes tulajdonosi kör mediánja mond").
+- ⭐⭐ **És ettől a D65 nagyobb lesz, nem kisebb:** ha az alapérték a hallgató többség
+  súlyát viszi, akkor **aki az `ALAP_KUSZOBOK`-ot állítja, az állítja a koino küszöbeit**.
+  Csaba példája (*„a pénz esetében alap 2/3"*) **típusonkénti alapértéket** jelent — erre a
+  `KATEGORIA_KORLAT` a precedens: a korlát a **számításban** van, nem a mediánban.
+- ⏸️ **És egy régi ismerős:** a hallgató tömeg egy része **elhagyta a koinót**, csak a
+  tudatpontja maradt. A néma készülék problémáját egyszer már megoldottuk
+  (`allapot.lancVegek`, 13. mérés) — ha az alapérték súlyt kap, itt is felmerül, hogy az
+  évek óta néma tulajdonos meddig szavazzon.
