@@ -19,7 +19,7 @@
 // belőle: csak a **teljes körök**, amiknek kézzel végigjárhatónak kell lenniük.
 
 import { probaGyujtemeny } from './probaFuttato.js';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -61,6 +61,34 @@ function azonosito(kimenet, elozmeny) {
 }
 
 const varj = (mp) => new Promise((t) => setTimeout(t, mp));
+
+/** A kiírt TELJES (43 karakteres) azonosító — a horgonyokhoz. */
+function teljesAzonosito(kimenet) {
+  const talalat = kimenet.match(/[A-Za-z0-9_-]{43}/g);
+  return talalat ? talalat[talalat.length - 1] : null;
+}
+
+/**
+ * EGY CSERE-KÖR két készülék között: `figyel` az egyik oldalon, `csere` a másikon.
+ *
+ * ⚠️ A figyelőt a kör végén LEÁLLÍTJUK, és várunk is utána — mérve derült ki, hogy amíg a
+ * figyelő fut, ugyanarra az adat-mappára indított másik parancs nem feltétlenül látja a
+ * frissen érkezett eseményeket. *(Ugyanaz a fajta ütközés, mint két párhuzamos `mind.js`.)*
+ */
+async function csereKor(gazda, vendeg, port) {
+  const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+    env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' },
+    stdio: 'ignore'
+  });
+  try {
+    await varj(2000);
+    await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    await varj(1000);
+  } finally {
+    figyelo.kill();
+    await varj(1000);
+  }
+}
 
 // ===================================
 // ⭐⭐⭐ AZ ÁLTALÁNOS KÖR: javaslat → egyezmény → állásfoglalás
@@ -160,6 +188,82 @@ proba('⭐ A SZERKESZTÉSI kör kézi útja: javaslat → szavaz → az új cím
     const kep = await fut(hely, 'allapot');
     // ⭐ A HARMADIK FÁZIS bizonyítéka a parancssorból: az entitás címe tényleg átíródott.
     return kep.includes('ÚJ CÍM') && kep.includes('SZERKESZTÉSI EGYEZMÉNYEK');
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ A SZAKASZ 4 KÉZI ÚTJA — az identitás (2026-09-12)
+// ===================================
+//
+// ⛔⛔ MIÉRT SZÜLETETT: a két lépcsős beléptető (D54–D63) **52 önpróbával** megépült, zöld
+// volt — és **senki nem érte el**. A `koino.js` a `muveletek.js` tizenhat műveletéből
+// kilencet importált; az `identitas.js` és a `jelzesek.js` egyetlen importálója a **saját
+// próbája** volt. *Modul-próbával ezt nem lehet elkapni: azok épp a modult hívják.*
+
+proba('⭐⭐⭐ A TELJES IDENTITÁS-KÖR KÉZZEL: belep → csere → meghiv → csere → TAG', async () => {
+  const alapito = await ujKeszulek();
+  const ujonc = await ujKeszulek();
+  try {
+    await fut(alapito, 'koino', 'Próba koinó');
+
+    // ⭐ Az újonc MEGNYITJA a saját azonosság-szeletét. Ez még NEM tagság.
+    const horgony = teljesAzonosito(await fut(ujonc, 'belep'));
+    if (!horgony) return false;
+
+    // Az alapítónak meg kell ismernie az újonc horgonyát — ez a csere dolga.
+    // ⚠️ És az újonc is csak ezután ismeri a koinót: addig az állapot a fejlécnél
+    // visszafordul, tehát a „még nem tag" képet CSAK a csere után lehet felvenni.
+    await csereKor(alapito, ujonc, 7931);
+
+    const elotte = await fut(ujonc, 'allapot');
+    if (!/✘ tag/.test(elotte)) return false;      // a kiindulás: ismeri a koinót, de nem tag
+
+    await fut(alapito, 'meghiv', horgony);
+    await csereKor(alapito, ujonc, 7932);
+
+    const utana = await fut(ujonc, 'allapot');
+    // ⭐ A BIZONYÍTÉK: ugyanaz a készülék, ugyanaz a parancs — más válasz.
+    return /✔ tag/.test(utana) && /tag hívta be/.test(utana);
+  } finally {
+    await rm(alapito, { recursive: true, force: true });
+    await rm(ujonc, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ AZ AZONOSSÁG LÁTSZIK az állapotban — és a „nem" INDOKOLT (D19)', async () => {
+  const hely = await ujKeszulek();
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    const kep = await fut(hely, 'allapot');
+    // ⭐ Az alapító mindhárom kérdésre igen — ő a rekurzió alapesete (D56).
+    return kep.includes('AZONOSSÁG')
+      && /✔ tag/.test(kep) && /✔ tanúsíthat/.test(kep) && /✔ 2\. lépcsős/.test(kep)
+      && /bízták rád a tanúsítást/.test(kep);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ HORGONY NÉLKÜL nem lehet állítani másról — a művelet megnevezi, mi hiányzik', async () => {
+  const hely = await ujKeszulek();
+  try {
+    // ⚠️ Szándékosan NINCS `koino` és NINCS `belep`: nincs saját horgony.
+    const kimenet = await fut(hely, 'meghiv', 'akarmi');
+    return /Nincs ilyen azonosító|horgony/i.test(kimenet);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ A „MEGBÍZÁS, NEM PONTSZÁM" (D60) a kiírásban is így jelenik meg', async () => {
+  const hely = await ujKeszulek();
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    const kep = await fut(hely, 'allapot');
+    // ⛔ Soha nem „becsületesség: N" — a jellem-szám hírnév-rendszerré romlana (D18/1, D49/b).
+    return /bízták rád a tanúsítást/.test(kep) && !/becsületesség/i.test(kep);
   } finally {
     await rm(hely, { recursive: true, force: true });
   }

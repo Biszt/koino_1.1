@@ -47,7 +47,17 @@
 // ⚠️ A GYORSÍTÓTÁR NEM KÉNYELEM, HANEM A LÉNYEG. Nélküle a bejárás 3^mélység volna; vele az
 // ŐS-HALMAZ mérete, mert mindenkit CSAK EGYSZER nézünk meg.
 //
-// Használják: az állapot-számítás és a felület (később a szabály-réteg is).
+// Használják: a **parancssor** (`koino.js` — az AZONOSSÁG szakasz és a hét identitás-parancs)
+// és a próbája.
+//
+// ⚠️⚠️ EZ A SOR SOKÁIG HAZUDOTT (javítva 2026-09-12): azt írta, „az állapot-számítás és a
+// felület" — egyik sem használta. Egy másik session kód-átnézése mérte ki, hogy az egyetlen
+// importáló a **saját próbája** volt. *Ugyanaz a csapda, amit az `Allaspont`-nál kimondtunk:
+// ahol egy mező mást mond, mint amit teszünk, ott előbb-utóbb valaki a mezőt hiszi el.*
+//
+// ⏸️ A **szabály-réteg** továbbra sem kérdez tagságot, és ez NYITOTT DÖNTÉS (Csaba, 2026-09-12).
+// ⛔ Ha egyszer kérdezni fog, a válasz nem lehet „kidobom": P2P-n a *„nem tag"* és a *„még nem
+// láttam a bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
 
 import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 

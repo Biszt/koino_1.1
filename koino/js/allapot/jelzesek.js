@@ -47,7 +47,13 @@
 // **D49** óta ez megengedett: két készülék MÁST mutathat, mert a jelzés **nem dönt**. (Amíg
 // döntött volna, addig ez kizáró ok volt — a 8/d szakasz erről szól.)
 //
-// Használják: a felület. ⛔ A szabály-réteg SOHA.
+// Használják: a **parancssor** (`koino.js`, az AZONOSSÁG szakasz) és a próbája.
+// ⛔ A szabály-réteg SOHA — ez nem ígéret, hanem ellenőrizhető tény: a döntés-réteg egyetlen
+// fájlja sem importálja ezt a lapot.
+//
+// ⚠️ EZ A SOR IS HAZUDOTT 2026-09-12-ig („Használják: a felület") — a felület sem használta.
+// A jelzés megépült, mérve 100%/9–25%-ot fogott, és **sehol nem látszott**. *A CLAUDE.md
+// szerint „a gépi segítség értéke az ÉSZREVÉTELBEN van" — az észrevételhez látszania kell.*
 
 import { entitasEsemenyei, sajatLancEsemenyei, esemenyLekerese } from '../tar/esemenyTar.js';
 

@@ -22,6 +22,13 @@
 //   node koino/koino.js torol <azonosító> ["indoklás"]
 //   node koino/koino.js athelyez <mit> <hova|gyoker> ["indoklás"]
 //   node koino/koino.js egyesit <az1>,<az2>[,...] "Egyesített cím" ["indoklás"]
+//   node koino/koino.js belep [alapítás]          — ⭐ a SAJÁT azonosság-szeletem
+//   node koino/koino.js meghiv <horgony>          — ⭐ 1. lépcső: tagság
+//   node koino/koino.js felhatalmaz <horgony>     — ⭐ rábízom a tanúsítást (D60)
+//   node koino/koino.js tanusit <horgony>         — ⭐ 2. lépcső: pénztárca (D11)
+//   node koino/koino.js bemutatkoz <horgony>      — ⭐ találkoztunk (D62)
+//   node koino/koino.js visszavon <horgony>       — ⭐ a felhatalmazás visszavétele
+//   node koino/koino.js lattam                    — ⭐ buli-elismerés (D61)
 //   node koino/koino.js altalanos "Az álláspont" <hely> ["indoklás"]  — ÁLTALÁNOS javaslat
 //   node koino/koino.js allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]
 //   node koino/koino.js felszabadit [buli]
@@ -60,7 +67,7 @@ import {
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
 } from './js/kulcs/kulcsTar.js';
-import { koinoEsemenyei, sajatLancEsemenyei } from './js/tar/esemenyTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
@@ -68,8 +75,12 @@ import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVeg
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
-  javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET
+  javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
+  // ⭐ A SZAKASZ 4 HÉT MŰVELETE (2026-09-12) — eddig egyik sem volt elérhető kézzel.
+  belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa
 } from './js/muveletek.js';
+import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
+import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 import {
@@ -142,6 +153,71 @@ function feloldas(toredek, lehetosegek) {
   if (talalatok.length === 1) return talalatok[0];
   if (talalatok.length === 0) throw new Error('Nincs ilyen azonosító: ' + toredek);
   throw new Error('Több azonosító is illik ide (' + talalatok.length + ') — írj többet belőle.');
+}
+
+// ===================================
+// ⭐⭐ AZ IDENTITÁS KÉZI ÚTJA (2026-09-12) — a 4. szabály pótlása
+// ===================================
+//
+// ⛔⛔ EGY MÁSIK SESSION KÓD-ÁTNÉZÉSE TALÁLTA: a Szakasz 4 teljes gépezete (két lépcsős
+// beléptetés, kontraszt-jelzés, visszavonás — D54–D63, **52 önpróbával bizonyítva**)
+// megépült, zöld volt, és **senki nem érte el**. Mérve: a `muveletek.js` tizenhat műveletet
+// exportál, a `koino.js` kilencet importált; az `identitas.js` és a `jelzesek.js` egyetlen
+// importálója a **saját próbája** volt.
+//
+// ⚠️ Ez ugyanaz a hiba, mint az `altalanos`-nál (2026-09-10), csak nagyobb léptékben — és a
+// legélesebb következménye: **a visszavonás elérhetetlen volt.** A CLAUDE.md szerint *„nem a
+// kapu véd, hanem hogy a rossz tanúsító elveszíti a szerepét"* — épp ezt nem tudta kimondani
+// senki.
+
+/**
+ * A SAJÁT HORGONYOM: az én `Belepes` eseményem ebben a koinóban.
+ *
+ * ⭐ Minden rólam szóló esemény (meghívás, felhatalmazás, tanúsítás) erre a szeletre mutat,
+ * és minden általam kiadott állítás **magával hozza** a horgonyomat (`sajatBelepes`) — hogy
+ * az ellenőrzés mutató-követés legyen, ne keresés. Ezért a parancsoknak **nem kell beírni**:
+ * a saját láncomból kiolvassuk.
+ *
+ * ⚠️ Az ALAPÍTÓ kivétel: neki a `KoinoLetrehozas` a horgonya (ő a rekurzió alapesete).
+ */
+async function sajatHorgonyom() {
+  const lanc = await sajatLancEsemenyei(tar, szerzo);
+  const belepesem = lanc.find((e) => e.koino === KOINO && e.tipus === 'Belepes');
+  if (belepesem) return belepesem.azonosito;
+
+  const alapitasom = lanc.find((e) => e.koino === KOINO && e.tipus === 'KoinoLetrehozas');
+  if (alapitasom) return alapitasom.azonosito;
+  return null;
+}
+
+/** Minden `Belepes`/`KoinoLetrehozas` horgony ebben a koinóban — a rövid azonosító feloldásához. */
+async function horgonyok() {
+  const esemenyek = await koinoEsemenyei(tar, KOINO);
+  return esemenyek
+    .filter((e) => e.tipus === 'Belepes' || e.tipus === 'KoinoLetrehozas')
+    .map((e) => e.azonosito);
+}
+
+/**
+ * Egy MÁSIK ember horgonyából kiolvassa, KI ő — és összeállítja az állítás adatait.
+ *
+ * ⭐ Miért elég a horgony? Mert a `kit` (a nyilvános kulcs) **kiszámítható belőle**: a horgony
+ * egy aláírt esemény, aminek a szerzője maga a másik ember. Ha kézzel kellene mindkettőt
+ * beírni, **el lehetne rontani** — és egy idegen szeletébe tett állítás nem számít.
+ * *Amit le lehet vezetni, azt ne kelljen bemondani.*
+ */
+async function allitasAdatai(horgonyToredek) {
+  if (!horgonyToredek) throw new Error('Melyik horgonyra? (a másik ember `belep`-jének azonosítója)');
+  const horgonya = feloldas(horgonyToredek, await horgonyok());
+
+  const horgonyEsemeny = await esemenyLekerese(tar, horgonya);
+  if (!horgonyEsemeny) throw new Error('Nem ismerem ezt a horgonyt: ' + horgonyToredek);
+
+  const sajatBelepes = await sajatHorgonyom();
+  if (!sajatBelepes) {
+    throw new Error('Előbb neked is be kell lépned ebbe a koinóba: node koino/koino.js belep');
+  }
+  return { kit: horgonyEsemeny.szerzo, horgonya, sajatBelepes };
 }
 
 /** A jelenlegi állapot és a javaslatok, adott időpontra. */
@@ -351,6 +427,58 @@ async function allapotKiirasa(napokMulva) {
     + ' · eseményeid: ' + (await sajatLancEsemenyei(tar, szerzo)).length
     + ' · esemény összesen: ' + esemenyek.length
     + (napokMulva ? ' · NÉZET: ' + napokMulva + ' nap múlva' : '') + SZIN.vege);
+
+  // ----- ⭐⭐ AZ AZONOSSÁG (2026-09-12) -----
+  //
+  // ⛔ Eddig SEHOL nem látszott: a két lépcsős beléptető kiszámolt mindent, de az állapot
+  // egy szót sem szólt róla. ⚠️ A CLAUDE.md szerint *„a gépi segítség értéke az
+  // ÉSZREVÉTELBEN van, nem a döntésben"* — az észrevételhez viszont **látszania kell**.
+  //
+  // ⭐ HÁROM KÉRDÉS, ugyanazzal a vázzal (D56): TAG ← meghívás · TANÚSÍTHAT ← felhatalmazás ·
+  // 2. LÉPCSŐS ← tanúsítás. ⚠️ A „nem" kétféle: **nincs meg** vagy **nem ellenőrizhető** (a
+  // lánc egy része hiányzik) — és ezt a kettőt sosem mossuk össze (D19).
+  const sajatBelepes = await sajatHorgonyom();
+  kiir();
+  kiir(SZIN.vastag + 'AZONOSSÁG' + SZIN.vege);
+  if (!sajatBelepes) {
+    kiir(SZIN.halvany + '  Még nincs horgonyod ebben a koinóban: node koino/koino.js belep'
+      + SZIN.vege);
+  } else {
+    const nezet = ujIdentitasNezet();
+    const kerdesek = [
+      ['tag', await tagE(tar, KOINO, sajatBelepes, nezet), '1. lépcső: minden mehet'],
+      ['tanúsíthat', await tanusithatE(tar, KOINO, sajatBelepes, nezet), 'a tanúsítás megbízása'],
+      ['2. lépcsős', await lepcso2E(tar, KOINO, sajatBelepes, nezet), 'a pénztárca (D11)']
+    ];
+    kiir('  ' + SZIN.halvany + 'horgonyod: ' + sajatBelepes.slice(0, 8) + SZIN.vege);
+    for (const [nev, valasz, mire] of kerdesek) {
+      // ⚠️ Három jel, nem kettő: ✔ igen · ✘ nem · ? nem ellenőrizhető (hiány, nem vád).
+      const jel = valasz.igen ? SZIN.jo + '✔' : (valasz.ellenorizheto ? SZIN.nem + '✘' : SZIN.halvany + '?');
+      kiir('  ' + jel + SZIN.vege + ' ' + nev.padEnd(12)
+        + SZIN.halvany + valasz.ok + ' — ' + mire + SZIN.vege);
+    }
+
+    // ⭐ MEGBÍZÁS, NEM PONTSZÁM (D60): „hányan bízták rá a tanúsítást" — soha nem
+    // „becsületesség: N". A különbség nem szépészeti: egy jellem-szám hírnév-rendszerré
+    // romlik (D18/1, D49/b), ez viszont TÉNY, és nem rólam szól, hanem arról, amit MÁSOK tettek.
+    const megbizas = await megbizasAllapota(tar, KOINO, sajatBelepes);
+    kiir('  ' + SZIN.halvany + megbizas.felhatalmazasok + '-en bízták rád a tanúsítást'
+      + (megbizas.visszavontak ? ' (' + megbizas.visszavontak + ' visszavonva)' : '')
+      + ' · ' + megbizas.tanusitasok + ' tanúsításod van'
+      + (megbizas.ellenorizheto ? '' : ' · ⚠️ nem ellenőrizhető') + SZIN.vege);
+
+    // ⭐⭐⭐ A VALÓDI VÉDELEM: a kontraszt-jelzés. *„Hány olyan embert tanúsítottál, akinek
+    // nincs önálló élete a közösségben?"* — a becsületes alapvonal 0,3, a megvett tanúsítóé
+    // több száz. ⛔ Ez SOHA nem ítél: szám, nem vád, és a döntés-réteg nem is látja.
+    const torlodas = await tanusitoiTorlodas(tar, KOINO, sajatBelepes);
+    if (torlodas.tanusitott) {
+      kiir('  ' + SZIN.halvany + 'akiket tanúsítottál: ' + torlodas.tanusitott
+        + ' · ebből önálló élet nélkül: ' + torlodas.magukbanAllok
+        + (torlodas.ellenorizheto ? '' : ' · ⚠️ nem ellenőrizhető') + SZIN.vege);
+      kiir('  ' + SZIN.halvany + '⚠️ Ez SZÁM, nem ítélet — a koino bejelent, nem bíráskodik (D19).'
+        + SZIN.vege);
+    }
+  }
 
   // ----- ⭐ ELAKADT TUDATPONT (2026-09-07) -----
   // A törölt gondolatra tett pontom a keretemben marad, amíg vissza nem veszem. ⚠️ Ezt
@@ -709,6 +837,80 @@ try {
         kiir(SZIN.halvany + 'Most nincs felszabadítható pont.'
           + (kert === null ? ' (Türelmetlenül: felszabadit 0)' : '') + SZIN.vege);
       }
+      break;
+    }
+
+    // ===================================
+    // ⭐⭐ A SZAKASZ 4 HÉT PARANCSA (2026-09-12) — a kézi út, 4. szabály
+    // ===================================
+
+    // ⭐ BELÉPÉS: megnyitom a saját azonosság-szeletemet. Ez még NEM tagság — csak annyit
+    // mond: „ide szeretnék tartozni." A tagság ebből és a kapott meghívásokból SZÁMÍTÓDIK.
+    case 'belep': {
+      const meglevo = await sajatHorgonyom();
+      if (meglevo) {
+        kiir('Már van horgonyod ebben a koinóban: ' + meglevo.slice(0, 8));
+        kiir(SZIN.halvany + 'A teljes azonosítója (ezt add meg annak, aki behív):' + SZIN.vege);
+        kiir('  ' + meglevo);
+        break;
+      }
+      // ⭐ Az alapító a `KoinoLetrehozas`-ára hivatkozik — ő a rekurzió alapesete (D56).
+      const e = await belepes(kornyezet, ervek[0]);
+      kiir('Beléptél — a horgonyod: ' + e.azonosito.slice(0, 8));
+      kiir(SZIN.halvany + 'A teljes azonosítója (ezt add meg annak, aki behív):' + SZIN.vege);
+      kiir('  ' + e.azonosito);
+      kiir(SZIN.halvany + '⚠️ Ez még NEM tagság: ahhoz kell egy meghívás egy tagtól.' + SZIN.vege);
+      break;
+    }
+
+    // ⭐ A NÉGY ÁLLÍTÁS MÁSRÓL — ugyanaz az alak (`allitokRola`), más a jelentés.
+    // ⚠️ Mindegyik a MÁSIK szeletébe kerül, és hozza a saját horgonyomat.
+    case 'meghiv':
+    case 'felhatalmaz':
+    case 'tanusit':
+    case 'bemutatkoz':
+    case 'visszavon': {
+      const adatok = await allitasAdatai(ervek[0]);
+
+      const muvelet = {
+        meghiv: meghivas,
+        felhatalmaz: felhatalmazas,
+        tanusit: tanusitas,
+        bemutatkoz: bemutatkozas,
+        visszavon: felhatalmazasVisszavonasa
+      }[parancs];
+
+      await muvelet(kornyezet, adatok);
+
+      const mondat = {
+        meghiv: 'Meghívtad — ezzel az 1. lépcsőn (tagság) segítetted át.',
+        felhatalmaz: 'Rábíztad a tanúsítást (D60: MEGBÍZÁS, nem pontszám).',
+        tanusit: 'Tanúsítottad: „létező, külön ember" — ez a 2. lépcső (pénztárca, D11).',
+        bemutatkoz: 'Feljegyezted, hogy találkoztatok (D62: csak KÖLCSÖNÖSEN számít).',
+        visszavon: 'Visszavontad a felhatalmazásodat — ez CSAK ELŐRE hat (D47).'
+      }[parancs];
+      kiir(mondat + ' (' + adatok.horgonya.slice(0, 8) + ')');
+
+      if (parancs === 'tanusit') {
+        kiir(SZIN.halvany + '⚠️ A tanúsítás állítás a MÚLTRÓL — nem vonható vissza (D46). '
+          + 'Amit vissza lehet venni, az a felhatalmazás.' + SZIN.vege);
+      }
+      if (parancs === 'visszavon') {
+        kiir(SZIN.halvany + 'A már kiadott tanúsításai érvényben maradnak (D47) — különben '
+          + 'néhány ember összebeszélve tömegektől venné el a pénztárcát.' + SZIN.vege);
+      }
+      break;
+    }
+
+    // ⭐⭐ „ESZERINT LÁTOK" — a buli-elismerés (D61). A saját láncomban van sorrend, ezért
+    // minden KÉSŐBBI eseményem bizonyíthatóan ezután keletkezett — globális óra nélkül.
+    case 'lattam': {
+      const sajatBelepes = await sajatHorgonyom();
+      if (!sajatBelepes) throw new Error('Előbb lépj be: node koino/koino.js belep');
+      await lattam(kornyezet, sajatBelepes);
+      kiir('Elismerted, meddig látsz a saját szeletedben.');
+      kiir(SZIN.halvany + 'Aki SOHA nem ír alá ilyet, nem szeg szabályt — de kilóg a '
+        + 'ritmusból, és ezt a jelzés mutatja, nem a szabály (D19).' + SZIN.vege);
       break;
     }
 
@@ -2051,6 +2253,8 @@ try {
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');
       kiir('           ertek <azonosító> <elfogadási%> <részvételi%> <min mp> <max mp>');
+      kiir('           belep [alapítás] · meghiv|felhatalmaz|tanusit|bemutatkoz|visszavon <horgony>');
+      kiir('           lattam   (az AZONOSSÁG szakasz mutatja, hol tartasz)');
       kiir('           altalanos <álláspont> <hely> [indoklás]  (ÁLTALÁNOS javaslat — D27)');
       kiir('           allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]');
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
