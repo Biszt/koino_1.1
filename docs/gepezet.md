@@ -349,7 +349,19 @@ ezért írjuk le, ne csússzon be észrevétlenül.*
 
 ---
 
-## 6. ⏸️ ELHALASZTVA: AZ ALKOTMÁNY — a terv áll, a megépítés vár
+## 6. ⛔ ELVETVE: AZ ALKOTMÁNY — a terv leírásként marad
+
+> ⛔⛔⛔ **CSABA ELVETETTE (2026-09-12, D66):** *„Nem kell alkotmány, nem kell 2/3-adot
+> előidéző rendszer, és nem kell program frissítés sem. Ezek mind sok új élt hoznak létre.
+> Maradunk a prototípus szerinti funkcióknál."*
+>
+> ⭐ A megújulás helyette **költözés**: a közösség és az entitásaik **átmásolódnak egy új
+> koino-verzióba**, az e-ember utasítására — nem a meglévőt írjuk felül. A részletek és az
+> indoklás: **D66** a fázis-2 tervben.
+>
+> **Az alábbi terv leírásként marad** (a gondolatmenet nem évül el), de **nem épül meg.**
+> A korábbi, 2026-09-11-i „elhalasztva" indoklás is érvényes maradt — csak már nem
+> halasztás, hanem elvetés.
 
 > ⛔⛔ **CSABA DÖNTÉSE (2026-09-11): EGYELŐRE NEM ÉPÍTJÜK MEG.**
 > *„Mivel ez még nem építőköve semminek, ezért bele lehet rakni később is."*

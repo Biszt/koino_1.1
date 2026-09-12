@@ -1268,7 +1268,7 @@ kockázata), a koino terjedésének egészségét, és emberi okból is érdekes
 > `node koino/meres/mind.js`-szel fut. A böngészős nézet és a próbaoldalak megszűntek
 > (a git történetében megmaradnak).
 
-**62 tervezési döntés áll (D1–D65; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
+**63 tervezési döntés áll (D1–D66; a D48 elvetve, a D44/D51/D53 pedig 2026-09-06-án
 tárgytalanná vált — mindegyik okával együtt
 megőrizve).** 2026-08-25-én három elméleti hidat építettünk
 (kulcskezelés, konszenzus, identitás) — Csaba döntése alapján: *előbb elméletben hidaljuk
@@ -3136,7 +3136,12 @@ gondolatokban van.
 
 ### D64. AZ ALKOTMÁNY — az általános javaslat/egyezmény helyére (2026-09-10, Csaba)
 
-> ⏸️⏸️ **ELHALASZTVA (Csaba, 2026-09-11):** *„Mivel ez még nem építőköve semminek, ezért
+> ⛔⛔⛔ **ELVETVE (Csaba, 2026-09-12) — lásd a D66-ot.** *„Nem kell alkotmány, nem kell
+> 2/3-adot előidéző rendszer, és nem kell program frissítés sem. Ezek mind sok új élt
+> hoznak létre. Maradunk a prototípus szerinti funkcióknál."* ⭐ Az alábbi terv **leírásként
+> érvényes marad** (a gondolatmenet nem évül el), de **nem épül meg**.
+>
+> *(Az előző állapota, 2026-09-11-ről:)* ⏸️ **ELHALASZTVA (Csaba, 2026-09-11):** *„Mivel ez még nem építőköve semminek, ezért
 > bele lehet rakni később is."* ⭐ Az indok **mérhető**: az `Alkotmany` tisztán **additív**
 > lenne (`GondolatLetrehozas` + `adat.tipus`, a meglévő `Szavazat`, a státusz számítás) —
 > **nincs új esemény-fajta, egyetlen meglévő tár sem évül el**, tehát később ugyanannyiba
@@ -3270,6 +3275,13 @@ küszöbe medián lenne, a közösség **leszállíthatná a saját alkotmány-k
 
 ### D65. A PROGRAM SZINTŰ SZABÁLY IS A KÖZÖSSÉGÉ (2026-09-11, Csaba)
 
+> ⭐⭐ **MEGVÁLASZOLVA A D66-BAN (2026-09-12), ÚJ MECHANIZMUS NÉLKÜL.** A kérdés — *ki
+> állítja a koino kemény állandóit, ha nem a programozó?* — válasza nem egy gépezet, hanem
+> a **költözés**: aki nem ért egyet az új állandókkal, **nem költözik át**. *A program
+> szintű szabály attól a közösségé, hogy a közösség dönti el, melyik programban él.*
+> ⛔ Az alábbiakból **tárgytalan** a „program-frissítés" mint mechanizmus; ⭐ **érvényes
+> marad** a paraméter/gépezet megkülönböztetés és a 15. mérés tanulsága.
+
 > „Igen, szerintem szükség lesz program szintű szabályozásra, de a koino **teljes
 > közössége** által hozott döntést kell majd program szintjére beépíteni." — Csaba
 
@@ -3349,6 +3361,120 @@ is beleszámolódnak"*, ott a hallgatás **NEM**-et jelent; globálisan viszont 
 felszabadításnál — és ott **már megoldottuk** (`allapot.lancVegek`). A globális nevező tehát
 lehetne: *tag **ÉS** nem nyilvánította magát passzívvá ebben a témában **ÉS** a lánca él.*
 Nem hit, hanem a saját láncából olvasható.
+
+### D66. A MEGÚJULÁS = KÖLTÖZÉS, NEM FRISSÍTÉS (2026-09-12, Csaba)
+
+> „Nem kell alkotmány, nem kell 2/3-adot előidéző rendszer, és **nem kell program frissítés
+> sem**. Ezek mind sok új élt hoznak létre. Maradunk a prototípus szerinti funkcióknál.
+>
+> A program megújulása viszont továbbra is fontos, csak nem úgy kell rá gondolni, hogy
+> **felülírjuk azt, ahol a közösség van**, hanem a közösséget és entitásaikat, meg mindent,
+> ami fontos, **átmásolunk az új koino verzióba**. És ezt nem automatikusan, hanem **az
+> e-ember utasítására**." — Csaba
+
+⛔⛔ **Ez a döntés HÁROM tervet vet el egyszerre:** a **D64**-et (alkotmány), a 67/67-es
+alapérték-ötletet, és a **D65** program-frissítési mechanizmusát. *Az indok nem az, hogy
+rosszak voltak, hanem hogy mindegyik **új élt** hozott a gépezetbe.*
+
+#### 1. ⭐⭐⭐ Ez nem új irány — Csaba 2026-08-31-én már kimondta
+
+A **D25** (a koinók családfája) a koinók szaporodásának **2. módjaként** sorolja fel:
+*„Új szabályrendszer — módosított program, saját szabályokkal"*, a **D13** alá kötve (*a fork
+normál üzemmód*). És a tanúsítás-öröklés kivételét Csaba szó szerint így fogalmazta meg:
+
+> *„Ez alól az az eset lehet kivétel, ha egy koino szétválik, mert mondjuk nem mindenki
+> fogadott el egy **verziófrissítést**."* — Csaba, 2026-08-31
+
+⭐ 2026-09-12-én ugyanoda jutott, másik úton. *Ami kétszer, függetlenül ugyanoda vezet, az
+valószínűleg a szerkezetből következik, nem az ízlésből.*
+
+#### 2. ⭐⭐ A kód alátámasztja: az aláírás KÖTI a koino nevét
+
+Az `esemeny.js` aláírt mezői: `'koino'`, `'tipus'`, `'szerzo'`, `'elozo'`, `'sorszam'`,
+`'ido'` — **a koino azonosítója az első aláírt mező**. Két következménye van, és mindkettő a
+modellt erősíti:
+
+- ⭐ **Régi esemény nem tud beszivárogni az új koinóba** — az aláírása egy másik koino nevére
+  szól. *Nem kell őrszabály; a kriptográfia zárja.*
+- ⭐⭐ **Ezért az „átmásolás" valójában ÚJRA ALÁÍRÁS**, emberenként — pontosan az, amit Csaba
+  mond (*„az e-ember utasítására"*). A **D15** miatt nem is lehet másképp: senki nem írhat alá
+  helyettem. *A modell nem enged más megoldást — ez jó jel.*
+
+#### 3. ⭐ Amit ez a 15. méréssel csinál
+
+A 15. mérés (ugyanaz a 8 esemény, eltérő `TUDATPONT_KERET` → 4 entitás vs 2, **és a csere nem
+veszi észre**) mostantól **nem javítandó hibát mutat, hanem az INDOKOT**. Ebben a modellben a
+helyzet elő sem állhat: két program-verzió = **két koino**, és a csere a `LENYOMAT`-nál tisztán
+elutasítja az idegen koinót (mérve: 1 kör, ~334 bájt).
+
+*A kettéhasadást nem megoldjuk, hanem megszüntetjük — ami eddig csendes eltérés volt, az
+mostantól két külön, bejelentett közösség.*
+
+#### 4. ⛔⛔ DE EGY FELTÉTELLEL, ami nélkül az egész nem véd
+
+> **Ha az állapotot befolyásoló állandó változik, az ÚJ KOINO — új azonosítóval.**
+
+⚠️ A védelem **kizárólag** ezen áll. Ha valaki átírja a `TUDATPONT_KERET`-et és **ugyanazt a
+koino-azonosítót** hagyja, a 15. mérésben látott néma kettéhasadás **változatlanul
+bekövetkezik**. A hat állapot-befolyásoló állandó (`TUDATPONT_KERET` · `ALAP_KUSZOBOK` ·
+`KATEGORIA_KORLAT` · `MEGHIVO_KELL` · `TANUSITAS_KELL` · `FELHATALMAZAS_KELL`) tehát
+**együtt mozog a koino nevével**.
+
+⏸️ **Ezért a szabály-lenyomat ötlete nem hal meg, csak más a szerepe:** nem a frissítés
+kísérője, hanem **a szabály betartásának ellenőre** — *„tényleg azt a programot futtatjuk-e,
+amit a koino neve ígér?"* Eltérésnél **jelzés, nem vád** (D19). ⚠️ Kisebb prioritás, mint
+korábban, de a 9. szabály szerint egymilliárdnál valaki **biztosan** futtat majd módosított
+programot változatlan névvel — véletlenül vagy szándékosan.
+
+#### 5. ⛔ A MÁSOLÁS HATÁRA — a kritérium
+
+Nem minden viselkedik egyformán a költözésnél:
+
+| Mi | Költözik? | Miért |
+|---|---|---|
+| **Amit ÉN állítok** — gondolat, tudatpont, szavazat, érték javaslat | ✅ **igen, újra aláírva** | a sajátom; a régi eseményt **mellé tehetem bizonyítékként** (D42-minta: *bemondom, mire támaszkodom*) |
+| **Amit MÁSOK állítottak rólam** — meghívás, felhatalmazás, tanúsítás | ⚠️ **nem én viszem** | nem az én aláírásom (`allitokRola`); a **D25 születéskori pillanatképe** menti át, vagy újra kell szerezni |
+| **A PÉNZ** | ⛔ **NEM** | a másolása **hamisítás** (lásd lent) |
+
+⛔ Ha a tanúsítások nem jönnek át, **mindenki visszaesik az 1. lépcsőre** az új koinóban, és a
+pénztárca bezárul (D11). *A D25 pillanatkép-szabálya ezért nem részletkérdés.*
+
+#### 6. ⛔⛔ A PÉNZ — amit Csaba maga is meglátott
+
+> „Egy problémát már én is látok: a pénz esetében ez nem lesz ilyen egyszerű, mivel a
+> termelődése, nyilvántartása nem történhet több helyen." — Csaba
+
+⭐ **Miért más, pontosan:** a koino minden más adata attól igaz, hogy **ÉN mondtam ki**. A pénz
+attól, hogy **MÁS mondta ki nekem**. Ha átmásolom az egyenlegemet, olyat állítok magamról,
+amit nem én adtam magamnak — és ha a régi koino tovább él, ugyanaz a pénz **kétszer létezik**.
+
+⭐ **Az irány, ami a koino saját mintájából jön:** a pénznél nem *másolás* kell, hanem
+**átvitel** — kétoldalú és aláírt. A régi koinóban aláírom, hogy *„ezt az összeget itt
+kivezetem"*, és az új koinóban **ez a kivezetés a fedezete** annak, amit kapok.
+
+⛔ **És az őszinte korlát:** a kivezetés csak akkor ér valamit, ha a **régi koino is
+megszünteti** azt a pénzt — és azt a régi koino *programja* tartja be. Aki ott más programot
+futtat, annál megmarad. *A kettős költés a verzióváltásnál ugyanaz a nehézség, mint a
+hálózatokban — és a koinónak nincs globális könyve, ami eldöntené.*
+
+⚠️⚠️ **ELHALASZTHATÓ, DE CSAK A PÉNZ MEGÉPÍTÉSÉIG.** A költözés pénz-szabályát a pénzzel
+**EGYÜTT** kell megtervezni, nem utána — ez pont az a fajta dolog, amit utólag nem lehet
+beletenni (9. szabály).
+
+#### 7. ⭐⭐ És ezzel a D65 kérdése is megválaszolódik — új mechanizmus nélkül
+
+A D65 azt kérdezte: *ki állítja a koino kemény állandóit, ha nem a programozó?* ⭐ A válasz
+nem egy új gépezet, hanem **a költözés**: aki nem ért egyet az új állandókkal, **nem költözik
+át**. *A program szintű szabály attól a közösségé, hogy a közösség dönti el, melyik programban
+él.* ⛔ És ehhez a **6. szabály** kell (*„ekkora program elfér egy üzenetben, és bárki
+újraírhatja"*) — enélkül a „nem költözöm" üres mondat lenne, mert nem lenne hova.
+
+#### ⏸️ Ami nyitva marad
+
+- **A költözés kézi útja** (4. szabály): milyen paranccsal viszi át valaki a sajátjait?
+- **A D25 születéskori pillanatképe**: pontosan mit örököl a leszármazó koino, és mit nem.
+- **A pénz átvitele** — a pénzzel együtt tervezendő (6. pont).
+- **A szabály-lenyomat** mint a szabály-betartás ellenőre (4. pont).
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
