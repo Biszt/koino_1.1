@@ -52,10 +52,11 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > lennie*).
 >
 > **A szakaszok újrarendezve:** 1. A helyi modell ✅ · 2. **A szállítás** ✅ *(átnevezve —
-> a munka valójában erről szólt, és elkészült)* · **3. A SZERKEZET** ✅ *(új, beékelődött;
-> kész 2026-09-03)* · 🚧 **4. AZ IDENTITÁS** *(tervezés — D43–D50,
-> [`szakasz4_terv.md`](szakasz4_terv.md))* · 5. A felület · 6. A kereső-réteg
-> *(elhagyható)* · 7. A pénz.
+> a munka valójában erről szólt, és elkészült)* · **3. A SZERKEZET** ✅ *(kész 2026-09-03)* ·
+> **4. AZ IDENTITÁS** ✅ *(kész 2026-09-06 — [`szakasz4_terv.md`](szakasz4_terv.md))* ·
+> 🚧 **5. A FELÜLET** *(itt folyik a munka — [`szakasz5_terv.md`](szakasz5_terv.md);
+> következő állomás: **5.6, a belépő tér**)* · 6. A kereső-réteg *(elhagyható)* · 7. A pénz
+> *(⚠️ a **D66** szerint a költözés pénz-szabályát EZZEL EGYÜTT kell megtervezni)*.
 >
 > ⚠️ **Ami látszólag ellentmond a D17-nek** (*„az identitás-réteg a gerinc, elsőként kell
 > állnia"*): az identitás **a bizalom** gerince, nem a **programé**. Az azonosság maga is
