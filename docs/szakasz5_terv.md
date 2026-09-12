@@ -332,10 +332,33 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.3** | ✅ **A kártyák** — az örökölt `Kartya.js` + Gondolat/Javaslat/Egyezmény, **változatlanul** (2026-09-06) | ettől lett mit nézni |
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
-| **5.6** | **A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
+| **5.6** | ⏭️ **KÖVETKEZIK: A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
 | **5.7** | **A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
+
+### ⏭️ ITT TARTUNK (2026-09-12)
+
+⭐⭐ **Az 5.6 elé bekerült egy tétel, ami nem volt a tervben, de az 5.6 ALAPJA:** a Szakasz 4
+(identitás) **kézi útja** megépült — hét parancs (`belep` · `meghiv` · `felhatalmaz` ·
+`tanusit` · `bemutatkoz` · `visszavon` · `lattam`) és az állapot **AZONOSSÁG** szakasza
+(három kérdés, három jellel: ✔ igen · ✘ nem · **?** nem ellenőrizhető).
+
+⛔ Kiderült ugyanis, hogy a teljes két lépcsős beléptető (D54–D63, **52 önpróbával**)
+**senkihez nem volt bekötve**: az `identitas.js` és a `jelzesek.js` egyetlen importálója a
+**saját próbája** volt. *A belépő tér (a D25 nézete) pont erre épülne — enélkül nem lett
+volna mit mutatnia.*
+
+⭐ A teljes kör **két készüléken, próbával bizonyítva** (`meres/parancssorProba.js`):
+`belep` → csere → `meghiv` → csere, és a másik készülék állapota **✘ tag-ról ✔ tag-ra** vált.
+
+⏸️ **És egy nyitott döntés, ami az 5.6-ot érinti:** kérdezzen-e a **szabály-réteg** tagságot?
+⛔ Ha igen, a válasz nem lehet „kidobom": P2P-n a *„nem tag"* és a *„még nem láttam a
+bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
+
+⏸️ **És egy apró hiány, ami közben felszínre jött:** nincs **fájlba mentés / fájlból olvasás**
+az eseményekre (a 4. szabály *„minden automatikus cseréhez tartozzon"* mondata). Ma a kézi út
+az adat-fájl másolása (`koino-adat/<koino>/esemenyek.jsonl` — hozzáfűzhető, tehát összefűzhető).
 
 ---
 
