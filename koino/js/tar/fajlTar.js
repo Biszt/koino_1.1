@@ -23,7 +23,7 @@
 //
 // Használják: esemenyTar.js és kulcsTar.js (rajtuk keresztül minden más).
 
-import { mkdir, readFile, appendFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, appendFile, writeFile, readdir, access } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
@@ -326,6 +326,100 @@ export function szeletJegyzekTarolo(hely = alapHely()) {
     async ir(lista) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify({ szeletek: lista }, null, 2), 'utf8');
+    }
+  };
+}
+
+// ===================================
+// ⭐ A TÉR — MELYIK KOINÓKAT ISMERI EZ A KÉSZÜLÉK? (Szakasz 5.6)
+// ===================================
+
+/**
+ * A készüléken lévő koinók azonosítói.
+ *
+ * ⭐ MIÉRT A MAPPÁK, ÉS MIÉRT NEM EGY NYILVÁNTARTÁS? Mert a mappa MAGA a nyilvántartás: egy
+ * koino attól van meg nekem, hogy itt az `esemenyek.jsonl`-je. Egy külön lista mellette
+ * **elcsúszhatna** az igazságtól — a `tarsak.json` azért lehet külön fájl, mert az
+ * megfigyelés (kivel sikerült beszélni), ez viszont TÉNY (megvan-e az adat).
+ *
+ * ⚠️ **CSAK AMIT EZ A KÉSZÜLÉK ISMER.** A D25 belépő tere ennél többet szeretne majd
+ * mutatni (böngészni az idegen koinókat is), de ahhoz a **kereső-réteg** kell, ami
+ * szándékosan elhagyható és még nincs meg. Amíg nincs, ez a lista az őszinte válasz —
+ * és nem hazudunk teljességet.
+ *
+ * 🔍 A 9. SZABÁLY PRÓBÁJA: *„mit csinál egymilliárd e-embernél?"* — ez a szám **nem** az
+ * e-emberek száma, hanem **ahány koinóban EZ A KÉSZÜLÉK benne van**. Az szerkezetileg
+ * kicsi marad (egy ember néhány közösségben él), tehát a felsorolás itt nem fojtópont.
+ *
+ * @param {string} [hely]
+ * @returns {Promise<Array<string>>} a koino-azonosítók, ábécé szerint
+ */
+export async function ismertKoinok(hely = alapHely()) {
+  console.log('ismertKoinok - KEZDÉS', { hely });
+
+  let bejegyzesek;
+  try {
+    bejegyzesek = await readdir(hely, { withFileTypes: true });
+  } catch (hiba) {
+    // Nincs még adat-mappa: ez nem hiba, csak még nincs egy koinónk sem.
+    if (hiba.code === 'ENOENT') return [];
+    throw hiba;
+  }
+
+  const koinok = [];
+  for (const b of bejegyzesek) {
+    if (!b.isDirectory()) continue;
+    // ⛔ A MAPPA ÖNMAGÁBAN NEM ELÉG: csak az számít koinónak, aminek van esemény-fájlja.
+    // Különben egy odatévedt mappa üres kártyaként jelenne meg a téren.
+    try {
+      await access(join(hely, b.name, 'esemenyek.jsonl'));
+      koinok.push(b.name);
+    } catch { /* nincs esemény-fájl → nem koino */ }
+  }
+
+  koinok.sort();
+  console.log('ismertKoinok - VÉGE', { darab: koinok.length });
+  return koinok;
+}
+
+/**
+ * „Mikor láttam ELŐSZÖR ezt a koinót?" — koinónként egy időpont.
+ *
+ * ⚠️ **Helyi feljegyzés, nem esemény** (3. szabály): sosem terjed, két készüléken mást
+ * jelent, és semmit nem dönt el a koinóban — ugyanaz a fajta, mint a `tarsak.js`
+ * `utoljara` mezője vagy a felszabadítási óra.
+ *
+ * ⭐ MIRE KELL? A belépő tér rendezéséhez a terv két időpontot kínál, és a különbségük
+ * elvi: a **`KoinoLetrehozas.ido`** a szerző órája — vagyis **állítás**, amit kívülről nem
+ * lehet igazolni (⚠️ ezért nem rendez `ido` szerint az `allapotSzamitas.js` sehol) —, az
+ * **először látás** viszont a saját megfigyelésem, tehát **hamisíthatatlan**. Az ára, hogy
+ * készülékenként más sorrendet ad. *Mindkettőt eltesszük, hogy a választás egy sor legyen.*
+ *
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function terJegyzekTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'ter.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Object>} koino → mikor láttuk először */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        return (adat && typeof adat === 'object' && !Array.isArray(adat)) ? adat : {};
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return {};
+        console.warn('terJegyzekTarolo - olvashatatlan feljegyzés, üresnek vesszük', { fajl });
+        return {};
+      }
+    },
+
+    /** @param {Object} jegyzet */
+    async ir(jegyzet) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify(jegyzet, null, 2), 'utf8');
     }
   };
 }

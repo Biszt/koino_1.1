@@ -83,6 +83,8 @@ import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/iden
 import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
+// ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
+import { terKartyai } from './js/allapot/ter.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -776,6 +778,63 @@ try {
       if (!nev) throw new Error('Mi legyen a koino neve?');
       await koinoLetrehozasa(kornyezet, nev, ervek[1]);
       kiir('A koino létrejött: ' + nev);
+      break;
+    }
+
+    // ===================================
+    // ⭐ A BELÉPŐ TÉR (5.6) — a koinók, amiket ez a készülék ismer
+    // ===================================
+    //
+    // ⭐ A 4. SZABÁLY: a parancs a funkcióval EGYÜTT jön, nem utána. Kétszer is megtörtént
+    // már (2026-09-10, 09-12), hogy egy megépült réteghez nem vezetett kézi út.
+
+    case 'ter': {
+      const { kartyak, koinok, csakAmitIsmerunk } = await terKartyai(alapHely(), {
+        szerzo,
+        rendezes: ervek[0] || undefined,
+        irany: ervek[1] || undefined
+      });
+
+      kiir(SZIN.vastag + 'A BELÉPŐ TÉR' + SZIN.vege + '  (' + koinok + ' koino)');
+
+      // ⛔⛔ A HATÁR KIMONDVA (D19). A kereső-réteg nélkül ez nem a világ összes koinója —
+      // és a hallgatás itt teljességet ígérne, amit nem tudunk tartani.
+      if (csakAmitIsmerunk) {
+        kiir(SZIN.halvany
+          + 'Csak amit EZ A KÉSZÜLÉK ismer — idegen koinók böngészéséhez kereső-réteg kell.'
+          + SZIN.vege);
+      }
+      kiir();
+
+      for (const k of kartyak) {
+        // ⚠️ A név hiányozhat: ha az eseményeket fájlból hoztam be, lehet, hogy a koino
+        // gondolatait ismerem, a SZÜLETÉSÉT nem. Nem találunk ki nevet (D19).
+        const nev = k.nev ?? SZIN.halvany + '(nem ismerem a születését)' + SZIN.vege;
+        const jel = k.enTagVagyok ? SZIN.jo + '✔' : SZIN.halvany + '·';
+        kiir('  ' + jel + SZIN.vege + ' ' + nev
+          + SZIN.halvany + '   [' + k.azonosito + ']' + SZIN.vege);
+
+        // ⭐⭐ HÁROM SZÁM, NEM EGY — a létszám SÚLYA a különbségükben van. Egy koino, ahol
+        // 900-an beléptek, de csak 12-nek van visszavezethető meghívási lánca, ránézésre
+        // más, mint ahol 900-ból 900.
+        let sor = '      ' + k.tagok + ' tag';
+        if (k.nemEllenorizhetok > 0) sor += ' · ' + k.nemEllenorizhetok + ' nem ellenőrizhető';
+        sor += ' · ' + k.belepok + ' belépő · ' + k.esemenyek + ' esemény';
+        kiir(SZIN.halvany + sor + SZIN.vege);
+
+        if (k.letrehozva) {
+          kiir(SZIN.halvany + '      létrehozva: ' + new Date(k.letrehozva).toLocaleString('hu-HU')
+            + ' (a szerző órája)' + SZIN.vege);
+        }
+        if (!k.enTagVagyok) {
+          kiir(SZIN.halvany + '      ' + k.miert + SZIN.vege);
+        }
+      }
+
+      if (koinok === 0) {
+        kiir(SZIN.halvany + '  Még egy koinót sem ismersz. Indíts egyet: koino <név>'
+          + SZIN.vege);
+      }
       break;
     }
 
@@ -2367,6 +2426,7 @@ try {
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
       kiir('           kivisz <fájl> [mind|sajat|<azonosító>] · behoz <fájl>   (a KÉZI ÚT)');
+      kiir('           ter [letrehozva|eloszorLattam|nev] [csokkeno|novekvo]  (A BELÉPŐ TÉR)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

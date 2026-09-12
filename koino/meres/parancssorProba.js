@@ -331,6 +331,44 @@ proba('⛔⛔ A FÁJLBAN ÁTÍRT gondolat nem jut be — a parancs KIMONDJA, hog
   }
 });
 
+// ===================================
+// ⭐ A BELÉPŐ TÉR KÉZI ÚTJA (5.6)
+// ===================================
+
+proba('⭐⭐ A BELÉPŐ TÉR KÉZZEL: két koino egy készüléken, mindkettő megjelenik', async () => {
+  const hely = await ujKeszulek();
+  try {
+    await fut(hely, 'koino', 'Falukozosseg');
+    // ⚠️ A második koino MÁS azonosítóval — ettől lesz két mappa egy készüléken.
+    await new Promise((teljesul, elakad) => {
+      execFile(process.execPath, [KOINO_JS, 'koino', 'Kozossegi kert'],
+        { env: { ...process.env, KOINO_ADAT: hely, KOINO_AZONOSITO: 'kert', KOINO_NAPLO: '' },
+          timeout: 30000 },
+        (hiba, ki, hibaKi) => (hiba && !ki) ? elakad(new Error(hiba.message)) : teljesul(ki + hibaKi));
+    });
+
+    const ter = await fut(hely, 'ter');
+
+    // ⛔ A HATÁR KIMONDVA (D19) — enélkül a lap némán teljességet ígérne.
+    return /Falukozosseg/.test(ter) && /Kozossegi kert/.test(ter)
+      && /2 koino/.test(ter) && /EZ A KÉSZÜLÉK ismer/.test(ter);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ A tér HÁROM SZÁMOT mutat, nem egyet — a létszám súlya látszik', async () => {
+  const hely = await ujKeszulek();
+  try {
+    await fut(hely, 'koino', 'Falukozosseg');
+    const ter = await fut(hely, 'ter');
+    // ⛔ Sosem puszta „létszám: N" — a tag/belépő kettőse az, amitől a szám ér valamit.
+    return /tag/.test(ter) && /belépő/.test(ter);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

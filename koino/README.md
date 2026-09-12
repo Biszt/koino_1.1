@@ -94,12 +94,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tizenhat próba-fájl, **472 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tizenhét próba-fájl, **491 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **131 fájl, 1836,6 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **133 fájl, 1869,6 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -126,6 +126,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
 | `meres/identitasProba.js` | ⭐ **a KÉT LÉPCSŐ és a KONTRASZT-JELZÉS** — a lánc visszavezet az alapítóig, a kör nem szül jogot, a választótestület zárt, a hiány nem vád, és a jelzés a becsületesre néma, a megvettre megszólal |
 | `meres/kapuProba.js` | ⭐ **a helyi kapu** (5.1): a négy őr + az útvonal-őr — ⛔ a kulcsfájl nem szerezhető meg, idegen oldal nem jut be, és **a program sehol nem importálja a felületet** (forrás-próba) |
+| `meres/terProba.js` | ⭐ **a belépő tér** (5.6): a koinók FÖLÖTTI nézet — ⛔ **létszám szerint nem lehet rendezni** (D18/2), ⭐ a létszám súlya **három számban** van (tag · nem ellenőrizhető · belépő), és a hiány (ismeretlen születés) **megnevezve** jelenik meg |
 | `meres/egyezmenyProba.js` | ⭐⭐ **a hurok bezárul**: az elfogadott szerkesztési egyezmény ÁTÍRJA az entitást — a folyamatban lévő és az általános (D27) nem; a sorrend a **lejárat** szerint dől el; ⛔ a kört csináló áthelyezés kimarad |
 | `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
 | `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
@@ -164,6 +165,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/csere.js` | a csere-protokoll **logikája, hálózat nélkül** (`ALLAS` → `KEREK` → `ESEMENY`) |
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
+| `js/allapot/ter.js` | ⭐ **A BELÉPŐ TÉR** (D25, 5.6): egy kártya minden koinóról, amit ez a készülék ismer — a kulcs és a társ-lista eddig is a koinók FÖLÖTT laktak, a tér ezt teszi láthatóvá |
 | `js/csere/fajlCsere.js` | ⛔⛔ **a KÉZI ÚT** (4. szabály): események fájlba és fájlból — ⭐ a kivitel alakja **bájtra a táré** (a másolt `esemenyek.jsonl` behozható), a behozatal pedig a `csere.js` `beolvasztas()`-át hívja, tehát **ugyanazon a kapun** megy be, mint a hálózatról jött |
 | `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
