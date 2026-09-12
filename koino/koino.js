@@ -2306,18 +2306,50 @@ try {
             return { adat: { data: { _id: esemeny.azonosito, cim: cim.trim() } } };
           }
 
-          // ⛔⛔ A SZERKESZTÉS NEM KÖZVETLEN — és ez nem hiányosság, hanem a modell.
+          // ===================================
+          // ⭐⭐ A SZERKESZTÉS: JAVASLAT, NEM KÖZVETLEN ÁTÍRÁS
+          // ===================================
           //
-          // A prototípusban a szerzője egyszerűen átírhatta a gondolatát. A koinóban egy
-          // létrejött entitást **csak egyezmény** változtathat meg (D8/D27): a szerkesztés
-          // útja a **szerkesztési javaslat**, amiről a tudatpont-tulajdonosok döntenek.
+          // ⚠️⚠️ EZT ELŐSZÖR ELRONTOTTAM (Csaba helyreigazítása, 2026-09-12). Azt hittem, a
+          // prototípusban a szerző **közvetlenül** átírhatta a gondolatát, és ezért a
+          // végpontot őszinte 400-zal zártam le. ⭐ **A prototípusban is javaslat →
+          // egyezmény mentén megy a szerkesztés** — csak ha a szerző az EGYETLEN
+          // tudatpont-tulajdonos, akkor 100% támogatottság mellett **azonnal megtörténik**.
           //
-          // ⚠️ Ezért NEM némán nyeljük el, hanem megmondjuk, mit tegyen helyette — ugyanaz
-          // a minta, mint a szavazat visszavonásánál (5.5).
+          // ⭐ Vagyis nincs itt kivétel és nincs külön út: ugyanaz a gépezet fut, csak
+          // egytagú választókörrel. *A modell nem szigorúbb a prototípusnál — a látszólagos
+          // szigor az én hibám volt.*
+          //
+          // ⚠️ AMI NEM AZONNAL LESZ: a `minimumDontesiIdo`. Ha a gondolatnak nincs 0-s
+          // minimuma, a saját szerkesztésed is kivárja azt az időt — a koino alapértéke
+          // **1 nap**, a prototípusé **0** volt. *(Ez egy nyitott különbség, és nem itt
+          // dől el: az `ALAP_KUSZOBOK` a hat állapot-befolyásoló állandó egyike — D66.)*
           if (modszer === 'PATCH' && utvonal.startsWith('/api/gondolat/')) {
-            return { allapot: 400, adat: { hiba:
-              'A koinóban egy gondolat nem írható át közvetlenül — a szerkesztés '
-              + 'szerkesztési JAVASLATTAL megy, amiről a tudatpont-tulajdonosok döntenek.' } };
+            const azonosito = utvonal.split('/')[3];
+            const { cim, szoveg } = test ?? {};
+            if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik gondolatot?' } };
+
+            const valtozas = {};
+            if (typeof cim === 'string' && cim.trim()) valtozas.cim = cim.trim();
+            if (Array.isArray(szoveg)) valtozas.szoveg = szoveg.length ? szoveg : null;
+            if (!Object.keys(valtozas).length) {
+              return { allapot: 400, adat: { hiba: 'mi változzon a gondolaton?' } };
+            }
+
+            // ⭐ A javaslattevő TÁMOGATÓ SZAVAZATÁT a művelet maga adja le
+            // (`muveletek.js`) — enélkül a saját szerkesztésed 0%-kal, ELVETVE zárna.
+            const e = await javaslatLetrehozasa(kornyezet, {
+              erintett: azonosito, muvelet: 'Modositas', valtozas, fajta: 'szerkesztesi'
+            });
+
+            // ⛔ A JAVASLAT IS ENTITÁS (2026-09-06), tehát tudatpont nélkül a koino
+            // elfelejtené (D14) — ugyanaz, amit a `javaslat` parancs is tesz.
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
+            await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
+              szetosztottPontok(allapot, szerzo));
+
+            pakliNezet.horgony = null;
+            return { adat: { data: { _id: e.azonosito, javaslat: true } } };
           }
 
           // ----- TUDATPONT-RENDEZÉS -----

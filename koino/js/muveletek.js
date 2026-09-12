@@ -93,8 +93,15 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
                       beallitas.horgonyDarab ?? HORGONY_DARAB)
     : [];
 
+  // ⚠️ AZ IDŐ ÁTADHATÓ, ÉS EGYETLEN OKBÓL (5.7): ha két esemény **egy tett** (a javaslat
+  // és a javaslattevő támogatása), akkor egy időbélyeget kell viselniük. ⛔ Különben nulla
+  // döntési időnél a szavazat **késői** lenne — a javaslat a születése pillanatában zár,
+  // és az egy ezredmásodperccel későbbi szavazat már nem számít bele (mérve).
+  //
+  // ⭐ Nem óra-hamisítás: a saját láncomban az idő nem lép VISSZA, csak áll egy pillanatra.
   const esemeny = await esemenyLetrehozasa(
-    { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott, ...veg },
+    { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott,
+      ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}), ...veg },
     kornyezet.kulcspar
   );
 
@@ -692,7 +699,7 @@ export function ertekJavaslat(kornyezet, entitas, ertekek) {
  * @param {Object} adatok - { erintettek: [{entitas, muvelet, valtozas}], indoklas, fajta }
  *        vagy a RÉGI alak: { erintett, muvelet, valtozas, indoklas, fajta }
  */
-export function javaslatLetrehozasa(kornyezet, adatok) {
+export async function javaslatLetrehozasa(kornyezet, adatok) {
   const { erintett, muvelet, valtozas, indoklas, fajta } = adatok;
 
   // A régi, egy-érintettes hívás listává alakul — így egyetlen alak megy az eseménybe.
@@ -714,7 +721,7 @@ export function javaslatLetrehozasa(kornyezet, adatok) {
     valtozas: r.valtozas ?? null
   }));
 
-  return esemenytTeszek(
+  const javaslat = await esemenytTeszek(
     kornyezet,
     'Javaslat',
     {
@@ -726,6 +733,40 @@ export function javaslatLetrehozasa(kornyezet, adatok) {
     // egyetlen gazdája lehet.
     { entitas: erintettek[0].entitas }
   );
+
+  // ===================================
+  // ⭐⭐ ÉS A JAVASLATTEVŐ TÁMOGATÓ SZAVAZATA — UGYANEBBEN A LÉPÉSBEN
+  // ===================================
+  //
+  // ⛔⛔ EZ HIÁNYZOTT, ÉS MÉRHETŐ KÁRT OKOZOTT (2026-09-12, Csaba helyreigazítása).
+  // A prototípus a javaslat létrehozásakor **automatikusan lead egy támogató szavazatot**
+  // (`javaslatService.js:635` — *„Automatikus támogató szavazat"*). A koino ezt nem tette,
+  // és emiatt egy **egytulajdonosú** entitás saját szerkesztési javaslata **0 szavazattal,
+  // ELVETVE** zárult — pontosan az ellenkezője annak, aminek történnie kell.
+  //
+  // ⭐ Csaba kimondása: *„a prototípusban is csak javaslat → egyezmény mentén lehet
+  // szerkeszteni, csak mivel ő az egyetlen tulajdonosa, ezért 100% támogatottság mellett
+  // azonnal megtörténik."* ⚠️ **A 100% nem jön magától** — ezt a szavazat adja.
+  //
+  // ⭐ MIÉRT ITT, ÉS NEM A HÍVÓBAN? Mert ez nem kényelem, hanem **a javaslattétel
+  // jelentésének része**: aki javasol valamit, az támogatja. Ha a hívóra bíznánk, pontosan
+  // ez történne újra — az egyik hívó megteszi, a másik elfelejti, és a koino két úton
+  // máshogy viselkedne.
+  //
+  // ⚠️ KÉT ALÁÍRT ESEMÉNY, nem egy — és ez rendben van: a saját készülékem a saját
+  // kulcsommal két külön állítást tesz (*„ezt javaslom"* és *„támogatom"*). Precedens: a
+  // `javaslat` parancs a tudatpontot is külön eseményként rendeli hozzá.
+  await esemenytTeszek(
+    kornyezet, 'Szavazat',
+    { javaslat: javaslat.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: false },
+    // ⛔⛔ UGYANAZ AZ IDŐBÉLYEG, mint a javaslaté — lásd az `esemenytTeszek` `ido` ágát.
+    // Nélküle nulla döntési időnél a saját szavazatom **késői** lenne, és a javaslat
+    // 0%-kal, ELVETVE zárna — mérve, 2026-09-12.
+    { entitas: erintettek[0].entitas, horgonyozzunk: true, ido: javaslat.ido }
+  );
+
+  // ⭐ A JAVASLAT eseményét adjuk vissza, nem a szavazatét — a hívót az érdekli.
+  return javaslat;
 }
 
 // ===================================

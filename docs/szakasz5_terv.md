@@ -453,6 +453,33 @@ A koinóban nincs szerver — és ez nem pótolható egy másik szerverrel sem:
 része megy (szöveg, link, entitás-hivatkozás, oldalak, előzmények, méretezés, mozgatás),
 és aki képet próbál beszúrni, **megtudja, miért nem megy**.
 
+⭐⭐⭐ **ÉS CSABA MEGADTA AZ IRÁNYT A SZÁLLÍTÁSRA (2026-09-12):**
+
+> *„azt még ki kell találni, mert szükség lesz nagyobb entitások másolására is. szerintem,
+> az eseményekből a buli alkalmával, megtudják a készülékek, hogy kinek mire van szüksége,
+> és a buli után meg fent kell tartani a kapcsolatot azon eszközöknek, amik nagyobb csomagot
+> kell hogy küldjenek egymásnak, addig, ameddig végbe megy a másolás/letöltés."*
+
+⭐ **KÉT LÉPÉS, ÉS EZ A SZÉTVÁLASZTÁS A LÉNYEG:**
+
+1. **A FELDERÍTÉS az eseményekből jön, a buli alatt.** Nem kell új kérdezősködés: az
+   események úgyis utaznak, és belőlük kiderül, **kinek mi hiányzik** — ugyanaz az elv,
+   mint az `ALLAS`-nál a cserében. *A drága rész (a bájtok) csak azután indul, hogy az
+   olcsó rész (a hivatkozások) már megmondta, mire van szükség.*
+2. **A SZÁLLÍTÁS a buli UTÁN is él**, de **csak a két érintett készülék között**, és **csak
+   amíg a másolás tart**.
+
+⚠️ **ÉS AMIÉRT EZ NEM SÉRTI AZ 5. SZABÁLYT** (*„ne épüljön folyamatos kapcsolatra"*): a
+szabály azt tiltja, hogy a koino **működése** kívánjon egyidejű online létet. Itt a
+kapcsolat **nem előfeltétel, hanem következmény**: az események már átmentek, a döntések
+már számolhatók — ha a másolás megszakad, a koino **teljes értékűen működik tovább**, csak
+a kép hiányzik. ⭐ *És a D3 pontosan ezt mondja a tartalmi rétegről: **elveszhet**.*
+
+⏸️ **Amit ez még nyitva hagy:** mekkora az egy darabban küldött szelet és hogyan folytatódik
+megszakadás után · ki kezdeményezi (a kérő vagy a birtokló) · hány párhuzamos átvitelt
+vállal egy készülék · és a **felső mérethatár** (a 6. szabály az eseményre kemény, de egy
+videóra is kell egy „eddig és ne tovább").
+
 ⏸️ **A javaslat, ha majd eldől:** a koino saját mintája — a fájlt a **lenyomata** nevezi
 meg (mint mindent a koinóban), az esemény csak ezt a ~100 bájtos hivatkozást hordozza, a
 bájtok pedig a tartalmi rétegben utaznak. Az ellenőrzés ingyen van: újra-lenyomatolni és

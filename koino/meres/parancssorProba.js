@@ -523,33 +523,52 @@ proba('⭐⭐⭐ A LAP LÉTREHOZ EGY GONDOLATOT — BLOKKOS szöveggel, és a k�
   }
 });
 
-proba('⛔⛔ A gondolat KÖZVETLENÜL nem írható át — a szerkesztés JAVASLATTAL megy (D8/D27)', async () => {
-  const hely = await ujKeszulek();
-  let kiszolgalo = null;
-  try {
-    await fut(hely, 'koino', 'Próba koinó');
-    kiszolgalo = await feluletet(hely, 7484);
-    const { hiv } = kiszolgalo;
+// ⭐⭐⭐ CSABA HELYREIGAZÍTÁSA (2026-09-12) — és ez a próba őrzi.
+//
+// ⚠️ Elsőre azt hittem, a prototípusban a szerző KÖZVETLENÜL átírhatta a gondolatát, és
+// ezért a `PATCH`-et őszinte 400-zal zártam le. ⛔ **Tévedés:** a prototípusban is
+// javaslat → egyezmény mentén megy a szerkesztés — csak ha a szerző az EGYETLEN
+// tudatpont-tulajdonos, akkor **100% támogatottság mellett azonnal megtörténik**.
+//
+// ⭐ A 100% viszont NEM jön magától: a prototípus a javaslat létrehozásakor
+// **automatikusan lead egy támogató szavazatot** (`javaslatService.js:635`). A koino ezt
+// nem tette — és emiatt a saját szerkesztésem **0 szavazattal, ELVETVE** zárult. *Ez a
+// próba pontosan azt a kört méri, ami eddig az ellenkezőjét adta.*
 
-    const uj = await hiv('/api/gondolat',
-      { method: 'POST', body: JSON.stringify({ cim: 'EREDETI CÍM' }) });
-    const id = uj.adat.data._id;
+proba('⭐⭐⭐ A SAJÁT SZERKESZTÉSEM AZONNAL HATÁLYBA LÉP — egyetlen tulajdonosként, 100%-kal',
+  async () => {
+    const hely = await ujKeszulek();
+    let kiszolgalo = null;
+    try {
+      await fut(hely, 'koino', 'Próba koinó');
+      kiszolgalo = await feluletet(hely, 7484);
+      const { hiv } = kiszolgalo;
 
-    // ⚠️ A prototípusban a szerző egyszerűen átírhatta. A koinóban egy létrejött entitást
-    // CSAK EGYEZMÉNY változtathat meg — és ezt nem némán nyeljük el, hanem megmondjuk.
-    const patch = await hiv('/api/gondolat/' + id,
-      { method: 'PATCH', body: JSON.stringify({ cim: 'ÁTÍRT CÍM' }) });
-    if (patch.allapot !== 400 || !/javaslat/i.test(patch.adat.hiba)) return false;
+      // ⚠️ NULLA döntési idővel, hogy tényleg AZONNAL dőljön el — a koino alapértéke 1 nap.
+      const uj = await hiv('/api/gondolat', {
+        method: 'POST',
+        body: JSON.stringify({
+          cim: 'EREDETI CÍM',
+          javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
+          aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+        })
+      });
+      const id = uj.adat.data._id;
 
-    // ⛔ És tényleg nem változott meg.
-    const pakli = await hiv('/api/pakli?darab=5');
-    return pakli.adat.kartyak.some((k) => k.cim === 'EREDETI CÍM')
-      && !pakli.adat.kartyak.some((k) => k.cim === 'ÁTÍRT CÍM');
-  } finally {
-    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
-    await rm(hely, { recursive: true, force: true });
-  }
-});
+      // ⭐ A szerkesztés JAVASLATOT ír — nem utasítjuk vissza, és nem is írjuk át közvetlenül.
+      const patch = await hiv('/api/gondolat/' + id,
+        { method: 'PATCH', body: JSON.stringify({ cim: 'ÁTÍRT CÍM' }) });
+      if (patch.allapot !== 200 || patch.adat?.data?.javaslat !== true) return false;
+
+      // ⛔⛔ ÉS A LÉNYEG: mivel egyedül vagyok tulajdonos, az egyezmény AZONNAL megszületik,
+      // és a gondolat címe MÁR AZ ÚJ.
+      const kep = await fut(hely, 'allapot');
+      return /ÁTÍRT CÍM/.test(kep) && /ELFOGADVA/.test(kep);
+    } finally {
+      if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
 
 proba('⭐ A besorolás-lenyílók a koino NEVEIT adják (a `cim` → `nev` fordítás egy helyen van)',
   async () => {
