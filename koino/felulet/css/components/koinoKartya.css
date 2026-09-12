@@ -1,0 +1,125 @@
+/* koino/felulet/css/components/koinoKartya.css */
+
+/* A BELÉPŐ TÉR kártyája (Szakasz 5.6).
+
+   ⚠️ EZ AZ EGYETLEN CSS-FÁJL A `felulet/`-BEN, AMI NEM A PROTOTÍPUSBÓL JÖTT — és nem
+   feledékenységből: a prototípusban a „koino" mint fogalom nem létezett, tehát nincs mit
+   átemelni. ⭐ Ezért viszont KIZÁRÓLAG a meglévő stílusváltozókat használja
+   (`base/variables.css`), hogy a tér ugyanabban a világban legyen, mint a pakli. */
+
+/* ⚠️⚠️ EZT A BÖNGÉSZŐ MONDTA MEG, nem az érvelés: a `hidden` attribútum csak a böngésző
+   alap-stíluslapján állít `display: none`-t, amit BÁRMELYIK osztály-szabály felülír. A
+   `.koino-sav { display: flex }` miatt a tér sávja a pakli mellett is látszott, pedig a
+   HTML-ben ott volt a `hidden`. Egy helyen zárjuk le, hogy a váltás megbízható legyen. */
+[hidden] { display: none !important; }
+
+.koino-kartya {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 0 auto .75rem;
+  max-width: 44rem;
+  color: var(--color-text);
+}
+
+/* ⭐ Ahol éppen állunk — a tér ebből látszik egy pillantásra. */
+.koino-kartya--aktiv {
+  border-color: var(--color-primary);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.koino-kartya__nev {
+  font-family: var(--font-display);
+  font-size: var(--text-lg, 1.25rem);
+  margin: 0 0 .25rem;
+}
+
+/* ⚠️ A HIÁNY LÁTSZIK, DE NEM VÁD (D19): halványabb és dőlt, nem piros. */
+.koino-kartya__nev--ismeretlen {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.koino-kartya__leiras {
+  margin: 0 0 .5rem;
+  font-size: var(--text-sm, .9rem);
+  opacity: .85;
+}
+
+/* ----- A HÁROM SZÁM ----- */
+
+.koino-kartya__szamok {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .75rem;
+  margin: .5rem 0;
+  font-size: var(--text-sm, .9rem);
+}
+
+.koino-kartya__szam {
+  background: var(--color-surface-offset);
+  border-radius: 4px;
+  padding: .15rem .5rem;
+  /* A `title` magyarázatot ad — jelezzük, hogy van mit elolvasni. */
+  cursor: help;
+}
+
+.koino-kartya__szam strong { color: var(--color-primary); }
+
+.koino-kartya__labjegyzet {
+  margin: .5rem 0 0;
+  font-size: var(--text-xs, .8rem);
+  color: var(--color-text-faint);
+}
+
+/* ----- AZ ALSÓ SÁV ----- */
+
+.koino-kartya__sav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-top: .75rem;
+  padding-top: .6rem;
+  border-top: 1px solid var(--color-divider);
+}
+
+.koino-kartya__allas {
+  font-size: var(--text-sm, .9rem);
+  opacity: .85;
+}
+
+.koino-kartya__belepes {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: 6px;
+  padding: .4rem .9rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.koino-kartya__belepes:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+.koino-kartya__belepes:disabled {
+  background: var(--color-surface-offset-2);
+  color: var(--color-text-faint);
+  cursor: default;
+}
+
+/* ----- A TÉR/PAKLI VÁLTÓ A FEJLÉCBEN ----- */
+
+.ter-valto {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--color-surface-offset);
+  color: var(--color-text-inverse);
+  border-radius: 6px;
+  padding: .3rem .75rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, .9rem);
+}
+
+.ter-valto:hover { background: rgba(255, 255, 255, .1); }

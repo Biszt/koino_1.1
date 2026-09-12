@@ -62,7 +62,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import {
-  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely
+  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely,
+  ismertKoinok
 } from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
@@ -224,9 +225,16 @@ async function allitasAdatai(horgonyToredek) {
   return { kit: horgonyEsemeny.szerzo, horgonya, sajatBelepes };
 }
 
-/** A jelenlegi állapot és a javaslatok, adott időpontra. */
-async function kepetKeszit(napokMulva = 0) {
-  const esemenyek = await koinoEsemenyei(tar, KOINO);
+/**
+ * A jelenlegi állapot és a javaslatok, adott időpontra.
+ *
+ * ⚠️ A TÁR ÉS A KOINO PARAMÉTER (5.6). Alapból az indításkori — így a parancssor minden
+ * hívása változatlan maradt —, de a **felület** átadja az ÉPP AKTÍV koinóét, mert ott
+ * futás közben lehet váltani. *Enélkül a lap a tér másik koinóján is az indításkori
+ * állapotot számolná: némán rossz adatot mutatna, nem hibát.*
+ */
+async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO) {
+  const esemenyek = await koinoEsemenyei(melyikTar, melyikKoino);
   const allapot = allapotSzamitasa(esemenyek);
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP);
 
@@ -2146,11 +2154,50 @@ try {
       // ⏸️ MA KÉT VÉGPONT VAN (5.1: `en`, 5.2: `pakli`). A többi a `szakasz5_terv.md`
       // térképe szerint jön — de a LÉNYEG már itt eldőlt: a lap SOSE kérhet „mindent".
       //
-      // ⭐ A pakli-nézet a FOLYAMATRA szól, nem kérésre: egy lapozás így egyszer számol
-      // állapotot, nem oldalanként.
-      const pakliNezet = ujPakliNezet();
+      // ===================================
+      // ⭐⭐ A FELÜLET AKTÍV KOINÓJA (5.6) — futás közben váltható
+      // ===================================
+      //
+      // ⛔ A PARANCSSOR EGY KOINÓRA SZÓL, A FELÜLET NEM. Egy `node koino.js gondolat …`
+      // hívás egyetlen koinóban dolgozik, és ez helyes: a `KOINO_AZONOSITO` indításkor
+      // eldől. A **belépő tér** viszont a koinók FÖLÖTT áll — a lap onnan lép be az
+      // egyikbe, majd vissza, majd egy másikba, **újraindítás nélkül**.
+      //
+      // ⭐ Ezért tart a felület koinónként egy **nyitott állapotot**: saját tár, saját
+      // környezet (az íráshoz) és saját pakli-nézet. ⚠️ A **kulcs közös** — a D15 szerint a
+      // személyazonosság a készüléké, nem a koinóé; a *tagság* az, ami koino-helyi.
+      //
+      // ⚠️ A pakli-nézet KOINÓNKÉNT külön: a horgony „az első N esemény" képe, és az
+      // eseményhalmaz koinónként más. Egy közös nézet a váltás után **másik koino képét**
+      // adná vissza a gyorsítótárból.
+      const nyitottKoinok = new Map();
+      let aktivKoino = KOINO;
+
+      async function aktivAllapot() {
+        if (!nyitottKoinok.has(aktivKoino)) {
+          // Az indításkori koino tárát nem nyitjuk meg másodszor.
+          const t = aktivKoino === KOINO ? tar : await esemenyTarNyitasa(aktivKoino);
+          nyitottKoinok.set(aktivKoino, {
+            koino: aktivKoino,
+            tar: t,
+            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t },
+            pakliNezet: ujPakliNezet()
+          });
+        }
+        return nyitottKoinok.get(aktivKoino);
+      }
 
       const kezelo = async ({ modszer, utvonal, kereses, test }) => {
+
+        // ⚠️⚠️ SZÁNDÉKOS ÁRNYÉKOLÁS, és ez a kulcsa az egésznek. A kezelő MINDEN sora az
+        // **aktív** koinóra vonatkozik, nem az indításkorira — a nevek viszont ugyanazok
+        // maradnak, ezért egyetlen végpont kódját sem kellett átírni a váltás miatt.
+        // *(A `kepetKeszit` a kivétel: annak paraméterként adjuk át, mert modul szintű.)*
+        const aktiv = await aktivAllapot();
+        const tar = aktiv.tar;
+        const KOINO = aktiv.koino;
+        const kornyezet = aktiv.kornyezet;
+        const pakliNezet = aktiv.pakliNezet;
 
         // ===================================
         // ⭐⭐ ÍRÁS (5.5) — itt születik esemény a lapról
@@ -2163,6 +2210,31 @@ try {
         // esemény létrejön, de nem fog számítani. *A felület nem véd, és nem is kell.*
         if (modszer === 'POST' || modszer === 'PUT') {
 
+          // ----- ⭐⭐ KOINO-VÁLTÁS (5.6) — belépés a térről egy koinóba -----
+          //
+          // ⚠️ EZ NEM ÍR ESEMÉNYT, és ez fontos. A D15 szerint nincs bejelentkezés: a
+          // személyazonosság a készülék kulcsa, ami MINDEN koinóban ugyanaz. Amit itt
+          // váltunk, az csak annyi: **melyik koinót nézi most ez a lap**. Semmi nem terjed,
+          // semmi nem dől el tőle a koinóban (3. szabály).
+          //
+          // ⛔ CSAK LÉTEZŐRE VÁLTHATUNK. Az `esemenyTarNyitasa` LÉTREHOZNÁ a mappát, ha nem
+          // létezik — vagyis egy elgépelt név némán új, üres koinót csinálna a téren.
+          if (utvonal === '/api/ter/valt') {
+            const kert = test?.koino;
+            if (typeof kert !== 'string' || !kert) {
+              return { allapot: 400, adat: { hiba: 'melyik koinóra váltsak?' } };
+            }
+            const ismertek = await ismertKoinok(alapHely());
+            if (!ismertek.includes(kert)) {
+              return { allapot: 404, adat: { hiba:
+                'Ezt a koinót nem ismeri ez a készülék: ' + kert
+                + ' — a téren csak azok szerepelnek, amiknek megvan az adata.' } };
+            }
+
+            aktivKoino = kert;
+            return { adat: { data: { aktiv: aktivKoino } } };
+          }
+
           // ----- TUDATPONT-RENDEZÉS -----
           if (utvonal === '/api/tudatpont/hozzarendeles') {
             const { entitasId, pontok, szerep } = test ?? {};
@@ -2172,7 +2244,7 @@ try {
 
             // ⭐ A D42 BEMONDOTT ÖSSZEGE: a művelet a saját láncból számolja, de a
             // jelenlegi képet meg kell kapnia — ezért kell a friss állapot.
-            const { allapot } = await kepetKeszit();
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
             await tudatpontRendezese(kornyezet, entitasId, pontok,
               szerep === 'passziv' ? 'passziv' : 'aktiv', szetosztottPontok(allapot, szerzo));
 
@@ -2188,7 +2260,7 @@ try {
 
             // ⚠️ A szerep-váltás NEM nyúl a pontokhoz: a jelenlegit írjuk vissza, csak más
             // szereppel. Ezért kell kiolvasni, mennyi van most rajta.
-            const { allapot } = await kepetKeszit();
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
             const entitas = allapot.entitasok.get(azonosito);
             const mostani = entitas?.hozzajarulok.get(szerzo)?.pont ?? 0;
             if (mostani <= 0) {
@@ -2263,6 +2335,27 @@ try {
           return { adat: { azonosito: szerzo, rovid: rovidAzonosito(szerzo), koino: KOINO } };
         }
 
+        // ===================================
+        // ⭐⭐ A BELÉPŐ TÉR (5.6) — a koinók FÖLÖTTI nézet
+        // ===================================
+        //
+        // ⚠️ EZ AZ EGYETLEN VÉGPONT, AMI NEM EGY KOINÓRÓL SZÓL. Ezért nem az aktív tárat
+        // kapja, hanem az **adat-mappát** — a tér a mappák fölött lát.
+        if (utvonal === '/api/ter') {
+          try {
+            const ter = await terKartyai(alapHely(), {
+              szerzo,
+              rendezes: kereses.get('rendezes') ?? undefined,
+              irany: kereses.get('irany') ?? undefined
+            });
+            // ⭐ A lap tudni akarja, MELYIK koinóban áll éppen — a tér ebből emeli ki az
+            // aktív kártyát.
+            return { adat: { ...ter, aktiv: aktivKoino } };
+          } catch (hiba) {
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+        }
+
         // ⭐⭐ A LAP HORGONYA — ezt hozza vissza minden kártya-kérés (2026-09-12).
         //
         // A lap a `/api/pakli` válaszából kapja (`horgony` + `most`), és visszaadja, amikor
@@ -2334,7 +2427,7 @@ try {
           // ⚠️ EGYSZER kérjük el a képet, nem kétszer. A `kepetKeszit` **teljes**
           // állapot-számítás (nincs mögötte gyorsítótár), és 2026-09-12-ig ez a kezelő
           // kétszer hívta meg — ugyanarra a kérdésre, ugyanabban a kérésben.
-          const { allapot: kep, javaslatok } = await kepetKeszit();
+          const { allapot: kep, javaslatok } = await kepetKeszit(0, tar, KOINO);
           if (!javaslatok.has(javaslatId)) {
             return { allapot: 404, adat: { hiba: 'nincs ilyen javaslat' } };
           }

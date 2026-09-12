@@ -36,6 +36,10 @@
 @import './components/modals/reszletekModal.css';
 @import './components/modals/ertekJavaslatModal.css';
 
+/* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
+   fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */
+@import './components/koinoKartya.css';
+
 /* ===== A LAP VÁZA — csak ami a prototípusban a foOldal.css dolga volt =====
    ⚠️ Szándékosan kevés: a főoldal vázát (fejléc, alsó sáv, menük) az 5.5/5.6 hozza. */
 

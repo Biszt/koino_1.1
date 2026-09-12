@@ -369,6 +369,115 @@ proba('⭐ A tér HÁROM SZÁMOT mutat, nem egyet — a létszám súlya látszi
   }
 });
 
+// ===================================
+// ⭐⭐ A TÉR A FELÜLETEN (5.6) — és a KOINO-VÁLTÁS
+// ===================================
+//
+// ⛔⛔ EZ A SZAKASZ 5.6 SZERKEZETI ÁLLÍTÁSA, ezért méri próba. A parancssor egy koinóra
+// szól (a `KOINO_AZONOSITO` indításkor eldől), a felület viszont a koinók FÖLÖTT áll: a
+// lap belép az egyikbe, majd egy másikba, **újraindítás nélkül**.
+//
+// ⚠️ Modul-próba ezt nem tudja megfogni: a végpontok a `koino.js` egy záródásában élnek,
+// nem exportált függvényben. Ezért indul itt valódi kiszolgáló, és megy rá valódi kérés.
+
+/** Elindít egy `felulet` kiszolgálót, és visszaadja a címét + a jelszavát. */
+async function feluletet(hely, port) {
+  const folyamat = spawn(process.execPath, [KOINO_JS, 'felulet', String(port)], {
+    env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  // A jelszót a kiírt címből olvassuk ki — ugyanúgy, ahogy egy ember tenné.
+  let kimenet = '';
+  const kulcs = await new Promise((teljesul, elakad) => {
+    const ido = setTimeout(() => elakad(new Error('a felület nem indult el: ' + kimenet)), 15000);
+    folyamat.stdout.on('data', (d) => {
+      kimenet += d;
+      const talalat = kimenet.match(/kulcs=([A-Za-z0-9_-]+)/);
+      if (talalat) { clearTimeout(ido); teljesul(talalat[1]); }
+    });
+  });
+
+  const hiv = async (utvonal, beallitas = {}) => {
+    const valasz = await fetch('http://127.0.0.1:' + port + utvonal, {
+      ...beallitas,
+      headers: { 'Content-Type': 'application/json', 'X-Koino-Kulcs': kulcs, ...beallitas.headers }
+    });
+    return { allapot: valasz.status, adat: await valasz.json() };
+  };
+
+  return { folyamat, hiv };
+}
+
+proba('⭐⭐⭐ A FELÜLET KOINÓT VÁLT: a tér egy MÁSIK koino pakliját hozza', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    // Két koino egy készüléken, mindkettőben egy-egy gondolattal.
+    await fut(hely, 'koino', 'Falukozosseg');
+    await fut(hely, 'gondolat', 'KOZOS KUT');
+    const masik = { ...process.env, KOINO_ADAT: hely, KOINO_AZONOSITO: 'kert', KOINO_NAPLO: '' };
+    for (const ervek of [['koino', 'Kozossegi kert'], ['gondolat', 'PALANTA TERV']]) {
+      await new Promise((teljesul, elakad) => {
+        execFile(process.execPath, [KOINO_JS, ...ervek], { env: masik, timeout: 30000 },
+          (hiba, ki, hibaKi) => (hiba && !ki) ? elakad(new Error(hiba.message)) : teljesul(ki + hibaKi));
+      });
+    }
+
+    kiszolgalo = await feluletet(hely, 7481);
+    const { hiv } = kiszolgalo;
+
+    // ----- A TÉR LÁTJA MINDKETTŐT, és KIMONDJA a határát -----
+    const ter = await hiv('/api/ter');
+    if (ter.adat.koinok !== 2 || ter.adat.csakAmitIsmerunk !== true) return false;
+    if (ter.adat.aktiv !== 'sajat') return false;
+
+    // ----- AZ INDULÓ KOINO PAKLIJA -----
+    const elso = await hiv('/api/pakli?darab=5');
+    if (!elso.adat.kartyak.some((k) => k.cim === 'KOZOS KUT')) return false;
+
+    // ----- ⭐ VÁLTÁS — és a pakli MÁSIK koinóé lesz -----
+    const valt = await hiv('/api/ter/valt',
+      { method: 'POST', body: JSON.stringify({ koino: 'kert' }) });
+    if (valt.adat?.data?.aktiv !== 'kert') return false;
+
+    const masodik = await hiv('/api/pakli?darab=5');
+    // ⛔ EZ A LÉNYEG: más koino, más pakli — ugyanabban a folyamatban.
+    return masodik.adat.kartyak.some((k) => k.cim === 'PALANTA TERV')
+      && !masodik.adat.kartyak.some((k) => k.cim === 'KOZOS KUT');
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ NEM LÉTEZŐ koinóra nem lehet váltani — és az állapot nem mozdul', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Falukozosseg');
+    await fut(hely, 'gondolat', 'KOZOS KUT');
+
+    kiszolgalo = await feluletet(hely, 7482);
+    const { hiv } = kiszolgalo;
+
+    // ⛔ Az `esemenyTarNyitasa` LÉTREHOZNÁ a mappát — egy elgépelt név némán új, üres
+    // koinót csinálna a téren. Ezért őr van előtte.
+    const rossz = await hiv('/api/ter/valt',
+      { method: 'POST', body: JSON.stringify({ koino: 'nincs-ilyen' }) });
+    if (rossz.allapot !== 404) return false;
+
+    // A tér továbbra is EGY koinót ismer, és a pakli a régi.
+    const ter = await hiv('/api/ter');
+    const pakli = await hiv('/api/pakli?darab=5');
+    return ter.adat.koinok === 1 && ter.adat.aktiv === 'sajat'
+      && pakli.adat.kartyak.some((k) => k.cim === 'KOZOS KUT');
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

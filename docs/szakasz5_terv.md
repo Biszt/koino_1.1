@@ -332,8 +332,8 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.3** | ✅ **A kártyák** — az örökölt `Kartya.js` + Gondolat/Javaslat/Egyezmény, **változatlanul** (2026-09-06) | ettől lett mit nézni |
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
-| **5.6** | ⏭️ **KÖVETKEZIK: A belépő tér** — koino-kártyák, létrehozási idő szerint | a D25 nézete |
-| **5.7** | **A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
+| **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
+| **5.7** | ⏭️ **KÖVETKEZIK: A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
@@ -356,9 +356,64 @@ volna mit mutatnia.*
 ⛔ Ha igen, a válasz nem lehet „kidobom": P2P-n a *„nem tag"* és a *„még nem láttam a
 bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
 
-⏸️ **És egy apró hiány, ami közben felszínre jött:** nincs **fájlba mentés / fájlból olvasás**
-az eseményekre (a 4. szabály *„minden automatikus cseréhez tartozzon"* mondata). Ma a kézi út
-az adat-fájl másolása (`koino-adat/<koino>/esemenyek.jsonl` — hozzáfűzhető, tehát összefűzhető).
+✅ **ÉS EZ MEGÉPÜLT (2026-09-12): `kivisz` + `behoz`** — a 4. szabály hiánya pótolva
+(`js/csere/fajlCsere.js`). ⭐ A behozatal **nem ír új beolvasztó logikát**, hanem a `csere.js`
+`beolvasztas()`-át hívja — ugyanazt, amit a TCP- és az UDP-csere —, tehát *a fájl sem kap
+engedékenyebb kaput* (3. szabály). A kivitel alakja **bájtra a táré**, ezért a lemásolt
+`esemenyek.jsonl` is behozható: a régi kézi út nem veszett el, hanem **ellenőrzötté vált**.
+
+---
+
+## ✅ AZ 5.6 ELKÉSZÜLT (2026-09-12) — a belépő tér
+
+⭐ **Csaba két döntése, amire épül:**
+
+1. **A hatókör:** a v1 azt mutatja, amit **ez a készülék ismer**. A D25 tere egyszer idegen
+   koinókat is mutatna, de ahhoz a **kereső-réteg** kell, ami szándékosan elhagyható és nincs
+   megépítve. ⛔ A felület ezért **kimondja a határt** (`csakAmitIsmerunk`) — próba őrzi, nem
+   csak komment. *A hallgatás teljességet ígérne, amit nem tudunk tartani (D19).*
+2. **A rendezés:** **létrehozási idő, új elöl.** A `KoinoLetrehozas.ido` a szerző órája, tehát
+   állítás — de **minden készüléken ugyanaz a sorrend**; a „mikor láttam először"
+   hamisíthatatlan, viszont gépfüggő. ⭐ A koino mindenhol a determinizmust választja, és a
+   másikat is **eltesszük és mutatjuk** (`eloszorLattam`), így a döntés megfordítása egy sor.
+
+### ⭐⭐ A terv két nyitott kérdésére megjött a válasz
+
+**„Mit mutasson a kártya a létszám mellé, hogy a szám súlya látszódjon?"** → **három szám,
+nem egy:** `tagok` · `nemEllenorizhetok` · `belepok`. Ugyanaz a D19-es hármas, amit az
+AZONOSSÁG szakasz használ — nem kellett hozzá új gépezet. ⭐ **A különbségük MAGA a súly:**
+ahol 900-an beléptek, de 12-nek van visszavezethető meghívási lánca, az **ránézésre más**,
+mint ahol 900-ból 900.
+
+**És a „létszám = a koino állítása" aggály szűkebb, mint hittük:** ez csak arra a koinóra
+igaz, aminek **nincs meg az adata**. Amelyiknek megvan, ott a számot **aláírt eseményekből
+számoljuk** — tény, nem állítás. ⛔ **Rendezni viszont továbbra sem lehet szerinte** (D18/2),
+és ezt próba őrzi: a `RENDEZESEK` lista nem tartalmazhat ilyet.
+
+### ⛔⛔ A szerkezeti darab: a felület koinót vált
+
+A parancssor **egy koinóra szól** (a `KOINO_AZONOSITO` indításkor eldől), és ez helyes. A
+belépő tér viszont a koinók FÖLÖTT áll: a lap belép az egyikbe, majd egy másikba,
+**újraindítás nélkül**. ⭐ Ezért a felület koinónként tart egy **nyitott állapotot** — saját
+tár, saját környezet, saját pakli-nézet —, és a kezelő **árnyékolja** a neveket, ezért
+egyetlen végpont kódját sem kellett átírni miatta.
+
+⚠️ **A pakli-nézet koinónként külön**, mert a horgony „az első N esemény" képe, és az
+eseményhalmaz koinónként más — egy közös nézet a váltás után **másik koino képét** adná
+vissza a gyorsítótárból.
+
+⚠️ **A „belépés" NEM bejelentkezés** (D15): a kulcsod minden koinóban ugyanaz, csak a lap
+néz máshová. ⛔ És csak **létező** koinóra lehet váltani: az `esemenyTarNyitasa` létrehozná a
+mappát, tehát egy elgépelt név némán új, üres koinót csinálna a téren.
+
+### ⚠️ Amit a böngésző mondott meg
+
+A `hidden` attribútum csak a böngésző alap-stíluslapján állít `display: none`-t, amit
+**bármelyik osztály-szabály felülír** — a `.koino-sav { display: flex }` miatt a tér sávja a
+pakli mellett is látszott. *Megint nem az érvelés találta meg, hanem a képernyő.*
+
+⏸️ **Ami a térből még hátra van:** a kártya-hamburger (az adott koino opciói) és az alsó sáv
+(a tér opciói: új koino indítása — ma parancssorból megy).
 
 ---
 
