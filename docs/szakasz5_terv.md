@@ -333,7 +333,9 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
-| **5.7** | 🚧 **A szövegszerkesztő ÁTEMELVE** + az „Új gondolat”, **7 önpróba** (2026-09-12); ⏸️ **a képek és fájlok a D3-ra várnak** | a szövegszerkesztő teljes átemelése |
+| **5.7** | ✅ **A szövegszerkesztő + az „Új gondolat” + a FÁJL-RÉTEG helyi fele**, **20 önpróba** (2026-09-12) | a szövegszerkesztő teljes átemelése |
+| **5.8** | ⏭️ **KÖVETKEZIK: a maradék modálok** — `JavaslatModal` (66 KB), `KategoriaModal`, `TudatpontokModal`… | a pakli teljes működése |
+| **⏸️** | **A fájlok SZÁLLÍTÁSA** — a buli mint randevú (Csaba terve) | két készülék között is látszódjon a kép |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
