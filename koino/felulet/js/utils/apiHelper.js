@@ -38,6 +38,44 @@ export function kapuKulcs() {
 }
 
 // ===================================
+// ⭐⭐ A LAP HORGONYA (2026-09-12)
+// ===================================
+//
+// A `/api/pakli` válasza megmondja, melyik KÉPBŐL készült a lista (`horgony` + `most`), és
+// minden további kártya-kérésnek **ugyanabból** kell dolgoznia. Enélkül a kártya a mostani
+// állapotot mutatná: mást mondana, mint a lista, amiből megnyitották — és a program
+// gyorsítótára sem találna, tehát minden kattintás újraszámolná az egész koinót.
+//
+// ⭐ MIÉRT ITT, ÉS NEM A KÁRTYÁKBAN? Mert a kártyák és a modálok **változatlanul jöttek át
+// a prototípusból**, és ez az érték maradjon is így. A prototípus teljes szerver-kapcsolata
+// ezen az egy fájlon megy át — ugyanaz az érv, amiért a JWT → kapu-jelszó csere is itt
+// történt, és nem húsz hívási helyen.
+//
+// ⚠️ Csak GET-re tesszük rá: az írás (POST/PUT) nem képből olvas, hanem eseményt írat.
+
+let LAP_HORGONYA = null;
+
+/**
+ * A lap horgonyának beállítása — a `PakliNezet` hívja minden oldal megérkezése után.
+ * `null`-lal törli (új lapozás kezdetén), és onnantól a program a mostani állapotot adja.
+ *
+ * @param {{horgony: number, most: number}|null} horgony
+ */
+export function lapHorgonyaBeallitasa(horgony) {
+  LAP_HORGONYA = (Number.isInteger(horgony?.horgony) && Number.isInteger(horgony?.most))
+    ? { horgony: horgony.horgony, most: horgony.most }
+    : null;
+  console.log('apiHelper.lapHorgonyaBeallitasa', LAP_HORGONYA);
+}
+
+/** Ráfűzi a horgonyt az útvonalra, ha van. A `?` vagy `&` attól függ, van-e már kérdés. */
+function horgonnyal(utvonal) {
+  if (!LAP_HORGONYA) return utvonal;
+  const jel = utvonal.includes('?') ? '&' : '?';
+  return utvonal + jel + 'horgony=' + LAP_HORGONYA.horgony + '&most=' + LAP_HORGONYA.most;
+}
+
+// ===================================
 // ÁLTALÁNOS API KÉRÉS
 // ===================================
 // Az összes többi függvény ezt használja
@@ -217,7 +255,8 @@ async function apiPatchFormData(utvonal, formData, token = null) {
 async function apiGet(utvonal, token = null) {
   // Metódus kezdő log
   console.log('apiHelper.apiGet - KEZDÉS', { utvonal });
-  const eredmeny = await apiKeres(utvonal, { method: 'GET' }, token);
+  // ⭐ A LAP HORGONYA: minden olvasás ugyanabból a képből jöjjön, amiből a lista készült.
+  const eredmeny = await apiKeres(horgonnyal(utvonal), { method: 'GET' }, token);
   // Metódus vég log
   console.log('apiHelper.apiGet - VÉGE', { utvonal });
   return eredmeny;
@@ -320,3 +359,4 @@ async function fajlFeltoltes(fajl, token = null) {
 // ===================================
 // VÁLTOZÁS: apiPostFormData és apiPatchFormData hozzáadva az exporthoz
 export { apiPost, apiPostFormData, apiGet, apiPut, apiPatch, apiPatchFormData, apiDelete, kepFeltoltes, fajlFeltoltes };
+// A `lapHorgonyaBeallitasa` és a `kapuKulcs` fent, a saját szakaszukban exportálódik.

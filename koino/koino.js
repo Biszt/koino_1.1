@@ -57,7 +57,7 @@
 //
 // A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -83,6 +83,8 @@ import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/iden
 import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
+// ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
+import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
   sajatCimekKiszurese, sajatCimE,
@@ -681,6 +683,91 @@ try {
       await writeFile(hova, await kulcsparKimentese(kulcspar), 'utf8');
       kiir('Elmentve: ' + hova);
       kiir(SZIN.nem + 'Aki ezt a fájlt megszerzi, a nevedben tud aláírni. Őrizd biztos helyen.' + SZIN.vege);
+      break;
+    }
+
+    // ===================================
+    // ⛔⛔ A KÉZI ÚT: FÁJLBA VINNI, FÁJLBÓL HOZNI (4. szabály)
+    // ===================================
+    //
+    // *„Ha egy funkció csak online tud működni, az fojtópont."* A koinónak eddig öt
+    // hálózati útja volt és **egy sem** kézi — a kézi út az adat-fájl másolása volt, amit
+    // nem a program kínált, és ami semmit nem ellenőrzött.
+    //
+    // ⭐ A kivitt fájl alakja UGYANAZ, mint a táré (`esemenyek.jsonl`), tehát a lemásolt
+    // adat-fájl is behozható — a régi kézi út nem veszett el, hanem ellenőrzötté vált.
+
+    case 'kivisz': {
+      const hova = ervek[0];
+      if (!hova) {
+        throw new Error('Hova vigyem? node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]');
+      }
+
+      const { szoveg, darab, hatokor, bajt } = await kivitelSzovege(tar, KOINO, {
+        hatokor: ervek[1] ?? 'mind',
+        szerzo
+      });
+
+      if (darab === 0) {
+        // ⚠️ NEM ÍRUNK ÜRES FÁJLT ÉS NEM HALLGATUNK: ha semmi nem jött ki, azt a hatókör
+        // magyarázza (elgépelt azonosító, üres lánc) — mondjuk meg, ne kelljen kitalálni.
+        kiir(SZIN.nem + 'Nincs mit kivinni ebben a hatókörben: ' + hatokor + SZIN.vege);
+        break;
+      }
+
+      await writeFile(hova, szoveg, 'utf8');
+      kiir('Kivíve: ' + hova);
+      kiir('  ' + darab + ' esemény · ' + bajt + ' bájt · hatókör: ' + hatokor);
+      kiir(SZIN.halvany
+        + 'Vidd át bárhogyan (pendrive, e-mail, üzenet), és ott: behoz <fájl>.' + SZIN.vege);
+      // ⚠️ A 6. SZABÁLY az ADAT-csomagra kemény — ezért mondjuk meg a bájtot, és ezért
+      // van hatóköre a kivitelnek. A „saját lánc" a D21 ~1 KB/fő újjáépítési magja.
+      if (hatokor === 'mind') {
+        kiir(SZIN.halvany
+          + 'Csak a saját láncod: kivisz <fájl> sajat — egy entitásé: kivisz <fájl> <azonosító>'
+          + SZIN.vege);
+      }
+      break;
+    }
+
+    case 'behoz': {
+      const honnan = ervek[0];
+      if (!honnan) throw new Error('Honnan hozzam? node koino/koino.js behoz <fájl>');
+
+      const szoveg = await readFile(honnan, 'utf8');
+      const e = await behozatalSzovegbol(tar, KOINO, szoveg);
+
+      kiir('Behozva: ' + honnan);
+      kiir('  ' + SZIN.jo + e.uj + ' új esemény' + SZIN.vege
+        + ' · ' + e.marMegvolt + ' már megvolt · ' + e.sorok + ' sor a fájlban');
+
+      // ⭐⭐ ÉS AMIT NEM HALLGATUNK EL (D19). Mind a négy lista MEGNEVEZI, mi történt —
+      // különben a „behozva" szó elfedné, hogy a fájl fele ki sem nyílt.
+      if (e.idegen > 0) {
+        kiir(SZIN.nem + '  ' + e.idegen + ' esemény MÁSIK koinóé — kihagyva.' + SZIN.vege);
+      }
+      if (e.hibasSorok.length > 0) {
+        kiir(SZIN.nem + '  ' + e.hibasSorok.length + ' sor nem volt értelmezhető:' + SZIN.vege);
+        for (const h of e.hibasSorok.slice(0, 5)) {
+          kiir(SZIN.halvany + '    ' + h.sorszam + '. sor: ' + h.eleje + '…' + SZIN.vege);
+        }
+      }
+      if (e.elutasitva.length > 0) {
+        kiir(SZIN.nem + '  ' + e.elutasitva.length + ' esemény ELUTASÍTVA a kapunál:' + SZIN.vege);
+        for (const el of e.elutasitva.slice(0, 5)) {
+          kiir(SZIN.halvany + '    ' + rovidAzonosito(el.azonosito) + ': ' + el.ok + SZIN.vege);
+        }
+      }
+      // ⚠️ AZ ELÁGAZÁS NEM HIBA, HANEM BIZONYÍTÉK (D17/D19): valaki két eseményt írt alá
+      // ugyanarról a pontról. Mindkettő bent marad — együtt ők a bizonyíték.
+      if (e.elagazasok.length > 0) {
+        kiir(SZIN.nem + '  ⚠️ ' + e.elagazasok.length
+          + ' ELÁGAZÁS derült ki (valaki két eseményt írt alá ugyanarról a pontról):' + SZIN.vege);
+        for (const ag of e.elagazasok.slice(0, 5)) {
+          kiir(SZIN.halvany + '    ' + rovidAzonosito(ag.szerzo)
+            + ' · ' + ag.sorszam + '. esemény' + SZIN.vege);
+        }
+      }
       break;
     }
 
@@ -2117,6 +2204,23 @@ try {
           return { adat: { azonosito: szerzo, rovid: rovidAzonosito(szerzo), koino: KOINO } };
         }
 
+        // ⭐⭐ A LAP HORGONYA — ezt hozza vissza minden kártya-kérés (2026-09-12).
+        //
+        // A lap a `/api/pakli` válaszából kapja (`horgony` + `most`), és visszaadja, amikor
+        // egy kártya részleteit kéri. ⛔ Enélkül a kártya a MOSTANI állapotból számolna,
+        // vagyis **átlépné a lap horgonyát**: mást mondana, mint a lista, amiből
+        // megnyitották — és a gyorsítótár sem találna, tehát minden kattintás újraszámolná
+        // az egész koinót.
+        //
+        // ⚠️ A szemetet nem „javítjuk ki" némán: ami nem egész szám, az nincs (a `lapKepe`
+        // olyankor a mostani állapotot adja — a parancssornak és a többi kliensnek ez a jó).
+        const horgonyPar = parseInt(kereses.get('horgony'), 10);
+        const mostPar = parseInt(kereses.get('most'), 10);
+        const lapHorgonya = {
+          horgony: Number.isInteger(horgonyPar) ? horgonyPar : undefined,
+          most: Number.isInteger(mostPar) ? mostPar : undefined
+        };
+
         // ⛔⛔ A PAKLI — EGY OLDAL, SOHA NEM AZ EGÉSZ (9. szabály).
         // A `darab` felülről korlátos, a lapozás kurzoros, a szövegek nincsenek benne.
         if (utvonal === '/api/pakli') {
@@ -2146,7 +2250,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás szövege?' } };
 
           const talalat = await entitasSzovege(tar, KOINO, decodeURIComponent(azonosito),
-            { nezet: pakliNezet });
+            { ...lapHorgonya, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -2159,7 +2263,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
           const talalat = await entitasTudatpontja(tar, KOINO, decodeURIComponent(azonosito),
-            { szerzo, nezet: pakliNezet });
+            { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -2167,7 +2271,11 @@ try {
         // ----- ⭐ A SAJÁT SZAVAZATOM (5.5) — a SzavazasFul kéri megnyitáskor -----
         if (utvonal.startsWith('/api/javaslat/') && utvonal.endsWith('/sajat-szavazat')) {
           const javaslatId = utvonal.split('/')[3];
-          const { javaslatok } = await kepetKeszit();
+
+          // ⚠️ EGYSZER kérjük el a képet, nem kétszer. A `kepetKeszit` **teljes**
+          // állapot-számítás (nincs mögötte gyorsítótár), és 2026-09-12-ig ez a kezelő
+          // kétszer hívta meg — ugyanarra a kérdésre, ugyanabban a kérésben.
+          const { allapot: kep, javaslatok } = await kepetKeszit();
           if (!javaslatok.has(javaslatId)) {
             return { allapot: 404, adat: { hiba: 'nincs ilyen javaslat' } };
           }
@@ -2176,7 +2284,6 @@ try {
           // ⭐ A koinóban a szavazat SOSEM tűnik el, csak felülíródik („az utolsó nyer"),
           // ezért a `sajatSzavazat` mindig a jelenlegi állásomat adja — nem kell külön
           // nyilvántartás róla.
-          const { allapot: kep } = await kepetKeszit();
           const enyem = sajatSzavazat(kep.szamitok, javaslatId, szerzo);
           return { adat: { data: enyem ? { szavazatTipus: enyem } : null } };
         }
@@ -2187,7 +2294,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás felmenői?' } };
 
           const talalat = await hianyzoFelmenok(tar, KOINO, decodeURIComponent(azonosito),
-            { szerzo, nezet: pakliNezet });
+            { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -2203,7 +2310,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
           const talalat = await entitasReszletei(tar, KOINO, decodeURIComponent(azonosito),
-            { szerzo, nezet: pakliNezet });
+            { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -2216,7 +2323,7 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás küszöbei?' } };
 
           const talalat = await entitasKuszobei(tar, KOINO, decodeURIComponent(azonosito),
-            { szerzo, nezet: pakliNezet });
+            { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -2259,6 +2366,7 @@ try {
       kiir('           allast <egyezmény> csatlakozik|tiltakozik|utkozik [másik] [indoklás]');
       kiir('           felszabadit [buli]  (a törölt gondolatokra tett pontod visszavétele)');
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
+      kiir('           kivisz <fájl> [mind|sajat|<azonosító>] · behoz <fájl>   (a KÉZI ÚT)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

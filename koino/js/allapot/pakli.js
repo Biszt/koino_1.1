@@ -444,6 +444,60 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
 }
 
 // ===================================
+// ⭐⭐ A KÁRTYA-VÉGPONTOK KÖZÖS ELŐSZAVA
+// ===================================
+//
+// Mind az öt kártya-végpont ugyanazzal kezdi: elkéri azt a KÉPET, amiből a lap listája is
+// készült. ⭐ **A lap horgonyát kapja meg**, nem verünk neki újat.
+//
+// ⛔⛔ MIÉRT EZ A HELYES — ÉS MI VOLT A BAJ A MÁSIKKAL. Eddig minden kártya-végpont a
+// **mostani** eseményszámmal számolt (`esemenyek.length`), vagyis **átlépte a lap
+// horgonyát**. Két következménye volt, mindkettő mérve (2026-09-12):
+//
+//   1. ⚠️ **A kártya mást mondhatott, mint a lista, amiből megnyitották.** A lista
+//      megjelenik, közben egy csere hoz egy tudatpont-eseményt (5 → 9), és a kártya már
+//      9-et mutat. Pontosan az, amit a horgony hivatott megakadályozni — *a közben
+//      érkezettet az `ujdonsag` MEGMONDJA, nem keverjük bele némán.*
+//   2. ⚠️ **A gyorsítótár élesben soha nem talált.** A kulcs harmadik tagja a `most`, és
+//      minden kérés friss `Date.now()`-t hozott, tehát minden kattintás újraszámolta az
+//      EGÉSZ koinót. Mérve: 80 kérés → 80 számítás (100% tévesztés), és egy kérés ára
+//      10 000 entitásnál 39,1 ms — lineárisan növekvő. *A 9. szabály kérdésére nem volt
+//      válasz.*
+//
+// ⭐ A javítás nem új gépezet: a lap válasza **eddig is hordozta** a `horgony`-t és a
+// `most`-ot (`pakliOldal` eredménye), csak senki nem adta vissza. Most visszaadja, és
+// ettől a kép ingyen van — a lap már kiszámolta.
+//
+// ⚠️ HORGONY NÉLKÜL a mostani állapot a válasz. Ez a helyes tartalék annak, aki nem
+// lapozásból kérdez (parancssor, másik kliens) — és a próbák **mindkét ágat** mérik, hogy
+// ne lehessen észrevétlenül visszacsúszni a régibe.
+
+/**
+ * A kártya-végpontok képe: a LAP horgonyához tartozó állapot.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {Object} beallitas
+ * @param {number} [beallitas.horgony] - a lap horgonya (`pakliOldal` válaszából)
+ * @param {number} [beallitas.most] - a lap pillanata (`pakliOldal` válaszából)
+ * @param {Object} [beallitas.nezet] - `ujPakliNezet()`, a kép megtartásához
+ */
+async function lapKepe(tar, koino, beallitas) {
+  const nezet = beallitas.nezet ?? ujPakliNezet();
+  const esemenyek = await koinoEsemenyei(tar, koino);
+  const teljes = esemenyek.length;
+
+  // ⚠️ Ugyanaz a `min`, mint a `pakliOldal`-ban: egy régi horgony nagyobb lehet, mint
+  // amennyi eseményünk MOST van (pl. másik adat-mappából indítva) — olyankor a mostani a
+  // mérvadó. A `max(0, …)` a szemetet fogja meg: negatív horgony nincs.
+  const kert = Number.isInteger(beallitas.horgony) ? beallitas.horgony : teljes;
+  const horgony = Math.max(0, Math.min(kert, teljes));
+
+  const most = Number.isInteger(beallitas.most) ? beallitas.most : Date.now();
+  return kepetKerni(nezet, koino, horgony, most, esemenyek);
+}
+
+// ===================================
 // EGY ENTITÁS SZÖVEGE
 // ===================================
 
@@ -457,18 +511,17 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
  * **egyezmény átírhatta** (`szerkesztesiVegrehajtas.js`). A szeletből olvasva a régi szöveget
  * kapnánk — pontosan az a hiba, amit 2026-09-06-án mértünk a címnél.
  *
- * ⏸️ A megvalósítás ma a pakli képét használja újra (tehát meleg gyorsítótárnál ingyen van);
- * ha egyszer kevés lesz, **a hívó változtatása nélkül** cserélhető — 9. szabály.
+ * ⏸️ A megvalósítás a pakli képét használja újra (`lapKepe`) — a lap horgonyával kérve
+ * **ingyen van**; ha egyszer kevés lesz, **a hívó változtatása nélkül** cserélhető
+ * — 9. szabály.
  *
+ * @param {Object} [beallitas] - `horgony` és `most` a lap válaszából; lásd `lapKepe`
  * @returns {Promise<Object|null>} { azonosito, tipus, cim, szoveg } vagy null
  */
 export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.entitasSzovege - KEZDÉS', { azonosito });
 
-  const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
-  const most = beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await lapKepe(tar, koino, beallitas);
 
   const entitas = kep.entitasok.get(azonosito);
   if (!entitas) {
@@ -501,10 +554,7 @@ export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
 export async function entitasTudatpontja(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.entitasTudatpontja - KEZDÉS', { azonosito });
 
-  const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
-  const most = beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await lapKepe(tar, koino, beallitas);
 
   const entitas = kep.entitasok.get(azonosito);
   if (!entitas) {
@@ -557,10 +607,7 @@ function kuszobokKifele(kuszobok) {
 export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.entitasReszletei - KEZDÉS', { azonosito });
 
-  const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
-  const most = beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await lapKepe(tar, koino, beallitas);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -613,10 +660,7 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
 export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.hianyzoFelmenok - KEZDÉS', { azonosito });
 
-  const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
-  const most = beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await lapKepe(tar, koino, beallitas);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -666,10 +710,7 @@ export async function hianyzoFelmenok(tar, koino, azonosito, beallitas = {}) {
 export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
   console.log('pakli.entitasKuszobei - KEZDÉS', { azonosito });
 
-  const nezet = beallitas.nezet ?? ujPakliNezet();
-  const esemenyek = await koinoEsemenyei(tar, koino);
-  const most = beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, esemenyek.length, most, esemenyek);
+  const kep = await lapKepe(tar, koino, beallitas);
 
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
@@ -696,8 +737,16 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
  * A horgonyhoz tartozó kép — gyorsítótárból, vagy kiszámolva.
  *
  * ⚠️ ITT ÜL MA A NEM-SKÁLÁZÓ RÉSZ, és tudatosan: az `allapotSzamitasa` az első `horgony`
- * darab eseményt kapja. **Egy lapozás alatt EGYSZER fut le**, nem oldalanként — a további
- * oldalak a gyorsítótárból jönnek.
+ * darab eseményt kapja.
+ *
+ * ⭐ **Egy lapozás alatt EGYSZER fut le** — a további oldalak ÉS a hozzájuk tartozó
+ * kártya-kérések (szöveg, tudatpont, részletek, küszöbök, felmenők) mind ugyanabból a
+ * képből jönnek, mert mind ugyanazt a `horgony`-t és `most`-ot hozzák.
+ *
+ * ⚠️⚠️ **A `most` a kulcs harmadik tagja, és ez érzékeny hely.** Aki friss `Date.now()`-val
+ * hívja, az minden kéréssel ÚJRASZÁMOLTATJA az egész koinót — 2026-09-12-ig pontosan ez
+ * történt az öt kártya-végponton. Ezért megy mind az öt a `lapKepe`-n keresztül; ha új
+ * kártya-végpont születik, **azt is oda kösd**, ne ide közvetlenül.
  */
 async function kepetKerni(nezet, koino, horgony, most, esemenyek) {
   const kulcs = koino + '|' + horgony + '|' + most;

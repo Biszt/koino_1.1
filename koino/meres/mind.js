@@ -21,6 +21,7 @@ import allapot from './allapotProba.js';
 import javaslat from './javaslatProba.js';
 import szabaly from './szabalyProba.js';
 import csere from './csereProba.js';
+import fajlCsere from './fajlCsereProba.js';
 import tarsak from './tarsakProba.js';
 import identitas from './identitasProba.js';
 import kapu from './kapuProba.js';
@@ -38,6 +39,7 @@ const PROBAK = [
   { nev: 'javaslat', futtat: javaslat },
   { nev: 'szabaly', futtat: szabaly },
   { nev: 'csere', futtat: csere },
+  { nev: 'fajlcsere', futtat: fajlCsere },
   { nev: 'tarsak', futtat: tarsak },
   { nev: 'identitas', futtat: identitas },
   { nev: 'kapu', futtat: kapu },

@@ -19,7 +19,7 @@
 // a `kovetkezoKurzor`-t adja vissza, semmi mást. *A lapozás állapota a kurzorban van, nem a
 // lapon számolt eltolásban.*
 
-import { apiGet } from './utils/apiHelper.js';
+import { apiGet, lapHorgonyaBeallitasa } from './utils/apiHelper.js';
 import { eemberMentese } from './utils/authHelper.js';
 import { kartyaLetrehozasa } from './components/kartya/kartyaGyar.js';
 import { oldalAdatta } from './kartyaAdat.js';
@@ -78,6 +78,10 @@ export class PakliNezet {
     this.kartyak = [];
     this.kontener.replaceChildren();
 
+    // ⭐ ÚJ LAPOZÁS = ÚJ HORGONY. Töröljük a régit, hogy a következő kérés FRISS képet
+    // verjen — különben a „frissítés" ugyanazt a befagyasztott bemenetet hozná vissza.
+    lapHorgonyaBeallitasa(null);
+
     await this.kovetkezoOldal();
     console.log('PakliNezet.ujratoltes - VÉGE');
   }
@@ -100,6 +104,11 @@ export class PakliNezet {
       this._allapot('Nem sikerült lekérni a paklit: ' + hiba.message, 'nem');
       return;
     }
+
+    // ⭐⭐ A HORGONY MEGJEGYZÉSE — és MÉG A KÁRTYÁK KIRAKÁSA ELŐTT. Innentől minden
+    // kártya-kérés (szöveg, tudatpont, részletek, küszöbök) ezt viszi magával, tehát
+    // ugyanabból a képből felel, amiből ez a lista készült.
+    lapHorgonyaBeallitasa({ horgony: oldal.horgony, most: oldal.most });
 
     for (const entitas of oldalAdatta(oldal.kartyak)) {
       await this._kartyaKirakasa(entitas);

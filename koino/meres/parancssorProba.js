@@ -20,7 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -266,6 +266,68 @@ proba('⭐ A „MEGBÍZÁS, NEM PONTSZÁM" (D60) a kiírásban is így jelenik m
     return /bízták rád a tanúsítást/.test(kep) && !/becsületesség/i.test(kep);
   } finally {
     await rm(hely, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⛔⛔ A KÉZI ÚT HÁLÓZAT NÉLKÜL: kivisz → behoz (4. szabály)
+// ===================================
+//
+// ⭐ EZ A PRÓBA A SZABÁLY MAGA. A 4. szabály azt mondja, minden automatikus cseréhez
+// tartozzon fájlba mentés / fájlból olvasás — *„ha egy funkció csak online tud működni,
+// az fojtópont"*. A modul-próba (`fajlCsereProba.js`) azt méri, hogy a **könyvtár** tudja;
+// ez azt, hogy a **kéz is eléri**. A kettő nem ugyanaz: 2026-09-10-én és 09-12-én is
+// pontosan ez a különbség rejtett el egy egész megépült réteget.
+//
+// ⚠️ Itt SEMMILYEN hálózat nincs: nincs `figyel`, nincs `csere`, nincs port. Két külön
+// adat-mappa, és egy fájl közöttük — ennyi.
+
+proba('⭐⭐⭐ A KÉZI ÚT HÁLÓZAT NÉLKÜL: kivisz → behoz, és a másik gép LÁTJA a gondolatot', async () => {
+  const egyik = await ujKeszulek();
+  const masik = await ujKeszulek();
+  const fajl = join(egyik, 'atvitel.jsonl');
+  try {
+    await fut(egyik, 'koino', 'Próba koinó');
+    await fut(egyik, 'gondolat', 'KÖZÖS KÚT');
+
+    const ki = await fut(egyik, 'kivisz', fajl);
+    if (!/Kivíve/.test(ki)) return false;
+
+    // ⛔ A MÁSIK KÉSZÜLÉK SOHA NEM BESZÉLT AZ ELSŐVEL. Csak ezt az egy fájlt kapta meg.
+    const be = await fut(masik, 'behoz', fajl);
+    if (!/új esemény/.test(be)) return false;
+
+    // ⭐ És a bizonyíték nem a „behozva" szó, hanem hogy az ÁLLAPOTÁBAN ott a gondolat.
+    const kep = await fut(masik, 'allapot');
+    return /KÖZÖS KÚT/.test(kep);
+  } finally {
+    await rm(egyik, { recursive: true, force: true });
+    await rm(masik, { recursive: true, force: true });
+  }
+});
+
+proba('⛔⛔ A FÁJLBAN ÁTÍRT gondolat nem jut be — a parancs KIMONDJA, hogy elutasította', async () => {
+  const egyik = await ujKeszulek();
+  const masik = await ujKeszulek();
+  const fajl = join(egyik, 'atvitel.jsonl');
+  const hamis = join(egyik, 'hamis.jsonl');
+  try {
+    await fut(egyik, 'koino', 'Próba koinó');
+    await fut(egyik, 'gondolat', 'KÖZÖS KÚT');
+    await fut(egyik, 'kivisz', fajl);
+
+    // ⚠️ Amit egy szövegszerkesztővel bárki megtehet, mielőtt továbbadja a pendrive-ot.
+    const szoveg = await readFile(fajl, 'utf8');
+    await writeFile(hamis, szoveg.replace('KÖZÖS KÚT', 'AZ ÉN KUTAM'), 'utf8');
+
+    const be = await fut(masik, 'behoz', hamis);
+    const kep = await fut(masik, 'allapot');
+
+    // A kimenet megnevezi az elutasítást (D19), és a hamis cím sehol nem jelenik meg.
+    return /ELUTASÍTVA/.test(be) && !/AZ ÉN KUTAM/.test(kep);
+  } finally {
+    await rm(egyik, { recursive: true, force: true });
+    await rm(masik, { recursive: true, force: true });
   }
 });
 

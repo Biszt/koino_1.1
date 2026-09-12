@@ -877,4 +877,101 @@ proba('⭐ Egy lapozás alatt EGYSZER számol állapotot, nem oldalanként', asy
   return oldalak === 4 && nezet.szamitasok === 1;
 });
 
+// ===================================
+// 12. ⭐⭐ A KÁRTYA-VÉGPONTOK A LAP HORGONYÁT KAPJÁK (2026-09-12)
+// ===================================
+//
+// Mit bizonyít ez a szakasz? Hogy a kártya UGYANABBÓL A KÉPBŐL felel, amiből a lista
+// készült — se nem mást mond, mint a lista, se nem számoltatja újra a koinót minden
+// kattintásra.
+//
+// ⛔⛔ ÉS MIÉRT NEM VAK. Mindkét ágat mérjük: horgonnyal **nem** látja a közben érkezett
+// eseményt, horgony nélkül **látja**. Ha valaki visszaállítaná a régi viselkedést (a
+// `lapKepe` mindig a mostani eseményszámmal számolna), az első próba azonnal bukna; ha
+// pedig a tartalék-ágat rontaná el valaki, a második bukna. *Egy zöld próba önmagában nem
+// bizonyíték — ezért van itt a tükörpárja is.*
+
+/**
+ * Egy lap, és a horgonya.
+ *
+ * ⚠️⚠️ A `pillanat` NEM kényelem, hanem a próba éle. Ha a lapot `Date.now()`-val kérnénk,
+ * a próba **vak lenne**: egy szoros ciklusban minden hívás ugyanabba az ezredmásodpercbe
+ * esik, tehát a gyorsítótár akkor is találna, ha a program eldobná a lap `most`-ját.
+ * *Pontosan ez rejtette el a hibát 2026-09-12-ig.* Egy rögzített, távoli pillanattal a
+ * két eset szétválik: a lap `most`-ja és a `Date.now()` biztosan különbözik.
+ */
+async function lapEsHorgony(tar, pillanat = Date.now() + 3600_000) {
+  const nezet = ujPakliNezet();
+  const oldal = await pakliOldal(tar, KOINO, { darab: 10, most: pillanat, nezet });
+  return { nezet, horgony: oldal.horgony, most: oldal.most };
+}
+
+proba('⭐⭐ A kártya NEM lépi át a lap horgonyát: a közben érkezettet nem mutatja', async () => {
+  const { tar, anna } = await ujKoino();
+  const az = await gondolat(tar, anna, 'A gondolat', 5);
+
+  const { nezet, horgony, most } = await lapEsHorgony(tar);
+
+  // Közben érkezik egy esemény — csere, vagy a másik készülékem.
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: az, pont: 9 }));
+
+  const kartya = await entitasTudatpontja(tar, KOINO, az,
+    { szerzo: anna.szerzo, horgony, most, nezet });
+
+  // A lap képében még 5 volt — a kártyának is 5-öt kell mondania.
+  return kartya.data.eemberHozzajarulas === 5;
+});
+
+proba('⭐ …HORGONY NÉLKÜL viszont a mostani állapot a válasz (a tartalék-ág)', async () => {
+  const { tar, anna } = await ujKoino();
+  const az = await gondolat(tar, anna, 'A gondolat', 5);
+
+  const { nezet } = await lapEsHorgony(tar);
+  await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: az, pont: 9 }));
+
+  // ⚠️ Ez a parancssor és a többi kliens útja: aki nem lapozásból kérdez, a MAI állapotot
+  // kapja. Ettől értelmes a horgonyos ág is — a kettő tényleg különbözik.
+  const kartya = await entitasTudatpontja(tar, KOINO, az, { szerzo: anna.szerzo, nezet });
+
+  return kartya.data.eemberHozzajarulas === 9;
+});
+
+proba('⭐⭐ A lap horgonyával a kártya-kérések INGYEN vannak (nincs újraszámolás)', async () => {
+  const { tar, anna } = await ujKoino();
+  const azonositok = [];
+  for (let i = 0; i < 6; i++) azonositok.push(await gondolat(tar, anna, 'G' + i, 100 + i));
+
+  const { nezet, horgony, most } = await lapEsHorgony(tar);
+  const oldalUtan = nezet.szamitasok;          // = 1
+
+  // Négy kártya-végpont, hat kártyára: 24 kérés.
+  for (const az of azonositok) {
+    const k = { szerzo: anna.szerzo, horgony, most, nezet };
+    await entitasSzovege(tar, KOINO, az, k);
+    await entitasTudatpontja(tar, KOINO, az, k);
+    await entitasReszletei(tar, KOINO, az, k);
+    await entitasKuszobei(tar, KOINO, az, k);
+  }
+
+  // ⛔ A LÉNYEG: egyetlen további állapot-számítás sem. A `most` a horgonyból jön, nem
+  // friss `Date.now()`-ból — ezért talál a gyorsítótár.
+  return oldalUtan === 1 && nezet.szamitasok === 1;
+});
+
+proba('⭐ A hibás horgony nem dönti el a kérést — a mostani állapot a mérvadó', async () => {
+  const { tar, anna } = await ujKoino();
+  const az = await gondolat(tar, anna, 'A gondolat', 5);
+  const { nezet, most } = await lapEsHorgony(tar);
+
+  // ⚠️ Nagyobb horgony, mint amennyi eseményünk van (pl. másik adat-mappából jött kurzor),
+  // és egy negatív. Egyik sem ejtheti el a kérést.
+  const tul = await entitasTudatpontja(tar, KOINO, az,
+    { szerzo: anna.szerzo, horgony: 999999, most, nezet });
+  const negativ = await entitasTudatpontja(tar, KOINO, az,
+    { szerzo: anna.szerzo, horgony: -5, most, nezet });
+
+  // A negatív horgony = üres bemenet → az entitás ott még nem létezik (D14), tehát null.
+  return tul?.data.eemberHozzajarulas === 5 && negativ === null;
+});
+
 export default futtatas;

@@ -94,12 +94,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tizenöt próba-fájl, **455 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Tizenhat próba-fájl, **472 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **129 fájl, 1801,8 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **131 fájl, 1836,6 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -122,6 +122,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/javaslatProba.js` | a döntés kiszámítható, és **a lezárt döntés nem fordul vissza** |
 | `meres/szabalyProba.js` | a szabályokat a **számítás** őrzi, nem a felület |
 | `meres/csereProba.js` | a csere teljes: a hézag és a rejtett elágazás is kiderül, és a hálózat **nem kap engedékenyebb kaput** |
+| `meres/fajlCsereProba.js` | ⛔⛔ **a 4. szabály** (a kézi út): fájlba vinni és fájlból hozni hálózat nélkül — ⭐ és hogy **a fájl sem kap engedékenyebb kaput**: a szövegszerkesztővel átírt esemény elbukik, az idegen koinóé kimarad, a hibás sor nem állítja meg a többit |
 | `meres/tarsakProba.js` | ⭐ **egy társ bukása nem dönti el a kört** — a csere nem múlik egyetlen címen |
 | `meres/identitasProba.js` | ⭐ **a KÉT LÉPCSŐ és a KONTRASZT-JELZÉS** — a lánc visszavezet az alapítóig, a kör nem szül jogot, a választótestület zárt, a hiány nem vád, és a jelzés a becsületesre néma, a megvettre megszólal |
 | `meres/kapuProba.js` | ⭐ **a helyi kapu** (5.1): a négy őr + az útvonal-őr — ⛔ a kulcsfájl nem szerezhető meg, idegen oldal nem jut be, és **a program sehol nem importálja a felületet** (forrás-próba) |
@@ -163,6 +164,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/csere.js` | a csere-protokoll **logikája, hálózat nélkül** (`ALLAS` → `KEREK` → `ESEMENY`) |
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
+| `js/csere/fajlCsere.js` | ⛔⛔ **a KÉZI ÚT** (4. szabály): események fájlba és fájlból — ⭐ a kivitel alakja **bájtra a táré** (a másolt `esemenyek.jsonl` behozható), a behozatal pedig a `csere.js` `beolvasztas()`-át hívja, tehát **ugyanazon a kapun** megy be, mint a hálózatról jött |
 | `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
