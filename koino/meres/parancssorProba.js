@@ -478,6 +478,103 @@ proba('⛔ NEM LÉTEZŐ koinóra nem lehet váltani — és az állapot nem mozd
   }
 });
 
+// ===================================
+// ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
+// ===================================
+//
+// ⛔ EDDIG EZ A LAPRÓL NEM MENT: a `GondolatModal` a szövegszerkesztőre várt, az pedig az
+// 5.7-re. A parancssor tudta, a lap nem — *a 4. szabály fordítottja.*
+//
+// ⚠️ A szerkesztő BLOKKOK tömbjét adja, nem szöveget. Ez ugyanaz a mező, két alakban
+// (a prototípusban is: `szoveg[].tartalom`), és a próba MINDKETTŐT méri — mert az első
+// körben pont ez bukott meg: a parancssor `[object Object]`-et írt ki a lapról jött
+// gondolatra.
+
+proba('⭐⭐⭐ A LAP LÉTREHOZ EGY GONDOLATOT — BLOKKOS szöveggel, és a kéz is OLVASSA', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    kiszolgalo = await feluletet(hely, 7483);
+    const { hiv } = kiszolgalo;
+
+    const valasz = await hiv('/api/gondolat', {
+      method: 'POST',
+      body: JSON.stringify({
+        cim: 'A FALU KUTJA',
+        // Pontosan az az alak, amit a `SzovegSzerkeszto.getTartalom()` ad.
+        szoveg: [{ id: 'blokk-1', tipus: 'szoveg', tartalom: 'Közös ügy.' }],
+        kezdoTudatpont: 40
+      })
+    });
+    if (valasz.allapot !== 200 || !valasz.adat?.data?._id) return false;
+
+    // ----- A LAPON LÁTSZIK -----
+    const pakli = await hiv('/api/pakli?darab=5');
+    const kartya = pakli.adat.kartyak.find((k) => k.cim === 'A FALU KUTJA');
+    if (!kartya || kartya.osszesPont !== 40) return false;
+
+    // ----- ⭐ ÉS A KÉZ IS OLVASSA (nem `[object Object]`) -----
+    const kep = await fut(hely, 'allapot');
+    return /A FALU KUTJA/.test(kep) && /Közös ügy\./.test(kep) && !/object Object/.test(kep);
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔⛔ A gondolat KÖZVETLENÜL nem írható át — a szerkesztés JAVASLATTAL megy (D8/D27)', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    kiszolgalo = await feluletet(hely, 7484);
+    const { hiv } = kiszolgalo;
+
+    const uj = await hiv('/api/gondolat',
+      { method: 'POST', body: JSON.stringify({ cim: 'EREDETI CÍM' }) });
+    const id = uj.adat.data._id;
+
+    // ⚠️ A prototípusban a szerző egyszerűen átírhatta. A koinóban egy létrejött entitást
+    // CSAK EGYEZMÉNY változtathat meg — és ezt nem némán nyeljük el, hanem megmondjuk.
+    const patch = await hiv('/api/gondolat/' + id,
+      { method: 'PATCH', body: JSON.stringify({ cim: 'ÁTÍRT CÍM' }) });
+    if (patch.allapot !== 400 || !/javaslat/i.test(patch.adat.hiba)) return false;
+
+    // ⛔ És tényleg nem változott meg.
+    const pakli = await hiv('/api/pakli?darab=5');
+    return pakli.adat.kartyak.some((k) => k.cim === 'EREDETI CÍM')
+      && !pakli.adat.kartyak.some((k) => k.cim === 'ÁTÍRT CÍM');
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ A besorolás-lenyílók a koino NEVEIT adják (a `cim` → `nev` fordítás egy helyen van)',
+  async () => {
+    const hely = await ujKeszulek();
+    let kiszolgalo = null;
+    try {
+      await fut(hely, 'koino', 'Próba koinó');
+      await fut(hely, 'gondolattipus', 'Kérdés', '❓');
+      await fut(hely, 'kategoria', 'Környezet', '🌿');
+
+      kiszolgalo = await feluletet(hely, 7485);
+      const { hiv } = kiszolgalo;
+
+      const tipusok = await hiv('/api/gondolatTipus');
+      const kategoriak = await hiv('/api/kategoria');
+
+      // ⚠️ A koinóban a név a `cim` mezőben van (5.4); az örökölt modal `nev`-et olvas.
+      return tipusok.adat.gondolatTipusok.some((t) => t.nev === 'Kérdés' && t._id)
+        && kategoriak.adat.kategoriak.some((k) => k.nev === 'Környezet' && k._id);
+    } finally {
+      if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

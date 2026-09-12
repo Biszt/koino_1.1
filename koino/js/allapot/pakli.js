@@ -599,6 +599,29 @@ function kuszobokKifele(kuszobok) {
 }
 
 /**
+ * ⭐ A MÁSIK IRÁNY (5.7): a prototípus nevei → a koino nevei.
+ *
+ * ⛔ SZÁNDÉKOSAN UGYANABBÓL AZ EGY TÁBLÁZATBÓL vezetjük le, nem külön listából. Két
+ * egymás mellé írt fordítás előbb-utóbb szétcsúszik — és pont az a fajta néma hiba lenne
+ * belőle, ami egy küszöböt az ellenkezőjére állít. *(Ugyanaz a tanulság, mint az `ALLASOK`
+ * kettős definíciójánál: két lista, két komment, egyik sem igaz.)*
+ *
+ * @param {Object} kulso - a lap küldte mezők
+ * @returns {Object|null} a koino küszöb-négyese, vagy null, ha nincs mind a négy
+ */
+export function kuszobokBefele(kulso) {
+  const be = {};
+  for (const [belso, kulsoNev] of Object.entries(KUSZOB_KIFELE)) {
+    const ertek = kulso?.[kulsoNev];
+    // ⚠️ CSAK EGÉSZ SZÁM. A kanonikus alak nem tűr törtet (`kanonikusAlak.js`), és egy
+    // fél százalék úgysem jelent semmit — ha bármelyik hiányzik, nem adunk be javaslatot.
+    if (!Number.isInteger(ertek)) return null;
+    be[belso] = ertek;
+  }
+  return be;
+}
+
+/**
  * Egy entitás részletei — a `ReszletekModal` ezt kéri.
  *
  * ⚠️ A VÁLASZ `{ data: … }` alakú, mint a tudatpont-képnél: az örökölt modal így olvassa.

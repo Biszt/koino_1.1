@@ -17,7 +17,7 @@ import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja,
-  entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK
+  entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele
 } from '../js/allapot/pakli.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
@@ -972,6 +972,48 @@ proba('⭐ A hibás horgony nem dönti el a kérést — a mostani állapot a m�
 
   // A negatív horgony = üres bemenet → az entitás ott még nem létezik (D14), tehát null.
   return tul?.data.eemberHozzajarulas === 5 && negativ === null;
+});
+
+// ===================================
+// 13. ⭐ A KÜSZÖB-FORDÍTÁS MINDKÉT IRÁNYA (5.7)
+// ===================================
+//
+// ⛔ MIÉRT MÉRJÜK? Mert a két irány EGY táblázatból származik, és ez szándékos: két
+// egymás mellé írt fordítás előbb-utóbb szétcsúszik, és abból **néma** hiba lesz — egy
+// küszöb az ellenkezőjére állna. *(Ugyanaz a tanulság, mint az `ALLASOK` kettős
+// definíciójánál.)*
+
+proba('⭐ A küszöb-fordítás ODA-VISSZA ugyanazt adja (egy táblázatból, nem kettőből)', async () => {
+  const belso = {
+    elfogadasiKuszob: 51, reszveteliKuszob: 20,
+    minimumDontesiIdo: 86400, maximumDontesiIdo: 604800
+  };
+
+  // A pakli KIFELÉ fordítja (a prototípus nevei), a lap ugyanazt küldi vissza.
+  const { tar, anna } = await ujKoino();
+  const az = await gondolat(tar, anna, 'Egy gondolat', 100);
+  await esemenyMentese(tar, await anna.tesz('ErtekJavaslat',
+    { entitas: az, ertekek: belso }));
+
+  const ki = await entitasKuszobei(tar, KOINO, az, { szerzo: anna.szerzo });
+  const vissza = kuszobokBefele(ki.eemberJavaslat);
+
+  return vissza !== null
+    && vissza.elfogadasiKuszob === 51 && vissza.reszveteliKuszob === 20
+    && vissza.minimumDontesiIdo === 86400 && vissza.maximumDontesiIdo === 604800;
+});
+
+proba('⛔ HIÁNYOS küszöb-négyes: null, nem féligkész javaslat', async () => {
+  // ⚠️ A lap üresen is elküldheti a mezőket. Egy féligkész érték javaslat rosszabb, mint
+  // a semmi: beleszámítana a mediánba (D4), és a hiányzó mezők helyére 0 kerülne.
+  return kuszobokBefele({ javaslatElfogadasiKuszob: 51 }) === null
+    && kuszobokBefele({}) === null
+    && kuszobokBefele(null) === null
+    // ⛔ És a tört sem megy: a kanonikus alak csak egész számot tűr.
+    && kuszobokBefele({
+      javaslatElfogadasiKuszob: 51.5, reszveteliAranyKuszob: 20,
+      aktualMinimumDontesiIdo: 1, aktualMaximumDontesiIdo: 2
+    }) === null;
 });
 
 export default futtatas;

@@ -399,4 +399,104 @@ proba('⭐⭐⭐ A PROGRAM SEHOL NEM IMPORTÁLJA A FELÜLETET (felulet_terv 3. p
     return true;
   });
 
+// ===================================
+// 7. ⭐⭐ AZ ÖRÖKÖLT KÓD BÁJTRA UGYANAZ (5.3, 5.7) — forrás-próba
+// ===================================
+//
+// ⭐ A koino felülete a prototípusból öröklődik (D22), és ennek az az ÉRTÉKE, hogy a
+// fájlok **bájtra ugyanazok**: amit a prototípuson évekig csiszoltak, azt nem írjuk újra,
+// és nem csúszik szét a kettő. Az 5.3-ban a kártyák jöttek így, az 5.7-ben a
+// szövegszerkesztő.
+//
+// ⛔ EZT KÖNNYŰ ELVESZÍTENI. Egy „gyors javítás" az örökölt fájlban észrevétlenül
+// elszakítja a kettőt, és onnantól a prototípus már nem a forrás, csak egy hasonló kód.
+// Ezért méri próba, ami MEGNEVEZI az eltérő fájlt.
+//
+// ⚠️ AMI SZÁNDÉKOSAN ELTÉR, azt itt soroljuk fel — a lista maga a dokumentáció arról, hogy
+// mit kellett a P2P miatt átírni. ⭐ **NÉGY fájl, több ezer sor örökölt kód mellett.**
+const SZANDEKOSAN_MAS = [
+  'utils/apiHelper.js',        // JWT → a helyi kapu jelszava (D15)
+  'utils/authHelper.js',       // a koinóban nincs bejelentkezés (D15)
+  'components/kartya/kartyaGyar.js',                 // 5.3: nincs Kategória/GondolatTípus… (majd lett)
+  'components/szovegSzerkeszto/FeltoltesKezelo.js'   // 5.7: a képek helye eldöntetlen (D3)
+];
+
+// ⭐⭐ A HELYŐRZŐKET NEM LISTÁZZUK, HANEM FELISMERJÜK. Az 5.3 tizenhárom helyőrzőt tett a
+// még át nem emelt modálok helyére, és ezek természetesen eltérnek a prototípustól.
+//
+// ⛔ Ha kézzel sorolnánk fel őket, a lista **elavulna** — és ami rosszabb: amikor egy
+// helyőrzőt valódira cserélünk, a fájl némán kimaradna az ellenőrzésből. Így viszont
+// **magától** bekerül. *(Épp ez történt az 5.7-ben a `GondolatModal`-lal.)*
+const HELYORZO_JELE = "from './helyorzoModal.js'";
+
+proba('⭐⭐ Az ÖRÖKÖLT felület-fájlok BÁJTRA ugyanazok, mint a prototípusban', async () => {
+  const gyoker = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const proto = join(gyoker, 'frontend', 'js');
+  const mienk = join(gyoker, 'koino', 'felulet', 'js');
+
+  // ⚠️ A `frontend/` NINCS MEG, ha valaki csak a `koino/` mappát másolta át (telefonra —
+  // és ez támogatott működés). Olyankor a próba nem bukik, hanem kimarad: *nem tudunk
+  // összehasonlítani, de ez nem a felület hibája.*
+  try {
+    await readdir(proto);
+  } catch {
+    console.log('kapuProba - a frontend/ nincs meg, az összevetés kimarad');
+    return true;
+  }
+
+  async function fajlok(hely, eddig = '') {
+    const talalt = [];
+    for (const b of await readdir(hely, { withFileTypes: true })) {
+      const relativ = eddig ? eddig + '/' + b.name : b.name;
+      if (b.isDirectory()) talalt.push(...await fajlok(join(hely, b.name), relativ));
+      else if (b.name.endsWith('.js')) talalt.push(relativ);
+    }
+    return talalt;
+  }
+
+  for (const relativ of await fajlok(mienk)) {
+    if (SZANDEKOSAN_MAS.includes(relativ)) continue;
+
+    let protoForras;
+    try {
+      protoForras = await readFile(join(proto, relativ), 'utf8');
+    } catch {
+      continue;    // nincs párja a prototípusban (pl. `terNezet.js`, `helyorzoModal.js`)
+    }
+
+    const mienkForras = await readFile(join(mienk, relativ), 'utf8');
+
+    // ⏸️ Még helyőrző — az eltérés itt nem hiba, hanem a hiány jele (D19).
+    if (mienkForras.includes(HELYORZO_JELE)) continue;
+
+    if (protoForras !== mienkForras) {
+      console.log('kapuProba - ELTÉR a prototípustól: ' + relativ);
+      return false;
+    }
+  }
+  return true;
+});
+
+proba('⭐ …és a próba NEM VAK: egy örökölt fájl megváltoztatását észreveszi', async () => {
+  // ⛔ A fenti próba önmagában akkor is „zöld", ha MINDEN fájlt kihagy (nincs `frontend/`,
+  // csupa helyőrző, elgépelt útvonal). Ezért mérjük meg, hogy tényleg **összevet**: egy
+  // ismert örökölt fájlt elrontunk a memóriában, és ugyanazzal a szabállyal nézzük.
+  const gyoker = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const relativ = 'components/kartya/Kartya.js';
+
+  let proto;
+  try {
+    proto = await readFile(join(gyoker, 'frontend', 'js', relativ), 'utf8');
+  } catch {
+    return true;      // nincs `frontend/` — ugyanaz a kimaradás, mint fent
+  }
+
+  const mienk = await readFile(join(gyoker, 'koino', 'felulet', 'js', relativ), 'utf8');
+  // Ma egyeznek — és egy egyetlen karakternyi eltérésnek látszania kell.
+  return proto === mienk
+    && proto !== (mienk + '\n// elrontva')
+    && !mienk.includes(HELYORZO_JELE)
+    && !SZANDEKOSAN_MAS.includes(relativ);
+});
+
 export default futtatas;

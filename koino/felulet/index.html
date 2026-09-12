@@ -45,6 +45,9 @@
   </select>
 
   <button type="button" id="frissites">Frissítés</button>
+  <!-- ⭐ ÚJ GONDOLAT (5.7) — eddig ez CSAK a parancssorból ment: a `GondolatModal` a
+       szövegszerkesztőre várt, az pedig az 5.7-re. -->
+  <button type="button" id="uj-gondolat">+ Új gondolat</button>
 </div>
 
 <!-- ===== A BELÉPŐ TÉR — a koinók FÖLÖTT (5.6) ===== -->
@@ -81,6 +84,7 @@
 <script type="module">
 import { PakliNezet } from './js/pakliNezet.js';
 import { TerNezet } from './js/terNezet.js';
+import GondolatModal from './js/components/modals/GondolatModal.js';
 
 const nezet = new PakliNezet(document.getElementById('pakli'), {
   allapotElem: document.getElementById('allapot'),
@@ -130,6 +134,26 @@ async function mutat(melyik) {
   if (melyik === 'ter') await terNezet.betoltes();
   else await nezet.ujratoltes();
 }
+
+// ===================================
+// ⭐ ÚJ GONDOLAT (5.7) — az első valódi használója a szövegszerkesztőnek
+// ===================================
+//
+// ⚠️ A modal a prototípusból jött, BÁJTRA VÁLTOZATLANUL — ahogy a kártyák az 5.3-ban.
+// Egyetlen fájlt kellett átírni a szerkesztő alatt: a `FeltoltesKezelo`-t, mert a képek
+// helye a P2P koinóban még eldöntetlen (D3).
+document.getElementById('uj-gondolat').addEventListener('click', async () => {
+  const modal = new GondolatModal('modal-kontener', {
+    mod: 'letrehozas',
+    // Létrejött → újratöltjük a paklit, hogy rögtön látszódjon.
+    onSiker: () => nezet.ujratoltes()
+  });
+  // ⚠️ AZ `init()` ÉPÍTI FEL A MODALT (sablon + szerkesztő); a `megnyitas()` csak
+  // megmutatja. Enélkül a `this.modal` null marad, és a megnyitás NÉMÁN nem csinál
+  // semmit — a prototípus `foOldal.js`-e is ebben a sorrendben hívja.
+  await modal.init();
+  modal.megnyitas();
+});
 
 document.getElementById('ter-valto').addEventListener('click', async () => {
   await mutat(document.getElementById('ter').hidden ? 'ter' : 'pakli');

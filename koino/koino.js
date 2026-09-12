@@ -97,6 +97,7 @@ import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
+  kuszobokBefele,
   hianyzoFelmenok
 } from './js/allapot/pakli.js';
 import { csereUdpResen } from './js/csere/udpVonal.js';
@@ -153,6 +154,31 @@ if (ujE) {
  * @param {Iterable<string>} lehetosegek
  * @returns {string}
  */
+/**
+ * Egy gondolat szövege OLVASHATÓAN a parancssorban.
+ *
+ * ⚠️ A SZÖVEG KÉTFÉLE ALAKÚ LEHET, és ez nem rendetlenség, hanem történet. A `gondolat`
+ * parancs egyszerű **szöveget** ad (egy sor a parancssorból), a szerkesztő viszont
+ * **blokkok tömbjét** (5.7) — ugyanaz a mező, két alak. *A prototípusban is így van
+ * (`szoveg[].tartalom`), tehát nem mi vezettük be.*
+ *
+ * ⛔ Enélkül a parancssor `[object Object]`-et írt ki a lapról létrehozott gondolatokra —
+ * mérve, az 5.7 első körében. *A felület és a kéz ugyanazt az adatot nézi; ha az egyik
+ * nem érti, az nem a másik hibája, hanem a közös alaké.*
+ */
+function szovegKifele(szoveg) {
+  if (typeof szoveg === 'string') return szoveg;
+  if (!Array.isArray(szoveg)) return '(ismeretlen alakú szöveg)';
+
+  return szoveg.map((blokk) => {
+    if (typeof blokk?.tartalom === 'string') return blokk.tartalom;
+    // A nem szöveges blokkokat megnevezzük — nem hallgatjuk el, és nem is hazudunk
+    // szöveget oda, ahol kép vagy fájl van (D19).
+    if (blokk?.tipus) return '[' + blokk.tipus + ']';
+    return '[?]';
+  }).filter((s) => s !== '').join(' ');
+}
+
 function feloldas(toredek, lehetosegek) {
   const talalatok = [...lehetosegek].filter((a) => a.startsWith(toredek));
   if (talalatok.length === 1) return talalatok[0];
@@ -535,7 +561,7 @@ async function allapotKiirasa(napokMulva) {
     kiir('  ' + SZIN.halvany + e.azonosito.slice(0, 8) + SZIN.vege + '  ' + e.cim);
     kiir('      ' + SZIN.halvany + e.meret + ' bájt · összes pont: ' + e.osszesPont
       + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size + SZIN.vege);
-    if (e.szoveg) kiir('      ' + SZIN.halvany + e.szoveg + SZIN.vege);
+    if (e.szoveg) kiir('      ' + SZIN.halvany + szovegKifele(e.szoveg) + SZIN.vege);
   }
 
   // ----- JAVASLATOK -----
@@ -2208,7 +2234,7 @@ try {
         // esemény ugyanazon az `esemenyMentese` kapun megy be, mint a hálózatról érkező
         // (3. szabály). ⭐ A szabályokat a SZÁMÍTÁS őrzi — ha a lap szabálysértőt küld, az
         // esemény létrejön, de nem fog számítani. *A felület nem véd, és nem is kell.*
-        if (modszer === 'POST' || modszer === 'PUT') {
+        if (modszer === 'POST' || modszer === 'PUT' || modszer === 'PATCH') {
 
           // ----- ⭐⭐ KOINO-VÁLTÁS (5.6) — belépés a térről egy koinóba -----
           //
@@ -2233,6 +2259,65 @@ try {
 
             aktivKoino = kert;
             return { adat: { data: { aktiv: aktivKoino } } };
+          }
+
+          // ===================================
+          // ⭐⭐ GONDOLAT LÉTREHOZÁSA A LAPRÓL (5.7)
+          // ===================================
+          //
+          // ⛔ EDDIG EZ A LAPRÓL NEM MENT. A pakli mutatta a gondolatokat, de újat csak a
+          // parancssorból lehetett létrehozni — a `GondolatModal` a szövegszerkesztőre várt,
+          // az pedig az 5.7-re. *A 4. szabály fordítottja: itt a kéz volt meg, a lap nem.*
+          //
+          // ⭐ HÁROM ALÁÍRT ESEMÉNY, nem egy „mentés". A prototípusban egy POST hozta létre
+          // a gondolatot, a kezdő tudatpontot és a küszöbeit; a koinóban ez **három külön
+          // esemény**, mert három külön állítás — és mindegyik ugyanazon az
+          // `esemenyMentese` kapun megy be (3. szabály).
+          if (utvonal === '/api/gondolat') {
+            const { cim, szoveg, gondolatTipusId, kategoriaIds, szuloId, kezdoTudatpont } = test ?? {};
+            if (typeof cim !== 'string' || !cim.trim()) {
+              return { allapot: 400, adat: { hiba: 'Mi legyen a gondolat címe?' } };
+            }
+
+            // 1. A GONDOLAT
+            const esemeny = await gondolatLetrehozasa(kornyezet, {
+              cim: cim.trim(),
+              // ⚠️ A szerkesztő BLOKKOK tömbjét adja, nem szöveget — a koino ezt tárolja
+              // (`szoveg[].tartalom`), ahogy a prototípus is.
+              szoveg: Array.isArray(szoveg) && szoveg.length ? szoveg : null,
+              szulo: typeof szuloId === 'string' ? szuloId : null,
+              gondolatTipus: typeof gondolatTipusId === 'string' ? gondolatTipusId : null,
+              kategoriak: Array.isArray(kategoriaIds) ? kategoriaIds : []
+            });
+
+            // 2. A KEZDŐ TUDATPONT — ⛔ enélkül a koino EL IS FELEJTENÉ (D14).
+            const pont = Number.isInteger(kezdoTudatpont) && kezdoTudatpont > 0
+              ? kezdoTudatpont : KEZDO_PONT;
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
+            await tudatpontRendezese(kornyezet, esemeny.azonosito, pont, 'aktiv',
+              szetosztottPontok(allapot, szerzo));
+
+            // 3. A KÜSZÖBÖK — csak ha a lap küldött. ⚠️ A medián (D4) egyetlen beadott
+            // javaslattal is értelmes: a létrehozóé lesz az első szavazat a küszöbökről.
+            const ertekek = kuszobokBefele(test);
+            if (ertekek) await ertekJavaslat(kornyezet, esemeny.azonosito, ertekek);
+
+            pakliNezet.horgony = null;      // a kép elavult
+            return { adat: { data: { _id: esemeny.azonosito, cim: cim.trim() } } };
+          }
+
+          // ⛔⛔ A SZERKESZTÉS NEM KÖZVETLEN — és ez nem hiányosság, hanem a modell.
+          //
+          // A prototípusban a szerzője egyszerűen átírhatta a gondolatát. A koinóban egy
+          // létrejött entitást **csak egyezmény** változtathat meg (D8/D27): a szerkesztés
+          // útja a **szerkesztési javaslat**, amiről a tudatpont-tulajdonosok döntenek.
+          //
+          // ⚠️ Ezért NEM némán nyeljük el, hanem megmondjuk, mit tegyen helyette — ugyanaz
+          // a minta, mint a szavazat visszavonásánál (5.5).
+          if (modszer === 'PATCH' && utvonal.startsWith('/api/gondolat/')) {
+            return { allapot: 400, adat: { hiba:
+              'A koinóban egy gondolat nem írható át közvetlenül — a szerkesztés '
+              + 'szerkesztési JAVASLATTAL megy, amiről a tudatpont-tulajdonosok döntenek.' } };
           }
 
           // ----- TUDATPONT-RENDEZÉS -----
@@ -2392,6 +2477,37 @@ try {
             // ⚠️ A rossz KÉRÉS nem a program hibája — 400, és mondjuk meg, mi a baj.
             return { allapot: 400, adat: { hiba: hiba.message } };
           }
+        }
+
+        // ===================================
+        // ⭐ A BESOROLÁSOK LISTÁJA (5.7) — a GondolatModal lenyílóihoz
+        // ===================================
+        //
+        // ⚠️ A VÁLASZ A PROTOTÍPUS ALAKJÁT BESZÉLI (`_id`, `nev`, `szuloId`), mert az
+        // örökölt modal így olvassa — ugyanaz a döntés, mint a tudatpont-végpontnál (5.5):
+        // *a hívó a régi; a válasz alkalmazkodik hozzá, nem fordítva.* ⭐ A koinóban a név
+        // a `cim` mezőben van (5.4), a fordítás itt történik, egy helyen.
+        //
+        // ⚠️⚠️ ÉS EGY ŐSZINTE KORLÁT: ez a két lista **teljes**, nem lapozott. Egy lenyíló
+        // menü ma ilyen — de ez ugyanaz az alak, amit a 9. szabály tilt, csak kicsiben.
+        // Amíg a besorolások száma egy koinón belül kicsi, ez rendben van; ha egyszer nem
+        // lesz az, ide **kereső** kell (Szakasz 6), nem nagyobb lista.
+        if (utvonal === '/api/gondolatTipus' || utvonal === '/api/kategoria') {
+          const kategoriaE = utvonal === '/api/kategoria';
+          const keresett = kategoriaE ? 'Kategoria' : 'GondolatTipus';
+
+          const { allapot } = await kepetKeszit(0, tar, KOINO);
+          const lista = [...allapot.entitasok.values()]
+            .filter((e) => e.tipus === keresett)
+            .map((e) => ({
+              _id: e.azonosito,
+              nev: e.cim,                  // ⭐ a koinóban `cim`; a modal `nev`-et olvas
+              ikon: e.ikon ?? null,
+              szuloId: e.szulo ?? null     // a kategória-fa behúzásához
+            }))
+            .sort((a, b) => (a.nev ?? '') < (b.nev ?? '') ? -1 : 1);
+
+          return { adat: kategoriaE ? { kategoriak: lista } : { gondolatTipusok: lista } };
         }
 
         // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért

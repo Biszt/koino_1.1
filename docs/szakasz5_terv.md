@@ -333,7 +333,7 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 | **5.4** | ✅ **A hiányzó műveletek** — kategória, gondolattípus, és a 7. pont lezárása (2026-09-06) | a felület alatti lyukak betömése |
 | **5.5** | 🚧 **A modálok** — ✅ tudatpont, érték javaslat, részletek, részvétel, **szavazás** (2026-09-06); ⏸️ a JavaslatModal és a létrehozó modálok (az 5.7-re várnak) | a teljes pakli |
 | **5.6** | ✅ **A belépő tér** — koino-kártyák létrehozási idő szerint, **19 önpróba** (2026-09-12) | a D25 nézete |
-| **5.7** | ⏭️ **KÖVETKEZIK: A képek és fájlok** — a D3 kérdésének megválaszolása után | a szövegszerkesztő teljes átemelése |
+| **5.7** | 🚧 **A szövegszerkesztő ÁTEMELVE** + az „Új gondolat”, **7 önpróba** (2026-09-12); ⏸️ **a képek és fájlok a D3-ra várnak** | a szövegszerkesztő teljes átemelése |
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
@@ -414,6 +414,63 @@ pakli mellett is látszott. *Megint nem az érvelés találta meg, hanem a képe
 
 ⏸️ **Ami a térből még hátra van:** a kártya-hamburger (az adott koino opciói) és az alsó sáv
 (a tér opciói: új koino indítása — ma parancssorból megy).
+
+---
+
+## 🚧 AZ 5.7 ELSŐ FELE (2026-09-12) — a szövegszerkesztő, és az első valódi használója
+
+⭐⭐ **HÚSZ FÁJL JÖTT ÁT BÁJTRA VÁLTOZATLANUL**, és **egyet** kellett átírni: a
+`FeltoltesKezelo`-t. Ugyanaz a minta, mint az 5.3-ban a kártyáknál — és ez nem véletlen:
+a feltöltés a szerkesztő **1355 soros** fő fájljában mindössze **13 sort** érint.
+
+⭐ **ÉS A 13 HELYőRZŐ ÍGÉRETE BEVÁLT:** a `GondolatModal` egy 601 bájtos helyőrző volt,
+most a protoípus **24 KB-os valódija** — *egy fájl cseréje*, ahogy az 5.3 megígérte.
+
+### ⛔ Amit ez kinyitott: a lapról eddig NEM lehetett gondolatot létrehozni
+
+A pakli mutatta a gondolatokat, de újat csak a parancssorból lehetett — *a 4. szabály
+fordítottja: itt a kéz volt meg, a lap nem.* Most megvan: `POST /api/gondolat`.
+
+⭐ **HÁROM ALÁÍRT ESEMÉNY, nem egy „mentés".** A prototípusban egy POST hozta létre a
+gondolatot, a kezdő tudatpontot és a küszöbeit; a koinóban ez három **külön állítás**,
+három esemény, ugyanazon az `esemenyMentese` kapun.
+
+⛔⛔ **ÉS AMI NEM JÖTT ÁT: a kÖZVETLEN SZERKESZTÉS.** A prototípusban a szerző egyszerűen
+átírhatta a gondolatát (`PATCH /api/gondolat/:id`). A koinóban egy létrejött entitást
+**csak egyezmény** változtathat meg (D8/D27) — tehát a végpont **őszinte 400-at ad**, és
+megmondja, mit tegyen helyette. *(Ugyanaz a minta, mint a szavazat visszavonásánál.)*
+
+### ⛔⛔ AMI NYITVA MARADT: A KÉPEK ÉS FÁJLOK HELYE (D3)
+
+A prototípusban a kép egy **szerver-mappába** került, és a blokk egy **URL-t** tárolt.
+A koinóban nincs szerver — és ez nem pótolható egy másik szerverrel sem:
+
+- ⛔ **2. szabály** — semmi ne múljon egyetlen címen vagy szolgáltatáson;
+- ⛔ **6. szabály (KEMÉNY)** — egy esemény ma ~400 bájt, egy fénykép ennek több ezerszerese;
+- ⏸️ **D3** — a kép a *tartalmi rétegbe* tartozik, aminek a **szállítása még nincs megtervezve**.
+
+⭐ **Ezért a `FeltoltesKezelo` őSZINTÉN ELAKAD, nem csendben:** a szerkesztő minden más
+része megy (szöveg, link, entitás-hivatkozás, oldalak, előzmények, méretezés, mozgatás),
+és aki képet próbál beszúrni, **megtudja, miért nem megy**.
+
+⏸️ **A javaslat, ha majd eldől:** a koino saját mintája — a fájlt a **lenyomata** nevezi
+meg (mint mindent a koinóban), az esemény csak ezt a ~100 bájtos hivatkozást hordozza, a
+bájtok pedig a tartalmi rétegben utaznak. Az ellenőrzés ingyen van: újra-lenyomatolni és
+összevetni — *a csatornát nem kell megbízhatóvá tenni* (3. szabály).
+
+⚠️ **És egy MÁSODIK nyitott pont ugyanitt:** az **entitás-hivatkozás** blokk keresése a
+`GET /api/kereses`-re épül — az a **kereső-réteg** (Szakasz 6), ami szándékosan elhagyható
+és még nincs meg.
+
+### ⭐ És egy új próba-fajta, amit ez a munka hozott
+
+**Forrás-próba a bájt-azonosságra.** A feltüntetett érték („az örökölt kód változatlan")
+eddig csak ígéret volt; most **mérjük**. ⛔ A helyőrzőket nem listázzuk, hanem
+**felismerjük** (a `helyorzoModal.js` importjáról) — így amikor egy helyőrzőt valódira
+cserélünk, a fájl **magától** bekerül az ellenőrzés alá. *Épp ez történt a `GondolatModal`-lal.*
+
+⚠️ A próba mellé kellett egy másik, ami azt méri, hogy **nem vak**: ha minden fájlt
+kihagyna (nincs `frontend/`, csupa helyőrző, elgépelt útvonal), akár úgy is zöld lenne.
 
 ---
 

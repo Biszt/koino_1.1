@@ -16,6 +16,8 @@
 @import './components/hamburgerMenu.css';
 @import './components/fejlesztesreVar.css';
 @import './components/szovegSzerkeszto.css';
+/* ⭐ A SZERKESZTŐ ESZKÖZTÁRA (5.7) — a prototípusból, bájtra változatlanul. */
+@import './components/eszkoztar.css';
 
 @import './components/kartya/kartya.css';
 @import './components/kartya/gondolatKartya.css';
