@@ -328,12 +328,34 @@ async function apiDelete(utvonal, adatok, token = null) {
 // A backend a 'kep' mezőnevű fájlt várja (Multer konfig alapján).
 // @param {File} fajl - A feltöltendő képfájl
 // @param {string|null} token
+// ⭐⭐ A KOINÓBAN NEM `multipart/form-data`, HANEM BASE64 EGY JSON TESTBEN (5.7).
+//
+// ⛔ MIÉRT: az 5.5 harmadik őre szerint a kapu **csak `application/json` testet** fogad el,
+// mert a JSON tartalomtípus **kötelezővé teszi** a böngésző előellenőrzését (preflight),
+// amit a kapunk nem enged át — *így a böngésző maga állítja meg az idegen írást, még
+// mielőtt ideérne.* Egy `multipart` feltöltés pontosan ezt az őrt kerülné meg.
+//
+// ⚠️ Az ára +33% méret — de ez egy **helyi** kérés (127.0.0.1), nem megy hálózaton.
+//
+// ⭐ A FÁJL a lenyomata alatt kerül tárolásra; a válasz `url`-je erre mutat, és a program
+// olvasáskor újra lenyomatolja. *A hívó (`FeltoltesKezelo`) ettől nem változott — bájtra
+// ugyanaz, mint a prototípusban.*
+async function fajlBase64(fajl) {
+  const puffer = await fajl.arrayBuffer();
+  const bajtok = new Uint8Array(puffer);
+  let szoveg = '';
+  // Darabokban, mert a `String.fromCharCode(...nagyTomb)` túlcsordítja a hívási vermet.
+  const DARAB = 0x8000;
+  for (let i = 0; i < bajtok.length; i += DARAB) {
+    szoveg += String.fromCharCode.apply(null, bajtok.subarray(i, i + DARAB));
+  }
+  return btoa(szoveg);
+}
+
 async function kepFeltoltes(fajl, token = null) {
   console.log('apiHelper.kepFeltoltes - KEZDÉS', { nev: fajl.name, meret: fajl.size });
-  // FormData összeállítása – Content-Type-t a böngésző kezeli automatikusan
-  const formData = new FormData();
-  formData.append('kep', fajl);
-  const eredmeny = await apiPostFormData('feltoltes/kep', formData, token);
+  const eredmeny = await apiPost('feltoltes/kep',
+    { adat: await fajlBase64(fajl), nev: fajl.name }, token);
   console.log('apiHelper.kepFeltoltes - VÉGE', { url: eredmeny?.url });
   return eredmeny;
 }
@@ -347,9 +369,8 @@ async function kepFeltoltes(fajl, token = null) {
 // @param {string|null} token
 async function fajlFeltoltes(fajl, token = null) {
   console.log('apiHelper.fajlFeltoltes - KEZDÉS', { nev: fajl.name, meret: fajl.size });
-  const formData = new FormData();
-  formData.append('fajl', fajl);
-  const eredmeny = await apiPostFormData('feltoltes/fajl', formData, token);
+  const eredmeny = await apiPost('feltoltes/fajl',
+    { adat: await fajlBase64(fajl), nev: fajl.name }, token);
   console.log('apiHelper.fajlFeltoltes - VÉGE', { url: eredmeny?.url });
   return eredmeny;
 }

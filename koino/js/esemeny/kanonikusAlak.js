@@ -152,6 +152,27 @@ export async function lenyomat(ertek) {
 }
 
 /**
+ * ⭐⭐ NYERS BÁJTOK LENYOMATA — a fájlokhoz (5.7).
+ *
+ * ⚠️ MIÉRT KÜLÖN A `lenyomat`-tól? Mert az **kanonikus alakra** hoz először (rendezett
+ * mezők, NFC, csak egész szám) — az egy *gondolat* lenyomata. Egy kép vagy egy fájl
+ * viszont **nyers bájtsor**: nincs mezője, amit rendezni lehetne, és egyetlen bájt
+ * megváltoztatása is más fájl. *Itt épp az a lényeg, hogy semmit ne alakítsunk rajta.*
+ *
+ * ⭐ ÉS EZ TESZI A CSATORNÁT FELESLEGESSÉ (3. szabály): aki megkapja a bájtokat, **maga
+ * ellenőrzi**, hogy azt kapta-e, amit az esemény megnevezett — nem kell megbíznia abban,
+ * akitől kapta. Ugyanaz az elv, mint az esemény azonosítójánál.
+ *
+ * @param {Uint8Array|ArrayBuffer} bajtok
+ * @returns {Promise<string>} 43 karakteres base64url lenyomat
+ */
+export async function bajtLenyomat(bajtok) {
+  const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
+  const hash = await crypto.subtle.digest('SHA-256', nyers);
+  return bajtokBase64Url(new Uint8Array(hash));
+}
+
+/**
  * Bájtok → base64url szöveg.
  * @param {Uint8Array} bajtok
  * @returns {string}

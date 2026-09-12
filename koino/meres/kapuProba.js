@@ -62,10 +62,12 @@ async function probaMappa() {
 }
 
 /** Kaput nyit a próbához, lefuttatja a törzset, aztán MINDIG bezárja. */
-async function kapuval(torzs, { kezelo } = {}) {
+async function kapuval(torzs, { kezelo, jelszoMentes, testKorlat } = {}) {
   const { alap, felulet } = await probaMappa();
   // port: 0 → az operációs rendszer ad szabadot (nem ütközünk semmivel)
-  const kapu = await kapuNyitasa({ mappa: felulet, kezelo, port: 0, jelszo: JELSZO });
+  const kapu = await kapuNyitasa({
+    mappa: felulet, kezelo, port: 0, jelszo: JELSZO, jelszoMentes, testKorlat
+  });
   try {
     return await torzs(kapu, { alap, felulet });
   } finally {
@@ -400,6 +402,48 @@ proba('⭐⭐⭐ A PROGRAM SEHOL NEM IMPORTÁLJA A FELÜLETET (felulet_terv 3. p
   });
 
 // ===================================
+// 6/b. ⛔⛔ A JELSZÓ-MENTES ÚT — SZŰK, ÉS AZ IS MARAD (5.7)
+// ===================================
+//
+// Az 5.7-ben egy `/api/` útvonal jelszó nélkülivé vált: a **fájl-kiszolgálás**. Az ok
+// kényszer (egy `<img src>` nem küld fejlécet, a címébe pedig tilos jelszót tenni, mert az
+// a cím a gondolat ESEMÉNYÉBEN utazik), a védelem pedig maga a **lenyomat**: kitalálhatatlan.
+//
+// ⛔ EZ A LEGKÉNYESEBB PONT AZ EGÉSZ KAPUBAN, mert egy őrt lazít. Ezért mérjük, hogy
+// **szűk marad**: a kivétel CSAK arra az egy útvonalra vonatkozik, amire a hívó mondta.
+
+proba('⭐ A jelszó-mentes útvonal jelszó NÉLKÜL is válaszol', () => kapuval(async (kapu) => {
+  const v = await keres(kapu.port, '/api/fajl/abc');
+  return v.allapot === 200 && v.test.includes('a-fajl');
+}, {
+  kezelo: async ({ utvonal }) =>
+    utvonal.startsWith('/api/fajl/') ? { adat: { ez: 'a-fajl' } } : { adat: { ez: 'titok' } },
+  jelszoMentes: (ut) => ut.startsWith('/api/fajl/')
+}));
+
+proba('⛔⛔ …DE A TÖBBI /api/ TOVÁBBRA IS ZÁRVA — a kivétel nem szivárog', () => kapuval(
+  async (kapu) => {
+    // ⚠️ Ez a próba a valódi kockázat: ha a kivétel „elmosódna", minden adat nyitva állna.
+    const a = await keres(kapu.port, '/api/en');
+    const b = await keres(kapu.port, '/api/pakli');
+    // ⛔ És az sem elég, ha az útvonal csak HASONLÍT a nyitottra.
+    const c = await keres(kapu.port, '/api/fajlok-titkos');
+    return a.allapot === 401 && b.allapot === 401 && c.allapot === 401
+      && !a.test.includes('titok') && !c.test.includes('titok');
+  },
+  {
+    kezelo: async () => ({ adat: { ez: 'titok' } }),
+    jelszoMentes: (ut) => ut.startsWith('/api/fajl/')
+  }
+));
+
+proba('⛔ Jelszó-mentes lista NÉLKÜL minden /api/ zárva marad (ez az alapértelmezés)',
+  () => kapuval(async (kapu) => {
+    const v = await keres(kapu.port, '/api/fajl/abc');
+    return v.allapot === 401;
+  }, { kezelo: async () => ({ adat: { ez: 'titok' } }) }));
+
+// ===================================
 // 7. ⭐⭐ AZ ÖRÖKÖLT KÓD BÁJTRA UGYANAZ (5.3, 5.7) — forrás-próba
 // ===================================
 //
@@ -417,9 +461,12 @@ proba('⭐⭐⭐ A PROGRAM SEHOL NEM IMPORTÁLJA A FELÜLETET (felulet_terv 3. p
 const SZANDEKOSAN_MAS = [
   'utils/apiHelper.js',        // JWT → a helyi kapu jelszava (D15)
   'utils/authHelper.js',       // a koinóban nincs bejelentkezés (D15)
-  'components/kartya/kartyaGyar.js',                 // 5.3: nincs Kategória/GondolatTípus… (majd lett)
-  'components/szovegSzerkeszto/FeltoltesKezelo.js'   // 5.7: a képek helye eldöntetlen (D3)
+  'components/kartya/kartyaGyar.js'                  // 5.3: nincs Kategória/GondolatTípus… (majd lett)
 ];
+// ⭐ HÁROM FÁJL — és a `FeltoltesKezelo` 2026-09-12-óta MÁR NEM köztük van: a fájl-réteg
+// megépültével bájtra visszakerült a prototípus változata, és csak az `apiHelper` két
+// feltöltő függvénye lett más (multipart → base64 JSON, a JSON-őr miatt).
+// *Ez a lista tehát nem csak szűkebb lett — egy ígéretet váltott be.*
 
 // ⭐⭐ A HELYŐRZŐKET NEM LISTÁZZUK, HANEM FELISMERJÜK. Az 5.3 tizenhárom helyőrzőt tett a
 // még át nem emelt modálok helyére, és ezek természetesen eltérnek a prototípustól.

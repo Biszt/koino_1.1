@@ -27,6 +27,7 @@ import { mkdir, readFile, appendFile, writeFile, readdir, access } from 'node:fs
 import { join } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
+import { bajtLenyomat } from '../esemeny/kanonikusAlak.js';
 
 // ===================================
 // HOL LAKIK AZ ADAT
@@ -326,6 +327,185 @@ export function szeletJegyzekTarolo(hely = alapHely()) {
     async ir(lista) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify({ szeletek: lista }, null, 2), 'utf8');
+    }
+  };
+}
+
+// ===================================
+// ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
+// ===================================
+//
+// ⛔⛔ A KÉP NEM MEHET AZ ESEMÉNYBE. Egy esemény ma ~400 bájt, egy fénykép ennek több
+// ezerszerese — a **6. szabály KEMÉNY fele** (az adat-csomag kicsi marad) ezt kizárja.
+// Szerver-mappa viszont nincs, és nem is lehet: a **2. szabály** szerint semmi ne múljon
+// egyetlen címen.
+//
+// ⭐ A MEGOLDÁS A KOINO SAJÁT MINTÁJA: a fájlt a **lenyomata** nevezi meg, ahogy minden
+// mást a koinóban. Az esemény csak ezt a ~43 karakteres nevet hordozza (a mérettel és a
+// típussal együtt ~100 bájt), a **bájtok külön élnek** — a tartalmi rétegben (D3).
+//
+// ⭐⭐ ÉS EBBŐL KÉT DOLOG INGYEN JÖN:
+//
+//   · **Az ellenőrzés** (3. szabály): aki megkapja a bájtokat, újra lenyomatolja, és látja,
+//     hogy azt kapta-e, amit az esemény megnevezett. *A csatornát nem kell megbízhatóvá
+//     tenni — a név MAGA a bizonyíték.*
+//   · **A duplikátum elnyelése**: ugyanaz a kép kétszer beszúrva EGY fájl a lemezen, mert
+//     ugyanaz a neve. (Ugyanaz az érv, mint az `esemenyMentese` duplikátum-kezelésénél.)
+//
+// ⚠️ ÉS AMI NEM JÖN INGYEN: a bájtok **szállítása** két készülék között. Az még nincs meg —
+// a terv Csabáé (2026-09-12): a **buli** a randevú-megbeszélés, ott derül ki, kinek mi kell,
+// és utána a két érintett készülék tartja a kapcsolatot, amíg a másolás tart. ⛔ Addig egy
+// kép **csak azon a készüléken van meg, ahol beszúrták** — a többi a hiányt LÁTJA, nem
+// kitalál helyette semmit (D19). *Ez pontosan a D3 tartalmi rétege: elveszhet.*
+
+/**
+ * ⛔ A FÁJL FELSŐ MÉRETHATÁRA — és ez **Csaba döntése**, nem az enyém (2026-09-12 óta
+ * nyitott kérdés: *„egy videóra is kell egy »eddig és ne tovább«"*).
+ *
+ * Az itteni 2 MB **kiindulás**, nem állásfoglalás: egy telefonos fénykép 2–5 MB, egy
+ * lekicsinyített 200–500 KB. ⭐ Egy helyen van, tehát a hangolása egyetlen sor.
+ *
+ * ⭐⭐ ÉS EGY FONTOS KÜLÖNBSÉGTÉTEL: ez **NEM** állapot-befolyásoló állandó (D66), tehát
+ * **nem hasítja ketté a koinót**, ha két készüléken más. Ha nálam 2 MB a határ, nálad 5,
+ * akkor ugyanazt az **állapotot** számoljuk (entitások, döntések) — csak nekem nincs meg
+ * az a kép. *A D3 szerint a tartalmi réteg amúgy is elveszhet; a tartós magot ez nem
+ * érinti.* Ezért szabad kiindulási értéket adni neki, és ezért nem kell koino-azonosítót
+ * váltani, ha megváltozik.
+ */
+export const FAJL_KORLAT = 2 * 1024 * 1024;
+
+/**
+ * ⛔⛔ A FÁJL TÍPUSA A BÁJTJAIBÓL DERÜL KI — SOHA NEM A KLIENS SZAVÁBÓL.
+ *
+ * ⚠️ EZ BIZTONSÁGI KÉRDÉS, nem kényelmi. Ha a lap mondhatná meg a típust, valaki
+ * feltölthetne egy HTML-fájlt `text/html`-ként, és a koino **a saját origin-jéről**
+ * szolgálná ki — vagyis a feltöltött kód hozzáférne mindenhez, amit a lap elér
+ * (a kapu jelszavát is beleértve). *A bájtokból kiolvasott típust nem lehet hazudni.*
+ *
+ * ⭐ ÉS EZ A KOINO ÁLTALÁNOS MINTÁJA: amit le lehet vezetni, azt ne kelljen bemondani —
+ * ugyanaz az érv, mint a `kivisz`-nél a horgonynál vagy az `entitasTipus` kihagyásánál.
+ *
+ * @param {Uint8Array} bajtok
+ * @returns {string} a kiszolgálható MIME-típus; ismeretlennél letöltendő bináris
+ */
+export function fajlTipus(bajtok) {
+  const b = bajtok;
+  const eleje = (...jelek) => jelek.every((j, i) => b[i] === j);
+
+  if (eleje(0x89, 0x50, 0x4e, 0x47)) return 'image/png';
+  if (eleje(0xff, 0xd8, 0xff)) return 'image/jpeg';
+  if (eleje(0x47, 0x49, 0x46, 0x38)) return 'image/gif';
+  // RIFF….WEBP
+  if (eleje(0x52, 0x49, 0x46, 0x46) && b[8] === 0x57 && b[9] === 0x45
+      && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  if (eleje(0x25, 0x50, 0x44, 0x46)) return 'application/pdf';
+
+  // ⛔ AMIT NEM ISMERÜNK FEL, AZ LETÖLTENDŐ BINÁRIS — nem találgatunk. A `nosniff`
+  // fejléccel együtt ez azt jelenti, hogy a böngésző SEM fogja megjeleníteni.
+  return 'application/octet-stream';
+}
+
+/**
+ * A koino fájl-tára: bájtok a lenyomatuk NEVE alatt.
+ *
+ * ⚠️ KOINÓNKÉNT KÜLÖN MAPPA, mint az eseményeknél — hogy egy koino elhagyásakor a hozzá
+ * tartozó fájlok is egyben legyenek.
+ *
+ * @param {string} koino
+ * @param {string} [hely]
+ * @returns {{ir: Function, olvas: Function, van: Function, lista: Function, mappa: string}}
+ */
+export function fajlBlobTarolo(koino, hely = alapHely()) {
+  const mappa = join(hely, koino, 'fajlok');
+
+  /**
+   * ⚠️ A LENYOMAT base64url, amiben van `-` és `_` — fájlnévnek ez rendben van, DE a `/`
+   * nem fordulhat elő (a base64url épp ezt cseréli le), és a `..` sem. Akkor is
+   * ellenőrizzük, ha mi állítjuk elő: ez a név **kívülről is jöhet** (a lap kéri le), és
+   * ott már útvonal-támadás lenne belőle.
+   */
+  function utja(lenyomat) {
+    if (typeof lenyomat !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(lenyomat)) {
+      throw new Error('Érvénytelen fájl-lenyomat.');
+    }
+    return join(mappa, lenyomat);
+  }
+
+  return {
+    mappa,
+
+    /**
+     * Bájtok beírása. A NEVE a lenyomatuk — tehát ugyanaz a tartalom mindig ugyanoda kerül.
+     * @param {Uint8Array} bajtok
+     * @returns {Promise<{lenyomat: string, meret: number, mar: boolean}>}
+     */
+    async ir(bajtok) {
+      const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
+      if (nyers.length > FAJL_KORLAT) {
+        throw new Error('A fájl túl nagy: ' + nyers.length + ' bájt (a határ '
+          + FAJL_KORLAT + ').');
+      }
+
+      const lenyomat = await bajtLenyomat(nyers);
+      const ut = utja(lenyomat);
+
+      // ⭐ HA MÁR MEGVAN, NEM ÍRJUK ÚJRA: azonos név = azonos tartalom.
+      try {
+        await access(ut);
+        return { lenyomat, meret: nyers.length, mar: true };
+      } catch { /* nincs meg — most írjuk */ }
+
+      await mkdir(mappa, { recursive: true });
+      await writeFile(ut, nyers);
+      return { lenyomat, meret: nyers.length, mar: false };
+    },
+
+    /**
+     * Bájtok kiolvasása — ⭐ ELLENŐRZÉSSEL.
+     *
+     * ⛔ AZ ELLENŐRZÉS NEM ÓVATOSKODÁS. A fájl a lemezen romolhat, és ami rosszabb: egyszer
+     * majd **hálózatról** fog érkezni. Ha nem néznénk meg, a koino olyan bájtokat adna a
+     * lapnak, amikről csak *hisszük*, hogy azok. Így viszont a név maga a bizonyíték.
+     *
+     * @returns {Promise<Uint8Array|null>} null, ha nincs meg vagy nem egyezik
+     */
+    async olvas(lenyomat) {
+      // ⛔⛔ AZ ELLENŐRZÉS A `try`-ON KÍVÜL — és ez nem stílus, hanem jelentés (D19).
+      //
+      // Előbb belül volt, és a `catch` elnyelte: egy `../../kulcs.json` alakú név
+      // **hiánynak** látszott, nem hibának. *A kettő nem ugyanaz:* a hiány normális
+      // (a fájl még nem ért ide), az érvénytelen név viszont azt jelenti, hogy a hívó
+      // szemetet küldött — és azt meg kell mondani neki. *(Próba találta meg.)*
+      const ut = utja(lenyomat);
+
+      let bajtok;
+      try {
+        bajtok = new Uint8Array(await readFile(ut));
+      } catch {
+        return null;                      // nincs meg — ez nem hiba, hanem hiány (D19)
+      }
+
+      const ellenorzes = await bajtLenyomat(bajtok);
+      if (ellenorzes !== lenyomat) {
+        console.warn('fajlBlobTarolo - A FÁJL NEM AZ, AMINEK A NEVE MONDJA', { lenyomat });
+        return null;
+      }
+      return bajtok;
+    },
+
+    /** Megvan-e? (Olcsó kérdés: nem olvassuk be és nem ellenőrizzük.) */
+    async van(lenyomat) {
+      try { await access(utja(lenyomat)); return true; } catch { return false; }
+    },
+
+    /** Mely fájlok vannak meg? — a szállítás majd ebből tudja, mit kell kérni. */
+    async lista() {
+      try {
+        return (await readdir(mappa)).filter((n) => /^[A-Za-z0-9_-]{43}$/.test(n));
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return [];
+        throw hiba;
+      }
     }
   };
 }

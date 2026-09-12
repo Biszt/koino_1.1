@@ -63,7 +63,9 @@ import { dirname, join } from 'node:path';
 
 import {
   esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely,
-  ismertKoinok
+  ismertKoinok,
+  // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
+  fajlBlobTarolo, fajlTipus, FAJL_KORLAT
 } from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
@@ -2236,6 +2238,48 @@ try {
         // esemény létrejön, de nem fog számítani. *A felület nem véd, és nem is kell.*
         if (modszer === 'POST' || modszer === 'PUT' || modszer === 'PATCH') {
 
+          // ===================================
+          // ⭐⭐ FÁJL FELTÖLTÉSE (5.7) — a tartalom-címzett tárba
+          // ===================================
+          //
+          // ⚠️ BASE64 EGY JSON TESTBEN, NEM `multipart/form-data` — és ez szándékos.
+          // Az 5.5 harmadik őre szerint a kapu **csak `application/json` testet** fogad el,
+          // mert a JSON tartalomtípus **kötelezővé teszi** a böngésző előellenőrzését, amit
+          // a kapunk nem enged át — *így a böngésző maga állítja meg az idegen írást.*
+          // ⛔ Egy `multipart` feltöltés ezt az őrt kerülné meg; a base64 ára (+33% egy
+          // HELYI kérésen, hálózat nélkül) ennél sokkal olcsóbb.
+          //
+          // ⭐ A VÁLASZ `{ url }`, mert az örökölt `FeltoltesKezelo` ezt várja — és az `url`
+          // a fájl LENYOMATÁRA mutat, ami egyben az ellenőrzés kulcsa is.
+          if (utvonal === '/api/feltoltes/kep' || utvonal === '/api/feltoltes/fajl') {
+            const { adat: base64, nev } = test ?? {};
+            if (typeof base64 !== 'string' || !base64) {
+              return { allapot: 400, adat: { hiba: 'nincs mit feltölteni' } };
+            }
+
+            let bajtok;
+            try {
+              bajtok = new Uint8Array(Buffer.from(base64, 'base64'));
+            } catch {
+              return { allapot: 400, adat: { hiba: 'a fájl nem értelmezhető' } };
+            }
+
+            try {
+              const { lenyomat, meret, mar } = await fajlBlobTarolo(KOINO).ir(bajtok);
+              return {
+                adat: {
+                  // ⭐ A NÉV A LENYOMAT — ugyanaz a kép kétszer beszúrva EGY fájl a lemezen.
+                  url: '/api/fajl/' + lenyomat,
+                  lenyomat, meret, mar,
+                  nev: typeof nev === 'string' ? nev : null
+                }
+              };
+            } catch (hiba) {
+              // ⚠️ A méret-korlát ŐSZINTE hiba, nem néma csonkítás.
+              return { allapot: 413, adat: { hiba: hiba.message } };
+            }
+          }
+
           // ----- ⭐⭐ KOINO-VÁLTÁS (5.6) — belépés a térről egy koinóba -----
           //
           // ⚠️ EZ NEM ÍR ESEMÉNYT, és ez fontos. A D15 szerint nincs bejelentkezés: a
@@ -2542,6 +2586,34 @@ try {
           return { adat: kategoriaE ? { kategoriak: lista } : { gondolatTipusok: lista } };
         }
 
+        // ===================================
+        // ⭐⭐ EGY FÁJL KISZOLGÁLÁSA (5.7) — a lenyomata alapján
+        // ===================================
+        //
+        // ⭐ A NÉV MAGA A BIZONYÍTÉK: a tár **újra lenyomatolja** a bájtokat olvasáskor, és
+        // ha nem egyeznek, nem adja ki őket. *A csatornát nem kell megbízhatóvá tenni*
+        // (3. szabály) — ez ma a lemez, holnap a hálózat.
+        //
+        // ⚠️ A HIÁNY ITT NEM HIBA (D19): egy kép **csak azon a készüléken van meg, ahol
+        // beszúrták**, amíg a tartalmi réteg szállítása meg nem épül. A 404 tehát azt
+        // mondja: *„ezt a fájlt nem ismerem"* — nem azt, hogy nem létezik.
+        if (utvonal.startsWith('/api/fajl/')) {
+          const lenyomat = utvonal.slice('/api/fajl/'.length);
+
+          let bajtok;
+          try {
+            bajtok = await fajlBlobTarolo(KOINO).olvas(decodeURIComponent(lenyomat));
+          } catch (hiba) {
+            return { allapot: 400, adat: { hiba: hiba.message } };
+          }
+          if (!bajtok) {
+            return { allapot: 404, adat: { hiba: 'ezt a fájlt nem ismeri ez a készülék' } };
+          }
+
+          // ⛔ A típus a BÁJTOKBÓL, nem a kérésből — lásd `fajlTipus`.
+          return { nyers: Buffer.from(bajtok), tipus: fajlTipus(bajtok) };
+        }
+
         // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért
         // a kártya külön kéri el — kártyánként, amikor tényleg kell.
         if (utvonal.startsWith('/api/pakli/szoveg/')) {
@@ -2631,7 +2703,22 @@ try {
         return null;   // nincs ilyen végpont → a kapu 404-et ad
       };
 
+      // ⭐⭐ A FÁJL-FELTÖLTÉS NAGYOBB TESTET KÍVÁN (5.7). A kapu alapértelmezése 256 KB —
+      // egy szavazatnak bőven elég, egy képnek nem. ⚠️ A base64 miatt a test ~4/3-a a
+      // fájlnak, és hagyunk egy kis fejléc-tartalékot.
+      //
+      // ⛔ A JSON-ŐR ÉRINTETLEN: a nagyobb test is `application/json` kell hogy legyen,
+      // tehát az 5.5 harmadik őre (a böngésző előellenőrzése) továbbra is véd.
+      const feltoltesKorlat = Math.ceil(FAJL_KORLAT * 4 / 3) + 64 * 1024;
+
       const felulet = await kapuNyitasa({
+        testKorlat: (ut) => ut.startsWith('/api/feltoltes/') ? feltoltesKorlat : undefined,
+        // ⛔⛔ EGYETLEN JELSZÓ-MENTES ÚT: a fájl-kiszolgálás. Egy `<img src>` nem küld
+        // fejlécet, a címébe pedig **tilos** jelszót tenni — az a cím a gondolat
+        // ESEMÉNYÉBEN van eltárolva, tehát a jelszó a láncra kerülne és szétterjedne.
+        // ⭐ Helyébe a **lenyomat** lép jogosultságként: 43 karakter, kitalálhatatlan, és
+        // aki nem látta az eseményt (ahhoz jelszó kell), nem tudja, mit kérjen.
+        jelszoMentes: (ut) => ut.startsWith('/api/fajl/'),
         // ⚠️ A program MELLETT lakik a felület, nem a futtatás helyén — különben másik
         // mappából indítva üres lapot adnánk. (`fileURLToPath`: Windowson is helyes út.)
         mappa: join(dirname(fileURLToPath(import.meta.url)), 'felulet'),

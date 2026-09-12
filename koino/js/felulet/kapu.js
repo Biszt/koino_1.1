@@ -170,9 +170,15 @@ export function biztonsagosUt(mappa, utvonal) {
  *        nem tud semmit a koinóról.
  * @param {number} [beallitas.port]
  * @param {string} [beallitas.jelszo] - a próbák adhatnak rögzítettet; egyébként generált
+ * @param {Function} [beallitas.jelszoMentes] - (utvonal) → boolean. ⚠️ SZŰK KIVÉTEL: mely
+ *        `/api/` útvonalak érhetők el jelszó nélkül. Csak olyanra szabad, aminek a címe
+ *        maga a jogosultság (kitalálhatatlan) — lásd az 1. őr kivétel-szakaszát.
+ * @param {Function} [beallitas.testKorlat] - (utvonal) → bájt. ⭐ KÍVÜLRŐL JÖN, mint a
+ *        kezelő: a kapu nem tudja, hogy egy kép-feltöltés nagyobb testet kíván, mint egy
+ *        szavazat — azt a koino tudja (7. szabály: a kapu cserélhető marad).
  * @returns {Promise<{port: number, jelszo: string, cim: string, zar: Function}>}
  */
-export async function kapuNyitasa({ mappa, kezelo, port = ALAP_PORT, jelszo } = {}) {
+export async function kapuNyitasa({ mappa, kezelo, port = ALAP_PORT, jelszo, testKorlat, jelszoMentes } = {}) {
   console.log('kapu.kapuNyitasa - KEZDÉS', { mappa, port });
 
   // base64url, hogy a címsorba menekítés nélkül beírható legyen
@@ -180,7 +186,8 @@ export async function kapuNyitasa({ mappa, kezelo, port = ALAP_PORT, jelszo } = 
   const gyoker = resolve(mappa);
 
   const kiszolgalo = createServer((keres, valasz) => {
-    kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port: () => tenylegesPort })
+    kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, testKorlat, jelszoMentes,
+      port: () => tenylegesPort })
       .catch((hiba) => {
         // Egy elhasalt kérés NE döntse el a kaput.
         console.warn('kapu - kérés-hiba', { hiba: hiba.message });
@@ -228,7 +235,7 @@ export async function kapuNyitasa({ mappa, kezelo, port = ALAP_PORT, jelszo } = 
  * A sorrend nem mindegy: előbb az őrök, aztán a munka. Amit egy őr elutasít, arról a
  * kezelő nem is értesül.
  */
-async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
+async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port, testKorlat, jelszoMentes }) {
   const p = port();
   const cim = new URL(keres.url, 'http://' + HUROK + ':' + p);
   const kereses = cim.searchParams;
@@ -284,7 +291,27 @@ async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
   // elakadnak, és a felület meg is mondja, mit kell tenni.
   const apiKeres = cim.pathname === '/api' || cim.pathname.startsWith('/api/');
 
-  if (apiKeres && !jelszoRendben(keres, kereses, kulcs)) {
+  // ----- ⭐⭐ ÉS EGY SZŰK KIVÉTEL, AMIT A HÍVÓ MOND MEG (5.7) -----
+  //
+  // ⛔ A KÉP UGYANAZ A CSAPDA, MINT 5.3-BAN A CSS: egy `<img src>` **nem küld fejlécet**,
+  // tehát a jelszót nem tudja átadni. A címébe tenni pedig **tilos**, mert az a cím a
+  // gondolat **eseményében** van eltárolva — a jelszó így a láncra kerülne, és
+  // szétterjedne mindenkihez. *A lánc örök; egy jelszó nem való bele.*
+  //
+  // ⭐ MIÉRT BIZTONSÁGOS MÉGIS: a fájl címe a **lenyomata** — 43 karakternyi, a tartalomból
+  // származtatott név, amit **nem lehet kitalálni**. Aki nem látta az eseményt (amihez
+  // viszont jelszó kell), az nem tudja, mit kérjen. *A lenyomat MAGA a jogosultság* —
+  // ugyanaz a gondolat, mint hogy a név maga a bizonyíték.
+  //
+  // ⚠️ És a többi őr ÁLL: a típus a bájtokból jön (nem futtatható HTML), a `nosniff`
+  // fejléc rajta van, az írás továbbra is jelszót és JSON testet kíván, és a kulcsfájl az
+  // útvonal-őr mögött marad.
+  //
+  // ⭐ A KAPU NEM TUDJA, MI EZ: a hívó adja meg, mely útvonalak nyitottak — ugyanúgy,
+  // ahogy a kezelőt és a test-korlátot (7. szabály: a kapu cserélhető marad).
+  const nyilt = apiKeres && jelszoMentes ? jelszoMentes(cim.pathname) : false;
+
+  if (apiKeres && !nyilt && !jelszoRendben(keres, kereses, kulcs)) {
     console.warn('kapu - HIÁNYZÓ VAGY ROSSZ JELSZÓ elutasítva', { utvonal: cim.pathname });
     return kuld(401, 'application/json; charset=utf-8', JSON.stringify({
       hiba: 'Ehhez a kapuhoz jelszó kell. Nyisd meg azt a címet, amit a program kiírt.'
@@ -316,7 +343,11 @@ async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
       }
 
       try {
-        test = await testBeolvasas(keres);
+        // ⭐ A KORLÁTOT A HÍVÓ MONDJA MEG ÚtVONALANKÉNT (5.7). Alapértelmezésben a
+        // szigorú `TEST_KORLAT`; a kép-feltöltés útja többet kér. ⛔ A JSON-őr ettől
+        // **nem engedül**: a nagyobb test is `application/json` kell hogy legyen.
+        const korlat = testKorlat ? testKorlat(cim.pathname) : TEST_KORLAT;
+        test = await testBeolvasas(keres, korlat);
       } catch (hiba) {
         console.warn('kapu - a test beolvasása nem sikerült', { hiba: hiba.message });
         return kuld(413, 'application/json; charset=utf-8',
@@ -334,6 +365,16 @@ async function kereskezeles(keres, valasz, { gyoker, kezelo, kulcs, port }) {
     if (!eredmeny) {
       return kuld(404, 'application/json; charset=utf-8', '{"hiba":"nincs ilyen végpont"}');
     }
+    // ⭐⭐ NYERS BÁJTOK IS JÖHETNEK (5.7) — egy kép nem JSON. A kezelő `nyers` +
+    // `tipus` párral kérheti, hogy ne alakítsuk át.
+    //
+    // ⚠️ A kapu ettől sem tud többet a koinóról (7. szabály): nem ő dönti el, mi kép és
+    // mi nem — csak továbbítja, amit a kezelő adott.
+    if (eredmeny.nyers) {
+      return kuld(eredmeny.allapot ?? 200,
+        eredmeny.tipus ?? 'application/octet-stream', eredmeny.nyers);
+    }
+
     return kuld(eredmeny.allapot ?? 200, 'application/json; charset=utf-8',
       JSON.stringify(eredmeny.adat));
   }
@@ -352,15 +393,15 @@ const TEST_KORLAT = 256 * 1024;
  * ⚠️ A KORLÁTOT MENET KÖZBEN nézzük, nem a végén: ha a végén néznénk, a memória már
  * megtelt volna, mire kiderül.
  */
-function testBeolvasas(keres) {
+function testBeolvasas(keres, korlat = TEST_KORLAT) {
   return new Promise((kesz, hiba) => {
     let nyers = '';
     let meret = 0;
 
     keres.on('data', (darab) => {
       meret += darab.length;
-      if (meret > TEST_KORLAT) {
-        hiba(new Error('a kérés teste túl nagy (max ' + (TEST_KORLAT / 1024) + ' KB)'));
+      if (meret > korlat) {
+        hiba(new Error('a kérés teste túl nagy (max ' + Math.round(korlat / 1024) + ' KB)'));
         keres.destroy();
         return;
       }
