@@ -20,6 +20,8 @@ import {
   entitasReszletei, entitasKuszobei, hianyzoFelmenok, MAX_DARAB, RENDEZESEK, kuszobokBefele
 } from '../js/allapot/pakli.js';
 
+import { ALAP_KUSZOBOK } from '../js/allapot/javaslatSzamitas.js';
+
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉRDEZHETŐ PAKLI (Szakasz 5 / 5.2)');
@@ -644,8 +646,12 @@ proba('⭐⭐ A KÜSZÖBÖK a prototípus NEVEIVEL érkeznek (a modal így olvas
 
   const alap = await entitasKuszobei(tar, KOINO, azonosito, { szerzo: anna.szerzo });
   // Még senki nem javasolt: az alapértelmezés jön, a saját javaslat üres.
-  const alapRendben = alap.aktualisErtekek.javaslatElfogadasiKuszob === 51
-    && alap.aktualisErtekek.aktualMinimumDontesiIdo === 86400
+  // ⚠️ AZ ÁLLANDÓRA HIVATKOZUNK, NEM BEÉGETETT SZÁMRA. Korábban 86400 állt itt, és amikor
+  // Csaba 1 másodpercre vitte le az alap-minimumot (2026-09-12), ez a próba bukott — pedig
+  // a mért viselkedés („az alapértelmezés jön") **nem változott**. *Egy próba, ami a
+  // paraméter ÉRTÉKÉT rögzíti, a paraméter minden hangolását álhibának mutatja.*
+  const alapRendben = alap.aktualisErtekek.javaslatElfogadasiKuszob === ALAP_KUSZOBOK.elfogadasiKuszob
+    && alap.aktualisErtekek.aktualMinimumDontesiIdo === ALAP_KUSZOBOK.minimumDontesiIdo
     && alap.eemberJavaslat === null;
 
   await esemenyMentese(tar, await anna.tesz('ErtekJavaslat', {

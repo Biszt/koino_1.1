@@ -475,6 +475,30 @@ kapcsolat **nem előfeltétel, hanem következmény**: az események már átmen
 már számolhatók — ha a másolás megszakad, a koino **teljes értékűen működik tovább**, csak
 a kép hiányzik. ⭐ *És a D3 pontosan ezt mondja a tartalmi rétegről: **elveszhet**.*
 
+⭐⭐ **ÉS A RANDEVÚ (Csaba, 2026-09-12):**
+
+> *„a buli alkalmával, mindenki kikűldi a kérelmeit, ami a böngészés közben született, és
+> megkapja azokat a kéréseket, amik az ő eszközéről kérnek adatot. A pajzsfuró elve az,
+> hogy egyidőben kell hogy keressék egymást, a kérelmező és a tároló eszköz. és egy
+> eszköznek tudnia kell, párhuzamossan kűldeni, és fogadni is, több helyről."*
+
+⭐⭐⭐ **A BULI EGY TALÁLKOZÓ-MEGBESZÉLÉS — és ez oldja meg a pajzsfúró nehéz feltételét.**
+A `pajzsfuro.js` szerint *„nem elég, ha az egyik fél figyel… mindkét félnek KI KELL SZÓLNIA
+a másiknak"* — vagyis az **egyidejűség** a működés feltétele. Eddig ez véletlenen múlt;
+a bulival **megbeszélt** lesz: *ott dől el, ki kinek mit küld, és onnan tudja mindkét fél,
+hogy a másik is kopogni fog.*
+
+⭐ **ÉS A PÁRHUZAMOSSÁG SEM ÚJ MECHANIZMUS:** a `pajzsfuro.js` azért választott UDP-t, mert
+*„egyetlen UDP-foglalat egyszerre tud küldeni és fogadni ugyanazon a porton"*. Amit Csaba
+kér — párhuzamosan küldeni és fogadni, több helyről —, arra a választott szállítás **már
+képes**; a munka a **nyilvántartás** (melyik átvitel hol tart) és a **korlátozás**.
+
+⚠️ **EGY KÉRDÉS, AMIT TISZTÁZNI KELL: a kérelem ESEMÉNY vagy MÚLÉKONY ÜZENET?**
+*Az én olvasatom: múlékony* — mint az `ALLAS` a cserében —, két okból: ⛔ ha esemény lenne,
+**a böngészésem felkerülne a láncra**, örökre és mindenki számára láthatóan (*mit néztem meg*
+— ez a D6 személyes-adat határa), és ⛔ minden kérés ~400 bájttal növelné a tartós adatot,
+holott a kérés **egyszeri és múlandó**. ⏸️ Eldöntendő.
+
 ⏸️ **Amit ez még nyitva hagy:** mekkora az egy darabban küldött szelet és hogyan folytatódik
 megszakadás után · ki kezdeményezi (a kérő vagy a birtokló) · hány párhuzamos átvitelt
 vállal egy készülék · és a **felső mérethatár** (a 6. szabály az eseményre kemény, de egy

@@ -44,7 +44,29 @@ import { erintettek } from './szabalyok.js';
 export const ALAP_KUSZOBOK = {
   elfogadasiKuszob: 51,        // százalék: a támogatottság ekkora legyen a szavazók közt
   reszveteliKuszob: 0,         // százalék: ekkora részvétel kell (0 = nincs feltétel)
-  minimumDontesiIdo: 86400,    // másodperc: 1 nap — a reakció-ablak (D4)
+
+  // ⭐⭐ 1 MÁSODPERC (Csaba döntése, 2026-09-12) — korábban 1 nap volt.
+  //
+  // ⛔ MIÉRT VOLT ROSSZ AZ 1 NAP: a prototípus alapértéke **0** (`gondolatErtekHisztogram.js`),
+  // és ezen múlik, hogy a saját gondolatod szerkesztése **azonnal** megtörténjen, ha te vagy
+  // az egyetlen tudatpont-tulajdonos. Egy nappal a koino szigorúbb lett volna a
+  // prototípusnál — nem elvből, csak egy elfelejtett állandó miatt.
+  //
+  // ⭐ MIÉRT NEM 0, HANEM 1: a nulla ablak **elfajult** — a javaslat a születése
+  // pillanatában zárna, tehát rajtam kívül **senki más nem tudna beleszavazni**, akármilyen
+  // gyors. Az 1 másodperc ugyanúgy „azonnali" egytulajdonosnál, de **nem zárja ki** a
+  // többieket elvi szinten. *(A saját támogató szavazatom amúgy is a javaslat időbélyegét
+  // viseli — `muveletek.js` —, tehát nem ezen múlik.)*
+  //
+  // ⚠️ ÉS EZ NEM „GYORS DÖNTÉS": a **D4 bizonyossági mutatója** dönti el, hol áll a valódi
+  // idő a minimum és a maximum KÖZÖTT. Egyhangú, teljes részvételű döntésnél a minimumnál
+  // (1 mp), vitatottnál a maximum (7 nap) felé — *a minimum nem a szokásos, hanem a
+  // legjobb eset.*
+  //
+  // ⛔⛔ A D66 SZERINT EZ ÁLLAPOT-BEFOLYÁSOLÓ ÁLLANDÓ: ha egy meglévő koino adatán
+  // változtatjuk, a régi és az új program **mást számol** ugyanabból az eseményhalmazból.
+  // Az `ALAP_KUSZOBOK` a hat ilyen egyike — vagyis ez a sor **együtt mozog a koino nevével**.
+  minimumDontesiIdo: 1,        // másodperc — a reakció-ablak alsó határa (D4)
   maximumDontesiIdo: 604800    // másodperc: 7 nap
 };
 
