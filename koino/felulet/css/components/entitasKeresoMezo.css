@@ -1,0 +1,186 @@
+/* frontend/css/components/entitasKeresoMezo.css */
+
+/* =============================================
+   ENTITÁS KERESŐ MEZŐ
+   =============================================
+   Cím-alapú entitás-választó élő találati listával:
+   a felhasználó a címet/nevet gépeli, és a legördülő listából választ.
+   Kiegészítő lehetőség: nyers 24-hex ObjectId beírása (fallback).
+   Használja: JavaslatModal minden ID-mezője (a régi IdEllenorzoMezo helyett).
+   ============================================= */
+
+.entitas-kereso-mezo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entitas-kereso-mezo__cimke {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Az input és a találati lista közös burkolója — a lista abszolút pozicionált benne */
+.entitas-kereso-mezo__input-burok {
+  position: relative;
+}
+
+.entitas-kereso-mezo__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color var(--transition-interactive);
+}
+
+.entitas-kereso-mezo__input:focus {
+  border-color: var(--color-primary);
+}
+
+/* =============================================
+   TALÁLATI LISTA (legördülő)
+   ============================================= */
+.entitas-kereso-mezo__talalatok {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.entitas-kereso-mezo__talalatok--rejtett {
+  display: none;
+}
+
+.entitas-kereso-mezo__talalat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-interactive);
+}
+
+.entitas-kereso-mezo__talalat:hover {
+  background: var(--color-surface-alt, rgba(0, 0, 0, 0.05));
+}
+
+.entitas-kereso-mezo__talalat-cim {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  /* Hosszú cím ne törje szét a sort — levágjuk */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entitas-kereso-mezo__talalat-tipus {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* =============================================
+   ÁLLAPOT SOR a mező alatt
+   ============================================= */
+.entitas-kereso-mezo__statusz {
+  min-height: 1.2em;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.entitas-kereso-mezo__statusz--folyamatban {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.entitas-kereso-mezo__statusz--talalat {
+  color: var(--color-success, #2f9e44);
+  font-weight: 600;
+}
+
+.entitas-kereso-mezo__statusz--hiba {
+  color: var(--color-danger, #e03131);
+}
+
+/* =============================================
+   SZÖVEGSZERKESZTŐ ESZKÖZTÁR - CÍM-KERESŐ
+   =============================================
+   A szerkesztő entitás-hivatkozás paneljébe illesztett kereső legördülő listája.
+   A toolbar saját `eszkoztar-input` stílusát használja az inputhoz; itt csak a
+   legördülő pozicionálását és kinézetét adjuk meg.
+   ============================================= */
+.eszkoztar-kereso-wrapper {
+  position: relative;
+}
+
+.eszkoztar-kereso-talalatok {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 220px;
+  z-index: 50;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.eszkoztar-kereso-talalatok--rejtett {
+  display: none;
+}
+
+.eszkoztar-kereso-talalat {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color var(--transition-interactive);
+}
+
+.eszkoztar-kereso-talalat:hover {
+  background: var(--color-surface-alt, rgba(0, 0, 0, 0.05));
+}
+
+/* „Nincs találat" sor — nem kattintható jelleg */
+.eszkoztar-kereso-talalat--ures {
+  color: var(--color-text-muted);
+  cursor: default;
+  font-style: italic;
+}
+
+.eszkoztar-kereso-talalat--ures:hover {
+  background: transparent;
+}

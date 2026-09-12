@@ -594,6 +594,133 @@ proba('⭐ A besorolás-lenyílók a koino NEVEIT adják (a `cim` → `nev` ford
     }
   });
 
+// ===================================
+// ⭐⭐⭐ SZERKESZTÉSI JAVASLAT A LAPRÓL (5.8)
+// ===================================
+//
+// ⛔ EDDIG A LAPRÓL CSAK SZAVAZNI LEHETETT, javasolni nem — a gépezet teljes volt, a
+// felület hiányzott. *Ugyanaz a fajta rés, mint az „Új gondolat".*
+//
+// ⚠️ ÉS EGY VALÓDI HIBÁT IS TALÁLT EZ A MUNKA: a végrehajtás a `szoveg`-et **csak
+// szövegként** fogadta el, a szerkesztő viszont **blokk-tömböt** ad — a módosítás lefutott,
+// a cím átíródott, a szöveg pedig **némán a régi maradt**. Ez a próba mindkettőt méri.
+
+proba('⭐⭐⭐ MÓDOSÍTÁSI JAVASLAT A LAPRÓL: a cím ÉS a blokkos szöveg is hatályba lép',
+  async () => {
+    const hely = await ujKeszulek();
+    let kiszolgalo = null;
+    try {
+      await fut(hely, 'koino', 'Próba koinó');
+      kiszolgalo = await feluletet(hely, 7486);
+      const { hiv } = kiszolgalo;
+
+      // Nulla döntési idővel, hogy egytulajdonosként azonnal eldőljön.
+      const uj = await hiv('/api/gondolat', {
+        method: 'POST',
+        body: JSON.stringify({
+          cim: 'EREDETI CÍM',
+          javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
+          aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+        })
+      });
+      const id = uj.adat.data._id;
+
+      const javaslat = await hiv('/api/javaslat', {
+        method: 'POST',
+        body: JSON.stringify({
+          javaslatTipus: 'Modositas',
+          erintettEntitasok: [{
+            entitasId: id, entitasTipus: 'Gondolat', muvelet: 'Modositas',
+            modositasAdatok: {
+              cim: 'ÁTÍRT CÍM',
+              // ⭐ Pontosan az az alak, amit a `SzovegSzerkeszto.getTartalom()` ad.
+              szoveg: [{ id: 'b1', tipus: 'szoveg', tartalom: 'ÚJ BLOKKOS SZÖVEG' }]
+            }
+          }],
+          indoklas: [{ id: 'i1', tipus: 'szoveg', tartalom: 'Pontosítás.' }],
+          kezdoTudatpont: 30
+        })
+      });
+      if (javaslat.allapot !== 200 || !javaslat.adat?.javaslat?._id) return false;
+
+      const kep = await fut(hely, 'allapot');
+      // ⛔ MINDKETTŐ kell: a cím ÉS a szöveg. A szöveg volt az, ami némán kiesett.
+      return /ELFOGADVA/.test(kep) && /ÁTÍRT CÍM/.test(kep) && /ÚJ BLOKKOS SZÖVEG/.test(kep);
+    } finally {
+      if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
+proba('⭐ ÁTHELYEZÉSI javaslat a lapról — és a gyökérre helyezés is (`null` szülő)', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    kiszolgalo = await feluletet(hely, 7487);
+    const { hiv } = kiszolgalo;
+
+    const gyors = {
+      javaslatElfogadasiKuszob: 51, reszveteliAranyKuszob: 0,
+      aktualMinimumDontesiIdo: 0, aktualMaximumDontesiIdo: 0
+    };
+    const szulo = await hiv('/api/gondolat',
+      { method: 'POST', body: JSON.stringify({ cim: 'A SZÜLŐ', ...gyors }) });
+    const gyerek = await hiv('/api/gondolat',
+      { method: 'POST', body: JSON.stringify({ cim: 'A GYEREK', ...gyors }) });
+
+    const javaslat = await hiv('/api/javaslat', {
+      method: 'POST',
+      body: JSON.stringify({
+        javaslatTipus: 'Athelyezes',
+        erintettEntitasok: [{
+          entitasId: gyerek.adat.data._id, entitasTipus: 'Gondolat', muvelet: 'Athelyezes',
+          modositasAdatok: { ujSzuloId: szulo.adat.data._id }
+        }],
+        indoklas: [{ id: 'i1', tipus: 'szoveg', tartalom: 'Oda tartozik.' }]
+      })
+    });
+    if (javaslat.allapot !== 200) return false;
+
+    // ⭐ A hierarchikus rendezésben a gyerek a szülője alá kerül.
+    const oldal = await hiv('/api/pakli?darab=10&rendezes=hierarchikus');
+    const k = oldal.adat.kartyak.find((x) => x.cim === 'A GYEREK');
+    return k?.szulo === szulo.adat.data._id;
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLRŐL KORLÁTOS', async () => {
+  const hely = await ujKeszulek();
+  let kiszolgalo = null;
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+    kiszolgalo = await feluletet(hely, 7488);
+    const { hiv } = kiszolgalo;
+
+    // ⚠️ Több entitás, mint a korlát — különben a próba VAK lenne (ugyanaz a tanulság,
+    // mint a pakli `MAX_DARAB`-jánál: a korlátot csak fölötte lehet mérni).
+    for (let i = 0; i < 25; i++) {
+      await hiv('/api/gondolat',
+        { method: 'POST', body: JSON.stringify({ cim: 'KERESHETŐ ' + i, kezdoTudatpont: 10 }) });
+    }
+
+    const talalt = await hiv('/api/kereses?q=' + encodeURIComponent('KERESHETŐ'));
+    const semmi = await hiv('/api/kereses?q=' + encodeURIComponent('nincs-ilyen-sehol'));
+    const ures = await hiv('/api/kereses?q=');
+
+    return talalt.adat.talalatok.length === 20        // KERESES_KORLAT
+      && talalt.adat.talalatok.every((t) => t.entitasId && t.entitasTipus && t.cim)
+      && semmi.adat.talalatok.length === 0
+      && ures.adat.talalatok.length === 0;
+  } finally {
+    if (kiszolgalo) { kiszolgalo.folyamat.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

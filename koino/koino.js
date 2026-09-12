@@ -115,6 +115,10 @@ const KEZDO_PONT = 100;
 const NAP = 86400 * 1000;
 const ALAP_PORT = 7373;
 
+// ⛔ Egy keresés legfeljebb ennyi találatot ad (5.8). Nem kényelmi szám: egy kereső,
+// ami „mindent” adhat vissza, nem kereső — ugyanaz az érv, mint a pakli `MAX_DARAB`-jánál.
+const KERESES_KORLAT = 20;
+
 // A napló alapból néma (a koino minden metódusa naplóz) — KOINO_NAPLO=1 bekapcsolja
 const naplo = console.log;
 if (!process.env.KOINO_NAPLO) { console.log = () => {}; console.warn = () => {}; }
@@ -2351,6 +2355,86 @@ try {
           }
 
           // ===================================
+          // ⭐⭐⭐ SZERKESZTÉSI JAVASLAT A LAPRÓL (5.8) — a `JavaslatModal` végpontja
+          // ===================================
+          //
+          // ⛔ EDDIG A LAPRÓL CSAK SZAVAZNI LEHETETT, javasolni nem. A gépezet mögötte
+          // teljes volt (négy művelet, töredék-modell, különválás, egyesítés) — csak a
+          // felület hiányzott. *Ugyanaz a fajta rés, mint az „Új gondolat" volt.*
+          //
+          // ⚠️ A RAKOMÁNY A PROTOTÍPUS ALAKJA (`erintettEntitasok`, `modositasAdatok`), mert
+          // az örökölt modal így küldi — a fordítás ITT történik, egy helyen. *A hívó a
+          // régi; a válasz alkalmazkodik hozzá, nem fordítva.*
+          if (utvonal === '/api/javaslat') {
+            const { erintettEntitasok, indoklas, kezdoTudatpont } = test ?? {};
+            if (!Array.isArray(erintettEntitasok) || !erintettEntitasok.length) {
+              return { allapot: 400, adat: { hiba: 'melyik entitást érinti a javaslat?' } };
+            }
+
+            // ----- A FORDÍTÁS: a prototípus alakja → a koino `erintettek`-je -----
+            const erintettek = [];
+            for (const r of erintettEntitasok) {
+              if (typeof r?.entitasId !== 'string') {
+                return { allapot: 400, adat: { hiba: 'egy érintett entitásnak nincs azonosítója' } };
+              }
+              const muvelet = r.muvelet ?? 'Modositas';
+              const m = r.modositasAdatok ?? {};
+
+              let valtozas = null;
+              if (muvelet === 'Modositas') {
+                valtozas = {};
+                // ⚠️ A koinóban a név MINDEN típusnál a `cim` (5.4) — a modal a
+                // gondolatnál `cim`-et, egyébként `nev`-et küld.
+                const ujCim = typeof m.cim === 'string' ? m.cim : m.nev;
+                if (typeof ujCim === 'string' && ujCim.trim()) valtozas.cim = ujCim.trim();
+                // ⭐ A szöveg BLOKK-TÖMB a szerkesztőből (5.7) — a végrehajtás ezt is érti.
+                if (Array.isArray(m.szoveg)) valtozas.szoveg = m.szoveg.length ? m.szoveg : null;
+                if (!Object.keys(valtozas).length) {
+                  return { allapot: 400, adat: { hiba: 'a módosítás nem nevezett meg mezőt' } };
+                }
+              } else if (muvelet === 'Athelyezes') {
+                // ⚠️ A gyökérre helyezés `null` — nem hiányzó mező, hanem kimondott érték.
+                valtozas = { szulo: typeof m.ujSzuloId === 'string' ? m.ujSzuloId : null };
+              } else if (muvelet === 'Egyesites') {
+                // ⭐ Az ELSŐ érintett viszi a nevet (a többi beleolvad) — lásd `egyesit`.
+                const ujCim = test?.egyesitesAdatok?.ujEntitasAdatok?.cim
+                  ?? test?.egyesitesAdatok?.ujEntitasAdatok?.nev;
+                valtozas = (erintettek.length === 0 && typeof ujCim === 'string' && ujCim.trim())
+                  ? { cim: ujCim.trim() } : null;
+              }
+
+              erintettek.push({ entitas: r.entitasId, muvelet, valtozas });
+            }
+
+            // ⚠️ AZ `egyezmenyTarhelyId`-T SZÁNDÉKOSAN NEM HASZNÁLJUK. A prototípusban külön
+            // meg kellett mondani, hova kerül az egyezmény; a koinóban ez **következmény**:
+            // az egyezmény azonosítója AZONOS a javaslatéval (D17), a javaslat szülője
+            // pedig az érintett entitás. *A jó szerkezet elvette a mező dolgát.*
+
+            let e;
+            try {
+              e = await javaslatLetrehozasa(kornyezet, {
+                erintettek,
+                indoklas: (Array.isArray(indoklas) && indoklas.length) ? indoklas : null,
+                fajta: 'szerkesztesi'
+              });
+            } catch (hiba) {
+              return { allapot: 400, adat: { hiba: hiba.message } };
+            }
+
+            // ⛔ A JAVASLAT IS ENTITÁS — tudatpont nélkül a koino elfelejtené (D14).
+            const pont = Number.isInteger(kezdoTudatpont) && kezdoTudatpont > 0
+              ? kezdoTudatpont : KEZDO_PONT;
+            const { allapot } = await kepetKeszit(0, tar, KOINO);
+            await tudatpontRendezese(kornyezet, e.azonosito, pont, 'aktiv',
+              szetosztottPontok(allapot, szerzo));
+
+            pakliNezet.horgony = null;
+            // ⭐ A modal `eredmeny?.javaslat`-ot olvas — a válasz ehhez igazodik.
+            return { adat: { javaslat: { _id: e.azonosito } } };
+          }
+
+          // ===================================
           // ⭐⭐ A SZERKESZTÉS: JAVASLAT, NEM KÖZVETLEN ÁTÍRÁS
           // ===================================
           //
@@ -2612,6 +2696,40 @@ try {
 
           // ⛔ A típus a BÁJTOKBÓL, nem a kérésből — lásd `fajlTipus`.
           return { nyers: Buffer.from(bajtok), tipus: fajlTipus(bajtok) };
+        }
+
+        // ===================================
+        // ⚠️ ENTITÁS-KERESÉS (5.8) — a JavaslatModal mezőihez
+        // ===================================
+        //
+        // ⛔⛔ EZ A KERESŐ-RÉTEG (Szakasz 6) ELŐFUTÁRA, ÉS SZÁNDÉKOSAN KICSI. Az áthelyezés
+        // („hova?") és az egyesítés („mivel?") nem megy anélkül, hogy meg tudnám nevezni a
+        // másik entitást — azt pedig keresni kell.
+        //
+        // ⚠️ A MAI MEGVALÓSÍTÁS VÉGIGNÉZ MINDEN ENTITÁST, és ezt kimondjuk: ez ugyanaz a
+        // korlát, ami a `koinoEsemenyei` mögött áll. ⭐ De az ILLESZTÉS már milliárdos:
+        // a hívó **kifejezést és korlátot** ad, nem „mindent" — tehát a kereső-réteg
+        // (ami hálózatot is kíván, és elhagyható) **a hívó változtatása nélkül** léphet a
+        // helyére. *Pontosan úgy, ahogy a 3.2-ben a tár-illesztő.*
+        if (utvonal === '/api/kereses') {
+          const q = (kereses.get('q') ?? '').trim().toLowerCase();
+          if (!q) return { adat: { talalatok: [] } };
+
+          const tipusok = (kereses.get('tipusok') ?? '')
+            .split(',').map((t) => t.trim()).filter(Boolean);
+
+          const { allapot } = await kepetKeszit(0, tar, KOINO);
+          const talalatok = [];
+          for (const e of allapot.entitasok.values()) {
+            if (tipusok.length && !tipusok.includes(e.tipus)) continue;
+            if (!(e.cim ?? '').toLowerCase().includes(q)) continue;
+            talalatok.push({ entitasId: e.azonosito, entitasTipus: e.tipus, cim: e.cim });
+            // ⛔ A TALÁLAT-SZÁM FELÜLRŐL KORLÁTOS — ugyanaz az érv, mint a pakli
+            // `MAX_DARAB`-jánál: egy kereső, ami „mindent" adhat vissza, nem kereső.
+            if (talalatok.length >= KERESES_KORLAT) break;
+          }
+
+          return { adat: { talalatok } };
         }
 
         // ⭐ EGY entitás szövege (5.3). A lista szándékosan nem hozza (9. szabály), ezért

@@ -94,8 +94,16 @@ function modositas(entitas, valtozas) {
     entitas.cim = valtozas.cim;
     valtozott.push('cim');
   }
-  if (typeof valtozas?.szoveg === 'string' || valtozas?.szoveg === null) {
-    entitas.szoveg = valtozas.szoveg;
+  // ⚠️⚠️ A SZÖVEG KÉTFÉLE ALAKÚ LEHET, és ez nem rendetlenség, hanem történet: a
+  // parancssor egyszerű **szöveget** ad (egy sor), a szerkesztő viszont **blokkok
+  // tömbjét** (5.7) — ugyanaz a mező, két alak, ahogy a prototípusban is.
+  //
+  // ⛔ EZ ELŐSZÖR CSAK A SZÖVEGET FOGADTA EL, és a tömb **némán kiesett**: a módosítás
+  // lefutott, a cím átíródott, a szöveg viszont a régi maradt — hiba nélkül. *Egy
+  // elhallgatott mező rosszabb, mint egy elutasított javaslat.*
+  const szoveg = valtozas?.szoveg;
+  if (typeof szoveg === 'string' || szoveg === null || Array.isArray(szoveg)) {
+    entitas.szoveg = szoveg;
     valtozott.push('szoveg');
   }
 

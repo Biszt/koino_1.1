@@ -38,6 +38,10 @@
 @import './components/modals/reszletekModal.css';
 @import './components/modals/ertekJavaslatModal.css';
 
+/* ⭐ A JAVASLAT-MODAL és az entitás-kereső mező (5.8) — a prototípusból, változatlanul. */
+@import './components/entitasKeresoMezo.css';
+@import './components/modals/javaslatModal.css';
+
 /* ⚠️ A BELÉPŐ TÉR (5.6) — az EGYETLEN nem örökölt CSS: a prototípusban a „koino" mint
    fogalom nem létezett, tehát nincs mit átemelni. Csak a meglévő változókra épül. */
 @import './components/koinoKartya.css';
