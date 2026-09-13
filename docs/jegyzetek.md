@@ -30,6 +30,40 @@ NEM akarunk azonnal megcsinálni, de elveszíteni sem.
 
 -->
 
+### 2026-09-13
+
+- 🆕 **Csaba:** *„az udp-és ablak szerintem, még máshól is jól fog jönni. arra gondolok,
+  hogy a tagok, akár hívhatnák is egymást, mikor buli éppen buli van (ez másodlagos, de ha
+  nem sokkal bonyolúltabb, akkor, az nagyon jó lenne)."*
+
+  **Amit erről megállapítottunk (2026-09-13):**
+
+  ⛔ **Az ablak a hívásnál NEM segít — sőt.** A fájl és a hang **ellentétes** dolgot kíván a
+  vonaltól: a fájlnál minden bájtnak meg kell érkeznie (az idő mindegy), a hangnál viszont
+  ami késik, az **halott** — azt el kell dobni, nem újraküldeni. *Az ablak + újraküldés a
+  hívásnál kifejezetten káros lenne.* ⚠️ Az ablak kérdését tehát továbbra is a **fájlok**
+  döntik el, nem a hívás.
+
+  ⭐⭐ **De a hívás ötlete jó, és a nehezét már megcsináltuk.** Ami a világnak nehéz, az
+  nálunk kész: a **pajzsfúrás** (a WebRTC pontosan ugyanezt csinálja) · a **randevú** ·
+  a **kulcs-alapú személyazonosság** · és ⭐ a **jelzőcsatorna**, ami a legtöbb rendszernél
+  központi szerver — *a WebRTC-hez ajánlatot és választ kell cserélni, és erre ott a buli:
+  a koino saját maga a jelzőpont.*
+
+  ⛔ **Ami hiányzik:** a Node-nak nincs mikrofonja/hangszórója, és a nyers hanghoz kodek
+  kellene (~1,4 Mbit/s tömörítés nélkül) — ⚠️ npm-csomagot pedig a **6. szabály** kizár.
+
+  ⭐ **Ezért a helye a BÖNGÉSZŐ:** ott mind a három megvan beépítve (mikrofon, Opus,
+  WebRTC), és a `felulet` már ma böngésző-lap. ⚠️ A **7. szabály** ezt megengedi, de
+  feltétellel: *a böngésző csak kliens lehet, sose előfeltétel* — egy hívás, ami csak
+  böngészővel megy, rendben van, amíg a koino maga (események, döntések, fájlok) nélküle is
+  teljes. **És az.**
+
+  ⏸️ **Az őszinte becslés:** nem „nem sokkal bonyolultabb", de nem is a nulláról indul. A
+  nehéz harmada (találkozás szolgáltató nélkül) megvan, a többi a böngészőből jön készen; a
+  valódi munka a kettő **összekötése** — a bulin kicserélt ajánlat/válasz, és a lap, ami
+  felveszi.
+
 ### 2026-09-11
 
 - 🆕 „a »normál entitások« értékjavaslatai rendszerét, nem kell módosítani, hanem majd a
