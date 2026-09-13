@@ -65,7 +65,7 @@ import {
   esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely,
   ismertKoinok,
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
-  fajlBlobTarolo, fajlTipus, FAJL_KORLAT
+  fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo
 } from './js/tar/fajlTar.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
@@ -90,6 +90,10 @@ import { allasOsszeallitasa } from './js/csere/csere.js';
 import { terKartyai } from './js/allapot/ter.js';
 // ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
 import { fajlIgenyek } from './js/allapot/fajlIgeny.js';
+import {
+  kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
+  valaszOsszeallitasa as fajlValaszOsszeallitasa
+} from './js/csere/fajlKerelem.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -257,6 +261,52 @@ async function allitasAdatai(horgonyToredek) {
     throw new Error('Előbb neked is be kell lépned ebbe a koinóba: node koino/koino.js belep');
   }
   return { kit: horgonyEsemeny.szerzo, horgonya, sajatBelepes };
+}
+
+/**
+ * ⭐⭐ A FÁJL-RÉSZ EGY CSERE-KÖRHÖZ (5.7 / a szállítás).
+ *
+ * Két dolgot ad a cserének: **mit kérdezek** (a hiányzó fájljaim korlátos listája) és
+ * **mit válaszolok** (a kérdezettek közül mi van meg nálam).
+ *
+ * ⚠️ A KÉRELEM ÖSSZEÁLLÍTÁSA ÁLLAPOT-SZÁMÍTÁS, tehát nem ingyen van — de **körönként
+ * egyszer** fut, nem társanként: egyszer állítjuk össze, és mindenkinek ugyanazt adjuk.
+ *
+ * @returns {Promise<{kerelem: Array<string>|null, valasz: Function}>}
+ */
+async function fajlResz() {
+  const blob = fajlBlobTarolo(KOINO);
+  const megvanE = (l) => blob.van(l);
+
+  let kerelem = [];
+  try {
+    const { allapot } = await kepetKeszit();
+    const jegyzo = fajlJegyzekTarolo(KOINO);
+    const { hianyzok } = await fajlIgenyek(allapot, megvanE, { szerzo });
+    // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — a jelzés a korábbi bulikból már megvan.
+    kerelem = kerelemOsszeallitasa(ritkasagSzerint(hianyzok, await jegyzo.olvas()));
+  } catch (hiba) {
+    // ⚠️ A fájl-réteg hibája NE döntse el az esemény-cserét — a két réteg külön él (D3).
+    console.warn('fajlResz - a kérelem nem állt össze', { hiba: hiba.message });
+  }
+
+  return {
+    // ⚠️ A `valasz` MINDIG megvan (ez a képesség), a `kerelem` lehet üres — a
+    // szimmetria a képességen múlik, nem azon, hogy épp van-e mit kérnem.
+    kerelem: kerelem.length ? kerelem : null,
+    valasz: (kertek) => fajlValaszOsszeallitasa(kertek, megvanE)
+  };
+}
+
+/**
+ * Amit a cserén a fájlokról tanultunk, azt elrakjuk — **helyi feljegyzés** (3. szabály):
+ * sosem terjed, és csak azt mondja meg, **kitől érdemes kérni**.
+ */
+async function fajlTanulsag(tarsCimke, fajlokNala) {
+  if (!Array.isArray(fajlokNala) || !fajlokNala.length) return 0;
+  const jegyzo = fajlJegyzekTarolo(KOINO);
+  await jegyzo.ir(birtoklasBeolvasztasa(await jegyzo.olvas(), tarsCimke, fajlokNala));
+  return fajlokNala.length;
 }
 
 /**
@@ -840,8 +890,12 @@ try {
     case 'fajlok': {
       const { allapot } = await kepetKeszit();
       const blob = fajlBlobTarolo(KOINO);
-      const { hianyzok, megvan, osszes } = await fajlIgenyek(allapot,
+      const { hianyzok: nyersHianyzok, megvan, osszes } = await fajlIgenyek(allapot,
         (l) => blob.van(l), { szerzo });
+
+      // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — és a `birtokosok` szám innentől látszik is.
+      const jegyzet = await fajlJegyzekTarolo(KOINO).olvas();
+      const hianyzok = ritkasagSzerint(nyersHianyzok, jegyzet);
 
       kiir(SZIN.vastag + 'FÁJLOK' + SZIN.vege
         + '  (' + megvan + ' / ' + osszes + ' megvan)');
@@ -863,8 +917,13 @@ try {
         const cimek = h.entitasok
           .map((a) => allapot.entitasok.get(a)?.cim ?? a.slice(0, 8))
           .join(', ');
+        // ⭐ KITŐL LEHET KÉRNI? — amit a bulikon tanultunk (helyi feljegyzés, 3. szabály).
+        // ⚠️ A NULLA NEM VÁD, hanem hiány: lehet, hogy csak még nem kérdeztünk rá senkitől.
+        const hol = h.birtokosok > 0
+          ? SZIN.jo + h.birtokosok + ' társnál megvan' + SZIN.vege
+          : SZIN.halvany + 'még nem tudom, kinél van meg' + SZIN.vege;
         kiir('  ' + jel + SZIN.vege + ' ' + h.lenyomat.slice(0, 12) + '…'
-          + SZIN.halvany + '  ' + cimek + SZIN.vege);
+          + SZIN.halvany + '  ' + cimek + SZIN.vege + '  — ' + hol);
       }
       kiir();
       kiir(SZIN.halvany
@@ -1454,6 +1513,9 @@ try {
       const cimTarolo = tarsakTarolo();
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
+        // kezdeményez (Csaba döntése, 2026-09-13).
+        fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
         hirdetettCimek: await hirdetendoCimek(cimTarolo),
         utana: async (eredmeny) => {
           if (eredmeny.hiba) {
@@ -1624,6 +1686,9 @@ try {
       const tarolo = tarsakTarolo();
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
+        // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
+        // kezdeményez (Csaba döntése, 2026-09-13).
+        fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
         hirdetettCimek: await hirdetendoCimek(tarolo),
         utana: async (e) => {
           if (e.hiba) return;
@@ -2128,8 +2193,14 @@ try {
       if (ervek[0]) {
         const cim = ervek[0];
         const port = parseInt(ervek[1], 10) || ALAP_PORT;
+        const fajlok = await fajlResz();
         const eredmeny = await csereVonalon(tar, KOINO, cim, port, 10000,
-          await hirdetendoCimek(tarolo));
+          await hirdetendoCimek(tarolo), fajlok);
+        const fajlTanultak = await fajlTanulsag(cim + ':' + port, eredmeny.fajlokNala);
+        if (fajlTanultak) {
+          kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy nála megvan'
+            + SZIN.vege);
+        }
 
         // ⚠️ MÁSIK KOINO: ez NEM hiba, csak nincs miről beszélni. Ki kell mondani, mert
         // különben a „kaptam 0, küldtem 0" úgy néz ki, mintha minden rendben lenne.
@@ -2176,8 +2247,10 @@ try {
       kiir(SZIN.vastag + 'CSERE ' + lista.length + ' társsal' + SZIN.vege);
 
       const hirdetjuk = await hirdetendoCimek(tarolo);
+      // ⭐ EGYSZER állítjuk össze a fájl-kérelmet, és minden társnak ugyanazt adjuk.
+      const fajlok = await fajlResz();
       const kor = await korbeCsere(lista,
-        (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk), {
+        (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok), {
         utana: (e) => {
           const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
           if (e.sikerult && e.masKoino) {
@@ -2194,6 +2267,14 @@ try {
       });
       await tarolo.ir(kor.lista);
 
+      // ⭐ AMIT A FÁJLOKRÓL TANULTUNK, azt társanként rakjuk el — mert a lényeg épp az,
+      // hogy **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
+      let fajlTanultak = 0;
+      for (const e of kor.eredmenyek) {
+        if (!e.sikerult || !e.fajlokNala?.length) continue;
+        fajlTanultak += await fajlTanulsag(e.tars.hoszt + ':' + e.tars.port, e.fajlokNala);
+      }
+
       const tanultCimek = kor.eredmenyek
         .filter((e) => e.sikerult).flatMap((e) => e.kapottCimek ?? []);
       const tanult = await kapottCimekBeolvasztasa(tarolo, tanultCimek);
@@ -2201,6 +2282,10 @@ try {
       kiir();
       if (tanult) {
         kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam a többiektől' + SZIN.vege);
+      }
+      if (fajlTanultak) {
+        kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy náluk megvan'
+          + SZIN.vege);
       }
       // ⚠️ A NULLA SIKER SEM HIBA: a koino ettől még működik, csak most nem terjedt.
       // Ezért nem `throw`, és ezért nem 1-es kilépési kód (2. szabály).

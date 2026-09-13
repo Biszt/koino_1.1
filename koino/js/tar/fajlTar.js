@@ -510,6 +510,48 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
   };
 }
 
+/**
+ * „Kinél van meg ez a fájl?" — amit a bulikon tanultunk.
+ *
+ * ⚠️ **HELYI FELJEGYZÉS, NEM ESEMÉNY** (3. szabály): sosem terjed, két készüléken mást
+ * jelent, és semmit nem dönt el a koinóban — csak azt, hogy **kitől érdemes kérni**.
+ * Ugyanaz a fajta, mint a `tarsak.js` `utoljara` mezője. Ha elveszik, a következő buli
+ * újratanulja.
+ *
+ * ⚠️ KOINÓNKÉNT KÜLÖN, mint a fájlok maguk.
+ *
+ * @param {string} koino
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function fajlJegyzekTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'fajlbirtoklas.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Object>} lenyomat → { tarsak: { címke: időpont } } */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        return (adat && typeof adat === 'object' && !Array.isArray(adat)) ? adat : {};
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return {};
+        // Egy elrontott jegyzék NE akadályozza a koino futását: ez kényelem, nem
+        // előfeltétel (2. szabály). Üresnek vesszük, és újratanuljuk a bulikon.
+        console.warn('fajlJegyzekTarolo - olvashatatlan jegyzék, üresnek vesszük', { fajl });
+        return {};
+      }
+    },
+
+    /** @param {Object} jegyzet */
+    async ir(jegyzet) {
+      await mkdir(join(hely, koino), { recursive: true });
+      await writeFile(fajl, JSON.stringify(jegyzet, null, 2), 'utf8');
+    }
+  };
+}
+
 // ===================================
 // ⭐ A TÉR — MELYIK KOINÓKAT ISMERI EZ A KÉSZÜLÉK? (Szakasz 5.6)
 // ===================================

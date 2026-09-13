@@ -721,6 +721,103 @@ proba('⭐ A KERESÉS megtalálja az entitást — és a találat-szám FELÜLR�
   }
 });
 
+// ===================================
+// ⭐⭐⭐ A FÁJL-KÉRELEM EGY VALÓDI BULIN (5.7 / a szállítás)
+// ===================================
+//
+// ⛔⛔ EZ A PRÓBA EGY VALÓDI PROTOKOLL-HIBÁT FOGOTT MEG, amit modul-próba nem talált
+// volna meg. Elsőre a fájl-kör feltétele a **saját** kérelem meglétéhez kötődött — a
+// figyelő (akinek nincs kérelme) tehát **küldött, de nem olvasott**, és az üzenet bent
+// maradt a sorban. ⚠️ A hiba NEM a fájl-rétegnél jelentkezett, hanem később:
+// *„Várt üzenet: CIMEK, érkezett: FAJLOK"*.
+//
+// ⭐ **Egy protokoll-lépés feltétele csak olyan dolog lehet, amit MINDKÉT fél ugyanúgy
+// lát** — itt a két képesség-jelzés együtt.
+//
+// ⚠️ ÉS EGY TULAJDONSÁG, AMI A MÉRÉSBŐL DERÜLT KI: a fájl-felderítés **egy bulival
+// később** jár, mint az esemény-csere — hiszen nem lehet olyan fájlról kérdezni, amiről
+// még nem tudom, hogy létezik. *Ez nem hiba, hanem a sorrend következménye.*
+
+proba('⭐⭐⭐ A BULIN KIDERÜL, KINÉL VAN MEG a hiányzó fájl', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7521;
+  let figyelo = null;
+  let felulet = null;
+  try {
+    await fut(gazda, 'koino', 'Próba koinó');
+
+    // ----- A gazda feltölt egy képet, és készít hozzá egy gondolatot -----
+    felulet = await feluletet(gazda, 7522);
+    const png = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489'
+      + '0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082', 'hex');
+    const fel = await felulet.hiv('/api/feltoltes/kep',
+      { method: 'POST', body: JSON.stringify({ adat: png.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', {
+      method: 'POST',
+      body: JSON.stringify({
+        cim: 'KÉPES GONDOLAT', kezdoTudatpont: 50,
+        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
+      })
+    });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+
+    // ----- A vendég kétszer cserél -----
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+
+    // ⚠️ AZ ELSŐ KÖRBEN a vendég még nem tud a képről (az események most érkeznek).
+    const elso = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    if (!/kaptam \d+ új eseményt/.test(elso)) return false;
+
+    // ⭐ A MÁSODIK KÖRBEN már kérdez — és megtudja, hogy a gazdánál megvan.
+    const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    if (!/fájlról tudom meg, hogy nála megvan/.test(masodik)) return false;
+
+    // ----- És ez látszik is -----
+    const fajlok = await fut(vendeg, 'fajlok');
+    return /1 fájl hiányzik/.test(fajlok)
+      && /KÉPES GONDOLAT/.test(fajlok)
+      && /1 társnál megvan/.test(fajlok);
+  } finally {
+    if (felulet) felulet.folyamat.kill();
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ A fájl-kör NEM akasztja meg a rendes cserét (a két réteg külön él — D3)', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7523;
+  let figyelo = null;
+  try {
+    await fut(gazda, 'koino', 'Próba koinó');
+    await fut(gazda, 'gondolat', 'KÉP NÉLKÜLI GONDOLAT');
+
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+
+    // ⚠️ Fájl SEHOL nincs — a csere-körnek ettől ugyanúgy végig kell mennie, és a
+    // MÁSODIK körnek is (ahol a fájl-kérdés elhangzana, ha lenne mit kérdezni).
+    await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+
+    const kep = await fut(vendeg, 'allapot');
+    return /Csere kész/.test(masodik) && /KÉP NÉLKÜLI GONDOLAT/.test(kep);
+  } finally {
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

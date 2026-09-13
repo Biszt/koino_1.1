@@ -94,12 +94,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Tizenkilenc próba-fájl, **528 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Húsz próba-fájl, **540 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **163 fájl, 2348,8 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **165 fájl, 2377,2 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -128,6 +128,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/kapuProba.js` | ⭐ **a helyi kapu** (5.1): a négy őr + az útvonal-őr — ⛔ a kulcsfájl nem szerezhető meg, idegen oldal nem jut be, és **a program sehol nem importálja a felületet** (forrás-próba) |
 | `meres/fajlProba.js` | ⭐⭐ **a tartalom-címzett fájltár** (5.7): a név a lenyomat — ⛔ a **megrontott fájlt nem adja ki** (újra-lenyomatolás olvasáskor), a duplikátum elnyelődik, és a **típus a bájtokból** jön, nem a kliens szavából (HTML soha nem `text/html`) |
 | `meres/fajlIgenyProba.js` | ⭐ **a fájl-igény** (a szállítás első fele): a felderítés **nem kíván új adatot** — az események már elmondják, mely fájlok tartoznak a koinóhoz; ⛔ és a **tudatpont tárolási vállalás** (D3): amire pontot tettem, azt vállaltam |
+| `meres/fajlKerelemProba.js` | ⭐ **a fájl-kérelem**: ⛔ **csak arra felelünk, amit kérdeztek** (a fájl-listám elárulná, mit néztem meg — D6), a kérdés és a válasz is korlátos, és ⭐ **a ritkábbat előbb** — de a **vállalás erősebb** a ritkaságnál (D3) |
 | `meres/terProba.js` | ⭐ **a belépő tér** (5.6): a koinók FÖLÖTTI nézet — ⛔ **létszám szerint nem lehet rendezni** (D18/2), ⭐ a létszám súlya **három számban** van (tag · nem ellenőrizhető · belépő), és a hiány (ismeretlen születés) **megnevezve** jelenik meg |
 | `meres/egyezmenyProba.js` | ⭐⭐ **a hurok bezárul**: az elfogadott szerkesztési egyezmény ÁTÍRJA az entitást — a folyamatban lévő és az általános (D27) nem; a sorrend a **lejárat** szerint dől el; ⛔ a kört csináló áthelyezés kimarad |
 | `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
@@ -168,6 +169,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |
+| `js/csere/fajlKerelem.js` | ⭐ **mit kérdezek a bulin, és mit tanulok belőle** — a kérelem **múlékony üzenet**, nem esemény (Csaba döntése: a böngészésem nem való a láncra); amit tanulunk, az **helyi feljegyzés** (3. szabály) |
 | `js/allapot/fajlIgeny.js` | ⭐ **mire van szükségem?** — a gondolat szövegében ott a kép-hivatkozás, a besorolásban az ikon; ez a réteg csak összeveti a lemezzel. ⚠️ Tárat és hálózatot **nem importál** (1. szabály): a „megvan-e?” kérdést kívülről kapja |
 | `js/allapot/ter.js` | ⭐ **A BELÉPŐ TÉR** (D25, 5.6): egy kártya minden koinóról, amit ez a készülék ismer — a kulcs és a társ-lista eddig is a koinók FÖLÖTT laktak, a tér ezt teszi láthatóvá |
 | `js/csere/fajlCsere.js` | ⛔⛔ **a KÉZI ÚT** (4. szabály): események fájlba és fájlból — ⭐ a kivitel alakja **bájtra a táré** (a másolt `esemenyek.jsonl` behozható), a behozatal pedig a `csere.js` `beolvasztas()`-át hívja, tehát **ugyanazon a kapun** megy be, mint a hálózatról jött |

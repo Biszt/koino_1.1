@@ -154,6 +154,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const sajatCimHirdetese = beallitas.sajatCimHirdetese ?? false;
   console.log('parbeszed - KEZDÉS', { koino });
 
+  // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
+  let fajlokNala = [];
+
   const sor = uzenetSor(kapcsolat);
   const kuld = (uzenet) => kapcsolat.write(JSON.stringify(uzenet) + '\n');
 
@@ -191,9 +194,25 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // megfigyelés: „innen láttalak". Ha a másik hazudik, legfeljebb nem jön össze a
     // kapcsolat — eseményt ettől még nem tud hamisítani. És bárki lehet tükör, aki
     // fogadni tud, tehát nem múlik egyetlen címen sem (2. szabály).
+    // ===== ⭐⭐ ÉS A FÁJL-KÉRELEM IS ITT UTAZIK (5.7 / a szállítás) =====
+    //
+    // ⛔⛔ MIÉRT A LENYOMAT MELLETT, ÉS NEM KÜLÖN KÖRBEN? Mert **a fájl-csere MERŐLEGES
+    // az esemény-cserére**: két készülék eseményei egyezhetnek (a lenyomat megegyezik, a kör
+    // 334 bájttal kilép), miközben a **fájljaik teljesen eltérnek** — hiszen a bájtok sosem
+    // utaztak. *A kérdést tehát akkor is fel kell tenni, ha nincs mit cserélni eseményből.*
+    //
+    // ⭐ ÉS ÍGY VISSZAFELÉ KOMPATIBILIS: a `fajlCsere` egy **képesség-jelzés**. Egy régebbi
+    // társ LENYOMAT-jában nincs benne — olyankor meg sem szólalunk róla, tehát **nem tud
+    // elakadni** rajta. *(A D66 szerint a verzió-eltérés nem kivétel, hanem alapállapot.)*
+    const sajatKerelem = beallitas.fajlKerelem ?? null;
+
     kuld({
       uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat,
-      latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort }
+      latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort },
+      // ⚠️ A JELZÉS A KÉPESSÉGRŐL SZÓL, NEM A KÉRELEMRŐL: ennélkül az a fél, akinek
+      // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
+      ...(beallitas.fajlValasz ? { fajlCsere: true } : {}),
+      ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {})
     });
     // ===== ⭐ A BÖNGÉSZŐ-LEKÉRÉS: „ADD IDE EZT AZ EGY ENTITÁST" =====
     //
@@ -252,6 +271,46 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       });
       masKoino = oveLenyomat.koino ?? '(ismeretlen)';
       break;
+    }
+
+    // ----- ⭐⭐ A FÁJL-KÉRELEM MEGVÁLASZOLÁSA (5.7) -----
+    //
+    // ⛔ CSAK AMIT KÉRDEZTEK, és ez szándékos: a teljes fájl-listám elárulna, **mit
+    // néztem meg** — akkor is, ha a kérdező sosem hallott arról a gondolatról (D6).
+    // *Csak arra felelünk, amit kérdeztek.*
+    //
+    // ⚠️ Ez a lenyomat-egyezés ELŐTT megy — mint a címjegyzék —, mert a fájlok akkor is
+    // hiányozhatnak, ha az eseményeink tökéletesen egyeznek.
+    // ⛔⛔ SZIMMETRIKUS, ÉS EZ NEM STÍLUS KÉRDÉSE. A párbeszéd **mindkét oldalon ugyanaz a
+    // függvény**: ha az egyik fél küld egy üzenetet, amit a másik nem olvas el, az üzenet
+    // **bent marad a sorban**, és a következő várakozásba csúszik bele.
+    //
+    // ⚠️ MÉRVE, KÉT FOLYAMATTAL (2026-09-13): elsőre a feltétel a **saját** kérelem
+    // meglétéhez kötődött, és a figyelő — akinek nincs kérelme — küldött, de nem olvasott.
+    // A hiba nem a fájl-rétegnél jelentkezett, hanem később:
+    // *„Várt üzenet: CIMEK, érkezett: FAJLOK”*. ⭐ **Egy protokoll-lépés feltétele csak olyan
+    // dolog lehet, amit MINDKÉT fél ugyanúgy lát** — itt a két képesség-jelzés együtt.
+    const fajlKorMegy = kor === 1 && oveLenyomat.fajlCsere && !!beallitas.fajlValasz;
+
+    if (fajlKorMegy) {
+      // ----- MINDKETTŐ FELEL -----
+      try {
+        const van = await beallitas.fajlValasz(oveLenyomat.fajlKerek ?? []);
+        kuld({ uzenet: 'FAJLOK', van });
+      } catch (hiba) {
+        // ⚠️ A fájl-réteg hibája NE döntse el az esemény-cserét: a két réteg külön él (D3).
+        console.warn('parbeszed - a fájl-válasz nem sikerült', { hiba: hiba.message });
+        kuld({ uzenet: 'FAJLOK', van: [] });
+      }
+
+      // ----- ÉS MINDKETTŐ OLVAS -----
+      const ove = await sor.kovetkezo();
+      if (ove.uzenet !== 'FAJLOK') {
+        throw new Error('Várt üzenet: FAJLOK, érkezett: ' + ove.uzenet);
+      }
+      // ⭐ A TANULT BIRTOKLÁS a hívóhoz megy vissza — a `vonal.js` **nem ír jegyzetet**,
+      // mert az már nem szállítás (1. szabály: a logika és a vonal külön él).
+      fajlokNala = Array.isArray(ove.van) ? ove.van : [];
     }
 
     // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) -----
@@ -348,10 +407,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   console.log('parbeszed - VÉGE', {
     korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom,
-    kapottCimek: kapottCimek.length
+    kapottCimek: kapottCimek.length, fajlokNala: fajlokNala.length
   });
   return {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek,
+    fajlokNala
   };
 }
 
@@ -384,7 +444,13 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
     // ⭐ A FIGYELŐ HIRDETHETI A SAJÁT CÍMÉT (D39). Amit a hívó tükröz vissza, az pontosan
     // az a cím, amire ő az imént CSATLAKOZOTT — tehát bizonyítottan működik, és a kapunk
     // utána is nyitva marad. (A kifelé hívónál ez nem így van, ott efemer a port.)
-    parbeszed(kapcsolat, tar, koino, { hirdetettCimek, sajatCimHirdetese: true })
+    // ⭐ A POSTALÁDA IS FELEL A FÁJL-KÉRDÉSRE (5.7) — és ez fontos: aki fogadni tud,
+    // az a legértékesebb forrás. ⚠️ De Ő NEM KÉRDEZ: a kérelmező kezdeményez (Csaba
+    // döntése, 2026-09-13), és a figyelő nem tudja, mikor ér rá a társ.
+    parbeszed(kapcsolat, tar, koino, {
+      hirdetettCimek, sajatCimHirdetese: true,
+      fajlValasz: beallitas.fajlValasz ?? null
+    })
       .then((eredmeny) => utana?.({
         ...eredmeny, honnan,
         bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead
@@ -424,7 +490,8 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
  * @param {number} [varakozasiIdo] - ennyi ezredmásodperc után feladjuk
  * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
  */
-export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000, hirdetettCimek = []) {
+export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
+                                   hirdetettCimek = [], fajl = {}) {
   console.log('csereVonalon - KEZDÉS', { cim, port });
 
   // family: 0 → a rendszer maga válasszon IPv4 és IPv6 között. A Szakasz 2 mérése miatt
@@ -440,7 +507,13 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
   });
 
   try {
-    const eredmeny = await parbeszed(kapcsolat, tar, koino, { hirdetettCimek });
+    // ⭐ A FÁJL-RÉSZ OPCIONÁLIS (5.7): ha a hívó nem ad kérelmet és válaszolót, a
+    // párbeszéd ugyanúgy fut, mint eddig — a két réteg külön él (D3).
+    const eredmeny = await parbeszed(kapcsolat, tar, koino, {
+      hirdetettCimek,
+      fajlKerelem: fajl.kerelem ?? null,
+      fajlValasz: fajl.valasz ?? null
+    });
 
     // ⭐ MENNYI ADAT MENT EL? (D35) Ez nem kíváncsiság: a csere ára befogadási kérdés —
     // egy mobilos e-embernek a számláján jelenik meg. Ami nem mérhető, azt nem lehet
