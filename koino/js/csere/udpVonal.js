@@ -61,6 +61,35 @@ const UJRAKULDES_KOZ = 300;
 // …és ennyi eredménytelen próbálkozás után feladjuk.
 const UJRAKULDES_KORLAT = 20;
 
+// ===================================
+// ⭐⭐⭐ AZ ABLAK — több darab úton egyszerre (D67 / 3. darab, 2026-09-14)
+// ===================================
+//
+// ⛔ MIÉRT: a vonal eddig **egy darabot** tartott úton, és megvárta a nyugtát. A 16. mérés
+// szerint ez **1 ms/csomag késleltetésnél 25 KB/s** — mert 64 KB az ~87 oda-vissza,
+// egymás után. *A szelet méretének növelése ezen nem segít: 87 darab az 87 oda-vissza,
+// akár egy szeletben van, akár nyolcban.*
+//
+// ⭐ ENNYI DARAB LEHET EGYSZERRE ÚTON. ⚠️ Ez **még rögzített szám** — a **D67 / 4. darabja**
+// (veszteségre feleződő ablak) teszi majd alkalmazkodóvá. *Nem ideiglenes megoldás, hanem a
+// terv szerinti következő lépcső: a szerkezet (ablak) most áll fel, a szabályozása utána.*
+// ⚠️ NEM állapot-befolyásoló állandó (D66): ha nálam 16, nálad 64, **ugyanazt az állapotot
+// számoljuk** — csak más ütemben ér oda.
+const ABLAK = 16;
+
+// ⭐⭐ GYORS ÚJRAKÜLDÉS — a MÁSODIK veszteség-jel, az órán kívül.
+//
+// ⛔⛔ EZ AZ, AMI NÉLKÜL AZ ABLAKNAK NINCS ÉRTELME, és ezt egy mérés tanította meg
+// (2026-09-14): stop-and-wait mellett **az óra az EGYETLEN veszteség-jel**, ezért egy
+// óvatos óra végzetes. ⭐ Ablakkal viszont ha egy KÉSŐBBI darabot már nyugtáztak, az
+// **bizonyíték**, hogy a korábbi elveszett — a hálózat ugyanis továbbvitte azt, ami utána
+// indult. *Nem kell megvárni az órát; a nyugta maga megmondja.*
+//
+// ⚠️ MIÉRT HÁROM, ÉS NEM EGY? Mert a csomagok **sorrendet is cserélhetnek** ingadozó
+// vonalon (a 16. mérés ezt is méri). Egyetlen „előrébb járó" nyugta tehát még nem vesztés —
+// három már az. *Ugyanaz a szám, amit a TCP is használ, és ugyanazért.*
+const GYORS_KUSZOB = 3;
+
 // Ennyi ideig tűrjük, hogy a másik fél NE SZÓLJON SEMMIT. Ugyanaz a 10 másodperc, amit a
 // `csereVonalon` használ TCP-n — a hívó felülírhatja (`beallitas.varakozasiIdo`).
 const TETLENSEG_ALAP = 10000;
@@ -82,8 +111,9 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   // ----- KÜLDÉS: egyszerre egy darab, nyugtára várva -----
   const sor = [];                 // a még el nem küldött darabok
   let kovetkezoSorszam = 1;
-  let uton = null;                // { sorszam, szoveg, ismetles }
-  let idozito = null;
+  // ⭐ ÚTON LÉVŐ DARABOK — sorszám → { szoveg, ismetles, ora, magasabbNyugtak }
+  // *Egy darab helyett legfeljebb `ABLAK` darab; ettől lesz a vonal használható.*
+  const uton = new Map();
   let lezarva = false;
 
   let bajtKuldott = 0, bajtKapott = 0;
@@ -136,24 +166,59 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     });
   };
 
-  const kovetkezotKuld = () => {
-    if (uton || !sor.length || lezarva) return;
-    uton = { sorszam: kovetkezoSorszam++, szoveg: sor.shift(), ismetles: 0 };
-    csomagot({ sz: uton.sorszam, a: uton.szoveg });
+  /** Feladjuk ezt a darabot — de HIBAKÉNT, nem csendben. A néma nem-esemény a legrosszabb. */
+  const feladas = (sorszam) => {
+    for (const t of uton.values()) clearInterval(t.ora);
+    uton.clear();
+    jelez('error', new Error('a másik fél nem nyugtázta a ' + sorszam
+      + '. darabot (' + UJRAKULDES_KORLAT + ' próbálkozás után)'));
+    uritestJelez(false);              // aki a kiürítésre vár, itt is kapjon választ
+  };
 
-    idozito = setInterval(() => {
-      if (!uton) return;
-      uton.ismetles++;
-      if (uton.ismetles > UJRAKULDES_KORLAT) {
-        // ⚠️ Feladjuk — de HIBAKÉNT, nem csendben. A néma nem-esemény a legrosszabb.
-        clearInterval(idozito); idozito = null;
-        jelez('error', new Error('a másik fél nem nyugtázta a ' + uton.sorszam
-          + '. darabot (' + UJRAKULDES_KORLAT + ' próbálkozás után)'));
-        uritestJelez(false);            // aki a kiürítésre vár, itt is kapjon választ
-        return;
-      }
-      csomagot({ sz: uton.sorszam, a: uton.szoveg });
-    }, UJRAKULDES_KOZ);
+  /** Egy darab (újra)küldése — és az órája felhúzása. */
+  const darabotKuld = (sorszam, tetel) => {
+    csomagot({ sz: sorszam, a: tetel.szoveg });
+    // ⭐ A gyors újraküldés számlálója nullázódik: innen új bizonyíték kell.
+    tetel.magasabbNyugtak = 0;
+  };
+
+  /**
+   * ⭐ ANNYI DARABOT INDÍTUNK, AMENNYI AZ ABLAKBA FÉR.
+   *
+   * ⚠️ Minden darabnak SAJÁT órája van. *Egy közös söprő óra is menne, de akkor a
+   * legfrissebb darab is a legrégebbi ütemére várna — és a mérés úgyis azt mondta, hogy a
+   * pontos idő itt számít.*
+   */
+  const kovetkezotKuld = () => {
+    while (!lezarva && sor.length && uton.size < ABLAK) {
+      const sorszam = kovetkezoSorszam++;
+      const tetel = { szoveg: sor.shift(), ismetles: 0, magasabbNyugtak: 0, ora: null };
+      uton.set(sorszam, tetel);
+
+      tetel.ora = setInterval(() => {
+        if (lezarva || !uton.has(sorszam)) return;
+        tetel.ismetles++;
+        if (tetel.ismetles > UJRAKULDES_KORLAT) return feladas(sorszam);
+        darabotKuld(sorszam, tetel);
+      }, UJRAKULDES_KOZ);
+
+      darabotKuld(sorszam, tetel);
+    }
+  };
+
+  /**
+   * ⭐⭐ GYORS ÚJRAKÜLDÉS: egy KÉSŐBBI darab nyugtája bizonyíték a korábbi vesztésére.
+   *
+   * A hálózat továbbvitte azt, ami később indult — tehát a korábbi nem „úton van", hanem
+   * **elveszett**. ⚠️ De csak `GYORS_KUSZOB` ilyen jel után lépünk, mert a sorrend-csere
+   * önmagában még nem vesztés.
+   */
+  const gyorsUjrakuldes = (nyugtazott) => {
+    for (const [sorszam, tetel] of uton) {
+      if (sorszam >= nyugtazott) continue;
+      tetel.magasabbNyugtak++;
+      if (tetel.magasabbNyugtak >= GYORS_KUSZOB) darabotKuld(sorszam, tetel);
+    }
   };
 
   // ----- FOGADÁS: sorrendbe rakva, ismétlést elnyelve -----
@@ -173,23 +238,38 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
 
     // Nyugta érkezett: mehet a következő darab.
     if (Number.isInteger(uzenet.ny)) {
-      if (uton && uzenet.ny === uton.sorszam) {
-        if (idozito) { clearInterval(idozito); idozito = null; }
-        uton = null;
+      const tetel = uton.get(uzenet.ny);
+      if (tetel) {
+        clearInterval(tetel.ora);
+        uton.delete(uzenet.ny);
+        // ⭐ Előbb a gyors-jel: a NÁLA korábbiak most kaptak egy bizonyítékot a vesztésre.
+        gyorsUjrakuldes(uzenet.ny);
         kovetkezotKuld();
         // Ha se úton, se sorban nincs több — mindent kiírtunk, a lezárás mehet.
-        if (!uton && !sor.length) uritestJelez(true);
+        if (!uton.size && !sor.length) uritestJelez(true);
       }
       return;
     }
 
     if (!Number.isInteger(uzenet.sz) || typeof uzenet.a !== 'string') return;
 
-    // Mindig nyugtázunk — akkor is, ha ez már megvolt: a nyugta is elveszhetett.
-    csomagot({ ny: uzenet.sz });
+    // ⭐ ISMÉTLÉS: nyugtázzuk — a nyugta is elveszhetett —, de nem tároljuk újra.
+    if (uzenet.sz < vartSorszam) { csomagot({ ny: uzenet.sz }); return; }
 
-    if (uzenet.sz < vartSorszam) return;          // ismétlés: elnyeljük
+    // ⛔⛔ AZ ABLAKON TÚLIT NEM FOGADJUK EL, ÉS NEM IS NYUGTÁZZUK (2026-09-14).
+    //
+    // ⚠️ Itt korábban **korlát nélküli** térkép állt: egy gyors vagy rosszindulatú társ
+    // tetszőleges sorszámokat küldhetett, és a memóriánk határtalanul nőtt. *Ez ma is
+    // defekt volt, nem csak skálázási kérdés.* Az ablak megadja a természetes korlátot:
+    // egy tisztességes társtól sosem jön `ABLAK`-nál messzebbi darab.
+    //
+    // ⛔ ÉS NEM NYUGTÁZZUK, mert azt hazudná, hogy megvan: a küldő továbblépne, a darab
+    // pedig örökre hiányozna. *Amit eldobtunk, arról hallgatni kell — a hallgatás itt
+    // igazat mond, a nyugta hazudna.*
+    if (uzenet.sz >= vartSorszam + ABLAK) return;
+
     varakozo.set(uzenet.sz, uzenet.a);
+    csomagot({ ny: uzenet.sz });
 
     // Ami sorrendben megvan, azt továbbadjuk a párbeszédnek.
     while (varakozo.has(vartSorszam)) {
@@ -231,7 +311,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
      * @returns {Promise<boolean>} igaz, ha minden kiment; hamis, ha feladtuk
      */
     kiurites() {
-      if (lezarva || (!uton && !sor.length)) return Promise.resolve(true);
+      if (lezarva || (!uton.size && !sor.length)) return Promise.resolve(true);
       return new Promise((teljesites) => { uritesreVar = teljesites; });
     },
 
@@ -254,7 +334,9 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     // ⚠️ A LEZÁRÁS ELDOBJA, AMI MÉG ÚTON VAN — ezért kell ELŐTTE `kiurites()`.
     end() {
       lezarva = true;
-      if (idozito) { clearInterval(idozito); idozito = null; }
+      // ⭐ MINDEN úton lévő darab óráját megállítjuk — ablakkal ezekből több is lehet.
+      for (const tetel of uton.values()) clearInterval(tetel.ora);
+      uton.clear();
       oratMegallit();
       uritestJelez(false);             // ha valaki mégis a kiürítésre várna, ne ragadjon be
     },

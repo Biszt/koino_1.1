@@ -21,7 +21,7 @@ import {
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
-import { csereUdpResen } from '../js/csere/udpVonal.js';
+import { csereUdpResen, udpKapcsolat } from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
   felfedezettekOsszefesulese
@@ -1384,6 +1384,84 @@ proba('⭐ A RENDES CSERE VÁLTOZATLAN — a szelet-kérés nem törte el', asyn
 
   await csereDroton(masik, egyik);
   return (await koinoEsemenyei(masik, KOINO)).length === 4;
+});
+
+// ===================================
+// ⭐⭐⭐ AZ ABLAK (D67 / 3. darab, 2026-09-14) — hálózat nélkül mérve
+// ===================================
+//
+// ⚠️ ITT NEM VALÓDI FOGLALATOT HASZNÁLUNK, hanem egy **bábut**: az `udpKapcsolat` csak
+// `send`-et hív és `message`-re iratkozik fel. Így a próba **pontosan** meg tudja nézni,
+// hány darab megy ki nyugta ELŐTT — amit valódi hálózaton csak találgatni lehetne.
+
+/** Bábu-foglalat: eltárolja a kiküldött csomagokat, és kézzel adagolható neki válasz. */
+function babuFoglalat() {
+  const kiment = [];
+  let figyelo = null;
+  return {
+    kiment,
+    send(bajtok, port, cim, visszahivas) {
+      kiment.push(JSON.parse(Buffer.from(bajtok).toString('utf8')));
+      if (typeof visszahivas === 'function') visszahivas(null);
+    },
+    on(nev, f) { if (nev === 'message') figyelo = f; return this; },
+    /** „Megérkezett" egy csomag a társtól. */
+    erkezik(targy) {
+      figyelo(Buffer.from(JSON.stringify(targy), 'utf8'),
+        { address: '127.0.0.1', port: 9999 });
+    },
+    /** Csak az adat-darabok (a nyugták nem). */
+    darabok() { return kiment.filter((u) => Number.isInteger(u.sz)); },
+    nyugtak() { return kiment.filter((u) => Number.isInteger(u.ny)); }
+  };
+}
+
+proba('⭐⭐⭐ AZ ABLAK: TÖBB darab megy ki egyetlen nyugta nélkül is', async () => {
+  const babu = babuFoglalat();
+  const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);
+
+  // Húsz darabnyi szöveg — több, mint az ablak, tehát a korlát is látszik.
+  vonal.write('x'.repeat(20 * 1000));
+
+  const kiment = babu.darabok().length;
+  vonal.end();
+
+  // ⛔ A RÉGI (stop-and-wait) vonal itt PONTOSAN 1-et adott. Ha valaki visszaállítja,
+  // ez a próba azonnal bukik. ⭐ És a felső korlátnak is állnia kell: az ablak ABLAK.
+  return kiment > 1 && kiment <= 16;
+});
+
+proba('⭐⭐ …és a nyugta HELYET CSINÁL: a következő darab csak ekkor indul', async () => {
+  const babu = babuFoglalat();
+  const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);
+
+  vonal.write('x'.repeat(20 * 1000));
+  const elso = babu.darabok().length;
+
+  // ⭐ Az 1-es nyugtája egy helyet szabadít fel — pontosan EGGYEL több darab mehet ki.
+  babu.erkezik({ ny: 1 });
+  const masodik = babu.darabok().length;
+  vonal.end();
+
+  return masodik === elso + 1;
+});
+
+proba('⛔⛔ AZ ABLAKON TÚLI DARABOT NEM NYUGTÁZZUK — a határtalan puffer őre', async () => {
+  const babu = babuFoglalat();
+  const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);
+
+  // ⚠️ Egy gyors vagy rosszindulatú társ tetszőleges sorszámot küldhet. Ha ezt
+  // eltárolnánk, a memóriánk határtalanul nőne; ha NYUGTÁZNÁNK anélkül, hogy eltároltuk
+  // volna, a küldő továbblépne, és a darab ÖRÖKRE hiányozna. *Egyik sem szabad.*
+  babu.erkezik({ sz: 1000, a: 'messze' });
+  const tavoli = babu.nyugtak().length;
+
+  // ⭐ És az ellenpróba: a soron lévő darabot viszont nyugtázzuk.
+  babu.erkezik({ sz: 1, a: 'itt' });
+  const kozeli = babu.nyugtak().length;
+  vonal.end();
+
+  return tavoli === 0 && kozeli === 1;
 });
 
 // ===================================

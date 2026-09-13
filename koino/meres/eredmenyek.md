@@ -1735,3 +1735,85 @@ stop-and-wait 1 ms/csomag késleltetésnél **25 KB/s**). ⏸️ Az ablak a `udp
 engedi (a `tcpLekepezesMeres.js` meg tudja mondani, hogy engedi-e). *Az 1. szabály — a
 szállítás cserélhető marad — épp ezt teszi olcsóvá: kettő megtartása nem két gépezet, mert a
 `parbeszed` mindkettőn változatlanul fut.*
+
+---
+
+## 20. ⭐⭐⭐ AZ ABLAK — a UDP-vonal nagyságrendet ugrott (2026-09-14, D67 / 3. darab)
+
+*A **D67** négy darabja közül ez a harmadik. ⚠️ És **nem ebben a sorrendben kezdtük**: előbb
+a mért RTT-vel próbálkoztam (1. darab), amit a mérés **megbuktatott** — lásd lentebb.*
+
+### Amit a vonal kapott
+
+- ⭐ **Csúszóablak**: egy helyett **`ABLAK` = 16** darab lehet egyszerre úton.
+- ⭐⭐ **Gyors újraküldés**: ha egy **későbbi** darabot már nyugtáztak, az **bizonyíték**,
+  hogy a korábbi elveszett — a hálózat ugyanis továbbvitte azt, ami utána indult. *Nem kell
+  megvárni az órát.* ⚠️ Három ilyen jel után lépünk, mert a **sorrend-csere** önmagában még
+  nem vesztés (ugyanaz a szám, amit a TCP is használ, és ugyanazért).
+- ⛔ **A fogadó puffer korlátos lett**: az `ABLAK`-on túli darabot **nem tároljuk és nem is
+  nyugtázzuk**. *Ez korábban korlát nélküli térkép volt — egy gyors vagy rosszindulatú társ
+  határtalanul növelhette a memóriánkat. Ma is defekt volt, nem csak skálázási kérdés.*
+
+### ⭐⭐ Az eredmény: mindenütt nagyságrend
+
+```
+  vonal                         előtte        ablakkal      szorzó
+  ──────────────────────────────────────────────────────────────────
+  +1 ms                        24 KB/s       460 KB/s        19x
+  +5 ms                        23 KB/s       294 KB/s        13x
+  1 ms ± 20 ms szórás          19 KB/s       212 KB/s        11x
+  1 ms, 1% vesztés             20 KB/s       370 KB/s        18x
+  1 ms, 5% vesztés             11 KB/s       346 KB/s        31x
+  1 ms, 15% vesztés             4 KB/s        53 KB/s        13x
+  400 ms oda-vissza             1 KB/s        10 KB/s        10x
+  800 ms oda-vissza             1 KB/s         5 KB/s         5x
+```
+
+⭐ És a **csere** (4 esemény, ötször futtatva, vesztéssel):
+
+```
+  vesztés     régi (stop-and-wait)   1. darab (mért RTT)      ABLAKKAL
+  ─────────────────────────────────────────────────────────────────────
+    0%              9 ms                   8 ms                 8 ms
+   10%            875 ms                1153 ms               870 ms
+   30%           4173 ms              7393 ms, 1 BUKÁS        2552 ms
+   50%          10403 ms              ⛔ mind az 5 BUKÁS      4235 ms
+```
+
+### ⛔⛔⛔ ÉS A LEGFONTOSABB TANULSÁG: A SORRENDEMET A MÉRÉS CÁFOLTA
+
+Azt terveztem, hogy **a mért RTT-vel kezdünk** (1. darab), mert annak volt a legerősebb
+bizonyítéka (a lassú vonalon ×2,0 és ×3,0 pazarlás). ⭐ Meg is építettem, és **a lassú vonalat
+meg is javította** (×3,0 → ×1,0). ⛔⛔ **De erős veszteségnél ELROMLOTT tőle a vonal:** 30%-nál
+egy bukás, 50%-nál mind az öt.
+
+⭐⭐⭐ **Az ok szerkezeti, nem hangolási:** a visszalépő újraküldési idő 100 → 200 → … →
+12 800 ms-ig nőtt egy olyan vonalon, aminek a **mért** oda-vissza ideje **1 ms**. ⚠️ **És ez
+pontosan az, amit a TCP is csinál** — csak ott ártalmatlan, mert a TCP a veszteségek nagy
+részét **nem az órából** tudja meg, hanem a **sorrenden kívüli nyugtákból**. ⛔ Stop-and-wait
+mellett viszont **az óra az EGYETLEN veszteség-jel**, tehát egy óvatos óra végzetes.
+
+⭐ **Vagyis az ablak nem gyorsítás, hanem ELŐFELTÉTEL:** ő adja a második veszteség-jelet, és
+attól lesz a konzervatív óra ritka tartalék ahelyett, hogy a fő út lenne. *A mért RTT ezután
+jöhet — most már biztonságosan.*
+
+⚠️ **A 1. darab kódját visszavettük** (Csaba döntése), hogy az ablak tiszta lappal épüljön.
+A mérése viszont megmarad: **így tudjuk, hogy a sorrend számít.**
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- **A pazarlás nem tűnt el, sőt:** ×1,4–1,7 vesztés és szórás mellett (a gyors újraküldés
+  néha feleslegesen lép), és a lassú vonalon **változatlanul ×2,0 / ×3,0** — *mert az
+  újraküldési idő még mindig a beégetett 300 ms.* ⏸️ Ezt a D67 1. darabja fogja elvenni.
+- **Az ablak fix 16.** ⏸️ A **4. darab** (veszteségre feleződő ablak) teszi alkalmazkodóvá —
+  addig egy zsúfolt vonalon mi is lehetünk a baj.
+- **Helyben nem gyorsult** (2133 vs. 2667 KB/s): ott nincs mit átfedni, az ablak csak
+  könyvelés. *A haszon ott van, ahol a vonalnak hossza van.*
+
+### ⭐ Három új önpróba, és a rontás-próba
+
+`csereProba.js`: **több darab megy ki egyetlen nyugta nélkül** · **a nyugta helyet csinál** ·
+**az ablakon túli darabot nem nyugtázzuk**. ⚠️ A próbák **bábu-foglalatot** használnak, nem
+valódi hálózatot — így pontosan megszámolható, hány darab ment ki nyugta előtt; valódi
+hálózaton ezt csak találgatni lehetne. ⭐ **Rontás-próbával igazolva:** `ABLAK = 1`-re
+állítva (a régi stop-and-wait) az első próba **azonnal bukik**.
