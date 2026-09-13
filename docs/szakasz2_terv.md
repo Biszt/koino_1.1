@@ -507,6 +507,42 @@ mérni**, nem feltételezni (a laptopé 7373 → 51967); a NAT-nak **célfügget
 lennie (mérve, az); és a UDP-n **pótolni kell**, amit a TCP ingyen ad (megérkezés, sorrend
 — 30%-os csomagvesztésre is van próba).
 
+---
+
+### ⭐⭐⭐ ÉS MEGISMÉTELVE, EGY MÁSIK HÁLÓZAT-PÁRON (2026-09-13, 22:38)
+
+*Terepmérés: Csaba a telefonnal egy MÁSIK szomszédban, más wifin, két héttel később.
+Teljes jegyzőkönyv: [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) 17.*
+
+| | Gép (itthon) | Telefon (a szomszédban) |
+|---|---|---|
+| **külső cím és port** | `31.46.250.205:54013` | `5.187.186.127:7373` |
+| a NAT viselkedése | **átírja** a portot | **megtartja** a portot |
+| **átfúrva** | ⭐ igen, mindkét irányban | ⭐ igen, **1 kopogásra, 190 ms** |
+| **a csere a résen** | ✓ 1 kör | ✓ 1 kör |
+
+⭐⭐ **A 190 ms a valódi szám.** A másik oldal 237 másodperce **nem a fúrás ára volt, hanem a
+várakozásé** — addig kopogott egyedül, amíg a másik fél el nem indult. Amint mindkét fél élt,
+a rés **az első kopogásra** összeért.
+
+⭐⭐⭐ **És ez az érv a BULI mellett, mérve:** a pajzsfúrás nem lassú és nem bizonytalan —
+**egyidejűséget** kíván. Megbeszélt találkozóval két tized másodperc; megbeszélés nélkül
+órákig kopogunk egymás mellett.
+
+⛔⛔ **A TCP-fúrás kérdése viszont NYITVA MARADT.** A TCP-fúróval indultunk, és nem ment —
+⚠️ **de ez nem cáfolat**: a routerem az IPv4-portot minden foglalatnál **más számra** írja át
+(**25787 → 6119 → 33905 → 54013**), a UDP-fúró ezt **megméri a saját foglalatáról**, a
+TCP-fúrónak viszont **nincs ilyen mérése** (a tükör `udp4`). A másik fél tehát a `7373`-ra
+kopogott, ahol nincs rés. ⏸️ **Előbb mérendő, mint bármit megépíteni:** célfüggetlen-e a
+TCP-leképezés? Ha kapcsolatonként ad új portot, a TCP-fúrás ezen a vonalon **elvi okból**
+lehetetlen.
+
+⛔ **Két hiány a fúróban, amit ez az este hozott ki:** a tükör `udp4`-re van drótozva
+(`pajzsfuro.js:167`), ezért **IPv6-on a fúró vak** · és a fúró **nem mondja meg, melyik saját
+címéről szól ki** (`localAddress`) — két globális IPv6 mellett ez eldönti, melyik címhez
+nyílik a rés. ⚠️ És egy harmadik, ami nem a kódé: az **ideiglenes IPv6-cím négy óra alatt
+háromszor cserélődött**, tehát **előre kiadni nem lehet**.
+
 ⚠️ **A STUN-ról őszintén:** a külső portot ma egy külső kiszolgálótól kérdeztük meg
 (`kulsoport` parancs). Ez **segédeszköz, nem előfeltétel** (D38): a kiszolgáló paraméter,
 bizalom nem jár vele, és hosszú távon **a koino saját tükre váltja ki** (`vonal.js`,

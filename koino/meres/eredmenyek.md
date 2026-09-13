@@ -1408,3 +1408,161 @@ mérni, nem megbecsülni**: a UDP-vonal **egyszerre egy darabot tart úton** (st
 A **vonalnak ablak kell** (több darab úton egyszerre), nem a szeletnek más méret. ⭐ És ez a
 `udpVonal.js`-ben marad, a fájl-átvitel **egyetlen sorának változtatása nélkül** — mert az
 átvitel a kapcsolatot **kapja**, nem ő nyitja (1. szabály).
+
+---
+
+## 17. ⭐⭐⭐ A PAJZSFÚRÁS MEGISMÉTELVE EGY MÁSIK HÁLÓZAT-PÁRON (2026-09-13, 22:38)
+
+*Terepmérés. Csaba a telefonnal a szomszédban, a fejlesztői gép itthon. A kérdés az volt,
+hogy átmegy-e a **TCP**-pajzsfúrás két valódi hálózat között — ⛔ **arra a kérdésre ez a
+mérés NEM válaszolt** (lásd lentebb), de közben megismételte a 2026-08-29-i UDP-eredményt
+egy **teljesen másik hálózat-páron**, és három hiányt hozott felszínre.*
+
+### Az eredmény
+
+```
+az én oldalam (itthon)                  a telefon (a szomszédban)
+────────────────────────────────────    ────────────────────────────────────
+⭐ KÍVÜLRŐL ÍGY LÁTSZOM:                 ⭐ KÍVÜLRŐL ÍGY LÁTSZOM:
+   31.46.250.205:54013                     5.187.186.127:7373
+   (a router ÁTÍRTA a portot)              (a router MEGTARTOTTA)
+
+⭐ A PAJZS ÁTFÚRVA — mindkét irány.      ⭐ A PAJZS ÁTFÚRVA — mindkét irány.
+  236 kopogás, 5 válasz, 237 348 ms       1 kopogás, 1 válasz, 190 ms
+
+CSERE A RÉSEN                           CSERE A RÉSEN
+  ✓ 0 új esemény, 1 kör, 807 bájt         ✓ 0 új esemény, 1 kör, 1,4 KB
+```
+
+### ⭐⭐ A legfontosabb szám: 190 ms — és amit a 237 másodperc jelent
+
+A két idő **nem ugyanazt méri**. A 237 másodperc az én oldalamon **nem a fúrás ára volt,
+hanem a várakozásé** — addig kopogtam egyedül, amíg a másik fél el nem indult. Abban a
+pillanatban, hogy a telefon kiszólt, a rés **az első kopogásra** összeért: **190 ms**.
+
+⭐⭐⭐ **Ez a pajzsfúrás valódi költsége, és ez az érv a BULI mellett.** A fúrás nem lassú és
+nem bizonytalan — **egyidejűséget** kíván. Ha a két készülék tudja, mikor keresse a másikat,
+ez két tized másodperc; ha nem tudja, órákig kopognak egymás mellett — *ahogy ezen az estén
+négy órán át tettük is.*
+
+### ⭐ Amit megismételt (és ezzel megerősített)
+
+A 2026-08-29-i mérés (232 ms, illetve 83 ms) **egy másik hálózat-páron** történt. Ez a mérés
+ugyanazt adta **más szomszéddal, más wifin, hónapokkal később**: két hétköznapi hálózat
+összeér, **továbbító nélkül, port-továbbítási szabály nélkül, szolgáltató nélkül az útban**.
+*Az akkori siker tehát nem szerencse volt.*
+
+### ⛔⛔ ÉS AMIT EZ A MÉRÉS NEM BIZONYÍT — a TCP kérdése NYITVA MARAD
+
+A TCP-fúróval indultunk, és **négy órán át nem ment**. ⚠️ **Ez nem cáfolat**, és pontosan
+tudjuk, miért nem:
+
+- a routerem az IPv4-es portot **minden foglalatnál átírja, más-más számra**
+  (mérve: **25787 → 6119 → 33905 → 54013**);
+- a UDP-fúró ezt **megméri a saját fúró-foglalatáról** (`ba9ce7b`), és ezért talált célba;
+- ⛔ a **TCP-fúrónak nincs ilyen mérése** — a tükör `udp4`-re van drótozva —, tehát a másik
+  fél a `7373`-ra kopogott, ahol nincs rés.
+
+⭐ Vagyis a nagy kérdés — *„megkapjuk-e ingyen a TCP negyven évnyi csiszolását?"* — továbbra
+is **eldöntetlen**, és a mai nap megmondta, **mi kell hozzá**: a TCP-fúrónak meg kell tudnia
+a saját külső TCP-portját.
+
+⚠️⚠️ **És egy kemény kérdés, amit előbb kell megmérni, mint bármit megépíteni:**
+**célfüggetlen-e a routerem TCP-leképezése?** A UDP-re ez **mérve igen** volt (2026-08-29,
+két tükörrel) — TCP-re **nem tudjuk**. ⛔ Ha TCP-n **kapcsolatonként** ad új külső portot,
+akkor a portot **elvi okból nem lehet előre megtudni**, és a TCP-pajzsfúrás ezen a vonalon
+**nem lehetséges** — semmilyen programmal. *Ez a mérés olcsó (két tükör, két különböző cél),
+és megspórolhat egy fölösleges építést.*
+
+### ⛔ Három hiány, amit ez az este hozott felszínre
+
+1. ⛔⛔ **Az ideiglenes IPv6-cím nem adható ki előre.** A telefon „privacy" címe **négy óra
+   alatt háromszor** cserélődött (`…4642:…621` → `…3f0d:…99e6` → `…1d80:…e12`). Egy előre
+   megbeszélt cím **a kimondás pillanatában elavulhat**. ⭐ *Eddig a randevút azért terveztük,
+   mert a fúrás egyidejűséget kíván; most kiderült, hogy a **cím érvényessége** miatt amúgy is
+   kötelező lenne.*
+2. ⛔ **A tükör `udp4`-re van drótozva** (`pajzsfuro.js:167`, `kulsoCim`). Ezért IPv6-on a
+   fúró **vak**: nem tudja megmondani, mit adjunk át a másiknak. Négy óra ment el erre.
+3. ⚠️ **A fúró nem mondja meg, melyik SAJÁT címéről szól ki.** Két globális IPv6 mellett az
+   OS választ, és ha nem azt adtuk meg a másiknak, a rés **a másik címhez** nyílik — a
+   csomagok némán elvesznek, **tökéletes szimmetriában**, ami elfedi az okot. A javítás egy
+   `localAddress` a `connect()`-ben, és **ugyanannak a címnek a kiírása** átadásra.
+
+### ⚠️ Egy mérési bizonytalanság, felírva
+
+Ugyanarra a csere-körre az egyik oldal **807 bájtot** mondott, a másik **1,4 KB-ot**. A két
+szám **nem ugyanazt számolja** (küldött vs. teljes forgalom). Nem hiba, de a **6. szabály**
+miatt — az adat-csomag mérete **kemény** korlát — tudni kell, melyik a mérce.
+
+---
+
+## 18. ⭐⭐⭐ CÉLFÜGGETLEN-E A ROUTER TCP-LEKÉPEZÉSE? (2026-09-13)
+
+`node koino/meres/tcpLekepezesMeres.js [helyi port]`
+
+*A 17. mérés nyitva hagyta a TCP-pajzsfúrás kérdését, és Csaba döntése az volt, hogy **előbb
+a mérés, ne az építés**: „Enélkül ha megépítjük a TCP külső-port felderítést, lehet, hogy egy
+elvi falnak építünk."* ⛔ **A fal nincs ott.**
+
+### A kérdés, és miért eldöntő
+
+- **célfüggetlen** leképezés → ugyanaz a helyi port MINDEN célpont felé UGYANAZT a külső
+  portot kapja. A tükörtől kapott szám tehát **egy harmadik félre is érvényes**, vagyis
+  bemondható → a TCP-fúrásnak van értelme.
+- **cél-függő** leképezés → minden célponthoz új külső port jár. A tükör válasza **csak a
+  tükörre igaz**, a társra nem → a TCP-pajzsfúrás **lehetetlen, semmilyen programmal**.
+
+### Az eredmény
+
+```
+1. KONTROLL — UDP (erről tudtuk: célfüggetlen)
+  10 tükör felelt, mind:  31.46.250.205:6251
+
+2. ELŐSZŰRÉS — TCP, RÖPKE portról (csak elérhetőség)
+  nextcloud  ✓ 31.46.250.205:63543
+  antisip    ✓ 31.46.250.205:63598
+  dus        ✓ 31.46.250.205:63600      (a többi 14 néma vagy elutasít)
+
+3. A MÉRÉS — TCP, mindig a 7373-es HELYI portról
+  nextcloud  ✓ 31.46.250.205:63539
+  antisip    ✓ 31.46.250.205:63539
+  dus        ✓ 31.46.250.205:63539
+
+  UDP: ⭐ CÉLFÜGGETLEN      TCP: ⭐ CÉLFÜGGETLEN
+```
+
+### ⭐⭐ Amit ez megmond
+
+1. ⭐⭐⭐ **A TCP-leképezés célfüggetlen** — három **különböző cég, három különböző IP**, és
+   mindhárom **ugyanazt** a külső portot látja. *A TCP-pajzsfúrásnak tehát van értelme, és a
+   17. mérés bukása valóban csak azon múlt, hogy a fúró nem kérdezi meg a saját portját.*
+2. ⭐ **A port átíródik, de KISZÁMÍTHATÓAN:** 7373 → 63539. Nem az a baj, hogy más szám —
+   hanem az volt, hogy **nem kérdeztük meg**.
+3. ⭐⭐ **És a mérés bizonyítottan nem vak:** a **röpke** portokról három **különböző** szám
+   jött (63543 · 63598 · 63600), a **rögzített** portról **háromszor ugyanaz**. *A mérés
+   tehát érzékeny a helyi portra, és érzéketlen a célpontra — pontosan ez a célfüggetlenség.*
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- **Nem bizonyítja, hogy a NEGYEDIK kapcsolat is ugyanazt a portot kapja.** Három egymás
+  utáni kapcsolat tartotta a leképezést; ez erős jel, nem tétel. *A fúrásnál ezért a mérésnek
+  ugyanabban a menetben kell megtörténnie, mint a kopogásnak.*
+- **A társ oldaláról semmit** — a 17. mérés szerint az ő routere megtartja a portot, de az
+  egy másik hálózat.
+- **Nem méri, hogy a rés valóban átfúrható-e TCP-vel.** Ez elvi akadályt zárt ki, nem sikert
+  igazolt. *A választ egy újabb terepmérés adja meg.*
+
+### ⛔ Két SAJÁT mérési hibát fogott meg ez a lap — felírva
+
+1. ⛔⛔ **Az első futás IPv6-on kapott választ, és a kód IPv4-nek olvasta.** A `pajzsfuro.js`
+   `stunbolCim`-je **vakon négy bájtot olvas IPv4-ként**, a család-bájt megnézése nélkül —
+   így a nextcloud IPv6-válaszából `32.1.76.77` lett, ami valójában a **saját `2001:4c4d…`
+   címem első négy bájtja**. *A mérés nem hazudott volna nagyobbat, ha kitalálja a számot.*
+   ✅ Itt javítva (család-bájt + `family: 4`), ⏸️ **de a `pajzsfuro.js`-ben még benne van.**
+2. ⛔⛔ **A második futáson mind az öt tükör `EADDRINUSE`-szal bukott** — mert egy válasz
+   nélkül elakadt kapcsolat `SYN_SENT`-ben **fogva tartja a rögzített helyi portot**. *Ez a
+   kép a routerről szólt volna, pedig a MI sorrendünk volt rossz.* ✅ Megoldás: **előszűrés
+   röpke portról** (ki felel egyáltalán?), és a rögzített portot csak a beszédesekre költjük.
+
+⭐ *Mindkettő ugyanaz a tanulság, sokadszor: a mérőeszközt is meg kell mérni. Az első két
+futás „eredménye" magabiztos és hamis volt.*
