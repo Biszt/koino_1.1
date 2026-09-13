@@ -419,23 +419,35 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
   const mappa = join(hely, koino, 'fajlok');
 
   /**
+   * ⛔⛔ A NÉV ŐRE — EGY HELYEN, MERT KÉT HELYEN KÉT KÜLÖNBÖZŐ VOLT (2026-09-13).
+   *
    * ⚠️ A LENYOMAT base64url, amiben van `-` és `_` — fájlnévnek ez rendben van, DE a `/`
    * nem fordulhat elő (a base64url épp ezt cseréli le), és a `..` sem. Akkor is
    * ellenőrizzük, ha mi állítjuk elő: ez a név **kívülről is jöhet** (a lap kéri le), és
    * ott már útvonal-támadás lenne belőle.
+   *
+   * ⚠️⚠️ MIÉRT KÜLÖN FÜGGVÉNY: a részleges fájl útja korábban csak a **hosszt** nézte
+   * (`lenyomat.length === 43`), a mintát nem — így egy 43 karakter hosszú, de érvénytelen
+   * név (`../../…/kulcsok`) **átcsúszott**, és a `reszlegesHozzafuz` írt is volna vele.
+   * *Nem volt elérhető (a `fajlIgeny.js` mintája horgonyzott), de az őr mást mondott, mint
+   * amit tett — és ahol ez így van, ott előbb-utóbb valaki az őrt hiszi el.*
    */
-  function utja(lenyomat) {
+  function ellenorzottNev(lenyomat) {
     if (typeof lenyomat !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(lenyomat)) {
       throw new Error('Érvénytelen fájl-lenyomat.');
     }
-    return join(mappa, lenyomat);
+    return lenyomat;
+  }
+
+  function utja(lenyomat) {
+    return join(mappa, ellenorzottNev(lenyomat));
   }
 
   // ⭐ A RÉSZLEGES FÁJL KÜLÖN MAPPÁBAN áll, és ez szándékos: ⛔ a `lista()` így **soha nem
   // mondja azt egy félkész fájlról, hogy megvan** — kulönben a bulin felajánlanánk másnak
   // valamit, ami még nincs készen. *A félkész és a kész két külön állapot, két külön helyen.*
   function reszlegesUtja(lenyomat) {
-    return join(mappa, 'reszleges', lenyomat.length === 43 ? lenyomat : utja(lenyomat));
+    return join(mappa, 'reszleges', ellenorzottNev(lenyomat));
   }
 
   return {
@@ -521,8 +533,13 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
 
     /** Hány bájt van meg eddig? (0, ha még semmi.) */
     async reszlegesMeret(lenyomat) {
+      // ⛔⛔ AZ ELLENŐRZÉS A `try`-ON KÍVÜL — ugyanaz a jelentésbeli különbség, mint az
+      // `olvas`-nál (D19): a **hiány** normális (még nem kezdtük el), az **érvénytelen név**
+      // viszont azt jelenti, hogy a hívó szemetet küldött. Ha belül maradna, a `catch`
+      // elnyelné, és a rossz név 0 bájtnak — vagyis „még nincs meg"-nek — látszana.
+      const ut = reszlegesUtja(lenyomat);
       try {
-        return (await readFile(reszlegesUtja(lenyomat))).length;
+        return (await readFile(ut)).length;
       } catch {
         return 0;
       }
@@ -579,7 +596,9 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
 
     /** A félbehagyott letöltés eldobása. */
     async reszlegesEldobas(lenyomat) {
-      try { await rm(reszlegesUtja(lenyomat)); } catch { /* nincs mit eldobni */ }
+      // ⚠️ A név őre itt is a `try` ELŐTT áll: a „nincs mit eldobni" normális, a rossz név nem.
+      const ut = reszlegesUtja(lenyomat);
+      try { await rm(ut); } catch { /* nincs mit eldobni */ }
     },
 
     /** Mely fájlok vannak meg? — a szállítás majd ebből tudja, mit kell kérni. */

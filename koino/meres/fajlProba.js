@@ -95,10 +95,18 @@ proba('⛔ ISMERETLEN lenyomat: null, nem hiba (D19 — hiány, nem vád)', asyn
   return (await tar.olvas('A'.repeat(43))) === null && (await tar.van('A'.repeat(43))) === false;
 });
 
+// ⛔⛔ EGY 43 KARAKTER HOSSZÚ, DE ÉRVÉNYTELEN NÉV — ez buktatta le a részleges fájl őrét.
+// ⚠️ Pontosan 43, mert a régi őr CSAK A HOSSZT nézte; az alábbi lista minden más eleme
+// „rossz hosszú" volt, ezért a rés fölött mind átment.
+const HOSSZU_DE_ROSSZ = '../'.repeat(12) + 'kulcsok';        // 43 karakter
+
 proba('⛔⛔ ÉRVÉNYTELEN lenyomat-alak ELAKAD — az útvonal-támadás ellen', async () => {
   const { tar } = await ujTar();
   // ⚠️ A név KÍVÜLRŐL is jön (a lap kéri le), tehát a `..` és a `/` nem csúszhat át.
-  for (const rossz of ['../../kulcs.json', 'a/b', '..', '', 'rovid', 'A'.repeat(44)]) {
+  const rosszak = ['../../kulcs.json', 'a/b', '..', '', 'rovid', 'A'.repeat(44), HOSSZU_DE_ROSSZ];
+  if (HOSSZU_DE_ROSSZ.length !== 43) return false;    // ⚠️ a próba maga is mérhető legyen
+
+  for (const rossz of rosszak) {
     try {
       await tar.olvas(rossz);
       return false;                                  // nem lett volna szabad idáig jutnia
@@ -108,6 +116,56 @@ proba('⛔⛔ ÉRVÉNYTELEN lenyomat-alak ELAKAD — az útvonal-támadás ellen
   }
   return true;
 });
+
+proba('⛔⛔⛔ A RÉSZLEGES FÁJL NÉGY MŰVELETE IS ELAKAD a rossz néven — nem csak az `olvas`',
+  async () => {
+    // ⚠️⚠️ EZT A PRÓBÁT EGY ÁTNÉZÉS KÉNYSZERÍTETTE KI (2026-09-13). A `reszlegesUtja` csak
+    // a HOSSZT nézte, a mintát nem — így a 43 karakteres `../…/kulcsok` átcsúszott, és a
+    // `reszlegesHozzafuz` `mkdir` + `appendFile`-lal **írt is volna** a mappán kívülre.
+    // ⭐ Nem volt elérhető (a `fajlIgeny.js` mintája horgonyzott), de az őr mást mondott,
+    // mint amit tett. *A próba azért kell, hogy a rés ne nyílhasson újra észrevétlenül.*
+    const { tar } = await ujTar();
+
+    // ⛔ Mind a NÉGY részleges művelet — a takarítás (`reszlegesEldobas`) is, mert a
+    // hallgatólagos `catch` ott is elnyelné a hibát, ha a név belül ellenőrződne (D19).
+    const muveletek = [
+      () => tar.reszlegesMeret(HOSSZU_DE_ROSSZ),
+      () => tar.reszlegesHozzafuz(HOSSZU_DE_ROSSZ, new Uint8Array([1, 2, 3])),
+      () => tar.reszlegesLezaras(HOSSZU_DE_ROSSZ),
+      () => tar.reszlegesEldobas(HOSSZU_DE_ROSSZ)
+    ];
+
+    for (const muvelet of muveletek) {
+      try {
+        await muvelet();
+        return false;                                // ⛔ némán átment: ez volt a rés
+      } catch (hiba) {
+        if (!/lenyomat/i.test(hiba.message)) return false;
+      }
+    }
+    return true;
+  });
+
+proba('⭐ …és az ÉRVÉNYES néven a részleges út továbbra is megy (a próba nem mindenre mond nemet)',
+  async () => {
+    // ⚠️ A fenti próba önmagában akkor is zöld lenne, ha MINDEN nevet elutasítanánk.
+    // Ez a párja méri, hogy a szigorítás a jó nevet nem fogta meg.
+    const { tar } = await ujTar();
+    const lenyomat = await bajtLenyomat(PNG);
+
+    const eleje = PNG.subarray(0, 30);
+    const vege = PNG.subarray(30);
+
+    if ((await tar.reszlegesMeret(lenyomat)) !== 0) return false;
+    await tar.reszlegesHozzafuz(lenyomat, eleje);
+    if ((await tar.reszlegesMeret(lenyomat)) !== eleje.length) return false;
+    await tar.reszlegesHozzafuz(lenyomat, vege);
+
+    const lezaras = await tar.reszlegesLezaras(lenyomat);
+    const vissza = await tar.olvas(lenyomat);
+    return lezaras.rendben === true
+      && vissza !== null && Buffer.from(vissza).equals(Buffer.from(PNG));
+  });
 
 proba('⛔ A TÚL NAGY fájl elakad — és megmondja, mekkora a határ', async () => {
   const { tar } = await ujTar();
