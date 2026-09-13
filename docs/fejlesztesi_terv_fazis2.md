@@ -3477,6 +3477,56 @@ nem egy új gépezet, hanem **a költözés**: aki nem ért egyet az új álland
 - **A pénz átvitele** — a pénzzel együtt tervezendő (6. pont).
 - **A szabály-lenyomat** mint a szabály-betartás ellenőre (4. pont).
 
+### D67. A UDP MARAD A FŐ ÚT — a szerkezet dönt, nem a sebesség (2026-09-13, Csaba)
+
+> „Ez egy nagyon fontos különbség, ami nekem azt mondja, hogy **az UDP-ét kell használnunk, és
+> nem ússzuk meg a munkát**. De ez nem baj, ha ettől lesz **készülék- és
+> router-független**." — Csaba
+
+⭐⭐⭐ **A döntés azután született, hogy a TCP-fúrás SIKERÜLT** (19. mérés, 2026-09-13: két
+valódi hálózat, átfúrva, a csere is átment rajta, a telefon oldalán **76 ms**). *Vagyis nem
+kudarcra adott válasz, hanem arra, amit a siker közben megláttunk.*
+
+#### 1. ⭐⭐ A különbség nem sebességbeli, hanem szerkezeti
+
+- ⭐ **UDP: egy foglalat = egy leképezés.** A fúró **abból a foglalatból** méri meg a külső
+  portját, amellyel kopogni fog — a szám tehát **biztosan igaz**, amíg a foglalat él.
+  *Ez a modellből következik.*
+- ⚠️ **TCP: minden kapcsolat külön kapcsolat.** Azok csak azért osztoznak egy leképezésen,
+  mert a NAT **célfüggetlen** (18. mérés). ⛔ Egy cél-függő NAT mögött a TCP-pajzsfúrás
+  **elvi okból lehetetlen** — semmilyen programmal. *Ott nem „lassabb", hanem nincs.*
+
+#### 2. ⛔⛔ És itt a 9. szabály szól
+
+*„Ez mit csinál egymilliárd e-embernél?"* — egymilliárdnál **nem lehet előfeltétel, hogy a
+router célfüggetlen legyen.** A 19. mérés sikere **ezen az egy vonalon** siker; a
+router-eltérés a 9. szabály szerint ugyanúgy **alapállapot, nem kivétel**, mint a
+verzió-eltérés (D66). ⭐ *A lefelé skálázás olcsó, a felfelé nem — és egy feltételhez kötött
+szállításra nem lehet alapozni.*
+
+#### 3. ⭐ A következmény, kimondva
+
+- **A UDP-vonal ABLAKÁT meg kell építeni** (16. mérés: a mai stop-and-wait **25 KB/s** már
+  1 ms/csomag késleltetésnél). ⭐ Az ablak a `udpVonal.js`-ben marad, és a fájl-átvitel
+  **egyetlen sorának változtatása nélkül** — mert az átvitel a kapcsolatot **kapja**, nem ő
+  nyitja (**1. szabály**).
+- **A TCP-út nem vész el, csak lefokozódik** alkalmi **gyorssávvá** ott, ahol a vonal engedi.
+  A `tcpLekepezesMeres.js` meg tudja mondani egy vonalról, hogy engedi-e.
+- ⭐ **Kettőt megtartani olcsó**, mert az 1. szabály miatt nem két gépezet: a `parbeszed`
+  **mindkét szállításon változatlanul fut**.
+
+#### 4. ⚠️ Amit ez NEM mond
+
+- Nem azt, hogy a TCP-fúrás rossz — **megmérve működik** (19. mérés).
+- Nem azt, hogy a UDP gyorsabb — **ma lassabb**, és épp ezért kell az ablak.
+- ⏸️ És **két port-átíró NAT között** (pl. két CGNAT) egyik szállítás sincs megmérve.
+
+#### ⏸️ Ami nyitva marad
+
+- **Az ablak mérete és alakja** (csúszóablak? nyugta-köteg? újraküldési óra) — mérés dönti el.
+- **A számcsere automatizálása**: a fúró ma már kimondja a saját külső portját, de a
+  **buli** még nem adja át — ma kézzel írtuk át egymásnak (19. mérés).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

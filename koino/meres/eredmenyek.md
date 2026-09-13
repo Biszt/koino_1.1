@@ -1566,3 +1566,110 @@ elvi falnak építünk."* ⛔ **A fal nincs ott.**
 
 ⭐ *Mindkettő ugyanaz a tanulság, sokadszor: a mérőeszközt is meg kell mérni. Az első két
 futás „eredménye" magabiztos és hamis volt.*
+
+---
+
+## 19. ⭐⭐⭐ A TCP-PAJZSFÚRÁS ÁTMEGY KÉT VALÓDI HÁLÓZAT KÖZÖTT (2026-09-13, 23:34)
+
+*Ez a Szakasz 2 utolsó nyitott kérdése, és a napló szerint **soha korábban nem mértük meg**:
+a 2026-08-29-i és a mai 17. mérés egyaránt **UDP**-vel ment. A válasz: **IGEN**.*
+
+```
+⭐ KÍVÜLRŐL ÍGY LÁTSZOM TCP-N: 31.46.250.205:63517   (a helyi 7373-esről, nextcloud szerint)
+   ⚠ A router átírta a portot (7373 → 63517) — ezért KELL bemondani.
+
+  23:30:23 → 1. próbálkozás…      ✗ némán eldobták
+  …  (15 próbálkozás, amíg a másik fél a RÉGI számomra kopogott)
+  23:34:08 → 16. próbálkozás…
+     ⭐ ÁTFÚRVA a 16. próbálkozásra! (11474 ms)
+
+⭐ A PAJZS ÁTFÚRVA — most jön a csere ugyanezen a kapcsolaton.
+Csere kész — kaptam 0 új eseményt, küldtem 0 (1 kör)
+```
+
+| | Gép (itthon) | Telefon (a szomszédban) |
+|---|---|---|
+| **külső TCP-cím** | `31.46.250.205:63517` | `5.187.186.127:7373` |
+| a NAT viselkedése | **átírja** a portot | **megtartja** a portot |
+| **átfúrva TCP-vel** | ⭐ a 16. próbálkozásra (11 474 ms) | ⭐⭐ **az 1.-re, 76 ms** |
+| **a csere a résen** | ✓ 1 kör | ✓ 1 kör |
+
+⭐⭐ **A 76 MS A VALÓDI SZÁM, ugyanúgy, mint a 17. mérésnél.** A telefon azért fúrt át az
+**első** próbálkozásra, mert a másik oldal addigra már folyamatosan kopogott — a rés készen
+állt, csak a helyes szám hiányzott. *A gép 16 próbálkozása nem a fúrás ára volt, hanem a
+rossz címé és a várakozásé.*
+
+⚠️ **És egy mellékes lelet a telefon naplójából: az ANDROID ALTATÁSA látszik.** A 13 mp-esre
+tervezett próbálkozások közül kettő **218 843 ms** és **100 667 ms** lett — a készülék aludt,
+és az óra megnyúlt. *Ez nem a hálózat lassúsága; ez az, amiért a buli-szám mérésénél is az
+alvó készülék volt a legnehezebb eset (13. mérés).*
+
+### ⭐⭐⭐ Amit ez eldönt
+
+1. ⭐⭐⭐ **A TCP-pajzsfúrás MŰKÖDIK két hétköznapi hálózat között** — továbbító nélkül,
+   port-továbbítási szabály nélkül, egyik routeren sem állítottunk be semmit. ⭐ **És a koino
+   cseréje átment rajta**, ugyanazon a kapcsolaton.
+2. ⭐⭐ **A TCP negyven évnyi csiszolása elérhető** — ablak, torlódás-vezérlés, újraküldés —,
+   **ott, ahol a router célfüggetlen.** ⛔⛔ **DE EBBŐL NEM LETT „az ablakot nem kell
+   megépíteni": Csaba a mérés után az ELLENKEZŐJÉT döntötte** — lásd a lap alján.
+3. ⭐ **A 18. mérés helyesnek bizonyult a gyakorlatban is:** a célfüggetlen leképezés miatt a
+   tükörtől kapott szám **a társra is érvényes volt** — a fúrás pontosan arra a portra ért be.
+
+### ⛔⛔ ÉS AMIT A MÉRÉS KÖZBEN ÉLŐBEN MEGMUTATOTT: A SZÁM NEM ADHATÓ KI ELŐRE
+
+A külső TCP-portom **három futáson át három különböző szám volt**:
+
+```
+63539  (a 18. mérés)        63495  (próba-futás)        63517  (az éles fúrás)
+```
+
+⛔ A társ az **első tizenöt próbálkozás alatt a RÉGI számomra kopogott** — ezért a néma
+eldobások. A siker abban a percben jött, amikor a **friss** számmal indult újra.
+
+⭐⭐⭐ **Ez a BULI (randevú) harmadik, egymástól független igazolása egy estén:**
+
+- az ideiglenes **IPv6-cím** négy óra alatt háromszor cserélődött (17. mérés),
+- a külső **UDP-port** foglalatonként más (17. mérés),
+- és most a külső **TCP-port** futásonként más (19. mérés).
+
+*A címet tehát nem lehet előre megbeszélni — csak a találkozás pillanatában átadni. A buli
+nem kényelem, hanem működési feltétel.* ⭐ És a fúró mostantól **magától kimondja** a saját
+számát (18. mérés nyomán), tehát a bulinak már van mit átadnia.
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- **Egy hálózat-pár.** Az egyik oldal port-átíró, a másik port-megtartó. ⏸️ **Két port-átíró
+  NAT között** (pl. két CGNAT) újra kell mérni — ott nehezebb.
+- **A számcsere kézi volt.** A fúrás sikerült, de a portokat mi írtuk át egymásnak; a buli
+  ezt fogja elvégezni, és az még nincs megépítve.
+- **Nem mértük a sebességet** a TCP-résen — csak azt, hogy a csere lefut rajta.
+
+### ⛔⛔⛔ ÉS A DÖNTÉS, AMIT EZ A HÁROM MÉRÉS EGYÜTT HOZOTT (Csaba, 2026-09-13)
+
+> *„Ez egy nagyon fontos különbség, ami nekem azt mondja, hogy az UDP-ét kell használnunk, és
+> nem ússzuk meg a munkát. De ez nem baj, ha ettől lesz készülék- és router-független."*
+
+⭐⭐⭐ **A mérés tehát NEM azt döntötte el, hogy melyik a gyorsabb, hanem hogy melyik az,
+AMELYIK MINDENHOL MŰKÖDIK.** A különbség nem sebességbeli, hanem szerkezeti:
+
+- ⭐ **UDP: egy foglalat = egy leképezés.** A fúró **abból a foglalatból** méri meg a portját,
+  amellyel kopogni fog — a szám tehát **biztosan igaz**, amíg a foglalat él. *Ez a modellből
+  következik, nem a router jóindulatából.*
+- ⚠️ **TCP: minden kapcsolat külön kapcsolat.** Csak azért osztoznak egy leképezésen, mert ez
+  a router **célfüggetlen** (18. mérés). ⛔ Egy cél-függő NAT mögött a TCP-fúrás **elvi okból
+  lehetetlen** — semmilyen programmal.
+
+⛔⛔ **ÉS ITT A 9. SZABÁLY SZÓL:** *„ez mit csinál egymilliárd e-embernél?"* — egymilliárdnál
+**nem lehet előfeltétel, hogy a router célfüggetlen legyen.** Ami a 19. mérésben sikerült, az
+ezen az egy vonalon sikerült; a 9. szabály szerint a verzió-eltéréshez hasonlóan a
+**router-eltérés is alapállapot, nem kivétel**.
+
+⭐ **Következmény, kimondva:** a **UDP-vonal ABLAKÁT MEG KELL ÉPÍTENI** (16. mérés: a mai
+stop-and-wait 1 ms/csomag késleltetésnél **25 KB/s**). ⏸️ Az ablak a `udpVonal.js`-ben marad,
+és a fájl-átvitel **egyetlen sorának változtatása nélkül** — mert az átvitel a kapcsolatot
+**kapja**, nem ő nyitja (1. szabály).
+
+⭐ **A TCP-út nem vész el, csak lefokozódik:** marad **alkalmi gyorssáv** ott, ahol a vonal
+engedi (a `tcpLekepezesMeres.js` meg tudja mondani, hogy engedi-e). *Az 1. szabály — a
+szállítás cserélhető marad — épp ezt teszi olcsóvá: kettő megtartása nem két gépezet, mert a
+`parbeszed` mindkettőn változatlanul fut.*

@@ -867,3 +867,38 @@ postás, nem szolgáltató — és a mérés érvényességét nem rontja, mert 
   legnagyobb sorszámot elküldeni**, mert a lánc szerkezete a többit megmondja. A szakasz
   nagy kérdése mérhetővé vált: natívan egy program **tud fogadni kapcsolatot**, tehát a
   globális IPv6-on a **közvetlen, szolgáltató nélküli** kapcsolat valóban kipróbálható.
+
+---
+
+### ⭐⭐⭐ ÉS A TCP-FÚRÁS IS ÁTMEGY (2026-09-13, 23:34) — a Szakasz 2 utolsó nyitott kérdése
+
+*A 2026-08-29-i és a 17. mérés egyaránt **UDP**-vel ment; a TCP-fúrást a napló szerint **soha
+nem mértük meg**. Most igen. Teljes jegyzőkönyv: [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) 19.*
+
+| | Gép (itthon) | Telefon (a szomszédban) |
+|---|---|---|
+| **külső TCP-cím** | `31.46.250.205:63517` | `5.187.186.127:7373` |
+| a NAT viselkedése | **átírja** a portot | **megtartja** a portot |
+| **átfúrva TCP-vel** | ⭐ a 16. próbálkozásra (11 474 ms) | ⭐⭐ **az 1.-re, 76 ms** |
+| **a csere a résen** | ✓ 1 kör | ✓ 1 kör |
+
+⭐⭐⭐ **Amit eldönt:** a TCP negyven évnyi csiszolása (ablak, torlódás-vezérlés, újraküldés)
+**elérhető ott, ahol a router célfüggetlen.**
+
+⛔⛔⛔ **DE A DÖNTÉS EZZEL SZEMBEN SZÜLETETT (Csaba, 2026-09-13):** *„az UDP-ét kell
+használnunk, és nem ússzuk meg a munkát. De ez nem baj, ha ettől lesz készülék- és
+router-független."* ⭐⭐ A különbség nem sebességbeli, hanem **szerkezeti**: a UDP-nél **egy
+foglalat = egy leképezés** (a modellből következik), a TCP-nél minden kapcsolat külön, és
+csak a NAT **célfüggetlensége** köti őket össze — egy cél-függő NAT mögött a TCP-fúrás
+**elvi okból lehetetlen**. ⛔ **A 9. szabály szerint** egymilliárdnál a router-eltérés
+**alapállapot, nem kivétel**. ⭐ Következmény: **a UDP-vonal ablakát meg kell építeni** (16.
+mérés: 25 KB/s 1 ms/csomag mellett), a TCP-út pedig **alkalmi gyorssávvá** fokozódik le.
+
+⛔⛔ **És élőben megmutatta, hogy a külső port NEM adható ki előre:** három futáson át
+**63539 → 63495 → 63517**, és a társ az első **tizenöt** próbálkozás alatt a **régi** számra
+kopogott. ⭐ A siker abban a percben jött, amikor a **friss** számmal indult újra — amit
+mostantól **maga a fúró mond ki** (`kulsoCimTcp`, a 18. mérés nyomán).
+
+⚠️ **Amit NEM mond meg:** egy hálózat-pár (egyik port-átíró, másik port-megtartó) — ⏸️ **két
+port-átíró NAT között** újra kell mérni · a **számcsere kézi volt** (ezt a buli fogja
+elvégezni, és az még nincs megépítve) · a TCP-rés **sebességét** nem mértük.

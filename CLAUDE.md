@@ -88,11 +88,35 @@ a TCP-fúrás előtt. Mérve, egy futáson belül: **UDP 39471, TCP 63495** — 
 kérdésre, és csak az egyik igaz.* A router a két szállításnak külön leképezést ad, tehát a
 UDP-szám a TCP-fúrásnál **félrevezet**; nem hagytuk ott „tájékoztatásul".
 
-⏸️ **HÁTRA VAN A HARMADIK LÉPÉS: EGY RÖVID TEREPMÉRÉS — CSABA VÉGZI.** Mindkét készüléken
-`pajzsfuro <a másik külső címe> <a másik külső portja> tcp`, és **a számot most már maga a
-fúró mondja meg** mindkét oldalon. ⭐ A 17. mérés szerint ez **190 ms alatt eldől**, ha
-mindkét fél egyszerre kopog. ⚠️ *Ez elvi akadályt zárt ki, nem sikert igazolt — a TCP-fúrás
-kérdése a terepmérésig NYITVA marad.*
+✅✅✅ **ÉS A HARMADIK LÉPÉS IS MEGTÖRTÉNT — 19. MÉRÉS (2026-09-13, 23:34): A TCP-PAJZSFÚRÁS ÁTMEGY.**
+*Ez a Szakasz 2 utolsó nyitott kérdése, és a napló szerint **soha korábban nem mértük meg**.*
+`31.46.250.205:63517` ↔ `5.187.186.127:7373`, és **a csere is átment ugyanazon a
+kapcsolaton** (1 kör). Továbbító nélkül, port-továbbítási szabály nélkül, egyik routeren sem
+állítottunk be semmit. ⭐⭐ **A telefon oldalán az 1. próbálkozásra, 76 MS alatt** — a gép 16
+próbálkozása nem a fúrás ára volt, hanem a rossz címé; *ugyanaz a kép, mint a 17. mérés
+190 ms-ánál.*
+⛔⛔⛔ **ÉS CSABA DÖNTÉSE A MÉRÉS UTÁN — A UDP MARAD A FŐ ÚT (2026-09-13):** *„ez egy nagyon
+fontos különbség, ami nekem azt mondja, hogy az UDP-ét kell használnunk, és nem ússzuk meg a
+munkát. De ez nem baj, ha ettől lesz készülék- és router-független."* ⭐⭐⭐ **A három mérés
+tehát nem azt döntötte el, melyik a gyorsabb, hanem hogy melyik az, AMELYIK MINDENHOL
+MŰKÖDIK:** a **UDP** egy foglalat = egy leképezés — *a modellből következik*; a **TCP** csak
+azért megy, mert ez a router **célfüggetlen** (18. mérés), és egy cél-függő NAT mögött
+**elvi okból lehetetlen**. ⛔⛔ **A 9. szabály itt szól:** egymilliárdnál **nem lehet
+előfeltétel, hogy a router célfüggetlen legyen** — a router-eltérés **alapállapot, nem
+kivétel**. ⭐ **Következmény: a UDP-vonal ABLAKÁT MEG KELL ÉPÍTENI** (16. mérés: 25 KB/s
+1 ms/csomag mellett), és ⭐ **a TCP-út nem vész el, csak lefokozódik alkalmi gyorssávvá** ott,
+ahol a vonal engedi *(a `tcpLekepezesMeres.js` megmondja, hogy engedi-e)*. *Az 1. szabály
+teszi ezt olcsóvá: a `parbeszed` mindkét szállításon változatlanul fut.*
+⛔⛔ **ÉS A MÉRÉS ÉLŐBEN MUTATTA MEG, HOGY A SZÁM NEM ADHATÓ KI ELŐRE:** a külső TCP-portom
+három futáson át **63539 → 63495 → 63517** volt, és a társ az első **tizenöt** próbálkozás
+alatt a **régi** számomra kopogott — a siker abban a percben jött, amikor a frissel indult
+újra. ⭐⭐⭐ **Ez a BULI harmadik, független igazolása egyetlen estén:** az ideiglenes
+IPv6-cím négy óra alatt háromszor cserélődött (17.), a külső UDP-port foglalatonként más
+(17.), a külső TCP-port futásonként más (19.). *A címet nem lehet előre megbeszélni — csak a
+találkozás pillanatában átadni.*
+⚠️ **Amit NEM mond meg:** egy hálózat-pár (egyik port-átíró, másik port-megtartó) — ⏸️ **két
+port-átíró NAT között** (pl. két CGNAT) újra kell mérni · a **számcsere kézi volt**, a buli
+ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét** nem mértük.
 
 ### ⛔ Három hiány, amit a terepmérés hozott felszínre (egyik sincs megépítve)
 
@@ -107,8 +131,11 @@ kérdése a terepmérésig NYITVA marad.*
 
 ### ⏸️ A többi nyitott döntés (mind Csabáé)
 
-1. **Az ablak** a UDP-vonalnak — ⚠️ a 18. mérés óta **kevésbé sürgős**: a TCP-út nyitva áll,
-   és ha a fúrás átmegy, az ablakot nem kell megépíteni.
+1. ⭐⭐ **AZ ABLAK A UDP-VONALNAK — ELDŐLVE, ÉS MEG KELL ÉPÍTENI** (Csaba, 2026-09-13, a 19.
+   mérés után). ⛔ *Nem azért, mert a TCP nem megy — hanem mert a TCP a router
+   célfüggetlenségén áll, a UDP viszont a foglalat-modellen. Egymilliárdnál a router-eltérés
+   alapállapot (9. szabály).* Az ablak a `udpVonal.js`-ben marad, a fájl-átvitel **egyetlen
+   sorának változtatása nélkül** (1. szabály). **Ez a következő építés.**
 2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — 25 KB/s mellett 2 MB ≈ 80 mp. ⭐ **Nem**
    állapot-befolyásoló állandó (D66), tehát szabadon hangolható.
 3. **A maradék modálok** (5.8) — részletek: [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md)
@@ -227,7 +254,7 @@ kérdése a terepmérésig NYITVA marad.*
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D66**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D67**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 
