@@ -162,9 +162,27 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
    ⛔ Stop-and-wait mellett **az óra az EGYETLEN veszteség-jel**, tehát az óvatos óra végzetes.
    *Az ablak tehát nem gyorsítás, hanem **előfeltétel**.* ⚠️ Az 1. darab kódját Csaba
    döntésére **visszavettük**, hogy az ablak tiszta lappal épüljön.
-   ⏸️ **Hátra: a mért RTT (1.) — most már biztonságosan —, majd a veszteségre feleződő ablak
-   (4.).** A pazarlás ugyanis megmaradt: lassú vonalon **változatlanul ×2,0 / ×3,0**, mert az
-   újraküldési idő még a beégetett **300 ms**.
+   ✅✅ **ÉS A MÉRT RTT IS MEGVAN — 21. mérés (2026-09-14), az ablak tetején, másodszorra.**
+   ⭐⭐⭐ **Pontos minták Karn helyett:** minden újraküldés **sorszámot** visz (`k`), a nyugta
+   **visszamondja** — így **minden nyugta pontos minta**, nem csak a tiszta darabé (a QUIC
+   útja). ⭐ **És nem kerül bájtot a szokásos esetben** (6. szabály): az **első** küldésen
+   nincs `k`, és a `k` nélküli nyugta épp azt jelenti, hogy az elsőre felel.
+   ⭐ **10% vesztésnél 875 → 51 ms**, 30%-nál **4173 → 1028 ms**, 1%-nál a fájl **20 → 582
+   KB/s**; a lassú vonal pazarlása **×3,0 → ×1,4** (64 KB-on; 8 KB-on ×1,9 — *az indulási
+   löket elolvad, ha van mit átvinni*).
+   ⛔⛔ **DE 50% VESZTESÉGNÉL LASSABB A RÉGINÉL: 10 403 → 25 127 ms** (bukás nélkül). *Az ok
+   nem hiba, hanem a viselkedés ára: a régi kód **soha nem lépett vissza**, 300 ms-onként
+   hajtotta a vonalat — ez gyorsabb véletlen vesztésnél, és pontosan az, ami egy **torlódott**
+   vonalon a bajt okozza.* ⏸️ És van szerkezeti ok remélni, hogy javul: ma az óra **és** az
+   ablak is a torlódásra reagál, vagyis **átfedik egymást** — a **4. darab** veszi majd át a
+   torlódás-választ, és akkor az óra kevésbé lehet türelmes.
+   ⭐ **Három további lelet, mind mérésből:** a visszalépést a **nyugta feloldja** (ha most
+   jutott át forgalom, az út él) · a **vak** óra csak a **legrégebbi** darabot szondázza
+   (mérés nélkül minden óra tipp — abból egy elég, kilenc nem), ⚠️ *de mért óránál ez már nem
+   áll: rászűkítés nélkül 15% vesztésnél 430 → 8177 ms-ra romlott* · és ⛔ **az RTO sosem több
+   a maradék feladási keret negyedénél**, mert *egy várakozás, ami után nem fér bele újabb
+   próbálkozás, nem türelem, hanem garantált bukás türelemnek öltözve.*
+   ⏸️ **Hátra a D67-ből: a 4. darab — a veszteségre feleződő ablak** (ma fix 16).
 2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — 25 KB/s mellett 2 MB ≈ 80 mp. ⭐ **Nem**
    állapot-befolyásoló állandó (D66), tehát szabadon hangolható.
 3. **A maradék modálok** (5.8) — részletek: [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md)
@@ -298,7 +316,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2489,5 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2510,9 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -429,7 +447,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2489,5 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2510,9 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

@@ -23,11 +23,16 @@
 // Ezért van itt egy pici, de valódi „megbízható folyam": minden darab kap SORSZÁMOT, a
 // másik NYUGTÁZZA, és amíg nem nyugtázta, ÚJRAKÜLDJÜK.
 //
-// ⚠️ SZÁNDÉKOSAN EGYSZERŰ: egyszerre EGY darab van úton („küldd — várd meg a nyugtát —
-// küldd a következőt"). Ez lassabb, mint amit a TCP tud, de a koino cseréje apró és
-// kérdés-válasz jellegű (egy „nincs újdonság" kör 334 bájt), ezért bőven elég — és
-// cserébe ÁTLÁTHATÓ. Ha egyszer kevés lesz, itt kell javítani, a protokollhoz nem kell
-// hozzányúlni.
+// ⚠️⚠️ EZ A BEKEZDÉS 2026-09-14-IG AZT ÍRTA, HOGY „szándékosan egyszerű: egyszerre EGY
+// darab van úton" — és azt is, hogy „ha egyszer kevés lesz, itt kell javítani". **Kevés
+// lett, és itt javítottuk.** A D67 óta a vonal **ablakkal** dolgozik (16 darab úton),
+// **gyors újraküldéssel** és **mért újraküldési idővel**; a protokollhoz tényleg nem
+// kellett hozzányúlni. *A régi mondat itt marad, mert a jóslata bevált — de a jelen időt
+// nem hagyhattuk rajta.*
+//
+// ⭐ A három mechanizmus a saját szakaszában van leírva lentebb, azzal a méréssel együtt,
+// ami kikényszerítette. **Egy „nincs újdonság" kör továbbra is 334 bájt** — az ablak csak
+// akkor számít, ha van mit átvinni.
 //
 // ===== A KÉT ŐR, AMI ELŐSZÖR HIÁNYZOTT (2026-08-30) =====
 //
@@ -56,10 +61,74 @@ import { parbeszed, fajlHozatala } from './vonal.js';
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
 const DARAB_MERET = 1000;
 
-// Ennyi időnként küldjük újra a nyugtázatlan darabot…
-const UJRAKULDES_KOZ = 300;
-// …és ennyi eredménytelen próbálkozás után feladjuk.
-const UJRAKULDES_KORLAT = 20;
+// ===================================
+// ⭐⭐⭐ AZ ÚJRAKÜLDÉSI IDŐ MÉRT, NEM BEÉGETETT (D67 / 1. darab, 2026-09-14)
+// ===================================
+//
+// ⛔⛔ ITT KORÁBBAN EGY SZÁM ÁLLT: `UJRAKULDES_KOZ = 300` ms. A 16. mérés megmutatta, mit
+// tesz ez egy lassú vonalon — **és nem érv, hanem szám**: 400 ms oda-visszánál minden darab
+// **×2,0**-szer megy ki, 800 ms-nál **×3,0**-szor. Vagyis **újraküldjük azt, ami éppen ÚTON
+// van** — a saját türelmetlenségünkből. ⚠️ Műholdas, mobil- és zsúfolt vonalon a 400–600 ms
+// hétköznapi; a **9. szabály** szerint egymilliárd készüléknél ez **alapeset, nem kivétel**.
+//
+// ⭐ A MEGOLDÁS A BEVÁLT (RFC 6298, Jacobson–Karels): megmérjük az oda-vissza időt,
+// simítjuk, és az **ingadozását** is követjük — mert egy vonal nem attól rossz, hogy lassú,
+// hanem attól, hogy **kiszámíthatatlan**:
+//
+//   RTO = SRTT + 4 × RTTVAR
+//
+// ⛔⛔ A KLASSZIKUS GOND: **melyik küldésre felel a nyugta?** Ha egy darabot kétszer
+// küldtünk el, a nyugtáról nem tudható — és a hamis mintától a becslés elromlik. A régi
+// válasz erre **Karn szabálya**: újraküldött darabból ne vegyünk mintát.
+//
+// ⭐⭐⭐ MI VISZONT MEGSZÜNTETJÜK A KÉTÉRTELMŰSÉGET AHELYETT, HOGY KIKERÜLNÉNK — ugyanaz az
+// út, amit a QUIC választott. Minden újraküldés **sorszámot** kap (`k`), a nyugta pedig
+// **visszamondja**. Így **minden nyugta pontosan megmondja, melyik küldésre felel**, tehát
+// **minden nyugtából lehet mintát venni** — az újraküldöttekből is.
+//
+// ⭐ ÉS EZ NEM KERÜL BÁJTOT A SZOKÁSOS ESETBEN (6. szabály): az **első** küldésen NINCS `k`
+// mező, és a `k` nélküli nyugta épp azt jelenti, hogy *az elsőre felel*. A többletbájt csak
+// **újraküldéskor** jelenik meg — vagyis ott, ahol amúgy is baj van. *Egy „nincs újdonság"
+// kör továbbra is 334 bájt.*
+//
+// ⚠️⚠️ MIÉRT KELLETT EZ — MÉRÉSBŐL (2026-09-14): a kapcsolat **első** darabjánál az ablak
+// még üres, tehát a gyors újraküldésnek nincs mire támaszkodnia; ott *megint stop-and-wait
+// van*, vak 1000 ms-os kezdőértékkel. 50% veszteségnél ez felduplázódva elnyelte a teljes
+// 30 mp-es keretet: **a csere 39 másodpercig tartott, ötből kétszer feladta.** ⭐ Pontos
+// mintákkal az első újraküldés nyugtája **azonnal helyrerakja** a becslést.
+//
+// ⭐⭐ ÉS A MUNKAMEGOSZTÁS, AMI EZT BIZTONSÁGOSSÁ TESZI: az óra dolga **egyetlen darab**
+// pótlása; a **torlódás** válasza az ablak mérete lesz (D67 / 4. darab). Ezért a visszalépés
+// **darabonkénti**, nem kapcsolat-szintű: egy beragadt darab nem fojtja meg a többit.
+// ⛔ Ez az ablak nélkül nem lett volna igaz — ezért is bukott meg az első nekifutás.
+//
+// ⚠️ NEM állapot-befolyásoló állandók (D66): ha nálam más az RTO, **ugyanazt az állapotot
+// számoljuk** — csak máskor küldök újra.
+
+// ⭐⭐ AMÍG EGYETLEN MINTÁNK SINCS. ⚠️ Az RFC 6298 itt 1 másodpercet mond — a TCP-nek
+// megteheti, mert ő a **kézfogásból** (SYN/SYN-ACK) már kap egy mintát, MIELŐTT adatot
+// küldene. A mi vonalunknak nincs külön kézfogása: az első darab **maga a kézfogás**.
+//
+// ⛔ És a 2026-09-14-i mérés megmutatta, mit jelent ez: 1000 ms-ból indulva, veszteség
+// mellett duplázva a **kapcsolat első darabja** elnyelte a teljes keretet — pedig a vonal
+// valódi oda-vissza ideje 1 ms volt. *Egy vak tipp ezerszeres tévedése minden további
+// duplázásba beleszorzódik.*
+//
+// ⭐ Ezért az első érték **próbálkozás, nem ígéret**: 300 ms lefedi a valódi vonalak nagy
+// részét, és aki ennél lassabb, annak **egyetlen fölösleges másolat** az ára — ⭐⭐ ami a
+// pontos mintavétel óta nem is kár: *az a másolat hozza meg a mérést hamarabb.* A rossz
+// irányú tévedés viszont **egy teljes másodperc** egy olyan cserében, ami tipikusan
+// **egyetlen oda-vissza, 334 bájt**. *Az aszimmetria egyértelmű.*
+const RTO_KEZDO = 300;
+const RTO_MIN = 100;           // alsó korlát az óra-felbontás és a téves újraküldés ellen
+const RTO_MAX = 60000;         // felső korlát: egy nagyon rossz vonalon se pörögjünk
+const SIMITAS = 0.125;         // α — a simított átlag súlya (1/8)
+const SZORAS_SULY = 0.25;      // β — az ingadozás súlya (1/4)
+
+// ⭐ A FELADÁS IDŐALAPÚ, NEM DARABSZÁM-ALAPÚ. Korábban „20 próbálkozás" volt — ⚠️ de a 16.
+// mérés szerint **soha nem is értük el**. Visszalépő újraküldésnél ráadásul a darabszám
+// semmit nem mond: 20 próbálkozás lehet 2 másodperc és fél óra is. *Az idő az, ami számít.*
+const FELADAS_IDO = 30000;
 
 // ===================================
 // ⭐⭐⭐ AZ ABLAK — több darab úton egyszerre (D67 / 3. darab, 2026-09-14)
@@ -116,6 +185,33 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   const uton = new Map();
   let lezarva = false;
 
+  // ----- ⭐ AZ ODA-VISSZA IDŐ BECSLÉSE (RFC 6298) -----
+  //
+  // `null`, amíg egyetlen TISZTA mintánk sincs — addig az `RTO_KEZDO` szól. *Nem tippelünk
+  // a vonal sebességére; megvárjuk, amíg megmondja.*
+  let srtt = null;                // simított oda-vissza idő
+  let rttvar = null;              // az ingadozása
+  let rto = RTO_KEZDO;            // ennyit vár egy ÚJ darab a nyugtára
+
+  /** Az RTO újraszámolása a becslésből — ez oldja fel a darabonkénti visszalépést is. */
+  const rtoUjraszamol = () => {
+    if (srtt === null) return;
+    // ⭐ A négyszeres szórás a ráhagyás: egy ingadozó vonalon türelmesebbek leszünk.
+    rto = Math.min(RTO_MAX, Math.max(RTO_MIN, Math.round(srtt + 4 * rttvar)));
+  };
+
+  /** Egy TISZTA minta érkezett (nem újraküldött darabról) — beépítjük. */
+  const mintaErkezett = (R) => {
+    if (srtt === null) {
+      srtt = R;
+      rttvar = R / 2;                                   // az első mintánál ez a szokás
+    } else {
+      rttvar = (1 - SZORAS_SULY) * rttvar + SZORAS_SULY * Math.abs(srtt - R);
+      srtt = (1 - SIMITAS) * srtt + SIMITAS * R;
+    }
+    rtoUjraszamol();
+  };
+
   let bajtKuldott = 0, bajtKapott = 0;
 
   // ----- A TÉTLENSÉGI ÓRA -----
@@ -168,40 +264,103 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
 
   /** Feladjuk ezt a darabot — de HIBAKÉNT, nem csendben. A néma nem-esemény a legrosszabb. */
   const feladas = (sorszam) => {
-    for (const t of uton.values()) clearInterval(t.ora);
+    for (const t of uton.values()) clearTimeout(t.ora);
     uton.clear();
-    jelez('error', new Error('a másik fél nem nyugtázta a ' + sorszam
-      + '. darabot (' + UJRAKULDES_KORLAT + ' próbálkozás után)'));
+    jelez('error', new Error('a másik fél nem nyugtázta a ' + sorszam + '. darabot '
+      + Math.round(FELADAS_IDO / 1000) + ' másodperc alatt'));
     uritestJelez(false);              // aki a kiürítésre vár, itt is kapjon választ
   };
 
-  /** Egy darab (újra)küldése — és az órája felhúzása. */
+  /**
+   * Egy darab órájának felhúzása a MOSTANI `rto`-val.
+   *
+   * ⚠️ `setTimeout`, nem `setInterval` — mert az idő minden körben MÁS lehet: a becslés
+   * finomodik, és időtúllépésnél **duplázódik**. *Egy állandó ütemű óra nem tudna erről.*
+   */
+  const orat_felhuz = (sorszam, tetel) => {
+    tetel.ora = setTimeout(() => {
+      tetel.ora = null;
+      if (lezarva || !uton.has(sorszam)) return;
+
+      // ⛔ IDŐALAPÚ FELADÁS — de HIBAKÉNT, nem csendben.
+      if (Date.now() - tetel.kezdet > FELADAS_IDO) return feladas(sorszam);
+
+      // ⭐⭐⭐ AZ ÓRÁRA CSAK A LEGRÉGEBBI DARAB MEGY ÚJRA — ahogy a TCP is teszi.
+      //
+      // ⛔⛔ Ez is mérésből derült ki (2026-09-14): egy 400 ms-os vonalon a 300 ms-os
+      // kezdőértékkel az EGÉSZ ablak egyszerre járt le, és **mind a kilenc darab
+      // fölöslegesen ment ki újra** (×1,9 pazarlás). *Kilenc szonda ugyanarra a kérdésre.*
+      //
+      // ⭐ A MUNKAMEGOSZTÁS: az óra dolga az **út megszondázása** — ahhoz egyetlen darab
+      // elég, és a nyugtája **mintát is hoz**, ami az egész ablakot helyrerakja. Egy-egy
+      // darab elvesztét nem az óra veszi észre, hanem a **gyors újraküldés** (a nála
+      // későbbiek nyugtái). *Két jel, két feladat — és egyik sem csinálja a másikét.*
+      // ⚠️⚠️ ÉS EZ CSAK AKKOR ÁLL, AMÍG NINCS MÉRÉSÜNK — ezt is egy mérés igazította ki.
+      // Egy **vak** óra (`srtt === null`) puszta tipp: abból egy szonda elég, kilenc nem.
+      // Egy **mért** óra viszont már bizonyíték ARRÓL a darabról, tehát a saját darabját
+      // jogosan küldi újra. *Rászűkítés nélkül 15% veszteségnél 430 ms-ról 8177 ms-ra
+      // romlott a fájl-átvitel: a tail-darabok a legrégebbire vártak.*
+      if (srtt === null) {
+        let legregebbi = Infinity;
+        for (const sz of uton.keys()) if (sz < legregebbi) legregebbi = sz;
+        if (sorszam !== legregebbi) return orat_felhuz(sorszam, tetel);
+      }
+
+      // ⭐⭐ VISSZALÉPŐ DUPLÁZÁS, DARABONKÉNT. Ha egy darab elveszett, ennél a darabnál
+      // türelmesebbek leszünk — de a többit nem büntetjük vele. *A torlódás válasza az
+      // ablak dolga lesz (4. darab), nem az óráé.*
+      // ⛔⛔ ÉS A VISSZALÉPÉST A FELADÁSI KERET KORLÁTOZZA — mert különben a két szabály
+      // ELLENTMOND egymásnak (mérve, 2026-09-14): 50% veszteségnél a visszalépés 3,2
+      // másodperces várakozásokig nőtt, miközben a keretből már alig maradt. *Egy olyan
+      // várakozás, ami után nem fér bele újabb próbálkozás, nem türelem, hanem **garantált
+      // bukás türelemnek öltözve**.* ⭐ Ezért sosem várunk többet, mint a maradék keret
+      // negyede: így a keret mindig legalább néhány próbálkozást jelent.
+      const maradek = FELADAS_IDO - (Date.now() - tetel.kezdet);
+      tetel.rto = Math.min(RTO_MAX, tetel.rto * 2, Math.max(RTO_MIN, maradek / 4));
+
+      darabotKuld(sorszam, tetel);
+    }, tetel.rto);
+  };
+
+  /**
+   * Egy darab (újra)küldése — és az órája felhúzása.
+   *
+   * ⭐ MINDEN KÜLDÉS IDEJÉT ELTESSZÜK (`kuldesek`), és az újraküldés **sorszámot** visz
+   * magával (`k`). A nyugta ezt visszamondja, tehát pontosan tudni fogjuk, melyik küldésre
+   * felel. ⚠️ Az ELSŐ küldés szándékosan `k` NÉLKÜL megy — így a szokásos eset **egyetlen
+   * bájttal sem nő** (6. szabály), és a `k` nélküli nyugta épp azt jelenti: „az elsőre".
+   */
   const darabotKuld = (sorszam, tetel) => {
-    csomagot({ sz: sorszam, a: tetel.szoveg });
+    const hanyadik = tetel.kuldesek.length;      // 0 = az első küldés
+    tetel.kuldesek.push(Date.now());
+    csomagot(hanyadik === 0
+      ? { sz: sorszam, a: tetel.szoveg }
+      : { sz: sorszam, a: tetel.szoveg, k: hanyadik });
+
     // ⭐ A gyors újraküldés számlálója nullázódik: innen új bizonyíték kell.
     tetel.magasabbNyugtak = 0;
+    if (tetel.ora) clearTimeout(tetel.ora);
+    orat_felhuz(sorszam, tetel);
   };
 
   /**
    * ⭐ ANNYI DARABOT INDÍTUNK, AMENNYI AZ ABLAKBA FÉR.
    *
-   * ⚠️ Minden darabnak SAJÁT órája van. *Egy közös söprő óra is menne, de akkor a
-   * legfrissebb darab is a legrégebbi ütemére várna — és a mérés úgyis azt mondta, hogy a
-   * pontos idő itt számít.*
+   * ⚠️ Minden darabnak SAJÁT órája van, és saját visszalépése — így egy beragadt darab
+   * nem fojtja meg a többit. *A kapcsolat-szintű visszalépés épp ezt tette, és emiatt
+   * bukott meg az első nekifutás (lásd a fenti szakaszt).*
    */
   const kovetkezotKuld = () => {
     while (!lezarva && sor.length && uton.size < ABLAK) {
       const sorszam = kovetkezoSorszam++;
-      const tetel = { szoveg: sor.shift(), ismetles: 0, magasabbNyugtak: 0, ora: null };
+      const most = Date.now();
+      const tetel = {
+        szoveg: sor.shift(), magasabbNyugtak: 0, ora: null,
+        kuldesek: [],          // ⭐ minden küldés ideje — ebből lesz a PONTOS minta
+        kezdet: most,          // innen számít a feladási határidő
+        rto                    // ⭐ a kapcsolat MOSTANI becslésével indul
+      };
       uton.set(sorszam, tetel);
-
-      tetel.ora = setInterval(() => {
-        if (lezarva || !uton.has(sorszam)) return;
-        tetel.ismetles++;
-        if (tetel.ismetles > UJRAKULDES_KORLAT) return feladas(sorszam);
-        darabotKuld(sorszam, tetel);
-      }, UJRAKULDES_KOZ);
-
       darabotKuld(sorszam, tetel);
     }
   };
@@ -240,9 +399,33 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     if (Number.isInteger(uzenet.ny)) {
       const tetel = uton.get(uzenet.ny);
       if (tetel) {
-        clearInterval(tetel.ora);
+        clearTimeout(tetel.ora);
         uton.delete(uzenet.ny);
-        // ⭐ Előbb a gyors-jel: a NÁLA korábbiak most kaptak egy bizonyítékot a vesztésre.
+
+        // ⭐⭐ ITT SZÜLETIK A MÉRÉS — és MINDEN nyugtából, mert tudjuk, melyikre felel.
+        //
+        // ⭐ A nyugta visszamondja a küldés sorszámát (`k`); ha nincs benne, az az ELSŐ
+        // küldésre felel. Így nincs kétértelműség, tehát Karn szabályára sincs szükség:
+        // az újraküldött darab nyugtája **ugyanolyan jó minta**, mint a többi.
+        const hanyadik = Number.isInteger(uzenet.k) ? uzenet.k : 0;
+        const mikor = tetel.kuldesek[hanyadik];
+        if (mikor !== undefined) mintaErkezett(Date.now() - mikor);
+        // ⭐⭐⭐ A NYUGTA BIZONYÍTJA, HOGY AZ ÚT ÉL — tehát a többiek visszalépését FELOLDJUK.
+        //
+        // ⛔⛔ Ezt is mérés kényszerítette ki (2026-09-14): a beragadt darab visszalépése
+        // darabonként duplázódott, és **soha nem oldódott fel**, pedig közben más darabok
+        // nyugtái érkeztek. 50% veszteségnél a csere így **34 másodpercig** tartott.
+        //
+        // ⭐ A visszalépés célja a **halott vagy torlódott** út kímélése. Ha épp most jutott
+        // át forgalom, ez a premissza **hamis** — nincs mit kímélni. *A TCP is a nyugtánál
+        // állítja vissza az óráját; nálunk csak darabonként kell megtenni.*
+        for (const [sz, t] of uton) {
+          if (t.rto <= rto) continue;
+          t.rto = rto;
+          if (t.ora) { clearTimeout(t.ora); orat_felhuz(sz, t); }
+        }
+
+        // ⭐ Aztán a gyors-jel: a NÁLA korábbiak most kaptak egy bizonyítékot a vesztésre.
         gyorsUjrakuldes(uzenet.ny);
         kovetkezotKuld();
         // Ha se úton, se sorban nincs több — mindent kiírtunk, a lezárás mehet.
@@ -254,7 +437,12 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     if (!Number.isInteger(uzenet.sz) || typeof uzenet.a !== 'string') return;
 
     // ⭐ ISMÉTLÉS: nyugtázzuk — a nyugta is elveszhetett —, de nem tároljuk újra.
-    if (uzenet.sz < vartSorszam) { csomagot({ ny: uzenet.sz }); return; }
+    // ⭐ A nyugta VISSZAMONDJA a küldés sorszámát — ettől lesz a minta pontos a túloldalon.
+    const nyugtaz = () => csomagot(Number.isInteger(uzenet.k)
+      ? { ny: uzenet.sz, k: uzenet.k }
+      : { ny: uzenet.sz });
+
+    if (uzenet.sz < vartSorszam) { nyugtaz(); return; }
 
     // ⛔⛔ AZ ABLAKON TÚLIT NEM FOGADJUK EL, ÉS NEM IS NYUGTÁZZUK (2026-09-14).
     //
@@ -269,7 +457,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     if (uzenet.sz >= vartSorszam + ABLAK) return;
 
     varakozo.set(uzenet.sz, uzenet.a);
-    csomagot({ ny: uzenet.sz });
+    nyugtaz();
 
     // Ami sorrendben megvan, azt továbbadjuk a párbeszédnek.
     while (varakozo.has(vartSorszam)) {
@@ -335,7 +523,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     end() {
       lezarva = true;
       // ⭐ MINDEN úton lévő darab óráját megállítjuk — ablakkal ezekből több is lehet.
-      for (const tetel of uton.values()) clearInterval(tetel.ora);
+      for (const tetel of uton.values()) clearTimeout(tetel.ora);
       uton.clear();
       oratMegallit();
       uritestJelez(false);             // ha valaki mégis a kiürítésre várna, ne ragadjon be

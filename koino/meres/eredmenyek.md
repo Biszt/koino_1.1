@@ -1817,3 +1817,75 @@ A mérése viszont megmarad: **így tudjuk, hogy a sorrend számít.**
 valódi hálózatot — így pontosan megszámolható, hány darab ment ki nyugta előtt; valódi
 hálózaton ezt csak találgatni lehetne. ⭐ **Rontás-próbával igazolva:** `ABLAK = 1`-re
 állítva (a régi stop-and-wait) az első próba **azonnal bukik**.
+
+---
+
+## 21. ⭐⭐ A MÉRT ÚJRAKÜLDÉSI IDŐ — az ablak tetején (2026-09-14, D67 / 1. darab)
+
+*A **D67** 1. darabja, **másodszorra**. Először az ablak ELŐTT próbáltuk (20. mérés), és a
+mérés megbuktatta; most az ablak tetején épült meg — és most már fizet.*
+
+### Az eredmény
+
+```
+  vonal                    stop-and-wait    ablak      ablak + mért RTT
+  ─────────────────────────────────────────────────────────────────────
+  +1 ms                        24 KB/s     460 KB/s        454 KB/s
+  1 ms, 1% vesztés             20 KB/s     370 KB/s        582 KB/s
+  1 ms, 15% vesztés             4 KB/s      53 KB/s         78 KB/s
+  400 ms oda-vissza (8 KB)      1 KB/s      10 KB/s         10 KB/s   (×3,0 → ×1,9)
+  400 ms oda-vissza (64 KB)        ~2 KB/s      —           22 KB/s   (×1,4)
+
+  csere 4 eseménnyel, ötször futtatva (átlag):
+   10% vesztés                 875 ms      870 ms           51 ms
+   30% vesztés                4173 ms     2552 ms         1028 ms
+   50% vesztés               10403 ms     4235 ms        25127 ms
+```
+
+### ⭐ Amit a darab hozott
+
+1. ⭐⭐⭐ **PONTOS MINTÁK KARN HELYETT.** A klasszikus gond, hogy nem tudni, melyik küldésre
+   felel a nyugta — a régi válasz erre Karn szabálya (*újraküldöttből ne mérj*). ⭐ Mi
+   **megszüntettük a kétértelműséget**, ahogy a QUIC: minden újraküldés **sorszámot** visz
+   (`k`), a nyugta **visszamondja**, tehát **minden nyugta pontos minta**. ⭐ **És ez nem
+   kerül bájtot a szokásos esetben** (6. szabály): az **első** küldésen nincs `k`, és a `k`
+   nélküli nyugta épp azt jelenti, hogy az elsőre felel. *A többletbájt csak ott van, ahol
+   amúgy is baj van.*
+2. ⭐ **A visszalépést a nyugta feloldja** — ha most jutott át forgalom, az út él, nincs mit
+   kímélni. *A TCP is a nyugtánál állítja vissza az óráját.*
+3. ⭐ **A vak óra csak a legrégebbi darabot szondázza.** Mérés nélkül minden óra puszta tipp;
+   abból **egy szonda elég, kilenc nem** (×1,9 pazarlás volt belőle). ⚠️ Mért óra esetén ez
+   már nem áll — ott az óra **bizonyíték** az adott darabról —, és a rászűkítés nélkül 15%
+   veszteségnél 430 → **8177 ms**-ra romlott a fájl-átvitel. *Ugyanaz a szabály két
+   helyzetben ellentétesen helyes.*
+4. ⛔ **A kezdőérték 1000 → 300 ms.** Az RFC 1 másodpercet mond — a TCP megteheti, mert a
+   **kézfogásból** már van mintája, mielőtt adatot küldene. A mi vonalunknak nincs külön
+   kézfogása: **az első darab maga a kézfogás**. *Egy vak tipp ezerszeres tévedése minden
+   további duplázásba beleszorzódik.*
+5. ⛔⛔ **ÉS EGY ELVI ELLENTMONDÁS, AMIT A MÉRÉS MUTATOTT MEG:** a visszalépő óra 3,2
+   másodperces várakozásokig nőtt, miközben a 30 mp-es feladási keretből alig maradt. *Egy
+   olyan várakozás, ami után nem fér bele újabb próbálkozás, nem türelem, hanem **garantált
+   bukás türelemnek öltözve**.* ✅ Mostantól az RTO sosem több a **maradék keret negyedénél**.
+
+### ⛔ ÉS AMIT NYÍLTAN KI KELL MONDANI: 50% VESZTESÉGNÉL LASSABB, MINT A RÉGI
+
+**10 403 → 25 127 ms.** ⚠️ Bukás nincs, de ez **2,4-szeres romlás** egy ponton, miközben
+0–30% között 4–17-szeres a javulás.
+
+⭐ **Az ok nem hiba, hanem a viselkedés ára:** a régi kód **soha nem lépett vissza** — 300
+ezredmásodpercenként hajtotta a vonalat, akármi volt. Ez gyorsabb egy véletlenszerűen
+vesztő vonalon, és pontosan az a viselkedés, ami egy **torlódott** vonalon a bajt okozza.
+⛔ 50% csomagvesztés = **75% oda-vissza bukás**: ez nem egészséges vonal.
+
+⏸️ **És van szerkezeti ok remélni, hogy javul:** ma az óra **és** az ablak is a torlódásra
+reagál (visszalépéssel), vagyis **átfedik egymást**. A **D67 / 4. darabja** (veszteségre
+feleződő ablak) veszi át a torlódás-választ — utána az óra megengedheti magának, hogy
+kevésbé legyen türelmes. *Ez nem ígéret, hanem a következő mérés kérdése.*
+
+### ⚠️ Ami nyitva marad
+
+- **A lassú vonal indulási lökete:** 8 KB-nál ×1,9, de 64 KB-nál már **×1,4** — *a löket
+  elolvad, ha van mit átvinni.* ⏸️ Teljesen a kézfogásból nyert kezdő RTT szüntetné meg (a
+  pajzsfúrás **már megmérte**: a terepmérésen 76 ms).
+- **A ×1,5–1,8 pazarlás veszteség és szórás mellett** — a gyors újraküldés néha fölöslegesen
+  lép. ⏸️ A 4. darab után újramérendő.
