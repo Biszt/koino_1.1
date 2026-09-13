@@ -2041,41 +2041,51 @@ try {
             + ' mögött is működhet (2026-08-29-i mérés).' + SZIN.vege);
         }
 
-        // ----- A KÜLSŐ IPv4: ezt kell átadni a másik félnek -----
-        try {
-          // ⚠️ UGYANARRÓL A HELYI PORTRÓL mérjünk, amiről fúrni fogunk — különben a
-          // leépezés másik porthoz tartozna, és a válasz félrevezetne.
-          // ⭐ Ütközés nincs: ez UDP, a fúrás TCP — a router külön tartja számon.
-          const kulso = await kulsoCim(helyiPort);
-          if (kulso?.cim) {
-            kiir(SZIN.jo + 'A te külső IPv4 címed: ' + kulso.cim + SZIN.vege);
-            kiir(SZIN.halvany + '  → EZT mondd meg a másiknak; ő ezt írja be címnek.'
-              + SZIN.vege);
-            // ⛔⛔ A LEGFONTOSABB FIGYELMEZTETÉS A MÉRÉSHEZ.
-            if (kulso.port && kulso.port !== helyiPort) {
-              kiir(SZIN.nem + '⚠⚠ A routered ÁTÍRTA a portot (' + helyiPort + ' → '
-                + kulso.port + ') — UDP-n legalábbis.' + SZIN.vege);
-              kiir(SZIN.halvany + '  Ha TCP-n is átírja, a másik fél SYN-je a ' + port
-                + '-esre érkezik, ahol nincs rés — és a fúrás ezért bukhat.' + SZIN.vege);
-              kiir(SZIN.halvany + '  ⭐ Ilyenkor a bukás NEM azt bizonyítja, hogy a TCP-fúrás'
-                + ' rossz — csak azt, hogy így nem találtunk célba.' + SZIN.vege);
-            } else if (kulso.port) {
-              kiir(SZIN.jo + '  ⭐ A routered MEGTARTJA a portot (' + kulso.port
-                + ') — ez a fúrásnak jó jel.' + SZIN.vege);
-            }
-          }
-        } catch (hiba) {
-          // ⚠️ SEGÉDESZKÖZ, NEM ELŐFELTÉTEL (2. szabály): ha nem megy, a fúrás ugyanúgy
-          // indul — csak a címet kell máshonnan megtudni.
-          kiir(SZIN.halvany + 'A külső címet nem sikerült megmérni (' + hiba.message
-            + ') — a fúrás ettől még megy.' + SZIN.vege);
-        }
+        // ----- ⛔ A KÜLSŐ CÍMET INNEN ELVETTÜK (2026-09-13, a 18. mérés után) -----
+        //
+        // Itt korábban egy **UDP**-s mérés állt, ami kiírta a külső portot. ⛔⛔ Ez a
+        // TCP-fúrásnál **félrevezető volt**: a router a két szállításnak KÜLÖN leképezést
+        // ad, tehát a UDP-szám nem az, amire a társ SYN-je érkezne. Mérve, egy futáson
+        // belül: UDP **39471**, TCP **63495** — *két szám ugyanarra a kérdésre, és csak az
+        // egyik igaz.*
+        //
+        // ⭐ Mostantól a mérést **maga a fúró** végzi, TCP-n, ugyanarról a foglalatról,
+        // amivel fúrni fog (`kulsoCimTcp`), és a `SAJAT-KULSO-CIM` jelzésben adja tovább.
+        // *Ahol egy szám mást mond, mint amit teszünk, ott előbb-utóbb valaki a számot
+        // hiszi el — ezért nem hagytuk itt „tájékoztatásul".*
         kiir();
 
         let elozoOk = null;
         const furas = await tcpPajzsfuras(helyiPort, cim, port, {
           koz: mp * 1000,
           utana: (e) => {
+            // ===== ⭐⭐ A SAJÁT KÜLSŐ TCP-PORT — a 18. mérés következménye =====
+            //
+            // ⛔ EZ AZ A SZÁM, AMI A 17. MÉRÉSNÉL HIÁNYZOTT. A routered átírhatja a portot,
+            // és a másik fél addig hiába kopog a 7373-ra — ott nincs rés. ⭐ A 18. mérés
+            // szerint a leképezés **célfüggetlen**, tehát ez a szám a TÁRSRA IS érvényes.
+            if (e.mi === 'SAJAT-KULSO-CIM') {
+              kiir(SZIN.jo + '⭐ KÍVÜLRŐL ÍGY LÁTSZOM TCP-N: ' + e.cim + ':' + e.port
+                + SZIN.vege + SZIN.halvany + '   (a helyi ' + e.helyiPort + '-esről, '
+                + e.tukor + ' szerint)' + SZIN.vege);
+              kiir('   ' + SZIN.vastag + 'EZT MONDD BE A MÁSIKNAK: node koino/koino.js '
+                + 'pajzsfuro ' + e.cim + ' ' + e.port + ' tcp' + SZIN.vege);
+              if (e.port !== e.helyiPort) {
+                kiir(SZIN.halvany + '   ⚠ A router átírta a portot (' + e.helyiPort + ' → '
+                  + e.port + ') — ezért KELL bemondani.' + SZIN.vege);
+              }
+              kiir();
+            }
+            // ⚠️ A HIÁNYT IS KIMONDJUK (D19) — különben csendben fúrnánk vakon, ahogy
+            // 2026-09-13-án négy órán át tettük.
+            if (e.mi === 'SAJAT-KULSO-CIM-NINCS') {
+              kiir(SZIN.nem + '⚠ A külső TCP-portomat nem sikerült megmérni'
+                + SZIN.vege + SZIN.halvany + ' (egyik tükör sem felelt).' + SZIN.vege);
+              kiir(SZIN.halvany + '   A fúrás ettől még megy, de ha a routered átírja a'
+                + ' portot, a másik fél nem talál célba.' + SZIN.vege);
+              kiir();
+            }
+
             // ⚠️ MINDEN próbálkozás látszik, nem csak a siker (Csaba kérése).
             if (e.mi === 'PROBALOK') {
               kiir(SZIN.halvany + '  ' + ora() + ' → ' + e.hanyadik + '. próbálkozás…'

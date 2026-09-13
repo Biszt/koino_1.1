@@ -85,16 +85,46 @@ export function stunValaszE(adat) {
   return adat.length >= 20 && adat.readUInt32BE(4) === SUTI;
 }
 
-/** Kiolvassa a leképezett címet egy STUN-válaszból (null, ha nincs benne). */
-function stunbolCim(v) {
+/**
+ * Kiolvassa a leképezett címet egy STUN-válaszból (null, ha nincs benne).
+ *
+ * ⛔⛔ A CSALÁD-BÁJTOT MEG KELL NÉZNI — és ezt a 18. mérés tanította meg (2026-09-13).
+ *
+ * Ez a függvény korábban **vakon négy bájtot olvasott IPv4-ként**. Amikor a tükör
+ * **IPv6-on** felelt, ebből `32.1.76.77` lett — ami valójában a saját `2001:4c4d…` címem
+ * **első négy bájtja**. *A mérés nem hazudott volna nagyobbat, ha kitalálja a számot.*
+ *
+ * ⚠️ A `kulsoCim` ma `udp4`-en kérdez, tehát ott a hiba nem jött elő — de a TCP-tükör már
+ * IPv6-on is felelhet, és egy kitalált cím rosszabb, mint a hiány (D19).
+ *
+ * ⚠️ **Kifelé adva a próba kedvéért** — ez a hiba érveléssel nem volt megfogható, csak
+ * bájtokkal; a próba tehát kézzel összerakott STUN-válaszokat olvastat vele.
+ *
+ * @returns {{cim: string, port: number, csalad: 4|6}|null}
+ */
+export function stunbolCim(v) {
   let p = 20;
   while (p + 4 <= v.length) {
     const tipus = v.readUInt16BE(p), hossz = v.readUInt16BE(p + 2);
     if (tipus === 0x0020) {                  // XOR-MAPPED-ADDRESS
+      const csalad = v[p + 5];               // 0x01 = IPv4, 0x02 = IPv6
       const port = v.readUInt16BE(p + 6) ^ 0x2112;
+
+      if (csalad === 0x02) {
+        // ⚠️ Az IPv6 első 4 bájtja a sütivel, a maradék 12 a TRANZAKCIÓ-AZONOSÍTÓVAL
+        // van XOR-olva (RFC 5389) — az a válasz 8..19. bájtján áll.
+        const b = [];
+        for (let i = 0; i < 16; i++) {
+          b.push(v[p + 8 + i] ^ (i < 4 ? ((SUTI >> (24 - 8 * i)) & 0xff) : v[8 + (i - 4)]));
+        }
+        const cim = Array.from({ length: 8 }, (_, i) =>
+          ((b[i * 2] << 8) | b[i * 2 + 1]).toString(16)).join(':');
+        return { cim, port, csalad: 6 };
+      }
+
       const cim = [0, 1, 2, 3]
         .map((i) => v[p + 8 + i] ^ ((SUTI >> (24 - 8 * i)) & 0xff)).join('.');
-      return { cim, port };
+      return { cim, port, csalad: 4 };
     }
     p += 4 + hossz + ((4 - (hossz % 4)) % 4);
   }
@@ -180,6 +210,110 @@ export async function kulsoCim(helyiPort, szerver = 'stun.l.google.com', szerver
   });
 }
 
+// ===================================
+// ⭐⭐ A KÜLSŐ CÍM **TCP-N** — a 18. mérés következménye (2026-09-13)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELLETT EZ, ÉS MIÉRT NEM VOLT MEG EDDIG? A 17. mérés (terepmérés, két valódi
+// hálózat) a TCP-fúrással kezdődött, és **négy órán át nem ment**. Az ok: a fejlesztő
+// routere az IPv4-portot **átírja** (7373 → 63539), a másik fél viszont a `7373`-ra
+// kopogott, ahol nincs rés. ⭐ A UDP-fúró ezt **megméri a saját fúró-foglalatáról** — a
+// TCP-fúrónak nem volt ilyen mérése, mert a tükör `udp4`-re van drótozva.
+//
+// ⭐⭐ ÉS A 18. MÉRÉS KIMONDTA, HOGY ENNEK VAN ÉRTELME: a TCP-leképezés **célfüggetlen**
+// (három különböző cég, három különböző IP → ugyanaz a külső port). Vagyis amit a tükör
+// mond, az **egy harmadik félre is érvényes** — tehát bemondható. *Ha cél-függő lett volna,
+// ez a függvény hazug számot adna, és meg sem lett volna szabad írni.*
+//
+// ⚠️ SEGÉDESZKÖZ, NEM ELŐFELTÉTEL (2. szabály): a tükrök **paraméterek**, több van belőlük,
+// és ha egyik sem felel, a fúrás **ugyanúgy elindul** — csak nem tudjuk bemondani a portot.
+// Bizalom nem jár velük (3. szabály): egy portszámot mondanak, nem igazságot.
+
+/**
+ * ⚠️ TCP-N KEVÉS NYILVÁNOS TÜKÖR FELEL. A 18. mérés tizenhétből **hármat** talált —
+ * ezek azok. Sorrendben próbáljuk, az első beszédes nyer.
+ */
+export const TCP_TUKROK = [
+  { nev: 'nextcloud', hoszt: 'stun.nextcloud.com', port: 443 },
+  { nev: 'antisip',   hoszt: 'stun.antisip.com',   port: 3478 },
+  { nev: 'dus',       hoszt: 'stun.dus.net',       port: 3478 }
+];
+
+/**
+ * Megkérdezi EGY tükörtől TCP-n, milyen külső címen és porton látszunk.
+ *
+ * ⛔⛔ A KAPCSOLATOT `resetAndDestroy()`-JAL ZÁRJUK, NEM `end()`-DEL — és ez nem stílus.
+ * A 18. mérésnél egy szabályosan lezárt (vagy válasz nélkül elakadt) kapcsolat
+ * **fogva tartotta a rögzített helyi portot**, és a következő kísérlet `EADDRINUSE`-szal
+ * bukott. *Itt ez végzetes lenne: a fúrásnak KELL a 7373-as.*
+ */
+function tukorKerdesTcp(helyiPort, tukor, idokorlat) {
+  return new Promise((teljesites) => {
+    let bejovo = Buffer.alloc(0);
+    let kesz = false;
+    let kapcsolat;
+
+    const vege = (eredmeny) => {
+      if (kesz) return;
+      kesz = true;
+      clearTimeout(ora);
+      try { kapcsolat.resetAndDestroy(); } catch { /* már zárva */ }
+      teljesites(eredmeny);
+    };
+
+    try {
+      // ⛔ `family: 4` — a NAT-ot akarjuk megkérdezni. IPv6-on nincs port-átírás, tehát
+      // egy IPv6-válasz szép lenne és semmit nem érne (18. mérés).
+      kapcsolat = connect({ host: tukor.hoszt, port: tukor.port, localPort: helyiPort,
+        family: 4 });
+    } catch (hiba) {
+      return teljesites(null);
+    }
+
+    const ora = setTimeout(() => vege(null), idokorlat);
+
+    kapcsolat.on('connect', () => kapcsolat.write(stunKeres()));
+    kapcsolat.on('data', (darab) => {
+      bejovo = Buffer.concat([bejovo, darab]);
+      if (bejovo.length < 20 || bejovo.readUInt32BE(4) !== SUTI) return;
+      const hossz = bejovo.readUInt16BE(2);
+      if (bejovo.length < 20 + hossz) return;          // még nem teljes
+      const cim = stunbolCim(bejovo.subarray(0, 20 + hossz));
+      vege(cim && cim.csalad === 4 ? { ...cim, tukor: tukor.nev } : null);
+    });
+    kapcsolat.on('error', () => vege(null));
+    kapcsolat.on('close', () => vege(null));
+  });
+}
+
+/**
+ * „Milyen külső TCP-porton látszom?" — a MEGADOTT helyi portról.
+ *
+ * ⚠️ A tükröket SORBAN kérdezzük, nem párhuzamosan: mindegyik ugyanazt a rögzített helyi
+ * portot használná, és ütköznének (`EADDRINUSE`).
+ *
+ * @param {number} helyiPort - erről a portról kérdezünk (a válasz csak erre érvényes)
+ * @param {Array} [tukrok]
+ * @param {number} [idokorlat]
+ * @returns {Promise<{cim: string, port: number, csalad: 4, tukor: string}|null>}
+ */
+export async function kulsoCimTcp(helyiPort, tukrok = TCP_TUKROK, idokorlat = 5000) {
+  console.log('kulsoCimTcp - KEZDÉS', { helyiPort });
+
+  for (const tukor of tukrok) {
+    const valasz = await tukorKerdesTcp(helyiPort, tukor, idokorlat);
+    if (valasz) {
+      console.log('kulsoCimTcp - VÉGE', valasz);
+      return valasz;
+    }
+    // ⚠️ Hagyjuk elengedni a portot, mielőtt a következő tükröt kérdezzük.
+    await new Promise((kesz) => setTimeout(kesz, 300));
+  }
+
+  console.log('kulsoCimTcp - VÉGE (egyik tükör sem felelt)');
+  return null;
+}
+
 const KOPOGAS_KOZ = 1000;      // ennyi ezredmásodpercenként kopogunk
 const IDOKORLAT = 60000;       // eddig próbálkozunk (0 = vég nélkül, amíg le nem állítják)
 
@@ -220,6 +354,30 @@ export async function tcpPajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}
   const probaIdo = beallitas.probaIdo ?? Math.max(2000, koz - 2000);
   const maxProba = beallitas.maxProba ?? Infinity;   // a próbák miatt: ne fusson örökké
   const jelez = beallitas.utana ?? (() => {});
+
+  // ===== ⭐⭐ ELŐSZÖR MEGKÉRDEZZÜK A SAJÁT KÜLSŐ PORTUNKAT (18. mérés) =====
+  //
+  // ⛔⛔ ÉS EZ A KOPOGÁS ELŐTT VAN, NEM KÖZBEN — mérésből: a rögzített helyi portot
+  // egyszerre csak egy kapcsolat foghatja. Ha fúrás közben kérdeznénk, a tükör-kapcsolat
+  // `EADDRINUSE`-szal bukna, vagy ami rosszabb, elvenné a portot a fúrás elől.
+  //
+  // ⚠️ IPv6-nál KIHAGYJUK: ott nincs NAT, tehát a port nem íródik át — a kérdésnek nincs
+  // értelme, és csak időt venne el. *(A `tarsCim`-ben lévő kettőspont árulja el.)*
+  //
+  // ⚠️ HA NEM FELEL SENKI, A FÚRÁS UGYANÚGY ELINDUL (2. szabály) — csak nem tudjuk
+  // bemondani a portot, és ezt ki is mondjuk (D19: a hiány nem hallgatás).
+  const ipv6Cel = typeof tarsCim === 'string' && tarsCim.includes(':');
+  if (!ipv6Cel && beallitas.kulsoCimKell !== false) {
+    const enyem = await kulsoCimTcp(sajatPort, beallitas.tukrok ?? TCP_TUKROK);
+    if (enyem) {
+      jelez({ mi: 'SAJAT-KULSO-CIM', cim: enyem.cim, port: enyem.port, tukor: enyem.tukor,
+        helyiPort: sajatPort });
+    } else {
+      jelez({ mi: 'SAJAT-KULSO-CIM-NINCS' });
+    }
+    // ⚠️ Hagyjuk teljesen elengedni a portot, mielőtt fúrni kezdünk.
+    await new Promise((kesz) => setTimeout(kesz, 300));
+  }
 
   let probak = 0;
 

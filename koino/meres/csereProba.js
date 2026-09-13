@@ -20,7 +20,7 @@ import {
 } from '../js/csere/csere.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
-import { pajzsfuras, tcpPajzsfuras } from '../js/csere/pajzsfuro.js';
+import { pajzsfuras, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
@@ -1384,6 +1384,63 @@ proba('⭐ A RENDES CSERE VÁLTOZATLAN — a szelet-kérés nem törte el', asyn
 
   await csereDroton(masik, egyik);
   return (await koinoEsemenyei(masik, KOINO)).length === 4;
+});
+
+// ===================================
+// ⛔⛔ A STUN-VÁLASZ OLVASÁSA — a 18. mérés által talált hiba őre (2026-09-13)
+// ===================================
+//
+// A `stunbolCim` korábban **vakon négy bájtot olvasott IPv4-ként**, a család-bájt nélkül.
+// Amikor a tükör IPv6-on felelt, ebből `32.1.76.77` lett — ami valójában a saját
+// `2001:4c4d…` cím **első négy bájtja**. ⭐ Ez **érveléssel nem volt megfogható, csak
+// bájtokkal**: a válasz szép volt, a szám hihető, és teljesen hamis.
+
+/** Egy STUN-válasz bájtjai, kézzel összerakva (rögzített tranzakció-azonosítóval). */
+function stunValaszBajtok({ csalad, cim, port }) {
+  const tranz = Buffer.alloc(12);
+  for (let i = 0; i < 12; i++) tranz[i] = 0x10 + i;
+  const suti = Buffer.from([0x21, 0x12, 0xA4, 0x42]);
+
+  const cimBajtok = csalad === 4
+    ? Buffer.from(cim.split('.').map(Number))
+    : Buffer.from(cim.split(':').flatMap((c) => {
+      const n = parseInt(c, 16); return [n >> 8, n & 0xff];
+    }));
+
+  const ertek = Buffer.alloc(4 + cimBajtok.length);
+  ertek[1] = csalad === 4 ? 0x01 : 0x02;
+  ertek.writeUInt16BE(port ^ 0x2112, 2);
+  for (let i = 0; i < cimBajtok.length; i++) {
+    ertek[4 + i] = cimBajtok[i] ^ (i < 4 ? suti[i] : tranz[i - 4]);
+  }
+
+  const fej = Buffer.alloc(20);
+  fej.writeUInt16BE(0x0101, 0);                 // Binding Success Response
+  fej.writeUInt16BE(4 + ertek.length, 2);
+  fej.writeUInt32BE(0x2112A442, 4);
+  tranz.copy(fej, 8);
+
+  const attr = Buffer.alloc(4 + ertek.length);
+  attr.writeUInt16BE(0x0020, 0);                // XOR-MAPPED-ADDRESS
+  attr.writeUInt16BE(ertek.length, 2);
+  ertek.copy(attr, 4);
+
+  return Buffer.concat([fej, attr]);
+}
+
+proba('⭐ A STUN IPv4-válaszából a cím és a port pontosan visszajön', async () => {
+  const v = stunbolCim(stunValaszBajtok({ csalad: 4, cim: '31.46.250.205', port: 63495 }));
+  return v !== null && v.cim === '31.46.250.205' && v.port === 63495 && v.csalad === 4;
+});
+
+proba('⛔⛔ Az IPv6-választ NEM olvassuk IPv4-nek — a 18. mérés hibája', async () => {
+  const cim = '2001:4c4d:25c3:6300:25f5:3818:439c:d6d4';
+  const v = stunbolCim(stunValaszBajtok({ csalad: 6, cim, port: 7373 }));
+  if (v === null) return false;
+
+  // ⛔ EZ A LÉNYEG: a régi kód `32.1.76.77`-et adott — a fenti cím első négy bájtját,
+  // pontnak olvasva. Ha valaki kiveszi a család-bájt vizsgálatát, ez a próba bukik.
+  return v.csalad === 6 && v.cim === cim && v.port === 7373 && !v.cim.includes('.');
 });
 
 export async function takaritas() {
