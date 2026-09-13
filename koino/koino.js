@@ -2023,12 +2023,52 @@ try {
 
         // ⭐ NYOMOZATI ALAPADAT: van-e egyáltalán globális IPv6-unk INNEN indulva?
         // Ha nincs, akkor a fúrásnak esélye sincs, és ezt jobb rögtön tudni.
+        // ===== ⭐ MIT MONDJ A MÁSIKNAK? =====
+        //
+        // ⚠️ EZ A SZAKASZ A TEREPMÉRÉS MIATT VAN. A fúráshoz mindkét félnek tudnia kell a
+        // másik **külső** címét — és a legtöbb időt az viszi el, ha ezt a helyszínen kell
+        // kitalálni. Ezért a fúró **maga kiírja**, amit át kell adni.
         const sajatjaim = await sajatGlobalisCimek();
         if (sajatjaim.length) {
-          kiir(SZIN.halvany + 'A te globális IPv6-od: ' + sajatjaim.join(', ') + SZIN.vege);
+          kiir(SZIN.jo + 'A te globális IPv6-od: ' + sajatjaim.join(', ') + SZIN.vege);
+          kiir(SZIN.halvany + '  ⭐ Ha MINDKÉT félnek van ilyen, ezt használjátok — IPv6-on'
+            + ' nincs NAT, tehát a port sem változik.' + SZIN.vege);
         } else {
-          kiir(SZIN.nem + '⚠ NINCS globális IPv6-od ezen a hálózaton — a fúrásnak így'
-            + ' esélye sincs.' + SZIN.vege);
+          // ⚠️ KORÁBBAN EZ AZT MONDTA: „a fúrásnak így esélye sincs" — ez TÉVES volt.
+          // A 2026-08-29-i sikeres mérés **IPv4-en, NAT mögött** történt (CGNAT-tal az egyik
+          // oldalon). Az IPv6 könnyebbé teszi, de nem feltétele.
+          kiir(SZIN.halvany + 'Nincs globális IPv6-od — ez nem baj, a fúrás IPv4-en, NAT'
+            + ' mögött is működhet (2026-08-29-i mérés).' + SZIN.vege);
+        }
+
+        // ----- A KÜLSŐ IPv4: ezt kell átadni a másik félnek -----
+        try {
+          // ⚠️ UGYANARRÓL A HELYI PORTRÓL mérjünk, amiről fúrni fogunk — különben a
+          // leépezés másik porthoz tartozna, és a válasz félrevezetne.
+          // ⭐ Ütközés nincs: ez UDP, a fúrás TCP — a router külön tartja számon.
+          const kulso = await kulsoCim(helyiPort);
+          if (kulso?.cim) {
+            kiir(SZIN.jo + 'A te külső IPv4 címed: ' + kulso.cim + SZIN.vege);
+            kiir(SZIN.halvany + '  → EZT mondd meg a másiknak; ő ezt írja be címnek.'
+              + SZIN.vege);
+            // ⛔⛔ A LEGFONTOSABB FIGYELMEZTETÉS A MÉRÉSHEZ.
+            if (kulso.port && kulso.port !== helyiPort) {
+              kiir(SZIN.nem + '⚠⚠ A routered ÁTÍRTA a portot (' + helyiPort + ' → '
+                + kulso.port + ') — UDP-n legalábbis.' + SZIN.vege);
+              kiir(SZIN.halvany + '  Ha TCP-n is átírja, a másik fél SYN-je a ' + port
+                + '-esre érkezik, ahol nincs rés — és a fúrás ezért bukhat.' + SZIN.vege);
+              kiir(SZIN.halvany + '  ⭐ Ilyenkor a bukás NEM azt bizonyítja, hogy a TCP-fúrás'
+                + ' rossz — csak azt, hogy így nem találtunk célba.' + SZIN.vege);
+            } else if (kulso.port) {
+              kiir(SZIN.jo + '  ⭐ A routered MEGTARTJA a portot (' + kulso.port
+                + ') — ez a fúrásnak jó jel.' + SZIN.vege);
+            }
+          }
+        } catch (hiba) {
+          // ⚠️ SEGÉDESZKÖZ, NEM ELŐFELTÉTEL (2. szabály): ha nem megy, a fúrás ugyanúgy
+          // indul — csak a címet kell máshonnan megtudni.
+          kiir(SZIN.halvany + 'A külső címet nem sikerült megmérni (' + hiba.message
+            + ') — a fúrás ettől még megy.' + SZIN.vege);
         }
         kiir();
 
