@@ -88,6 +88,8 @@ import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/c
 import { allasOsszeallitasa } from './js/csere/csere.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
+// ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
+import { fajlIgenyek } from './js/allapot/fajlIgeny.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -827,6 +829,55 @@ try {
     //
     // ⭐ A 4. SZABÁLY: a parancs a funkcióval EGYÜTT jön, nem utána. Kétszer is megtörtént
     // már (2026-09-10, 09-12), hogy egy megépült réteghez nem vezetett kézi út.
+
+    // ===================================
+    // ⭐ MELY FÁJLOK HIÁNYOZNAK? (5.7 / a szállítás első fele)
+    // ===================================
+    //
+    // ⭐ A 4. SZABÁLY: a parancs a funkcióval EGYÜTT jön. És itt külön haszna is van —
+    // *ez az egyetlen hely, ahol ma LÁTNI lehet, mi hiányzik a készülékről.*
+
+    case 'fajlok': {
+      const { allapot } = await kepetKeszit();
+      const blob = fajlBlobTarolo(KOINO);
+      const { hianyzok, megvan, osszes } = await fajlIgenyek(allapot,
+        (l) => blob.van(l), { szerzo });
+
+      kiir(SZIN.vastag + 'FÁJLOK' + SZIN.vege
+        + '  (' + megvan + ' / ' + osszes + ' megvan)');
+
+      if (!osszes) {
+        kiir(SZIN.halvany + '  Ebben a koinóban még nincs kép vagy fájl.' + SZIN.vege);
+        break;
+      }
+      if (!hianyzok.length) {
+        kiir(SZIN.jo + '  Minden hivatkozott fájl megvan ezen a készüléken.' + SZIN.vege);
+        break;
+      }
+
+      kiir();
+      kiir(SZIN.nem + '  ' + hianyzok.length + ' fájl hiányzik:' + SZIN.vege);
+      for (const h of hianyzok) {
+        // ⭐ A TUDATPONT TÁROLÁSI VÁLLALÁS IS (D3): amire pontot tettem, az az ÉN dolgom.
+        const jel = h.vallaltam ? SZIN.nem + '!' : SZIN.halvany + '·';
+        const cimek = h.entitasok
+          .map((a) => allapot.entitasok.get(a)?.cim ?? a.slice(0, 8))
+          .join(', ');
+        kiir('  ' + jel + SZIN.vege + ' ' + h.lenyomat.slice(0, 12) + '…'
+          + SZIN.halvany + '  ' + cimek + SZIN.vege);
+      }
+      kiir();
+      kiir(SZIN.halvany
+        + '  ! = tudatpontot tettél rá, tehát VÁLLALTAD a tárolását (D3)' + SZIN.vege);
+      // ⚠️ A HIÁNY NEM HIBA (D19) — megmondjuk azt is, miért van, és mi lesz vele.
+      kiir(SZIN.halvany
+        + '  A bájtok szállítása még nem épült meg: egy kép ma csak azon a készüléken van'
+        + SZIN.vege);
+      kiir(SZIN.halvany
+        + '  meg, ahol beszúrták. Addig a kézi út: a koino-adat/' + KOINO
+        + '/fajlok/ mappa másolása.' + SZIN.vege);
+      break;
+    }
 
     case 'ter': {
       const { kartyak, koinok, csakAmitIsmerunk } = await terKartyai(alapHely(), {
@@ -2873,6 +2924,7 @@ try {
       kiir('           szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]');
       kiir('           kivisz <fájl> [mind|sajat|<azonosító>] · behoz <fájl>   (a KÉZI ÚT)');
       kiir('           ter [letrehozva|eloszorLattam|nev] [csokkeno|novekvo]  (A BELÉPŐ TÉR)');
+      kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
       kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
