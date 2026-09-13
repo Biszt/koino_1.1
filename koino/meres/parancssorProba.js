@@ -774,14 +774,12 @@ proba('⭐⭐⭐ A BULIN KIDERÜL, KINÉL VAN MEG a hiányzó fájl', async () =
     if (!/kaptam \d+ új eseményt/.test(elso)) return false;
 
     // ⭐ A MÁSODIK KÖRBEN már kérdez — és megtudja, hogy a gazdánál megvan.
+    //
+    // ⚠️ EZ A PRÓBA A FELDERÍTÉST méri, nem az átvitelt: azt, hogy a **bulin kiderül**,
+    // kinél van meg. *(Korábban azt is állította, hogy a fájl hiányzó MARAD — és amikor az
+    // átvitel megépült, ez helyesen bukott. A próba a tárgyához igazodott, nem fordítva.)*
     const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
-    if (!/fájlról tudom meg, hogy nála megvan/.test(masodik)) return false;
-
-    // ----- És ez látszik is -----
-    const fajlok = await fut(vendeg, 'fajlok');
-    return /1 fájl hiányzik/.test(fajlok)
-      && /KÉPES GONDOLAT/.test(fajlok)
-      && /1 társnál megvan/.test(fajlok);
+    return /fájlról tudom meg, hogy nála megvan/.test(masodik);
   } finally {
     if (felulet) felulet.folyamat.kill();
     if (figyelo) { figyelo.kill(); await varj(1000); }
@@ -817,6 +815,72 @@ proba('⛔ A fájl-kör NEM akasztja meg a rendes cserét (a két réteg külön
     await rm(vendeg, { recursive: true, force: true });
   }
 });
+
+// ===================================
+// ⭐⭐⭐ A BÁJTOK MEGÉRKEZNEK (5.7 / B) — a teljes kör két készüléken
+// ===================================
+//
+// ⭐ EZ A SZÁLLÍTÁS VÉGE: felderítés a bulin → kérelem → a bájtok. A fájl **több
+// szeletben** jön (64 KB-onként), és a lezárás **újra lenyomatol** — csak akkor kerül a
+// végleges nevére, ha a bájtok azt adják ki.
+//
+// ⚠️ EGY MÉRÉSI CSAPDA, AMI ENGEM IS BECSAPOTT: a birtoklás-jegyzet a társat
+// `hoszt:port` alakban jegyzi meg. Ha a próba minden körben MÁS porton indítja a
+// figyelőt, a jegyzet a **régi** portot őrzi, és az átvitel egy halott címre megy.
+// *Ezért fut ez a próba végig EGYETLEN porton.*
+
+proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, bájtra azonosan',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const port = 7541;
+    let figyelo = null;
+    let felulet = null;
+    try {
+      await fut(gazda, 'koino', 'Próba koinó');
+
+      // ----- Egy TÖBB SZELETNYI kép (150 KB ≈ 3 szelet) -----
+      felulet = await feluletet(gazda, 7542);
+      const fej = Buffer.from(
+        '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+      const kep = Buffer.concat([fej, Buffer.alloc(150 * 1024, 7),
+        Buffer.from('0000000049454e44ae426082', 'hex')]);
+
+      const fel = await felulet.hiv('/api/feltoltes/kep',
+        { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+      await felulet.hiv('/api/gondolat', {
+        method: 'POST',
+        body: JSON.stringify({
+          cim: 'NAGY KÉPES GONDOLAT', kezdoTudatpont: 50,
+          szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
+        })
+      });
+      felulet.folyamat.kill(); felulet = null; await varj(500);
+
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+
+      // 1. kör: az események · 2. kör: a kérdés, majd A BÁJTOK
+      await fut(vendeg, 'csere', '127.0.0.1', String(port));
+      const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+      if (!/1 fájl megérkezett/.test(masodik)) return false;
+
+      // ⭐ ÉS A LÉNYEG: a vendégnél megvan, és BÁJTRA ugyanaz.
+      const fajlok = await fut(vendeg, 'fajlok');
+      const nala = await readFile(
+        join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
+
+      return /1 \/ 1 megvan/.test(fajlok)
+        && Buffer.from(nala).equals(kep);
+    } finally {
+      if (felulet) felulet.folyamat.kill();
+      if (figyelo) { figyelo.kill(); await varj(1000); }
+      await rm(gazda, { recursive: true, force: true });
+      await rm(vendeg, { recursive: true, force: true });
+    }
+  });
 
 export default futtatas;
 

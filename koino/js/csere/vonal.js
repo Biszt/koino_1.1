@@ -42,6 +42,7 @@ import { createServer, connect } from 'node:net';
 import {
   allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
 } from './csere.js';
+import { SZELET_MERET, kovetkezoKeres, szeletEllenorzes } from './fajlAtvitel.js';
 import { entitasEsemenyei } from '../tar/esemenyTar.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
@@ -228,6 +229,53 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // ⚠️ ÉS A BIZALOM ITT SEM MÁS: amit így kapunk, ugyanazon az `esemenyMentese` kapun
     // megy be, mint bármi más (3. szabály). A kérés nem ad jogot semmire.
     const elsoUzenet = await sor.kovetkezo();
+
+    // ===== ⭐⭐ A FÁJL-SZELET KISZOLGÁLÁSA (5.7 / B) =====
+    //
+    // ⭐ UGYANAZ A MINTA, MINT A `SZELETKEREK`-NÉL: **saját kapcsolat**, nem a rendes
+    // párbeszéd közepébe ékelve. Ez pontosan Csaba terve: *„a buli után fent kell tartani a
+    // kapcsolatot azon eszközöknek, amik nagyobb csomagot küldenek egymásnak."*
+    //
+    // ⭐ ÉS EZ ADJA A PÁRHUZAMOSSÁGOT IS: három egyidejű átvitel = három kapcsolat. Nem kell
+    // hozzá multiplexelés, és egy lassú átvitel nem akasztja meg a többit.
+    //
+    // ⚠️ A KISZOLGÁLÓ NEM ÍTÉL: ha nincs meg a fájl, azt mondja, hogy nincs meg — nem
+    // magyarázkodik és nem vádol (D19).
+    if (kor === 1 && elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
+      const lenyomat = elsoUzenet.lenyomat;
+      const eltolas = Number.isInteger(elsoUzenet.eltolas) ? elsoUzenet.eltolas : 0;
+
+      let bajtok = null;
+      try {
+        bajtok = await beallitas.fajlOlvas(lenyomat);
+      } catch (hiba) {
+        console.warn('parbeszed - a fájl olvasása nem sikerült', { hiba: hiba.message });
+      }
+
+      if (!bajtok) {
+        kuld({ uzenet: 'FAJLNINCS', lenyomat });
+      } else {
+        // ⛔ EGY SZELET, NEM AZ EGÉSZ FÁJL. A kérelmező mondja meg, hol tart — így egy
+        // megszakadt átvitel **onnan folytatódik**, ahol abbamaradt.
+        const vege = Math.min(eltolas + SZELET_MERET, bajtok.length);
+        const szelet = bajtok.subarray(Math.min(eltolas, bajtok.length), vege);
+        kuld({
+          uzenet: 'FAJLSZELET',
+          lenyomat,
+          eltolas,
+          // ⚠️ base64, mert a vonal **soronként egy JSON-üzenet** (ugyanaz az alak, mint a
+          // táré) — a nyers bájt eltörné a sorokat. Az ára +33% EGY szeleten.
+          adat: Buffer.from(szelet).toString('base64'),
+          teljes: bajtok.length,
+          vege: vege >= bajtok.length
+        });
+      }
+
+      console.log('parbeszed - VÉGE (fájl-szelet kiszolgálva)',
+        { lenyomat, eltolas, megvolt: !!bajtok });
+      return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
+               masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], fajlokNala: [] };
+    }
 
     if (kor === 1 && elsoUzenet.uzenet === 'SZELETKEREK') {
       const kertek = typeof elsoUzenet.entitas === 'string'
@@ -449,7 +497,9 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
     // döntése, 2026-09-13), és a figyelő nem tudja, mikor ér rá a társ.
     parbeszed(kapcsolat, tar, koino, {
       hirdetettCimek, sajatCimHirdetese: true,
-      fajlValasz: beallitas.fajlValasz ?? null
+      fajlValasz: beallitas.fajlValasz ?? null,
+      // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): aki fogadni tud, az a legértékesebb forrás.
+      fajlOlvas: beallitas.fajlOlvas ?? null
     })
       .then((eredmeny) => utana?.({
         ...eredmeny, honnan,
@@ -512,7 +562,8 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
     const eredmeny = await parbeszed(kapcsolat, tar, koino, {
       hirdetettCimek,
       fajlKerelem: fajl.kerelem ?? null,
-      fajlValasz: fajl.valasz ?? null
+      fajlValasz: fajl.valasz ?? null,
+      fajlOlvas: fajl.olvas ?? null
     });
 
     // ⭐ MENNYI ADAT MENT EL? (D35) Ez nem kíváncsiság: a csere ára befogadási kérdés —
@@ -566,6 +617,103 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
  * @param {number} [varakozasiIdo]
  * @returns {Promise<{kapott: number, uj: number, bajtKuldott: number, bajtKapott: number}>}
  */
+/**
+ * ⭐⭐ EGY FÁJL ELHOZÁSA — szeletenként, folytathatóan (5.7 / B).
+ *
+ * ===== A MENET =====
+ *
+ *   mi  → FAJLKEREK { lenyomat, eltolas }
+ *   ő   → FAJLSZELET { adat, vege } — vagy FAJLNINCS
+ *
+ * ⚠️ KÖRÖNKÉNT EGY SZELET, ÚJ KAPCSOLATTAL. Nem a legtakarékosabb, de **a legegyszerűbb
+ * helyes**: minden szelet önállóan értelmes, és egy megszakadás **nem hagy félkész
+ * állapotot a protokollban** — a részleges fájl mérete úgyis megmondja, hol tartunk.
+ * *(Ha egyszer kevés lesz, a körön belül több szelet is kérhető — a hívó változtatása
+ * nélkül.)*
+ *
+ * ⛔⛔ ÉS A LEZÁRÁS: a bájtok **ideiglenes néven** gyűlnek, és csak akkor kerülnek a
+ * végleges (lenyomat-)nevükre, ha **újra lenyomatolva** azt adják ki. *Így egy megszakadt
+ * vagy meghamisított letöltés soha nem hagy hátra hamis fájlt* (3. szabály).
+ *
+ * @param {Object} blob - a fájl-tár (`fajlBlobTarolo`)
+ * @param {string} koino
+ * @param {string} cim
+ * @param {number} port
+ * @param {string} lenyomat
+ * @param {Object} [beallitas]
+ * @returns {Promise<{kesz: boolean, ok?: string, bajt: number, szeletek: number}>}
+ */
+export async function fajlHozatala(blob, koino, cim, port, lenyomat, beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? 30000;
+  const korlat = beallitas.korlat ?? Infinity;
+  console.log('fajlHozatala - KEZDÉS', { cim, port, lenyomat });
+
+  let szeletek = 0;
+  let bajt = 0;
+
+  for (;;) {
+    const eddigi = await blob.reszlegesMeret(lenyomat);
+    const keres = kovetkezoKeres(eddigi);
+
+    const kapcsolat = connect({ host: cim, port, family: 0 });
+    kapcsolat.setTimeout(varakozasiIdo, () => {
+      kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+    });
+
+    let uzenet;
+    try {
+      await new Promise((teljesites, elutasitas) => {
+        kapcsolat.once('connect', teljesites);
+        kapcsolat.once('error', elutasitas);
+      });
+
+      const sor = uzenetSor(kapcsolat);
+      kapcsolat.write(JSON.stringify({
+        uzenet: 'FAJLKEREK', koino, lenyomat, eltolas: keres.eltolas
+      }) + '\n');
+
+      // ⚠️ A másik fél LENYOMAT-tal kezdhet (a párbeszéd szimmetrikus) — átlépjük, ahogy
+      // a `szeletHozatala` is teszi.
+      for (;;) {
+        uzenet = await sor.kovetkezo();
+        if (uzenet.uzenet === 'FAJLSZELET' || uzenet.uzenet === 'FAJLNINCS') break;
+      }
+    } finally {
+      kapcsolat.destroy();
+    }
+
+    if (uzenet.uzenet === 'FAJLNINCS') {
+      // ⚠️ NEM HIBA, HANEM HIÁNY (D19): a társ azt mondta, nála sincs meg. Lehet, hogy
+      // törölte (D3: a tartalmi réteg elveszhet), vagy a jegyzetünk elavult.
+      console.log('fajlHozatala - VÉGE (nála sincs meg)', { lenyomat });
+      return { kesz: false, ok: 'a társnál sincs meg', bajt, szeletek };
+    }
+
+    const darab = new Uint8Array(Buffer.from(uzenet.adat ?? '', 'base64'));
+    const ellenorzes = szeletEllenorzes(eddigi, uzenet.eltolas, darab.length, korlat);
+    if (!ellenorzes.rendben) {
+      // ⛔ A ROSSZ SZELET NEM KERÜL BE, és eldobjuk a félkész fájlt: különben a következő
+      // kör egy elrontott alapra építene.
+      await blob.reszlegesEldobas(lenyomat);
+      console.warn('fajlHozatala - VÉGE (rossz szelet)', { ok: ellenorzes.ok });
+      return { kesz: false, ok: ellenorzes.ok, bajt, szeletek };
+    }
+
+    if (darab.length > 0) {
+      await blob.reszlegesHozzafuz(lenyomat, darab);
+      bajt += darab.length;
+      szeletek++;
+    }
+
+    if (uzenet.vege || darab.length === 0) {
+      // ⛔⛔ A LEZÁRÁS ELLENŐRIZ: a név maga a bizonyíték.
+      const lezaras = await blob.reszlegesLezaras(lenyomat);
+      console.log('fajlHozatala - VÉGE', { lenyomat, kesz: lezaras.rendben, bajt, szeletek });
+      return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek };
+    }
+  }
+}
+
 export async function szeletHozatala(tar, koino, cim, port, entitas, varakozasiIdo = 10000) {
   console.log('szeletHozatala - KEZDÉS', { cim, port, entitas });
 

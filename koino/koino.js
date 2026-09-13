@@ -84,7 +84,9 @@ import {
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
-import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from './js/csere/vonal.js';
+import {
+  figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala, fajlHozatala
+} from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
@@ -94,6 +96,7 @@ import {
   kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
 } from './js/csere/fajlKerelem.js';
+import { atvitelTerv } from './js/csere/fajlAtvitel.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -272,7 +275,7 @@ async function allitasAdatai(horgonyToredek) {
  * ⚠️ A KÉRELEM ÖSSZEÁLLÍTÁSA ÁLLAPOT-SZÁMÍTÁS, tehát nem ingyen van — de **körönként
  * egyszer** fut, nem társanként: egyszer állítjuk össze, és mindenkinek ugyanazt adjuk.
  *
- * @returns {Promise<{kerelem: Array<string>|null, valasz: Function}>}
+ * @returns {Promise<{kerelem: Array<string>|null, valasz: Function, olvas: Function}>}
  */
 async function fajlResz() {
   const blob = fajlBlobTarolo(KOINO);
@@ -294,8 +297,70 @@ async function fajlResz() {
     // ⚠️ A `valasz` MINDIG megvan (ez a képesség), a `kerelem` lehet üres — a
     // szimmetria a képességen múlik, nem azon, hogy épp van-e mit kérnem.
     kerelem: kerelem.length ? kerelem : null,
-    valasz: (kertek) => fajlValaszOsszeallitasa(kertek, megvanE)
+    valasz: (kertek) => fajlValaszOsszeallitasa(kertek, megvanE),
+    // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): a cserét kezdeményező fél is forrás lehet.
+    olvas: (lenyomat) => blob.olvas(lenyomat)
   };
+}
+
+/**
+ * ⭐⭐ A HIÁNYZÓ FÁJLOK ELHOZÁSA — a buli UTÁN (5.7 / B).
+ *
+ * ⭐ CSABA TERVE SZERINT: *„a buli után fent kell tartani a kapcsolatot azon eszközöknek,
+ * amik nagyobb csomagot küldenek egymásnak, addig, ameddig végbe megy a másolás."*
+ *
+ * A **kérelmező kezdeményez** (1. döntés), a sorrend **a ritkábbat előbb** (4.), és a
+ * munka **három egyidejű átvitelre, társanként egyre** oszlik (3.).
+ *
+ * @returns {Promise<{kesz: number, bukott: number, bajt: number}>}
+ */
+async function fajlokElhozasa() {
+  const blob = fajlBlobTarolo(KOINO);
+  const jegyzo = fajlJegyzekTarolo(KOINO);
+
+  const { allapot } = await kepetKeszit();
+  const { hianyzok } = await fajlIgenyek(allapot, (l) => blob.van(l), { szerzo });
+  if (!hianyzok.length) return { kesz: 0, bukott: 0, bajt: 0 };
+
+  const jegyzet = await jegyzo.olvas();
+  const terv = atvitelTerv(ritkasagSzerint(hianyzok, jegyzet), jegyzet);
+  if (!terv.length) return { kesz: 0, bukott: 0, bajt: 0 };
+
+  // ⭐ PÁRHUZAMOSAN — a korlátot már a terv tartja be (három, társanként egy).
+  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tars }) => {
+    const ketpont = tars.lastIndexOf(':');
+    const hoszt = tars.slice(0, ketpont);
+    const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
+    try {
+      return await fajlHozatala(blob, KOINO, hoszt, tarsPort, lenyomat,
+        { korlat: FAJL_KORLAT });
+    } catch (hiba) {
+      // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
+      console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });
+      return { kesz: false, bajt: 0 };
+    }
+  }));
+
+  return {
+    kesz: eredmenyek.filter((e) => e.kesz).length,
+    bukott: eredmenyek.filter((e) => !e.kesz).length,
+    bajt: eredmenyek.reduce((o, e) => o + (e.bajt ?? 0), 0)
+  };
+}
+
+/**
+ * A fájl-átvitel lefuttatása és kiírása — **a buli UTÁN**, ahogy Csaba tervezte:
+ * *„a buli után fent kell tartani a kapcsolatot azon eszközöknek, amik nagyobb csomagot
+ * küldenek egymásnak."* A felderítés már megtörtént — innen tudjuk, kitől mit kérjünk.
+ */
+async function fajlAtvitelKiirasa() {
+  const atvitel = await fajlokElhozasa();
+  if (!atvitel.kesz && !atvitel.bukott) return;
+
+  kiir((atvitel.kesz ? SZIN.jo : SZIN.halvany) + atvitel.kesz + ' fájl megérkezett'
+    + SZIN.vege + SZIN.halvany
+    + (atvitel.bukott ? ' · ' + atvitel.bukott + ' nem sikerült' : '')
+    + ' (' + adatMennyiseg({ bajtKuldott: atvitel.bajt }) + ')' + SZIN.vege);
 }
 
 /**
@@ -1516,6 +1581,8 @@ try {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
         // kezdeményez (Csaba döntése, 2026-09-13).
         fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
+        // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
+        fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
         hirdetettCimek: await hirdetendoCimek(cimTarolo),
         utana: async (eredmeny) => {
           if (eredmeny.hiba) {
@@ -1689,6 +1756,8 @@ try {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
         // kezdeményez (Csaba döntése, 2026-09-13).
         fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
+        // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
+        fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
         hirdetettCimek: await hirdetendoCimek(tarolo),
         utana: async (e) => {
           if (e.hiba) return;
@@ -2232,6 +2301,9 @@ try {
         if (tanult) kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam tőle'
           + SZIN.vege);
 
+        // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
+        await fajlAtvitelKiirasa();
+
         kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
         break;
       }
@@ -2298,6 +2370,10 @@ try {
         kiir(SZIN.halvany + 'Egy társ sem válaszolt. Ez nem hiba — később újra megy;'
           + ' addig is minden művelet mehet tovább helyben.' + SZIN.vege);
       }
+
+      // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
+      await fajlAtvitelKiirasa();
+
       kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
       break;
     }

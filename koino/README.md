@@ -94,12 +94,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Húsz próba-fájl, **540 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonegy próba-fájl, **556 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **165 fájl, 2377,2 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **167 fájl, 2407,3 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -129,6 +129,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/fajlProba.js` | ⭐⭐ **a tartalom-címzett fájltár** (5.7): a név a lenyomat — ⛔ a **megrontott fájlt nem adja ki** (újra-lenyomatolás olvasáskor), a duplikátum elnyelődik, és a **típus a bájtokból** jön, nem a kliens szavából (HTML soha nem `text/html`) |
 | `meres/fajlIgenyProba.js` | ⭐ **a fájl-igény** (a szállítás első fele): a felderítés **nem kíván új adatot** — az események már elmondják, mely fájlok tartoznak a koinóhoz; ⛔ és a **tudatpont tárolási vállalás** (D3): amire pontot tettem, azt vállaltam |
 | `meres/fajlKerelemProba.js` | ⭐ **a fájl-kérelem**: ⛔ **csak arra felelünk, amit kérdeztek** (a fájl-listám elárulná, mit néztem meg — D6), a kérdés és a válasz is korlátos, és ⭐ **a ritkábbat előbb** — de a **vállalás erősebb** a ritkaságnál (D3) |
+| `meres/fajlAtvitelProba.js` | ⭐⭐ **a bájtok átvitele** (5.7/B): a részleges fájl **mérete maga az állapot** (onnan folytatódik), ⛔ a lezárás **újra lenyomatol** — a meghamisított letöltés **nem kerül a végleges nevére, és nem hagy hátra semmit**; és a munka szétterül (társanként egy átvitel) |
 | `meres/terProba.js` | ⭐ **a belépő tér** (5.6): a koinók FÖLÖTTI nézet — ⛔ **létszám szerint nem lehet rendezni** (D18/2), ⭐ a létszám súlya **három számban** van (tag · nem ellenőrizhető · belépő), és a hiány (ismeretlen születés) **megnevezve** jelenik meg |
 | `meres/egyezmenyProba.js` | ⭐⭐ **a hurok bezárul**: az elfogadott szerkesztési egyezmény ÁTÍRJA az entitást — a folyamatban lévő és az általános (D27) nem; a sorrend a **lejárat** szerint dől el; ⛔ a kört csináló áthelyezés kimarad |
 | `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
@@ -169,6 +170,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |
+| `js/csere/fajlAtvitel.js` | ⭐ **a bájtok logikája** (5.7/B): szeletelés (64 KB), folytatás a részleges méretből, és a munka elosztása — három egyidejű átvitel, **társanként legfeljebb egy**. ⚠️ Hálózatot **nem importál** (1. szabály) |
 | `js/csere/fajlKerelem.js` | ⭐ **mit kérdezek a bulin, és mit tanulok belőle** — a kérelem **múlékony üzenet**, nem esemény (Csaba döntése: a böngészésem nem való a láncra); amit tanulunk, az **helyi feljegyzés** (3. szabály) |
 | `js/allapot/fajlIgeny.js` | ⭐ **mire van szükségem?** — a gondolat szövegében ott a kép-hivatkozás, a besorolásban az ikon; ez a réteg csak összeveti a lemezzel. ⚠️ Tárat és hálózatot **nem importál** (1. szabály): a „megvan-e?” kérdést kívülről kapja |
 | `js/allapot/ter.js` | ⭐ **A BELÉPŐ TÉR** (D25, 5.6): egy kártya minden koinóról, amit ez a készülék ismer — a kulcs és a társ-lista eddig is a koinók FÖLÖTT laktak, a tér ezt teszi láthatóvá |

@@ -23,8 +23,8 @@
 //
 // Használják: esemenyTar.js és kulcsTar.js (rajtuk keresztül minden más).
 
-import { mkdir, readFile, appendFile, writeFile, readdir, access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, appendFile, writeFile, readdir, access, rename, rm } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
 import { bajtLenyomat } from '../esemeny/kanonikusAlak.js';
@@ -431,6 +431,13 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
     return join(mappa, lenyomat);
   }
 
+  // ⭐ A RÉSZLEGES FÁJL KÜLÖN MAPPÁBAN áll, és ez szándékos: ⛔ a `lista()` így **soha nem
+  // mondja azt egy félkész fájlról, hogy megvan** — kulönben a bulin felajánlanánk másnak
+  // valamit, ami még nincs készen. *A félkész és a kész két külön állapot, két külön helyen.*
+  function reszlegesUtja(lenyomat) {
+    return join(mappa, 'reszleges', lenyomat.length === 43 ? lenyomat : utja(lenyomat));
+  }
+
   return {
     mappa,
 
@@ -496,6 +503,83 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
     /** Megvan-e? (Olcsó kérdés: nem olvassuk be és nem ellenőrizzük.) */
     async van(lenyomat) {
       try { await access(utja(lenyomat)); return true; } catch { return false; }
+    },
+
+    // ===================================
+    // ⭐⭐ A RÉSZLEGES FÁJL — a megszakadt átvitel folytatásához (5.7 / B)
+    // ===================================
+    //
+    // ⭐ A RÉSZLEGES FÁJL MÉRETE MAGA AZ ÁLLAPOT. Nem vezetünk külön nyilvántartást arról,
+    // hogy hányadik szeletnél tartunk: a szeletek **rögzített méretűek és sorrendben**
+    // érkeznek, tehát a meglévő bájtok száma megmondja, hol folytassuk. *Ugyanaz az elv,
+    // mint az esemény-tárnál: a fájl tartalma az igazság, nem egy mellette vezetett napló.*
+    //
+    // ⛔⛔ ÉS A LEZÁRÁS ELŐTT MINDIG ELLENŐRZÜNK. A részleges fájl **ideiglenes néven** áll,
+    // és csak akkor kerül a végleges (lenyomat-)nevére, ha a bájtjai tényleg azt adják ki.
+    // *Így egy megszakadt vagy meghamisított letöltés SOHA nem hagy hátra hamis fájlt* —
+    // és a csatornát továbbra sem kell megbízhatóvá tenni (3. szabály).
+
+    /** Hány bájt van meg eddig? (0, ha még semmi.) */
+    async reszlegesMeret(lenyomat) {
+      try {
+        return (await readFile(reszlegesUtja(lenyomat))).length;
+      } catch {
+        return 0;
+      }
+    },
+
+    /**
+     * Egy szelet hozzáfűzése a részleges fájlhoz.
+     *
+     * ⛔ A FELSŐ KORLÁT ITT IS ÉL: egy rosszindulatú társ végtelen bájtot küldhetne, és a
+     * lemezünket töltené meg. A korlát túllépésekor **eldobjuk az egészet**.
+     */
+    async reszlegesHozzafuz(lenyomat, bajtok) {
+      const ut = reszlegesUtja(lenyomat);
+      const eddigi = await this.reszlegesMeret(lenyomat);
+      const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
+
+      if (eddigi + nyers.length > FAJL_KORLAT) {
+        await this.reszlegesEldobas(lenyomat);
+        throw new Error('A részleges fájl túllépte a határt — eldobva.');
+      }
+
+      await mkdir(dirname(ut), { recursive: true });
+      await appendFile(ut, nyers);
+      return eddigi + nyers.length;
+    },
+
+    /**
+     * A részleges fájl lezárása: ⭐ **ellenőrzés, majd átnevezés a végleges nevére**.
+     *
+     * @returns {Promise<{rendben: boolean, ok?: string}>}
+     */
+    async reszlegesLezaras(lenyomat) {
+      const ut = reszlegesUtja(lenyomat);
+
+      let bajtok;
+      try {
+        bajtok = new Uint8Array(await readFile(ut));
+      } catch {
+        return { rendben: false, ok: 'nincs részleges fájl' };
+      }
+
+      // ⛔⛔ A NÉV MAGA A BIZONYÍTÉK: ha a bájtok nem ezt a lenyomatot adják, a fájl NEM az,
+      // aminek mondják — eldobjuk, és nem hagyunk hátra semmit.
+      const ellenorzes = await bajtLenyomat(bajtok);
+      if (ellenorzes !== lenyomat) {
+        await this.reszlegesEldobas(lenyomat);
+        return { rendben: false, ok: 'a bájtok nem ezt a lenyomatot adják — eldobva' };
+      }
+
+      await mkdir(mappa, { recursive: true });
+      await rename(ut, utja(lenyomat));
+      return { rendben: true };
+    },
+
+    /** A félbehagyott letöltés eldobása. */
+    async reszlegesEldobas(lenyomat) {
+      try { await rm(reszlegesUtja(lenyomat)); } catch { /* nincs mit eldobni */ }
     },
 
     /** Mely fájlok vannak meg? — a szállítás majd ebből tudja, mit kell kérni. */
