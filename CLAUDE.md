@@ -15,6 +15,49 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-13)
+
+✅ **A SZAKASZ 5 GERINCE KÉSZ** (5.1–5.7): a helyi kapu · a kérdezhető pakli · a kártyák ·
+a hiányzó műveletek · a modálok magja · a **belépő tér** · a **szövegszerkesztő** · a
+**fájl-réteg** · és a **fájl-szállítás** (felderítés · kérelem · átvitel · randevú).
+**557 önpróba**, minden zöld, a munkakönyvtár tiszta.
+
+⭐ **A lapon ma megy:** böngészés · gondolat- és kategória-létrehozás · **javaslat-tétel** ·
+tudatpont · érték javaslat · szavazás · koino-váltás · **képek**.
+
+### ⛔⛔ A KÖVETKEZŐ LÉPÉS EGY TEREPMÉRÉS — CSABA VÉGZI, NE ÉPÍTS ELŐTTE
+
+**A kérdés:** átmegy-e a **TCP-pajzsfúrás** két valódi hálózat között? *(Csaba leviszi a
+telefont a szomszédba.)*
+
+⭐ **Miért ez a legfontosabb:** ha átmegy, **ingyen megkapjuk a TCP negyven évnyi
+csiszolását**, és a UDP-vonal **ablakját nem kell megépíteni**. A 16. mérés szerint ugyanis a
+mai UDP-rés már **1 ms/csomag késleltetésnél 25 KB/s**-ra esik (stop-and-wait).
+
+```bash
+node koino/koino.js pajzsfuro <a másik címe> 7373 tcp 15
+```
+
+⚠️ **Amit a mérés előtt már tudunk** (a fejlesztő gépén mérve): van globális IPv6, és a
+router **IPv4-en ÁTÍRJA a portot** (7373 → 59007). ⛔ Ezért **IPv4-es bukás nem bizonyíték**.
+⭐ Előbb **IPv6-tal** próbálják, ha mindkettőnek van — ott nincs NAT.
+
+⛔⛔ **ÉS AMIT A NAPLÓ SZERINT MÉG SOSEM MÉRTÜNK: a TCP-fúrást valódi hálózaton.** A
+2026-08-29-i sikeres mérés (két háztartás, CGNAT, 232 ms) **UDP-vel** történt; a TCP-fúró
+commitja kimondja, hogy a lényeget *„helyben nem lehet megmérni"*. **Ne hidd, hogy megmértük
+és megbukott.**
+
+### ⏸️ A többi nyitott döntés (mind Csabáé)
+
+1. **Az ablak** a UDP-vonalnak — a fenti mérés után dől el.
+2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — 25 KB/s mellett 2 MB ≈ 80 mp. ⭐ **Nem**
+   állapot-befolyásoló állandó (D66), tehát szabadon hangolható.
+3. **A maradék modálok** (5.8) — részletek: [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md)
+   „ITT TARTUNK".
+4. **A hívás ötlete** (2026-09-13) — [`docs/jegyzetek.md`](docs/jegyzetek.md).
+
+---
+
 **Olvasd el induláskor:** ⭐ [`docs/utiterv.md`](docs/utiterv.md) — **mit építünk, milyen sorrendben, és miért** (rövid; ez a belépő). Utána: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (**1. A helyi modell** — ✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (**2. A szállítás** — ✅ kész; a neve eddig „csere" volt, de a munka a szállításról szólt). ✅ **3. A szerkezet** — kész (2026-09-03): a kanonikus alak négy új mezője, a kérdezhető tár-illesztő, a böngésző-lekérés. ✅ **4. AZ IDENTITÁS — kész (2026-09-06)** — terv: [`docs/szakasz4_terv.md`](docs/szakasz4_terv.md) — a szerkezet 2026-09-06-án átépült, **Csaba lezárta** *(„nekem ez így már megfelel, első koinónak")*, és ⭐ **a megépítés BEFEJEZŐDÖTT**: a 9/c terv **LEZÁRVA**: a 4.1–4.6 megépítve, a **4.7 (séta) elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt), a **4.8 (`lancGyoker`) definiálva** (D63), megvalósítás mérés alapján. Vagyis — a **két lépcső** (`js/allapot/identitas.js`), a **kontraszt-jelzés** és a **visszavonás** (`js/allapot/jelzesek.js`), **52 önpróbával** (a szakasz zárásakor összesen 269; **ma 557**). 🚧 **Most az 5. szakasz FOLYIK: A FELÜLET** — a pakli és a belépő tér a prototípusból; ettől lesz a koino **használható**. Két doksi: [`docs/felulet_terv.md`](docs/felulet_terv.md) (**a döntések** — futtatókörnyezet, vékony lap, hatókör) és [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md) (**a végpont-térkép** és az állomások). ⭐ **A hatókör a TELJES pakli** (Csaba: *„nem kell mérföldkő"* — a szűkített termékre értve, a munka állomásokra bomlik): a 82 prototípus-végpontból **43 jön át**, 10 más mechanikával, a többi mögött nincs mit átemelni (jelszó, e-mail, feltöltés — D15/D6). ⛔ **A szakasz gerince a `GET /api/pakli/`**: ez a `betolt()` alakja, az utolsó nem-skálázó út — kérdezhetővé kell tenni (rendezés + kurzor + darab), különben a felület bebetonozza. ✅ **Az 5.1 (a helyi kapu) KÉSZ** (2026-09-06): `js/felulet/kapu.js` + `node koino/koino.js felulet` — négy őr (hurok-cím · jelszó · Origin · Host) és egy útvonal-őr, **23 önpróbával**. ✅ **És az 5.2 (a kérdezhető pakli) KÉSZ** (2026-09-06): `js/allapot/pakli.js` + `GET /api/pakli?rendezes&irany&kurzor&darab` — **`darab` felülről korlátos** (100), a lista **nem hordoz szövegeket**, a kurzor **kulcs-alapú** (nem `skip`), **23 önpróbával**. ⭐⭐ **A HORGONY:** a lapozás az „első N esemény" képéhez kötődik (a tár hozzáfűzhető, tehát az a halmaz soha nem változik) — *nem az időt fagyasztjuk be, hanem a bemenetet*; a közben érkezettet az `ujdonsag` **megmondja**, nem keveri bele. ⚠️ *A horgony helyi feljegyzés, nem esemény (3. szabály).*
 ✅ **ÉS AZ 5.3 (A KÁRTYÁK) KÉSZ** (2026-09-06): a `koino/felulet/` alá **22 JS + 3 HTML + 14 CSS** került át a prototípusból — a kártya-osztályok, a hamburger menü, a szövegmegjelenítő és **minden CSS bájtra ugyanaz**; a `frontend/` érintetlen. ⭐ **Három fájlt kellett átírni:** `apiHelper.js` (JWT → a kapu jelszava), `authHelper.js` (kicserélve, de **ugyanazokkal az export-nevekkel**, ezért a `Kartya.js` nem változott), `kartyaGyar.js` (a Kategória/GondolatTípus kimaradt — nem létezik a koinóban). ⭐⭐ **A modal-csapda megoldása: 13 helyőrző** — a kártyák import-sorai bájtra ugyanazok, és egy valódi modal átemelése (5.5) **egy fájl cseréje**. ⚠️ *Mérésből derült ki két dolog: a jelszó határa az `/api/`-ra tolódott (a `fetch('./html/…')` és a `<link>` nem küld fejlécet; süti helyett — az CSRF-et hozna — az adat kapujára került), és a tudatpont-sor mezői a kártya LEGFELSŐ szintjén vannak, nem az `adatok`-ban.* Két új végpont: `GET /api/pakli/szoveg/:tipus/:id` és `GET /api/tudatpont/entitas/:tipus/:id`.
 ✅ **ÉS AZ 5.4 (A KATEGÓRIA ÉS A GONDOLATTÍPUS) KÉSZ** (2026-09-06): a végpont-térkép 2. találata volt — tíz prototípus-végpont mögött **nem volt esemény**, pedig a domain-fogalom mindig megvolt. ⭐ **Nem új esemény-fajta:** a `GondolatLetrehozas` az ÁLTALÁNOS entitás-létrehozás, és az `adat.tipus` különbözteti meg a fajtákat (a Szakasz 1 óta így van) — új név minden meglévő tárat érvénytelenítene. ⭐ **Önálló entitás**, mert így ugyanaz jár neki, mint bármely másnak (tudatpont, javaslat, küszöb, egyezmény): *egy kategória neve is közösségi döntéssel változik.* ⚠️ **A neve a `cim` mezőben van**, nem külön `nev`-ben — így a rendezés és az egyezmény-végrehajtás változtatás nélkül működik rajta; a kártya `nev`-et olvas, azt a felület fordítja. ⛔⛔ **A max-3 korlát a SZÁMÍTÁSBAN van** (`szabalyok.js`: `KATEGORIA_KORLAT`), a duplikátum-szűréssel együtt — a prototípusban Mongoose-validátor tartotta, de itt **nincs szerver, ami visszautasítsa**. ⭐ Az ikon lehet **emoji** (a kártya URL-nél képet rak ki, egyébként szöveget), tehát nem kell hozzá feltöltés. Új parancsok: `kategoria <név> [ikon] [leírás]` · `gondolattipus <név> [ikon] [leírás]` · `gondolat <cím> [szöveg] [típus] [kategória…]`.
@@ -140,7 +183,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **168 fájl, 2423,7 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **168 fájl, 2426,1 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -267,7 +310,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 168 fájl, 2423,7 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 168 fájl, 2426,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

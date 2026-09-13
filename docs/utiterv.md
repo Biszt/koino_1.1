@@ -10,7 +10,20 @@
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-06) — a Szakasz 4 SZERKEZETE MEGVAN
+> ## ▶️ HOL TARTUNK (2026-09-13) — A SZAKASZ 5 GERINCE KÉSZ
+>
+> ✅ **Szakasz 1–4 kész**, és a **Szakasz 5 (a felület) gerince is**: 5.1–5.7 — a helyi
+> kapu · a kérdezhető pakli · a kártyák · a modálok magja · a **belépő tér** · a
+> **szövegszerkesztő** · a **fájl-réteg** és a **fájl-szállítás**. **557 önpróba.**
+>
+> ⛔⛔ **A következő lépés egy TEREPMÉRÉS, nem kód:** átmegy-e a **TCP-pajzsfúrás** két
+> valódi hálózat között? Ha igen, a UDP-vonal **ablakját nem kell megépíteni**.
+> A részletek a [`CLAUDE.md`](../CLAUDE.md) tetején és a
+> [`szakasz5_terv.md`](szakasz5_terv.md) „ITT TARTUNK" szakaszában.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-06) — a Szakasz 4 SZERKEZETE MEGVAN
 >
 > ✅ **Szakasz 1–3 kész.** A 3. (a szerkezet) 2026-09-03-án zárult: a kanonikus alak négy
 > új mezője, a **kérdezhető tár-illesztő** (két mért fal ledőlt: mentés 495 ms → 1,4 ms,

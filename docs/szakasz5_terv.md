@@ -339,7 +339,59 @@ felosztására — **„természetesen megértem, hogy szakaszokra/állomásokra
 
 ⚠️ *Az 5.2 nem halasztható az 5.3 mögé: a kártya alakja attól függ, mit tud kérni a lap.*
 
-### ⏭️ ITT TARTUNK (2026-09-12)
+### ⏭️ ITT TARTUNK (2026-09-13)
+
+✅ **A SZAKASZ 5 GERINCE KÉSZ.** 5.1–5.7 megvan: a helyi kapu, a kérdezhető pakli, a
+kártyák, a hiányzó műveletek, a modálok magja, a **belépő tér**, a **szövegszerkesztő**,
+a **fájl-réteg** és a **fájl-szállítás** (felderítés · kérelem · átvitel · randevú).
+A lapon ma megy: böngészés, gondolat- és kategória-létrehozás, **javaslat-tétel**,
+tudatpont, érték javaslat, szavazás, koino-váltás, **képek**.
+
+### ⛔⛔ A KÖVETKEZŐ LÉPÉS: EGY TEREPMÉRÉS (Csaba végzi)
+
+**A kérdés:** átmegy-e a **TCP-pajzsfúrás** két valódi hálózat között?
+
+⭐ **Miért ez a legfontosabb nyílt kérdés:** ha átmegy, **ingyen megkapjuk a TCP negyven
+évnyi csiszolását**, és a UDP-vonal **ablakját nem kell megépíteni** — a 16. mérés szerint
+ugyanis a mai UDP-rés már **1 ms/csomag késleltetésnél 25 KB/s-ra** esik (stop-and-wait).
+Ha nem megy át, akkor tudjuk, hogy az UDP-úton kell élnünk, és az ablak megéri.
+
+**A menet** — mindkét készüléken, nagyjából egyszerre:
+
+```bash
+node koino/koino.js pajzsfuro <a másik címe> 7373 tcp 15
+```
+
+⭐ **Előbb IPv6-tal**, ha mindkettőnek van (a fúró kiírja) — ott nincs NAT, tehát a port
+sem változik. Ha az egyiknek nincs, a külső IPv4-gyel (azt is kiírja).
+
+⛔ Közben **ne fusson `orjarat` vagy `figyel`** egyik gépen sem (EADDRINUSE).
+
+⚠️ **AMIT A MÉRÉS ELŐTT MÁR TUDUNK** (a fejlesztő gépén mérve, 2026-09-13): van globális
+IPv6, és a router **IPv4-en ÁTÍRJA a portot** (7373 → 59007). ⛔ Ezért **IPv4-es bukás nem
+bizonyíték**: a másik fél SYN-je a 7373-asra érkezne, ahol nincs rés. *A fúró ezt maga is
+kiírja, hogy ne vonjunk le téves következtetést.*
+
+⚠️ **ÉS AMIT A NAPLÓ SZERINT MÉG SOSEM MÉRTÜNK:** a TCP-fúrást **valódi hálózaton**. A
+2026-08-29-i sikeres mérés (két háztartás, CGNAT, 232 ms) **UDP-vel** történt; a TCP-fúró
+commitja kimondja, hogy a lényeget *„helyben nem lehet megmérni"*. ⛔ **Tehát ne higgye egy
+későbbi session, hogy megmértük és megbukott.**
+
+### ⏸️ A TÖBBI NYITOTT DÖNTÉS (mind Csabáé)
+
+1. **Az ablak** a UDP-vonalnak — a fenti mérés után dől el.
+2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — most már van mivel számolni: 25 KB/s mellett
+   2 MB ≈ 80 másodperc. ⭐ **Nem állapot-befolyásoló állandó** (D66), tehát szabadon
+   hangolható, koino-váltás nélkül.
+3. **A maradék modálok** (5.8): `KategoriaModal`, `TudatpontokModal`, `KeresesModal`,
+   `RendezesModal`, `StrukturaModal`. ⛔ Az `ErtesitesekModal` és az `ErtesitesiBeallitasModal`
+   mögött **nincs réteg** — azok nem modál-munkák. ⏸️ A `SikidomModal` a prototípusban is
+   felfüggesztve.
+4. **A hívás ötlete** (Csaba, 2026-09-13) — a [`jegyzetek.md`](jegyzetek.md)-ben.
+
+---
+
+### ⏭️ KORÁBBAN (2026-09-12)
 
 ⭐⭐ **Az 5.6 elé bekerült egy tétel, ami nem volt a tervben, de az 5.6 ALAPJA:** a Szakasz 4
 (identitás) **kézi útja** megépült — hét parancs (`belep` · `meghiv` · `felhatalmaz` ·
