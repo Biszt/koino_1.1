@@ -1405,7 +1405,69 @@ mérni, nem megbecsülni**: a UDP-vonal **egyszerre egy darabot tart úton** (st
 
 ### ⏸️ A következmény, ha egyszer sorra kerül
 
-A **vonalnak ablak kell** (több darab úton egyszerre), nem a szeletnek más méret. ⭐ És ez a
+A **vonalnak ablak kell** (több darab úton egyszerre), nem a szeletnek más méret.
+
+### ⭐⭐ KITERJESZTVE (2026-09-14): VESZTESÉG, INGADOZÁS, LASSÚ VONAL — a D67 alapvonala
+
+*A **D67** szerint a vonalnak **veszteségre reagáló ablakot** kell kapnia. ⛔ Veszteség-választ
+viszont nem lehet becsületesen megépíteni olyan műszerrel, ami **soha nem veszít csomagot** —
+az ugyanaz a csapda lenne, mint a vak próba. Ezért a műszer nőtt először, nem a vonal.*
+
+**Amit a lap mostantól tud:** állítható **csomagvesztés** · **ingadozó** késleltetés (ettől a
+csomagok sorrendet is cserélnek) · **magvas véletlen** (ugyanaz a mag → ugyanaz a
+veszteség-minta, hogy az „ablak előtt / ablak után" **mérés** legyen, ne szerencse) · és a
+**küldött csomagok száma**, a tökéletes vonalhoz viszonyítva.
+
+```
+  mérés                            méret        idő      sebesség
+  ──────────────────────────────────────────────────────────────────────────────
+  UDP-rés (helyben)                64 KB       23 ms    2783 KB/s    182 csomag
+  UDP-rés (+1 ms)                  64 KB     2649 ms      24 KB/s    182 csomag
+  UDP-rés (1 ms ± 5 ms szórás)     64 KB     2709 ms      24 KB/s    182 csomag
+  UDP-rés (1 ms ± 20 ms szórás)    64 KB     3436 ms      19 KB/s    182 csomag
+  UDP-rés (1 ms, 1% vesztés)       64 KB     3241 ms      20 KB/s    185 csomag  x1.0
+  UDP-rés (1 ms, 5% vesztés)       64 KB     5808 ms      11 KB/s    198 csomag  x1.1
+  UDP-rés (1 ms, 15% vesztés)      64 KB    17042 ms       4 KB/s    246 csomag  x1.4
+  UDP-rés (200 ms -> 400 ms oda-vissza)  8 KB   5490 ms    1 KB/s     59 csomag  x2.0
+  UDP-rés (400 ms -> 800 ms oda-vissza)  8 KB  10940 ms    1 KB/s     89 csomag  x3.0
+```
+
+#### ⭐⭐⭐ A legfontosabb lelet: a LASSÚ vonalon MI pazarolunk
+
+A `x` oszlop a tökéletes vonalhoz viszonyít. ⭐ Késleltetésnél és ingadozásnál **x1,0** — a
+vonal lassú, de **nem pazarol**. ⛔⛔ **400 ms oda-visszánál x2,0, 800 ms-nál x3,0** — vagyis
+minden darab **két-háromszor** megy ki, és ez **önhiba**: a `UJRAKULDES_KOZ` **fix 300 ms**
+rövidebb, mint az oda-vissza, tehát **újraküldünk olyat, ami éppen ÚTON van.**
+
+⭐ *Ez a szám a D67 második darabjának (mért RTT) a bizonyítéka — és nem érv, hanem mérés.*
+⚠️ Műholdas, mobil- és zsúfolt vonalakon a 400–600 ms hétköznapi, tehát ez nem szélsőség.
+
+#### ⚠️ ÉS AMIT A MÉRÉS CÁFOLT — a saját állításomat
+
+A kiterjesztés jegyzetébe azt írtam, hogy a vonal *„20 próbálkozás után FELADJA — ez egy
+lassú vagy lyukas vonalon idő előtti feladás"*. ⛔ **Nem adta fel:** sem 15% veszteségnél,
+sem 800 ms oda-visszánál. Az `ismetles` számláló **darabonként nullázódik**, és a nyugta
+mindig megérkezett a 20. próbálkozás előtt. *A kár nem a feladás, hanem a megsokszorozott
+forgalom — és ezt csak azért tudjuk, mert megmértük ahelyett, hogy elhittük volna.*
+
+#### ⛔ Két SAJÁT műszer-hiba, felírva
+
+1. **A késleltetett küldések túlélték a foglalat bezárását** — 400 ms-nál a mérés
+   `ERR_SOCKET_DGRAM_NOT_RUNNING`-gal **összeomlott**. ✅ Javítva (órák nyilvántartása +
+   zárás-jelző). *A műszert is meg kell mérni.*
+2. ⚠️ **Az első csomag-oszlopom HAZUDOTT:** a „×1,4"-et újraküldésnek olvastam, pedig a
+   **base64 (+33%) és a nyugták** adták. ✅ Javítva: a viszonyítás mostantól a **mért**
+   alapvonal (ugyanaz a fájl tökéletes vonalon), nem egy számolt ideál. *Egy rossz
+   viszonyítási pont magabiztos, kerek és hamis számot ad.*
+
+#### ⏸️ És egy tétel, ami ebből a mérésből nőtt ki
+
+⚠️ **A base64-adó láthatóvá vált:** 64 KB-ból **182 csomag** lesz (~87 adat + ~87 nyugta),
+pedig 1000 bájtos darabokkal 65 elég volna. A fájl-szelet ugyanis `base64`-ként utazik a
+JSON-ban (`vonal.js:279`) — **+33% minden bájton**. Kis eseményeknél ez ár nélküli kényelem,
+**nagy fájloknál valódi teher** (D67, 6. pont).
+
+ ⭐ És ez a
 `udpVonal.js`-ben marad, a fájl-átvitel **egyetlen sorának változtatása nélkül** — mert az
 átvitel a kapcsolatot **kapja**, nem ő nyitja (1. szabály).
 
