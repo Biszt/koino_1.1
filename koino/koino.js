@@ -85,7 +85,7 @@ import {
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
 import {
-  figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala, fajlHozatala
+  figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala, fajlHozatala, tcpNyito
 } from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
@@ -332,8 +332,10 @@ async function fajlokElhozasa() {
     const hoszt = tars.slice(0, ketpont);
     const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
     try {
-      return await fajlHozatala(blob, KOINO, hoszt, tarsPort, lenyomat,
-        { korlat: FAJL_KORLAT });
+      // ⭐ A NYITÓ DÖNTI EL A SZÁLLÍTÁST (1. szabály): itt TCP, az átfúrt résen UDP —
+      // az átvitel logikája nem tudja, melyiken beszél.
+      return await fajlHozatala(blob, KOINO, lenyomat,
+        tcpNyito(hoszt, tarsPort), { korlat: FAJL_KORLAT });
     } catch (hiba) {
       // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
       console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });

@@ -50,7 +50,7 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed } from './vonal.js';
+import { parbeszed, fajlHozatala } from './vonal.js';
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -282,6 +282,46 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
  * @param {Object} [beallitas] - amit a `parbeszed` kap (pl. hirdetettCimek), és
  *   `varakozasiIdo`: ennyi néma ezredmásodperc után feladjuk (alap: 10 000)
  */
+/**
+ * ⭐⭐ EGY FÁJL ELHOZÁSA AZ ÁTFÚRT RÉSEN (5.7 / C) — a randevú.
+ *
+ * ⛔⛔ EZ AZ AZ ESET, AMIKOR EGYIK FÉL SEM TUD FOGADNI. Ha az egyik készülék nyitva tart
+ * egy kaput (postaláda), a fájl TCP-n is átjön — de két zárt router mögött egyik sem
+ * kezdeményezhet befelé. ⭐ A **pajzsfúrás** oldása ugyanaz, mint a rendes cserénél:
+ * mindkét fél **kifelé kopog**, és a két rés találkozik.
+ *
+ * ⭐ ÉS ITT TÉRÜL MEG AZ 1. SZABÁLY: a `fajlHozatala` **kapja** a kapcsolatot, nem ő
+ * nyitja — ezért ugyanaz a kód fut TCP-n és az átfúrt résen, **egyetlen sor változtatás
+ * nélkül**. *(A fájl-átvitel logikája nem is tudja, melyiken beszél.)*
+ *
+ * ⚠️ A UDP-VONAL EGYSZERRE EGY DARABOT tart úton (stop-and-wait), és egy darab 1000 bájt.
+ * Egy 64 KB-os szelet tehát ~87 oda-vissza — ez a résen lényegesen lassabb, mint TCP-n.
+ * *A mérés a `meres/eredmenyek.md`-ben; ha kevés lesz, a vonalnak ablak kell, nem a
+ * szeletnek más méret.*
+ *
+ * @param {Object} halo - a már átfúrt UDP-foglalat (a `pajzsfuras` adja)
+ * @param {Object} blob - a fájl-tár
+ * @returns {Promise<Object>} a `fajlHozatala` eredménye
+ */
+export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
+                                   beallitas = {}) {
+  console.log('fajlUdpResen - KEZDÉS', { tarsCim, tarsPort, lenyomat });
+
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  const nyito = async () => {
+    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+    // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE — ugyanaz az őr, mint a rendes UDP-cserénél.
+    kapcsolat.setTimeout(varakozasiIdo, () => {
+      kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+    });
+    return kapcsolat;
+  };
+
+  const eredmeny = await fajlHozatala(blob, koino, lenyomat, nyito, beallitas);
+  console.log('fajlUdpResen - VÉGE', eredmeny);
+  return eredmeny;
+}
+
 export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallitas = {}) {
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   console.log('csereUdpResen - KEZDÉS', { tarsCim, tarsPort, koino, varakozasiIdo });

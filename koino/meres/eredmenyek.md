@@ -1362,3 +1362,49 @@ ugyanazt TUDJUK-e; nem azt, hogy ugyanazt SZÁMOLJUK-e.*
 ⚠️ **Amit ez a mérés NEM mond meg:** hogy a szabály-lenyomat mennyibe kerülne egy csere-körben
 (ma egy „nincs újdonság" kör 334 bájt), és hogy eltérésnél mit tegyen a készülék a
 bejelentésen túl. *Az külön döntés — a koino bejelent, nem bíráskodik (D19).*
+
+---
+
+## 16. A FÁJL-ÁTVITEL SEBESSÉGE AZ ÁTFÚRT RÉSEN (2026-09-13)
+
+`node koino/meres/resSebessegMeres.js`
+
+A randevú (5.7 / C) megépítésekor egy szerkezeti tulajdonság látszott, amit **meg kellett
+mérni, nem megbecsülni**: a UDP-vonal **egyszerre egy darabot tart úton** (stop-and-wait,
+`udpVonal.js`), és egy darab 1000 bájt.
+
+```
+  mérés                          méret        idő      sebesség
+  ──────────────────────────────────────────────────────────────
+  TCP (helyben)                  64 KB       13 ms    4923 KB/s
+  UDP-rés (helyben)              64 KB       22 ms    2909 KB/s
+  TCP (helyben)                 256 KB       24 ms   10667 KB/s
+  UDP-rés (helyben)             256 KB       75 ms    3413 KB/s
+
+  UDP-rés (+1 ms/csomag)         64 KB     2606 ms      25 KB/s
+  UDP-rés (+5 ms/csomag)         64 KB     2781 ms      23 KB/s
+```
+
+### Amit ez megmond
+
+1. ⭐ **Helyben a rés alig lassabb:** 2909 vs. 4923 KB/s — a pajzsfúrás önmagában nem drága.
+   *A randevú tehát nem „vészmegoldás", hanem teljes értékű út.*
+2. ⛔⛔ **De a késleltetés összeomlasztja:** már **1 ms/csomag** mellett is **25 KB/s** —
+   **116-szoros** esés. Egy valódi internetkapcsolaton (10–50 ms) ez a nagyságrend a mérvadó,
+   nem a helyi szám.
+3. ⭐⭐ **És a szelet mérete ezen NEM segít.** A 64 KB ~87 darabra bomlik, és 87 darab az
+   87 oda-vissza — akár egy szeletben van, akár nyolcban. *A szűk keresztmetszet a vonal
+   ablaka, nem a szelet.*
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- **A +1 és a +5 ms közti különbség eltűnt** (25 vs. 23 KB/s), pedig ötszörös a késleltetés.
+  Ez a mérés **határa**, nem eredmény: ezen a szinten valószínűleg a `setTimeout` felbontása
+  és az újraküldési óra dominál, nem a bevitt késleltetés. *Valódi hálózaton kell újramérni.*
+- Hogy **mennyivel javítana egy ablak** — ahhoz meg kellene építeni.
+
+### ⏸️ A következmény, ha egyszer sorra kerül
+
+A **vonalnak ablak kell** (több darab úton egyszerre), nem a szeletnek más méret. ⭐ És ez a
+`udpVonal.js`-ben marad, a fájl-átvitel **egyetlen sorának változtatása nélkül** — mert az
+átvitel a kapcsolatot **kapja**, nem ő nyitja (1. szabály).

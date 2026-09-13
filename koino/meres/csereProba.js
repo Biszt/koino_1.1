@@ -959,6 +959,61 @@ async function udpParos(vesztesegAranya = 0) {
   };
 }
 
+// ===================================
+// ⭐⭐⭐ A RANDEVÚ (5.7 / C) — fájl az átfúrt résen
+// ===================================
+//
+// ⛔⛔ EZ AZ AZ ESET, AMIKOR EGYIK FÉL SEM TUD FOGADNI. Ha az egyik készülék nyitva tart
+// egy kaput (postaláda), a fájl TCP-n is átjön — de két zárt router mögött egyik sem
+// kezdeményezhet befelé. ⭐ A pajzsfúrás oldása ugyanaz, mint a rendes cserénél.
+//
+// ⭐⭐ ÉS ITT TÉRÜL MEG AZ 1. SZABÁLY: a `fajlHozatala` **kapja** a kapcsolatot, nem ő
+// nyitja — ezért **ugyanaz a kód** fut TCP-n és az átfúrt résen. *A fájl-átvitel logikája
+// nem is tudja, melyiken beszél.*
+
+proba('⭐⭐⭐ A FÁJL ÁTMEGY AZ ÁTFÚRT RÉSEN — bájtra azonosan', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const { fajlUdpResen } = await import('../js/csere/udpVonal.js');
+  const { parbeszed } = await import('../js/csere/vonal.js');
+  const { udpKapcsolat } = await import('../js/csere/udpVonal.js');
+
+  const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-res-a-'));
+  const vendegHely = await mkdtemp(join(tmpdir(), 'koino-res-b-'));
+  const gazdaBlob = fajlBlobTarolo(KOINO, gazdaHely);
+  const vendegBlob = fajlBlobTarolo(KOINO, vendegHely);
+
+  // ⚠️ TÖBB SZELETNYI fájl — különben a folytatás ága méretlen maradna.
+  const tartalom = new Uint8Array(100 * 1024);
+  for (let i = 0; i < tartalom.length; i++) tartalom[i] = i % 251;
+  const { lenyomat } = await gazdaBlob.ir(tartalom);
+
+  const p = await udpParos();
+  const gazdaTar = await ujTar();
+  const vendegTar = await ujTar();
+
+  try {
+    const [, eredmeny] = await Promise.all([
+      // A GAZDA a résen kiszolgál (a `parbeszed` a fájl-ágon kilép).
+      parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort), gazdaTar, KOINO, {
+        fajlOlvas: (l) => gazdaBlob.olvas(l)
+      }),
+      // A VENDÉG kér — ugyanazzal a kóddal, mint TCP-n.
+      fajlUdpResen(p.masik, '127.0.0.1', p.egyikPort, vendegBlob, KOINO, lenyomat)
+    ]);
+
+    const nala = await vendegBlob.olvas(lenyomat);
+    return eredmeny.kesz === true
+      && nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom))
+      // ⛔ És nem maradt félkész maradvány.
+      && (await vendegBlob.reszlegesMeret(lenyomat)) === 0;
+  } finally {
+    p.bezar();
+  }
+});
+
 proba('⭐⭐ A CSERE ÁTMEGY A UDP-RÉSEN — ugyanaz a protokoll, más szállítás', async () => {
   const anna = await ujEember(KOINO);
   const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 3));
