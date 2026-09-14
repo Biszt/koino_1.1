@@ -55,7 +55,7 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed, fajlHozatala } from './vonal.js';
+import { parbeszed, fajlHozatala, fajlKiszolgalas } from './vonal.js';
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -187,6 +187,15 @@ const GYORS_KUSZOB = 3;
 // Ennyi ideig tűrjük, hogy a másik fél NE SZÓLJON SEMMIT. Ugyanaz a 10 másodperc, amit a
 // `csereVonalon` használ TCP-n — a hívó felülírhatja (`beallitas.varakozasiIdo`).
 const TETLENSEG_ALAP = 10000;
+
+// ⭐ AZ UTÓHANG: a lezárás után még ennyi ideig felelünk a másik fél ISMÉTELT darabjaira.
+//
+// ⛔ Nem díszítés — mérve (2026-09-14): enélkül a 30%-os vesztésű csere beragad, mert a
+// lezárás pillanatában úton lévő utolsó darab nyugtáját nincs ki pótolja. ⚠️ Viszont nem is
+// örökre: a randevúnál fájlonként új kapcsolat nyílik ugyanazon a foglalaton, és a lezárt
+// példányok nem gyűlhetnek ott korlátlanul. *Két másodperc bőven fedi az újraküldés
+// ütemét (RTO), és a következő fájl átvitelénél már csend van.*
+const UTOHANG = 2000;
 
 /**
  * TCP-foglalatnak látszó objektum, ami alatta UDP-t használ.
@@ -618,6 +627,31 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
       for (const tetel of uton.values()) clearTimeout(tetel.ora);
       uton.clear();
       oratMegallit();
+
+      // ⛔⛔⛔ A FIGYELŐT LEVESSZÜK — DE CSAK AZ UTÓHANG UTÁN (2026-09-14).
+      //
+      // ⚠️⚠️ EZ EGY CÁFOLT ÁLLÍTÁSOM HELYE, ezért marad itt kimondva. Elsőre AZONNAL
+      // levettem a figyelőt a lezárásnál, ezzel az érveléssel: *„egy lezárt kapcsolat ne
+      // beszéljen"* — a randevúnál ugyanis egy foglalaton **egymás után több** kapcsolat
+      // nyílik, és a lezárt példány az új folyam darabjaira is nyugtázott volna.
+      //
+      // ⛔ A MÉRÉS MEGCÁFOLT: a 30%-os vesztésű, ötszörös rontás-próba **elbukott tőle**.
+      // A lezárt példány nyugtázása ugyanis **nem pazarlás, hanem FUNKCIÓ**: a másik fél
+      // utolsó darabja épp a lezárás pillanatában lehet úton, és ha a mi nyugtánk elveszett,
+      // **ő újraküldi** — ilyenkor a mi lezárt példányunk ismétlésként **pótolja a nyugtát**.
+      // *Enélkül ő a tétlenségi órájáig vár: pontosan az a holtpont, amit a 2026-08-30-i
+      // mérés megtalált.*
+      //
+      // ⭐ EZÉRT UTÓHANG: a lezárás után még felelünk egy darabig, aztán elhallgatunk. Így
+      // mindkét igény teljesül — az elveszett nyugta pótolható, a lezárt példányok viszont
+      // nem gyűlnek a foglalaton (a randevúnál fájlonként egy nyílik).
+      //
+      // ⚠️ ÉS AMI MIATT A DUPLIKÁLT NYUGTA NEM HAZUG: amíg a régi figyelő él, az ÚJ is él —
+      // a `halo` **mindkettőnek** odaadja a csomagot. Vagyis a régi példány nyugtája arra
+      // felel, ami tényleg megérkezett; a küldő az első nyugtánál kiveszi a darabot az
+      // `uton`-ból, a többit elnyeli.
+      setTimeout(() => halo.off?.('message', uzenetErkezett), UTOHANG).unref?.();
+
       uritestJelez(false);             // ha valaki mégis a kiürítésre várna, ne ragadjon be
     },
 
@@ -656,10 +690,11 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
  * nyitja — ezért ugyanaz a kód fut TCP-n és az átfúrt résen, **egyetlen sor változtatás
  * nélkül**. *(A fájl-átvitel logikája nem is tudja, melyiken beszél.)*
  *
- * ⚠️ A UDP-VONAL EGYSZERRE EGY DARABOT tart úton (stop-and-wait), és egy darab 1000 bájt.
- * Egy 64 KB-os szelet tehát ~87 oda-vissza — ez a résen lényegesen lassabb, mint TCP-n.
- * *A mérés a `meres/eredmenyek.md`-ben; ha kevés lesz, a vonalnak ablak kell, nem a
- * szeletnek más méret.*
+ * ⚠️ EZ A BEKEZDÉS 2026-09-14-IG AZT ÍRTA, hogy a vonal „egyszerre egy darabot tart úton
+ * (stop-and-wait)", és hogy „ha kevés lesz, a vonalnak ablak kell". **Kevés lett, és az
+ * ablak megépült** (D67): 16 darab úton, gyors újraküldés, mért újraküldési idő, AIMD.
+ * A számok a `meres/eredmenyek.md` 20–22. mérésében. *A jóslat bevált — de a jelen időt
+ * nem hagyhattuk rajta.*
  *
  * @param {Object} halo - a már átfúrt UDP-foglalat (a `pajzsfuras` adja)
  * @param {Object} blob - a fájl-tár
@@ -681,6 +716,149 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
 
   const eredmeny = await fajlHozatala(blob, koino, lenyomat, nyito, beallitas);
   console.log('fajlUdpResen - VÉGE', eredmeny);
+  return eredmeny;
+}
+
+/**
+ * ⭐⭐⭐ A FÁJL-RANDEVÚ (2026-09-14) — MINDKÉT FÉL KÉRHET, EGY FOGLALATON.
+ *
+ * ⛔⛔ MIÉRT KELLETT: a `fajlUdpResen` 2026-09-13 óta megvan és mérve van — de **senki nem
+ * hívta** az éles kódból. A `pajzsfuro` parancs a résen lefuttatta az esemény-cserét, majd
+ * azonnal bezárta a foglalatot; a fájlokat kizárólag a `fajlokElhozasa` hozta, az meg
+ * TCP-t nyit. *Vagyis pontosan abban a helyzetben, amiért a pajzsfúrás létezik — két zárt
+ * router, egyik fél sem tud fogadni —, az események átjöttek, a képek soha.*
+ *
+ * ===== ⛔ AMI A RÉSEN MÁS, MINT TCP-N: A SZEREP NEM ADÓDIK MAGÁTÓL =====
+ *
+ * TCP-n a szerep nyilvánvaló: aki kaput tart nyitva, az szolgál ki, aki csatlakozik, az kér.
+ * ⚠️ A résen **nincs kapu és nincs elfogadás**: egy foglalat van és egy társ, a két fél
+ * tökéletesen szimmetrikus. Ha mindkettő egyszerre kérne, **egyik sem szolgálna ki** —
+ * mindkettő a tétlenségi órájáig várna, és semmi nem jönne át.
+ *
+ * ⭐⭐ ÉS EGYSZERRE CSAK EGY KAPCSOLAT ÉLHET A FOGLALATON: a `udpKapcsolat` a `halo`
+ * minden csomagját feldolgozza, tehát két egyidejű példány összekeverné a sorszámozást.
+ * *Ezért soros a randevú — és ez egyben Csaba 3. döntése is: társanként legfeljebb egy
+ * átvitel.*
+ *
+ * ===== ⭐ A SZEREPET A KÉT KÜLSŐ CÍM DÖNTI EL, ÚJ ÜZENET NÉLKÜL =====
+ *
+ * A csere mindkét félnek megmondja a **saját** külső címét (`latlak` → `kivulrolIgyLatszom`),
+ * a másikét pedig eleve ismeri — tehát mindkét gépen **ugyanaz a két szöveg** van meg, csak
+ * fordított szerepben. Aki a kisebb, az kér előbb. ⭐ *Nem kellett hozzá új protokoll-üzenet:
+ * a döntéshez szükséges adat már ott volt.*
+ *
+ * ⚠️ ÉS HA NEM TUDJUK ELDÖNTENI (a társ nem mondta meg, hogyan lát), akkor **kiszolgálunk,
+ * nem kérünk** — a passzív oldal nem okoz ütközést. Ha mindkettőnél így van, egyik sem kap
+ * semmit, de **egyik sem ragad be** (a tétlenségi óra zár), és a hívó megtudja, miért
+ * (D19). *Romlás, nem törés.*
+ *
+ * ⚠️ A MÁSODIK KISZOLGÁLÓ FÁZIS TÜRELMESEBB (kétszeres), és ennek oka van: aki előbb kért,
+ * annak a kérő fázisa üresen is véget érhet, és ilyenkor a két oldal órája versenyre kelne.
+ * *A türelmetlenebb fél a kérő; a türelmesebb a kiszolgáló — így nem csúsznak szét.*
+ *
+ * @param {import('node:dgram').Socket} halo - az átfúrt, NYITVA TARTOTT foglalat
+ * @param {string} tarsCim
+ * @param {number} tarsPort
+ * @param {Object} beallitas
+ * @param {string|null} beallitas.sajatCim - 'cim:port', ahogy a társ lát kívülről
+ * @param {string[]} beallitas.kerhetok - mely lenyomatok vannak meg NÁLA (a csere mondja meg)
+ * @param {Object} beallitas.blob - a fájl-tár
+ * @param {Object} beallitas.tar - az esemény-tár (a kiszolgáló párbeszédhez)
+ * @param {string} beallitas.koino
+ * @param {Function} [beallitas.fajlOlvas] - (lenyomat) → bájtok|null
+ * @returns {Promise<{kesz: number, bukott: number, bajt: number, kiszolgalt: number,
+ *                    szerep: 'kerek-elobb'|'kiszolgalok-elobb'|'nem-tudom'}>}
+ */
+export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
+  const {
+    sajatCim = null, kerhetok = [], blob, tar, koino,
+    fajlOlvas = null, korlat = Infinity,
+    varakozasiIdo = TETLENSEG_ALAP, utana = () => {}
+  } = beallitas;
+
+  const ove = tarsCim + ':' + tarsPort;
+  // ⭐ Szöveges összehasonlítás: ugyanaz a két szöveg van meg mindkét gépen, tehát a
+  // döntés is ugyanaz — csak fordítva. ⚠️ Egyenlőségnél (elvileg lehetetlen) senki nem kezd.
+  const tudjuk = typeof sajatCim === 'string' && sajatCim !== ove;
+  const enKezdek = tudjuk && sajatCim < ove;
+  const szerep = !tudjuk ? 'nem-tudom' : (enKezdek ? 'kerek-elobb' : 'kiszolgalok-elobb');
+
+  console.log('fajlRandevu - KEZDÉS', { tarsCim, tarsPort, szerep, kerhetok: kerhetok.length });
+  utana({ mi: 'SZEREP', szerep, sajatCim, tarsCim: ove });
+
+  let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0;
+
+  /** ⭐ KÉRŐ FÁZIS: egyesével, mert a foglalaton egyszerre egy kapcsolat élhet. */
+  const keroFazis = async () => {
+    if (!tudjuk) return;                   // ⚠️ nem tudjuk, ki a soros — nem kérünk (lásd fent)
+    for (const lenyomat of kerhetok) {
+      try {
+        const e = await fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
+          { korlat, varakozasiIdo });
+        if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
+        utana({ mi: e.kesz ? 'MEGJOTT' : 'NEM-JOTT', lenyomat, ok: e.ok, bajt: e.bajt ?? 0 });
+      } catch (hiba) {
+        // ⚠️ EGY FÁJL BUKÁSA NEM DÖNTI EL A TÖBBIT — ugyanaz az elv, mint a `tarsak.js`-nél.
+        bukott++;
+        utana({ mi: 'NEM-JOTT', lenyomat, ok: hiba.message, bajt: 0 });
+      }
+    }
+  };
+
+  /**
+   * ⭐ KISZOLGÁLÓ FÁZIS: amíg kér, adunk; ha `turelem` ideig nem szól, ő végzett.
+   *
+   * ⛔⛔ ÉS ITT **NEM** `parbeszed` FUT, HANEM A PASSZÍV `fajlKiszolgalas` — ezt egy mérés
+   * kényszerítette ki (2026-09-14). A `parbeszed` ugyanis **kezdeményez**: rögtön küld egy
+   * `LENYOMAT`-ot. Mivel a résen mindkét fél ugyanazt a szerepet játssza, a két LENYOMAT
+   * találkozott, és a két gép **rendes cserébe kezdett egymással** — a fájl-ág pedig a
+   * második szeletnél egy `CIMEK` üzenetet kapott `FAJLKEREK` helyett, és kilépett.
+   * *A 70 KB-os fájl fele úton maradt, a tünet („a társ nem kért semmit") pedig félrevezetett.*
+   *
+   * ⭐ Aki kiszolgál, az NE beszéljen elsőként.
+   *
+   * ⚠️ A kiszolgálás EGY fájl után visszatér (a kérő `KESZ`-t mond), ezért kell a ciklus.
+   * A két kapcsolat közti pillanatban a kérő első csomagja elveszhet — de **újraküldi**,
+   * tehát legfeljebb egy RTO-nyi késés az ára, nem a fájl.
+   */
+  const kiszolgaloFazis = async (turelem) => {
+    // ⭐ Ha nincs mit olvasnunk, akkor is FELELÜNK — őszintén, hogy nincs meg (D19).
+    // *Enélkül a fázis-ütem csúszna el, és a másik fél kérése a semmibe menne.*
+    const olvas = fajlOlvas ?? (async () => null);
+    for (;;) {
+      const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+      kapcsolat.setTimeout(turelem, () => {
+        kapcsolat.destroy(new Error('a társ nem kért semmit (' + turelem + ' ms)'));
+      });
+      try {
+        const e = await fajlKiszolgalas(kapcsolat, olvas);
+        if (!e.kiszolgalt) { utana({ mi: 'KISZOLGALAS-VEGE', ok: e.ok }); break; }
+        kiszolgalt++;
+        utana({ mi: 'KISZOLGALTAM', hanyadik: kiszolgalt });
+      } catch (hiba) {
+        // ⭐ Ez a RENDES befejezés: a társ végzett, vagy nem is kért. Nem hiba (D19) —
+        // ⚠️ de KIMONDJUK, mert egy elnyelt ok itt csendes holtpontot takarhat.
+        utana({ mi: 'KISZOLGALAS-VEGE', ok: hiba.message, hanyadik: kiszolgalt });
+        break;
+      } finally {
+        // ⚠️ ELŐBB KIÜRÍTÉS: az utolsó szelet darabjai még úton lehetnek, és az `end()`
+        // eldobná őket — pontosan az a holtpont, amit a `csereUdpResen`-nél már megmértünk.
+        if (typeof kapcsolat.kiurites === 'function') await kapcsolat.kiurites();
+        kapcsolat.end();
+      }
+    }
+  };
+
+  if (enKezdek) {
+    await keroFazis();
+    await kiszolgaloFazis(2 * varakozasiIdo);
+  } else {
+    await kiszolgaloFazis(varakozasiIdo);
+    await keroFazis();
+  }
+
+  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep };
+  console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
 }
 

@@ -45,6 +45,19 @@
 //   node koino/koino.js tukor <cím> [port]       — ⭐ kívülről hogy látszom? (STUN helyett)
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson kaput
+//   node koino/koino.js hozd <azonosító>         — EGY entitás elhozása (böngésző-lekérés)
+//   node koino/koino.js pajzsfuro <cím> <port> [tcp]  — ⭐ a rés: csere ÉS fájlok
+//   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
+//   node koino/koino.js felfedez [mp] [port]     — ki van még ezen a wifin?
+//   node koino/koino.js ter [rendezés] [irány]   — a BELÉPŐ TÉR: a koinók, amiket ismerek
+//   node koino/koino.js fajlok                   — mely képek/fájlok hiányoznak
+//   node koino/koino.js felulet [port]           — a felület a böngészőnek (helyi kapu)
+//   node koino/koino.js kivisz <fájl> [hatókör] · behoz <fájl>   — a KÉZI ÚT (4. szabály)
+//   node koino/koino.js ertek <az> <elfogadási%> <részvételi%> <min mp> <max mp>
+//   node koino/koino.js kategoria <név> [ikon] [leírás] · gondolattipus <név> …
+//
+// ⚠️ EZ A LISTA 2026-09-14-IG ELAVULT VOLT: tizenkét meglévő parancsot nem említett.
+// *A teljes, mindig érvényes lista a fájl végén, az ismeretlen parancs ágán van.*
 //
 // Bárhol, ahol azonosítót kér, elég a RÖVIDÍTÉSE is (mint a gitben).
 //
@@ -111,7 +124,8 @@ import {
   kuszobokBefele,
   hianyzoFelmenok
 } from './js/allapot/pakli.js';
-import { csereUdpResen } from './js/csere/udpVonal.js';
+// ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
+import { csereUdpResen, fajlRandevu } from './js/csere/udpVonal.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import { allapotUjjlenyomata } from './js/allapot/osszehasonlitas.js';
@@ -1797,9 +1811,36 @@ try {
             + SZIN.vege);
         } else {
           const hirdetjuk = await hirdetendoCimek(tarolo);
+
+          // ===== ⛔⛔ A FÁJL-KÖR IS MEGY — ÉS 2026-09-14-IG NEM MENT (átnézés) =====
+          //
+          // Itt korábban a `csereVonalon` **hetedik paramétere hiányzott**, vagyis az
+          // őrjárat SOHA nem kérdezte meg, kinél van meg a hiányzó kép — csak felelt, ha
+          // őt kérdezték. ⚠️ Márpedig a CLAUDE.md szerint ez „a valódi üzemmód": a
+          // fájl-szállítás teljes lánca (felderítés → kérelem → átvitel) **csak akkor
+          // futott, ha valaki kézzel begépelte a `csere` parancsot**.
+          //
+          // ⭐ Ugyanaz a hiba-fajta, mint a Szakasz 4-nél (2026-09-12): a réteg megépült,
+          // mérve volt, próba őrizte — és az éles út nem hívta. *Amit csak modul-próba mér,
+          // arról nem tudjuk, hogy fut-e a valódi üzemmódban.*
+          //
+          // ⭐ EGYSZER állítjuk össze a kérelmet, és minden társnak ugyanazt adjuk.
+          const fajlok = await fajlResz();
           const kor = await korbeCsere(lista,
-            (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk));
+            (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok));
           await tarolo.ir(kor.lista);
+
+          // ⭐ AMIT A FÁJLOKRÓL TANULTUNK: társanként rakjuk el — a lényeg épp az, hogy
+          // **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
+          let fajlTanultak = 0;
+          for (const e of kor.eredmenyek) {
+            if (!e.sikerult || !e.fajlokNala?.length) continue;
+            fajlTanultak += await fajlTanulsag(e.tars.hoszt + ':' + e.tars.port, e.fajlokNala);
+          }
+          if (fajlTanultak) {
+            kiir(SZIN.jo + '  + ' + ora() + ' ' + fajlTanultak
+              + ' fájlról tudom meg, hogy náluk megvan' + SZIN.vege);
+          }
 
           // ⭐ AMIT A TÁRSAKTÓL HALLOTTUNK: új címek a listára. Ettől bővül magától.
           const ujCimek = kor.eredmenyek
@@ -1817,6 +1858,23 @@ try {
           kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
             + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
             + adatMennyiseg({ bajtKuldott: kor.bajt }) + SZIN.vege);
+        }
+
+        // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
+        //
+        // ⛔ EZ IS HIÁNYZOTT INNEN. A kézi `csere` mindkét ága elhozta a hiányzó fájlokat,
+        // az őrjárat viszont nem — pedig épp ez az, aminek magától kell mennie: *„a buli
+        // után fent kell tartani a kapcsolatot azon eszközöknek, amik nagyobb csomagot
+        // küldenek egymásnak"* (Csaba, 2026-09-12).
+        //
+        // ⚠️ A társ-listán KÍVÜL is futhat: a birtoklás-jegyzet a saját címeit hozza, tehát
+        // akkor is van kitől kérni, ha most épp egy társ sem felelt. *A bukás nem hiba —
+        // a `fajlokElhozasa` társanként nyeli el, és a következő kör újrapróbálja.*
+        try {
+          await fajlAtvitelKiirasa();
+        } catch (hiba) {
+          // ⚠️ A tartalmi réteg hibája NE döntse el az őrjáratot (D3: a két réteg külön él).
+          kiir(SZIN.halvany + '  ⚠ a fájl-átvitel most nem sikerült: ' + hiba.message + SZIN.vege);
         }
 
         // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
@@ -2198,9 +2256,14 @@ try {
         // hirdeti a saját címét, mert az tartós és TCP-vel hívható. A rés nem az.
         // Amikor az őrjárat majd maga is tud fúrni, ez visszakapcsolható — de akkor a
         // társ-listának meg kell tanulnia, mi a múlandó UDP-rés és mi a tartós cím.
-        const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO,
-          { hirdetettCimek: await hirdetendoCimek(tarolo) });
-        eredmeny.halo.close();
+        const fajlok = await fajlResz();
+        const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO, {
+          hirdetettCimek: await hirdetendoCimek(tarolo),
+          // ⭐⭐ A FÁJL-KÖR A RÉSEN IS MEGY (5.7) — enélkül nem tudnánk meg, mi van nála.
+          fajlKerelem: fajlok.kerelem,
+          fajlValasz: fajlok.valasz,
+          fajlOlvas: fajlok.olvas
+        });
 
         kiir(SZIN.jo + '  ✓ kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott
           + SZIN.vege + SZIN.halvany + ' (' + csere.korok + ' kör, '
@@ -2212,6 +2275,61 @@ try {
           kiir(SZIN.halvany + '  Kívülről így látszol: ' + csere.kivulrolIgyLatszom.cim
             + ':' + csere.kivulrolIgyLatszom.port + SZIN.vege);
         }
+
+        // ===== ⭐⭐⭐ ÉS A BÁJTOK IS ÁTJÖNNEK A RÉSEN (2026-09-14) =====
+        //
+        // ⛔ EDDIG ITT AZONNAL BEZÁRTUK A FOGLALATOT. A `fajlUdpResen` 2026-09-13 óta kész
+        // volt és mérve is — de **egyetlen éles hívó nélkül**: a fájlokat csak a
+        // `fajlokElhozasa` hozta, az pedig TCP-t nyit. *Vagyis épp abban a helyzetben, amiért
+        // a pajzsfúrás létezik (két zárt router), a kép soha nem jött át.*
+        //
+        // ⭐ A CSERE MONDJA MEG, MIT LEHET KÉRNI TŐLE: a fájl-kör válasza (`fajlokNala`) az
+        // a lista, amit kértem és nála megvan. *Nem kell új kérdezősködés — ugyanaz az elv,
+        // mint az `ALLAS`-nál.*
+        const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
+        if (kerhetok.length) {
+          await fajlTanulsag(cim + ':' + port, kerhetok);
+        }
+
+        kiir();
+        kiir(SZIN.vastag + 'FÁJLOK A RÉSEN' + SZIN.vege + SZIN.halvany
+          + '   (' + kerhetok.length + ' kérhető tőle)' + SZIN.vege);
+
+        const randevu = await fajlRandevu(eredmeny.halo, cim, port, {
+          // ⭐ A SZEREPHEZ A SAJÁT KÜLSŐ CÍMEM KELL — és azt épp az imént mondta meg a csere.
+          sajatCim: csere.kivulrolIgyLatszom
+            ? csere.kivulrolIgyLatszom.cim + ':' + csere.kivulrolIgyLatszom.port
+            : null,
+          kerhetok,
+          blob: fajlBlobTarolo(KOINO),
+          tar, koino: KOINO,
+          fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+          korlat: FAJL_KORLAT,
+          utana: (e) => {
+            if (e.mi === 'SZEREP' && e.szerep === 'nem-tudom') {
+              // ⚠️ A HIÁNYT KIMONDJUK (D19) — különben csak annyi látszana, hogy „nem jött".
+              kiir(SZIN.nem + '  ⚠ Nem tudom, melyikünk kérdezzen előbb' + SZIN.vege
+                + SZIN.halvany + ' (a társ nem mondta meg, hogyan lát kívülről) —'
+                + ' ezért csak kiszolgálok.' + SZIN.vege);
+            }
+            if (e.mi === 'MEGJOTT') {
+              kiir(SZIN.jo + '  ✓ megjött egy fájl' + SZIN.vege + SZIN.halvany
+                + ' (' + adatMennyiseg({ bajtKuldott: e.bajt }) + ')' + SZIN.vege);
+            }
+            if (e.mi === 'NEM-JOTT') {
+              kiir(SZIN.halvany + '  · egy fájl nem jött át: ' + (e.ok ?? 'ismeretlen ok')
+                + SZIN.vege);
+            }
+          }
+        });
+
+        if (randevu.kesz || randevu.bukott || randevu.kiszolgalt) {
+          kiir(SZIN.halvany + '  ' + randevu.kesz + ' megérkezett · ' + randevu.bukott
+            + ' nem sikerült · ' + randevu.kiszolgalt + ' fájlt adtam neki' + SZIN.vege);
+        }
+
+        // ⛔ A FOGLALATOT CSAK MOST ZÁRJUK — a fájlok utolsó szelete után.
+        eredmeny.halo.close();
       } else if (eredmeny.sikerult) {
         // ⚠️ FÉL SIKER: az ő csomagjai átjönnek, a mieink nem. Ez is mérés, nem hiba.
         kiir(SZIN.nem + '⚠ FÉL SIKER: az ő kopogása átjött, a miénk nem.' + SZIN.vege);
@@ -3139,7 +3257,8 @@ try {
       kiir('           ter [letrehozva|eloszorLattam|nev] [csokkeno|novekvo]  (A BELÉPŐ TÉR)');
       kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
-      kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port]');
+      kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
+      kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           kategoria <név> [ikon] [leírás] · gondolattipus <név> [ikon] [leírás]');
       kiir('           gondolat <cím> [szöveg] [típus] [kategória...] · felulet [port]');

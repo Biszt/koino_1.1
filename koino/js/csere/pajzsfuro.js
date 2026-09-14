@@ -41,7 +41,10 @@
 // ⚠️ EZ A FÁJL SEMMIT NEM TUD A KOINÓRÓL. Nem ismer eseményt, tárat, szabályt — csak
 // csomagokat küld és fogad. A `vonal.js` MELLÉ került, nem bele (1. szabály).
 //
-// Használják: koino.js (`talalkozo` parancs) és a csereProba.js.
+// Használják: koino.js (a `pajzsfuro` és a `kulsoport` parancs) és a csereProba.js.
+// ⚠️ EZ A SOR IS HAZUDOTT 2026-09-14-ig: `talalkozo` parancsot említett, ilyen viszont
+// sosem volt. *Ugyanaz a csapda, amit az `Allaspont`-nál kimondtunk: ahol egy felirat mást
+// mond, mint ami a kód, ott előbb-utóbb valaki a feliratot hiszi el.*
 
 import { createSocket } from 'node:dgram';
 import { connect } from 'node:net';

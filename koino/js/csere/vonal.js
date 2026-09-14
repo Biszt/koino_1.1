@@ -242,60 +242,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // ⚠️ A KISZOLGÁLÓ NEM ÍTÉL: ha nincs meg a fájl, azt mondja, hogy nincs meg — nem
     // magyarázkodik és nem vádol (D19).
     if (kor === 1 && elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
-      // ⛔⛔ CIKLUSBAN SZOLGÁLUNK KI, EGY KAPCSOLATON — és ezt a MÉRÉS kényszerítette ki.
-      //
-      // Elsőre szeletenként ÚJ kapcsolat nyílt. TCP-n ez működik (a figyelő minden
-      // kapcsolatot külön elfogad), ⚠️ de az **átfúrt résen nincs „elfogadás"**: ott egy
-      // foglalat van és egy társ. A második szelet kérésekor már senki nem figyelt — a
-      // párbeszéd időtúllépéssel elakadt.
-      //
-      // ⭐ ÉS ÍGY JOBB IS: kevesebb oda-vissza, és a TCP-út is gyorsabb lett tőle.
-      // *A szállítás-függetlenség nem elméleti igény — a rés mutatta meg, hol sérült.*
-      let keres = elsoUzenet;
-      for (;;) {
-      const lenyomat = keres.lenyomat;
-      const eltolas = Number.isInteger(keres.eltolas) ? keres.eltolas : 0;
-
-      let bajtok = null;
-      try {
-        bajtok = await beallitas.fajlOlvas(lenyomat);
-      } catch (hiba) {
-        console.warn('parbeszed - a fájl olvasása nem sikerült', { hiba: hiba.message });
-      }
-
-      if (!bajtok) {
-        kuld({ uzenet: 'FAJLNINCS', lenyomat });
-      } else {
-        // ⛔ EGY SZELET, NEM AZ EGÉSZ FÁJL. A kérelmező mondja meg, hol tart — így egy
-        // megszakadt átvitel **onnan folytatódik**, ahol abbamaradt.
-        const vege = Math.min(eltolas + SZELET_MERET, bajtok.length);
-        const szelet = bajtok.subarray(Math.min(eltolas, bajtok.length), vege);
-        kuld({
-          uzenet: 'FAJLSZELET',
-          lenyomat,
-          eltolas,
-          // ⚠️ base64, mert a vonal **soronként egy JSON-üzenet** (ugyanaz az alak, mint a
-          // táré) — a nyers bájt eltörné a sorokat. Az ára +33% EGY szeleten.
-          adat: Buffer.from(szelet).toString('base64'),
-          teljes: bajtok.length,
-          vege: vege >= bajtok.length
-        });
-      }
-
-      console.log('parbeszed - fájl-szelet kiszolgálva',
-        { lenyomat, eltolas, megvolt: !!bajtok });
-
-      // ⭐ Kér még? Ha a kapcsolat lezárul (végeztünk), a sor hibával válaszol — az a
-      // rendes befejezés, nem baj.
-      if (!bajtok) break;
-      try {
-        keres = await sor.kovetkezo();
-      } catch {
-        break;
-      }
-      // ⭐ A `KESZ` a kimondott befejezés (lásd a kliens oldalát); bármi más is kiléptet.
-      if (keres.uzenet !== 'FAJLKEREK') break;
-      }
+      await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
 
       console.log('parbeszed - VÉGE (fájl-átvitel)');
       return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
@@ -668,6 +615,111 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
  * @param {Object} [beallitas]
  * @returns {Promise<{kesz: boolean, ok?: string, bajt: number, szeletek: number}>}
  */
+/**
+ * ⭐⭐ A FÁJL-SZELETEK KISZOLGÁLÁSA — a `fajlHozatala` párja, egy kapcsolaton.
+ *
+ * ⛔⛔ CIKLUSBAN SZOLGÁLUNK KI, EGY KAPCSOLATON — és ezt a MÉRÉS kényszerítette ki.
+ * Elsőre szeletenként ÚJ kapcsolat nyílt. TCP-n ez működik (a figyelő minden kapcsolatot
+ * külön elfogad), ⚠️ de az **átfúrt résen nincs „elfogadás"**: ott egy foglalat van és egy
+ * társ. A második szelet kérésekor már senki nem figyelt — a párbeszéd elakadt.
+ *
+ * ⚠️ A KISZOLGÁLÓ NEM ÍTÉL: ha nincs meg a fájl, azt mondja, hogy nincs meg — nem
+ * magyarázkodik és nem vádol (D19).
+ */
+async function fajlSzeletekKiszolgalasa(sor, kuld, fajlOlvas, elsoKeres) {
+  let keres = elsoKeres;
+  let szeletek = 0;
+
+  for (;;) {
+    const lenyomat = keres.lenyomat;
+    const eltolas = Number.isInteger(keres.eltolas) ? keres.eltolas : 0;
+
+    let bajtok = null;
+    try {
+      bajtok = await fajlOlvas(lenyomat);
+    } catch (hiba) {
+      console.warn('fajlSzeletekKiszolgalasa - a fájl olvasása nem sikerült',
+        { hiba: hiba.message });
+    }
+
+    if (!bajtok) {
+      kuld({ uzenet: 'FAJLNINCS', lenyomat });
+    } else {
+      // ⛔ EGY SZELET, NEM AZ EGÉSZ FÁJL. A kérelmező mondja meg, hol tart — így egy
+      // megszakadt átvitel **onnan folytatódik**, ahol abbamaradt.
+      const vege = Math.min(eltolas + SZELET_MERET, bajtok.length);
+      const szelet = bajtok.subarray(Math.min(eltolas, bajtok.length), vege);
+      kuld({
+        uzenet: 'FAJLSZELET',
+        lenyomat,
+        eltolas,
+        // ⚠️ base64, mert a vonal **soronként egy JSON-üzenet** (ugyanaz az alak, mint a
+        // táré) — a nyers bájt eltörné a sorokat. Az ára +33% EGY szeleten.
+        adat: Buffer.from(szelet).toString('base64'),
+        teljes: bajtok.length,
+        vege: vege >= bajtok.length
+      });
+      szeletek++;
+    }
+
+    console.log('fajlSzeletekKiszolgalasa - szelet kiszolgálva',
+      { lenyomat, eltolas, megvolt: !!bajtok });
+
+    // ⭐ Kér még? Ha a kapcsolat lezárul (végeztünk), a sor hibával válaszol — az a
+    // rendes befejezés, nem baj.
+    if (!bajtok) break;
+    try {
+      keres = await sor.kovetkezo();
+    } catch {
+      break;
+    }
+    // ⭐ A `KESZ` a kimondott befejezés (lásd a kliens oldalát); bármi más is kiléptet.
+    if (keres.uzenet !== 'FAJLKEREK') break;
+  }
+
+  return { szeletek };
+}
+
+/**
+ * ⭐⭐⭐ PASSZÍV FÁJL-KISZOLGÁLÁS EGY KAPCSOLATON (2026-09-14) — a randevúhoz.
+ *
+ * ⛔⛔ MIÉRT NEM A `parbeszed` EZ: mert a `parbeszed` **kezdeményez** — rögtön küld egy
+ * `LENYOMAT`-ot. TCP-n ez rendben van (a kapcsolatot a kérő nyitotta, tehát a szerepek
+ * eleve el vannak osztva), ⚠️ de az **átfúrt résen mindkét fél ugyanazt a szerepet játssza**:
+ * ha mindkét oldal `parbeszed`-et futtatna „kiszolgálóként", a két LENYOMAT találkozna, és
+ * a két gép **rendes cserébe kezdene egymással** — miközben az egyikük épp fájlt kér.
+ *
+ * ⭐ MÉRVE (2026-09-14, a randevú első nekifutása): pontosan ez történt. A kiszolgáló
+ * fájl-ága a második szeletnél egy **`CIMEK`** üzenetet kapott `FAJLKEREK` helyett, kilépett,
+ * és a 70 KB-os fájl fele úton maradt. *A tünet félrevezető volt („a társ nem kért semmit"),
+ * az ok pedig szerkezeti: aki kiszolgál, az NE beszéljen elsőként.*
+ *
+ * ⭐ Ez a függvény tehát **néma, amíg nem kérdezik**. Ugyanazt a kiszolgáló-logikát futtatja,
+ * amit a `parbeszed` fájl-ága — egy helyen, két hívóval.
+ *
+ * @param {Object} kapcsolat - a MÁR MEGNYITOTT kapcsolat (TCP-foglalat vagy UDP-rés)
+ * @param {Function} fajlOlvas - (lenyomat) → bájtok|null
+ * @returns {Promise<{kiszolgalt: boolean, ok?: string, szeletek: number}>}
+ */
+export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
+  const sor = uzenetSor(kapcsolat);
+  const kuld = (targy) => kapcsolat.write(JSON.stringify(targy) + '\n');
+
+  // ⚠️ Ez a hívás DOBHAT (időtúllépés, lezárás) — és ez a rendes befejezés: a társ nem
+  // kért semmit. A hívó dönti el, mit kezd vele; itt nem nyeljük el (D19).
+  const elso = await sor.kovetkezo();
+
+  if (elso.uzenet !== 'FAJLKEREK') {
+    // ⚠️ Nem hiba, csak nem ez a dolgunk: megnevezzük, mi jött helyette.
+    console.log('fajlKiszolgalas - VÉGE (nem fájl-kérés)', { uzenet: elso.uzenet });
+    return { kiszolgalt: false, ok: 'nem fájl-kérés: ' + elso.uzenet, szeletek: 0 };
+  }
+
+  const { szeletek } = await fajlSzeletekKiszolgalasa(sor, kuld, fajlOlvas, elso);
+  console.log('fajlKiszolgalas - VÉGE', { szeletek });
+  return { kiszolgalt: true, szeletek };
+}
+
 /**
  * ⭐ EGY TCP-KAPCSOLAT NYITÓJA a fájl-átvitelhez.
  *

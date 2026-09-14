@@ -21,7 +21,7 @@ import {
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
-import { csereUdpResen, udpKapcsolat } from '../js/csere/udpVonal.js';
+import { csereUdpResen, udpKapcsolat, fajlRandevu } from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
   felfedezettekOsszefesulese
@@ -1009,6 +1009,108 @@ proba('⭐⭐⭐ A FÁJL ÁTMEGY AZ ÁTFÚRT RÉSEN — bájtra azonosan', async
       && nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom))
       // ⛔ És nem maradt félkész maradvány.
       && (await vendegBlob.reszlegesMeret(lenyomat)) === 0;
+  } finally {
+    p.bezar();
+  }
+});
+
+// ===================================
+// ⭐⭐⭐ A RANDEVÚ MÁSIK FELE (2026-09-14): MINDKÉT FÉL KÉRHET
+// ===================================
+//
+// ⛔⛔ AMIT AZ ELŐZŐ PRÓBA NEM MÉRT: ott az egyik fél **kizárólag kiszolgált**, a másik
+// **kizárólag kért** — a próba osztotta ki a szerepeket. ⚠️ A valóságban viszont a rés
+// **tökéletesen szimmetrikus**: nincs kapu és nincs elfogadás, mindkét félnek lehet
+// hiányzó fájlja. Ha mindkettő egyszerre kérne, egyik sem szolgálna ki, és **semmi nem
+// jönne át** — mindkettő a tétlenségi órájáig várna.
+//
+// ⭐ A `fajlRandevu` ezt oldja meg, ÚJ PROTOKOLL-ÜZENET NÉLKÜL: a szerepet a két külső
+// cím dönti el (a csere mindkét félnek megmondja a sajátját), és a kisebb kér előbb.
+//
+// ⛔ EZ A PRÓBA AKKOR IS ZÖLD LENNE, ha csak az egyik irányt néznénk — ezért mér
+// **mindkettőt**, és azt is, hogy a két fél szerepe TÉNYLEG ellentétes lett.
+
+proba('⭐⭐⭐ A RANDEVÚ: MINDKÉT FÉL KÉR ÉS AD — egy foglalaton, ütközés nélkül', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+
+  const helyA = await mkdtemp(join(tmpdir(), 'koino-randevu-a-'));
+  const helyB = await mkdtemp(join(tmpdir(), 'koino-randevu-b-'));
+  mappak.push(helyA, helyB);
+  const blobA = fajlBlobTarolo(KOINO, helyA);
+  const blobB = fajlBlobTarolo(KOINO, helyB);
+
+  // ⚠️ AZ EGYIK TÖBB SZELETES, a másik egy szeletes — így a folytatás ága is mérve van,
+  // és az sem marad méretlen, hogy egy rövid átvitel után a szerep-csere megtörténik.
+  const tartalomA = new Uint8Array(70 * 1024);
+  for (let i = 0; i < tartalomA.length; i++) tartalomA[i] = i % 251;
+  const tartalomB = new Uint8Array(5 * 1024);
+  for (let i = 0; i < tartalomB.length; i++) tartalomB[i] = (i * 7) % 253;
+
+  const { lenyomat: lenyA } = await blobA.ir(tartalomA);   // ez csak A-nál van meg
+  const { lenyomat: lenyB } = await blobB.ir(tartalomB);   // ez csak B-nél
+
+  const p = await udpParos();
+  const tarA = await ujTar();
+  const tarB = await ujTar();
+
+  try {
+    const [a, b] = await Promise.all([
+      fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+        sajatCim: '127.0.0.1:' + p.egyikPort,
+        kerhetok: [lenyB],                       // A a B fájlját kéri
+        blob: blobA, tar: tarA, koino: KOINO,
+        fajlOlvas: (l) => blobA.olvas(l),
+        varakozasiIdo: 500
+      }),
+      fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+        sajatCim: '127.0.0.1:' + p.masikPort,
+        kerhetok: [lenyA],                       // B az A fájlját kéri
+        blob: blobB, tar: tarB, koino: KOINO,
+        fajlOlvas: (l) => blobB.olvas(l),
+        varakozasiIdo: 500
+      })
+    ]);
+
+    const aNal = await blobA.olvas(lenyB);
+    const bNel = await blobB.olvas(lenyA);
+
+    return a.kesz === 1 && b.kesz === 1
+      // ⭐ MINDKÉT IRÁNYBAN bájtra azonos
+      && aNal !== null && Buffer.from(aNal).equals(Buffer.from(tartalomB))
+      && bNel !== null && Buffer.from(bNel).equals(Buffer.from(tartalomA))
+      // ⛔ És nem maradt félkész maradvány egyik oldalon sem.
+      && (await blobA.reszlegesMeret(lenyB)) === 0
+      && (await blobB.reszlegesMeret(lenyA)) === 0
+      // ⛔⛔ ÉS A LÉNYEG: pontosan EGY fél kezdett. Ha mindkettő ugyanazt a szerepet
+      // választaná, ez a sor buktatja — a fájlok ilyenkor is átjöhetnének véletlenül.
+      && (a.szerep === 'kerek-elobb') !== (b.szerep === 'kerek-elobb')
+      && a.szerep !== 'nem-tudom' && b.szerep !== 'nem-tudom';
+  } finally {
+    p.bezar();
+  }
+});
+
+// ⚠️ ÉS A PÁRJA: HA NEM TUDJUK ELDÖNTENI a szerepet (a társ nem mondta meg, hogyan lát
+// kívülről), a randevú **nem ragad be** — kiszolgál, és megmondja, hogy nem tudja (D19).
+// *Enélkül a „nem-tudom" ág csendes holtpont lenne, és soha nem derülne ki.*
+proba('⚠️ SZEREP NÉLKÜL sem ragad be — kiszolgál, és KIMONDJA, hogy nem tudja', async () => {
+  const p = await udpParos();
+  const tarA = await ujTar();
+  try {
+    const jelzesek = [];
+    const e = await fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+      sajatCim: null,                            // ⛔ a társ nem mondta meg, hogyan lát
+      kerhetok: ['nem-is-kerem-mert-nem-tudom-ki-a-soros-4444444'],
+      blob: null, tar: tarA, koino: KOINO,
+      varakozasiIdo: 200,
+      utana: (j) => jelzesek.push(j)
+    });
+    return e.szerep === 'nem-tudom'
+      && e.kesz === 0 && e.bukott === 0          // ⭐ NEM kért — a passzív oldal nem ütközik
+      && jelzesek.some((j) => j.mi === 'SZEREP' && j.szerep === 'nem-tudom');
   } finally {
     p.bezar();
   }

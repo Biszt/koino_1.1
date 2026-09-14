@@ -3506,8 +3506,9 @@ szállításra nem lehet alapozni.*
 
 #### 3. ⭐ A következmény, kimondva
 
-- **A UDP-vonal ABLAKÁT meg kell építeni** (16. mérés: a mai stop-and-wait **25 KB/s** már
-  1 ms/csomag késleltetésnél). ⭐ Az ablak a `udpVonal.js`-ben marad, és a fájl-átvitel
+- ✅ **A UDP-vonal ABLAKÁT meg kellett építeni** (16. mérés: az akkori stop-and-wait
+  **25 KB/s** már 1 ms/csomag késleltetésnél) — ⭐ **és 2026-09-14-re megépült** (D67:
+  ablak + gyors újraküldés + mért RTO + AIMD; 20–22. mérés, **460 KB/s**). ⭐ Az ablak a `udpVonal.js`-ben marad, és a fájl-átvitel
   **egyetlen sorának változtatása nélkül** — mert az átvitel a kapcsolatot **kapja**, nem ő
   nyitja (**1. szabály**).
 - **A TCP-út nem vész el, csak lefokozódik** alkalmi **gyorssávvá** ott, ahol a vonal engedi.

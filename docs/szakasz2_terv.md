@@ -974,3 +974,88 @@ romlanának (1% / 5% / 15% = **287 / 104 / 39 KB/s**), és anélkül, hogy a tor
 lassulna. ⚠️ **És egy kockázat, amit mérni kell:** mobilvonalon az RTT attól is ingadozik,
 aminek semmi köze a sorbanálláshoz (rádiós ütemezés, cellaváltás) — ott **fölöslegesen is
 visszafoghatunk**; a műszernek ezt is modelleznie kell.
+
+---
+
+## ⛔⛔⛔ ÉS EGY KÖZBEJÖTT MUNKA A D68 ELŐTT: A SZÁLLÍTÁS BEKÖTÉSE (2026-09-14)
+
+Egy kód-átnézés kimutatta, hogy **a fájl-szállítás megépült, mérve volt, próba őrizte — és
+az éles út nem hívta**. Ez a D68 sorrendjét is érinti: ⚠️ *a bufferbloat, amit a 23. mérés
+kimutatott (három egyidejű átvitel teletömi a sort), élesben elő sem állhatott, mert három
+egyidejű átvitel csak kézzel gépelt `csere` parancsból indult.* **A D68 tehát a bekötés
+utáni világ szabálya** — és a bekötés megtörtént.
+
+### Amit a mérés talált
+
+1. ⛔ **Az `orjarat` nem hozott fájlt.** A `csereVonalon` **hetedik paramétere** (a fájl-rész)
+   hiányzott, és a kör után nem futott a `fajlAtvitelKiirasa()`. Az őrjárat csak **felelt**,
+   ha kérdezték.
+2. ⛔ **A `fajlUdpResen` (a randevú) egyetlen éles hívó nélkül állt.** A `pajzsfuro` az
+   esemény-csere után azonnal bezárta a foglalatot; a fájlokat csak a `fajlokElhozasa`
+   hozta, az pedig TCP-t nyit. *Két zárt router mögött — pont amiért a pajzsfúrás létezik —
+   a kép soha nem jött át.*
+
+### ⭐⭐ A szerkezeti darab: a szereposztás a résen
+
+TCP-n a szerep magától adódik (aki kaput tart, kiszolgál; aki csatlakozik, kér). ⛔ **A résen
+nincs kapu és nincs elfogadás**: egy foglalat, egy társ, tökéletes szimmetria — ha mindkettő
+kér, egyik sem szolgál ki. ⭐ **A döntés új üzenet nélkül:** a két **külső cím** dönt (a csere
+mindkét félnek megmondja a sajátját a `latlak`-ban), és **a kisebb kér előbb**; ugyanaz a két
+szöveg van meg mindkét gépen, csak fordítva. ⚠️ Ha nem eldönthető: **kiszolgálunk, nem
+kérünk**, és **kimondjuk** (D19) — *romlás, nem törés*.
+
+⚠️ **A második kiszolgáló fázis kétszer türelmesebb:** aki előbb kért, annak a kérő fázisa
+üresen is véget érhet, és ilyenkor a két oldal órája versenyre kelne.
+
+### ⛔⛔ És egy valódi hibát a mérés talált, nem az érvelés
+
+A kiszolgáló **nem futtathat `parbeszed`-et**, mert az **kezdeményez** (rögtön `LENYOMAT`-ot
+küld). A résen mindkét fél ugyanazt tette, a két LENYOMAT találkozott, és a két gép **rendes
+cserébe kezdett egymással** — a fájl-ág a második szeletnél `CIMEK` üzenetet kapott
+`FAJLKEREK` helyett, kilépett, és a 70 KB-os fájl fele úton maradt. ⚠️ A tünet félrevezetett
+(*„a társ nem kért semmit"*). ✅ Ezért van a **passzív `fajlKiszolgalas`** (`vonal.js`):
+ugyanaz a kiszolgáló-logika, amit a `parbeszed` fájl-ága futtat — **egy helyen, két hívóval**
+—, de **néma, amíg nem kérdezik**. *Aki kiszolgál, az ne beszéljen elsőként.*
+
+### ⛔⛔ És egy „takarítást" a mérés cáfolt — a lezárás utóhangja
+
+Észrevettem, hogy a lezárt `udpKapcsolat` nem veszi le a figyelőjét a foglalatról, és
+azonnal levettem: *„egy lezárt kapcsolat ne beszéljen"*. ⛔ **A 30%-os vesztésű, ötszörös
+rontás-próba elbukott tőle.** A lezárt példány nyugtázása ugyanis **funkció**: a másik fél
+utolsó darabja épp a lezárás pillanatában lehet úton, és ha a nyugtánk elveszett, **ő
+újraküldi** — a lezárt példány ilyenkor **pótolja a nyugtát**. *Enélkül ő a tétlenségi
+órájáig vár: pontosan a 2026-08-30-i holtpont.*
+
+✅ **A megoldás UTÓHANG** (`UTOHANG = 2000`): a lezárás után még felelünk egy darabig, aztán
+elhallgatunk — az elveszett nyugta pótolható, a lezárt példányok mégsem gyűlnek a foglalaton.
+⭐ És ami miatt a duplikált nyugta nem hazug: amíg a régi figyelő él, az **új is él** — a
+`halo` mindkettőnek odaadja a csomagot, tehát a régi példány arra felel, ami tényleg
+megérkezett.
+
+⚠️⚠️ **És egy melléklelet, ami FÜGGETLEN ettől a munkától:** a 30%-os vesztésű UDP-próbák
+**ingadoznak**. Mérve, `git stash`-sel visszaállított **eredeti** kódon: **5 futásból 1
+bukott**. A mai kóddal (utóhanggal) 5/5 zöld, és a teljes készlet is kétszer zöld. *A
+jelenség tehát régebbi — de a szakasz szabálya szerint egy néha bukó próba nem szeszélyes,
+hanem igazat mond.* ⏸️ Külön kivizsgálandó.
+
+### ✅ Négy új próba, mind rontás-próbával igazolva
+
+- a **kétirányú randevú** (mindkét fél kér ÉS ad, egy foglalaton; és a szerepük **ellentétes**),
+- a **„nem tudom a szerepet"** ág (nem ragad be, kimondja),
+- ⭐ **az őrjárat parancssor-próbája**: a kép **magától** megérkezik, kézi parancs nélkül.
+
+⛔ **A rontás-próbák mind buktatnak:** a 7. paraméter kivétele · a `fajlAtvitelKiirasa`
+kikapcsolása · a szerepválasztás rontása (*mindkettő kezd*) · a passzív kiszolgáló
+visszacserélése `parbeszed`-re.
+
+⚠️ **A tanulság, amit érdemes megjegyezni:** a meglévő kép-próba **végig zöld volt**, mert
+kézzel cserélt. *Amit csak kézi paranccsal mérünk, arról nem tudjuk, hogy magától is
+megtörténik-e — ahogy amit csak modul-próba mér, arról nem tudjuk, hogy elérhető-e kézzel.*
+
+### ⏸️ Ami nyitva maradt ebből
+
+- ⛔ **A fájl-bájtoknak nincs kézi útja** (a 4. szabály másik fele): a `kivisz`/`behoz` csak
+  eseményeket visz. Kézzel a `koino-adat/<koino>/fajlok/<lenyomat>` másolható, és az
+  ellenőrzés ott is ingyen van (az `olvas` újra lenyomatol) — de a program nem kínálja.
+- ⚠️ **A `pajzsfuro` randevú-ágát parancssor-próba nem méri** (két készülék és két hálózat
+  kellene hozzá); a `fajlRandevu` maga modul-szinten mérve van, két foglalattal.

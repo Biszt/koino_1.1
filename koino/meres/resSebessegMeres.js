@@ -4,12 +4,17 @@
 // (5.7 / C) megépítésekor egy szerkezeti tulajdonság látszott, amit **meg kell mérni,
 // nem megbecsülni**:
 //
-// ⛔⛔ A UDP-VONAL EGYSZERRE EGY DARABOT TART ÚTON (stop-and-wait, `udpVonal.js`), és egy
-// darab 1000 bájt. Egy 64 KB-os szelet tehát ~87 oda-vissza — ⭐ **és a szelet mérete
-// ezen NEM segít**: 87 darab az 87 oda-vissza, akár egy szeletben van, akár nyolcban.
+// ⛔⛔ AKKOR A UDP-VONAL EGYSZERRE EGY DARABOT TARTOTT ÚTON (stop-and-wait), és egy darab
+// 1000 bájt. Egy 64 KB-os szelet tehát ~87 oda-vissza — ⭐ **és a szelet mérete ezen NEM
+// segít**: 87 darab az 87 oda-vissza, akár egy szeletben van, akár nyolcban.
 //
-// ⭐ A kérdés tehát nem az, hogy „mekkora legyen a szelet", hanem hogy **kell-e a vonalnak
-// ABLAK** (több darab úton egyszerre). Ez a mérés ehhez ad számot.
+// ⭐ A kérdés tehát nem az volt, hogy „mekkora legyen a szelet", hanem hogy **kell-e a
+// vonalnak ABLAK** (több darab úton egyszerre). ✅ **A válasz megjött, és az ablak megépült**
+// (D67, 20–22. mérés): 16 darab úton, gyors újraküldés, mért újraküldési idő, AIMD.
+//
+// ⚠️⚠️ EZÉRT EZ A LAP MA MÁR **AZ ABLAKOS VONALAT MÉRI** — a szövege 2026-09-14-ig jelen
+// időben állította az ellenkezőjét, vagyis *hamis magyarázatot adott a saját számaihoz*.
+// A régi számok (az alapvonal) a `meres/eredmenyek.md` 16. mérésében maradtak meg.
 //
 // Futtatás:  node koino/meres/resSebessegMeres.js
 
@@ -56,7 +61,7 @@ function magvasVeletlen(mag) {
  *
  * ⭐⭐ A VONAL HÁROM TULAJDONSÁGA ÁLLÍTHATÓ, és mindhárom a valóság egy-egy darabja:
  *
- *   · `kesleltetes` — az alap oda-út (a stop-and-wait ezt MINDEN darabra rárakja),
+ *   · `kesleltetes` — az alap oda-út (az ablak ELŐTT ez MINDEN darabra rárakódott),
  *   · `ingadozas`   — ⭐ ehhez hozzáadódó szórás; ettől a csomagok **sorrendet is
  *                     cserélhetnek**, ami valódi hálózaton mindennapos,
  *   · `vesztes`     — ⛔ a csomagok ekkora hányada **elvész**.
@@ -303,7 +308,8 @@ for (const meret of [64 * 1024, 256 * 1024]) {
 // nincs mihez képest. Ezt csendben vesszük fel (nem tábla-sor, csak viszonyítás).
 alapvonal.set(8 * 1024, (await resenMeres(8 * 1024)).csomag.kuldott);
 
-// ⭐ MIT JELENT A STOP-AND-WAIT EGY VALÓDI HÁLÓZATON?
+// ⭐ MIT JELENT A KÉSLELTETÉS EGY VALÓDI HÁLÓZATON? (Az ablak ELŐTT ez volt a szűk
+// keresztmetszet: ~1000 bájtonként egy oda-vissza — lásd a 16. mérést.)
 kiir('');
 for (const kesleltetes of [1, 5]) {
   sor('UDP-rés (+' + kesleltetes + ' ms)', 64 * 1024, await resenMeres(64 * 1024, { kesleltetes }));
@@ -312,8 +318,8 @@ for (const kesleltetes of [1, 5]) {
 // ⭐⭐ ÉS AMI 2026-09-14-TŐL VAN: INGADOZÁS ÉS VESZTESÉG.
 //
 // ⛔ A D67 szerint a vonalnak **veszteségre reagáló ablakot** kell kapnia. Ez a szakasz
-// adja hozzá az ALAPVONALAT: mit tud a MAI (stop-and-wait, fix 300 ms-os) vonal, ha a
-// hálózat nem tökéletes. *Amit itt látunk, azt kell majd megjavítani.*
+// adta hozzá az ALAPVONALAT: mit tudott az AKKORI (stop-and-wait, fix 300 ms-os) vonal, ha
+// a hálózat nem tökéletes. ✅ *Amit itt láttunk, azt javította meg a 20–22. mérés.*
 kiir('');
 for (const ingadozas of [5, 20]) {
   sor('UDP-rés (1 ms ± ' + ingadozas + ' ms szórás)', 64 * 1024,
@@ -362,10 +368,9 @@ for (const savszelesseg of [2000, 500]) {
 sor('UDP-rés (500 darab/mp, 8-as sor)', 64 * 1024,
   await resenMeres(64 * 1024, { kesleltetes: 5, savszelesseg: 500, sorMeret: 8 }));
 
-kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. A stop-and-wait miatt a késleltetés');
-kiir('   MINDEN darabra rárakódik: ~1000 bájtonként egy oda-vissza.');
-kiir('   ⭐ Ezért kell a vonalnak ABLAK (több darab úton egyszerre) — a szelet');
-kiir('   méretének növelése NEM segít rajta.');
+kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. Az ABLAK ELŐTT a késleltetés MINDEN');
+kiir('   darabra rárakódott (~1000 bájtonként egy oda-vissza) — ez volt a 16. mérés');
+kiir('   lelete. ✅ Az ablak (D67) azóta megépült: ez a lap MA MÁR AZT méri.');
 kiir('');
 kiir('⛔⛔ A VESZTESÉG- ÉS LASSÚ-SOROK A D67 ALAPVONALA.');
 kiir('');

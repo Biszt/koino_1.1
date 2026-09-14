@@ -353,7 +353,10 @@ tudatpont, érték javaslat, szavazás, koino-váltás, **képek**.
 
 ⭐ **Miért ez a legfontosabb nyílt kérdés:** ha átmegy, **ingyen megkapjuk a TCP negyven
 évnyi csiszolását**, és a UDP-vonal **ablakját nem kell megépíteni** — a 16. mérés szerint
-ugyanis a mai UDP-rés már **1 ms/csomag késleltetésnél 25 KB/s-ra** esik (stop-and-wait).
+ugyanis az AKKORI UDP-rés már **1 ms/csomag késleltetésnél 25 KB/s-ra** esett (stop-and-wait).
+⚠️ *2026-09-14: ez az „ingyen" érv tárgytalan — az ablak **megépült** (D67, 20–22. mérés:
+460 KB/s), és Csaba döntése szerint a **UDP a fő út**, mert a TCP-rés a router
+célfüggetlenségén áll, a UDP viszont a foglalat-modellen (9. szabály).*
 Ha nem megy át, akkor tudjuk, hogy az UDP-úton kell élnünk, és az ablak megéri.
 
 **A menet** — mindkét készüléken, nagyjából egyszerre:

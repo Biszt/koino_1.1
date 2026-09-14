@@ -15,12 +15,76 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-13)
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-14)
 
 ✅ **A SZAKASZ 5 GERINCE KÉSZ** (5.1–5.7): a helyi kapu · a kérdezhető pakli · a kártyák ·
 a hiányzó műveletek · a modálok magja · a **belépő tér** · a **szövegszerkesztő** · a
 **fájl-réteg** · és a **fájl-szállítás** (felderítés · kérelem · átvitel · randevú).
-**566 önpróba**, minden zöld, a munkakönyvtár tiszta.
+**569 önpróba**, minden zöld, a munkakönyvtár tiszta.
+
+### ⛔⛔⛔ ÉS EGY ÁTNÉZÉS A LEGNAGYOBB 4. SZABÁLY-HIÁNYT TALÁLTA A FÁJL-SZÁLLÍTÁSNÁL (2026-09-14, javítva)
+
+⛔ **A teljes fájl-szállítás megépült, mérve volt, próba őrizte — és az ÉLES ÚT NEM HÍVTA.**
+Két külön helyen, mérve:
+
+1. ⛔⛔ **Az `orjarat` — „a valódi üzemmód" — soha nem hozott fájlt.** A `csereVonalon`
+   **hetedik paramétere** (a fájl-rész) hiányzott, a kör után pedig nem futott a
+   `fajlAtvitelKiirasa()`. *Vagyis az őrjárat csak FELELT, ha kérdezték — magától sosem
+   kérdezte meg, kinél van meg a hiányzó kép, és sosem hozta el a bájtokat.* A teljes lánc
+   (felderítés → kérelem → átvitel) **csak kézzel gépelt `csere` parancsból futott.**
+2. ⛔⛔ **A randevú (`fajlUdpResen`) egyetlen éles hívó nélkül állt.** A `pajzsfuro` parancs
+   az átfúrt résen lefuttatta az esemény-cserét, majd **azonnal bezárta a foglalatot**; a
+   fájlokat kizárólag a `fajlokElhozasa` hozta, az pedig `tcpNyito`-t nyit. *Vagyis pontosan
+   abban a helyzetben, amiért a pajzsfúrás létezik — két zárt router, egyik fél sem tud
+   fogadni —, az események átjöttek, a képek soha.* ⚠️ **És a D67 teljes ablak-munkája
+   (16., 20–22. mérés) épp ezt az utat gyorsította.**
+
+⭐⭐ **ÉS A RANDEVÚ BEKÖTÉSE EGY SZERKEZETI DARABOT KÖVETELT: A SZEREPOSZTÁST.** TCP-n a
+szerep magától adódik (aki kaput tart, az szolgál ki; aki csatlakozik, az kér) — ⛔ **a résen
+nincs kapu és nincs elfogadás**: egy foglalat van és egy társ, a két fél tökéletesen
+szimmetrikus. Ha mindkettő egyszerre kérne, **egyik sem szolgálna ki**. ⭐ **A megoldás új
+protokoll-üzenet nélkül:** a szerepet **a két külső cím** dönti el (a csere mindkét félnek
+megmondja a sajátját a `latlak`-ban), és **a kisebb kér előbb** — ugyanaz a két szöveg van
+meg mindkét gépen, csak fordítva. ⚠️ Ha nem eldönthető (a társ nem mondta meg, hogyan lát),
+akkor **kiszolgálunk, nem kérünk**, és **kimondjuk** (D19) — *romlás, nem törés.*
+
+⛔⛔ **ÉS EGY VALÓDI HIBÁT A MÉRÉS TALÁLT, NEM AZ ÉRVELÉS: a kiszolgáló nem futtathat
+`parbeszed`-et.** A `parbeszed` ugyanis **kezdeményez** — rögtön küld egy `LENYOMAT`-ot.
+Mivel a résen mindkét fél ugyanazt teszi, a két LENYOMAT találkozott, és a két gép **rendes
+cserébe kezdett egymással**; a fájl-ág a második szeletnél egy **`CIMEK`** üzenetet kapott
+`FAJLKEREK` helyett, kilépett, és **a 70 KB-os fájl fele úton maradt**. ⚠️ A tünet
+félrevezetett (*„a társ nem kért semmit"*), az ok szerkezeti volt. ✅ Ezért született a
+**passzív `fajlKiszolgalas`** (`vonal.js`): ugyanaz a kiszolgáló-logika, amit a `parbeszed`
+fájl-ága futtat — **egy helyen, két hívóval** —, de **néma, amíg nem kérdezik**.
+*Aki kiszolgál, az ne beszéljen elsőként.*
+
+⛔⛔⛔ **ÉS EGY SAJÁT „TAKARÍTÁSOMAT A MÉRÉS CÁFOLTA — ez a menet legfontosabb tanulsága.**
+Észrevettem, hogy a lezárt `udpKapcsolat` **nem veszi le a figyelőjét a foglalatról**, és
+azonnal levettem, ezzel az érveléssel: *„egy lezárt kapcsolat ne beszéljen"* (a randevúnál
+ugyanis egy foglalaton egymás után több kapcsolat nyílik). ⛔ **A 30%-os vesztésű, ötszörös
+rontás-próba elbukott tőle.** Az ok: a lezárt példány nyugtázása **nem pazarlás, hanem
+FUNKCIÓ** — a másik fél utolsó darabja épp a lezárás pillanatában lehet úton, és ha a mi
+nyugtánk elveszett, **ő újraküldi**; ilyenkor a lezárt példányunk **pótolja a nyugtát**.
+*Enélkül a tétlenségi órájáig vár — pontosan az a holtpont, amit a 2026-08-30-i mérés
+megtalált.* ✅ A megoldás **utóhang**: a lezárás után még 2 másodpercig felelünk, aztán
+csend — így az elveszett nyugta pótolható, a lezárt példányok mégsem gyűlnek a foglalaton.
+⚠️ *Amit „szemétnek" néztem, az egy őr volt. A kód olvasása ezt nem mondta meg; a mérés igen.*
+
+⚠️⚠️ **ÉS EGY MELLÉKLELET, AMI FÜGGETLEN A MAI MUNKÁTÓL: a 30%-os vesztésű UDP-próbák
+INGADOZNAK.** Mérve, `git stash`-sel visszaállított **eredeti** kódon: **5 futásból 1
+bukott** (a „CSOMAGVESZTÉS MELLETT IS ÁTMEGY" próba, 10 mp-es időtúllépéssel). ⭐ A mai
+kóddal, utóhanggal: **5/5 zöld**, és a teljes készlet kétszer zöld. *Vagyis a jelenség
+régebbi, mint a mai változtatás — de attól még igazat mond (a szakasz szabálya szerint egy
+néha bukó próba nem szeszélyes).* ⏸️ Ez külön kivizsgálandó tétel.
+
+✅ **NÉGY ÚJ PRÓBA, ÉS MIND A NÉGY RONTÁS-PRÓBÁVAL IGAZOLVA:** a kétirányú randevú (mindkét
+fél kér ÉS ad, egy foglalaton — és a szerepük **ellentétes**) · a „nem tudom a szerepet" ág
+(nem ragad be, kimondja) · és ⭐ **az őrjárat parancssor-próbája: a kép magától megérkezik,
+kézi parancs nélkül** (14 mp, két készülék, külön folyamatban). ⛔ **A rontás-próbák:** a
+7. paraméter kivétele · a `fajlAtvitelKiirasa` kikapcsolása · a szerepválasztás rontása
+(*mindkettő kezd*) · a passzív kiszolgáló visszacserélése `parbeszed`-re — **mind buktat**.
+⚠️ *És ez a lényeg: a meglévő kép-próba végig ZÖLD volt, mert kézzel cserélt. **Amit csak
+kézi paranccsal mérünk, arról nem tudjuk, hogy magától is megtörténik-e.***
 
 ⭐ **A lapon ma megy:** böngészés · gondolat- és kategória-létrehozás · **javaslat-tétel** ·
 tudatpont · érték javaslat · szavazás · koino-váltás · **képek**.
@@ -227,6 +291,13 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
    FOLYAMOT szimulálni** — enélkül nem mérhető, hogy eleget engedünk-e, vagy kiéheztetnek-e
    minket. **A cél számokban:** `sor:` **13–14 → 1–2**, ⛔ **anélkül**, hogy a véletlenül vesztő
    sorok romlanának (1%/5%/15% = **287/104/39 KB/s**). Teljes indoklás: **D68**.
+1/b. ⛔ **A FÁJL-BÁJTOKNAK NINCS KÉZI ÚTJA** (2026-09-14, átnézés — a 4. szabály másik fele).
+   A `kivisz`/`behoz` **csak eseményeket** visz; ha egyetlen hálózati út sem megy, a **kép
+   semmilyen paranccsal nem vihető át**. ⚠️ Kézzel ma is átmásolható
+   (`koino-adat/<koino>/fajlok/<lenyomat>`), és ⭐ **az ellenőrzés ott is ingyen van** — az
+   `olvas` újra lenyomatol, tehát a rossz bájt nem jut be. *De a program nem kínálja: pont
+   az az állapot, ami az eseményeknél 2026-09-12-ig volt.* ⏸️ Csaba döntése, hogy kell-e
+   `fajlKivisz`/`fajlBehoz` parancs.
 2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — 25 KB/s mellett 2 MB ≈ 80 mp. ⭐ **Nem**
    állapot-befolyásoló állandó (D66), tehát szabadon hangolható.
 3. **A maradék modálok** (5.8) — részletek: [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md)
@@ -235,7 +306,7 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
 
 ---
 
-**Olvasd el induláskor:** ⭐ [`docs/utiterv.md`](docs/utiterv.md) — **mit építünk, milyen sorrendben, és miért** (rövid; ez a belépő). Utána: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (**1. A helyi modell** — ✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (**2. A szállítás** — ✅ kész; a neve eddig „csere" volt, de a munka a szállításról szólt). ✅ **3. A szerkezet** — kész (2026-09-03): a kanonikus alak négy új mezője, a kérdezhető tár-illesztő, a böngésző-lekérés. ✅ **4. AZ IDENTITÁS — kész (2026-09-06)** — terv: [`docs/szakasz4_terv.md`](docs/szakasz4_terv.md) — a szerkezet 2026-09-06-án átépült, **Csaba lezárta** *(„nekem ez így már megfelel, első koinónak")*, és ⭐ **a megépítés BEFEJEZŐDÖTT**: a 9/c terv **LEZÁRVA**: a 4.1–4.6 megépítve, a **4.7 (séta) elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt), a **4.8 (`lancGyoker`) definiálva** (D63), megvalósítás mérés alapján. Vagyis — a **két lépcső** (`js/allapot/identitas.js`), a **kontraszt-jelzés** és a **visszavonás** (`js/allapot/jelzesek.js`), **52 önpróbával** (a szakasz zárásakor összesen 269; **ma 566**). 🚧 **Most az 5. szakasz FOLYIK: A FELÜLET** — a pakli és a belépő tér a prototípusból; ettől lesz a koino **használható**. Két doksi: [`docs/felulet_terv.md`](docs/felulet_terv.md) (**a döntések** — futtatókörnyezet, vékony lap, hatókör) és [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md) (**a végpont-térkép** és az állomások). ⭐ **A hatókör a TELJES pakli** (Csaba: *„nem kell mérföldkő"* — a szűkített termékre értve, a munka állomásokra bomlik): a 82 prototípus-végpontból **43 jön át**, 10 más mechanikával, a többi mögött nincs mit átemelni (jelszó, e-mail, feltöltés — D15/D6). ⛔ **A szakasz gerince a `GET /api/pakli/`**: ez a `betolt()` alakja, az utolsó nem-skálázó út — kérdezhetővé kell tenni (rendezés + kurzor + darab), különben a felület bebetonozza. ✅ **Az 5.1 (a helyi kapu) KÉSZ** (2026-09-06): `js/felulet/kapu.js` + `node koino/koino.js felulet` — négy őr (hurok-cím · jelszó · Origin · Host) és egy útvonal-őr, **23 önpróbával**. ✅ **És az 5.2 (a kérdezhető pakli) KÉSZ** (2026-09-06): `js/allapot/pakli.js` + `GET /api/pakli?rendezes&irany&kurzor&darab` — **`darab` felülről korlátos** (100), a lista **nem hordoz szövegeket**, a kurzor **kulcs-alapú** (nem `skip`), **23 önpróbával**. ⭐⭐ **A HORGONY:** a lapozás az „első N esemény" képéhez kötődik (a tár hozzáfűzhető, tehát az a halmaz soha nem változik) — *nem az időt fagyasztjuk be, hanem a bemenetet*; a közben érkezettet az `ujdonsag` **megmondja**, nem keveri bele. ⚠️ *A horgony helyi feljegyzés, nem esemény (3. szabály).*
+**Olvasd el induláskor:** ⭐ [`docs/utiterv.md`](docs/utiterv.md) — **mit építünk, milyen sorrendben, és miért** (rövid; ez a belépő). Utána: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) → az elején a **„HOL TARTUNK"** szakasz. A szakasz-tervek: [`docs/szakasz1_terv.md`](docs/szakasz1_terv.md) (**1. A helyi modell** — ✅ kész) · [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) (**2. A szállítás** — ✅ kész; a neve eddig „csere" volt, de a munka a szállításról szólt). ✅ **3. A szerkezet** — kész (2026-09-03): a kanonikus alak négy új mezője, a kérdezhető tár-illesztő, a böngésző-lekérés. ✅ **4. AZ IDENTITÁS — kész (2026-09-06)** — terv: [`docs/szakasz4_terv.md`](docs/szakasz4_terv.md) — a szerkezet 2026-09-06-án átépült, **Csaba lezárta** *(„nekem ez így már megfelel, első koinónak")*, és ⭐ **a megépítés BEFEJEZŐDÖTT**: a 9/c terv **LEZÁRVA**: a 4.1–4.6 megépítve, a **4.7 (séta) elvetve** (mérve gyenge, és a D62 óta a szerepe is megszűnt), a **4.8 (`lancGyoker`) definiálva** (D63), megvalósítás mérés alapján. Vagyis — a **két lépcső** (`js/allapot/identitas.js`), a **kontraszt-jelzés** és a **visszavonás** (`js/allapot/jelzesek.js`), **52 önpróbával** (a szakasz zárásakor összesen 269; **ma 569**). 🚧 **Most az 5. szakasz FOLYIK: A FELÜLET** — a pakli és a belépő tér a prototípusból; ettől lesz a koino **használható**. Két doksi: [`docs/felulet_terv.md`](docs/felulet_terv.md) (**a döntések** — futtatókörnyezet, vékony lap, hatókör) és [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md) (**a végpont-térkép** és az állomások). ⭐ **A hatókör a TELJES pakli** (Csaba: *„nem kell mérföldkő"* — a szűkített termékre értve, a munka állomásokra bomlik): a 82 prototípus-végpontból **43 jön át**, 10 más mechanikával, a többi mögött nincs mit átemelni (jelszó, e-mail, feltöltés — D15/D6). ⛔ **A szakasz gerince a `GET /api/pakli/`**: ez a `betolt()` alakja, az utolsó nem-skálázó út — kérdezhetővé kell tenni (rendezés + kurzor + darab), különben a felület bebetonozza. ✅ **Az 5.1 (a helyi kapu) KÉSZ** (2026-09-06): `js/felulet/kapu.js` + `node koino/koino.js felulet` — négy őr (hurok-cím · jelszó · Origin · Host) és egy útvonal-őr, **23 önpróbával**. ✅ **És az 5.2 (a kérdezhető pakli) KÉSZ** (2026-09-06): `js/allapot/pakli.js` + `GET /api/pakli?rendezes&irany&kurzor&darab` — **`darab` felülről korlátos** (100), a lista **nem hordoz szövegeket**, a kurzor **kulcs-alapú** (nem `skip`), **23 önpróbával**. ⭐⭐ **A HORGONY:** a lapozás az „első N esemény" képéhez kötődik (a tár hozzáfűzhető, tehát az a halmaz soha nem változik) — *nem az időt fagyasztjuk be, hanem a bemenetet*; a közben érkezettet az `ujdonsag` **megmondja**, nem keveri bele. ⚠️ *A horgony helyi feljegyzés, nem esemény (3. szabály).*
 ✅ **ÉS AZ 5.3 (A KÁRTYÁK) KÉSZ** (2026-09-06): a `koino/felulet/` alá **22 JS + 3 HTML + 14 CSS** került át a prototípusból — a kártya-osztályok, a hamburger menü, a szövegmegjelenítő és **minden CSS bájtra ugyanaz**; a `frontend/` érintetlen. ⭐ **Három fájlt kellett átírni:** `apiHelper.js` (JWT → a kapu jelszava), `authHelper.js` (kicserélve, de **ugyanazokkal az export-nevekkel**, ezért a `Kartya.js` nem változott), `kartyaGyar.js` (a Kategória/GondolatTípus kimaradt — nem létezik a koinóban). ⭐⭐ **A modal-csapda megoldása: 13 helyőrző** — a kártyák import-sorai bájtra ugyanazok, és egy valódi modal átemelése (5.5) **egy fájl cseréje**. ⚠️ *Mérésből derült ki két dolog: a jelszó határa az `/api/`-ra tolódott (a `fetch('./html/…')` és a `<link>` nem küld fejlécet; süti helyett — az CSRF-et hozna — az adat kapujára került), és a tudatpont-sor mezői a kártya LEGFELSŐ szintjén vannak, nem az `adatok`-ban.* Két új végpont: `GET /api/pakli/szoveg/:tipus/:id` és `GET /api/tudatpont/entitas/:tipus/:id`.
 ✅ **ÉS AZ 5.4 (A KATEGÓRIA ÉS A GONDOLATTÍPUS) KÉSZ** (2026-09-06): a végpont-térkép 2. találata volt — tíz prototípus-végpont mögött **nem volt esemény**, pedig a domain-fogalom mindig megvolt. ⭐ **Nem új esemény-fajta:** a `GondolatLetrehozas` az ÁLTALÁNOS entitás-létrehozás, és az `adat.tipus` különbözteti meg a fajtákat (a Szakasz 1 óta így van) — új név minden meglévő tárat érvénytelenítene. ⭐ **Önálló entitás**, mert így ugyanaz jár neki, mint bármely másnak (tudatpont, javaslat, küszöb, egyezmény): *egy kategória neve is közösségi döntéssel változik.* ⚠️ **A neve a `cim` mezőben van**, nem külön `nev`-ben — így a rendezés és az egyezmény-végrehajtás változtatás nélkül működik rajta; a kártya `nev`-et olvas, azt a felület fordítja. ⛔⛔ **A max-3 korlát a SZÁMÍTÁSBAN van** (`szabalyok.js`: `KATEGORIA_KORLAT`), a duplikátum-szűréssel együtt — a prototípusban Mongoose-validátor tartotta, de itt **nincs szerver, ami visszautasítsa**. ⭐ Az ikon lehet **emoji** (a kártya URL-nél képet rak ki, egyébként szöveget), tehát nem kell hozzá feltöltés. Új parancsok: `kategoria <név> [ikon] [leírás]` · `gondolattipus <név> [ikon] [leírás]` · `gondolat <cím> [szöveg] [típus] [kategória…]`.
 🚧 **ÉS AZ 5.7 ELSŐ FELE KÉSZ — A SZÖVEGSZERKESZTŐ ÁTEMELVE** (2026-09-12): **húsz fájl bájtra változatlanul**, és **egyet** kellett átírni — a `FeltoltesKezelo`-t. ⭐ Nem véletlen, hogy ilyen olcsó volt: a feltöltés a szerkesztő **1355 soros** fő fájljában mindössze **13 sort** érint. ⭐⭐ **ÉS A 13 HELYŐRZŐ ÍGÉRETE BEVÁLT:** a `GondolatModal` egy 601 bájtos helyőrző volt, most a prototípus **24 KB-os valódija** — *egy fájl cseréje*, pontosan ahogy az 5.3 megígérte. ⛔ **ÉS EZ KINYITOTT EGY VALÓDI LYUKAT: a lapról eddig NEM lehetett gondolatot létrehozni** — a pakli mutatta őket, de újat csak a parancssorból; *a 4. szabály fordítottja: itt a kéz volt meg, a lap nem.* ⭐ **HÁROM ALÁÍRT ESEMÉNY, nem egy „mentés"**: a prototípusban egy POST hozta létre a gondolatot, a kezdő tudatpontot és a küszöbeit — a koinóban ez három külön állítás. ⛔⛔⛔ **ÉS EGY TÉVEDÉSEM, AMIT CSABA HELYREIGAZÍTOTT — ÉS EGY VALÓDI HIÁNYT HOZOTT KI (2026-09-12).** Azt hittem, a prototípusban a szerző **közvetlenül** átírhatta a gondolatát, és ezért a `PATCH`-et őszinte 400-zal zártam le. ⭐ **Csaba:** *„a prototípusban is csak javaslat → egyezmény mentén lehet szerkeszteni, csak mivel ő az egyetlen tulajdonosa, ezért 100% támogatottság mellett azonnal megtörténik."* — vagyis **nincs kivétel és nincs külön út**: ugyanaz a gépezet fut, csak egytagú választókörrel. ⛔⛔ **ÉS A 100% NEM JÖTT MAGÁTÓL:** a prototípus a javaslat létrehozásakor **automatikusan lead egy támogató szavazatot** (`javaslatService.js:635`) — a koino ezt **nem tette**, és emiatt egy egytulajdonosú entitás saját szerkesztési javaslata **0 szavazattal, ELVETVE** zárult (mérve). ✅ Pótolva a `muveletek.js`-ben, mert **ez a javaslattétel jelentésének része** (aki javasol, az támogatja) — ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené. ⚠️ **És egy második, finomabb rés ugyanitt:** a szavazatnak **ugyanazt az időbélyeget** kell viselnie, mint a javaslatnak — nulla döntési időnél a javaslat a **születése pillanatában** zár, és egy ezredmásodperccel későbbi szavazat már **késői** (szintén mérve). *Két esemény, egy tett — egy időbélyeg.* ✅ **ÉS A KÜSZÖB IS ELDŐLT (Csaba, 2026-09-12): `minimumDontesiIdo` = **1 MÁSODPERC** (korábban 1 nap; a prototípusé 0 volt). ⭐ **Miért nem 0:** a nulla ablak **elfajult** — a javaslat a születése pillanatában zárna, tehát rajtam kívül **senki más nem tudna beleszavazni**, akármilyen gyors. Az 1 mp ugyanúgy „azonnali” egytulajdonosnál, de nem zárja ki a többieket elvi szinten. ⚠️⚠️ **ÉS EZ NEM „GYORS DÖNTÉS”:** a **D4 bizonyossági mutatója** mondja meg, hol áll a valódi idő a minimum és a maximum KÖZÖTT — mérve: egy tulajdonos, egyhangú → **azonnal**; **két tulajdonos, 50% részvétel → 42 ÓRA**. *A minimum nem a szokásos, hanem a legjobb eset.* ⛔⛔ **A D66 szerint ez állapot-befolyásoló állandó:** ha egy már élő koino adatán változtatnánk, a régi és az új program **mást számolna** ugyanabból az eseményhalmazból — ez a sor **együtt mozog a koino nevével**. ⚠️ *És egy próba is tanult belőle: a beégetett `86400` helyett mostantól az `ALAP_KUSZOBOK`-ra hivatkozik — egy próba, ami a paraméter ÉRTÉKÉT rögzíti, a paraméter minden hangolását álhibának mutatja.*
@@ -360,7 +431,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2521,8 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2560,3 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -472,7 +543,7 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # az 566 önpróba
+node koino/meres/mind.js         # az 569 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
@@ -491,7 +562,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2521,8 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2560,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -514,7 +585,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 566 próba huszonegy fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 569 próba huszonegy fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)

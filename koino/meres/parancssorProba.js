@@ -882,6 +882,84 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
     }
   });
 
+// ===================================
+// ⛔⛔⛔ …ÉS AZ ŐRJÁRAT IS ELHOZZA — KÉZ NÉLKÜL (2026-09-14)
+// ===================================
+//
+// ⛔ EZ A PRÓBA EGY VALÓDI HIÁNY MIATT SZÜLETETT, amit egy átnézés talált: a fenti próba
+// **kézzel gépelt `csere` parancsot** használ — és mérve, az őrjárat (a CLAUDE.md szerint
+// „a valódi üzemmód") a `csereVonalon` **hetedik paraméterét nem adta át**, a kör után
+// pedig nem hozta el a bájtokat. *Vagyis a fájl-szállítás teljes lánca csak akkor futott,
+// ha valaki odaült a géphez.*
+//
+// ⚠️ ÉS A LÉNYEG: EZT EGYETLEN MEGLÉVŐ PRÓBA SEM VETTE ÉSZRE — a fenti kép-próba is zöld
+// volt végig, mert kézzel cserélt. *Amit csak kézi paranccsal mérünk, arról nem tudjuk,
+// hogy magától is megtörténik-e.*
+//
+// ⚠️ KÉT KÖR KELL: a fájl-felderítés **egy bulival később jár**, mint az esemény-csere —
+// nem lehet olyan fájlról kérdezni, amiről még nem tudom, hogy létezik. Ezért fut az
+// őrjárat rövid (3 mp-es) körökkel, és ezért várunk többet egy körnél.
+
+proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélkül', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7546;
+  let figyelo = null, felulet = null, orjarat = null;
+  try {
+    await fut(gazda, 'koino', 'Próba koinó');
+
+    // Egy egyszeletnyi kép — a több szeletet a fenti próba méri.
+    felulet = await feluletet(gazda, 7547);
+    const fej = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const kep = Buffer.concat([fej, Buffer.alloc(20 * 1024, 11),
+      Buffer.from('0000000049454e44ae426082', 'hex')]);
+
+    const fel = await felulet.hiv('/api/feltoltes/kep',
+      { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', {
+      method: 'POST',
+      body: JSON.stringify({
+        cim: 'ŐRJÁRATOS KÉPES GONDOLAT', kezdoTudatpont: 50,
+        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
+      })
+    });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+
+    // A vendég egyetlen kézi tette: felveszi a társat. ⭐ Innentől kéz nem érinti.
+    await fut(vendeg, 'tars', '127.0.0.1', String(port));
+
+    let kimenet = '';
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7548'], {
+      env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+    orjarat.stderr.on('data', (d) => { kimenet += d; });
+
+    await varj(14000);                       // ~4 kör: az elsőn az események, utána a fájl
+    orjarat.kill(); orjarat = null;
+    await varj(1000);
+
+    if (!/fájl megérkezett/.test(kimenet)) return false;
+
+    // ⭐ ÉS A LÉNYEG: a vendégnél megvan, BÁJTRA ugyanaz — magától.
+    const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
+    return Buffer.from(nala).equals(kep);
+  } finally {
+    if (felulet) felulet.folyamat.kill();
+    if (orjarat) orjarat.kill();
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js
