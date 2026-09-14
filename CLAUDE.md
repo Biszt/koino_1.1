@@ -317,9 +317,35 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
    és épp ezért kellett előbb megmérni. *A romlás a fájl-átvitelnél megengedhető (a
    redundancia pótolja), a cserénél nem.* ⚠️ A műszer még nem tud **mobil-ingadozást** és
    **két koino-folyamot** egymás mellett.
-   ⏭️ **A KÖVETKEZŐ: a jel alakja, méréssel** (Vegas / LEDBAT / CDG). **A cél számokban:**
-   `sor:` **27 → 1–2** és a hívás **12,8 → ~2 ms**, ⛔ **anélkül**, hogy a véletlenül vesztő
-   sorok romlanának (1%/5%/15% = **287/104/39 KB/s**). Teljes indoklás: **D68**.
+   ✅✅✅ **ÉS A JEL ALAKJA IS ELDŐLT — 26. mérés (2026-09-15): A VEGAS NYERT, MÉRÉSSEL.**
+   Két jelölt épült meg **paraméterként** (`torlodasJel`), és futott ugyanazon a műszeren:
+   ⭐ **Vegas** (a jel a sorban álló darabok **becsült SZÁMA**, α=2/β=4 **darab**) és
+   **LEDBAT** (a sorbanállási késleltetés egy cél alatt; ⛔ a klasszikus 100 ms-os cél
+   varázsszám lenne, ezért nálunk a `minRtt`-hez viszonyul).
+   ⭐⭐ **A VEGAS NÉGY OKBÓL:** *(1)* a mellettünk futó hívás késleltetése **12 → 3 ms** (az
+   üres vonal 2,0!), csúcsa 45 → 19; a LEDBAT csak 6–8 ms-ig jut · *(2)* az ára a fő
+   helyzetben −11…−19%, a **gyors, üres vonalon NULLA** · *(3)* az **ingadozó (mobil-szerű)
+   vonalon stabil** (−4…−12%), míg a LEDBAT ott 43%-ot is veszíthet — *ez a D68 kimondott
+   kockázata volt* · *(4)* ⭐⭐⭐ **a küszöbe DARABSZÁM, nem ezredmásodperc**, tehát a 9.
+   szabály próbáján magyarázat nélkül megy át.
+   ⛔ **Az ára kimondva:** a véletlenül vesztő vonalon −30…−50%, a mohó szomszéd mellett
+   feleannyi. *A D68 ezt tudatosan vállalja: a fájl-átvitel háttérmunka, a redundancia
+   pótolja — a cseréé nem.*
+   ⛔⛔ **ÉS HÁROM MŰSZER-HIBÁT KELLETT ELŐBB MEGTALÁLNI, mindhárom a jelet fojtotta:** a
+   `Date.now()` **ms-felbontása** (a minták azóta `performance.now()`-val készülnek), a
+   Windows `setTimeout` **15,6 ms-os kvantálása** (a „+1 ms-os" vonal valójában ingadozó,
+   15 ms-os volt — a jel **helyesen** fogott vissza rajta), és a jel bemenete (az `srtt`
+   **átlag** helyett a friss minták **MINIMUMA**). ⚠️ *Mindhármat úgy találtuk meg, hogy a jel
+   kiadta a belső állapotát (`jelAllapot()`) — a jel alakját nem lehet a végeredményből
+   megítélni.*
+   ⛔⛔⛔ **ÉS EGY CÉL, AMI NEM TELJESÜLT:** a `sor:` **27 → 14–16** lett, nem 1–2. ⚠️
+   Szigorúbb küszöbbel (α=1/β=2) sem csökkent — csak az ár nőtt. ⭐ **Az ok szerkezeti: a
+   `sor:` a CSÚCSOT méri, azt pedig nem az ablak nagysága szabja meg, hanem hogy LÖKETBEN
+   küldünk** (16 darab egyszerre indul). ⏭️ **Vagyis a `sor: 1–2`-höz ÜTEMEZÉS kell** (D68/d),
+   nem szigorúbb küszöb — *amit „félmegoldásnak" neveztünk, az a hiányzó másik fele.*
+   ⏸️ **Hátra:** az **ütemezés** · és a **szétválasztás** (a fájl-átvitel enged, a csere nem —
+   a jel ma `torlodasJel: 'nincs'` alapon **ki van kapcsolva**, tehát élesben még semmi nem
+   változott). Teljes indoklás: **D68**.
 1/b. ⛔ **A FÁJL-BÁJTOKNAK NINCS KÉZI ÚTJA** (2026-09-14, átnézés — a 4. szabály másik fele).
    A `kivisz`/`behoz` **csak eseményeket** visz; ha egyetlen hálózati út sem megy, a **kép
    semmilyen paranccsal nem vihető át**. ⚠️ Kézzel ma is átmásolható
@@ -460,7 +486,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2584,3 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2601,8 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -591,7 +617,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2584,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2601,8 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

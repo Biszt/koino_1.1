@@ -2193,3 +2193,83 @@ szórásán belül, de érdemes szemmel tartani.
 ⏸️ **Amit ez a mérés nem old meg:** a vak óra rászűkítése a legrégebbi darabra **marad**
 (a 21. mérés szerint nélküle 15% vesztésnél 430 → 8177 ms-ra romlott a fájl-átvitel) — tehát
 a „mögötte álló darab áll" tulajdonság megmaradt, csak a némaság ideje lett korlátos.
+
+---
+
+## 26. ⭐⭐⭐ A JEL ALAKJA: VEGAS vagy LEDBAT? — a mérés döntött (2026-09-15, D68 / 2. lépés)
+
+**Kérdés:** a D68 szerint a torlódás jele legyen a **késleltetés** — de melyik alakban?
+Csaba 1. válasza: *„méréssel dőljön el"*. Két jelölt épült meg, paraméterként
+(`torlodasJel`), hogy **ugyanazon a műszeren, ugyanazokon a helyzeteken** fussanak.
+
+- **Vegas** — a jel a sorban álló darabok **becsült száma** (`ablak × (RTT − minRtt) / RTT`),
+  a küszöb α=2 / β=4 **darab**. ⭐ A küszöb tehát **skálafüggetlen** — a 9. szabály szerint ez
+  a legfontosabb tulajdonsága: *„két darab a sorban" egy 1 ms-os és egy 400 ms-os vonalon
+  ugyanazt jelenti.*
+- **LEDBAT** — a sorbanállási késleltetést tartja egy **cél** alatt. ⛔ A klasszikus 100 ms-os
+  cél **varázsszám** lenne (tilos), ezért nálunk a cél a `minRtt`-hez viszonyul.
+
+### ⛔⛔ Előbb két MŰSZER-HIBÁT kellett megtalálni — mindkettő a jelet fojtotta
+
+1. **A `Date.now()` ezredmásodperc-felbontású**, a helyi vonalon mért oda-vissza idők viszont
+   0–2 ms-ban mozognak. `minRtt` gyakran **0** lett, és akkor a „sorbanállás" a teljes mért
+   időnek látszott. ✅ A minták azóta `performance.now()`-val készülnek (mikroszekundum,
+   beépített, nulla függőség). *A jel a felbontás alatt dolgozott: nem torlódást mért, hanem
+   kerekítést.*
+2. ⭐⭐ **A késleltetés-utánzat `setTimeout`-ja Windowson ~15,6 ms-os kvantálást ad.** Mérve,
+   a jel belső állapotából: egy „+1 ms-os" vonalon `minRtt = 1,8 ms`, a friss minták minimuma
+   viszont **15–31 ms**. ⛔ Vagyis az a vonal nem 1 ms-os volt, hanem **ingadozó, 15 ms-os** —
+   és a jel ezt **helyesen** olvasta sorbanállásnak: 591 → 131 KB/s. *Ez nem a jel hibája,
+   hanem a műszeré.* ✅ A „gyors vonal" sor azóta `kesleltetes: 0` (ott nincs időzítő).
+
+⭐ **És egy harmadik, a jel bemenetén:** először az `srtt`-ből (simított **átlag**) számoltuk a
+sorbanállást, ami a zajt is beépíti. Mostantól az utolsó **8 minta MINIMUMA** a bemenet:
+*a torlódás tartósan emel, a zaj csak szór — a minimum az, ami a kettőt szétválasztja.*
+
+⚠️⚠️ **Mindhármat úgy találtuk meg, hogy a jel kiadta a belső állapotát** (`jelAllapot()`:
+ablak, minRtt, friss, srtt). *A jel alakját nem lehet a végeredményből megítélni — két
+különböző ablak-pálya ugyanazt a sebességet adhatja. Ha nem látjuk, mit csinál, csak
+találgatunk.*
+
+### A mérés (két egybehangzó futás)
+
+```
+  helyzet                           nincs          vegas          ledbat
+  ──────────────────────────────────────────────────────────────────────────
+  szűk vonal + HÍVÁS            281/280 KB/s   227/250 KB/s   273/268 KB/s
+    ↳ a hívás késleltetése       10,9/12,0 ms    3,1/3,9 ms     5,8/6,9 ms
+    ↳ a sor mélysége                 27/27          14/16          22/23
+  5% véletlen vesztés            107/105 KB/s     76/50 KB/s     59/59 KB/s
+  MOHÓ szomszéd mellett          113/134 KB/s     56/75 KB/s    146/38 KB/s
+  gyors vonal, egyedül          4830/4830 KB/s 4923/4741 KB/s 4741/4571 KB/s
+  ingadozó vonal (±20 ms)        239/240 KB/s   210/231 KB/s   207/137 KB/s
+```
+
+### ✅ A DÖNTÉS: VEGAS — és az indok mérésből, nem ízlésből
+
+1. ⭐ **A fő célt ő teljesíti legjobban:** a mellettünk futó hívás késleltetése
+   **12 → 3 ms** (az üres vonal 2,0 ms!), a csúcsa 45 → 19–21 ms. A LEDBAT ugyanitt csak
+   6–8 ms-ig jut.
+2. ⭐ **Az ára a legkisebb ott, ahol számít:** a fő helyzetben −11…−19%, a **gyors, üres
+   vonalon nulla** (4923 vs. 4830 KB/s — nincs mit kímélni, és nem is fog vissza).
+3. ⭐⭐ **Az ingadozó (mobil-szerű) vonalon stabil** (−4…−12%), míg a LEDBAT ott **43%-ot** is
+   veszíthet. *Ez a D68 kimondott kockázata volt — a Vegas jobban viseli.*
+4. ⭐⭐⭐ **A küszöbe darabszám, nem ezredmásodperc** — a 9. szabály próbáján ez az egyetlen,
+   ami átmegy magyarázat nélkül. A LEDBAT célját viszonyítani kellett, és az maga is tipp.
+
+⛔ **Az ára, kimondva:** a **véletlenül vesztő** vonalon −30…−50% (ott nincs torlódás, tehát
+a visszafogás téves), a **mohó szomszéd** mellett pedig feleannyit kapunk. ⭐ *A D68 ezt
+tudatosan vállalja: a fájl-átvitel háttérmunka, és a REDUNDANCIA pótolja — a cseréé nem.*
+
+### ⛔⛔ ÉS EGY CÉL, AMI NEM TELJESÜLT — a mérés megmondta, miért
+
+A D68 célja `sor:` **27 → 1–2** volt. A Vegas **14–16**-ra vitte. ⚠️ Szigorúbb küszöbbel
+(α=1, β=2) sem lett kevesebb: a sor **maradt 14**, csak az ár nőtt (250 → 209 KB/s).
+
+⭐⭐⭐ **Az ok szerkezeti: a `sor:` oszlop a CSÚCSOT méri, azt pedig nem az ablak nagysága
+szabja meg, hanem hogy LÖKETBEN küldünk.** Tizenhat darab egyszerre indul, és a sor abban a
+pillanatban telik meg — akármekkora is az ablak átlagban.
+
+⏭️ **Vagyis a `sor: 1–2`-höz ÜTEMEZÉS kell** (a D68 (d) pontja: a darabokat elosztva küldeni
+az oda-vissza idő alatt), nem szigorúbb küszöb. *Amit korábban „félmegoldásnak" neveztünk,
+az valójában a hiányzó másik fele — és ezt csak a mérés mondta meg.*

@@ -166,6 +166,55 @@ const ABLAK_KEZDO = 16;
 const ABLAK_MIN = 1;           // ⛔ egy alá nem mehet: az a némaság
 const ABLAK_MAX = 64;
 
+// ===================================
+// ⭐⭐⭐ A TORLÓDÁS JELE: A KÉSLELTETÉS (D68 / 2. lépés, 2026-09-15)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELL, HA MÁR VAN AIMD? Mert a 23. mérés megmutatta, hogy **az AIMD nem tanul
+// semmit**, amíg nem veszít csomagot — a mai routerek puffere viszont akkora, hogy előbb
+// telik meg **több száz ezredmásodpercnyi késleltetéssel**, mint hogy bármi elveszne.
+// ⭐ A 24. mérés ezt számmá tette: mellettünk egy hívás késleltetése **2,0 → 12,8 ms**
+// (csúcsban 2 → 44 ms), miközben mi **egyetlen csomagot sem veszítünk**.
+//
+// ⭐⭐ A D68 VÁLASZA: a jel legyen a **KÉSLELTETÉS**, a fájl-átvitel legyen **engedékeny**
+// (a csere ne), és a **REDUNDANCIA** teszi megfizethetővé — ha ugyanazt több társ is hozza,
+// a visszafogás nem állítja meg a munkát.
+//
+// ⚠️ A JELÖLTEKET A MÉRÉS VÁLASZTJA KI, NEM AZ ÉRVELÉS (Csaba 1. válasza) — ezért paraméter
+// (`torlodasJel`), és ezért fut mindkettő ugyanazon a műszeren.
+//
+// ⛔⛔ AMI MINDKETTŐRE ÁLL: **rögzített ms-küszöb TILOS** (9. szabály) — a vonalak hat
+// nagyságrendet fognak át, egy „100 ms" mindenütt mást jelent. A Vegas ezért vonzó: nála a
+// küszöb **darabszám**, ami skálafüggetlen. A LEDBAT célját viszonyítani kellett.
+
+// ⭐ VEGAS: ennyi darab állhat a sorban, mielőtt visszafogunk. A klasszikus α=2, β=4.
+// *Két darab: „van mit átvinni". Négy fölött: „sorba állítottuk a vonalat."*
+const VEGAS_ALFA = 2;
+const VEGAS_BETA = 4;
+
+// ⭐ LEDBAT: a cél a `minRtt`-hez viszonyul (lásd a `sikerEsemeny`-ben), de kell egy alsó
+// korlát — egy 0,2 ms-os helyi vonalon különben a mérési zaj vezérelne. ⚠️ Ez NEM a
+// klasszikus 100 ms-os cél: az varázsszám lenne.
+const LEDBAT_ALSO_CEL = 5;     // ms
+const LEDBAT_NYERESEG = 1;     // körönként legfeljebb ennyi darabbal mozdul
+
+// ⭐ Ennyi friss mintából vesszük a MINIMUMOT (a jel bemenete). ⚠️ Rövid ablak: a torlódás
+// tartós, a zaj szór — a minimum az, ami a kettőt szétválasztja.
+const FRISS_MINTA = 8;
+
+// ⭐⭐⭐ NAGYFELBONTÁSÚ ÓRA A MINTÁKHOZ — és ezt is egy mérés kényszerítette ki (2026-09-15).
+//
+// ⛔⛔ A `Date.now()` **ezredmásodperc-felbontású**, a helyi vonalon mért oda-vissza idők
+// viszont **0–2 ms** tartományban vannak. Mérve: a késleltetés-jel egy ÜRES, gyors vonalon
+// 688 → 138 KB/s-ra fojtotta a vonalat, mert `minRtt` gyakran **0** lett — és akkor a
+// „sorbanállás" a teljes mért időnek látszott. *A jel a felbontás alatt dolgozott: nem
+// torlódást mért, hanem kerekítést.*
+//
+// ⭐ A `performance.now()` mikroszekundum-pontos, és a Node-ban beépített (nulla függőség).
+// ⚠️ Csak a MINTÁKHOZ használjuk: a feladási keret és a tétlenség ms-ban is jó, azoknál a
+// `Date.now()` marad — *ott valódi órára van szükség, nem eltelt időre.*
+const most = () => performance.now();
+
 // ⚠️⚠️ A FOGADÓ MINDIG A FELSŐ KORLÁTIG fogad el, nem a küldő PILLANATNYI ablakáig — mert a
 // két oldal ablaka külön él, és a küldőé nőhet. *Ha a fogadó a sajátjához mérne, egy megnőtt
 // küldő-ablak darabjait némán eldobná, és a csere beragadna.*
@@ -205,8 +254,11 @@ const UTOHANG = 2000;
  * @param {number} tarsPort - a másik KÜLSŐ portja
  * @returns {Object} foglalat-szerű objektum a `parbeszed` számára
  */
-export function udpKapcsolat(halo, tarsCim, tarsPort) {
-  console.log('udpKapcsolat - KEZDÉS', { tarsCim, tarsPort });
+export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
+  // ⭐ A TORLÓDÁS-JEL PARAMÉTER, NEM ÁTÍRÁS (D68 / 2. lépés): alapból 'nincs' — vagyis a
+  // tiszta AIMD, ahogy eddig. *A jelölteket a mérés hasonlítja össze; a döntés utána jön.*
+  const torlodasJel = beallitas.torlodasJel ?? 'nincs';
+  console.log('udpKapcsolat - KEZDÉS', { tarsCim, tarsPort, torlodasJel });
 
   const figyelok = { data: [], error: [], end: [], close: [] };
   const jelez = (nev, ertek) => { for (const f of figyelok[nev] ?? []) f(ertek); };
@@ -226,6 +278,18 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   let srtt = null;                // simított oda-vissza idő
   let rttvar = null;              // az ingadozása
   let rto = RTO_KEZDO;            // ennyit vár egy ÚJ darab a nyugtára
+  let minRtt = Infinity;          // ⭐ a vonal SAJÁTJA, sorbanállás nélkül (D68)
+  // ⭐⭐ A FRISS MINTÁK — és ezt egy mérés kényszerítette ki (D68 / 2. lépés, 2026-09-15).
+  //
+  // ⛔ ELŐSZÖR az `srtt`-ből számoltuk a sorbanállást, és a mérés lefojtotta a vonalat: egy
+  // ÜRES, gyors vonalon 635 → 131 KB/s (Vegas), 635 → 28 (LEDBAT). Az ok: az `srtt` **simított
+  // ÁTLAG**, ami a saját feldolgozási zajunkat is beépíti — egy 0,2 ms-os helyi vonalon a
+  // szoftveres késés nagyobb, mint maga a vonal, tehát a jel **zajt olvasott torlódásnak**.
+  //
+  // ⭐ A TORLÓDÁS TARTÓSAN emeli a késleltetést, a zaj csak SZÓR — ezért a jel bemenete az
+  // utolsó néhány minta **MINIMUMA**, nem az átlaga. *Ugyanaz az elv, mint a `minRtt`-nél,
+  // csak rövid ablakon.* (Ez a LEDBAT „current delay" alakja.)
+  const frissMintak = [];
 
   // ----- ⭐ AZ ALKALMAZKODÓ ABLAK (AIMD) -----
   let ablak = ABLAK_KEZDO;        // hány darab lehet egyszerre úton (törtszám is lehet)
@@ -253,8 +317,55 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
    * ⚠️ Nyugtánként `1/ablak`-ot adunk hozzá, mert egy kör annyi nyugtából áll, amekkora az
    * ablak. *Így a növekedés „egy darab körönként" marad — nem gyorsul be akkor, amikor az
    * ablak már amúgy is nagy.*
+   *
+   * ⭐⭐⭐ ÉS ITT DÖNTI EL A TORLÓDÁS-JEL, HOGY NŐHET-E (D68 / 2. lépés, 2026-09-15).
+   * A `torlodasJel` beállítás nélkül minden marad a régiben (tiszta AIMD) — a jel
+   * **paraméter, nem átírás**, hogy a mérés össze tudja hasonlítani a jelölteket.
    */
   const sikerEsemeny = () => {
+    if (torlodasJel === 'nincs' || srtt === null || minRtt === Infinity) {
+      ablak = Math.min(ABLAK_MAX, ablak + 1 / ablak);
+      return;
+    }
+
+    // ⭐ A SORBANÁLLÁS BECSLÉSE — ennyivel lassabb most a vonal, mint üresen.
+    // ⚠️ A FRISS MINTÁK MINIMUMÁBÓL, nem az `srtt`-ből: az átlag a zajt is beépíti, és mérve
+    // ettől fojtotta le a jel az ÜRES vonalat is (635 → 131 KB/s).
+    const friss = frissMintak.length ? Math.min(...frissMintak) : srtt;
+    const sorKesleltetes = Math.max(0, friss - minRtt);
+
+    if (torlodasJel === 'vegas') {
+      // ⭐⭐⭐ VEGAS — és a koino szempontjából ez a legvonzóbb tulajdonsága: a küszöb
+      // **DARABSZÁMBAN** van, nem ezredmásodpercben.
+      //
+      // `diff` ≈ hány darabunk áll a sorban:  ablak × (srtt − minRtt) / srtt
+      //
+      // ⛔ A 9. szabály miatt ez döntő: egy ms-ban megadott küszöb **varázsszám** lenne (egy
+      // 1 ms-os helyi vonalon értelmetlenül szűk, egy 400 ms-os műholdason értelmetlenül
+      // tág), a „két darab a sorban" viszont **ugyanazt jelenti mindenhol**.
+      const diff = friss > 0 ? ablak * sorKesleltetes / friss : 0;
+      if (diff < VEGAS_ALFA) ablak = Math.min(ABLAK_MAX, ablak + 1 / ablak);
+      else if (diff > VEGAS_BETA) ablak = Math.max(ABLAK_MIN, ablak - 1 / ablak);
+      // a kettő között: MARAD — *ez a „jól beállt" állapot, és pont ezt keressük.*
+      return;
+    }
+
+    if (torlodasJel === 'ledbat') {
+      // ⭐ LEDBAT — a sorbanállási késleltetést egy CÉLÉRTÉK alatt tartja, és annál
+      // erősebben fog vissza, minél messzebb van tőle.
+      //
+      // ⛔⛔ A KLASSZIKUS LEDBAT CÉLJA 100 ms — **ez varázsszám**, tehát nálunk tilos
+      // (9. szabály). ⭐ Helyette **viszonyított** cél: a sorbanállás ne haladja meg a vonal
+      // SAJÁT oda-vissza idejét (`minRtt`) — *„ne várakoztassunk többet, mint amennyi az út
+      // maga"*. ⚠️ Egy alsó korlát mégis kell, különben egy 0,2 ms-os helyi vonalon a
+      // mérési zaj vezérelne.
+      const cel = Math.max(LEDBAT_ALSO_CEL, minRtt);
+      const eltero = (cel - sorKesleltetes) / cel;         // +1 … −∞
+      ablak = Math.max(ABLAK_MIN,
+        Math.min(ABLAK_MAX, ablak + LEDBAT_NYERESEG * eltero / ablak));
+      return;
+    }
+
     ablak = Math.min(ABLAK_MAX, ablak + 1 / ablak);
   };
 
@@ -289,6 +400,19 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
 
   /** Egy TISZTA minta érkezett (nem újraküldött darabról) — beépítjük. */
   const mintaErkezett = (R) => {
+    // ⭐⭐ A LEGKISEBB VALAHA LÁTOTT ODA-VISSZA IDŐ: ez a vonal SAJÁTJA, sor nélkül.
+    // Ami e fölött van, az **sorbanállás** — ezen áll az egész késleltetés-alapú jel (D68).
+    //
+    // ⚠️⚠️ ÉS A HATÁRA KIMONDVA: a `minRtt` **elavulhat** (útvonalváltás, mobil cellaváltás),
+    // és akkor a megnőtt alapkésleltetést örökre sorbanállásnak hinnénk. *Egy csere ~1
+    // másodperc, egy fájl-átvitel hosszabb — ott ez valódi kockázat.* A LEDBAT erre
+    // „minRtt-ablakot" használ (az utolsó N másodperc minimuma); ⏸️ nálunk ez még nincs
+    // megépítve, és a mérésnek kell megmondania, hogy kell-e.
+    if (R < minRtt) minRtt = R;
+
+    frissMintak.push(R);
+    if (frissMintak.length > FRISS_MINTA) frissMintak.shift();
+
     if (srtt === null) {
       srtt = R;
       rttvar = R / 2;                                   // az első mintánál ez a szokás
@@ -432,7 +556,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
       // ⚠️ ÉS AMIT SZÁNDÉKOSAN NEM TESZÜNK: nem nullázzuk az RTO-t, csak **megállítjuk a
       // duplázást**. A beérkező adat ugyanis a MÁSIK irányról szól — a torlódás lehet
       // aszimmetrikus. *„Amíg hallom őt, nem ritkítok tovább — de nem is sietek."*
-      const utolsoKuldes = tetel.kuldesek[tetel.kuldesek.length - 1] ?? tetel.kezdet;
+      const utolsoKuldes = tetel.kuldesek[tetel.kuldesek.length - 1] ?? 0;
       const hallottamOta = utolsoErkezes >= utolsoKuldes;
 
       // ⛔⛔ ÉS EGY NEGYEDIK KORLÁT: A MÁSIK FÉL TÜRELME.
@@ -479,7 +603,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
    */
   const darabotKuld = (sorszam, tetel) => {
     const hanyadik = tetel.kuldesek.length;      // 0 = az első küldés
-    tetel.kuldesek.push(Date.now());
+    tetel.kuldesek.push(most());
     csomagot(hanyadik === 0
       ? { sz: sorszam, a: tetel.szoveg }
       : { sz: sorszam, a: tetel.szoveg, k: hanyadik });
@@ -541,7 +665,9 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     if (felado.address !== tarsCim || felado.port !== tarsPort) return;
 
     oratUjraindit();                   // ÉLETJEL: tőle jött valami, tehát él
-    utolsoErkezes = Date.now();        // ⭐ …és ezt az újraküldés visszalépése is használja
+    // ⚠️ UGYANABBAN AZ IDŐSKÁLÁBAN, mint a `kuldesek` — a visszalépés feloldása a kettőt
+    // hasonlítja össze (`hallottamOta`), és két különböző óra ott némán hazudna.
+    utolsoErkezes = most();
     bajtKapott += bajtok.length;
     let uzenet;
     try { uzenet = JSON.parse(bajtok.toString('utf8')); } catch { return; }
@@ -560,7 +686,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
         // az újraküldött darab nyugtája **ugyanolyan jó minta**, mint a többi.
         const hanyadik = Number.isInteger(uzenet.k) ? uzenet.k : 0;
         const mikor = tetel.kuldesek[hanyadik];
-        if (mikor !== undefined) mintaErkezett(Date.now() - mikor);
+        if (mikor !== undefined) mintaErkezett(most() - mikor);
 
         // ⭐⭐ HA AZ ELSŐ KÜLDÉSRE JÖTT A NYUGTA, de közben újraküldtük — akkor az eredeti
         // MEGÉRKEZETT, csak késett. A vesztés-jel téves volt: az ablakot visszaadjuk.
@@ -631,6 +757,17 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   return {
     remoteAddress: tarsCim,
     remotePort: tarsPort,
+
+    /**
+     * ⭐ A TORLÓDÁS-VEZÉRLÉS BELSŐ ÁLLAPOTA — a MÉRÉSNEK (D68 / 2. lépés).
+     *
+     * ⚠️ A jel alakját nem lehet a végeredményből megítélni: két különböző ablak-pálya
+     * ugyanazt a sebességet adhatja. *Ha nem látjuk, mit csinál, csak találgatunk.*
+     */
+    jelAllapot() {
+      const friss = frissMintak.length ? Math.min(...frissMintak) : srtt;
+      return { ablak, minRtt, friss, srtt, uton: uton.size, sor: sor.length };
+    },
     get bytesWritten() { return bajtKuldott; },
     get bytesRead() { return bajtKapott; },
 
@@ -763,7 +900,7 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
 
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   const nyito = async () => {
-    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
     // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE — ugyanaz az őr, mint a rendes UDP-cserénél.
     kapcsolat.setTimeout(varakozasiIdo, () => {
       kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
@@ -883,7 +1020,7 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     // *Enélkül a fázis-ütem csúszna el, és a másik fél kérése a semmibe menne.*
     const olvas = fajlOlvas ?? (async () => null);
     for (;;) {
-      const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+      const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
       kapcsolat.setTimeout(turelem, () => {
         kapcsolat.destroy(new Error('a társ nem kért semmit (' + turelem + ' ms)'));
       });
@@ -923,7 +1060,7 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   console.log('csereUdpResen - KEZDÉS', { tarsCim, tarsPort, koino, varakozasiIdo });
 
-  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort);
+  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
 
   // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE. Ha a másik elhallgat (elment, lefagyott, vagy csak
   // elveszett a válasza), ez a határidő zárja le a párbeszédet — HIBÁVAL, nem csenddel.

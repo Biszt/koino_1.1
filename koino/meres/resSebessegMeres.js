@@ -323,11 +323,14 @@ async function resenMeres(meret, beallitas = {}) {
 
   const kezd = Date.now();
   try {
+    // ⭐ A TORLÓDÁS-JEL A KÜLDŐ OLDALÁN SZÁMÍT (D68 / 2. lépés): a fájl szeleteit a GAZDA
+    // küldi, tehát ő tölti a sort. *A kérő oldala keveset küld — rajta a jel alig látszana.*
     const [, eredmeny] = await Promise.all([
-      parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort), gazdaTar, KOINO,
+      parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort,
+        { torlodasJel: beallitas.torlodasJel }), gazdaTar, KOINO,
         { fajlOlvas: (l) => gazda.olvas(l) }),
       fajlUdpResen(p.masik, '127.0.0.1', p.egyikPort, vendeg, KOINO, lenyomat,
-        { varakozasiIdo: 120000 })
+        { varakozasiIdo: 120000, torlodasJel: beallitas.torlodasJel })
     ]);
     return {
       kesz: eredmeny.kesz, ido: Date.now() - kezd, szeletek: eredmeny.szeletek,
@@ -538,6 +541,74 @@ sor('UDP-rés + MOHÓ szomszéd', 256 * 1024, await resenMeres(256 * 1024,
 // mennyit vett el tőlünk a mohó — csak azt, hogy lassúak vagyunk.*
 sor('UDP-rés (ugyanez, EGYEDÜL)', 256 * 1024, await resenMeres(256 * 1024,
   { kesleltetes: 5, savszelesseg: 500 }));
+
+// ===================================
+// ⭐⭐⭐ A JEL ALAKJA — A JELÖLTEK ÖSSZEHASONLÍTÁSA (D68 / 2. lépés, 2026-09-15)
+// ===================================
+//
+// ⛔ A DÖNTÉST A MÉRÉS HOZZA, NEM AZ ÉRVELÉS (Csaba 1. válasza). Két jelölt fut ugyanazon a
+// műszeren, ugyanazokon a helyzeteken:
+//
+//   · **Vegas** — a sorban álló darabok BECSÜLT SZÁMA a jel (α=2, β=4 darab). ⭐ A küszöb
+//     **darabszám**, tehát skálafüggetlen — a 9. szabály szerint ez a legfontosabb
+//     tulajdonsága: egy 1 ms-os és egy 400 ms-os vonalon **ugyanazt jelenti**.
+//   · **LEDBAT** — a sorbanállási késleltetést tartja egy cél alatt. ⚠️ A klasszikus 100
+//     ms-os cél varázsszám lenne, ezért nálunk a cél a `minRtt`-hez viszonyul.
+//
+// ⭐ A MÉRCE HÁROM OSZLOPBAN olvasható: **`sor:`** (mennyire tömjük tele a vonalat) · a
+// **hívás késleltetése** (mennyit ártunk másnak) · és a **KB/s** (mit fizetünk érte).
+kiir('');
+kiir('  ⭐⭐⭐ A JEL ALAKJA — jelöltek egymás mellett (D68 / 2. lépés)');
+kiir('  ' + '─'.repeat(72));
+
+for (const jel of ['nincs', 'vegas', 'ledbat']) {
+  // 1. A FŐ HELYZET: szűk keresztmetszet + egy hívás ugyanazon a vonalon.
+  sor('[' + jel + '] szűk vonal + HÍVÁS', 256 * 1024, await resenMeres(256 * 1024,
+    { kesleltetes: 5, savszelesseg: 500, torlodasJel: jel,
+      idegen: { fajta: 'egyenletes', uteme: 50 } }));
+}
+
+kiir('');
+for (const jel of ['nincs', 'vegas', 'ledbat']) {
+  // 2. ⛔ A VÉLETLENÜL VESZTŐ VONAL: itt NINCS torlódás, tehát NEM szabad visszafogni.
+  // *Ha egy jelölt itt romlik, az azt jelenti, hogy a zajt torlódásnak olvassa.*
+  sor('[' + jel + '] 5% vesztés (nincs torlódás)', 64 * 1024,
+    await resenMeres(64 * 1024, { kesleltetes: 1, vesztes: 0.05, torlodasJel: jel }));
+}
+
+kiir('');
+for (const jel of ['nincs', 'vegas', 'ledbat']) {
+  // 3. ⚠️ A MOHÓ SZOMSZÉD: itt derül ki, mennyit fizetünk az udvariasságért.
+  sor('[' + jel + '] MOHÓ szomszéd mellett', 256 * 1024, await resenMeres(256 * 1024,
+    { kesleltetes: 5, savszelesseg: 500, torlodasJel: jel, idegen: { fajta: 'moho' } }));
+}
+
+kiir('');
+for (const jel of ['nincs', 'vegas', 'ledbat']) {
+  // 4. ⭐ ÉS EGY GYORS, ÜRES VONAL: a jel NE lassítson ott, ahol nincs mit kímélni.
+  //
+  // ⛔⛔ ITT `kesleltetes: 0` VAN, ÉS ENNEK OKA VAN — a műszer korlátja (2026-09-15).
+  // A késleltetés-utánzat `setTimeout`-tal működik, aminek Windowson a felbontása
+  // **~15,6 ms**. Mérve: egy „+1 ms-os" vonalon a `minRtt` 1,8 ms, a friss minták minimuma
+  // viszont **15–31 ms** — vagyis a vonal nem 1 ms-os, hanem **ingadozó, 15 ms-os**.
+  // ⚠️ A késleltetés-alapú jel ezt **helyesen** olvassa sorbanállásnak, és visszafog:
+  // 591 → 131 KB/s. *Ez nem a jel hibája, hanem a műszeré.* ⭐ Nulla késleltetésnél nincs
+  // időzítő (`if (ido <= 0) return eredeti(...)`), tehát ez a sor **hű**.
+  //
+  // ⭐⭐ ÉS EGY VÁRATLAN HASZON: a timer-kvantálás **véletlenül pont azt modellezte**, amitől
+  // a D68 tart (a mobilvonal sorbanállástól független ingadozása) — a következménye tehát
+  // mérve van: *ingadozó vonalon a késleltetés-jel fölöslegesen visszafog.*
+  sor('[' + jel + '] gyors vonal, egyedül', 256 * 1024,
+    await resenMeres(256 * 1024, { kesleltetes: 0, torlodasJel: jel }));
+}
+
+kiir('');
+for (const jel of ['nincs', 'vegas', 'ledbat']) {
+  // 5. ⚠️ ÉS A MOBIL-KOCKÁZAT, immár szándékosan: ingadozó késleltetés, torlódás NÉLKÜL.
+  // *Itt nincs mit kímélni — aki visszafog, az téved.*
+  sor('[' + jel + '] ingadozó vonal (±20 ms)', 64 * 1024,
+    await resenMeres(64 * 1024, { kesleltetes: 1, ingadozas: 20, torlodasJel: jel }));
+}
 
 kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. Az ABLAK ELŐTT a késleltetés MINDEN');
 kiir('   darabra rárakódott (~1000 bájtonként egy oda-vissza) — ez volt a 16. mérés');

@@ -961,10 +961,23 @@ Csaba három válaszával: **D68** a [`fejlesztesi_terv_fazis2.md`](fejlesztesi_
    megengedhető (a redundancia pótolja), a cserénél nem.*
    ⚠️ Amit a műszer még nem tud: a **mobilvonal ingadozása**, és **két koino-folyam** egymás
    mellett (a 3 egyidejű átvitel esete).
-2. **A jel alakja, MÉRÉSSEL** (Csaba 1. válasza): Vegas (várt vs. tényleges átbocsátás) ·
-   LEDBAT (az egyirányú késleltetés növekménye) · CDG (a késleltetés **gradiense**).
-   ⛔ **Rögzített ms-küszöb TILOS** — varázsszám, és a 9. szabályon bukna (a vonalak hat
-   nagyságrendet fognak át). A küszöb **viszonyított** legyen (a látott `minRtt`-hez).
+2. ✅ **A JEL ALAKJA ELDŐLT — 26. mérés (2026-09-15): VEGAS.** Két jelölt épült meg
+   **paraméterként** (`torlodasJel`), és futott ugyanazon a műszeren, ugyanazokon a
+   helyzeteken. ⭐ **A Vegas négy okból nyert:** a hívás késleltetése mellette **12 → 3 ms**
+   (a LEDBAT csak 6–8-ig jut) · az ára a gyors, üres vonalon **nulla** · az **ingadozó
+   (mobil-szerű) vonalon stabil** (−4…−12%, a LEDBAT ott 43%-ot is veszít) · és ⭐⭐⭐ **a
+   küszöbe DARABSZÁM** (α=2/β=4), nem ezredmásodperc — a 9. szabály próbáján ez az egyetlen,
+   ami magyarázat nélkül megy át. ⛔ Ára: a véletlenül vesztő vonalon −30…−50%, mohó
+   szomszéd mellett feleannyi — *a D68 ezt tudatosan vállalja a fájl-átvitelnél.*
+   ⛔⛔ **Három MŰSZER-hibát kellett előbb megtalálni** (mind a jelet fojtotta): a `Date.now()`
+   ms-felbontása → `performance.now()` · a Windows `setTimeout` **15,6 ms-os kvantálása**
+   (a „+1 ms-os" vonal valójában ingadozó, 15 ms-os) · és a jel bemenete (`srtt` átlag helyett
+   a friss minták **minimuma**). *Mindhárom a jel belső állapotából (`jelAllapot()`) derült ki.*
+2/b. ⛔⛔ **ÉS EGY CÉL, AMI NEM TELJESÜLT — ÜTEMEZÉS KELL HOZZÁ.** A `sor:` **27 → 14–16**
+   lett, nem 1–2; szigorúbb küszöbbel (α=1/β=2) sem csökkent, csak az ár nőtt. ⭐ Az ok
+   szerkezeti: **a `sor:` a CSÚCSOT méri, azt pedig a LÖKETSZERŰ küldés adja** (16 darab
+   egyszerre indul), nem az ablak nagysága. ⏭️ *Amit a D68 (d) pontja „félmegoldásnak"
+   nevezett, az valójában a hiányzó másik fele.*
 3. **Az engedékenység szétválasztása** (e): a **fájl-átvitel** enged, a **csere** nem.
    ⭐ A szétválasztás **már kész** — a fájl-átvitel 5.7/B óta **saját kapcsolaton** fut, tehát
    ez egy paraméter a vonalnak, nem új gépezet.
