@@ -1446,6 +1446,50 @@ proba('⭐⭐ …és a nyugta HELYET CSINÁL: a következő darab csak ekkor ind
   return masodik === elso + 1;
 });
 
+/** Hány KÜLÖNBÖZŐ darab ment ki eddig? (az újraküldés nem számít újnak) */
+const kulonbozoDarabok = (babu) => new Set(babu.darabok().map((d) => d.sz)).size;
+
+proba('⛔⛔ AZ ABLAK FELEZŐDIK VESZTÉSKOR — a gyors újraküldés jelére (AIMD)', async () => {
+  const babu = babuFoglalat();
+  const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);
+  vonal.write('x'.repeat(40 * 1000));
+
+  const elso = kulonbozoDarabok(babu);          // az induló ablak: 16
+
+  // ⭐ HÉT nyugta, mind az 1-esnél KÉSŐBBI darabra. A harmadik már bizonyíték: az 1-es
+  // elveszett (a hálózat továbbvitte azt, ami utána indult).
+  for (const ny of [2, 3, 4, 5, 6, 7, 8]) babu.erkezik({ ny });
+
+  const masodik = kulonbozoDarabok(babu);
+  vonal.end();
+
+  // ⛔ HÉT HELY SZABADULT FEL, mégis legfeljebb KETTŐ új darab indult.
+  //
+  // ⚠️ Miért kettő, és nem nulla? Mert a vesztés csak a HARMADIK jelre bizonyított — az
+  // első két nyugta még a régi, tág ablakkal szabadít helyet. *A próba első változata
+  // nullát várt, és emiatt bukott: a várakozásom volt rossz, nem a kód.*
+  //
+  // ⭐ ÉS EZ A KÜLÖNBSÉG A PRÓBA TÁRGYA: felezés nélkül mind a hét helyre indulna új
+  // darab (23). Nem azt méri, hogy „van AIMD", hanem hogy LÁTSZIK a hatása.
+  return elso === 16 && masodik <= 18;
+});
+
+proba('⭐ AZ ABLAK NŐ, HA MINDEN ÁTMEGY — óvatosan, körönként egy darabbal', async () => {
+  const babu = babuFoglalat();
+  const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);
+  vonal.write('x'.repeat(300 * 1000));
+
+  // ⭐ Sorban nyugtázunk, vesztés nélkül: minden nyugta egy kicsit tágít.
+  for (let sz = 1; sz <= 100; sz++) babu.erkezik({ ny: sz });
+
+  const utonMost = kulonbozoDarabok(babu) - 100;   // kiment − nyugtázott
+  vonal.end();
+
+  // ⚠️ A növekedés NEM robbanás: száz sikeres nyugta után ~21 darab van úton, nem 64.
+  // *Az additív növekedés lényege, hogy lassan tapogat — a felezés viszont azonnali.*
+  return utonMost > 16 && utonMost < 32;
+});
+
 proba('⛔⛔ AZ ABLAKON TÚLI DARABOT NEM NYUGTÁZZUK — a határtalan puffer őre', async () => {
   const babu = babuFoglalat();
   const vonal = udpKapcsolat(babu, '127.0.0.1', 9999);

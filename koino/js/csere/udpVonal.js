@@ -139,12 +139,37 @@ const FELADAS_IDO = 30000;
 // egymás után. *A szelet méretének növelése ezen nem segít: 87 darab az 87 oda-vissza,
 // akár egy szeletben van, akár nyolcban.*
 //
-// ⭐ ENNYI DARAB LEHET EGYSZERRE ÚTON. ⚠️ Ez **még rögzített szám** — a **D67 / 4. darabja**
-// (veszteségre feleződő ablak) teszi majd alkalmazkodóvá. *Nem ideiglenes megoldás, hanem a
-// terv szerinti következő lépcső: a szerkezet (ablak) most áll fel, a szabályozása utána.*
-// ⚠️ NEM állapot-befolyásoló állandó (D66): ha nálam 16, nálad 64, **ugyanazt az állapotot
+// ⭐⭐⭐ AZ ABLAK MÉRETE ALKALMAZKODIK — AIMD (D67 / 4. darab, 2026-09-14)
+//
+// ⛔⛔ MIÉRT NEM MARADHAT RÖGZÍTETT SZÁM? A **9. szabály** kérdése: *„ez mit csinál
+// egymilliárd e-embernél?"* — ott a vonalak hat nagyságrendet fognak át. Egy rögzített 16
+// egy lassú mobilvonalon **túl sok** (mi okozzuk a torlódást), egy gyors vonalon **kevés**.
+// ⭐ És a **torlódás válasza szerkezetileg ide tartozik**, nem az órához: az óra dolga
+// *egyetlen darab* pótlása, az ablaké az **ütem**.
+//
+// ⭐ A SZABÁLY A BEVÁLT AIMD (additive increase, multiplicative decrease):
+//
+//   · siker   → **lassan nő** (+1 darab körönként) — óvatosan tapogatjuk a határt;
+//   · vesztés → **felére csökken** — azonnal enged.
+//
+// ⚠️ **Az aszimmetria a lényeg, nem mellékhatás:** így a vonalat megosztó felek
+// **egyensúlyba kerülnek** egymással ahelyett, hogy a legagresszívabb vinné el az egészet.
+// *Ez a „nem mi leszünk a baj" szabály matematikai alakja.*
+//
+// ⛔ EGY VESZTÉS-ESEMÉNY = EGY FELEZÉS. Egy elveszett körben több darab is hiányozhat; ha
+// mindegyikre feleznénk, egyetlen zavar **a földbe döngölné** az ablakot. Ezért a felezés
+// után a **már úton lévőkre** nem csökkentünk újra (`csokkentesHatar`).
+//
+// ⚠️ NEM állapot-befolyásoló állandók (D66): ha nálam más az ablak, **ugyanazt az állapotot
 // számoljuk** — csak más ütemben ér oda.
-const ABLAK = 16;
+const ABLAK_KEZDO = 16;
+const ABLAK_MIN = 1;           // ⛔ egy alá nem mehet: az a némaság
+const ABLAK_MAX = 64;
+
+// ⚠️⚠️ A FOGADÓ MINDIG A FELSŐ KORLÁTIG fogad el, nem a küldő PILLANATNYI ablakáig — mert a
+// két oldal ablaka külön él, és a küldőé nőhet. *Ha a fogadó a sajátjához mérne, egy megnőtt
+// küldő-ablak darabjait némán eldobná, és a csere beragadna.*
+const FOGADO_ABLAK = ABLAK_MAX;
 
 // ⭐⭐ GYORS ÚJRAKÜLDÉS — a MÁSODIK veszteség-jel, az órán kívül.
 //
@@ -192,6 +217,59 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   let srtt = null;                // simított oda-vissza idő
   let rttvar = null;              // az ingadozása
   let rto = RTO_KEZDO;            // ennyit vár egy ÚJ darab a nyugtára
+
+  // ----- ⭐ AZ ALKALMAZKODÓ ABLAK (AIMD) -----
+  let ablak = ABLAK_KEZDO;        // hány darab lehet egyszerre úton (törtszám is lehet)
+  let csokkentesHatar = 0;        // eddig a sorszámig már elkönyveltünk egy vesztés-eseményt
+  let csokkentesOka = null;       // melyik darab miatt csökkentettünk utoljára
+  let ablakCsokkentesElott = 0;   // …és mekkora volt előtte
+
+  /**
+   * ⛔ VESZTÉS TÖRTÉNT — az ablak felére csökken.
+   *
+   * ⚠️ De **körönként csak egyszer**: egy elveszett körben több darab is hiányozhat, és ha
+   * mindegyikre feleznénk, egyetlen zavar **a földbe döngölné** az ablakot.
+   */
+  const vesztesEsemeny = (sorszam) => {
+    if (sorszam < csokkentesHatar) return;
+    ablakCsokkentesElott = ablak;
+    csokkentesOka = sorszam;
+    ablak = Math.max(ABLAK_MIN, ablak / 2);
+    csokkentesHatar = kovetkezoSorszam;
+  };
+
+  /**
+   * ⭐ SIKER — az ablak LASSAN nő: körönként egy darabbal.
+   *
+   * ⚠️ Nyugtánként `1/ablak`-ot adunk hozzá, mert egy kör annyi nyugtából áll, amekkora az
+   * ablak. *Így a növekedés „egy darab körönként" marad — nem gyorsul be akkor, amikor az
+   * ablak már amúgy is nagy.*
+   */
+  const sikerEsemeny = () => {
+    ablak = Math.min(ABLAK_MAX, ablak + 1 / ablak);
+  };
+
+  /**
+   * ⭐⭐⭐ A TÉVES FELEZÉS VISSZAVONÁSA — és ezt a mérés kényszerítette ki (2026-09-14).
+   *
+   * ⛔ Mérve: `1 ms ± 20 ms` szórásnál, **nulla veszteség mellett** az ablak feleződött, és
+   * a sebesség 234 → 106 KB/s-ra esett. Az ok: a **sorrend-csere** hármas „előrébb járó"
+   * nyugtát ad, amit a gyors újraküldés vesztésnek olvas. *A vonal nem volt torlódott —
+   * csak rendetlen.*
+   *
+   * ⭐ ÉS VAN RÁ BIZONYÍTÉKUNK, INGYEN: a nyugta **visszamondja, melyik küldésre felel**
+   * (1. darab). Ha az **ELSŐ** küldésre jön nyugta egy olyan darabra, amit közben
+   * újraküldtünk, akkor az eredeti **megérkezett** — tehát nem veszett el, csak késett.
+   * *Ilyenkor visszaadjuk az ablakot.*
+   *
+   * ⚠️ Csak a LEGUTÓBBI csökkentést vonjuk vissza, és csak ha épp az a darab cáfolta meg —
+   * *a bizonyíték arról szól, nem általában a vonalról.*
+   */
+  const tevesFelezes = (sorszam) => {
+    if (csokkentesOka !== sorszam) return;
+    ablak = Math.min(ABLAK_MAX, ablakCsokkentesElott);
+    csokkentesOka = null;
+  };
 
   /** Az RTO újraszámolása a becslésből — ez oldja fel a darabonkénti visszalépést is. */
   const rtoUjraszamol = () => {
@@ -318,6 +396,10 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
       const maradek = FELADAS_IDO - (Date.now() - tetel.kezdet);
       tetel.rto = Math.min(RTO_MAX, tetel.rto * 2, Math.max(RTO_MIN, maradek / 4));
 
+      // ⛔ AZ IDŐTÚLLÉPÉS IS VESZTÉS — az ablak enged. *Ez a súlyosabb jel a kettő közül:
+      // itt nemcsak egy darab veszett el, hanem semmi nem jött vissza helyette.*
+      vesztesEsemeny(sorszam);
+
       darabotKuld(sorszam, tetel);
     }, tetel.rto);
   };
@@ -351,7 +433,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
    * bukott meg az első nekifutás (lásd a fenti szakaszt).*
    */
   const kovetkezotKuld = () => {
-    while (!lezarva && sor.length && uton.size < ABLAK) {
+    while (!lezarva && sor.length && uton.size < Math.floor(ablak)) {
       const sorszam = kovetkezoSorszam++;
       const most = Date.now();
       const tetel = {
@@ -376,7 +458,10 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     for (const [sorszam, tetel] of uton) {
       if (sorszam >= nyugtazott) continue;
       tetel.magasabbNyugtak++;
-      if (tetel.magasabbNyugtak >= GYORS_KUSZOB) darabotKuld(sorszam, tetel);
+      if (tetel.magasabbNyugtak >= GYORS_KUSZOB) {
+        vesztesEsemeny(sorszam);       // ⛔ bizonyított vesztés: az ablak enged
+        darabotKuld(sorszam, tetel);
+      }
     }
   };
 
@@ -410,6 +495,13 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
         const hanyadik = Number.isInteger(uzenet.k) ? uzenet.k : 0;
         const mikor = tetel.kuldesek[hanyadik];
         if (mikor !== undefined) mintaErkezett(Date.now() - mikor);
+
+        // ⭐⭐ HA AZ ELSŐ KÜLDÉSRE JÖTT A NYUGTA, de közben újraküldtük — akkor az eredeti
+        // MEGÉRKEZETT, csak késett. A vesztés-jel téves volt: az ablakot visszaadjuk.
+        if (hanyadik === 0 && tetel.kuldesek.length > 1) tevesFelezes(uzenet.ny);
+
+        // ⭐ A darab MEGÉRKEZETT — az ablak óvatosan tapogat tovább.
+        sikerEsemeny();
         // ⭐⭐⭐ A NYUGTA BIZONYÍTJA, HOGY AZ ÚT ÉL — tehát a többiek visszalépését FELOLDJUK.
         //
         // ⛔⛔ Ezt is mérés kényszerítette ki (2026-09-14): a beragadt darab visszalépése
@@ -454,7 +546,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     // ⛔ ÉS NEM NYUGTÁZZUK, mert azt hazudná, hogy megvan: a küldő továbblépne, a darab
     // pedig örökre hiányozna. *Amit eldobtunk, arról hallgatni kell — a hallgatás itt
     // igazat mond, a nyugta hazudna.*
-    if (uzenet.sz >= vartSorszam + ABLAK) return;
+    if (uzenet.sz >= vartSorszam + FOGADO_ABLAK) return;
 
     varakozo.set(uzenet.sz, uzenet.a);
     nyugtaz();

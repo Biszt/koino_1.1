@@ -1889,3 +1889,78 @@ kevésbé legyen türelmes. *Ez nem ígéret, hanem a következő mérés kérd�
   pajzsfúrás **már megmérte**: a terepmérésen 76 ms).
 - **A ×1,5–1,8 pazarlás veszteség és szórás mellett** — a gyors újraküldés néha fölöslegesen
   lép. ⏸️ A 4. darab után újramérendő.
+
+---
+
+## 22. ⭐⭐ AZ ALKALMAZKODÓ ABLAK — AIMD (2026-09-14, D67 / 4. darab)
+
+*A D67 utolsó darabja. ⭐ És a legfontosabb, amit meg kell érteni róla: **ez a darab
+SZÁNDÉKOSAN LASSÍT** bizonyos vonalakon — mert nem a sebességről szól, hanem arról, hogy
+**ne mi legyünk a baj**.*
+
+### A szabály
+
+- **siker** → az ablak **lassan nő** (+1 darab körönként),
+- **vesztés** → **felére csökken**, azonnal.
+
+⚠️ **Az aszimmetria a lényeg, nem mellékhatás:** így a vonalat megosztó felek **egyensúlyba
+kerülnek** egymással ahelyett, hogy a legagresszívabb vinné el az egészet. ⛔ **Egy
+vesztés-esemény = egy felezés**: egy elveszett körben több darab is hiányozhat, és ha
+mindegyikre feleznénk, egyetlen zavar a földbe döngölné az ablakot.
+
+### Az eredmény — és a két irány
+
+```
+  vonal                     ablak+RTT (21.)    +AIMD (22.)     csomag
+  ─────────────────────────────────────────────────────────────────────
+  +1 ms                        454 KB/s        593 KB/s      182 → 182
+  1 ms ± 20 ms szórás          234 KB/s        221 KB/s      294 → 292
+  1 ms, 1% vesztés             582 KB/s        287 KB/s      253 → 198  (×1,4 → ×1,1)
+  1 ms, 5% vesztés             356 KB/s        104 KB/s      281 → 226  (×1,5 → ×1,2)
+  1 ms, 15% vesztés             78 KB/s         39 KB/s      332 → 254  (×1,8 → ×1,4)
+
+  csere 4 eseménnyel (átlag):   10%  51 → 203 ms · 30%  1028 → 2108 ms
+```
+
+⭐⭐ **A csomag-oszlop a lényeg:** veszteséges vonalon **egyharmaddal kevesebb csomagot**
+küldünk (×1,8 → ×1,4). *A lassulás nem ár nélküli veszteség — pontosan az a forgalom tűnt
+el, amivel a torlódást etettük volna.*
+
+⚠️ **És ez megfelel az elméletnek:** a veszteség-alapú torlódás-vezérlés átbocsátása a
+veszteséggel fordítottan, a gyök szerint romlik. ⛔ **Egy VÉLETLENSZERŰEN vesztő** (nem
+torlódott) vonalon ez **túlreagálás** — de a küldő **nem tudja megkülönböztetni** a kettőt,
+és a tévedés két iránya nem egyenrangú: *aki tévedésből visszafog, lassabb lesz; aki
+tévedésből hajt, összeomlást okoz másoknak is.*
+
+### ⛔⛔ ÉS EGY VALÓDI HIBÁT A MÉRÉS AZONNAL KIDOBOTT
+
+Az első futásnál `1 ms ± 20 ms` szórásnál, **nulla veszteség mellett** a sebesség
+**234 → 106 KB/s**-ra esett. ⭐ Az ok: a **sorrend-csere** hármas „előrébb járó" nyugtát ad,
+amit a gyors újraküldés vesztésnek olvas — *a vonal nem volt torlódott, csak rendetlen.*
+
+⭐⭐⭐ **És a bizonyíték ingyen megvolt, az 1. darabból:** a nyugta **visszamondja, melyik
+küldésre felel**. Ha az **ELSŐ** küldésre jön nyugta egy olyan darabra, amit közben
+újraküldtünk, akkor az eredeti **megérkezett** — tehát nem veszett el, csak késett, és a
+felezés **téves volt**. ✅ Ilyenkor visszaadjuk az ablakot (`tevesFelezes`), és a szórás-sor
+visszaállt **221 KB/s**-ra. *Ugyanaz a mechanizmus, ami a pontos RTT-mintát adta, itt a téves
+torlódás-jelet is kiszűri — egy mező, két haszon.*
+
+### ⭐ Két új önpróba, rontás-próbával
+
+`csereProba.js`: **az ablak feleződik vesztéskor** (hét felszabadult hely után is legfeljebb
+kettő új darab indul — *felezés nélkül mind a hét indulna*) · **az ablak nő, ha minden
+átmegy** (száz sikeres nyugta után ~21 darab van úton, **nem 64** — az additív növekedés
+lassan tapogat). ⭐ Mindkettő **bukik**, ha a felezést vagy a növelést kikapcsoljuk.
+
+⚠️ **A felezés-próba első változata NULLA új darabot várt, és emiatt bukott** — pedig a kód
+jó volt: a vesztés csak a **harmadik** jelre bizonyított, tehát az első két nyugta még a
+régi, tág ablakkal szabadít helyet. *A várakozásom volt rossz, nem a mérés tárgya.*
+
+### ⏸️ Ami nyitva marad
+
+- **Nincs lassú indítás** (slow start): az ablak 16-ról indul, nem 1-ről duplázva. ⭐ Rövid
+  cseréknél ez előny, nagy fájlnál a 64-es plafon elérése lassabb. ⏸️ Méréssel eldönthető.
+- **A véletlen vesztés és a torlódás megkülönböztetése** — ehhez ütem-alapú vezérlés
+  kellene (a BBR iránya). ⏸️ Más nagyságrendű munka; ma nem indokolt.
+- **A lassú vonal indulási lökete** (×1,9 nyolc kilobájtnál) változatlan — az a kezdő RTO-é,
+  nem az ablaké.
