@@ -65,8 +65,29 @@ function magvasVeletlen(mag) {
  * ablakot** kell kapnia, és *veszteség-választ nem lehet becsületesen megépíteni olyan
  * műszerrel, ami soha nem veszít csomagot*. Az ugyanaz a csapda lenne, mint a vak próba:
  * zöld, és semmit nem bizonyít.
+ *
+ * ===== ⭐⭐⭐ ÉS A NEGYEDIK TULAJDONSÁG: A SZŰK KERESZTMETSZET (2026-09-14) =====
+ *
+ * ⛔⛔ A FENTI HÁROM EGYIKE SEM TUD TORLÓDÁST CSINÁLNI. A késleltetés **állandó** volt: nem
+ * számított, hány darab van úton. ⚠️ Márpedig a torlódás épp az, hogy **a vonal nem bír el
+ * annyit, amennyit küldünk** — és ilyenkor a késleltetés **NŐ** (gyűlik a sor), majd a
+ * csomagok **el is vesznek** (megtelik a sor).
+ *
+ * ⭐ Enélkül a következő lépés (késleltetés-alapú torlódás-jel) **csak a hízelgő felét**
+ * tudná megmérni: a véletlen vesztést, ahol nem szabad visszafogni. Hogy torlódásnál
+ * helyesen viselkedik-e, arra **vakok maradnánk**. *Ugyanaz a rend, mint eddig: előbb a
+ * mérce, aztán az építés.*
+ *
+ * ⭐ A MODELL A LEGEGYSZERŰBB HŰ ALAK: egy kiszolgáló, egy sor. Minden csomag **kivárja**,
+ * amíg a vonal felszabadul (`szabadEttol`), és csak utána indul. Ha a sor hossza eléri a
+ * `sorMeret`-et, a csomag **eldobódik** — *ez a torlódásos vesztés, és a küldő önmagának
+ * okozta.*
+ *
+ * @param {number} [beallitas.savszelesseg] - darab/másodperc (0 = korlátlan, mint eddig)
+ * @param {number} [beallitas.sorMeret] - ennyi darab várhat; efölött eldobás
  */
-async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1 } = {}) {
+async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
+  savszelesseg = 0, sorMeret = 32 } = {}) {
   const nyit = () => new Promise((kesz) => {
     const h = createSocket('udp4');
     h.bind(0, '127.0.0.1', () => kesz(h));
@@ -75,7 +96,12 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1 }
   const masik = await nyit();
 
   const veletlen = magvasVeletlen(mag);
-  const szamlalo = { kuldott: 0, eldobott: 0 };
+  const szamlalo = { kuldott: 0, eldobott: 0, torlodas: 0, maxSor: 0 };
+
+  // ⭐ A SZŰK KERESZTMETSZET ÁLLAPOTA, IRÁNYONKÉNT KÜLÖN — egy vonalnak két iránya van,
+  // és a sor mindkettőben külön gyűlik. *A `Map` a foglalathoz köti.*
+  const vonalAllapot = new Map();
+  const szolgalatiIdo = savszelesseg > 0 ? 1000 / savszelesseg : 0;   // ms / darab
 
   // ⚠️⚠️ EZT A MÉRÉS TALÁLTA MEG A SAJÁT MŰSZERÉBEN (2026-09-14): 400 ms-os késleltetésnél
   // a függőben lévő küldések **TÚLÉLIK a foglalat bezárását**, és zárt foglalatra ütnek
@@ -105,7 +131,33 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1 }
           return;
         }
 
-        const ido = kesleltetes + (ingadozas > 0 ? veletlen() * ingadozas : 0);
+        // ===== ⭐ A SOR: a csomag KIVÁRJA, amíg a vonal felszabadul =====
+        let sorIdo = 0;
+        if (szolgalatiIdo > 0) {
+          const most = Date.now();
+          const allapot = vonalAllapot.get(h) ?? { szabadEttol: 0 };
+          vonalAllapot.set(h, allapot);
+
+          // Hány darab vár még előtte? (a hátralévő idő / egy darab ideje)
+          const varakozok = Math.max(0, Math.round((allapot.szabadEttol - most) / szolgalatiIdo));
+          if (varakozok > szamlalo.maxSor) szamlalo.maxSor = varakozok;
+
+          // ⛔ MEGTELT A SOR — a csomag eldobódik. *Ez a TORLÓDÁSOS vesztés: nem a vonal
+          // hibája, hanem azé, aki többet küldött, mint amennyi elfér.*
+          if (varakozok >= sorMeret) {
+            szamlalo.eldobott++;
+            szamlalo.torlodas++;
+            const v = ervek[ervek.length - 1];
+            if (typeof v === 'function') v(null);
+            return;
+          }
+
+          const indul = Math.max(most, allapot.szabadEttol);
+          allapot.szabadEttol = indul + szolgalatiIdo;
+          sorIdo = allapot.szabadEttol - most;         // sorbanállás + kiszolgálás
+        }
+
+        const ido = sorIdo + kesleltetes + (ingadozas > 0 ? veletlen() * ingadozas : 0);
         if (ido <= 0) return eredeti(...ervek);
 
         const ora = setTimeout(() => {
@@ -221,6 +273,11 @@ const sor = (cimke, meret, e) => {
     ? '  ' + String(cs.kuldott).padStart(5) + ' csomag'
       + (alap && alap !== cs.kuldott ? '  ×' + (cs.kuldott / alap).toFixed(1) : '')
       + (cs.eldobott ? '  ' + (100 * cs.eldobott / cs.kuldott).toFixed(1) + '% veszett' : '')
+      // ⭐⭐ A SOR MÉLYSÉGE A LEGBESZÉDESEBB SZÁM A TORLÓDÁSNÁL: megmondja, mennyire tömtük
+      // tele a szűk keresztmetszetet. *Egy jól nevelt küldő SEKÉLYEN tartja — a mély sor
+      // mindenki másnak is késleltetést okoz, nem csak nekünk.*
+      + (cs.maxSor ? '  sor:' + String(cs.maxSor).padStart(3) : '')
+      + (cs.torlodas ? '  ' + cs.torlodas + ' torlódásos' : '')
     : '';
   kiir(
     '  ' + cimke.padEnd(30)
@@ -281,6 +338,29 @@ for (const kesleltetes of [200, 400]) {
   sor('UDP-rés (' + kesleltetes + ' ms → ' + (2 * kesleltetes) + ' ms oda-vissza)', 8 * 1024,
     await resenMeres(8 * 1024, { kesleltetes }));
 }
+
+// ===================================
+// ⛔⛔ A TORLÓDÁS — a negyedik tulajdonság (2026-09-14)
+// ===================================
+//
+// ⭐ ITT A KÉSLELTETÉS **AZ ÚTON LÉVŐ DARABOK SZÁMÁTÓL FÜGG**: a szűk keresztmetszet
+// másodpercenként `savszelesseg` darabot visz át, a többi **sorban áll**, és ha a sor
+// megtelik (32), a csomag **elveszik**. *Ez a torlódás, és a küldő maga okozza.*
+//
+// ⚠️ EZ A SZAKASZ NEM A SEBESSÉGRŐL SZÓL, hanem a `sor:` oszlopról: mennyire tömjük tele a
+// vonalat. *A következő lépés (késleltetés-alapú torlódás-jel) ezt akarja sekélyen tartani;
+// a sebesség itt csak kísérő adat.*
+kiir('');
+for (const savszelesseg of [2000, 500]) {
+  sor('UDP-rés (' + savszelesseg + ' darab/mp, 5 ms)', 64 * 1024,
+    await resenMeres(64 * 1024, { kesleltetes: 5, savszelesseg }));
+}
+
+// ⚠️ ÉS EGY KIS PUFFERREL IS, hogy a torlódásos ELDOBÁS ága se maradjon méretlen: ha a sor
+// csak 8 darabot bír, a 16-os ablak **túlcsordítja** — és a vesztés már nem a vonal zaja,
+// hanem a **mi túlküldésünk**. *Egy méretlen ág olyan, mint egy vak próba.*
+sor('UDP-rés (500 darab/mp, 8-as sor)', 64 * 1024,
+  await resenMeres(64 * 1024, { kesleltetes: 5, savszelesseg: 500, sorMeret: 8 }));
 
 kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. A stop-and-wait miatt a késleltetés');
 kiir('   MINDEN darabra rárakódik: ~1000 bájtonként egy oda-vissza.');

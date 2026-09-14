@@ -1964,3 +1964,49 @@ régi, tág ablakkal szabadít helyet. *A várakozásom volt rossz, nem a méré
   kellene (a BBR iránya). ⏸️ Más nagyságrendű munka; ma nem indokolt.
 - **A lassú vonal indulási lökete** (×1,9 nyolc kilobájtnál) változatlan — az a kezdő RTO-é,
   nem az ablaké.
+
+---
+
+## 23. ⭐⭐⭐ A MŰSZER MEGTANUL TORLÓDNI — és rögtön kimutat egy bajt (2026-09-14)
+
+*A következő lépés a **késleltetés-alapú torlódás-jel** lenne (a véletlen vesztés és a
+torlódás megkülönböztetése). ⛔ De a műszerünk **torlódást egyáltalán nem tudott
+szimulálni**: a késleltetés állandó volt, nem függött attól, hány darab van úton. Így csak a
+**hízelgő felét** tudtuk volna megmérni.*
+
+### A modell: egy kiszolgáló, egy sor
+
+A szűk keresztmetszet másodpercenként `savszelesseg` darabot visz át; a többi **sorban áll**
+(ettől nő a késleltetés), és ha a sor megtelik, a csomag **elveszik**. ⭐ *Ez a torlódás — és
+itt a küldő MAGA okozza, nem a vonal zaja.*
+
+### ⛔⛔ ÉS AZ ELSŐ FUTÁS AZONNAL KIMUTATOTT EGY BAJT
+
+```
+  UDP-rés (2000 darab/mp, 5 ms)    64 KB    197 ms   325 KB/s   182 csomag  sor: 13
+  UDP-rés (500 darab/mp, 5 ms)     64 KB    260 ms   246 KB/s   182 csomag  sor: 14
+  UDP-rés (500 darab/mp, 8-as sor) 64 KB    323 ms   198 KB/s   210 csomag  sor:  8  14 torlódásos
+```
+
+⭐⭐⭐ **A `sor:` oszlop a lelet: 13–14.** Az ablak 16 — vagyis a küldő **majdnem a teljes
+ablakával teletömi a szűk keresztmetszet sorát**, és **egyetlen csomag sem vész el**. ⛔ Az
+AIMD ezért **soha nem is értesül róla**: nincs vesztés, tehát nincs felezés.
+
+⚠️ **Ez a „bufferbloat", és nem a mi sebességünket rontja, hanem MINDENKI MÁSÉT:** aki
+ugyanazon a szűk keresztmetszeten osztozik velünk, a mi 14 darabunk mögé áll be. *A koino
+szabálya erre világos — „ne mi legyünk a baj" —, és ma megszegjük.*
+
+⭐ **És a harmadik sor bizonyítja, hogy a torlódásos ELDOBÁS ága is él** (14 eldobás, 6,7%
+vesztés): ha a puffer kicsi, a 16-os ablak **túlcsordítja**. *Egy méretlen ág olyan, mint egy
+vak próba — ezért került külön sorba.*
+
+### ⏸️ Ez a KÖVETKEZŐ LÉPÉS MÉRCÉJE
+
+A késleltetés-alapú jel akkor lesz jó, ha:
+
+- ⭐ **a `sor:` oszlop 13–14-ről 1–2-re esik** — vagyis nem tömjük tele a vonalat,
+- ⭐ **a véletlenül vesztő sorok NEM romlanak** (1%/5%/15%: ma 287/104/39 KB/s) — ott nincs
+  torlódás, tehát nem szabad visszafogni,
+- ⚠️ és a torlódásos sor **nem lesz lassabb** annál, amit ma mérünk.
+
+*A cél tehát nem a sebesség, hanem hogy a két helyzetet a vonal MEGKÜLÖNBÖZTESSE.*
