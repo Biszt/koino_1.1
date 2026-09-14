@@ -1040,27 +1040,44 @@ elhallgatunk — az elveszett nyugta pótolható, a lezárt példányok mégsem 
 `halo` mindkettőnek odaadja a csomagot, tehát a régi példány arra felel, ami tényleg
 megérkezett.
 
-### ⛔⛔⛔ ÉS EGY VALÓDI HOLTPONT, AMIT EZ A NAP HOZOTT FELSZÍNRE (nyitva)
+### ✅✅✅ ÉS A NÉMA HOLTPONT MEGVAN ÉS MEGJAVÍTVA (25. mérés, 2026-09-14/15)
 
-A 30%-os vesztésű UDP-próbák **ingadoznak**: kísérletenként **~3%**, futásonként **6-ból 1**.
-⚠️ **Nem a mai munka okozta** — `git stash`-sel visszaállított **eredeti** kódon is **5-ből 1**.
+A 30%-os vesztésű csere önpróbája **6 futásból 1-szer** bukott — és a D67 **előtti** kódon is
+5-ből 1-szer, tehát a jelenség régi. ⭐ *Egy néha bukó próba nem szeszélyes: igazat mond.*
 
-⛔ **És két magyarázatomat is megcáfolta a mérés:**
+⛔ **Két magyarázatomat a mérés cáfolta**, mielőtt a harmadikhoz eljutottam: a lezárt kapcsolat
+figyelője (az **utóhang** után is megmaradt) és a visszalépő óra (a határidőt 15 000 ms-ra
+emelve **ugyanúgy bukott**). *Mindkettő érvelés volt, nem mérés.*
 
-1. *„a próba indoklása elavult: a D67 óta visszalépő az óra, tehát 5 másodperc csendhez nem
-   16 vesztés kell, hanem hat"* — ⛔ **a 15 000 ms-ra emelt határidő ugyanúgy bukott**.
-   15 másodperc teljes csendhez 7–8 egymás utáni vesztés kellene (0,3^7 ≈ 0,02%), ami a
-   3%-ot **nem magyarázza**.
-2. *„a lezárt kapcsolat figyelőjének levétele okozza"* — ⛔ az **utóhang** után is megmaradt.
+⭐⭐ **A harmadik nekifutás csomag-naplóból indult** — a bukás ugyanis **nem-esemény** (teljes
+csend), amit naplóból nem lehet látni. 200–300 kísérlet, minden csomag feljegyezve.
 
-⭐⭐ **AMIT BIZTOSAN TUDUNK:** ez **nem valószínűségi jelenség, hanem valódi, ritka
-HOLTPONT** — a vonal (vagy a párbeszéd) néha **véglegesen elhallgat**, és csak a tétlenségi
-óra menti meg. *„A néma nem-esemény a legrosszabb hibafajta" — most a saját vonalunkon.*
+**A mechanizmus: három helyes szabály esett egybe.** A kapcsolat **első** darabja sorozatban
+elveszett → `srtt` **null** maradt → a **vak óra** szándékosan csak a **legrégebbi** darabot
+szondázza (21. mérés) → a mögötte álló, már kiküldött darab **meg sem mozdult** → közben a
+visszalépés **4800 ms**-ra nőtt. ⛔⛔ **És ekkor a két őr ellentmondott egymásnak:** a mi
+újraküldésünk tovább hallgatott, mint a **társ tétlenségi órája** (5000 ms). *Egy türelem, ami
+túléli a másik fél türelmét, nem türelem, hanem néma bukás.*
 
-⏸️ **A jelöltek a felderítéshez:** a `parbeszed` befejezésének **aszimmetriája** 30%-os
-vesztésnél (az egyik fél lezár, a másik még vár egy üzenetre, ami már sosem jön), illetve a
-`kiurites()` és a lezárás viszonya. ⚠️ **A D68 előtt érdemes megfogni**, mert a
-késleltetés-alapú jel ugyanezen a vonalon fog dolgozni.
+✅ **Két korlát, mindkettő a meglévő elv kiterjesztése:**
+
+1. a visszalépés **megáll**, ha a darab utolsó küldése óta **hallottuk a társat** — a kód már
+   kimondta, hogy *„a nyugta bizonyítja, hogy az út él"*, és ez minden tőle jövő csomagra
+   igaz; ⚠️ de **csak a duplázást** állítjuk meg, az RTO-t nem nullázzuk (a beérkező adat a
+   MÁSIK irányról szól, a torlódás lehet aszimmetrikus);
+2. az **RTO sosem több a tétlenségi óra harmadánál** — a **szimmetrikus** esetre, amikor egyik
+   fél sem beszél. A társ **ugyanazt a programot futtatja** (D66), tehát a saját óránkból
+   következtethetünk az övére: így legalább **három szondát** hall.
+
+⭐ **Mérve: 3/200 → 0/300.** És az önpróba határideje **10 000 ms** lett: ez a `csereUdpResen`
+**éles alapértéke**, tehát a próba mostantól azt méri, amit élesben futtatunk. *Nem lazítás —
+ugyanazzal a javított kóddal 5000-nél még 1/300 maradt, 10 000-nél 0/300.*
+
+⚠️ **A D67 számai nem romlottak** (három ismételt futás): 1%/5%/15% = ~**300 / 104–110 /
+31–35 KB/s** a korábbi 287/104/39 ellenében — a 15%-os sor a szóráson belül, de szemmel
+tartandó. ⏸️ És a vak óra rászűkítése **marad** (nélküle 15%-nál 430 → 8177 ms): csak a
+némaság ideje lett korlátos, a tulajdonság megmaradt.
+
 
 ### ✅ Négy új próba, mind rontás-próbával igazolva
 

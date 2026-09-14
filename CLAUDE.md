@@ -70,18 +70,30 @@ megtalált.* ✅ A megoldás **utóhang**: a lezárás után még 2 másodpercig
 csend — így az elveszett nyugta pótolható, a lezárt példányok mégsem gyűlnek a foglalaton.
 ⚠️ *Amit „szemétnek" néztem, az egy őr volt. A kód olvasása ezt nem mondta meg; a mérés igen.*
 
-⛔⛔⛔ **ÉS EGY VALÓDI HOLTPONT, AMIT EZ A NAP HOZOTT FELSZÍNRE — NYITVA (2026-09-14).**
-A 30%-os vesztésű UDP-próbák **ingadoznak**: kísérletenként **~3%**, futásonként **6-ból 1**.
-⚠️ **Nem a mai munka okozta** — `git stash`-sel visszaállított **eredeti** kódon is **5-ből 1**.
-⛔ **És két magyarázatomat is megcáfolta a mérés:** *(1)* hogy a D67-es **visszalépő óra** az
-ok — a határidőt 15 000 ms-ra emelve **ugyanúgy bukott**, pedig 15 mp teljes csendhez 7–8
-egymás utáni vesztés kellene ugyanabból a darabból (0,3^7 ≈ 0,02%); *(2)* hogy a lezárt
-kapcsolat figyelője — az **utóhang** után is megmaradt. ⭐⭐ **Vagyis nem valószínűségi
-jelenség, hanem valódi, ritka HOLTPONT:** a vonal néha **véglegesen elhallgat**, és csak a
-tétlenségi óra menti meg. *„A néma nem-esemény a legrosszabb hibafajta" — most a sajátunkon.*
-⏸️ **Jelöltek:** a `parbeszed` befejezésének **aszimmetriája** 30%-os vesztésnél (az egyik
-fél lezár, a másik még vár egy üzenetre, ami sosem jön), illetve a `kiurites()` és a lezárás
-viszonya. ⚠️ **A D68 előtt érdemes megfogni**, mert a késleltetés-jel ugyanezen a vonalon fut.
+✅✅✅ **ÉS A HOLTPONT MEGVAN ÉS MEGJAVÍTVA — 25. mérés (2026-09-14/15).** A 30%-os
+vesztésű csere önpróbája **6 futásból 1-szer** bukott (és a D67 ELŐTTI kódon is 5-ből 1-szer).
+⛔ **Két magyarázatomat a mérés cáfolta** — a lezárt kapcsolat figyelője (az utóhang után is
+megmaradt) és a visszalépő óra (15 000 ms-os határidőnél ugyanúgy bukott). ⭐⭐ **A harmadik
+nekifutás már csomag-naplóból indult**, 200–300 kísérleten át — mert a bukás **nem-esemény**
+(teljes csend), és azt naplóból nem lehet látni.
+⭐⭐⭐ **A MECHANIZMUS: három helyes szabály esett egybe.** A kapcsolat **első** darabja
+sorozatban elveszett → `srtt` **null** maradt → a **vak óra** szándékosan csak a **legrégebbi**
+darabot szondázza (21. mérés) → a mögötte álló darab **meg sem mozdult** → közben a
+visszalépés **4800 ms**-ra nőtt. ⛔⛔ **És ekkor a két őr ELLENTMONDOTT egymásnak:** a mi
+újraküldésünk tovább hallgatott, mint a **társ tétlenségi órája**. *Egy türelem, ami túléli a
+másik fél türelmét, nem türelem, hanem néma bukás.* ⚠️ Ugyanaz a hibafajta, mint a `maradek/4`
+korlátnál — csak ott a saját keretünkkel ütközött, itt a **másikéval**.
+✅ **Két korlát, mindkettő a meglévő elv kiterjesztése:** *(1)* a visszalépés **megáll**, ha a
+darab utolsó küldése óta **hallottuk a társat** (a kód már kimondta, hogy „a nyugta bizonyítja,
+hogy az út él" — ez minden tőle jövő csomagra igaz; ⚠️ de csak a duplázást állítjuk meg, az
+RTO-t nem nullázzuk, mert a beérkező adat a MÁSIK irányról szól); *(2)* az **RTO sosem több a
+tétlenségi óra harmadánál** — a szimmetrikus esetre, amikor egyik fél sem beszél; a társ
+**ugyanazt a programot futtatja** (D66), tehát a saját óránkból következtethetünk az övére.
+⭐ **MÉRVE: 3/200 → 0/300**, és a próba határideje **10 000 ms** lett — a `csereUdpResen`
+**éles alapértéke**, tehát a próba mostantól azt méri, amit élesben futtatunk. *Nem lazítás:
+ugyanazzal a javított koddal 5000-nél még 1/300 maradt, 10 000-nél 0/300.*
+⚠️ A D67 számai nem romlottak (1%/5%/15% = ~300/104–110/31–35 KB/s a korábbi 287/104/39-hez
+képest; a 15%-os sor a szóráson belül, de szemmel tartandó).
 
 ✅ **NÉGY ÚJ PRÓBA, ÉS MIND A NÉGY RONTÁS-PRÓBÁVAL IGAZOLVA:** a kétirányú randevú (mindkét
 fél kér ÉS ad, egy foglalaton — és a szerepük **ellentétes**) · a „nem tudom a szerepet" ág
@@ -448,7 +460,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2575,1 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **169 fájl, 2584,3 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -579,7 +591,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2575,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 169 fájl, 2584,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

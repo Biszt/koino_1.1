@@ -314,6 +314,11 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
   let tetlensegOra = null;
   let tetlensegVisszahivas = null;
 
+  // ⭐ MIKOR HALLOTTUK ŐT UTOLJÁRA? (2026-09-14, a holtpont-mérés óta.) Bármi tőle:
+  // nyugta VAGY adat. Ez az egyetlen bizonyítékunk arra, hogy a vonal **él** — az
+  // újraküldés visszalépése ezen múlik (lásd `orat_felhuz`).
+  let utolsoErkezes = 0;
+
   const oratUjraindit = () => {
     if (!tetlensegHatar || lezarva) return;
     if (tetlensegOra) clearTimeout(tetlensegOra);
@@ -402,8 +407,59 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
       // várakozás, ami után nem fér bele újabb próbálkozás, nem türelem, hanem **garantált
       // bukás türelemnek öltözve**.* ⭐ Ezért sosem várunk többet, mint a maradék keret
       // negyede: így a keret mindig legalább néhány próbálkozást jelent.
+      // ⛔⛔⛔ ÉS EGY HARMADIK KORLÁT, AMIT EGY MÉRT HOLTPONT KÉNYSZERÍTETT KI (2026-09-14).
+      //
+      // ⚠️⚠️ A JELENSÉG: a 30%-os vesztésű csere **kísérletenként ~1,5–3%-ban** véglegesen
+      // elhallgatott, és csak a másik fél tétlenségi órája vetett neki véget. 200 kísérlet
+      // csomag-naplójából a mechanizmus pontosan kiolvasható volt:
+      //
+      //   · a kapcsolat ELSŐ darabja (a `LENYOMAT`) sorozatban elveszett — ezért `srtt`
+      //     `null` maradt, tehát az óra **vak**, és a fenti rászűkítés miatt **csak ezt az
+      //     egy darabot** szondáztuk; a mögötte álló (már kiküldött) darab meg sem mozdult;
+      //   · a visszalépés közben 300 → 600 → 1200 → 2400 → **4800 ms**-ra nőtt;
+      //   · ⛔ a másik fél **tétlenségi órája 5000–10 000 ms** — vagyis **hamarabb adta fel,
+      //     mint ahogy mi újra megszólaltunk volna.**
+      //
+      // ⛔ A KÉT ŐR TEHÁT ELLENTMONDOTT EGYMÁSNAK — ugyanaz a fajta hiba, mint fentebb a
+      // feladási keretnél: *egy türelem, ami túléli a másik fél türelmét, nem türelem, hanem
+      // néma bukás.*
+      //
+      // ⭐⭐⭐ A FELOLDÁS A MÁR MEGLÉVŐ ELV KITERJESZTÉSE: lentebb kimondtuk, hogy **a nyugta
+      // bizonyítja, hogy az út él**, ezért a visszalépést feloldjuk. ⭐ Ugyanez igaz minden
+      // TŐLE érkező csomagra: ha ennek a darabnak az utolsó küldése ÓTA hallottuk őt, akkor a
+      // némaság nem a vonal halála — **nincs mit kímélni, tehát nem ritkítunk tovább**.
+      //
+      // ⚠️ ÉS AMIT SZÁNDÉKOSAN NEM TESZÜNK: nem nullázzuk az RTO-t, csak **megállítjuk a
+      // duplázást**. A beérkező adat ugyanis a MÁSIK irányról szól — a torlódás lehet
+      // aszimmetrikus. *„Amíg hallom őt, nem ritkítok tovább — de nem is sietek."*
+      const utolsoKuldes = tetel.kuldesek[tetel.kuldesek.length - 1] ?? tetel.kezdet;
+      const hallottamOta = utolsoErkezes >= utolsoKuldes;
+
+      // ⛔⛔ ÉS EGY NEGYEDIK KORLÁT: A MÁSIK FÉL TÜRELME.
+      //
+      // ⚠️ A fenti feloldás csak akkor véd, ha **legalább az egyik fél beszél**. Mérve
+      // viszont előfordul a **szimmetrikus** eset is: mindkét oldal a saját első darabjára
+      // vár, mindkettő visszalépett — és akkor **senki nem ad életjelet**, tehát a
+      // „hallottam-e azóta" feltétel egyiknél sem teljesül.
+      //
+      // ⭐ A vonal ismeri a SAJÁT tétlenségi óráját, és a másik fél **ugyanezt a programot
+      // futtatja** (a D66 óta ez nem feltevés, hanem a koino azonosságából következik):
+      // egy koino = egy verzió. Ezért az RTO **sosem több a tétlenségi óra harmadánál** —
+      // így a társ legalább **három** szondát hall, mielőtt feladná.
+      //
+      // ⚠️ Az ára egy rossz vonalon sűrűbb szondázás; de a szonda **egyetlen darab** (a
+      // legrégebbi), és a cél épp az, hogy a kapcsolat ne haljon meg NÉMÁN.
+      const turelem = tetlensegHatar > 0 ? tetlensegHatar / 3 : Infinity;
+
       const maradek = FELADAS_IDO - (Date.now() - tetel.kezdet);
-      tetel.rto = Math.min(RTO_MAX, tetel.rto * 2, Math.max(RTO_MIN, maradek / 4));
+      if (!hallottamOta) {
+        tetel.rto = Math.min(
+          RTO_MAX,
+          tetel.rto * 2,
+          Math.max(RTO_MIN, maradek / 4),
+          Math.max(RTO_MIN, turelem)
+        );
+      }
 
       // ⛔ AZ IDŐTÚLLÉPÉS IS VESZTÉS — az ablak enged. *Ez a súlyosabb jel a kettő közül:
       // itt nemcsak egy darab veszett el, hanem semmi nem jött vissza helyette.*
@@ -485,6 +541,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort) {
     if (felado.address !== tarsCim || felado.port !== tarsPort) return;
 
     oratUjraindit();                   // ÉLETJEL: tőle jött valami, tehát él
+    utolsoErkezes = Date.now();        // ⭐ …és ezt az újraküldés visszalépése is használja
     bajtKapott += bajtok.length;
     let uzenet;
     try { uzenet = JSON.parse(bajtok.toString('utf8')); } catch { return; }

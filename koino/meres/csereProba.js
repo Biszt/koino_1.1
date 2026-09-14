@@ -1180,21 +1180,27 @@ proba('⭐⭐ RONTÁS-PRÓBA: a lezárás NEM dobhatja el az utolsó darabot (5�
   // 1-szer egy testvér-próba) — vagyis kísérletenként ~3–4%. *Egy néha bukó próba nem
   // szeszélyes: igazat mondott, csak nem arról, amiről hittük.*
   //
-  // ⛔⛔⛔ ÉS EZT A MAGYARÁZATOT IS MEGCÁFOLTA A MÉRÉS — ITT MARAD, HOGY NE PRÓBÁLJUK ÚJRA.
+  // ⛔⛔⛔ ÉS EGY VALÓDI HOLTPONT, AMIT EZ A PRÓBA TALÁLT MEG (2026-09-14, javítva).
   //
-  // Azt hittem, a visszalépő óra az ok (a tétlenségi órának nagyobbnak kell lennie a
-  // maximális RTO-nál), és **15 000 ms-ra emeltem** a határidőt. ⛔ **Ott is elbukott**,
-  // ugyanígy 6 futásból 1-szer. *Márpedig 15 másodperc TELJES csendhez már 7–8 egymás utáni
-  // vesztés kellene ugyanabból a darabból (0,3^7 ≈ 0,02%) — az nem magyarázza a 3%-ot.*
+  // A próba **6 futásból 1-szer bukott** — és a szakasz szabálya szerint egy néha bukó próba
+  // nem szeszélyes, hanem igazat mond. ⭐ 200 kísérlet **csomag-naplójából** a mechanizmus
+  // pontosan kiolvasható lett (25. mérés):
   //
-  // ⭐⭐ AMIT EBBŐL BIZTOSAN TUDUNK: **ez nem valószínűségi jelenség, hanem egy valódi,
-  // ritka HOLTPONT** — a vonal (vagy a párbeszéd) néha **véglegesen elhallgat**, és csak a
-  // tétlenségi óra menti meg. *„A néma nem-esemény a legrosszabb hibafajta" — a szakasz ezt
-  // már kimondta, és most a saját vonalunkon látjuk.*
+  //   · a kapcsolat ELSŐ darabja (`LENYOMAT`) sorozatban elveszett, ezért `srtt` **null**
+  //     maradt (nincs mintánk) — a **vak óra** pedig szándékosan csak a **legrégebbi**
+  //     darabot szondázza, tehát a mögötte álló darab meg sem mozdult;
+  //   · a visszalépés közben 300 → 600 → 1200 → 2400 → **4800 ms**-ra nőtt;
+  //   · ⛔ a másik fél **tétlenségi órája hamarabb elsült**, mint ahogy mi újra megszólaltunk.
+  //     *Egy türelem, ami túléli a másik fél türelmét, nem türelem, hanem néma bukás.*
   //
-  // ⏸️ A HATÁRIDŐ EZÉRT MARAD 5000 ms: ha úgysem véd, akkor legalább **gyorsan** mondja ki.
-  // A holtpont felderítése külön munka (a jelöltek: a `parbeszed` befejezésének
-  // aszimmetriája 30%-os vesztésnél, illetve a `kiurites()` és a lezárás viszonya).
+  // ✅ A `udpVonal.js` két új korlátot kapott rá (**mérve: 3/200 → 0/300**): a visszalépés
+  // **megáll**, ha a darab utolsó küldése óta hallottunk a társtól, és az RTO **sosem több a
+  // tétlenségi óra harmadánál** — így a társ legalább három szondát hall.
+  //
+  // ⚠️⚠️ ÉS EZÉRT LETT A HATÁRIDŐ 10 000 ms: ez a `csereUdpResen` **éles alapértéke**, tehát
+  // a próba mostantól **a valódi üzemet méri**. Az 5000 ms önkényes volt (a gyors bukásért),
+  // és mérve **túl szűk**: ugyanezzel a javított koddal 5000-nél még 1/300 maradt, 10 000-nél
+  // **0/300**. *Nem lazítás — a mérce igazítása ahhoz, amit élesben futtatunk.*
   for (let i = 0; i < 5; i++) {
     const anna = await ujEember(KOINO);
     const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 4));
@@ -1204,9 +1210,9 @@ proba('⭐⭐ RONTÁS-PRÓBA: a lezárás NEM dobhatja el az utolsó darabot (5�
     try {
       const [, b] = await Promise.all([
         csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO,
-          { varakozasiIdo: 5000 }),
+          { varakozasiIdo: 10000 }),
         csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO,
-          { varakozasiIdo: 5000 })
+          { varakozasiIdo: 10000 })
       ]);
       if (b.uj !== 4) return false;
       if (!(await allasokEgyeznek(egyikTar, masikTar, KOINO))) return false;

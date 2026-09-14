@@ -2108,3 +2108,88 @@ A mérce **mindkét fele megvan**. A jel alakja (Vegas / LEDBAT / CDG) most már
 dönthető el, és a cél számokban: `sor:` **27 → 1–2**, a hívás késleltetése **12,8 → ~2 ms**,
 ⛔ **anélkül**, hogy a véletlenül vesztő sorok romlanának (1%/5%/15%) — és tudva, hogy a
 mohó-szomszéd melletti **141 KB/s** az, amiből engedünk.
+
+---
+
+## 25. ⛔⛔⛔ A NÉMA HOLTPONT — amit egy „szeszélyes" próba mondott el (2026-09-14)
+
+**A jel:** a 30%-os csomagvesztésű UDP-csere önpróbája **6 futásból 1-szer** bukott — és nem
+csak ma: `git stash`-sel visszaállított, **D67 előtti** kódon is 5-ből 1-szer. ⚠️ *A szakasz
+szabálya szerint egy néha bukó próba nem szeszélyes, hanem igazat mond — csak nem feltétlenül
+arról, amiről hisszük.*
+
+**Műszer:** a bukás **nem-esemény** (teljes csend), tehát naplóból nem látszik. Kellett egy
+lap, ami **minden csomagot feljegyez** (irány, tartalom eleje, idő) és bukásnál kiírja az
+utolsó harmincat, mindkét oldalról — majd ezt 200–300 kísérleten át ismétli.
+
+### ⛔ Két magyarázatomat a mérés cáfolta, mielőtt a harmadikhoz eljutottam
+
+1. *„a lezárt kapcsolat figyelője okozza"* → az **utóhang** bevezetése után is megmaradt.
+2. *„a D67-es visszalépő óra túlnő a tétlenségi órán, tehát emeljük a határidőt 15 000 ms-ra"*
+   → **ugyanúgy bukott**. 15 másodperc teljes csendhez 7–8 egymás utáni vesztés kellene
+   ugyanabból a darabból (0,3^7 ≈ 0,02%) — ez a 3%-ot nem magyarázza.
+
+*Mindkettő érvelés volt, nem mérés. A harmadik nekifutás már a csomag-naplóból indult.*
+
+### ⭐⭐⭐ A mechanizmus, ahogy a napló megmutatta
+
+```
+     0 ms  B KULD-ELVESZETT  {"sz":1,"a":"LENYOMAT…"}     ← B első darabja
+   302 ms  B KULD-ELVESZETT  (újraküldés)
+   909 ms  B KULD-ELVESZETT  (újraküldés)
+   910 ms  B KULD            {"sz":2,"a":"CIMEK…"}        ← a MÁSODIK darab kiment
+   910 ms  A KULD-ELVESZETT  {"ny":2}                     ← …de a nyugtája elveszett
+  2120 ms  B KULD-ELVESZETT  (a sz:1 újra — a sz:2 NEM!)
+  4533 ms  B KULD-ELVESZETT  (a sz:1 újra, 4,8 mp múlva)
+        …és innentől CSEND, amíg a társ tétlenségi órája le nem jár
+```
+
+Három dolog esett egybe, és **egyenként mindhárom helyes volt**:
+
+- a kapcsolat **első** darabja sorozatban elveszett, ezért `srtt` **null** maradt (nincs
+  mintánk) — az óra **vak**;
+- a **vak óra szándékosan csak a LEGRÉGEBBI darabot szondázza** (a 21. mérés döntése:
+  *„mérés nélkül minden óra tipp, abból egy elég, kilenc nem"*), tehát a mögötte álló,
+  már kiküldött darab **meg sem mozdult**;
+- a **visszalépés** közben 300 → 600 → 1200 → 2400 → **4800 ms**-ra nőtt.
+
+⛔⛔ **És ekkor a két őr ELLENTMONDOTT egymásnak:** a mi újraküldésünk 4,8 másodpercig
+hallgatott, a társ **tétlenségi órája** viszont 5 másodperc. *Egy türelem, ami túléli a másik
+fél türelmét, nem türelem, hanem néma bukás.* ⚠️ Ugyanaz a hibafajta, amit a `maradek / 4`
+korlátnál már egyszer kimondtunk — csak ott a saját feladási keretünkkel ütközött, itt a
+**másik fél** türelmével.
+
+### ✅ A javítás: két korlát, mindkettő a meglévő elv kiterjesztése
+
+1. ⭐ **A visszalépés megáll, ha hallottuk a társat.** A kód már kimondta, hogy *„a nyugta
+   bizonyítja, hogy az út él"* — ez **minden tőle érkező csomagra** igaz. ⚠️ De csak a
+   **duplázást** állítjuk meg, az RTO-t nem nullázzuk: a beérkező adat a MÁSIK irányról szól,
+   a torlódás lehet aszimmetrikus. *„Amíg hallom őt, nem ritkítok tovább — de nem is sietek."*
+2. ⭐ **Az RTO sosem több a tétlenségi óra harmadánál.** Ez a **szimmetrikus** esetre kell,
+   amikor egyik fél sem beszél (mindkettő a saját első darabjára vár). A másik fél
+   **ugyanazt a programot futtatja** (a D66 óta ez a koino azonosságából következik), tehát a
+   saját óránkból következtethetünk az övére: így legalább **három szondát** hall.
+
+### A mérés, ami a javítást igazolja
+
+```
+  állapot                                   tétlenségi óra     bukás
+  ─────────────────────────────────────────────────────────────────────
+  eredeti kód                                    5 000 ms      3 / 200   (1,5%)
+  + „hallottam azóta" feloldás                   5 000 ms      2 / 200
+  + a társ türelmének korlátja                   5 000 ms      1 / 300   (0,33%)
+  ugyanaz, az ÉLES órával                       10 000 ms      0 / 300
+```
+
+⭐⭐ **És ezért lett az önpróba határideje is 10 000 ms**: ez a `csereUdpResen` **éles
+alapértéke**, tehát a próba mostantól **azt méri, amit élesben futtatunk**. Az 5000 ms
+önkényes volt (a gyors bukásért választva), és mérve **túl szűk**. *Nem lazítás — a mérce
+igazítása a valódi üzemhez.*
+
+⚠️ **A D67 számai nem romlottak tőle** (három ismételt futás): 1% / 5% / 15% vesztés mellett
+**~300 / 104–110 / 31–35 KB/s** a korábbi 287 / 104 / 39 ellenében — a 15%-os sor a mérés
+szórásán belül, de érdemes szemmel tartani.
+
+⏸️ **Amit ez a mérés nem old meg:** a vak óra rászűkítése a legrégebbi darabra **marad**
+(a 21. mérés szerint nélküle 15% vesztésnél 430 → 8177 ms-ra romlott a fájl-átvitel) — tehát
+a „mögötte álló darab áll" tulajdonság megmaradt, csak a némaság ideje lett korlátos.
