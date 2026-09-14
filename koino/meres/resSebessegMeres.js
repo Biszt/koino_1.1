@@ -88,11 +88,35 @@ function magvasVeletlen(mag) {
  * `sorMeret`-et, a csomag **eldobódik** — *ez a torlódásos vesztés, és a küldő önmagának
  * okozta.*
  *
+ * ===== ⭐⭐⭐ ÉS AZ ÖTÖDIK: A VERSENGŐ FOLYAM (D68 / 1. lépés, 2026-09-14) =====
+ *
+ * ⛔⛔ A NÉGY FENTI EGYIKE SEM TUD MEGMÉRNI KÉT DOLGOT, amit a D68 épp eldöntene:
+ *
+ *   · **ártunk-e MÁSNAK?** — a 23. mérés szerint teletömjük a sort (`sor: 13–14`), és aki
+ *     ugyanazon a vonalon telefonál, **a mi sorunk mögé áll be**. Ez a kár eddig csak
+ *     *következtetés* volt: a sor mélységéből olvastuk ki, nem mértük meg **rajta**.
+ *   · **kiéheztetnek-e MINKET?** — a késleltetés-alapú jel ismert gyengéje, hogy egy
+ *     veszteség-alapú szomszéd (bárki TCP-je) teletömi a sort, mi meg folyton visszahúzódunk.
+ *     *Ha ezt nem mérjük, a D68 megépítése után sem tudnánk, mit fizettünk érte.*
+ *
+ * ⭐ EZÉRT KAP A VONAL EGY MÁSODIK, „IDEGEN" TERHELÉST, ami **ugyanazt a sort tölti**.
+ * Kétféle, mert a két kérdés kétféle szomszédot kíván:
+ *
+ *   · `egyenletes` — állandó ütemű (mint egy hívás vagy videó). ⭐ Ő a **sértett fél**:
+ *     a késleltetése megmondja, mekkora kárt okozunk neki.
+ *   · `moho` — ablakot tart, és csak **vesztésre** fog vissza (mint egy TCP-letöltés).
+ *     ⭐ Ő a **versenytárs**: mellette a MI átbocsátásunk mondja meg, kiéheztetnek-e.
+ *
+ * ⚠️ AZ IDEGEN NEM KÜLD VALÓDI CSOMAGOT — csak **foglalja a szűk keresztmetszetet**. Ez elég
+ * és hű: a sor nem tudja, ki tette bele a csomagot. *A műszer így nem lesz bonyolultabb
+ * annál, amit mérni akar.*
+ *
  * @param {number} [beallitas.savszelesseg] - darab/másodperc (0 = korlátlan, mint eddig)
  * @param {number} [beallitas.sorMeret] - ennyi darab várhat; efölött eldobás
+ * @param {Object} [beallitas.idegen] - { fajta: 'egyenletes'|'moho', uteme }
  */
 async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
-  savszelesseg = 0, sorMeret = 32 } = {}) {
+  savszelesseg = 0, sorMeret = 32, idegen = null } = {}) {
   const nyit = () => new Promise((kesz) => {
     const h = createSocket('udp4');
     h.bind(0, '127.0.0.1', () => kesz(h));
@@ -114,6 +138,34 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
   // *A műszert is meg kell mérni; a hiba nem a vonalé volt, hanem az enyém.*
   let zarva = false;
   const orak = new Set();
+
+  /**
+   * ⭐⭐ A SORBANÁLLÁS — EGY HELYEN, MERT MOSTANTÓL KÉT FORGALOM HASZNÁLJA (2026-09-14).
+   *
+   * ⚠️ Korábban ez a `h.send` belsejében élt. Az idegen folyamnak **ugyanazon a soron** kell
+   * átmennie, különben nem versengés lenne, hanem két külön vonal — *és pont az a kérdés,
+   * hogy egy sort hogyan osztunk meg.* Egy sor, egy kód: két igazság itt sem lehet.
+   *
+   * @returns {{eldobva: boolean, sorIdo: number, varakozok: number}}
+   */
+  const sorbaAll = (h, most) => {
+    if (szolgalatiIdo <= 0) return { eldobva: false, sorIdo: 0, varakozok: 0 };
+
+    const allapot = vonalAllapot.get(h) ?? { szabadEttol: 0 };
+    vonalAllapot.set(h, allapot);
+
+    // Hány darab vár még előtte? (a hátralévő idő / egy darab ideje)
+    const varakozok = Math.max(0, Math.round((allapot.szabadEttol - most) / szolgalatiIdo));
+    if (varakozok > szamlalo.maxSor) szamlalo.maxSor = varakozok;
+
+    // ⛔ MEGTELT A SOR — a csomag eldobódik. *Ez a TORLÓDÁSOS vesztés: nem a vonal
+    // hibája, hanem azé, aki többet küldött, mint amennyi elfér.*
+    if (varakozok >= sorMeret) return { eldobva: true, sorIdo: 0, varakozok };
+
+    const indul = Math.max(most, allapot.szabadEttol);
+    allapot.szabadEttol = indul + szolgalatiIdo;
+    return { eldobva: false, sorIdo: allapot.szabadEttol - most, varakozok };
+  };
 
   // ⚠️ MINDIG beépítjük a számlálót — a késleltetés nélküli sor adja a VISZONYÍTÁST.
   // *Enélkül a „hányszor ment ki" oszlopnak nincs alapvonala, és az első olvasásra
@@ -137,29 +189,13 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
         }
 
         // ===== ⭐ A SOR: a csomag KIVÁRJA, amíg a vonal felszabadul =====
-        let sorIdo = 0;
-        if (szolgalatiIdo > 0) {
-          const most = Date.now();
-          const allapot = vonalAllapot.get(h) ?? { szabadEttol: 0 };
-          vonalAllapot.set(h, allapot);
-
-          // Hány darab vár még előtte? (a hátralévő idő / egy darab ideje)
-          const varakozok = Math.max(0, Math.round((allapot.szabadEttol - most) / szolgalatiIdo));
-          if (varakozok > szamlalo.maxSor) szamlalo.maxSor = varakozok;
-
-          // ⛔ MEGTELT A SOR — a csomag eldobódik. *Ez a TORLÓDÁSOS vesztés: nem a vonal
-          // hibája, hanem azé, aki többet küldött, mint amennyi elfér.*
-          if (varakozok >= sorMeret) {
-            szamlalo.eldobott++;
-            szamlalo.torlodas++;
-            const v = ervek[ervek.length - 1];
-            if (typeof v === 'function') v(null);
-            return;
-          }
-
-          const indul = Math.max(most, allapot.szabadEttol);
-          allapot.szabadEttol = indul + szolgalatiIdo;
-          sorIdo = allapot.szabadEttol - most;         // sorbanállás + kiszolgálás
+        const { eldobva, sorIdo } = sorbaAll(h, Date.now());
+        if (eldobva) {
+          szamlalo.eldobott++;
+          szamlalo.torlodas++;
+          const v = ervek[ervek.length - 1];
+          if (typeof v === 'function') v(null);
+          return;
         }
 
         const ido = sorIdo + kesleltetes + (ingadozas > 0 ? veletlen() * ingadozas : 0);
@@ -175,12 +211,83 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
     }
   }
 
+  // ===================================
+  // ⭐⭐⭐ AZ IDEGEN FOLYAM — a versengés (D68 / 1. lépés)
+  // ===================================
+  //
+  // ⚠️ AZ IRÁNY A `egyik`-é, mert a fájl **szeleteit** ő küldi (a `resenMeres`-ben ő a
+  // kiszolgáló). *A szűk keresztmetszet a feltöltési irány — otthon is ez a szűk.*
+  const idegenSzam = { kuldott: 0, eldobott: 0, atment: 0, osszVaras: 0, maxVaras: 0 };
+  let idegenOra = null;
+
+  if (idegen && szolgalatiIdo > 0) {
+    const halo = egyik;
+    const jegyez = (sorIdo) => {
+      idegenSzam.atment++;
+      idegenSzam.osszVaras += sorIdo;
+      if (sorIdo > idegenSzam.maxVaras) idegenSzam.maxVaras = sorIdo;
+    };
+
+    if (idegen.fajta === 'moho') {
+      // ⭐ A VERSENYTÁRS: ablakot tart, és CSAK vesztésre fog vissza — pontosan az a
+      // viselkedés, ami a puffert teletömi (és amivel a késleltetés-alapú jelnek együtt
+      // kell élnie). *AIMD, ugyanaz a szabály, mint a mi vonalunkban.*
+      let ablak = 4, uton = 0;
+      const loket = () => {
+        while (!zarva && uton < Math.floor(ablak)) {
+          idegenSzam.kuldott++;
+          uton++;
+          const { eldobva, sorIdo } = sorbaAll(halo, Date.now());
+
+          if (eldobva) {
+            // ⛔ Vesztés: felezés. ⚠️ És KILÉPÜNK a löketből — különben (ablak = 1 mellett)
+            // szinkron végtelen ciklus lenne. *A műszert is meg kell mérni.*
+            idegenSzam.eldobott++;
+            uton--;
+            ablak = Math.max(1, ablak / 2);
+            const varo = setTimeout(() => {
+              orak.delete(varo);
+              if (!zarva) loket();
+            }, Math.max(10, 2 * kesleltetes));
+            orak.add(varo);
+            return;
+          }
+
+          // A „nyugta" a sorbanállás + oda-vissza idő múlva ér vissza.
+          const ora = setTimeout(() => {
+            orak.delete(ora);
+            if (zarva) return;
+            uton--;
+            jegyez(sorIdo);
+            ablak = Math.min(64, ablak + 1 / ablak);       // siker: óvatosan nő
+            loket();
+          }, sorIdo + 2 * kesleltetes);
+          orak.add(ora);
+        }
+      };
+      loket();
+    } else {
+      // ⭐ A SÉRTETT FÉL: állandó ütem, mint egy hívás. ⛔ Ő NEM fog vissza — nem is tud:
+      // egy beszélgetésnek annyi csomagja van, amennyi. *Amit elszenved, az a MI kárunk.*
+      const koz = Math.max(1, Math.round(1000 / (idegen.uteme ?? 50)));
+      idegenOra = setInterval(() => {
+        if (zarva) return;
+        idegenSzam.kuldott++;
+        const { eldobva, sorIdo } = sorbaAll(halo, Date.now());
+        if (eldobva) { idegenSzam.eldobott++; return; }
+        jegyez(sorIdo);
+      }, koz);
+    }
+  }
+
   return {
     egyik, masik, szamlalo,
+    idegen: idegen ? idegenSzam : null,
     egyikPort: egyik.address().port,
     masikPort: masik.address().port,
     bezar: () => {
       zarva = true;
+      if (idegenOra) clearInterval(idegenOra);
       for (const ora of orak) clearTimeout(ora);
       orak.clear();
       egyik.close(); masik.close();
@@ -224,11 +331,12 @@ async function resenMeres(meret, beallitas = {}) {
     ]);
     return {
       kesz: eredmeny.kesz, ido: Date.now() - kezd, szeletek: eredmeny.szeletek,
-      csomag: p.szamlalo
+      csomag: p.szamlalo, idegen: p.idegen
     };
   } catch (hiba) {
     // ⛔ A vonal feladta. Ez SZÁM, nem összeomlás — a mérés kiírja, és megy tovább.
-    return { kesz: false, ido: Date.now() - kezd, ok: hiba.message, csomag: p.szamlalo };
+    return { kesz: false, ido: Date.now() - kezd, ok: hiba.message,
+             csomag: p.szamlalo, idegen: p.idegen };
   } finally {
     p.bezar();
   }
@@ -291,6 +399,23 @@ const sor = (cimke, meret, e) => {
     + (e.kesz && Number.isFinite(kbs) ? kbs.toFixed(0).padStart(6) + ' KB/s' : '       —')
     + (e.kesz ? extra : '   ⛔ FELADTA' + extra)
   );
+
+  // ⭐⭐⭐ ÉS AMIT A SZOMSZÉD ELSZENVEDETT (D68 / 1. lépés) — ez az ÚJ szám.
+  //
+  // ⚠️ A `sor:` oszlop eddig csak azt mondta meg, mennyire tömtük tele a sort; hogy ez
+  // MEKKORA KÁR MÁSNAK, az következtetés volt. Ez a sor **megméri rajta**: mennyit várt a
+  // szomszéd csomagja, és mennyi veszett el belőle.
+  if (e.idegen && e.idegen.kuldott) {
+    const i = e.idegen;
+    const atlag = i.atment ? i.osszVaras / i.atment : 0;
+    kiir(
+      '      ↳ idegen folyam:'.padEnd(32)
+      + String(i.kuldott).padStart(5) + ' csomag  '
+      + ('átlag ' + atlag.toFixed(1) + ' ms').padStart(16)
+      + ('  csúcs ' + i.maxVaras.toFixed(0) + ' ms').padStart(15)
+      + (i.eldobott ? '  ⛔ ' + (100 * i.eldobott / i.kuldott).toFixed(1) + '% eldobva' : '')
+    );
+  }
 };
 
 kiir('\n⭐ A FÁJL-ÁTVITEL SEBESSÉGE — TCP vs. az átfúrt rés\n');
@@ -367,6 +492,52 @@ for (const savszelesseg of [2000, 500]) {
 // hanem a **mi túlküldésünk**. *Egy méretlen ág olyan, mint egy vak próba.*
 sor('UDP-rés (500 darab/mp, 8-as sor)', 64 * 1024,
   await resenMeres(64 * 1024, { kesleltetes: 5, savszelesseg: 500, sorMeret: 8 }));
+
+// ===================================
+// ⭐⭐⭐ A VERSENGÉS — A D68 ALAPVONALA (1. lépés, 2026-09-14)
+// ===================================
+//
+// ⛔ EZ A SZAKASZ AZT A KÉT KÉRDÉST MÉRI, AMIRE EDDIG VAKOK VOLTUNK:
+//
+//   1. **ÁRTUNK-E MÁSNAK?** — egy állandó ütemű szomszéd (50 csomag/mp, mint egy hívás)
+//      ugyanazon a soron. ⭐ Az `átlag` és a `csúcs` az Ő várakozása: *ennyivel késik a
+//      beszélgetése, amíg mi fájlt viszünk.* A D68 célja ezt a számot levinni.
+//   2. **KIÉHEZTETNEK-E MINKET?** — egy mohó, veszteség-alapú szomszéd (mint bárki TCP-je).
+//      ⭐ Itt a MI `KB/s`-ünk a lelet: ennyi marad nekünk, amíg ő tolja. *Amikor a
+//      késleltetés-alapú jel megépül, ennek a számnak ROMLANIA fog — és pont ezért kell
+//      MOST megmérni, amíg a mai (veszteség-alapú) vonal az összehasonlítási alap.*
+//
+// ⚠️ ELŐBB A MÉRCE, AZTÁN AZ ÉPÍTÉS — ugyanaz a rend, mint eddig. *Ha a jelet előbb
+// építenénk meg, nem lenne mihez mérni, hogy jobb lett-e.*
+//
+// ⚠️ ÉS 256 KB-TAL, NEM 64-GYEL — mérésből: egy 64 KB-os átvitel 260 ms, amibe a szomszédnak
+// mindössze **9 csomagja** fér bele. *Kilenc mintából nem szabad átlagot mondani.* A 256 KB
+// ~1 másodperc, tehát ~50 minta — és a viszonyítás is ugyanennyi ideig fut.
+kiir('');
+sor('UDP-rés + HÍVÁS a vonalon', 256 * 1024, await resenMeres(256 * 1024,
+  { kesleltetes: 5, savszelesseg: 500, idegen: { fajta: 'egyenletes', uteme: 50 } }));
+
+// ⚠️ ÉS UGYANAZ A HÍVÁS, AMIKOR MI NEM VAGYUNK A VONALON — ez a viszonyítás. *Enélkül a
+// fenti szám önmagában semmit nem mond: nem tudnánk, mennyi belőle a vonal sajátja.*
+{
+  const p = await udpParos({ kesleltetes: 5, savszelesseg: 500,
+    idegen: { fajta: 'egyenletes', uteme: 50 } });
+  await new Promise((kesz) => setTimeout(kesz, 1000));
+  const i = p.idegen;
+  p.bezar();
+  const atlag = i.atment ? i.osszVaras / i.atment : 0;
+  kiir('      ↳ ugyanez ÜRES vonalon:'.padEnd(32) + String(i.kuldott).padStart(5)
+    + ' csomag  ' + ('átlag ' + atlag.toFixed(1) + ' ms').padStart(16)
+    + ('  csúcs ' + i.maxVaras.toFixed(0) + ' ms').padStart(15));
+}
+
+sor('UDP-rés + MOHÓ szomszéd', 256 * 1024, await resenMeres(256 * 1024,
+  { kesleltetes: 5, savszelesseg: 500, idegen: { fajta: 'moho' } }));
+
+// ⭐ ÉS A VISZONYÍTÁS EHHEZ IS: ugyanaz a 256 KB, szomszéd NÉLKÜL. *Enélkül nem tudnánk,
+// mennyit vett el tőlünk a mohó — csak azt, hogy lassúak vagyunk.*
+sor('UDP-rés (ugyanez, EGYEDÜL)', 256 * 1024, await resenMeres(256 * 1024,
+  { kesleltetes: 5, savszelesseg: 500 }));
 
 kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. Az ABLAK ELŐTT a késleltetés MINDEN');
 kiir('   darabra rárakódott (~1000 bájtonként egy oda-vissza) — ez volt a 16. mérés');

@@ -946,13 +946,21 @@ Csaba három válaszával: **D68** a [`fejlesztesi_terv_fazis2.md`](fejlesztesi_
 
 #### ⏭️ A KÖVETKEZŐ SESSION SORRENDJE (ebben a sorrendben)
 
-1. ⛔⛔ **A MŰSZER TANULJON MEG VERSENGŐ FOLYAMOT.** Ma a
-   [`koino/meres/resSebessegMeres.js`](../koino/meres/resSebessegMeres.js) `udpParos()`-a
-   **egyetlen** folyamot enged a szűk keresztmetszeten át (`savszelesseg`, `sorMeret`,
-   `szamlalo = { kuldott, eldobott, torlodas, maxSor }`, per-foglalat `szabadEttol`).
-   ⭐ **Kell mellé egy második, „idegen" terhelés**, ami ugyanazt a sort tölti — különben
-   **nem mérhető**, hogy (e) eleget enged-e, és hogy (a)-t **kiéheztetik-e**.
-   *Egy méretlen ág olyan, mint egy vak próba — ezt a szakasz már hatszor megtanulta.*
+1. ✅ **A MŰSZER MEGTANULT VERSENGENI (2026-09-14, 24. mérés) — KÉSZ.** Az `udpParos()`
+   kapott egy második, **„idegen" terhelést**, ami **ugyanazt a sort** tölti: `egyenletes`
+   (50 csomag/mp, mint egy hívás — ő a **sértett fél**) és `moho` (ablakos, veszteség-alapú,
+   mint bárki TCP-je — ő a **versenytárs**). ⭐ A sorbanállás kódja **egy helyre került**
+   (`sorbaAll`), mert két forgalom használja.
+   ⭐⭐ **ÉS A KÉT SZÁM, AMIRE EDDIG VAKOK VOLTUNK:**
+   **(1) ártunk másnak** — a hívás késleltetése **2,0 → 12,8 ms** (átlag), a csúcsa
+   **2 → 44 ms**, miközben mi egyetlen csomagot sem veszítünk;
+   **(2) ma NEM éheztetnek ki minket** — a mohó szomszéd mellett **281 → 141 KB/s**, vagyis
+   pontosan **felezünk** (az AIMD ígérete teljesül).
+   ⛔⛔ **A 141 KB/s a D68 ÁRCÉDULÁJA:** a késleltetés-alapú jel megépítése után ennek a
+   számnak **romlania fog** — ezért kellett MOST megmérni. *A romlás a fájl-átvitelnél
+   megengedhető (a redundancia pótolja), a cserénél nem.*
+   ⚠️ Amit a műszer még nem tud: a **mobilvonal ingadozása**, és **két koino-folyam** egymás
+   mellett (a 3 egyidejű átvitel esete).
 2. **A jel alakja, MÉRÉSSEL** (Csaba 1. válasza): Vegas (várt vs. tényleges átbocsátás) ·
    LEDBAT (az egyirányú késleltetés növekménye) · CDG (a késleltetés **gradiense**).
    ⛔ **Rögzített ms-küszöb TILOS** — varázsszám, és a 9. szabályon bukna (a vonalak hat
@@ -1032,11 +1040,27 @@ elhallgatunk — az elveszett nyugta pótolható, a lezárt példányok mégsem 
 `halo` mindkettőnek odaadja a csomagot, tehát a régi példány arra felel, ami tényleg
 megérkezett.
 
-⚠️⚠️ **És egy melléklelet, ami FÜGGETLEN ettől a munkától:** a 30%-os vesztésű UDP-próbák
-**ingadoznak**. Mérve, `git stash`-sel visszaállított **eredeti** kódon: **5 futásból 1
-bukott**. A mai kóddal (utóhanggal) 5/5 zöld, és a teljes készlet is kétszer zöld. *A
-jelenség tehát régebbi — de a szakasz szabálya szerint egy néha bukó próba nem szeszélyes,
-hanem igazat mond.* ⏸️ Külön kivizsgálandó.
+### ⛔⛔⛔ ÉS EGY VALÓDI HOLTPONT, AMIT EZ A NAP HOZOTT FELSZÍNRE (nyitva)
+
+A 30%-os vesztésű UDP-próbák **ingadoznak**: kísérletenként **~3%**, futásonként **6-ból 1**.
+⚠️ **Nem a mai munka okozta** — `git stash`-sel visszaállított **eredeti** kódon is **5-ből 1**.
+
+⛔ **És két magyarázatomat is megcáfolta a mérés:**
+
+1. *„a próba indoklása elavult: a D67 óta visszalépő az óra, tehát 5 másodperc csendhez nem
+   16 vesztés kell, hanem hat"* — ⛔ **a 15 000 ms-ra emelt határidő ugyanúgy bukott**.
+   15 másodperc teljes csendhez 7–8 egymás utáni vesztés kellene (0,3^7 ≈ 0,02%), ami a
+   3%-ot **nem magyarázza**.
+2. *„a lezárt kapcsolat figyelőjének levétele okozza"* — ⛔ az **utóhang** után is megmaradt.
+
+⭐⭐ **AMIT BIZTOSAN TUDUNK:** ez **nem valószínűségi jelenség, hanem valódi, ritka
+HOLTPONT** — a vonal (vagy a párbeszéd) néha **véglegesen elhallgat**, és csak a tétlenségi
+óra menti meg. *„A néma nem-esemény a legrosszabb hibafajta" — most a saját vonalunkon.*
+
+⏸️ **A jelöltek a felderítéshez:** a `parbeszed` befejezésének **aszimmetriája** 30%-os
+vesztésnél (az egyik fél lezár, a másik még vár egy üzenetre, ami már sosem jön), illetve a
+`kiurites()` és a lezárás viszonya. ⚠️ **A D68 előtt érdemes megfogni**, mert a
+késleltetés-alapú jel ugyanezen a vonalon fog dolgozni.
 
 ### ✅ Négy új próba, mind rontás-próbával igazolva
 

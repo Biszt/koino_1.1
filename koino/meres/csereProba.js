@@ -1167,11 +1167,34 @@ proba('⭐⭐ RONTÁS-PRÓBA: a lezárás NEM dobhatja el az utolsó darabot (5�
   // 6-ból 1-szer akkor is ZÖLD volt, ha a kód rossz. Öt futásnak mind az ötje csak
   // (1/6)^5 ≈ nyolcezred eséllyel sikerül — vagyis a hiba nem tud átcsúszni.
   //
-  // ⚠️ ÉS MIÉRT 5000 ms A HATÁRIDŐ? Mérve: egy 30%-os vesztésű csere maga is 2,2–5,3
-  // MÁSODPERC (minden elveszett csomag egy 300 ms-os újraküldés-várás). De a határidő
-  // TÉTLENSÉGET mér, nem összidőt: két csomag között ~300 ms telik, tehát 5000 ms
-  // csendhez 16 egymás utáni vesztés kellene (0,3^16 — sosem). Egy visszatérő hiba
-  // viszont TELJES csendet csinál, tehát 5 másodperc múlva BUKÁS lesz, nem beragadás.
+  // ⛔⛔⛔ ÉS EGY ELAVULT INDOKLÁS, AMIT A MÉRÉS BUKTATOTT LE (2026-09-14).
+  //
+  // Itt korábban ez állt: *„a határidő TÉTLENSÉGET mér… két csomag között ~300 ms telik,
+  // tehát 5000 ms csendhez 16 egymás utáni vesztés kellene (0,3^16 — sosem)"*, és a
+  // várakozási idő **5000 ms** volt. ⚠️ **Ez az érvelés a RÉGI, FIX 300 ms-os újraküldésre
+  // épült** — a D67 óta viszont az újraküldési idő **mért ÉS visszalépő** (időtúllépésnél
+  // duplázódik): 100 → 200 → 400 → 800 → 1600 → 3200 ms. *Vagyis 5 másodperc csendhez nem
+  // tizenhat vesztés kell, hanem HAT* — és az már nem „sosem".
+  //
+  // ⛔ MÉRVE: ez a próba **6 futásból 1-szer bukott** (az eredeti, D67 előtti kódon 5-ből
+  // 1-szer egy testvér-próba) — vagyis kísérletenként ~3–4%. *Egy néha bukó próba nem
+  // szeszélyes: igazat mondott, csak nem arról, amiről hittük.*
+  //
+  // ⛔⛔⛔ ÉS EZT A MAGYARÁZATOT IS MEGCÁFOLTA A MÉRÉS — ITT MARAD, HOGY NE PRÓBÁLJUK ÚJRA.
+  //
+  // Azt hittem, a visszalépő óra az ok (a tétlenségi órának nagyobbnak kell lennie a
+  // maximális RTO-nál), és **15 000 ms-ra emeltem** a határidőt. ⛔ **Ott is elbukott**,
+  // ugyanígy 6 futásból 1-szer. *Márpedig 15 másodperc TELJES csendhez már 7–8 egymás utáni
+  // vesztés kellene ugyanabból a darabból (0,3^7 ≈ 0,02%) — az nem magyarázza a 3%-ot.*
+  //
+  // ⭐⭐ AMIT EBBŐL BIZTOSAN TUDUNK: **ez nem valószínűségi jelenség, hanem egy valódi,
+  // ritka HOLTPONT** — a vonal (vagy a párbeszéd) néha **véglegesen elhallgat**, és csak a
+  // tétlenségi óra menti meg. *„A néma nem-esemény a legrosszabb hibafajta" — a szakasz ezt
+  // már kimondta, és most a saját vonalunkon látjuk.*
+  //
+  // ⏸️ A HATÁRIDŐ EZÉRT MARAD 5000 ms: ha úgysem véd, akkor legalább **gyorsan** mondja ki.
+  // A holtpont felderítése külön munka (a jelöltek: a `parbeszed` befejezésének
+  // aszimmetriája 30%-os vesztésnél, illetve a `kiurites()` és a lezárás viszonya).
   for (let i = 0; i < 5; i++) {
     const anna = await ujEember(KOINO);
     const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 4));

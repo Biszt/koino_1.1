@@ -2026,3 +2026,85 @@ méretlen**: nem tudjuk megmérni, hogy **eleget engedünk-e** másnak, és hogy
 semmi köze a sorbanálláshoz (rádiós ütemezés, cellaváltás, link-szintű újraküldés) — ott a
 késleltetés-jel **fölöslegesen is visszafoghat**. *Romlás, nem törés (a bukás módja itt a
 lényeg), de mérni kell.*
+
+---
+
+## 24. ⭐⭐⭐ A MŰSZER MEGTANUL VERSENGENI — és megméri a KÁRT, amit másnak okozunk (2026-09-14)
+
+**Kérdés:** a 23. mérés kimutatta, hogy teletömjük a szűk keresztmetszet sorát (`sor: 13–14`)
+— de hogy ez **mekkora kár másnak**, az addig **következtetés** volt, nem mérés. És a
+fordítottja is méretlen maradt: ha egy veszteség-alapú szomszéd tolja a vonalat,
+**kiéheztet-e minket**? ⛔ *A D68 mércéjének mindkét fele hiányzott.*
+
+**Futtatás:** `node koino/meres/resSebessegMeres.js` · a műszer:
+[`resSebessegMeres.js`](resSebessegMeres.js) `udpParos({ idegen })`
+
+### A műszer, amivel készült
+
+Az `udpParos()` eddig **egyetlen** folyamot engedett a szűk keresztmetszeten át. Most kapott
+egy második, **„idegen" terhelést**, ami **ugyanazt a sort** tölti — kétféle szomszéd, mert a
+két kérdés kétfélét kíván:
+
+- **`egyenletes`** — állandó ütem (50 csomag/mp, mint egy hívás). ⭐ Ő a **sértett fél**: nem
+  tud visszafogni, tehát amit elszenved, az a **mi kárunk**.
+- **`moho`** — ablakot tart, és csak **vesztésre** fog vissza (mint bárki TCP-je). ⭐ Ő a
+  **versenytárs**: mellette a **mi** átbocsátásunk a lelet.
+
+⭐⭐ **És a sorbanállás kódja EGY helyre került** (`sorbaAll`), mert mostantól két forgalom
+használja. *Ha két helyen állna, nem versengés lenne, hanem két külön vonal — épp azt nem
+mérnénk, ami a kérdés.* ⚠️ Az idegen **nem küld valódi csomagot**, csak **foglalja** a szűk
+keresztmetszetet; a sor nem tudja, ki tette bele a csomagot.
+
+### 1. ⛔⛔ ÁRTUNK-E MÁSNAK? — IGEN, ÉS MOST MÁR SZÁMBAN IS
+
+```
+  UDP-rés + HÍVÁS a vonalon       256 KB      915 ms     280 KB/s    716 csomag  sor: 27
+      ↳ idegen folyam:             30 csomag     átlag 12.8 ms    csúcs 44 ms
+      ↳ ugyanez ÜRES vonalon:      32 csomag      átlag 2.0 ms     csúcs  2 ms
+```
+
+⭐⭐⭐ **A hívás késleltetése 2,0 → 12,8 ms (átlag), a csúcsa 2 → 44 ms.** Hatszoros átlag,
+**huszonkétszeres csúcs** — miközben mi egyetlen csomagot sem veszítünk, tehát az AIMD **nem
+tanul semmit**. *Ez a bufferbloat ára, immár nem érvben, hanem ezredmásodpercben.*
+
+⚠️ **És a szám a valóságban rosszabb:** a mérés egy **0,9 másodperces** átvitelt mutat egy
+gyors helyi vonalon. Otthon a feltöltés lassabb, a fájl nagyobb, és **három egyidejű átvitel**
+fut (Csaba 3. döntése) — ott a hívás nem 44 ms-ot vár, hanem sokszor annyit.
+
+⭐ **A viszonyítás azért kellett, mert enélkül a 12,8 ms semmit nem mondana:** az üres vonalon
+mért **2,0 ms** a vonal sajátja (a szolgálati idő), a különbség a MI sorunk.
+
+### 2. ⭐⭐ KIÉHEZTETNEK-E MINKET? — MA NEM: PONTOSAN FELEZÜNK
+
+```
+  UDP-rés + MOHÓ szomszéd         256 KB     1819 ms     141 KB/s    796 csomag  sor: 32  28 torlódásos
+      ↳ idegen folyam:            534 csomag     átlag 34.6 ms    csúcs 63 ms  ⛔ 0.4% eldobva
+  UDP-rés (ugyanez, EGYEDÜL)      256 KB      912 ms     281 KB/s    716 csomag  sor: 27
+```
+
+⭐ **281 → 141 KB/s**, vagyis a mai, veszteség-alapú vonalunk **felezi a sávot** egy
+TCP-szerű szomszéddal. *Ez az AIMD ígérete, és teljesül: aszimmetrikus szabály → egyensúly.*
+
+⛔⛔ **ÉS EZ A SZÁM A D68 VALÓDI ÁRCÉDULÁJA.** A késleltetés-alapú jel ismert gyengéje, hogy
+egy mohó szomszéd mellett **visszahúzódik** — vagyis ennek a 141 KB/s-nak a megépítés után
+**romlania fog**. ⭐ *Pontosan ezért kellett MOST megmérni: ez az alapvonal, amihez a
+„mennyit fizettünk az udvariasságért" kérdés mérhető lesz.* ⚠️ És a D68 szerint ez a romlás
+**megengedhető a fájl-átvitelnél** (scavenger), mert a redundancia pótolja — a **cserénél
+nem**.
+
+### ⏸️ Amit ez a mérés MÉG NEM tud
+
+- ⚠️ **A mobilvonal ingadozása** (rádiós ütemezés, cellaváltás) még nincs modellezve — ott a
+  késleltetés-jel **fölöslegesen is visszafoghat**. *Romlás, nem törés, de mérni kell.*
+- ⚠️ **Két koino-folyam egymás mellett** (a 3 egyidejű átvitel esete) nincs külön sorban: ma
+  az idegen szomszéd vagy hívás, vagy TCP-szerű — nem egy másik koino.
+- ⚠️ **A minta mérete határt szab:** 64 KB-os átvitelnél a hívásnak mindössze **9 csomagja**
+  fért bele, ezért mennek a versengő sorok **256 KB-tal** (~30–50 minta). *Kilenc mintából
+  nem szabad átlagot mondani — ezt a mérés maga tanította meg.*
+
+### ⏭️ Innen a D68 következő lépése
+
+A mérce **mindkét fele megvan**. A jel alakja (Vegas / LEDBAT / CDG) most már **méréssel**
+dönthető el, és a cél számokban: `sor:` **27 → 1–2**, a hívás késleltetése **12,8 → ~2 ms**,
+⛔ **anélkül**, hogy a véletlenül vesztő sorok romlanának (1%/5%/15%) — és tudva, hogy a
+mohó-szomszéd melletti **141 KB/s** az, amiből engedünk.
