@@ -204,6 +204,29 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
    ⏸️ **Nyitva:** nincs **lassú indítás** (16-ról indul, nem 1-ről duplázva) · a **véletlen
    vesztés és a torlódás megkülönböztetése** (a BBR iránya — más nagyságrendű munka) · és a
    lassú vonal **indulási lökete** (×1,9), ami a kezdő RTO-é, nem az ablaké.
+   ✅✅ **ÉS A MŰSZER MEGTANULT TORLÓDNI — 23. mérés (2026-09-14), és RÖGTÖN KIMUTATOTT EGY
+   BAJT:** szűk keresztmetszet + korlátos sor, és a küldő **teletömi a sort** a majdnem teljes
+   16-os ablakával, **miközben egyetlen csomagot sem veszít** — tehát az **AIMD nem tanul
+   semmit** (`sor: 13–14`, nulla vesztés). ⛔ **Ez a bufferbloat**, és kétszeresen árt: a vonalat
+   megosztó **másoknak** (a mi sorunk mögé áll be a hívásuk), és **magunknak is**, mert a
+   **3 egyidejű fájl-átvitel** ugyanazon a feltöltésen osztozik a **késleltetés-érzékeny
+   cserével**. *A vonal tele van, és a mai vezérlés vak rá.*
+   ⭐⭐⭐ **ÉS EBBŐL SZÜLETETT A D68 (Csaba, 2026-09-14): A TORLÓDÁS JELE LEGYEN A
+   KÉSLELTETÉS — és a REDUNDANCIA teszi megfizethetővé.** A fájl-átvitel legyen **engedékeny**
+   (scavenger), a **csere ne** — a szétválasztás már kész (a fájl-átvitel saját kapcsolaton fut).
+   ⭐⭐ **És a két szál egymás gyengéjét orvosolja:** a késleltetés-jelet **kiéheztethetik**, de
+   ⭐ ha ugyanazt az adatot több társ is hozza, a visszafogás **nem állítja meg a munkát** —
+   *ez a ritka tulajdonság, ami a MÉRETTEL JAVUL.* ⛔ **Határ:** *„a vesztés megengedhető"* ≠
+   *„nem kell torlódás-vezérlés"* — a teletömött sor akkor is **mindenki másnak** okoz
+   késleltetést. ⏸️⏸️ **A KÖVETKEZŐ MUNKA, Csaba három válaszával: (1)** a küszöb alakja
+   (Vegas / LEDBAT / CDG) **méréssel** dőljön el · **(2)** a `FELADAS_IDO` (ma **30 000 ms**,
+   `udpVonal.js:131`) **le**, de **függjön attól, hány forrásból szerezhető be ugyanaz** (és/vagy
+   a torlódás-mérőtől) — *a türelem annyi legyen, amennyit az alternatíva hiánya indokol* ·
+   **(3)** a több forrásból egy fájl **külön munka** (ma a részleges fájl **mérete maga az
+   állapot**, ami sorrendet feltételez). ⛔⛔ **ELSŐ LÉPÉS: a műszer tanuljon meg VERSENGŐ
+   FOLYAMOT szimulálni** — enélkül nem mérhető, hogy eleget engedünk-e, vagy kiéheztetnek-e
+   minket. **A cél számokban:** `sor:` **13–14 → 1–2**, ⛔ **anélkül**, hogy a véletlenül vesztő
+   sorok romlanának (1%/5%/15% = **287/104/39 KB/s**). Teljes indoklás: **D68**.
 2. **`FAJL_KORLAT`** (ma **2 MB**, kiindulás) — 25 KB/s mellett 2 MB ≈ 80 mp. ⭐ **Nem**
    állapot-befolyásoló állandó (D66), tehát szabadon hangolható.
 3. **A maradék modálok** (5.8) — részletek: [`docs/szakasz5_terv.md`](docs/szakasz5_terv.md)
@@ -322,7 +345,7 @@ ezt fogja elvégezni, és az még nincs megépítve · a TCP-rés **sebességét
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D67**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D68**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

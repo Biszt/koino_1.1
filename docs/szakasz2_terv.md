@@ -902,3 +902,75 @@ mostantól **maga a fúró mond ki** (`kulsoCimTcp`, a 18. mérés nyomán).
 ⚠️ **Amit NEM mond meg:** egy hálózat-pár (egyik port-átíró, másik port-megtartó) — ⏸️ **két
 port-átíró NAT között** újra kell mérni · a **számcsere kézi volt** (ezt a buli fogja
 elvégezni, és az még nincs megépítve) · a TCP-rés **sebességét** nem mértük.
+
+---
+
+### ✅✅✅ A D67 MEGÉPÜLT — A UDP-VONAL NÉGY DARABJA (2026-09-14)
+
+*Jegyzőkönyv: [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) 20–23. A kód végig a
+[`koino/js/csere/udpVonal.js`](../koino/js/csere/udpVonal.js)-ben él; a fájl-átvitel **egyetlen
+sora sem változott** (1. szabály).*
+
+| # | Darab | Amit hozott |
+|---|---|---|
+| 3. | **Az ablak** (16 darab úton, gyors újraküldés, korlátos fogadó-puffer) | 24 → **460 KB/s** (1 ms) · 11 → 346 (5% vesztés) · 1 → 5 (800 ms) |
+| 1. | **A mért újraküldési idő** (Jacobson–Karels + **pontos minták** a `k` mezővel) | 10% vesztésnél 875 → **51 ms** · a lassú vonal pazarlása ×3,0 → ×1,4 |
+| 4. | **Az alkalmazkodó ablak (AIMD)** + `tevesFelezes` | **egyharmaddal kevesebb csomag** · a sorrend-csere okozta 234 → 106 KB/s visszaállt 221-re |
+| — | **A műszer** (veszteség · ingadozás · lassú vonal · szűk keresztmetszet + sor) | ez tette mindegyiket mérhetővé |
+
+⛔⛔⛔ **A szakasz legfontosabb módszertani tanulsága:** a **sorrendemet a mérés cáfolta.** A
+mért RTT-vel kezdtem (a legerősebb bizonyíték állt mögötte), és **erős veszteségnél elrontotta
+a vonalat** (30%: 1 bukás, 50%: mind az 5) — mert **stop-and-wait mellett az óra az EGYETLEN
+veszteség-jel**, tehát az óvatos óra végzetes. *Az ablak nem gyorsítás, hanem **előfeltétel**.*
+⭐ Csaba döntésére visszavettük, és az ablak után **másodszorra** épült meg, hibátlanul.
+
+### ⛔⛔ ÉS A 23. MÉRÉS EGY ÚJ BAJT NYITOTT: BUFFERBLOAT — ITT TARTUNK
+
+```
+  UDP-rés (2000 darab/mp, 5 ms)    64 KB    197 ms   325 KB/s   182 csomag  sor: 13
+  UDP-rés (500 darab/mp, 5 ms)     64 KB    260 ms   246 KB/s   182 csomag  sor: 14
+  UDP-rés (500 darab/mp, 8-as sor) 64 KB    323 ms   198 KB/s   210 csomag  sor:  8  14 torlódásos
+```
+
+⛔ A küldő **teletömi a szűk keresztmetszet sorát** a majdnem teljes 16-os ablakával,
+**miközben egyetlen csomagot sem veszít** — tehát az AIMD **nem tanul semmit**. Két kár: a
+vonalat megosztó **másoknak** (a mi sorunk mögé áll be a hívásuk), és **magunknak is**, mert
+a **3 egyidejű fájl-átvitel** ugyanazon a feltöltésen osztozik a **késleltetés-érzékeny
+cserével**.
+
+⭐⭐⭐ **A válasz a D68** (2026-09-14, Csaba): **késleltetés-alapú jel** + a fájl-átvitel
+legyen **engedékeny** (scavenger), a **csere ne** — és ⭐⭐ **a REDUNDANCIA teszi
+megfizethetővé**: ha ugyanazt több társ is hozza, a visszafogás nem állítja meg a munkát.
+*Ez a ritka tulajdonság, ami a mérettel JAVUL.* Teljes indoklás, a 9. szabály próbájával és
+Csaba három válaszával: **D68** a [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md)-ben.
+
+#### ⏭️ A KÖVETKEZŐ SESSION SORRENDJE (ebben a sorrendben)
+
+1. ⛔⛔ **A MŰSZER TANULJON MEG VERSENGŐ FOLYAMOT.** Ma a
+   [`koino/meres/resSebessegMeres.js`](../koino/meres/resSebessegMeres.js) `udpParos()`-a
+   **egyetlen** folyamot enged a szűk keresztmetszeten át (`savszelesseg`, `sorMeret`,
+   `szamlalo = { kuldott, eldobott, torlodas, maxSor }`, per-foglalat `szabadEttol`).
+   ⭐ **Kell mellé egy második, „idegen" terhelés**, ami ugyanazt a sort tölti — különben
+   **nem mérhető**, hogy (e) eleget enged-e, és hogy (a)-t **kiéheztetik-e**.
+   *Egy méretlen ág olyan, mint egy vak próba — ezt a szakasz már hatszor megtanulta.*
+2. **A jel alakja, MÉRÉSSEL** (Csaba 1. válasza): Vegas (várt vs. tényleges átbocsátás) ·
+   LEDBAT (az egyirányú késleltetés növekménye) · CDG (a késleltetés **gradiense**).
+   ⛔ **Rögzített ms-küszöb TILOS** — varázsszám, és a 9. szabályon bukna (a vonalak hat
+   nagyságrendet fognak át). A küszöb **viszonyított** legyen (a látott `minRtt`-hez).
+3. **Az engedékenység szétválasztása** (e): a **fájl-átvitel** enged, a **csere** nem.
+   ⭐ A szétválasztás **már kész** — a fájl-átvitel 5.7/B óta **saját kapcsolaton** fut, tehát
+   ez egy paraméter a vonalnak, nem új gépezet.
+4. **A `FELADAS_IDO` leszállítása** (Csaba 2. válasza): ma **30 000 ms**
+   ([`udpVonal.js:131`](../koino/js/csere/udpVonal.js)) — ⛔ **de NEM fix kisebb számra**, mert
+   az ugyanolyan varázsszám lenne. ⭐ **Függjön attól, hány forrásból szerezhető be ugyanaz**
+   (és/vagy a torlódás-mérőtől): *a türelem annyi legyen, amennyit az alternatíva hiánya
+   indokol.* A társ-váltás legyen a válasz a rossz vonalra.
+5. ⏸️ **Több forrásból egy fájl — KÜLÖN munka** (Csaba 3. válasza: *„ahogy logikusabb"*).
+   ⚠️ Ára: ma **a részleges fájl mérete MAGA az állapot**, ami **sorrendben** érkező
+   szeleteket feltételez; több forráshoz **szelet-nyilvántartás** kellene.
+
+**A cél, számokban:** `sor:` **13–14 → 1–2** ⛔ **anélkül**, hogy a véletlenül vesztő sorok
+romlanának (1% / 5% / 15% = **287 / 104 / 39 KB/s**), és anélkül, hogy a torlódásos sor
+lassulna. ⚠️ **És egy kockázat, amit mérni kell:** mobilvonalon az RTT attól is ingadozik,
+aminek semmi köze a sorbanálláshoz (rádiós ütemezés, cellaváltás) — ott **fölöslegesen is
+visszafoghatunk**; a műszernek ezt is modelleznie kell.

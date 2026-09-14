@@ -3527,6 +3527,136 @@ szállításra nem lehet alapozni.*
 - **A számcsere automatizálása**: a fúró ma már kimondja a saját külső portját, de a
   **buli** még nem adja át — ma kézzel írtuk át egymásnak (19. mérés).
 
+### D68. A TORLÓDÁS JELE LEGYEN A KÉSLELTETÉS — és a REDUNDANCIA teszi megfizethetővé (2026-09-14, Csaba)
+
+> ⭐⭐⭐ **Ez a döntés két szálból áll össze, és a szépsége az, hogy a kettő egymás gyengéjét
+> orvosolja.** Az egyik szálat a 23. mérés nyitotta meg (bufferbloat), a másikat Csaba saját
+> ötlete (több forrás ugyanarra az adatra).
+
+#### 0. ⛔⛔ A LELET, amiből indult (23. mérés, 2026-09-14)
+
+A műszer megtanult **torlódni** (szűk keresztmetszet + korlátos sor), és azonnal kimutatott
+egy bajt: a küldő **teletömi a sort** a majdnem teljes 16-os ablakával, **miközben egyetlen
+csomagot sem veszít** — tehát az AIMD **nem tanul semmit**.
+
+```
+  UDP-rés (2000 darab/mp, 5 ms)    64 KB    197 ms   325 KB/s   182 csomag  sor: 13
+  UDP-rés (500 darab/mp, 5 ms)     64 KB    260 ms   246 KB/s   182 csomag  sor: 14
+  UDP-rés (500 darab/mp, 8-as sor) 64 KB    323 ms   198 KB/s   210 csomag  sor:  8  14 torlódásos
+```
+
+⛔ **Ez a bufferbloat**, és két külön kárt okoz: (1) mindenki másnak, aki osztozik a vonalon
+— a mi sorunk mögé áll be a hívásuk, a lapjuk; (2) **magunknak is**, mert a koino **3
+egyidejű fájl-átvitele** (Csaba 3. döntése) ugyanazon a feltöltésen osztozik a
+**késleltetés-érzékeny cserével**. *A vonal tele van, és a mai vezérlés vak rá.*
+
+#### 1. A DÖNTÉS: (a) + (e) — késleltetés-alapú jel, és a fájl-átvitel legyen ENGEDÉKENY
+
+Öt irány volt az asztalon; Csaba a kettőt együtt választotta:
+
+- **(a) Késleltetés-alapú jel** — *„nőtt az oda-vissza idő a látott minimumhoz képest → sor
+  épül → fogd vissza"*. ⭐ **Nem kell hozzá új mérés**: a pontos RTT-mintavétel (`k` mező,
+  D67/1. darab) **már megvan**. ⚠️ A gyengéje: aki veszteség-alapú (a világ nagy része),
+  **kiéheztet** minket.
+- **(e) Scavenger (engedékeny) viselkedés** — a **fájl-átvitel** szándékosan engedjen, a
+  **csere ne**. ⭐⭐ *Ettől (a) gyengéje ERÉNNYÉ válik:* a háttérmunka **akkor is helyes, ha
+  visszafog**, mert a D3 szerint a tartalmi réteg amúgy is elveszhet. ⭐ És a szétválasztás
+  **már kész**: a fájl-átvitel 5.7/B óta **saját kapcsolaton** fut.
+
+⛔ **Elvetve, és miért:** **(b) BBR/ütem-alapú** — más nagyságrendű munka (ütemezés, szondázó
+fázisok), és a mai leletre túl nagy kalapács · **(c) kis rögzített ablak-plafon** —
+**varázsszám**, amit Csaba elvi okból elvet, és a 9. szabály is (*„hat nagyságrendnyi vonal"*)
+· **(d) csak ütemezés (pacing)** — olcsó és részben javít, de **nem jel**: attól még nem tudjuk
+meg, mekkora a sor. *(A (d) később kiegészítője lehet az (a)-nak, nem helyettesítője.)*
+
+#### 2. ✅ A 9. SZABÁLY PRÓBÁJA — átmegy, és itt van, miért
+
+- ⭐ **Az állapot készülékenként korlátos**: kapcsolatonként néhány szám (`minRtt`, `srtt`,
+  ablak), a kapcsolatok számát pedig **már korlátozza egy döntés** (3 egyidejű átvitel,
+  társanként legfeljebb egy). *Nem nő a taglétszámmal.*
+- ⭐ **Nem kell hozzá külső szolgáltatás** (2. szabály): a jel a **saját nyugtáinkból** jön.
+- ⭐ **Cserélhető** (1. szabály): az egész a `udpVonal.js`-ben él, a `parbeszed` egy sora sem
+  tud róla. A 9. szabály megengedi: *a SZERKEZET milliárdos (a vonalnak van
+  torlódás-vezérlője), a megvalósítás mögötte lehet egyszerű.*
+- ⭐⭐ **És a bukás módja a lényeg:** a TCP azért esett ki, mert egy router-tulajdonságon állt,
+  és ha az nem teljesül, **nincs kapcsolat** — bináris, végzetes. A késleltetés-jel is
+  támaszkodik egy feltevésre (*„a nőtt RTT sorbanállást jelent"*), ⚠️ **de ha az nem
+  teljesül, csak lassabbak leszünk.** *Romlás, nem törés — és háttérmunkánál (D3) a romlás
+  megengedhető.*
+
+⛔ **Ami viszont MEGBUKNA rajta, ezért tilos:** egy **rögzített küszöb** (pl. *„fogj vissza
+50 ms fölött"*) — egy 1 ms-os helyi hálózaton értelmetlenül szűk, egy 400 ms-os műholdas
+vonalon értelmetlenül tág. A küszöbnek **viszonyítottnak** kell lennie.
+
+⚠️⚠️ **És egy őszinte kockázat, amit nem hallgatunk el:** **mobilvonalon az RTT attól is
+ingadozik, aminek semmi köze a sorbanálláshoz** (rádiós ütemezés, cellaváltás, link-szintű
+újraküldés). Ott **visszafoghatunk olyankor is, amikor nem kellene** — és egymilliárdból a
+legtöbben épp mobilon lesznek. *Ez romlás, nem törés, de a mérésnek modelleznie kell.*
+
+#### 3. ⭐⭐⭐ CSABA ÖTLETE: a redundancia — és miért JOBB, mint amilyennek látszik
+
+> „Az, hogy több készülék tudja ugyanazt küldeni egyidőben egy készüléknek, akkor lehet, hogy
+> **megengedhetjük a veszteséget, vonalanként**, mert ami elveszett az egyik vonalról, az
+> átjöhetett egy másik vonalon." — Csaba, 2026-09-14
+
+⭐ **Az alapgondolat helyes, és a koinóban MÁR MŰKÖDIK — csak nem a vonalon, hanem a
+protokollban.** A csere `ALLAS`/`KEREK` köre **minden alkalommal újra felderíti**, mi hiányzik;
+a postaláda (D34) továbbadja azt, amit ő maga sem ért. *Ha egy esemény nem jön át Annától,
+átjön Bélától, vagy Annától a következő bulin.* **A koino eleve veszteségtűrő — eseményszinten.**
+
+⛔ **A vonalon BELÜL viszont nem tűrhető a vesztés, és ez nem konzervativizmus:** a `parbeszed`
+**állapotos beszélgetés** (`LENYOMAT` → `ALLAS` → `KEREK` → `ESEMENY`), és egy üzenet **fél
+JSON-ként nem értelmezhető**. *Nem az adat pótolhatatlan, hanem a MONDAT.*
+
+⭐⭐⭐ **De az ötlet ettől nem vész el — átfordítva ez lesz belőle: ne a vesztést tűrjük,
+hanem ADJUK FEL HAMARABB a rossz vonalat.** Ma a `FELADAS_IDO` **30 másodperc**
+(`udpVonal.js:131`) — ennyit küzdünk **egyetlen darabért**. ⚠️ Ha ugyanazt három társ is el
+tudja hozni, harminc másodpercet verekedni egy rossz vonallal **pazarlás**. *Vagyis a
+redundancia nem a megbízhatóságot váltja ki, hanem a TÜRELMET teszi feleslegessé.*
+
+⭐⭐ **És a két szál itt ér össze:** a késleltetés-jel gyengéje a **kiéheztetés** volt — ha
+mindig engedünk, néha alig haladunk. ⭐ **A redundancia pontosan ezt orvosolja:** ha egy
+vonalon visszafogunk, a munka **nem áll meg**, mert ugyanaz az adat máshonnan is jön.
+⭐⭐⭐ **És ez a ritka fajta tulajdonság, ami a MÉRETTEL JAVUL:** egymilliárdnál több társ
+tartja ugyanazt — minél nagyobb a koino, **annál olcsóbb udvariasnak lenni**. *A legtöbb
+rendszernél fordítva van.*
+
+⛔⛔ **ÉS EGY HATÁR, AMIT ÉLESEN MEG KELL HÚZNI:** *„a vesztés megengedhető"* ≠ *„nem kell
+torlódás-vezérlés"*. A vesztés **nekünk** mindegy lehet (más vonalon átjön) — ⛔ **de a sor,
+amit teletömtünk, akkor is MINDENKI MÁSNAK okoz késleltetést.** *Ha a redundanciára hivatkozva
+hajtanánk, épp azt a kárt okoznánk, amit most megmértünk — csak jó lelkiismerettel.*
+
+#### 4. ✅ CSABA HÁROM VÁLASZA (2026-09-14) — ez a következő munka megbízása
+
+1. ⭐ **A küszöb alakja: MÉRÉSSEL dőljön el.** *„Méréssel döntsd el."* — nem érveléssel
+   választunk a Vegas-féle (várt vs. tényleges átbocsátás), a LEDBAT-féle (egyirányú
+   késleltetés növekménye) és a CDG-féle (a késleltetés **gradiense**) között. ⭐ A mérőszám
+   **megvan**: a `sor:` oszlop (23. mérés).
+2. ⭐⭐ **A feladási időt vigyük le — DE függjön a forrásoktól.** *„Igen, vigyük le. De attól
+   is függjön, hogy hány helyről tudja beszerezni ugyanazt. Vagy pedig egy torlódás-mérő
+   segítségével kéne a váltásokat kezelni."* ⛔ **Ez pontosan a helyes megkötés:** egy fix
+   kisebb szám ugyanolyan varázsszám lenne, mint a 30 000. ⭐ A türelem **annyi legyen,
+   amennyit a ALTERNATÍVA hiánya indokol** — ha egyetlen forrás van, türelmesnek kell lenni;
+   ha öt, nem. *A torlódás-mérő (1. pont) adja a második bemenetet: a lassú vonal és a
+   torlódott vonal nem ugyanaz.*
+3. ⏸️ **Több forrásból egy fájl: „ahogy logikusabb, nekem mindegy."** ⚠️ **Az ára kimondva:**
+   ma a folytatás alapja, hogy **a részleges fájl MÉRETE maga az állapot** — ez **sorrendben
+   érkező** szeleteket feltételez. Több forráshoz **szelet-nyilvántartás** kellene, és ezzel
+   egy mai szerkezeti egyszerűség veszne el. ⭐ **A javaslat ezért: KÜLÖN munka, később** —
+   a 2. pont (gyors társ-váltás) a haszon nagy részét **szelet-nyilvántartás nélkül** megadja.
+
+#### ⏸️ Ami nyitva marad (a következő session feladata)
+
+- ⛔⛔ **A műszer ma NEM tud versengő folyamot szimulálni** — vagyis *nem tudjuk megmérni,
+  hogy eleget engedünk-e, és hogy kiéheztetnek-e minket*. **Ez az (a)+(e) előfeltétele:**
+  egy méretlen ág olyan, mint egy vak próba. **Ez az első lépés.**
+- A **cél**, számokban: `sor:` **13–14 → 1–2** ⛔ **anélkül**, hogy a véletlenül vesztő sorok
+  romlanának (1% / 5% / 15% = **287 / 104 / 39 KB/s**), és anélkül, hogy a torlódásos sor
+  lassulna.
+- ⏸️ Nyitva korábbról: **nincs lassú indítás** · a fájl-út **base64 +33%** adója · a **buli**
+  (a cím- és portcsere automatizálása) · **két port-átíró NAT** (CGNAT↔CGNAT) mérése ·
+  `FAJL_KORLAT` (2 MB).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

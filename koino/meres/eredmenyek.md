@@ -2010,3 +2010,19 @@ A késleltetés-alapú jel akkor lesz jó, ha:
 - ⚠️ és a torlódásos sor **nem lesz lassabb** annál, amit ma mérünk.
 
 *A cél tehát nem a sebesség, hanem hogy a két helyzetet a vonal MEGKÜLÖNBÖZTESSE.*
+
+⭐⭐⭐ **ÉS A DÖNTÉS MEGSZÜLETETT ERRE — D68 (Csaba, 2026-09-14):** a jel a **késleltetés**
+legyen, a **fájl-átvitel engedékeny** (a csere nem), és ⭐⭐ **a REDUNDANCIA teszi
+megfizethetővé**: ha ugyanazt több társ is hozza, a visszafogás **nem állítja meg a munkát** —
+*ez a ritka tulajdonság, ami a MÉRETTEL JAVUL.*
+
+⛔⛔ **DE A KÖVETKEZŐ MÉRÉS NEM EZ, HANEM A MŰSZERÉ: VERSENGŐ FOLYAM.** Ma az `udpParos()`
+**egyetlen** folyamot enged a szűk keresztmetszeten át — vagyis a fenti mérce **fele
+méretlen**: nem tudjuk megmérni, hogy **eleget engedünk-e** másnak, és hogy minket
+**kiéheztet-e** egy veszteség-alapú versenytárs. *Egy méretlen ág olyan, mint egy vak próba —
+és épp ezt mondtuk ki két bekezdéssel feljebb.*
+
+⚠️ **És egy modellezendő kockázat:** mobilvonalon az oda-vissza idő attól is ingadozik, aminek
+semmi köze a sorbanálláshoz (rádiós ütemezés, cellaváltás, link-szintű újraküldés) — ott a
+késleltetés-jel **fölöslegesen is visszafoghat**. *Romlás, nem törés (a bukás módja itt a
+lényeg), de mérni kell.*
