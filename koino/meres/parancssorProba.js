@@ -867,6 +867,11 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
       const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
       if (!/1 fájl megérkezett/.test(masodik)) return false;
 
+      // ⭐ ÉS A TÜRELEM IS LÁTSZIK (D68): *„annyit küzdünk, amennyit az alternatíva hiánya
+      // indokol"*. ⚠️ Itt EGY forrás van, tehát a teljes türelem jár — hogy a szám tényleg
+      // **el is jut a vonalig**, azt a következő próba méri (viselkedéssel, nem kiírással).
+      if (!/türelem: 30\.0 mp · 1 forrás/.test(masodik)) return false;
+
       // ⭐ ÉS A LÉNYEG: a vendégnél megvan, és BÁJTRA ugyanaz.
       const fajlok = await fut(vendeg, 'fajlok');
       const nala = await readFile(
@@ -957,6 +962,60 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
     if (figyelo) { figyelo.kill(); await varj(1000); }
     await rm(gazda, { recursive: true, force: true });
     await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⛔⛔ ÉS A TÜRELEM TÉNYLEG ELJUT A VONALIG — VISELKEDÉSSEL MÉRVE (D68, 2026-09-15)
+// ===================================
+//
+// ⚠️⚠️ AZ ELSŐ PRÓBÁM VAK VOLT, ÉS A RONTÁS-PRÓBA BUKTATTA LE: a kiírt „türelem: 30,0 mp"
+// sort néztem, az viszont a **kiszámolt** értékből jön — a bekötést kivéve (a `tcpNyito`
+// harmadik paraméterét elhagyva) a kiírás **változatlan maradt**. *Azt mértem, hogy
+// kiszámoltuk, nem azt, hogy használjuk.* **Hetedszer ugyanaz a szabály.**
+//
+// ⭐ EZ A PRÓBA VISELKEDÉST MÉR: egy **nem válaszoló** társtól kérünk fájlt, és megnézzük,
+// **mennyi idő múlva adjuk fel**. Hat forrás → a türelem az alsó korlát (5 mp), tehát a
+// bukásnak ~5–6 másodperc alatt meg kell jönnie. ⛔ Ha a türelem nem jutna el a vonalig, a
+// vonal alapértéke (30 mp) szólna — és ez a próba időkorlátjába ütközne.
+
+proba('⛔⛔ A TÜRELEM ELJUT A VONALIG: hat forrásnál 5 mp alatt feladjuk', async () => {
+  const hely = await ujKeszulek();
+  const port = 7551;
+  let figyelo = null;
+  try {
+    await fut(hely, 'koino', 'Próba koinó');
+
+    // ⭐ EGY HIÁNYZÓ FÁJL-HIVATKOZÁS, felület nélkül: a besorolás IKONJA is lehet kép (5.4).
+    const hamisLenyomat = 'Zt' + 'a'.repeat(41);          // 43 karakter, sosem létezett
+    await fut(hely, 'kategoria', 'Képes kategória', '/api/fajl/' + hamisLenyomat);
+
+    // ⭐ HAT FORRÁS a birtoklás-jegyzetben — mind NEM VÁLASZOLÓ cím (nem routolható).
+    // *A jegyzet helyi feljegyzés (3. szabály), tehát nyugodtan írható kézzel.*
+    const tarsak = {};
+    for (let i = 1; i <= 6; i++) tarsak['10.255.255.' + i + ':7373'] = { mikor: Date.now() };
+    await writeFile(join(hely, 'sajat', 'fajlbirtoklas.json'),
+      JSON.stringify({ [hamisLenyomat]: { tarsak } }), 'utf8');
+
+    // ⚠️ A csere maga EGY ÉLŐ (üres) társsal fut, hogy gyorsan lezáruljon — így a mért idő
+    // gyakorlatilag a fájl-átvitel türelme. *A halott címek csak a fájl-jegyzetben vannak.*
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: await ujKeszulek(), KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(1500);
+
+    const kezd = Date.now();
+    const kimenet = await fut(hely, 'csere', '127.0.0.1', String(port));
+    const eltelt = Date.now() - kezd;
+
+    // ⭐ A KIÍRÁS a hat forrást és az 5 mp-es türelmet mondja…
+    if (!/türelem: 5\.0 mp · 6 forrás/.test(kimenet)) return false;
+    // ⛔ …ÉS A VISELKEDÉS IS: ~5 mp körül feladtuk, nem 30-nál. *Ez a sor buktatja a
+    // bekötés kivételét — a kiírás önmagában nem, mert az a KISZÁMOLT értéket mutatja.*
+    return eltelt > 3000 && eltelt < 20000;
+  } finally {
+    if (figyelo) { figyelo.kill(); await varj(500); }
+    await rm(hely, { recursive: true, force: true });
   }
 });
 

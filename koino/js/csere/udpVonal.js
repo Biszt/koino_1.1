@@ -128,7 +128,17 @@ const SZORAS_SULY = 0.25;      // β — az ingadozás súlya (1/4)
 // ⭐ A FELADÁS IDŐALAPÚ, NEM DARABSZÁM-ALAPÚ. Korábban „20 próbálkozás" volt — ⚠️ de a 16.
 // mérés szerint **soha nem is értük el**. Visszalépő újraküldésnél ráadásul a darabszám
 // semmit nem mond: 20 próbálkozás lehet 2 másodperc és fél óra is. *Az idő az, ami számít.*
-const FELADAS_IDO = 30000;
+//
+// ⭐⭐⭐ ÉS 2026-09-15 ÓTA EZ CSAK AZ ALAPÉRTÉK: a hívó felülírhatja (`beallitas.feladasIdo`).
+//
+// ⛔ MIÉRT: a türelem **nem a vonal kérdése**. A vonal csak csomagokat lát — azt, hogy
+// *érdemes-e még küzdeni ezzel a társsal*, csak a fájl-réteg tudja, mert ő ismeri, **hány
+// forrásból szerezhető be ugyanaz** (D68, Csaba 2. válasza). A számítás ezért ott van
+// (`fajlAtvitel.js`: `turelemForrasokbol`), és a vonal **paraméterként kapja**.
+// *Ugyanaz a szétválasztás, mint mindenhol: a vonal nem tud a koinóról (1. szabály).*
+//
+// ⚠️ Az alapérték a cseréé marad: ott **nincs „másik forrás"** ugyanarra a beszélgetésre.
+const FELADAS_ALAP = 30000;
 
 // ===================================
 // ⭐⭐⭐ AZ ABLAK — több darab úton egyszerre (D67 / 3. darab, 2026-09-14)
@@ -264,6 +274,8 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
   // ⭐ A TORLÓDÁS-JEL PARAMÉTER, NEM ÁTÍRÁS (D68 / 2. lépés): alapból 'nincs' — vagyis a
   // tiszta AIMD, ahogy eddig. *A jelölteket a mérés hasonlítja össze; a döntés utána jön.*
   const torlodasJel = beallitas.torlodasJel ?? 'nincs';
+  // ⭐ A TÜRELEM KÍVÜLRŐL JÖN (D68): a fájl-réteg a forrásszámból számolja ki.
+  const feladasIdo = beallitas.feladasIdo ?? FELADAS_ALAP;
   // ⭐ Az ÜTEMEZÉS független a jeltől (a jel az ÜTEMET szabja meg, ez a LÖKETET).
   //
   // ⛔⛔ ALAPBÓL KI — ÉS EZ MÉRT DÖNTÉS, NEM FELEDÉKENYSÉG (D68 / 4. lépés, 2026-09-15).
@@ -514,7 +526,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
     for (const t of uton.values()) clearTimeout(t.ora);
     uton.clear();
     jelez('error', new Error('a másik fél nem nyugtázta a ' + sorszam + '. darabot '
-      + Math.round(FELADAS_IDO / 1000) + ' másodperc alatt'));
+      + Math.round(feladasIdo / 1000) + ' másodperc alatt'));
     uritestJelez(false);              // aki a kiürítésre vár, itt is kapjon választ
   };
 
@@ -530,7 +542,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
       if (lezarva || !uton.has(sorszam)) return;
 
       // ⛔ IDŐALAPÚ FELADÁS — de HIBAKÉNT, nem csendben.
-      if (Date.now() - tetel.kezdet > FELADAS_IDO) return feladas(sorszam);
+      if (Date.now() - tetel.kezdet > feladasIdo) return feladas(sorszam);
 
       // ⭐⭐⭐ AZ ÓRÁRA CSAK A LEGRÉGEBBI DARAB MEGY ÚJRA — ahogy a TCP is teszi.
       //
@@ -606,7 +618,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
       // legrégebbi), és a cél épp az, hogy a kapcsolat ne haljon meg NÉMÁN.
       const turelem = tetlensegHatar > 0 ? tetlensegHatar / 3 : Infinity;
 
-      const maradek = FELADAS_IDO - (Date.now() - tetel.kezdet);
+      const maradek = feladasIdo - (Date.now() - tetel.kezdet);
       if (!hallottamOta) {
         tetel.rto = Math.min(
           RTO_MAX,

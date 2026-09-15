@@ -341,26 +341,41 @@ async function fajlokElhozasa() {
   if (!terv.length) return { kesz: 0, bukott: 0, bajt: 0 };
 
   // ⭐ PÁRHUZAMOSAN — a korlátot már a terv tartja be (három, társanként egy).
-  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tars }) => {
+  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tars, turelem, forrasok }) => {
     const ketpont = tars.lastIndexOf(':');
     const hoszt = tars.slice(0, ketpont);
     const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
     try {
       // ⭐ A NYITÓ DÖNTI EL A SZÁLLÍTÁST (1. szabály): itt TCP, az átfúrt résen UDP —
       // az átvitel logikája nem tudja, melyiken beszél.
-      return await fajlHozatala(blob, KOINO, lenyomat,
-        tcpNyito(hoszt, tarsPort), { korlat: FAJL_KORLAT });
+      //
+      // ⭐⭐ ÉS A TÜRELMET A TERV MONDJA MEG (D68): *annyit küzdünk ezzel a társsal,
+      // amennyit az alternatíva hiánya indokol* — egy forrásnál 30 mp, ötnél 6, tízénél 5
+      // (alsó korlát). ⚠️ A feladás itt nem adatvesztés, hanem **társ-váltás**: a részleges
+      // fájl megmarad, és a következő kör onnan folytatja.
+      console.log('fajlokElhozasa - türelem', { lenyomat, forrasok, turelem });
+      return {
+        ...(await fajlHozatala(blob, KOINO, lenyomat,
+          tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT })),
+        // ⭐ A HASZNÁLT TÜRELMET VISSZAADJUK — hogy a bekötés **mérhető tény** legyen, ne
+        // ígéret. *Ugyanaz a fogás, mint a torlódás-jelnél: amit nem lehet megmérni, arról
+        // egy hét múlva nem tudjuk, igaz-e még.*
+        turelem, forrasok
+      };
     } catch (hiba) {
       // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
       console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });
-      return { kesz: false, bajt: 0 };
+      return { kesz: false, bajt: 0, turelem, forrasok };
     }
   }));
 
   return {
     kesz: eredmenyek.filter((e) => e.kesz).length,
     bukott: eredmenyek.filter((e) => !e.kesz).length,
-    bajt: eredmenyek.reduce((o, e) => o + (e.bajt ?? 0), 0)
+    bajt: eredmenyek.reduce((o, e) => o + (e.bajt ?? 0), 0),
+    // ⭐ A LEGRÖVIDEBB TÜRELEM ÉS A HOZZÁ TARTOZÓ FORRÁSSZÁM — ez az, ami látszik is.
+    turelem: Math.min(...eredmenyek.map((e) => e.turelem ?? Infinity)),
+    forrasok: Math.max(...eredmenyek.map((e) => e.forrasok ?? 0))
   };
 }
 
@@ -377,6 +392,14 @@ async function fajlAtvitelKiirasa() {
     + SZIN.vege + SZIN.halvany
     + (atvitel.bukott ? ' · ' + atvitel.bukott + ' nem sikerült' : '')
     + ' (' + adatMennyiseg({ bajtKuldott: atvitel.bajt }) + ')' + SZIN.vege);
+
+  // ⭐⭐ ÉS KIMONDJUK, MENNYIT KÜZDÖTTÜNK, ÉS MIÉRT ANNYIT (D68).
+  // *„A türelem annyi legyen, amennyit az alternatíva hiánya indokol."* — ⚠️ enélkül a
+  // szabály csak a kódban élne, és senki nem venné észre, ha egyszer kiesne.
+  if (Number.isFinite(atvitel.turelem)) {
+    kiir(SZIN.halvany + '  türelem: ' + (atvitel.turelem / 1000).toFixed(1)
+      + ' mp · ' + atvitel.forrasok + ' forrás' + SZIN.vege);
+  }
 }
 
 /**
@@ -1010,11 +1033,17 @@ try {
       kiir(SZIN.halvany
         + '  ! = tudatpontot tettél rá, tehát VÁLLALTAD a tárolását (D3)' + SZIN.vege);
       // ⚠️ A HIÁNY NEM HIBA (D19) — megmondjuk azt is, miért van, és mi lesz vele.
+      //
+      // ⛔ EZ A SZÖVEG 2026-09-15-IG HAZUDOTT: azt írta, hogy *„a bájtok szállítása még nem
+      // épült meg"* — pedig 2026-09-13 óta megvan (felderítés → kérelem → átvitel →
+      // randevú), és az őrjárat azóta magától is elhozza. *Ugyanaz a csapda, amit az
+      // `Allaspont`-nál kimondtunk: ahol egy felirat mást mond, mint amit a kód tesz, ott
+      // előbb-utóbb valaki a feliratot hiszi el.*
       kiir(SZIN.halvany
-        + '  A bájtok szállítása még nem épült meg: egy kép ma csak azon a készüléken van'
+        + '  A bájtok a következő bulikon megérkeznek (a felderítés egy körrel előbb jár),'
         + SZIN.vege);
       kiir(SZIN.halvany
-        + '  meg, ahol beszúrták. Addig a kézi út: a koino-adat/' + KOINO
+        + '  vagy magától: node koino/koino.js orjarat.  Kézi út: a koino-adat/' + KOINO
         + '/fajlok/ mappa másolása.' + SZIN.vege);
       break;
     }

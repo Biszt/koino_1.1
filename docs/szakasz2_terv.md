@@ -992,11 +992,15 @@ Csaba három válaszával: **D68** a [`fejlesztesi_terv_fazis2.md`](fejlesztesi_
    `sor_alsó ≈ ébredési köz / szolgálati idő` = 15,6 / 2 ≈ **8 csomag**. *A `sor: 1–2` ezen a
    gépen nem hangolás kérdése, hanem mérhetetlen.* ⏸️ A telefonon (~1 ms-os óra) újra kell
    mérni — a parancs készen áll.
-4. **A `FELADAS_IDO` leszállítása** (Csaba 2. válasza): ma **30 000 ms**
-   ([`udpVonal.js:131`](../koino/js/csere/udpVonal.js)) — ⛔ **de NEM fix kisebb számra**, mert
-   az ugyanolyan varázsszám lenne. ⭐ **Függjön attól, hány forrásból szerezhető be ugyanaz**
-   (és/vagy a torlódás-mérőtől): *a türelem annyi legyen, amennyit az alternatíva hiánya
-   indokol.* A társ-váltás legyen a válasz a rossz vonalra.
+5. ✅ **A TÜRELEM KÉSZ — 28. mérés (2026-09-15).** `turelem(n) = max(5 000, 30 000 / n)`,
+   ahol `n` a források száma. ⭐ Egy forrásnál 30 mp (*nincs hova menni*), négynél 7,5, hatnál
+   az alsó korlát; az **ismeretlen** forrásszám a legóvatosabb választ adja (D19).
+   ⛔ Az alsó korlát a lassú vonalé: 800 ms oda-visszánál 5 mp is csak néhány próbálkozás.
+   ⭐ A számítás a **fájl-rétegben** (`turelemForrasokbol`), a vonal **paraméterként kapja** —
+   ő nem tudhatja, hány forrás van. ⚠️ A randevúnál marad a teljes türelem: ott nincs
+   alternatíva. ⛔⛔ **És egy vak próbát a rontás-próba buktatott le**: a kiírt türelmet
+   mértem, nem a használtat — a javított próba **viselkedést** mér (hat nem válaszoló
+   forrásnál ~5 mp alatt fel kell adni).
 5. ⏸️ **Több forrásból egy fájl — KÜLÖN munka** (Csaba 3. válasza: *„ahogy logikusabb"*).
    ⚠️ Ára: ma **a részleges fájl mérete MAGA az állapot**, ami **sorrendben** érkező
    szeleteket feltételez; több forráshoz **szelet-nyilvántartás** kellene.

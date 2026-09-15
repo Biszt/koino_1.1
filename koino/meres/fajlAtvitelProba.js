@@ -15,7 +15,8 @@ import { join } from 'node:path';
 
 import { fajlBlobTarolo, FAJL_KORLAT } from '../js/tar/fajlTar.js';
 import {
-  kovetkezoKeres, szeletEllenorzes, atvitelTerv, SZELET_MERET, EGYIDEJU_ATVITEL
+  kovetkezoKeres, szeletEllenorzes, atvitelTerv, SZELET_MERET, EGYIDEJU_ATVITEL,
+  turelemForrasokbol, TURELEM_MAX, TURELEM_MIN
 } from '../js/csere/fajlAtvitel.js';
 import { bajtLenyomat } from '../js/esemeny/kanonikusAlak.js';
 
@@ -194,6 +195,59 @@ proba('⭐ A SORRENDET tiszteletben tartja (a ritkábbat/vállaltat előbb)', as
   // A hívó már rendezett: L(2) az első.
   const terv = atvitelTerv([{ lenyomat: L(2) }, { lenyomat: L(1) }], jegyzet);
   return terv[0].lenyomat === L(2);
+});
+
+// ===================================
+// ⭐⭐⭐ A TÜRELEM: AMENNYIT AZ ALTERNATÍVA HIÁNYA INDOKOL (D68, 2026-09-15)
+// ===================================
+//
+// ⛔ A régi `FELADAS_IDO = 30 000` **honnan sem jött**: egyetlen 1000 bájtos darabért
+// küzdöttünk fél percig, akkor is, ha ugyanaz a fájl tíz másik társnál megvolt.
+// ⭐ Csaba döntése nem egy kisebb fix szám volt (*„az ugyanolyan varázsszám lenne"*), hanem
+// hogy **függjön a források számától**.
+
+proba('⭐⭐ A TÜRELEM CSÖKKEN, ahogy nő a források száma', async () => {
+  const egy = turelemForrasokbol(1);
+  const ketto = turelemForrasokbol(2);
+  const ot = turelemForrasokbol(5);
+  return egy === TURELEM_MAX          // ⭐ egy forrásnál: nincs hova menni
+    && ketto < egy && ot < ketto       // ⭐ monoton csökken
+    && ketto === 15000 && ot === 6000;
+});
+
+proba('⛔ DE VAN ALSÓ KORLÁT — a lassú vonal alapeset, nem kivétel (9. szabály)', async () => {
+  // ⚠️ Száz forrásnál sem eshet olyan alacsonyra, hogy egy 800 ms oda-visszájú vonalon
+  // egyetlen tisztességes próbálkozás se férjen bele.
+  return turelemForrasokbol(100) === TURELEM_MIN
+    && turelemForrasokbol(1000) === TURELEM_MIN
+    && TURELEM_MIN >= 5000;
+});
+
+proba('⚠️ AZ ISMERETLEN FORRÁSSZÁM a LEGÓVATOSABB választ adja (D19)', async () => {
+  // *Ha nem tudunk alternatíváról, akkor nincs alternatíva — a hiány nem ok a
+  // türelmetlenségre.*
+  return turelemForrasokbol(0) === TURELEM_MAX
+    && turelemForrasokbol(null) === TURELEM_MAX
+    && turelemForrasokbol(undefined) === TURELEM_MAX
+    && turelemForrasokbol(-3) === TURELEM_MAX;
+});
+
+proba('⭐⭐⭐ ÉS A TERV VISZI MAGÁVAL — a vonal nem tudhatja, hány forrás van', async () => {
+  // Az L(1) fájl EGY társnál van meg, az L(2) NÉGYNÉL.
+  const jegyzet = jegyzettel([
+    [L(1), ['a:1']],
+    [L(2), ['b:1', 'c:1', 'd:1', 'e:1']]
+  ]);
+  const terv = atvitelTerv([{ lenyomat: L(1) }, { lenyomat: L(2) }], jegyzet);
+
+  const egyForras = terv.find((t) => t.lenyomat === L(1));
+  const negyForras = terv.find((t) => t.lenyomat === L(2));
+
+  return egyForras.forrasok === 1 && negyForras.forrasok === 4
+    // ⭐ A LÉNYEG: akinek több forrása van, azzal kevesebbet küzdünk.
+    && egyForras.turelem === TURELEM_MAX
+    && negyForras.turelem === 7500
+    && negyForras.turelem < egyForras.turelem;
 });
 
 export default futtatas;

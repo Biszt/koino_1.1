@@ -2340,3 +2340,63 @@ döntés, nem feledékenység.*
 késleltetése **11,5 → 3,0 ms**, a csúcsa **45 → 18 ms** — az ára a fájl-átvitelen
 **271 → 233 KB/s** (−14%), amit a D68 tudatosan vállal: *háttérmunka, és a redundancia
 pótolja.*
+
+---
+
+## 28. ⭐⭐ A TÜRELEM: AMENNYIT AZ ALTERNATÍVA HIÁNYA INDOKOL (2026-09-15, D68 / 5. lépés)
+
+**A D68 utolsó előtti tétele, Csaba 2. válasza.** A UDP-vonal **30 000 ms**-ig küzdött
+**egyetlen 1000 bájtos darabért** — akkor is, ha ugyanaz a fájl tíz másik társnál megvolt.
+⚠️ A döntés nem egy kisebb fix szám volt (*„az ugyanolyan varázsszám lenne"*), hanem hogy
+**függjön attól, hány forrásból szerezhető be ugyanaz**.
+
+### A szabály, és ami elvileg alátámasztja
+
+```
+  turelem(n) = max(5 000 ms, 30 000 ms / n)        n = hány társnál van meg
+```
+
+| források | türelem | miért |
+|---|---|---|
+| 1 | 30,0 mp | ha feladom, a fájl **nem jön meg** — nincs hova menni |
+| 2 | 15,0 mp | |
+| 4 | 7,5 mp | |
+| 6+ | 5,0 mp | ⛔ az alsó korlát: egy **800 ms oda-visszájú** vonalon ennyi is csak néhány próbálkozás |
+| 0 / ismeretlen | 30,0 mp | ⚠️ *ha nem tudunk alternatíváról, akkor nincs alternatíva* (D19) |
+
+⭐⭐ **És amiért a feladás tényleg olcsó:** a részleges fájl megmarad, és **a mérete maga az
+állapot** — a következő próbálkozás onnan folytatja. *A feladás itt nem adatvesztés, hanem
+társ-váltás.*
+
+### ⭐ A szétválasztás: a vonal nem tudhatja, hány forrás van
+
+A számítás a **fájl-rétegben** él (`fajlAtvitel.js`: `turelemForrasokbol`), a vonal pedig
+**paraméterként kapja** (`beallitas.feladasIdo`). ⛔ A vonal csak csomagokat lát — azt, hogy
+*érdemes-e még küzdeni ezzel a társsal*, csak az tudja, aki a birtoklás-jegyzetet ismeri.
+*Ugyanaz a szétválasztás, mint mindenhol: a vonal nem tud a koinóról (1. szabály).*
+
+⚠️ **A randevúnál (átfúrt rés) marad a teljes türelem** — ott **nincs másik forrás**: a
+pajzsfúrás egyetlen társsal nyitott rést, oda nem lehet „átváltani".
+
+### ⛔⛔ ÉS EGY VAK PRÓBÁT A RONTÁS-PRÓBA BUKTATOTT LE — HETEDSZER UGYANAZ
+
+Az első parancssor-próbám a kiírt *„türelem: 30,0 mp · 1 forrás"* sort nézte. ⛔ A bekötést
+kivéve (a `tcpNyito` harmadik paraméterét elhagyva) **a kiírás változatlan maradt**, mert az a
+**kiszámolt** értékből jön. *Azt mértem, hogy kiszámoltuk — nem azt, hogy használjuk.*
+
+✅ A javított próba **viselkedést mér**: hat (nem válaszoló) forrásnál a türelem az alsó
+korlát, tehát a bukásnak **~5 másodperc alatt** meg kell jönnie. Ha a szám nem jutna el a
+vonalig, a vonal alapértéke (30 mp) szólna — és az a próba időkorlátjába ütközne. ⭐ A
+rontás-próba ezt most **buktatja**.
+
+⭐ **Négy modul-próba is őrzi a szabályt:** monoton csökken · van alsó korlát · az ismeretlen
+forrásszám a legóvatosabb választ adja · és **a terv viszi magával** (`forrasok` + `turelem`
+minden tervelemben).
+
+### ⚠️ És egy hazudó felirat, amit ez a munka talált
+
+A `fajlok` parancs még mindig azt írta: *„A bájtok szállítása még nem épült meg: egy kép ma
+csak azon a készüléken van meg, ahol beszúrták."* ⛔ **2026-09-13 óta nem igaz** (felderítés →
+kérelem → átvitel → randevú), és 2026-09-14 óta az őrjárat magától is elhozza. ✅ Javítva.
+*Ugyanaz a csapda, amit az `Allaspont`-nál kimondtunk: ahol egy felirat mást mond, mint amit
+a kód tesz, ott előbb-utóbb valaki a feliratot hiszi el.*

@@ -35,6 +35,49 @@ export const EGYIDEJU_ATVITEL = 3;
 export const TARSANKENT = 1;
 
 // ===================================
+// ⭐⭐⭐ A TÜRELEM: AMENNYIT AZ ALTERNATÍVA HIÁNYA INDOKOL (D68, Csaba 2. válasza)
+// ===================================
+//
+// ⛔⛔ MI VOLT A BAJ: a UDP-vonal **30 000 ms**-ig küzdött EGYETLEN 1000 bájtos darabért,
+// és ez a szám **honnan sem jött** — se a vonalból, se a feladatból. ⚠️ Csaba döntése
+// (2026-09-14) nem az volt, hogy vigyük le egy kisebb fix számra: *„az ugyanolyan varázsszám
+// lenne"* — hanem hogy **függjön attól, hány forrásból szerezhető be ugyanaz.**
+//
+// ⭐ AZ ELV, EGY MONDATBAN: *a türelem annyi legyen, amennyit az alternatíva hiánya indokol.*
+//
+//   · **egy forrás** → ha feladom, a fájl **nem jön meg** (amíg új forrás nem akad),
+//     tehát érdemes kitartani;
+//   · **sok forrás** → a következő próbálkozás egy **másik vonalon** megy, tehát a váltás
+//     olcsóbb, mint a küzdelem.
+//
+// ⭐⭐ ÉS AMIÉRT A FELADÁS TÉNYLEG OLCSÓ: **a részleges fájl megmarad, és a mérete maga az
+// állapot** — a következő próbálkozás onnan folytatja, ahol abbamaradt. *A feladás itt nem
+// adatvesztés, hanem társ-váltás.*
+//
+// ⛔ AZ ALSÓ KORLÁT NEM DÍSZ: egy 800 ms oda-visszájú (műholdas, mobil) vonalon az
+// újraküldési idő önmagában 1–2 másodperc. Ha ez alá mennénk, **a lassú vonalon soha semmi
+// nem jönne át** — és a 9. szabály szerint a lassú vonal **alapeset, nem kivétel**.
+//
+// ⚠️ NEM állapot-befolyásoló állandók (D66): ha nálam más a türelem, **ugyanazt az állapotot
+// számoljuk** — csak máskor váltok társat.
+export const TURELEM_MAX = 30000;   // egyetlen forrásnál: nincs hova menni
+export const TURELEM_MIN = 5000;    // ennyi egy lassú vonalon is néhány próbálkozás
+
+/**
+ * ⭐ Mennyit küzdjünk EGY forrással, ha ennyi forrás van összesen?
+ *
+ * ⚠️ Az ismeretlen forrásszám (0, `null`, hibás) a **legóvatosabb** választ adja: ha nem
+ * tudunk alternatíváról, akkor nincs alternatíva. *A hiány nem ok a türelmetlenségre (D19).*
+ *
+ * @param {number} forrasok - hány társnál van meg ez a fájl
+ * @returns {number} ezredmásodperc
+ */
+export function turelemForrasokbol(forrasok) {
+  const n = Number.isFinite(forrasok) && forrasok > 0 ? Math.floor(forrasok) : 1;
+  return Math.max(TURELEM_MIN, Math.round(TURELEM_MAX / n));
+}
+
+// ===================================
 // 1. HOL TARTOK, ÉS MIT KÉRJEK?
 // ===================================
 
@@ -124,7 +167,13 @@ export function atvitelTerv(sorrend, jegyzet, beallitas = {}) {
     const szabad = tarsak.find((t) => (tarsTerhelese.get(t) ?? 0) < tarsankent);
     if (!szabad) continue;      // senki nem ér rá (vagy nem tudjuk, kinél van meg)
 
-    terv.push({ lenyomat: h.lenyomat, tars: szabad });
+    // ⭐ A TERV MEGMONDJA A TÜRELMET IS — mert itt tudjuk, hány forrás van (D68).
+    // *A vonal ezt nem tudhatja: ő csak csomagokat lát (1. szabály).*
+    terv.push({
+      lenyomat: h.lenyomat, tars: szabad,
+      forrasok: tarsak.length,
+      turelem: turelemForrasokbol(tarsak.length)
+    });
     tarsTerhelese.set(szabad, (tarsTerhelese.get(szabad) ?? 0) + 1);
   }
 
