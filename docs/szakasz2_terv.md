@@ -1128,3 +1128,102 @@ megtörténik-e — ahogy amit csak modul-próba mér, arról nem tudjuk, hogy e
   ellenőrzés ott is ingyen van (az `olvas` újra lenyomatol) — de a program nem kínálja.
 - ⚠️ **A `pajzsfuro` randevú-ágát parancssor-próba nem méri** (két készülék és két hálózat
   kellene hozzá); a `fajlRandevu` maga modul-szinten mérve van, két foglalattal.
+
+---
+
+## ⏭️ A KÖVETKEZŐ MUNKA: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., Csaba 3. válasza)
+
+**Ez a D68 utolsó tétele**, és Csaba 2026-09-15-én ezt jelölte ki következőnek. ⚠️ Ez a lap
+azért készült, hogy a következő session **ne vakon kezdjen bele** — mert az első kérdés nem
+az, hogy *hogyan*, hanem hogy *mennyit hoz*.
+
+### ⛔⛔ ELŐSZÖR A MÉRCE: MENNYIT HOZNA EGYÁLTALÁN?
+
+A mai (2026-09-15-i) állapot már **sokat megad a redundancia hasznából**, több forrás nélkül:
+
+- a **türelem** a forrásszámhoz igazodik (28. mérés): hat forrásnál 5 mp után **társat
+  váltunk**, nem küzdünk fél percig egy rossz vonallal;
+- a **részleges fájl megmarad**, tehát a váltás nem veszít adatot — a következő társ onnan
+  folytatja, ahol az előző abbahagyta.
+
+⭐ **Vagyis a „soros több forrás" (egyik után a másik) MÁR MEGVAN.** Ami hiányzik, az a
+**párhuzamos** eset: ugyanannak a fájlnak a különböző szeletei **egyszerre, több társtól**.
+
+⛔ **Ezért az első lépés MÉRÉS, nem építés** (ugyanaz a rend, mint a D67/D68-nál): mennyivel
+gyorsabb egy fájl, ha három társtól jön párhuzamosan, mint ha egytől? ⚠️ És a válasz **nem
+triviálisan „háromszor"**: a szűk keresztmetszet gyakran a **saját letöltésünk**, nem a
+társak feltöltése — akkor a párhuzamosság **semmit nem hoz**, csak bonyolít.
+
+*A műszer készen áll: a `resSebessegMeres.js` tud szűk keresztmetszetet, versengő folyamot és
+veszteséget. Egy „három forrás" sor beletehető.*
+
+### A mai szerkezet, és pontosan mi áll az útban
+
+```
+  fajlAtvitel.js    kovetkezoKeres(eddigi) → { eltolas }      ← a MÉRETBŐL számol
+  fajlTar.js        reszlegesMeret / reszlegesHozzafuz         ← append: SORRENDET feltételez
+                    reszlegesLezaras                           ← újra lenyomatol, majd átnevez
+  atvitelTerv       fájlonként EGY társ (TARSANKENT = 1)
+```
+
+⭐⭐ **A mai elv: „a részleges fájl mérete MAGA az állapot"** — nincs szelet-nyilvántartás,
+mert a szeletek rögzített méretűek és **sorrendben** jönnek. *Ugyanaz, mint az esemény-tárnál:
+a tartalom az igazság, nem egy mellette vezetett napló.* ⛔ Több forrásnál ez a feltevés
+elesik: a 3. szelet megjöhet az 1. előtt.
+
+### ⭐ A javasolt irány — és amiért illik a koinóba
+
+Ne vezessünk be **naplót**; tartsuk meg az elvet, hogy **a tartalom az állapot**:
+
+```
+  koino-adat/<koino>/fajlok/reszleges/<lenyomat>/<eltolas>     ← szeletenként egy fájl
+```
+
+⭐ Ekkor **„mi van meg?" = a mappa listája** — nincs külön nyilvántartás, amit szinkronban
+kellene tartani, és egy megszakadt írás legfeljebb egy szeletet visz. A lezárás ugyanaz marad:
+a szeleteket eltolás szerint összefűzzük, **újra lenyomatoljuk**, és csak akkor nevezzük át.
+
+⚠️ Az ára kimondva: sok apró fájl (2 MB-nál 32 darab), és egy mappa-takarítás a lezárásnál.
+
+### ⛔⛔ A VALÓDI DÖNTÉSI PONT, AMI CSABÁÉ: A ROSSZ SZELET
+
+Ma a lenyomat **a teljes fájlra** szól. Ha több forrásból szedjük össze, és **egy társ hamis
+szeletet ad**, a lezárás elbukik — ⛔ de **nem tudjuk, melyik szelet volt rossz**, tehát az
+egészet eldobjuk, és kezdhetjük elölről. *Egy rosszindulatú társ így olcsón tehet tönkre egy
+nagy letöltést, újra és újra.*
+
+Három válasz lehetséges, és mindegyiknek ára van:
+
+1. **Nem teszünk semmit** — a lezárás elbukik, újrakezdjük. ⭐ Olcsó és biztonságos (hamis
+   fájl SOHA nem kerül be), ⛔ de egy támadó ingyen ismételheti.
+2. **Szeletenkénti lenyomat az eseményben** — ⛔ ez **új adat a láncon**, és a 6. szabály
+   KEMÉNY fele tiltja: egy 2 MB-os fájlnál 32 × 43 karakter ≈ 1,4 KB, *négyszerese egy teljes
+   eseménynek.*
+3. ⭐ **Merkle-fa**: az esemény továbbra is **egyetlen** lenyomatot hordoz (a gyökeret), a
+   szelet-hasheket és az ellenőrző ágat a **szállítás** adja át (nem a lánc). Így szeletenként
+   ellenőrizhetünk, és a rossz forrás **azonosítható**. ⚠️ Ára: a fájl-lenyomat számítása
+   megváltozna — ⛔⛔ **és ez visszamenőleg minden meglévő hivatkozást érvénytelenítene**,
+   hacsak nem tartunk meg kétféle lenyomatot. *Ez nem apró döntés.*
+
+⭐ **A javaslatom az 1-es**, egy kiegészítéssel: ha a lezárás elbukik, **jegyezzük fel, kik
+adtak szeletet** ehhez a próbálkozáshoz, és a következő körben **más forrásokkal** próbáljuk.
+⛔ *Ez nem rangsor és nem „ki mennyit adott" mérleg (D18/2, D48)* — csak egyetlen bukott
+letöltés helyi tanulsága, ami a következő buli után el is felejthető.
+
+### ⏸️ Amit el kell dönteni, mielőtt kód születik
+
+1. **Megéri-e egyáltalán?** → előbb a mérés (fent).
+2. **A rossz szelet válasza** → 1., 2. vagy 3. (a javaslat: 1.).
+3. **Hány forrás egy fájlhoz?** A mai `TARSANKENT = 1` társanként egy átvitelt enged; a
+   fájlonkénti korlát (ma szintén egy) lazulna. ⚠️ A 9. szabály kérdése: *„mit csinál
+   egymilliárdnál?"* — a szeletszám fájlonként korlátos (2 MB / 64 KB = 32), de a **források
+   száma** is korlátos kell legyen.
+4. **A `FAJL_KORLAT`** (ma 2 MB, Csaba nyitott kérdése) ezzel összefügg: nagyobb fájloknál nő
+   a párhuzamosság haszna és a rossz-szelet kockázata is.
+
+### ⚠️ És ami NEM tartozik ide
+
+- A **randevú** (átfúrt rés) marad egy forrásos: ott a pajzsfúrás **egyetlen társsal** nyitott
+  rést, nincs kihez fordulni.
+- A **csere** (esemény-forgalom) érintetlen: ott a redundancia már ma is megvan (a postaláda
+  és a társ-lista), és nincs szeletelés.

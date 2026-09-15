@@ -15,7 +15,24 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-14)
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
+
+### ⏭️⏭️ A KÖVETKEZŐ MUNKA: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) — a terv készen áll
+
+⭐ **A részletes terv, a nyitott döntésekkel:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md)
+legvége („A KÖVETKEZŐ MUNKA"). ⛔⛔ **És az első lépés ott sem az építés, hanem a MÉRÉS:**
+a „soros több forrás" (társ-váltás rossz vonalnál) **már megvan** (28. mérés), tehát előbb azt
+kell megmérni, hogy a **párhuzamos** eset mennyit tenne hozzá — *a szűk keresztmetszet gyakran
+a saját letöltésünk, és akkor a párhuzamosság semmit nem hoz, csak bonyolít.*
+
+⛔⛔ **CSABA ELVE A SORRENDRŐL (2026-09-15) — egy friss session ösztönösen ez ellen fog
+javasolni:** *„nem kell, hogy minél hamarabb használható legyen. Az a lényeg, hogy a
+**megfelelő sorrendben** fejlesszünk, nem az, hogy minél hamarabb lássak valamit."*
+⭐ Vagyis **ne** ajánlj „gyors győzelmet" vagy demózható funkciót azzal, hogy *ettől lesz
+hamarabb használható*. A sorrendet a **függőségek és a szerkezet** döntsék el (9. szabály: a
+szerkezetet nem lehet utólag beletenni), és a választás Csabáé.
+
+## ⏭️ A SZAKASZ 5 ÁLLAPOTA (2026-09-14)
 
 ✅ **A SZAKASZ 5 GERINCE KÉSZ** (5.1–5.7): a helyi kapu · a kérdezhető pakli · a kártyák ·
 a hiányzó műveletek · a modálok magja · a **belépő tér** · a **szövegszerkesztő** · a
