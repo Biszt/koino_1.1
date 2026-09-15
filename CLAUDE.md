@@ -17,13 +17,42 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
-### ⏭️⏭️ A KÖVETKEZŐ MUNKA: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) — a terv készen áll
+### ⏭️⏭️ A KÖVETKEZŐ MUNKA: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) — ✅ A MÉRÉS MEGVAN, a DÖNTÉS Csabáé
 
 ⭐ **A részletes terv, a nyitott döntésekkel:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md)
-legvége („A KÖVETKEZŐ MUNKA"). ⛔⛔ **És az első lépés ott sem az építés, hanem a MÉRÉS:**
-a „soros több forrás" (társ-váltás rossz vonalnál) **már megvan** (28. mérés), tehát előbb azt
-kell megmérni, hogy a **párhuzamos** eset mennyit tenne hozzá — *a szűk keresztmetszet gyakran
-a saját letöltésünk, és akkor a párhuzamosság semmit nem hoz, csak bonyolít.*
+legvége („A KÖVETKEZŐ MUNKA"). ⛔⛔ **És az első lépés ott sem az építés, hanem a MÉRÉS** volt —
+✅ **ez 2026-09-15-én megtörtént: 29. mérés** ([`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md)),
+`node koino/meres/resSebessegMeres.js`, a „TÖBB FORRÁSBÓL EGY FÁJL" szakasz.
+
+⭐⭐⭐ **A VÁLASZ NEM EGY SZÁM, HANEM EGY ARÁNY: a haszon pontosan addig tart, amíg a források
+EGYÜTT be nem töltik a saját letöltésünket.** Három eset, 512 KB, +10 ms:
+
+- **(A) a FORRÁS feltöltése a szűk** → **×2,0** (2 forrás) és **×2,7** (3) — majdnem lineáris;
+- ⛔ **(B) a MI letöltésünk a szűk** → **×1,0**: *a párhuzamosság semmit nem hoz, csak bonyolít*
+  (pontosan a terv figyelmeztetése, számmal);
+- **(C) valósághű aszimmetria** (a forrás feltöltése a letöltésünk negyede) → ×1,6 / **×1,9** / **×2,6** (5 forrás).
+
+⭐ **És az otthoni vonal az (A) felé húz:** az aszimmetrikus kapcsolatokon a **feltöltés** a szűk,
+tehát egy társ feltöltése tipikusan töredéke a mi letöltésünknek. *A D68 redundancia-érve ezzel
+számot kapott: nem csak a türelem lesz olcsóbb (28. mérés), hanem a sebesség is nő.*
+
+⭐⭐ **ÉS EGY LELET A KÓDBÓL, MÉG A MÉRÉS ELŐTT: a protokoll MÁR TUDJA.** A `FAJLKEREK` hordozza
+az `eltolas`-t, és a kiszolgáló **állapotmentes** — a kérő mondja meg, honnan kér. *Vagyis a több
+forrás nem protokoll-kérdés, hanem kliens-oldali szerkezeté* (a `fajlTar` mai elve, hogy „a
+részleges fájl mérete maga az állapot", sorrendet feltételez — ez az, ami útban áll).
+
+⛔⛔ **ÉS KÉT MAGYARÁZATOMAT A MÉRÉS CÁFOLTA, a hiba a MŰSZERBEN volt.** A (C) sor elsőre
+×1,8-nál megállt; sem a Vegas-jel (jel nélkül ugyanaz), sem a szemcse (1 MB-on ugyanaz) nem
+magyarázta. ⭐ A valódi ok: a műszer sora **darabszám-alapú**, tehát egy ~50 bájtos **nyugta**
+ugyanannyiba kerül benne, mint egy 1000 bájtos adat-darab — a közös letöltő soron a saját
+nyugtáink versengtek a szeletekkel. *Harmadszor ugyanaz a lecke: a műszert is meg kell mérni —
+és ha elfogadtam volna az első ×1,8-at, a döntés egy műszer-hibán állna.*
+
+⏸️⏸️ **AMI MOST KÖVETKEZIK, ÉS CSABÁÉ:** *(1)* **megéri-e** megépíteni (a fenti számok alapján) ·
+*(2)* ⛔ **a rossz szelet válasza** — ez nem sebesség, hanem bizalom: ma a lenyomat a TELJES
+fájlra szól, tehát egy hamis szelet az egészet elbuktatja, és **nem tudjuk, melyik volt**
+(három válasz, mindegyik ára kimondva a tervben; a javaslat az 1., helyi kiegészítéssel) ·
+*(3)* **hány forrás** egy fájlhoz (a 9. szabály: felülről korlátosnak kell lennie).
 
 ⛔⛔ **CSABA ELVE A SORRENDRŐL (2026-09-15) — egy friss session ösztönösen ez ellen fog
 javasolni:** *„nem kell, hogy minél hamarabb használható legyen. Az a lényeg, hogy a
@@ -588,7 +617,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **170 fájl, 2651,6 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **170 fájl, 2670,6 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -713,6 +742,9 @@ node koino/meres/verzioMeres.js ir|olvas  # ⛔ A PROGRAM-VERZIÓ mint az állap
 node koino/meres/resSebessegMeres.js    # ⭐ A FÁJL-ÁTVITEL SEBESSÉGE az átfúrt résen (16.)
                                  # ⭐⭐ 2026-09-14 óta: VESZTESÉG · ingadozás · lassú vonal
                                  # (a D67 alapvonala) — magvas véletlen, hogy összevethető legyen
+                                 # ⭐⭐⭐ 2026-09-15 óta: TÖBB FORRÁSBÓL EGY FÁJL (29. mérés) —
+                                 # KÉT sor egymás után: a forrás feltöltése ÉS a mi letöltésünk
+                                 # (közös). A haszon a kettő arányától függ: ×2,7 … ×1,0
 node koino/meres/tcpLekepezesMeres.js   # ⭐⭐ CÉLFÜGGETLEN-E a router TCP-leképezése? (18.)
                                  # (a 17. a terepmérés volt — nincs parancsa, két készülék kell hozzá)
 node koino/meres/meghivasMeres.js       # ⭐ A MEGHÍVÁSOS BELÉPÉS: védelem ÉS ár, hat változatban
@@ -724,7 +756,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 170 fájl, 2651,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 170 fájl, 2670,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

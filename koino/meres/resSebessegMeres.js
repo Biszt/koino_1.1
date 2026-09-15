@@ -26,7 +26,12 @@ import { createSocket } from 'node:dgram';
 
 import { fajlBlobTarolo } from '../js/tar/fajlTar.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
-import { parbeszed, fajlHozatala, tcpNyito, figyeloIndulasa } from '../js/csere/vonal.js';
+import {
+  parbeszed, fajlHozatala, tcpNyito, figyeloIndulasa,
+  // ⭐ A több forrás méréséhez: a kiszolgáló oldal a VALÓDI éles kód (D68 / 6.).
+  fajlKiszolgalas
+} from '../js/csere/vonal.js';
+import { SZELET_MERET } from '../js/csere/fajlAtvitel.js';
 import { udpKapcsolat, fajlUdpResen } from '../js/csere/udpVonal.js';
 
 // ⚠️ A koino minden metódusa naplóz — a mérés számai csak így olvashatók.
@@ -116,7 +121,7 @@ function magvasVeletlen(mag) {
  * @param {Object} [beallitas.idegen] - { fajta: 'egyenletes'|'moho', uteme }
  */
 async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
-  savszelesseg = 0, sorMeret = 32, idegen = null } = {}) {
+  savszelesseg = 0, sorMeret = 32, idegen = null, kozosVonal = null } = {}) {
   const nyit = () => new Promise((kesz) => {
     const h = createSocket('udp4');
     h.bind(0, '127.0.0.1', () => kesz(h));
@@ -149,6 +154,36 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
    * @returns {{eldobva: boolean, sorIdo: number, varakozok: number}}
    */
   const sorbaAll = (h, most) => {
+    // ⭐⭐⭐ KÉT SOR, EGYMÁS UTÁN (2026-09-15, a D68 / 6. mérése) — mert a valóságban is
+    // kettő van, és a több forrás kérdése ÉPP AZON MÚLIK, melyik a szűkebb:
+    //
+    //   1. a FORRÁS feltöltése — foglalatonként külön (minden társnak saját vonala van),
+    //   2. a MI letöltésünk — ⛔ **KÖZÖS**: minden forrás ugyanabba a csövünkbe érkezik.
+    //
+    // ⚠️ Enélkül a mérés hazudna: három foglalat automatikusan háromszoros sávot kapna,
+    // és a „párhuzamosság háromszoros" válasz a MŰSZERBŐL jönne, nem a valóságból.
+    // *Otthon épp a másik irány igaz: a feltöltés a szűk, ezért várunk hasznot tőle.*
+    const elso = forrasSorbaAll(h, most);
+    if (elso.eldobva || !kozosVonal || kozosVonal.szolgalatiIdo <= 0) return elso;
+
+    // A csomag a forrás sorából ekkor lép ki, és EKKOR áll be a közös sorba.
+    const erkezik = most + elso.sorIdo;
+    const varakozok = Math.max(0,
+      Math.round((kozosVonal.szabadEttol - erkezik) / kozosVonal.szolgalatiIdo));
+    if (varakozok > kozosVonal.maxSor) kozosVonal.maxSor = varakozok;
+
+    if (varakozok >= kozosVonal.sorMeret) {
+      kozosVonal.eldobott++;
+      return { eldobva: true, sorIdo: 0, varakozok };
+    }
+
+    const indul = Math.max(erkezik, kozosVonal.szabadEttol);
+    kozosVonal.szabadEttol = indul + kozosVonal.szolgalatiIdo;
+    return { eldobva: false, sorIdo: kozosVonal.szabadEttol - most, varakozok };
+  };
+
+  /** A forrás saját vonala — ez volt eddig az egyetlen sor. */
+  const forrasSorbaAll = (h, most) => {
     if (szolgalatiIdo <= 0) return { eldobva: false, sorIdo: 0, varakozok: 0 };
 
     const allapot = vonalAllapot.get(h) ?? { szabadEttol: 0 };
@@ -189,7 +224,22 @@ async function udpParos({ kesleltetes = 0, ingadozas = 0, vesztes = 0, mag = 1,
         }
 
         // ===== ⭐ A SOR: a csomag KIVÁRJA, amíg a vonal felszabadul =====
-        const { eldobva, sorIdo } = sorbaAll(h, Date.now());
+        //
+        // ⛔⛔ EGY MŰSZER-HIBA, AMIT A TÖBB FORRÁS MÉRÉSE HOZOTT KI (2026-09-15): a sor
+        // DARABSZÁM-alapú, nem bájt-alapú — tehát egy ~50 bájtos NYUGTA ugyanannyiba
+        // kerül benne, mint egy 1000 bájtos adat-darab. Egy forrásnál ez nem számított
+        // (a két irány külön soron ment), ⛔ **a közös letöltő sornál viszont uralkodik**:
+        // a nyugtáink ott versengtek a beérkező szeletekkel, és a 600/s-ből effektíve
+        // 300/s maradt az adatnak. *Pontosan ez adta a megmagyarázhatatlan ×1,8-at.*
+        //
+        // ⭐ A javítás a kérdéshez szabott: a `kozosVonal` a LETÖLTÉSI irány modellje,
+        // tehát csak a forrás felől jövő forgalomra vonatkozik. A nyugta a mi feltöltő
+        // irányunkon megy, ami nincs modellezve — és ez közelítőleg helyes, mert a nyugta
+        // húszszor kisebb. ⚠️ A késleltetés természetesen RÁ IS vonatkozik.
+        const sorKell = !(kozosVonal && h === masik);
+        const { eldobva, sorIdo } = sorKell
+          ? sorbaAll(h, Date.now())
+          : { eldobva: false, sorIdo: 0 };
         if (eldobva) {
           szamlalo.eldobott++;
           szamlalo.torlodas++;
@@ -343,6 +393,167 @@ async function resenMeres(meret, beallitas = {}) {
              csomag: p.szamlalo, idegen: p.idegen };
   } finally {
     p.bezar();
+  }
+}
+
+// ===================================
+// ⏭️ TÖBB FORRÁSBÓL EGY FÁJL — MENNYIT HOZ? (D68 / 6., 2026-09-15)
+// ===================================
+//
+// ⛔⛔ EZ MÉRÉS, NEM ÉPÍTÉS — és szándékosan ebben a sorrendben (a terv:
+// `docs/szakasz2_terv.md`, „A KÖVETKEZŐ MUNKA"). A kérdés nem az, hogy *hogyan*, hanem
+// hogy **mennyit hoz egyáltalán**. ⚠️ A válasz nem triviálisan „háromszor": ha a szűk
+// keresztmetszet a **saját letöltésünk**, a párhuzamosság semmit nem ad, csak bonyolít.
+//
+// ⭐⭐ ÉS AMI A MÉRÉS ELŐTT KIDERÜLT, A KÓDBÓL: a protokoll **már ma tud** tetszőleges
+// eltolásból kérni — a `FAJLKEREK` hordozza az `eltolas`-t, és a kiszolgáló
+// (`fajlSzeletekKiszolgalasa`) **állapotmentes**: a kérő mondja meg, honnan kér.
+// *Vagyis a több forrás nem protokoll-kérdés, hanem kliens-oldali szerkezeté.*
+//
+// ⚠️ EZÉRT MÉRHETŐ ÉPÍTÉS NÉLKÜL: a kérő oldalát itt utánozzuk (memóriában gyűjtünk,
+// és a végén lenyomatolunk), a KISZOLGÁLÓ viszont a valódi éles kód. A `fajlTar` mai
+// „a részleges fájl mérete maga az állapot" elve érintetlen marad, amíg nem tudjuk,
+// megéri-e átalakítani.
+
+/** Soronkénti JSON-olvasó — a `vonal.js` `uzenetSor`-ának mérő-oldali párja. */
+function sorOlvaso(kapcsolat) {
+  const beerkezett = [];
+  const varakozok = [];
+  let puffer = '';
+
+  kapcsolat.setEncoding('utf8');
+  kapcsolat.on('data', (darab) => {
+    puffer += darab;
+    let vege;
+    while ((vege = puffer.indexOf('\n')) !== -1) {
+      const sor = puffer.slice(0, vege);
+      puffer = puffer.slice(vege + 1);
+      if (!sor.trim()) continue;
+      try { beerkezett.push(JSON.parse(sor)); } catch { /* a mérésben nincs szemét */ }
+    }
+    while (varakozok.length && beerkezett.length) varakozok.shift()(beerkezett.shift());
+  });
+
+  return () => (beerkezett.length
+    ? Promise.resolve(beerkezett.shift())
+    : new Promise((t) => varakozok.push(t)));
+}
+
+/**
+ * Egy fájl elhozása N forrásból, párhuzamosan.
+ *
+ * ⭐⭐ A FELOSZTÁS MUNKALOPÓ, NEM ELŐRE KIOSZTOTT: van egy közös „következő szelet"
+ * számláló, és minden forrás azt kéri, amelyik épp sorra kerül. ⛔ Ez nem kényelem:
+ * előre kiosztott tartományoknál **a leglassabb forrás szabná meg a végét** (a többi
+ * rég végzett, és állna) — márpedig a valóságban a források SOHA nem egyforma gyorsak.
+ * *Ugyanaz az elv, mint a türelemnél (28. mérés): ne várjunk arra, aki nem halad.*
+ *
+ * @param {number} forrasok - hány társtól kérünk egyszerre
+ */
+async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
+  const gazda = await ujBlob('tf-gazda');
+  const vendeg = await ujBlob('tf-vendeg');
+
+  const tartalom = new Uint8Array(meret);
+  for (let i = 0; i < meret; i++) tartalom[i] = i % 251;
+  const { lenyomat } = await gazda.ir(tartalom);
+
+  // ⭐ A KÖZÖS LETÖLTŐ VONAL — ezen osztozik MINDEN forrás. Ez a mérés lelke: enélkül
+  // három foglalat automatikusan háromszoros sávot kapna, és a műszer adná a választ.
+  const kozosVonal = (beallitas.kozosSav ?? 0) > 0
+    ? {
+      szolgalatiIdo: 1000 / beallitas.kozosSav,
+      szabadEttol: 0,
+      sorMeret: beallitas.kozosSorMeret ?? 64,
+      maxSor: 0,
+      eldobott: 0
+    }
+    : null;
+
+  const parosok = [];
+  for (let i = 0; i < forrasok; i++) {
+    // ⚠️ Forrásonként MÁS mag: különben mindegyik ugyanott veszítene csomagot, ami a
+    // párhuzamosságnak hamis előnyt adna (a vesztések tökéletesen fedve lennének).
+    parosok.push(await udpParos({ ...beallitas, mag: (beallitas.mag ?? 1) + i, kozosVonal }));
+  }
+
+  const szeletSzam = Math.max(1, Math.ceil(meret / SZELET_MERET));
+  let kovetkezoSzelet = 0;
+  const darabok = new Map();          // eltolás → bájtok
+  const forrasonkent = new Array(forrasok).fill(0);
+
+  const kezd = Date.now();
+  try {
+    const munkak = [];
+
+    for (let i = 0; i < forrasok; i++) {
+      const p = parosok[i];
+
+      // ----- A KISZOLGÁLÓ OLDAL: a VALÓDI éles kód (passzív, nem beszél elsőként) -----
+      munkak.push((async () => {
+        const kapcsolat = udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort,
+          { torlodasJel: beallitas.torlodasJel ?? 'vegas', utemezes: beallitas.utemezes });
+        kapcsolat.setTimeout(120000, () => kapcsolat.destroy(new Error('néma kérő')));
+        try {
+          await fajlKiszolgalas(kapcsolat, (l) => gazda.olvas(l));
+        } catch { /* a kérő lezárta — ez a rendes befejezés */ } finally {
+          kapcsolat.destroy();
+        }
+      })());
+
+      // ----- A KÉRŐ OLDAL: mérő-oldali utánzat (ez épülne meg, ha megéri) -----
+      munkak.push((async () => {
+        const kapcsolat = udpKapcsolat(p.masik, '127.0.0.1', p.egyikPort,
+          { torlodasJel: beallitas.torlodasJel ?? 'vegas', utemezes: beallitas.utemezes });
+        kapcsolat.setTimeout(120000, () => kapcsolat.destroy(new Error('néma forrás')));
+        const kovetkezo = sorOlvaso(kapcsolat);
+
+        try {
+          for (;;) {
+            const sorszam = kovetkezoSzelet++;
+            if (sorszam >= szeletSzam) break;
+            const eltolas = sorszam * SZELET_MERET;
+
+            kapcsolat.write(JSON.stringify(
+              { uzenet: 'FAJLKEREK', koino: KOINO, lenyomat, eltolas }) + '\n');
+
+            let uzenet;
+            do { uzenet = await kovetkezo(); }
+            while (uzenet.uzenet !== 'FAJLSZELET' && uzenet.uzenet !== 'FAJLNINCS');
+            if (uzenet.uzenet === 'FAJLNINCS') throw new Error('a forrásnál sincs meg');
+
+            darabok.set(uzenet.eltolas, Buffer.from(uzenet.adat ?? '', 'base64'));
+            forrasonkent[i]++;
+          }
+          try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ }
+          if (typeof kapcsolat.kiurites === 'function') await kapcsolat.kiurites();
+        } finally {
+          kapcsolat.destroy();
+        }
+      })());
+    }
+
+    await Promise.all(munkak);
+
+    // ⛔⛔ A LEZÁRÁS UGYANÚGY ELLENŐRIZ: összefűzzük eltolás szerint, és ÚJRA
+    // LENYOMATOLUNK. *Ha a mérés nem ezt tenné, azt mérné, hogy gyorsan jöttek bájtok —
+    // nem azt, hogy megvan a fájl.*
+    const osszefuzott = Buffer.concat(
+      [...darabok.keys()].sort((a, b) => a - b).map((e) => darabok.get(e)));
+    const vissza = await vendeg.ir(new Uint8Array(osszefuzott));
+
+    return {
+      kesz: vissza.lenyomat === lenyomat && osszefuzott.length === meret,
+      ido: Date.now() - kezd,
+      szeletek: darabok.size,
+      forrasonkent,
+      csomag: parosok[0].szamlalo,
+      kozosSor: kozosVonal ? { maxSor: kozosVonal.maxSor, eldobott: kozosVonal.eldobott } : null
+    };
+  } catch (hiba) {
+    return { kesz: false, ido: Date.now() - kezd, ok: hiba.message, forrasonkent };
+  } finally {
+    for (const p of parosok) p.bezar();
   }
 }
 
@@ -632,6 +843,89 @@ for (const [cimke, be] of [
     { kesleltetes: 5, savszelesseg: 500, ...be,
       idegen: { fajta: 'egyenletes', uteme: 50 } }));
 }
+
+// ===================================
+// ⏭️ TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) — A MÉRÉS AZ ÉPÍTÉS ELŐTT
+// ===================================
+//
+// ⛔⛔ A KÉRDÉS NEM AZ, HOGY HOGYAN, HANEM HOGY MENNYIT HOZ. És a válasz nem egy szám:
+// attól függ, **melyik a szűk keresztmetszet** — a forrás feltöltése vagy a mi letöltésünk.
+// Ezért a műszer 2026-09-15 óta KÉT sort modellez egymás után (lásd `sorbaAll`).
+kiir('');
+kiir('  ⏭️ TÖBB FORRÁSBÓL EGY FÁJL — mennyit hoz? (D68 / 6.)');
+kiir('  ' + '─'.repeat(72));
+
+const TF_MERET = 512 * 1024;
+
+async function tobbForrasSor(cimke, forrasok, be, alapIdo, meret = TF_MERET) {
+  const e = await tobbForrasMeres(meret, forrasok, be);
+  const sebesseg = e.ido > 0 ? (meret / 1024) / (e.ido / 1000) : 0;
+  kiir('  ' + (cimke + ' · ' + forrasok + ' forrás').padEnd(32)
+    + String(e.ido).padStart(7) + ' ms'
+    + sebesseg.toFixed(0).padStart(7) + ' KB/s'
+    + (alapIdo ? ('×' + (alapIdo / e.ido).toFixed(1)).padStart(7) : ''.padStart(7))
+    + '   ' + (e.kesz ? 'szeletek: ' + e.forrasonkent.join('/')
+      : '⛔ ' + (e.ok ?? 'NEM LETT KÉSZ')));
+  return e.ido;
+}
+
+// ----- (A) A FORRÁS FELTÖLTÉSE A SZŰK — a mi letöltésünk bőséges -----
+// ⭐ Ez az otthoni eset: az aszimmetrikus vonalakon a FELTÖLTÉS a szűk, tehát három társ
+// együtt háromszor annyit tud feltölteni, mint egy.
+{
+  const be = { kesleltetes: 10, savszelesseg: 200, kozosSav: 0 };
+  const alap = await tobbForrasSor('(A) a FORRÁS a szűk', 1, be, 0);
+  await tobbForrasSor('(A) a FORRÁS a szűk', 2, be, alap);
+  await tobbForrasSor('(A) a FORRÁS a szűk', 3, be, alap);
+}
+
+// ----- (B) A MI LETÖLTÉSÜNK A SZŰK — a források bőségesek -----
+// ⛔ Itt a párhuzamosságtól SEMMIT nem várunk: a három forrás ugyanabba a csőbe tölt.
+// *Ez a terv figyelmeztetése, számmal.*
+kiir('');
+{
+  const be = { kesleltetes: 10, savszelesseg: 0, kozosSav: 200 };
+  const alap = await tobbForrasSor('(B) a MI letöltésünk a szűk', 1, be, 0);
+  await tobbForrasSor('(B) a MI letöltésünk a szűk', 3, be, alap);
+}
+
+// ----- (C) A VALÓSÁGHŰ ESET: aszimmetria -----
+// A társak feltöltése lassú (150 darab/s), a mi letöltésünk négyszer bővebb (600/s).
+// ⭐ Itt látszik, hol ÁLL MEG a haszon: amint a források együtt betöltik a mi csövünket.
+kiir('');
+{
+  const be = { kesleltetes: 10, savszelesseg: 150, kozosSav: 600 };
+  const alap = await tobbForrasSor('(C) aszimmetrikus (4× letöltés)', 1, be, 0);
+  await tobbForrasSor('(C) aszimmetrikus (4× letöltés)', 2, be, alap);
+  await tobbForrasSor('(C) aszimmetrikus (4× letöltés)', 3, be, alap);
+  await tobbForrasSor('(C) aszimmetrikus (4× letöltés)', 5, be, alap);
+}
+
+// ----- ⛔⛔ MIÉRT ÁLL MEG A HASZON A (C) SORBAN? -----
+//
+// A letöltésünk NÉGYSZER bővebb a forrásénál, tehát a plafonnak ~×4-nek kellene lennie.
+// ⚠️ Egy szám magyarázat nélkül nem eredmény — két gyanúsított van, és mindkettő mérhető.
+kiir('');
+{
+  // (1) ⭐ A JEL: a Vegas a KÖZÖS sor késleltetését látja. Minden forrás ugyanazt a
+  //     torlódást érzékeli, tehát MINDEGYIK visszafog — pedig együtt sem töltik meg.
+  const be = { kesleltetes: 10, savszelesseg: 150, kozosSav: 600, torlodasJel: 'nincs' };
+  const alap = await tobbForrasSor('(C/1) ugyanaz, JEL NÉLKÜL', 1, be, 0);
+  await tobbForrasSor('(C/1) ugyanaz, JEL NÉLKÜL', 3, be, alap);
+}
+kiir('');
+{
+  // (2) ⭐ A SZEMCSE: 512 KB = 8 szelet. Háromfelé osztva 3/3/2 — a leghosszabb ág
+  //     szabja meg a véget, tehát a plafon ⌈8/3⌉/8 = ×2,7, nem ×3. Nagyobb fájlon
+  //     finomabb a szemcse: 1 MB = 16 szelet → 6/5/5.
+  const be = { kesleltetes: 10, savszelesseg: 150, kozosSav: 600 };
+  const alap = await tobbForrasSor('(C/2) 1 MB — finomabb szemcse', 1, be, 0, 1024 * 1024);
+  await tobbForrasSor('(C/2) 1 MB — finomabb szemcse', 3, be, alap, 1024 * 1024);
+}
+
+kiir('');
+kiir('  ⚠️ A `szeletek:` oszlop a MUNKALOPÓ felosztást mutatja: forrásonként hány szeletet');
+kiir('     hozott. Nem egyenlő részekre osztunk — aki ráér, az kéri a következőt.');
 
 kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. Az ABLAK ELŐTT a késleltetés MINDEN');
 kiir('   darabra rárakódott (~1000 bájtonként egy oda-vissza) — ez volt a 16. mérés');

@@ -1154,8 +1154,26 @@ gyorsabb egy fájl, ha három társtól jön párhuzamosan, mint ha egytől? ⚠
 triviálisan „háromszor"**: a szűk keresztmetszet gyakran a **saját letöltésünk**, nem a
 társak feltöltése — akkor a párhuzamosság **semmit nem hoz**, csak bonyolít.
 
-*A műszer készen áll: a `resSebessegMeres.js` tud szűk keresztmetszetet, versengő folyamot és
-veszteséget. Egy „három forrás" sor beletehető.*
+### ✅ A MÉRÉS MEGTÖRTÉNT (2026-09-15) — 29. mérés
+
+`node koino/meres/resSebessegMeres.js`, a „TÖBB FORRÁSBÓL EGY FÁJL" szakasz. Jegyzőkönyv:
+[`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) 29.
+
+⭐⭐⭐ **A válasz nem egy szám, hanem egy ARÁNY: a haszon pontosan addig tart, amíg a források
+EGYÜTT be nem töltik a saját letöltésünket.**
+
+| eset | 2 forrás | 3 forrás | 5 forrás |
+|---|---|---|---|
+| **(A) a FORRÁS feltöltése a szűk** | ×2,0 | **×2,7** | |
+| ⛔ **(B) a MI letöltésünk a szűk** | | **×1,0** — *semmit nem hoz* | |
+| **(C) valósághű aszimmetria** (4× letöltés) | ×1,6 | ×1,9 | **×2,6** |
+
+⭐ **És az otthoni vonal az (A) felé húz:** az aszimmetrikus kapcsolatokon a **feltöltés** a
+szűk. ⭐⭐ **A mérés előtt pedig a kód adott egy leletet:** a `FAJLKEREK` **már ma hordozza az
+`eltolas`-t**, és a kiszolgáló **állapotmentes** — *a több forrás nem protokoll-kérdés, hanem
+kliens-oldali szerkezeté.* ⛔ A műszerhez viszont **két sort** kellett modellezni (a forrás
+feltöltése + a mi közös letöltésünk), különben három foglalat automatikusan háromszoros sávot
+kapott volna, és a „×3" a műszerből jött volna, nem a valóságból.
 
 ### A mai szerkezet, és pontosan mi áll az útban
 

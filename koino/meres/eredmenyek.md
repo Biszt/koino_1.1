@@ -2400,3 +2400,84 @@ csak azon a készüléken van meg, ahol beszúrták."* ⛔ **2026-09-13 óta nem
 kérelem → átvitel → randevú), és 2026-09-14 óta az őrjárat magától is elhozza. ✅ Javítva.
 *Ugyanaz a csapda, amit az `Allaspont`-nál kimondtunk: ahol egy felirat mást mond, mint amit
 a kód tesz, ott előbb-utóbb valaki a feliratot hiszi el.*
+
+---
+
+## 29. ⭐⭐⭐ TÖBB FORRÁSBÓL EGY FÁJL: MENNYIT HOZ? — mérés az építés ELŐTT (2026-09-15, D68 / 6.)
+
+**A D68 utolsó tétele.** ⛔⛔ És a terv kimondottan azt írta elő, hogy **az első lépés ne az
+építés legyen, hanem a mérés**: *„a válasz nem triviálisan »háromszor«: a szűk keresztmetszet
+gyakran a saját letöltésünk, és akkor a párhuzamosság semmit nem hoz, csak bonyolít."*
+
+### ⭐⭐ Amit a KÓD mondott meg, még a mérés előtt: a protokoll már tudja
+
+A `FAJLKEREK` üzenet **hordozza az `eltolas`-t**, és a kiszolgáló
+(`fajlSzeletekKiszolgalasa`) **állapotmentes**: a kérő mondja meg, honnan kér, ő onnan küld
+egy szeletet. ⭐ *Vagyis a több forrás nem protokoll-kérdés, hanem kliens-oldali szerkezeté* —
+és ezért volt a mérés egyáltalán elvégezhető építés nélkül: a **kiszolgáló a valódi éles kód**,
+csak a kérő oldalát utánozza a mérő (memóriában gyűjt, és a végén **újra lenyomatol**).
+
+### A műszer: KÉT sor, egymás után
+
+⛔ Enélkül a mérés hazudna. Ha három foglalatnak három független sora van, a párhuzamosság
+**automatikusan** háromszoros sávot kap — és a „×3" a műszerből jönne, nem a valóságból.
+Ezért a `udpParos` mostantól két sorbanállást modellez:
+
+1. **a FORRÁS feltöltése** — foglalatonként külön (minden társnak saját vonala van),
+2. **a MI letöltésünk** — ⛔ **közös**: minden forrás ugyanabba a csövünkbe érkezik.
+
+### Az eredmény (512 KB, +10 ms, munkalopó felosztás)
+
+| eset | 1 forrás | 2 forrás | 3 forrás | 5 forrás |
+|---|---|---|---|---|
+| **(A) a FORRÁS a szűk** (200/s, letöltés bő) | 123 KB/s | 246 — **×2,0** | 328 — **×2,7** | |
+| **(B) a MI LETÖLTÉSÜNK a szűk** (közös 200/s) | 132 KB/s | | 129 — **×1,0** | |
+| **(C) aszimmetrikus** (forrás 150/s, letöltés 600/s) | 99 KB/s | 157 — ×1,6 | 191 — **×1,9** | 255 — **×2,6** |
+
+⭐⭐⭐ **A VÁLASZ TEHÁT NEM EGY SZÁM, HANEM EGY ARÁNY: a haszon pontosan addig tart, amíg a
+források EGYÜTT be nem töltik a saját letöltésünket.** Az (A) sor a felső határ (majdnem
+lineáris), a (B) az alsó (**semmi**), és a valóság a kettő között van.
+
+⭐ **És az otthoni vonal az (A) felé húz:** az aszimmetrikus kapcsolatokon a **feltöltés** a
+szűk — egy társ feltöltése tipikusan töredéke a mi letöltésünknek. *Ez a D68 redundancia-érve
+számokkal: nem csak a türelem lesz olcsóbb, hanem a sebesség is nő.*
+
+### ⛔⛔ ÉS KÉT MAGYARÁZATOMAT A MÉRÉS CÁFOLTA — a hiba a MŰSZERBEN volt
+
+A (C) sor elsőre **×1,8-nál megállt**, pedig a letöltésünk négyszer bővebb a forrásénál.
+Két magyarázatot adtam, és **mindkettőt megmértem**:
+
+- *„a Vegas fogja vissza őket, mert mind a közös sor késleltetését látja"* → ⛔ **cáfolva**:
+  `torlodasJel: 'nincs'` mellett **ugyanaz a ×1,8**;
+- *„a szemcse durva: 8 szelet nem osztható háromfelé"* → ⛔ **cáfolva**: 1 MB-on (16 szelet,
+  5/6/5) **ugyanaz a ×1,8**.
+
+⭐⭐⭐ **A valódi ok a műszerben volt: a sor DARABSZÁM-alapú, nem bájt-alapú** — tehát egy
+~50 bájtos **nyugta** ugyanannyiba kerül benne, mint egy 1000 bájtos adat-darab. Egy forrásnál
+ez sosem számított (a két irány külön soron ment); ⛔ **a közös letöltő sornál viszont
+uralkodik**: a saját nyugtáink ott versengtek a beérkező szeletekkel, és a 600/s-ből
+**effektíve 300/s** maradt az adatnak. *Ez számszerűen pontosan a ×1,8-at adja.*
+
+✅ A javítás a kérdéshez szabott: a közös vonal a **letöltési irány** modellje, tehát csak a
+forrás felől jövő forgalomra vonatkozik (a nyugta a mi feltöltő irányunkon megy, ami húszszor
+kisebb — a késleltetés természetesen rá is vonatkozik). Utána a (B) sor **×0,9 → ×1,0** lett,
+a (C) pedig ×1,8 → **×1,9 (3 forrás) és ×2,6 (5 forrás)**.
+
+⚠️ *Harmadszor ugyanaz a lecke ebben a szakaszban: **a műszert is meg kell mérni**. És a
+sorrend számít — ha elfogadtam volna az első ×1,8-at, a döntés egy műszer-hibán állna.*
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- **A rossz szelet** kérdését (a terv 2. döntési pontja) — az nem sebesség, hanem bizalom.
+- **A tárolás szerkezetét**: a mérő memóriában gyűjt, az éles kódnak lemezen kellene
+  (a mai elv — *„a részleges fájl mérete maga az állapot"* — sorrendet feltételez).
+- **A valódi hálózatot**: itt a szűk keresztmetszet modell, nem mért vonal.
+- És hogy **hány forrás az optimum**: a (C) sor 5 forrásnál még nőtt, de a 9. szabály szerint
+  a források számának felülről korlátosnak kell lennie.
+
+### ✅ És a műszer-változtatás a korábbi sorokat NEM mozdította el
+
+*Ez nem feltevés, hanem ellenőrzés:* a teljes lap újrafuttatva a 16–28. mérés minden szakaszát
+a rögzített értékeken adta vissza (Vegas mellett a hívás **12,3 → 3,5 ms**, csúcs **44 → 19**;
+az ütemezés `sor: 27 → 17`, csúcs `45 → 25`). ⭐ Ennek szerkezeti oka van: a közös sor csak
+akkor létezik, ha a hívó **kér** ilyet (`kozosSav`), és azt egyedül a több-forrás szakasz teszi.
