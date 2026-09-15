@@ -49,8 +49,22 @@ mindenhol előfeltétel.*
 
 **Ami megépült:** *(1)* a várakozás a **fal órájához** igazodik, nem a kör végéhez
 (üzenetváltás nélkül, jelzőpont nélkül — 2. szabály); *(3)* a kör **ismétlődik, amíg van
-újdonság** (`MENET_KORLAT = 5` biztonsági szeleppel). ⭐ **Két parancssor-próba méri, mindkettőt
-rontás-próba igazolja.**
+újdonság**. ⭐ **Két parancssor-próba méri, mindkettőt rontás-próba igazolja.**
+
+⛔⛔⛔ **ÉS CSABA KÉRDÉSE EGY VALÓDI HIÁNYT TALÁLT A SAJÁT JAVÍTÁSOMBAN** (*„ez akkor most azt
+jelenti, hogy a mostani rendszer nem skálázható végtelenig?"*). A terjedés **alakja**
+logaritmikus, ⛔ **de én tettem bele egy beégetett `MENET_KORLAT = 5`-öt, ami a mérettel nem
+nő.** Mérve (a legjobb esetben, tehát ez **alsó korlát**): 100 000 készüléknél 14 társsal
+**5,0 menet** (épp a határon), **egymilliónál 6,0** — és ⛔ **ritka gráfon (3 társ) már EZER
+készüléknél 7,8**, százezernél **12,3**. *A 9. szabály szerint így a darab nem volt kész.*
+
+✅ **A javítás: a korlát ne SZÁM legyen, hanem maga az ABLAK** — a menetek addig futnak, amíg
+van újdonság ÉS még tart az ablak (a következő percfordulóig). ⭐ Ettől a korlát **a mérettel
+együtt nő**, a rosszindulat ellen ugyanúgy véd (az ablak véges), és **nincs benne varázsszám**:
+az ablak hosszát az e-ember úgyis megadja. *Ugyanaz az elv, mint a türelemnél (28. mérés): a
+határt ne találjuk ki, hanem abból következzen, ami amúgy is adott.*
+⚠️ **És ezt a javítást a MÉRÉS igazolja, nem parancssor-próba** — egy 6+ menetes lánchoz hat
+figyelő kellene; a próbák azt mérik, hogy az ismétlés fut. *Amit nem mértünk, azt leírjuk.*
 
 ⛔⛔ **ÉS EGY VAK PRÓBÁT A RONTÁS BUKTATOTT LE — NYOLCADSZOR UGYANAZ.** Az ismétlés próbája
 rögtön indította az őrjáratot, és a rontás **nem buktatta**: az igazítás miatt a második ablak
@@ -743,7 +757,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **171 fájl, 2755,4 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **171 fájl, 2761,9 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -885,7 +899,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 171 fájl, 2755,4 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 171 fájl, 2761,9 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

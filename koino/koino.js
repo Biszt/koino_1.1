@@ -151,12 +151,32 @@ const ALAP_PORT = 7373;
 // ami „mindent” adhat vissza, nem kereső — ugyanaz az érv, mint a pakli `MAX_DARAB`-jánál.
 const KERESES_KORLAT = 20;
 
-// ⭐ HÁNY MENET EGY BULIBAN (a buli 3. darabja, 30. mérés). A kör addig ismétlődik, amíg
-// van újdonság — ez a korlát csak **biztonsági szelep**: egy hibás vagy rosszindulatú társ
-// minden menetben „újdonságot" adhatna, és az ablak sosem érne véget (9. szabály).
-// ⚠️ A nemzedék-számítás szerint három menet ~3400 készülékhez ér; a szokásos eset EGY menet
-// (nincs újdonság → azonnal megállunk). *Nem állapot-befolyásoló állandó (D66).*
-const MENET_KORLAT = 5;
+// ⛔⛔ ITT ELŐSZÖR EGY BEÉGETETT `MENET_KORLAT = 5` ÁLLT — és a 9. szabály elkapta.
+//
+// Csaba kérdése (*„ez akkor most azt jelenti, hogy a mostani rendszer nem skálázható
+// végtelenig?"*) egy valódi hiányt talált: a terjedés ALAKJA logaritmikus, de egy beégetett
+// plafon a mérettel **nem nő**. ⭐ Mérve (30. mérés, menet-szakasz), a legjobb esetben —
+// mindenki ébren, egy ablakban:
+//
+//   |  készülék | társ | menet |
+//   |   100 000 |   14 |   5,0 |  épp a határon
+//   | 1 000 000 |   14 |   6,0 |  ⛔ az 5 KEVÉS
+//   |     1 000 |    3 |   7,8 |  ⛔ ritka gráfon már EZERNÉL kevés
+//   |   100 000 |    3 |  12,3 |  ⛔
+//
+// ⭐⭐ A JAVÍTÁS: a korlát ne SZÁM legyen, hanem maga az ABLAK. A menetek addig futnak,
+// amíg van újdonság ÉS még tart az ablak (a következő percfordulóig). Ettől
+//
+//   · a korlát a **mérettel együtt nő** — ahány menet belefér, annyi fut;
+//   · a **rosszindulat ellen ugyanúgy véd** (az ablak véges, tehát a ciklus véges);
+//   · és **nincs benne varázsszám**: az ablak hosszát az e-ember úgyis megadja (`perc`).
+//
+// *Ugyanaz az elv, mint a türelemnél (28. mérés): a határt ne találjuk ki, hanem abból
+// következzen, ami amúgy is adott.*
+//
+// ⚠️ A `MENET_PLAFON` csak a legvégső szelep — ha valaki nulla percet ad meg, az ablak
+// nem korlátoz. *Nem állapot-befolyásoló állandó (D66).*
+const MENET_PLAFON = 1000;
 
 // A napló alapból néma (a koino minden metódusa naplóz) — KOINO_NAPLO=1 bekapcsolja
 const naplo = console.log;
@@ -2011,6 +2031,13 @@ try {
           // ⚠️ A LEÁLLÁS MAGÁTÓL ADÓDIK: ha egy menet nem hozott új eseményt, nincs mit
           // továbbadni. A szokásos eset tehát EGY menet (334 bájt/társ) — az ismétlés csak
           // akkor kerül pénzbe, amikor tényleg történt valami.
+          //
+          // ⭐⭐⭐ ÉS A MÁSIK KORLÁT AZ ABLAK MAGA, NEM EGY SZÁM (lásd a `MENET_PLAFON`
+          // indoklását fent): a menetek addig futnak, amíg a **következő percforduló** el
+          // nem érkezik. *Így a korlát a mérettel együtt nő — ahány menet belefér, annyi
+          // fut —, a rosszindulat ellen mégis véd, mert az ablak véges.*
+          const ablakVege = Math.ceil((Date.now() + 1) / Math.max(1, Math.round(perc * 60 * 1000)))
+            * Math.max(1, Math.round(perc * 60 * 1000));
           let kor = null;
           let menetek = 0;
           for (;;) {
@@ -2027,10 +2054,11 @@ try {
               eredmenyek: menet.eredmenyek
             };
 
-            // ⛔ A KORLÁT NEM DÍSZ (9. szabály): egy hibás vagy rosszindulatú társ minden
-            // menetben „újdonságot" adhatna, és az ablak sosem érne véget. *A nemzedék-
-            // számítás szerint három menet ~3400 készülékhez ér — öt bőven elég.*
-            if (!menet.uj || menetek >= MENET_KORLAT) break;
+            // ⛔ HÁROM OK ÁLLÍTHATJA MEG A KÖRT, ÉS MINDHÁROM MÁST MOND:
+            //   · nincs újdonság → **készen vagyunk** (a szokásos eset);
+            //   · elfogyott az ablak → a következő buli folytatja (a méret-független korlát);
+            //   · a plafon → a legvégső szelep, ha valaki nulla ablakot adott meg.
+            if (!menet.uj || Date.now() >= ablakVege || menetek >= MENET_PLAFON) break;
           }
           await tarolo.ir(kor.lista);
 

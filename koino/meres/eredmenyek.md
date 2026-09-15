@@ -2723,3 +2723,45 @@ A *„kopogjon a kör elején minden társra"* **UDP-kérdés**: a NAT-rést a p
 (`pajzsfuro.js`), az őrjárat viszont ma **TCP-vel** cserél (`csereVonalon` → `connect`).
 ⛔ Vagyis ez nem egy sor, hanem **a UDP-út bekötése az őrjáratba** — önálló munka, és a
 mérése is terepmérés (két hálózat). *Az indoka viszont megvan: „nincs full cone" (2026-08-30).*
+
+### ⛔⛔⛔ ÉS CSABA KÉRDÉSE EGY VALÓDI HIÁNYT TALÁLT A SAJÁT JAVÍTÁSOMBAN
+
+*„Ez akkor most azt jelenti, hogy a mostani rendszer nem skálázható végtelenig?"* — és a
+válasz kimérve **igen, volt egy pont, ahol nem**. A terjedés ALAKJA logaritmikus, ⛔ **de én
+tettem bele egy beégetett `MENET_KORLAT = 5`-öt, ami a mérettel nem nő.**
+
+**Hány menet kell egy ablakban?** (a legjobb eset: mindenki ébren, egy ablakban — tehát
+**alsó korlát**)
+
+| készülék | társ | menet (átlag) | legrosszabb | elég az 5? |
+|---|---|---|---|---|
+| 100 | 14 | 2,7 | 3 | ✔ |
+| 1 000 | 14 | 3,7 | 4 | ✔ |
+| 10 000 | 14 | 4,3 | 5 | ✔ |
+| 100 000 | 14 | 5,0 | 5 | épp ✔ |
+| **1 000 000** | 14 | **6,0** | 6 | ⛔ **NEM** |
+| ⛔ **1 000** | **3** | **7,8** | 9 | ⛔ **NEM** |
+| ⛔ **100 000** | 3 | **12,3** | 13 | ⛔ **NEM** |
+
+⛔⛔ **A ritka gráf itt is a kritikus:** három társnál már **ezer készüléknél** kevés az öt.
+
+### ✅ A JAVÍTÁS: A KORLÁT NE SZÁM LEGYEN, HANEM AZ ABLAK
+
+A menetek addig futnak, amíg **van újdonság** ÉS **még tart az ablak** (a következő
+percfordulóig). Ettől
+
+- a korlát **a mérettel együtt nő** — ahány menet belefér, annyi fut;
+- a **rosszindulat ellen ugyanúgy véd** (az ablak véges, tehát a ciklus véges);
+- és **nincs benne varázsszám**: az ablak hosszát az e-ember úgyis megadja (`perc`).
+
+⭐ *Ugyanaz az elv, mint a türelemnél (28. mérés): a határt ne találjuk ki, hanem abból
+következzen, ami amúgy is adott.* A `MENET_PLAFON = 1000` csak a legvégső szelep.
+
+**Belefér-e?** (számítás, nem mérés — egy csere mérve 189 ms, 2026-08-30):
+egymilliónál 6 menet × 14 társ × 0,19 s ≈ **16 s**; ritka gráfon 100 000 főnél
+12,3 × 3 × 0,19 ≈ **7 s**. ⭐ Egy 30 másodperces ablakba mindkettő belefér — *de ez
+számítás: valódi vonalon a csere lassabb, és nem mindenki van ébren.*
+
+⚠️ **És amit kimondunk: a korlát-javítást a FENTI MÉRÉS igazolja, nem parancssor-próba.**
+A 6+ menetes lánc próbához hat figyelő kellene; a parancssor-próbák azt mérik, hogy az
+ismétlés egyáltalán fut (és a rontás buktatja). *Amit nem mértünk, arról ezt írjuk le.*

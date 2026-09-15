@@ -246,4 +246,71 @@ kiir('  ⭐ Az „elér" az ÁTLAGOS hányad, amihez a hír eljut; a „mindenki
 kiir('     ahol MINDENKI megtudta. A medián idő csak a teljes futásokra vonatkozik.');
 kiir('');
 
+// ===================================
+// ⛔⛔ ÉS A 9. SZABÁLY PRÓBÁJA: HÁNY MENET KELL EGY ABLAKBAN?
+// ===================================
+//
+// ⚠️⚠️ A FENTI TÁBLÁZAT AZT MUTATJA, HOGY AZ IDŐ NEM NŐ A MÉRETTEL — de ez csak akkor
+// igaz, ha a menetek **beleférnek** az ablakba. A kódban `MENET_KORLAT = 5` áll, és ez
+// **egy általam beírt szám**: ha a hír menetenként ~T-szeresére terjed, öt menet ≈ T⁵
+// készülékig elég. ⛔ **Egymilliárdnál ez kevés lehet — és akkor a darab a 9. szabály
+// szerint NINCS KÉSZ.**
+//
+// ⭐ Ez a szakasz **csak a meneteket** számolja (a teljes időtengely nélkül), ezért
+// nagy hálózatokon is fut. A modell a legjobb eset: **mindenki ébren, egy ablakban** —
+// vagyis a kapott szám **alsó korlát**, a valóságban több kell.
+
+kiir('  ⛔ HÁNY MENET KELL EGY ABLAKBAN? — a 9. szabály próbája (MENET_KORLAT = 5)');
+kiir('  ' + '─'.repeat(70));
+kiir('  ' + 'készülék'.padStart(12) + 'társ'.padStart(7) + 'menet (átlag)'.padStart(16)
+  + 'legrosszabb'.padStart(14) + 'elég az 5?'.padStart(12));
+
+function menetSzamMeres(n, tarsak, ismetles, mag) {
+  let ossz = 0;
+  let legrosszabb = 0;
+  for (let k = 0; k < ismetles; k++) {
+    const veletlen = magvasVeletlen(mag + k);
+    const szomszedok = Array.from({ length: n }, () => new Set());
+    for (let i = 0; i < n; i++) {
+      while (szomszedok[i].size < Math.min(tarsak, n - 1)) {
+        const j = Math.floor(veletlen() * n);
+        if (j !== i) { szomszedok[i].add(j); szomszedok[j].add(i); }
+      }
+    }
+
+    // ⭐ Egy MENET: mindenki, aki tudja, továbbadja a társainak (egy körbejárás).
+    let ismeri = new Uint8Array(n);
+    ismeri[0] = 1;
+    let elert = 1;
+    let menet = 0;
+    while (elert < n && menet < 40) {
+      menet++;
+      const elotte = ismeri;
+      ismeri = elotte.slice();
+      for (let i = 0; i < n; i++) {
+        if (!elotte[i]) continue;
+        for (const j of szomszedok[i]) ismeri[j] = 1;
+      }
+      elert = 0;
+      for (let i = 0; i < n; i++) elert += ismeri[i];
+    }
+    ossz += menet;
+    if (menet > legrosszabb) legrosszabb = menet;
+  }
+  return { atlag: ossz / ismetles, legrosszabb };
+}
+
+for (const [n, t] of [[100, 14], [1000, 14], [10000, 14], [100000, 14], [1000000, 14],
+  [1000, 3], [100000, 3]]) {
+  const e = menetSzamMeres(n, t, n >= 100000 ? 3 : 20, MAG);
+  kiir('  ' + String(n).padStart(12) + String(t).padStart(7)
+    + e.atlag.toFixed(1).padStart(16) + String(e.legrosszabb).padStart(14)
+    + (e.legrosszabb <= 5 ? '✔' : '⛔ NEM').padStart(12));
+}
+
+kiir('');
+kiir('  ⚠️ A modell a LEGJOBB eset: mindenki ébren, egy ablakban. A kapott szám tehát');
+kiir('     ALSÓ korlát — a valóságban ennél több menet kell.');
+kiir('');
+
 process.exit(0);
