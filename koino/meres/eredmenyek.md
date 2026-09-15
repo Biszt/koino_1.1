@@ -2546,3 +2546,56 @@ ugyanez **×1,7**, kiegyensúlyozott 3/2/3 eloszlással.
 - ⭐ **És a bekötés próbája VISELKEDÉST mér, nem feliratot:** a jel a `bajt` oszlop —
   munkamegosztás nélkül mindkét ág a TELJES fájlt hozná, és a mennyiség megkétszereződne.
   *A 28. mérés vak próbája épp az volt, hogy a kiírt számot néztem.*
+
+---
+
+## 29/c. ⭐⭐ A ROSSZ SZELET HELYI VÁLASZA — és egy hiba, amit megint a mérés talált (2026-09-15)
+
+**A D68 / 6. utolsó darabja, Csaba jóváhagyásával.** ⛔ A baj: a lenyomat a **teljes fájlra**
+szól, tehát egy hamis szelet az egészet elbuktatja, és **nem tudjuk, melyik volt** — a lezárás
+eldobja a részlegest, és kezdhetjük elölről. *Egy rosszindulatú társ így olcsón ismételtethet.*
+
+⭐ **A választott válasz az 1. (a tervből): nem teszünk új adatot a láncra.** A másik kettő
+vagy a **6. szabály kemény felébe** ütközne (szeletenkénti lenyomat: 2 MB-nál ~1,4 KB, egy
+teljes esemény négyszerese), vagy **minden meglévő fájl-hivatkozást érvénytelenítene**
+(Merkle-fa). ⭐⭐ A kiegészítés **helyi tanulság**: ha a lezárás elbukott, feljegyezzük, kik
+adtak szeletet, és a következő körben **mást választunk**.
+
+### ⛔⛔ Három korlát, ami ezt nem engedi rangsorrá válni
+
+1. **Fájlonkénti**, nem társankénti — nem azt mondjuk, hogy *„ez a társ rossz"*, hanem hogy
+   *„ehhez a fájlhoz ezek nem váltak be"*. *Nincs globális mérleg (D18/2, D48).*
+2. **Nem vád:** a résztvevők közül **legfeljebb egy** adott hamis bájtot, és ezt nem tudjuk
+   szétválasztani. Ezért nem is mondunk róluk semmit.
+3. ⭐ **Ha nem marad forrás, FELEJTÜNK.** Különben egy fájl, amit csak egy társ birtokol,
+   egyetlen bukás után **soha többé** nem jönne meg — *a védekezés vágná el az utat ahhoz az
+   adathoz, amit védeni akar.* És amint a fájl megjön, a jegyzet törlődik.
+
+### ⛔⛔⛔ ÉS A MÉRÉS EGY VALÓDI HIBÁT TALÁLT A SAJÁT MEGOLDÁSOMBAN
+
+Először **a kijelölt forrásokat** jegyeztem fel — azokat, akiknek a terv szólt. ⛔ Mérve
+(kézi forgatókönyv, hamis kiszolgálóval) ez **használhatatlan**: egy 20 KB-os, **egyszeletes**
+fájlnál a hamis forrás hozta az egyetlen szeletet, a másik ág **semmit** — mégis **mindkettő**
+megjelölve. Így a következő körben nem maradt választható forrás, a felejtés-szabály
+visszaadta mindkettőt, és a hamis **újra sorra került**: *a kép soha nem jött meg.*
+
+✅ A javítás: **csak azokat jegyezzük fel, akik ténylegesen adtak szeletet** (`szeletek > 0`).
+Utána a 2. kör elkerüli a hamis forrást, és a kép **bájtra azonosan** megérkezik.
+
+⚠️ **A jelölés így is közelítés, és ezt kimondjuk:** több szeletnél több forrás kerül a
+listára, pedig legfeljebb egy volt hamis. *Ez nem pontatlanság, hanem a modell határa.*
+
+### ⭐ Egy lelet, ami mellékesen derült ki: valódi koino NEM tud hamis bájtot adni
+
+A kiszolgáló `blob.olvas`-a **újra lenyomatol**, tehát a lemezen megrontott fájlt **ki sem
+adja** — a hamis szelet csak **szándékosan módosított programmal** állítható elő. ⭐ Ezért a
+próbához külön meg kellett írni a támadót: egy kézzel írt kiszolgáló, ami a fájl-protokollt
+beszéli és szemetet küld. *Jó hír a modellről, és egyben a próba feltétele.*
+
+### A próbák (7 új, ÖT rontás-próbával igazolva)
+
+⭐ A parancssor-próba **viselkedést mér**: valódi `csere` paranccsal, hamis és jó forrással —
+az 1. kör bukik és jegyez, a 2. kör **elkerüli a hamisat**, a kép megjön, a jegyzet kitisztul.
+⛔ A rontás-próbák: a kerülés kikapcsolása · a felejtés kikapcsolása · a bekötés kivétele ·
+a `romlott` **mező** elnémítása (⭐ *szöveg-illesztés helyett mező — egy átfogalmazott
+hibaüzenet némán kikapcsolná a választ*) · és a fenti hiba visszacserélése — **mind buktat**.

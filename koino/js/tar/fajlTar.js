@@ -663,7 +663,14 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
       const ellenorzes = await bajtLenyomat(bajtok);
       if (ellenorzes !== lenyomat) {
         await this.reszlegesEldobas(lenyomat);
-        return { rendben: false, ok: 'a bájtok nem ezt a lenyomatot adják — eldobva' };
+        // ⭐ A `romlott` JELZÉS, nem a szöveg: a hívónak tudnia kell, hogy itt **valaki
+        // hamis bájtot adott** — szemben a „hiányzó szelet"-tel, ami csak türelmet kíván.
+        // ⚠️ Szöveg-illesztésre bízni ezt törékeny lenne: egy átfogalmazott hibaüzenet
+        // némán kikapcsolná a válaszunkat. *A jelentés legyen mező, ne mondat.*
+        return {
+          rendben: false, romlott: true,
+          ok: 'a bájtok nem ezt a lenyomatot adják — eldobva'
+        };
       }
 
       await mkdir(mappa, { recursive: true });

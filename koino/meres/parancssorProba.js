@@ -1173,6 +1173,138 @@ proba('⭐⭐⭐ KÉT FORRÁSBÓL JÖN EGY KÉP — és a bájtok NEM sokszoroz�
   }
 });
 
+// ===================================
+// ⭐⭐⭐ A ROSSZ SZELET: HAMIS BÁJT UTÁN MÁS FORRÁSHOZ FORDULUNK (D68 / 6.)
+// ===================================
+//
+// ⛔⛔ EGY VALÓDI KOINO NEM TUD HAMIS BÁJTOT ADNI: a kiszolgáló `blob.olvas`-a **újra
+// lenyomatol**, tehát a megrontott fájlt ki sem adja. ⭐ *Ez jó hír, de épp ezért a támadót
+// külön meg kell írni:* egy hamis kiszolgáló, ami a fájl-protokollt beszéli, és szemetet
+// küld. Így mérhető az éles út — nem utánzattal, hanem valódi `csere` paranccsal.
+
+/** Egy hamis forrás: a `FAJLKEREK`-re rossz bájtokat ad, `vege: true`-val. */
+async function hamisForras(meret) {
+  const { createServer } = await import('node:net');
+  const kapcsolatok = [];
+  const kiszolgalo = createServer((k) => {
+    kapcsolatok.push(k);
+    let puffer = '';
+    k.setEncoding('utf8');
+    k.on('error', () => {});
+    k.on('data', (d) => {
+      puffer += d;
+      let vege;
+      while ((vege = puffer.indexOf('\n')) !== -1) {
+        const sor = puffer.slice(0, vege);
+        puffer = puffer.slice(vege + 1);
+        let uzenet;
+        try { uzenet = JSON.parse(sor); } catch { continue; }
+        if (uzenet.uzenet !== 'FAJLKEREK') continue;
+        // ⛔ A HAMISÍTÁS: a kért eltolásra küldünk, de MÁS bájtokat.
+        k.write(JSON.stringify({
+          uzenet: 'FAJLSZELET', lenyomat: uzenet.lenyomat, eltolas: uzenet.eltolas,
+          adat: Buffer.alloc(meret, 66).toString('base64'), teljes: meret, vege: true
+        }) + '\n');
+      }
+    });
+  });
+  await new Promise((t) => kiszolgalo.listen(0, '127.0.0.1', t));
+  return {
+    port: kiszolgalo.address().port,
+    zar: () => { for (const k of kapcsolatok) k.destroy(); kiszolgalo.close(); }
+  };
+}
+
+proba('⭐⭐⭐ HAMIS BÁJT UTÁN MÁS FORRÁSSAL PRÓBÁLJUK — és a kép megjön', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7571;
+  let figyelo = null, felulet = null, hamis = null, ures = null;
+
+  try {
+    await fut(gazda, 'koino', 'Rossz szelet koinó');
+
+    // ----- Egy kép, ami EGY szeletnél kisebb (hogy a hamis forrás egy üzenettel végezzen) -----
+    felulet = await feluletet(gazda, 7572);
+    const fej = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const kep = Buffer.concat([fej, Buffer.alloc(20 * 1024, 5),
+      Buffer.from('0000000049454e44ae426082', 'hex')]);
+
+    const fel = await felulet.hiv('/api/feltoltes/kep',
+      { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', {
+      method: 'POST',
+      body: JSON.stringify({
+        cim: 'ROSSZ SZELET', kezdoTudatpont: 50,
+        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
+      })
+    });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+
+    // ⭐ AZ ESEMÉNYEK HÁLÓZAT NÉLKÜL mennek át (4. szabály) — így a vendég ismeri a képet,
+    // de a bájtjai nincsenek meg neki.
+    const vittFajl = join(gazda, 'atvitel.jsonl');
+    await fut(gazda, 'kivisz', vittFajl, 'mind');
+    await fut(vendeg, 'behoz', vittFajl);
+
+    // A JÓ forrás (valódi koino) és a HAMIS (kézzel írt kiszolgáló).
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    hamis = await hamisForras(kep.length);
+    await varj(1500);
+
+    // ⭐ A BIRTOKLÁS-JEGYZET: MINDKETTŐNÉL „megvan" — a vendég nem tudja, melyik hazudik.
+    // *A jegyzet helyi feljegyzés (3. szabály), tehát nyugodtan írható kézzel.*
+    const jegyzetUt = join(vendeg, 'sajat', 'fajlbirtoklas.json');
+    await writeFile(jegyzetUt, JSON.stringify({
+      [fel.adat.lenyomat]: {
+        tarsak: {
+          ['127.0.0.1:' + hamis.port]: { mikor: Date.now() },
+          ['127.0.0.1:' + port]: { mikor: Date.now() }
+        }
+      }
+    }), 'utf8');
+
+    // ⚠️ Egy ÉLŐ, üres társ kell, hogy a `csere` kör lefusson (a fájl-átvitel a kör UTÁN megy).
+    ures = spawn(process.execPath, [KOINO_JS, 'figyel', '7573'], {
+      env: { ...process.env, KOINO_ADAT: await ujKeszulek(), KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(1200);
+
+    // ===== 1. KÖR: a hamis forrás is sorra kerül → a lezárás elbukik =====
+    await fut(vendeg, 'csere', '127.0.0.1', '7573');
+
+    // ⛔ A DÖNTŐ ELLENŐRZÉS: a jegyzetben megjelent a bukás — és PONTOSAN azoknál, akik
+    // részt vettek. *Ez a bekötés bizonyítéka: a réteg tudása eljutott a lemezre.*
+    const utana = JSON.parse(await readFile(jegyzetUt, 'utf8'));
+    const romlott = utana[fel.adat.lenyomat]?.romlott ?? {};
+    if (!Object.keys(romlott).length) return false;
+
+    // ===== 2. KÖR: a bukott forrást KERÜLJÜK → a jó forrástól megjön =====
+    for (let i = 0; i < 3; i++) {
+      await fut(vendeg, 'csere', '127.0.0.1', '7573');
+      const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat))
+        .catch(() => null);
+      if (nala && Buffer.from(nala).equals(kep)) {
+        // ⭐ ÉS A FELEJTÉS: amint a fájl megvan, a tanulság tárgytalan.
+        const vegul = JSON.parse(await readFile(jegyzetUt, 'utf8'));
+        return vegul[fel.adat.lenyomat]?.romlott === undefined;
+      }
+    }
+    return false;
+  } finally {
+    if (felulet) felulet.folyamat.kill();
+    if (figyelo) figyelo.kill();
+    if (ures) ures.kill();
+    if (hamis) hamis.zar();
+    await varj(1000);
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

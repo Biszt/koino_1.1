@@ -849,13 +849,19 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
       munka.lezarasKesz(lezaras);
       console.log('fajlHozatala - VÉGE',
         { lenyomat, kesz: lezaras.rendben, bajt, szeletek });
-      return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek, enZartamLe };
+      // ⭐ A `romlott` TOVÁBBMEGY A HÍVÓHOZ (D68 / 6.): ő tudja, KIKTŐL jöttek a szeletek,
+      // és ő jegyezheti fel, hogy a következő körben mással próbáljunk.
+      return { kesz: lezaras.rendben, ok: lezaras.ok, romlott: lezaras.romlott === true,
+               bajt, szeletek, enZartamLe };
     }
 
     // ⭐ Más ág zárja le — megvárjuk az eredményét, hogy ugyanazt mondjuk róla.
     // *Két ág nem adhat két igazságot ugyanarról a fájlról.*
     const lezaras = await munka.lezarasraVar();
-    return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek, enZartamLe };
+    // ⭐ A `romlott` TOVÁBBMEGY A HÍVÓHOZ (D68 / 6.): ő tudja, KIKTŐL jöttek a szeletek,
+      // és ő jegyezheti fel, hogy a következő körben mással próbáljunk.
+      return { kesz: lezaras.rendben, ok: lezaras.ok, romlott: lezaras.romlott === true,
+               bajt, szeletek, enZartamLe };
   } finally {
     munka.kilep();
     // ⚠️ A UDP-vonalon ELŐBB KI KELL ÜRÍTENI, különben az utolsó darab elveszik —

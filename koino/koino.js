@@ -114,7 +114,11 @@ import {
 } from './js/csere/fajlKerelem.js';
 // ⭐ A `ujMunkamegosztas` a TÖBB FORRÁSHOZ kell (D68 / 6.): a `fajlHozatala` ágai ezen
 // osztoznak — ő mondja meg, melyik ág melyik szeletet hozza, és ki zárja le a fájlt.
-import { atvitelTerv, ujMunkamegosztas } from './js/csere/fajlAtvitel.js';
+import {
+  atvitelTerv, ujMunkamegosztas,
+  // ⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.): kikkel bukott el ez a fájl?
+  romlottJegyzes, romlottFelejtes
+} from './js/csere/fajlAtvitel.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -422,8 +426,11 @@ async function fajlokElhozasa() {
         // amennyit az alternatíva hiánya indokol* — egy forrásnál 30 mp, ötnél 6, tízénél 5
         // (alsó korlát). ⚠️ A feladás itt nem adatvesztés, hanem **társ-váltás**: a részleges
         // fájl megmarad, és a következő kör onnan folytatja.
-        return await fajlHozatala(blob, KOINO, lenyomat,
-          tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT, munka });
+        return {
+          ...(await fajlHozatala(blob, KOINO, lenyomat,
+            tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT, munka })),
+          tars
+        };
       } catch (hiba) {
         // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
         // ⭐ És a munkamegosztásnak SZÓLNI KELL: ha ez az ág volt az utolsó dolgozó, a
@@ -439,11 +446,43 @@ async function fajlokElhozasa() {
     return {
       kesz: agak.some((a) => a.kesz),
       bajt: agak.reduce((o, a) => o + (a.bajt ?? 0), 0),
+      // ⛔⛔ HAMIS BÁJT ÉRKEZETT? A lezárás ezt MEZŐBEN mondja meg (`romlott`), nem
+      // hibaszövegben — és a hívó az, aki tudja, KIKTŐL jöttek a szeletek.
+      romlott: agak.some((a) => a.romlott === true),
+      lenyomat,
+      // ⛔⛔ CSAK AKIK TÉNYLEGESEN ADTAK SZELETET — és ezt a MÉRÉS kényszerítette ki.
+      //
+      // Először a kijelölt forrásokat jegyeztem fel, és a mérés megmutatta, hogy ez
+      // **használhatatlan**: egy 20 KB-os (egyszeletes) fájlnál a hamis forrás hozta az
+      // egyetlen szeletet, a másik ág **semmit** — mégis mindkettő megjelölve. ⛔ Így a
+      // következő körben nem maradt választható forrás, a felejtés-szabály visszaadta
+      // mindkettőt, és a hamis **újra sorra került**: a kép soha nem jött meg.
+      //
+      // ⚠️ A JELÖLÉS ÍGY IS KÖZELÍTÉS, és ezt ki kell mondani: több szeletnél **több
+      // forrás** kerül a listára, pedig legfeljebb egy volt közülük hamis. *Ez nem
+      // pontatlanság, hanem a modell határa — a lenyomat a TELJES fájlra szól.*
+      adok: agak.filter((a) => (a.szeletek ?? 0) > 0).map((a) => a.tars).filter(Boolean),
       // ⭐ A HASZNÁLT TÜRELMET ÉS A FORRÁSSZÁMOT VISSZAADJUK — hogy a bekötés **mérhető
       // tény** legyen, ne ígéret. *Ugyanaz a fogás, mint a torlódás-jelnél.*
       turelem, forrasok, agak: tarsak.length
     };
   }));
+
+  // ===== ⭐⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.) =====
+  //
+  // ⛔ Nem tudjuk, MELYIK forrás adta a hamis bájtot — a lenyomat a teljes fájlra szól.
+  // ⭐ Ezért a próbálkozás RÉSZTVEVŐIT jegyezzük fel, és a következő körben mást
+  // választunk, **ha van kit**. ⚠️ Ez nem vád és nem rangsor: fájlonkénti, helyi, és
+  // elfelejtjük, amint a fájl megjön — vagy amint nem marad más forrás.
+  const romlottak = eredmenyek.filter((e) => e.romlott);
+  const megjottek = eredmenyek.filter((e) => e.kesz);
+  if (romlottak.length || megjottek.length) {
+    let friss = await jegyzo.olvas();
+    for (const e of romlottak) friss = romlottJegyzes(friss, e.lenyomat, e.adok);
+    // ⭐ ÉS A FELEJTÉS: ami megjött, arról a régi bukás semmit nem mond többé.
+    for (const e of megjottek) friss = romlottFelejtes(friss, e.lenyomat);
+    await jegyzo.ir(friss);
+  }
 
   return {
     kesz: eredmenyek.filter((e) => e.kesz).length,

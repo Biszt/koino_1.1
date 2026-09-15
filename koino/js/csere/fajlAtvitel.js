@@ -295,6 +295,97 @@ export function szeletEllenorzes(kertEltolas, eltolas, hossz, korlat) {
 // 2. ⭐ MIT KÉRJEK, ÉS KITŐL? — a munka elosztása
 // ===================================
 
+// ===================================
+// ⭐⭐⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6., Csaba jóváhagyásával 2026-09-15)
+// ===================================
+//
+// ⛔⛔ A BAJ, KIMONDVA: a lenyomat a **teljes fájlra** szól, tehát ha egy társ hamis
+// szeletet ad, a lezárás elbukik — ⛔ **de nem tudjuk, MELYIK szelet volt rossz**, és így
+// azt sem, ki adta. Az egészet eldobjuk, és kezdhetjük elölről. *Egy rosszindulatú társ
+// így olcsón ismételtethet, újra és újra.*
+//
+// ⭐ HÁROM VÁLASZ LÉTEZETT, és Csaba az ELSŐT választotta (a tervben mindhárom ára ki van
+// mondva): a másik kettő vagy **új adatot tesz a láncra** (szeletenkénti lenyomat: egy
+// 2 MB-os fájlnál ~1,4 KB, négyszerese egy teljes eseménynek — a 6. szabály KEMÉNY fele
+// tiltja), vagy **minden meglévő fájl-hivatkozást érvénytelenítene** (Merkle-fa: megváltozna
+// a fájl-lenyomat számítása).
+//
+// ⭐⭐ EZ ITT A KIEGÉSZÍTÉS: ha a lezárás elbukott, **feljegyezzük, kik adtak szeletet**
+// ehhez a próbálkozáshoz, és a következő körben **mást választunk**.
+//
+// ⛔⛔ ÉS AMI EZT NEM TESZI RANGSORRÁ — három korlát, mindegyik szándékos:
+//
+//   1. **FÁJLONKÉNTI**, nem társankénti. Nem azt mondjuk, hogy „ez a társ rossz", hanem
+//      hogy *„ehhez a fájlhoz ezek a források nem váltak be"*. *Nincs globális mérleg, és
+//      nincs „ki mennyit adott" (D18/2, D48).*
+//   2. **NEM VÁD.** A résztvevők közül **legfeljebb egy** adott hamis bájtot; a többi
+//      ártatlan, és ezt nem tudjuk szétválasztani. *Ezért nem is mondjuk ki róluk semmit.*
+//   3. ⭐ **ELFELEJTHETŐ, sőt: ha nem marad forrás, EL IS FELEJTJÜK.** Különben egy fájl,
+//      amit csak egyetlen társ birtokol, egyetlen bukás után **soha többé** nem jönne meg —
+//      *a védekezés elvágná az utat az adathoz, amit védeni akar.*
+//
+// ⚠️ A jegyzet **helyi megfigyelés, nem esemény** (3. szabály): sosem terjed, és semmit
+// nem dönt el a koinóban — csak azt, hogy MI kitől kérünk legközelebb.
+
+/**
+ * Kiket válasszunk ehhez a fájlhoz — a bukott forrásokat kerülve, ha van kit helyettük.
+ *
+ * @param {Array<string>} tarsak - akikről tudjuk, hogy megvan nekik
+ * @param {Object} [romlott] - címke → időpont (a fájl jegyzetéből)
+ * @returns {Array<string>}
+ */
+export function valaszthatoForrasok(tarsak, romlott) {
+  const lista = Array.isArray(tarsak) ? tarsak : [];
+  const kerulendo = new Set(Object.keys(romlott ?? {}));
+  if (!kerulendo.size) return lista;
+
+  const maradek = lista.filter((t) => !kerulendo.has(t));
+  // ⛔ HA NEM MARADT SENKI, FELEJTÜNK. *Egy bukás nem zárhatja el véglegesen az utat.*
+  return maradek.length ? maradek : lista;
+}
+
+/**
+ * Egy bukott letöltés feljegyzése: kik adtak szeletet ehhez a fájlhoz?
+ *
+ * ⚠️ Új jegyzetet ad vissza (nem írja át a kapottat) — ugyanaz a minta, mint a
+ * `birtoklasBeolvasztasa`-nál: a tárolás a hívó dolga.
+ *
+ * @param {Object} jegyzet
+ * @param {string} lenyomat
+ * @param {Array<string>} tarsak - a próbálkozásban RÉSZT VETT források
+ * @param {number} [mikor]
+ * @returns {Object} az új jegyzet
+ */
+export function romlottJegyzes(jegyzet, lenyomat, tarsak, mikor = Date.now()) {
+  if (typeof lenyomat !== 'string' || !Array.isArray(tarsak) || !tarsak.length) {
+    return jegyzet ?? {};
+  }
+  const uj = { ...(jegyzet ?? {}) };
+  const elem = { ...(uj[lenyomat] ?? {}) };
+  const romlott = { ...(elem.romlott ?? {}) };
+
+  for (const t of tarsak) {
+    if (typeof t === 'string' && t) romlott[t] = mikor;
+  }
+
+  uj[lenyomat] = { ...elem, romlott };
+  return uj;
+}
+
+/**
+ * ⭐ A fájl megjött — a tanulság tárgytalan, a jegyzet törlődik.
+ *
+ * *Erre a „felejtés" szóval szoktunk hivatkozni: a bukás helyi és ideiglenes tudás volt,
+ * és amint a fájl megvan, semmit nem ér.*
+ */
+export function romlottFelejtes(jegyzet, lenyomat) {
+  if (!jegyzet?.[lenyomat]?.romlott) return jegyzet ?? {};
+  const uj = { ...jegyzet };
+  const { romlott, ...tobbi } = uj[lenyomat];
+  uj[lenyomat] = tobbi;
+  return uj;
+}
+
 /**
  * Az átvitel-terv: melyik fájlt melyik társtól kérjük.
  *
@@ -327,6 +418,8 @@ export function atvitelTerv(sorrend, jegyzet, beallitas = {}) {
 
     // ⚠️ A társak sorrendje determinisztikus (címke szerint), hogy két futás ugyanazt adja.
     const tarsak = Object.keys(jegyzet?.[h.lenyomat]?.tarsak ?? {}).sort();
+    // ⭐ ÉS AKIKKEL EZ A FÁJL MÁR ELBUKOTT — ha van kit helyettük választani.
+    const valaszthato = valaszthatoForrasok(tarsak, jegyzet?.[h.lenyomat]?.romlott);
 
     // ⭐⭐ TÖBB FORRÁS EGY FÁJLHOZ (D68 / 6., 2026-09-15) — mérve megéri (29. mérés):
     // ha a társak feltöltése a szűk keresztmetszet, három forrás **×2,7**.
@@ -337,7 +430,7 @@ export function atvitelTerv(sorrend, jegyzet, beallitas = {}) {
     // *Ez a „legrövidebb feladat előbb": egy KÉSZ fájl ér valamit, a félkész nem —
     // azt a bulin sem ajánlhatjuk fel.*
     const valasztott = [];
-    for (const t of tarsak) {
+    for (const t of valaszthato) {
       if (valasztott.length >= fajlonkent) break;
       if (kapcsolatok + valasztott.length >= osszesen) break;
       if ((tarsTerhelese.get(t) ?? 0) >= tarsankent) continue;

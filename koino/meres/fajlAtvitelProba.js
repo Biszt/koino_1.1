@@ -18,7 +18,9 @@ import {
   kovetkezoKeres, szeletEllenorzes, atvitelTerv, SZELET_MERET, EGYIDEJU_ATVITEL,
   turelemForrasokbol, TURELEM_MAX, TURELEM_MIN,
   // ⭐ TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., 2026-09-15)
-  ujMunkamegosztas, FORRASONKENT_EGY_FAJLRA
+  ujMunkamegosztas, FORRASONKENT_EGY_FAJLRA,
+  // ⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.)
+  romlottJegyzes, romlottFelejtes, valaszthatoForrasok
 } from '../js/csere/fajlAtvitel.js';
 import { bajtLenyomat } from '../js/esemeny/kanonikusAlak.js';
 
@@ -387,6 +389,69 @@ proba('⛔ Ha MINDEN szelet megvan a lemezen, nincs mit kérni — de kész sinc
     return meretNelkul === false && m.keszEgesz() === true
       && (await m.kovetkezo()) === null;
   });
+
+// ===================================
+// ⭐⭐⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6., 2026-09-15)
+// ===================================
+//
+// ⛔ Ma a lenyomat a TELJES fájlra szól: egy hamis szelet az egészet elbuktatja, és **nem
+// tudjuk, melyik volt**. A válasz nem újabb adat a láncon, hanem egy **helyi** tanulság:
+// a következő körben mással próbáljuk.
+
+proba('⭐ A BUKOTT FORRÁSOKAT FELJEGYEZZÜK — fájlonként, nem társanként', async () => {
+  const jegyzet = romlottJegyzes({}, L(1), ['a:1', 'b:1']);
+
+  return Object.keys(jegyzet[L(1)].romlott).sort().join(',') === 'a:1,b:1'
+    // ⛔ ÉS CSAK ERRE A FÁJLRA: nincs globális mérleg a társakról (D18/2, D48).
+    && jegyzet[L(2)] === undefined;
+});
+
+proba('⭐⭐ A KÖVETKEZŐ KÖRBEN MÁST VÁLASZTUNK — ha van kit', async () => {
+  const jegyzet = jegyzettel([[L(1), ['a:1', 'b:1', 'c:1']]]);
+  const bukott = romlottJegyzes(jegyzet, L(1), ['a:1', 'b:1']);
+
+  const terv = atvitelTerv([{ lenyomat: L(1) }], bukott);
+  return terv.length === 1
+    && terv[0].tarsak.length === 1 && terv[0].tarsak[0] === 'c:1';
+});
+
+proba('⛔⛔ DE HA NEM MARAD SENKI, FELEJTÜNK — a védekezés nem vághatja el az utat',
+  async () => {
+    // ⚠️ Ez a legfontosabb korlát. Egy fájl, amit CSAK EGY társ birtokol, egyetlen bukás
+    // után **soha többé** nem jönne meg, ha a kerülés örökre szólna.
+    const jegyzet = jegyzettel([[L(1), ['a:1']]]);
+    const bukott = romlottJegyzes(jegyzet, L(1), ['a:1']);
+
+    const terv = atvitelTerv([{ lenyomat: L(1) }], bukott);
+    return terv.length === 1 && terv[0].tarsak[0] === 'a:1';
+  });
+
+proba('⭐ …és amint a fájl MEGJÖN, a tanulság tárgytalan (felejtés)', async () => {
+  const jegyzet = jegyzettel([[L(1), ['a:1', 'b:1']]]);
+  const bukott = romlottJegyzes(jegyzet, L(1), ['a:1']);
+  const felejtve = romlottFelejtes(bukott, L(1));
+
+  return bukott[L(1)].romlott !== undefined
+    && felejtve[L(1)].romlott === undefined
+    // ⚠️ A birtoklás-tudás VISZONT MEGMARAD: az másról szól (kinél van meg).
+    && Object.keys(felejtve[L(1)].tarsak).length === 2;
+});
+
+proba('⛔ A jegyzést nem írjuk felül a helyén — új jegyzetet ad (mint a birtoklásnál)',
+  async () => {
+    const eredeti = jegyzettel([[L(1), ['a:1']]]);
+    const uj = romlottJegyzes(eredeti, L(1), ['a:1']);
+    return eredeti[L(1)].romlott === undefined && uj[L(1)].romlott !== undefined;
+  });
+
+proba('⭐ A `valaszthatoForrasok` önmagában is a fenti szabályt mondja', async () => {
+  const harom = ['a:1', 'b:1', 'c:1'];
+  return valaszthatoForrasok(harom, { 'a:1': 1 }).join(',') === 'b:1,c:1'
+    // ⛔ mind kizárva → felejtés
+    && valaszthatoForrasok(harom, { 'a:1': 1, 'b:1': 1, 'c:1': 1 }).length === 3
+    // ⚠️ üres jegyzet → változatlan
+    && valaszthatoForrasok(harom, undefined).length === 3;
+});
 
 export default futtatas;
 
