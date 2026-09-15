@@ -327,10 +327,11 @@ async function resenMeres(meret, beallitas = {}) {
     // küldi, tehát ő tölti a sort. *A kérő oldala keveset küld — rajta a jel alig látszana.*
     const [, eredmeny] = await Promise.all([
       parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort,
-        { torlodasJel: beallitas.torlodasJel }), gazdaTar, KOINO,
+        { torlodasJel: beallitas.torlodasJel, utemezes: beallitas.utemezes }), gazdaTar, KOINO,
         { fajlOlvas: (l) => gazda.olvas(l) }),
       fajlUdpResen(p.masik, '127.0.0.1', p.egyikPort, vendeg, KOINO, lenyomat,
-        { varakozasiIdo: 120000, torlodasJel: beallitas.torlodasJel })
+        { varakozasiIdo: 120000, torlodasJel: beallitas.torlodasJel,
+          utemezes: beallitas.utemezes })
     ]);
     return {
       kesz: eredmeny.kesz, ido: Date.now() - kezd, szeletek: eredmeny.szeletek,
@@ -608,6 +609,28 @@ for (const jel of ['nincs', 'vegas', 'ledbat']) {
   // *Itt nincs mit kímélni — aki visszafog, az téved.*
   sor('[' + jel + '] ingadozó vonal (±20 ms)', 64 * 1024,
     await resenMeres(64 * 1024, { kesleltetes: 1, ingadozas: 20, torlodasJel: jel }));
+}
+
+// ===================================
+// ⭐⭐⭐ AZ ÜTEMEZÉS — A LÖKET LEVÁGÁSA (D68 / 4. lépés, 2026-09-15)
+// ===================================
+//
+// ⛔ A 26. mérés lelete: a `sor:` oszlop a **CSÚCSOT** méri, és azt nem a küszöb szabja meg,
+// hanem hogy **egyszerre** lökjük ki a darabokat. ⭐ Ez a szakasz azt méri, mit tesz ehhez az
+// ütemezés — **külön kapcsolható** (`utemezes`), hogy a hatása ne keveredjen a jelével.
+kiir('');
+kiir('  ⭐⭐⭐ AZ ÜTEMEZÉS: külön-külön és együtt (D68 / 4. lépés)');
+kiir('  ' + '─'.repeat(72));
+
+for (const [cimke, be] of [
+  ['sem jel, sem ütem', { torlodasJel: 'nincs', utemezes: false }],
+  ['csak ÜTEMEZÉS', { torlodasJel: 'nincs', utemezes: true }],
+  ['csak JEL (vegas)', { torlodasJel: 'vegas', utemezes: false }],
+  ['jel + ütemezés', { torlodasJel: 'vegas', utemezes: true }]
+]) {
+  sor('[' + cimke + ']', 256 * 1024, await resenMeres(256 * 1024,
+    { kesleltetes: 5, savszelesseg: 500, ...be,
+      idegen: { fajta: 'egyenletes', uteme: 50 } }));
 }
 
 kiir('\n⚠️ A `+N ms` a valódi hálózat közelítése. Az ABLAK ELŐTT a késleltetés MINDEN');

@@ -202,6 +202,12 @@ const LEDBAT_NYERESEG = 1;     // körönként legfeljebb ennyi darabbal mozdul
 // tartós, a zaj szór — a minimum az, ami a kettőt szétválasztja.
 const FRISS_MINTA = 8;
 
+// ⭐ AZ ÜTEMEZÉS LÖKET-KORLÁTJA: ennyi darab mehet ki egyszerre, ha az óra késve ébred.
+// ⚠️ Nem varázsszám, hanem a **durva óra ára**: Windowson a `setTimeout` ~15,6 ms-os
+// lépésekben ébred, tehát a pontos ütemet nem lehet kirajzolni. A 4 az a kompromisszum,
+// ami a löketet 16-ról levágja, de egy késő ébredés után sem fojtja meg az átbocsátást.
+const LOKET_MAX = 4;
+
 // ⭐⭐⭐ NAGYFELBONTÁSÚ ÓRA A MINTÁKHOZ — és ezt is egy mérés kényszerítette ki (2026-09-15).
 //
 // ⛔⛔ A `Date.now()` **ezredmásodperc-felbontású**, a helyi vonalon mért oda-vissza idők
@@ -258,6 +264,23 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
   // ⭐ A TORLÓDÁS-JEL PARAMÉTER, NEM ÁTÍRÁS (D68 / 2. lépés): alapból 'nincs' — vagyis a
   // tiszta AIMD, ahogy eddig. *A jelölteket a mérés hasonlítja össze; a döntés utána jön.*
   const torlodasJel = beallitas.torlodasJel ?? 'nincs';
+  // ⭐ Az ÜTEMEZÉS független a jeltől (a jel az ÜTEMET szabja meg, ez a LÖKETET).
+  //
+  // ⛔⛔ ALAPBÓL KI — ÉS EZ MÉRT DÖNTÉS, NEM FELEDÉKENYSÉG (D68 / 4. lépés, 2026-09-15).
+  // A 27. mérés szerint a **jel mellett nem ad hozzá mérhetőt** ezen a futtatókörnyezeten:
+  // a hívás csúcsa a Vegas-szal már 18–19 ms (az ütemezés önmagában csak 24–27-ig jut), az
+  // átlag 3,0 → 3,4–4,6-ra **romlott**, a sebesség pedig ingadozóbb lett.
+  //
+  // ⭐⭐ ÉS AZ OK SZERKEZETI, NEM HANGOLÁSI: **a sor mélységének alsó határát a
+  // futtatókörnyezet ÓRÁJA szabja meg.** Windowson a `setTimeout` ~15,6 ms-onként ébred, a
+  // vonal viszont 2 ms-onként visz át egy csomagot — egy ébredés alatt tehát ~8 csomagnyi
+  // idő telik el, és ennél kisebb löketet **nem lehet kirajzolni** anélkül, hogy a vonal
+  // kihasználatlan maradjon. *A `sor: 1–2` cél itt nem hangolás kérdése, hanem mérhetetlen.*
+  //
+  // ⏸️ A KOINO CÉLKÉSZÜLÉKE VISZONT A TELEFON (Termux/Android), ahol az óra ~1 ms-os —
+  // ott az ütemezés várhatóan fizet, és a cél is elérhető. ⚠️ De **bekapcsolni csak mérés
+  // után szabad**: `node koino/meres/resSebessegMeres.js`, az „AZ ÜTEMEZÉS" szakasz.
+  const utemezes = beallitas.utemezes === true;
   console.log('udpKapcsolat - KEZDÉS', { tarsCim, tarsPort, torlodasJel });
 
   const figyelok = { data: [], error: [], end: [], close: [] };
@@ -279,6 +302,14 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
   let rttvar = null;              // az ingadozása
   let rto = RTO_KEZDO;            // ennyit vár egy ÚJ darab a nyugtára
   let minRtt = Infinity;          // ⭐ a vonal SAJÁTJA, sorbanállás nélkül (D68)
+
+  // ----- ⭐ AZ ÜTEMEZÉS ÁLLAPOTA (D68 / 4. lépés) -----
+  // `utemKredit`: hány darabot küldhetünk MOST (időarányosan gyűlik, `LOKET_MAX`-ig).
+  // ⭐ Egy teljes löketnyi kredittel indulunk: a kapcsolat eleje ne legyen lassabb a
+  // réginél — ott úgysincs még mérésünk, tehát ütemezés sincs.
+  let utemKredit = LOKET_MAX;
+  let utemUtolso = 0;
+  let utemOra = null;
   // ⭐⭐ A FRISS MINTÁK — és ezt egy mérés kényszerítette ki (D68 / 2. lépés, 2026-09-15).
   //
   // ⛔ ELŐSZÖR az `srtt`-ből számoltuk a sorbanállást, és a mérés lefojtotta a vonalat: egy
@@ -622,17 +653,73 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
    * bukott meg az első nekifutás (lásd a fenti szakaszt).*
    */
   const kovetkezotKuld = () => {
+    if (lezarva) return;
+
+    // ===== ⭐⭐⭐ AZ ÜTEMEZÉS (D68 / 4. lépés, 2026-09-15) =====
+    //
+    // ⛔⛔ MIÉRT KELL, HA MÁR VAN JEL? Mert **két különböző dolgot szabályoznak**, és a
+    // 26. mérés ezt élesen megmutatta: a Vegas az ablakot 16-ról 5–6-ra vitte (a hívás
+    // átlagos késleltetése 12 → 3 ms), ⛔ **de a `sor:` oszlop 14–16 maradt** — mert az a
+    // CSÚCSOT méri, azt pedig nem az ablak nagysága szabja meg, hanem hogy **egyszerre**
+    // lökjük ki a darabokat. *Szigorúbb küszöbbel sem csökkent, csak az ár nőtt.*
+    //
+    // ⭐ A KÉP, AMI MEGMAGYARÁZZA: a szűk keresztmetszet 2 ms-onként visz át egy csomagot.
+    // Ha 16-ot lököm ki egyszerre, a 16. harminc ezredmásodpercet vár — **és aki mögé beáll
+    // (a családtag hívása), az is.** Ha 2 ms-onként küldök egyet, **ugyanannyi adat megy át
+    // ugyanannyi idő alatt**, de a sor mindig üres marad. *A sor nem gyorsít semmit.*
+    //
+    // ⭐ AZ ÜTEM MAGÁTÓL ADÓDIK, nincs benne varázsszám: egy kör (`srtt`) alatt pont egy
+    // ablaknyi darab megy ki, tehát **`srtt / ablak` ezredmásodperc jut egy darabra**.
+    //
+    // ⚠️⚠️ ÉS EGY KORLÁT, AMIT KI KELL MONDANI: az időzítő felbontása. Windowson a
+    // `setTimeout` ~15,6 ms-os lépésekben ébred (ezt a 26. mérés a saját műszerünkön
+    // mutatta meg), vagyis a 2 ms-os ütemet **nem tudja kirajzolni**. ⭐ Ezért nem
+    // darabonként időzítünk, hanem **kreditet gyűjtünk**: ébredéskor annyi darab mehet,
+    // amennyi a TÉNYLEGESEN eltelt idő alatt „összejött". Így egy késő ébredés nem lassít —
+    // legfeljebb egy kis löketet enged, `LOKET_MAX`-ig. *A durva óra így is jobb, mint a
+    // löket: 16 helyett 4.*
+    //
+    // ⛔ ÉS AMÍG NINCS MÉRÉSÜNK (`srtt === null`), NINCS ÜTEMEZÉS: a kapcsolat első darabjai
+    // (a `LENYOMAT`) azonnal mennek. *Ütemezni csak ahhoz lehet, amit már megmértünk.*
+    const koz = (!utemezes || srtt === null) ? 0 : srtt / Math.max(1, ablak);   // ms / darab
+
+    if (koz > 0) {
+      const mostPontos = most();
+      if (utemUtolso === 0) utemUtolso = mostPontos;
+      // ⚠️ A PLAFON AZ ABLAKHOZ IGAZODIK, nem fix szám: egy durván ébredő óra (Windows:
+      // ~15,6 ms) alatt több darabnyi kredit gyűlik, és ha azt fix 4-nél levágnánk, **a
+      // saját ütemezésünk fojtaná meg a vonalat** (mérve: 247 → 179 KB/s).
+      const plafon = Math.max(LOKET_MAX, Math.floor(ablak / 2));
+      utemKredit = Math.min(plafon, utemKredit + (mostPontos - utemUtolso) / koz);
+      utemUtolso = mostPontos;
+    }
+
     while (!lezarva && sor.length && uton.size < Math.floor(ablak)) {
+      if (koz > 0) {
+        if (utemKredit < 1) break;          // ⭐ most nem fér bele — időzítünk lentebb
+        utemKredit -= 1;
+      }
+
       const sorszam = kovetkezoSorszam++;
-      const most = Date.now();
+      const mostMs = Date.now();
       const tetel = {
         szoveg: sor.shift(), magasabbNyugtak: 0, ora: null,
         kuldesek: [],          // ⭐ minden küldés ideje — ebből lesz a PONTOS minta
-        kezdet: most,          // innen számít a feladási határidő
+        kezdet: mostMs,        // innen számít a feladási határidő
         rto                    // ⭐ a kapcsolat MOSTANI becslésével indul
       };
       uton.set(sorszam, tetel);
       darabotKuld(sorszam, tetel);
+    }
+
+    // ⭐ Maradt küldenivaló, de az ütem nem engedte: ébredjünk, amikor jár a következő.
+    // ⚠️ `unref`, hogy egy nyitva felejtett ütem-óra ne tartsa életben a folyamatot.
+    if (koz > 0 && !lezarva && sor.length && uton.size < Math.floor(ablak) && !utemOra) {
+      utemOra = setTimeout(() => {
+        utemOra = null;
+        kovetkezotKuld();
+      }, Math.max(1, Math.round(koz)));
+      utemOra.unref?.();
     }
   };
 
@@ -766,7 +853,8 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
      */
     jelAllapot() {
       const friss = frissMintak.length ? Math.min(...frissMintak) : srtt;
-      return { ablak, minRtt, friss, srtt, uton: uton.size, sor: sor.length };
+      return { jel: torlodasJel, utemezes, ablak, minRtt, friss, srtt,
+               uton: uton.size, sor: sor.length };
     },
     get bytesWritten() { return bajtKuldott; },
     get bytesRead() { return bajtKapott; },
@@ -820,6 +908,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
       // ⭐ MINDEN úton lévő darab óráját megállítjuk — ablakkal ezekből több is lehet.
       for (const tetel of uton.values()) clearTimeout(tetel.ora);
       uton.clear();
+      if (utemOra) { clearTimeout(utemOra); utemOra = null; }   // ⭐ az ütem-óra is
       oratMegallit();
 
       // ⛔⛔⛔ A FIGYELŐT LEVESSZÜK — DE CSAK AZ UTÓHANG UTÁN (2026-09-14).
@@ -899,8 +988,16 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
   console.log('fajlUdpResen - KEZDÉS', { tarsCim, tarsPort, lenyomat });
 
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  // ⭐⭐⭐ ITT VÁLIK SZÉT A KÉT FORGALOM (D68 / 3. lépés, 2026-09-15).
+  //
+  // A fájl-átvitel **engedékeny** (`vegas`), a csere **nem** (`csereUdpResen`: `nincs`).
+  // ⛔⛔ ÉS EZT NEM A HÍVÓRA BÍZZUK — ugyanaz az érv, mint a javaslathoz tartozó
+  // szavazatnál (`muveletek.js`): *ha a hívó dolga lenne, az egyik út megtenné, a másik
+  // elfelejtené.* A fájl-út **definíció szerint** tömeg-forgalom, tehát a jel ide tartozik.
+  // ⚠️ Felülírható (a mérés ezzel hasonlítja össze a jelölteket).
+  const jel = beallitas.torlodasJel ?? 'vegas';
   const nyito = async () => {
-    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
+    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, { ...beallitas, torlodasJel: jel });
     // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE — ugyanaz az őr, mint a rendes UDP-cserénél.
     kapcsolat.setTimeout(varakozasiIdo, () => {
       kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
@@ -908,7 +1005,10 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
     return kapcsolat;
   };
 
-  const eredmeny = await fajlHozatala(blob, koino, lenyomat, nyito, beallitas);
+  // ⭐ A HASZNÁLT JELET VISSZAADJUK — hogy a szétválasztás **mérhető tény** legyen, ne
+  // ígéret. *Amit nem lehet megmérni, arról egy hét múlva nem tudjuk, igaz-e még.*
+  const eredmeny = { ...(await fajlHozatala(blob, koino, lenyomat, nyito, beallitas)),
+                     torlodasJel: jel };
   console.log('fajlUdpResen - VÉGE', eredmeny);
   return eredmeny;
 }
@@ -970,6 +1070,12 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     varakozasiIdo = TETLENSEG_ALAP, utana = () => {}
   } = beallitas;
 
+  // ⭐ A RANDEVÚ MINDKÉT FÁZISA TÖMEG-FORGALOM — kérünk vagy adunk, mindkettő fájl.
+  // ⛔ És a torlódást a KÜLDŐ okozza, tehát a **kiszolgáló** fázisnak is kell (ő küldi a
+  // 64 KB-os szeleteket). *Ha csak a kérőre tennénk, épp az maradna vezérlés nélkül, aki a
+  // vonalat tölti.*
+  const jel = beallitas.torlodasJel ?? 'vegas';
+
   const ove = tarsCim + ':' + tarsPort;
   // ⭐ Szöveges összehasonlítás: ugyanaz a két szöveg van meg mindkét gépen, tehát a
   // döntés is ugyanaz — csak fordítva. ⚠️ Egyenlőségnél (elvileg lehetetlen) senki nem kezd.
@@ -988,7 +1094,7 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     for (const lenyomat of kerhetok) {
       try {
         const e = await fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
-          { korlat, varakozasiIdo });
+          { korlat, varakozasiIdo, torlodasJel: jel });
         if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
         utana({ mi: e.kesz ? 'MEGJOTT' : 'NEM-JOTT', lenyomat, ok: e.ok, bajt: e.bajt ?? 0 });
       } catch (hiba) {
@@ -1020,7 +1126,8 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     // *Enélkül a fázis-ütem csúszna el, és a másik fél kérése a semmibe menne.*
     const olvas = fajlOlvas ?? (async () => null);
     for (;;) {
-      const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
+      const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort,
+        { ...beallitas, torlodasJel: jel });
       kapcsolat.setTimeout(turelem, () => {
         kapcsolat.destroy(new Error('a társ nem kért semmit (' + turelem + ' ms)'));
       });
@@ -1051,7 +1158,7 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     await keroFazis();
   }
 
-  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep };
+  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel };
   console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
 }
@@ -1060,7 +1167,13 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   console.log('csereUdpResen - KEZDÉS', { tarsCim, tarsPort, koino, varakozasiIdo });
 
-  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, beallitas);
+  // ⛔⛔ A CSERE NEM ENGEDÉKENY (D68 / 3. lépés) — és ez nem udvariatlanság, hanem a
+  // forgalom természete: a csere **apró és kérdés-válasz jellegű** (egy „nincs újdonság"
+  // kör 334 bájt), tehát **nem ő tölti meg a sort** — ő az, aki a sor mögé kerül.
+  // ⭐ *Az engedékenység annak való, aki a vonalat terheli; aki nem terheli, annak a
+  // visszafogás csak kár lenne — a késleltetés-érzékeny forgalmat kétszer büntetné.*
+  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort,
+    { ...beallitas, torlodasJel: beallitas.torlodasJel ?? 'nincs' });
 
   // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE. Ha a másik elhallgat (elment, lefagyott, vagy csak
   // elveszett a válasza), ez a határidő zárja le a párbeszédet — HIBÁVAL, nem csenddel.
@@ -1084,7 +1197,9 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
     const teljes = {
       ...eredmeny,
       bajtKuldott: kapcsolat.bytesWritten,
-      bajtKapott: kapcsolat.bytesRead
+      bajtKapott: kapcsolat.bytesRead,
+      // ⭐ Ugyanúgy megfigyelhető tény, mint a fájl-útnál — a szétválasztás így mérhető.
+      torlodasJel: kapcsolat.jelAllapot().jel
     };
     console.log('csereUdpResen - VÉGE', teljes);
     return teljes;

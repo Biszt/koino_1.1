@@ -978,9 +978,20 @@ Csaba három válaszával: **D68** a [`fejlesztesi_terv_fazis2.md`](fejlesztesi_
    szerkezeti: **a `sor:` a CSÚCSOT méri, azt pedig a LÖKETSZERŰ küldés adja** (16 darab
    egyszerre indul), nem az ablak nagysága. ⏭️ *Amit a D68 (d) pontja „félmegoldásnak"
    nevezett, az valójában a hiányzó másik fele.*
-3. **Az engedékenység szétválasztása** (e): a **fájl-átvitel** enged, a **csere** nem.
-   ⭐ A szétválasztás **már kész** — a fájl-átvitel 5.7/B óta **saját kapcsolaton** fut, tehát
-   ez egy paraméter a vonalnak, nem új gépezet.
+3. ✅ **AZ ENGEDÉKENYSÉG SZÉTVÁLASZTÁSA KÉSZ — 27. mérés (2026-09-15).** A **fájl-átvitel**
+   enged (`vegas`), a **csere** nem (`nincs`). ⭐ És a jel **nem a hívó dolga**: a fájl-út
+   magával hozza — *ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
+   ⚠️ A **kiszolgáló** oldalnak is kell, mert a torlódást a küldő okozza (ő küldi a 64 KB-os
+   szeleteket). ⭐⭐ **Mérhetővé téve:** a használt jel visszakerül az eredménybe
+   (`torlodasJel`), önpróba méri, rontás-próba buktatja.
+   ⭐ **Élesben:** a hívás késleltetése **11,5 → 3,0 ms**, csúcsa **45 → 18 ms**; az ár a
+   fájl-átvitelen **−14%** (271 → 233 KB/s).
+4. ⛔⛔ **AZ ÜTEMEZÉS MEGÉPÜLT, DE ALAPBÓL KI — mért döntés.** Önmagában dolgozik (csúcs
+   45 → 24–27, sor 27 → 17–18, **nem lassít**), de a jel mellett nem ad hozzá mérhetőt.
+   ⭐⭐⭐ **Az ok szerkezeti: a sor alsó határát az ÓRA szabja meg** —
+   `sor_alsó ≈ ébredési köz / szolgálati idő` = 15,6 / 2 ≈ **8 csomag**. *A `sor: 1–2` ezen a
+   gépen nem hangolás kérdése, hanem mérhetetlen.* ⏸️ A telefonon (~1 ms-os óra) újra kell
+   mérni — a parancs készen áll.
 4. **A `FELADAS_IDO` leszállítása** (Csaba 2. válasza): ma **30 000 ms**
    ([`udpVonal.js:131`](../koino/js/csere/udpVonal.js)) — ⛔ **de NEM fix kisebb számra**, mert
    az ugyanolyan varázsszám lenne. ⭐ **Függjön attól, hány forrásból szerezhető be ugyanaz**

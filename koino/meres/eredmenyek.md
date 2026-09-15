@@ -2273,3 +2273,70 @@ pillanatban telik meg — akármekkora is az ablak átlagban.
 ⏭️ **Vagyis a `sor: 1–2`-höz ÜTEMEZÉS kell** (a D68 (d) pontja: a darabokat elosztva küldeni
 az oda-vissza idő alatt), nem szigorúbb küszöb. *Amit korábban „félmegoldásnak" neveztünk,
 az valójában a hiányzó másik fele — és ezt csak a mérés mondta meg.*
+
+---
+
+## 27. ⭐⭐ A SZÉTVÁLASZTÁS ÉS AZ ÜTEMEZÉS — és amit az utóbbiról a mérés mondott (2026-09-15)
+
+**A D68 3. és 4. lépése.** A 26. mérés eldöntötte a jel alakját (Vegas), de két dolog maradt:
+a jel **élesben ki volt kapcsolva**, és a `sor:` oszlop 14–16 maradt a remélt 1–2 helyett.
+
+### ✅ 3. lépés: a szétválasztás — a fájl enged, a csere nem
+
+⭐ A jel **nem a hívó dolga**: a fájl-út magával hozza (`fajlUdpResen`, `fajlRandevu` →
+`vegas`), a csere szintén (`csereUdpResen` → `nincs`). *Ugyanaz az érv, mint a javaslathoz
+tartozó szavazatnál: ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
+
+⭐⭐ **És mérhetővé is tettük:** a használt jel **visszakerül az eredménybe** (`torlodasJel`),
+tehát nem naplósor, hanem megfigyelhető tény — egy új önpróba ezen méri, hogy a két forgalom
+**tényleg külön jelet kap**, és rontás-próba (a szétválasztás elmosása) buktatja.
+
+⚠️ **A kiszolgáló oldalnak is kell** — a torlódást a **küldő** okozza, és a 64 KB-os
+szeleteket a kiszolgáló küldi. *Ha csak a kérőre tennénk, épp az maradna vezérlés nélkül,
+aki a vonalat tölti.*
+
+⛔ **A TCP-út nem a mi dolgunk:** ott a kernel torlódás-vezérlése (CUBIC) hajt. Ez a D67
+utáni döntéssel összefér — a TCP „alkalmi gyorssáv", a fő út a UDP.
+
+### ⛔⛔ 4. lépés: az ütemezés — MEGÉPÜLT, ÉS A MÉRÉS SZERINT ALAPBÓL KI MARAD
+
+```
+  változat                        KB/s    sor    hívás átlag    csúcs
+  ────────────────────────────────────────────────────────────────────
+  sem jel, sem ütem            271/275     27    11,5 ms        45 ms
+  csak ÜTEMEZÉS                280/279  17/18    10,4/11,3      24/27
+  csak JEL (vegas)             233/233     14     3,0 ms        18/19
+  jel + ütemezés               263/226  15/15     4,6/3,4       19/19
+```
+
+⭐ **Az ütemezés önmagában dolgozik**: a csúcsot 45 → 24–27 ms-ra viszi, a sort 27 → 17–18-ra,
+és **nem lassít** (280 KB/s). ⛔ **De a jel mellett nem ad hozzá mérhetőt:** a Vegas a csúcsot
+már 18–19-re vitte, az átlagot 3,0-ra — a kettő együtt az átlagot **rontotta** (3,4–4,6), a
+sebességet pedig ingadozóbbá tette.
+
+### ⭐⭐⭐ ÉS A LELET, AMI EZT MEGMAGYARÁZZA: A SOR ALSÓ HATÁRÁT AZ ÓRA SZABJA MEG
+
+A `sor: 1–2` cél **nem hangolás kérdése ezen a gépen, hanem mérhetetlen**:
+
+```
+  sor_alsó_határ  ≈  az óra ébredési köze / a vonal szolgálati ideje
+                  ≈  15,6 ms (Windows setTimeout) / 2 ms (500 csomag/mp)  ≈  8 csomag
+```
+
+Egy ébredés alatt a vonal ~8 csomagnyi időt kiszolgál — ennél kisebb löketet **nem lehet
+kirajzolni** anélkül, hogy a vonal kihasználatlan maradjon. ⚠️ És ezt **élőben is megmértük**:
+egy fix, 4-es löket-plafonnal a saját ütemezésünk **megfojtotta a vonalat** (247 → 179 KB/s).
+✅ A javítás az volt, hogy a kredit-plafon az **ablakhoz igazodik** (`ablak / 2`), nem fix szám.
+
+⏸️ **A koino célkészüléke viszont a TELEFON** (Termux/Android), ahol az óra ~1 ms-os — ott az
+ütemezés várhatóan fizet, és a `sor: 1–2` is elérhető. ⛔ **De bekapcsolni csak MÉRÉS után
+szabad**, és a mérés parancsa készen áll: `node koino/meres/resSebessegMeres.js`, az
+„AZ ÜTEMEZÉS" szakasz. *A kód marad, a paraméter él (`utemezes: true`) — a kikapcsolás mért
+döntés, nem feledékenység.*
+
+### Mi változott élesben ezzel
+
+⭐ **A fájl-átvitel mostantól engedékeny** (Vegas), a csere nem. A mellettünk futó hívás
+késleltetése **11,5 → 3,0 ms**, a csúcsa **45 → 18 ms** — az ára a fájl-átvitelen
+**271 → 233 KB/s** (−14%), amit a D68 tudatosan vállal: *háttérmunka, és a redundancia
+pótolja.*

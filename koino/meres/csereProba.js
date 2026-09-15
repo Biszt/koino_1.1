@@ -21,7 +21,7 @@ import {
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
 import { pajzsfuras, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
-import { csereUdpResen, udpKapcsolat, fajlRandevu } from '../js/csere/udpVonal.js';
+import { csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen } from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
   felfedezettekOsszefesulese
@@ -1091,6 +1091,70 @@ proba('⭐⭐⭐ A RANDEVÚ: MINDKÉT FÉL KÉR ÉS AD — egy foglalaton, ütk�
   } finally {
     p.bezar();
   }
+});
+
+// ===================================
+// ⭐⭐⭐ A SZÉTVÁLASZTÁS: A FÁJL ENGED, A CSERE NEM (D68 / 3. lépés, 2026-09-15)
+// ===================================
+//
+// ⛔⛔ EZ A D68 LÉNYEGE, ÉS EDDIG CSAK ÍGÉRET VOLT. A késleltetés-alapú jel (Vegas)
+// **szándékosan lassít** — a mérés szerint a véletlenül vesztő vonalon 30–50%-ot. ⭐ Ezt a
+// **fájl-átvitel** megengedheti magának (háttérmunka, és a redundancia pótolja), a **csere**
+// viszont nem: az apró, kérdés–válasz jellegű, és nem is ő tölti meg a sort.
+//
+// ⭐ EZÉRT A JEL NEM A HÍVÓ DOLGA: a fájl-út **magával hozza** (`fajlUdpResen`,
+// `fajlRandevu` → `vegas`), a csere szintén (`csereUdpResen` → `nincs`). *Ugyanaz az érv,
+// mint a javaslathoz tartozó szavazatnál: ha a hívóra bíznánk, az egyik út megtenné, a másik
+// elfelejtené.*
+//
+// ⚠️ A próba azért tudja megmérni, mert a használt jel **visszakerül az eredménybe** — nem
+// naplósor, hanem megfigyelhető tény.
+
+proba('⭐⭐⭐ A FÁJL-ÚT ENGED, A CSERE NEM — a két forgalom külön jelet kap (D68)', async () => {
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+
+  const gazdaBlob = fajlBlobTarolo(KOINO, await mkdtemp(join(tmpdir(), 'koino-szet-a-')));
+  const vendegBlob = fajlBlobTarolo(KOINO, await mkdtemp(join(tmpdir(), 'koino-szet-b-')));
+  const tartalom = new Uint8Array(3 * 1024);
+  for (let i = 0; i < tartalom.length; i++) tartalom[i] = i % 251;
+  const { lenyomat } = await gazdaBlob.ir(tartalom);
+
+  // ----- 1. A FÁJL-ÚT -----
+  const p1 = await udpParos();
+  const fajlEredmeny = await (async () => {
+    const gazdaTar = await ujTar();
+    try {
+      const [, e] = await Promise.all([
+        parbeszed(udpKapcsolat(p1.egyik, '127.0.0.1', p1.masikPort), gazdaTar, KOINO,
+          { fajlOlvas: (l) => gazdaBlob.olvas(l) }),
+        fajlUdpResen(p1.masik, '127.0.0.1', p1.egyikPort, vendegBlob, KOINO, lenyomat,
+          { varakozasiIdo: 3000 })
+      ]);
+      return e;
+    } finally { p1.bezar(); }
+  })();
+
+  // ----- 2. A CSERE -----
+  const anna = await ujEember(KOINO);
+  const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 2));
+  const masikTar = await ujTar();
+  const p2 = await udpParos();
+  let csereEredmeny;
+  try {
+    [csereEredmeny] = await Promise.all([
+      csereUdpResen(p2.egyik, '127.0.0.1', p2.masikPort, egyikTar, KOINO),
+      csereUdpResen(p2.masik, '127.0.0.1', p2.egyikPort, masikTar, KOINO)
+    ]);
+  } finally { p2.bezar(); }
+
+  return fajlEredmeny.kesz === true
+    // ⭐ A LÉNYEG: a két forgalom NEM ugyanazt a jelet használja.
+    && fajlEredmeny.torlodasJel === 'vegas'
+    && csereEredmeny.torlodasJel === 'nincs'
+    && fajlEredmeny.torlodasJel !== csereEredmeny.torlodasJel;
 });
 
 // ⚠️ ÉS A PÁRJA: HA NEM TUDJUK ELDÖNTENI a szerepet (a társ nem mondta meg, hogyan lát
