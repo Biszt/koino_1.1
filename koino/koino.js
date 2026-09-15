@@ -34,6 +34,7 @@
 //   node koino/koino.js felszabadit [buli]
 //   node koino/koino.js szavaz <javaslat> tamogat|ellenez|tartozkodik [kulonag]
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
+//   node koino/koino.js visszatolt <fájl>        — …és a visszahozása egy másik készüléken
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
 //   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
 //   node koino/koino.js csere                    — csere MINDEN társsal (a lista szerint)
@@ -81,7 +82,9 @@ import {
   fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo
 } from './js/tar/fajlTar.js';
 import {
-  kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese
+  kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese,
+  // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
+  kulcsparVisszatoltese
 } from './js/kulcs/kulcsTar.js';
 import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese } from './js/tar/esemenyTar.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
@@ -156,6 +159,57 @@ const SZIN = process.stdout.isTTY
 // ===================================
 
 const tarolo = kulcsTarolo();
+
+// ===================================
+// ⛔⛔ A VISSZATÖLTÉS AZ EGYETLEN PARANCS, AMI A KULCS-BIZTOSÍTÁS ELŐTT FUT
+// ===================================
+//
+// ⚠️ MIÉRT ITT, ÉS NEM A TÖBBI PARANCS KÖZÖTT (mérve, 2026-09-15): a `kulcsparBiztositasa`
+// minden induláskor lefut, a `switch (parancs)` viszont csak jóval később. Vagyis aki a
+// mentett kulcsával akart visszatérni, ELŐBB kapott egy vadonatúj azonosságot, és ezt
+// olvasta: *„Új kulcs készült — ez mostantól a személyazonosságod."*
+//
+// ⭐ Igaz mondat a lehető legrosszabb pillanatban: pont azt állítja, amit az e-ember épp
+// meg akar előzni. Ugyanaz a csapda, mint az `Allaspont`-nál és a `fajlok` feliratánál —
+// *ahol a szöveg mást mond, mint a szándék, ott valaki a szöveget hiszi el.*
+//
+// Ezért a visszatöltés a kulcs SZÜLETÉSE ELŐTT dől el, és utána kilépünk: ez a parancs
+// nem a koinóval dolgozik, hanem magával a személyazonossággal.
+const [parancs, ...ervek] = process.argv.slice(2);
+
+if (parancs === 'visszatolt') {
+  try {
+    const honnan = ervek[0];
+    if (!honnan) {
+      throw new Error('Melyik fájlból? node koino/koino.js visszatolt <fájl> [felulir]');
+    }
+    // ⭐ A `felulir` KIMONDOTT engedély (a koino mintája: `belep [alapítás]`,
+    // `szavaz … kulonag`) — a programnak nincs interaktív kérdése, és ez jó így: egy
+    // igen/nem kérdésre könnyebb gépiesen rábólintani, mint kiírni, mit akarsz.
+    const felulir = ervek.includes('felulir');
+    const fajlTartalom = await readFile(honnan, 'utf8');
+
+    const eredmeny = await kulcsparVisszatoltese(tarolo, fajlTartalom, { felulir });
+
+    kiir(SZIN.vastag + 'A kulcs visszatöltve — ez mostantól a személyazonosságod.'
+      + SZIN.vege);
+    kiir('  ' + rovidAzonosito(eredmeny.azonosito));
+    kiir(SZIN.halvany + '  A kulcs helye: ' + tarolo.fajl + SZIN.vege);
+    if (eredmeny.elhagyott) {
+      // ⛔ D19: ha eldobtunk valamit, azt KIMONDJUK — akkor is, ha kérték.
+      kiir(SZIN.nem + '  ⚠ A korábbi kulcs ELVESZETT: '
+        + rovidAzonosito(eredmeny.elhagyott) + SZIN.vege);
+    }
+    kiir(SZIN.halvany + 'Az események a te lépéseiddel folytatódnak; amit ezzel a kulccsal'
+      + ' írtál alá, az újra a tiéd.' + SZIN.vege);
+    process.exit(0);
+  } catch (hiba) {
+    kiir(SZIN.nem + 'Nem sikerült: ' + hiba.message + SZIN.vege);
+    if (process.env.KOINO_NAPLO) naplo(hiba);
+    process.exit(1);
+  }
+}
+
 const { kulcspar, ujE } = await kulcsparBiztositasa(tarolo);
 const szerzo = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
 const tar = await esemenyTarNyitasa(KOINO);
@@ -491,7 +545,8 @@ async function elakadtPontokFelszabaditasa(hangos = false, kellBuli = MEGULEPEDE
 // A PARANCSOK
 // ===================================
 
-const [parancs, ...ervek] = process.argv.slice(2);
+// ⚠️ A `parancs` és az `ervek` FELJEBB dől el (az indulásnál), mert a `visszatolt`-nak a
+// kulcs születése ELŐTT kell döntenie — lásd az ottani indoklást.
 
 /** Ezrelék → olvasható százalék. */
 const szazalek = (ezrelek) => (ezrelek / 10).toFixed(1).replace('.0', '') + '%';
@@ -881,6 +936,12 @@ try {
       await writeFile(hova, await kulcsparKimentese(kulcspar), 'utf8');
       kiir('Elmentve: ' + hova);
       kiir(SZIN.nem + 'Aki ezt a fájlt megszerzi, a nevedben tud aláírni. Őrizd biztos helyen.' + SZIN.vege);
+      // ⭐ ÉS MEGMONDJUK, MIRE JÓ. Egy mentés, amiről nem tudod, hogyan hozható vissza,
+      // nem mentés, hanem hamis biztonságérzet — a visszatöltés parancsa 2026-09-15-ig
+      // hiányzott is, pedig a réteg tudta.
+      kiir(SZIN.halvany + 'Visszahozni így lehet — egy ÚJ készüléken, mielőtt bármi mást'
+        + ' csinálnál rajta:' + SZIN.vege);
+      kiir(SZIN.halvany + '  node koino/koino.js visszatolt ' + hova + SZIN.vege);
       break;
     }
 
@@ -3271,7 +3332,8 @@ try {
 
     default:
       kiir('Ismeretlen parancs: ' + parancs);
-      kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · koino <név> · gondolat <cím> [szöveg]');
+      kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · visszatolt <fájl> [felulir]');
+    kiir('           koino <név> · gondolat <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');

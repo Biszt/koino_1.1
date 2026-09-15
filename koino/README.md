@@ -40,6 +40,7 @@ node koino/koino.js
 | `node koino/koino.js allapot 3` | **mi lesz 3 nap múlva** — a döntési idő napokban mérhető |
 | `node koino/koino.js kulcs` | ki vagyok, hol a kulcsom és az adatom |
 | `node koino/koino.js mentes kulcs.json` | a kulcs kimentése (ez te vagy — mentsd el) |
+| `node koino/koino.js visszatolt kulcs.json [felulir]` | ⭐ **…és a visszahozása** egy másik készüléken (2026-09-15). Meglévő kulcsot csak a kimondott `felulir` ír felül — a régi azonosság elveszne (D15) |
 | `node koino/koino.js koino "Név"` | koino létrehozása |
 | `node koino/koino.js gondolat "Cím" "szöveg" [típus] [kategória...]` | új gondolat (+100 tudatpont, enélkül nem létezne); a besorolás elhagyható, rövidítéssel is megadható |
 | `node koino/koino.js kategoria "Név" [ikon] [leírás]` | ⭐ **új kategória** (5.4) — önálló entitás, saját tudatponttal. Az ikon lehet **emoji** vagy kép-cím |
@@ -94,12 +95,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonegy próba-fájl, **575 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonkét próba-fájl, **593 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **169 fájl, 2630,1 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **170 fájl, 2651,6 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -116,6 +117,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | Fájl | Mit bizonyít |
 |---|---|
 | `meres/kanonikusProba.js` | ugyanaz az adat mindig ugyanazt a lenyomatot adja (+ regressziós horgony) |
+| `meres/kulcsProba.js` | ⭐ **a személyazonosság** (2026-09-15): a kimentett kulcs visszahozza ugyanazt az e-embert — és a bizonyíték nem a szöveg, hanem egy **aláírt esemény**. ⛔ A visszatöltés nem ír felül némán, és az átírt `azonosito` mező lelepleződik |
 | `meres/esemenyProba.js` | az esemény hamisíthatatlan, a kettős cselekvés leleplezhető |
 | `meres/tarProba.js` | az események megmaradnak, ellenőrizetlen nem kerül a tárba |
 | `meres/allapotProba.js` | a sorrend nem számít — ugyanaz a halmaz, ugyanaz az állapot |
@@ -161,7 +163,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/esemeny/esemeny.js` | aláírás és ellenőrzés; az esemény neve a gondolata lenyomata |
 | `js/tar/fajlTar.js` | a tár: **hozzáfűzhető** fájl, soronként egy esemény — ⭐ 3.2 óta **kérdezhető** (`esemeny`, `szerzoLanca`, `szeletEsemenyei`, `sorszamSzerint`), nem csak `betolt()` |
 | `js/tar/esemenyTar.js` | a lánc kezelése — ellenőrizetlen esemény nem kerül be |
-| `js/kulcs/kulcsTar.js` | a kulcs = a személyazonosság (D15) |
+| `js/kulcs/kulcsTar.js` | a kulcs = a személyazonosság (D15) — kimentés **és visszatöltés**; ⛔ az egyetlen művelet a koinóban, ami ELDOB valamit, ezért kimondott engedély kell hozzá |
 | `js/allapot/szabalyok.js` | mely események **számítanak** (keret, jogosultság) |
 | `js/allapot/allapotSzamitas.js` | események → entitások |
 | `js/allapot/javaslatSzamitas.js` | a döntéshozatal; **az egyezmény mint számítás** |

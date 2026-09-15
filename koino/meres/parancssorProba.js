@@ -1019,6 +1019,76 @@ proba('⛔⛔ A TÜRELEM ELJUT A VONALIG: hat forrásnál 5 mp alatt feladjuk', 
   }
 });
 
+// ===================================
+// ⛔⛔ A KULCS KÉZI ÚTJA — ODA ÉS VISSZA (2026-09-15)
+// ===================================
+//
+// Egy átnézés talált egy 4. szabály-hiányt, ugyanabból a fajtából, mint 2026-09-10-én: a
+// `kulcsparVisszatoltese` MEGÉPÜLT és működött, de **egyetlen hívója sem volt** — se éles
+// út, se próba. A program az első indításkor azt mondta: *„Mentsd el"* — és a mentett
+// fájlt nem lehetett visszahozni vele.
+//
+// ⛔ És a mérés rosszabbat mutatott a puszta hiánynál: a `kulcsparBiztositasa` MINDEN
+// parancs előtt lefut, tehát aki a mentett kulcsával próbálkozott, előbb kapott egy
+// vadonatúj azonosságot — és ezt olvasta: *„Új kulcs készült — ez mostantól a
+// személyazonosságod."* Igaz mondat a lehető legrosszabb pillanatban.
+
+proba('⭐⭐⭐ A MENTETT KULCS VISSZAHOZHATÓ — és közben NEM születik új azonosság', async () => {
+  const regi = await ujKeszulek();
+  const uj = await ujKeszulek();
+  const mentesFajl = join(regi, 'kulcsom.json');
+
+  try {
+    // 1. Az „elveszett" készülék azonossága, és a mentés.
+    const eredeti = teljesAzonosito(await fut(regi, 'kulcs'));
+    await fut(regi, 'mentes', mentesFajl);
+
+    // 2. Az ÚJ készülék — mint egy frissen vett telefon.
+    const vissza = await fut(uj, 'visszatolt', mentesFajl);
+
+    // ⛔ EZ A SOR BUKTATJA A KORAI ÁG KIVÉTELÉT: ha a visszatöltés a kulcs-biztosítás
+    // UTÁN futna, itt ott állna az „Új kulcs készült" — és a mentés hiába jött volna.
+    if (vissza.includes('Új kulcs készült')) return false;
+    if (!vissza.includes('visszatöltve')) return false;
+
+    // 3. ⭐ A BIZONYÍTÉK: a készülék MOSTANTÓL ugyanaz az e-ember.
+    const mostani = teljesAzonosito(await fut(uj, 'kulcs'));
+    return eredeti !== null && mostani === eredeti;
+  } finally {
+    await rm(regi, { recursive: true, force: true });
+    await rm(uj, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ MEGLÉVŐ azonosságot csak KIMONDOTT engedéllyel ír felül — és megmondja, mit dob el',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const mentesFajl = join(egyik, 'kulcsom.json');
+
+    try {
+      const hozott = teljesAzonosito(await fut(egyik, 'kulcs'));
+      await fut(egyik, 'mentes', mentesFajl);
+
+      // A másik készüléknek MÁR VAN azonossága — ez a veszélyes eset.
+      const sajat = teljesAzonosito(await fut(masik, 'kulcs'));
+
+      // a) Engedély nélkül: megtagadja, és a régi marad.
+      const tiltas = await fut(masik, 'visszatolt', mentesFajl);
+      if (!tiltas.includes('MÁR VAN kulcs')) return false;
+      if (teljesAzonosito(await fut(masik, 'kulcs')) !== sajat) return false;
+
+      // b) Kimondott engedéllyel: megtörténik, ÉS kimondja, mi veszett el (D19).
+      const csere = await fut(masik, 'visszatolt', mentesFajl, 'felulir');
+      if (!csere.includes('ELVESZETT')) return false;
+
+      return teljesAzonosito(await fut(masik, 'kulcs')) === hozott && hozott !== sajat;
+    } finally {
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

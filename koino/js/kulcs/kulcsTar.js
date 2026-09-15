@@ -1,6 +1,6 @@
 // koino/js/kulcs/kulcsTar.js
 
-// Felelősség: a saját kulcspár létrehozása, tárolása, betöltése és kimentése.
+// Felelősség: a saját kulcspár létrehozása, tárolása, betöltése, kimentése és VISSZATÖLTÉSE.
 //
 // A KULCS A KOINÓBAN NEM JELSZÓ, HANEM SZEMÉLYAZONOSSÁG (D15): nem titkol, hanem
 // HITELESÍT. A nyilvános fele a „neved" a hálózaton (32 bájt), a privát felével írod alá
@@ -18,7 +18,11 @@
 // (létrehozás, kimentés, visszatöltés); hogy hol lakik, azt a tároló dönti el
 // (`olvas`/`ir`). Így a kulcs-kezelés egy példányban él, futtatókörnyezettől függetlenül.
 //
-// Használják: a program indulása és minden művelet.
+// Használják: a program indulása és minden művelet; a `mentes` és a `visszatolt` parancs.
+//
+// ⚠️⚠️ 2026-09-15-IG EZ A FEJLÉC IGAZAT MONDOTT A LOGIKÁRÓL, ÉS MÉGIS FÉLREVEZETETT: a
+// „visszatöltés" tényleg itt volt — de **senki nem hívta**, mert nem volt hozzá parancs.
+// *Egy réteg, ami tud valamit, amit a kéz nem ér el, a 4. szabály szerint nincs kész.*
 
 // ⚠️⚠️ A `bajtokBase64Url` ITT EGYSZER MÁR MÁSODPÉLDÁNYBAN ÉLT (2026-09-06-ig). Kívülről
 // ártalmatlannak látszott — nyolc sor, és bájtra ugyanaz, mint a `kanonikusAlak.js`-beli.
@@ -202,6 +206,22 @@ export async function kulcsparLeirasbol(leiras) {
     'jwk', nyilvanosJwk, { name: ALGORITMUS }, true, ['verify']
   );
 
+  // ⭐⭐ A NÉV A KULCSBÓL JÖN, NEM A FÁJL SZAVÁBÓL.
+  //
+  // Az `azonosito` mező KÉNYELEM: hogy a mentett fájlba ránézve lássuk, kié. De ő csak
+  // BEMONDOTT adat — a valódi azonosító a nyilvános kulcsból SZÁMÍTHATÓ, és ez a kettő
+  // eltérhet, ha a fájlt átírták vagy két mentés összekeveredett.
+  //
+  // ⭐ Ugyanaz az elv, mint a `fajlTar`-nál (*a típus a bájtokból jön, nem a kliens
+  // szavából*) és amiért az eseményből kihagytuk az `entitasTipus`-t: **egy második,
+  // hazudható forrás ugyanarról nem érték, hanem csapda** — előbb-utóbb valaki a mezőt
+  // hiszi el. Itt a tét a személyazonosság (D15), ezért az eltérés NEM jelzés, hanem hiba.
+  const szamitott = await nyilvanosKulcsSzovegesen(publicKey);
+  if (leiras.azonosito && leiras.azonosito !== szamitott) {
+    throw new Error('A kulcs-leírás HAZUDIK: a bemondott azonosító (' + leiras.azonosito
+      + ') nem ez a kulcs (' + szamitott + '). A fájlt átírták vagy sérült.');
+  }
+
   return { privateKey, publicKey };
 }
 
@@ -216,17 +236,50 @@ export async function kulcsparKimentese(kulcspar) {
 
 /**
  * Egy korábban kimentett kulcsfájl visszatöltése — és elmentése a tárolóba.
- * @param {Object} tarolo
+ *
+ * ⛔⛔ EZ AZ EGYETLEN MŰVELET A KOINÓBAN, AMI ELDOB VALAMIT. Mindenütt máshol
+ * hozzáfűzünk: az esemény-tár csak `hozzafuz`-t tud, eseményt soha nem módosítunk. Itt
+ * viszont egy meglévő kulcs FELÜLÍRÓDNA — és a D15 szerint az nem „egy fájl", hanem az
+ * e-ember maga: a régi kulcshoz tartozó lánc, tagság és tanúsítások mind elérhetetlenné
+ * válnának, mert senki más nem tud helyette aláírni.
+ *
+ * ⭐ Ezért alapból NEM ír felül, és a `felulir` KIMONDOTT engedély kell hozzá. Az őr itt
+ * van, nem a parancssorban — ugyanaz az érv, mint a javaslathoz tartozó szavazatnál: ha a
+ * hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.
+ *
+ * ⚠️ És a sorrend sem véletlen: ELŐBB a fájlt ellenőrizzük, csak AZUTÁN nyúlunk a tárhoz.
+ * Egy hibás fájl így nyom nélkül elbukik.
+ *
+ * @param {Object} tarolo - { olvas, ir }
  * @param {string} fajlTartalom
- * @returns {Promise<CryptoKeyPair>}
+ * @param {{ felulir?: boolean }} beallitas
+ * @returns {Promise<{kulcspar: CryptoKeyPair, azonosito: string, elhagyott: string|null}>}
  */
-export async function kulcsparVisszatoltese(tarolo, fajlTartalom) {
-  console.log('kulcsparVisszatoltese - KEZDÉS');
+export async function kulcsparVisszatoltese(tarolo, fajlTartalom, beallitas = {}) {
+  console.log('kulcsparVisszatoltese - KEZDÉS', { felulir: beallitas.felulir === true });
 
-  const leiras = JSON.parse(fajlTartalom);
+  let leiras;
+  try {
+    leiras = JSON.parse(fajlTartalom);
+  } catch {
+    // ⚠️ D19: a „nem is JSON" más hiba, mint a „nem koino kulcs" — ne mosódjon össze.
+    throw new Error('Ez a fájl nem olvasható: nem JSON.');
+  }
+
   const kulcspar = await kulcsparLeirasbol(leiras);
+  const azonosito = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
+
+  const meglevo = await tarolo.olvas();
+  if (meglevo && beallitas.felulir !== true) {
+    // ⚠️ A meglévő fájlban az `azonosito` mező hiányozhat (kézzel szerkesztették) — a
+    // hiányt KIMONDJUK, nem írunk a helyére `undefined`-ot (D19).
+    throw new Error('Ezen a készüléken MÁR VAN kulcs ('
+      + (rovidAzonosito(meglevo.azonosito) || 'ismeretlen azonosítójú')
+      + '), a visszatöltés pedig ELDOBNÁ. Ha tényleg ezt akarod, mondd ki: `felulir`.');
+  }
+
   await tarolo.ir(leiras);
 
-  console.log('kulcsparVisszatoltese - VÉGE');
-  return kulcspar;
+  console.log('kulcsparVisszatoltese - VÉGE', { azonosito });
+  return { kulcspar, azonosito, elhagyott: meglevo?.azonosito ?? null };
 }

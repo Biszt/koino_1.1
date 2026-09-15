@@ -15,6 +15,8 @@
 import { kiir } from './naplo.js';
 
 import kanonikus from './kanonikusProba.js';
+// ⭐ A kulcs-réteg lapja 2026-09-15-ig hiányzott — a személyazonosság volt méretlen.
+import kulcs from './kulcsProba.js';
 import esemeny from './esemenyProba.js';
 import tar from './tarProba.js';
 import allapot from './allapotProba.js';
@@ -38,6 +40,7 @@ import vizsga from './vizsgaProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
+  { nev: 'kulcs', futtat: kulcs },
   { nev: 'esemeny', futtat: esemeny },
   { nev: 'tar', futtat: tar },
   { nev: 'allapot', futtat: allapot },
