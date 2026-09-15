@@ -1305,6 +1305,123 @@ proba('⭐⭐⭐ HAMIS BÁJT UTÁN MÁS FORRÁSSAL PRÓBÁLJUK — és a kép me
   }
 });
 
+// ===================================
+// ⭐⭐⭐ A BULI: AZ ÖSSZEHANGOLT ABLAK ÉS AZ ISMÉTELT MENET (30. mérés, 2026-09-15)
+// ===================================
+
+proba('⭐⭐ AZ ŐRJÁRAT A FAL ÓRÁJÁHOZ IGAZODIK — nem az indítás pillanatához', async () => {
+  // ⛔ MIT MÉR: a `setTimeout(perc * 60 * 1000)` korábban a kör UTÁN indult, tehát az
+  // ébredés fázisát az szabta meg, ki mikor kapcsolta be a készülékét. ⭐ Két készülék így
+  // csak véletlenül találkozott — a 30. mérés szerint ritka gráfon a futások 97%-ában SOHA.
+  //
+  // ⭐⭐ ÉS EZ VISELKEDÉS, NEM FELIRAT: 6 másodperces ütemnél az igazított körök az epoch
+  // szerinti 6 mp-es rácson kezdődnek, tehát a kiírt másodperc **osztható hattal**.
+  // *Igazítás nélkül a fázist az indítás adná — egyenletesen szórna a hat érték között.*
+  const hely = await ujKeszulek();
+  let orjarat = null;
+  try {
+    await fut(hely, 'koino', 'Buli koinó');
+
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7591'], {
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' }
+    });
+
+    let kimenet = '';
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+
+    // ⚠️ Az indítást SZÁNDÉKOSAN nem igazítjuk: a próba épp azt méri, hogy a program
+    // igazít, akkor is, ha a rács közepén indult.
+    await varj(26000);
+
+    // A kör-sorok időbélyege: „· HH:MM:SS nincs társ a listán…" (nincs társ, ez elég).
+    const masodpercek = [...kimenet.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)]
+      .map((m) => parseInt(m[3], 10));
+
+    // Az ELSŐ kör az indításkor fut (még nem igazítva) — azt kihagyjuk.
+    const kesobbiek = masodpercek.slice(1);
+    if (kesobbiek.length < 2) return false;
+
+    // ⭐ A DÖNTŐ ÁLLÍTÁS: a későbbi körök a 6 mp-es rácson vannak.
+    // ⚠️ Egy másodperc türelemmel, mert a kiírás a kör VÉGÉN történik.
+    const raconVan = kesobbiek.filter((mp) => mp % 6 <= 1).length;
+    return raconVan === kesobbiek.length;
+  } finally {
+    if (orjarat) orjarat.kill();
+    await varj(500);
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG — a hír EGY ablakon belül tovább ér',
+  async () => {
+    // ⛔ MIT MÉR: egy menet alatt a hír egy lépést tesz a láncban. ⭐ A társ-listán a
+    // SORREND dönt: ha a hír forrása a lista VÉGÉN van, egy menetnél a lista elején álló
+    // társ **csak a következő ablakban** tudná meg. Ismételt menetnél ugyanabban.
+    //
+    // ⭐⭐ A forgatókönyv: az őrjárat listáján előbb a NÉMA (aki majd megkapja), utána a
+    // FORRÁS. Egy menet: néma (semmi) → forrás (megkapjuk). Két menet: néma (ÁTADJUK!).
+    const orjaratHely = await ujKeszulek();
+    const forrasHely = await ujKeszulek();
+    const celHely = await ujKeszulek();
+    let forras = null, cel = null, orjarat = null;
+
+    try {
+      // Közös koino: az eseményeket hálózat nélkül visszük át (4. szabály).
+      await fut(forrasHely, 'koino', 'Ismételt menet');
+      const vitt = join(forrasHely, 'alap.jsonl');
+      await fut(forrasHely, 'kivisz', vitt, 'mind');
+      await fut(orjaratHely, 'behoz', vitt);
+      await fut(celHely, 'behoz', vitt);
+
+      // ⭐ AZ ÚJDONSÁG: csak a forrásnál van meg.
+      await fut(forrasHely, 'gondolat', 'AZ ISMÉTELT MENET HÍRE');
+
+      forras = spawn(process.execPath, [KOINO_JS, 'figyel', '7593'], {
+        env: { ...process.env, KOINO_ADAT: forrasHely, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      cel = spawn(process.execPath, [KOINO_JS, 'figyel', '7594'], {
+        env: { ...process.env, KOINO_ADAT: celHely, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(1500);
+
+      // ⛔ A SORREND A LÉNYEG: előbb a CÉL (neki nincs mit adnia), utána a FORRÁS.
+      await fut(orjaratHely, 'tars', '127.0.0.1', '7594');
+      await fut(orjaratHely, 'tars', '127.0.0.1', '7593');
+
+      // ⛔⛔ EZ A VÁRAKOZÁS EGY VAK PRÓBÁT JAVÍT KI (2026-09-15). Az első változat rögtön
+      // indította az őrjáratot, és a rontás-próba **nem buktatta** — mert az őrjárat azóta
+      // a **percfordulóhoz igazít**, tehát a második ablak akár 2 másodperc múlva is
+      // jöhetett. ⚠️ Két kör futott a 12 másodpercben, és a hír a MÁSODIK körben jutott át:
+      // *a próba az igazítást mérte, nem az ismétlést.*
+      //
+      // ⭐ A javítás: a percforduló UTÁN indítunk, tehát a következő ablak ~60 mp-re van —
+      // a próba idejébe biztosan EGY kör fér. *Amit mérni akarunk, azt egyedül kell hagyni.*
+      const percHatra = 60000 - (Date.now() % 60000);
+      await varj(percHatra + 500);
+
+      // ⚠️ EGY PERCES ütem: ha csak egy menet futna, a cél a következő körig — vagyis a
+      // próba ideje alatt SOHA — nem tudná meg. *Ez teszi a mérést élessé.*
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '1', '7592'], {
+        env: { ...process.env, KOINO_ADAT: orjaratHely, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(12000);
+      orjarat.kill(); orjarat = null;
+      await varj(500);
+
+      // ⭐ A BIZONYÍTÉK: a CÉL készülék állapotában ott a hír — egyetlen ablakból.
+      const allapot = await fut(celHely, 'allapot');
+      return /AZ ISMÉTELT MENET HÍRE/.test(allapot);
+    } finally {
+      if (orjarat) orjarat.kill();
+      if (forras) forras.kill();
+      if (cel) cel.kill();
+      await varj(800);
+      for (const m of [orjaratHely, forrasHely, celHely]) {
+        await rm(m, { recursive: true, force: true });
+      }
+    }
+  });
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

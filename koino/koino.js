@@ -151,6 +151,13 @@ const ALAP_PORT = 7373;
 // ami „mindent” adhat vissza, nem kereső — ugyanaz az érv, mint a pakli `MAX_DARAB`-jánál.
 const KERESES_KORLAT = 20;
 
+// ⭐ HÁNY MENET EGY BULIBAN (a buli 3. darabja, 30. mérés). A kör addig ismétlődik, amíg
+// van újdonság — ez a korlát csak **biztonsági szelep**: egy hibás vagy rosszindulatú társ
+// minden menetben „újdonságot" adhatna, és az ablak sosem érne véget (9. szabály).
+// ⚠️ A nemzedék-számítás szerint három menet ~3400 készülékhez ér; a szokásos eset EGY menet
+// (nincs újdonság → azonnal megállunk). *Nem állapot-befolyásoló állandó (D66).*
+const MENET_KORLAT = 5;
+
 // A napló alapból néma (a koino minden metódusa naplóz) — KOINO_NAPLO=1 bekapcsolja
 const naplo = console.log;
 if (!process.env.KOINO_NAPLO) { console.log = () => {}; console.warn = () => {}; }
@@ -1988,8 +1995,43 @@ try {
           //
           // ⭐ EGYSZER állítjuk össze a kérelmet, és minden társnak ugyanazt adjuk.
           const fajlok = await fajlResz();
-          const kor = await korbeCsere(lista,
-            (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok));
+
+          // ===== ⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG (a buli 3. darabja) =====
+          //
+          // ⛔ MIÉRT: egy menet alatt a hír **egy lépést** tesz a láncban — amit az 5.
+          // társtól kaptam, arról az 1. még nem tud. ⭐ Ha a kör újraindul, a tudás az
+          // ablakon belül **nemzedékenként** terjed: a lista végéről az elejére is átjut.
+          //
+          // ⭐⭐ MÉRVE (30. mérés), és a szám meglepő: **az ismétlés ÖNMAGÁBAN semmit nem
+          // ér** (8,9 → 8,6 perc), az **igazítással együtt viszont ×30** (8,9 → 0,3 perc),
+          // ritka gráfon pedig a működés feltétele. *Az igazítás teremti meg a nagy,
+          // egyszerre ébren lévő csoportot; az ismétlés ezen belül terjeszt. Egyik a másik
+          // előfeltétele — nem két javítás, hanem egy szerkezet két fele.*
+          //
+          // ⚠️ A LEÁLLÁS MAGÁTÓL ADÓDIK: ha egy menet nem hozott új eseményt, nincs mit
+          // továbbadni. A szokásos eset tehát EGY menet (334 bájt/társ) — az ismétlés csak
+          // akkor kerül pénzbe, amikor tényleg történt valami.
+          let kor = null;
+          let menetek = 0;
+          for (;;) {
+            menetek++;
+            const menet = await korbeCsere(lista,
+              (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok));
+
+            // Az első menet adja a kör vázát; a továbbiak hozzáadódnak.
+            kor = kor === null ? menet : {
+              ...menet,
+              uj: kor.uj + menet.uj,
+              bajt: kor.bajt + menet.bajt,
+              sikeres: Math.max(kor.sikeres, menet.sikeres),
+              eredmenyek: menet.eredmenyek
+            };
+
+            // ⛔ A KORLÁT NEM DÍSZ (9. szabály): egy hibás vagy rosszindulatú társ minden
+            // menetben „újdonságot" adhatna, és az ablak sosem érne véget. *A nemzedék-
+            // számítás szerint három menet ~3400 készülékhez ér — öt bőven elég.*
+            if (!menet.uj || menetek >= MENET_KORLAT) break;
+          }
           await tarolo.ir(kor.lista);
 
           // ⭐ AMIT A FÁJLOKRÓL TANULTUNK: társanként rakjuk el — a lényeg épp az, hogy
@@ -2052,7 +2094,29 @@ try {
           kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
         }
 
-        await new Promise((teljesites) => setTimeout(teljesites, perc * 60 * 1000));
+        // ===== ⭐⭐⭐ A KÖVETKEZŐ ABLAK A FAL ÓRÁJÁHOZ IGAZODIK (a buli 1. darabja) =====
+        //
+        // ⛔ MI VOLT A BAJ: a `setTimeout(perc * 60 * 1000)` a kör UTÁN indult, tehát az
+        // ébredés fázisát az szabta meg, **ki mikor kapcsolta be a készülékét** — és a kör
+        // ideje minden alkalommal hozzáadódott. Két készülék így csak véletlenül találkozott.
+        //
+        // ⭐ A MEGOLDÁS ÜZENETVÁLTÁS NÉLKÜL MŰKÖDIK: mindenki ugyanahhoz a **külső ponthoz**
+        // igazodik — az epoch szerinti percfordulóhoz. Nem kell megbeszélni, nem kell
+        // jelzőpont (2. szabály), és nincs „ki az óra" kérdés. *Ugyanaz a szerkezet, amit
+        // az `ebredesProba.js res` üzemmódja már mér: „a fal órájához igazított ablakok".*
+        //
+        // ⭐⭐ MÉRVE (30. mérés): **ritka gráfon (3 társ) ez a működés feltétele** — igazítás
+        // nélkül a hír a futások 97%-ában SOHA nem ért körbe, és ahol igen, ott 10 óra alatt.
+        // Sűrű gráfon (14 társ) „csak" gyorsítás, mert ott a sodródás elvégzi helyette —
+        // ⚠️ *lassan és kiszámíthatatlanul, amire a randevú nem építhet.*
+        //
+        // ⚠️ AZ ÓRÁRA TÁMASZKODUNK, ÉS EZT KIMONDJUK: ha két készülék órája percekkel eltér,
+        // az ablakaik nem fednek át. A koino ettől nem romlik el (a sodródás marad, mint ma),
+        // csak nem élvezi az igazítás hasznát — *romlás, nem törés* (D19).
+        const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
+        const most = Date.now();
+        const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
+        await new Promise((teljesites) => setTimeout(teljesites, kovetkezoAblak - most));
       }
       // ide nem jutunk el; a figyelőt a folyamat vége zárja
     }

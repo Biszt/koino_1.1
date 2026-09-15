@@ -2599,3 +2599,127 @@ az 1. kör bukik és jegyez, a 2. kör **elkerüli a hamisat**, a kép megjön, 
 ⛔ A rontás-próbák: a kerülés kikapcsolása · a felejtés kikapcsolása · a bekötés kivétele ·
 a `romlott` **mező** elnémítása (⭐ *szöveg-illesztés helyett mező — egy átfogalmazott
 hibaüzenet némán kikapcsolná a választ*) · és a fenti hiba visszacserélése — **mind buktat**.
+
+---
+
+## 30. ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK? — a „buli" (2026-09-15)
+
+`node koino/meres/buliMeres.js` · A fázis-2 terv három darabot ír elő az `orjarat`-hoz:
+**(1)** igazítsa a kört a **percfordulóhoz** · **(2)** a kör elején **kopogjon minden
+társra** · **(3)** **ismételje a kört, amíg van újdonság**.
+
+⛔ A **(2) indoka már terepen mérve van** (2026-08-30: *„nincs full cone"* — 14 146 kopogás
+alatt a laptop semmit nem kapott attól, akinek ő maga nem küldött). ⚠️⚠️ **Az (1) és a (3)
+viszont SZÁMÍTVA volt, nem mérve** — a terv szó szerint kimondja: *„a nemzedék-számítás
+levezetett, nem mért"*. Ez a mérés azt a kettőt méri meg.
+
+### Miért kellett ÚJ műszer
+
+A `felszabaditasMeres.js` az ébrenlétet **körönkénti érmedobással** modellezi
+(`veletlen() < ebrenlet`) — ⛔ és ez pontosan azt rejti el, ami itt a kérdés: hogy az
+ébrenlét **IDŐBEN HOL VAN**. *Két készülék attól találkozik, hogy az ablakaik átfednek, nem
+attól, hogy mindkettő „ébren volt aznap" — egy független érmedobás beépíti a válaszba, amit
+mérni akarunk.*
+
+### ⚠️ És egy dolog, ami nélkül a mérés FEKETÉBBRE festette volna a mai állapotot
+
+A mai kód `setTimeout(perc * 60 * 1000)`-t hív a kör **után**, tehát a csere ideje
+hozzáadódik: minden készülék köze kicsit más. ⭐ **Fix közzel a találkozás determinisztikus
+lenne — vagy mindig, vagy SOHA**; a valóságban viszont a fázisok lassan **egymásba
+vándorolnak**. A modellbe ezért került be a **sodródás** (~3 mp/kör), és a mai sor rögtön
+96%-ra ugrott a sodródás nélküli 73%-ról. *A becsületes mérés a saját állításomat gyengítette.*
+
+### Az eredmény (100 készülék, 30 mp-es ablak, 5 perces ütem, 200 futás)
+
+**Sűrű gráf — 14 társ (a D33 szerinti nagyságrend):**
+
+| változat | elér | mindenkihez | medián idő |
+|---|---|---|---|
+| **(a) MA:** nincs igazítás, egy menet | 100% | 96% (12 órán 100%) | 8,9 perc |
+| (b) igazítva, egy menet | 100% | 100% | 5,3 perc |
+| ⭐ **(c) igazítva + ismételt menet** | 100% | 100% | **0,3 perc** |
+| (d) nincs igazítás + ismételt menet | 100% | 96% | 8,6 perc |
+
+**Ritka gráf — 3 társ (a kis családi koino, D22), 12 óra:**
+
+| változat | elér | mindenkihez | medián idő |
+|---|---|---|---|
+| ⛔ **(a) MA** | 89% | **3%** | 601 perc |
+| (b) igazítva, egy menet | 100% | 100% | 15,3 perc |
+| ⭐ **(c) igazítva + ismételt menet** | 100% | 100% | **0,3 perc** |
+| ⛔ (d) nincs igazítás + ismételt menet | 89% | **3%** | 601 perc |
+
+### ⭐⭐⭐ A LELET: AZ IGAZÍTÁS ÉS AZ ISMÉTLÉS EGYÜTT MŰKÖDIK, KÜLÖN ALIG
+
+- **az ismétlés ÖNMAGÁBAN semmit nem ér** (a → d: 8,6 vs 8,9 perc; ritkán 3% vs 3%);
+- **az igazítás önmagában** sűrűn ×1,7, ritkán viszont **a működés feltétele**;
+- ⭐ **a kettő EGYÜTT ×30 (sűrű) és ×2000 (ritka)**.
+
+*Az ok szerkezeti, és pontosan az, amit a terv jósolt: **az igazítás teremti meg a nagy,
+egyszerre ébren lévő csoportot; az ismétlés pedig ezen a csoporton belül terjeszti a hírt
+nemzedékenként.** Egyik a másik előfeltétele — nem két független javítás, hanem egy szerkezet
+két fele.*
+
+### ⭐⭐⭐ ÉS A 9. SZABÁLY PRÓBÁJA: A MÉRETTEL A MAI MEGOLDÁS ROMLIK, AZ ÚJ NEM
+
+**1000 készülék, 14 társ, 2 óra:**
+
+| változat | mindenkihez | medián idő |
+|---|---|---|
+| ⛔ **(a) MA** | **64%** | **70,3 perc** |
+| (b) igazítva, egy menet | 100% | 10,3 perc |
+| ⭐ **(c) igazítva + ismételt menet** | 100% | **0,3 perc** |
+
+⛔ A mai sor **100 → 1000 készüléknél 8,9 → 70,3 percre romlik** (és 96% → 64%), mert a hír
+ablakonként **egy lépést** tesz, tehát az idő a hálózat átmérőjével nő. ⭐⭐ A (c) sor
+**változatlanul 0,3 perc** — a nemzedékenkénti terjedés logaritmikus, nem lineáris.
+
+*A 9. szabály kérdésére (**„mit csinál egymilliárd e-embernél?"**) tehát a mai válasz az,
+hogy „egyre lassabban", az újé pedig az, hogy „ugyanannyi idő alatt". Ez nem hangolás
+kérdése — a kettő más nagyságrendben nő.*
+
+### ⛔⛔ ÉS A KRITIKUS ESET A RITKA GRÁF — vagyis a KIS KOINO
+
+Sűrű hálózatban (14 társ) a mai állapot is eljut mindenkihez, csak lassabban — ott az
+igazítás kényelem. ⛔ **Három társnál viszont a hír a futások 97%-ában SOHA nem ér körbe**,
+és ahol mégis, ott 10 óra alatt. *A D22 szerint épp a kis családi közösség az egyik cél —
+tehát ez nem sarokeset, hanem alapeset.*
+
+⚠️ **És a saját várakozásomat is cáfolta a mérés:** azt hittem, az igazítás mindenhol
+előfeltétel. Sűrű gráfban nem az — a sodródás elvégzi helyette, csak lassan és
+kiszámíthatatlanul.
+
+### ⚠️ Amit ez a mérés NEM mond meg
+
+- A **kopogást** (2. darab): az NAT-kérdés, terepméréssel igazolva, itt nem modellezzük.
+- Az **adat-árat**: a terv számolja (~7 MB/nap 5 perces ütemnél, 14 társsal).
+- A **randevút**: hogy a kiszámítható ablak mennyit ér a fájl-átvitelnek — az egyidejűség
+  ott **működési feltétel**, nem sebesség-kérdés.
+- Az **alvó telefont**: a modell ébren lévő készülékkel számol (a terv is kimondja, hogy
+  „a flotta gerince asztali gép legyen").
+
+### ✅ ÉS MEGÉPÜLT — az (1) és a (3) darab (2026-09-15)
+
+- ⭐ **Az igazítás:** a várakozás a **fal órájához** igazodik (`Math.ceil(most / kozMs) * kozMs`),
+  nem a kör végéhez. ⭐⭐ *Üzenetváltás nélkül működik:* mindenki ugyanahhoz a **külső ponthoz**
+  igazodik, nem kell megbeszélni és nem kell jelzőpont (2. szabály). ⚠️ Az órára támaszkodunk,
+  és ezt kimondjuk: percekben eltérő óráknál az ablakok nem fednek át — a koino ettől nem
+  romlik el (marad a mai sodródás), csak nem élvezi a hasznot. *Romlás, nem törés (D19).*
+- ⭐ **Az ismétlés:** a kör addig fut, amíg egy menet hoz új eseményt. A szokásos eset **egy
+  menet** (nincs újdonság → azonnal megállunk), tehát az ár csak akkor merül fel, amikor
+  tényleg történt valami. ⛔ A `MENET_KORLAT = 5` **biztonsági szelep**: egy hibás vagy
+  rosszindulatú társ minden menetben „újdonságot" adhatna, és az ablak sosem érne véget.
+
+⛔⛔ **ÉS EGY VAK PRÓBÁT A RONTÁS-PRÓBA BUKTATOTT LE — NYOLCADSZOR UGYANAZ.** Az ismétlés
+próbája először **rögtön indította** az őrjáratot, és a rontás (az ismétlés kivétele) **nem
+buktatta**. ⭐ Az ok: az őrjárat azóta a **percfordulóhoz igazít**, tehát a második ablak akár
+2 másodperc múlva is jöhetett — két kör futott a 12 másodpercben, és a hír a MÁSODIK körben
+jutott át. *A próba az igazítást mérte, nem az ismétlést.* ✅ A javítás: a percforduló **után**
+indítunk, így a próba idejébe biztosan egy kör fér. *Amit mérni akarunk, azt egyedül kell hagyni.*
+
+### ⏸️ ÉS A (2) DARAB NEM ÉPÜLT MEG — kimondva, nem elhallgatva
+
+A *„kopogjon a kör elején minden társra"* **UDP-kérdés**: a NAT-rést a pajzsfúrás nyitja
+(`pajzsfuro.js`), az őrjárat viszont ma **TCP-vel** cserél (`csereVonalon` → `connect`).
+⛔ Vagyis ez nem egy sor, hanem **a UDP-út bekötése az őrjáratba** — önálló munka, és a
+mérése is terepmérés (két hálózat). *Az indoka viszont megvan: „nincs full cone" (2026-08-30).*
