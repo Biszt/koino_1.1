@@ -2481,3 +2481,68 @@ sorrend számít — ha elfogadtam volna az első ×1,8-at, a döntés egy műsz
 a rögzített értékeken adta vissza (Vegas mellett a hívás **12,3 → 3,5 ms**, csúcs **44 → 19**;
 az ütemezés `sor: 27 → 17`, csúcs `45 → 25`). ⭐ Ennek szerkezeti oka van: a közös sor csak
 akkor létezik, ha a hívó **kér** ilyet (`kozosSav`), és azt egyedül a több-forrás szakasz teszi.
+
+---
+
+## 29/b. ✅ ÉS MEGÉPÜLT — a valódi kód számai, és amit a mérő-utánzat elrejtett (2026-09-15)
+
+A 29. mérés az **építés előtt** futott, ezért a kérő oldalát egy **mérő-oldali utánzat**
+játszotta (memóriában gyűjtött, és vaktában osztotta a szeleteket). ⭐ A megépítés után az
+utánzatot **le kellett cserélni a valódi `fajlHozatala`-ra** — *két igazság nem lehet: ha a
+mérő mást csinál, mint az éles út, akkor nem azt mérjük, amit futtatunk.*
+
+⛔ **És a csere azonnal kisebb számokat adott** (512 KB, +10 ms):
+
+| eset | utánzat (29.) | **a valódi kód** |
+|---|---|---|
+| (A) a forrás a szűk, 3 forrás | ×2,7 | **×2,0** |
+| (C) aszimmetrikus, 3 forrás | ×1,9 | **×1,7** |
+| (C) aszimmetrikus, 5 forrás | ×2,6 | **×2,1** |
+| (B) a mi letöltésünk a szűk | ×1,0 | **×1,0** |
+
+⭐⭐⭐ **AZ OK SZERKEZETI, ÉS KI KELL MONDANI: az ELSŐ SZELET MINDIG SOROSAN JÖN.** A fájl
+méretét a `FAJLSZELET` üzenet `teljes` mezője mondja meg — ⛔ amíg az meg nem érkezett, nem
+tudjuk, hány szelet van, tehát **csak egy ág indulhat**. Nyolc szeletnél ez az idő nyolcada,
+vagyis a három forrás elméleti ×3-a helyett **×2,3 a plafon**. *Az utánzat ezt nem fizette
+meg — ő tudta előre a méretet, mert a mérő adta neki.*
+
+⏸️ Megkerülhető lenne (a felderítés megmondhatná a méretet, vagy spekulatívan indulhatnánk),
+⚠️ de mindkettő **új viselkedés**: az egyik új mezőt tesz a vonalra (6. szabály), a másik
+fölösleges kérést egy rövid fájlnál. *A mai ár ismert és korlátos; a megkerülésé nem.*
+
+### ⛔ Egy valódi hibát a saját kódomban a mérés talált: O(N²) a lemezen
+
+A `reszlegesIras` a beírás után **a teljes részleges méretet adta vissza** — az pedig
+végigstatolja az ÖSSZES eddigi szeletet. Nyolc szeletnél 36, tizenhatnál 136 fájl-művelet,
+⚠️ **egy senkinek nem kellő visszatérési értékért** (a `fajlHozatala` nem használta).
+✅ Kivéve: a (C) sor 3 forrásnál **×1,5 → ×1,7**, a (C/1) **×0,9 → ×1,3**.
+
+### ⭐⭐⭐ ÉS A LEGFONTOSABB ÚJ LELET: JEL NÉLKÜL A TÖBB FORRÁS RONT
+
+A (C/1) kontroll-sor — ugyanaz a vonal, `torlodasJel: 'nincs'` — három forrással **×0,9…×1,3**
+között ingadozik, és a szeletek eloszlása **6/1/1**: ⛔ **két ág gyakorlatilag megbénul.**
+
+⭐ Az ok: a három agresszív (veszteség-alapú) ág **ugyanazt a közös sort tölti**, tehát
+egymással versengenek — torlódásos vesztés, újraküldés, kaotikus eloszlás. Vegas mellett
+ugyanez **×1,7**, kiegyensúlyozott 3/2/3 eloszlással.
+
+⭐⭐ **Ez a D68 (a késleltetés-alapú jel) független igazolása:** eddig azzal érveltünk, hogy
+*másoknak* ne ártsunk. Most kiderült, hogy **magunknak is árt** a hiánya — mert a több forrás
+óta a saját ágaink is egymás szomszédai. *A jel nem udvariasság, hanem működési feltétel.*
+
+### Amit ez a menet még megépített
+
+- **A részleges fájl szeletenként** (`reszleges/<lenyomat>/<eltolas>`) — „mi van meg?" = a
+  mappa listája. ⭐ Az elv megmarad (*a tartalom az állapot*), csak a hossz helyett a lista
+  mondja meg. ⚠️ A régi, egyfájlos alak eldobható helyi adat: a `readdir` `ENOTDIR`-je üres
+  listát ad, és a letöltés elölről kezdődik.
+- **A munkalopó munkamegosztás** (`ujMunkamegosztas`) — nem előre kiosztott tartományok,
+  mert *a leglassabb forrás szabná meg a végét*. Egy bukott ág szelete **visszakerül**.
+- **A lezárás joga egyszer adódik ki** — különben a második ág „nincs részleges fájl"-t
+  kapna, és *hibának látszana, hogy más volt gyorsabb*.
+- **12 új önpróba, hat rontás-próbával igazolva**: a kizárólagosság · a lezárás-jog · az
+  elengedés (⭐ **időkorláttal, hogy a beragadás is BUKÁS legyen**, ne végtelen várakozás) ·
+  a bekötés (a `munka` átadása az éles úton) · a fájlonkénti forrásszám · a szelet-lista.
+- ⭐ **És a bekötés próbája VISELKEDÉST mér, nem feliratot:** a jel a `bajt` oszlop —
+  munkamegosztás nélkül mindkét ág a TELJES fájlt hozná, és a mennyiség megkétszereződne.
+  *A 28. mérés vak próbája épp az volt, hogy a kiírt számot néztem.*

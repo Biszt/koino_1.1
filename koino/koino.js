@@ -112,7 +112,9 @@ import {
   kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
 } from './js/csere/fajlKerelem.js';
-import { atvitelTerv } from './js/csere/fajlAtvitel.js';
+// ⭐ A `ujMunkamegosztas` a TÖBB FORRÁSHOZ kell (D68 / 6.): a `fajlHozatala` ágai ezen
+// osztoznak — ő mondja meg, melyik ág melyik szeletet hozza, és ki zárja le a fájlt.
+import { atvitelTerv, ujMunkamegosztas } from './js/csere/fajlAtvitel.js';
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
@@ -394,33 +396,53 @@ async function fajlokElhozasa() {
   const terv = atvitelTerv(ritkasagSzerint(hianyzok, jegyzet), jegyzet);
   if (!terv.length) return { kesz: 0, bukott: 0, bajt: 0 };
 
-  // ⭐ PÁRHUZAMOSAN — a korlátot már a terv tartja be (három, társanként egy).
-  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tars, turelem, forrasok }) => {
-    const ketpont = tars.lastIndexOf(':');
-    const hoszt = tars.slice(0, ketpont);
-    const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
-    try {
-      // ⭐ A NYITÓ DÖNTI EL A SZÁLLÍTÁST (1. szabály): itt TCP, az átfúrt résen UDP —
-      // az átvitel logikája nem tudja, melyiken beszél.
-      //
-      // ⭐⭐ ÉS A TÜRELMET A TERV MONDJA MEG (D68): *annyit küzdünk ezzel a társsal,
-      // amennyit az alternatíva hiánya indokol* — egy forrásnál 30 mp, ötnél 6, tízénél 5
-      // (alsó korlát). ⚠️ A feladás itt nem adatvesztés, hanem **társ-váltás**: a részleges
-      // fájl megmarad, és a következő kör onnan folytatja.
-      console.log('fajlokElhozasa - türelem', { lenyomat, forrasok, turelem });
-      return {
-        ...(await fajlHozatala(blob, KOINO, lenyomat,
-          tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT })),
-        // ⭐ A HASZNÁLT TÜRELMET VISSZAADJUK — hogy a bekötés **mérhető tény** legyen, ne
-        // ígéret. *Ugyanaz a fogás, mint a torlódás-jelnél: amit nem lehet megmérni, arról
-        // egy hét múlva nem tudjuk, igaz-e még.*
-        turelem, forrasok
-      };
-    } catch (hiba) {
-      // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
-      console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });
-      return { kesz: false, bajt: 0, turelem, forrasok };
-    }
+  // ⭐ PÁRHUZAMOSAN — a korlátot már a terv tartja be (három kapcsolat, társanként egy).
+  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tarsak, turelem, forrasok }) => {
+    // ⭐⭐⭐ TÖBB FORRÁS UGYANARRA A FÁJLRA (D68 / 6., 2026-09-15) — mérve ×2,7 (29. mérés),
+    // ha a társak feltöltése a szűk keresztmetszet (otthon tipikusan az).
+    //
+    // ⭐ A MUNKAMEGOSZTÁS KÖZÖS, és **itt születik**: a `fajlHozatala` maga nem tudja, hogy
+    // többen dolgoznak ugyanazon. *Ugyanaz az elv, mint a türelemnél: a réteg paraméterként
+    // kapja, amit nem tudhat magától (1. szabály).*
+    //
+    // ⚠️ A kezdő állapot a LEMEZRŐL jön (`reszlegesSzeletek`): ami egy korábbi körben már
+    // megérkezett, azt nem kérjük el újra.
+    const munka = ujMunkamegosztas(await blob.reszlegesSzeletek(lenyomat));
+    console.log('fajlokElhozasa - türelem', { lenyomat, forrasok, turelem, agak: tarsak.length });
+
+    const agak = await Promise.all(tarsak.map(async (tars) => {
+      const ketpont = tars.lastIndexOf(':');
+      const hoszt = tars.slice(0, ketpont);
+      const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
+      try {
+        // ⭐ A NYITÓ DÖNTI EL A SZÁLLÍTÁST (1. szabály): itt TCP, az átfúrt résen UDP —
+        // az átvitel logikája nem tudja, melyiken beszél.
+        //
+        // ⭐⭐ ÉS A TÜRELMET A TERV MONDJA MEG (D68): *annyit küzdünk ezzel a társsal,
+        // amennyit az alternatíva hiánya indokol* — egy forrásnál 30 mp, ötnél 6, tízénél 5
+        // (alsó korlát). ⚠️ A feladás itt nem adatvesztés, hanem **társ-váltás**: a részleges
+        // fájl megmarad, és a következő kör onnan folytatja.
+        return await fajlHozatala(blob, KOINO, lenyomat,
+          tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT, munka });
+      } catch (hiba) {
+        // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
+        // ⭐ És a munkamegosztásnak SZÓLNI KELL: ha ez az ág volt az utolsó dolgozó, a
+        // többiek várakozását fel kell oldani. *Különben egy néma társ megállítaná a többit.*
+        console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });
+        munka.kilep();
+        return { kesz: false, bajt: 0 };
+      }
+    }));
+
+    // ⭐ EGY FÁJL, EGY EREDMÉNY: kész-e, és összesen hány bájtot hozott a több ág.
+    // *A `kesz` bármelyik ágtól jöhet — a lezárás joga egyszer adódik ki (`lezarasEnyem`).*
+    return {
+      kesz: agak.some((a) => a.kesz),
+      bajt: agak.reduce((o, a) => o + (a.bajt ?? 0), 0),
+      // ⭐ A HASZNÁLT TÜRELMET ÉS A FORRÁSSZÁMOT VISSZAADJUK — hogy a bekötés **mérhető
+      // tény** legyen, ne ígéret. *Ugyanaz a fogás, mint a torlódás-jelnél.*
+      turelem, forrasok, agak: tarsak.length
+    };
   }));
 
   return {
@@ -429,7 +451,9 @@ async function fajlokElhozasa() {
     bajt: eredmenyek.reduce((o, e) => o + (e.bajt ?? 0), 0),
     // ⭐ A LEGRÖVIDEBB TÜRELEM ÉS A HOZZÁ TARTOZÓ FORRÁSSZÁM — ez az, ami látszik is.
     turelem: Math.min(...eredmenyek.map((e) => e.turelem ?? Infinity)),
-    forrasok: Math.max(...eredmenyek.map((e) => e.forrasok ?? 0))
+    forrasok: Math.max(...eredmenyek.map((e) => e.forrasok ?? 0)),
+    // ⭐ Hány ág ment egyszerre a legtöbb forrású fájlra (D68 / 6.)
+    agak: Math.max(...eredmenyek.map((e) => e.agak ?? 0), 0)
   };
 }
 
@@ -453,6 +477,15 @@ async function fajlAtvitelKiirasa() {
   if (Number.isFinite(atvitel.turelem)) {
     kiir(SZIN.halvany + '  türelem: ' + (atvitel.turelem / 1000).toFixed(1)
       + ' mp · ' + atvitel.forrasok + ' forrás' + SZIN.vege);
+  }
+
+  // ⭐⭐ ÉS HÁNY FORRÁSTÓL HOZTUK EGYSZERRE (D68 / 6., 29. mérés)?
+  // ⚠️ Ez KIÍRÁS, tehát önmagában nem bizonyíték — a bekötést az méri, hogy a `bajt`
+  // oszlop NEM sokszorozódik meg: munkamegosztás nélkül minden ág a TELJES fájlt hozná,
+  // és a mennyiség az ágak számával szorzódna. *A viselkedés a bizonyíték, nem a felirat.*
+  if (atvitel.agak > 1) {
+    kiir(SZIN.halvany + '  párhuzamosan ' + atvitel.agak
+      + ' forrásból — a szeletek szétosztva' + SZIN.vege);
   }
 }
 

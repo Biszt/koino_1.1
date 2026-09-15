@@ -16,7 +16,9 @@ import { join } from 'node:path';
 import { fajlBlobTarolo, FAJL_KORLAT } from '../js/tar/fajlTar.js';
 import {
   kovetkezoKeres, szeletEllenorzes, atvitelTerv, SZELET_MERET, EGYIDEJU_ATVITEL,
-  turelemForrasokbol, TURELEM_MAX, TURELEM_MIN
+  turelemForrasokbol, TURELEM_MAX, TURELEM_MIN,
+  // ⭐ TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., 2026-09-15)
+  ujMunkamegosztas, FORRASONKENT_EGY_FAJLRA
 } from '../js/csere/fajlAtvitel.js';
 import { bajtLenyomat } from '../js/esemeny/kanonikusAlak.js';
 
@@ -62,8 +64,10 @@ proba('⭐ A hiányzó/hibás méret 0-nak számít — nem esünk el rajta', as
 proba('⛔ ROSSZ ELTOLÁSRA érkezett szeletet nem fogadunk el', async () => {
   // ⚠️ Enélkül a fájl CSENDBEN romlana el: a bájtok rossz helyre kerülnének, és csak a
   // lezáráskor derülne ki — feleslegesen letöltve az egészet.
+  // ⚠️ 2026-09-15 óta a KÉRT eltoláshoz mérünk, nem az eddigi mérethez (D68 / 6.) —
+  // több forrásnál a szeletek sorrendje nem rögzített, a saját kérésünk viszont tény.
   const v = szeletEllenorzes(1000, 500, 100, FAJL_KORLAT);
-  return v.rendben === false && /nem oda/.test(v.ok);
+  return v.rendben === false && /nem arra/.test(v.ok);
 });
 
 proba('⛔ TÚL NAGY szeletet nem fogadunk el — egy kérés nem hozhat végtelen adatot',
@@ -92,9 +96,9 @@ proba('⭐⭐ SZELETENKÉNT összeáll, és a lezárás a VÉGLEGES nevére tesz
   const teljes = new Uint8Array(1000).fill(3);
   const lenyomat = await bajtLenyomat(teljes);
 
-  await tar.reszlegesHozzafuz(lenyomat, teljes.subarray(0, 400));
+  await tar.reszlegesIras(lenyomat, 0, teljes.subarray(0, 400));
   const felutnal = await tar.reszlegesMeret(lenyomat);
-  await tar.reszlegesHozzafuz(lenyomat, teljes.subarray(400));
+  await tar.reszlegesIras(lenyomat, 400, teljes.subarray(400));
 
   const lezaras = await tar.reszlegesLezaras(lenyomat);
   const vissza = await tar.olvas(lenyomat);
@@ -111,7 +115,7 @@ proba('⛔⛔ A MEGHAMISÍTOTT letöltés NEM kerül a végleges nevére — eld
   const lenyomat = await bajtLenyomat(teljes);
 
   // ⚠️ A társ mást küldött, mint amit a lenyomat ígért — ez a valódi támadás.
-  await tar.reszlegesHozzafuz(lenyomat, new Uint8Array(500).fill(1));
+  await tar.reszlegesIras(lenyomat, 0, new Uint8Array(500).fill(1));
 
   const lezaras = await tar.reszlegesLezaras(lenyomat);
   return lezaras.rendben === false && /lenyomatot/.test(lezaras.ok)
@@ -125,7 +129,7 @@ proba('⛔ A félkész fájl NEM számít „megvan"-nak — másnak sem ajánlj
   const teljes = new Uint8Array(1000).fill(5);
   const lenyomat = await bajtLenyomat(teljes);
 
-  await tar.reszlegesHozzafuz(lenyomat, teljes.subarray(0, 400));
+  await tar.reszlegesIras(lenyomat, 0, teljes.subarray(0, 400));
 
   // ⚠️ Enélkül a bulin felajánlanánk másnak valamit, ami még nincs készen.
   return (await tar.van(lenyomat)) === false
@@ -137,7 +141,7 @@ proba('⛔ A KORLÁT TÚLLÉPÉSEKOR eldobjuk az egészet', async () => {
   const { tar } = await ujTar();
   const lenyomat = L(1);
   try {
-    await tar.reszlegesHozzafuz(lenyomat, new Uint8Array(FAJL_KORLAT + 1));
+    await tar.reszlegesIras(lenyomat, 0, new Uint8Array(FAJL_KORLAT + 1));
     return false;
   } catch (hiba) {
     return /határt/.test(hiba.message) && (await tar.reszlegesMeret(lenyomat)) === 0;
@@ -164,14 +168,39 @@ proba('⛔⛔ TÁRSANKÉNT EGY ÁTVITEL — egy lassú társ nem foglalhatja le 
       [{ lenyomat: L(1) }, { lenyomat: L(2) }, { lenyomat: L(3) }], jegyzet);
 
     // ⭐ Csak EGY indul el — a többi a következő körben, vagy mástól.
-    return terv.length === 1 && terv[0].tars === 'a:1';
+    return terv.length === 1 && terv[0].tarsak.length === 1 && terv[0].tarsak[0] === 'a:1';
   });
 
 proba('⭐ HÁROM társtól három átvitel indul — a munka szétterül', async () => {
   const jegyzet = jegyzettel([[L(1), ['a:1']], [L(2), ['b:1']], [L(3), ['c:1']]]);
   const terv = atvitelTerv(
     [{ lenyomat: L(1) }, { lenyomat: L(2) }, { lenyomat: L(3) }], jegyzet);
-  return terv.length === 3 && new Set(terv.map((t) => t.tars)).size === 3;
+  return terv.length === 3 && new Set(terv.flatMap((t) => t.tarsak)).size === 3;
+});
+
+proba('⭐⭐⭐ EGY FÁJL, HÁROM FORRÁS — ha mindhárom társnál megvan (D68 / 6.)', async () => {
+  // ⚠️ Ez az új képesség (29. mérés: ×2,7, ha a források feltöltése a szűk). Korábban
+  // ugyanez a jegyzet EGY átvitelt adott: a többletet a program nem használta ki.
+  const jegyzet = jegyzettel([[L(1), ['a:1', 'b:1', 'c:1']]]);
+  const terv = atvitelTerv([{ lenyomat: L(1) }], jegyzet);
+
+  return terv.length === 1
+    && terv[0].tarsak.length === 3
+    && new Set(terv[0].tarsak).size === 3
+    // ⭐ És a türelem a VALÓDI forrásszámból jön, nem az ágakéból.
+    && terv[0].forrasok === 3;
+});
+
+proba('⛔ …de a fájlonkénti forrásszám FELÜLRŐL KORLÁTOS (9. szabály)', async () => {
+  // *Egy nagy koinóban egyetlen fájlért nem nyithatunk száz kapcsolatot.*
+  const sok = [];
+  for (let i = 0; i < 12; i++) sok.push('t' + i + ':1');
+  const terv = atvitelTerv([{ lenyomat: L(1) }], jegyzettel([[L(1), sok]]),
+    { osszesen: 99 });
+
+  return terv[0].tarsak.length === FORRASONKENT_EGY_FAJLRA
+    // ⚠️ A türelem viszont MIND A TIZENKETTŐT látja: van hova menni, ha ez a három néma.
+    && terv[0].forrasok === 12;
 });
 
 proba('⛔ Az EGYIDEJŰ KORLÁT felül is zár', async () => {
@@ -249,6 +278,115 @@ proba('⭐⭐⭐ ÉS A TERV VISZI MAGÁVAL — a vonal nem tudhatja, hány forr�
     && negyForras.turelem === 7500
     && negyForras.turelem < egyForras.turelem;
 });
+
+// ===================================
+// ⭐⭐⭐ A MUNKAMEGOSZTÁS — TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., 2026-09-15)
+// ===================================
+//
+// ⚠️ Ez a darab **hálózat nélkül mérhető** (1. szabály: a `fajlAtvitel.js` nem importál
+// vonalat) — pedig épp ő dönti el, melyik ág mit hoz, és ki zárja le a fájlt.
+
+proba('⭐ EGY FORRÁS: sorban kapja a szeleteket, és a végén nincs több dolga', async () => {
+  const m = ujMunkamegosztas();
+
+  const elso = await m.kovetkezo();          // a méret még ismeretlen → a 0. szelet
+  m.meretMegvan(2 * SZELET_MERET);
+  m.kesz(elso);
+
+  const masodik = await m.kovetkezo();
+  m.kesz(masodik);
+
+  return elso === 0 && masodik === SZELET_MERET
+    && m.keszEgesz() === true
+    && (await m.kovetkezo()) === null;
+});
+
+proba('⛔⛔ AMÍG A MÉRET ISMERETLEN, CSAK EGY ÁG DOLGOZIK — a többi VÁR, nem lép ki',
+  async () => {
+    // ⚠️ Ez a finom pont: a fájl méretét az ELSŐ válasz `teljes` mezője mondja meg. Addig
+    // nem tudjuk, hány szelet van. ⛔ Ha a többi ág ilyenkor `null`-t kapna, **kilépnének**,
+    // és a párhuzamosság sosem indulna el — egyetlen forrás hozná az egészet.
+    const m = ujMunkamegosztas();
+    const elso = await m.kovetkezo();
+
+    let masodikMegjott = false;
+    const masodik = m.kovetkezo().then((e) => { masodikMegjott = true; return e; });
+
+    // Egy környi várakozás: a második ág NEM kaphatott munkát.
+    await new Promise((t) => setTimeout(t, 20));
+    const vartE = masodikMegjott === false;
+
+    // ⭐ És most megjön a méret — ettől indulhat a többi.
+    m.meretMegvan(3 * SZELET_MERET);
+    m.kesz(elso);
+
+    const masodikEltolas = await masodik;
+    return elso === 0 && vartE === true
+      && masodikEltolas !== null && masodikEltolas !== 0;
+  });
+
+proba('⛔ UGYANAZT A SZELETET KETTEN NEM HOZZÁK — a kiosztás kizárólagos', async () => {
+  const m = ujMunkamegosztas();
+  const elso = await m.kovetkezo();
+  m.meretMegvan(4 * SZELET_MERET);
+  m.kesz(elso);
+
+  // Három ág egyszerre kér — mindegyiknek MÁST kell kapnia.
+  const harom = await Promise.all([m.kovetkezo(), m.kovetkezo(), m.kovetkezo()]);
+  return new Set(harom).size === 3 && !harom.includes(0) && !harom.includes(null);
+});
+
+proba('⭐⭐ HA EGY ÁG ELBUKIK, A SZELETE VISSZAKERÜL — más elviheti', async () => {
+  // *Enélkül egy elnémult társ magával vinné azt a darabot, amit épp ő kért — és a fájl
+  // sosem lenne kész, pedig a bájtok másnál is megvannak.*
+  const m = ujMunkamegosztas();
+  const elso = await m.kovetkezo();
+  m.meretMegvan(2 * SZELET_MERET);
+  m.kesz(elso);
+
+  const masikE = await m.kovetkezo();        // egy ág elviszi…
+  m.elengedi(masikE);                        // …majd elbukik
+
+  const ujra = await m.kovetkezo();
+  return masikE === SZELET_MERET && ujra === SZELET_MERET && m.keszEgesz() === false;
+});
+
+proba('⛔⛔ A LEZÁRÁS JOGA EGYSZER ADÓDIK KI — és a másik ág ugyanazt az eredményt kapja',
+  async () => {
+    // ⚠️ Több forrásnál MINDEGYIK ág látja, hogy minden szelet megvan. Ha mind lezárna, a
+    // második már „nincs részleges fájl"-t kapna — *hibának látszana, hogy más volt gyorsabb.*
+    const m = ujMunkamegosztas([0]);
+    m.meretMegvan(SZELET_MERET);
+
+    const egyik = m.lezarasEnyem();
+    const masik = m.lezarasEnyem();
+
+    // A vesztes megvárja az eredményt — ezt a nyertes rögzíti.
+    const varakozas = m.lezarasraVar();
+    m.lezarasKesz({ rendben: true });
+
+    return egyik === true && masik === false && (await varakozas).rendben === true;
+  });
+
+proba('⭐ AMI A LEMEZEN MÁR MEGVAN, AZT NEM KÉRJÜK EL ÚJRA', async () => {
+  // *A részleges fájl szeletei túlélik a program leállását — ez a „társ-váltás olcsó"
+  // másik fele (28. mérés).*
+  const m = ujMunkamegosztas([0, SZELET_MERET]);
+  m.meretMegvan(3 * SZELET_MERET);
+
+  const kovetkezo = await m.kovetkezo();
+  return kovetkezo === 2 * SZELET_MERET;
+});
+
+proba('⛔ Ha MINDEN szelet megvan a lemezen, nincs mit kérni — de kész sincs méret nélkül',
+  async () => {
+    const m = ujMunkamegosztas([0, SZELET_MERET]);
+    // ⚠️ Méret nélkül nem jelenthetjük ki, hogy kész: hátha van még egy szelet.
+    const meretNelkul = m.keszEgesz();
+    m.meretMegvan(2 * SZELET_MERET);
+    return meretNelkul === false && m.keszEgesz() === true
+      && (await m.kovetkezo()) === null;
+  });
 
 export default futtatas;
 

@@ -42,7 +42,11 @@ import { createServer, connect } from 'node:net';
 import {
   allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
 } from './csere.js';
-import { SZELET_MERET, kovetkezoKeres, szeletEllenorzes } from './fajlAtvitel.js';
+// ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
+// képlet a SOROS átvitel alakja volt. Több forrásnál a munkamegosztás mondja meg, melyik
+// szelet következik (D68 / 6.) — a képlet maga viszont megmarad a `fajlAtvitel.js`-ben,
+// mert a szelet-határokat ugyanúgy ő számolja.
+import { SZELET_MERET, szeletEllenorzes, ujMunkamegosztas } from './fajlAtvitel.js';
 import { entitasEsemenyei } from '../tar/esemenyTar.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
@@ -756,63 +760,104 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
   const kapcsolat = await kapcsolatNyitas();
   const sor = uzenetSor(kapcsolat);
 
+  // ⭐⭐⭐ A MUNKA MEGOSZTHATÓ (D68 / 6., 2026-09-15). Ha a hívó ad egy munkamegosztást, N
+  // forrás ugyanannak a fájlnak a **különböző szeleteit** hozza, egyszerre. Ha nem ad,
+  // ez a példány egyedül dolgozik — *és akkor pontosan a korábbi viselkedés marad.*
+  const munka = beallitas.munka ?? ujMunkamegosztas(await blob.reszlegesSzeletek(lenyomat));
+  let enZartamLe = false;
+
   try {
     for (;;) {
-      const eddigi = await blob.reszlegesMeret(lenyomat);
-      const keres = kovetkezoKeres(eddigi);
+      const kertEltolas = await munka.kovetkezo();
+      if (kertEltolas === null) break;        // nincs több dolgunk ezzel a fájllal
 
-      kapcsolat.write(JSON.stringify({
-        uzenet: 'FAJLKEREK', koino, lenyomat, eltolas: keres.eltolas
-      }) + '\n');
+      let sikerult = false;
+      try {
+        kapcsolat.write(JSON.stringify({
+          uzenet: 'FAJLKEREK', koino, lenyomat, eltolas: kertEltolas
+        }) + '\n');
 
-      // ⚠️ A másik fél LENYOMAT-tal kezdhet (a párbeszéd szimmetrikus) — átlépjük, ahogy
-      // a `szeletHozatala` is teszi.
-      let uzenet;
-      for (;;) {
-        uzenet = await sor.kovetkezo();
-        if (uzenet.uzenet === 'FAJLSZELET' || uzenet.uzenet === 'FAJLNINCS') break;
-      }
+        // ⚠️ A másik fél LENYOMAT-tal kezdhet (a párbeszéd szimmetrikus) — átlépjük, ahogy
+        // a `szeletHozatala` is teszi.
+        let uzenet;
+        for (;;) {
+          uzenet = await sor.kovetkezo();
+          if (uzenet.uzenet === 'FAJLSZELET' || uzenet.uzenet === 'FAJLNINCS') break;
+        }
 
-      if (uzenet.uzenet === 'FAJLNINCS') {
-        // ⚠️ NEM HIBA, HANEM HIÁNY (D19): a társ azt mondta, nála sincs meg. Lehet, hogy
-        // törölte (D3: a tartalmi réteg elveszhet), vagy a jegyzetünk elavult.
-        console.log('fajlHozatala - VÉGE (nála sincs meg)', { lenyomat });
-        return { kesz: false, ok: 'a társnál sincs meg', bajt, szeletek };
-      }
+        if (uzenet.uzenet === 'FAJLNINCS') {
+          // ⚠️ NEM HIBA, HANEM HIÁNY (D19): a társ azt mondta, nála sincs meg. Lehet, hogy
+          // törölte (D3: a tartalmi réteg elveszhet), vagy a jegyzetünk elavult.
+          // ⭐ A szeletet VISSZAADJUK a közösbe: másnál még meglehet.
+          console.log('fajlHozatala - VÉGE (nála sincs meg)', { lenyomat });
+          return { kesz: false, ok: 'a társnál sincs meg', bajt, szeletek };
+        }
 
-      const darab = new Uint8Array(Buffer.from(uzenet.adat ?? '', 'base64'));
-      const ellenorzes = szeletEllenorzes(eddigi, uzenet.eltolas, darab.length, korlat);
-      if (!ellenorzes.rendben) {
-        // ⛔ A ROSSZ SZELET NEM KERÜL BE, és eldobjuk a félkész fájlt: különben a következő
-        // kör egy elrontott alapra építene.
-        await blob.reszlegesEldobas(lenyomat);
-        console.warn('fajlHozatala - VÉGE (rossz szelet)', { ok: ellenorzes.ok });
-        return { kesz: false, ok: ellenorzes.ok, bajt, szeletek };
-      }
+        const darab = new Uint8Array(Buffer.from(uzenet.adat ?? '', 'base64'));
+        const ellenorzes = szeletEllenorzes(kertEltolas, uzenet.eltolas, darab.length, korlat);
+        if (!ellenorzes.rendben) {
+          // ⛔ A ROSSZ SZELET NEM KERÜL BE, és eldobjuk a félkész fájlt: különben a következő
+          // kör egy elrontott alapra építene.
+          await blob.reszlegesEldobas(lenyomat);
+          console.warn('fajlHozatala - VÉGE (rossz szelet)', { ok: ellenorzes.ok });
+          return { kesz: false, ok: ellenorzes.ok, bajt, szeletek };
+        }
 
-      if (darab.length > 0) {
-        await blob.reszlegesHozzafuz(lenyomat, darab);
-        bajt += darab.length;
-        szeletek++;
-      }
+        // ⭐ A TELJES MÉRET AZ ELSŐ VÁLASZBÓL — ettől indulhat a többi forrás is.
+        munka.meretMegvan(uzenet.teljes);
 
-      if (uzenet.vege || darab.length === 0) {
-        // ⛔⛔ KIMONDJUK, HOGY VÉGEZTÜNK — és ezt is a mérés kényszerítette ki.
-        //
-        // TCP-n elég lenne bezárni a kapcsolatot: a másik fél olvasása hibával végződik,
-        // és tudja, hogy vége. ⚠️ **A UDP-nek viszont nincs lezárása** — a kiszolgáló nem
-        // értesül róla, és a következő kérésre várna a tétlenségi órája lejártáig.
-        // *Amit a szállítás nem mond meg, azt a protokollnak kell.*
-        try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ }
+        if (darab.length > 0) {
+          await blob.reszlegesIras(lenyomat, kertEltolas, darab);
+          bajt += darab.length;
+          szeletek++;
+        }
+        munka.kesz(kertEltolas);
+        sikerult = true;
 
-        // ⛔⛔ A LEZÁRÁS ELLENŐRIZ: a név maga a bizonyíték.
-        const lezaras = await blob.reszlegesLezaras(lenyomat);
-        console.log('fajlHozatala - VÉGE',
-          { lenyomat, kesz: lezaras.rendben, bajt, szeletek });
-        return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek };
+        // ⚠️ Az ÜRES szelet és a `vege` jelzés a fájl végét jelenti — ilyenkor a méret is
+        // biztosan ismert, tehát a `keszEgesz()` mondja meg, van-e még dolgunk.
+        if (darab.length === 0) munka.meretMegvan(kertEltolas);
+        if (munka.keszEgesz()) break;
+      } finally {
+        // ⛔ HA NEM SIKERÜLT, A SZELET VISSZAKERÜL A KÖZÖSBE — egy másik forrás elviheti.
+        // *Enélkül egy elnémult társ magával vinné azt a darabot, amit épp ő kért.*
+        if (!sikerult) munka.elengedi(kertEltolas);
       }
     }
+
+    // ⛔⛔ KIMONDJUK, HOGY VÉGEZTÜNK — és ezt is a mérés kényszerítette ki.
+    //
+    // TCP-n elég lenne bezárni a kapcsolatot: a másik fél olvasása hibával végződik,
+    // és tudja, hogy vége. ⚠️ **A UDP-nek viszont nincs lezárása** — a kiszolgáló nem
+    // értesül róla, és a következő kérésre várna a tétlenségi órája lejártáig.
+    // *Amit a szállítás nem mond meg, azt a protokollnak kell.*
+    // ⭐ Minden ág a SAJÁT kapcsolatán mondja ki: a `KESZ` a kapcsolat vége, nem a fájlé.
+    try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ }
+
+    if (!munka.keszEgesz()) {
+      // ⚠️ Nincs több dolgunk, de a fájl nincs kész: a hiányzó szeleteket másnak kell
+      // elhoznia (vagy egy későbbi kör). *A részleges fájl MEGMARAD — a feladás itt nem
+      // adatvesztés, hanem társ-váltás (28. mérés).*
+      console.log('fajlHozatala - VÉGE (részlegesen)', { lenyomat, bajt, szeletek });
+      return { kesz: false, ok: 'nem lett meg minden szelet', bajt, szeletek };
+    }
+
+    if (munka.lezarasEnyem()) {
+      // ⛔⛔ A LEZÁRÁS ELLENŐRIZ: a név maga a bizonyíték.
+      enZartamLe = true;
+      const lezaras = await blob.reszlegesLezaras(lenyomat);
+      munka.lezarasKesz(lezaras);
+      console.log('fajlHozatala - VÉGE',
+        { lenyomat, kesz: lezaras.rendben, bajt, szeletek });
+      return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek, enZartamLe };
+    }
+
+    // ⭐ Más ág zárja le — megvárjuk az eredményét, hogy ugyanazt mondjuk róla.
+    // *Két ág nem adhat két igazságot ugyanarról a fájlról.*
+    const lezaras = await munka.lezarasraVar();
+    return { kesz: lezaras.rendben, ok: lezaras.ok, bajt, szeletek, enZartamLe };
   } finally {
+    munka.kilep();
     // ⚠️ A UDP-vonalon ELŐBB KI KELL ÜRÍTENI, különben az utolsó darab elveszik —
     // a TCP-foglalatnak nincs ilyen metódusa, ezért kérdezünk rá.
     if (typeof kapcsolat.kiurites === 'function') await kapcsolat.kiurites();

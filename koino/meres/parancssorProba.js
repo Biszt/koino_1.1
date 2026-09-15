@@ -20,7 +20,8 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
+// ⭐ A `cp` a TÖBB FORRÁS próbájához kell: ugyanaz a fájl két készüléken (D68 / 6.).
+import { mkdtemp, rm, readFile, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -1088,6 +1089,89 @@ proba('⛔ MEGLÉVŐ azonosságot csak KIMONDOTT engedéllyel ír felül — és
       await rm(masik, { recursive: true, force: true });
     }
   });
+
+// ===================================
+// ⭐⭐⭐ TÖBB FORRÁSBÓL EGY FÁJL — ÉLESBEN (D68 / 6., 2026-09-15)
+// ===================================
+
+proba('⭐⭐⭐ KÉT FORRÁSBÓL JÖN EGY KÉP — és a bájtok NEM sokszorozódnak meg', async () => {
+  // ⛔⛔ EZ A BEKÖTÉS PRÓBÁJA, ÉS VISELKEDÉST MÉR, NEM FELIRATOT. A 28. mérés vak próbája
+  // épp az volt, hogy a **kiírt** számot néztem — az a kiszámolt értékből jön, tehát a
+  // bekötés kivételekor sem változik.
+  //
+  // ⭐ ITT A JEL A `bajt` OSZLOP: munkamegosztás nélkül **mindkét ág a TELJES fájlt
+  // hozná**, és a mennyiség megkétszereződne. *A duplikáció mérhető; az ígéret nem.*
+  const gazda = await ujKeszulek();
+  const masolat = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const portA = 7561;
+  const portB = 7562;
+  let figyeloA = null, figyeloB = null, felulet = null;
+
+  try {
+    await fut(gazda, 'koino', 'Két forrás koinó');
+
+    // ----- Egy TÖBB SZELETNYI kép (300 KB ≈ 5 szelet) -----
+    felulet = await feluletet(gazda, 7563);
+    const fej = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const kep = Buffer.concat([fej, Buffer.alloc(300 * 1024, 11),
+      Buffer.from('0000000049454e44ae426082', 'hex')]);
+
+    const fel = await felulet.hiv('/api/feltoltes/kep',
+      { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+    await felulet.hiv('/api/gondolat', {
+      method: 'POST',
+      body: JSON.stringify({
+        cim: 'KÉT FORRÁSBÓL', kezdoTudatpont: 50,
+        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
+      })
+    });
+    felulet.folyamat.kill(); felulet = null; await varj(500);
+
+    // ⭐ A MÁSODIK FORRÁS: ugyanaz a készülék lemásolva — ugyanaz a fájl két helyen.
+    // *A koinóban ez a szokásos: a lenyomat a név, tehát ugyanaz a tartalom mindenkinél
+    // ugyanazt az azonosítót kapja.*
+    await cp(gazda, masolat, { recursive: true });
+
+    figyeloA = spawn(process.execPath, [KOINO_JS, 'figyel', String(portA)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    figyeloB = spawn(process.execPath, [KOINO_JS, 'figyel', String(portB)], {
+      env: { ...process.env, KOINO_ADAT: masolat, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+
+    // ⭐ MINDKÉT TÁRS A LISTÁRA — így EGY kör mindkettőtől megkérdezi, kinél van meg,
+    // és a kör utáni fájl-átvitel már KÉT forrást lát.
+    await fut(vendeg, 'tars', '127.0.0.1', String(portA));
+    await fut(vendeg, 'tars', '127.0.0.1', String(portB));
+
+    await fut(vendeg, 'csere');            // 1. kör: az események
+    const masodik = await fut(vendeg, 'csere');   // 2. kör: a kérdés, majd A BÁJTOK
+
+    if (!/1 fájl megérkezett/.test(masodik)) return false;
+
+    // ⛔⛔ A DÖNTŐ SOR: mennyi bájt jött? A kép 300 KB — munkamegosztás nélkül 600 lenne.
+    const mennyi = masodik.match(/1 fájl megérkezett[^(]*\(([\d.]+) KB/);
+    if (!mennyi) return false;
+    const kb = parseFloat(mennyi[1]);
+    if (!(kb > 250 && kb < 450)) return false;
+
+    // ⭐ És a kép BÁJTRA ugyanaz, egyetlen darabból összerakva.
+    const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
+    return Buffer.from(nala).equals(kep)
+      && /párhuzamosan 2 forrásból/.test(masodik);
+  } finally {
+    if (felulet) felulet.folyamat.kill();
+    if (figyeloA) figyeloA.kill();
+    if (figyeloB) figyeloB.kill();
+    await varj(1000);
+    for (const m of [gazda, masolat, vendeg]) {
+      await rm(m, { recursive: true, force: true });
+    }
+  }
+});
 
 export default futtatas;
 

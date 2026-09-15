@@ -95,12 +95,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonkét próba-fájl, **593 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonkét próba-fájl, **605 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **170 fájl, 2670,6 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **170 fájl, 2706,9 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -172,7 +172,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |
-| `js/csere/fajlAtvitel.js` | ⭐ **a bájtok logikája** (5.7/B): szeletelés (64 KB), folytatás a részleges méretből, és a munka elosztása — három egyidejű átvitel, **társanként legfeljebb egy**. ⚠️ Hálózatot **nem importál** (1. szabály) |
+| `js/csere/fajlAtvitel.js` | ⭐ **a bájtok logikája** (5.7/B): szeletelés (64 KB), a türelem a források számából, és a munka elosztása — három egyidejű **kapcsolat**, társanként legfeljebb egy. ⭐⭐ 2026-09-15 óta **több forrás egy fájlra** (D68 / 6.): munkalopó megosztás, a bukott ág szelete visszakerül, a lezárás joga **egyszer** adódik ki. ⚠️ Hálózatot **nem importál** (1. szabály) |
 | `js/csere/fajlKerelem.js` | ⭐ **mit kérdezek a bulin, és mit tanulok belőle** — a kérelem **múlékony üzenet**, nem esemény (Csaba döntése: a böngészésem nem való a láncra); amit tanulunk, az **helyi feljegyzés** (3. szabály) |
 | `js/allapot/fajlIgeny.js` | ⭐ **mire van szükségem?** — a gondolat szövegében ott a kép-hivatkozás, a besorolásban az ikon; ez a réteg csak összeveti a lemezzel. ⚠️ Tárat és hálózatot **nem importál** (1. szabály): a „megvan-e?” kérdést kívülről kapja |
 | `js/allapot/ter.js` | ⭐ **A BELÉPŐ TÉR** (D25, 5.6): egy kártya minden koinóról, amit ez a készülék ismer — a kulcs és a társ-lista eddig is a koinók FÖLÖTT laktak, a tér ezt teszi láthatóvá |

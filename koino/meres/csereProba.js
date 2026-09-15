@@ -1760,6 +1760,131 @@ proba('⛔⛔ Az IPv6-választ NEM olvassuk IPv4-nek — a 18. mérés hibája',
   return v.csalad === 6 && v.cim === cim && v.port === 7373 && !v.cim.includes('.');
 });
 
+// ===================================
+// ⭐⭐⭐ EGY FÁJL, HÁROM FORRÁS — VALÓDI VONALON (D68 / 6., 2026-09-15)
+// ===================================
+
+proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, duplikáció nélkül',
+  async () => {
+    // ⚠️ A modul-próbák a munkamegosztást mérik, ez a VÉGPONTTÓL VÉGPONTIG tartó utat:
+    // három külön figyelő, három kapcsolat, egy közös munkamegosztás.
+    const { mkdtemp } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+    const { fajlHozatala, tcpNyito, figyeloIndulasa } = await import('../js/csere/vonal.js');
+    const { ujMunkamegosztas, SZELET_MERET } = await import('../js/csere/fajlAtvitel.js');
+
+    // ⭐ UGYANAZ A FÁJL HÁROM KÉSZÜLÉKEN — a koinóban ez a szokásos: a lenyomat a név,
+    // tehát ugyanaz a tartalom mindenkinél ugyanazt az azonosítót kapja.
+    const tartalom = new Uint8Array(6 * SZELET_MERET);
+    for (let i = 0; i < tartalom.length; i++) tartalom[i] = (i * 7) % 251;
+
+    const gazdak = [];
+    for (let i = 0; i < 3; i++) {
+      const hely = await mkdtemp(join(tmpdir(), 'koino-tf-gazda-'));
+      mappak.push(hely);
+      const blob = fajlBlobTarolo(KOINO, hely);
+      await blob.ir(tartalom);
+      gazdak.push({ blob, figyelo: await figyeloIndulasa(await ujTar(), KOINO, 0,
+        { fajlOlvas: (l) => blob.olvas(l) }) });
+    }
+
+    const vendegHely = await mkdtemp(join(tmpdir(), 'koino-tf-vendeg-'));
+    mappak.push(vendegHely);
+    const vendeg = fajlBlobTarolo(KOINO, vendegHely);
+    const { lenyomat } = await gazdak[0].blob.ir(tartalom);
+
+    try {
+      // ⭐ A KÖZÖS MUNKAMEGOSZTÁS — ez teszi a három kapcsolatot EGY letöltéssé.
+      const munka = ujMunkamegosztas(await vendeg.reszlegesSzeletek(lenyomat));
+      const agak = await Promise.all(gazdak.map((g) =>
+        fajlHozatala(vendeg, KOINO, lenyomat,
+          tcpNyito('127.0.0.1', g.figyelo.port, 20000), { munka })));
+
+      const nala = await vendeg.olvas(lenyomat);
+      const hozott = agak.reduce((o, a) => o + (a.szeletek ?? 0), 0);
+      const dolgozok = agak.filter((a) => (a.szeletek ?? 0) > 0).length;
+
+      return nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom))
+        // ⛔ NINCS DUPLIKÁCIÓ: a hat szeletet pontosan hatszor hozták el, nem többször.
+        // *Ez a munkamegosztás kizárólagosságának végponti bizonyítéka.*
+        && hozott === 6
+        // ⭐ ÉS TÉNYLEG SZÉTTERÜLT: nem egyetlen ág hozta az egészet.
+        && dolgozok >= 2
+        // ⭐ Mindegyik ág ugyanazt mondja a fájlról — a lezárás joga egyszer adódott ki.
+        && agak.every((a) => a.kesz === true)
+        // ⛔ És nem maradt félkész maradvány.
+        && (await vendeg.reszlegesMeret(lenyomat)) === 0;
+    } finally {
+      for (const g of gazdak) await g.figyelo.bezar();
+    }
+  });
+
+proba('⛔⛔ HA EGY FORRÁS ELNÉMUL A SZELETÉVEL, A TÖBBI BEFEJEZI — nincs beragadás',
+  async () => {
+    // ⚠️⚠️ ITT A NÉMA TÁRS A LÉNYEG, NEM A HALOTT. Egy zárt portnál a kapcsolat-nyitás
+    // azonnal dob — az ág **szeletet sem kapott**, tehát nincs mit visszaadnia. ⛔ A valódi
+    // eset az, amikor a társ **elfogadja a kapcsolatot, kioszt magának egy szeletet, és
+    // utána hallgat**: ilyenkor az a darab nála „ragad", és ha nem kerül vissza a közösbe,
+    // a fájl SOHA nem lesz kész — pedig a bájtok a másik forrásnál megvannak.
+    //
+    // ⭐ Ezért van a próbán IDŐKORLÁT: a beragadás így **bukásként** jelenik meg, nem
+    // végtelen várakozásként. *A legrosszabb hiba a nem-esemény (25. mérés).*
+    const { mkdtemp } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { createServer } = await import('node:net');
+    const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+    const { fajlHozatala, tcpNyito, figyeloIndulasa } = await import('../js/csere/vonal.js');
+    const { ujMunkamegosztas, SZELET_MERET } = await import('../js/csere/fajlAtvitel.js');
+
+    const tartalom = new Uint8Array(3 * SZELET_MERET);
+    for (let i = 0; i < tartalom.length; i++) tartalom[i] = (i * 3) % 251;
+
+    const johely = await mkdtemp(join(tmpdir(), 'koino-tf-jo-'));
+    const vendegHely = await mkdtemp(join(tmpdir(), 'koino-tf-v2-'));
+    mappak.push(johely, vendegHely);
+
+    const joBlob = fajlBlobTarolo(KOINO, johely);
+    const { lenyomat } = await joBlob.ir(tartalom);
+    const vendeg = fajlBlobTarolo(KOINO, vendegHely);
+
+    const figyelo = await figyeloIndulasa(await ujTar(), KOINO, 0,
+      { fajlOlvas: (l) => joBlob.olvas(l) });
+
+    // A NÉMA forrás: elfogadja a kapcsolatot, és soha nem felel.
+    const nemaKapcsolatok = [];
+    const nema = createServer((k) => nemaKapcsolatok.push(k));
+    await new Promise((t) => nema.listen(0, '127.0.0.1', t));
+
+    try {
+      const munka = ujMunkamegosztas();
+      const munkak = Promise.all([
+        fajlHozatala(vendeg, KOINO, lenyomat,
+          tcpNyito('127.0.0.1', figyelo.port, 20000), { munka }),
+        fajlHozatala(vendeg, KOINO, lenyomat,
+          tcpNyito('127.0.0.1', nema.address().port, 2000), { munka })
+          .catch(() => ({ kesz: false, szeletek: 0 }))
+      ]);
+
+      const eredmeny = await Promise.race([
+        munkak,
+        new Promise((t) => setTimeout(() => t('BERAGADT'), 25000))
+      ]);
+      if (eredmeny === 'BERAGADT') return false;
+
+      const [jo, halgato] = eredmeny;
+      const nala = await vendeg.olvas(lenyomat);
+      return jo.kesz === true && halgato.kesz === false
+        && nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom));
+    } finally {
+      for (const k of nemaKapcsolatok) k.destroy();
+      nema.close();
+      await figyelo.bezar();
+    }
+  });
+
 export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }

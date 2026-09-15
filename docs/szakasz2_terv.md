@@ -1131,7 +1131,16 @@ megtörténik-e — ahogy amit csak modul-próba mér, arról nem tudjuk, hogy e
 
 ---
 
-## ⏭️ A KÖVETKEZŐ MUNKA: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., Csaba 3. válasza)
+## ✅ MEGÉPÜLT: TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6., Csaba 3. válasza) — 2026-09-15
+
+> ⭐ **A lap alatti terv MEGVALÓSULT**, a javasolt irány szerint: szeletenként egy fájl a
+> `reszleges/<lenyomat>/<eltolas>` mappában, munkalopó felosztás, és a rossz szeletre az
+> **1. válasz** (a lezárás elbukik, újrakezdjük). ⏸️ **Ami nyitva maradt:** a helyi
+> kiegészítés — *„a következő körben más forrásokkal próbáljuk"* — még nincs megépítve.
+>
+> ⛔ **És a valódi kód kevesebbet hoz, mint a mérő-utánzat** (×2,7 → ×2,0): az **első szelet
+> mindig sorosan jön**, mert a fájl méretét csak az első válasz mondja meg. Részletek és a
+> további leletek: [`koino/meres/eredmenyek.md`](../koino/meres/eredmenyek.md) **29/b**.
 
 **Ez a D68 utolsó tétele**, és Csaba 2026-09-15-én ezt jelölte ki következőnek. ⚠️ Ez a lap
 azért készült, hogy a következő session **ne vakon kezdjen bele** — mert az első kérdés nem

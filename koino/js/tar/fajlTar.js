@@ -23,7 +23,10 @@
 //
 // Használják: esemenyTar.js és kulcsTar.js (rajtuk keresztül minden más).
 
-import { mkdir, readFile, appendFile, writeFile, readdir, access, rename, rm } from 'node:fs/promises';
+// ⚠️ A `rename` 2026-09-15-ig a részleges fájl lezárásához kellett; azóta a szeleteket
+// ÖSSZEFŰZVE írjuk ki (D68 / 6.), tehát kikerült. A `stat` viszont bejött: a részleges
+// méret most a szelet-fájlok összege.
+import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
@@ -446,8 +449,32 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
   // ⭐ A RÉSZLEGES FÁJL KÜLÖN MAPPÁBAN áll, és ez szándékos: ⛔ a `lista()` így **soha nem
   // mondja azt egy félkész fájlról, hogy megvan** — kulönben a bulin felajánlanánk másnak
   // valamit, ami még nincs készen. *A félkész és a kész két külön állapot, két külön helyen.*
-  function reszlegesUtja(lenyomat) {
+  //
+  // ⭐⭐⭐ ÉS 2026-09-15 ÓTA EZ MAPPA, NEM FÁJL — szeletenként egy fájl benne (D68 / 6.).
+  //
+  // ⛔ MIÉRT KELLETT: eddig a részleges fájl **egyetlen, hozzáfűzött fájl** volt, és
+  // „a mérete maga az állapot" — ez viszont **sorrendet feltételez**: a 3. szelet nem
+  // jöhet meg az 1. előtt. Több forrásból viszont épp ez történik.
+  //
+  // ⭐ AZ ELV MEGMARAD: *a tartalom az állapot, nem egy mellette vezetett napló.* Csak
+  // most a **mappa listája** mondja meg, mi van meg — nem a fájl hossza. Egy megszakadt
+  // írás legfeljebb egy szeletet visz, és a lezárás ugyanúgy **újra lenyomatol**.
+  function reszlegesMappa(lenyomat) {
     return join(mappa, 'reszleges', ellenorzottNev(lenyomat));
+  }
+
+  /**
+   * Egy szelet fájlneve a részleges mappában: maga az ELTOLÁS, decimálisan.
+   *
+   * ⚠️ Ez is kívülről jövő szám (a társ mondja meg, hova küld), tehát ugyanúgy őrizni kell,
+   * mint a lenyomatot: ha fájlnévbe kerülhetne bármi, az útvonal-támadás lenne. *Az őr azt
+   * mondja, amit tesz: csak nem-negatív egész.*
+   */
+  function ellenorzottEltolas(eltolas) {
+    if (!Number.isInteger(eltolas) || eltolas < 0 || eltolas > FAJL_KORLAT) {
+      throw new Error('Érvénytelen szelet-eltolás.');
+    }
+    return String(eltolas);
   }
 
   return {
@@ -531,55 +558,105 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
     // *Így egy megszakadt vagy meghamisított letöltés SOHA nem hagy hátra hamis fájlt* —
     // és a csatornát továbbra sem kell megbízhatóvá tenni (3. szabály).
 
-    /** Hány bájt van meg eddig? (0, ha még semmi.) */
-    async reszlegesMeret(lenyomat) {
+    /**
+     * ⭐⭐ MELY SZELETEK VANNAK MEG? — eltolások, növekvő sorrendben.
+     *
+     * *Ez MAGA az állapot:* nincs mellette napló, amit szinkronban kellene tartani. A
+     * hívó ebből tudja meg, mit kell még kérnie — és mivel eltolásokat kap, nem méretet,
+     * a szeletek **tetszőleges sorrendben** érkezhetnek.
+     */
+    async reszlegesSzeletek(lenyomat) {
       // ⛔⛔ AZ ELLENŐRZÉS A `try`-ON KÍVÜL — ugyanaz a jelentésbeli különbség, mint az
       // `olvas`-nál (D19): a **hiány** normális (még nem kezdtük el), az **érvénytelen név**
       // viszont azt jelenti, hogy a hívó szemetet küldött. Ha belül maradna, a `catch`
-      // elnyelné, és a rossz név 0 bájtnak — vagyis „még nincs meg"-nek — látszana.
-      const ut = reszlegesUtja(lenyomat);
+      // elnyelné, és a rossz név „még nincs meg"-nek látszana.
+      const ut = reszlegesMappa(lenyomat);
       try {
-        return (await readFile(ut)).length;
+        return (await readdir(ut))
+          .filter((n) => /^[0-9]{1,12}$/.test(n))
+          .map(Number)
+          .sort((a, b) => a - b);
       } catch {
-        return 0;
+        // ⚠️ IDE ESIK A RÉGI ALAK IS (2026-09-15 előtt a részleges EGY FÁJL volt ezen a
+        // néven): a `readdir` `ENOTDIR`-t ad rá. *Ez helyes viselkedés — a félkész letöltés
+        // helyi, eldobható adat, a következő kör elölről kezdi. Hamis fájl nem keletkezhet
+        // belőle, mert a lezárás úgyis lenyomatol.*
+        return [];
       }
     },
 
+    /** Hány bájt van meg eddig? (0, ha még semmi.) */
+    async reszlegesMeret(lenyomat) {
+      const eltolasok = await this.reszlegesSzeletek(lenyomat);
+      let osszes = 0;
+      for (const eltolas of eltolasok) {
+        try {
+          osszes += (await stat(join(reszlegesMappa(lenyomat), String(eltolas)))).size;
+        } catch { /* közben eltűnt — a következő kör újra kéri */ }
+      }
+      return osszes;
+    },
+
     /**
-     * Egy szelet hozzáfűzése a részleges fájlhoz.
+     * ⭐ EGY SZELET BEÍRÁSA, a saját eltolására.
      *
      * ⛔ A FELSŐ KORLÁT ITT IS ÉL: egy rosszindulatú társ végtelen bájtot küldhetne, és a
      * lemezünket töltené meg. A korlát túllépésekor **eldobjuk az egészet**.
+     *
+     * ⚠️ Ugyanannak az eltolásnak az újraírása **nem hiba**: két forrás küldheti ugyanazt
+     * (versenyhelyzet), és a bájtok úgyis ellenőrzés alá kerülnek a lezárásnál.
      */
-    async reszlegesHozzafuz(lenyomat, bajtok) {
-      const ut = reszlegesUtja(lenyomat);
-      const eddigi = await this.reszlegesMeret(lenyomat);
+    async reszlegesIras(lenyomat, eltolas, bajtok) {
+      const ut = join(reszlegesMappa(lenyomat), ellenorzottEltolas(eltolas));
       const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
 
-      if (eddigi + nyers.length > FAJL_KORLAT) {
+      if (eltolas + nyers.length > FAJL_KORLAT) {
         await this.reszlegesEldobas(lenyomat);
         throw new Error('A részleges fájl túllépte a határt — eldobva.');
       }
 
       await mkdir(dirname(ut), { recursive: true });
-      await appendFile(ut, nyers);
-      return eddigi + nyers.length;
+      await writeFile(ut, nyers);
+
+      // ⛔⛔ ITT ELŐSZÖR A TELJES RÉSZLEGES MÉRETET ADTAM VISSZA — és az MÉRHETŐ KÁR VOLT.
+      // A `reszlegesMeret` végigstatolja az ÖSSZES eddigi szeletet, tehát minden egyes
+      // szelet beírása után nőtt a munka: nyolc szeletnél 36, tizenhatnál 136 fájl-művelet,
+      // ⚠️ **a senkinek nem kellő visszatérési értékért** (a `fajlHozatala` nem használja).
+      // *Egy O(N²) lemez-menet egy kényelmi számért.*
+      return nyers.length;
     },
 
     /**
-     * A részleges fájl lezárása: ⭐ **ellenőrzés, majd átnevezés a végleges nevére**.
+     * A részleges fájl lezárása: ⭐ **összefűzés, ellenőrzés, majd átnevezés a véglegesre**.
      *
-     * @returns {Promise<{rendben: boolean, ok?: string}>}
+     * ⛔⛔ KÉT KÜLÖNBÖZŐ BUKÁS, KÉT KÜLÖNBÖZŐ KÖVETKEZMÉNY (D19):
+     *
+     *   · **hiányzó szelet** → *még nem vagyunk kész.* NEM dobunk el semmit: a lyuk
+     *     pótolható, és épp ez a több forrás lényege.
+     *   · **rossz lenyomat** → a bájtok nem azok, aminek mondják. ⭐ Ilyenkor **eldobjuk
+     *     az egészet**, mert nem tudjuk, melyik szelet volt hamis (a lenyomat a TELJES
+     *     fájlra szól). *Egy támadó így legfeljebb ismételtetni tud, hamisítani nem.*
+     *
+     * @returns {Promise<{rendben: boolean, ok?: string, hianyzik?: number}>}
      */
     async reszlegesLezaras(lenyomat) {
-      const ut = reszlegesUtja(lenyomat);
+      const eltolasok = await this.reszlegesSzeletek(lenyomat);
+      if (!eltolasok.length) return { rendben: false, ok: 'nincs részleges fájl' };
 
-      let bajtok;
-      try {
-        bajtok = new Uint8Array(await readFile(ut));
-      } catch {
-        return { rendben: false, ok: 'nincs részleges fájl' };
+      // ⭐ FOLYTONOS-E? A szeleteket eltolás szerint fűzzük össze, és közben nézzük, hogy
+      // nincs-e lyuk. *A sorrendet a NÉV adja, nem az érkezés.*
+      const darabok = [];
+      let varhato = 0;
+      for (const eltolas of eltolasok) {
+        if (eltolas !== varhato) {
+          return { rendben: false, ok: 'hiányzó szelet', hianyzik: varhato };
+        }
+        const darab = await readFile(join(reszlegesMappa(lenyomat), String(eltolas)));
+        darabok.push(darab);
+        varhato += darab.length;
       }
+
+      const bajtok = new Uint8Array(Buffer.concat(darabok));
 
       // ⛔⛔ A NÉV MAGA A BIZONYÍTÉK: ha a bájtok nem ezt a lenyomatot adják, a fájl NEM az,
       // aminek mondják — eldobjuk, és nem hagyunk hátra semmit.
@@ -590,15 +667,16 @@ export function fajlBlobTarolo(koino, hely = alapHely()) {
       }
 
       await mkdir(mappa, { recursive: true });
-      await rename(ut, utja(lenyomat));
+      await writeFile(utja(lenyomat), bajtok);
+      await this.reszlegesEldobas(lenyomat);
       return { rendben: true };
     },
 
-    /** A félbehagyott letöltés eldobása. */
+    /** A félbehagyott letöltés eldobása — a szeletekkel együtt. */
     async reszlegesEldobas(lenyomat) {
       // ⚠️ A név őre itt is a `try` ELŐTT áll: a „nincs mit eldobni" normális, a rossz név nem.
-      const ut = reszlegesUtja(lenyomat);
-      try { await rm(ut); } catch { /* nincs mit eldobni */ }
+      const ut = reszlegesMappa(lenyomat);
+      try { await rm(ut, { recursive: true, force: true }); } catch { /* nincs mit eldobni */ }
     },
 
     /** Mely fájlok vannak meg? — a szállítás majd ebből tudja, mit kell kérni. */

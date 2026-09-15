@@ -130,7 +130,8 @@ proba('⛔⛔⛔ A RÉSZLEGES FÁJL NÉGY MŰVELETE IS ELAKAD a rossz néven —
     // hallgatólagos `catch` ott is elnyelné a hibát, ha a név belül ellenőrződne (D19).
     const muveletek = [
       () => tar.reszlegesMeret(HOSSZU_DE_ROSSZ),
-      () => tar.reszlegesHozzafuz(HOSSZU_DE_ROSSZ, new Uint8Array([1, 2, 3])),
+      () => tar.reszlegesSzeletek(HOSSZU_DE_ROSSZ),
+      () => tar.reszlegesIras(HOSSZU_DE_ROSSZ, 0, new Uint8Array([1, 2, 3])),
       () => tar.reszlegesLezaras(HOSSZU_DE_ROSSZ),
       () => tar.reszlegesEldobas(HOSSZU_DE_ROSSZ)
     ];
@@ -157,9 +158,9 @@ proba('⭐ …és az ÉRVÉNYES néven a részleges út továbbra is megy (a pr�
     const vege = PNG.subarray(30);
 
     if ((await tar.reszlegesMeret(lenyomat)) !== 0) return false;
-    await tar.reszlegesHozzafuz(lenyomat, eleje);
+    await tar.reszlegesIras(lenyomat, 0, eleje);
     if ((await tar.reszlegesMeret(lenyomat)) !== eleje.length) return false;
-    await tar.reszlegesHozzafuz(lenyomat, vege);
+    await tar.reszlegesIras(lenyomat, eleje.length, vege);
 
     const lezaras = await tar.reszlegesLezaras(lenyomat);
     const vissza = await tar.olvas(lenyomat);

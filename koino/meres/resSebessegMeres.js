@@ -31,7 +31,7 @@ import {
   // ⭐ A több forrás méréséhez: a kiszolgáló oldal a VALÓDI éles kód (D68 / 6.).
   fajlKiszolgalas
 } from '../js/csere/vonal.js';
-import { SZELET_MERET } from '../js/csere/fajlAtvitel.js';
+import { SZELET_MERET, ujMunkamegosztas } from '../js/csere/fajlAtvitel.js';
 import { udpKapcsolat, fajlUdpResen } from '../js/csere/udpVonal.js';
 
 // ⚠️ A koino minden metódusa naplóz — a mérés számai csak így olvashatók.
@@ -415,30 +415,6 @@ async function resenMeres(meret, beallitas = {}) {
 // „a részleges fájl mérete maga az állapot" elve érintetlen marad, amíg nem tudjuk,
 // megéri-e átalakítani.
 
-/** Soronkénti JSON-olvasó — a `vonal.js` `uzenetSor`-ának mérő-oldali párja. */
-function sorOlvaso(kapcsolat) {
-  const beerkezett = [];
-  const varakozok = [];
-  let puffer = '';
-
-  kapcsolat.setEncoding('utf8');
-  kapcsolat.on('data', (darab) => {
-    puffer += darab;
-    let vege;
-    while ((vege = puffer.indexOf('\n')) !== -1) {
-      const sor = puffer.slice(0, vege);
-      puffer = puffer.slice(vege + 1);
-      if (!sor.trim()) continue;
-      try { beerkezett.push(JSON.parse(sor)); } catch { /* a mérésben nincs szemét */ }
-    }
-    while (varakozok.length && beerkezett.length) varakozok.shift()(beerkezett.shift());
-  });
-
-  return () => (beerkezett.length
-    ? Promise.resolve(beerkezett.shift())
-    : new Promise((t) => varakozok.push(t)));
-}
-
 /**
  * Egy fájl elhozása N forrásból, párhuzamosan.
  *
@@ -477,9 +453,9 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
     parosok.push(await udpParos({ ...beallitas, mag: (beallitas.mag ?? 1) + i, kozosVonal }));
   }
 
+  // ⭐ A KÖZÖS MUNKAMEGOSZTÁS — ez teszi a több kapcsolatot EGY letöltéssé (D68 / 6.).
+  const kozosMunka = ujMunkamegosztas(await vendeg.reszlegesSzeletek(lenyomat));
   const szeletSzam = Math.max(1, Math.ceil(meret / SZELET_MERET));
-  let kovetkezoSzelet = 0;
-  const darabok = new Map();          // eltolás → bájtok
   const forrasonkent = new Array(forrasok).fill(0);
 
   const kezd = Date.now();
@@ -501,51 +477,35 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
         }
       })());
 
-      // ----- A KÉRŐ OLDAL: mérő-oldali utánzat (ez épülne meg, ha megéri) -----
+      // ----- A KÉRŐ OLDAL: 2026-09-15 ÓTA SZINTÉN A VALÓDI ÉLES KÓD -----
+      //
+      // ⚠️⚠️ ITT ELŐSZÖR EGY MÉRŐ-OLDALI UTÁNZAT ÁLLT, és annak jó oka volt: a mérés
+      // **az építés előtt** futott (29. mérés), tehát munkamegosztás még nem létezett.
+      // ⛔ De amint megépült, az utánzatot le KELLETT cserélni — *két igazság nem lehet:
+      // ha a mérő mást csinál, mint az éles út, akkor nem azt mérjük, amit futtatunk.*
       munkak.push((async () => {
-        const kapcsolat = udpKapcsolat(p.masik, '127.0.0.1', p.egyikPort,
-          { torlodasJel: beallitas.torlodasJel ?? 'vegas', utemezes: beallitas.utemezes });
-        kapcsolat.setTimeout(120000, () => kapcsolat.destroy(new Error('néma forrás')));
-        const kovetkezo = sorOlvaso(kapcsolat);
-
-        try {
-          for (;;) {
-            const sorszam = kovetkezoSzelet++;
-            if (sorszam >= szeletSzam) break;
-            const eltolas = sorszam * SZELET_MERET;
-
-            kapcsolat.write(JSON.stringify(
-              { uzenet: 'FAJLKEREK', koino: KOINO, lenyomat, eltolas }) + '\n');
-
-            let uzenet;
-            do { uzenet = await kovetkezo(); }
-            while (uzenet.uzenet !== 'FAJLSZELET' && uzenet.uzenet !== 'FAJLNINCS');
-            if (uzenet.uzenet === 'FAJLNINCS') throw new Error('a forrásnál sincs meg');
-
-            darabok.set(uzenet.eltolas, Buffer.from(uzenet.adat ?? '', 'base64'));
-            forrasonkent[i]++;
-          }
-          try { kapcsolat.write(JSON.stringify({ uzenet: 'KESZ' }) + '\n'); } catch { /* zárt */ }
-          if (typeof kapcsolat.kiurites === 'function') await kapcsolat.kiurites();
-        } finally {
-          kapcsolat.destroy();
-        }
+        const nyito = async () => {
+          const kapcsolat = udpKapcsolat(p.masik, '127.0.0.1', p.egyikPort,
+            { torlodasJel: beallitas.torlodasJel ?? 'vegas', utemezes: beallitas.utemezes });
+          kapcsolat.setTimeout(120000, () => kapcsolat.destroy(new Error('néma forrás')));
+          return kapcsolat;
+        };
+        const e = await fajlHozatala(vendeg, KOINO, lenyomat, nyito, { munka: kozosMunka });
+        forrasonkent[i] = e.szeletek ?? 0;
       })());
     }
 
     await Promise.all(munkak);
 
-    // ⛔⛔ A LEZÁRÁS UGYANÚGY ELLENŐRIZ: összefűzzük eltolás szerint, és ÚJRA
-    // LENYOMATOLUNK. *Ha a mérés nem ezt tenné, azt mérné, hogy gyorsan jöttek bájtok —
-    // nem azt, hogy megvan a fájl.*
-    const osszefuzott = Buffer.concat(
-      [...darabok.keys()].sort((a, b) => a - b).map((e) => darabok.get(e)));
-    const vissza = await vendeg.ir(new Uint8Array(osszefuzott));
+    // ⛔⛔ A LEZÁRÁS ITT IS AZ ÉLES KÓDÉ: a `fajlHozatala` végén a `reszlegesLezaras`
+    // **újra lenyomatol**, és csak akkor teszi a végleges nevére, ha a bájtok azt adják ki.
+    // *A mérés így nem azt méri, hogy gyorsan jöttek bájtok, hanem hogy MEGVAN a fájl.*
+    const kesz = await vendeg.olvas(lenyomat);
 
     return {
-      kesz: vissza.lenyomat === lenyomat && osszefuzott.length === meret,
+      kesz: kesz !== null && kesz.length === meret,
       ido: Date.now() - kezd,
-      szeletek: darabok.size,
+      szeletek: forrasonkent.reduce((o, n) => o + n, 0),
       forrasonkent,
       csomag: parosok[0].szamlalo,
       kozosSor: kozosVonal ? { maxSor: kozosVonal.maxSor, eldobott: kozosVonal.eldobott } : null
