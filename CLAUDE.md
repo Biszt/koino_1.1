@@ -23,8 +23,12 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 614 önpróba zöld, semmi nincs pusholva.**
 
 - ✅ **Megvan:** *mikor* találkozunk (percforduló) és *hogyan terjed* a hír az ablakban (ismételt menet).
-- ⛔ **Hiányzik:** *hogyan ér el egymáshoz két zárt router* — az `orjarat` ma **TCP-vel** cserél,
-  a pajzsfúrás + `csereUdpResen` + `fajlUdpResen` **csak kézi parancsból fut**.
+- ⛔⛔ **Hiányzik: AZ ŐRJÁRAT MA IS TCP-N FUT.** Csaba 2026-09-13-án eldöntötte, hogy **a UDP a
+  fő út**, és a UDP-vonal meg is épült (ablak · mért RTT · AIMD · Vegas · randevú) — ⛔ **de
+  egyetlen éles hívója a kézi `pajzsfuro` parancs.** Az `orjarat` a `csereVonalon`-t hívja, a
+  kaput a `figyeloIndulasa` nyitja, a fájlokat a `tcpNyito` hozza — mind `node:net`, azaz TCP.
+  *Ugyanaz a 4. szabály-hiba alakja, mint annyiszor: a réteg kész, az éles út nem hívja.*
+  **A következő munka tehát: az őrjárat átállítása UDP-re.**
 - ⛔⛔ **A szerkezeti akadály:** a `latlak` és a `hirdetendoCimek` **TCP-címeket** ismer, a router
   viszont a UDP-nek **külön** leképezést ad (UDP 39471 vs TCP 63495, egy futáson belül), és a
   UDP-port **foglalatonként más** — *a címet csak a találkozáskor lehet átadni.*

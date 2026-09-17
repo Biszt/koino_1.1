@@ -1271,10 +1271,19 @@ másik fele hiányzik: a KAPCSOLÓDÁS.**
 | **hogyan** terjed a hír az ablakban | ✅ megvan — a kör ismétlődik, amíg van újdonság |
 | **hogyan** ér el egymáshoz két zárt router | ⛔ **hiányzik** — az őrjárat **TCP-vel** cserél |
 
-⭐ A `pajzsfuro` + `csereUdpResen` + `fajlUdpResen` **megvan és mérve van** (17., 19. mérés),
-de **csak kézzel gépelt parancsból fut**: a `fajlokElhozasa` `tcpNyito`-t nyit, az őrjárat
-`csereVonalon`-t hív. *Ugyanaz az alak, mint a 2026-09-14-i átnézés két leleténél: a réteg
-kész, az éles út nem hívja.*
+⛔⛔ **KIMONDVA, mert könnyű félreérteni: AZ ŐRJÁRAT MA IS TCP-N FUT.** Csaba 2026-09-13-án
+eldöntötte, hogy **a UDP a fő út** (19. mérés után), és a UDP-vonal teljesen megépült (ablak,
+mért RTT, AIMD, Vegas, randevú, 20–29. mérés) — ⛔ **de egyetlen éles hívója a kézi `pajzsfuro`
+parancs.** Az automatikus üzemmódban minden `node:net`:
+
+- a társ-lista bejárása: `csereVonalon` (`koino.js`, `orjarat`);
+- a postaláda-kapu: `figyeloIndulasa`;
+- a fájlok: `fajlokElhozasa` → `tcpNyito`;
+- és a kézi `csere` parancs is.
+
+*Ugyanaz az alak, mint a 2026-09-14-i átnézés két leleténél: a réteg kész, az éles út nem
+hívja.* ⭐ **A következő munka tehát nem „egy újabb darab", hanem az őrjárat átállítása UDP-re**
+— a döntés már megszületett, a végrehajtása maradt el.
 
 ### ⛔⛔ A SZERKEZETI AKADÁLY: a UDP-cím NEM AZ, amit ma cserélünk
 
