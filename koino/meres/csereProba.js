@@ -1889,6 +1889,73 @@ export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }
 
+// ===== ⭐⭐ A FRISS UDP-CÍM ÁTMEGY A CSERÉN (2026-09-18) =====
+//
+// ⛔ MIÉRT VALÓDI CSERÉVEL, ÉS NEM A TISZTA FÜGGVÉNNYEL? Mert a tiszta próba azt méri,
+// hogy KI TUDJUK SZÁMOLNI a kort — nem azt, hogy a `CIMEK` üzenet tényleg viszi is.
+// *Amit csak modul-próba mér, arról nem tudjuk, hogy az éles úton megtörténik-e.*
+proba('⭐ A friss UDP-cím átmegy a cserén, és a kora is', async () => {
+  const mienk = await ujTar();
+  const ove = await ujTar();
+
+  // A figyelő (postaláda) hirdet egy friss UDP-címet — 30 másodperce mérte.
+  const figyelo = await figyeloIndulasa(ove, KOINO, 0, {
+    hoszt: '127.0.0.1',
+    udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 30 }]
+  });
+  try {
+    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port);
+    const kapott = eredmeny.kapottUdpCimek ?? [];
+    return kapott.length === 1 && kapott[0].hoszt === '10.9.9.9'
+      && kapott[0].port === 41234 && kapott[0].kor === 30;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+// ⚠️ A MÁSIK IRÁNY IS KELL, ÉS EZ A LÉNYEG (Csaba, 2026-09-18): a szűrés miatt nem elég,
+// hogy én tudom az ő címét — NEKI IS tudnia kell az enyémet, ugyanabban az ablakban.
+// *Ezért nem egyoldalú hirdetés a terjesztés, hanem csere.*
+proba('⭐⭐ A cím MINDKÉT irányban megy — a kopogáshoz ez a feltétel', async () => {
+  const mienk = await ujTar();
+  const ove = await ujTar();
+
+  let figyeloKapott = null;
+  const figyelo = await figyeloIndulasa(ove, KOINO, 0, {
+    hoszt: '127.0.0.1',
+    udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 5 }],
+    utana: (e) => { figyeloKapott = e.kapottUdpCimek; }
+  });
+  try {
+    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port, 10000, [], {},
+      [{ hoszt: '10.8.8.8', port: 40000, kor: 7 }]);
+    // Kis türelem: a figyelő `utana`-ja a kapcsolat lezárása után fut le.
+    for (let i = 0; i < 50 && figyeloKapott === null; i++) {
+      await new Promise((kesz) => setTimeout(kesz, 20));
+    }
+    return (eredmeny.kapottUdpCimek ?? []).length === 1
+      && Array.isArray(figyeloKapott) && figyeloKapott.length === 1
+      && figyeloKapott[0].hoszt === '10.8.8.8' && figyeloKapott[0].kor === 7;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
+// ⚠️ VISSZAFELÉ OLVASHATÓSÁG: egy régebbi társ nem küld `udp` mezőt — ettől a csere
+// ugyanúgy lefut, csak nem tanulunk friss címet. *Romlás, nem törés* (D19).
+proba('A régebbi társ (nincs udp mező) nem töri el a cserét', async () => {
+  const mienk = await ujTar();
+  const ove = await ujTar();
+
+  const figyelo = await figyeloIndulasa(ove, KOINO, 0, { hoszt: '127.0.0.1' });
+  try {
+    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port);
+    return eredmeny.korok >= 1 && (eredmeny.kapottUdpCimek ?? []).length === 0;
+  } finally {
+    await figyelo.bezar();
+  }
+});
+
 export default async function (csendes) {
   const eredmeny = await futtatas(csendes);
   await takaritas();

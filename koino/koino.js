@@ -76,7 +76,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import {
-  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, felszabaditasTarolo, alapHely,
+  esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, udpCimTarolo,
+  felszabaditasTarolo, alapHely,
   ismertKoinok,
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
   fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo
@@ -124,7 +125,9 @@ import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
   sajatCimekKiszurese, sajatCimE,
-  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa
+  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
+  // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
+  udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa, UDP_CIM_ELEVULES
 } from './js/csere/tarsak.js';
 import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
@@ -698,6 +701,41 @@ async function sajatGlobalisCimek() {
 async function hirdetendoCimek(tarolo) {
   const lista = await tarolo.olvas();
   return tarsakSorrendje(lista).map((t) => ({ hoszt: t.hoszt, port: t.port }));
+}
+
+// ===================================
+// ⭐⭐ A FRISS UDP-CÍMEK — a cím-elévülés válasza (2026-09-18)
+// ===================================
+//
+// ⛔ A BAJ, MÉRVE (31. mérés): a külső UDP-port csendben elévül — a telefon 150 mp-et
+// túlélt, 330-at nem —, tehát egy bulin bemondott cím a következő bulira ROSSZ lehet.
+// ⭐ A VÁLASZ (Csaba, 2026-09-18): a friss címek MINDEN cserén terjednek, tehát nem azt
+// kell elérni, akivel dolgunk van, hanem BÁRKIT — ő továbbviszi.
+//
+// ⚠️ AZ ELÉVÜLÉS A HÍVÓÉ, NEM VARÁZSSZÁM (9. szabály): az őrjárat a SAJÁT ablakát adja át.
+
+/** A friss UDP-címek a vonalra kész alakban (a kor másodpercben utazik). */
+async function frissUdpCimek(jegyzekTarolo, elevules = UDP_CIM_ELEVULES) {
+  return udpCimek(await jegyzekTarolo.olvas(), Date.now(), elevules);
+}
+
+/** A cserén kapott friss címeket felvesszük — a kort a SAJÁT óránkhoz kötve. */
+async function udpCimeketTanul(jegyzekTarolo, kapott, elevules = UDP_CIM_ELEVULES) {
+  if (!kapott?.length) return 0;
+  const most = Date.now();
+  const elotte = await jegyzekTarolo.olvas();
+  const utana = udpJegyzekTakaritasa(
+    udpCimekBeolvasztasa(elotte, kapott, most, elevules), most, elevules);
+  await jegyzekTarolo.ir(utana);
+  return Math.max(0, utana.length - elotte.length);
+}
+
+/** A SAJÁT külső UDP-címünk feljegyzése — ezt hirdetjük tovább a bulin. */
+async function sajatUdpCimJegyzese(jegyzekTarolo, cim, port, elevules = UDP_CIM_ELEVULES) {
+  if (!cim || !Number.isInteger(port)) return;
+  const most = Date.now();
+  await jegyzekTarolo.ir(udpJegyzekTakaritasa(
+    udpCimMegjegyzese(await jegyzekTarolo.olvas(), cim, port, most), most, elevules));
 }
 
 /**
@@ -1781,6 +1819,11 @@ try {
       // A postaláda a saját társait is hirdeti — így a hozzá bekopogók megtudják, kik
       // vannak még a közösségben (D36–D38). Ettől bővül a háló magától.
       const cimTarolo = tarsakTarolo();
+      // ⭐ És a FRISS UDP-címeket is (2026-09-18). ⚠️ A postaláda hosszan fut, ezért a
+      // listát dobozban tartjuk: minden tanulás után frissül, különben halott címeket
+      // hirdetne (a leképezés percek alatt elévül — 31. mérés).
+      const udpTarolo = udpCimTarolo();
+      let figyeloUdp = await frissUdpCimek(udpTarolo);
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
@@ -1789,6 +1832,9 @@ try {
         // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
         fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
         hirdetettCimek: await hirdetendoCimek(cimTarolo),
+        // ⭐ A postaláda a friss UDP-címeket is terjeszti (2026-09-18) — ő beszél a
+        // legtöbb emberrel, tehát nála ér a legtöbbet.
+        udpCimek: () => figyeloUdp,
         utana: async (eredmeny) => {
           if (eredmeny.hiba) {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
@@ -1817,6 +1863,11 @@ try {
           // kifelé menő cserékből bővült, pedig ő beszél a legtöbb emberrel.
           const tanult = await cimeketTanul(cimTarolo, eredmeny.kapottCimek,
             eredmeny.kivulrolIgyLatszom);
+          const udpTanult = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
+          if (udpTanult) {
+            figyeloUdp = await frissUdpCimek(udpTarolo);
+            kiir(SZIN.jo + '    + ' + udpTanult + ' friss UDP-címet tanultam tőle' + SZIN.vege);
+          }
           if (tanult) {
             kiir(SZIN.jo + '    + ' + tanult + ' új társ-címet tanultam tőle' + SZIN.vege);
           }
@@ -1956,6 +2007,15 @@ try {
       const perc = parseFloat(ervek[0]) || 5;
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
       const tarolo = tarsakTarolo();
+      // ⭐⭐ A FRISS UDP-CÍMEK JEGYZÉKE (2026-09-18) — és az ELÉVÜLÉS MAGA AZ ABLAK:
+      // ha az e-ember 2 perces bulit kér, a cím 2 percig érdekes. *Nincs varázsszám
+      // (9. szabály): a határ abból következik, ami amúgy is adott.*
+      const udpTarolo = udpCimTarolo();
+      const udpElevules = Math.max(60000, Math.round(perc * 60 * 1000));
+      // A postaláda HOSSZAN fut, ezért nem tömböt kap, hanem ezt a dobozt: minden ablak
+      // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
+      // hirdetne.
+      let frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
@@ -1964,6 +2024,7 @@ try {
         // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
         fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
         hirdetettCimek: await hirdetendoCimek(tarolo),
+        udpCimek: () => frissUdp,
         utana: async (e) => {
           if (e.hiba) return;
           if (e.masKoino) return;
@@ -1971,10 +2032,15 @@ try {
           // akit mi hívunk. E nélkül a kapunkat nyitva tartó készülék, aki a legtöbb
           // emberrel beszél, tanulna a legkevesebbet.
           const tanult = await cimeketTanul(tarolo, e.kapottCimek, e.kivulrolIgyLatszom);
+          // ⭐ A friss UDP-címeket is megtanuljuk tőle — így terjed a cím azon is, aki
+          // sosem hívott minket (Csaba, 2026-09-18).
+          const udpTanult = await udpCimeketTanul(udpTarolo, e.kapottUdpCimek, udpElevules);
+          if (udpTanult) frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
           kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
             + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
             + ' (' + adatMennyiseg(e) + ')'
-            + (tanult ? ' · +' + tanult + ' cím' : '') + SZIN.vege);
+            + (tanult ? ' · +' + tanult + ' cím' : '')
+            + (udpTanult ? ' · +' + udpTanult + ' friss UDP-cím' : '') + SZIN.vege);
         }
       });
 
@@ -2043,7 +2109,8 @@ try {
           for (;;) {
             menetek++;
             const menet = await korbeCsere(lista,
-              (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok));
+              (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok,
+                frissUdp));
 
             // Az első menet adja a kör vázát; a továbbiak hozzáadódnak.
             kor = kor === null ? menet : {
@@ -2075,6 +2142,18 @@ try {
           }
 
           // ⭐ AMIT A TÁRSAKTÓL HALLOTTUNK: új címek a listára. Ettől bővül magától.
+          // ⭐ A FRISS UDP-CÍMEK IS BEKERÜLNEK — és a lista rögtön frissül, hogy a
+          // következő menet már ezekkel hirdessen.
+          const ujUdp = kor.eredmenyek
+            .filter((e) => e.sikerult)
+            .flatMap((e) => e.kapottUdpCimek ?? []);
+          const udpHozzajott = await udpCimeketTanul(udpTarolo, ujUdp, udpElevules);
+          frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+          if (udpHozzajott) {
+            kiir(SZIN.jo + '  + ' + ora() + ' ' + udpHozzajott
+              + ' friss UDP-cím a többiektől' + SZIN.vege);
+          }
+
           const ujCimek = kor.eredmenyek
             .filter((e) => e.sikerult)
             .flatMap((e) => e.kapottCimek ?? []);
@@ -2456,6 +2535,12 @@ try {
           // nyit, tehát MÁS portot mérhet; 2026-08-30-án csak a NAT jóindulatán múlt,
           // hogy a bemondott szám stimmelt.
           if (e.mi === 'SAJAT-KULSO-CIM') {
+            // ⭐ FELJEGYEZZÜK A SAJÁT FRISS UDP-CÍMÜNKET (2026-09-18) — innentől ez terjed
+            // a cserén, és ettől tud egy társ a KÖVETKEZŐ bulin ide kopogni.
+            // ⚠️ Csak a fúró foglalatáé érvényes: a leképezés a foglalathoz tartozik.
+            sajatUdpCimJegyzese(udpCimTarolo(), e.cim, e.port)
+              .catch((hiba) => console.warn('a saját UDP-cím feljegyzése nem sikerült',
+                { ok: hiba.message }));
             kiir(SZIN.jo + '  ⭐ KÍVÜLRŐL ÍGY LÁTSZOM: ' + e.cim + ':' + e.port + SZIN.vege);
             kiir(SZIN.vastag + '     EZT MONDD BE A MÁSIKNAK:' + SZIN.vege + SZIN.halvany
               + ' node koino/koino.js pajzsfuro ' + e.cim + ' ' + e.port + ' 7373'
@@ -2526,6 +2611,10 @@ try {
         const tanult = await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
         if (tanult) kiir(SZIN.jo + '  + ' + tanult + ' új társ-címet tanultam' + SZIN.vege);
         if (csere.kivulrolIgyLatszom) {
+          // ⭐⭐ EZ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE: nem egy tükör mondja, hanem a TÁRS,
+          // arról a résről, amin épp beszélünk (2026-09-18). *A végleges tükör a társ.*
+          await sajatUdpCimJegyzese(udpCimTarolo(),
+            csere.kivulrolIgyLatszom.cim, csere.kivulrolIgyLatszom.port);
           kiir(SZIN.halvany + '  Kívülről így látszol: ' + csere.kivulrolIgyLatszom.cim
             + ':' + csere.kivulrolIgyLatszom.port + SZIN.vege);
         }
@@ -2687,8 +2776,15 @@ try {
         const cim = ervek[0];
         const port = parseInt(ervek[1], 10) || ALAP_PORT;
         const fajlok = await fajlResz();
+        const udpTarolo = udpCimTarolo();
         const eredmeny = await csereVonalon(tar, KOINO, cim, port, 10000,
-          await hirdetendoCimek(tarolo), fajlok);
+          await hirdetendoCimek(tarolo), fajlok, await frissUdpCimek(udpTarolo));
+        // ⭐ A friss UDP-címeket innen is megtanuljuk (2026-09-18) — a kézi csere ugyanúgy
+        // buli, mint az őrjáraté.
+        const udpTanultak = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
+        if (udpTanultak) {
+          kiir(SZIN.jo + '+ ' + udpTanultak + ' friss UDP-címet tanultam tőle' + SZIN.vege);
+        }
         const fajlTanultak = await fajlTanulsag(cim + ':' + port, eredmeny.fajlokNala);
         if (fajlTanultak) {
           kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy nála megvan'

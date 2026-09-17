@@ -1494,3 +1494,27 @@ megy. *A névtelen cím-lista tehát nem hiányosság, hanem védelem.*
 - ⏸️ **AZ ÉJJELI ŐRSÉG NEM ÉPÜL MEG MOST** (Csaba: *„nem ragaszkodom hozzá, csak akkor építsük
   meg, ha úgy tűnik, hogy szükséges"*). ⭐ **A mérce:** ha a friss címek terjesztése mellett is
   gyakran nem ér össze a kör, akkor kerül elő. *Tartalék irány, a terv (b) pontja szerint.*
+
+### ✅ AZ 1. LÉPÉS MEGÉPÜLT: A FRISS UDP-CÍM A CSERÉN (2026-09-18) — 33. mérés
+
+**Ami megépült:**
+
+- ⭐ **Külön jegyzék** a friss UDP-címeknek (`tarsak.js`: `udpCimMegjegyzese` · `udpCimek` ·
+  `udpCimekBeolvasztasa` · `udpJegyzekTakaritasa`; tárolva: `udpcimek.json`). ⛔ **Miért nem a
+  társ-listába:** ott a szabály az, hogy *„a koino nem felejt el senkit magától"* — egy múlékony
+  rés-címre ez halott címet jelentene. *Ami az egyiknél hűség, az a másiknál hiba.*
+- ⭐⭐ **A vonalon KOR utazik, nem időbélyeg** (`CIMEK` → `udp: [{hoszt, port, kor}]`), és a
+  fogadó a **saját órájához** köti. *Idegen órában nem kell megbízni.*
+- ⭐ **Az elévülés a HÍVÓÉ:** az őrjárat a **saját ablakát** adja át (9. szabály — nincs
+  varázsszám). Az `UDP_CIM_ELEVULES` csak tartalék, és pontosan az alapértelmezett ablak.
+- ⭐ **Bekötve az ÉLES útba** (4. szabály): az `orjarat` (postaláda-ág és kör-ág), a `figyel` és
+  a kézi `csere` is terjeszti és tanulja; a `pajzsfuro` pedig **feljegyzi a saját friss
+  címünket** — a tükörtől ÉS a társ `latlak`-jából, *ami a jobb forrás.*
+- ⭐ **10 új önpróba, HÁROM rontás-próbával igazolva:** a `CIMEK` `udp` mezőjének kiürítése ·
+  a kor-számítás kikapcsolása (idegen időbélyeg) · az elévülés-őr kivétele — **mind buktat**.
+  ⚠️ És a vonal-próba **viselkedést mér**: valódi cserén megy át a cím, MINDKÉT irányban.
+
+**⚠️ És az ára, mérve (33. mérés):** egy friss cím **~96 bájt körönként** (oda-vissza), tíz
+címmel a „nincs újdonság" kör **386 → 1346 bájt**. ⛔ Napi léptékben 14 társnál, 5 perces
+ütemmel **1,5 → 5,4 MB**. ⏸️ **Ezért a jegyzék korlátja (10) NEM végleges szám**: a
+`buliMeres.js` kiterjesztése mondja majd meg, hány friss cím kell ahhoz, hogy a kör összeérjen.

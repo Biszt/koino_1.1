@@ -175,7 +175,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   };
 
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
-  let kivulrolIgyLatszom = null, kapottCimek = [];
+  let kivulrolIgyLatszom = null, kapottCimek = [], kapottUdpCimek = [];
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -250,7 +250,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
       console.log('parbeszed - VÉGE (fájl-átvitel)');
       return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
-               masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], fajlokNala: [] };
+               masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
+               fajlokNala: [] };
     }
 
     if (kor === 1 && elsoUzenet.uzenet === 'SZELETKEREK') {
@@ -268,7 +269,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       });
       return {
         korok: 1, uj: 0, kuldott: kertek.length, reszletesAllasok: 0,
-        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: 0,
+        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: 0, kapottUdpCimek: 0,
         szeletKiszolgalva: elsoUzenet.entitas
       };
     }
@@ -371,13 +372,43 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
         ? [{ hoszt: kivulrolIgyLatszom.cim, port: kivulrolIgyLatszom.port }]
         : [];
 
+      // ===== ⭐⭐ ÉS A FRISS UDP-CÍMEK, KÜLÖN MEZŐBEN (2026-09-18) =====
+      //
+      // ⛔ MIÉRT KÜLÖN, ÉS MIÉRT NEM A `cimek` KÖZÉ? Mert a router a két szállításnak KÜLÖN
+      // leképezést ad — mérve egy futáson belül: UDP 39471, TCP 63495. Egy listába keverve a
+      // társ TCP-vel hívna egy UDP-portot, vagy fordítva: *két szám ugyanarra a kérdésre.*
+      //
+      // ⭐ ÉS CSAK UDP-CÍM UTAZIK (Csaba, 2026-09-18): a TCP-címek HELYBEN maradnak (a `tars`
+      // parancs és a helyi felfedezés adja őket). Így nincs szükség jelölő mezőre — ami a
+      // vonalon van, az UDP. *A 6. szabály a kisebb üzenetet kéri.*
+      //
+      // ⭐ A `kor` MÁSODPERCBEN utazik, nem időbélyeg: a fogadó a SAJÁT órájához köti
+      // (`udpCimekBeolvasztasa`). Idegen órában nem kell megbízni.
+      //
+      // ⚠️ VISSZAFELÉ OLVASHATÓ: egy régebbi társ nem küld `udp` mezőt, és nem is várja —
+      // a JSON-üzenetben egy ismeretlen mező ártalmatlan.
+      // ⚠️ LEHET FÜGGVÉNY IS: a figyelő (postaláda) HOSSZAN fut, és a friss címek listája
+      // ablakonként más — egy induláskor átadott tömb néhány perc múlva halott címeket
+      // hirdetne. *A hívó dolga megmondani, mi a friss; ez a réteg csak továbbítja.*
+      const udpForras = typeof beallitas.udpCimek === 'function'
+        ? beallitas.udpCimek() : beallitas.udpCimek;
+      const udpCimek = Array.isArray(udpForras) ? udpForras : [];
+
       // A sajátunk ELÖL: ha a korlátba nem fér bele minden, ez az egy cím az, amit a
       // másik sehonnan máshonnan nem tudhat meg.
-      kuld({ uzenet: 'CIMEK', cimek: [...sajatCim, ...hirdetettCimek].slice(0, CIM_KORLAT) });
+      kuld({
+        uzenet: 'CIMEK',
+        cimek: [...sajatCim, ...hirdetettCimek].slice(0, CIM_KORLAT),
+        udp: udpCimek.slice(0, CIM_KORLAT)
+      });
       const ove = await varj('CIMEK');
       kapottCimek = (Array.isArray(ove.cimek) ? ove.cimek : [])
         .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
           && c.port > 0 && c.port < 65536)
+        .slice(0, CIM_KORLAT);
+      kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
+        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
+          && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
         .slice(0, CIM_KORLAT);
     }
 
@@ -431,10 +462,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   console.log('parbeszed - VÉGE', {
     korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom,
-    kapottCimek: kapottCimek.length, fajlokNala: fajlokNala.length
+    kapottCimek: kapottCimek.length, kapottUdpCimek: kapottUdpCimek.length,
+    fajlokNala: fajlokNala.length
   });
   return {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek,
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek, kapottUdpCimek,
     fajlokNala
   };
 }
@@ -473,6 +505,8 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
     // döntése, 2026-09-13), és a figyelő nem tudja, mikor ér rá a társ.
     parbeszed(kapcsolat, tar, koino, {
       hirdetettCimek, sajatCimHirdetese: true,
+      // ⚠️ Függvényként is jöhet: a postaláda HOSSZAN fut, a friss lista ablakonként más.
+      udpCimek: beallitas.udpCimek ?? [],
       fajlValasz: beallitas.fajlValasz ?? null,
       // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): aki fogadni tud, az a legértékesebb forrás.
       fajlOlvas: beallitas.fajlOlvas ?? null
@@ -517,7 +551,7 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
  * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
  */
 export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
-                                   hirdetettCimek = [], fajl = {}) {
+                                   hirdetettCimek = [], fajl = {}, udpCimek = []) {
   console.log('csereVonalon - KEZDÉS', { cim, port });
 
   // family: 0 → a rendszer maga válasszon IPv4 és IPv6 között. A Szakasz 2 mérése miatt
@@ -537,6 +571,9 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
     // párbeszéd ugyanúgy fut, mint eddig — a két réteg külön él (D3).
     const eredmeny = await parbeszed(kapcsolat, tar, koino, {
       hirdetettCimek,
+      // ⭐ A friss UDP-címek a TCP-cserén is utaznak (2026-09-18) — ma ez az út, amin
+      // találkozunk. *A terjesztés nem a szállítástól függ, hanem a bulitól.*
+      udpCimek,
       fajlKerelem: fajl.kerelem ?? null,
       fajlValasz: fajl.valasz ?? null,
       fajlOlvas: fajl.olvas ?? null

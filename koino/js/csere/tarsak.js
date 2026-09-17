@@ -346,3 +346,91 @@ export function szeletJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = S
   }
   return eredmeny;
 }
+
+// ===================================
+// ⭐⭐ A FRISS UDP-CÍMEK JEGYZÉKE (2026-09-18, a cím-elévülés válasza)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELL KÜLÖN JEGYZÉK, ÉS MIÉRT NEM A TÁRS-LISTÁBA? Mert a kétféle cím
+// ELLENTÉTES szabályt kíván:
+//
+//   · a TÁRS-LISTA címe TARTÓS (nyitott kapu, helyi cím) — ott a szabály az, hogy „a koino
+//     nem felejt el senkit magától", a bukott társ is a listán marad (4. szabály);
+//   · ⛔ egy UDP-rés külső címe MÚLÉKONY: a leképezés csendben ELÉVÜL — mérve 150 mp-et
+//     túlélt, 330-at nem (31. mérés, telefon), és a szám vonalanként más.
+//
+// *Egy listában a kettő nem fér meg: ami az egyiknél hűség, az a másiknál halott cím.*
+//
+// ⭐⭐ A FRISSESSÉG KOR, NEM IDŐBÉLYEG. A vonalon `kor` utazik (hány MÁSODPERCE mértük), és
+// a fogadó a SAJÁT órájához köti. *Így nem kell megbízni az idegen órájában* — ugyanaz az
+// elv, amiért az állapot sem az `ido` mező szerint rendez.
+//
+// ⭐ ÉS A HATÁRT A HÍVÓ ADJA MEG, NEM EGY VARÁZSSZÁM (9. szabály): az őrjárat a SAJÁT
+// ablakát adja át elévülésnek — ha az e-ember 2 perces bulit kér, a cím 2 percig érdekes.
+// Az alábbi állandó csak tartalék, és pontosan az őrjárat alapértelmezett ablaka.
+//
+// ⚠️ BIZALOM NEM JÁR VELE (3. szabály): a cím nem esemény, nem dönt el semmit. Aki hamis
+// címet terjeszt, elérhetetlenséget okoz, nem hamisítást.
+
+/** Tartalék elévülés: az őrjárat alapértelmezett ablaka (5 perc). A hívó felülírhatja. */
+export const UDP_CIM_ELEVULES = 5 * 60 * 1000;
+
+/** Legfeljebb ennyi friss UDP-cím utazik egy üzenetben (6. szabály: a bájtok számítanak). */
+export const UDP_CIM_KORLAT = 10;
+
+/**
+ * Megjegyzi, hogy EBBEN a pillanatban ezen a külső UDP-címen volt elérhető valaki.
+ *
+ * ⚠️ A cím NÉVTELEN: nem mondjuk meg, kié. ⭐ Nem is kell: a buli elején mindenkire
+ * kopogunk, aki a jegyzékben van, és aki felel, az felel. *Egy azonosító–cím kötés a
+ * hálózatot feltérképezhetővé tenné (D6) — ez a névtelenség tehát védelem, nem hiányosság.*
+ *
+ * @returns {Array<Object>} az ÚJ jegyzék
+ */
+export function udpCimMegjegyzese(jegyzek, hoszt, port, most = Date.now()) {
+  const normalt = cimNormalizalasa(hoszt);
+  if (!normalt || !Number.isInteger(port) || port <= 0 || port >= 65536) return jegyzek;
+
+  const nelkule = jegyzek.filter(
+    (b) => !(cimNormalizalasa(b.hoszt) === normalt && b.port === port)
+  );
+  return [...nelkule, { hoszt, port, mikor: most }];
+}
+
+/**
+ * A friss UDP-címek — a legfrissebbek elöl, a vonalra kész alakban (`kor` másodpercben).
+ *
+ * @returns {Array<{hoszt: string, port: number, kor: number}>}
+ */
+export function udpCimek(jegyzek, most = Date.now(), elevules = UDP_CIM_ELEVULES) {
+  return jegyzek
+    .filter((b) => most - b.mikor <= elevules && most >= b.mikor)
+    .sort((a, b) => b.mikor - a.mikor)
+    .slice(0, UDP_CIM_KORLAT)
+    .map((b) => ({ hoszt: b.hoszt, port: b.port, kor: Math.round((most - b.mikor) / 1000) }));
+}
+
+/**
+ * A cserén kapott friss címek beolvasztása — a kort a SAJÁT óránkhoz kötve.
+ *
+ * ⛔ Az elévülésnél RÉGEBBIT be sem vesszük: az már halott cím, csak a helyet foglalná.
+ */
+export function udpCimekBeolvasztasa(jegyzek, kapott, most = Date.now(),
+                                     elevules = UDP_CIM_ELEVULES) {
+  let uj = jegyzek;
+  for (const c of Array.isArray(kapott) ? kapott : []) {
+    if (!c || typeof c.hoszt !== 'string' || !Number.isInteger(c.port)) continue;
+    const kor = Number.isInteger(c.kor) && c.kor >= 0 ? c.kor * 1000 : null;
+    if (kor === null || kor > elevules) continue;
+    uj = udpCimMegjegyzese(uj, c.hoszt, c.port, most - kor);
+  }
+  return uj;
+}
+
+/** Kidobja az elévülteket és a korlát fölöttieket — a jegyzék különben korlátlanul hízna. */
+export function udpJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = UDP_CIM_ELEVULES) {
+  return jegyzek
+    .filter((b) => most - b.mikor <= elevules && most >= b.mikor)
+    .sort((a, b) => b.mikor - a.mikor)
+    .slice(0, UDP_CIM_KORLAT);
+}

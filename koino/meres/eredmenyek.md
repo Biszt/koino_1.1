@@ -2874,3 +2874,28 @@ tehát nem végtelen — de egy elutasított eseményt ugyanabban a cserében ne
 - **Két MOBIL készülék egymás közt** (ugyanazon szolgáltató CGNAT-ja mögül) — ott a fúrásnak a
   közös NAT-on kellene visszafordulnia (hairpinning), és ez gyakran tiltott.
 - **A rés sebessége** valódi vonalon.
+
+---
+
+## 33. ⚠️ MENNYIBE KERÜL A FRISS CÍM A VONALON? (2026-09-18, a terjesztés megépítésekor)
+
+*A `CIMEK` üzenet mostantól **friss UDP-címeket** is visz (`udp` mező, `kor` másodpercben).
+A 6. szabály szerint az új mezőt a **bájtokon** kell megnézni, nem a mappa méretén.*
+
+Két üres tár, „nincs újdonság" kör, oda-vissza együtt:
+
+| | a kör mérete | a friss címek ára |
+|---|---|---|
+| friss cím nélkül | **386 bájt** | — |
+| 1 friss címmel | 480 bájt | +94 |
+| **10 friss címmel** | **1346 bájt** | **+960** |
+
+⛔⛔ **EGY CÍM ~96 BÁJT KÖRÖNKÉNT (oda-vissza), és ez sok.** Tíz címmel a „nincs újdonság"
+kör **megháromszorozódik**. ⚠️ Napi léptékben, 14 társsal, 5 perces ütemmel: **1,5 MB → 5,4 MB
+naponta** — *egy mobilos e-embernek ez érezhető* (D35: a csere ára befogadási kérdés).
+
+⏸️ **AMI EBBŐL KÖVETKEZIK, ÉS MÉRÉST KÍVÁN:** hány friss cím kell ahhoz, hogy a kör összeérjen?
+A jegyzék korlátja ma **10** (a `CIM_KORLAT`-hoz igazítva), de ez **nem mért szám** — a
+`buliMeres.js` kiterjesztése tudná megmondani, és addig ez a legdrágább új tétel a vonalon.
+⭐ *Két olcsóbb irány is nyitva áll: kevesebb címet küldeni (a legfrissebbeket), vagy rövidebb
+mezőneveket használni (~20%).*

@@ -23,7 +23,9 @@ import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
   cimNormalizalasa, sajatCimE, sajatCimekKiszurese,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
-  SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT
+  SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT,
+  udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa,
+  UDP_CIM_ELEVULES, UDP_CIM_KORLAT
 } from '../js/csere/tarsak.js';
 
 const { proba, futtatas } = probaGyujtemeny('A társ-lista próbája');
@@ -387,6 +389,71 @@ proba('⚠️ A jegyzék NEM hízik korlátlanul: szeletenként legfeljebb a kor
   return j.length === SZELET_CIM_KORLAT + 10 && tiszta.length === SZELET_CIM_KORLAT
     // A legfrissebbek maradnak meg.
     && tiszta[0].mikor === 1000 + SZELET_CIM_KORLAT + 9;
+});
+
+// ===== ⭐⭐ A FRISS UDP-CÍMEK (2026-09-18) — a cím-elévülés válasza =====
+//
+// ⛔ MIT KELL ITT BIZONYÍTANI? Nem azt, hogy „terjed a cím" — azt a vonal próbája méri.
+// Hanem azt a HÁRMAT, amiért ez a jegyzék külön él a társ-listától:
+//   1. a KOR utazik, nem időbélyeg (idegen órában nem bízunk);
+//   2. az ELÉVÜLT cím nem kerül be és nem is terjed tovább;
+//   3. a jegyzék NEM hízik korlátlanul.
+
+proba('A kor a SAJÁT óránkhoz kötődik — nem az idegen időbélyegéhez', () => {
+  // A társ azt mondja: „ezt a címet 30 másodperce mértük". Nálunk épp 1 000 000 az óra.
+  const jegyzek = udpCimekBeolvasztasa([], [{ hoszt: '10.0.0.7', port: 41000, kor: 30 }],
+    1000000);
+  // A bejegyzés ideje a MI óránkon: most − 30 mp.
+  return jegyzek.length === 1 && jegyzek[0].mikor === 1000000 - 30000;
+});
+
+proba('⛔ Az elévülésnél régebbi címet be sem vesszük', () => {
+  const kor = Math.round(UDP_CIM_ELEVULES / 1000) + 1;      // egy másodperccel túl öreg
+  const jegyzek = udpCimekBeolvasztasa([], [{ hoszt: '10.0.0.7', port: 41000, kor }], 1000000);
+  return jegyzek.length === 0;
+});
+
+proba('A hibás bejegyzést kihagyjuk (nincs kor, rossz port, nem szám)', () => {
+  const jegyzek = udpCimekBeolvasztasa([], [
+    { hoszt: '10.0.0.1', port: 41000 },                       // nincs kor
+    { hoszt: '10.0.0.2', port: 0, kor: 5 },                   // rossz port
+    { hoszt: '10.0.0.3', port: 41000, kor: -5 },              // visszafelé lépő kor
+    { hoszt: 42, port: 41000, kor: 5 }                        // nem szöveg
+  ], 1000000);
+  return jegyzek.length === 0;
+});
+
+proba('⭐ A kifelé menő lista KOR-t ad, másodpercben, a legfrissebbel elöl', () => {
+  let j = [];
+  j = udpCimMegjegyzese(j, '10.0.0.1', 41000, 100000);        // régebbi
+  j = udpCimMegjegyzese(j, '10.0.0.2', 41001, 160000);        // frissebb
+  const kifele = udpCimek(j, 200000);
+  return kifele.length === 2
+    && kifele[0].hoszt === '10.0.0.2' && kifele[0].kor === 40
+    && kifele[1].kor === 100
+    // ⚠️ Időbélyeg SOHA nem megy ki: azt a másik órája nem tudná értelmezni.
+    && kifele.every((c) => c.mikor === undefined);
+});
+
+proba('⛔ Az elévült cím nem is terjed tovább', () => {
+  let j = [];
+  j = udpCimMegjegyzese(j, '10.0.0.1', 41000, 0);
+  return udpCimek(j, UDP_CIM_ELEVULES + 1).length === 0;
+});
+
+proba('Ugyanaz a cím csak egyszer szerepel — a friss idő felülírja', () => {
+  let j = [];
+  j = udpCimMegjegyzese(j, '10.0.0.1', 41000, 1000);
+  j = udpCimMegjegyzese(j, '10.0.0.1', 41000, 5000);
+  return j.length === 1 && j[0].mikor === 5000;
+});
+
+proba('⚠️ A jegyzék NEM hízik korlátlanul: a takarítás a korlátig vág', () => {
+  let j = [];
+  for (let i = 0; i < UDP_CIM_KORLAT + 5; i++) j = udpCimMegjegyzese(j, '10.0.0.' + i, 41000, 1000 + i);
+  const tiszta = udpJegyzekTakaritasa(j, 2000);
+  return j.length === UDP_CIM_KORLAT + 5 && tiszta.length === UDP_CIM_KORLAT
+    && tiszta[0].mikor === 1000 + UDP_CIM_KORLAT + 4;       // a legfrissebb elöl
 });
 
 export default futtatas;

@@ -877,3 +877,48 @@ export function felszabaditasTarolo(hely = alapHely()) {
     }
   };
 }
+
+// ===================================
+// ⭐ A FRISS UDP-CÍMEK TÁROLÁSA (2026-09-18)
+// ===================================
+
+/**
+ * „Milyen külső UDP-címeken volt valaki elérhető az utóbbi percekben?"
+ *
+ * ⛔ MIÉRT HARMADIK FÁJL? Mert a tartalma **percekig él**, nem hetekig: egy UDP-leképezés
+ * csendben elévül (31. mérés: 150 mp igen, 330 nem). A társ-listában ez kimosná a tartós
+ * címeket, a szelet-jegyzékben pedig más a kérdés (ott: „hol láttam ezt az entitást").
+ *
+ * ⚠️ A bejegyzés NÉVTELEN — nem mondja meg, kié a cím. *Ez védelem (D6), nem hiányosság:
+ * a kopogásnak nem kell tudnia, kinek kopog.*
+ *
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function udpCimTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'udpcimek.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Array<Object>>} a bejegyzések, vagy üres lista */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        const lista = Array.isArray(adat) ? adat : adat.cimek;
+        return Array.isArray(lista) ? lista : [];
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return [];
+        // Egy elrontott jegyzék NE akadályozza a koino futását: ez gyorsítás, nem igazság.
+        console.warn('udpCimTarolo - olvashatatlan jegyzék, üresnek vesszük', { fajl });
+        return [];
+      }
+    },
+
+    /** @param {Array<Object>} lista */
+    async ir(lista) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify({ cimek: lista }, null, 2), 'utf8');
+    }
+  };
+}
