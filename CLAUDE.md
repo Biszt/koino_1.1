@@ -17,6 +17,25 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
+### ⏭️⏭️ A KÖVETKEZŐ MUNKA: A BULI MÁSODIK FELE — A RÉS-NYITÁS
+
+⭐ **A részletes terv, a nyitott döntésekkel:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md)
+legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 614 önpróba zöld, semmi nincs pusholva.**
+
+- ✅ **Megvan:** *mikor* találkozunk (percforduló) és *hogyan terjed* a hír az ablakban (ismételt menet).
+- ⛔ **Hiányzik:** *hogyan ér el egymáshoz két zárt router* — az `orjarat` ma **TCP-vel** cserél,
+  a pajzsfúrás + `csereUdpResen` + `fajlUdpResen` **csak kézi parancsból fut**.
+- ⛔⛔ **A szerkezeti akadály:** a `latlak` és a `hirdetendoCimek` **TCP-címeket** ismer, a router
+  viszont a UDP-nek **külön** leképezést ad (UDP 39471 vs TCP 63495, egy futáson belül), és a
+  UDP-port **foglalatonként más** — *a címet csak a találkozáskor lehet átadni.*
+- ⭐ **Az első lépés NEM az építés, hanem a MÉRÉS:** két **port-átíró** NAT között (pl. két CGNAT)
+  a koino soha nem mért (a 19. mérés kimondott hiánya). *Ha ott elvi fal van, kár előbb építeni.*
+  ⚠️ Terepmérés — két készülék, két hálózat, **Csaba kell hozzá**.
+- ⏸️ **Csaba döntései:** mérjünk-e előbb · hol utazzon a UDP-cím (**külön mező**, nem a TCP-é) ·
+  mikor váltson az őrjárat UDP-re · a kopogás adat-ára (D35).
+- ⏸️ **Továbbra is nyitva:** a fájl-bájtok kézi útja (`fajlKivisz`/`fajlBehoz`) · `FAJL_KORLAT` ·
+  a maradék modálok (5.8) · a „kurbli" (az első találkozás kézi marad).
+
 ### ✅✅ A BULI ELSŐ KÉT DARABJA MEGÉPÜLT (2026-09-15) — 30. mérés
 
 ⭐ **A sorrendet a függőségek döntötték el** (Csaba, 2026-09-15): a randevú, a pajzsfúrás és a
@@ -157,10 +176,9 @@ a támadót.* ⭐⭐ **7 új önpróba, ÖT rontás-próbával** — és a paran
 mér**: valódi `csere` paranccsal, hamis és jó forrással; az 1. kör bukik és jegyez, a 2. kör
 elkerüli a hamisat, a kép megjön, a jegyzet kitisztul.
 
-### ⏭️ A KÖVETKEZŐ MUNKA (a korábbi állapot, történetként): a mérés
+### ✅ TÖRTÉNETKÉNT: A TÖBB FORRÁS MÉRÉSE, AMI AZ ÉPÍTÉST MEGELŐZTE (29. mérés)
 
-⭐ **A részletes terv, a nyitott döntésekkel:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md)
-legvége („A KÖVETKEZŐ MUNKA"). ⛔⛔ **És az első lépés ott sem az építés, hanem a MÉRÉS** volt —
+⭐ **A terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md), a D68/6 szakasz. ⛔⛔ **És az első lépés ott sem az építés, hanem a MÉRÉS** volt —
 ✅ **ez 2026-09-15-én megtörtént: 29. mérés** ([`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md)),
 `node koino/meres/resSebessegMeres.js`, a „TÖBB FORRÁSBÓL EGY FÁJL" szakasz.
 
@@ -188,7 +206,7 @@ ugyanannyiba kerül benne, mint egy 1000 bájtos adat-darab — a közös letöl
 nyugtáink versengtek a szeletekkel. *Harmadszor ugyanaz a lecke: a műszert is meg kell mérni —
 és ha elfogadtam volna az első ×1,8-at, a döntés egy műszer-hibán állna.*
 
-⏸️⏸️ **AMI MOST KÖVETKEZIK, ÉS CSABÁÉ:** *(1)* **megéri-e** megépíteni (a fenti számok alapján) ·
+✅ **(Mindhárom kérdés azóta eldőlt és megépült — lásd fentebb.)** **Ami akkor következett:** *(1)* **megéri-e** megépíteni (a fenti számok alapján) ·
 *(2)* ⛔ **a rossz szelet válasza** — ez nem sebesség, hanem bizalom: ma a lenyomat a TELJES
 fájlra szól, tehát egy hamis szelet az egészet elbuktatja, és **nem tudjuk, melyik volt**
 (három válasz, mindegyik ára kimondva a tervben; a javaslat az 1., helyi kiegészítéssel) ·

@@ -1254,3 +1254,69 @@ letöltés helyi tanulsága, ami a következő buli után el is felejthető.
   rést, nincs kihez fordulni.
 - A **csere** (esemény-forgalom) érintetlen: ott a redundancia már ma is megvan (a postaláda
   és a társ-lista), és nincs szeletelés.
+
+---
+
+## ⏭️⏭️ A KÖVETKEZŐ MUNKA: A BULI MÁSODIK FELE — A RÉS-NYITÁS (2026-09-15)
+
+⚠️ **Ez a lap azért készült, hogy a következő session ne vakon kezdjen.** A buli **terjedési**
+fele 2026-09-15-én megépült (30. mérés: igazítás + ismételt menet, együtt ×30) — ⛔ **de a
+másik fele hiányzik: a KAPCSOLÓDÁS.**
+
+### Hol tartunk pontosan
+
+| | ma |
+|---|---|
+| **mikor** találkozunk | ✅ megvan — a **percfordulóhoz igazított** ablak (üzenetváltás nélkül) |
+| **hogyan** terjed a hír az ablakban | ✅ megvan — a kör ismétlődik, amíg van újdonság |
+| **hogyan** ér el egymáshoz két zárt router | ⛔ **hiányzik** — az őrjárat **TCP-vel** cserél |
+
+⭐ A `pajzsfuro` + `csereUdpResen` + `fajlUdpResen` **megvan és mérve van** (17., 19. mérés),
+de **csak kézzel gépelt parancsból fut**: a `fajlokElhozasa` `tcpNyito`-t nyit, az őrjárat
+`csereVonalon`-t hív. *Ugyanaz az alak, mint a 2026-09-14-i átnézés két leleténél: a réteg
+kész, az éles út nem hívja.*
+
+### ⛔⛔ A SZERKEZETI AKADÁLY: a UDP-cím NEM AZ, amit ma cserélünk
+
+- a `latlak` a **TCP-kapcsolat** távoli címét mondja meg (`vonal.js`), a `hirdetendoCimek`
+  a társ-lista **TCP-címeit** hirdeti;
+- ⛔ a router a UDP-nek **külön leképezést** ad — mérve egy futáson belül: **UDP 39471,
+  TCP 63495** (2026-09-13);
+- ⛔⛔ és a külső UDP-port **foglalatonként más**, a TCP-port **futásonként más** (17., 19.
+  mérés) — *a címet nem lehet előre megbeszélni, csak a találkozás pillanatában átadni.*
+
+### ⭐ A kérdés, amire a terv nem tud válaszolni — és ezért MÉRÉS az első lépés
+
+**Két port-átíró NAT között** (pl. két CGNAT) a koino **soha nem mért** — a 19. mérés
+kimondja: *„egy hálózat-pár (egyik port-átíró, másik port-megtartó); két port-átíró NAT
+között újra kell mérni."* ⛔ A 9. szabály szerint ez **alapállapot, nem kivétel**.
+
+⚠️ **Ez terepmérés: két készülék, két hálózat** — Csaba nélkül nem elvégezhető. *Ha itt elvi
+fal van, az egész irányt újra kell gondolni (postaláda-központú megoldás), és akkor kár lenne
+előbb megépíteni.*
+
+### A javasolt irány (ha a mérés átmegy)
+
+1. **A buli elején mindenki megméri a saját UDP külső címét** (`kulsoCim`, a fúró-foglalatról
+   — ez már megvan, `ba9ce7b`).
+2. **A cím a cserén utazik**, a meglévő `CIMEK` üzenet mellett — ⚠️ de **külön mezőben**,
+   mert a TCP- és a UDP-cím **nem ugyanaz** (*„két szám ugyanarra a kérdésre, és csak az
+   egyik igaz"*).
+3. **A következő ablakban mindkét fél kopog** — az időpontot már nem kell megbeszélni, mert
+   a percforduló adja. ⭐ *Itt térül meg az igazítás: a pajzsfúrás nehéz feltétele
+   (egyidejűség) innentől megbeszélt, nem véletlen.*
+4. **A kurbli marad kézi**: az első találkozáshoz (`tars <cím>`, helyi felfedezés, vagy
+   egyidejű `pajzsfuro`) nincs mit automatizálni — akinek a címét nem ismered, afelé nem
+   tudsz nyitni.
+
+### ⏸️ Nyitott döntések (mind Csabáé)
+
+1. ⛔ **Mérjünk-e előbb két port-átíró NAT között?** *(A javaslat: igen — ez a 19. mérés
+   kimondott hiánya, és egy elvi falnak nem érdemes építeni.)*
+2. **Hol utazzon a UDP-cím?** A `CIMEK` üzenetben új mezőként, vagy a `LENYOMAT` `latlak`-ja
+   mellett? ⚠️ A 6. szabály szerint ez **új adat a vonalon** — meg kell nézni a bájtokat.
+3. **Mikor váltson át az őrjárat UDP-re?** Mindig, vagy csak ha a TCP nem megy? *(A javaslat:
+   a TCP marad az első próbálkozás, mert olcsóbb — a rés a tartalék. Az 1. szabály miatt ez
+   nem kerül kódba: a `parbeszed` mindkét szállításon változatlanul fut.)*
+4. **Az adat-ár**: a kopogás minden társra, minden ablakban — mennyi? *(Számolni kell, a D35
+   szerint ez befogadási kérdés.)*
