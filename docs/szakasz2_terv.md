@@ -1329,3 +1329,13 @@ előbb megépíteni.*
    nem kerül kódba: a `parbeszed` mindkét szállításon változatlanul fut.)*
 4. **Az adat-ár**: a kopogás minden társra, minden ablakban — mennyi? *(Számolni kell, a D35
    szerint ez befogadási kérdés.)*
+
+### ✅ A 31. MÉRÉS (2026-09-17) — az első kérdés, amihez egy készülék elég
+
+⭐ Mielőtt az őrjárat UDP-re áll, azt kellett tudni, **túléli-e a bulin bemondott külső
+UDP-cím a buli-közt** (az őrjárat 5 percenként ébred, közben hallgat). `node
+koino/meres/udpLekepezesMeres.js`. **Az otthoni vonalon: 330 mp csend után is ugyanaz a port**,
+a leképezés célfüggetlen. ⭐ *Vagyis ezen a vonalon a „cím a cserén utazik, a következő bulin
+arra kopogunk" szerkezet életjel nélkül működik.* ⚠️ A külső IP viszont napok alatt változott.
+⏸️ **A döntő eset a mobil (CGNAT)** — a telefonon, mobil adattal ugyanez a parancs; utána a két
+készülékes terepmérés. Részletek: `koino/meres/eredmenyek.md` 31.

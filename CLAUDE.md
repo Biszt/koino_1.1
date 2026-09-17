@@ -32,9 +32,13 @@ legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 614 önpróba z
 - ⛔⛔ **A szerkezeti akadály:** a `latlak` és a `hirdetendoCimek` **TCP-címeket** ismer, a router
   viszont a UDP-nek **külön** leképezést ad (UDP 39471 vs TCP 63495, egy futáson belül), és a
   UDP-port **foglalatonként más** — *a címet csak a találkozáskor lehet átadni.*
-- ⭐ **Az első lépés NEM az építés, hanem a MÉRÉS:** két **port-átíró** NAT között (pl. két CGNAT)
-  a koino soha nem mért (a 19. mérés kimondott hiánya). *Ha ott elvi fal van, kár előbb építeni.*
-  ⚠️ Terepmérés — két készülék, két hálózat, **Csaba kell hozzá**.
+- ✅ **31. mérés (2026-09-17): az otthoni vonalon a bemondott UDP-cím 330 mp csendet is túlél**
+  (`node koino/meres/udpLekepezesMeres.js`) — vagyis 5 perces ütemnél **életjel nélkül** igaz
+  marad a következő bulin; a leképezés célfüggetlen. ⚠️ A külső IP viszont napok alatt változott
+  (…205 → …22). ⏸️ **A döntő eset a MOBIL (CGNAT)** — ahhoz sem kell második készülék: a
+  telefonon, **mobil adattal**, ugyanez a parancs. **Csaba futtatja.**
+- ⭐ **Utána a két készülékes terepmérés:** két **port-átíró** NAT között (pl. két CGNAT) a koino
+  soha nem mért (a 19. mérés kimondott hiánya). *Ha ott elvi fal van, kár előbb építeni.*
 - ⏸️ **Csaba döntései:** mérjünk-e előbb · hol utazzon a UDP-cím (**külön mező**, nem a TCP-é) ·
   mikor váltson az őrjárat UDP-re · a kopogás adat-ára (D35).
 - ⏸️ **Továbbra is nyitva:** a fájl-bájtok kézi útja (`fajlKivisz`/`fajlBehoz`) · `FAJL_KORLAT` ·
@@ -779,7 +783,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **171 fájl, 2761,9 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **172 fájl, 2773,1 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -910,6 +914,8 @@ node koino/meres/resSebessegMeres.js    # ⭐ A FÁJL-ÁTVITEL SEBESSÉGE az át
 node koino/meres/buliMeres.js    # ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK? (30. mérés)
                                  # Az igazítás ÉS az ismétlés együtt ×30 — külön alig.
                                  # A mai állapot MÉRETTEL romlik (8,9 → 70,3 perc), az új nem.
+node koino/meres/udpLekepezesMeres.js   # ⭐⭐ TÚLÉLI-E a bemondott UDP-cím a buli-közt? (31.)
+                                 # EGY készülék elég; a MOBIL adattal futtatva a döntő
 node koino/meres/tcpLekepezesMeres.js   # ⭐⭐ CÉLFÜGGETLEN-E a router TCP-leképezése? (18.)
                                  # (a 17. a terepmérés volt — nincs parancsa, két készülék kell hozzá)
 node koino/meres/meghivasMeres.js       # ⭐ A MEGHÍVÁSOS BELÉPÉS: védelem ÉS ár, hat változatban
@@ -921,7 +927,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 171 fájl, 2761,9 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 172 fájl, 2773,1 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

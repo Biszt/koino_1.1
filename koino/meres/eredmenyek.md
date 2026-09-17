@@ -2765,3 +2765,62 @@ számítás: valódi vonalon a csere lassabb, és nem mindenki van ébren.*
 ⚠️ **És amit kimondunk: a korlát-javítást a FENTI MÉRÉS igazolja, nem parancssor-próba.**
 A 6+ menetes lánc próbához hat figyelő kellene; a parancssor-próbák azt mérik, hogy az
 ismétlés egyáltalán fut (és a rontás buktatja). *Amit nem mértünk, arról ezt írjuk le.*
+
+---
+
+## 31. ⭐⭐ TÚLÉLI-E A BEMONDOTT UDP-CÍM A BULI-KÖZT? — az őrjárat UDP-re állítása előtt (2026-09-17)
+
+`node koino/meres/udpLekepezesMeres.js [várakozások mp] [helyi kezdőport]`
+
+### Miért most
+
+⛔ **Az `orjarat` ma is TCP-n fut** — a UDP-vonal (ablak, RTT, AIMD, Vegas, randevú) egyetlen
+éles hívója a kézi `pajzsfuro` parancs. Csaba 2026-09-13-án a UDP-t választotta fő útnak; a
+végrehajtás maradt el. Az átállítás előtt egy kérdés **szerkezetet** dönt el: az őrjárat
+5 percenként ébred, közben a foglalat hallgat — **igaz marad-e a bulin bemondott külső
+UDP-cím a következő bulin?** Ha nem, minden ablak elején újra át kell adni, vagy életjel kell
+(az 5. szabály széle).
+
+⭐ **Egy készülék elég hozzá.** Több foglalat egyszerre indul, megkérdezi a külső portját,
+**hallgat** (20 / 60 / 150 / 330 mp), és újra kérdez; mellette egy **kontroll**, ami 15
+mp-enként kérdez (ha az is mozdul, a vonal változott, nem a csend okozta).
+
+### Az eredmény — a fejlesztő otthoni vonala
+
+| csend | előtte → utána | |
+|---|---|---|
+| 20 mp | 9867 → 9867 | ✓ |
+| 60 mp | 9890 → 9890 | ✓ |
+| 150 mp | 9869 → 9869 | ✓ |
+| **330 mp** | **9936 → 9936** | ✓ |
+| kontroll | végig 9937 | ✓ |
+
+- ⭐⭐ **A külső port 330 mp csendet is túlélt** — vagyis ezen a vonalon egy bulin bemondott
+  UDP-cím az alapértelmezett 5 perces ütem mellett **életjel nélkül** is igaz marad.
+- ⭐ **Célfüggetlen**: három tükör (google ×2, cloudflare) ugyanazt a portot látta (9954).
+- ⭐ **A router átír, de kiszámíthatóan**: a helyi 7380 → 9954, 7381 → 9867 **mindkét futásnál,
+  percek különbséggel** is. *Ebből az is következik, hogy a „port ugyanaz maradt" itt jelentheti
+  azt is, hogy a leképezés lejárt, és ugyanazt a számot kapta vissza — a koinónak a kettő
+  egyenértékű: a bemondott szám igaz.*
+
+### ⛔ Egy vak lépést a saját mérőmben az első futás mutatott meg
+
+Volt benne egy „újranyitás" lépés (bezárni, ugyanarról a helyi portról újra megnyitni) — és
+**semmit nem mért**: a router nem tudja, hogy a program bezárta a foglalatot, neki csak a csend
+számít, tehát egy másodperc után magától értetődően ugyanazt adta. Kivettem; a kérdést a
+hallgató foglalatok teszik fel helyesen.
+
+### ⚠️ És egy mellék-lelet: a KÜLSŐ IP IS VÁLTOZIK
+
+A 17–19. mérésnél (2026-09-13) a vonal **31.46.250.205** volt, ma **31.46.250.22**. ⭐ *A
+negyedik független igazolása, hogy a cím nem adható ki tartósan — csak a találkozáskor.* Egy
+bulin bemondott cím napokra nem, percekre igen.
+
+### ⛔ Amit NEM mond meg
+
+- **EGY vonal** (otthoni router). ⏸️ **A mobilhálózat (CGNAT) a döntő eset** — és ⭐ ahhoz sem
+  kell második készülék: a telefonon, **mobil adattal, wifi nélkül** ugyanez a parancs. A
+  CGNAT-ok leképezése tipikusan rövidebb életű.
+- **Hosszabb buli-közt** (pl. 30 perc) — a parancs első érvével mérhető.
+- **A szűrést** (kinek engedi be a csomagot a router) — az a pajzsfúrás kérdése, azt a két
+  készülékes terepmérés méri.
