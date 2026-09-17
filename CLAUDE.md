@@ -38,8 +38,16 @@ legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 614 önpróba z
   (…205 → …22). ⏸️ **A döntő eset a MOBIL (CGNAT)** — ahhoz sem kell második készülék: a
   telefonon, **mobil adattal**, ugyanez a parancs. **Csaba futtatja.**
 - ⛔ **A Google/Cloudflare STUN-tükör NEM a végleges tükör** (Csaba, 2026-09-17): addig marad, amíg kevés a készülék; a végleges tükör **a társ** (`latlak` → `kivulrolIgyLatszom`).
-- ⭐ **Utána a két készülékes terepmérés:** két **port-átíró** NAT között (pl. két CGNAT) a koino
-  soha nem mért (a 19. mérés kimondott hiánya). *Ha ott elvi fal van, kár előbb építeni.*
+- ✅✅✅ **32. mérés (2026-09-17): A PAJZSFÚRÁS ÁTMEGY KÉT PORT-ÁTÍRÓ NAT KÖZÖTT** — otthoni
+  router (31.46.250.22, 7373 → 31573) ↔ **mobil szolgáltatói NAT** (130.43.209.249, 7373 →
+  36557), **1 kopogás, 190 ms**, és a csere is végigfutott a résen (5 kör, 31 KB). *A 19. mérés
+  kimondott hiánya ezzel betöltve — nincs elvi fal, az építés mehet.*
+  ⛔ **És egy lelet: a fúrót nem szabad újraindítani** — a telefon ugyanarról a helyi portról
+  futásonként MÁS külső portot kapott (31602 → 31514). *A bemondott szám csak addig él, amíg az
+  a foglalat él — újabb érv a buli mellett.*
+  ⏸️ **Nyitva maradt:** a mobil leképezés **élettartama** (a szomszéd elment) · **két mobil
+  készülék** egymás közt (hairpinning) · és egy pazarlás: az elutasított eseményt a társ
+  **körönként újra kérte** (5 × 9 = 45), amíg a csendes kör le nem állította.
 - ⏸️ **Csaba döntései:** mérjünk-e előbb · hol utazzon a UDP-cím (**külön mező**, nem a TCP-é) ·
   mikor váltson az őrjárat UDP-re · a kopogás adat-ára (D35).
 - ⏸️ **Továbbra is nyitva:** a fájl-bájtok kézi útja (`fajlKivisz`/`fajlBehoz`) · `FAJL_KORLAT` ·

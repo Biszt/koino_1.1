@@ -2824,3 +2824,53 @@ bulin bemondott cím napokra nem, percekre igen.
 - **Hosszabb buli-közt** (pl. 30 perc) — a parancs első érvével mérhető.
 - **A szűrést** (kinek engedi be a csomagot a router) — az a pajzsfúrás kérdése, azt a két
   készülékes terepmérés méri.
+
+---
+
+## 32. ⭐⭐⭐ A PAJZSFÚRÁS ÁTMEGY KÉT PORT-ÁTÍRÓ NAT KÖZÖTT — terepmérés (2026-09-17, 18:00)
+
+*Ez a 19. mérés kimondott hiánya volt: „két port-átíró NAT között (pl. két CGNAT) újra kell
+mérni". A szomszéd telefonja **mobil adaton** (szolgáltatói NAT), a laptop **otthoni routeren**.*
+
+| | otthoni router (laptop) | mobil, szolgáltatói NAT (telefon) |
+|---|---|---|
+| helyi port | 7373 | 7373 |
+| kívülről | **31.46.250.22:31573** | **130.43.209.249:36557** |
+| a port átírva | ✔ | ✔ |
+
+⭐⭐ **ÁTMENT: 1 kopogás, 190 ms** (a laptop oldalán; a telefon 52 kopogása a várakozásé volt,
+mert 51 mp-cel korábban indult). **Mindkét irány működik**, továbbító nélkül, port-továbbítási
+szabály nélkül. ⭐ **És a csere is végigfutott a résen**: 5 kör, 31 KB, a telefon **2 új
+társ-címet tanult**.
+
+⭐ *Vagyis a pajzsfúrás nem a router célfüggetlenségén bukik el attól, hogy MINDKÉT oldal
+átírja a portot — a UDP-modellből következően a leképezés a foglalathoz tartozik, és a
+STUN-nal megmért szám egy harmadik félre is érvényes volt.*
+
+### ⛔ ÉS EGY LELET, AMI A KÖVETKEZŐ MUNKÁT ÉRINTI: A FÚRÓT NEM SZABAD ÚJRAINDÍTANI
+
+A telefon ugyanarról a helyi portról **futásonként más külső portot** kapott
+(7380 → 31602, majd 31514; a fúró 7373 → 36557). ⚠️ Tehát a bemondott szám **csak addig
+érvényes, amíg az a foglalat él** — ha a program újraindul, a társ a semmibe kopog.
+⭐ *Ez a buli-szerkezet melletti újabb érv: a címet a találkozás pillanatában kell átadni.*
+
+### ⚠️ ÉS AMI 0 ESEMÉNYT HOZOTT — a kapu jól működött
+
+A laptop 45 eseményt küldött, a telefon **0 újat vett át**. ⭐ Az ok nem a rés: helyben, két
+folyamattal megismételve **ugyanez jött ki**. A laptop `sajat` koinójában **9 esemény** áll
+**2026-08-29-ből**, vagyis a Szakasz 3 (2026-09-03) kanonikus alakja ELŐTTI formátumban —
+hiányzik belőlük az `entitas` mező, ezért az `esemenyMentese` **minden készüléken elutasítja**
+(„hiányzó mező: entitas"). *A régi adat nem törik be a mai koinóba — ez a 3. szabály
+gyakorlatban.*
+
+⏸️ **Egy kisebb pazarlás, feljegyezve:** a telefon **körönként újra kérte ugyanazt a 9
+eseményt** (5 kör × 9 = 45), mert egyik sem került a tárába. A csendes kör szabálya leállította,
+tehát nem végtelen — de egy elutasított eseményt ugyanabban a cserében nem kellene újra kérni.
+
+### ⏸️ Amit ez a menet NEM mért meg
+
+- **A mobil leképezés ÉLETTARTAMA** (31. mérés a mobilon) — a szomszéd elment, mielőtt lefutott
+  volna. ⭐ A koino fent van a telefonján: `node koino/meres/udpLekepezesMeres.js`, 6 perc.
+- **Két MOBIL készülék egymás közt** (ugyanazon szolgáltató CGNAT-ja mögül) — ott a fúrásnak a
+  közös NAT-on kellene visszafordulnia (hairpinning), és ez gyakran tiltott.
+- **A rés sebessége** valódi vonalon.
