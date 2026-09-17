@@ -1339,3 +1339,13 @@ a leképezés célfüggetlen. ⭐ *Vagyis ezen a vonalon a „cím a cserén uta
 arra kopogunk" szerkezet életjel nélkül működik.* ⚠️ A külső IP viszont napok alatt változott.
 ⏸️ **A döntő eset a mobil (CGNAT)** — a telefonon, mobil adattal ugyanez a parancs; utána a két
 készülékes terepmérés. Részletek: `koino/meres/eredmenyek.md` 31.
+
+### ⛔ A TÜKÖR: A GOOGLE/CLOUDFLARE NEM A VÉGLEGES (Csaba, 2026-09-17)
+
+A saját külső címet ma a Google/Cloudflare STUN-tükre mondja meg (`kulsoCimFoglalaton`,
+alapértelmezés: `stun.l.google.com`). ⭐ **Addig marad, amíg kevés készülék van a hálózatban.**
+⛔ Nem végleges: egymilliárd készülék nem függhet egy cég szerverétől (2. és 9. szabály).
+⭐ **A végleges tükör a társ**: a cserén megmondja, honnan lát (`latlak` →
+`kivulrolIgyLatszom`), és ez annál jobban működik, minél több készülék van — ráadásul
+pontosabb, mert arról a résről szól, amelyen beszélünk. ⚠️ A STUN szerepe a végén az
+**első bemutatkozás** marad, amikor még nincs kit kérdezni — és ott is cserélhető paraméter.

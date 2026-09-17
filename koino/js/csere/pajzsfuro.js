@@ -64,6 +64,12 @@ import { connect } from 'node:net';
 // ⭐ HOSSZÚ TÁVON EZT A SAJÁT TÜKRÜNK VÁLTJA KI: aki fogad, az amúgy is látja, honnan
 // jövünk (lásd `vonal.js`, `latlak`). Ez itt a BEMUTATKOZÁSHOZ kell, amíg nincs kihez
 // szólni — pontosan az az eset, amit a D37 „első bemutatkozás"-nak nevez.
+//
+// ⛔⛔ A GOOGLE/CLOUDFLARE TÜKÖR NEM A VÉGLEGES TÜKÖR (Csaba, 2026-09-17). Addig marad,
+// amíg kevés készülék van a hálózatban. *Egymilliárd készülék nem függhet egy cég STUN-
+// szerverétől (2. és 9. szabály).* A végleges út: a külső címet a TÁRSAK mondják meg a
+// cserén (`latlak` → `kivulrolIgyLatszom`) — ez annál jobban működik, minél több készülék
+// van, és pontosabb is, mert arról a résről szól, amin a társsal beszélünk.
 
 const SUTI = 0x2112A442;
 

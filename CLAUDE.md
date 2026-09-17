@@ -37,6 +37,7 @@ legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 614 önpróba z
   marad a következő bulin; a leképezés célfüggetlen. ⚠️ A külső IP viszont napok alatt változott
   (…205 → …22). ⏸️ **A döntő eset a MOBIL (CGNAT)** — ahhoz sem kell második készülék: a
   telefonon, **mobil adattal**, ugyanez a parancs. **Csaba futtatja.**
+- ⛔ **A Google/Cloudflare STUN-tükör NEM a végleges tükör** (Csaba, 2026-09-17): addig marad, amíg kevés a készülék; a végleges tükör **a társ** (`latlak` → `kivulrolIgyLatszom`).
 - ⭐ **Utána a két készülékes terepmérés:** két **port-átíró** NAT között (pl. két CGNAT) a koino
   soha nem mért (a 19. mérés kimondott hiánya). *Ha ott elvi fal van, kár előbb építeni.*
 - ⏸️ **Csaba döntései:** mérjünk-e előbb · hol utazzon a UDP-cím (**külön mező**, nem a TCP-é) ·
