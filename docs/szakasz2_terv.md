@@ -1402,3 +1402,53 @@ kell kopogni.*
 
 Nincs benne varázsszám · nem múlik egyetlen címen vagy szolgáltatáson (2. szabály) · nem kíván
 folyamatos kapcsolatot (5. szabály) · és **egymilliárd e-embernél is ugyanaz a szerkezet**.
+
+### ⭐⭐⭐ CSABA MEGOLDÁSA A CÍM-ELÉVÜLÉSRE (2026-09-18): TERJESZTÉS + ÉJJELI ŐRSÉG
+
+Szó szerint: *„bulikor nem feltétlenül azt kell egy megváltozott című eszköznek elérni, akivel
+éppen dolga van, hanem bárkit… a cél készülék aktuális címe eljuthat hozzá, és a sajátját is
+beviszi a buliba… alkalmazhatnánk éjjeli őrséget a buli-közökre, ami abból áll, hogy néhány
+készülék fenntartja a kapcsolatot egymással, azért, hogy a címük biztosan az maradjon, ami
+5 perce is volt. Az éjjeli őrséget mindig más készülékek biztosítanák, amiről a buli végén
+döntés születik (véletlen, vagy földrajzi, vagy más mentén), és meglesz mindenkinek, hogy
+kiknél kell kezdeni a következő bulit."*
+
+#### (a) A CÍM-TERJESZTÉS — és a feltétel, ami nélkül nem működik
+
+⭐ Nem kell elérni azt, akivel dolgunk van: aki az ablakban elérhető, az **továbbviszi** a
+címet. ⛔⛔ **De KÖLCSÖNÖSNEK kell lennie:** a szűrés miatt nem elég, hogy én tudom az ő
+mostani címét — **neki is tudnia kell az enyémet**, különben a kopogásom az ő routerén kívül
+marad. *Vagyis a bulin a címet nemcsak ELVINNI kell, hanem ODA IS ADNI, ugyanabban az ablakban.*
+
+⚠️ **Ami a kódból hiányzik hozzá:** a `CIMEK` üzenet ma **TCP-címeket** hirdet, és **nem mondja
+meg, mikor mérték** — így egy régi cím ugyanolyan súllyal terjedne, mint egy mostani.
+
+#### (b) AZ ÉJJELI ŐRSÉG — a hiányzó horgony
+
+⭐ Néhány készülék a buli-közben **beszélget egymással**, ezért a leképezésük nem évül el, és a
+következő ablak elején **a tegnapi címükön szólíthatók**. Aki felébred, hozzájuk fordul: megtudja
+a sajátját (`latlak`) és a többiekét is. *Ez a „bemutató" konkrét alakja — az én megfogalmazásom
+nyitva hagyta, KI a bemutató; erre ez a válasz.*
+
+#### Három kiegészítés, amit a koino eddigi elvei kikényszerítenek
+
+1. ⭐⭐ **AZ ŐRSÉG NE MEGBESZÉLÉS LEGYEN, HANEM LEVEZETÉS.** A *„a buli végén döntés születik"*
+   azt feltételezné, hogy egy ablakban mindenki ugyanazt látja — ⛔ P2P-n ez nem igaz. Ugyanaz a
+   csapda, amit a percfordulónál már megoldottunk: ott sem üzenünk a találkozó idejéről, hanem
+   **mindenki ugyanabból a szabályból számolja**. ⭐ Az őrség is jöhet így: az **ablak sorszáma +
+   a társ-azonosítók** alapján mindenki ugyanazt a néhány készüléket kapja, üzenetváltás nélkül,
+   és a forgás magától adódik.
+2. ⛔ **GYORSÍTÁS, NEM ELŐFELTÉTEL** (5. szabály). Ha egyetlen őr sem elérhető, a körnek működnie
+   kell — lassabban. *Romlás, nem törés* (D19).
+3. ⛔ **A KIVÁLASZTÁS NE VÁLJON RANGSORRÁ** (D18/2, D48). A véletlen vagy a számított sorrend
+   rendben van; ⚠️ a **földrajzi** alap helyadatot kívánna (D6) — az külön döntés, ne most.
+
+#### Amit meg kell mérni, mielőtt megépül
+
+- **az őrség ára**: mennyi forgalom és akkumulátor a leképezés életben tartása (néhány kis csomag
+  percenként) — és mekkora a legnagyobb csend, amit még kibír;
+- **hány őr kell**, hogy egy ablak elején szinte mindenki találjon elérhetőt (a `buliMeres.js`
+  kiterjesztése);
+- ⛔ **a támadó kérdése**: az őr látja, ki van fent és milyen címen — ha a kiválasztás számítható,
+  sok hamis azonossággal sok őr-helyre be lehet-e ülni? *(A kontraszt-jelzés a tagságra válasz,
+  erre nem.)*
