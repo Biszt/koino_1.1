@@ -1349,3 +1349,56 @@ alapértelmezés: `stun.l.google.com`). ⭐ **Addig marad, amíg kevés készül
 `kivulrolIgyLatszom`), és ez annál jobban működik, minél több készülék van — ráadásul
 pontosabb, mert arról a résről szól, amelyen beszélünk. ⚠️ A STUN szerepe a végén az
 **első bemutatkozás** marad, amikor még nincs kit kérdezni — és ott is cserélhető paraméter.
+
+### ⛔⛔ A PROBLÉMA KÖRÜLHATÁROLÁSA: A CÍM ELÉVÜL A BULI-KÖZ ALATT (2026-09-18)
+
+*A 31. mérés második adatpontja (Csaba telefonja, UGYANAZON az otthoni routeren) **megcáfolta**
+az első következtetést: a bemondott UDP-cím ott **150 mp-et túlélt, 330-at nem**. A laptopon
+330 is átment. ⭐ Vagyis az élettartam **készülékenként is más**, és az alapértelmezett
+**5 perces buli-köz hosszabb, mint a leképezés élettartama** ezen a vonalon.*
+
+#### Mi az, ami elévül — két KÜLÖN dolog, és csak együtt adnak kapcsolatot
+
+1. ⭐ **A LEKÉPEZÉS** (*melyik külső porton látszom*): a foglalathoz tartozik, célfüggetlen
+   (18., 31., 32. mérés), és **csendben elévül**. Mérve: >150 mp, <330 mp (telefon) · ≥330 mp
+   (laptop) · ⏸️ **mobilon ismeretlen**.
+2. ⭐ **A SZŰRÉS** (*kitől engedi be a csomagot*): ahhoz, hogy a társ csomagja bejöjjön, **mi
+   is küldtünk** neki nem sokkal korábban. ⛔ Ezt a pajzsfúrás oldja meg — mindkét fél kifelé
+   kopog —, és **ezért kell az egyidejű ablak**. ⚠️ A szűrés órája tipikusan **rövidebb**, mint
+   a leképezésé, és ezt sem mértük.
+
+*A buli az 1-esre nem válasz, csak a 2-esre: az egyidejűség attól még nem tudja, MELYIK portra
+kell kopogni.*
+
+#### Amit tudnunk kell a kopogás pillanatában
+
+- **a társ MOSTANI külső címe** (különben a semmibe kopogunk),
+- **a saját MOSTANI külső címem**, hogy a társ tudja, hova kopogjon,
+- ⛔ és mindkettő **ugyanabban az ablakban** legyen igaz.
+
+#### Három irány — Csaba választása az 1. (2026-09-18), a másik kettő tartalék
+
+1. ⭐ **BEMUTATÓ: a címet minden ablak elején egy KÖZÖS TÁRS adja át** (nem a legutóbbi bulin
+   tanult cím számít). ⚠️ **Az ára kimondva:** a bemutatót olyan társ tudja ellátni, aki
+   **elérhető** — nyitott kapu (`figyel`/postaláda), már élő rés, vagy azonos helyi hálózat.
+   ⛔ Ez **nem ingyen van**: ha senki nem elérhető, nincs bemutató. *A postaláda (D34) viszont
+   pont ez a szerep, csak eddig az eseményekre értettük, nem a címekre.*
+2. ⏸️ **RÖVIDEBB BULI-KÖZ** (a leképezés élettartama alatt) — a 30. mérés szerint a terjedés
+   ettől nem romlik, de **több ébredés és több forgalom**; és a szám **vonalanként más**, tehát
+   varázsszám lenne (9. szabály).
+3. ⏸️ **ÉLETJEL** (a foglalat ne hallgasson végig) — ⛔ az 5. szabály széle és akkumulátor-kérdés.
+   ⚠️ *Egy pontosítás: a leképezés célfüggetlen, tehát az életjelet BÁRHOVÁ elég küldeni — de a
+   szűrést ez nem tartja nyitva, azt csak a társ felé küldött csomag.*
+
+#### Amit MÉG NEM TUDUNK — ezek a következő mérések
+
+- **a mobilhálózat (CGNAT) leképezés-élettartama** — a szomszéd telefonján 6 perc;
+- **a szűrés élettartama** (a leképezésé és a szűrésé két külön óra);
+- ⛔ **kiszámítható-e a port elévülés után**: a laptop ugyanazt a számot kapta vissza, a telefon
+  **MÁSIKAT** (31602 → 31514, és 31562 → 29318) — *tehát nem, és erre nem szabad építeni*;
+- **hány társ elérhető** egy valódi koinóban (a bemutató ára ezen múlik).
+
+#### A megoldás mércéje (9. szabály)
+
+Nincs benne varázsszám · nem múlik egyetlen címen vagy szolgáltatáson (2. szabály) · nem kíván
+folyamatos kapcsolatot (5. szabály) · és **egymilliárd e-embernél is ugyanaz a szerkezet**.
