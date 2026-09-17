@@ -186,6 +186,15 @@ async function meres() {
       : '⛔ CÉL-FÜGGŐ (portok: ' + cel.portok.join(', ') + ') — a pajzsfúrás itt elvi okból nem megy'));
   kiir();
 
+  // ⛔ HA EGYIK TÜKÖR SEM FELELT, NINCS MIT VÁRNI — ezt a telefonos futás mutatta meg
+  // (2026-09-17): hálózat nélkül a mérés némán 330 mp-et várt egy eredményre, ami nem jöhet.
+  // *A hiányt ki kell mondani, nem kivárni* (D19).
+  if (!cel.valaszok.some((v) => v.cim)) {
+    kiir('⛔ Egyik tükör sem felelt — nincs hálózat, vagy a vonal nem enged ki UDP-t.');
+    kiir('  Az élettartam így nem mérhető; a mérés itt véget ér.');
+    return;
+  }
+
   // ----- 2–3. ÉLETTARTAM + KONTROLL, egyszerre -----
   kiir('2. ÉLETTARTAM — ' + varakozasok.length + ' hallgató foglalat + 1 beszédes kontroll, egyszerre');
   kiir('  (várunk ' + leghosszabb + ' mp-et…)');
