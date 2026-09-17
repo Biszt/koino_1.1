@@ -1452,3 +1452,45 @@ nyitva hagyta, KI a bemutató; erre ez a válasz.*
 - ⛔ **a támadó kérdése**: az őr látja, ki van fent és milyen címen — ha a kiválasztás számítható,
   sok hamis azonossággal sok őr-helyre be lehet-e ülni? *(A kontraszt-jelzés a tagságra válasz,
   erre nem.)*
+
+### ✅ A CÍM-KEZELÉS ÁTNÉZÉSE ÉS CSABA DÖNTÉSEI (2026-09-18)
+
+#### Ami MÁR MEGVAN (`vonal.js:340`)
+
+- A `CIMEK` csere **minden kör elején fut, a lenyomat-összevetés ELŐTT** — így egy „nincs
+  újdonság" beszélgetés is terjeszt címet. ⭐ *A terjesztés váza tehát kész.*
+- A saját külső címünket csak ott hirdetjük, ahol a port **tartósan nyitva van**
+  (`sajatCimHirdetese`: postaláda és UDP-rés) — ⛔ egy kifelé hívó TCP-kliens nem, mert az
+  efemer portja a kapcsolat után meghal.
+- A kapott címek felkerülnek a listára, a sajátjaink kiszűrve; korlát **10 cím / üzenet**.
+
+#### Ami HIÁNYZIK a terjesztéshez
+
+1. ⭐ **FRISSESSÉG — de KOR, ne időbélyeg.** „Ennyi másodperce mértük", amit a fogadó a **saját**
+   órájához köt. *Így nem kell megbízni az idegen órájában* — ugyanaz az elv, mint mindenhol.
+2. ⛔ **ELÉVÜLÉS.** Ma egy cím **soha nem esik ki** a listáról, és ez a **tartós** címekre
+   szándékos („a koino nem felejt el senkit magától", 4. szabály). ⛔ A **múlékony UDP-rés-címre
+   pont fordítva kell**: azt el kell dobni. *A kettő nem fér egy listába* — precedens a
+   `SZELET_CIM_ELEVULES` saját jegyzéke.
+3. ⚠️ **A MÉRET (6. szabály).** Egy cím JSON-ban ~30–40 bájt, tehát 10 cím összemérhető a
+   334 bájtos „nincs újdonság" körrel. **Mérni kell**, mielőtt bővítjük a listát.
+
+#### ⭐⭐ ÉS EGY RÉTEG, AMIT NEM KELL MEGÉPÍTENI: a cím NEM mondja meg, KIÉ
+
+A `CIMEK` névtelen címeket hordoz — és ⭐ **erre nincs is szükség**: a buli elején úgyis
+mindenkire kopogunk, aki a listán van, és aki felel, az felel. ⛔ Egy azonosító–cím kötés nemcsak
+munka lenne, hanem **kockázat**: a hálózat feltérképezhetővé válna (ki hol van), ami a **D6** ellen
+megy. *A névtelen cím-lista tehát nem hiányosság, hanem védelem.*
+
+#### Csaba döntései (2026-09-18)
+
+- ⭐ **A BULIN CSAK UDP-CÍM TERJEDJEN.** A TCP-címek maradnak **helyben** (a `tars` parancs és a
+  helyi felfedezés). Így ami a vonalon utazik, az egyértelműen UDP — **nem kell jelölő mező**
+  (6. szabály). *Ha később mégis kell a TCP-cím terjesztése, akkor jön a jelölés.*
+- ⛔ **A TCP NEM VEHETŐ KI** (Csaba kérdésére): az `orjarat` ma **csak azon** cserél · aki kaput
+  tud tartani (postaláda, D34), annál a TCP a legolcsóbb (nincs fúrás, nincs ablak, a kernel
+  vezérel) · **azonos wifin** nincs is NAT a két készülék között. *Marad alkalmi gyorssávnak —
+  ahogy a 2026-09-13-i döntés kimondta.*
+- ⏸️ **AZ ÉJJELI ŐRSÉG NEM ÉPÜL MEG MOST** (Csaba: *„nem ragaszkodom hozzá, csak akkor építsük
+  meg, ha úgy tűnik, hogy szükséges"*). ⭐ **A mérce:** ha a friss címek terjesztése mellett is
+  gyakran nem ér össze a kör, akkor kerül elő. *Tartalék irány, a terv (b) pontja szerint.*
