@@ -313,4 +313,123 @@ kiir('  ⚠️ A modell a LEGJOBB eset: mindenki ébren, egy ablakban. A kapott 
 kiir('     ALSÓ korlát — a valóságban ennél több menet kell.');
 kiir('');
 
+
+// ===================================
+// ⭐⭐ HÁNY FRISS CÍM KELL? (2026-09-18, a 33. mérés kérdése)
+// ===================================
+//
+// ⛔ A KÉRDÉS: a friss UDP-címek terjesztése MÉRHETŐEN DRÁGA — egy cím ~96 bájt körönként,
+// tíz címmel a „nincs újdonság" kör 386 → 1346 bájt (33. mérés). Tehát nem mindegy, hány
+// cím utazik. *A korlát ma 10, de azt a `CIM_KORLAT` örökölte — nem mérés.*
+//
+// ===== A MODELL, ÉS AMI BENNE A LÉNYEG =====
+//
+// ⭐ EGY ABLAKOT nézünk, a legrosszabb esettel: **mindenki külső címe megváltozott** a
+// buli-köz alatt (a leképezés elévült — 31. mérés). Aki nem változott, az a **HORGONY**:
+// nyitott kaput tart (postaláda, D34), vagy a címe túlélte a csendet.
+//
+// ⭐⭐ ÉS A KOPOGÁSHOZ ELÉG AZ EGYIK OLDAL TUDÁSA: ha én tudom a te mostani címedet, a
+// kopogásomból te is megtudod az enyémet (a `latlak` mindig megmondja). *Ezért a terjedés
+// nem kölcsönös tudást kíván, hanem EGY ismert címet valahol a környéken.*
+//
+// A menet: aki ismer egy friss címet, oda kopog; a találkozáskor **K friss címet** cserélnek
+// (ez a mérendő korlát), és a hír is átmegy. Az ablakban a menet ismétlődik.
+//
+// Futtatás: a `buliMeres.js` végén, magától.
+
+function cimTerjedes({ n, tarsak, k, horgonyArany, menetek, veletlen }) {
+  const szomszedok = Array.from({ length: n }, () => new Set());
+  for (let i = 0; i < n; i++) {
+    while (szomszedok[i].size < Math.min(tarsak, n - 1)) {
+      const j = Math.floor(veletlen() * n);
+      if (j !== i) szomszedok[i].add(j);
+    }
+  }
+  for (let i = 0; i < n; i++) for (const j of szomszedok[i]) szomszedok[j].add(i);
+
+  // ⭐ A HORGONYOK: az ő címük a buli-köz után is érvényes (nyitott kapu vagy túlélő leképezés).
+  const horgony = new Array(n).fill(false);
+  for (let i = 0; i < n; i++) if (veletlen() < horgonyArany) horgony[i] = true;
+
+  // Ki melyik MOSTANI címet ismeri? Induláskor: a szomszédai közül a horgonyokét.
+  // ⚠️ A jegyzék SORRENDES: a legfrissebbet küldjük először (a valódi kód is így tesz).
+  const ismert = Array.from({ length: n }, () => new Set());
+  const jegyzek = Array.from({ length: n }, () => []);
+  for (let i = 0; i < n; i++) {
+    for (const j of szomszedok[i]) if (horgony[j]) { ismert[i].add(j); jegyzek[i].push(j); }
+  }
+
+  const ismeri = new Array(n).fill(false);
+  ismeri[0] = true;
+
+  let hasznaltElek = 0;
+  for (let menet = 0; menet < menetek; menet++) {
+    const talalkozok = [];
+    for (let i = 0; i < n; i++) {
+      for (const j of szomszedok[i]) {
+        if (i < j && (ismert[i].has(j) || ismert[j].has(i))) talalkozok.push([i, j]);
+      }
+    }
+    if (!talalkozok.length) break;
+    hasznaltElek = talalkozok.length;
+
+    for (const [i, j] of talalkozok) {
+      // ⭐ A találkozás MAGA is címcsere: mindketten látják a másik mostani címét.
+      if (!ismert[i].has(j)) { ismert[i].add(j); jegyzek[i].push(j); }
+      if (!ismert[j].has(i)) { ismert[j].add(i); jegyzek[j].push(i); }
+
+      // ⭐⭐ ÉS K DARAB FRISS CÍM A JEGYZÉKBŐL — a legfrissebbek (a lista vége).
+      const kuld = (a, b) => {
+        for (const c of jegyzek[a].slice(-k)) {
+          if (c === b || ismert[b].has(c)) continue;
+          ismert[b].add(c); jegyzek[b].push(c);
+        }
+      };
+      if (k > 0) { kuld(i, j); kuld(j, i); }
+
+      if (ismeri[i] || ismeri[j]) { ismeri[i] = true; ismeri[j] = true; }
+    }
+  }
+
+  const elert = ismeri.reduce((o, e) => o + (e ? 1 : 0), 0);
+  const elerheto = ismert.reduce((o, h) => o + h.size, 0) / n;
+  return { elert, elerheto, hasznaltElek };
+}
+
+function cimMeres(n, tarsak, k, horgonyArany, ismetles, mag) {
+  const veletlen = magvasVeletlen(mag);
+  let osszElert = 0, osszElerheto = 0, teljes = 0;
+  for (let i = 0; i < ismetles; i++) {
+    const e = cimTerjedes({ n, tarsak, k, horgonyArany, menetek: 10, veletlen });
+    osszElert += e.elert;
+    osszElerheto += e.elerheto;
+    if (e.elert === n) teljes++;
+  }
+  return {
+    elert: (100 * osszElert) / (ismetles * n),
+    elerheto: osszElerheto / ismetles,
+    teljes: (100 * teljes) / ismetles
+  };
+}
+
+kiir();
+kiir('=========================================================');
+kiir(' HÁNY FRISS CÍM KELL? — a terjesztés ára és haszna');
+kiir('=========================================================');
+kiir(' ' + N + ' készülék · ' + TARSAK + ' társ · egy ablak, legfeljebb 10 menet');
+kiir(' A legrosszabb eset: MINDENKI címe megváltozott, kivéve a horgonyokat.');
+kiir();
+kiir(' horgony |  K=0   |  K=1   |  K=3   |  K=5   |  K=10   (a hír hány %-át éri el)');
+kiir(' --------+--------+--------+--------+--------+--------');
+for (const arany of [0, 0.02, 0.05, 0.2, 0.5]) {
+  const sorok = [0, 1, 3, 5, 10].map((k) => {
+    const e = cimMeres(N, TARSAK, k, arany, 60, MAG + k);
+    return e.elert.toFixed(0).padStart(5) + '%';
+  });
+  kiir(' ' + (100 * arany).toFixed(0).padStart(6) + '% | ' + sorok.join(' | '));
+}
+kiir();
+kiir(' ⭐ A „horgony" az, akinek a címe a buli-köz után is érvényes: nyitott kaput tart');
+kiir('    (postaláda), vagy a leképezése túlélte a csendet.');
+
 process.exit(0);

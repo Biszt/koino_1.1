@@ -2899,3 +2899,70 @@ A jegyzék korlátja ma **10** (a `CIM_KORLAT`-hoz igazítva), de ez **nem mért
 `buliMeres.js` kiterjesztése tudná megmondani, és addig ez a legdrágább új tétel a vonalon.
 ⭐ *Két olcsóbb irány is nyitva áll: kevesebb címet küldeni (a legfrissebbeket), vagy rövidebb
 mezőneveket használni (~20%).*
+
+---
+
+## 34. ⭐⭐⭐ HÁNY FRISS CÍM KELL? — és a válasz NEM a szám (2026-09-18)
+
+`node koino/meres/buliMeres.js [készülék] [társ]` — az utolsó szakasz.
+
+### A kérdés és a modell
+
+A 33. mérés szerint egy friss cím **~96 bájt körönként**, tíz címmel a kör 386 → 1346 bájt.
+Tehát nem mindegy, hány utazik. ⭐ **A modell a legrosszabb esetet nézi:** egy ablak, és
+**mindenki külső címe megváltozott** a buli-köz alatt — kivéve a **horgonyokat**, akiknek a
+címe érvényes maradt (nyitott kapu / postaláda, vagy a leképezés túlélte a csendet).
+⭐⭐ **És a kopogáshoz elég az egyik oldal tudása:** aki kopog, annak a címét a másik a
+csomagból látja (`latlak`). *A találkozás maga is címcsere.*
+
+### Az eredmény — a hír hány %-át éri el, egy ablakon belül
+
+**Sűrű gráf (100 készülék, 14 társ):**
+
+| horgony | K=0 | K=1 | K=3 | K=5 | K=10 |
+|---|---|---|---|---|---|
+| **0%** | **1%** | **1%** | **1%** | **1%** | **1%** |
+| 2% | 20% | 32% | 22% | 25% | 25% |
+| 5% | 58% | 65% | 57% | 60% | 56% |
+| **20%** | 99% | 100% | 100% | 98% | 100% |
+| 50% | 100% | 100% | 100% | 100% | 100% |
+
+**⛔ Ritka gráf (100 készülék, 3 társ — a KIS KOINO, D22):**
+
+| horgony | K=0 | K=1 | K=3 | K=5 | K=10 |
+|---|---|---|---|---|---|
+| 0% | 1% | 1% | 1% | 1% | 1% |
+| 5% | 11% | 7% | 11% | 11% | 8% |
+| 20% | 62% | 61% | 60% | 66% | 61% |
+| 50% | 95% | 97% | 99% | 97% | 97% |
+
+### ⛔⛔ A LELET: NEM A CÍM-SZÁM DÖNT, HANEM A HORGONYOK ARÁNYA
+
+A sorokon belüli ingadozás (32% vs 22%) a **szórás**, nem tendencia — 60 futás mellett ±5
+pont. ⭐ **A K oszlopok gyakorlatilag egyformák, a sorok viszont nagyságrendet ugranak.**
+
+Két ok, és mindkettő szerkezeti:
+
+1. ⭐ **A találkozás maga is címcsere** — az első kapcsolat után a címet nem kell terjeszteni.
+2. ⛔⛔ **Horgony nélkül SEMMI nem indul el** (0% sor: 1%, vagyis csak a hír gazdája tudja).
+   *A terjesztésnek kell egy pont, ahonnan induljon.*
+
+⭐⭐⭐ **EBBŐL KÖVETKEZIK, HOGY AZ „ÉJJELI ŐRSÉG" NEM DÍSZ, HANEM FELTÉTEL** — vagy legalábbis
+valami, ami ugyanezt adja: **postaláda, nyitott kapu, vagy olyan vonal, amin a leképezés
+túléli a csendet**. *(A laptop ilyen volt, a telefon nem — 31. mérés.)* ⛔ És a **kis koino**
+itt is a kritikus eset: három társnál még 20% horgony mellett is csak 62%.
+
+### ⏸️ A JAVASLAT, ami ebből adódik (Csaba döntése)
+
+⭐ **A SAJÁT friss címünk menjen mindig** (ez EGY bejegyzés: +94 bájt körönként) — ettől leszünk
+megtalálhatók. ⏸️ **Mások címének továbbítása viszont a mérés szerint alig ad hozzá**, és
+tízszer ennyibe kerül: a korlát **10-ről 3-ra (vagy 0-ra) vihető**, amíg valódi hálózaton
+mást nem mutat. *Az olcsóbb megoldás nem feladás: a horgony adja a terjedést, nem a lista.*
+
+### ⚠️ A MODELL HATÁRAI — amit ez a mérés NEM mond meg
+
+- A terjesztést **azonosító–cím kötésként** modellezi; a valódi lista **névtelen**, tehát a
+  kopogás a jegyzék MINDEN friss címére megy — ez **többet érhet**, mint amit itt mértünk
+  (idegen, nem szomszéd címére is kopoghatunk).
+- **Egy ablak, legfeljebb 10 menet, mindenki ébren** — legjobb eset.
+- A horgony címét **végig érvényesnek** veszi.

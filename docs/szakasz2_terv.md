@@ -1518,3 +1518,31 @@ megy. *A névtelen cím-lista tehát nem hiányosság, hanem védelem.*
 címmel a „nincs újdonság" kör **386 → 1346 bájt**. ⛔ Napi léptékben 14 társnál, 5 perces
 ütemmel **1,5 → 5,4 MB**. ⏸️ **Ezért a jegyzék korlátja (10) NEM végleges szám**: a
 `buliMeres.js` kiterjesztése mondja majd meg, hány friss cím kell ahhoz, hogy a kör összeérjen.
+
+### ⭐⭐⭐ ÉS A 34. MÉRÉS MEGFORDÍTOTTA A KÉRDÉST (2026-09-18)
+
+*A kérdés az volt: „hány friss cím kell?" — a válasz viszont nem egy szám.*
+
+⛔ **A K (hány cím utazik) NEM SZÁMÍT MÉRHETŐEN:** K=0 és K=10 között nincs különbség egyik
+esetben sem. ⭐ **A HORGONYOK ARÁNYA dönt** — 0%-nál semmi nem indul el (a hír 1%-ot ér el),
+20%-nál sűrű gráfon ~100%, ⛔ **ritka gráfon (kis koino, D22) csak 62%**.
+
+⭐ **Az ok szerkezeti, és már a kódban is benne van:** *a találkozás maga is címcsere* — aki
+kopog, annak a címét a másik a csomagból látja (`latlak`). A terjesztésnek tehát nem szélesség
+kell, hanem **indulópont**.
+
+⭐⭐⭐ **EZZEL AZ „ÉJJELI ŐRSÉG" TARTALÉKBÓL FELTÉTELLÉ VÁLT** — vagy az, vagy valami, ami
+ugyanezt adja: **postaláda / nyitott kapu**, vagy olyan vonal, amin a leképezés túléli a
+csendet (a laptop ilyen volt, a telefon nem — 31. mérés).
+
+#### ⏸️ A döntés, ami Csabára vár
+
+1. **A saját friss címünk menjen mindig** (+94 bájt körönként) — ettől vagyunk megtalálhatók.
+2. **Mások címének továbbítása** 10-ről **3-ra vagy 0-ra** — a mérés szerint alig ad hozzá,
+   tízszeres áron. *Az olcsóbb megoldás nem feladás: a horgony adja a terjedést.*
+3. **A horgony-szerep megépítése** (a levezetett őrség, vagy a postaláda-szerep kimondása) —
+   ⛔ ez most a legfontosabb nyitott darab, mert e nélkül a UDP-s őrjárat nem indul el.
+
+⚠️ **A modell határa, kimondva:** a terjesztést azonosító–cím kötésként modellezi, a valódi
+lista viszont **névtelen** — a kopogás a jegyzék MINDEN friss címére megy, ami többet érhet,
+mint amit mértünk. *Valódi hálózaton újra kell nézni.*

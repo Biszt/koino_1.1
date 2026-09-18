@@ -48,6 +48,19 @@ legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 624 önpróba z
   ⏸️ **Nyitva maradt:** a mobil leképezés **élettartama** (a szomszéd elment) · **két mobil
   készülék** egymás közt (hairpinning) · és egy pazarlás: az elutasított eseményt a társ
   **körönként újra kérte** (5 × 9 = 45), amíg a csendes kör le nem állította.
+- ✅ **AZ 1. LÉPÉS MEGÉPÜLT (2026-09-18): A FRISS UDP-CÍM A CSERÉN** — külön, elévülő jegyzék
+  (`udpcimek.json`), a vonalon **KOR utazik, nem időbélyeg** (idegen órában nem bízunk), és az
+  elévülést **az őrjárat ablaka** adja (nincs varázsszám). Bekötve: `orjarat` · `figyel` · kézi
+  `csere` · a `pajzsfuro` feljegyzi a saját friss címünket. **10 új önpróba, 3 rontás-próbával.**
+  ⚠️ **Az ára mérve (33. mérés):** egy cím **~96 bájt körönként**, tízzel a „nincs újdonság" kör
+  **386 → 1346 bájt** — napi 1,5 → 5,4 MB 14 társnál, 5 perces ütemmel.
+- ⭐⭐⭐ **ÉS A 34. MÉRÉS MEGFORDÍTOTTA A KÉRDÉST: nem a cím-szám dönt, hanem a HORGONYOK aránya.**
+  K=0 és K=10 között **nincs mérhető különbség**; ⛔ 0% horgonynál viszont **semmi nem indul el**
+  (a hír 1%-ot ér el), 20%-nál sűrű gráfon ~100%, ⛔ **ritka gráfon (kis koino) csak 62%**.
+  ⭐ *Az ok szerkezeti: a találkozás MAGA is címcsere — a terjesztésnek csak INDULÓPONT kell.*
+  ⏸️ **Csaba döntése következik:** a SAJÁT cím menjen mindig (+94 bájt), mások címének
+  továbbítása **10-ről 3-ra vagy 0-ra** vihető · és ⭐⭐ **az „éjjeli őrség" ezzel FELTÉTELLÉ
+  vált** — vagy az, vagy postaláda, vagy olyan vonal, amin a leképezés túléli a csendet.
 - ⏸️ **Csaba döntései:** mérjünk-e előbb · hol utazzon a UDP-cím (**külön mező**, nem a TCP-é) ·
   mikor váltson az őrjárat UDP-re · a kopogás adat-ára (D35).
 - ⏸️ **Továbbra is nyitva:** a fájl-bájtok kézi útja (`fajlKivisz`/`fajlBehoz`) · `FAJL_KORLAT` ·
@@ -792,7 +805,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **172 fájl, 2799,5 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **172 fájl, 2809,2 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -920,7 +933,9 @@ node koino/meres/resSebessegMeres.js    # ⭐ A FÁJL-ÁTVITEL SEBESSÉGE az át
                                  # ⭐⭐⭐ 2026-09-15 óta: TÖBB FORRÁSBÓL EGY FÁJL (29. mérés) —
                                  # KÉT sor egymás után: a forrás feltöltése ÉS a mi letöltésünk
                                  # (közös). A haszon a kettő arányától függ: ×2,7 … ×1,0
-node koino/meres/buliMeres.js    # ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK? (30. mérés)
+node koino/meres/buliMeres.js    # ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK? (30.) ÉS
+                                 # HÁNY FRISS CÍM KELL? (34. — a válasz: nem a szám, hanem
+                                 # a HORGONYOK aránya; K=0 és K=10 között nincs különbség)
                                  # Az igazítás ÉS az ismétlés együtt ×30 — külön alig.
                                  # A mai állapot MÉRETTEL romlik (8,9 → 70,3 perc), az új nem.
 node koino/meres/udpLekepezesMeres.js   # ⭐⭐ TÚLÉLI-E a bemondott UDP-cím a buli-közt? (31.)
@@ -936,7 +951,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 172 fájl, 2799,5 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 172 fájl, 2809,2 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
