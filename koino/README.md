@@ -95,12 +95,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonkét próba-fájl, **629 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhárom próba-fájl, **646 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **173 fájl, 2841,9 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **176 fájl, 2890,9 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -136,6 +136,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/egyezmenyProba.js` | ⭐⭐ **a hurok bezárul**: az elfogadott szerkesztési egyezmény ÁTÍRJA az entitást — a folyamatban lévő és az általános (D27) nem; a sorrend a **lejárat** szerint dől el; ⛔ a kört csináló áthelyezés kimarad |
 | `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
 | `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
+| `meres/dhtProba.js` | ⭐ **a DHT-kliens** (hirdetőtábla, BEP 44) — hálózat nélkül: a hivatalos tesztvektorok bájtra, a méret-korlátok, és egy hurok-címen futó **hamis DHT**-n a feltétel és a visszakeresés; ⛔ a **hazudó** gép bejegyzését elvetjük, a néma gépek és a halott belépő nem akasztják meg a keresést |
 
 ⚠️ **Két mérőeszköz NEM önpróba** — nem igen/nem-et adnak, hanem számokat, ezért a
 `mind.js` nem futtatja őket:
@@ -148,6 +149,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
   **tanúsítási** világ): egy becsületes hálót és egy támadót szimulál, és megmondja, **hány
   hamis azonosság jut be** szabályonként — **és hogy közben nő-e egyáltalán a közösség**.
   ⚠️ *Ezt a világot a 2026-09-06-i átépítés felváltotta; a mérés a történet része.*
+- `node koino/meres/dhtMeres.js` — ⭐ **a DHT mint hirdetőtábla** (36. mérés): a VALÓDI BitTorrent DHT-n tesz fel és keres vissza egy aláírt bejegyzést; `tesz` + `keres` két készülékhez;
 - `node koino/meres/meghivasMeres.js` — ⭐⭐ **a MEGHÍVÁSOS világ mérése** (a mai szerkezet):
   védelem ÉS ár hat változatban, három jelzés-lencse, és `LEPCSO=1`-gyel a **két lépcső**
   (pénztárca-kapu + a tanúsítói lánc alakja). Kapcsolók: `MELEGIT` · `REJTOZO` · `KITARTO` ·
@@ -181,6 +183,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
 | `js/csere/helyiFelfedezes.js` | **helyi felfedezés** (F. lépés): aki keres, kiált; aki dolgozik, felel — cím beírása nélkül |
+| `js/csere/dht.js` | ⭐ **a BitTorrent DHT kliense** (BEP 5 + 44): egy kis, aláírt, kulcshoz kötött bejegyzés feltétele és visszakeresése — a **hirdetőtábla** jelöltje (35–36. mérés). ⛔ Minden talált bejegyzés aláírását ellenőrzi (3. szabály), a belépők csak paraméterek (2. szabály). ⚠️ **Egyelőre csak a mérés hívja** — az éles útba a mérés után kerülhet |
 | `js/allapot/identitas.js` | ⭐ **KI TAG?** (Szakasz 4, D54–D63): két lépcső — tagság egy **meghívással**, pénztárca **három tanúsítással**; számítás, nem esemény |
 | `js/allapot/jelzesek.js` | ⭐⭐ **a kontraszt-jelzés** (a valódi Sybil-válasz): *„hány olyan embert tanúsítottál, akinek nincs önálló élete a közösségben?"* — ⛔ soha nem ítél, csak számokat ad |
 | `js/allapot/szerkesztesiVegrehajtas.js` | **a harmadik fázis**: az elfogadott szerkesztési egyezmények rávezetése az entitásokra (módosítás · áthelyezés · törlés · egyesítés · különválás) |

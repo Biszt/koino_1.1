@@ -3046,3 +3046,81 @@ szerencsétől**: a nyitott ajtó a nagy koinóban bőven elég, a családi koin
   koinót ez segítené) **és a kézi kurbli.**
 - **Nincs benne az akkumulátor** — az életjel gyakorisága a router órájából jön (31. mérés), és a
   mobil óra **még nincs megmérve**.
+
+---
+
+## 36. ⭐⭐⭐ A DHT MINT HIRDETŐTÁBLA — a VALÓDI BitTorrent DHT-n (2026-09-19)
+
+`node koino/meres/dhtMeres.js [kor] [körök] [szünet]` · `tesz` + `keres` két készülékhez ·
+`KOINO_DHT_BELEPOK=nincs` · `KOINO_DHT_UJKULCS=1` · `KOINO_DHT_KERDESIDO=…`
+
+### A kérdés
+
+A 35. mérés szerint a kötés-háló a hálózatváltást csak **hirdetőtáblával** éli túl, és a modell
+feltételezte, hogy a tábla **egy 5 perces ablak alatt** írható és olvasható. Csaba a **DHT-t**
+választotta (2026-09-19: gazda nélküli tábla). Igaz-e a feltevés a valódi hálón?
+
+### A műszer — és hogy a mért kód a valódi
+
+`js/csere/dht.js`: BEP 5 (iteratív keresés, tömör címek) + BEP 44 (aláírt, változtatható
+bejegyzés), **függőség nélkül**, csak-olvasó kliensként (BEP 43). A mérés ezt a kódot hívja,
+nem utánzatot (29/b tanulsága). A bejegyzés **~200 bájt** (három társnak titkosított cím
+nagyságrendje), a só `koino-meres`, a kulcs **külön mérő-kulcs**, nem a koino-azonosságé.
+
+### Az eredmény (a fejlesztő otthoni vonala, NAT mögül; 2 mp kérdésidő)
+
+- **Belépőkkel, gyorsítótár nélkül (az első futás):** ha a feltevés sikerült (3/5), a
+  visszakeresés **mindig** megtalálta — az első érvényes találat **2,5–3,4 mp**, 6 gépről,
+  **0 hamis**. ⛔ **De 2 körben a feltevés már az indulásnál elakadt:** a 4 közismert belépőből
+  egy felelt, a többi néma maradt (valószínűleg korlátoztak — egymás után sokszor kérdeztük őket).
+  *A 2. szabály kockázata, mérve: aki csak a belépőkön áll, azon múlik.*
+- ⭐⭐ **BELÉPŐ NÉLKÜL, csak az 50 megjegyzett géppel: 5/5** — tárolta 7/8 gép, a feltevés
+  ~11 mp, a teljes keresés ~11 mp. ⚠️ Az első találat itt **0,1 mp** volt — de ez túl kedvező:
+  minden kör UGYANAZT a célszámot használta, és a megjegyzett gépek között ott voltak épp a
+  tárolói. *Egy visszatérő társnál valósághű, egy első keresésnél nem.*
+- ⭐⭐⭐ **BELÉPŐ NÉLKÜL, MINDEN KÖR ÚJ KULCCSAL: 5/5** — tárolta 7–8 gép, a feltevés mediánja
+  **17,6 mp**, a teljes keresés mediánja **18,9 mp**, 0 hamis. ⚠️ Az első találat (0,2–2,4 mp)
+  itt is kedvező, mert a kereső ugyanazzal a gyorsítótárral indul, mint a feltevő; egy másik
+  készüléknél az első futás **2,5–6 mp**-e a valósághűbb.
+- A kérdések **kb. fele-kétharmada néma** (lejár), és az idő nagy része ezekre várás.
+
+### ⭐ A LELET
+
+**A 35. mérés feltevése áll: a DHT egy ablakon belül írható és olvasható** — a feltevés és a
+keresés is **~20 mp**, az ablak 5 perc. ⭐⭐ **És a 2. szabály itt kézzelfogható:** a közismert
+belépők korlátoznak és elnémulnak, **a megjegyzett gépekkel viszont belépő nélkül is 10/10**.
+*A belépő a kurbli: egyszer kell, utána a készülék a saját emlékezetéből indul — és a társak
+is átadhatják egymásnak a megismert DHT-gépeket.*
+
+### ⛔⛔ AMIT AZ ÉPÍTÉS ÉS A MÉRÉS KÖZBEN A RONTÁS-PRÓBÁK TALÁLTAK
+
+1. ⛔⛔ **A keresés időkorlátja csak VÁLASZRA ellenőrződött.** Ha egyetlen válasz sem jön (egy
+   várakozás nem jár le, vagy egy ág elfelejt léptetni), a keresés **örökre állt** — két
+   rontás-próba nem bukott, hanem **beragadt**. *A nem-esemény, a legrosszabb hibafajta
+   (25. mérés).* ✅ Saját óra: az időkorlát akkor is lezár, ha semmi nem történik.
+2. ⚠️ **Egy hazudó felirat:** a keresés akkor is „kész"-t mondott, ha **egyetlen** gép felelt
+   és a jelöltek elfogytak (mérve: „7 kérdés, 1 felelt, vége: kesz"). ✅ „Kész" csak nyolc
+   felelő géppel; különben „nincs-tobb-jelolt".
+3. ⚠️⚠️ **És egy próba, ami a hazudó feliratra épült:** a néma gépes önpróba `ok === 'kesz'`-t
+   kért, és a javítás után **néha** bukott — helyesen: néma gépekkel a keresés becsületesen
+   kevesebb mint nyolc felelővel ér véget. *A próba a régi címkét mérte, nem a viselkedést.*
+   ✅ Most azt méri, ami a lényeg: megtalálja, és az időkorlát ELŐTT ér véget.
+4. ⚠️ **Az első halott-belépős próba vak volt:** a keresés a másik belépőn át már végzett,
+   mire a halottra lejárt a várakozás. ✅ A valódi eset a néma gép a legközelebbiek KÖZÖTT.
+
+⭐ **17 önpróba, ÖT rontás-próbával igazolva** — az aláírás-ellenőrzés kikapcsolása · a
+jelöltek felvételének kikapcsolása · a só kihagyása az aláírt bájtokból · a `find_node`-tartalék
+elrontása · és a lejárat letiltása: **mind buktat**, beragadás nélkül. A BEP 44 hivatalos
+tesztvektorai (bittorrent.org) **bájtra** egyeznek.
+
+### ⚠️ AMIT EZ A MÉRÉS NEM MOND MEG
+
+- **Egy vonal, egy gép** (otthoni NAT). ⏸️ **Mobil adatról** és **két készülék között** a
+  `tesz` + `keres` párossal mérhető — ez a következő terepmérés.
+- **Mennyi ideig marad fent** egy bejegyzés (a BEP 44 szerint a tárolók néhány óra után
+  elengedhetik): ⏸️ `node koino/meres/dhtMeres.js keres` órák múlva megmondja (a mérő-kulcs
+  megmarad, és kiírja, hány perce tették fel).
+- **Csak IPv4.** Az IPv6 DHT (`nodes6`) nincs megépítve.
+- **Az adatvédelem** (D6): ma a mérő-kulcs nyilvános, a só ismert. Élesben a bejegyzést **nem
+  az azonossági kulccsal** tesszük fel, és a tartalom a társaknak titkosított — ⏸️ ezt a
+  beépítéskor kell megtervezni.

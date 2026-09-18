@@ -37,6 +37,7 @@ import egyezmeny from './egyezmenyProba.js';
 import felszabaditas from './felszabaditasProba.js';
 import parancssor from './parancssorProba.js';
 import vizsga from './vizsgaProba.js';
+import dht from './dhtProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -60,7 +61,8 @@ const PROBAK = [
   { nev: 'egyezmeny', futtat: egyezmeny },
   { nev: 'felszabaditas', futtat: felszabaditas },
   { nev: 'parancssor', futtat: parancssor },
-  { nev: 'vizsga', futtat: vizsga }
+  { nev: 'vizsga', futtat: vizsga },
+  { nev: 'dht', futtat: dht }
 ];
 
 const szuro = process.argv[2];

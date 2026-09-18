@@ -1671,3 +1671,26 @@ Két forma, ⏸️ **Csaba döntése:**
    **szűrés** (lásd 1.).
 3. ⏸️ **Csaba döntése: webes tábla, DHT vagy mindkettő.**
 4. Utána az akkumulátor-mérés, és csak azután az építés.
+
+### ✅ 5. A DHT MINT HIRDETŐTÁBLA — Csaba döntése és a 36. mérés (2026-09-19)
+
+⭐ **Csaba döntése: a hirdetőtábla a BitTorrent DHT legyen** (*„nekem a dht a biztatóbb"*) —
+gazda nélküli, több millió gépes, és pont a mi kulcstípusunkkal (Ed25519) aláírt bejegyzéseket
+tárol (BEP 44). ⭐ **És a sorrend: előbb mérőeszköz, aztán beépítés.**
+
+✅ **Megépült: `js/csere/dht.js`** (BEP 5 + 44, függőség nélkül, csak-olvasó kliens) +
+`meres/dhtProba.js` (17 önpróba, 5 rontás-próbával, a hivatalos tesztvektorokkal) +
+`meres/dhtMeres.js` (a valódi DHT-n). ⚠️ **Az éles út szándékosan még NEM hívja.**
+
+⭐⭐ **A 36. mérés szerint a 35. mérés feltevése áll:** feltevés és keresés **~20 mp**, az
+ablak 5 perc; **belépő nélkül, csak a megjegyzett gépekkel 10/10**, 7–8 tároló, 0 hamis.
+⛔ A közismert belépők korlátoznak és elnémulnak — *a belépő a kurbli, utána a készülék a
+saját emlékezetéből indul.*
+
+⏸️ **Ami még hátra van a beépítés előtt:**
+1. **Terepmérés:** mobil adatról és két készülék között (`dhtMeres.js tesz` az egyiken,
+   `keres <kulcs>` a másikon) — Csaba futtatja, a két mobil méréssel együtt.
+2. **A bejegyzés élettartama:** `dhtMeres.js keres` órák múlva.
+3. **A tervezés:** külön (nem azonossági) kulcs, a tartalom titkosítása a társaknak (D6), a
+   megismert DHT-gépek átadása a társak között (2. szabály), és hogy a kötés-háló mikor olvas
+   a tábláról.
