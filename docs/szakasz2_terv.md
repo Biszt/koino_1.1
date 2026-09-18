@@ -1596,3 +1596,78 @@ tesz**. ⭐ A cím-szám (K) ezen **nem segít**: K=0 és K=10 között nincs m�
   formátumú események vannak, és emiatt a szerző ÚJ eseményei is elbuknak (a kiosztási
   főkönyv ellentmond). ⚠️ *Méréshez tiszta adat-mappát használjunk.*
 - A fájl-bájtok kézi útja · `FAJL_KORLAT` · a maradék modálok (5.8) · a „kurbli".
+
+---
+
+## ⭐⭐⭐ A HORGONY-KÉRDÉS ÁTBESZÉLVE — A KÖTÉS-HÁLÓ ÉS A HIRDETŐTÁBLA (2026-09-18, 35. mérés)
+
+### 1. A horgony átkeretezése — egy feltevés ütközött a terepméréssel
+
+A 34. mérés modellje szerint *„a kopogáshoz elég az egyik oldal tudása"*. ⛔ A 2026-08-30-i
+terepmérés (UDP, 14 146 kopogás, „nincs full cone") szerint viszont a router **csak attól enged
+be, akinek maga is küldött**. Ebből:
+
+- a **túlélő leképezés** és az **éjjeli őrség** csak a **már ismert párok** folytonosságát adja
+  — egy **új címmel** ébredőt nem enged be;
+- **idegent csak a nyitott ajtó** fogad — tehát a 34. mérés horgonya valójában a nyitott ajtó.
+- ⚠️ **A mobil NAT szűrését nem mértük.** Ha a mobil NAT beengedi az idegent, amíg a leképezés
+  él, akkor minden élő telefon horgony. *A mérés meglévő paranccsal megy (a fúró bárkitől
+  fogad): a telefon mobil adaton a semmibe fúr (`pajzsfuro 192.0.2.1 7373 7373`), a laptop a
+  kiírt címére kopog, a telefonnak NEM mondjuk meg a laptop címét.* ⏸️ **Csaba futtatja, ha
+  alkalom lesz rá.**
+
+### 2. Csaba célja és ötlete: csak-mobilos közösség, KÖTÉS-HÁLÓ
+
+⭐ **A cél:** *„működjön akkor is, ha a közösségnek csak mobiltelefonja van"* — tehát a nyitott
+ajtó legfeljebb bónusz lehet, feltétel nem.
+
+⭐⭐ **Az ötlet:** minden készülék **3 társsal** tart energiatakarékos, folyamatos kapcsolatot
+(kötést), és a kötések **hálózatot** alkotnak, nem szigeteket. Két réteg válik szét: a
+**kapcsolat-réteg** tartja az elérhetőséget, a **terjesztés** (csere, buli) azon fut, ami él.
+
+- ⭐ **„Folyamatos" = a router órája nem jár le.** Minden átmenő csomag nullázza az órát, tehát a
+  percenkénti életjel ugyanolyan folyamatos, mint a másodpercenkénti — *ettől energiatakarékos*.
+- ⭐ **A gyakoriság mérésből jön, nem varázsszám:** mindkét fél bemondja a saját routere mért
+  óráját (`udpLekepezesMeres.js`), a kötés a **rövidebbikhez** igazodik, ráhagyással.
+- ⭐ **Az életjel is a percfordulóhoz igazodik** — egy rádió-ébredés alatt megy ki a saját
+  csomag, és jönnek be a társakéi.
+- ⭐ **A társ véletlen sétával jön** a meglévő kötéseken — nem rendezett méhsejt (Csaba
+  elfogadta: a méhsejt a méret gyökével nő, ~20 000 lépés egymilliárdnál; a véletlen ~14).
+- ⭐ **A kötésszám felülről korlátos** (9. szabály).
+
+⛔ **Amit a kötés nem vészel át: a hálózatváltás** (wifi ↔ mobil, IP-csere, router-újraindulás)
+— átfedés nélkül történik, és a készülék minden kötését elveszti.
+
+### 3. Az automatizált kurbli: a HIRDETŐTÁBLA
+
+⭐ **Felismerni könnyű** (megváltozik a helyi cím · mindhárom társ egyszerre elhallgat · a tükör
+más címet mond). ⭐ **Automatizálni is lehet:** a leszakadt **kifelé kiírja** az új címét egy
+táblára, a régi társai **kifelé kiolvassák**, és a következő bulin egyszerre kopognak. *Befelé
+senkinek nem kell fogadnia.* Csaba ennyit hajlandó engedni a függetlenségből.
+
+Két forma, ⏸️ **Csaba döntése:**
+
+1. **Webes tábla (HTTPS)** — több tábla, bármelyik elég (2. szabály); csak a cím kerül rá
+   (6. szabály); aláírva és a társaknak titkosítva (3. szabály, D6); elhagyható.
+2. ⭐ **BitTorrent DHT (cég nélkül)** — gazda nélküli, több millió gépes háló, ami pont ilyen
+   kis, **aláírt, kulcshoz kötött** bejegyzéseket tárol (≤1000 bájt, Ed25519, az újabb sorszám
+   nyer). Kifelé működik. *Ára:* saját kliens függőség nélkül, néhány óránként újra kiírni, és
+   **mérni kell**, milyen gyorsan találja meg.
+
+### 4. A 35. mérés — a modell kimondta
+
+- ⛔⛔ **Mentés nélkül a kötés-háló egy nap alatt szétesik** (3. nap: 100% leszakadva), a
+  mérettől függetlenül. *A mentés feltétel, nem kényelem.*
+- ⭐⭐⭐ **A hirdetőtábla méretfüggetlenül tart:** ~1% leszakadva (ez maga az egy ablaknyi késés),
+  99% egy darabban, 10 és 1000 készüléknél is.
+- ⛔ **A nyitott ajtó a nagyban elég, a kicsiben nem:** 10 készüléknél 5% horgony mellett 58%
+  leszakadva.
+
+### ⏭️ A SORREND INNEN
+
+1. ✅ A modell (35. mérés).
+2. ⏸️ **Két terepmérés, Csaba futtatja:** a mobil leképezés **élettartama**
+   (`udpLekepezesMeres.js` mobil adaton — ebből jön az életjel gyakorisága) és a mobil
+   **szűrés** (lásd 1.).
+3. ⏸️ **Csaba döntése: webes tábla, DHT vagy mindkettő.**
+4. Utána az akkumulátor-mérés, és csak azután az építés.

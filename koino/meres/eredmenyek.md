@@ -2966,3 +2966,83 @@ mást nem mutat. *Az olcsóbb megoldás nem feladás: a horgony adja a terjedés
   (idegen, nem szomszéd címére is kopoghatunk).
 - **Egy ablak, legfeljebb 10 menet, mindenki ébren** — legjobb eset.
 - A horgony címét **végig érvényesnek** veszi.
+- ⛔⛔ **ÉS EGY FELTEVÉSE ÜTKÖZIK A 2026-08-30-I TEREPMÉRÉSSEL** (felismerve 2026-09-18, a
+  horgony-kérdés átbeszélésekor): a *„kopogáshoz elég az egyik oldal tudása"* csak akkor igaz,
+  ha a kopogás **átjut** a fogadó routerén. A „nincs full cone" mérés szerint (UDP, 14 146
+  kopogás) a router csak attól enged be, akinek maga is küldött. ⭐ Vagyis az a horgony, akinek
+  csak a **leképezése** élte túl a csendet, egy **új címmel** ébredőt nem enged be — a modell
+  horgonya valójában csak a **nyitott ajtó** lehet. ⚠️ A mobil NAT szűrését nem mértük.
+
+---
+
+## 35. ⭐⭐⭐ A KÖTÉS-HÁLÓ — összefüggő marad-e, ha a telefonok hálózatot váltanak? (2026-09-18)
+
+`node koino/meres/kotesMeres.js` · *(`KOINO_VALTAS=8` → napi 8 hálózatváltás)*
+
+### A kérdés — Csaba ötlete
+
+*„minden készülék 2-3 készülékkel tartana fent egy olyan energiatakarékos kapcsolatot, ami
+lehetővé tenné, hogy elcsípjük a címváltást úgy, hogy még a régivel kapcsolatban vagyunk… a
+csoportok nem szigetek lennének, hanem hálózatba rendezve."* — és a cél: **működjön akkor is,
+ha a közösségnek csak mobiltelefonja van.**
+
+⭐ **A kötés** (két készülék rendszeresen szól egymásnak, mielőtt a router órája lejárna) a
+**csendből jövő** címváltást megszünteti: a leképezés nem évül el, és a szűrő is nyitva marad a
+két fél között. ⛔ A **hálózatváltást** (wifi ↔ mobil, IP-csere, router-újraindulás) viszont nem
+vészeli át: új cím, és a társak routere eldobja a kopogást. **A modell kérdése: ki hozza vissza
+a leszakadtat, és egyben marad-e a háló?**
+
+### A modell
+
+5 perces buli-ablakok, 3 nap · K = 3 kötés (legfeljebb 5 — 9. szabály) · az új társ **véletlen
+sétával** jön a meglévő kötéseken (globális címjegyzék nélkül) · napi 4 hálózatváltás
+készülékenként, és ilyenkor **minden kötés elvész**. A mentés a következő ablakban:
+**hirdetőtábla** (a leszakadt kifelé kiírja az új címét, a régi társai kifelé kiolvassák) vagy
+**nyitott ajtó** (egy horgonyon át indul a séta).
+
+### Az eredmény (napi 4 hálózatváltás)
+
+- ⛔⛔ **MENTÉS NÉLKÜL A HÁLÓ EGY NAP ALATT SZÉTESIK — mérettől függetlenül.** Átlagosan 93%
+  leszakadva, a 3. nap végén **100%**; a legnagyobb összefüggő darab 10 készüléknél 15%, 1000-nél
+  7%. *Hiába tart mindenki kötést: minden hálózatváltás kivesz egy készüléket, és vissza semmi
+  nem hozza.* ⭐ Csaba megérzése (*„az nem segít azokon, akik leszakadtak"*) ezzel számot kapott.
+- ⭐⭐⭐ **A HIRDETŐTÁBLA MÉRETTŐL FÜGGETLENÜL MŰKÖDIK:** 10 és 1000 készüléknél is ~1% leszakadva,
+  99% egy darabban, a visszaállás mediánja **5 perc** (egy ablak). ⭐ Az 1% maga a szerkezeti
+  alsó határ: napi 4 váltás × 5 perc ≈ 20 perc/nap. Ha minden második olvasás bukik: 2–3%, a
+  95%-os visszaállás 25 perc.
+- ⛔ **A NYITOTT AJTÓ A NAGY KOINÓBAN ELÉG, A KICSIBEN NEM:** 1000 készüléknél már 5% horgony is
+  ~1%-ot ad, **10 készüléknél** viszont 5% mellett **58% leszakadva** (a futások ~60%-ában
+  egyetlen horgony sincs), 20% mellett 10%. *A nyitott ajtó szerencse kérdése — a kis koinó
+  (D22) épp ezen bukik el.*
+- Napi 8 váltásnál ugyanez a kép: a tábla 2–5%, mentés nélkül 97%.
+
+### ⭐⭐ ÉS A MÉHSEJT (Csaba első képe) — hány lépés bárhonnan bárhová?
+
+| készülék | méhsejt | méhsejt + 1 véletlen | sétával növesztett |
+|---|---|---|---|
+| 100 | 7,7 | 3,2 | 3,1 |
+| 1 000 | 23,2 | 4,6 | 4,6 |
+| 10 000 | 78,6 | 6,3 | 5,9 |
+| 100 000 | **198,7** | 7,9 | **7,6** |
+
+⭐ A méhsejt a méret **gyökével** nő, a véletlen háló a **logaritmusával**. Kivetítve (becslés,
+nem mérés) egymilliárdra: **méhsejt ~20 000 lépés, véletlen ~14**. ⚠️ *A beszélgetésben ~30-at
+mondtam — a mérés szerint kevesebb.* ⭐⭐ **És a méhsejt megmenthető:** egyetlen véletlen
+távoli társ készülékenként ugyanoda hozza, mint a teljesen véletlen háló *(⚠️ ott a kötésszám
+4, nem 3)*. Csaba a véletlen hármat választotta (2026-09-18).
+
+### ⭐ A LELET
+
+**Csak-mobilos közösségben a kötések ÖNMAGUKBAN nem tartják egyben a hálót — a mentés nem
+kényelem, hanem feltétel.** A mentések közül pedig **csak a hirdetőtábla nem függ a mérettől és a
+szerencsétől**: a nyitott ajtó a nagy koinóban bőven elég, a családi koinóban nem.
+
+### ⚠️ AMIT EZ A MODELL NEM MOND MEG
+
+- **A hirdetőtábla mindig elérhető és egy ablak alatt olvasható** — valódi táblán (web vagy DHT)
+  ezt mérni kell; az (e) sor csak a félig bukó olvasást mutatja.
+- **A horgony terhelése korlátlan** — kedvező feltevés.
+- **Nincs benne az alvó/kikapcsolt telefon, az otthoni wifi** (helyi felfedezés — a családi
+  koinót ez segítené) **és a kézi kurbli.**
+- **Nincs benne az akkumulátor** — az életjel gyakorisága a router órájából jön (31. mérés), és a
+  mobil óra **még nincs megmérve**.

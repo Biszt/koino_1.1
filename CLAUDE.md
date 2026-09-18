@@ -22,7 +22,24 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 ⭐ **A részletes terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) **legvége**
 („A KÖVETKEZŐ MUNKA"). **629 önpróba zöld, a munkakönyvtár tiszta, minden pusholva.**
 
-⛔⛔ **A LEGFONTOSABB, AMIVEL KEZDENI KELL — és ez Csaba döntése:** a 34. mérés szerint
+⭐⭐⭐ **FRISSÍTÉS (2026-09-18 este): A HORGONY-KÉRDÉS ÁTBESZÉLVE — 35. mérés.** Részletek:
+[`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) legvége („A HORGONY-KÉRDÉS ÁTBESZÉLVE").
+- ⛔ **A 34. mérés egy feltevése ütközött a 2026-08-30-i terepméréssel** (UDP, „nincs full
+  cone"): a router csak attól enged be, akinek maga is küldött — tehát **idegent csak a nyitott
+  ajtó fogad**; a túlélő leképezés és az őrség csak a már ismert párokat tartja. ⏸️ A **mobil**
+  NAT szűrése nincs mérve (meglévő paranccsal mérhető, Csaba futtatja).
+- ⭐⭐ **Csaba célja: működjön csak-mobilos közösségben is.** Az ötlete: **KÖTÉS-HÁLÓ** — minden
+  készülék 3 társsal tart energiatakarékos, folyamatos kapcsolatot (az életjel a router órája
+  előtt, a gyakoriság a **mért** órából, percfordulóhoz igazítva), a társak **véletlen sétával**
+  (nem méhsejt: az ~20 000 lépés egymilliárdnál, a véletlen ~14).
+- ⛔⛔ **A 35. mérés: mentés nélkül a kötés-háló EGY NAP alatt szétesik** (a hálózatváltás minden
+  kötést elvesz). ⭐⭐⭐ **A HIRDETŐTÁBLA** (a leszakadt kifelé kiírja az új címét, a társak kifelé
+  kiolvassák — *automatizált kurbli*) **méretfüggetlenül tart**: ~1% leszakadva, 99% egyben. A
+  nyitott ajtó a nagy koinóban elég, a **családiban nem** (58% leszakadva).
+- ⏸️ **Csaba döntése: webes tábla vagy a BitTorrent DHT (cég nélkül, aláírt Ed25519
+  bejegyzések) — vagy mindkettő.** Előtte a két mobil terepmérés (élettartam, szűrés).
+
+⛔⛔ **(Korábbi állapot, a fenti felülírja:)** a 34. mérés szerint
 **horgony nélkül a cím-terjesztés el sem indul** (a hír 1%-ot ér el). Horgony az, akinek a
 címe a buli-köz után is érvényes: **postaláda** (nyitott kapu, D34) · **túlélő leképezés** ·
 vagy **éjjeli őrség**. ⏸️ **Melyik legyen?** E nélkül az őrjárat UDP-re állítása megépülhet,
@@ -841,7 +858,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **172 fájl, 2819,5 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **173 fájl, 2841,9 KB** — ⚠️ *ebből a `felulet/` 100 fájl / 844,2 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -974,6 +991,9 @@ node koino/meres/buliMeres.js    # ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK?
                                  # a HORGONYOK aránya; K=0 és K=10 között nincs különbség)
                                  # Az igazítás ÉS az ismétlés együtt ×30 — külön alig.
                                  # A mai állapot MÉRETTEL romlik (8,9 → 70,3 perc), az új nem.
+node koino/meres/kotesMeres.js   # ⭐⭐⭐ A KÖTÉS-HÁLÓ (35.): 3 kötés/készülék, hálózatváltás —
+                                 # mentés nélkül egy nap alatt szétesik, hirdetőtáblával ~1%
+                                 # leszakadva; és a méhsejt vs véletlen (lépésszám)
 node koino/meres/udpLekepezesMeres.js   # ⭐⭐ TÚLÉLI-E a bemondott UDP-cím a buli-közt? (31.)
                                  # EGY készülék elég; a MOBIL adattal futtatva a döntő
 node koino/meres/tcpLekepezesMeres.js   # ⭐⭐ CÉLFÜGGETLEN-E a router TCP-leképezése? (18.)
@@ -987,7 +1007,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 172 fájl, 2819,5 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 173 fájl, 2841,9 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
