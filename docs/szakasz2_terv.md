@@ -1546,3 +1546,53 @@ csendet (a laptop ilyen volt, a telefon nem — 31. mérés).
 ⚠️ **A modell határa, kimondva:** a terjesztést azonosító–cím kötésként modellezi, a valódi
 lista viszont **névtelen** — a kopogás a jegyzék MINDEN friss címére megy, ami többet érhet,
 mint amit mértünk. *Valódi hálózaton újra kell nézni.*
+---
+
+## ⏭️⏭️ A KÖVETKEZŐ MUNKA (2026-09-18, a session-váltáshoz)
+
+⚠️ **Ez a lap azért készült, hogy a következő session ne vakon kezdjen.** A sorrendet a
+**függőségek** döntötték el, és az első két kérdés már eldőlt méréssel.
+
+### Hol tartunk
+
+| | állapot |
+|---|---|
+| a pajzsfúrás két port-átíró NAT között | ✅ **átmegy** (32. mérés, terepmérés) |
+| a friss UDP-cím a cserén | ✅ **megépült** (1. lépés, 33. mérés az áráról) |
+| a horgony (postaláda / őrség) | ⛔ **hiányzik — és a 34. mérés szerint FELTÉTEL** |
+| az őrjárat UDP-re állítása | ⛔ hiányzik (a 2. lépés) |
+
+### ⛔⛔ A DÖNTŐ LELET, AMIVEL KEZDENI KELL (34. mérés)
+
+**Horgony nélkül a terjesztés el sem indul.** Ha minden készülék külső címe megváltozik a
+buli-közben, és senkinek nincs érvényes címe, akkor a hír a futások 99%-ában **egy lépést sem
+tesz**. ⭐ A cím-szám (K) ezen **nem segít**: K=0 és K=10 között nincs mérhető különbség, mert
+*a találkozás maga is címcsere*.
+
+⭐ **Horgony az, akinek a címe a buli-köz után is érvényes:**
+- **nyitott kaput tart** (postaláda, D34) — ma is van ilyen szerep, csak nem erre használjuk;
+- vagy a **leképezése túléli a csendet** (a laptop igen, a telefon nem — 31. mérés);
+- vagy **éjjeli őrséget** ad: a buli-közben beszélget valakivel, hogy a címe ne évüljön el
+  (Csaba ötlete; ⭐ a kiválasztás **levezetés legyen, ne megbeszélés** — az ablak sorszámából).
+
+### A javasolt sorrend
+
+1. ⏸️ **CSABA DÖNTÉSE ELŐSZÖR:** mi legyen a horgony? *(a) a postaláda-szerep kimondása
+   (aki kaput tart, azt hirdetjük horgonyként) · (b) levezetett éjjeli őrség · (c) mindkettő.*
+   ⚠️ Ez nem stílus-kérdés: e nélkül a 2. lépés megépülhet, de üresben jár.
+2. **A cím-korlát olcsóbbra vétele** (a 34. mérés javaslata): a SAJÁT cím mindig menjen
+   (+94 bájt/kör), mások címéből 10 helyett 3 vagy 0. *Egy sor, mérhető haszon.*
+3. **AZ ŐRJÁRAT UDP-RE ÁLLÍTÁSA** — az ablak elején kopogás a friss címekre, majd csere a
+   résen. ⭐ A darabok készen állnak (`pajzsfuras`, `csereUdpResen`, `fajlRandevu`), tehát ez
+   **bekötés, nem új réteg** — de figyelni kell: a fúró foglalatát az ablakon belül **nyitva
+   kell tartani**, mert a cím csak addig él (32. mérés lelete).
+4. **Terepmérés újra**, két valódi hálózattal: összeér-e a kör magától, kézi parancs nélkül.
+
+### ⏸️ Ami továbbra is nyitva van
+
+- **A mobil leképezés élettartama** (a szomszéd telefonján 6 perc: `udpLekepezesMeres.js`).
+- **Két mobil készülék egymás közt** (közös CGNAT → hairpinning).
+- **A régi adat csapdája** (32. mérés): a laptop `sajat` koinójában 2026-08-29-i, régi
+  formátumú események vannak, és emiatt a szerző ÚJ eseményei is elbuknak (a kiosztási
+  főkönyv ellentmond). ⚠️ *Méréshez tiszta adat-mappát használjunk.*
+- A fájl-bájtok kézi útja · `FAJL_KORLAT` · a maradék modálok (5.8) · a „kurbli".

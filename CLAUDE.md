@@ -17,7 +17,23 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
-### ⏭️⏭️ A KÖVETKEZŐ MUNKA: A BULI MÁSODIK FELE — A RÉS-NYITÁS
+### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
+
+⭐ **A részletes terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) **legvége**
+(„A KÖVETKEZŐ MUNKA"). **624 önpróba zöld, a munkakönyvtár tiszta, minden pusholva.**
+
+⛔⛔ **A LEGFONTOSABB, AMIVEL KEZDENI KELL — és ez Csaba döntése:** a 34. mérés szerint
+**horgony nélkül a cím-terjesztés el sem indul** (a hír 1%-ot ér el). Horgony az, akinek a
+címe a buli-köz után is érvényes: **postaláda** (nyitott kapu, D34) · **túlélő leképezés** ·
+vagy **éjjeli őrség**. ⏸️ **Melyik legyen?** E nélkül az őrjárat UDP-re állítása megépülhet,
+de üresben jár.
+
+**A sorrend utána:** *(2)* a cím-korlát olcsóbbra vétele (saját cím mindig, másoké 10 → 3/0) ·
+*(3)* **az őrjárat UDP-re állítása** (bekötés: `pajzsfuras` + `csereUdpResen` + `fajlRandevu`
+készen áll; ⚠️ a fúró foglalatát az ablakon belül **nyitva kell tartani**) · *(4)* terepmérés
+két valódi hálózattal.
+
+### ⏭️⏭️ A RÉSZLETEK (történetként): A BULI MÁSODIK FELE — A RÉS-NYITÁS
 
 ⭐ **A részletes terv, a nyitott döntésekkel:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md)
 legvége („A BULI MÁSODIK FELE"). **A munkakönyvtár tiszta, 624 önpróba zöld, semmi nincs pusholva.**
