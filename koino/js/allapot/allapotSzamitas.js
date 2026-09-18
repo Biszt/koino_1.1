@@ -731,25 +731,12 @@ export function elakadtPontok(allapot, szerzo) {
   return lista;
 }
 
-/**
- * Egy entitás AKTÍV tudatpont-tulajdonosai — a MOSTANI állapot szerint.
- *
- * A passzív figyelők kimaradnak: aki nem akar részt venni a döntésben, ne is
- * korlátozza azt.
- *
- * ⚠️ A DÖNTÉSHOZATAL NEM EZT HASZNÁLJA (2026-08-28 óta). Ott a nevezőt a LEZÁRÁS
- * PILLANATÁIG feldolgozott tudatpont-eseményekből számoljuk (javaslatSzamitas.js) —
- * különben egy utólagos tudatpont-rendezés visszamenőleg megmozdítaná egy már lezárt
- * döntés határidejét. Ez a függvény a felületnek való: „kik a mai aktív tulajdonosok".
- *
- * @param {Object} entitas
- * @returns {Set<string>} a szerzők halmaza
- */
-export function aktivTulajdonosok(entitas) {
-  const halmaz = new Set();
-  if (!entitas) return halmaz;
-  for (const [szerzo, adat] of entitas.hozzajarulok) {
-    if (adat.szerep === 'aktiv') halmaz.add(szerzo);
-  }
-  return halmaz;
-}
+// ⚠️ ITT ÁLLT AZ `aktivTulajdonosok` — KIVÉVE 2026-09-18-án, egy átnézés nyomán.
+//
+// A fejléce azt mondta: *„ez a függvény a felületnek való"* — ⛔ **a felület sem hívta**,
+// és rajta kívül senki. *Ugyanaz a csapda, amit az `identitas.js`-nél és a `jelzesek.js`-nél
+// már egyszer kijavítottunk: ahol egy felirat mást mond, mint amit a kód tesz, ott
+// előbb-utóbb valaki a feliratot hiszi el.*
+//
+// ⭐ A döntéshozatal nevezőjét a `javaslatSzamitas.js` számolja, a LEZÁRÁS pillanatáig
+// feldolgozott eseményekből — az a hely, ahol ez a kérdés valóban eldől.

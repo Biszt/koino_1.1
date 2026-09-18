@@ -1422,6 +1422,220 @@ proba('⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG — a hír EGY ablako
     }
   });
 
+// ===================================
+// ⭐⭐ A FRISS UDP-CÍM BEKÖTÉSE — VISELKEDÉST MÉRÜNK (2026-09-18)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELLETT EZ A PRÓBA, ÉS HOGYAN DERÜLT KI? Egy kód-átnézés (másik session,
+// 2026-09-18) kivágta MIND A NÉGY éles bekötési pontot — az őrjárat cseréjét, a postaláda
+// hirdetését, a kézi cserét és a saját cím feljegyzését —, és **mind a négyszer 624/624
+// maradt zöld**. Megismételve: a rontás után is zöld. ⭐ *A `tarsak.js` függvényeit őrizte
+// próba; azt, hogy a PROGRAM használja őket, semmi.*
+//
+// ⚠️ Ugyanaz az alak, amit a napló nyolcszor felsorol — és pontosan az, amit a 28. mérés
+// tanulsága kimond: **a próba viselkedést mérjen, ne kiírt számot.**
+//
+// A mérés alakja: két készülék, két folyamat, valódi `figyel` + `csere`. Az egyikbe
+// **kézzel** beírunk egy friss UDP-címet (ez a 4. szabály kézi útja — a jegyzék sima JSON),
+// a másiknak pedig ott kell lennie a cserénél. *Nem kiírás, hanem a másik gép lemeze.*
+
+proba('⭐⭐ A FRISS UDP-CÍM ÁTKERÜL A MÁSIK KÉSZÜLÉKRE (a bekötés próbája)', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7451;
+
+  await fut(gazda, 'koino', 'Cim proba');
+
+  // A gazda jegyzékébe kézzel írunk egy FRISS címet — mintha az imént fúrt volna.
+  await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
+    cimek: [{ hoszt: '203.0.113.77', port: 41777, mikor: Date.now() }]
+  }), 'utf8');
+
+  await csereKor(gazda, vendeg, port);
+
+  // ⭐ A BIZONYÍTÉK A VENDÉG LEMEZÉN VAN: a cím átkerült-e a saját jegyzékébe?
+  let jegyzek = [];
+  try {
+    jegyzek = JSON.parse(await readFile(join(vendeg, 'udpcimek.json'), 'utf8')).cimek ?? [];
+  } catch { return false; }
+
+  return jegyzek.some((c) => c.hoszt === '203.0.113.77' && c.port === 41777
+    // ⚠️ És a KORÁT a saját óránkhoz kötötte: a bejegyzés ideje a MI időnk, nem az övé.
+    && Number.isInteger(c.mikor) && Math.abs(Date.now() - c.mikor) < 60000);
+});
+
+// ⚠️ ÉS AZ ELÉVÜLT CÍM NEM TERJED. *Enélkül a jegyzék halott címeket hordana szét, és a
+// következő buli azokra kopogna — ez a 31. mérés leletének gyakorlati fele.*
+proba('⛔ Az ELÉVÜLT cím NEM kerül át (a jegyzék nem terjeszt halott címet)', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7452;
+
+  await fut(gazda, 'koino', 'Cim proba 2');
+
+  // Két cím: az egyik friss, a másik RÉG elévült (két órája).
+  await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
+    cimek: [
+      { hoszt: '203.0.113.88', port: 41888, mikor: Date.now() },
+      { hoszt: '203.0.113.99', port: 41999, mikor: Date.now() - 2 * 3600 * 1000 }
+    ]
+  }), 'utf8');
+
+  await csereKor(gazda, vendeg, port);
+
+  let jegyzek = [];
+  try {
+    jegyzek = JSON.parse(await readFile(join(vendeg, 'udpcimek.json'), 'utf8')).cimek ?? [];
+  } catch { return false; }
+
+  return jegyzek.some((c) => c.hoszt === '203.0.113.88')
+    && !jegyzek.some((c) => c.hoszt === '203.0.113.99');
+});
+
+// ⛔⛔ ÉS A HARMADIK PRÓBA AZ ŐRJÁRATÉ — mert a fenti kettő NEM fedi le.
+//
+// *Ezt a saját rontás-próbám mutatta meg (2026-09-18): kivágtam az őrjárat hirdetését, és a
+// fenti két próba ZÖLD maradt — mert azok a `figyel` parancsot használják, az pedig másik
+// ág.* ⭐ Az őrjárat a „valódi üzemmód": ha ott nem terjed a cím, akkor élesben nem terjed.
+//
+// Ez a próba MINDKÉT irányt méri egy menetben: a vendég őrjárata megtanulja a gazda friss
+// címét (a kör-ág beolvasztása), ÉS a gazda megtanulja a vendégét (a kör-ág hirdetése).
+proba('⭐⭐⭐ AZ ŐRJÁRAT is terjeszti a friss címet — MINDKÉT irányban', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7453;
+  let figyelo = null, orjarat = null;
+
+  try {
+    await fut(gazda, 'koino', 'Orjarat cim proba');
+
+    // Mindkét készülék jegyzékébe egy-egy friss cím (a kézi út: sima JSON).
+    await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
+      cimek: [{ hoszt: '198.51.100.11', port: 41011, mikor: Date.now() }]
+    }), 'utf8');
+    await writeFile(join(vendeg, 'udpcimek.json'), JSON.stringify({
+      cimek: [{ hoszt: '198.51.100.22', port: 41022, mikor: Date.now() }]
+    }), 'utf8');
+
+    // A vendég ismerje a gazdát — az őrjárat a társ-listát járja körbe.
+    await fut(vendeg, 'tars', '127.0.0.1', String(port), 'A gazda');
+
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(1500);
+
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7454'], {
+      env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(8000);                      // néhány kör: a 0,05 perc = 3 másodperces ütem
+    orjarat.kill(); orjarat = null;
+    figyelo.kill(); figyelo = null;
+    await varj(1000);
+
+    const jegyzek = async (hely) => {
+      try {
+        return JSON.parse(await readFile(join(hely, 'udpcimek.json'), 'utf8')).cimek ?? [];
+      } catch { return []; }
+    };
+    const vendegE = await jegyzek(vendeg);
+    const gazdaE = await jegyzek(gazda);
+
+    // ⭐ A BIZONYÍTÉK: mindkét lemezen ott a MÁSIK címe. *Nem kiírás, hanem fájl.*
+    return vendegE.some((c) => c.hoszt === '198.51.100.11')
+      && gazdaE.some((c) => c.hoszt === '198.51.100.22');
+  } finally {
+    if (orjarat) orjarat.kill();
+    if (figyelo) { figyelo.kill(); await varj(1000); }
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ⚠️ ÉS EGY NEGYEDIK, mert a harmadik SEM fedte le az őrjárat POSTALÁDA-ágát.
+//
+// *A rontás-próba megint pontosabb volt nálam: kivágtam az őrjárat postaláda-hirdetését, és
+// a fenti három próba zöld maradt — mert ott az őrjárat a HÍVÓ, nem a fogadó.* ⭐ Itt tehát
+// az őrjáratnak **nincs egyetlen társa sem** (a kör-ág el sem indul), és a másik készülék
+// kopog be hozzá: így csak a postaláda-ág maradhat.
+proba('⭐⭐ Az őrjárat POSTALÁDA-ága is hirdeti a friss címet', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  let orjarat = null;
+
+  try {
+    await fut(vendeg, 'koino', 'Postalada cim proba');
+    await writeFile(join(vendeg, 'udpcimek.json'), JSON.stringify({
+      cimek: [{ hoszt: '198.51.100.33', port: 41033, mikor: Date.now() }]
+    }), 'utf8');
+
+    // ⚠️ A vendégnek NINCS társa — tehát a kör-ág nem futhat, csak a kapu.
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7455'], {
+      env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+    await fut(gazda, 'csere', '127.0.0.1', '7455');
+    await varj(1000);
+    orjarat.kill(); orjarat = null;
+    await varj(500);
+
+    let jegyzek = [];
+    try {
+      jegyzek = JSON.parse(await readFile(join(gazda, 'udpcimek.json'), 'utf8')).cimek ?? [];
+    } catch { return false; }
+    return jegyzek.some((c) => c.hoszt === '198.51.100.33' && c.port === 41033);
+  } finally {
+    if (orjarat) orjarat.kill();
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ⭐⭐⭐ ÉS AZ ÖTÖDIK: A SAJÁT FRISS CÍMÜNK FELJEGYZÉSE — a rés két oldalán.
+//
+// ⛔ MIÉRT KELL KÜLÖN? Mert ez a jegyzék EGYETLEN valódi forrása: a többi bejegyzést
+// másoktól kapjuk, ezt viszont MAGUNKRÓL tudjuk meg — és e nélkül a társ soha nem tudná
+// meg, hova kopogjon nekünk. *A rontás-próba szerint eddig ezt sem mérte semmi.*
+//
+// ⚠️ A rés itt a hurok-címen nyílik (két folyamat, két helyi port) — NAT nélkül, tehát a
+// „külső" cím a 127.0.0.1 lesz. A mérés tárgya nem a NAT, hanem hogy a `latlak`-ból tanult
+// cím **a lemezre kerül-e**.
+proba('⭐⭐⭐ A SAJÁT friss címünket a rés után feljegyezzük', async () => {
+  const egyik = await ujKeszulek();
+  const masik = await ujKeszulek();
+  let a = null, b = null;
+
+  try {
+    await fut(egyik, 'koino', 'Res cim proba');
+
+    a = spawn(process.execPath, [KOINO_JS, 'pajzsfuro', '127.0.0.1', '7457', '7456'], {
+      env: { ...process.env, KOINO_ADAT: egyik, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    b = spawn(process.execPath, [KOINO_JS, 'pajzsfuro', '127.0.0.1', '7456', '7457'], {
+      env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(9000);                       // fúrás + csere + a fájl-randevú vége
+    a.kill(); a = null; b.kill(); b = null;
+    await varj(500);
+
+    const jegyzek = async (hely) => {
+      try {
+        return JSON.parse(await readFile(join(hely, 'udpcimek.json'), 'utf8')).cimek ?? [];
+      } catch { return []; }
+    };
+    // ⭐ Mindkét oldalnak fel kell jegyeznie, amit a MÁSIK látott belőle.
+    const egyikE = await jegyzek(egyik);
+    const masikE = await jegyzek(masik);
+    return egyikE.some((c) => c.port === 7456) && masikE.some((c) => c.port === 7457);
+  } finally {
+    if (a) a.kill();
+    if (b) b.kill();
+    await varj(500);
+    await rm(egyik, { recursive: true, force: true });
+    await rm(masik, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

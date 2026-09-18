@@ -74,7 +74,6 @@ async function szarmaztatottAzonosito(forras, egyezmeny) {
 // egyetlen, ami entitásokat von össze — és mert azonosító-kérdést vetett fel: Csaba
 // döntése szerint **nem születik új azonosító, az ELSŐ érintett olvasztja be a többit**
 // (lásd az `egyesites` függvénynél).
-export const VEGREHAJTHATO = ['Modositas', 'Athelyezes', 'Torles', 'Egyesites'];
 export const ISMERT_MUVELETEK = ['Modositas', 'Athelyezes', 'Torles', 'Egyesites'];
 
 // ===================================

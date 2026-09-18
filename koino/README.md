@@ -95,12 +95,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonkét próba-fájl, **624 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonkét próba-fájl, **629 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **172 fájl, 2809,2 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **172 fájl, 2819,5 KB**, nulla
 npm-csomag.)*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
@@ -181,14 +181,20 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
 | `js/csere/helyiFelfedezes.js` | **helyi felfedezés** (F. lépés): aki keres, kiált; aki dolgozik, felel — cím beírása nélkül |
-| `js/muveletek.js` | a hat művelet |
+| `js/allapot/identitas.js` | ⭐ **KI TAG?** (Szakasz 4, D54–D63): két lépcső — tagság egy **meghívással**, pénztárca **három tanúsítással**; számítás, nem esemény |
+| `js/allapot/jelzesek.js` | ⭐⭐ **a kontraszt-jelzés** (a valódi Sybil-válasz): *„hány olyan embert tanúsítottál, akinek nincs önálló élete a közösségben?"* — ⛔ soha nem ítél, csak számokat ad |
+| `js/allapot/szerkesztesiVegrehajtas.js` | **a harmadik fázis**: az elfogadott szerkesztési egyezmények rávezetése az entitásokra (módosítás · áthelyezés · törlés · egyesítés · különválás) |
+| `js/allapot/pakli.js` | ⛔ **egy oldalnyi kártya, soha nem az egész** (5.2): korlátos `darab`, kulcs-alapú kurzor, horgony a lapozáshoz |
+| `js/allapot/felszabaditas.js` | az elakadt tudatpontok visszavétele — **bulikban mérve**, nem időben, és a láncok vége a bizonyíték |
+| `js/felulet/kapu.js` | a **helyi kapu** a böngészőnek (5.1) — öt őr, és ⛔ **semmit nem tud a koinóról** (7. szabály) |
+| `js/muveletek.js` | a **tizenhat** művelet — mindegyik: lánc vége → aláírt esemény → mentés |
 | `koino.js` | a parancssori arc |
 
 ⚠️ **Az 1. szabály itt látszik:** a `csere.js` **soha nem importál hálózati kódot** — a
 logika és a szállítás külön él, ezért cserélhető ki a vonal bármi másra (fájl, pendrive,
 rádió) anélkül, hogy a csere-protokollhoz hozzá kellene nyúlni.
 
-## Hol tartunk (2026-09-03)
+## Hol tartunk (2026-09-18)
 
 > ⭐ **A sorrend külön dokumentumban él:** [`../docs/utiterv.md`](../docs/utiterv.md) —
 > *mit építünk, milyen sorrendben, és miért*. Ez itt csak a rövid leltár.
@@ -234,14 +240,18 @@ szólása nyitva tartja a rést). Ez olcsóbb bármilyen router-beállításnál
 az első naptól milliárdos (⛔ **9. szabály**), a megvalósítás mögötte pedig maradhat
 egyszerű: ma memóriában tartott mutató, és a hívók egyike sem tud róla.
 
-### ▶️ A KÖVETKEZŐ MUNKA: Szakasz 4 — AZ IDENTITÁS
+### ▶️ A KÖVETKEZŐ MUNKA (2026-09-18)
 
-⚠️ *A D17 mondata áll: a konszenzus biztonsága = az identitás-réteg biztonsága, semmi más.
-**Enélkül minden eddigi munka egy hatékonyan skálázódó hamisítás-gépezet.***
+⭐ **A részletes terv:** [`../docs/szakasz2_terv.md`](../docs/szakasz2_terv.md) legvége, és a
+[`../CLAUDE.md`](../CLAUDE.md) belépője. *Ez itt csak a rövid leltár.*
 
-Tanúsítás · távolság-szabály · tartós mag — a részletek az
-[`utiterv.md`](../docs/utiterv.md) 4. szakaszában és a
-[`skalazas_terv.md`](../docs/skalazas_terv.md) Sybil-válaszában.
+- ✅ **Szakasz 4 — AZ IDENTITÁS: kész** (2026-09-06): két lépcső, kontraszt-jelzés, visszavonás.
+- 🚧 **Szakasz 5 — A FELÜLET: folyik** (5.1–5.8): helyi kapu · kérdezhető pakli · kártyák ·
+  belépő tér · szövegszerkesztő · javaslat-modal · fájl-réteg és fájl-szállítás.
+- ⛔ **A mostani munka a BULI MÁSODIK FELE:** az őrjárat ma **TCP-n** fut, a UDP-vonal viszont
+  kész — a rés-nyitás bekötése hiányzik. ⭐ A friss UDP-címek terjesztése 2026-09-18-án
+  megépült; ⛔ **a horgony (postaláda / éjjeli őrség) még nincs**, és a 34. mérés szerint
+  **e nélkül a terjesztés el sem indul**.
 
 ⭐ **És az első valódi használat nem a végén van:** a **D18/0** szerint kis közösségben
 *„nem kell rendszer — tudod, ki valódi, mert ismered"*. Vagyis a Szakasz 3 + egy minimális

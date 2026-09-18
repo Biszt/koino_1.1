@@ -113,32 +113,6 @@ function kerdez(uzenet, cim, hatosIPv6) {
 // NAT-PMP — „élsz egyáltalán?"
 // ===================================
 
-/**
- * A legegyszerűbb kérdés: „mi a külső címem?" (NAT-PMP, 0. művelet).
- *
- * Ez csak azt méri, hogy a router **válaszol-e egyáltalán** az 5351-es porton. A választ
- * magát nem tudjuk használni (IPv4, és a CGNAT miatt úgyis értéktelen) — de ha VAN válasz,
- * akkor a portnyitás-szolgáltatás fut.
- *
- * @param {string} atjaro - az IPv4 átjáró (pl. 192.168.1.1)
- * @returns {Promise<{valaszol: boolean, kulsoCim?: string}>}
- */
-export async function natpmpEletjel(atjaro) {
-  console.log('natpmpEletjel - KEZDÉS', { atjaro });
-
-  const keres = Buffer.from([0, 0]);          // verzió 0, művelet 0
-  const valasz = await kerdez(keres, atjaro, false);
-
-  if (!valasz || valasz.length < 12) {
-    console.log('natpmpEletjel - VÉGE (nincs válasz)');
-    return { valaszol: false };
-  }
-
-  const kulsoCim = [valasz[8], valasz[9], valasz[10], valasz[11]].join('.');
-  console.log('natpmpEletjel - VÉGE', { kulsoCim });
-  return { valaszol: true, kulsoCim };
-}
-
 // ===================================
 // PCP — a tűzfal-rés kérése IPv6-ra
 // ===================================

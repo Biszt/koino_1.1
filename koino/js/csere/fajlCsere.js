@@ -53,9 +53,6 @@ import { beolvasztas } from './csere.js';
 // A HATÓKÖRÖK
 // ===================================
 
-/** A két megnevezett hatókör; minden más szöveget entitás-azonosítónak veszünk. */
-export const HATOKOROK = ['mind', 'sajat'];
-
 // ===================================
 // KIVITEL — események fájlba
 // ===================================
