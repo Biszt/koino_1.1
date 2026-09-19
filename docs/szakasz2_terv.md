@@ -1691,8 +1691,8 @@ saját emlékezetéből indul.*
 1. ✅ **Terepmérés — MEGVAN (36/b, 2026-09-19):** mobilnetről 3/3, és két hálózat között is
    (a telefon mobilnetről tette fel, a laptop otthonról 2,6 mp alatt megtalálta, 0 hamis).
 2. ✅ **A bejegyzés élettartama — MEGVAN (36/c):** 6,6 óra után is fent, újraírás nélkül (7 → 5 → 3
-   tároló). ✅ **És a mobil leképezés (31/b):** 330 mp csendet is túlél, célfüggetlen — ⏸️ a mobil
-   **szűrés** még hátra van (telefon + laptop egyszerre).
+   tároló). ✅ **És a mobil leképezés (31/b):** 330 mp csendet is túlél, célfüggetlen — ✅ a mobil
+   **szűrés** is megmérve (36/d): ⛔ a mobil NAT **nem engedi be az idegent** — csak-mobilos közösségben nincs nyitott ajtó, az új kapcsolatot a kölcsönös kopogás (buli + tábla) nyitja.
 3. **A tervezés:** külön (nem azonossági) kulcs, a tartalom titkosítása a társaknak (D6), a
    megismert DHT-gépek átadása a társak között (2. szabály), és hogy a kötés-háló mikor olvas
    a tábláról.

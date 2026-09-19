@@ -19,12 +19,11 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️▶️ SESSION-VÁLTÁS (2026-09-19) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-1. **Ha Csaba hozza a szomszéd mobilnetes telefonját → előbb a mobil SZŰRÉS mérése** (a DHT
-   mérései után ez az egyetlen hátralévő terepmérés). Telefonon, mobil adattal (wifi KI):
-   `cd ~/koino_1.1 && node koino/koino.js pajzsfuro 192.0.2.1 7373 7373` — a semmibe fúr, és
-   kiírja: *„KÍVÜLRŐL ÍGY LÁTSZOM: X:P"*. A laptopról (Claude futtatja): `node koino/koino.js
-   pajzsfuro X P 7373`. Ha a telefon jelzi a kopogást → a mobil NAT **beengedi** az idegent;
-   ha pár perc alatt semmi → **szűr** (mint az otthoni router). Jegyzőkönyv: `eredmenyek.md` 36/d.
+1. ✅ **A mobil SZŰRÉS MEGMÉRVE (36/d, 2026-09-19 este): a mobil NAT NEM engedi be az
+   idegent** — 180 kopogás, 0 válasz; az ellenpróba (kölcsönös kopogás) azonnal átment, a
+   csere is. ⛔ *Csak-mobilos közösségben tehát nincs „nyitott ajtó": új kapcsolatot csak a
+   KÖLCSÖNÖS kopogás nyit — vagyis a buli (egyidejűség) + a hirdetőtábla (a friss cím) az
+   egyetlen út, nem kényelem.* Ez a terv (2.) bemenete.
 2. **A fejlesztés: előbb egy RÖVID TERV-DOKUMENTUM** (Csaba egyetértett): hogyan illeszkedik a
    **kötés-háló + a buli + a hirdetőtábla (DHT) + az őrjárat**. Csaba döntési pontjaival:
    *(a)* ki olvashatja a táblát — **külön, nem azonossági** kulcs vagy titkos só, a tartalom a
@@ -53,7 +52,7 @@ beragadást talált:** a keresés időkorlátja csak válaszra ellenőrződött 
 2026-09-19 — a laptop 2,6 mp alatt találta meg, amit a telefon mobilnetről tett fel), ✅ **a bejegyzés 6,6 óra
 után is megvan** (36/c, újraírás nélkül, 7 → 3 tároló), ✅ **és a MOBIL leképezés 330 mp csendet is túlél**
 (31/b, célfüggetlen — *az 5 perces buli-köz életjel nélkül is átvészelhető ezen a szolgáltatón*),
-⏸️ a mobil **szűrés** még nincs mérve, és a tervezés
+⛔ a mobil **szűrés** megmérve (36/d): az idegent NEM engedi be; hátra a tervezés
 (külön kulcs, titkosítás a társaknak — D6). ⚠️ **A munkakönyvtár tiszta, de a commitok NINCSENEK
 pusholva.**
 

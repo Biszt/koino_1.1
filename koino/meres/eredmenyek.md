@@ -3184,3 +3184,47 @@ mért), és **egy szolgáltató egy mérése** — más szolgáltatónál más l
 
 ⏸️ **Hátra:** hosszabb csend (`udpLekepezesMeres.js 900`) · és a **mobil SZŰRÉS** (beengedi-e
 az idegent, amíg a leképezés él) — ahhoz a telefon és a laptop kell egyszerre.
+
+---
+
+## 36/d. ⛔⛔ A MOBIL SZŰRÉS — A MOBIL NAT NEM ENGEDI BE AZ IDEGENT (2026-09-19, 21:46, terepmérés)
+
+A szomszéd telefonja **mobil adaton** (wifi ki), a laptop otthon. Meglévő parancsokkal, új kód nélkül.
+
+**1. A próba (idegen kopog):** a telefon a **semmibe** fúrt
+(`pajzsfuro 192.0.2.1 7373 7373` — a TEST-NET címen senki nem felel), így a leképezése élt
+(`130.43.210.126:61389`), de rést **csak a 192.0.2.1 felé** nyitott. A laptop
+(`31.46.250.22:49921`) **180 kopogást** küldött 3 percen át a telefon bemondott címére —
+⛔ **egyetlen válasz sem jött** — és a telefon képernyője szerint (556 saját kopogás alatt) **egyetlen idegen kopogás sem érkezett hozzá**, vagyis a csomag nem a visszaúton veszett el, hanem be sem jutott. *(A fúró bárki kopogására felel, nem csak a céljáéra; ha
+egyetlen kopogás átjut, a telefon `HALLAK`-ja a laptophoz visszaér, mert a laptop routere
+már nyitott rést a telefon felé.)*
+
+**2. Az ellenpróba (kölcsönös kopogás):** hogy ne a rossz cím legyen a magyarázat, a telefon
+újraindult a **laptop** címére (`pajzsfuro 31.46.250.22 49921 7373`), a laptop változatlanul a
+telefon **régi** címére kopogott — ✅ **azonnal átment** (a telefon oldalán **1 kopogás, 292 ms**): kopogás mindkét irányból, `HALLAK`
+mindkét irányból, és a **csere is végigfutott a résen** (5 kör, 38,8 KB).
+⭐ *Vagyis a cím jó volt, az út él — az egyetlen különbség az, hogy a telefon kopogott-e a
+laptopra. Ez a SZŰRÉS, tisztán elválasztva.*
+
+### ⭐ A LELET
+
+- ⛔⛔ **Ezen a mobil szolgáltatón egy telefon NEM lehet nyitott ajtó.** A leképezés
+  célfüggetlen (31/b) és 330 mp-et túlél, de a **szűrés** csak attól enged be, akinek a telefon
+  maga is küldött — ugyanúgy, mint az otthoni router (2026-08-30). *A „port-korlátozott kúp"
+  alak: a szám mindenkinek igaz, az ajtó csak az ismerősnek nyílik.*
+- ⭐ **Következmény a kötés-hálóra: a kapcsolatot csak KÖLCSÖNÖS kopogás nyithatja** — tehát
+  az **új** társ elérése (a hálózatváltás után is!) mindkét fél egyidejű fúrását kívánja. Ehhez
+  kell a két dolog, amit már terveztünk: a **buli** (az egyidejűség) és a **hirdetőtábla** (a
+  friss cím, amire kopogni kell). *A 35. mérés „nyitott ajtó" mentése csak-mobilos közösségben
+  tehát nem áll rendelkezésre — a tábla nem kényelem, hanem az egyetlen út.*
+- ⭐ **Mellékes, de hasznos:** a telefon **ugyanazt a külső portot** kapta vissza (61389), amikor
+  ~8 perccel később ugyanarról a helyi portról újraindult; a laptop szintén (49921). *A
+  leképezés a HELYI foglalathoz kötődik, és amíg él, az újraindítás nem változtatja meg.* ⚠️ A
+  32. mérésnél ugyanennél a szolgáltatónál újraindításkor más port jött — ott valószínűleg
+  közben elévült. Erre tehát nem építünk, csak feljegyezzük.
+
+### ⚠️ AMIT EZ A MÉRÉS NEM MOND MEG
+
+Egy szolgáltató, egy készülék, egy este. Más mobil szolgáltató szűrhet lazábban — de a
+tervezésnek a **szigorú** esetet kell kiszolgálnia (9. szabály: a router-eltérés alapállapot).
+⏸️ **Két mobil egymás közt** (hairpinning ugyanazon a szolgáltatón) továbbra is méretlen.
