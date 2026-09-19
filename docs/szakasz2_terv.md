@@ -1688,8 +1688,8 @@ ablak 5 perc; **belépő nélkül, csak a megjegyzett gépekkel 10/10**, 7–8 t
 saját emlékezetéből indul.*
 
 ⏸️ **Ami még hátra van a beépítés előtt:**
-1. **Terepmérés:** mobil adatról és két készülék között (`dhtMeres.js tesz` az egyiken,
-   `keres <kulcs>` a másikon) — Csaba futtatja, a két mobil méréssel együtt.
+1. ✅ **Terepmérés — MEGVAN (36/b, 2026-09-19):** mobilnetről 3/3, és két hálózat között is
+   (a telefon mobilnetről tette fel, a laptop otthonról 2,6 mp alatt megtalálta, 0 hamis).
 2. **A bejegyzés élettartama:** `dhtMeres.js keres` órák múlva.
 3. **A tervezés:** külön (nem azonossági) kulcs, a tartalom titkosítása a társaknak (D6), a
    megismert DHT-gépek átadása a társak között (2. szabály), és hogy a kötés-háló mikor olvas

@@ -3124,3 +3124,25 @@ tesztvektorai (bittorrent.org) **bájtra** egyeznek.
 - **Az adatvédelem** (D6): ma a mérő-kulcs nyilvános, a só ismert. Élesben a bejegyzést **nem
   az azonossági kulccsal** tesszük fel, és a tartalom a társaknak titkosított — ⏸️ ezt a
   beépítéskor kell megtervezni.
+
+### ✅✅✅ 36/b. — MOBILNETRŐL ÉS KÉT HÁLÓZAT KÖZÖTT IS (2026-09-19, terepmérés)
+
+A szomszéd telefonja (Termux, **mobil adat, wifi nélkül** — a képernyőn 4G jel), Csaba futtatta.
+
+- **`kor 3` a telefonon, üres emlékezettel, a közismert belépőkkel: 3/3.** Feltéve 7/7, 7/7,
+  7/8 gépre, 17–25 mp alatt; a visszakeresés mindháromszor megtalálta — az első körben
+  **4,5 mp** alatt jött az első érvényes találat, utána 0,2–0,3 mp (a megjegyzett gépek hatása);
+  a teljes keresés ~19 mp. **0 hamis.** A felelő és a néma gépek aránya ugyanaz, mint az
+  otthoni vonalon — **a szolgáltató nem fojtja el a DHT-forgalmat**.
+- ⭐⭐⭐ **KÉT HÁLÓZAT KÖZÖTT:** a telefon mobilnetről feltett egy bejegyzést (`tesz`, 7/8
+  tároló, 19,2 mp), a **laptop az otthoni vonalról megtalálta** (`keres <kulcs>`): ugyanaz a
+  sorszám, **4 perccel** a feltevés után, **5 érvényes, 0 hamis**, az első találat **2,6 mp**,
+  a teljes keresés 22,8 mp. ⚠️ Ez az „első keresés" esete: a laptop megjegyzett gépei között
+  nem voltak ennek a célszámnak a tárolói.
+- A belépők ezúttal elsőre engedtek — a 36. mérés elakadása valószínűleg a sok egymás utáni
+  futásnak szólt.
+
+⭐ **A LELET: a DHT mint hirdetőtábla mobilnetről és két hálózat között ugyanúgy működik, mint
+egy gépen — ez volt az egyetlen mérés, ami az építést befolyásolta volna.** ⏸️ Hátra: a
+bejegyzés **élettartama** (`keres` órák múlva) — és a mobil leképezés élettartama és szűrése
+(a kötés-hálóhoz), amik a DHT-t már nem érintik.
