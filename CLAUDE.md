@@ -17,6 +17,25 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
+### ▶️▶️ SESSION-VÁLTÁS (2026-09-19) — A KÖVETKEZŐ SESSION INNEN INDUL
+
+1. **Ha Csaba hozza a szomszéd mobilnetes telefonját → előbb a mobil SZŰRÉS mérése** (a DHT
+   mérései után ez az egyetlen hátralévő terepmérés). Telefonon, mobil adattal (wifi KI):
+   `cd ~/koino_1.1 && node koino/koino.js pajzsfuro 192.0.2.1 7373 7373` — a semmibe fúr, és
+   kiírja: *„KÍVÜLRŐL ÍGY LÁTSZOM: X:P"*. A laptopról (Claude futtatja): `node koino/koino.js
+   pajzsfuro X P 7373`. Ha a telefon jelzi a kopogást → a mobil NAT **beengedi** az idegent;
+   ha pár perc alatt semmi → **szűr** (mint az otthoni router). Jegyzőkönyv: `eredmenyek.md` 36/d.
+2. **A fejlesztés: előbb egy RÖVID TERV-DOKUMENTUM** (Csaba egyetértett): hogyan illeszkedik a
+   **kötés-háló + a buli + a hirdetőtábla (DHT) + az őrjárat**. Csaba döntési pontjaival:
+   *(a)* ki olvashatja a táblát — **külön, nem azonossági** kulcs vagy titkos só, a tartalom a
+   társaknak titkosítva (D6) · *(b)* a tábla **cserélhető** (DHT / webes) és van **kézi útja**
+   (4. szabály) · *(c)* a megismert DHT-gépek **átadása a társak között** (2. szabály — a belépő
+   csak kurbli) · *(d)* a régóta nyitott **cím-korlát** (saját cím mindig, másoké 10 → 3/0).
+3. **Ha jóváhagyja: az őrjárat UDP-re állítása** — minden változathoz kell, a mobil mérésektől
+   független. ⛔ A DHT-t az éles út **addig ne hívja**, amíg a terv nincs jóváhagyva.
+- ⚠️ **A `main` 2 committal jár az origin előtt** (`4e3192a`, `ef3c56d`) — push **csak Csaba
+  kérésére** (az egyszeri engedély nem általános).
+
 ### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
 
 ⭐ **A részletes terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) **legvége**
