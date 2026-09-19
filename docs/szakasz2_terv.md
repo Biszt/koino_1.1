@@ -1690,7 +1690,9 @@ saját emlékezetéből indul.*
 ⏸️ **Ami még hátra van a beépítés előtt:**
 1. ✅ **Terepmérés — MEGVAN (36/b, 2026-09-19):** mobilnetről 3/3, és két hálózat között is
    (a telefon mobilnetről tette fel, a laptop otthonról 2,6 mp alatt megtalálta, 0 hamis).
-2. **A bejegyzés élettartama:** `dhtMeres.js keres` órák múlva.
+2. ✅ **A bejegyzés élettartama — MEGVAN (36/c):** 6,6 óra után is fent, újraírás nélkül (7 → 5 → 3
+   tároló). ✅ **És a mobil leképezés (31/b):** 330 mp csendet is túlél, célfüggetlen — ⏸️ a mobil
+   **szűrés** még hátra van (telefon + laptop egyszerre).
 3. **A tervezés:** külön (nem azonossági) kulcs, a tartalom titkosítása a társaknak (D6), a
    megismert DHT-gépek átadása a társak között (2. szabály), és hogy a kötés-háló mikor olvas
    a tábláról.

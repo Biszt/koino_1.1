@@ -3146,3 +3146,41 @@ A szomszéd telefonja (Termux, **mobil adat, wifi nélkül** — a képernyőn 4
 egy gépen — ez volt az egyetlen mérés, ami az építést befolyásolta volna.** ⏸️ Hátra: a
 bejegyzés **élettartama** (`keres` órák múlva) — és a mobil leképezés élettartama és szűrése
 (a kötés-hálóhoz), amik a DHT-t már nem érintik.
+
+### ✅ 36/c. — A BEJEGYZÉS ÉLETTARTAMA: 6,6 óra után is megvan (2026-09-19, 19:40)
+
+A telefon mobilnetről 13:04-kor feltett bejegyzését a laptop **6,6 órával később, újraírás
+nélkül** is megtalálta: **3 érvényes, 0 hamis**, az első találat 2,1 mp, a keresés 24,6 mp.
+⭐ A tárolók száma lassan fogy: **7** (feltevéskor) → **5** (4 perc múlva) → **3** (6,6 óra
+múlva). *Vagyis a tábla nem percekben, hanem órákban felejt — az újraírás órás ütemben is
+bőven elég, és a hálózatváltáskori kiírás addig biztosan fent marad, amíg a társak kiolvassák.*
+⚠️ Egy mérés, egy bejegyzés — a pontos felejtési görbéhez több kell.
+
+---
+
+## 31/b. ⭐⭐⭐ A MOBIL LEKÉPEZÉS ÉLETTARTAMA — mobilnetről (2026-09-19, 17:59, terepmérés)
+
+`node koino/meres/udpLekepezesMeres.js` · a szomszéd telefonja, **mobil adaton** (4G), Csaba futtatta.
+
+- **Célfüggetlen:** ugyanarról a foglalatról (7380) három tükör (google-1, google-2,
+  cloudflare) **ugyanazt** látja: `130.43.210.126:61396`. *A bemondott port egy harmadik félre
+  is igaz — ahogy otthon (18., 31.) és a 32. mérésnél.*
+- ⭐⭐⭐ **A LEKÉPEZÉS 330 MP CSENDET IS TÚLÉLT:** 20 · 60 · 150 · 330 mp hallgatás után
+  **mind a négy foglalat ugyanazon a külső porton** szólalt meg; a 15 mp-enként kérdező
+  kontroll végig ugyanaz. *A korábbi „150 és 330 mp között elévül" (31. mérés, telefon) nem ez
+  a hálózat volt — ezen a mobil szolgáltatón legalább 5,5 perc.*
+- ⚠️ Mellékes megfigyelés: az egymás után nyitott foglalatok (7380…7385) **egymás utáni**
+  külső portot kaptak (61396…61401). A 32. mérésnél ugyanennél a szolgáltatónál újraindításkor
+  **más** szám jött — tehát erre NEM szabad építeni, csak feljegyezzük.
+
+### ⭐ A LELET — és ami a kötés-hálónak következik belőle
+
+**Ezen a mobil hálózaton egy 5 perces buli-köz életjel nélkül is átvészelhető.** A kötés-háló
+életjelének tehát nem kell sűrűbbnek lennie, mint maga a buli: *ha a társak a percfordulós
+ablakban amúgy is szólnak egymásnak, az ablak MAGA tartja életben a leképezést* — külön
+ébredés nélkül. ⚠️ **A 330 mp alsó korlát, nem a határ** (hosszabb csendet ez a futás nem
+mért), és **egy szolgáltató egy mérése** — más szolgáltatónál más lehet; ezért marad az elv:
+*a gyakoriság mindenhol a mért órából jön, nem beírt számból.*
+
+⏸️ **Hátra:** hosszabb csend (`udpLekepezesMeres.js 900`) · és a **mobil SZŰRÉS** (beengedi-e
+az idegent, amíg a leképezés él) — ahhoz a telefon és a laptop kell egyszerre.

@@ -31,7 +31,10 @@ DHT-n: feltevés és keresés ~20 mp (az ablak 5 perc), belépő NÉLKÜL, csak 
 *a belépő a kurbli, utána a készülék a saját emlékezetéből indul.* ⛔⛔ **A rontás-próba egy
 beragadást talált:** a keresés időkorlátja csak válaszra ellenőrződött — ✅ saját óra. ⏸️ **Hátra:**
 ✅ **mobilnetről is 3/3, és két hálózat között is megtalálta** (36/b, a szomszéd telefonja,
-2026-09-19 — a laptop 2,6 mp alatt találta meg, amit a telefon mobilnetről tett fel), a bejegyzés élettartama, és a tervezés
+2026-09-19 — a laptop 2,6 mp alatt találta meg, amit a telefon mobilnetről tett fel), ✅ **a bejegyzés 6,6 óra
+után is megvan** (36/c, újraírás nélkül, 7 → 3 tároló), ✅ **és a MOBIL leképezés 330 mp csendet is túlél**
+(31/b, célfüggetlen — *az 5 perces buli-köz életjel nélkül is átvészelhető ezen a szolgáltatón*),
+⏸️ a mobil **szűrés** még nincs mérve, és a tervezés
 (külön kulcs, titkosítás a társaknak — D6). ⚠️ **A munkakönyvtár tiszta, de a commitok NINCSENEK
 pusholva.**
 
