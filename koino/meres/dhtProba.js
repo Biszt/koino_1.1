@@ -115,7 +115,10 @@ proba('A tömör címek (BEP 5) oda-vissza', () => {
 // Minden hamis gép ISMERI az összes többit (egy igazi gép csak néhányat), és a legközelebbi
 // nyolcat adja vissza — így a keresés útja rövid, de VALÓDI: a kliens csak a belépőt ismeri.
 
-async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set() } = {}) {
+// ⭐ KIFELÉ ADVA (2026-09-20): a parancssor-próba is ezt használja — így a TÁBLA bekötése
+// (a `tabla` parancs és az őrjárat tábla-ága) **internet nélkül** mérhető. *Egy próba, ami
+// a valódi DHT-t hívná, a hálózat hangulatát mérné, nem a kódot.*
+export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set(), nemaPut = false } = {}) {
   const gepek = [];
   for (let i = 0; i < n; i++) {
     const halo = createSocket('udp4');
@@ -151,6 +154,7 @@ async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), n
         return valasz({ nodes: kozeli(g, a.target), token: Buffer.from('jegy'), ...tarolt });
       }
       if (q === 'put') {
+        if (nemaPut) return;   // a keresésre felel, a feltevésre soha
         const so = a.salt ?? Buffer.alloc(0);
         const ok = await bejegyzesEllenorzese({ k: a.k, salt: so, seq: a.seq, v: bencodeKodol(a.v), sig: a.sig });
         if (!ok) return hiba(206, 'invalid signature');
@@ -236,6 +240,26 @@ proba('⛔ Belépő nélkül a keresés AZONNAL, tisztán véget ér — nem vá
   const g = await k.keres(Buffer.alloc(32, 1), 'x');
   k.bezar();
   return g.legjobb === null && g.kereses.ok === 'nincs-tobb-jelolt' && Date.now() - kezdet < 500;
+});
+
+proba('⛔⛔ A BEZÁRÁS FELEL a függő kérdéseknek — a feltevés közben bezárt kliens NEM vár örökre', async () => {
+  // A gépek a keresésre felelnek, a feltevésre SOHA — és a kérdés-óra 30 mp, tehát ha a
+  // `bezar()` nem jelezne a függő `put`-oknak, a `kozzetesz` az órájuk törlése után örökre
+  // állna (a nem-esemény, 25. mérés). ⚠️ Rontás-próba: a `bezar()` jelzését kivéve ez a
+  // próba 5 mp után BUKIK (a határ nélkül a futtató akadna el, nem a próba).
+  const h = await hamisHalozat(20, { nemaPut: true });
+  try {
+    const b = await bejegyzesKeszitese({ kulcspar: await ujKulcspar(), salt: 'koino-proba', seq: 1, ertek: 'x' });
+    const a = await dhtKliens({ belepok: [h.belepo(0)], kerdesIdo: 30000, keresesIdo: 60000 });
+    const kezdet = Date.now();
+    setTimeout(() => a.bezar(), 1500);   // a keresés a hurok-címen addigra rég végzett
+    const p = await Promise.race([
+      a.kozzetesz(b),
+      new Promise((kesz) => setTimeout(() => kesz(null), 5000))
+    ]);
+    return p !== null && p.probalt >= 1 && p.tarolta === 0
+      && p.putHibak.lezarva === p.probalt && Date.now() - kezdet < 5000;
+  } finally { h.bezar(); }
 });
 
 export default futtatas;

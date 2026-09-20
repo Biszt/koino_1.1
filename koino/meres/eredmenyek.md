@@ -3228,3 +3228,43 @@ laptopra. Ez a SZŰRÉS, tisztán elválasztva.*
 Egy szolgáltató, egy készülék, egy este. Más mobil szolgáltató szűrhet lazábban — de a
 tervezésnek a **szigorú** esetet kell kiszolgálnia (9. szabály: a router-eltérés alapállapot).
 ⏸️ **Két mobil egymás közt** (hairpinning ugyanazon a szolgáltatón) továbbra is méretlen.
+
+---
+
+## 37. ⭐⭐⭐ A HIRDETŐTÁBLA ÉLESBEN — a cím átmegy a valódi DHT-n, titkosítva (2026-09-20)
+
+`node koino/koino.js tabla kiir <cím> <port>` · `… tabla olvas` — két adat-mappa egy gépen,
+a **valódi BitTorrent DHT-n** (nem hamis hálózat).
+
+### Az eredmény
+
+- ⭐ **KIÍRÁS: 22,1 mp, 8 tároló gép.** Az egyik készülék a MÁSIK rekeszébe írta a címét
+  (`203.0.113.7:41777`) — aláírva a saját tábla-kulcsával, a tartalom titkosítva.
+- ⭐ **KIOLVASÁS: 22,9 mp**, és a cím **kibontva, hibátlanul** megjött.
+- ⭐⭐ **A teljes lánc végigment:** tábla-kulcs → közös titok (X25519, küldés nélkül) →
+  AES-GCM titkosítás → Ed25519 aláírás → DHT (BEP 44) → vissza, kibontva.
+
+### ⭐ A LELET
+
+**Az „automatizált kurbli" működik: a leszakadt készülék KIFELÉ kiírja az új címét, a társa
+KIFELÉ kiolvassa — és közben egyetlen idegen sem tudja, mit olvas.** A 35. mérés modellje
+ezzel valódi alapot kapott: a tábla, ami ott ~1%-os leszakadást adott, élesben is ~22 mp,
+vagyis az 5 perces ablakba **bőven belefér**.
+
+### ⛔ AMIT A MÉRÉS NEM MOND MEG
+
+- **Egy gép, két adat-mappa** — a DHT-út valódi, de a két „készülék" ugyanazon a vonalon
+  van. ⏸️ Két valódi mobil még hátra van (a terv 4. lépése).
+- **Egy bejegyzés, egy alkalom.** A 36/c. szerint a bejegyzés 6,6 órát túlél; a tábla
+  felejtési görbéje ezzel együtt is csak közelítés.
+- ⚠️ **A 22 mp a KERESÉS ideje, nem a kiírásé:** a DHT-ben a művelet nagy része a rekeszhez
+  legközelebbi gépek megtalálása. *Ezért olcsóbb ritkán írni (csak címváltáskor), mint
+  gyakran.*
+
+### ⭐⭐ ÉS AMIT A SZERKEZET AD INGYEN — a rekeszt meg sem lehet találni
+
+A rekesz „sója" a **két nyilvános titkosító-kulcsból** számítódik, a DHT-beli cél pedig a
+kulcs és a só lenyomata. ⛔ Egy kívülálló tehát **nem tudja kiszámolni, hol keresse** — még
+akkor sem, ha a tábla-kulcsunkat valahonnan megszerezte. *Nem azért nem olvassa el, mert
+megtiltjuk, hanem mert nem találja meg.* ⚠️ A tartalmat ettől függetlenül a titkosítás védi:
+két külön őr, két külön kérdésre.

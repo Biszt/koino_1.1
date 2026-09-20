@@ -37,10 +37,15 @@ const KOINO_JS = new URL('../koino.js', import.meta.url).pathname.replace(/^\/([
  * LÁT, nem azt, amit a modul tud.
  */
 function fut(hely, ...ervek) {
+  // ⭐ AZ UTOLSÓ ÉRV LEHET KÖRNYEZET is (2026-09-20): a tábla-próbának meg kell mondani,
+  // melyik (hamis) DHT-belépőt használja. *Nem új gépezet: egy objektum a lista végén.*
+  const kornyezet = (ervek.length && typeof ervek[ervek.length - 1] === 'object')
+    ? ervek.pop() : {};
   return new Promise((teljesul, elakad) => {
     execFile(
       process.execPath, [KOINO_JS, ...ervek],
-      { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' }, timeout: 30000 },
+      { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...kornyezet },
+        timeout: 30000 },
       (hiba, kimenet, hibaKimenet) => {
         if (hiba && !kimenet) return elakad(new Error(hiba.message + ' | ' + hibaKimenet));
         teljesul(kimenet + hibaKimenet);
@@ -1609,6 +1614,58 @@ proba('⭐⭐ A KÖTÉS MEGSZÜLETIK A BULIN — a társ TÁBLA-KULCSA alatt, ne
       if (egyikOr) egyikOr.kill();
       if (masikOr) masikOr.kill();
       await varj(800);
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐⭐ A HIRDETŐTÁBLA BEKÖTÉSE (2026-09-20)
+// ===================================
+//
+// ⛔⛔ MIT MÉR: hogy a `tabla` PARANCS tényleg kiír és kiolvas — vagyis hogy a réteg nem
+// csak megépült, hanem a kéz el is éri (4. szabály). ⭐ És hogy a lánc VÉGIG megy: kulcs →
+// közös titok → titkosítás → aláírás → DHT → vissza.
+//
+// ⚠️ HAMIS DHT-N, NEM AZ IGAZIN: egy próba, ami a valódi hálózatot hívná, a hálózat
+// hangulatát mérné, nem a kódot. *Az igazi DHT-n külön terepmérés fut (37.).*
+
+proba('⭐⭐⭐ A TÁBLA PARANCSA KIÍR ÉS KIOLVAS — a lánc végigmegy (hamis DHT-n)',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const halo = await hamisHalozat(12);
+
+    try {
+      // Két tábla-kulcs, és mindkét oldal ismeri a másikat — ez a KÖTÉS (kézi úton
+      // felírva: a jegyzék sima JSON, 4. szabály).
+      const egyikK = await ujTablaKulcs();
+      const masikK = await ujTablaKulcs();
+      await writeFile(join(egyik, 'tabla-kulcs.json'), JSON.stringify(egyikK), 'utf8');
+      await writeFile(join(masik, 'tabla-kulcs.json'), JSON.stringify(masikK), 'utf8');
+
+      const kotes = (mienk, ove) => JSON.stringify({
+        kotesek: [{ ...nyilvanosResz(ove), hoszt: '10.0.0.1', port: 7373,
+          utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]
+      });
+      await writeFile(join(egyik, 'kotesek.json'), kotes(egyikK, masikK), 'utf8');
+      await writeFile(join(masik, 'kotesek.json'), kotes(masikK, egyikK), 'utf8');
+
+      const belepo = halo.belepo(0);
+      const kornyezet = { KOINO_DHT_BELEPOK: belepo };
+
+      // (1) Az egyik KIÍRJA az új címét a másik rekeszébe.
+      const kiiras = await fut(egyik, 'tabla', 'kiir', '203.0.113.7', '41777', kornyezet);
+      // (2) A másik KIOLVASSA — és a címnek meg kell jelennie.
+      const olvasas = await fut(masik, 'tabla', 'olvas', kornyezet);
+
+      return /1 rekeszbe kiírva/.test(kiiras)
+        && /203\.0\.113\.7:41777/.test(olvasas);
+    } finally {
+      halo.bezar();
       await rm(egyik, { recursive: true, force: true });
       await rm(masik, { recursive: true, force: true });
     }

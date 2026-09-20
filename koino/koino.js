@@ -135,8 +135,13 @@ import { pajzsfuras, pajzsfurasTobbfele, tcpPajzsfuras, kulsoCim } from './js/cs
 // cím — mert épp a cím az, ami elromlik.
 import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tablaKulcs.js';
 import {
-  talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista
+  talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
+  nemaKotesek
 } from './js/csere/kotesek.js';
+// ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20): a leszakadt készülék KIFELÉ írja ki az új címét, a
+// társai KIFELÉ olvassák ki. A tábla ma a BitTorrent DHT — de cserélhető (2. szabály).
+import { cimBejegyzes, cimBejegyzesbol, tarsRekesze } from './js/csere/tabla.js';
+import { dhtKliens, ALAP_BELEPOK } from './js/csere/dht.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
@@ -777,6 +782,110 @@ async function kotesFeljegyzese(tarolo, kapottTablaKulcs, cim) {
 }
 
 // ===================================
+// ⭐⭐⭐ A HIRDETŐTÁBLA — kiírás és kiolvasás (2026-09-20)
+// ===================================
+//
+// ⚠️ A TÁBLA SEGÉDESZKÖZ, NEM ELŐFELTÉTEL (2. szabály): ha a DHT nem elérhető, a koino
+// ugyanúgy működik — csak a leszakadt társ visszatalálása lassul (marad a kézi `tars`
+// és a helyi felfedezés). Ezért minden hiba itt **feljegyzés, nem összeomlás**.
+
+/** A megismert DHT-gépek — a belépő csak kurbli, utána a saját emlékezetünkből indulunk. */
+function dhtGyorsitotar() {
+  return join(alapHely(), 'dht-csomopontok.json');
+}
+
+async function dhtIsmertek() {
+  try { return JSON.parse(await readFile(dhtGyorsitotar(), 'utf8')); } catch { return []; }
+}
+
+async function dhtIsmertekMentese(kliens) {
+  try {
+    const osszes = new Map((await dhtIsmertek()).map((c) => [c.cim + ':' + c.port, c]));
+    for (const c of kliens.ismertCsomopontok()) osszes.set(c.cim + ':' + c.port, c);
+    // ⛔ Korlátos (9. szabály): a legutóbb felelt 300 marad.
+    await writeFile(dhtGyorsitotar(), JSON.stringify([...osszes.values()].slice(-300)));
+  } catch (hiba) {
+    console.warn('a DHT-gépek mentése nem sikerült', { ok: hiba.message });
+  }
+}
+
+/** Egy tábla-kliens, a saját emlékezetünkkel — a belépőket csak tartaléknak hívjuk. */
+async function tablaKliens() {
+  const ismertek = await dhtIsmertek();
+  const env = process.env.KOINO_DHT_BELEPOK;
+  const belepok = env === undefined ? ALAP_BELEPOK
+    : (env === 'nincs' || env === '' ? [] : env.split(',').map((s) => s.trim()).filter(Boolean));
+  return dhtKliens({ belepok, ismertek });
+}
+
+/**
+ * „Itt az új címem" — kiírjuk MINDEN kötésünk rekeszébe.
+ *
+ * ⭐ Eseményre, nem órára (Csaba döntése): csak akkor írunk, ha a címünk MEGVÁLTOZOTT.
+ * *Egy nyugodt napon a tábla forgalma nulla.*
+ */
+async function tablaraKiiras(sajatKulcs, kotesJegyzek, cim, naplo = () => {}) {
+  const celok = kotesLista(kotesJegyzek, 5).filter((k) => k.titkosito && k.alairo);
+  if (!celok.length || !cim?.hoszt) return { kiirt: 0, tarolta: 0 };
+
+  const kliens = await tablaKliens();
+  try {
+    let kiirt = 0, tarolta = 0;
+    for (const k of celok) {
+      try {
+        const bejegyzes = await cimBejegyzes(sajatKulcs,
+          { alairo: k.alairo, titkosito: k.titkosito }, cim);
+        const e = await kliens.kozzetesz(bejegyzes);
+        kiirt++;
+        tarolta += e.tarolta ?? 0;
+        naplo({ mi: 'KIIRVA', tars: k.alairo.slice(0, 8), tarolta: e.tarolta });
+      } catch (hiba) {
+        naplo({ mi: 'KIIRAS-BUKOTT', tars: k.alairo.slice(0, 8), ok: hiba.message });
+      }
+    }
+    await dhtIsmertekMentese(kliens);
+    return { kiirt, tarolta };
+  } finally {
+    kliens.bezar();
+  }
+}
+
+/**
+ * „Hol van most a társam?" — a NÉMA kötések rekeszét olvassuk ki.
+ *
+ * @returns {Promise<Array<{alairo: string, hoszt: string, port: number}>>}
+ */
+async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
+  if (!nemak.length) return [];
+
+  const kliens = await tablaKliens();
+  try {
+    const talaltak = [];
+    for (const k of nemak) {
+      if (!k.titkosito || !k.alairo) continue;
+      try {
+        const rekesz = await tarsRekesze(sajatKulcs, { alairo: k.alairo, titkosito: k.titkosito });
+        const e = await kliens.keres(rekesz.kulcs, rekesz.so);
+        if (!e.legjobb) { naplo({ mi: 'NINCS-A-TABLAN', tars: k.alairo.slice(0, 8) }); continue; }
+        const ertek = Buffer.from(e.legjobb.ertek).toString('utf8');
+        const cim = await cimBejegyzesbol(sajatKulcs,
+          { alairo: k.alairo, titkosito: k.titkosito }, ertek);
+        if (!cim) { naplo({ mi: 'OLVASHATATLAN', tars: k.alairo.slice(0, 8) }); continue; }
+        talaltak.push({ alairo: k.alairo, titkosito: k.titkosito, ...cim });
+        naplo({ mi: 'MEGVAN-A-TABLAN', tars: k.alairo.slice(0, 8),
+          hoszt: cim.hoszt, port: cim.port });
+      } catch (hiba) {
+        naplo({ mi: 'OLVASAS-BUKOTT', tars: k.alairo.slice(0, 8), ok: hiba.message });
+      }
+    }
+    await dhtIsmertekMentese(kliens);
+    return talaltak;
+  } finally {
+    kliens.bezar();
+  }
+}
+
+// ===================================
 // ⭐⭐⭐ A BULI UDP-ÁGA (2026-09-20)
 // ===================================
 //
@@ -1370,6 +1479,96 @@ try {
     //
     // ⭐ A 4. SZABÁLY: a parancs a funkcióval EGYÜTT jön. És itt külön haszna is van —
     // *ez az egyetlen hely, ahol ma LÁTNI lehet, mi hiányzik a készülékről.*
+
+    // ===== ⭐⭐⭐ A HIRDETŐTÁBLA KÉZI ÚTJA (2026-09-20, 4. szabály) =====
+    //
+    // ⛔ MIÉRT KELL KÉZI ÚT: *„minden automatikus cseréhez tartozzon kézi út"* — enélkül a
+    // tábla egy doboz lenne, amibe nem látunk bele. ⭐ Így megnézhető, mi van a rekeszben,
+    // és kiírható a cím akkor is, ha az őrjárat épp nem fut.
+    case 'tabla': {
+      const mit = (ervek[0] ?? 'allapot').toLowerCase();
+      const kulcs = await tablaKulcsBiztositasa();
+      const kotesTar = kotesTarolo();
+      const jegyzek = await kotesTar.olvas();
+
+      kiir(SZIN.vastag + 'A HIRDETŐTÁBLA' + SZIN.vege + SZIN.halvany
+        + '   (a rekeszem neve: ' + kulcs.alairoNyilvanos.slice(0, 12) + '… — ⛔ NEM az'
+        + ' azonosságod)' + SZIN.vege);
+      kiir(SZIN.halvany + '  ' + jegyzek.length + ' kötés a jegyzékben' + SZIN.vege);
+      kiir();
+
+      if (mit === 'kiir') {
+        // A címet a hívó adja meg, vagy a saját friss jegyzékünkből vesszük.
+        const hoszt = ervek[1];
+        const port = parseInt(ervek[2], 10);
+        let cim = hoszt && Number.isInteger(port) ? { hoszt, port } : null;
+        if (!cim) {
+          const frissek = await frissUdpCimek(udpCimTarolo());
+          cim = frissek.length ? { hoszt: frissek[0].hoszt, port: frissek[0].port } : null;
+        }
+        if (!cim) {
+          kiir(SZIN.nem + '⚠ Nincs mit kiírni: nem tudom a külső UDP-címemet.' + SZIN.vege);
+          kiir(SZIN.halvany + '  Fúrj egyet (`pajzsfuro`), vagy add meg kézzel:'
+            + ' tabla kiir <cím> <port>' + SZIN.vege);
+          break;
+        }
+        kiir(SZIN.halvany + '  Kiírom: ' + cim.hoszt + ':' + cim.port + SZIN.vege);
+        const e = await tablaraKiiras(kulcs, jegyzek, cim, (esemeny) => {
+          if (esemeny.mi === 'KIIRVA') {
+            kiir(SZIN.jo + '  ✓ ' + esemeny.tars + '… rekeszébe ('
+              + esemeny.tarolta + ' tároló gép)' + SZIN.vege);
+          }
+          if (esemeny.mi === 'KIIRAS-BUKOTT') {
+            kiir(SZIN.nem + '  ✗ ' + esemeny.tars + '…: ' + esemeny.ok + SZIN.vege);
+          }
+        });
+        kiir();
+        kiir(e.kiirt ? SZIN.jo + '⭐ ' + e.kiirt + ' rekeszbe kiírva' + SZIN.vege
+          : SZIN.nem + '⚠ Egyetlen rekeszbe sem sikerült kiírni' + SZIN.vege);
+        break;
+      }
+
+      if (mit === 'olvas') {
+        if (!jegyzek.length) {
+          kiir(SZIN.halvany + 'Nincs kötésem — nincs kinek a rekeszét megnézni.' + SZIN.vege);
+          kiir(SZIN.halvany + 'A kötés a bulin születik: `orjarat`.' + SZIN.vege);
+          break;
+        }
+        const talaltak = await tablarolOlvasas(kulcs, kotesLista(jegyzek, 5), (esemeny) => {
+          if (esemeny.mi === 'MEGVAN-A-TABLAN') {
+            kiir(SZIN.jo + '  ⭐ ' + esemeny.tars + '… → ' + esemeny.hoszt + ':'
+              + esemeny.port + SZIN.vege);
+          }
+          if (esemeny.mi === 'NINCS-A-TABLAN') {
+            kiir(SZIN.halvany + '  · ' + esemeny.tars + '… nincs a táblán (nem írt ki'
+              + ' semmit, vagy már elévült)' + SZIN.vege);
+          }
+          if (esemeny.mi === 'OLVASHATATLAN') {
+            kiir(SZIN.nem + '  ✗ ' + esemeny.tars + '… bejegyzése nem bontható ki'
+              + SZIN.vege);
+          }
+        });
+        kiir();
+        kiir(SZIN.halvany + talaltak.length + ' társ címe jött meg a tábláról' + SZIN.vege);
+        break;
+      }
+
+      // ===== `tabla` (állapot) =====
+      for (const k of kotesLista(jegyzek, 5)) {
+        const kor = Math.round((Date.now() - (k.utoljara ?? 0)) / 1000);
+        kiir('  ' + k.alairo.slice(0, 12) + '…' + SZIN.halvany
+          + '  ' + (k.hoszt ?? '?') + ':' + (k.port ?? '?')
+          + ' · ' + k.talalkozasok + ' találkozás · ' + kor + ' mp-e hallottam'
+          + SZIN.vege);
+      }
+      if (!jegyzek.length) {
+        kiir(SZIN.halvany + '  (még nincs kötés — a bulin születik: `orjarat`)' + SZIN.vege);
+      }
+      kiir();
+      kiir(SZIN.halvany + 'Kiírás:  node koino/koino.js tabla kiir [cím] [port]' + SZIN.vege);
+      kiir(SZIN.halvany + 'Olvasás: node koino/koino.js tabla olvas' + SZIN.vege);
+      break;
+    }
 
     case 'fajlok': {
       const { allapot } = await kepetKeszit();
@@ -2196,8 +2395,11 @@ try {
       const udpElevules = Math.max(60000, Math.round(perc * 60 * 1000));
       // ⭐⭐ A TÁBLA-KULCS: a kötések azonosítója és a rekeszünk neve a hirdetőtáblán.
       // ⛔ Nem az azonosságunk (D6) — külön kulcs, külön kérdés.
-      const sajatTablaKulcs = nyilvanosResz(await tablaKulcsBiztositasa());
+      const sajatTablaKulcsTeljes = await tablaKulcsBiztositasa();
+      const sajatTablaKulcs = nyilvanosResz(sajatTablaKulcsTeljes);
       const kotesTar = kotesTarolo();
+      // ⭐ Amit utoljára kiírtunk a táblára — ebből tudjuk, hogy VÁLTOZOTT-e a címünk.
+      let tablaraKiirtCim = null;
       // A postaláda HOSSZAN fut, ezért nem tömböt kap, hanem ezt a dobozt: minden ablak
       // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
       // hirdetne.
@@ -2474,6 +2676,56 @@ try {
           kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
             + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
             + adatMennyiseg({ bajtKuldott: kor.bajt }) + SZIN.vege);
+        }
+
+        // ===== ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20) =====
+        //
+        // ⛔ MIÉRT A KÖR VÉGÉN: a kopogásnak a percfordulóra kell esnie (36/d: rést csak a
+        // KÖLCSÖNÖS kopogás nyit), a tábla viszont ráér — a DHT-művelet ~20 mp, az ablak 5
+        // perc. *Ami egyidejűséget kíván, az megy elöl; ami nem, az utána.*
+        try {
+          const kotesJegyzekMost = await kotesTar.olvas();
+
+          // (1) OLVASÁS: akiről egy ablak óta nem hallottunk, azt a tábláról keressük.
+          const nemak = nemaKotesek(kotesJegyzekMost, kozMs);
+          if (nemak.length) {
+            const talaltak = await tablarolOlvasas(sajatTablaKulcsTeljes, nemak, (e) => {
+              if (e.mi === 'MEGVAN-A-TABLAN') {
+                kiir(SZIN.jo + '  ⭐ ' + ora() + ' a táblán megvan egy néma társ új címe: '
+                  + e.hoszt + ':' + e.port + SZIN.vege);
+              }
+              if (e.mi === 'NINCS-A-TABLAN') {
+                kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ nincs a táblán'
+                  + SZIN.vege);
+              }
+            });
+            // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE KERÜL — a következő buli már rá kopog.
+            for (const t of talaltak) {
+              await sajatUdpCimJegyzese(udpTarolo, t.hoszt, t.port, udpElevules);
+              await kotesFeljegyzese(kotesTar, { alairo: t.alairo, titkosito: t.titkosito },
+                { hoszt: t.hoszt, port: t.port });
+            }
+            if (talaltak.length) frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+          }
+
+          // (2) ÍRÁS: csak akkor, ha a CÍMÜNK MEGVÁLTOZOTT (Csaba: eseményre, nem órára).
+          const mostiCim = sajatKulsoUdp
+            ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null;
+          const valtozott = mostiCim && (!tablaraKiirtCim
+            || tablaraKiirtCim.hoszt !== mostiCim.hoszt || tablaraKiirtCim.port !== mostiCim.port);
+          if (valtozott) {
+            const e = await tablaraKiiras(sajatTablaKulcsTeljes,
+              await kotesTar.olvas(), mostiCim);
+            if (e.kiirt) {
+              tablaraKiirtCim = mostiCim;
+              kiir(SZIN.jo + '  ⭐ ' + ora() + ' az új címemet kiírtam a táblára ('
+                + e.kiirt + ' társ rekeszébe, ' + e.tarolta + ' tároló)' + SZIN.vege);
+            }
+          }
+        } catch (hiba) {
+          // ⚠️ A TÁBLA SEGÉDESZKÖZ (2. szabály): ha nem megy, a koino megy tovább.
+          kiir(SZIN.halvany + '  · ' + ora() + ' a tábla most nem elérhető ('
+            + hiba.message + ')' + SZIN.vege);
         }
 
         // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----

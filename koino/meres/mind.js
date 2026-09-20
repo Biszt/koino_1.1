@@ -39,6 +39,7 @@ import parancssor from './parancssorProba.js';
 import vizsga from './vizsgaProba.js';
 import dht from './dhtProba.js';
 import kotes from './kotesProba.js';
+import tabla from './tablaProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -64,7 +65,8 @@ const PROBAK = [
   { nev: 'parancssor', futtat: parancssor },
   { nev: 'vizsga', futtat: vizsga },
   { nev: 'dht', futtat: dht },
-  { nev: 'kotes', futtat: kotes }
+  { nev: 'kotes', futtat: kotes },
+  { nev: 'tabla', futtat: tabla }
 ];
 
 const szuro = process.argv[2];

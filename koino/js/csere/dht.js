@@ -355,6 +355,7 @@ export async function dhtKliens(beallitas = {}) {
   const fuggo = new Map();
   let tSzamlalo = crypto.getRandomValues(new Uint16Array(1))[0];
   const valaszoltak = new Map();   // „cím:port" → { cim, port, id } — a gyorsítótárhoz
+  let lezarva = false;
 
   halo.on('message', (adat, felado) => {
     let u;
@@ -377,6 +378,8 @@ export async function dhtKliens(beallitas = {}) {
 
   function kerdez(cim, port, q, a) {
     return new Promise((kesz) => {
+      // ⚠️ Lezárt foglalaton a `send` SZINKRON dob — a várakozó keresés ezt el nem kapná.
+      if (lezarva) return kesz({ ok: false, lezarva: true });
       const t = Buffer.alloc(2);
       t.writeUInt16BE(tSzamlalo = (tSzamlalo + 1) & 0xffff);
       const kulcs = t.toString('hex');
@@ -497,8 +500,11 @@ export async function dhtKliens(beallitas = {}) {
             } else {
               j.allapot = 'bukott';
               if (v.lejart) stat.lejart++;
-              else {
+              else if (!v.lezarva) {
                 stat.hibak[v.kod ?? 'ismeretlen'] = (stat.hibak[v.kod ?? 'ismeretlen'] ?? 0) + 1;
+                // ⚠️ A tartalék is kérdés: a KERDES_KORLAT rá is vonatkozik (különben a
+                // hibát adó gépek számával túlléphető — korlátos maradt, de nem a kimondott).
+                if (stat.kerdes >= KERDES_KORLAT) return leptet();
                 // ⭐ A GÉP ÉL, CSAK NEM ISMERI A `get`-et (régebbi kliens, vagy belépő).
                 // Tárolónak nem jó, de a szomszédait megmondhatja — különben a keresés
                 // elakadna rajta. Egyszer kérdezzük, `find_node`-dal.
@@ -543,7 +549,7 @@ export async function dhtKliens(beallitas = {}) {
     const tarolta = eredmenyek.filter((e) => e.ok).length;
     const putHibak = {};
     for (const e of eredmenyek) {
-      if (!e.ok) { const kod = e.lejart ? 'lejart' : (e.kod ?? 'ismeretlen'); putHibak[kod] = (putHibak[kod] ?? 0) + 1; }
+      if (!e.ok) { const kod = e.lejart ? 'lejart' : e.lezarva ? 'lezarva' : (e.kod ?? 'ismeretlen'); putHibak[kod] = (putHibak[kod] ?? 0) + 1; }
     }
     console.log('dhtKliens.kozzetesz - VÉGE', { tarolta, probalt: tarolok.length });
     return { kereses: k, tarolta, probalt: tarolok.length, putHibak };
@@ -584,8 +590,15 @@ export async function dhtKliens(beallitas = {}) {
       .map((c) => ({ cim: c.cim, port: c.port, id: c.id.toString('hex') }));
   }
 
+  // ⛔ A BEZÁRÁS FELEL A VÁRAKOZÓKNAK (2026-09-19, átnézés). Korábban csak az órájukat
+  // állította le — egy feltevés közbeni bezárásnál a `kozzetesz` így ÖRÖKRE várt (a
+  // nem-esemény, 25. mérés). Most minden függő kérdés „lezárva" választ kap.
   function bezar() {
-    for (const f of fuggo.values()) clearTimeout(f.ora);
+    lezarva = true;
+    for (const f of fuggo.values()) {
+      clearTimeout(f.ora);
+      f.kesz({ ok: false, lezarva: true });
+    }
     fuggo.clear();
     try { halo.close(); } catch { /* már zárva */ }
   }
