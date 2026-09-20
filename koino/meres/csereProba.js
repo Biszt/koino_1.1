@@ -836,7 +836,8 @@ proba('⭐ A címek NEM lesznek események — a tár tiszta marad', async () =>
   }
 });
 
-proba('⭐ A rossz címeket eldobjuk, és legfeljebb 10-et fogadunk el', async () => {
+proba('⭐ A rossz címeket eldobjuk, és MÁSOKÉBÓL legfeljebb HÁRMAT hirdetünk (34. mérés)',
+  async () => {
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
   const masik = await ujTar();
@@ -850,12 +851,17 @@ proba('⭐ A rossz címeket eldobjuk, és legfeljebb 10-et fogadunk el', async (
   });
   try {
     const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    // ⚠️ A D39 óta a figyelő SAJÁT címe is beleszámít a tízbe (és elöl van) — a korlát
-    // viszont ugyanúgy áll, és rossz cím továbbra sem jöhet át.
-    return eredmeny.kapottCimek.length === 10
+    // ⭐⭐ A SZABÁLY 2026-09-20 ÓTA (Csaba döntése a 34. mérés után): a SAJÁT cím mindig
+    // megy (azt a másik sehonnan máshonnan nem tudhatja meg), MÁSOKÉBÓL legfeljebb három.
+    // ⚠️ A figyelő saját címe elöl van, tehát 1 + 3 = 4 az egész.
+    // *A próba a döntéshez igazodik, nem fordítva — de a lényeg ugyanaz: van felső korlát,
+    // és rossz cím nem jöhet át.*
+    return eredmeny.kapottCimek.length === 4
       && eredmeny.kapottCimek.every((c) =>
         typeof c.hoszt === 'string' && Number.isInteger(c.port) && c.port > 0)
-      && !eredmeny.kapottCimek.some((c) => c.hoszt === 'rossz');
+      && !eredmeny.kapottCimek.some((c) => c.hoszt === 'rossz')
+      // ⭐ ÉS A SAJÁTJA TÉNYLEG OTT VAN: a hurok-címéről szól hozzánk.
+      && eredmeny.kapottCimek.some((c) => c.hoszt === '127.0.0.1');
   } finally {
     await figyelo.bezar();
   }

@@ -63,6 +63,18 @@ const KOR_KORLAT = 5;
 // fejenként még egymillió főnél is).
 const CIM_KORLAT = 10;
 
+// ⭐⭐⭐ ÉS AMIT MÁSOKRÓL MONDUNK, AZ HÁROM (Csaba döntése, 2026-09-20 — a 34. mérés után).
+//
+// ⛔ A 34. mérés megfordította a kérdést: **nem a cím-szám dönti el, hogy a hír körbeér-e**,
+// hanem a horgonyok aránya. K=0 és K=10 között **nincs mérhető különbség** — mert a
+// találkozás MAGA is címcsere. ⭐ A saját címünk viszont mindig megy: *azt a másik sehonnan
+// máshonnan nem tudhatja meg.*
+//
+// ⚠️ Az ára mérve (33. mérés): egy cím ~96 bájt körönként, tízzel a „nincs újdonság" kör
+// 386 → 1346 bájt (napi 5,4 MB 14 társnál). Hárommal ez ~670 bájttal olcsóbb — *és épp
+// ebbe a helybe fér bele a kötés-kulcs, ami nélkül a hirdetőtábla nem működne.*
+const IDEGEN_CIM_KORLAT = 3;
+
 // ===================================
 // AZ ÜZENET-SOR — a bejövő sorok kiolvasása
 // ===================================
@@ -176,6 +188,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
   let kivulrolIgyLatszom = null, kapottCimek = [], kapottUdpCimek = [];
+  let kapottTablaKulcs = null;      // a társ tábla-kulcsa — a KÖTÉS azonosítója
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -251,6 +264,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       console.log('parbeszed - VÉGE (fájl-átvitel)');
       return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
                masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
+               kapottTablaKulcs: null,
                fajlokNala: [] };
     }
 
@@ -396,16 +410,42 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
       // A sajátunk ELÖL: ha a korlátba nem fér bele minden, ez az egy cím az, amit a
       // másik sehonnan máshonnan nem tudhat meg.
+      // ⭐ A SAJÁT CÍM MINDIG ELÖL ÉS MINDIG MEGY, a többiekből legfeljebb három.
+      // ⚠️ A UDP-jegyzék NÉVTELEN (nem mondja meg, melyik cím kié), ezért a sajátunkat a
+      // hívó adja meg külön — ő az egyetlen, aki tudja, melyik az.
+      // ⚠️ LEHET FÜGGVÉNY IS, ugyanabból az okból, mint a jegyzék: a postaláda hosszan fut,
+      // és a saját külső címünk közben változhat (új rés, új leképezés).
+      const sajatUdp = typeof beallitas.sajatUdpCim === 'function'
+        ? beallitas.sajatUdpCim() : (beallitas.sajatUdpCim ?? null);
+      const idegenUdp = udpCimek.filter((c) => !(sajatUdp
+        && c.hoszt === sajatUdp.hoszt && c.port === sajatUdp.port));
+      // ⭐⭐⭐ A TÁBLA-KULCS IS ITT UTAZIK (2026-09-20): ez a KÖTÉS azonosítója és a
+      // rekeszünk neve a hirdetőtáblán. ⛔ **Nem az azonosságunk** (D6) — külön kulcs,
+      // hogy a táblát figyelő ne köthesse a címeinket a személyünkhöz.
+      // ⚠️ A NYILVÁNOS fele megy, a titkos soha; a társankénti közös titkot mindkét fél a
+      // sajátjából SZÁMÍTJA (`tablaKulcs.js`). ~90 bájt körönként — épp az a hely, amit a
+      // cím-korlát 10 → 3 felszabadított.
+      const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
+        ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
+
       kuld({
         uzenet: 'CIMEK',
-        cimek: [...sajatCim, ...hirdetettCimek].slice(0, CIM_KORLAT),
-        udp: udpCimek.slice(0, CIM_KORLAT)
+        ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
+        cimek: [...sajatCim, ...hirdetettCimek.slice(0, IDEGEN_CIM_KORLAT)],
+        udp: [
+          ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
+          ...idegenUdp.slice(0, IDEGEN_CIM_KORLAT)
+        ]
       });
       const ove = await varj('CIMEK');
       kapottCimek = (Array.isArray(ove.cimek) ? ove.cimek : [])
         .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
           && c.port > 0 && c.port < 65536)
         .slice(0, CIM_KORLAT);
+      // ⚠️ AZ ALAKJÁT ITT NEM ELLENŐRIZZÜK, csak továbbadjuk: a `vonal.js` semmit nem tud
+      // a tábláról (1. szabály). Az ellenőrzés a hívónál van (`ervenyesTablaKulcs`), és
+      // attól, hogy valaki bemond egy kulcsot, semmit nem hiszünk el neki (3. szabály).
+      kapottTablaKulcs = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
       kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
         .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
           && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
@@ -467,6 +507,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   });
   return {
     korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek, kapottUdpCimek,
+    kapottTablaKulcs,
     fajlokNala
   };
 }
@@ -507,6 +548,8 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
       hirdetettCimek, sajatCimHirdetese: true,
       // ⚠️ Függvényként is jöhet: a postaláda HOSSZAN fut, a friss lista ablakonként más.
       udpCimek: beallitas.udpCimek ?? [],
+      sajatUdpCim: beallitas.sajatUdpCim ?? null,
+      tablaKulcs: beallitas.tablaKulcs ?? null,
       fajlValasz: beallitas.fajlValasz ?? null,
       // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): aki fogadni tud, az a legértékesebb forrás.
       fajlOlvas: beallitas.fajlOlvas ?? null
@@ -551,7 +594,8 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
  * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
  */
 export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
-                                   hirdetettCimek = [], fajl = {}, udpCimek = []) {
+                                   hirdetettCimek = [], fajl = {}, udpCimek = [],
+                                   beallitas = {}) {
   console.log('csereVonalon - KEZDÉS', { cim, port });
 
   // family: 0 → a rendszer maga válasszon IPv4 és IPv6 között. A Szakasz 2 mérése miatt
@@ -574,6 +618,8 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
       // ⭐ A friss UDP-címek a TCP-cserén is utaznak (2026-09-18) — ma ez az út, amin
       // találkozunk. *A terjesztés nem a szállítástól függ, hanem a bulitól.*
       udpCimek,
+      sajatUdpCim: beallitas.sajatUdpCim ?? null,
+      tablaKulcs: beallitas.tablaKulcs ?? null,
       fajlKerelem: fajl.kerelem ?? null,
       fajlValasz: fajl.valasz ?? null,
       fajlOlvas: fajl.olvas ?? null

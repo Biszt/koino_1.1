@@ -77,6 +77,7 @@ import { dirname, join } from 'node:path';
 
 import {
   esemenyTarNyitasa, kulcsTarolo, tarsakTarolo, szeletJegyzekTarolo, udpCimTarolo,
+  tablaKulcsTarolo, kotesTarolo,
   felszabaditasTarolo, alapHely,
   ismertKoinok,
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
@@ -130,6 +131,12 @@ import {
   udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa, UDP_CIM_ELEVULES
 } from './js/csere/tarsak.js';
 import { pajzsfuras, pajzsfurasTobbfele, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
+// ⭐⭐ A TÁBLA-KULCS ÉS A KÖTÉSEK (2026-09-20): a kötést a tábla-kulcs azonosítja, nem a
+// cím — mert épp a cím az, ami elromlik.
+import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tablaKulcs.js';
+import {
+  talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista
+} from './js/csere/kotesek.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
@@ -731,6 +738,45 @@ async function udpCimeketTanul(jegyzekTarolo, kapott, elevules = UDP_CIM_ELEVULE
 }
 
 // ===================================
+// ⭐⭐ A TÁBLA-KULCS ÉS A KÖTÉSEK (2026-09-20)
+// ===================================
+
+/**
+ * A készülék tábla-kulcsa — ha még nincs, most születik.
+ *
+ * ⛔⛔ EZ NEM AZ AZONOSSÁGOD (D6). A `kulcs.json` azt mondja meg, KI vagy; ez azt, hogy
+ * hol érhető el ez a KÉSZÜLÉK. *Aki a hirdetőtáblát figyeli, ne tudja a címeidet a
+ * személyedhez kötni.*
+ */
+async function tablaKulcsBiztositasa() {
+  const tarolo = tablaKulcsTarolo();
+  const meglevo = await tarolo.olvas();
+  if (meglevo?.alairoNyilvanos && meglevo?.titkositoNyilvanos) return meglevo;
+
+  const uj = await ujTablaKulcs();
+  await tarolo.ir(uj);
+  return uj;
+}
+
+/**
+ * Egy sikeres találkozás feljegyzése a kötés-jegyzékbe.
+ *
+ * ⚠️ A CÍM CSAK JELÖLT: azt jegyezzük fel, ahol az imént elértük. Ha ez TCP-cím volt, a
+ * következő bulin egy kopogás (~60 bájt) kideríti, hogy UDP-n is ott van-e. *Olcsóbb
+ * megpróbálni, mint elfelejteni valakit, akivel az előbb beszéltünk.*
+ *
+ * @returns {Promise<boolean>} feljegyeztük-e
+ */
+async function kotesFeljegyzese(tarolo, kapottTablaKulcs, cim) {
+  if (!ervenyesTablaKulcs(kapottTablaKulcs)) return false;
+  const most = Date.now();
+  const jegyzek = await tarolo.olvas();
+  await tarolo.ir(jegyzekTakaritasa(
+    talalkozasFeljegyzese(jegyzek, kapottTablaKulcs, cim, most)));
+  return true;
+}
+
+// ===================================
 // ⭐⭐⭐ A BULI UDP-ÁGA (2026-09-20)
 // ===================================
 //
@@ -760,11 +806,12 @@ const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy cser
 async function udpBuli(beallitas) {
   const {
     helyiPort, celok, idokorlat, tar, koino, tarolo, udpTarolo, udpElevules,
-    fajlok, hirdetjuk, frissUdp, naplo = () => {}
+    fajlok, hirdetjuk, frissUdp, tablaKulcs = null, kotesTarolo: kotesek = null,
+    naplo = () => {}
   } = beallitas;
 
   const osszeg = {
-    celok: celok.length, atfurt: 0, sikeres: 0, uj: 0, kuldott: 0, bajt: 0,
+    celok: celok.length, atfurt: 0, sikeres: 0, uj: 0, kuldott: 0, bajt: 0, kotesek: 0,
     fajlKesz: 0, fajlKiszolgalt: 0, kapottCimek: [], kapottUdpCimek: [], fajlokNala: []
   };
   if (!celok.length || idokorlat <= 0) return osszeg;
@@ -801,6 +848,8 @@ async function udpBuli(beallitas) {
       const csere = await csereUdpResen(halo, cel.cim, celPort, tar, koino, {
         hirdetettCimek: hirdetjuk,
         udpCimek: frissUdp,
+        sajatUdpCim: beallitas.sajatUdpCim ?? null,
+        tablaKulcs,
         fajlKerelem: fajlok.kerelem,
         fajlValasz: async (kertek) => {
           const van = await fajlok.valasz(kertek);
@@ -809,6 +858,13 @@ async function udpBuli(beallitas) {
         },
         fajlOlvas: fajlok.olvas
       });
+
+      // ⭐⭐ ÉS ITT SZÜLETIK A KÖTÉS: akivel összeértünk, azt feljegyezzük a tábla-kulcsa
+      // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
+      if (kotesek && await kotesFeljegyzese(kotesek, csere.kapottTablaKulcs,
+        { hoszt: cel.cim, port: celPort })) {
+        osszeg.kotesek++;
+      }
 
       osszeg.sikeres++;
       osszeg.uj += csere.uj ?? 0;
@@ -2138,6 +2194,10 @@ try {
       // (9. szabály): a határ abból következik, ami amúgy is adott.*
       const udpTarolo = udpCimTarolo();
       const udpElevules = Math.max(60000, Math.round(perc * 60 * 1000));
+      // ⭐⭐ A TÁBLA-KULCS: a kötések azonosítója és a rekeszünk neve a hirdetőtáblán.
+      // ⛔ Nem az azonosságunk (D6) — külön kulcs, külön kérdés.
+      const sajatTablaKulcs = nyilvanosResz(await tablaKulcsBiztositasa());
+      const kotesTar = kotesTarolo();
       // A postaláda HOSSZAN fut, ezért nem tömböt kap, hanem ezt a dobozt: minden ablak
       // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
       // hirdetne.
@@ -2155,6 +2215,11 @@ try {
         fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
         hirdetettCimek: await hirdetendoCimek(tarolo),
         udpCimek: () => frissUdp,
+        // ⭐ A SAJÁT CÍMÜNK MINDIG MEGY (Csaba döntése, 2026-09-20): a jegyzék névtelen,
+        // ezért csak MI tudjuk megmondani, melyik bejegyzés a sajátunk.
+        sajatUdpCim: () => (sajatKulsoUdp
+          ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null),
+        tablaKulcs: sajatTablaKulcs,
         utana: async (e) => {
           if (e.hiba) return;
           if (e.masKoino) return;
@@ -2166,6 +2231,9 @@ try {
           // sosem hívott minket (Csaba, 2026-09-18).
           const udpTanult = await udpCimeketTanul(udpTarolo, e.kapottUdpCimek, udpElevules);
           if (udpTanult) frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+          // ⭐ A BEKOPOGÓVAL IS KÖTÉS SZÜLETIK — ugyanúgy, ahogy a címet is tanuljuk tőle.
+          await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
+            { hoszt: e.honnan, port: null });
           kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
             + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
             + ' (' + adatMennyiseg(e) + ')'
@@ -2215,7 +2283,13 @@ try {
         // (D22) két készüléke nem találná meg egymást.
         const sajatCimek = await sajatOsszesCim();
         const frissJegyzek = await frissUdpCimek(udpTarolo, udpElevules);
-        const udpCelok = frissJegyzek.filter((c) => {
+        // ⭐⭐⭐ A KÖTÉSEK ELŐL: az ő utolsó ismert címük akkor is megvan, ha a névtelen
+        // jegyzékből már elévült (31. mérés: a leképezés percek alatt elhal). *A kötés
+        // épp ezért nem címhez kötődik, hanem tábla-kulcshoz.*
+        const kotesJegyzek = await kotesTar.olvas();
+        const celJeloltek = kopogasCeljai(kotesJegyzek, frissJegyzek)
+          .map((c) => ({ hoszt: c.cim, port: c.port }));
+        const udpCelok = celJeloltek.filter((c) => {
           // A saját, épp mért külső címünk — pontos pár szerint.
           if (sajatKulsoUdp && sajatCimE(c.hoszt, [sajatKulsoUdp.cim])
             && c.port === sajatKulsoUdp.port) return false;
@@ -2234,6 +2308,10 @@ try {
             fajlok: await fajlResz(),
             hirdetjuk: await hirdetendoCimek(tarolo),
             frissUdp,
+            sajatUdpCim: sajatKulsoUdp
+              ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
+            tablaKulcs: sajatTablaKulcs,
+            kotesTarolo: kotesTar,
             naplo: (e) => {
               if (e.mi === 'SAJAT-CIM') {
                 sajatKulsoUdp = { cim: e.cim, port: e.port };
@@ -2319,7 +2397,11 @@ try {
             menetek++;
             const menet = await korbeCsere(lista,
               (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok,
-                frissUdp));
+                frissUdp, {
+                  sajatUdpCim: sajatKulsoUdp
+                    ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
+                  tablaKulcs: sajatTablaKulcs
+                }));
 
             // Az első menet adja a kör vázát; a továbbiak hozzáadódnak.
             kor = kor === null ? menet : {
@@ -2348,6 +2430,20 @@ try {
           if (fajlTanultak) {
             kiir(SZIN.jo + '  + ' + ora() + ' ' + fajlTanultak
               + ' fájlról tudom meg, hogy náluk megvan' + SZIN.vege);
+          }
+
+          // ⭐⭐ ÉS A TCP-KÖRBŐL IS SZÜLETIK KÖTÉS: aki rendszeresen ott van, az a társam,
+          // akárhogy értünk össze. ⚠️ A cím itt TCP-cím — jelölt, nem ígéret: a következő
+          // bulin egy kopogás (~60 bájt) kideríti, hogy UDP-n is ott van-e.
+          let ujKotesek = 0;
+          for (const e of kor.eredmenyek) {
+            if (!e.sikerult) continue;
+            if (await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
+              { hoszt: e.tars.hoszt, port: e.tars.port })) ujKotesek++;
+          }
+          if (ujKotesek) {
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + ujKotesek
+              + ' társsal van kötésem (a tábla-kulcsuk alatt)' + SZIN.vege);
           }
 
           // ⭐ AMIT A TÁRSAKTÓL HALLOTTUNK: új címek a listára. Ettől bővül magától.

@@ -879,6 +879,75 @@ export function felszabaditasTarolo(hely = alapHely()) {
 }
 
 // ===================================
+// ⭐⭐ A TÁBLA-KULCS ÉS A KÖTÉSEK TÁROLÁSA (2026-09-20)
+// ===================================
+
+/**
+ * A készülék TÁBLA-KULCSA — a neve a hirdetőtáblán, és a kötések azonosítója.
+ *
+ * ⛔⛔ EZ NEM AZ AZONOSSÁGOD (D6): a `kulcs.json` azt mondja meg, KI vagy, ez pedig azt,
+ * hogy hol érhető el ez a KÉSZÜLÉK. Szándékosan külön fájl és külön kulcs — aki a táblát
+ * figyeli, ne tudja a címeidet a személyedhez kötni.
+ *
+ * ⚠️ A KOINÓK FÖLÖTT lakik, mint a kulcs és a társ-lista: a készülék elérhetősége nem
+ * koino-helyi kérdés (D25).
+ */
+export function tablaKulcsTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'tabla-kulcs.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Object|null>} a kulcs-leírás, vagy null, ha még nincs */
+    async olvas() {
+      try {
+        return JSON.parse(await readFile(fajl, 'utf8'));
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return null;
+        throw hiba;
+      }
+    },
+
+    async ir(leiras) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify(leiras, null, 2), 'utf8');
+    }
+  };
+}
+
+/**
+ * A KÖTÉS-JEGYZÉK: kivel tartok rendszeres kapcsolatot (helyi megfigyelés, 3. szabály).
+ *
+ * ⚠️ Sosem terjed, és semmit nem dönt el a koinóban — ha elveszik, a következő bulikon
+ * újraépül. *Ezért nem is baj, hogy sima JSON: a 4. szabály kézi útja is ez.*
+ */
+export function kotesTarolo(hely = alapHely()) {
+  const fajl = join(hely, 'kotesek.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Array<Object>>} */
+    async olvas() {
+      try {
+        const adat = JSON.parse(await readFile(fajl, 'utf8'));
+        const lista = Array.isArray(adat) ? adat : adat.kotesek;
+        return Array.isArray(lista) ? lista : [];
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return [];
+        console.warn('kotesTarolo - olvashatatlan jegyzék, üresnek vesszük', { fajl });
+        return [];
+      }
+    },
+
+    async ir(jegyzek) {
+      await mkdir(hely, { recursive: true });
+      await writeFile(fajl, JSON.stringify({ kotesek: jegyzek }, null, 2), 'utf8');
+    }
+  };
+}
+
+// ===================================
 // ⭐ A FRISS UDP-CÍMEK TÁROLÁSA (2026-09-18)
 // ===================================
 

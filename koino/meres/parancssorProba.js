@@ -1554,6 +1554,66 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT KOPOGÁSSAL TALÁL ÖSSZE — társ-lista NÉLKÜL
     }
   });
 
+proba('⭐⭐ A KÖTÉS MEGSZÜLETIK A BULIN — a társ TÁBLA-KULCSA alatt, nem a címe alatt',
+  async () => {
+    // ⛔ MIT MÉR: a kötés-jegyzék a valódi üzemmódban épül-e. ⭐ És hogy a társat a
+    // TÁBLA-KULCSA azonosítja — mert a cím az, ami holnap elromlik.
+    // ⚠️ A bizonyíték a MÁSIK készülék lemezén van: az ő tábla-kulcsa szerepel-e nálunk.
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const A = 7463, B = 7464;
+    let egyikOr = null, masikOr = null;
+
+    try {
+      await fut(egyik, 'koino', 'Kotes proba');
+      const vitt = join(egyik, 'alap.jsonl');
+      await fut(egyik, 'kivisz', vitt, 'mind');
+      await fut(masik, 'behoz', vitt);
+
+      const jegyzek = (hova, mihez) => writeFile(join(hova, 'udpcimek.json'),
+        JSON.stringify({ cimek: [{ hoszt: '127.0.0.1', port: mihez, mikor: Date.now() }] }),
+        'utf8');
+      await jegyzek(egyik, B);
+      await jegyzek(masik, A);
+
+      egyikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(A)], {
+        env: { ...process.env, KOINO_ADAT: egyik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      masikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(B)], {
+        env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(14000);
+      egyikOr.kill(); egyikOr = null;
+      masikOr.kill(); masikOr = null;
+      await varj(700);
+
+      const olvas = async (hely, mit) => {
+        try { return JSON.parse(await readFile(join(hely, mit), 'utf8')); } catch { return null; }
+      };
+      const egyikKulcs = await olvas(egyik, 'tabla-kulcs.json');
+      const masikKulcs = await olvas(masik, 'tabla-kulcs.json');
+      const egyikKotes = (await olvas(egyik, 'kotesek.json'))?.kotesek ?? [];
+      const masikKotes = (await olvas(masik, 'kotesek.json'))?.kotesek ?? [];
+
+      return !!egyikKulcs && !!masikKulcs
+        // ⭐ MINDKETTŐ A MÁSIK TÁBLA-KULCSÁT JEGYEZTE FEL.
+        && egyikKotes.some((k) => k.alairo === masikKulcs.alairoNyilvanos)
+        && masikKotes.some((k) => k.alairo === egyikKulcs.alairoNyilvanos)
+        // ⛔⛔ ÉS A TÁBLA-KULCS NEM AZ AZONOSSÁG: a mentett kulcs-fájlban semmi köze
+        // a `kulcs.json`-hoz. *Ha valaki egyszer összevonná a kettőt, ez buktat.*
+        && egyikKulcs.alairoNyilvanos
+          !== (await olvas(egyik, 'kulcs.json'))?.nyilvanos
+        // ⭐ És a cím is ott van, amire kopogni lehet.
+        && egyikKotes.some((k) => k.hoszt === '127.0.0.1' && k.port === B);
+    } finally {
+      if (egyikOr) egyikOr.kill();
+      if (masikOr) masikOr.kill();
+      await varj(800);
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
 // ⛔⛔ ÉS A HARMADIK PRÓBA AZ ŐRJÁRATÉ — mert a fenti kettő NEM fedi le.
 //
 // *Ezt a saját rontás-próbám mutatta meg (2026-09-18): kivágtam az őrjárat hirdetését, és a
