@@ -54,7 +54,7 @@ utoljára) · *(3)* **a tábla bekötése** (írás címváltáskor, olvasás n�
 terjed, de semmi nem tárcsáz róla, mert az őrjárat TCP-n cserél. *A 33. mérés bájtjaiért ma nem
 kapunk semmit.* Ezt az (1) lépés hozza meg.
 
-## 4. ⏸️ A DÖNTÉSEK — ezek Csabáé
+## 4. ✅ A DÖNTÉSEK — Csaba válaszai (2026-09-20)
 
 ### (a) Ki olvashatja a táblát? — a kulcs és a titkosítás (D6)
 
@@ -72,23 +72,31 @@ kapunk semmit.* Ezt az (1) lépés hozza meg.
    függőség). A közös titkot **a találkozáskor** cseréljük, a már hitelesített csere-csatornán;
    nem kell hozzá új kulcs-matematika.
 
-⏸️ **Amit el kell döntened:** elég-e ennyi, vagy a tábla-kulcs **forogjon is** (időszakonként
-új rekesz, hogy egy régi megfigyelő ne követhessen). ⭐ A forgatás megépíthető, de bonyolít:
-ha a társ lemarad egy ablakot, tudnia kell, melyik rekeszt nézze.
+✅ **CSABA DÖNTÉSE: elég a külön kulcs — NINCS forgatás.** *(„igazából nem tudom, hogy milyen
+visszaélések történhetnek akkor, ha nem titkos cím esetében.")* ⭐ **A titkosítás marad**, mert
+gyakorlatilag ingyen van, és három valódi visszaélést zár ki:
+1. ⛔⛔ **A bejegyzést IDEGENEK tárolják** — nem egy „tábla", hanem 7–8 véletlen internetes gép
+   (36. mérés). Nyílt tartalomnál ők látják az **állandó kulcsot és mellette a címedet**, tehát
+   hónapokon át összefűzhetik: mikor voltál otthon, mikor mobilneten, mikor utaztál.
+2. **Az állandó kulcs maga is azonosító** — a hálózataidat akkor is összeköti, ha a tartalom
+   haszontalan lenne. *(A forgatás EZT szüntetné meg; Csaba szerint ez az ár nem éri meg.)*
+3. A cím ismerete **támadási felület** (kopogtatás, terhelés) — a kisebbik baj, mert a csere
+   úgyis ellenőriz mindent (3. szabály).
+⚠️ **Amit a titkosítás NEM old meg, és ezt kimondjuk:** a **társaid** előtt a cím amúgy sem
+titok (a cserén ma is nyíltan utazik) — ez a tárolók és a véletlen megfigyelők elleni védelem.
 
 ### (b) Cserélhető tábla és kézi út (2. és 4. szabály)
 
 A DHT **nem lehet előfeltétel**: a program egy *„tábla"* nevű illesztőt hívjon (*kiír* /
 *kiolvas*), és a DHT ennek **egy** megvalósítása legyen. ⏸️ **Döntés:** épüljön-e mellé
-azonnal a **webes tábla** is (egy egyszerű cím, amit bárki üzemeltethet), vagy egyelőre elég a
-DHT + a kézi út. ⭐ **A kézi út mindenképp kell** (4. szabály): a `tars <cím>` és a helyi
+azonnal a **webes tábla** is → ✅ **CSABA: NEM, elég a DHT és a kézi út.** ⭐ **A kézi út mindenképp kell** (4. szabály): a `tars <cím>` és a helyi
 felfedezés ma is megvan — *a tábla a kurblit automatizálja, nem váltja ki.*
 
 ### (c) A megismert DHT-gépek átadása a társak között
 
 ⛔ A közismert belépő-gépek korlátoznak (36.: 5-ből 2 kör elakadt rajtuk). ⭐ A megoldás a
 mérésben már bevált: **a készülék a saját emlékezetéből indul** (belépő nélkül 10/10). ⏸️
-**Döntés:** a csere adjon-e át néhány megismert DHT-gépet a társaknak — így egy friss telepítés
+**CSABA: IGEN** — a csere adjon át néhány megismert DHT-gépet, így egy friss telepítés
 az első buli után **független a közismert belépőktől**. ⚠️ Az ára: pár száz bájt körönként, és
 ezt a (d) döntéssel együtt kell nézni.
 
@@ -98,11 +106,11 @@ Ma **10 idegen cím** utazik körönként (~96 bájt darabja; a „nincs újdons
 bájt). ⛔ A 34. mérés szerint **a szám nem számít** (K=0 és K=10 között nincs mérhető
 különbség), mert a találkozás maga is címcsere. ⭐ **A javaslatom: a saját cím mindig menjen,
 másoké 10 → 3.** *(Nullára is vihető, de a 3 olcsó, és a kötésen kívüli véletlen találkozásokat
-segíti.)* ⏸️ **Döntés: 3 vagy 0.**
+segíti.)* ✅ **CSABA: rendben — 3.**
 
-### (e) Mikor írunk és olvasunk a tábláról?
+### (e) Mikor írunk és olvasunk a tábláról? — ✅ **CSABA: rendben (eseményre)**
 
-⭐ **A javaslatom: eseményre, nem órára.** Írunk, ha **megváltozott a saját külső címünk**;
+⭐ **Eseményre, nem órára.** Írunk, ha **megváltozott a saját külső címünk**;
 olvasunk, ha **egy kötött társ egy ablakot kihagyott**. *Így egy nyugodt napon a tábla
 forgalma nulla* — szemben az időzített írással, ami akkor is dolgozik, ha nincs mit mondani.
 ⚠️ Ezt mérni fogjuk: a 35. modell 5 perces ablakkal számolt, és a 36. szerint egy feltevés
