@@ -3268,3 +3268,35 @@ kulcs és a só lenyomata. ⛔ Egy kívülálló tehát **nem tudja kiszámolni,
 akkor sem, ha a tábla-kulcsunkat valahonnan megszerezte. *Nem azért nem olvassa el, mert
 megtiltjuk, hanem mert nem találja meg.* ⚠️ A tartalmat ettől függetlenül a titkosítás védi:
 két külön őr, két külön kérdésre.
+
+---
+
+## 38. ⚠️ MIBE KERÜL A KÖR A TÁBLA UTÁN? (2026-09-20, a 33. mérés folytatása)
+
+Két készülék egy gépen, `figyel` + `csere`, **nincs újdonság** (üres kör) — ez a napi
+forgalom alapegysége (D35, 6. szabály).
+
+| a kör tartalma | bájt |
+|---|---|
+| ⛔ **RÉGEN: tíz idegen cím** (33. mérés) | **1346** |
+| ⭐ **MA: 3 idegen cím + saját + tábla-kulcs + 3 DHT-gép** | **931** |
+| csak a tábla-kulccsal (üres jegyzékek) | 762 |
+| tábla-kulcs nélkül, üres jegyzékekkel | 550 |
+
+### ⭐ A LELET — a tábla ÁRÁT a cím-korlát kifizette
+
+- **A tábla-kulcs 212 bájt körönként** (106 irányonként: két 43 karakteres kulcs + a mezők).
+  ⚠️ Ez több, mint amennyit becsültem (~90) — *a mérés megint pontosabb volt az érvelésnél.*
+- ⭐⭐ **De a teljes kör MÉGIS olcsóbb lett: 1346 → 931 bájt**, mert Csaba (d) döntése
+  (mások címéből 3 megy, nem 10) ennél többet szabadított fel. *A hirdetőtábla tehát nem
+  drágítja a napi forgalmat — a helyére költözött annak, amiről a 34. mérés kimutatta, hogy
+  nem számít.*
+- Napi szinten, 5 perces ütemmel, 14 társsal: **5,4 MB → 3,8 MB**.
+
+### ⏸️ AMI OLCSÓBB LEHETNE (ha egyszer szűkös lesz)
+
+A tábla-kulcs **minden körben** utazik, pedig a társ az első találkozás után már tudja.
+⭐ Olcsóbb alak: a kulcs helyett egy rövid **ujjlenyomat** menne (kb. 20 bájt), és a teljes
+kulcs csak akkor, ha a másik nem ismeri fel. ⛔ Ez viszont protokoll-bonyolítás (ki kérdez,
+ki felel, mi történik, ha az egyik fél elveszítette a jegyzékét) — *ma a 931 bájt kevesebb,
+mint ami tegnap volt, tehát nem kell megvenni ezt a bonyolultságot.*
