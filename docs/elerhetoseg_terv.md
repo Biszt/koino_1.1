@@ -1,6 +1,7 @@
 # AZ ELÉRHETŐSÉG TERVE — kötés-háló · buli · hirdetőtábla · őrjárat
 
-*(2026-09-20, Csaba kérésére. ⛔ Ez TERV: eldöntendő pontokkal. A kód a jóváhagyás után épül.)*
+*(2026-09-20, Csaba kérésére. ⭐ **A döntések megvannak, és az 1–3. lépés MEGÉPÜLT** — lásd az
+5. szakaszt. Ami hátra van: a terepmérés két valódi mobillal, és a véletlen séta.)*
 
 ## 1. A kérdés, egy mondatban
 
@@ -39,20 +40,36 @@ buli adja az egyidejűséget; a tábla hozza vissza, ami elszakadt; az őrjárat
 5. **Ha a saját külső címem megváltozott → kiírom a táblára** (mindegyik társam rekeszébe).
 6. Az ablak végén elenged mindent (5. szabály).
 
-## 3. Mi van már meg, és mi hiányzik
+## 3. ✅ MI ÉPÜLT MEG (2026-09-20) — és mi maradt
 
-✅ **Megvan:** a percfordulós ablak és az ismétlődő menet (30.) · a pajzsfúrás és a csere a
-résen (17., 19., 32.) · a fájl-randevú · a friss UDP-cím jegyzéke és terjesztése a cserén
-(`udpcimek.json`, 33.) · a DHT-kliens mérőeszközként (`js/csere/dht.js`, 36.).
+✅ **(1) AZ ŐRJÁRAT UDP-RE ÁLLT.** A kör elején **egy foglalatról** kopogunk minden friss
+címre (a leképezés a foglalathoz tartozik — társanként külön foglalattal nem lenne egyetlen
+bemondható címünk), és akinek megnyílik a rése, azzal **azonnal** csere + fájl-randevú megy
+ugyanazon a foglalaton. A TCP-kör és a postaláda változatlanul fut mellette.
+⭐ *Ezzel a friss cím jegyzéke nem write-only többé: végre tárcsáz róla valaki.*
 
-⛔ **Hiányzik:** *(1)* **az őrjárat UDP-re állítása** — ma `csereVonalon` (TCP), a kaput a
-`figyeloIndulasa` nyitja · *(2)* **a kötések nyilvántartása** (kit tartok, mikor hallottam
-utoljára) · *(3)* **a tábla bekötése** (írás címváltáskor, olvasás néma kötésnél) · *(4)* a
-**cím-korlát** olcsóbbra vétele.
+✅ **(2) A KÖTÉSEK NYILVÁNTARTÁSA.** A kötést a **tábla-kulcs** azonosítja, nem a cím — mert
+épp a cím az, ami elromlik. A kötés megőrzi az utolsó ismert címet akkor is, ha a névtelen
+jegyzékből már elévült (K=3, legfeljebb 5; `kotesek.json`).
 
-⚠️ **És egy tény, amit ki kell mondani:** a friss cím jegyzéke ma **write-only** — gyűlik és
-terjed, de semmi nem tárcsáz róla, mert az őrjárat TCP-n cserél. *A 33. mérés bájtjaiért ma nem
-kapunk semmit.* Ezt az (1) lépés hozza meg.
+✅ **(3) A HIRDETŐTÁBLA.** Társanként külön rekesz, a tartalom titkosítva, a bejegyzés
+aláírva (BEP 44). Az őrjárat **néma kötésnél olvas**, **címváltáskor ír**. Kézi út: `tabla`,
+`tabla kiir`, `tabla olvas`. ⭐ **37. mérés a valódi DHT-n:** kiírás 22,1 mp (8 tároló),
+kiolvasás 22,9 mp, a lánc végigment.
+
+✅ **(4) A CÍM-KORLÁT 3.** És a megismert **DHT-gépek is átkerülnek** a társakhoz (a (c)
+döntés) — így egy friss telepítés az első buli után független a közismert belépőktől.
+⭐ **38. mérés:** a „nincs újdonság" kör **1346 → 931 bájt** (napi 5,4 → 3,8 MB, 14 társnál).
+*A tábla árát a cím-korlát kifizette.*
+
+⛔ **AMI HÁTRA VAN:**
+- **Terepmérés két valódi mobillal** (a terv 4. lépése) — ez a döntő próba.
+- **A véletlen séta:** ma a kötések abból lesznek, akivel amúgy is összeérünk; a társakat még
+  nem „kérjük el" egymástól. A 35. mérés szerint a séta az, ami NAGY méretnél tartja egyben a
+  hálót — kis koinóban mindenki amúgy is mindenkivel találkozik.
+- ⏸️ **Olcsóbb tábla-kulcs:** ma minden körben utazik (212 bájt). Elég lenne egy rövid
+  ujjlenyomat, és a teljes kulcs csak az első találkozáskor — de ez protokoll-bonyolítás, és
+  a kör ma **olcsóbb, mint tegnap volt** (38. mérés). *Nem kell megvenni.*
 
 ## 4. ✅ A DÖNTÉSEK — Csaba válaszai (2026-09-20)
 
@@ -118,12 +135,14 @@ forgalma nulla* — szemben az időzített írással, ami akkor is dolgozik, ha 
 
 ## 5. A megépítés sorrendje (a függőségek szerint, nem a látványosság szerint)
 
-1. **Az őrjárat UDP-re** — ez minden változathoz kell, és a mobil mérésektől független. Ettől
-   lesz a mai cím-jegyzék hasznos (ma write-only), és ettől jut el a koino odáig, hogy két
-   telefon **magától** összeérjen.
-2. **A kötések nyilvántartása** (3 társ, véletlen séta, „mikor hallottam utoljára").
-3. **A tábla illesztő + a DHT mögé** — az (a)–(c) döntések szerint.
-4. **Terepmérés két valódi mobillal**, a teljes körrel.
+1. ✅ **Az őrjárat UDP-re** (2026-09-20) — egy parancssor-próba méri: két készülék
+   **társ-lista nélkül**, csak friss UDP-címből összeér, és a hír átmegy.
+2. ✅ **A kötések nyilvántartása** (2026-09-20) — a kötés a tábla-kulcs alatt születik, és
+   ezt is próba méri a másik készülék lemezén.
+3. ✅ **A tábla + a DHT mögé** (2026-09-20) — modul-próbák és egy parancssor-próba **hamis
+   DHT-n** (egy próba, ami a valódi hálózatot hívná, a hálózat hangulatát mérné), plusz a
+   37. mérés az igazin.
+4. ⏸️ **Terepmérés két valódi mobillal**, a teljes körrel — **ez a következő.**
 
 ⚠️ **A 9. szabály próbája mindegyik darabon:** a kötésszám **felülről korlátos** (3, legfeljebb
 5) · a tábla **rekeszenként** címzett, nem egy listát tart · a keresés a DHT-ben
