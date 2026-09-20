@@ -1162,11 +1162,35 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     }
   };
 
+  // ⭐⭐⭐ AMIT A CSERE MÁR MEGMONDOTT, AZT NE VÁRJUK KI ÚJRA (2026-09-20).
+  //
+  // ⛔ MIT JAVÍT: a kiszolgáló fázis a **tétlenségi óráig vár** arra, hogy a társ kérjen
+  // valamit — akkor is, ha a társnak semmi kérnivalója nincs. Egyszeri, kézi fúrásnál ez
+  // csak néhány másodperc kényelmetlenség; ⛔⛔ az ŐRJÁRAT ablakában viszont **elviszi az
+  // egész bulit**, és több társnál egymás után halmozódik.
+  //
+  // ⭐ A csere fájl-köre (`FAJLOK`) MINDKÉT irányban lefutott már: tudom, mit kérhetek
+  // tőle (`kerhetok`), és tudom, mit válaszoltam az ő kérésére (`kiszolgalasKell`). Ha
+  // egyik sincs, nincs miről randevúzni. *Ugyanaz az elv, mint az `ALLAS`-nál: a
+  // felderítés az, ami már megtörtént — ne kérdezzük meg másodszor.*
+  //
+  // ⚠️ ÉS EZ SZIMMETRIKUS, ezért nem ragad be a másik fél sem: az én „mit kérhetek"
+  // listám pontosan az ő „mit adhatok" listája, és fordítva — a két gép ugyanarra jut.
+  const kiszolgalasKell = beallitas.kiszolgalasKell !== false;
+
+  if (!kerhetok.length && !kiszolgalasKell) {
+    const semmi = { kesz: 0, bukott: 0, bajt: 0, kiszolgalt: 0, szerep, torlodasJel: jel,
+      kihagyva: true };
+    console.log('fajlRandevu - VÉGE (nincs miről)', semmi);
+    utana({ mi: 'NINCS-MIROL' });
+    return semmi;
+  }
+
   if (enKezdek) {
     await keroFazis();
-    await kiszolgaloFazis(2 * varakozasiIdo);
+    if (kiszolgalasKell) await kiszolgaloFazis(2 * varakozasiIdo);
   } else {
-    await kiszolgaloFazis(varakozasiIdo);
+    if (kiszolgalasKell) await kiszolgaloFazis(varakozasiIdo);
     await keroFazis();
   }
 

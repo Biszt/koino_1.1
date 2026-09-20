@@ -562,6 +562,10 @@ export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
         honnan: null, eltelt: null });
   }
 
+  // A hívó által a megnyílt résen indított munkák (csere, fájl-randevú) — a foglalatot
+  // csak ezek után szabad lezárni.
+  const munkak = [];
+
   return new Promise((teljesites) => {
     let idozito = null, hatarido = null;
 
@@ -581,9 +585,20 @@ export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
       return null;
     };
 
-    const befejez = (sikerult) => {
+    let vege = false;
+
+    const befejez = async (sikerult) => {
+      if (vege) return;                 // ⚠️ hiba + időkorlát egyszerre is beeshet
+      vege = true;
       if (idozito) clearInterval(idozito);
       if (hatarido) clearTimeout(hatarido);
+
+      // ⭐⭐ ELŐBB A MUNKA, CSAK UTÁNA A ZÁRÁS. Ha a hívó a megnyílt résen cserét indított,
+      // azt MEG KELL VÁRNI — különben a foglalat a csere alól csúszna ki, és a másik fél
+      // a tétlenségi órájáig várna. *Ugyanaz az elv, mint a `kiurites()`-nél: a lezárás
+      // nem esemény, hanem következmény.*
+      if (munkak.length) await Promise.allSettled(munkak);
+
       // ⭐ SIKER UTÁN NYITVA HAGYHATÓ a foglalat — mert épp az a rés, amit átfúrtunk.
       // Ha most becsuknánk, a következő megnyitás ÚJ külső portot kaphatna, és kezdhetnénk
       // elölről. A csere ezen a foglalaton megy tovább (udpVonal.js).
@@ -647,6 +662,19 @@ export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
         if (allapot && !allapot.mindketIrany) {
           allapot.mindketIrany = true;
           allapot.eltelt = Date.now() - kezdet;
+
+          // ⭐⭐ AKI ÁTÉRT, AZZAL AZONNAL LEHET DOLGOZNI — nem a kör végén (2026-09-20).
+          // ⛔ MIÉRT: a rés nem vár ránk. Ha megvárnánk a többieket, az elsőként megnyílt
+          // rés a NAT órája szerint közben elévülhetne — és akkor a fúrás eredménye egy
+          // olyan cím, amin már nincs ajtó. *A megnyílt rést azonnal használni kell.*
+          // ⚠️ A hívó által indított munkát MEGVÁRJUK a lezárás előtt (lásd `befejez`),
+          // különben a foglalat kicsúszna a cserénk alól.
+          if (typeof beallitas.atfurt === 'function') {
+            const munka = (async () => beallitas.atfurt(allapot, halo))()
+              .catch((hiba) => jelez({ mi: 'ATFURT-MUNKA-BUKOTT', cim: allapot.cim,
+                port: allapot.port, ok: hiba.message }));
+            munkak.push(munka);
+          }
         }
         // ⛔ NEM ÁLLUNK MEG AZ ELSŐ SIKERNÉL, ha több társra fúrunk: a többiek rése még
         // nincs nyitva. *Csak akkor van vége, ha MINDENKI átért* — vagy lejár az ablak.

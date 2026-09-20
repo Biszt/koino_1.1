@@ -129,7 +129,7 @@ import {
   // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
   udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa, UDP_CIM_ELEVULES
 } from './js/csere/tarsak.js';
-import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
+import { pajzsfuras, pajzsfurasTobbfele, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
@@ -728,6 +728,132 @@ async function udpCimeketTanul(jegyzekTarolo, kapott, elevules = UDP_CIM_ELEVULE
     udpCimekBeolvasztasa(elotte, kapott, most, elevules), most, elevules);
   await jegyzekTarolo.ir(utana);
   return Math.max(0, utana.length - elotte.length);
+}
+
+// ===================================
+// ⭐⭐⭐ A BULI UDP-ÁGA (2026-09-20)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELL, ÉS MIÉRT ÉPP MOST: a 36/d. mérés szerint **a mobil NAT nem engedi be az
+// idegent** — rést csak a KÖLCSÖNÖS kopogás nyit. Egy csak-mobilos közösségben tehát a
+// „nyitva tartom a kaput" (postaláda) senkinek nem elég: a kapcsolatot **mindkét félnek
+// egyszerre** kell kezdeményeznie. Ezt adja a buli (percfordulós ablak, 30. mérés).
+//
+// ⭐ EGY FOGLALAT, TÖBB TÁRS — mert a NAT-leképezés a foglalathoz tartozik: így egyetlen
+// külső címünk van, amit mindenkinek bemondhatunk (és később a hirdetőtáblára kiírhatunk).
+//
+// ⚠️⚠️ A KOPOGÁS ADAT-ÁRA (D35) — és ezért nem kopogunk az egész ablakon át: egy kopogás
+// ~60 bájt, egy „nincs újdonság" csere-kör 334. ⭐ **A korlát ebből következik, nem
+// tippből:** annyit kopogunk, amennyi nagyságrendben belefér EGY csere-kör árába — a
+// terepmérés szerint amúgy is **190 ms** (17.) és **76 ms** (19.) alatt megnyílik a rés,
+// ha a másik fél ott van. *Aki nincs ott, azt nem a kitartás hozza vissza, hanem a
+// következő buli.*
+const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy csere-kör nagyságrendje
+
+/**
+ * Egy buli UDP-ága: kopogunk minden friss címre, és akinek megnyílik a rése, azzal
+ * AZONNAL cserélünk ugyanazon a foglalaton (események + fájlok).
+ *
+ * ⚠️ Semmit nem dönt el a koinóról: a beérkező esemény ugyanazon az `esemenyMentese`
+ * kapun megy be, mint bármelyik másik (3. szabály).
+ */
+async function udpBuli(beallitas) {
+  const {
+    helyiPort, celok, idokorlat, tar, koino, tarolo, udpTarolo, udpElevules,
+    fajlok, hirdetjuk, frissUdp, naplo = () => {}
+  } = beallitas;
+
+  const osszeg = {
+    celok: celok.length, atfurt: 0, sikeres: 0, uj: 0, kuldott: 0, bajt: 0,
+    fajlKesz: 0, fajlKiszolgalt: 0, kapottCimek: [], kapottUdpCimek: [], fajlokNala: []
+  };
+  if (!celok.length || idokorlat <= 0) return osszeg;
+
+  // ⭐ A HUROK-CÍMEN NINCS MIT MÉRNI: ha minden cél a saját gépen van, a külső cím
+  // kérdése értelmetlen — és egy tükör-kérdés a hálózatra menne feleslegesen.
+  const csakHelyben = celok.every((c) => /^127\./.test(c.cim) || c.cim === '::1');
+
+  const furas = await pajzsfurasTobbfele(helyiPort, celok, {
+    idokorlat,
+    sajatCimMerese: !csakHelyben,
+    tartsdNyitva: false,      // az ablak végén a rés lezárul — a következő bulin újrafúrunk
+    utana: (e) => {
+      // ⭐ A SAJÁT FRISS CÍMÜNK: ezt a foglalatot méri a tükör, és ez az, ami terjed.
+      if (e.mi === 'SAJAT-KULSO-CIM') {
+        sajatUdpCimJegyzese(udpTarolo, e.cim, e.port, udpElevules)
+          .catch((hiba) => console.warn('a saját UDP-cím feljegyzése nem sikerült',
+            { ok: hiba.message }));
+        naplo({ mi: 'SAJAT-CIM', cim: e.cim, port: e.port });
+      }
+      if (e.mi === 'CEL-KIHAGYVA') naplo(e);
+    },
+    // ⭐⭐ AKI ÁTÉRT, AZZAL AZONNAL DOLGOZUNK — a rés nem vár ránk.
+    atfurt: async (cel, halo) => {
+      osszeg.atfurt++;
+      // ⚠️ Ahova kopogtunk, és ahonnan felelt, nem feltétlenül ugyanaz a port (a társ
+      // leképezése közben változhatott) — a cserét oda visszük, ahonnan hallottuk.
+      const celPort = cel.masPort ?? cel.port;
+      naplo({ mi: 'ATFURVA', cim: cel.cim, port: celPort, eltelt: cel.eltelt });
+
+      // ⭐ MEGJEGYEZZÜK, MIT KÉRHETNEK TŐLÜNK: ha semmit, a randevú kiszolgáló fázisát
+      // nem kell kivárni (a társ sem fog kérni — ugyanezt a listát látja).
+      let adhatok = 0;
+      const csere = await csereUdpResen(halo, cel.cim, celPort, tar, koino, {
+        hirdetettCimek: hirdetjuk,
+        udpCimek: frissUdp,
+        fajlKerelem: fajlok.kerelem,
+        fajlValasz: async (kertek) => {
+          const van = await fajlok.valasz(kertek);
+          adhatok += Array.isArray(van) ? van.length : 0;
+          return van;
+        },
+        fajlOlvas: fajlok.olvas
+      });
+
+      osszeg.sikeres++;
+      osszeg.uj += csere.uj ?? 0;
+      osszeg.kuldott += csere.kuldott ?? 0;
+      osszeg.bajt += (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
+      osszeg.kapottCimek.push(...(csere.kapottCimek ?? []));
+      osszeg.kapottUdpCimek.push(...(csere.kapottUdpCimek ?? []));
+      naplo({ mi: 'CSERE', cim: cel.cim, port: celPort, uj: csere.uj,
+        kuldott: csere.kuldott, korok: csere.korok,
+        bajt: (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0) });
+
+      // ⭐⭐ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE A TÁRS (Csaba, 2026-09-17): nem egy tükör
+      // mondja meg, hanem az, akivel épp beszélünk — arról a résről, ami tényleg él.
+      if (csere.kivulrolIgyLatszom) {
+        await sajatUdpCimJegyzese(udpTarolo,
+          csere.kivulrolIgyLatszom.cim, csere.kivulrolIgyLatszom.port, udpElevules);
+      }
+
+      // ⭐ ÉS A BÁJTOK IS A RÉSEN JÖNNEK — épp ezért van a randevú (5.7).
+      const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
+      osszeg.fajlokNala.push({ tars: cel.cim + ':' + celPort, lenyomatok: kerhetok });
+
+      const randevu = await fajlRandevu(halo, cel.cim, celPort, {
+        sajatCim: csere.kivulrolIgyLatszom
+          ? csere.kivulrolIgyLatszom.cim + ':' + csere.kivulrolIgyLatszom.port
+          : null,
+        kerhetok,
+        blob: fajlBlobTarolo(koino),
+        tar, koino,
+        fajlOlvas: (lenyomat) => fajlBlobTarolo(koino).olvas(lenyomat),
+        korlat: FAJL_KORLAT,
+        kiszolgalasKell: adhatok > 0
+      });
+      osszeg.fajlKesz += randevu.kesz ?? 0;
+      osszeg.fajlKiszolgalt += randevu.kiszolgalt ?? 0;
+      if (randevu.kesz || randevu.kiszolgalt) {
+        naplo({ mi: 'FAJLOK', cim: cel.cim, port: celPort,
+          kesz: randevu.kesz, kiszolgalt: randevu.kiszolgalt });
+      }
+    }
+  });
+
+  osszeg.kopogas = furas.kuldott;
+  osszeg.nemFelelt = furas.nemSikerultek.length;
+  return osszeg;
 }
 
 /** A SAJÁT külső UDP-címünk feljegyzése — ezt hirdetjük tovább a bulin. */
@@ -2016,6 +2142,10 @@ try {
       // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
       // hirdetne.
       let frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+      // ⭐ A SAJÁT KÜLSŐ UDP-CÍMÜNK, ahogy legutóbb láttuk (tükörtől vagy a társtól). Ez
+      // kell ahhoz, hogy a jegyzékben SAJÁT magunkra ne kopogjunk — a jegyzék ugyanis
+      // szándékosan NÉVTELEN (nem mondja meg, melyik cím kié).
+      let sajatKulsoUdp = null;
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
@@ -2061,6 +2191,86 @@ try {
         const lista = await tarolo.olvas();
         let sikeresEbbenAKorben = 0;    // ⭐ hányan feleltek — ettől lesz a körből BULI
 
+        // ⭐⭐⭐ AZ ABLAK VÉGE: ebből jön a menetek korlátja ÉS a kopogásé is (30. mérés).
+        const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
+        const ablakVege = Math.ceil((Date.now() + 1) / kozMs) * kozMs;
+
+        // ===== ⭐⭐⭐ A BULI UDP-ÁGA — AKIRE KOPOGNI TUDUNK (2026-09-20) =====
+        //
+        // ⛔⛔ EZ A 4. SZABÁLY-HIBA JAVÍTÁSA: a UDP-vonal (ablak · mért RTT · AIMD · Vegas ·
+        // randevú) és a friss cím-jegyzék hónapok óta készen állt — **de az éles út nem
+        // hívta**, a jegyzék pedig WRITE-ONLY volt: gyűlt, terjedt, és senki nem tárcsázott
+        // róla. Innentől ez az ág tárcsáz.
+        //
+        // ⚠️ A társ-listás (TCP) kör ATTÓL FÜGGETLENÜL megy tovább: aki kaput tart, azt
+        // továbbra is hívjuk, és a postaláda is nyitva marad. *A UDP nem kiváltja a TCP-t,
+        // hanem melléáll — a 19. mérés óta a TCP alkalmi gyorssáv, nem fő út.*
+        // ⛔⛔ A SAJÁT MAGUNK KISZŰRÉSE CÍM **ÉS** PORT EGYÜTT (2026-09-20, próbából).
+        //
+        // ⚠️ Az első változat csak a CÍMET nézte — és ezt a parancssor-próba azonnal
+        // elbuktatta: a hurok-címen a két készülék ugyanazt az IP-t használja, tehát
+        // mindketten „magukat" látták a jegyzékben, és **egyikük sem kopogott**.
+        // ⭐ És ez nem próba-műtermék: **két telefon ugyanazon a wifin ugyanazt a külső
+        // IP-t mutatja** — csak a portjuk más. Cím alapján szűrve épp a családi koino
+        // (D22) két készüléke nem találná meg egymást.
+        const sajatCimek = await sajatOsszesCim();
+        const frissJegyzek = await frissUdpCimek(udpTarolo, udpElevules);
+        const udpCelok = frissJegyzek.filter((c) => {
+          // A saját, épp mért külső címünk — pontos pár szerint.
+          if (sajatKulsoUdp && sajatCimE(c.hoszt, [sajatKulsoUdp.cim])
+            && c.port === sajatKulsoUdp.port) return false;
+          // A saját gépünk valamelyik címe + a SAJÁT fúró-portunk = mi magunk vagyunk.
+          if (sajatCimE(c.hoszt, sajatCimek) && c.port === port) return false;
+          return true;
+        });
+        if (udpCelok.length) {
+          const udp = await udpBuli({
+            helyiPort: port,
+            celok: udpCelok.map((c) => ({ cim: c.hoszt, port: c.port })),
+            // ⭐ A kopogás ára korlátos (D35), de az ABLAKON soha nem lóg túl.
+            idokorlat: Math.max(0, Math.min(KOPOGAS_ARA_KORONKENT * 1000,
+              ablakVege - Date.now())),
+            tar, koino: KOINO, tarolo, udpTarolo, udpElevules,
+            fajlok: await fajlResz(),
+            hirdetjuk: await hirdetendoCimek(tarolo),
+            frissUdp,
+            naplo: (e) => {
+              if (e.mi === 'SAJAT-CIM') {
+                sajatKulsoUdp = { cim: e.cim, port: e.port };
+              }
+              if (e.mi === 'ATFURVA') {
+                kiir(SZIN.jo + '  ⭐ ' + ora() + ' rés nyílt: ' + e.cim + ':' + e.port
+                  + SZIN.vege + SZIN.halvany + ' (' + e.eltelt + ' ms)' + SZIN.vege);
+              }
+              if (e.mi === 'CSERE') {
+                kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + e.cim + ':' + e.port
+                  + SZIN.vege + SZIN.halvany + ' — ' + e.uj + ' új esemény, küldtem '
+                  + e.kuldott + ' (' + e.korok + ' kör, '
+                  + adatMennyiseg({ bajtKuldott: e.bajt }) + ')' + SZIN.vege);
+              }
+              if (e.mi === 'FAJLOK') {
+                kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + e.kesz
+                  + ' megjött, ' + e.kiszolgalt + ' elment' + SZIN.vege);
+              }
+            }
+          });
+
+          if (udp.sikeres) {
+            sikeresEbbenAKorben += udp.sikeres;
+            // Amit a résen hallottunk, ugyanúgy tanulunk belőle, mint a TCP-körből.
+            await udpCimeketTanul(udpTarolo, udp.kapottUdpCimek, udpElevules);
+            await kapottCimekBeolvasztasa(tarolo, udp.kapottCimek);
+            for (const f of udp.fajlokNala) {
+              if (f.lenyomatok?.length) await fajlTanulsag(f.tars, f.lenyomatok);
+            }
+            frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+          } else if (udp.celok) {
+            // ⚠️ A HIÁNYT IS KIMONDJUK (D19): a kopogás ment, csak nem volt ott senki.
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + udp.celok
+              + ' friss címre kopogtam, egyik rés sem nyílt meg' + SZIN.vege);
+          }
+        }
+
         if (!lista.length) {
           kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
             + SZIN.vege);
@@ -2102,8 +2312,7 @@ try {
           // indoklását fent): a menetek addig futnak, amíg a **következő percforduló** el
           // nem érkezik. *Így a korlát a mérettel együtt nő — ahány menet belefér, annyi
           // fut —, a rosszindulat ellen mégis véd, mert az ablak véges.*
-          const ablakVege = Math.ceil((Date.now() + 1) / Math.max(1, Math.round(perc * 60 * 1000)))
-            * Math.max(1, Math.round(perc * 60 * 1000));
+          // (az `ablakVege` fent, a kör elején dőlt el — a kopogás is abból él)
           let kor = null;
           let menetek = 0;
           for (;;) {
@@ -2220,7 +2429,8 @@ try {
         // ⚠️ AZ ÓRÁRA TÁMASZKODUNK, ÉS EZT KIMONDJUK: ha két készülék órája percekkel eltér,
         // az ablakaik nem fednek át. A koino ettől nem romlik el (a sodródás marad, mint ma),
         // csak nem élvezi az igazítás hasznát — *romlás, nem törés* (D19).
-        const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
+        // (a `kozMs` a kör elején számolódott — ugyanaz az ütem szabja meg az ablakot
+        //  és az alvást; két külön számítás előbb-utóbb szétcsúszna)
         const most = Date.now();
         const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
         await new Promise((teljesites) => setTimeout(teljesites, kovetkezoAblak - most));

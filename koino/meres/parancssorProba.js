@@ -1492,6 +1492,68 @@ proba('⛔ Az ELÉVÜLT cím NEM kerül át (a jegyzék nem terjeszt halott cím
     && !jegyzek.some((c) => c.hoszt === '203.0.113.99');
 });
 
+// ===================================
+// ⭐⭐⭐ AZ ŐRJÁRAT UDP-ÁGA (2026-09-20) — A KOPOGÁSSAL TALÁLKOZÁS
+// ===================================
+//
+// ⛔⛔ MIT MÉR, ÉS MIÉRT EZ A LEGFONTOSABB PRÓBA ITT: a 36/d. terepmérés szerint **idegent
+// a mobil NAT nem enged be** — rést csak a KÖLCSÖNÖS kopogás nyit. Vagyis egy csak-mobilos
+// közösségben a kapu nyitva tartása (postaláda) senkinek nem elég.
+//
+// ⭐ A próba ezért SZÁNDÉKOSAN NEM AD TÁRS-LISTÁT egyik készüléknek sem: a társ-listás
+// (TCP) út el sem indulhat. Az egyetlen út a friss UDP-cím + a kopogás.
+// ⭐⭐ És VISELKEDÉST mér, nem feliratot: a hírnek a MÁSIK KÉSZÜLÉK ÁLLAPOTÁBAN kell
+// megjelennie.
+
+proba('⭐⭐⭐ AZ ŐRJÁRAT KOPOGÁSSAL TALÁL ÖSSZE — társ-lista NÉLKÜL, friss UDP-címből',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const A = 7461, B = 7462;
+    let egyikOr = null, masikOr = null;
+
+    try {
+      // Közös koino, hálózat nélkül (4. szabály).
+      await fut(egyik, 'koino', 'Kopogos buli');
+      const vitt = join(egyik, 'alap.jsonl');
+      await fut(egyik, 'kivisz', vitt, 'mind');
+      await fut(masik, 'behoz', vitt);
+
+      // ⭐ AZ ÚJDONSÁG CSAK AZ EGYIKNÉL VAN.
+      await fut(egyik, 'gondolat', 'A KOPOGÁSSAL ÉRKEZETT HÍR');
+
+      // ⭐ EGYMÁS FRISS UDP-CÍME — és SEMMI MÁS. Nincs `tars`, nincs társ-lista.
+      const jegyzek = (hova, mihez) => writeFile(join(hova, 'udpcimek.json'),
+        JSON.stringify({ cimek: [{ hoszt: '127.0.0.1', port: mihez, mikor: Date.now() }] }),
+        'utf8');
+      await jegyzek(egyik, B);
+      await jegyzek(masik, A);
+
+      // ⚠️ EGYSZERRE indítjuk — mert épp ez a lényeg: a rés a KÖLCSÖNÖS kopogásra nyílik.
+      egyikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(A)], {
+        env: { ...process.env, KOINO_ADAT: egyik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      masikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(B)], {
+        env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+
+      await varj(20000);
+      egyikOr.kill(); egyikOr = null;
+      masikOr.kill(); masikOr = null;
+      await varj(700);
+
+      // ⭐ A BIZONYÍTÉK A MÁSIK KÉSZÜLÉK LEMEZÉN: megvan-e a hír, kézi parancs nélkül?
+      const allapot = await fut(masik, 'allapot');
+      return /A KOPOGÁSSAL ÉRKEZETT HÍR/.test(allapot);
+    } finally {
+      if (egyikOr) egyikOr.kill();
+      if (masikOr) masikOr.kill();
+      await varj(800);
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
 // ⛔⛔ ÉS A HARMADIK PRÓBA AZ ŐRJÁRATÉ — mert a fenti kettő NEM fedi le.
 //
 // *Ezt a saját rontás-próbám mutatta meg (2026-09-18): kivágtam az őrjárat hirdetését, és a
