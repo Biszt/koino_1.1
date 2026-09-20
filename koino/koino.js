@@ -141,7 +141,9 @@ import {
 // ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20): a leszakadt készülék KIFELÉ írja ki az új címét, a
 // társai KIFELÉ olvassák ki. A tábla ma a BitTorrent DHT — de cserélhető (2. szabály).
 import { cimBejegyzes, cimBejegyzesbol, tarsRekesze } from './js/csere/tabla.js';
-import { dhtKliens, ALAP_BELEPOK } from './js/csere/dht.js';
+import {
+  dhtKliens, ALAP_BELEPOK, gepekHirdetese, gepekBeolvasztasa
+} from './js/csere/dht.js';
 import { kapuNyitasa, ALAP_PORT as FELULET_PORT } from './js/felulet/kapu.js';
 import {
   pakliOldal, ujPakliNezet, entitasSzovege, entitasTudatpontja, entitasReszletei, entitasKuszobei,
@@ -798,6 +800,21 @@ async function dhtIsmertek() {
   try { return JSON.parse(await readFile(dhtGyorsitotar(), 'utf8')); } catch { return []; }
 }
 
+/** Amit a TÁRSTÓL kaptunk: néhány DHT-gép, beolvasztva a saját jegyzékünkbe. */
+async function dhtGepeketTanul(kapott) {
+  if (!kapott?.length) return 0;
+  try {
+    const elotte = await dhtIsmertek();
+    const utana = gepekBeolvasztasa(elotte, kapott);
+    if (utana.length === elotte.length) return 0;
+    await writeFile(dhtGyorsitotar(), JSON.stringify(utana));
+    return utana.length - elotte.length;
+  } catch (hiba) {
+    console.warn('a kapott DHT-gépek beolvasztása nem sikerült', { ok: hiba.message });
+    return 0;
+  }
+}
+
 async function dhtIsmertekMentese(kliens) {
   try {
     const osszes = new Map((await dhtIsmertek()).map((c) => [c.cim + ':' + c.port, c]));
@@ -921,6 +938,7 @@ async function udpBuli(beallitas) {
 
   const osszeg = {
     celok: celok.length, atfurt: 0, sikeres: 0, uj: 0, kuldott: 0, bajt: 0, kotesek: 0,
+    kapottDhtGepek: [],
     fajlKesz: 0, fajlKiszolgalt: 0, kapottCimek: [], kapottUdpCimek: [], fajlokNala: []
   };
   if (!celok.length || idokorlat <= 0) return osszeg;
@@ -959,6 +977,7 @@ async function udpBuli(beallitas) {
         udpCimek: frissUdp,
         sajatUdpCim: beallitas.sajatUdpCim ?? null,
         tablaKulcs,
+        dhtGepek: beallitas.dhtGepek ?? [],
         fajlKerelem: fajlok.kerelem,
         fajlValasz: async (kertek) => {
           const van = await fajlok.valasz(kertek);
@@ -981,6 +1000,7 @@ async function udpBuli(beallitas) {
       osszeg.bajt += (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
       osszeg.kapottCimek.push(...(csere.kapottCimek ?? []));
       osszeg.kapottUdpCimek.push(...(csere.kapottUdpCimek ?? []));
+      osszeg.kapottDhtGepek.push(...(csere.kapottDhtGepek ?? []));
       naplo({ mi: 'CSERE', cim: cel.cim, port: celPort, uj: csere.uj,
         kuldott: csere.kuldott, korok: csere.korok,
         bajt: (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0) });
@@ -2205,6 +2225,8 @@ try {
       // hirdetne (a leképezés percek alatt elévül — 31. mérés).
       const udpTarolo = udpCimTarolo();
       let figyeloUdp = await frissUdpCimek(udpTarolo);
+      const figyeloKotesTar = kotesTarolo();
+      let figyeloDhtGepek = gepekHirdetese(await dhtIsmertek());
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
@@ -2216,6 +2238,11 @@ try {
         // ⭐ A postaláda a friss UDP-címeket is terjeszti (2026-09-18) — ő beszél a
         // legtöbb emberrel, tehát nála ér a legtöbbet.
         udpCimek: () => figyeloUdp,
+        // ⭐⭐ ÉS UGYANÚGY A TÁBLA-KULCSOT ÉS NÉHÁNY DHT-GÉPET (2026-09-20).
+        // ⚠️ EZT KÜLÖN BE KELL KÖTNI: a `figyel` MÁSIK ág, mint az őrjárat postaládája —
+        // *pontosan ez az a hiba-alak, amit a napló kilencszer felsorol.*
+        tablaKulcs: nyilvanosResz(await tablaKulcsBiztositasa()),
+        dhtGepek: () => figyeloDhtGepek,
         utana: async (eredmeny) => {
           if (eredmeny.hiba) {
             kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
@@ -2248,6 +2275,14 @@ try {
           if (udpTanult) {
             figyeloUdp = await frissUdpCimek(udpTarolo);
             kiir(SZIN.jo + '    + ' + udpTanult + ' friss UDP-címet tanultam tőle' + SZIN.vege);
+          }
+          // ⭐⭐ ÉS A KÖTÉS MEG A DHT-GÉPEK IS (2026-09-20) — a postaláda ugyanúgy társ.
+          await kotesFeljegyzese(figyeloKotesTar, eredmeny.kapottTablaKulcs,
+            { hoszt: eredmeny.honnan, port: null });
+          const dhtTanult = await dhtGepeketTanul(eredmeny.kapottDhtGepek);
+          if (dhtTanult) {
+            figyeloDhtGepek = gepekHirdetese(await dhtIsmertek());
+            kiir(SZIN.jo + '    + ' + dhtTanult + ' DHT-gépet tanultam tőle' + SZIN.vege);
           }
           if (tanult) {
             kiir(SZIN.jo + '    + ' + tanult + ' új társ-címet tanultam tőle' + SZIN.vege);
@@ -2400,6 +2435,8 @@ try {
       const kotesTar = kotesTarolo();
       // ⭐ Amit utoljára kiírtunk a táblára — ebből tudjuk, hogy VÁLTOZOTT-e a címünk.
       let tablaraKiirtCim = null;
+      // ⭐ A megismert DHT-gépekből néhányat hirdetünk (Csaba (c) döntése, 2026-09-20).
+      let hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
       // A postaláda HOSSZAN fut, ezért nem tömböt kap, hanem ezt a dobozt: minden ablak
       // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
       // hirdetne.
@@ -2422,6 +2459,8 @@ try {
         sajatUdpCim: () => (sajatKulsoUdp
           ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null),
         tablaKulcs: sajatTablaKulcs,
+        // ⭐ NÉHÁNY MEGISMERT DHT-GÉP (Csaba (c) döntése): a belépő csak kurbli.
+        dhtGepek: () => hirdetendoDhtGepek,
         utana: async (e) => {
           if (e.hiba) return;
           if (e.masKoino) return;
@@ -2436,6 +2475,9 @@ try {
           // ⭐ A BEKOPOGÓVAL IS KÖTÉS SZÜLETIK — ugyanúgy, ahogy a címet is tanuljuk tőle.
           await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
             { hoszt: e.honnan, port: null });
+          if (await dhtGepeketTanul(e.kapottDhtGepek)) {
+            hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
+          }
           kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
             + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
             + ' (' + adatMennyiseg(e) + ')'
@@ -2514,6 +2556,7 @@ try {
               ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
             tablaKulcs: sajatTablaKulcs,
             kotesTarolo: kotesTar,
+            dhtGepek: hirdetendoDhtGepek,
             naplo: (e) => {
               if (e.mi === 'SAJAT-CIM') {
                 sajatKulsoUdp = { cim: e.cim, port: e.port };
@@ -2539,6 +2582,9 @@ try {
             sikeresEbbenAKorben += udp.sikeres;
             // Amit a résen hallottunk, ugyanúgy tanulunk belőle, mint a TCP-körből.
             await udpCimeketTanul(udpTarolo, udp.kapottUdpCimek, udpElevules);
+            if (await dhtGepeketTanul(udp.kapottDhtGepek)) {
+              hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
+            }
             await kapottCimekBeolvasztasa(tarolo, udp.kapottCimek);
             for (const f of udp.fajlokNala) {
               if (f.lenyomatok?.length) await fajlTanulsag(f.tars, f.lenyomatok);
@@ -2602,7 +2648,8 @@ try {
                 frissUdp, {
                   sajatUdpCim: sajatKulsoUdp
                     ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
-                  tablaKulcs: sajatTablaKulcs
+                  tablaKulcs: sajatTablaKulcs,
+                  dhtGepek: hirdetendoDhtGepek
                 }));
 
             // Az első menet adja a kör vázát; a továbbiak hozzáadódnak.
@@ -2637,11 +2684,17 @@ try {
           // ⭐⭐ ÉS A TCP-KÖRBŐL IS SZÜLETIK KÖTÉS: aki rendszeresen ott van, az a társam,
           // akárhogy értünk össze. ⚠️ A cím itt TCP-cím — jelölt, nem ígéret: a következő
           // bulin egy kopogás (~60 bájt) kideríti, hogy UDP-n is ott van-e.
-          let ujKotesek = 0;
+          let ujKotesek = 0, ujDhtGepek = 0;
           for (const e of kor.eredmenyek) {
             if (!e.sikerult) continue;
             if (await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
               { hoszt: e.tars.hoszt, port: e.tars.port })) ujKotesek++;
+            ujDhtGepek += await dhtGepeketTanul(e.kapottDhtGepek);
+          }
+          if (ujDhtGepek) {
+            hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + ujDhtGepek
+              + ' új DHT-gépet tanultam a társaktól (a belépő csak kurbli)' + SZIN.vege);
           }
           if (ujKotesek) {
             kiir(SZIN.halvany + '  · ' + ora() + ' ' + ujKotesek
@@ -3336,13 +3389,27 @@ try {
         const fajlok = await fajlResz();
         const udpTarolo = udpCimTarolo();
         const eredmeny = await csereVonalon(tar, KOINO, cim, port, 10000,
-          await hirdetendoCimek(tarolo), fajlok, await frissUdpCimek(udpTarolo));
+          await hirdetendoCimek(tarolo), fajlok, await frissUdpCimek(udpTarolo), {
+            // ⭐⭐ A KÉZI CSERE IS TELJES ÉRTÉKŰ BULI (2026-09-20): tábla-kulcs és néhány
+            // DHT-gép is utazik. *Ami csak az őrjáratban megy, arról nem tudjuk, hogy
+            // kézzel is működik-e — és fordítva.*
+            tablaKulcs: nyilvanosResz(await tablaKulcsBiztositasa()),
+            dhtGepek: gepekHirdetese(await dhtIsmertek())
+          });
         // ⭐ A friss UDP-címeket innen is megtanuljuk (2026-09-18) — a kézi csere ugyanúgy
         // buli, mint az őrjáraté.
         const udpTanultak = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
         if (udpTanultak) {
           kiir(SZIN.jo + '+ ' + udpTanultak + ' friss UDP-címet tanultam tőle' + SZIN.vege);
         }
+        // ⭐ ÉS TANULUNK IS TŐLE: kötés + DHT-gépek.
+        await kotesFeljegyzese(kotesTarolo(), eredmeny.kapottTablaKulcs,
+          { hoszt: cim, port });
+        const dhtTanultak = await dhtGepeketTanul(eredmeny.kapottDhtGepek);
+        if (dhtTanultak) {
+          kiir(SZIN.jo + '+ ' + dhtTanultak + ' DHT-gépet tanultam tőle' + SZIN.vege);
+        }
+
         const fajlTanultak = await fajlTanulsag(cim + ':' + port, eredmeny.fajlokNala);
         if (fajlTanultak) {
           kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy nála megvan'

@@ -189,6 +189,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
   let kivulrolIgyLatszom = null, kapottCimek = [], kapottUdpCimek = [];
   let kapottTablaKulcs = null;      // a társ tábla-kulcsa — a KÖTÉS azonosítója
+  let kapottDhtGepek = [];          // néhány DHT-gép, amit ő ismer (nem bizalom, csak cím)
 
   for (let kor = 1; kor <= korlat; kor++) {
     korok = kor;
@@ -264,7 +265,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       console.log('parbeszed - VÉGE (fájl-átvitel)');
       return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
                masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
-               kapottTablaKulcs: null,
+               kapottTablaKulcs: null, kapottDhtGepek: [],
                fajlokNala: [] };
     }
 
@@ -428,9 +429,16 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
         ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
 
+      // ⭐ ÉS NÉHÁNY MEGISMERT DHT-GÉP (Csaba döntése, 2026-09-20): így egy friss telepítés
+      // az első buli után független a közismert belépőktől. ~20 bájt darabja, három megy.
+      const dhtForras = typeof beallitas.dhtGepek === 'function'
+        ? beallitas.dhtGepek() : beallitas.dhtGepek;
+      const dhtGepek = Array.isArray(dhtForras) ? dhtForras : [];
+
       kuld({
         uzenet: 'CIMEK',
         ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
+        ...(dhtGepek.length ? { dht: dhtGepek } : {}),
         cimek: [...sajatCim, ...hirdetettCimek.slice(0, IDEGEN_CIM_KORLAT)],
         udp: [
           ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
@@ -446,6 +454,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       // a tábláról (1. szabály). Az ellenőrzés a hívónál van (`ervenyesTablaKulcs`), és
       // attól, hogy valaki bemond egy kulcsot, semmit nem hiszünk el neki (3. szabály).
       kapottTablaKulcs = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
+      kapottDhtGepek = Array.isArray(ove.dht)
+        ? ove.dht.filter((g) => typeof g === 'string').slice(0, IDEGEN_CIM_KORLAT) : [];
       kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
         .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
           && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
@@ -507,7 +517,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   });
   return {
     korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek, kapottUdpCimek,
-    kapottTablaKulcs,
+    kapottTablaKulcs, kapottDhtGepek,
     fajlokNala
   };
 }
@@ -550,6 +560,7 @@ export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
       udpCimek: beallitas.udpCimek ?? [],
       sajatUdpCim: beallitas.sajatUdpCim ?? null,
       tablaKulcs: beallitas.tablaKulcs ?? null,
+      dhtGepek: beallitas.dhtGepek ?? [],
       fajlValasz: beallitas.fajlValasz ?? null,
       // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): aki fogadni tud, az a legértékesebb forrás.
       fajlOlvas: beallitas.fajlOlvas ?? null
@@ -620,6 +631,7 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
       udpCimek,
       sajatUdpCim: beallitas.sajatUdpCim ?? null,
       tablaKulcs: beallitas.tablaKulcs ?? null,
+      dhtGepek: beallitas.dhtGepek ?? [],
       fajlKerelem: fajl.kerelem ?? null,
       fajlValasz: fajl.valasz ?? null,
       fajlOlvas: fajl.olvas ?? null

@@ -327,6 +327,61 @@ async function belepokFeloldasa(belepok) {
  * @param {number} [beallitas.kerdesIdo] - egy kérdésre ennyit várunk (ms)
  * @param {number} [beallitas.keresesIdo] - egy teljes keresés felső határa (ms)
  */
+// ===================================
+// ⭐⭐ A MEGISMERT GÉPEK ÁTADÁSA (Csaba döntése, 2026-09-20)
+// ===================================
+//
+// ⛔ MIÉRT KELL: a közismert belépő-gépek KORLÁTOZNAK (36. mérés: 5 körből 2 akadt el
+// rajtuk) — egymilliárd készülék nem függhet néhány cég gépétől (2. és 9. szabály).
+// ⭐ A megoldás a mérésben már bevált: **a készülék a saját emlékezetéből indul** (belépő
+// nélkül 10/10). Ez a réteg azt teszi hozzá, hogy az emlékezet a bulin TERJED is: aki
+// tegnap beszélt a DHT-vel, az ad néhány gépet annak, aki ma telepített.
+//
+// ⚠️ SEMMILYEN BIZALOM NEM JÁR VELE (3. szabály): egy kapott gép csak egy cím, amit
+// megpróbálunk. Ha hazudott, a keresés megy tovább másfelé — a bejegyzések igazságát az
+// ALÁÍRÁS dönti el, nem az, hogy kitől kaptuk a gép címét.
+
+/** Hány gépet adunk át egy körben? ⭐ Kevés is elég: a DHT-ben minden gép továbbmutat. */
+export const GEP_HIRDETES = 3;
+
+/** Legfeljebb ennyi gépet tartunk nyilván (9. szabály: a jegyzék nem hízhat korlátlanul). */
+export const GEP_KORLAT = 300;
+
+/** A hirdetendő gépek — a legutóbb felelők, tömör `cím:port` alakban. */
+export function gepekHirdetese(jegyzek, darab = GEP_HIRDETES) {
+  return (jegyzek ?? [])
+    .filter((c) => c && typeof c.cim === 'string' && Number.isInteger(c.port))
+    .slice(-darab)
+    .map((c) => c.cim + ':' + c.port);
+}
+
+/**
+ * A társtól kapott gépek beolvasztása a saját jegyzékünkbe.
+ *
+ * ⚠️ Az alakot ellenőrizzük (egy elrontott mező ne kerüljön be), de az elérhetőséget nem:
+ * *azt a következő keresés úgyis megméri.*
+ */
+export function gepekBeolvasztasa(jegyzek, kapott, korlat = GEP_KORLAT) {
+  const terkep = new Map((jegyzek ?? [])
+    .filter((c) => c && typeof c.cim === 'string' && Number.isInteger(c.port))
+    .map((c) => [c.cim + ':' + c.port, c]));
+
+  for (const nyers of Array.isArray(kapott) ? kapott.slice(0, GEP_HIRDETES) : []) {
+    if (typeof nyers !== 'string') continue;
+    const kettospont = nyers.lastIndexOf(':');
+    if (kettospont <= 0) continue;
+    const cim = nyers.slice(0, kettospont);
+    const port = parseInt(nyers.slice(kettospont + 1), 10);
+    if (!cim || !Number.isInteger(port) || port <= 0 || port >= 65536) continue;
+    // ⚠️ Aki már megvan, azt NEM írjuk felül: a saját megfigyelésünk (van `id`-je, felelt
+    // nekünk) többet ér, mint egy bemondott cím.
+    if (terkep.has(cim + ':' + port)) continue;
+    terkep.set(cim + ':' + port, { cim, port, id: null });
+  }
+
+  return [...terkep.values()].slice(-korlat);
+}
+
 export async function dhtKliens(beallitas = {}) {
   console.log('dhtKliens - KEZDÉS');
   const {

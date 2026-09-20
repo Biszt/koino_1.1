@@ -17,7 +17,8 @@ import { createSocket } from 'node:dgram';
 import {
   bencodeKodol, bencodeBont, alairandoBajtok, valtozoCel, valtozatlanCel,
   bejegyzesKeszitese, bejegyzesEllenorzese, tomorCsomopontokBontasa,
-  tomorCsomopontokKeszitese, tavolsagOsszevetes, dhtKliens, ERTEK_KORLAT
+  tomorCsomopontokKeszitese, tavolsagOsszevetes, dhtKliens, ERTEK_KORLAT,
+  gepekHirdetese, gepekBeolvasztasa, GEP_HIRDETES
 } from '../js/csere/dht.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
@@ -260,6 +261,43 @@ proba('⛔⛔ A BEZÁRÁS FELEL a függő kérdéseknek — a feltevés közben 
     return p !== null && p.probalt >= 1 && p.tarolta === 0
       && p.putHibak.lezarva === p.probalt && Date.now() - kezdet < 5000;
   } finally { h.bezar(); }
+});
+
+// ===================================
+// ⭐⭐ A MEGISMERT GÉPEK ÁTADÁSA (Csaba (c) döntése, 2026-09-20)
+// ===================================
+
+proba('⭐ A HIRDETÉS KORLÁTOS — három gép megy, a legutóbb feleltekből', () => {
+  const jegyzek = [];
+  for (let i = 0; i < 10; i++) jegyzek.push({ cim: '10.0.0.' + i, port: 6881 + i });
+  const hirdetjuk = gepekHirdetese(jegyzek);
+  return hirdetjuk.length === GEP_HIRDETES
+    // A LEGUTÓBBIAK mennek (a lista végéről) — azok felelnek a legnagyobb eséllyel.
+    && hirdetjuk[hirdetjuk.length - 1] === '10.0.0.9:6890'
+    && hirdetjuk.every((sz) => /^[\d.]+:\d+$/.test(sz));
+});
+
+proba('⭐⭐ A KAPOTT GÉPEK BEOLVADNAK — de a SAJÁT megfigyelésünket nem írják felül', () => {
+  // ⚠️ A sajátunknak van `id`-je (felelt nekünk); a kapott csak egy bemondott cím.
+  const enyem = [{ cim: '10.0.0.1', port: 6881, id: 'abcd' }];
+  const utana = gepekBeolvasztasa(enyem, ['10.0.0.1:6881', '10.0.0.2:6882']);
+
+  return utana.length === 2
+    && utana.find((g) => g.cim === '10.0.0.1').id === 'abcd'
+    && utana.some((g) => g.cim === '10.0.0.2' && g.port === 6882 && g.id === null);
+});
+
+proba('⛔ A ROSSZ ALAKOT ELDOBJUK, és a kapott gépek száma is KORLÁTOS', () => {
+  const rosszak = ['nincs-port', ':6881', '10.0.0.1:', '10.0.0.1:0', '10.0.0.1:70000', 5, null];
+  const semmi = gepekBeolvasztasa([], rosszak);
+
+  // ⛔ És egy rosszindulatú társ sem tömheti tele a jegyzékünket: a kapottból is csak
+  // annyit veszünk, amennyit mi magunk hirdetnénk.
+  const sok = [];
+  for (let i = 0; i < 50; i++) sok.push('10.1.0.' + i + ':6881');
+  const korlatos = gepekBeolvasztasa([], sok);
+
+  return semmi.length === 0 && korlatos.length === GEP_HIRDETES;
 });
 
 export default futtatas;

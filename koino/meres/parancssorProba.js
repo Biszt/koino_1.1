@@ -1671,6 +1671,35 @@ proba('⭐⭐⭐ A TÁBLA PARANCSA KIÍR ÉS KIOLVAS — a lánc végigmegy (ham
     }
   });
 
+proba('⭐⭐ A MEGISMERT DHT-GÉPEK ÁTKERÜLNEK A TÁRSHOZ (a belépő csak kurbli)',
+  async () => {
+    // ⛔ MIT MÉR: Csaba (c) döntését — a csere adjon át néhány DHT-gépet, hogy egy friss
+    // telepítés az első buli után NE függjön a közismert belépőktől (36. mérés: ők
+    // korlátoznak). ⭐ A bizonyíték a MÁSIK készülék lemezén van.
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const port = 7465;
+
+    await fut(gazda, 'koino', 'Dht gep proba');
+
+    // A gazda jegyzékébe kézzel írunk két gépet (a jegyzék sima JSON — 4. szabály).
+    await writeFile(join(gazda, 'dht-csomopontok.json'), JSON.stringify([
+      { cim: '203.0.113.50', port: 6881, id: 'aabb' },
+      { cim: '203.0.113.51', port: 6882, id: 'ccdd' }
+    ]), 'utf8');
+
+    await csereKor(gazda, vendeg, port);
+
+    let jegyzek = [];
+    try {
+      jegyzek = JSON.parse(await readFile(join(vendeg, 'dht-csomopontok.json'), 'utf8'));
+    } catch { return false; }
+
+    return jegyzek.some((g) => g.cim === '203.0.113.51' && g.port === 6882)
+      // ⚠️ És a BEMONDOTT gépnek nincs `id`-je: az csak a saját megfigyelésünkből lehet.
+      && jegyzek.every((g) => g.cim !== '203.0.113.51' || g.id === null);
+  });
+
 // ⛔⛔ ÉS A HARMADIK PRÓBA AZ ŐRJÁRATÉ — mert a fenti kettő NEM fedi le.
 //
 // *Ezt a saját rontás-próbám mutatta meg (2026-09-18): kivágtam az őrjárat hirdetését, és a
