@@ -476,16 +476,68 @@ export async function tcpPajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}
 export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
   console.log('talalkozo - KEZDÉS', { sajatPort, tarsCim, tarsPort });
 
+  // ⭐⭐ EGY LOGIKA, KÉT HÍVÓ (2026-09-20). A fúrás motorja a TÖBBCÉLÚ változat; ez itt
+  // annak a különleges esete, EGY céllal. *Ha két külön kód fúrna, az egyik előbb-utóbb
+  // elfelejtene egy őrt — pontosan úgy, ahogy a `parbeszed`/`fajlKiszolgalas` párosnál
+  // kimondtuk: aki kiszolgál, az ne beszéljen elsőként, de ugyanabból a kódból.*
+  const soklovas = await pajzsfurasTobbfele(sajatPort, [{ cim: tarsCim, port: tarsPort }],
+    beallitas);
+
+  const cel = soklovas.celok[0] ?? {};
+  const eredmeny = {
+    halo: soklovas.halo,
+    // ⚠️ A RÉGI JELENTÉS VÁLTOZATLAN: „sikerült" az is, ha csak az Ő csomagja jött át
+    // (fél siker) — mert az is mérés. A teljes sikert a `mindketIrany` mondja meg.
+    sikerult: soklovas.sikerult,
+    mindketIrany: cel.mindketIrany ?? false,
+    kuldott: soklovas.kuldott,
+    kapott: soklovas.kapott,
+    honnan: cel.honnan ?? soklovas.honnan,
+    sajatVisszhang: soklovas.sajatVisszhang,
+    bukott: soklovas.bukott,
+    sajatKulso: soklovas.sajatKulso,
+    eltelt: soklovas.eltelt
+  };
+  console.log('talalkozo - VÉGE', eredmeny);
+  return eredmeny;
+}
+
+/**
+ * ⭐⭐⭐ TÖBBCÉLÚ PAJZSFÚRÁS: EGY FOGLALAT, TÖBB TÁRS (2026-09-20).
+ *
+ * ⛔ MIÉRT NEM ELÉG A TÁRSANKÉNTI FÚRÁS: **a NAT-leképezés a FOGLALATHOZ tartozik**, nem a
+ * készülékhez (17., 18., 31/b. mérés). Ha minden társhoz külön foglalatot nyitnánk, minden
+ * társ MÁS külső portot látna belőlünk — és akkor nincs egyetlen olyan címünk, amit a
+ * bulin bemondhatnánk, és amit a hirdetőtáblára kiírhatnánk. *Egy foglalat = egy cím =
+ * egy mondható szám.*
+ *
+ * ⭐ ÉS EZ A BULI ALAKJA: az ablakban egyszerre kopogunk MINDENKIRE, mert a 36/d. mérés
+ * szerint **idegent a mobil NAT nem enged be** — rést csak a KÖLCSÖNÖS kopogás nyit.
+ *
+ * @param {number} sajatPort - a rögzített helyi port (ezen fogadunk, ezt hirdetjük)
+ * @param {Array<{cim: string, port: number}>} celok
+ * @param {Object} [beallitas] - mint a `pajzsfuras`-nál (idokorlat · koz · utana · tartsdNyitva)
+ * @returns {Promise<Object>} - `celok`: társanként az eredmény; `halo`: a nyitva hagyott rés
+ */
+export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
+  console.log('pajzsfurasTobbfele - KEZDÉS', { sajatPort, celok: celok?.length ?? 0 });
+
   const idokorlat = beallitas.idokorlat ?? IDOKORLAT;
   const koz = beallitas.koz ?? KOPOGAS_KOZ;
   const jelez = beallitas.utana ?? (() => {});
 
-  // Az `udp6` a globális IPv6-hoz kell. A `reuseAddr` azért, hogy egy félbehagyott
-  // próbálkozás után azonnal újra lehessen indítani ugyanazon a porton.
-  // ⭐ IPv4 VAGY IPv6? A cím maga megmondja: ha van benne kettőspont, IPv6.
-  // Ez azért lett fontos, mert két hétköznapi háztartás közül az egyikben NINCS működő
-  // IPv6 — a közös nevező az IPv4. A fúrónak tehát mindkettőt tudnia kell.
-  const ipv6E = String(tarsCim).includes(':');
+  // ⚠️ EGY FOGLALAT — EGY CSALÁD. Az `udp4` foglalat nem tud IPv6-címre küldeni, és
+  // fordítva. A többségi családot visszük, a kimaradókat pedig **kimondjuk** (D19),
+  // nem hallgatjuk el: aki kimaradt, arra ebben az ablakban nem fúrunk.
+  const lista = (celok ?? []).map((c) => ({ cim: String(c.cim), port: Number(c.port) }))
+    .filter((c) => c.cim && Number.isFinite(c.port));
+  const ipv6E = lista.length > 0 && lista.every((c) => c.cim.includes(':'));
+  const mehet = lista.filter((c) => c.cim.includes(':') === ipv6E);
+  for (const kimaradt of lista.filter((c) => c.cim.includes(':') !== ipv6E)) {
+    jelez({ mi: 'CEL-KIHAGYVA', cim: kimaradt.cim, port: kimaradt.port,
+      ok: ipv6E ? 'IPv4-cím IPv6-os körben' : 'IPv6-cím IPv4-es körben' });
+  }
+
   const halo = createSocket({ type: ipv6E ? 'udp6' : 'udp4', reuseAddr: true });
 
   // ⚠️ SAJÁT AZONOSÍTÓ — EZ NÉLKÜL A MÉRÉS VAK VOLT (mérve 2026-08-29).
@@ -498,12 +550,36 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
   const sajatAzonosito = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
   const kezdet = Date.now();
-  let kuldott = 0, kapott = 0, honnan = null, mindketIrany = false;
+  let kuldott = 0, kapott = 0, honnan = null;
   let sajatVisszhang = 0, bukott = 0;
   let sajatKulso = null;          // amit a tükör mond RÓLUNK, EZEN a foglalaton
 
+  // Társanként külön könyvelés — a kör akkor is hasznos, ha csak az egyik fél ért össze.
+  const allapotok = new Map();
+  for (const c of mehet) {
+    allapotok.set(c.cim + ':' + c.port,
+      { cim: c.cim, port: c.port, kuldott: 0, kapott: 0, mindketIrany: false,
+        honnan: null, eltelt: null });
+  }
+
   return new Promise((teljesites) => {
     let idozito = null, hatarido = null;
+
+    // ⭐ MELYIK TÁRS SZÓLT? Elsőre pontos egyezés (cím ÉS port). ⚠️ Ha a port nem egyezik,
+    // de a CÍM igen, akkor is őt ismerjük fel: a mobil NAT a leképezést a foglalathoz
+    // adja, és az ő oldalán ez újraindításkor más szám lehet (32. mérés) — *a szám csak
+    // addig él, amíg az a foglalat*. Ilyenkor feljegyezzük a friss portot is.
+    const kiSzolt = (felado) => {
+      const pontos = allapotok.get(felado.address + ':' + felado.port);
+      if (pontos) return pontos;
+      for (const a of allapotok.values()) {
+        if (a.cim === felado.address) {
+          a.masPort = felado.port;
+          return a;
+        }
+      }
+      return null;
+    };
 
     const befejez = (sikerult) => {
       if (idozito) clearInterval(idozito);
@@ -512,13 +588,19 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
       // Ha most becsuknánk, a következő megnyitás ÚJ külső portot kaphatna, és kezdhetnénk
       // elölről. A csere ezen a foglalaton megy tovább (udpVonal.js).
       if (!(sikerult && beallitas.tartsdNyitva)) halo.close();
+      const celEredmenyek = [...allapotok.values()];
       const eredmeny = {
         halo: sikerult && beallitas.tartsdNyitva ? halo : null,
-        sikerult, mindketIrany, kuldott, kapott, honnan, sajatVisszhang, bukott,
-        sajatKulso,
+        sikerult,
+        celok: celEredmenyek,
+        // ⭐ A HÍVÓNAK EZ A KÉT LISTA KELL: kivel lehet most cserélni, és kivel nem.
+        atfurtak: celEredmenyek.filter((c) => c.mindketIrany),
+        nemSikerultek: celEredmenyek.filter((c) => !c.mindketIrany),
+        kuldott, kapott, honnan, sajatVisszhang, bukott, sajatKulso,
         eltelt: Date.now() - kezdet
       };
-      console.log('talalkozo - VÉGE', eredmeny);
+      console.log('pajzsfurasTobbfele - VÉGE', {
+        atfurt: eredmeny.atfurtak.length, cel: celEredmenyek.length, kuldott, kapott });
       teljesites(eredmeny);
     };
 
@@ -540,22 +622,35 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
 
       kapott++;
       honnan = felado.address;
+      const allapot = kiSzolt(felado);
+      if (allapot) {
+        allapot.kapott++;
+        allapot.honnan = felado.address;
+      }
 
       if (uzenet.uzenet === 'KOPOG') {
         // Az ő csomagja átjutott hozzánk. Visszaszólunk — ettől ő is megtudja, hogy a
-        // MÁSIK irány is él.
-        jelez({ mi: 'KOPOG-ERKEZETT', honnan: felado.address, port: felado.port });
+        // MÁSIK irány is él. ⚠️ Akkor is felelünk, ha nem ismerjük fel: lehet, hogy egy
+        // társ hív, akinek a címe azóta megváltozott. *A felelet nem bizalom* (3. szabály):
+        // a csere utána ugyanúgy ellenőriz mindent.
+        jelez({ mi: 'KOPOG-ERKEZETT', honnan: felado.address, port: felado.port,
+          ismert: Boolean(allapot) });
         halo.send(JSON.stringify({ uzenet: 'HALLAK', tol: sajatAzonosito }),
           felado.port, felado.address);
-        // Nem állunk meg: megvárjuk a HALLAK-ot is, hogy mindkét irányról tudjunk.
         return;
       }
 
       if (uzenet.uzenet === 'HALLAK') {
         // ⭐ EZ A TELJES SIKER: a mi csomagunk is átment, és a válasza is visszaért.
-        mindketIrany = true;
-        jelez({ mi: 'HALLAK-ERKEZETT', honnan: felado.address, port: felado.port });
-        befejez(true);
+        jelez({ mi: 'HALLAK-ERKEZETT', honnan: felado.address, port: felado.port,
+          ismert: Boolean(allapot) });
+        if (allapot && !allapot.mindketIrany) {
+          allapot.mindketIrany = true;
+          allapot.eltelt = Date.now() - kezdet;
+        }
+        // ⛔ NEM ÁLLUNK MEG AZ ELSŐ SIKERNÉL, ha több társra fúrunk: a többiek rése még
+        // nincs nyitva. *Csak akkor van vége, ha MINDENKI átért* — vagy lejár az ablak.
+        if ([...allapotok.values()].every((a) => a.mindketIrany)) befejez(true);
       }
     });
 
@@ -587,18 +682,28 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
       }
 
       const kopog = () => {
-        halo.send(JSON.stringify({ uzenet: 'KOPOG', tol: sajatAzonosito }),
-          tarsPort, tarsCim, (hiba) => {
-          if (hiba) {
-            // Egy sikertelen küldés önmagában nem végzetes (a hálózat változik), de ha
-            // MINDEN küldés bukik, akkor a csomagjaink el sem indulnak — és ezt látni kell.
-            bukott++;
-            jelez({ mi: 'KULDES-BUKOTT', ok: hiba.message, hanyadik: bukott });
-            return;
-          }
-          kuldott++;
-          jelez({ mi: 'KOPOGTAM', hanyadik: kuldott });
-        });
+        for (const allapot of allapotok.values()) {
+          // ⭐ AKI ÁTÉRT, ARRA NEM KOPOGUNK TOVÁBB — a rés már nyitva van, a további
+          // csomag csak adat (6. szabály) és akkumulátor.
+          if (allapot.mindketIrany) continue;
+          // ⭐ Ha közben MÁS portról szólt hozzánk, oda is kopogunk: a leképezése
+          // megváltozhatott azóta, hogy a címét megkaptuk.
+          const celPort = allapot.masPort ?? allapot.port;
+          halo.send(JSON.stringify({ uzenet: 'KOPOG', tol: sajatAzonosito }),
+            celPort, allapot.cim, (hiba) => {
+            if (hiba) {
+              // Egy sikertelen küldés önmagában nem végzetes (a hálózat változik), de ha
+              // MINDEN küldés bukik, akkor a csomagjaink el sem indulnak — és ezt látni kell.
+              bukott++;
+              jelez({ mi: 'KULDES-BUKOTT', ok: hiba.message, hanyadik: bukott,
+                cim: allapot.cim, port: celPort });
+              return;
+            }
+            kuldott++;
+            allapot.kuldott++;
+            jelez({ mi: 'KOPOGTAM', hanyadik: kuldott, cim: allapot.cim, port: celPort });
+          });
+        }
       };
 
       kopog();
@@ -613,7 +718,9 @@ export async function pajzsfuras(sajatPort, tarsCim, tarsPort, beallitas = {}) {
         hatarido = setTimeout(() => {
           // ⚠️ Ha kaptunk KOPOG-ot, de HALLAK-ot nem, az FÉL siker: az ő csomagjai
           // átjönnek, a mieink nem. Ez is értékes mérés, ezért külön jelezzük.
-          befejez(kapott > 0);
+          // ⭐ Több célnál a „sikerült" azt jelenti: van LEGALÁBB EGY átfúrt társ —
+          // *egy buli nem attól ér valamit, hogy mindenki eljött.*
+          befejez([...allapotok.values()].some((a) => a.mindketIrany) || kapott > 0);
         }, idokorlat);
       }
     });

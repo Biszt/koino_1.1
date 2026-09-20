@@ -20,7 +20,7 @@ import {
 } from '../js/csere/csere.js';
 import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
 import { createServer } from 'node:net';
-import { pajzsfuras, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
+import { pajzsfuras, pajzsfurasTobbfele, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen } from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
@@ -614,6 +614,45 @@ proba('⭐ A PAJZSFÚRÓ: két fél egymásra talál, és MINDKÉT irányt igazo
   return egyik.sikerult && masik.sikerult
     && egyik.mindketIrany && masik.mindketIrany
     && egyik.kuldott > 0 && masik.kuldott > 0;
+});
+
+// ===== ⭐⭐⭐ A TÖBBCÉLÚ FÚRÓ: EGY FOGLALAT, TÖBB TÁRS (2026-09-20) =====
+//
+// ⛔ MIÉRT EZ A SZERKEZET: a NAT-leképezés a FOGLALATHOZ tartozik. Társanként külön
+// foglalattal minden társ MÁS külső portot látna belőlünk — és akkor nincs egyetlen
+// mondható címünk a bulira és a hirdetőtáblára. *Egy foglalat = egy cím.*
+
+proba('⭐⭐⭐ A TÖBBCÉLÚ FÚRÓ: EGY foglalatról KÉT társ rése nyílik meg', async () => {
+  const KOZEP = 7381, EGYIK = 7382, MASIK = 7383;
+  const [sok, a, b] = await Promise.all([
+    pajzsfurasTobbfele(KOZEP, [{ cim: '::1', port: EGYIK }, { cim: '::1', port: MASIK }],
+      { idokorlat: 4000, koz: 100 }),
+    pajzsfuras(EGYIK, '::1', KOZEP, { idokorlat: 4000, koz: 100 }),
+    pajzsfuras(MASIK, '::1', KOZEP, { idokorlat: 4000, koz: 100 })
+  ]);
+  // ⭐ A LÉNYEG: MINDKÉT társ átfúrva, EGY foglalatról — és a két szélső is megkapta
+  // a maga teljes sikerét, tehát tényleg oda-vissza ment a csomag.
+  return sok.atfurtak.length === 2 && sok.nemSikerultek.length === 0
+    && a.mindketIrany && b.mindketIrany
+    && sok.celok.every((c) => c.kuldott > 0 && c.kapott > 0);
+});
+
+proba('⛔ A TÖBBCÉLÚ FÚRÓ NEM ÁLL MEG AZ ELSŐ SIKERNÉL — a néma társ külön látszik', async () => {
+  // ⚠️ EZ A RONTÁS-PRÓBA PÁRJA: ha a fúró az első HALLAK-ra befejezné (ahogy az egycélú
+  // teszi), a másik társ rése SOHA nem nyílna meg. Itt a második cél szándékosan néma:
+  // a kör így is végigmegy, és a NÉV SZERINT megmondja, ki maradt ki (D19).
+  const KOZEP = 7384, ELO = 7385, NEMA = 7386;
+  const [sok, elo] = await Promise.all([
+    pajzsfurasTobbfele(KOZEP, [{ cim: '::1', port: ELO }, { cim: '::1', port: NEMA }],
+      { idokorlat: 1500, koz: 100 }),
+    pajzsfuras(ELO, '::1', KOZEP, { idokorlat: 1500, koz: 100 })
+  ]);
+  const nema = sok.nemSikerultek.find((c) => c.port === NEMA);
+  return sok.sikerult && elo.mindketIrany
+    && sok.atfurtak.length === 1 && sok.atfurtak[0].port === ELO
+    && !!nema && nema.kapott === 0
+    // ⭐ ÉS KOPOGTUNK IS RÁ — vagyis nem azért nem sikerült, mert meg sem próbáltuk.
+    && nema.kuldott > 0;
 });
 
 proba('⭐⭐ A FÚRÓ MEGMÉRI A SAJÁT KÜLSŐ CÍMÉT — a saját foglalatáról', async () => {
