@@ -17,10 +17,44 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
-### ▶️▶️ SESSION-VÁLTÁS (2026-09-20) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️▶️ SESSION-VÁLTÁS (2026-09-21) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-⭐⭐⭐ **AZ ELÉRHETŐSÉG GERINCE MEGÉPÜLT.** A terv és Csaba öt döntése:
-[`docs/elerhetoseg_terv.md`](docs/elerhetoseg_terv.md). **680 önpróba zöld** (26 próba-fájl).
+⭐⭐⭐ **A HIRDETŐTÁBLA TEREPEN IS MŰKÖDIK — 39. mérés, két valódi telefonnal.**
+Jegyzőkönyv: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) 39. · a forgatókönyv:
+[`docs/terepmeres_mobil.md`](docs/terepmeres_mobil.md). **A munkakönyvtár tiszta, a `main`
+pusholva** (`5e832b8`), **680 önpróba zöld** (26 próba-fájl).
+
+**A DÖNTŐ SOR, a maradó telefon naplójából:**
+
+```
+20:09:35  0/4 társ — 0 új esemény, 0 bájt          ← a társ elnémult
+20:10:05  ⭐ a táblán megvan egy néma társ új címe:
+          5.187.184.117:7373 (az ő órája szerint 1 perce írta ki)
+```
+
+⭐ Az elvitt telefon **magától** kiírta az új címét, a maradó **magától** kiolvasta —
+**kézzel egyetlen címet sem írtunk be**, és elnémulástól a megtalálásig **30 másodperc**.
+A kiírás telefonról **8 tárolót** ért el, ugyanannyit, mint a 37. mérés laptopról.
+
+⛔⛔ **DE A RÉS NEM NYÍLT MEG, és a gondolat nem jött át** (`1 friss címre kopogtam, egyik
+rés sem nyílt meg`). ⚠️⚠️ **Két magyarázat, és a naplóból NEM szétválaszthatók:**
+*(1)* a másik fél **nem kopogott vissza** (az ő kötésében a maradó RÉGI, hotspotos címe állt,
+és nem tudjuk, kiolvasta-e a tábláról az újat) · *(2)* **két mobil NAT nem tud egymásba
+fúrni** (a 32. mérés máig nyitott kérdése). ⛔ *Nem választottunk, mert az „A" telefon
+naplójához megszűnt a hozzáférés — egy mérés, aminek a döntő fele hiányzik, nem ad választ.*
+
+⏭️⏭️ **A KÖVETKEZŐ LÉPÉS EBBEN: MEGISMÉTELNI, MINDKÉT NAPLÓVAL.**
+⭐ **A 0. szakaszt NEM kell újra** — a kötés mindkét telefon lemezén megmaradt
+(`kotesek.json`), tehát a következő alkalom **rögtön a hálózatváltással kezdhet**.
+⛔ A döntő adat: **kiolvassa-e a TÁVOZÓ is a tábláról a maradó címét?** Ha igen, és a rés
+mégsem nyílik, akkor az a 32. mérés hiányzó darabja, **negatív eredménnyel**.
+
+⏸️ **És egy kicsi, de terepen drága javítandó (39. mérés / 2. mellék-lelet):** a `felfedez`
+azt írja, *„1 már ismerős volt"* akkor is, amikor a valóság *„1-et kiszűrtem, mert a SAJÁT
+címem"*. A szűrő jól működik, a **felirat** mond két különböző dolgot ugyanannak — ez a
+terepen tíz percnyi rossz diagnózist okozott.
+
+**Ami 2026-09-20-án elkészült — mind próbával és rontás-próbával:**
 
 **Ami 2026-09-20-án elkészült — mind próbával és rontás-próbával:**
 1. ✅ **AZ ŐRJÁRAT UDP-RE ÁLLT.** A kör elején **egy foglalatról** kopogunk minden friss
@@ -40,10 +74,10 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 5,4 → 3,8 MB, 14 társnál): *a tábla árát a cím-korlát kifizette.*
 
 **A KÖVETKEZŐ MUNKA, sorrendben:**
-1. ⏸️⏸️ **TEREPMÉRÉS KÉT VALÓDI MOBILLAL** — ez a döntő próba, és **Csaba kell hozzá**.
-   A forgatókönyv: két telefon, mindkettő mobil adaton, `orjarat` fut mindkettőn; az egyik
-   hálózatot vált (wifi ↔ mobil), és a kérdés: **visszatalál-e a tábláról**. *Ez az, amit
-   eddig csak modellben (35.) és egy gépen (37.) mértünk.*
+1. 🚧 **TEREPMÉRÉS KÉT VALÓDI MOBILLAL — FELE MEGVAN (39. mérés, 2026-09-21).**
+   ✅ A tábla-út végigment (a fenti napló). ⛔ A rés nem nyílt meg, és az ok **nyitva van**.
+   ⏭️ **Megismételni, MINDKÉT telefon naplójával** — a 0. szakasz nélkül, rögtön a
+   hálózatváltással. **Csaba kell hozzá.**
 2. ⏸️ **A VÉLETLEN SÉTA** — ma a kötések abból lesznek, akivel amúgy is összeérünk; a
    társakat még **nem kérjük el egymástól**. A 35. mérés szerint a séta NAGY méretnél tartja
    egyben a hálót (kis koinóban mindenki amúgy is találkozik mindenkivel).
@@ -51,11 +85,52 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
    bájt/kör megtakarítás, de protokoll-bonyolítás. ⭐ *Ma nem kell: a kör olcsóbb, mint
    tegnap volt.*
 
-- ⚠️ **A `main` több committal jár az origin előtt** — a pontos szám: `git rev-list --count
-  origin/main..main`. Push **csak Csaba kérésére** (az egyszeri engedély nem általános).
-- ⚠️ **Egy másik session munkája a munkakönyvtárban van** (docs + `koino/README.md` +
-  `szabalyok.js`), még nem commitolva. **Ne söpörd bele a saját commitodba** (`git add -A`
-  helyett fájlonként adj hozzá) — 2026-09-20-án ez egyszer megtörtént.
+### ⭐ ÉS EGY ÁTNÉZÉS UGYANAZON A NAPON (2026-09-21) — hat javítás + két szeszélyes próba
+
+⭐ **Hat valódi hiány javítva** (a hetediket Csaba **cáfolta**, jogosan — a `valtozatlanCel`
+és a `tomorCsomopontokKeszitese` nem halott, a `dhtProba.js` hívja őket):
+- ⛔⛔ **A KÖTÉS-JEGYZÉK BEFAGYOTT:** a kiesés a `talalkozasok` szerint dőlt el, ezért egy ÚJ
+  társ (1 találkozás) azonnal kiesett a sokszor látott régiek mögül, és legközelebb megint
+  1-ről indult. **Mérve: öt régi társ 20 találkozással, majd négy új tízszer — egyetlen új
+  sem jutott be**, és a halott kötés **örökre** foglalta a helyét (körönként rá kopogtunk, a
+  tábláról őt kerestük ~23 mp-ig). ✅ A kiesés mostantól az **`utoljara`** szerint dől el
+  (Csaba döntése); a kopogás sorrendje marad a rendszeresség szerint.
+- Három **hazudó felirat** (a `dht.js` fejléce · a `tabla.js` `mikor` mezője · a
+  `sajatUdpCimJegyzese` neve → `frissUdpCimJegyzese`), a **`tabla` parancs** hiánya mindkét
+  súgó-listából, és a **DHT-gyorsítótár** rossz végének vágása (a `Map.set` nem mozgat hátra).
+
+⭐⭐ **ÉS A KÉZI ÚT AZ ÖSSZEVETÉSHEZ (4. szabály):** az `elteresek` **egyetlen éles hívó
+nélkül** állt — az `ujjlenyomat` megmondta, hogy eltérünk, de azt nem, hogy MIBEN.
+Új: `ujjlenyomat kiment <fájl>` → a másik gépen `ujjlenyomat osszevet <fájl>`. A lap hordozza
+a **pillanatot** (az ujjlenyomat időfüggő) és a **saját ujjlenyomatát** (olvasáskor újra
+lenyomatolunk). Az `elteresek` **kétoldalú** lett: korábban a csak a másiknál meglévő
+szakaszról **némán hallgatott**, a csak nálunk levőnél pedig **hibát dobott** — épp a D66-os
+verzió-eltérés esetében.
+
+⛔⛔ **ÉS KÉT SZESZÉLYES PRÓBA, ELLENTÉTES OKKAL — ez a menet fő tanulsága:**
+- `dht` „NÉMA gépek": a **PRÓBA** hibája (véletlen topológia futásonként). Mérve **5/30
+  terhelés NÉLKÜL is**; két magyarázatomat a mérés cáfolta (nem a terhelés, és **nem a
+  kérdés-óra**: 400 ms → 0/12, 1500 ms → 1/12). ✅ **Magvas véletlen, öt magon** (hogy ne
+  lehessen zöldre hangolni): **0/25**.
+- `parancssor` „A SAJÁT friss címünket…": a **PROGRAM** hibája — **ELVESZETT ÍRÁS**. A saját
+  külső címet **két forrásból** tanuljuk (tükör és a **TÁRS**), és a rés két oldalán ez
+  ezredmásodperceken belül érkezik; a külön `olvas()` + `ir()` páros a későbbivel **felülírta**
+  a korábbit (mérve: 1 ms különbség → elveszett; 17 ms → megmaradt). ⭐ *Az elveszett cím épp
+  az, amit a CLAUDE.md a végleges tükörnek nevez.* ✅ Javítva a **RÉTEGBEN**: a tárolók új
+  **`modosit()`** művelete fájlonkénti sorba állítja a beolvas–módosít–kiír lépést.
+  **~2/13 → 0/8 teljes futás.**
+- ⚠️ **És egy saját próbám VAK volt** (az őrt rossz helyre tettem) — a rontás-próba leplezte le.
+
+⭐⭐ **A MÓDSZER, amit ez a menet megerősített:** egy szeszélyes próba **vagy a próba, vagy a
+program hibáját takarja — és kívülről a kettő UGYANÚGY néz ki.** Ezért nem szabad
+„zöldre hangolni": meg kell mérni. *(És a diagnosztika nélkül egyik sem lett volna
+megtalálható: a bukásnak meg kell neveznie magát.)*
+
+- ✅ **A `main` PUSHOLVA** (`5e832b8`, 2026-09-21). Push továbbra is **csak Csaba kérésére**.
+- ⚠️ **Egy másik session munkája a munkakönyvtárban van** (`docs/gepezet.md` ·
+  `docs/utiterv.md` · `szabalyok.js`), még nem commitolva. **Ne söpörd bele a saját
+  commitodba** (`git add -A` helyett fájlonként adj hozzá) — 2026-09-20-án ez egyszer
+  megtörtént.
 
 ### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
 
@@ -917,7 +992,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere-kör **334 bájt** · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **181 fájl, 3036,6 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **181 fájl, 3042,3 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -1072,7 +1147,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" kör **334 bájt** (a B. lépés miatt), tehát sűrűn is mehet. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 181 fájl, 3036,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 181 fájl, 3042,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

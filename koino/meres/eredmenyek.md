@@ -3300,3 +3300,101 @@ A tábla-kulcs **minden körben** utazik, pedig a társ az első találkozás ut
 kulcs csak akkor, ha a másik nem ismeri fel. ⛔ Ez viszont protokoll-bonyolítás (ki kérdez,
 ki felel, mi történik, ha az egyik fél elveszítette a jegyzékét) — *ma a 931 bájt kevesebb,
 mint ami tegnap volt, tehát nem kell megvenni ezt a bonyolultságot.*
+
+---
+
+## 39. ⭐⭐⭐ A HIRDETŐTÁBLA TEREPEN — KÉT VALÓDI TELEFON (2026-09-21, 19:30–20:12)
+
+**Ez a 35. és 37. mérés hiányzó darabja:** eddig a táblát csak modellben (35.) és **egy
+gépen** (37.) mértük. Most két valódi telefon, Termux + Node, a friss `main`-ről
+(`5e832b8`, 680 önpróba).
+
+| | „A" telefon | „B" telefon |
+|---|---|---|
+| szerep | **elvitt** (ő váltott hálózatot) | **maradó** (ő figyelt) |
+| kulcs | `UPkUZ4an_99W4vPc8` | `dqowl2V7_D29X0_wE` |
+| tábla-kulcs (rekesz) | `ApZHO1qsoIyk…` | `35oykowL4itc…` |
+| induló cím | `192.168.233.98` | `192.168.233.14` |
+| globális IPv6 a mobilon | **van** (`2a00:1110:…`) | nincs |
+
+Mindkettőn `orjarat 1` futott (1 perces ablak — a mérés miatt, az alapérték 5).
+
+### ⭐⭐⭐ A FŐ EREDMÉNY: A TÁBLA VÉGIGVITTE A CÍMET, KÉZI BEAVATKOZÁS NÉLKÜL
+
+A „B" telefon naplója, a hálózatváltás után:
+
+```
+20:09:35  0/4 társ — 0 új esemény, 0 bájt            ← a társ elnémult
+20:10:05  ⭐ a táblán megvan egy néma társ új címe:
+          5.187.184.117:7373 (az ő órája szerint 1 perce írta ki)
+```
+
+- **A** magától észrevette, hogy megváltozott a címe, és **kiírta a táblára** — miközben
+  már úton volt, kézi parancs nélkül.
+- **B** magától észrevette, hogy a társ **elnémult**, és **kiolvasta a tábláról az ÚJ
+  címét** — egy vadonatúj, nyilvános címet (`5.187.184.117`), aminek semmi köze a korábbi
+  `192.168.233.98`-hoz.
+- ⭐ **Elnémulástól a megtalálásig 30 MÁSODPERC.** *(A 35. mérés modellje 5 perces ablakkal
+  számolt; itt 1 perces ablaknál a teljes visszatalálás jóval egy percen belül volt.)*
+
+⭐ **És a kiírás ára élesben, TELEFONRÓL:** `19:54:28 az új címemet kiírtam a táblára
+(1 társ rekeszébe, **8 tároló**)` — **ugyanannyi tároló, mint a 37. mérésen** (laptopról).
+*A telefon nem gyengébb tábla-résztvevő.*
+
+⚠️⚠️ **PONTOSÍTÁS, mert könnyű összekeverni:** ez a 8 tárolós kiírás a **„B" (maradó)**
+telefoné, és **még a váltás ELŐTT** történt — akkor, amikor a közös hálózaton először
+megtudta a saját külső címét. ⛔ A **váltás utáni** kiírás az „A" telefoné volt, és arról
+**csak közvetett tudásunk van**: „B" olvasata szerint *„az ő órája szerint 1 perce írta ki"*.
+**Az „A" oldali tároló-szám ISMERETLEN** — a naplójához nem fértünk hozzá. *Ezt a számot a
+következő mérésnek kell elhoznia.*
+
+### ⛔ AMI NEM SIKERÜLT: A RÉS NEM NYÍLT MEG
+
+```
+20:11:24  1 friss címre kopogtam, egyik rés sem nyílt meg
+20:12:06  1 friss címre kopogtam, egyik rés sem nyílt meg
+```
+
+A cím megvolt, a kopogás elment — de a rés nem nyílt, tehát a váltás után létrehozott
+gondolat (`ie-mAD_2 „Atjott a valtas utan"`) **nem jött át**. A 3. szakasz nem teljesült.
+
+⚠️⚠️ **ÉS KÉT MAGYARÁZAT VAN, AMIT EBBŐL A NAPLÓBÓL NEM LEHET SZÉTVÁLASZTANI:**
+
+1. **A másik fél nem kopogott vissza.** A rés csak **kölcsönös** kopogásra nyílik. „A"
+   kötés-jegyzékében „B" **régi, hotspotos címe** (`192.168.233.14`) állt — az kívülről
+   használhatatlan. Neki is ki kellett volna olvasnia a tábláról „B" címét; hogy megtette-e,
+   azt csak **az ő naplója** mondaná meg.
+2. **Két mobil NAT nem tud egymásba fúrni.** Ez a **32. mérés** kimondott, máig nyitott
+   kérdése (*„két mobil készülék egymás közt, hairpinning"*).
+
+⛔ **A kettő közül NEM választunk, mert nincs rá adat.** Az „A" telefon naplójához a mérés
+közben megszűnt a hozzáférés. *Egy mérés, aminek a döntő fele hiányzik, nem ad választ — és
+ezt kimondani többet ér, mint a valószínűbbet megtippelni.*
+
+### ⏭️ AMIT LEGKÖZELEBB MÁSKÉNT KELL CSINÁLNI
+
+- ⭐ **A 0. szakaszt NEM kell újra:** a kötés mindkét telefon lemezén megmaradt
+  (`kotesek.json`), tehát a következő alkalom **rögtön a hálózatváltással kezdhet**.
+- ⛔⛔ **MINDKÉT telefon naplója kell**, és főleg a **távozóé**: kiolvassa-e a tábláról a
+  maradó címét. Enélkül a rés-kérdés megválaszolhatatlan.
+- Ha a távozó megtalálja a maradót, és a rés **mégsem** nyílik, akkor az a **32. mérés
+  hiányzó darabja, negatív eredménnyel** — és akkor a két mobil NAT esete nem elméleti
+  aggály, hanem mért tény.
+
+### ⚠️ HÁROM MELLÉKLELET, MIND A TEREPRŐL
+
+1. ⛔ **A HELYI FELFEDEZÉS CSAK ÖNMAGÁT TALÁLTA MEG.** A `felfedez 5` egyetlen választ
+   kapott: a **saját** mobilnetes címét (`10.91.173.90`, ami a `cimek` szerint a saját
+   felülete). A társ válasza sosem ért át — *ezen a hálózaton a broadcast/multicast nem megy
+   át a két készülék között, csak visszahurkolódik.* A két telefon így **kézi `tars`-szal**
+   találkozott (`192.168.233.98` ↔ `192.168.233.14`), és onnantól minden ment.
+2. ⛔⛔ **ÉS EGY FELIRAT FÉLREVEZETETT — ENGEM IS.** A felfedezés ezt írta: *„+ 0 új társ a
+   listán (**1 már ismerős volt**)"* — pedig a valóság az volt, hogy *„1-et KISZŰRTEM, mert
+   a SAJÁT címem"*. A szűrő jól működött (`kapottCimekBeolvasztasa` → `sajatCimekKiszurese`),
+   de a szöveg két különböző dolgot mond ugyanannak. ⭐ Ez tíz percnyi rossz irányt okozott
+   a terepen: arra jutottam, hogy a telefon **felvette magát társnak** — a `tars torol`
+   cáfolt meg (*„Nem volt a listán"*). ⏸️ **Javítandó:** a felirat mondja meg külön, hogy
+   *már ismert* vagy *saját cím volt*.
+3. ⭐ **A rés a közös hálózaton 36–98 ms alatt nyílt** (`rés nyílt: …:7373 (36 ms)`,
+   `(67 ms)`, `(98 ms)`) — ugyanaz a nagyságrend, mint a 17. (190 ms) és 19. (76 ms) mérésen.
+   *Telefonon sem drágább.*
