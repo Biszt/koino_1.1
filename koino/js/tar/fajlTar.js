@@ -943,8 +943,61 @@ export function kotesTarolo(hely = alapHely()) {
     async ir(jegyzek) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify({ kotesek: jegyzek }, null, 2), 'utf8');
+    },
+
+    /**
+     * ⭐ BEOLVAS → MÓDOSÍT → KIÍR, oszthatatlanul (lásd a fenti „EGY SOR FÁJLONKÉNT").
+     *
+     * ⚠️ A kötés-jegyzékre ugyanaz a veszély áll: az őrjárat a **postaláda-ágból** és a
+     * **kör-ágból** is feljegyez találkozást, és a kettő egyszerre futhat.
+     */
+    async modosit(atalakit) {
+      return sorban(fajl, async () => {
+        const uj = await atalakit(await this.olvas());
+        await this.ir(uj);
+        return uj;
+      });
     }
   };
+}
+
+// ===================================
+// ⛔⛔⛔ EGY SOR FÁJLONKÉNT — AZ ELVESZETT ÍRÁS ELLEN (2026-09-21)
+// ===================================
+//
+// ⛔ A HIBA, AHOGY ELŐKERÜLT: egy parancssor-próba **szeszélyesen bukott** (a teljes
+// suite-ban 8 futásból ~2-szer, önmagában soha). A diagnosztika mutatta meg az okát:
+// a készülék a résen MEGTANULTA a saját külső címét a társtól, ki is írta a képernyőre —
+// ⛔ **de az nem került a lemezre.** A túlélő és az elveszett írás között **1 ms** telt el;
+// ahol 17 ms volt (a másik gépen), ott mindkettő megmaradt.
+//
+// ⭐ A MECHANIZMUS: a tárolók külön `olvas()`-t és `ir()`-t adnak, a „beolvas → módosít →
+// kiír" pedig a HÍVÓBAN van. Két egyidejű hívás mindkettő a RÉGIT olvassa, és a később
+// kiíró **felülírja** a másik munkáját. *A saját friss címünk annak a jegyzéknek az egyetlen
+// valódi forrása — ha elveszik, a társ nem tudja meg, hova kopogjon.*
+//
+// ⭐ EZÉRT AZ ŐR A RÉTEGBEN VAN, NEM A HÍVÓBAN. Ugyanaz az érv, mint a kulcs felülírásánál
+// és a javaslathoz tartozó szavazatnál: ha a hívóra bíznánk, az egyik út megtenné, a másik
+// elfelejtené. A `modosit()` egy FÁJLONKÉNTI sorba állítja a műveletet.
+//
+// ⚠️ Ez a sor a FOLYAMATON BELÜL véd. Két külön `node` folyamat ugyanarra az adat-mappára
+// továbbra is egymásra írhat — *azt a koino amúgy sem ígéri* (egy készülék, egy őrjárat).
+
+/** Fájlonkénti ígéret-lánc: ami ide kerül, az egymás UTÁN fut, nem egymásra. */
+const jegyzekSorok = new Map();
+
+function sorban(fajl, munka) {
+  const elozo = jegyzekSorok.get(fajl) ?? Promise.resolve();
+  const mostani = elozo.then(munka);
+  // ⚠️⚠️ ITT AZ ŐR, ÉS EZ NEM DÍSZ: a SORBAN TÁROLT ígéret elnyeli a bukást, ezért egy
+  // elakadt módosítás nem ragasztja be a mögötte állókat. ⛔ Enélkül egyetlen hibás írás
+  // után a jegyzék **soha többé** nem frissülne — a nem-esemény, ami a legrosszabb hiba
+  // (25. mérés). ⚠️ A hívó a saját bukását változatlanul megkapja (`mostani`).
+  //
+  // ⚠️ Az első változatom az `elozo.then(munka, munka)` alakot használta — a rontás-próba
+  // megmutatta, hogy az **halott kód**: az `elozo` ezzel az őrrel sosem bukik.
+  jegyzekSorok.set(fajl, mostani.then(() => {}, () => {}));
+  return mostani;
 }
 
 // ===================================
@@ -988,6 +1041,24 @@ export function udpCimTarolo(hely = alapHely()) {
     async ir(lista) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify({ cimek: lista }, null, 2), 'utf8');
+    },
+
+    /**
+     * ⭐ BEOLVAS → MÓDOSÍT → KIÍR, egyetlen oszthatatlan lépésben.
+     *
+     * ⛔ EZT KELL HASZNÁLNI minden olyan helyen, ahol a meglévő jegyzékhez ADUNK valamit.
+     * A külön `olvas()` + `ir()` páros két egyidejű hívásnál **elveszti az egyiket** —
+     * mérve, 2026-09-21 (lásd a fenti szakaszt).
+     *
+     * @param {Function} atalakit - a régi listát kapja, az ÚJAT adja vissza
+     * @returns {Promise<Array<Object>>} az új lista
+     */
+    async modosit(atalakit) {
+      return sorban(fajl, async () => {
+        const uj = await atalakit(await this.olvas());
+        await this.ir(uj);
+        return uj;
+      });
     }
   };
 }

@@ -124,12 +124,34 @@ export function nemaKotesek(jegyzek, ablak, most = Date.now()) {
 }
 
 /**
- * A jegyzék karbantartása: a kötés-korláton felüli, LEGRÉGEBBEN hallott tételek kiesnek.
+ * A jegyzék karbantartása: a kötés-korláton felüli, LEGRÉGEBBEN HALLOTT tételek kiesnek.
  *
  * ⛔ MIÉRT KELL: e nélkül a jegyzék minden valaha látott készüléket megőrizne — pontosan
- * az a „globális lista", amit a 9. szabály tilt. ⭐ A korlát a kötésszámból következik,
- * nem tippből: aki nem fér bele, annak a helyét úgyis elfoglalta valaki rendszeresebb.
+ * az a „globális lista", amit a 9. szabály tilt.
+ *
+ * ⛔⛔⛔ ÉS MIÉRT AZ `utoljara` DÖNT, NEM A `talalkozasok` (2026-09-21, átnézésből —
+ * mérve, nem érvelve): korábban ez a függvény a `kotesek()`-et hívta, vagyis a
+ * RENDSZERESSÉG szerint vágott. Mivel a `talalkozasok` monoton nő és soha nem felejt, egy
+ * ÚJ társ (1 találkozás) azonnal kiesett a húszszor látott régiek mögül — és a következő
+ * találkozáskor megint 1-ről indult. ⛔ A jegyzék tehát **befagyott az először megismert
+ * ötön**, és egy végleg eltűnt társ **örökre** foglalta a helyét: körönként rá kopogtunk,
+ * a tábláról őt kerestük (~23 mp), és az új címünket az ő rekeszébe írtuk.
+ * *Mérve: öt régi társ 20 találkozással, majd négy új társ tízszer — egyetlen új sem
+ * jutott be.*
+ *
+ * ⭐ A JAVÍTÁS (Csaba döntése): **a kiesés az `utoljara` szerint dől el** — aki a
+ * legrégebben szólalt meg, az esik ki —, a KOPOGÁS sorrendje viszont marad a
+ * rendszeresség szerint (`kotesek()`). *Így a halott kötés kiürül, az élő új társ pedig
+ * marad, amíg él.*
+ *
+ * ⚠️ Az ára kimondva: egy nyüzsgő koinóban, ahol ötnél több társsal érünk össze, a helyek
+ * cserélődnek, és a `talalkozasok` nem tud felgyűlni. *Ez tudatos csere: egy friss,
+ * elérhető cím többet ér, mint egy régi ismeretség halott címe.*
  */
 export function jegyzekTakaritasa(jegyzek, korlat = KOTES_KORLAT) {
-  return kotesek(jegyzek, korlat);
+  return [...(jegyzek ?? [])]
+    .filter((k) => k && typeof k.alairo === 'string')
+    .sort((a, b) => (b.utoljara ?? 0) - (a.utoljara ?? 0)
+      || String(a.alairo).localeCompare(String(b.alairo)))
+    .slice(0, Math.max(0, korlat));
 }

@@ -15,7 +15,8 @@
 // döntés lezárul). Két készülék ujjlenyomata tehát csak AZONOS IDŐPONTRA számolva
 // hasonlítható össze — ezért a `javaslatok` itt bemenet, nem itt számoljuk ki.
 //
-// Használják: koino.js (az `ujjlenyomat` parancs) és a vizsgaProba.js.
+// Használják: koino.js (az `ujjlenyomat` parancs — a lenyomat, a `kiment` és az `osszevet`
+// ága) és a vizsgaProba.js.
 
 import { lenyomat, kanonikusSzoveg } from '../esemeny/kanonikusAlak.js';
 
@@ -134,20 +135,127 @@ export async function allapotUjjlenyomata(allapot, javaslatok) {
   return lenyomat(allapotOsszefoglaloja(allapot, javaslatok));
 }
 
+// ===================================
+// ⭐⭐⭐ A KÉZI ÚT: AZ ÖSSZEFOGLALÓ EGY LAPON (2026-09-21)
+// ===================================
+//
+// ⛔⛔ MIÉRT KELL, ÉS MIÉRT EDDIG NEM VOLT: az `elteresek` 2026-09-21-ig **egyetlen éles
+// hívó nélkül** állt — csak a saját próbája hívta. Vagyis a parancs, ami azért létezik,
+// hogy két készülék összevethesse magát, a saját kérdésének a FELÉT válaszolta meg: két
+// ember felolvasta egymásnak a 43 karaktert, megállapították, hogy nem egyezik — és itt
+// véget is ért. *Pedig a függvény, ami megmondja, MIBEN, végig ott volt.*
+//
+// ⭐ A HIÁNYZÓ DARAB NEM A SZÁMÍTÁS VOLT, HANEM AZ ÁTVITEL: az összevetéshez a MÁSIK gép
+// összefoglalója kell. ⛔ A vonalra nem tesszük rá (6. szabály: új üzenet lenne MINDEN
+// körben, egy ritka hibáért) — ⭐ a 4. szabály útja viszont ingyen van: **egy fájl**.
+//
+// ⚠️ EZ A RÉTEG NEM ÍR LEMEZRE (1. szabály): szöveget készít és szöveget olvas. Hogy a
+// szöveg hogyan kerül fájlba, az a `koino.js` dolga.
+//
+// ⚠️⚠️ ÉS AMIT KIMONDUNK: ez **fejlesztői műszer**, nem koino-funkció. Az `allapotOsszefoglaloja`
+// MINDEN entitást belevesz — ez a `betolt()` alakja, az utolsó nem-skálázó út (9. szabály).
+// A lap tehát a koino MAI méretéig használható; egymilliárd e-embernél nem ez a válasz.
+// *A fájlba írás ezt nem rontja el, csak LÁTHATÓVÁ teszi: eddig egy hash rejtette el,
+// mostantól a fájl mérete kiírja.*
+
+const LAP_ALAK = 'koino-ujjlenyomat-1';
+
+/**
+ * Az összefoglaló egy hordozható lapon — ezt viszi át az e-ember a másik készülékre.
+ *
+ * ⭐ A LAP HORDOZZA A PILLANATOT IS, és ez nem kényelem: az állapot ujjlenyomata
+ * IDŐFÜGGŐ (a döntések lezárulnak). Két, percekkel eltérő időpontra számolt lap
+ * **jogosan** térhet el — ha a pillanat nincs rajta, ezt nem lehetne megkülönböztetni
+ * egy valódi eltéréstől. *A műszer mondja meg, mennyire bízhatunk benne, ne a használója
+ * találgassa.*
+ *
+ * @returns {Promise<string>} a lap szövege (kanonikus, tehát bájtra azonos egyezésnél)
+ */
+export async function ujjlenyomatLap(allapot, javaslatok, beallitas = {}) {
+  const { koino = null, szerzo = null, pillanat = Date.now(), napokMulva = 0 } = beallitas;
+  const osszefoglalo = allapotOsszefoglaloja(allapot, javaslatok);
+
+  return kanonikusSzoveg({
+    alak: LAP_ALAK,
+    koino,
+    szerzo,
+    pillanat,
+    napokMulva,
+    // ⭐ A LAP KIMONDJA A SAJÁT UJJLENYOMATÁT — így az olvasó ELLENŐRIZHETI, hogy a lapot
+    // nem írták át és nem sérült meg útközben. *Ugyanaz az elv, mint a fájl-tárnál: olvasáskor
+    // újra lenyomatolunk. A csatornát nem kell megbízhatóvá tenni (3. szabály).*
+    ujjlenyomat: await lenyomat(osszefoglalo),
+    osszefoglalo
+  });
+}
+
+/**
+ * Egy lap beolvasása — és az ellenőrzése.
+ *
+ * ⛔ HÁROM DOLGOT NÉZ MEG, mindhármat kimondva (D19): az ALAKOT (ami nem a mi formánk, az
+ * nem lap), a szerkezetet, és hogy a lap a SAJÁT ujjlenyomatát adja-e ki. *Egy átírt lap
+ * nem „kicsit más állapot", hanem hazugság — és a kettőt nem szabad összekeverni.*
+ */
+export async function ujjlenyomatLapBol(szoveg) {
+  let lap;
+  try {
+    lap = JSON.parse(szoveg);
+  } catch {
+    throw new Error('Ez a fájl nem ujjlenyomat-lap: nem is olvasható JSON.');
+  }
+
+  if (lap?.alak !== LAP_ALAK) {
+    throw new Error('Ez a fájl nem ujjlenyomat-lap (az alakja: ' + (lap?.alak ?? 'hiányzik') + ').');
+  }
+  if (!lap.osszefoglalo || typeof lap.osszefoglalo !== 'object') {
+    throw new Error('A lapról hiányzik az összefoglaló.');
+  }
+
+  const ujra = await lenyomat(lap.osszefoglalo);
+  if (ujra !== lap.ujjlenyomat) {
+    throw new Error('A lap NEM a saját ujjlenyomatát adja ki — átírták vagy megsérült.'
+      + ' (bemondott: ' + lap.ujjlenyomat + ', számított: ' + ujra + ')');
+  }
+  return lap;
+}
+
 /**
  * Ha két állapot eltér, MEGMONDJA, HOL — nem csak azt, hogy eltér.
  *
  * Egy „nem egyezik" önmagában használhatatlan hiba-üzenet: a Szakasz 2 egész értelme az,
  * hogy ha kiderül egy eltérés, meg is találjuk. Ezért szakaszonként hasonlítunk.
  *
+ * ⛔⛔ KÉTOLDALÚ — ÉS 2026-09-21-IG NEM VOLT AZ. A bejárás csak az EGYIK összefoglaló
+ * kulcsain ment végig, és ennek két külön rossz vége volt:
+ *   · ami csak a MÁSIKNÁL van meg, arról **némán hallgatott**;
+ *   · ami csak NÁLUNK van meg, ott `kanonikusSzoveg(undefined)`-ot hívott, ami **hibát dob**
+ *     („ez a típus nem szerepelhet eseményben: undefined") — tehát összeomlott ahelyett,
+ *     hogy megnevezte volna az eltérést.
+ *
+ * ⭐ MIKOR FORDUL EZ ELŐ: ha a két készülék **más program-változatot** futtat, és az egyik
+ * összefoglalójában van egy szakasz, ami a másikéban nincs. *Épp az a helyzet, amire a D66
+ * szerint a legnagyobb szükség van egy összevetőre — és pont ott hallgatott vagy omlott
+ * össze.* A hiányzó szakasz mostantól **eltérés** (D19: a hiány is tény, nem semmi).
+ *
  * @param {Object} egyikOsszefoglalo - allapotOsszefoglaloja eredménye
  * @param {Object} masikOsszefoglalo
- * @returns {Array<string>} az eltérő szakaszok nevei (üres = egyeznek)
+ * @returns {Array<string>} az eltérő szakaszok nevei, ábécésorrendben (üres = egyeznek)
  */
 export function elteresek(egyikOsszefoglalo, masikOsszefoglalo) {
+  const egyik = egyikOsszefoglalo ?? {};
+  const masik = masikOsszefoglalo ?? {};
+
+  // ⭐ A KÉT KULCSHALMAZ UNIÓJA, rendezve — hogy a válasz se függjön attól, melyiket
+  // adták be elsőnek. *Ugyanaz az elv, mint a rekesz sójánál: a sorrend a szövegből jöjjön,
+  // ne a hívótól.*
+  const szakaszok = [...new Set([...Object.keys(egyik), ...Object.keys(masik)])].sort();
+
   const eltero = [];
-  for (const szakasz of Object.keys(egyikOsszefoglalo)) {
-    if (kanonikusSzoveg(egyikOsszefoglalo[szakasz]) !== kanonikusSzoveg(masikOsszefoglalo[szakasz])) {
+  for (const szakasz of szakaszok) {
+    const vanItt = egyik[szakasz] !== undefined;
+    const vanOtt = masik[szakasz] !== undefined;
+    if (!vanItt || !vanOtt) { eltero.push(szakasz); continue; }
+    if (kanonikusSzoveg(egyik[szakasz]) !== kanonikusSzoveg(masik[szakasz])) {
       eltero.push(szakasz);
     }
   }

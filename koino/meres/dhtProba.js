@@ -119,12 +119,44 @@ proba('A tömör címek (BEP 5) oda-vissza', () => {
 // ⭐ KIFELÉ ADVA (2026-09-20): a parancssor-próba is ezt használja — így a TÁBLA bekötése
 // (a `tabla` parancs és az őrjárat tábla-ága) **internet nélkül** mérhető. *Egy próba, ami
 // a valódi DHT-t hívná, a hálózat hangulatát mérné, nem a kódot.*
-export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set(), nemaPut = false } = {}) {
+// ⭐⭐⭐ MAGVAS VÉLETLEN (2026-09-21) — és ezt egy MÉRÉS kényszerítette ki.
+//
+// ⛔ A gépek azonosítója eddig MINDEN futásban friss véletlen volt, a keresett kulcs szintén.
+// Vagyis a topológia — hogy a célhoz legközelebbi gépek közül hány esik a szándékosan NÉMA
+// felébe — futásonként pénzfeldobás volt. Mérve: **5 bukás / 30 futás, terhelés nélkül**.
+// ⚠️ Két magyarázatomat előtte a mérés megcáfolta: nem a terhelés (5/30 üres gépen is), és
+// nem a kérdés-óra (400 ms → 0/12, 1500 ms → 1/12 — a tágabb óra nem segített).
+//
+// ⭐ A MEGKÖTÉS TRÜKKJE: az azonosító a CÉLHOZ képest születik (`cel XOR előtag`), ezért a
+// TÁVOLSÁGOK pontosan az előtagok — vagyis a magtól függenek, nem a véletlen kulcstól.
+// *Így nem kell befagyasztott kulcspár: a topológia akkor is determinisztikus, ha a
+// bejegyzés kulcsa minden futásban új.*
+//
+// ⭐ Precedens a házban: a 16. mérés műszere ugyanezt kapta — *„magvas véletlen, hogy
+// összevethető legyen"*. Egy próba, ami néha bukik, nem szeszélyes: használhatatlan.
+const magvasVeletlen = (mag) => () => {
+  mag = (mag + 0x6d2b79f5) | 0;
+  let t = Math.imul(mag ^ (mag >>> 15), 1 | mag);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new Set(), nema = new Set(), nemaPut = false, mag = null, cel = null } = {}) {
+  // ⚠️ Mag NÉLKÜL marad a régi, véletlen viselkedés — a többi próba így használja.
+  const veletlen = mag === null ? null : magvasVeletlen(mag);
+  const azonosito = (i) => {
+    if (!veletlen || !cel) return Buffer.from(crypto.getRandomValues(new Uint8Array(20)));
+    // A cél XOR egy magból számolt előtag → a gép távolsága a céltól MAGA az előtag.
+    const id = Buffer.from(cel);
+    for (let b = 0; b < 20; b++) id[b] ^= Math.floor(veletlen() * 256);
+    return id;
+  };
+
   const gepek = [];
   for (let i = 0; i < n; i++) {
     const halo = createSocket('udp4');
     await new Promise((kesz) => halo.bind(0, '127.0.0.1', kesz));
-    gepek.push({ i, halo, id: Buffer.from(crypto.getRandomValues(new Uint8Array(20))),
+    gepek.push({ i, halo, id: azonosito(i),
       cim: '127.0.0.1', port: halo.address().port, tar: new Map() });
   }
   const kozeli = (en, cel) => tomorCsomopontokKeszitese(gepek.filter((g) => g !== en)
@@ -222,17 +254,59 @@ proba('⛔ NÉMA gépek (a háló fele) és egy HALOTT belépő sem akasztja meg
   // a legközelebbiek között, a keresés HELYESEN kevesebb mint nyolc felelővel ér véget, és
   // ennek a becsületes neve „nincs-tobb-jelolt". *A próba a régi, félrevezető feliratot
   // kérte számon.* A lényeg két dolog: MEGTALÁLJA, és az IDŐKORLÁT ELŐTT ér véget.
+  //
+  // ⛔⛔⛔ ÉS A HARMADIK VÁLTOZAT IS TÉVEDETT — ezt egy MÉRÉS mondta meg (2026-09-21).
+  // A próba SZESZÉLYES volt: ugyanazon a kódon hol zöld, hol piros. Mérve: **5 bukás /
+  // 30 futás**, és ⚠️ **terhelés nélkül is** — vagyis az „egyedül mindig zöld" megfigyelés
+  // szerencse volt, nem bizonyíték. ⛔ Két magyarázatomat a mérés cáfolta: nem a gép
+  // terheltsége, és **nem a kérdés-óra** sem (400 ms → 0/12, 1500 ms → 1/12 — a tágabb óra
+  // NEM segített). ⭐ Az ok a **véletlen topológia** volt: minden futás új azonosítókat
+  // sorsolt, tehát pénzfeldobás volt, hány néma gép esik a cél KÖZELÉBE.
+  //
+  // ⛔ ÉS A DIAGNOSZTIKA EGY MÁSODIK HIBÁT IS KIDOBOTT — a próba SAJÁT állításában.
+  // A bukások így néztek ki: `tárolta=3 · megvan=TRUE · eltelt 1629 ms`. ⭐ Vagyis a
+  // keresés **megtalálta** a bejegyzést, és **bőven az időkorláton belül** végzett — a két
+  // dolog, amit a próba a fenti sorban a lényegnek nevez. ⛔ Egyedül a `tarolta >= 4`
+  // bukott: egy **önkényes szám**, ami szemben állt a próba kimondott céljával.
+  // *Hogy hány gép tárol, az a topológiától függ — nem a kliens helyességétől.*
+  //
+  // ⭐ A MAI ALAK: **öt MAGON**, mindegyiken teljesülnie kell. ⚠️ Azért öt és nem egy, hogy
+  // ne lehessen „zöldre hangolni": egyetlen szerencsés magot ki lehetne válogatni, ötöt nem.
   const nemak = new Set([1, 2, 4, 6, 8, 10, 13, 15, 17, 19, 21, 23]);   // a háló fele
-  const h = await hamisHalozat(24, { nema: nemak });
-  const halott = createSocket('udp4');
-  await new Promise((kesz) => halott.bind(0, '127.0.0.1', kesz));
-  const halottPort = halott.address().port;
-  halott.close();
-  try {
-    const { p, g } = await felteszEsKeres(h, { bBelepok: ['127.0.0.1:' + halottPort, h.belepo(11)] });
-    return p.tarolta >= 4 && g.legjobb !== null && g.kereses.ok !== 'idokorlat'
-      && p.kereses.ok !== 'idokorlat';
-  } finally { h.bezar(); }
+  for (const mag of [1, 2, 3, 4, 5]) {
+    const b = await bejegyzesKeszitese({ kulcspar: await ujKulcspar(), salt: 'koino-proba', seq: 5, ertek: 'itt vagyok' });
+    // ⭐ A hálózat a BEJEGYZÉS CÉLJÁHOZ képest épül — ettől lesz a topológia magvas.
+    const h = await hamisHalozat(24, { nema: nemak, mag, cel: b.cel });
+    const halott = createSocket('udp4');
+    await new Promise((kesz) => halott.bind(0, '127.0.0.1', kesz));
+    const halottPort = halott.address().port;
+    halott.close();
+    const kezdet = Date.now();
+    try {
+      const a = await dhtKliens({ belepok: [h.belepo(0)], ...GYORS });
+      const p = await a.kozzetesz(b);
+      a.bezar();
+      const k = await dhtKliens({ belepok: ['127.0.0.1:' + halottPort, h.belepo(11)], ...GYORS });
+      const g = await k.keres(b.k, 'koino-proba');
+      k.bezar();
+
+      // ⛔ AMIT MÉRÜNK, PONTOSAN: megtalálja · eltárolta valahol · és egyik szakasz sem
+      // az IDŐKORLÁTON állt meg. *A „hány gép tárolta" nem a kliens helyességének mércéje.*
+      const rendben = g.legjobb !== null && p.tarolta >= 1
+        && g.kereses.ok !== 'idokorlat' && p.kereses.ok !== 'idokorlat';
+
+      // ⚠️ ÉS HA BUKIK, MEGNEVEZI MAGÁT (D19) — e nélkül a fenti három mérés meg sem
+      // születhetett volna: egy puszta „BUKOTT" nem mondja meg, melyik magyarázat igaz.
+      if (!rendben) {
+        throw new Error('a dht-keresés nem úgy zárult, ahogy vártuk — mag: ' + mag + ' · '
+          + 'eltelt: ' + (Date.now() - kezdet) + ' ms (a keresés kerete ' + GYORS.keresesIdo
+          + ', kérdésenként ' + GYORS.kerdesIdo + ') · '
+          + 'feltevés: ok=' + p.kereses.ok + ', tárolta=' + p.tarolta + ' · '
+          + 'keresés: ok=' + g.kereses.ok + ', megvan=' + (g.legjobb !== null));
+      }
+    } finally { h.bezar(); }
+  }
+  return true;
 });
 
 proba('⛔ Belépő nélkül a keresés AZONNAL, tisztán véget ér — nem vár a semmire', async () => {

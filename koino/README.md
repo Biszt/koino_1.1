@@ -54,11 +54,13 @@ node koino/koino.js
 | Parancs | Mit csinál |
 |---|---|
 | `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
+| `node koino/koino.js ujjlenyomat kiment\|osszevet <fájl>` | ⭐⭐ **…és ha NEM, akkor MIBEN?** (2026-09-21) A lap egy fájlban átvihető a másik készülékre, és ott **megnevezi az eltérő szakaszt**. ⛔ A vonalra nem tesszük (6. szabály), ez a **4. szabály útja**. ⚠️ Fejlesztői műszer: az összefoglaló minden entitást tartalmaz |
 | `node koino/koino.js orjarat [perc] [port]` | ⭐⭐ **a készülék magától dolgozik**: kaput tart nyitva ÉS időnként kiszól minden társnak. Ez a valódi üzemmód |
 | `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja |
 | `node koino/koino.js felfedez [mp] [port]` | ⭐ **ki van még ezen a wifin?** — cím beírása nélkül megtalálja a helyi készülékeket, és felveszi őket társnak |
 | `node koino/koino.js kulsoport [port]` | **hogy látszik kívülről a portom?** — a NAT átírja, ezt kell megmérni a fúrás előtt |
 | `node koino/koino.js pajzsfuro <cím> <port>` | ⭐⭐ **pajzsfúrás**: mindkét fél kifelé kopog, a két rés a közepén találkozik — és ha átjut, **azonnal cserél is** |
+| `node koino/koino.js tabla [kiir\|olvas]` | ⭐⭐⭐ **a HIRDETŐTÁBLA** (2026-09-20): a kötéseim · az új címem a társaim **külön rekeszébe**, titkosítva · és hol vannak ŐK most. ⛔ A tábla-kulcs **nem az azonosságod** (D6) |
 | `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
 | `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből, aztán a társ-listából keres |
@@ -95,13 +97,15 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhárom próba-fájl, **646 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhat próba-fájl, **680 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **176 fájl, 2890,9 KB**, nulla
-npm-csomag.)*
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **181 fájl, 3036,6 KB**, nulla
+npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
+a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
+úgy néz ki, mintha mérték volna.*
 
 ⚠️ *2026-09-06 óta a program mérete **lágy** preferencia — a kemény korlát az **adat-csomagra**
 került (6. szabály, `../CLAUDE.md`). A szám itt attól hasznos, hogy tudjuk, hol tartunk.*
@@ -183,7 +187,10 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
 | `js/csere/helyiFelfedezes.js` | **helyi felfedezés** (F. lépés): aki keres, kiált; aki dolgozik, felel — cím beírása nélkül |
-| `js/csere/dht.js` | ⭐ **a BitTorrent DHT kliense** (BEP 5 + 44): egy kis, aláírt, kulcshoz kötött bejegyzés feltétele és visszakeresése — a **hirdetőtábla** jelöltje (35–36. mérés). ⛔ Minden talált bejegyzés aláírását ellenőrzi (3. szabály), a belépők csak paraméterek (2. szabály). ⚠️ **Egyelőre csak a mérés hívja** — az éles útba a mérés után kerülhet |
+| `js/csere/dht.js` | ⭐ **a BitTorrent DHT kliense** (BEP 5 + 44): egy kis, aláírt, kulcshoz kötött bejegyzés feltétele és visszakeresése — ma ez viszi a **hirdetőtáblát** (35–37. mérés). ⛔ Minden talált bejegyzés aláírását ellenőrzi (3. szabály), a belépők csak paraméterek (2. szabály), a belépő pedig **csak kurbli**: a készülék a saját emlékezetéből indul |
+| `js/csere/tablaKulcs.js` | ⭐⭐ **a TÁBLA-KULCS**: a készülék neve a táblán és a kötések azonosítója — ⛔ **soha nem az azonosságod** (D6). Két kulcspár: Ed25519 (a rekesz neve, ez ír alá) és X25519 (ebből lesz a társankénti közös titok, **küldés nélkül**) |
+| `js/csere/kotesek.js` | ⭐⭐ **a KÖTÉS-HÁLÓ könyvelése**: kivel tartok rendszeres kapcsolatot — ⛔ a kötést a **tábla-kulcs** azonosítja, nem a cím, *mert épp a cím az, ami elromlik*. K=3, legfeljebb 5 (9. szabály), és a jegyzékből a **legrégebben hallott** esik ki |
+| `js/csere/tabla.js` | ⭐⭐⭐ **a HIRDETŐTÁBLA**: „leszakadtam, itt az új címem" — **társanként külön rekesz** (a só a két nyilvános kulcsból: egy kívülálló meg sem találja), a tartalom titkosítva, a bejegyzés aláírva. ⚠️ Hálózatot **nem nyit** (1. szabály) |
 | `js/allapot/identitas.js` | ⭐ **KI TAG?** (Szakasz 4, D54–D63): két lépcső — tagság egy **meghívással**, pénztárca **három tanúsítással**; számítás, nem esemény |
 | `js/allapot/jelzesek.js` | ⭐⭐ **a kontraszt-jelzés** (a valódi Sybil-válasz): *„hány olyan embert tanúsítottál, akinek nincs önálló élete a közösségben?"* — ⛔ soha nem ítél, csak számokat ad |
 | `js/allapot/szerkesztesiVegrehajtas.js` | **a harmadik fázis**: az elfogadott szerkesztési egyezmények rávezetése az entitásokra (módosítás · áthelyezés · törlés · egyesítés · különválás) |

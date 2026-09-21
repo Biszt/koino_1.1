@@ -35,10 +35,14 @@
 //   mérete — egy rosszindulatú gép sem tarthat végtelen keresésben.
 // · ⚠️ **CSAK IPv4** (`nodes`, 26 bájtos tömör alak). Az IPv6 (`nodes6`) későbbi munka.
 //
-// Használják: ⚠️ **EGYELŐRE CSAK a `meres/dhtMeres.js` (36. mérés) és a `meres/dhtProba.js`.**
-// A koino éles útja SZÁNDÉKOSAN nem hívja: előbb a mérés dönti el, beválik-e
-// hirdetőtáblának (gyors-e, megbízható-e, mobilról is). *Ezt kimondjuk, hogy ne látsszon
-// „megépült, de senki nem hívja" hiánynak — nem elfelejtettük, hanem még nem döntöttünk.*
+// Használják: a `koino.js` **éles útja** (a `tablaKliens` az őrjárat tábla-ágához és a
+// `tabla` parancshoz), a `meres/dhtMeres.js` (36. mérés) és a `meres/dhtProba.js`.
+//
+// ⚠️ 2026-09-19-ig itt az állt, hogy *„a koino éles útja SZÁNDÉKOSAN nem hívja"* — akkor ez
+// igaz volt, és azért mondtuk ki, hogy ne látsszon „megépült, de senki nem hívja" hiánynak.
+// ⛔ A bekötés 2026-09-20-án megtörtént, a mondat viszont két napig itt maradt, és ettől
+// **fordítva tévesztett meg**. *Ahol egy felirat mást mond, mint amit teszünk, ott
+// előbb-utóbb valaki a feliratot hiszi el.*
 
 import { createSocket } from 'node:dgram';
 import { lookup } from 'node:dns/promises';

@@ -1813,15 +1813,29 @@ proba('⭐⭐⭐ A SAJÁT friss címünket a rés után feljegyezzük', async ()
   const masik = await ujKeszulek();
   let a = null, b = null;
 
+  // ⚠️⚠️ A FÚRÓK KIMENETÉT ELTESSZÜK (2026-09-21) — korábban `stdio: 'ignore'` volt, tehát
+  // ha a próba bukott, **semmit nem tudtunk arról, mi történt a résen**. ⛔ És ez a próba
+  // SZESZÉLYES: ugyanazon a kódon hol zöld, hol piros. *Egy néma bukás nem lelet, hanem
+  // találgatásra hívás* — a 25. mérés tanulsága: a legrosszabb hiba a nem-esemény.
+  const naplok = { a: '', b: '' };
+  const figyel = (folyamat, kulcs) => {
+    folyamat.stdout.on('data', (d) => { naplok[kulcs] += d; });
+    folyamat.stderr.on('data', (d) => { naplok[kulcs] += d; });
+  };
+
   try {
     await fut(egyik, 'koino', 'Res cim proba');
 
     a = spawn(process.execPath, [KOINO_JS, 'pajzsfuro', '127.0.0.1', '7457', '7456'], {
-      env: { ...process.env, KOINO_ADAT: egyik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      env: { ...process.env, KOINO_ADAT: egyik, KOINO_NAPLO: '' },
+      stdio: ['ignore', 'pipe', 'pipe']
     });
+    figyel(a, 'a');
     b = spawn(process.execPath, [KOINO_JS, 'pajzsfuro', '127.0.0.1', '7456', '7457'], {
-      env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' }, stdio: 'ignore'
+      env: { ...process.env, KOINO_ADAT: masik, KOINO_NAPLO: '' },
+      stdio: ['ignore', 'pipe', 'pipe']
     });
+    figyel(b, 'b');
     await varj(9000);                       // fúrás + csere + a fájl-randevú vége
     a.kill(); a = null; b.kill(); b = null;
     await varj(500);
@@ -1834,7 +1848,20 @@ proba('⭐⭐⭐ A SAJÁT friss címünket a rés után feljegyezzük', async ()
     // ⭐ Mindkét oldalnak fel kell jegyeznie, amit a MÁSIK látott belőle.
     const egyikE = await jegyzek(egyik);
     const masikE = await jegyzek(masik);
-    return egyikE.some((c) => c.port === 7456) && masikE.some((c) => c.port === 7457);
+    const rendben = egyikE.some((c) => c.port === 7456) && masikE.some((c) => c.port === 7457);
+
+    // ⚠️ ÉS HA BUKIK, MEGNEVEZI MAGÁT (D19): mi került a két jegyzékbe, és mit mondott a
+    // két fúró. *Ebből derül ki, hogy a RÉS nem nyílt-e meg, vagy megnyílt, de a cím nem
+    // jutott a lemezre — a kettő teljesen más hiba.*
+    if (!rendben) {
+      const rovid = (sz) => sz.replace(/\s+/g, ' ').trim().slice(-400);
+      throw new Error('a saját friss cím nem került a lemezre — '
+        + 'egyik jegyzéke: ' + JSON.stringify(egyikE) + ' · '
+        + 'másik jegyzéke: ' + JSON.stringify(masikE)
+        + ' ||| A fúró (egyik): ' + rovid(naplok.a)
+        + ' ||| A fúró (másik): ' + rovid(naplok.b));
+    }
+    return true;
   } finally {
     if (a) a.kill();
     if (b) b.kill();
@@ -1843,6 +1870,58 @@ proba('⭐⭐⭐ A SAJÁT friss címünket a rés után feljegyezzük', async ()
     await rm(masik, { recursive: true, force: true });
   }
 });
+
+// ===================================
+// ⭐⭐⭐ A KÉZI ÚT AZ ÖSSZEVETÉSHEZ (2026-09-21)
+// ===================================
+//
+// ⛔⛔ MIT MÉR, ÉS MIÉRT ÉPP PARANCSSORBÓL: az `elteresek` (osszehasonlitas.js) megépült,
+// próba őrizte — és **egyetlen éles hívója sem volt**. Vagyis a parancs, ami azért van,
+// hogy két készülék összevethesse magát, csak annyit mondott, hogy „nem egyezik"; azt
+// nem, hogy MIBEN. *Ugyanaz az alak, mint a Szakasz 4-nél és a fájl-szállításnál: a
+// réteg tudta, a kéz nem érte el.* ⭐ Ezért ez a próba NEM a függvényt hívja, hanem a
+// PARANCSOT — külön folyamatban, két készülékkel, ahogy egy ember használná.
+
+proba('⭐⭐⭐ ujjlenyomat kiment → osszevet: MEGNEVEZI az eltérést, csere után pedig egyezést mond',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const lap = join(egyik, 'lap.json');
+    try {
+      await fut(egyik, 'koino', 'Vizsga koinó');
+      await fut(masik, 'koino', 'Vizsga koinó');
+
+      // ⭐ Két KÜLÖNBÖZŐ gondolat a két gépen — tehát az `entitasok` szakasznak el KELL térnie.
+      await fut(egyik, 'gondolat', 'CSAK AZ EGYIKEN');
+      await fut(masik, 'gondolat', 'CSAK A MÁSIKON');
+
+      await fut(egyik, 'ujjlenyomat', 'kiment', lap);
+      const elteres = await fut(masik, 'ujjlenyomat', 'osszevet', lap);
+
+      // ⛔ A LÉNYEG: nem elég, hogy nemet mond — meg kell NEVEZNIE a szakaszt.
+      const megnevezte = elteres.includes('ELTÉRÜNK') && elteres.includes('entitasok');
+
+      // ----- ÉS A MÁSIK IRÁNY: csere után UGYANAZT látjuk -----
+      // ⚠️ Egy műszer, ami mindig eltérést kiált, ugyanolyan használhatatlan, mint
+      // amelyik mindig egyezést. *A próba mindkét választ megköveteli.*
+      await csereKor(egyik, masik, 7941);
+      await fut(egyik, 'ujjlenyomat', 'kiment', lap);
+      const egyezes = await fut(masik, 'ujjlenyomat', 'osszevet', lap);
+
+      // ⛔ ÉS AZ ÁTÍRT LAP: a másik gépen sem „kicsit más állapot", hanem hiba.
+      const atirt = join(egyik, 'lap-atirt.json');
+      await writeFile(atirt,
+        (await readFile(lap, 'utf8')).replace('CSAK AZ EGYIKEN', 'ÁTÍRT CÍM'), 'utf8');
+      const hamis = await fut(masik, 'ujjlenyomat', 'osszevet', atirt);
+
+      return megnevezte
+        && egyezes.includes('UGYANAZT LÁTJUK')
+        && hamis.includes('NEM a saját ujjlenyomatát');
+    } finally {
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
 
 export default futtatas;
 

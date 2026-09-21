@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
-import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
+import { esemenyTarNyitasa, udpCimTarolo, kotesTarolo } from '../js/tar/fajlTar.js';
 import {
   esemenyMentese, esemenyLekerese, lancVege, lancEllenorzese,
   sajatLancEsemenyei, koinoEsemenyei
@@ -158,6 +158,75 @@ proba('A SÉRÜLT sor nem teszi olvashatatlanná a tárat', async () => {
   const esemenyek = await serultTar.betolt();
   await rm(kulon, { recursive: true, force: true });
   return esemenyek.length === 1 && esemenyek[0].azonosito === e.azonosito;
+});
+
+// ===================================
+// ⛔⛔⛔ AZ ELVESZETT ÍRÁS (2026-09-21)
+// ===================================
+//
+// ⛔ MIT MÉR, ÉS HONNAN JÖTT: egy parancssor-próba **szeszélyesen bukott** — a teljes
+// suite-ban 8 futásból ~2-szer, önmagában 0/15-ször. A diagnosztika mutatta meg, hogy a
+// készülék a résen MEGTANULTA a saját külső címét a társtól (ki is írta), ⛔ **de az nem
+// került a lemezre**: a túlélő és az elveszett írás között **1 ms** telt el.
+//
+// ⭐ Az ok nem időzítés volt, hanem SZERKEZET: a „beolvas → módosít → kiír" a hívóban élt,
+// védtelenül. *A szeszélyes próba igazat mondott — ez az a hiba, amit meg akart fogni.*
+//
+// ⚠️ Ez a próba NEM valószínűséget mér: a két írást SZÁNDÉKOSAN egyszerre indítjuk, tehát
+// a régi kódon MINDIG bukik, az újon MINDIG átmegy.
+
+proba('⛔⛔ KÉT EGYIDEJŰ ÍRÁS EGYIKE SEM VESZHET EL — a jegyzék sorba állít', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-sor-'));
+  try {
+    const tarolo = udpCimTarolo(hely);
+
+    // ⚠️ A LÉNYEG: egyiket sem várjuk meg a másik előtt — pontosan úgy, ahogy a résen
+    // történik (a tükör válasza és a társ `latlak`-ja ezredmásodperceken belül érkezik).
+    await Promise.all([
+      tarolo.modosit((lista) => [...lista, { hoszt: '198.51.100.1', port: 1111, mikor: 1000 }]),
+      tarolo.modosit((lista) => [...lista, { hoszt: '198.51.100.2', port: 2222, mikor: 1001 }]),
+      tarolo.modosit((lista) => [...lista, { hoszt: '198.51.100.3', port: 3333, mikor: 1002 }])
+    ]);
+
+    const vegul = await tarolo.olvas();
+    return vegul.length === 3
+      && vegul.some((c) => c.port === 1111)
+      && vegul.some((c) => c.port === 2222)
+      && vegul.some((c) => c.port === 3333);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ …és a KÖTÉS-jegyzék ugyanígy — ott két ág ír (a postaláda és a kör)', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-sor2-'));
+  try {
+    const tarolo = kotesTarolo(hely);
+    await Promise.all([
+      tarolo.modosit((j) => [...j, { alairo: 'A'.repeat(43), utoljara: 1 }]),
+      tarolo.modosit((j) => [...j, { alairo: 'B'.repeat(43), utoljara: 2 }])
+    ]);
+    const vegul = await tarolo.olvas();
+    return vegul.length === 2;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⚠️ EGY BUKÓ MÓDOSÍTÁS NEM AKASZTJA MEG A SORT — a következő lefut', async () => {
+  // ⛔ Egy ígéret-lánc könnyen beragad: ha a bukás nem fogódik meg, a MÖGÖTTE álló munka
+  // soha nem indul el. *A nem-esemény a legrosszabb hiba (25. mérés).*
+  const hely = await mkdtemp(join(tmpdir(), 'koino-sor3-'));
+  try {
+    const tarolo = udpCimTarolo(hely);
+    let bukott = false;
+    await tarolo.modosit(() => { throw new Error('szándékos'); }).catch(() => { bukott = true; });
+    await tarolo.modosit((lista) => [...lista, { hoszt: '198.51.100.9', port: 9999, mikor: 5 }]);
+    const vegul = await tarolo.olvas();
+    return bukott && vegul.length === 1 && vegul[0].port === 9999;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
 });
 
 // A próbák után takarítunk: a mappa eldobható

@@ -32,9 +32,20 @@ import { kozosTitok, titkositva, kititkositva, bajtokka, szovegge } from './tabl
 // kitalálhatatlan. *Nem titkosítás, hanem cím: aki nem tudja, az nem találja meg a rekeszt.*
 const SO_HOSSZ = 20;
 
-// ⚠️ A bejegyzés a címünkön kívül a KORÁT is hordozza — másodpercben, a SAJÁT óránk
-// szerint. A fogadó a saját órájához köti (ugyanaz az elv, mint a cím-jegyzéknél: idegen
-// órában nem bízunk).
+// ⚠️⚠️ A `mikor` MEZŐ: a bejegyzés a címünkön kívül a kiírás idejét is hordozza — abszolút
+// időbélyeg, a SAJÁT óránk szerint. ⛔ 2026-09-21-ig itt az állt, hogy „a korát, másodperc-
+// ben, és a fogadó a saját órájához köti" — **egyik sem volt igaz**, és a mező fogyasztó
+// nélkül állt.
+//
+// ⭐ ÉS AMI FONTOSABB: a fogadó SZÁNDÉKOSAN frissként jegyzi be a táblán talált címet, és
+// ez helyes — a tábla nem pletyka-jegyzék. A névtelen UDP-jegyzékben a kor azt jelenti,
+// hogy „a leképezés azóta elhalhatott"; a táblán viszont a társ **mostani** címe áll (csak
+// változáskor ír), tehát egy hat órás bejegyzés ugyanúgy érvényes. *Ha a korához kötnénk
+// az elévülést, a tábla pont arra válna használhatatlanná, amiért van: a régóta leszakadt
+// társ megtalálására.* Melyik a frissebb, azt a BEP 44 `seq` dönti el, nem ez a mező.
+//
+// ⭐ A `mikor` tehát TÁJÉKOZTATÁS: az e-ember lássa, mikor írta ki a társ (az őrjárat ki is
+// írja) — idegen óra, ezért nem dönt semmiről. *Egy mező, ami nem dönt, nem is hazudhat.*
 const ALAK = 'koino-cim-1';
 
 /**

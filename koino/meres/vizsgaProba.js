@@ -24,7 +24,7 @@ import { esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import {
-  allapotUjjlenyomata, allapotOsszefoglaloja, elteresek
+  allapotUjjlenyomata, allapotOsszefoglaloja, elteresek, ujjlenyomatLap, ujjlenyomatLapBol
 } from '../js/allapot/osszehasonlitas.js';
 import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
@@ -205,6 +205,82 @@ proba('Az eltérés MEGNEVEZHETŐ: melyik szakaszban van', async () => {
 
   // Nem elég, hogy „eltér" — meg is kell tudni mondani, hol
   return hol.length > 0 && hol.includes('entitasok');
+});
+
+proba('⛔⛔ AZ ELTÉRÉS-KERESÉS KÉTOLDALÚ: a csak az EGYIK oldalon meglévő szakasz is eltérés',
+  async () => {
+    // ⛔ MIT MÉR (2026-09-21): 2026-09-21-ig a bejárás csak az ELSŐ összefoglaló kulcsain
+    // ment végig, és ennek KÉT külön rossz vége volt — ezért két irányban is mérjük:
+    //   · ami csak a MÁSODIKNÁL van meg, arról némán hallgatott;
+    //   · ami csak az ELSŐNÉL van meg, ott `kanonikusSzoveg(undefined)`-ot hívott, ami
+    //     HIBÁT DOB — tehát összeomlott ahelyett, hogy megnevezte volna.
+    // ⭐ Épp a D66-os eset: két készülék más program-változatot futtat, és az egyik
+    // összefoglalójában van egy szakasz, ami a másikéban nincs.
+    const teljes = { koino: { nev: 'A' }, entitasok: [], ujSzakasz: [1, 2] };
+    const regi = { koino: { nev: 'A' }, entitasok: [] };
+
+    // (1) A MÁSODIKNÁL hiányzik — korábban némán elsikkadt volna.
+    const elore = elteresek(teljes, regi);
+    // (2) Az ELSŐNÉL hiányzik — korábban HIBÁT DOBOTT volna.
+    let visszafeleHiba = false;
+    let vissza = [];
+    try { vissza = elteresek(regi, teljes); } catch { visszafeleHiba = true; }
+
+    return elore.length === 1 && elore[0] === 'ujSzakasz'
+      && !visszafeleHiba && vissza.length === 1 && vissza[0] === 'ujSzakasz'
+      // ⭐ És ami MINDKETTŐBEN megvan és egyezik, az továbbra sem eltérés — különben a
+      // próba akkor is zöld lenne, ha a függvény mindenre igent mondana.
+      && elteresek(regi, regi).length === 0;
+  });
+
+// ===================================
+// ⭐⭐⭐ A KÉZI ÚT: A LAP (2026-09-21)
+// ===================================
+//
+// ⛔ MIÉRT KELL: az `elteresek` eddig EGYETLEN éles hívó nélkül állt, mert az összevetéshez
+// a másik gép összefoglalója kell — és arra nem volt út. A vonalra nem tesszük (6. szabály),
+// tehát marad a 4. szabály útja: egy fájl.
+
+proba('⭐⭐ A LAP KÖRBEÉR: amit kiírok, abból ugyanaz az összefoglaló jön vissza', async () => {
+  const { esemenyek } = await teljesEset();
+  const t = await ujTar(); await ment(t, esemenyek);
+  const { allapot, javaslatok } = await kep(t);
+
+  const szoveg = await ujjlenyomatLap(allapot, javaslatok,
+    { koino: KOINO, szerzo: 'valaki', pillanat: KESOBB, napokMulva: 0 });
+  const lap = await ujjlenyomatLapBol(szoveg);
+
+  const mienk = allapotOsszefoglaloja(allapot, javaslatok);
+  return lap.koino === KOINO && lap.pillanat === KESOBB
+    // ⭐ A BIZONYÍTÉK: a visszaolvasott összefoglalóval az eltérés-keresés ÜRESET ad.
+    && elteresek(mienk, lap.osszefoglalo).length === 0
+    && lap.ujjlenyomat === await allapotUjjlenyomata(allapot, javaslatok);
+});
+
+proba('⛔⛔ AZ ÁTÍRT LAP NEM „MÁS ÁLLAPOT", HANEM HIBA — a lap újra lenyomatolódik', async () => {
+  const { esemenyek } = await teljesEset();
+  const t = await ujTar(); await ment(t, esemenyek);
+  const { allapot, javaslatok } = await kep(t);
+  const szoveg = await ujjlenyomatLap(allapot, javaslatok, { koino: KOINO });
+
+  // ⚠️ Egy szövegszerkesztővel bárki átírhat egy címet a lapon. ⭐ Az olvasás újra
+  // lenyomatol (ugyanaz az elv, mint a fájl-tárnál) — tehát nem „kicsit más állapotnak"
+  // látszik, hanem lelepleződik. *A hiány és a hamisítás nem ugyanaz (D19).*
+  const atirt = szoveg.replace('Anna gondolata', 'Átírt gondolat');
+  let atirtBukott = false;
+  try { await ujjlenyomatLapBol(atirt); } catch { atirtBukott = true; }
+
+  // ⛔ És ami nem a mi alakunk, az nem lap.
+  let idegenBukott = false;
+  try { await ujjlenyomatLapBol('{"alak":"valami-mas"}'); } catch { idegenBukott = true; }
+
+  let olvashatatlanBukott = false;
+  try { await ujjlenyomatLapBol('ez nem json'); } catch { olvashatatlanBukott = true; }
+
+  // ⚠️ És a próba nem vak: az ÉP lap átmegy.
+  const ep = await ujjlenyomatLapBol(szoveg);
+
+  return atirtBukott && idegenBukott && olvashatatlanBukott && ep.alak === 'koino-ujjlenyomat-1';
 });
 
 // ===================================
