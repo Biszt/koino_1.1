@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
-import { esemenyTarNyitasa, udpCimTarolo, kotesTarolo } from '../js/tar/fajlTar.js';
+import { esemenyTarNyitasa, udpCimTarolo, kotesTarolo, tarsakTarolo } from '../js/tar/fajlTar.js';
 import {
   esemenyMentese, esemenyLekerese, lancVege, lancEllenorzese,
   sajatLancEsemenyei, koinoEsemenyei
@@ -208,6 +208,26 @@ proba('⭐ …és a KÖTÉS-jegyzék ugyanígy — ott két ág ír (a postalád
     ]);
     const vegul = await tarolo.olvas();
     return vegul.length === 2;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔⛔ …és a TÁRS-LISTA is — ott a leghosszabb a rés: egy TELJES csere-kör', async () => {
+  // ⛔ MIÉRT KELLETT KÉSŐBB (2026-09-22): a `modosit()` 2026-09-21-én megszületett, és a
+  // társ-lista **kimaradt belőle** — ott egy külön ígéret-lánc állt a `koino.js`-ben,
+  // ami viszont az őrjárat kör végi írását nem fogta meg. ⭐ *Egy problémára két
+  // gépezet: az egyik előbb-utóbb kimarad valahonnan.*
+  const hely = await mkdtemp(join(tmpdir(), 'koino-sor4-'));
+  try {
+    const tarolo = tarsakTarolo(hely);
+    await Promise.all([
+      tarolo.modosit((l) => [...l, { hoszt: '198.51.100.1', port: 1 }]),
+      tarolo.modosit((l) => [...l, { hoszt: '198.51.100.2', port: 2 }]),
+      tarolo.modosit((l) => [...l, { hoszt: '198.51.100.3', port: 3 }])
+    ]);
+    const vegul = await tarolo.olvas();
+    return vegul.length === 3 && vegul.every((t) => t.hoszt.startsWith('198.51.100.'));
   } finally {
     await rm(hely, { recursive: true, force: true });
   }

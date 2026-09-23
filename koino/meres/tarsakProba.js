@@ -20,7 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
-  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere, megfigyelesekRavezetese,
   cimNormalizalasa, sajatCimE, sajatCimekKiszurese,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
   SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT,
@@ -206,6 +206,86 @@ proba('A bukás NÖVELI a számlálót, de az utolsó sikert nem törli', async 
   return kor.lista[0].sikertelen === 3 && kor.lista[0].utoljara === 5000;
 });
 
+// ===================================
+// ⛔⛔⛔ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA (2026-09-22)
+// ===================================
+//
+// ⛔ MIÉRT SZÜLETETT: az őrjárat a kör eleji listát írta ki a kör végén, és ezzel
+// elsöpörte, amit a postaláda-ág közben tanult (mérve: a napló „+1 cím"-et írt, a
+// lemezen mégsem volt ott). ⭐ A válasz nem zárolás, hanem szerkezet: a kör csak
+// MEGFIGYEL, a friss listára pedig RÁVEZETÜNK.
+
+proba('⭐⭐ A MEGFIGYELÉS RÁSZÁLL A FRISS SORRA — a megfigyelés-mezők átjönnek', async () => {
+  const kor = await korbeCsere(
+    [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 3 }],
+    sikeresCsere([]), { most: 12345 }
+  );
+  // A friss lemezkép: ugyanaz a társ, de közben a kéz NEVET adott neki.
+  const friss = [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 3, nev: 'Anna gépe' }];
+  const uj = megfigyelesekRavezetese(friss, kor.megfigyelesek);
+
+  return uj.length === 1
+    && uj[0].utoljara === 12345        // a kör megfigyelése átjött
+    && uj[0].sikertelen === 0
+    && uj[0].nev === 'Anna gépe';      // ⭐ …és a frissen írt mezőt NEM tapostuk le
+});
+
+proba('⛔⛔ A KÖR ALATT FELVETT ÚJ TÁRS MEGMARAD — ez az elveszett írás magja', async () => {
+  const kor = await korbeCsere([{ hoszt: 'regi', port: 1 }], sikeresCsere([]), { most: 7 });
+  // Közben a postaláda-ág egy bekopogótól tanult egy címet:
+  const friss = [{ hoszt: 'regi', port: 1 }, { hoszt: 'kozben-tanult', port: 2 }];
+  const uj = megfigyelesekRavezetese(friss, kor.megfigyelesek);
+
+  return uj.length === 2
+    && uj.some((t) => t.hoszt === 'kozben-tanult')
+    && uj.find((t) => t.hoszt === 'regi').utoljara === 7;
+});
+
+proba('⛔ AMIT A KÉZ LEVETT, AZT A KÖR NEM TÁMASZTJA FEL', async () => {
+  // ⚠️ A `tars torol` kimondott emberi tett; a megfigyelés csak a kör mellékterméke.
+  // *Egy sorrend-frissítés nem hozhat vissza valakit, akit szándékosan levettünk.*
+  const kor = await korbeCsere(
+    [{ hoszt: 'a', port: 1 }, { hoszt: 'torolt', port: 2 }], sikeresCsere([]), { most: 7 }
+  );
+  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1 }], kor.megfigyelesek);
+  return uj.length === 1 && uj[0].hoszt === 'a';
+});
+
+proba('⛔ A SIKERTELEN KÖR NEM TÖRLI a frissen szerzett sikert', async () => {
+  // ⚠️ EZ A SAJÁT JAVÍTÁSOM ÉLE, ÉS KÜLÖN KELL MÉRNI (a rontás-próba mutatta meg, hogy
+  // e nélkül a `utoljara` óvatos kezelése mérhetetlen ág maradt volna).
+  //
+  // ⛔ AZ ESET: a kör indulásakor a társsal még sose sikerült a csere, és most sem
+  // sikerül — a megfigyelés `utoljara`-ja tehát ÜRES. Közben viszont egy másik ágon
+  // (a postaláda) épp sikerült vele beszélni, és a friss soron már ott az idő.
+  // *Egy üres érték ráírása TÖRÖLNÉ a frissen szerzett sikert — és a társ a sorrend
+  // végére csúszna, pedig ő a legfrissebb.*
+  const kor = await korbeCsere(
+    [{ hoszt: 'a', port: 1 }], async () => { throw new Error('nem megy'); }
+  );
+  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1, utoljara: 999 }], kor.megfigyelesek);
+  return uj[0].utoljara === 999 && uj[0].sikertelen === 1;
+});
+
+proba('⛔ …és egy RÉGI siker-időt sem ír a frissebbre (2026-09-23)', async () => {
+  // ⛔ AZ ESET: a társsal a kör ELŐTT már sikerült (5000), most nem sikerül — a
+  // megfigyelés tehát a kör eleji 5000-et viszi tovább. Közben egy másik ágon újra
+  // sikerült (9000). *A régi idő ráírása a frissebb sikert tüntetné el.*
+  const kor = await korbeCsere(
+    [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }],
+    async () => { throw new Error('nem megy'); }
+  );
+  const uj = megfigyelesekRavezetese(
+    [{ hoszt: 'a', port: 1, utoljara: 9000, sikertelen: 0 }], kor.megfigyelesek);
+  return uj[0].utoljara === 9000 && uj[0].sikertelen === 3;
+});
+
+proba('⭐ Megfigyelés nélkül a friss lista VÁLTOZATLAN (nincs kárt okozó üres írás)', () => {
+  const friss = [{ hoszt: 'a', port: 1, nev: 'x' }];
+  return megfigyelesekRavezetese(friss, []) === friss
+    && megfigyelesekRavezetese(friss, undefined) === friss;
+});
+
 proba('⭐ A kör a SORREND szerint megy: a legutóbb sikeres társ az első', async () => {
   const megszolitva = [];
   const lista = [
@@ -300,6 +380,56 @@ proba('Ha nem tudjuk a saját címeinket, semmit nem szűrünk ki (nem találgat
   const kapott = [{ hoszt: '192.168.1.50', port: 7373 }];
   return sajatCimekKiszurese(kapott, []).cimek.length === 1
     && sajatCimekKiszurese(kapott).cimek.length === 1;
+});
+
+// ===================================
+// ⛔⛔ A NAT MÖGÖTTI TÁRS — a tükör cím+port párként szűr (2026-09-22, Csaba „B" döntése)
+// ===================================
+//
+// ⛔ A BAJ: a NAT miatt egy egész háztartás EGYETLEN külső címet mutat, és a készülékeket
+// csak a PORT különbözteti meg; mobilon (CGNAT) ez több ezer idegen előfizetőre is igaz.
+// Amíg a tükör-címet puszta cím szerint szűrtük, minden velünk egy NAT-on lévő társ
+// **láthatatlan volt** — a testvér-telefon (D22) és egy CGNAT alatti vadidegen is.
+
+proba('⭐⭐⭐ A VELÜNK EGY NAT-ON LÉVŐ TÁRS BEKERÜL — ugyanaz a cím, MÁS port', () => {
+  const kapott = [
+    { hoszt: '31.46.250.22', port: 31573 },   // ⭐ a testvér-telefon (vagy egy CGNAT-társ)
+    { hoszt: '31.46.250.22', port: 7373 }     // ⛔ MI magunk: a pontos pár
+  ];
+  const { cimek, kihagyott } = sajatCimekKiszurese(kapott,
+    ['192.168.1.134'],                        // a gépünk LAN-címe — ez NEM a külső cím
+    { cim: '31.46.250.22', port: 7373 });     // a tükör: így látnak minket kívülről
+
+  return kihagyott === 1
+    && cimek.length === 1
+    && cimek[0].port === 31573;
+});
+
+proba('⛔ …de ÖNMAGUNKAT továbbra sem hívjuk: a pontos cím+port pár kiesik', () => {
+  const kapott = [{ hoszt: '31.46.250.22', port: 7373 }];
+  return sajatCimekKiszurese(kapott, [], { cim: '31.46.250.22', port: 7373 })
+    .cimek.length === 0;
+});
+
+proba('⛔⛔ ÉS A 2026-08-30-I TANULSÁG MEGMARAD: az INTERFÉSZ-cím portostul kiesik', () => {
+  // ⚠️ EZ AZ, AMI MIATT A KÉT FORRÁS SZÉTVÁLIK. A saját IPv6-címünket CSAK az
+  // interfész-lista fogja meg — a tükör IPv4-et mond, tehát a cím+port pár sosem
+  // illeszkedne rá. *Ha egyetlen szabályt használnánk, az egyik eset mindig elromlana.*
+  const kapott = [
+    { hoszt: '2001:4c4d:25cb:b200:7395:e583:5de6:5a1a', port: 55555 },  // mi, röpke porton
+    { hoszt: '192.168.1.134', port: 9999 }                              // mi, más porton
+  ];
+  const { cimek } = sajatCimekKiszurese(kapott,
+    ['192.168.1.134', '2001:4c4d:25cb:b200:7395:e583:5de6:5a1a'],
+    { cim: '31.46.250.22', port: 7373 });
+  return cimek.length === 0;
+});
+
+proba('⚠️ Tükör PORT nélkül nem szűr a tükör-ág (nem találgatunk egy fél párból)', () => {
+  // ⛔ Egy port nélküli tükörrel a régi, cím-alapú viselkedéshez esnénk vissza — épp ahhoz,
+  // amit ez a javítás megszüntetett. *Inkább egy fölösleges hívás, mint egy kiesett társ.*
+  const kapott = [{ hoszt: '31.46.250.22', port: 7373 }];
+  return sajatCimekKiszurese(kapott, [], { cim: '31.46.250.22' }).cimek.length === 1;
 });
 
 // ===================================

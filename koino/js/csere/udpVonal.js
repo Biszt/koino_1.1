@@ -31,8 +31,8 @@
 // nem hagyhattuk rajta.*
 //
 // ⭐ A három mechanizmus a saját szakaszában van leírva lentebb, azzal a méréssel együtt,
-// ami kikényszerítette. **Egy „nincs újdonság" kör továbbra is 334 bájt** — az ablak csak
-// akkor számít, ha van mit átvinni.
+// ami kikényszerítette. **Egy „nincs újdonság" kör továbbra is egyetlen oda-vissza** (ma
+// 931 bájt, 38. mérés) — az ablak csak akkor számít, ha van mit átvinni.
 //
 // ===== A KÉT ŐR, AMI ELŐSZÖR HIÁNYZOTT (2026-08-30) =====
 //
@@ -89,7 +89,7 @@ const DARAB_MERET = 1000;
 // ⭐ ÉS EZ NEM KERÜL BÁJTOT A SZOKÁSOS ESETBEN (6. szabály): az **első** küldésen NINCS `k`
 // mező, és a `k` nélküli nyugta épp azt jelenti, hogy *az elsőre felel*. A többletbájt csak
 // **újraküldéskor** jelenik meg — vagyis ott, ahol amúgy is baj van. *Egy „nincs újdonság"
-// kör továbbra is 334 bájt.*
+// kör ettől a mezőtől nem lett drágább.*
 //
 // ⚠️⚠️ MIÉRT KELLETT EZ — MÉRÉSBŐL (2026-09-14): a kapcsolat **első** darabjánál az ablak
 // még üres, tehát a gyors újraküldésnek nincs mire támaszkodnia; ott *megint stop-and-wait
@@ -118,7 +118,7 @@ const DARAB_MERET = 1000;
 // részét, és aki ennél lassabb, annak **egyetlen fölösleges másolat** az ára — ⭐⭐ ami a
 // pontos mintavétel óta nem is kár: *az a másolat hozza meg a mérést hamarabb.* A rossz
 // irányú tévedés viszont **egy teljes másodperc** egy olyan cserében, ami tipikusan
-// **egyetlen oda-vissza, 334 bájt**. *Az aszimmetria egyértelmű.*
+// **egyetlen oda-vissza** (ma 931 bájt, 38. mérés). *Az aszimmetria egyértelmű.*
 const RTO_KEZDO = 300;
 const RTO_MIN = 100;           // alsó korlát az óra-felbontás és a téves újraküldés ellen
 const RTO_MAX = 60000;         // felső korlát: egy nagyon rossz vonalon se pörögjünk
@@ -1205,7 +1205,7 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
 
   // ⛔⛔ A CSERE NEM ENGEDÉKENY (D68 / 3. lépés) — és ez nem udvariatlanság, hanem a
   // forgalom természete: a csere **apró és kérdés-válasz jellegű** (egy „nincs újdonság"
-  // kör 334 bájt), tehát **nem ő tölti meg a sort** — ő az, aki a sor mögé kerül.
+  // kör 931 bájt, 38. mérés), tehát **nem ő tölti meg a sort** — ő az, aki a sor mögé kerül.
   // ⭐ *Az engedékenység annak való, aki a vonalat terheli; aki nem terheli, annak a
   // visszafogás csak kár lenne — a késleltetés-érzékeny forgalmat kétszer büntetné.*
   const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort,

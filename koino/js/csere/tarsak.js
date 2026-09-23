@@ -71,15 +71,22 @@ export function cimNormalizalasa(cim) {
  * mivel a hívás mindig „sikerült", a rendezés a lista ÉLÉRE tette, a valódi társ elé.
  * Sőt a cserén tovább is terjedt: a telefon is megörökölte.
  *
- * ⭐ A PORTOT SZÁNDÉKOSAN NEM NÉZZÜK. Egy korábbi, szűkebb szűrő csak a cím+port párost
+ * ⭐ A PORTOT ITT SZÁNDÉKOSAN NEM NÉZZÜK. Egy korábbi, szűkebb szűrő csak a cím+port párost
  * hasonlította a tükörhöz — az IPv6-os saját cím átcsúszott rajta, mert a tükör IPv4-et
- * mondott. Ha a cím a miénk, a port nem számít: magunkat semmilyen porton nem hívjuk.
+ * mondott. Ha a cím a saját GÉPÜNK interfészéé, a port nem számít: magunkat semmilyen
+ * porton nem hívjuk.
+ *
+ * ⛔⛔ ÉS EZÉRT VÁLIK SZÉT A KÉT FORRÁS (2026-09-22): ez a függvény csak az **interfész-
+ * címekre** való — azokon senki mással nem osztozunk. ⭐ A **tükör-cím** (amit NAT mögül
+ * mutatunk kifelé) MÁS természetű: azon egy egész háztartás, CGNAT alatt pedig több ezer
+ * idegen előfizető osztozik, és csak a PORT különbözteti meg őket. Azt a
+ * `sajatCimekKiszurese` külön, cím+port párként nézi.
  *
  * ⚠️ AMI NEM VÁLTOZIK: a saját címünket TOVÁBBRA IS HIRDETJÜK másoknak (D39). Két külön
  * dologról van szó — „kit hívjak" és „kiről meséljek". Ez a szűrő csak az elsőre hat.
  *
  * @param {string} hoszt - a vizsgált cím
- * @param {string[]} sajatCimek - a saját címeink (interfészek + amit a tükör mond)
+ * @param {string[]} sajatCimek - a saját GÉPÜNK interfész-címei
  */
 export function sajatCimE(hoszt, sajatCimek = []) {
   const mienk = new Set(sajatCimek.map(cimNormalizalasa).filter(Boolean));
@@ -87,12 +94,49 @@ export function sajatCimE(hoszt, sajatCimek = []) {
 }
 
 /**
- * Kiszűri a kapott címek közül a sajátjainkat.
+ * Kiszűri a kapott címek közül a sajátjainkat — KÉT KÜLÖN SZABÁLLYAL.
  *
+ * ===== ⛔⛔ MIÉRT KETTŐ, ÉS NEM EGY (2026-09-22, Csaba döntése) =====
+ *
+ * A NAT (cím-fordítás) miatt egy egész háztartás **egyetlen** külső címet mutat kifelé, és
+ * a készülékeket csak a PORT különbözteti meg. Mobilon ez kétszer igaz (CGNAT): ott több
+ * ezer, egymást nem ismerő előfizető osztozik egy címen.
+ *
+ * ⛔ Amíg a tükör-címet is puszta cím szerint szűrtük, **minden velünk egy NAT-on lévő
+ * társ láthatatlan volt** a cserén tanult címek közül: a családi koino testvér-telefonja
+ * (D22) és — a súlyosabb eset — egy CGNAT alatti **vadidegen** társ is, akinek a helyi
+ * felfedezés nem tartalék útja, mert nem is egy hálózaton vagyunk.
+ *
+ * ⭐ A KÉT SZABÁLY, ÉS AZ OK, AMIÉRT NEM EGYFORMÁK:
+ *
+ *   · **interfész-cím** → a port NEM számít. Ez a mi gépünk saját címe, senki mással nem
+ *     osztozunk rajta. *(És a 2026-08-30-i mérés tanulsága is itt lakik: a saját
+ *     IPv6-címünket CSAK így lehet elkapni, mert a tükör IPv4-et mond.)*
+ *   · **tükör-cím** → a port SZÁMÍT. Csak a pontos cím+port pár vagyunk mi; ugyanaz a cím
+ *     más porton már valaki MÁS készüléke.
+ *
+ * ⚠️ AZ ÁRA KIMONDVA: a velünk egy NAT-on lévő társat ezután megpróbáljuk hívni, és lehet,
+ * hogy a hívás nem megy át (a saját routerünkön magunk felé fordulni külön képesség —
+ * *hairpinning* —, amit sok router nem tud). ⭐ Akkor a társ „sikertelen"-ként jegyződik,
+ * és a kör megy tovább: *ez a `korbeCsere` alapviselkedése, nem hiba.*
+ *
+ * @param {Array} kapott
+ * @param {string[]} sajatCimek - a saját GÉPÜNK interfész-címei (port nélkül szűrnek)
+ * @param {{cim: string, port: number}} [sajatPar] - a tükör: CSAK a pontos pár mi vagyunk
  * @returns {{cimek: Array, kihagyott: number}}
  */
-export function sajatCimekKiszurese(kapott, sajatCimek = []) {
-  const cimek = (kapott ?? []).filter((c) => c && !sajatCimE(c.hoszt, sajatCimek));
+export function sajatCimekKiszurese(kapott, sajatCimek = [], sajatPar = null) {
+  const parCim = sajatPar?.cim ? cimNormalizalasa(sajatPar.cim) : null;
+  const parPort = Number(sajatPar?.port);
+
+  const cimek = (kapott ?? []).filter((c) => {
+    if (!c) return false;
+    if (sajatCimE(c.hoszt, sajatCimek)) return false;
+    // ⭐ A tükör-cím CSAK a saját portunkkal együtt mi vagyunk.
+    if (parCim && Number.isInteger(parPort)
+      && cimNormalizalasa(c.hoszt) === parCim && Number(c.port) === parPort) return false;
+    return true;
+  });
   return { cimek, kihagyott: (kapott ?? []).length - cimek.length };
 }
 
@@ -187,7 +231,12 @@ export function tarsakSorrendje(lista) {
  * @param {Array<Object>} lista - a társak
  * @param {(tars: Object) => Promise<{uj: number, kuldott: number, korok: number}>} csereVegzo
  * @param {{legfeljebb?: number, utana?: Function, most?: number}} [beallitas]
- * @returns {Promise<{lista: Array<Object>, eredmenyek: Array<Object>, sikeres: number, uj: number, kuldott: number}>}
+ * ⚠️⚠️ A VISSZAADOTT `lista` A KÖR ELEJI KÉP — ne írd ki vakon (2026-09-22). Amíg a kör
+ * fut, a postaláda-ág ÚJ társat vehetett fel; a kör eleji képet kiírva az elveszne.
+ * ⭐ Ezért ad vissza `megfigyelesek`-et is: azt kell **rávezetni** a friss listára
+ * (`megfigyelesekRavezetese`), és a kettő együtt az igazság.
+ *
+ * @returns {Promise<{lista: Array<Object>, megfigyelesek: Array<Object>, eredmenyek: Array<Object>, sikeres: number, uj: number, kuldott: number}>}
  */
 export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
   console.log('korbeCsere - KEZDÉS', { tarsak: lista.length });
@@ -222,6 +271,9 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
 
   const osszegzes = {
     lista: ujLista,
+    // ⭐ AMIT A KÖR MEGFIGYELT — és CSAK az: kivel sikerült, kivel nem. *A friss listára
+    // ezt kell rávezetni, nem a kör eleji képet ráírni.*
+    megfigyelesek: [...frissitve.values()],
     eredmenyek,
     sikeres: eredmenyek.filter((e) => e.sikerult).length,
     uj: eredmenyek.reduce((ossz, e) => ossz + (e.uj ?? 0), 0),
@@ -235,6 +287,50 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
     sikeres: osszegzes.sikeres, probalt: eredmenyek.length, uj: osszegzes.uj
   });
   return osszegzes;
+}
+
+/**
+ * ⛔⛔⛔ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA — az elveszett írás ellen (2026-09-22).
+ *
+ * ===== A HIBA, AHOGY ELŐKERÜLT =====
+ *
+ * Az őrjárat a kör ELEJÉN olvasta a társ-listát, a kör VÉGÉN pedig a `korbeCsere`
+ * visszaadta (kör eleji) képet írta ki egészben. ⛔ Közben a postaláda-ág egy bekopogótól
+ * ÚJ címet tanult — a kör végi írás **csendben elsöpörte**. ⭐ Mérve: a napló kiírta,
+ * hogy *„+1 cím"*, a `tarsak.json`-ból a kör után mégis hiányzott.
+ *
+ * ⭐ A MEGOLDÁS ALAKJA: nem a régi képet írjuk rá az újra, hanem a kör **megfigyeléseit**
+ * (kivel sikerült, kivel nem) vezetjük rá arra, ami ÉPP a lemezen van. Amit a kör nem
+ * figyelt meg, ahhoz nem nyúlunk; amit közben tanultunk, az megmarad.
+ *
+ * ⚠️ ÉS AMI KÖZBEN ELTŰNT, AZ ELTŰNVE MARAD: ha a `tars torol` a kör alatt levett valakit,
+ * a megfigyelése **nem hozza vissza** — a törlés kimondott emberi tett, a megfigyelés
+ * csak mellékterméke a körnek. *Nem szabad, hogy egy kör feltámassza, amit a kéz levett.*
+ *
+ * @param {Array<Object>} friss - ami ÉPP a lemezen van
+ * @param {Array<Object>} megfigyelesek - a `korbeCsere` `megfigyelesek` mezője
+ * @returns {Array<Object>} a frissített lista
+ */
+export function megfigyelesekRavezetese(friss, megfigyelesek) {
+  if (!megfigyelesek?.length) return friss;
+
+  const szerint = new Map(megfigyelesek.map((m) => [kulcs(m.hoszt, m.port), m]));
+  return friss.map((t) => {
+    const megfigyeles = szerint.get(kulcs(t.hoszt, t.port));
+    if (!megfigyeles) return t;
+    // ⭐ CSAK A MEGFIGYELÉS-MEZŐK jönnek át. A nevet, és bármit, amit a kéz közben írt,
+    // a friss sor viszi tovább — a kör nem tud róla, tehát nem is írhatja felül.
+    // ⚠️ Az `utoljara` a KETTŐ KÖZÜL A FRISSEBB. Egy `undefined` ráírása TÖRÖLNÉ a
+    // frissben álló sikert — ⛔ és egy RÉGI érték ráírása is (2026-09-23): a sikertelen
+    // kör megfigyelése a kör ELEJI `utoljara`-t viszi tovább (`...tars`), ami régebbi
+    // lehet annál, amit közben egy másik ág a lemezre tett.
+    const idok = [t.utoljara, megfigyeles.utoljara].filter((ido) => ido != null);
+    return {
+      ...t,
+      ...(idok.length ? { utoljara: Math.max(...idok) } : {}),
+      sikertelen: megfigyeles.sikertelen ?? 0
+    };
+  });
 }
 
 // ===================================

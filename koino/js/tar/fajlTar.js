@@ -246,7 +246,7 @@ export function kulcsTarolo(hely = alapHely()) {
  * közös koinóban ugyanaz a társ, és a cím a készülékhez tartozik, nem a témához.
  *
  * @param {string} [hely]
- * @returns {{olvas: Function, ir: Function, fajl: string}}
+ * @returns {{olvas: Function, ir: Function, modosit: Function, fajl: string}}
  */
 export function tarsakTarolo(hely = alapHely()) {
   const fajl = join(hely, 'tarsak.json');
@@ -282,6 +282,26 @@ export function tarsakTarolo(hely = alapHely()) {
     async ir(lista) {
       await mkdir(hely, { recursive: true });
       await writeFile(fajl, JSON.stringify({ tarsak: lista }, null, 2), 'utf8');
+    },
+
+    /**
+     * ⭐ BEOLVAS → MÓDOSÍT → KIÍR, oszthatatlanul (lásd a lenti „EGY SOR FÁJLONKÉNT").
+     *
+     * ⛔⛔ ÉS ITT A LEGHOSSZABB AZ ABLAK AZ EGÉSZ PROGRAMBAN (2026-09-22, mérve). A
+     * kötés- és az UDP-cím-jegyzéknél a veszélyes rés ezredmásodperc; a társ-listát
+     * viszont az őrjárat a kör ELEJÉN olvassa és a kör VÉGÉN írja — **a teljes csere-kör
+     * a rés**, másodpercek vagy percek. Közben a postaláda egy bekopogótól címet tanul,
+     * és a kör végi írás azt csendben elsöpri.
+     *
+     * ⭐ A kár iránya a rosszabbik: a **postaláda-ág** veszít, vagyis épp az a készülék,
+     * aki a legtöbb emberrel beszél — pontosan az, amit a cím-tanulás meg akart előzni.
+     */
+    async modosit(atalakit) {
+      return sorban(fajl, async () => {
+        const uj = await atalakit(await this.olvas());
+        await this.ir(uj);
+        return uj;
+      });
     }
   };
 }

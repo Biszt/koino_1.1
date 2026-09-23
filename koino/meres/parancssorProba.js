@@ -1923,6 +1923,102 @@ proba('⭐⭐⭐ ujjlenyomat kiment → osszevet: MEGNEVEZI az eltérést, csere
     }
   });
 
+// ===================================
+// ⛔⛔⛔ AZ ELVESZETT ÍRÁS A TÁRS-LISTÁN (2026-09-22)
+// ===================================
+
+proba('⛔⛔ A KÖR ALATT TANULT CÍM TÚLÉLI A KÖR VÉGÉT — nincs elveszett írás', async () => {
+  // ⛔ MIT MÉR, ÉS MIÉRT NEM MODUL-PRÓBA: az őrjárat a társ-listát a kör ELEJÉN olvasta
+  // és a kör VÉGÉN írta ki egészben. Közben a **postaláda-ág** egy bekopogótól új címet
+  // tanult — a kör végi írás azt **csendben elsöpörte**. ⭐ A két ág csak az ÉLES
+  // őrjáratban fut egyszerre; modul-próbával ez elvileg sem fogható meg.
+  //
+  // ⭐⭐ ÉS VISELKEDÉST MÉR, NEM FELIRATOT: a napló a hibás kóddal is kiírta, hogy
+  // „+1 cím" — a bizonyíték a **lemez**, vagyis hogy a cím a kör után is ott van.
+  //
+  // ⚠️ A KÖRT SZÁNDÉKOSAN LASSÍTJUK: egy nem válaszoló társ a listán 10 másodpercig
+  // várat. *Enélkül a kör hamarabb lezárul, mint hogy a bekopogó megérkezne — és a
+  // próba vakon zöld lenne.*
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  let orjarat = null;
+  try {
+    await fut(gazda, 'koino', 'Elveszett írás');
+    await csereKor(gazda, vendeg, 7951);              // a vendég megismeri a koinót
+
+    await fut(gazda, 'tars', '10.255.255.1', '7999', 'nema');   // ettől lassú a kör
+    await fut(vendeg, 'tars', '10.9.9.9', '9999', 'hirdetett'); // ezt fogja hirdetni
+
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.5', '7952'], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2500);                                  // a kör már fut, a némára vár
+    await fut(vendeg, 'csere', '127.0.0.1', '7952');   // ⭐ bekopogunk KÖZBEN
+
+    const tarsakat = async () => {
+      try {
+        const adat = JSON.parse(await readFile(join(gazda, 'tarsak.json'), 'utf8'));
+        return (Array.isArray(adat) ? adat : (adat.tarsak ?? [])).map((t) => t.hoszt);
+      } catch { return []; }
+    };
+
+    // ⚠️ ELŐBB A VAKSÁG-PRÓBA: ha meg sem tanulta, akkor nem ezt mértük.
+    if (!(await tarsakat()).includes('10.9.9.9')) return false;
+
+    await varj(12000);                                 // megvárjuk, hogy a kör LEZÁRULJON
+    return (await tarsakat()).includes('10.9.9.9');    // ⭐ a bizonyíték: még ott van
+  } finally {
+    if (orjarat) orjarat.kill();
+    await varj(500);
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐⭐ A BEMUTATKOZÁS KÖLCSÖNÖSSÉGE LÁTSZIK (D62, bekötve 2026-09-22)
+// ===================================
+
+proba('⭐⭐ A BEMUTATKOZÁS ÁLLÁSA LÁTSZIK: előbb FÜGGŐBEN, a válasz után KÖLCSÖNÖS',
+  async () => {
+    // ⛔ MIT MÉR: a `bemutatkozasok()` számítás **hét önpróbával** megépült, és a
+    // `koino.js` nem importálta. A `bemutatkoz` parancs kiírta, hogy *„csak KÖLCSÖNÖSEN
+    // számít"* — de hogy teljesült-e, azt semmi nem mondta meg.
+    //
+    // ⭐ A BIZONYÍTÉK KÉT KÉP KÜLÖNBSÉGE: ugyanaz a parancs, ugyanaz a készülék, és a
+    // másik fél válasza után MÁS a válasz. *Egy szám, ami sosem változik, nem jelzés.*
+    const anna = await ujKeszulek();
+    const bela = await ujKeszulek();
+    try {
+      await fut(anna, 'koino', 'Bemutatkozás koinó');
+      const annaHorgony = teljesAzonosito(await fut(anna, 'belep', 'alapitas'));
+      const belaHorgony = teljesAzonosito(await fut(bela, 'belep'));
+      if (!annaHorgony || !belaHorgony) return false;
+
+      await csereKor(anna, bela, 7953);
+      await fut(anna, 'meghiv', belaHorgony);
+      await csereKor(anna, bela, 7954);
+
+      // ----- 1. EGYOLDALÚ: Anna bemutatkozik, Béla még nem -----
+      await fut(anna, 'bemutatkoz', belaHorgony);
+      const egyoldaluan = await fut(anna, 'allapot');
+      if (!/FÜGGŐBEN/.test(egyoldaluan)) return false;
+      if (!/0 kölcsönös bemutatkozásod van/.test(egyoldaluan)) return false;
+
+      // ----- 2. KÖLCSÖNÖS: Béla viszonozza, és a két lánc összeér -----
+      await fut(bela, 'bemutatkoz', annaHorgony);
+      await csereKor(bela, anna, 7955);
+
+      const kolcsonosen = await fut(anna, 'allapot');
+      // ⭐ A DÖNTŐ SOR: 1 kölcsönös, és a „függőben" eltűnt.
+      return /1 kölcsönös bemutatkozásod van/.test(kolcsonosen)
+        && !/FÜGGŐBEN/.test(kolcsonosen);
+    } finally {
+      await rm(anna, { recursive: true, force: true });
+      await rm(bela, { recursive: true, force: true });
+    }
+  });
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

@@ -45,11 +45,12 @@ export const TUDATPONT_KERET = 10000;
 // korlát a SZÁMÍTÁSBAN van (2. szabály lent), és a felület nem tudja kijátszani.
 export const KATEGORIA_KORLAT = 3;
 
-// A koino entitás-típusai. ⚠️ Ezek NEM külön esemény-fajták: mindegyiket ugyanaz a
-// `GondolatLetrehozas` esemény hozza létre, és az `adat.tipus` különbözteti meg őket
-// (ezért van az `allapotSzamitas.js`-ben `?? 'Gondolat'` alapérték). *Az esemény neve
-// történeti; a típust az adat mondja meg.*
-export const ENTITAS_TIPUSOK = ['Gondolat', 'Kategoria', 'GondolatTipus'];
+// A koino entitás-típusai (Gondolat · Kategoria · GondolatTipus). ⚠️ Ezek NEM külön
+// esemény-fajták: mindegyiket ugyanaz a `GondolatLetrehozas` esemény hozza létre, és az
+// `adat.tipus` különbözteti meg őket (ezért van az `allapotSzamitas.js`-ben
+// `?? 'Gondolat'` alapérték). *Az esemény neve történeti; a típust az adat mondja meg.*
+// ⚠️ Itt korábban egy `ENTITAS_TIPUSOK` lista is állt — a bevezetése óta SEMMI nem
+// olvasta (2026-09-19, mérve), ezért kivéve. *Egy lista, amit senki nem néz, nem szabály.*
 
 // ===================================
 // ⭐⭐ AZ ÉRINTETT ENTITÁSOK — TÖBB, NEM EGY (2026-09-07)

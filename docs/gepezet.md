@@ -432,8 +432,8 @@ egy meglévő új szerepben. *(Ugyanaz a minta, mint amikor a hierarchikus tudat
 jogosultsággá vált.)*
 
 ⭐ **A típus olcsó:** az `Alkotmany` ugyanúgy a `GondolatLetrehozas` eseményből születik, mint
-a `Kategoria` és a `GondolatTipus` — az `adat.tipus` különbözteti meg (`szabalyok.js`:
-`ENTITAS_TIPUSOK`). **Nem kell új esemény-fajta**, tehát egyetlen meglévő tár sem évül el.
+a `Kategoria` és a `GondolatTipus` — az `adat.tipus` különbözteti meg (`allapotSzamitas.js`:
+`adat.tipus ?? 'Gondolat'`). **Nem kell új esemény-fajta**, tehát egyetlen meglévő tár sem évül el.
 
 ### B) A STÁTUSZ — egyetlen mérce, két küszöb
 

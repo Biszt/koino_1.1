@@ -73,6 +73,8 @@ const CIM_KORLAT = 10;
 // ⚠️ Az ára mérve (33. mérés): egy cím ~96 bájt körönként, tízzel a „nincs újdonság" kör
 // 386 → 1346 bájt (napi 5,4 MB 14 társnál). Hárommal ez ~670 bájttal olcsóbb — *és épp
 // ebbe a helybe fér bele a kötés-kulcs, ami nélkül a hirdetőtábla nem működne.*
+// ⭐ A mérleg a 38. mérésben zárult: a mai kör **931 bájt** (napi 3,8 MB 14 társnál),
+// vagyis a tábla ára elfért abban, amit a cím-korlát felszabadított.
 const IDEGEN_CIM_KORLAT = 3;
 
 // ===================================
@@ -217,7 +219,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     //
     // ⛔⛔ MIÉRT A LENYOMAT MELLETT, ÉS NEM KÜLÖN KÖRBEN? Mert **a fájl-csere MERŐLEGES
     // az esemény-cserére**: két készülék eseményei egyezhetnek (a lenyomat megegyezik, a kör
-    // 334 bájttal kilép), miközben a **fájljaik teljesen eltérnek** — hiszen a bájtok sosem
+    // egyetlen oda-vissza alatt kilép), miközben a **fájljaik teljesen eltérnek** — hiszen a bájtok sosem
     // utaztak. *A kérdést tehát akkor is fel kell tenni, ha nincs mit cserélni eseményből.*
     //
     // ⭐ ÉS ÍGY VISSZAFELÉ KOMPATIBILIS: a `fajlCsere` egy **képesség-jelzés**. Egy régebbi

@@ -54,6 +54,11 @@
 // ⚠️ EZ A SOR IS HAZUDOTT 2026-09-12-ig („Használják: a felület") — a felület sem használta.
 // A jelzés megépült, mérve 100%/9–25%-ot fogott, és **sehol nem látszott**. *A CLAUDE.md
 // szerint „a gépi segítség értéke az ÉSZREVÉTELBEN van" — az észrevételhez látszania kell.*
+//
+// ⚠️⚠️ ÉS 2026-09-22-IG A SOR *FÉLIG* HAZUDOTT: a `megbizasAllapota` és a
+// `tanusitoiTorlodas` bekötve volt, a **`bemutatkozasok` viszont nem** — pedig a
+// `bemutatkoz` parancs kiírja, hogy *„csak KÖLCSÖNÖSEN számít"*, és semmi nem mondta meg,
+// teljesült-e. *Egy kimondott feltételt, amiről a program hallgat, nem lehet teljesíteni.*
 
 import { entitasEsemenyei, sajatLancEsemenyei, esemenyLekerese } from '../tar/esemenyTar.js';
 

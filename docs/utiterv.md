@@ -10,16 +10,28 @@
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-13) — A SZAKASZ 5 GERINCE KÉSZ
+> ## ▶️ HOL TARTUNK (2026-09-19) — A BULI ÉS A HIRDETŐTÁBLA
 >
-> ✅ **Szakasz 1–4 kész**, és a **Szakasz 5 (a felület) gerince is**: 5.1–5.7 — a helyi
-> kapu · a kérdezhető pakli · a kártyák · a modálok magja · a **belépő tér** · a
-> **szövegszerkesztő** · a **fájl-réteg** és a **fájl-szállítás**. **557 önpróba.**
+> ✅ **Szakasz 1–4 kész**, a **Szakasz 5 (a felület) gerince is** (5.1–5.7), és a
+> **fájl-szállítás** teljes: ablakos UDP-vonal (D67) · Vegas-jel (D68) · több forrásból egy
+> fájl · a buli első két darabja (percforduló + ismételt menet). **647 önpróba.**
 >
-> ⛔⛔ **A következő lépés egy TEREPMÉRÉS, nem kód:** átmegy-e a **TCP-pajzsfúrás** két
-> valódi hálózat között? Ha igen, a UDP-vonal **ablakját nem kell megépíteni**.
-> A részletek a [`CLAUDE.md`](../CLAUDE.md) tetején és a
-> [`szakasz5_terv.md`](szakasz5_terv.md) „ITT TARTUNK" szakaszában.
+> ⛔ **A TCP/UDP kérdés eldőlt (2026-09-13, a 19. mérés után): a UDP a FŐ ÚT** — nem a
+> gyorsabb, hanem az, amelyik minden routeren működik (9. szabály); a TCP alkalmi gyorssáv.
+> A UDP-vonal ablaka azóta **meg is épült**.
+>
+> ⏭️ **A következő:** *(1)* a mobil NAT **szűrésének** mérése · *(2)* egy **rövid
+> terv-dokumentum**: kötés-háló + buli + hirdetőtábla (**DHT**, 36. mérés) + őrjárat ·
+> *(3)* jóváhagyás után **az őrjárat UDP-re állítása**. A részletek a
+> [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS" blokkjában és a
+> [`szakasz2_terv.md`](szakasz2_terv.md) legvégén.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-13) — A SZAKASZ 5 GERINCE KÉSZ
+>
+> 5.1–5.7 kész, **557 önpróba**. *(Az akkori „következő lépés" — ha a TCP-fúrás átmegy, a
+> UDP-ablak nem kell — a fenti döntéssel ELVETVE.)*
 >
 > ---
 >

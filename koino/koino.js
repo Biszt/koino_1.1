@@ -108,7 +108,7 @@ import {
   belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
-import { megbizasAllapota, tanusitoiTorlodas } from './js/allapot/jelzesek.js';
+import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
 import {
   figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala, fajlHozatala, tcpNyito
 } from './js/csere/vonal.js';
@@ -131,7 +131,7 @@ import {
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
-  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere,
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere, megfigyelesekRavezetese,
   sajatCimekKiszurese, sajatCimE,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
   // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
@@ -1093,14 +1093,20 @@ async function frissUdpCimJegyzese(jegyzekTarolo, cim, port, elevules = UDP_CIM_
  * wifin, több IPv6, esetleg vezetékes), és a társak BÁRMELYIKET hirdethetik rólunk.
  * Mérve (2026-08-30): a laptop saját IPv6-címe így került a listájára, majd a cserén
  * TOVÁBB is terjedt a telefonra — a tükör (IPv4) alapján szűrő ezt nem fogta meg.
+ *
+ * ⛔⛔ ÉS A TÜKÖR 2026-09-22 ÓTA NINCS BENNE EBBEN A LISTÁBAN. Ezek a címek a saját
+ * GÉPÜNKÉI — rajtuk senki mással nem osztozunk, tehát a port nem számít. A tükör-cím
+ * (amit NAT mögül mutatunk kifelé) MÁS: azon egy háztartás, CGNAT alatt idegenek ezrei
+ * osztoznak, és csak a port különbözteti meg őket. *Egy listába téve a kettőt, a port
+ * kérdése eldönthetetlen volt: vagy az IPv6-unk csúszott át, vagy a szomszéd esett ki.*
+ * A tükröt ezért a `sajatCimekKiszurese` kapja külön, cím+port párként.
  */
-async function sajatOsszesCim(tukor = null) {
+async function sajatOsszesCim() {
   const halozat = (await import('node:os')).networkInterfaces();
   const cimek = [];
   for (const lista of Object.values(halozat)) {
     for (const cim of lista ?? []) cimek.push(cim.address);
   }
-  if (tukor?.cim) cimek.push(tukor.cim);      // amit a másik lát belőlünk (NAT mögül)
   return cimek;
 }
 
@@ -1114,37 +1120,59 @@ async function sajatOsszesCim(tukor = null) {
  * ⭐ KÉT KÜLÖN DOLOG, ami eddig egy fájlban élt: „kit hívjak" (ez a lista) és „kiről
  * meséljek" (a hirdetés). A sajátunkat TOVÁBBRA IS elmondjuk másoknak — csak nem hívjuk.
  *
+ * ⭐⭐ ÉS MEGMONDJA, MIT SZŰRT KI — HÁROM SZÁM, NEM EGY (2026-09-22). A kapott címek
+ * háromfelé mennek, és a három **különböző dolgot jelent**: ÚJ társ · **már ismerős** ·
+ * ⛔ **a SAJÁT címünk**. ⚠️ A `felfedez` korábban a második kettőt egybemosta, és
+ * mindkettőre azt írta, hogy *„már ismerős volt"* — a terepen (39. mérés) ez tíz percnyi
+ * rossz diagnózist okozott. *A réteg mindig is megmondta (`kihagyott`); a hívó dobta el.*
+ *
+ * ⛔⛔ ÉS A TÜKÖR CÍM+PORT PÁRKÉNT SZŰR (2026-09-22, Csaba döntése — a „B" út). Korábban
+ * a tükör-címet beolvasztottuk a gép saját címei közé, és ott a port nem számított — így
+ * **minden velünk egy NAT-on lévő társ kiesett**: a testvér-telefon (D22) és CGNAT alatt
+ * egy vadidegen társ is, akinek a helyi felfedezés nem tartalék útja. *A NAT mögött a
+ * címen osztozunk; csak a port mondja meg, ki kicsoda.*
+ *
  * @param {Object} tarolo
  * @param {Array} kapott
  * @param {{cim: string, port: number}} [sajat] - aminek a másik LÁT minket (a tükör)
+ * @returns {Promise<{hozzajott: number, ismeros: number, mienk: number}>}
  */
 async function kapottCimekBeolvasztasa(tarolo, kapott, sajat = null) {
-  if (!kapott?.length) return 0;
-  const { cimek: idegenek } = sajatCimekKiszurese(kapott, await sajatOsszesCim(sajat));
+  if (!kapott?.length) return { hozzajott: 0, ismeros: 0, mienk: 0 };
+  const { cimek: idegenek, kihagyott } =
+    sajatCimekKiszurese(kapott, await sajatOsszesCim(), sajat);
 
-  let lista = await tarolo.olvas();
-  const elotte = lista.length;
-  for (const c of idegenek) {
-    try { lista = tarsHozzaadasa(lista, { hoszt: c.hoszt, port: c.port }); } catch { /* rossz cím: kihagyjuk */ }
-  }
-  if (lista.length !== elotte) await tarolo.ir(lista);
-  return lista.length - elotte;
+  // ⭐⭐ AZ ŐR A RÉTEGBEN (2026-09-21, kiterjesztve a társ-listára 2026-09-22): a
+  // beolvas → módosít → kiír egyetlen oszthatatlan lépés, különben két egyidejű tanulás
+  // közül az egyik némán elvész.
+  let hozzajott = 0;
+  await tarolo.modosit((lista) => {
+    const elotte = lista.length;
+    let uj = lista;
+    for (const c of idegenek) {
+      try { uj = tarsHozzaadasa(uj, { hoszt: c.hoszt, port: c.port }); } catch { /* rossz cím: kihagyjuk */ }
+    }
+    hozzajott = uj.length - elotte;
+    return uj;
+  });
+  return { hozzajott, ismeros: idegenek.length - hozzajott, mienk: kihagyott };
 }
 
-// ⚠️ A társ-listát több helyről is ÍRJUK: az őrjárat köre, és külön minden bekopogó
-// kiszolgálása (D39). Két átfedő írásnál az egyik némán elveszne — ezért sorba tesszük
-// őket. Nem zár, csak sorrend: a fájl kicsi, egy írás ezredmásodperc.
-let cimIrasSor = Promise.resolve(0);
-
-/** Beolvasztás sorban, hibától védve — a cím-tanulás sose döntse el a cserét. */
-function cimeketTanul(tarolo, kapott, sajat = null) {
-  cimIrasSor = cimIrasSor
-    .then(() => kapottCimekBeolvasztasa(tarolo, kapott, sajat))
-    .catch((hiba) => {
-      console.warn('cimeketTanul - nem sikerült felírni', { ok: hiba.message });
-      return 0;
-    });
-  return cimIrasSor;
+/**
+ * Beolvasztás hibától védve — a cím-tanulás sose döntse el a cserét.
+ *
+ * ⚠️ A SOROSÍTÁS MÁR NEM ITT VAN (2026-09-22): a `tarsakTarolo.modosit()` végzi, fájlonként.
+ * Korábban egy külön ígéret-lánc (`cimIrasSor`) állt itt — ⛔ de az csak az EGYMÁS KÖZTI
+ * hívásokat rendezte sorba, az őrjárat kör végi írását nem, és épp ott volt a baj.
+ * *Egy problémára két gépezet: az egyik előbb-utóbb kimarad valahonnan.*
+ */
+async function cimeketTanul(tarolo, kapott, sajat = null) {
+  try {
+    return await kapottCimekBeolvasztasa(tarolo, kapott, sajat);
+  } catch (hiba) {
+    console.warn('cimeketTanul - nem sikerült felírni', { ok: hiba.message });
+    return { hozzajott: 0, ismeros: 0, mienk: 0 };
+  }
 }
 
 const adatMennyiseg = (eredmeny) => {
@@ -1206,6 +1234,31 @@ async function allapotKiirasa(napokMulva) {
       + (megbizas.visszavontak ? ' (' + megbizas.visszavontak + ' visszavonva)' : '')
       + ' · ' + megbizas.tanusitasok + ' tanúsításod van'
       + (megbizas.ellenorizheto ? '' : ' · ⚠️ nem ellenőrizhető') + SZIN.vege);
+
+    // ⭐⭐ A BEMUTATKOZÁSOK — KÖLCSÖNÖSEN, VAGY SEHOGY (D62, bekötve 2026-09-22).
+    //
+    // ⛔ A `bemutatkoz` parancs eddig is kiírta, hogy *„csak KÖLCSÖNÖSEN számít"* — de
+    // hogy a kölcsönösség TELJESÜLT-e, azt a program sehol nem mondta meg. A számítás
+    // megvolt (7 önpróbával), **éles hívó nélkül**. *Egy feltétel, amiről hallgatunk,
+    // nem feltétel, csak felirat.*
+    //
+    // ⚠️ ÉS A FÜGGŐBEN LÉVŐT KÜLÖN NEVEZZÜK MEG (D19): az egyoldalú bemutatkozás nem
+    // hiba és nem vád — a másik fél még nem ért ide. *De tudni kell róla, különben az
+    // ember azt hiszi, elintézte.*
+    //
+    // ⛔ ÉS A „NEM ELLENŐRIZHETŐ" KÜLÖN SOR (2026-09-23): ilyenkor a számítás 0/0-t ad,
+    // tehát a számok szerinti feltétel mögé téve ez a felirat SOHA nem jelent meg —
+    // épp arról hallgatott, amiről szólnia kellett. *A „nincs" és a „nem tudjuk" nem
+    // ugyanaz (D19).*
+    const talalkozasok = await bemutatkozasok(tar, KOINO, sajatBelepes);
+    if (!talalkozasok.ellenorizheto) {
+      kiir('  ' + SZIN.halvany + 'bemutatkozásaid: ⚠️ nem ellenőrizhető' + SZIN.vege);
+    } else if (talalkozasok.kolcsonos || talalkozasok.egyoldalu) {
+      kiir('  ' + SZIN.halvany + talalkozasok.kolcsonos + ' kölcsönös bemutatkozásod van'
+        + (talalkozasok.egyoldalu
+          ? ' · ' + talalkozasok.egyoldalu + ' még FÜGGŐBEN (egyoldalú)' : '')
+        + SZIN.vege);
+    }
 
     // ⭐⭐⭐ A VALÓDI VÉDELEM: a kontraszt-jelzés. *„Hány olyan embert tanúsítottál, akinek
     // nincs önálló élete a közösségben?"* — a becsületes alapvonal 0,3, a megvett tanúsítóé
@@ -2415,7 +2468,7 @@ try {
           // ⭐ A POSTALÁDA IS TANUL A HÍVÓTÓL (D39, 2026-08-30). Eddig a bekopogó
           // elmondta, kiket ismer — és mi eldobtuk. Így a postaláda címjegyzéke csak
           // kifelé menő cserékből bővült, pedig ő beszél a legtöbb emberrel.
-          const tanult = await cimeketTanul(cimTarolo, eredmeny.kapottCimek,
+          const { hozzajott: tanult } = await cimeketTanul(cimTarolo, eredmeny.kapottCimek,
             eredmeny.kivulrolIgyLatszom);
           const udpTanult = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
           if (udpTanult) {
@@ -2507,15 +2560,22 @@ try {
     }
 
     case 'tars': {
+      // ⚠️ MINDEN ÍRÁS A `modosit()`-ON ÁT (2026-09-23) — a kézi utak is. Ma külön
+      // folyamatban futnak, tehát a sor nem véd itt semmit; ⭐ de *ha a hívóra bíznánk,
+      // az egyik út megtenné, a másik elfelejtené* — és egy későbbi átszervezés csendben
+      // egy folyamatba hozhatja őket az őrjárattal.
       const tarolo = tarsakTarolo();
-      const lista = await tarolo.olvas();
 
       if (ervek[0] === 'torol') {
         const cim = ervek[1];
         if (!cim) throw new Error('Kit vegyek le? node koino/koino.js tars torol <cím> [port]');
         const port = parseInt(ervek[2], 10) || ALAP_PORT;
-        const { lista: maradt, torolt } = tarsTorlese(lista, cim, port);
-        await tarolo.ir(maradt);
+        let torolt = 0;
+        await tarolo.modosit((lista) => {
+          const eredmeny = tarsTorlese(lista, cim, port);
+          torolt = eredmeny.torolt;
+          return eredmeny.lista;
+        });
         kiir(torolt
           ? SZIN.jo + 'Levéve: ' + cim + ' ' + port + SZIN.vege
           : SZIN.nem + 'Nem volt a listán: ' + cim + ' ' + port + SZIN.vege);
@@ -2541,7 +2601,7 @@ try {
           + SZIN.vege);
       }
 
-      await tarolo.ir(tarsHozzaadasa(lista, { hoszt: cim, port, nev: ervek[2] }));
+      await tarolo.modosit((lista) => tarsHozzaadasa(lista, { hoszt: cim, port, nev: ervek[2] }));
       kiir(SZIN.jo + 'Felvéve: ' + cim + ' ' + port + (ervek[2] ? ' („' + ervek[2] + '")' : '')
         + SZIN.vege);
       kiir(SZIN.halvany + 'Csere mindenkivel: node koino/koino.js csere' + SZIN.vege);
@@ -2564,7 +2624,7 @@ try {
       // mindent, és alszik a következőig. Épp ez a különbség a postaláda és az élő
       // továbbító között.
       //
-      // ⭐ ÉS EZÉRT KELLETT ELŐBB A B. LÉPÉS: egy „nincs újdonság" kör ~190 bájt, tehát
+      // ⭐ ÉS EZÉRT KELLETT ELŐBB A B. LÉPÉS: egy „nincs újdonság" kör 931 bájt, tehát
       // sűrűn is mehet anélkül, hogy egy mobilos e-ember számláját megterhelné (D35).
       const perc = parseFloat(ervek[0]) || 5;
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
@@ -2613,7 +2673,8 @@ try {
           // ⭐ A bekopogótól is tanulunk címet (D39) — ő ugyanúgy hoz újdonságot, mint
           // akit mi hívunk. E nélkül a kapunkat nyitva tartó készülék, aki a legtöbb
           // emberrel beszél, tanulna a legkevesebbet.
-          const tanult = await cimeketTanul(tarolo, e.kapottCimek, e.kivulrolIgyLatszom);
+          const { hozzajott: tanult } =
+            await cimeketTanul(tarolo, e.kapottCimek, e.kivulrolIgyLatszom);
           // ⭐ A friss UDP-címeket is megtanuljuk tőle — így terjed a cím azon is, aki
           // sosem hívott minket (Csaba, 2026-09-18).
           const udpTanult = await udpCimeketTanul(udpTarolo, e.kapottUdpCimek, udpElevules);
@@ -2777,7 +2838,7 @@ try {
           // előfeltétele — nem két javítás, hanem egy szerkezet két fele.*
           //
           // ⚠️ A LEÁLLÁS MAGÁTÓL ADÓDIK: ha egy menet nem hozott új eseményt, nincs mit
-          // továbbadni. A szokásos eset tehát EGY menet (334 bájt/társ) — az ismétlés csak
+          // továbbadni. A szokásos eset tehát EGY menet (931 bájt/társ) — az ismétlés csak
           // akkor kerül pénzbe, amikor tényleg történt valami.
           //
           // ⭐⭐⭐ ÉS A MÁSIK KORLÁT AZ ABLAK MAGA, NEM EGY SZÁM (lásd a `MENET_PLAFON`
@@ -2813,7 +2874,18 @@ try {
             //   · a plafon → a legvégső szelep, ha valaki nulla ablakot adott meg.
             if (!menet.uj || Date.now() >= ablakVege || menetek >= MENET_PLAFON) break;
           }
-          await tarolo.ir(kor.lista);
+
+          // ⛔⛔⛔ AMIT A KÖR MEGFIGYELT, AZT RÁVEZETJÜK — NEM ÍRJUK RÁ (2026-09-22).
+          //
+          // ⛔ ITT VOLT EGY `tarolo.ir(kor.lista)`, ÉS AZ ELVESZTETTE A KÖZBEN TANULT
+          // CÍMEKET. A `kor.lista` a kör ELEJI kép; amíg a kör futott (másodpercek, akár
+          // percek), a postaláda-ág egy bekopogótól ÚJ társat vehetett fel — a teljes
+          // lista kiírása azt **csendben elsöpörte**. ⭐ Mérve: a napló kiírta, hogy
+          // „+1 cím", a `tarsak.json`-ból a kör után mégis hiányzott.
+          //
+          // ⭐ Ugyanaz a hibafajta, mint a 2026-09-21-i elveszett írás (a saját külső
+          // címünk) — csak ott ezredmásodperces volt a rés, itt a TELJES KÖR az.
+          await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, kor.megfigyelesek));
 
           // ⭐ AMIT A FÁJLOKRÓL TANULTUNK: társanként rakjuk el — a lényeg épp az, hogy
           // **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
@@ -2863,7 +2935,7 @@ try {
           const ujCimek = kor.eredmenyek
             .filter((e) => e.sikerult)
             .flatMap((e) => e.kapottCimek ?? []);
-          const hozzajott = await kapottCimekBeolvasztasa(tarolo, ujCimek);
+          const { hozzajott } = await kapottCimekBeolvasztasa(tarolo, ujCimek);
           if (hozzajott) {
             kiir(SZIN.jo + '  + ' + ora() + ' ' + hozzajott
               + ' új társ-cím a többiektől' + SZIN.vege);
@@ -3065,10 +3137,17 @@ try {
 
       // ⭐ ÉS FEL IS ÍRJUK ŐKET — különben a felfedezés csak látvány lenne. Ez ugyanaz a
       // kapu, mint a terjedő címjegyzéké: cím kerül a listára, nem bizalom (3. szabály).
-      const hozzajott = await kapottCimekBeolvasztasa(tarolo, eredmeny.tarsak);
-      kiir(SZIN.jo + '  + ' + hozzajott + ' új társ a listán' + SZIN.vege
-        + SZIN.halvany + (hozzajott < eredmeny.tarsak.length
-          ? ' (' + (eredmeny.tarsak.length - hozzajott) + ' már ismerős volt)' : '')
+      const felirat = await kapottCimekBeolvasztasa(tarolo, eredmeny.tarsak);
+      // ⭐⭐ HÁROM DOLOG, HÁROM SZÓ (2026-09-22). A felirat korábban mindenre, ami nem
+      // volt új, azt mondta: *„már ismerős volt"* — ⛔ holott a leggyakoribb eset a
+      // hálózaton az, hogy **magunkat találtuk meg** (a `felfedez` a saját kiáltásunkra
+      // érkező választ is látja). A 39. mérés terepen ezen bukott el tíz percre.
+      const reszletek = [
+        felirat.ismeros ? felirat.ismeros + ' már ismerős volt' : null,
+        felirat.mienk ? felirat.mienk + '-et kiszűrtem, mert a SAJÁT címem' : null
+      ].filter(Boolean);
+      kiir(SZIN.jo + '  + ' + felirat.hozzajott + ' új társ a listán' + SZIN.vege
+        + SZIN.halvany + (reszletek.length ? ' (' + reszletek.join(' · ') + ')' : '')
         + SZIN.vege);
       kiir();
       kiir(SZIN.halvany + 'Most már mehet: node koino/koino.js csere' + SZIN.vege);
@@ -3378,7 +3457,7 @@ try {
           + SZIN.vege + SZIN.halvany + ' (' + csere.korok + ' kör, '
           + adatMennyiseg({ bajtKuldott: csere.bajtKuldott, bajtKapott: csere.bajtKapott })
           + ')' + SZIN.vege);
-        const tanult = await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
+        const { hozzajott: tanult } = await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
         if (tanult) kiir(SZIN.jo + '  + ' + tanult + ' új társ-címet tanultam' + SZIN.vege);
         if (csere.kivulrolIgyLatszom) {
           // ⭐⭐ EZ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE: nem egy tükör mondja, hanem a TÁRS,
@@ -3593,15 +3672,19 @@ try {
 
         // Akivel egyszer sikerült, azt megjegyezzük — különben minden cserénél újra kézzel
         // kellene beírni a címet, és pont az nem épülne fel, ami a D33-hoz kell: a lista.
-        const lista = await tarolo.olvas();
-        const volt = lista.some((t) => t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port);
-        await tarolo.ir(tarsHozzaadasa(lista, { hoszt: cim, port }).map((t) =>
-          (t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port)
-            ? { ...t, utoljara: Date.now(), sikertelen: 0 } : t));
+        // ⚠️ A `modosit()`-on át, mint a társ-lista minden más írása (2026-09-23).
+        let volt = false;
+        await tarolo.modosit((lista) => {
+          volt = lista.some((t) => t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port);
+          return tarsHozzaadasa(lista, { hoszt: cim, port }).map((t) =>
+            (t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port)
+              ? { ...t, utoljara: Date.now(), sikertelen: 0 } : t);
+        });
         if (!volt) kiir(SZIN.halvany + 'Felvettem a társak közé (levenni: tars torol '
           + cim + ' ' + port + ')' + SZIN.vege);
 
-        const tanult = await kapottCimekBeolvasztasa(tarolo, eredmeny.kapottCimek);
+        const { hozzajott: tanult } =
+          await kapottCimekBeolvasztasa(tarolo, eredmeny.kapottCimek);
         if (tanult) kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam tőle'
           + SZIN.vege);
 
@@ -3641,7 +3724,10 @@ try {
             : SZIN.halvany + '  · ' + cimke + ' — nem érhető el: ' + e.hiba + SZIN.vege);
         }
       });
-      await tarolo.ir(kor.lista);
+      // ⭐ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA — ugyanaz az őr, mint az őrjáratnál.
+      // ⚠️ A kézi `csere` rövidebb, tehát a rés is kisebb — de az elvet nem a rés
+      // hossza dönti el: *ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
+      await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, kor.megfigyelesek));
 
       // ⭐ AMIT A FÁJLOKRÓL TANULTUNK, azt társanként rakjuk el — mert a lényeg épp az,
       // hogy **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
@@ -3653,7 +3739,7 @@ try {
 
       const tanultCimek = kor.eredmenyek
         .filter((e) => e.sikerult).flatMap((e) => e.kapottCimek ?? []);
-      const tanult = await kapottCimekBeolvasztasa(tarolo, tanultCimek);
+      const { hozzajott: tanult } = await kapottCimekBeolvasztasa(tarolo, tanultCimek);
 
       kiir();
       if (tanult) {

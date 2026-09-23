@@ -9,6 +9,81 @@ utolsó nyitott kérdés, amit eddig csak modellben (35.) és egy gépen (37.) m
 
 ---
 
+## 0. A MÁSODIK NEKIFUTÁS — olvasd el ezt először (2026-09-22)
+
+⭐ A **39. mérés fele sikerült**: a tábla-út végigment (az elvitt telefon magától kiírta az új
+címét, a maradó magától kiolvasta, 30 másodperc alatt), ⛔ **de a rés nem nyílt meg, és nem
+tudtuk megmondani, miért** — mert *„az »A« telefon naplójához megszűnt a hozzáférés"*.
+**Egy mérés, aminek a döntő fele hiányzik, nem ad választ.**
+
+### ⛔⛔ EZÉRT AZ ELSŐ SZABÁLY: A NAPLÓ FÁJLBA MEGY, MINDKÉT TELEFONON
+
+Az őrjáratot **így** indítsd — a `tee` egyszerre írja a képernyőre és a fájlba:
+
+```bash
+node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-A.log
+```
+
+*(A másik telefonon értelemszerűen `~/orjarat-B.log`.)*
+
+⭐ **Ez a mérés legfontosabb sora.** A döntő kérdés — *kiolvassa-e a TÁVOZÓ is a tábláról a
+maradó címét?* — csak a **két napló egymás mellé téve** válaszolható meg, és a képernyőn
+görgő szöveg a mérés végére elvész. ⚠️ Ha a `tee` bármiért nem megy, a mérés akkor is
+futtatható — de akkor **fényképezd le** a döntő sorokat, ahogy megjelennek.
+
+A naplók utólag megnézhetők, és a telefonról átküldhetők:
+
+```bash
+grep -E "tábl|rés|kopog|csere" ~/orjarat-A.log
+```
+
+### ⭐⭐ A MÁSODIK ÚJDONSÁG: MOST HÁROM KÉRDÉSRE IS FELELHET
+
+Ha **mindkét telefon mobilneten** van, ez a mérés egyszerre három nyitott pontot zár le:
+
+1. **A 39. mérés megismétlése** — a tábla-út *mindkét* oldalról, naplóval.
+2. **A 32. mérés nyitott pontja** — *nyílik-e rés két mobil NAT között?* (eddig csak
+   otthoni ↔ mobil párost mértünk).
+3. ⭐ **A 2026-09-22-i NAT-javítás bekötése** — ezt hurok-címen **nem lehetett megmérni**,
+   mert ott a saját gép címe amúgy is kiesik. Valódi CGNAT kell hozzá.
+
+⛔⛔ **DE A 0. SZAKASZ KÖZÖS WIFIT KÍVÁN, és ez mobilneten nem megy.** Két eset van:
+
+- ⭐ **Ha ugyanaz a két telefon, mint 2026-09-21-én:** a kötés **megmaradt a lemezükön**
+  (`kotesek.json`), tehát a 0. szakasz **kihagyható** — ellenőrizd a `tabla` paranccsal, és
+  ha kötést ír, indulhatsz rögtön az 1. szakasszal.
+- ⚠️ **Ha friss készülék van köztük:** előbb kell egy **közös wifi** az ismerkedéshez (0.
+  szakasz), és csak utána a váltás. *A kézi `tars` út itt nem segít: CGNAT mögé nem lehet
+  csak úgy bekopogni — épp ez az egész mérés tárgya.*
+
+### 🔍 ÉS EGY MÉRÉS, AMI EGY PERC: UGYANAZT A KÜLSŐ CÍMET KAPTÁK?
+
+**A váltás után, mindkét telefonon** — ⛔ **egy MÁSIK helyi porttal**, egy harmadik ablakban:
+
+```bash
+node koino/koino.js kulsoport 7400
+```
+
+⛔⛔ **A `7400` nem elírás, és ne hagyd el.** Az őrjárat a `7373`-at használja, a mérés pedig
+`reuseAddr`-rel ugyanarra a portra ülne — ⚠️ a két foglalat **elveheti egymás csomagjait**,
+és a 32. mérés szerint egy újabb foglalat **más külső portot** is kaphat, ami épp a futó rést
+zavarná meg. ⭐ *Nekünk viszont nem a port kell, hanem a **CÍM** — az minden porton ugyanaz.*
+
+Írd fel a **két külső címet** (a `KÍVÜLRŐL ÍGY LÁTSZOL` sor első fele). ⭐ Ha a cím
+**megegyezik** (a port úgyis más lesz), akkor a két telefon **ugyanazon a szolgáltatói
+NAT-on (CGNAT) van** — és ez ma már nem csak érdekesség:
+
+- ⛔ A tegnapi programban ilyenkor a két telefon **kiszűrte volna egymást** („ez a saját
+  címem"), és a cserén tanult cím sosem került volna a listára. **Ma nem szűri ki** — ez a
+  2026-09-22-i javítás, és élesben itt derül ki, hogy tényleg működik-e.
+- ⭐ Ilyenkor a rés-nyitás a **hairpinning** kérdése is: át tud-e fordulni a szolgáltató
+  NAT-ja saját maga felé. *Erre eddig nem volt adatunk, mert meg sem próbáltuk.*
+
+⚠️ Ha a két külső cím **különbözik**, az is eredmény — akkor a mérés a „két mobil NAT" tiszta
+esetét méri, javítás-függetlenül.
+
+---
+
 ## 1. A kérdés, egy mondatban
 
 **Ha két telefon összeismerkedett, majd az egyik hálózatot vált, visszatalálnak-e egymáshoz
@@ -68,13 +143,15 @@ node koino/koino.js felfedez 5
 „AP isolation"). A parancs ki is írja ezt. Ilyenkor a kézi út marad: az A telefonon
 `node koino/koino.js cimek`, és a B-n `node koino/koino.js tars <cím> 7373`.
 
-Most **mindkét telefonon** indítsd el az őrjáratot, és hagyd futni:
+Most **mindkét telefonon** indítsd el az őrjáratot, és hagyd futni — ⛔ **naplóval együtt**
+(lásd a 0. szakaszt: a 39. mérés épp ezen bukott el):
 
 ```bash
-node koino/koino.js orjarat 1
+node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-A.log
 ```
 
-*(1 perces ablak — a mérés alatt jobb, mint az 5 perces alapérték: nem kell annyit várni.)*
+*(1 perces ablak — a mérés alatt jobb, mint az 5 perces alapérték: nem kell annyit várni.
+A másik telefonon `~/orjarat-B.log` legyen a fájl neve.)*
 
 **Amit látni fogsz, ha sikerült — ez a 0. szakasz vizsgája:**
 
@@ -143,11 +220,16 @@ node koino/koino.js
 | Amit mérünk | Miért ez |
 |---|---|
 | A **szolgáltató** neve mindkét telefonon | a NAT viselkedése szolgáltatónként más (36/d) |
+| ⭐ **A két külső cím** (`kulsoport` a váltás után) | egyezik → közös CGNAT, és él a 2026-09-22-i javítás meg a hairpinning kérdése |
 | Hány **tároló** vette át a tábla-bejegyzést (`N tároló`) | ez a tábla erőssége; 0 = néma bukás |
 | **Mennyi idő** telt a váltástól az `A` gép „megvan a táblán" soráig | a 35. modell 5 perces ablakkal számolt |
+| ⛔⛔ **Kiolvasta-e a TÁVOZÓ is a tábláról a maradó címét** | *ez a 39. mérés hiányzó fele* — a B naplójában kell keresni |
 | Hány **kopogás** után nyílt a rés (`… ms`) | a 17. mérés 190 ms-ot, a 19. 76-ot mért |
 | Átment-e a **gondolat** (3. szakasz) | ez a valódi siker |
 | Bármi, ami **nem** a fenti sorok közül jött | a meglepetés a legértékesebb adat |
+
+⭐ **És a végén mentsd el a két naplót** (`~/orjarat-A.log`, `~/orjarat-B.log`) — az
+`eredmenyek.md`-be a döntő sorok szó szerint kerülnek be, ahogy a 39. mérésnél is.
 
 ---
 
@@ -180,5 +262,17 @@ node koino/koino.js
   ablakot várt.*
 - **Megtalálta, de a rés nem nyílt** → a két mobil NAT egymás közt (ez a 32. mérés nyitva
   hagyott kérdése: **két mobil készülék egymás között**).
+  ⛔⛔ **ÉS ITT A NAPLÓ DÖNT, NEM A TÜNET** — a 39. mérésen pont ez maradt eldöntetlenül. Két
+  magyarázat van, és **kívülről ugyanúgy néznek ki**:
+  *(1)* a másik fél **nem kopogott vissza** (nem olvasta ki a tábláról a friss címet, tehát
+  a régire kopogott) — ez **program-kérdés**, javítható;
+  *(2)* a két mobil NAT **elvi okból** nem tud egymásba fúrni — ez **fal**, és akkor a
+  kötés-hálónak más utat kell találnia.
+  ⭐ A kettőt **csak a TÁVOZÓ naplója** választja szét: keresd benne a *„a táblán megvan egy
+  néma társ új címe"* sort. Ha ott van, és a rés mégsem nyílt → **(2)**, negatív eredménnyel.
+  Ha nincs ott → **(1)**, és van mit javítani.
+- ⭐ **Ha a két külső cím EGYEZETT, és a társ mégsem került a listára** → a 2026-09-22-i
+  javítás nem ért el az éles útig. *Ez az egyetlen pont, amit hurok-címen nem tudtunk
+  próbával lefedni — itt derül ki.*
 - **A rés megnyílt, de a gondolat nem ment át** → ez lenne a legmeglepőbb, és a csere
   rétegéé, nem az elérhetőségé.

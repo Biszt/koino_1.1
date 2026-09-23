@@ -25,14 +25,15 @@
 // ===== ⭐⭐ ÉS A LEGFONTOSABB SZERKEZETI ÉSZREVÉTEL =====
 //
 // **A fájl-csere MERŐLEGES az esemény-cserére.** Két készülék eseményei egyezhetnek (a
-// `LENYOMAT` megegyezik, a kör 334 bájttal kilép), miközben a **fájljaik teljesen
+// `LENYOMAT` megegyezik, a kör egyetlen oda-vissza alatt kilép), miközben a **fájljaik teljesen
 // eltérnek** — hiszen a bájtok sosem utaztak. ⛔ Ezért a fájl-kérdést akkor is fel kell
 // tenni, ha nincs mit cserélni eseményből. *A két réteg külön él, ahogy a D3 mondja.*
 //
 // Használják: `vonal.js` (a párbeszédben) és a `koino.js`.
 
 // ⛔ HÁNY FÁJLT KÉRDEZÜNK EGY KÖRBEN? Nem kényelmi szám: a „nincs újdonság" csere-kör ma
-// **334 bájt** (6. szabály, mérve), és egy lenyomat 43 karakter. Ötven kérdés ~2 KB — még
+// **931 bájt** (38. mérés, 2026-09-20 — a szám nő, ahogy a körbe új mező kerül: 334 volt
+// a B. lépésnél, 1346 tíz hirdetett címmel), és egy lenyomat 43 karakter. Ötven kérdés ~2 KB — még
 // elfér, de a végtelen már nem. ⭐ És nem is kell több: a legfontosabbakat úgyis előre
 // rendezzük, a többi a következő bulin sorra kerül.
 export const KERELEM_KORLAT = 50;
