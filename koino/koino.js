@@ -1254,10 +1254,19 @@ async function allapotKiirasa(napokMulva) {
     if (!talalkozasok.ellenorizheto) {
       kiir('  ' + SZIN.halvany + 'bemutatkozásaid: ⚠️ nem ellenőrizhető' + SZIN.vege);
     } else if (talalkozasok.kolcsonos || talalkozasok.egyoldalu) {
+      // ⭐⭐ A FÜGGŐBEN LÉVŐ KÉT IRÁNYA KÜLÖN (2026-09-23): ami RÁM vár, az teendő; ami a
+      // MÁSIKRA, az csak tény. *Egy összeg a kettőből nem mondja meg, kell-e lépnem.*
       kiir('  ' + SZIN.halvany + talalkozasok.kolcsonos + ' kölcsönös bemutatkozásod van'
-        + (talalkozasok.egyoldalu
-          ? ' · ' + talalkozasok.egyoldalu + ' még FÜGGŐBEN (egyoldalú)' : '')
+        + (talalkozasok.radVar ? ' · ' + talalkozasok.radVar + ' FÜGGŐBEN, rád vár' : '')
+        + (talalkozasok.masikraVar
+          ? ' · ' + talalkozasok.masikraVar + ' FÜGGŐBEN, a másik félre vár' : '')
         + SZIN.vege);
+      // ⭐ A kézi út kéznél (4. szabály): amit viszonozhatok, azt parancsként mondjuk meg.
+      // ⚠️ Csak ELLENŐRZÖTT horgonyra (lásd a `bemutatkozasok` fejlécét) — ha találkoztatok.
+      for (const h of talalkozasok.radVarHorgonyok) {
+        kiir('    ' + SZIN.halvany + 'ha találkoztatok, viszonozd: node koino/koino.js bemutatkoz '
+          + h.slice(0, 8) + SZIN.vege);
+      }
     }
 
     // ⭐⭐⭐ A VALÓDI VÉDELEM: a kontraszt-jelzés. *„Hány olyan embert tanúsítottál, akinek

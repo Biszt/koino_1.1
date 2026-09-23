@@ -1078,6 +1078,40 @@ proba('⭐ AZ EGYOLDALÚ állítás MINDKÉT oldalon FÜGGŐBEN látszik — és
       && alapitonal.kolcsonos === 0 && alapitonal.egyoldalu === 1;
 });
 
+proba('⭐⭐ A FÜGGŐBEN LÉVŐ KÉT IRÁNYA KÜLÖN: Annára VÁR, az alapító a MÁSIKRA vár (2026-09-23)', async () => {
+  // ⛔ MIT MÉR: az `egyoldalu` összeg mindkét oldalon 1 (lásd fent) — és ebből nem derült
+  // ki, KINEK van teendője. Anna viszonozhat; az alapítónak nincs dolga, csak várni.
+  const tar = await ujTar();
+  const { kor, esemenyek } = await alapitoKor(5);
+  const anna = await belepo();
+  await ment(tar, ...esemenyek, anna.esemeny, await bemutatkozik(kor[0], anna));
+
+  const annanal = await bemutatkozasok(tar, KOINO, anna.horgony);
+  const alapitonal = await bemutatkozasok(tar, KOINO, kor[0].horgony);
+  return annanal.radVar === 1 && annanal.masikraVar === 0
+      && alapitonal.radVar === 0 && alapitonal.masikraVar === 1
+      // ⭐ …és Annának a viszonzáshoz a helyes horgonyt adjuk: az alapítóét.
+      && annanal.radVarHorgonyok.length === 1 && annanal.radVarHorgonyok[0] === kor[0].horgony
+      && alapitonal.radVarHorgonyok.length === 0;
+});
+
+proba('⛔⛔ RONTÁS: a bemutatkozó HAMIS horgonyt ír magáról — nem javasoljuk viszonzásra', async () => {
+  // ⛔ AZ ESET: a csaló Annának bemutatkozik, de a `sajatBelepes` mezőbe BÉLA horgonyát
+  // írja. Ha ezt vakon továbbadnánk, a „viszonozd" javaslat rávenné Annát, hogy BÉLÁRÓL
+  // állítson találkozást — akivel talán sosem találkozott. ⭐ A tény (valaki bemutatkozott)
+  // megmarad a számban; javaslat viszont csak ellenőrzött horgonyból lesz.
+  const tar = await ujTar();
+  const { esemenyek } = await alapitoKor(5);
+  const anna = await belepo();
+  const bela = await belepo();
+  const csalo = await belepo();
+  await ment(tar, ...esemenyek, anna.esemeny, bela.esemeny, csalo.esemeny,
+    await bemutatkozik(csalo, anna, { sajatBelepes: bela.horgony }));
+
+  const annanal = await bemutatkozasok(tar, KOINO, anna.horgony);
+  return annanal.radVar === 1 && annanal.radVarHorgonyok.length === 0;
+});
+
 proba('⛔ RONTÁS: a MÁSRÓL szóló bemutatkozás nem ad szálat annak, akinek a szeletébe került', async () => {
   const tar = await ujTar();
   const { kor, esemenyek } = await alapitoKor(5);

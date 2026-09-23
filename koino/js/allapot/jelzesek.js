@@ -175,25 +175,49 @@ export async function onalloSzalak(tar, koino, horgony) {
  *
  * 🔍 *Egymilliárd e-embernél is ennyi: egy szelet és egy lánc.*
  *
- * @returns {Promise<{kolcsonos: number, egyoldalu: number, ellenorizheto: boolean}>}
+ * ===== ⭐⭐ A FÜGGŐBEN LÉVŐ KÉT IRÁNYA (2026-09-23) =====
+ *
+ * Az egyoldalú bemutatkozás kétféle, és a kettő MÁST kér tőlem:
+ *
+ *   · `radVar`     — ő bemutatkozott nekem, én még nem neki → **rajtam múlik** (viszonozhatom)
+ *   · `masikraVar` — én bemutatkoztam neki, ő még nem nekem → a másikon múlik, nekem nincs dolgom
+ *
+ * ⛔ Egy összegként (`egyoldalu`, megmaradt a régi hívóknak) a kettő eldönthetetlen: a
+ * „2 függőben" nem mondja meg, hogy tennem kell-e valamit. *A „rám vár" és a „rá várok"
+ * nem ugyanaz (D19).*
+ *
+ * ⛔⛔ ÉS A VISSZAJELZÉSHEZ ADOTT HORGONYT ELLENŐRIZZÜK. A bemutatkozó a saját horgonyát
+ * (`adat.sajatBelepes`) MAGA írja az eseménybe — egy csaló ide egy HARMADIK ember horgonyát
+ * is írhatná, és a „viszonozd" javaslat rávenne, hogy olyasvalakiről állítsak találkozást,
+ * akivel sosem találkoztam. ⭐ Ezért csak az a horgony kerül a `radVarHorgonyok` közé, ami
+ * ebben a koinóban **annak a belépése, aki a bemutatkozást aláírta**. Ami nem ilyen, az a
+ * `radVar` számában benne van (a tény tény), de javaslat nem lesz belőle.
+ *
+ * @returns {Promise<{kolcsonos: number, egyoldalu: number, radVar: number,
+ *                    masikraVar: number, radVarHorgonyok: string[], ellenorizheto: boolean}>}
  */
 export async function bemutatkozasok(tar, koino, horgony) {
   console.log('jelzesek.bemutatkozasok - KEZDÉS', { horgony });
 
   const horgonyEsemeny = await esemenyLekerese(tar, horgony);
   if (!horgonyEsemeny || horgonyEsemeny.koino !== koino) {
-    const nemTudjuk = { kolcsonos: 0, egyoldalu: 0, ellenorizheto: false };
+    const nemTudjuk = {
+      kolcsonos: 0, egyoldalu: 0, radVar: 0, masikraVar: 0, radVarHorgonyok: [],
+      ellenorizheto: false
+    };
     console.log('jelzesek.bemutatkozasok - VÉGE (nem ellenőrizhető)', nemTudjuk);
     return nemTudjuk;
   }
   const en = horgonyEsemeny.szerzo;
 
-  // „Ki állította, hogy találkozott velem?" — a szeletemből.
-  const felem = new Set();
+  // „Ki állította, hogy találkozott velem?" — a szeletemből. ⭐ Mellé a horgony, amit
+  // ő mondott magáról (ellenőrizetlenül — lent szűrjük).
+  const felem = new Map();
   for (const e of await entitasEsemenyei(tar, koino, horgony)) {
     if (e.tipus !== 'Bemutatkozas') continue;
     if (e.adat?.kit !== en || e.szerzo === en) continue;
-    felem.add(e.szerzo);
+    if (!felem.has(e.szerzo)) felem.set(e.szerzo, new Set());
+    if (typeof e.adat?.sajatBelepes === 'string') felem.get(e.szerzo).add(e.adat.sajatBelepes);
   }
 
   // „Kiről állítottam én ugyanezt?" — a saját láncomból.
@@ -206,11 +230,30 @@ export async function bemutatkozasok(tar, koino, horgony) {
 
   // ⭐ A metszet a KÖLCSÖNÖS; ami csak az egyik oldalon van, az FÜGGŐBEN marad.
   let kolcsonos = 0;
-  for (const a of felem) if (tolem.has(a)) kolcsonos++;
+  for (const a of felem.keys()) if (tolem.has(a)) kolcsonos++;
+  const radVar = felem.size - kolcsonos;
+  const masikraVar = tolem.size - kolcsonos;
+
+  // ⛔⛔ A javasolható horgony: ebben a koinóban az ALÁÍRÓ SAJÁT belépése (lásd fent).
+  const radVarHorgonyok = [];
+  for (const [szerzo, horgonyai] of felem) {
+    if (tolem.has(szerzo)) continue;
+    for (const h of horgonyai) {
+      const belepese = await esemenyLekerese(tar, h);
+      if (belepese?.koino === koino && belepese.szerzo === szerzo
+        && (belepese.tipus === 'Belepes' || belepese.tipus === 'KoinoLetrehozas')) {
+        radVarHorgonyok.push(h);
+        break;
+      }
+    }
+  }
 
   const eredmeny = {
     kolcsonos,
-    egyoldalu: (felem.size - kolcsonos) + (tolem.size - kolcsonos),
+    egyoldalu: radVar + masikraVar,
+    radVar,
+    masikraVar,
+    radVarHorgonyok,
     ellenorizheto: true
   };
   console.log('jelzesek.bemutatkozasok - VÉGE', eredmeny);

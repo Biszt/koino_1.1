@@ -2004,9 +2004,20 @@ proba('⭐⭐ A BEMUTATKOZÁS ÁLLÁSA LÁTSZIK: előbb FÜGGŐBEN, a válasz ut
       const egyoldaluan = await fut(anna, 'allapot');
       if (!/FÜGGŐBEN/.test(egyoldaluan)) return false;
       if (!/0 kölcsönös bemutatkozásod van/.test(egyoldaluan)) return false;
+      // ⭐⭐ A KÉT IRÁNY KÜLÖN (2026-09-23): Annának nincs teendője, ő Bélára vár…
+      if (!/1 FÜGGŐBEN, a másik félre vár/.test(egyoldaluan)) return false;
+      if (/rád vár|viszonozd/.test(egyoldaluan)) return false;
 
-      // ----- 2. KÖLCSÖNÖS: Béla viszonozza, és a két lánc összeér -----
-      await fut(bela, 'bemutatkoz', annaHorgony);
+      // …Bélánál viszont ugyanez RÁ vár, és a program megmondja, mit futtasson.
+      await csereKor(anna, bela, 7956);
+      const belanal = await fut(bela, 'allapot');
+      if (!/1 FÜGGŐBEN, rád vár/.test(belanal)) return false;
+      if (!belanal.includes('viszonozd: node koino/koino.js bemutatkoz ' + annaHorgony.slice(0, 8))) {
+        return false;
+      }
+
+      // ----- 2. KÖLCSÖNÖS: Béla viszonozza — ⭐ épp a javasolt RÖVID horgonnyal -----
+      await fut(bela, 'bemutatkoz', annaHorgony.slice(0, 8));
       await csereKor(bela, anna, 7955);
 
       const kolcsonosen = await fut(anna, 'allapot');
