@@ -37,7 +37,31 @@ A naplók utólag megnézhetők, és a telefonról átküldhetők:
 grep -E "tábl|rés|kopog|csere" ~/orjarat-A.log
 ```
 
-### ⭐⭐ A MÁSODIK ÚJDONSÁG: MOST HÁROM KÉRDÉSRE IS FELELHET
+### ⭐⭐ KÉT VÁLTOZAT — ÉS MELYIK MIRE FELEL (2026-09-24)
+
+| Kérdés | 🅰️ telefon + laptop (lent, **0/b.**) | 🅱️ két mobil |
+|---|---|---|
+| **1.** A program hibája? *(kiolvassa-e a TÁVOZÓ is a táblát, visszakopog-e, átmegy-e a gondolat)* | ✅ **ez felel rá a legtisztábban** | ✅ |
+| **2.** Nyílik-e rés **két mobil NAT** között? *(a 32. mérés nyitott pontja)* | ❌ | ✅ **csak ez** |
+| **3.** Él-e a 2026-09-22-i NAT-javítás? *(közös külső cím, más port)* | ✅ a hotspotos lépéssel | ✅ ha a két telefon közös CGNAT-on van |
+
+⭐ **Ha mindkettőre van idő: előbb az 🅰️, aztán a 🅱️.** Az 🅰️ az **ismerten működő
+párost** használja (otthoni router ↔ mobil: a 32. mérésen 1 kopogás, 190 ms) — ⛔ *ha ott
+nem nyílik a rés, az szinte biztosan PROGRAM-hiba, nem fal.* Ha ott minden átmegy, a 🅱️
+bukása már **csak** a két mobil NAT-ról szólhat.
+
+⛔⛔ **MINDKÉT VÁLTOZAT ELŐTT: minden készüléken ugyanaz a friss `main`.** A 39. mérés
+telefonjai a `5e832b8`-at futtatták — abban **még nincs benne** a 2026-09-22-i NAT-javítás.
+A telefonon a frissítés egy sor ([`telepites_telefon.md`](telepites_telefon.md), „HA MÁR FENT
+VAN"), és a kötés **megmarad** (az adat a program mappáján kívül van):
+
+```bash
+cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js
+```
+
+✅ Ha a vége `✅ Mind a … próba rendben`, mehet.
+
+### 🅱️ A KÉT MOBILOS VÁLTOZAT: HÁROM KÉRDÉSRE IS FELELHET
 
 Ha **mindkét telefon mobilneten** van, ez a mérés egyszerre három nyitott pontot zár le:
 
@@ -81,6 +105,120 @@ NAT-on (CGNAT) van** — és ez ma már nem csak érdekesség:
 
 ⚠️ Ha a két külső cím **különbözik**, az is eredmény — akkor a mérés a „két mobil NAT" tiszta
 esetét méri, javítás-függetlenül.
+
+---
+
+## 0/b. 🅰️ A TELEFON + LAPTOP VÁLTOZAT (2026-09-24)
+
+*Egy mobilnetes telefon és a laptop. A telefon a **távozó** (ő vált hálózatot), a laptop a
+**maradó** (otthon marad, az otthoni routeren).*
+
+### A laptopon: Git Bash, a `C:\koino_1.1` mappában
+
+⚠️ **Git Bash-t használj, ne PowerShellt** — a `tee` ott ugyanúgy működik, mint a telefonon,
+és a napló sima szövegfájl lesz. *(A PowerShell 5.1 a `2>&1`-et hibasorokba csomagolja, a
+`Tee-Object` pedig UTF-16-ot ír — a napló utólag nehezen kereshető.)*
+
+```bash
+cd /c/koino_1.1
+```
+
+⚠️ **Ha a Windows tűzfal-kérdéssel ugrik fel** („Engedélyezi a Node.js-t…?"), engedélyezd.
+*(A `szakasz2_terv.md` szerint a `node.exe` bejövő szabálya már megvan — de egy frissített
+Node új kérdést hozhat.)*
+
+### A0. Előkészület a laptopon — egyszeri, 1 perc
+
+A laptop társ-listáján **régi próba-maradékok** állnak (két `127.0.0.1`-es cím, 2026-09-10-ből).
+Nem ártanak, de minden körben rájuk kopogna, és a naplóban zajt csinálnak:
+
+```bash
+node koino/koino.js tarsak
+node koino/koino.js tars torol 127.0.0.1 7398
+node koino/koino.js tars torol 127.0.0.1 7399
+```
+
+### A1. Ismerkedés az otthoni wifin — ~5 perc
+
+⛔ **Ez itt KELL** (a laptopnak még nincs kötése a telefonnal). Mindkettő az **otthoni
+wifin**. A laptopon kérdezd meg a helyi címet:
+
+```bash
+node koino/koino.js cimek
+```
+
+A `192.168.…` kezdetűt írd fel. A **telefonon** vedd fel társnak *(a `felfedez` a 39.
+mérésen csak önmagát találta — a kézi út biztosabb)*:
+
+```bash
+node koino/koino.js tars <a laptop 192.168-as címe> 7373
+```
+
+Most **mindkettőn** indítsd az őrjáratot, **naplóval**:
+
+```bash
+node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-L.log      # a laptopon
+node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-T.log      # a telefonon
+```
+
+✅ **A vizsga:** mindkét naplóban megjelenik a `1 társsal van kötésem` sor, és a
+`kiírtam a táblára` is (ekkor tudja meg mindkettő a saját külső címét). ⛔ Ha kötés nincs,
+**állj meg** — a tábla nem tud mit kiírni.
+
+### A2. A váltás — a TELEFON megy mobilnetre
+
+A **telefonon**: wifi KI, mobil adat BE. Az őrjárat fusson tovább (**ne indítsd újra** —
+32. mérés: új foglalat, új külső port). A laptop marad, ahol volt.
+
+⭐ **Innentől a telefon kötésében a laptop HELYI címe áll** (`192.168.…`), ami mobilnetről
+használhatatlan. ⛔⛔ **Vagyis a telefonnak IS a tábláról kell kiolvasnia a laptop címét** —
+*és ez pontosan a 39. mérés hiányzó fele.*
+
+### A3. Amit a két naplóban keresünk — ~5-10 perc
+
+| Napló | A sor | Mit jelent |
+|---|---|---|
+| **telefon** (T) | `az új címemet kiírtam a táblára (… N tároló)` | a távozó kiírta az új címét — **N-et írd fel** |
+| **laptop** (L) | `a táblán megvan egy néma társ új címe: …` | a maradó kiolvasta |
+| ⭐⭐ **telefon** (T) | `a táblán megvan egy néma társ új címe: …` | ⭐ **A DÖNTŐ SOR** — a távozó IS kiolvasta a maradót |
+| mindkettő | `rés nyílt: …` | a rés megnyílt |
+
+### A4. A döntő próba — a gondolat
+
+A **telefonon** (mobilneten): `node koino/koino.js gondolat "Atjott a valtas utan"`, majd egy-két
+ablak múlva a **laptopon**: `node koino/koino.js`. ⭐ **És fordítva is**: a laptopon egy
+másik gondolat, és nézd meg a telefonon. *A rés kétirányú — a csere is legyen az.*
+
+### A5. ⭐ A NAT-javítás próbája: a laptop a telefon HOTSPOTJÁRA — ~5 perc (opcionális)
+
+A telefonon kapcsold be a **hotspotot** (a mobil adat maradjon), és a laptopot tedd rá.
+**Mindkettőn**, egy harmadik ablakban:
+
+```bash
+node koino/koino.js kulsoport 7400
+```
+
+⭐ Ha a **két külső cím egyezik** (a port más lesz), a két készülék **ugyanazon a
+szolgáltatói címen** osztozik — pontosan a 2026-09-22-i javítás esete. Ekkor figyeld:
+
+- `node koino/koino.js tarsak` — felkerült-e a **másik fél nyilvános címe** (a közös cím, a
+  MÁSIK porttal) a listára? ⛔ *Ha néhány ablak után sem, a javítás nem ért el az éles
+  útig — ⚠️ az őrjárat ezt nem írja ki külön, ezért kell a `tarsak`.*
+- a naplóban a `rés nyílt: <cím>` — ⚠️ **a cím mondja meg, merre nyílt**: ha a **nyilvános**
+  cím, a szolgáltató NAT-ja visszafordult saját maga felé (*hairpinning* — erre eddig nem
+  volt adatunk); ha egy **helyi** (`192.168.…`) cím, akkor a hotspot helyi hálózatán mentek
+  át, és a hairpinning kérdése nyitva marad.
+
+### Mit jelent az eredmény
+
+- ✅ **A4 átment mindkét irányban** → a program lánca rendben: kiírás, kiolvasás **mindkét
+  oldalról**, visszakopogás, csere. ⭐ Ekkor a 39. mérés bukása **a két mobil NAT** számlájára
+  írható — és a 🅱️ változat dönti el, hogy tényleg fal-e.
+- ⛔ **A telefon naplójában NINCS „a táblán megvan" sor** → a távozó nem olvasta ki a maradót:
+  **program-hiba**, és ez volt a 39. mérés oka is. *A két napló kell hozzá — küldd el mindkettőt.*
+- ⛔ **Mindkét „megvan" sor ott van, a rés mégsem nyílt** → ez **váratlan** (ezen a páron a
+  32. mérés már nyitott rést). *A kopogás időzítése vagy a port a gyanús — a napló `kopogtam`
+  sorai döntenek.*
 
 ---
 
@@ -219,6 +357,7 @@ node koino/koino.js
 
 | Amit mérünk | Miért ez |
 |---|---|
+| **Melyik változat** (🅰️ telefon + laptop · 🅱️ két mobil) | a kettő más kérdésre felel |
 | A **szolgáltató** neve mindkét telefonon | a NAT viselkedése szolgáltatónként más (36/d) |
 | ⭐ **A két külső cím** (`kulsoport` a váltás után) | egyezik → közös CGNAT, és él a 2026-09-22-i javítás meg a hairpinning kérdése |
 | Hány **tároló** vette át a tábla-bejegyzést (`N tároló`) | ez a tábla erőssége; 0 = néma bukás |
@@ -228,7 +367,8 @@ node koino/koino.js
 | Átment-e a **gondolat** (3. szakasz) | ez a valódi siker |
 | Bármi, ami **nem** a fenti sorok közül jött | a meglepetés a legértékesebb adat |
 
-⭐ **És a végén mentsd el a két naplót** (`~/orjarat-A.log`, `~/orjarat-B.log`) — az
+⭐ **És a végén mentsd el a két naplót** (🅱️: `~/orjarat-A.log`, `~/orjarat-B.log` ·
+🅰️: `~/orjarat-T.log` a telefonon, `~/orjarat-L.log` a laptopon) — az
 `eredmenyek.md`-be a döntő sorok szó szerint kerülnek be, ahogy a 39. mérésnél is.
 
 ---
