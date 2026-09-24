@@ -244,11 +244,12 @@ program hibáját takarja — és kívülről a kettő UGYANÚGY néz ki.** Ezé
 „zöldre hangolni": meg kell mérni. *(És a diagnosztika nélkül egyik sem lett volna
 megtalálható: a bukásnak meg kell neveznie magát.)*
 
-- ✅ **A `main` PUSHOLVA** (`5e832b8`, 2026-09-21). Push továbbra is **csak Csaba kérésére**.
-- ⚠️ **Egy másik session munkája a munkakönyvtárban van** (`docs/gepezet.md` ·
-  `docs/utiterv.md` · `szabalyok.js`), még nem commitolva. **Ne söpörd bele a saját
-  commitodba** (`git add -A` helyett fájlonként adj hozzá) — 2026-09-20-án ez egyszer
-  megtörtént.
+- ✅ **A `main` PUSHOLVA** (`4bd037a`, 2026-09-24). Push továbbra is **csak Csaba kérésére**.
+- ✅ *A „másik session be nem commitolt munkája" (`docs/gepezet.md` · `docs/utiterv.md` ·
+  `szabalyok.js`) 2026-09-23-án bekerült az `ea55ab3`-ba — átnézve, rendezett.*
+  ⚠️ **A szabály marad:** ha a munkakönyvtárban más munkája áll, **ne söpörd bele a saját
+  commitodba** (`git add -A` helyett fájlonként adj hozzá, és előbb nézd meg a `git status`-t
+  meg ezt a fájlt) — 2026-09-20-án és 2026-09-23-án is megtörtént.
 
 ### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
 
