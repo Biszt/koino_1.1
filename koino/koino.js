@@ -907,7 +907,18 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
       try {
         const rekesz = await tarsRekesze(sajatKulcs, { alairo: k.alairo, titkosito: k.titkosito });
         const e = await kliens.keres(rekesz.kulcs, rekesz.so);
-        if (!e.legjobb) { naplo({ mi: 'NINCS-A-TABLAN', tars: k.alairo.slice(0, 8) }); continue; }
+        if (!e.legjobb) {
+          // ⛔⛔ A „NINCS RAJTA" ÉS A „NEM TUDTAM MEGNÉZNI" KÉT KÜLÖN DOLOG (40. mérés,
+          // 2026-09-24). Terepen egy mobilnet nélküli telefon azt írta, hogy *„egy néma
+          // társ nincs a táblán"* — pedig egyetlen DHT-gép sem felelt neki. ⭐ Ha senki nem
+          // felelt, a keresés nem mondhat semmit a rekeszről: az a hálózat híre, nem a
+          // társé (D19). *Ugyanaz a hibafajta, mint a `felfedez` „már ismerős" felirata.*
+          const kerdes = e.kereses?.kerdes ?? 0;
+          const valasz = e.kereses?.valasz ?? 0;
+          naplo({ mi: valasz ? 'NINCS-A-TABLAN' : 'TABLA-NEM-ELERHETO',
+            tars: k.alairo.slice(0, 8), kerdes, valasz });
+          continue;
+        }
         const ertek = Buffer.from(e.legjobb.ertek).toString('utf8');
         const cim = await cimBejegyzesbol(sajatKulcs,
           { alairo: k.alairo, titkosito: k.titkosito }, ertek);
@@ -949,6 +960,23 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
 const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy csere-kör nagyságrendje
 
 /**
+ * A tükör (STUN-kiszolgáló), amitől a saját külső címünket kérdezzük — `KOINO_TUKOR=cím:port`.
+ *
+ * ⭐ Ugyanaz az elv, mint a `KOINO_DHT_BELEPOK`-nál: a segédeszköz cserélhető (2. szabály) —
+ * ha egy hálózat a megszokott tükröt tiltja, egy másikat meg lehet adni. És ettől mérhető
+ * próbában is, mi történik, ha a tükör NEM felel (40. mérés).
+ * Beállítás nélkül a `kulsoCimFoglalaton` alapértéke szól.
+ */
+function tukorBeallitas() {
+  const env = process.env.KOINO_TUKOR;
+  if (!env) return {};
+  const hatar = env.lastIndexOf(':');
+  const port = parseInt(env.slice(hatar + 1), 10);
+  if (hatar <= 0 || !Number.isInteger(port)) return {};
+  return { tukorSzerver: env.slice(0, hatar).replace(/^\[|\]$/g, ''), tukorPort: port };
+}
+
+/**
  * Egy buli UDP-ága: kopogunk minden friss címre, és akinek megnyílik a rése, azzal
  * AZONNAL cserélünk ugyanazon a foglalaton (események + fájlok).
  *
@@ -976,6 +1004,7 @@ async function udpBuli(beallitas) {
   const furas = await pajzsfurasTobbfele(helyiPort, celok, {
     idokorlat,
     sajatCimMerese: !csakHelyben,
+    ...tukorBeallitas(),
     tartsdNyitva: false,      // az ablak végén a rés lezárul — a következő bulin újrafúrunk
     utana: (e) => {
       // ⭐ A SAJÁT FRISS CÍMÜNK: ezt a foglalatot méri a tükör, és ez az, ami terjed.
@@ -985,6 +1014,11 @@ async function udpBuli(beallitas) {
             { ok: hiba.message }));
         naplo({ mi: 'SAJAT-CIM', cim: e.cim, port: e.port });
       }
+      // ⛔⛔ ÉS HA NEM SIKERÜLT, AZT IS TOVÁBBADJUK (40. mérés, 2026-09-24). Eddig ez itt
+      // elveszett: a telefon mobilnet nélkül nem tudta megmérni a külső címét, ezért nem
+      // írt ki új címet a táblára — és a napló erről EGY SZÓT sem szólt. *Egy lépés, ami
+      // csendben kimarad, kívülről ugyanúgy néz ki, mint egy lépés, amire nem volt szükség.*
+      if (e.mi === 'SAJAT-CIM-NEM-MEGY') naplo(e);
       if (e.mi === 'CEL-KIHAGYVA') naplo(e);
     },
     // ⭐⭐ AKI ÁTÉRT, AZZAL AZONNAL DOLGOZUNK — a rés nem vár ránk.
@@ -1660,7 +1694,16 @@ try {
           }
           if (esemeny.mi === 'NINCS-A-TABLAN') {
             kiir(SZIN.halvany + '  · ' + esemeny.tars + '… nincs a táblán (nem írt ki'
-              + ' semmit, vagy már elévült)' + SZIN.vege);
+              + ' semmit, vagy már elévült — ' + esemeny.valasz + ' DHT-gép felelt)' + SZIN.vege);
+          }
+          if (esemeny.mi === 'TABLA-NEM-ELERHETO') {
+            kiir(SZIN.nem + '  ✗ ' + esemeny.tars + '…: a tábla NEM ÉRHETŐ EL ('
+              + esemeny.kerdes + ' kérdés, egyik DHT-gép sem felelt) — nem tudom, kint'
+              + ' van-e' + SZIN.vege);
+          }
+          if (esemeny.mi === 'OLVASAS-BUKOTT') {
+            kiir(SZIN.nem + '  ✗ ' + esemeny.tars + '…: az olvasás elbukott ('
+              + esemeny.ok + ')' + SZIN.vege);
           }
           if (esemeny.mi === 'OLVASHATATLAN') {
             kiir(SZIN.nem + '  ✗ ' + esemeny.tars + '… bejegyzése nem bontható ki'
@@ -2660,6 +2703,9 @@ try {
       // kell ahhoz, hogy a jegyzékben SAJÁT magunkra ne kopogjunk — a jegyzék ugyanis
       // szándékosan NÉVTELEN (nem mondja meg, melyik cím kié).
       let sajatKulsoUdp = null;
+      // ⚠️ Bukik-e most a külső cím mérése? Csak a VÁLTOZÁST írjuk ki (40. mérés): egy
+      // mobilnet nélküli telefonon körönként ugyanaz a sor csak zaj volna.
+      let sajatCimMeresBukik = false;
 
       const figyelo = await figyeloIndulasa(tar, KOINO, port, {
         // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
@@ -2776,6 +2822,18 @@ try {
             naplo: (e) => {
               if (e.mi === 'SAJAT-CIM') {
                 sajatKulsoUdp = { cim: e.cim, port: e.port };
+                if (sajatCimMeresBukik) {
+                  sajatCimMeresBukik = false;
+                  kiir(SZIN.jo + '  · ' + ora() + ' a saját külső címem mérése újra megy: '
+                    + e.cim + ':' + e.port + SZIN.vege);
+                }
+              }
+              // ⛔⛔ A KIMARADT LÉPÉS MEGNEVEZI MAGÁT (40. mérés): e nélkül a tábla-írás
+              // csendben elmaradt, és a társ csak a RÉGI címünket találta meg.
+              if (e.mi === 'SAJAT-CIM-NEM-MEGY' && !sajatCimMeresBukik) {
+                sajatCimMeresBukik = true;
+                kiir(SZIN.nem + '  ✗ ' + ora() + ' nem tudom megmérni a saját külső címemet ('
+                  + e.ok + ') — amíg ez így van, új címet sem írhatok a táblára' + SZIN.vege);
               }
               if (e.mi === 'ATFURVA') {
                 kiir(SZIN.jo + '  ⭐ ' + ora() + ' rés nyílt: ' + e.cim + ':' + e.port
@@ -2980,9 +3038,21 @@ try {
                     : SZIN.halvany + ' (az ő órája szerint ' + perce + ' perce írta ki)'
                       + SZIN.vege));
               }
+              // ⭐ A TÁRSAT IS MEGNEVEZZÜK (40. mérés): két néma kötésnél a napló eddig
+              // nem mondta meg, melyikük hiányzik — utólag kellett kikövetkeztetni.
               if (e.mi === 'NINCS-A-TABLAN') {
-                kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ nincs a táblán'
-                  + SZIN.vege);
+                kiir(SZIN.halvany + '  · ' + ora() + ' egy néma társ (' + e.tars
+                  + '…) nincs a táblán (' + e.valasz + ' DHT-gép felelt)' + SZIN.vege);
+              }
+              // ⛔⛔ ÉS HA SENKI NEM FELELT, AZ NEM „NINCS A TÁBLÁN" (40. mérés).
+              if (e.mi === 'TABLA-NEM-ELERHETO') {
+                kiir(SZIN.nem + '  ✗ ' + ora() + ' a tábla NEM ÉRHETŐ EL (' + e.kerdes
+                  + ' kérdés, egyik DHT-gép sem felelt) — nem tudom, hol van ' + e.tars
+                  + '…' + SZIN.vege);
+              }
+              if (e.mi === 'OLVASAS-BUKOTT') {
+                kiir(SZIN.nem + '  ✗ ' + ora() + ' a táblaolvasás elbukott (' + e.tars
+                  + '…: ' + e.ok + ')' + SZIN.vege);
               }
             });
             // ⭐ A TALÁLT CÍM A FRISS JEGYZÉKBE KERÜL — a következő buli már rá kopog.

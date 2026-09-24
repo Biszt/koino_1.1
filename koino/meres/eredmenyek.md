@@ -3398,3 +3398,161 @@ ezt kimondani többet ér, mint a valószínűbbet megtippelni.*
 3. ⭐ **A rés a közös hálózaton 36–98 ms alatt nyílt** (`rés nyílt: …:7373 (36 ms)`,
    `(67 ms)`, `(98 ms)`) — ugyanaz a nagyságrend, mint a 17. (190 ms) és 19. (76 ms) mérésen.
    *Telefonon sem drágább.*
+
+---
+
+## 40. ⚠️ A KÉT MOBIL NAT — ELMARADT, DE HAT LELETET HOZOTT (2026-09-24, 19:55–20:45)
+
+*A 39. mérés megismétlése lett volna, két mobilnettel (a [forgatókönyv](../../docs/terepmeres_mobil.md)
+🅱️ változata). ⛔ **A két mobil NAT közötti rést NEM mértük meg:** az „A" telefon mobilnete
+nem működött (feltöltőkártyás — *„a bankos mobil alkalmazást se akarja megnyitni"*). Ami
+mégis kiderült, az alább.*
+
+| | „A" telefon (Csabáé) | „B" telefon (a szomszédé) |
+|---|---|---|
+| tábla-kulcs (rekesz) | `SbjQHYMA63Vd…` — **új**, nem a 39-es „A" | `35oykowL4itc…` — **a 39-es „B"** |
+| kulcs | `3Wf7CJIW…` | `dqowl2V7…D29X0_wE` |
+| a program | `e747be3` (695 önpróba) | `e747be3` |
+| wifis cím | `192.168.1.144` | `192.168.1.36` |
+| kötés a mérés előtt | 0 | 1 — a 39-es „A" (`ApZHO…`), **258 018 mp** (~72 óra) óta néma |
+
+⚠️ Mivel az „A" új készülék volt, a 0. szakasz (ismerkedés) **kellett**: kézi `tars`
+mindkét irányban, majd `orjarat 1 2>&1 | tee` mindkét telefonon (a 39. mérés tanulsága: a
+napló most **fájlban** van).
+
+### ✅ AMI MŰKÖDÖTT: A KÖTÉS ÉS A KIÍRÁS
+
+```
+A:  20:09:22 1 társsal van kötésem (a tábla-kulcsuk alatt)
+A:  20:09:47 az új címemet kiírtam a táblára (1 társ rekeszébe, 8 tároló)
+B:  20:08:14 1 társsal van kötésem (a tábla-kulcsuk alatt)
+B:  20:09:33 az új címemet kiírtam a táblára (2 társ rekeszébe, 14 tároló)
+```
+
+⭐ A B **20:40:15-kor újra kiírt** (2 rekesz, 14 tároló) — hálózatváltás NÉLKÜL. A kiírás
+csak akkor fut, ha a mért külső cím megváltozott, tehát a B-nek új leképezést adott a router.
+*A napló nem mondja meg, mire változott — valószínűleg a portja (a fúró körönként új
+foglalatot nyit, lásd 32. mérés).* Az „eseményre, nem órára" szabály így is ritka írást adott:
+**két kiírás 36 perc alatt.**
+
+### ⭐⭐ A DHT EGY HÁROMNAPOS BEJEGYZÉST IS MEGŐRZÖTT
+
+A B minden néma-körben kereste a 39-es „A" rekeszét — és megtalálta:
+
+```
+20:08:38 a táblán megvan egy néma társ új címe: 5.187.184.117:7373 (az ő órája szerint 4320 perce írta ki)
+…
+20:32:05 a táblán megvan egy néma társ új címe: 5.187.184.117:7373 (az ő órája szerint 4343 perce írta ki)
+```
+
+- ⭐ **4343 perc = 72,4 óra**, újraírás nélkül. Eddig a leghosszabb mért élettartam **6,6 óra**
+  volt (36/c). *A BEP 44 szerint a tárolók néhány óra után elengedhetik (lásd 36.) — a valódi
+  DHT-n ezt a bejegyzést három napig többen is megtartották.*
+- ⚠️ **De nem mindig:** a 3 napos bejegyzés **7 olvasásból 5-ször** jött meg (20:26:10-kor
+  és 20:39:01-kor nem). A friss, 8 tárolós „A"-bejegyzés **3-ból 3-szor**.
+- ⚠️ *A két „nincs" melyik társé volt, azt a napló NEM mondta meg* — az időrendből
+  következtetve a régié (a friss mindkét alkalommal fél percen belül megjött). → **javítva**, lent.
+
+### ⚠️ A RÉS: HELYI CÍMEN IGEN, NYILVÁNOSON SOHA
+
+```
+A:  20:11:04 rés nyílt: 192.168.1.36:7373 (4173 ms)
+A:  20:19:01 rés nyílt: 192.168.1.36:7373 (1393 ms)
+    … és minden körben: „1–3 friss címre kopogtam, egyik rés sem nyílt meg"
+```
+
+- A **helyi** címre (a kötésben álló `192.168.1.36`) a rés megnyílt — ⚠️ de **1,4–4,2 mp**
+  alatt, a 39. mérés 36–98 ms-ával szemben.
+- A **friss címekre** (a cserén terjedő nyilvános címek) **egyszer sem**. ⭐ A két telefon
+  egy routeren van, tehát egymás nyilvános címe a SAJÁT külső címünk, más porttal — ez a
+  2026-09-22-i NAT-javítás esete, és a rés itt csak akkor nyílna, ha a router **visszafordítja**
+  a forgalmat saját maga felé (*hairpinning*). ⚠️ *Következtetés, nem mérés:* a napló nem
+  írja ki, melyik címre kopogott — de a két telefon mindvégig egy wifin volt, és a helyi rés
+  közben megnyílt, tehát a társ ott volt. *Ez a router valószínűleg nem tud hairpinninget* —
+  a javítás előre kimondott ára, most először terepen.
+
+### ⚠️ A CSERE: KÖRÖNKÉNT 35 KB, NULLA ÚJ ESEMÉNNYEL
+
+A napló minden körben ezt mutatta: `1/5 társ — 0 új esemény, 35.2 KB` · `átvettem 0,
+továbbadtam 10`. ⭐ **A kapu elutasítási okát a részletes napló adta meg** (kézi `csere`,
+`KOINO_NAPLO=1`):
+
+| Irány | Mi jött | Mi lett vele |
+|---|---|---|
+| A → B | **9 esemény** | mind `ELUTASÍTVA — hiányzó mező: entitas` |
+| B → A | **2 esemény** | mind `marMegvolt` — az „A"-nál **már megvolt** |
+
+- **Az A → B 9:** az „A" telefon **2026-08-29-i**, a Szakasz 3 (09-03) ELŐTTI alakú eseményei
+  (a laptopon ugyanez a 9 áll: 7 a laptopé, 2 az „A"-é). *A 32. mérés már feljegyezte ezt a
+  pazarlást* — egy elutasított eseményt a csere körönként újra elkér. A kapu jól dönt (3.
+  szabály); a pazarlás marad.
+- ⭐ **A B → A 2 ÚJ LELET:** az „A" körönként **újra elkér két eseményt, amelyek már
+  megvannak nála**. Ez nem az elutasítás esete — a mentés „már megvolt"-ot mond. *Oka
+  nyitott:* valószínűleg az állás-összevetés (hézag vagy elágazás) mond „hiányzik"-ot arra, ami
+  megvan. ⏸️ Kivizsgálandó.
+- ✅ **A mérést ez NEM akasztotta volna meg:** a kapu nem kéri az elődöt (`esemenyMentese`
+  — aláírás, azonosító, elágazás), tehát egy ÚJ esemény a régi hézag mellett is bemegy.
+
+### ⛔ 20:22 UTÁN: AZ „A" MOBILNET NÉLKÜL — ÉS A PROGRAM EZT NEM MONDTA KI
+
+Az „A" 20:22-kor kikapcsolta a wifit — a mobilnet nem működött, vagyis **offline** lett. A
+napló ettől kezdve:
+
+```
+A:  20:22:46 0/6 társ — 0 új esemény, 0 bájt
+A:  20:22:56 egy néma társ nincs a táblán
+A:  20:25:01 egy néma társ nincs a táblán
+B:  20:26:36 a táblán megvan egy néma társ új címe: 31.46.251.115:47928 (az ő órája szerint 17 perce írta ki)
+```
+
+⛔⛔ **KÉT HALLGATÓ HELY, mindkettő ugyanabból a fajtából, mint a 39. mérés „már ismerős"
+felirata:**
+
+1. **„egy néma társ nincs a táblán"** — pedig az „A" **egyetlen DHT-gépet sem ért el**.
+   A társ közben kint volt (a B mindvégig megtalálta a friss bejegyzéseket). *A felirat a
+   HÁLÓZAT hírét a TÁRS hírének adta ki.*
+2. **Az „A" nem írta ki az új címét — és erről egy szót sem szólt.** A kiírás csak akkor fut,
+   ha a külső cím mérése (STUN, a fúró foglalatán) sikerül; ha nem, a fúró jelzi
+   (`SAJAT-CIM-NEM-MEGY`) — ⛔ **de az őrjárat ezt a jelzést eldobta.** Ezért a B csak a
+   RÉGI, otthoni címet találta meg (`31.46.251.115:47928`), és 20:29-től arra kopogott.
+
+✅ **Mindkettő javítva ugyanaznap** — próbával és rontás-próbával (lásd a CLAUDE.md-t):
+- a táblaolvasás a keresés **válaszszámát** is nézi: ha senki nem felelt → *„a tábla NEM
+  ÉRHETŐ EL (N kérdés, egyik DHT-gép sem felelt)"*; ha feleltek, de nincs rajta → *„nincs a
+  táblán (N DHT-gép felelt)"* — és **megnevezi a társat**;
+- az őrjárat kiírja: *„nem tudom megmérni a saját külső címemet (…) — amíg ez így van, új
+  címet sem írhatok a táblára"*, **sorozatonként egyszer**, és szól, ha a mérés újra megy.
+
+### ⚠️ A KÖRÖK KÖZÖTT PERCEK MARADTAK KI
+
+„Kör 1 percenként" helyett több helyen **3–5 perces** szünet: A `20:13:06 → 20:16:40`,
+`20:25:01 → 20:29:52`; B `20:13:06 → 20:16:43`, `20:20:14 → 20:24:33`, `20:40:15 → 20:45:17`.
+*Oka nyitott.* Két gyanú, és a napló nem választja szét őket: *(1)* az Android
+visszafogja a háttérben/elsötétült képernyővel futó Termuxot (→ legközelebb **„Acquire
+wakelock"**); *(2)* a kör maga hosszú: a B társ-listáján 6 cím állt, és egy halott TCP-cím
+10 mp várakozás. ⚠️ A 20:13–20:16-os szünet **mindkét** telefonon egyszerre volt — ez közös
+okra utal.
+
+### ⚠️ ÉS AZ ÖNPRÓBÁK A TELEFONOKON: NÉGY IDŐZÍTÉS-ÉRZÉKENY BUKÁS
+
+| Futás | Bukott (695-ből) |
+|---|---|
+| A, wifin | `parancssor`: *A TÜRELEM ELJUT A VONALIG* · *A KÖTÉS MEGSZÜLETIK A BULIN* |
+| B, wifi nélkül | `dht`: *NÉMA gépek…* — `eltelt 10450 ms (keret 6000) · feltevés: idokorlat, tárolta=4 · keresés: megvan=true` |
+| B, wifin | `parancssor`: *AZ ŐRJÁRAT A FAL ÓRÁJÁHOZ IGAZODIK* |
+
+⭐ **Mind a négy más próba, mindegyik egyszer**, és mind a négy fix, a laptophoz szabott
+időkeretet használ (1,5 mp induló folyamatra · 14 mp egy 12 mp-es ablakra · 6 mp a DHT-re ·
+1 mp tűrés a kör végi kiírásra). A laptopon **mind zöld**, és a `dht` próba **8 mag teljes
+terhelése mellett is 3/3**. *Az időzítésre utal, nem programhibára — de BIZONYÍTANI nem
+lehet: a négyből három csak annyit mond, hogy „BUKOTT".* ⏸️ **Javítandó:** nevezzék meg,
+melyik feltételük nem teljesült, és mennyi idő telt el (ahogy a `dht` próba már teszi).
+
+### ⏭️ AMI KÖVETKEZIK
+
+- ⭐ **A kötés MINDKÉT telefonon megmaradt** (`kotesek.json`) — a következő két mobilos
+  alkalom **rögtön a hálózatváltással** kezdhet.
+- ⭐ **A telefon + laptop változathoz (0/b.) nem kell a szomszéd** — amint az „A" mobilnete
+  működik, egyedül is mérhető, és az dönti el a legfontosabbat: *kiolvassa-e a TÁVOZÓ is a
+  táblát, visszakopog-e, átmegy-e a gondolat.*
+- A két mobil NAT (32. mérés nyitott pontja) egy **második működő mobilnettel**.

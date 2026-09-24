@@ -97,7 +97,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhat próba-fájl, **695 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhat próba-fájl, **697 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 

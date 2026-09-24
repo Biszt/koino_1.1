@@ -387,6 +387,13 @@ node koino/koino.js
   friss telepítésnek még nincs emlékezete.
 - ⚠️ **Ugyanaz a koino kell.** Ha a 0. szakasz cseréje megy, ez bizonyított; ha „MÁSIK koino"
   üzenetet látsz, ott állj meg.
+- ⛔⛔ **A váltás előtt nézd meg, hogy a mobilnet TÉNYLEG működik** (40. mérés — ezen bukott el):
+  kapcsold ki a wifit, és nyiss meg egy weboldalt. *Egy feltöltőkártyás telefonon a mobil
+  adat „be van kapcsolva", címet is kap — de forgalmat nem enged.* Utána vissza a wifire.
+- ⚠️ **„Acquire wakelock" mindkét telefonon** (a Termux értesítésében) — a 40. mérésen az 1
+  perces körök között 3–5 perces szünetek voltak. *A mérés végén: „Release wakelock".*
+- ⭐ **Mobilnet nélkül a napló 2026-09-24 óta megmondja:** *„a tábla NEM ÉRHETŐ EL"* és
+  *„nem tudom megmérni a saját külső címemet"*. Ha ezt látod, a mérés nem a programot méri.
 
 ---
 

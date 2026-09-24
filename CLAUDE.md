@@ -17,11 +17,40 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
-### ▶️▶️ SESSION-VÁLTÁS (2026-09-21) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️▶️▶️ A LEGFRISSEBB (2026-09-24) — 40. MÉRÉS: A KÉT MOBIL NAT ELMARADT
+
+⛔ **A két mobil NAT közötti rést NEM mértük meg** — az „A" telefon (Csabáé) mobilnete nem
+működött (feltöltőkártyás). ⭐ Ami mégis kiderült: [`eredmenyek.md`](koino/meres/eredmenyek.md)
+**40.** Röviden:
+- ✅ a kötés a kézi `tars`-szal megszületett, a kiírás mindkét oldalon ment (8 és 14 tároló);
+- ⭐⭐ **a DHT egy 72,4 órás bejegyzést is megőrzött** (eddig 6,6 óra volt a csúcs) — de 7-ből
+  csak 5-ször adta vissza;
+- ⚠️ egy routeren a **helyi** címre nyílt rés (1,4–4,2 mp), a **nyilvánosra soha** — ez a router
+  valószínűleg nem tud hairpinninget (a 2026-09-22-i NAT-javítás kimondott ára, most terepen);
+- ⚠️ a csere körönként **35 KB**, 0 új eseménnyel: az „A" 9 db **2026-08-29-i régi alakú**
+  eseményét a kapu jogosan elutasítja (`hiányzó mező: entitas`) — és ⭐ **ÚJ lelet:** a B → A
+  irányban 2 esemény körönként újra jön, pedig az „A"-nál **már megvan** (`marMegvolt`). ⏸️
+- ⛔⛔ **KÉT HALLGATÓ HELY, mindkettő JAVÍTVA 2026-09-24:** offline telefonon a napló azt írta,
+  hogy *„egy néma társ nincs a táblán"* (pedig egyetlen DHT-gép sem felelt), és **szó nélkül
+  kihagyta** az új cím kiírását (a STUN-bukást az őrjárat eldobta). Most: *„a tábla NEM ÉRHETŐ
+  EL (N kérdés, egyik DHT-gép sem felelt)"* · a társat is megnevezi · és *„nem tudom megmérni a
+  saját külső címemet (…) — amíg ez így van, új címet sem írhatok a táblára"* (sorozatonként
+  egyszer). ⭐ Új: **`KOINO_TUKOR=cím:port`** (a tükör cserélhető, 2. szabály — és így
+  próbálható). **2 új parancssor-próba, 3 rontás-próba.**
+- ⚠️ a telefonokon **4 különböző időzítés-érzékeny próba bukott**, mind egyszer (a laptopon mind
+  zöld, 8 mag terhelése mellett is) — ⏸️ a négyből háromnak meg kell neveznie a bukása okát.
+
+⏭️⏭️ **A KÖVETKEZŐ LÉPÉS:** amint az „A" mobilnete működik → a **telefon + laptop** változat
+(forgatókönyv **0/b.**) — ehhez **nem kell a szomszéd**, és ez dönti el, hogy a program
+hibás-e. ⭐ A kötés az „A" és a szomszéd „B" telefonja között **megmaradt**: a két mobilos
+mérés legközelebb rögtön a hálózatváltással kezdhet. ⚠️ A telefonokon **„Acquire wakelock"**
+(a körök között 3–5 perces szünetek voltak).
+
+### ▶️▶️ SESSION-VÁLTÁS (2026-09-21)
 
 ⭐⭐⭐ **A HIRDETŐTÁBLA TEREPEN IS MŰKÖDIK — 39. mérés, két valódi telefonnal.**
 Jegyzőkönyv: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) 39. · a forgatókönyv:
-[`docs/terepmeres_mobil.md`](docs/terepmeres_mobil.md). **695 önpróba zöld** (26 próba-fájl;
+[`docs/terepmeres_mobil.md`](docs/terepmeres_mobil.md). **697 önpróba zöld** (26 próba-fájl;
 680 volt a 2026-09-22-i átnézés előtt, 692 utána — lásd lentebb). ⚠️ *A 2026-09-22-i átnézés
 munkája 2026-09-23-ig NEM volt commitolva — az itteni „a munkakönyvtár tiszta" sor hazudott.*
 
@@ -254,7 +283,7 @@ megtalálható: a bukásnak meg kell neveznie magát.)*
 ### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
 
 ⭐ **A részletes terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) **legvége**
-(„A KÖVETKEZŐ MUNKA"). ⚠️ *Ez a szakasz 2026-09-18-i állapot — a friss a fenti* **695 önpróba**.
+(„A KÖVETKEZŐ MUNKA"). ⚠️ *Ez a szakasz 2026-09-18-i állapot — a friss a fenti* **697 önpróba**.
 
 ⭐⭐⭐ **FRISSÍTÉS (2026-09-19): A HIRDETŐTÁBLA A DHT LESZ — 36. mérés.** Csaba választása:
 **BitTorrent DHT** (gazda nélküli, aláírt Ed25519 bejegyzések, BEP 44). ✅ Megépült a kliens
@@ -600,7 +629,7 @@ amiről nem tudod, hogyan hozható vissza, nem mentés, hanem hamis biztonságé
 ✅ **A SZAKASZ 5 GERINCE KÉSZ** (5.1–5.7): a helyi kapu · a kérdezhető pakli · a kártyák ·
 a hiányzó műveletek · a modálok magja · a **belépő tér** · a **szövegszerkesztő** · a
 **fájl-réteg** · és a **fájl-szállítás** (felderítés · kérelem · átvitel · randevú).
-**695 önpróba**, minden zöld.
+**697 önpróba**, minden zöld.
 
 ### ⛔⛔⛔ ÉS EGY ÁTNÉZÉS A LEGNAGYOBB 4. SZABÁLY-HIÁNYT TALÁLTA A FÁJL-SZÁLLÍTÁSNÁL (2026-09-14, javítva)
 
@@ -1232,7 +1261,7 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 695 önpróba
+node koino/meres/mind.js         # a 697 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
@@ -1250,6 +1279,7 @@ node koino/meres/buliMeres.js    # ⭐⭐⭐ MENNYIT ÉR AZ ÖSSZEHANGOLT ABLAK?
                                  # A mai állapot MÉRETTEL romlik (8,9 → 70,3 perc), az új nem.
 node koino/meres/dhtMeres.js [kor 5 5]  # ⭐⭐⭐ A DHT MINT HIRDETŐTÁBLA (36.) — a VALÓDI BitTorrent DHT-n
                                  # KOINO_DHT_BELEPOK=nincs · KOINO_DHT_UJKULCS=1 · tesz / keres <kulcs>
+                                 # KOINO_TUKOR=cím:port — a tükör (STUN) cseréje (2026-09-24, 40.)
 node koino/meres/kotesMeres.js   # ⭐⭐⭐ A KÖTÉS-HÁLÓ (35.): 3 kötés/készülék, hálózatváltás —
                                  # mentés nélkül egy nap alatt szétesik, hirdetőtáblával ~1%
                                  # leszakadva; és a méhsejt vs véletlen (lépésszám)
@@ -1289,7 +1319,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 695 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 697 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)

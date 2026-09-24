@@ -24,6 +24,8 @@ import { execFile, spawn } from 'node:child_process';
 import { mkdtemp, rm, readFile, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+// ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
+import { createSocket } from 'node:dgram';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
@@ -1668,6 +1670,108 @@ proba('⭐⭐⭐ A TÁBLA PARANCSA KIÍR ÉS KIOLVAS — a lánc végigmegy (ham
       halo.bezar();
       await rm(egyik, { recursive: true, force: true });
       await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⛔⛔ A „NINCS A TÁBLÁN" ÉS A „NEM ÉRTEM EL A TÁBLÁT" KÉT KÜLÖN DOLOG (40. mérés, 2026-09-24)
+// ===================================
+//
+// ⛔ MIÉRT SZÜLETETT: terepen egy telefon mobilnet NÉLKÜL azt írta, hogy *„egy néma társ nincs
+// a táblán"* — pedig egyetlen DHT-gép sem felelt neki. A társ közben kint volt (a másik
+// telefon mindvégig megtalálta). *A felirat a hálózat hírét a társ hírének adta ki.*
+//
+// ⭐ A PRÓBA KÉT ÁGA, hogy ne legyen vak: egy NÉMA DHT-gép mellett a tábla „nem érhető el",
+// egy ÉLŐ (hamis) DHT-n viszont, ahova senki nem írt, a társ tényleg „nincs a táblán".
+
+async function nemaFoglalat() {
+  // Hall, de soha nem felel — mint egy mobilnet nélküli telefonnak az egész internet.
+  const halo = createSocket('udp4');
+  await new Promise((kesz) => halo.bind(0, '127.0.0.1', kesz));
+  return halo;
+}
+
+proba('⛔⛔ HA EGYETLEN DHT-GÉP SEM FELEL, A TÁBLA „NEM ÉRHETŐ EL" — nem „nincs rajta"',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+
+    const hely = await ujKeszulek();
+    const nema = await nemaFoglalat();
+    const halo = await hamisHalozat(12);
+
+    try {
+      const sajat = await ujTablaKulcs();
+      const tars = await ujTablaKulcs();
+      await writeFile(join(hely, 'tabla-kulcs.json'), JSON.stringify(sajat), 'utf8');
+      await writeFile(join(hely, 'kotesek.json'), JSON.stringify({
+        kotesek: [{ ...nyilvanosResz(tars), hoszt: '10.0.0.1', port: 7373,
+          utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]
+      }), 'utf8');
+
+      // (1) NÉMA háló: a kérdések kimennek, válasz nem jön.
+      const nemaBan = await fut(hely, 'tabla', 'olvas',
+        { KOINO_DHT_BELEPOK: '127.0.0.1:' + nema.address().port });
+      // (2) ÉLŐ háló, üres rekesszel: itt a „nincs a táblán" az igazság.
+      const eloben = await fut(hely, 'tabla', 'olvas', { KOINO_DHT_BELEPOK: halo.belepo(0) });
+
+      return /NEM ÉRHETŐ EL/.test(nemaBan) && !/nincs a táblán/.test(nemaBan)
+        && /nincs a táblán/.test(eloben) && !/NEM ÉRHETŐ EL/.test(eloben);
+    } finally {
+      nema.close();
+      halo.bezar();
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⛔⛔ AZ ŐRJÁRAT SZÓL, HA NEM TUDJA MEGMÉRNI A SAJÁT KÜLSŐ CÍMÉT (40. mérés, 2026-09-24)
+// ===================================
+//
+// ⛔ MIÉRT SZÜLETETT: a mobilnet nélküli telefon nem tudta megmérni a külső címét, ezért nem
+// írt ki új címet a táblára — a társ csak a RÉGIT találta meg. ⛔ És a napló erről egy szót
+// sem szólt: a jelzés (`SAJAT-CIM-NEM-MEGY`) a fúróból kijött, az őrjárat eldobta.
+//
+// ⭐ A TÜKÖR ITT EGY NÉMA HELYI FOGLALAT (`KOINO_TUKOR`), tehát a próba nem a valódi hálózat
+// hangulatát méri. ⚠️ A kopogás célja egy dokumentációs cím (192.0.2.1, RFC 5737): csak
+// nem-helyi célnál mér a fúró külső címet — ez a feltétele, hogy a mérés egyáltalán
+// elinduljon. A DHT kikapcsolva, a kötés FRISS (nem néma), így táblaolvasás sem indul.
+
+proba('⛔⛔ AZ ŐRJÁRAT MEGNEVEZI, HA NEM TUDJA MEGMÉRNI A KÜLSŐ CÍMÉT — és csak egyszer',
+  async () => {
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+
+    const hely = await ujKeszulek();
+    const tukor = await nemaFoglalat();
+    let orjarat = null;
+
+    try {
+      await fut(hely, 'koino', 'Tukor proba');
+      const tars = await ujTablaKulcs();
+      await writeFile(join(hely, 'kotesek.json'), JSON.stringify({
+        kotesek: [{ ...nyilvanosResz(tars), hoszt: '192.0.2.1', port: 7373,
+          utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]
+      }), 'utf8');
+
+      let kimenet = '';
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7597'], {
+        env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '',
+          KOINO_TUKOR: '127.0.0.1:' + tukor.address().port, KOINO_DHT_BELEPOK: 'nincs' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      orjarat.stdout.on('data', (d) => { kimenet += d; });
+
+      // ⚠️ A tükör 5 mp-ig vár a válaszra, egy kör 6 mp — két-három kör elég, hogy kiderüljön,
+      // hogy a sor MEGJELENIK, és hogy NEM ismétlődik körönként.
+      await varj(20000);
+
+      const sorok = kimenet.match(/nem tudom megmérni a saját külső címemet/g) ?? [];
+      return sorok.length === 1 && /STUN-kiszolgáló nem válaszolt/.test(kimenet);
+    } finally {
+      if (orjarat) orjarat.kill();
+      tukor.close();
+      await varj(500);
+      await rm(hely, { recursive: true, force: true });
     }
   });
 
