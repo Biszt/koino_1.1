@@ -10,7 +10,19 @@
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-19) — A BULI ÉS A HIRDETŐTÁBLA
+> ## ▶️ HOL TARTUNK (2026-09-25) — UDP MINDENHOL, LÉPCSŐZETESEN (D69)
+>
+> ✅ Az őrjárat 2026-09-20 óta UDP-n is kopog és cserél, a **hirdetőtábla terepen is működik**
+> (39., 42. mérés). **714 önpróba.** ⭐ **Csaba döntése (D69):** a TCP–UDP kettősség drága,
+> **UDP mindenhol**, de lépcsőzetesen, minden lépcső előtt bizonyítással: *(1)* a résen futó
+> csere hibája ✅ · *(3)* az **állandó UDP-kapu** (`js/csere/udpKapu.js` — egy foglalat a
+> teljes futásra) ✅ · ⏭️ *(2)* **a TCP-kör kivétele az őrjáratból** — a következő munka. A
+> részletek a [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS (2026-09-25 este)" blokkjában.
+> ⏸️ Terepen még nincs mérve: az állandó kapu, és a két mobil NAT közötti rés.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-19) — A BULI ÉS A HIRDETŐTÁBLA
 >
 > ✅ **Szakasz 1–4 kész**, a **Szakasz 5 (a felület) gerince is** (5.1–5.7), és a
 > **fájl-szállítás** teljes: ablakos UDP-vonal (D67) · Vegas-jel (D68) · több forrásból egy

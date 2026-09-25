@@ -182,6 +182,11 @@ használhatatlan. ⛔⛔ **Vagyis a telefonnak IS a tábláról kell kiolvasnia 
 | **laptop** (L) | `a táblán megvan egy néma társ új címe: …` | a maradó kiolvasta |
 | ⭐⭐ **telefon** (T) | `a táblán megvan egy néma társ új címe: …` | ⭐ **A DÖNTŐ SOR** — a távozó IS kiolvasta a maradót |
 | mindkettő | `rés nyílt: …` | a rés megnyílt |
+| mindkettő | `ismeretlen kopogott be (…) — visszakopogok, és vele is cserélek` | ⭐ a másik fél kopogása a mi körünkön KÍVÜL érkezett, és az állandó kapu (D69/3) felelt rá |
+| mindkettő | `… foglalt — épp egy korábbi munkán dolgozik velem` | ⭐ nem hiba: a munka vele már fut, a végén visszakopogunk |
+| mindkettő | `rés nyílt (…), de a csere a résen elbukott: …` | ⛔ **a legfontosabb hibasor** — a rés él, a csere nem; az ok szó szerint kell |
+| telefon (T) | `Ébren tartást kértem (termux-wake-lock)` | ⭐ az őrjárat maga kérte az ébren tartást (42. mérés óta) — ha helyette `✗ Az ébren tartás nem sikerült`, kézzel: „Acquire wakelock" |
+| mindkettő | `… az új címem kiírása nem ért célba: egyetlen DHT-gép sem vette át` | ⚠️ 0 tároló — a következő kör **magától újra próbálja** (42. mérés óta) |
 
 ### A4. A döntő próba — a gondolat
 
@@ -379,7 +384,9 @@ node koino/koino.js
   számra. ⭐ Ebben a mérésben ez nem gond, mert a címet **nem kézzel adjuk át** — épp ez a
   tárgya. *De ha kézi `tars`-ra kényszerülsz, mindig frissen kérdezd meg.*
 - ⛔ **A fúrót nem szabad újraindítgatni** (32. mérés): a telefon ugyanarról a helyi portról
-  futásonként más külső portot kapott. Hagyd futni az őrjáratot.
+  futásonként más külső portot kapott. Hagyd futni az őrjáratot. ⭐ *2026-09-25 óta (D69/3) az
+  őrjárat UDP-foglalata a teljes futásra nyitva marad — a futás alatt tehát egy leképezés él,
+  de az újraindítás továbbra is újat kér.*
 - ⚠️ **A telefon elalvása** megakasztja az őrjáratot. Tartsd ébren a képernyőt mindkét
   készüléken a mérés idejére.
 - ⚠️ **A DHT-belépők korlátozhatnak** (36. mérés: 5 körből 2 elakadt rajtuk). Ha a tábla

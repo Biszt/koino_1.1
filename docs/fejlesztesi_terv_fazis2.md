@@ -3712,6 +3712,39 @@ javasoljuk (41. mérés), de kisebb átalakításként, mert a TCP-kör kiesik.
 ⛔ **AMIT NEM mond:** hogy a TCP rossz volna. Egy wifin és nyitott kapunál a TCP ma is a
 legolcsóbb, és **a kivezetés csak akkor jön, ha az UDP-út ugyanazt bizonyítottan elbírja.**
 
+#### 5. ✅ A 3. LÉPCSŐ MEGÉPÜLT: AZ ÁLLANDÓ UDP-KAPU (2026-09-25, `js/csere/udpKapu.js`)
+
+⭐ **Egy UDP-foglalat a teljes futásra** (az őrjárat portján, a TCP-kapu mellett). A régi,
+körönként nyitott-zárt fúró-foglalat helyett:
+
+- **A kopogásra bármikor felelünk**, nem csak a saját ablakunkban. Aki bekopog, arra
+  visszakopogunk; a munka (csere + fájl-randevú) a **kölcsönös megerősítésre** indul — ugyanaz
+  a kézfogás, mint eddig, csak nem egy ablakon belül.
+- ⛔ **Társanként egyszerre egy munka.** A UDP-folyamoknak nincs saját azonosítójuk (a fájl-randevú
+  is ezért soros), tehát egy második, egyidejű kapcsolat ugyanazzal a társsal összekeverné a
+  sorszámokat. Ha a társ akkor kopog, amikor a munkánk vele már **adatot kapott** tőle, a válasz
+  **`FOGLALT`** (új üzenet — egy régi társ nem ismeri, figyelmen kívül hagyja, és kopog tovább);
+  a munka végén visszakopogunk rá. ⚠️ A kézfogás szakaszában (még nem jött tőle adat) viszont
+  `HALLAK` — különben egy elveszett HALLAK beragasztaná a két felet.
+- ⚠️ **A bekopogók száma korlátos** (ablakonként 3), és a hely **az elfogadáskor** foglalódik
+  (a próba mutatta meg, hogy a futáskori számolás két egyszerre érkezőt is átenged). A korlát
+  fölötti szintén `FOGLALT`-at kap, nem `HALLAK`-ot.
+- ⭐ **Ha a cél a címét tartva más portról felel** (a mobil NAT portot vált), azt is őt ismerjük fel.
+- ⭐ **A saját külső címet ezen a foglalaton mérjük** — egy foglalat, egy leképezés: a szám a
+  futás alatt nem avul el foglalatcserétől.
+
+⭐⭐ **A MELLÉKHATÁS, AMI A 41. MÉRÉS BAJÁNAK NAGY RÉSZÉT IS VISZI:** a leképezés, amit egy
+kopogásunk nyitott, a következő percekben is él (mobilon 330 mp, 31/b.). Ha két készülék
+eltérő percben kopog, a másik kopogása **akkor is átjut**, mert a foglalatunk nyitva van, és a
+leképezésünk él. *Az egyidejűség kényszere ezzel „ugyanabban a percben" helyett „a leképezés
+élettartamán belül" lesz.* ⏸️ Terepen még nincs mérve.
+
+**Mérve:** 6 kapu-önpróba hamis munkával (`udpKapuProba.js`, ötből ötször zöld) · egy új
+parancssor-próba, ami **csak az állandó kapuval** megy át (a másiknak nincs kire kopognia,
+tehát a régi szerkezetben UDP-foglalata sem volt) · és a teljes régi parancssor-sor változatlanul
+zöld. ⏭️ **A következő: a 2. lépcső** (a TCP-kör kivétele) — most már a UDP-n is van mindig
+figyelő kapu, és az ismételt menet is megoldható (a társ kapuja bármikor fogad).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

@@ -97,12 +97,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhat próba-fájl, **707 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhat próba-fájl, **714 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **181 fájl, 3065,9 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **183 fájl, 3159,2 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -141,6 +141,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/pakliProba.js` | ⛔⛔ **a 9. szabály** (5.2): a `darab` felülről korlátos, a lista nem hordoz szövegeket, és ⭐ **a lapozás nem csúszik el**, ha közben átrendezik a tudatpontot — a **horgony** tartja együtt a képet |
 | `meres/vizsgaProba.js` | ⭐ **a Szakasz 2 vizsgája**: kevert események, csere, **azonos állapot** — és a **postaláda** (D34) |
 | `meres/dhtProba.js` | ⭐ **a DHT-kliens** (hirdetőtábla, BEP 44) — hálózat nélkül: a hivatalos tesztvektorok bájtra, a méret-korlátok, és egy hurok-címen futó **hamis DHT**-n a feltétel és a visszakeresés; ⛔ a **hazudó** gép bejegyzését elvetjük, a néma gépek és a halott belépő nem akasztják meg a keresést |
+| `meres/udpKapuProba.js` | ⭐ **az állandó UDP-kapu** (D69/3) hamis munkával: a kopogásra ablak nélkül is felel, **társanként egyszerre egy munka** (a futó munka alatti kopogás `FOGLALT`-at kap, és utána sorra kerül), a bekopogók száma korlátos, a saját visszhang nem munka, és a mobil portváltást felismeri |
 
 ⚠️ **Két mérőeszköz NEM önpróba** — nem igen/nem-et adnak, hanem számokat, ezért a
 `mind.js` nem futtatja őket:
@@ -186,6 +187,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
+| `js/csere/udpKapu.js` | ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25): **egy foglalat a teljes őrjáratra** — a kopogásra bármikor felel, a bekopogóval is munka indul, társanként egyszerre egy (`FOGLALT`), és a saját külső címet is ezen méri (egy leképezés, egész futásra). A munkát kívülről kapja: a kapu nem tud a koinóról |
 | `js/csere/helyiFelfedezes.js` | **helyi felfedezés** (F. lépés): aki keres, kiált; aki dolgozik, felel — cím beírása nélkül |
 | `js/csere/dht.js` | ⭐ **a BitTorrent DHT kliense** (BEP 5 + 44): egy kis, aláírt, kulcshoz kötött bejegyzés feltétele és visszakeresése — ma ez viszi a **hirdetőtáblát** (35–37. mérés). ⛔ Minden talált bejegyzés aláírását ellenőrzi (3. szabály), a belépők csak paraméterek (2. szabály), a belépő pedig **csak kurbli**: a készülék a saját emlékezetéből indul |
 | `js/csere/tablaKulcs.js` | ⭐⭐ **a TÁBLA-KULCS**: a készülék neve a táblán és a kötések azonosítója — ⛔ **soha nem az azonosságod** (D6). Két kulcspár: Ed25519 (a rekesz neve, ez ír alá) és X25519 (ebből lesz a társankénti közös titok, **küldés nélkül**) |

@@ -40,6 +40,8 @@ import vizsga from './vizsgaProba.js';
 import dht from './dhtProba.js';
 import kotes from './kotesProba.js';
 import tabla from './tablaProba.js';
+// ⭐ Az állandó UDP-kapu (D69/3, 2026-09-25) — hamis munkával, a kapu szabályai egymagukban.
+import udpKapu from './udpKapuProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -66,7 +68,8 @@ const PROBAK = [
   { nev: 'vizsga', futtat: vizsga },
   { nev: 'dht', futtat: dht },
   { nev: 'kotes', futtat: kotes },
-  { nev: 'tabla', futtat: tabla }
+  { nev: 'tabla', futtat: tabla },
+  { nev: 'udpkapu', futtat: udpKapu }
 ];
 
 const szuro = process.argv[2];

@@ -1799,6 +1799,64 @@ proba('⭐ TERMUXBAN AZ ŐRJÁRAT MAGA KÉRI AZ ÉBREN TARTÁST — és kimondja
   }
 });
 
+// ===================================
+// ⭐⭐⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25)
+// ===================================
+//
+// ⛔ A RÉGI SZERKEZET: a UDP-foglalat csak a SAJÁT kopogási ablakunkban élt — akinek nem volt
+// kire kopognia, annak egyáltalán nem volt UDP-foglalata. Egy ilyen készüléket UDP-n senki
+// nem ért el (csak TCP-n, ha kaput tartott).
+// ⭐ A próba ezt a helyzetet építi fel: a MÁSIKNAK nincs egyetlen UDP-célja, tehát magától
+// soha nem kopog. Az egyik mégis rá kopog — és a hírnek át kell mennie.
+
+proba('⭐⭐⭐ AZ ÁLLANDÓ KAPU AKKOR IS FELEL, HA A MÁSIKNAK NINCS KIRE KOPOGNIA — a hír átmegy',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const A = 7641, B = 7642;
+    let egyikOr = null, masikOr = null;
+
+    try {
+      await fut(egyik, 'koino', 'Allando kapu');
+      const vitt = join(egyik, 'alap.jsonl');
+      await fut(egyik, 'kivisz', vitt, 'mind');
+      await fut(masik, 'behoz', vitt);
+      await fut(egyik, 'gondolat', 'AZ ALLANDO KAPUN ATJOTT HIR');
+
+      // ⭐ CSAK AZ EGYIKNEK van célja; a másiknak semmi (se társ, se friss cím, se kötés).
+      await writeFile(join(egyik, 'udpcimek.json'), JSON.stringify({
+        cimek: [{ hoszt: '127.0.0.1', port: B, mikor: Date.now() }]
+      }), 'utf8');
+
+      const kornyezet = { ...process.env, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' };
+      let masikKimenet = '';
+      masikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '1', String(B)], {
+        env: { ...kornyezet, KOINO_ADAT: masik }, stdio: ['ignore', 'pipe', 'pipe']
+      });
+      masikOr.stdout.on('data', (d) => { masikKimenet += d; });
+      await varj(1500);
+      egyikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(A)], {
+        env: { ...kornyezet, KOINO_ADAT: egyik }, stdio: 'ignore'
+      });
+
+      await varj(15000);
+      egyikOr.kill(); egyikOr = null;
+      masikOr.kill(); masikOr = null;
+      await varj(700);
+
+      const allapot = await fut(masik, 'allapot');
+      return /AZ ALLANDO KAPUN ATJOTT HIR/.test(allapot)
+        && /ismeretlen kopogott be \(127\.0\.0\.1:7641\)/.test(masikKimenet)
+        && /csere a résen 127\.0\.0\.1:7641/.test(masikKimenet);
+    } finally {
+      if (egyikOr) egyikOr.kill();
+      if (masikOr) masikOr.kill();
+      await varj(800);
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
 proba('⛔⛔ HA A RÉS MEGNYÍLIK, DE A CSERE RAJTA ELBUKIK, A NAPLÓ KIMONDJA — nem „rés sem nyílt"',
   async () => {
     // ⛔ MIT MÉR: a 40. mérésen a napló a megnyílt rés után azt írta, hogy „egyik rés sem
