@@ -3609,3 +3609,56 @@ bukást** mutatott (701-ből), a következő **négy** mind zöld volt. ⛔ *Hog
 bukott, NEM tudjuk — a kimenetet nem mentettem el, csak az összesítő sort.* Ez ugyanaz a
 lecke, mint a telefonokon: egy bukás, ami nem nevezi meg magát, és aminek a nyomát nem
 őrizzük meg, nem vizsgálható. ⏸️ *Legközelebb a teljes futás kimenete fájlba megy.*
+
+---
+
+## 41. ⛔⛔ A HOSSZÚ KÖR ELVISZI A KOPOGÁST (2026-09-25, a laptopon)
+
+*A 40. mérésen a körök között 3–5 perces szünetek voltak. Kérdés: mennyi egy kör, ha a
+társ elnémult — és mit tesz ez a kopogással?*
+
+**A beállítás** (ideiglenes adatmappa, a valódi `koino-adat` érintetlen): **5 halott TCP-társ**
+(`10.255.255.1–5:7373`, nem routolható — a kapcsolódás csak az időkorlátnál adja fel, ahogy egy
+telefon régi wifis címe) és **2 néma kötés** (a valódi DHT-n keresi őket). `orjarat 1`, 6 perc.
+
+```
+  · 12:16:31 2 friss címre kopogtam, egyik rés sem nyílt meg      ← indulás: 12:16:25
+  · 12:17:21 0/5 társ — 0 új esemény, 0 bájt                     ← TCP-kör: 50 mp
+  · 12:17:43 egy néma társ (LyJNctOl…) nincs a táblán (22 DHT-gép felelt)
+  · 12:17:47 egy néma társ (ujdjB6Hh…) nincs a táblán (1 DHT-gép felelt)
+  ⭐ 12:18:27 az új címemet kiírtam a táblára (2 társ rekeszébe, 15 tároló)
+  · 12:19:06 2 friss címre kopogtam, …                            ← a 12:17 és 12:18 kimaradt
+  · 12:19:56 0/5 társ …   · 12:20:15 … · 12:20:37 …
+  · 12:21:06 2 friss címre kopogtam, …                            ← a 12:20 kimaradt
+  · 12:21:56 0/5 társ …   · 12:22:14 … · 12:22:31 …
+```
+
+⭐ **Egy kör: kopogás 6 mp + TCP-kör 50 mp (5 × 10 mp, egymás után) + táblaolvasás 17–40 mp
+(néma kötésenként 4–22 mp) ≈ 90–97 mp**; az első körben a táblaírással **122 mp**. ⛔ A kör
+UTÁN alszik a következő percfordulóig — tehát **a kopogás csak minden második percfordulón fut**
+(12:19, 12:21, 12:23), az elején kettőt is kihagyott.
+
+⛔⛔ **A KÖVETKEZMÉNY A LÉNYEG:** a rés csak **egyidejű** kopogásra nyílik (36/d.). Két ilyen
+állapotú készülék, ha az egyik páros, a másik páratlan percben kopog, **soha nem kopog
+egyszerre** — és ez nem véletlen, hanem **stabil állapot**, amibe beleragadnak. ⚠️ És épp akkor
+áll elő, amikor a legnagyobb szükség van a résre: hálózatváltás után a társ néma, ettől hosszú
+a kör. *Kívülről ugyanúgy néz ki, mint „a két mobil NAT fal" — a két mobilos mérés e nélkül nem
+adhat megbízható választ.*
+
+⚠️ Az alapértelmezett 5 perces ütemben egy 97 mp-es kör még belefér; de a társlista nem
+korlátos (*„a koino nem felejt el senkit magától"*), 30 halott cím már 5 perc.
+
+⏸️ **Döntésre vár (Csaba):** *(a)* a kopogás SAJÁT ütemben, minden percfordulón, a kör többi
+részétől függetlenül (+ a halott TCP-címek párhuzamos próbálása) · *(b)* csak a kör
+rövidítése/korlátozása, garancia nélkül. **Átmeneti tanács terepre:** `orjarat 5`.
+
+### ⛔ ÉS EGY HARMADIK HALLGATÓ HELY, AMIT A 40. MÉRÉS NAPLÓJA REJTETT
+
+A 40. mérésen az „A" telefon kétszer kiírta: `rés nyílt: 192.168.1.36:7373` — utána nem jött
+`csere a résen` sor, viszont jött ez: *„3 friss címre kopogtam, egyik rés sem nyílt meg"*.
+⛔ **Ellentmondás, és a kódban megvan az oka, két rétegben:** az összegző sor a **sikeresen
+lezárult cseréket** számolja, nem a megnyílt réseket; és a résen futó csere hibáját
+(`ATFURT-MUNKA-BUKOTT`) **az őrjárat eldobja** — ugyanúgy, mint a 2026-09-24-én javított két
+jelzést. *Vagyis a közös wifin a rés megnyílt, a csere rajta ismeretlen okból elbukott, és a
+program ezt elhallgatta.* ⏸️ Javítandó a kopogás ütemezése előtt: két mobil között csak a rés
+létezik, és ha azon a csere elbukik, a gondolat akkor sem megy át, ha a NAT-ok engednék.
