@@ -26,7 +26,10 @@ import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import {
   allapotUjjlenyomata, allapotOsszefoglaloja, elteresek, ujjlenyomatLap, ujjlenyomatLapBol
 } from '../js/allapot/osszehasonlitas.js';
-import { figyeloIndulasa, csereVonalon } from '../js/csere/vonal.js';
+// ⚠️ 2026-09-26 óta (D69/2) a vizsga a UDP-résen fut, a postaláda pedig az éles állandó kapu.
+import { createSocket } from 'node:dgram';
+import { csereUdpResen } from '../js/csere/udpVonal.js';
+import { udpKapuNyitasa } from '../js/csere/udpKapu.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A Szakasz 2 VIZSGÁJA');
@@ -65,13 +68,61 @@ async function ujjlenyomat(tar, most) {
   return allapotUjjlenyomata(allapot, javaslatok);
 }
 
-/** Két tár cseréje valódi TCP-n. */
+/**
+ * Két tár cseréje egy UDP-résen (2026-09-26 óta — D69/2: nincs TCP a készülékek között).
+ * ⭐ A résen nincs kliens és szerver: mindkét fél ugyanazt a párbeszédet futtatja.
+ */
 async function csereDroton(egyikTar, masikTar) {
-  const figyelo = await figyeloIndulasa(masikTar, KOINO, 0, { hoszt: '127.0.0.1' });
+  const egyik = createSocket('udp4');
+  const masik = createSocket('udp4');
+  await new Promise((t) => egyik.bind(0, '127.0.0.1', t));
+  await new Promise((t) => masik.bind(0, '127.0.0.1', t));
   try {
-    return await csereVonalon(egyikTar, KOINO, '127.0.0.1', figyelo.port);
+    const [eredmeny] = await Promise.all([
+      csereUdpResen(egyik, '127.0.0.1', masik.address().port, egyikTar, KOINO),
+      csereUdpResen(masik, '127.0.0.1', egyik.address().port, masikTar, KOINO)
+    ]);
+    return eredmeny;
   } finally {
-    await figyelo.bezar();
+    egyik.close();
+    masik.close();
+  }
+}
+
+/**
+ * ⭐ EGY POSTALÁDA — az ÉLES gépezettel: állandó UDP-kapu, ami bármikor felel, és a
+ * bekopogóval cserél (`udpKapu.js`, D69/3). *Nem utánzat: ugyanaz a kapu, amit a `figyel`
+ * és az őrjárat nyit.*
+ */
+async function postaladaNyitasa(tar) {
+  let beszelgetesek = 0;
+  const kapu = await udpKapuNyitasa({
+    port: 0,
+    munka: async (halo, t) => {
+      const e = await csereUdpResen(halo, t.cim, t.port, tar, KOINO);
+      beszelgetesek++;
+      return e;
+    }
+  });
+  return { kapu, beszelgetesek: () => beszelgetesek, bezar: () => kapu.zar() };
+}
+
+/**
+ * Egy készülék, ami NEM TUD FOGADNI: a parancs idejére nyit egy kaput, rákopog a
+ * postaládára, cserél, és bezár. *Pontosan a kézi `csere <cím>` útja.*
+ */
+async function bekopog(tar, postalada) {
+  const kapu = await udpKapuNyitasa({
+    port: 0, bekopogoKorlat: 0,
+    munka: (halo, t) => csereUdpResen(halo, t.cim, t.port, tar, KOINO)
+  });
+  try {
+    const kor = await kapu.kopog([{ cim: '127.0.0.1', port: postalada.kapu.port }],
+      { idokorlat: 5000 });
+    if (!kor.sikeres) throw new Error('a postaláda nem felelt: ' + kor.eredmenyek[0]?.hiba);
+    return kor.eredmenyek[0].eredmeny;
+  } finally {
+    kapu.zar();
   }
 }
 
@@ -430,21 +481,23 @@ proba('⭐⭐ A POSTALÁDA (D34): Anna és Béla SOHA nem beszélt, mégis ugyan
   const bela = await ujTar(); await ment(bela, esemenyek.slice(fele));
   const cili = await ujTar();                       // a postaláda: ÜRESEN indul
 
-  // ⭐ CSAK CILI FOGAD. Anna és Béla egyetlen portot sem nyit — végig ők hívnak.
-  let beszelgetesek = 0;
-  const postalada = await figyeloIndulasa(cili, KOINO, 0, {
-    hoszt: '127.0.0.1',
-    utana: () => { beszelgetesek++; }
-  });
+  // ⭐ CSAK CILI FOGAD. Anna és Béla csak a kopogás idejére nyit kaput — végig ők kezdenek.
+  const postalada = await postaladaNyitasa(cili);
 
+  let beszelgetesek = 0;
   try {
-    // ⚠️ EGYMÁS UTÁN, nem egyszerre: minden kapcsolat lezárul, mielőtt a következő nyílik.
+    // ⚠️ EGYMÁS UTÁN, nem egyszerre: minden beszélgetés lezárul, mielőtt a következő nyílik.
     // Épp ez a lényeg — Cilinek sosem kell két felet EGYSZERRE online tartania.
-    await csereVonalon(anna, KOINO, '127.0.0.1', postalada.port);   // Cili átveszi Annáét
-    await csereVonalon(bela, KOINO, '127.0.0.1', postalada.port);   // Béla megkapja, ad
-    await csereVonalon(anna, KOINO, '127.0.0.1', postalada.port);   // Anna megkapja Béláét
+    await bekopog(anna, postalada);   // Cili átveszi Annáét
+    await bekopog(bela, postalada);   // Béla megkapja, ad
+    await bekopog(anna, postalada);   // Anna megkapja Béláét
+    // ⚠️ Cili munkája a bekopogó után zárul (kiürítés) — egy pillanatot várunk rá.
+    for (let i = 0; i < 40 && postalada.beszelgetesek() < 3; i++) {
+      await new Promise((t) => setTimeout(t, 50));
+    }
+    beszelgetesek = postalada.beszelgetesek();
   } finally {
-    await postalada.bezar();
+    postalada.bezar();
   }
 
   const egy = await ujjlenyomat(anna);
@@ -466,12 +519,12 @@ proba('⭐ A postaláda TOVÁBBAD olyat is, amiről ő maga nem tud semmit', asy
   const belaTar = await ujTar();
   const ciliTar = await ujTar();
 
-  const postalada = await figyeloIndulasa(ciliTar, KOINO, 0, { hoszt: '127.0.0.1' });
+  const postalada = await postaladaNyitasa(ciliTar);
   try {
-    await csereVonalon(annaTar, KOINO, '127.0.0.1', postalada.port);
-    await csereVonalon(belaTar, KOINO, '127.0.0.1', postalada.port);
+    await bekopog(annaTar, postalada);
+    await bekopog(belaTar, postalada);
   } finally {
-    await postalada.bezar();
+    postalada.bezar();
   }
 
   return (await koinoEsemenyei(belaTar, KOINO)).length === 3
@@ -492,12 +545,12 @@ proba('⭐ A postaláda NEM kap engedékenyebb kaput: a hamisítottat nem adja t
   const belaTar = await ujTar();
   const ciliTar = await ujTar();
 
-  const postalada = await figyeloIndulasa(ciliTar, KOINO, 0, { hoszt: '127.0.0.1' });
+  const postalada = await postaladaNyitasa(ciliTar);
   try {
-    await csereVonalon(annaTar, KOINO, '127.0.0.1', postalada.port);
-    await csereVonalon(belaTar, KOINO, '127.0.0.1', postalada.port);
+    await bekopog(annaTar, postalada);
+    await bekopog(belaTar, postalada);
   } finally {
-    await postalada.bezar();
+    postalada.bezar();
   }
 
   // A postaládába se, Bélához se juthatott el a hamisítvány — az igazi viszont igen.

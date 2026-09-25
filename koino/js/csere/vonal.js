@@ -1,11 +1,16 @@
 // koino/js/csere/vonal.js
 
-// Felelősség: a CSERE SZÁLLÍTÁSA — ugyanaz a protokoll, most már dróton.
+// Felelősség: a CSERE PÁRBESZÉDE — ugyanaz a protokoll, egy kapcsolaton.
 //
 // ⭐ MIT CSINÁL, ÉS MIT NEM. Ez a fájl SEMMIT nem tud a koinóról: nem ismer eseményt,
 // szabályt, tudatpontot. Csak annyit tesz, hogy a [`csere.js`](csere.js) objektumait
-// oda-vissza küldi egy TCP-kapcsolaton. Ha itt hiba van, az szállítási hiba; a protokoll
-// helyessége a csere.js önpróbáiban dől el, hálózat nélkül.
+// oda-vissza küldi egy foglalat-szerű kapcsolaton. Ha itt hiba van, az szállítási hiba; a
+// protokoll helyessége a csere.js önpróbáiban dől el, hálózat nélkül.
+//
+// ⭐ A KAPCSOLATOT A HÍVÓ ADJA (1. szabály). 2026-09-26-ig ez a fájl TCP-t is nyitott (figyelő,
+// hívás); a D69/2 óta nincs TCP a készülékek között — a kapcsolat a UDP-rés
+// (`udpVonal.js` → `udpKapcsolat`), és a párbeszéd ugyanúgy fut rajta, egyetlen sor
+// változtatás nélkül.
 //
 // ===== A VONAL ALAKJA: soronként egy JSON-üzenet =====
 //
@@ -27,17 +32,18 @@
 //
 // ===== SZIMMETRIKUS: NINCS KLIENS ÉS SZERVER =====
 //
-// Mindkét fél UGYANAZT a menetet futtatja: elmondja az állását, kér, ad, beolvaszt. Aki
-// „csatlakozik", az csak annyiban más, hogy ő nyitja a kapcsolatot — utána a két oldal
+// Mindkét fél UGYANAZT a menetet futtatja: elmondja az állását, kér, ad, beolvaszt. A
+// résen ez szó szerint igaz: ott senki nem „csatlakozik" — a két oldal
 // megkülönböztethetetlen. Ezért van egyetlen `parbeszed` függvény, és nem kettő.
 //
 // ⚠️ A MÁSIK FÉL IDEGEN. Amit küld, az adat, nem parancs: minden esemény átmegy az
 // `esemenyMentese` ellenőrzésén (aláírás + azonosító), az értelmezhetetlen sort kihagyjuk,
 // a túl hosszú sort pedig elvágjuk — egy rosszindulatú fél ne tudjon memóriát elfogyasztani.
 //
-// Használják: koino/koino.js (a `figyel` és a `csere` parancs) és a csereProba.js.
+// Használják: udpVonal.js (a résen: csere, szelet-kérés, fájl-randevú), a próbák.
 
-import { createServer, connect } from 'node:net';
+// ⚠️ 2026-09-26-IG ITT ÁLLT A `node:net` IMPORTJA (TCP). A D69/2 óta a párbeszéd csak egy
+// foglalat-szerű kapcsolatot kap (a UDP-résen: `udpVonal.js` → `udpKapcsolat`).
 
 import {
   allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
@@ -57,7 +63,7 @@ const SOR_KORLAT = 8 * 1024 * 1024;
 // járna, azt HIBAKÉNT akarjuk látni, nem végtelen ciklusként.
 const KOR_KORLAT = 5;
 
-// Egy beszélgetésben legfeljebb ennyi címet hirdetünk/fogadunk el. Nem szigor, hanem
+// Egy beszélgetésben legfeljebb ennyi (friss UDP-)címet fogadunk el. Nem szigor, hanem
 // olcsóság: a címjegyzék MINDEN cserén utazik, tehát a mérete a napi forgalomban jelenik
 // meg (D35). Tíz cím bőven elég ahhoz, hogy a gráf összefüggő maradjon (D33: ~14 kapcsolat
 // fejenként még egymillió főnél is).
@@ -84,10 +90,11 @@ const IDEGEN_CIM_KORLAT = 3;
 /**
  * A kapcsolatra érkező sorokat üzenetekké alakítja, és `kovetkezo()`-vel adagolja.
  *
- * Miért kell külön ilyen? Mert a TCP nem üzeneteket szállít, hanem bájt-folyamot: egy
- * `data` esemény tartalmazhat fél üzenetet vagy hármat is. A sorokra bontás a mi dolgunk.
+ * Miért kell külön ilyen? Mert a kapcsolat nem üzeneteket szállít, hanem bájt-folyamot (a
+ * résen is: a `udpKapcsolat` 1000 bájtos darabokra vág) — egy `data` esemény tartalmazhat
+ * fél üzenetet vagy hármat is. A sorokra bontás a mi dolgunk.
  *
- * @param {import('node:net').Socket} kapcsolat
+ * @param {Object} kapcsolat - foglalat-szerű kapcsolat (`on('data')`, `setEncoding`…)
  * @returns {{kovetkezo: () => Promise<Object>}}
  */
 function uzenetSor(kapcsolat) {
@@ -159,7 +166,7 @@ function uzenetSor(kapcsolat) {
  * Több kör azért kell, mert egy elrejtett elágazás felderítése két-három körbe telhet
  * (lásd a csere.js kérés-szabályát).
  *
- * @param {import('node:net').Socket} kapcsolat
+ * @param {Object} kapcsolat - foglalat-szerű kapcsolat (`write`, `on('data')`, `remoteAddress`…)
  * @param {Object} tar
  * @param {string} koino
  * @param {number} [korlat]
@@ -167,10 +174,8 @@ function uzenetSor(kapcsolat) {
  */
 export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const korlat = beallitas.korlat ?? KOR_KORLAT;
-  const hirdetettCimek = beallitas.hirdetettCimek ?? [];
-  // Hirdessük-e a tükörtől tanult SAJÁT címünket is? Alapból nem — lásd az indoklást
-  // a CIMEK küldésénél: csak az hirdetheti, aki a megfigyelt portot nyitva is tartja.
-  const sajatCimHirdetese = beallitas.sajatCimHirdetese ?? false;
+  // ⚠️ 2026-09-26-ig itt állt a `hirdetettCimek` és a `sajatCimHirdetese`: a TCP-címjegyzék
+  // (`cimek` mező, D36–D39). A D69/2 óta a címeket a friss UDP-jegyzék terjeszti (`udp`).
   console.log('parbeszed - KEZDÉS', { koino });
 
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
@@ -189,7 +194,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   };
 
   let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
-  let kivulrolIgyLatszom = null, kapottCimek = [], kapottUdpCimek = [];
+  let kivulrolIgyLatszom = null, kapottUdpCimek = [];
   let kapottTablaKulcs = null;      // a társ tábla-kulcsa — a KÖTÉS azonosítója
   let kapottDhtGepek = [];          // néhány DHT-gép, amit ő ismer (nem bizalom, csak cím)
 
@@ -261,12 +266,17 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     //
     // ⚠️ A KISZOLGÁLÓ NEM ÍTÉL: ha nincs meg a fájl, azt mondja, hogy nincs meg — nem
     // magyarázkodik és nem vádol (D19).
+    //
+    // ⏸️ 2026-09-26 ÓTA ÉLESBEN SENKI NEM KEZD ÍGY: ezt az ágat a kör utáni TCP-s elhozás (a
+    // több forrás, D68 / 6.) hívta, és az a D69/2-vel kikerült. ⭐ Az ág viszont szállítás-
+    // független, és a résen is kiszolgál (a kapu munkája csere, annak párbeszéde ide jut) —
+    // a UDP-s több forrás erre épülhet. A `csereProba.js` a résen méri.
     if (kor === 1 && elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
       await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
 
       console.log('parbeszed - VÉGE (fájl-átvitel)');
       return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
-               masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
+               masKoino: null, kivulrolIgyLatszom: null, kapottUdpCimek: [],
                kapottTablaKulcs: null, kapottDhtGepek: [],
                fajlokNala: [] };
     }
@@ -289,7 +299,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       // tömbként olvassa tovább.
       return {
         korok: 1, uj: 0, kuldott: kertek.length, reszletesAllasok: 0,
-        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
+        masKoino: null, kivulrolIgyLatszom: null, kapottUdpCimek: [],
         kapottTablaKulcs: null, kapottDhtGepek: [], fajlokNala: [],
         szeletKiszolgalva: elsoUzenet.entitas
       };
@@ -359,7 +369,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       fajlokNala = Array.isArray(ove.van) ? ove.van : [];
     }
 
-    // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) -----
+    // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — 2026-09-26 óta csak UDP-címek -----
     //
     // ⭐ MIÉRT ITT, ÉS MIÉRT MINDIG? Csaba felismerése: a tükör és a terjedő címjegyzék
     // UGYANAZ A DOLOG — a saját külső címed is csak egy cím, ami a közösségben terjed.
@@ -371,37 +381,20 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // ezért a címek csak a vonalon utaznak, és a hívó dönti el, mit kezd velük.
     // Bizalom nem jár velük (3. szabály): ha valaki hazudik, legfeljebb nem jön össze
     // egy kapcsolat.
+    //
+    // ⛔ 2026-09-26-IG ITT MENT A TCP-CÍMJEGYZÉK IS (`cimek` mező, a figyelő saját címével —
+    // D39). A D69/2 óta nincs TCP a készülékek között: a címek terjesztése a friss
+    // UDP-jegyzéké (`udp` mező, lent). *Egy régi társ `cimek`-et is küldhet — nem olvassuk.*
     if (kor === 1) {
-      // ⭐ A SAJÁT KÜLSŐ CÍMÜNK IS MEGY (D39, 2026-08-30). Eddig CSAK a társainkét
-      // hirdettük — ezért egy címváltozás csak addig terjedt, ameddig a gazdája maga
-      // elvitte. Most: amit az imént tanultunk a tükörtől (`latlak`), azt továbbadjuk.
-      //
-      // ⚠️ ÉS EZÉRT CSAK KÉRÉSRE (`sajatCimHirdetese`). A tükör azt mondja meg, milyen
-      // címről ÉS PORTRÓL látnak minket — ez csak akkor használható cím, ha az a port
-      // olyan, amit nyitva is tartunk:
-      //   · FIGYELŐ (postaláda): igen — a hívó épp a mi kapunkra csatlakozott, tehát
-      //     amit ő lát, az pontosan az a cím, ahova vissza lehet jönni;
-      //   · UDP-RÉS: igen — a pajzsfúró RÖGZÍTETT helyi portról hív, a rés ott él;
-      //   · TCP-hívás kifelé: ⚠️ NEM — onnan efemer porttal indulunk, amit a rendszer
-      //     a kapcsolat után elenged. Azt hirdetni halott címet terjesztene.
-      //
-      // ⭐ Az időzítés stimmel: a tükröt a másik LENYOMAT-ja hozza, ami ELŐBB érkezik,
-      // mint ahogy mi a CIMEK-et küldjük — tehát a FRISSEN tanult cím megy el, még
-      // ugyanabban a beszélgetésben. Nem kell hozzá se fájl, se emlékezés.
-      const sajatCim = (sajatCimHirdetese && kivulrolIgyLatszom?.cim
-        && Number.isInteger(kivulrolIgyLatszom.port))
-        ? [{ hoszt: kivulrolIgyLatszom.cim, port: kivulrolIgyLatszom.port }]
-        : [];
-
       // ===== ⭐⭐ ÉS A FRISS UDP-CÍMEK, KÜLÖN MEZŐBEN (2026-09-18) =====
       //
       // ⛔ MIÉRT KÜLÖN, ÉS MIÉRT NEM A `cimek` KÖZÉ? Mert a router a két szállításnak KÜLÖN
       // leképezést ad — mérve egy futáson belül: UDP 39471, TCP 63495. Egy listába keverve a
       // társ TCP-vel hívna egy UDP-portot, vagy fordítva: *két szám ugyanarra a kérdésre.*
       //
-      // ⭐ ÉS CSAK UDP-CÍM UTAZIK (Csaba, 2026-09-18): a TCP-címek HELYBEN maradnak (a `tars`
-      // parancs és a helyi felfedezés adja őket). Így nincs szükség jelölő mezőre — ami a
-      // vonalon van, az UDP. *A 6. szabály a kisebb üzenetet kéri.*
+      // ⭐ ÉS CSAK UDP-CÍM UTAZIK (Csaba, 2026-09-18): az induló címek HELYBEN maradnak (a
+      // `tars` parancs és a helyi felfedezés adja őket). Így nincs szükség jelölő mezőre —
+      // ami a vonalon van, az UDP. *A 6. szabály a kisebb üzenetet kéri.*
       //
       // ⭐ A `kor` MÁSODPERCBEN utazik, nem időbélyeg: a fogadó a SAJÁT órájához köti
       // (`udpCimekBeolvasztasa`). Idegen órában nem kell megbízni.
@@ -413,7 +406,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       // hirdetne. *A hívó dolga megmondani, mi a friss; ez a réteg csak továbbítja.*
       const udpForras = typeof beallitas.udpCimek === 'function'
         ? beallitas.udpCimek() : beallitas.udpCimek;
-      const udpCimek = Array.isArray(udpForras) ? udpForras : [];
+      // ⚠️ A saját listánkból is csak ÉRVÉNYES címet küldünk: egy elrontott bejegyzés (a
+      // jegyzék kézzel is szerkeszthető, 4. szabály) ne döntse el a cserét.
+      const udpCimek = (Array.isArray(udpForras) ? udpForras : [])
+        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port));
 
       // A sajátunk ELÖL: ha a korlátba nem fér bele minden, ez az egy cím az, amit a
       // másik sehonnan máshonnan nem tudhat meg.
@@ -445,17 +441,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
         uzenet: 'CIMEK',
         ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
         ...(dhtGepek.length ? { dht: dhtGepek } : {}),
-        cimek: [...sajatCim, ...hirdetettCimek.slice(0, IDEGEN_CIM_KORLAT)],
         udp: [
           ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
           ...idegenUdp.slice(0, IDEGEN_CIM_KORLAT)
         ]
       });
       const ove = await varj('CIMEK');
-      kapottCimek = (Array.isArray(ove.cimek) ? ove.cimek : [])
-        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
-          && c.port > 0 && c.port < 65536)
-        .slice(0, CIM_KORLAT);
       // ⚠️ AZ ALAKJÁT ITT NEM ELLENŐRIZZÜK, csak továbbadjuk: a `vonal.js` semmit nem tud
       // a tábláról (1. szabály). Az ellenőrzés a hívónál van (`ervenyesTablaKulcs`), és
       // attól, hogy valaki bemond egy kulcsot, semmit nem hiszünk el neki (3. szabály).
@@ -518,146 +509,19 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   console.log('parbeszed - VÉGE', {
     korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom,
-    kapottCimek: kapottCimek.length, kapottUdpCimek: kapottUdpCimek.length,
+    kapottUdpCimek: kapottUdpCimek.length,
     fajlokNala: fajlokNala.length
   });
   return {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottCimek, kapottUdpCimek,
+    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek,
     fajlokNala
   };
 }
 
-// ===================================
-// FIGYELÉS — a koino fogad kapcsolatot
-// ===================================
-
-/**
- * Portot nyit, és mindenkivel cserél, aki csatlakozik.
- *
- * ⭐ EZ AZ, AMIT A BÖNGÉSZŐ NEM TUD (D29). Egy lap nem tud fogadni kapcsolatot — ezért
- * kell neki jelzőpont, STUN és továbbító. Egy önálló program viszont egyszerűen kinyit
- * egy portot. A Szakasz 2 nagy kérdése (két készülék, két hálózat, szolgáltató nélkül)
- * ettől a néhány sortól válik egyáltalán mérhetővé.
- *
- * @param {Object} tar
- * @param {string} koino
- * @param {number} [port] - 0 = a rendszer válasszon (a próbák így kérnek szabad portot)
- * @param {Object} [beallitas]
- * @param {string} [beallitas.hoszt] - alapból `::` (IPv6 és — ahol a rendszer engedi — IPv4 is)
- * @param {Function} [beallitas.utana] - minden lezajlott csere után meghívjuk
- * @returns {Promise<{port: number, bezar: Function}>}
- */
-export async function figyeloIndulasa(tar, koino, port = 0, beallitas = {}) {
-  const { hoszt = '::', utana, hirdetettCimek = [] } = beallitas;
-  console.log('figyeloIndulasa - KEZDÉS', { koino, port, hoszt });
-
-  const kiszolgalo = createServer((kapcsolat) => {
-    const honnan = kapcsolat.remoteAddress;
-    // ⭐ A FIGYELŐ HIRDETHETI A SAJÁT CÍMÉT (D39). Amit a hívó tükröz vissza, az pontosan
-    // az a cím, amire ő az imént CSATLAKOZOTT — tehát bizonyítottan működik, és a kapunk
-    // utána is nyitva marad. (A kifelé hívónál ez nem így van, ott efemer a port.)
-    // ⭐ A POSTALÁDA IS FELEL A FÁJL-KÉRDÉSRE (5.7) — és ez fontos: aki fogadni tud,
-    // az a legértékesebb forrás. ⚠️ De Ő NEM KÉRDEZ: a kérelmező kezdeményez (Csaba
-    // döntése, 2026-09-13), és a figyelő nem tudja, mikor ér rá a társ.
-    parbeszed(kapcsolat, tar, koino, {
-      hirdetettCimek, sajatCimHirdetese: true,
-      // ⚠️ Függvényként is jöhet: a postaláda HOSSZAN fut, a friss lista ablakonként más.
-      udpCimek: beallitas.udpCimek ?? [],
-      sajatUdpCim: beallitas.sajatUdpCim ?? null,
-      tablaKulcs: beallitas.tablaKulcs ?? null,
-      dhtGepek: beallitas.dhtGepek ?? [],
-      fajlValasz: beallitas.fajlValasz ?? null,
-      // ⭐ ÉS A BÁJTOK KISZOLGÁLÁSA (5.7 / B): aki fogadni tud, az a legértékesebb forrás.
-      fajlOlvas: beallitas.fajlOlvas ?? null
-    })
-      .then((eredmeny) => utana?.({
-        ...eredmeny, honnan,
-        bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead
-      }))
-      .catch((hiba) => {
-        console.warn('figyeloIndulasa - a csere megszakadt', { honnan, ok: hiba.message });
-        utana?.({ honnan, hiba: hiba.message });
-      })
-      .finally(() => kapcsolat.end());
-  });
-
-  await new Promise((teljesites, elutasitas) => {
-    kiszolgalo.once('error', elutasitas);
-    kiszolgalo.listen(port, hoszt, teljesites);
-  });
-
-  const valodiPort = kiszolgalo.address().port;
-  console.log('figyeloIndulasa - VÉGE', { port: valodiPort });
-
-  return {
-    port: valodiPort,
-    bezar: () => new Promise((teljesites) => kiszolgalo.close(teljesites))
-  };
-}
-
-// ===================================
-// CSATLAKOZÁS — a koino megkeresi a másikat
-// ===================================
-
-/**
- * Csatlakozik egy másik koinóhoz, és lefuttatja a cserét.
- *
- * @param {Object} tar
- * @param {string} koino
- * @param {string} cim - IP-cím vagy név (IPv6-cím is: `2001:…`)
- * @param {number} port
- * @param {number} [varakozasiIdo] - ennyi ezredmásodperc után feladjuk
- * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
- */
-export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
-                                   hirdetettCimek = [], fajl = {}, udpCimek = [],
-                                   beallitas = {}) {
-  console.log('csereVonalon - KEZDÉS', { cim, port });
-
-  // family: 0 → a rendszer maga válasszon IPv4 és IPv6 között. A Szakasz 2 mérése miatt
-  // fontos, hogy az IPv6 ne legyen kizárva.
-  const kapcsolat = connect({ host: cim, port, family: 0 });
-  kapcsolat.setTimeout(varakozasiIdo, () => {
-    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
-  });
-
-  await new Promise((teljesites, elutasitas) => {
-    kapcsolat.once('connect', teljesites);
-    kapcsolat.once('error', elutasitas);
-  });
-
-  try {
-    // ⭐ A FÁJL-RÉSZ OPCIONÁLIS (5.7): ha a hívó nem ad kérelmet és válaszolót, a
-    // párbeszéd ugyanúgy fut, mint eddig — a két réteg külön él (D3).
-    const eredmeny = await parbeszed(kapcsolat, tar, koino, {
-      hirdetettCimek,
-      // ⭐ A friss UDP-címek a TCP-cserén is utaznak (2026-09-18) — ma ez az út, amin
-      // találkozunk. *A terjesztés nem a szállítástól függ, hanem a bulitól.*
-      udpCimek,
-      sajatUdpCim: beallitas.sajatUdpCim ?? null,
-      tablaKulcs: beallitas.tablaKulcs ?? null,
-      dhtGepek: beallitas.dhtGepek ?? [],
-      fajlKerelem: fajl.kerelem ?? null,
-      fajlValasz: fajl.valasz ?? null,
-      fajlOlvas: fajl.olvas ?? null
-    });
-
-    // ⭐ MENNYI ADAT MENT EL? (D35) Ez nem kíváncsiság: a csere ára befogadási kérdés —
-    // egy mobilos e-embernek a számláján jelenik meg. Ami nem mérhető, azt nem lehet
-    // olcsóvá tenni, ezért a szám mostantól minden cserénél kijön.
-    const teljes = {
-      ...eredmeny,
-      bajtKuldott: kapcsolat.bytesWritten,
-      bajtKapott: kapcsolat.bytesRead
-    };
-
-    console.log('csereVonalon - VÉGE', teljes);
-    return teljes;
-  } finally {
-    kapcsolat.end();
-  }
-}
+// ⚠️ ITT ÁLLT 2026-09-26-IG A `figyeloIndulasa` ÉS A `csereVonalon` — a TCP-postaláda és a
+// TCP-hívás. A D69/2 óta a fogadás az állandó UDP-kapué (`udpKapu.js`), a párbeszéd a résen
+// fut (`udpVonal.js` → `csereUdpResen`), mindkét oldalon ugyanúgy.
 
 // ===================================
 // ⭐ BÖNGÉSZŐ-LEKÉRÉS — egyetlen entitás elhozása
@@ -686,13 +550,8 @@ export async function csereVonalon(tar, koino, cim, port, varakozasiIdo = 10000,
  * ⚠️ A KAPOTT ESEMÉNYEK UGYANAZON A KAPUN MENNEK BE (`esemenyMentese`, 3. szabály). Attól,
  * hogy mi kértük, semmivel nem lesznek hitelesebbek.
  *
- * @param {Object} tar
- * @param {string} koino
- * @param {string} cim
- * @param {number} port
- * @param {string} entitas - melyik entitást kérjük
- * @param {number} [varakozasiIdo]
- * @returns {Promise<{kapott: number, uj: number, bajtKuldott: number, bajtKapott: number}>}
+ * ⭐ A megvalósítás lent: `szeletKapcsolaton` (a kapcsolatot a hívó nyitja — a résen a
+ * `szeletUdpResen`, `udpVonal.js`).
  */
 /**
  * ⭐⭐ EGY FÁJL ELHOZÁSA — szeletenként, folytathatóan (5.7 / B).
@@ -825,26 +684,6 @@ export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
   return { kiszolgalt: true, szeletek };
 }
 
-/**
- * ⭐ EGY TCP-KAPCSOLAT NYITÓJA a fájl-átvitelhez.
- *
- * ⚠️ Ezért külön függvény, és nem a `fajlHozatala` belsejében: **a szállítás
- * cserélhető marad** (1. szabály). Ugyanide illeszkedik az átfúrt UDP-rés is.
- */
-export function tcpNyito(cim, port, varakozasiIdo = 30000) {
-  return async () => {
-    const kapcsolat = connect({ host: cim, port, family: 0 });
-    kapcsolat.setTimeout(varakozasiIdo, () => {
-      kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
-    });
-    await new Promise((teljesites, elutasitas) => {
-      kapcsolat.once('connect', teljesites);
-      kapcsolat.once('error', elutasitas);
-    });
-    return kapcsolat;
-  };
-}
-
 export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beallitas = {}) {
   const korlat = beallitas.korlat ?? Infinity;
   console.log('fajlHozatala - KEZDÉS', { lenyomat });
@@ -969,26 +808,6 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
     // a TCP-foglalatnak nincs ilyen metódusa, ezért kérdezünk rá.
     if (typeof kapcsolat.kiurites === 'function') await kapcsolat.kiurites();
     kapcsolat.destroy();
-  }
-}
-
-export async function szeletHozatala(tar, koino, cim, port, entitas, varakozasiIdo = 10000) {
-  console.log('szeletHozatala - KEZDÉS', { cim, port, entitas });
-
-  const kapcsolat = connect({ host: cim, port, family: 0 });
-  kapcsolat.setTimeout(varakozasiIdo, () => {
-    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
-  });
-
-  await new Promise((teljesites, elutasitas) => {
-    kapcsolat.once('connect', teljesites);
-    kapcsolat.once('error', elutasitas);
-  });
-
-  try {
-    return await szeletKapcsolaton(tar, koino, kapcsolat, entitas);
-  } finally {
-    kapcsolat.end();
   }
 }
 

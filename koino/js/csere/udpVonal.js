@@ -516,9 +516,17 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
   const csomagot = (targy) => {
     const bajtok = Buffer.from(JSON.stringify(targy), 'utf8');
     bajtKuldott += bajtok.length;
-    halo.send(bajtok, tarsPort, tarsCim, (hiba) => {
-      if (hiba) console.warn('udpKapcsolat - küldés bukott', { ok: hiba.message });
-    });
+    // ⚠️ A LEZÁRT FOGLALAT SZINKRON DOB (`ERR_SOCKET_DGRAM_NOT_RUNNING`) — és egy óra-hívásból
+    // dobott hiba az egész folyamatot leállítaná (2026-09-26, próbából). Egy kapu, amit épp
+    // bezártak, ne döntse le a készüléket: a küldés ilyenkor egyszerűen nem megy ki (D19: a
+    // napló kimondja), a kapcsolat pedig a tétlenségi órájával zárul.
+    try {
+      halo.send(bajtok, tarsPort, tarsCim, (hiba) => {
+        if (hiba) console.warn('udpKapcsolat - küldés bukott', { ok: hiba.message });
+      });
+    } catch (hiba) {
+      console.warn('udpKapcsolat - a foglalat már zárva', { ok: hiba.message });
+    }
   };
 
   /** Feladjuk ezt a darabot — de HIBAKÉNT, nem csendben. A néma nem-esemény a legrosszabb. */

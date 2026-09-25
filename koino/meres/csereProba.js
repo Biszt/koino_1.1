@@ -18,10 +18,13 @@ import {
   allasOsszeallitasa, hianyokSzamitasa, valaszOsszeallitasa,
   beolvasztas, csereKor, csereAmigKell, allasokEgyeznek
 } from '../js/csere/csere.js';
-import { figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala } from '../js/csere/vonal.js';
-import { createServer } from 'node:net';
-import { pajzsfuras, pajzsfurasTobbfele, tcpPajzsfuras, stunbolCim } from '../js/csere/pajzsfuro.js';
-import { csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen } from '../js/csere/udpVonal.js';
+// ⚠️ 2026-09-26 óta (D69/2) a vonal-próbák a UDP-résen futnak: a `vonal.js` TCP-nyitói
+// (`figyeloIndulasa`, `csereVonalon`, `tcpNyito`) és a `tcpPajzsfuras` kikerültek.
+import { parbeszed } from '../js/csere/vonal.js';
+import { pajzsfuras, pajzsfurasTobbfele, stunbolCim } from '../js/csere/pajzsfuro.js';
+import {
+  csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen, szeletUdpResen
+} from '../js/csere/udpVonal.js';
 import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
   felfedezettekOsszefesulese
@@ -412,18 +415,33 @@ proba('⭐ Az ELŐRÉBB TARTÓ fél nem kér vissza fölöslegesen', async () =>
   return kerelem.szerzok.length === 0;
 });
 
-// ===== A VONAL: ugyanez valódi TCP-n =====
+// ===== A VONAL: ugyanez valódi foglalaton — 2026-09-26 óta a UDP-résen (D69/2) =====
 //
-// Itt már drót van a két tár között — de a protokoll ugyanaz. Ha ezek a próbák mást
+// Itt már foglalat van a két tár között — de a protokoll ugyanaz. Ha ezek a próbák mást
 // adnának, mint a fentiek, az SZÁLLÍTÁSI hiba lenne, nem protokoll-hiba.
+// ⚠️ 2026-09-26-ig ez TCP volt (`figyeloIndulasa` + `csereVonalon`); a D69/2 óta nincs TCP a
+// készülékek között, és a párbeszéd MINDKÉT oldalon ugyanaz (a résen nincs kliens és szerver).
 
-/** Két tár cseréje valódi TCP-kapcsolaton, a helyi gépen. */
-async function csereDroton(egyikTar, masikTar, hoszt = '127.0.0.1') {
-  const figyelo = await figyeloIndulasa(masikTar, KOINO, 0, { hoszt });
+/**
+ * Két tár cseréje egy UDP-résen, a helyi gépen — mindkét fél a saját párbeszédét futtatja.
+ * @returns {Promise<Object>} az EGYIK fél eredménye (a `masikEredmenye` mezőben a másiké)
+ */
+async function csereDroton(egyikTar, masikTar, hoszt = '127.0.0.1', {
+  egyikKoino = KOINO, masikKoino = KOINO, egyikBeallitas = {}, masikBeallitas = {}
+} = {}) {
+  const p = await udpParos(0, hoszt);
   try {
-    return await csereVonalon(egyikTar, KOINO, hoszt, figyelo.port);
+    // ⚠️ MINDKÉT FÉL VÉGÉT MEGVÁRJUK, akkor is, ha az egyik elbukik — különben a foglalatot a
+    // másik fél munkája alól zárnánk be.
+    const [egyik, masik] = await Promise.allSettled([
+      csereUdpResen(p.egyik, hoszt, p.masikPort, egyikTar, egyikKoino, egyikBeallitas),
+      csereUdpResen(p.masik, hoszt, p.egyikPort, masikTar, masikKoino, masikBeallitas)
+    ]);
+    if (egyik.status === 'rejected') throw egyik.reason;
+    if (masik.status === 'rejected') throw masik.reason;
+    return { ...egyik.value, masikEredmenye: masik.value };
   } finally {
-    await figyelo.bezar();
+    p.bezar();
   }
 }
 
@@ -469,7 +487,7 @@ proba('A VONALON is idempotens: a második csatlakozás nem hoz újat', async ()
   return elso.kuldott === 4 && masodik.kuldott === 0 && masodik.uj === 0;
 });
 
-proba('A VONAL IPv6-on is áll (::1) — a Szakasz 2 nagy kérdésének előszobája', async () => {
+proba('A RÉS IPv6-on is áll (::1) — a szállítás szintjén (⚠️ a kapu ma IPv4-es)', async () => {
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
   const masik = await ujTar();
@@ -589,7 +607,10 @@ proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-emberné
   // ⚠️ A KÜSZÖB 300-ról 500-ra nőtt, és ez tudatos ár: a LENYOMAT azóta viszi a TÜKRÖT
   // („innen látlak"), és minden kör visz egy CÍMJEGYZÉKET is. Ezekért cserébe a hálózat
   // magától tud bővülni (D36–D38) — enélkül minden címet kézzel kellene begépelni.
-  return eredmeny.reszletesAllasok === 0 && osszes < 500 && osszes * 20 < allasBajt;
+  // ⚠️ ÉS AZ ARÁNY 20×-RÓL 15×-RE (2026-09-26, D69/2): a mérés azóta a UDP-résen fut, és
+  // annak saját ára van — sorszám, nyugta, JSON-burok darabonként (TCP-n ~334 bájt volt,
+  // a résen ~480). ⭐ A lényeg nem változott: a részletes állás el sem indul.
+  return eredmeny.reszletesAllasok === 0 && osszes < 500 && osszes * 15 < allasBajt;
 });
 
 // ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====
@@ -624,18 +645,13 @@ proba('⭐ MÁS KOINO: a csere azonnal véget ér, és nem keveredik semmi', asy
     await esemenyMentese(ove, await bela.tesz('GondolatLetrehozas', { cim: 'M' + i, meret: 10 }));
   }
 
-  const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
-  let eredmeny;
-  try {
-    eredmeny = await csereVonalon(ove, MASIK, '127.0.0.1', figyelo.port);
-  } finally {
-    await figyelo.bezar();
-  }
+  const eredmeny = await csereDroton(ove, mienk, '127.0.0.1', { egyikKoino: MASIK });
 
   return eredmeny.masKoino === KOINO            // felismerte, kivel beszélt
     && eredmeny.korok === 1                     // EGY kör, nem öt
     && eredmeny.uj === 0 && eredmeny.kuldott === 0
     && eredmeny.reszletesAllasok === 0          // a részletes állás el sem indult
+    && eredmeny.masikEredmenye.masKoino === MASIK                // a másik is felismerte
     && (await koinoEsemenyei(mienk, KOINO)).length === 3        // a mi tárunk érintetlen
     && (await koinoEsemenyei(ove, MASIK)).length === 3;         // az övé is
 });
@@ -652,12 +668,7 @@ proba('⭐ A MAPPA is tiszta marad — nem csak a számított állapot', async (
   const ove = await ujTarMasKoinonak(MASIK);
   await esemenyMentese(ove, await bela.tesz('GondolatLetrehozas', { cim: 'M', meret: 10 }));
 
-  const figyelo = await figyeloIndulasa(mienk, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    await csereVonalon(ove, MASIK, '127.0.0.1', figyelo.port);
-  } finally {
-    await figyelo.bezar();
-  }
+  await csereDroton(ove, mienk, '127.0.0.1', { egyikKoino: MASIK });
 
   const nyers = await mienk.betolt();                       // a tár SZŰRETLEN gondolata
   return nyers.length === 2 && nyers.every((e) => e.koino === KOINO);
@@ -791,111 +802,11 @@ proba('⭐ A STUN-válasz felismerhető — nem keverjük össze a kopogással',
   return stunValaszE(stun) && !stunValaszE(kopogas) && !stunValaszE(Buffer.alloc(4));
 });
 
-proba('⭐⭐ A CÍMJEGYZÉK TERJED: a társak elmondják egymásnak, kiket ismernek', async () => {
-  const anna = await ujEember(KOINO);
-  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
-  const masik = await ujTar();
-
-  const oveCimei = [{ hoszt: '2001:db8::b', port: 7373 }];
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: oveCimei
-  });
-  try {
-    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port, 10000,
-      [{ hoszt: '2001:db8::a', port: 7373 }]);
-    // ⚠️ A D39 óta KÉT cím jön: a figyelő TÁRSÁÉ (ezt méri ez a próba) és a figyelő
-    // SAJÁTJA (azt a következő próba méri). Ezért nem darabszámra nézünk, hanem arra,
-    // hogy a társ címe TÉNYLEG átjött-e.
-    const tarse = eredmeny.kapottCimek.find((c) => c.hoszt === '2001:db8::b');
-    return !!tarse && tarse.port === 7373;
-  } finally {
-    await figyelo.bezar();
-  }
-});
-
-proba('⭐ A címek akkor is terjednek, ha NINCS újdonság (különben nem bővülne a háló)', async () => {
-  // ⚠️ Ezért megy a címcsere a lenyomat-egyezés ELŐTT. Ha utána menne, a hétköznapi
-  // „nincs újdonság" beszélgetés egyetlen címet sem vinne tovább.
-  const anna = await ujEember(KOINO);
-  const esemenyek = await lanc(anna, 2);
-  const egyik = await ujTar(); await ment(egyik, esemenyek);
-  const masik = await ujTar(); await ment(masik, esemenyek);   // MINDKETTŐ ugyanazt tudja
-
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: [{ hoszt: '2001:db8::c', port: 7373 }]
-  });
-  try {
-    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    return eredmeny.uj === 0 && eredmeny.reszletesAllasok === 0    // tényleg nem volt újdonság
-      && eredmeny.kapottCimek.some((c) => c.hoszt === '2001:db8::c');
-  } finally {
-    await figyelo.bezar();
-  }
-});
-
-proba('⭐⭐ A FIGYELŐ A SAJÁT CÍMÉT IS HIRDETI — a tükörtől tanultat (D39)', async () => {
-  // ⚠️ EZ A HIÁNYZÓ LÁNCSZEM VOLT. Eddig mindenki CSAK a társai címeit adta tovább, a
-  // sajátját soha — ezért egy címváltozás csak addig terjedt, ameddig a gazdája maga
-  // elvitte. A figyelő viszont TUDJA a saját címét: a hívó visszamondja neki, hogy
-  // honnan látja. Innentől ezt is továbbadja.
-  const anna = await ujEember(KOINO);
-  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
-  const masik = await ujTar();
-
-  // A figyelőnek NINCS egyetlen felvett társ-címe sem — így ami visszajön, csakis a
-  // sajátja lehet. (Ez teszi a próbát vakság-mentessé.)
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: []
-  });
-  try {
-    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    return eredmeny.kapottCimek.length === 1
-      && eredmeny.kapottCimek[0].hoszt === '127.0.0.1'
-      && eredmeny.kapottCimek[0].port === figyelo.port;   // épp az a kapu, amin bejöttünk
-  } finally {
-    await figyelo.bezar();
-  }
-});
-
-proba('⭐⭐ RONTÁS-PRÓBA: a KIFELÉ HÍVÓ nem hirdeti a megfigyelt címét (efemer port)', async () => {
-  // ⚠️ MIÉRT VOLNA HIBA? Mert a kifelé induló TCP-kapcsolat portját a rendszer adja, és a
-  // kapcsolat után elengedi. Ha ezt hirdetnénk, HALOTT címet terjesztenénk a hálózaton —
-  // és a hézag-kereső társak azt hinnék, van hova visszaszólni. A tükör tehát nem
-  // önmagában érték: csak annak, aki a megfigyelt portot nyitva is tartja.
-  const anna = await ujEember(KOINO);
-  const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
-  const masik = await ujTar();
-
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: []
-  });
-  try {
-    // A hívó oldalán gyűjtjük össze, mit küldött EL — ehhez a `parbeszed`-et közvetlenül
-    // futtatjuk egy foglalaton, alapbeállítással (tehát `sajatCimHirdetese` nélkül).
-    const { connect } = await import('node:net');
-    const kapcsolat = connect({ host: '127.0.0.1', port: figyelo.port });
-    await new Promise((t, e) => { kapcsolat.once('connect', t); kapcsolat.once('error', e); });
-
-    const elkuldott = [];
-    const eredetiIras = kapcsolat.write.bind(kapcsolat);
-    kapcsolat.write = (szoveg) => {
-      try {
-        const u = JSON.parse(String(szoveg).trim());
-        if (u.uzenet === 'CIMEK') elkuldott.push(...u.cimek);
-      } catch { /* nem CIMEK: nem érdekes */ }
-      return eredetiIras(szoveg);
-    };
-
-    try {
-      await parbeszed(kapcsolat, egyik, KOINO, { hirdetettCimek: [] });
-    } finally {
-      kapcsolat.end();
-    }
-    return elkuldott.length === 0;         // a hívó SEMMIT nem hirdetett magáról
-  } finally {
-    await figyelo.bezar();
-  }
-});
+// ⚠️ ITT ÁLLT 2026-09-26-IG NÉGY PRÓBA A TCP-CÍMJEGYZÉKRŐL (`cimek` mező, D36–D39): a
+// címjegyzék terjed · „nincs újdonság” mellett is terjed · a figyelő a saját címét is hirdeti ·
+// a kifelé hívó NEM hirdeti az efemer portját. ⛔ A D69/2 óta a `cimek` mező nem utazik: a
+// címek terjesztése a friss UDP-jegyzéké (`udp` mező) — ugyanaz a munka, egy gépezettel. A
+// terjedést a lenti UDP-próbák és a parancssor-próbák (a MÁSIK készülék lemezén) mérik.
 
 proba('⭐ A címek NEM lesznek események — a tár tiszta marad', async () => {
   // ⚠️ A cím múlandó körülmény, nem igazság: két hét múlva már másé. Egy aláírt esemény
@@ -904,71 +815,54 @@ proba('⭐ A címek NEM lesznek események — a tár tiszta marad', async () =>
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
   const masik = await ujTar();
 
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: [{ hoszt: '2001:db8::d', port: 7373 }]
+  await csereDroton(egyik, masik, '127.0.0.1', {
+    egyikBeallitas: { udpCimek: [{ hoszt: '198.51.100.201', port: 7373, kor: 1 }] },
+    masikBeallitas: { udpCimek: [{ hoszt: '198.51.100.202', port: 7373, kor: 1 }] }
   });
-  try {
-    await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port, 10000,
-      [{ hoszt: '2001:db8::e', port: 7373 }]);
-    const egyikNyers = await egyik.betolt();
-    const masikNyers = await masik.betolt();
-    const vanBenneCim = (l) => l.some((e) => JSON.stringify(e).includes('2001:db8'));
-    return !vanBenneCim(egyikNyers) && !vanBenneCim(masikNyers) && masikNyers.length === 2;
-  } finally {
-    await figyelo.bezar();
-  }
+  const egyikNyers = await egyik.betolt();
+  const masikNyers = await masik.betolt();
+  const vanBenneCim = (l) => l.some((e) => JSON.stringify(e).includes('198.51.100.20'));
+  return !vanBenneCim(egyikNyers) && !vanBenneCim(masikNyers) && masikNyers.length === 2;
 });
 
-proba('⭐ A rossz címeket eldobjuk, és MÁSOKÉBÓL legfeljebb HÁRMAT hirdetünk (34. mérés)',
+proba('⭐ A rossz UDP-címeket eldobjuk, és MÁSOKÉBÓL legfeljebb HÁRMAT hirdetünk (34. mérés)',
   async () => {
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 1));
   const masik = await ujTar();
 
   const sok = [];
-  for (let i = 0; i < 25; i++) sok.push({ hoszt: '2001:db8::' + i, port: 7373 });
-  sok.push({ hoszt: 'rossz', port: 0 }, { hoszt: 5, port: 7373 }, null);
+  for (let i = 0; i < 25; i++) sok.push({ hoszt: '198.51.100.' + i, port: 40000 + i, kor: 2 });
+  sok.push({ hoszt: 'rossz', port: 0, kor: 1 }, { hoszt: 5, port: 7373, kor: 1 }, null);
 
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, {
-    hoszt: '127.0.0.1', hirdetettCimek: sok
+  const eredmeny = await csereDroton(egyik, masik, '127.0.0.1', {
+    masikBeallitas: { udpCimek: sok, sajatUdpCim: { hoszt: '127.0.0.1', port: 7373 } }
   });
-  try {
-    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    // ⭐⭐ A SZABÁLY 2026-09-20 ÓTA (Csaba döntése a 34. mérés után): a SAJÁT cím mindig
-    // megy (azt a másik sehonnan máshonnan nem tudhatja meg), MÁSOKÉBÓL legfeljebb három.
-    // ⚠️ A figyelő saját címe elöl van, tehát 1 + 3 = 4 az egész.
-    // *A próba a döntéshez igazodik, nem fordítva — de a lényeg ugyanaz: van felső korlát,
-    // és rossz cím nem jöhet át.*
-    return eredmeny.kapottCimek.length === 4
-      && eredmeny.kapottCimek.every((c) =>
-        typeof c.hoszt === 'string' && Number.isInteger(c.port) && c.port > 0)
-      && !eredmeny.kapottCimek.some((c) => c.hoszt === 'rossz')
-      // ⭐ ÉS A SAJÁTJA TÉNYLEG OTT VAN: a hurok-címéről szól hozzánk.
-      && eredmeny.kapottCimek.some((c) => c.hoszt === '127.0.0.1');
-  } finally {
-    await figyelo.bezar();
-  }
+  // ⭐⭐ A SZABÁLY 2026-09-20 ÓTA (Csaba döntése a 34. mérés után): a SAJÁT cím mindig
+  // megy (azt a másik sehonnan máshonnan nem tudhatja meg), MÁSOKÉBÓL legfeljebb három.
+  // ⚠️ A saját cím elöl van, tehát 1 + 3 = 4 az egész.
+  const kapott = eredmeny.kapottUdpCimek;
+  return kapott.length === 4
+    && kapott.every((c) => typeof c.hoszt === 'string' && Number.isInteger(c.port) && c.port > 0)
+    && !kapott.some((c) => c.hoszt === 'rossz')
+    // ⭐ ÉS A SAJÁTJA TÉNYLEG OTT VAN, 0 korral.
+    && kapott.some((c) => c.hoszt === '127.0.0.1' && c.port === 7373 && c.kor === 0);
 });
 
 proba('⭐⭐ A TÜKÖR: a másik megmondja, milyen címről lát minket', async () => {
   // ⭐ EZ VÁLTJA KI A STUN-T. IPv4-en a router átírja a portot, tehát a készülék nem
   // ismeri a saját külső címét — enélkül nem tudja megmondani, hova kopogjanak neki.
-  // A koinóban nem kell hozzá szolgáltatás: aki fogad, az látja, és visszamondja.
+  // A koinóban nem kell hozzá szolgáltatás: akivel beszélünk, az látja, és visszamondja.
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
   const masik = await ujTar();
 
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    const eredmeny = await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    // Helyben a „külső" cím a hurok-cím, a port pedig a rendszer által adott forrás-port.
-    return !!eredmeny.kivulrolIgyLatszom
-      && typeof eredmeny.kivulrolIgyLatszom.port === 'number'
-      && eredmeny.kivulrolIgyLatszom.port > 0
-      && String(eredmeny.kivulrolIgyLatszom.cim).includes('127.0.0.1');
-  } finally {
-    await figyelo.bezar();
-  }
+  const eredmeny = await csereDroton(egyik, masik);
+  // Helyben a „külső" cím a hurok-cím, a port pedig a foglalatunké.
+  return !!eredmeny.kivulrolIgyLatszom
+    && typeof eredmeny.kivulrolIgyLatszom.port === 'number'
+    && eredmeny.kivulrolIgyLatszom.port > 0
+    && String(eredmeny.kivulrolIgyLatszom.cim).includes('127.0.0.1');
 });
 
 proba('⭐ A tükör NEM ad bizalmat: az esemény-kapu ugyanaz marad', async () => {
@@ -979,56 +873,15 @@ proba('⭐ A tükör NEM ad bizalmat: az esemény-kapu ugyanaz marad', async () 
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 2));
   const masik = await ujTar();
 
-  const figyelo = await figyeloIndulasa(masik, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    await csereVonalon(egyik, KOINO, '127.0.0.1', figyelo.port);
-    const nyers = await masik.betolt();
-    // Egyetlen elmentett esemény sem hordoz „latlak" mezőt: a tükör a vonalon marad.
-    return nyers.length === 2 && nyers.every((e) => e.latlak === undefined);
-  } finally {
-    await figyelo.bezar();
-  }
+  await csereDroton(egyik, masik);
+  const nyers = await masik.betolt();
+  // Egyetlen elmentett esemény sem hordoz „latlak" mezőt: a tükör a vonalon marad.
+  return nyers.length === 2 && nyers.every((e) => e.latlak === undefined);
 });
 
-proba('⭐⭐ A TCP-fúró a RÖGZÍTETT helyi portról hív — EZEN MÚLIK AZ EGÉSZ', async () => {
-  // ⭐ MIÉRT EZ A LÉNYEG? A pajzsfúrás azért működhet, mert mindkét fél UGYANARRÓL a
-  // portról UGYANARRA a portra hív — így a két router ugyanazt a négyest (cím+port ↔
-  // cím+port) jegyzi fel, és a rések egymásra illeszkednek. A `csere` épp ezt nem
-  // csinálja: véletlen helyi portról indul, ezért nem tud átfúrni.
-  //
-  // ⚠️ AMIT ITT NEM LEHET MEGMÉRNI: magát az „egyidejű nyitást". A helyi hurkon a rendszer
-  // AZONNAL elutasít (ECONNREFUSED), ha nincs figyelő — így sosem alakul ki a függőben
-  // lévő hívás, ami ehhez kellene. Valódi hálózaton a SYN kimegy és VÁRAKOZIK, mert a
-  // router csendben eldobja. Ez tehát csak élesben, két hálózat között mérhető.
-  // ⚠️ VÉLETLEN PORTOK. Az első változat rögzített portot használt, és egy előző futás
-  // után a rendszer még fogta őket (EADDRINUSE) — a próba hol átment, hol nem. Egy
-  // ingadozó próba rosszabb a semminél: azt tanítja, hogy a piros szín néha hazudik.
-  const sajatPort = 20000 + Math.floor(Math.random() * 30000);
-
-  let honnanPort = null;
-  const kiszolgalo = createServer((k) => { honnanPort = k.remotePort; k.end(); });
-  await new Promise((t) => kiszolgalo.listen(0, '::1', t));
-  const celPort = kiszolgalo.address().port;
-
-  try {
-    const eredmeny = await tcpPajzsfuras(sajatPort, '::1', celPort, {
-      koz: 200, probaIdo: 500, maxProba: 3
-    });
-    eredmeny.kapcsolat?.destroy();
-    return eredmeny.sikerult && honnanPort === sajatPort;
-  } finally {
-    await new Promise((t) => kiszolgalo.close(t));
-  }
-});
-
-proba('⭐ A TCP-fúró FELADJA, ha nincs kit átfúrni (nem fut örökké a próbákban)', async () => {
-  const eredmeny = await tcpPajzsfuras(
-    20000 + Math.floor(Math.random() * 30000), '::1',
-    20000 + Math.floor(Math.random() * 30000),
-    { koz: 100, probaIdo: 100, maxProba: 3 }
-  );
-  return eredmeny.sikerult === false && eredmeny.probak === 3 && eredmeny.kapcsolat === null;
-});
+// ⚠️ ITT ÁLLT 2026-09-26-IG KÉT PRÓBA A TCP-FÚRÓRÓL (rögzített helyi port · feladja, ha nincs
+// kit átfúrni). ⛔ A `tcpPajzsfuras` a D69/2-vel kikerült: a TCP-fúrás a router
+// célfüggetlenségén állt, a UDP a foglalat-modellen (17–19. mérés, Csaba döntése).
 
 proba('⭐⭐ RONTÁS-PRÓBA: a SAJÁT visszhang NEM siker (a mérés nem vak)', async () => {
   // ⚠️ Az első változat ezen elbukott: aki a saját címére kopogott, „teljes sikert"
@@ -1056,12 +909,13 @@ proba('⭐ Ha NINCS ott senki, nem dob hibát — csak sikertelen lesz', async (
 // csak más alatta a szállítás — ez az 1. szabály gyakorlati haszna.
 
 /** Két UDP-foglalat, egymásnak címezve — ez játssza az „átfúrt rést". */
-async function udpParos(vesztesegAranya = 0) {
+async function udpParos(vesztesegAranya = 0, hoszt = '127.0.0.1') {
   const { createSocket } = await import('node:dgram');
-  const egyik = createSocket({ type: 'udp4', reuseAddr: true });
-  const masik = createSocket({ type: 'udp4', reuseAddr: true });
-  await new Promise((t) => egyik.bind(0, '127.0.0.1', t));
-  await new Promise((t) => masik.bind(0, '127.0.0.1', t));
+  const tipus = hoszt.includes(':') ? 'udp6' : 'udp4';
+  const egyik = createSocket({ type: tipus, reuseAddr: true });
+  const masik = createSocket({ type: tipus, reuseAddr: true });
+  await new Promise((t) => egyik.bind(0, hoszt, t));
+  await new Promise((t) => masik.bind(0, hoszt, t));
 
   // ⚠️ CSOMAGVESZTÉS-UTÁNZAT: az UDP-nél ez a valóság, nem kivétel. Ha a próba csak
   // tökéletes hálózaton menne át, semmit nem bizonyítana.
@@ -1480,10 +1334,10 @@ proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
     const [a] = await Promise.all([
       csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO),
       csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO,
-        { hirdetettCimek: [{ hoszt: '2001:db8::f', port: 7373 }] })
+        { udpCimek: [{ hoszt: '198.51.100.99', port: 7373, kor: 4 }] })
     ]);
     return a.kivulrolIgyLatszom?.port === p.egyikPort
-      && a.kapottCimek.length === 1 && a.kapottCimek[0].hoszt === '2001:db8::f';
+      && a.kapottUdpCimek.length === 1 && a.kapottUdpCimek[0].hoszt === '198.51.100.99';
   } finally {
     p.bezar();
   }
@@ -1681,18 +1535,29 @@ async function ketSzelet() {
   return { esemenyek: [t1, p1, t2, p2], egyik: t1.azonosito, masik: t2.azonosito };
 }
 
+/**
+ * ⭐ Egy szelet-kérés a résen (D69/2): a kérő `szeletUdpResen`-t futtat, a túloldalon a
+ * RENDES csere áll (`csereUdpResen`) — pont úgy, ahogy élesben a kapu munkája.
+ */
+async function szeletResen(szolgalo, kero, entitas) {
+  const p = await udpParos();
+  try {
+    const [eredmeny] = await Promise.all([
+      szeletUdpResen(p.egyik, '127.0.0.1', p.masikPort, kero, KOINO, entitas),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, szolgalo, KOINO)
+    ]);
+    return eredmeny;
+  } finally {
+    p.bezar();
+  }
+}
+
 proba('⭐⭐ A BÖNGÉSZŐ-LEKÉRÉS CSAK A KÉRT SZELETET HOZZA', async () => {
   const { esemenyek, egyik, masik } = await ketSzelet();
   const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
   const kero = await ujTar();
 
-  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
-  let eredmeny;
-  try {
-    eredmeny = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
-  } finally {
-    await figyelo.bezar();
-  }
+  const eredmeny = await szeletResen(szolgalo, kero, egyik);
 
   const nalunk = await koinoEsemenyei(kero, KOINO);
   // A kért szelet KÉT eseménye megvan…
@@ -1707,13 +1572,8 @@ proba('Ismeretlen entitás kérése: nulla esemény, de NEM hiba', async () => {
   const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
   const kero = await ujTar();
 
-  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    const e = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, 'nincs-ilyen');
-    return e.kapott === 0 && e.uj === 0;
-  } finally {
-    await figyelo.bezar();
-  }
+  const e = await szeletResen(szolgalo, kero, 'nincs-ilyen');
+  return e.kapott === 0 && e.uj === 0;
 });
 
 proba('⚠️ A KAPU UGYANAZ: másodszorra már nincs új esemény', async () => {
@@ -1721,16 +1581,11 @@ proba('⚠️ A KAPU UGYANAZ: másodszorra már nincs új esemény', async () =>
   const szolgalo = await ujTar(); await ment(szolgalo, esemenyek);
   const kero = await ujTar();
 
-  const figyelo = await figyeloIndulasa(szolgalo, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    const elso = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
-    const masodik = await szeletHozatala(kero, KOINO, '127.0.0.1', figyelo.port, egyik);
-    // Ugyanannyit KAPTUNK, de másodszor egyik sem ÚJ — az `esemenyMentese` felismerte,
-    // hogy már megvannak (az azonosító a gondolat lenyomata).
-    return elso.uj === 2 && masodik.kapott === 2 && masodik.uj === 0;
-  } finally {
-    await figyelo.bezar();
-  }
+  const elso = await szeletResen(szolgalo, kero, egyik);
+  const masodik = await szeletResen(szolgalo, kero, egyik);
+  // Ugyanannyit KAPTUNK, de másodszor egyik sem ÚJ — az `esemenyMentese` felismerte,
+  // hogy már megvannak (az azonosító a gondolat lenyomata).
+  return elso.uj === 2 && masodik.kapott === 2 && masodik.uj === 0;
 });
 
 proba('⭐ A RENDES CSERE VÁLTOZATLAN — a szelet-kérés nem törte el', async () => {
@@ -1923,18 +1778,29 @@ proba('⛔⛔ Az IPv6-választ NEM olvassuk IPv4-nek — a 18. mérés hibája',
 });
 
 // ===================================
-// ⭐⭐⭐ EGY FÁJL, HÁROM FORRÁS — VALÓDI VONALON (D68 / 6., 2026-09-15)
+// ⭐⭐⭐ EGY FÁJL, TÖBB FORRÁS — A RÉSEN (D68 / 6.; 2026-09-26 óta UDP-n)
 // ===================================
+//
+// ⚠️ ÉLESBEN 2026-09-26 ÓTA NEM FUT (D69/2): a több forrásból egy fájl csak a TCP-n élt, és a
+// TCP kikerült (Csaba vállalta az árát). ⭐ A gépezet viszont a szállítástól független (1.
+// szabály) — ezért a próba most a RÉSEN méri: ha a UDP-s több forrás megépül, ezen a
+// munkamegosztáson fog állni.
+
+/**
+ * Egy forrás a résen: a túloldalon a RENDES csere-munka áll (`csereUdpResen`), ahogy élesben
+ * a kapu munkája — a párbeszéde az első üzenetből (`FAJLKEREK`) látja, hogy fájlt kérnek.
+ * ⚠️ Ha a vendég ennek a forrásnak nem ad szeletet, rögtön `KESZ`-t mond: az nem hiba.
+ */
+function resForras(p, tar, fajlOlvas, varakozasiIdo = 20000) {
+  return csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tar, KOINO,
+    { fajlOlvas, varakozasiIdo, torlodasJel: 'vegas' }).catch(() => null);
+}
 
 proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, duplikáció nélkül',
   async () => {
     // ⚠️ A modul-próbák a munkamegosztást mérik, ez a VÉGPONTTÓL VÉGPONTIG tartó utat:
-    // három külön figyelő, három kapcsolat, egy közös munkamegosztás.
-    const { mkdtemp } = await import('node:fs/promises');
-    const { tmpdir } = await import('node:os');
-    const { join } = await import('node:path');
+    // három külön rés, három kapcsolat, egy közös munkamegosztás.
     const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
-    const { fajlHozatala, tcpNyito, figyeloIndulasa } = await import('../js/csere/vonal.js');
     const { ujMunkamegosztas, SZELET_MERET } = await import('../js/csere/fajlAtvitel.js');
 
     // ⭐ UGYANAZ A FÁJL HÁROM KÉSZÜLÉKEN — a koinóban ez a szokásos: a lenyomat a név,
@@ -1948,8 +1814,7 @@ proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, 
       mappak.push(hely);
       const blob = fajlBlobTarolo(KOINO, hely);
       await blob.ir(tartalom);
-      gazdak.push({ blob, figyelo: await figyeloIndulasa(await ujTar(), KOINO, 0,
-        { fajlOlvas: (l) => blob.olvas(l) }) });
+      gazdak.push({ blob, tar: await ujTar(), p: await udpParos() });
     }
 
     const vendegHely = await mkdtemp(join(tmpdir(), 'koino-tf-vendeg-'));
@@ -1958,11 +1823,13 @@ proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, 
     const { lenyomat } = await gazdak[0].blob.ir(tartalom);
 
     try {
+      const forrasok = gazdak.map((g) => resForras(g.p, g.tar, (l) => g.blob.olvas(l)));
       // ⭐ A KÖZÖS MUNKAMEGOSZTÁS — ez teszi a három kapcsolatot EGY letöltéssé.
       const munka = ujMunkamegosztas(await vendeg.reszlegesSzeletek(lenyomat));
       const agak = await Promise.all(gazdak.map((g) =>
-        fajlHozatala(vendeg, KOINO, lenyomat,
-          tcpNyito('127.0.0.1', g.figyelo.port, 20000), { munka })));
+        fajlUdpResen(g.p.egyik, '127.0.0.1', g.p.masikPort, vendeg, KOINO, lenyomat,
+          { munka, varakozasiIdo: 20000 })));
+      await Promise.all(forrasok);
 
       const nala = await vendeg.olvas(lenyomat);
       const hozott = agak.reduce((o, a) => o + (a.szeletek ?? 0), 0);
@@ -1970,7 +1837,6 @@ proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, 
 
       return nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom))
         // ⛔ NINCS DUPLIKÁCIÓ: a hat szeletet pontosan hatszor hozták el, nem többször.
-        // *Ez a munkamegosztás kizárólagosságának végponti bizonyítéka.*
         && hozott === 6
         // ⭐ ÉS TÉNYLEG SZÉTTERÜLT: nem egyetlen ág hozta az egészet.
         && dolgozok >= 2
@@ -1979,26 +1845,19 @@ proba('⭐⭐⭐ EGY FÁJL HÁROM FORRÁSBÓL ÁLL ÖSSZE — bájtra azonosan, 
         // ⛔ És nem maradt félkész maradvány.
         && (await vendeg.reszlegesMeret(lenyomat)) === 0;
     } finally {
-      for (const g of gazdak) await g.figyelo.bezar();
+      for (const g of gazdak) g.p.bezar();
     }
   });
 
 proba('⛔⛔ HA EGY FORRÁS ELNÉMUL A SZELETÉVEL, A TÖBBI BEFEJEZI — nincs beragadás',
   async () => {
-    // ⚠️⚠️ ITT A NÉMA TÁRS A LÉNYEG, NEM A HALOTT. Egy zárt portnál a kapcsolat-nyitás
-    // azonnal dob — az ág **szeletet sem kapott**, tehát nincs mit visszaadnia. ⛔ A valódi
-    // eset az, amikor a társ **elfogadja a kapcsolatot, kioszt magának egy szeletet, és
-    // utána hallgat**: ilyenkor az a darab nála „ragad", és ha nem kerül vissza a közösbe,
-    // a fájl SOHA nem lesz kész — pedig a bájtok a másik forrásnál megvannak.
+    // ⚠️⚠️ ITT A NÉMA TÁRS A LÉNYEG: a rés él (a foglalat nyitva), a vendég kioszt magának
+    // egy szeletet, és a társ HALLGAT. Ha az a darab nem kerül vissza a közösbe, a fájl SOHA
+    // nem lesz kész — pedig a bájtok a másik forrásnál megvannak.
     //
     // ⭐ Ezért van a próbán IDŐKORLÁT: a beragadás így **bukásként** jelenik meg, nem
     // végtelen várakozásként. *A legrosszabb hiba a nem-esemény (25. mérés).*
-    const { mkdtemp } = await import('node:fs/promises');
-    const { tmpdir } = await import('node:os');
-    const { join } = await import('node:path');
-    const { createServer } = await import('node:net');
     const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
-    const { fajlHozatala, tcpNyito, figyeloIndulasa } = await import('../js/csere/vonal.js');
     const { ujMunkamegosztas, SZELET_MERET } = await import('../js/csere/fajlAtvitel.js');
 
     const tartalom = new Uint8Array(3 * SZELET_MERET);
@@ -2012,21 +1871,17 @@ proba('⛔⛔ HA EGY FORRÁS ELNÉMUL A SZELETÉVEL, A TÖBBI BEFEJEZI — nincs
     const { lenyomat } = await joBlob.ir(tartalom);
     const vendeg = fajlBlobTarolo(KOINO, vendegHely);
 
-    const figyelo = await figyeloIndulasa(await ujTar(), KOINO, 0,
-      { fajlOlvas: (l) => joBlob.olvas(l) });
-
-    // A NÉMA forrás: elfogadja a kapcsolatot, és soha nem felel.
-    const nemaKapcsolatok = [];
-    const nema = createServer((k) => nemaKapcsolatok.push(k));
-    await new Promise((t) => nema.listen(0, '127.0.0.1', t));
-
+    const jo = await udpParos();
+    const nema = await udpParos();       // ⛔ a `masik` foglalat NYITVA, de senki nem felel rajta
+    const joTar = await ujTar();
     try {
+      const forras = resForras(jo, joTar, (l) => joBlob.olvas(l));
       const munka = ujMunkamegosztas();
       const munkak = Promise.all([
-        fajlHozatala(vendeg, KOINO, lenyomat,
-          tcpNyito('127.0.0.1', figyelo.port, 20000), { munka }),
-        fajlHozatala(vendeg, KOINO, lenyomat,
-          tcpNyito('127.0.0.1', nema.address().port, 2000), { munka })
+        fajlUdpResen(jo.egyik, '127.0.0.1', jo.masikPort, vendeg, KOINO, lenyomat,
+          { munka, varakozasiIdo: 20000 }),
+        fajlUdpResen(nema.egyik, '127.0.0.1', nema.masikPort, vendeg, KOINO, lenyomat,
+          { munka, varakozasiIdo: 2000 })
           .catch(() => ({ kesz: false, szeletek: 0 }))
       ]);
 
@@ -2035,15 +1890,15 @@ proba('⛔⛔ HA EGY FORRÁS ELNÉMUL A SZELETÉVEL, A TÖBBI BEFEJEZI — nincs
         new Promise((t) => setTimeout(() => t('BERAGADT'), 25000))
       ]);
       if (eredmeny === 'BERAGADT') return false;
+      await forras;
 
-      const [jo, halgato] = eredmeny;
+      const [joAg, hallgato] = eredmeny;
       const nala = await vendeg.olvas(lenyomat);
-      return jo.kesz === true && halgato.kesz === false
+      return joAg.kesz === true && hallgato.kesz === false
         && nala !== null && Buffer.from(nala).equals(Buffer.from(tartalom));
     } finally {
-      for (const k of nemaKapcsolatok) k.destroy();
-      nema.close();
-      await figyelo.bezar();
+      jo.bezar();
+      nema.bezar();
     }
   });
 
@@ -2051,7 +1906,7 @@ export async function takaritas() {
   for (const mappa of mappak) await rm(mappa, { recursive: true, force: true });
 }
 
-// ===== ⭐⭐ A FRISS UDP-CÍM ÁTMEGY A CSERÉN (2026-09-18) =====
+// ===== ⭐⭐ A FRISS UDP-CÍM ÁTMEGY A CSERÉN (2026-09-18; 2026-09-26 óta a résen) =====
 //
 // ⛔ MIÉRT VALÓDI CSERÉVEL, ÉS NEM A TISZTA FÜGGVÉNNYEL? Mert a tiszta próba azt méri,
 // hogy KI TUDJUK SZÁMOLNI a kort — nem azt, hogy a `CIMEK` üzenet tényleg viszi is.
@@ -2060,19 +1915,14 @@ proba('⭐ A friss UDP-cím átmegy a cserén, és a kora is', async () => {
   const mienk = await ujTar();
   const ove = await ujTar();
 
-  // A figyelő (postaláda) hirdet egy friss UDP-címet — 30 másodperce mérte.
-  const figyelo = await figyeloIndulasa(ove, KOINO, 0, {
-    hoszt: '127.0.0.1',
-    udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 30 }]
+  // A túloldal (pl. egy postaláda) hirdet egy friss UDP-címet — 30 másodperce mérte.
+  // ⚠️ Függvényként: a postaláda hosszan fut, és a lista ablakonként más.
+  const eredmeny = await csereDroton(mienk, ove, '127.0.0.1', {
+    masikBeallitas: { udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 30 }] }
   });
-  try {
-    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port);
-    const kapott = eredmeny.kapottUdpCimek ?? [];
-    return kapott.length === 1 && kapott[0].hoszt === '10.9.9.9'
-      && kapott[0].port === 41234 && kapott[0].kor === 30;
-  } finally {
-    await figyelo.bezar();
-  }
+  const kapott = eredmeny.kapottUdpCimek ?? [];
+  return kapott.length === 1 && kapott[0].hoszt === '10.9.9.9'
+    && kapott[0].port === 41234 && kapott[0].kor === 30;
 });
 
 // ⚠️ A MÁSIK IRÁNY IS KELL, ÉS EZ A LÉNYEG (Csaba, 2026-09-18): a szűrés miatt nem elég,
@@ -2082,40 +1932,23 @@ proba('⭐⭐ A cím MINDKÉT irányban megy — a kopogáshoz ez a feltétel', 
   const mienk = await ujTar();
   const ove = await ujTar();
 
-  let figyeloKapott = null;
-  const figyelo = await figyeloIndulasa(ove, KOINO, 0, {
-    hoszt: '127.0.0.1',
-    udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 5 }],
-    utana: (e) => { figyeloKapott = e.kapottUdpCimek; }
+  const eredmeny = await csereDroton(mienk, ove, '127.0.0.1', {
+    egyikBeallitas: { udpCimek: [{ hoszt: '10.8.8.8', port: 40000, kor: 7 }] },
+    masikBeallitas: { udpCimek: () => [{ hoszt: '10.9.9.9', port: 41234, kor: 5 }] }
   });
-  try {
-    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port, 10000, [], {},
-      [{ hoszt: '10.8.8.8', port: 40000, kor: 7 }]);
-    // Kis türelem: a figyelő `utana`-ja a kapcsolat lezárása után fut le.
-    for (let i = 0; i < 50 && figyeloKapott === null; i++) {
-      await new Promise((kesz) => setTimeout(kesz, 20));
-    }
-    return (eredmeny.kapottUdpCimek ?? []).length === 1
-      && Array.isArray(figyeloKapott) && figyeloKapott.length === 1
-      && figyeloKapott[0].hoszt === '10.8.8.8' && figyeloKapott[0].kor === 7;
-  } finally {
-    await figyelo.bezar();
-  }
+  const masikKapta = eredmeny.masikEredmenye.kapottUdpCimek ?? [];
+  return (eredmeny.kapottUdpCimek ?? []).length === 1
+    && masikKapta.length === 1 && masikKapta[0].hoszt === '10.8.8.8' && masikKapta[0].kor === 7;
 });
 
-// ⚠️ VISSZAFELÉ OLVASHATÓSÁG: egy régebbi társ nem küld `udp` mezőt — ettől a csere
-// ugyanúgy lefut, csak nem tanulunk friss címet. *Romlás, nem törés* (D19).
-proba('A régebbi társ (nincs udp mező) nem töri el a cserét', async () => {
+// ⚠️ ÜRES JEGYZÉKKEL: a csere ugyanúgy lefut, csak nem tanulunk friss címet. *Romlás, nem
+// törés* (D19).
+proba('Üres UDP-jegyzékkel sem törik el a csere', async () => {
   const mienk = await ujTar();
   const ove = await ujTar();
 
-  const figyelo = await figyeloIndulasa(ove, KOINO, 0, { hoszt: '127.0.0.1' });
-  try {
-    const eredmeny = await csereVonalon(mienk, KOINO, '127.0.0.1', figyelo.port);
-    return eredmeny.korok >= 1 && (eredmeny.kapottUdpCimek ?? []).length === 0;
-  } finally {
-    await figyelo.bezar();
-  }
+  const eredmeny = await csereDroton(mienk, ove);
+  return eredmeny.korok >= 1 && (eredmeny.kapottUdpCimek ?? []).length === 0;
 });
 
 export default async function (csendes) {

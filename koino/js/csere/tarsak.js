@@ -17,10 +17,10 @@
 // az nem hiba, hanem a normális működés. Párban mérve a siker ~70% volt; több társnál
 // ez 99% fölé megy — nem okosságból, hanem mert 0,3 az ötödiken már 0,002.
 //
-// ⚠️ NINCS BENNE HÁLÓZAT (1. szabály). A `korbeCsere` a cserét VÉGZŐ FÜGGVÉNYT kapja meg
-// kívülről, nem a `vonal.js`-t importálja. Így ez a réteg ugyanúgy önpróbázható két
-// folyamat és két gép nélkül, mint a `csere.js` — és ha a szállítás egyszer pendrive vagy
-// rádió lesz, ez a fájl változatlan marad.
+// ⚠️ NINCS BENNE HÁLÓZAT (1. szabály). A kopogás a kapué (`udpKapu.js`); ez a réteg csak a
+// listát kezeli és könyvel (`kopogasMegfigyelesei`). Így ugyanúgy önpróbázható két folyamat
+// és két gép nélkül, mint a `csere.js` — és ha a szállítás egyszer pendrive vagy rádió
+// lesz, ez a fájl változatlan marad.
 //
 // ⚠️ NINCS BENNE ÓRA-FÜGGÉS SEM, ami számítana. A `utoljara` és a `sikertelen` mező HELYI
 // MEGFIGYELÉS: soha nem megy át a hálózaton, soha nem kerül eseménybe, és soha nem dönt el
@@ -28,7 +28,7 @@
 // amiről a terv 3. iránya kimondta: a „mikor kaptam meg" sehol nincs rögzítve, tehát
 // konszenzusra alkalmatlan — itt viszont épp ezért ártalmatlan.)
 //
-// Használják: koino.js (`tarsak`, `tars`, `csere` parancsok) és a tarsakProba.js.
+// Használják: koino.js (`tarsak`, `tars`, `csere`, `orjarat`) és a tarsakProba.js.
 
 // ===================================
 // A LISTA KEZELÉSE — tiszta függvények
@@ -118,7 +118,7 @@ export function sajatCimE(hoszt, sajatCimek = []) {
  * ⚠️ AZ ÁRA KIMONDVA: a velünk egy NAT-on lévő társat ezután megpróbáljuk hívni, és lehet,
  * hogy a hívás nem megy át (a saját routerünkön magunk felé fordulni külön képesség —
  * *hairpinning* —, amit sok router nem tud). ⭐ Akkor a társ „sikertelen"-ként jegyződik,
- * és a kör megy tovább: *ez a `korbeCsere` alapviselkedése, nem hiba.*
+ * és a kör megy tovább: *ez a kör alapviselkedése, nem hiba.*
  *
  * @param {Array} kapott
  * @param {string[]} sajatCimek - a saját GÉPÜNK interfész-címei (port nélkül szűrnek)
@@ -213,80 +213,42 @@ export function tarsakSorrendje(lista) {
 }
 
 // ===================================
-// A KÖR — végigmenni a listán
+// A KÖR MEGFIGYELÉSEI — a kopogás eredményéből (D69/2, 2026-09-26)
 // ===================================
+//
+// ⚠️ ITT ÁLLT 2026-09-26-IG A `korbeCsere`: a lista EGYMÁS UTÁNI végighívása (a TCP-kör),
+// halott címenként 10 mp várakozással (41. mérés). ⭐ A D69/2 óta a kör az állandó UDP-kapun
+// fut: MINDEN célra egyszerre kopogunk (`udpKapu.js` → `kopog`), és egy társ bukása ott sem
+// dönti el a kört. Ami ebből a rétegből megmaradt, az a KÖNYVELÉS: ki felelt, ki nem.
 
 /**
- * Végigpróbálja a társakat, és mindegyikkel megkísérli a cserét.
+ * A kopogás eredményeiből a lista MEGFIGYELÉSEI — a `megfigyelesekRavezetese` bemenete.
  *
- * ⭐ AMI ITT A LÉNYEG: EGY TÁRS BUKÁSA NEM HIBA. A régi `csere <cím>` parancsnál a
- * sikertelen kapcsolat az egész műveletet elbuktatta — ezért függött minden egyetlen
- * címen (a 2. szabály megsértése). Itt minden hiba elkapódik, feljegyződik, és megyünk
- * a következőre. A kör akkor is „sikeres", ha csak egyetlen társ vette fel.
+ * ⭐ CSAK A LISTÁRÓL JÖTT CÉLOK: a kapu a kötésekre és a friss UDP-címekre is kopog, de
+ * azok könyvelése a saját jegyzékükben van. ⭐ A `cel` az EREDETI cím, amire kopogtunk —
+ * ha a társ más portról felelt (mobil portváltás), a könyvelés akkor is a listás bejegyzést
+ * frissíti, amiből a kopogás indult.
  *
- * ⚠️ NEM állunk meg az első sikernél. A D33 szerint a cél az ÖSSZEFÜGGŐSÉG: minél több
- * társsal cseréltünk, annál nehezebb kettészakadni. A `legfeljebb` viszont korlátoz, mert
- * a csere ára befogadási kérdés (D35) — egy mobilos e-embernek nem mindegy.
+ * ⚠️ A siker nullázza a bukás-számlálót és feljegyzi az időt; a bukás növeli a számlálót,
+ * de az utolsó sikert nem törli (a rávezetés úgyis a frissebbet tartja meg, 2026-09-23).
  *
- * @param {Array<Object>} lista - a társak
- * @param {(tars: Object) => Promise<{uj: number, kuldott: number, korok: number}>} csereVegzo
- * @param {{legfeljebb?: number, utana?: Function, most?: number}} [beallitas]
- * ⚠️⚠️ A VISSZAADOTT `lista` A KÖR ELEJI KÉP — ne írd ki vakon (2026-09-22). Amíg a kör
- * fut, a postaláda-ág ÚJ társat vehetett fel; a kör eleji képet kiírva az elveszne.
- * ⭐ Ezért ad vissza `megfigyelesek`-et is: azt kell **rávezetni** a friss listára
- * (`megfigyelesekRavezetese`), és a kettő együtt az igazság.
- *
- * @returns {Promise<{lista: Array<Object>, megfigyelesek: Array<Object>, eredmenyek: Array<Object>, sikeres: number, uj: number, kuldott: number}>}
+ * @param {Array<Object>} lista - a társ-lista, ahogy a kör ELEJÉN volt
+ * @param {Array<{cel: {cim: string, port: number}, ok: boolean}>} eredmenyek - a `kopog` eredményei
+ * @param {number} [most]
+ * @returns {Array<Object>} megfigyelések (a lista soraiból, frissített mezőkkel)
  */
-export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
-  console.log('korbeCsere - KEZDÉS', { tarsak: lista.length });
-
-  const legfeljebb = beallitas.legfeljebb ?? Infinity;
-  const most = beallitas.most ?? Date.now();
-
-  const sorrend = tarsakSorrendje(lista).slice(0, legfeljebb);
-  const eredmenyek = [];
-  const frissitve = new Map();
-
-  for (const tars of sorrend) {
-    let eredmeny;
-    try {
-      const valasz = await csereVegzo(tars);
-      eredmeny = { tars, sikerult: true, ...valasz };
-      frissitve.set(kulcs(tars.hoszt, tars.port), { ...tars, utoljara: most, sikertelen: 0 });
-    } catch (hiba) {
-      // ⭐ Itt NEM dobunk tovább. Egy elérhetetlen társ a normális működés, nem hiba.
-      eredmeny = { tars, sikerult: false, hiba: hiba.message };
-      frissitve.set(kulcs(tars.hoszt, tars.port), {
-        ...tars, sikertelen: (tars.sikertelen ?? 0) + 1
-      });
-    }
-
-    eredmenyek.push(eredmeny);
-    if (beallitas.utana) beallitas.utana(eredmeny);
+export function kopogasMegfigyelesei(lista, eredmenyek, most = Date.now()) {
+  const szerint = new Map((lista ?? []).map((t) => [kulcs(t.hoszt, Number(t.port)), t]));
+  const megfigyelesek = [];
+  for (const e of eredmenyek ?? []) {
+    if (!e?.cel) continue;
+    const t = szerint.get(kulcs(e.cel.cim, Number(e.cel.port)));
+    if (!t) continue;
+    megfigyelesek.push(e.ok
+      ? { ...t, utoljara: most, sikertelen: 0 }
+      : { ...t, sikertelen: (t.sikertelen ?? 0) + 1 });
   }
-
-  // A ki nem próbáltak (a `legfeljebb` miatt kimaradtak) változatlanul maradnak.
-  const ujLista = lista.map((t) => frissitve.get(kulcs(t.hoszt, t.port)) ?? t);
-
-  const osszegzes = {
-    lista: ujLista,
-    // ⭐ AMIT A KÖR MEGFIGYELT — és CSAK az: kivel sikerült, kivel nem. *A friss listára
-    // ezt kell rávezetni, nem a kör eleji képet ráírni.*
-    megfigyelesek: [...frissitve.values()],
-    eredmenyek,
-    sikeres: eredmenyek.filter((e) => e.sikerult).length,
-    uj: eredmenyek.reduce((ossz, e) => ossz + (e.uj ?? 0), 0),
-    kuldott: eredmenyek.reduce((ossz, e) => ossz + (e.kuldott ?? 0), 0),
-    // ⭐ A kör TELJES adatforgalma (D35): ez az a szám, ami a mobilos e-ember számláján
-    // megjelenik — és ami miatt a kör `legfeljebb` korlátot kapott.
-    bajt: eredmenyek.reduce((ossz, e) => ossz + (e.bajtKuldott ?? 0) + (e.bajtKapott ?? 0), 0)
-  };
-
-  console.log('korbeCsere - VÉGE', {
-    sikeres: osszegzes.sikeres, probalt: eredmenyek.length, uj: osszegzes.uj
-  });
-  return osszegzes;
+  return megfigyelesek;
 }
 
 /**
@@ -294,7 +256,7 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
  *
  * ===== A HIBA, AHOGY ELŐKERÜLT =====
  *
- * Az őrjárat a kör ELEJÉN olvasta a társ-listát, a kör VÉGÉN pedig a `korbeCsere`
+ * Az őrjárat a kör ELEJÉN olvasta a társ-listát, a kör VÉGÉN pedig a (2026-09-26-ig élő) `korbeCsere`
  * visszaadta (kör eleji) képet írta ki egészben. ⛔ Közben a postaláda-ág egy bekopogótól
  * ÚJ címet tanult — a kör végi írás **csendben elsöpörte**. ⭐ Mérve: a napló kiírta,
  * hogy *„+1 cím"*, a `tarsak.json`-ból a kör után mégis hiányzott.
@@ -308,7 +270,7 @@ export async function korbeCsere(lista, csereVegzo, beallitas = {}) {
  * csak mellékterméke a körnek. *Nem szabad, hogy egy kör feltámassza, amit a kéz levett.*
  *
  * @param {Array<Object>} friss - ami ÉPP a lemezen van
- * @param {Array<Object>} megfigyelesek - a `korbeCsere` `megfigyelesek` mezője
+ * @param {Array<Object>} megfigyelesek - a `kopogasMegfigyelesei` eredménye
  * @returns {Array<Object>} a frissített lista
  */
 export function megfigyelesekRavezetese(friss, megfigyelesek) {

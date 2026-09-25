@@ -12,15 +12,15 @@
 // próbák közül a legfontosabb az, amelyik ELRONTJA az első társat, és megnézi, hogy a
 // többi attól még megkapja-e az eseményeket.
 //
-// ⚠️ HÁLÓZAT NÉLKÜL MÉRÜNK. A `korbeCsere` a cserét végző függvényt KÍVÜLRŐL kapja, ezért
-// itt hamis cserékkel dolgozunk: van, amelyik sikerül, van, amelyik dob. Így a kör-logika
-// TCP, portok és két folyamat nélkül mérhető — és nem is a hálózatot akarjuk mérni.
+// ⚠️ HÁLÓZAT NÉLKÜL MÉRÜNK. A kör könyvelése (`kopogasMegfigyelesei`) a kapu eredményeit
+// kapja KÍVÜLRŐL, ezért itt kézzel írt eredményekkel dolgozunk: van, amelyik sikerült, van,
+// amelyik nem. Így a logika portok és két folyamat nélkül mérhető.
 //
 // Futtatás: node koino/meres/mind.js tarsak
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
-  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere, megfigyelesekRavezetese,
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, kopogasMegfigyelesei, megfigyelesekRavezetese,
   cimNormalizalasa, sajatCimE, sajatCimekKiszurese,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
   SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT,
@@ -29,14 +29,6 @@ import {
 } from '../js/csere/tarsak.js';
 
 const { proba, futtatas } = probaGyujtemeny('A társ-lista próbája');
-
-// ===== SEGÉD: hamis csere, ami mindig sikerül, és feljegyzi, kivel hívták meg =====
-function sikeresCsere(naplo) {
-  return async (tars) => {
-    naplo.push(tars.hoszt);
-    return { uj: 1, kuldott: 2, korok: 3 };
-  };
-}
 
 // ===================================
 // A LISTA KEZELÉSE
@@ -146,83 +138,82 @@ proba('A rendezés NEM írja át az eredeti listát', () => {
 });
 
 // ===================================
-// A KÖR — ez a lépés lényege
+// A KÖR KÖNYVELÉSE — a kopogás eredményéből (D69/2, 2026-09-26)
 // ===================================
+//
+// ⚠️ ITT ÁLLT 2026-09-26-IG TIZENKÉT PRÓBA A `korbeCsere`-RŐL (a lista egymás utáni
+// végighívása, a TCP-kör). A D69/2 óta a kör a kapun fut, minden célra egyszerre (a kapu
+// próbái: `udpKapuProba.js`; a teljes kör: `parancssorProba.js`). ⭐ Ami ebből a rétegből
+// maradt, az a KÖNYVELÉS — és a lényeg ugyanaz: EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT.
 
-proba('A kör mindenkivel megpróbálja a cserét', async () => {
-  const megszolitva = [];
-  const lista = [{ hoszt: 'a', port: 1 }, { hoszt: 'b', port: 1 }, { hoszt: 'c', port: 1 }];
-  const kor = await korbeCsere(lista, sikeresCsere(megszolitva));
-  return megszolitva.length === 3 && kor.sikeres === 3;
+/** Egy kopogás-eredmény a kapu alakjában: a `cel` az, amire kopogtunk. */
+const eredmeny = (hoszt, port, ok, felelt = null) => ({
+  cel: { cim: hoszt, port },
+  cim: felelt?.cim ?? hoszt, port: felelt?.port ?? port, ok
 });
 
-proba('⭐⭐ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — a többivel megvan a csere', async () => {
-  // Ez az a próba, amiért az egész A. lépés megszületett. A régi `csere <cím>` itt
-  // elszállt volna, és a másik két társ SOHA nem kapja meg az eseményeket.
-  const megszolitva = [];
+proba('A siker feljegyződik, és a bukás-számláló NULLÁZÓDIK', () => {
+  const lista = [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 7 }];
+  const m = kopogasMegfigyelesei(lista, [eredmeny('a', 1, true)], 12345);
+  return m.length === 1 && m[0].utoljara === 12345 && m[0].sikertelen === 0;
+});
+
+proba('A bukás NÖVELI a számlálót, de az utolsó sikert nem törli', () => {
+  const lista = [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }];
+  const m = kopogasMegfigyelesei(lista, [eredmeny('a', 1, false)], 9999);
+  return m[0].sikertelen === 3 && m[0].utoljara === 5000;
+});
+
+proba('⭐⭐ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — a többi sikere feljegyződik', () => {
   const lista = [
     { hoszt: 'halott', port: 1, utoljara: null, sikertelen: 0 },
     { hoszt: 'elo1', port: 1, utoljara: null, sikertelen: 0 },
     { hoszt: 'elo2', port: 1, utoljara: null, sikertelen: 0 }
   ];
-
-  const kor = await korbeCsere(lista, async (t) => {
-    if (t.hoszt === 'halott') throw new Error('ECONNREFUSED');
-    megszolitva.push(t.hoszt);
-    return { uj: 2, kuldott: 1, korok: 2 };
-  });
-
-  return megszolitva.length === 2          // a két élő társ megkapta
-    && kor.sikeres === 2
-    && kor.eredmenyek.length === 3         // a halottat is megpróbáltuk
-    && kor.uj === 4;                       // 2 + 2 új esemény
+  const m = kopogasMegfigyelesei(lista,
+    [eredmeny('halott', 1, false), eredmeny('elo1', 1, true), eredmeny('elo2', 1, true)], 7);
+  const szerint = new Map(m.map((t) => [t.hoszt, t]));
+  return m.length === 3
+    && szerint.get('halott').sikertelen === 1
+    && szerint.get('elo1').utoljara === 7 && szerint.get('elo2').utoljara === 7;
 });
 
-proba('⭐ A NULLA SIKER sem dob hibát — csak nem terjedt semmi', async () => {
-  // A koino ettől még működik: helyben minden művelet mehet tovább.
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1 }, { hoszt: 'b', port: 1 }],
-    async () => { throw new Error('nincs hálózat'); }
-  );
-  return kor.sikeres === 0 && kor.eredmenyek.length === 2 && kor.uj === 0;
+proba('⭐ CSAK A LISTÁRÓL JÖTT CÉLOKAT könyveli — a kötések és a friss címek nem ide tartoznak', () => {
+  // ⚠️ A kapu a kötésekre és a friss UDP-címekre is kopog; azok könyvelése a saját
+  // jegyzékükben van. *Egy friss cím sikere nem kerülhet fel a te listádra.*
+  const lista = [{ hoszt: 'a', port: 1 }];
+  const m = kopogasMegfigyelesei(lista, [eredmeny('a', 1, true), eredmeny('kotes', 9, true)], 7);
+  return m.length === 1 && m[0].hoszt === 'a';
 });
 
-proba('A bukás OKA megmarad (a hibaüzenet kiírható)', async () => {
-  const kor = await korbeCsere([{ hoszt: 'a', port: 1 }], async () => {
-    throw new Error('ECONNREFUSED');
-  });
-  return kor.eredmenyek[0].sikerult === false && kor.eredmenyek[0].hiba === 'ECONNREFUSED';
+proba('⭐ A PORTVÁLTÁS a CÉLHOZ kötődik — a listás bejegyzés frissül, nem egy új', () => {
+  // ⚠️ A mobil NAT portot válthat (32. mérés): a társ más portról felel. A könyvelés azt a
+  // bejegyzést frissíti, AMIBŐL a kopogás indult.
+  const lista = [{ hoszt: '10.0.0.5', port: 7373, sikertelen: 2 }];
+  const m = kopogasMegfigyelesei(lista,
+    [eredmeny('10.0.0.5', 7373, true, { cim: '10.0.0.5', port: 41000 })], 7);
+  return m.length === 1 && m[0].port === 7373 && m[0].utoljara === 7 && m[0].sikertelen === 0;
 });
 
-proba('A siker feljegyződik, és a bukás-számláló NULLÁZÓDIK', async () => {
-  const lista = [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 7 }];
-  const kor = await korbeCsere(lista, sikeresCsere([]), { most: 12345 });
-  return kor.lista[0].utoljara === 12345 && kor.lista[0].sikertelen === 0;
-});
-
-proba('A bukás NÖVELI a számlálót, de az utolsó sikert nem törli', async () => {
-  const lista = [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }];
-  const kor = await korbeCsere(lista, async () => { throw new Error('x'); });
-  return kor.lista[0].sikertelen === 3 && kor.lista[0].utoljara === 5000;
-});
+proba('Üres eredménnyel nincs megfigyelés (és nem is dob)', () =>
+  kopogasMegfigyelesei([{ hoszt: 'a', port: 1 }], []).length === 0
+  && kopogasMegfigyelesei([], undefined).length === 0);
 
 // ===================================
 // ⛔⛔⛔ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA (2026-09-22)
 // ===================================
 //
 // ⛔ MIÉRT SZÜLETETT: az őrjárat a kör eleji listát írta ki a kör végén, és ezzel
-// elsöpörte, amit a postaláda-ág közben tanult (mérve: a napló „+1 cím"-et írt, a
-// lemezen mégsem volt ott). ⭐ A válasz nem zárolás, hanem szerkezet: a kör csak
-// MEGFIGYEL, a friss listára pedig RÁVEZETÜNK.
+// elsöpörte, amit egy másik ág közben írt (mérve: a napló „+1 cím"-et írt, a lemezen
+// mégsem volt ott). ⭐ A válasz nem zárolás, hanem szerkezet: a kör csak MEGFIGYEL, a friss
+// listára pedig RÁVEZETÜNK. *2026-09-26 óta a megfigyelés a kopogásból jön.*
 
-proba('⭐⭐ A MEGFIGYELÉS RÁSZÁLL A FRISS SORRA — a megfigyelés-mezők átjönnek', async () => {
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 3 }],
-    sikeresCsere([]), { most: 12345 }
-  );
+proba('⭐⭐ A MEGFIGYELÉS RÁSZÁLL A FRISS SORRA — a megfigyelés-mezők átjönnek', () => {
+  const m = kopogasMegfigyelesei([{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 3 }],
+    [eredmeny('a', 1, true)], 12345);
   // A friss lemezkép: ugyanaz a társ, de közben a kéz NEVET adott neki.
   const friss = [{ hoszt: 'a', port: 1, utoljara: null, sikertelen: 3, nev: 'Anna gépe' }];
-  const uj = megfigyelesekRavezetese(friss, kor.megfigyelesek);
+  const uj = megfigyelesekRavezetese(friss, m);
 
   return uj.length === 1
     && uj[0].utoljara === 12345        // a kör megfigyelése átjött
@@ -230,53 +221,43 @@ proba('⭐⭐ A MEGFIGYELÉS RÁSZÁLL A FRISS SORRA — a megfigyelés-mezők �
     && uj[0].nev === 'Anna gépe';      // ⭐ …és a frissen írt mezőt NEM tapostuk le
 });
 
-proba('⛔⛔ A KÖR ALATT FELVETT ÚJ TÁRS MEGMARAD — ez az elveszett írás magja', async () => {
-  const kor = await korbeCsere([{ hoszt: 'regi', port: 1 }], sikeresCsere([]), { most: 7 });
-  // Közben a postaláda-ág egy bekopogótól tanult egy címet:
-  const friss = [{ hoszt: 'regi', port: 1 }, { hoszt: 'kozben-tanult', port: 2 }];
-  const uj = megfigyelesekRavezetese(friss, kor.megfigyelesek);
+proba('⛔⛔ A KÖR ALATT FELVETT ÚJ TÁRS MEGMARAD — ez az elveszett írás magja', () => {
+  const m = kopogasMegfigyelesei([{ hoszt: 'regi', port: 1 }], [eredmeny('regi', 1, true)], 7);
+  // Közben a kéz (`tars`) felvett egy címet:
+  const friss = [{ hoszt: 'regi', port: 1 }, { hoszt: 'kozben-felvett', port: 2 }];
+  const uj = megfigyelesekRavezetese(friss, m);
 
   return uj.length === 2
-    && uj.some((t) => t.hoszt === 'kozben-tanult')
+    && uj.some((t) => t.hoszt === 'kozben-felvett')
     && uj.find((t) => t.hoszt === 'regi').utoljara === 7;
 });
 
-proba('⛔ AMIT A KÉZ LEVETT, AZT A KÖR NEM TÁMASZTJA FEL', async () => {
+proba('⛔ AMIT A KÉZ LEVETT, AZT A KÖR NEM TÁMASZTJA FEL', () => {
   // ⚠️ A `tars torol` kimondott emberi tett; a megfigyelés csak a kör mellékterméke.
   // *Egy sorrend-frissítés nem hozhat vissza valakit, akit szándékosan levettünk.*
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1 }, { hoszt: 'torolt', port: 2 }], sikeresCsere([]), { most: 7 }
-  );
-  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1 }], kor.megfigyelesek);
+  const m = kopogasMegfigyelesei([{ hoszt: 'a', port: 1 }, { hoszt: 'torolt', port: 2 }],
+    [eredmeny('a', 1, true), eredmeny('torolt', 2, true)], 7);
+  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1 }], m);
   return uj.length === 1 && uj[0].hoszt === 'a';
 });
 
-proba('⛔ A SIKERTELEN KÖR NEM TÖRLI a frissen szerzett sikert', async () => {
-  // ⚠️ EZ A SAJÁT JAVÍTÁSOM ÉLE, ÉS KÜLÖN KELL MÉRNI (a rontás-próba mutatta meg, hogy
-  // e nélkül a `utoljara` óvatos kezelése mérhetetlen ág maradt volna).
-  //
-  // ⛔ AZ ESET: a kör indulásakor a társsal még sose sikerült a csere, és most sem
-  // sikerül — a megfigyelés `utoljara`-ja tehát ÜRES. Közben viszont egy másik ágon
-  // (a postaláda) épp sikerült vele beszélni, és a friss soron már ott az idő.
-  // *Egy üres érték ráírása TÖRÖLNÉ a frissen szerzett sikert — és a társ a sorrend
-  // végére csúszna, pedig ő a legfrissebb.*
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1 }], async () => { throw new Error('nem megy'); }
-  );
-  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1, utoljara: 999 }], kor.megfigyelesek);
+proba('⛔ A SIKERTELEN KÖR NEM TÖRLI a frissen szerzett sikert', () => {
+  // ⚠️ AZ ESET: a kör indulásakor a társsal még sose sikerült, és most sem sikerül — a
+  // megfigyelés `utoljara`-ja tehát ÜRES. Közben viszont egy másik ágon (a postaláda) épp
+  // sikerült vele beszélni, és a friss soron már ott az idő.
+  // *Egy üres érték ráírása TÖRÖLNÉ a frissen szerzett sikert.*
+  const m = kopogasMegfigyelesei([{ hoszt: 'a', port: 1 }], [eredmeny('a', 1, false)]);
+  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1, utoljara: 999 }], m);
   return uj[0].utoljara === 999 && uj[0].sikertelen === 1;
 });
 
-proba('⛔ …és egy RÉGI siker-időt sem ír a frissebbre (2026-09-23)', async () => {
+proba('⛔ …és egy RÉGI siker-időt sem ír a frissebbre (2026-09-23)', () => {
   // ⛔ AZ ESET: a társsal a kör ELŐTT már sikerült (5000), most nem sikerül — a
   // megfigyelés tehát a kör eleji 5000-et viszi tovább. Közben egy másik ágon újra
   // sikerült (9000). *A régi idő ráírása a frissebb sikert tüntetné el.*
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }],
-    async () => { throw new Error('nem megy'); }
-  );
-  const uj = megfigyelesekRavezetese(
-    [{ hoszt: 'a', port: 1, utoljara: 9000, sikertelen: 0 }], kor.megfigyelesek);
+  const m = kopogasMegfigyelesei([{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }],
+    [eredmeny('a', 1, false)]);
+  const uj = megfigyelesekRavezetese([{ hoszt: 'a', port: 1, utoljara: 9000, sikertelen: 0 }], m);
   return uj[0].utoljara === 9000 && uj[0].sikertelen === 3;
 });
 
@@ -284,58 +265,6 @@ proba('⭐ Megfigyelés nélkül a friss lista VÁLTOZATLAN (nincs kárt okozó 
   const friss = [{ hoszt: 'a', port: 1, nev: 'x' }];
   return megfigyelesekRavezetese(friss, []) === friss
     && megfigyelesekRavezetese(friss, undefined) === friss;
-});
-
-proba('⭐ A kör a SORREND szerint megy: a legutóbb sikeres társ az első', async () => {
-  const megszolitva = [];
-  const lista = [
-    { hoszt: 'hatul', port: 1, utoljara: null, sikertelen: 4 },
-    { hoszt: 'elol', port: 1, utoljara: 9999, sikertelen: 0 }
-  ];
-  await korbeCsere(lista, sikeresCsere(megszolitva));
-  return megszolitva[0] === 'elol';
-});
-
-proba('A `legfeljebb` korlátoz — a csere ára befogadási kérdés (D35)', async () => {
-  const megszolitva = [];
-  const lista = [
-    { hoszt: 'a', port: 1, utoljara: 3, sikertelen: 0 },
-    { hoszt: 'b', port: 1, utoljara: 2, sikertelen: 0 },
-    { hoszt: 'c', port: 1, utoljara: 1, sikertelen: 0 }
-  ];
-  const kor = await korbeCsere(lista, sikeresCsere(megszolitva), { legfeljebb: 2 });
-  return megszolitva.length === 2 && kor.eredmenyek.length === 2;
-});
-
-proba('⭐ A korlát miatt KIMARADT társ adata változatlan marad', async () => {
-  const lista = [
-    { hoszt: 'sorra-kerul', port: 1, utoljara: 9, sikertelen: 0 },
-    { hoszt: 'kimarad', port: 1, utoljara: null, sikertelen: 3 }
-  ];
-  const kor = await korbeCsere(lista, sikeresCsere([]), { legfeljebb: 1 });
-  const kimaradt = kor.lista.find((t) => t.hoszt === 'kimarad');
-  return kor.lista.length === 2 && kimaradt.sikertelen === 3 && kimaradt.utoljara === null;
-});
-
-proba('Az ÜRES listával a kör nem csinál semmit (és nem is dob)', async () => {
-  const kor = await korbeCsere([], sikeresCsere([]));
-  return kor.sikeres === 0 && kor.eredmenyek.length === 0 && kor.lista.length === 0;
-});
-
-proba('A kör ÖSSZEGZI, mennyi eseményt kaptunk és küldtünk', async () => {
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1 }, { hoszt: 'b', port: 1 }],
-    async () => ({ uj: 3, kuldott: 5, korok: 2 })
-  );
-  return kor.uj === 6 && kor.kuldott === 10;
-});
-
-proba('A kör ÖSSZEGZI az ADATFORGALMAT is (D35 — ez a mobilos számlája)', async () => {
-  const kor = await korbeCsere(
-    [{ hoszt: 'a', port: 1 }, { hoszt: 'b', port: 1 }],
-    async () => ({ uj: 0, kuldott: 0, korok: 1, bajtKuldott: 79, bajtKapott: 79 })
-  );
-  return kor.bajt === 316;
 });
 
 // ===== ÖNMAGUNK KISZŰRÉSE — hogy a készülék ne hívogassa saját magát =====

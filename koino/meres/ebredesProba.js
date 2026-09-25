@@ -60,8 +60,9 @@ import { appendFile, readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { alapHely, esemenyTarNyitasa, tarsakTarolo } from '../js/tar/fajlTar.js';
-import { tarsakSorrendje, korbeCsere } from '../js/csere/tarsak.js';
-import { csereVonalon } from '../js/csere/vonal.js';
+import { kopogasMegfigyelesei, megfigyelesekRavezetese } from '../js/csere/tarsak.js';
+// ⭐ 2026-09-26 óta (D69/2) a valódi út a KAPU: az ébredés utáni csere is ezen megy.
+import { udpKapuNyitasa } from '../js/csere/udpKapu.js';
 import { pajzsfuras } from '../js/csere/pajzsfuro.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
 
@@ -102,22 +103,32 @@ async function csereKor(tar, tarolo) {
   const lista = await tarolo.olvas();
   if (!lista.length) return { tarsak: 0, sikeres: 0, uj: 0, kuldott: 0, bajt: 0 };
 
-  const hirdetjuk = tarsakSorrendje(lista).map((t) => ({ hoszt: t.hoszt, port: t.port }));
-
-  const kor = await korbeCsere(lista,
-    (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, IDOKORLAT_MS, hirdetjuk));
+  // ⭐ A kapu a mérés idejére nyílik (a rendszer adta porton — egy futó őrjárat mellett is).
+  const kapu = await udpKapuNyitasa({
+    port: 0, bekopogoKorlat: 0,
+    munka: (halo, t) => csereUdpResen(halo, t.cim, t.port, tar, KOINO,
+      { varakozasiIdo: IDOKORLAT_MS })
+  });
+  let kor;
+  try {
+    kor = await kapu.kopog(lista.map((t) => ({ cim: t.hoszt, port: Number(t.port) })),
+      { idokorlat: IDOKORLAT_MS });
+  } finally {
+    kapu.zar();
+  }
 
   // A társ-lista frissül (utoljara / sikertelen) — ez helyi megfigyelés, sosem terjed.
-  await tarolo.ir(kor.lista);
+  await tarolo.modosit((friss) =>
+    megfigyelesekRavezetese(friss, kopogasMegfigyelesei(lista, kor.eredmenyek)));
 
   let sikeres = 0, uj = 0, kuldott = 0, bajt = 0;
   const hibak = [];
   for (const e of kor.eredmenyek) {
-    if (e.sikerult) {
+    if (e.ok) {
       sikeres++;
-      uj += e.uj ?? 0;
-      kuldott += e.kuldott ?? 0;
-      bajt += (e.bajtKuldott ?? 0) + (e.bajtKapott ?? 0);
+      uj += e.eredmeny?.uj ?? 0;
+      kuldott += e.eredmeny?.kuldott ?? 0;
+      bajt += (e.eredmeny?.bajtKuldott ?? 0) + (e.eredmeny?.bajtKapott ?? 0);
     } else if (hibak.length < 3) {
       hibak.push(e.hiba);
     }
@@ -272,7 +283,6 @@ function kovetkezoAblak(ablakMs) {
  */
 async function resUzemmod(cim, tavoliPort, helyiPort, ablakPerc) {
   const tar = await esemenyTarNyitasa(KOINO);
-  const tarolo = tarsakTarolo();
   const ablakMs = Math.round(ablakPerc * 60 * 1000);
 
   // Mennyi ideig fúrjunk EGY ablakban? Az ablak töredéke — a többi idő alvás.
@@ -314,10 +324,8 @@ async function resUzemmod(cim, tavoliPort, helyiPort, ablakPerc) {
       });
 
       if (furas.mindketIrany) {
-        const hirdetjuk = tarsakSorrendje(await tarolo.olvas())
-          .map((t) => ({ hoszt: t.hoszt, port: t.port }));
-        csere = await csereUdpResen(furas.halo, cim, tavoliPort, tar, KOINO,
-          { hirdetettCimek: hirdetjuk });
+        // ⚠️ A TCP-címjegyzék (`hirdetettCimek`) 2026-09-26 óta nem utazik (D69/2).
+        csere = await csereUdpResen(furas.halo, cim, tavoliPort, tar, KOINO);
       }
     } catch (e) {
       hiba = e.message;

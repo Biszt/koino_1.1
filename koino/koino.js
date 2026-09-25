@@ -126,7 +126,7 @@ import {
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
-  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, megfigyelesekRavezetese,
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, megfigyelesekRavezetese, kopogasMegfigyelesei,
   sajatCimekKiszurese, sajatCimE,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
   // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
@@ -1220,25 +1220,7 @@ function keziHibaSzovege(e, cim, port) {
   return 'A csere nem sikerült (' + hol + '): ' + e.hiba;
 }
 
-/**
- * A kopogás eredményeiből a társ-lista megfigyelései — a `megfigyelesekRavezetese` alakjában.
- *
- * ⭐ Csak azok, akik a LISTÁRÓL jöttek (a `cel` szerint): a kötések és a friss címek
- * könyvelése a saját jegyzékükben van. ⚠️ A sikertelen megfigyelés a lista mostani
- * értékéből számol tovább — a rávezetés a frissebbet tartja meg (2026-09-23).
- */
-function tarsMegfigyelesek(lista, eredmenyek, most = Date.now()) {
-  const szerint = new Map(lista.map((t) => [t.hoszt + ':' + Number(t.port), t]));
-  const megfigyelesek = [];
-  for (const e of eredmenyek) {
-    const t = szerint.get(e.cel.cim + ':' + e.cel.port);
-    if (!t) continue;
-    megfigyelesek.push(e.ok
-      ? { ...t, utoljara: most, sikertelen: 0 }
-      : { ...t, sikertelen: (t.sikertelen ?? 0) + 1 });
-  }
-  return megfigyelesek;
-}
+// ⭐ A kopogás könyvelése a `tarsak.js`-ben él (`kopogasMegfigyelesei`) — próbával mérve.
 
 const adatMennyiseg = (eredmeny) => {
   const bajt = (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
@@ -2835,7 +2817,7 @@ try {
           // ⭐ A KÖNYVELÉS: az induló címek közül ki felelt, ki nem — csak az ELSŐ menetből
           // (a többi menet csak az ott sikereseket ismételte). ⚠️ A `modosit()`-on át, és
           // RÁVEZETVE, nem ráírva (2026-09-22): amit a kéz közben felvett, az megmarad.
-          const megfigyelesek = tarsMegfigyelesek(induloLista, elso.eredmenyek);
+          const megfigyelesek = kopogasMegfigyelesei(induloLista, elso.eredmenyek);
           if (megfigyelesek.length) {
             await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, megfigyelesek));
           }
@@ -3514,7 +3496,7 @@ try {
       // ⭐ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA — ugyanaz az őr, mint az őrjáratnál.
       // ⚠️ *Ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
       await tarolo.modosit((friss) =>
-        megfigyelesekRavezetese(friss, tarsMegfigyelesek(lista, kor.eredmenyek)));
+        megfigyelesekRavezetese(friss, kopogasMegfigyelesei(lista, kor.eredmenyek)));
 
       kiir();
       // ⚠️ A NULLA SIKER SEM HIBA: a koino ettől még működik, csak most nem terjedt.

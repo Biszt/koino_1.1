@@ -21,7 +21,7 @@
 //
 // ⭐ ÉS EGY KÉSZÜLÉK ELÉG HOZZÁ — a két port-átíró NAT közötti terepmérés előtt ez megmondja,
 // mit tud EGY vonal. A pajzsfúrás elmélete szerint két **célfüggetlen** leképezésű NAT
-// között a fúrás átmegy; a `tcpLekepezesMeres.js` ezt TCP-re már mérte, UDP-re kontrollként.
+// között a fúrás átmegy; a (2026-09-26 óta törölt) `tcpLekepezesMeres.js` ezt TCP-re már mérte (18. mérés), UDP-re kontrollként.
 //
 // ===== ⭐ A MÉRÉS ALAKJA =====
 //

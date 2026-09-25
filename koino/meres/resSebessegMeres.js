@@ -27,7 +27,7 @@ import { createSocket } from 'node:dgram';
 import { fajlBlobTarolo } from '../js/tar/fajlTar.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import {
-  parbeszed, fajlHozatala, tcpNyito, figyeloIndulasa,
+  parbeszed, fajlHozatala,
   // ⭐ A több forrás méréséhez: a kiszolgáló oldal a VALÓDI éles kód (D68 / 6.).
   fajlKiszolgalas
 } from '../js/csere/vonal.js';
@@ -517,27 +517,8 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
   }
 }
 
-/** Ugyanaz TCP-n — hogy legyen mihez hasonlítani. */
-async function tcpMeres(meret) {
-  const gazda = await ujBlob('ta');
-  const vendeg = await ujBlob('tb');
-
-  const tartalom = new Uint8Array(meret);
-  for (let i = 0; i < meret; i++) tartalom[i] = i % 251;
-  const { lenyomat } = await gazda.ir(tartalom);
-
-  const figyelo = await figyeloIndulasa(await ujTar(), KOINO, 0,
-    { fajlOlvas: (l) => gazda.olvas(l) });
-
-  const kezd = Date.now();
-  try {
-    const e = await fajlHozatala(vendeg, KOINO, lenyomat,
-      tcpNyito('127.0.0.1', figyelo.port));
-    return { kesz: e.kesz, ido: Date.now() - kezd, szeletek: e.szeletek };
-  } finally {
-    await figyelo.bezar();
-  }
-}
+// ⚠️ ITT ÁLLT 2026-09-26-IG A `tcpMeres` (a TCP-viszonyítás sora). A D69/2 óta nincs TCP a
+// készülékek között; a régi TCP-számok a 16. mérésben (`eredmenyek.md`) megvannak.
 
 // ===================================
 // A MÉRÉS
@@ -593,12 +574,11 @@ const sor = (cimke, meret, e) => {
   }
 };
 
-kiir('\n⭐ A FÁJL-ÁTVITEL SEBESSÉGE — TCP vs. az átfúrt rés\n');
+kiir('\n⭐ A FÁJL-ÁTVITEL SEBESSÉGE az átfúrt résen (a TCP-viszonyítás: 16. mérés)\n');
 kiir('  ' + 'mérés'.padEnd(30) + 'méret'.padStart(8) + '        idő      sebesség');
 kiir('  ' + '─'.repeat(72));
 
 for (const meret of [64 * 1024, 256 * 1024]) {
-  sor('TCP (helyben)', meret, await tcpMeres(meret));
   const helyi = await resenMeres(meret);
   alapvonal.set(meret, helyi.csomag.kuldott);      // ⭐ EZ lesz a viszonyítás
   sor('UDP-rés (helyben)', meret, helyi);
