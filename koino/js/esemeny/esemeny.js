@@ -202,39 +202,8 @@ export async function esemenyLetrehozasa(leiras, kulcspar) {
  */
 export async function esemenyEllenorzese(esemeny) {
   // ----- ALAKI ELLENŐRZÉS -----
-  if (!esemeny || typeof esemeny !== 'object') {
-    return { rendben: false, ok: 'nem objektum' };
-  }
-  // ⚠️ A HÁROM ÚJ MEZŐ IS KÖTELEZŐ (2026-08-31). Ez szándékos szigor: a kanonikus alak a
-  // hiányzó mezőt kihagyja, tehát egy régi alakú esemény ÖNMAGÁBAN érvényesnek látszana —
-  // és akkor KÉTFÉLE eseményalak élne egymás mellett. Ki lehetne hagyni a mezőket, hogy a
-  // szabály-réteg ne tudjon rájuk támaszkodni. Egy alak van, nem kettő.
-  // (A `null` érvényes érték: az `entitas: null` azt jelenti, „a saját szeletét nyitja".)
-  for (const mezo of [
-    'koino', 'tipus', 'szerzo', 'sorszam', 'ido',
-    'entitas', 'entitasSorszam', 'latott', 'lancGyoker',
-    'azonosito', 'alairas'
-  ]) {
-    if (esemeny[mezo] === undefined) {
-      return { rendben: false, ok: 'hiányzó mező: ' + mezo };
-    }
-  }
-
-  // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
-  if (esemeny.entitas !== null && typeof esemeny.entitas !== 'string') {
-    return { rendben: false, ok: 'az entitas csak azonosító vagy null lehet' };
-  }
-  if (!Number.isInteger(esemeny.entitasSorszam) || esemeny.entitasSorszam < 1) {
-    return { rendben: false, ok: 'az entitasSorszam csak 1-nél nem kisebb egész lehet' };
-  }
-  if (!Array.isArray(esemeny.latott) || esemeny.latott.some((a) => typeof a !== 'string')) {
-    return { rendben: false, ok: 'a latott csak azonosítók tömbje lehet' };
-  }
-  // ⏸️ A lánc-gyökér egyelőre MINDIG null (lefoglalt hely). Szövegként is átengedjük, hogy
-  // a Szakasz 4 bekapcsolása ne kívánjon itt újabb változtatást.
-  if (esemeny.lancGyoker !== null && typeof esemeny.lancGyoker !== 'string') {
-    return { rendben: false, ok: 'a lancGyoker csak lenyomat vagy null lehet' };
-  }
+  const alaki = alakiHiba(esemeny);
+  if (alaki) return { rendben: false, ok: alaki };
 
   // ----- 1. AZ AZONOSÍTÓ A GONDOLAT LENYOMATA-E? -----
   let ujraszamolt;
@@ -264,6 +233,52 @@ export async function esemenyEllenorzese(esemeny) {
   }
 
   return { rendben: true };
+}
+
+/**
+ * ⭐ AZ ALAKI ELLENŐRZÉS ÖNMAGÁBAN — szinkron és olcsó (2026-09-24, 40. mérés).
+ *
+ * ⛔ MIÉRT VÁLT KÜLÖN: a kapu (`esemenyEllenorzese`) ezt is, a drága részt is (lenyomat +
+ * aláírás) elvégzi. ⭐ A CSERE viszont a SAJÁT tárát nézi, amit egyszer már egy kapu
+ * beengedett — ott az aláírás nem változhatott, csak a SZABÁLY: egy régebbi programmal
+ * tárolt esemény ma alakilag érvénytelen lehet (a 2026-08-31-i három új mező előtti alak).
+ * Az ilyet a csere ne hirdesse és ne küldje: *amit egyetlen mai kapu sem enged be, az a mai
+ * protokoll számára nem létezik.* Egy szabály, két hívó — különben elcsúszhatnának.
+ *
+ * @param {Object} esemeny
+ * @returns {string|null} a hiba oka, vagy `null`, ha alakilag rendben van
+ */
+export function alakiHiba(esemeny) {
+  if (!esemeny || typeof esemeny !== 'object') return 'nem objektum';
+  // ⚠️ A HÁROM ÚJ MEZŐ IS KÖTELEZŐ (2026-08-31). Ez szándékos szigor: a kanonikus alak a
+  // hiányzó mezőt kihagyja, tehát egy régi alakú esemény ÖNMAGÁBAN érvényesnek látszana —
+  // és akkor KÉTFÉLE eseményalak élne egymás mellett. Ki lehetne hagyni a mezőket, hogy a
+  // szabály-réteg ne tudjon rájuk támaszkodni. Egy alak van, nem kettő.
+  // (A `null` érvényes érték: az `entitas: null` azt jelenti, „a saját szeletét nyitja".)
+  for (const mezo of [
+    'koino', 'tipus', 'szerzo', 'sorszam', 'ido',
+    'entitas', 'entitasSorszam', 'latott', 'lancGyoker',
+    'azonosito', 'alairas'
+  ]) {
+    if (esemeny[mezo] === undefined) return 'hiányzó mező: ' + mezo;
+  }
+
+  // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
+  if (esemeny.entitas !== null && typeof esemeny.entitas !== 'string') {
+    return 'az entitas csak azonosító vagy null lehet';
+  }
+  if (!Number.isInteger(esemeny.entitasSorszam) || esemeny.entitasSorszam < 1) {
+    return 'az entitasSorszam csak 1-nél nem kisebb egész lehet';
+  }
+  if (!Array.isArray(esemeny.latott) || esemeny.latott.some((a) => typeof a !== 'string')) {
+    return 'a latott csak azonosítók tömbje lehet';
+  }
+  // ⏸️ A lánc-gyökér egyelőre MINDIG null (lefoglalt hely). Szövegként is átengedjük, hogy
+  // a Szakasz 4 bekapcsolása ne kívánjon itt újabb változtatást.
+  if (esemeny.lancGyoker !== null && typeof esemeny.lancGyoker !== 'string') {
+    return 'a lancGyoker csak lenyomat vagy null lehet';
+  }
+  return null;
 }
 
 // ===================================

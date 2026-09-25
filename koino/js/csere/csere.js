@@ -23,7 +23,40 @@
 // Használják: a csere-vonal (TCP) és a csereProba.js.
 
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
+import { alakiHiba } from '../esemeny/esemeny.js';
 import { koinoEsemenyei, esemenyMentese } from '../tar/esemenyTar.js';
+
+// ===================================
+// ⛔⛔ AMIT EGYETLEN MAI KAPU SEM ENGED BE, AZT NEM HIRDETJÜK (2026-09-24, 40. mérés)
+// ===================================
+//
+// ⛔ A SZIVÁRGÁS, AHOGY TEREPEN MÉRTÜK: egy telefon tárában 9 esemény állt 2026-08-29-ből, a
+// három új mező (2026-08-31) ELŐTTI alakban. A régi program beengedte őket; a mai kapu nem
+// (`hiányzó mező: entitas`). ⛔ A csere mégis hirdette őket az állásában — ezért a társ
+// minden körben elkérte, és minden körben eldobta: **körönként 35 KB, nulla új eseménnyel**,
+// percenkénti körrel napi ~50 MB egy mobilon (D35).
+//
+// ⛔⛔ ÉS UGYANEZ OKOZTA A TÜKÖRKÉPÉT IS: a régi események miatt az egyik fél lánca
+// (1,2,3,4) „bővebbnek" látszott a másikénál (3,4 + hézag 1,2). Az ujjlenyomat örökre
+// eltért, a nyilvánvaló hiány üres volt — tehát a „nem behatárolható eltérés" ág (lent, 3.)
+// MINDEN körben a teljes tartományt kérte el: a 3,4-et, ami már megvolt (`marMegvolt: 2`).
+// *A `hianyokSzamitasa` megállási érve feltételezi, hogy amit az egyik fél hirdet, azt a
+// másik el is tudja tárolni. Ez a feltétel sérült, nem a számítás.*
+//
+// ⭐ A JAVÍTÁS EGY SZABÁLY: az állás és a válasz csak ALAKILAG ÉRVÉNYES eseményt lát —
+// ugyanazt a mércét, amit a kapu (`alakiHiba`). Így két azonos változatú készülék
+// ugyanarról a halmazról beszél, és az ujjlenyomatuk egyezni fog, amint ugyanazt tudják.
+// ⚠️ Az aláírást itt NEM ellenőrizzük újra: a tárba csak kapun át kerül esemény, és az
+// aláírás szabálya nem változott — csak az alaké. *(Egy 10 000 eseményes tárnál a teljes
+// újraellenőrzés körönként ~0,6 mp volna; az alaki ellenőrzés elhanyagolható.)*
+//
+// ⏸️ AMIT EZ NEM OLD MEG: egy RÉGEBBI változatú társ továbbra is hirdeti a régi eseményeit, és
+// a mai kapu továbbra is eldobja — ott a pazarlás marad, amíg a társ nem frissít.
+
+/** A koino eseményei, ahogy a CSERE látja: csak ami alakilag ma is érvényes. */
+async function csereLatoEsemenyek(tar, koino) {
+  return (await koinoEsemenyei(tar, koino)).filter((e) => alakiHiba(e) === null);
+}
 
 // ===================================
 // ÁLLÁS — „ezt tudom"
@@ -62,7 +95,8 @@ export async function allasOsszeallitasa(tar, koino) {
 
   // Egyetlen betöltés, és utána szerzőnként csoportosítunk. (Szerzőnként újra betölteni
   // ugyanazt a fájlt pazarlás lenne — és a nagy állásokat épp mérni akarjuk.)
-  const esemenyek = await koinoEsemenyei(tar, koino);
+  // ⛔ Csak az alakilag érvényeset (lásd fent, 40. mérés).
+  const esemenyek = await csereLatoEsemenyek(tar, koino);
 
   const szerzonkent = new Map();
   for (const e of esemenyek) {
@@ -170,6 +204,10 @@ async function lancAllasa(szerzo, esemenyek) {
  * (mindkettő nem lehet hosszabb a másiknál), tehát a 3. pont mindig lefut valamelyik
  * oldalon. Minden kör vagy hoz új eseményt (akkor haladtunk), vagy kiváltja a teljes
  * tartomány elkérését — ami után a lánc biztosan egyezik. Nem tud körbe-körbe járni.
+ * ⚠️⚠️ FELTÉVE, hogy amit az egyik fél hirdet, azt a másik EL IS TUDJA TÁROLNI (2026-09-24,
+ * 40. mérés). Terepen ez sérült: régi alakú eseményeket hirdettünk, a társ kapuja eldobta
+ * őket, és a kör MINDEN alkalommal újraindult (35 KB, 0 új esemény). ⭐ Ezért az állás csak
+ * alakilag érvényes eseményt lát (`csereLatoEsemenyek`, fent).
  *
  * Amit SOSEM kérünk: amit ő maga is hézagként jelöl. Neki sincs meg.
  *
@@ -245,7 +283,9 @@ export function hianyokSzamitasa(sajatAllas, idegenAllas) {
 export async function valaszOsszeallitasa(tar, kerelem) {
   console.log('valaszOsszeallitasa - KEZDÉS', { szerzok: kerelem.szerzok.length });
 
-  const esemenyek = await koinoEsemenyei(tar, kerelem.koino);
+  // ⛔ Amit egy mai kapu úgysem enged be, azt el sem küldjük (40. mérés — egy RÉGEBBI
+  // változatú társ még kérheti: az ő állás-számítása nem ismeri ezt a szabályt).
+  const esemenyek = await csereLatoEsemenyek(tar, kerelem.koino);
   const kertek = new Map(kerelem.szerzok.map((sz) => [sz.szerzo, new Set(sz.sorszamok)]));
 
   const valasz = esemenyek.filter((e) => kertek.get(e.szerzo)?.has(e.sorszam));

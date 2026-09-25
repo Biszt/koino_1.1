@@ -3487,9 +3487,8 @@ továbbadtam 10`. ⭐ **A kapu elutasítási okát a részletes napló adta meg*
   pazarlást* — egy elutasított eseményt a csere körönként újra elkér. A kapu jól dönt (3.
   szabály); a pazarlás marad.
 - ⭐ **A B → A 2 ÚJ LELET:** az „A" körönként **újra elkér két eseményt, amelyek már
-  megvannak nála**. Ez nem az elutasítás esete — a mentés „már megvolt"-ot mond. *Oka
-  nyitott:* valószínűleg az állás-összevetés (hézag vagy elágazás) mond „hiányzik"-ot arra, ami
-  megvan. ⏸️ Kivizsgálandó.
+  megvannak nála**. Ez nem az elutasítás esete — a mentés „már megvolt"-ot mond. ✅ **Az oka
+  megvan, és javítva — lásd 40/b.**
 - ✅ **A mérést ez NEM akasztotta volna meg:** a kapu nem kéri az elődöt (`esemenyMentese`
   — aláírás, azonosító, elágazás), tehát egy ÚJ esemény a régi hézag mellett is bemegy.
 
@@ -3556,3 +3555,57 @@ melyik feltételük nem teljesült, és mennyi idő telt el (ahogy a `dht` prób
   működik, egyedül is mérhető, és az dönti el a legfontosabbat: *kiolvassa-e a TÁVOZÓ is a
   táblát, visszakopog-e, átmegy-e a gondolat.*
 - A két mobil NAT (32. mérés nyitott pontja) egy **második működő mobilnettel**.
+
+---
+
+## 40/b. ✅ A KÉT SZIVÁRGÁS EGY OKBÓL — JAVÍTVA: 33,1 KB → 1022 bájt körönként (2026-09-24)
+
+*A 40. mérés két pazarlása (körönként 9 elutasított és 2 „már megvolt" esemény) ugyanabból
+a gyökérből nőtt ki.*
+
+⛔ **AZ OK:** a csere a SAJÁT tárát hirdette az állásában — benne a 2026-08-31-i alakváltás
+előtti eseményekkel, amelyeket a régi program beengedett, a mai kapu viszont nem. Ebből két
+kör-ismétlés lett:
+
+1. **A társ elkérte és eldobta őket** — a hiány nála örökre megmaradt, tehát a következő
+   körben újra elkérte.
+2. **A tükörképe:** a régi események miatt az egyik lánc 1..4-nek látszott, a társé 3,4 +
+   hézag 1,2-nek. Az ujjlenyomat örökre eltért, a „nyilvánvaló hiány" üres volt — és a
+   `hianyokSzamitasa` erre a lánc közepén rejtett elágazás elleni ágával felelt: **a teljes
+   tartományt** kérte el (a 3,4-et), körönként. *A számítás megállási érve azt feltételezi,
+   hogy amit az egyik fél hirdet, azt a másik el is tudja tárolni — ez sérült.*
+
+⭐ **A JAVÍTÁS EGY SZABÁLY:** az állás ÉS a válasz csak **alakilag érvényes** eseményt lát
+(`csereLatoEsemenyek` — ugyanaz az `alakiHiba`, amit a kapu is használ, most már külön,
+szinkron függvényként). *Amit egyetlen mai kapu sem enged be, az a mai protokoll számára nem
+létezik.* ⚠️ Az aláírást nem ellenőrizzük újra: a tárba csak kapun át kerül esemény, és az
+aláírás szabálya nem változott, csak az alaké.
+
+⭐⭐ **MÉRVE — próbában és valódi vonalon:**
+
+```
+A terepi helyzet próbában (régi alakú Anna 1,2 + Béla 1..7; érvényes Anna 3,4), három kör:
+  régi kód:     kör 1–3: régi kapott marMegvolt 2 · új kapott elutasítva 9 · egyezik: NEM
+  javított kód: kör 1–3: régi kapott marMegvolt 0 · új kapott elutasítva 0 · egyezik: IGEN
+
+A laptop VALÓDI adatával (a 9 régi + 2 érvényes esemény), TCP-n, `figyel` + `csere`:
+  régi kód:     küldtem 45 (5 kör, 31 ms, 33.1 KB)     ← terepen 35 KB
+  javított kód: küldtem 0  (1 kör, 20 ms, 1022 bájt)
+```
+
+⭐ **Körönként ~33-szor kevesebb**, és ⭐ a kör **egyetlen** oda-vissza lett az öt helyett. A
+terepen percenkénti körrel ez napi **~50 MB → ~1,5 MB** egy mobilon (D35).
+
+⭐ **4 új próba** (a hirdetés · a tükörképe · *„a próba nem vak"*: egy ÚJ, érvényes esemény a
+régi hézag mellett is átmegy · a válasz sem küldi el a régit) — **és a rontás mind buktat**:
+az állás szűrőjének kivétele hármat, a válaszé egyet.
+
+⏸️ **AMIT EZ NEM OLD MEG:** egy RÉGEBBI változatú társ továbbra is hirdeti a régi eseményeit,
+és a mai kapu továbbra is eldobja. *Ez frissítéssel megszűnik; a két telefonon a következő
+mérés előtt úgyis frissítünk.*
+
+⚠️ **ÉS EGY SZESZÉLYES FUTÁS A LAPTOPON:** a javítás után az első teljes önpróba-futás **1
+bukást** mutatott (701-ből), a következő **négy** mind zöld volt. ⛔ *Hogy melyik próba
+bukott, NEM tudjuk — a kimenetet nem mentettem el, csak az összesítő sort.* Ez ugyanaz a
+lecke, mint a telefonokon: egy bukás, ami nem nevezi meg magát, és aminek a nyomát nem
+őrizzük meg, nem vizsgálható. ⏸️ *Legközelebb a teljes futás kimenete fájlba megy.*

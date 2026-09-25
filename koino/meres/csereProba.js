@@ -221,6 +221,89 @@ proba('⭐ A lánc KÖZEPÉN elrejtett elágazás is kiderül (ezért kell ujjle
   return megtevesztoenEgyforma && egyezik && mindketto;
 });
 
+// ===== ⛔⛔ A RÉGI ALAKÚ ESEMÉNY NEM SZIVÁROG (2026-09-24, 40. mérés) =====
+//
+// ⛔ TEREPEN MÉRT HELYZET: az egyik telefon tárában 9 esemény állt a 2026-08-31-i alakváltás
+// előttről — a régi program beengedte, a mai kapu nem. Két szivárgás lett belőle, körönként:
+//   · a társ elkérte és eldobta őket (`hiányzó mező: entitas`),
+//   · és a régi események miatt „bővebb" láncot a társ hézaga nem magyarázta meg, ezért a
+//     teljes tartomány ment újra (`marMegvolt: 2`).
+// ⭐ A próba ugyanezt építi fel: Anna láncának ELEJE régi alakú (1,2), a vége érvényes
+// (3,4); Béla lánca teljesen régi. A régi alakú eseményt a KAPU MEGKERÜLÉSÉVEL tesszük a
+// tárba (`hozzafuz`) — pontosan úgy, ahogy egy régebbi program tette.
+
+/** Egy esemény a három új mező (2026-08-31) ELŐTTI alakban. */
+function regiAlak(e) {
+  const { entitas, entitasSorszam, latott, lancGyoker, ...regi } = e;
+  return regi;
+}
+
+/** A terepi helyzet: a „régi" tárban régi alakú események is állnak, az „új"-ban nem. */
+async function regiAlakosPar() {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const annaE = await lanc(anna, 4);
+  const belaE = await lanc(bela, 3);
+
+  const regi = await ujTar();
+  for (const e of [annaE[0], annaE[1], ...belaE]) await regi.hozzafuz(regiAlak(e));
+  await ment(regi, annaE.slice(2));                       // Anna 3,4 — érvényes
+  const uj = await ujTar();
+  await ment(uj, annaE.slice(2));                         // csak Anna 3,4
+  return { anna, bela, annaE, regi, uj };
+}
+
+proba('⛔⛔ A RÉGI ALAKÚ eseményt a csere NEM hirdeti — a társ nem kéri el újra és újra', async () => {
+  const { anna, bela, regi, uj } = await regiAlakosPar();
+  const regiAllas = await allasOsszeallitasa(regi, KOINO);
+
+  // Béla lánca teljesen régi — az állásban nem is szerepel; Anna lánca 3,4, hézag 1,2.
+  const annaSor = sora(regiAllas, anna.szerzo);
+  const allasTiszta = !sora(regiAllas, bela.szerzo)
+    && annaSor.legnagyobb === 4 && annaSor.hezagok.join(',') === '1,2';
+
+  // ⭐ A DÖNTŐ ÁLLÍTÁS: az új tár SEMMIT nem kér (terepen: 9 eseményt kért körönként).
+  const ujKeri = hianyokSzamitasa(await allasOsszeallitasa(uj, KOINO), regiAllas);
+  return allasTiszta && ujKeri.szerzok.length === 0;
+});
+
+proba('⛔⛔ …ÉS A TÜKÖRKÉPE: a „régi" tár sem kéri újra, ami már megvan nála', async () => {
+  // Terepen: a régi események miatt a lánc 1..4-nek látszott, a társé 3,4-nek — az
+  // ujjlenyomat örökre eltért, és a teljes tartomány ment körönként (`marMegvolt: 2`).
+  const { regi, uj } = await regiAlakosPar();
+  const regiKeri = hianyokSzamitasa(
+    await allasOsszeallitasa(regi, KOINO), await allasOsszeallitasa(uj, KOINO));
+
+  // …és egy teljes kör sem mozgat semmit: se elutasítás, se „már megvolt", és egyeznek.
+  const kor = await csereKor(regi, uj, KOINO);
+  return regiKeri.szerzok.length === 0 && kor.egyezik
+    && kor.egyikKapott.marMegvolt === 0 && kor.masikKapott.elutasitva.length === 0
+    && kor.egyikKapott.elutasitva.length === 0;
+});
+
+proba('⭐ …DE A PRÓBA NEM VAK: egy ÚJ, érvényes esemény ugyanabban a láncban átmegy', async () => {
+  // Ha a szűrő túl sokat takarna el, a régi hézag mellett a friss esemény sem terjedne.
+  const { anna, regi, uj } = await regiAlakosPar();
+  const otodik = await lanc(anna, 1);                     // Anna 5. eseménye, érvényes
+  await ment(regi, otodik);
+
+  const ujKeri = hianyokSzamitasa(
+    await allasOsszeallitasa(uj, KOINO), await allasOsszeallitasa(regi, KOINO));
+  const valasz = await valaszOsszeallitasa(regi, ujKeri);
+  return kertek(ujKeri, anna.szerzo).join(',') === '5'
+    && valasz.length === 1 && valasz[0].sorszam === 5;
+});
+
+proba('⛔ A régi alakú eseményt a válasz SEM küldi el — egy régebbi társ hiába kéri', async () => {
+  // ⚠️ Egy régebbi változatú társ még kérheti (az ő állás-számítása nem ismeri a szabályt).
+  const { anna, bela, regi } = await regiAlakosPar();
+  const valasz = await valaszOsszeallitasa(regi, {
+    koino: KOINO,
+    szerzok: [{ szerzo: anna.szerzo, sorszamok: [1, 2, 3] }, { szerzo: bela.szerzo, sorszamok: [1, 2, 3] }]
+  });
+  return valasz.length === 1 && valasz[0].szerzo === anna.szerzo && valasz[0].sorszam === 3;
+});
+
 // ===== A VÁLASZ ÉS A BEOLVASZTÁS =====
 
 proba('A válasz CSAK a kért eseményeket adja', async () => {
