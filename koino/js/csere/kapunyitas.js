@@ -118,7 +118,10 @@ function kerdez(uzenet, cim, hatosIPv6) {
 // ===================================
 
 /**
- * Megkéri a routert, hogy engedje be a bejövő TCP-kapcsolatot egy portra.
+ * Megkéri a routert, hogy engedje be a bejövő UDP-forgalmat egy portra.
+ *
+ * ⚠️ 2026-09-26-IG TCP-t kért (a régi postaláda TCP-kapuja miatt). A D69/2 óta nincs TCP a
+ * készülékek között: a koino UDP-kapun fogad, tehát a rést is UDP-re kérjük.
  *
  * ⚠️ IPv6-on ez NEM cím-fordítás, hanem TŰZFAL-RÉS („pinhole"). Nincs mit lefordítani: a
  * címünk valódi, csak a tűzfal nem enged be rá. Ezért a „külső port" és a „belső port"
@@ -147,7 +150,7 @@ export async function pcpKapuKerese({ atjaro, szakasz, sajatCim, port, elettarta
   // A „nonce" egy véletlen szám: ezzel ismeri fel a router, hogy UGYANAZ a kérés
   // ismétlődik-e, vagy valaki más kér ugyanarra a portra.
   for (let i = 0; i < 12; i++) adat[i] = Math.floor(Math.random() * 256);
-  adat[12] = 6;                               // 6 = TCP
+  adat[12] = 17;                              // 17 = UDP (6 volt: TCP — D69/2)
   adat.writeUInt16BE(port, 16);               // belső port
   adat.writeUInt16BE(port, 18);               // ugyanezt kérjük kívülre is
   cimBajtok(sajatCim).copy(adat, 20);         // a kért külső cím = a sajátunk

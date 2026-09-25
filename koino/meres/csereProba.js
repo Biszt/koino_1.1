@@ -1415,6 +1415,40 @@ proba('⭐⭐ RONTÁS-PRÓBA: a lezárás NEM dobhatja el az utolsó darabot (5�
   return true;
 });
 
+proba('⛔⛔ ÚJ KAPCSOLAT UGYANAZON A FOGLALATON: a régi utóhangja NEM nyeli el az első darabját',
+  async () => {
+    // ⛔ A 2026-09-26-I HIBA (D69/2, az őrjárat ismételt menete hozta elő): ugyanazzal a
+    // társsal másodpercen belül új kapcsolat nyílik ugyanazon a foglalaton. Ha a társ új
+    // kapcsolata KÉSVE indul, a régi — még utóhangban lévő — példánya az új kapcsolat első
+    // darabját ismétlésnek nézte és NYUGTÁZTA; a küldő nem küldte újra, az új párbeszéd sosem
+    // kapta meg, és a csere a tétlenségi óráig várt. *A sorszámok minden kapcsolatban 1-től
+    // indulnak — a lezárt példánynak a TARTALOMBÓL kell felismernie a saját ismétlését.*
+    const anna = await ujEember(KOINO);
+    const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 3));
+    const masikTar = await ujTar();
+
+    const p = await udpParos();
+    try {
+      // 1. kapcsolat: rendes csere.
+      await Promise.all([
+        csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO),
+        csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO)
+      ]);
+      // 2. kapcsolat AZONNAL — a túloldal 150 ms-mal később indul (a régi még utóhangban van).
+      await ment(egyikTar, await lanc(anna, 1));
+      const [, b] = await Promise.all([
+        csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, egyikTar, KOINO,
+          { varakozasiIdo: 3000 }),
+        new Promise((kesz) => setTimeout(kesz, 150)).then(() =>
+          csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, masikTar, KOINO,
+            { varakozasiIdo: 3000 }))
+      ]);
+      return b.uj === 1 && await allasokEgyeznek(egyikTar, masikTar, KOINO);
+    } finally {
+      p.bezar();
+    }
+  });
+
 proba('⭐⭐ A NÉMA TÁRS: a csere HIBÁVAL zárul, nem ragad be örökre', async () => {
   // ⚠️ A másik oldala ugyanannak: ha a társ egyáltalán nem válaszol (elment, lefagyott),
   // a cserének VÉGE kell legyen. A `koino.js` őrjárata e nélkül egyetlen néma társon

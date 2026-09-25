@@ -245,11 +245,17 @@ export function kulcsTarolo(hely = alapHely()) {
  * ⚠️ Készülék-szintű, nem koino-szintű (mint a kulcs): ugyanaz a társ jellemzően minden
  * közös koinóban ugyanaz a társ, és a cím a készülékhez tartozik, nem a témához.
  *
+ * ⛔⛔ TISZTA LAP (D69/2, 2026-09-26, Csaba döntése): a lista mostantól az INDULÓ CÍMEKÉ —
+ * amit a `tars` és a helyi felfedezés vesz fel, és amire az őrjárat a UDP-kapun kopog. ⚠️ A
+ * régi `tarsak.json` TCP-címeket gyűjtött (a TCP-cserék tanították, a router a TCP-nek
+ * KÜLÖN leképezést ad, mint a UDP-nek) — ezért nem vettük át: **új fájl, új lista**. A régi
+ * fájl a lemezen marad, de semmi nem olvassa; kézzel törölhető.
+ *
  * @param {string} [hely]
  * @returns {{olvas: Function, ir: Function, modosit: Function, fajl: string}}
  */
 export function tarsakTarolo(hely = alapHely()) {
-  const fajl = join(hely, 'tarsak.json');
+  const fajl = join(hely, 'indulocimek.json');
 
   return {
     fajl,

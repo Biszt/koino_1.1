@@ -352,15 +352,19 @@ export async function udpKapuNyitasa(beallitas) {
     korok.delete(kor);
 
     // ⭐ ELŐBB A MUNKA, CSAK UTÁNA A BESZÁMOLÓ — ugyanaz az elv, mint a fúró lezárásánál.
+    // ⭐ A `cel` az EREDETI cím, amire kopogtunk — a `cim`/`port` pedig az, ahonnan a társ
+    // valóban felelt (portváltásnál más). A könyvelés a célhoz kötődik (D69/2): *azt a
+    // bejegyzést kell frissíteni, amiből a kopogás indult, nem azt, ahonnan a válasz jött.*
     const eredmenyek = [];
     for (const a of allapotok) {
+      const cel = { cim: a.cim, port: a.port };
       if (!a.igeret) {
-        eredmenyek.push({ cim: a.cim, port: a.port, ok: false,
+        eredmenyek.push({ cim: a.cim, port: a.port, cel, ok: false,
           hiba: a.foglalt ? 'foglalt' : a.hallak ? 'felelt, de nem indult munka' : 'nem felelt' });
         continue;
       }
       const e = await a.igeret;
-      eredmenyek.push({ cim: a.tars?.cim ?? a.cim, port: a.tars?.port ?? a.port, ...e });
+      eredmenyek.push({ cim: a.tars?.cim ?? a.cim, port: a.tars?.port ?? a.port, cel, ...e });
     }
     return {
       celok: allapotok.length,

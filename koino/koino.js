@@ -36,20 +36,21 @@
 //   node koino/koino.js mentes <fájl>            — a kulcs kimentése
 //   node koino/koino.js visszatolt <fájl>        — …és a visszahozása egy másik készüléken
 //   node koino/koino.js orjarat [perc] [port]    — ⭐ a készülék MAGÁTÓL dolgozik
-//   node koino/koino.js figyel [port]            — kaput nyit: fogadja a cserét
+//   node koino/koino.js figyel [port]            — UDP-kaput nyit: fogadja a cserét
 //   node koino/koino.js csere                    — csere MINDEN társsal (a lista szerint)
 //   node koino/koino.js csere <cím> [port]       — csere egy megadott készülékkel
+//                                                  ⭐ 2026-09-26 óta MIND UDP-n (D69/2)
 //   node koino/koino.js tarsak                   — kik a társaim, és mikor sikerült
 //   node koino/koino.js tars <cím> [port] [név]  — társ felvétele
 //   node koino/koino.js tars torol <cím> [port]  — társ levétele
 //   node koino/koino.js ujjlenyomat [napok]      — „ugyanazt látjuk-e?" két készüléken
 //   node koino/koino.js ujjlenyomat kiment <fájl> [napok]    — ⭐ …és ha NEM, MIBEN?
 //   node koino/koino.js ujjlenyomat osszevet <fájl> [napok]    a kézi út (4. szabály)
-//   node koino/koino.js tukor <cím> [port]       — ⭐ kívülről hogy látszom? (STUN helyett)
+//   node koino/koino.js tukor <cím> [port]       — ⭐ kívülről hogy látszom UDP-n? (STUN helyett)
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
-//   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson kaput
+//   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson UDP-kaput
 //   node koino/koino.js hozd <azonosító>         — EGY entitás elhozása (böngésző-lekérés)
-//   node koino/koino.js pajzsfuro <cím> <port> [tcp]  — ⭐ a rés: csere ÉS fájlok
+//   node koino/koino.js pajzsfuro <cím> <port> [helyi port]  — ⭐ a rés: csere ÉS fájlok
 //   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
 //   node koino/koino.js felfedez [mp] [port]     — ki van még ezen a wifin?
 //   node koino/koino.js tabla [kiir|olvas]       — ⭐ A HIRDETŐTÁBLA: a kötéseim, az új
@@ -109,9 +110,6 @@ import {
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
-import {
-  figyeloIndulasa, csereVonalon, parbeszed, szeletHozatala, fajlHozatala, tcpNyito
-} from './js/csere/vonal.js';
 import { allasOsszeallitasa } from './js/csere/csere.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
@@ -121,23 +119,20 @@ import {
   kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
 } from './js/csere/fajlKerelem.js';
-// ⭐ A `ujMunkamegosztas` a TÖBB FORRÁSHOZ kell (D68 / 6.): a `fajlHozatala` ágai ezen
-// osztoznak — ő mondja meg, melyik ág melyik szeletet hozza, és ki zárja le a fájlt.
-import {
-  atvitelTerv, ujMunkamegosztas,
-  // ⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.): kikkel bukott el ez a fájl?
-  romlottJegyzes, romlottFelejtes
-} from './js/csere/fajlAtvitel.js';
+// ⚠️ A TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) 2026-09-26 óta NEM fut az éles úton: csak a TCP-n
+// élt, és a TCP kikerült (D69/2, Csaba vállalta az árát). A tervező függvények
+// (`atvitelTerv`, `ujMunkamegosztas`, `romlottJegyzes`…) a `fajlAtvitel.js`-ben megmaradtak,
+// próbával — a UDP-s több forrás ezekre épül majd.
 // ⭐ A KÉZI ÚT (4. szabály): fájlba vinni és fájlból hozni — ugyanazon a kapun, mint a hálózat.
 import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
-  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, korbeCsere, megfigyelesekRavezetese,
+  tarsHozzaadasa, tarsTorlese, tarsakSorrendje, megfigyelesekRavezetese,
   sajatCimekKiszurese, sajatCimE,
   szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
   // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
   udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa, UDP_CIM_ELEVULES
 } from './js/csere/tarsak.js';
-import { pajzsfuras, tcpPajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
+import { pajzsfuras, kulsoCim } from './js/csere/pajzsfuro.js';
 // ⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25): egy foglalat a teljes futásra — az őrjárat ezen kopog.
 import { udpKapuNyitasa } from './js/csere/udpKapu.js';
 // ⭐⭐ A TÁBLA-KULCS ÉS A KÖTÉSEK (2026-09-20): a kötést a tábla-kulcs azonosítja, nem a
@@ -160,7 +155,8 @@ import {
   hianyzoFelmenok
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
-import { csereUdpResen, fajlRandevu } from './js/csere/udpVonal.js';
+// ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
+import { csereUdpResen, fajlRandevu, szeletUdpResen } from './js/csere/udpVonal.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import {
@@ -432,156 +428,10 @@ async function fajlResz() {
   };
 }
 
-/**
- * ⭐⭐ A HIÁNYZÓ FÁJLOK ELHOZÁSA — a buli UTÁN (5.7 / B).
- *
- * ⭐ CSABA TERVE SZERINT: *„a buli után fent kell tartani a kapcsolatot azon eszközöknek,
- * amik nagyobb csomagot küldenek egymásnak, addig, ameddig végbe megy a másolás."*
- *
- * A **kérelmező kezdeményez** (1. döntés), a sorrend **a ritkábbat előbb** (4.), és a
- * munka **három egyidejű átvitelre, társanként egyre** oszlik (3.).
- *
- * @returns {Promise<{kesz: number, bukott: number, bajt: number}>}
- */
-async function fajlokElhozasa() {
-  const blob = fajlBlobTarolo(KOINO);
-  const jegyzo = fajlJegyzekTarolo(KOINO);
-
-  const { allapot } = await kepetKeszit();
-  const { hianyzok } = await fajlIgenyek(allapot, (l) => blob.van(l), { szerzo });
-  if (!hianyzok.length) return { kesz: 0, bukott: 0, bajt: 0 };
-
-  const jegyzet = await jegyzo.olvas();
-  const terv = atvitelTerv(ritkasagSzerint(hianyzok, jegyzet), jegyzet);
-  if (!terv.length) return { kesz: 0, bukott: 0, bajt: 0 };
-
-  // ⭐ PÁRHUZAMOSAN — a korlátot már a terv tartja be (három kapcsolat, társanként egy).
-  const eredmenyek = await Promise.all(terv.map(async ({ lenyomat, tarsak, turelem, forrasok }) => {
-    // ⭐⭐⭐ TÖBB FORRÁS UGYANARRA A FÁJLRA (D68 / 6., 2026-09-15) — mérve ×2,7 (29. mérés),
-    // ha a társak feltöltése a szűk keresztmetszet (otthon tipikusan az).
-    //
-    // ⭐ A MUNKAMEGOSZTÁS KÖZÖS, és **itt születik**: a `fajlHozatala` maga nem tudja, hogy
-    // többen dolgoznak ugyanazon. *Ugyanaz az elv, mint a türelemnél: a réteg paraméterként
-    // kapja, amit nem tudhat magától (1. szabály).*
-    //
-    // ⚠️ A kezdő állapot a LEMEZRŐL jön (`reszlegesSzeletek`): ami egy korábbi körben már
-    // megérkezett, azt nem kérjük el újra.
-    const munka = ujMunkamegosztas(await blob.reszlegesSzeletek(lenyomat));
-    console.log('fajlokElhozasa - türelem', { lenyomat, forrasok, turelem, agak: tarsak.length });
-
-    const agak = await Promise.all(tarsak.map(async (tars) => {
-      const ketpont = tars.lastIndexOf(':');
-      const hoszt = tars.slice(0, ketpont);
-      const tarsPort = parseInt(tars.slice(ketpont + 1), 10) || ALAP_PORT;
-      try {
-        // ⭐ A NYITÓ DÖNTI EL A SZÁLLÍTÁST (1. szabály): itt TCP, az átfúrt résen UDP —
-        // az átvitel logikája nem tudja, melyiken beszél.
-        //
-        // ⭐⭐ ÉS A TÜRELMET A TERV MONDJA MEG (D68): *annyit küzdünk ezzel a társsal,
-        // amennyit az alternatíva hiánya indokol* — egy forrásnál 30 mp, ötnél 6, tízénél 5
-        // (alsó korlát). ⚠️ A feladás itt nem adatvesztés, hanem **társ-váltás**: a részleges
-        // fájl megmarad, és a következő kör onnan folytatja.
-        return {
-          ...(await fajlHozatala(blob, KOINO, lenyomat,
-            tcpNyito(hoszt, tarsPort, turelem), { korlat: FAJL_KORLAT, munka })),
-          tars
-        };
-      } catch (hiba) {
-        // ⚠️ EGY TÁRS BUKÁSA NEM DÖNTI EL A KÖRT — ugyanaz az elv, mint a `tarsak.js`-nél.
-        // ⭐ És a munkamegosztásnak SZÓLNI KELL: ha ez az ág volt az utolsó dolgozó, a
-        // többiek várakozását fel kell oldani. *Különben egy néma társ megállítaná a többit.*
-        console.warn('fajlokElhozasa - nem sikerült', { tars, hiba: hiba.message });
-        munka.kilep();
-        return { kesz: false, bajt: 0 };
-      }
-    }));
-
-    // ⭐ EGY FÁJL, EGY EREDMÉNY: kész-e, és összesen hány bájtot hozott a több ág.
-    // *A `kesz` bármelyik ágtól jöhet — a lezárás joga egyszer adódik ki (`lezarasEnyem`).*
-    return {
-      kesz: agak.some((a) => a.kesz),
-      bajt: agak.reduce((o, a) => o + (a.bajt ?? 0), 0),
-      // ⛔⛔ HAMIS BÁJT ÉRKEZETT? A lezárás ezt MEZŐBEN mondja meg (`romlott`), nem
-      // hibaszövegben — és a hívó az, aki tudja, KIKTŐL jöttek a szeletek.
-      romlott: agak.some((a) => a.romlott === true),
-      lenyomat,
-      // ⛔⛔ CSAK AKIK TÉNYLEGESEN ADTAK SZELETET — és ezt a MÉRÉS kényszerítette ki.
-      //
-      // Először a kijelölt forrásokat jegyeztem fel, és a mérés megmutatta, hogy ez
-      // **használhatatlan**: egy 20 KB-os (egyszeletes) fájlnál a hamis forrás hozta az
-      // egyetlen szeletet, a másik ág **semmit** — mégis mindkettő megjelölve. ⛔ Így a
-      // következő körben nem maradt választható forrás, a felejtés-szabály visszaadta
-      // mindkettőt, és a hamis **újra sorra került**: a kép soha nem jött meg.
-      //
-      // ⚠️ A JELÖLÉS ÍGY IS KÖZELÍTÉS, és ezt ki kell mondani: több szeletnél **több
-      // forrás** kerül a listára, pedig legfeljebb egy volt közülük hamis. *Ez nem
-      // pontatlanság, hanem a modell határa — a lenyomat a TELJES fájlra szól.*
-      adok: agak.filter((a) => (a.szeletek ?? 0) > 0).map((a) => a.tars).filter(Boolean),
-      // ⭐ A HASZNÁLT TÜRELMET ÉS A FORRÁSSZÁMOT VISSZAADJUK — hogy a bekötés **mérhető
-      // tény** legyen, ne ígéret. *Ugyanaz a fogás, mint a torlódás-jelnél.*
-      turelem, forrasok, agak: tarsak.length
-    };
-  }));
-
-  // ===== ⭐⭐ A ROSSZ SZELET HELYI TANULSÁGA (D68 / 6.) =====
-  //
-  // ⛔ Nem tudjuk, MELYIK forrás adta a hamis bájtot — a lenyomat a teljes fájlra szól.
-  // ⭐ Ezért a próbálkozás RÉSZTVEVŐIT jegyezzük fel, és a következő körben mást
-  // választunk, **ha van kit**. ⚠️ Ez nem vád és nem rangsor: fájlonkénti, helyi, és
-  // elfelejtjük, amint a fájl megjön — vagy amint nem marad más forrás.
-  const romlottak = eredmenyek.filter((e) => e.romlott);
-  const megjottek = eredmenyek.filter((e) => e.kesz);
-  if (romlottak.length || megjottek.length) {
-    let friss = await jegyzo.olvas();
-    for (const e of romlottak) friss = romlottJegyzes(friss, e.lenyomat, e.adok);
-    // ⭐ ÉS A FELEJTÉS: ami megjött, arról a régi bukás semmit nem mond többé.
-    for (const e of megjottek) friss = romlottFelejtes(friss, e.lenyomat);
-    await jegyzo.ir(friss);
-  }
-
-  return {
-    kesz: eredmenyek.filter((e) => e.kesz).length,
-    bukott: eredmenyek.filter((e) => !e.kesz).length,
-    bajt: eredmenyek.reduce((o, e) => o + (e.bajt ?? 0), 0),
-    // ⭐ A LEGRÖVIDEBB TÜRELEM ÉS A HOZZÁ TARTOZÓ FORRÁSSZÁM — ez az, ami látszik is.
-    turelem: Math.min(...eredmenyek.map((e) => e.turelem ?? Infinity)),
-    forrasok: Math.max(...eredmenyek.map((e) => e.forrasok ?? 0)),
-    // ⭐ Hány ág ment egyszerre a legtöbb forrású fájlra (D68 / 6.)
-    agak: Math.max(...eredmenyek.map((e) => e.agak ?? 0), 0)
-  };
-}
-
-/**
- * A fájl-átvitel lefuttatása és kiírása — **a buli UTÁN**, ahogy Csaba tervezte:
- * *„a buli után fent kell tartani a kapcsolatot azon eszközöknek, amik nagyobb csomagot
- * küldenek egymásnak."* A felderítés már megtörtént — innen tudjuk, kitől mit kérjünk.
- */
-async function fajlAtvitelKiirasa() {
-  const atvitel = await fajlokElhozasa();
-  if (!atvitel.kesz && !atvitel.bukott) return;
-
-  kiir((atvitel.kesz ? SZIN.jo : SZIN.halvany) + atvitel.kesz + ' fájl megérkezett'
-    + SZIN.vege + SZIN.halvany
-    + (atvitel.bukott ? ' · ' + atvitel.bukott + ' nem sikerült' : '')
-    + ' (' + adatMennyiseg({ bajtKuldott: atvitel.bajt }) + ')' + SZIN.vege);
-
-  // ⭐⭐ ÉS KIMONDJUK, MENNYIT KÜZDÖTTÜNK, ÉS MIÉRT ANNYIT (D68).
-  // *„A türelem annyi legyen, amennyit az alternatíva hiánya indokol."* — ⚠️ enélkül a
-  // szabály csak a kódban élne, és senki nem venné észre, ha egyszer kiesne.
-  if (Number.isFinite(atvitel.turelem)) {
-    kiir(SZIN.halvany + '  türelem: ' + (atvitel.turelem / 1000).toFixed(1)
-      + ' mp · ' + atvitel.forrasok + ' forrás' + SZIN.vege);
-  }
-
-  // ⭐⭐ ÉS HÁNY FORRÁSTÓL HOZTUK EGYSZERRE (D68 / 6., 29. mérés)?
-  // ⚠️ Ez KIÍRÁS, tehát önmagában nem bizonyíték — a bekötést az méri, hogy a `bajt`
-  // oszlop NEM sokszorozódik meg: munkamegosztás nélkül minden ág a TELJES fájlt hozná,
-  // és a mennyiség az ágak számával szorzódna. *A viselkedés a bizonyíték, nem a felirat.*
-  if (atvitel.agak > 1) {
-    kiir(SZIN.halvany + '  párhuzamosan ' + atvitel.agak
-      + ' forrásból — a szeletek szétosztva' + SZIN.vege);
-  }
-}
+// ⚠️ ITT ÁLLT 2026-09-26-IG A `fajlokElhozasa` ÉS A `fajlAtvitelKiirasa`: a kör UTÁN, TCP-n
+// hozták el a hiányzó fájlokat, több forrásból egyszerre (D68). ⛔ A D69/2 óta nincs TCP a
+// készülékek között — a fájl a résen jön, a randevún (`resMunkaKeszito`). A több forrás ára
+// ismert és vállalt (Csaba): egy fájl egyetlen társtól jön, amíg a UDP-s több forrás meg nem épül.
 
 /**
  * Amit a cserén a fájlokról tanultunk, azt elrakjuk — **helyi feljegyzés** (3. szabály):
@@ -720,13 +570,10 @@ async function sajatGlobalisCimek() {
   return cimek;
 }
 
-// ⭐ A TERJEDŐ CÍMJEGYZÉK (D36–D38). Amit hirdetünk: a saját társaink címei. Ettől a
-// hálózat MAGÁTÓL bővül — nem kell tudnod senki címét ahhoz, hogy a koinód megtalálja a
-// közösséget. ⚠️ Ezek NEM események: a cím múlandó körülmény, nem igazság.
-async function hirdetendoCimek(tarolo) {
-  const lista = await tarolo.olvas();
-  return tarsakSorrendje(lista).map((t) => ({ hoszt: t.hoszt, port: t.port }));
-}
+// ⚠️ A TERJEDŐ TCP-CÍMJEGYZÉK (D36–D38, a `hirdetendoCimek`) 2026-09-26 óta nincs: a
+// társ-lista TCP-címeit hirdette a cserén. ⭐ A D69/2 óta a címek terjesztése a friss
+// UDP-jegyzéké (lent) — ugyanaz a munka, egy gépezettel. *Egy problémára két gépezet: az
+// egyik előbb-utóbb kimarad valahonnan.*
 
 // ===================================
 // ⭐⭐ A FRISS UDP-CÍMEK — a cím-elévülés válasza (2026-09-18)
@@ -1125,21 +972,272 @@ async function kapottCimekBeolvasztasa(tarolo, kapott, sajat = null) {
   return { hozzajott, ismeros: idegenek.length - hozzajott, mienk: kihagyott };
 }
 
+// ===================================
+// ⭐⭐⭐ A RÉSEN VÉGZETT MUNKA — EGY GÉPEZET, MINDEN ÚTNAK (D69/2, 2026-09-26)
+// ===================================
+//
+// ⛔ MIÉRT KÖZÖS: 2026-09-26-ig a résen végzett munka az őrjárat belsejében élt (`resMunka`),
+// a `figyel` és a kézi `csere` pedig TCP-n dolgozott, saját tanulási ágakkal. A D69/2 óta
+// nincs TCP a készülékek között — tehát MINDEN út a kapun megy, és mind ugyanazt a munkát
+// kell elvégezze: csere, kötés, tanulás (saját cím · UDP-címek · DHT-gépek · fájl-tanulság),
+// fájl-randevú. *Egy problémára egy gépezet — a három ág eddig háromszor tanulta ugyanazt,
+// és a napló kilencszer felsorolja, mi lesz az ilyenből.*
+
 /**
- * Beolvasztás hibától védve — a cím-tanulás sose döntse el a cserét.
+ * A munka állapota: amit a résen végzett munka olvas, és amit a hívó (az őrjárat köre)
+ * közben frissít. *Egy doboz, nem változók szétszórva — így a munka bármikor futhat.*
  *
- * ⚠️ A SOROSÍTÁS MÁR NEM ITT VAN (2026-09-22): a `tarsakTarolo.modosit()` végzi, fájlonként.
- * Korábban egy külön ígéret-lánc (`cimIrasSor`) állt itt — ⛔ de az csak az EGYMÁS KÖZTI
- * hívásokat rendezte sorba, az őrjárat kör végi írását nem, és épp ott volt a baj.
- * *Egy problémára két gépezet: az egyik előbb-utóbb kimarad valahonnan.*
+ * @param {Object} beallitas
+ * @param {number} [beallitas.udpElevules] - meddig friss egy UDP-cím (az őrjárat az ablakát adja)
+ * @returns {Promise<Object>}
  */
-async function cimeketTanul(tarolo, kapott, sajat = null) {
+async function resAllapotKeszites({ udpElevules = UDP_CIM_ELEVULES } = {}) {
+  const udpTarolo = udpCimTarolo();
+  const sajatTablaKulcsTeljes = await tablaKulcsBiztositasa();
+  return {
+    udpTarolo, udpElevules,
+    kotesTar: kotesTarolo(),
+    sajatTablaKulcsTeljes,
+    sajatTablaKulcs: nyilvanosResz(sajatTablaKulcsTeljes),
+    frissUdp: await frissUdpCimek(udpTarolo, udpElevules),
+    hirdetendoDhtGepek: gepekHirdetese(await dhtIsmertek()),
+    // ⭐ A SAJÁT KÜLSŐ UDP-CÍMÜNK, ahogy legutóbb mértük — az őrjárat tölti ki.
+    sajatKulsoUdp: null,
+    // ⭐ A kör fájl-része (körönként egyszer állítjuk össze); `null` = a munka maga számolja.
+    korFajlok: null,
+    // ⚠️ ÁLLANDÓ-E A KAPU PORTJA? Ha a kézi parancs a rendszer adta portra szorult (mert az
+    // alap-portot egy futó őrjárat fogja), a társtól tanult saját címünk ÁLÉ: azt a portot a
+    // parancs végén elengedjük. Ilyenkor nem jegyezzük fel — különben halott címet terjesztene.
+    allando: true
+  };
+}
+
+/**
+ * A résen végzett munka — ezt kapja az állandó UDP-kapu (`udpKapuNyitasa`), bármelyik út nyitja.
+ *
+ * @param {Object} allapot - a `resAllapotKeszites` doboza
+ * @returns {(halo: Object, tars: {cim: string, port: number}) => Promise<Object>}
+ */
+function resMunkaKeszito(allapot) {
+  return async (halo, tars) => {
+    // ⭐ A FRISS LISTA MINDEN MUNKA ELEJÉN: a postaláda hosszan fut, és a jegyzék elévül.
+    allapot.frissUdp = await frissUdpCimek(allapot.udpTarolo, allapot.udpElevules);
+    const fajlok = allapot.korFajlok ?? await fajlResz();
+    // ⭐ MEGJEGYEZZÜK, MIT KÉRHETNEK TŐLÜNK: ha semmit, a randevú kiszolgáló fázisát
+    // nem kell kivárni (a társ sem fog kérni — ugyanezt a listát látja).
+    let adhatok = 0;
+    const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
+      udpCimek: allapot.frissUdp,
+      sajatUdpCim: allapot.sajatKulsoUdp
+        ? { hoszt: allapot.sajatKulsoUdp.cim, port: allapot.sajatKulsoUdp.port } : null,
+      tablaKulcs: allapot.sajatTablaKulcs,
+      dhtGepek: allapot.hirdetendoDhtGepek,
+      fajlKerelem: fajlok.kerelem,
+      fajlValasz: async (kertek) => {
+        const van = await fajlok.valasz(kertek);
+        adhatok += Array.isArray(van) ? van.length : 0;
+        return van;
+      },
+      fajlOlvas: fajlok.olvas
+    });
+    const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
+    const alap = { uj: csere.uj ?? 0, kuldott: csere.kuldott ?? 0, korok: csere.korok ?? 0,
+      bajt, masKoino: csere.masKoino ?? null, kivulrolIgyLatszom: csere.kivulrolIgyLatszom ?? null,
+      szeletKiszolgalva: csere.szeletKiszolgalva ?? null };
+
+    // ⚠️ MÁSIK KOINO: nincs miről beszélni, és tanulni sem tanulunk tőle — kimondjuk (D19).
+    if (csere.masKoino) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' — MÁSIK koinóé ('
+        + csere.masKoino + '), nem cseréltünk' + SZIN.vege);
+      return alap;
+    }
+    // ⭐ Ha a társ csak EGY szeletet kért (`hozd`), az nem csere — nincs mit tanulni belőle.
+    if (csere.szeletKiszolgalva) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port
+        + ' egy szeletet kért tőlem (' + csere.kuldott + ' esemény)' + SZIN.vege);
+      return alap;
+    }
+
+    kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
+      + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
+      + alap.kuldott + ' (' + alap.korok + ' kör, '
+      + adatMennyiseg({ bajtKuldott: bajt }) + ')' + SZIN.vege);
+
+    // ⭐⭐ ÉS ITT SZÜLETIK A KÖTÉS: akivel összeértünk, azt feljegyezzük a tábla-kulcsa
+    // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
+    await kotesFeljegyzese(allapot.kotesTar, csere.kapottTablaKulcs,
+      { hoszt: tars.cim, port: tars.port });
+
+    // ⭐⭐ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE A TÁRS (Csaba, 2026-09-17): nem egy tükör
+    // mondja meg, hanem az, akivel épp beszélünk — arról a résről, ami tényleg él.
+    // ⚠️ Csak ha a kapu portja állandó (lásd `allando`).
+    if (csere.kivulrolIgyLatszom && allapot.allando) {
+      await frissUdpCimJegyzese(allapot.udpTarolo,
+        csere.kivulrolIgyLatszom.cim, csere.kivulrolIgyLatszom.port, allapot.udpElevules);
+    }
+    const udpTanult = await udpCimeketTanul(allapot.udpTarolo, csere.kapottUdpCimek,
+      allapot.udpElevules);
+    if (await dhtGepeketTanul(csere.kapottDhtGepek)) {
+      allapot.hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
+    }
+    const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
+    const fajlTanult = kerhetok.length
+      ? await fajlTanulsag(tars.cim + ':' + tars.port, kerhetok) : 0;
+    allapot.frissUdp = await frissUdpCimek(allapot.udpTarolo, allapot.udpElevules);
+    if (udpTanult || fajlTanult) {
+      kiir(SZIN.halvany + '    '
+        + [udpTanult ? '+' + udpTanult + ' friss UDP-cím' : null,
+          fajlTanult ? fajlTanult + ' fájlról tudom meg, hogy nála megvan' : null]
+          .filter(Boolean).join(' · ') + SZIN.vege);
+    }
+
+    // ⭐ ÉS A BÁJTOK IS A RÉSEN JÖNNEK — épp ezért van a randevú (5.7).
+    const randevu = await fajlRandevu(halo, tars.cim, tars.port, {
+      sajatCim: csere.kivulrolIgyLatszom
+        ? csere.kivulrolIgyLatszom.cim + ':' + csere.kivulrolIgyLatszom.port
+        : null,
+      kerhetok,
+      blob: fajlBlobTarolo(KOINO),
+      tar, koino: KOINO,
+      fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+      korlat: FAJL_KORLAT,
+      kiszolgalasKell: adhatok > 0
+    });
+    if (randevu.kesz || randevu.kiszolgalt || randevu.bukott) {
+      kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
+        + ' megjött' + (randevu.bajt ? ' (' + adatMennyiseg({ bajtKuldott: randevu.bajt }) + ')' : '')
+        + ', ' + randevu.kiszolgalt + ' elment'
+        + (randevu.bukott ? ', ' + randevu.bukott + ' nem jött át' : '') + SZIN.vege);
+    }
+    return { ...alap, fajlMegjott: randevu.kesz ?? 0 };
+  };
+}
+
+/**
+ * A kapu jelzései a naplóba — minden út ugyanúgy mondja ki, mi történik a kapun (D19).
+ */
+function kapuJelzesKiiro() {
+  return (e) => {
+    if (e.mi === 'ATFURVA') {
+      kiir(SZIN.jo + '  ⭐ ' + ora() + ' rés nyílt: ' + e.cim + ':' + e.port + SZIN.vege
+        + (e.eltelt === null ? '' : SZIN.halvany + ' (' + e.eltelt + ' ms)' + SZIN.vege));
+    }
+    // ⭐ A bekopogót is megnevezzük: terepen ebből látszik, hogy a rés melyik
+    // oldalról indult, és hogy a másik fél ismert-e minket.
+    if (e.mi === 'BEKOPOGO-CEL') {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ismeretlen kopogott be (' + e.cim + ':'
+        + e.port + ') — visszakopogok, és vele is cserélek' + SZIN.vege);
+    }
+    if (e.mi === 'BEKOPOGO-ELUTASITVA') {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ismeretlen kopogott be (' + e.cim + ':'
+        + e.port + '), de most annyi bekopogóval dolgozom, amennyit vállalok — később'
+        + SZIN.vege);
+    }
+    // ⛔⛔ A RÉS MEGNYÍLT, DE A MUNKA RAJTA ELBUKOTT — ezt 2026-09-25-ig SEMMI nem mondta
+    // ki (41. mérés). *Két mobil között csak ez az út van.*
+    if (e.mi === 'ATFURT-MUNKA-BUKOTT') {
+      kiir(SZIN.nem + '  ✗ ' + ora() + ' rés nyílt (' + e.cim + ':' + e.port
+        + '), de a csere a résen elbukott: ' + e.ok + SZIN.vege);
+    }
+    if (e.mi === 'FOGLALT') {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + e.cim + ':' + e.port + ' foglalt — épp'
+        + ' egy korábbi munkán dolgozik velem; újra kopogok' + SZIN.vege);
+    }
+    // ⚠️ A UDP-kapu ma IPv4-es: egy IPv6-os célt nem hallgatunk el, kimondjuk (D19).
+    if (e.mi === 'CEL-KIHAGYVA') {
+      kiir(SZIN.nem + '  ✗ ' + ora() + ' ' + e.cim + ' kihagyva: ' + e.ok + SZIN.vege);
+    }
+    if (e.mi === 'JEGYZEK-TELE') {
+      kiir(SZIN.nem + '  ✗ ' + ora() + ' a kapu társ-jegyzéke tele (' + e.korlat
+        + ') — új idegen feladónak most nem felelek' + SZIN.vege);
+    }
+    if (e.mi === 'KAPU-HIBA') {
+      kiir(SZIN.nem + '  ✗ ' + ora() + ' a UDP-kapu hibát jelzett: ' + e.ok + SZIN.vege);
+    }
+  };
+}
+
+// ⭐ Egy kézi parancs ennyi ideig kopog a célra (ms). A kézi út nem ablakhoz kötött, de véges:
+// ha a túloldal 10 mp alatt nem felel, nincs ott (vagy a portása nem enged be — D19).
+const KEZI_KOPOGAS_MS = 10000;
+
+/**
+ * ⭐ A KÉZI PARANCSOK KAPUJA (D69/2): egy UDP-kapu a parancs idejére.
+ *
+ * ⭐ AZ ALAP-PORTON NYÍLIK, HA SZABAD: így a túloldal ugyanazt a címet jegyzi fel rólunk,
+ * amin a készülék őrjárata is hallgat — a kézi csere után a kötés címe tartós. ⚠️ Ha egy
+ * őrjárat vagy postaláda már fogja a portot, a rendszer adta portra lépünk (`allando: false`).
+ *
+ * @param {Function} munka - a résen végzendő munka
+ * @returns {Promise<{kapu: Object, allando: boolean}>}
+ */
+async function keziKapuNyitasa(munka) {
+  // ⚠️ Idegen bekopogót a kézi kapu nem szolgál ki (0): a parancs a végén bezárja a kaput,
+  // és egy félbehagyott munka rosszabb, mint egy őszinte „foglalt".
+  const beallitas = { munka, bekopogoKorlat: 0, jelez: kapuJelzesKiiro() };
   try {
-    return await kapottCimekBeolvasztasa(tarolo, kapott, sajat);
+    return { kapu: await udpKapuNyitasa({ ...beallitas, port: ALAP_PORT }), allando: true };
   } catch (hiba) {
-    console.warn('cimeketTanul - nem sikerült felírni', { ok: hiba.message });
-    return { hozzajott: 0, ismeros: 0, mienk: 0 };
+    if (hiba.code !== 'EADDRINUSE') throw hiba;
+    return { kapu: await udpKapuNyitasa({ ...beallitas, port: 0 }), allando: false };
   }
+}
+
+/**
+ * ⭐ KÉZI CSERE A KAPUN (D69/2) — a `csere` és a `tukor` közös útja: kapu a parancs idejére,
+ * kopogás a célokra, a munka a közös gépezet (`resMunkaKeszito`), a végén zárás.
+ *
+ * @param {Array<{hoszt: string, port: number}>} celok
+ * @returns {Promise<{kor: Object, allando: boolean, kapuPort: number}>}
+ */
+async function keziCsere(celok) {
+  const res = await resAllapotKeszites();
+  const { kapu, allando } = await keziKapuNyitasa(resMunkaKeszito(res));
+  res.allando = allando;
+  try {
+    // ⭐ EGYSZER állítjuk össze a fájl-kérelmet, és minden társnak ugyanazt adjuk.
+    res.korFajlok = await fajlResz();
+    const kor = await kapu.kopog(celok.map((c) => ({ cim: c.hoszt, port: c.port })),
+      { idokorlat: KEZI_KOPOGAS_MS });
+    return { kor, allando, kapuPort: kapu.port };
+  } finally {
+    kapu.zar();
+  }
+}
+
+/**
+ * Egy kézi kopogás bukásának szövege — MI történt, nem csak az, hogy „nem sikerült" (D19).
+ * ⚠️ A „nem felelt" nem vád: a túloldalon nem fut koino, vagy a portása nem enged be.
+ */
+function keziHibaSzovege(e, cim, port) {
+  const hol = cim + ':' + port;
+  if (!e) return 'Erre a címre nem tudok kopogni (' + hol + ') — a UDP-kapu ma IPv4-es';
+  if (e.hiba === 'nem felelt') {
+    return 'A társ nem felelt ' + (KEZI_KOPOGAS_MS / 1000) + ' mp alatt (' + hol + ') — nem fut'
+      + ' ott koino, vagy a portása nem enged be (NAT mögött a `pajzsfuro` az út, mindkét oldalon)';
+  }
+  if (e.hiba === 'foglalt') return 'A társ foglalt volt (' + hol + ') — egy korábbi munkán dolgozik velem';
+  return 'A csere nem sikerült (' + hol + '): ' + e.hiba;
+}
+
+/**
+ * A kopogás eredményeiből a társ-lista megfigyelései — a `megfigyelesekRavezetese` alakjában.
+ *
+ * ⭐ Csak azok, akik a LISTÁRÓL jöttek (a `cel` szerint): a kötések és a friss címek
+ * könyvelése a saját jegyzékükben van. ⚠️ A sikertelen megfigyelés a lista mostani
+ * értékéből számol tovább — a rávezetés a frissebbet tartja meg (2026-09-23).
+ */
+function tarsMegfigyelesek(lista, eredmenyek, most = Date.now()) {
+  const szerint = new Map(lista.map((t) => [t.hoszt + ':' + Number(t.port), t]));
+  const megfigyelesek = [];
+  for (const e of eredmenyek) {
+    const t = szerint.get(e.cel.cim + ':' + e.cel.port);
+    if (!t) continue;
+    megfigyelesek.push(e.ok
+      ? { ...t, utoljara: most, sikertelen: 0 }
+      : { ...t, sikertelen: (t.sikertelen ?? 0) + 1 });
+  }
+  return megfigyelesek;
 }
 
 const adatMennyiseg = (eredmeny) => {
@@ -2192,10 +2290,12 @@ try {
       });
 
       if (eredmeny.sikeres) {
-        kiir(SZIN.jo + '✓ A router kinyitotta a ' + (eredmeny.port ?? port) + '-es kaput'
+        kiir(SZIN.jo + '✓ A router kinyitotta a ' + (eredmeny.port ?? port) + '-es UDP-kaput'
           + SZIN.vege + SZIN.halvany + ' — ' + eredmeny.elettartam + ' másodpercre' + SZIN.vege);
-        kiir(SZIN.halvany + 'Most már fogadhatsz kapcsolatot: node koino/koino.js figyel '
-          + port + SZIN.vege);
+        // ⚠️ KIMONDJUK A HATÁRT (D19): a rés IPv6-os, a koino UDP-kapuja ma IPv4-es — amíg a
+        // kapu IPv6-ot is nem hall, ezen a résen nem jön forgalom (D69/2, 2026-09-26).
+        kiir(SZIN.nem + '⚠ A koino UDP-kapuja ma még IPv4-es — ezen az IPv6-os résen addig nem'
+          + ' jön forgalom, amíg a kapu IPv6-ot is nem hall.' + SZIN.vege);
       } else {
         kiir(SZIN.nem + '✗ Nem sikerült: ' + eredmeny.ok + SZIN.vege);
         kiir();
@@ -2207,8 +2307,8 @@ try {
     }
 
     case 'cimek': {
-      // ⭐ MIÉRT KELL EZ? A Szakasz 2 / 4. lépéséhez (két készülék, két hálózat) tudni
-      // kell a saját GLOBÁLIS IPv6-címünket — a másik ezen ér el. Androidon a szokásos
+      // ⭐ MIÉRT KELL EZ? Hogy tudd, milyen címet adj meg a másik készüléknek. (A Szakasz 2 /
+      // 4. lépésénél ez még a GLOBÁLIS IPv6 volt — a D69/2 óta a kapu IPv4-es.) Androidon a szokásos
       // rendszer-parancsok (`ip addr`) nem mindig adnak választ, mert a rendszer korlátozza
       // őket; a program viszont a SAJÁT címeit mindig ismeri.
       //
@@ -2230,21 +2330,24 @@ try {
         }
       }
 
-      kiir(SZIN.vastag + 'GLOBÁLIS IPv6' + SZIN.vege + SZIN.halvany
-        + '   ← EZT add meg a másik készüléknek' + SZIN.vege);
-      if (!csoportok.globalis.length) {
-        kiir(SZIN.nem + '  (nincs) — így a közvetlen kapcsolat két hálózat között nem megy'
-          + SZIN.vege);
-      }
-      for (const { nev, cim } of csoportok.globalis) {
+      // ⚠️ 2026-09-26 ÓTA AZ IPv4 ÁLL ELÖL (D69/2): a koino UDP-kapuja ma IPv4-es, tehát a
+      // társ az IPv4-címen éri el — a wifin a helyi címen, NAT mögül a külsőn (azt a
+      // `kulsoport` vagy a `tukor` mondja meg). Az IPv6-címek tájékoztatásul maradnak.
+      kiir(SZIN.vastag + 'HELYI HÁLÓZAT (IPv4)' + SZIN.vege + SZIN.halvany
+        + '   ← egy wifin EZT add meg a másik készüléknek' + SZIN.vege);
+      if (!csoportok.negyes.length) kiir(SZIN.nem + '  (nincs)' + SZIN.vege);
+      for (const { nev, cim } of csoportok.negyes) {
         kiir('  ' + cim + SZIN.halvany + '   (' + nev + ')' + SZIN.vege);
       }
 
       kiir();
-      kiir(SZIN.halvany + 'Helyi hálózat (IPv4): '
-        + (csoportok.negyes.map((c) => c.cim).join(', ') || '—') + SZIN.vege);
+      kiir(SZIN.halvany + 'Globális IPv6: '
+        + (csoportok.globalis.map((c) => c.cim).join(', ') || '—')
+        + ' (a UDP-kapu ma IPv4-es — IPv6-on még nem ér el senki)' + SZIN.vege);
       kiir(SZIN.halvany + 'Csak-link IPv6 (fe80…, nem használható kívülről): '
         + csoportok.helyi.length + ' db' + SZIN.vege);
+      kiir(SZIN.halvany + 'Két hálózat között a KÜLSŐ címed kell: node koino/koino.js kulsoport'
+        + SZIN.vege);
       kiir();
       kiir(SZIN.halvany + 'A másik készüléken:  node koino/koino.js csere <a fenti cím> 7373'
         + SZIN.vege);
@@ -2389,98 +2492,31 @@ try {
     // ===== A CSERE: két készülék között (Szakasz 2) =====
 
     case 'figyel': {
-      // ===== A POSTALÁDA-SZEREP (D34) =====
+      // ===== A POSTALÁDA-SZEREP (D34) — 2026-09-26 óta az állandó UDP-kapun (D69/2) =====
       //
       // ⭐ AKI FOGADNI TUD, AZ POSTALÁDA. Nem élő továbbító: nem kell egyszerre online
       // tartania két felet (ez a TURN drágasága, és a koino épp ezt úszhatja meg). Elég,
       // ha ÁTVESZI, ELTÁROLJA, és a következő beszélgetésnél TOVÁBBADJA.
       //
-      // Anna és Béla egyike sem tud fogadni; mindketten ide szólnak ki — és teljesen
-      // kicserélik az eseményeiket, pedig soha nem beszéltek egymással. Mérve: a
-      // vizsgaProba.js „A POSTALÁDA" próbája.
+      // ⭐ A KAPU A RÉGI TCP-KAPU HELYÉN: bármikor felel a kopogásra, a bekopogóra visszakopog,
+      // és vele ugyanazt a munkát végzi, mint az őrjárat (`resMunkaKeszito`). ⚠️ Ő maga nem
+      // kopog senkire — ezért kívülről csak az éri el, aki átjut a portásán: a wifin bárki,
+      // nyilvános címen bárki, NAT mögött az, akire ő is kiszólt (vagy akinek a `kapu`
+      // paranccsal állandó szabályt kért a routertől).
       const port = parseInt(ervek[0], 10) || ALAP_PORT;
-      let beszelgetesek = 0, atvett = 0, tovabbadott = 0, forgalom = 0;
-
-      // A postaláda a saját társait is hirdeti — így a hozzá bekopogók megtudják, kik
-      // vannak még a közösségben (D36–D38). Ettől bővül a háló magától.
-      const cimTarolo = tarsakTarolo();
-      // ⭐ És a FRISS UDP-címeket is (2026-09-18). ⚠️ A postaláda hosszan fut, ezért a
-      // listát dobozban tartjuk: minden tanulás után frissül, különben halott címeket
-      // hirdetne (a leképezés percek alatt elévül — 31. mérés).
-      const udpTarolo = udpCimTarolo();
-      let figyeloUdp = await frissUdpCimek(udpTarolo);
-      const figyeloKotesTar = kotesTarolo();
-      let figyeloDhtGepek = gepekHirdetese(await dhtIsmertek());
-
-      const figyelo = await figyeloIndulasa(tar, KOINO, port, {
-        // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
-        // kezdeményez (Csaba döntése, 2026-09-13).
-        fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
-        // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
-        fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
-        hirdetettCimek: await hirdetendoCimek(cimTarolo),
-        // ⭐ A postaláda a friss UDP-címeket is terjeszti (2026-09-18) — ő beszél a
-        // legtöbb emberrel, tehát nála ér a legtöbbet.
-        udpCimek: () => figyeloUdp,
-        // ⭐⭐ ÉS UGYANÚGY A TÁBLA-KULCSOT ÉS NÉHÁNY DHT-GÉPET (2026-09-20).
-        // ⚠️ EZT KÜLÖN BE KELL KÖTNI: a `figyel` MÁSIK ág, mint az őrjárat postaládája —
-        // *pontosan ez az a hiba-alak, amit a napló kilencszer felsorol.*
-        tablaKulcs: nyilvanosResz(await tablaKulcsBiztositasa()),
-        dhtGepek: () => figyeloDhtGepek,
-        utana: async (eredmeny) => {
-          if (eredmeny.hiba) {
-            kiir(SZIN.nem + '  ✗ megszakadt (' + eredmeny.honnan + '): ' + eredmeny.hiba + SZIN.vege);
-            return;
-          }
-          if (eredmeny.masKoino) {
-            // Egy nyitott hálózaton ez rendes dolog: bekopogott valaki, aki más koinóé.
-            kiir(SZIN.halvany + '  · ' + eredmeny.honnan + ' — MÁSIK koinóé ('
-              + eredmeny.masKoino + '), nem cseréltünk' + SZIN.vege);
-            return;
-          }
-          beszelgetesek++;
-          atvett += eredmeny.uj;
-          tovabbadott += eredmeny.kuldott;
-          forgalom += (eredmeny.bajtKuldott ?? 0) + (eredmeny.bajtKapott ?? 0);
-
-          kiir(SZIN.jo + '  ✓ csere ' + eredmeny.honnan + SZIN.vege + SZIN.halvany
-            + ' — átvettem ' + eredmeny.uj + ', továbbadtam ' + eredmeny.kuldott
-            + ' (' + eredmeny.korok + ' kör, ' + adatMennyiseg(eredmeny) + ')' + SZIN.vege);
-          kiir(SZIN.halvany + '    összesen: ' + beszelgetesek + ' beszélgetés · '
-            + atvett + ' átvett · ' + tovabbadott + ' továbbadott · '
-            + adatMennyiseg({ bajtKuldott: forgalom }) + SZIN.vege);
-
-          // ⭐ A POSTALÁDA IS TANUL A HÍVÓTÓL (D39, 2026-08-30). Eddig a bekopogó
-          // elmondta, kiket ismer — és mi eldobtuk. Így a postaláda címjegyzéke csak
-          // kifelé menő cserékből bővült, pedig ő beszél a legtöbb emberrel.
-          const { hozzajott: tanult } = await cimeketTanul(cimTarolo, eredmeny.kapottCimek,
-            eredmeny.kivulrolIgyLatszom);
-          const udpTanult = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
-          if (udpTanult) {
-            figyeloUdp = await frissUdpCimek(udpTarolo);
-            kiir(SZIN.jo + '    + ' + udpTanult + ' friss UDP-címet tanultam tőle' + SZIN.vege);
-          }
-          // ⭐⭐ ÉS A KÖTÉS MEG A DHT-GÉPEK IS (2026-09-20) — a postaláda ugyanúgy társ.
-          await kotesFeljegyzese(figyeloKotesTar, eredmeny.kapottTablaKulcs,
-            { hoszt: eredmeny.honnan, port: null });
-          const dhtTanult = await dhtGepeketTanul(eredmeny.kapottDhtGepek);
-          if (dhtTanult) {
-            figyeloDhtGepek = gepekHirdetese(await dhtIsmertek());
-            kiir(SZIN.jo + '    + ' + dhtTanult + ' DHT-gépet tanultam tőle' + SZIN.vege);
-          }
-          if (tanult) {
-            kiir(SZIN.jo + '    + ' + tanult + ' új társ-címet tanultam tőle' + SZIN.vege);
-          }
-        }
+      const res = await resAllapotKeszites();
+      const kapu = await udpKapuNyitasa({
+        port, munka: resMunkaKeszito(res), bekopogoKorlat: BEKOPOGO_KORLAT,
+        jelez: kapuJelzesKiiro()
       });
 
       // ⭐ ÉS FELELÜNK A HELYI KIÁLTÁSOKRA (F. lépés). Aki ugyanezen a wifin a `felfedez`-t
       // futtatja, cím beírása nélkül megtalál minket. ⚠️ Nem kiáltunk magunktól, csak
-      // válaszolunk — és ha nem megy, az őrjárat/postaláda ettől még dolgozik.
-      const valaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: figyelo.port });
+      // válaszolunk — és ha nem megy, a postaláda ettől még dolgozik.
+      const valaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: kapu.port });
 
       kiir(SZIN.vastag + 'POSTALÁDA' + SZIN.vege + SZIN.halvany
-        + '   (a kapu nyitva a ' + figyelo.port + '-es porton)' + SZIN.vege);
+        + '   (a UDP-kapu nyitva a ' + kapu.port + '-es porton)' + SZIN.vege);
       kiir(valaszolo.mukodik
         ? SZIN.halvany + 'A helyi hálózaton felfedezhető vagyok (felfedez)' + SZIN.vege
         : SZIN.halvany + '⚠ A helyi felfedezésre nem tudok felelni — a kézi `tars` út marad'
@@ -2491,10 +2527,10 @@ try {
         + SZIN.vege);
       kiir(SZIN.halvany + 'és a következő beszélgetésnél továbbadja — így két olyan e-ember'
         + SZIN.vege);
-      kiir(SZIN.halvany + 'is elér egymáshoz, aki egyikük sem tud kaput nyitni.' + SZIN.vege);
+      kiir(SZIN.halvany + 'is elér egymáshoz, akik egymást közvetlenül nem érik el.' + SZIN.vege);
       kiir();
       kiir(SZIN.halvany + 'A másik készüléken: node koino/koino.js csere <ez a cím> '
-        + figyelo.port + SZIN.vege);
+        + kapu.port + SZIN.vege);
       kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
       // Nem lépünk ki: a nyitott kapu életben tartja a folyamatot.
       break;
@@ -2502,12 +2538,14 @@ try {
 
     case 'tarsak': {
       // ⭐ D33: nem az a kérdés, hogy egy adott gépet elérünk-e, hanem hogy a hálózat
-      // összefüggő marad-e. Ez a lista az, amiből az összefüggőség lesz.
+      // összefüggő marad-e. ⭐ A D69/2 óta ez az INDULÓ CÍMEK listája: amit te adtál meg
+      // (`tars`) vagy a helyi felfedezés talált — az első találkozáshoz. Más készüléktől
+      // tanult cím nem kerül ide (azt a friss UDP-jegyzék és a kötések viszik).
       const tarolo = tarsakTarolo();
       const lista = tarsakSorrendje(await tarolo.olvas());
 
       kiir(SZIN.vastag + 'TÁRSAK' + SZIN.vege + SZIN.halvany
-        + '   (ebben a sorrendben próbálja a `csere`)' + SZIN.vege);
+        + '   (az induló címeid — ezekre kopog a `csere` és az őrjárat, UDP-n)' + SZIN.vege);
       if (!lista.length) {
         kiir(SZIN.halvany + '  (üres) — vegyél fel egyet: node koino/koino.js tars <cím> [port] [név]'
           + SZIN.vege);
@@ -2603,7 +2641,11 @@ try {
       //
       // Két dolgot csinál egyszerre, mert egy valódi készülék is ezt teszi:
       //   1. NYITVA TARTJA A KAPUT (postaláda, D34) — aki tud, az bekopoghat,
-      //   2. IDŐNKÉNT KISZÓL mindenkinek a társ-listáról (D33).
+      //   2. IDŐNKÉNT KISZÓL mindenkinek, akit ismer (D33).
+      //
+      // ⭐⭐ 2026-09-26 ÓTA MINDKETTŐ EGYETLEN UDP-KAPUN (D69/2, Csaba döntése): nincs TCP-kör
+      // és nincs TCP-postaláda. *A kettősség drága volt — két címjegyzék, két kör, két
+      // hibahely —, és a TCP-kör ELREJTETTE a UDP-út hibáját (40. mérés).*
       //
       // ⚠️ EZ NEM „folyamatos kapcsolat" (5. szabály). A készülék a kör végén elenged
       // mindent, és alszik a következőig. Épp ez a különbség a postaláda és az élő
@@ -2613,17 +2655,18 @@ try {
       // sűrűn is mehet anélkül, hogy egy mobilos e-ember számláját megterhelné (D35).
       const perc = parseFloat(ervek[0]) || 5;
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
+      // ⭐ AZ INDULÓ CÍMEK (D69/2): amit a `tars` és a `felfedez` vett fel — az első találkozáshoz.
       const tarolo = tarsakTarolo();
-      // ⭐⭐ A FRISS UDP-CÍMEK JEGYZÉKE (2026-09-18) — és az ELÉVÜLÉS MAGA AZ ABLAK:
-      // ha az e-ember 2 perces bulit kér, a cím 2 percig érdekes. *Nincs varázsszám
-      // (9. szabály): a határ abból következik, ami amúgy is adott.*
-      const udpTarolo = udpCimTarolo();
+      // ⭐⭐ A FRISS UDP-CÍMEK ELÉVÜLÉSE MAGA AZ ABLAK (2026-09-18): ha az e-ember 2 perces
+      // bulit kér, a cím 2 percig érdekes. *Nincs varázsszám (9. szabály): a határ abból
+      // következik, ami amúgy is adott.*
       const udpElevules = Math.max(60000, Math.round(perc * 60 * 1000));
-      // ⭐⭐ A TÁBLA-KULCS: a kötések azonosítója és a rekeszünk neve a hirdetőtáblán.
-      // ⛔ Nem az azonosságunk (D6) — külön kulcs, külön kérdés.
-      const sajatTablaKulcsTeljes = await tablaKulcsBiztositasa();
-      const sajatTablaKulcs = nyilvanosResz(sajatTablaKulcsTeljes);
-      const kotesTar = kotesTarolo();
+      // ⭐ A RÉSEN VÉGZETT MUNKA ÁLLAPOTA — a kör frissíti, a munka olvassa (`resMunkaKeszito`).
+      // Benne a tábla-kulcs (⛔ nem az azonosságunk, D6), a kötések és a friss UDP-címek.
+      const res = await resAllapotKeszites({ udpElevules });
+      const kotesTar = res.kotesTar;
+      const udpTarolo = res.udpTarolo;
+      const sajatTablaKulcsTeljes = res.sajatTablaKulcsTeljes;
       // ⛔ A SAJÁT MAGUNKKAL KÖTÖTT KÖTÉS KIESIK (42. mérés, 2026-09-25): a telefon a
       // társlistáján álló SAJÁT címét is felhívta, és a „társ" tábla-kulcsa a sajátja volt —
       // a kötés-jegyzékbe így önmaga került, és minden körben önmagát kereste a táblán.
@@ -2632,183 +2675,29 @@ try {
         jegyzek.filter((k) => k.alairo !== sajatTablaKulcsTeljes.alairoNyilvanos));
       // ⭐ Amit utoljára kiírtunk a táblára — ebből tudjuk, hogy VÁLTOZOTT-e a címünk.
       let tablaraKiirtCim = null;
-      // ⭐ A megismert DHT-gépekből néhányat hirdetünk (Csaba (c) döntése, 2026-09-20).
-      let hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
-      // A postaláda HOSSZAN fut, ezért nem tömböt kap, hanem ezt a dobozt: minden ablak
-      // elején frissül. Egy induláskor átadott lista néhány perc múlva halott címeket
-      // hirdetne.
-      let frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
-      // ⭐ A SAJÁT KÜLSŐ UDP-CÍMÜNK, ahogy legutóbb láttuk (tükörtől vagy a társtól). Ez
-      // kell ahhoz, hogy a jegyzékben SAJÁT magunkra ne kopogjunk — a jegyzék ugyanis
-      // szándékosan NÉVTELEN (nem mondja meg, melyik cím kié).
-      let sajatKulsoUdp = null;
       // ⚠️ Bukik-e most a külső cím mérése? Csak a VÁLTOZÁST írjuk ki (40. mérés): egy
       // mobilnet nélküli telefonon körönként ugyanaz a sor csak zaj volna.
       let sajatCimMeresBukik = false;
 
-      const figyelo = await figyeloIndulasa(tar, KOINO, port, {
-        // ⭐ A postaláda felel a fájl-kérdésre is (5.7) — de NEM kérdez: a kérelmező
-        // kezdeményez (Csaba döntése, 2026-09-13).
-        fajlValasz: async (kertek) => (await fajlResz()).valasz(kertek),
-        // ⭐ ÉS KISZOLGÁLJA A BÁJTOKAT IS (5.7 / B) — szeletenként, saját kapcsolaton.
-        fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
-        hirdetettCimek: await hirdetendoCimek(tarolo),
-        udpCimek: () => frissUdp,
-        // ⭐ A SAJÁT CÍMÜNK MINDIG MEGY (Csaba döntése, 2026-09-20): a jegyzék névtelen,
-        // ezért csak MI tudjuk megmondani, melyik bejegyzés a sajátunk.
-        sajatUdpCim: () => (sajatKulsoUdp
-          ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null),
-        tablaKulcs: sajatTablaKulcs,
-        // ⭐ NÉHÁNY MEGISMERT DHT-GÉP (Csaba (c) döntése): a belépő csak kurbli.
-        dhtGepek: () => hirdetendoDhtGepek,
-        utana: async (e) => {
-          if (e.hiba) return;
-          if (e.masKoino) return;
-          // ⭐ A bekopogótól is tanulunk címet (D39) — ő ugyanúgy hoz újdonságot, mint
-          // akit mi hívunk. E nélkül a kapunkat nyitva tartó készülék, aki a legtöbb
-          // emberrel beszél, tanulna a legkevesebbet.
-          const { hozzajott: tanult } =
-            await cimeketTanul(tarolo, e.kapottCimek, e.kivulrolIgyLatszom);
-          // ⭐ A friss UDP-címeket is megtanuljuk tőle — így terjed a cím azon is, aki
-          // sosem hívott minket (Csaba, 2026-09-18).
-          const udpTanult = await udpCimeketTanul(udpTarolo, e.kapottUdpCimek, udpElevules);
-          if (udpTanult) frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
-          // ⭐ A BEKOPOGÓVAL IS KÖTÉS SZÜLETIK — ugyanúgy, ahogy a címet is tanuljuk tőle.
-          await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
-            { hoszt: e.honnan, port: null });
-          if (await dhtGepeketTanul(e.kapottDhtGepek)) {
-            hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
-          }
-          kiir(SZIN.jo + '  ← ' + ora() + ' bejött valaki (' + e.honnan + ')' + SZIN.vege
-            + SZIN.halvany + ' — átvettem ' + e.uj + ', továbbadtam ' + e.kuldott
-            + ' (' + adatMennyiseg(e) + ')'
-            + (tanult ? ' · +' + tanult + ' cím' : '')
-            + (udpTanult ? ' · +' + udpTanult + ' friss UDP-cím' : '') + SZIN.vege);
-        }
-      });
-
-      // ⭐ Felelünk a helyi kiáltásokra is (F. lépés) — így egy ugyanezen a wifin induló
-      // készülék cím beírása nélkül megtalál. Nem kiáltunk magunktól.
-      const orValaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: figyelo.port });
-
-      // ===== ⭐⭐⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25) =====
+      // ===== ⭐⭐⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25) — és 2026-09-26 óta AZ EGYETLEN =====
       //
       // ⛔ Eddig minden kör új foglalatot nyitott és zárt — ebből lett a 42. mérés „nyitva van,
       // de nem szolgál ki" esete, a 41. mérés egyidejűségi kényszere, és a körönként változó
       // külső port. ⭐ Most EGY foglalat szolgál a teljes futásra: a kopogásra bármikor felel,
       // a bekopogóval munka indul, és társanként egyszerre egy munka fut (lásd `udpKapu.js`).
-      //
-      // A munka a körönként frissülő állapotból dolgozik — ezek a „doboz"-változók:
-      let korFajlok = null;
-      let korHirdetjuk = null;
-
-      /**
-       * ⭐ A RÉSEN VÉGZETT MUNKA: csere, kötés, tanulás, fájl-randevú — ugyanaz, amit a régi
-       * `udpBuli` az átfúrt társsal tett, csak most a kapu hívja, bármikor, akár bekopogóra is.
-       */
-      const resMunka = async (halo, tars) => {
-        const fajlok = korFajlok ?? await fajlResz();
-        const hirdetjuk = korHirdetjuk ?? await hirdetendoCimek(tarolo);
-        // ⭐ MEGJEGYEZZÜK, MIT KÉRHETNEK TŐLÜNK: ha semmit, a randevú kiszolgáló fázisát
-        // nem kell kivárni (a társ sem fog kérni — ugyanezt a listát látja).
-        let adhatok = 0;
-        const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
-          hirdetettCimek: hirdetjuk,
-          udpCimek: frissUdp,
-          sajatUdpCim: sajatKulsoUdp ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
-          tablaKulcs: sajatTablaKulcs,
-          dhtGepek: hirdetendoDhtGepek,
-          fajlKerelem: fajlok.kerelem,
-          fajlValasz: async (kertek) => {
-            const van = await fajlok.valasz(kertek);
-            adhatok += Array.isArray(van) ? van.length : 0;
-            return van;
-          },
-          fajlOlvas: fajlok.olvas
-        });
-        const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
-        kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
-          + SZIN.vege + SZIN.halvany + ' — ' + csere.uj + ' új esemény, küldtem '
-          + csere.kuldott + ' (' + csere.korok + ' kör, '
-          + adatMennyiseg({ bajtKuldott: bajt }) + ')' + SZIN.vege);
-
-        // ⭐⭐ ÉS ITT SZÜLETIK A KÖTÉS: akivel összeértünk, azt feljegyezzük a tábla-kulcsa
-        // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
-        await kotesFeljegyzese(kotesTar, csere.kapottTablaKulcs, { hoszt: tars.cim, port: tars.port });
-
-        // ⭐⭐ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE A TÁRS (Csaba, 2026-09-17): nem egy tükör
-        // mondja meg, hanem az, akivel épp beszélünk — arról a résről, ami tényleg él.
-        if (csere.kivulrolIgyLatszom) {
-          await frissUdpCimJegyzese(udpTarolo,
-            csere.kivulrolIgyLatszom.cim, csere.kivulrolIgyLatszom.port, udpElevules);
-        }
-        // Amit a résen hallottunk, ugyanúgy tanulunk belőle, mint a TCP-körből.
-        await udpCimeketTanul(udpTarolo, csere.kapottUdpCimek, udpElevules);
-        if (await dhtGepeketTanul(csere.kapottDhtGepek)) {
-          hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
-        }
-        await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
-        const kerhetok = Array.isArray(csere.fajlokNala) ? csere.fajlokNala : [];
-        if (kerhetok.length) await fajlTanulsag(tars.cim + ':' + tars.port, kerhetok);
-        frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
-
-        // ⭐ ÉS A BÁJTOK IS A RÉSEN JÖNNEK — épp ezért van a randevú (5.7).
-        const randevu = await fajlRandevu(halo, tars.cim, tars.port, {
-          sajatCim: csere.kivulrolIgyLatszom
-            ? csere.kivulrolIgyLatszom.cim + ':' + csere.kivulrolIgyLatszom.port
-            : null,
-          kerhetok,
-          blob: fajlBlobTarolo(KOINO),
-          tar, koino: KOINO,
-          fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
-          korlat: FAJL_KORLAT,
-          kiszolgalasKell: adhatok > 0
-        });
-        if (randevu.kesz || randevu.kiszolgalt) {
-          kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
-            + ' megjött, ' + randevu.kiszolgalt + ' elment' + SZIN.vege);
-        }
-        return { uj: csere.uj ?? 0, kuldott: csere.kuldott ?? 0, bajt };
-      };
-
       const kapu = await udpKapuNyitasa({
         port,
-        munka: resMunka,
+        munka: resMunkaKeszito(res),
         bekopogoKorlat: BEKOPOGO_KORLAT,
-        jelez: (e) => {
-          if (e.mi === 'ATFURVA') {
-            kiir(SZIN.jo + '  ⭐ ' + ora() + ' rés nyílt: ' + e.cim + ':' + e.port + SZIN.vege
-              + (e.eltelt === null ? '' : SZIN.halvany + ' (' + e.eltelt + ' ms)' + SZIN.vege));
-          }
-          // ⭐ A bekopogót is megnevezzük: terepen ebből látszik, hogy a rés melyik
-          // oldalról indult, és hogy a másik fél ismert-e minket.
-          if (e.mi === 'BEKOPOGO-CEL') {
-            kiir(SZIN.halvany + '  · ' + ora() + ' ismeretlen kopogott be (' + e.cim + ':'
-              + e.port + ') — visszakopogok, és vele is cserélek' + SZIN.vege);
-          }
-          if (e.mi === 'BEKOPOGO-ELUTASITVA') {
-            kiir(SZIN.halvany + '  · ' + ora() + ' ismeretlen kopogott be (' + e.cim + ':'
-              + e.port + '), de most annyi bekopogóval dolgozom, amennyit vállalok — később'
-              + SZIN.vege);
-          }
-          // ⛔⛔ A RÉS MEGNYÍLT, DE A MUNKA RAJTA ELBUKOTT — ezt 2026-09-25-ig SEMMI nem mondta
-          // ki (41. mérés). *Két mobil között csak ez az út van.*
-          if (e.mi === 'ATFURT-MUNKA-BUKOTT') {
-            kiir(SZIN.nem + '  ✗ ' + ora() + ' rés nyílt (' + e.cim + ':' + e.port
-              + '), de a csere a résen elbukott: ' + e.ok + SZIN.vege);
-          }
-          if (e.mi === 'FOGLALT') {
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + e.cim + ':' + e.port + ' foglalt — épp'
-              + ' egy korábbi munkán dolgozik velem; újra kopogok' + SZIN.vege);
-          }
-          if (e.mi === 'KAPU-HIBA') {
-            kiir(SZIN.nem + '  ✗ ' + ora() + ' a UDP-kapu hibát jelzett: ' + e.ok + SZIN.vege);
-          }
-        }
+        jelez: kapuJelzesKiiro()
       });
 
+      // ⭐ Felelünk a helyi kiáltásokra is (F. lépés) — így egy ugyanezen a wifin induló
+      // készülék cím beírása nélkül megtalál. Nem kiáltunk magunktól.
+      const orValaszolo = await felfedezoValaszolo({ koino: KOINO, sajatPort: kapu.port });
+
       kiir(SZIN.vastag + 'ŐRJÁRAT' + SZIN.vege + SZIN.halvany
-        + '   (kapu nyitva a ' + figyelo.port + '-en · kör ' + perc + ' percenként'
+        + '   (UDP-kapu nyitva a ' + kapu.port + '-en · kör ' + perc + ' percenként'
         + (orValaszolo.mukodik ? ' · helyben felfedezhető' : '') + ')' + SZIN.vege);
       kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · koino: ' + KOINO + SZIN.vege);
       kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
@@ -2823,57 +2712,61 @@ try {
       }
       kiir();
 
-      // Vég nélküli kör. A társ-listát MINDEN körben újraolvassuk, hogy egy közben
+      // Vég nélküli kör. Az induló címeket MINDEN körben újraolvassuk, hogy egy közben
       // felvett társ azonnal beleférjen (a `tars` parancs egy másik ablakban futhat).
       for (;;) {
-        const lista = await tarolo.olvas();
+        const induloLista = await tarolo.olvas();
         let sikeresEbbenAKorben = 0;    // ⭐ hányan feleltek — ettől lesz a körből BULI
 
         // ⭐⭐⭐ AZ ABLAK VÉGE: ebből jön a menetek korlátja ÉS a kopogásé is (30. mérés).
         const kozMs = Math.max(1, Math.round(perc * 60 * 1000));
         const ablakVege = Math.ceil((Date.now() + 1) / kozMs) * kozMs;
 
-        // ===== ⭐⭐⭐ A BULI UDP-ÁGA — AKIRE KOPOGNI TUDUNK (2026-09-20) =====
+        // ===== ⭐⭐⭐ KIRE KOPOGUNK? — HÁROM FORRÁS, EGY KAPU (D69/2) =====
         //
-        // ⛔⛔ EZ A 4. SZABÁLY-HIBA JAVÍTÁSA: a UDP-vonal (ablak · mért RTT · AIMD · Vegas ·
-        // randevú) és a friss cím-jegyzék hónapok óta készen állt — **de az éles út nem
-        // hívta**, a jegyzék pedig WRITE-ONLY volt: gyűlt, terjedt, és senki nem tárcsázott
-        // róla. Innentől ez az ág tárcsáz.
+        // ⭐ A KÖTÉSEK ELŐL: az ő utolsó ismert címük akkor is megvan, ha a névtelen
+        // jegyzékből már elévült (31. mérés: a leképezés percek alatt elhal). *A kötés épp
+        // ezért nem címhez kötődik, hanem tábla-kulcshoz.* Utánuk a FRISS UDP-CÍMEK
+        // (a kötésen kívüli találkozás tartja egyben a hálót, 34. mérés), végül az INDULÓ
+        // CÍMEK — a te listád, az első találkozáshoz.
         //
-        // ⚠️ A társ-listás (TCP) kör ATTÓL FÜGGETLENÜL megy tovább: aki kaput tart, azt
-        // továbbra is hívjuk, és a postaláda is nyitva marad. *A UDP nem kiváltja a TCP-t,
-        // hanem melléáll — a 19. mérés óta a TCP alkalmi gyorssáv, nem fő út.*
-        // ⛔⛔ A SAJÁT MAGUNK KISZŰRÉSE CÍM **ÉS** PORT EGYÜTT (2026-09-20, próbából).
-        //
-        // ⚠️ Az első változat csak a CÍMET nézte — és ezt a parancssor-próba azonnal
-        // elbuktatta: a hurok-címen a két készülék ugyanazt az IP-t használja, tehát
-        // mindketten „magukat" látták a jegyzékben, és **egyikük sem kopogott**.
-        // ⭐ És ez nem próba-műtermék: **két telefon ugyanazon a wifin ugyanazt a külső
-        // IP-t mutatja** — csak a portjuk más. Cím alapján szűrve épp a családi koino
-        // (D22) két készüléke nem találná meg egymást.
+        // ⛔⛔ A SAJÁT MAGUNK KISZŰRÉSE CÍM **ÉS** PORT EGYÜTT (2026-09-20, próbából): a
+        // hurok-címen a két készülék ugyanazt az IP-t használja — és ez nem próba-műtermék:
+        // **két telefon ugyanazon a wifin ugyanazt a külső IP-t mutatja**, csak a portjuk más.
+        // ⛔ ÉS ÖNMAGUNKAT NEM HÍVJUK (42. mérés): a telefon társlistáján a SAJÁT wifis címe
+        // állt, és minden körben felhívta — „bejött valaki" lett belőle, önmagától.
         const sajatCimek = await sajatOsszesCim();
-        const frissJegyzek = await frissUdpCimek(udpTarolo, udpElevules);
-        // ⭐⭐⭐ A KÖTÉSEK ELŐL: az ő utolsó ismert címük akkor is megvan, ha a névtelen
-        // jegyzékből már elévült (31. mérés: a leképezés percek alatt elhal). *A kötés
-        // épp ezért nem címhez kötődik, hanem tábla-kulcshoz.*
+        res.frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
         const kotesJegyzek = await kotesTar.olvas();
-        const celJeloltek = kopogasCeljai(kotesJegyzek, frissJegyzek)
-          .map((c) => ({ hoszt: c.cim, port: c.port }));
-        const udpCelok = celJeloltek.filter((c) => {
+        const celok = [];
+        const volt = new Set();
+        const felvesz = (hoszt, cport) => {
+          if (!hoszt || !Number.isInteger(cport)) return;
+          const kulcs = hoszt + ':' + cport;
+          if (volt.has(kulcs)) return;
+          volt.add(kulcs);
+          celok.push({ hoszt, port: cport });
+        };
+        for (const c of kopogasCeljai(kotesJegyzek, res.frissUdp)) felvesz(c.cim, c.port);
+        // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
+        for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
+        const udpCelok = celok.filter((c) => {
           // A saját, épp mért külső címünk — pontos pár szerint.
-          if (sajatKulsoUdp && sajatCimE(c.hoszt, [sajatKulsoUdp.cim])
-            && c.port === sajatKulsoUdp.port) return false;
-          // A saját gépünk valamelyik címe + a SAJÁT fúró-portunk = mi magunk vagyunk.
+          if (res.sajatKulsoUdp && sajatCimE(c.hoszt, [res.sajatKulsoUdp.cim])
+            && c.port === res.sajatKulsoUdp.port) return false;
+          // A saját gépünk valamelyik címe + a SAJÁT kapu-portunk = mi magunk vagyunk.
           if (sajatCimE(c.hoszt, sajatCimek) && c.port === port) return false;
           return true;
         });
-        if (udpCelok.length) {
-          // ⭐ A résen végzett munka EBBŐL a körből dolgozik — a bekopogóké is, akik a kör
-          // előtt vagy után érkeznek (az állandó kapu bármikor felel, D69/3).
-          korFajlok = await fajlResz();
-          korHirdetjuk = await hirdetendoCimek(tarolo);
+
+        if (!udpCelok.length) {
+          kiir(SZIN.halvany + '  ' + ora() + ' nincs kire kopognom (se kötés, se friss cím,'
+            + ' se induló cím) — csak a kaput tartom nyitva' + SZIN.vege);
+        } else {
+          // ⭐ A résen végzett munka EBBŐL a körből dolgozik — a bekopogóké is.
+          res.korFajlok = await fajlResz();
           // ⭐ A kopogás ára korlátos (D35), de az ABLAKON soha nem lóg túl.
-          const idokorlat = Math.max(0, Math.min(KOPOGAS_ARA_KORONKENT * 1000,
+          const kopogasIdo = () => Math.max(0, Math.min(KOPOGAS_ARA_KORONKENT * 1000,
             ablakVege - Date.now()));
 
           // ⭐ A SAJÁT KÜLSŐ CÍMÜNK — EZEN az állandó foglalaton mérve, tehát ez a mondható
@@ -2885,7 +2778,7 @@ try {
               frissUdpCimJegyzese(udpTarolo, cim.cim, cim.port, udpElevules)
                 .catch((hiba) => console.warn('a saját UDP-cím feljegyzése nem sikerült',
                   { ok: hiba.message }));
-              sajatKulsoUdp = { cim: cim.cim, port: cim.port };
+              res.sajatKulsoUdp = { cim: cim.cim, port: cim.port };
               if (sajatCimMeresBukik) {
                 sajatCimMeresBukik = false;
                 kiir(SZIN.jo + '  · ' + ora() + ' a saját külső címem mérése újra megy: '
@@ -2901,174 +2794,67 @@ try {
                 + hiba.message + ') — amíg ez így van, új címet sem írhatok a táblára' + SZIN.vege);
             });
 
-          const udp = await kapu.kopog(udpCelok.map((c) => ({ cim: c.hoszt, port: c.port })),
-            { idokorlat });
-          await meres;
-          sikeresEbbenAKorben += udp.sikeres;
+          // ===== ⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG (a buli 3. darabja, 30. mérés) =====
+          //
+          // ⛔ MIÉRT: egy menet alatt a hír **egy lépést** tesz a láncban — amit az egyik
+          // társtól kaptam, arról a többi még nem tud. ⭐ Ha újra kopogunk azokra, akikkel a
+          // munka sikerült, a tudás az ablakon belül **nemzedékenként** terjed.
+          //
+          // ⭐⭐ MÉRVE (30. mérés): **az ismétlés ÖNMAGÁBAN semmit nem ér** (8,9 → 8,6 perc), az
+          // **igazítással együtt viszont ×30** (8,9 → 0,3 perc), ritka gráfon pedig a működés
+          // feltétele. *Egyik a másik előfeltétele — nem két javítás, hanem egy szerkezet két fele.*
+          //
+          // ⭐ 2026-09-26 ÓTA A KAPUN (D69/2): a társ kapuja bármikor fogad — ha épp a korábbi
+          // munkánkon dolgozik, `FOGLALT`-at mond, és a kopogás addig ismétlődik.
+          //
+          // ⚠️ HÁROM OK ÁLLÍTHATJA MEG, ÉS MINDHÁROM MÁST MOND:
+          //   · nincs újdonság → **készen vagyunk** (a szokásos eset: EGY menet);
+          //   · elfogyott az ablak → a következő buli folytatja (a méret-független korlát);
+          //   · a plafon → a legvégső szelep, ha valaki nulla ablakot adott meg.
+          const sikeresCimek = new Set();
+          let menetek = 0, osszesUj = 0, elso = null;
+          let menetCeljai = udpCelok;
+          for (;;) {
+            menetek++;
+            const udp = await kapu.kopog(menetCeljai.map((c) => ({ cim: c.hoszt, port: c.port })),
+              { idokorlat: kopogasIdo() });
+            if (!elso) { elso = udp; await meres; }
+            const sikeresek = udp.eredmenyek.filter((e) => e.ok);
+            for (const e of sikeresek) sikeresCimek.add(e.cim + ':' + e.port);
+            const uj = sikeresek.reduce((o, e) => o + (e.eredmeny?.uj ?? 0), 0);
+            osszesUj += uj;
+            if (!uj || !sikeresek.length || Date.now() >= ablakVege
+              || menetek >= MENET_PLAFON) break;
+            menetCeljai = sikeresek.map((e) => ({ hoszt: e.cim, port: e.port }));
+          }
+          // ⭐⭐ A BULI MÉRCÉJE: ahány KÜLÖNBÖZŐ társsal ebben a körben végigment a munka.
+          // ⛔ 2026-09-26-ig itt egy hiba ült: a UDP-sikereket a TCP-kör száma FELÜLÍRTA, tehát
+          // egy csak-UDP-s kör „néma" körnek számított a felszabadításnál.
+          sikeresEbbenAKorben = sikeresCimek.size;
 
-          if (!udp.sikeres && udp.celok) {
+          // ⭐ A KÖNYVELÉS: az induló címek közül ki felelt, ki nem — csak az ELSŐ menetből
+          // (a többi menet csak az ott sikereseket ismételte). ⚠️ A `modosit()`-on át, és
+          // RÁVEZETVE, nem ráírva (2026-09-22): amit a kéz közben felvett, az megmarad.
+          const megfigyelesek = tarsMegfigyelesek(induloLista, elso.eredmenyek);
+          if (megfigyelesek.length) {
+            await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, megfigyelesek));
+          }
+
+          if (elso.sikeres) {
+            kiir(SZIN.jo + '  ✓ ' + ora() + ' ' + sikeresEbbenAKorben + '/' + elso.celok
+              + ' társ' + SZIN.vege + SZIN.halvany + ' — ' + osszesUj + ' új esemény'
+              + (menetek > 1 ? ', ' + menetek + ' menet' : '') + SZIN.vege);
+          } else if (elso.celok) {
             // ⚠️ A HIÁNYT IS KIMONDJUK (D19) — és pontosan: a nem nyílt rés, a megnyílt, de
             // elbukott csere, és a „foglalt" (a társ épp egy korábbi munkán dolgozik velünk)
             // három különböző dolog (41. mérés).
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + udp.celok + ' friss címre kopogtam, '
-              + (udp.atfurt
-                ? udp.atfurt + ' rés nyílt meg, de a csere egyiken sem ment végig'
-                : udp.foglalt
-                  ? udp.foglalt + ' társ foglalt volt (egy korábbi munkán dolgozik velem)'
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + elso.celok + ' címre kopogtam, '
+              + (elso.atfurt
+                ? elso.atfurt + ' rés nyílt meg, de a csere egyiken sem ment végig'
+                : elso.foglalt
+                  ? elso.foglalt + ' társ foglalt volt (egy korábbi munkán dolgozik velem)'
                   : 'egyik rés sem nyílt meg') + SZIN.vege);
           }
-        }
-
-        // ⛔ ÖNMAGUNKAT NEM HÍVJUK (42. mérés, 2026-09-25): a telefon társlistáján a SAJÁT
-        // wifis címe állt, és a kör minden alkalommal felhívta — a naplóban „bejött valaki"
-        // lett belőle, önmagától, és egy saját magával kötött kötés. ⚠️ Csak a pontos pár
-        // (saját gép-cím + a SAJÁT portunk) esik ki: egy gépen két példány más porton legitim.
-        const hivhatok = lista.filter((t) =>
-          !(sajatCimE(t.hoszt, sajatCimek) && Number(t.port) === port));
-
-        if (!hivhatok.length) {
-          kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
-            + SZIN.vege);
-        } else {
-          const hirdetjuk = await hirdetendoCimek(tarolo);
-
-          // ===== ⛔⛔ A FÁJL-KÖR IS MEGY — ÉS 2026-09-14-IG NEM MENT (átnézés) =====
-          //
-          // Itt korábban a `csereVonalon` **hetedik paramétere hiányzott**, vagyis az
-          // őrjárat SOHA nem kérdezte meg, kinél van meg a hiányzó kép — csak felelt, ha
-          // őt kérdezték. ⚠️ Márpedig a CLAUDE.md szerint ez „a valódi üzemmód": a
-          // fájl-szállítás teljes lánca (felderítés → kérelem → átvitel) **csak akkor
-          // futott, ha valaki kézzel begépelte a `csere` parancsot**.
-          //
-          // ⭐ Ugyanaz a hiba-fajta, mint a Szakasz 4-nél (2026-09-12): a réteg megépült,
-          // mérve volt, próba őrizte — és az éles út nem hívta. *Amit csak modul-próba mér,
-          // arról nem tudjuk, hogy fut-e a valódi üzemmódban.*
-          //
-          // ⭐ EGYSZER állítjuk össze a kérelmet, és minden társnak ugyanazt adjuk.
-          const fajlok = await fajlResz();
-
-          // ===== ⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG (a buli 3. darabja) =====
-          //
-          // ⛔ MIÉRT: egy menet alatt a hír **egy lépést** tesz a láncban — amit az 5.
-          // társtól kaptam, arról az 1. még nem tud. ⭐ Ha a kör újraindul, a tudás az
-          // ablakon belül **nemzedékenként** terjed: a lista végéről az elejére is átjut.
-          //
-          // ⭐⭐ MÉRVE (30. mérés), és a szám meglepő: **az ismétlés ÖNMAGÁBAN semmit nem
-          // ér** (8,9 → 8,6 perc), az **igazítással együtt viszont ×30** (8,9 → 0,3 perc),
-          // ritka gráfon pedig a működés feltétele. *Az igazítás teremti meg a nagy,
-          // egyszerre ébren lévő csoportot; az ismétlés ezen belül terjeszt. Egyik a másik
-          // előfeltétele — nem két javítás, hanem egy szerkezet két fele.*
-          //
-          // ⚠️ A LEÁLLÁS MAGÁTÓL ADÓDIK: ha egy menet nem hozott új eseményt, nincs mit
-          // továbbadni. A szokásos eset tehát EGY menet (931 bájt/társ) — az ismétlés csak
-          // akkor kerül pénzbe, amikor tényleg történt valami.
-          //
-          // ⭐⭐⭐ ÉS A MÁSIK KORLÁT AZ ABLAK MAGA, NEM EGY SZÁM (lásd a `MENET_PLAFON`
-          // indoklását fent): a menetek addig futnak, amíg a **következő percforduló** el
-          // nem érkezik. *Így a korlát a mérettel együtt nő — ahány menet belefér, annyi
-          // fut —, a rosszindulat ellen mégis véd, mert az ablak véges.*
-          // (az `ablakVege` fent, a kör elején dőlt el — a kopogás is abból él)
-          let kor = null;
-          let menetek = 0;
-          for (;;) {
-            menetek++;
-            const menet = await korbeCsere(hivhatok,
-              (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok,
-                frissUdp, {
-                  sajatUdpCim: sajatKulsoUdp
-                    ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null,
-                  tablaKulcs: sajatTablaKulcs,
-                  dhtGepek: hirdetendoDhtGepek
-                }));
-
-            // Az első menet adja a kör vázát; a továbbiak hozzáadódnak.
-            kor = kor === null ? menet : {
-              ...menet,
-              uj: kor.uj + menet.uj,
-              bajt: kor.bajt + menet.bajt,
-              sikeres: Math.max(kor.sikeres, menet.sikeres),
-              eredmenyek: menet.eredmenyek
-            };
-
-            // ⛔ HÁROM OK ÁLLÍTHATJA MEG A KÖRT, ÉS MINDHÁROM MÁST MOND:
-            //   · nincs újdonság → **készen vagyunk** (a szokásos eset);
-            //   · elfogyott az ablak → a következő buli folytatja (a méret-független korlát);
-            //   · a plafon → a legvégső szelep, ha valaki nulla ablakot adott meg.
-            if (!menet.uj || Date.now() >= ablakVege || menetek >= MENET_PLAFON) break;
-          }
-
-          // ⛔⛔⛔ AMIT A KÖR MEGFIGYELT, AZT RÁVEZETJÜK — NEM ÍRJUK RÁ (2026-09-22).
-          //
-          // ⛔ ITT VOLT EGY `tarolo.ir(kor.lista)`, ÉS AZ ELVESZTETTE A KÖZBEN TANULT
-          // CÍMEKET. A `kor.lista` a kör ELEJI kép; amíg a kör futott (másodpercek, akár
-          // percek), a postaláda-ág egy bekopogótól ÚJ társat vehetett fel — a teljes
-          // lista kiírása azt **csendben elsöpörte**. ⭐ Mérve: a napló kiírta, hogy
-          // „+1 cím", a `tarsak.json`-ból a kör után mégis hiányzott.
-          //
-          // ⭐ Ugyanaz a hibafajta, mint a 2026-09-21-i elveszett írás (a saját külső
-          // címünk) — csak ott ezredmásodperces volt a rés, itt a TELJES KÖR az.
-          await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, kor.megfigyelesek));
-
-          // ⭐ AMIT A FÁJLOKRÓL TANULTUNK: társanként rakjuk el — a lényeg épp az, hogy
-          // **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
-          let fajlTanultak = 0;
-          for (const e of kor.eredmenyek) {
-            if (!e.sikerult || !e.fajlokNala?.length) continue;
-            fajlTanultak += await fajlTanulsag(e.tars.hoszt + ':' + e.tars.port, e.fajlokNala);
-          }
-          if (fajlTanultak) {
-            kiir(SZIN.jo + '  + ' + ora() + ' ' + fajlTanultak
-              + ' fájlról tudom meg, hogy náluk megvan' + SZIN.vege);
-          }
-
-          // ⭐⭐ ÉS A TCP-KÖRBŐL IS SZÜLETIK KÖTÉS: aki rendszeresen ott van, az a társam,
-          // akárhogy értünk össze. ⚠️ A cím itt TCP-cím — jelölt, nem ígéret: a következő
-          // bulin egy kopogás (~60 bájt) kideríti, hogy UDP-n is ott van-e.
-          let ujKotesek = 0, ujDhtGepek = 0;
-          for (const e of kor.eredmenyek) {
-            if (!e.sikerult) continue;
-            if (await kotesFeljegyzese(kotesTar, e.kapottTablaKulcs,
-              { hoszt: e.tars.hoszt, port: e.tars.port })) ujKotesek++;
-            ujDhtGepek += await dhtGepeketTanul(e.kapottDhtGepek);
-          }
-          if (ujDhtGepek) {
-            hirdetendoDhtGepek = gepekHirdetese(await dhtIsmertek());
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + ujDhtGepek
-              + ' új DHT-gépet tanultam a társaktól (a belépő csak kurbli)' + SZIN.vege);
-          }
-          if (ujKotesek) {
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + ujKotesek
-              + ' társsal van kötésem (a tábla-kulcsuk alatt)' + SZIN.vege);
-          }
-
-          // ⭐ AMIT A TÁRSAKTÓL HALLOTTUNK: új címek a listára. Ettől bővül magától.
-          // ⭐ A FRISS UDP-CÍMEK IS BEKERÜLNEK — és a lista rögtön frissül, hogy a
-          // következő menet már ezekkel hirdessen.
-          const ujUdp = kor.eredmenyek
-            .filter((e) => e.sikerult)
-            .flatMap((e) => e.kapottUdpCimek ?? []);
-          const udpHozzajott = await udpCimeketTanul(udpTarolo, ujUdp, udpElevules);
-          frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
-          if (udpHozzajott) {
-            kiir(SZIN.jo + '  + ' + ora() + ' ' + udpHozzajott
-              + ' friss UDP-cím a többiektől' + SZIN.vege);
-          }
-
-          const ujCimek = kor.eredmenyek
-            .filter((e) => e.sikerult)
-            .flatMap((e) => e.kapottCimek ?? []);
-          const { hozzajott } = await kapottCimekBeolvasztasa(tarolo, ujCimek);
-          if (hozzajott) {
-            kiir(SZIN.jo + '  + ' + ora() + ' ' + hozzajott
-              + ' új társ-cím a többiektől' + SZIN.vege);
-          }
-
-          sikeresEbbenAKorben = kor.sikeres;
-
-          const jel = kor.sikeres ? SZIN.jo + '  ✓ ' : SZIN.halvany + '  · ';
-          kiir(jel + ora() + ' ' + kor.sikeres + '/' + kor.eredmenyek.length + ' társ'
-            + SZIN.vege + SZIN.halvany + ' — ' + kor.uj + ' új esemény, '
-            + adatMennyiseg({ bajtKuldott: kor.bajt }) + SZIN.vege);
         }
 
         // ===== ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20) =====
@@ -3116,12 +2902,12 @@ try {
               await kotesFeljegyzese(kotesTar, { alairo: t.alairo, titkosito: t.titkosito },
                 { hoszt: t.hoszt, port: t.port });
             }
-            if (talaltak.length) frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
+            if (talaltak.length) res.frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
           }
 
           // (2) ÍRÁS: csak akkor, ha a CÍMÜNK MEGVÁLTOZOTT (Csaba: eseményre, nem órára).
-          const mostiCim = sajatKulsoUdp
-            ? { hoszt: sajatKulsoUdp.cim, port: sajatKulsoUdp.port } : null;
+          const mostiCim = res.sajatKulsoUdp
+            ? { hoszt: res.sajatKulsoUdp.cim, port: res.sajatKulsoUdp.port } : null;
           const valtozott = mostiCim && (!tablaraKiirtCim
             || tablaraKiirtCim.hoszt !== mostiCim.hoszt || tablaraKiirtCim.port !== mostiCim.port);
           if (valtozott) {
@@ -3151,22 +2937,9 @@ try {
             + hiba.message + ')' + SZIN.vege);
         }
 
-        // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
-        //
-        // ⛔ EZ IS HIÁNYZOTT INNEN. A kézi `csere` mindkét ága elhozta a hiányzó fájlokat,
-        // az őrjárat viszont nem — pedig épp ez az, aminek magától kell mennie: *„a buli
-        // után fent kell tartani a kapcsolatot azon eszközöknek, amik nagyobb csomagot
-        // küldenek egymásnak"* (Csaba, 2026-09-12).
-        //
-        // ⚠️ A társ-listán KÍVÜL is futhat: a birtoklás-jegyzet a saját címeit hozza, tehát
-        // akkor is van kitől kérni, ha most épp egy társ sem felelt. *A bukás nem hiba —
-        // a `fajlokElhozasa` társanként nyeli el, és a következő kör újrapróbálja.*
-        try {
-          await fajlAtvitelKiirasa();
-        } catch (hiba) {
-          // ⚠️ A tartalmi réteg hibája NE döntse el az őrjáratot (D3: a két réteg külön él).
-          kiir(SZIN.halvany + '  ⚠ a fájl-átvitel most nem sikerült: ' + hiba.message + SZIN.vege);
-        }
+        // ⚠️ A BÁJTOK 2026-09-26 ÓTA A RÉSEN JÖNNEK, a munkán belül (randevú): a kör utáni
+        // TCP-s elhozás kikerült (D69/2). *A buli után fenntartott kapcsolat (Csaba,
+        // 2026-09-12) most maga a rés — ugyanazon a foglalaton, amin a csere ment.*
 
         // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
         // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
@@ -3206,7 +2979,7 @@ try {
         const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
         await new Promise((teljesites) => setTimeout(teljesites, kovetkezoAblak - most));
       }
-      // ide nem jutunk el; a figyelőt a folyamat vége zárja
+      // ide nem jutunk el; a kaput a folyamat vége zárja
     }
 
     case 'felfedez': {
@@ -3300,31 +3073,35 @@ try {
       // a saját külső címét — így nem tudja megmondani a másiknak, hova kopogjon. Ezt
       // szokás STUN-nal megtudni.
       //
-      // ⭐ DE ITT NINCS KÜLÖN SZOLGÁLTATÁS: aki fogadni tud (postaláda), az ezt amúgy is
-      // látja, és a csere első üzenetében visszamondja. Bárki lehet tükör — tehát nem
-      // múlik egyetlen címen (2. szabály), és semmilyen bizalom nem következik belőle
-      // (3. szabály): ez megfigyelés, nem igazság.
+      // ⭐ DE ITT NINCS KÜLÖN SZOLGÁLTATÁS: bármelyik társ, akivel a kapun összeérünk, a
+      // csere első üzenetében visszamondja, honnan lát. Bárki lehet tükör — tehát nem múlik
+      // egyetlen címen (2. szabály), és semmilyen bizalom nem következik belőle (3. szabály):
+      // ez megfigyelés, nem igazság.
+      //
+      // ⛔⛔ 2026-09-26 ÓTA UDP-N (D69/2) — és ez nem formaság: a router a UDP-nek és a
+      // TCP-nek KÜLÖN leképezést ad (egy futáson belül UDP 39471, TCP 63495). A régi, TCP-s
+      // tükör tehát olyan számot mondott, amire a UDP-kapun senki nem kopoghatott.
       const cim = ervek[0];
       if (!cim) throw new Error('Kitől kérdezzem meg? node koino/koino.js tukor <cím> [port]');
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
 
-      const eredmeny = await csereVonalon(tar, KOINO, cim, port);
+      const { kor, kapuPort } = await keziCsere([{ hoszt: cim, port }]);
+      const e = kor.eredmenyek[0];
+      if (!e?.ok) throw new Error(keziHibaSzovege(e, cim, port));
 
-      kiir(SZIN.vastag + 'KÍVÜLRŐL ÍGY LÁTSZOL' + SZIN.vege);
-      if (eredmeny.kivulrolIgyLatszom) {
-        kiir('  ' + SZIN.jo + eredmeny.kivulrolIgyLatszom.cim + '  port: '
-          + eredmeny.kivulrolIgyLatszom.port + SZIN.vege);
-        kiir(SZIN.halvany + '  (ezt látta rólad ' + cim + ')' + SZIN.vege);
+      kiir(SZIN.vastag + 'KÍVÜLRŐL ÍGY LÁTSZOL (UDP-n)' + SZIN.vege);
+      const lat = e.eredmeny?.kivulrolIgyLatszom;
+      if (lat) {
+        kiir('  ' + SZIN.jo + lat.cim + '  port: ' + lat.port + SZIN.vege);
+        kiir(SZIN.halvany + '  (ezt látta rólad ' + cim + ', a helyi ' + kapuPort
+          + '-es portodról)' + SZIN.vege);
+        if (lat.port !== kapuPort) {
+          kiir(SZIN.halvany + '⚠ A port nem a helyi portod — a router átírta. Ezt a külső'
+            + ' portot kell megadni a másiknak.' + SZIN.vege);
+        }
       } else {
         kiir(SZIN.nem + '  (nem mondta meg — régi verziót futtat a másik oldal?)' + SZIN.vege);
       }
-
-      kiir();
-      const sajatjaim = await sajatGlobalisCimek();
-      kiir(SZIN.halvany + 'A saját globális IPv6-od: '
-        + (sajatjaim.join(', ') || '(nincs)') + SZIN.vege);
-      kiir(SZIN.halvany + '⚠ Ha a fenti PORT nem a te helyi portod, akkor a router átírta —'
-        + ' ezt a külső portot kell megadni a másiknak.' + SZIN.vege);
       break;
     }
 
@@ -3375,128 +3152,17 @@ try {
       const cim = ervek[0];
       if (!cim) {
         throw new Error('Kihez kopogjak?'
-          + '\n  node koino/koino.js pajzsfuro <cím> <távoli port> [helyi port]'
-          + '\n  node koino/koino.js pajzsfuro <cím> <távoli port> tcp [mp]');
+          + '\n  node koino/koino.js pajzsfuro <cím> <távoli port> [helyi port]');
       }
       const port = parseInt(ervek[1], 10) || ALAP_PORT;
       // ⚠️ A HELYI ÉS A TÁVOLI PORT KÜLÖNBÖZHET — és IPv4-en általában KÜLÖNBÖZIK is,
       // mert a NAT átírja. A helyi portot MI választjuk (ezen fogadunk), a távolit a
       // másik KÜLSŐ portja adja (oda kopogunk). A `kulsoport` parancs mondja meg.
-      const helyiPort = (ervek[2] && ervek[2].toLowerCase() !== 'tcp')
-        ? (parseInt(ervek[2], 10) || ALAP_PORT) : ALAP_PORT;
+      const helyiPort = parseInt(ervek[2], 10) || ALAP_PORT;
 
-      // ===== TCP-VÁLTOZAT =====
-      // Ugyanaz az elv, de magával a csere protokolljával fúrunk — így ha átértünk, a
-      // csere AZONNAL mehet ugyanazon a kapcsolaton (az UDP-lyuk erre nem jó).
-      if ((ervek[2] ?? '').toLowerCase() === 'tcp') {
-        const mp = parseFloat(ervek[3]) || 15;
-
-        kiir(SZIN.vastag + 'PAJZSFÚRÓ — TCP' + SZIN.vege + SZIN.halvany
-          + '   (a helyi ' + helyiPort + '-esről a ' + port + '-esre, ' + mp
-          + ' másodpercenként)' + SZIN.vege);
-        kiir(SZIN.halvany + 'A másik készüléken UGYANEZT kell futtatni, a te címedre.'
-          + SZIN.vege);
-        kiir(SZIN.nem + '⚠ Közben NE fusson `orjarat` vagy `figyel` ugyanezen a porton —'
-          + ' a fúrónak kell a ' + port + '-es, és ütköznének (EADDRINUSE).' + SZIN.vege);
-        kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
-
-        // ⭐ NYOMOZATI ALAPADAT: van-e egyáltalán globális IPv6-unk INNEN indulva?
-        // Ha nincs, akkor a fúrásnak esélye sincs, és ezt jobb rögtön tudni.
-        // ===== ⭐ MIT MONDJ A MÁSIKNAK? =====
-        //
-        // ⚠️ EZ A SZAKASZ A TEREPMÉRÉS MIATT VAN. A fúráshoz mindkét félnek tudnia kell a
-        // másik **külső** címét — és a legtöbb időt az viszi el, ha ezt a helyszínen kell
-        // kitalálni. Ezért a fúró **maga kiírja**, amit át kell adni.
-        const sajatjaim = await sajatGlobalisCimek();
-        if (sajatjaim.length) {
-          kiir(SZIN.jo + 'A te globális IPv6-od: ' + sajatjaim.join(', ') + SZIN.vege);
-          kiir(SZIN.halvany + '  ⭐ Ha MINDKÉT félnek van ilyen, ezt használjátok — IPv6-on'
-            + ' nincs NAT, tehát a port sem változik.' + SZIN.vege);
-        } else {
-          // ⚠️ KORÁBBAN EZ AZT MONDTA: „a fúrásnak így esélye sincs" — ez TÉVES volt.
-          // A 2026-08-29-i sikeres mérés **IPv4-en, NAT mögött** történt (CGNAT-tal az egyik
-          // oldalon). Az IPv6 könnyebbé teszi, de nem feltétele.
-          kiir(SZIN.halvany + 'Nincs globális IPv6-od — ez nem baj, a fúrás IPv4-en, NAT'
-            + ' mögött is működhet (2026-08-29-i mérés).' + SZIN.vege);
-        }
-
-        // ----- ⛔ A KÜLSŐ CÍMET INNEN ELVETTÜK (2026-09-13, a 18. mérés után) -----
-        //
-        // Itt korábban egy **UDP**-s mérés állt, ami kiírta a külső portot. ⛔⛔ Ez a
-        // TCP-fúrásnál **félrevezető volt**: a router a két szállításnak KÜLÖN leképezést
-        // ad, tehát a UDP-szám nem az, amire a társ SYN-je érkezne. Mérve, egy futáson
-        // belül: UDP **39471**, TCP **63495** — *két szám ugyanarra a kérdésre, és csak az
-        // egyik igaz.*
-        //
-        // ⭐ Mostantól a mérést **maga a fúró** végzi, TCP-n, ugyanarról a foglalatról,
-        // amivel fúrni fog (`kulsoCimTcp`), és a `SAJAT-KULSO-CIM` jelzésben adja tovább.
-        // *Ahol egy szám mást mond, mint amit teszünk, ott előbb-utóbb valaki a számot
-        // hiszi el — ezért nem hagytuk itt „tájékoztatásul".*
-        kiir();
-
-        let elozoOk = null;
-        const furas = await tcpPajzsfuras(helyiPort, cim, port, {
-          koz: mp * 1000,
-          utana: (e) => {
-            // ===== ⭐⭐ A SAJÁT KÜLSŐ TCP-PORT — a 18. mérés következménye =====
-            //
-            // ⛔ EZ AZ A SZÁM, AMI A 17. MÉRÉSNÉL HIÁNYZOTT. A routered átírhatja a portot,
-            // és a másik fél addig hiába kopog a 7373-ra — ott nincs rés. ⭐ A 18. mérés
-            // szerint a leképezés **célfüggetlen**, tehát ez a szám a TÁRSRA IS érvényes.
-            if (e.mi === 'SAJAT-KULSO-CIM') {
-              kiir(SZIN.jo + '⭐ KÍVÜLRŐL ÍGY LÁTSZOM TCP-N: ' + e.cim + ':' + e.port
-                + SZIN.vege + SZIN.halvany + '   (a helyi ' + e.helyiPort + '-esről, '
-                + e.tukor + ' szerint)' + SZIN.vege);
-              kiir('   ' + SZIN.vastag + 'EZT MONDD BE A MÁSIKNAK: node koino/koino.js '
-                + 'pajzsfuro ' + e.cim + ' ' + e.port + ' tcp' + SZIN.vege);
-              if (e.port !== e.helyiPort) {
-                kiir(SZIN.halvany + '   ⚠ A router átírta a portot (' + e.helyiPort + ' → '
-                  + e.port + ') — ezért KELL bemondani.' + SZIN.vege);
-              }
-              kiir();
-            }
-            // ⚠️ A HIÁNYT IS KIMONDJUK (D19) — különben csendben fúrnánk vakon, ahogy
-            // 2026-09-13-án négy órán át tettük.
-            if (e.mi === 'SAJAT-KULSO-CIM-NINCS') {
-              kiir(SZIN.nem + '⚠ A külső TCP-portomat nem sikerült megmérni'
-                + SZIN.vege + SZIN.halvany + ' (egyik tükör sem felelt).' + SZIN.vege);
-              kiir(SZIN.halvany + '   A fúrás ettől még megy, de ha a routered átírja a'
-                + ' portot, a másik fél nem talál célba.' + SZIN.vege);
-              kiir();
-            }
-
-            // ⚠️ MINDEN próbálkozás látszik, nem csak a siker (Csaba kérése).
-            if (e.mi === 'PROBALOK') {
-              kiir(SZIN.halvany + '  ' + ora() + ' → ' + e.hanyadik + '. próbálkozás…'
-                + SZIN.vege);
-            }
-            if (e.mi === 'PROBA-BUKOTT') {
-              kiir(SZIN.nem + '     ✗ ' + e.ok + SZIN.vege
-                + SZIN.halvany + '  (' + e.eltelt + ' ms)' + SZIN.vege);
-              // A magyarázatot csak akkor ismételjük, ha VÁLTOZOTT — különben elárasztja.
-              if (e.ok !== elozoOk) {
-                const magyarazat = hibaMagyarazat(e.ok);
-                if (magyarazat) kiir(SZIN.halvany + '       → ' + magyarazat + SZIN.vege);
-                elozoOk = e.ok;
-              }
-            }
-            if (e.mi === 'ATFURVA') {
-              kiir(SZIN.jo + '     ⭐ ÁTFÚRVA a ' + e.hanyadik + '. próbálkozásra! ('
-                + e.eltelt + ' ms)' + SZIN.vege);
-            }
-          }
-        });
-
-        kiir();
-        kiir(SZIN.jo + '⭐ A PAJZS ÁTFÚRVA — most jön a csere ugyanezen a kapcsolaton.'
-          + SZIN.vege);
-        const csere = await parbeszed(furas.kapcsolat, tar, KOINO);
-        furas.kapcsolat.end();
-        kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
-          + ' — kaptam ' + csere.uj + ' új eseményt, küldtem ' + csere.kuldott
-          + ' (' + csere.korok + ' kör)' + SZIN.vege);
-        break;
-      }
+      // ⚠️ ITT ÁLLT 2026-09-26-IG A TCP-VÁLTOZAT (`pajzsfuro <cím> <port> tcp`, 17–19. mérés). A
+      // D69/2 óta nincs TCP a készülékek között: a TCP-fúrás a router célfüggetlenségén állt,
+      // a UDP a foglalat-modellen (Csaba döntése, 2026-09-13 és 2026-09-25).
 
       kiir(SZIN.vastag + 'PAJZSFÚRÓ' + SZIN.vege + SZIN.halvany
         + '   (a helyi ' + helyiPort + '-esről a ' + cim + ':' + port
@@ -3569,23 +3235,13 @@ try {
           + ' válasz, ' + eredmeny.eltelt + ' ms alatt' + SZIN.vege);
 
         // ⭐ ÉS ITT A JUTALOM: a megnyílt résen AZONNAL megy a csere. Ugyanaz a
-        // `parbeszed` fut, mint TCP-n — csak a szállítás más (1. szabály).
-        const tarolo = tarsakTarolo();
+        // `parbeszed` fut, mint az őrjárat kapuján — csak a foglalat más (1. szabály).
         kiir();
         kiir(SZIN.vastag + 'CSERE A RÉSEN' + SZIN.vege);
-        // ⚠️ A RÉS CÍMÉT NEM HIRDETJÜK (2026-08-30, mérésből). Tegnap még igen, azzal az
-        // indokkal, hogy „a fúró rögzített portról hív, a rés ott él". A valódi mérés
-        // megcáfolta: a másik fél felvette TARTÓS TÁRSNAK, és az őrjárata azóta TCP-vel
-        // hívogatja — a résen viszont csak UDP fér át, és a leképezés percek alatt
-        // elévül. Mérve: `1× nem sikerült` közvetlenül a sikeres csere után.
-        //
-        // ⭐ Ez nem a D39 visszavonása: aki KAPUT TART NYITVA (`figyel`), az továbbra is
-        // hirdeti a saját címét, mert az tartós és TCP-vel hívható. A rés nem az.
-        // Amikor az őrjárat majd maga is tud fúrni, ez visszakapcsolható — de akkor a
-        // társ-listának meg kell tanulnia, mi a múlandó UDP-rés és mi a tartós cím.
+        // ⚠️ A TCP-CÍMJEGYZÉK (`hirdetettCimek`) 2026-09-26 óta nem utazik (D69/2): a
+        // címeket a friss UDP-jegyzék terjeszti.
         const fajlok = await fajlResz();
         const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO, {
-          hirdetettCimek: await hirdetendoCimek(tarolo),
           // ⭐⭐ A FÁJL-KÖR A RÉSEN IS MEGY (5.7) — enélkül nem tudnánk meg, mi van nála.
           fajlKerelem: fajlok.kerelem,
           fajlValasz: fajlok.valasz,
@@ -3596,8 +3252,6 @@ try {
           + SZIN.vege + SZIN.halvany + ' (' + csere.korok + ' kör, '
           + adatMennyiseg({ bajtKuldott: csere.bajtKuldott, bajtKapott: csere.bajtKapott })
           + ')' + SZIN.vege);
-        const { hozzajott: tanult } = await kapottCimekBeolvasztasa(tarolo, csere.kapottCimek);
-        if (tanult) kiir(SZIN.jo + '  + ' + tanult + ' új társ-címet tanultam' + SZIN.vege);
         if (csere.kivulrolIgyLatszom) {
           // ⭐⭐ EZ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE: nem egy tükör mondja, hanem a TÁRS,
           // arról a résről, amin épp beszélünk (2026-09-18). *A végleges tükör a társ.*
@@ -3682,6 +3336,10 @@ try {
       // tud és mi nem — böngészéskor viszont EGYETLEN entitás kell, most azonnal. A
       // periodikus csere erre elvileg alkalmatlan: hiába ér körbe minden esemény öt perc
       // alatt, ha egy nem tárolt entitást akarok megnyitni.
+      //
+      // ⭐ 2026-09-26 ÓTA A KAPUN (D69/2): minden jelöltre EGYSZERRE kopogunk, és akinél
+      // megnyílik a rés, attól kérjük a szeletet (`szeletUdpResen`). ⚠️ A túloldalon a
+      // rendes csere-munka áll — az első üzenetünkből látja, hogy csak egy szeletet kérünk.
       const entitas = ervek[0];
       if (!entitas) {
         throw new Error('Melyik entitást hozzam?'
@@ -3692,7 +3350,7 @@ try {
       const tarolo = tarsakTarolo();
 
       // ----- KIT KÉRDEZZÜNK MEG? -----
-      // 1. akit megadtak · 2. akinél KORÁBBAN LÁTTUK ezt az entitást · 3. a társak
+      // 1. akit megadtak · 2. akinél KORÁBBAN LÁTTUK ezt az entitást · 3. az induló címek
       let cimek;
       if (ervek[1]) {
         cimek = [{ hoszt: ervek[1], port: parseInt(ervek[2], 10) || ALAP_PORT }];
@@ -3701,7 +3359,10 @@ try {
         const ismertek = szeletCimei(jegyzek, entitas);
         const tarsak = tarsakSorrendje(await tarolo.olvas());
         // A szelet-jegyzék ELÖL: ott biztosan megvolt egyszer.
-        cimek = [...ismertek, ...tarsak].map((c) => ({ hoszt: c.hoszt, port: c.port }));
+        const volt = new Set();
+        cimek = [...ismertek, ...tarsak]
+          .map((c) => ({ hoszt: c.hoszt, port: Number(c.port) }))
+          .filter((c) => !volt.has(c.hoszt + ':' + c.port) && volt.add(c.hoszt + ':' + c.port));
       }
 
       if (!cimek.length) {
@@ -3712,19 +3373,28 @@ try {
       }
 
       kiir(SZIN.vastag + 'HOZOM: ' + entitas.slice(0, 12) + '…' + SZIN.vege
-        + SZIN.halvany + '   (' + cimek.length + ' cím a listán)' + SZIN.vege);
+        + SZIN.halvany + '   (' + cimek.length + ' címre kopogok egyszerre)' + SZIN.vege);
 
-      // ⚠️ EGY ELÉRHETETLEN CÍM NEM HIBA, HANEM A NORMÁLIS MŰKÖDÉS (D33) — megyünk tovább.
+      const { kapu } = await keziKapuNyitasa((halo, t) =>
+        szeletUdpResen(halo, t.cim, t.port, tar, KOINO, entitas));
+      let kor;
+      try {
+        kor = await kapu.kopog(cimek.map((c) => ({ cim: c.hoszt, port: c.port })),
+          { idokorlat: KEZI_KOPOGAS_MS });
+      } finally {
+        kapu.zar();
+      }
+
+      // ⚠️ EGY ELÉRHETETLEN CÍM NEM HIBA, HANEM A NORMÁLIS MŰKÖDÉS (D33) — megnevezzük, megyünk tovább.
       let siker = null;
-      for (const c of cimek) {
-        try {
-          const e = await szeletHozatala(tar, KOINO, c.hoszt, c.port, entitas);
-          siker = { ...e, cim: c };
-          kiir(SZIN.jo + '  ✓ ' + c.hoszt + ' — ' + e.kapott + ' esemény, ebből ÚJ: ' + e.uj
-            + SZIN.vege + SZIN.halvany + ' (' + adatMennyiseg(e) + ')' + SZIN.vege);
-          break;
-        } catch (hiba) {
-          kiir(SZIN.halvany + '  · ' + c.hoszt + ' ' + c.port + ' — ' + hiba.message + SZIN.vege);
+      for (const e of kor.eredmenyek) {
+        if (e.ok && !siker) {
+          siker = { ...e.eredmeny, cim: { hoszt: e.cim, port: e.port } };
+          kiir(SZIN.jo + '  ✓ ' + e.cim + ' — ' + e.eredmeny.kapott + ' esemény, ebből ÚJ: '
+            + e.eredmeny.uj + SZIN.vege + SZIN.halvany + ' (' + adatMennyiseg(e.eredmeny) + ')'
+            + SZIN.vege);
+        } else if (!e.ok) {
+          kiir(SZIN.halvany + '  · ' + e.cel.cim + ' ' + e.cel.port + ' — ' + e.hiba + SZIN.vege);
         }
       }
 
@@ -3754,44 +3424,24 @@ try {
     }
 
     case 'csere': {
+      // ⭐ 2026-09-26 ÓTA A KAPUN (D69/2): a kézi csere ugyanazt a munkát végzi, mint az
+      // őrjárat és a postaláda (`resMunkaKeszito`) — csere, kötés, tanulás, fájl-randevú.
+      // *Ami csak az őrjáratban megy, arról nem tudjuk, hogy kézzel is működik-e — és fordítva.*
       const tarolo = tarsakTarolo();
       const kezdet = Date.now();
 
       // ===== EGY MEGADOTT CÍM =====
       // Marad, mert kell: az első társat valahonnan meg kell adni (kézzel átvitt címmel),
-      // és a mérésekhez is ez a legrövidebb út.
+      // és a mérésekhez is ez a legrövidebb út. ⚠️ NAT mögött csak akkor megy át, ha a
+      // másik is kopog ránk (vagy a wifin vagytok) — két idegen router között a
+      // `pajzsfuro` az út, mindkét oldalon.
       if (ervek[0]) {
         const cim = ervek[0];
         const port = parseInt(ervek[1], 10) || ALAP_PORT;
-        const fajlok = await fajlResz();
-        const udpTarolo = udpCimTarolo();
-        const eredmeny = await csereVonalon(tar, KOINO, cim, port, 10000,
-          await hirdetendoCimek(tarolo), fajlok, await frissUdpCimek(udpTarolo), {
-            // ⭐⭐ A KÉZI CSERE IS TELJES ÉRTÉKŰ BULI (2026-09-20): tábla-kulcs és néhány
-            // DHT-gép is utazik. *Ami csak az őrjáratban megy, arról nem tudjuk, hogy
-            // kézzel is működik-e — és fordítva.*
-            tablaKulcs: nyilvanosResz(await tablaKulcsBiztositasa()),
-            dhtGepek: gepekHirdetese(await dhtIsmertek())
-          });
-        // ⭐ A friss UDP-címeket innen is megtanuljuk (2026-09-18) — a kézi csere ugyanúgy
-        // buli, mint az őrjáraté.
-        const udpTanultak = await udpCimeketTanul(udpTarolo, eredmeny.kapottUdpCimek);
-        if (udpTanultak) {
-          kiir(SZIN.jo + '+ ' + udpTanultak + ' friss UDP-címet tanultam tőle' + SZIN.vege);
-        }
-        // ⭐ ÉS TANULUNK IS TŐLE: kötés + DHT-gépek.
-        await kotesFeljegyzese(kotesTarolo(), eredmeny.kapottTablaKulcs,
-          { hoszt: cim, port });
-        const dhtTanultak = await dhtGepeketTanul(eredmeny.kapottDhtGepek);
-        if (dhtTanultak) {
-          kiir(SZIN.jo + '+ ' + dhtTanultak + ' DHT-gépet tanultam tőle' + SZIN.vege);
-        }
-
-        const fajlTanultak = await fajlTanulsag(cim + ':' + port, eredmeny.fajlokNala);
-        if (fajlTanultak) {
-          kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy nála megvan'
-            + SZIN.vege);
-        }
+        const { kor, allando, kapuPort } = await keziCsere([{ hoszt: cim, port }]);
+        const e = kor.eredmenyek[0];
+        if (!e?.ok) throw new Error(keziHibaSzovege(e, cim, port));
+        const eredmeny = e.eredmeny;
 
         // ⚠️ MÁSIK KOINO: ez NEM hiba, csak nincs miről beszélni. Ki kell mondani, mert
         // különben a „kaptam 0, küldtem 0" úgy néz ki, mintha minden rendben lenne.
@@ -3807,34 +3457,30 @@ try {
         kiir(SZIN.jo + 'Csere kész' + SZIN.vege + SZIN.halvany
           + ' — kaptam ' + eredmeny.uj + ' új eseményt, küldtem ' + eredmeny.kuldott
           + ' (' + eredmeny.korok + ' kör, ' + (Date.now() - kezdet) + ' ms, '
-          + adatMennyiseg(eredmeny) + ')' + SZIN.vege);
+          + adatMennyiseg({ bajtKuldott: eredmeny.bajt }) + ')' + SZIN.vege);
+        if (!allando) {
+          kiir(SZIN.halvany + '  (a ' + ALAP_PORT + '-es portot egy futó őrjárat vagy postaláda'
+            + ' fogja — a ' + kapuPort + '-esről kopogtam)' + SZIN.vege);
+        }
 
         // Akivel egyszer sikerült, azt megjegyezzük — különben minden cserénél újra kézzel
-        // kellene beírni a címet, és pont az nem épülne fel, ami a D33-hoz kell: a lista.
-        // ⚠️ A `modosit()`-on át, mint a társ-lista minden más írása (2026-09-23).
+        // kellene beírni a címet. ⚠️ A `modosit()`-on át, mint a lista minden más írása.
         let volt = false;
         await tarolo.modosit((lista) => {
-          volt = lista.some((t) => t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port);
+          volt = lista.some((t) => t.hoszt.toLowerCase() === cim.toLowerCase()
+            && Number(t.port) === port);
           return tarsHozzaadasa(lista, { hoszt: cim, port }).map((t) =>
-            (t.hoszt.toLowerCase() === cim.toLowerCase() && t.port === port)
+            (t.hoszt.toLowerCase() === cim.toLowerCase() && Number(t.port) === port)
               ? { ...t, utoljara: Date.now(), sikertelen: 0 } : t);
         });
         if (!volt) kiir(SZIN.halvany + 'Felvettem a társak közé (levenni: tars torol '
           + cim + ' ' + port + ')' + SZIN.vege);
 
-        const { hozzajott: tanult } =
-          await kapottCimekBeolvasztasa(tarolo, eredmeny.kapottCimek);
-        if (tanult) kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam tőle'
-          + SZIN.vege);
-
-        // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
-        await fajlAtvitelKiirasa();
-
         kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
         break;
       }
 
-      // ===== MINDENKI A LISTÁRÓL =====
+      // ===== MINDENKI A LISTÁRÓL — egyszerre, a kapun =====
       const lista = await tarolo.olvas();
       if (!lista.length) {
         throw new Error('Nincs egyetlen társ sem. Vegyél fel egyet:'
@@ -3844,64 +3490,44 @@ try {
 
       kiir(SZIN.vastag + 'CSERE ' + lista.length + ' társsal' + SZIN.vege);
 
-      const hirdetjuk = await hirdetendoCimek(tarolo);
-      // ⭐ EGYSZER állítjuk össze a fájl-kérelmet, és minden társnak ugyanazt adjuk.
-      const fajlok = await fajlResz();
-      const kor = await korbeCsere(lista,
-        (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok), {
-        utana: (e) => {
-          const cimke = e.tars.nev ? e.tars.nev : e.tars.hoszt + ' ' + e.tars.port;
-          if (e.sikerult && e.masKoino) {
-            kiir(SZIN.halvany + '  · ' + cimke + ' — egy MÁSIK koinóé (' + e.masKoino
-              + '), nincs mit cserélni' + SZIN.vege);
-            return;
-          }
-          kiir(e.sikerult
-            ? SZIN.jo + '  ✓ ' + cimke + SZIN.vege + SZIN.halvany
-              + ' — kaptam ' + e.uj + ', küldtem ' + e.kuldott
-              + ' (' + e.korok + ' kör, ' + adatMennyiseg(e) + ')' + SZIN.vege
-            : SZIN.halvany + '  · ' + cimke + ' — nem érhető el: ' + e.hiba + SZIN.vege);
-        }
-      });
-      // ⭐ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA — ugyanaz az őr, mint az őrjáratnál.
-      // ⚠️ A kézi `csere` rövidebb, tehát a rés is kisebb — de az elvet nem a rés
-      // hossza dönti el: *ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
-      await tarolo.modosit((friss) => megfigyelesekRavezetese(friss, kor.megfigyelesek));
-
-      // ⭐ AMIT A FÁJLOKRÓL TANULTUNK, azt társanként rakjuk el — mert a lényeg épp az,
-      // hogy **kitől** lehet kérni (helyi feljegyzés, 3. szabály).
-      let fajlTanultak = 0;
+      const { kor } = await keziCsere(lista.map((t) => ({ hoszt: t.hoszt, port: Number(t.port) })));
+      const nevek = new Map(lista.map((t) => [t.hoszt + ':' + Number(t.port), t.nev]));
+      let osszUj = 0, osszKuldott = 0, osszBajt = 0;
       for (const e of kor.eredmenyek) {
-        if (!e.sikerult || !e.fajlokNala?.length) continue;
-        fajlTanultak += await fajlTanulsag(e.tars.hoszt + ':' + e.tars.port, e.fajlokNala);
+        const nev = nevek.get(e.cel.cim + ':' + e.cel.port);
+        const cimke = nev ? nev : e.cel.cim + ' ' + e.cel.port;
+        if (e.ok && e.eredmeny?.masKoino) {
+          kiir(SZIN.halvany + '  · ' + cimke + ' — egy MÁSIK koinóé (' + e.eredmeny.masKoino
+            + '), nincs mit cserélni' + SZIN.vege);
+          continue;
+        }
+        if (e.ok) {
+          osszUj += e.eredmeny.uj; osszKuldott += e.eredmeny.kuldott; osszBajt += e.eredmeny.bajt;
+          kiir(SZIN.jo + '  ✓ ' + cimke + SZIN.vege + SZIN.halvany
+            + ' — kaptam ' + e.eredmeny.uj + ', küldtem ' + e.eredmeny.kuldott
+            + ' (' + e.eredmeny.korok + ' kör, ' + adatMennyiseg({ bajtKuldott: e.eredmeny.bajt })
+            + ')' + SZIN.vege);
+        } else {
+          kiir(SZIN.halvany + '  · ' + cimke + ' — nem érhető el: ' + e.hiba + SZIN.vege);
+        }
       }
-
-      const tanultCimek = kor.eredmenyek
-        .filter((e) => e.sikerult).flatMap((e) => e.kapottCimek ?? []);
-      const { hozzajott: tanult } = await kapottCimekBeolvasztasa(tarolo, tanultCimek);
+      // ⭐ A KÖR MEGFIGYELÉSEI A FRISS LISTÁRA — ugyanaz az őr, mint az őrjáratnál.
+      // ⚠️ *Ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.*
+      await tarolo.modosit((friss) =>
+        megfigyelesekRavezetese(friss, tarsMegfigyelesek(lista, kor.eredmenyek)));
 
       kiir();
-      if (tanult) {
-        kiir(SZIN.jo + '+ ' + tanult + ' új társ-címet tanultam a többiektől' + SZIN.vege);
-      }
-      if (fajlTanultak) {
-        kiir(SZIN.jo + '+ ' + fajlTanultak + ' fájlról tudom meg, hogy náluk megvan'
-          + SZIN.vege);
-      }
       // ⚠️ A NULLA SIKER SEM HIBA: a koino ettől még működik, csak most nem terjedt.
       // Ezért nem `throw`, és ezért nem 1-es kilépési kód (2. szabály).
       kiir((kor.sikeres ? SZIN.jo : SZIN.nem) + kor.sikeres + '/' + kor.eredmenyek.length
         + ' társ vette fel' + SZIN.vege + SZIN.halvany
-        + ' — összesen ' + kor.uj + ' új esemény, ' + kor.kuldott + ' küldött'
-        + ' (' + (Date.now() - kezdet) + ' ms, ' + adatMennyiseg({ bajtKuldott: kor.bajt })
+        + ' — összesen ' + osszUj + ' új esemény, ' + osszKuldott + ' küldött'
+        + ' (' + (Date.now() - kezdet) + ' ms, ' + adatMennyiseg({ bajtKuldott: osszBajt })
         + ')' + SZIN.vege);
       if (!kor.sikeres) {
         kiir(SZIN.halvany + 'Egy társ sem válaszolt. Ez nem hiba — később újra megy;'
           + ' addig is minden művelet mehet tovább helyben.' + SZIN.vege);
       }
-
-      // ----- ⭐⭐ ÉS A BULI UTÁN: A BÁJTOK (5.7 / B) -----
-      await fajlAtvitelKiirasa();
 
       kiir(SZIN.halvany + 'Az állapot: node koino/koino.js' + SZIN.vege);
       break;
@@ -4616,9 +4242,9 @@ try {
       kiir('           kivisz <fájl> [mind|sajat|<azonosító>] · behoz <fájl>   (a KÉZI ÚT)');
       kiir('           ter [letrehozva|eloszorLattam|nev] [csokkeno|novekvo]  (A BELÉPŐ TÉR)');
       kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
-      kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]');
+      kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]   (mind UDP-n)');
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
-      kiir('           pajzsfuro <cím> [port] [tcp] · tukor <cím> [port] · kulsoport [port]');
+      kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           ujjlenyomat kiment|osszevet <fájl> [napok]   (…és MIBEN térünk el)');
       kiir('           tabla [kiir [cím] [port] | olvas]   (A HIRDETŐTÁBLA — a kötéseim)');

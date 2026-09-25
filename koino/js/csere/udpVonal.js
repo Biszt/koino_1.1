@@ -55,7 +55,7 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed, fajlHozatala, fajlKiszolgalas } from './vonal.js';
+import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton } from './vonal.js';
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -756,6 +756,7 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
   // ----- FOGADÁS: sorrendbe rakva, ismétlést elnyelve -----
   let vartSorszam = 1;
   const varakozo = new Map();     // sorszám → szöveg (ami előbb ért ide, mint kellett)
+  const utolsoKapottak = new Map(); // sorszám → szöveg: a már továbbadott utolsó darabok (utóhang)
 
   const uzenetErkezett = (bajtok, felado) => {
     // ⚠️ Csak attól fogadunk el, akivel beszélünk. Ez NEM bizalom (3. szabály) — az
@@ -825,6 +826,27 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
       ? { ny: uzenet.sz, k: uzenet.k }
       : { ny: uzenet.sz });
 
+    // ⛔⛔⛔ AZ UTÓHANG CSAK A SAJÁT ISMÉTLÉSEIRE FELEL (2026-09-26, D69/2 — mérésből).
+    //
+    // ⚠️ A lenti régi feltevés (*„amíg a régi figyelő él, az ÚJ is él"*) a KÜLDŐ oldalán igaz,
+    // a FOGADÓén nem mindig. Az őrjárat ismételt menete ugyanazzal a társsal másodpercen belül
+    // ÚJ kapcsolatot nyit ugyanazon a foglalaton — és a sorszámok minden kapcsolatban 1-től
+    // indulnak. ⛔ Mérve: a társ új munkája még el sem indult, a régi kapcsolata viszont az
+    // utóhangban NYUGTÁZTA az új kapcsolat első darabját (a `sz < vartSorszam` ág azt hitte,
+    // ismétlést lát). A küldő nem küldte újra, a társ új párbeszéde sosem kapta meg, és a
+    // csere 10 mp múlva elbukott: *„rés nyílt, de a csere a résen elbukott"*.
+    //
+    // ⭐ A MEGKÜLÖNBÖZTETÉS ÚJ MEZŐ NÉLKÜL MEGVAN: az első küldés SOSEM visz `k`-t (lásd a
+    // pontos mintáknál), tehát ami `k` nélkül jön, az nem lehet a mi kapcsolatunk ismétlése.
+    // És ami `k`-val jön, az is csak akkor a miénk, ha BÁJTRA azt hozza, amit mi kaptunk
+    // azon a sorszámon. A lezárt példány új adatot sem fogad (`sz >= vartSorszam`): a
+    // párbeszéd csak akkor zár, ha a társ minden üzenetét elolvasta.
+    if (lezarva) {
+      if (Number.isInteger(uzenet.k) && uzenet.sz < vartSorszam
+        && utolsoKapottak.get(uzenet.sz) === uzenet.a) nyugtaz();
+      return;
+    }
+
     if (uzenet.sz < vartSorszam) { nyugtaz(); return; }
 
     // ⛔⛔ AZ ABLAKON TÚLIT NEM FOGADJUK EL, ÉS NEM IS NYUGTÁZZUK (2026-09-14).
@@ -846,6 +868,10 @@ export function udpKapcsolat(halo, tarsCim, tarsPort, beallitas = {}) {
     while (varakozo.has(vartSorszam)) {
       const szoveg = varakozo.get(vartSorszam);
       varakozo.delete(vartSorszam);
+      // ⭐ Az utolsó néhány kapott darabot megőrizzük — az utóhang ezzel ismeri fel a SAJÁT
+      // ismétléseit (lásd fent). Korlátos: csak a fogadó ablaknyi utolsó darab.
+      utolsoKapottak.set(vartSorszam, szoveg);
+      utolsoKapottak.delete(vartSorszam - FOGADO_ABLAK);
       vartSorszam++;
       jelez('data', szoveg);
     }
@@ -1197,6 +1223,35 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel };
   console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
+}
+
+/**
+ * ⭐ EGY SZELET ELKÉRÉSE A RÉSEN (D69/2, 2026-09-26) — a `hozd` parancs UDP-útja.
+ *
+ * ⭐ A túloldalon a rendes csere-munka fut (a kapu mást nem indít): az ő `parbeszed`-je
+ * LENYOMAT-tal kezd, mi viszont `SZELETKEREK`-et küldünk, és ebből látja, hogy nem cserét,
+ * hanem egy szeletet kérünk. *Ugyanaz a visszafelé kompatibilis elágazás, amit a TCP-út
+ * 2026-09-02 óta használt — csak most a résen.*
+ *
+ * @returns {Promise<Object>} a `szeletKapcsolaton` eredménye
+ */
+export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entitas,
+                                     beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  console.log('szeletUdpResen - KEZDÉS', { tarsCim, tarsPort, entitas });
+  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, { torlodasJel: 'nincs' });
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+  try {
+    const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas);
+    // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
+    await kapcsolat.kiurites();
+    console.log('szeletUdpResen - VÉGE', eredmeny);
+    return eredmeny;
+  } finally {
+    kapcsolat.end();
+  }
 }
 
 export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallitas = {}) {

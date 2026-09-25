@@ -20,8 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-// ⭐ A `cp` a TÖBB FORRÁS próbájához kell: ugyanaz a fájl két készüléken (D68 / 6.).
-import { mkdtemp, rm, readFile, writeFile, cp } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
@@ -870,15 +869,11 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
       });
       await varj(2000);
 
-      // 1. kör: az események · 2. kör: a kérdés, majd A BÁJTOK
+      // 1. kör: az események · 2. kör: a kérdés, majd A BÁJTOK — ugyanazon a résen (D69/2:
+      // a fájl a randevún jön, nem egy kör utáni TCP-hívással).
       await fut(vendeg, 'csere', '127.0.0.1', String(port));
       const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
-      if (!/1 fájl megérkezett/.test(masodik)) return false;
-
-      // ⭐ ÉS A TÜRELEM IS LÁTSZIK (D68): *„annyit küzdünk, amennyit az alternatíva hiánya
-      // indokol"*. ⚠️ Itt EGY forrás van, tehát a teljes türelem jár — hogy a szám tényleg
-      // **el is jut a vonalig**, azt a következő próba méri (viselkedéssel, nem kiírással).
-      if (!/türelem: 30\.0 mp · 1 forrás/.test(masodik)) return false;
+      if (!/fájlok a résen: 1 megjött/.test(masodik)) return false;
 
       // ⭐ ÉS A LÉNYEG: a vendégnél megvan, és BÁJTRA ugyanaz.
       const fajlok = await fut(vendeg, 'fajlok');
@@ -959,7 +954,12 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
     orjarat.kill(); orjarat = null;
     await varj(1000);
 
-    if (!/fájl megérkezett/.test(kimenet)) return false;
+    // ⚠️ HA BUKIK, MEGNEVEZI MAGÁT (D19): az őrjárat naplója mondja meg, a rés nem nyílt-e
+    // meg, vagy megnyílt, de a fájl nem jött át.
+    if (!/fájlok a résen: 1 megjött/.test(kimenet)) {
+      throw new Error('a kép nem jött meg — az őrjárat naplója: '
+        + kimenet.replace(/\s+/g, ' ').trim().slice(-900));
+    }
 
     // ⭐ ÉS A LÉNYEG: a vendégnél megvan, BÁJTRA ugyanaz — magától.
     const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
@@ -973,59 +973,10 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
   }
 });
 
-// ===================================
-// ⛔⛔ ÉS A TÜRELEM TÉNYLEG ELJUT A VONALIG — VISELKEDÉSSEL MÉRVE (D68, 2026-09-15)
-// ===================================
-//
-// ⚠️⚠️ AZ ELSŐ PRÓBÁM VAK VOLT, ÉS A RONTÁS-PRÓBA BUKTATTA LE: a kiírt „türelem: 30,0 mp"
-// sort néztem, az viszont a **kiszámolt** értékből jön — a bekötést kivéve (a `tcpNyito`
-// harmadik paraméterét elhagyva) a kiírás **változatlan maradt**. *Azt mértem, hogy
-// kiszámoltuk, nem azt, hogy használjuk.* **Hetedszer ugyanaz a szabály.**
-//
-// ⭐ EZ A PRÓBA VISELKEDÉST MÉR: egy **nem válaszoló** társtól kérünk fájlt, és megnézzük,
-// **mennyi idő múlva adjuk fel**. Hat forrás → a türelem az alsó korlát (5 mp), tehát a
-// bukásnak ~5–6 másodperc alatt meg kell jönnie. ⛔ Ha a türelem nem jutna el a vonalig, a
-// vonal alapértéke (30 mp) szólna — és ez a próba időkorlátjába ütközne.
-
-proba('⛔⛔ A TÜRELEM ELJUT A VONALIG: hat forrásnál 5 mp alatt feladjuk', async () => {
-  const hely = await ujKeszulek();
-  const port = 7551;
-  let figyelo = null;
-  try {
-    await fut(hely, 'koino', 'Próba koinó');
-
-    // ⭐ EGY HIÁNYZÓ FÁJL-HIVATKOZÁS, felület nélkül: a besorolás IKONJA is lehet kép (5.4).
-    const hamisLenyomat = 'Zt' + 'a'.repeat(41);          // 43 karakter, sosem létezett
-    await fut(hely, 'kategoria', 'Képes kategória', '/api/fajl/' + hamisLenyomat);
-
-    // ⭐ HAT FORRÁS a birtoklás-jegyzetben — mind NEM VÁLASZOLÓ cím (nem routolható).
-    // *A jegyzet helyi feljegyzés (3. szabály), tehát nyugodtan írható kézzel.*
-    const tarsak = {};
-    for (let i = 1; i <= 6; i++) tarsak['10.255.255.' + i + ':7373'] = { mikor: Date.now() };
-    await writeFile(join(hely, 'sajat', 'fajlbirtoklas.json'),
-      JSON.stringify({ [hamisLenyomat]: { tarsak } }), 'utf8');
-
-    // ⚠️ A csere maga EGY ÉLŐ (üres) társsal fut, hogy gyorsan lezáruljon — így a mért idő
-    // gyakorlatilag a fájl-átvitel türelme. *A halott címek csak a fájl-jegyzetben vannak.*
-    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
-      env: { ...process.env, KOINO_ADAT: await ujKeszulek(), KOINO_NAPLO: '' }, stdio: 'ignore'
-    });
-    await varj(1500);
-
-    const kezd = Date.now();
-    const kimenet = await fut(hely, 'csere', '127.0.0.1', String(port));
-    const eltelt = Date.now() - kezd;
-
-    // ⭐ A KIÍRÁS a hat forrást és az 5 mp-es türelmet mondja…
-    if (!/türelem: 5\.0 mp · 6 forrás/.test(kimenet)) return false;
-    // ⛔ …ÉS A VISELKEDÉS IS: ~5 mp körül feladtuk, nem 30-nál. *Ez a sor buktatja a
-    // bekötés kivételét — a kiírás önmagában nem, mert az a KISZÁMOLT értéket mutatja.*
-    return eltelt > 3000 && eltelt < 20000;
-  } finally {
-    if (figyelo) { figyelo.kill(); await varj(500); }
-    await rm(hely, { recursive: true, force: true });
-  }
-});
+// ⚠️ ITT ÁLLT 2026-09-26-IG „A TÜRELEM ELJUT A VONALIG” (D68): hat forrás a birtoklás-jegyzetben,
+// és a kör UTÁNI TCP-s elhozás 5 mp alatt feladta. ⛔ A D69/2 óta nincs TCP a készülékek
+// között, és a több forrásból egy fájl az éles úton nem fut (Csaba vállalta az árát) — a
+// próba tárgya megszűnt. A türelem-számítást a `fajlAtvitelProba.js` továbbra is méri.
 
 // ===================================
 // ⛔⛔ A KULCS KÉZI ÚTJA — ODA ÉS VISSZA (2026-09-15)
@@ -1098,219 +1049,14 @@ proba('⛔ MEGLÉVŐ azonosságot csak KIMONDOTT engedéllyel ír felül — és
   });
 
 // ===================================
-// ⭐⭐⭐ TÖBB FORRÁSBÓL EGY FÁJL — ÉLESBEN (D68 / 6., 2026-09-15)
+// ⏸️ TÖBB FORRÁSBÓL EGY FÁJL (D68 / 6.) — 2026-09-26 óta NEM fut élesben (D69/2)
 // ===================================
 
-proba('⭐⭐⭐ KÉT FORRÁSBÓL JÖN EGY KÉP — és a bájtok NEM sokszorozódnak meg', async () => {
-  // ⛔⛔ EZ A BEKÖTÉS PRÓBÁJA, ÉS VISELKEDÉST MÉR, NEM FELIRATOT. A 28. mérés vak próbája
-  // épp az volt, hogy a **kiírt** számot néztem — az a kiszámolt értékből jön, tehát a
-  // bekötés kivételekor sem változik.
-  //
-  // ⭐ ITT A JEL A `bajt` OSZLOP: munkamegosztás nélkül **mindkét ág a TELJES fájlt
-  // hozná**, és a mennyiség megkétszereződne. *A duplikáció mérhető; az ígéret nem.*
-  const gazda = await ujKeszulek();
-  const masolat = await ujKeszulek();
-  const vendeg = await ujKeszulek();
-  const portA = 7561;
-  const portB = 7562;
-  let figyeloA = null, figyeloB = null, felulet = null;
-
-  try {
-    await fut(gazda, 'koino', 'Két forrás koinó');
-
-    // ----- Egy TÖBB SZELETNYI kép (300 KB ≈ 5 szelet) -----
-    felulet = await feluletet(gazda, 7563);
-    const fej = Buffer.from(
-      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
-    const kep = Buffer.concat([fej, Buffer.alloc(300 * 1024, 11),
-      Buffer.from('0000000049454e44ae426082', 'hex')]);
-
-    const fel = await felulet.hiv('/api/feltoltes/kep',
-      { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
-    await felulet.hiv('/api/gondolat', {
-      method: 'POST',
-      body: JSON.stringify({
-        cim: 'KÉT FORRÁSBÓL', kezdoTudatpont: 50,
-        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
-      })
-    });
-    felulet.folyamat.kill(); felulet = null; await varj(500);
-
-    // ⭐ A MÁSODIK FORRÁS: ugyanaz a készülék lemásolva — ugyanaz a fájl két helyen.
-    // *A koinóban ez a szokásos: a lenyomat a név, tehát ugyanaz a tartalom mindenkinél
-    // ugyanazt az azonosítót kapja.*
-    await cp(gazda, masolat, { recursive: true });
-
-    figyeloA = spawn(process.execPath, [KOINO_JS, 'figyel', String(portA)], {
-      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
-    });
-    figyeloB = spawn(process.execPath, [KOINO_JS, 'figyel', String(portB)], {
-      env: { ...process.env, KOINO_ADAT: masolat, KOINO_NAPLO: '' }, stdio: 'ignore'
-    });
-    await varj(2000);
-
-    // ⭐ MINDKÉT TÁRS A LISTÁRA — így EGY kör mindkettőtől megkérdezi, kinél van meg,
-    // és a kör utáni fájl-átvitel már KÉT forrást lát.
-    await fut(vendeg, 'tars', '127.0.0.1', String(portA));
-    await fut(vendeg, 'tars', '127.0.0.1', String(portB));
-
-    await fut(vendeg, 'csere');            // 1. kör: az események
-    const masodik = await fut(vendeg, 'csere');   // 2. kör: a kérdés, majd A BÁJTOK
-
-    if (!/1 fájl megérkezett/.test(masodik)) return false;
-
-    // ⛔⛔ A DÖNTŐ SOR: mennyi bájt jött? A kép 300 KB — munkamegosztás nélkül 600 lenne.
-    const mennyi = masodik.match(/1 fájl megérkezett[^(]*\(([\d.]+) KB/);
-    if (!mennyi) return false;
-    const kb = parseFloat(mennyi[1]);
-    if (!(kb > 250 && kb < 450)) return false;
-
-    // ⭐ És a kép BÁJTRA ugyanaz, egyetlen darabból összerakva.
-    const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
-    return Buffer.from(nala).equals(kep)
-      && /párhuzamosan 2 forrásból/.test(masodik);
-  } finally {
-    if (felulet) felulet.folyamat.kill();
-    if (figyeloA) figyeloA.kill();
-    if (figyeloB) figyeloB.kill();
-    await varj(1000);
-    for (const m of [gazda, masolat, vendeg]) {
-      await rm(m, { recursive: true, force: true });
-    }
-  }
-});
-
-// ===================================
-// ⭐⭐⭐ A ROSSZ SZELET: HAMIS BÁJT UTÁN MÁS FORRÁSHOZ FORDULUNK (D68 / 6.)
-// ===================================
-//
-// ⛔⛔ EGY VALÓDI KOINO NEM TUD HAMIS BÁJTOT ADNI: a kiszolgáló `blob.olvas`-a **újra
-// lenyomatol**, tehát a megrontott fájlt ki sem adja. ⭐ *Ez jó hír, de épp ezért a támadót
-// külön meg kell írni:* egy hamis kiszolgáló, ami a fájl-protokollt beszéli, és szemetet
-// küld. Így mérhető az éles út — nem utánzattal, hanem valódi `csere` paranccsal.
-
-/** Egy hamis forrás: a `FAJLKEREK`-re rossz bájtokat ad, `vege: true`-val. */
-async function hamisForras(meret) {
-  const { createServer } = await import('node:net');
-  const kapcsolatok = [];
-  const kiszolgalo = createServer((k) => {
-    kapcsolatok.push(k);
-    let puffer = '';
-    k.setEncoding('utf8');
-    k.on('error', () => {});
-    k.on('data', (d) => {
-      puffer += d;
-      let vege;
-      while ((vege = puffer.indexOf('\n')) !== -1) {
-        const sor = puffer.slice(0, vege);
-        puffer = puffer.slice(vege + 1);
-        let uzenet;
-        try { uzenet = JSON.parse(sor); } catch { continue; }
-        if (uzenet.uzenet !== 'FAJLKEREK') continue;
-        // ⛔ A HAMISÍTÁS: a kért eltolásra küldünk, de MÁS bájtokat.
-        k.write(JSON.stringify({
-          uzenet: 'FAJLSZELET', lenyomat: uzenet.lenyomat, eltolas: uzenet.eltolas,
-          adat: Buffer.alloc(meret, 66).toString('base64'), teljes: meret, vege: true
-        }) + '\n');
-      }
-    });
-  });
-  await new Promise((t) => kiszolgalo.listen(0, '127.0.0.1', t));
-  return {
-    port: kiszolgalo.address().port,
-    zar: () => { for (const k of kapcsolatok) k.destroy(); kiszolgalo.close(); }
-  };
-}
-
-proba('⭐⭐⭐ HAMIS BÁJT UTÁN MÁS FORRÁSSAL PRÓBÁLJUK — és a kép megjön', async () => {
-  const gazda = await ujKeszulek();
-  const vendeg = await ujKeszulek();
-  const port = 7571;
-  let figyelo = null, felulet = null, hamis = null, ures = null;
-
-  try {
-    await fut(gazda, 'koino', 'Rossz szelet koinó');
-
-    // ----- Egy kép, ami EGY szeletnél kisebb (hogy a hamis forrás egy üzenettel végezzen) -----
-    felulet = await feluletet(gazda, 7572);
-    const fej = Buffer.from(
-      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
-    const kep = Buffer.concat([fej, Buffer.alloc(20 * 1024, 5),
-      Buffer.from('0000000049454e44ae426082', 'hex')]);
-
-    const fel = await felulet.hiv('/api/feltoltes/kep',
-      { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
-    await felulet.hiv('/api/gondolat', {
-      method: 'POST',
-      body: JSON.stringify({
-        cim: 'ROSSZ SZELET', kezdoTudatpont: 50,
-        szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }]
-      })
-    });
-    felulet.folyamat.kill(); felulet = null; await varj(500);
-
-    // ⭐ AZ ESEMÉNYEK HÁLÓZAT NÉLKÜL mennek át (4. szabály) — így a vendég ismeri a képet,
-    // de a bájtjai nincsenek meg neki.
-    const vittFajl = join(gazda, 'atvitel.jsonl');
-    await fut(gazda, 'kivisz', vittFajl, 'mind');
-    await fut(vendeg, 'behoz', vittFajl);
-
-    // A JÓ forrás (valódi koino) és a HAMIS (kézzel írt kiszolgáló).
-    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
-      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
-    });
-    hamis = await hamisForras(kep.length);
-    await varj(1500);
-
-    // ⭐ A BIRTOKLÁS-JEGYZET: MINDKETTŐNÉL „megvan" — a vendég nem tudja, melyik hazudik.
-    // *A jegyzet helyi feljegyzés (3. szabály), tehát nyugodtan írható kézzel.*
-    const jegyzetUt = join(vendeg, 'sajat', 'fajlbirtoklas.json');
-    await writeFile(jegyzetUt, JSON.stringify({
-      [fel.adat.lenyomat]: {
-        tarsak: {
-          ['127.0.0.1:' + hamis.port]: { mikor: Date.now() },
-          ['127.0.0.1:' + port]: { mikor: Date.now() }
-        }
-      }
-    }), 'utf8');
-
-    // ⚠️ Egy ÉLŐ, üres társ kell, hogy a `csere` kör lefusson (a fájl-átvitel a kör UTÁN megy).
-    ures = spawn(process.execPath, [KOINO_JS, 'figyel', '7573'], {
-      env: { ...process.env, KOINO_ADAT: await ujKeszulek(), KOINO_NAPLO: '' }, stdio: 'ignore'
-    });
-    await varj(1200);
-
-    // ===== 1. KÖR: a hamis forrás is sorra kerül → a lezárás elbukik =====
-    await fut(vendeg, 'csere', '127.0.0.1', '7573');
-
-    // ⛔ A DÖNTŐ ELLENŐRZÉS: a jegyzetben megjelent a bukás — és PONTOSAN azoknál, akik
-    // részt vettek. *Ez a bekötés bizonyítéka: a réteg tudása eljutott a lemezre.*
-    const utana = JSON.parse(await readFile(jegyzetUt, 'utf8'));
-    const romlott = utana[fel.adat.lenyomat]?.romlott ?? {};
-    if (!Object.keys(romlott).length) return false;
-
-    // ===== 2. KÖR: a bukott forrást KERÜLJÜK → a jó forrástól megjön =====
-    for (let i = 0; i < 3; i++) {
-      await fut(vendeg, 'csere', '127.0.0.1', '7573');
-      const nala = await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat))
-        .catch(() => null);
-      if (nala && Buffer.from(nala).equals(kep)) {
-        // ⭐ ÉS A FELEJTÉS: amint a fájl megvan, a tanulság tárgytalan.
-        const vegul = JSON.parse(await readFile(jegyzetUt, 'utf8'));
-        return vegul[fel.adat.lenyomat]?.romlott === undefined;
-      }
-    }
-    return false;
-  } finally {
-    if (felulet) felulet.folyamat.kill();
-    if (figyelo) figyelo.kill();
-    if (ures) ures.kill();
-    if (hamis) hamis.zar();
-    await varj(1000);
-    await rm(gazda, { recursive: true, force: true });
-    await rm(vendeg, { recursive: true, force: true });
-  }
-});
+// ⚠️ ITT ÁLLT 2026-09-26-IG KÉT PRÓBA A TÖBB FORRÁSRÓL (D68 / 6.): „KÉT FORRÁSBÓL JÖN EGY KÉP”
+// és „HAMIS BÁJT UTÁN MÁS FORRÁSSAL PRÓBÁLJUK”. ⛔ Mindkettő a kör utáni TCP-s elhozást
+// mérte, ami a D69/2-vel kikerült. A tervező függvények (munkamegosztás, rossz szelet
+// feljegyzése és felejtése) a `fajlAtvitelProba.js`-ben próbával maradtak — a UDP-s több
+// forrás ezekre épül majd, és akkor ide is visszakerül a viselkedés próbája.
 
 // ===================================
 // ⭐⭐⭐ A BULI: AZ ÖSSZEHANGOLT ABLAK ÉS AZ ISMÉTELT MENET (30. mérés, 2026-09-15)
@@ -1340,7 +1086,7 @@ proba('⭐⭐ AZ ŐRJÁRAT A FAL ÓRÁJÁHOZ IGAZODIK — nem az indítás pilla
     // igazít, akkor is, ha a rács közepén indult.
     await varj(26000);
 
-    // A kör-sorok időbélyege: „· HH:MM:SS nincs társ a listán…" (nincs társ, ez elég).
+    // A kör-sorok időbélyege: „· HH:MM:SS nincs kire kopognom…" (nincs cél, ez elég).
     const masodpercek = [...kimenet.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)]
       .map((m) => parseInt(m[3], 10));
 
@@ -1759,7 +1505,8 @@ proba('⛔ A TÁRSLISTÁN ÁLLÓ SAJÁT CÍMÜNKET NEM HÍVJUK — és kötés s
     let kotesek = [];
     try { kotesek = JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek; } catch { /* nincs */ }
     const sajat = JSON.parse(await readFile(join(hely, 'tabla-kulcs.json'), 'utf8'));
-    return /nincs társ a listán/.test(kimenet) && !/bejött valaki/.test(kimenet)
+    return /nincs kire kopognom/.test(kimenet)
+      && !/ismeretlen kopogott be|csere a résen/.test(kimenet)
       && !kotesek.some((k) => k.alairo === sajat.alairoNyilvanos);
   } finally {
     if (orjarat) orjarat.kill();
@@ -2373,51 +2120,52 @@ proba('⭐⭐⭐ ujjlenyomat kiment → osszevet: MEGNEVEZI az eltérést, csere
 // ⛔⛔⛔ AZ ELVESZETT ÍRÁS A TÁRS-LISTÁN (2026-09-22)
 // ===================================
 
-proba('⛔⛔ A KÖR ALATT TANULT CÍM TÚLÉLI A KÖR VÉGÉT — nincs elveszett írás', async () => {
-  // ⛔ MIT MÉR, ÉS MIÉRT NEM MODUL-PRÓBA: az őrjárat a társ-listát a kör ELEJÉN olvasta
-  // és a kör VÉGÉN írta ki egészben. Közben a **postaláda-ág** egy bekopogótól új címet
-  // tanult — a kör végi írás azt **csendben elsöpörte**. ⭐ A két ág csak az ÉLES
-  // őrjáratban fut egyszerre; modul-próbával ez elvileg sem fogható meg.
+proba('⛔⛔ A KÖR ALATT FELVETT TÁRS TÚLÉLI A KÖR VÉGI KÖNYVELÉST — nincs elveszett írás', async () => {
+  // ⛔ MIT MÉR (2026-09-22, és a D69/2 óta az induló címeken): az őrjárat a listát a kör
+  // ELEJÉN olvassa, és a kör VÉGÉN könyvel (ki felelt, ki nem). Ha a könyvelés a kör eleji
+  // képet írná ki egészben, a közben kézzel felvett társ **csendben elveszne**. ⭐ A két ág
+  // csak az ÉLES őrjáratban fut egyszerre; modul-próbával ez elvileg sem fogható meg.
   //
-  // ⭐⭐ ÉS VISELKEDÉST MÉR, NEM FELIRATOT: a napló a hibás kóddal is kiírta, hogy
-  // „+1 cím" — a bizonyíték a **lemez**, vagyis hogy a cím a kör után is ott van.
+  // ⭐⭐ ÉS VISELKEDÉST MÉR, NEM FELIRATOT: a bizonyíték a **lemez** — a kör után ott van-e
+  // a közben felvett cím, ÉS a halott cím könyvelése megtörtént-e (különben a kör nem is
+  // írt, és a próba vakon zöld volna).
   //
-  // ⚠️ A KÖRT SZÁNDÉKOSAN LASSÍTJUK: egy nem válaszoló társ a listán 10 másodpercig
-  // várat. *Enélkül a kör hamarabb lezárul, mint hogy a bekopogó megérkezne — és a
-  // próba vakon zöld lenne.*
+  // ⚠️ A KÖRT SZÁNDÉKOSAN HOSSZÚRA NYÚJTJUK: egy nem válaszoló induló címre a kör a teljes
+  // kopogási időt (6 mp) kivárja — és a percforduló UTÁN indítunk, hogy az ablak ne vágja le.
   const gazda = await ujKeszulek();
-  const vendeg = await ujKeszulek();
   let orjarat = null;
+  const lista = async () => {
+    try {
+      const adat = JSON.parse(await readFile(join(gazda, 'indulocimek.json'), 'utf8'));
+      return Array.isArray(adat) ? adat : (adat.tarsak ?? []);
+    } catch { return []; }
+  };
   try {
     await fut(gazda, 'koino', 'Elveszett írás');
-    await csereKor(gazda, vendeg, 7951);              // a vendég megismeri a koinót
+    await fut(gazda, 'tars', '10.255.255.1', '7999', 'nema');   // ettől tart a kör
 
-    await fut(gazda, 'tars', '10.255.255.1', '7999', 'nema');   // ettől lassú a kör
-    await fut(vendeg, 'tars', '10.9.9.9', '9999', 'hirdetett'); // ezt fogja hirdetni
-
+    // ⭐ Egy 30 mp-es ablak ELEJÉN indulunk: így az első kör a teljes 6 mp-et kopog.
+    const hatra = 30000 - (Date.now() % 30000);
+    await varj(hatra + 300);
     orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.5', '7952'], {
-      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' },
+      stdio: 'ignore'
     });
-    await varj(2500);                                  // a kör már fut, a némára vár
-    await fut(vendeg, 'csere', '127.0.0.1', '7952');   // ⭐ bekopogunk KÖZBEN
+    await varj(2500);                                        // a kör már kopog a némára
+    await fut(gazda, 'tars', '10.9.9.9', '9999', 'kozben');   // ⭐ KÖZBEN veszünk fel valakit
 
-    const tarsakat = async () => {
-      try {
-        const adat = JSON.parse(await readFile(join(gazda, 'tarsak.json'), 'utf8'));
-        return (Array.isArray(adat) ? adat : (adat.tarsak ?? [])).map((t) => t.hoszt);
-      } catch { return []; }
-    };
+    // ⚠️ ELŐBB A VAKSÁG-PRÓBA: ha a felvétel el sem jutott a lemezre, nem ezt mértük.
+    if (!(await lista()).some((t) => t.hoszt === '10.9.9.9')) return false;
 
-    // ⚠️ ELŐBB A VAKSÁG-PRÓBA: ha meg sem tanulta, akkor nem ezt mértük.
-    if (!(await tarsakat()).includes('10.9.9.9')) return false;
-
-    await varj(12000);                                 // megvárjuk, hogy a kör LEZÁRULJON
-    return (await tarsakat()).includes('10.9.9.9');    // ⭐ a bizonyíték: még ott van
+    await varj(7000);                                        // a kör LEZÁRUL, és könyvel
+    const vegul = await lista();
+    const nema = vegul.find((t) => t.hoszt === '10.255.255.1');
+    // ⭐ A bizonyíték: a közben felvett cím MEGVAN, és a kör tényleg könyvelt (a néma bukott).
+    return vegul.some((t) => t.hoszt === '10.9.9.9') && (nema?.sikertelen ?? 0) >= 1;
   } finally {
     if (orjarat) orjarat.kill();
     await varj(500);
     await rm(gazda, { recursive: true, force: true });
-    await rm(vendeg, { recursive: true, force: true });
   }
 });
 

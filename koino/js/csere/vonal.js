@@ -284,9 +284,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       console.log('parbeszed - VÉGE (szelet kiszolgálva)', {
         entitas: elsoUzenet.entitas, esemeny: kertek.length
       });
+      // ⚠️ A mezők ALAKJA ugyanaz, mint a rendes cserénél (tömbök, nem számok): 2026-09-26
+      // óta a kiszolgáló a résen a közös csere-munkán át fut, és az a kapott listákat
+      // tömbként olvassa tovább.
       return {
         korok: 1, uj: 0, kuldott: kertek.length, reszletesAllasok: 0,
-        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: 0, kapottUdpCimek: 0,
+        masKoino: null, kivulrolIgyLatszom: null, kapottCimek: [], kapottUdpCimek: [],
+        kapottTablaKulcs: null, kapottDhtGepek: [], fajlokNala: [],
         szeletKiszolgalva: elsoUzenet.entitas
       };
     }
@@ -982,30 +986,48 @@ export async function szeletHozatala(tar, koino, cim, port, entitas, varakozasiI
   });
 
   try {
-    const sor = uzenetSor(kapcsolat);
-    kapcsolat.write(JSON.stringify({ uzenet: 'SZELETKEREK', koino, entitas }) + '\n');
-
-    const erkezett = [];
-    for (;;) {
-      const uzenet = await sor.kovetkezo();
-      if (uzenet.uzenet === 'KESZ') break;
-      if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
-      // A LENYOMAT-ot (és bármi mást) átlépjük — lásd a fenti magyarázatot.
-    }
-
-    // ⚠️ UGYANAZ A KAPU, mint a rendes cserénél: ellenőrizetlen esemény innen sem kerül be.
-    const beolvasztva = await beolvasztas(tar, erkezett, koino);
-
-    const eredmeny = {
-      entitas,
-      kapott: erkezett.length,
-      uj: beolvasztva.uj,
-      bajtKuldott: kapcsolat.bytesWritten,
-      bajtKapott: kapcsolat.bytesRead
-    };
-    console.log('szeletHozatala - VÉGE', eredmeny);
-    return eredmeny;
+    return await szeletKapcsolaton(tar, koino, kapcsolat, entitas);
   } finally {
     kapcsolat.end();
   }
+}
+
+/**
+ * ⭐ EGY SZELET ELKÉRÉSE EGY MÁR MEGNYITOTT KAPCSOLATON — a szállítás a hívóé (1. szabály).
+ *
+ * ⭐ Ugyanaz a minta, mint a `fajlHozatala`-nál: a függvény **nem tudja**, min beszél. Így
+ * fut az állandó UDP-kapu résén is (`szeletUdpResen`, D69/2), ahol a túloldalon a rendes
+ * csere-munka áll — annak `parbeszed`-je az első üzenetből (`SZELETKEREK`) látja, hogy ez
+ * nem csere, hanem egy szelet kérése.
+ *
+ * @param {Object} tar
+ * @param {string} koino
+ * @param {Object} kapcsolat - a MÁR MEGNYITOTT kapcsolat (foglalat-szerű)
+ * @param {string} entitas
+ * @returns {Promise<{entitas: string, kapott: number, uj: number, bajtKuldott: number, bajtKapott: number}>}
+ */
+export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas) {
+  const sor = uzenetSor(kapcsolat);
+  kapcsolat.write(JSON.stringify({ uzenet: 'SZELETKEREK', koino, entitas }) + '\n');
+
+  const erkezett = [];
+  for (;;) {
+    const uzenet = await sor.kovetkezo();
+    if (uzenet.uzenet === 'KESZ') break;
+    if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
+    // A LENYOMAT-ot (és bármi mást) átlépjük — lásd a fenti magyarázatot.
+  }
+
+  // ⚠️ UGYANAZ A KAPU, mint a rendes cserénél: ellenőrizetlen esemény innen sem kerül be.
+  const beolvasztva = await beolvasztas(tar, erkezett, koino);
+
+  const eredmeny = {
+    entitas,
+    kapott: erkezett.length,
+    uj: beolvasztva.uj,
+    bajtKuldott: kapcsolat.bytesWritten,
+    bajtKapott: kapcsolat.bytesRead
+  };
+  console.log('szeletKapcsolaton - VÉGE', eredmeny);
+  return eredmeny;
 }
