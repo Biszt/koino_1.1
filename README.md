@@ -8,13 +8,14 @@ platform lényege a **közösségi döntéshozatal**: a gondolatokból *javaslat
 javaslatokból *egyezmények* születnek — mindezt egy átlátható, mindenki számára
 egyenlő szavazási mechanika vezérli.
 
-Élesben: **[koino.hu](https://koino.hu)**
+A prototípus élesben: **[koino.hu](https://koino.hu)**
 
 ---
 
 ## Tartalomjegyzék
 
 - [Mi ez a projekt?](#mi-ez-a-projekt)
+- [Két program egy repóban](#két-program-egy-repóban)
 - [A központi ötlet dióhéjban](#a-központi-ötlet-dióhéjban)
 - [Technológiák](#technológiák)
 - [Gyors indítás](#gyors-indítás)
@@ -34,14 +35,27 @@ irányít mindent, itt a **közösség maga** hozza a döntéseket. A rendszer n
 szándékát** teszi láthatóvá — ellenőrzött emberek, egy-ember-egy-hang, átlátható
 folyamat.
 
-Ez a repository a platform **1.1-es, tisztán újraírt változata**. Két fázisban
-gondolkodunk:
+Két fázisban gondolkodunk:
 
-- **Fázis 1 (ez a kód):** központi szerveres koino — a döntéshozatali mechanika
-  kifejlesztése és élesben bizonyítása az első közösséggel.
-- **Fázis 2 (jövő):** P2P koino — elosztott, központi szereplő nélküli működés.
+- **Fázis 1 — a prototípus:** központi szerveres koino, amely kifejlesztette és
+  élesben bizonyította a döntéshozatali mechanikát az első közösséggel.
+- **Fázis 2 — a P2P koino:** a készüléken fut, aláírt eseményekkel, szerver nélkül.
+  **Itt folyik a fejlesztés** (2026-08-26 óta, D22 döntés: *„a kis családi
+  közösségeknek is P2P-nek kell lenniük"*).
 
-Részletek: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md).
+Részletek: [`docs/utiterv.md`](docs/utiterv.md) és
+[`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md).
+
+## Két program egy repóban
+
+| Mappa | Mi ez | Állapot |
+|-------|-------|---------|
+| **`koino/`** | **Az új program** — P2P koino (Fázis 2). Önálló Node-program, nem böngészőben fut; a felülete egy helyi kapun át a böngészőben nyílik meg | 🚧 **itt folyik a fejlesztés** |
+| `backend/` + `frontend/` | **A prototípus** — központi szerveres koino (Fázis 1), ez fut a koino.hu-n | ⏸️ **befagyasztva** — üzemel, de nem fejlesztjük |
+
+> ⚠️ A prototípus mappáihoz ne nyúlj: az éles deploy a repó gyökeréből épít, egy
+> átrendezés némán eltörné. A `koino/felulet/` a prototípus kártyáit és modáljait
+> örökölte, jórészt bájtra változatlanul (ezt önpróba őrzi).
 
 ## A központi ötlet dióhéjban
 
@@ -59,43 +73,66 @@ Részletek: [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
    egyértelműbb az eredmény és magasabb a részvétel, annál hamarabb.
 6. Az elfogadott javaslatból **egyezmény** lesz.
 
+A P2P koinóban ugyanez **aláírt eseményekből számolódik** minden készüléken: nincs
+szerver, amely kimondaná az eredményt — ugyanazokból az eseményekből mindenhol
+ugyanaz az állapot jön ki. A készülékek időnként maguktól összeérnek (**őrjárat**),
+és kicserélik egymással, ami újdonság.
+
 > A pontos terminológiát (kötelező!) lásd a [`CLAUDE.md`](CLAUDE.md)
-> „Domain-fogalmak" szakaszában, illetve a
-> [`docs/architektura.md`](docs/architektura.md)-ban.
+> „Domain-fogalmak" szakaszában.
 
 ## Technológiák
+
+**Az új program (`koino/`):**
+
+| Réteg | Eszközök |
+|-------|----------|
+| Futtatókörnyezet | Node.js (laptopon és telefonon, Termuxban) — **nulla külső függőség** |
+| Kriptográfia | a Node beépített WebCryptója (Ed25519 aláírások) |
+| Tárolás | hozzáfűzhető eseménynapló (`koino-adat/`), fájlok a lenyomatuk szerint |
+| Hálózat | UDP (pajzsfúrás a NAT-on át, saját ablakos vonal), BitTorrent DHT hirdetőtáblának, helyi felfedezés |
+| Felület | a prototípus vanilla JS kártyái, egy helyi (127.0.0.1) kapun kiszolgálva |
+
+**A prototípus (`backend/` + `frontend/`):**
 
 | Réteg | Eszközök |
 |-------|----------|
 | Frontend | Vanilla HTML / CSS / JavaScript (ES-modulok, **build nélkül**) |
-| Backend | Node.js, Express, Mongoose |
-| Adatbázis | MongoDB |
-| Auth | JWT + bcrypt |
-| Feltöltés | Multer |
-| Időzítés | node-cron |
+| Backend | Node.js, Express, Mongoose, MongoDB |
+| Auth / feltöltés / időzítés | JWT + bcrypt · Multer · node-cron |
 | Üzemeltetés | Docker Compose (külön dev és prod stack) |
 
 ## Gyors indítás
 
-A legegyszerűbb út a Docker-es fejlesztői környezet:
+### Az új program (`koino/`)
+
+Csak Node kell, telepítendő függőség nincs:
+
+```bash
+node koino/koino.js
+```
+
+Ez kiírja az állapotot (gondolatok, javaslatok, egyezmények). Néhány további parancs:
+
+```bash
+node koino/koino.js orjarat          # a valódi üzemmód: a készülék magától dolgozik
+node koino/koino.js felulet          # a felület a böngészőben (helyi kapu, jelszóval)
+node koino/meres/mind.js             # az önpróbák (714, mind zöldnek kell lennie)
+```
+
+A teljes parancslista: [`koino/README.md`](koino/README.md). Telefonra telepítés
+(Termux): [`docs/telepites_telefon.md`](docs/telepites_telefon.md).
+
+### A prototípus (`backend/` + `frontend/`)
 
 ```bash
 docker-compose -f docker-compose.dev.yml up
 ```
 
-Ezután a platform elérhető: **http://localhost:3000** (a backend a 3000-es
+Ezután a prototípus elérhető: **http://localhost:3000** (a backend a 3000-es
 porton fut, és statikusan kiszolgálja a frontendet is; a MongoDB kívülről a
-27018-as porton). Csak localhost — a 8080-at az éles stack viszi.
-
-A backend önállóan is futtatható Docker nélkül:
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-Ehhez a `backend/.env` fájlban be kell állítani a `MONGODB_URI` kapcsolatot.
+27018-as porton). A backend Docker nélkül is fut (`cd backend`, `npm install`,
+`npm run dev`); ehhez a `backend/.env` fájlban kell a `MONGODB_URI`.
 
 > Az **éles** (koino.hu) környezet külön stackben fut ugyanazon a gépen — lásd
 > [`docs/elesites.md`](docs/elesites.md). Éleset **soha** ne állíts le
@@ -106,49 +143,47 @@ Ehhez a `backend/.env` fájlban be kell állítani a `MONGODB_URI` kapcsolatot.
 ```
 koino_1.1/
 ├─ README.md              ← ezt olvasod
-├─ CLAUDE.md              ← domain-fogalmak + architektúra + konvenciók (kötelező olvasmány)
+├─ CLAUDE.md              ← hol tartunk + szabályok + domain-fogalmak (kötelező olvasmány)
 ├─ CHANGELOG.md           ← mi változott mikor
 ├─ LICENSE                ← AGPL-3.0 (lásd a Licenc szakaszt)
 ├─ SECURITY.md            ← biztonsági hiba bejelentése
-├─ docker-compose.dev.yml ← fejlesztői stack
-├─ docker-compose.prod.yml← éles stack
 │
-├─ backend/               ← Node + Express + Mongoose (lásd backend/README.md)
-│  ├─ server.js           ← belépési pont
-│  ├─ routes/             ← HTTP-útvonalak
-│  ├─ controllers/        ← kérés-értelmezés, válasz
-│  ├─ services/           ← üzleti logika (a javaslat-életciklus magja itt)
-│  ├─ repositories/       ← adatbázis-hozzáférés
-│  ├─ models/             ← Mongoose sémák
-│  ├─ middlewares/        ← auth, feltöltés
-│  └─ jobs/               ← cron (lejáró javaslatok lezárása)
+├─ koino/                 ← 🚧 AZ ÚJ PROGRAM — P2P koino (lásd koino/README.md)
+│  ├─ koino.js            ← belépési pont: a parancssor és az őrjárat
+│  ├─ js/esemeny/         ← az aláírt esemény és a kanonikus alak
+│  ├─ js/allapot/         ← az állapot számítása: szabályok, javaslat, identitás, pakli
+│  ├─ js/csere/           ← a szállítás: csere, UDP-vonal, pajzsfúró, kapu, DHT, tábla
+│  ├─ js/tar/             ← esemény- és fájltár
+│  ├─ js/kulcs/           ← a kulcspár (ez az azonosságod)
+│  ├─ js/felulet/         ← a helyi kapu a böngészőnek
+│  ├─ felulet/            ← a böngészős felület (a prototípusból örökölve)
+│  └─ meres/              ← önpróbák (mind.js) és mérések (eredmenyek.md)
 │
-├─ frontend/              ← vanilla JS SPA (lásd frontend/README.md)
-│  ├─ index.html          ← belépési pont
-│  ├─ js/main.js          ← alkalmazás-indító
-│  ├─ js/components/       ← komponens-osztályok (kártyák, modálok, szerkesztő)
-│  ├─ html/               ← komponens-sablonok
-│  └─ css/                ← komponensenkénti stílusok
+├─ backend/               ← ⏸️ PROTOTÍPUS: Node + Express + Mongoose (lásd backend/README.md)
+├─ frontend/              ← ⏸️ PROTOTÍPUS: vanilla JS SPA (lásd frontend/README.md)
+├─ docker-compose.*.yml   ← a prototípus fejlesztői és éles stackje
 │
+├─ megismeres/            ← rövid bemutató lapok a fogalmakról
 └─ docs/                  ← részletes dokumentáció (lásd lentebb)
 ```
 
 ## Hol kezdd az olvasást?
 
-Ha most találkozol először a kóddal, ebben a sorrendben haladj:
+Ha most találkozol először a kóddal:
 
-1. **[`CLAUDE.md`](CLAUDE.md)** — a domain-fogalmak és a magas szintű
-   architektúra. Enélkül a magyar elnevezések nehezen értelmezhetők.
-2. **[`docs/architektura.md`](docs/architektura.md)** — mélyebb technikai túra:
-   végigköveti, hogyan halad egy kérés a rétegeken, és hogyan születik egy
-   javaslatból egyezmény.
-3. **[`backend/README.md`](backend/README.md)** és
-   **[`frontend/README.md`](frontend/README.md)** — réteg-szintű belépők.
-4. **[`docs/fejlesztoi_utmutato.md`](docs/fejlesztoi_utmutato.md)** — kódolási
-   konvenciók és „hogyan adj hozzá új funkciót" recept.
-5. Egy **konkrét folyamat** végigolvasása kódban: `javaslatRoutes.js` →
-   `javaslatController.js` → `services/javaslat/javaslatService.js`. Ez a
-   projekt szíve.
+1. **[`CLAUDE.md`](CLAUDE.md)** — hol tartunk, a kilenc szabály, amely minden új kódra
+   érvényes, és a domain-fogalmak. Enélkül a magyar elnevezések nehezen értelmezhetők.
+2. **[`docs/utiterv.md`](docs/utiterv.md)** — mit építünk, milyen sorrendben, és miért
+   (rövid; ez a belépő).
+3. **[`koino/README.md`](koino/README.md)** — az új program: miért nem böngésző, a
+   parancsok, a rétegek.
+4. **[`docs/gepezet.md`](docs/gepezet.md)** — a döntéshozatali gépezet ábrákon.
+5. **[`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)** — a
+   tervezési döntések (D1–D69) és indoklásuk.
+
+A prototípushoz: [`docs/architektura.md`](docs/architektura.md) (kód-túra),
+[`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md) és
+[`docs/fejlesztoi_utmutato.md`](docs/fejlesztoi_utmutato.md).
 
 ## Dokumentáció
 
@@ -156,25 +191,36 @@ A `docs/` mappa a projekt tudásbázisa:
 
 | Fájl | Miről szól |
 |------|-----------|
-| [`architektura.md`](docs/architektura.md) | Technikai kód-túra (fejlesztőknek) |
-| [`fejlesztoi_utmutato.md`](docs/fejlesztoi_utmutato.md) | Konvenciók, hozzájárulás, workflow |
-| [`teszt.md`](docs/teszt.md) | Böngészős teszt-referencia (útvonalak, mezők, forgatókönyvek) |
-| [`elesites.md`](docs/elesites.md) | Éles (koino.hu) üzemeltetési kézikönyv |
-| [`fejlesztesi_terv.md`](docs/fejlesztesi_terv.md) | Fázis 1 fejlesztési terv |
-| [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) | Fázis 2 (P2P) terv |
+| [`utiterv.md`](docs/utiterv.md) | **A belépő:** mit építünk, milyen sorrendben, és miért |
+| [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) | Fázis 2 (P2P) — a döntések (D1–D69) |
+| [`szakasz1_terv.md`](docs/szakasz1_terv.md) … [`szakasz5_terv.md`](docs/szakasz5_terv.md) | A szakaszok részletes tervei (helyi modell, szállítás, szerkezet, identitás, felület) |
+| [`gepezet.md`](docs/gepezet.md) | A döntéshozatali gépezet ábrákon |
+| [`skalazas_terv.md`](docs/skalazas_terv.md) | A milliárdos lépték szerkezete |
+| [`felulet_terv.md`](docs/felulet_terv.md) | A P2P felület döntései |
+| [`telepites_telefon.md`](docs/telepites_telefon.md) / [`terepmeres_mobil.md`](docs/terepmeres_mobil.md) | Telefonra telepítés és a terepmérések forgatókönyve |
+| [`claude_naplo.md`](docs/claude_naplo.md) | A fejlesztés naplója (2026-09-06 – 09-25): mérések, átnézések, döntések indoklása |
 | [`kormanyzas.md`](docs/kormanyzas.md) | **Forráskód-kormányzás** — hogyan alakítja a közösség magát a programot, és miért nincs a koinók felett kormányzat |
 | [`vizio_kritikak.md`](docs/vizio_kritikak.md) | A vízió melletti és elleni érvek |
 | [`jegyzetek.md`](docs/jegyzetek.md) | Zárójeles ötletek naplója |
-| [`adatkezeles.md`](docs/adatkezeles.md) / [`adatvedelmi_nyilatkozat.md`](docs/adatvedelmi_nyilatkozat.md) | Adatvédelem |
 | [`koinos_idios.md`](docs/koinos_idios.md) | A „koino" név eredete, és a koinós/idios szembenállás |
 | [`bemutato_kivulalloknak.md`](docs/bemutato_kivulalloknak.md) / [`bemutato_kormany.md`](docs/bemutato_kormany.md) | Bemutató anyagok |
+| [`architektura.md`](docs/architektura.md) / [`fejlesztoi_utmutato.md`](docs/fejlesztoi_utmutato.md) | A prototípus kód-túrája és konvenciói |
+| [`fejlesztesi_terv.md`](docs/fejlesztesi_terv.md) / [`teszt.md`](docs/teszt.md) / [`elesites.md`](docs/elesites.md) | A prototípus terve, böngészős teszt-referenciája és éles üzemeltetése |
+| [`adatkezeles.md`](docs/adatkezeles.md) / [`adatvedelmi_nyilatkozat.md`](docs/adatvedelmi_nyilatkozat.md) | Adatvédelem |
+
+A mérések jegyzőkönyve: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md).
 
 ## Állapot
 
-🟢 **Élesben** fut a [koino.hu](https://koino.hu)-n (Fázis 1). A döntéshozatali
-mechanika működik; a finomítás és a Fázis 2 (P2P) tervezése folyamatban.
+🚧 **A P2P koino (`koino/`) fejlesztés alatt.** Kész a helyi modell, a szállítás, a
+szerkezet és az identitás (Szakasz 1–4), a felület gerince (Szakasz 5), valamint a
+fájlok szállítása. Az őrjárat UDP-n kopog és cserél, a hirdetőtábla (BitTorrent DHT)
+terepen, valódi telefonokkal is működik. **714 önpróba**, mind zöld
+(`node koino/meres/mind.js`). A következő lépés: *UDP mindenhol* (D69). A friss
+állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
 
-Nincs automatizált teszt — a tesztelés böngészős, referenciája a
+🟢 **A prototípus élesben fut** a [koino.hu](https://koino.hu)-n (Fázis 1),
+befagyasztva. Automatizált tesztje nincs; a tesztelés böngészős, referenciája a
 [`docs/teszt.md`](docs/teszt.md).
 
 ## Licenc
@@ -198,5 +244,6 @@ létrejöhetne pontosan az, ami ellen a koino született: egy közösségi tér,
 amelynek a tagjai nem látják és nem alakíthatják a kódot, ami őket működteti.
 
 A forráskód-kormányzás tervéről (hogyan hat a közösség közvetlenül a kódra)
-lásd: [`docs/vizio_kritikak.md`](docs/vizio_kritikak.md) 9. pontja és
+lásd: [`docs/kormanyzas.md`](docs/kormanyzas.md),
+[`docs/vizio_kritikak.md`](docs/vizio_kritikak.md) 9. pontja és
 [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) D9 / N5.
