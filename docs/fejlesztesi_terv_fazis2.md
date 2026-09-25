@@ -3745,6 +3745,63 @@ tehát a régi szerkezetben UDP-foglalata sem volt) · és a teljes régi paranc
 zöld. ⏭️ **A következő: a 2. lépcső** (a TCP-kör kivétele) — most már a UDP-n is van mindig
 figyelő kapu, és az ismételt menet is megoldható (a társ kapuja bármikor fogad).
 
+#### 6. ✅ A 2. LÉPCSŐ — ÉS VELE A TELJES TCP — KIKERÜLT (2026-09-26, Csaba döntései)
+
+> *„nyugottan lehet tiszta lappal indúlni. nem szeretnék tcp-és megoldásokat."* ·
+> *„vegyük ki a tcp-ét egyszerre. nem szeretném hogy bezavarjon."* — Csaba
+
+⭐ **A HATÓKÖR NŐTT, KIMONDOTT DÖNTÉSSEL:** a terv a 2. lépcsőben csak az őrjárat TCP-körét
+vette volna ki (a postaláda, a kézi utak és a `kapu` egyelőre TCP-n maradt volna). Csaba
+**egyszerre** kérte az egészet. Ami 2026-09-26 óta NINCS: a TCP-kör és a TCP-postaláda az
+őrjáratban · a `figyel` TCP-kapuja · a kézi `csere`, `hozd`, `tukor` TCP-hívása · a
+`pajzsfuro … tcp` · a kör utáni TCP-s fájl-elhozás · a TCP-címjegyzék terjesztése (`cimek`) ·
+a `vonal.js` TCP-nyitói, a `tcpPajzsfuras`, a lista egymás utáni végighívása (`korbeCsere` —
+helyette a kopogás könyvelése: `kopogasMegfigyelesei`) és a `tcpLekepezesMeres.js`. **Ami
+marad, és nem hálózat a készülékek
+között:** a felület HTTP-je a gépen belül (127.0.0.1 — a böngésző csak így beszél).
+
+**A felépítés:**
+- ⭐ **Egy gépezet minden útnak** (`resMunkaKeszito`, `koino.js`): az őrjárat, a `figyel` és a
+  kézi parancsok ugyanazt a munkát végzik a résen — csere, kötés, tanulás (saját cím · UDP-címek
+  · DHT-gépek · fájl-tanulság), fájl-randevú. *Eddig a három ág háromszor tanulta ugyanazt.*
+- ⭐ **A `figyel` = állandó UDP-kapu** (postaláda, D34): nem kopog, csak felel és visszakopog.
+- ⭐ **A kézi parancsok kapuja** a parancs idejére nyílik, az alap-porton, ha szabad (így a
+  túloldal tartós címet jegyez fel rólunk); ha egy őrjárat fogja, a rendszer adta porton — és
+  akkor a saját címünket NEM jegyezzük fel (halott címet terjesztene).
+- ⭐⭐ **Tiszta lap a társ-listán:** új fájl (`indulocimek.json`), csak a `tars` és a `felfedez`
+  ír bele. A régi `tarsak.json` (TCP-címek) a lemezen marad, semmi nem olvassa. Más készüléktől
+  tanult cím nem kerül a listára — azt a friss UDP-jegyzék és a kötések viszik.
+- ⭐ **Az őrjárat köre:** kötések + friss UDP-címek + induló címek, egy kapun. Az induló címek
+  könyvelése (`utoljara`/`sikertelen`) a UDP-eredményből, a `modosit()`-on át, RÁVEZETVE.
+- ⭐⭐ **Az ismételt menet a kapun** (30. mérés): ha egy menet újdonságot hozott, újra kopogunk
+  mindenkire, akivel a munka sikerült — amíg van újdonság és tart az ablak.
+- ⛔ **Egy régi hiba magától javult:** a UDP-sikereket a TCP-kör száma FELÜLÍRTA, tehát egy
+  csak-UDP-s kör „néma” körnek számított a felszabadításnál (`sikeresEbbenAKorben`).
+- ⭐ **A `kapu` UDP-rést kér** a routertől (PCP, 17 = UDP). ⚠️ A rés IPv6-os, a kapu ma IPv4-es —
+  a parancs ezt kimondja.
+
+⛔⛔ **ÉS AMIT AZ ISMÉTELT MENET HOZOTT FELSZÍNRE — EGY VALÓDI VONAL-HIBA (javítva):** ugyanazzal
+a társsal másodpercen belül új kapcsolat nyílik ugyanazon a foglalaton, és a sorszámok 1-től
+indulnak. Ha a társ új kapcsolata késve indult, a **régi kapcsolata az utóhangban nyugtázta az
+új kapcsolat első darabját** (ismétlésnek nézte) — a küldő nem küldte újra, és a csere 10 mp
+múlva elbukott. ✅ **Új mező nélkül javítva** (`udpVonal.js`): az első küldés sosem visz `k`-t,
+tehát az utóhang csak `k`-val érkező, BÁJTRA azonos ismétlést nyugtáz, új adatot nem fogad.
+Új önpróba méri, a rontása buktat.
+
+⚠️⚠️ **AZ ÁRAK, KIMONDVA (Csaba vállalta):**
+- **A több forrásból egy fájl (D68 / 6.) élesben nem fut:** csak a TCP-n élt. Egy fájl a résen,
+  egyetlen társtól jön, amíg a UDP-s több forrás meg nem épül. A rossz szelet helyi tanulsága
+  (29/c.) is ezzel együtt pihen. A tervező függvények próbával megmaradtak.
+- **IPv6 nincs:** a UDP-kapu IPv4-es, a TCP viszont IPv6-on is ment. ⏸️ Kettős (IPv4+IPv6) kapu
+  külön lépés.
+- **Egy wifin is kopogni kell:** a TCP ott „ingyen” ment; a kapun a wifin a kopogás azonnal
+  átjut (nincs portás), de ez is a kapun megy.
+- **A régi és az új program nem beszél egymással** — a készülékeket együtt kell frissíteni (D66).
+
+⏸️ **Kimondott feltevés (Csaba, 2026-09-26):** két cél-függő NAT között (pl. két mobil
+szolgáltató) a pajzsfúrás elvi okból nehéz — **nem mértük**. Amíg nincs mérve, feltételezzük, hogy
+nem áll útban; a napló bukás esetén megnevezi („rés nyílt, de…” / „egyik rés sem nyílt meg”).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

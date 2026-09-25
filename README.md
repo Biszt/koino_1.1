@@ -90,7 +90,7 @@ ugyanaz az állapot jön ki. A készülékek időnként maguktól összeérnek (
 | Futtatókörnyezet | Node.js (laptopon és telefonon, Termuxban) — **nulla külső függőség** |
 | Kriptográfia | a Node beépített WebCryptója (Ed25519 aláírások) |
 | Tárolás | hozzáfűzhető eseménynapló (`koino-adat/`), fájlok a lenyomatuk szerint |
-| Hálózat | UDP (pajzsfúrás a NAT-on át, saját ablakos vonal), BitTorrent DHT hirdetőtáblának, helyi felfedezés |
+| Hálózat | **csak UDP** (2026-09-26 óta nincs TCP a készülékek között): állandó UDP-kapu, pajzsfúrás a NAT-on át, saját ablakos vonal, BitTorrent DHT hirdetőtáblának, helyi felfedezés |
 | Felület | a prototípus vanilla JS kártyái, egy helyi (127.0.0.1) kapun kiszolgálva |
 
 **A prototípus (`backend/` + `frontend/`):**
@@ -117,7 +117,7 @@ Ez kiírja az állapotot (gondolatok, javaslatok, egyezmények). Néhány továb
 ```bash
 node koino/koino.js orjarat          # a valódi üzemmód: a készülék magától dolgozik
 node koino/koino.js felulet          # a felület a böngészőben (helyi kapu, jelszóval)
-node koino/meres/mind.js             # az önpróbák (717, mind zöldnek kell lennie)
+node koino/meres/mind.js             # az önpróbák (703, mind zöldnek kell lennie)
 ```
 
 A teljes parancslista: [`koino/README.md`](koino/README.md). Telefonra telepítés
@@ -215,9 +215,10 @@ A mérések jegyzőkönyve: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek
 🚧 **A P2P koino (`koino/`) fejlesztés alatt.** Kész a helyi modell, a szállítás, a
 szerkezet és az identitás (Szakasz 1–4), a felület gerince (Szakasz 5), valamint a
 fájlok szállítása. Az őrjárat UDP-n kopog és cserél, a hirdetőtábla (BitTorrent DHT)
-terepen, valódi telefonokkal is működik. **717 önpróba**, mind zöld
-(`node koino/meres/mind.js`). A következő lépés: *UDP mindenhol* (D69). A friss
-állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
+terepen, valódi telefonokkal is működik. 2026-09-26 óta **nincs TCP a készülékek között**: az
+őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **703
+önpróba**, mind zöld (`node koino/meres/mind.js`). A következő lépés: terepmérés az új úton. A
+friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
 
 🟢 **A prototípus élesben fut** a [koino.hu](https://koino.hu)-n (Fázis 1),
 befagyasztva. Automatizált tesztje nincs; a tesztelés böngészős, referenciája a

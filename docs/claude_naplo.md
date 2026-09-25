@@ -8,6 +8,110 @@ elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklá
 
 ---
 
+### ✅ 2026-09-26 — D69/2: A TCP KIKERÜLT A KÉSZÜLÉKEK KÖZÜL (Csaba döntései)
+
+⭐ **A döntések, szó szerint:** *„nyugottan lehet tiszta lappal indúlni. nem szeretnék tcp-és
+megoldásokat."* · *„vegyük ki a tcp-ét egyszerre. nem szeretném hogy bezavarjon."* · a több
+forrás árára: *„elfogadom ezt az árat, ameddig az udp-és több forrás meg nem épűl."* · és a két
+mobil NAT feltevésére: *„ameddig ezt nem tudjuk tesztelni, feltételezzük azt, hogy működik."*
+
+⭐ **Előtte egy tanuló-beszélgetés** (a TCP és a UDP, a portás-kép, a pajzsfúrás lépésenként, a
+cél-függő NAT) — ebből jött a tiszta lap: a `tarsak.json` címei a TCP-kapuk számai voltak, UDP-n
+hiábavalók.
+
+**Mit építettünk (három commitban):** közös munka minden útnak (`resMunkaKeszito`) · `figyel` =
+állandó UDP-kapu · az őrjárat TCP-kör és TCP-postaláda nélkül, a kötésekre + friss címekre +
+induló címekre kopog, ismételt menettel · kézi `csere`/`hozd`/`tukor` a kapun · `pajzsfuro … tcp`
+ki · `kapu` UDP-rést kér · `indulocimek.json` (tiszta lap) · a `vonal.js` TCP-nyitói, a
+`tcpPajzsfuras`, a `korbeCsere`, a `cimek` mező és a `tcpLekepezesMeres.js` ki · a könyvelés a
+kopogásból (`kopogasMegfigyelesei`, próbával).
+
+⛔⛔ **A MENET LELETE — EGY VALÓDI VONAL-HIBA:** az ismételt menet a teljes próbasorban egyszer
+elbukott (*„rés nyílt, de a csere a résen elbukott: A másik fél nem válaszol"*). Külön futtatva
+zöld volt — ⚠️ **nem hangoltuk zöldre**, a próba megnevezte magát (az őrjárat naplójával), és
+kiderült: ugyanazzal a társsal másodpercen belül új kapcsolat nyílik ugyanazon a foglalaton, a
+sorszámok 1-től indulnak, és a társ **régi kapcsolatának utóhangja nyugtázta az új kapcsolat
+első darabját**, mielőtt az ő új kapcsolata megszületett volna. ✅ Javítva új mező nélkül: az
+első küldés sosem visz `k`-t, tehát az utóhang csak `k`-val érkező, bájtra azonos ismétlést
+nyugtáz. Új önpróba reprodukálja (késleltetett túloldal), a rontása buktat.
+
+⚠️ **Két apróbb javítás a próbákból:** egy lezárt foglalaton próbált küldés szinkron dob
+(`ERR_SOCKET_DGRAM_NOT_RUNNING`) — most elnyeljük, egy bezárt kapu ne döntse le a folyamatot; a
+küldő a saját UDP-listájából is csak érvényes címet küld.
+
+⚠️ **Az árak:** a több forrás (és a rossz szelet helyi tanulsága) élesben pihen; IPv6 nincs (a
+kapu IPv4-es); a „nincs újdonság" csere a résen ~480 bájt (TCP-n ~334 volt — a UDP-vonal
+sorszámai és nyugtái); a régi és az új koino nem beszél egymással. ⏭️ **Terepen még semmi nincs
+mérve a D69/2-ből.**
+
+---
+
+### ▶️ SESSION-VÁLTÁS (2026-09-25 este) — a D69/2 TERVE, ahogy a munka előtt állt
+
+**Az állapot:** a D69 (*„UDP mindenhol, lépcsőzetesen"*, Csaba döntése) **1. lépcsője ✅**
+(az egyoldalú rés javítva, terepen is láttuk: 42. mérés, 16:30) és **3. lépcsője ✅** (az
+állandó UDP-kapu, lent). ⏭️ **A KÖVETKEZŐ MUNKA: a D69/2 — a TCP-kör kivétele az őrjáratból.**
+Csaba kifejezetten új sessionben akarja kezdeni. **717 önpróba zöld** (26 próba-fájl a
+`mind.js`-ben); a munkakönyvtár a session-váltó commit után tiszta.
+
+#### ⏭️ A D69/2 — hol és hogyan
+
+⭐ **Hol van a kód:** [`koino/koino.js`](koino/koino.js), a `case 'orjarat'` ág. A körben
+előbb a **UDP-ág** fut (`udpCelok` → `kapu.kopog(...)`), utána a **TCP-kör** (`hivhatok` →
+`korbeCsere(hivhatok, (t) => csereVonalon(...))` az ismételt menettel, a `MENET_PLAFON`-nal és
+az `ablakVege`-vel), aztán a tábla. A résen végzett munka a `resMunka` — **ez már most mindent
+megtesz, amit a TCP-kör a sikeres társsal** (kötés · saját cím a társtól · UDP-címek · DHT-gépek
+· társ-címek · fájl-tanulság · fájl-randevú), egyetlen kivétellel: a `tarsak.json` `utoljara`
+könyvelése (`megfigyelesekRavezetese`) csak a TCP-körben van.
+
+A lépések, ahogy most látom:
+
+1. **A társlista címeire is a kapun kopogunk.** A `hivhatok` címei kerüljenek a `kapu.kopog`
+   céljai közé az `udpCelok` mellé, cím:port szerint egyszer. ⚠️ A társlistán **TCP-port** áll,
+   de az őrjárat a UDP-kaput **ugyanazon a számon** nyitja (`port`), tehát a szám jó — ha a
+   másik oldalon is őrjárat fut.
+2. ⛔ **A `figyel` parancsnak is kell UDP-kapu.** Ma csak TCP-t nyit (postaláda, D34): a D69/2
+   után az őrjárat nem hívná többé. A `figyel` nyisson `udpKapuNyitasa`-t ugyanazon a porton, a
+   `resMunka`-val azonos munkával (a kör-állapot nélkül). Célszerű a `resMunka`-t kiemelni az
+   őrjáratból, hogy mindkettő ugyanazt hívja. *Egy problémára egy gépezet.*
+3. **Az ismételt menet (30. mérés, ×30) UDP-n.** Ha egy kopogás-kör új eseményt hozott (a
+   `kopog` eredményében `eredmenyek[i].eredmeny.uj`), kopogjunk újra az átfúrt társakra,
+   amíg van újdonság, és `Date.now() < ablakVege`, legfeljebb `MENET_PLAFON`-szor. A társ
+   kapuja bármikor fogad; a `FOGLALT` már kezelve van. ⚠️ Ezt a próbának kell eldöntenie: a 30.
+   mérés alakja (három készülék láncban, a hír egy ablakon belül a végéig jut) UDP-n is.
+4. **Az `utoljara` könyvelés** (melyik társ mikor felelt) kerüljön át a UDP-útra, vagy mondjuk
+   ki, hogy a társlista mostantól csak *kiinduló cím* (a kötés tudja a többit). ⚠️ Ez
+   tervezési kérdés — ha nem egyértelmű, **Csabának döntési kérdésként** kell feltenni.
+5. **A `sikeresEbbenAKorben`** (ebből lesz a körből „buli", a felszabadítás mércéje) maradjon
+   meg: a `udp.sikeres` adja.
+6. **Próbák:** a parancssor-próbák közül azok, amelyek `figyel`-t indítanak, és egy őrjárat
+   TCP-körrel éri el (pl. a felület + őrjárat próba; a „fájl több forrásból" próba két `figyel`
+   forrással), a 2. pont után a kapun kell átmenjenek — ez maga a bizonyítás. ⛔ Rontás-próba:
+   a társlista-kopogás kivétele buktasson; a régi (TCP-körös) `koino.js` pedig egy új próbán,
+   ami csak UDP-n mehet át.
+7. **Mérés:** a 41. mérés 90–97 mp-es köre halott TCP-címekből jött — írjuk fel a kör új
+   hosszát az [`eredmenyek.md`](koino/meres/eredmenyek.md)-be.
+
+⚠️ **Ami a D69/2 után is TCP marad** (a D69 szerint *egyelőre*): a `figyel` TCP-postaládája
+(a kézi `csere <cím>` és a régi társak miatt) · a kézi `csere`, `hozd`, `tukor` · a felület
+(`127.0.0.1`, HTTP — a gépen belül) · a `kapu` (routerkérés). *A TCP-kapu teljes lezárása
+külön lépés, nem ennek a része.*
+
+#### ⏸️ Ami nyitva maradt (terep és próbák)
+
+- ⏸️ **Terepen még nem mért:** az állandó kapu, a Termux-ébren tartás és a 0-tárolós újrapróba.
+  A **telefon + laptop** (forgatókönyv **0/b.** a [`terepmeres_mobil.md`](docs/terepmeres_mobil.md)-ben,
+  az új naplósorok az A3. táblában) elég hozzá. A telefon frissítése:
+  `cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js > ~/probak.txt 2>&1; tail -3 ~/probak.txt`
+- ⏸️ **A két mobil NAT közötti rés** még nincs mérve: Csaba feltöltőkártyás mobilnete nem
+  működik, a szomszédé korlátlan, de nem mindig érhető el.
+- ⏸️ **Négy időzítés-érzékeny próba** egyszer-egyszer bukott a telefonokon (a laptopon zöld):
+  meg kell nevezniük a bukásuk okát, mielőtt bárki hozzányúl az időzítésükhöz.
+- ⏸️ **A kopogás saját üteme** (41. mérés): a D69/2 után kisebb munka, a tábla-olvasás
+  (~20 mp néma kötésenként) akkor is megnyújtja a kört.
+
+---
+
 ### ⛔ 2026-09-25 éjjel — ÁTNÉZÉS: AZ ÁLLANDÓ UDP-KAPU JEGYZÉKE DARABRA IS KORLÁTOS
 
 ⛔ **A lelet:** az `udpKapu.js` társ-jegyzéke csak IDŐBEN volt korlátos (10 perc), darabra

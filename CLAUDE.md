@@ -15,71 +15,52 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-25)
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-26)
 
-### ▶️▶️▶️▶️▶️▶️▶️ SESSION-VÁLTÁS (2026-09-25 este) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️ SESSION-VÁLTÁS (2026-09-26) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** a D69 (*„UDP mindenhol, lépcsőzetesen"*, Csaba döntése) **1. lépcsője ✅**
-(az egyoldalú rés javítva, terepen is láttuk: 42. mérés, 16:30) és **3. lépcsője ✅** (az
-állandó UDP-kapu, lent). ⏭️ **A KÖVETKEZŐ MUNKA: a D69/2 — a TCP-kör kivétele az őrjáratból.**
-Csaba kifejezetten új sessionben akarja kezdeni. **717 önpróba zöld** (26 próba-fájl a
-`mind.js`-ben); a munkakönyvtár a session-váltó commit után tiszta.
+**Az állapot:** a D69 (*„UDP mindenhol"*, Csaba döntése) **mindhárom lépcsője kész** — és a 2.
+lépcső Csaba kérésére a TELJES TCP-t vitte ki: **nincs TCP a készülékek között.** A részletek
+és az árak: **D69 / 6.** a [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)-ben.
+**703 önpróba zöld** (két teljes futás egymás után); a munkakönyvtár tiszta.
 
-#### ⏭️ A D69/2 — hol és hogyan
+**Ahogy most működik (egy bekezdésben):** minden út az **állandó UDP-kapun** megy
+([`udpKapu.js`](koino/js/csere/udpKapu.js)), és ugyanazt a munkát végzi
+(`resMunkaKeszito` a [`koino.js`](koino/koino.js)-ben: csere · kötés · tanulás · fájl-randevú). Az
+**őrjárat** a kötésekre, a friss UDP-címekre és az **induló címekre** (`indulocimek.json` — tiszta
+lap, a régi `tarsak.json`-t semmi nem olvassa) kopog, **ismételt menettel**. A **`figyel`** =
+állandó kapu (postaláda). A **kézi `csere`/`hozd`/`tukor`** a parancs idejére nyit kaput (az
+alap-porton, ha szabad). A `cimek` mező (TCP-címjegyzék) nem utazik; a címeket a friss
+UDP-jegyzék terjeszti. Egy **vonal-hiba** is kiderült és javult: az utóhang nyugtázta az új
+kapcsolat első darabját ugyanazon a foglalaton (`udpVonal.js`).
 
-⭐ **Hol van a kód:** [`koino/koino.js`](koino/koino.js), a `case 'orjarat'` ág. A körben
-előbb a **UDP-ág** fut (`udpCelok` → `kapu.kopog(...)`), utána a **TCP-kör** (`hivhatok` →
-`korbeCsere(hivhatok, (t) => csereVonalon(...))` az ismételt menettel, a `MENET_PLAFON`-nal és
-az `ablakVege`-vel), aztán a tábla. A résen végzett munka a `resMunka` — **ez már most mindent
-megtesz, amit a TCP-kör a sikeres társsal** (kötés · saját cím a társtól · UDP-címek · DHT-gépek
-· társ-címek · fájl-tanulság · fájl-randevú), egyetlen kivétellel: a `tarsak.json` `utoljara`
-könyvelése (`megfigyelesekRavezetese`) csak a TCP-körben van.
+⭐ **Kimondott feltevés (Csaba):** két cél-függő NAT között (két mobil szolgáltató) a pajzsfúrás
+nehéz lehet — **nem mértük**; addig úgy vesszük, hogy nem áll útban.
 
-A lépések, ahogy most látom:
+#### ⏭️ A KÖVETKEZŐ MUNKA — a sorrend Csabáé
 
-1. **A társlista címeire is a kapun kopogunk.** A `hivhatok` címei kerüljenek a `kapu.kopog`
-   céljai közé az `udpCelok` mellé, cím:port szerint egyszer. ⚠️ A társlistán **TCP-port** áll,
-   de az őrjárat a UDP-kaput **ugyanazon a számon** nyitja (`port`), tehát a szám jó — ha a
-   másik oldalon is őrjárat fut.
-2. ⛔ **A `figyel` parancsnak is kell UDP-kapu.** Ma csak TCP-t nyit (postaláda, D34): a D69/2
-   után az őrjárat nem hívná többé. A `figyel` nyisson `udpKapuNyitasa`-t ugyanazon a porton, a
-   `resMunka`-val azonos munkával (a kör-állapot nélkül). Célszerű a `resMunka`-t kiemelni az
-   őrjáratból, hogy mindkettő ugyanazt hívja. *Egy problémára egy gépezet.*
-3. **Az ismételt menet (30. mérés, ×30) UDP-n.** Ha egy kopogás-kör új eseményt hozott (a
-   `kopog` eredményében `eredmenyek[i].eredmeny.uj`), kopogjunk újra az átfúrt társakra,
-   amíg van újdonság, és `Date.now() < ablakVege`, legfeljebb `MENET_PLAFON`-szor. A társ
-   kapuja bármikor fogad; a `FOGLALT` már kezelve van. ⚠️ Ezt a próbának kell eldöntenie: a 30.
-   mérés alakja (három készülék láncban, a hír egy ablakon belül a végéig jut) UDP-n is.
-4. **Az `utoljara` könyvelés** (melyik társ mikor felelt) kerüljön át a UDP-útra, vagy mondjuk
-   ki, hogy a társlista mostantól csak *kiinduló cím* (a kötés tudja a többit). ⚠️ Ez
-   tervezési kérdés — ha nem egyértelmű, **Csabának döntési kérdésként** kell feltenni.
-5. **A `sikeresEbbenAKorben`** (ebből lesz a körből „buli", a felszabadítás mércéje) maradjon
-   meg: a `udp.sikeres` adja.
-6. **Próbák:** a parancssor-próbák közül azok, amelyek `figyel`-t indítanak, és egy őrjárat
-   TCP-körrel éri el (pl. a felület + őrjárat próba; a „fájl több forrásból" próba két `figyel`
-   forrással), a 2. pont után a kapun kell átmenjenek — ez maga a bizonyítás. ⛔ Rontás-próba:
-   a társlista-kopogás kivétele buktasson; a régi (TCP-körös) `koino.js` pedig egy új próbán,
-   ami csak UDP-n mehet át.
-7. **Mérés:** a 41. mérés 90–97 mp-es köre halott TCP-címekből jött — írjuk fel a kör új
-   hosszát az [`eredmenyek.md`](koino/meres/eredmenyek.md)-be.
-
-⚠️ **Ami a D69/2 után is TCP marad** (a D69 szerint *egyelőre*): a `figyel` TCP-postaládája
-(a kézi `csere <cím>` és a régi társak miatt) · a kézi `csere`, `hozd`, `tukor` · a felület
-(`127.0.0.1`, HTTP — a gépen belül) · a `kapu` (routerkérés). *A TCP-kapu teljes lezárása
-külön lépés, nem ennek a része.*
+1. ⭐⭐ **TEREPMÉRÉS a D69/2 után** (telefon + laptop, forgatókönyv **0/b.**,
+   [`terepmeres_mobil.md`](docs/terepmeres_mobil.md)): ez nagy változás volt — a kör, a
+   postaláda és a kézi út is új úton megy. ⚠️ **Mindkét készüléket frissíteni kell** (a régi
+   TCP-s koino nem beszél az újjal), és az induló címeket **újra fel kell venni** (`tars`, vagy
+   a wifin `felfedez`) — a kötések viszont megmaradtak. Írjuk fel a **kör új hosszát** is (a 41.
+   mérés 90–97 mp-e halott TCP-címekből jött).
+2. ⏸️ **A UDP-s több forrás** (D68 / 6. — ma egy fájl egy társtól jön a résen): a tervező
+   függvények és a `parbeszed` `FAJLKEREK`-ága készen állnak, a résen próbával mérve.
+3. ⏸️ **IPv6:** a kapu IPv4-es (a TCP IPv6-on is ment). Kettős (IPv4+IPv6) kapu — külön lépés.
+4. ⏸️ **A kopogás saját üteme** (41. mérés): a tábla-olvasás (~20 mp néma kötésenként) még
+   megnyújtja a kört.
 
 #### ⏸️ Ami nyitva maradt (terep és próbák)
 
-- ⏸️ **Terepen még nem mért:** az állandó kapu, a Termux-ébren tartás és a 0-tárolós újrapróba.
-  A **telefon + laptop** (forgatókönyv **0/b.** a [`terepmeres_mobil.md`](docs/terepmeres_mobil.md)-ben,
-  az új naplósorok az A3. táblában) elég hozzá. A telefon frissítése:
+- ⏸️ **Terepen még nem mért:** a D69/2 egésze, az állandó kapu, a Termux-ébren tartás és a
+  0-tárolós újrapróba. A telefon frissítése:
   `cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js > ~/probak.txt 2>&1; tail -3 ~/probak.txt`
-- ⏸️ **A két mobil NAT közötti rés** még nincs mérve: Csaba feltöltőkártyás mobilnete nem
-  működik, a szomszédé korlátlan, de nem mindig érhető el.
+- ⏸️ **A két mobil NAT közötti rés** még nincs mérve (lásd a feltevést fent).
 - ⏸️ **Négy időzítés-érzékeny próba** egyszer-egyszer bukott a telefonokon (a laptopon zöld):
   meg kell nevezniük a bukásuk okát, mielőtt bárki hozzányúl az időzítésükhöz.
-- ⏸️ **A kopogás saját üteme** (41. mérés): a D69/2 után kisebb munka, a tábla-olvasás
-  (~20 mp néma kötésenként) akkor is megnyújtja a kört.
+- ⏸️ **A sikerszámlálás javítása** (a UDP-sikereket a TCP-kör felülírta) magától jött a TCP-kör
+  kivételével; külön próbája nincs (a felszabadítás megülepedéséhez kellene).
 
 #### ⛔ A munka módja (Csabával)
 
@@ -295,7 +276,7 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 717 önpróba
+node koino/meres/mind.js         # a 703 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
@@ -319,8 +300,6 @@ node koino/meres/kotesMeres.js   # ⭐⭐⭐ A KÖTÉS-HÁLÓ (35.): 3 kötés/k
                                  # leszakadva; és a méhsejt vs véletlen (lépésszám)
 node koino/meres/udpLekepezesMeres.js   # ⭐⭐ TÚLÉLI-E a bemondott UDP-cím a buli-közt? (31.)
                                  # EGY készülék elég; a MOBIL adattal futtatva a döntő
-node koino/meres/tcpLekepezesMeres.js   # ⭐⭐ CÉLFÜGGETLEN-E a router TCP-leképezése? (18.)
-                                 # (a 17. a terepmérés volt — nincs parancsa, két készülék kell hozzá)
 node koino/meres/meghivasMeres.js       # ⭐ A MEGHÍVÁSOS BELÉPÉS: védelem ÉS ár, hat változatban
                                  # (MELEGIT=1 · MEGTEVESZTETT=8 · MEGHIVO_KORLAT=10 · KOROK=60)
 node koino/meres/ebredesProba.js fut    # ÉBREDÉS-PRÓBA egy hálózaton: engedi-e az OS az ébredést
@@ -348,12 +327,12 @@ KOINO_ADAT=./adat-B node koino/koino.js csere 127.0.0.1 7373
 node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js csere
 ```
 
-⭐ **A `figyel` = POSTALÁDA** (D34, C. lépés): aki fogadni tud, az átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja. **Nem élő továbbító** — nem kell egyszerre online tartania két felet (ez a TURN drágasága). Mérve: Anna és Béla egyike sem nyitott kaput, csak Cilihez szóltak ki — mégis mindkettő mindent megtudott. ⚠️ **Egy `figyel` = EGY koino** (a `KOINO_AZONOSITO` indításkor dől el). Aki két koinónak is tagja, két `figyel`-t futtat, két porton. A protokoll a `LENYOMAT`-ban megmondja, melyik koinóról beszél, és **eltérésnél a csere azonnal, tisztán véget ér** (1 kör, ~334 bájt) — mérve, mert korábban nem így volt.
+⭐ **A `figyel` = POSTALÁDA** (D34, C. lépés; 2026-09-26 óta az állandó UDP-kapun): aki fogadni tud, az átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja. **Nem élő továbbító** — nem kell egyszerre online tartania két felet (ez a TURN drágasága). Mérve: Anna és Béla egyike sem nyitott kaput, csak Cilihez szóltak ki — mégis mindkettő mindent megtudott. ⚠️ **Egy `figyel` = EGY koino** (a `KOINO_AZONOSITO` indításkor dől el). Aki két koinónak is tagja, két `figyel`-t futtat, két porton. A protokoll a `LENYOMAT`-ban megmondja, melyik koinóról beszél, és **eltérésnél a csere azonnal, tisztán véget ér** (1 kör, ~334 bájt) — mérve, mert korábban nem így volt.
 
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 717 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 703 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
@@ -387,8 +366,9 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 - ⭐⭐ **A VISSZAVONÁS (4.5), és a szép megkülönböztetés benne:** a **felhatalmazás az enyém** — én adtam, én veszem vissza, egyoldalúan („az utolsó nyer", mint a tudatpontnál); a **tanúsítás állítás a múltról**, azt nem lehet visszavonni (D46). ⭐ És Csaba döntése (b): a visszavonás **csak előre hat** — aki elveszíti a megbízást, többet nem tanúsíthat, de a **már kiadott tanúsításai érvényben maradnak** (D47), különben néhány ember összebeszélve becsületes emberek tömegétől venné el a pénztárcát. Ehhez a tanúsítás **bemondja**, mire támaszkodott (D42-minta). ⭐⭐ **És a szigorítás, amit Csaba kérdése hozott ki (D61):** a tanúsítás **lehorgonyoz a saját szeletébe** — elköti, meddig látta a rólam szóló eseményeket. Ha a visszavonás ezen **belülre** esik, a tanúsító **bizonyíthatóan tudott róla**, és a tanúsítás **nem számít** (kemény szabály, mert a saját aláírásából következik). ⚠️ Aki a visszavonás **előtti** pontra horgonyzott, azt **nem büntetjük** — az a normális eset egy P2P hálózaton. ⭐⭐⭐ **És a rést a BULI-ELISMERÉS zárja be (D61):** a `Lattam` esemény aláírja, **meddig látok** a saját szeletemben — és mivel **a saját láncomban van sorrend** (a `sorszam`, amit csak én írhatok), minden KÉSŐBBI eseményem bizonyíthatóan azután keletkezett. ⭐ **Globális óra nélkül.** Így a „szándékosan régi horgony" trükk sem működik: horgony nélkül is elkapjuk azt, aki egyszer már elismerte, hogy látja a visszavonást. ⚠️ Aki SOHA nem ismeri el, hogy lát, az nem szeg szabályt — de **kilóg a ritmusból**, és ezt a jelzés mutatja (`elismeresek`).
 - `js/muveletek.js` — a **tizenhat** művelet; mindegyik: lánc vége → aláírt esemény → mentés. ⭐ A `meghivas`, a `felhatalmazas` és a `tanusitas` **ugyanaz az alak** (`allitokRola`): az esemény a MÁSIK szeletébe kerül, és **hozza a saját horgonyomat** — ettől lesz az ellenőrzés keresés nélküli mutató-követés.
 - `js/csere/csere.js` — **a csere-protokoll logikája, hálózat nélkül** (Szakasz 2): `ALLAS` (szerzőnként legnagyobb sorszám + hézagok + elágazások + a lánc **ujjlenyomata**) → `KEREK` → `ESEMENY`. ⚠️ A „legnagyobb sorszám önmagában elég" **nem igaz** — a hézag és a lánc közepén rejtett elágazás miatt; mindkettő rontás-próbával igazolva. A beérkezett esemény ugyanazon az `esemenyMentese` kapun megy be, mint a saját: **a hálózat nem kap engedékenyebb kaput**.
-- `js/csere/vonal.js` — **a szállítás**: soronként egy JSON-üzenet TCP-n (ugyanaz az alak, mint a táré). Szimmetrikus — egyetlen `parbeszed` fut mindkét oldalon —, és **a csendes körnél áll meg** (se nem adtunk, se nem kaptunk). Semmit nem tud a koinóról. ⭐ **A kör egy 43 karakteres `LENYOMAT`-tal kezdődik** (D35, B. lépés): ha a két fél tudása egyezik, a részletes `ALLAS` el sem indul — mérve **334 bájt a 16 158 helyett**. ⚠️ A csendes kör feltétele emellett is megmarad: a lenyomat az egyetértést fogja meg, a csendes kör a hibás/rosszindulatú felet.
-- `js/csere/udpVonal.js` — **ugyanaz a csere, UDP-n** (D37–D39, E. lépés): egy TCP-foglalatnak látszó utánzat, ami alatta UDP-t használ, így a `parbeszed` **változatlanul** fut az átfúrt résen (1. szabály gyakorlati haszna). Amit a UDP nem ad meg, azt itt pótoljuk: sorszám + nyugta + újraküldés. ⚠️ **És két őr, ami először hiányzott** (2026-08-30): a `kiurites()` — a lezárás előtt meg kell várni, hogy az utolsó darabot nyugtázzák, különben eldobjuk (a `parbeszed` az utolsó `LENYOMAT`-ra már nem vár) —, és a **tétlenségi óra**, hogy a néma társ ne ragaszthasson be. E kettő nélkül a csere **végtelenül várt**; rontás-próba őrzi mindkettőt.
+- `js/csere/vonal.js` — **a párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen — D69/2: nincs TCP a készülékek között) (ugyanaz az alak, mint a táré). Szimmetrikus — egyetlen `parbeszed` fut mindkét oldalon —, és **a csendes körnél áll meg** (se nem adtunk, se nem kaptunk). Semmit nem tud a koinóról. ⭐ **A kör egy 43 karakteres `LENYOMAT`-tal kezdődik** (D35, B. lépés): ha a két fél tudása egyezik, a részletes `ALLAS` el sem indul — mérve **334 bájt a 16 158 helyett**. ⚠️ A csendes kör feltétele emellett is megmarad: a lenyomat az egyetértést fogja meg, a csendes kör a hibás/rosszindulatú felet.
+- `js/csere/udpVonal.js` — **a csere UDP-n** (D37–D39, E. lépés; 2026-09-26 óta az EGYETLEN szállítás): egy foglalatnak látszó utánzat, ami alatta UDP-t használ, így a `parbeszed` **változatlanul** fut az átfúrt résen (1. szabály gyakorlati haszna). Amit a UDP nem ad meg, azt itt pótoljuk: sorszám + nyugta + újraküldés. ⚠️ **És két őr, ami először hiányzott** (2026-08-30): a `kiurites()` — a lezárás előtt meg kell várni, hogy az utolsó darabot nyugtázzák, különben eldobjuk (a `parbeszed` az utolsó `LENYOMAT`-ra már nem vár) —, és a **tétlenségi óra**, hogy a néma társ ne ragaszthasson be. E kettő nélkül a csere **végtelenül várt**; rontás-próba őrzi mindkettőt.
+- `js/csere/udpKapu.js` — ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25; a D69/2 óta az EGYETLEN kapu): egy foglalat a teljes futásra — bármikor felel a kopogásra, a bekopogóra visszakopog, társanként egyszerre egy munka (`FOGLALT`), a jegyzéke időben ÉS darabra korlátos. A munkát kívülről kapja (`resMunkaKeszito` a `koino.js`-ben — az őrjárat, a `figyel` és a kézi parancsok közös gépezete).
 - `js/csere/pajzsfuro.js` — **a lyukfúrás** (D37, E. lépés): mindkét fél kifelé kopog egy **rögzített helyi portról**, és a két rés a közepén találkozik — fogadóképes fél nélkül. A `mindketIrany` a mérce: nem elég kapni, a MI csomagunknak is át kell jutnia. ⚠️ A `kulsoCim` (STUN) **segédeszköz és paraméter** (2. szabály): a szerver cserélhető, ha nem válaszol a koino ugyanúgy működik, és **semmilyen bizalom nem jár vele** — egy portszámot mond, nem igazságot. Hosszú távon a saját tükrünk váltja ki (`vonal.js`, `latlak`).
 - `js/csere/kapunyitas.js` — **megkérjük a routert**, hogy engedje be a kapcsolatot (NAT-PMP, PCP, UPnP — mind a három megmérve). ⚠️ **Segédeszköz, nem előfeltétel** (2. szabály): ha a router nemet mond, a koino ugyanúgy működik, csak ő kezdeményez kifelé. A fejlesztő routere mind a hármat elutasította — ezért fordult a terv a D33 felé.
 - `js/csere/helyiFelfedezes.js` — **a helyi felfedezés** (Szakasz 2 / F. lépés): azonos wifin lévő készülékek megtalálják egymást, **cím beírása nélkül**. Két szerep: aki keres, **kiált** (`helyiFelfedezes`), aki dolgozik (`orjarat`/`figyel`), az **felel** (`felfedezoValaszolo`) — magától senki nem kiabál. ⚠️ **Kényelem, nem előfeltétel** (2. és 4. szabály): ha a wifi tiltja a kliensek közti forgalmat, a kézi `tars` út marad. Bizalom nem jár vele (3. szabály): a cím a **foglalatból** jön, nem az üzenetből, és sosem lesz esemény. ⚠️ Két dolog mérésből jött: **ismételve kell kiáltani** (egyszeri kiáltásnál a később induló nem hall semmit), és a válasz **a csoportnak is** megy (egy gépen több példány osztozik a rögzített felfedező porton).
@@ -396,7 +376,7 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 - `js/csere/kotesek.js` — ⭐⭐ **A KÖTÉS-HÁLÓ könyvelése** (Csaba ötlete, 2026-09-18): kivel tartok rendszeres kapcsolatot. ⛔ **A kötést a tábla-kulcs azonosítja, nem a cím** — *mert épp a cím az, ami elromlik.* ⭐ Ezért őrzi a társ utolsó ismert címét akkor is, ha a névtelen jegyzékből elévült: egy kopogás ~60 bájt, *olcsóbb megpróbálni, mint elfelejteni valakit, akivel tegnap beszéltünk.* K=3, legfeljebb 5 (9. szabály). ⚠️ Helyi megfigyelés, sosem terjed (3. szabály).
 - `js/csere/tabla.js` — ⭐⭐⭐ **A HIRDETŐTÁBLA** (2026-09-20): „leszakadtam, itt az új címem" — **társanként külön rekesz**, a tartalom titkosítva, a bejegyzés aláírva. ⭐⭐ **A rekesz „sója" a két NYILVÁNOS kulcsból számítódik**, a DHT-beli cél pedig a kulcs és a só lenyomata — *egy kívülálló tehát nem tudja kiszámolni, hol keresse: nem azért nem olvassa el, mert megtiltjuk, hanem mert nem találja meg.* ⚠️ Hálózatot nem nyit (1. szabály): bejegyzést KÉSZÍT és OLVAS; hogy mi viszi a táblára, az a hívó dolga (ma a `dht.js`).
 - `js/csere/dht.js` — **a tábla mai megvalósítása**: függőség nélküli BitTorrent-DHT kliens (BEP 5 + 44). ⚠️ **Segédeszköz, nem előfeltétel** (2. szabály): ha nem elérhető, a koino megy tovább, csak a leszakadt társ visszatalálása lassul. ⭐ A **belépő csak kurbli**: a készülék a saját emlékezetéből indul, és a csere **át is ad** néhány megismert gépet a társaknak (Csaba döntése, 2026-09-20).
-- `js/csere/tarsak.js` — **a társ-lista** (D33, Szakasz 2 / A. lépés): a `csere` már nem egyetlen címre megy, hanem végig a listán. ⭐ **Egy társ bukása nem hiba, hanem a normális működés** — a kör megy tovább, és a bukás csak feljegyződik. Hálózatot **nem importál**: a cserét végző függvényt kívülről kapja (1. szabály), ezért TCP nélkül önpróbázható. A `utoljara`/`sikertelen` mező **helyi megfigyelés** — sosem terjed, és semmit nem dönt el a koinóban.
+- `js/csere/tarsak.js` — **a társ-lista** (D33, Szakasz 2 / A. lépés) — 2026-09-26 óta az **induló címek** (`indulocimek.json`, tiszta lap): a `csere` és az őrjárat nem egyetlen címre megy, hanem a listára — a kapun, egyszerre. ⭐ **Egy társ bukása nem hiba, hanem a normális működés** — a kör megy tovább, és a bukás csak feljegyződik. Hálózatot **nem importál**: a kopogás a kapué, ez csak könyvel (`kopogasMegfigyelesei`, 1. szabály), ezért hálózat nélkül önpróbázható. A `utoljara`/`sikertelen` mező **helyi megfigyelés** — sosem terjed, és semmit nem dönt el a koinóban.
 - `koino.js` — a **parancssori arc**: ezzel játszható végig kézzel a teljes kör (fejlesztői eszköz, lásd fentebb).
 - `meres/probaFuttato.js` + `meres/mind.js` — az önpróbák közös váza és belépője.
 

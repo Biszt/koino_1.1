@@ -10,7 +10,17 @@
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-25) — UDP MINDENHOL, LÉPCSŐZETESEN (D69)
+> ## ▶️ HOL TARTUNK (2026-09-26) — A D69 KÉSZ: NINCS TCP A KÉSZÜLÉKEK KÖZÖTT
+>
+> ✅ **A D69 mindhárom lépcsője kész** — a 2. lépcső Csaba kérésére a TELJES TCP-t vitte ki: az
+> őrjárat, a postaláda és a kézi parancsok is az állandó UDP-kapun mennek, egy közös munkával.
+> Az árak kimondva (D69 / 6.): a több forrásból egy fájl élesben pihen, IPv6 nincs (a kapu
+> IPv4-es). ⏭️ **A következő: terepmérés a D69/2 után** (telefon + laptop), aztán a UDP-s több
+> forrás. A részletek a [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS (2026-09-26)" blokkjában.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-25) — UDP MINDENHOL, LÉPCSŐZETESEN (D69)
 >
 > ✅ Az őrjárat 2026-09-20 óta UDP-n is kopog és cserél, a **hirdetőtábla terepen is működik**
 > (39., 42. mérés). **717 önpróba.** ⭐ **Csaba döntése (D69):** a TCP–UDP kettősség drága,

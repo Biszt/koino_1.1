@@ -49,26 +49,26 @@ node koino/koino.js
 | `node koino/koino.js javaslat <azonosító> "Új cím"` | szerkesztési javaslat |
 | `node koino/koino.js szavaz <javaslat> tamogat\|ellenez\|tartozkodik` | szavazat |
 
-**A Szakasz 2 parancsai** — a csere két készülék között:
+**A Szakasz 2 parancsai** — a csere két készülék között. ⭐ **2026-09-26 óta mind UDP-n** (D69/2): nincs TCP a készülékek között, minden út az állandó UDP-kapun megy, és ugyanazt a munkát végzi (csere · kötés · tanulás · fájl-randevú):
 
 | Parancs | Mit csinál |
 |---|---|
 | `node koino/koino.js ujjlenyomat` | **„ugyanazt látjuk-e?"** — az állapot 43 karakteres lenyomata |
 | `node koino/koino.js ujjlenyomat kiment\|osszevet <fájl>` | ⭐⭐ **…és ha NEM, akkor MIBEN?** (2026-09-21) A lap egy fájlban átvihető a másik készülékre, és ott **megnevezi az eltérő szakaszt**. ⛔ A vonalra nem tesszük (6. szabály), ez a **4. szabály útja**. ⚠️ Fejlesztői műszer: az összefoglaló minden entitást tartalmaz |
-| `node koino/koino.js orjarat [perc] [port]` | ⭐⭐ **a készülék magától dolgozik**: kaput tart nyitva ÉS időnként kiszól minden társnak. Ez a valódi üzemmód |
-| `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja |
+| `node koino/koino.js orjarat [perc] [port]` | ⭐⭐ **a készülék magától dolgozik**: UDP-kaput tart nyitva ÉS időnként rákopog a kötéseire, a friss UDP-címekre és az induló címeire — ha egy menet újdonságot hozott, az ablakon belül újra (ismételt menet). Ez a valódi üzemmód |
+| `node koino/koino.js figyel [port]` | ⭐ **postaláda** (D34): állandó UDP-kapu — átveszi mások eseményeit, eltárolja, és a következő beszélgetésnél továbbadja. Nem kopog, csak felel |
 | `node koino/koino.js felfedez [mp] [port]` | ⭐ **ki van még ezen a wifin?** — cím beírása nélkül megtalálja a helyi készülékeket, és felveszi őket társnak |
 | `node koino/koino.js kulsoport [port]` | **hogy látszik kívülről a portom?** — a NAT átírja, ezt kell megmérni a fúrás előtt |
 | `node koino/koino.js pajzsfuro <cím> <port>` | ⭐⭐ **pajzsfúrás**: mindkét fél kifelé kopog, a két rés a közepén találkozik — és ha átjut, **azonnal cserél is** |
 | `node koino/koino.js tabla [kiir\|olvas]` | ⭐⭐⭐ **a HIRDETŐTÁBLA** (2026-09-20): a kötéseim · az új címem a társaim **külön rekeszébe**, titkosítva · és hol vannak ŐK most. ⛔ A tábla-kulcs **nem az azonosságod** (D6) |
-| `node koino/koino.js csere <hoszt> <port>` | kapcsolódás egy megadott készülékhez |
-| `node koino/koino.js csere` | ⭐ csere **minden társsal** — egy elérhetetlen társ nem dönti el a kört |
-| `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből, aztán a társ-listából keres |
-| `node koino/koino.js tarsak` | kik a társaim, és melyikkel mikor sikerült |
+| `node koino/koino.js csere <hoszt> <port>` | csere egy megadott készülékkel — rákopog a kapujára. ⚠️ NAT mögött csak akkor megy át, ha a másik is kopog (vagy egy wifin vagytok) — két idegen router között a `pajzsfuro` az út |
+| `node koino/koino.js csere` | ⭐ csere **minden induló címmel**, egyszerre a kapun — egy elérhetetlen társ nem dönti el a kört |
+| `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből és az induló címekből keres, egyszerre kopog |
+| `node koino/koino.js tarsak` | az **induló címeim** (`indulocimek.json` — 2026-09-26-tól tiszta lap), és melyikkel mikor sikerült |
 | `node koino/koino.js tars <hoszt> [port] [név]` | társ felvétele (levétel: `tars torol <hoszt> [port]`) |
-| `node koino/koino.js tukor <hoszt> [port]` | ⭐ **kívülről hogy látszom?** — a másik visszamondja, milyen címről/portról lát (STUN helyett) |
+| `node koino/koino.js tukor <hoszt> [port]` | ⭐ **kívülről hogy látszom UDP-n?** — a másik visszamondja, milyen címről/portról lát (STUN helyett) |
 | `node koino/koino.js cimek` | milyen címeken érhető el ez a készülék |
-| `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a kapcsolatot (NAT-PMP / PCP / UPnP) |
+| `node koino/koino.js kapu [port]` | megkéri a routert, hogy engedje be a UDP-forgalmat (PCP / UPnP). ⚠️ IPv6-os rést kér, a kapu ma IPv4-es |
 
 **A Szakasz 5 parancsa** — a felület:
 
@@ -97,7 +97,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhat próba-fájl, **717 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhat próba-fájl, **703 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
@@ -176,7 +176,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/allapot/javaslatSzamitas.js` | a döntéshozatal; **az egyezmény mint számítás** |
 | `js/allapot/osszehasonlitas.js` | **„ugyanazt látjuk-e?"** — az állapot ujjlenyomata, és hol tér el |
 | `js/csere/csere.js` | a csere-protokoll **logikája, hálózat nélkül** (`ALLAS` → `KEREK` → `ESEMENY`) |
-| `js/csere/vonal.js` | a **szállítás**: soronként egy JSON-üzenet TCP-n. Semmit nem tud a koinóról |
+| `js/csere/vonal.js` | a **párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen). Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |
 | `js/csere/fajlAtvitel.js` | ⭐ **a bájtok logikája** (5.7/B): szeletelés (64 KB), a türelem a források számából, és a munka elosztása — három egyidejű **kapcsolat**, társanként legfeljebb egy. ⭐⭐ 2026-09-15 óta **több forrás egy fájlra** (D68 / 6.): munkalopó megosztás, a bukott ág szelete visszakerül, a lezárás joga **egyszer** adódik ki. ⚠️ Hálózatot **nem importál** (1. szabály) |
@@ -184,7 +184,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/allapot/fajlIgeny.js` | ⭐ **mire van szükségem?** — a gondolat szövegében ott a kép-hivatkozás, a besorolásban az ikon; ez a réteg csak összeveti a lemezzel. ⚠️ Tárat és hálózatot **nem importál** (1. szabály): a „megvan-e?” kérdést kívülről kapja |
 | `js/allapot/ter.js` | ⭐ **A BELÉPŐ TÉR** (D25, 5.6): egy kártya minden koinóról, amit ez a készülék ismer — a kulcs és a társ-lista eddig is a koinók FÖLÖTT laktak, a tér ezt teszi láthatóvá |
 | `js/csere/fajlCsere.js` | ⛔⛔ **a KÉZI ÚT** (4. szabály): események fájlba és fájlból — ⭐ a kivitel alakja **bájtra a táré** (a másolt `esemenyek.jsonl` behozható), a behozatal pedig a `csere.js` `beolvasztas()`-át hívja, tehát **ugyanazon a kapun** megy be, mint a hálózatról jött |
-| `js/csere/tarsak.js` | **a társ-lista** (D33): kikkel próbáljunk cserélni, és milyen sorrendben — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
+| `js/csere/tarsak.js` | **a társ-lista** (D33) — 2026-09-26 óta az **induló címek**: kire kopogjunk az első találkozáshoz — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
 | `js/csere/udpKapu.js` | ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25): **egy foglalat a teljes őrjáratra** — a kopogásra bármikor felel, a bekopogóval is munka indul, társanként egyszerre egy (`FOGLALT`), és a saját külső címet is ezen méri (egy leképezés, egész futásra). A munkát kívülről kapja: a kapu nem tud a koinóról |
@@ -220,7 +220,7 @@ végigjátszható: koino → gondolat → tudatpont → javaslat → szavazat �
 | Lépés | Állapot |
 |---|---|
 | **1a** a csere logikája, hálózat nélkül | ✅ kész |
-| **1b** a vonal (TCP) | ✅ kész |
+| **1b** a vonal (TCP) | ✅ kész — ⚠️ 2026-09-26 óta nincs TCP a készülékek között (D69/2): a vonal a UDP-rés |
 | **2** a vizsga: két készülék → azonos állapot | ✅ kész |
 | **A** több társ: a `csere` társ-listára menjen, ne egy címre | ✅ kész — és két halott címmel is átment a valódi csere |
 | **B** olcsó csere: ujjlenyomat előbb, részletes `ALLAS` csak eltérésnél (D35) | ✅ kész — **334 bájt a 16 158 helyett** (50 e-ember, „nincs újdonság") |
@@ -260,10 +260,10 @@ egyszerű: ma memóriában tartott mutató, és a hívók egyike sem tud róla.
 - ✅ **Szakasz 4 — AZ IDENTITÁS: kész** (2026-09-06): két lépcső, kontraszt-jelzés, visszavonás.
 - 🚧 **Szakasz 5 — A FELÜLET: folyik** (5.1–5.8): helyi kapu · kérdezhető pakli · kártyák ·
   belépő tér · szövegszerkesztő · javaslat-modal · fájl-réteg és fájl-szállítás.
-- ⛔ **A mostani munka a BULI MÁSODIK FELE:** az őrjárat ma **TCP-n** fut, a UDP-vonal viszont
-  kész — a rés-nyitás bekötése hiányzik. ⭐ A friss UDP-címek terjesztése 2026-09-18-án
-  megépült; ⛔ **a horgony (postaláda / éjjeli őrség) még nincs**, és a 34. mérés szerint
-  **e nélkül a terjesztés el sem indul**.
+- ✅ **A BULI MÁSODIK FELE és a D69 (UDP mindenhol) KÉSZ** (2026-09-20 – 09-26): az őrjárat, a
+  postaláda (`figyel`) és a kézi parancsok is az **állandó UDP-kapun** mennek, ugyanazzal a
+  munkával; hirdetőtábla (DHT) és kötések tartják egyben a hálót. ⛔ **Nincs TCP a készülékek
+  között.** ⏭️ A következő: terepmérés a D69/2 után (a friss állapot: [`../CLAUDE.md`](../CLAUDE.md)).
 
 ⭐ **És az első valódi használat nem a végén van:** a **D18/0** szerint kis közösségben
 *„nem kell rendszer — tudod, ki valódi, mert ismered"*. Vagyis a Szakasz 3 + egy minimális
