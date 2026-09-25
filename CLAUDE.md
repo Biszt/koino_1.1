@@ -297,7 +297,10 @@ program hibáját takarja — és kívülről a kettő UGYANÚGY néz ki.** Ezé
 „zöldre hangolni": meg kell mérni. *(És a diagnosztika nélkül egyik sem lett volna
 megtalálható: a bukásnak meg kell neveznie magát.)*
 
-- ✅ **A `main` PUSHOLVA** (`4bd037a`, 2026-09-24). Push továbbra is **csak Csaba kérésére**.
+- ⭐ **ENGEDÉLY ELŐRE (Csaba, 2026-09-25):** *„ne kérj engedélyt semmire. mindenre engedélyt adok
+  előre."* — commit, push, a következő lépés: **kérdezés nélkül**. A válasz végén ne legyen
+  „mehet?" / „pusholhatom?". *(A D-szintű tervezési döntések továbbra is Csabáéi — azokat
+  döntési kérdésként kell elé tenni, nem engedélykérésként.)*
 - ✅ *A „másik session be nem commitolt munkája" (`docs/gepezet.md` · `docs/utiterv.md` ·
   `szabalyok.js`) 2026-09-23-án bekerült az `ea55ab3`-ba — átnézve, rendezett.*
   ⚠️ **A szabály marad:** ha a munkakönyvtárban más munkája áll, **ne söpörd bele a saját
