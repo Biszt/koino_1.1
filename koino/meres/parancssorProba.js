@@ -1561,6 +1561,124 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT KOPOGÁSSAL TALÁL ÖSSZE — társ-lista NÉLKÜL
     }
   });
 
+// ===================================
+// ⛔⛔⛔ AZ EGYOLDALÚ RÉS (2026-09-25 — a 40. mérés hibája, itthon reprodukálva)
+// ===================================
+//
+// ⛔ A TEREPI HELYZET: az egyik telefon ismerte a másik címét és kopogott rá; a másik a
+// bekopogóval csak TCP-n találkozott, ezért a kötésében az első címe PORT NÉLKÜL állt, és
+// arra sosem kopogott vissza. A rés megnyílt (a másik visszaszólt), de nála csere nem
+// indult — az első fél cseréje 10 mp múlva elbukott, és a napló ezt elhallgatta.
+// ⚠️ A régi próba (fent) ezt nem látta: ott MINDKÉT fél ismerte a másikat.
+//
+// ⚠️ A „MÁSIK" célja itt SZÁNDÉKOSAN nem a hurok-cím: a fúró az azonos CÍMRŐL, más portról
+// érkező kopogót a már ismert célnak veszi (a mobil portváltása miatt) — ha minden cím
+// 127.0.0.1 volna, a hiba el sem jönne elő. Ezért egy nem routolható cím (10.255.255.9),
+// és egy néma helyi tükör, hogy a mérés ne a valódi hálózatot hívja.
+
+proba('⛔⛔⛔ AZ EGYOLDALÚ RÉS IS CSERÉT HOZ — aki bekopog, azzal a másik is cserél',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const A = 7621, B = 7622;
+    const tukor = await nemaFoglalat();
+    let egyikOr = null, masikOr = null;
+
+    try {
+      await fut(egyik, 'koino', 'Egyoldalu res');
+      const vitt = join(egyik, 'alap.jsonl');
+      await fut(egyik, 'kivisz', vitt, 'mind');
+      await fut(masik, 'behoz', vitt);
+      await fut(egyik, 'gondolat', 'AZ EGYOLDALU RESEN ATJOTT HIR');
+
+      // ⭐ CSAK AZ EGYIK ISMERI A MÁSIKAT. A másiknak egy MÁS című (halott) célja van,
+      // hogy a kopogási ablaka egyáltalán megnyíljon — mint a 40. mérésen.
+      const jegyzek = (hova, hoszt, port) => writeFile(join(hova, 'udpcimek.json'),
+        JSON.stringify({ cimek: [{ hoszt, port, mikor: Date.now() }] }), 'utf8');
+      await jegyzek(egyik, '127.0.0.1', B);
+      await jegyzek(masik, '10.255.255.9', 7373);
+
+      const kornyezet = { ...process.env, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs',
+        KOINO_TUKOR: '127.0.0.1:' + tukor.address().port };
+      let masikKimenet = '';
+      egyikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(A)], {
+        env: { ...kornyezet, KOINO_ADAT: egyik }, stdio: 'ignore'
+      });
+      masikOr = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(B)], {
+        env: { ...kornyezet, KOINO_ADAT: masik }, stdio: ['ignore', 'pipe', 'pipe']
+      });
+      masikOr.stdout.on('data', (d) => { masikKimenet += d; });
+
+      await varj(26000);
+      egyikOr.kill(); egyikOr = null;
+      masikOr.kill(); masikOr = null;
+      await varj(700);
+
+      const allapot = await fut(masik, 'allapot');
+      let kotesek = [];
+      try { kotesek = JSON.parse(await readFile(join(masik, 'kotesek.json'), 'utf8')).kotesek; } catch { /* nincs */ }
+
+      return /AZ EGYOLDALU RESEN ATJOTT HIR/.test(allapot)
+        // ⭐ …és a napló MEGNEVEZI, hogy ismeretlen kopogott be (terepen ebből látszik, honnan indult)
+        && /ismeretlen kopogott be \(127\.0\.0\.1:7621\)/.test(masikKimenet)
+        // ⭐ …és a kötés mostantól PORTOT is tud: a következő körtől magától kopog vissza.
+        && kotesek.some((k) => k.port === A);
+    } finally {
+      if (egyikOr) egyikOr.kill();
+      if (masikOr) masikOr.kill();
+      tukor.close();
+      await varj(800);
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+proba('⛔⛔ HA A RÉS MEGNYÍLIK, DE A CSERE RAJTA ELBUKIK, A NAPLÓ KIMONDJA — nem „rés sem nyílt"',
+  async () => {
+    // ⛔ MIT MÉR: a 40. mérésen a napló a megnyílt rés után azt írta, hogy „egyik rés sem
+    // nyílt meg" — az összegző sor a sikeres CSERÉKET számolta, és a résen futó csere
+    // hibáját az őrjárat eldobta. ⭐ Itt egy HAMIS társ a kopogásra visszaszól, de cserélni
+    // nem hajlandó (mint egy régebbi változat, vagy akinek közben bezárult az ablaka).
+    const hely = await ujKeszulek();
+    const A = 7623;
+    const hamis = createSocket('udp4');
+    await new Promise((kesz) => hamis.bind(0, '127.0.0.1', kesz));
+    hamis.on('message', (adat, felado) => {
+      let u = {};
+      try { u = JSON.parse(adat.toString('utf8')); } catch { return; }
+      if (u.uzenet === 'KOPOG') {
+        hamis.send(JSON.stringify({ uzenet: 'HALLAK', tol: 'hamis-tars' }), felado.port, felado.address);
+      }
+    });
+    let orjarat = null;
+
+    try {
+      await fut(hely, 'koino', 'Buko res');
+      await writeFile(join(hely, 'udpcimek.json'), JSON.stringify({
+        cimek: [{ hoszt: '127.0.0.1', port: hamis.address().port, mikor: Date.now() }]
+      }), 'utf8');
+
+      let kimenet = '';
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.2', String(A)], {
+        env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      orjarat.stdout.on('data', (d) => { kimenet += d; });
+
+      // ⚠️ A résen a csere 10 mp várakozás után adja fel — ennyi kell, és egy kis ráhagyás.
+      await varj(17000);
+
+      return /rés nyílt \(127\.0\.0\.1:\d+\), de a csere a résen elbukott: A másik fél nem válaszol/.test(kimenet)
+        && /1 rés nyílt meg, de a csere egyiken sem ment végig/.test(kimenet)
+        && !/egyik rés sem nyílt meg/.test(kimenet);
+    } finally {
+      if (orjarat) orjarat.kill();
+      hamis.close();
+      await varj(700);
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
 proba('⭐⭐ A KÖTÉS MEGSZÜLETIK A BULIN — a társ TÁBLA-KULCSA alatt, nem a címe alatt',
   async () => {
     // ⛔ MIT MÉR: a kötés-jegyzék a valódi üzemmódban épül-e. ⭐ És hogy a társat a

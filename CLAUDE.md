@@ -17,7 +17,28 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-15)
 
-### ▶️▶️▶️ A LEGFRISSEBB (2026-09-24) — 40. MÉRÉS: A KÉT MOBIL NAT ELMARADT
+### ▶️▶️▶️▶️ A LEGFRISSEBB (2026-09-25) — D69: UDP MINDENHOL, LÉPCSŐZETESEN
+
+⭐ **Csaba döntése (D69, [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)):** a
+TCP–UDP kettősség drága (két címjegyzék, két kör, és a TCP-kör ELREJTETTE a UDP-út hibáját) —
+**UDP mindenhol**, de lépcsőzetesen, minden lépcső előtt bizonyítással: *(1)* a résen futó
+csere hibája ✅ · *(2)* a TCP-kör ki az őrjáratból ⏭️ · *(3)* állandó UDP-kapu a postaládának ⏭️.
+
+⛔⛔ **41. mérés:** öt halott TCP-címmel és két néma kötéssel egy kör **90–97 mp**, és a kopogás
+csak minden második percfordulón fut — két ilyen készülék **soha nem kopog egyszerre**. ⏸️ A
+kopogás saját üteme továbbra is javasolt (a D69/2 után kisebb munka).
+
+✅ **41/b.: az egyoldalú rés — itthon reprodukálva, JAVÍTVA.** A 40. mérésen a rés megnyílt, a
+csere elbukott, mert a kötés csak az egyik oldalon tudott PORTOT (a bekopogóval kötött kötés
+port nélkül áll) — a másik fél csak visszaszólt, cserét nem indított. Most **aki bekopog, azzal
+a másik is cserél** (`bekopogoFogadas`, ablakonként ≤ 3), és a kötés ettől öngyógyító. A
+láthatóság is javítva: *„rés nyílt, de a csere a résen elbukott: …"*. ⚠️ *A reprodukcióhoz a
+hurok-cím csapdáját ki kellett kerülni: azonos címről a fúró a halott célt „felismerte".*
+⏸️ **Terepen még nincs mérve.**
+
+📄 **Interaktív magyarázó oldal** a hálózatról (Csabának): *„A koino hálózata"* (artifact).
+
+### ▶️▶️▶️ 2026-09-24 — 40. MÉRÉS: A KÉT MOBIL NAT ELMARADT
 
 ⛔ **A két mobil NAT közötti rést NEM mértük meg** — az „A" telefon (Csabáé) mobilnete nem
 működött (feltöltőkártyás). ⭐ Ami mégis kiderült: [`eredmenyek.md`](koino/meres/eredmenyek.md)
@@ -53,7 +74,7 @@ mérés legközelebb rögtön a hálózatváltással kezdhet. ⚠️ A telefonok
 
 ⭐⭐⭐ **A HIRDETŐTÁBLA TEREPEN IS MŰKÖDIK — 39. mérés, két valódi telefonnal.**
 Jegyzőkönyv: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) 39. · a forgatókönyv:
-[`docs/terepmeres_mobil.md`](docs/terepmeres_mobil.md). **701 önpróba zöld** (26 próba-fájl;
+[`docs/terepmeres_mobil.md`](docs/terepmeres_mobil.md). **703 önpróba zöld** (26 próba-fájl;
 680 volt a 2026-09-22-i átnézés előtt, 692 utána — lásd lentebb). ⚠️ *A 2026-09-22-i átnézés
 munkája 2026-09-23-ig NEM volt commitolva — az itteni „a munkakönyvtár tiszta" sor hazudott.*
 
@@ -286,7 +307,7 @@ megtalálható: a bukásnak meg kell neveznie magát.)*
 ### ⏭️⏭️ A KÖVETKEZŐ MUNKA — ELŐSZÖR EZT OLVASD (2026-09-18)
 
 ⭐ **A részletes terv:** [`docs/szakasz2_terv.md`](docs/szakasz2_terv.md) **legvége**
-(„A KÖVETKEZŐ MUNKA"). ⚠️ *Ez a szakasz 2026-09-18-i állapot — a friss a fenti* **701 önpróba**.
+(„A KÖVETKEZŐ MUNKA"). ⚠️ *Ez a szakasz 2026-09-18-i állapot — a friss a fenti* **703 önpróba**.
 
 ⭐⭐⭐ **FRISSÍTÉS (2026-09-19): A HIRDETŐTÁBLA A DHT LESZ — 36. mérés.** Csaba választása:
 **BitTorrent DHT** (gazda nélküli, aláírt Ed25519 bejegyzések, BEP 44). ✅ Megépült a kliens
@@ -632,7 +653,7 @@ amiről nem tudod, hogyan hozható vissza, nem mentés, hanem hamis biztonságé
 ✅ **A SZAKASZ 5 GERINCE KÉSZ** (5.1–5.7): a helyi kapu · a kérdezhető pakli · a kártyák ·
 a hiányzó műveletek · a modálok magja · a **belépő tér** · a **szövegszerkesztő** · a
 **fájl-réteg** · és a **fájl-szállítás** (felderítés · kérelem · átvitel · randevú).
-**701 önpróba**, minden zöld.
+**703 önpróba**, minden zöld.
 
 ### ⛔⛔⛔ ÉS EGY ÁTNÉZÉS A LEGNAGYOBB 4. SZABÁLY-HIÁNYT TALÁLTA A FÁJL-SZÁLLÍTÁSNÁL (2026-09-14, javítva)
 
@@ -1264,7 +1285,7 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 701 önpróba
+node koino/meres/mind.js         # a 703 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
@@ -1322,7 +1343,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 701 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 703 próba huszonhat fájlban; a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)

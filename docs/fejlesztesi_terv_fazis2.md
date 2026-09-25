@@ -3658,6 +3658,52 @@ hajtanánk, épp azt a kárt okoznánk, amit most megmértünk — csak jó lelk
   (a cím- és portcsere automatizálása) · **két port-átíró NAT** (CGNAT↔CGNAT) mérése ·
   `FAJL_KORLAT` (2 MB).
 
+### D69. UDP MINDENHOL — a TCP kivezetése lépcsőzetesen, bizonyítás után (2026-09-25, Csaba)
+
+> *„azért vagyok udp párti, mert én úgy emlékszem, hogy a tcp kapcsolat nem vólt készülék
+> független. és lehet hogy feleslegessen bonyolítjuk azzal, hogy ahól tudunk használni tcp-ét
+> ott használunk, ahol meg nem, ott udp-ét használunk."* — Csaba
+
+#### 1. A pontosítás, amin a döntés áll
+
+⭐ **A TCP-FÚRÁS függ a routertől** (célfüggő NAT mögött elvi okból lehetetlen — D67), **a sima
+TCP-HÍVÁS nem**: egy hálózaton belül, vagy nyitott kapunál mindig megy. A D67 a fúrásról
+döntött; ez a döntés a **kettősségről** szól.
+
+#### 2. Miért drága a kettősség — MÉRVE
+
+- **Két címjegyzék** (a TCP-társlista · a kötések + friss UDP-címek), **két kör**, **két hibahely**.
+- ⛔ **A 41. mérés hosszú körét a TCP-kör okozta:** halott címenként 10 mp, egymás után, és a
+  lista nem korlátos — ettől maradt ki a kopogás.
+- ⛔ **És a kettősség ELREJTETTE a UDP-út hibáját:** a 40. mérésen egy wifin a rés megnyílt, a
+  csere rajta elbukott, és ezt senki nem vette észre, mert a TCP-kör elvégezte helyette.
+  *A projekt saját tanulsága (2026-09-22): „egy problémára két gépezet: az egyik előbb-utóbb
+  kimarad valahonnan."*
+
+#### 3. Amiért a 2026-09-18-i válasz még „a TCP nem vehető ki" volt — és mi változott
+
+| Az akkori ok | Ma |
+|---|---|
+| az `orjarat` csak TCP-n cserélt | ✅ 2026-09-20 óta UDP-n is kopog és cserél |
+| a postaláda (mindig elérhető gép) csak TCP-n létezik | ⏸️ még igaz — az UDP-foglalat csak a kopogási ablakban él |
+| egy wifin nincs címfordítás, a TCP a legegyszerűbb | ⚠️ ott a rés is megnyílik — de a csere rajta elbukott (40.) |
+
+#### 4. A DÖNTÉS: UDP mindenhol, lépcsőzetesen — minden lépcső előtt bizonyítás
+
+1. ✅ **A résen futó csere hibájának felderítése és javítása** (2026-09-25, lásd a 41/b. mérést):
+   a rés egyoldalúan nyílt meg — most aki bekopog, azzal a másik is cserél.
+2. ⏭️ **A TCP-kör kivétele az őrjáratból:** a társlista címeire is UDP-n kopogunk. A TCP-kapu
+   egyelőre nyitva marad (postaláda, kézi utak).
+3. ⏭️ **Állandóan figyelő UDP-kapu a postaládának** — utána a TCP-re csak a felületnek (a gépen
+   belül) és egy kézi vésztartaléknak van szüksége.
+
+⚠️ **Ami a 2. lépcső után is megmarad:** a táblaolvasás néma kötésenként ~20 mp (legfeljebb 5
+kötés), tehát a kör egy perc fölé nyúlhat — **a kopogás saját ütemét** ezért továbbra is
+javasoljuk (41. mérés), de kisebb átalakításként, mert a TCP-kör kiesik.
+
+⛔ **AMIT NEM mond:** hogy a TCP rossz volna. Egy wifin és nyitott kapunál a TCP ma is a
+legolcsóbb, és **a kivezetés csak akkor jön, ha az UDP-út ugyanazt bizonyítottan elbírja.**
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

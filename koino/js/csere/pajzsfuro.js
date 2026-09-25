@@ -525,6 +525,9 @@ export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
   const idokorlat = beallitas.idokorlat ?? IDOKORLAT;
   const koz = beallitas.koz ?? KOPOGAS_KOZ;
   const jelez = beallitas.utana ?? (() => {});
+  // ⭐ Hány ISMERETLEN bekopogót veszünk fel célnak ebben az ablakban (2026-09-25, lent a
+  // KOPOG-ágnál). Alapból 0: a régi viselkedés, amíg a hívó ki nem mondja, hogy kéri.
+  let bekopogoHely = Math.max(0, beallitas.bekopogoFogadas ?? 0);
 
   // ⚠️ EGY FOGLALAT — EGY CSALÁD. Az `udp4` foglalat nem tud IPv6-címre küldeni, és
   // fordítva. A többségi családot visszük, a kimaradókat pedig **kimondjuk** (D19),
@@ -652,6 +655,30 @@ export async function pajzsfurasTobbfele(sajatPort, celok, beallitas = {}) {
           ismert: Boolean(allapot) });
         halo.send(JSON.stringify({ uzenet: 'HALLAK', tol: sajatAzonosito }),
           felado.port, felado.address);
+
+        // ⛔⛔ A BEKOPOGÓT CÉLNAK IS FELVESSZÜK (2026-09-25, a 40. mérés hibája).
+        //
+        // ⛔ A HIBA: a rés EGYOLDALÚAN nyílt meg. Az egyik fél ismerte a másik címét és
+        // kopogott, a másik csak visszaszólt (HALLAK) — de mivel őt NEM ismerte célként,
+        // nála nem indult csere. Az első fél cseréje így 10 mp múlva elbukott („a másik
+        // fél nem válaszol"). ⭐ Terepen ez a hétköznapi eset: a bekopogóval (TCP-n)
+        // kötött kötés PORT NÉLKÜL áll, tehát arra a fél sosem kopog vissza.
+        // ⭐ A JAVÍTÁS: aki az ablakunkban ismeretlenként kopog, azt felvesszük, és azonnal
+        // visszakopogunk rá — a válaszára (HALLAK) ugyanúgy „átfúrt" lesz, mint egy
+        // ismert cél, és a csere mindkét oldalon elindul. *Ez az UDP-postaláda első
+        // darabja: ugyanaz, amit a TCP-kapu tesz, csak a kopogási ablakon belül.*
+        // ⚠️ KORLÁTOSAN (`bekopogoHely`) és csak a befejezés előtt: egy idegen ne tudja
+        // a foglalatot végtelen munkával lekötni, és a lezáráskor induló munka ne
+        // csússzon ki a foglalat alól (a `befejez` csak az addig indultakat várja meg).
+        if (!allapot && !vege && bekopogoHely > 0) {
+          bekopogoHely--;
+          const uj = { cim: felado.address, port: felado.port, kuldott: 0, kapott: 1,
+            mindketIrany: false, honnan: felado.address, eltelt: null, bekopogo: true };
+          allapotok.set(felado.address + ':' + felado.port, uj);
+          jelez({ mi: 'BEKOPOGO-CEL', cim: felado.address, port: felado.port });
+          halo.send(JSON.stringify({ uzenet: 'KOPOG', tol: sajatAzonosito }),
+            felado.port, felado.address);
+        }
         return;
       }
 

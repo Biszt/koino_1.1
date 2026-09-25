@@ -959,6 +959,11 @@ async function tablarolOlvasas(sajatKulcs, nemak, naplo = () => {}) {
 // következő buli.*
 const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy csere-kör nagyságrendje
 
+// ⭐ Ablakonként ennyi ISMERETLEN bekopogót veszünk fel célnak (2026-09-25). Nem varázsszám,
+// hanem a kötés-korlát (legfeljebb 5 kötés, jellemzően 3) nagyságrendje: annyi társ lehet,
+// akinek nálunk nincs kopogható címe. *Egy idegen se kösse le a foglalatot végtelen munkával.*
+const BEKOPOGO_KORLAT = 3;
+
 /**
  * A tükör (STUN-kiszolgáló), amitől a saját külső címünket kérdezzük — `KOINO_TUKOR=cím:port`.
  *
@@ -1005,6 +1010,10 @@ async function udpBuli(beallitas) {
     idokorlat,
     sajatCimMerese: !csakHelyben,
     ...tukorBeallitas(),
+    // ⭐⭐ AKI BEKOPOG, AZZAL IS CSERÉLÜNK (2026-09-25, a 40. mérés hibája): a rés eddig
+    // egyoldalúan nyílt meg, ha csak az egyik fél ismerte a másikat — ilyenkor az ismerő
+    // fél cseréje 10 mp múlva elbukott. Ablakonként legfeljebb ennyi ismeretlent fogadunk.
+    bekopogoFogadas: BEKOPOGO_KORLAT,
     tartsdNyitva: false,      // az ablak végén a rés lezárul — a következő bulin újrafúrunk
     utana: (e) => {
       // ⭐ A SAJÁT FRISS CÍMÜNK: ezt a foglalatot méri a tükör, és ez az, ami terjed.
@@ -1019,6 +1028,10 @@ async function udpBuli(beallitas) {
       // írt ki új címet a táblára — és a napló erről EGY SZÓT sem szólt. *Egy lépés, ami
       // csendben kimarad, kívülről ugyanúgy néz ki, mint egy lépés, amire nem volt szükség.*
       if (e.mi === 'SAJAT-CIM-NEM-MEGY') naplo(e);
+      // ⛔⛔ ÉS A RÉSEN FUTÓ MUNKA BUKÁSA IS (41. mérés, 2026-09-25): a 40. mérésen a rés
+      // kétszer megnyílt, a csere rajta elbukott — és ez a jelzés itt ELVESZETT.
+      if (e.mi === 'ATFURT-MUNKA-BUKOTT') naplo(e);
+      if (e.mi === 'BEKOPOGO-CEL') naplo(e);
       if (e.mi === 'CEL-KIHAGYVA') naplo(e);
     },
     // ⭐⭐ AKI ÁTÉRT, AZZAL AZONNAL DOLGOZUNK — a rés nem vár ránk.
@@ -2839,6 +2852,19 @@ try {
                 kiir(SZIN.jo + '  ⭐ ' + ora() + ' rés nyílt: ' + e.cim + ':' + e.port
                   + SZIN.vege + SZIN.halvany + ' (' + e.eltelt + ' ms)' + SZIN.vege);
               }
+              // ⛔⛔ A RÉS MEGNYÍLT, DE A MUNKA RAJTA ELBUKOTT — ezt eddig SEMMI nem mondta ki
+              // (41. mérés). *Két mobil között csak ez az út van: ha itt csendben bukik, a
+              // gondolat akkor sem megy át, ha a címfordítók engednék.*
+              // ⭐ A bekopogót is megnevezzük: terepen ebből látszik, hogy a rés melyik
+              // oldalról indult, és hogy a másik fél ismert-e minket.
+              if (e.mi === 'BEKOPOGO-CEL') {
+                kiir(SZIN.halvany + '  · ' + ora() + ' ismeretlen kopogott be (' + e.cim + ':'
+                  + e.port + ') — visszakopogok, és vele is cserélek' + SZIN.vege);
+              }
+              if (e.mi === 'ATFURT-MUNKA-BUKOTT') {
+                kiir(SZIN.nem + '  ✗ ' + ora() + ' rés nyílt (' + e.cim + ':' + e.port
+                  + '), de a csere a résen elbukott: ' + e.ok + SZIN.vege);
+              }
               if (e.mi === 'CSERE') {
                 kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + e.cim + ':' + e.port
                   + SZIN.vege + SZIN.halvany + ' — ' + e.uj + ' új esemény, küldtem '
@@ -2866,8 +2892,13 @@ try {
             frissUdp = await frissUdpCimek(udpTarolo, udpElevules);
           } else if (udp.celok) {
             // ⚠️ A HIÁNYT IS KIMONDJUK (D19): a kopogás ment, csak nem volt ott senki.
-            kiir(SZIN.halvany + '  · ' + ora() + ' ' + udp.celok
-              + ' friss címre kopogtam, egyik rés sem nyílt meg' + SZIN.vege);
+            // ⛔ DE CSAK AKKOR, HA TÉNYLEG NEM NYÍLT RÉS (41. mérés): ez a sor a SIKERES
+            // cseréket számolta, ezért egy megnyílt, de elbukott résre is azt írta, hogy
+            // „egyik rés sem nyílt meg" — a 40. mérésen épp a `rés nyílt` sor után.
+            kiir(SZIN.halvany + '  · ' + ora() + ' ' + udp.celok + ' friss címre kopogtam, '
+              + (udp.atfurt
+                ? udp.atfurt + ' rés nyílt meg, de a csere egyiken sem ment végig'
+                : 'egyik rés sem nyílt meg') + SZIN.vege);
           }
         }
 

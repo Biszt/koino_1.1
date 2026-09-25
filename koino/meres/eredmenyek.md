@@ -3662,3 +3662,59 @@ lezárult cseréket** számolja, nem a megnyílt réseket; és a résen futó cs
 jelzést. *Vagyis a közös wifin a rés megnyílt, a csere rajta ismeretlen okból elbukott, és a
 program ezt elhallgatta.* ⏸️ Javítandó a kopogás ütemezése előtt: két mobil között csak a rés
 létezik, és ha azon a csere elbukik, a gondolat akkor sem megy át, ha a NAT-ok engednék.
+
+---
+
+## 41/b. ✅ AZ EGYOLDALÚ RÉS — itthon reprodukálva, és javítva (2026-09-25)
+
+*A D69 („UDP mindenhol") első lépcsője: miért bukott el a 40. mérésen a csere a megnyílt résen?*
+
+⭐ **A GYANÚ A 40. MÉRÉS NAPLÓJÁBÓL:** a kötésnek csak az egyik oldalán volt kopogható cím. Az
+„A" a B-t a saját TCP-körében hívta (`192.168.1.36:7373`) — nála a kötés PORTTAL áll. A B az
+A-t csak bekopogóként ismerte (`bejött valaki`) — az ilyen kötés szándékosan PORT NÉLKÜL áll
+(a TCP forrásportja pillanatnyi), és a `kopogasCeljai` a port nélkülit kihagyja. **Vagyis a B
+soha nem kopogott az A-ra.** Az A kopogott, a B fúrója visszaszólt (`HALLAK`) → „rés nyílt" —
+de a B csak annak indít cserét, akit célként ismer. Az A cseréje 10 mp múlva elbukott.
+
+⛔ **ELSŐ PRÓBÁLKOZÁS — NEM REPRODUKÁLT, és a miért tanulságos:** a gépen belül minden cím
+`127.0.0.1`, és a fúró az azonos CÍMRŐL, más portról érkező kopogót a már ismert célnak veszi
+(a mobil portváltása miatti szabály, 32. mérés) — a B „felismerte" az A-t a halott célja
+alapján. *Egy hurok-címes próba itt vak lett volna.* ⭐ A második próbában a B célja más
+címen volt (`10.255.255.9`), ahogy terepen:
+
+```
+A:  ⭐ 13:05:04 rés nyílt: 127.0.0.1:7612 (1016 ms)
+A:  ✗ 13:05:14 rés nyílt (127.0.0.1:7612), de a csere a résen elbukott: A másik fél nem válaszol (10000 ms)
+A:  · 13:05:14 1 friss címre kopogtam, 1 rés nyílt meg, de a csere egyiken sem ment végig
+B:  · 13:05:09 1 friss címre kopogtam, egyik rés sem nyílt meg
+    → a hír NEM ment át
+```
+
+⭐⭐ **Pontosan a 40. mérés mintája** — és már az új feliratokkal, amelyek kimondják.
+
+✅ **A JAVÍTÁS (`pajzsfuro.js`, `bekopogoFogadas`):** aki a kopogási ablakunkban ISMERETLENKÉNT
+kopog be, azt a fúró felveszi célnak, azonnal visszakopog rá, és a válaszára ugyanúgy „átfúrt"
+lesz, mint egy ismert cél — a csere mindkét oldalon elindul. Ablakonként legfeljebb 3 ilyen
+(`BEKOPOGO_KORLAT`), és csak a befejezés előtt. *Az UDP-postaláda első darabja: amit a
+TCP-kapu tesz, csak a kopogási ablakon belül.* Ugyanaz a helyzet utána:
+
+```
+B:  · 13:06:51 ismeretlen kopogott be (127.0.0.1:7611) — visszakopogok, és vele is cserélek
+B:  ⭐ 13:06:51 rés nyílt: 127.0.0.1:7611 (1022 ms)
+B:  ✓ 13:06:51 csere a résen 127.0.0.1:7611 — 2 új esemény, küldtem 0 (2 kör, 3.6 KB)
+    → a hír ÁTMENT · és a B kötésében az A mostantól PORTTAL áll (127.0.0.1:7611)
+```
+
+⭐ **A kötés ettől öngyógyító:** a következő körtől a B magától kopog az A-ra, a kapcsolat
+szimmetrikus lesz.
+
+⭐ **A láthatóság is javítva (`koino.js`):** a résen futó munka bukása (`ATFURT-MUNKA-BUKOTT`)
+most kiíródik, és az összegző sor megkülönbözteti a „nem nyílt rés"-t a „megnyílt, de a csere
+elbukott"-tól.
+
+**2 új parancssor-próba:** az egyoldalú rés is cserét hoz (a terepi helyzet, a hurok-cím
+csapdáját kikerülve) · és egy hamis társ, aki a kopogásra visszaszól, de cserélni nem hajlandó
+— a naplónak ki kell mondania.
+
+⏸️ **Terepen még NINCS mérve.** A következő terepmérés (egy wifin is, két telefonnal) mutatja
+meg, hogy élesben is végigmegy-e.
