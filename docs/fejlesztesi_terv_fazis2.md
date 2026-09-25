@@ -3697,6 +3697,14 @@ döntött; ez a döntés a **kettősségről** szól.
 3. ⏭️ **Állandóan figyelő UDP-kapu a postaládának** — utána a TCP-re csak a felületnek (a gépen
    belül) és egy kézi vésztartaléknak van szüksége.
 
+⚠️⚠️ **A SORREND PONTOSÍTVA (2026-09-25 délután, a 42. mérés és a kód átnézése után): a 3.
+lépcső jön a 2. ELŐTT.** Ma két dolog csak TCP-n létezik: a *mindig figyelő* kapu (postaláda,
+`figyel`), és erre épül az **ismételt menet** (30. mérés: a hír egy ablakon belül több lépést
+tesz, ×30). A körönként nyitott UDP-foglalat csak a saját kopogási ablakában él — a TCP-kör
+kivétele ezeket megszüntetné. ⭐ A 42. mérés ráadásul megmutatta a körönkénti foglalat saját
+hibáját is: a válaszoló fél *„nyitva van, de nem szolgál ki"*. **Egy foglalat, a teljes
+futásra** — és mellékhatásként egyetlen, tartós címleképezés (nem változik körönként a külső port).
+
 ⚠️ **Ami a 2. lépcső után is megmarad:** a táblaolvasás néma kötésenként ~20 mp (legfeljebb 5
 kötés), tehát a kör egy perc fölé nyúlhat — **a kopogás saját ütemét** ezért továbbra is
 javasoljuk (41. mérés), de kisebb átalakításként, mert a TCP-kör kiesik.

@@ -3717,4 +3717,99 @@ csapdáját kikerülve) · és egy hamis társ, aki a kopogásra visszaszól, de
 — a naplónak ki kell mondania.
 
 ⏸️ **Terepen még NINCS mérve.** A következő terepmérés (egy wifin is, két telefonnal) mutatja
-meg, hogy élesben is végigmegy-e.
+meg, hogy élesben is végigmegy-e. → ✅ **Megmérve a 42. mérésen.**
+
+---
+
+## 42. ⭐ TELEFON A SZOMSZÉD WIFIJÉN, LAPTOP OTTHON — KÉT ROUTER, MOBILNET NÉLKÜL (2026-09-25, 13:51–16:41)
+
+*A forgatókönyv 🅰️ változata, mobilnet helyett a szomszéd wifijével: két külön otthoni router.
+A laptop oldalát Claude futtatta (`orjarat 1`), a telefon (Csabáé, `3Wf7CJIW…`, tábla-kulcs
+`SbjQHYMA…`) `orjarat 2`-vel ment. A program: `a29b8cc` (703 önpróba), vagyis a 41/b.
+javítással.*
+
+**Az ismerkedés** otthon, kézi `tars`-szal, csak a telefonon (a laptop a bekopogótól tanult):
+laptop 13:57:16 kötés, 13:57:29 kiírás (8 tároló); telefon 13:58:51 kiírás (3 rekesz, 23 tároló).
+13:59 körül a telefon átment a szomszédhoz.
+
+### ✅⭐⭐ A TÁVOZÓ KIOLVASTA A MARADÓ CÍMÉT — a 39. mérés hiányzó fele, igennel
+
+```
+T:  14:07:49 a táblán megvan egy néma társ új címe: 31.46.251.115:15478 (az ő órája szerint 11 perce írta ki)
+T:  14:43:32 … 31.46.251.115:15478 (46 perce) · 14:54:09 … (57 perce) · 16:23:12 … (146 perce)
+```
+
+⭐ A telefon a szomszéd wifijéről **négyszer** megtalálta a laptop otthoni nyilvános címét. *A 39.
+mérés nyitott kérdése („kiolvassa-e a TÁVOZÓ is a táblát?") ezzel eldőlt: **igen, a program ezen
+az oldalon jól működik.***
+
+### ⛔⛔ A TELEFON ÚJ CÍME VISZONT NEM KERÜLT A TÁBLÁRA — és ezért nem nyílt rés
+
+```
+T:  14:08:30 a tábla NEM ÉRHETŐ EL (4 kérdés, egyik DHT-gép sem felelt) — nem tudom, hol van SbjQHYMA…
+T:  14:08:30 az új címemet kiírtam a táblára (3 társ rekeszébe, 0 tároló)      ← 0 tároló!
+L:  14:00:43 … 16:24:39  a táblán megvan egy néma társ új címe: 31.46.251.115:15425 (… 2 → 146 perce)
+```
+
+⛔ A kiírás **0 tárolót** ért el (a DHT abban a percben nem felelt a telefonnak), a program mégis
+kiírtnak vette, és **2 és fél órán át nem próbálta újra**. A laptop így végig a telefon RÉGI,
+otthoni címét olvasta (`15425`), és nem kopoghatott a szomszéd felé. *A 2026-09-21-i nyitott
+kérdés („a 0 tárolós kiírás is kiírtnak számít") itt mért kárt okozott — és ez a rés
+elmaradásának valódi oka, nem a routerek.* ✅ **Javítva:** kiírtnak csak az számít, amit
+legalább egy tároló átvett; különben a következő kör újra próbálja, és a napló kimondja.
+
+### ⛔ A TELEFON KÖREI 15–20 PERCESEK LETTEK — az Android elaltatta
+
+```
+T:  14:08:30 → 14:27:56 → 14:42:52 → 14:52:23 → 15:05:39 → 15:14:06 → … → 16:20:30
+L:  percre pontosan, végig (:06 kopogás, :16 TCP-kör, kétpercenként táblaolvasás)
+```
+
+⛔ A telefon a zsebben elaludt: egy kétperces őrjárat helyett negyedóránként ébredt. *Egy alvó
+őrjárat nem kopog, nem ír, nem cserél — kívülről ez is „nem nyílt rés"-nek látszik.* ✅
+**Javítva:** Termuxban az őrjárat maga kéri az ébren tartást (`termux-wake-lock`), kilépéskor
+elengedi, és ha nem sikerül, kimondja. ⏸️ *Telefonon még nincs kipróbálva.*
+
+### ⚠️ A TELEFON ÖNMAGÁVAL IS KÖTÖTT
+
+A telefon társlistáján a **saját** wifis címe állt: 13:56:41-kor felhívta önmagát (`bejött valaki
+(::ffff:192.168.1.144)` — a saját naplójában), és a jegyzékbe önmaga került (`SbjQHYMA…`) — minden
+körben önmagát kereste a táblán. ✅ **Javítva:** a TCP-kör nem hívja a saját címét (pontos
+cím+port pár), a kötés-feljegyzés nem köt saját kulccsal, és a régi saját kötést induláskor
+kitakarítjuk. ⚠️ *A kötés-őrt külön próba nem méri* (a próbában már a hívás sem jön létre) — ez a
+második védvonal a többi útra.
+
+### ⭐⭐ HAZAÉRVE: A RÉS MEGNYÍLT, ÉS A CSERE A RÉSEN VÉGIGMENT — először terepen, az őrjáraton belül
+
+```
+T:  16:30:00 ismeretlen kopogott be (192.168.1.134:7373) — visszakopogok, és vele is cserélek
+T:  16:30:00 rés nyílt: 192.168.1.134:7373 (379 ms)
+T:  16:30:00 csere a résen 192.168.1.134:7373 — 0 új esemény, küldtem 0 (1 kör, 1.6 KB)
+L:  16:30:01 rés nyílt: 192.168.1.144:7373 (1024 ms)
+L:  16:30:01 csere a résen 192.168.1.144:7373 — 0 új esemény, küldtem 0 (1 kör, 1.6 KB)
+L:  16:36:02 rés nyílt … (2057 ms) · csere a résen … (1 kör, 1.7 KB)
+```
+
+⭐⭐ **A 41/b. javítás terepen is működik** — *„ismeretlen kopogott be — visszakopogok"* —, és ez
+az első alkalom, hogy a csere az őrjáraton belül, élesben, a résen ment végig. Egy wifin
+(helyi cím).
+
+### ⚠️ ÉS EGY ÚJ ESET: A RÉS MEGNYÍLT, DE A MÁSIK „MÁR ÁTFÚRTNAK" TARTOTTA
+
+```
+L:  16:37:00 rés nyílt: 192.168.1.144:7373 (376 ms)
+L:  16:37:10 rés nyílt (192.168.1.144:7373), de a csere a résen elbukott: A másik fél nem válaszol (10000 ms)
+```
+
+⚠️ A telefon visszaszólt a kopogásra, de cserét nem indított. *Valószínű ok:* az előző körének
+foglalata még nyitva volt (a munkák lezárására várt), és abban a laptop már „átfúrt" volt — új
+cserét tehát nem kezdett. ⭐ Ezt a körönként nyitott foglalat szerkezete okozza: **a válaszoló
+fél „nyitva van, de nem szolgál ki".** ⏭️ Az állandó UDP-kapu (D69/3) oldja meg, ahol minden
+bejövő cserét kiszolgálunk.
+
+### ⏭️ A KÖVETKEZŐ
+- ⭐ **D69/3: egyetlen, a futás alatt nyitva maradó UDP-foglalat**, ami bármikor fogad kopogást és
+  cserét (UDP-postaláda) — a TCP-kör kivétele (D69/2) csak utána, mert ma az ismételt menet és
+  a postaláda csak TCP-n létezik.
+- A telefon + laptop mérés **megismétlése** a mai javításokkal: a 0 tárolós kiírás újrapróbálása
+  és az ébren tartás élesben.

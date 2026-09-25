@@ -787,8 +787,20 @@ async function tablaKulcsBiztositasa() {
  *
  * @returns {Promise<boolean>} feljegyeztük-e
  */
+/** A saját tábla-kulcsunk aláíró fele — csak a már létező kulcsot jegyezzük meg. */
+let sajatTablaAlairo = null;
+async function sajatTablaAlairoja() {
+  if (sajatTablaAlairo) return sajatTablaAlairo;
+  try { sajatTablaAlairo = (await tablaKulcsTarolo().olvas())?.alairoNyilvanos ?? null; } catch { /* még nincs */ }
+  return sajatTablaAlairo;
+}
+
 async function kotesFeljegyzese(tarolo, kapottTablaKulcs, cim) {
   if (!ervenyesTablaKulcs(kapottTablaKulcs)) return false;
+  // ⛔ SAJÁT MAGUNKKAL NEM KÖTÜNK (42. mérés): ha a társlistán a saját címünk áll, a hívás
+  // önmagunkhoz fut be, és a „társ" tábla-kulcsa a miénk. Egy ilyen kötés minden körben
+  // táblaolvasást és kopogást ér — és semmit nem hoz.
+  if (kapottTablaKulcs.alairo === await sajatTablaAlairoja()) return false;
   const most = Date.now();
   // ⭐ EGY LÉPÉSBEN (2026-09-21): az őrjárat a postaláda-ágból ÉS a kör-ágból is jegyez
   // találkozást, és a kettő egyszerre futhat — a külön `olvas()` + `ir()` páros ilyenkor
@@ -963,6 +975,39 @@ const KOPOGAS_ARA_KORONKENT = 6;      // kopogás/társ — ~360 bájt, egy cser
 // hanem a kötés-korlát (legfeljebb 5 kötés, jellemzően 3) nagyságrendje: annyi társ lehet,
 // akinek nálunk nincs kopogható címe. *Egy idegen se kösse le a foglalatot végtelen munkával.*
 const BEKOPOGO_KORLAT = 3;
+
+/**
+ * ⭐ A TELEFON ÉBREN TARTÁSA (42. mérés, 2026-09-25).
+ *
+ * ⛔ MIÉRT: a szomszéd wifijén a telefon körei 15–20 percesek lettek (14:08 → 14:27 →
+ * 14:42), miközben a laptopé percre pontos maradt. Az Android a zsebben, sötét képernyővel
+ * altatja a Termuxot — és egy alvó őrjárat nem kopog, nem ír a táblára, nem cserél. A
+ * kézi „Acquire wakelock" gomb megoldja, de **elfelejthető** (a 40. és a 42. mérésen is).
+ * ⭐ Ezért Termuxban az őrjárat maga kéri (`termux-wake-lock`), és kilépéskor elengedi.
+ * ⚠️ Ha nem sikerül, kimondjuk (D19) — a kézi út marad. `KOINO_EBRENTARTAS=nem` kikapcsolja.
+ *
+ * @returns {Promise<{termux: boolean, kert: boolean}>}
+ */
+async function ebrenTartas() {
+  const termux = Boolean(process.env.TERMUX_VERSION) || /com\.termux/.test(process.env.PREFIX ?? '');
+  if (!termux || process.env.KOINO_EBRENTARTAS === 'nem') return { termux, kert: false };
+  const { spawn, spawnSync } = await import('node:child_process');
+  const sikerult = await new Promise((kesz) => {
+    const folyamat = spawn('termux-wake-lock', [], { stdio: 'ignore' });
+    folyamat.on('error', () => kesz(false));
+    folyamat.on('exit', (kod) => kesz(kod === 0));
+  });
+  if (sikerult) {
+    const elenged = () => {
+      try { spawnSync('termux-wake-unlock', [], { stdio: 'ignore' }); } catch { /* már nincs mit */ }
+    };
+    process.once('exit', elenged);
+    for (const jel of ['SIGINT', 'SIGTERM']) {
+      process.once(jel, () => { elenged(); process.exit(130); });
+    }
+  }
+  return { termux, kert: sikerult };
+}
 
 /**
  * A tükör (STUN-kiszolgáló), amitől a saját külső címünket kérdezzük — `KOINO_TUKOR=cím:port`.
@@ -2704,6 +2749,12 @@ try {
       const sajatTablaKulcsTeljes = await tablaKulcsBiztositasa();
       const sajatTablaKulcs = nyilvanosResz(sajatTablaKulcsTeljes);
       const kotesTar = kotesTarolo();
+      // ⛔ A SAJÁT MAGUNKKAL KÖTÖTT KÖTÉS KIESIK (42. mérés, 2026-09-25): a telefon a
+      // társlistáján álló SAJÁT címét is felhívta, és a „társ" tábla-kulcsa a sajátja volt —
+      // a kötés-jegyzékbe így önmaga került, és minden körben önmagát kereste a táblán.
+      // ⭐ Az új kötés ilyet már nem jegyez fel (`kotesFeljegyzese`); a régit itt takarítjuk.
+      await kotesTar.modosit((jegyzek) =>
+        jegyzek.filter((k) => k.alairo !== sajatTablaKulcsTeljes.alairoNyilvanos));
       // ⭐ Amit utoljára kiírtunk a táblára — ebből tudjuk, hogy VÁLTOZOTT-e a címünk.
       let tablaraKiirtCim = null;
       // ⭐ A megismert DHT-gépekből néhányat hirdetünk (Csaba (c) döntése, 2026-09-20).
@@ -2770,6 +2821,15 @@ try {
         + (orValaszolo.mukodik ? ' · helyben felfedezhető' : '') + ')' + SZIN.vege);
       kiir(SZIN.halvany + 'Te: ' + rovidAzonosito(szerzo) + ' · koino: ' + KOINO + SZIN.vege);
       kiir(SZIN.halvany + 'Kilépés: Ctrl+C' + SZIN.vege);
+      // ⭐ A telefon ne aludjon el közben (42. mérés) — lásd `ebrenTartas`.
+      const ebren = await ebrenTartas();
+      if (ebren.termux) {
+        kiir(ebren.kert
+          ? SZIN.halvany + 'Ébren tartást kértem (termux-wake-lock) — a telefon sötét képernyővel'
+            + ' is dolgozik; kilépéskor elengedem.' + SZIN.vege
+          : SZIN.nem + '✗ Az ébren tartás nem sikerült — kapcsold be kézzel: a Termux'
+            + ' értesítésében „Acquire wakelock".' + SZIN.vege);
+      }
       kiir();
 
       // Vég nélküli kör. A társ-listát MINDEN körben újraolvassuk, hogy egy közben
@@ -2902,7 +2962,14 @@ try {
           }
         }
 
-        if (!lista.length) {
+        // ⛔ ÖNMAGUNKAT NEM HÍVJUK (42. mérés, 2026-09-25): a telefon társlistáján a SAJÁT
+        // wifis címe állt, és a kör minden alkalommal felhívta — a naplóban „bejött valaki"
+        // lett belőle, önmagától, és egy saját magával kötött kötés. ⚠️ Csak a pontos pár
+        // (saját gép-cím + a SAJÁT portunk) esik ki: egy gépen két példány más porton legitim.
+        const hivhatok = lista.filter((t) =>
+          !(sajatCimE(t.hoszt, sajatCimek) && Number(t.port) === port));
+
+        if (!hivhatok.length) {
           kiir(SZIN.halvany + '  ' + ora() + ' nincs társ a listán — csak a kaput tartom nyitva'
             + SZIN.vege);
         } else {
@@ -2948,7 +3015,7 @@ try {
           let menetek = 0;
           for (;;) {
             menetek++;
-            const menet = await korbeCsere(lista,
+            const menet = await korbeCsere(hivhatok,
               (t) => csereVonalon(tar, KOINO, t.hoszt, t.port, 10000, hirdetjuk, fajlok,
                 frissUdp, {
                   sajatUdpCim: sajatKulsoUdp
@@ -3103,17 +3170,22 @@ try {
           if (valtozott) {
             const e = await tablaraKiiras(sajatTablaKulcsTeljes,
               await kotesTar.olvas(), mostiCim);
-            // ⏸️ NYITOTT KÉRDÉS (2026-09-21, átnézésből): a cím akkor is „kiírtnak"
-            // számít, ha a DHT-n **egyetlen gép sem** tárolta el (`tarolta: 0`) — mert a
-            // döntést a `kiirt` hozza, vagyis hány társ rekeszét PRÓBÁLTUK meg. Ilyenkor
-            // nincs újrapróbálkozás: a következő kísérlet csak akkor jön, ha a címünk
-            // MEGINT megváltozik. ⚠️ A szám látszik (lent, „… tároló"), tehát nem néma —
-            // de a program nem reagál rá. *A „hány tároló elég?" MÉRT kérdés: a két
-            // mobilos terepmérésé* (a 37. mérésen 8 tároló volt).
-            if (e.kiirt) {
+            // ⭐ A 2026-09-21-i nyitott kérdés („a 0 tárolós kiírás is kiírtnak számít, és
+            // nincs újrapróbálkozás") a 42. mérésen mért kárt okozott — lent javítva.
+            // ⛔⛔ A NYITOTT KÉRDÉS MEGVÁLASZOLVA — A MÉRÉS DÖNTÖTT (42. mérés, 2026-09-25).
+            // A telefon a szomszéd wifijén kiírta az új címét, de **0 tároló** vette át (a
+            // DHT abban a percben nem felelt). A program ezt kiírtnak vette, és nem próbálta
+            // újra — a laptop 2 és fél órán át a RÉGI címét olvasta, és a rés meg sem nyílt.
+            // ⭐ Ezért kiírtnak csak az számít, amit legalább EGY tároló átvett; a 0 tárolós
+            // kiírást a következő kör újra megpróbálja. *Egy kiírás, amit senki nem őriz, nem
+            // kiírás.*
+            if (e.kiirt && e.tarolta > 0) {
               tablaraKiirtCim = mostiCim;
               kiir(SZIN.jo + '  ⭐ ' + ora() + ' az új címemet kiírtam a táblára ('
                 + e.kiirt + ' társ rekeszébe, ' + e.tarolta + ' tároló)' + SZIN.vege);
+            } else if (e.kiirt) {
+              kiir(SZIN.nem + '  ✗ ' + ora() + ' az új címem kiírása nem ért célba: egyetlen'
+                + ' DHT-gép sem vette át — a következő körben újra próbálom' + SZIN.vege);
             }
           }
         } catch (hiba) {

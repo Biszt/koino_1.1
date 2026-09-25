@@ -1633,6 +1633,172 @@ proba('⛔⛔⛔ AZ EGYOLDALÚ RÉS IS CSERÉT HOZ — aki bekopog, azzal a más
     }
   });
 
+// ===================================
+// ⛔⛔ A 42. MÉRÉS HÁROM JAVÍTÁSA (2026-09-25)
+// ===================================
+
+/** Egy STUN-válasz (XOR-MAPPED-ADDRESS, IPv4) — a hamis tükörnek. */
+function stunValasz(cim, port) {
+  const suti = [0x21, 0x12, 0xA4, 0x42];
+  const ertek = Buffer.alloc(8);
+  ertek[1] = 0x01;
+  ertek.writeUInt16BE(port ^ 0x2112, 2);
+  cim.split('.').map(Number).forEach((b, i) => { ertek[4 + i] = b ^ suti[i]; });
+  const fej = Buffer.alloc(20);
+  fej.writeUInt16BE(0x0101, 0);
+  fej.writeUInt16BE(4 + ertek.length, 2);
+  fej.writeUInt32BE(0x2112A442, 4);
+  const attr = Buffer.alloc(4);
+  attr.writeUInt16BE(0x0020, 0);
+  attr.writeUInt16BE(ertek.length, 2);
+  return Buffer.concat([fej, attr, ertek]);
+}
+
+proba('⛔⛔ A 0 TÁROLÓS KIÍRÁS NEM „KIÍRT" — a következő kör újra próbálja, és kimondja',
+  async () => {
+    // ⛔ A TEREPI HELYZET (42. mérés): a telefon új címét 0 tároló vette át, a program ezt
+    // kiírtnak vette, és 2 és fél órán át nem próbálta újra — a társ a RÉGI címét olvasta.
+    // ⭐ Itt a tükör hamis, de VALÓDI STUN-választ ad (tehát megvan a saját külső cím), a
+    // DHT viszont néma: a kiírás soha nem ér célba. Minden körben újra kell próbálni.
+    const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+    const hely = await ujKeszulek();
+    const tukor = await nemaFoglalat();
+    tukor.on('message', (adat, felado) => {
+      if (adat.length >= 20 && adat.readUInt16BE(0) === 0x0001) {
+        tukor.send(stunValasz('203.0.113.9', 40000), felado.port, felado.address);
+      }
+    });
+    const dht = await nemaFoglalat();
+    let orjarat = null;
+
+    try {
+      await fut(hely, 'koino', 'Ujra kiiras');
+      // Egy kötés, amelynek a rekeszébe írni kell — egy dokumentációs címmel, hogy a fúró
+      // mérje a külső címet (csak nem-helyi célnál teszi).
+      await writeFile(join(hely, 'kotesek.json'), JSON.stringify({
+        kotesek: [{ ...nyilvanosResz(await ujTablaKulcs()), hoszt: '192.0.2.1', port: 7373,
+          utoljara: Date.now(), talalkozasok: 3, eloszor: Date.now() }]
+      }), 'utf8');
+
+      let kimenet = '';
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7631'], {
+        env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '',
+          KOINO_TUKOR: '127.0.0.1:' + tukor.address().port,
+          KOINO_DHT_BELEPOK: '127.0.0.1:' + dht.address().port },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+      orjarat.stdout.on('data', (d) => { kimenet += d; });
+      await varj(32000);
+
+      const probak = (kimenet.match(/az új címem kiírása nem ért célba/g) ?? []).length;
+      return probak >= 2 && !/az új címemet kiírtam a táblára/.test(kimenet);
+    } finally {
+      if (orjarat) orjarat.kill();
+      tukor.close();
+      dht.close();
+      await varj(700);
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
+proba('⛔ A SAJÁT MAGUNKKAL KÖTÖTT RÉGI KÖTÉS INDULÁSKOR KIESIK', async () => {
+  const { ujTablaKulcs, nyilvanosResz } = await import('../js/csere/tablaKulcs.js');
+  const hely = await ujKeszulek();
+  let orjarat = null;
+  try {
+    await fut(hely, 'koino', 'Sajat kotes');
+    const sajat = await ujTablaKulcs();
+    await writeFile(join(hely, 'tabla-kulcs.json'), JSON.stringify(sajat), 'utf8');
+    // A terepi állapot: a jegyzékben SAJÁT magunk (és egy valódi társ, akit meg kell tartani).
+    const tars = nyilvanosResz(await ujTablaKulcs());
+    await writeFile(join(hely, 'kotesek.json'), JSON.stringify({
+      kotesek: [
+        { ...nyilvanosResz(sajat), hoszt: '127.0.0.1', port: 7635, utoljara: Date.now(), talalkozasok: 2, eloszor: Date.now() },
+        { ...tars, hoszt: '127.0.0.1', port: 7699, utoljara: Date.now(), talalkozasok: 2, eloszor: Date.now() }
+      ]
+    }), 'utf8');
+
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', '7635'], {
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' },
+      stdio: 'ignore'
+    });
+    await varj(4000);
+    orjarat.kill(); orjarat = null;
+    await varj(500);
+
+    const kotesek = JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek;
+    return !kotesek.some((k) => k.alairo === sajat.alairoNyilvanos)
+      && kotesek.some((k) => k.alairo === tars.alairo);
+  } finally {
+    if (orjarat) orjarat.kill();
+    await varj(300);
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ A TÁRSLISTÁN ÁLLÓ SAJÁT CÍMÜNKET NEM HÍVJUK — és kötés sem lesz belőle', async () => {
+  // ⛔ A TEREPI HELYZET (42. mérés): a telefon a saját wifis címét is felhívta; a napló
+  // „bejött valaki"-t írt önmagától, és a jegyzékbe önmaga került.
+  const hely = await ujKeszulek();
+  const port = 7633;
+  let orjarat = null;
+  try {
+    await fut(hely, 'koino', 'Sajat cim');
+    await fut(hely, 'tars', '127.0.0.1', String(port));
+
+    let kimenet = '';
+    orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)], {
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    orjarat.stdout.on('data', (d) => { kimenet += d; });
+    await varj(9000);
+    orjarat.kill(); orjarat = null;
+    await varj(500);
+
+    let kotesek = [];
+    try { kotesek = JSON.parse(await readFile(join(hely, 'kotesek.json'), 'utf8')).kotesek; } catch { /* nincs */ }
+    const sajat = JSON.parse(await readFile(join(hely, 'tabla-kulcs.json'), 'utf8'));
+    return /nincs társ a listán/.test(kimenet) && !/bejött valaki/.test(kimenet)
+      && !kotesek.some((k) => k.alairo === sajat.alairoNyilvanos);
+  } finally {
+    if (orjarat) orjarat.kill();
+    await varj(300);
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ TERMUXBAN AZ ŐRJÁRAT MAGA KÉRI AZ ÉBREN TARTÁST — és kimondja, ha nem sikerül', async () => {
+  // ⛔ A TEREPI HELYZET (42. mérés): a telefon körei a zsebben 15–20 percesek lettek. ⭐ Itt a
+  // Termuxot a környezet jelzi, a `termux-wake-lock` parancs viszont NINCS a keresési úton —
+  // tehát a kérésnek el kell buknia, és ezt ki kell mondania. Termuxon kívül meg sem próbálja.
+  const hely = await ujKeszulek();
+  const ures = await ujKeszulek();
+  const futtat = async (env, port) => {
+    let kimenet = '';
+    const p = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)], {
+      env, stdio: ['ignore', 'pipe', 'pipe']
+    });
+    p.stdout.on('data', (d) => { kimenet += d; });
+    await varj(3000);
+    p.kill();
+    await varj(400);
+    return kimenet;
+  };
+  try {
+    await fut(hely, 'koino', 'Ebren');
+    const alap = { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' };
+    delete alap.TERMUX_VERSION;
+    const termuxban = await futtat({ ...alap, TERMUX_VERSION: 'proba', PATH: ures, Path: ures }, 7637);
+    const kivul = await futtat({ ...alap, PREFIX: '' }, 7638);
+    return /Az ébren tartás nem sikerült/.test(termuxban)
+      && !/ébren tartás/i.test(kivul);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+    await rm(ures, { recursive: true, force: true });
+  }
+});
+
 proba('⛔⛔ HA A RÉS MEGNYÍLIK, DE A CSERE RAJTA ELBUKIK, A NAPLÓ KIMONDJA — nem „rés sem nyílt"',
   async () => {
     // ⛔ MIT MÉR: a 40. mérésen a napló a megnyílt rés után azt írta, hogy „egyik rés sem
