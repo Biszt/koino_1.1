@@ -38,6 +38,11 @@
 // ⚠️ A kézfogás szakaszában (még nem jött tőle adat) viszont `HALLAK` a válasz: ha az ő
 // HALLAK-unk elveszett, ő tovább kopog, és a FOGLALT beragasztaná a két felet.
 //
+// ⛔ A TÁRS-JEGYZÉK KORLÁTOS — időben (`ELFELEJTES`) ÉS darabra (`JEGYZEK_KORLAT`). A UDP
+// feladócíme hamisítható: darab-plafon nélkül egy elárasztó a jegyzéket korlátlanul
+// felduzzaszthatná. A plafon felett a legrégebben látott, munka és friss kopogásunk nélküli
+// bejegyzés esik ki; ha ilyen nincs, az idegen új feladónak nem felelünk (2026-09-25).
+//
 // ⚠️ AMIT NEM CSINÁL: nem tud a koinóról, nem cserél, nem ír táblára. A munkát a hívó adja
 // (`munka(halo, tars)`), ez a fájl csak azt dönti el, KIVEL és MIKOR indulhat.
 //
@@ -56,6 +61,16 @@ const FRISS_KOPOGAS = 15000;
 // ⭐ A rég nem látott társak bejegyzése kiesik — a jegyzék nem hízhat korlátlanul (9. szabály).
 const ELFELEJTES = 10 * 60 * 1000;
 
+// ⛔ ÉS A JEGYZÉK DARABRA IS KORLÁTOS (2026-09-25, átnézés). Az idő önmagában nem elég: minden
+// új feladócímről jövő KOPOG új bejegyzés, és a UDP feladócíme HAMISÍTHATÓ — egy elárasztó a
+// 10 perces ablakon belül akármennyit gyárthatna. ⭐ A plafon felett a LEGRÉGEBBEN LÁTOTT,
+// KISZORÍTHATÓ bejegyzés esik ki (lásd `kiszorithato`); ha nincs ilyen, az idegen új feladót
+// nem vesszük fel. A saját céljaink mindig bekerülnek — azok számát a hívó korlátozza.
+// ⚠️ A szám nem a hálózat méretéből jön, hanem a készülékéből: egy bejegyzés ~200 bájt, tehát
+// ezer is elhanyagolható — a plafon az elárasztás ellen véd, egy valódi koinóban el sem érjük
+// (a kötések és a társlista a tucatnyi nagyságrendben mozognak).
+const JEGYZEK_KORLAT = 1000;
+
 /**
  * Megnyitja az állandó UDP-kaput.
  *
@@ -65,12 +80,14 @@ const ELFELEJTES = 10 * 60 * 1000;
  *   - a résen elvégzendő munka (csere + fájl-randevú); a hívó adja
  * @param {Function} [beallitas.jelez] - események a naplónak (D19)
  * @param {number} [beallitas.bekopogoKorlat] - egyszerre legfeljebb ennyi ismeretlen bekopogóval dolgozunk
+ * @param {number} [beallitas.jegyzekKorlat] - a társ-jegyzék legfeljebb ennyi bejegyzést tart
  * @param {number} [beallitas.kopogasKoz]
  * @returns {Promise<Object>} { port, azonosito, kopog, sajatCim, zar, tarsakSzama }
  */
 export async function udpKapuNyitasa(beallitas) {
   const {
-    port, munka, jelez = () => {}, bekopogoKorlat = 3, kopogasKoz = KOPOGAS_KOZ
+    port, munka, jelez = () => {}, bekopogoKorlat = 3, jegyzekKorlat = JEGYZEK_KORLAT,
+    kopogasKoz = KOPOGAS_KOZ
   } = beallitas;
   console.log('udpKapuNyitasa - KEZDÉS', { port });
 
@@ -102,10 +119,45 @@ export async function udpKapuNyitasa(beallitas) {
     });
   };
 
-  const bejegyzes = (cim, cport, letrehoz = true) => {
+  // ⛔ KISZORÍTHATÓ az a bejegyzés, amellyel nem fut munka, és amelyre mostanában nem
+  // kopogtunk. ⚠️ A friss kopogás védi: arra a HALLAK még megjöhet, és ha a bejegyzés addig
+  // kiesne, a válasz kóbor csomagnak látszana — egy elárasztó így a mi köreinket is elbuktatná.
+  const kiszorithato = (t) => !t.munka && most() - t.utolsoKopogasunk > FRISS_KOPOGAS;
+
+  // A legrégebben látott kiszorítható bejegyzés kiesik. Egy menet a jegyzéken — a plafon
+  // felett, tehát csak elárasztáskor fut, és akkor is korlátos (jegyzekKorlat lépés).
+  const helyetCsinal = () => {
+    let legregebbi = null;
+    for (const t of tarsak.values()) {
+      if (kiszorithato(t) && (!legregebbi || t.latva < legregebbi.latva)) legregebbi = t;
+    }
+    if (!legregebbi) return false;
+    tarsak.delete(legregebbi.kulcs);
+    return true;
+  };
+
+  // ⚠️ A „tele" jelzés sorozatonként EGYSZER megy (D19): elárasztáskor csomagonként egy sor a
+  // naplóban maga is elárasztás volna.
+  let teleJelezve = false;
+
+  /**
+   * A társ bejegyzése — ha nincs, és `letrehoz`, létrehozzuk.
+   * @param {boolean} [sajat] - a SAJÁT célunk (mi kopogunk rá): a plafon sem zárja ki
+   * @returns {Object|null} null, ha a jegyzék tele, és egy idegen új feladónak nincs hely
+   */
+  const bejegyzes = (cim, cport, letrehoz = true, sajat = false) => {
     const kulcs = cim + ':' + cport;
     let t = tarsak.get(kulcs);
     if (!t && letrehoz) {
+      const plafonAlatt = tarsak.size < jegyzekKorlat;
+      if (!plafonAlatt && !helyetCsinal() && !sajat) {
+        if (!teleJelezve) {
+          teleJelezve = true;
+          jelez({ mi: 'JEGYZEK-TELE', korlat: jegyzekKorlat, cim, port: cport });
+        }
+        return null;
+      }
+      if (plafonAlatt) teleJelezve = false;
       t = { cim, port: cport, kulcs, munka: null, adatJott: false, ujKopogas: false,
         bekopogo: false, utolsoKopogasunk: 0, latva: most() };
       tarsak.set(kulcs, t);
@@ -170,6 +222,9 @@ export async function udpKapuNyitasa(beallitas) {
 
     if (u.uzenet === 'KOPOG') {
       const t = bejegyzes(felado.address, felado.port);
+      // ⛔ Tele a jegyzék, és nincs kiszorítható hely: nem felelünk (se HALLAK, se
+      // visszakopogás) — egy hamisított feladónak így nem küldünk semmit.
+      if (!t) return;
       if (t.munka && t.adatJott) {
         // ⛔ A munkánk vele már javában folyik — egy második csere összeakadna vele.
         t.ujKopogas = true;
@@ -198,6 +253,7 @@ export async function udpKapuNyitasa(beallitas) {
 
     if (u.uzenet === 'HALLAK') {
       const t = bejegyzes(felado.address, felado.port);
+      if (!t) return;
       for (const kor of korok) kor.hallak(t);
       if (t.munka) return;
       // ⭐ A CÍMRE kopogtunk, és egy MÁSIK portjáról felelt? A mobil NAT portot válthat
@@ -218,6 +274,7 @@ export async function udpKapuNyitasa(beallitas) {
 
     if (u.uzenet === 'FOGLALT') {
       const t = bejegyzes(felado.address, felado.port);
+      if (!t) return;
       for (const kor of korok) kor.foglalt(t);
       jelez({ mi: 'FOGLALT', cim: t.cim, port: t.port });
     }
@@ -276,7 +333,7 @@ export async function udpKapuNyitasa(beallitas) {
     const kopogas = () => {
       for (const a of allapotok) {
         if (a.hallak) continue;
-        const t = bejegyzes(a.cim, a.port);
+        const t = bejegyzes(a.cim, a.port, true, true);
         if (t.munka) { a.hallak = true; a.tars = t; a.igeret = t.munka; continue; }
         kopogj(t);
         kuldott++;

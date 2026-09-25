@@ -12,6 +12,7 @@
 //
 // Futtatás: node koino/meres/mind.js udpkapu
 
+import { createSocket } from 'node:dgram';
 import { probaGyujtemeny } from './probaFuttato.js';
 import { udpKapuNyitasa } from '../js/csere/udpKapu.js';
 
@@ -27,12 +28,13 @@ const varj = (ms) => new Promise((kesz) => setTimeout(kesz, ms));
  * túloldali munka indulása előtt ért oda, és a FOGLALT-szabály meg sem kaphatta az esélyt.
  * *Egy valódi csere folyamatosan beszél — a hamisnak is kell.*
  */
-async function hamisKapu({ ido = 100, bekopogoKorlat = 3 } = {}) {
+async function hamisKapu({ ido = 100, bekopogoKorlat = 3, jegyzekKorlat } = {}) {
   const naplo = { munkak: [], egyszerre: 0, csucs: 0, jelzesek: [] };
   const futo = new Map();
   const kapu = await udpKapuNyitasa({
     port: 0,
     bekopogoKorlat,
+    jegyzekKorlat,
     jelez: (e) => naplo.jelzesek.push(e),
     munka: async (halo, tars) => {
       const kulcs = tars.cim + ':' + tars.port;
@@ -52,6 +54,37 @@ async function hamisKapu({ ido = 100, bekopogoKorlat = 3 } = {}) {
 }
 
 const cel = (k) => [{ cim: '127.0.0.1', port: k.kapu.port }];
+
+/**
+ * Nyers UDP-foglalatok — mindegyik egy külön „feladó" (más port = más bejegyzés a kapuban).
+ * Megszámolják, hány csomagot kaptak; a `hallakEgyszer` az első KOPOG-ra `kesleltetes` múlva
+ * EGY HALLAK-ot mond (csak egyszer — így a válasz sorsa mérhető).
+ */
+async function nyersFeladok(db, { hallakEgyszer = false, kesleltetes = 0 } = {}) {
+  const lista = [];
+  for (let i = 0; i < db; i++) {
+    const s = createSocket({ type: 'udp4' });
+    await new Promise((kesz) => s.bind(0, '127.0.0.1', kesz));
+    const f = { s, port: s.address().port, kapott: 0, felelt: false };
+    s.on('message', (adat, honnan) => {
+      f.kapott++;
+      let u;
+      try { u = JSON.parse(adat.toString('utf8')); } catch { return; }
+      if (hallakEgyszer && !f.felelt && u.uzenet === 'KOPOG') {
+        f.felelt = true;
+        setTimeout(() => s.send(JSON.stringify({ uzenet: 'HALLAK', tol: 'nyers' + i }),
+          honnan.port, honnan.address), kesleltetes);
+      }
+    });
+    lista.push(f);
+  }
+  return {
+    lista,
+    kopog: (port) => lista.forEach((f, i) =>
+      f.s.send(JSON.stringify({ uzenet: 'KOPOG', tol: 'arasztó' + i }), port, '127.0.0.1')),
+    zar: () => lista.forEach((f) => f.s.close())
+  };
+}
 
 proba('⭐⭐ A KOPOGÁSRA A KAPU ABLAK NÉLKÜL IS FELEL — és a bekopogóval MINDKÉT oldalon munka indul', async () => {
   // ⛔ A régi fúró csak a SAJÁT kopogási ablakában élt: a B itt soha nem kopog, mégis felel.
@@ -140,6 +173,56 @@ proba('⭐ AKIVEL MÁR FUT A MUNKA, ARRA NEM KOPOGUNK — a futó munkáját sz�
     return kor.atfurt === 1 && kor.sikeres === 1 && a.naplo.csucs === 1
       && a.naplo.munkak.length === 1;
   } finally { a.kapu.zar(); b.kapu.zar(); }
+});
+
+proba('⛔⛔ A JEGYZÉK DARABRA IS KORLÁTOS — száz hamis feladó sem nő a plafon fölé', async () => {
+  // ⛔ Az átnézés lelete (2026-09-25): a UDP feladócíme hamisítható, és minden új feladó új
+  // bejegyzés volt — a plafon csak az IDŐ volt (10 perc). Itt 100 feladó, 20-as plafon.
+  const b = await hamisKapu({ jegyzekKorlat: 20 });
+  const arasztok = await nyersFeladok(100);
+  try {
+    arasztok.kopog(b.kapu.port);
+    await varj(400);
+    return b.kapu.tarsakSzama() <= 20 && b.kapu.tarsakSzama() > 0;
+  } finally { b.kapu.zar(); arasztok.zar(); }
+});
+
+proba('⛔⛔ …ÉS AZ ELÁRASZTÁS NEM SZORÍTJA KI A FRISS KOPOGÁSUNK CÉLJÁT — a HALLAK utána is munkát indít', async () => {
+  // ⭐ A kiszorítás a LEGRÉGEBBEN látottat dobná — és az épp a mi célunk: rá kopogtunk
+  // elsőként, az áradat utána jött. Ha kiesne, a HALLAK-ja kóbor csomagnak látszana, és egy
+  // elárasztó így a mi köreinket is elbuktatná. ⚠️ A bekopogó-korlát 0: az áradat egyetlen
+  // tagjára sem kopogunk vissza, tehát a portváltás-felismerés sem mentheti meg a célt.
+  const a = await hamisKapu({ jegyzekKorlat: 20, bekopogoKorlat: 0 });
+  const cel1 = await nyersFeladok(1, { hallakEgyszer: true, kesleltetes: 300 });
+  const arasztok = await nyersFeladok(60);
+  try {
+    const kor = a.kapu.kopog([{ cim: '127.0.0.1', port: cel1.lista[0].port }], { idokorlat: 900 });
+    await varj(80);
+    arasztok.kopog(a.kapu.port);                      // az áradat a kopogás és a HALLAK között
+    const eredmeny = await kor;
+    return eredmeny.atfurt === 1 && a.naplo.munkak.length === 1
+      && a.kapu.tarsakSzama() <= 20;
+  } finally { a.kapu.zar(); cel1.zar(); arasztok.zar(); }
+});
+
+proba('⛔ HA NINCS KISZORÍTHATÓ HELY, AZ IDEGEN ÚJ FELADÓ NEM KAP VÁLASZT — és a „tele" EGYSZER hangzik el', async () => {
+  // ⭐ Öt saját célunk tölti ki a jegyzéket (friss kopogás védi őket). Az áradat húsz tagja
+  // közül senki nem kerül be, senki nem kap választ (se HALLAK, se FOGLALT, se visszakopogás),
+  // és a napló egyetlen sort kap, nem húszat.
+  const a = await hamisKapu({ jegyzekKorlat: 5 });
+  const nemak = await nyersFeladok(5);
+  const arasztok = await nyersFeladok(20);
+  try {
+    const kor = a.kapu.kopog(nemak.lista.map((f) => ({ cim: '127.0.0.1', port: f.port })),
+      { idokorlat: 700 });
+    await varj(100);
+    arasztok.kopog(a.kapu.port);
+    await varj(300);
+    const tele = a.naplo.jelzesek.filter((e) => e.mi === 'JEGYZEK-TELE').length;
+    const valasz = arasztok.lista.reduce((s, f) => s + f.kapott, 0);
+    await kor;
+    return a.kapu.tarsakSzama() === 5 && tele === 1 && valasz === 0;
+  } finally { a.kapu.zar(); nemak.zar(); arasztok.zar(); }
 });
 
 export default futtatas;

@@ -8,6 +8,26 @@ elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklá
 
 ---
 
+### ⛔ 2026-09-25 éjjel — ÁTNÉZÉS: AZ ÁLLANDÓ UDP-KAPU JEGYZÉKE DARABRA IS KORLÁTOS
+
+⛔ **A lelet:** az `udpKapu.js` társ-jegyzéke csak IDŐBEN volt korlátos (10 perc), darabra
+nem — pedig a fájl maga hivatkozik a 9. szabályra. A UDP feladócíme **hamisítható**, és minden
+új feladótól jövő `KOPOG` új bejegyzés: egy elárasztó a jegyzéket korlátlanul felduzzaszthatta.
+✅ **A javítás:** `JEGYZEK_KORLAT = 1000` (egy valódi koinóban el sem érjük). A plafon felett a
+**legrégebben látott, kiszorítható** bejegyzés esik ki — kiszorítható az, amellyel nem fut
+munka, és amelyre **nem kopogtunk az utolsó 15 mp-ben** (⚠️ különben az elárasztó a mi
+célunkat szorítaná ki, és a HALLAK-ja kóbor csomagnak látszana). Ha nincs kiszorítható hely,
+az idegen új feladó **választ sem kap** (se HALLAK, se FOGLALT, se visszakopogás), és a napló
+sorozatonként **egyszer** mondja: `JEGYZEK-TELE`. A saját céljaink mindig bekerülnek.
+⭐ **3 új önpróba** (100 hamis feladó 20-as plafonnal · az áradat a kopogás és a HALLAK között ·
+tele jegyzék), **négy rontás, mind buktat** (a plafon kivétele · a friss kopogás védelmének
+kivétele · a „tele" minden alkalommal · válasz tele jegyzéknél). **717 önpróba**, az új próbák
+ötből ötször zöldek. ⏸️ *Nem változott:* egy kopogásra a kapu egy választ küld (HALLAK vagy
+FOGLALT, hasonló méretű csomag); második csomagot (visszakopogást) csak a korlátos számú —
+alapból 3 — friss bekopogó kap. Erősítésre (amplification) tehát érdemben nem használható.
+
+---
+
 ### ▶️▶️▶️▶️▶️▶️ 2026-09-25 este — D69/3: AZ ÁLLANDÓ UDP-KAPU MEGÉPÜLT
 
 ⭐ **Egy UDP-foglalat a teljes futásra** ([`js/csere/udpKapu.js`](koino/js/csere/udpKapu.js)) — a
