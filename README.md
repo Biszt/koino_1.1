@@ -117,7 +117,7 @@ Ez kiírja az állapotot (gondolatok, javaslatok, egyezmények). Néhány továb
 ```bash
 node koino/koino.js orjarat          # a valódi üzemmód: a készülék magától dolgozik
 node koino/koino.js felulet          # a felület a böngészőben (helyi kapu, jelszóval)
-node koino/meres/mind.js             # az önpróbák (704, mind zöldnek kell lennie)
+node koino/meres/mind.js             # az önpróbák (707, mind zöldnek kell lennie)
 ```
 
 A teljes parancslista: [`koino/README.md`](koino/README.md). Telefonra telepítés
@@ -216,7 +216,7 @@ A mérések jegyzőkönyve: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek
 szerkezet és az identitás (Szakasz 1–4), a felület gerince (Szakasz 5), valamint a
 fájlok szállítása. Az őrjárat UDP-n kopog és cserél, a hirdetőtábla (BitTorrent DHT)
 terepen, valódi telefonokkal is működik. 2026-09-26 óta **nincs TCP a készülékek között**: az
-őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **704
+őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **707
 önpróba**, mind zöld (`node koino/meres/mind.js`). A következő lépés: terepmérés az új úton. A
 friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
 

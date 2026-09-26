@@ -3901,6 +3901,14 @@ futtatott két folyamatot ugyanazon a táron.* ⭐ Újraindítás után **mindk�
 automatikus felszabadítása + egy kézi parancs), mindkettő a saját, elavult lánc-végéből számol —
 **elágazás** születhet a saját láncunkban.
 
+✅ **Javítva (ugyanaznap):** a tár kapott egy `frissit()` műveletet — csak a fájl új végét olvassa
+(ahol legutóbb abbahagyta), a már ismertet azonosító szerint kihagyja, a félig írt sort megvárja.
+Hívja: minden munka eleje (`resMunkaKeszito`), minden saját esemény írása (`esemenytTeszek` — ez
+az elágazás esélyét a milliszekundumos résre szűkíti, de nem zárja ki), és az állapot bemenete
+(`koinoEsemenyei` — a felület sem mutat elavult képet). Két próba: a tár-szintű (két tár-példány
+egy fájlon) és egy parancssor-próba a terep alakjában (a postaláda fut, MÁSIK folyamat ír, a
+vendég a cserén megkapja). ⚠️ Rontás-próba: kikapcsolt `frissit()`-tel pontosan ez a kettő bukik.
+
 **2. hiba — egy elvetett pont-esemény után a szerző MINDEN további pont-eseménye elbukik:**
 
 ```
@@ -3918,6 +3926,13 @@ elválnak. Így egyetlen rossz pont-esemény a szerző **összes későbbi** pon
 érvényteleníti, és vele minden új gondolatát (D14: 0 tudatpontú entitás nincs). *Ugyanaz a lecke,
 mint a „két sorrend tükörképe": ami két helyen „ugyanaz", annak egy forrásból kell jönnie.*
 
+✅ **Javítva (ugyanaznap):** az ítélet egy exportált függvényben él (`pontEsemenyMerlege`,
+`szabalyok.js`), és a szabály-réteg meg a `sajatKiosztott` is ezt hívja. Próba a
+`szabalyProba.js`-ben: a VALÓDI művelet a VALÓDI táron, egy kézzel aláírt régi alakú esemény után
+(a próba-segéd saját összegzése egy harmadik másolat lett volna). ⚠️ Rontás-próba: a régi
+`muveletek.js`-szel bukik. ⚠️ *A két terepi gondolat már így marad (az esemény nem írható át) — de
+ezen a koinón a következő pont-esemény már számít.*
+
 ### ⚠️ MELLÉKLELETEK
 
 - **A „nincs újdonság" csere a résen terepen 1,2–1,7 KB** (1 kör). A CLAUDE.md 6. szabályának
@@ -3931,9 +3946,11 @@ mint a „két sorrend tükörképe": ami két helyen „ugyanaz", annak egy for
   korláton belül van.
 
 ### ⏭️ A KÖVETKEZŐ
-- ⛔ **A két hiba javítása** (próbával és rontás-próbával): (1) az őrjárat minden kör és munka
-  előtt olvassa be, amit más folyamat a tárhoz fűzött; (2) a `sajatKiosztott` és a szabály-réteg
-  EGY közös függvényből számoljon.
+- ✅ ~~A két hiba javítása~~ — kész, ugyanaznap (lásd fent); 707 önpróba.
 - ⭐ **Döntési kérdés (Csabáé):** egy készüléken hány folyamat írhat a saját láncba (a
-  felszabadítás és a kézi parancsok) — egy író, vagy zárolás?
+  felszabadítás és a kézi parancsok) — egy író, vagy zárolás? ⛔ A tét: a saját láncban két esemény
+  ugyanazon a sorszámon **ELÁGAZÁS** — az állapot-számítás azonosító szerint az egyiket tartja meg
+  (D19: nem büntet), a **másik tettünk csendben elvész**, és az ellentmondás mindenkinél látható
+  marad (a `lancEllenorzese` szövege szerint „csalás, és bizonyított"). *Egy becsületes e-ember a
+  saját két ablaka miatt.*
 - A 🅱️ változat (két mobil) — a kimondott feltevés (két cél-függő NAT) még mindig nincs mérve.

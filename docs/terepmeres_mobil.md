@@ -11,6 +11,11 @@ utolsó nyitott kérdés, amit eddig csak modellben (35.) és egy gépen (37.) m
 
 ## ⭐ A D69/2 UTÁN — olvasd el ezt MINDENEK ELŐTT (2026-09-26)
 
+✅ **A 🅰️ változat lement (43. mérés, 2026-09-26, szomszéd wifi):** mindkét oldal a tábláról
+talált, a rés két router között nyílt. ⛔ Két hibát hozott ki — mindkettő javítva: az A4-hez
+(gondolat a második ablakban, futó őrjárat mellett) **már nem kell az őrjáratot újraindítani**;
+2026-09-26 előtti programmal kellett. ⏭️ **Következik a 🅱️ (két mobil).**
+
 ⛔ **2026-09-26 óta nincs TCP a készülékek között** (D69/2): az őrjárat, a postaláda (`figyel`)
 és a kézi parancsok (`csere`, `hozd`, `tukor`) is az **állandó UDP-kapun** mennek. Ami ebből a
 mérésre tartozik:
