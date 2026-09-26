@@ -32,23 +32,38 @@ export function probaGyujtemeny(cim) {
   return {
     /**
      * Felvesz egy próbát.
+     *
+     * ===== ⭐ AZ ISMERT HIBA (2026-09-26) =====
+     *
+     * „Előbb a mérés, aztán az építés": egy hibát előbb egy próba nevez meg — és az a próba a
+     * javításig BUKIK. Ha a sorba pirosként kerülne, a többi 700 próba minden futása pirosat
+     * mutatna, és egy ÚJ bukás elveszne mellette (a telefon `tail -3`-ja sem mondaná meg,
+     * melyik az). Ezért a próba kaphat egy `ismertHiba` leírást: külön sorban, néven nevezve
+     * látszik, de a sort nem pirosítja be.
+     * ⛔⛔ SZIGORÚ, mindkét irányban: ha az ismert hiba próbája egyszer ÁTMEGY, az BUKÁS
+     * („a hiba eltűnt — vedd le a jelet"), tehát a jel nem maradhat ott a javítás után; és ha
+     * a próba KIVÉTELT dob, az is bukás — egy eltört próba nem bújhat az ismert hiba mögé.
+     *
      * @param {string} nev
      * @param {Function} futtat - igaz = rendben
+     * @param {{ismertHiba?: string}} [beallitas] - mi a hiba ma, és mire vár a javítása
      */
-    proba(nev, futtat) {
-      probak.push({ nev, futtat });
+    proba(nev, futtat, beallitas = {}) {
+      probak.push({ nev, futtat, ismertHiba: beallitas.ismertHiba ?? null });
     },
 
     /**
      * Lefuttatja mindet, és kiírja az eredményt.
      * @param {boolean} [csendes] - csak az összegzést írja ki (a mind.js használja)
-     * @returns {Promise<{cim: string, osszes: number, sikeres: number, bukottak: Array<string>}>}
+     * @returns {Promise<{cim: string, osszes: number, sikeres: number, bukottak: Array<string>,
+     *                    ismertHibak: Array<string>}>}
      */
     async futtatas(csendes = false) {
       if (!csendes) kiir('\n' + SZIN.vastag + cim + SZIN.vege);
 
       let sikeres = 0;
       const bukottak = [];
+      const ismertHibak = [];
 
       for (const p of probak) {
         let rendben = false, hibaSzoveg = '';
@@ -57,6 +72,22 @@ export function probaGyujtemeny(cim) {
         } catch (hiba) {
           rendben = false;
           hibaSzoveg = ' — váratlan hiba: ' + hiba.message;
+        }
+
+        if (p.ismertHiba) {
+          if (!rendben && !hibaSzoveg) {
+            ismertHibak.push(p.nev + ' — ' + p.ismertHiba);
+            if (!csendes) kiir('  ' + SZIN.halvany + 'ISMERT ' + SZIN.vege + '  ' + p.nev
+              + SZIN.halvany + ' — ' + p.ismertHiba + SZIN.vege);
+            continue;
+          }
+          // ⛔ Átment (vagy eltört): a jel nem maradhat.
+          const miert = rendben
+            ? ' — ⚠️ AZ ISMERT HIBA ELTŰNT: ha javítva van, vedd le az `ismertHiba` jelet'
+            : hibaSzoveg;
+          bukottak.push(p.nev + miert);
+          if (!csendes) kiir('  ' + SZIN.nem + 'BUKOTT ' + SZIN.vege + '  ' + p.nev + miert);
+          continue;
         }
 
         if (rendben) {
@@ -69,13 +100,13 @@ export function probaGyujtemeny(cim) {
       }
 
       if (!csendes) {
-        const mind = sikeres === probak.length;
-        kiir('  ' + (mind ? SZIN.jo + '✅ Mind a ' + probak.length + ' próba rendben'
+        const ismert = ismertHibak.length ? ' · ⚠️ ' + ismertHibak.length + ' ismert hiba nyitva' : '';
+        kiir('  ' + (!bukottak.length ? SZIN.jo + '✅ Mind a ' + sikeres + ' próba rendben' + ismert
                                  : SZIN.nem + '❌ ' + bukottak.length + ' próba BUKOTT ('
-                                   + probak.length + '-ből)') + SZIN.vege);
+                                   + probak.length + '-ből)' + ismert) + SZIN.vege);
       }
 
-      return { cim, osszes: probak.length, sikeres, bukottak };
+      return { cim, osszes: probak.length, sikeres, bukottak, ismertHibak };
     }
   };
 }

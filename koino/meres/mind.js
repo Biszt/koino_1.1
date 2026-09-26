@@ -88,12 +88,14 @@ if (!futtatandok.length) {
 
 let osszes = 0, sikeres = 0;
 const bukottak = [];
+const ismertHibak = [];
 
 for (const p of futtatandok) {
   const eredmeny = await p.futtat();
   osszes += eredmeny.osszes;
   sikeres += eredmeny.sikeres;
   for (const b of eredmeny.bukottak) bukottak.push(p.nev + ': ' + b);
+  for (const h of eredmeny.ismertHibak ?? []) ismertHibak.push(p.nev + ': ' + h);
 }
 
 const SZIN = process.stdout.isTTY
@@ -101,10 +103,17 @@ const SZIN = process.stdout.isTTY
   : { jo: '', nem: '', vastag: '', vege: '' };
 
 console.log('\n' + SZIN.vastag + '───── ÖSSZESEN ─────' + SZIN.vege);
+// ⭐ Az ismert hibák ELŐBB, az összegzés UTOLJÁRA — a telefon `tail -3`-ja így is az összegzést
+// látja (lásd `probaFuttato.js`, „AZ ISMERT HIBA").
+if (ismertHibak.length) {
+  kiir('⚠️ ' + ismertHibak.length + ' ISMERT HIBA nyitva — a próbája a javításig bukik:');
+  for (const h of ismertHibak) kiir('   · ' + h);
+}
+const ismert = ismertHibak.length ? ' · ⚠️ ' + ismertHibak.length + ' ismert hiba nyitva' : '';
 if (bukottak.length) {
-  kiir(SZIN.nem + '❌ ' + bukottak.length + ' próba BUKOTT (' + osszes + '-ből)' + SZIN.vege);
+  kiir(SZIN.nem + '❌ ' + bukottak.length + ' próba BUKOTT (' + osszes + '-ből)' + ismert + SZIN.vege);
   for (const b of bukottak) kiir('   · ' + b);
   process.exit(1);
 } else {
-  kiir(SZIN.jo + '✅ Mind a ' + osszes + ' próba rendben' + SZIN.vege);
+  kiir(SZIN.jo + '✅ Mind a ' + sikeres + ' próba rendben' + ismert + SZIN.vege);
 }

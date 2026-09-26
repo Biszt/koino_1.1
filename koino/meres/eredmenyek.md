@@ -4010,3 +4010,64 @@ másért él (őrjárat, felület), kiszolgál.
 - ✅ ~~A telefonon a friss `main` és a teljes próbasor~~ — 714/714 zöld.
 - ⭐ Az (a) döntés folytatása: a kopogás-kör hozzárendelése a tábla-kulccsal (a négyszeres csere)
   — Csaba döntése szerint új sessionben.
+
+---
+
+## 44. ⛔ AZ AZONOS IP-JŰ IDEGEN A KÖR KÖNYVELÉSÉBEN — a délelőtti kísérlet próbává (2026-09-26 este, a laptopon)
+
+*Az (a) döntés folytatásának 1. lépése: előbb a mérés. A kísérlet (napló, 2026-09-26 délelőtt)
+most próba (`udpKapuProba.js`), és a hibát a próba nevezi meg.*
+
+**A helyzet:** az A egy NÉMA célra kopog, akitől a B-t várja (kötésből jött cél — a tábla-aláírója
+ismert). Közben a C, egy IDEGEN ugyanarról az IP-ről (egy család több készüléke egy router mögött),
+bekopog az A-hoz. A C munkája a végén megmondja, ki volt (a hamis munka a próbában egy
+névjegyzékből, a valódi a csere `kapottTablaKulcs`-ából).
+
+**1. Ma** (4 mp-es kör, a néma célra kopogunk; a néma cél egy kapott csomagot sem válaszol):
+
+```
+az idegen 300 ms-nál kopog be:   ok=true, sikeres=1 · a felelő port az IDEGENÉ · várt B, a munka szerint C
+                                 a néma cél 1 kopogást kapott · a kör 1325 ms után véget ért
+az idegen 1500 ms-nál kopog be:  ok=true, sikeres=1 · ugyanígy · 2 kopogás · a kör 2523 ms
+```
+
+⛔ **Két hiba, nem egy:** a néma célt sikeresnek könyveli, ÉS abbahagyja a kopogtatását — a kör
+„mindenki hallott" állapotba jut, és a határidő előtt véget ér.
+
+**2. Három változat a kapun** (ideiglenesen, `.bak`-ból visszaállítva):
+
+```
+a) a harmadik lépcső KI („kézenfekvő javítás"):   az új próba zöld · ⛔ a PORTVÁLTÁS-próba BUKIK
+b) a munka végén a tábla-aláíró felülbírálja:       mind a 10 zöld
+c) rossz javítás — az idegen elhallgattatása:      ⛔ az új próba BUKIK (és két régi is)
+```
+
+⭐⭐ **Az a) a lényeg:** cím szintjén a portváltás és az azonos IP-jű idegen **ugyanaz a helyzet**
+(halott/néma port + egy másik kapu ugyanarról az IP-ről) — a két próba egymás tükörképe, és csak
+az választja el őket, KIVEL dolgozott a munka. A portváltás-próba ezért most a várt aláírót is
+hordozza, és megköveteli, hogy a munka a B-vel menjen. A c) miatt a próba azt is megköveteli, hogy
+az idegennel a munka lefusson (postaláda): *a javítás nem lehet a bekopogó elhallgattatása.*
+
+**3. ⭐⭐ A b) vázlattal a KOPOGÁS nem javul:**
+
+```
+az idegen 300 ms-nál:   ok=false (helyes) · a néma cél 1 kopogást kapott · a kör 1326 ms
+az idegen 1500 ms-nál:  ok=false (helyes) · 2 kopogás · a kör 2519 ms
+```
+
+A könyvelés a munka VÉGÉN javítható — a kopogás viszont a munka ELEJÉN áll le (a HALLAK-nál). Ha a
+valódi B csak késve felelne, ebben a körben már nem kopognánk rá. ⏸️ **Ez a (i) döntési kérdés
+második fele** — a próba szándékosan nem dönti el.
+
+**4. ⚠️ Egy következmény a (i)-hez:** a tábla-aláíró csak a KÖTÉSBŐL jött célnál ismert. A friss
+UDP-címekből és az induló címekből jött célnál nincs várt társ — ott a munka végén derül ki
+először, ki felelt, tehát ott a b) sem tud mit összevetni.
+
+**5. Az ISMERT HIBA jel** (`probaFuttato.js`): a próba a javításig bukik, de a sort nem pirosítja be
+— külön sorban, néven nevezve látszik (`714 rendben · 1 ismert hiba nyitva`). ⛔ Szigorú, mindkét
+irányban, rontás-próbával mérve: ha az ismert hiba próbája ÁTMEGY (a b) vázlattal kipróbálva), az
+bukás (*„a hiba eltűnt — vedd le a jelet"*, kilépési kód 1); ha KIVÉTELT dob, az is bukás.
+
+### ⏭️ A KÖVETKEZŐ
+- A 2. lépés: a négyszeres csere mérése helyben (hurok-cím + helyi cím = egy társ két címen).
+- A 3. lépés: a (i)–(iii) döntési kérdések Csabának — a (i)-be a 3. és a 4. pont lelete is.
