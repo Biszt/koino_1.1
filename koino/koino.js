@@ -438,9 +438,12 @@ function szovegOlvasoKeszites(blob) {
  * randevúban jön, mint a szöveg, nem egy bulival később.
  * ⚠️ Csak az lehet szöveg-darab, ami JSON-szöveggel vagy -tömbbel kezdődik (`"` vagy `[`);
  * egy kép bájtjait nem próbáljuk szövegként olvasni.
+ * ⛔ Legfeljebb `hany`-at ad (a randevú kérés-kerete, `fajlRandevu`): amint megvan, nem járjuk
+ * tovább a darabot — a többi a következő körben igény lesz.
  */
 function szovegKepeiKeresre(blob) {
-  return async (lenyomat) => {
+  return async (lenyomat, hany = Infinity) => {
+    if (hany <= 0) return [];
     const bajtok = await blob.olvas(lenyomat);
     if (!bajtok || (bajtok[0] !== 0x5b && bajtok[0] !== 0x22)) return [];
     let szoveg;
@@ -448,6 +451,7 @@ function szovegKepeiKeresre(blob) {
     if (!Array.isArray(szoveg)) return [];
     const kellenek = [];
     for (const blokk of szoveg) {
+      if (kellenek.length >= hany) break;
       const l = lenyomatUrlbol(blokk?.url);
       if (l && !kellenek.includes(l) && !(await blob.van(l))) kellenek.push(l);
     }
@@ -1170,7 +1174,9 @@ function resMunkaKeszito(allapot) {
       kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
         + ' megjött' + (randevu.bajt ? ' (' + adatMennyiseg({ bajtKuldott: randevu.bajt }) + ')' : '')
         + ', ' + randevu.kiszolgalt + ' elment'
-        + (randevu.bukott ? ', ' + randevu.bukott + ' nem jött át' : '') + SZIN.vege);
+        + (randevu.bukott ? ', ' + randevu.bukott + ' nem jött át' : '')
+        // ⭐ A korlát miatt kimaradtat kimondjuk (D19) — nem veszett el, a következő kör hozza.
+        + (randevu.korlatElerve ? ' · a többi a következő körben (kérés-korlát)' : '') + SZIN.vege);
     }
     return { ...alap, fajlMegjott: randevu.kesz ?? 0 };
   };
@@ -3407,7 +3413,9 @@ try {
 
         if (randevu.kesz || randevu.bukott || randevu.kiszolgalt) {
           kiir(SZIN.halvany + '  ' + randevu.kesz + ' megérkezett · ' + randevu.bukott
-            + ' nem sikerült · ' + randevu.kiszolgalt + ' fájlt adtam neki' + SZIN.vege);
+            + ' nem sikerült · ' + randevu.kiszolgalt + ' fájlt adtam neki'
+            + (randevu.korlatElerve ? ' · a többi a következő körben (kérés-korlát)' : '')
+            + SZIN.vege);
         }
 
         // ⛔ A FOGLALATOT CSAK MOST ZÁRJUK — a fájlok utolsó szelete után.

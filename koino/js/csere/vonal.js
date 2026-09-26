@@ -366,7 +366,17 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       }
       // ⭐ A TANULT BIRTOKLÁS a hívóhoz megy vissza — a `vonal.js` **nem ír jegyzetet**,
       // mert az már nem szállítás (1. szabály: a logika és a vonal külön él).
-      fajlokNala = Array.isArray(ove.van) ? ove.van : [];
+      //
+      // ⛔⛔ CSAK ARRÓL, AMIT KÉRDEZTÜNK (2026-09-27, átnézés). A KÉRDÉST a válaszadó eddig is
+      // korlátozta (`valaszOsszeallitasa`), a VÁLASZT viszont úgy vettük át, ahogy jött: egy
+      // társ akármennyi lenyomatot bemondhatott, és a randevú mindet sorban elkérte, a
+      // birtoklás-jegyzet pedig mindet megjegyezte. ⭐ A metszet a saját kérelmünkkel — ami
+      // korlátos (`KERELEM_KORLAT`) — a választ is korlátossá teszi (9. szabály), és amit nem
+      // kérdeztünk, arról a társ szava nem tanulság (3. szabály).
+      const kerdeztuk = new Set(Array.isArray(sajatKerelem) ? sajatKerelem : []);
+      fajlokNala = Array.isArray(ove.van)
+        ? [...new Set(ove.van)].filter((lenyomat) => kerdeztuk.has(lenyomat))
+        : [];
     }
 
     // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — 2026-09-26 óta csak UDP-címek -----

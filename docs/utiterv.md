@@ -16,7 +16,7 @@
 > *„végtelenig lehessen skálázni"* — egy készülék terhe ne a koino méretétől függjön (a 9.
 > szabály élesítése). ✅ **D72** — a szeletelés döntései ([`szeleteles_terv.md`](szeleteles_terv.md)),
 > és az **A lépés: a gondolat szövege külön darab** (`js/esemeny/szovegDarab.js`). A **48. mérés**
-> az S3–S4 alapvonala. **740 önpróba.** ⏭️ **A következő: B — az entitásonkénti tár**
+> az S3–S4 alapvonala. **744 önpróba.** ⏭️ **A következő: B — az entitásonkénti tár**
 > (szeletenként egy hozzáfűzhető fájl, jegyzék, lusta betöltés), utána **C** (a csere
 > szeletenként). A részletek a [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS (2026-09-27 hajnal)"
 > blokkjában. ⚠️ A telefon régi kódon fut — a következő terepi mérés előtt frissíteni kell.

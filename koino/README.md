@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonnyolc próba-fájl, **740 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Huszonnyolc próba-fájl, **744 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **188 fájl, 3277,1 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **188 fájl, 3285,4 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*

@@ -56,6 +56,7 @@
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
 import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton } from './vonal.js';
+import { KERELEM_KORLAT } from './fajlKerelem.js';
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -1106,8 +1107,13 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
  * @param {Object} beallitas.tar - az esemény-tár (a kiszolgáló párbeszédhez)
  * @param {string} beallitas.koino
  * @param {Function} [beallitas.fajlOlvas] - (lenyomat) → bájtok|null
+ * @param {Function} [beallitas.ujKerhetok] - async (lenyomat, hany) → legfeljebb `hany`
+ *        további lenyomat, ami egy megérkezett fájlból derült ki (D72: a szöveg képei)
+ * @param {number} [beallitas.kerdesKorlat] - egy randevún legfeljebb ennyi fájlt kérünk
+ *        (alapból `KERELEM_KORLAT`)
  * @returns {Promise<{kesz: number, bukott: number, bajt: number, kiszolgalt: number,
- *                    szerep: 'kerek-elobb'|'kiszolgalok-elobb'|'nem-tudom'}>}
+ *                    szerep: 'kerek-elobb'|'kiszolgalok-elobb'|'nem-tudom',
+ *                    korlatElerve: boolean}>}
  */
 export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   const {
@@ -1115,8 +1121,17 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     fajlOlvas = null, korlat = Infinity,
     varakozasiIdo = TETLENSEG_ALAP, utana = () => {},
     // ⭐ D72 (2026-09-26): egy megérkezett fájlból kiderülhet, hogy MÁS fájlok is kellenek —
-    // a szöveg-darabban képek lehetnek. (async lenyomat → további lenyomatok)
-    ujKerhetok = null
+    // a szöveg-darabban képek lehetnek. (async lenyomat, hany → további lenyomatok)
+    ujKerhetok = null,
+    // ⛔⛔ EGY RANDEVÚ KÉRÉSEINEK SZÁMA FELÜLRŐL KORLÁTOS (2026-09-27, átnézés). A kérés-sor
+    // két helyről nőhet: a társ válaszából (`kerhetok`), és a megérkezett szöveg-darabok
+    // képeiből (`ujKerhetok`) — ez utóbbit a darab SZERZŐJE szabja meg, és egy 2 MB-os
+    // blokk-tömb több tízezer képre hivatkozhat. Korlát nélkül a randevú hossza a darab
+    // tartalmától függött volna, egyenként, sorban kérve (9. szabály). ⭐ Ami kimarad, nem
+    // vész el: a fájl-igény a következő körben újra látja (a meglévő szöveg képei is igények).
+    // ⚠️ Az őr a RÉTEGBEN van, alapértékkel — ha a hívóra bíznánk, az egyik út megtenné, a
+    // másik elfelejtené.
+    kerdesKorlat = KERELEM_KORLAT
   } = beallitas;
 
   // ⭐ A RANDEVÚ MINDKÉT FÁZISA TÖMEG-FORGALOM — kérünk vagy adunk, mindkettő fájl.
@@ -1136,14 +1151,18 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   utana({ mi: 'SZEREP', szerep, sajatCim, tarsCim: ove });
 
   let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0;
+  // ⭐ Kimondjuk, ha a korlát miatt maradt ki valami (D19) — a maradék a következő körben jön.
+  let korlatElerve = false;
 
   /** ⭐ KÉRŐ FÁZIS: egyesével, mert a foglalaton egyszerre egy kapcsolat élhet. */
   const keroFazis = async () => {
     if (!tudjuk) return;                   // ⚠️ nem tudjuk, ki a soros — nem kérünk (lásd fent)
     // ⭐ D72: SOR, nem lista — egy megérkezett szöveg-darab képei a végére kerülnek, és még
     // ugyanebben a randevúban elkérjük őket (különben a kép egy bulival később jönne, mint a
-    // szöveg). ⚠️ Egy lenyomatot csak egyszer kérünk.
-    const sor = [...kerhetok];
+    // szöveg). ⚠️ Egy lenyomatot csak egyszer kérünk, és összesen legfeljebb `kerdesKorlat`-ot.
+    const egyediek = [...new Set(kerhetok)];
+    const sor = egyediek.slice(0, kerdesKorlat);
+    if (egyediek.length > sor.length) korlatElerve = true;
     const kert = new Set(sor);
     while (sor.length) {
       const lenyomat = sor.shift();
@@ -1153,8 +1172,13 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
         if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
         utana({ mi: e.kesz ? 'MEGJOTT' : 'NEM-JOTT', lenyomat, ok: e.ok, bajt: e.bajt ?? 0 });
         if (e.kesz && ujKerhetok) {
-          for (const uj of await ujKerhetok(lenyomat)) {
-            if (!kert.has(uj)) { kert.add(uj); sor.push(uj); }
+          // ⚠️ A maradék keretnél EGGYEL többet kérdezünk: ha annyi jön, tudjuk, hogy a korlát
+          // miatt maradt ki valami — és a kérdezett oldalnak sem kell az egész darabot bejárnia.
+          const maradek = kerdesKorlat - kert.size;
+          for (const uj of await ujKerhetok(lenyomat, maradek + 1)) {
+            if (kert.has(uj)) continue;
+            if (kert.size >= kerdesKorlat) { korlatElerve = true; break; }
+            kert.add(uj); sor.push(uj);
           }
         }
       } catch (hiba) {
@@ -1228,7 +1252,7 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
 
   if (!kerhetok.length && !kiszolgalasKell) {
     const semmi = { kesz: 0, bukott: 0, bajt: 0, kiszolgalt: 0, szerep, torlodasJel: jel,
-      kihagyva: true };
+      korlatElerve: false, kihagyva: true };
     console.log('fajlRandevu - VÉGE (nincs miről)', semmi);
     utana({ mi: 'NINCS-MIROL' });
     return semmi;
@@ -1242,7 +1266,7 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     await keroFazis();
   }
 
-  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel };
+  const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel, korlatElerve };
   console.log('fajlRandevu - VÉGE', eredmeny);
   return eredmeny;
 }

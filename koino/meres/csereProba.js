@@ -1162,6 +1162,116 @@ proba('⚠️ SZEREP NÉLKÜL sem ragad be — kiszolgál, és KIMONDJA, hogy ne
   }
 });
 
+// ===================================
+// ⛔⛔ A FÁJL-KÉRÉS KORLÁTOS — A VÁLASZ ÉS A RANDEVÚ IS (2026-09-27, átnézés)
+// ===================================
+//
+// ⛔ AMIT AZ ÁTNÉZÉS TALÁLT: a KÉRDÉST a válaszadó korlátozta (`valaszOsszeallitasa`), a
+// VÁLASZT viszont úgy vettük át, ahogy jött — egy társ akármennyi lenyomatot bemondhatott,
+// és a randevú mindet sorban elkérte. ⭐ A D72 óta egy második forrás is volt: a megérkezett
+// szöveg-darab képei (`ujKerhetok`), amiket a darab SZERZŐJE szab meg. Mindkettő a randevú
+// hosszát tette a társtól / a szerzőtől függővé (9. szabály).
+
+/** Egy érvényes alakú, de sehol meg nem lévő lenyomat (a fájl-tár a nevet ellenőrzi). */
+const hamisLenyomat = (i) => 'hamis' + String(i).padStart(38, '0');
+
+proba('⛔⛔ A FÁJL-VÁLASZBÓL CSAK AZ SZÁMÍT, AMIT KÉRDEZTÜNK — a társ nem bővítheti a listát', async () => {
+  const mienk = await ujTar();
+  const ove = await ujTar();
+  const kert = hamisLenyomat(1);
+  const eredmeny = await csereDroton(mienk, ove, '127.0.0.1', {
+    // Mi EGYET kérdezünk; ⚠️ a fájl-kör csak akkor megy, ha mindkét fél tud felelni.
+    egyikBeallitas: { fajlKerelem: [kert], fajlValasz: async () => [hamisLenyomat(900)] },
+    // ⛔ Ő a kérdezettet (kétszer) ÉS még ötvenet mond be, amit senki nem kérdezett.
+    masikBeallitas: {
+      fajlValasz: async () => [kert, kert, ...Array.from({ length: 50 }, (_, i) => hamisLenyomat(100 + i))]
+    }
+  });
+  const nala = eredmeny.fajlokNala ?? [];
+  const masikNala = eredmeny.masikEredmenye.fajlokNala ?? [];
+  // ⭐ Nálunk pontosan a kérdezett, egyszer; ⛔ ő semmit nem kérdezett, tehát nála semmi.
+  return nala.length === 1 && nala[0] === kert && masikNala.length === 0;
+});
+
+/**
+ * Egy randevú, ahol B kér A-tól: A-nál egy valódi fájl van, B a `beallitasB` szerint kér.
+ * @returns {Promise<{b: Object, hivasok: Array<number>}>} B eredménye, és hogy az
+ *          `ujKerhetok`-at mekkora kerettel hívták
+ */
+async function kerRandevu(kerhetokFn, beallitasB = {}) {
+  const { fajlBlobTarolo } = await import('../js/tar/fajlTar.js');
+  const helyA = await mkdtemp(join(tmpdir(), 'koino-korlat-a-'));
+  const helyB = await mkdtemp(join(tmpdir(), 'koino-korlat-b-'));
+  mappak.push(helyA, helyB);
+  const blobA = fajlBlobTarolo(KOINO, helyA);
+  const blobB = fajlBlobTarolo(KOINO, helyB);
+  const { lenyomat } = await blobA.ir(new Uint8Array(2048).fill(7));
+
+  const p = await udpParos();
+  const tarA = await ujTar();
+  const tarB = await ujTar();
+  try {
+    const [, b] = await Promise.all([
+      fajlRandevu(p.egyik, '127.0.0.1', p.masikPort, {
+        sajatCim: '127.0.0.1:' + p.egyikPort, kerhetok: [],
+        blob: blobA, tar: tarA, koino: KOINO,
+        fajlOlvas: (l) => blobA.olvas(l), varakozasiIdo: 500
+      }),
+      fajlRandevu(p.masik, '127.0.0.1', p.egyikPort, {
+        sajatCim: '127.0.0.1:' + p.masikPort, kerhetok: kerhetokFn(lenyomat),
+        blob: blobB, tar: tarB, koino: KOINO,
+        kiszolgalasKell: false,                  // A nem kér semmit
+        varakozasiIdo: 500,
+        ...beallitasB
+      })
+    ]);
+    return b;
+  } finally {
+    p.bezar();
+  }
+}
+
+proba('⛔⛔ A RANDEVÚ KÉRÉSEI FELÜLRŐL KORLÁTOSAK — a társ listája és a szöveg-darab képei is', async () => {
+  // ----- 1. A TÁRS LISTÁJA TÖBB, MINT A KERET -----
+  const lista = await kerRandevu(
+    () => Array.from({ length: 10 }, (_, i) => hamisLenyomat(i)), { kerdesKorlat: 2 });
+
+  // ----- 2. A MEGÉRKEZETT DARAB „KÉPEI" TÖBBEK, MINT A MARADÉK KERET -----
+  // ⚠️ A `ujKerhetok` itt SZÁNDÉKOSAN nem tartja be a kapott keretet — a rétegnek akkor is
+  // korlátosnak kell maradnia, ha a hívó elfelejti.
+  const hivasok = [];
+  const kepek = await kerRandevu((valodi) => [valodi], {
+    kerdesKorlat: 4,
+    ujKerhetok: async (_l, hany) => {
+      hivasok.push(hany);
+      return Array.from({ length: 200 }, (_, i) => hamisLenyomat(500 + i));
+    }
+  });
+
+  return lista.kesz + lista.bukott === 2 && lista.korlatElerve === true
+    // ⭐ A valódi megjött, és a 200 „képből" pontosan a maradék keret (3) ment ki kérésként.
+    && kepek.kesz === 1 && kepek.bukott === 3 && kepek.korlatElerve === true
+    // ⭐ A kérdezett oldal a maradék keretnél eggyel többet kapott (3 + 1) — nem a végtelent.
+    && hivasok.length === 1 && hivasok[0] === 4;
+});
+
+proba('⛔ A KORLÁT A RÉTEGBEN VAN — keret nélkül hívva is legfeljebb KERELEM_KORLAT kérés', async () => {
+  const { KERELEM_KORLAT } = await import('../js/csere/fajlKerelem.js');
+  const b = await kerRandevu((valodi) => [valodi], {
+    ujKerhetok: async () => Array.from({ length: KERELEM_KORLAT + 30 }, (_, i) => hamisLenyomat(700 + i))
+  });
+  return b.kesz === 1 && b.kesz + b.bukott === KERELEM_KORLAT && b.korlatElerve === true;
+});
+
+// ⭐ ÉS A PÁRJA: a keret alatt semmi nem változik — nincs „korlát elérve", minden kép jön.
+proba('⭐ A KERET ALATT minden kért fájl megy, és nincs „korlát elérve" jelzés', async () => {
+  const b = await kerRandevu((valodi) => [valodi], {
+    kerdesKorlat: 5,
+    ujKerhetok: async () => [hamisLenyomat(801), hamisLenyomat(802)]
+  });
+  return b.kesz === 1 && b.bukott === 2 && b.korlatElerve === false;
+});
+
 proba('⭐⭐ A CSERE ÁTMEGY A UDP-RÉSEN — ugyanaz a protokoll, más szállítás', async () => {
   const anna = await ujEember(KOINO);
   const egyikTar = await ujTar(); await ment(egyikTar, await lanc(anna, 3));
