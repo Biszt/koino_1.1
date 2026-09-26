@@ -149,18 +149,41 @@ Az új csere nem érti a régit. ⏸️ A 7. szakasz 3. kérdése.
 
 ## 5. A LÉPÉSEK — mindegyik mérve, próbával és rontás-próbával
 
-1. **A szelet-lenyomat és a tartomány-egyeztetés logikája** (`csere.js` mellé, hálózat nélkül —
-   1. szabály): tiszta függvények, önpróbával. ⭐ **Mérés:** ugyanaz, mint a 48.-é — 1 eltérés
-   100 000 esemény közt → hány bájt, ha a két fél egy közös szeleten osztozik, és ha tízen.
-2. **A csere új üzenetei** (`vonal.js`): az érdeklődési halmaz, a közös-szelet-lenyomat, a
-   tartományok, a kérés. A társankénti emlékezet a kötés-jegyzék mellé (helyi, sosem utazik).
-3. **Az entitásonkénti tár** (`fajlTar.js`): szelet-fájlok, jegyzék, lusta betöltés, a saját lánc
-   mutatója, az író mögött; az egyszeri szétválogatás. ⭐ **Mérés:** a megnyitás ideje 100 000
-   eseménynél (ma 813 ms).
-4. **A hétköznapi út leválasztása a `betolt()`-ről:** a csere és a számítás a helyi szeletekből
-   dolgozik. *(A parancssor-próbák ellenőrzik, hogy minden parancs ugyanazt adja, mint előtte.)*
-5. **Az érdeklődés szabálya** (mit tart egy készülék) — a 7. szakasz 1. kérdése szerint.
-6. **Terepen, a telefonnal:** a csendes kör ára, és egy új gondolat útja.
+⭐ **A D72 után (Csaba, 2026-09-26 éjjel: a szöveg külön darab, és a (b)):** a sorrendet a
+függőségek adják. Az A és a B NEM függ a még nyitott 2–4. kérdéstől (a csere protokolljától), tehát
+azokkal indulunk.
+
+**A. A SZÖVEG KÜLÖN DARAB** (D72/2 — a csere protokolljától független)
+1. Az új gondolat és a szerkesztési javaslat a szöveget nem hordozza, csak a **lenyomatát** (és a
+   bemondott `meret`-et, D26); a szöveg a fájl-tárba kerül (ugyanoda, ahol a képek: `fajlBlobTarolo`).
+2. A számítás a lenyomatot viszi az állapotba; a **megjelenítés** (a pakli, a felület, a parancssor)
+   oldja fel szöveggé — ha nincs meg, „a szöveg még nem érkezett meg", nem hiba (D19).
+3. A szöveg a résen jön, **mint egy kép** (a fájl-randevú): aki az entitást tartja vagy megnyitja,
+   annak kell. ⚠️ A `fajlIgeny.js` (milyen képekre hivatkozik egy entitás) a szöveg lehozása UTÁN
+   tudja meg a képeit — ezt végig kell vezetni.
+4. ⭐ **A próba, ami a D72 ígéretét őrzi:** két készülék, az egyiknél megvan a szöveg, a másiknál
+   nincs → **azonos állapot-ujjlenyomat**. És: a régi (szöveget hordozó) esemény ugyanúgy számol.
+
+**B. AZ ENTITÁSONKÉNTI TÁR** (S3 — a protokolltól független)
+5. Szelet-fájlok, jegyzék, lusta betöltés, a saját lánc mutatója, az író mögött; az egyszeri
+   szétválogatás. ⭐ **Mérés:** a megnyitás ideje 100 000 eseménynél (ma 813 ms).
+
+**C. A CSERE SZELETENKÉNT** (S4 — a 7. szakasz 2–4. kérdése után)
+6. A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály). ⭐ **Mérés:**
+   ugyanaz, mint a 48.-é — 1 eltérés 100 000 esemény közt → hány bájt.
+7. ⭐ **A gyerek-bejelentés:** egy szülő szeletének egyeztetési halmaza = a saját eseményei + a
+   KÖZVETLEN GYEREKEI születési eseményei. *A szöveg külön darab (A), tehát ezek kicsik: a szülő köre
+   megtudja, hogy új gondolat született, a szövege nélkül.*
+8. A csere új üzenetei (`vonal.js`): az érdeklődési halmaz, a közös-szelet-lenyomat, a tartományok,
+   a kérés. A társankénti emlékezet a kötés-jegyzék mellé (helyi, sosem utazik). ⭐ Itt kap otthont
+   a D71 (iii) V2-je.
+9. **Az érdeklődés szabálya (D72/1):** a készülék a tudatpontos, a megnézett és a saját szeleteit
+   tartja; a hétköznapi út leválik a `betolt()`-ről (a csere és a számítás a helyi szeletekből).
+10. **A D63 lánc-gyökere** — a kettős lánc a szeletek között is lelepleződjön.
+
+**D. A BÖNGÉSZÉS ÚTJA** — a felület egy nem tartott entitást is megnyit (a `hozd`, S6, már megvan).
+
+**E. TEREPEN, a telefonnal:** a csendes kör ára, és egy új gondolat útja a szülő körében.
 
 ## 6. Amit a terv NEM old meg (és hol van a helye)
 
@@ -169,6 +192,9 @@ Az új csere nem érti a régit. ⏸️ A 7. szakasz 3. kérdése.
 - **A tömeges entitás összegző fája** (4.6) — az illesztés már most rá van szabva (4.2).
 
 ## 7. ⭐ DÖNTÉSI KÉRDÉSEK (Csabáéi)
+
+✅ **Döntve (D72, 2026-09-26 éjjel):** az **1.** → **(b)**, és az **5.** → **igen** (a szöveg külön darab).
+⏸️ **Nyitva:** a 2., a 3. és a 4.
 
 1. **Mit tartson egy készülék az első változatban?**
    - **(a) mindent, amit a társai kínálnak** — a mai viselkedés, de már szeletes szerkezetben: a

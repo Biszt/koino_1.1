@@ -3958,6 +3958,34 @@ A négy csere egy társsal egyperces körrel ~6,5–8 MB/nap; eggyel ~1,4 MB/nap
    semmit nem spórolna) — ⏭️ előbb a skálázási terv **S3–S4** (entitásonkénti tár, lenyomat és ÁLLÁS),
    és azokra a V2, a V3 és a tulajdonosi körök.
 
+### D72. A SZELETELÉS: ki mit tart, és a szöveg külön darab (2026-09-26 éjjel, Csaba)
+
+> *„igen, a szöveg legyen külön darab, és jöhet a b)."* — Csaba, a
+> [szeletelési terv](szeleteles_terv.md) 7. szakaszának 1. és 5. kérdésére
+
+**Amiből jött:** a „végtelen" elv (a 9. szabály élesítése, 2026-09-26) és a 48. mérés: ma a tár, a
+csere és a számítás is a KOINO méretével nő. A skálázási terv S3–S4 lépése a tárolás és a csere
+egységét a szeletre teszi — és ehhez el kellett dönteni, **mit tart egy készülék**.
+
+#### A DÖNTÉS
+
+1. ⭐ **(b) Egy készülék a SAJÁT érdeklődését tartja:** amire tudatpontot tett, amit megnézett
+   (SK11: megtartja), és a saját szeletét. *Nem köztes állapot: a szerkezet és a szabály együtt
+   épül meg.* Ehhez kell (a szeletelési terv 3/b és 7. szakasza): a gyerek-bejelentés (egy új
+   gondolat METAADATA a szülő körében terjed), a böngészés útja a felületen, és a D63 lánc-gyökere
+   (a kettős lánc a szeletek között is lelepleződjön).
+2. ⭐ **A gondolat szövege KÜLÖN DARAB, lenyomattal hivatkozva — ahogy a képek.** Az esemény a
+   metaadatot és a szöveg lenyomatát hordozza (kicsi, aláírt, ellenőrizhető); a szöveg úgy jön,
+   mint egy kép, és a lenyomat garantálja, hogy azt kaptuk, amit a szerző aláírt (3. szabály).
+   ⭐ **Átnézve (a mérés helyett, 2026-09-26):** a számítás a szöveg tartalmából semmit nem dönt el
+   — csak átmásolja és összeveti; a `meret` a szerző bemondása (D26). Ha az állapotba a LENYOMAT
+   kerül, minden gép ugyanazt az ujjlenyomatot számolja, akár lehozta a szöveget, akár nem. ⚠️ Ezt
+   próba fogja őrizni (két készülék, az egyiknél megvan a szöveg, a másiknál nincs → azonos
+   ujjlenyomat). ⚠️ A régi (szöveget hordozó) események érvényesek maradnak.
+
+⏸️ **Nyitva (a szeletelési terv 7. szakasza, 2–4.):** mit cseréljünk a közös szelet nélküli véletlen
+kötésekkel · tiszta törés a régi protokollal · tartomány-alapú szelet-egyeztetés.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
