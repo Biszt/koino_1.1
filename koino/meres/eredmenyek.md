@@ -4099,22 +4099,45 @@ két cím,     2 mp csúszás:     4 csere / ablak   (4 · 4 · 4 · 4 · 4)   ~
 Egy „nincs újdonság" csere helyben 0,9–1,2 KB (két címnél a nagyobb, mert a hirdetett címlista
 hosszabb). A B naplója minden sorban ugyanannyi cserét mutat, mint az A-é (egy csere = egy-egy sor).
 
-**2. ⭐ Terepen, ugyanaznap este** (a telefon a szomszéd wifijén, a laptop otthon — EGY élő cím):
+**2. ⭐ Terepen, ugyanaznap este — mindkét oldal naplójával** (a laptop otthon végig; a telefon
+18:46-tól a szomszéd wifijén, 19:21-től újra otthon; `orjarat 1` mindkettőn, a laptopét Claude
+futtatta, a telefonét Csaba — `tee ~/orjarat-szomszed.txt`):
 
 ```
-18:49:25  a laptop a tábláról megtalálja a telefon új címét (5.187.184.117:7373, 2 perce írta ki)
-18:50 … 19:00   minden percben PONTOSAN KÉT csere (11 percből 11-szer):
-   xx:00  a laptop köre  — rés 21–519 ms · 1,5 KB (egyszer 1,7)
-   xx:01  a telefon köre — rés 20–122 ms · 1,3 KB
+A SZOMSZÉDBAN — EGY élő cím (a telefon: 5.187.184.117:7373 · a laptop: 31.46.251.115:43079)
+T 18:46:42  indul · 18:47:07 a tábláról megvan a laptop címe · 18:47:54 kiírja a sajátját
+L 18:49:25  a tábláról megvan a telefon új címe (2 perce írta ki)
+T 18:49:59  rés nyílt: 31.46.251.115:43079 (119337 ms) — két perce kopogott rá, hiába
+18:50 … 19:19   minden percben PONTOSAN KÉT csere (a laptopon 30-ból 30-szor, a telefonon ugyanígy):
+   L xx:00 = T xx:58–59   a laptop köre  — rés 17–519 ms · 1,5 KB (néha 1,3 / 1,7)
+   L xx:01 = T xx:00      a telefon köre — rés 18–346 ms · 1,3 KB
+
+OTTHON — a telefon hazaér (19:20 körül hálózatot vált)
+T 19:21:00  rés nyílt: 192.168.1.134:7373 — a laptop HELYI címén (az induló címek közül)
+19:21 … 19:40   percenként KÉT csere, mind a helyi címen (19:21 és 19:22: egy-egy)
+   a NYILVÁNOS út (hairpinning) 19 perc alatt EGYSZER SEM nyílt meg: a laptop kopogott a telefon
+   nyilvános címére (…:43110 — „1/2 társ"), a telefon a laptopéra (…:43079 — „1/3 társ")
 ```
 
-⭐⭐ **Az irányok terepen nem olvadnak össze magától:** a telefon köre ~1 mp-cel a laptopé után
-indul (óra-eltérés vagy késő ébredés), amikor az első csere már véget ért. *Helyben 2 mp csúszás is
-elég a szétváláshoz — terepen tehát a „két irány = két csere" a szokásos eset, nem a kivétel.*
+⭐⭐ **Az irányok terepen nem olvadnak össze magától — és most látszik, miért:** a telefon órája
+~1–2 mp-cel késik a laptopéhoz képest (a laptop xx:00-s köre a telefon naplójában xx:58–59-kor
+érkezik). A telefon köre így az első csere VÉGE után indul. *Helyben 2 mp csúszás is elég a
+szétváláshoz — terepen tehát a „két irány = két csere" a szokásos eset, nem a kivétel.*
+
+⚠️ **A címek tényezője viszont nem biztos:** a 43. mérésen az otthoni router nyilvános útja 10
+perc kopogás után megnyílt (`624628 ms`), és négy csere lett; ma 19 perc alatt sem. *Hogy miért
+(a router a visszaforduló csomagot hol a nyilvános, hol a helyi feladóval adja tovább?), azt ez a
+mérés nem dönti el — csak azt, hogy a hairpinning nem minden nap ugyanaz.* A két cím így nem
+állandó ár, hanem alkalmi — az irány viszont minden percben ott van.
+
+⭐ **És az otthoni router cím szerint szűr** (a 43. mérés 179 mp-e után most másodszor): a telefon
+két percig kopogott a laptop nyilvános címére, és a rés csak akkor nyílt meg, amikor a laptop a
+tábláról megtudta a telefon új címét, és ő is kikopogott. A laptop külső portja közben **43079**
+(a router átírta a 7373-at), a telefoné a szomszédban **7373** maradt.
 
 **3. Mit jelent ez:**
-- A négy **két független tényező** szorzata, és mindkettőt mérve láttuk: a **címek száma** (×2 —
-  ez a (ii) kérdés) és az **irányok száma** (×2 — ez a (iii) kérdés). Az egyik nélkül 2 marad,
+- A négy **két független tényező** szorzata, és mindkettőt mérve láttuk: a **címek száma** (×2, ha
+  a második út megnyílik — ez a (ii) kérdés) és az **irányok száma** (×2 — ez a (iii) kérdés). Az egyik nélkül 2 marad,
   mindkettő nélkül 1.
 - ⭐ **Az ár:** egyperces körrel egy készüléknek egy társsal ma **~6,5 MB/nap** (helyben, négy
   cserével; terepen a nagyobb cserékkel ~8), egy címen két iránnyal ~4 MB/nap (terepen mérve),
@@ -4132,9 +4155,15 @@ elég a szétváláshoz — terepen tehát a „két irány = két csere" a szok
 - **A „ismeretlen kopogott be" felirat ISMERT társra is kiíródik** (helyben a 2 és 15 mp-es
   csúszásnál: a B-re, akire az A is kopog — csak épp nem az utolsó 15 mp-ben). A felirat a kapu
   `BEKOPOGO-CEL` jelzéséből jön, ami azt jelenti: *„most nem mi kezdtük"*, nem azt, hogy
-  *„nem ismerem"*. A terepi napló olvasásakor ez félrevezet.
+  *„nem ismerem"*. A terepi napló olvasásakor ez félrevezet (terepen is: a telefon percenként
+  kiírja a laptopról).
+- **Egy lassú tábla-írás egy egész ablakot elvitt** (a nyitott *„a kopogás saját üteme"* első
+  terepi mérése): hazaérve a telefon 19:21:06-tól 19:22:14-ig írt a táblára, és a 19:22-es köre
+  kimaradt — a kör sorban megy (kopogás → tábla → háztartás → várakozás a következő ablakra).
+- A telefon egy régi, néma kötése (`35oykowL…`) minden körben tábla-olvasást kap (*„nincs a
+  táblán"*) — ugyanaz, mint a 43. mérésen; a 3 célból így percenként egy sikeres.
 
 ### ⏭️ A KÖVETKEZŐ
 - A 3. lépés: a (i)–(iii) döntési kérdések Csabának — a 44. (i)-hez tartozó leletével és ezzel a
   szorzótáblával.
-- A telefon naplója (`~/orjarat-szomszed.txt`) a terepi sor másik oldala — ha megjön, ide.
+- ✅ ~~A telefon naplója~~ — megjött, fent a 2. pontban (a hazaérkezéssel együtt).

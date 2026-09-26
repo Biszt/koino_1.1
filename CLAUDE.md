@@ -79,9 +79,10 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
 2. ✅ **A négyszeres csere mérése helyben** ([`negyszeresCsereMeres.js`](koino/meres/negyszeresCsereMeres.js),
    [`eredmenyek.md`](koino/meres/eredmenyek.md) 45.): ⭐⭐ **a négy = a CÍMEK × az IRÁNYOK** — egy
    cím/egy irány 1 csere ablakonként, egy cím/két irány 2, két cím/egy irány 2, két cím/két irány 4.
-   Az irányokat a két kör csúszása választja szét: helyben 2 mp is elég, és ⭐ **terepen mérve
-   (ugyanaznap, a szomszédban, egy címen) 11 percből 11-szer 2 csere/perc** — a telefon köre ~1
-   mp-cel a laptopé után. Az ár egyperces körrel: négy cserével ~6,5 MB/nap, eggyel ~1,4. ⚠️
+   Az irányokat a két kör csúszása választja szét: helyben 2 mp is elég, és ⭐ **terepen, mindkét
+   oldal naplójával:** a szomszédban (egy cím) 30 percből 30-szor 2 csere/perc — a telefon órája
+   ~1–2 mp-cel késik; otthon a helyi címen szintén 2, mert a hairpinning ma 19 perc alatt sem nyílt
+   meg (a 43.-on 10 perc után igen). *A címek tényezője alkalmi, az irányoké minden percben ott van.* Az ár egyperces körrel: négy cserével ~6,5 MB/nap, eggyel ~1,4. ⚠️
    Mellékletek: két címen a bemelegítés eseményei kétszer utaznak; az *„ismeretlen kopogott be"*
    felirat ismert társra is kiíródik.
 3. ⭐ **Döntési kérdések Csabának, MIELŐTT építünk** (felírni, nem eldönteni): (i) ha a munka végén
@@ -96,7 +97,8 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
    függvények és a `parbeszed` `FAJLKEREK`-ága készen állnak, a résen próbával mérve.
 3. ⏸️ **IPv6:** a kapu IPv4-es. Kettős (IPv4+IPv6) kapu — külön lépés.
 4. ⏸️ **A kopogás saját üteme** (41. mérés): a tábla-olvasás (~20 mp néma kötésenként) még
-   megnyújtja a kört.
+   megnyújtja a kört — ⚠️ terepen mérve (45.): egy 68 mp-es tábla-írás a telefonon egy egész
+   ablakot kihagyatott.
 
 #### ⏸️ Ami nyitva maradt (terep és próbák)
 
@@ -209,7 +211,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **185 fájl, 3183,3 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **185 fájl, 3185,8 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -365,7 +367,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. A címek tényezőjét a tábla-kulcsos hozzárendelés felezné, az irányokét a (iii) döntés — együtt közel az ötödére. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 185 fájl, 3183,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 185 fájl, 3185,8 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
