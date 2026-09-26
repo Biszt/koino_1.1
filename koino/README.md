@@ -103,7 +103,7 @@ futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra il
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **185 fájl, 3221,0 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **186 fájl, 3237,9 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -160,6 +160,9 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
   védelem ÉS ár hat változatban, három jelzés-lencse, és `LEPCSO=1`-gyel a **két lépcső**
   (pénztárca-kapu + a tanúsítói lánc alakja). Kapcsolók: `MELEGIT` · `REJTOZO` · `KITARTO` ·
   `ALLANDO_KOROK` · `VISSZAVONAS` · `MEGTEVESZTETT` · `MEGHIVO_KORLAT`.
+- `node koino/meres/iranyokMeres.js [N K csúszás futás]` — ⭐⭐⭐ **egy csere ablakonként** (47. mérés):
+  esemény-szimuláció a kör valódi szerkezetével — lassít-e, ha a pár ablakonként egyszer cserél, és
+  mennyit ér, ha aki újat tanul, azonnal továbbadja;
 - `node koino/meres/negyszeresCsereMeres.js [csúszás mp] [ketto|egy] [ablak perc] [ablakok]` —
   ⭐ **a négyszeres csere** (45. mérés): két valódi őrjárat egy gépen, a társ egy vagy két címen,
   a két kör egyszerre vagy elcsúszva — hány csere megy egy ablakban, és mennyi bájt.

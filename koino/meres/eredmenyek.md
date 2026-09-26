@@ -4207,6 +4207,59 @@ régi (egy címes) bejegyzésből is lista lesz · a csoport a helyi címmel el�
 RANG dönt · a korlát társakat számol · a kihagyott cím az induló címek könyvelésében nem kudarc.
 
 ### ⏭️ A KÖVETKEZŐ
-- ⏸️ **(iii)** előbb a mérés: lassítja-e a hír terjedését, ha társanként ablakonként egy csere megy?
+- ✅ ~~**(iii)** előbb a mérés~~ — lásd a 47.-et.
 - A telefon frissítése, és egy otthoni terepi kör: a kötés megtanulja-e a helyi és a nyilvános utat
   (ha a hairpinning épp megnyílik), és utána egy csere megy-e.
+
+---
+
+## 47. ⭐⭐⭐ EGY CSERE ABLAKONKÉNT — és ami közben kiderült: a mai kör a hírt csak a következő ablakban adja tovább (2026-09-26 éjjel, szimuláció)
+
+*A D71 (iii) előtti mérés (Csaba: „csak a mérés után"). Eszköz: [`iranyokMeres.js`](iranyokMeres.js)
+— esemény-szimuláció a kör valódi szerkezetével: mindenki a SAJÁT órája szerinti ablak-határon
+kezd (0–2 mp csúszás, terepen ~1–2 mp-et mértünk), egy csere 0,3–1,5 mp, egy pár között egyszerre
+egy fut, az ismételt menet a kód szerint (csak ha a kör SAJÁT cseréi hoztak újat), a kapu közben
+bárkit kiszolgál. A hír az ablak előtt születik; 20 futás, magvas véletlennel.*
+
+**A négy változat:** MA · V1 — ha ebben az ablakban már volt csere a társsal, kihagyjuk (szó
+szerint) · V2 — csak ha azóta nem tudtunk meg semmi újat (nincs mit mondanunk), és az ismételt
+menet „akinek van mit mondanom" · V3 — a V2, és aki újat tanul (bármilyen cserében, a kapuja
+szolgálta ki is), maga továbbadja, még az ablakon belül, NAT-biztosan (csak akivel ebben az
+ablakban már volt csere).
+
+```
+                     a hír mindenkihez (medián · p90)                      nyugalomban, csere/pár/ablak
+N=50,   K=3    MA 63 · 121 mp   V1 182 · 241   V2 63 · 64     V3 4,9 · 5,2    MA 1,32 · V1–V3 1,00
+N=300,  K=3    MA 124 · 182     V1 302 · 361   V2 123 · 181   V3 7,0 · 7,7    MA 1,32 · V1–V3 1,00
+N=1000, K=3    MA 182 · 182     V1 362 · 421   V2 182 · 183   V3 7,8 · 8,2    MA 1,33 · V1–V3 1,00
+N=1000, K=5    MA 122 · 122     V1 242 · 242   V2 122 · 122   V3 5,6 · 6,1    MA 1,33 · V1–V3 1,00
+N=1000, K=3,   csúszás nélkül:  MA 182 · V1 421 · V2 182 · V3 7,1 mp            MA 1,00 · V1–V3 1,00
+```
+
+⭐ **A (iii) kérdésre a válasz:**
+- ⛔ **A V1 (szó szerint) kétszer lassít** (2–3 ablak → 4–7): kiüti az ismételt meneteket — a 30.
+  mérés leckéje, most a kör valódi szerkezetén.
+- ✅ **A V2 nem lassít** (minden esetben a mai idő), és a pár ablakonként pontosan EGY cserét csinál
+  (ma 1,32 véletlen csúszással; terepen — egy konkrét pár ~1–2 mp-es eltérésével — 2, 45. mérés).
+
+⭐⭐⭐ **ÉS AMI KÖZBEN KIDERÜLT — a V3:** a mai kód csak akkor ismétel, ha a kör SAJÁT cseréi hoztak
+újat. Amit a kapu egy **bekopogótól** tanul, miután a saját köre véget ért, az a **következő
+ablakig vár** — ezért kell ma 2–3 ablak (egyperces körrel 2–3 perc), mire egy hír mindenkihez
+eljut. ⭐ Ha aki újat tanul, maga továbbadja (V3), a hír **5–8 másodperc** alatt ér körbe — N=1000
+mellett is —, ugyanazzal az egy cserével nyugalomban. *A 30. mérés modellje ezt nem láthatta: ott
+az ablakon belül az összefüggő csoport feltételezve kiegyenlítődött.* A NAT-biztos alak (csak akivel
+ebben az ablakban már beszéltünk) ugyanolyan gyors: a hír az ablak elején terjed, amikor a párok
+épp frissen beszéltek.
+
+⚠️ **Egy csapda, amit a mérés maga mutatott meg:** a „mit tud már a társ tőlem" pillanatkép a
+csere KEZDETI állapota (kivéve, ha épp tőle tanultam). Az első változat a csere VÉGÉN rögzítette —
+ha közben mástól tanultam, azt hitte, a társ azt is tudja, és a V2 lassabbnak látszott a mainál
+(3–5 ablak). *A valódi építésnél ugyanez a csapda: a lenyomatot a csere elejéről kell venni.*
+
+⚠️ **Amit a szimuláció nem mér:** a hálózati hibát, a néma kötést, a NAT-rés nyitását, és a
+saját új eseményt a kör közepén (ma az is a következő körig vár — V3-ban a keletkezése is
+indíthatna továbbadást).
+
+### ⏭️ A KÖVETKEZŐ
+- ⭐ **Döntési kérdés Csabának:** V2 (csak az üres második cserét hagyjuk el — a mai sebesség, fele
+  annyi csere terepen) vagy V3 (és a hírt azonnal továbbadjuk — percekről másodpercekre)?

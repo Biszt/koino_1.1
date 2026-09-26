@@ -3948,7 +3948,11 @@ A négy csere egy társsal egyperces körrel ~6,5–8 MB/nap; eggyel ~1,4 MB/nap
    és a wifi; két hálózati kártya) a frissesség a két oldalon eltérhet, és megint két csere lenne.
    Ezért **rang** dönt (gépen belüli · helyi háló · link-local · nyilvános), ami a címből jön, tehát
    mindkét oldalon ugyanaz. A kihagyott cím a könyvelésben „kihagyva", nem kudarc.
-3. **(iii)** előbb a mérés (a terjedés az ablakonként egy cserével), aztán Csaba dönt, aztán építés.
+3. ✅ **(iii) mérve** (47. mérés, `iranyokMeres.js`): a szó szerinti szabály kétszer lassít; a
+   finomított (**V2** — csak ha azóta nincs mit mondanunk; az ismételt menet „akinek van mit mondanom")
+   nem lassít, és páronként ablakonként egy csere. ⭐ Mellette kiderült: a mai kör a bekopogótól tanult
+   hírt a következő ablakig tartja; a továbbadással (**V3**) a hír 5–8 mp alatt ér körbe (ma 2–3
+   ablak). ⏭️ Csaba dönt: V2 vagy V3 — aztán építés.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
