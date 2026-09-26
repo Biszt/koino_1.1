@@ -843,8 +843,8 @@ indexelni.
 | ~~**S1/c**~~ | ~~`agMeretSzamitasa` javítása~~ | I | ✅ **KÉSZ** (2026-09-03) — levelektől felfelé, egy menetben; a rejtett ciklus-veszély is elmúlt | mérve: **4 615 ms → 502 ms**, és **lineáris** |
 | ~~**S2/a**~~ | ~~A tár-illesztő szeletelhetővé tétele~~ | I | ✅ **KÉSZ** (2026-09-03) — `esemeny()` · `szerzoLanca()` · `szeletEsemenyei()` · `sorszamSzerint()`. A `betolt()` megmaradt, de **egyetlen hétköznapi művelet sem hívja** | 203 önpróba rendben |
 | **S2** | ⭐ **A KANONIKUS ALAK BŐVÍTÉSE** (`kiosztva` + `entitasSorszam` [+ `latott`]) | I | a három önhordó bizonyíték | rontás-próbák: elhallgatott esemény → **kimutatható ellentmondás** |
-| **S3** | **Entitás-szintű tár** | I | a tárolás egysége az entitás | a betöltött bájt az entitás méretével arányos |
-| **S4** | **Entitás-szintű lenyomat és ÁLLÁS** | I | a csere ára a **közös szeletektől** függ | S1 tárával: 1 eltérés 100 000 esemény közt → hány bájt |
+| **S3** | **Entitás-szintű tár** — ⏭️ részletes terv: [`szeleteles_terv.md`](szeleteles_terv.md) (2026-09-26) | I | a tárolás egysége az entitás | a betöltött bájt az entitás méretével arányos |
+| **S4** | **Entitás-szintű lenyomat és ÁLLÁS** — ⏭️ [`szeleteles_terv.md`](szeleteles_terv.md): tartomány-alapú halmaz-egyeztetés; alapvonal: 48. mérés | I | a csere ára a **közös szeletektől** függ | S1 tárával: 1 eltérés 100 000 esemény közt → hány bájt |
 | ~~**S5**~~ | ~~Címjegyzék az entitáson~~ | I | ✅ **KÉSZ** (2026-09-03) — név nélkül, elévüléssel, szeletenkénti korláttal | 10 önpróba |
 | ~~**S6**~~ | ~~Böngésző-lekérés („add ide E-t")~~ | I | ✅ **KÉSZ** (2026-09-03) — `SZELETKEREK`, visszafelé kompatibilisen; a `hozd` parancs | 4 önpróba: ⭐ **csak a kért szeletet hozza** |
 | **S7** | **Másolat-tartás** (4.5) | I | az elérhetőség a népszerűséggel nő | találati arány |

@@ -120,6 +120,14 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
    **S3 (entitásonkénti tár) és S4 (entitásonkénti lenyomat és ÁLLÁS)**, és azokra a V2, a V3 és a
    tulajdonosi körök szerinti terjedés.
 
+**⏭️⏭️ AZ S3–S4 (Csaba: „folytasd ezekkel", 2026-09-26 éjjel):** ✅ az alapvonal újramérve
+([48. mérés](koino/meres/eredmenyek.md): 1 eltérés cseréje 100 000 eseménynél 160 KB, 0,35% hasznos;
+az ÁLLÁS minden cserénél az összes eseményből, 239 ms) · ✅ a részletes terv:
+[`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) — a tár és a csere egysége a SZELET; a
+szelet-egyeztetés tartomány-alapú (az eltérések × log n, nem a tulajdonosok száma); az esemény
+NEM változik (nincs új koino). ⏭️ **Négy döntési kérdés Csabának** (a terv 7. szakasza), és csak
+utána építés.
+
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
 1. ⭐ **A 🅱️ változat (két mobil):** dönt a kimondott feltevésről (két cél-függő NAT).
@@ -180,7 +188,7 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
   Egy szeszélyes próba vagy a próba, vagy a program hibáját takarja — **mérni kell, nem zöldre
   hangolni**, és a bukásnak meg kell neveznie magát.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–47.).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–48.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 

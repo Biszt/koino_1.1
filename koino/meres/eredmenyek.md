@@ -4261,5 +4261,32 @@ saját új eseményt a kör közepén (ma az is a következő körig vár — V3
 indíthatna továbbadást).
 
 ### ⏭️ A KÖVETKEZŐ
-- ⭐ **Döntési kérdés Csabának:** V2 (csak az üres második cserét hagyjuk el — a mai sebesség, fele
-  annyi csere terepen) vagy V3 (és a hírt azonnal továbbadjuk — percekről másodpercekre)?
+- ✅ ~~Döntési kérdés Csabának: V2 vagy V3?~~ — Csaba (2026-09-26 éjjel): az entitások a
+  tudatpont-tulajdonosok szerint terjedjenek, és *„végtelenig lehessen skálázni"* → a V2 és a V3 az
+  **S3–S4 (entitásonkénti tár és csere) után**, arra épülve. Lásd a 48.-at.
+
+---
+
+## 48. ⭐ AZ S3–S4 ALAPVONALA — az S1 újra, a mai programon (2026-09-26 éjjel)
+
+*A skálázási terv S4 mérése (*„1 eltérés 100 000 esemény közt → hány bájt"*) az S1-ben már lefutott
+(2026-08-31); azóta a kód változott (alaki szűrés, új mezők, UDP), ezért újra: `skalaMeres.js`,
+500 e-ember, magvas generálás.*
+
+```
+esemény  | megnyitás | betölt+számítás | ÁLLÁS/fő | ÁLLÁS összeállítása | 1 eltérés cseréje | hasznos
+   1 000 |      —    |      12 ms      |  170 B   |          —          |      2,7 KB       |  ~20 %
+  10 000 |      —    |      94 ms      |  164 B   |          —          |       17 KB       |  3,5 %
+ 100 000 |   813 ms  |     878 ms      |  163 B   |   239 ms / csere    |    160,2 KB       |  0,35 %
+```
+
+⭐ **A 2026-08-31-i kép áll:** a koino-szintű lenyomat egyik méretnél sem egyezik, ha egy esemény
+eltér — minden kör a teljes, szerzőnkénti ÁLLÁS-ra esik vissza, és egy hasznos bájtra 100 000
+eseménynél **286 bájt forgalom** jut. ⚠️ **Két szám, ami a tervet érinti:** (1) az ÁLLÁS-t **minden
+csere újra összeállítja az ÖSSZES eseményből** (239 ms 100 000-nél) — nem csak a bájt, a számítás
+is a koinóval nő; (2) **egy esemény ma átlag 611 B** (a 08-31-i 476 helyett — az új mezők), tehát a
+tárolási becslések ~30%-kal nőnek. ✅ A mentés lapos (1 ms) — az S2/a óta.
+
+⭐ **A „végtelen" próbája (Csaba, 2026-09-26) ezen a táblán:** a csere ára, az ÁLLÁS összeállítása,
+a megnyitás és az állapot-számítás mind a KOINO méretével nő — egyik sem attól, amivel a készülék
+foglalkozik. Ez az S3–S4 kiindulópontja: [`docs/szeleteles_terv.md`](../../docs/szeleteles_terv.md).
