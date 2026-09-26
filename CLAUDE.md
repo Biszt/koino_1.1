@@ -15,122 +15,62 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-26)
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-27)
 
-### ▶️ SESSION-VÁLTÁS (2026-09-26 késő este) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️ SESSION-VÁLTÁS (2026-09-27 hajnal) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** a D69 (*„UDP mindenhol"*) kész — **nincs TCP a készülékek között**. ✅ **A 43.
-terepmérés** (telefon a szomszéd wifijén, laptop otthon): mindkét oldal a tábláról találta meg a
-másikat, a rés két router között nyílt ([`eredmenyek.md`](koino/meres/eredmenyek.md) 43.). ✅ **A
-D70 — EGY ÍRÓ** megépült, és **Androidon is mérve** (a telefonon 714/714,
-[`eredmenyek.md`](koino/meres/eredmenyek.md) 43/b.). **714 önpróba zöld** (27 próba-fájl) a laptopon
-és a telefonon; a munkakönyvtár tiszta, a telefon a friss `main`-en. *(A D72 A lépése óta:
-**740 próba, mind zöld** — a D71 (i)–(ii) és a D72 A lépése után, lásd lent.)*
+**Az állapot:** **740 önpróba zöld** (28 próba-fájl) · 188 fájl / 3277,1 KB · 0 npm-csomag · a
+munkakönyvtár tiszta. ⚠️ **A telefon régi kódon fut** (a 09-26-i `c6b74d8` körül) — a D72 óta a
+gondolat szövege külön darab, amit a régi program *„(ismeretlen alakú szöveg)"*-ként mutat: a
+következő terepi mérés előtt frissíteni kell (a parancs lent, *„Ami nyitva maradt"*).
 
-**Ahogy most működik (egy bekezdésben):** minden út az **állandó UDP-kapun** megy
-([`udpKapu.js`](koino/js/csere/udpKapu.js)), és ugyanazt a munkát végzi
-(`resMunkaKeszito` a [`koino.js`](koino/koino.js)-ben: csere · kötés · tanulás · fájl-randevú). Az
-**őrjárat** a kötésekre, a friss UDP-címekre és az **induló címekre** (`indulocimek.json`) kopog,
-**ismételt menettel**. A **`figyel`** = állandó kapu (postaláda). A **kézi `csere`/`hozd`/`tukor`**
-a parancs idejére nyit kaput. ⭐ **A tár `frissit()`-tel** olvassa be, amit más folyamat fűzött
-hozzá (sorban, egyszerre egy), ⭐⭐ **és a tár mögött az ÍRÓ áll** (D70,
-[`iro.js`](koino/js/tar/iro.js)): a fájlhoz csak az a folyamat fűz, amelyik a gépen belüli
-csatornán hallgat — a csatorna maga a zár. A kézi parancs a kész eseményt átadja, vagy ha nincs
-író, maga lesz az; a saját új esemény csak a lánc végére kerülhet.
+**Ami az előző sessionben (2026-09-26 késő este – 09-27 hajnal) megépült — a részletek a
+[naplóban](docs/claude_naplo.md), szó szerint:**
+- ✅ **D71 — a kopogás-kör a TÁRSAT keresi, nem a címét** (44–46. mérés): (i) a kötés célja a várt
+  tábla-aláírót hordozza, a munka visszaadja, kivel dolgozott; az azonos IP-jű, más portú válasz
+  csak feltevés, amit a munka aláírója dönt el (egy IP-n több kötésnél is) · (ii) egy kötés ≤3
+  címe csoportban, **rang szerint** (gépen belüli · helyi háló · link-local · nyilvános), sorban —
+  két címen 2 → 1 csere/ablak. ⏸️ **(iii)** mérve (47.): a „csak ha van mit mondanom" (V2) nem
+  lassít; a továbbadás (V3) percekről másodpercekre gyorsítaná a terjedést — ⛔ **de mindkettő az
+  S4 után**, mert a koino-szintű lenyomatra épülve nagy koinóban semmit nem érnének.
+- ⭐⭐⭐ **Csaba elve (a 9. szabály élesítése, lent): „végtelenig lehessen skálázni"** — egy készülék
+  terhe ne a koino méretétől függjön, hanem attól, amivel ő maga foglalkozik.
+- ✅ **D72 — a szeletelés döntései** ([fázis-2 terv](docs/fejlesztesi_terv_fazis2.md) D72,
+  [`szeleteles_terv.md`](docs/szeleteles_terv.md) 7.): a készülék a **saját érdeklődését** tartja
+  (b) · a gondolat **szövege külön darab** · a véletlen kötésekkel az érdeklődési lenyomat, a
+  gyerek-bejelentések, később a lánc-gyökerek · a régi protokollal **tiszta törés** · a
+  szelet-egyeztetés **tartomány-alapú**.
+- ✅ **A — A SZÖVEG KÜLÖN DARAB** (`c301501`): [`szovegDarab.js`](koino/js/esemeny/szovegDarab.js);
+  az esemény a szöveg lenyomatát hordozza, az állapot ettől független (próba őrzi); a randevú a
+  darab képeit ugyanabban a körben elkéri; a kézi út viszi a darabot.
+- ✅ **A 48. mérés — az S3–S4 alapvonala:** 1 eltérés cseréje 100 000 eseménynél **160 KB**
+  (0,35% hasznos); az ÁLLÁS minden cserénél az összes eseményből (239 ms); a megnyitás **813 ms**.
 
-⭐ **Kimondott feltevés (Csaba):** két cél-függő NAT között (két mobil szolgáltató) a pajzsfúrás
-nehéz lehet — **nem mértük**; addig úgy vesszük, hogy nem áll útban.
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION: B — AZ ENTITÁSONKÉNTI TÁR (Csaba, 2026-09-27)
 
-#### ⏭️⏭️ A KÖVETKEZŐ SESSION: AZ (a) DÖNTÉS FOLYTATÁSA (Csaba, 2026-09-26)
+> *„folytathatjuk a B)-vel, de csak a következő sessionban"* — Csaba
 
-> *(a):* „a terepmérés után a hozzárendelést a munka végén kapott tábla-kulcs erősítse meg" ·
-> és este: *„Az a) döntés folytatásával menjünk tovább, de csak másik sessionban."* — Csaba
+**A terv:** [`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) **3. szakasz** (a tár) és **5./B**
+(a lépés). Röviden:
+- **szeletenként egy hozzáfűzhető fájl** (`szeletek/<az azonosító első két jele>/<szelet>.jsonl`);
+- **egy kis jegyzék** (`szeletek.json`): szeletenként az eseményszám és a **szelet lenyomata** (a
+  rendezett esemény-azonosítókból) — a C lépés erre épít;
+- **a saját lánc mutatója** (sorszám → szelet) — a `szerzoLanca`/`lancVege` a sajátomra ebből;
+- ⭐ **lusta betöltés:** a megnyitás csak a jegyzéket olvassa (⭐ **mérés:** 100 000 eseménynél, ma
+  813 ms); az illesztés marad (S2/a), + `szeletek()` és `szeletLenyomata(szelet)`;
+- **az író mögött** (D70) · **egyszeri szétválogatás** (a régi `esemenyek.jsonl` megmarad
+  biztonsági másolatnak).
 
-⭐ **KÉT TÜNET, EGY HIÁNY:**
-1. **Téves hozzárendelés azonos IP-n.** A `udpKapu.js` `talal`-jának (317–319. sor) harmadik
-   lépcsője — *„azonos IP, más port = a célunk"*, a mobil NAT portváltása miatt — az IDEGEN
-   bekopogóra is lefut: egy **néma** célt sikeresnek könyvel, és **abbahagyja a kopogtatását**.
-   Kísérlettel mérve (a [napló](docs/claude_naplo.md) 2026-09-26-i délelőtti átnézése: néma port a
-   127.0.0.1-en + egy harmadik kapu ugyanarról az IP-ről bekopog → a néma célra `ok: true`). ⚠️ A
-   kézenfekvő javítás (bekopogóra ne fusson) a portváltó mobil NAT-ot rontaná el.
-2. **Négyszeres csere** (43. mérés): otthon két készülék két címen érte el egymást (helyi +
-   nyilvános — a router hairpinningel), és mindkettő a saját körében is kopogott → **percenként
-   négy csere**, egyenként ~1,4 KB; egyperces körrel társanként ~8 MB/nap.
+⚠️ **Amit a B elején ki kell mérni/dönteni, mielőtt építünk:**
+1. **A `frissit()` több fájl fölött:** ma egy fájl végét olvassa (amit MÁS folyamat fűzött hozzá,
+   43. mérés). Szeletenként sok fájl van — honnan tudja egy olvasó, melyik változott? (Jelölt: egy
+   rövid, hozzáfűzhető *változás-napló* az író mellett; vagy a jegyzék módosulása.) *Előbb mérni.*
+2. **A kézi út és a `koinoEsemenyei`:** a csere és a számítás a C-ig még az egész koinót kéri — a
+   B után is működnie kell (a `betolt()` a szeletekből áll össze), a C veszi ki a hétköznapi útból.
+3. **A régi alakú (szelet nélküli) események** a teszt-koinóban (`sajat`): hová kerülnek?
 
-⭐⭐ **A közös gyökér:** a kopogás-kör csak CÍMEKET ismer — hogy két cím ugyanaz a társ-e, az csak
-a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKulcs`, `vonal.js` 453. sor).
-
-**Hol van ma a tudás, és hol vész el:**
-- a kötés-jegyzék tudja a társ tábla-kulcsát (`alairo`), de a `kopogasCeljai` (`kotesek.js` 97.
-  sor) a célba csak címet tesz — **a várt azonosság elvész**, mielőtt a kör elindul;
-- a `resMunkaKeszito` (`koino.js`) a kapott tábla-kulcsot a kötés feljegyzéséhez felhasználja, de a
-  munka eredményében **nem adja vissza** (`return { ...alap, fajlMegjott }`) — **a kör nem tudja
-  meg, kivel dolgozott**.
-
-**Az indulás, sorban (előbb a mérés, aztán az építés):**
-1. ✅ **A délelőtti kísérlet önpróbává** (`udpKapuProba.js`, [`eredmenyek.md`](koino/meres/eredmenyek.md)
-   44.): néma cél + azonos IP-ről bekopogó idegen. ⭐ A próba **ISMERT HIBA** jellel áll
-   (`probaFuttato.js`: a sort nem pirosítja be, de ha átmegy, bukik — *a javítás vegye le a
-   jelet*). Mérve: cím szintjén ez **a portváltás-próba tükörképe** (a harmadik lépcső kikapcsolva
-   az új próba zöld, a portváltás bukik) — csak a várt tábla-aláíró választja szét őket, ezért a cél
-   `alairo`-t hordoz, a munka `alairo`-t ad vissza. ⭐⭐ **És egy lelet a (i)-hez:** a munka végi
-   felülbírálás (vázlatként kipróbálva: mind zöld) a KÖNYVELÉST javítja, a kopogást nem — a kör a
-   HALLAK-nál áll le, a néma cél a 4 mp-es körből 1 kopogást kap.
-2. ✅ **A négyszeres csere mérése helyben** ([`negyszeresCsereMeres.js`](koino/meres/negyszeresCsereMeres.js),
-   [`eredmenyek.md`](koino/meres/eredmenyek.md) 45.): ⭐⭐ **a négy = a CÍMEK × az IRÁNYOK** — egy
-   cím/egy irány 1 csere ablakonként, egy cím/két irány 2, két cím/egy irány 2, két cím/két irány 4.
-   Az irányokat a két kör csúszása választja szét: helyben 2 mp is elég, és ⭐ **terepen, mindkét
-   oldal naplójával:** a szomszédban (egy cím) 30 percből 30-szor 2 csere/perc — a telefon órája
-   ~1–2 mp-cel késik; otthon a helyi címen szintén 2, mert a hairpinning ma 19 perc alatt sem nyílt
-   meg (a 43.-on 10 perc után igen). *A címek tényezője alkalmi, az irányoké minden percben ott van.* Az ár egyperces körrel: négy cserével ~6,5 MB/nap, eggyel ~1,4. ⚠️
-   Mellékletek: két címen a bemelegítés eseményei kétszer utaznak; az *„ismeretlen kopogott be"*
-   felirat ismert társra is kiíródik.
-3. ✅ **Döntve: D71** ([fázis-2 terv](docs/fejlesztesi_terv_fazis2.md) — Csaba: *„elfogadom a
-   javaslataidat"*): (i) becsületes könyvelés — a várt társ „nem felelt", és a kör hívja tovább,
-   amíg a tábla-kulcs meg nem erősíti · (ii) társanként egy út: egy kötés címei egymás után, a helyi
-   elöl; az új címnél a munka után megjegyezzük, kié · (iii) társanként ablakonként egy csere —
-   ⛔ **csak a mérés után** (lassítja-e a hír terjedését?).
-
-**A D71 lépései:**
-1. ✅ **(i) megépült** (`udpKapu.js` · `kotesek.js` · `koino.js`): a kötés célja hordozza a várt
-   tábla-aláírót, a munka visszaadja, kivel dolgozott; az azonos IP-jű, más portú válasz feltevés,
-   amit a munka aláírója dönt el — ⭐ egy IP-n több kötésnél is (egy család egy router mögött).
-   Próbák: `udpKapuProba.js` (a 44. mérés ismert hibája zöld, a jel lekerült; + a család, a „más
-   felelt", a várt társ nélküli régi út) · `kotesProba.js` · ⭐ `parancssorProba.js` (három valódi
-   őrjárat: az idegen nem teszi elértté a néma kötést, a portváltó kötést a tábla-kulcs ugyanabban a
-   körben megerősíti). Rontás-próbák ágankénti bukással (öt a kapun, három a bekötésen). A napló két
-   új sora: *„egy kötésem új porton jelentkezett … a tábla-kulcsa megerősítette"* és *„… nem az a
-   kötésem, akit … vártam — őt hívom tovább"*.
-2. ✅ **(ii) megépült** (`kotesek.js` · `udpKapu.js` · `tarsak.js`): a kötés legfeljebb 3 címet
-   jegyez meg; a kör egy kötés címeit egy csoportként, **rang szerint** (gépen belüli · helyi háló ·
-   link-local · nyilvános — *a címből jön, így a két fél ugyanazt az utat választja*), sorban hívja,
-   és amint az egyiken elérte, a többit kihagyja (*„kihagyva"* — az induló címek könyvelésében nem
-   kudarc). ⭐ **Mérve (46.): két címen 2 → 1 csere/ablak, csúszással 4 → 2** — a címek tényezője
-   eltűnt, az irányoké maradt. A mérőeszköz egy hibáját is itt fogtuk meg (egy kör nélküli ablakot
-   „0 csere"-nek számolt). A `tabla` parancs a kötés összes címét mutatja.
-3. ✅ **(iii) mérve** ([`iranyokMeres.js`](koino/meres/iranyokMeres.js), [`eredmenyek.md`](koino/meres/eredmenyek.md)
-   47.): ⛔ a szó szerinti szabály (V1) **kétszer lassít**; ✅ a finomított (V2 — csak ha azóta nincs
-   mit mondanunk) **nem lassít**, és páronként ablakonként pontosan egy csere. ⭐⭐⭐ **És kiderült:** a
-   mai kód a bekopogótól tanult hírt a következő ablakig tartja — ezért kell ma 2–3 ablak, mire egy
-   hír mindenkihez eljut; ha aki újat tanul, maga továbbadja (V3), **5–8 mp** (N=1000 mellett is).
-   ⭐⭐ **Csaba döntései (2026-09-26 éjjel):** a címek megosztása és az entitások terjedése KÜLÖN
-   kérdés; az entitások a **tudatpont-tulajdonosok szerint** terjedjenek (+ véletlen kötések, 4.2/b);
-   és ⭐ **„végtelenig lehessen skálázni"** (a 9. szabály élesítése, lent). ⛔ Ezért a V2 és a V3 **nem
-   a koino-szintű lenyomatra épül** (nagy koinóban az soha nem egyezik) — előbb a skálázási terv
-   **S3 (entitásonkénti tár) és S4 (entitásonkénti lenyomat és ÁLLÁS)**, és azokra a V2, a V3 és a
-   tulajdonosi körök szerinti terjedés.
-
-**⏭️⏭️ AZ S3–S4 (Csaba: „folytasd ezekkel", 2026-09-26 éjjel):** ✅ az alapvonal újramérve
-([48. mérés](koino/meres/eredmenyek.md): 1 eltérés cseréje 100 000 eseménynél 160 KB, 0,35% hasznos;
-az ÁLLÁS minden cserénél az összes eseményből, 239 ms) · ✅ a részletes terv:
-[`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) — a tár és a csere egysége a SZELET; a
-szelet-egyeztetés tartomány-alapú (az eltérések × log n, nem a tulajdonosok száma); az esemény
-NEM változik (nincs új koino). ✅ **D72 (Csaba, 2026-09-26 éjjel): (b) — a készülék a saját
-érdeklődését tartja; és a gondolat SZÖVEGE KÜLÖN DARAB** (lenyomattal hivatkozva, mint a képek; a
-metaadat a szülő körében terjed). ⏭️ **A lépések** (a terv 5. szakasza): **A** — a szöveg külön
-darab · **B** — az entitásonkénti tár (mindkettő független a csere protokolljától) · **C** — a csere
-szeletenként, a gyerek-bejelentéssel és a D63-mal (⏸️ a terv 7./2–4. kérdése után: a véletlen
-kötések · tiszta törés · tartomány-alapú egyeztetés).
+**Utána:** **C** — a csere szeletenként (a gyerek-bejelentéssel, a D63 lánc-gyökérrel, és a V2
+itt kap otthont) · **D** — a böngészés útja a felületen · **E** — terepen, a telefonnal.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -154,6 +94,9 @@ kötések · tiszta törés · tartomány-alapú egyeztetés).
   HALLAK elvész, a kör *„rés nyílt, de a csere elbukott”* lesz (a következő menet pótolja).
 - ⏸️ **A sikerszámlálás javítása** (a UDP-sikereket a TCP-kör felülírta) magától jött a TCP-kör
   kivételével; külön próbája nincs.
+- ⏸️ **A D72 A-ból maradt (a D lépés része):** a `hozd` csak az eseményeket hozza, a szöveg-darabot
+  nem (a következő randevú hozza) · a felület a még meg nem érkezett szöveget üresen mutatja (a
+  kiszolgáló kimondja: `szovegHianyzik`, a lap még nem írja ki).
 - ⚠️ **A telefon + laptop teszt-koinója (`sajat`) régi alakú eseményeket hordoz** (a 09-06-i
   átnevezés és a D42 előttről) — a két terepi gondolat ezért nem számít (esemény nem írható át);
   az új pont-események a javítás óta már igen.
