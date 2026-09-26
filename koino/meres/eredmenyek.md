@@ -4164,6 +4164,49 @@ tábláról megtudta a telefon új címét, és ő is kikopogott. A laptop küls
   táblán"*) — ugyanaz, mint a 43. mérésen; a 3 célból így percenként egy sikeres.
 
 ### ⏭️ A KÖVETKEZŐ
-- A 3. lépés: a (i)–(iii) döntési kérdések Csabának — a 44. (i)-hez tartozó leletével és ezzel a
-  szorzótáblával.
+- ✅ ~~A 3. lépés: a (i)–(iii) döntési kérdések Csabának~~ — döntve: **D71** (Csaba elfogadta a
+  javaslatokat); az (i) és a (ii) megépült, lásd a 46.-ot.
 - ✅ ~~A telefon naplója~~ — megjött, fent a 2. pontban (a hazaérkezéssel együtt).
+
+---
+
+## 46. ⭐⭐ D71 (ii) — A CÍMEK TÉNYEZŐJE ELTŰNT: két címen is egy csere (2026-09-26 este, a laptopon)
+
+*A 45. mérés eszközével (`negyszeresCsereMeres.js`), a D71 (i) és (ii) után: a kötés megjegyzi a
+társ címeit, a kör egy csoportként, rang szerint, sorban hívja őket, és amint az egyiken elérte,
+a többit kihagyja.*
+
+```
+                                        a 45. mérés (előtte)     a D71 (ii) után
+két cím,  csúszás nélkül                2 · 2 · 2 · 2 · 2        1 · 1 · 1 · 1 · 1   (kétszer mérve)
+két cím,  2 mp csúszás                  4 · 4 · 4 · 4 · 4        2 · 2 · 2 · 2 · 2
+két cím,  15 mp csúszás                 4 · 4 · 4 · 4 · 4        2 · 2 · 2 · 2 · 2
+egy cím,  15 mp csúszás (kontroll)      2 · 2 · 2 · 2 · 2        2 · 2 · 2 · 2 · 2
+```
+
+⭐ **A címek tényezője eltűnt, az irányoké maradt** — az a (iii)-é. Minden csere a hurok-címen megy
+(a rang: a gépen belüli cím előbb, mint a helyi háló — *mindkét oldalon ugyanaz az út*). Egyperces
+körrel két címen, egy iránnyal ~1,5 MB/nap (előtte ~3,2).
+
+⚠️ **A bemelegítés még két csere:** az első találkozáskor mindkét cím névtelen induló cím, tehát
+mindkettőn lemegy a csere (az események ma is kétszer utaznak, 2 × 3,8 KB). A kötés EZUTÁN tudja,
+hogy a két cím egy társ — *a tanulás ára egyszeri*.
+
+⛔⛔ **A MÉRŐESZKÖZ HIBÁJA, AMIT ITT FOGTUNK MEG:** az első futás `0 · 1 · 1 · 1 · 1`-et adott. A
+nyers naplóval megismételve minden ablakban volt csere — az üres ablakot a MÉRÉS okozta: ha a két
+gép néhány másodperccel egy ablak-határ előtt indult, az első kör (két menettel) átnyúlt a
+határon, és a program a KÖVETKEZŐ ablakig várt, tehát abban az ablakban nem volt kör. *Ugyanaz a
+jelenség, mint a telefon kimaradt köre a 68 mp-es tábla-írás után (45.).* A 45. mérésen véletlenül
+nem jött elő. ✅ Az eszköz ma a számolást csak azután kezdi, hogy mindkét gép lezárta az első
+körét.
+
+**A kapu és a kötés próbái** (mind rontás-próbával, ágankénti bukással): az első cím felel → a
+másodikra rá sem kopogunk, és a könyvelés *„kihagyva"*-t mond · az első néma → egy kopogás-köz után
+a második · az első címen más felel → a második · a kötés legfeljebb három címet jegyez meg · a
+régi (egy címes) bejegyzésből is lista lesz · a csoport a helyi címmel elöl · két helyi cím között a
+RANG dönt · a korlát társakat számol · a kihagyott cím az induló címek könyvelésében nem kudarc.
+
+### ⏭️ A KÖVETKEZŐ
+- ⏸️ **(iii)** előbb a mérés: lassítja-e a hír terjedését, ha társanként ablakonként egy csere megy?
+- A telefon frissítése, és egy otthoni terepi kör: a kötés megtanulja-e a helyi és a nyilvános utat
+  (ha a hairpinning épp megnyílik), és utána egy csere megy-e.

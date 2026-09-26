@@ -142,7 +142,7 @@ import { udpKapuNyitasa } from './js/csere/udpKapu.js';
 import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tablaKulcs.js';
 import {
   talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
-  nemaKotesek
+  nemaKotesek, kotesCimei
 } from './js/csere/kotesek.js';
 // ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20): a leszakadt készülék KIFELÉ írja ki az új címét, a
 // társai KIFELÉ olvassák ki. A tábla ma a BitTorrent DHT — de cserélhető (2. szabály).
@@ -1768,8 +1768,11 @@ try {
       // ===== `tabla` (állapot) =====
       for (const k of kotesLista(jegyzek, 5)) {
         const kor = Math.round((Date.now() - (k.utoljara ?? 0)) / 1000);
+        // ⭐ A kötés ÖSSZES ismert címe (D71 (ii)) — a legutóbbi elöl: terepen ebből látszik, hogy
+        // a gép tudja-e, hogy a helyi és a nyilvános út ugyanaz a társ.
+        const cimek = kotesCimei(k).map((c) => c.hoszt + ':' + c.port);
         kiir('  ' + k.alairo.slice(0, 12) + '…' + SZIN.halvany
-          + '  ' + (k.hoszt ?? '?') + ':' + (k.port ?? '?')
+          + '  ' + (cimek.length ? cimek.join(' · ') : '?')
           + ' · ' + k.talalkozasok + ' találkozás · ' + kor + ' mp-e hallottam'
           + SZIN.vege);
       }

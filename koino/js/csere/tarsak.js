@@ -242,6 +242,9 @@ export function kopogasMegfigyelesei(lista, eredmenyek, most = Date.now()) {
   const megfigyelesek = [];
   for (const e of eredmenyek ?? []) {
     if (!e?.cel) continue;
+    // ⭐ A KIHAGYOTT cím nem megfigyelés (D71 (ii)): a társat a másik címén értük el, erre rá sem
+    // kopogtunk — se siker, se kudarc. *Amit a kör nem figyelt meg, ahhoz nem nyúlunk.*
+    if (e.kihagyva) continue;
     const t = szerint.get(kulcs(e.cel.cim, Number(e.cel.port)));
     if (!t) continue;
     megfigyelesek.push(e.ok

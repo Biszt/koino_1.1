@@ -3942,8 +3942,12 @@ A négy csere egy társsal egyperces körrel ~6,5–8 MB/nap; eggyel ~1,4 MB/nap
    IP-jű kötéshez kötődne, egy IP-n több kötésnél (egy család egy router mögött) a valódi társ abban a
    körben nem erősödne meg — ezért nem a sorrend, hanem **a munka aláírója választja ki**, kit értünk
    el (külön próba, rontás-próbával). A bekötést három valódi őrjárat méri (`parancssorProba.js`).
-2. **(ii)** a kötés címei, a csoportos, egymás utáni hívás, a helyi elöl · a hatás a
-   `negyszeresCsereMeres.js`-sel (két cím: 2 → 1 csere/ablak).
+2. ✅ **(ii)** a kötés címei (legfeljebb 3), a csoportos, egymás utáni hívás · a hatás a
+   `negyszeresCsereMeres.js`-sel mérve (46. mérés): **két címen 2 → 1 csere/ablak**, csúszással 4 → 2.
+   ⭐ **Építés közben kiderült:** a „helyi elöl" nem elég — két HELYI cím között (egy gépen a hurok
+   és a wifi; két hálózati kártya) a frissesség a két oldalon eltérhet, és megint két csere lenne.
+   Ezért **rang** dönt (gépen belüli · helyi háló · link-local · nyilvános), ami a címből jön, tehát
+   mindkét oldalon ugyanaz. A kihagyott cím a könyvelésben „kihagyva", nem kudarc.
 3. **(iii)** előbb a mérés (a terjedés az ablakonként egy cserével), aztán Csaba dönt, aztán építés.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)

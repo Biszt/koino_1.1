@@ -35,12 +35,63 @@
 export const KOTES_CEL = 3;
 export const KOTES_KORLAT = 5;
 
+// ⭐ HÁNY CÍMET JEGYEZ MEG EGY KÖTÉS? (D71 (ii), 2026-09-26) — egy készüléknek jellemzően egy
+// helyi (wifis) és egy nyilvános címe van, és egy harmadik, ha hálózatot vált (otthon · a
+// szomszédban · mobilon). A szám felülről korlátos (9. szabály): a legrégebben használt esik ki.
+export const KOTES_CIM_KORLAT = 3;
+
+/**
+ * Helyi cím-e? — a helyi hálón (vagy a gépen belül) elérhető IPv4-cím.
+ *
+ * ⭐ MIÉRT KELL (D71 (ii)): ha egy kötést KÉT úton is elérünk (otthon a helyi címén és a
+ * routeren átforduló nyilvánoson — 43., 45. mérés), a helyit hívjuk előbb: gyorsabb, nem
+ * terheli a routert, és ha felel, a másikat nem is kell hívni. ⚠️ A 100.64/10 (a szolgáltatói
+ * NAT) NEM helyi: a mi hálónkról nem érhető el.
+ */
+export function helyiCimE(hoszt) {
+  return cimRangja(hoszt) < 3;
+}
+
+/**
+ * A cím RANGJA a hívás sorrendjéhez: 0 = a gépen belül (127/8) · 1 = helyi háló (10/8,
+ * 172.16/12, 192.168/16) · 2 = link-local (169.254/16) · 3 = minden más (nyilvános).
+ *
+ * ⛔ MIÉRT RANG, ÉS NEM CSAK „HELYI-E": a két félnek UGYANAZT az utat kell választania. Ha mindkét
+ * cím helyi (egy gépen a hurok- és a wifis cím; egy készülék két hálózati kártyával), a „legutóbb
+ * használt" a két oldalon eltérhet — az A a hurkon hívná a B-t, a B a wifin az A-t, és megint két
+ * csere lenne. *A rang mindkét oldalon ugyanúgy dől el: nem a saját emlékezetünkből, hanem a
+ * címből.*
+ */
+export function cimRangja(hoszt) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(String(hoszt ?? '').replace(/^::ffff:/, ''));
+  if (!m) return 3;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  if (a === 127) return 0;
+  if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return 1;
+  if (a === 169 && b === 254) return 2;
+  return 3;
+}
+
+/**
+ * Egy kötés ismert címei — a legutóbb használt elöl.
+ * ⚠️ A régi (egy címes) bejegyzésből is ad listát: a jegyzék a lemezen él, és a D71 előtt írták.
+ */
+export function kotesCimei(k) {
+  const lista = Array.isArray(k?.cimek) && k.cimek.length ? k.cimek
+    : (k?.hoszt && Number.isInteger(k?.port) ? [{ hoszt: k.hoszt, port: k.port, utoljara: k.utoljara ?? 0 }] : []);
+  return lista.filter((c) => c && c.hoszt && Number.isInteger(c.port));
+}
+
 /**
  * Egy sikeres találkozás feljegyzése.
  *
  * ⭐ A KÖTÉS NEM KÉRÉS, HANEM TÉNY: nem megállapodunk róla, hanem abból lesz, hogy
  * rendszeresen összeérünk. *Ugyanaz az elv, mint a tudatpontnál: nem engedélyt kérünk,
  * hanem teszünk valamit, és az látszik.*
+ *
+ * ⭐⭐ ÉS MEGJEGYZI, HOL ÉRTÜK EL (D71 (ii), 2026-09-26): a `cimek` a társ legutóbbi
+ * `KOTES_CIM_KORLAT` címe. *Így tudja a következő kör, hogy a helyi és a nyilvános cím UGYANAZ a
+ * társ — és nem cserél vele kétszer (45. mérés).* A `hoszt`/`port` a legutóbbi (a régi alak).
  *
  * @param {Array<Object>} jegyzek
  * @param {{alairo: string, titkosito: string}} tablaKulcs - a társ tábla-kulcsa (azonosító)
@@ -51,11 +102,17 @@ export function talalkozasFeljegyzese(jegyzek, tablaKulcs, cim, most = Date.now(
   if (!tablaKulcs?.alairo) return jegyzek;
 
   const regi = (jegyzek ?? []).find((k) => k.alairo === tablaKulcs.alairo);
+  const vanCim = cim?.hoszt && Number.isInteger(cim?.port);
+  const cimek = [
+    ...(vanCim ? [{ hoszt: cim.hoszt, port: cim.port, utoljara: most }] : []),
+    ...kotesCimei(regi).filter((c) => !vanCim || c.hoszt !== cim.hoszt || c.port !== cim.port)
+  ].sort((a, b) => (b.utoljara ?? 0) - (a.utoljara ?? 0)).slice(0, KOTES_CIM_KORLAT);
   const uj = {
     alairo: tablaKulcs.alairo,
     titkosito: tablaKulcs.titkosito ?? regi?.titkosito ?? null,
     hoszt: cim?.hoszt ?? regi?.hoszt ?? null,
     port: Number.isInteger(cim?.port) ? cim.port : (regi?.port ?? null),
+    cimek,
     utoljara: most,
     // ⭐ HÁNYSZOR ÉRTÜNK ÖSSZE: ebből lesz a kötés. *Egy véletlen találkozás még nem
     // kapcsolat; a rendszeresség az.*
@@ -97,21 +154,39 @@ export function kotesek(jegyzek, korlat = KOTES_CEL) {
 export function kopogasCeljai(jegyzek, frissCimek = [], korlat = KOTES_KORLAT + KOTES_CEL) {
   const celok = [];
   const volt = new Set();
+  // ⭐ A korlát TÁRSAKAT számol, nem címeket: egy kötés címeire a kapu egymás után kopog (D71
+  // (ii)), tehát egy kötés egy kopogás ára — a friss cím egyenként.
+  let egysegek = 0;
   // ⭐⭐ A KÖTÉS CÉLJA A VÁRT TÁRSAT IS HORDOZZA (D71, 2026-09-26): a tábla-aláíróját. Ebből
   // tudja a kopogás-kör a munka végén, hogy tényleg ŐT érte-e el (44. mérés: egy azonos IP-ről
   // bekopogó idegen különben a néma kötést tette sikeressé). A friss cím névtelen: `alairo: null`.
   const felvesz = (hoszt, port, alairo = null) => {
-    if (!hoszt || !Number.isInteger(port)) return;
+    if (!hoszt || !Number.isInteger(port)) return false;
     const kulcs = hoszt + ':' + port;
-    if (volt.has(kulcs)) return;
+    if (volt.has(kulcs)) return false;
     volt.add(kulcs);
     celok.push({ cim: hoszt, port, alairo });
+    return true;
   };
 
-  for (const k of kotesek(jegyzek, KOTES_KORLAT)) felvesz(k.hoszt, k.port, k.alairo ?? null);
-  for (const c of frissCimek ?? []) felvesz(c.hoszt, c.port);
+  // ⭐⭐ (ii) EGY KÖTÉS ÖSSZES ISMERT CÍME, EGY CSOPORTBAN (ugyanaz az `alairo`) — a HELYI ELÖL,
+  // aztán a legutóbb használt. A kapu a csoportot sorban hívja: a következő címet csak akkor, ha
+  // az előzők egy kopogás-köz alatt nem feleltek, és amint a társat az egyiken elérte, a többit
+  // kihagyja. *Így az otthoni két út (helyi + hairpinning) egy csere, nem kettő (45. mérés).*
+  for (const k of kotesek(jegyzek, KOTES_KORLAT)) {
+    if (egysegek >= korlat) break;
+    const cimek = kotesCimei(k).sort((a, b) => (cimRangja(a.hoszt) - cimRangja(b.hoszt))
+      || (b.utoljara ?? 0) - (a.utoljara ?? 0));
+    let volt1 = false;
+    for (const c of cimek) volt1 = felvesz(c.hoszt, c.port, k.alairo ?? null) || volt1;
+    if (volt1) egysegek++;
+  }
+  for (const c of frissCimek ?? []) {
+    if (egysegek >= korlat) break;
+    if (felvesz(c.hoszt, c.port)) egysegek++;
+  }
 
-  return celok.slice(0, korlat);
+  return celok;
 }
 
 /**

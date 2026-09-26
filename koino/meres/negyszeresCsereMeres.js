@@ -24,9 +24,11 @@
 // száma — ha a B-é eltér, azt kimondjuk (D19).
 //
 // ⭐ MIT SZÁMOLUNK: a mérés a fal órájához igazított ablakokat nézi (az A órája a valódi óra).
-// Az első ablak BEMELEGÍTÉS — ott találkoznak először, és ott megy át az A eseménye; ezt külön
-// írjuk ki. Utána `ablakok` darab ablak az ÁLLANDÓSULT állapot: ebben minden kör „nincs
-// újdonság" csere, tehát ez a D35 ára.
+// A BEMELEGÍTÉS az első találkozás (ott megy át az A eseménye) — amíg mindkét gép le nem zárta
+// az első körét; ezt külön írjuk ki. Utána `ablakok` darab ablak az ÁLLANDÓSULT állapot: ebben
+// minden kör „nincs újdonság" csere, tehát ez a D35 ára.
+// ⭐ A 46. mérés óta (D71 (ii)) a bemelegítés után a gép már TUDJA, hogy a két cím ugyanaz a
+// társ (a kötés megjegyezte) — ezért két címen is 1 csere/ablak; a bemelegítés még kettő.
 //
 // ⚠️ A mérés semmit nem küld ki a gépből: a DHT belépő nélkül fut (`KOINO_DHT_BELEPOK=nincs`), a
 // tükör egy néma helyi port (`KOINO_TUKOR=127.0.0.1:9`). A két adat-mappa eldobható, a portok
@@ -144,12 +146,18 @@ async function meres() {
       if (cimek === 'ketto') await fut(hely, 'tars', helyi, String(port), 'helyi');
     }
 
-    const indulas = Date.now();
     a = orjarat(A, PORT_A, perc, 0);
     b = orjarat(B, PORT_B, perc, csuszasMs);
 
-    // Az első ablak-határ a valódi óra szerint — előtte a bemelegítés.
-    const elsoHatar = Math.ceil((indulas + 1) / ablakMs) * ablakMs;
+    // ⛔ A BEMELEGÍTÉS VÉGE NEM AZ ELSŐ ABLAK-HATÁR (mérve, 2026-09-26): ha a két gép néhány
+    // másodperccel egy határ előtt indult, az első kör (két menettel) átnyúlik rajta, és a program
+    // a KÖVETKEZŐ ablakig vár — egy ablak kör nélkül marad, amit a mérés „0 csere"-nek számolt
+    // (0 · 1 · 1 · 1 · 1). ⭐ Ezért a számolás csak azután kezdődik, hogy MINDKÉT gép lezárta az
+    // első körét, a rákövetkező ablak-határon.
+    const korVege = /\d+\/\d+ társ|címre kopogtam|nincs kire kopognom/;
+    const lezarta = (o) => o.sorok.some((s) => korVege.test(s.szoveg));
+    for (let i = 0; i < 240 && !(lezarta(a) && lezarta(b)); i++) await varj(250);
+    const elsoHatar = Math.ceil((Date.now() + 1) / ablakMs) * ablakMs;
     const vege = elsoHatar + ablakok * ablakMs;
     await varj(vege - Date.now() + 3000);
     a.folyamat.kill(); b.folyamat.kill();
@@ -163,7 +171,7 @@ async function meres() {
     const tarB = (await readFile(join(B, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => ''))
       .split('\n').filter(Boolean).map((s) => JSON.parse(s).azonosito);
     kiir();
-    kiir('BEMELEGÍTÉS (az első találkozás, az első ablak-határig):');
+    kiir('BEMELEGÍTÉS (az első találkozás — amíg mindkét gép le nem zárta az első körét):');
     kiir('  ' + elsoA.length + ' csere (a B naplója: ' + elsoB.length + ') · a B '
       + bUj + ' „új esemény"-t jelentett — a tárában ' + tarB.length + ' sor, '
       + new Set(tarB).size + ' különböző esemény');

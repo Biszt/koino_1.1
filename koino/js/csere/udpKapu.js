@@ -313,8 +313,42 @@ export async function udpKapuNyitasa(beallitas) {
     const allapotok = jok
       .filter((c) => !c.cim.includes(':'))
       .map((c) => ({ ...c, kulcs: c.cim + ':' + c.port, tars: null, igeret: null,
-        hallak: false, foglalt: false, masJelentkezett: false, bukott: null }));
+        hallak: false, foglalt: false, masJelentkezett: false, bukott: null,
+        jo: undefined, kopogtunk: false, csoport: null }));
     let kuldott = 0;
+
+    // ===== ⭐⭐ (ii) EGY TÁRS, EGY ÚT — egy kötés címei CSOPORTBAN (D71, 2026-09-26) =====
+    //
+    // ⛔ A 45. mérés: otthon a társ KÉT úton is elérhető (helyi + a routeren átforduló nyilvános),
+    // és a kör mindkettőn cserélt. ⭐ Az azonos `alairo`-jú célok EGY társ címei: a kör SORBAN
+    // hívja őket (a hívó a helyit teszi előre) — a következőt csak akkor, ha az előzők egy
+    // kopogás-köz alatt nem feleltek —, és amint a társat az egyiken elérte (a munka aláírója
+    // megerősítette), a többit kihagyja. ⛔ *Nem a második kézfogást kell félbehagyni — a munka
+    // mindkét oldalon a kölcsönös kopogásra indul, és a túloldalon 10 mp-es elbukott csere lenne
+    // belőle —, hanem a második címet nem is kell hívni, amíg az első felel.*
+    // A névtelen célok (friss, induló) egytagú csoportok: rájuk minden a régi.
+    const csoportok = [];
+    const csoportja = new Map();
+    for (const a of allapotok) {
+      let g = a.alairo ? csoportja.get(a.alairo) : null;
+      if (!g) {
+        g = { alairo: a.alairo, tagok: [], nyitva: 1 };
+        csoportok.push(g);
+        if (a.alairo) csoportja.set(a.alairo, g);
+      }
+      g.tagok.push(a);
+      a.csoport = g;
+    }
+
+    /** A cél munkája — és a végén: tényleg a várt társ volt-e (`jo`)? */
+    const munkatFigyel = (a, igeret) => {
+      a.igeret = igeret;
+      a.jo = undefined;
+      igeret.then((e) => {
+        if (a.igeret !== igeret) return;
+        a.jo = e.ok && !(a.alairo && e.eredmeny?.alairo && e.eredmeny.alairo !== a.alairo);
+      });
+    };
 
     // ===== ⭐⭐ KI FELELT? — A HOZZÁRENDELÉS (D71, 2026-09-26) =====
     //
@@ -359,7 +393,7 @@ export async function udpKapuNyitasa(beallitas) {
       const talalt = j.find((c) => c.alairo && c.alairo === e.eredmeny?.alairo)
         ?? j.find((c) => !c.alairo);
       if (talalt) {
-        talalt.hallak = true; talalt.tars = t; talalt.igeret = igeret;
+        talalt.hallak = true; talalt.tars = t; talalt.igeret = igeret; talalt.jo = true;
         if (talalt.alairo) {
           jelez({ mi: 'PORTVALTAS-MEGEROSITVE', cim: t.cim, port: t.port,
             cel: talalt.cim + ':' + talalt.port });
@@ -383,7 +417,7 @@ export async function udpKapuNyitasa(beallitas) {
       },
       munkaIndult(t, igeret) {
         const a = hozzarendel(t);
-        if (a) { a.igeret = igeret; return; }
+        if (a) { munkatFigyel(a, igeret); return; }
         if (!feltevesek.has(t)) return;
         feltevesek.set(t, igeret);
         igeret.then((e) => dont(t, igeret, e));
@@ -394,24 +428,44 @@ export async function udpKapuNyitasa(beallitas) {
     // Akivel már fut a munka, az a körnek eleve „átfúrt".
     for (const a of allapotok) {
       const t = tarsak.get(a.kulcs);
-      if (t && t.munka) { a.hallak = true; a.tars = t; a.igeret = t.munka; }
+      if (t && t.munka) { a.hallak = true; a.tars = t; munkatFigyel(a, t.munka); }
     }
 
+    // ⭐ A csoport állapota: ELÉRT (egy munka megerősítette a társat) · VÁR (egy címe felelt, a
+    // munka még dönt — addig máshová nem kopogunk) · KERES · KÉSZ (minden címe felelt, de egyiken
+    // sem ő). A névtelen csoport a régi: kész, ha mindenki felelt.
+    const csoportAllapot = (g) => {
+      if (!g.alairo) return g.tagok.every((a) => a.hallak) ? 'kesz' : 'keres';
+      if (g.tagok.some((a) => a.hallak && a.jo === true)) return 'elert';
+      if (g.tagok.some((a) => a.hallak && a.jo === undefined)) return 'var';
+      return g.tagok.every((a) => a.hallak) ? 'kesz' : 'keres';
+    };
+    // ⚠️ Egy függő feltevés (portváltás) a csoport valamelyik címén: a már hívott címekre tovább
+    // kopogunk (az (i) ezt kéri), de újat nem nyitunk — lehet, hogy épp ő jelentkezett.
+    const fuggoFeltevese = (g) => [...feltevesek.keys()]
+      .some((t) => g.tagok.some((a) => !a.hallak && a.cim === t.cim));
+
     const kopogas = () => {
-      for (const a of allapotok) {
-        if (a.hallak) continue;
-        const t = bejegyzes(a.cim, a.port, true, true);
-        if (t.munka) { a.hallak = true; a.tars = t; a.igeret = t.munka; continue; }
-        kopogj(t);
-        kuldott++;
+      for (const g of csoportok) {
+        if (csoportAllapot(g) !== 'keres') continue;
+        for (const a of g.tagok.slice(0, g.nyitva)) {
+          if (a.hallak) continue;
+          const t = bejegyzes(a.cim, a.port, true, true);
+          if (t.munka) { a.hallak = true; a.tars = t; munkatFigyel(a, t.munka); continue; }
+          kopogj(t);
+          a.kopogtunk = true;
+          kuldott++;
+        }
+        if (!fuggoFeltevese(g)) g.nyitva = Math.min(g.tagok.length, g.nyitva + 1);
       }
     };
+    const mindKesz = () => csoportok.every((g) => ['elert', 'kesz'].includes(csoportAllapot(g)));
 
     await new Promise((kesz) => {
       if (!allapotok.length || idokorlat <= 0) return kesz();
       kopogas();
       const ora = setInterval(() => {
-        if (allapotok.every((a) => a.hallak)) { clearInterval(ora); clearTimeout(vege); kesz(); return; }
+        if (mindKesz()) { clearInterval(ora); clearTimeout(vege); kesz(); return; }
         kopogas();
       }, kopogasKoz);
       const vege = setTimeout(() => { clearInterval(ora); kesz(); }, idokorlat);
@@ -429,6 +483,13 @@ export async function udpKapuNyitasa(beallitas) {
     for (const a of allapotok) {
       const cel = { cim: a.cim, port: a.port };
       if (!a.igeret && a.bukott) { a.tars = a.bukott.tars; a.igeret = a.bukott.igeret; }
+      // ⭐ (ii) A társat a csoport egy MÁSIK címén értük el, erre rá sem kopogtunk: nem kudarc, és
+      // nem is megfigyelés — a könyvelés ne számolja „nem felelt"-nek.
+      if (!a.igeret && !a.kopogtunk && a.csoport?.alairo && csoportAllapot(a.csoport) === 'elert') {
+        eredmenyek.push({ cim: a.cim, port: a.port, cel, ok: false, kihagyva: true,
+          hiba: 'a társat a másik címén értük el' });
+        continue;
+      }
       if (!a.igeret) {
         eredmenyek.push({ cim: a.cim, port: a.port, cel, ok: false,
           hiba: a.foglalt ? 'foglalt' : a.hallak ? 'felelt, de nem indult munka' : 'nem felelt',

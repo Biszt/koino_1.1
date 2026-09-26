@@ -46,7 +46,7 @@ async function hamisKapu({ ido = 100, bekopogoKorlat = 3, jegyzekKorlat, nevjegy
       const kulcs = tars.cim + ':' + tars.port;
       futo.set(kulcs, (futo.get(kulcs) ?? 0) + 1);
       naplo.csucs = Math.max(naplo.csucs, futo.get(kulcs));
-      naplo.munkak.push({ ...tars });
+      naplo.munkak.push({ ...tars, ido: Date.now() });
       const beszel = () => halo.send(JSON.stringify({ sz: 1, a: 'x' }), tars.port, tars.cim);
       beszel();
       const ora = setInterval(beszel, 50);
@@ -269,6 +269,71 @@ proba('⭐ VÁRT TÁRS NÉLKÜL (friss és induló cím) A PORTVÁLTÁS MARAD A 
     await varj(300);
     return ka.atfurt === 1 && ka.sikeres === 1 && ka.eredmenyek[0].port === b.kapu.port;
   } finally { a.kapu.zar(); b.kapu.zar(); }
+});
+
+proba('⭐⭐ (ii) EGY KÖTÉS KÉT CÍMEN: ha az első felel, a másodikra RÁ SEM KOPOGUNK — egy munka (D71)', async () => {
+  // ⛔ A 45. mérés: otthon a társ két úton is elérhető, és a kör mindkettőn cserélt. ⭐ Az azonos
+  // aláírójú célok egy társ címei: az első (a helyi) felel, a második kihagyva — és a könyvelés
+  // ezt kimondja (`kihagyva`), nem „nem felelt"-et ír.
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const b = await hamisKapu({ nevjegyzek });
+  const masik = await nyersFeladok(1);                // a B „másik címe" — számolja, kap-e kopogást
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(b.kapu.port, 'B');
+  try {
+    const kor = await a.kapu.kopog([
+      { cim: '127.0.0.1', port: b.kapu.port, alairo: 'B' },
+      { cim: '127.0.0.1', port: masik.lista[0].port, alairo: 'B' }
+    ], { idokorlat: 3000 });
+    await varj(200);
+    const [e1, e2] = kor.eredmenyek;
+    return e1.ok === true && e2.kihagyva === true && masik.lista[0].kapott === 0
+      && kor.sikeres === 1 && a.naplo.munkak.length === 1;
+  } finally { a.kapu.zar(); b.kapu.zar(); masik.zar(); }
+});
+
+proba('⭐ …ha az ELSŐ cím néma, egy kopogás-köz után a MÁSODIK jön — és ott érjük el (D71)', async () => {
+  // ⭐ A sorrend előny, nem feltétel: a néma helyi cím (a társ elment otthonról) csak egy
+  // kopogás-köznyi késést okoz. ⚠️ A munka indulásának ideje a mérce: ha a kör mindkét címet
+  // egyszerre hívná, a munka azonnal indulna.
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const b = await hamisKapu({ nevjegyzek });
+  const elso = await nyersFeladok(1);                 // a B régi, néma címe
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(b.kapu.port, 'B');
+  try {
+    const t0 = Date.now();
+    const kor = await a.kapu.kopog([
+      { cim: '127.0.0.1', port: elso.lista[0].port, alairo: 'B' },
+      { cim: '127.0.0.1', port: b.kapu.port, alairo: 'B' }
+    ], { idokorlat: 4000 });
+    const [e1, e2] = kor.eredmenyek;
+    return e1.ok === false && e1.hiba === 'nem felelt' && elso.lista[0].kapott >= 1
+      && e2.ok === true && a.naplo.munkak.length === 1 && a.naplo.munkak[0].ido - t0 >= 800;
+  } finally { a.kapu.zar(); b.kapu.zar(); elso.zar(); }
+});
+
+proba('⭐ …ha az első címen MÁS felel, a második jön — a csoport nem áll meg a rossz társnál (D71)', async () => {
+  // ⭐ A B régi címe ma a C-é (a router kiosztotta): az első címen a munka a C-t hozza („más
+  // felelt"), és a kör a B másik címén keresi tovább — ott eléri.
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const b = await hamisKapu({ nevjegyzek });
+  const c = await hamisKapu({ nevjegyzek });
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(b.kapu.port, 'B');
+  nevjegyzek.set(c.kapu.port, 'C');
+  try {
+    const kor = await a.kapu.kopog([
+      { cim: '127.0.0.1', port: c.kapu.port, alairo: 'B' },
+      { cim: '127.0.0.1', port: b.kapu.port, alairo: 'B' }
+    ], { idokorlat: 4000 });
+    const [e1, e2] = kor.eredmenyek;
+    return e1.masFelelt === true && e2.ok === true && e2.eredmeny?.alairo === 'B'
+      && kor.sikeres === 1;
+  } finally { a.kapu.zar(); b.kapu.zar(); c.kapu.zar(); }
 });
 
 proba('⭐ AKIVEL MÁR FUT A MUNKA, ARRA NEM KOPOGUNK — a futó munkáját számoljuk be', async () => {

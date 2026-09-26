@@ -158,6 +158,14 @@ proba('A siker feljegyződik, és a bukás-számláló NULLÁZÓDIK', () => {
   return m.length === 1 && m[0].utoljara === 12345 && m[0].sikertelen === 0;
 });
 
+proba('⭐ A KIHAGYOTT cím nem megfigyelés (D71 (ii)) — se siker, se kudarc: a számláló érintetlen', () => {
+  // ⭐ A társat a csoport egy másik címén értük el, erre a címre rá sem kopogtunk. Ha ez kudarcnak
+  // számítana, egy élő, de épp más úton elért cím bukás-számlálója nőne — alaptalanul.
+  const lista = [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }];
+  const m = kopogasMegfigyelesei(lista, [{ ...eredmeny('a', 1, false), kihagyva: true }], 9999);
+  return m.length === 0;
+});
+
 proba('A bukás NÖVELI a számlálót, de az utolsó sikert nem törli', () => {
   const lista = [{ hoszt: 'a', port: 1, utoljara: 5000, sikertelen: 2 }];
   const m = kopogasMegfigyelesei(lista, [eredmeny('a', 1, false)], 9999);

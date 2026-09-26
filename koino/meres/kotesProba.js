@@ -15,7 +15,7 @@ import {
 } from '../js/csere/tablaKulcs.js';
 import {
   talalkozasFeljegyzese, kotesek, kopogasCeljai, nemaKotesek, jegyzekTakaritasa,
-  KOTES_CEL, KOTES_KORLAT
+  kotesCimei, helyiCimE, cimRangja, KOTES_CEL, KOTES_KORLAT
 } from '../js/csere/kotesek.js';
 
 const { proba, futtatas } = probaGyujtemeny('A TÁBLA-KULCS ÉS A KÖTÉSEK (2026-09-20)');
@@ -223,6 +223,72 @@ proba('⭐⭐ A KÖTÉS CÉLJA A VÁRT TÁRSAT IS HORDOZZA (D71) — a friss cí
   const anna = celok.find((c) => c.cim === '203.0.113.7');
   const idegen = celok.find((c) => c.cim === '198.51.100.9');
   return celok.length === 2 && anna?.alairo === kulcs('anna').alairo && idegen?.alairo === null;
+});
+
+proba('⭐⭐ (ii) A KÖTÉS TÖBB CÍMET MEGJEGYEZ — a legutóbbi elöl, legfeljebb háromat (D71)', () => {
+  // ⛔ Egy címmel a kör nem tudhatja, hogy a helyi és a nyilvános út UGYANAZ a társ (45. mérés:
+  // otthon két csere egy helyett). ⭐ Minden találkozás a társ címei közé kerül; a legrégebbi esik ki.
+  let j = [];
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '192.168.1.5', port: 7373 }, 1000);
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '203.0.113.7', port: 41777 }, 2000);
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '192.168.1.5', port: 7373 }, 3000);  // újra a helyi
+  const ketto = j[0].cimek.map((c) => c.hoszt);
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '5.187.184.117', port: 7373 }, 4000);
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '100.64.0.9', port: 5000 }, 5000);
+  const harom = j[0].cimek.map((c) => c.hoszt);
+  return j.length === 1 && ketto.join() === '192.168.1.5,203.0.113.7'
+    && harom.join() === '100.64.0.9,5.187.184.117,192.168.1.5'       // a 203.0.113.7 esett ki
+    && j[0].hoszt === '100.64.0.9' && j[0].talalkozasok === 5;
+});
+
+proba('⭐ …és a RÉGI (egy címes) bejegyzésből is lista lesz — a jegyzék a D71 előtt íródott', () => {
+  const regi = [{ alairo: kulcs('anna').alairo, titkosito: kulcs('anna').titkosito,
+    hoszt: '192.168.1.5', port: 7373, utoljara: 1000, talalkozasok: 4, eloszor: 1 }];
+  const j = talalkozasFeljegyzese(regi, kulcs('anna'), { hoszt: '203.0.113.7', port: 41777 }, 2000);
+  return kotesCimei(regi[0]).length === 1
+    && j[0].cimek.map((c) => c.hoszt + ':' + c.port).join() === '203.0.113.7:41777,192.168.1.5:7373';
+});
+
+proba('⭐⭐ (ii) A KOPOGÁS CÉLJAI: egy kötés címei EGY CSOPORT (ugyanaz az aláíró), a HELYI ELÖL (D71)', () => {
+  // ⭐ A kapu a csoportot sorban hívja — ezért itt a sorrend a döntés: a helyi cím elöl, még ha a
+  // nyilvános a frissebb is. A friss jegyzékben álló bármelyik címe nem duplázódik (névtelenül).
+  let j = [];
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '192.168.1.5', port: 7373 }, 1000);
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '203.0.113.7', port: 41777 }, 2000);
+  const celok = kopogasCeljai(j, [{ hoszt: '203.0.113.7', port: 41777 }]);
+  return celok.length === 2
+    && celok[0].cim === '192.168.1.5' && celok[1].cim === '203.0.113.7'
+    && celok.every((c) => c.alairo === kulcs('anna').alairo);
+});
+
+proba('⛔ …és KÉT HELYI cím között a RANG dönt, nem a frissesség — a két fél ugyanazt az utat választja', () => {
+  // ⛔ Ha a frissesség döntene, az A a hurkon hívná a B-t, a B a wifin az A-t (a saját emlékezete
+  // szerint) — és megint két csere lenne. A rang a címből jön, mindkét oldalon ugyanaz.
+  let a = [], b = [];
+  a = talalkozasFeljegyzese(a, kulcs('bela'), { hoszt: '127.0.0.1', port: 7612 }, 1000);
+  a = talalkozasFeljegyzese(a, kulcs('bela'), { hoszt: '192.168.1.134', port: 7612 }, 2000);
+  b = talalkozasFeljegyzese(b, kulcs('anna'), { hoszt: '192.168.1.134', port: 7611 }, 1000);
+  b = talalkozasFeljegyzese(b, kulcs('anna'), { hoszt: '127.0.0.1', port: 7611 }, 2000);
+  return kopogasCeljai(a)[0].cim === '127.0.0.1' && kopogasCeljai(b)[0].cim === '127.0.0.1'
+    && cimRangja('127.0.0.1') < cimRangja('192.168.1.1') && cimRangja('192.168.1.1') < cimRangja('169.254.0.1')
+    && cimRangja('169.254.0.1') < cimRangja('31.46.251.115');
+});
+
+proba('⭐ …és a korlát TÁRSAKAT számol, nem címeket — egy három címes kötés egy egység', () => {
+  let j = [];
+  for (const [i, h] of ['192.168.1.5', '203.0.113.7', '5.187.184.117'].entries()) {
+    j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: h, port: 7373 }, 1000 + i);
+  }
+  const celok = kopogasCeljai(j, [{ hoszt: '198.51.100.1', port: 1 }, { hoszt: '198.51.100.2', port: 2 }], 2);
+  // korlát 2: az Anna (3 cím, 1 egység) + EGY friss cím
+  return celok.length === 4 && celok.filter((c) => c.alairo === null).length === 1;
+});
+
+proba('⭐ A HELYI CÍM felismerése — a szolgáltatói NAT (100.64/10) NEM helyi', () => {
+  const igen = ['10.0.0.1', '172.16.0.1', '172.31.255.1', '192.168.1.134', '127.0.0.1',
+    '169.254.1.1', '::ffff:192.168.1.5'];
+  const nem = ['100.64.0.1', '172.32.0.1', '8.8.8.8', '31.46.251.115', '::1', 'nem-cim', null];
+  return igen.every(helyiCimE) && !nem.some(helyiCimE);
 });
 
 proba('⭐ A NÉMA KÖTÉS megnevezhető — erről kell majd a TÁBLÁRÓL érdeklődni (D19)', () => {
