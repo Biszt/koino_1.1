@@ -8,6 +8,57 @@ elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklá
 
 ---
 
+### 🔍 2026-09-26 (délelőtt) — ÁTNÉZÉS a terepmérés előtt: a D69/2 útja és a felület kapuja
+
+**Amit néztünk:** a D69/2 friss kódja (`udpKapu.js`, `udpVonal.js`, az őrjárat és a
+`resMunkaKeszito` a `koino.js`-ben), a felület kapuja (`kapu.js`), a dokumentált számok. A
+kiinduló próbasor: **703 zöld**. Minden gyanút kísérlettel mértünk, nem érveléssel.
+
+✅ **JAVÍTVA — AZ ÉKEZET KETTÉTÖRT A KAPUN.** A `testBeolvasas` a kérés-törzs minden darabját
+külön alakította szöveggé (`nyers += darab`). Egy darab bármelyik bájtnál végződhet, az „ű”
+pedig két bájt: ha a határ közéjük esett, mindkét fele „�” lett. ⛔ Mérve: két írásra bontott
+kérésnél *„Árvíztűrő”* → *„Árvízt��rő”* — és ez a szöveg aláírt eseménybe kerülne, onnan
+mindenkihez. ⭐ Most a bájtok gyűlnek, és egyszer, a végén lesz belőlük szöveg. Új próba a
+`kapuProba.js`-ben; ⚠️ a régi alakkal bukik (kipróbálva: 37/38), a javítottal zöld. *(A többi
+`on('data')` rendben van: a `vonal.js` már szöveget kap a UDP-vonaltól, a `kapunyitas.js` a
+router ASCII-válaszát olvassa.)*
+
+⭐ **DÖNTÉSI KÉRDÉS — AZ AZONOS IP-JŰ IDEGEN A KÖR KÖNYVELÉSÉBEN (nincs javítva).** A
+`udpKapu.js` `kopog` körének `talal`-ja három lépcsőben keresi, melyik célunkhoz tartozik egy
+válasz: pontos cím → akihez már hozzárendeltük → **azonos IP, más port** (a mobil NAT
+portváltása, 32. mérés). ⛔ A harmadik lépcső az IDEGEN BEKOPOGÓRA is lefut. Kísérlet: a kapu
+egy néma portra kopog a 127.0.0.1-en; közben egy harmadik kapu ugyanerről az IP-ről bekopog. Az
+eredmény: `{"ok":true,"cim":"127.0.0.1","port":<az idegené>,"cel":{…a néma cél…}}` — **a néma
+célt sikeresnek könyveli, és a kör abbahagyja a kopogtatását** (mindenki „hallott”). Élesben:
+egy család több készüléke egy router mögött, egy távoli társ szemével.
+⚠️ **Miért nincs javítva:** a kézenfekvő javítás (bekopogóra ne fusson a harmadik lépcső) a
+portváltó NAT-ot rontaná el, ha a társ ELŐBB kopog be az új portjáról, mint ahogy a mi
+kopogásunkra felelne — a csere megtörténne, de a kör *„nem felelt”*-et írna. A telefon ↔ laptop
+terepmérésen épp ez az eset jöhet, és a napló félrevezető lenne. A kopogás-rétegben a kettő nem
+különböztethető meg (a `tol` futásonkénti véletlen, nem azonosság); a munka után viszont
+megvan a társ **tábla-kulcsa** (`csere.kapottTablaKulcs`) — egy kötésből jött célnál ezzel utólag
+ellenőrizhető a hozzárendelés. *Ez tervezési kérdés, Csabáé.*
+
+⏸️ **ROBUSZTUSSÁG — EGYETLEN VISSZAKOPOGÁS.** Aki bekopog, arra a kapu EGYSZER kopog vissza
+(`kopogj(t)` a KOPOG-ágban); a bekopogó közben a mi HALLAK-unkra már elindította a munkáját, és
+abbahagyta a kopogást. Ha ez az egy csomag vagy a rá jövő HALLAK elvész, a mi munkánk nem indul,
+az övé 10 mp múlva elbukik: *„rés nyílt, de a csere a résen elbukott”*. A következő menet vagy
+kör pótolja — tehát nem törés, de veszteséges vonalon ismétlődő bukás-sor lehet belőle.
+Csomagvesztéses próbával mérendő, mielőtt bárki hozzányúl.
+
+✅ **MEGMÉRT, NEM HIBA — A UDP-DARAB MÉRETE.** A `DARAB_MERET = 1000` karaktert számol, a
+komment bájtot ígér („1200 alatt”). Megmérve (a JSON-ba csomagolás és az UTF-8 együtt): valódi
+eseményekkel max ~1130 bájt, magyar szöveggel ~1210, emodzsival ~1320 — mind a töredezési határ
+(~1470) alatt. Nincs teendő.
+
+⚠️ **ELAVULT SZÁMOK:** a program mérete a D69/2 óta **182 fájl, 3098,3 KB** volt (a dokumentált
+183 / 3159,2 helyett — a `tcpLekepezesMeres.js` és a TCP-kód kiesett); a javítással **3100,5 KB**,
+átvezetve. ⛔ **Nincs átvezetve** a „nincs újdonság” kör mércéje: a CLAUDE.md 6. szabálya és a
+`figyel` leírása **334 bájtot** mond (TCP-n mérve), a D69/2-bejegyzés ~480-at, a `koino.js` és a
+`udpVonal.js` kommentjei 931-et (38. mérés). Újra kell mérni, és egy számot mindenhova.
+
+---
+
 ### ✅ 2026-09-26 — D69/2: A TCP KIKERÜLT A KÉSZÜLÉKEK KÖZÜL (Csaba döntései)
 
 ⭐ **A döntések, szó szerint:** *„nyugottan lehet tiszta lappal indúlni. nem szeretnék tcp-és
