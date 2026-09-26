@@ -3813,3 +3813,127 @@ bejövő cserét kiszolgálunk.
   a postaláda csak TCP-n létezik.
 - A telefon + laptop mérés **megismétlése** a mai javításokkal: a 0 tárolós kiírás újrapróbálása
   és az ébren tartás élesben.
+
+## 43. ✅⭐⭐ A D69/2 TEREPEN: TELEFON A SZOMSZÉDBAN, LAPTOP OTTHON — CSAK UDP, MINDKÉT OLDAL A TÁBLÁRÓL TALÁL (2026-09-26, 13:02–13:42)
+
+*A forgatókönyv 🅰️ változata, mobilnet helyett újra a szomszéd wifijével (két külön router). A
+program: `c890731` (704 önpróba — a telefonon is, 13:0x-kor). A laptop oldalát Claude futtatta
+Git Bash-ben (`orjarat 1 | tee -a`), a telefont Csaba (`orjarat 1 | tee ~/orjarat-T.log`,
+Termux). A telefon sorai a képernyőképekről átírva.*
+
+⚠️ **Előtte két zavar, a méréstől függetlenül:** egy félbehagyott, visszagörgetett másik session
+12:26-kor őrjáratot indított a laptopon, és valószínűleg a telefonon is (régi kóddal, 12:33-kor
+táblát írt) — a Termuxot teljesen újraindítottuk („Exit"). A laptop őrjáratát a Claude-session
+újraindulása egyszer leállította (13:01) — újraindítva, a napló folytatva.
+
+### ✅ A1 — ISMERKEDÉS OTTHON (kézi `tars`, csak a telefonon)
+
+```
+L:  13:10:54 ismeretlen kopogott be (192.168.1.124:7373) — visszakopogok, és vele is cserélek
+L:  13:10:54 rés nyílt: 192.168.1.124:7373 (51 ms)
+L:  13:10:54 csere a résen 192.168.1.124:7373 — 0 új esemény, küldtem 0 (1 kör, 1.2 KB)
+T:  13:10:53 rés nyílt: 192.168.1.134:7373 (10 ms) · csere a résen … (1 kör, 1.2 KB)
+```
+
+⭐ **Az otthoni router HAIRPINNINGEL** (új adat — eddig nem volt rá mérésünk): 13:13-tól a két
+készülék a **nyilvános** címen át is cserélt, a routeren át önmaga felé fordulva.
+
+```
+L:  13:13:01 rés nyílt: 31.46.251.115:14378 (624628 ms)
+L:  13:13:01 csere a résen 31.46.251.115:14378 — 0 új esemény, küldtem 0 (1 kör, 1.4 KB)
+L:  13:13:02 2/2 társ — 0 új esemény
+```
+
+### ✅⭐⭐ A2–A3 — A VÁLTÁS: MINDKÉT OLDAL A TÁBLÁRÓL TALÁLT, ÉS A RÉS KÉT ROUTER KÖZÖTT NYÍLT
+
+```
+T:  13:18:00 nem tudom megmérni a saját külső címemet (getaddrinfo ENOTFOUND stun.l.google.com) — …
+T:  13:18:06 a tábla NEM ÉRHETŐ EL (200 kérdés, egyik DHT-gép sem felelt) — nem tudom, hol van GjG6BL69…
+T:  13:19:00 a saját külső címem mérése újra megy: 5.187.184.117:7373
+T:  13:19:31 a táblán megvan egy néma társ új címe: 31.46.251.115:14369 (az ő órája szerint 17 perce írta ki)
+L:  13:20:22 a táblán megvan egy néma társ új címe: 5.187.184.117:7373 (az ő órája szerint 0 perce írta ki)
+T:  13:20:38 az új címemet kiírtam a táblára (2 társ rekeszébe, 13 tároló)
+T:  13:20:59 ismeretlen kopogott be (31.46.251.115:14369) — visszakopogok, és vele is cserélek
+T:  13:20:59 rés nyílt: 31.46.251.115:14369 (179155 ms)
+L:  13:21:00 rés nyílt: 5.187.184.117:7373 (242 ms)
+L:  13:21:00 csere a résen 5.187.184.117:7373 — 0 új esemény, küldtem 0 (1 kör, 1.4 KB)
+```
+
+⭐⭐ **A 39. mérés nyitott kérdése mindkét oldalról igennel zárult, és most csak UDP-n:** a távozó
+(T) kiolvasta a maradót, a maradó (L) a távozót, a rés megnyílt, a csere végigment — utána
+**percre pontosan** folytatódott (13:21 … 13:37), sötét képernyővel is.
+- ⭐ A **„179155 ms"** a mérés legtanulságosabb száma: a telefon 13:18 óta kopogott a laptop
+  nyilvános címére, **és nem jutott át**, amíg a laptop ki nem kopogott a telefon ÚJ címére — azt
+  pedig csak a tábláról tudhatta meg. *Az otthoni router tehát cím-függően szűr: a tábla itt nem
+  kényelem volt, hanem az egyetlen út.*
+- ⭐ A telefon a szomszéd routerén **megtartotta a portját** (`5.187.184.117:7373`).
+- ⚠️ A laptop 13:20:22-kor már olvasta azt, amit a telefon 13:20:38-kor „kiírtnak" jelentett: a
+  kiírás sor a TELJES feltevés végén jön (~16 mp), a bejegyzés az első tárolókon már korábban ott
+  volt. *Nem hiba — de a naplósor időpontja a feltevés vége, nem a kezdete.*
+- ✅ **Az ébren tartás él** (`Ébren tartást kértem (termux-wake-lock)`): a 42. mérés 15–20 perces
+  körei helyett percenkénti kör, a telefon a szomszédban hagyva. *A D69/2 ÁRA terepen is látszik: a
+  kör kopogása ~1 mp (13:21:00 → 13:21:01), elérhetetlen céllal ~6 mp — a 41. mérés 90–97 mp-e
+  helyett.*
+- ✅ Hazaérve (13:38–13:40) a telefon a helyi induló címen újra összeért (`rés nyílt:
+  192.168.1.134:7373 (248236 ms)`; közben új helyi IP-t kapott: .124 → .144).
+
+### ⛔⛔ A4 — A GONDOLAT: A SZÁLLÍTÁS ÁTVITTE, DE KÉT PROGRAMHIBA KIDERÜLT
+
+**1. hiba — a futó őrjárat nem látja, amit MÁSIK folyamat ír a tárba:**
+
+```
+L:  13:26:13 (második ablak) gondolat "Atjott a laptoprol a szomszedba (43. meres)" → Létrejött: qq4f9zUo
+L:  13:27:00 … 13:30:01 csere a résen 5.187.184.117:7373 — 0 új esemény, küldtem 0      ← négy körön át
+L:  13:30:31 (az őrjárat újraindítva)
+L:  13:30:32 csere a résen 5.187.184.117:7373 — 0 új esemény, küldtem 2 (2 kör, 4.6 KB)
+T:  (második ablak) gondolat "Atjott a szomszedbol (43. meres)" → xGedjwiw; az őrjárat újraindítva
+T:  13:35:52 csere a résen 31.46.251.115:14369 — 0 új esemény, küldtem 2 (2 kör, 4.6 KB)
+L:  13:35:53 csere a résen 5.187.184.117:7373 — 2 új esemény, küldtem 0 (2 kör, 4.6 KB)
+```
+
+⛔ Az `esemenyTarNyitasa` (`fajlTar.js`) a tárat **indításkor egyszer** olvassa a memóriába, és
+utána csak a SAJÁT `hozzafuz()`-jeit látja. Amit a második ablak parancsa (vagy a `felulet`, ami
+szintén külön folyamat) a fájlhoz fűz, azt a futó őrjárat **soha** nem adja tovább. *A 4.
+szabály-hiány tankönyvi esete: a réteg kész, az éles út nem hívja — és egyetlen önpróba sem
+futtatott két folyamatot ugyanazon a táron.* ⭐ Újraindítás után **mindkét irányban átment**
+(`küldtem 2` / `2 új esemény`) — a szállítás rendben van.
+⚠️ **És a mélyebb kérdése:** ha egy készüléken két folyamat ír a SAJÁT láncba (az őrjárat
+automatikus felszabadítása + egy kézi parancs), mindkettő a saját, elavult lánc-végéből számol —
+**elágazás** születhet a saját láncunkban.
+
+**2. hiba — egy elvetett pont-esemény után a szerző MINDEN további pont-eseménye elbukik:**
+
+```
+L:  node koino/koino.js  →  GONDOLATOK (még nincs)
+    ⚠ nem számít: TudatpontRendezes — hiányzik vagy hibás a bemondott összeg (adat.kiosztva)   (×4)
+    ⚠ nem számít: TudatpontRendezes — a bemondott összeg ellentmond a saját láncának (bemondva 400, a láncából 100)
+```
+
+⚠️ A kiváltó ok ártatlan: ez a teszt-koino (`sajat`, 2026-08-28) **régi alakú** eseményeket
+hordoz (`TartalomLetrehozas` a 09-06-i átnevezés előttről, `kiosztva` nélküli pont-események a
+D42 előttről) — ezeket a szabály-réteg joggal elveti. ⛔ **De a művelet (`muveletek.js`,
+`sajatKiosztott`) beleszámolja őket a bemondott összegbe, a szabály (`szabalyok.js`) nem** — a
+kettő „ugyanaz a szabály" kommenttel él egymás mellett, és egy elvetett esemény után **végleg**
+elválnak. Így egyetlen rossz pont-esemény a szerző **összes későbbi** pont-eseményét
+érvényteleníti, és vele minden új gondolatát (D14: 0 tudatpontú entitás nincs). *Ugyanaz a lecke,
+mint a „két sorrend tükörképe": ami két helyen „ugyanaz", annak egy forrásból kell jönnie.*
+
+### ⚠️ MELLÉKLELETEK
+
+- **A „nincs újdonság" csere a résen terepen 1,2–1,7 KB** (1 kör). A CLAUDE.md 6. szabályának
+  **334 bájtja elavult** (TCP-n mérték); a napló D69/2-bejegyzésének ~480-a helyi mérés volt.
+- **Ugyanaz a két készülék otthon percenként NÉGYSZER cserélt:** két címen érték el egymást
+  (helyi + nyilvános, a hairpinning miatt), és mindkettő a saját körében is kopogott. A kopogás-kör
+  csak a munka után tudja, hogy a két cím ugyanaz a társ — ⭐ a tábla-kulcs erre is felel (Csaba
+  (a) döntése, 2026-09-26: a hozzárendelést a munka végén kapott tábla-kulcs erősítse meg).
+- A telefon egy régi kötése (`3SoykowL…`, 146 344 mp néma) minden körben tábla-olvasást kap
+  („nincs a táblán") — ártalmatlan, de a kötés-jegyzék takarítása ezt nem veszi ki, amíg a
+  korláton belül van.
+
+### ⏭️ A KÖVETKEZŐ
+- ⛔ **A két hiba javítása** (próbával és rontás-próbával): (1) az őrjárat minden kör és munka
+  előtt olvassa be, amit más folyamat a tárhoz fűzött; (2) a `sajatKiosztott` és a szabály-réteg
+  EGY közös függvényből számoljon.
+- ⭐ **Döntési kérdés (Csabáé):** egy készüléken hány folyamat írhat a saját láncba (a
+  felszabadítás és a kézi parancsok) — egy író, vagy zárolás?
+- A 🅱️ változat (két mobil) — a kimondott feltevés (két cél-függő NAT) még mindig nincs mérve.
