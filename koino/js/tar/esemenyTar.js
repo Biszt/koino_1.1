@@ -37,11 +37,14 @@ import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
  *
  * @param {Object} tar - a tároló (betolt/hozzafuz)
  * @param {Object} esemeny
+ * @param {{ujSajat?: boolean}} [beallitas] - ⭐ D70: a SAJÁT, most aláírt esemény — a tár
+ *   (az író) csak a lánc VÉGÉRE engedi, különben `ELAVULT` hibát dob, és a hívó újra próbál.
+ *   A hálózatról érkezőnél nincs ilyen: ott az elágazás bizonyíték, azt el kell menteni.
  * @returns {Promise<{mentve: boolean, ok?: string, marMegvolt?: boolean, elagazas?: Object}>}
  *   mentve=false + ok      → elutasítva (érvénytelen)
  *   mentve=true + elagazas → elmentve, DE ellentmondás derült ki (lásd lentebb)
  */
-export async function esemenyMentese(tar, esemeny) {
+export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   console.log('esemenyMentese - KEZDÉS', { azonosito: esemeny?.azonosito, tipus: esemeny?.tipus });
 
   // ----- 1. ELLENŐRZÉS -----
@@ -73,7 +76,8 @@ export async function esemenyMentese(tar, esemeny) {
   // ----- 4. MENTÉS -----
   // Az elágazást is elmentjük! A két esemény EGYÜTT a bizonyíték (D17/D19) — ha az
   // egyiket eldobnánk, épp a bizonyítékot dobnánk el.
-  await tar.hozzafuz(esemeny);
+  // ⭐ D70: a tár mögött az ÍRÓ áll — neki mondjuk meg, ha ez a saját, most aláírt eseményünk.
+  await tar.hozzafuz(esemeny, beallitas);
 
   if (utkozo) {
     console.warn('esemenyMentese - ELÁGAZÁS! Ugyanaz a szerző két eseményt írt alá ugyanarról a pontról', {

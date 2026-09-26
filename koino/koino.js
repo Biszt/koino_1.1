@@ -91,6 +91,8 @@ import {
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
   fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo
 } from './js/tar/fajlTar.js';
+// ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
+import { iroTarNyitasa } from './js/tar/iro.js';
 import {
   kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese,
   // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
@@ -269,7 +271,21 @@ if (parancs === 'visszatolt') {
 
 const { kulcspar, ujE } = await kulcsparBiztositasa(tarolo);
 const szerzo = await nyilvanosKulcsSzovegesen(kulcspar.publicKey);
-const tar = await esemenyTarNyitasa(KOINO);
+
+/**
+ * ⛔⛔ EGY KOINÓ TÁRA AZ ÍRÓ MÖGÖTT (D70, 2026-09-26). Egy készüléken több folyamat dolgozik
+ * ugyanazon a táron (az őrjárat, a második ablak parancsa, a felület) — a fájlhoz közülük
+ * mindig CSAK EGY fűz: az író. Aki nem az, átadja neki az eseményt; ha nincs élő író, ő lesz.
+ * *A lánc vége így egyetlen helyen dől el — a saját láncunk nem ágazhat el két ablak miatt.*
+ */
+async function koinoTaraNyitasa(koino) {
+  return iroTarNyitasa(await esemenyTarNyitasa(koino), {
+    mappa: join(alapHely(), koino),
+    jelez: (e) => console.log('író', e)
+  });
+}
+
+const tar = await koinoTaraNyitasa(KOINO);
 
 // ⭐ Az elakadt tudatpontok órája — HELYI feljegyzés, nem esemény (3. szabály).
 const felszabaditasJegyzet = felszabaditasTarolo();
@@ -2490,6 +2506,9 @@ try {
       // nyilvános címen bárki, NAT mögött az, akire ő is kiszólt (vagy akinek a `kapu`
       // paranccsal állandó szabályt kért a routertől).
       const port = parseInt(ervek[0], 10) || ALAP_PORT;
+      // ⭐ D70: a postaláda a futása végéig tartja az író-szerepet, ha most senki nem író —
+      // a kézi parancsok ilyenkor NEKI adják át az eseményt, és a lánc vége egy helyen dől el.
+      await tar.iroLeszek();
       const res = await resAllapotKeszites();
       const kapu = await udpKapuNyitasa({
         port, munka: resMunkaKeszito(res), bekopogoKorlat: BEKOPOGO_KORLAT,
@@ -2671,6 +2690,9 @@ try {
       // de nem szolgál ki" esete, a 41. mérés egyidejűségi kényszere, és a körönként változó
       // külső port. ⭐ Most EGY foglalat szolgál a teljes futásra: a kopogásra bármikor felel,
       // a bekopogóval munka indul, és társanként egyszerre egy munka fut (lásd `udpKapu.js`).
+      // ⭐ D70: az őrjárat a futása végéig tartja az író-szerepet, ha most senki nem író —
+      // a kézi parancsok ilyenkor NEKI adják át az eseményt, és a lánc vége egy helyen dől el.
+      await tar.iroLeszek();
       const kapu = await udpKapuNyitasa({
         port,
         munka: resMunkaKeszito(res),
@@ -3555,13 +3577,18 @@ try {
       // ⚠️ A pakli-nézet KOINÓNKÉNT külön: a horgony „az első N esemény" képe, és az
       // eseményhalmaz koinónként más. Egy közös nézet a váltás után **másik koino képét**
       // adná vissza a gyorsítótárból.
+      // ⭐ D70: a felület a futása végéig tartja az író-szerepet, ha most senki nem író.
+      await tar.iroLeszek();
       const nyitottKoinok = new Map();
       let aktivKoino = KOINO;
 
       async function aktivAllapot() {
         if (!nyitottKoinok.has(aktivKoino)) {
           // Az indításkori koino tárát nem nyitjuk meg másodszor.
-          const t = aktivKoino === KOINO ? tar : await esemenyTarNyitasa(aktivKoino);
+          // ⭐ D70: a másik koinó tára is az író mögött — a felület ott is csak átad.
+          const t = aktivKoino === KOINO ? tar : await koinoTaraNyitasa(aktivKoino);
+          // ⭐ A felület is a futása végéig tartja az író-szerepet (ha most senki nem író).
+          await t.iroLeszek();
           nyitottKoinok.set(aktivKoino, {
             koino: aktivKoino,
             tar: t,

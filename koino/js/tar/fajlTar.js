@@ -204,46 +204,63 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
      * nincs új, ennyi az ára. ⚠️ Nem ellenőrzünk újra: a fájl sorait megnyitáskor sem —
      * ami a fájlba került, az egy másik folyamat `esemenyMentese` kapuján ment át.
      *
+     * ⛔⛔ ÉS EGYSZERRE CSAK EGY FUT (2026-09-26, a D70 mérése közben). Egy folyamaton belül is
+     * hívódhat két frissítés egyszerre (az őrjárat párhuzamos munkái, az állapot-számítás) —
+     * mérve: mindkettő ugyanonnan olvasott, és mindkettő hozzáadta a saját hosszát a jelhez;
+     * a jel túlfutott, és a következő esemény ELVESZETT (200 eseményes farkon tízből tízszer).
+     * Ezért a hívások sorba állnak, és a jel a saját kezdőpontjából számolódik.
+     *
      * @returns {Promise<number>} hány új eseményt vettünk fel
      */
-    async frissit() {
-      let meret;
-      try {
-        meret = (await stat(fajl)).size;
-      } catch (hiba) {
-        if (hiba.code === 'ENOENT') return 0;
-        throw hiba;
-      }
-      if (meret <= ismertMeret) return 0;
-
-      const uj = Buffer.alloc(meret - ismertMeret);
-      const fogantyu = await open(fajl, 'r');
-      try {
-        await fogantyu.read(uj, 0, uj.length, ismertMeret);
-      } finally {
-        await fogantyu.close();
-      }
-      // ⚠️ A félig írt utolsó sort (egy másik folyamat épp most ír) a következő alkalomra hagyjuk.
-      const sorVege = uj.lastIndexOf(0x0a);
-      if (sorVege < 0) return 0;
-      ismertMeret += sorVege + 1;
-
-      let felvett = 0;
-      for (const sor of uj.subarray(0, sorVege + 1).toString('utf8').split('\n')) {
-        if (!sor.trim()) continue;
-        try {
-          const e = JSON.parse(sor);
-          if (azonositoSzerint.has(e.azonosito)) continue;   // a sajátunk, vagy már ismert
-          bejegyez(e);
-          felvett++;
-        } catch {
-          console.warn('esemenyTar.frissit - sérült sor, kihagyva', { fajl });
-        }
-      }
-      if (felvett) console.log('esemenyTar.frissit - más folyamat eseményei felvéve', { felvett });
-      return felvett;
+    frissit() {
+      const eredmeny = frissitesSor.then(frissitesEgyszer, frissitesEgyszer);
+      frissitesSor = eredmeny.catch(() => {});
+      return eredmeny;
     }
   };
+
+  // ⭐ A frissítések sora: egyszerre egy olvassa a fájl végét (lásd `frissit()`).
+  let frissitesSor = Promise.resolve();
+
+  /** Egy frissítés — CSAK a sorból hívjuk. */
+  async function frissitesEgyszer() {
+    let meret;
+    try {
+      meret = (await stat(fajl)).size;
+    } catch (hiba) {
+      if (hiba.code === 'ENOENT') return 0;
+      throw hiba;
+    }
+    const kezdet = ismertMeret;
+    if (meret <= kezdet) return 0;
+
+    const uj = Buffer.alloc(meret - kezdet);
+    const fogantyu = await open(fajl, 'r');
+    try {
+      await fogantyu.read(uj, 0, uj.length, kezdet);
+    } finally {
+      await fogantyu.close();
+    }
+    // ⚠️ A félig írt utolsó sort (egy másik folyamat épp most ír) a következő alkalomra hagyjuk.
+    const sorVege = uj.lastIndexOf(0x0a);
+    if (sorVege < 0) return 0;
+    ismertMeret = kezdet + sorVege + 1;
+
+    let felvett = 0;
+    for (const sor of uj.subarray(0, sorVege + 1).toString('utf8').split('\n')) {
+      if (!sor.trim()) continue;
+      try {
+        const e = JSON.parse(sor);
+        if (azonositoSzerint.has(e.azonosito)) continue;   // a sajátunk, vagy már ismert
+        bejegyez(e);
+        felvett++;
+      } catch {
+        console.warn('esemenyTar.frissit - sérült sor, kihagyva', { fajl });
+      }
+    }
+    if (felvett) console.log('esemenyTar.frissit - más folyamat eseményei felvéve', { felvett });
+    return felvett;
+  }
 
   console.log('esemenyTarNyitasa - VÉGE', { fajl, esemeny: mind.length });
   return tar;

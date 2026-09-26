@@ -205,6 +205,44 @@ proba('⛔⛔ A MÁSIK FOLYAMAT ESEMÉNYE A FUTÓ TÁRBA IS BEKERÜL — a sajá
   }
 });
 
+// ⛔⛔ EGYSZERRE HÍVOTT FRISSÍTÉSEK SEM UGRANAK ÁT SEMMIT (2026-09-26, a D70 mérése közben).
+//
+// Egy folyamaton belül is futhat egyszerre két `frissit()` (az őrjárat két társsal párhuzamosan
+// dolgozik, közben az állapot-számítás is frissít). ⛔ Mérve: mindkettő UGYANONNAN olvasott, és
+// mindkettő hozzáadta a saját hosszát az „eddig olvastam" jelhez — a jel túlfutott, a
+// következő olvasás egy sor közepén kezdődött („sérült sor, kihagyva"), vagy a valódi új
+// eseményt ÁTUGROTTA. ⭐ Nyolc frissítés egyszerre egy 200 eseményes farkon, utána EGY új
+// esemény — annak meg kell jönnie. ⚠️ Kis farokkal (5 esemény, 3 hívás) a hiba csak néha jött
+// elő, és a próba VAK volt (a hibás kódon is átment); így a hibás kód tízből tízszer bukik
+// (mérve). Rontás-próba: sorba állítás nélkül bukik (kipróbálva).
+proba('⛔⛔ AZ EGYSZERRE HÍVOTT FRISSÍTÉSEK UTÁN IS MEGJÖN A KÖVETKEZŐ ESEMÉNY', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-parhuzamos-'));
+  try {
+    const futo = await esemenyTarNyitasa('proba', hely);
+    const masik = await esemenyTarNyitasa('proba', hely);
+    let elozo = null;
+    const ujat = async (sorszam) => {
+      const e = await esemenyLetrehozasa({ koino: 'proba', tipus: 'GondolatLetrehozas',
+        adat: { cim: 'P' + sorszam, meret: 3 }, elozo, sorszam }, kulcspar);
+      elozo = e.azonosito;
+      await esemenyMentese(masik, e);
+      return e;
+    };
+    for (let i = 1; i <= 200; i++) await ujat(i);
+
+    const felvettek = await Promise.all(Array.from({ length: 8 }, () => futo.frissit()));
+    const utolso = await ujat(201);
+    const utana = await futo.frissit();
+
+    return felvettek.reduce((o, n) => o + n, 0) === 200     // mind a kétszáz, egyszer
+      && utana === 1                                        // ⭐ a következő sem vész el
+      && (await futo.esemeny(utolso.azonosito))?.azonosito === utolso.azonosito
+      && (await futo.betolt()).length === 201;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 // ===================================
 // ⛔⛔⛔ AZ ELVESZETT ÍRÁS (2026-09-21)
 // ===================================

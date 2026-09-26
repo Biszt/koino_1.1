@@ -42,6 +42,8 @@ import kotes from './kotesProba.js';
 import tabla from './tablaProba.js';
 // ⭐ Az állandó UDP-kapu (D69/3, 2026-09-25) — hamis munkával, a kapu szabályai egymagukban.
 import udpKapu from './udpKapuProba.js';
+// ⭐ Az író (D70, 2026-09-26) — koinónként és készülékenként egy folyamat fűz a tárhoz.
+import iro from './iroProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -69,7 +71,8 @@ const PROBAK = [
   { nev: 'dht', futtat: dht },
   { nev: 'kotes', futtat: kotes },
   { nev: 'tabla', futtat: tabla },
-  { nev: 'udpkapu', futtat: udpKapu }
+  { nev: 'udpkapu', futtat: udpKapu },
+  { nev: 'iro', futtat: iro }
 ];
 
 const szuro = process.argv[2];

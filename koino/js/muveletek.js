@@ -70,15 +70,51 @@ const ELISMERES_HORGONY = 12;
  * @returns {Promise<Object>} a létrehozott esemény
  */
 async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
-  const { entitas = null, horgonyozzunk = false } = beallitas;
+  const { entitas = null } = beallitas;
   console.log('muveletek.esemenytTeszek - KEZDÉS', { tipus, entitas });
 
-  // ⛔ ELŐBB AMIT MÁS FOLYAMAT ÍRT (2026-09-26, 43. mérés): egy készüléken több folyamat ír a
-  // SAJÁT láncunkba (a futó őrjárat felszabadítása, a második ablak parancsa, a felület).
-  // Elavult lánc-véggel ugyanarra a sorszámra két eseményünk születne — ELÁGAZÁS a saját
-  // láncunkban. ⚠️ Ez a kockázatot csak szűkíti (a frissítés és a mentés között egy másik
-  // folyamat még írhat) — a teljes válasz döntési kérdés (egy író vagy zárolás).
-  await kornyezet.tar.frissit?.();
+  // ⛔⛔ D70 (2026-09-26): A TÁR MÖGÖTT AZ ÍRÓ ÁLL. Egy készüléken több folyamat ír a saját
+  // láncunkba (az őrjárat felszabadítása, a második ablak parancsa, a felület); az író a SAJÁT
+  // új eseményt csak a lánc VÉGÉRE engedi. Ha közben egy másik folyamat írt, a válasz
+  // „ELAVULT": frissítünk, és a lánc új végéről újra aláírunk. *Elágazás így nem születhet.*
+  //
+  // ⚠️ Az ADAT is újraszámolódhat (függvényként adva): a tudatpont bemondott összege a saját
+  // láncból jön — egy közben beírt pont-esemény után a régi összeg hazudna (D42).
+  for (let kiserlet = 1; ; kiserlet++) {
+    // ⭐ EGY PILLANATKÉP próbálkozásonként: előbb amit MÁS folyamat írt (43. mérés), és utána
+    // ugyanebből jön az adat (a bemondott összeg) ÉS a lánc vége. ⛔ Ha a kettő közé egy
+    // frissítés esne, az összeg és a hely két különböző állapotról beszélne.
+    await kornyezet.tar.frissit?.();
+    const adatMost = typeof adat === 'function' ? await adat() : adat;
+    const esemeny = await esemenyAlairasa(kornyezet, tipus, adatMost, beallitas);
+    let eredmeny;
+    try {
+      eredmeny = await esemenyMentese(kornyezet.tar, esemeny, { ujSajat: true });
+    } catch (hiba) {
+      if (hiba.kod === 'ELAVULT' && kiserlet < ELAVULT_PROBAK) {
+        console.log('muveletek.esemenytTeszek - elavult lánc-vég, újra', { kiserlet });
+        continue;
+      }
+      throw hiba;
+    }
+    if (!eredmeny.mentve) {
+      throw new Error('Az esemény nem menthető: ' + eredmeny.ok);
+    }
+    console.log('muveletek.esemenytTeszek - VÉGE', { azonosito: esemeny.azonosito });
+    return esemeny;
+  }
+}
+
+// ⭐ Ennyiszer próbálunk újra, ha közben más folyamat írt a láncunkba. ⚠️ Nem várt verseny
+// esetén egy-kettő; a korlát csak azért van, hogy semmi ne pörögjön a végtelenségig.
+const ELAVULT_PROBAK = 20;
+
+/**
+ * A lánc mostani végéről aláír egy saját eseményt (még nem menti).
+ * ⚠️ Nem frissít: a pillanatképet a hívó készíti (lásd fent).
+ */
+async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
+  const { entitas = null, horgonyozzunk = false } = beallitas;
   const veg = await lancVege(kornyezet.tar, kornyezet.szerzo);
 
   // A saját szeletét nyitó eseménynél az entitás-sorszám mindig 1 — nincs mihez képest
@@ -105,19 +141,11 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
   // és az egy ezredmásodperccel későbbi szavazat már nem számít bele (mérve).
   //
   // ⭐ Nem óra-hamisítás: a saját láncomban az idő nem lép VISSZA, csak áll egy pillanatra.
-  const esemeny = await esemenyLetrehozasa(
+  return esemenyLetrehozasa(
     { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott,
       ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}), ...veg },
     kornyezet.kulcspar
   );
-
-  const eredmeny = await esemenyMentese(kornyezet.tar, esemeny);
-  if (!eredmeny.mentve) {
-    throw new Error('Az esemény nem menthető: ' + eredmeny.ok);
-  }
-
-  console.log('muveletek.esemenytTeszek - VÉGE', { azonosito: esemeny.azonosito });
-  return esemeny;
 }
 
 // ===================================
@@ -576,21 +604,26 @@ export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'akt
     throw new Error('A tudatpont csak egész szám lehet, és nem lehet negatív.');
   }
 
-  // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új" kiadás.
-  const { osszeg, regi } = await sajatKiosztott(kornyezet, entitas);
-  const kiosztva = osszeg - regi + pont;
+  // ⭐ D70: az adat FÜGGVÉNY — ha közben más folyamat írt a láncunkba, az `esemenytTeszek` a
+  // friss láncból újraszámolja a bemondott összeget, mielőtt újra aláírna.
+  const adat = async () => {
+    // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új" kiadás.
+    const { osszeg, regi } = await sajatKiosztott(kornyezet, entitas);
+    const kiosztva = osszeg - regi + pont;
 
-  if (kiosztva > TUDATPONT_KERET) {
-    throw new Error(
-      'Ennyi tudatpontod nincs. Kereted ' + TUDATPONT_KERET +
-      ', ebből máshol ' + (osszeg - regi) + ' van kiosztva.'
-    );
-  }
+    if (kiosztva > TUDATPONT_KERET) {
+      throw new Error(
+        'Ennyi tudatpontod nincs. Kereted ' + TUDATPONT_KERET +
+        ', ebből máshol ' + (osszeg - regi) + ' van kiosztva.'
+      );
+    }
+    return { entitas, pont, szerep, kiosztva };
+  };
 
   return esemenytTeszek(
     kornyezet,
     'TudatpontRendezes',
-    { entitas, pont, szerep, kiosztva },
+    adat,
     { entitas, horgonyozzunk: true }   // a tudatpont mozgatja a részvételi arányt → a határidőt is
   );
 }

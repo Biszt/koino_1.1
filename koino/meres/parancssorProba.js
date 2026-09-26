@@ -1215,6 +1215,44 @@ proba('⛔⛔ A FUTÓ POSTALÁDA TOVÁBBADJA, AMIT KÖZBEN MÁSIK FOLYAMAT ÍRT 
   }
 });
 
+// ⛔⛔ AZ ÍRÓ A FOLYAMATOK KÖZÖTT (D70, 2026-09-26): a postaláda fut, és ő az író — öt kézi parancs
+// EGYSZERRE ír, és mind az öt csak ÁTADÁSSAL juthat a tárba (a csatornát a postaláda tartja, a
+// parancsok nem lehetnek írók). ⭐ A lemezen kell látszania: mind az öt gondolat megvan, és a
+// saját láncban egyetlen elágazás sincs. ⚠️ Rontás-próba: ha az író nem ment (a csatornán mindent
+// visszautasít), a parancsok elbuknak, és a próba is (kipróbálva). *A verseny DETERMINISZTIKUS
+// mérése az `iroProba.js`-ben van; ez a bekötést méri: a valódi folyamatok tényleg átadnak.*
+proba('⛔⛔ A FUTÓ POSTALÁDA AZ ÍRÓ — öt egyszerre futó kézi parancs átad, elágazás nélkül (D70)',
+  async () => {
+    const hely = await ujKeszulek();
+    const port = 7972;
+    let figyelo = null;
+    try {
+      await fut(hely, 'koino', 'Iro proba');
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+
+      const kimenetek = await Promise.all([1, 2, 3, 4, 5].map((i) =>
+        fut(hely, 'gondolat', 'EGYSZERRE ' + i)));
+
+      const sorok = (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8'))
+        .split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s));
+      const cimek = new Set(sorok.filter((e) => e.tipus === 'GondolatLetrehozas')
+        .map((e) => e.adat?.cim));
+      const pontok = new Map();
+      for (const e of sorok) pontok.set(e.szerzo + '|' + e.sorszam, (pontok.get(e.szerzo + '|' + e.sorszam) ?? 0) + 1);
+
+      return kimenetek.every((k) => k.includes('Létrejött:'))
+        && [1, 2, 3, 4, 5].every((i) => cimek.has('EGYSZERRE ' + i))
+        && [...pontok.values()].every((n) => n === 1);            // ⛔ egyetlen elágazás sem
+    } finally {
+      if (figyelo) figyelo.kill();
+      await varj(1000);
+      await rm(hely, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ A FRISS UDP-CÍM BEKÖTÉSE — VISELKEDÉST MÉRÜNK (2026-09-18)
 // ===================================
