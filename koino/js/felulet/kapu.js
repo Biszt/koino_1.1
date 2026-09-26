@@ -392,10 +392,15 @@ const TEST_KORLAT = 256 * 1024;
  *
  * ⚠️ A KORLÁTOT MENET KÖZBEN nézzük, nem a végén: ha a végén néznénk, a memória már
  * megtelt volna, mire kiderül.
+ *
+ * ⛔⛔ BÁJTOKAT GYŰJTÜNK, ÉS CSAK A VÉGÉN LESZ BELŐLÜK SZÖVEG (2026-09-26, átnézés). Egy darab
+ * bármelyik bájtnál végződhet, az ékezetes betű pedig UTF-8-ban két bájt: ha darabonként
+ * alakítanánk szöveggé, a határra eső betű mindkét fele „�" lenne. Mérve: „Árvíztűrő" →
+ * „Árvízt��rő" — és ez a szöveg a kulcsoddal aláírt eseménybe kerülne. A próba: kapuProba.js.
  */
 function testBeolvasas(keres, korlat = TEST_KORLAT) {
   return new Promise((kesz, hiba) => {
-    let nyers = '';
+    const darabok = [];
     let meret = 0;
 
     keres.on('data', (darab) => {
@@ -405,10 +410,11 @@ function testBeolvasas(keres, korlat = TEST_KORLAT) {
         keres.destroy();
         return;
       }
-      nyers += darab;
+      darabok.push(darab);
     });
 
     keres.on('end', () => {
+      const nyers = Buffer.concat(darabok).toString('utf8');
       if (!nyers) return kesz(null);
       try {
         kesz(JSON.parse(nyers));

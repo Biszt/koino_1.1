@@ -366,6 +366,34 @@ proba('⛔⛔ A TÚL NAGY TEST elakad — a memória nem tölthető meg', () => 
   }
 }, { kezelo: async () => { throw new Error('a kezelő meg sem hívódhat'); } }));
 
+// ⛔⛔ AZ ÉKEZET NEM TÖRHET KETTÉ A DARABHATÁRON (2026-09-26, átnézés).
+//
+// A kérés teste darabokban érkezik, és egy darab BÁRMELYIK bájtnál végződhet. Az „ű" UTF-8-ban
+// két bájt: ha a határ a kettő közé esik, és a kapu darabonként alakít szöveggé, mindkét fele
+// „�" lesz. ⚠️ Mérve: „Árvíztűrő" → „Árvízt��rő" — és ez a szöveg a kulcsommal aláírt
+// eseménybe kerülne, onnan pedig mindenkihez. *Egy magyar nyelvű koinóban ez nem kivétel.*
+//
+// ⭐ A próba a határt SZÁNDÉKOSAN a két bájt közé teszi: két külön írás, köztük szünet.
+// ⚠️ Rontás-próba: a régi `nyers += darab` alakkal ez a próba bukik (kipróbálva).
+proba('⛔⛔ AZ ÉKEZETES BETŰ ÉPEN JÖN ÁT, ha a két bájtja két darabba esik', () => kapuval(
+  async (kapu) => {
+    const szoveg = 'Árvíztűrő tükörfúrógép';
+    const test = Buffer.from(JSON.stringify({ cim: szoveg }), 'utf8');
+    const vagas = test.indexOf(Buffer.from('ű', 'utf8')) + 1;   // az „ű" KÉT bájtja közé
+    const v = await new Promise((kesz, hiba) => {
+      const k = request({
+        host: '127.0.0.1', port: kapu.port, path: '/api/ir', method: 'POST',
+        headers: { 'content-type': 'application/json', 'content-length': test.length, ...jelszoval }
+      }, (r) => {
+        let t = ''; r.on('data', (d) => { t += d; }); r.on('end', () => kesz({ allapot: r.statusCode, test: t }));
+      });
+      k.on('error', hiba);
+      k.write(test.subarray(0, vagas));
+      setTimeout(() => k.end(test.subarray(vagas)), 100);
+    });
+    return v.allapot === 200 && JSON.parse(v.test).kapott === szoveg;
+  }, { kezelo: async ({ test }) => ({ adat: { kapott: test?.cim } }) }));
+
 // ===================================
 // 6. ⭐ A RÉTEGZÉS — forrás-próba, nem kérés-próba
 // ===================================
