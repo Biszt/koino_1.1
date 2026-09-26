@@ -92,7 +92,8 @@ szinte biztosan PROGRAM-hiba a D69/2-ben, nem fal — a két napló kell hozzá.
   készüléke egy router mögött), a néma célt **sikeresnek könyveli**, és **abbahagyja a
   kopogtatását**. Mérve (kísérlettel, a napló írja le). ⚠️ A kézenfekvő javítás (bekopogóra ne
   alkalmazzuk) a telefon ↔ laptop terepmérésen épp a portváltó mobil NAT-ot rontaná el a
-  naplóban — ezért nincs javítva; a helyes út a munka után kapott tábla-kulcs lehet.
+  naplóban — ezért nincs javítva. ✅ **Csaba döntése (2026-09-26): (a)** — a terepmérésig marad
+  így; utána a hozzárendelést a munka végén kapott **tábla-kulcs** erősítse meg.
 - ⏸️ **Robusztusság (mérendő):** a bekopogóra EGYETLEN visszakopogás megy; ha az vagy a rá jövő
   HALLAK elvész, a kör *„rés nyílt, de a csere elbukott”* lesz (a következő menet pótolja).
 - ⚠️ **Elavult mérce:** a 6. szabály és a `figyel` leírása ma is **334 bájtos** „nincs újdonság”

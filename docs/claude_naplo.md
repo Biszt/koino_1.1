@@ -37,7 +37,8 @@ kopogásunkra felelne — a csere megtörténne, de a kör *„nem felelt”*-et
 terepmérésen épp ez az eset jöhet, és a napló félrevezető lenne. A kopogás-rétegben a kettő nem
 különböztethető meg (a `tol` futásonkénti véletlen, nem azonosság); a munka után viszont
 megvan a társ **tábla-kulcsa** (`csere.kapottTablaKulcs`) — egy kötésből jött célnál ezzel utólag
-ellenőrizhető a hozzárendelés. *Ez tervezési kérdés, Csabáé.*
+ellenőrizhető a hozzárendelés. *Ez tervezési kérdés, Csabáé.* ✅ **Csaba döntése: (a)** — *„a
+terepmérés után a hozzárendelést a munka végén kapott tábla-kulcs erősítse meg”*; addig marad.
 
 ⏸️ **ROBUSZTUSSÁG — EGYETLEN VISSZAKOPOGÁS.** Aki bekopog, arra a kapu EGYSZER kopog vissza
 (`kopogj(t)` a KOPOG-ágban); a bekopogó közben a mi HALLAK-unkra már elindította a munkáját, és
