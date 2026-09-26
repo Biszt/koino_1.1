@@ -69,6 +69,33 @@ két ág két különböző szeletbe esik, a találkozás elmaradhat (skálázá
 **D63 `lancGyoker`** (a szerző minden eseménye elköteleződik az egész addigi láncára) — ez most
 is lefoglalt mező. ⏸️ Hogy mikor épüljön meg, az a 7. szakasz 1. kérdéséhez kötődik.
 
+## 3/b. ⭐ HÁROM DOLOG, HÁROM ÚT — a metaadat, a hálózati cím és a tartalom (Csaba, 2026-09-26)
+
+> *„azt is beszéltük, hogy a címeket, a meta adatokat, és az entitás tartalmát, is külön kell
+> kezelni."* — ez a skálázási terv 4.7 és 0/b szakasza (*„Külön kell kezelni az entitás
+> metaadatait, a címet, és a body-t."*, 2026-09-02).
+
+- **A metaadat** (cím, típus, szülő, kategóriák — és a számok: tudatpont, a szavazás állása) kicsi
+  (~250 B/entitás). ⭐ **Ez az, aminek a SZÜLŐ körében is terjednie kell** — ettől tud bárki egy új
+  gondolatról, és ettől böngészhető a fa. *(A számok SZÁMÍTÁS eredményei: aki nem tartja az
+  entitást, annak csak tájékoztatás — dönteni csak a tartók döntenek, akiknél a teljes bemenet
+  megvan. Ellenőrizhetővé az összegző Merkle-fa teszi, 4.6.)*
+- **A hálózati cím** percenként változhat: a kötéseké a DHT-táblán (D71 előtt, 2026-09-20), az
+  entitás tartóié az entitás címjegyzékében (S5, név nélkül).
+- **A tartalom** (a szöveg, a képek) a legnagyobb, és csak ott kell, ahol tudatpontot tettek rá, vagy
+  megnyitották. ⭐ **A képek és a fájlok MÁR ÍGY működnek:** a szöveg a lenyomatukkal hivatkozik
+  rájuk, és a résen, igény szerint jönnek (fájl-randevú, 5.7).
+
+⛔ **A MAI AKADÁLY:** a `GondolatLetrehozas` EGY aláírt eseményben viszi a metaadatot ÉS a teljes
+szöveget (`adat.szoveg`). Ha a metaadatnak a szülő körében kell terjednie, a szöveg is vele
+utazna — pont az, amit a három külön út el akar kerülni.
+
+⭐ **A kézenfekvő megoldás ugyanaz, mint a képeké:** a szöveg külön darab lesz, és az esemény csak a
+LENYOMATÁT hordozza. Az esemény így kicsi és ellenőrizhető (aláírt), a szöveg pedig úgy jön, mint
+egy kép — és a lenyomat garantálja, hogy azt kaptuk, amit a szerző aláírt (a bizalom nem a
+csatornából jön, 3. szabály). ⏸️ Ez a gondolat ADATÁNAK alakját érinti (nem a kanonikus alak
+szabályait) — a 7. szakasz 5. kérdése.
+
 ## 4. S4 — A CSERE SZELETENKÉNT
 
 ### 4.1 Melyik szeleteken osztozunk?
@@ -168,3 +195,10 @@ Az új csere nem érti a régit. ⏸️ A 7. szakasz 3. kérdése.
 4. **A szelet-egyeztetés módja:** tartomány-alapú halmaz-egyeztetés (4.2), vagy a mai ÁLLÁS szeletre
    szűkítve? ⭐ Javaslatom: **a tartomány-alapú** — a szeletre szűkített ÁLLÁS a tömeges entitásnál
    ugyanazt a falat hozná vissza, egy szinttel lejjebb.
+5. **A gondolat szövege külön darab legyen-e, lenyomattal hivatkozva — ahogy a képek?** (3/b) ⭐
+   Javaslatom: **igen** — ettől terjedhet a metaadat a szülő körében a szöveg nélkül, és ettől lesz
+   a (b) tiszta. ⚠️ Két dolgot meg kell nézni előtte: (1) a régi (szöveget hordozó) események
+   érvényesek maradnak, tehát a számításnak mindkét alakot értenie kell; (2) kell-e hozzá új koino
+   (D66)? Valószínűleg nem, mert az állapot (entitás, tudatpont, döntés) nem a szövegből számítódik
+   — de ezt a 15. mérés mintájára meg kell mérni, nem kijelenteni. A szerkesztési javaslat (ami új
+   szöveget hoz) ugyanígy.
