@@ -9,8 +9,9 @@
 //     után visszakopogunk (42. mérés, 16:37: „nyitva van, de nem szolgál ki");
 //   · a saját visszhang nem munka; a bekopogók száma korlátos; és ha a cél a címét tartva
 //     MÁS portról jelentkezik, azt is őt ismerjük fel.
-//   · ⏸️ …DE AZ AZONOS IP-RŐL BEKOPOGÓ IDEGEN nem teheti sikeressé a néma célt (az (a) döntés,
-//     2026-09-26). ⚠️ Ma ISMERT HIBA: a próbája a javításig bukik (`probaFuttato.js`).
+//   · ⭐ D71 (2026-09-26): …DE AZ AZONOS IP-RŐL BEKOPOGÓ IDEGEN nem teheti sikeressé a néma
+//     célt — ha a cél várt társat hordoz, a portváltás csak feltevés, amit a munka végén a
+//     tábla-aláíró erősít meg; pontos címen a más aláíró „más felelt"; várt társ nélkül a régi marad.
 //
 // Futtatás: node koino/meres/mind.js udpkapu
 
@@ -171,19 +172,23 @@ proba('⭐ HA A CÉL A CÍMÉT TARTVA MÁS PORTRÓL JELENTKEZIK, AZT IS ŐT ISME
   } finally { a.kapu.zar(); b.kapu.zar(); }
 });
 
-proba('⛔ AZ AZONOS IP-RŐL BEKOPOGÓ IDEGEN NEM TESZI SIKERESSÉ A NÉMA CÉLT — (a) döntés, 2026-09-26', async () => {
-  // ⛔ A délelőtti kísérlet (napló, 2026-09-26): az A egy NÉMA célra kopog, akitől a B-t
-  // várja (egy kötés: a tábla-aláírója ismert). Közben a C — egy IDEGEN, UGYANARRÓL az
-  // IP-ről (egy család több készüléke egy router mögött) — bekopog az A-hoz.
+proba('⛔ AZ AZONOS IP-RŐL BEKOPOGÓ IDEGEN NEM TESZI SIKERESSÉ A NÉMA CÉLT — és a kör hívja tovább (D71)', async () => {
+  // ⛔ A 44. mérés: az A egy NÉMA célra kopog, akitől a B-t várja (egy kötés: a tábla-aláírója
+  // ismert). Közben a C — egy IDEGEN, UGYANARRÓL az IP-ről (egy család több készüléke egy router
+  // mögött) — bekopog az A-hoz.
   // ⚠️ Cím szintjén ez PONTOSAN a fenti portváltás-próba: halott/néma port + egy másik
   // kapu ugyanarról az IP-ről. A kettőt csak az választja el, KIVEL dolgozott a munka
   // (a tábla-kulcs, a munka végén) — ott a várt társ jött, itt egy idegen.
-  // ⭐ Amit a próba megkövetel (és ami a (i)–(iii) döntési kérdéstől független):
-  //   · a néma célt a kör NEM könyveli sikeresnek (ő egy szót sem szólt);
+  // ⭐ Amit a próba megkövetel (D71 (i), Csaba, 2026-09-26):
+  //   · a néma célt a kör NEM könyveli sikeresnek (ő egy szót sem szólt) — és kimondja, hogy
+  //     azonos IP-ről más jelentkezett (`masJelentkezett`);
+  //   · a kör a néma célt TOVÁBB HÍVJA (a hozzárendelés csak feltevés volt) — 2,5 mp alatt
+  //     legalább két kopogás (a javítás előtt: egy, 44. mérés);
   //   · az idegennel a munka ETTŐL MÉG lefut (postaláda — nem a bekopogó elhallgattatása a javítás).
-  // ⏸️ Hogy a kör kopogjon-e tovább a néma célra, az a (i) kérdés — ezt a próba nem dönti el.
+  // ⚠️ Az A munkája LASSÚ (2,2 mp): a feltevés addig függ, és a kopogásnak KÖZBEN is mennie kell.
+  // Gyors munkánál az elutasítás után egy „feltevés alatt néma" kör is újrakezdené — a próba vak volna.
   const nevjegyzek = new Map();
-  const a = await hamisKapu({ nevjegyzek });
+  const a = await hamisKapu({ nevjegyzek, ido: 2200 });
   const c = await hamisKapu({ nevjegyzek });
   const nema = await nyersFeladok(1);                 // kap, de soha nem felel
   nevjegyzek.set(a.kapu.port, 'A');
@@ -196,11 +201,75 @@ proba('⛔ AZ AZONOS IP-RŐL BEKOPOGÓ IDEGEN NEM TESZI SIKERESSÉ A NÉMA CÉLT
     ]);
     await varj(300);
     const e = ka.eredmenyek[0];
-    return e.ok !== true && ka.sikeres === 0
+    return e.ok !== true && ka.sikeres === 0 && e.masJelentkezett === true
+      && nema.lista[0].kapott >= 2
       && a.naplo.munkak.some((m) => m.port === c.kapu.port);
   } finally { a.kapu.zar(); c.kapu.zar(); nema.zar(); }
-}, { ismertHiba: 'ma a néma célt sikeresnek könyveli (a felelő port az idegené), és a kör abbahagyja '
-  + 'a kopogtatását — a javítás az (a) döntésé: a munka végén kapott tábla-kulcs erősítse meg a hozzárendelést' });
+});
+
+proba('⭐⭐ EGY IP-N TÖBB KÖTÉS (egy család egy router mögött): a MUNKA ALÁÍRÓJA választja ki, kit értünk el (D71)', async () => {
+  // ⛔ Ha a portváltás feltevése a sorban ELSŐ azonos IP-jű kötéshez kötődne, a valódi társ — a
+  // második — abban a körben nem erősödne meg, az első pedig „más jelentkezett"-et kapna. ⭐ A
+  // hozzárendelést ezért a munka végén kapott tábla-aláíró dönti el, nem a sorrend.
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const b2 = await hamisKapu({ nevjegyzek });
+  const nemak = await nyersFeladok(2);                // a két kötés régi (néma) címe
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(b2.kapu.port, 'B2');
+  try {
+    const celok = [
+      { cim: '127.0.0.1', port: nemak.lista[0].port, alairo: 'B1' },
+      { cim: '127.0.0.1', port: nemak.lista[1].port, alairo: 'B2' }
+    ];
+    const [ka] = await Promise.all([
+      a.kapu.kopog(celok, { idokorlat: 2500 }),
+      varj(300).then(() => b2.kapu.kopog(cel(a), { idokorlat: 2000 }))
+    ]);
+    await varj(300);
+    const [e1, e2] = ka.eredmenyek;
+    return e1.ok === false && !e1.masJelentkezett
+      && e2.ok === true && e2.port === b2.kapu.port && e2.eredmeny?.alairo === 'B2'
+      && a.naplo.jelzesek.some((j) => j.mi === 'PORTVALTAS-MEGEROSITVE');
+  } finally { a.kapu.zar(); b2.kapu.zar(); nemak.zar(); }
+});
+
+proba('⛔ PONTOS CÍMEN IS: HA MÁS FELEL, MINT AKIT A CÉL VÁRT, AZ „MÁS FELELT" — nem siker (D71)', async () => {
+  // ⭐ A cím azóta másé (pl. a router a B régi címét a C-nek adta ki): az A a B-t várja, a C felel.
+  // A rés megnyílt, a munka lement — de a kötést NEM érte el, és ezt a könyvelés kimondja.
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const c = await hamisKapu({ nevjegyzek });
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(c.kapu.port, 'C');
+  try {
+    const kor = await a.kapu.kopog([{ cim: '127.0.0.1', port: c.kapu.port, alairo: 'B' }],
+      { idokorlat: 2000 });
+    const e = kor.eredmenyek[0];
+    return kor.atfurt === 1 && kor.sikeres === 0 && e.ok === false && e.masFelelt === true
+      && e.eredmeny?.alairo === 'C';
+  } finally { a.kapu.zar(); c.kapu.zar(); }
+});
+
+proba('⭐ VÁRT TÁRS NÉLKÜL (friss és induló cím) A PORTVÁLTÁS MARAD A RÉGI — nincs mivel összevetni (D71)', async () => {
+  // ⚠️ A friss és az induló címnél nem tudjuk előre, ki van ott: a hozzárendelés azonnali, mint a
+  // D71 előtt. *Ha itt is megerősítést várnánk, a munka aláíróját semmivel nem vethetnénk össze —
+  // és minden portváltó társ „nem felelt" lenne.*
+  const nevjegyzek = new Map();
+  const a = await hamisKapu({ nevjegyzek });
+  const b = await hamisKapu({ nevjegyzek });
+  nevjegyzek.set(a.kapu.port, 'A');
+  nevjegyzek.set(b.kapu.port, 'B');
+  try {
+    const halott = { cim: '127.0.0.1', port: b.kapu.port === 65000 ? 65001 : 65000 };
+    const [ka] = await Promise.all([
+      a.kapu.kopog([halott], { idokorlat: 2500 }),
+      b.kapu.kopog(cel(a), { idokorlat: 2500 })
+    ]);
+    await varj(300);
+    return ka.atfurt === 1 && ka.sikeres === 1 && ka.eredmenyek[0].port === b.kapu.port;
+  } finally { a.kapu.zar(); b.kapu.zar(); }
+});
 
 proba('⭐ AKIVEL MÁR FUT A MUNKA, ARRA NEM KOPOGUNK — a futó munkáját számoljuk be', async () => {
   // ⭐ A B bekopogott az A-hoz (az A-nál munka indult); az A-nak épp most kezdődik egy köre,

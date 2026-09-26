@@ -3885,6 +3885,67 @@ háromból egyszer elágazott, a `frissit()`-es hatból egyszer sem — tehát a
 véletlenszerű. A determinisztikus alak (két tár-példány, egyszerre három-három gondolat) író nélkül
 háromból háromszor, íróval egyszer sem ágazott el.
 
+### D71. A KOPOGÁS-KÖR A TÁRSAT KERESI, NEM A CÍMÉT — a tábla-kulcs erősíti meg (2026-09-26, Csaba)
+
+> *(a):* „a terepmérés után a hozzárendelést a munka végén kapott tábla-kulcs erősítse meg" ·
+> és a három döntési kérdésre: *„rendben. elfogadom a javaslataidat."* — Csaba
+
+#### 1. Amiből jött — a 44. és a 45. mérés
+
+A kopogás-kör **címeket** hív, és csak a munka VÉGÉN tudja meg, ki vette fel (a társ tábla-kulcsa,
+`csere.kapottTablaKulcs`). Ebből három baj lett, mind mérve:
+
+- **(i) Rossz társ felel** (44.): a portváltás szabálya (*„azonos IP, más port = a célunk"*) egy
+  azonos IP-ről bekopogó IDEGENT is a célnak könyvel — a néma célt sikeresnek írja, és abbahagyja a
+  hívását. ⛔ A könyvelés hazudik.
+- **(ii) Ugyanaz a társ két címen** (45.): otthon a helyi és a nyilvános (hairpinning) út — két
+  csere egy helyett. ⚠️ Alkalmi: a 43. mérésen megnyílt, a 45.-en 19 perc alatt sem.
+- **(iii) Mindkét fél a saját körében hív** (45.): két csere percenként — terepen MINDEN percben
+  (a két óra ~1–2 mp-cel eltér, a második kör az első csere vége után indul).
+
+A négy csere egy társsal egyperces körrel ~6,5–8 MB/nap; eggyel ~1,4 MB/nap (6. szabály).
+
+#### 2. A DÖNTÉS
+
+- ⭐ **(i) A becsületes könyvelés:** ha a munka végén kiderül, hogy nem a várt társ felelt, a cél
+  **„nem felelt"** (pontos címen: „más felelt"), és a kör **addig hívja tovább** a célt, amíg a
+  tábla-kulcs meg nem erősíti, kivel beszélt. *Egy kopogás ~60 bájt — a hallgatás a drágább.*
+- ⭐ **(ii) Társanként egy út:** ha egy kötést az egyik címén már elértünk, a többi címét abban a
+  körben nem hívjuk, és a **helyi címet** részesítjük előnyben. Az új (névtelen) címnél a munka
+  után **megjegyezzük**, melyik cím kié — a következő körtől ott is működik.
+- ⏸️ **(iii) Társanként ablakonként egy csere** („ha ebben az ablakban már beszéltünk vele, bárki
+  kezdte, a saját körünk kihagyja") — ⛔ **de csak a mérés után**: a második csere elhozhatja, amit
+  a másik a két kör között tudott meg; hogy ez lassítja-e a hír terjedését (30. mérés: az ablakon
+  belüli ismétlés számít), azt előbb mérni kell.
+
+#### 3. A felépítés
+
+- **A cél hordozhatja a várt társat** (`alairo` — a kötés tábla-aláírója); a **munka visszaadja,
+  kivel dolgozott** (`alairo`, csak érvényes tábla-kulcsból). A kapu így sem tud a koinóról: két
+  átlátszatlan szöveget vet össze.
+- ⭐ **A portváltás-hozzárendelés FELTÉTELES, ha a cél várt társat hordoz:** a cél addig nem
+  „hallott", amíg a munka a várt aláírót nem hozza — közben a kör kopog tovább. Pontos címen a
+  munka indul, és ha más jön vissza, az eredmény „más felelt". ⚠️ **Várt társ nélkül** (friss és
+  induló címek) a hozzárendelés marad a mai: nincs mivel összevetni — ezeknél a (ii) tanulása segít.
+- ⭐ **(ii) A társ címei csoportot alkotnak, és egymás után hívódnak** (a helyi elöl): a következő
+  cím csak akkor kap kopogást, ha az előzők egy kopogás-köz alatt nem feleltek. ⛔ *Nem a második
+  kézfogást kell félbehagyni — a munka mindkét oldalon a kölcsönös kopogásra indul, és egy félbe
+  hagyott kézfogásból a túloldalon 10 mp-es elbukott csere lenne —, hanem a második címet nem is
+  kell hívni, amíg az első felel.* A kötés ehhez **több címet** is megjegyez (korlátosan; helyi
+  feljegyzés, sosem utazik — a névtelen friss jegyzék névtelen marad).
+
+#### 4. A lépések (mindegyik próbával és rontás-próbával)
+
+1. ✅ **(i)** a kapuban (`udpKapu.js`): a feltételes hozzárendelés, a „más felelt", a tovább-kopogás ·
+   a bekötés (`kopogasCeljai` → `alairo`; `resMunkaKeszito` → `alairo`) · a 44. mérés ISMERT HIBÁJA
+   zöldre fordult, és a jel lekerült. ⭐ **Építés közben kiderült:** ha a feltevés a sorban ELSŐ azonos
+   IP-jű kötéshez kötődne, egy IP-n több kötésnél (egy család egy router mögött) a valódi társ abban a
+   körben nem erősödne meg — ezért nem a sorrend, hanem **a munka aláírója választja ki**, kit értünk
+   el (külön próba, rontás-próbával). A bekötést három valódi őrjárat méri (`parancssorProba.js`).
+2. **(ii)** a kötés címei, a csoportos, egymás utáni hívás, a helyi elöl · a hatás a
+   `negyszeresCsereMeres.js`-sel (két cím: 2 → 1 csere/ablak).
+3. **(iii)** előbb a mérés (a terjedés az ablakonként egy cserével), aztán Csaba dönt, aztán építés.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

@@ -1061,9 +1061,12 @@ function resMunkaKeszito(allapot) {
       fajlOlvas: fajlok.olvas
     });
     const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
+    // ⭐⭐ KIVEL DOLGOZTUNK? (D71) — a társ tábla-aláírója, ha érvényes tábla-kulcsot hozott. A
+    // kopogás-kör ebből erősíti meg (vagy veti el) a hozzárendelést: a cím csak feltevés, ez a név.
+    const alairo = ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null;
     const alap = { uj: csere.uj ?? 0, kuldott: csere.kuldott ?? 0, korok: csere.korok ?? 0,
       bajt, masKoino: csere.masKoino ?? null, kivulrolIgyLatszom: csere.kivulrolIgyLatszom ?? null,
-      szeletKiszolgalva: csere.szeletKiszolgalva ?? null };
+      szeletKiszolgalva: csere.szeletKiszolgalva ?? null, alairo };
 
     // ⚠️ MÁSIK KOINO: nincs miről beszélni, és tanulni sem tanulunk tőle — kimondjuk (D19).
     if (csere.masKoino) {
@@ -1158,6 +1161,20 @@ function kapuJelzesKiiro() {
     if (e.mi === 'ATFURT-MUNKA-BUKOTT') {
       kiir(SZIN.nem + '  ✗ ' + ora() + ' rés nyílt (' + e.cim + ':' + e.port
         + '), de a csere a résen elbukott: ' + e.ok + SZIN.vege);
+    }
+    // ⭐⭐ D71: A PORTVÁLTÁS CSAK FELTEVÉS — a tábla-kulcs dönt (44. mérés). Terepen ebből látszik
+    // a mobil NAT portváltása is, és az is, ha egy azonos IP-jű MÁS készülék jelentkezett.
+    if (e.mi === 'PORTVALTAS-MEGEROSITVE') {
+      kiir(SZIN.jo + '  ⭐ ' + ora() + ' egy kötésem új porton jelentkezett (' + e.cim + ':' + e.port
+        + ', eddig ' + e.cel + ') — a tábla-kulcsa megerősítette' + SZIN.vege);
+    }
+    if (e.mi === 'MAS-JELENTKEZETT') {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + e.cim + ':' + e.port + ' nem az a kötésem, akit a '
+        + e.cel + ' címen vártam (más a tábla-kulcsa) — őt hívom tovább' + SZIN.vege);
+    }
+    if (e.mi === 'MAS-FELELT') {
+      kiir(SZIN.halvany + '  · ' + ora() + ' a ' + e.cim + ':' + e.port + ' címen most MÁS felel, nem a'
+        + ' kötésem (más a tábla-kulcsa) — ott nem értem el' + SZIN.vege);
     }
     if (e.mi === 'FOGLALT') {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + e.cim + ':' + e.port + ' foglalt — épp'
@@ -2748,14 +2765,16 @@ try {
         const kotesJegyzek = await kotesTar.olvas();
         const celok = [];
         const volt = new Set();
-        const felvesz = (hoszt, cport) => {
+        // ⭐ A kötés célja a VÁRT TÁRSAT is hordozza (D71): a kör a munka végén ebből tudja, hogy
+        // tényleg őt érte-e el. A friss és az induló cím névtelen.
+        const felvesz = (hoszt, cport, alairo = null) => {
           if (!hoszt || !Number.isInteger(cport)) return;
           const kulcs = hoszt + ':' + cport;
           if (volt.has(kulcs)) return;
           volt.add(kulcs);
-          celok.push({ hoszt, port: cport });
+          celok.push({ hoszt, port: cport, alairo });
         };
-        for (const c of kopogasCeljai(kotesJegyzek, res.frissUdp)) felvesz(c.cim, c.port);
+        for (const c of kopogasCeljai(kotesJegyzek, res.frissUdp)) felvesz(c.cim, c.port, c.alairo);
         // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
         for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
         const udpCelok = celok.filter((c) => {
@@ -2824,7 +2843,8 @@ try {
           let menetCeljai = udpCelok;
           for (;;) {
             menetek++;
-            const udp = await kapu.kopog(menetCeljai.map((c) => ({ cim: c.hoszt, port: c.port })),
+            const udp = await kapu.kopog(menetCeljai.map((c) => ({ cim: c.hoszt, port: c.port,
+              alairo: c.alairo ?? null })),
               { idokorlat: kopogasIdo() });
             if (!elso) { elso = udp; await meres; }
             const sikeresek = udp.eredmenyek.filter((e) => e.ok);
@@ -2833,7 +2853,9 @@ try {
             osszesUj += uj;
             if (!uj || !sikeresek.length || Date.now() >= ablakVege
               || menetek >= MENET_PLAFON) break;
-            menetCeljai = sikeresek.map((e) => ({ hoszt: e.cim, port: e.port }));
+            // ⭐ Az ismételt menet már tudja, kivel beszélt — a munka aláíróját viszi tovább (D71).
+            menetCeljai = sikeresek.map((e) => ({ hoszt: e.cim, port: e.port,
+              alairo: e.eredmeny?.alairo ?? null }));
           }
           // ⭐⭐ A BULI MÉRCÉJE: ahány KÜLÖNBÖZŐ társsal ebben a körben végigment a munka.
           // ⛔ 2026-09-26-ig itt egy hiba ült: a UDP-sikereket a TCP-kör száma FELÜLÍRTA, tehát

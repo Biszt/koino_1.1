@@ -294,13 +294,17 @@ export async function udpKapuNyitasa(beallitas) {
    * ⭐ Akivel a munka már fut (mert ő kopogott be), arra nem kopogunk — a futó munkáját
    * számoljuk be. ⚠️ Ha a cél a CÍMÉT tartva más portról felel (a mobil NAT portot vált,
    * 32. mérés), azt is őt ismerjük fel — a munka a valódi, felelő porttal megy.
+   * ⭐⭐ D71: a cél hordozhat VÁRT TÁRSAT (`alairo`), a munka pedig visszaadja, kivel dolgozott
+   * (`eredmeny.alairo`). Ilyenkor a portváltás csak feltevés, amit a munka erősít meg — ha nem,
+   * a cél „nem felelt" (`masJelentkezett`), pontos címen „más felelt" (`masFelelt`).
    *
    * @returns {Promise<{celok: number, atfurt: number, sikeres: number, foglalt: number,
    *                    kuldott: number, eredmenyek: Array<Object>}>}
    */
   async function kopog(celok, { idokorlat }) {
     const jok = (celok ?? [])
-      .map((c) => ({ cim: String(c.cim), port: Number(c.port) }))
+      .map((c) => ({ cim: String(c.cim), port: Number(c.port),
+        alairo: typeof c.alairo === 'string' && c.alairo ? c.alairo : null }))
       .filter((c) => c.cim && Number.isInteger(c.port));
     // ⚠️ A kapu IPv4-es foglalat (a tábla és a tükör is IPv4) — az IPv6-os célt kimondjuk (D19).
     for (const c of jok.filter((c) => c.cim.includes(':'))) {
@@ -309,18 +313,81 @@ export async function udpKapuNyitasa(beallitas) {
     const allapotok = jok
       .filter((c) => !c.cim.includes(':'))
       .map((c) => ({ ...c, kulcs: c.cim + ':' + c.port, tars: null, igeret: null,
-        hallak: false, foglalt: false }));
+        hallak: false, foglalt: false, masJelentkezett: false, bukott: null }));
     let kuldott = 0;
 
+    // ===== ⭐⭐ KI FELELT? — A HOZZÁRENDELÉS (D71, 2026-09-26) =====
+    //
     // ⚠️ A sorrend számít: pontos egyezés → akihez MÁR hozzárendeltük (a HALLAK után a munka
     // indulása ugyanezt a társat keresi) → azonos cím, más port (portváltás).
-    const talal = (t) => allapotok.find((a) => a.kulcs === t.kulcs)
-      ?? allapotok.find((a) => a.tars === t)
-      ?? allapotok.find((a) => !a.hallak && a.cim === t.cim);
+    //
+    // ⛔ A PORTVÁLTÁS CSAK FELTEVÉS (44. mérés): cím szintjén egy azonos IP-ről bekopogó IDEGEN
+    // pontosan így néz ki. Ha az azonos IP-jű, még el nem ért célok közt van VÁRT TÁRSAT hordozó
+    // (`alairo` — egy kötésből), a hozzárendelést ezért a MUNKA dönti el: a végén hozott
+    // tábla-aláíró választja ki, melyik célt értük el — ⭐ akkor is, ha egy IP-n több kötés áll (egy
+    // család több készüléke egy router mögött). Addig a célok nem „hallottak", és a kör kopog tovább.
+    // *A kopogás ~60 bájt — a hallgatás a drágább.* Várt társ nélkül (friss és induló címek) nincs
+    // mivel összevetni: ott a hozzárendelés azonnali, mint eddig.
+    const feltevesek = new Map();          // társ (a kapu bejegyzése) → a munkája (null, ha még nem indult)
+    const pontos = (t) => allapotok.find((a) => a.kulcs === t.kulcs);
+    const jeloltek = (t) => allapotok.filter((a) => !a.hallak && a.cim === t.cim && a.kulcs !== t.kulcs);
+
+    /** A társ hozzárendelése egy célhoz — ha van hová. A célt adja vissza, vagy null-t. */
+    const hozzarendel = (t) => {
+      const a = pontos(t) ?? allapotok.find((c) => c.tars === t);
+      if (a) { a.hallak = true; a.tars = t; return a; }
+      if (feltevesek.has(t)) return null;               // már feltevés — a munka dönt
+      const j = jeloltek(t);
+      if (!j.length) return null;
+      if (j.some((c) => c.alairo)) { feltevesek.set(t, null); return null; }
+      j[0].hallak = true; j[0].tars = t;
+      return j[0];
+    };
+
+    /** A feltevés sorsa — a munka eredménye dönti el (a tábla-kulcs). */
+    const dont = (t, igeret, e) => {
+      if (feltevesek.get(t) !== igeret) return;
+      feltevesek.delete(t);
+      const j = jeloltek(t);
+      if (!e.ok) {
+        // ⚠️ A BUKOTT munka nem bizonyít semmit (se őt, se mást): a kör tovább kopog, és ha
+        // semmi jobb nem jön, a végén ezt számoljuk be („rés nyílt, de a csere elbukott").
+        const c = j.find((x) => !x.bukott);
+        if (c) c.bukott = { tars: t, igeret };
+        return;
+      }
+      const talalt = j.find((c) => c.alairo && c.alairo === e.eredmeny?.alairo)
+        ?? j.find((c) => !c.alairo);
+      if (talalt) {
+        talalt.hallak = true; talalt.tars = t; talalt.igeret = igeret;
+        if (talalt.alairo) {
+          jelez({ mi: 'PORTVALTAS-MEGEROSITVE', cim: t.cim, port: t.port,
+            cel: talalt.cim + ':' + talalt.port });
+        }
+        return;
+      }
+      // ⛔ Egyik várt társ sem ő: a célok szabadok maradnak, és a kör hívja őket tovább.
+      const vartak = j.filter((c) => c.alairo);
+      for (const c of vartak) c.masJelentkezett = true;
+      jelez({ mi: 'MAS-JELENTKEZETT', cim: t.cim, port: t.port,
+        cel: vartak.map((c) => c.cim + ':' + c.port).join(', ') });
+    };
+
     const kor = {
-      hallak(t) { const a = talal(t); if (a) { a.hallak = true; a.tars = t; } },
-      foglalt(t) { const a = talal(t); if (a) { a.foglalt = true; a.tars = t; } },
-      munkaIndult(t, igeret) { const a = talal(t); if (a) { a.hallak = true; a.tars = t; a.igeret = igeret; } }
+      hallak(t) { hozzarendel(t); },
+      foglalt(t) {
+        // ⚠️ A „foglalt" nem erősíthető meg (nem fut munka) — várt társnál portváltásra nem könyveljük.
+        const a = pontos(t) ?? allapotok.find((c) => c.tars === t)
+          ?? jeloltek(t).find((c) => !c.alairo);
+        if (a) { a.foglalt = true; a.tars = t; }
+      },
+      munkaIndult(t, igeret) {
+        const a = hozzarendel(t);
+        if (a) { a.igeret = igeret; return; }
+        if (!feltevesek.has(t)) return;
+        feltevesek.set(t, igeret);
+        igeret.then((e) => dont(t, igeret, e));
+      }
     };
     korok.add(kor);
 
@@ -355,16 +422,27 @@ export async function udpKapuNyitasa(beallitas) {
     // ⭐ A `cel` az EREDETI cím, amire kopogtunk — a `cim`/`port` pedig az, ahonnan a társ
     // valóban felelt (portváltásnál más). A könyvelés a célhoz kötődik (D69/2): *azt a
     // bejegyzést kell frissíteni, amiből a kopogás indult, nem azt, ahonnan a válasz jött.*
+    // ⭐ A még függő feltevések munkáját megvárjuk — a `dont` előbb fut (előbb iratkozott fel),
+    // tehát utána minden cél sorsa eldőlt.
+    for (const ig of [...feltevesek.values()]) if (ig) await ig;
     const eredmenyek = [];
     for (const a of allapotok) {
       const cel = { cim: a.cim, port: a.port };
+      if (!a.igeret && a.bukott) { a.tars = a.bukott.tars; a.igeret = a.bukott.igeret; }
       if (!a.igeret) {
         eredmenyek.push({ cim: a.cim, port: a.port, cel, ok: false,
-          hiba: a.foglalt ? 'foglalt' : a.hallak ? 'felelt, de nem indult munka' : 'nem felelt' });
+          hiba: a.foglalt ? 'foglalt' : a.hallak ? 'felelt, de nem indult munka' : 'nem felelt',
+          ...(a.masJelentkezett ? { masJelentkezett: true } : {}) });
         continue;
       }
       const e = await a.igeret;
-      eredmenyek.push({ cim: a.tars?.cim ?? a.cim, port: a.tars?.port ?? a.port, cel, ...e });
+      // ⭐ PONTOS CÍMEN IS: ha a munka MÁS aláírót hozott, mint akit a cél várt, az „más felelt"
+      // (a cím azóta másé — pl. a router kiosztotta). ⚠️ Ha a munka nem hozott aláírót (pl. MÁSIK
+      // koinóé volt, és a csere a lenyomatnál véget ért), azt nem tudjuk cáfolni: marad, ami volt.
+      const mas = a.alairo && e.ok && e.eredmeny?.alairo && e.eredmeny.alairo !== a.alairo;
+      if (mas) jelez({ mi: 'MAS-FELELT', cim: a.tars?.cim ?? a.cim, port: a.tars?.port ?? a.port });
+      eredmenyek.push({ cim: a.tars?.cim ?? a.cim, port: a.tars?.port ?? a.port, cel, ...e,
+        ...(mas ? { ok: false, hiba: 'más felelt', masFelelt: true } : {}) });
     }
     return {
       celok: allapotok.length,

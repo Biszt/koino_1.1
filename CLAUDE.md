@@ -24,8 +24,8 @@ terepmérés** (telefon a szomszéd wifijén, laptop otthon): mindkét oldal a t
 másikat, a rés két router között nyílt ([`eredmenyek.md`](koino/meres/eredmenyek.md) 43.). ✅ **A
 D70 — EGY ÍRÓ** megépült, és **Androidon is mérve** (a telefonon 714/714,
 [`eredmenyek.md`](koino/meres/eredmenyek.md) 43/b.). **714 önpróba zöld** (27 próba-fájl) a laptopon
-és a telefonon; a munkakönyvtár tiszta, a telefon a friss `main`-en. *(Az (a) 1. lépése óta:
-**715 próba — 714 zöld + 1 ismert hiba**, lásd lent.)*
+és a telefonon; a munkakönyvtár tiszta, a telefon a friss `main`-en. *(A D71 (i) óta:
+**720 próba, mind zöld** — az (a) ismert hibája javítva, lásd lent.)*
 
 **Ahogy most működik (egy bekezdésben):** minden út az **állandó UDP-kapun** megy
 ([`udpKapu.js`](koino/js/csere/udpKapu.js)), és ugyanazt a munkát végzi
@@ -85,10 +85,25 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
    meg (a 43.-on 10 perc után igen). *A címek tényezője alkalmi, az irányoké minden percben ott van.* Az ár egyperces körrel: négy cserével ~6,5 MB/nap, eggyel ~1,4. ⚠️
    Mellékletek: két címen a bemelegítés eseményei kétszer utaznak; az *„ismeretlen kopogott be"*
    felirat ismert társra is kiíródik.
-3. ⭐ **Döntési kérdések Csabának, MIELŐTT építünk** (felírni, nem eldönteni): (i) ha a munka végén
-   kiderül, hogy a társ nem az, akit a cél várt — mi legyen a könyveléssel és a kopogással? (ii) ha
-   egy társt a körben már elértünk az egyik címén, kopogjunk-e a másikon? (iii) ha mindkét fél a
-   saját körében is kopog, elég-e egy csere — és ki kezdje?
+3. ✅ **Döntve: D71** ([fázis-2 terv](docs/fejlesztesi_terv_fazis2.md) — Csaba: *„elfogadom a
+   javaslataidat"*): (i) becsületes könyvelés — a várt társ „nem felelt", és a kör hívja tovább,
+   amíg a tábla-kulcs meg nem erősíti · (ii) társanként egy út: egy kötés címei egymás után, a helyi
+   elöl; az új címnél a munka után megjegyezzük, kié · (iii) társanként ablakonként egy csere —
+   ⛔ **csak a mérés után** (lassítja-e a hír terjedését?).
+
+**A D71 lépései:**
+1. ✅ **(i) megépült** (`udpKapu.js` · `kotesek.js` · `koino.js`): a kötés célja hordozza a várt
+   tábla-aláírót, a munka visszaadja, kivel dolgozott; az azonos IP-jű, más portú válasz feltevés,
+   amit a munka aláírója dönt el — ⭐ egy IP-n több kötésnél is (egy család egy router mögött).
+   Próbák: `udpKapuProba.js` (a 44. mérés ismert hibája zöld, a jel lekerült; + a család, a „más
+   felelt", a várt társ nélküli régi út) · `kotesProba.js` · ⭐ `parancssorProba.js` (három valódi
+   őrjárat: az idegen nem teszi elértté a néma kötést, a portváltó kötést a tábla-kulcs ugyanabban a
+   körben megerősíti). Rontás-próbák ágankénti bukással (öt a kapun, három a bekötésen). A napló két
+   új sora: *„egy kötésem új porton jelentkezett … a tábla-kulcsa megerősítette"* és *„… nem az a
+   kötésem, akit … vártam — őt hívom tovább"*.
+2. ⏭️ **(ii)** a kötés címei, a csoportos, egymás utáni hívás, a helyi elöl · a hatás a
+   `negyszeresCsereMeres.js`-sel (két cím: 2 → 1 csere/ablak).
+3. ⏸️ **(iii)** előbb a mérés (a terjedés ablakonként egy cserével), aztán Csaba dönt, aztán építés.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -173,7 +188,7 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
   karcsúsításakor került oda, **szó szerint**. Ha egy döntés *miértje* kell, ott keresd.
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D70 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D71 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -196,7 +211,7 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D70**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D71**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 
@@ -211,7 +226,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **185 fájl, 3185,8 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **185 fájl, 3201,4 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -332,7 +347,7 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 715 önpróba (714 zöld + 1 ismert hiba — az (a) döntésé)
+node koino/meres/mind.js         # a 720 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
@@ -367,7 +382,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. A címek tényezőjét a tábla-kulcsos hozzárendelés felezné, az irányokét a (iii) döntés — együtt közel az ötödére. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 185 fájl, 3185,8 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 185 fájl, 3201,4 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -390,7 +405,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 715 próba huszonhét fájlban (ebből 1 **ismert hiba**: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 720 próba huszonhét fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
@@ -427,7 +442,7 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 - `js/csere/csere.js` — **a csere-protokoll logikája, hálózat nélkül** (Szakasz 2): `ALLAS` (szerzőnként legnagyobb sorszám + hézagok + elágazások + a lánc **ujjlenyomata**) → `KEREK` → `ESEMENY`. ⚠️ A „legnagyobb sorszám önmagában elég" **nem igaz** — a hézag és a lánc közepén rejtett elágazás miatt; mindkettő rontás-próbával igazolva. A beérkezett esemény ugyanazon az `esemenyMentese` kapun megy be, mint a saját: **a hálózat nem kap engedékenyebb kaput**.
 - `js/csere/vonal.js` — **a párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen — D69/2: nincs TCP a készülékek között) (ugyanaz az alak, mint a táré). Szimmetrikus — egyetlen `parbeszed` fut mindkét oldalon —, és **a csendes körnél áll meg** (se nem adtunk, se nem kaptunk). Semmit nem tud a koinóról. ⭐ **A kör egy 43 karakteres `LENYOMAT`-tal kezdődik** (D35, B. lépés): ha a két fél tudása egyezik, a részletes `ALLAS` el sem indul — mérve **334 bájt a 16 158 helyett**. ⚠️ A csendes kör feltétele emellett is megmarad: a lenyomat az egyetértést fogja meg, a csendes kör a hibás/rosszindulatú felet.
 - `js/csere/udpVonal.js` — **a csere UDP-n** (D37–D39, E. lépés; 2026-09-26 óta az EGYETLEN szállítás): egy foglalatnak látszó utánzat, ami alatta UDP-t használ, így a `parbeszed` **változatlanul** fut az átfúrt résen (1. szabály gyakorlati haszna). Amit a UDP nem ad meg, azt itt pótoljuk: sorszám + nyugta + újraküldés. ⚠️ **És két őr, ami először hiányzott** (2026-08-30): a `kiurites()` — a lezárás előtt meg kell várni, hogy az utolsó darabot nyugtázzák, különben eldobjuk (a `parbeszed` az utolsó `LENYOMAT`-ra már nem vár) —, és a **tétlenségi óra**, hogy a néma társ ne ragaszthasson be. E kettő nélkül a csere **végtelenül várt**; rontás-próba őrzi mindkettőt.
-- `js/csere/udpKapu.js` — ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25; a D69/2 óta az EGYETLEN kapu): egy foglalat a teljes futásra — bármikor felel a kopogásra, a bekopogóra visszakopog, társanként egyszerre egy munka (`FOGLALT`), a jegyzéke időben ÉS darabra korlátos. A munkát kívülről kapja (`resMunkaKeszito` a `koino.js`-ben — az őrjárat, a `figyel` és a kézi parancsok közös gépezete).
+- `js/csere/udpKapu.js` — ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25; a D69/2 óta az EGYETLEN kapu): egy foglalat a teljes futásra — bármikor felel a kopogásra, a bekopogóra visszakopog, társanként egyszerre egy munka (`FOGLALT`), a jegyzéke időben ÉS darabra korlátos. A munkát kívülről kapja (`resMunkaKeszito` a `koino.js`-ben — az őrjárat, a `figyel` és a kézi parancsok közös gépezete). ⭐⭐ **D71 (2026-09-26): a kör a TÁRSAT keresi, nem a címét.** A kötésből jött cél a várt társ tábla-aláíróját is hordozza, a munka visszaadja, kivel dolgozott — és az azonos IP-jű, más portú válasz (a mobil NAT portváltása) csak FELTEVÉS, amit a munka végén a tábla-kulcs erősít meg (egy IP-n több kötésnél is ez választ). Ha nem az jött, akit vártunk, a cél „nem felelt", és a kör hívja tovább (44. mérés: különben egy azonos IP-jű idegen tette sikeressé a néma kötést); pontos címen a más aláíró „más felelt". Várt társ nélkül (friss és induló cím) a régi, azonnali hozzárendelés marad.
 - `js/csere/pajzsfuro.js` — **a lyukfúrás** (D37, E. lépés): mindkét fél kifelé kopog egy **rögzített helyi portról**, és a két rés a közepén találkozik — fogadóképes fél nélkül. A `mindketIrany` a mérce: nem elég kapni, a MI csomagunknak is át kell jutnia. ⚠️ A `kulsoCim` (STUN) **segédeszköz és paraméter** (2. szabály): a szerver cserélhető, ha nem válaszol a koino ugyanúgy működik, és **semmilyen bizalom nem jár vele** — egy portszámot mond, nem igazságot. Hosszú távon a saját tükrünk váltja ki (`vonal.js`, `latlak`).
 - `js/csere/kapunyitas.js` — **megkérjük a routert**, hogy engedje be a kapcsolatot (NAT-PMP, PCP, UPnP — mind a három megmérve). ⚠️ **Segédeszköz, nem előfeltétel** (2. szabály): ha a router nemet mond, a koino ugyanúgy működik, csak ő kezdeményez kifelé. A fejlesztő routere mind a hármat elutasította — ezért fordult a terv a D33 felé.
 - `js/csere/helyiFelfedezes.js` — **a helyi felfedezés** (Szakasz 2 / F. lépés): azonos wifin lévő készülékek megtalálják egymást, **cím beírása nélkül**. Két szerep: aki keres, **kiált** (`helyiFelfedezes`), aki dolgozik (`orjarat`/`figyel`), az **felel** (`felfedezoValaszolo`) — magától senki nem kiabál. ⚠️ **Kényelem, nem előfeltétel** (2. és 4. szabály): ha a wifi tiltja a kliensek közti forgalmat, a kézi `tars` út marad. Bizalom nem jár vele (3. szabály): a cím a **foglalatból** jön, nem az üzenetből, és sosem lesz esemény. ⚠️ Két dolog mérésből jött: **ismételve kell kiáltani** (egyszeri kiáltásnál a később induló nem hall semmit), és a válasz **a csoportnak is** megy (egy gépen több példány osztozik a rögzített felfedező porton).

@@ -97,15 +97,18 @@ export function kotesek(jegyzek, korlat = KOTES_CEL) {
 export function kopogasCeljai(jegyzek, frissCimek = [], korlat = KOTES_KORLAT + KOTES_CEL) {
   const celok = [];
   const volt = new Set();
-  const felvesz = (hoszt, port) => {
+  // ⭐⭐ A KÖTÉS CÉLJA A VÁRT TÁRSAT IS HORDOZZA (D71, 2026-09-26): a tábla-aláíróját. Ebből
+  // tudja a kopogás-kör a munka végén, hogy tényleg ŐT érte-e el (44. mérés: egy azonos IP-ről
+  // bekopogó idegen különben a néma kötést tette sikeressé). A friss cím névtelen: `alairo: null`.
+  const felvesz = (hoszt, port, alairo = null) => {
     if (!hoszt || !Number.isInteger(port)) return;
     const kulcs = hoszt + ':' + port;
     if (volt.has(kulcs)) return;
     volt.add(kulcs);
-    celok.push({ cim: hoszt, port });
+    celok.push({ cim: hoszt, port, alairo });
   };
 
-  for (const k of kotesek(jegyzek, KOTES_KORLAT)) felvesz(k.hoszt, k.port);
+  for (const k of kotesek(jegyzek, KOTES_KORLAT)) felvesz(k.hoszt, k.port, k.alairo ?? null);
   for (const c of frissCimek ?? []) felvesz(c.hoszt, c.port);
 
   return celok.slice(0, korlat);

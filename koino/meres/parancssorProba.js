@@ -2302,6 +2302,93 @@ proba('⭐⭐ A BEMUTATKOZÁS ÁLLÁSA LÁTSZIK: előbb FÜGGŐBEN, a válasz ut
     }
   });
 
+proba('⛔⛔ D71 AZ ŐRJÁRATBAN: egy azonos IP-jű IDEGEN nem teszi elértté a néma kötést — a portváltó kötést viszont a tábla-kulcs ugyanabban a körben megerősíti',
+  async () => {
+    // ⛔ A 44. mérés a VALÓDI programban, három őrjárattal (a bekötés próbája — 4. szabály):
+    //   0. a B az A-hoz kopog, cserélnek — az A-nak kötése lesz a B-vel (127.0.0.1:PB1). A B leáll.
+    //   1. az A a néma B-re kopog; közben a C — egy IDEGEN ugyanarról az IP-ről — bekopog, és
+    //      cserélnek. A D71 előtt az A a C-t a B-nek könyvelte („1/1 társ"); most kimondja, hogy
+    //      más jelentkezett, és a B-t hívja tovább.
+    //   2. a B visszajön ÚJ porton (mint a mobil NAT portváltása). Az A körében ez feltevés, és a
+    //      munka végén a B tábla-kulcsa ugyanabban a körben megerősíti.
+    // ⭐ A két szakasz a bekötés két darabját méri: az 1. a kötés célját (`kopogasCeljai` →
+    //   `alairo`), a 2. a munka eredményét (`resMunkaKeszito` → `alairo`). Bármelyik hiányzik, bukik.
+    // ⚠️ Minden készülék saját, kijelölt porton fut: a kézi parancs a 7373-at venné fel, ha szabad,
+    //   és ott egy VALÓDI őrjárat is állhat — a próba adata nem juthat hozzá.
+    // ⚠️ Az időzítés: 6 mp-es ablakban az A a teljes ablakban kopog; a C és a B az ablak eleje után
+    //   0,3 mp-cel indul, így a kopogásuk az A körébe esik.
+    const A = await ujKeszulek();
+    const B = await ujKeszulek();
+    const C = await ujKeszulek();
+    const PA = 7661, PB1 = 7662, PB2 = 7663, PC = 7664;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+      { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben },
+        stdio: ['ignore', 'pipe', 'pipe'] });
+    const ablakElejere = () => {
+      const most = Date.now();
+      return varj(Math.ceil((most + 1) / 6000) * 6000 - most + 300);
+    };
+    let a = null, b = null, c = null;
+    try {
+      await fut(A, 'koino', 'Kotes proba');
+      await fut(B, 'tars', '127.0.0.1', String(PA), 'A');
+      await fut(C, 'tars', '127.0.0.1', String(PA), 'A');
+
+      let kimenet = '';
+      a = orjarat(A, PA);
+      a.stdout.on('data', (d) => { kimenet += d; });
+      a.stderr.on('data', (d) => { kimenet += d; });
+
+      // 0. A KÖTÉS — a B bekopog, cserélnek; utána a B elhallgat.
+      b = orjarat(B, PB1);
+      let bKimenet = '';
+      b.stdout.on('data', (d) => { bKimenet += d; });
+      for (let i = 0; i < 40 && !/csere a résen/.test(bKimenet); i++) await varj(500);
+      b.kill(); b = null;
+      // ⚠️ Megvárjuk, hogy az A egy kört a NÉMA B-vel is lezárjon: a 0. szakasz „1/1 társ" sora
+      // különben néha a határ után íródik ki, és átcsúszna az 1. szakasz naplójába (mérve).
+      const nemaKor = async () => {
+        const tol = kimenet.length;
+        for (let i = 0; i < 40 && !/egyik rés sem nyílt meg/.test(kimenet.slice(tol)); i++) await varj(500);
+      };
+      await nemaKor();
+
+      // 1. AZ IDEGEN — ugyanarról az IP-ről, az A körébe időzítve.
+      await ablakElejere();
+      const h0 = kimenet.length;
+      c = orjarat(C, PC);
+      await varj(3500);
+      c.kill(); c = null;                     // a következő körben már ne legyen kit elérni
+      await nemaKor();                        // az idegen körének összegzője is az 1. szakaszé
+      const elso = kimenet.slice(h0);
+
+      // 2. A B ÚJ PORTON — az A körébe időzítve.
+      await ablakElejere();
+      const h1 = kimenet.length;
+      b = orjarat(B, PB2);
+      await varj(9000);
+      const masodik = kimenet.slice(h1);
+
+      // ⚠️ HA BUKIK, MEGNEVEZI MAGÁT (D19): melyik szakasz, és az A naplója abból a szakaszból.
+      const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').trim();
+      const elertVkit = /✓ \d\d:\d\d:\d\d [1-9]\d*\/\d+ társ/;
+      if (!elso.includes('nem az a kötésem, akit a 127.0.0.1:' + PB1 + ' címen vártam')
+        || elertVkit.test(elso)) {
+        throw new Error('1. szakasz (az idegen) — az A naplója: ' + tiszta(elso).slice(0, 900));
+      }
+      if (!masodik.includes('egy kötésem új porton jelentkezett (127.0.0.1:' + PB2
+        + ', eddig 127.0.0.1:' + PB1 + ')') || !elertVkit.test(masodik)) {
+        throw new Error('2. szakasz (a B új porton) — az A naplója: ' + tiszta(masodik).slice(0, 900));
+      }
+      return true;
+    } finally {
+      for (const f of [a, b, c]) if (f) f.kill();
+      await varj(700);
+      for (const h of [A, B, C]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
 export default futtatas;
 
 // Önállóan is futtatható: node koino/meres/parancssorProba.js

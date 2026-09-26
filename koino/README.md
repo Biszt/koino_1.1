@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhét próba-fájl, **715 önpróba** (714 zöld + 1 **ismert hiba**, ami a javításig bukik, de a
-sort nem pirosítja be — lásd `meres/probaFuttato.js`); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhét próba-fájl, **720 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **185 fájl, 3185,8 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **185 fájl, 3201,4 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -192,7 +192,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/tarsak.js` | **a társ-lista** (D33) — 2026-09-26 óta az **induló címek**: kire kopogjunk az első találkozáshoz — ⭐ 3.4 óta a **szelet-címjegyzék** is („kinél van EZ az entitás?"): név nélkül, elévüléssel |
 | `js/csere/pajzsfuro.js` | **pajzsfúrás** (E. lépés): mindkét fél kifelé kopog, hogy a két router rése egymásra illeszkedjen |
 | `js/csere/udpVonal.js` | ugyanaz a csere **az átfúrt UDP-résen** — sorszám, nyugta, újraküldés, kiürítés és tétlenségi óra |
-| `js/csere/udpKapu.js` | ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25): **egy foglalat a teljes őrjáratra** — a kopogásra bármikor felel, a bekopogóval is munka indul, társanként egyszerre egy (`FOGLALT`), és a saját külső címet is ezen méri (egy leképezés, egész futásra). A munkát kívülről kapja: a kapu nem tud a koinóról |
+| `js/csere/udpKapu.js` | ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25): **egy foglalat a teljes őrjáratra** — a kopogásra bármikor felel, a bekopogóval is munka indul, társanként egyszerre egy (`FOGLALT`), és a saját külső címet is ezen méri (egy leképezés, egész futásra). A munkát kívülről kapja: a kapu nem tud a koinóról. ⭐⭐ **D71: a kör a TÁRSAT keresi** — a kötésből jött cél a várt tábla-aláírót hordozza, és az azonos IP-jű, más portú válasz csak feltevés, amit a munka végén kapott aláíró erősít meg (különben „nem felelt", és a kör hívja tovább) |
 | `js/csere/helyiFelfedezes.js` | **helyi felfedezés** (F. lépés): aki keres, kiált; aki dolgozik, felel — cím beírása nélkül |
 | `js/csere/dht.js` | ⭐ **a BitTorrent DHT kliense** (BEP 5 + 44): egy kis, aláírt, kulcshoz kötött bejegyzés feltétele és visszakeresése — ma ez viszi a **hirdetőtáblát** (35–37. mérés). ⛔ Minden talált bejegyzés aláírását ellenőrzi (3. szabály), a belépők csak paraméterek (2. szabály), a belépő pedig **csak kurbli**: a készülék a saját emlékezetéből indul |
 | `js/csere/tablaKulcs.js` | ⭐⭐ **a TÁBLA-KULCS**: a készülék neve a táblán és a kötések azonosítója — ⛔ **soha nem az azonosságod** (D6). Két kulcspár: Ed25519 (a rekesz neve, ez ír alá) és X25519 (ebből lesz a társankénti közös titok, **küldés nélkül**) |

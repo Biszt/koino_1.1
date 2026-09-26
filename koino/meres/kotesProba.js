@@ -211,6 +211,20 @@ proba('⭐ A KOPOGÁS CÉLJAI: a kötések ELÖL, a friss címek utánuk — dup
     && celok.some((c) => c.cim === '198.51.100.9');
 });
 
+proba('⭐⭐ A KÖTÉS CÉLJA A VÁRT TÁRSAT IS HORDOZZA (D71) — a friss cím névtelen marad', () => {
+  // ⛔ Enélkül a kopogás-kör csak címet ismer, és a munka végén nincs mivel összevetnie, kit ért
+  // el (44. mérés). ⚠️ Ha egy friss cím egyezik egy kötés címével, a kötésé marad (elöl jön).
+  let j = [];
+  j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '203.0.113.7', port: 41777 }, 1000);
+  const celok = kopogasCeljai(j, [
+    { hoszt: '203.0.113.7', port: 41777 },
+    { hoszt: '198.51.100.9', port: 7373 }
+  ]);
+  const anna = celok.find((c) => c.cim === '203.0.113.7');
+  const idegen = celok.find((c) => c.cim === '198.51.100.9');
+  return celok.length === 2 && anna?.alairo === kulcs('anna').alairo && idegen?.alairo === null;
+});
+
 proba('⭐ A NÉMA KÖTÉS megnevezhető — erről kell majd a TÁBLÁRÓL érdeklődni (D19)', () => {
   let j = [];
   j = talalkozasFeljegyzese(j, kulcs('anna'), { hoszt: '10.0.0.1', port: 1 }, 1000);
