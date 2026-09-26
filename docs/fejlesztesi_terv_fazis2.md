@@ -3952,7 +3952,11 @@ A négy csere egy társsal egyperces körrel ~6,5–8 MB/nap; eggyel ~1,4 MB/nap
    finomított (**V2** — csak ha azóta nincs mit mondanunk; az ismételt menet „akinek van mit mondanom")
    nem lassít, és páronként ablakonként egy csere. ⭐ Mellette kiderült: a mai kör a bekopogótól tanult
    hírt a következő ablakig tartja; a továbbadással (**V3**) a hír 5–8 mp alatt ér körbe (ma 2–3
-   ablak). ⏭️ Csaba dönt: V2 vagy V3 — aztán építés.
+   ablak). ⭐ **Csaba (2026-09-26 éjjel):** az entitások a tudatpont-tulajdonosok szerint terjedjenek
+   (+ véletlen kötések, 4.2/b), és *„úgy tervezzünk meg mindent, hogy végtelenig lehessen skálázni"*.
+   ⛔ Ezért a V2 és a V3 **nem a koino-szintű lenyomatra épül** (nagy koinóban soha nem egyezik, a V2
+   semmit nem spórolna) — ⏭️ előbb a skálázási terv **S3–S4** (entitásonkénti tár, lenyomat és ÁLLÁS),
+   és azokra a V2, a V3 és a tulajdonosi körök.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 

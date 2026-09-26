@@ -113,7 +113,12 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
    mit mondanunk) **nem lassít**, és páronként ablakonként pontosan egy csere. ⭐⭐⭐ **És kiderült:** a
    mai kód a bekopogótól tanult hírt a következő ablakig tartja — ezért kell ma 2–3 ablak, mire egy
    hír mindenkihez eljut; ha aki újat tanul, maga továbbadja (V3), **5–8 mp** (N=1000 mellett is).
-   ⏭️ **Döntési kérdés Csabának: V2 vagy V3?**
+   ⭐⭐ **Csaba döntései (2026-09-26 éjjel):** a címek megosztása és az entitások terjedése KÜLÖN
+   kérdés; az entitások a **tudatpont-tulajdonosok szerint** terjedjenek (+ véletlen kötések, 4.2/b);
+   és ⭐ **„végtelenig lehessen skálázni"** (a 9. szabály élesítése, lent). ⛔ Ezért a V2 és a V3 **nem
+   a koino-szintű lenyomatra épül** (nagy koinóban az soha nem egyezik) — előbb a skálázási terv
+   **S3 (entitásonkénti tár) és S4 (entitásonkénti lenyomat és ÁLLÁS)**, és azokra a V2, a V3 és a
+   tulajdonosi körök szerinti terjedés.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -257,6 +262,12 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 🔍 **Ellenőrizhető alak — ezt kérdezd minden új darabnál:** *„Ez mit csinál egymilliárd e-embernél?"* Ha a válasz **„akkor majd kicseréljük"**, a darab **nincs kész**.
 
 ⚠️ *Ez a szabály azért került ide, mert Claude 2026-08-31-én pont ezt javasolta („indulj a maival, cseréld később"), és Csaba elutasította. Egy friss session ugyanezt fogja javasolni.* Az első, amit a szabály elkap: a tár-illesztő **`betolt()`** művelete az ÖSSZES eseményt adja vissza — vagyis **nem a fájlformátum a hiba, hanem az illesztés**; gyorsítótárral is csak a rossz kérdés lesz gyorsabb. Részletek: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) 0. szakasz.
+
+⭐⭐ **ÉS A VÉGTELEN (Csaba, 2026-09-26):** *„az nagyon fontos, hogy úgy tervezzünk meg mindent, hogy végtelenig lehessen skálázni."*
+
+🔍 **A „végtelen" ellenőrizhető alakja — élesebb, mint a milliárd:** *egy készülék terhe (amit tárol, amit naponta küld, ahány cserét csinál, amennyit számol) **ne a koino méretétől függjön**, hanem attól, amivel ő maga foglalkozik — a tudatpontjaitól, a kötéseitől, a saját szeletétől.* Ahol elkerülhetetlen (az identitás-ellenőrzés, a DHT keresése), legfeljebb **logaritmikusan** nőhet.
+
+⚠️ *Ez a mondat azért került ide, mert Claude még aznap a D71 (iii)-ra azt javasolta, hogy „a V2 most megépül" — pedig a V2 az EGÉSZ koino egyetlen lenyomatára épült volna, ami nagy koinóban soha nem egyezik, tehát ott semmit nem spórolt volna. Ugyanaz a minta, mint 08-31-én: „működik most, és majd kicseréljük alatta".* ⭐ Ami ma a próbát kiállja: a kötés-háló (K korlátos), a kötés címei (≤3), a kapu jegyzéke (időben és darabra korlátos), a DHT-tábla (log N). ⛔ Ami nem: az egyetlen `esemenyek.jsonl` és a „mindenki mindent tárol" (skálázási terv **S3**), a koino-szintű lenyomat és a szerzőnkénti ÁLLÁS (**S4**).
 
 ## Domain-fogalmak (kötelező terminológia)
 
