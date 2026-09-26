@@ -44,6 +44,7 @@ import tabla from './tablaProba.js';
 import udpKapu from './udpKapuProba.js';
 // ⭐ Az író (D70, 2026-09-26) — koinónként és készülékenként egy folyamat fűz a tárhoz.
 import iro from './iroProba.js';
+import szovegDarab from './szovegDarabProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -72,7 +73,8 @@ const PROBAK = [
   { nev: 'kotes', futtat: kotes },
   { nev: 'tabla', futtat: tabla },
   { nev: 'udpkapu', futtat: udpKapu },
-  { nev: 'iro', futtat: iro }
+  { nev: 'iro', futtat: iro },
+  { nev: 'szovegdarab', futtat: szovegDarab }
 ];
 
 const szuro = process.argv[2];

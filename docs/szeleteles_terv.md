@@ -153,7 +153,11 @@ Az új csere nem érti a régit. ⏸️ A 7. szakasz 3. kérdése.
 függőségek adják. Az A és a B NEM függ a még nyitott 2–4. kérdéstől (a csere protokolljától), tehát
 azokkal indulunk.
 
-**A. A SZÖVEG KÜLÖN DARAB** (D72/2 — a csere protokolljától független)
+**A. ✅ A SZÖVEG KÜLÖN DARAB** (D72/2 — KÉSZ, 2026-09-26 éjjel: `szovegDarab.js`; a műveletek, a szerkesztés,
+a megjelenítés, a fájl-igény, a randevú és a kézi út; 9 modul-próba + egy parancssor-próba, hét
+rontás-próbával. ⭐ Építés közben: (1) a szöveg-darab KÉPEIT a randevú ugyanabban a körben elkéri —
+különben a kép egy bulival a szöveg után jönne; (2) a különválás eddig a blokk-tömböt is csendben
+elhagyta — javítva.)
 1. Az új gondolat és a szerkesztési javaslat a szöveget nem hordozza, csak a **lenyomatát** (és a
    bemondott `meret`-et, D26); a szöveg a fájl-tárba kerül (ugyanoda, ahol a képek: `fajlBlobTarolo`).
 2. A számítás a lenyomatot viszi az állapotba; a **megjelenítés** (a pakli, a felület, a parancssor)

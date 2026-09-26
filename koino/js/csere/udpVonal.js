@@ -1113,7 +1113,10 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   const {
     sajatCim = null, kerhetok = [], blob, tar, koino,
     fajlOlvas = null, korlat = Infinity,
-    varakozasiIdo = TETLENSEG_ALAP, utana = () => {}
+    varakozasiIdo = TETLENSEG_ALAP, utana = () => {},
+    // ⭐ D72 (2026-09-26): egy megérkezett fájlból kiderülhet, hogy MÁS fájlok is kellenek —
+    // a szöveg-darabban képek lehetnek. (async lenyomat → további lenyomatok)
+    ujKerhetok = null
   } = beallitas;
 
   // ⭐ A RANDEVÚ MINDKÉT FÁZISA TÖMEG-FORGALOM — kérünk vagy adunk, mindkettő fájl.
@@ -1137,12 +1140,23 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   /** ⭐ KÉRŐ FÁZIS: egyesével, mert a foglalaton egyszerre egy kapcsolat élhet. */
   const keroFazis = async () => {
     if (!tudjuk) return;                   // ⚠️ nem tudjuk, ki a soros — nem kérünk (lásd fent)
-    for (const lenyomat of kerhetok) {
+    // ⭐ D72: SOR, nem lista — egy megérkezett szöveg-darab képei a végére kerülnek, és még
+    // ugyanebben a randevúban elkérjük őket (különben a kép egy bulival később jönne, mint a
+    // szöveg). ⚠️ Egy lenyomatot csak egyszer kérünk.
+    const sor = [...kerhetok];
+    const kert = new Set(sor);
+    while (sor.length) {
+      const lenyomat = sor.shift();
       try {
         const e = await fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyomat,
           { korlat, varakozasiIdo, torlodasJel: jel });
         if (e.kesz) { kesz++; bajt += e.bajt ?? 0; } else { bukott++; }
         utana({ mi: e.kesz ? 'MEGJOTT' : 'NEM-JOTT', lenyomat, ok: e.ok, bajt: e.bajt ?? 0 });
+        if (e.kesz && ujKerhetok) {
+          for (const uj of await ujKerhetok(lenyomat)) {
+            if (!kert.has(uj)) { kert.add(uj); sor.push(uj); }
+          }
+        }
       } catch (hiba) {
         // ⚠️ EGY FÁJL BUKÁSA NEM DÖNTI EL A TÖBBIT — ugyanaz az elv, mint a `tarsak.js`-nél.
         bukott++;

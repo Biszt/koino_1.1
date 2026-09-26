@@ -871,16 +871,22 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
 
       // 1. kör: az események · 2. kör: a kérdés, majd A BÁJTOK — ugyanazon a résen (D69/2:
       // a fájl a randevún jön, nem egy kör utáni TCP-hívással).
+      // ⭐ D72 (2026-09-26): a gondolat SZÖVEGE is külön darab — a 2. körben előbb a szöveg jön,
+      // és ⭐ UGYANABBAN A RANDEVÚBAN a benne hivatkozott kép is (`ujKerhetok`): tehát 2 fájl.
+      // *Ha a kép egy körrel később jönne, itt 1 állna — a próba épp ezt a késést fogja meg.*
       await fut(vendeg, 'csere', '127.0.0.1', String(port));
       const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
-      if (!/fájlok a résen: 1 megjött/.test(masodik)) return false;
+      if (!/fájlok a résen: 2 megjött/.test(masodik)) {
+        throw new Error('a 2. csere nem hozta a szöveget ÉS a képet: '
+          + masodik.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').slice(-400));
+      }
 
       // ⭐ ÉS A LÉNYEG: a vendégnél megvan, és BÁJTRA ugyanaz.
       const fajlok = await fut(vendeg, 'fajlok');
       const nala = await readFile(
         join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat));
 
-      return /1 \/ 1 megvan/.test(fajlok)
+      return /2 \/ 2 megvan/.test(fajlok)
         && Buffer.from(nala).equals(kep);
     } finally {
       if (felulet) felulet.folyamat.kill();
@@ -956,8 +962,9 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
 
     // ⚠️ HA BUKIK, MEGNEVEZI MAGÁT (D19): az őrjárat naplója mondja meg, a rés nem nyílt-e
     // meg, vagy megnyílt, de a fájl nem jött át.
-    if (!/fájlok a résen: 1 megjött/.test(kimenet)) {
-      throw new Error('a kép nem jött meg — az őrjárat naplója: '
+    // ⭐ D72: a szöveg-darab és a kép UGYANABBAN a randevúban jön — 2 fájl.
+    if (!/fájlok a résen: 2 megjött/.test(kimenet)) {
+      throw new Error('a szöveg és a kép nem jött meg együtt — az őrjárat naplója: '
         + kimenet.replace(/\s+/g, ' ').trim().slice(-900));
     }
 
@@ -2372,7 +2379,9 @@ proba('⛔⛔ D71 AZ ŐRJÁRATBAN: egy azonos IP-jű IDEGEN nem teszi elértté 
 
       // ⚠️ HA BUKIK, MEGNEVEZI MAGÁT (D19): melyik szakasz, és az A naplója abból a szakaszból.
       const tiszta = (s) => s.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').trim();
-      const elertVkit = /✓ \d\d:\d\d:\d\d [1-9]\d*\/\d+ társ/;
+      // ⚠️ Az óra EGY jegyű is lehet (`toLocaleTimeString('hu-HU')` → „0:00:36") — a próba az
+      // első változatban két jegyet várt, és éjfél után 10-ig MINDIG bukott (2026-09-27, mérve).
+      const elertVkit = /✓ \d{1,2}:\d\d:\d\d [1-9]\d*\/\d+ társ/;
       if (!elso.includes('nem az a kötésem, akit a 127.0.0.1:' + PB1 + ' címen vártam')
         || elertVkit.test(elso)) {
         throw new Error('1. szakasz (az idegen) — az A naplója: ' + tiszta(elso).slice(0, 900));
@@ -2386,6 +2395,66 @@ proba('⛔⛔ D71 AZ ŐRJÁRATBAN: egy azonos IP-jű IDEGEN nem teszi elértté 
       for (const f of [a, b, c]) if (f) f.kill();
       await varj(700);
       for (const h of [A, B, C]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+proba('⭐⭐⭐ D72: A SZÖVEG KÜLÖN DARAB — az esemény nem hordozza, a másik gép a résen kapja, a kézi úton is átmegy, és az állapot végig ugyanaz',
+  async () => {
+    // ⭐ A D72 ígérete a VALÓDI programban: (1) a gazda tárában az esemény NEM hordozza a
+    // szöveget; (2) a vendég az első csere után a gondolatot már látja, a szövegéről kimondja,
+    // hogy még nem érkezett meg — és az állapotunk MÁR EKKOR ugyanaz; (3) a második csere
+    // randevúja hozza a darabot, és a vendég a szöveget mutatja; (4) a kézi út (kivisz/behoz)
+    // egy harmadik gépre hálózat nélkül viszi a szöveget is.
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const harmadik = await ujKeszulek();
+    const port = 7671;
+    let figyelo = null;
+    try {
+      await fut(gazda, 'koino', 'Szöveg-darab koinó');
+      await fut(gazda, 'gondolat', 'A CÍM', 'EZ A SZÖVEG KÜLÖN DARAB');
+
+      // (1) Az esemény-fájlban NINCS a szöveg — csak a hivatkozás.
+      const esemenyFajl = await readFile(join(gazda, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      if (esemenyFajl.includes('EZ A SZÖVEG KÜLÖN DARAB')) throw new Error('a szöveg az eseményben maradt');
+      if (!(await fut(gazda)).includes('EZ A SZÖVEG KÜLÖN DARAB')) throw new Error('a gazda nem mutatja a saját szövegét');
+
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+
+      // (2) Az első csere: az esemény átjön, a darab még nem.
+      await fut(vendeg, 'csere', '127.0.0.1', String(port));
+      const elotte = await fut(vendeg);
+      const lap = join(gazda, 'lap.json');
+      await fut(gazda, 'ujjlenyomat', 'kiment', lap);
+      const egyezesElotte = await fut(vendeg, 'ujjlenyomat', 'osszevet', lap);
+      if (!elotte.includes('A CÍM') || !elotte.includes('a szöveg még nem érkezett meg')
+        || !egyezesElotte.includes('UGYANAZT LÁTJUK')) {
+        throw new Error('az első csere után: ' + elotte.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').slice(0, 500)
+          + ' | összevetés: ' + egyezesElotte.replace(/\s+/g, ' ').slice(0, 200));
+      }
+
+      // (3) A második csere randevúja hozza a darabot.
+      const masodik = await fut(vendeg, 'csere', '127.0.0.1', String(port));
+      const utana = await fut(vendeg);
+      const egyezesUtana = await fut(vendeg, 'ujjlenyomat', 'osszevet', lap);
+      if (!/fájlok a résen: 1 megjött/.test(masodik) || !utana.includes('EZ A SZÖVEG KÜLÖN DARAB')
+        || !egyezesUtana.includes('UGYANAZT LÁTJUK')) {
+        throw new Error('a második csere után: ' + masodik.replace(/\x1b\[[0-9;]*m/g, '').replace(/\s+/g, ' ').slice(-300));
+      }
+
+      // (4) A kézi út: kivisz a gazdáról, behoz a harmadikra — hálózat nélkül.
+      const fajl = join(gazda, 'kivitel.jsonl');
+      const ki = await fut(gazda, 'kivisz', fajl);
+      const be = await fut(harmadik, 'behoz', fajl);
+      const harmadikLatja = await fut(harmadik);
+      return ki.includes('1 szöveg-darab') && be.includes('1 szöveg-darab')
+        && harmadikLatja.includes('EZ A SZÖVEG KÜLÖN DARAB');
+    } finally {
+      if (figyelo) { figyelo.kill(); await varj(1000); }
+      for (const h of [gazda, vendeg, harmadik]) await rm(h, { recursive: true, force: true });
     }
   });
 

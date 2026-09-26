@@ -116,7 +116,7 @@ import { allasOsszeallitasa } from './js/csere/csere.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
 // ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
-import { fajlIgenyek } from './js/allapot/fajlIgeny.js';
+import { fajlIgenyek, lenyomatUrlbol } from './js/allapot/fajlIgeny.js';
 import {
   kerelemOsszeallitasa, ritkasagSzerint, birtoklasBeolvasztasa,
   valaszOsszeallitasa as fajlValaszOsszeallitasa
@@ -140,6 +140,7 @@ import { udpKapuNyitasa } from './js/csere/udpKapu.js';
 // ⭐⭐ A TÁBLA-KULCS ÉS A KÖTÉSEK (2026-09-20): a kötést a tábla-kulcs azonosítja, nem a
 // cím — mert épp a cím az, ami elromlik.
 import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tablaKulcs.js';
+import { szovegFeloldasa, szovegDarabbol, szovegHivatkozasE } from './js/esemeny/szovegDarab.js';
 import {
   talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
   nemaKotesek, kotesCimei
@@ -290,7 +291,8 @@ const tar = await koinoTaraNyitasa(KOINO);
 // ⭐ Az elakadt tudatpontok órája — HELYI feljegyzés, nem esemény (3. szabály).
 const felszabaditasJegyzet = felszabaditasTarolo();
 
-const kornyezet = { koino: KOINO, kulcspar, szerzo, tar };
+// ⭐ D72: a műveletek a szöveget KÜLÖN DARABKÉNT a fájl-tárba írják (ahol a képek is) — innen kapják.
+const kornyezet = { koino: KOINO, kulcspar, szerzo, tar, darabTar: fajlBlobTarolo(KOINO) };
 
 if (ujE) {
   kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
@@ -418,15 +420,52 @@ async function allitasAdatai(horgonyToredek) {
  *
  * @returns {Promise<{kerelem: Array<string>|null, valasz: Function, olvas: Function}>}
  */
+/**
+ * ⭐ D72: egy szöveg-darab olvasója a fájl-igényhez — a darab bájtjaiból a szöveg (ha megvan).
+ * ⚠️ A fájl-tár olvasása ellenőrzi a lenyomatot; egy sérült darab hiánynak számít, nem szövegnek.
+ */
+function szovegOlvasoKeszites(blob) {
+  return async (lenyomat) => {
+    const bajtok = await blob.olvas(lenyomat);
+    if (!bajtok) return null;
+    try { return szovegDarabbol(bajtok); } catch { return null; }
+  };
+}
+
+/**
+ * ⭐ D72: egy randevún megérkezett fájlból kiderülhet, hogy más fájlok is kellenek — ha a fájl
+ * egy SZÖVEG-DARAB, a benne hivatkozott (nálunk még hiányzó) képek. Így a kép ugyanabban a
+ * randevúban jön, mint a szöveg, nem egy bulival később.
+ * ⚠️ Csak az lehet szöveg-darab, ami JSON-szöveggel vagy -tömbbel kezdődik (`"` vagy `[`);
+ * egy kép bájtjait nem próbáljuk szövegként olvasni.
+ */
+function szovegKepeiKeresre(blob) {
+  return async (lenyomat) => {
+    const bajtok = await blob.olvas(lenyomat);
+    if (!bajtok || (bajtok[0] !== 0x5b && bajtok[0] !== 0x22)) return [];
+    let szoveg;
+    try { szoveg = szovegDarabbol(bajtok); } catch { return []; }
+    if (!Array.isArray(szoveg)) return [];
+    const kellenek = [];
+    for (const blokk of szoveg) {
+      const l = lenyomatUrlbol(blokk?.url);
+      if (l && !kellenek.includes(l) && !(await blob.van(l))) kellenek.push(l);
+    }
+    return kellenek;
+  };
+}
+
 async function fajlResz() {
   const blob = fajlBlobTarolo(KOINO);
   const megvanE = (l) => blob.van(l);
 
   let kerelem = [];
   try {
-    const { allapot } = await kepetKeszit();
+    const { allapot, javaslatok } = await kepetKeszit();
     const jegyzo = fajlJegyzekTarolo(KOINO);
-    const { hianyzok } = await fajlIgenyek(allapot, megvanE, { szerzo });
+    // ⭐ D72: a szöveg-darabok és a javaslatok új szövege is igény; a meglévő szöveg képei is.
+    const { hianyzok } = await fajlIgenyek(allapot, megvanE,
+      { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob) });
     // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — a jelzés a korábbi bulikból már megvan.
     kerelem = kerelemOsszeallitasa(ritkasagSzerint(hianyzok, await jegyzo.olvas()));
   } catch (hiba) {
@@ -1124,7 +1163,8 @@ function resMunkaKeszito(allapot) {
       tar, koino: KOINO,
       fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
       korlat: FAJL_KORLAT,
-      kiszolgalasKell: adhatok > 0
+      kiszolgalasKell: adhatok > 0,
+      ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO))
     });
     if (randevu.kesz || randevu.kiszolgalt || randevu.bukott) {
       kiir(SZIN.jo + '  ✓ ' + ora() + ' fájlok a résen: ' + randevu.kesz
@@ -1409,7 +1449,13 @@ async function allapotKiirasa(napokMulva) {
     kiir('  ' + SZIN.halvany + e.azonosito.slice(0, 8) + SZIN.vege + '  ' + e.cim);
     kiir('      ' + SZIN.halvany + e.meret + ' bájt · összes pont: ' + e.osszesPont
       + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size + SZIN.vege);
-    if (e.szoveg) kiir('      ' + SZIN.halvany + szovegKifele(e.szoveg) + SZIN.vege);
+    if (e.szoveg) {
+      // ⭐ D72: a szöveg külön darab lehet — a fájl-tárból oldjuk fel; ha még nincs meg, kimondjuk.
+      const f = await szovegFeloldasa(e.szoveg, (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat));
+      kiir('      ' + SZIN.halvany + (f.hianyzik
+        ? '(a szöveg még nem érkezett meg — külön darab: ' + f.lenyomat.slice(0, 8) + '…)'
+        : szovegKifele(f.szoveg)) + SZIN.vege);
+    }
   }
 
   // ----- JAVASLATOK -----
@@ -1593,10 +1639,13 @@ try {
         throw new Error('Hova vigyem? node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]');
       }
 
-      const { szoveg, darab, hatokor, bajt } = await kivitelSzovege(tar, KOINO, {
-        hatokor: ervek[1] ?? 'mind',
-        szerzo
-      });
+      const { szoveg, darab, hatokor, bajt, szovegDarabok, hianyzoDarabok } = await kivitelSzovege(
+        tar, KOINO, {
+          hatokor: ervek[1] ?? 'mind',
+          szerzo,
+          // ⭐ D72: a szöveg külön darab — a kézi út azt is viszi.
+          darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat)
+        });
 
       if (darab === 0) {
         // ⚠️ NEM ÍRUNK ÜRES FÁJLT ÉS NEM HALLGATUNK: ha semmi nem jött ki, azt a hatókör
@@ -1607,7 +1656,13 @@ try {
 
       await writeFile(hova, szoveg, 'utf8');
       kiir('Kivíve: ' + hova);
-      kiir('  ' + darab + ' esemény · ' + bajt + ' bájt · hatókör: ' + hatokor);
+      kiir('  ' + darab + ' esemény · ' + szovegDarabok + ' szöveg-darab · ' + bajt + ' bájt · hatókör: '
+        + hatokor);
+      // ⚠️ Amit nálunk sincs meg, azt nem visszük — és kimondjuk (D19).
+      if (hianyzoDarabok) {
+        kiir(SZIN.nem + '  ' + hianyzoDarabok + ' szöveg-darab nálam sincs meg — a fájlban csak a'
+          + ' hivatkozása utazik' + SZIN.vege);
+      }
       kiir(SZIN.halvany
         + 'Vidd át bárhogyan (pendrive, e-mail, üzenet), és ott: behoz <fájl>.' + SZIN.vege);
       // ⚠️ A 6. SZABÁLY az ADAT-csomagra kemény — ezért mondjuk meg a bájtot, és ezért
@@ -1625,11 +1680,19 @@ try {
       if (!honnan) throw new Error('Honnan hozzam? node koino/koino.js behoz <fájl>');
 
       const szoveg = await readFile(honnan, 'utf8');
-      const e = await behozatalSzovegbol(tar, KOINO, szoveg);
+      const e = await behozatalSzovegbol(tar, KOINO, szoveg, {
+        // ⭐ D72: a szöveg-darabok a fájl-tárba (a lenyomatuk ellenőrzése után).
+        darabIr: (bajtok) => fajlBlobTarolo(KOINO).ir(bajtok)
+      });
 
       kiir('Behozva: ' + honnan);
       kiir('  ' + SZIN.jo + e.uj + ' új esemény' + SZIN.vege
-        + ' · ' + e.marMegvolt + ' már megvolt · ' + e.sorok + ' sor a fájlban');
+        + ' · ' + e.marMegvolt + ' már megvolt · ' + e.szovegDarabok + ' szöveg-darab · '
+        + e.sorok + ' sor a fájlban');
+      if (e.hibasDarabok?.length) {
+        kiir(SZIN.nem + '  ' + e.hibasDarabok.length + ' szöveg-darab NEM az, aminek a neve mondja'
+          + ' — kihagyva' + SZIN.vege);
+      }
 
       // ⭐⭐ ÉS AMIT NEM HALLGATUNK EL (D19). Mind a négy lista MEGNEVEZI, mi történt —
       // különben a „behozva" szó elfedné, hogy a fájl fele ki sem nyílt.
@@ -1786,10 +1849,10 @@ try {
     }
 
     case 'fajlok': {
-      const { allapot } = await kepetKeszit();
+      const { allapot, javaslatok } = await kepetKeszit();
       const blob = fajlBlobTarolo(KOINO);
       const { hianyzok: nyersHianyzok, megvan, osszes } = await fajlIgenyek(allapot,
-        (l) => blob.van(l), { szerzo });
+        (l) => blob.van(l), { szerzo, javaslatok, szovegOlvas: szovegOlvasoKeszites(blob) });
 
       // ⭐ A RITKÁBBAT ELŐBB (Csaba döntése) — és a `birtokosok` szám innentől látszik is.
       const jegyzet = await fajlJegyzekTarolo(KOINO).olvas();
@@ -3323,6 +3386,7 @@ try {
           tar, koino: KOINO,
           fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
           korlat: FAJL_KORLAT,
+          ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO)),
           utana: (e) => {
             if (e.mi === 'SZEREP' && e.szerep === 'nem-tudom') {
               // ⚠️ A HIÁNYT KIMONDJUK (D19) — különben csak annyi látszana, hogy „nem jött".
@@ -3617,7 +3681,7 @@ try {
           nyitottKoinok.set(aktivKoino, {
             koino: aktivKoino,
             tar: t,
-            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t },
+            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino) },
             pakliNezet: ujPakliNezet()
           });
         }
@@ -4035,7 +4099,9 @@ try {
                 kurzor: kereses.get('kurzor') ?? undefined,
                 darab: Number.isInteger(darab) ? darab : undefined,
                 szerzo,          // ⭐ hogy a kártya a SAJÁT tudatpontodat is mutathassa
-                nezet: pakliNezet
+                nezet: pakliNezet,
+                // ⭐ D72: a javaslat-kártyák szöveg-hivatkozása innen oldódik fel
+                darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat)
               })
             };
           } catch (hiba) {
@@ -4145,7 +4211,8 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás szövege?' } };
 
           const talalat = await entitasSzovege(tar, KOINO, decodeURIComponent(azonosito),
-            { ...lapHorgonya, nezet: pakliNezet });
+            { ...lapHorgonya, nezet: pakliNezet,
+              darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat) });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }
@@ -4205,7 +4272,8 @@ try {
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
           const talalat = await entitasReszletei(tar, KOINO, decodeURIComponent(azonosito),
-            { ...lapHorgonya, szerzo, nezet: pakliNezet });
+            { ...lapHorgonya, szerzo, nezet: pakliNezet,
+              darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat) });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
         }

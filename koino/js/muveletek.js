@@ -24,6 +24,7 @@
 import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
+import { szovegDarabra } from './esemeny/szovegDarab.js';
 import {
   esemenyMentese, lancVege, sajatLancEsemenyei,
   kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei
@@ -69,6 +70,35 @@ const ELISMERES_HORGONY = 12;
  *        eseményeknél igen: szavazat, tudatpont-rendezés, érték javaslat)
  * @returns {Promise<Object>} a létrehozott esemény
  */
+/**
+ * ⭐ D72 (2026-09-26): A SZÖVEG KÜLÖN DARAB. A szöveg bájtjai a környezet darab-tárába
+ * (`kornyezet.darabTar` — a fájl-tár, ahol a képek is) kerülnek, és a HIVATKOZÁS jön vissza,
+ * amit az esemény hordoz.
+ *
+ * ⚠️ ELŐBB A DARAB, CSAK UTÁNA AZ ESEMÉNY: így egy aláírt esemény soha nem hivatkozik olyan
+ * darabra, ami a saját gépünkön nincs meg. (Ha az esemény mentése utána bukik, a darab
+ * árván marad — ártalmatlan: a neve a tartalma.)
+ *
+ * ⛔ HA NINCS DARAB-TÁR, NEM TESSZÜK A SZÖVEGET CSENDBEN AZ ESEMÉNYBE — megnevezett hibával
+ * leállunk. *Egy elhallgatott döntés-szegés rosszabb, mint egy megtagadott művelet.*
+ *
+ * @param {Object} kornyezet
+ * @param {string|Array|Object|null} szoveg
+ * @returns {Promise<Object|null>} a hivatkozás (vagy null, ha nincs szöveg)
+ */
+async function szovegDarabbaTetele(kornyezet, szoveg) {
+  const { hivatkozas, bajtok } = await szovegDarabra(szoveg);
+  if (!bajtok) return hivatkozas;
+  if (!kornyezet.darabTar) {
+    throw new Error('A szöveg külön darab (D72) — ehhez a környezetben darab-tár kell (darabTar).');
+  }
+  const irt = await kornyezet.darabTar.ir(bajtok);
+  if (irt.lenyomat !== hivatkozas.lenyomat) {
+    throw new Error('A darab-tár más lenyomatot adott, mint a szövegé — nem írunk alá rá hivatkozást.');
+  }
+  return hivatkozas;
+}
+
 async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
   const { entitas = null } = beallitas;
   console.log('muveletek.esemenytTeszek - KEZDÉS', { tipus, entitas });
@@ -505,14 +535,16 @@ export async function gondolatLetrehozasa(
   const gondolat = {
     tipus: 'Gondolat',
     cim,
-    szoveg: szoveg || null,
+    // ⭐ D72: a szöveg KÜLÖN DARAB — az esemény csak a hivatkozást hordozza (szovegDarab.js).
+    szoveg: await szovegDarabbaTetele(kornyezet, szoveg || null),
     szulo: szulo || null,
     gondolatTipus: gondolatTipus || null,
     kategoriak: Array.isArray(kategoriak) ? kategoriak : []
   };
 
-  // A méret a gondolat SAJÁT adatára vonatkozik (a burkolat és az aláírás nélkül)
-  gondolat.meret = kanonikusBajtok(gondolat).length;
+  // A méret a gondolat SAJÁT adatára vonatkozik (a burkolat és az aláírás nélkül) — ⭐ D72: a
+  // külön darab is beleszámít, mert a tartó azt is tárolja (D26: a tárolási vállalás mértéke).
+  gondolat.meret = kanonikusBajtok(gondolat).length + (gondolat.szoveg?.bajt ?? 0);
 
   return esemenytTeszek(kornyezet, 'GondolatLetrehozas', gondolat);
 }
@@ -543,11 +575,12 @@ export async function gondolatLetrehozasa(
  * változtatás nélkül működik rajtuk. A prototípus kártyái `nev`-et olvasnak — azt a
  * felület fordítja (`felulet/js/kartyaAdat.js`).
  */
-function besorolasLetrehozasa(kornyezet, tipus, { nev, leiras, ikon, szulo }) {
+async function besorolasLetrehozasa(kornyezet, tipus, { nev, leiras, ikon, szulo }) {
   const entitas = {
     tipus,
     cim: nev,
-    szoveg: leiras || null,
+    // ⭐ D72: a leírás is szöveg — külön darab, ahogy a gondolaté.
+    szoveg: await szovegDarabbaTetele(kornyezet, leiras || null),
     szulo: szulo || null,
     // ⭐ Az ikon lehet EMOJI vagy URL — az örökölt kártya mindkettőt kezeli (URL-nél képet
     // rak ki, egyébként szöveget). Emojival tehát nem kell hozzá feltöltés, ami a P2P-ben
@@ -555,7 +588,7 @@ function besorolasLetrehozasa(kornyezet, tipus, { nev, leiras, ikon, szulo }) {
     ikon: ikon || null
   };
 
-  entitas.meret = kanonikusBajtok(entitas).length;
+  entitas.meret = kanonikusBajtok(entitas).length + (entitas.szoveg?.bajt ?? 0);
   return esemenytTeszek(kornyezet, 'GondolatLetrehozas', entitas);
 }
 
@@ -757,11 +790,18 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
 
   // ⭐ Minden elem TELJES: entitás + művelet + változás. A hiányzó mezőt itt töltjük ki, nem
   // az olvasóknál — így a kanonikus alak sem lesz hol ilyen, hol olyan.
-  const erintettek = lista.map((r) => ({
-    entitas: r.entitas,
-    muvelet: r.muvelet || 'Modositas',
-    valtozas: r.valtozas ?? null
-  }));
+  const erintettek = [];
+  for (const r of lista) {
+    const valtozas = r.valtozas ?? null;
+    erintettek.push({
+      entitas: r.entitas,
+      muvelet: r.muvelet || 'Modositas',
+      // ⭐ D72: a javasolt ÚJ szöveg is külön darab — a javaslat a hivatkozását hordozza.
+      valtozas: valtozas && typeof valtozas === 'object' && 'szoveg' in valtozas
+        ? { ...valtozas, szoveg: await szovegDarabbaTetele(kornyezet, valtozas.szoveg) }
+        : valtozas
+    });
+  }
 
   const javaslat = await esemenytTeszek(
     kornyezet,

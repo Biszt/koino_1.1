@@ -38,6 +38,7 @@
 
 import { szerkezetIgazitasa, median } from './allapotSzamitas.js';
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
+import { ervenyesSzovegErtek, azonosSzoveg } from '../esemeny/szovegDarab.js';
 
 // ===================================
 // ⭐⭐⭐ A SZÁRMAZTATOTT AZONOSÍTÓ
@@ -100,8 +101,10 @@ function modositas(entitas, valtozas) {
   // ⛔ EZ ELŐSZÖR CSAK A SZÖVEGET FOGADTA EL, és a tömb **némán kiesett**: a módosítás
   // lefutott, a cím átíródott, a szöveg viszont a régi maradt — hiba nélkül. *Egy
   // elhallgatott mező rosszabb, mint egy elutasított javaslat.*
+  // ⭐ D72 (2026-09-26): és egy HARMADIK alak — a szöveg-hivatkozás (külön darab, lenyomattal).
+  // A számítás nem nyúl a tartalmához: a hivatkozást viszi át, ahogy a régi kettőt.
   const szoveg = valtozas?.szoveg;
-  if (typeof szoveg === 'string' || szoveg === null || Array.isArray(szoveg)) {
+  if (valtozas && 'szoveg' in valtozas && ervenyesSzovegErtek(szoveg)) {
     entitas.szoveg = szoveg;
     valtozott.push('szoveg');
   }
@@ -885,12 +888,18 @@ async function egyReszVegrehajtasa(allapot, egyezmeny, resz, alkalmazottak, kiha
 
     // ⭐ Az „új" változat: az entitás mai alakja + a javasolt változás. ⚠️ Ha a változás
     // nem nevez meg mezőt, nincs miben különbözni — akkor nincs is miről különválni.
+    // ⛔ A SZÖVEG MINDHÁROM ALAKJA (2026-09-26): eddig itt csak a sima szöveget és a `null`-t
+    // vettük át — a blokk-tömb (a szerkesztőből) CSENDBEN KIESETT, és a különválók a régi
+    // szöveget vitték volna. Ugyanaz a hiba, amit a `modositas` 2026-09-07-én már kijavított;
+    // a D72 hivatkozása hozta elő újra. ⭐ És az összevetés a kanonikus alak szerint megy: egy
+    // tömb vagy egy hivatkozás `===`-vel sosem egyezne.
+    const javasoltSzoveg = resz.valtozas && 'szoveg' in resz.valtozas
+      && ervenyesSzovegErtek(resz.valtozas.szoveg);
     const ujValtozat = {
       cim: typeof resz.valtozas?.cim === 'string' ? resz.valtozas.cim : entitas.cim,
-      szoveg: (typeof resz.valtozas?.szoveg === 'string' || resz.valtozas?.szoveg === null)
-        ? resz.valtozas.szoveg : entitas.szoveg
+      szoveg: javasoltSzoveg ? resz.valtozas.szoveg : entitas.szoveg
     };
-    if (ujValtozat.cim === entitas.cim && ujValtozat.szoveg === entitas.szoveg) {
+    if (ujValtozat.cim === entitas.cim && azonosSzoveg(ujValtozat.szoveg, entitas.szoveg)) {
       return { rendben: true, csendben: true };
     }
 

@@ -33,6 +33,8 @@
 
 // ⭐ A FÁJL-HIVATKOZÁS ALAKJA: `/api/fajl/<43 karakteres lenyomat>`. Ez a felület útvonala,
 // és szándékosan ez van az eseményben is — így a kép a lapon **fordítás nélkül** megjelenik.
+import { szovegHivatkozasE } from '../esemeny/szovegDarab.js';
+
 const HIVATKOZAS = /^\/api\/fajl\/([A-Za-z0-9_-]{43})$/;
 
 /**
@@ -72,6 +74,9 @@ export function entitasFajljai(entitas) {
   if (Array.isArray(entitas?.szoveg)) {
     for (const blokk of entitas.szoveg) felvesz(blokk?.url);
   }
+  // ⭐ D72: és egy harmadik — a szöveg-hivatkozás. A DARAB maga is igény (úgy jön, mint egy kép);
+  // a benne lévő képeket a `fajlIgenyek` a darab megérkezése után látja.
+  if (szovegHivatkozasE(entitas?.szoveg)) talalt.add(entitas.szoveg.lenyomat);
 
   return talalt;
 }
@@ -92,23 +97,43 @@ export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
 
   // lenyomat → { entitasok: [azonosító], vallaltam: boolean }
   const hivatkozasok = new Map();
+  const felvesz = (lenyomat, azonosito, vallaltam) => {
+    const eddig = hivatkozasok.get(lenyomat);
+    if (eddig) {
+      if (!eddig.entitasok.includes(azonosito)) eddig.entitasok.push(azonosito);
+      eddig.vallaltam = eddig.vallaltam || vallaltam;
+    } else {
+      hivatkozasok.set(lenyomat, { entitasok: [azonosito], vallaltam });
+    }
+  };
+  const vallaltamE = (entitas) => (en ? (entitas?.hozzajarulok.get(en)?.pont ?? 0) > 0 : false);
+
+  // ⭐ D72 (2026-09-26): a SZÖVEG-DARAB képei csak a darab megérkezése UTÁN ismerhetők meg
+  // (ahogy a képek maguk is egy bulival később jönnek, mint az események). Ha a hívó ad
+  // `szovegOlvas`-t (async lenyomat → a szöveg, ha megvan), a meglévő szöveg képei is igények.
+  const szovegKepei = async (ertek) => {
+    if (!szovegHivatkozasE(ertek) || !beallitas.szovegOlvas) return [];
+    const szoveg = await beallitas.szovegOlvas(ertek.lenyomat);
+    return Array.isArray(szoveg) ? szoveg.map((b) => lenyomatUrlbol(b?.url)).filter(Boolean) : [];
+  };
 
   for (const entitas of allapot.entitasok.values()) {
-    const fajlok = entitasFajljai(entitas);
-    if (!fajlok.size) continue;
-
     // ⭐ VÁLLALTAM-E? A tudatpont tárolási vállalás is (D3) — ha tettem rá pontot, az
     // entitás fájljai az én dolgom is, nem csak „arra járok".
-    const vallaltam = en ? (entitas.hozzajarulok.get(en)?.pont ?? 0) > 0 : false;
+    const vallaltam = vallaltamE(entitas);
+    for (const lenyomat of entitasFajljai(entitas)) felvesz(lenyomat, entitas.azonosito, vallaltam);
+    for (const lenyomat of await szovegKepei(entitas.szoveg)) felvesz(lenyomat, entitas.azonosito, vallaltam);
+  }
 
-    for (const lenyomat of fajlok) {
-      const eddig = hivatkozasok.get(lenyomat);
-      if (eddig) {
-        eddig.entitasok.push(entitas.azonosito);
-        eddig.vallaltam = eddig.vallaltam || vallaltam;
-      } else {
-        hivatkozasok.set(lenyomat, { entitasok: [entitas.azonosito], vallaltam });
-      }
+  // ⭐ D72: A JAVASLATOK ÚJ SZÖVEGE IS IGÉNY — aki szavaz, annak el kell tudnia olvasni, mire.
+  // A javaslat az érintett entitás ügye: vállalt, ha az érintettre tettem pontot.
+  for (const dontes of beallitas.javaslatok?.values?.() ?? []) {
+    for (const r of dontes.erintettek ?? []) {
+      const ertek = r.valtozas?.szoveg;
+      if (!szovegHivatkozasE(ertek)) continue;
+      const vallaltam = vallaltamE(allapot.entitasok.get(r.entitas));
+      felvesz(ertek.lenyomat, dontes.azonosito ?? r.entitas, vallaltam);
+      for (const lenyomat of await szovegKepei(ertek)) felvesz(lenyomat, dontes.azonosito ?? r.entitas, vallaltam);
     }
   }
 

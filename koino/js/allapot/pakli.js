@@ -48,6 +48,19 @@ import { allapotSzamitasa, szetosztottPontok } from './allapotSzamitas.js';
 import { TUDATPONT_KERET } from './szabalyok.js';
 import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
+import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
+
+/**
+ * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
+ * szöveget vár, nem lenyomatot. ⚠️ Laponként korlátos munka (egy lapon korlátos számú kártya),
+ * és a lista maga továbbra sem hordoz gondolat-szöveget (5.2). Ami még nincs meg, azt kimondjuk
+ * (`szovegHianyzik`), nem hallgatjuk el (D19).
+ */
+async function valtozasFeloldasa(valtozas, darabOlvas) {
+  if (!valtozas || typeof valtozas !== 'object' || !szovegHivatkozasE(valtozas.szoveg)) return valtozas;
+  const f = await szovegFeloldasa(valtozas.szoveg, darabOlvas);
+  return { ...valtozas, szoveg: f.szoveg, ...(f.hianyzik ? { szovegHianyzik: true, szovegLenyomat: f.lenyomat } : {}) };
+}
 
 // ===================================
 // A PARAMÉTEREK
@@ -420,10 +433,18 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const oldal = mind.slice(innen, innen + darab);
   const utolso = oldal[oldal.length - 1];
 
+  const kartyak = oldal.map((elem) => kartya(
+    elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok,
+    kep.javaslatok?.get(elem.azonosito) ?? null));
+  // ⭐ D72: a javaslat-kártyák változásaiban a szöveg-hivatkozás szöveggé.
+  for (const k of kartyak) {
+    if (!k.javaslat) continue;
+    k.javaslat.valtozas = await valtozasFeloldasa(k.javaslat.valtozas, beallitas.darabOlvas);
+    for (const r of k.javaslat.erintettek) r.valtozas = await valtozasFeloldasa(r.valtozas, beallitas.darabOlvas);
+  }
+
   const eredmeny = {
-    kartyak: oldal.map((elem) => kartya(
-      elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok,
-      kep.javaslatok?.get(elem.azonosito) ?? null)),
+    kartyak,
     // Csak akkor van következő oldal, ha maradt még valami.
     kovetkezoKurzor: (utolso && innen + darab < mind.length)
       ? kurzorKodolas({ horgony, most, ertek: utolso.ertek, azonosito: utolso.azonosito })
@@ -529,11 +550,15 @@ export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
     return null;
   }
 
+  // ⭐ D72: ha a szöveg külön darab, a darab-tárból oldjuk fel (`beallitas.darabOlvas`); ha
+  // még nem érkezett meg, azt kimondjuk — nem hiba, hanem hiány (D19).
+  const f = await szovegFeloldasa(entitas.szoveg ?? null, beallitas.darabOlvas);
   const eredmeny = {
     azonosito: entitas.azonosito,
     tipus: entitas.tipus,
     cim: entitas.cim,
-    szoveg: entitas.szoveg ?? null
+    szoveg: f.szoveg,
+    ...(f.hianyzik ? { szovegHianyzik: true, szovegLenyomat: f.lenyomat } : {})
   };
   console.log('pakli.entitasSzovege - VÉGE', { van: eredmeny.szoveg !== null });
   return eredmeny;
@@ -637,6 +662,8 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
 
   const agazati = agazatiPontok(kep.entitasok);
   const en = beallitas.szerzo;
+  // ⭐ D72: a szöveg feloldása (lásd `entitasSzovege`).
+  const reszletSzoveg = await szovegFeloldasa(e.szoveg ?? null, beallitas.darabOlvas);
 
   console.log('pakli.entitasReszletei - VÉGE');
   return {
@@ -646,7 +673,8 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
       // ⭐ A koinóban a `cim` a név MINDEN típusnál — a modal `nev`-et is olvashat.
       cim: e.cim,
       nev: e.cim,
-      szoveg: e.szoveg ?? null,
+      szoveg: reszletSzoveg.szoveg,
+      ...(reszletSzoveg.hianyzik ? { szovegHianyzik: true, szovegLenyomat: reszletSzoveg.lenyomat } : {}),
       ikon: e.ikon ?? null,
       szuloId: e.szulo ?? null,
       letrehozva: e.letrehozva,
