@@ -103,7 +103,7 @@ futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra il
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **184 fájl, 3169,1 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **185 fájl, 3183,3 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -144,7 +144,7 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 | `meres/dhtProba.js` | ⭐ **a DHT-kliens** (hirdetőtábla, BEP 44) — hálózat nélkül: a hivatalos tesztvektorok bájtra, a méret-korlátok, és egy hurok-címen futó **hamis DHT**-n a feltétel és a visszakeresés; ⛔ a **hazudó** gép bejegyzését elvetjük, a néma gépek és a halott belépő nem akasztják meg a keresést |
 | `meres/udpKapuProba.js` | ⭐ **az állandó UDP-kapu** (D69/3) hamis munkával: a kopogásra ablak nélkül is felel, **társanként egyszerre egy munka** (a futó munka alatti kopogás `FOGLALT`-at kap, és utána sorra kerül), a bekopogók száma korlátos, a saját visszhang nem munka, és a mobil portváltást felismeri |
 
-⚠️ **Két mérőeszköz NEM önpróba** — nem igen/nem-et adnak, hanem számokat, ezért a
+⚠️ **Ezek a mérőeszközök NEM önpróbák** — nem igen/nem-et adnak, hanem számokat, ezért a
 `mind.js` nem futtatja őket:
 
 - `node koino/meres/skalaMeres.js` — **skála-mérés**: hol van a fal (a 3.2 két
@@ -160,6 +160,9 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
   védelem ÉS ár hat változatban, három jelzés-lencse, és `LEPCSO=1`-gyel a **két lépcső**
   (pénztárca-kapu + a tanúsítói lánc alakja). Kapcsolók: `MELEGIT` · `REJTOZO` · `KITARTO` ·
   `ALLANDO_KOROK` · `VISSZAVONAS` · `MEGTEVESZTETT` · `MEGHIVO_KORLAT`.
+- `node koino/meres/negyszeresCsereMeres.js [csúszás mp] [ketto|egy] [ablak perc] [ablakok]` —
+  ⭐ **a négyszeres csere** (45. mérés): két valódi őrjárat egy gépen, a társ egy vagy két címen,
+  a két kör egyszerre vagy elcsúszva — hány csere megy egy ablakban, és mennyi bájt.
 
 Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 

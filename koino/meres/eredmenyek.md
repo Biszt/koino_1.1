@@ -4069,5 +4069,72 @@ irányban, rontás-próbával mérve: ha az ismert hiba próbája ÁTMEGY (a b) 
 bukás (*„a hiba eltűnt — vedd le a jelet"*, kilépési kód 1); ha KIVÉTELT dob, az is bukás.
 
 ### ⏭️ A KÖVETKEZŐ
-- A 2. lépés: a négyszeres csere mérése helyben (hurok-cím + helyi cím = egy társ két címen).
+- ✅ ~~A 2. lépés: a négyszeres csere mérése helyben~~ — lásd a 45.-öt.
 - A 3. lépés: a (i)–(iii) döntési kérdések Csabának — a (i)-be a 3. és a 4. pont lelete is.
+
+---
+
+## 45. ⭐⭐ A NÉGYSZERES CSERE = A CÍMEK × AZ IRÁNYOK — helyben szétszedve, terepen megerősítve (2026-09-26 este)
+
+*Az (a) döntés folytatásának 2. lépése. A 43. mérésen otthon a telefon és a laptop percenként
+NÉGYSZER cserélt. A kérdés: miből jön a négy, és mennyibe kerül?*
+
+**Az eszköz:** [`negyszeresCsereMeres.js`](negyszeresCsereMeres.js) — két valódi őrjárat egy gépen
+(eldobható adat-mappák, DHT és tükör nélkül, semmi nem megy ki a gépből). A két tényezőt külön
+kapcsolja: a **címek** (a társ a hurok-címen ÉS a helyi címen — a hairpinning utánzata —, vagy
+csak az egyiken), és az **irányok** (a B órája eltolható `--import`-tal: a két kör ablaka így nem
+esik egybe, mint két valódi készüléknél). Az első ablak a bemelegítés, utána 5 ablak (fél
+percesek) az állandósult „nincs újdonság" állapot.
+
+**1. Helyben — a szorzótábla:**
+
+```
+egy cím,    csúszás nélkül:    1 csere / ablak   (1 · 1 · 1 · 1 · 1)   ~1,0 KB / ablak
+egy cím,    15 mp csúszás:     2 csere / ablak   (2 · 2 · 2 · 2 · 2)   ~2,1 KB
+két cím,    csúszás nélkül:    2 csere / ablak   (2 · 2 · 2 · 2 · 2)   ~2,3 KB
+két cím,    15 mp csúszás:     4 csere / ablak   (4 · 4 · 4 · 4 · 4)   ~4,8 KB   ← a 43. mérés otthoni esete
+két cím,     2 mp csúszás:     4 csere / ablak   (4 · 4 · 4 · 4 · 4)   ~4,6 KB
+```
+
+Egy „nincs újdonság" csere helyben 0,9–1,2 KB (két címnél a nagyobb, mert a hirdetett címlista
+hosszabb). A B naplója minden sorban ugyanannyi cserét mutat, mint az A-é (egy csere = egy-egy sor).
+
+**2. ⭐ Terepen, ugyanaznap este** (a telefon a szomszéd wifijén, a laptop otthon — EGY élő cím):
+
+```
+18:49:25  a laptop a tábláról megtalálja a telefon új címét (5.187.184.117:7373, 2 perce írta ki)
+18:50 … 19:00   minden percben PONTOSAN KÉT csere (11 percből 11-szer):
+   xx:00  a laptop köre  — rés 21–519 ms · 1,5 KB (egyszer 1,7)
+   xx:01  a telefon köre — rés 20–122 ms · 1,3 KB
+```
+
+⭐⭐ **Az irányok terepen nem olvadnak össze magától:** a telefon köre ~1 mp-cel a laptopé után
+indul (óra-eltérés vagy késő ébredés), amikor az első csere már véget ért. *Helyben 2 mp csúszás is
+elég a szétváláshoz — terepen tehát a „két irány = két csere" a szokásos eset, nem a kivétel.*
+
+**3. Mit jelent ez:**
+- A négy **két független tényező** szorzata, és mindkettőt mérve láttuk: a **címek száma** (×2 —
+  ez a (ii) kérdés) és az **irányok száma** (×2 — ez a (iii) kérdés). Az egyik nélkül 2 marad,
+  mindkettő nélkül 1.
+- ⭐ **Az ár:** egyperces körrel egy készüléknek egy társsal ma **~6,5 MB/nap** (helyben, négy
+  cserével; terepen a nagyobb cserékkel ~8), egy címen két iránnyal ~4 MB/nap (terepen mérve),
+  ablakonként egy cserével **~1,4 MB/nap** (helyben) — a két tényező megszüntetése **közel az ötödére**
+  viszi le az adatot. Ötperces körrel ugyanez 1,3 → 0,3 MB/nap.
+- ⚠️ A két tényező **nem ugyanaz a kérdés**: a címeké a hozzárendelésé (ugyanaz a társ-e, a
+  tábla-kulcs mondja meg — a munka VÉGÉN), az irányoké az ütemé (két kör, egy ablak — ha az egyik
+  csere már megvolt, kell-e a másik?).
+
+**4. ⚠️ Mellékleletek:**
+- **A bemelegítésben két címen az események KÉTSZER utaznak:** a két párhuzamos csere ugyanazt a 3
+  eseményt vitte át (2 × 3,8 KB), és a B **6 „új esemény"-t** jelentett. A tár tiszta maradt (3 sor,
+  3 különböző esemény), tehát kár nincs, csak dupla
+  forgalom és egy félrevezető szám a naplóban.
+- **A „ismeretlen kopogott be" felirat ISMERT társra is kiíródik** (helyben a 2 és 15 mp-es
+  csúszásnál: a B-re, akire az A is kopog — csak épp nem az utolsó 15 mp-ben). A felirat a kapu
+  `BEKOPOGO-CEL` jelzéséből jön, ami azt jelenti: *„most nem mi kezdtük"*, nem azt, hogy
+  *„nem ismerem"*. A terepi napló olvasásakor ez félrevezet.
+
+### ⏭️ A KÖVETKEZŐ
+- A 3. lépés: a (i)–(iii) döntési kérdések Csabának — a 44. (i)-hez tartozó leletével és ezzel a
+  szorzótáblával.
+- A telefon naplója (`~/orjarat-szomszed.txt`) a terepi sor másik oldala — ha megjön, ide.
