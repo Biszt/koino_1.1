@@ -37,14 +37,33 @@ kapcsolat első darabját ugyanazon a foglalaton (`udpVonal.js`).
 ⭐ **Kimondott feltevés (Csaba):** két cél-függő NAT között (két mobil szolgáltató) a pajzsfúrás
 nehéz lehet — **nem mértük**; addig úgy vesszük, hogy nem áll útban.
 
-#### ⏭️ A KÖVETKEZŐ MUNKA — a sorrend Csabáé
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION: A TEREPMÉRÉS (Csaba döntése, 2026-09-26)
 
-1. ⭐⭐ **TEREPMÉRÉS a D69/2 után** (telefon + laptop, forgatókönyv **0/b.**,
-   [`terepmeres_mobil.md`](docs/terepmeres_mobil.md)): ez nagy változás volt — a kör, a
-   postaláda és a kézi út is új úton megy. ⚠️ **Mindkét készüléket frissíteni kell** (a régi
-   TCP-s koino nem beszél az újjal), és az induló címeket **újra fel kell venni** (`tars`, vagy
-   a wifin `felfedez`) — a kötések viszont megmaradtak. Írjuk fel a **kör új hosszát** is (a 41.
-   mérés 90–97 mp-e halott TCP-címekből jött).
+⭐ **A forgatókönyv fel van készítve:** [`terepmeres_mobil.md`](docs/terepmeres_mobil.md) — előbb
+a legfelső **„A D69/2 UTÁN"** szakasz (mi változott), aztán a **0/b.** (telefon + laptop). ⚠️ A
+[`telepites_telefon.md`](docs/telepites_telefon.md) 🅲 szakasza (IPv6 + TCP, 2026-08-28) **elavult,
+ne futtassátok**.
+
+**Az indulás, sorban:**
+1. **Mindkét készüléken a friss `main`** — a laptopon `git pull`, a telefonon az egysoros
+   frissítés (lent). ✅ **703 önpróba** zöldje az előfeltétel, mindkét gépen.
+2. **Az induló cím újra** — a társ-lista tiszta lappal indul (`tarsak` üres, ez rendben van); a
+   wifin a telefonon `tars <a laptop 192.168-as címe> 7373`. ⭐ A kötés megmaradt (`tabla`).
+3. **Őrjárat naplóval mindkét gépen** (`… orjarat 1 2>&1 | tee ~/orjarat-L.log` / `-T.log`) —
+   ⭐ a laptop oldalát Claude is futtathatja Git Bash-ben (a 42. mérésen is így volt), a
+   telefonét Csaba.
+4. **A vizsga (A1):** `csere a résen` mindkét naplóban + a `tabla` mindkét gépen mutatja a
+   kötést. Aztán a váltás (A2), a naplósorok (A3), a gondolat oda-vissza (A4).
+5. **Felírni** (a forgatókönyv 5. pontja + ⭐ **a kör új hossza**: két kör-sor időbélyege — a
+   41. mérés 90–97 mp-e halott TCP-címekből jött): a **43. mérés** az
+   [`eredmenyek.md`](koino/meres/eredmenyek.md)-be, a döntő naplósorokkal szó szerint.
+
+⛔ **Ha a rés NEM nyílik az ismert páron** (otthoni router ↔ mobil — a 32. mérésen 1 kopogás):
+szinte biztosan PROGRAM-hiba a D69/2-ben, nem fal — a két napló kell hozzá.
+
+#### ⏭️ UTÁNA — a sorrend Csabáé
+
+1. ⭐ **A 🅱️ változat (két mobil):** dönt a kimondott feltevésről (két cél-függő NAT).
 2. ⏸️ **A UDP-s több forrás** (D68 / 6. — ma egy fájl egy társtól jön a résen): a tervező
    függvények és a `parbeszed` `FAJLKEREK`-ága készen állnak, a résen próbával mérve.
 3. ⏸️ **IPv6:** a kapu IPv4-es (a TCP IPv6-on is ment). Kettős (IPv4+IPv6) kapu — külön lépés.

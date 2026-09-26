@@ -9,6 +9,30 @@ utolsó nyitott kérdés, amit eddig csak modellben (35.) és egy gépen (37.) m
 
 ---
 
+## ⭐ A D69/2 UTÁN — olvasd el ezt MINDENEK ELŐTT (2026-09-26)
+
+⛔ **2026-09-26 óta nincs TCP a készülékek között** (D69/2): az őrjárat, a postaláda (`figyel`)
+és a kézi parancsok (`csere`, `hozd`, `tukor`) is az **állandó UDP-kapun** mennek. Ami ebből a
+mérésre tartozik:
+
+- ⛔ **Minden készüléken ugyanaz a friss `main` kell** — a régi (TCP-s) koino **nem beszél** az
+  újjal. A frissítés egy sor (lent, és a [`telepites_telefon.md`](telepites_telefon.md)-ben).
+- ⭐ **A társ-lista tiszta lappal indul** (`indulocimek.json`): a `tarsak` parancs **üres** —
+  ez rendben van, a régi `tarsak.json`-t semmi nem olvassa. Az induló címet **újra fel kell
+  venni** (`tars`, vagy a wifin `felfedez`). ⭐ **A kötések viszont megmaradtak**
+  (`kotesek.json`, a `tabla` paranccsal nézhető) — a két telefon ismerős társként ismeri fel
+  egymást.
+- ⭐ **A kör összegző sora új:** `✓ HH:MM:SS N/M társ — X új esemény[, K menet]` — a `K menet`
+  az **ismételt menet** (ha egy menet újdonságot hozott, az ablakon belül újra kopog). Ha nincs
+  kire kopognia: `nincs kire kopognom … — csak a kaput tartom nyitva`.
+- ⭐ **Írd fel a kör hosszát is:** két egymás utáni kör-sor időbélyegének különbsége az ablakon
+  belül. *A 41. mérés 90–97 mp-es köre halott TCP-címekből jött — most nincs TCP-kör, a kopogás
+  legfeljebb 6 mp, csak a tábla-olvasás (~20 mp néma kötésenként) nyújthatja meg.*
+- ⏸️ **Kimondott feltevés (Csaba):** két cél-függő NAT között (két mobil szolgáltató) a
+  pajzsfúrás nehéz lehet — **nem mértük**. A 🅱️ változat ezt dönti el.
+
+---
+
 ## 0. A MÁSODIK NEKIFUTÁS — olvasd el ezt először (2026-09-22)
 
 ⭐ A **39. mérés fele sikerült**: a tábla-út végigment (az elvitt telefon magától kiírta az új
@@ -129,13 +153,13 @@ Node új kérdést hozhat.)*
 
 ### A0. Előkészület a laptopon — egyszeri, 1 perc
 
-A laptop társ-listáján **régi próba-maradékok** állnak (két `127.0.0.1`-es cím, 2026-09-10-ből).
-Nem ártanak, de minden körben rájuk kopogna, és a naplóban zajt csinálnak:
+⭐ **2026-09-26 óta tiszta lap** (D69/2): a `tarsak` parancs üres listát mutat, a régi
+próba-maradékok (a két `127.0.0.1`-es cím) a régi `tarsak.json`-ban maradtak, amit semmi nem
+olvas. Nincs mit takarítani — csak nézd meg, és hogy a kötés megvan-e:
 
 ```bash
 node koino/koino.js tarsak
-node koino/koino.js tars torol 127.0.0.1 7398
-node koino/koino.js tars torol 127.0.0.1 7399
+node koino/koino.js tabla
 ```
 
 ### A1. Ismerkedés az otthoni wifin — ~5 perc
@@ -161,9 +185,11 @@ node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-L.log      # a laptopon
 node koino/koino.js orjarat 1 2>&1 | tee ~/orjarat-T.log      # a telefonon
 ```
 
-✅ **A vizsga:** mindkét naplóban megjelenik a `1 társsal van kötésem` sor, és a
-`kiírtam a táblára` is (ekkor tudja meg mindkettő a saját külső címét). ⛔ Ha kötés nincs,
-**állj meg** — a tábla nem tud mit kiírni.
+✅ **A vizsga:** mindkét naplóban megjelenik a `csere a résen <a másik címe>` sor és a
+`kiírtam a táblára` is (ekkor tudja meg mindkettő a saját külső címét) — ⭐ és egy **harmadik
+ablakban** a `node koino/koino.js tabla` **mindkét** készüléken mutatja a kötést, a másik fél
+címével. *(A D69/2 óta a kör végén nincs külön „N társsal van kötésem" sor — a `tabla` mondja
+meg.)* ⛔ Ha kötés nincs, **állj meg** — a tábla nem tud mit kiírni.
 
 ### A2. A váltás — a TELEFON megy mobilnetre
 
@@ -182,6 +208,8 @@ használhatatlan. ⛔⛔ **Vagyis a telefonnak IS a tábláról kell kiolvasnia 
 | **laptop** (L) | `a táblán megvan egy néma társ új címe: …` | a maradó kiolvasta |
 | ⭐⭐ **telefon** (T) | `a táblán megvan egy néma társ új címe: …` | ⭐ **A DÖNTŐ SOR** — a távozó IS kiolvasta a maradót |
 | mindkettő | `rés nyílt: …` | a rés megnyílt |
+| mindkettő | `✓ … N/M társ — X új esemény[, K menet]` | ⭐ a kör összegzése (D69/2): hány célból hánnyal ment végig a munka; `K menet` = ismételt menet. **Két egymás utáni ilyen sor időbélyege adja a kör hosszát** |
+| mindkettő | `N címre kopogtam, egyik rés sem nyílt meg` | a kopogás nem ért célba ebben a körben — a táblára vár |
 | mindkettő | `ismeretlen kopogott be (…) — visszakopogok, és vele is cserélek` | ⭐ a másik fél kopogása a mi körünkön KÍVÜL érkezett, és az állandó kapu (D69/3) felelt rá |
 | mindkettő | `… foglalt — épp egy korábbi munkán dolgozik velem` | ⭐ nem hiba: a munka vele már fut, a végén visszakopogunk |
 | mindkettő | `rés nyílt (…), de a csere a résen elbukott: …` | ⛔ **a legfontosabb hibasor** — a rés él, a csere nem; az ok szó szerint kell |
@@ -206,9 +234,10 @@ node koino/koino.js kulsoport 7400
 ⭐ Ha a **két külső cím egyezik** (a port más lesz), a két készülék **ugyanazon a
 szolgáltatói címen** osztozik — pontosan a 2026-09-22-i javítás esete. Ekkor figyeld:
 
-- `node koino/koino.js tarsak` — felkerült-e a **másik fél nyilvános címe** (a közös cím, a
-  MÁSIK porttal) a listára? ⛔ *Ha néhány ablak után sem, a javítás nem ért el az éles
-  útig — ⚠️ az őrjárat ezt nem írja ki külön, ezért kell a `tarsak`.*
+- `node koino/koino.js tabla` — a kötés mellett a **másik fél nyilvános címe** áll-e (a közös
+  cím, a MÁSIK porttal)? ⛔ *Ha néhány ablak után sem, a javítás nem ért el az éles útig.*
+  ⚠️ *2026-09-26 óta a `tarsak` ezt nem mutatja: a társ-lista csak az induló címeké, a
+  cserén tanult címek a friss UDP-jegyzékbe és a kötésbe kerülnek (D69/2).*
 - a naplóban a `rés nyílt: <cím>` — ⚠️ **a cím mondja meg, merre nyílt**: ha a **nyilvános**
   cím, a szolgáltató NAT-ja visszafordult saját maga felé (*hairpinning* — erre eddig nem
   volt adatunk); ha egy **helyi** (`192.168.…`) cím, akkor a hotspot helyi hálózatán mentek
@@ -370,6 +399,7 @@ node koino/koino.js
 | ⛔⛔ **Kiolvasta-e a TÁVOZÓ is a tábláról a maradó címét** | *ez a 39. mérés hiányzó fele* — a B naplójában kell keresni |
 | Hány **kopogás** után nyílt a rés (`… ms`) | a 17. mérés 190 ms-ot, a 19. 76-ot mért |
 | Átment-e a **gondolat** (3. szakasz) | ez a valódi siker |
+| ⭐ **A kör hossza** (két egymás utáni kör-sor időbélyege) | a D69/2 után először — a 41. mérés 90–97 mp-ét a TCP-kör okozta |
 | Bármi, ami **nem** a fenti sorok közül jött | a meglepetés a legértékesebb adat |
 
 ⭐ **És a végén mentsd el a két naplót** (🅱️: `~/orjarat-A.log`, `~/orjarat-B.log` ·

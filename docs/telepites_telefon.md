@@ -259,8 +259,9 @@ node koino/koino.js figyel 7373
 ⚠️ **A Windows fel fog ugrani egy tűzfal-kérdéssel** („Engedélyezi a Node.js
 kommunikációját?"). **Nyomd meg az Engedélyezés gombot** — a „Magánhálózatok" pipa elég.
 
-✅ **Ha sikerült:** kiírja, hogy `A kapu nyitva: 7373-es port`. **Ezt az ablakot hagyd
-nyitva**, itt fog dolgozni.
+✅ **Ha sikerült:** kiírja, hogy `POSTALÁDA (a UDP-kapu nyitva a 7373-es porton)`. **Ezt az
+ablakot hagyd nyitva**, itt fog dolgozni. *(2026-09-26 óta — D69/2 — a kapu UDP-s; TCP nincs a
+készülékek között.)*
 
 ## 12. lépés — a telefon csatlakozik
 
@@ -271,10 +272,10 @@ k csere 192.168.1.134 7373
 ```
 
 ✅ **Ha sikerült:** a telefon kiírja, hogy `Csere kész — kaptam ... eseményt`, a laptop
-ablakában pedig megjelenik egy zöld pipa és egy `✓ csere` sor.
+ablakában pedig megjelenik egy `ismeretlen kopogott be` és egy `✓ … csere a résen` sor.
 
-❌ **Ha azt írja, hogy nem tud csatlakozni:** a leggyakoribb ok, hogy a tűzfalnál nem
-Engedélyezést nyomtál. Zárd be a `figyel`-t (CTRL + C), és próbáld újra.
+❌ **Ha azt írja, hogy `A társ nem felelt 10 mp alatt`:** a leggyakoribb ok, hogy a tűzfalnál
+nem Engedélyezést nyomtál (a UDP-nek is kell). Zárd be a `figyel`-t (CTRL + C), és próbáld újra.
 
 ## 13. lépés — ⭐ ugyanazt látja a két készülék?
 
@@ -293,6 +294,12 @@ látja.
 ---
 
 # 🅲 SZAKASZ — a hálózati mérés (telefon a szomszédban)
+
+> ⛔⛔ **ELAVULT (2026-09-26, D69/2) — EZT A SZAKASZT NE FUTTASD.** Ez a 2026-08-28-i mérés
+> **IPv6-on, közvetlen TCP-cserével** mért. A D69/2 óta nincs TCP a készülékek között, és az
+> állandó UDP-kapu ma **IPv4-es** — egy IPv6-os címre a `csere` azt mondja, hogy kihagyta.
+> ⭐ **A két hálózat közötti mérés mai forgatókönyve:** [`terepmeres_mobil.md`](terepmeres_mobil.md)
+> — a telefon + laptop változat (**0/b.**). *A lenti lépések történetként maradnak.*
 
 > ⚠️ **Ez már nem életkérdés (D31, 2026-08-28).** Amíg a mérce az volt, hogy „két
 > készüléknek közvetlenül össze kell érnie", addig ezen múlt a koino sorsa. A
