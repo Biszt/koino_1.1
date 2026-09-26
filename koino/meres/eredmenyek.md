@@ -3947,10 +3947,64 @@ ezen a koinón a következő pont-esemény már számít.*
 
 ### ⏭️ A KÖVETKEZŐ
 - ✅ ~~A két hiba javítása~~ — kész, ugyanaznap (lásd fent); 707 önpróba.
-- ⭐ **Döntési kérdés (Csabáé):** egy készüléken hány folyamat írhat a saját láncba (a
-  felszabadítás és a kézi parancsok) — egy író, vagy zárolás? ⛔ A tét: a saját láncban két esemény
+- ✅ **Döntve: EGY ÍRÓ (D70, Csaba) — megépült, lásd a 43/b.-t.** A kérdés volt: egy készüléken
+  hány folyamat írhat a saját láncba (a felszabadítás és a kézi parancsok) — egy író, vagy
+  zárolás? ⛔ A tét: a saját láncban két esemény
   ugyanazon a sorszámon **ELÁGAZÁS** — az állapot-számítás azonosító szerint az egyiket tartja meg
   (D19: nem büntet), a **másik tettünk csendben elvész**, és az ellentmondás mindenkinél látható
   marad (a `lancEllenorzese` szövege szerint „csalás, és bizonyított"). *Egy becsületes e-ember a
   saját két ablaka miatt.*
 - A 🅱️ változat (két mobil) — a kimondott feltevés (két cél-függő NAT) még mindig nincs mérve.
+
+## 43/b. ⛔⛔ A SAJÁT LÁNC VERSENYE — mérve, és a D70 (egy író) előtte–utána (2026-09-26, a laptopon)
+
+*Csaba döntése a 43. mérés nyitott kérdésére: **egy író** — „szerkezeti tisztaság fontosabb, mint a
+munka spórolás". Előbb a mérés: valóban születik-e elágazás, ha egy készüléken több folyamat ír?*
+
+**1. Valódi folyamatok, egyszerre indítva** (egy adat-mappa, kézi `gondolat` parancsok):
+
+```
+6 egyszerre, a frissit()-es program:        0 elágazás (13 esemény)
+20 egyszerre, a frissit()-es program:       0 · 0 · 0 elágazás (41 esemény, háromszor)
+20 egyszerre, a 43. mérés ELŐTTI program:   1 · 0 · 0 elágazás — ⭐ a mérés látja
+```
+
+⭐ **A hiba valós, de ritka és véletlenszerű** — a Node indulása szétszórja a parancsokat, a rés
+néhány milliszekundum. *Erre próbát építeni nem lehet: a véletlenre épülne.*
+
+**2. A determinisztikus alak** (két tár-példány ugyanazon a mappán, ugyanazzal a kulccsal,
+egyszerre három-három gondolat — `iroProba.js`):
+
+```
+író NÉLKÜL:  7 esemény, 1 elágazás   ×3 (háromból háromszor)
+ÍRÓVAL:      7 esemény, 0 elágazás   ×3
+```
+
+⭐ A próba **mindkét sort megköveteli** — ha a helyzet egyszer író nélkül sem ágazna el, a próba
+nem mérne semmit, és ezt kimondaná.
+
+**3. ⛔ A mérés közben egy MÁSODIK hiba — a `frissit()` egyidejű hívása:** a verseny-mérés
+naplójában *„sérült sor, kihagyva"* jelent meg, íróval is. Két frissítés ugyanonnan olvasott, és
+mindkettő hozzáadta a saját hosszát a jelhez — a jel túlfutott:
+
+```
+3 egyszerre, 5 eseményes farok:     [0,5,0] → 1 ✓ · [5,0,0] → 1 ✓ · [5,0,0] → 0 ✗ (elveszett)
+8 egyszerre, 200 eseményes farok:   tízből tízszer: a következő esemény ELVESZETT
+```
+
+✅ A frissítések sorba állnak, a jel a saját kezdőpontjából számolódik. ⚠️ A próba (`tarProba.js`)
+első alakja (5 esemény, 3 hívás) **a hibás kódon is átment** — vak volt; a 200/8-as alakkal a
+hibás kód háromból háromszor bukik, a javított háromból háromszor zöld.
+
+**4. A csatorna, amin az író dolgozik** (Windows, névvel ellátott cső): a második hallgató
+`EADDRINUSE`-t kap · a kliens a futóhoz csatlakozik · az első halála után a kliens `ENOENT`-et
+kap, és új hallgató indulhat. ⭐ **A csatorna maga a zár** — nincs elavult jelzőfájl. ⏸️ Androidon
+fájl-foglalat: a telefon próbasora méri meg.
+
+**5. ⛔ A bekötés első futása ELAKADT:** az íróvá lett kézi parancs soha nem lépett ki — a nyitott
+csatorna életben tartotta a folyamatot. ✅ A csatorna nem tartja életben (`unref`); amíg a folyamat
+másért él (őrjárat, felület), kiszolgál.
+
+### ⏭️ A KÖVETKEZŐ
+- A telefonon a friss `main` és a teljes próbasor — az író Androidos csatornája.
+- Az (a) döntés folytatása: a kopogás-kör hozzárendelése a tábla-kulccsal (a négyszeres csere).

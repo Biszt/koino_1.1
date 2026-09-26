@@ -117,7 +117,7 @@ Ez kiírja az állapotot (gondolatok, javaslatok, egyezmények). Néhány továb
 ```bash
 node koino/koino.js orjarat          # a valódi üzemmód: a készülék magától dolgozik
 node koino/koino.js felulet          # a felület a böngészőben (helyi kapu, jelszóval)
-node koino/meres/mind.js             # az önpróbák (707, mind zöldnek kell lennie)
+node koino/meres/mind.js             # az önpróbák (714, mind zöldnek kell lennie)
 ```
 
 A teljes parancslista: [`koino/README.md`](koino/README.md). Telefonra telepítés
@@ -179,7 +179,7 @@ Ha most találkozol először a kóddal:
    parancsok, a rétegek.
 4. **[`docs/gepezet.md`](docs/gepezet.md)** — a döntéshozatali gépezet ábrákon.
 5. **[`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)** — a
-   tervezési döntések (D1–D69) és indoklásuk.
+   tervezési döntések (D1–D70) és indoklásuk.
 
 A prototípushoz: [`docs/architektura.md`](docs/architektura.md) (kód-túra),
 [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md) és
@@ -192,7 +192,7 @@ A `docs/` mappa a projekt tudásbázisa:
 | Fájl | Miről szól |
 |------|-----------|
 | [`utiterv.md`](docs/utiterv.md) | **A belépő:** mit építünk, milyen sorrendben, és miért |
-| [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) | Fázis 2 (P2P) — a döntések (D1–D69) |
+| [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) | Fázis 2 (P2P) — a döntések (D1–D70) |
 | [`szakasz1_terv.md`](docs/szakasz1_terv.md) … [`szakasz5_terv.md`](docs/szakasz5_terv.md) | A szakaszok részletes tervei (helyi modell, szállítás, szerkezet, identitás, felület) |
 | [`gepezet.md`](docs/gepezet.md) | A döntéshozatali gépezet ábrákon |
 | [`skalazas_terv.md`](docs/skalazas_terv.md) | A milliárdos lépték szerkezete |
@@ -216,9 +216,9 @@ A mérések jegyzőkönyve: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek
 szerkezet és az identitás (Szakasz 1–4), a felület gerince (Szakasz 5), valamint a
 fájlok szállítása. Az őrjárat UDP-n kopog és cserél, a hirdetőtábla (BitTorrent DHT)
 terepen, valódi telefonokkal is működik. 2026-09-26 óta **nincs TCP a készülékek között**: az
-őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **707
-önpróba**, mind zöld (`node koino/meres/mind.js`). A következő lépés: terepmérés az új úton. A
-friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
+őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **714
+önpróba**, mind zöld (`node koino/meres/mind.js`). A terepmérés az új úton (43.) sikerült, és
+2026-09-26 óta egy készüléken egyetlen folyamat ír a tárba (D70, egy író). A friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
 
 🟢 **A prototípus élesben fut** a [koino.hu](https://koino.hu)-n (Fázis 1),
 befagyasztva. Automatizált tesztje nincs; a tesztelés böngészős, referenciája a

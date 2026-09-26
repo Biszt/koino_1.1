@@ -97,12 +97,12 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonhat próba-fájl, **707 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
+Huszonhét próba-fájl, **714 önpróba**; a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **182 fájl, 3124,1 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **184 fájl, 3159,9 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -170,6 +170,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/esemeny/esemeny.js` | aláírás és ellenőrzés; az esemény neve a gondolata lenyomata |
 | `js/tar/fajlTar.js` | a tár: **hozzáfűzhető** fájl, soronként egy esemény — ⭐ 3.2 óta **kérdezhető** (`esemeny`, `szerzoLanca`, `szeletEsemenyei`, `sorszamSzerint`), nem csak `betolt()` |
 | `js/tar/esemenyTar.js` | a lánc kezelése — ellenőrizetlen esemény nem kerül be |
+| `js/tar/iro.js` | ⭐ **az író** (D70): koinónként és készülékenként egy folyamat fűz a tárhoz — a gépen belüli csatorna maga a zár; aki nem író, a kész eseményt átadja; a saját új esemény csak a lánc végére kerül |
 | `js/kulcs/kulcsTar.js` | a kulcs = a személyazonosság (D15) — kimentés **és visszatöltés**; ⛔ az egyetlen művelet a koinóban, ami ELDOB valamit, ezért kimondott engedély kell hozzá |
 | `js/allapot/szabalyok.js` | mely események **számítanak** (keret, jogosultság) |
 | `js/allapot/allapotSzamitas.js` | események → entitások |

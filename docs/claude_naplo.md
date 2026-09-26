@@ -8,6 +8,41 @@ elvek a CLAUDE.md-ben maradtak; itt a **történet** és a döntések **indoklá
 
 ---
 
+### ✅ 2026-09-26 (este) — D70: EGY ÍRÓ — és egy harmadik hiba a `frissit()`-ben
+
+⭐ **Csaba döntése** a 43. mérés nyitott kérdésére (egy író · zárolás · marad így): *„nem szeretnék
+ideiglenes megoldást. szerkezeti tisztaság fontosabb, mint a munka spórolás."* → **egy író.**
+
+**Előbb a mérés** (részletek: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 43/b.): húsz egyszerre
+induló kézi paranccsal a régi program háromból egyszer elágazott, a `frissit()`-es egyszer sem — a
+hiba valós, de véletlenszerű, ezért a próba **determinisztikus alakot** kapott (két tár-példány
+egyszerre ír: író nélkül háromból háromszor elágazik, íróval soha).
+
+⭐⭐ **A felépítés, ahogy a mérés után kialakult:** a csatorna maga a zár (Windowson a második
+hallgató `EADDRINUSE`-t kap, és a halállal a név felszabadul — mérve); az író SENKI helyett nem ír
+alá, csak kész eseményt enged át a saját kapuján, ezért nem kell jelszó; SORBAN dolgozik, és a saját
+új eseményt csak a lánc végére engedi („ELAVULT" → a művelet frissít, a bemondott összeget is
+újraszámolja, újra aláír); a hálózatról jött idegen elágazás bizonyítékként megmarad (D19). Az
+őrjárat, a `figyel` és a felület induláskor jelentkezik íróként; a kézi parancs átad, vagy ha nincs
+író, maga lesz az.
+
+⛔⛔ **Három dolog, amit a munka hozott ki:**
+1. **A `frissit()` egy folyamaton belül sem bírta az egyidejű hívást** — a jel túlfutott, és a
+   következő esemény ELVESZETT (200 eseményes farkon tízből tízszer). ✅ Sorba állnak. ⚠️ A próba
+   első alakja vak volt (a hibás kódon is átment) — megerősítve.
+2. **Az íróvá lett kézi parancs nem lépett ki** — a csatorna életben tartotta. ✅ `unref`.
+3. **A D70 terve jelzőfájlt és jelszót írt** — a mérés után egyik sem kellett (a csatorna a zár, az
+   író nem ír alá senki helyett). A terv átvezetve.
+
+⚠️ **Egy saját hibám a munka közben:** a parancssor-próba rontás-oldalát úgy mértem, hogy az
+`iro.js`-t pár másodpercre elrontottam, miközben a háttérben a parancssori próbacsoport futott — az
+akkor induló folyamatai a rontott kódot kaphatták. A csoport eredményét ezért csak bukás nélkül
+fogadtam el, és a teljes próbasort utána újra lefuttattam.
+
+⏸️ **Nyitva:** Androidon fájl-foglalat a csatorna — a telefon próbasora méri meg.
+
+---
+
 ### ✅ 2026-09-26 (délután) — 43. MÉRÉS: A D69/2 TEREPEN — ÉS KÉT HIBA, UGYANAZNAP JAVÍTVA
 
 ⚠️ **Előtte rend kellett:** egy félbehagyott, visszagörgetett másik session 12:26-kor commitolta

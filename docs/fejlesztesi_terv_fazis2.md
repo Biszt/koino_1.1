@@ -3802,6 +3802,89 @@ tehát az utóhang csak `k`-val érkező, BÁJTRA azonos ismétlést nyugtáz, �
 szolgáltató) a pajzsfúrás elvi okból nehéz — **nem mértük**. Amíg nincs mérve, feltételezzük, hogy
 nem áll útban; a napló bukás esetén megnevezi („rés nyílt, de…” / „egyik rés sem nyílt meg”).
 
+### D70. EGY ÍRÓ — koinónként és készülékenként egyetlen folyamat fűz a tárhoz (2026-09-26, Csaba)
+
+> *„nem szeretnék ideiglenes megoldást. szerkezeti tisztaság fontosabb, mint a munka spórolás."*
+> — Csaba (a három lehetőség közül: zárolás · **egy író** · marad így)
+
+#### 1. Amiből jött — a 43. mérés
+
+Egy készüléken ma **több folyamat ír ugyanabba a tárba**: a futó őrjárat (a kapott eseményeket
+és a saját felszabadítását), a második ablak kézi parancsa, a felület. A 43. mérés első hibáját
+(a futó folyamat nem látta a másikét) a `frissit()` javította — ⛔ **de az írás versenyét nem**:
+két folyamat a saját, egymás elől rejtett lánc-végéből számol, és ugyanarra a sorszámra két
+saját eseményünk születhet. Az állapot-számítás az egyiket tartja meg (D19: nem büntet), **a
+másik tettünk csendben elvész**, és az ellentmondás mindenkinél látszik. A `frissit()` ezt a
+milliszekundumos résre szűkíti — Csaba szerint ez ideiglenes, és nem ez a szerkezet.
+
+#### 2. A DÖNTÉS
+
+⭐ **Koinónként és készülékenként EGY folyamat fűz a tárhoz: az ÍRÓ.** Minden más folyamat — a kézi
+parancs, a felület, az őrjárat, ha épp nem ő az író — **átadja neki** az eseményt, és az író a
+saját kapuján (`esemenyMentese`, 3. szabály) engedi be. *A lánc vége így egyetlen helyen dől el:
+ott, ahol a lánc készül.*
+
+#### 3. A felépítés
+
+- ⭐⭐ **A CSATORNA MAGA A ZÁR** (a terv eredetileg külön jelzőfájlt és jelszót írt — a mérés
+  egyszerűbbet mutatott): egy név alatt egyszerre CSAK EGY folyamat hallgathat, és a folyamat
+  halálával a név felszabadul (mérve, Windows: a második `EADDRINUSE`-t kap, az első halála után
+  a kliens `ENOENT`-et, és új író indulhat). **Az író az, aki a csatornán hallgat** — nincs
+  előre kinevezett író, nincs elavult jelzőfájl. A hosszan futó folyamat (őrjárat, `figyel`,
+  felület) induláskor jelentkezik, és a futása végéig tartja; a kézi parancs csak ha épp senki.
+- **A csatorna CSAK a gépen belül él** (Windowson névvel ellátott cső; máshol fájl-foglalat az
+  ideiglenes mappában, a tár mappájának lenyomatával) — a hálózat nem éri el. Nulla függőség
+  (`node:net`). ⚠️ Nem hálózat a készülékek között: a D69/2 (nincs TCP) erre nem vonatkozik.
+  ⚠️ **A fájl-foglalat** egy összeomlás után ottmaradhat — a következő író eltakarítja; ezért ott
+  az író minden hozzáfűzés előtt megnézi, hogy a csatorna tényleg ŐT éri-e el (egy „árva" író
+  különben másodikként írna), és ha nem, lemond. ⏸️ *Androidon a telefon próbasora méri meg.*
+- ⭐ **Nem kell jelszó:** az író SENKI HELYETT nem ír alá — csak kész, aláírt eseményt fogad, és
+  ugyanazon a kapun engedi át, mint a hálózatról jövőt. Aki a csatornán beszél, ugyanannyit tehet,
+  mint egy társ a hálózaton (3. szabály).
+- **Aki nem író, kliens:** az átadás egy kérés — `mentsd ezt az eseményt` —, a válasz `mentve`
+  vagy az ok. ⭐ **A saját új eseménynél** az író azt is ellenőrzi, hogy a lánc VÉGÉRE kerül-e; ha
+  a kliens elavult lánc-végből számolt, a válasz „elavult", és a kliens frissít, újra aláír, újra
+  küld. *Elágazás így nem születhet — nem ritka lesz, hanem lehetetlen.*
+- **Ha nincs élő író** (a csatornán senki nem felel), aki írni akar, átveszi a szerepet. ⭐ **A kézi
+  parancs ilyenkor maga lesz az író** — a kézi út futó őrjárat nélkül is teljes marad (4. szabály).
+  ⛔ A csatorna nem tartja életben a folyamatot (mérve: enélkül az íróvá lett kézi parancs soha
+  nem lépett ki).
+- ⛔⛔ **Az író SORBAN dolgozik:** a „lánc végére kerül-e?" ellenőrzés és a hozzáfűzés egy lépés.
+  És ha a hívó egy közben beírt pont-esemény miatt kap „elavult"-at, a **bemondott összeget is
+  újraszámolja** (D42), egy pillanatképből a lánc végével.
+- **Olvasni mindenki olvas** — a saját mutatójából, a `frissit()`-tel (az író írásai így jutnak el
+  hozzá).
+
+#### 4. Amit NEM mond
+
+- Nem mondja, hogy a készüléken csak egy folyamat futhat: a felület és az őrjárat együtt futhat,
+  csak az egyik ír.
+- Nem vonatkozik a KÉT KÉSZÜLÉKRE ugyanazzal a kulccsal (D19: két offline készülék elágazhat — az
+  a hálózat természetes állapota, nem ennek a döntésnek a tárgya).
+
+#### 5. A lépések (mindegyik próbával és rontás-próbával)
+
+1. ✅ `js/tar/iro.js` — a csatorna (a zár), a szerep átvétele, az önellenőrzés, a sor.
+2. ✅ A tár-illesztő: aki nem író, annak a `hozzafuz()`-e átad; az író a saját új eseményt csak a
+   lánc végére engedi (`esemenyMentese` harmadik paramétere: `ujSajat`).
+3. ✅ `esemenytTeszek`: „elavult" válaszra frissít, az adatot is újraszámolja, újra aláír.
+4. ✅ A bekötés: a parancssor minden útja (`koinoTaraNyitasa`) és a felület koinónkénti tára; az
+   őrjárat, a `figyel` és a felület induláskor jelentkezik íróként.
+5. ✅ Próbák: `iroProba.js` (öt: a szerep, az átvétel, ⛔ **a verseny — író nélkül háromból háromszor
+   elágazik, íróval soha; a próba mindkettőt megköveteli**, az elavult saját esemény, és az idegen
+   elágazás mint bizonyíték) · `parancssorProba.js` (a futó postaláda az író, öt egyszerre futó
+   kézi parancs átad, elágazás nélkül). Rontás-próbák ágankénti bukással.
+
+⭐ **A MÉRÉS, AMI MELLETTE KIDERÜLT:** a 43. mérés `frissit()`-je egy folyamaton belül sem bírta az
+egyidejű hívást — két frissítés ugyanonnan olvasott, a jel túlfutott, és a **következő esemény
+elveszett** (200 eseményes farkon tízből tízszer). ✅ A frissítések sorba állnak; próba a
+`tarProba.js`-ben (kis farokkal a próba először vak volt — a hibás kódon is átment; megerősítve).
+
+⭐ **A verseny mérése, számokkal:** húsz egyszerre induló kézi paranccsal a 43. mérés előtti program
+háromból egyszer elágazott, a `frissit()`-es hatból egyszer sem — tehát a hiba valós, de ritka és
+véletlenszerű. A determinisztikus alak (két tár-példány, egyszerre három-három gondolat) író nélkül
+háromból háromszor, íróval egyszer sem ágazott el.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
