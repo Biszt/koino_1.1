@@ -54,8 +54,8 @@ verzió pótolja, és ha vita van róla, **kétfelé válik, és mindkettő kipr
 > **A szakaszok újrarendezve:** 1. A helyi modell ✅ · 2. **A szállítás** ✅ *(átnevezve —
 > a munka valójában erről szólt, és elkészült)* · **3. A SZERKEZET** ✅ *(kész 2026-09-03)* ·
 > **4. AZ IDENTITÁS** ✅ *(kész 2026-09-06 — [`szakasz4_terv.md`](szakasz4_terv.md))* ·
-> 🚧 **5. A FELÜLET** *(itt folyik a munka — [`szakasz5_terv.md`](szakasz5_terv.md);
-> következő állomás: **5.6, a belépő tér**)* · 6. A kereső-réteg *(elhagyható)* · 7. A pénz
+> 🚧 **5. A FELÜLET** *(a gerince kész — [`szakasz5_terv.md`](szakasz5_terv.md); a friss
+> állomás mindig az [`utiterv.md`](utiterv.md) „HOL TARTUNK" blokkjában áll)* · 6. A kereső-réteg *(elhagyható)* · 7. A pénz
 > *(⚠️ a **D66** szerint a költözés pénz-szabályát EZZEL EGYÜTT kell megtervezni)*.
 >
 > ⚠️ **Ami látszólag ellentmond a D17-nek** (*„az identitás-réteg a gerinc, elsőként kell

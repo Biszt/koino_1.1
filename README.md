@@ -216,9 +216,11 @@ A mérések jegyzőkönyve: [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek
 szerkezet és az identitás (Szakasz 1–4), a felület gerince (Szakasz 5), valamint a
 fájlok szállítása. Az őrjárat UDP-n kopog és cserél, a hirdetőtábla (BitTorrent DHT)
 terepen, valódi telefonokkal is működik. 2026-09-26 óta **nincs TCP a készülékek között**: az
-őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **714
+őrjárat, a postaláda és a kézi parancsok is egy állandó UDP-kapun mennek (D69). **740
 önpróba**, mind zöld (`node koino/meres/mind.js`). A terepmérés az új úton (43.) sikerült, és
-2026-09-26 óta egy készüléken egyetlen folyamat ír a tárba (D70, egy író). A friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
+2026-09-26 óta egy készüléken egyetlen folyamat ír a tárba (D70, egy író). 2026-09-27 óta a
+gondolat szövege külön darab (D72) — ez a szeletelés első lépése; a következő az
+entitásonkénti tár. A friss állapot mindig a [`CLAUDE.md`](CLAUDE.md) elején áll.
 
 🟢 **A prototípus élesben fut** a [koino.hu](https://koino.hu)-n (Fázis 1),
 befagyasztva. Automatizált tesztje nincs; a tesztelés böngészős, referenciája a

@@ -3,14 +3,27 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D63),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D72),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
 
 ---
 
-> ## ▶️ HOL TARTUNK (2026-09-26) — A D69 KÉSZ: NINCS TCP A KÉSZÜLÉKEK KÖZÖTT
+> ## ▶️ HOL TARTUNK (2026-09-27) — A SZELETELÉS (D72): AZ A KÉSZ, A B KÖVETKEZIK
+>
+> ✅ **D71** — a kopogás-kör a társat keresi, nem a címét (44–46. mérés). ⭐ **Csaba elve:**
+> *„végtelenig lehessen skálázni"* — egy készülék terhe ne a koino méretétől függjön (a 9.
+> szabály élesítése). ✅ **D72** — a szeletelés döntései ([`szeleteles_terv.md`](szeleteles_terv.md)),
+> és az **A lépés: a gondolat szövege külön darab** (`js/esemeny/szovegDarab.js`). A **48. mérés**
+> az S3–S4 alapvonala. **740 önpróba.** ⏭️ **A következő: B — az entitásonkénti tár**
+> (szeletenként egy hozzáfűzhető fájl, jegyzék, lusta betöltés), utána **C** (a csere
+> szeletenként). A részletek a [`CLAUDE.md`](../CLAUDE.md) „SESSION-VÁLTÁS (2026-09-27 hajnal)"
+> blokkjában. ⚠️ A telefon régi kódon fut — a következő terepi mérés előtt frissíteni kell.
+>
+> ---
+>
+> ## ▶️ KORÁBBAN (2026-09-26) — A D69 KÉSZ: NINCS TCP A KÉSZÜLÉKEK KÖZÖTT
 >
 > ✅ **A D69 mindhárom lépcsője kész** — a 2. lépcső Csaba kérésére a TELJES TCP-t vitte ki: az
 > őrjárat, a postaláda és a kézi parancsok is az állandó UDP-kapun mennek, egy közös munkával.
