@@ -125,8 +125,12 @@ a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKul
 az ÁLLÁS minden cserénél az összes eseményből, 239 ms) · ✅ a részletes terv:
 [`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) — a tár és a csere egysége a SZELET; a
 szelet-egyeztetés tartomány-alapú (az eltérések × log n, nem a tulajdonosok száma); az esemény
-NEM változik (nincs új koino). ⏭️ **Négy döntési kérdés Csabának** (a terv 7. szakasza), és csak
-utána építés.
+NEM változik (nincs új koino). ✅ **D72 (Csaba, 2026-09-26 éjjel): (b) — a készülék a saját
+érdeklődését tartja; és a gondolat SZÖVEGE KÜLÖN DARAB** (lenyomattal hivatkozva, mint a képek; a
+metaadat a szülő körében terjed). ⏭️ **A lépések** (a terv 5. szakasza): **A** — a szöveg külön
+darab · **B** — az entitásonkénti tár (mindkettő független a csere protokolljától) · **C** — a csere
+szeletenként, a gyerek-bejelentéssel és a D63-mal (⏸️ a terv 7./2–4. kérdése után: a véletlen
+kötések · tiszta törés · tartomány-alapú egyeztetés).
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -211,7 +215,7 @@ utána építés.
   karcsúsításakor került oda, **szó szerint**. Ha egy döntés *miértje* kell, ott keresd.
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D71 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D72 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -234,7 +238,7 @@ utána építés.
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D71**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D72**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 
