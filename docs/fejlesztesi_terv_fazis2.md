@@ -3837,7 +3837,7 @@ ott, ahol a lánc készül.*
   (`node:net`). ⚠️ Nem hálózat a készülékek között: a D69/2 (nincs TCP) erre nem vonatkozik.
   ⚠️ **A fájl-foglalat** egy összeomlás után ottmaradhat — a következő író eltakarítja; ezért ott
   az író minden hozzáfűzés előtt megnézi, hogy a csatorna tényleg ŐT éri-e el (egy „árva" író
-  különben másodikként írna), és ha nem, lemond. ⏸️ *Androidon a telefon próbasora méri meg.*
+  különben másodikként írna), és ha nem, lemond. ✅ *Androidon mérve: a telefon próbasora 714/714.*
 - ⭐ **Nem kell jelszó:** az író SENKI HELYETT nem ír alá — csak kész, aláírt eseményt fogad, és
   ugyanazon a kapun engedi át, mint a hálózatról jövőt. Aki a csatornán beszél, ugyanannyit tehet,
   mint egy társ a hálózaton (3. szabály).

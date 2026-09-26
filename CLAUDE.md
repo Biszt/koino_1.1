@@ -17,64 +17,64 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-26)
 
-### ▶️ SESSION-VÁLTÁS (2026-09-26 este) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️ SESSION-VÁLTÁS (2026-09-26 késő este) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** a D69 (*„UDP mindenhol"*) kész — **nincs TCP a készülékek között** (részletek és
-árak: **D69 / 6.** a [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)-ben). ✅ **A 43.
-mérés szerint terepen is működik:** telefon a szomszéd wifijén, laptop otthon — **mindkét oldal a
-tábláról találta meg a másikat**, a rés két router között nyílt, a csere percenként ment, sötét
-képernyővel is (részletek, szó szerinti sorok: [`eredmenyek.md`](koino/meres/eredmenyek.md) 43.).
-⛔ A mérés **két programhibát** hozott ki — **mindkettő javítva, próbával és rontás-próbával**
-(lent). ✅ **És megépült a D70 — EGY ÍRÓ** (Csaba döntése: *„szerkezeti tisztaság fontosabb, mint
-a munka spórolás"*): koinónként és készülékenként egy folyamat fűz a tárhoz, a saját láncunk nem
-ágazhat el két ablak miatt. **714 önpróba zöld** (27 próba-fájl); a munkakönyvtár tiszta.
+**Az állapot:** a D69 (*„UDP mindenhol"*) kész — **nincs TCP a készülékek között**. ✅ **A 43.
+terepmérés** (telefon a szomszéd wifijén, laptop otthon): mindkét oldal a tábláról találta meg a
+másikat, a rés két router között nyílt ([`eredmenyek.md`](koino/meres/eredmenyek.md) 43.). ✅ **A
+D70 — EGY ÍRÓ** megépült, és **Androidon is mérve** (a telefonon 714/714,
+[`eredmenyek.md`](koino/meres/eredmenyek.md) 43/b.). **714 önpróba zöld** (27 próba-fájl) a laptopon
+és a telefonon; a munkakönyvtár tiszta, a telefon a friss `main`-en.
 
 **Ahogy most működik (egy bekezdésben):** minden út az **állandó UDP-kapun** megy
 ([`udpKapu.js`](koino/js/csere/udpKapu.js)), és ugyanazt a munkát végzi
 (`resMunkaKeszito` a [`koino.js`](koino/koino.js)-ben: csere · kötés · tanulás · fájl-randevú). Az
 **őrjárat** a kötésekre, a friss UDP-címekre és az **induló címekre** (`indulocimek.json`) kopog,
 **ismételt menettel**. A **`figyel`** = állandó kapu (postaláda). A **kézi `csere`/`hozd`/`tukor`**
-a parancs idejére nyit kaput. ⭐ **A tár 2026-09-26 óta `frissit()`-el** (43. mérés): a futó
-folyamat a munka elején, saját írás előtt és állapot-számításkor beolvassa, amit MÁSIK folyamat
-fűzött a fájlhoz (a második ablak parancsa, a felület) — addig csak újraindítás után látta.
-⭐⭐ **És a tár mögött az ÍRÓ áll** (D70, [`iro.js`](koino/js/tar/iro.js)): a fájlhoz mindig CSAK
-az a folyamat fűz, amelyik a gépen belüli csatornán hallgat — **a csatorna maga a zár** (egy név
-alatt egy hallgató, a halállal felszabadul). Az őrjárat, a `figyel` és a felület induláskor
-jelentkezik íróként; a kézi parancs neki adja át a kész, aláírt eseményt, vagy — ha nincs író —
-maga lesz az. Az író a saját új eseményt csak a lánc VÉGÉRE engedi („ELAVULT" → a művelet
-frissít, újraszámol, újra aláír).
+a parancs idejére nyit kaput. ⭐ **A tár `frissit()`-tel** olvassa be, amit más folyamat fűzött
+hozzá (sorban, egyszerre egy), ⭐⭐ **és a tár mögött az ÍRÓ áll** (D70,
+[`iro.js`](koino/js/tar/iro.js)): a fájlhoz csak az a folyamat fűz, amelyik a gépen belüli
+csatornán hallgat — a csatorna maga a zár. A kézi parancs a kész eseményt átadja, vagy ha nincs
+író, maga lesz az; a saját új esemény csak a lánc végére kerülhet.
 
 ⭐ **Kimondott feltevés (Csaba):** két cél-függő NAT között (két mobil szolgáltató) a pajzsfúrás
 nehéz lehet — **nem mértük**; addig úgy vesszük, hogy nem áll útban.
 
-#### ✅ A 43. mérés két hibája — javítva (részletek: a [napló](docs/claude_naplo.md) tetején)
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION: AZ (a) DÖNTÉS FOLYTATÁSA (Csaba, 2026-09-26)
 
-1. **A futó őrjárat nem látta, amit másik folyamat írt a tárba** → `frissit()` (`fajlTar.js`),
-   hívja a `resMunkaKeszito`, az `esemenytTeszek` és a `koinoEsemenyei`. Próbák: `tarProba.js`
-   (két tár-példány egy fájlon) és `parancssorProba.js` (a postaláda fut, MÁSIK folyamat ír, a
-   vendég megkapja).
-2. **Egy elvetett pont-esemény után a szerző minden további pont-eseménye elbukott** (a művelet
-   és a szabály két külön számítás volt) → egy közös függvény: `pontEsemenyMerlege`
-   (`szabalyok.js`), a `sajatKiosztott` is ezt hívja. Próba: `szabalyProba.js`, a valódi művelettel.
+> *(a):* „a terepmérés után a hozzárendelést a munka végén kapott tábla-kulcs erősítse meg" ·
+> és este: *„Az a) döntés folytatásával menjünk tovább, de csak másik sessionban."* — Csaba
 
-#### ✅ D70 — EGY ÍRÓ (Csaba döntése, 2026-09-26; a terv: [`fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md) D70)
+⭐ **KÉT TÜNET, EGY HIÁNY:**
+1. **Téves hozzárendelés azonos IP-n.** A `udpKapu.js` `talal`-jának (317–319. sor) harmadik
+   lépcsője — *„azonos IP, más port = a célunk"*, a mobil NAT portváltása miatt — az IDEGEN
+   bekopogóra is lefut: egy **néma** célt sikeresnek könyvel, és **abbahagyja a kopogtatását**.
+   Kísérlettel mérve (a [napló](docs/claude_naplo.md) 2026-09-26-i délelőtti átnézése: néma port a
+   127.0.0.1-en + egy harmadik kapu ugyanarról az IP-ről bekopog → a néma célra `ok: true`). ⚠️ A
+   kézenfekvő javítás (bekopogóra ne fusson) a portváltó mobil NAT-ot rontaná el.
+2. **Négyszeres csere** (43. mérés): otthon két készülék két címen érte el egymást (helyi +
+   nyilvános — a router hairpinningel), és mindkettő a saját körében is kopogott → **percenként
+   négy csere**, egyenként ~1,4 KB; egyperces körrel társanként ~8 MB/nap.
 
-⭐ **Próbák:** `iroProba.js` (öt — köztük a verseny: két tár egyszerre ír; ⛔ **író nélkül
-háromból háromszor elágazik, íróval soha, és a próba MINDKETTŐT megköveteli**, tehát nem lehet
-vak) · `parancssorProba.js` (a futó postaláda az író, öt egyszerre futó kézi parancs átad,
-elágazás nélkül). Rontás-próbák ágankénti bukással. ⭐ **Mellékesen kiderült és javult:** a
-`frissit()` egy folyamaton belül sem bírta az egyidejű hívást — a jel túlfutott, és a
-következő esemény ELVESZETT (tízből tízszer); ma sorban futnak (`tarProba.js`).
-⏸️ **Androidon még nincs mérve:** ott fájl-foglalat a csatorna (Windowson cső) — a telefon
-próbasora dönt róla.
+⭐⭐ **A közös gyökér:** a kopogás-kör csak CÍMEKET ismer — hogy két cím ugyanaz a társ-e, az csak
+a munka VÉGÉN derül ki, a társ **tábla-kulcsából** (`csere.kapottTablaKulcs`, `vonal.js` 453. sor).
 
-#### ⏭️⏭️ A KÖVETKEZŐ LÉPÉS — a sorrend Csabáé
+**Hol van ma a tudás, és hol vész el:**
+- a kötés-jegyzék tudja a társ tábla-kulcsát (`alairo`), de a `kopogasCeljai` (`kotesek.js` 97.
+  sor) a célba csak címet tesz — **a várt azonosság elvész**, mielőtt a kör elindul;
+- a `resMunkaKeszito` (`koino.js`) a kapott tábla-kulcsot a kötés feljegyzéséhez felhasználja, de a
+  munka eredményében **nem adja vissza** (`return { ...alap, fajlMegjott }`) — **a kör nem tudja
+  meg, kivel dolgozott**.
 
-1. ⭐ **A telefonon a friss `main` + a teljes próbasor** — ez méri meg az író Androidos csatornáját
-   (fájl-foglalat + önellenőrzés), amit a laptopon nem lehet.
-2. ⭐ **Az (a) döntés folytatása** (Csaba, 2026-09-26): a kopogás-kör hozzárendelése a munka végén
-   kapott **tábla-kulccsal** — ugyanez szüntetné meg, hogy két készülék otthon percenként
-   NÉGYSZER cserél (két cím × két irány, 43. mérés).
+**Az indulás, sorban (előbb a mérés, aztán az építés):**
+1. **A délelőtti kísérlet önpróbává** (`udpKapuProba.js`): néma cél + azonos IP-ről bekopogó idegen.
+   Ma a hibás viselkedést mutatja — a próba nevezze meg, és a javítás fordítsa zöldre.
+2. **A négyszeres csere mérése helyben:** egy gépen a hurok-cím és a helyi cím ugyanaz a társ két
+   címen — hány csere megy körönként, és mennyi bájt.
+3. ⭐ **Döntési kérdések Csabának, MIELŐTT építünk** (felírni, nem eldönteni): (i) ha a munka végén
+   kiderül, hogy a társ nem az, akit a cél várt — mi legyen a könyveléssel és a kopogással? (ii) ha
+   egy társt a körben már elértünk az egyik címén, kopogjunk-e a másikon? (iii) ha mindkét fél a
+   saját körében is kopog, elég-e egy csere — és ki kezdje?
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -91,8 +91,8 @@ próbasora dönt róla.
   `cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js > ~/probak.txt 2>&1; tail -3 ~/probak.txt`
   ⚠️ *Előtte a Termuxban `termux-wake-lock` — alvás közben a próbák lelassulnak.*
 - ⏸️ **Négy időzítés-érzékeny próba** egyszer-egyszer bukott a telefonokon (2026-09-26-án a
-  telefonon mind a 704 zöld volt, félig alvó telefonnal is): meg kell nevezniük a bukásuk okát,
-  mielőtt bárki hozzányúl az időzítésükhöz.
+  telefonon kétszer is minden zöld volt): meg kell nevezniük a bukásuk okát, mielőtt bárki
+  hozzányúl az időzítésükhöz.
 - ⏸️ **Robusztusság (mérendő):** a bekopogóra EGYETLEN visszakopogás megy; ha az vagy a rá jövő
   HALLAK elvész, a kör *„rés nyílt, de a csere elbukott”* lesz (a következő menet pótolja).
 - ⏸️ **A sikerszámlálás javítása** (a UDP-sikereket a TCP-kör felülírta) magától jött a TCP-kör

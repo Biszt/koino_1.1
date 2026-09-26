@@ -3998,13 +3998,15 @@ hibás kód háromból háromszor bukik, a javított háromból háromszor zöld
 
 **4. A csatorna, amin az író dolgozik** (Windows, névvel ellátott cső): a második hallgató
 `EADDRINUSE`-t kap · a kliens a futóhoz csatlakozik · az első halála után a kliens `ENOENT`-et
-kap, és új hallgató indulhat. ⭐ **A csatorna maga a zár** — nincs elavult jelzőfájl. ⏸️ Androidon
-fájl-foglalat: a telefon próbasora méri meg.
+kap, és új hallgató indulhat. ⭐ **A csatorna maga a zár** — nincs elavult jelzőfájl.
+✅ **Androidon is** (fájl-foglalat + önellenőrzés): a telefonon a `3a6af6c` teljes próbasora
+**714/714 zöld** (2026-09-26, 17:04) — benne az író öt próbája és a parancssori verseny.
 
 **5. ⛔ A bekötés első futása ELAKADT:** az íróvá lett kézi parancs soha nem lépett ki — a nyitott
 csatorna életben tartotta a folyamatot. ✅ A csatorna nem tartja életben (`unref`); amíg a folyamat
 másért él (őrjárat, felület), kiszolgál.
 
 ### ⏭️ A KÖVETKEZŐ
-- A telefonon a friss `main` és a teljes próbasor — az író Androidos csatornája.
-- Az (a) döntés folytatása: a kopogás-kör hozzárendelése a tábla-kulccsal (a négyszeres csere).
+- ✅ ~~A telefonon a friss `main` és a teljes próbasor~~ — 714/714 zöld.
+- ⭐ Az (a) döntés folytatása: a kopogás-kör hozzárendelése a tábla-kulccsal (a négyszeres csere)
+  — Csaba döntése szerint új sessionben.
