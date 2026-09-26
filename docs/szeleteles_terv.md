@@ -168,7 +168,7 @@ azokkal indulunk.
 5. Szelet-fájlok, jegyzék, lusta betöltés, a saját lánc mutatója, az író mögött; az egyszeri
    szétválogatás. ⭐ **Mérés:** a megnyitás ideje 100 000 eseménynél (ma 813 ms).
 
-**C. A CSERE SZELETENKÉNT** (S4 — a 7. szakasz 2–4. kérdése után)
+**C. A CSERE SZELETENKÉNT** (S4 — a 7. szakasz 2–4. kérdése döntve)
 6. A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály). ⭐ **Mérés:**
    ugyanaz, mint a 48.-é — 1 eltérés 100 000 esemény közt → hány bájt.
 7. ⭐ **A gyerek-bejelentés:** egy szülő szeletének egyeztetési halmaza = a saját eseményei + a
@@ -193,8 +193,8 @@ azokkal indulunk.
 
 ## 7. ⭐ DÖNTÉSI KÉRDÉSEK (Csabáéi)
 
-✅ **Döntve (D72, 2026-09-26 éjjel):** az **1.** → **(b)**, és az **5.** → **igen** (a szöveg külön darab).
-⏸️ **Nyitva:** a 2., a 3. és a 4.
+✅ **Döntve (D72, 2026-09-26 éjjel):** az **1.** → **(b)**, az **5.** → **igen** (a szöveg külön darab),
+és a **2–4.** → a javaslatok szerint (Csaba: *„elfogadom a javaslataidat"*).
 
 1. **Mit tartson egy készülék az első változatban?**
    - **(a) mindent, amit a társai kínálnak** — a mai viselkedés, de már szeletes szerkezetben: a

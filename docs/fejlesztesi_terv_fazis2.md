@@ -3983,8 +3983,10 @@ egységét a szeletre teszi — és ehhez el kellett dönteni, **mit tart egy k�
    próba fogja őrizni (két készülék, az egyiknél megvan a szöveg, a másiknál nincs → azonos
    ujjlenyomat). ⚠️ A régi (szöveget hordozó) események érvényesek maradnak.
 
-⏸️ **Nyitva (a szeletelési terv 7. szakasza, 2–4.):** mit cseréljünk a közös szelet nélküli véletlen
-kötésekkel · tiszta törés a régi protokollal · tartomány-alapú szelet-egyeztetés.
+3. ✅ **A 2–4. kérdés (Csaba: „elfogadom a javaslataidat"):** a közös szelet nélküli véletlen
+   kötésekkel az érdeklődési halmaz lenyomata, a gyerek-bejelentések és később a lánc-gyökerek
+   utaznak · a régi protokollal **tiszta törés** (a régi programmal a csere megnevezetten leáll) ·
+   a szelet-egyeztetés **tartomány-alapú**.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
