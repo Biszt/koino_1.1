@@ -1176,6 +1176,46 @@ proba('⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG — a hír EGY ablako
   });
 
 // ===================================
+// ⛔⛔ A FUTÓ KAPU LÁTJA, AMIT KÖZBEN MÁSIK FOLYAMAT ÍRT (2026-09-26, 43. mérés)
+// ===================================
+//
+// Terepen mérve: a laptopon futott az őrjárat, a második ablakban született egy gondolat — és
+// az őrjárat négy körön át „küldtem 0"-t mondott, csak újraindítás után adta tovább. A tár
+// mutatója megnyitáskor épült, és csak a SAJÁT hozzáfűzéseit látta. ⚠️ Egyetlen próba sem
+// futtatott addig két folyamatot ugyanazon a táron — a `csereKor` épp le is állítja a
+// figyelőt, mielőtt a másik parancs olvasna.
+//
+// ⭐ A mérés alakja a terepé: a gazda postaládája MÁR FUT, amikor egy MÁSIK folyamat gondolatot
+// ír a tárába; a vendég utána cserél, és a gondolatnak a VENDÉG lemezén kell lennie.
+// ⚠️ Rontás-próba: a `frissit()` nélkül bukik (kipróbálva).
+
+proba('⛔⛔ A FUTÓ POSTALÁDA TOVÁBBADJA, AMIT KÖZBEN MÁSIK FOLYAMAT ÍRT A TÁRÁBA', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  const port = 7971;
+  let figyelo = null;
+  try {
+    await fut(gazda, 'koino', 'Masik folyamat proba');
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+      env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+
+    // ⭐ A postaláda már fut — a gondolat egy MÁSIK folyamatban születik.
+    await fut(gazda, 'gondolat', 'KOZBEN IRTAM MASIK ABLAKBAN');
+    await fut(vendeg, 'csere', '127.0.0.1', String(port));
+
+    const kep = await fut(vendeg, 'allapot');
+    return kep.includes('KOZBEN IRTAM MASIK ABLAKBAN');
+  } finally {
+    if (figyelo) figyelo.kill();
+    await varj(1000);
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ A FRISS UDP-CÍM BEKÖTÉSE — VISELKEDÉST MÉRÜNK (2026-09-18)
 // ===================================
 //

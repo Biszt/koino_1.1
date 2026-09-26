@@ -4,9 +4,19 @@
 // gép felülete semmitől nem véd meg. A próbák KÉZZEL ALÁÍRT eseményekkel dolgoznak,
 // vagyis pontosan úgy, ahogy egy rosszindulatú másik gép tenné.
 
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szabalyokErvenyesitese, TUDATPONT_KERET } from '../js/allapot/szabalyok.js';
+import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
+import {
+  esemenyMentese, lancVege, kovetkezoEntitasSorszam, koinoEsemenyei
+} from '../js/tar/esemenyTar.js';
+import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese } from '../js/muveletek.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -74,6 +84,47 @@ proba('A NEGATÍV és a tört tudatpont sem számít', async () => {
   const a = allapotSzamitasa([t, jo, rossz]);
   return a.kivetelek.length === 1 && a.entitasok.get(t.azonosito).osszesPont === 100;
 });
+
+// ⛔⛔ A MŰVELET ÉS A SZABÁLY UGYANAZT SZÁMOLJA — egy elvetett pont-esemény után is (43. mérés).
+//
+// Terepen mérve (2026-09-26): egy régi, bemondás (`kiosztva`) nélküli pont-esemény után a
+// szerző MINDEN új pont-eseménye „ellentmondott a saját láncának" — a művelet
+// (`sajatKiosztott`) beleszámolta az elvetettet, a szabály nem —, és így minden új gondolata
+// eltűnt (D14). ⭐ Ez a próba a VALÓDI műveletet hívja a VALÓDI táron (nem a próba-segéd
+// saját összegzését — az egy harmadik másolat lenne). ⚠️ Rontás-próba: a régi
+// `sajatKiosztott`-tal bukik (kipróbálva).
+proba('⛔⛔ EGY ELVETETT PONT-ESEMÉNY UTÁN AZ ÚJ MÉG SZÁMÍT — a művelet és a szabály egy forrásból',
+  async () => {
+    const tar = await esemenyTarNyitasa(KOINO, await mkdtemp(join(tmpdir(), 'koino-szabaly-')));
+    const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey))
+      .toString('base64url');
+    const kornyezet = { koino: KOINO, kulcspar, szerzo, tar };
+
+    await koinoLetrehozasa(kornyezet, 'Régi koino');
+    const regi = await gondolatLetrehozasa(kornyezet, { cim: 'Régi gondolat' });
+
+    // ⛔ A RÉGI ALAK: pont-esemény BEMONDOTT ÖSSZEG NÉLKÜL — ahogy a D42 előtti program írta.
+    // A tár kapuja átengedi (aláírt, ép lánc), a szabály-réteg joggal elveti.
+    const regiPont = await esemenyLetrehozasa({
+      koino: KOINO, tipus: 'TudatpontRendezes',
+      adat: { entitas: regi.azonosito, pont: 100, szerep: 'aktiv' },
+      entitas: regi.azonosito,
+      entitasSorszam: await kovetkezoEntitasSorszam(tar, KOINO, szerzo, regi.azonosito),
+      latott: [], ...(await lancVege(tar, szerzo))
+    }, kulcspar);
+    if (!(await esemenyMentese(tar, regiPont)).mentve) return false;
+
+    // A mai program: új gondolat, és rá pont — a VALÓDI művelettel.
+    const uj = await gondolatLetrehozasa(kornyezet, { cim: 'Új gondolat' });
+    const ujPont = await tudatpontRendezese(kornyezet, uj.azonosito, 100);
+
+    const a = allapotSzamitasa(await koinoEsemenyei(tar, KOINO));
+    return a.kivetelek.some((k) => k.azonosito === regiPont.azonosito)    // a régi kiesik
+      && !a.kivetelek.some((k) => k.azonosito === ujPont.azonosito)       // az új számít
+      && ujPont.adat.kiosztva === 100                                       // és jól mondja be
+      && a.entitasok.get(uj.azonosito)?.osszesPont === 100;                 // a gondolat él
+  });
 
 // ===== 2. SZABÁLY: JAVASLATOT CSAK A GAZDA TEHET =====
 

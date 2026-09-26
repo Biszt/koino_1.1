@@ -26,7 +26,7 @@
 // ⚠️ A `rename` 2026-09-15-ig a részleges fájl lezárásához kellett; azóta a szeleteket
 // ÖSSZEFŰZVE írjuk ki (D68 / 6.), tehát kikerült. A `stat` viszont bejött: a részleges
 // méret most a szelet-fájlok összege.
-import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat } from 'node:fs/promises';
+import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
@@ -66,6 +66,7 @@ export function alapHely() {
  *   szeletEsemenyei(entitas)    — EGY entitás (szelet) eseményei
  *   sorszamSzerint(szerzo, n)   — egy pont a szerző láncán (az elágazás-kereséshez)
  *   hozzafuz(esemeny)           — változatlan
+ *   frissit()                   — amit MÁSIK folyamat fűzött hozzá (2026-09-26, 43. mérés)
  *   ⚠️ betolt()                 — MEGMARADT, de ez az, ami NEM SKÁLÁZIK (lásd lent)
  *
  * ===== A MEGVALÓSÍTÁS SZÁNDÉKOSAN EGYSZERŰ (9. szabály) =====
@@ -119,11 +120,15 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
     if (ottLevok) ottLevok.push(e); else pontSzerint.set(pont, [e]);
   };
 
+  // ⭐ MEDDIG OLVASTUK A FÁJLT (bájtban) — a `frissit()` innen folytatja (43. mérés).
+  let ismertMeret = 0;
+
   // ----- A MUTATÓ FELÉPÍTÉSE: egyetlen olvasás megnyitáskor -----
   // ⚠️ Ez még O(fájl), de FUTÁSONKÉNT EGYSZER, nem műveletenként. A következő mélység
   // (lemezre írt index) ezt is eltünteti — a hívók változtatása nélkül.
   try {
-    const szoveg = await readFile(fajl, 'utf8');
+    const bajtok = await readFile(fajl);
+    const szoveg = bajtok.toString('utf8');
     let sorszam = 0;
     for (const sor of szoveg.split('\n')) {
       sorszam++;
@@ -136,6 +141,9 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
         console.warn('esemenyTarNyitasa - sérült sor, kihagyva', { fajl, sorszam });
       }
     }
+    // ⚠️ Csak az UTOLSÓ SORVÉGIG számít olvasottnak: ha egy másik folyamat épp félig írt egy
+    // sort, azt a `frissit()` a következő alkalommal egészben olvassa újra.
+    ismertMeret = bajtok.lastIndexOf(0x0a) + 1;
   } catch (hiba) {
     if (hiba.code !== 'ENOENT') throw hiba;   // még nincs fájl: üres tár
   }
@@ -180,6 +188,60 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
     async hozzafuz(esemeny) {
       await appendFile(fajl, JSON.stringify(esemeny) + '\n', 'utf8');
       bejegyez(esemeny);
+    },
+
+    /**
+     * ⛔⛔ AMIT MÁSIK FOLYAMAT FŰZÖTT A FÁJLHOZ — beolvasva a mutatóba (2026-09-26, 43. mérés).
+     *
+     * A mutató megnyitáskor épül, és utána csak a SAJÁT `hozzafuz()`-einket látja. Egy
+     * készüléken viszont több folyamat ír ugyanabba a fájlba: az őrjárat fut, a második
+     * ablakban egy `gondolat` parancs, és külön folyamat a `felulet` is. ⛔ Mérve: a
+     * második ablakban írt gondolatot a futó őrjárat négy körön át NEM adta tovább
+     * („küldtem 0"), csak újraindítás után.
+     *
+     * ⭐ Csak a fájl ÚJ VÉGÉT olvassuk (ahol legutóbb abbahagytuk), és ami már a mutatóban
+     * van (a saját hozzáfűzéseink), azt az azonosítója alapján kihagyjuk. Egy `stat`, és ha
+     * nincs új, ennyi az ára. ⚠️ Nem ellenőrzünk újra: a fájl sorait megnyitáskor sem —
+     * ami a fájlba került, az egy másik folyamat `esemenyMentese` kapuján ment át.
+     *
+     * @returns {Promise<number>} hány új eseményt vettünk fel
+     */
+    async frissit() {
+      let meret;
+      try {
+        meret = (await stat(fajl)).size;
+      } catch (hiba) {
+        if (hiba.code === 'ENOENT') return 0;
+        throw hiba;
+      }
+      if (meret <= ismertMeret) return 0;
+
+      const uj = Buffer.alloc(meret - ismertMeret);
+      const fogantyu = await open(fajl, 'r');
+      try {
+        await fogantyu.read(uj, 0, uj.length, ismertMeret);
+      } finally {
+        await fogantyu.close();
+      }
+      // ⚠️ A félig írt utolsó sort (egy másik folyamat épp most ír) a következő alkalomra hagyjuk.
+      const sorVege = uj.lastIndexOf(0x0a);
+      if (sorVege < 0) return 0;
+      ismertMeret += sorVege + 1;
+
+      let felvett = 0;
+      for (const sor of uj.subarray(0, sorVege + 1).toString('utf8').split('\n')) {
+        if (!sor.trim()) continue;
+        try {
+          const e = JSON.parse(sor);
+          if (azonositoSzerint.has(e.azonosito)) continue;   // a sajátunk, vagy már ismert
+          bejegyez(e);
+          felvett++;
+        } catch {
+          console.warn('esemenyTar.frissit - sérült sor, kihagyva', { fajl });
+        }
+      }
+      if (felvett) console.log('esemenyTar.frissit - más folyamat eseményei felvéve', { felvett });
+      return felvett;
     }
   };
 

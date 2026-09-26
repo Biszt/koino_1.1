@@ -141,6 +141,10 @@ export async function sajatLancEsemenyei(tar, szerzo) {
  * @returns {Promise<Array<Object>>}
  */
 export async function koinoEsemenyei(tar, koino) {
+  // ⭐ Előbb amit MÁS folyamat fűzött a tárhoz (43. mérés) — különben a futó felület vagy
+  // őrjárat elavult képet számolna. ⚠️ Nem minden tárnak van ilyenje (a próbák memóriás
+  // tára egyetlen folyamaté), ezért feltételes.
+  await tar.frissit?.();
   return (await tar.betolt()).filter((e) => e.koino === koino);
 }
 

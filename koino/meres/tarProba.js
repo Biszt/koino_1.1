@@ -160,6 +160,51 @@ proba('A SÉRÜLT sor nem teszi olvashatatlanná a tárat', async () => {
   return esemenyek.length === 1 && esemenyek[0].azonosito === e.azonosito;
 });
 
+// ⛔⛔ AMIT MÁSIK FOLYAMAT FŰZ A FÁJLHOZ, AZ A FUTÓ TÁRBA IS BEKERÜL (2026-09-26, 43. mérés).
+//
+// Két tár-példány ugyanazon a mappán = két folyamat ugyanazon a fájlon (a futó őrjárat és a
+// második ablak parancsa). ⭐ Négy dolgot kell tudnia: a másikét felveszi · a SAJÁTJÁT nem
+// veszi fel kétszer · a FÉLIG ÍRT sort megvárja (nem dobja el, nem olvassa félbe) · és ha
+// nincs új, nem csinál semmit. ⚠️ Rontás-próba: ha a `frissit()` semmit nem olvas, bukik.
+proba('⛔⛔ A MÁSIK FOLYAMAT ESEMÉNYE A FUTÓ TÁRBA IS BEKERÜL — a sajátunk nem kétszer', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-ketfolyamat-'));
+  try {
+    const futo = await esemenyTarNyitasa('proba', hely);      // mint az őrjárat
+    const masik = await esemenyTarNyitasa('proba', hely);     // mint a második ablak
+    const { appendFile } = await import('node:fs/promises');
+
+    // A futó ír egyet (a sajátja), a másik folyamat is egyet.
+    const sajat = await esemenyLetrehozasa({ koino: 'proba', tipus: 'GondolatLetrehozas',
+      adat: { cim: 'Sajat', meret: 5 }, elozo: null, sorszam: 1 }, kulcspar);
+    await esemenyMentese(futo, sajat);
+    const kulso = await esemenyLetrehozasa({ koino: 'proba', tipus: 'GondolatLetrehozas',
+      adat: { cim: 'Masik ablak', meret: 11 }, elozo: sajat.azonosito, sorszam: 2 }, kulcspar);
+    await esemenyMentese(masik, kulso);
+
+    const elotte = (await futo.betolt()).length;              // 1: a másikét még nem látja
+    const felvett = await futo.frissit();                      // 1: csak a másikét
+    const utana = await futo.betolt();
+
+    // ⚠️ A FÉLIG ÍRT sor: még nincs sorvége — nem vesszük fel, és nem is dobjuk el.
+    const harmadik = await esemenyLetrehozasa({ koino: 'proba', tipus: 'GondolatLetrehozas',
+      adat: { cim: 'Felig', meret: 5 }, elozo: kulso.azonosito, sorszam: 3 }, kulcspar);
+    const sor = JSON.stringify(harmadik);
+    await appendFile(futo.fajl, sor.slice(0, 40), 'utf8');
+    const felig = await futo.frissit();                         // 0: várunk a sorvégre
+    await appendFile(futo.fajl, sor.slice(40) + '\n', 'utf8');
+    const egesz = await futo.frissit();                         // 1: most egészben
+    const ures = await futo.frissit();                          // 0: nincs új
+
+    return elotte === 1 && felvett === 1
+      && utana.length === 2 && utana[1].azonosito === kulso.azonosito
+      && felig === 0 && egesz === 1 && ures === 0
+      && (await futo.esemeny(harmadik.azonosito))?.azonosito === harmadik.azonosito
+      && (await futo.betolt()).length === 3;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 // ===================================
 // ⛔⛔⛔ AZ ELVESZETT ÍRÁS (2026-09-21)
 // ===================================

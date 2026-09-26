@@ -1020,6 +1020,10 @@ async function resAllapotKeszites({ udpElevules = UDP_CIM_ELEVULES } = {}) {
  */
 function resMunkaKeszito(allapot) {
   return async (halo, tars) => {
+    // ⛔⛔ ÉS A TÁR IS FRISS (2026-09-26, 43. mérés): amit a futás közben MÁSIK folyamat írt
+    // (a második ablak `gondolat` parancsa, a felület), azt is adjuk tovább. Enélkül a futó
+    // őrjárat négy körön át „küldtem 0"-t mondott egy percekkel korábban írt gondolatra.
+    await tar.frissit?.();
     // ⭐ A FRISS LISTA MINDEN MUNKA ELEJÉN: a postaláda hosszan fut, és a jegyzék elévül.
     allapot.frissUdp = await frissUdpCimek(allapot.udpTarolo, allapot.udpElevules);
     const fajlok = allapot.korFajlok ?? await fajlResz();

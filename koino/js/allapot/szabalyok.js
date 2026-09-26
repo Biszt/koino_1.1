@@ -204,6 +204,86 @@ export function elsoErintett(adat) {
 }
 
 // ===================================
+// ⛔⛔ EGY PONT-ESEMÉNY MÉRLEGE — A SZABÁLY ÉS A MŰVELET KÖZÖS FORRÁSA (2026-09-26, 43. mérés)
+// ===================================
+//
+// ⛔ EZ A FÜGGVÉNY EGY TEREPEN MÉRT HIBÁBÓL SZÜLETETT. A művelet-réteg (`muveletek.js`,
+// `sajatKiosztott`) eddig a SAJÁT másolatát futtatta ennek a szabálynak, „ugyanaz a szabály"
+// kommenttel — de a másolat csak a keret-túllépést hagyta ki, az ELVETETT bemondást nem. Egy
+// régi (bemondás nélküli) pont-esemény után a művelet beleszámolta azt, amit a szabály nem, és
+// onnantól a szerző MINDEN új pont-eseménye *„ellentmond a saját láncának"* lett — vele minden
+// új gondolata is (D14). Mérve: 43. mérés, „bemondva 400, a láncából 100".
+//
+// ⭐ Ezért az ítélet EGY helyen él, és a kettő ugyanezt hívja. *Ami két helyen „ugyanaz", az
+// előbb-utóbb két igazság lesz.*
+
+/**
+ * Egy `TudatpontRendezes` esemény megítélése a szerző eddig ELFOGADOTT állásához képest.
+ *
+ * ⚠️ Tiszta függvény: az `allas`-t nem módosítja — elfogadáskor a hívó veszi át az új értéket.
+ *
+ * @param {Object} e - a pont-esemény
+ * @param {{osszeg: number, pontok: Map<string, number>}} allas - az eddig elfogadott állás
+ * @param {boolean} folytonos - hézagtalanul ismerjük-e a láncot eddig a pontig
+ * @returns {{elvetve?: string, jelzes?: string, entitas?: string, pont?: number, ujOsszeg?: number}}
+ *   `elvetve`: nem számít (indoklással) · `jelzes`: számít, de nem ellenőrizhető (D19)
+ */
+export function pontEsemenyMerlege(e, allas, folytonos) {
+  const pont = e.adat?.pont;
+  const kiosztva = e.adat?.kiosztva;
+
+  if (!Number.isInteger(pont) || pont < 0) {
+    return { elvetve: 'a tudatpont csak nemnegatív egész szám lehet' };
+  }
+
+  // ----- ⭐ A BEMONDOTT ÖSSZEG (D42) -----
+  // A pont-esemény magával viszi, mennyi a szerzőnek ÖSSZESEN kiosztva ezután.
+  if (!Number.isInteger(kiosztva) || kiosztva < 0) {
+    return { elvetve: 'hiányzik vagy hibás a bemondott összeg (adat.kiosztva)' };
+  }
+
+  // ⭐⭐ EZ A D42 LÉNYEGE: EGYETLEN ESEMÉNYBŐL ELDŐL, a lánc többi része nélkül.
+  // Szeletelt tárban ez az EGYETLEN mód a keret ellenőrzésére — teljes láncot soha
+  // többé nem fogunk látni.
+  if (kiosztva > TUDATPONT_KERET) {
+    return { elvetve: 'a bemondott összeg túllépi a keretet ('
+      + kiosztva + ' / ' + TUDATPONT_KERET + ')' };
+  }
+
+  // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új"
+  // kiadás. Ezért a régi értéket kivonjuk, mielőtt az újat hozzáadnánk.
+  const regi = allas.pontok.get(e.adat.entitas) ?? 0;
+  const ujOsszeg = allas.osszeg - regi + pont;
+
+  // ----- ⭐⭐ A BEMONDÁS ÖSSZEVETÉSE A SAJÁT LÁNCÁVAL -----
+  //
+  // ITT VÁLIK A HALLGATÁS ÁTADHATÓ BIZONYÍTÉKKÁ. Aki elhallgat egy pont-eseményt,
+  // annak a bemondott összege nem stimmel a többi SAJÁT, ALÁÍRT eseményével — és
+  // akkor két saját állítása mond ellent egymásnak. Ma a bizonyíték egy HIÁNY
+  // (kétértelmű: támadás vagy lemaradás?) és nem átadható; így viszont odaadom a két
+  // eseményt, és bárki ellenőrzi.
+  //
+  // ⚠️ DE CSAK AKKOR BIZONYÍTÉK, HA HÉZAGTALANUL ISMERJÜK A LÁNCOT. Hézag után a
+  // MI számításunk a hiányos — nem ő hazudott. Ilyenkor jelzünk, nem büntetünk (D19).
+  let jelzes = null;
+  if (kiosztva !== ujOsszeg) {
+    if (folytonos) {
+      return { elvetve: 'a bemondott összeg ellentmond a saját láncának (bemondva '
+        + kiosztva + ', a láncából ' + ujOsszeg + ')' };
+    }
+    jelzes = 'a bemondott összeg (' + kiosztva
+      + ') nem egyezik a számítottal (' + ujOsszeg + '), de a láncában hézag van';
+  }
+
+  if (ujOsszeg > TUDATPONT_KERET) {
+    return { jelzes, elvetve: 'túllépné a tudatpont-keretet (' + ujOsszeg + ' / '
+      + TUDATPONT_KERET + ')' };
+  }
+
+  return { jelzes, entitas: e.adat.entitas, pont, ujOsszeg };
+}
+
+// ===================================
 // A SZABÁLYOK ÉRVÉNYESÍTÉSE
 // ===================================
 
@@ -313,63 +393,16 @@ export function szabalyokErvenyesitese(esemenyek) {
       vartSorszam = e.sorszam + 1;
 
       // ===== 1. SZABÁLY: A TUDATPONT-KERET =====
+      // ⭐ Az ítélet a `pontEsemenyMerlege`-ben él — a művelet-réteg UGYANAZT hívja (lent).
       if (e.tipus === 'TudatpontRendezes') {
-        const pont = e.adat?.pont;
-        const kiosztva = e.adat?.kiosztva;
-
-        if (!Number.isInteger(pont) || pont < 0) {
-          kivetel(e, 'a tudatpont csak nemnegatív egész szám lehet');
-          continue;
-        }
-
-        // ----- ⭐ A BEMONDOTT ÖSSZEG (D42) -----
-        // A pont-esemény magával viszi, mennyi a szerzőnek ÖSSZESEN kiosztva ezután.
-        if (!Number.isInteger(kiosztva) || kiosztva < 0) {
-          kivetel(e, 'hiányzik vagy hibás a bemondott összeg (adat.kiosztva)');
-          continue;
-        }
-
-        // ⭐⭐ EZ A D42 LÉNYEGE: EGYETLEN ESEMÉNYBŐL ELDŐL, a lánc többi része nélkül.
-        // Szeletelt tárban ez az EGYETLEN mód a keret ellenőrzésére — teljes láncot soha
-        // többé nem fogunk látni.
-        if (kiosztva > TUDATPONT_KERET) {
-          kivetel(e, 'a bemondott összeg túllépi a keretet ('
-            + kiosztva + ' / ' + TUDATPONT_KERET + ')');
-          continue;
-        }
-
-        // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új"
-        // kiadás. Ezért a régi értéket kivonjuk, mielőtt az újat hozzáadnánk.
-        const regi = pontok.get(e.adat.entitas) ?? 0;
-        const ujOsszeg = osszeg - regi + pont;
-
-        // ----- ⭐⭐ A BEMONDÁS ÖSSZEVETÉSE A SAJÁT LÁNCÁVAL -----
-        //
-        // ITT VÁLIK A HALLGATÁS ÁTADHATÓ BIZONYÍTÉKKÁ. Aki elhallgat egy pont-eseményt,
-        // annak a bemondott összege nem stimmel a többi SAJÁT, ALÁÍRT eseményével — és
-        // akkor két saját állítása mond ellent egymásnak. Ma a bizonyíték egy HIÁNY
-        // (kétértelmű: támadás vagy lemaradás?) és nem átadható; így viszont odaadom a két
-        // eseményt, és bárki ellenőrzi.
-        //
-        // ⚠️ DE CSAK AKKOR BIZONYÍTÉK, HA HÉZAGTALANUL ISMERJÜK A LÁNCOT. Hézag után a
-        // MI számításunk a hiányos — nem ő hazudott. Ilyenkor jelzünk, nem büntetünk (D19).
-        if (kiosztva !== ujOsszeg) {
-          if (folytonos) {
-            kivetel(e, 'a bemondott összeg ellentmond a saját láncának (bemondva '
-              + kiosztva + ', a láncából ' + ujOsszeg + ')');
-            continue;
-          }
-          nemEllenorizheto(e, 'a bemondott összeg (' + kiosztva
-            + ') nem egyezik a számítottal (' + ujOsszeg + '), de a láncában hézag van');
-        }
-
-        if (ujOsszeg > TUDATPONT_KERET) {
-          kivetel(e, 'túllépné a tudatpont-keretet (' + ujOsszeg + ' / ' + TUDATPONT_KERET + ')');
+        const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos);
+        if (merleg.jelzes) nemEllenorizheto(e, merleg.jelzes);
+        if (merleg.elvetve) {
+          kivetel(e, merleg.elvetve);
           continue;   // a régi érték marad érvényben
         }
-
-        pontok.set(e.adat.entitas, pont);
-        osszeg = ujOsszeg;
+        pontok.set(merleg.entitas, merleg.pont);
+        osszeg = merleg.ujOsszeg;
         continue;
       }
 

@@ -21,7 +21,7 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET, elsoErintett, ALLASOK } from './allapot/szabalyok.js';
+import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import {
@@ -73,6 +73,12 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
   const { entitas = null, horgonyozzunk = false } = beallitas;
   console.log('muveletek.esemenytTeszek - KEZDÉS', { tipus, entitas });
 
+  // ⛔ ELŐBB AMIT MÁS FOLYAMAT ÍRT (2026-09-26, 43. mérés): egy készüléken több folyamat ír a
+  // SAJÁT láncunkba (a futó őrjárat felszabadítása, a második ablak parancsa, a felület).
+  // Elavult lánc-véggel ugyanarra a sorszámra két eseményünk születne — ELÁGAZÁS a saját
+  // láncunkban. ⚠️ Ez a kockázatot csak szűkíti (a frissítés és a mentés között egy másik
+  // folyamat még írhat) — a teljes válasz döntési kérdés (egy író vagy zárolás).
+  await kornyezet.tar.frissit?.();
   const veg = await lancVege(kornyezet.tar, kornyezet.szerzo);
 
   // A saját szeletét nyitó eseménynél az entitás-sorszám mindig 1 — nincs mihez képest
@@ -138,25 +144,28 @@ async function sajatKiosztott(kornyezet, entitas) {
   const lanc = (await sajatLancEsemenyei(kornyezet.tar, kornyezet.szerzo))
     .filter((e) => e.koino === kornyezet.koino);
 
-  const pontok = new Map();
-  let osszeg = 0;
+  const allas = { osszeg: 0, pontok: new Map() };
+  // ⭐ A folytonosságot is ugyanúgy követjük, mint a szabály (a saját láncunk rendes esetben
+  // hézagtalan — de ha nem, az ítéletnek akkor is egyeznie kell).
+  let folytonos = true;
+  let vartSorszam = 1;
 
   for (const e of lanc) {
+    if (e.sorszam !== vartSorszam) folytonos = false;
+    vartSorszam = e.sorszam + 1;
     if (e.tipus !== 'TudatpontRendezes') continue;
-    const pont = e.adat?.pont;
-    if (!Number.isInteger(pont) || pont < 0) continue;
 
-    // Ugyanaz a szabály, mint a szabalyok.js-ben: a keretet túllépő esemény NEM SZÁMÍT,
-    // tehát a régi érték marad érvényben.
-    const regi = pontok.get(e.adat.entitas) ?? 0;
-    const ujOsszeg = osszeg - regi + pont;
-    if (ujOsszeg > TUDATPONT_KERET) continue;
-
-    pontok.set(e.adat.entitas, pont);
-    osszeg = ujOsszeg;
+    // ⛔⛔ UGYANAZ AZ ÍTÉLET, NEM A MÁSOLATA (2026-09-26, 43. mérés): a szabály-réteg
+    // függvényét hívjuk. Egy korábbi saját másolat az ELVETETT bemondást (pl. egy régi,
+    // `kiosztva` nélküli eseményt) beleszámolta — és onnantól minden új pont-eseményünk
+    // „ellentmondott a saját láncának".
+    const merleg = pontEsemenyMerlege(e, allas, folytonos);
+    if (merleg.elvetve) continue;   // ami nem számít, az a régi értéket hagyja érvényben
+    allas.pontok.set(merleg.entitas, merleg.pont);
+    allas.osszeg = merleg.ujOsszeg;
   }
 
-  return { osszeg, regi: pontok.get(entitas) ?? 0 };
+  return { osszeg: allas.osszeg, regi: allas.pontok.get(entitas) ?? 0 };
 }
 
 // ===================================
