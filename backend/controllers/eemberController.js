@@ -21,7 +21,12 @@ class eEmberController {
   // @param {Object} req - Express request (body: eemberNev, email, jelszo, nev, lokacio)
   // @param {Object} res - Express response
   async regisztracio(req, res) {
-    console.log('eEmberController.regisztracio - KEZDÉS', { body: req.body });
+    // ⛔ A body-t NEM naplózzuk egészben: benne van a jelszó, és a napló nem titkos
+    // hely (a docker logs bárkinek kiírja, aki a gépen van). Csak a nem-titkos mezők.
+    console.log('eEmberController.regisztracio - KEZDÉS', {
+      eemberNev: req.body?.eemberNev,
+      email:     req.body?.email
+    });
     try {
       // Regisztrációs adatok kiolvasása a kérés body-jából
       const adatok = req.body;
@@ -51,7 +56,8 @@ class eEmberController {
   // @param {Object} req - Express request (body: azonosito, jelszo)
   // @param {Object} res - Express response
   async bejelentkezes(req, res) {
-    console.log('eEmberController.bejelentkezes - KEZDÉS', { body: req.body });
+    // ⛔ A jelszót soha nem naplózzuk (lásd a regisztrációnál) — csak az azonosítót.
+    console.log('eEmberController.bejelentkezes - KEZDÉS', { azonosito: req.body?.azonosito });
     try {
       // azonosito: lehet email CÍM vagy eemberNev – a service dönti el
       const { azonosito, jelszo } = req.body;
