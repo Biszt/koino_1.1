@@ -89,7 +89,9 @@ import {
   felszabaditasTarolo, alapHely,
   ismertKoinok,
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
-  fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo
+  fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo,
+  // ⭐ D78: a lánc-gyökér gyorsítótára (a napló csúcsai és a kiosztás).
+  lancTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
@@ -292,7 +294,7 @@ const tar = await koinoTaraNyitasa(KOINO);
 const felszabaditasJegyzet = felszabaditasTarolo();
 
 // ⭐ D72: a műveletek a szöveget KÜLÖN DARABKÉNT a fájl-tárba írják (ahol a képek is) — innen kapják.
-const kornyezet = { koino: KOINO, kulcspar, szerzo, tar, darabTar: fajlBlobTarolo(KOINO) };
+const kornyezet = { koino: KOINO, kulcspar, szerzo, tar, darabTar: fajlBlobTarolo(KOINO), lancTarolo: lancTarolo(KOINO) };
 
 if (ujE) {
   kiir(SZIN.vastag + 'Új kulcs készült — ez mostantól a személyazonosságod.' + SZIN.vege);
@@ -3692,7 +3694,7 @@ try {
           nyitottKoinok.set(aktivKoino, {
             koino: aktivKoino,
             tar: t,
-            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino) },
+            kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino), lancTarolo: lancTarolo(aktivKoino) },
             pakliNezet: ujPakliNezet()
           });
         }

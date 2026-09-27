@@ -50,6 +50,8 @@ import szovegDarab from './szovegDarabProba.js';
 import egyeztetes from './tartomanyProba.js';
 // ⭐ Az összegző Merkle-fa (D78, 2026-09-27) — a két elrendezés, a bizonyítékok, a változás.
 import osszegzoFa from './osszegzoFaProba.js';
+// ⭐ A szerző lánc-gyökere (D78, az A pillér 2. lépése) — az új események `lancGyoker`-e.
+import lancGyoker from './lancGyokerProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -81,7 +83,8 @@ const PROBAK = [
   { nev: 'iro', futtat: iro },
   { nev: 'szovegdarab', futtat: szovegDarab },
   { nev: 'egyeztetes', futtat: egyeztetes },
-  { nev: 'osszegzofa', futtat: osszegzoFa }
+  { nev: 'osszegzofa', futtat: osszegzoFa },
+  { nev: 'lancgyoker', futtat: lancGyoker }
 ];
 
 const szuro = process.argv[2];

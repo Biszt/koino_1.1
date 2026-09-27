@@ -4228,6 +4228,31 @@ A napló-fát ez nem érinti (ott nincs összeg, csak tagság). ⏸️ **Hogy ki
 listát** (mindig · szúrópróbával · gyanúra), az a bemondott összeg ellenőrzésének lépésében Csaba
 döntése lesz.
 
+### D79. A TELJES KIOSZTÁS-LISTA ELLENŐRZÉSE: szúrópróbával (2026-09-27, Csaba)
+
+> *„ez tetszik."* — Csaba (a három változat közül: mindig · gyanúra · szúrópróbával)
+
+**Amiből jött:** a D78 pontosítása — a rejtett negatív levelet csak a kiosztás TELJES listája mutatja
+meg. A kérdés: ki és mikor kérje le.
+
+- ⛔ **Mindig** (minden új gyökérnél): túl drága — egy készülék, amelynek szeleteiben tízezer szerző
+  szerepel, naponta tíz megabájtokat töltene csak ellenőrzésre (a lista a keret határán 829 KB, 52.).
+- ⛔ **Gyanúra:** gyenge — a csaló épp úgy rejti el a negatív levelet, hogy semmi ne tűnjön gyanúsnak.
+
+#### A DÖNTÉS: SZÚRÓPRÓBA
+
+1. ⭐ **Minden ellenőrző kis eséllyel (kiinduló érték: 5%) lekéri a teljes listát, amikor egy szerző
+   új kiosztás-gyökerével találkozik.** Mivel egy szerző eseményeit sokan tartják, a csalás lebukása
+   szinte biztos (50 ellenőrzőnél ~92%, 200-nál gyakorlatilag 100%), és egy készülék terhe ~5%-a a
+   „mindig" változatnak.
+2. ⭐ **Lebukáskor a csaló aláírt gyökere és a lista együtt ÁTADHATÓ BIZONYÍTÉK** — a szerző
+   pont-eseményei attól a gyökértől kezdve nem számítanak (mint a D42-nél, amikor a bemondás
+   ellentmond a saját láncának).
+3. ⭐ **Ha a szerző nem adja ki a listát: „nem ellenőrizhető" (D19)** — a pont számít, de jelzéssel,
+   mint ma a hézagnál.
+4. ⚠️ **Az 5% nem állapot-befolyásoló állandó** (D66) — a mérés után hangolható, és két készülék
+   eltérő értékkel is ugyanazt az állapotot számolja (a bizonyíték mindenkinél ugyanazt jelenti).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

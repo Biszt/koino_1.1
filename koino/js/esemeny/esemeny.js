@@ -305,9 +305,11 @@ export function alakiHiba(esemeny) {
   if (!Array.isArray(esemeny.latott) || esemeny.latott.some((a) => typeof a !== 'string')) {
     return 'a latott csak azonosítók tömbje lehet';
   }
-  // ⏸️ A lánc-gyökér egyelőre MINDIG null (lefoglalt hely). Szövegként is átengedjük, hogy
-  // a Szakasz 4 bekapcsolása ne kívánjon itt újabb változtatást.
-  if (esemeny.lancGyoker !== null && typeof esemeny.lancGyoker !== 'string') {
+  // ⭐ A lánc-gyökér (D63, D78): a szerző esemény előtti naplójának és kiosztásának lenyomata — vagy
+  // null (a D78 előtti események, és ha a szerző saját lánca nem ép). ⚠️ 2026-09-27-ig bármilyen
+  // szöveget átengedtünk („lefoglalt hely"); az üzenet viszont már akkor is lenyomatot mondott — most
+  // az őr is azt teszi, amit mond (a D77 mintája).
+  if (esemeny.lancGyoker !== null && !azonositoAlaku(esemeny.lancGyoker)) {
     return 'a lancGyoker csak lenyomat vagy null lehet';
   }
 

@@ -25,6 +25,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
 import { createSocket } from 'node:dgram';
+// ⭐ D78: a lánc-gyökér újraszámolása a láncból (a mérce — a kézi út eseményeit ezzel vetjük össze).
+import { lancGyokerLancbol } from '../js/allapot/lancGyoker.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
@@ -432,6 +434,39 @@ proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint 
 // ===================================
 // ⭐ A BELÉPŐ TÉR KÉZI ÚTJA (5.6)
 // ===================================
+
+// ===================================
+// ⭐⭐ D78: A LÁNC-GYÖKÉR AZ ÉLES ÚTON (2026-09-27 este)
+// ===================================
+//
+// A modul-próba (`lancGyokerProba.js`) a művelet-réteget hívja; ez azt méri, hogy a PROGRAM is így
+// ír: külön folyamatokban futó kézi parancsok eseményei a láncból újraszámolt gyökeret viselik —
+// ⭐ és minden parancs ÚJ folyamat, tehát a második-harmadik a FÁJL-gyorsítótárból (`lanc.json`)
+// folytat. Viselkedést mérünk: a lemezen álló eseményeket, nem feliratot.
+proba('⭐⭐ A LÁNC-GYÖKÉR AZ ÉLES ÚTON — a kézi parancsok eseményei a láncból újraszámolt gyökeret viselik (D78)', async () => {
+  const hely = await ujKeszulek();
+  try {
+    await fut(hely, 'koino', 'Lanc proba');
+    const elso = await fut(hely, 'gondolat', 'Elso');
+    await fut(hely, 'pont', azonosito(elso, 'Létrejött:'), '30');
+    await fut(hely, 'gondolat', 'Masodik');
+    await fut(hely, 'pont', azonosito(elso, 'Létrejött:'), '12');
+    const sorok = (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8'))
+      .split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s)).sort((a, b) => a.sorszam - b.sorszam);
+    const gyorsitotar = JSON.parse(await readFile(join(hely, 'sajat', 'lanc.json'), 'utf8'));
+    for (let i = 0; i < sorok.length; i++) {
+      if (typeof sorok[i].lancGyoker !== 'string' || sorok[i].lancGyoker !== await lancGyokerLancbol(sorok.slice(0, i))) {
+        console.log('    (hibás gyökér a(z) ' + sorok[i].sorszam + '. eseményben)');
+        return false;
+      }
+    }
+    // ⭐ A gyorsítótár a folyamatok között él: az utolsó esemény ELŐTTI állapotot fedi le.
+    return sorok.length >= 5 && sorok.filter((e) => e.tipus === 'TudatpontRendezes').length >= 2
+      && gyorsitotar.sorszam === sorok.length - 1;
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
 
 proba('⭐⭐ A BELÉPŐ TÉR KÉZZEL: két koino egy készüléken, mindkettő megjelenik', async () => {
   const hely = await ujKeszulek();

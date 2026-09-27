@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D78), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D79), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -74,10 +74,11 @@ adatból bizonyítható**, a teljes halmaz nélkül.
   nem horgony (olcsó azonosság). ⏸️ A tartós mag horgonya a pénzzel együtt (D66).
 - ✅ **SK14 lezárva:** a lánc-gyökér az eseményben lakik, nem a magban.
 
-**A megépítés sorrendje:** ① a fa-modul (a két elrendezés, bizonyíték, ellenőrzés, a kiosztás
-változásának ellenőrzése) próbákkal és méréssel → ② a `lancGyoker` az új eseményekben → ③ a
-bemondott összeg ellenőrzése bizonyítékkal (a hézagnál ma csak jelzés) és a kettős lánc
-leleplezése a szeletek között.
+**A megépítés sorrendje:** ✅ ① a fa-modul (a két elrendezés, bizonyíték, ellenőrzés, a kiosztás
+változásának ellenőrzése) próbákkal és méréssel (52.) → ✅ ② a `lancGyoker` az új eseményekben (az
+ESEMÉNY ELŐTTI állapot; a szerző gyorsítótára) → ⏭️ ③ a bemondott összeg ellenőrzése bizonyítékkal (a
+hézagnál ma csak jelzés), a lánc folytonossága, a kettős lánc leleplezése a szeletek között, a
+teljes kiosztás-lista szúrópróbája (D79), és a bizonyíték kiszolgálása (logaritmikusan).
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 

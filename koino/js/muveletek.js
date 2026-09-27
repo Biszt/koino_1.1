@@ -22,6 +22,8 @@
 // Használják: koino.js (a parancssori arc).
 
 import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
+// ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
+import { lancGyokerUjEsemenyhez } from './allapot/lancGyoker.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
@@ -171,8 +173,14 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   // és az egy ezredmásodperccel későbbi szavazat már nem számít bele (mérve).
   //
   // ⭐ Nem óra-hamisítás: a saját láncomban az idő nem lép VISSZA, csak áll egy pillanatra.
+  //
+  // ⭐⭐ D78: A LÁNC-GYÖKÉR — az új esemény elköti a szerző ESEMÉNY ELŐTTI naplóját (a kettős lánc a
+  // szeletek között is lelepleződik, D63) és kiosztását (a bemondott összeg egy bizonyítékkal
+  // ellenőrizhető, D42). Ha a saját lánc nem ép, null (mint a D78 előtti eseményeké).
+  const lancGyoker = await lancGyokerUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
+    veg.sorszam, kornyezet.lancTarolo ?? null);
   return esemenyLetrehozasa(
-    { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott,
+    { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott, lancGyoker,
       ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}), ...veg },
     kornyezet.kulcspar
   );

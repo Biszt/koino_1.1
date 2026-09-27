@@ -813,6 +813,52 @@ export function szeletJegyzekTarolo(hely = alapHely()) {
 }
 
 // ===================================
+// A LÁNC-GYÖKÉR GYORSÍTÓTÁRA (D78)
+// ===================================
+
+/**
+ * A szerző lánc-gyökerének gyorsítótára (`allapot/lancGyoker.js`): a napló csúcsai és a kiosztás —
+ * koinónként egy JSON-fájl (`lanc.json`).
+ *
+ * ⚠️ TISZTA GYORSÍTÓTÁR (mint a mutató pillanatképe, D73): ha nincs, sérült, vagy nem illik a
+ * lánchoz, a láncból épül újra — ezért az olvasás hibája `null`, nem kivétel. Az írás átnevezéssel
+ * kerül a helyére (egyszerre egészben), mert több folyamat is írhatja.
+ *
+ * @param {string} koino
+ * @param {string} [hely]
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function lancTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'lanc.json');
+
+  return {
+    fajl,
+
+    /** @returns {Promise<Object|null>} a gyorsítótár, vagy null (nincs / olvashatatlan) */
+    async olvas() {
+      try {
+        return JSON.parse(await readFile(fajl, 'utf8'));
+      } catch {
+        return null;
+      }
+    },
+
+    /** @param {Object} adat */
+    async ir(adat) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
+    }
+  };
+}
+
+// ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================
 //
