@@ -103,7 +103,14 @@ export async function szeletParok(tar, koino, reszvesz = () => true) {
   const parok = [];
   for (const { szelet: s } of await tar.szeletek()) {
     const kulcs = vonalKulcsa(s);
-    if (!reszvesz(kulcs)) continue;
+    // ⛔⛔ A KI NEM MONDHATÓ SZELETET NEM HIRDETJÜK (2026-09-27, átnézés — mérve). A kapu
+    // (`alakiHiba`) az `entitas`-t és a születés `szulo`-ját BÁRMILYEN szövegként átengedi; a vonal
+    // viszont csak 43 jeles kulcsot fogad el (`tartomany.js`, az ELTERO listája). Egyetlen ilyen
+    // esemény a tárban a csere MINDEN körét megakasztotta azzal a társsal, akinél nincs meg
+    // (HIBAS-EGYEZTETES vagy „Hibás ELTERO”), és semmi más nem ment át. *A 40. mérés elve: amit a
+    // vonal nem tud kimondani, azt nem hirdetjük.* ⭐ A rossz szülőjű gondolat így is utazik — a
+    // SAJÁT szeletével, aminek a kulcsa egy lenyomat; csak a nem létező szülő köre marad néma.
+    if (!ervenyesKulcs(kulcs) || !reszvesz(kulcs)) continue;
     const par = await szeletPar(tar, koino, kulcs);
     if (par) parok.push(par);
   }

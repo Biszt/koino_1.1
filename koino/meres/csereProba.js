@@ -437,6 +437,12 @@ async function csereDroton(egyikTar, masikTar, hoszt = '127.0.0.1', {
       csereUdpResen(p.egyik, hoszt, p.masikPort, egyikTar, egyikKoino, egyikBeallitas),
       csereUdpResen(p.masik, hoszt, p.egyikPort, masikTar, masikKoino, masikBeallitas)
     ]);
+    // ⚠️ HA MINDKETTŐ ELBUKIK, MINDKÉT OKOT MEGNEVEZZÜK (2026-09-27, átnézés): az egyik fél
+    // jellemzően csak a tétlenségi óráig várt („nem válaszol”) — a valódi ok a másiké.
+    if (egyik.status === 'rejected' && masik.status === 'rejected') {
+      const ok = (r) => (r.reason?.kod ? r.reason.kod + ' ' : '') + r.reason?.message;
+      throw new Error('mindkét fél elbukott — egyik: ' + ok(egyik) + ' | másik: ' + ok(masik));
+    }
     if (egyik.status === 'rejected') throw egyik.reason;
     if (masik.status === 'rejected') throw masik.reason;
     return { ...egyik.value, masikEredmenye: masik.value };
@@ -694,6 +700,46 @@ proba('⭐⭐ EGY SZELETEN BELÜL MINDKÉT IRÁNYBAN: csak a hiányzó eseménye
     && eredmeny.kuldott === 1 && eredmeny.masikEredmenye.kuldott === 1
     && nalaEgyik.length === 3 && nalaEgyik.includes(belaPontja.azonosito)
     && nalaMasik.length === 3 && nalaMasik.includes(annaPontja.azonosito);
+});
+
+// ⛔⛔ A KI NEM MONDHATÓ SZELET-KULCS (2026-09-27, átnézés — mérve). A kapu (`alakiHiba`) az
+// `entitas`-t és a születés `szulo`-ját BÁRMILYEN szövegként átengedi; a vonal viszont csak 43 jeles
+// kulcsot fogad el (`tartomany.js`, az ELTERO listája). Mérve: egyetlen ilyen esemény a tárban a
+// csere MINDEN körét megakasztotta azzal a társsal, akinél nincs meg (HIBAS-EGYEZTETES vagy „Hibás
+// ELTERO”) — és semmi más nem ment át, a másik fél pedig a tétlenségi óráig várt.
+// ⚠️ KÉT PRÓBA, mert két úton kerül ilyen kulcs a szeletek jegyzékébe (a szelet és a szülő).
+async function kiNemMondhatoCsere(mereg) {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const g = await anna.tesz('GondolatLetrehozas', { cim: 'Közös', meret: 10 });
+  const m = await mereg(anna);
+  const n = await bela.tesz('GondolatLetrehozas', { cim: 'Béla újdonsága', meret: 10 });
+
+  const egyik = await ujTar(); await ment(egyik, [g, m]);
+  const masik = await ujTar(); await ment(masik, [g, n]);
+  // Előfeltétel: a kapu tényleg beengedte (különben a próba semmit nem mérne).
+  const bentVan = !!(await egyik.esemeny(m.azonosito));
+
+  await csereDroton(egyik, masik);
+  const nalaEgyik = (await koinoEsemenyei(egyik, KOINO)).map((e) => e.azonosito);
+  const nalaMasik = (await koinoEsemenyei(masik, KOINO)).map((e) => e.azonosito);
+  return { bentVan, m, n, nalaEgyik, nalaMasik };
+}
+
+proba('⛔⛔ A KI NEM MONDHATÓ SZÜLŐ (a születés szulo-ja nem 43 jeles) nem akasztja meg a cserét', async () => {
+  const { bentVan, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
+    anna.tesz('GondolatLetrehozas', { cim: 'Rossz szülő', meret: 10, szulo: 'x' }));
+  return bentVan
+    && nalaEgyik.includes(n.azonosito)            // ⭐ a csere lement, az újdonság átjött
+    && nalaMasik.includes(m.azonosito);           // ⭐ a gondolat a SAJÁT szeletével utazik
+});
+
+proba('⛔⛔ A KI NEM MONDHATÓ SZELET (az entitas nem 43 jeles) nem akasztja meg a cserét — és nem is utazik', async () => {
+  const { bentVan, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
+    anna.tesz('TudatpontRendezes', { entitas: 'x', pont: 1 }));   // a szelet-kulcs az adatból: 'x'
+  return bentVan
+    && nalaEgyik.includes(n.azonosito)
+    && !nalaMasik.includes(m.azonosito);          // ⛔ amit a vonal nem tud kimondani, azt nem hirdetjük
 });
 
 // ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====

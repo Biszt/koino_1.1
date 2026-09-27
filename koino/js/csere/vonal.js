@@ -3,9 +3,11 @@
 // Felelősség: a CSERE PÁRBESZÉDE — ugyanaz a protokoll, egy kapcsolaton.
 //
 // ⭐ MIT CSINÁL, ÉS MIT NEM. Ez a fájl SEMMIT nem tud a koinóról: nem ismer eseményt,
-// szabályt, tudatpontot. Csak annyit tesz, hogy a [`csere.js`](csere.js) objektumait
-// oda-vissza küldi egy foglalat-szerű kapcsolaton. Ha itt hiba van, az szállítási hiba; a
-// protokoll helyessége a csere.js önpróbáiban dől el, hálózat nélkül.
+// szabályt, tudatpontot. Csak annyit tesz, hogy a csere lépéseit — a
+// [`tartomany.js`](tartomany.js) üzeneteit, a [`szeletEgyeztetes.js`](szeletEgyeztetes.js)
+// listáit és az eseményeket — oda-vissza küldi egy foglalat-szerű kapcsolaton. Ha itt hiba
+// van, az szállítási hiba; a lépések helyessége a saját önpróbáikban dől el, hálózat nélkül.
+// *(2026-09-27-ig a [`csere.js`](csere.js) ÁLLÁS-objektumai utaztak itt.)*
 //
 // ⭐ A KAPCSOLATOT A HÍVÓ ADJA (1. szabály). 2026-09-26-ig ez a fájl TCP-t is nyitott (figyelő,
 // hívás); a D69/2 óta nincs TCP a készülékek között — a kapcsolat a UDP-rés
@@ -566,9 +568,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
  *   mi  → SZELETKEREK { entitas }
  *   ő   → ESEMENY × N, majd KESZ
  *
- * ⭐ A másik fél LENYOMAT-tal kezd (a párbeszéd szimmetrikus) — azt egyszerűen átlépjük.
- * Ettől lesz az egész **visszafelé kompatibilis**: a protokoll nem változott, csak egy új
- * kérdést tettünk bele, amit a régi kliens sosem tesz fel.
+ * ⭐ A másik fél `NYITAS`-sal kezd (a párbeszéd szimmetrikus) — azt egyszerűen átlépjük; a
+ * `parbeszed` az első bejövő üzenetből (`SZELETKEREK`) látja, hogy ez nem csere.
+ * *(2026-09-27-ig ez `LENYOMAT` volt — a tiszta törés óta a régi programmal ez sem megy.)*
  *
  * ⚠️ A KAPOTT ESEMÉNYEK UGYANAZON A KAPUN MENNEK BE (`esemenyMentese`, 3. szabály). Attól,
  * hogy mi kértük, semmivel nem lesznek hitelesebbek.
@@ -576,32 +578,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
  * ⭐ A megvalósítás lent: `szeletKapcsolaton` (a kapcsolatot a hívó nyitja — a résen a
  * `szeletUdpResen`, `udpVonal.js`).
  */
-/**
- * ⭐⭐ EGY FÁJL ELHOZÁSA — szeletenként, folytathatóan (5.7 / B).
- *
- * ===== A MENET =====
- *
- *   mi  → FAJLKEREK { lenyomat, eltolas }
- *   ő   → FAJLSZELET { adat, vege } — vagy FAJLNINCS
- *
- * ⚠️ KÖRÖNKÉNT EGY SZELET, ÚJ KAPCSOLATTAL. Nem a legtakarékosabb, de **a legegyszerűbb
- * helyes**: minden szelet önállóan értelmes, és egy megszakadás **nem hagy félkész
- * állapotot a protokollban** — a részleges fájl mérete úgyis megmondja, hol tartunk.
- * *(Ha egyszer kevés lesz, a körön belül több szelet is kérhető — a hívó változtatása
- * nélkül.)*
- *
- * ⛔⛔ ÉS A LEZÁRÁS: a bájtok **ideiglenes néven** gyűlnek, és csak akkor kerülnek a
- * végleges (lenyomat-)nevükre, ha **újra lenyomatolva** azt adják ki. *Így egy megszakadt
- * vagy meghamisított letöltés soha nem hagy hátra hamis fájlt* (3. szabály).
- *
- * @param {Object} blob - a fájl-tár (`fajlBlobTarolo`)
- * @param {string} koino
- * @param {string} cim
- * @param {number} port
- * @param {string} lenyomat
- * @param {Object} [beallitas]
- * @returns {Promise<{kesz: boolean, ok?: string, bajt: number, szeletek: number}>}
- */
+
 /**
  * ⭐⭐ A FÁJL-SZELETEK KISZOLGÁLÁSA — a `fajlHozatala` párja, egy kapcsolaton.
  *
@@ -707,6 +684,30 @@ export async function fajlKiszolgalas(kapcsolat, fajlOlvas) {
   return { kiszolgalt: true, szeletek };
 }
 
+/**
+ * ⭐⭐ EGY FÁJL ELHOZÁSA — szeletenként, folytathatóan (5.7 / B).
+ *
+ * ===== A MENET =====
+ *
+ *   mi  → FAJLKEREK { lenyomat, eltolas }
+ *   ő   → FAJLSZELET { adat, vege } — vagy FAJLNINCS
+ *
+ * ⚠️ EGY KAPCSOLAT, MINDEN SZELET (lent: az átfúrt résen nincs „elfogadás”). Minden szelet
+ * önállóan értelmes, és egy megszakadás **nem hagy félkész állapotot a protokollban** — a
+ * részleges fájl szeletei úgyis megmondják, hol tartunk.
+ *
+ * ⛔⛔ ÉS A LEZÁRÁS: a bájtok **ideiglenes helyen** gyűlnek, és csak akkor kerülnek a
+ * végleges (lenyomat-)nevükre, ha **újra lenyomatolva** azt adják ki. *Így egy megszakadt
+ * vagy meghamisított letöltés soha nem hagy hátra hamis fájlt* (3. szabály).
+ *
+ * @param {Object} blob - a fájl-tár (`fajlBlobTarolo`)
+ * @param {string} koino
+ * @param {string} lenyomat
+ * @param {Function} kapcsolatNyitas - () → a MÁR MEGNYITOTT kapcsolat (1. szabály: a hívóé)
+ * @param {Object} [beallitas] - `korlat` (a fájl felső mérete), `munka` (a több forrás közös
+ *        munkamegosztása, D68 / 6.)
+ * @returns {Promise<{kesz: boolean, ok?: string, romlott?: boolean, bajt: number, szeletek: number}>}
+ */
 export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beallitas = {}) {
   const korlat = beallitas.korlat ?? Infinity;
   console.log('fajlHozatala - KEZDÉS', { lenyomat });
@@ -740,8 +741,8 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
           uzenet: 'FAJLKEREK', koino, lenyomat, eltolas: kertEltolas
         }) + '\n');
 
-        // ⚠️ A másik fél LENYOMAT-tal kezdhet (a párbeszéd szimmetrikus) — átlépjük, ahogy
-        // a `szeletHozatala` is teszi.
+        // ⚠️ A másik fél NYITAS-sal kezdhet (a párbeszéd szimmetrikus) — átlépjük, ahogy
+        // a `szeletKapcsolaton` is teszi.
         let uzenet;
         for (;;) {
           uzenet = await sor.kovetkezo();
@@ -821,10 +822,8 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
     // ⭐ Más ág zárja le — megvárjuk az eredményét, hogy ugyanazt mondjuk róla.
     // *Két ág nem adhat két igazságot ugyanarról a fájlról.*
     const lezaras = await munka.lezarasraVar();
-    // ⭐ A `romlott` TOVÁBBMEGY A HÍVÓHOZ (D68 / 6.): ő tudja, KIKTŐL jöttek a szeletek,
-      // és ő jegyezheti fel, hogy a következő körben mással próbáljunk.
-      return { kesz: lezaras.rendben, ok: lezaras.ok, romlott: lezaras.romlott === true,
-               bajt, szeletek, enZartamLe };
+    return { kesz: lezaras.rendben, ok: lezaras.ok, romlott: lezaras.romlott === true,
+             bajt, szeletek, enZartamLe };
   } finally {
     munka.kilep();
     // ⚠️ A UDP-vonalon ELŐBB KI KELL ÜRÍTENI, különben az utolsó darab elveszik —
@@ -857,7 +856,7 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas) {
     const uzenet = await sor.kovetkezo();
     if (uzenet.uzenet === 'KESZ') break;
     if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
-    // A LENYOMAT-ot (és bármi mást) átlépjük — lásd a fenti magyarázatot.
+    // A NYITAS-t (és bármi mást) átlépjük — lásd a fenti magyarázatot.
   }
 
   // ⚠️ UGYANAZ A KAPU, mint a rendes cserénél: ellenőrizetlen esemény innen sem kerül be.

@@ -21,11 +21,11 @@
 > `szeletLenyomata()`). ✅ **C/6 — a tartomány-egyeztetés** (D74: a lenyomat hash; 50. mérés: 1 eltérés
 > 100 000 közt 4,0 KB a 160,2 helyett). ✅ **C/7–8 — a csere szeletenként** (a gyerek-bejelentés, az új
 > párbeszéd; ⛔ tiszta törés a régi protokollal — a telefont frissíteni kell; 51. mérés: a vonalon 1
-> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba.** ✅ **D75** (a két tár: tartós és
+> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba**; az átnézés után **764**. ✅ **D75** (a két tár: tartós és
 > átmeneti) és **D76** (a kérelmezés: a nézet kérdez, a kérelem továbbadható) · ⭐ az alappillér elve.
 > ⏭️ **A következő: az alappillérek** — a térkép és a javasolt sorrend:
-> [`alappillerek.md`](alappillerek.md) (elsőként az összegző Merkle-fa, a szerző láncával)
-> (tartomány-egyeztetés, gyerek-bejelentés, az érdeklődés szabálya, D63). A részletek a
+> [`alappillerek.md`](alappillerek.md) (elsőként az összegző Merkle-fa, a szerző láncával — D63;
+> utána az érdeklődés szabálya, a két tárral). A részletek a
 > [`CLAUDE.md`](../CLAUDE.md) elején. ⚠️ A telefon régi kódon fut — a következő terepi mérés
 > előtt frissíteni kell.
 >
