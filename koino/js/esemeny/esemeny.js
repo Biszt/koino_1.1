@@ -254,14 +254,25 @@ export async function esemenyEllenorzese(esemeny) {
 }
 
 /**
+ * ⭐ AZ AZONOSÍTÓ ALAKJA (D77, 2026-09-27): egy lenyomat — 43 base64url jel. EGY helyen, mert a
+ * kapu (`alakiHiba`) és a csere vonala (`csere/szeletEgyeztetes.js`, a szelet-kulcs) ugyanezt
+ * kérdezi: ha a kettő eltérne, egy kapun átjutott esemény megint kimondhatatlan kulcsot adna.
+ */
+export const AZONOSITO_MINTA = /^[A-Za-z0-9_-]{43}$/;
+
+/** Azonosító alakú-e (szöveg, 43 base64url jel)? */
+export const azonositoAlaku = (x) => typeof x === 'string' && AZONOSITO_MINTA.test(x);
+
+/**
  * ⭐ AZ ALAKI ELLENŐRZÉS ÖNMAGÁBAN — szinkron és olcsó (2026-09-24, 40. mérés).
  *
  * ⛔ MIÉRT VÁLT KÜLÖN: a kapu (`esemenyEllenorzese`) ezt is, a drága részt is (lenyomat +
  * aláírás) elvégzi. ⭐ A CSERE viszont a SAJÁT tárát nézi, amit egyszer már egy kapu
  * beengedett — ott az aláírás nem változhatott, csak a SZABÁLY: egy régebbi programmal
- * tárolt esemény ma alakilag érvénytelen lehet (a 2026-08-31-i három új mező előtti alak).
- * Az ilyet a csere ne hirdesse és ne küldje: *amit egyetlen mai kapu sem enged be, az a mai
- * protokoll számára nem létezik.* Egy szabály, két hívó — különben elcsúszhatnának.
+ * tárolt esemény ma alakilag érvénytelen lehet (a 2026-08-31-i három új mező előtti alak, vagy
+ * a D77 előtti, nem azonosító alakú `entitas` / `szulo`). Az ilyet a csere ne hirdesse és ne
+ * küldje: *amit egyetlen mai kapu sem enged be, az a mai protokoll számára nem létezik.* Egy
+ * szabály, két hívó — különben elcsúszhatnának.
  *
  * @param {Object} esemeny
  * @returns {string|null} a hiba oka, vagy `null`, ha alakilag rendben van
@@ -282,7 +293,10 @@ export function alakiHiba(esemeny) {
   }
 
   // ----- A HÁROM ÚJ MEZŐ ALAKJA -----
-  if (esemeny.entitas !== null && typeof esemeny.entitas !== 'string') {
+  // ⛔ D77 (2026-09-27, Csaba): az `entitas` nem akármilyen szöveg, hanem egy AZONOSÍTÓ — a szelet
+  // kulcsa, és a csere ezt mondja ki a vonalon. Az átnézés mérte: egy kapun átjutott `"x"` kulcs a
+  // társsal folytatott MINDEN cserét megakasztotta (HIBAS-EGYEZTETES).
+  if (esemeny.entitas !== null && !azonositoAlaku(esemeny.entitas)) {
     return 'az entitas csak azonosító vagy null lehet';
   }
   if (!Number.isInteger(esemeny.entitasSorszam) || esemeny.entitasSorszam < 1) {
@@ -295,6 +309,17 @@ export function alakiHiba(esemeny) {
   // a Szakasz 4 bekapcsolása ne kívánjon itt újabb változtatást.
   if (esemeny.lancGyoker !== null && typeof esemeny.lancGyoker !== 'string') {
     return 'a lancGyoker csak lenyomat vagy null lehet';
+  }
+
+  // ----- ⛔ D77: A SZÜLETÉS SZÜLŐJE — mert az is szelet-kulcs lesz -----
+  // A gyerek-bejelentés (a C 7. pontja) a születést a SZÜLŐ körében is kimondja (`szuleteseSzuloje`):
+  // a szülő tehát ugyanúgy kulcs a vonalon, mint az `entitas`. Hiányzó vagy `null` szülő: legfelső
+  // szintű gondolat.
+  if (esemeny.tipus === 'GondolatLetrehozas') {
+    const szulo = esemeny.adat?.szulo;
+    if (szulo !== undefined && szulo !== null && !azonositoAlaku(szulo)) {
+      return 'a gondolat szulo-ja csak azonosító vagy null lehet';
+    }
   }
   return null;
 }

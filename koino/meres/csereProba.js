@@ -702,11 +702,14 @@ proba('⭐⭐ EGY SZELETEN BELÜL MINDKÉT IRÁNYBAN: csak a hiányzó eseménye
     && nalaMasik.length === 3 && nalaMasik.includes(annaPontja.azonosito);
 });
 
-// ⛔⛔ A KI NEM MONDHATÓ SZELET-KULCS (2026-09-27, átnézés — mérve). A kapu (`alakiHiba`) az
-// `entitas`-t és a születés `szulo`-ját BÁRMILYEN szövegként átengedi; a vonal viszont csak 43 jeles
-// kulcsot fogad el (`tartomany.js`, az ELTERO listája). Mérve: egyetlen ilyen esemény a tárban a
-// csere MINDEN körét megakasztotta azzal a társsal, akinél nincs meg (HIBAS-EGYEZTETES vagy „Hibás
-// ELTERO”) — és semmi más nem ment át, a másik fél pedig a tétlenségi óráig várt.
+// ⛔⛔ A KI NEM MONDHATÓ SZELET-KULCS (2026-09-27, átnézés — mérve). A kapu az `entitas`-t és a
+// születés `szulo`-ját addig BÁRMILYEN szövegként átengedte; a vonal viszont csak 43 jeles kulcsot
+// fogad el (`tartomany.js`, az ELTERO listája). Mérve: egyetlen ilyen esemény a tárban a csere
+// MINDEN körét megakasztotta azzal a társsal, akinél nincs meg (HIBAS-EGYEZTETES vagy „Hibás
+// ELTERO”) — semmi más nem ment át, a másik fél pedig a tétlenségi óráig várt.
+// ⭐ D77 óta a kapu nem engedi be (a kapu próbája: `esemenyProba.js`). ⚠️ Egy RÉGEBBI programmal
+// tárolt ilyen esemény viszont a tárban lehet — ezt a próba a kapu megkerülésével (`hozzafuz`)
+// teszi be, és azt méri, hogy a csere a 40. mérés elvével távol tartja: nem hirdeti, nem küldi.
 // ⚠️ KÉT PRÓBA, mert két úton kerül ilyen kulcs a szeletek jegyzékébe (a szelet és a szülő).
 async function kiNemMondhatoCsere(mereg) {
   const anna = await ujEember(KOINO);
@@ -715,31 +718,33 @@ async function kiNemMondhatoCsere(mereg) {
   const m = await mereg(anna);
   const n = await bela.tesz('GondolatLetrehozas', { cim: 'Béla újdonsága', meret: 10 });
 
-  const egyik = await ujTar(); await ment(egyik, [g, m]);
+  const egyik = await ujTar(); await ment(egyik, [g]);
+  await egyik.hozzafuz(m);                      // ⚠️ a kapu MEGKERÜLÉSÉVEL: a D77 előtti tár
   const masik = await ujTar(); await ment(masik, [g, n]);
-  // Előfeltétel: a kapu tényleg beengedte (különben a próba semmit nem mérne).
+  // Előfeltételek: a mai kapu elutasítaná, a tárban mégis ott van (különben a próba semmit nem mérne).
+  const kapuElutasitja = (await esemenyMentese(await ujTar(), m)).mentve === false;
   const bentVan = !!(await egyik.esemeny(m.azonosito));
 
   await csereDroton(egyik, masik);
   const nalaEgyik = (await koinoEsemenyei(egyik, KOINO)).map((e) => e.azonosito);
   const nalaMasik = (await koinoEsemenyei(masik, KOINO)).map((e) => e.azonosito);
-  return { bentVan, m, n, nalaEgyik, nalaMasik };
+  return { rendben: kapuElutasitja && bentVan, m, n, nalaEgyik, nalaMasik };
 }
 
-proba('⛔⛔ A KI NEM MONDHATÓ SZÜLŐ (a születés szulo-ja nem 43 jeles) nem akasztja meg a cserét', async () => {
-  const { bentVan, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
+proba('⛔⛔ A KI NEM MONDHATÓ SZÜLŐ (a születés szulo-ja nem 43 jeles) nem akasztja meg a cserét — és nem utazik', async () => {
+  const { rendben, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
     anna.tesz('GondolatLetrehozas', { cim: 'Rossz szülő', meret: 10, szulo: 'x' }));
-  return bentVan
+  return rendben
     && nalaEgyik.includes(n.azonosito)            // ⭐ a csere lement, az újdonság átjött
-    && nalaMasik.includes(m.azonosito);           // ⭐ a gondolat a SAJÁT szeletével utazik
+    && !nalaMasik.includes(m.azonosito);          // ⛔ amit a kapu nem enged be, azt nem hirdetjük
 });
 
-proba('⛔⛔ A KI NEM MONDHATÓ SZELET (az entitas nem 43 jeles) nem akasztja meg a cserét — és nem is utazik', async () => {
-  const { bentVan, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
+proba('⛔⛔ A KI NEM MONDHATÓ SZELET (az entitas nem 43 jeles) nem akasztja meg a cserét — és nem utazik', async () => {
+  const { rendben, m, n, nalaEgyik, nalaMasik } = await kiNemMondhatoCsere((anna) =>
     anna.tesz('TudatpontRendezes', { entitas: 'x', pont: 1 }));   // a szelet-kulcs az adatból: 'x'
-  return bentVan
+  return rendben
     && nalaEgyik.includes(n.azonosito)
-    && !nalaMasik.includes(m.azonosito);          // ⛔ amit a vonal nem tud kimondani, azt nem hirdetjük
+    && !nalaMasik.includes(m.azonosito);
 });
 
 // ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====

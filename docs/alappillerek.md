@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D76), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D77), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -108,7 +108,7 @@ A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ma egy
 síkidom- és a térkép-nézet kérelmezése, és a terep (a telefon frissítése — ⛔ a tiszta törés óta
 enélkül nem cserél).
 
-## 4. A javasolt sorrend — a függőségekből (⚠️ a választás Csabáé)
+## 4. A sorrend — a függőségekből (✅ Csaba megerősítette, 2026-09-27 este)
 
 1. **A** — az összegző Merkle-fa, az első alkalmazásával: **a szerző lánca** (D63 + a tudatpont-keret),
    mert ott a horgony tiszta (a szerző aláírja). Ezzel a **C** (a C lépés 10. pontja) is kész.
@@ -149,3 +149,8 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
     hierarchikus elrendezés, össz-pont) · a saját pont / idő szerinti rendezés és a síkidom/térkép
     nézet később · D76.
 11. **2026-09-27 · a telefon** → **a tiszta törés óta nem tud cserélni**, amíg nem frissül · CLAUDE.md.
+12. **2026-09-27 este · a kapu: bármilyen szöveg mint `entitas` / születés-`szulo`** → **csak azonosító
+    alakú vagy null (D77)** · mert a szeletenkénti csere ezeket szelet-kulcsként mondja ki, és egy
+    kapun átjutott `"x"` a társsal folytatott minden cserét megakasztotta (az átnézés mérte). Elsőként
+    a csere szűrt; ⭐ Csaba döntésével a szabály a KAPUBA került, a csere-oldali szűrő kikerült (egy
+    szabály, egy helyen) · D77, `esemenyProba.js`, `csereProba.js` („KI NEM MONDHATÓ”).

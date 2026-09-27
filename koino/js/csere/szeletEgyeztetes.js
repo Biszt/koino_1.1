@@ -24,7 +24,7 @@
 //
 // Használja: csere/vonal.js (a párbeszéd), a próbák.
 
-import { alakiHiba, szelet, szuleteseSzuloje } from '../esemeny/esemeny.js';
+import { alakiHiba, szelet, szuleteseSzuloje, azonositoAlaku } from '../esemeny/esemeny.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 
 /**
@@ -33,15 +33,16 @@ import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
  */
 export const GYOKER_KULCS = '0'.repeat(43);
 
-const KULCS_MINTA = /^[A-Za-z0-9_-]{43}$/;
-
 /** A vonal kulcsa → a tár kulcsa. */
 export const tarKulcsa = (kulcs) => (kulcs === GYOKER_KULCS ? '' : kulcs);
 /** A tár kulcsa → a vonal kulcsa. */
 export const vonalKulcsa = (s) => (s === '' ? GYOKER_KULCS : s);
 
-/** Érvényes szelet-kulcs-e (a vonalról jött listák ellenőrzéséhez)? */
-export const ervenyesKulcs = (kulcs) => typeof kulcs === 'string' && KULCS_MINTA.test(kulcs);
+/**
+ * Érvényes szelet-kulcs-e (a vonalról jött listák ellenőrzéséhez)? ⭐ D77: ugyanaz a minta, mint a
+ * kapué (`azonositoAlaku`) — így ami a kapun átjut, annak a kulcsa a vonalon is kimondható.
+ */
+export const ervenyesKulcs = azonositoAlaku;
 
 /**
  * Egy szelet egyeztetett halmazának ESEMÉNYEI (a szelet érvényes eseményei + a gyerekei születése).
@@ -103,14 +104,13 @@ export async function szeletParok(tar, koino, reszvesz = () => true) {
   const parok = [];
   for (const { szelet: s } of await tar.szeletek()) {
     const kulcs = vonalKulcsa(s);
-    // ⛔⛔ A KI NEM MONDHATÓ SZELETET NEM HIRDETJÜK (2026-09-27, átnézés — mérve). A kapu
-    // (`alakiHiba`) az `entitas`-t és a születés `szulo`-ját BÁRMILYEN szövegként átengedi; a vonal
-    // viszont csak 43 jeles kulcsot fogad el (`tartomany.js`, az ELTERO listája). Egyetlen ilyen
-    // esemény a tárban a csere MINDEN körét megakasztotta azzal a társsal, akinél nincs meg
-    // (HIBAS-EGYEZTETES vagy „Hibás ELTERO”), és semmi más nem ment át. *A 40. mérés elve: amit a
-    // vonal nem tud kimondani, azt nem hirdetjük.* ⭐ A rossz szülőjű gondolat így is utazik — a
-    // SAJÁT szeletével, aminek a kulcsa egy lenyomat; csak a nem létező szülő köre marad néma.
-    if (!ervenyesKulcs(kulcs) || !reszvesz(kulcs)) continue;
+    // ⛔⛔ A KI NEM MONDHATÓ SZELET (2026-09-27, átnézés — mérve): egy kapun átjutott, nem 43 jeles
+    // `entitas` vagy születés-`szulo` a társsal folytatott MINDEN cserét megakasztotta
+    // (HIBAS-EGYEZTETES / „Hibás ELTERO”). ⭐ A szabály a KAPUBAN él (D77, `alakiHiba`), és innen
+    // a 40. mérés elve tartja távol: egy régebbi programmal tárolt ilyen esemény alakilag hibás,
+    // tehát a halmazába nem kerül be (`egyeztetettEsemenyek`) — az üres halmazú szeletet pedig nem
+    // hirdetjük. *Egy szabály, egy helyen — egy második őr itt egy nap némán elcsúszna tőle.*
+    if (!reszvesz(kulcs)) continue;
     const par = await szeletPar(tar, koino, kulcs);
     if (par) parok.push(par);
   }

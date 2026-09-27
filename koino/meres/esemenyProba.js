@@ -112,6 +112,41 @@ proba('TÖRT szám az adatban már a létrehozáskor hibát dob', async () => {
   } catch (h) { return h.message.includes('EGÉSZ'); }
 });
 
+// ⛔⛔ D77 (2026-09-27, Csaba — az átnézés mérése nyomán): az `entitas` és a születés `szulo`-ja
+// SZELET-KULCS, amit a csere a vonalon kimond — ezért csak azonosító alakú (43 base64url jel) vagy
+// null lehet. Előtte bármilyen szöveg átjutott, és egyetlen ilyen esemény a társsal folytatott
+// minden cserét megakasztotta (a csere próbája: `csereProba.js`, „KI NEM MONDHATÓ”).
+// ⚠️ Mindkét próba a HELYES alakot is beengedi — különben egy mindent elutasító kapu is átmenne.
+
+proba('⛔⛔ D77: a nem azonosító alakú ENTITAS-t a kapu elutasítja — az azonosító alakút beengedi', async () => {
+  const rossz = ['x', '', 'a'.repeat(42), 'a'.repeat(44), 'a'.repeat(42) + '/', 'a'.repeat(42) + '='];
+  for (const entitas of rossz) {
+    const e = await esemenyLetrehozasa(
+      { ...alapLeiras, tipus: 'TudatpontRendezes', adat: { pont: 1 }, entitas }, kulcspar);
+    const ered = await esemenyEllenorzese(e);
+    if (ered.rendben || !ered.ok.includes('entitas')) return false;
+  }
+  const jo = await esemenyLetrehozasa(
+    { ...alapLeiras, tipus: 'TudatpontRendezes', adat: { pont: 1 }, entitas: esemeny.azonosito }, kulcspar);
+  return (await esemenyEllenorzese(jo)).rendben === true;
+});
+
+proba('⛔⛔ D77: a gondolat nem azonosító alakú SZULO-ját a kapu elutasítja — a null és az azonosító mehet', async () => {
+  for (const szulo of ['x', '', 5, 'a'.repeat(44)]) {
+    const e = await esemenyLetrehozasa({ ...alapLeiras, adat: { ...alapLeiras.adat, szulo } }, kulcspar);
+    const ered = await esemenyEllenorzese(e);
+    if (ered.rendben || !ered.ok.includes('szulo')) return false;
+  }
+  for (const szulo of [null, esemeny.azonosito]) {
+    const e = await esemenyLetrehozasa({ ...alapLeiras, adat: { ...alapLeiras.adat, szulo } }, kulcspar);
+    if (!(await esemenyEllenorzese(e)).rendben) return false;
+  }
+  // ⭐ Csak a SZÜLETÉSRE vonatkozik: más típus `szulo`-ja (pl. a kategória-fa) nem szelet-kulcs.
+  const kategoria = await esemenyLetrehozasa(
+    { ...alapLeiras, tipus: 'KategoriaLetrehozas', adat: { nev: 'K', szulo: 'x' } }, kulcspar);
+  return (await esemenyEllenorzese(kategoria)).rendben === true;
+});
+
 // ===== TÁJÉKOZTATÓ MÉRÉS =====
 
 proba('Egy esemény mérete ésszerű (< 1 KB)', async () => {

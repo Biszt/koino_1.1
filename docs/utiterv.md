@@ -3,7 +3,7 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D76),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D77),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
@@ -21,7 +21,7 @@
 > `szeletLenyomata()`). ✅ **C/6 — a tartomány-egyeztetés** (D74: a lenyomat hash; 50. mérés: 1 eltérés
 > 100 000 közt 4,0 KB a 160,2 helyett). ✅ **C/7–8 — a csere szeletenként** (a gyerek-bejelentés, az új
 > párbeszéd; ⛔ tiszta törés a régi protokollal — a telefont frissíteni kell; 51. mérés: a vonalon 1
-> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba**; az átnézés után **764**. ✅ **D75** (a két tár: tartós és
+> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba**; az átnézés és a D77 után **766**. ✅ **D75** (a két tár: tartós és
 > átmeneti) és **D76** (a kérelmezés: a nézet kérdez, a kérelem továbbadható) · ⭐ az alappillér elve.
 > ⏭️ **A következő: az alappillérek** — a térkép és a javasolt sorrend:
 > [`alappillerek.md`](alappillerek.md) (elsőként az összegző Merkle-fa, a szerző láncával — D63;

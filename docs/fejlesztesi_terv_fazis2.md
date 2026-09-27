@@ -4104,6 +4104,37 @@ két tár része lesz. A részletek: [`alappillerek.md`](alappillerek.md) B.
    valami … a merkle-fát se halogassuk, ha már építenénk rá."* — az **összegző Merkle-fa** az
    alappillérek elsője ([`alappillerek.md`](alappillerek.md) A).
 
+### D77. A SZELET-KULCS A KAPUBAN: az `entitas` és a születés `szulo`-ja csak azonosító alakú (2026-09-27, Csaba)
+
+> *„Igen, a telefon előtt."* — Csaba (a kapu szigorítására, az átnézés után)
+
+**Amiből jött (az átnézés mérése, 2026-09-27 este):** a kapu (`alakiHiba`) az `entitas`-t és a
+`GondolatLetrehozas` `adat.szulo`-ját **bármilyen szövegként** átengedte. A szeletenkénti csere (a C
+7–8. pontja) viszont mindkettőt **szelet-kulcsként mondja ki a vonalon**, és ott csak 43 jeles
+azonosítót fogad el. Egyetlen `szulo: "x"`-es gondolat vagy `entitas: "x"`-es esemény a tárban a
+társsal folytatott **minden** cserét megakasztotta (`HIBAS-EGYEZTETES` vagy „Hibás ELTERO”) —
+semmi más nem ment át, és a csere ezt magától soha nem heverte volna ki. Elsőként a csere oldalán
+javítottuk (a ki nem mondható szeletet nem hirdette); a kérdés az volt, szigorítson-e a kapu is.
+
+#### A DÖNTÉS
+
+1. ⭐ **Az `entitas` csak `null` vagy azonosító alakú** (43 base64url jel — `AZONOSITO_MINTA`,
+   `js/esemeny/esemeny.js`).
+2. ⭐ **A `GondolatLetrehozas` `szulo`-ja csak hiányzó, `null` vagy azonosító alakú** — mert a
+   gyerek-bejelentés a szülő körében is kimondja a születést. Más típus `szulo`-ja (pl. a
+   kategória-fáé) nem szelet-kulcs, arra ez nem vonatkozik.
+3. ⭐ **A szabály EGY helyen él: a kapuban.** A csere a 40. mérés elvével tartja távol a régebbi
+   programmal tárolt ilyen eseményt (alakilag hibás → nem kerül a szelet halmazába → az üres
+   szeletet nem hirdetjük), és a vonal kulcs-mintája ugyanaz a konstans (`ervenyesKulcs =
+   azonositoAlaku`). A csere-oldali külön szűrő ezért kikerült: *egy második őr ugyanarra a
+   szabályra egy nap némán elcsúszna tőle.*
+
+⚠️ **Miért most, és miért nem kell új koino (D66):** a befogadás szabálya változik, de a tiszta
+törés (a C 8. pontja) óta a régi program úgysem cserél az újjal, és **a telefon frissítése előtt**
+lép életbe — a két készülék egyszerre kapja meg. A kizárt események semmilyen érvényes állapotot
+nem hordoztak (nem létező szelet, nem létező szülő); a már tárolt ilyen esemény a tárban marad
+(eseményt nem törlünk), de nem utazik.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
