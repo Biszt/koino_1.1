@@ -295,6 +295,9 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
     // ⭐ D73: a szeletek jegyzéke és egy szelet lenyomata — olvasás, a belső tárból.
     szeletek: () => belso.szeletek(),
     szeletLenyomata: (szelet) => belso.szeletLenyomata(szelet),
+    // ⭐ A C 7. pontja: egy szülő gyerekeinek születése.
+    szuletesek: (szulo) => belso.szuletesek(szulo),
+    szeletValtozata: (szelet) => belso.szeletValtozata(szelet),
     mutatoAllapota: () => belso.mutatoAllapota?.(),
     frissit: () => belso.frissit?.() ?? 0,
 

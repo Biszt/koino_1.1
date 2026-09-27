@@ -112,7 +112,8 @@ import {
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
-import { allasOsszeallitasa } from './js/csere/csere.js';
+import { szeletParok } from './js/csere/szeletEgyeztetes.js';
+import { halmazLenyomata } from './js/esemeny/halmaz.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
 import { terKartyai } from './js/allapot/ter.js';
 // ⭐ MELY FÁJLOKRA VAN SZÜKSÉGEM? — a szállítás első fele (a felderítés).
@@ -165,7 +166,6 @@ import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.j
 import {
   allapotUjjlenyomata, allapotOsszefoglaloja, elteresek, ujjlenyomatLap, ujjlenyomatLapBol
 } from './js/allapot/osszehasonlitas.js';
-import { lenyomat } from './js/esemeny/kanonikusAlak.js';
 
 // ===== ÁLLANDÓK =====
 
@@ -2556,12 +2556,15 @@ try {
 
       const napokMulva = parseInt(ervek[0], 10) || 0;
       const { allapot, javaslatok } = await kepetKeszit(napokMulva);
-      const allas = await allasOsszeallitasa(tar, KOINO);
+      // ⭐ 2026-09-27 ÓTA (a C 7–8. pontja): a TUDÁS a csere NYITÓ lenyomata — a szeletek
+      // „szelet:lenyomat" párjainak lenyomata. Pontosan ezt veti össze a csere: ha a kettőé egyezik,
+      // egyetlen nyitás-csere a kör. *(Előtte a szerzőnkénti ÁLLÁS lenyomata volt.)*
+      const parok = await szeletParok(tar, KOINO);
 
       kiir(SZIN.vastag + 'TUDÁS' + SZIN.vege + SZIN.halvany
         + '     (mely eseményeket ismerem — ezt egyenlíti ki a csere)' + SZIN.vege);
-      kiir('  ' + await lenyomat(allas.szerzok));
-      kiir(SZIN.halvany + '  ' + allas.szerzok.length + ' e-ember · '
+      kiir('  ' + await halmazLenyomata(parok));
+      kiir(SZIN.halvany + '  ' + parok.length + ' szelet · '
         + (await koinoEsemenyei(tar, KOINO)).length + ' esemény' + SZIN.vege);
 
       kiir();

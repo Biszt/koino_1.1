@@ -18,17 +18,19 @@
 // hálózati séma, amit külön karban kellene tartani, és a forgalom emberi szemmel is
 // olvasható — egy `nc`-vel bele lehet nézni.
 //
-//   {"uzenet":"LENYOMAT","koino":"…","lenyomat":"…"} — melyik koinóról, és mit tudok róla
-//   {"uzenet":"ALLAS","allas":{…}}      — ezt tudom (részletesen)
-//   {"uzenet":"KEREK","kerelem":{…}}    — ebből ez hiányzik nekem
+//   {"uzenet":"NYITAS","koino":"…","lenyomat":"…"}  — melyik koinóról, és a szeleteim lenyomata
+//   {"uzenet":"SZELETEK","lepes":[…]}   — az első szint: melyik szelet tér el?
+//   {"uzenet":"ELTERO",…} · {"uzenet":"RESZVETEL",…}  — az eltérő szeletek, és ki melyikben van
+//   {"uzenet":"TARTOMANYOK","lepesek":{…}} — a második szint: a szeleteken belüli eltérés
 //   {"uzenet":"ESEMENY","esemeny":{…}}  — tessék, egy esemény
+//   {"uzenet":"KEREK","azonositok":[…]} — ezek hiányoznak nekem
 //   {"uzenet":"KESZ"}                   — mindent elküldtem, amit kértél
 //
-// ⭐ A LENYOMAT AZ ELSŐ, ÉS EZ A LÉNYEG (D35, B. lépés). A részletes ÁLLÁS ára 162
-// bájt/e-ember — 10 000 fősnél ~1,6 MB, mindkét irányban. A hétköznapi eset viszont az,
-// hogy KÉT CSERE KÖZÖTT SEMMI NEM TÖRTÉNT. Ezért a kör a 43 karakteres lenyomattal
-// kezdődik: ha a kettő egyezik, azonnal végeztünk, és a részletes állás el sem indul.
-// Egy „nincs újdonság" csere így 1,6 MB helyett ~100 bájt.
+// ⭐ A NYITÓ LENYOMAT AZ ELSŐ, ÉS EZ A LÉNYEG (D35 óta). A hétköznapi eset az, hogy KÉT CSERE
+// KÖZÖTT SEMMI NEM TÖRTÉNT: ha a két nyitó lenyomat egyezik, azonnal végeztünk. ⭐ 2026-09-27 óta
+// (a C 7–8. pontja) ha nem egyezik, már nem a szerzőnkénti ÁLLÁS megy (100 000 eseménynél egy
+// eltérésért 160 KB — 48. mérés), hanem tartomány-egyeztetés szeletenként (D74; ~4 KB — 50. mérés).
+// ⛔ A régi `LENYOMAT`/`ALLAS` menettel TISZTA TÖRÉS (D72).
 //
 // ===== SZIMMETRIKUS: NINCS KLIENS ÉS SZERVER =====
 //
@@ -45,9 +47,12 @@
 // ⚠️ 2026-09-26-IG ITT ÁLLT A `node:net` IMPORTJA (TCP). A D69/2 óta a párbeszéd csak egy
 // foglalat-szerű kapcsolatot kap (a UDP-résen: `udpVonal.js` → `udpKapcsolat`).
 
+import { beolvasztas } from './csere.js';
+// ⭐ A C 7–8. pontja (2026-09-27): a csere szeletenként, tartomány-egyeztetéssel (D74).
+import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
 import {
-  allasOsszeallitasa, allasLenyomata, hianyokSzamitasa, valaszOsszeallitasa, beolvasztas
-} from './csere.js';
+  szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs
+} from './szeletEgyeztetes.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
 // képlet a SOROS átvitel alakja volt. Több forrásnál a munkamegosztás mondja meg, melyik
 // szelet következik (D68 / 6.) — a képlet maga viszont megmarad a `fajlAtvitel.js`-ben,
@@ -59,9 +64,15 @@ import { entitasEsemenyei } from '../tar/esemenyTar.js';
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
 const SOR_KORLAT = 8 * 1024 * 1024;
 
-// Egy kapcsolaton legfeljebb ennyi kört futunk. Nem díszítés: ha valami körbe-körbe
-// járna, azt HIBAKÉNT akarjuk látni, nem végtelen ciklusként.
-const KOR_KORLAT = 5;
+// Egy egyeztetés legfeljebb ennyi oda-vissza lépés. Nem díszítés: ha valami körbe-körbe járna,
+// azt HIBAKÉNT akarjuk látni, nem végtelen ciklusként. (A tartomány-egyeztetés log16(méret)
+// lépésben ér véget — 100 000 eseménynél ~5.)
+const LEPES_KORLAT = 64;
+
+// ⛔ Egy szelet-kulcs lista (ELTERO, RESZVETEL) legfeljebb ennyi elemű (9. szabály). ⚠️ Az első
+// találkozás (egy üres készülék) az összes szeletet egy listában kapja — a sor-korlát (8 MB)
+// ~180 000 kulcsot enged; ennél nagyobb koinónál az első találkozást részletekben kell (⏸️).
+const KULCS_KORLAT = 180000;
 
 // Egy beszélgetésben legfeljebb ennyi (friss UDP-)címet fogadunk el. Nem szigor, hanem
 // olcsóság: a címjegyzék MINDEN cserén utazik, tehát a mérete a napi forgalomban jelenik
@@ -159,24 +170,44 @@ function uzenetSor(kapcsolat) {
 /**
  * Lefuttatja a cserét egy már felépült kapcsolaton — mindkét oldalon ugyanígy.
  *
- * ⭐ MIKOR ÁLLUNK MEG? Ha egy körben SE NEM ADTUNK, SE NEM KAPTUNK semmit. Ezt a
- * feltételt mindkét fél ugyanúgy számolja ki (amit én küldtem, azt ő kapta), tehát
- * egyszerre lépnek ki — nem kell hozzá külön „vége" üzenet és nem kell megegyezni róla.
+ * ===== ⭐⭐ A CSERE SZELETENKÉNT (a C 7–8. pontja, 2026-09-27 — a szeletelési terv 4.5) =====
  *
- * Több kör azért kell, mert egy elrejtett elágazás felderítése két-három körbe telhet
- * (lásd a csere.js kérés-szabályát).
+ * ⛔ 2026-09-27-IG ITT A KOINO-SZINTŰ LENYOMAT ÉS A SZERZŐNKÉNTI ÁLLÁS MENT (LENYOMAT → ALLAS →
+ * KEREK → ESEMENY, körökben). Az ÁLLÁS a SZERZŐK számával nőtt: 100 000 eseménynél egyetlen
+ * eltérésért 160,2 KB (48. mérés). ⭐ Helyette tartomány-egyeztetés (D72/4, D74), két szinten —
+ * az ára az eltérések száma × log(méret): ugyanaz az eltérés ~4 KB (50. mérés).
+ *
+ *   0. NYITAS     — koino · tükör · fájl-kérelem · az első szint nyitó lenyomata
+ *                   (utána, mint eddig: FAJLOK és CIMEK). Egyező lenyomat → kész (a hétköznapi eset).
+ *   1. SZELETEK   — tartomány-egyeztetés a „szelet:lenyomat" párokon: melyik szelet tér el?
+ *   2. ELTERO     — aki listát dolgozott fel, megmondja, amit megtudott (mindkét oldalé)
+ *   3. RESZVETEL  — az eltérő szeletek közül ki melyikből marad ki ((a): senki; (b): 9. pont)
+ *   4. TARTOMANYOK — a közösen eltérő szeletekben az esemény-azonosítók egyeztetése
+ *   5. ESEMENY… KEREK · ESEMENY… KESZ — az átadás: amit a másiknak hiányzónak találtam, azt
+ *                   küldöm; amit magamnak, azt kérem; a csak nálam lévő szeletet egészben küldöm
+ *
+ * ⭐ KI NYIT? A két nyitó lenyomat közül a NAGYOBB nyit, a kisebb felel — mindkét fél ugyanazt a
+ * két szöveget látja, tehát ugyanúgy dönt (új üzenet nélkül; a fájl-randevú szerep-döntése is így
+ * megy). Egyező lenyomatnál nincs mit egyeztetni.
+ *
+ * ⛔ TISZTA TÖRÉS (D72): egy régi társ `LENYOMAT`-tal nyit — arra megnevezett hibával állunk le
+ * (`REGI-PROTOKOLL`), és a régi program is megáll a `NYITAS`-on.
+ *
+ * ⚠️ A MÁSIK FÉL IDEGEN: minden listáját ellenőrizzük (alak, méret), a tartomány-üzeneteit a
+ * `tartomany.js` ellenőrzi, és amit küld, az ugyanazon a kapun megy be, mint a saját (3. szabály).
+ * ⛔ Csak a közös (vagy általunk kért) szeletek eseményeit vesszük át, és csak azokból adunk.
  *
  * @param {Object} kapcsolat - foglalat-szerű kapcsolat (`write`, `on('data')`, `remoteAddress`…)
  * @param {Object} tar
  * @param {string} koino
- * @param {number} [korlat]
- * @returns {Promise<{korok: number, uj: number, kuldott: number}>}
+ * @param {Object} [beallitas]
+ * @param {Function} [beallitas.reszvesz] - (szelet-kulcs) → részt veszek-e benne; alapból mind (a)
+ * @returns {Promise<Object>} { korok, uj, kuldott, masKoino, kivulrolIgyLatszom, … ,
+ *   elteroSzeletek, egyeztetoUzenetek }
  */
 export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
-  const korlat = beallitas.korlat ?? KOR_KORLAT;
-  // ⚠️ 2026-09-26-ig itt állt a `hirdetettCimek` és a `sajatCimHirdetese`: a TCP-címjegyzék
-  // (`cimek` mező, D36–D39). A D69/2 óta a címeket a friss UDP-jegyzék terjeszti (`udp`).
   console.log('parbeszed - KEZDÉS', { koino });
+  const reszvesz = beallitas.reszvesz ?? (() => true);
 
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
   let fajlokNala = [];
@@ -193,340 +224,322 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     return uzenet;
   };
 
-  let korok = 0, uj = 0, kuldott = 0, reszletesAllasok = 0, masKoino = null;
+  let uj = 0, kuldott = 0, masKoino = null;
   let kivulrolIgyLatszom = null, kapottUdpCimek = [];
   let kapottTablaKulcs = null;      // a társ tábla-kulcsa — a KÖTÉS azonosítója
   let kapottDhtGepek = [];          // néhány DHT-gép, amit ő ismer (nem bizalom, csak cím)
+  let elteroSzeletek = 0, egyeztetoUzenetek = 0;
 
-  for (let kor = 1; kor <= korlat; kor++) {
-    korok = kor;
+  const eredmeny = () => ({
+    korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
+    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek
+  });
 
-    // ----- 0. AZ OLCSÓ KÉRDÉS: „ugyanazt tudjuk?" (43 karakter, D35) -----
-    //
-    // ⭐ EZ A LÉPÉS SPÓROL. A részletes állás ára a létszámmal nő; ez a lenyomat nem.
-    // Ha egyezik, a kör azonnal véget ér — és a hétköznapi eset épp ez.
-    const sajatAllas = await allasOsszeallitasa(tar, koino);
-    const sajatLenyomat = await allasLenyomata(sajatAllas);
+  // ===== 0. A NYITÁS =====
+  //
+  // ⭐ Az első szint nyitó lenyomata a résztvevő szeletek párjainak lenyomata: ha a kettőé egyezik,
+  // UGYANAZT tudjuk minden közös szeletről, és a kör itt véget ér (a hétköznapi eset).
+  const parok = await szeletParok(tar, koino, reszvesz);
+  const [[, , sajatLenyomat]] = await egyeztetesNyitasa(parok);
 
-    // ⭐ A TÜKÖR (2026-08-29, Csaba nyomán). Megmondjuk a másiknak, MILYEN CÍMRŐL LÁTJUK.
-    //
-    // MIÉRT KELL? Mert IPv4-en a router ÁTÍRJA a portot: a géped azt hiszi, a 7373-ról
-    // indult, kifelé viszont mondjuk a 51842-esen látszik. Így nem tudja megmondani a
-    // másiknak, hova kopogjon — nem ismeri a saját külső címét. Ezt szokás STUN-nal
-    // megtudni; a koinóban viszont NEM KELL külön szolgáltatás: aki fogadni tud, az ezt
-    // amúgy is látja. Elég visszamondania.
-    //
-    // ⚠️ EBBŐL SEMMILYEN BIZALOM NEM KÖVETKEZIK (3. szabály). Ez nem igazság, hanem
-    // megfigyelés: „innen láttalak". Ha a másik hazudik, legfeljebb nem jön össze a
-    // kapcsolat — eseményt ettől még nem tud hamisítani. És bárki lehet tükör, aki
-    // fogadni tud, tehát nem múlik egyetlen címen sem (2. szabály).
-    // ===== ⭐⭐ ÉS A FÁJL-KÉRELEM IS ITT UTAZIK (5.7 / a szállítás) =====
-    //
-    // ⛔⛔ MIÉRT A LENYOMAT MELLETT, ÉS NEM KÜLÖN KÖRBEN? Mert **a fájl-csere MERŐLEGES
-    // az esemény-cserére**: két készülék eseményei egyezhetnek (a lenyomat megegyezik, a kör
-    // egyetlen oda-vissza alatt kilép), miközben a **fájljaik teljesen eltérnek** — hiszen a bájtok sosem
-    // utaztak. *A kérdést tehát akkor is fel kell tenni, ha nincs mit cserélni eseményből.*
-    //
-    // ⭐ ÉS ÍGY VISSZAFELÉ KOMPATIBILIS: a `fajlCsere` egy **képesség-jelzés**. Egy régebbi
-    // társ LENYOMAT-jában nincs benne — olyankor meg sem szólalunk róla, tehát **nem tud
-    // elakadni** rajta. *(A D66 szerint a verzió-eltérés nem kivétel, hanem alapállapot.)*
-    const sajatKerelem = beallitas.fajlKerelem ?? null;
+  // ===== ⭐⭐ ÉS A FÁJL-KÉRELEM IS ITT UTAZIK (5.7 / a szállítás) =====
+  //
+  // ⛔⛔ MIÉRT A NYITÁS MELLETT, ÉS NEM KÜLÖN KÖRBEN? Mert **a fájl-csere MERŐLEGES az
+  // esemény-cserére**: két készülék eseményei egyezhetnek, miközben a **fájljaik teljesen
+  // eltérnek** — hiszen a bájtok sosem utaztak. *A kérdést tehát akkor is fel kell tenni, ha
+  // nincs mit cserélni eseményből.*
+  const sajatKerelem = beallitas.fajlKerelem ?? null;
 
-    kuld({
-      uzenet: 'LENYOMAT', koino, lenyomat: sajatLenyomat,
-      latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort },
-      // ⚠️ A JELZÉS A KÉPESSÉGRŐL SZÓL, NEM A KÉRELEMRŐL: ennélkül az a fél, akinek
-      // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
-      ...(beallitas.fajlValasz ? { fajlCsere: true } : {}),
-      ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {})
-    });
-    // ===== ⭐ A BÖNGÉSZŐ-LEKÉRÉS: „ADD IDE EZT AZ EGY ENTITÁST" =====
-    //
-    // ⭐ MIÉRT ITT ÁGAZIK EL? Mert így **visszafelé kompatibilis**: a párbeszéd szimmetrikus,
-    // mindkét fél LENYOMAT-tal kezd — egy régi kliens tehát SOHA nem küld `SZELETKEREK`-et,
-    // és a régi kód nem is változik tőle. Aki viszont csak EGY entitást akar (mert épp
-    // böngészi), az a kapott LENYOMAT-ot figyelmen kívül hagyja, és ezt kéri helyette.
-    //
-    // ⚠️ MIÉRT KELL EGYÁLTALÁN? Mert a rendes csere MINDENT áthoz, amit a másik tud és mi
-    // nem — böngészéskor viszont EGYETLEN entitás kell. Csaba észrevétele indította:
-    // *„böngészés közben az összes entitásnak elérhetőnek kell lennie."*
-    //
-    // ⚠️ ÉS A BIZALOM ITT SEM MÁS: amit így kapunk, ugyanazon az `esemenyMentese` kapun
-    // megy be, mint bármi más (3. szabály). A kérés nem ad jogot semmire.
-    const elsoUzenet = await sor.kovetkezo();
+  // ⭐ A TÜKÖR (2026-08-29, Csaba nyomán): megmondjuk a másiknak, MILYEN CÍMRŐL LÁTJUK. ⚠️ Ebből
+  // semmilyen bizalom nem következik (3. szabály) — megfigyelés, nem igazság.
+  kuld({
+    // ⭐ A változatot maga az üzenet neve jelzi (a régi program LENYOMAT-tal nyit) — külön mező
+    // nélkül: az minden cserén utazna (6. szabály; mérve +28 bájt oda-vissza).
+    uzenet: 'NYITAS', koino, lenyomat: sajatLenyomat,
+    latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort },
+    // ⚠️ A JELZÉS A KÉPESSÉGRŐL SZÓL, NEM A KÉRELEMRŐL: ennélkül az a fél, akinek
+    // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
+    ...(beallitas.fajlValasz ? { fajlCsere: true } : {}),
+    ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {})
+  });
 
-    // ===== ⭐⭐ A FÁJL-SZELET KISZOLGÁLÁSA (5.7 / B) =====
-    //
-    // ⭐ UGYANAZ A MINTA, MINT A `SZELETKEREK`-NÉL: **saját kapcsolat**, nem a rendes
-    // párbeszéd közepébe ékelve. Ez pontosan Csaba terve: *„a buli után fent kell tartani a
-    // kapcsolatot azon eszközöknek, amik nagyobb csomagot küldenek egymásnak."*
-    //
-    // ⭐ ÉS EZ ADJA A PÁRHUZAMOSSÁGOT IS: három egyidejű átvitel = három kapcsolat. Nem kell
-    // hozzá multiplexelés, és egy lassú átvitel nem akasztja meg a többit.
-    //
-    // ⚠️ A KISZOLGÁLÓ NEM ÍTÉL: ha nincs meg a fájl, azt mondja, hogy nincs meg — nem
-    // magyarázkodik és nem vádol (D19).
-    //
-    // ⏸️ 2026-09-26 ÓTA ÉLESBEN SENKI NEM KEZD ÍGY: ezt az ágat a kör utáni TCP-s elhozás (a
-    // több forrás, D68 / 6.) hívta, és az a D69/2-vel kikerült. ⭐ Az ág viszont szállítás-
-    // független, és a résen is kiszolgál (a kapu munkája csere, annak párbeszéde ide jut) —
-    // a UDP-s több forrás erre épülhet. A `csereProba.js` a résen méri.
-    if (kor === 1 && elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
-      await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
+  const elsoUzenet = await sor.kovetkezo();
 
-      console.log('parbeszed - VÉGE (fájl-átvitel)');
-      return { korok: 1, uj: 0, kuldott: 0, reszletesAllasok: 0,
-               masKoino: null, kivulrolIgyLatszom: null, kapottUdpCimek: [],
-               kapottTablaKulcs: null, kapottDhtGepek: [],
-               fajlokNala: [] };
-    }
-
-    if (kor === 1 && elsoUzenet.uzenet === 'SZELETKEREK') {
-      const kertek = typeof elsoUzenet.entitas === 'string'
-        ? await entitasEsemenyei(tar, koino, elsoUzenet.entitas)
-        : [];
-
-      // Eseményenként külön üzenet — ahogy a rendes csere is teszi. Így egy nagy szelet
-      // sem ütközik a sorhossz-korlátba.
-      for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
-      kuld({ uzenet: 'KESZ' });
-
-      console.log('parbeszed - VÉGE (szelet kiszolgálva)', {
-        entitas: elsoUzenet.entitas, esemeny: kertek.length
-      });
-      // ⚠️ A mezők ALAKJA ugyanaz, mint a rendes cserénél (tömbök, nem számok): 2026-09-26
-      // óta a kiszolgáló a résen a közös csere-munkán át fut, és az a kapott listákat
-      // tömbként olvassa tovább.
-      return {
-        korok: 1, uj: 0, kuldott: kertek.length, reszletesAllasok: 0,
-        masKoino: null, kivulrolIgyLatszom: null, kapottUdpCimek: [],
-        kapottTablaKulcs: null, kapottDhtGepek: [], fajlokNala: [],
-        szeletKiszolgalva: elsoUzenet.entitas
-      };
-    }
-
-    if (elsoUzenet.uzenet !== 'LENYOMAT') {
-      throw new Error('Várt üzenet: LENYOMAT, érkezett: ' + elsoUzenet.uzenet);
-    }
-    const oveLenyomat = elsoUzenet;
-
-    if (oveLenyomat.latlak?.cim) kivulrolIgyLatszom = oveLenyomat.latlak;
-
-    // ----- MÁSIK KOINO? Akkor nincs miről beszélni -----
-    //
-    // ⚠️ MÉRVE, 2026-08-29 — ezért került ide. E nélkül két KÜLÖNBÖZŐ koino készüléke is
-    // „cserélt": az eseményeik átkerültek egymás mappájába, és mivel az ÁLLÁS mindig csak
-    // a saját koinóra készül, a két lenyomat SOSEM konvergált — a kör-korlátig pörgött,
-    // ugyanazt küldve újra minden körben (mérve: 17,2 KB ~100 bájt helyett).
-    //
-    // Mindkét fél ugyanitt ismeri fel, tehát egyszerre lépnek ki. Nem hiba: két idegen
-    // koino találkozása teljesen rendes dolog egy nyitott hálózaton.
-    if (oveLenyomat.koino !== koino) {
-      console.warn('parbeszed - a másik fél MÁSIK koinóé', {
-        sajat: koino, ove: oveLenyomat.koino
-      });
-      masKoino = oveLenyomat.koino ?? '(ismeretlen)';
-      break;
-    }
-
-    // ----- ⭐⭐ A FÁJL-KÉRELEM MEGVÁLASZOLÁSA (5.7) -----
-    //
-    // ⛔ CSAK AMIT KÉRDEZTEK, és ez szándékos: a teljes fájl-listám elárulna, **mit
-    // néztem meg** — akkor is, ha a kérdező sosem hallott arról a gondolatról (D6).
-    // *Csak arra felelünk, amit kérdeztek.*
-    //
-    // ⚠️ Ez a lenyomat-egyezés ELŐTT megy — mint a címjegyzék —, mert a fájlok akkor is
-    // hiányozhatnak, ha az eseményeink tökéletesen egyeznek.
-    // ⛔⛔ SZIMMETRIKUS, ÉS EZ NEM STÍLUS KÉRDÉSE. A párbeszéd **mindkét oldalon ugyanaz a
-    // függvény**: ha az egyik fél küld egy üzenetet, amit a másik nem olvas el, az üzenet
-    // **bent marad a sorban**, és a következő várakozásba csúszik bele.
-    //
-    // ⚠️ MÉRVE, KÉT FOLYAMATTAL (2026-09-13): elsőre a feltétel a **saját** kérelem
-    // meglétéhez kötődött, és a figyelő — akinek nincs kérelme — küldött, de nem olvasott.
-    // A hiba nem a fájl-rétegnél jelentkezett, hanem később:
-    // *„Várt üzenet: CIMEK, érkezett: FAJLOK”*. ⭐ **Egy protokoll-lépés feltétele csak olyan
-    // dolog lehet, amit MINDKÉT fél ugyanúgy lát** — itt a két képesség-jelzés együtt.
-    const fajlKorMegy = kor === 1 && oveLenyomat.fajlCsere && !!beallitas.fajlValasz;
-
-    if (fajlKorMegy) {
-      // ----- MINDKETTŐ FELEL -----
-      try {
-        const van = await beallitas.fajlValasz(oveLenyomat.fajlKerek ?? []);
-        kuld({ uzenet: 'FAJLOK', van });
-      } catch (hiba) {
-        // ⚠️ A fájl-réteg hibája NE döntse el az esemény-cserét: a két réteg külön él (D3).
-        console.warn('parbeszed - a fájl-válasz nem sikerült', { hiba: hiba.message });
-        kuld({ uzenet: 'FAJLOK', van: [] });
-      }
-
-      // ----- ÉS MINDKETTŐ OLVAS -----
-      const ove = await sor.kovetkezo();
-      if (ove.uzenet !== 'FAJLOK') {
-        throw new Error('Várt üzenet: FAJLOK, érkezett: ' + ove.uzenet);
-      }
-      // ⭐ A TANULT BIRTOKLÁS a hívóhoz megy vissza — a `vonal.js` **nem ír jegyzetet**,
-      // mert az már nem szállítás (1. szabály: a logika és a vonal külön él).
-      //
-      // ⛔⛔ CSAK ARRÓL, AMIT KÉRDEZTÜNK (2026-09-27, átnézés). A KÉRDÉST a válaszadó eddig is
-      // korlátozta (`valaszOsszeallitasa`), a VÁLASZT viszont úgy vettük át, ahogy jött: egy
-      // társ akármennyi lenyomatot bemondhatott, és a randevú mindet sorban elkérte, a
-      // birtoklás-jegyzet pedig mindet megjegyezte. ⭐ A metszet a saját kérelmünkkel — ami
-      // korlátos (`KERELEM_KORLAT`) — a választ is korlátossá teszi (9. szabály), és amit nem
-      // kérdeztünk, arról a társ szava nem tanulság (3. szabály).
-      const kerdeztuk = new Set(Array.isArray(sajatKerelem) ? sajatKerelem : []);
-      fajlokNala = Array.isArray(ove.van)
-        ? [...new Set(ove.van)].filter((lenyomat) => kerdeztuk.has(lenyomat))
-        : [];
-    }
-
-    // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — 2026-09-26 óta csak UDP-címek -----
-    //
-    // ⭐ MIÉRT ITT, ÉS MIÉRT MINDIG? Csaba felismerése: a tükör és a terjedő címjegyzék
-    // UGYANAZ A DOLOG — a saját külső címed is csak egy cím, ami a közösségben terjed.
-    // Ezért a címcsere a lenyomat-egyezés ELŐTT megy: még egy „nincs újdonság" beszélgetés
-    // is terjessze a címeket, különben a hálózat nem tudna magától bővülni.
-    //
-    // ⚠️ EZEK NEM ESEMÉNYEK, ÉS SOHA NEM IS LESZNEK AZOK. A cím nem igazság, hanem
-    // múlandó körülmény: két hét múlva már másé. Egy aláírt esemény örökre megmaradna —
-    // ezért a címek csak a vonalon utaznak, és a hívó dönti el, mit kezd velük.
-    // Bizalom nem jár velük (3. szabály): ha valaki hazudik, legfeljebb nem jön össze
-    // egy kapcsolat.
-    //
-    // ⛔ 2026-09-26-IG ITT MENT A TCP-CÍMJEGYZÉK IS (`cimek` mező, a figyelő saját címével —
-    // D39). A D69/2 óta nincs TCP a készülékek között: a címek terjesztése a friss
-    // UDP-jegyzéké (`udp` mező, lent). *Egy régi társ `cimek`-et is küldhet — nem olvassuk.*
-    if (kor === 1) {
-      // ===== ⭐⭐ ÉS A FRISS UDP-CÍMEK, KÜLÖN MEZŐBEN (2026-09-18) =====
-      //
-      // ⛔ MIÉRT KÜLÖN, ÉS MIÉRT NEM A `cimek` KÖZÉ? Mert a router a két szállításnak KÜLÖN
-      // leképezést ad — mérve egy futáson belül: UDP 39471, TCP 63495. Egy listába keverve a
-      // társ TCP-vel hívna egy UDP-portot, vagy fordítva: *két szám ugyanarra a kérdésre.*
-      //
-      // ⭐ ÉS CSAK UDP-CÍM UTAZIK (Csaba, 2026-09-18): az induló címek HELYBEN maradnak (a
-      // `tars` parancs és a helyi felfedezés adja őket). Így nincs szükség jelölő mezőre —
-      // ami a vonalon van, az UDP. *A 6. szabály a kisebb üzenetet kéri.*
-      //
-      // ⭐ A `kor` MÁSODPERCBEN utazik, nem időbélyeg: a fogadó a SAJÁT órájához köti
-      // (`udpCimekBeolvasztasa`). Idegen órában nem kell megbízni.
-      //
-      // ⚠️ VISSZAFELÉ OLVASHATÓ: egy régebbi társ nem küld `udp` mezőt, és nem is várja —
-      // a JSON-üzenetben egy ismeretlen mező ártalmatlan.
-      // ⚠️ LEHET FÜGGVÉNY IS: a figyelő (postaláda) HOSSZAN fut, és a friss címek listája
-      // ablakonként más — egy induláskor átadott tömb néhány perc múlva halott címeket
-      // hirdetne. *A hívó dolga megmondani, mi a friss; ez a réteg csak továbbítja.*
-      const udpForras = typeof beallitas.udpCimek === 'function'
-        ? beallitas.udpCimek() : beallitas.udpCimek;
-      // ⚠️ A saját listánkból is csak ÉRVÉNYES címet küldünk: egy elrontott bejegyzés (a
-      // jegyzék kézzel is szerkeszthető, 4. szabály) ne döntse el a cserét.
-      const udpCimek = (Array.isArray(udpForras) ? udpForras : [])
-        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port));
-
-      // A sajátunk ELÖL: ha a korlátba nem fér bele minden, ez az egy cím az, amit a
-      // másik sehonnan máshonnan nem tudhat meg.
-      // ⭐ A SAJÁT CÍM MINDIG ELÖL ÉS MINDIG MEGY, a többiekből legfeljebb három.
-      // ⚠️ A UDP-jegyzék NÉVTELEN (nem mondja meg, melyik cím kié), ezért a sajátunkat a
-      // hívó adja meg külön — ő az egyetlen, aki tudja, melyik az.
-      // ⚠️ LEHET FÜGGVÉNY IS, ugyanabból az okból, mint a jegyzék: a postaláda hosszan fut,
-      // és a saját külső címünk közben változhat (új rés, új leképezés).
-      const sajatUdp = typeof beallitas.sajatUdpCim === 'function'
-        ? beallitas.sajatUdpCim() : (beallitas.sajatUdpCim ?? null);
-      const idegenUdp = udpCimek.filter((c) => !(sajatUdp
-        && c.hoszt === sajatUdp.hoszt && c.port === sajatUdp.port));
-      // ⭐⭐⭐ A TÁBLA-KULCS IS ITT UTAZIK (2026-09-20): ez a KÖTÉS azonosítója és a
-      // rekeszünk neve a hirdetőtáblán. ⛔ **Nem az azonosságunk** (D6) — külön kulcs,
-      // hogy a táblát figyelő ne köthesse a címeinket a személyünkhöz.
-      // ⚠️ A NYILVÁNOS fele megy, a titkos soha; a társankénti közös titkot mindkét fél a
-      // sajátjából SZÁMÍTJA (`tablaKulcs.js`). ~90 bájt körönként — épp az a hely, amit a
-      // cím-korlát 10 → 3 felszabadított.
-      const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
-        ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
-
-      // ⭐ ÉS NÉHÁNY MEGISMERT DHT-GÉP (Csaba döntése, 2026-09-20): így egy friss telepítés
-      // az első buli után független a közismert belépőktől. ~20 bájt darabja, három megy.
-      const dhtForras = typeof beallitas.dhtGepek === 'function'
-        ? beallitas.dhtGepek() : beallitas.dhtGepek;
-      const dhtGepek = Array.isArray(dhtForras) ? dhtForras : [];
-
-      kuld({
-        uzenet: 'CIMEK',
-        ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
-        ...(dhtGepek.length ? { dht: dhtGepek } : {}),
-        udp: [
-          ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
-          ...idegenUdp.slice(0, IDEGEN_CIM_KORLAT)
-        ]
-      });
-      const ove = await varj('CIMEK');
-      // ⚠️ AZ ALAKJÁT ITT NEM ELLENŐRIZZÜK, csak továbbadjuk: a `vonal.js` semmit nem tud
-      // a tábláról (1. szabály). Az ellenőrzés a hívónál van (`ervenyesTablaKulcs`), és
-      // attól, hogy valaki bemond egy kulcsot, semmit nem hiszünk el neki (3. szabály).
-      kapottTablaKulcs = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
-      kapottDhtGepek = Array.isArray(ove.dht)
-        ? ove.dht.filter((g) => typeof g === 'string').slice(0, IDEGEN_CIM_KORLAT) : [];
-      kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
-        .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
-          && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
-        .slice(0, CIM_KORLAT);
-    }
-
-    if (oveLenyomat.lenyomat === sajatLenyomat) {
-      // Ugyanazt tudjuk. Nincs mit kérni és nincs mit adni — a részletes állást el sem
-      // küldjük. Mindkét fél ugyanezt számolja ki, tehát egyszerre lépnek ki.
-      console.log('parbeszed - egyező lenyomat, nincs mit cserélni', { kor });
-      break;
-    }
-
-    // ----- 1. MINDKETTŐ ELMONDJA, MIT TUD (részletesen) -----
-    reszletesAllasok++;
-    kuld({ uzenet: 'ALLAS', allas: sajatAllas });
-    const ove = await varj('ALLAS');
-
-    // ----- 2. MINDKETTŐ KÉR -----
-    kuld({ uzenet: 'KEREK', kerelem: hianyokSzamitasa(sajatAllas, ove.allas) });
-    const kerese = await varj('KEREK');
-
-    // ----- 3. MINDKETTŐ AD -----
-    const kuldendok = await valaszOsszeallitasa(tar, kerese.kerelem);
-    for (const esemeny of kuldendok) kuld({ uzenet: 'ESEMENY', esemeny });
-    kuld({ uzenet: 'KESZ' });
-    kuldott += kuldendok.length;
-
-    // ----- 4. AMIT Ő KÜLDÖTT -----
-    const erkezett = [];
-    for (;;) {
-      const uzenet = await sor.kovetkezo();
-      if (uzenet.uzenet === 'KESZ') break;
-      if (uzenet.uzenet !== 'ESEMENY') {
-        throw new Error('Váratlan üzenet a csere közben: ' + uzenet.uzenet);
-      }
-      erkezett.push(uzenet.esemeny);
-    }
-
-    // ----- 5. BEOLVASZTÁS: ugyanaz a kapu, mint a saját műveleteinknél -----
-    // ⚠️ A koino-szűrés MÁSODIK rétege: fent az ŐSZINTE tévedést fogtuk meg (a másik
-    // bemondta, melyik koinóé), itt a HAZUGOT — aki a mi koinónkat mondta, de mást küld.
-    const eredmeny = await beolvasztas(tar, erkezett, koino);
-    uj += eredmeny.uj;
-
-    // ----- 6. CSENDES KÖR? -----
-    //
-    // ⚠️ EZ MEGMARAD A LENYOMAT MELLETT IS, ÉS NEM FÖLÖSLEGES. A lenyomat akkor állít
-    // meg, ha a két fél EGYETÉRT. Ez a feltétel akkor is megáll, ha nem: ha a másik fél
-    // hibás vagy rosszindulatú, és nem adja meg, amit kérünk, a lenyomat sosem egyezne —
-    // a csendes kör viszont kilép. A kettő együtt zárja ki a végtelen ciklust.
-    if (kuldendok.length === 0 && erkezett.length === 0) break;
+  // ===== ⭐⭐ A FÁJL-SZELET KISZOLGÁLÁSA (5.7 / B) — saját kapcsolat, a nyitás helyett =====
+  //
+  // ⏸️ 2026-09-26 ÓTA ÉLESBEN SENKI NEM KEZD ÍGY (a TCP-s több forrás kikerült, D69/2); az ág
+  // viszont szállítás-független, és a UDP-s több forrás erre épülhet. A `csereProba.js` méri.
+  if (elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
+    await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
+    console.log('parbeszed - VÉGE (fájl-átvitel)');
+    return { ...eredmeny(), fajlokNala: [] };
   }
 
-  console.log('parbeszed - VÉGE', {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom,
-    kapottUdpCimek: kapottUdpCimek.length,
-    fajlokNala: fajlokNala.length
-  });
-  return {
-    korok, uj, kuldott, reszletesAllasok, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
-    kapottTablaKulcs, kapottDhtGepek,
-    fajlokNala
+  // ===== ⭐ A BÖNGÉSZŐ-LEKÉRÉS: „ADD IDE EZT AZ EGY ENTITÁST" — a nyitás helyett =====
+  //
+  // ⚠️ A bizalom itt sem más: amit így kapunk, ugyanazon az `esemenyMentese` kapun megy be
+  // (3. szabály). A kérés nem ad jogot semmire.
+  if (elsoUzenet.uzenet === 'SZELETKEREK') {
+    const kertek = typeof elsoUzenet.entitas === 'string'
+      ? await entitasEsemenyei(tar, koino, elsoUzenet.entitas)
+      : [];
+    // Eseményenként külön üzenet — így egy nagy szelet sem ütközik a sorhossz-korlátba.
+    for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
+    kuld({ uzenet: 'KESZ' });
+    kuldott = kertek.length;
+    console.log('parbeszed - VÉGE (szelet kiszolgálva)', {
+      entitas: elsoUzenet.entitas, esemeny: kertek.length
+    });
+    return { ...eredmeny(), szeletKiszolgalva: elsoUzenet.entitas };
+  }
+
+  // ⛔ TISZTA TÖRÉS (D72): a régi program `LENYOMAT`-tal nyit.
+  if (elsoUzenet.uzenet === 'LENYOMAT') {
+    const hiba = new Error('A társ a RÉGI csere-protokollt beszéli (LENYOMAT) — a programját '
+      + 'frissíteni kell; a szeletenkénti cserét (2026-09-27) nem érti.');
+    hiba.kod = 'REGI-PROTOKOLL';
+    throw hiba;
+  }
+  if (elsoUzenet.uzenet !== 'NYITAS') {
+    throw new Error('Várt üzenet: NYITAS, érkezett: ' + elsoUzenet.uzenet);
+  }
+  const oveNyitas = elsoUzenet;
+  if (oveNyitas.latlak?.cim) kivulrolIgyLatszom = oveNyitas.latlak;
+
+  // ----- MÁSIK KOINO? Akkor nincs miről beszélni -----
+  //
+  // ⚠️ MÉRVE, 2026-08-29: e nélkül két KÜLÖNBÖZŐ koino készüléke is „cserélt" — az eseményeik
+  // átkerültek egymás mappájába. Mindkét fél ugyanitt ismeri fel, tehát egyszerre lépnek ki.
+  if (oveNyitas.koino !== koino) {
+    console.warn('parbeszed - a másik fél MÁSIK koinóé', { sajat: koino, ove: oveNyitas.koino });
+    masKoino = oveNyitas.koino ?? '(ismeretlen)';
+    return eredmeny();
+  }
+  if (typeof oveNyitas.lenyomat !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(oveNyitas.lenyomat)) {
+    throw new Error('A társ nyitása hibás (nincs érvényes nyitó lenyomat)');
+  }
+
+  // ----- ⭐⭐ A FÁJL-KÉRELEM MEGVÁLASZOLÁSA (5.7) -----
+  //
+  // ⛔ CSAK AMIT KÉRDEZTEK: a teljes fájl-listám elárulná, **mit néztem meg** (D6).
+  // ⛔⛔ SZIMMETRIKUS: egy protokoll-lépés feltétele csak olyan dolog lehet, amit MINDKÉT fél
+  // ugyanúgy lát — itt a két képesség-jelzés együtt (mérve, 2026-09-13).
+  if (oveNyitas.fajlCsere && !!beallitas.fajlValasz) {
+    try {
+      const van = await beallitas.fajlValasz(oveNyitas.fajlKerek ?? []);
+      kuld({ uzenet: 'FAJLOK', van });
+    } catch (hiba) {
+      // ⚠️ A fájl-réteg hibája NE döntse el az esemény-cserét: a két réteg külön él (D3).
+      console.warn('parbeszed - a fájl-válasz nem sikerült', { hiba: hiba.message });
+      kuld({ uzenet: 'FAJLOK', van: [] });
+    }
+    const ove = await varj('FAJLOK');
+    // ⛔⛔ CSAK ARRÓL, AMIT KÉRDEZTÜNK (2026-09-27, átnézés): a metszet a saját kérelmünkkel —
+    // ami korlátos (`KERELEM_KORLAT`) — a választ is korlátossá teszi (9. szabály).
+    const kerdeztuk = new Set(Array.isArray(sajatKerelem) ? sajatKerelem : []);
+    fajlokNala = Array.isArray(ove.van)
+      ? [...new Set(ove.van)].filter((lenyomat) => kerdeztuk.has(lenyomat))
+      : [];
+  }
+
+  // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — csak UDP-címek -----
+  //
+  // ⭐ Még egy „nincs újdonság" beszélgetés is terjessze a címeket, különben a hálózat nem tudna
+  // magától bővülni. ⚠️ EZEK NEM ESEMÉNYEK: a cím múlandó körülmény, csak a vonalon utazik.
+  {
+    // ⚠️ LEHET FÜGGVÉNY IS: a figyelő (postaláda) hosszan fut, és a friss címek listája
+    // ablakonként más.
+    const udpForras = typeof beallitas.udpCimek === 'function'
+      ? beallitas.udpCimek() : beallitas.udpCimek;
+    const udpCimek = (Array.isArray(udpForras) ? udpForras : [])
+      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port));
+    // ⭐ A SAJÁT CÍM MINDIG ELÖL ÉS MINDIG MEGY, a többiekből legfeljebb három.
+    const sajatUdp = typeof beallitas.sajatUdpCim === 'function'
+      ? beallitas.sajatUdpCim() : (beallitas.sajatUdpCim ?? null);
+    const idegenUdp = udpCimek.filter((c) => !(sajatUdp
+      && c.hoszt === sajatUdp.hoszt && c.port === sajatUdp.port));
+    // ⭐⭐⭐ A TÁBLA-KULCS IS ITT UTAZIK (2026-09-20): a KÖTÉS azonosítója — ⛔ nem az azonosságunk.
+    const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
+      ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
+    // ⭐ ÉS NÉHÁNY MEGISMERT DHT-GÉP (Csaba döntése, 2026-09-20).
+    const dhtForras = typeof beallitas.dhtGepek === 'function'
+      ? beallitas.dhtGepek() : beallitas.dhtGepek;
+    const dhtGepek = Array.isArray(dhtForras) ? dhtForras : [];
+
+    kuld({
+      uzenet: 'CIMEK',
+      ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
+      ...(dhtGepek.length ? { dht: dhtGepek } : {}),
+      udp: [
+        ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
+        ...idegenUdp.slice(0, IDEGEN_CIM_KORLAT)
+      ]
+    });
+    const ove = await varj('CIMEK');
+    // ⚠️ Az alakját itt nem ellenőrizzük, csak továbbadjuk (1. szabály); a hívó ellenőriz.
+    kapottTablaKulcs = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
+    kapottDhtGepek = Array.isArray(ove.dht)
+      ? ove.dht.filter((g) => typeof g === 'string').slice(0, IDEGEN_CIM_KORLAT) : [];
+    kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
+      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
+        && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
+      .slice(0, CIM_KORLAT);
+  }
+
+  if (oveNyitas.lenyomat === sajatLenyomat) {
+    // ⭐ Ugyanazt tudjuk minden közös szeletről — a hétköznapi eset, egyetlen nyitás-csere.
+    console.log('parbeszed - VÉGE (egyező nyitó lenyomat, nincs mit egyeztetni)');
+    return eredmeny();
+  }
+
+  // ⭐ KI NYIT? A nagyobb lenyomatú; a kisebb felel (mindkettő ugyanazt látja).
+  const enNyitok = sajatLenyomat > oveNyitas.lenyomat;
+
+  // ===== 1. AZ ELSŐ SZINT — melyik szelet tér el? =====
+  const parLelet = { kellNekem: [], kellNeki: [] };
+  {
+    // A felelő a nyitó lenyomatával kezd (azt a nyitásban már megkapta).
+    let bejovo = [[null, 'L', oveNyitas.lenyomat]];
+    let enJovok = !enNyitok;
+    for (let lepes = 0; ; lepes++) {
+      if (lepes > LEPES_KORLAT) throw new Error('Az első szint nem ért véget ' + LEPES_KORLAT + ' lépésben');
+      if (enJovok) {
+        const { valasz, kellNekem, kellNeki } = await egyeztetesLepese(parok, bejovo);
+        parLelet.kellNekem.push(...kellNekem);
+        parLelet.kellNeki.push(...kellNeki);
+        kuld({ uzenet: 'SZELETEK', lepes: valasz });
+        egyeztetoUzenetek++;
+        if (valasz === null) break;
+      } else {
+        const u = await varj('SZELETEK');
+        if (u.lepes === null) break;
+        bejovo = u.lepes;
+      }
+      enJovok = !enJovok;
+    }
+  }
+
+  // ===== 2. AZ ELTÉRŐ SZELETEK — amit én tudok meg, azt a másik is megtudja =====
+  const sajatLelet = elteresekSzeletei(parLelet.kellNekem, parLelet.kellNeki);
+  kuld({ uzenet: 'ELTERO', ...sajatLelet });
+  const oveLelet = await varj('ELTERO');
+  const kulcsLista = (lista) => {
+    if (!Array.isArray(lista) || lista.length > KULCS_KORLAT || !lista.every(ervenyesKulcs)) {
+      throw new Error('Hibás ELTERO üzenet (a szelet-kulcsok listája)');
+    }
+    return lista;
   };
+  // ⭐ Az ő „nálam"-ja nálam „nálad", és fordítva.
+  const mindketten = new Set([...sajatLelet.mindketten, ...kulcsLista(oveLelet.mindketten)]);
+  const csakNalam = new Set([...sajatLelet.nalam, ...kulcsLista(oveLelet.nalad)]);
+  const csakNala = new Set([...sajatLelet.nalad, ...kulcsLista(oveLelet.nalam)]);
+
+  // ===== 3. A RÉSZVÉTEL — ki melyik eltérő szeletből marad ki =====
+  const mind = new Set([...mindketten, ...csakNalam, ...csakNala]);
+  const kimaradok = [...mind].filter((k) => !reszvesz(k)).sort();
+  kuld({ uzenet: 'RESZVETEL', kimarad: kimaradok });
+  const oveKimarad = new Set(kulcsLista((await varj('RESZVETEL')).kimarad));
+  const enKimaradok = new Set(kimaradok);
+  const egyeztetendo = [...mindketten].filter((k) => !enKimaradok.has(k) && !oveKimarad.has(k)).sort();
+  const kuldendoSzeletek = [...csakNalam].filter((k) => !oveKimarad.has(k)).sort();
+  const vartSzeletek = [...csakNala].filter((k) => !enKimaradok.has(k)).sort();
+  elteroSzeletek = egyeztetendo.length + kuldendoSzeletek.length + vartSzeletek.length;
+
+  // ===== 4. A MÁSODIK SZINT — a közösen eltérő szeletek eseményei =====
+  const halmazok = new Map();
+  for (const k of egyeztetendo) halmazok.set(k, await egyeztetesiHalmaz(tar, koino, k));
+  const kellNekem = new Set();
+  const kellNeki = new Set();
+  {
+    const lepesKor = async (lepesek) => {
+      const ki = {};
+      for (const [k, uzenet] of Object.entries(lepesek)) {
+        if (!halmazok.has(k)) throw new Error('Hibás TARTOMANYOK üzenet: nem egyeztetett szelet');
+        const { valasz, kellNekem: kn, kellNeki: kni } = await egyeztetesLepese(halmazok.get(k), uzenet);
+        for (const x of kn) kellNekem.add(x);
+        for (const x of kni) kellNeki.add(x);
+        if (valasz) ki[k] = valasz;
+      }
+      return ki;
+    };
+    let kesz = false;
+    if (enNyitok) {
+      const nyitok = {};
+      for (const k of egyeztetendo) nyitok[k] = await egyeztetesNyitasa(halmazok.get(k));
+      kuld({ uzenet: 'TARTOMANYOK', lepesek: nyitok });
+      egyeztetoUzenetek++;
+      kesz = egyeztetendo.length === 0;
+    }
+    for (let lepes = 0; !kesz; lepes++) {
+      if (lepes > LEPES_KORLAT) throw new Error('A második szint nem ért véget ' + LEPES_KORLAT + ' lépésben');
+      const be = await varj('TARTOMANYOK');
+      const lepesek = be.lepesek && typeof be.lepesek === 'object' ? be.lepesek : {};
+      if (!Object.keys(lepesek).length) break;
+      const ki = await lepesKor(lepesek);
+      kuld({ uzenet: 'TARTOMANYOK', lepesek: ki });
+      egyeztetoUzenetek++;
+      if (!Object.keys(ki).length) kesz = true;
+    }
+  }
+
+  // ===== 5. AZ ÁTADÁS =====
+  //
+  // ⭐ Amit a MÁSIKNAK hiányzónak találtam, azt küldöm; a csak nálam lévő szeletet egészben
+  // (a születéseivel); amit MAGAMNAK hiányzónak találtam, azt kérem.
+  const kuldesre = new Map();
+  for (const k of kuldendoSzeletek) {
+    for (const e of await egyeztetettEsemenyek(tar, koino, k)) kuldesre.set(e.azonosito, e);
+  }
+  for (const a of kellNeki) {
+    const e = await tar.esemeny(a);
+    if (e) kuldesre.set(a, e);
+  }
+  for (const e of kuldesre.values()) kuld({ uzenet: 'ESEMENY', esemeny: e });
+  kuld({ uzenet: 'KEREK', azonositok: [...kellNekem].sort() });
+  kuldott += kuldesre.size;
+
+  const erkezett = [];
+  let oveKerese = null;
+  for (;;) {
+    const uzenet = await sor.kovetkezo();
+    if (uzenet.uzenet === 'KEREK') { oveKerese = uzenet; break; }
+    if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
+    erkezett.push(uzenet.esemeny);
+  }
+
+  // ⛔ CSAK A KÖZÖSEN EGYEZTETETT SZELETEKBŐL ADUNK — amit ő kér, annak ott kell lennie.
+  const adhatok = new Set();
+  for (const h of halmazok.values()) for (const a of h) adhatok.add(a);
+  const kertek = Array.isArray(oveKerese.azonositok) ? oveKerese.azonositok : [];
+  if (kertek.length > adhatok.size) throw new Error('Hibás KEREK üzenet: több kérés, mint amit egyeztettünk');
+  let valaszolt = 0;
+  for (const a of kertek) {
+    if (typeof a !== 'string' || !adhatok.has(a)) continue;
+    const e = await tar.esemeny(a);
+    if (e) { kuld({ uzenet: 'ESEMENY', esemeny: e }); valaszolt++; }
+  }
+  kuld({ uzenet: 'KESZ' });
+  kuldott += valaszolt;
+
+  for (;;) {
+    const uzenet = await sor.kovetkezo();
+    if (uzenet.uzenet === 'KESZ') break;
+    if (uzenet.uzenet !== 'ESEMENY') throw new Error('Váratlan üzenet az átadás közben: ' + uzenet.uzenet);
+    erkezett.push(uzenet.esemeny);
+  }
+
+  // ----- A BEOLVASZTÁS: ugyanaz a kapu, mint a saját műveleteinknél -----
+  // ⛔ Csak a közös vagy általunk várt szeletekből vesszük át (a (b)-ben ez tartja távol a mások
+  // érdeklődését a tárunktól); a koino-szűrés és az ellenőrzés a `beolvasztas` dolga.
+  const megengedett = new Set([...egyeztetendo, ...vartSzeletek]);
+  const atveheto = erkezett.filter((e) => e && typeof e === 'object' && szeletbeTartozik(e, megengedett));
+  const beolvasztva = await beolvasztas(tar, atveheto, koino);
+  uj += beolvasztva.uj;
+
+  console.log('parbeszed - VÉGE', {
+    uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length
+  });
+  return eredmeny();
 }
 
 // ⚠️ ITT ÁLLT 2026-09-26-IG A `figyeloIndulasa` ÉS A `csereVonalon` — a TCP-postaláda és a

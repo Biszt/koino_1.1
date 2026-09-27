@@ -503,6 +503,44 @@ proba('⭐ A SZELET LENYOMATA: sorrend-független, testet nem kér, és a szelet
     && await kepbol.szeletLenyomata('nincs-ilyen-szelet') !== g2Elotte;
 });
 
+proba('⭐⭐ A SZÜLETÉSEK A SZÜLŐ ALATT (C 7.) — a képből is, és a régi alakú képet eldobja', async () => {
+  const hely = join(MAPPA, 'szuletes-' + (++mutatoMappaSzam));
+  const t = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const anna = await ujEember(KOINO);
+  const szulo = await anna.tesz('GondolatLetrehozas', { cim: 'Szülő', meret: 10 });
+  const gyerek1 = await anna.tesz('GondolatLetrehozas', { cim: 'Gyerek 1', meret: 10, szulo: szulo.azonosito });
+  const gyerek2 = await anna.tesz('GondolatLetrehozas', { cim: 'Gyerek 2', meret: 10, szulo: szulo.azonosito });
+  const unoka = await anna.tesz('GondolatLetrehozas', { cim: 'Unoka', meret: 10, szulo: gyerek1.azonosito });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: szulo.azonosito, pont: 3 });
+  for (const e of [szulo, gyerek1, gyerek2, unoka, pont]) await esemenyMentese(t, e);
+
+  const valaszok = async (tar) => [
+    (await tar.szuletesek(szulo.azonosito)).map((e) => e.azonosito).sort().join(),
+    (await tar.szuletesek(gyerek1.azonosito)).map((e) => e.azonosito).join(),
+    (await tar.szuletesek('')).map((e) => e.azonosito).join(),
+    (await tar.szuletesek(gyerek2.azonosito)).length
+  ].join('|');
+  const vart = [[gyerek1.azonosito, gyerek2.azonosito].sort().join(), unoka.azonosito,
+    szulo.azonosito, 0].join('|');
+
+  const kozvetlen = await valaszok(t);                        // a hozzáfűzésből
+  await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });     // a fájlból → megírja a képet
+  const kepbol = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const kepbolValasz = await valaszok(kepbol);
+
+  // ⛔ Egy 1. változatú (szülő nélküli) kép: a tár nem hiheti el — a fájlból épít újat.
+  const kepFajl = join(hely, KOINO, 'mutato.json');
+  const kep = JSON.parse(await readFile(kepFajl, 'utf8'));
+  const { writeFile: ir } = await import('node:fs/promises');
+  await ir(kepFajl, JSON.stringify({ ...kep, v: 1, e: kep.e.map((x) => x.slice(0, 6)) }));
+  const regiKeppel = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 100 });
+
+  return kozvetlen === vart && kepbolValasz === vart
+    && kepbol.mutatoAllapota().pillanatkepbol === true
+    && regiKeppel.mutatoAllapota().pillanatkepbol === false
+    && await valaszok(regiKeppel) === vart;
+});
+
 // A próbák után takarítunk: a mappa eldobható
 export async function takaritas() {
   await rm(MAPPA, { recursive: true, force: true });

@@ -4359,3 +4359,27 @@ hétköznapi esetben megspórolhatja: ha tudom, mely közös szeleteink változt
 csak azokat kell egyeztetni. (3) ⚠️ Egy legfeljebb 32 azonosítós tartományban az eltérő fél a TELJES
 listáját küldi — ezért a legnagyobb szelet (28, illetve 60 esemény) egy eltérése is ~1,2 KB. A
 lista-küszöb hangolható, és nem állapot-befolyásoló.
+
+## 51. ⭐⭐⭐ A SZELETENKÉNTI CSERE A VONALON — egy eltérés 100 000 közt 9,8 KB (2026-09-27, gépen belüli UDP-rés)
+
+*A C 7–8. pontja után: a valódi párbeszéd (`vonal.js` → `parbeszed`, a `csereUdpResen`-en át) két
+tár között, a gépen belüli UDP-résen — a keretekkel, a nyugtákkal, a fájl-körrel és a
+címjegyzékkel együtt. `csereMeres.js`, a 48. mérés generátorával; a B tárból egy esemény hiányzik.*
+
+```
+                     |  10 000 esemény                    |  100 000 esemény
+1 eltérés            |  5,8 KB · 565 ms · 7 egyeztető üz. |  9,8 KB · 3 585 ms · 8 egyeztető üz.
+nincs újdonság       |  484 B · 32 ms · 0 egyeztető üz.   |  484 B · 253 ms · 0 egyeztető üz.
+(a régi csere, 48.)  |  17 KB (csak a logika)             |  160,2 KB (csak a logika)
+```
+
+⭐ **A lelet:** egy eltérés a vonalon, minden kerettel együtt **9,8 KB** — a régi csere a keret
+NÉLKÜL 160,2 KB volt. A „nincs újdonság" kör 484 B, és egyetlen egyeztető üzenet nélkül zárul (a
+két nyitó lenyomat egyezik). 100 000-nél **két** szelet tér el: a hiányzó esemény saját szelete,
+és — mert születés — a szülőjéé is (a gyökér), ahol a születése elhangzik (a C 7. pontja).
+
+⚠️ **Az idő:** az első csere 100 000-nél 3,6 s, mert egy folyamat ELŐSZÖR számolja ki mind a 28 825
+szelet halmazát (minden test betöltése, az alaki szűrés, a lenyomat); a második csere már a
+gyorsítótárból megy (253 ms). Egy hosszan futó őrjáratnál ez egyszeri; a kézi `csere` parancs
+minden indításkor megfizeti. ⭐ A (b) után (a 9. pont) a halmaz a saját érdeklődés — ez az ár is
+azzal lesz arányos.

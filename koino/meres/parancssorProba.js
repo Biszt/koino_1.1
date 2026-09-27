@@ -397,7 +397,10 @@ proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint 
     // ⛔ Egy elrontott kép: a program a fájlból számol, és új, ép képet ír a helyére.
     await writeFile(kep, '{ez nem pillanatkép');
     const negyedik = ujjlenyomatai(await fut(egyik, 'ujjlenyomat'));
-    const ujraIrva = JSON.parse(await readFile(kep, 'utf8')).v === 1;
+    // ⚠️ Nem egy rögzített változat-számot nézünk (a kép alakja 2026-09-27-én már egyszer
+    // változott, a C 7. pontjával — és ez a próba ezen bukott el), hanem hogy ÉP, teljes kép lett.
+    const ujKep = JSON.parse(await readFile(kep, 'utf8'));
+    const ujraIrva = Number.isInteger(ujKep.v) && Array.isArray(ujKep.e) && ujKep.e.length > 1000;
 
     // ⭐ A MÉRCE: egy másik készülék, ugyanazokkal az eseményekkel, pillanatkép nélkül számolva.
     // ⚠️ A második `behoz` megnyitása ott is képet írna — a mérce előtt eldobjuk.
@@ -406,9 +409,20 @@ proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint 
     await rm(join(masik, 'sajat', 'mutato.json'), { force: true });
     const masikLatja = ujjlenyomatai(await fut(masik, 'ujjlenyomat'));
 
-    return kepMegvan && elso.length === 87 && elso === masodik
-      && harmadik !== masodik && harmadik === negyedik && harmadik === masikLatja
-      && kepNemIrodottUjra && ujraIrva;
+    // ⭐ A BUKÁS MEGNEVEZI MAGÁT: melyik feltétel nem teljesült (egyszer a teljes sorban bukott,
+    // külön futtatva nem — ezért kell tudni, melyik).
+    const feltetelek = {
+      kepMegvan, ketUjjlenyomat: elso.length === 87, masodikUgyanaz: elso === masodik,
+      aKepUtaniLatszik: harmadik !== masodik, rontottKepUgyanaz: harmadik === negyedik,
+      masikGepUgyanaz: harmadik === masikLatja, kepNemIrodottUjra, ujraIrva
+    };
+    const nemTeljesult = Object.entries(feltetelek).filter(([, v]) => !v).map(([k]) => k);
+    if (nemTeljesult.length) {
+      throw new Error('nem teljesült: ' + nemTeljesult.join(', ') + ' · első: ' + elso.slice(0, 20)
+        + '… második: ' + masodik.slice(0, 20) + '… harmadik: ' + harmadik.slice(0, 20)
+        + '… negyedik: ' + negyedik.slice(0, 20) + '… másik: ' + masikLatja.slice(0, 20) + '…');
+    }
+    return true;
   } finally {
     await rm(egyik, { recursive: true, force: true });
     await rm(masik, { recursive: true, force: true });

@@ -20,7 +20,13 @@
 // ESEMÉNY A HÁLÓZATRÓL SEM KERÜL A TÁRBA, és az elágazás mentéskor lelepleződik. A
 // hálózat nem kap külön, engedékenyebb kaput.
 //
-// Használják: a csere-vonal (TCP) és a csereProba.js.
+// ⚠️ 2026-09-27 ÓTA (a C 7–8. pontja) A PÁRBESZÉD NEM EZT HASZNÁLJA: a csere szeletenként, tartomány-
+// egyeztetéssel megy (`szeletEgyeztetes.js`, `tartomany.js`). Innen a `beolvasztas` maradt éles (a
+// kapu a hálózatról és a kézi útról jött eseményeknek); az ÁLLÁS-logika a próbák mércéje
+// (`allasokEgyeznek`: ugyanazt tudja-e a két tár, szerzőnként) és a régi menet próbái. ⏸️ Ha a
+// próbák más mércére állnak, az ÁLLÁS-logika kivehető.
+//
+// Használják: a csere-vonal (`beolvasztas`), a kézi út (`fajlCsere.js`) és a csereProba.js.
 
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
 import { alakiHiba } from '../esemeny/esemeny.js';

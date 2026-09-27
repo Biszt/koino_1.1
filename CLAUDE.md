@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-09-27 hajnal) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **757 önpróba zöld** (29 próba-fájl) · 193 fájl / 3364,6 KB · 0 npm-csomag · a
+**Az állapot:** **762 önpróba zöld** (29 próba-fájl) · 195 fájl / 3387,7 KB · 0 npm-csomag · a
 munkakönyvtár tiszta. ⚠️ **A telefon régi kódon fut** (a 09-26-i `c6b74d8` körül) — a D72 óta a
 gondolat szövege külön darab, amit a régi program *„(ismeretlen alakú szöveg)"*-ként mutat: a
 következő terepi mérés előtt frissíteni kell (a parancs lent, *„Ami nyitva maradt"*).
@@ -96,13 +96,31 @@ lenyomattal kiszámolni — Wagner-féle általánosított születésnap). A sza
 ✅ **6. pont KÉSZ — a tartomány-egyeztetés logikája** (`js/csere/tartomany.js`, hálózat nélkül): 7
 próba, 8 rontás-próba. ⭐ **Mérve (50.):** egy eltérés 100 000 esemény közt **4,0 KB** a mai
 160,2 helyett (tízszeres koinóra 3,0 → 4,0 KB: logaritmikus); két szinten (szelet-jelek, aztán az
-eltérő szelet) 4,7 KB; „nincs eltérés" **58 B**. ⚠️ **A csere még nem hívja.**
+eltérő szelet) 4,7 KB; „nincs eltérés" **58 B**. ⭐ A 8. pont óta a párbeszéd ezen fut.
 
-⏭️ **A következő pontok:** **7.** a gyerek-bejelentés · **8.** a csere új üzenetei (`vonal.js`: az
-érdeklődési halmaz, a közös szeletek, a tartományok, a kérés; a társankénti emlékezet a kötés-jegyzék
-mellé; itt kap otthont a D71 (iii) V2-je) — ⚠️ ez köti be a 6. pontot, és a régi protokollal **tiszta
-törés** (D72) · **9.** az érdeklődés szabálya (b), a hétköznapi út leválik a `betolt()`-ről ·
-**10.** a D63 lánc-gyökere.
+✅ **7–8. pont KÉSZ — A CSERE SZELETENKÉNT** (a menet: a szeletelési terv 4.5):
+- **7. a gyerek-bejelentés:** a mutató a születés szülőjét is tartja (a kép 2. változata), a tár
+  `szuletesek(szulo)`-t felel; egy szelet egyeztetett halmaza = az érvényes eseményei + a közvetlen
+  gyerekei születése (a legfelső szintűeké a gyökérben). ⚠️ Az ÁTHELYEZÉS az új szülőnél még nem
+  hangzik el (⏸️).
+- **8. az új párbeszéd** (`vonal.js`, `csere/szeletEgyeztetes.js`): NYITAS → (FAJLOK, CIMEK) →
+  SZELETEK (az első szint a „szelet:lenyomat” párokon) → ELTERO → RESZVETEL → TARTOMANYOK (a
+  második szint) → ESEMENY/KEREK/KESZ. A nagyobb nyitó lenyomatú nyit. A részvétel ma (a) — minden;
+  a `reszvesz` beállítás a (b) helye. ⛔ **Tiszta törés:** régi `LENYOMAT`-ra `REGI-PROTOKOLL`
+  hiba — ⚠️ **a telefont frissíteni kell, különben nem tud cserélni.**
+- ⭐ **Mérve (51.):** a vonalon (keretekkel) egy eltérés 100 000 közt **9,8 KB** (10 000-nél 5,8);
+  „nincs újdonság" **484 B**, egyeztetés nélkül. ⚠️ Az első csere egy folyamatban 100 000-nél 3,6 s
+  (mind a 28 825 szelet halmaza először számolódik), utána gyorsítótárból.
+- A TUDÁS-ujjlenyomat (`ujjlenyomat` parancs) most a csere nyitó lenyomata. A `csere.js` ÁLLÁS-
+  logikáját a párbeszéd már nem használja (a próbák mércéje maradt — ⏸️ kivehető).
+- Próbák: 7 új (tár: a születések; csere: régi protokoll, gyerek-bejelentés ×2, szeleten belül); a
+  rontás-próbák közül a fogadó szűrőjét egy „hamis küldő" rontással együtt mértük (egyedül nem
+  látszik, mert a küldő is véd).
+
+⏭️ **A következő pontok:** **9.** az érdeklődés szabálya (b) — a `reszvesz` feltöltése (tudatpont,
+megnézett, saját), a hétköznapi út leválik a `betolt()`-ről · **10.** a D63 lánc-gyökere. ⏸️ És a
+társankénti emlékezet (a D71 (iii) V2-je): hogy a (b)-ben a nem közös szeletek ne legyenek minden
+körben „eltérők".
 
 ⚠️ **Nyitva a C-ben:** a fájl-igény is a szelethez kötődjön (az átnézés lelete: a `fajlIgenyek`
 minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas) — a 9. ponttal együtt.
@@ -233,7 +251,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **193 fájl, 3364,6 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **195 fájl, 3387,7 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -360,12 +378,13 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 757 önpróba
+node koino/meres/mind.js         # a 762 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/szeletTarMeres.js [darab]  # ⭐ A TÁR ALAKJA (49.): szelet-fájlok vs egy adatfájl + mutató,
                                  # és a valódi tár megnyitása (D73) — alapból 100 000 esemény, ~6 perc
 node koino/meres/tartomanyMeres.js [darab]  # ⭐ A TARTOMÁNY-EGYEZTETÉS ÁRA (50.): 1 eltérés 100 000 közt → bájt
                                  # (egy halmazként és két szinten: szeletek, aztán az eltérő szelet)
+node koino/meres/csereMeres.js [darab]  # ⭐ A SZELETENKÉNTI CSERE A VONALON (51.): 1 eltérés és „nincs újdonság" bájtban
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
 node koino/meres/verzioMeres.js ir|olvas  # ⛔ A PROGRAM-VERZIÓ mint az állapot bemenete (15.)
@@ -402,7 +421,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 193 fájl, 3364,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 195 fájl, 3387,7 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -425,7 +444,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 757 próba huszonkilenc fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 762 próba huszonkilenc fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
@@ -461,9 +480,10 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 - `js/allapot/jelzesek.js` — ⭐⭐⭐ **A VALÓDI VÉDELEM: a kontraszt-jelzés** (9/c 4.4). *„Hány olyan embert tanúsítottál, akinek nincs önálló élete a közösségben?"* — a becsületes alapvonal **0,3**, a megvett tanúsítóé több száz; mérve **100% / 9–25%** minden támadó ellen. ⭐ Nem a NAGY SZÁM kell hozzá, hanem a **kontraszt** — ezért a 18 ugyanolyan feltűnő, mint a 293. ⛔ **Ez a fájl SOHA nem ítél és nem dönt:** csak számokat ad, nincs benne „gyanús" mező, és a **döntés-réteg nem importálja** (ellenőrizhető szabály, nem ígéret). A visszavonás emberi út (D46).
 - ⭐⭐ **A VISSZAVONÁS (4.5), és a szép megkülönböztetés benne:** a **felhatalmazás az enyém** — én adtam, én veszem vissza, egyoldalúan („az utolsó nyer", mint a tudatpontnál); a **tanúsítás állítás a múltról**, azt nem lehet visszavonni (D46). ⭐ És Csaba döntése (b): a visszavonás **csak előre hat** — aki elveszíti a megbízást, többet nem tanúsíthat, de a **már kiadott tanúsításai érvényben maradnak** (D47), különben néhány ember összebeszélve becsületes emberek tömegétől venné el a pénztárcát. Ehhez a tanúsítás **bemondja**, mire támaszkodott (D42-minta). ⭐⭐ **És a szigorítás, amit Csaba kérdése hozott ki (D61):** a tanúsítás **lehorgonyoz a saját szeletébe** — elköti, meddig látta a rólam szóló eseményeket. Ha a visszavonás ezen **belülre** esik, a tanúsító **bizonyíthatóan tudott róla**, és a tanúsítás **nem számít** (kemény szabály, mert a saját aláírásából következik). ⚠️ Aki a visszavonás **előtti** pontra horgonyzott, azt **nem büntetjük** — az a normális eset egy P2P hálózaton. ⭐⭐⭐ **És a rést a BULI-ELISMERÉS zárja be (D61):** a `Lattam` esemény aláírja, **meddig látok** a saját szeletemben — és mivel **a saját láncomban van sorrend** (a `sorszam`, amit csak én írhatok), minden KÉSŐBBI eseményem bizonyíthatóan azután keletkezett. ⭐ **Globális óra nélkül.** Így a „szándékosan régi horgony" trükk sem működik: horgony nélkül is elkapjuk azt, aki egyszer már elismerte, hogy látja a visszavonást. ⚠️ Aki SOHA nem ismeri el, hogy lát, az nem szeg szabályt — de **kilóg a ritmusból**, és ezt a jelzés mutatja (`elismeresek`).
 - `js/muveletek.js` — a **tizenhat** művelet; mindegyik: lánc vége → aláírt esemény → mentés. ⭐ A `meghivas`, a `felhatalmazas` és a `tanusitas` **ugyanaz az alak** (`allitokRola`): az esemény a MÁSIK szeletébe kerül, és **hozza a saját horgonyomat** — ettől lesz az ellenőrzés keresés nélküli mutató-követés.
-- `js/csere/csere.js` — **a csere-protokoll logikája, hálózat nélkül** (Szakasz 2): `ALLAS` (szerzőnként legnagyobb sorszám + hézagok + elágazások + a lánc **ujjlenyomata**) → `KEREK` → `ESEMENY`. ⚠️ A „legnagyobb sorszám önmagában elég" **nem igaz** — a hézag és a lánc közepén rejtett elágazás miatt; mindkettő rontás-próbával igazolva. A beérkezett esemény ugyanazon az `esemenyMentese` kapun megy be, mint a saját: **a hálózat nem kap engedékenyebb kaput**.
-- `js/csere/tartomany.js` — ⭐⭐ **A TARTOMÁNY-EGYEZTETÉS** (S4, D74, 2026-09-27; a C lépés 6. pontja): két azonosító-halmaz különbsége úgy, hogy a forgalom az **eltérések számától** függjön, ne a halmaz méretétől — *„ebben a tartományban ez a lenyomatom; a tiéd?”*, és ahol eltér, 16 részre osztva tovább, ahol kevés maradt, a lista. ⭐ Mérve (50.): lásd az `eredmenyek.md`-t. ⚠️ **Hálózatot nem importál** (1. szabály), a beérkező üzenetet ellenőrzi (alak, határok, méret — `HIBAS-EGYEZTETES`), és ⚠️ **a csere még nem hívja** — a C 8. pontja köti be.
-- `js/csere/vonal.js` — **a párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen — D69/2: nincs TCP a készülékek között) (ugyanaz az alak, mint a táré). Szimmetrikus — egyetlen `parbeszed` fut mindkét oldalon —, és **a csendes körnél áll meg** (se nem adtunk, se nem kaptunk). Semmit nem tud a koinóról. ⭐ **A kör egy 43 karakteres `LENYOMAT`-tal kezdődik** (D35, B. lépés): ha a két fél tudása egyezik, a részletes `ALLAS` el sem indul — mérve **334 bájt a 16 158 helyett**. ⚠️ A csendes kör feltétele emellett is megmarad: a lenyomat az egyetértést fogja meg, a csendes kör a hibás/rosszindulatú felet.
+- `js/csere/csere.js` — **a régi csere-logika, hálózat nélkül** (Szakasz 2): `ALLAS` (szerzőnként legnagyobb sorszám + hézagok + elágazások + a lánc ujjlenyomata) → `KEREK` → `ESEMENY`. ⚠️ **2026-09-27 óta a párbeszéd NEM ezt használja** (a csere szeletenként megy — `szeletEgyeztetes.js`, `tartomany.js`); innen a **`beolvasztas`** éles (a hálózatról és a kézi útról jött események kapuja — **a hálózat nem kap engedékenyebb kaput**), az ÁLLÁS a próbák mércéje (`allasokEgyeznek`). ⏸️ Kivehető, ha a próbák más mércére állnak.
+- `js/csere/szeletEgyeztetes.js` — ⭐⭐ **MIT EGYEZTETÜNK SZELETENKÉNT** (a C 7–8. pontja, 2026-09-27): egy szelet halmaza = az alakilag érvényes eseményei (a 40. mérés tanulsága) + a közvetlen gyerekei **születése** (a gyerek-bejelentés; a legfelső szintűeké a gyökérben — `GYOKER_KULCS`); a „szelet:lenyomat” párok gyorsítótárral (a tár `szeletValtozata` szerint); a lista-feldolgozó leletéből a három szelet-lista (mindkettőnél eltér · csak nálam · csak nála); és a fogadó szűrője (`szeletbeTartozik`: csak közös vagy általunk várt szeletből veszünk át).
+- `js/csere/tartomany.js` — ⭐⭐ **A TARTOMÁNY-EGYEZTETÉS** (S4, D74, 2026-09-27; a C lépés 6. pontja): két azonosító-halmaz különbsége úgy, hogy a forgalom az **eltérések számától** függjön, ne a halmaz méretétől — *„ebben a tartományban ez a lenyomatom; a tiéd?”*, és ahol eltér, 16 részre osztva tovább, ahol kevés maradt, a lista. ⭐ Mérve (50.): lásd az `eredmenyek.md`-t. ⚠️ **Hálózatot nem importál** (1. szabály), a beérkező üzenetet ellenőrzi (alak, határok, méret — `HIBAS-EGYEZTETES`), és ⭐ **2026-09-27 óta a párbeszéd ezen fut** (a C 8. pontja, két szinten).
+- `js/csere/vonal.js` — **a párbeszéd** — ⭐⭐ **2026-09-27 óta szeletenként** (NYITAS → SZELETEK → ELTERO → RESZVETEL → TARTOMANYOK → ESEMENY/KEREK/KESZ; a szeletelési terv 4.5; ⛔ tiszta törés a régi `LENYOMAT`-tal — `REGI-PROTOKOLL`; az alábbi leírás a korábbi menetből való, a lényege áll): soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen — D69/2: nincs TCP a készülékek között) (ugyanaz az alak, mint a táré). Szimmetrikus — egyetlen `parbeszed` fut mindkét oldalon —, és **a csendes körnél áll meg** (se nem adtunk, se nem kaptunk). Semmit nem tud a koinóról. ⭐ **A kör egy 43 karakteres `LENYOMAT`-tal kezdődik** (D35, B. lépés): ha a két fél tudása egyezik, a részletes `ALLAS` el sem indul — mérve **334 bájt a 16 158 helyett**. ⚠️ A csendes kör feltétele emellett is megmarad: a lenyomat az egyetértést fogja meg, a csendes kör a hibás/rosszindulatú felet.
 - `js/csere/udpVonal.js` — **a csere UDP-n** (D37–D39, E. lépés; 2026-09-26 óta az EGYETLEN szállítás): egy foglalatnak látszó utánzat, ami alatta UDP-t használ, így a `parbeszed` **változatlanul** fut az átfúrt résen (1. szabály gyakorlati haszna). Amit a UDP nem ad meg, azt itt pótoljuk: sorszám + nyugta + újraküldés. ⚠️ **És két őr, ami először hiányzott** (2026-08-30): a `kiurites()` — a lezárás előtt meg kell várni, hogy az utolsó darabot nyugtázzák, különben eldobjuk (a `parbeszed` az utolsó `LENYOMAT`-ra már nem vár) —, és a **tétlenségi óra**, hogy a néma társ ne ragaszthasson be. E kettő nélkül a csere **végtelenül várt**; rontás-próba őrzi mindkettőt.
 - `js/csere/udpKapu.js` — ⭐ **az állandó UDP-kapu** (D69/3, 2026-09-25; a D69/2 óta az EGYETLEN kapu): egy foglalat a teljes futásra — bármikor felel a kopogásra, a bekopogóra visszakopog, társanként egyszerre egy munka (`FOGLALT`), a jegyzéke időben ÉS darabra korlátos. A munkát kívülről kapja (`resMunkaKeszito` a `koino.js`-ben — az őrjárat, a `figyel` és a kézi parancsok közös gépezete). ⭐⭐ **D71 (2026-09-26): a kör a TÁRSAT keresi, nem a címét.** A kötésből jött cél a várt társ tábla-aláíróját is hordozza, a munka visszaadja, kivel dolgozott — és az azonos IP-jű, más portú válasz (a mobil NAT portváltása) csak FELTEVÉS, amit a munka végén a tábla-kulcs erősít meg (egy IP-n több kötésnél is ez választ). Ha nem az jött, akit vártunk, a cél „nem felelt", és a kör hívja tovább (44. mérés: különben egy azonos IP-jű idegen tette sikeressé a néma kötést); pontos címen a más aláíró „más felelt". Várt társ nélkül (friss és induló cím) a régi, azonnali hozzárendelés marad.
 - `js/csere/pajzsfuro.js` — **a lyukfúrás** (D37, E. lépés): mindkét fél kifelé kopog egy **rögzített helyi portról**, és a két rés a közepén találkozik — fogadóképes fél nélkül. A `mindketIrany` a mérce: nem elég kapni, a MI csomagunknak is át kell jutnia. ⚠️ A `kulsoCim` (STUN) **segédeszköz és paraméter** (2. szabály): a szerver cserélhető, ha nem válaszol a koino ugyanúgy működik, és **semmilyen bizalom nem jár vele** — egy portszámot mond, nem igazságot. Hosszú távon a saját tükrünk váltja ki (`vonal.js`, `latlak`).

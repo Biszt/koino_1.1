@@ -19,7 +19,10 @@
 > az S3–S4 alapvonala. ✅ **B — az entitásonkénti tár (D73):** a 49. mérés után NEM szeletenként
 > egy fájl, hanem **egy adatfájl + a mutató pillanatképe** (lusta testek, `szeletek()`,
 > `szeletLenyomata()`). ✅ **C/6 — a tartomány-egyeztetés** (D74: a lenyomat hash; 50. mérés: 1 eltérés
-> 100 000 közt 4,0 KB a 160,2 helyett). **757 önpróba.** ⏭️ **A következő: C — a csere szeletenként**
+> 100 000 közt 4,0 KB a 160,2 helyett). ✅ **C/7–8 — a csere szeletenként** (a gyerek-bejelentés, az új
+> párbeszéd; ⛔ tiszta törés a régi protokollal — a telefont frissíteni kell; 51. mérés: a vonalon 1
+> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba.** ⏭️ **A következő: C/9 — az
+> érdeklődés szabálya (b)**
 > (tartomány-egyeztetés, gyerek-bejelentés, az érdeklődés szabálya, D63). A részletek a
 > [`CLAUDE.md`](../CLAUDE.md) elején. ⚠️ A telefon régi kódon fut — a következő terepi mérés
 > előtt frissíteni kell.

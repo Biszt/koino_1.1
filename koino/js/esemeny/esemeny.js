@@ -92,6 +92,24 @@ export function szelet(esemeny) {
   return esemeny.entitas ?? esemeny.azonosito;
 }
 
+/**
+ * ⭐ EGY SZÜLETÉS SZÜLŐJE (a C 7. pontja, a gyerek-bejelentés): a `GondolatLetrehozas` `szulo`-ja,
+ * vagy '' (a gyökér), ha legfelső szintű. Minden más eseménynél null — az nem születés.
+ *
+ * ⭐ A szülő köre ebből tudja meg, hogy új gondolat született: a születés a SZÜLŐ egyeztetett
+ * halmazában is benne van (a szöveg nélkül — D72). ⚠️ Csak a születés: az áthelyezés (egyezmény)
+ * az új szülőnél még nem hangzik el.
+ *
+ * Használják: tar/fajlTar.js (a mutató), csere/szeletEgyeztetes.js.
+ *
+ * @param {Object} e
+ * @returns {string|null}
+ */
+export function szuleteseSzuloje(e) {
+  if (e?.tipus !== 'GondolatLetrehozas') return null;
+  return typeof e.adat?.szulo === 'string' ? e.adat.szulo : '';
+}
+
 // ===================================
 // SEGÉD: A LENYOMATOLANDÓ RÉSZ KIEMELÉSE
 // ===================================

@@ -54,8 +54,11 @@ export const TARTOMANY_KORLAT = 4096;
 // …és összesen ennyi azonosító. *Korlát nélkül egy fél egy üzenettel megtölthetné a memóriát.*
 export const AZONOSITO_KORLAT = 8192;
 
-const AZONOSITO_MINTA = /^[A-Za-z0-9_-]{43}$/;
-const HATAR_MINTA = /^[A-Za-z0-9_-]{1,43}$/;
+const LENYOMAT_MINTA = /^[A-Za-z0-9_-]{43}$/;
+// ⭐ Egy elem: egy azonosító (43 jel) — vagy az első szinten egy „szelet:lenyomat” pár (87 jel),
+// hogy aki a listát feldolgozza, a MÁSIK fél eltérő szeleteit is megtudja (a szeletelési terv 4.5).
+const ELEM_MINTA = /^[A-Za-z0-9_-]{43}(:[A-Za-z0-9_-]{43})?$/;
+const HATAR_MINTA = /^[A-Za-z0-9_:-]{1,87}$/;
 
 /** Megnevezett hiba — a hívó a kódjából tudja, hogy a társ üzenete volt a hibás. */
 function hibasUzenet(ok) {
@@ -142,7 +145,7 @@ function ellenorzes(uzenet) {
     }
     if (felso !== null && felso <= elozo) throw hibasUzenet('a határok nem növekvők');
     if (mod === 'L') {
-      if (typeof ertek !== 'string' || !AZONOSITO_MINTA.test(ertek)) throw hibasUzenet('érvénytelen lenyomat');
+      if (typeof ertek !== 'string' || !LENYOMAT_MINTA.test(ertek)) throw hibasUzenet('érvénytelen lenyomat');
     } else if (mod === 'I') {
       if (!Array.isArray(ertek)) throw hibasUzenet('az azonosító-lista nem lista');
       azonositok += ertek.length;
@@ -150,7 +153,7 @@ function ellenorzes(uzenet) {
       for (const a of ertek) {
         // ⛔ Egy azonosító csak a saját tartományában állhat — különben a társ olyasmit mondana
         // „a tartomány minden elemének", ami nem is abba a tartományba esik.
-        if (typeof a !== 'string' || !AZONOSITO_MINTA.test(a)
+        if (typeof a !== 'string' || !ELEM_MINTA.test(a)
             || a < elozo || (felso !== null && a >= felso)) {
           throw hibasUzenet('érvénytelen vagy tartományon kívüli azonosító');
         }

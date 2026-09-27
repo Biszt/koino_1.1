@@ -156,7 +156,37 @@ sincs. ⏸️ Hogy velük mit cseréljünk, az a 7. szakasz 2. kérdése.
 
 ### 4.4 A régi protokollú társ
 
-Az új csere nem érti a régit. ⏸️ A 7. szakasz 3. kérdése.
+Az új csere nem érti a régit. ✅ A 7. szakasz 3. kérdése döntve (D72): **tiszta törés** — a régi
+programmal a csere megnevezetten leáll.
+
+### 4.5 ⭐ A CSERE MENETE (a C 7–8. pontja, 2026-09-27 — a megépítendő alak)
+
+**Az egyeztetett halmaz.** Egy szelet halmaza = a szelet **alakilag érvényes** eseményei (a 40.
+mérés tanulsága: amit a kapu nem enged be, azt nem hirdetjük) **+ a közvetlen gyerekei születési
+eseményei** (7. pont: a `GondolatLetrehozas`, aminek `szulo`-ja ez a szelet). A legfelső szintű
+gondolatok születése a **gyökérben** (a `''` szülő) hangzik el — ez a koino „címlapja", és
+természeténél fogva tömeges entitás (4.6). ⚠️ Csak a SZÜLETÉS hangzik el a szülőnél; az áthelyezés
+(egyezmény) az új szülőnél még nem — ⏸️ későbbi lépés. A mutató ehhez eseményenként a születés
+szülőjét is tartja (a pillanatkép 2. változata).
+
+**Egy kör, mindkét oldalon ugyanaz a függvény:**
+1. **NYITÁS** — a koino, a tükör (`latlak`), a fájl-kérelem, a protokoll változata, és az első
+   szint nyitó lenyomata. ⛔ Régi `LENYOMAT`-ra megnevezett hiba (tiszta törés). Utána, mint eddig:
+   **FAJLOK** és **CIMEK** (a címjegyzék, a tábla-kulcs, a DHT-gépek).
+2. **ELSŐ SZINT — melyik szelet tér el?** Tartomány-egyeztetés a `szelet:lenyomat` párok halmazán
+   (egy pár = a szelet kulcsa és a halmazának lenyomata; a gyökér is egy pár). A kettőnél kisebb
+   nyitó lenyomatú fél felel, a másik nyit (mindkettő ugyanazt látja, tehát ugyanúgy dönt). ⭐ Aki
+   egy listát feldolgoz, MINDKÉT oldal eltérő szeleteit megtudja (a párban ott a kulcs), és egy
+   **ELTÉRŐ** üzenetben megmondja a másiknak — utána mindketten ugyanazt a szelet-listát ismerik.
+3. **A RÉSZVÉTEL** — az eltérő szeletek közül ki melyikben vesz részt: **(a)** mindben (a mai
+   viselkedés); **(b)** a 9. ponttól a saját érdeklődésében. Csak a közösekben megy tovább.
+4. **MÁSODIK SZINT — mi hiányzik a szeletben?** Tartomány-egyeztetés az esemény-azonosítókon,
+   minden közös eltérő szeletre egyszerre (egy üzenet több szelet lépését viszi).
+5. **AZ ÁTADÁS** — amit a lista-feldolgozó a másiknak hiányzónak talált, azt elküldi; amit
+   magának, azt elkéri (**KEREK**); a kért események jönnek; **KESZ**. Mindkét oldalon
+   ugyanaz a kapu (`beolvasztas` → `esemenyMentese`, 3. szabály).
+
+⭐ A hétköznapi eset — nincs újdonság — egyetlen NYITÁS-csere (a két nyitó lenyomat egyezik).
 
 ## 5. A LÉPÉSEK — mindegyik mérve, próbával és rontás-próbával
 
@@ -188,10 +218,11 @@ elhagyta — javítva.)
 6. ✅ A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály) — KÉSZ
    (2026-09-27: `js/csere/tartomany.js`, a lenyomat hash — D74). ⭐ **Mérés (50.):** 1 eltérés
    100 000 esemény közt **4,0 KB** a 48. mérés 160,2 KB-ja helyett; „nincs eltérés" 58 B.
-7. ⭐ **A gyerek-bejelentés:** egy szülő szeletének egyeztetési halmaza = a saját eseményei + a
+7. ✅ ⭐ **A gyerek-bejelentés** (KÉSZ, 2026-09-27; ⚠️ az áthelyezés még nem hangzik el az új szülőnél): egy szülő szeletének egyeztetési halmaza = a saját eseményei + a
    KÖZVETLEN GYEREKEI születési eseményei. *A szöveg külön darab (A), tehát ezek kicsik: a szülő köre
    megtudja, hogy új gondolat született, a szövege nélkül.*
-8. A csere új üzenetei (`vonal.js`): az érdeklődési halmaz, a közös-szelet-lenyomat, a tartományok,
+8. ✅ A csere új üzenetei (KÉSZ, 2026-09-27 — a menet a 4.5-ben; 51. mérés: 1 eltérés 100 000 közt a
+   vonalon 9,8 KB, „nincs újdonság" 484 B; ⏸️ a társankénti emlékezet még nincs) (`vonal.js`): az érdeklődési halmaz, a közös-szelet-lenyomat, a tartományok,
    a kérés. A társankénti emlékezet a kötés-jegyzék mellé (helyi, sosem utazik). ⭐ Itt kap otthont
    a D71 (iii) V2-je.
 9. **Az érdeklődés szabálya (D72/1):** a készülék a tudatpontos, a megnézett és a saját szeleteit

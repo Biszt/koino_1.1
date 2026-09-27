@@ -540,26 +540,28 @@ proba('MÉRÉS: az ÁLLÁS 50 e-embernél is 200 bájt/fő alatt marad', async (
 // befogadási kérdés, mert az állás ára a LÉTSZÁMMAL nő: 162 bájt/fő, mindkét irányban.
 // Egy mobilos e-embernek ez a számláján jelenik meg.
 
-proba('⭐ A „NINCS ÚJDONSÁG" csere el sem küldi a részletes állást', async () => {
+// ⭐ 2026-09-27 ÓTA (a C 7–8. pontja) a részletes ÁLLÁS helyett tartomány-egyeztetés fut — a
+// próba ugyanazt kérdezi: a hétköznapi eset NEM indítja el az egyeztetést.
+proba('⭐ A „NINCS ÚJDONSÁG" csere el sem indítja az egyeztetést — egyetlen nyitás-csere', async () => {
   const anna = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 4));
   const masik = await ujTar();
 
-  const elso = await csereDroton(egyik, masik);       // itt még kell a részletes állás
+  const elso = await csereDroton(egyik, masik);       // itt még kell az egyeztetés
   const masodik = await csereDroton(egyik, masik);    // itt már nem
 
-  return elso.reszletesAllasok >= 1 && masodik.reszletesAllasok === 0
+  return elso.egyeztetoUzenetek >= 1 && masodik.egyeztetoUzenetek === 0
     && masodik.uj === 0 && masodik.kuldott === 0;
 });
 
-proba('⭐ ELTÉRŐ tudásnál viszont elindul a részletes állás (a lenyomat nem takar el semmit)', async () => {
+proba('⭐ ELTÉRŐ tudásnál viszont elindul az egyeztetés (a nyitó lenyomat nem takar el semmit)', async () => {
   const anna = await ujEember(KOINO);
   const bela = await ujEember(KOINO);
   const egyik = await ujTar(); await ment(egyik, await lanc(anna, 3));
   const masik = await ujTar(); await ment(masik, await lanc(bela, 2));
 
   const eredmeny = await csereDroton(egyik, masik);
-  return eredmeny.reszletesAllasok >= 1
+  return eredmeny.egyeztetoUzenetek >= 1
     && (await koinoEsemenyei(egyik, KOINO)).length === 5
     && await allasokEgyeznek(egyik, masik, KOINO);
 });
@@ -609,8 +611,89 @@ proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-emberné
   // magától tud bővülni (D36–D38) — enélkül minden címet kézzel kellene begépelni.
   // ⚠️ ÉS AZ ARÁNY 20×-RÓL 15×-RE (2026-09-26, D69/2): a mérés azóta a UDP-résen fut, és
   // annak saját ára van — sorszám, nyugta, JSON-burok darabonként (TCP-n ~334 bájt volt,
-  // a résen ~480). ⭐ A lényeg nem változott: a részletes állás el sem indul.
-  return eredmeny.reszletesAllasok === 0 && osszes < 500 && osszes * 15 < allasBajt;
+  // a résen ~480). ⭐ A lényeg nem változott (2026-09-27 óta a szeletenkénti cserével sem):
+  // az egyeztetés el sem indul.
+  return eredmeny.egyeztetoUzenetek === 0 && osszes < 500 && osszes * 15 < allasBajt;
+});
+
+// ===================================
+// ⭐⭐ A CSERE SZELETENKÉNT (a C 7–8. pontja, 2026-09-27)
+// ===================================
+
+proba('⛔ RÉGI PROTOKOLLÚ TÁRS: tiszta törés — a csere megnevezett hibával áll le (D72)', async () => {
+  const tar = await ujTar();
+  const p = await udpParos();
+  try {
+    // A régi program LENYOMAT-tal nyit.
+    const regi = udpKapcsolat(p.masik, '127.0.0.1', p.egyikPort);
+    regi.write(JSON.stringify({ uzenet: 'LENYOMAT', koino: KOINO, lenyomat: 'A'.repeat(43) }) + '\n');
+    try {
+      await parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort), tar, KOINO);
+      return false;
+    } catch (hiba) {
+      return hiba.kod === 'REGI-PROTOKOLL';
+    }
+  } finally {
+    p.bezar();
+  }
+});
+
+// ⭐⭐ A GYEREK-BEJELENTÉS (C 7.) ÉS A RÉSZVÉTEL (a (b) előképe): aki CSAK a szülő szeletében vesz
+// részt, az megkapja a gyerek SZÜLETÉSÉT (a szülő halmazában van) — de a gyerek szeletének többi
+// eseményét (egy tudatpontot) nem, mert abban nem vesz részt.
+//
+// ⚠️ KÉT PRÓBA, KÉT ŐR: mi jut át a FOGADÓHOZ (ezt a fogadó szűrője is védi, ha a küldő hibás
+// volna), és mit KÜLD a küldő (ezt a részvétel bemondása védi). Egy próbában a két őr egymást
+// takarná — a rontás-próba így derítette ki.
+async function gyerekCsere() {
+  const anna = await ujEember(KOINO);
+  const szulo = await anna.tesz('GondolatLetrehozas', { cim: 'Szülő', meret: 10 });
+  const gyerek = await anna.tesz('GondolatLetrehozas', { cim: 'Gyerek', meret: 10, szulo: szulo.azonosito });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: gyerek.azonosito, pont: 2 });
+
+  const egyik = await ujTar(); await ment(egyik, [szulo, gyerek, pont]);
+  const masik = await ujTar(); await ment(masik, [szulo]);
+
+  const eredmeny = await csereDroton(egyik, masik, '127.0.0.1', {
+    // A másik CSAK a szülő szeletében vesz részt.
+    masikBeallitas: { reszvesz: (k) => k === szulo.azonosito }
+  });
+  const nala = (await koinoEsemenyei(masik, KOINO)).map((e) => e.azonosito);
+  return { eredmeny, nala, gyerek, pont };
+}
+
+proba('⭐⭐ A GYEREK SZÜLETÉSE A SZÜLŐ KÖRÉBEN TERJED — a gyerek szeletének többi eseménye nem jut át', async () => {
+  const { eredmeny, nala, gyerek, pont } = await gyerekCsere();
+  return eredmeny.egyeztetoUzenetek >= 1
+    && nala.includes(gyerek.azonosito)          // ⭐ a születés megjött (a szülő köréből)
+    && !nala.includes(pont.azonosito)           // ⛔ a gyerek szeletének többi eseménye nem
+    && nala.length === 2;
+});
+
+proba('⭐ …és a küldő nem is küldi: csak a születést (a részvételt a társ bemondta)', async () => {
+  const { eredmeny } = await gyerekCsere();
+  return eredmeny.kuldott === 1;
+});
+
+// ⭐⭐ A MÁSODIK SZINT: ugyanannak a szeletnek mindkét félnél MÁS-MÁS eseményei vannak (két szerző
+// pontja ugyanarra a gondolatra) — itt nem egész szelet megy, hanem a szeleten belüli különbség.
+proba('⭐⭐ EGY SZELETEN BELÜL MINDKÉT IRÁNYBAN: csak a hiányzó események mennek át', async () => {
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const g = await anna.tesz('GondolatLetrehozas', { cim: 'Közös gondolat', meret: 10 });
+  const annaPontja = await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 3 });
+  const belaPontja = await bela.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 4 });
+
+  const egyik = await ujTar(); await ment(egyik, [g, annaPontja]);
+  const masik = await ujTar(); await ment(masik, [g, belaPontja]);
+
+  const eredmeny = await csereDroton(egyik, masik);
+  const nalaEgyik = (await koinoEsemenyei(egyik, KOINO)).map((e) => e.azonosito);
+  const nalaMasik = (await koinoEsemenyei(masik, KOINO)).map((e) => e.azonosito);
+  return eredmeny.elteroSzeletek === 1
+    && eredmeny.kuldott === 1 && eredmeny.masikEredmenye.kuldott === 1
+    && nalaEgyik.length === 3 && nalaEgyik.includes(belaPontja.azonosito)
+    && nalaMasik.length === 3 && nalaMasik.includes(annaPontja.azonosito);
 });
 
 // ===== KÉT KÜLÖNBÖZŐ KOINO (2026-08-29, mérés után javítva) =====
