@@ -4421,3 +4421,25 @@ log₂ n + ~1,5 (a véletlen kulcs-utak közös előtagjai), a legmélyebb út a
 - **A teljes kiosztás-lista a keret határán 829 KB** — a jellemző eset (néhány tucat–néhány száz
   entitás) néhány KB–néhány tíz KB. Korlátos (a keret), de nem apró: a „ki és mikor kéri le" döntés
   ezért fontos.
+
+## 53. ⭐ AZ ESEMÉNY MÉRETE A LÁNC-GYÖKÉRREL ÉS A BIZONYÍTÉKKAL — a D81 ára (2026-09-27 este)
+
+*A D81 után (a bizonyíték az eseménnyel utazik): `esemenyMeretMeres.js`. Valódi aláírt események,
+43 jeles azonosítókkal; a pont-esemény bizonyítéka a szerző kiosztás-fájából (20 kulcs átlaga).*
+
+```
+                                   |  gondolat  |  pont-esemény  |  a bizonyíték (lépés)
+lánc-gyökér nélkül (null)          |    647 B   |     558 B      |   —
+kiosztás    10 entitáson           |    799 B   |   1 145 B      |   4,7
+kiosztás   100 entitáson           |    802 B   |   1 370 B      |   7,8
+kiosztás 1 000 entitáson           |    804 B   |   1 606 B      |  11,2
+kiosztás 10 000 entitáson (keret)  |    806 B   |   1 863 B      |  14,7
+```
+
+⭐ **A lelet:** a lánc-gyökér (a két gyökér összegzése) eseményenként **+~155 B**; a pont-esemény a
+bizonyítékkal **1,15–1,86 KB** — logaritmikus a szerző SAJÁT kiosztásával, a koino méretétől független.
+
+⚠️ **A becslés alatta maradt:** a D81 +~110 B-ot és 100 entitásnál ~1,2 KB-os pont-eseményt mondott;
+a mérés +~155 B és 1,37 KB (a JSON mezőnevei és a 43 jeles lenyomatok). Ez az ára annak, hogy egy
+pont-esemény a szerző nélkül is ellenőrizhető, és a hazug bemondás hézagos láncnál is bizonyítottan
+elbukik.

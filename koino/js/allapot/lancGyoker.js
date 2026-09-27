@@ -1,9 +1,14 @@
 // koino/js/allapot/lancGyoker.js
 
-// Felelősség: A SZERZŐ LÁNC-GYÖKERE (D63, D78 — az A pillér 2. lépése): minden új saját esemény
-// `lancGyoker`-e egyetlen lenyomattal elköti a szerző ESEMÉNY ELŐTTI állapotát —
+// Felelősség: A SZERZŐ LÁNC-GYÖKERE (D63, D78, D81 — az A pillér 2. lépése): minden új saját esemény
+// `lancGyoker`-e a szerző ESEMÉNY ELŐTTI két gyökerét hordozza —
 //
-//   lancGyoker(k) = lenyomat(['G', naplo(1..k-1).l, kiosztas(k-1).l])
+//   lancGyoker(k) = { naplo: naplo(1..k-1), kiosztas: kiosztas(k-1) }     (két összegzés: { l, d, o })
+//
+// ⭐ D81: nem a lenyomatuk, hanem MAGUK — a bizonyíték az eseménnyel utazik, így aki az eseményt
+// tartja, a szerző nélkül is ellenőrizni tudja. A PONT-esemény ezen felül az adatában hozza az
+// entitása régi értékének bizonyítékát (`adat.bizonyitek`, a kiosztás-fából) — a kapu ellenőrzi
+// (`pontEsemenyOnbizonyitasa`), és a szabály-réteg ebből a hézagos láncnál is BIZONYÍTOTTAN ítél.
 //
 //   · a NAPLÓ-FA gyökere: a szerző 1..k-1 sorszámú eseményeinek azonosítói, sorrendben (D63: így a
 //     kettős lánc a szeletek között is lelepleződik — két aláírt gyökér ellentmond egymásnak);
@@ -31,12 +36,14 @@
 // A fájl tartalmát ezen felül egy ellenőrző-lenyomat köti (a csendes sérülés ellen); ha bármi nem
 // illik, a láncból épül újra.
 //
-// Használják: muveletek.js (az új események aláírása), a próbák; (a ③ lépéstől) az ellenőrzés.
+// Használják: muveletek.js (az új események aláírása), tar/esemenyTar.js (a kapu: a pont-esemény
+// bizonyítéka), allapot/ellentmondas.js, a próbák.
 
 import { lenyomat } from '../esemeny/kanonikusAlak.js';
 import {
   levelOsszegzes, ujNaplo, naploHozzafuzes, naploCsucsGyokere, naploGyokere,
-  ujAllapotFa, allapotBeallitas, allapotGyokere, osszegzesAlakja
+  ujAllapotFa, allapotBeallitas, allapotGyokere, osszegzesAlakja,
+  allapotBizonyitek, allapotBizonyitekEllenorzese
 } from '../esemeny/osszegzoFa.js';
 import { pontEsemenyMerlege } from './szabalyok.js';
 
@@ -48,13 +55,37 @@ export const KIOSZTAS_HOSSZ = 1;
 const TAR_VALTOZAT = 1;
 
 /**
- * A lánc-gyökér a két gyökérből.
- * @param {{l: string}} naploGyoker
- * @param {{l: string}} kiosztasGyoker
- * @returns {Promise<string>} 43 jel
+ * A lánc-gyökér a két gyökérből (D81: maguk az összegzések — csak a `l`, `d`, `o` mezőjük).
+ * @param {{l: string, d: number, o: Array<number>}} naploGyoker
+ * @param {{l: string, d: number, o: Array<number>}} kiosztasGyoker
+ * @returns {{naplo: Object, kiosztas: Object}}
  */
-export async function lancGyokerKetGyokerbol(naploGyoker, kiosztasGyoker) {
-  return lenyomat(['G', naploGyoker.l, kiosztasGyoker.l]);
+export function lancGyokerKetGyokerbol(naploGyoker, kiosztasGyoker) {
+  const tiszta = (x) => ({ l: x.l, d: x.d, o: [...x.o] });
+  return { naplo: tiszta(naploGyoker), kiosztas: tiszta(kiosztasGyoker) };
+}
+
+/** Két lánc-gyökér ugyanaz-e (mindkettő null, vagy ugyanaz a két gyökér)? */
+export function azonosLancGyoker(a, b) {
+  if (a === null || b === null) return a === b;
+  const egy = (x, y) => x.l === y.l && x.d === y.d && x.o.length === y.o.length && x.o.every((v, i) => v === y.o[i]);
+  return egy(a.naplo, b.naplo) && egy(a.kiosztas, b.kiosztas);
+}
+
+/**
+ * ⭐⭐ A PONT-ESEMÉNY ÖNBIZONYÍTÁSA (D81) — a kapu hívja: ha a pont-esemény a lánc-gyökerét hordozza,
+ * az adatában lennie kell az entitása régi értékének bizonyítékának, és illenie kell a saját aláírt
+ * kiosztás-gyökeréhez. Ettől a szabály-réteg a bizonyíték számait (az összeget és a régi értéket)
+ * hézag nélkül elhiheti — ahogy az aláírást is. ⚠️ Nem ítél a bemondásról: azt a szabály teszi.
+ * @returns {Promise<{rendben: boolean, ok?: string}>}
+ */
+export async function pontEsemenyOnbizonyitasa(e) {
+  if (e?.tipus !== 'TudatpontRendezes' || e.lancGyoker === null || e.lancGyoker === undefined) return { rendben: true };
+  const entitas = e.adat?.entitas;
+  if (typeof entitas !== 'string') return { rendben: false, ok: 'a pont-esemény entitása hiányzik' };
+  const b = await allapotBizonyitekEllenorzese(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, e.lancGyoker.kiosztas, entitas, e.adat.bizonyitek);
+  return b.rendben ? { rendben: true }
+    : { rendben: false, ok: 'a pont-esemény bizonyítéka hiányzik vagy nem illik a saját lánc-gyökeréhez (D81): ' + b.ok };
 }
 
 /** Egy saját esemény hatása az állásra — a szabály ítéletével (a `szabalyok.js` ugyanígy lép). */
@@ -73,11 +104,6 @@ async function kiosztasFaja(pontok) {
   const fa = ujAllapotFa(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ);
   for (const [kulcs, pont] of pontok) if (pont > 0) await allapotBeallitas(fa, kulcs, null, [pont]);
   return fa;
-}
-
-/** A kiosztás-fa gyökere az állásból. */
-async function kiosztasGyokere(pontok) {
-  return allapotGyokere(await kiosztasFaja(pontok));
 }
 
 // ===================================
@@ -108,13 +134,13 @@ export async function lancAllapotaLancbol(elozmenyek) {
   const kiosztasGyoker = await allapotGyokere(kiosztasFa);
   return {
     naploLevelek, naploGyoker, kiosztasFa, kiosztasGyoker, osszeg: allas.osszeg,
-    lancGyoker: await lancGyokerKetGyokerbol(naploGyoker, kiosztasGyoker)
+    lancGyoker: lancGyokerKetGyokerbol(naploGyoker, kiosztasGyoker)
   };
 }
 
 /**
  * A lánc-gyökér a szerző 1..k-1 sorszámú eseményeiből — a k-adik eseményhez. Gyorsítótár nélkül.
- * @returns {Promise<string|null>} null, ha a lánc nem ép
+ * @returns {Promise<Object|null>} null, ha a lánc nem ép
  */
 export async function lancGyokerLancbol(elozmenyek) {
   return (await lancAllapotaLancbol(elozmenyek))?.lancGyoker ?? null;
@@ -127,9 +153,11 @@ export async function lancGyokerLancbol(elozmenyek) {
 // tár → (szerző → állapot): a folyamaton belüli emlékezet.
 const memoria = new WeakMap();
 
+// ⚠️ A `kiosztasFa` (a kiosztás FÁJA) csak a memóriában él — a fájl a pontokat tartja, a fa a
+// bizonyítékhoz kérésre épül belőlük (egy pont-eseménynél).
 const uresAllapot = (szerzo) => ({
   szerzo, sorszam: 0, utolso: null, naplo: ujNaplo(NAPLO_FAJTA),
-  osszeg: 0, pontok: new Map(), kiosztasGyoker: null
+  osszeg: 0, pontok: new Map(), kiosztasGyoker: null, kiosztasFa: null
 });
 
 /** A gyorsítótár tartalmának ellenőrző-lenyomata (a csendes sérülés ellen). */
@@ -160,7 +188,7 @@ async function fajlbolAllapot(adat, szerzo) {
   const naplo = { ...ujNaplo(NAPLO_FAJTA), csucsok: adat.csucsok };
   const pontok = new Map(adat.pontok);
   return { szerzo, sorszam: adat.sorszam, utolso: adat.utolso ?? null, naplo, osszeg: adat.osszeg, pontok,
-    kiosztasGyoker: adat.kiosztasGyoker };
+    kiosztasGyoker: adat.kiosztasGyoker, kiosztasFa: null };
 }
 
 async function fajlba(a) {
@@ -215,9 +243,10 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
     if (allasLepese(allas, ott[0])) pontValtozott = true;
     utolso = ott[0].azonosito;
   }
+  const kiosztasFa = pontValtozott ? await kiosztasFaja(pontok) : a.kiosztasFa;
   const kesz = {
-    szerzo, sorszam: meddig, utolso, naplo: uj, osszeg: allas.osszeg, pontok,
-    kiosztasGyoker: pontValtozott ? await kiosztasGyokere(pontok) : a.kiosztasGyoker
+    szerzo, sorszam: meddig, utolso, naplo: uj, osszeg: allas.osszeg, pontok, kiosztasFa,
+    kiosztasGyoker: pontValtozott ? await allapotGyokere(kiosztasFa) : a.kiosztasGyoker
   };
 
   tarbeli.set(szerzo, kesz);
@@ -229,17 +258,31 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
 }
 
 /**
- * ⭐ A LÁNC-GYÖKÉR EGY ÚJ SAJÁT ESEMÉNYHEZ — a `sorszam`-adik eseményhez (az 1..sorszam-1 állapota).
+ * ⭐ A LÁNC-GYÖKÉR (és a pont-esemény bizonyítéka) EGY ÚJ SAJÁT ESEMÉNYHEZ — a `sorszam`-adik
+ * eseményhez, az 1..sorszam-1 állapotából.
  *
  * @param {Object} tar
  * @param {string} koino
  * @param {string} szerzo
  * @param {number} sorszam - az új esemény sorszáma (a lánc vége + 1)
  * @param {Object} [tarolo] - a gyorsítótár fájlja (`lancTarolo`); nélküle csak a memória
- * @returns {Promise<string|null>} 43 jel, vagy null, ha a saját lánc nem ép
+ * @param {string|null} [entitas] - pont-eseménynél az entitás: a régi értékének bizonyítéka is kell
+ * @returns {Promise<{lancGyoker: Object|null, bizonyitek: Object|null}>} null-ok, ha a saját lánc nem ép
  */
-export async function lancGyokerUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo = null) {
+export async function lancUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo = null, entitas = null) {
   const a = await allapotIg(tar, koino, szerzo, sorszam - 1, tarolo);
-  if (!a) return null;
-  return lancGyokerKetGyokerbol(await naploCsucsGyokere(a.naplo), a.kiosztasGyoker);
+  if (!a) return { lancGyoker: null, bizonyitek: null };
+  const lancGyoker = lancGyokerKetGyokerbol(await naploCsucsGyokere(a.naplo), a.kiosztasGyoker);
+  let bizonyitek = null;
+  if (typeof entitas === 'string') {
+    // A fa a pontokból épül (a fájlból jött állapotnak csak a pontjai vannak meg) — egyszer.
+    if (!a.kiosztasFa) a.kiosztasFa = await kiosztasFaja(a.pontok);
+    bizonyitek = await allapotBizonyitek(a.kiosztasFa, entitas);
+  }
+  return { lancGyoker, bizonyitek };
+}
+
+/** A lánc-gyökér egy új saját eseményhez (a bizonyíték nélkül). */
+export async function lancGyokerUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo = null) {
+  return (await lancUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo)).lancGyoker;
 }

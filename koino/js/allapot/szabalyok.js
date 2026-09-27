@@ -218,6 +218,24 @@ export function elsoErintett(adat) {
 // előbb-utóbb két igazság lesz.*
 
 /**
+ * ⭐ D81: a pont-esemény SAJÁT bizonyítéka — az előző összeg (a lánc-gyökér kiosztás-összegzéséből) és
+ * az entitás régi értéke (a bizonyíték végpontjából; ha a végpont nem ez az entitás, a régi érték 0).
+ * ⚠️ A kapu ellenőrizte, hogy a bizonyíték a gyökérhez illik (`pontEsemenyOnbizonyitasa`) — a szabály
+ * a tárban lévőt hiszi el, mint az aláírást. Ha az esemény nem hordozza, null.
+ * @returns {{osszeg: number, regi: number}|null}
+ */
+export function onbizonyitas(e) {
+  const gyoker = e.lancGyoker;
+  const b = e.adat?.bizonyitek;
+  if (!gyoker || typeof gyoker !== 'object' || !Array.isArray(gyoker.kiosztas?.o) || !b || typeof b !== 'object') return null;
+  const osszeg = gyoker.kiosztas.o[0];
+  const vp = b.vegpont;
+  const regi = vp && vp.kulcs === e.adat.entitas && Array.isArray(vp.osszegek) ? vp.osszegek[0] : 0;
+  if (!Number.isSafeInteger(osszeg) || !Number.isSafeInteger(regi)) return null;
+  return { osszeg, regi };
+}
+
+/**
  * Egy `TudatpontRendezes` esemény megítélése a szerző eddig ELFOGADOTT állásához képest.
  *
  * ⚠️ Tiszta függvény: az `allas`-t nem módosítja — elfogadáskor a hívó veszi át az új értéket.
@@ -250,6 +268,17 @@ export function pontEsemenyMerlege(e, allas, folytonos) {
       + kiosztva + ' / ' + TUDATPONT_KERET + ')' };
   }
 
+  // ----- ⭐⭐ D81: AZ ESEMÉNY SAJÁT BIZONYÍTÉKA — a lánc ismerete nélkül -----
+  //
+  // Ha a pont-esemény a lánc-gyökerét és az entitása régi értékének bizonyítékát hordozza (a kapu
+  // ellenőrizte, hogy illik), a bemondás a szerző SAJÁT ALÁÍRT előző állapotával is összevethető —
+  // hézagnál is. ⭐ Ez az, amit a D42 egymagában nem tudott: ott a hézag után csak jelezni lehetett.
+  const sajat = onbizonyitas(e);
+  if (sajat && kiosztva !== sajat.osszeg - sajat.regi + pont) {
+    return { elvetve: 'a bemondott összeg ellentmond a saját aláírt előző állapotának (D81: bemondva '
+      + kiosztva + ', az előképből ' + (sajat.osszeg - sajat.regi + pont) + ')' };
+  }
+
   // A tudatpont ÁTRENDEZHETŐ: ami ezen az entitáson már ott van, az nem „új"
   // kiadás. Ezért a régi értéket kivonjuk, mielőtt az újat hozzáadnánk.
   const regi = allas.pontok.get(e.adat.entitas) ?? 0;
@@ -271,8 +300,11 @@ export function pontEsemenyMerlege(e, allas, folytonos) {
       return { elvetve: 'a bemondott összeg ellentmond a saját láncának (bemondva '
         + kiosztva + ', a láncából ' + ujOsszeg + ')' };
     }
-    jelzes = 'a bemondott összeg (' + kiosztva
-      + ') nem egyezik a számítottal (' + ujOsszeg + '), de a láncában hézag van';
+    // ⭐ D81: ha az esemény saját bizonyítéka igazolta a bemondást, a hézag a MI lemaradásunk — nem jelzés.
+    if (!sajat) {
+      jelzes = 'a bemondott összeg (' + kiosztva
+        + ') nem egyezik a számítottal (' + ujOsszeg + '), de a láncában hézag van';
+    }
   }
 
   if (ujOsszeg > TUDATPONT_KERET) {

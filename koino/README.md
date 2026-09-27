@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Harminckét próba-fájl, **799 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminckét próba-fájl, **801 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **202 fájl, 3482,5 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **203 fájl, 3496,3 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -149,6 +149,8 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 
 - `node koino/meres/skalaMeres.js` — **skála-mérés**: hol van a fal (a 3.2 két
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
+- `node koino/meres/esemenyMeretMeres.js` — ⭐ **az esemény mérete a bizonyítékkal** (53., D81): a lánc-gyökér
+  +~155 B eseményenként, a pont-esemény a bizonyítékával 1,15–1,86 KB (a szerző kiosztásától függően);
 - `node koino/meres/osszegzoFaMeres.js` — ⭐ **az összegző Merkle-fa ára** (52., D78): a bizonyíték
   logaritmikus — 10⁵ elemnél ~1,2 KB, egymilliárdnál ~2,0 KB; a teljes kiosztás-lista a keret határán 829 KB;
 - `node koino/meres/csereMeres.js` — ⭐ **a szeletenkénti csere a vonalon** (51.): egy eltérés

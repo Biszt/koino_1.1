@@ -24,12 +24,10 @@ import {
   koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese
 } from '../js/muveletek.js';
 import {
-  lancGyokerLancbol, lancAllapotaLancbol, lancGyokerKetGyokerbol, lancGyokerUjEsemenyhez,
+  lancGyokerLancbol, lancGyokerKetGyokerbol, lancGyokerUjEsemenyhez, lancUjEsemenyhez, azonosLancGyoker,
   KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, NAPLO_FAJTA
 } from '../js/allapot/lancGyoker.js';
-import {
-  uresOsszegzes, allapotBizonyitek, allapotValtozasa
-} from '../js/esemeny/osszegzoFa.js';
+import { uresOsszegzes, allapotValtozasa } from '../js/esemeny/osszegzoFa.js';
 
 const { proba, futtatas } = probaGyujtemeny('A szerző lánc-gyökere (D78, az A pillér 2. lépése)');
 
@@ -52,7 +50,7 @@ async function elsoElteres(tar, szerzo) {
   const lanc = await sajatLancEsemenyei(tar, szerzo);
   for (let i = 0; i < lanc.length; i++) {
     const vart = await lancGyokerLancbol(lanc.slice(0, i));
-    if (lanc[i].lancGyoker !== vart) return lanc[i].sorszam;
+    if (!azonosLancGyoker(lanc[i].lancGyoker, vart)) return lanc[i].sorszam;
   }
   return 0;
 }
@@ -78,8 +76,8 @@ proba('⭐ AZ ELSŐ ESEMÉNY GYÖKERE az üres napló és az üres kiosztás len
   const { tar, kornyezet } = await ujKornyezet();
   await koinoLetrehozasa(kornyezet, 'Első');
   const [elso] = await sajatLancEsemenyei(tar, kornyezet.szerzo);
-  const vart = await lancGyokerKetGyokerbol(await uresOsszegzes(NAPLO_FAJTA, 0), await uresOsszegzes(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ));
-  return elso.sorszam === 1 && elso.lancGyoker === vart;
+  const vart = lancGyokerKetGyokerbol(await uresOsszegzes(NAPLO_FAJTA, 0), await uresOsszegzes(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ));
+  return elso.sorszam === 1 && azonosLancGyoker(elso.lancGyoker, vart) && elso.lancGyoker.naplo.d === 0;
 });
 
 proba('⭐⭐ MINDEN ÚJ ESEMÉNY GYÖKERE = A LÁNCBÓL ÚJRASZÁMOLT — pontok, átrendezés, visszavétel is', async () => {
@@ -87,10 +85,12 @@ proba('⭐⭐ MINDEN ÚJ ESEMÉNY GYÖKERE = A LÁNCBÓL ÚJRASZÁMOLT — ponto
   await elet(kornyezet);
   const lanc = await sajatLancEsemenyei(tar, kornyezet.szerzo);
   // ⚠️ Előfeltétel: a gyökér tényleg ott van (különben a „null = null" egyezés semmit nem mérne).
-  return lanc.length === 8 && lanc.every((e) => typeof e.lancGyoker === 'string')
+  return lanc.length === 8 && lanc.every((e) => e.lancGyoker !== null && typeof e.lancGyoker === 'object')
     && await elsoElteres(tar, kornyezet.szerzo) === 0
-    // A gyökerek különböznek egymástól (minden esemény más napló-állapotot köt el).
-    && new Set(lanc.map((e) => e.lancGyoker)).size === lanc.length;
+    // A napló-gyökerek különböznek egymástól (minden esemény más napló-állapotot köt el).
+    && new Set(lanc.map((e) => e.lancGyoker.naplo.l)).size === lanc.length
+    // ⭐ D81: minden pont-esemény hozza az entitása régi értékének bizonyítékát.
+    && lanc.filter((e) => e.tipus === 'TudatpontRendezes').every((e) => e.adat.bizonyitek && Array.isArray(e.adat.bizonyitek.testverek));
 });
 
 // ===================================
@@ -149,77 +149,61 @@ proba('⭐⭐ HA KÖZBEN EGY MÁSIK FOLYAMAT ÍRT, A KÖVETKEZŐ GYÖKÉR IS HEL
 });
 
 // ===================================
-// 3. ⭐ A PONT-ESEMÉNY ÖNMAGÁBAN ELLENŐRIZHETŐ — ezért köti az ESEMÉNY ELŐTTI állapotot
+// 3. ⭐ A PONT-ESEMÉNY ÖNMAGÁBAN ELLENŐRIZHETŐ — D81: CSAK AZ ESEMÉNYBŐL, a szerző nélkül
 // ===================================
 
 /**
- * Az ellenőrző oldala: CSAK a pont-eseményt tartja; a szerzőtől a két gyökeret és az entitás régi
- * értékének bizonyítékát kapja. Igaz, ha a bemondott összeg a bizonyítékból kijön.
+ * Az ellenőrző oldala: CSAK a pont-eseményt tartja. ⭐ D81: a lánc-gyökere (az előző állapot) és az
+ * entitás régi értékének bizonyítéka az aláírt eseményben van — a szerzőt semmiért nem kell megkérni.
  */
-async function pontEsemenyEllenorzese(e, { naploGyoker, kiosztasGyoker, bizonyitek }) {
-  if (await lancGyokerKetGyokerbol(naploGyoker, kiosztasGyoker) !== e.lancGyoker) return false;
+async function pontEsemenyEllenorzese(e) {
   const uj = e.adat.pont > 0 ? { ertek: null, osszegek: [e.adat.pont] } : null;
-  const valtozas = await allapotValtozasa(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, kiosztasGyoker, e.adat.entitas, bizonyitek, uj);
-  return valtozas.rendben && valtozas.gyoker.o[0] === e.adat.kiosztva;
+  const valtozas = await allapotValtozasa(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, e.lancGyoker.kiosztas, e.adat.entitas, e.adat.bizonyitek, uj);
+  return valtozas.rendben && valtozas.gyoker.o[0] === e.adat.kiosztva ? valtozas.gyoker : null;
 }
 
-/** A szerző oldala: a k-adik esemény előtti állapotból a két gyökér és a bizonyíték. */
-async function szerzoBizonyiteka(lanc, e) {
-  const a = await lancAllapotaLancbol(lanc.slice(0, e.sorszam - 1));
-  return { naploGyoker: a.naploGyoker, kiosztasGyoker: a.kiosztasGyoker,
-    bizonyitek: await allapotBizonyitek(a.kiosztasFa, e.adat.entitas) };
-}
-
-proba('⭐⭐⭐ A PONT-ESEMÉNY ÖNMAGÁBAN ELLENŐRIZHETŐ — minden pont-esemény bemondott összege kijön a bizonyítékból', async () => {
+proba('⭐⭐⭐ A PONT-ESEMÉNY ÖNMAGÁBAN ELLENŐRIZHETŐ — CSAK az aláírt eseményből, a szerző nélkül (D81)', async () => {
   const { tar, kornyezet } = await ujKornyezet();
   await elet(kornyezet);
   const lanc = await sajatLancEsemenyei(tar, kornyezet.szerzo);
   const pontEsemenyek = lanc.filter((e) => e.tipus === 'TudatpontRendezes');
-  for (const e of pontEsemenyek) {
-    if (!await pontEsemenyEllenorzese(e, await szerzoBizonyiteka(lanc, e))) return false;
-  }
+  for (const e of pontEsemenyek) if (!await pontEsemenyEllenorzese(e)) return false;
   return pontEsemenyek.length === 4;
 });
 
-proba('⭐⭐ AZ ÁLLAPOT FOLYTONOS — a pont-esemény bizonyítékából számolt új kiosztás = a KÖVETKEZŐ esemény aláírt előtti állapota', async () => {
-  // ⭐ Ez köti össze a szerző egymás utáni eseményeit (a ③ ellenőrzés egyik fele): amit a pont-esemény
-  // után a bizonyítékból számolunk, azt kell a következő eseménynek elkötnie. ⚠️ Ez méri azt is, hogy
-  // a 0 pont kiesik-e a fából (a visszavétel): ha bent maradna, a kettő eltérne.
+proba('⭐⭐ AZ ÁLLAPOT FOLYTONOS — a pont-esemény utáni kiosztás = a KÖVETKEZŐ esemény aláírt előtti állapota (két eseményből)', async () => {
+  // ⭐ Ez köti össze a szerző egymás utáni eseményeit, és D81 óta a két esemény elég hozzá. ⚠️ Ez méri
+  // azt is, hogy a 0 pont kiesik-e a fából (a visszavétel): ha bent maradna, a kettő eltérne.
   const { tar, kornyezet } = await ujKornyezet();
   await elet(kornyezet);
   const lanc = await sajatLancEsemenyei(tar, kornyezet.szerzo);
   let merve = 0;
   for (let i = 0; i < lanc.length - 1; i++) {
-    const e = lanc[i];
-    if (e.tipus !== 'TudatpontRendezes') continue;
-    const { kiosztasGyoker, bizonyitek } = await szerzoBizonyiteka(lanc, e);
-    const uj = e.adat.pont > 0 ? { ertek: null, osszegek: [e.adat.pont] } : null;
-    const szamitott = await allapotValtozasa(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, kiosztasGyoker, e.adat.entitas, bizonyitek, uj);
-    const kovetkezo = await lancAllapotaLancbol(lanc.slice(0, i + 1));
-    if (!szamitott.rendben || szamitott.gyoker.l !== kovetkezo.kiosztasGyoker.l) return false;
+    if (lanc[i].tipus !== 'TudatpontRendezes') continue;
+    const utana = await pontEsemenyEllenorzese(lanc[i]);
+    if (!utana || utana.l !== lanc[i + 1].lancGyoker.kiosztas.l) return false;
     merve++;
   }
   return merve === 4;
 });
 
-proba('⛔⛔ A HAZUG BEMONDÁS LEBUKIK — a helyes gyökérrel aláírt, de túl kicsi összeget mondó pont-esemény', async () => {
+proba('⛔⛔ A HAZUG BEMONDÁS LEBUKIK — a helyes gyökérrel és bizonyítékkal aláírt, de túl kicsi összeget mondó pont-esemény', async () => {
   const { tar, kornyezet } = await ujKornyezet();
   const { g1 } = await elet(kornyezet);
   const lanc = await sajatLancEsemenyei(tar, kornyezet.szerzo);
   const utolso = lanc[lanc.length - 1];
-  // A csaló a HELYES lánc-gyökérrel ír alá egy új pont-eseményt — de kevesebbet mond be (a keret
-  // alatt maradna), mint amennyi a kiosztásából kijön.
-  const lancGyoker = await lancGyokerUjEsemenyhez(tar, KOINO, kornyezet.szerzo, utolso.sorszam + 1);
-  const hazug = await esemenyLetrehozasa({
+  // A csaló a HELYES lánc-gyökérrel és bizonyítékkal ír alá — de kevesebbet mond be.
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, KOINO, kornyezet.szerzo, utolso.sorszam + 1, null, g1.azonosito);
+  const alair = (kiosztva) => esemenyLetrehozasa({
     koino: KOINO, tipus: 'TudatpontRendezes', entitas: g1.azonosito, entitasSorszam: 99,
-    adat: { entitas: g1.azonosito, pont: 50, szerep: 'aktiv', kiosztva: 10 },
+    adat: { entitas: g1.azonosito, pont: 50, szerep: 'aktiv', kiosztva, bizonyitek },
     elozo: utolso.azonosito, sorszam: utolso.sorszam + 1, lancGyoker
   }, kornyezet.kulcspar);
-  const becsuletes = { ...hazug };           // kontroll: ugyanez a helyes bemondással (45 → 50: 50)
-  const bizonyitek = await szerzoBizonyiteka([...lanc, hazug], hazug);
+  const hazug = await alair(10);
+  const becsuletes = await alair(50);         // kontroll: 45 → 50 (a g2 0-n áll)
   return (await esemenyEllenorzese(hazug)).rendben                // az aláírás rendben van…
-    && !await pontEsemenyEllenorzese(hazug, bizonyitek)            // …a bemondás mégis lebukik
-    && await pontEsemenyEllenorzese({ ...becsuletes, adat: { ...hazug.adat, kiosztva: 50 } }, bizonyitek);
+    && !await pontEsemenyEllenorzese(hazug)                        // …a bemondás mégis lebukik
+    && !!await pontEsemenyEllenorzese(becsuletes);
 });
 
 // ===================================
@@ -239,15 +223,42 @@ proba('⛔ HA A SAJÁT LÁNC NEM ÉP (hézag vagy szakadás), A GYÖKÉR NULL �
     elozo: null, sorszam: 2 }, masik.kornyezet.kulcspar);
   await esemenyMentese(masik.tar, szakadt);
   const szakadassal = await lancGyokerUjEsemenyhez(masik.tar, KOINO, masik.kornyezet.szerzo, 3);
-  return hezaggal === null && typeof eppel === 'string' && (await masik.tar.esemeny(szakadt.azonosito)) !== undefined
+  return hezaggal === null && eppel !== null && typeof eppel === 'object' && (await masik.tar.esemeny(szakadt.azonosito)) !== undefined
     && szakadassal === null;
 });
 
-proba('⛔ A KAPU CSAK LENYOMAT ALAKÚ GYÖKERET ENGED BE — a null és a 43 jeles mehet', async () => {
-  const { kornyezet } = await ujKornyezet();
-  const alap = { koino: KOINO, tipus: 'GondolatLetrehozas', adat: { cim: 'x' }, elozo: null, sorszam: 1 };
-  const e = async (lancGyoker) => (await esemenyEllenorzese(await esemenyLetrehozasa({ ...alap, lancGyoker }, kornyezet.kulcspar))).rendben;
-  return await e(null) && await e('A'.repeat(43)) && !await e('x') && !await e('A'.repeat(44));
+proba('⛔ A KAPU CSAK A KÉT GYÖKERET ENGEDI BE (vagy null-t) — és a pont-eseménynél a hozzá illő bizonyítékot (D81)', async () => {
+  const { tar, kornyezet } = await ujKornyezet();
+  const { g1, g2 } = await elet(kornyezet);
+  // ⚠️ KÉT levél kell a kiosztásban: egylevelű fában egy hiányzó kulcs bizonyítéka pontosan UGYANAZ,
+  // mint az egyetlen levélé — a „más kulcs bizonyítéka" semmit nem mérne (a próba első változata így járt).
+  await tudatpontRendezese(kornyezet, g2.azonosito, 10);
+  const lanc = await sajatLancEsemenyei(tar, kornyezet.szerzo);
+  const utolso = lanc[lanc.length - 1];
+  const sorszam = utolso.sorszam + 1;
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, KOINO, kornyezet.szerzo, sorszam, null, g1.azonosito);
+  const alak = async (lg, s = sorszam) => (await esemenyEllenorzese(await esemenyLetrehozasa(
+    { koino: KOINO, tipus: 'GondolatLetrehozas', adat: { cim: 'x' }, elozo: utolso.azonosito, sorszam: s, lancGyoker: lg },
+    kornyezet.kulcspar))).rendben;
+  const kapu = async (adat) => (await esemenyMentese(tar, await esemenyLetrehozasa(
+    { koino: KOINO, tipus: 'TudatpontRendezes', entitas: g1.azonosito, entitasSorszam: 77, adat,
+      elozo: utolso.azonosito, sorszam, lancGyoker }, kornyezet.kulcspar))).mentve;
+  const masBizonyitek = (await lancUjEsemenyhez(tar, KOINO, kornyezet.szerzo, sorszam, null, g2.azonosito)).bizonyitek;
+  const pont = { entitas: g1.azonosito, pont: 50, szerep: 'aktiv', kiosztva: 60 };
+  const esetek = [
+    ['null', await alak(null), true],
+    ['a két gyökér', await alak(lancGyoker), true],
+    ['43 jeles lenyomat', await alak('A'.repeat(43)), false],
+    ['rossz napló-darab', await alak(lancGyoker, sorszam + 1), false],
+    ['fölös mező', await alak({ ...lancGyoker, x: 1 }), false],
+    ['hiányzó kiosztás', await alak({ naplo: lancGyoker.naplo }), false],
+    ['pont-esemény bizonyíték nélkül', await kapu(pont), false],
+    ['pont-esemény MÁS kulcs bizonyítékával', await kapu({ ...pont, bizonyitek: masBizonyitek }), false],
+    ['pont-esemény a hozzá illő bizonyítékkal', await kapu({ ...pont, bizonyitek }), true]
+  ];
+  const rossz = esetek.filter(([, kapott, vart]) => kapott !== vart).map(([nev]) => nev);
+  if (rossz.length) console.log('    (rosszul ítélt esetek: ' + rossz.join(', ') + ')');
+  return rossz.length === 0;
 });
 
 export default futtatas;

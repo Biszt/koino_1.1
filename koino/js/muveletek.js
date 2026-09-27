@@ -23,7 +23,7 @@
 
 import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
 // ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
-import { lancGyokerUjEsemenyhez } from './allapot/lancGyoker.js';
+import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
 import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
@@ -208,13 +208,16 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   //
   // ⭐ Nem óra-hamisítás: a saját láncomban az idő nem lép VISSZA, csak áll egy pillanatra.
   //
-  // ⭐⭐ D78: A LÁNC-GYÖKÉR — az új esemény elköti a szerző ESEMÉNY ELŐTTI naplóját (a kettős lánc a
-  // szeletek között is lelepleződik, D63) és kiosztását (a bemondott összeg egy bizonyítékkal
-  // ellenőrizhető, D42). Ha a saját lánc nem ép, null (mint a D78 előtti eseményeké).
-  const lancGyoker = await lancGyokerUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
-    veg.sorszam, kornyezet.lancTarolo ?? null);
+  // ⭐⭐ D78, D81: A LÁNC-GYÖKÉR — az új esemény a szerző ESEMÉNY ELŐTTI naplóját (a kettős lánc a
+  // szeletek között is lelepleződik, D63) és kiosztását hordozza; a PONT-esemény az entitása régi
+  // értékének bizonyítékát is (D81: a bizonyíték az eseménnyel utazik — a bemondott összeg a szerző
+  // nélkül is ellenőrizhető, D42). Ha a saját lánc nem ép, null (mint a D78 előtti eseményeké).
+  const pontEntitas = tipus === 'TudatpontRendezes' && typeof adat?.entitas === 'string' ? adat.entitas : null;
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
+    veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas);
+  const vegsoAdat = pontEntitas && bizonyitek ? { ...adat, bizonyitek } : adat;
   return esemenyLetrehozasa(
-    { koino: kornyezet.koino, tipus, adat, entitas, entitasSorszam, latott, lancGyoker,
+    { koino: kornyezet.koino, tipus, adat: vegsoAdat, entitas, entitasSorszam, latott, lancGyoker,
       ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}), ...veg },
     kornyezet.kulcspar
   );

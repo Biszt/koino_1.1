@@ -20,6 +20,8 @@
 // Használják: a tár-réteg és minden művelet (gondolat, tudatpont, javaslat, szavazat).
 
 import { lenyomat, base64UrlBajtok, bajtokBase64Url } from './kanonikusAlak.js';
+// ⭐ D81: a lánc-gyökér két összegzés — az alakjukat itt nézzük (a fa egy forrás).
+import { osszegzesAlakja } from './osszegzoFa.js';
 
 const ALGORITMUS = 'Ed25519';
 
@@ -36,7 +38,7 @@ const ALGORITMUS = 'Ed25519';
 //   entitas        — ⭐ A SZELET-KULCS. Melyik entitáshoz tartozik ez az esemény?
 //   entitasSorszam — hányadik eseményem EZEN AZ ENTITÁSON (a `sorszam` entitás-szintű párja)
 //   latott         — pár IDEGEN esemény azonosítója, amit már ismertem (horgony az időhöz)
-//   lancGyoker     — ⏸️ LEFOGLALT HELY, egyelőre MINDIG `null` (lásd lentebb)
+//   lancGyoker     — ⭐ a szerző ESEMÉNY ELŐTTI naplójának és kiosztásának gyökere (D78, D81; lásd lentebb)
 //
 // ⚠️ MIÉRT A BURKOLATBAN, ÉS NEM AZ `adat`-BAN? Mert a tár-illesztőnek szeletelnie kell,
 // és ehhez NEM SZABAD értenie a domaint. Ma az entitás típusonként más néven lapul az
@@ -73,6 +75,17 @@ const ALGORITMUS = 'Ed25519';
 // az egy mező HOZZÁADÁSA vagy ELVÉTELE — mert attól kétféle eseményalak lenne, és átállás
 // közben két gép ugyanarra a tudásra MÁS ujjlenyomatot számolna, némán. Egy `null`-t
 // értelmes értékre cserélni NEM ilyen: az csak egy másik érték, mint bármelyik másikban.
+//
+// ===== ✅ ÉS MOST MEGKAPTA AZ ÉRTELMÉT (D78, D81 — 2026-09-27) =====
+//
+// A `lancGyoker` a szerző ESEMÉNY ELŐTTI két gyökerének ÖSSZEGZÉSE: `{ naplo, kiosztas }` —
+// a napló-fáé (az 1..sorszam−1 események azonosítói) és a kiosztás-fáé (entitás → pont; a
+// gyökér összege a kiosztott összeg). ⭐ Nem a lenyomatuk, hanem maguk (D81: a bizonyíték az
+// eseménnyel utazik): így aki az eseményt tartja, a szerző nélkül is ellenőrizni tudja. A
+// pont-esemény ezen felül az adatában hozza az entitása régi értékének bizonyítékát.
+// A `null` marad a régi (D78 előtti) eseményeké, és azé, akinek a saját lánca nem ép.
+// ⭐ És ez pontosan az a csere, amit a 2026-09-02-i döntés olcsónak mondott: egy `null` helyén
+// egy érték — a régi események érvényesek maradnak.
 const TARTALOM_MEZOK = [
   'koino', 'tipus', 'szerzo', 'elozo', 'sorszam', 'ido',
   'entitas', 'entitasSorszam', 'latott', 'lancGyoker',
@@ -264,6 +277,18 @@ export const AZONOSITO_MINTA = /^[A-Za-z0-9_-]{43}$/;
 export const azonositoAlaku = (x) => typeof x === 'string' && AZONOSITO_MINTA.test(x);
 
 /**
+ * A lánc-gyökér alakja (D81): `{ naplo, kiosztas }` — két összegzés (`{ l, d, o }`), semmi más; a
+ * napló összeg nélküli, a kiosztás egy összeget (a pontot) visz, és a napló darabja a sorszám − 1.
+ * ⚠️ Csak az ALAK: hogy a gyökerek a szerző láncához illenek-e, azt a bizonyítékok döntik el.
+ */
+export function lancElokepAlakja(x, sorszam) {
+  const osszegzes = (y, hossz) => !!y && typeof y === 'object' && Object.keys(y).length === 3
+    && osszegzesAlakja(y, hossz);
+  return !!x && typeof x === 'object' && !Array.isArray(x) && Object.keys(x).length === 2
+    && osszegzes(x.naplo, 0) && osszegzes(x.kiosztas, 1) && x.naplo.d === sorszam - 1;
+}
+
+/**
  * ⭐ AZ ALAKI ELLENŐRZÉS ÖNMAGÁBAN — szinkron és olcsó (2026-09-24, 40. mérés).
  *
  * ⛔ MIÉRT VÁLT KÜLÖN: a kapu (`esemenyEllenorzese`) ezt is, a drága részt is (lenyomat +
@@ -305,12 +330,11 @@ export function alakiHiba(esemeny) {
   if (!Array.isArray(esemeny.latott) || esemeny.latott.some((a) => typeof a !== 'string')) {
     return 'a latott csak azonosítók tömbje lehet';
   }
-  // ⭐ A lánc-gyökér (D63, D78): a szerző esemény előtti naplójának és kiosztásának lenyomata — vagy
-  // null (a D78 előtti események, és ha a szerző saját lánca nem ép). ⚠️ 2026-09-27-ig bármilyen
-  // szöveget átengedtünk („lefoglalt hely"); az üzenet viszont már akkor is lenyomatot mondott — most
-  // az őr is azt teszi, amit mond (a D77 mintája).
-  if (esemeny.lancGyoker !== null && !azonositoAlaku(esemeny.lancGyoker)) {
-    return 'a lancGyoker csak lenyomat vagy null lehet';
+  // ⭐ A lánc-gyökér (D63, D78, D81): a szerző ESEMÉNY ELŐTTI két gyökere — vagy null (a D78 előtti
+  // események, és ha a szerző saját lánca nem ép). ⛔ Pontosan két összegzés, és a napló darabja a
+  // sorszám − 1 (annyi eseménye volt előtte): egy alak van, nem kettő.
+  if (esemeny.lancGyoker !== null && !lancElokepAlakja(esemeny.lancGyoker, esemeny.sorszam)) {
+    return 'a lancGyoker csak a két gyökér (napló, kiosztás) vagy null lehet';
   }
 
   // ----- ⛔ D77: A SZÜLETÉS SZÜLŐJE — mert az is szelet-kulcs lesz -----

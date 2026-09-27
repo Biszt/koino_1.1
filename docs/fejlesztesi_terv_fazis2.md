@@ -4284,6 +4284,32 @@ bizonyítéknak tehát oda kell jutnia, ahol a csaló pontjait számolják.
 szándékosan **nem büntet** (két offline készülék ártatlanul is elágaztat — `elagazasokFeloldasa`), tehát
 a következménye más kérdés — Csaba döntése.
 
+### D81. A BIZONYÍTÉK AZ ESEMÉNNYEL UTAZIK (2026-09-27, Csaba)
+
+> *„elfogadom a javaslatodat"* — Csaba (a három változat közül: kérésre · az eseménnyel · külön darab)
+
+**Amiből jött:** ha a bizonyítékot a szerzőtől KÉRÉSRE kapjuk, a csaló egyszerűen hallgathat — és a
+D79/3 szerint a hallgatás „nem ellenőrizhető", a pont számít. A hallgatást büntetni sem lehet: egy
+offline becsületes ember és egy hallgató csaló kívülről ugyanaz (D19). A külön darab ugyanezt a rést
+hagyná nyitva (a szerző visszatarthatja).
+
+#### A DÖNTÉS
+
+1. ⭐ **Az esemény magával hozza a bizonyítékát** — a D42 elve: *„ahol a tudás elfogy, ott az esemény
+   hozza a bizonyítékát"*. Aki az eseményt tartja, mindig ellenőrizni tudja — akkor is, ha a szerző
+   eltűnt, és ehhez nem kell hálózati üzenet.
+2. ⭐ **A megvalósítás (a pontos alak a megvalósításé — D78):** maga a `lancGyoker` lesz az előkép —
+   a két gyökér összegzése (`{ naplo, kiosztas }`), nem a lenyomatuk (vagy `null`). Így **egy alak
+   marad** (nincs új kötelező mező, a régi események érvényesek), és az előkép az ALÁÍRT tartalomban
+   utazik — nem lehet leválasztani anélkül, hogy az esemény érvénytelenné válna. A pont-esemény
+   ezen felül az adatában hozza az entitása régi értékének bizonyítékát (`adat.bizonyitek`).
+3. ⭐⭐ **A haszna:** a szabály-réteg a hazug bemondást **hézagos láncnál is bizonyítottan** elveti
+   (ma ott csak jelez), és a folytonosság minden szomszédos párra ellenőrizhető a szerző nélkül.
+4. **Az ára (52. mérés):** egy pont-esemény ~450 bájt helyett ~1,2 KB (100 kiosztott entitásnál; a
+   keret határán ~1,7 KB), a többi esemény +~110 bájt. ⚠️ Most a legolcsóbb: a telefon még a tiszta
+   törés előtti programon fut.
+5. **A D79 teljes listája kérésre marad** (ritka, 5%) — ott a hallgatás „nem ellenőrizhető".
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

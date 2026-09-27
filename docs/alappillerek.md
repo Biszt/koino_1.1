@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D80), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D81), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -77,10 +77,11 @@ adatból bizonyítható**, a teljes halmaz nélkül.
 **A megépítés sorrendje:** ✅ ① a fa-modul (a két elrendezés, bizonyíték, ellenőrzés, a kiosztás
 változásának ellenőrzése) próbákkal és méréssel (52.) → ✅ ② a `lancGyoker` az új eseményekben (az
 ESEMÉNY ELŐTTI állapot; a szerző gyorsítótára) → ✅ ③/helyi: az ellentmondás bizonyítéka (D80 — esemény a
-vádolt azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) → ⏭️
-③/hálózati: hogyan jut a bizonyíték az ellenőrzőhöz (⚠️ Csaba döntése: kérésre vagy az eseménnyel), a
-teljes kiosztás-lista szúrópróbája (D79), a kettős lánc a szeletek között, a bizonyíték kiszolgálása
-(logaritmikusan).
+vádolt azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) → ✅
+D81: a bizonyíték az eseménnyel utazik (a `lancGyoker` maga a két gyökér, a pont-esemény a
+bizonyítékát is hozza; a szabály hézagnál is bizonyítottan ítél) → ⏭️ a folytonosság automatikus
+észlelése és bejelentése, a D79 szúrópróba (a teljes lista kérésre), a kettős lánc a szeletek között
+(⚠️ a következménye döntés), a napló-bizonyíték kiszolgálása (logaritmikusan).
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
@@ -183,3 +184,8 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
     szerző adhatja ki · `ellentmondas.js` vége.
 19. **2026-09-27 este · a kettős lánc napló-alapú bizonyítéka** → **nem most** · mert az elágazás ma
     szándékosan nem büntet (két offline készülék ártatlanul is elágaztat), a következménye döntés · D80.
+20. **2026-09-27 este · a bizonyíték útja: kérésre a szerzőtől** → **az eseménnyel utazik (D81)** · mert
+    kérésre a csaló egyszerűen hallgathat, és a hallgatás „nem ellenőrizhető" (a pontja számít) · D81.
+21. **2026-09-27 este · a `lancGyoker` alakja: a két gyökér lenyomata (43 jel)** → **maga a két gyökér**
+    · mert így az előkép az aláírt eseményben utazik (nem választható le), és nem kell új mező (egy alak
+    marad, a régi események érvényesek) · D81, 53. mérés.

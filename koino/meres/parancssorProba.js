@@ -26,14 +26,13 @@ import { join } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
 import { createSocket } from 'node:dgram';
 // ⭐ D78: a lánc-gyökér újraszámolása a láncból (a mérce — a kézi út eseményeit ezzel vetjük össze).
-import { lancGyokerLancbol } from '../js/allapot/lancGyoker.js';
+import { lancGyokerLancbol, azonosLancGyoker } from '../js/allapot/lancGyoker.js';
 // ⭐ D80: a bizonyíték a kézi úton — a csaló láncát és a vádat a próba MAGA rakja össze.
 import { esemenyTarNyitasa, fajlBlobTarolo } from '../js/tar/fajlTar.js';
 import { sajatLancEsemenyei, esemenyMentese } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
 import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese } from '../js/muveletek.js';
-import { lancAllapotaLancbol, lancGyokerUjEsemenyhez } from '../js/allapot/lancGyoker.js';
-import { allapotBizonyitek } from '../js/esemeny/osszegzoFa.js';
+import { lancUjEsemenyhez } from '../js/allapot/lancGyoker.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
@@ -462,7 +461,7 @@ proba('⭐⭐ A LÁNC-GYÖKÉR AZ ÉLES ÚTON — a kézi parancsok eseményei a
       .split('\n').filter((s) => s.trim()).map((s) => JSON.parse(s)).sort((a, b) => a.sorszam - b.sorszam);
     const gyorsitotar = JSON.parse(await readFile(join(hely, 'sajat', 'lanc.json'), 'utf8'));
     for (let i = 0; i < sorok.length; i++) {
-      if (typeof sorok[i].lancGyoker !== 'string' || sorok[i].lancGyoker !== await lancGyokerLancbol(sorok.slice(0, i))) {
+      if (!sorok[i].lancGyoker || !azonosLancGyoker(sorok[i].lancGyoker, await lancGyokerLancbol(sorok.slice(0, i)))) {
         console.log('    (hibás gyökér a(z) ' + sorok[i].sorszam + '. eseményben)');
         return false;
       }
@@ -498,26 +497,21 @@ proba('⭐⭐ AZ ELLENTMONDÁS A KÉZI ÚTON — az ép vád a másik készülé
     await tudatpontRendezese(k, g.azonosito, 30);
     let lanc = await sajatLancEsemenyei(tar, k.szerzo);
     const utolso = lanc[lanc.length - 1];
+    // ⭐ D81: a helyes lánc-gyökérrel és bizonyítékkal — csak a bemondás hazug (a kapu így beengedi).
+    const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, 'sajat', k.szerzo, utolso.sorszam + 1, null, g.azonosito);
     const hazug = await esemenyLetrehozasa({ koino: 'sajat', tipus: 'TudatpontRendezes', entitas: g.azonosito,
-      entitasSorszam: 9, adat: { entitas: g.azonosito, pont: 80, szerep: 'aktiv', kiosztva: 5 },
-      elozo: utolso.azonosito, sorszam: utolso.sorszam + 1,
-      lancGyoker: await lancGyokerUjEsemenyhez(tar, 'sajat', k.szerzo, utolso.sorszam + 1) }, k.kulcspar);
+      entitasSorszam: 9, adat: { entitas: g.azonosito, pont: 80, szerep: 'aktiv', kiosztva: 5, bizonyitek },
+      elozo: utolso.azonosito, sorszam: utolso.sorszam + 1, lancGyoker }, k.kulcspar);
     await esemenyMentese(tar, hazug);
     lanc = await sajatLancEsemenyei(tar, k.szerzo);
 
-    // ----- A vád: ép és hamis (a hamis egy becsületes pont-eseményt vádol) -----
-    const a = await lancAllapotaLancbol(lanc.slice(0, hazug.sorszam - 1));
-    const elotte = { naplo: a.naploGyoker, kiosztas: a.kiosztasGyoker };
+    // ----- A vád: ép és hamis (a hamis egy becsületes pont-eseményt vádol) — D81: az esemény elég -----
     const bejelento = await kulcs();
     const vadEsemeny = async (adat) => esemenyLetrehozasa({ koino: 'sajat', tipus: 'Ellentmondas',
       entitas: lanc[0].azonosito, entitasSorszam: 1, adat, elozo: null, sorszam: 1 }, bejelento.kulcspar);
-    const ep = await vadEsemeny({ kit: k.szerzo, fajta: 'bemondas', vadpont: hazug.sorszam, esemeny: hazug, elotte,
-      bizonyitek: await allapotBizonyitek(a.kiosztasFa, g.azonosito) });
+    const ep = await vadEsemeny({ kit: k.szerzo, fajta: 'bemondas', vadpont: hazug.sorszam, esemeny: hazug });
     const becsuletes = lanc.find((e) => e.tipus === 'TudatpontRendezes');
-    const b0 = await lancAllapotaLancbol(lanc.slice(0, becsuletes.sorszam - 1));
-    const hamis = await vadEsemeny({ kit: k.szerzo, fajta: 'bemondas', vadpont: becsuletes.sorszam, esemeny: becsuletes,
-      elotte: { naplo: b0.naploGyoker, kiosztas: b0.kiosztasGyoker },
-      bizonyitek: await allapotBizonyitek(b0.kiosztasFa, g.azonosito) });
+    const hamis = await vadEsemeny({ kit: k.szerzo, fajta: 'bemondas', vadpont: becsuletes.sorszam, esemeny: becsuletes });
 
     // ----- A kézi út: a csaló lánca + a vádak EGY fájlban, a valódi `behoz`-zal -----
     const fajl = join(vevo, 'bizonyitek.jsonl');

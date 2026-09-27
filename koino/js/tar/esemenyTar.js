@@ -29,6 +29,8 @@
 import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
+// ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
+import { pontEsemenyOnbizonyitasa } from '../allapot/lancGyoker.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -54,6 +56,16 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   if (!ellenorzes.rendben) {
     console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: ellenorzes.ok });
     return { mentve: false, ok: ellenorzes.ok };
+  }
+
+  // ----- 1/a. ⭐ D81: A PONT-ESEMÉNY BIZONYÍTÉKA -----
+  // Ha a pont-esemény a lánc-gyökerét hordozza, magával hozza az entitása régi értékének bizonyítékát
+  // — és annak illenie kell a saját aláírt kiosztás-gyökeréhez. Ettől a szabály-réteg a bizonyíték
+  // számait (az előző összeget és a régi értéket) elhiheti, ahogy az aláírást is.
+  const onbizonyitas = await pontEsemenyOnbizonyitasa(esemeny);
+  if (!onbizonyitas.rendben) {
+    console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: onbizonyitas.ok });
+    return { mentve: false, ok: onbizonyitas.ok };
   }
 
   // ----- 1/b. ⭐ D80: AZ ELLENTMONDÁS BIZONYÍTÉKA IS ITT MEGY ÁT -----
