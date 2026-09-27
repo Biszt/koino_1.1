@@ -4330,3 +4330,32 @@ egyszeri, és minden olyan megnyitásnál, ahol ezer fölötti esemény jött a 
 
 ⏸️ **Nem mérve:** a telefonon (Android, f2fs/ext4) a fájlonkénti ár valószínűleg kisebb — de a
 döntést a teljes betöltés aránya (≈45×) hozta, nem egy konstans. Érdemes a telefonon is lefuttatni.
+
+## 50. ⭐⭐⭐ A TARTOMÁNY-EGYEZTETÉS ÁRA — egy eltérés 100 000 közt: 160,2 KB → 4,0 KB (2026-09-27, hálózat nélkül)
+
+*A szeletelési terv 5./C 6. pontja: ugyanaz a kérdés, mint a 48.-é (*„1 eltérés 100 000 esemény
+közt → hány bájt"*), ugyanazon a generátoron — de a mai szerzőnkénti ÁLLÁS helyett a tartomány-
+egyeztetéssel (`js/csere/tartomany.js`, D74: a tartomány lenyomata a rendezett azonosítók hash-e;
+16 részre osztás, 32 azonosító alatt lista). `tartomanyMeres.js`; a bájt az üzenetek JSON-hossza.*
+
+```
+                                        |  10 000 esemény       |  100 000 esemény      | a mai csere (48.)
+1 eltérés, egyetlen halmazként          |  3,0 KB · 5 üzenet    |  4,0 KB · 5 üzenet    | 17 KB / 160,2 KB
+1 eltérés, két szinten (szelet → belül) |  4,3 KB               |  4,7 KB               |
+   · a szelet-jelek (3107 / 28 825)     |  4,0 KB · 4 üzenet    |  4,4 KB · 5 üzenet    |
+   · az eltérő szelet belül             |  256 B · 2 üzenet     |  256 B · 2 üzenet     |
+nincs eltérés                           |  58 B · 1 üzenet      |  58 B · 1 üzenet      | 334 B (TCP-n)
+egy szelet, 1 eltérés (medián / legn.)  |  164 B / 1,3 KB (28)  |  164 B / 1,2 KB (60)  |
+```
+
+⭐ **A lelet:** a forgalom tízszeres koinóra 3,0 → 4,0 KB — **logaritmikusan nő** (a felosztások
+száma, log16), nem a koinóval; 100 000 eseménynél **40-szer kevesebb**, mint a mai csere. És a
+leggyakoribb eset, a „nincs újdonság", egyetlen 58 bájtos üzenet.
+
+⚠️ **Amit a szám nem tartalmaz:** (1) az üzenetek keretét a vonalon (a UDP-darabolás, a nyugták —
+a 43. mérés szerint egy „nincs újdonság" kör a résen ma 1,2–1,7 KB, ennek zöme a keret és a
+címjegyzék); (2) a két szintű alak első szintjét a **társankénti emlékezet** (a 8. pont) a
+hétköznapi esetben megspórolhatja: ha tudom, mely közös szeleteink változtak az utolsó cserénk óta,
+csak azokat kell egyeztetni. (3) ⚠️ Egy legfeljebb 32 azonosítós tartományban az eltérő fél a TELJES
+listáját küldi — ezért a legnagyobb szelet (28, illetve 60 esemény) egy eltérése is ~1,2 KB. A
+lista-küszöb hangolható, és nem állapot-befolyásoló.

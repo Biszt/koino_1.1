@@ -32,7 +32,8 @@ import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open
 import { join, dirname } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
-import { bajtLenyomat, lenyomat } from '../esemeny/kanonikusAlak.js';
+import { bajtLenyomat } from '../esemeny/kanonikusAlak.js';
+import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 
 // ===================================
 // HOL LAKIK AZ ADAT
@@ -542,8 +543,10 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     async szeletLenyomata(s) {
       const kesz = lenyomatok.get(s);
       if (kesz) return kesz;
-      const azonositok = (szeletSzerint.get(s) ?? []).map((b) => b.a).sort();
-      const ertek = await lenyomat(azonositok);
+      // ⭐ A szabály EGY helyen él (`esemeny/halmaz.js`): ugyanezt számolja a tartomány-egyeztetés
+      // is a teljes tartományra (D74).
+      const azonositok = rendezettHalmaz((szeletSzerint.get(s) ?? []).map((b) => b.a));
+      const ertek = await halmazLenyomata(azonositok);
       // ⚠️ Csak akkor tesszük el, ha közben nem bővült (a bővülés eldobja a régit).
       if ((szeletSzerint.get(s)?.length ?? 0) === azonositok.length) lenyomatok.set(s, ertek);
       return ertek;

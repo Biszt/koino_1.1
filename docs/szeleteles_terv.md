@@ -138,6 +138,11 @@ esemény ugyanarról a lánc-pontról (a halmaz mindkettőt hordozza, és a kapu
 az `entitasSorszam`-ban (a szabály-réteg gyanújele, 4.3). A mai ÁLLÁS négy mezőjének mindegyik
 feladata megmarad — csak nem a csere-üzenetben, hanem ahol eredetileg is lakniuk kellett.
 
+⭐ **A lenyomat alakja (D74, 2026-09-27, Csaba):** a tartomány rendezett azonosítóinak HASH-e — nem
+az összegük. Az összeadó lenyomat olcsóbb volna, de aki sok eseményt aláírhat, két különböző
+halmazt tudna ugyanazzal az összeggel kiszámolni (Wagner-féle általánosított születésnap), és egy
+eseményt elrejthetne az egyeztetés elől.
+
 ⚠️ **A megvalósítás egyszerű lehet, az illesztés nem:** az első változat egy szelet tartomány-
 lenyomatát a rendezett azonosító-listán számolja (a szelet méretével arányos — ez egy normál
 entitásnál kicsi). A tömeges entitásnál (4.6) ugyanez az illesztés egy fával válaszol, amelynek
@@ -180,8 +185,9 @@ elhagyta — javítva.)
    megnyitás 100 000 eseménynél — lásd az [`eredmenyek.md`](../koino/meres/eredmenyek.md)-t.
 
 **C. A CSERE SZELETENKÉNT** (S4 — a 7. szakasz 2–4. kérdése döntve)
-6. A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály). ⭐ **Mérés:**
-   ugyanaz, mint a 48.-é — 1 eltérés 100 000 esemény közt → hány bájt.
+6. ✅ A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály) — KÉSZ
+   (2026-09-27: `js/csere/tartomany.js`, a lenyomat hash — D74). ⭐ **Mérés (50.):** 1 eltérés
+   100 000 esemény közt **4,0 KB** a 48. mérés 160,2 KB-ja helyett; „nincs eltérés" 58 B.
 7. ⭐ **A gyerek-bejelentés:** egy szülő szeletének egyeztetési halmaza = a saját eseményei + a
    KÖZVETLEN GYEREKEI születési eseményei. *A szöveg külön darab (A), tehát ezek kicsik: a szülő köre
    megtudja, hogy új gondolat született, a szövege nélkül.*

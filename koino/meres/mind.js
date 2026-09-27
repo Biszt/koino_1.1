@@ -45,6 +45,9 @@ import udpKapu from './udpKapuProba.js';
 // ⭐ Az író (D70, 2026-09-26) — koinónként és készülékenként egy folyamat fűz a tárhoz.
 import iro from './iroProba.js';
 import szovegDarab from './szovegDarabProba.js';
+// ⭐ A tartomány-egyeztetés (S4, D74, 2026-09-27) — hálózat nélkül. ⚠️ A név NEM „tartomany": a
+// `tar` szűrő részszóra illeszkedik, és a tár-próbákkal együtt indítaná.
+import egyeztetes from './tartomanyProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -74,7 +77,8 @@ const PROBAK = [
   { nev: 'tabla', futtat: tabla },
   { nev: 'udpkapu', futtat: udpKapu },
   { nev: 'iro', futtat: iro },
-  { nev: 'szovegdarab', futtat: szovegDarab }
+  { nev: 'szovegdarab', futtat: szovegDarab },
+  { nev: 'egyeztetes', futtat: egyeztetes }
 ];
 
 const szuro = process.argv[2];

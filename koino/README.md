@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonnyolc próba-fájl, **750 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Huszonkilenc próba-fájl, **757 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **189 fájl, 3335,6 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **193 fájl, 3364,6 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -149,6 +149,8 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 
 - `node koino/meres/skalaMeres.js` — **skála-mérés**: hol van a fal (a 3.2 két
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
+- `node koino/meres/tartomanyMeres.js` — ⭐ **a tartomány-egyeztetés ára** (50.): egy eltérés
+  100 000 esemény közt 4,0 KB (a mai csere 160,2 KB-ja helyett), „nincs eltérés" 58 B;
 - `node koino/meres/szeletTarMeres.js` — ⭐ **a tár alakja** (49.): szeletenkénti fájlok vagy egy
   adatfájl + a mutató (D73) — mérve: a teljes betöltés szelet-fájlokból 18–20 s lett volna, a
   mutató pillanatképéből nyitott tár 129–169 ms alatt nyílik, 0 testtel;
@@ -188,6 +190,8 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/allapot/javaslatSzamitas.js` | a döntéshozatal; **az egyezmény mint számítás** |
 | `js/allapot/osszehasonlitas.js` | **„ugyanazt látjuk-e?"** — az állapot ujjlenyomata, és hol tér el |
 | `js/csere/csere.js` | a csere-protokoll **logikája, hálózat nélkül** (`ALLAS` → `KEREK` → `ESEMENY`) |
+| `js/csere/tartomany.js` | ⭐ **a tartomány-egyeztetés** (S4, D74): két azonosító-halmaz különbsége az eltérések számával arányos forgalommal — hálózat nélkül; a csere a C 8. pontjától hívja |
+| `js/esemeny/halmaz.js` | ⭐ az azonosító-halmaz **rendezése és lenyomata egy helyen** (a tár `szeletLenyomata()`-ja és a tartomány-egyeztetés is ezt használja) |
 | `js/csere/vonal.js` | a **párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen). Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |

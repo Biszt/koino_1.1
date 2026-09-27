@@ -3,7 +3,7 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D73),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D74),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
@@ -18,7 +18,8 @@
 > és az **A lépés: a gondolat szövege külön darab** (`js/esemeny/szovegDarab.js`). A **48. mérés**
 > az S3–S4 alapvonala. ✅ **B — az entitásonkénti tár (D73):** a 49. mérés után NEM szeletenként
 > egy fájl, hanem **egy adatfájl + a mutató pillanatképe** (lusta testek, `szeletek()`,
-> `szeletLenyomata()`). **750 önpróba.** ⏭️ **A következő: C — a csere szeletenként**
+> `szeletLenyomata()`). ✅ **C/6 — a tartomány-egyeztetés** (D74: a lenyomat hash; 50. mérés: 1 eltérés
+> 100 000 közt 4,0 KB a 160,2 helyett). **757 önpróba.** ⏭️ **A következő: C — a csere szeletenként**
 > (tartomány-egyeztetés, gyerek-bejelentés, az érdeklődés szabálya, D63). A részletek a
 > [`CLAUDE.md`](../CLAUDE.md) elején. ⚠️ A telefon régi kódon fut — a következő terepi mérés
 > előtt frissíteni kell.

@@ -4030,6 +4030,28 @@ további írás), a több folyamat közti frissítéshez pedig új változás-na
 - ⚠️ A szelet lenyomatát NEM tároljuk: a C (a tartomány-egyeztetés) még változtathat azon, mi
   pontosan a lenyomat — egy tárolt érték akkor elavulna.
 
+### D74. A TARTOMÁNY-LENYOMAT: a rendezett azonosítók HASH-e, nem összeg (2026-09-27, Csaba)
+
+> *„A rendezett azonosítók hash-e […] ezt választom."* — Csaba, a C lépés elején
+
+**Amiből jött:** a szelet-egyeztetés tartomány-alapú (D72/4): a két fél egy azonosító-tartomány
+lenyomatát veti össze, és ahol eltér, ott kettéosztja. Két alak jött szóba:
+
+- **összeadó lenyomat** (a Negentropy mintája: a tartomány azonosítóinak összege) — tartományonként
+  olcsón karbantartható, egy fában O(log n). ⛔ **De aki sok eseményt tud aláírni, kiszámíthat két
+  különböző halmazt ugyanazzal az összeggel** (Wagner-féle általánosított születésnap-támadás), és
+  így egy eseményt elrejthet az egyeztetés elől;
+- **a rendezett azonosítók hash-e** — ütközést csak a hash feltörésével lehetne gyártani.
+
+#### A DÖNTÉS
+
+⭐ **A tartomány lenyomata a tartomány rendezett azonosítóinak kanonikus lenyomata** (ugyanaz a
+szabály, mint a D73 `szeletLenyomata`-é — EGY forrásból, `js/esemeny/halmaz.js`). ⚠️ **Az ár:** a
+lenyomatot tartományonként újra kell számolni (a tartomány méretével arányos munka). Normál
+szeletnél ez semmi (49. mérés: medián 3, 99% 13 esemény); a tömeges entitásnál (4.6) egy fa
+csomópontjai őrizhetik a részlenyomatokat — ugyanaz az illesztés, a hívók változása nélkül. Az
+összeadó alak csak akkor jöhet szóba, ha a mérés kikényszeríti.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
