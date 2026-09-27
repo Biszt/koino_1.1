@@ -4052,6 +4052,58 @@ szeletnél ez semmi (49. mérés: medián 3, 99% 13 esemény); a tömeges entit�
 csomópontjai őrizhetik a részlenyomatokat — ugyanaz az illesztés, a hívók változása nélkül. Az
 összeadó alak csak akkor jöhet szóba, ha a mérés kikényszeríti.
 
+### D75. A KÉT TÁR — tartós (vállalt) és átmeneti (látott, eldobható) (2026-09-27, Csaba)
+
+> *„igen"* (a két tár képére) · *„igen, kiszolgálhatja, a body-n kívül, mindennel."* — Csaba
+
+**Amiből jött:** a (b) (D72/1) első lépése előtt kiderült, hogy ha egy készülék egy gyereknek csak
+a születését tartja (a szülő köréből, a C 7. pontja), a tudatpontjait nem, akkor a számítás „0
+pontosnak" látja, és a **D14** szerint el is tűnik a felületről — pedig a „nincs pontja" és a „nincs
+nálam" két különböző dolog (D19). Csaba egy korábbi beszélgetésből emlékezett a rövid és a hosszú
+távú memória képére; ez a döntés annak a mai alakja, a tudatpont-alapú tárolással (2026-07-16) és
+az SK11-gyel (2026-09-02) együtt.
+
+#### A DÖNTÉS
+
+1. ⭐ **A TARTÓS TÁR — amit vállaltam:** a tudatpontos szeleteim és a saját eseményeim szeletei. Itt
+   a csere teljes jogú résztvevője vagyok (egyeztetek, tartom, kiszolgálom). Ha a pontomat
+   visszaveszem, a szelet átkerül az átmenetibe.
+2. ⭐ **AZ ÁTMENETI TÁR — amit csak láttam:** a megnézett, a lekért, és a szülő köréből érkezett
+   születések. **Eldobható** (ha kell a hely, a legrégebbi megy — SK11), és semmit nem ígér.
+3. ⭐ **A KISZOLGÁLÁS:** az átmeneti tár **mindent kiszolgál, a törzs (body) kivételével** — a törzs
+   a nagy adat, és a vállalás a tudatpont-tartóé (D3). ⚠️ Csak arra felelünk, amit kérdeztek (a
+   kiszolgálás elárulja, mit néztem meg).
+4. ⭐ **A D14 CSAK A TARTÓS TÁRRA vonatkozik** — ami csak az átmenetiben van, az nem tűnik el, hanem
+   jelölve látszik („nem tartod").
+
+⚠️ **Műszaki következmény:** ha az átmeneti tár külön fájl, az eldobás egyszerű; a D73 újraírási
+ára csak a pont visszavételekor jelentkezik. ⚠️ A „megnézett" ma sehol nincs feljegyezve — ez a
+két tár része lesz. A részletek: [`alappillerek.md`](alappillerek.md) B.
+
+### D76. A KÉRELMEZÉS — a nézet kérdez, a válasz az átmeneti tárba kerül (2026-09-27, Csaba)
+
+> *„azt kell szem előtt tartani, hogy a böngészés közben a felhasználó lássa a címeket, fejléceket
+> adatokkal. […] ezt a nézet mondja meg."* — Csaba
+
+#### A DÖNTÉS
+
+1. ⭐ **A készülék csak azt kéri, ami az első betöltéshez kell — ezt a NÉZET mondja meg.** Ma két
+   nézet van (pakli, síkidom), később lesz térkép; **első körben CSAK a pakli** szabályai szerint.
+2. ⭐ **A pakli: a HIERARCHIKUS elrendezés, az ÖSSZ-PONT szerint** (a leszármazottakéval együtt; a
+   saját pont és az idő szerinti rendezés még nem kell). Az első betöltés válasza: **a legnagyobb
+   össz-pontú legfelső szintű entitás mindenestül (törzzsel)**, **szintenként a legnagyobb
+   össz-pontú leszármazott** (fejléc), és **a kiválasztott testvéreinek fejléce**. Egy másik kártya
+   kiválasztása és a testvérre húzás **új kérelem** (a törzsre) — várni kell rá.
+3. ⭐ **A folytonosság élménye nem fontos:** a kérelem kimegy a hálózatba, a válasz akár percek múlva
+   jön. **A frissesség: törekvés, nem ígéret** (a változások nem azonnal terjednek).
+4. ⭐ **A kérelem TOVÁBBADHATÓ** (a D71 (iii) V3-je, kérelmekre): **a válasz ugyanazon az úton jön
+   vissza**; **ugrás-korlát** (kiinduló 3) és **azonosító** (nincs kétszeres továbbadás); **darabkorlát**
+   készülékenként — így senki terhe nem a koino méretétől függ. A számok mérés után állíthatók.
+5. ⚠️ **Az össz-pont ma ellenőrizhetetlen** (a válaszoló számolja, aláírás nincs rajta — egy
+   rosszhiszemű társ hamisat is mondhat). ⭐ Csaba: *„csináljunk meg minden alap pillért, amire épül
+   valami … a merkle-fát se halogassuk, ha már építenénk rá."* — az **összegző Merkle-fa** az
+   alappillérek elsője ([`alappillerek.md`](alappillerek.md) A).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

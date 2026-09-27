@@ -17,115 +17,42 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-27)
 
-### ▶️ SESSION-VÁLTÁS (2026-09-27 hajnal) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️ SESSION-VÁLTÁS (2026-09-27 este) — A KÖVETKEZŐ SESSION INNEN INDUL
 
 **Az állapot:** **762 önpróba zöld** (29 próba-fájl) · 195 fájl / 3387,7 KB · 0 npm-csomag · a
-munkakönyvtár tiszta. ⚠️ **A telefon régi kódon fut** (a 09-26-i `c6b74d8` körül) — a D72 óta a
-gondolat szövege külön darab, amit a régi program *„(ismeretlen alakú szöveg)"*-ként mutat: a
-következő terepi mérés előtt frissíteni kell (a parancs lent, *„Ami nyitva maradt"*).
+munkakönyvtár tiszta. ⛔⛔ **A telefon régi kódon fut, és a tiszta törés óta (a C 8. pontja) NEM TUD
+CSERÉLNI a laptoppal**, amíg nem frissül (a parancs lent, *„Ami nyitva maradt"*).
 
-**Ami az előző sessionben (2026-09-26 késő este – 09-27 hajnal) megépült — a részletek a
-[naplóban](docs/claude_naplo.md), szó szerint:**
-- ✅ **D71 — a kopogás-kör a TÁRSAT keresi, nem a címét** (44–46. mérés): (i) a kötés célja a várt
-  tábla-aláírót hordozza, a munka visszaadja, kivel dolgozott; az azonos IP-jű, más portú válasz
-  csak feltevés, amit a munka aláírója dönt el (egy IP-n több kötésnél is) · (ii) egy kötés ≤3
-  címe csoportban, **rang szerint** (gépen belüli · helyi háló · link-local · nyilvános), sorban —
-  két címen 2 → 1 csere/ablak. ⏸️ **(iii)** mérve (47.): a „csak ha van mit mondanom" (V2) nem
-  lassít; a továbbadás (V3) percekről másodpercekre gyorsítaná a terjedést — ⛔ **de mindkettő az
-  S4 után**, mert a koino-szintű lenyomatra épülve nagy koinóban semmit nem érnének.
-- ⭐⭐⭐ **Csaba elve (a 9. szabály élesítése, lent): „végtelenig lehessen skálázni"** — egy készülék
-  terhe ne a koino méretétől függjön, hanem attól, amivel ő maga foglalkozik.
-- ✅ **D72 — a szeletelés döntései** ([fázis-2 terv](docs/fejlesztesi_terv_fazis2.md) D72,
-  [`szeleteles_terv.md`](docs/szeleteles_terv.md) 7.): a készülék a **saját érdeklődését** tartja
-  (b) · a gondolat **szövege külön darab** · a véletlen kötésekkel az érdeklődési lenyomat, a
-  gyerek-bejelentések, később a lánc-gyökerek · a régi protokollal **tiszta törés** · a
-  szelet-egyeztetés **tartomány-alapú**.
-- ✅ **A — A SZÖVEG KÜLÖN DARAB** (`c301501`): [`szovegDarab.js`](koino/js/esemeny/szovegDarab.js);
-  az esemény a szöveg lenyomatát hordozza, az állapot ettől független (próba őrzi); a randevú a
-  darab képeit ugyanabban a körben elkéri; a kézi út viszi a darabot.
-- ✅ **A 48. mérés — az S3–S4 alapvonala:** 1 eltérés cseréje 100 000 eseménynél **160 KB**
-  (0,35% hasznos); az ÁLLÁS minden cserénél az összes eseményből (239 ms); a megnyitás **813 ms**.
-- ✅ **Átnézés (2026-09-27, a B előtt — Csaba a sorrendet rám bízta):** a **fájl-kérés korlátos
-  lett**. (i) A csere `FAJLOK` válaszából csak az marad, amit KÉRDEZTÜNK (`vonal.js` — eddig a
-  társ akármennyi lenyomatot bemondhatott, és a randevú mindet sorban elkérte); (ii) egy randevú
-  legfeljebb `KERELEM_KORLAT` fájlt kér, a D72 szöveg-darabjának képeit is beleértve
-  (`fajlRandevu` → `kerdesKorlat`, az őr a rétegben, alapértékkel); a kimaradtat kimondja
-  (`korlatElerve`), és a következő kör hozza. 4 új próba, 7 rontás-próba — mind a sajátját
-  buktatja. ⚠️ A `koino.js` `szovegKepeiKeresre` keret-figyelése (csak hatékonyság — a korlátot
-  a réteg adja) és a „kérés-korlát" kiírás saját próba nélkül van.
+⭐⭐⭐ **A KÖVETKEZŐ SESSION BELÉPŐJE: [`docs/alappillerek.md`](docs/alappillerek.md)** — az irány, ami
+áll, a hiányzó **alappillérek** a függőségük szerint, a javasolt sorrend, és az **elágazások naplója**
+(miről ágaztunk le, és miért). Csaba kérése: *„csináljunk meg minden alap pillért, amire épül
+valami … jól kell dokumentálni, hogy miről ágaztunk le, és miért."*
 
-#### ✅ B — AZ ENTITÁSONKÉNTI TÁR KÉSZ (2026-09-27) — ⭐ D73: egy adatfájl + a mutató
+**Ami ebben a sessionben (2026-09-27) megépült — a részletek a [naplóban](docs/claude_naplo.md), az
+előző blokk szó szerint:**
+- ✅ **Átnézés** → a fájl-kérés korlátos lett (`c00a892`).
+- ✅ **B — D73: egy adatfájl + a mutató pillanatképe** (a szelet-fájlokat a 49. mérés vetette el).
+- ✅ **D74: a tartomány-lenyomat hash**, nem összeg · ✅ **C/6: a tartomány-egyeztetés** (50. mérés).
+- ✅ **C/7–8: a csere szeletenként** — a gyerek-bejelentés és az új párbeszéd; ⛔ tiszta törés;
+  51. mérés: a vonalon 1 eltérés 100 000 közt **9,8 KB** (a régi 160,2 KB helyett), „nincs
+  újdonság" 484 B.
+- ✅ **Döntések (Csaba):** **D75 — a két tár** (tartós = vállalt; átmeneti = látott, eldobható,
+  mindent kiszolgál a törzs kivételével; a D14 csak a tartósra) · **D76 — a kérelmezés** (a nézet
+  kérdez; első körben a pakli, hierarchikusan, az össz-pont szerint; a kérelem továbbadható: vissza
+  az úton, ugrás-, darabkorlát) · ⭐ **az alappillér elve** (lent, a tartós elvek között).
 
-> *„Egy adatfájl + mutató"* — Csaba döntése a 49. mérés után (D73)
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION: az alappillérek — a sorrend Csabáé
 
-⚠️ **A terv (szeletenként egy fájl) a mérésen elbukott** (49.): Windowson 100 000 eseménynél
-28 825 fájl, és a teljes betöltés — amit a C 9. pontjáig minden számítás kér — szelet-fájlokból
-**19,6 s** a 0,69 helyett. **Ami megépült** (`js/tar/fajlTar.js`):
-- az adat **marad egy hozzáfűzhető fájlban**; mellette a **MUTATÓ, test nélkül** (eseményenként a
-  sor helye, azonosító, szerző, sorszám, szelet) — ebből felel minden tár-kérdés;
-- a mutató **pillanatképe** (`mutato.json`, ezer olvasott esemény fölött íródik): a megnyitás ezt
-  olvassa + a fájl kép utáni végét; ⛔ **tiszta gyorsítótár** — ha nem illik, a fájlból épül újra,
-  és a testek beolvasásakor mind a négy mezőt ellenőrizzük;
-- **lusta testek**, és két új kérdés: **`szeletek()`** és **`szeletLenyomata(szelet)`** (a rendezett
-  azonosítók kanonikus lenyomata, test nélkül; ⚠️ NEM tárolt — a C még változtathat rajta);
-- ⭐ **mérve (49.):** a megnyitás 100 000 eseménynél **689–759 → 129–169 ms**, utána **0 test** a
-  memóriában; egy szelet ~0,8 ms, a lenyomata 0,05 ms; a teljes betöltés 416 ms. *(Építés közben:
-  a „szerző|sorszám" térkép ~80 ms volt a megnyitásban — most szerzőnként, az első kérdéskor épül.)*
-- a CLAUDE.md három B-előtti kérdése így megszűnt (a `frissit()`, a kézi út és a régi alakú
-  események változatlanok).
-- 6 új próba (5 modul + 1 parancssor), 11 rontás-próba. ⚠️ Egy rontás („a kép utáni vég nem
-  olvasódik") a parancssor-próbát NEM buktatta — mert a `koinoEsemenyei` előtte `frissit()`-et hív,
-  tehát az éles út ezt kiheveri; a próba ezért a LEMEZEN nézi a használatot (a képből nyitó
-  program nem írja újra a képet).
-- ⚠️ **Ami nem változott (és a C dolga):** a hétköznapi út (állapot, ÁLLÁS) még `betolt()`-tel
-  kér mindent — a B a szerkezetet adja, a C 9. pontja veszi ki az útból.
+A javaslat ([`alappillerek.md`](docs/alappillerek.md) 4.): **A — az összegző Merkle-fa**, az első
+alkalmazásával (**a szerző lánca**: D63 lánc-gyökér + a tudatpont-keret — itt a gyökeret a szerző
+maga írja alá, tehát a horgony tiszta; ez a C lépés 10. pontja is) → **B — a két tár és az érdeklődés
+szabálya** (C/9) → **D — a kérelmezés és a továbbadás** → **F, E** (a társankénti emlékezet, az
+identitás a szeletelt világban) → a ház (a pakli-nézet a felületen, a terep).
 
-#### ⏭️⏭️ A KÖVETKEZŐ: C — A CSERE SZELETENKÉNT
-
-**A terv:** [`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) **4. szakasz** és **5./C** (6–10.):
-a szelet-lenyomat és a **tartomány-egyeztetés** logikája hálózat nélkül (⭐ mérés: 1 eltérés
-100 000 esemény közt → hány bájt, a 48.-hoz mérve) · a **gyerek-bejelentés** · a csere új üzenetei
-(`vonal.js`; itt kap otthont a D71 (iii) V2-je) · **az érdeklődés szabálya (D72/1, (b))** — a
-hétköznapi út leválik a `betolt()`-ről · a **D63 lánc-gyökere**.
-
-✅ **D74 (Csaba, 2026-09-27):** a tartomány lenyomata a rendezett azonosítók **HASH-e**, nem az
-összegük (az összeadó alakkal egy sok eseményt aláíró fél két különböző halmazt tudna ugyanazzal a
-lenyomattal kiszámolni — Wagner-féle általánosított születésnap). A szabály egy helyen él:
-`js/esemeny/halmaz.js` (a tár `szeletLenyomata()`-ja is ezt használja).
-
-✅ **6. pont KÉSZ — a tartomány-egyeztetés logikája** (`js/csere/tartomany.js`, hálózat nélkül): 7
-próba, 8 rontás-próba. ⭐ **Mérve (50.):** egy eltérés 100 000 esemény közt **4,0 KB** a mai
-160,2 helyett (tízszeres koinóra 3,0 → 4,0 KB: logaritmikus); két szinten (szelet-jelek, aztán az
-eltérő szelet) 4,7 KB; „nincs eltérés" **58 B**. ⭐ A 8. pont óta a párbeszéd ezen fut.
-
-✅ **7–8. pont KÉSZ — A CSERE SZELETENKÉNT** (a menet: a szeletelési terv 4.5):
-- **7. a gyerek-bejelentés:** a mutató a születés szülőjét is tartja (a kép 2. változata), a tár
-  `szuletesek(szulo)`-t felel; egy szelet egyeztetett halmaza = az érvényes eseményei + a közvetlen
-  gyerekei születése (a legfelső szintűeké a gyökérben). ⚠️ Az ÁTHELYEZÉS az új szülőnél még nem
-  hangzik el (⏸️).
-- **8. az új párbeszéd** (`vonal.js`, `csere/szeletEgyeztetes.js`): NYITAS → (FAJLOK, CIMEK) →
-  SZELETEK (az első szint a „szelet:lenyomat” párokon) → ELTERO → RESZVETEL → TARTOMANYOK (a
-  második szint) → ESEMENY/KEREK/KESZ. A nagyobb nyitó lenyomatú nyit. A részvétel ma (a) — minden;
-  a `reszvesz` beállítás a (b) helye. ⛔ **Tiszta törés:** régi `LENYOMAT`-ra `REGI-PROTOKOLL`
-  hiba — ⚠️ **a telefont frissíteni kell, különben nem tud cserélni.**
-- ⭐ **Mérve (51.):** a vonalon (keretekkel) egy eltérés 100 000 közt **9,8 KB** (10 000-nél 5,8);
-  „nincs újdonság" **484 B**, egyeztetés nélkül. ⚠️ Az első csere egy folyamatban 100 000-nél 3,6 s
-  (mind a 28 825 szelet halmaza először számolódik), utána gyorsítótárból.
-- A TUDÁS-ujjlenyomat (`ujjlenyomat` parancs) most a csere nyitó lenyomata. A `csere.js` ÁLLÁS-
-  logikáját a párbeszéd már nem használja (a próbák mércéje maradt — ⏸️ kivehető).
-- Próbák: 7 új (tár: a születések; csere: régi protokoll, gyerek-bejelentés ×2, szeleten belül); a
-  rontás-próbák közül a fogadó szűrőjét egy „hamis küldő" rontással együtt mértük (egyedül nem
-  látszik, mert a küldő is véd).
-
-⏭️ **A következő pontok:** **9.** az érdeklődés szabálya (b) — a `reszvesz` feltöltése (tudatpont,
-megnézett, saját), a hétköznapi út leválik a `betolt()`-ről · **10.** a D63 lánc-gyökere. ⏸️ És a
-társankénti emlékezet (a D71 (iii) V2-je): hogy a (b)-ben a nem közös szeletek ne legyenek minden
-körben „eltérők".
-
-⚠️ **Nyitva a C-ben:** a fájl-igény is a szelethez kötődjön (az átnézés lelete: a `fajlIgenyek`
-minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas) — a 9. ponttal együtt.
-
-**Utána:** **D** — a böngészés útja a felületen · **E** — terepen, a telefonnal.
+⚠️ **A session elején:** Csaba erősítse meg a sorrendet (vagy válasszon mást). ⚠️ **Az A előtt
+dönteni kell:** a fa pontos alakja (mely összegeket visz a csomópont), és a D-szintű kérdés, **ki
+horgonyozza a gyökeret** ott, ahol nem a szerző (a részfa össz-pontja — ez a D76 ellenőrzött
+össz-pontjánál lesz sürgős).
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -139,7 +66,8 @@ minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas)
 
 #### ⏸️ Ami nyitva maradt (terep és próbák)
 
-- ⏸️ **A két mobil NAT közötti rés** még nincs mérve (lásd a feltevést fent). A telefon frissítése:
+- ⛔⛔ **A TELEFONT FRISSÍTENI KELL** (a tiszta törés óta nem cserél a laptoppal). ⏸️ **A két mobil NAT
+  közötti rés** még nincs mérve (lásd a feltevést fent). A telefon frissítése:
   `cd ~/koino_1.1 && git fetch --depth 1 origin main && git reset --hard origin/main && node koino/meres/mind.js > ~/probak.txt 2>&1; tail -3 ~/probak.txt`
   ⚠️ *Előtte a Termuxban `termux-wake-lock` — alvás közben a próbák lelassulnak.*
 - ⏸️ **Négy időzítés-érzékeny próba** egyszer-egyszer bukott a telefonokon (2026-09-26-án a
@@ -176,6 +104,12 @@ minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas)
   előre."* — commit, push, a következő lépés: **kérdezés nélkül**. A válasz végén ne legyen
   „mehet?" / „pusholhatom?". *(A D-szintű tervezési döntések továbbra is Csabáéi — azokat
   döntési kérdésként kell elé tenni, nem engedélykérésként.)*
+- ⭐⭐ **AZ ALAPPILLÉR ELVE (Csaba, 2026-09-27):** *„csináljunk meg minden alap pillért, amire épül
+  valami. […] a fejlesztés iránya tele lesz elágazással, ezért jól kell dokumentálni, hogy miről
+  ágaztunk le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* ⭐ Vagyis: amire
+  egy következő lépés épül, azt NEM halasztjuk „majd később"-re (a 9. szabály testvére); és minden
+  elágazás bekerül a [`docs/alappillerek.md`](docs/alappillerek.md) 5. szakaszába (mikor, miről, mire,
+  miért, hol a részlet).
 - ⛔⛔ **A SORREND ELVE (Csaba, 2026-09-15) — egy friss session ösztönösen ez ellen fog
   javasolni:** *„nem kell, hogy minél hamarabb használható legyen. Az a lényeg, hogy a
   **megfelelő sorrendben** fejlesszünk, nem az, hogy minél hamarabb lássak valamit."*
@@ -211,9 +145,11 @@ minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas)
 - **A munka története** (2026-09-06 – 2026-09-25: mérések, átnézések, javítások, döntések
   indoklása): [`docs/claude_naplo.md`](docs/claude_naplo.md) — a CLAUDE.md 2026-09-25-i
   karcsúsításakor került oda, **szó szerint**. Ha egy döntés *miértje* kell, ott keresd.
+- ⭐ **Az alappillérek és az elágazások naplója:** [`docs/alappillerek.md`](docs/alappillerek.md) — mi áll,
+  mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D74 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D76 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -236,7 +172,7 @@ minden körben MINDEN entitáson végigmegy, és minden szöveg-darabot beolvas)
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D74**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D76**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

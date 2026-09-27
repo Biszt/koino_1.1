@@ -3,7 +3,7 @@
 *Létrehozva: 2026-08-31, Csaba kérésére, a skálázási terv és az S1 mérés után.*
 
 > **Mi ez a dokumentum, és mi nem?**
-> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D74),
+> A [`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntések** helye (D1–D76),
 > a szakasz-tervek az egyes szakaszok **részletei**, a [`skalazas_terv.md`](skalazas_terv.md)
 > a **szerkezet**. Ez itt a **sorrend**: mi következik mi után, és miből mennyi kell.
 > Rövidnek kell maradnia — ha hosszú lesz, valamit rossz helyre írtunk.
@@ -21,8 +21,10 @@
 > `szeletLenyomata()`). ✅ **C/6 — a tartomány-egyeztetés** (D74: a lenyomat hash; 50. mérés: 1 eltérés
 > 100 000 közt 4,0 KB a 160,2 helyett). ✅ **C/7–8 — a csere szeletenként** (a gyerek-bejelentés, az új
 > párbeszéd; ⛔ tiszta törés a régi protokollal — a telefont frissíteni kell; 51. mérés: a vonalon 1
-> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba.** ⏭️ **A következő: C/9 — az
-> érdeklődés szabálya (b)**
+> eltérés 100 000 közt 9,8 KB, „nincs újdonság” 484 B). **762 önpróba.** ✅ **D75** (a két tár: tartós és
+> átmeneti) és **D76** (a kérelmezés: a nézet kérdez, a kérelem továbbadható) · ⭐ az alappillér elve.
+> ⏭️ **A következő: az alappillérek** — a térkép és a javasolt sorrend:
+> [`alappillerek.md`](alappillerek.md) (elsőként az összegző Merkle-fa, a szerző láncával)
 > (tartomány-egyeztetés, gyerek-bejelentés, az érdeklődés szabálya, D63). A részletek a
 > [`CLAUDE.md`](../CLAUDE.md) elején. ⚠️ A telefon régi kódon fut — a következő terepi mérés
 > előtt frissíteni kell.
