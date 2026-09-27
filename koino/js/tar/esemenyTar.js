@@ -27,6 +27,8 @@
 // Használják: muveletek.js és minden, ami eseményt olvas.
 
 import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
+// ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
+import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -52,6 +54,18 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   if (!ellenorzes.rendben) {
     console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: ellenorzes.ok });
     return { mentve: false, ok: ellenorzes.ok };
+  }
+
+  // ----- 1/b. ⭐ D80: AZ ELLENTMONDÁS BIZONYÍTÉKA IS ITT MEGY ÁT -----
+  // Az `Ellentmondas` esemény a vádolt SAJÁT, egymásnak ellentmondó állításait hordozza — és a
+  // szabály-réteg ennek alapján hagyja ki a pontjait (D79). ⛔ Ezért a tartalmát is itt ellenőrizzük,
+  // az egyetlen kapun (3. szabály): hamis vád nem kerül a tárba, és a szabály a tárban lévőt hiszi el.
+  if (esemeny.tipus === 'Ellentmondas') {
+    const vad = await ellentmondasEllenorzese(esemeny.adat, esemeny.koino);
+    if (!vad.rendben) {
+      console.log('esemenyMentese - VÉGE (HAMIS VÁD)', { ok: vad.ok });
+      return { mentve: false, ok: 'a bizonyíték nem áll meg: ' + vad.ok };
+    }
   }
 
   // ----- 2. MÁR MEGVAN? -----

@@ -376,6 +376,18 @@ export function szabalyokErvenyesitese(esemenyek) {
     szerzonkent.get(e.szerzo).push(e);
   }
 
+  // ----- ⭐ D80: A BIZONYÍTOTT ELLENTMONDÁSOK — szerzőnként a legkorábbi vádpont -----
+  // Az `Ellentmondas` eseményt a KAPU ellenőrizte (a tartalma önmagát igazolja — `ellentmondas.js`),
+  // ahogy az aláírást is: a szabály a tárban lévőt hiszi el. ⭐ Nem ítélet, hanem determinisztikus
+  // lépés: aki a bizonyítékot látja, ugyanazt számolja (D17).
+  const vadpontok = new Map();
+  for (const e of esemenyek) {
+    if (e.tipus !== 'Ellentmondas') continue;
+    const { kit, vadpont } = e.adat ?? {};
+    if (typeof kit !== 'string' || !Number.isSafeInteger(vadpont) || vadpont < 1) continue;
+    if (!vadpontok.has(kit) || vadpont < vadpontok.get(kit)) vadpontok.set(kit, vadpont);
+  }
+
   for (const lanc of szerzonkent.values()) {
     const rendezett = [...lanc].sort((a, b) => a.sorszam - b.sorszam);
     const pontok = new Map();            // entitás → a szerző jelenlegi pontja rajta
@@ -395,6 +407,13 @@ export function szabalyokErvenyesitese(esemenyek) {
       // ===== 1. SZABÁLY: A TUDATPONT-KERET =====
       // ⭐ Az ítélet a `pontEsemenyMerlege`-ben él — a művelet-réteg UGYANAZT hívja (lent).
       if (e.tipus === 'TudatpontRendezes') {
+        // ⛔ D79/D80: a bizonyított ellentmondástól a szerző pont-eseményei nem számítanak.
+        const vadpont = vadpontok.get(e.szerzo);
+        if (vadpont !== undefined && e.sorszam >= vadpont) {
+          kivetel(e, 'bizonyított ellentmondás a saját láncában (D80) — a ' + vadpont
+            + '. eseményétől a pontjai nem számítanak');
+          continue;
+        }
         const merleg = pontEsemenyMerlege(e, { osszeg, pontok }, folytonos);
         if (merleg.jelzes) nemEllenorizheto(e, merleg.jelzes);
         if (merleg.elvetve) {

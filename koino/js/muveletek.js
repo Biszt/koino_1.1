@@ -24,6 +24,8 @@
 import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
 // ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
 import { lancGyokerUjEsemenyhez } from './allapot/lancGyoker.js';
+// ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
+import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
@@ -135,6 +137,38 @@ async function esemenytTeszek(kornyezet, tipus, adat, beallitas = {}) {
     console.log('muveletek.esemenytTeszek - VÉGE', { azonosito: esemeny.azonosito });
     return esemeny;
   }
+}
+
+/**
+ * Egy szerző AZONOSSÁG-HORGONYA ebben a koinóban (D56): az alapítóé a `KoinoLetrehozas`, mindenki
+ * másé a (legkorábbi) `Belepes` eseménye. ⚠️ A tárban lévő láncából — ha nincs meg, null (D19).
+ * @returns {Promise<string|null>}
+ */
+export async function azonossagHorgonya(tar, koino, szerzo) {
+  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === koino);
+  const belepes = lanc.find((e) => e.tipus === 'Belepes');
+  if (belepes) return belepes.azonosito;
+  return lanc.find((e) => e.tipus === 'KoinoLetrehozas')?.azonosito ?? null;
+}
+
+/**
+ * ⭐⭐ AZ ELLENTMONDÁS BEJELENTÉSE (D80) — a bizonyíték a VÁDOLT azonosság-szeletébe kerül (mint a
+ * meghívás és a tanúsítás a másikéba), mert aki a pontjait számolja, az oda úgyis ránéz.
+ *
+ * ⚠️ Előbb MAGUNK ellenőrizzük: hamis vádat nem írunk alá (a kapu amúgy is elutasítaná).
+ *
+ * @param {Object} kornyezet
+ * @param {Object} adat - a bizonyíték (`ellentmondas.js`: kit, fajta, vadpont, és a fajta anyaga)
+ */
+export async function ellentmondasBejelentese(kornyezet, adat) {
+  const vad = await ellentmondasEllenorzese(adat, kornyezet.koino);
+  if (!vad.rendben) throw new Error('A bizonyíték nem áll meg: ' + vad.ok);
+  const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, adat.kit);
+  if (!horgony) {
+    throw new Error('A vádoltnak nincs azonosság-szelete ebben a koinóban (se Belepes, se '
+      + 'KoinoLetrehozas nálunk) — a bizonyíték nem helyezhető el (D80).');
+  }
+  return esemenytTeszek(kornyezet, 'Ellentmondas', adat, { entitas: horgony });
 }
 
 // ⭐ Ennyiszer próbálunk újra, ha közben más folyamat írt a láncunkba. ⚠️ Nem várt verseny

@@ -52,6 +52,8 @@ import egyeztetes from './tartomanyProba.js';
 import osszegzoFa from './osszegzoFaProba.js';
 // ⭐ A szerző lánc-gyökere (D78, az A pillér 2. lépése) — az új események `lancGyoker`-e.
 import lancGyoker from './lancGyokerProba.js';
+// ⭐ Az ellentmondás bizonyítéka (D79, D80) — a kapu, a szabály és a bejelentés.
+import ellentmondas from './ellentmondasProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -84,7 +86,8 @@ const PROBAK = [
   { nev: 'szovegdarab', futtat: szovegDarab },
   { nev: 'egyeztetes', futtat: egyeztetes },
   { nev: 'osszegzofa', futtat: osszegzoFa },
-  { nev: 'lancgyoker', futtat: lancGyoker }
+  { nev: 'lancgyoker', futtat: lancGyoker },
+  { nev: 'ellentmondas', futtat: ellentmondas }
 ];
 
 const szuro = process.argv[2];

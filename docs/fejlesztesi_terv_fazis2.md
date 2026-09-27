@@ -4253,6 +4253,37 @@ meg. A kérdés: ki és mikor kérje le.
 4. ⚠️ **Az 5% nem állapot-befolyásoló állandó** (D66) — a mérés után hangolható, és két készülék
    eltérő értékkel is ugyanazt az állapotot számolja (a bizonyíték mindenkinél ugyanazt jelenti).
 
+### D80. AZ ELLENTMONDÁS BIZONYÍTÉKA: esemény, a csaló azonosság-szeletébe (2026-09-27, Csaba)
+
+> *„egyet értek ezzel."* — Csaba
+
+**Amiből jött:** a D79 szerint lebukáskor a csaló pont-eseményei nem számítanak — a **D17** szerint
+viszont az állapotot minden gép maga számolja. Ha a bizonyíték csak annál van, aki megtalálta, az
+egyik gép már kihagyja a csaló pontjait, a másik még nem: **a két gép másképp látja a koinót.** A
+bizonyítéknak tehát oda kell jutnia, ahol a csaló pontjait számolják.
+
+#### A DÖNTÉS
+
+1. ⭐ **A bizonyíték egy ESEMÉNY** (`Ellentmondas`), és **a csaló azonosság-szeletébe kerül** (a
+   horgonya: az alapítónál a `KoinoLetrehozas`, mindenki másnál a `Belepes`) — ugyanaz a minta,
+   mint a meghívásé és a tanúsításé (`allitokRola`). Aki egy szerző pontjait számolja, az úgyis
+   ránéz az azonosság-szeletére (tag-e?), tehát a bizonyítékot is ott találja.
+2. ⭐ **A bizonyíték ÖNMAGÁT igazolja:** a csaló saját aláírt eseményei, a lánc-gyökerük előképe és
+   egy logaritmikus bizonyíték. Nem kell hinni annak, aki beküldte — az aláírása csak azt mutatja,
+   ki találta meg. ⛔ **A kapu ellenőrzi** (az egyetlen kapu, 3. szabály): hamis bizonyíték nem kerül
+   a tárba.
+3. ⭐ **Nem ítél, hanem determinisztikus szabály:** a szabály-réteg a csaló pont-eseményeit a
+   bizonyított ponttól (a „vádpont") kezdve kihagyja — ugyanaz a lépés, mint a D42-nél, amikor két
+   saját állítás ellentmond egymásnak. Minden gép, amelyik a bizonyítékot látja, ugyanazt számolja.
+4. **A fajtái (az első kör — mind a kiosztásról, D79):** *bemondás* (a pont-esemény bemondott összege
+   nem jön ki a saját aláírt előző állapotából) · *folytonosság* (a pont-esemény utáni helyes állapot
+   nem az, amit a szerző következő eseménye aláírt) · *negatív levél* (az aláírt kiosztás-fában egy
+   nem pozitív levél).
+
+⏸️ **Ami nem ide tartozik (még):** a kettős lánc napló-alapú bizonyítéka. Az elágazás ma
+szándékosan **nem büntet** (két offline készülék ártatlanul is elágaztat — `elagazasokFeloldasa`), tehát
+a következménye más kérdés — Csaba döntése.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

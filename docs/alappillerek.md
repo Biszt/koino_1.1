@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D79), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D80), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -76,9 +76,11 @@ adatból bizonyítható**, a teljes halmaz nélkül.
 
 **A megépítés sorrendje:** ✅ ① a fa-modul (a két elrendezés, bizonyíték, ellenőrzés, a kiosztás
 változásának ellenőrzése) próbákkal és méréssel (52.) → ✅ ② a `lancGyoker` az új eseményekben (az
-ESEMÉNY ELŐTTI állapot; a szerző gyorsítótára) → ⏭️ ③ a bemondott összeg ellenőrzése bizonyítékkal (a
-hézagnál ma csak jelzés), a lánc folytonossága, a kettős lánc leleplezése a szeletek között, a
-teljes kiosztás-lista szúrópróbája (D79), és a bizonyíték kiszolgálása (logaritmikusan).
+ESEMÉNY ELŐTTI állapot; a szerző gyorsítótára) → ✅ ③/helyi: az ellentmondás bizonyítéka (D80 — esemény a
+vádolt azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) → ⏭️
+③/hálózati: hogyan jut a bizonyíték az ellenőrzőhöz (⚠️ Csaba döntése: kérésre vagy az eseménnyel), a
+teljes kiosztás-lista szúrópróbája (D79), a kettős lánc a szeletek között, a bizonyíték kiszolgálása
+(logaritmikusan).
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
@@ -172,3 +174,12 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
     szám árcédula), és az össz-pont nem dönt, csak sorrendet ad · D78.
 15. **2026-09-27 este · a lánc-gyökér helye: a tartós mag (SK14)** → **az esemény** (D78) · mert a
     mag állandóan változóvá válna (D14: „legyen minél kisebb") · D78, skálázási terv SK14.
+16. **2026-09-27 este · a teljes kiosztás-lista ellenőrzése: mindig / gyanúra** → **szúrópróba, 5%
+    (D79)** · mert a „mindig" túl drága, a „gyanúra" a csalót nem fogja meg · D79.
+17. **2026-09-27 este · a bizonyíték helye: csak aki megtalálta** → **esemény a vádolt azonosság-szeletébe
+    (D80)** · mert különben a gépek másképp számolnának (D17) · D80.
+18. **2026-09-27 este · az ellentmondás-keresés a teljes láncból** → **kivéve, építés közben** · mert
+    a folytonosság bizonyítékához a szerző HAMIS előképe kell, ami a láncból nem számolható — csak a
+    szerző adhatja ki · `ellentmondas.js` vége.
+19. **2026-09-27 este · a kettős lánc napló-alapú bizonyítéka** → **nem most** · mert az elágazás ma
+    szándékosan nem büntet (két offline készülék ártatlanul is elágaztat), a következménye döntés · D80.
