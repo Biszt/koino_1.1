@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonkilenc próba-fájl, **766 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminc próba-fájl, **781 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **195 fájl, 3395,4 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **198 fájl, 3414,3 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -149,6 +149,8 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 
 - `node koino/meres/skalaMeres.js` — **skála-mérés**: hol van a fal (a 3.2 két
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
+- `node koino/meres/osszegzoFaMeres.js` — ⭐ **az összegző Merkle-fa ára** (52., D78): a bizonyíték
+  logaritmikus — 10⁵ elemnél ~1,2 KB, egymilliárdnál ~2,0 KB; a teljes kiosztás-lista a keret határán 829 KB;
 - `node koino/meres/csereMeres.js` — ⭐ **a szeletenkénti csere a vonalon** (51.): egy eltérés
   100 000 esemény közt 9,8 KB a kerettel együtt, „nincs újdonság” 484 B;
 - `node koino/meres/tartomanyMeres.js` — ⭐ **a tartomány-egyeztetés ára** (50.): egy eltérés
@@ -195,6 +197,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/szeletEgyeztetes.js` | ⭐ **mit egyeztetünk szeletenként** (a C 7–8. pontja): egy szelet halmaza = az érvényes eseményei + a gyerekei **születése** (a gyerek-bejelentés); a „szelet:lenyomat” párok; a fogadó szűrője |
 | `js/csere/tartomany.js` | ⭐ **a tartomány-egyeztetés** (S4, D74): két azonosító-halmaz különbsége az eltérések számával arányos forgalommal — hálózat nélkül; 2026-09-27 óta a párbeszéd ezen fut (két szinten) |
 | `js/esemeny/halmaz.js` | ⭐ az azonosító-halmaz **rendezése és lenyomata egy helyen** (a tár `szeletLenyomata()`-ja és a tartomány-egyeztetés is ezt használja) |
+| `js/esemeny/osszegzoFa.js` | ⭐⭐ **az összegző Merkle-fa** (D78): egy csomópont (lenyomat + darab + összeg), két elrendezés — a **napló-fa** (a szerző lánca) és az **állapot-fa** (a kiosztás); bizonyíték a jelenlétre és a hiányra, és a változás a bizonyítékból — hálózat nélkül |
 | `js/csere/vonal.js` | a **párbeszéd**: soronként egy JSON-üzenet egy foglalat-szerű kapcsolaton (2026-09-26 óta csak a UDP-résen). Semmit nem tud a koinóról |
 | `js/csere/kapunyitas.js` | megkérjük a routert, hogy engedje be a kapcsolatot — ⚠️ **segédeszköz, nem előfeltétel** |
 | `js/tar/fajlTar.js` → `fajlBlobTarolo` | ⭐ **a fájlok** (5.7): bájtok a **lenyomatuk** neve alatt — az esemény csak a ~100 bájtos hivatkozást hordozza (6. szabály), a bájtok a tartalmi rétegben (D3); olvasáskor **újra lenyomatolunk**, tehát a csatornát nem kell megbízhatóvá tenni |

@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D77), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D78), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -62,13 +62,22 @@ adatból bizonyítható**, a teljes halmaz nélkül.
    ellenőrizhetővé a részfa összegző fája teszi.
 6. **A tartós mag (D14/D21)** — azonosság-egyszeriség, később a pénz (a pénzzel együtt, D66).
 
-⚠️ **A nyitott kérdés, ami D-szintű lesz: KI HORGONYOZZA A GYÖKERET?** Egy Merkle-bizonyíték csak
-annyit mond, hogy „ez a gyökérhez illik" — a gyökérben valakinek meg kell bíznia:
-- **a szerző láncánál a szerző** írja alá (az eseményeibe kerül) — ez tiszta, és ezért ez a
-  **javasolt első alkalmazás** (1–2.);
-- **a szelet-egyeztetésnél** mindkét fél maga számolja — horgony nem kell (4.);
-- **egy részfa össz-pontjánál** (5.) a nem-tartónak nincs saját gyökere: valakinek alá kell írnia
-  (pl. a tartók egy része) — ⏸️ ezt akkor kell eldönteni, amikor a D76 ellenőrzött össz-pontot kér.
+✅ **ELDÖNTVE (D78, Csaba, 2026-09-27 este) — a fa alakja és a horgony:**
+- **Egy csomópont** (a gyerekek lenyomata + darab + rögzített összeg-lista, a lenyomat mindent
+  fed), **két elrendezés**: a **napló-fa** (a szerző lánca, sorszám szerint, csak hozzáfűzés) és az
+  **állapot-fa** (kulcs szerint, felülírható — a szerző kiosztása, később egy entitás tulajdonosai;
+  a helyet a kulcs lenyomata szabja meg). Egy `lancGyoker` az eseményben mindkettőt elköti.
+- **Most darab + egy összeg (a tudatpont).** Az összeg-lista fa-típusonként bővíthető.
+- ⭐⭐ **A horgony: aláírással csak a SZERZŐ, és csak a sajátjáról; minden más gyökér SZÁMÍTOTT**
+  — a szelet (mindkét fél), a döntés (a raj), és ⭐ az **össz-pont a NÉZETÉ, nem a döntésé**:
+  szúrópróba a szerzők aláírt gyökereivel + a legnagyobb ellenőrzött válasz. ⛔ A tartók aláírása
+  nem horgony (olcsó azonosság). ⏸️ A tartós mag horgonya a pénzzel együtt (D66).
+- ✅ **SK14 lezárva:** a lánc-gyökér az eseményben lakik, nem a magban.
+
+**A megépítés sorrendje:** ① a fa-modul (a két elrendezés, bizonyíték, ellenőrzés, a kiosztás
+változásának ellenőrzése) próbákkal és méréssel → ② a `lancGyoker` az új eseményekben → ③ a
+bemondott összeg ellenőrzése bizonyítékkal (a hézagnál ma csak jelzés) és a kettős lánc
+leleplezése a szeletek között.
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
@@ -154,3 +163,11 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
     kapun átjutott `"x"` a társsal folytatott minden cserét megakasztotta (az átnézés mérte). Elsőként
     a csere szűrt; ⭐ Csaba döntésével a szabály a KAPUBA került, a csere-oldali szűrő kikerült (egy
     szabály, egy helyen) · D77, `esemenyProba.js`, `csereProba.js` („KI NEM MONDHATÓ”).
+13. **2026-09-27 este · a Merkle-fa: EGY fa mindenre** → **két elrendezés, egy csomópont (D78)** · mert
+    a kiosztott összeg nem az események összege (a tudatpont átrendezhető, az utolsó nyer) — a
+    napló-fa a történetre, az állapot-fa a mostani állásra felel · D78.
+14. **2026-09-27 este · a gyökér horgonya: a tartók aláírása** → **csak a szerző ír alá; minden más
+    számított, az össz-pont szúrópróbával** (D78) · mert a tartó olcsó azonosság (11–12. mérés: a
+    szám árcédula), és az össz-pont nem dönt, csak sorrendet ad · D78.
+15. **2026-09-27 este · a lánc-gyökér helye: a tartós mag (SK14)** → **az esemény** (D78) · mert a
+    mag állandóan változóvá válna (D14: „legyen minél kisebb") · D78, skálázási terv SK14.

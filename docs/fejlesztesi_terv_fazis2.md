@@ -4135,6 +4135,99 @@ lép életbe — a két készülék egyszerre kapja meg. A kizárt események se
 nem hordoztak (nem létező szelet, nem létező szülő); a már tárolt ilyen esemény a tárban marad
 (eseményt nem törlünk), de nem utazik.
 
+### D78. AZ ÖSSZEGZŐ MERKLE-FA: két alak, egy csomópont — és a horgony szabálya (2026-09-27, Csaba)
+
+> *„rendben. minden javaslatoddal egyet értek."* — Csaba (az alappillérek A-ja előtt; a
+> szempont: *„a skálázhatóság az egyik fő szempont"*)
+
+**Amiből jött:** az alappillérek A-ja ([`alappillerek.md`](alappillerek.md)) két kérdést hagyott
+nyitva: milyen alakú a fa (mit visz egy csomópont), és ki horgonyozza a gyökeret ott, ahol nem a
+szerző. A tervek már sokat rögzítettek (skálázási terv 4.6, 4.8, 4.9 · D63 · SK12, SK14); két
+felismerés adta a döntés gerincét: **a „fa" két különböző kérdésre felel**, és **a horgony kérdése
+azon múlik, hogy egy számból DÖNTÉS születik-e, vagy csak MEGJELENÍTÉS.**
+
+#### 1. A FA ALAKJA
+
+1. ⭐ **Egy építőkő: az összegző csomópont** — a két gyereke lenyomata, az alatta lévő elemek
+   **darabszáma**, és egy rövid, rögzített sorrendű **összeg-lista** (egész számok); a lenyomat a
+   darabot és az összeget is fedi. A levél és a belső csomópont más előtagot kap (a Merkle-fák
+   ismert csapdája: a belső csomópont ne adhassa ki magát levélnek).
+2. ⭐ **Két elrendezés, mert két természetű az adat:**
+   - **a NAPLÓ-FA** — ami *történt*, csak hozzáfűzéssel: a szerző lánca, sorszám szerint (összeg
+     nélkül). Az `elozo` már ma is hash-lánc, de azon „benne van-e" csak **végigjárással**
+     bizonyítható (lineáris) — a fával logaritmikusan. Így a szerző bármely két eseménye, két
+     külön szeletben is, összevethető: a kettős lánc két aláírt gyökere ellentmond egymásnak (D63);
+   - **az ÁLLAPOT-FA** — ami *most igaz*, kulcs szerint, felülírhatóan: a szerző kiosztása
+     (entitás → pont; a gyökér összege = a kiosztott összeg), később egy entitás tulajdonosai. ⚠️
+     A napló-fa ide nem jó, mert a tudatpont átrendezhető: a „mennyi van most kiosztva" a
+     legutolsó állapot, nem az események összege. Az elem helyét a **kulcs lenyomata** szabja
+     meg — a fa alakja így nem függ az érkezés sorrendjétől (a `rendezettBemenet` leckéje).
+3. ⭐ **Egy mező mindkettőre:** az esemény `lancGyoker`-e (a 3.1 óta lefoglalt) a szerző **addigi
+   naplóját ÉS a kiosztását** köti el — a skálázási terv 4.9 „~80 bájtos csontváza". Aki a
+   szerzőnek csak egyetlen eseményét tartja, logaritmikus bizonyítékkal ellenőrizheti a bemondott
+   összeget (D42), a lánc többi része nélkül — ma ez hézagnál csak „nem ellenőrizhető" jelzés.
+4. ⭐ **A csomópont most darabot és EGY összeget visz (a tudatpontot).** Az összeg-lista fa-típusonként
+   bővíthető (a tömeges entitás szavazat-összesítése, 4.6). ⛔ Nem visz időt, nevet, szöveget, címet:
+   minden mező minden bizonyíték minden lépésében utazik (6. szabály).
+5. **A régi, `null` gyökerű események érvényesek maradnak** (mint a D72 régi szövegei); a
+   lánc-ellenőrzés tőlük nem kér semmit, a szerző a következő eseményével kezd horgonyozni.
+
+**A skála (a „végtelen" próbája):** egy esemény +~43 bájt (mérve: +41); egy bizonyíték log₂(n) lépés
+(⚠️ mérve ~69 bájt/lépés, nem a becsült ~55 — 52. mérés: 10³-nál 0,7 KB, 10⁵-nél 1,2 KB, egy
+tízmilliós entitásnál ~1,6 KB, egymilliárdnál ~2,0 KB); a szerző a folytatáshoz a napló-fa néhány csúcsát tárolja
+(logaritmikus) és a saját kiosztását (a kerettel felülről korlátos); egy ellenőrző készülék csak a
+saját szeleteiben szereplő szerzők legutóbbi gyökerét. **A koino mérete sehol nem jelenik meg.**
+
+#### 2. KI HORGONYOZZA A GYÖKERET?
+
+⭐⭐ **Aláírással csak a SZERZŐ horgonyoz, és csak a SAJÁT dolgait; minden más gyökér SZÁMÍTOTT,
+nem kimondott** (mint az egyezmény, D17):
+
+- **a szerző lánca és kiosztása** — a szerző írja alá, a saját eseményében utazik;
+- **a szelet halmaza (a csere)** — mindkét fél maga számolja, horgony nem kell;
+- **egy entitás tulajdonosai és szavazatai (a DÖNTÉS)** — a szeletet tartó raj minden tagja
+  ugyanazt számolja (4.6); a levelek aláírtak, az összegeket a fa köti; elhallgatni lehet, de azt
+  a kimaradó veszi észre a saját aláírt eseményével;
+- **a részfa össz-pontja (D76)** — a kérdező nem tartja a szeletet. ⭐ **Az össz-pont a NÉZETÉ,
+  nem a DÖNTÉSÉ** (csak a pakli sorrendjét adja — SK1: a megtalálás rétege), ezért nem aláírt
+  horgony kell hozzá, hanem **ellenőrizhetőség**: a válasz a fával jön, a kérdező néhány véletlen
+  levelet a szerzők aláírt kiosztás-gyökerével vet össze (a felfújt összeg lebukik), és több
+  válaszoló közül a **legnagyobb, szúrópróbán átment** választ fogadja el (az elhallgatót bármelyik
+  becsületes legyőzi). A legrosszabb, amit egy hazug elér: egy kártya rossz helyen áll.
+
+⛔ **Elvetve: a tartók vagy a tanúsítók aláírása mint horgony** — a tartó olcsó azonosság (az 1.
+lépcső szándékosan az), a 11–12. mérés szerint *a szám árcédula, nem védelem*; és új eseménytípust,
+bájtokat és egy új konszenzus-kérdést hozna („ki tartó?").
+
+⏸️ **Az egyetlen hely, ahol a számított gyökér nem elég: a tartós mag** (azonosság-egyszeriség,
+később a pénz) — ott senki nem tartja a teljes bemenetet, globális egyetértés kell (D17). A
+horgonya a pénzzel együtt tervezendő (D66); a fa-kód ugyanez lesz.
+
+#### 3. AZ SK14 LEZÁRVA
+
+✅ **A lánc-gyökér az ESEMÉNYBEN lakik, nem a tartós magban** — mindenkinél annyi van belőle, ahány
+szerző eseményét ténylegesen számolja, és a mag nem válik állandóan változóvá (D14: *„legyen minél
+kisebb"*).
+
+⏸️ **A pontos algoritmusok** (a napló-fa és a kulcs szerinti fa konkrét változata) a megvalósítás
+részei — előbb mérés (bájt/esemény, bizonyíték-méret 10³-tól 10⁹-ig).
+
+#### ⚠️ PONTOSÍTÁS (2026-09-27 este, az építés előtt — Claude javította a saját ígéretét)
+
+Az 1/3. pont azt ígérte, hogy a bemondott összeg **egyetlen logaritmikus bizonyítékkal**
+ellenőrizhető. ⛔ **Ez így csak félig igaz:** az összegző fa minden csomópontot ellenőrizhetővé tesz,
+amelyik a bizonyíték ÚTJÁBA esik — de a szerző maga építi a fáját, és egy olyan részfába, amit senki
+nem nyit ki, elrejthet egy **negatív levelet** (pl. −5000 egy nem létező entitáson): a gyökér összege
+10 000 alatt marad, a valódi kiosztása 15 000. *(A Merkle-összegfák ismert gyengesége.)*
+
+⭐ **A javítás olcsó, és kiállja a „végtelen" próbáját:** a kiosztás-fa **a kerettel felülről
+korlátos** (legfeljebb 10 000 levél; jellemzően néhány tucat–néhány száz, azaz néhány KB) — tehát a
+**teljes lista is lekérhető** és az aláírt gyökérrel összevethető. Negatív levél vagy eltérés a
+szerző aláírt gyökere ellen **átadható bizonyíték**. Az ára a keret (konstans), nem a koino mérete.
+A napló-fát ez nem érinti (ott nincs összeg, csak tagság). ⏸️ **Hogy ki és mikor kéri le a teljes
+listát** (mindig · szúrópróbával · gyanúra), az a bemondott összeg ellenőrzésének lépésében Csaba
+döntése lesz.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

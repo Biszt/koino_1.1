@@ -48,6 +48,8 @@ import szovegDarab from './szovegDarabProba.js';
 // ⭐ A tartomány-egyeztetés (S4, D74, 2026-09-27) — hálózat nélkül. ⚠️ A név NEM „tartomany": a
 // `tar` szűrő részszóra illeszkedik, és a tár-próbákkal együtt indítaná.
 import egyeztetes from './tartomanyProba.js';
+// ⭐ Az összegző Merkle-fa (D78, 2026-09-27) — a két elrendezés, a bizonyítékok, a változás.
+import osszegzoFa from './osszegzoFaProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -78,7 +80,8 @@ const PROBAK = [
   { nev: 'udpkapu', futtat: udpKapu },
   { nev: 'iro', futtat: iro },
   { nev: 'szovegdarab', futtat: szovegDarab },
-  { nev: 'egyeztetes', futtat: egyeztetes }
+  { nev: 'egyeztetes', futtat: egyeztetes },
+  { nev: 'osszegzofa', futtat: osszegzoFa }
 ];
 
 const szuro = process.argv[2];

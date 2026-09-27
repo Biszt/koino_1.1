@@ -4383,3 +4383,41 @@ szelet halmazát (minden test betöltése, az alaki szűrés, a lenyomat); a má
 gyorsítótárból megy (253 ms). Egy hosszan futó őrjáratnál ez egyszeri; a kézi `csere` parancs
 minden indításkor megfizeti. ⭐ A (b) után (a 9. pont) a halmaz a saját érdeklődés — ez az ár is
 azzal lesz arányos.
+
+## 52. ⭐⭐ AZ ÖSSZEGZŐ MERKLE-FA ÁRA — a bizonyíték logaritmikus, egymilliárdnál ~2 KB (2026-09-27 este, a laptopon)
+
+*A D78 megépítésének első lépése után: `js/esemeny/osszegzoFa.js` (a napló-fa és az állapot-fa),
+`osszegzoFaMeres.js`. A kulcsok és az esemény-azonosítók valódi hosszúak (43 jel).*
+
+```
+NAPLÓ-FA (a szerző lánca)   |  bizonyíték        |  ellenőrzés  |  hozzáfűzés  |  bizonyíték ELŐÁLLÍTÁSA
+n = 1 000                   |  10 lépés,   692 B |  0,7 ms      |  42 µs       |     42 ms
+n = 10 000                  |  14 lépés,   966 B |  0,6 ms      |  36 µs       |    339 ms
+n = 100 000                 |  17 lépés, 1 175 B |  0,6 ms      |  35 µs       |  3 633 ms
+(számolva, ~69 B/lépés)     |  10⁶: 20 lépés ≈ 1,4 KB · 10⁷: 24 ≈ 1,6 KB · 10⁹: 30 ≈ 2,0 KB
+
+ÁLLAPOT-FA (a kiosztás)     |  mélység (átlag / legmélyebb a mintában, log₂ n)  |  bizonyíték  |  változás ellenőrzése
+n = 100                     |   8,2 / 15  (6,6)                                  |    665 B    |  0,9 ms
+n = 1 000                   |  10,9 / 15  (10,0)                                 |    865 B    |  1,0 ms
+n = 10 000                  |  14,8 / 22  (13,3)                                 |  1 145 B    |  1,4 ms
+n = 100 000                 |  17,9 / 22  (16,6)                                 |  1 380 B    |  1,5 ms
+
+A TELJES kiosztás-lista (a teljes ellenőrzéshez, D78 pontosítás): 100 entitás 8,3 KB ·
+1 000 entitás 82,9 KB · 10 000 entitás (a keret határa, 1 pont mindegyiken) 829 KB
+Egy esemény a lancGyoker-rel: +41 bájt
+```
+
+⭐ **A lelet:** minden, ami a VONALON utazik, logaritmikus — egy bizonyíték 10⁵ elemnél ~1,2–1,4 KB,
+egymilliárdnál a mért lépés-mérettel ~2,0 KB (a becslés 57 bájt/lépés volt, a mérés ~69: a D78
+„~1,6 KB"-ja így 2,0 KB). Az ellenőrzés 1 ms körül van, a méret szinte nem számít. A szerző a
+folytatáshoz 5–6 csúcsot tárol (~0,5 KB), egy hozzáfűzés ~35–42 µs. Az állapot-fa átlagos mélysége
+log₂ n + ~1,5 (a véletlen kulcs-utak közös előtagjai), a legmélyebb út a mintában 22.
+
+⚠️ **Amit a mérés kiderített:**
+- **A napló-bizonyíték ELŐÁLLÍTÁSA lineáris** a szerző saját láncával (a testvér-részfákat újraszámolja):
+  10⁴ eseménynél 0,34 s, 10⁵-nél 3,6 s (a telefonon a korábbi mérések szerint 3–5×). Ez a szerző SAJÁT
+  adata, nem a koino mérete — de logaritmikussá tehető: ha a szerző a fa belső csomópontjait is
+  megtartja. ⏭️ A `lancGyoker` beépítésénél (a szerző gyorsítótára) jön.
+- **A teljes kiosztás-lista a keret határán 829 KB** — a jellemző eset (néhány tucat–néhány száz
+  entitás) néhány KB–néhány tíz KB. Korlátos (a keret), de nem apró: a „ki és mikor kéri le" döntés
+  ezért fontos.
