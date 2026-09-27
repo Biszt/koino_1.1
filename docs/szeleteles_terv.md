@@ -43,16 +43,22 @@ lenyomattal viszont pontosan azt kérdezi, amit kell: *a közös entitásainkban
 ## 3. S3 — AZ ENTITÁSONKÉNTI TÁR
 
 **A tárolás egysége a szelet.** Ma egyetlen `esemenyek.jsonl` van koinónként, és a megnyitás
-végigolvassa. Helyette:
+végigolvassa.
 
-- **szeletenként egy hozzáfűzhető fájl** (`szeletek/<az azonosító első két jele>/<szelet>.jsonl`
-  — az alkönyvtár azért kell, hogy egy mappában ne legyen százezer fájl);
-- **egy kis jegyzék** (`szeletek.json`): szeletenként az eseményszám és a **szelet lenyomata**
-  (a rendezett esemény-azonosítókból). Ez a készülék saját érdeklődésével arányos — a koinóval nem;
-- **a saját láncom mutatója** (sorszám → szelet): a saját eseményeim a szeletekben laknak, a
-  lánc-kérdés (`szerzoLanca` a sajátomra, `lancVege`) ebből felel;
-- ⭐ **LUSTA betöltés:** a megnyitás csak a jegyzéket olvassa; egy szelet eseményei az első
-  kérdezéskor töltődnek be. *(A 48. mérés 813 ms-os megnyitása így a jegyzék méretével arányos.)*
+> ⚠️ **ÁTÍRVA A 49. MÉRÉS UTÁN (D73, 2026-09-27, Csaba döntése).** Az eredeti terv szeletenként egy
+> fájlt írt, egy kis jegyzékkel és a saját lánc mutatójával. A mérés szerint ez Windowson 100 000
+> eseménynél 28 825 fájl, és a teljes betöltés (amit a C lépés 9. pontjáig minden számítás kér)
+> szelet-fájlokból 19,6 s a 0,69 helyett; az azonosító és a szerző szerinti kérdéshez pedig külön
+> mutató kellett volna. **Helyette:**
+
+- **az adat marad egy hozzáfűzhető fájlban** (a kézi út alakja is);
+- ⭐ **mellette a MUTATÓ, az esemény teste nélkül:** eseményenként a sor helye (eltolás, hossz),
+  az azonosító, a szerző, a sorszám és a szelet. Ebből felel a szelet, az azonosító, a szerző lánca
+  (a sajátom is, az idegen is) és a lánc-pont kérdése — és ebből a **szeletek jegyzéke** és a
+  **szelet lenyomata** (a rendezett azonosítókból, test nélkül);
+- ⭐ **a mutató PILLANATKÉPE** (`mutato.json`): a megnyitás ezt olvassa, és a fájl kép utáni végét.
+  Tiszta gyorsítótár — ha nem illik a fájlhoz, a mutató a fájlból épül újra;
+- ⭐ **LUSTA testek:** egy szelet eseményei az első kérdezéskor jönnek, a fájl adott helyéről.
 
 **Az illesztés nem változik** (S2/a óta szeletelhető: `esemeny` · `szerzoLanca` ·
 `szeletEsemenyei` · `sorszamSzerint` · `hozzafuz` · `frissit`), csak két kérdés jön hozzá:
@@ -60,8 +66,8 @@ végigolvassa. Helyette:
 **kikerül a hétköznapi útból teljesen** (ma a csere és a számítás még ezen át kapja a bemenetét,
 a `koinoEsemenyei`-n keresztül).
 
-**Az átállás:** egyszeri szétválogatás — a régi `esemenyek.jsonl`-t szeletekre bontjuk, a régi
-fájl megmarad biztonsági másolatnak. Az események nem változnak, tehát nincs mit elrontani rajtuk.
+**Az átállás:** nincs szétválogatás (D73) — az első megnyitás a fájlból építi a mutatót, és
+megírja a pillanatképét. Az események és a fájl nem változnak.
 
 ⚠️ **Egy ismert gyengülés, kimondva:** amíg egy készülék MINDENT tart, a kettős lánc (egy szerző
 két eseménye ugyanarról a sorszámról) bárhol lelepleződik. Ha csak a saját szeleteit tartja, és a
@@ -168,9 +174,10 @@ elhagyta — javítva.)
 4. ⭐ **A próba, ami a D72 ígéretét őrzi:** két készülék, az egyiknél megvan a szöveg, a másiknál
    nincs → **azonos állapot-ujjlenyomat**. És: a régi (szöveget hordozó) esemény ugyanúgy számol.
 
-**B. AZ ENTITÁSONKÉNTI TÁR** (S3 — a protokolltól független)
-5. Szelet-fájlok, jegyzék, lusta betöltés, a saját lánc mutatója, az író mögött; az egyszeri
-   szétválogatás. ⭐ **Mérés:** a megnyitás ideje 100 000 eseménynél (ma 813 ms).
+**B. ✅ AZ ENTITÁSONKÉNTI TÁR** (S3 — a protokolltól független; KÉSZ, 2026-09-27, D73)
+5. ~~Szelet-fájlok, jegyzék~~ → **egy adatfájl + a mutató pillanatképe** (D73, a 49. mérés után),
+   lusta testek, a szeletek jegyzéke és a szelet lenyomata; az író mögött. ⭐ **Mérés (49.):** a
+   megnyitás 100 000 eseménynél — lásd az [`eredmenyek.md`](../koino/meres/eredmenyek.md)-t.
 
 **C. A CSERE SZELETENKÉNT** (S4 — a 7. szakasz 2–4. kérdése döntve)
 6. A szelet-lenyomat és a tartomány-egyeztetés logikája (hálózat nélkül, 1. szabály). ⭐ **Mérés:**

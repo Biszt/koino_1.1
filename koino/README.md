@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Huszonnyolc próba-fájl, **744 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Huszonnyolc próba-fájl, **750 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **188 fájl, 3285,4 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **189 fájl, 3335,6 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -149,6 +149,9 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
 
 - `node koino/meres/skalaMeres.js` — **skála-mérés**: hol van a fal (a 3.2 két
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
+- `node koino/meres/szeletTarMeres.js` — ⭐ **a tár alakja** (49.): szeletenkénti fájlok vagy egy
+  adatfájl + a mutató (D73) — mérve: a teljes betöltés szelet-fájlokból 18–20 s lett volna, a
+  mutató pillanatképéből nyitott tár 129–169 ms alatt nyílik, 0 testtel;
 - `node koino/meres/ebredesProba.js` — **ébredés-próba** telefonon: bír-e a készülék
   ötperces ablakot (mérve: egy óra alvás után is **nulla csúszás**);
 - `node koino/meres/szigetMeres.js` — ⭐ **a hamis sziget mérése** (Szakasz 4, a
@@ -176,7 +179,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/esemeny/kanonikusAlak.js` | ⚠️ a legveszélyesebb részlet: ugyanaz az adat = ugyanazok a bájtok |
 | `js/esemeny/esemeny.js` | aláírás és ellenőrzés; az esemény neve a gondolata lenyomata |
 | `js/esemeny/szovegDarab.js` | ⭐⭐ **a szöveg külön darab** (D72): az esemény a szöveg lenyomatát hordozza, a szöveg a fájl-tárba kerül, és úgy jön, mint egy kép — az állapot ettől független, a megjelenítés oldja fel |
-| `js/tar/fajlTar.js` | a tár: **hozzáfűzhető** fájl, soronként egy esemény — ⭐ 3.2 óta **kérdezhető** (`esemeny`, `szerzoLanca`, `szeletEsemenyei`, `sorszamSzerint`), nem csak `betolt()` |
+| `js/tar/fajlTar.js` | a tár: **hozzáfűzhető** fájl, soronként egy esemény — ⭐ 3.2 óta **kérdezhető** (`esemeny`, `szerzoLanca`, `szeletEsemenyei`, `sorszamSzerint`), nem csak `betolt()` — ⭐ D73 óta a **mutató** (test nélkül) és a pillanatképe (`mutato.json`) mellette: lusta testek, `szeletek()`, `szeletLenyomata()` |
 | `js/tar/esemenyTar.js` | a lánc kezelése — ellenőrizetlen esemény nem kerül be |
 | `js/tar/iro.js` | ⭐ **az író** (D70): koinónként és készülékenként egy folyamat fűz a tárhoz — a gépen belüli csatorna maga a zár; aki nem író, a kész eseményt átadja; a saját új esemény csak a lánc végére kerül |
 | `js/kulcs/kulcsTar.js` | a kulcs = a személyazonosság (D15) — kimentés **és visszatöltés**; ⛔ az egyetlen művelet a koinóban, ami ELDOB valamit, ezért kimondott engedély kell hozzá |

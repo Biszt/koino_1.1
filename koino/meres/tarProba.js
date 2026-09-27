@@ -10,7 +10,7 @@ import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { esemenyLetrehozasa, szelet } from '../js/esemeny/esemeny.js';
 import { esemenyTarNyitasa, udpCimTarolo, kotesTarolo, tarsakTarolo } from '../js/tar/fajlTar.js';
 import {
   esemenyMentese, esemenyLekerese, lancVege, lancEllenorzese,
@@ -330,6 +330,177 @@ proba('⚠️ EGY BUKÓ MÓDOSÍTÁS NEM AKASZTJA MEG A SORT — a következő l
   } finally {
     await rm(hely, { recursive: true, force: true });
   }
+});
+
+// ===================================
+// ⭐⭐ D73 (2026-09-27): A MUTATÓ ÉS A PILLANATKÉPE
+// ===================================
+//
+// Az adat egy hozzáfűzhető fájl marad; mellette a MUTATÓ (eseményenként a sor helye,
+// azonosító, szerző, sorszám, szelet — test nélkül), és a pillanatképe (`mutato.json`), amit a
+// megnyitás olvas. A testek kérésre jönnek. ⛔ A pillanatkép csak gyorsítótár: ha nem illik a
+// fájlhoz, a mutató a fájlból épül újra — ezt mérik az alábbiak, viselkedéssel.
+
+let mutatoMappaSzam = 0;
+
+/** Egy friss tár-mappa, két szerzővel és három szelettel (az egyikben ékezetes cím). */
+async function mutatosTar() {
+  const hely = join(MAPPA, 'mutato-' + (++mutatoMappaSzam));
+  const t = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const anna = await ujEember(KOINO);
+  const bela = await ujEember(KOINO);
+  const g1 = await anna.tesz('GondolatLetrehozas', { cim: 'Első', meret: 10 });
+  const g2 = await bela.tesz('GondolatLetrehozas', { cim: 'Második', meret: 10 });
+  const esemenyek = [
+    g1, g2,
+    await anna.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 5 }),
+    await bela.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 3 }),
+    await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 2 }),
+    await bela.tesz('GondolatLetrehozas', { cim: 'Harmadik — őszi fűz', meret: 10 })
+  ];
+  for (const e of esemenyek) await esemenyMentese(t, e);
+  return { hely, anna, bela, g1, g2, esemenyek };
+}
+
+/** Amit a tár a négy kérdésre és a jegyzékre felel — egyetlen összevethető szövegben. */
+async function tarValaszai(t, esemenyek) {
+  const ki = [(await t.betolt()).map((e) => e.azonosito).join(',')];
+  for (const e of esemenyek) {
+    ki.push((await t.esemeny(e.azonosito))?.azonosito ?? '-');
+    ki.push((await t.szeletEsemenyei(szelet(e))).map((x) => x.azonosito).join(','));
+    ki.push((await t.sorszamSzerint(e.szerzo, e.sorszam)).map((x) => x.azonosito).join(','));
+    ki.push((await t.szerzoLanca(e.szerzo)).map((x) => x.azonosito).join(','));
+  }
+  ki.push(JSON.stringify((await t.szeletek()).sort((a, b) => (a.szelet < b.szelet ? -1 : 1))));
+  return ki.join('|');
+}
+
+proba('⭐⭐ A PILLANATKÉPBŐL NYITOTT TÁR UGYANAZT FELELI, mint a fájlból olvasott — és testet nem tölt be', async () => {
+  const { hely, esemenyek } = await mutatosTar();
+  // A fájlból olvasó megnyitás (6 esemény ≥ 1) megírja a pillanatképet…
+  const fajlbol = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  // …és a következő megnyitás már abból épül.
+  const kepbol = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const elotte = kepbol.mutatoAllapota();
+  return fajlbol.mutatoAllapota().pillanatkepbol === false
+    && elotte.pillanatkepbol === true && elotte.esemeny === 6
+    // ⭐ A megnyitás egyetlen testet sem olvasott be.
+    && elotte.betoltottTest === 0
+    && await tarValaszai(kepbol, esemenyek) === await tarValaszai(fajlbol, esemenyek);
+});
+
+proba('⭐ LUSTA TESTEK: egy szelet kérdése csak a szelet eseményeit olvassa be', async () => {
+  const { hely, g1 } = await mutatosTar();
+  await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });           // a pillanatkép megírása
+  const t = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const szeletje = await t.szeletEsemenyei(g1.azonosito);          // g1 + két pont-esemény
+  const utana = t.mutatoAllapota().betoltottTest;
+  const mind = await t.betolt();
+  return t.mutatoAllapota().pillanatkepbol === true
+    && szeletje.length === 3 && utana === 3
+    && mind.length === 6 && t.mutatoAllapota().betoltottTest === 6;
+});
+
+proba('⭐ A PILLANATKÉP UTÁN ÍRT ESEMÉNY IS LÁTSZIK — a megnyitás a fájl végét elolvassa', async () => {
+  const { hely, anna, g2 } = await mutatosTar();
+  const irt = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });   // pillanatkép: 6 esemény
+  const uj = await anna.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 1 });
+  await esemenyMentese(irt, uj);
+  // ⚠️ Nagy küszöb: most nem íródik új pillanatkép — a 7. esemény CSAK a fájl végén van.
+  const t = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 100 });
+  const szeletje = (await t.szeletEsemenyei(g2.azonosito)).map((e) => e.azonosito);
+  return t.mutatoAllapota().pillanatkepbol === true
+    && t.mutatoAllapota().esemeny === 7
+    && (await t.esemeny(uj.azonosito))?.azonosito === uj.azonosito
+    && szeletje.includes(uj.azonosito)
+    && (await lancVege(t, anna.szerzo)).sorszam === uj.sorszam + 1;
+});
+
+proba('⛔⛔ A FÁJLHOZ NEM ILLŐ PILLANATKÉP NEM TÉVESZT MEG — se kicserélt fájlnál, se elcsúszott vagy rossz bejegyzésnél', async () => {
+  // ----- 1. A FÁJLT KICSERÉLTÉK (a pillanatkép egy másik fájlhoz készült) -----
+  const regi = await mutatosTar();
+  await esemenyTarNyitasa(KOINO, regi.hely, { kepKuszob: 1 });       // pillanatkép a régi fájlhoz
+  const masik = await mutatosTar();
+  const { writeFile: ir, copyFile } = await import('node:fs/promises');
+  await copyFile(join(masik.hely, KOINO, 'esemenyek.jsonl'), join(regi.hely, KOINO, 'esemenyek.jsonl'));
+  const t1 = await esemenyTarNyitasa(KOINO, regi.hely, { kepKuszob: 100 });
+  const kicserelt = t1.mutatoAllapota().pillanatkepbol === false
+    && (await t1.betolt()).map((e) => e.azonosito).join() === masik.esemenyek.map((e) => e.azonosito).join()
+    && (await t1.esemeny(regi.g1.azonosito)) === undefined;
+
+  // ----- 2. A PILLANATKÉP EGY KÖZBÜLSŐ BEJEGYZÉSE ELCSÚSZOTT -----
+  // Az utolsó bejegyzés ép (a megnyitás próbája átmegy), de a 2. és a 3. helye fel van cserélve.
+  const harmadik = await mutatosTar();
+  await esemenyTarNyitasa(KOINO, harmadik.hely, { kepKuszob: 1 });
+  const kepFajl = join(harmadik.hely, KOINO, 'mutato.json');
+  const kep = JSON.parse(await readFile(kepFajl, 'utf8'));
+  [kep.e[1][0], kep.e[2][0]] = [kep.e[2][0], kep.e[1][0]];
+  [kep.e[1][1], kep.e[2][1]] = [kep.e[2][1], kep.e[1][1]];
+  await ir(kepFajl, JSON.stringify(kep));
+  const t2 = await esemenyTarNyitasa(KOINO, harmadik.hely, { kepKuszob: 100 });
+  const nyitaskor = t2.mutatoAllapota().pillanatkepbol;
+  let mindJo = true;
+  for (const e of harmadik.esemenyek) {
+    if ((await t2.esemeny(e.azonosito))?.azonosito !== e.azonosito) mindJo = false;
+  }
+  // ⭐ A rossz pillanatképet a tár észrevette, a fájlból újraépült, és eldobta a képet.
+  const { access } = await import('node:fs/promises');
+  const kepMaradt = await access(kepFajl).then(() => true, () => false);
+
+  // ----- 3. CSAK EGY BEJEGYZÉS SZELETE ROSSZ (a helye jó) -----
+  // ⛔ Az azonosító-ellenőrzés ezt nem fogná meg: a test beolvasása a mutató minden mezőjét nézi.
+  const negyedik = await mutatosTar();
+  await esemenyTarNyitasa(KOINO, negyedik.hely, { kepKuszob: 1 });
+  const kepFajl4 = join(negyedik.hely, KOINO, 'mutato.json');
+  const kep4 = JSON.parse(await readFile(kepFajl4, 'utf8'));
+  // A 2. esemény (Béla gondolata) a saját szeletében van; a kép szerint g1 szeletébe tartozna.
+  const g1Indexe = kep4.szeletek.indexOf(negyedik.g1.azonosito);
+  kep4.e[1][5] = g1Indexe;
+  await ir(kepFajl4, JSON.stringify(kep4));
+  const t3 = await esemenyTarNyitasa(KOINO, negyedik.hely, { kepKuszob: 100 });
+  const g1Szelete = (await t3.szeletEsemenyei(negyedik.g1.azonosito)).map((e) => e.azonosito);
+  const g2Szelete = (await t3.szeletEsemenyei(negyedik.g2.azonosito)).map((e) => e.azonosito);
+  const szeletJo = !g1Szelete.includes(negyedik.g2.azonosito) && g1Szelete.length === 3
+    && g2Szelete.includes(negyedik.g2.azonosito);
+
+  return kicserelt && nyitaskor === true && mindJo
+    && t2.mutatoAllapota().pillanatkepbol === false && !kepMaradt && szeletJo;
+});
+
+proba('⭐ A SZELET LENYOMATA: sorrend-független, testet nem kér, és a szelet bővülésével változik', async () => {
+  const { hely, anna, g1, g2, esemenyek } = await mutatosTar();
+  // Ugyanaz a hat esemény, fordított sorrendben, egy másik tárban.
+  const forditott = await esemenyTarNyitasa(KOINO, join(MAPPA, 'mutato-fordított-' + (++mutatoMappaSzam)));
+  for (const e of [...esemenyek].reverse()) await esemenyMentese(forditott, e);
+  const eredeti = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+  const kepbol = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });
+
+  const szeletek = [...new Set(esemenyek.map((e) => szelet(e)))];
+  let egyeznek = true;
+  for (const s of szeletek) {
+    const l = await kepbol.szeletLenyomata(s);
+    if (l.length !== 43 || l !== await forditott.szeletLenyomata(s) || l !== await eredeti.szeletLenyomata(s)) {
+      egyeznek = false;
+    }
+  }
+  // ⭐ A lenyomat testet nem kért (a pillanatképből nyitott tárban).
+  const testNelkul = kepbol.mutatoAllapota().betoltottTest === 0;
+
+  // Egy új esemény g1 szeletében: CSAK az a lenyomat változik.
+  const g1Elotte = await kepbol.szeletLenyomata(g1.azonosito);
+  const g2Elotte = await kepbol.szeletLenyomata(g2.azonosito);
+  const uj = await anna.tesz('TudatpontRendezes', { entitas: g1.azonosito, pont: 4 });
+  await esemenyMentese(kepbol, uj);
+  await esemenyMentese(forditott, uj);
+  const g1Utana = await kepbol.szeletLenyomata(g1.azonosito);
+
+  return egyeznek && testNelkul
+    && g1Utana !== g1Elotte
+    && g1Utana === await forditott.szeletLenyomata(g1.azonosito)
+    && await kepbol.szeletLenyomata(g2.azonosito) === g2Elotte
+    // ⭐ Az ismeretlen szeleté is determinisztikus (az üres halmazé), és nem a többié.
+    && await kepbol.szeletLenyomata('nincs-ilyen-szelet') === await forditott.szeletLenyomata('ez-sincs')
+    && await kepbol.szeletLenyomata('nincs-ilyen-szelet') !== g2Elotte;
 });
 
 // A próbák után takarítunk: a mappa eldobható

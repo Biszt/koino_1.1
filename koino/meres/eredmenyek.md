@@ -4290,3 +4290,43 @@ tárolási becslések ~30%-kal nőnek. ✅ A mentés lapos (1 ms) — az S2/a ó
 ⭐ **A „végtelen" próbája (Csaba, 2026-09-26) ezen a táblán:** a csere ára, az ÁLLÁS összeállítása,
 a megnyitás és az állapot-számítás mind a KOINO méretével nő — egyik sem attól, amivel a készülék
 foglalkozik. Ez az S3–S4 kiindulópontja: [`docs/szeleteles_terv.md`](../../docs/szeleteles_terv.md).
+
+## 49. ⭐⭐ AZ ENTITÁSONKÉNTI TÁR ALAKJA — a szelet-fájlok elbuknak, egy adatfájl + a mutató nyer (2026-09-27, a laptopon)
+
+*A szeletelési terv B lépése (S3) előtt: `szeletTarMeres.js`, a 48. mérés generátorával (100 000
+esemény, 500 e-ember, magvas), Windows, Node 22. A kérdés: a terv szerinti szeletenkénti fájlok,
+vagy más alak? — ⚠️ mert a tárat NÉGY kérdés éri (szelet, azonosító, szerző lánca, lánc-pont), és a
+jegyzék csak az elsőre felel.*
+
+```
+                                           | szeletenként egy fájl      | egy adatfájl + mutató (D73)
+szeletek / fájlok                          | 28 825 fájl                | 1 fájl + mutato.json (8,5 MB)
+szétválogatás (egyszeri)                   | 25,6–27,8 s                | nincs
+megnyitás                                  | 22–28 ms (csak a jegyzék) ¹ | 129–169 ms külön folyamatban ²
+egy szelet eseményei                       | 0,7–0,9 ms                 | 0,84 ms (fájl megnyitással)
+TELJES betöltés (a C 9. pontjáig ez kell)  | 18,1–20,0 s (párh. 4,8–5,2) | 416 ms
+azonosító / szerző szerinti kérdés         | külön mutató kell ³         | a mutatóból
+több folyamat közti frissítés              | új változás-napló kell      | a mai frissit() (egy fájl vége)
+```
+
+¹ a jegyzék a szerző és az azonosító szerinti kérdésre nem felel · ² a D73 előtti megnyitás (minden
+test a memóriában) 689–759 ms; a mérés-folyamaton belül, az első megnyitás 100 000 teste mellett
+227 ms · ³ azonosító-vödrök (9,7 MB) + szerzőnkénti lánc-fájlok (10,4 MB), eseményenként két
+további írás. ⭐ Egy fájlművelet ára Windowson: hozzáfűzés 0,36–0,57 ms, egy kis fájl beolvasása
+~0,7 ms, egy `stat` 0,07 ms (28 825 fájl végigkérdezése 2,0–2,2 s).
+
+⭐ **A lelet:** a szeletenkénti fájlok a MEGNYITÁST gyorsítanák, de a C lépés 9. pontjáig a
+hétköznapi út (az állapot-számítás, a csere ÁLLÁS-a) MINDENT kér — és az szelet-fájlokból
+**18–20 s** a 0,4 helyett. ⭐ **Csaba döntése (D73): egy adatfájl + a mutató pillanatképe.** A mutató
+az esemény teste nélkül tartja a sor helyét, az azonosítót, a szerzőt, a sorszámot és a szeletet;
+a testek kérésre jönnek (a képből nyitott tár a megnyitás után **0 testet** tart). Egy szelet
+lenyomata test nélkül 0,05 ms.
+
+⚠️ **Építés közben mért javítás:** a képből nyitás elsőre 260–350 ms volt; a fázisok szerint a
+térképek építése vitte (170–200 ms), abból a „szerző|sorszám" térkép 100 000 szöveg-kulcsa ~80 ms-ot.
+Ezt csak az elágazás-keresés kérdezi, szerzőnként — most az első kérdéskor épül, szerzőnként
+(→ 129–169 ms). ⚠️ Az első, kép nélküli megnyitás 741–836 ms (a fájl + a kép megírása, ~65 ms):
+egyszeri, és minden olyan megnyitásnál, ahol ezer fölötti esemény jött a kép óta.
+
+⏸️ **Nem mérve:** a telefonon (Android, f2fs/ext4) a fájlonkénti ár valószínűleg kisebb — de a
+döntést a teljes betöltés aránya (≈45×) hozta, nem egy konstans. Érdemes a telefonon is lefuttatni.

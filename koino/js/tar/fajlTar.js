@@ -16,21 +16,23 @@
 // töröljük — csak új sor keletkezik. A fájl emberi szemmel is olvasható, bármikor
 // megnézhető, és egy szövegszerkesztővel is menthető.
 //
-// Nincs adatbázis-motor, nincs séma-migráció, nincs zárolás. A mérés szerint 10 000
-// esemény ellenőrzése 0,58 mp — ezen a méreten a „töltsd be az egészet a memóriába"
-// nem kompromisszum, hanem a legegyszerűbb helyes megoldás. Ha egyszer kevés lesz, a
-// tár-illesztő mögött kicserélhető, a fölötte lévő rétegek érintése nélkül.
+// Nincs adatbázis-motor és nincs séma-migráció. ⭐ A fájl mellett a MUTATÓ él (D73,
+// 2026-09-27): eseményenként a sor helye, azonosítója, szerzője, sorszáma és szelete — az
+// esemény teste nélkül —, és a pillanatképe (`mutato.json`), hogy a megnyitásnak ne kelljen
+// az egész fájlt olvasnia. A testek kérésre jönnek. *Az adat a fájl; a mutató csak a térkép
+// hozzá — ha nem illik, a fájlból újraépül.* A zárolás nem itt van: egy koinó tárához egy
+// folyamat fűz, az író (`iro.js`, D70).
 //
 // Használják: esemenyTar.js és kulcsTar.js (rajtuk keresztül minden más).
 
 // ⚠️ A `rename` 2026-09-15-ig a részleges fájl lezárásához kellett; azóta a szeleteket
-// ÖSSZEFŰZVE írjuk ki (D68 / 6.), tehát kikerült. A `stat` viszont bejött: a részleges
-// méret most a szelet-fájlok összege.
-import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open } from 'node:fs/promises';
+// ÖSSZEFŰZVE írjuk ki (D68 / 6.). ⭐ A D73 óta újra kell: a mutató pillanatképe átnevezéssel
+// kerül a helyére, egyszerre egészben.
+import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open, rename } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 import { szelet } from '../esemeny/esemeny.js';
-import { bajtLenyomat } from '../esemeny/kanonikusAlak.js';
+import { bajtLenyomat, lenyomat } from '../esemeny/kanonikusAlak.js';
 
 // ===================================
 // HOL LAKIK AZ ADAT
@@ -47,6 +49,15 @@ export function alapHely() {
 // ===================================
 // AZ ESEMÉNY-TÁR
 // ===================================
+
+// ⭐ A pillanatképet akkor írjuk újra, ha a megnyitáskor ennyi (vagy több) eseményt kellett a
+// fájlból olvasni — a pillanatkép nélkül, vagy utána. ⚠️ Nem állapot-befolyásoló állandó: a
+// pillanatkép csak gyorsítótár; kis tárnál nem is készül (ott a teljes olvasás olcsó).
+export const KEP_KUSZOB = 1000;
+
+// ⭐ Ennél több hiányzó testet egyetlen, sorban olvasással hozunk (mint a teljes betöltés);
+// kevesebbet egyenként, a nyitott fájl adott helyéről.
+const SOROS_OLVASAS_FELETT = 256;
 
 /**
  * Megnyit (és ha kell, létrehoz) egy koino esemény-tárát.
@@ -65,162 +76,373 @@ export function alapHely() {
  *   szerzoLanca(szerzo)         — EGY szerző lánca
  *   szeletEsemenyei(entitas)    — EGY entitás (szelet) eseményei
  *   sorszamSzerint(szerzo, n)   — egy pont a szerző láncán (az elágazás-kereséshez)
+ *   szeletek()                  — ⭐ D73: a szeletek jegyzéke (szeletenként az eseményszám)
+ *   szeletLenyomata(szelet)     — ⭐ D73: egy szelet lenyomata (a C lépés erre épít)
  *   hozzafuz(esemeny)           — változatlan
  *   frissit()                   — amit MÁSIK folyamat fűzött hozzá (2026-09-26, 43. mérés)
  *   ⚠️ betolt()                 — MEGMARADT, de ez az, ami NEM SKÁLÁZIK (lásd lent)
  *
- * ===== A MEGVALÓSÍTÁS SZÁNDÉKOSAN EGYSZERŰ (9. szabály) =====
+ * ===== ⭐⭐ D73 (2026-09-27): EGY ADATFÁJL + A MUTATÓ PILLANATKÉPE =====
  *
- * Mögötte most egy **memóriában tartott mutató** van, amit megnyitáskor egyszer építünk fel,
- * és hozzáfűzéskor karbantartunk. Ez a *szerkezet* szempontjából már milliárdos —
- * a hívók a helyes kérdéseket teszik fel —, a *mélység* pedig később cserélhető
- * (lemezre írt index, részleges betöltés) **anélkül, hogy bárki más változna**.
+ * A szeletelési terv szeletenként egy fájlt írt (S3). A 49. mérés ezt Windowson megdöntötte:
+ * 100 000 eseménynél 28 825 fájl, és a C lépésig a hétköznapi út MINDENT kér — ez szelet-
+ * fájlokból **19,6 s** (párhuzamosan 4,9) a mai 0,69 helyett. Csaba döntése: **az adat
+ * marad egy hozzáfűzhető fájlban** (ez a kézi út alakja is), és mellette él
+ * — ⭐ **a MUTATÓ, az esemény TESTE NÉLKÜL:** eseményenként a sor helye a fájlban (eltolás,
+ *   hossz), az azonosító, a szerző, a sorszám és a szelet. Ebből felel mind a négy kérdés,
+ *   és ebből jön a szelet lenyomata is — test nélkül;
+ * — ⭐ **a mutató PILLANATKÉPE** (`mutato.json`): a megnyitás ezt olvassa, és csak a fájl
+ *   pillanatkép utáni végét (mérve: 689 → 188 ms 100 000 eseménynél). ⚠️ **Tiszta
+ *   gyorsítótár:** ha nincs, sérült, vagy nem illik a fájlhoz, a teljes olvasás pótolja;
+ * — ⭐ **a testek KÉRÉSRE jönnek**, a fájl adott helyéről (egy szelet: 0,21 ms), és
+ *   megmaradnak a memóriában.
  *
- * ⭐ ÉS EGY MÉRT MELLÉKHATÁS: ezzel az `esemenyMentese` is olcsó lett. Eddig MINDEN mentés
- * végigolvasta az egész fájlt (mérve: 100 000 eseménynél **495 ms egyetlen mentés**, vagyis
- * N esemény beírása négyzetes volt). A mutatóval a kettősség- és elágazás-keresés O(1).
+ * *A git csomag-fájlja ugyanez: egy adatfájl, mellette az index.* A szerkezet (a kérdések)
+ * változatlan; a mélység (a pillanatkép lusta, szeletenkénti olvasása) később jöhet — a
+ * hívók változása nélkül (9. szabály).
+ *
+ * ⛔⛔ **A PILLANATKÉP NEM TÉVESZTHET MEG.** A megnyitás megnézi, hogy a pillanatkép utolsó
+ * bejegyzése tényleg ott van-e a fájlban; és MINDEN test beolvasásakor ellenőrizzük, hogy az
+ * adott helyen tényleg a várt azonosítójú esemény áll. Ha nem, a mutatót a fájlból újraépítjük
+ * (a fájl az igazság, a mutató csak a térkép hozzá). *Ugyanaz az elv, mint a fájl-táré: a név
+ * maga a bizonyíték.*
+ *
+ * ⭐ ÉS EGY MÉRT MELLÉKHATÁS (3.2): az `esemenyMentese` is olcsó — a kettősség- és
+ * elágazás-keresés a mutatóból O(1), nem a fájl végigolvasása (100 000-nél 495 ms volt).
  *
  * @param {string} koino - a koino azonosítója (ez lesz a mappa neve)
  * @param {string} [hely] - hol legyen az adat (alapból: alapHely())
+ * @param {Object} [beallitas]
+ * @param {number} [beallitas.kepKuszob] - ennyi olvasott esemény után írunk pillanatképet
+ *        (alapból `KEP_KUSZOB`; a próbák kicsire veszik)
  * @returns {Promise<Object>} a tároló
  */
-export async function esemenyTarNyitasa(koino, hely = alapHely()) {
+export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}) {
   console.log('esemenyTarNyitasa - KEZDÉS', { koino, hely });
+  const kepKuszob = beallitas.kepKuszob ?? KEP_KUSZOB;
 
   const mappa = join(hely, koino);
   await mkdir(mappa, { recursive: true });
   const fajl = join(mappa, 'esemenyek.jsonl');
+  const kepFajl = join(mappa, 'mutato.json');
 
-  // ===== A MUTATÓ =====
-  // Négy nézet ugyanarra az eseményhalmazra. A `mind` a fájl sorrendjét őrzi — erre a
-  // csere és a próbák támaszkodnak.
-  const mind = [];
-  const azonositoSzerint = new Map();     // azonosító → esemény
-  const szerzoSzerint = new Map();        // szerző → események
-  const szeletSzerint = new Map();        // szelet-kulcs → események
-  const pontSzerint = new Map();          // szerző|sorszám → események (elágazásnál több)
+  // ===== A MUTATÓ — az esemény TESTE NÉLKÜL =====
+  // Egy bejegyzés: { o: eltolás, h: hossz (bájt, sorvég nélkül), a: azonosító, z: szerző,
+  // n: sorszám, s: szelet }. ⚠️ A saját `hozzafuz()`-ünk eltolása még ismeretlen (`o: null`) —
+  // a fájl következő olvasása pótolja; addig a teste úgyis a memóriában van.
+  let sorrend = [];                       // a beérkezés (a fájl) sorrendjében — a `betolt()`-nek
+  let azonositoSzerint = new Map();       // azonosító → bejegyzés
+  let szerzoSzerint = new Map();          // szerző → bejegyzések
+  let szeletSzerint = new Map();          // szelet-kulcs → bejegyzések
+  // ⭐ szerző → (sorszám → bejegyzések; elágazásnál több). KÉRÉSRE épül, szerzőnként: csak az
+  // elágazás-keresés kérdezi, és a megnyitáskor 100 000 szöveg-kulcs ~80 ms volt (49. mérés).
+  let pontSzerint = new Map();
 
-  /** Egy eseményt bevesz a mutatóba. */
-  const bejegyez = (e) => {
-    mind.push(e);
-    azonositoSzerint.set(e.azonosito, e);
-
-    const szerzoje = szerzoSzerint.get(e.szerzo);
-    if (szerzoje) szerzoje.push(e); else szerzoSzerint.set(e.szerzo, [e]);
-
-    // ⭐ A SZELET-KULCS type-független szabálya (`esemeny.js`): vagy meg van mondva, vagy
-    // az esemény a saját szeletét nyitja. A tárolónak ennyit kell tudnia a domainről —
-    // és pontosan ezért került a mező a burkolatba a 3.1-ben.
-    const kulcs = szelet(e);
-    const szelete = szeletSzerint.get(kulcs);
-    if (szelete) szelete.push(e); else szeletSzerint.set(kulcs, [e]);
-
-    const pont = e.szerzo + '|' + e.sorszam;
-    const ottLevok = pontSzerint.get(pont);
-    if (ottLevok) ottLevok.push(e); else pontSzerint.set(pont, [e]);
-  };
+  // ⭐ A TESTEK: azonosító → az esemény — kérésre töltve, és utána itt maradnak.
+  const testek = new Map();
+  // ⭐ A szelet-lenyomatok: kérésre számolva, és ha a szelet bővül, eldobva.
+  const lenyomatok = new Map();
 
   // ⭐ MEDDIG OLVASTUK A FÁJLT (bájtban) — a `frissit()` innen folytatja (43. mérés).
   let ismertMeret = 0;
+  // Honnan épült a mutató (a próbáknak és a naplónak).
+  let pillanatkepbol = false;
 
-  // ----- A MUTATÓ FELÉPÍTÉSE: egyetlen olvasás megnyitáskor -----
-  // ⚠️ Ez még O(fájl), de FUTÁSONKÉNT EGYSZER, nem műveletenként. A következő mélység
-  // (lemezre írt index) ezt is eltünteti — a hívók változtatása nélkül.
-  try {
-    const bajtok = await readFile(fajl);
-    const szoveg = bajtok.toString('utf8');
-    let sorszam = 0;
-    for (const sor of szoveg.split('\n')) {
-      sorszam++;
-      if (!sor.trim()) continue;
-      try {
-        bejegyez(JSON.parse(sor));
-      } catch {
-        // Egy sérült sor nem teheti olvashatatlanná az egész tárat. Jelezzük, és megyünk
-        // tovább — az esemény aláírása úgyis minden sort külön igazol.
-        console.warn('esemenyTarNyitasa - sérült sor, kihagyva', { fajl, sorszam });
+  const hozza = (terkep, kulcs, b) => {
+    const lista = terkep.get(kulcs);
+    if (lista) lista.push(b); else terkep.set(kulcs, [b]);
+  };
+
+  /**
+   * Egy bejegyzés a mutatóba. Ha az azonosító már ismert, csak a hiányzó helyét pótolja.
+   * @returns {boolean} igaz, ha új
+   */
+  function bejegyez(b) {
+    const meglevo = azonositoSzerint.get(b.a);
+    if (meglevo) {
+      if (meglevo.o === null && b.o !== null) { meglevo.o = b.o; meglevo.h = b.h; }
+      return false;
+    }
+    sorrend.push(b);
+    azonositoSzerint.set(b.a, b);
+    hozza(szerzoSzerint, b.z, b);
+    // ⭐ A SZELET-KULCS type-független szabálya (`esemeny.js`): vagy meg van mondva, vagy az
+    // esemény a saját szeletét nyitja. A tárolónak ennyit kell tudnia a domainről.
+    hozza(szeletSzerint, b.s, b);
+    const pontjai = pontSzerint.get(b.z);
+    if (pontjai) hozza(pontjai, b.n, b);
+    lenyomatok.delete(b.s);
+    return true;
+  }
+
+  /** Egy szerző lánc-pontjai (sorszám → bejegyzések) — az első kérdéskor épül. */
+  function szerzoPontjai(szerzo) {
+    let pontjai = pontSzerint.get(szerzo);
+    if (!pontjai) {
+      pontjai = new Map();
+      for (const b of szerzoSzerint.get(szerzo) ?? []) hozza(pontjai, b.n, b);
+      pontSzerint.set(szerzo, pontjai);
+    }
+    return pontjai;
+  }
+
+  const bejegyzesEsemenybol = (e, o, h) =>
+    ({ o, h, a: e.azonosito, z: e.szerzo, n: e.sorszam, s: szelet(e) });
+
+  /**
+   * A fájl egy darabjának sorai a mutatóba (és a testek a memóriába). ⚠️ A darab egész
+   * sorokból áll (az utolsó sorvégig vágva), és `alap` a darab eltolása a fájlban.
+   * @returns {number} hány új eseményt vettünk fel
+   */
+  function sorokFeldolgozasa(darab, alap) {
+    const sorok = darab.toString('utf8').split('\n');
+    let o = alap;
+    let felvett = 0;
+    // Az utolsó elem az utolsó sorvég utáni üres szöveg.
+    for (let i = 0; i < sorok.length - 1; i++) {
+      const sor = sorok[i];
+      const h = Buffer.byteLength(sor, 'utf8');
+      if (sor.trim()) {
+        try {
+          const e = JSON.parse(sor);
+          if (e && typeof e === 'object' && typeof e.azonosito === 'string') {
+            // ⚠️ Ha a teste már megvan (a saját hozzáfűzésünk), azt tartjuk meg — a hívók
+            // ugyanarra az objektumra hivatkozhatnak.
+            if (!testek.has(e.azonosito)) testek.set(e.azonosito, e);
+            if (bejegyez(bejegyzesEsemenybol(e, o, h))) felvett++;
+          } else {
+            console.warn('esemenyTar - azonosító nélküli sor, kihagyva', { fajl, eltolas: o });
+          }
+        } catch {
+          // Egy sérült sor nem teheti olvashatatlanná az egész tárat. Jelezzük, és megyünk
+          // tovább — az esemény aláírása úgyis minden sort külön igazol.
+          console.warn('esemenyTar - sérült sor, kihagyva', { fajl, eltolas: o });
+        }
       }
+      o += h + 1;
+    }
+    return felvett;
+  }
+
+  /** A mutató kiürítése (a testek maradnak: egy azonosító mindig ugyanazt az eseményt jelenti). */
+  function mutatoUritese() {
+    sorrend = [];
+    azonositoSzerint = new Map();
+    szerzoSzerint = new Map();
+    szeletSzerint = new Map();
+    pontSzerint = new Map();
+    lenyomatok.clear();
+    ismertMeret = 0;
+  }
+
+  /**
+   * A TELJES OLVASÁS — a mutató a fájlból, elejétől. Ez a pillanatkép nélküli út (és a
+   * tartalék, ha a pillanatkép nem illik a fájlhoz).
+   * @returns {Promise<number>} hány eseményt vettünk fel
+   */
+  async function teljesOlvasas() {
+    mutatoUritese();
+    let bajtok;
+    try {
+      bajtok = await readFile(fajl);
+    } catch (hiba) {
+      if (hiba.code !== 'ENOENT') throw hiba;
+      return 0;                             // még nincs fájl: üres tár
     }
     // ⚠️ Csak az UTOLSÓ SORVÉGIG számít olvasottnak: ha egy másik folyamat épp félig írt egy
     // sort, azt a `frissit()` a következő alkalommal egészben olvassa újra.
-    ismertMeret = bajtok.lastIndexOf(0x0a) + 1;
-  } catch (hiba) {
-    if (hiba.code !== 'ENOENT') throw hiba;   // még nincs fájl: üres tár
+    const vege = bajtok.lastIndexOf(0x0a) + 1;
+    const felvett = sorokFeldolgozasa(bajtok.subarray(0, vege), 0);
+    ismertMeret = vege;
+    return felvett;
   }
 
-  const tar = {
-    fajl,
-
-    /**
-     * ⚠️ AZ ÖSSZES ESEMÉNY — EZ AZ, AMI NEM SKÁLÁZIK.
-     *
-     * Szándékosan megmaradt, mert két helyen jogos: a **próbák** így nézik meg a tár nyers
-     * gondolatát, és a **kis koino** állapotszámítása így kapja meg a bemenetét. De a
-     * hétköznapi műveletek közül **egyetlen sem hívja** — és ez a 3.2 lényege.
-     *
-     * ⛔ Új kódban ne ezt használd: kérdezz szeletet, láncot vagy azonosítót.
-     */
-    async betolt() {
-      return [...mind];
-    },
-
-    /** EGY esemény, azonosító szerint. O(1). */
-    async esemeny(azonosito) {
-      return azonositoSzerint.get(azonosito);
-    },
-
-    /** EGY szerző eseményei (a fájl sorrendjében). */
-    async szerzoLanca(szerzo) {
-      return [...(szerzoSzerint.get(szerzo) ?? [])];
-    },
-
-    /** EGY szelet (entitás) eseményei. */
-    async szeletEsemenyei(entitas) {
-      return [...(szeletSzerint.get(entitas) ?? [])];
-    },
-
-    /** Egy pont a szerző láncán — rendes esetben egy esemény, elágazásnál több. */
-    async sorszamSzerint(szerzo, sorszam) {
-      return [...(pontSzerint.get(szerzo + '|' + sorszam) ?? [])];
-    },
-
-    /** Egy új esemény a fájl végére — és a mutatóba. */
-    async hozzafuz(esemeny) {
-      await appendFile(fajl, JSON.stringify(esemeny) + '\n', 'utf8');
-      bejegyez(esemeny);
-    },
-
-    /**
-     * ⛔⛔ AMIT MÁSIK FOLYAMAT FŰZÖTT A FÁJLHOZ — beolvasva a mutatóba (2026-09-26, 43. mérés).
-     *
-     * A mutató megnyitáskor épül, és utána csak a SAJÁT `hozzafuz()`-einket látja. Egy
-     * készüléken viszont több folyamat ír ugyanabba a fájlba: az őrjárat fut, a második
-     * ablakban egy `gondolat` parancs, és külön folyamat a `felulet` is. ⛔ Mérve: a
-     * második ablakban írt gondolatot a futó őrjárat négy körön át NEM adta tovább
-     * („küldtem 0"), csak újraindítás után.
-     *
-     * ⭐ Csak a fájl ÚJ VÉGÉT olvassuk (ahol legutóbb abbahagytuk), és ami már a mutatóban
-     * van (a saját hozzáfűzéseink), azt az azonosítója alapján kihagyjuk. Egy `stat`, és ha
-     * nincs új, ennyi az ára. ⚠️ Nem ellenőrzünk újra: a fájl sorait megnyitáskor sem —
-     * ami a fájlba került, az egy másik folyamat `esemenyMentese` kapuján ment át.
-     *
-     * ⛔⛔ ÉS EGYSZERRE CSAK EGY FUT (2026-09-26, a D70 mérése közben). Egy folyamaton belül is
-     * hívódhat két frissítés egyszerre (az őrjárat párhuzamos munkái, az állapot-számítás) —
-     * mérve: mindkettő ugyanonnan olvasott, és mindkettő hozzáadta a saját hosszát a jelhez;
-     * a jel túlfutott, és a következő esemény ELVESZETT (200 eseményes farkon tízből tízszer).
-     * Ezért a hívások sorba állnak, és a jel a saját kezdőpontjából számolódik.
-     *
-     * @returns {Promise<number>} hány új eseményt vettünk fel
-     */
-    frissit() {
-      const eredmeny = frissitesSor.then(frissitesEgyszer, frissitesEgyszer);
-      frissitesSor = eredmeny.catch(() => {});
-      return eredmeny;
+  /** Egy sor a fájl adott helyéről — vagy null, ha nincs ott teljes sor. */
+  async function sorOlvasasa(o, h) {
+    let fogantyu;
+    try {
+      fogantyu = await open(fajl, 'r');
+      const puffer = Buffer.alloc(h);
+      const { bytesRead } = await fogantyu.read(puffer, 0, h, o);
+      if (bytesRead !== h) return null;
+      return JSON.parse(puffer.toString('utf8'));
+    } catch {
+      return null;
+    } finally {
+      await fogantyu?.close();
     }
+  }
+
+  /** Érvényes alakú-e a pillanatkép? (Egy gyorsítótárban sem bízunk vakon.) */
+  function kepAlakjaRendben(kep) {
+    if (!kep || kep.v !== 1 || !Number.isInteger(kep.fedett) || kep.fedett < 0) return false;
+    if (!Array.isArray(kep.szerzok) || !Array.isArray(kep.szeletek) || !Array.isArray(kep.e)) return false;
+    return kep.e.every((x) => Array.isArray(x) && x.length === 6
+      && Number.isInteger(x[0]) && x[0] >= 0 && Number.isInteger(x[1]) && x[1] > 0
+      && typeof x[2] === 'string'
+      && Number.isInteger(x[3]) && x[3] >= 0 && x[3] < kep.szerzok.length
+      && Number.isInteger(x[5]) && x[5] >= 0 && x[5] < kep.szeletek.length);
+  }
+
+  /**
+   * ⭐ A PILLANATKÉP BETÖLTÉSE — ha van, ép, és illik a fájlhoz.
+   *
+   * ⛔ Az illeszkedés próbája: a fájl legalább akkora, amekkorát a pillanatkép lefed, és az
+   * utolsó bejegyzés helyén tényleg a várt azonosítójú esemény áll. *(A közbülső helyeket a
+   * testek beolvasása ellenőrzi, egyenként — lásd `testekOlvasasa`.)*
+   *
+   * @returns {Promise<boolean>} igaz, ha a mutató a pillanatképből épült
+   */
+  async function pillanatkepBetoltese() {
+    let kep;
+    try {
+      kep = JSON.parse(await readFile(kepFajl, 'utf8'));
+    } catch {
+      return false;                         // nincs, vagy olvashatatlan — a teljes olvasás pótolja
+    }
+    let meret;
+    try {
+      meret = (await stat(fajl)).size;
+    } catch {
+      meret = -1;
+    }
+    let rendben = kepAlakjaRendben(kep) && kep.fedett <= meret;
+    if (rendben && kep.e.length) {
+      const u = kep.e[kep.e.length - 1];
+      rendben = u[2] === kep.utolso && u[0] + u[1] + 1 <= kep.fedett
+        && (await sorOlvasasa(u[0], u[1]))?.azonosito === u[2];
+    } else if (rendben) {
+      rendben = kep.fedett === 0;
+    }
+    if (!rendben) {
+      // ⭐ A nem illő pillanatképet eldobjuk — különben minden megnyitás újra megpróbálná.
+      console.warn('esemenyTar - a pillanatkép nem illik a fájlhoz, eldobva', { kepFajl });
+      await rm(kepFajl, { force: true }).catch(() => {});
+      return false;
+    }
+
+    mutatoUritese();
+    for (const x of kep.e) {
+      bejegyez({ o: x[0], h: x[1], a: x[2], z: kep.szerzok[x[3]], n: x[4], s: kep.szeletek[x[5]] });
+    }
+    ismertMeret = kep.fedett;
+    return true;
+  }
+
+  /**
+   * ⭐ A PILLANATKÉP ÍRÁSA — a mutató, ahogy most a fájl ismert részét lefedi.
+   *
+   * ⚠️ BÁRMELY FOLYAMAT ÍRHATJA, és ez nem verseny: a pillanatkép tartalmát a fájl eleje
+   * határozza meg, és átnevezéssel kerül a helyére (egyszerre egész). Ha az írás nem sikerül
+   * (Windowson egy épp olvasott fájl nem mindig nevezhető felül), az nem hiba — a következő
+   * megnyitás a fájlból pótolja.
+   */
+  async function pillanatkepIrasa() {
+    const bejegyzesek = sorrend.filter((b) => b.o !== null).sort((x, y) => x.o - y.o);
+    const szerzok = [];
+    const szeletek = [];
+    const szerzoSzama = new Map();
+    const szeletSzama = new Map();
+    const szama = (terkep, lista, kulcs) => {
+      if (!terkep.has(kulcs)) { terkep.set(kulcs, lista.length); lista.push(kulcs); }
+      return terkep.get(kulcs);
+    };
+    const e = bejegyzesek.map((b) =>
+      [b.o, b.h, b.a, szama(szerzoSzama, szerzok, b.z), b.n, szama(szeletSzama, szeletek, b.s)]);
+    const kep = {
+      v: 1,
+      fedett: ismertMeret,
+      utolso: bejegyzesek.length ? bejegyzesek[bejegyzesek.length - 1].a : null,
+      szerzok, szeletek, e
+    };
+    const ideiglenes = kepFajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+    try {
+      await writeFile(ideiglenes, JSON.stringify(kep));
+      await rename(ideiglenes, kepFajl);
+      console.log('esemenyTar - pillanatkép írva', { esemeny: e.length, fedett: ismertMeret });
+    } catch (hiba) {
+      console.warn('esemenyTar - a pillanatkép nem írható (nem baj, a fájl pótolja)', { hiba: hiba.message });
+      await rm(ideiglenes, { force: true }).catch(() => {});
+    }
+  }
+
+  /**
+   * Egy beolvasott sor a testek közé — ha tényleg a várt esemény áll ott.
+   * ⛔ Nem csak az azonosítót nézzük: a mutató szerzője, sorszáma és szelete is a testből jön
+   * (egy elcsúszott pillanatkép különben egy eseményt rossz szeletbe sorolhatna).
+   */
+  function testetBevesz(b, bajtok) {
+    try {
+      const e = JSON.parse(bajtok.toString('utf8'));
+      if (e?.azonosito !== b.a || e.szerzo !== b.z || e.sorszam !== b.n || szelet(e) !== b.s) {
+        return false;
+      }
+      if (!testek.has(b.a)) testek.set(b.a, e);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * A hiányzó testek beolvasása a fájlból.
+   * @returns {Promise<boolean>} hamis, ha valamelyik helyen NEM a várt esemény áll
+   */
+  async function testekOlvasasa(hianyzok) {
+    if (hianyzok.some((b) => b.o === null)) return false;   // ilyen nincs: a saját test a memóriában van
+    if (hianyzok.length > SOROS_OLVASAS_FELETT) {
+      const bajtok = await readFile(fajl);
+      return hianyzok.every((b) => testetBevesz(b, bajtok.subarray(b.o, b.o + b.h)));
+    }
+    const fogantyu = await open(fajl, 'r');
+    try {
+      for (const b of hianyzok) {
+        const puffer = Buffer.alloc(b.h);
+        const { bytesRead } = await fogantyu.read(puffer, 0, b.h, b.o);
+        if (bytesRead !== b.h || !testetBevesz(b, puffer)) return false;
+      }
+    } finally {
+      await fogantyu.close();
+    }
+    return true;
+  }
+
+  // ⭐ A mutatót módosító munkák sora: egyszerre egy (lásd `frissit()`). A hozzáfűzés, a
+  // fájl végének olvasása és az újraépítés ugyanitt áll sorba — így egyik sem húzhatja ki
+  // a mutatót a másik alól.
+  let mutatoSor = Promise.resolve();
+  const sorba = (munka) => {
+    const eredmeny = mutatoSor.then(munka, munka);
+    mutatoSor = eredmeny.catch(() => {});
+    return eredmeny;
   };
 
-  // ⭐ A frissítések sora: egyszerre egy olvassa a fájl végét (lásd `frissit()`).
-  let frissitesSor = Promise.resolve();
+  /** ⛔ A mutató nem illett a fájlhoz: újraépítjük a fájlból, és a rossz pillanatképet eldobjuk. */
+  const ujraepites = () => sorba(async () => {
+    console.warn('esemenyTar - a mutató nem illett a fájlhoz, újraépítés a fájlból', { fajl });
+    await rm(kepFajl, { force: true }).catch(() => {});
+    const felvett = await teljesOlvasas();
+    pillanatkepbol = false;
+    if (felvett >= kepKuszob) await pillanatkepIrasa();
+  });
+
+  /**
+   * ⭐ A TESTEK — a kért bejegyzések eseményei, a hiányzók a fájlból.
+   *
+   * @param {Function} bejegyzesek - () → a kért bejegyzések (az újraépítés után újra kérdezzük)
+   * @returns {Promise<Array<Object>>}
+   */
+  async function testekKellenek(bejegyzesek) {
+    for (let kor = 0; kor < 2; kor++) {
+      const lista = bejegyzesek();
+      const hianyzok = lista.filter((b) => !testek.has(b.a));
+      if (!hianyzok.length || await testekOlvasasa(hianyzok)) {
+        return lista.map((b) => testek.get(b.a));
+      }
+      await ujraepites();
+    }
+    throw new Error('esemenyTar: a mutató a fájlból újraépítve sem illik a fájlhoz — ' + fajl);
+  }
 
   /** Egy frissítés — CSAK a sorból hívjuk. */
   async function frissitesEgyszer() {
@@ -246,23 +468,129 @@ export async function esemenyTarNyitasa(koino, hely = alapHely()) {
     if (sorVege < 0) return 0;
     ismertMeret = kezdet + sorVege + 1;
 
-    let felvett = 0;
-    for (const sor of uj.subarray(0, sorVege + 1).toString('utf8').split('\n')) {
-      if (!sor.trim()) continue;
-      try {
-        const e = JSON.parse(sor);
-        if (azonositoSzerint.has(e.azonosito)) continue;   // a sajátunk, vagy már ismert
-        bejegyez(e);
-        felvett++;
-      } catch {
-        console.warn('esemenyTar.frissit - sérült sor, kihagyva', { fajl });
-      }
-    }
-    if (felvett) console.log('esemenyTar.frissit - más folyamat eseményei felvéve', { felvett });
+    const felvett = sorokFeldolgozasa(uj.subarray(0, sorVege + 1), kezdet);
+    if (felvett) console.log('esemenyTar.frissit - új események a fájl végén', { felvett });
     return felvett;
   }
 
-  console.log('esemenyTarNyitasa - VÉGE', { fajl, esemeny: mind.length });
+  // ----- A MUTATÓ FELÉPÍTÉSE -----
+  pillanatkepbol = await pillanatkepBetoltese();
+  const olvasott = pillanatkepbol ? await frissitesEgyszer() : await teljesOlvasas();
+  if (olvasott >= kepKuszob) await pillanatkepIrasa();
+
+  const tar = {
+    fajl,
+
+    /**
+     * ⚠️ AZ ÖSSZES ESEMÉNY — EZ AZ, AMI NEM SKÁLÁZIK.
+     *
+     * Szándékosan megmaradt, mert két helyen jogos: a **próbák** így nézik meg a tár nyers
+     * gondolatát, és a **kis koino** állapotszámítása így kapja meg a bemenetét. ⚠️ A C
+     * lépésig a csere ÁLLÁS-a és az állapot-számítás még ezen át kap (`koinoEsemenyei`).
+     *
+     * ⛔ Új kódban ne ezt használd: kérdezz szeletet, láncot vagy azonosítót.
+     */
+    async betolt() {
+      return testekKellenek(() => sorrend);
+    },
+
+    /** EGY esemény, azonosító szerint (a teste kérésre jön). */
+    async esemeny(azonosito) {
+      if (!azonositoSzerint.has(azonosito)) return undefined;
+      const [e] = await testekKellenek(() => {
+        const b = azonositoSzerint.get(azonosito);
+        return b ? [b] : [];
+      });
+      return e;
+    },
+
+    /** EGY szerző eseményei (a fájl sorrendjében). */
+    async szerzoLanca(szerzo) {
+      return testekKellenek(() => szerzoSzerint.get(szerzo) ?? []);
+    },
+
+    /** EGY szelet (entitás) eseményei. */
+    async szeletEsemenyei(entitas) {
+      return testekKellenek(() => szeletSzerint.get(entitas) ?? []);
+    },
+
+    /** Egy pont a szerző láncán — rendes esetben egy esemény, elágazásnál több. */
+    async sorszamSzerint(szerzo, sorszam) {
+      return testekKellenek(() => szerzoPontjai(szerzo).get(sorszam) ?? []);
+    },
+
+    /**
+     * ⭐ D73: A SZELETEK JEGYZÉKE — szeletenként az eseményszám, test nélkül.
+     * @returns {Promise<Array<{szelet: string, db: number}>>}
+     */
+    async szeletek() {
+      return [...szeletSzerint].map(([s, lista]) => ({ szelet: s, db: lista.length }));
+    },
+
+    /**
+     * ⭐ D73: EGY SZELET LENYOMATA — a rendezett esemény-azonosítók kanonikus lenyomata.
+     *
+     * ⭐ Test nélkül számol (az azonosítók a mutatóban vannak), és SORREND-FÜGGETLEN: két gép,
+     * amelyik ugyanazokat az eseményeket ismeri a szeletből, ugyanazt kapja — akármilyen
+     * sorrendben érkeztek. Ha a szelet bővül, a lenyomat újraszámolódik.
+     * ⚠️ Nincs a pillanatképben: a C lépés (a tartomány-egyeztetés) még változtathat azon, hogy
+     * pontosan mi a szelet lenyomata — és egy tárolt lenyomat akkor elavulna.
+     *
+     * @param {string} s - a szelet-kulcs
+     * @returns {Promise<string>} 43 karakter (az üres szeleté is determinisztikus)
+     */
+    async szeletLenyomata(s) {
+      const kesz = lenyomatok.get(s);
+      if (kesz) return kesz;
+      const azonositok = (szeletSzerint.get(s) ?? []).map((b) => b.a).sort();
+      const ertek = await lenyomat(azonositok);
+      // ⚠️ Csak akkor tesszük el, ha közben nem bővült (a bővülés eldobja a régit).
+      if ((szeletSzerint.get(s)?.length ?? 0) === azonositok.length) lenyomatok.set(s, ertek);
+      return ertek;
+    },
+
+    /** Egy új esemény a fájl végére — és a mutatóba (a helye a fájl következő olvasásakor). */
+    hozzafuz(esemeny) {
+      return sorba(async () => {
+        await appendFile(fajl, JSON.stringify(esemeny) + '\n', 'utf8');
+        if (!testek.has(esemeny.azonosito)) testek.set(esemeny.azonosito, esemeny);
+        bejegyez(bejegyzesEsemenybol(esemeny, null, null));
+      });
+    },
+
+    /**
+     * ⛔⛔ AMIT MÁSIK FOLYAMAT FŰZÖTT A FÁJLHOZ — beolvasva a mutatóba (2026-09-26, 43. mérés).
+     *
+     * A mutató megnyitáskor épül, és utána csak a SAJÁT `hozzafuz()`-einket látja. Egy
+     * készüléken viszont több folyamat ír ugyanabba a fájlba: az őrjárat fut, a második
+     * ablakban egy `gondolat` parancs, és külön folyamat a `felulet` is. ⛔ Mérve: a
+     * második ablakban írt gondolatot a futó őrjárat négy körön át NEM adta tovább
+     * („küldtem 0"), csak újraindítás után.
+     *
+     * ⭐ Csak a fájl ÚJ VÉGÉT olvassuk (ahol legutóbb abbahagytuk); ami már a mutatóban van
+     * (a saját hozzáfűzéseink), annak itt derül ki a helye. Egy `stat`, és ha nincs új, ennyi
+     * az ára. ⚠️ Nem ellenőrzünk újra: ami a fájlba került, az egy másik folyamat
+     * `esemenyMentese` kapuján ment át.
+     *
+     * ⛔⛔ ÉS EGYSZERRE CSAK EGY FUT (2026-09-26, a D70 mérése közben). Egy folyamaton belül is
+     * hívódhat két frissítés egyszerre (az őrjárat párhuzamos munkái, az állapot-számítás) —
+     * mérve: mindkettő ugyanonnan olvasott, és mindkettő hozzáadta a saját hosszát a jelhez;
+     * a jel túlfutott, és a következő esemény ELVESZETT (200 eseményes farkon tízből tízszer).
+     * Ezért a hívások sorba állnak, és a jel a saját kezdőpontjából számolódik.
+     *
+     * @returns {Promise<number>} hány új eseményt vettünk fel
+     */
+    frissit() {
+      return sorba(frissitesEgyszer);
+    },
+
+    /** A mutató állapota (a próbáknak és a naplónak) — testet nem tölt be. */
+    mutatoAllapota() {
+      return { pillanatkepbol, esemeny: sorrend.length, betoltottTest: testek.size, fedett: ismertMeret };
+    }
+  };
+
+  console.log('esemenyTarNyitasa - VÉGE', { fajl, esemeny: sorrend.length, pillanatkepbol });
   return tar;
 }
 

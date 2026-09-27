@@ -44,6 +44,7 @@ import { kiir } from './naplo.js';
 import { mkdir, rm, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
 import { kanonikusBajtok } from '../js/esemeny/kanonikusAlak.js';
@@ -124,7 +125,7 @@ function cimetGyartok(veletlen) {
  * @param {string} hely - hova (ideiglenes mappa)
  * @returns {Promise<{fajl: string, fok: number, sorok: Array<string>}>}
  */
-async function tarGyartasa(darab, hely) {
+export async function tarGyartasa(darab, hely) {
   const veletlen = veletlenGyar();
   const fok = Math.max(2, Math.ceil(darab / ESEMENY_PER_FO));
 
@@ -550,9 +551,13 @@ async function fut() {
   osszefoglalo(eredmenyek);
 }
 
-fut().catch((hiba) => {
-  kiir('');
-  kiir('HIBA: ' + hiba.message);
-  kiir(hiba.stack);
-  process.exit(1);
-});
+// ⭐ Csak közvetlen futtatáskor mér — a generátort (`tarGyartasa`) más mérés is használja
+// (`szeletTarMeres.js`, 49.), és az importálás nem indíthatja el ezt a mérést.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  fut().catch((hiba) => {
+    kiir('');
+    kiir('HIBA: ' + hiba.message);
+    kiir(hiba.stack);
+    process.exit(1);
+  });
+}

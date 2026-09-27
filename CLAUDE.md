@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-09-27 hajnal) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **744 önpróba zöld** (28 próba-fájl) · 188 fájl / 3285,4 KB · 0 npm-csomag · a
+**Az állapot:** **750 önpróba zöld** (28 próba-fájl) · 189 fájl / 3335,6 KB · 0 npm-csomag · a
 munkakönyvtár tiszta. ⚠️ **A telefon régi kódon fut** (a 09-26-i `c6b74d8` körül) — a D72 óta a
 gondolat szövege külön darab, amit a régi program *„(ismeretlen alakú szöveg)"*-ként mutat: a
 következő terepi mérés előtt frissíteni kell (a parancs lent, *„Ami nyitva maradt"*).
@@ -54,31 +54,52 @@ következő terepi mérés előtt frissíteni kell (a parancs lent, *„Ami nyit
   buktatja. ⚠️ A `koino.js` `szovegKepeiKeresre` keret-figyelése (csak hatékonyság — a korlátot
   a réteg adja) és a „kérés-korlát" kiírás saját próba nélkül van.
 
-#### ⏭️⏭️ A KÖVETKEZŐ SESSION: B — AZ ENTITÁSONKÉNTI TÁR (Csaba, 2026-09-27)
+#### ✅ B — AZ ENTITÁSONKÉNTI TÁR KÉSZ (2026-09-27) — ⭐ D73: egy adatfájl + a mutató
 
-> *„folytathatjuk a B)-vel, de csak a következő sessionban"* — Csaba
+> *„Egy adatfájl + mutató"* — Csaba döntése a 49. mérés után (D73)
 
-**A terv:** [`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) **3. szakasz** (a tár) és **5./B**
-(a lépés). Röviden:
-- **szeletenként egy hozzáfűzhető fájl** (`szeletek/<az azonosító első két jele>/<szelet>.jsonl`);
-- **egy kis jegyzék** (`szeletek.json`): szeletenként az eseményszám és a **szelet lenyomata** (a
-  rendezett esemény-azonosítókból) — a C lépés erre épít;
-- **a saját lánc mutatója** (sorszám → szelet) — a `szerzoLanca`/`lancVege` a sajátomra ebből;
-- ⭐ **lusta betöltés:** a megnyitás csak a jegyzéket olvassa (⭐ **mérés:** 100 000 eseménynél, ma
-  813 ms); az illesztés marad (S2/a), + `szeletek()` és `szeletLenyomata(szelet)`;
-- **az író mögött** (D70) · **egyszeri szétválogatás** (a régi `esemenyek.jsonl` megmarad
-  biztonsági másolatnak).
+⚠️ **A terv (szeletenként egy fájl) a mérésen elbukott** (49.): Windowson 100 000 eseménynél
+28 825 fájl, és a teljes betöltés — amit a C 9. pontjáig minden számítás kér — szelet-fájlokból
+**19,6 s** a 0,69 helyett. **Ami megépült** (`js/tar/fajlTar.js`):
+- az adat **marad egy hozzáfűzhető fájlban**; mellette a **MUTATÓ, test nélkül** (eseményenként a
+  sor helye, azonosító, szerző, sorszám, szelet) — ebből felel minden tár-kérdés;
+- a mutató **pillanatképe** (`mutato.json`, ezer olvasott esemény fölött íródik): a megnyitás ezt
+  olvassa + a fájl kép utáni végét; ⛔ **tiszta gyorsítótár** — ha nem illik, a fájlból épül újra,
+  és a testek beolvasásakor mind a négy mezőt ellenőrizzük;
+- **lusta testek**, és két új kérdés: **`szeletek()`** és **`szeletLenyomata(szelet)`** (a rendezett
+  azonosítók kanonikus lenyomata, test nélkül; ⚠️ NEM tárolt — a C még változtathat rajta);
+- ⭐ **mérve (49.):** a megnyitás 100 000 eseménynél **689–759 → 129–169 ms**, utána **0 test** a
+  memóriában; egy szelet ~0,8 ms, a lenyomata 0,05 ms; a teljes betöltés 416 ms. *(Építés közben:
+  a „szerző|sorszám" térkép ~80 ms volt a megnyitásban — most szerzőnként, az első kérdéskor épül.)*
+- a CLAUDE.md három B-előtti kérdése így megszűnt (a `frissit()`, a kézi út és a régi alakú
+  események változatlanok).
+- 6 új próba (5 modul + 1 parancssor), 11 rontás-próba. ⚠️ Egy rontás („a kép utáni vég nem
+  olvasódik") a parancssor-próbát NEM buktatta — mert a `koinoEsemenyei` előtte `frissit()`-et hív,
+  tehát az éles út ezt kiheveri; a próba ezért a LEMEZEN nézi a használatot (a képből nyitó
+  program nem írja újra a képet).
+- ⚠️ **Ami nem változott (és a C dolga):** a hétköznapi út (állapot, ÁLLÁS) még `betolt()`-tel
+  kér mindent — a B a szerkezetet adja, a C 9. pontja veszi ki az útból.
 
-⚠️ **Amit a B elején ki kell mérni/dönteni, mielőtt építünk:**
-1. **A `frissit()` több fájl fölött:** ma egy fájl végét olvassa (amit MÁS folyamat fűzött hozzá,
-   43. mérés). Szeletenként sok fájl van — honnan tudja egy olvasó, melyik változott? (Jelölt: egy
-   rövid, hozzáfűzhető *változás-napló* az író mellett; vagy a jegyzék módosulása.) *Előbb mérni.*
-2. **A kézi út és a `koinoEsemenyei`:** a csere és a számítás a C-ig még az egész koinót kéri — a
-   B után is működnie kell (a `betolt()` a szeletekből áll össze), a C veszi ki a hétköznapi útból.
-3. **A régi alakú (szelet nélküli) események** a teszt-koinóban (`sajat`): hová kerülnek?
+#### ⏭️⏭️ A KÖVETKEZŐ: C — A CSERE SZELETENKÉNT
 
-**Utána:** **C** — a csere szeletenként (a gyerek-bejelentéssel, a D63 lánc-gyökérrel, és a V2
-itt kap otthont) · **D** — a böngészés útja a felületen · **E** — terepen, a telefonnal.
+**A terv:** [`docs/szeleteles_terv.md`](docs/szeleteles_terv.md) **4. szakasz** és **5./C** (6–10.):
+a szelet-lenyomat és a **tartomány-egyeztetés** logikája hálózat nélkül (⭐ mérés: 1 eltérés
+100 000 esemény közt → hány bájt, a 48.-hoz mérve) · a **gyerek-bejelentés** · a csere új üzenetei
+(`vonal.js`; itt kap otthont a D71 (iii) V2-je) · **az érdeklődés szabálya (D72/1, (b))** — a
+hétköznapi út leválik a `betolt()`-ről · a **D63 lánc-gyökere**.
+
+⚠️ **Amit a C elején dönteni/mérni kell:**
+1. **A tartomány-lenyomat alakja.** Egy ÖSSZEADÓ lenyomat (a Negentropy mintája: az azonosítók
+   összege) tartományonként olcsón karbantartható — ⚠️ de aki sok eseményt tud aláírni, az
+   kiszámíthat két különböző halmazt ugyanazzal az összeggel (Wagner-féle általánosított
+   születésnap-támadás), és így egy eseményt elrejthet az egyeztetés elől. A rendezett azonosítók
+   HASH-e (a mai `szeletLenyomata`) ettől véd, de tartományonként újraszámolandó. *Mérni és
+   dönteni — ez D-szintű.*
+2. **A fájl-igény is a szelethez kötődjön** (az átnézés lelete, 2026-09-27): a `fajlIgenyek`
+   minden körben MINDEN entitáson végigmegy, és a D72 óta minden szöveg-darabot be is olvas a
+   képei miatt — ez ma a koino méretével nő; a (b)-vel a saját szeletekre szűkül.
+
+**Utána:** **D** — a böngészés útja a felületen · **E** — terepen, a telefonnal.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé
 
@@ -166,7 +187,7 @@ itt kap otthont) · **D** — a böngészés útja a felületen · **E** — ter
   karcsúsításakor került oda, **szó szerint**. Ha egy döntés *miértje* kell, ott keresd.
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D72 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D73 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -189,7 +210,7 @@ itt kap otthont) · **D** — a böngészés útja a felületen · **E** — ter
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D72**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D73**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 
@@ -204,7 +225,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **188 fájl, 3285,4 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **189 fájl, 3335,6 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -331,8 +352,10 @@ node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]  # ⭐ A KÉZI ÚT
 node koino/koino.js behoz <fájl>                    # ⭐ …és fájlból — HÁLÓZAT NÉLKÜL (4. szabály)
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
-node koino/meres/mind.js         # a 744 önpróba
+node koino/meres/mind.js         # a 750 önpróba
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
+node koino/meres/szeletTarMeres.js [darab]  # ⭐ A TÁR ALAKJA (49.): szelet-fájlok vs egy adatfájl + mutató,
+                                 # és a valódi tár megnyitása (D73) — alapból 100 000 esemény, ~6 perc
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
 node koino/meres/verzioMeres.js ir|olvas  # ⛔ A PROGRAM-VERZIÓ mint az állapot bemenete (15.)
@@ -369,7 +392,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 188 fájl, 3285,4 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 189 fájl, 3335,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 
@@ -392,7 +415,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 744 próba huszonnyolc fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 750 próba huszonnyolc fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)
@@ -413,7 +436,7 @@ Nincs szerver és nincs adatbázis-kiszolgáló: **minden művelet egy aláírt 
 - `js/esemeny/kanonikusAlak.js` — ⚠️ **a legveszélyesebb részlet**: ugyanaz az adat MINDIG ugyanazokat a bájtokat adja. Szabályok: rendezett mezőnevek · **csak egész szám** · NFC-normalizált szöveg. Ha ez elromlik, két gép sosem ért egyet.
 - `js/esemeny/esemeny.js` — aláírás és ellenőrzés; az esemény **neve a gondolatának lenyomata** (mint a gitben).
 - `js/esemeny/szovegDarab.js` — ⭐⭐ **A GONDOLAT SZÖVEGE KÜLÖN DARAB** (D72, 2026-09-26): az esemény a szöveg helyett a **hivatkozását** hordozza (`{ lenyomat, bajt }` — a kanonikus alak lenyomata, és ez a neve a fájl-tárban is), a szöveg pedig úgy jön a résen, mint egy kép. ⭐ A számítás a hivatkozást viszi az állapotba, tehát **minden gép ugyanazt az ujjlenyomatot számolja, akár lehozta a szöveget, akár nem**; a megjelenítés oldja fel, és ami még nincs meg, azt kimondja (D19). A régi (szöveget hordozó) események érvényesek maradnak. ⭐ A randevú egy megérkezett szöveg-darab képeit **ugyanabban a randevúban** elkéri (`ujKerhetok`), a kézi út (`kivisz`/`behoz`) a darabot is viszi, és a hamisat nem veszi be.
-- `js/tar/fajlTar.js` — a tár: **hozzáfűzhető fájl** (`esemenyek.jsonl`), soronként egy esemény. Nincs adatbázis-motor és nincs séma-migráció; a tároló csak `betolt()`-öt és `hozzafuz()`-t tud — „módosít" és „töröl" nincs, mert a modell szerint nem is létezhet. ⭐ **És `frissit()`-et** (2026-09-26, 43. mérés): egy készüléken több folyamat ír ugyanabba a fájlba (őrjárat, második ablak, felület), a mutató viszont megnyitáskor épül — ez olvassa be a fájl új végét.
+- `js/tar/fajlTar.js` — a tár: **hozzáfűzhető fájl** (`esemenyek.jsonl`), soronként egy esemény. Nincs adatbázis-motor és nincs séma-migráció; „módosít" és „töröl" nincs, mert a modell szerint nem is létezhet. ⭐ **És `frissit()`-et** (2026-09-26, 43. mérés): egy készüléken több folyamat ír ugyanabba a fájlba (őrjárat, második ablak, felület), a mutató viszont megnyitáskor épül — ez olvassa be a fájl új végét. ⭐⭐ **D73 (2026-09-27): a MUTATÓ az esemény teste NÉLKÜL** (eseményenként a sor helye, azonosító, szerző, sorszám, szelet) — ebből felel a tár minden kérdése, és ebből a `szeletek()` és a `szeletLenyomata()` (a C erre épít); a **pillanatképe** (`mutato.json`) a megnyitást gyorsítja, a **testek kérésre** jönnek. ⛔ A pillanatkép tiszta gyorsítótár: ha nem illik a fájlhoz, a mutató a fájlból épül újra, és a testek beolvasásakor minden mezőt ellenőrzünk. *(A szeletenkénti fájlokat a 49. mérés vetette el — Windowson a teljes betöltés 19,6 s lett volna.)*
 - `js/tar/iro.js` — ⭐⭐ **AZ ÍRÓ** (D70, 2026-09-26): koinónként és készülékenként EGY folyamat fűz a tárhoz. **A csatorna maga a zár** (Windowson cső, máshol fájl-foglalat az ideiglenes mappában — ott az író minden hozzáfűzés előtt ellenőrzi, hogy még ő hallgat-e). Aki nem író, a kész, aláírt eseményt átadja; az író SENKI helyett nem ír alá, ugyanazon a kapun enged be mindent (3. szabály), és SORBAN dolgozik: a saját új esemény csak a lánc végére kerülhet („ELAVULT"), a hálózatról jött idegen elágazás bizonyítékként megmarad (D19). ⛔ A csatorna nem tartja életben a folyamatot (a kézi parancs kilép).
 - `js/tar/esemenyTar.js` — a lánc kezelése; a tárolót **kívülről kapja** (első paraméter), így a szabályok egy példányban élnek. **Ellenőrizetlen esemény nem kerül a tárba**, és eseményt **soha nem módosítunk/törlünk**.
 - `js/allapot/szabalyok.js` — **a szabály-réteg**: egy helyen dönti el, mely események **számítanak** (tudatpont-keret, javaslat-jogosultság). *Amit a számítás nem ellenőriz, az nem szabály, csak illemtan* — a felület a másik gépen nem véd semmitől. A szabálysértő eseményt **nem törli**, csak kihagyja és felsorolja (D19).

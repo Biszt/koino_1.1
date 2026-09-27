@@ -292,6 +292,10 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
     szerzoLanca: (szerzo) => belso.szerzoLanca(szerzo),
     szeletEsemenyei: (entitas) => belso.szeletEsemenyei(entitas),
     sorszamSzerint: (szerzo, sorszam) => belso.sorszamSzerint(szerzo, sorszam),
+    // ⭐ D73: a szeletek jegyzéke és egy szelet lenyomata — olvasás, a belső tárból.
+    szeletek: () => belso.szeletek(),
+    szeletLenyomata: (szelet) => belso.szeletLenyomata(szelet),
+    mutatoAllapota: () => belso.mutatoAllapota?.(),
     frissit: () => belso.frissit?.() ?? 0,
 
     /**

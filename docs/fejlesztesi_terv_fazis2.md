@@ -3988,6 +3988,48 @@ egységét a szeletre teszi — és ehhez el kellett dönteni, **mit tart egy k�
    utaznak · a régi protokollal **tiszta törés** (a régi programmal a csere megnevezetten leáll) ·
    a szelet-egyeztetés **tartomány-alapú**.
 
+### D73. AZ ENTITÁSONKÉNTI TÁR ALAKJA: egy adatfájl + a mutató pillanatképe (2026-09-27, Csaba)
+
+> *„Egy adatfájl + mutató"* — Csaba választása a B lépés elején (a szeletelési terv 5./B), a 49.
+> mérés után
+
+**Amiből jött:** a [szeletelési terv](szeleteles_terv.md) 3. szakasza szeletenként egy fájlt írt.
+A 49. mérés (100 000 esemény, Windows) ezt megdöntötte: 28 825 fájl lett, és a C lépés 9. pontjáig
+a hétköznapi út (az állapot-számítás, a csere ÁLLÁS-a) még MINDENT kér — szelet-fájlokból ez
+**19,6 s** (párhuzamosan 4,9) a mai 0,69 helyett; az egyszeri szétválogatás 27 s; és az azonosító,
+illetve a szerző szerinti kérdéshez külön, szétosztott mutató kellett volna (eseményenként két
+további írás), a több folyamat közti frissítéshez pedig új változás-napló.
+
+#### A DÖNTÉS
+
+1. ⭐ **Az adat marad EGY hozzáfűzhető fájlban** (`esemenyek.jsonl` — a kézi út alakja is).
+2. ⭐ **Mellette a MUTATÓ, az esemény teste nélkül:** eseményenként a sor helye (eltolás, hossz),
+   az azonosító, a szerző, a sorszám és a szelet. Ebből felel a tár minden kérdése (szelet,
+   azonosító, szerző lánca, lánc-pont), és ebből jön a **szeletek jegyzéke** és a **szelet
+   lenyomata** (a rendezett azonosítókból — test nélkül; a C erre épít).
+3. ⭐ **A mutató PILLANATKÉPE** (`mutato.json`): a megnyitás ezt olvassa, és csak a fájl kép utáni
+   végét. ⛔ **Tiszta gyorsítótár:** ha nincs, sérült vagy nem illik a fájlhoz, a mutató a fájlból
+   épül újra — és a testek beolvasásakor minden mezőt ellenőrzünk (a fájl az igazság, a mutató
+   csak a térkép hozzá).
+4. ⭐ **A testek kérésre jönnek**, a fájl adott helyéről, és utána a memóriában maradnak.
+
+*A git csomag-fájlja ugyanez: egy adatfájl, mellette az index.*
+
+#### Mit old meg, és mi az ára
+
+- ✅ Megnyitás 100 000 eseménynél: **689–759 → 129–169 ms** a pillanatképből, és a megnyitás
+  után **0 test** a memóriában (49. mérés, [`eredmenyek.md`](../koino/meres/eredmenyek.md)); egy
+  szelet ~0,8 ms; a teljes betöltés 416 ms (szelet-fájlokból 18–20 s lett volna); szétválogatás nincs.
+- ✅ A CLAUDE.md B-előtti három kérdése megszűnt: a `frissit()` változatlan (egy fájl vége), a kézi
+  út és a `koinoEsemenyei` változatlan, a régi alakú események a helyükön maradnak (a szeletüket a
+  mai `szelet()` szabály adja).
+- ⚠️ **Az ár:** ha a (b)-ben egy szeletet elengedünk, a fájlt időnként újra kell írni (mint a
+  `git gc`) — ritka karbantartás, nem hétköznapi út. És a megnyitás a TÁROLT eseményekkel arányos
+  (a (b) után: a saját érdeklődéssel), nem a szeletek számával. A mélység (a pillanatkép lusta,
+  részenkénti olvasása) később jöhet, a hívók változása nélkül.
+- ⚠️ A szelet lenyomatát NEM tároljuk: a C (a tartomány-egyeztetés) még változtathat azon, mi
+  pontosan a lenyomat — egy tárolt érték akkor elavulna.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

@@ -339,6 +339,83 @@ proba('⛔⛔ A FÁJLBAN ÁTÍRT gondolat nem jut be — a parancs KIMONDJA, hog
 });
 
 // ===================================
+// ⭐⭐ D73 (2026-09-27): A MUTATÓ PILLANATKÉPE AZ ÉLES ÚTON
+// ===================================
+//
+// A modul-próbák (tarProba) mérik a mutatót; ez azt, hogy a PROGRAM is így nyitja a tárat:
+// ezer esemény fölött a megnyitás megírja a pillanatképet, a következő abból nyit, a kép utáni
+// eseményeket is látja, és egy elrontott kép helyett a fájlból számol — és mindezt úgy, hogy a
+// kiírt TUDÁS és ÁLLAPOT ugyanaz, mint egy pillanatkép nélkül számoló másik készüléken.
+
+/** Egy eseményfájl a kézi út alakjában (soronként egy esemény). */
+async function esemenyFajl(fajl, esemenyek) {
+  await writeFile(fajl, esemenyek.map((e) => JSON.stringify(e)).join('\n') + '\n');
+}
+
+/** A kiírt két ujjlenyomat (TUDÁS, ÁLLAPOT) — ezek a 43 jelű szavak a kimenetben. */
+const ujjlenyomatai = (kimenet) => (kimenet.match(/[A-Za-z0-9_-]{43}/g) ?? []).join(' ');
+
+proba('⭐⭐ A PROGRAM A PILLANATKÉPPEL NYIT — és ugyanazt számolja, mint nélküle (D73)', async () => {
+  const { ujEember } = await import('./probaFuttato.js');
+  const egyik = await ujKeszulek();
+  const masik = await ujKeszulek();
+  try {
+    // ----- EZER FÖLÖTTI ESEMÉNY (a pillanatkép küszöbe) — egy koino, 40 e-ember -----
+    const alapito = await ujEember('sajat');
+    const nagy = [await alapito.tesz('KoinoLetrehozas', { nev: 'Mutató-próba', leiras: null, alapitok: [] })];
+    for (let i = 0; i < 40; i++) {
+      const ember = await ujEember('sajat');
+      for (let j = 0; j < 13; j++) {
+        const g = await ember.tesz('GondolatLetrehozas', { cim: 'G' + i + '-' + j, meret: 10 });
+        nagy.push(g, await ember.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 1 }));
+      }
+    }
+    const kesobbi = [];
+    const utolso = await ujEember('sajat');
+    for (let j = 0; j < 2; j++) {
+      const g = await utolso.tesz('GondolatLetrehozas', { cim: 'Később ' + j, meret: 10 });
+      kesobbi.push(g, await utolso.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 2 }));
+    }
+    const nagyFajl = join(egyik, 'nagy.jsonl');
+    const kesobbiFajl = join(egyik, 'kesobbi.jsonl');
+    await esemenyFajl(nagyFajl, nagy);
+    await esemenyFajl(kesobbiFajl, kesobbi);
+    const kep = join(egyik, 'sajat', 'mutato.json');
+    const vanKep = () => readFile(kep, 'utf8').then(() => true, () => false);
+
+    await fut(egyik, 'behoz', nagyFajl);
+    const elso = ujjlenyomatai(await fut(egyik, 'ujjlenyomat'));    // a fájlból → megírja a képet
+    const kepMegvan = await vanKep();
+    const fedett = async () => JSON.parse(await readFile(kep, 'utf8')).fedett;
+    const elsoFedett = kepMegvan ? await fedett() : -1;
+    const masodik = ujjlenyomatai(await fut(egyik, 'ujjlenyomat')); // a képből
+    await fut(egyik, 'behoz', kesobbiFajl);                          // a kép UTÁN írt események
+    const harmadik = ujjlenyomatai(await fut(egyik, 'ujjlenyomat'));
+    // ⭐ A HASZNÁLAT BIZONYÍTÉKA A LEMEZEN: a képből nyitó program csak a rövid véget olvasta, tehát
+    // nem írt új képet. ⛔ Ha a teljes fájlt olvasná (ezer fölött), újraírná — és a `fedett` nőne.
+    const kepNemIrodottUjra = (await fedett()) === elsoFedett;
+    // ⛔ Egy elrontott kép: a program a fájlból számol, és új, ép képet ír a helyére.
+    await writeFile(kep, '{ez nem pillanatkép');
+    const negyedik = ujjlenyomatai(await fut(egyik, 'ujjlenyomat'));
+    const ujraIrva = JSON.parse(await readFile(kep, 'utf8')).v === 1;
+
+    // ⭐ A MÉRCE: egy másik készülék, ugyanazokkal az eseményekkel, pillanatkép nélkül számolva.
+    // ⚠️ A második `behoz` megnyitása ott is képet írna — a mérce előtt eldobjuk.
+    await fut(masik, 'behoz', nagyFajl);
+    await fut(masik, 'behoz', kesobbiFajl);
+    await rm(join(masik, 'sajat', 'mutato.json'), { force: true });
+    const masikLatja = ujjlenyomatai(await fut(masik, 'ujjlenyomat'));
+
+    return kepMegvan && elso.length === 87 && elso === masodik
+      && harmadik !== masodik && harmadik === negyedik && harmadik === masikLatja
+      && kepNemIrodottUjra && ujraIrva;
+  } finally {
+    await rm(egyik, { recursive: true, force: true });
+    await rm(masik, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐ A BELÉPŐ TÉR KÉZI ÚTJA (5.6)
 // ===================================
 
