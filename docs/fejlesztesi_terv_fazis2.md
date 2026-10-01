@@ -4337,6 +4337,31 @@ mert két offline készülék ártatlanul is elágaztat. A szeletelt világban v
 **A sorrend (Csaba, ugyanitt):** ① a folytonosság (és a helyben látható ellentmondások) AUTOMATIKUS
 észlelése és bejelentése → ② a D79 szúrópróba és a napló-alapú észlelés a D pillér után.
 
+### D83. A KISZOLGÁLÁS ÉS A SZIGORÚ (b) IDŐZÍTÉSE (2026-10-01, Csaba)
+
+> *„alap esetben, csak azt osztják meg, amire tudatpontot rendeltek. Akár készülékenként is
+> beállíthatják […] A kérelmező oldaláról, pedig elsőnek azoktól kell megpróbálni beszerezni az
+> entitást, akinek van rajta tudatpontja."* — és: *„rendben, csak dokumentáld, hogy tudjuk, hogy ez
+> nem a végleges megoldás."* — Csaba
+
+#### A DÖNTÉS
+
+1. ⭐ **A KISZOLGÁLÁS (a D75/3 pontosítása):** egy készülék **alapból csak azt adja tovább, amire
+   tudatpontot tett**, és — a javaslat szerint — **a saját eseményeit mindig** (különben egy szavazata
+   ki sem jutna a készülékéről). Beállíthatja, hogy azt is kiszolgálja, amit csak megnézett.
+2. ⭐ **A beállítás KÉSZÜLÉKENKÉNT él** (a PC-n „mindent, ami megvan", a telefonon „csak a
+   tudatpontosat") — helyi beállítás, nem esemény, nem terjed.
+3. ⭐ **Aki kér, először azoktól próbálja, akiknek tudatpontjuk van rajta** (a D76 kérelméhez): náluk a
+   legfrissebb, mert a tudatpontos szeletek a bulin maguktól frissülnek.
+4. ⛔⛔ **A SZIGORÚ (b) — hogy a bulin a készülék csak a vállalt szeleteit cserélje — a D pillér (a
+   kérelmezés) és az E (az identitás a szeletelt világban) UTÁN kapcsol.** Addig a bulin minden szelet
+   mozog (a nem vállaltak az átmeneti tárba). ⚠️ **EZ KÖZTES ÁLLAPOT, NEM A VÉGLEGES MEGOLDÁS:** a
+   szerkezet és a szabály a B-ben elkészül és próbával mérve (bekapcsolva is), de amíg a szigorú (b) ki
+   van kapcsolva, a készülék terhe NEM a saját érdeklődésével arányos — mindent tárol, mint ma (a
+   „végtelen" próbáját ez a szakasz NEM állja ki). Az ok: előtte az új készülékek indulása (nincs mit
+   tartaniuk, kérni még nem tudnak) és a tagság ellenőrzése (a meghívó azonosság-szeletét senki nem
+   tartaná) elakadna. A D72 „nem köztes állapot" mondatától ez tudatos eltérés.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

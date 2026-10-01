@@ -15,100 +15,51 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 **A fordulat oka (D22):** *„a központi server részét most nem kell fejleszteni. A kis családi közösségeknek is P2P-nek kell lenniük."* — a régi koino a prototípus, ami tanított; az új a **készüléken** kezdődik, örökölve belőle a domain-logikát és a felületet.
 
-## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-09-27)
+## ⏭️ HOL TARTUNK — ELŐSZÖR EZT OLVASD (2026-10-01)
 
-### ▶️ SESSION-VÁLTÁS (2026-09-27 este) — A KÖVETKEZŐ SESSION INNEN INDUL
+### ▶️ SESSION-VÁLTÁS (2026-10-01) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **809 önpróba zöld** (33 próba-fájl) · 205 fájl / 3523,4 KB · 0 npm-csomag · a
-munkakönyvtár tiszta. ⛔⛔ **A telefon régi kódon fut, és a tiszta törés óta (a C 8. pontja) NEM TUD
-CSERÉLNI a laptoppal**, amíg nem frissül (a parancs lent, *„Ami nyitva maradt"*).
+**Az állapot:** **809 önpróba zöld** (33 próba-fájl) · 205 fájl / 3523,4 KB (⚠️ CR nélkül mérve — lásd
+a 6. szabályt) · 0 npm-csomag · a munkakönyvtár tiszta. ⛔⛔ **A telefon régi kódon fut** (a tiszta
+törés óta nem cserél a laptoppal; a frissítés parancsa lent) — a frissítéssel a D77 és a D81 is megy.
 
-⭐⭐⭐ **A KÖVETKEZŐ SESSION BELÉPŐJE: [`docs/alappillerek.md`](docs/alappillerek.md)** — az irány, ami
-áll, a hiányzó **alappillérek** a függőségük szerint, a javasolt sorrend, és az **elágazások naplója**
-(miről ágaztunk le, és miért). Csaba kérése: *„csináljunk meg minden alap pillért, amire épül
-valami … jól kell dokumentálni, hogy miről ágaztunk le, és miért."*
+⛔⛔ **SESSION-NYITÁSKOR („nézd át a koino_1.1 mappát") NE FUTTASS PRÓBÁT** (Csaba, 2026-10-01) — az
+átnézés OLVASÁS: a munkakönyvtár, az utolsó commitok, a dokumentáció, a kód. Lásd *A munka módja*.
 
-**Ami ebben a sessionben (2026-09-27) megépült — a részletek a [naplóban](docs/claude_naplo.md), az
-előző blokk szó szerint:**
-- ✅ **Átnézés** → a fájl-kérés korlátos lett (`c00a892`).
-- ✅ **B — D73: egy adatfájl + a mutató pillanatképe** (a szelet-fájlokat a 49. mérés vetette el).
-- ✅ **D74: a tartomány-lenyomat hash**, nem összeg · ✅ **C/6: a tartomány-egyeztetés** (50. mérés).
-- ✅ **C/7–8: a csere szeletenként** — a gyerek-bejelentés és az új párbeszéd; ⛔ tiszta törés;
-  51. mérés: a vonalon 1 eltérés 100 000 közt **9,8 KB** (a régi 160,2 KB helyett), „nincs
-  újdonság" 484 B.
-- ✅ **Döntések (Csaba):** **D75 — a két tár** (tartós = vállalt; átmeneti = látott, eldobható,
-  mindent kiszolgál a törzs kivételével; a D14 csak a tartósra) · **D76 — a kérelmezés** (a nézet
-  kérdez; első körben a pakli, hierarchikusan, az össz-pont szerint; a kérelem továbbadható: vissza
-  az úton, ugrás-, darabkorlát) · ⭐ **az alappillér elve** (lent, a tartós elvek között).
-- ✅ **Átnézés (2026-09-27 este, a session-váltás után):** ⛔⛔ **a ki nem mondható szelet-kulcs
-  megakasztotta a cserét** — mérve: egy kapun átjutott esemény, amelynek `entitas`-a vagy a
-  születésének `szulo`-ja nem 43 jeles (pl. `"x"`), a társsal folytatott MINDEN cserét elbuktatta
-  (`HIBAS-EGYEZTETES` vagy „Hibás ELTERO”), semmi más nem ment át, és a másik fél a tétlenségi
-  óráig várt. Első javítás: a csere nem hirdette (`d8f7239`); ⭐ **utána Csaba döntése, D77: a
-  KAPU szigorít** — az `entitas` és a születés `szulo`-ja csak azonosító alakú vagy null, a szabály
-  egy helyen (`AZONOSITO_MINTA`, `esemeny.js`), a csere-oldali szűrő kikerült. Próbák a kapura és a
-  cserére (a D77 előtti, kapun kívül tárolt esemény sem akaszt meg, és nem utazik), rontás-próbával.
-  · A `vonal.js` elavult kommentjei (`LENYOMAT` → `NYITAS`, a leszakadt `fajlHozatala`-leírás).
-  · ⚠️ A tár `szeletLenyomata()`-ja ≠ a csere szelet-halmaza (a `halmaz.js` sora lent) — az **A**
-  bemenete.
+**Ami ebben a sessionben (2026-09-27 este → 10-01) megépült** (a részletek: a [fázis-2 terv](docs/fejlesztesi_terv_fazis2.md)
+D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredmények](koino/meres/eredmenyek.md) 52–53.):
+- ✅ **Átnézés → D77:** a kapu csak azonosító alakú `entitas`-t és születés-`szulo`-t enged be (egy
+  kimondhatatlan szelet-kulcs a társsal folytatott minden cserét megakasztotta — mérve).
+- ✅ **Az A pillér (az összegző Merkle-fa) helyben elérhető része:** **D78** (napló-fa + állapot-fa, egy
+  csomópont; a horgony: aláírással csak a szerző, minden más számított; SK14 lezárva) · **D79** (a teljes
+  kiosztás-lista szúrópróbával, 5%) · **D80** (az ellentmondás bizonyítéka esemény a vádolt
+  azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) · **D81** (a
+  bizonyíték az eseménnyel utazik: a `lancGyoker` maga a két gyökér, a pont-esemény hozza a
+  bizonyítékát — a hazug bemondás hézagos láncnál is bizonyítottan elbukik) · **D82** (a kettős lánc nem
+  büntet; a bizonyíték a két ágat egy helyre hozza) · **az észlelő** (a csere és a `behoz` után magától;
+  `ellenoriz`). ⛔⛔ A garancia: becsületes láncra nem állítható össze vád (próba; két lyukat betömtünk).
+- ✅ **D83 (Csaba, 2026-10-01):** a kiszolgálás (alapból csak a tudatpontos + a saját események;
+  készülékenként „mindent"; a kérő először a tudatpont-tartóktól) és a szigorú (b) időzítése (lent).
 
-#### ⏭️⏭️ AZ ALAPPILLÉREK — A folyamatban (D78)
+#### ⏭️⏭️ A KÖVETKEZŐ SESSION
 
-A javaslat ([`alappillerek.md`](docs/alappillerek.md) 4.): **A — az összegző Merkle-fa**, az első
-alkalmazásával (**a szerző lánca**: D63 lánc-gyökér + a tudatpont-keret — itt a gyökeret a szerző
-maga írja alá, tehát a horgony tiszta; ez a C lépés 10. pontja is) → **B — a két tár és az érdeklődés
-szabálya** (C/9) → **D — a kérelmezés és a továbbadás** → **F, E** (a társankénti emlékezet, az
-identitás a szeletelt világban) → a ház (a pakli-nézet a felületen, a terep).
+1. ⭐ **ELSŐ FELADAT: a próbák témakörök szerinti CSOPORTJAI a `mind.js`-ben** (Csaba, 2026-10-01) —
+   *alap* (kanonikus, kulcs, esemény, tár) · *allapot* (állapot, javaslat, szabály, egyezmény,
+   felszabadítás, identitás, pakli, tér) · *csere* (csere, társak, egyeztetés, udpkapu, kötés, tábla,
+   dht, iro) · *fajl* (fájl, fájligény, fájlkérelem, fájlátvitel, fájlcsere, szövegdarab) · *fa*
+   (összegzőfa, láncgyökér, ellentmondás, észlelő) · *parancssor* (parancssor, vizsga) — a mai részszó-
+   szűrő helyett (a `tar` a `tarsak`-ot is indítja). ⚠️ A pontos besorolást a próba-fájlok tartalma döntse el.
+2. ⭐ **A B PILLÉR** (a két tár és az érdeklődés szabálya) — a terv: [`alappillerek.md`](docs/alappillerek.md)
+   B (D75, D83). ⛔⛔ **A szigorú (b) — hogy a bulin csak a vállalt szeletek mozogjanak — a D és az E
+   UTÁN kapcsol: KÖZTES ÁLLAPOT, NEM VÉGLEGES** (D83/4): addig a készülék mindent tárol, mint ma.
+3. Utána: **D** (a kérelmezés) → ⏸️ az A-ból hátralévők (a D79 szúrópróba, a napló-alapú kettős-lánc
+   észlelés, a napló-bizonyíték logaritmikus kiszolgálása — 52.: ma lineáris) → **a szigorú (b)
+   bekapcsolása** az **E**-vel → **F**.
 
-✅ **Csaba megerősítette a sorrendet (2026-09-27 este): A → B → D → F, E.** ✅ **És döntött az A
-kérdéseiről — D78:** egy csomópont (lenyomat + darab + összeg-lista), két elrendezés (**napló-fa** a
-szerző láncára, **állapot-fa** a kiosztására), egy `lancGyoker` az eseményben mindkettőre; ⭐ a
-horgony: **aláírással csak a szerző, a sajátjáról — minden más számított**, az össz-pont a nézeté
-(szúrópróba); ✅ SK14 lezárva (a lánc-gyökér az eseményben). ⚠️ **Pontosítás (Claude, az építés
-előtt):** a rejtett negatív levelet az útba eső ellenőrzés nem látja — a kiosztás TELJES listája
-(a kerettel korlátos) igen.
-
-**Az A lépései:** ✅ **① a fa-modul** ([`osszegzoFa.js`](koino/js/esemeny/osszegzoFa.js), 15 próba,
-11 rontás-próba; 52. mérés: a bizonyíték logaritmikus, 10⁵-nél ~1,2 KB, egymilliárdnál ~2,0 KB) ·
-✅ **② a `lancGyoker` az új eseményekben** ([`lancGyoker.js`](koino/js/allapot/lancGyoker.js)) — a
-szerző ESEMÉNY ELŐTTI naplóját és kiosztását köti el, így egy pont-esemény önmagában ellenőrizhető
-(a benne aláírt korábbi állapot + egy bizonyíték → az új összeg; próba méri, a hazug bemondás
-lebukik). A szerző gyorsítótára (`lanc.json`: a napló csúcsai + a kiosztás) az utolsó lefedett
-esemény azonosítójához kötött és ellenőrző-lenyomattal védett — ⛔ mert egy rossz gyorsítótárból a
-szerző HAMIS gyökeret írna alá. Ha a saját lánc nem ép, a gyökér null. A kapu csak lenyomat alakú
-gyökeret enged be. 9 modul-próba + 1 parancssor-próba, 8 rontás-próba. · ✅ **③ az ellenőrzés
-HELYI fele — D80** ([`ellentmondas.js`](koino/js/allapot/ellentmondas.js)): az `Ellentmondas` esemény
-(bemondás · folytonosság · negatív levél — a vádolt saját aláírt állításai + előkép + logaritmikus
-bizonyíték) önmagát igazolja; **a kapu ellenőrzi**, a **szabály-réteg a vádponttól kihagyja** a vádolt
-pont-eseményeit (hézagos láncnál is — ott a D42 csak jelezne), a bejelentés a vádolt **azonosság-szeletébe**
-kerül. ⛔⛔ **A garancia: becsületes láncra nem állítható össze vád** (próba; építés közben egy lyukat
-be kellett tömni: a bejelentő adta előkép-összeg nem kötött — csak a lenyomat dönt). 7 modul-próba +
-1 parancssor-próba (`behoz`), 13 rontás-próba. ✅ **D79: a teljes kiosztás-lista szúrópróbával** (5%).
-· ✅ **D81 — a bizonyíték az eseménnyel utazik** (Csaba: kérésre a csaló hallgathatna): a
-`lancGyoker` maga a két gyökér (`{ naplo, kiosztas }`, nem a lenyomatuk), a pont-esemény az entitása
-régi értékének bizonyítékát is hozza (`adat.bizonyitek`) — a kapu ellenőrzi, a **szabály-réteg a hazug
-bemondást hézagos láncnál is bizonyítottan elveti** (a becsületes pedig nem kap jelzést), és a
-folytonosság két szomszédos eseményből ellenőrizhető a szerző nélkül. 53. mérés: +~155 B/esemény, a
-pont-esemény 1,15–1,86 KB (a becslés alatta maradt). · ✅ **D82 — a kettős lánc nem büntet**, a
-bizonyíték a két ágat egy helyre hozza (a kapu a bizonyítékban hordozott eseményeket is beveszi — így
-a meglévő választás mindenhol ugyanaz; próba: három készülék, a bizonyíték után ugyanazt számolja).
-· ✅ **Az ÉSZLELŐ** ([`eszlelo.js`](koino/js/allapot/eszlelo.js)): a csere és a `behoz` után a
-készülék MAGÁTÓL keres a beérkezett események szomszédságában (elágazás · bemondás · folytonosság
-mindkét irányban), és bejelenti a vádolt azonosság-szeletébe, ismétlés nélkül; kézi út: `ellenoriz`.
-Csak a kapun is átmenő lelet — a becsületes láncra adott garancia az automatikára is áll.
-· ⏭️ **Ami az A-ból hátra van — a D pillér (kérelmezés) UTÁN** (Csaba, D82): a D79 szúrópróba (a teljes
-kiosztás-lista kérésre), a napló-alapú kettős-lánc észlelés, a napló-bizonyíték logaritmikus
-kiszolgálása. ⭐ **Így a következő pillér a B** (a két tár és az érdeklődés szabálya — D75, C/9).
-
-#### ⏭️ UTÁNA — a sorrend Csabáé
+#### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
 1. ⭐ **A 🅱️ változat (két mobil):** dönt a kimondott feltevésről (két cél-függő NAT).
-2. ⏸️ **A UDP-s több forrás** (D68 / 6. — ma egy fájl egy társtól jön a résen): a tervező
-   függvények és a `parbeszed` `FAJLKEREK`-ága készen állnak, a résen próbával mérve.
-3. ⏸️ **IPv6:** a kapu IPv4-es. Kettős (IPv4+IPv6) kapu — külön lépés.
-4. ⏸️ **A kopogás saját üteme** (41. mérés): a tábla-olvasás (~20 mp néma kötésenként) még
-   megnyújtja a kört — ⚠️ terepen mérve (45.): egy 68 mp-es tábla-írás a telefonon egy egész
-   ablakot kihagyatott.
+2. ⏸️ **A UDP-s több forrás** (D68 / 6.) · 3. ⏸️ **IPv6** (kettős kapu) · 4. ⏸️ **A kopogás saját üteme** (41., 45.).
 
 #### ⏸️ Ami nyitva maradt (terep és próbák)
 
@@ -141,6 +92,11 @@ kiszolgálása. ⭐ **Így a következő pillér a B** (a két tár és az érde
   veszi, és engedélyt kér rá — *„ne kérj engedélyt semmire"*. A session ideiglenes mappája
   (scratchpad) jó. **Abszolút útvonalak** (a .NET más
   munkakönyvtárból dolgozik: egyszer egy üres `koino/CLAUDE.md` lett belőle).
+- ⛔⛔ **A PRÓBÁK RENDJE (Csaba, 2026-10-01):** session-nyitáskor („nézd át") **NEM futtatunk próbát**;
+  fejlesztés közben **témakörönként** (a csoportok: lásd *A KÖVETKEZŐ SESSION* 1.); **a teljes sor** csak
+  ha KÖZÖS réteg változott (az esemény alakja, a kapu, a tár, a szabály-réteg), vagy egy lépés
+  lezárásakor, commit előtt. *(Miért kell mégis a teljes: a D81 alakváltása egyszerre három csoport
+  próbáit törte el.)*
 - **A teljes próbasor kimenete fájlba** (`node koino/meres/mind.js > …txt 2>&1`): egy
   szeszélyes bukás csak így nézhető meg utólag.
 
@@ -195,7 +151,7 @@ kiszolgálása. ⭐ **Így a következő pillér a B** (a két tár és az érde
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D82 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D83 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -218,7 +174,7 @@ kiszolgálása. ⭐ **Így a következő pillér a B** (a két tár és az érde
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D82**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D83**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

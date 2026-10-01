@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D82), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D83), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -86,6 +86,14 @@ napló-alapú kettős-lánc észlelés, a napló-bizonyíték kiszolgálása (lo
 elérhető része kész — a következő pillér a B.**
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
+
+⏭️ **A KÖVETKEZŐ PILLÉR (2026-10-01).** A megépítendő alak (D75, D83): két tár (tartós = vállalt:
+a tudatpontos szeletek és a saját eseményeim szeletei; átmeneti = látott, eldobható — a legrégebben
+megnézett megy, SK11) · a vállalás SZÁMÍTOTT (a tudatpontokból és a saját eseményekből) · a
+„megnézett" feljegyzése (a `hozd` és a felület megnyitásai) · a D14 csak a tartósra (a nem tartott
+entitás „nem tartod" jelzéssel látszik) · a csere `reszvesz`-e a vállalásból · a kiszolgálás D83
+szerint (alapból csak a tudatpontos + a saját események; készülékenként „mindent"). ⛔ **A szigorú (b)
+a D és az E UTÁN kapcsol — köztes állapot, NEM végleges** (D83/4).
 
 A **tartós tár** a vállalt (tudatpontos szeletek, a saját eseményeim szeletei) — itt a csere teljes
 jogú résztvevője vagyok, és a D14 csak erre vonatkozik. Az **átmeneti tár** a látott (megnézett,
@@ -198,3 +206,7 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
     állapotot számolta (próba mérte) · D82, `esemenyTar.js`.
 24. **2026-09-27 este · a D79 szúrópróba és a napló-alapú észlelés** → **a D pillér (kérelmezés) után**
     · mert mindkettő kérés–válasz, és egy alkalmi üzenet a D-t előzné meg · D82.
+25. **2026-10-01 · a szigorú (b) bekapcsolása a B-vel együtt** (a D72 szövege: „nem köztes állapot")
+    → **a D és az E után; addig KÖZTES ÁLLAPOT, NEM VÉGLEGES** · mert előtte az új készülékek indulása és a
+    tagság ellenőrzése elakadna; ⚠️ addig a készülék mindent tárol (a „végtelen" próbáját ez a szakasz
+    nem állja ki) · D83/4.
