@@ -333,6 +333,8 @@ export async function beolvasztas(tar, esemenyek, koino) {
   let uj = 0, marMegvolt = 0, idegen = 0;
   const elutasitva = [];
   const elagazasok = [];
+  // ⭐ D82: a MOST bekerült események azonosítói — az észlelő ezek körül keres (a hívóé).
+  const ujAzonositok = [];
 
   for (const esemeny of esemenyek) {
     // ----- IDEGEN KOINO: be sem visszük a kapuig -----
@@ -354,12 +356,13 @@ export async function beolvasztas(tar, esemenyek, koino) {
     if (eredmeny.marMegvolt) { marMegvolt++; continue; }
 
     uj++;
+    ujAzonositok.push(esemeny.azonosito);
     if (eredmeny.elagazas) {
       elagazasok.push({ szerzo: esemeny.szerzo, sorszam: esemeny.sorszam });
     }
   }
 
-  const osszegzes = { uj, marMegvolt, idegen, elutasitva, elagazasok };
+  const osszegzes = { uj, marMegvolt, idegen, elutasitva, elagazasok, ujAzonositok };
   console.log('beolvasztas - VÉGE', {
     uj, marMegvolt, idegen, elutasitva: elutasitva.length, elagazasok: elagazasok.length
   });

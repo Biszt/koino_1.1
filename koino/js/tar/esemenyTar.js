@@ -74,6 +74,7 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // az egyetlen kapun (3. szabály): hamis vád nem kerül a tárba, és a szabály a tárban lévőt hiszi el.
   if (esemeny.tipus === 'Ellentmondas') {
     const vad = await ellentmondasEllenorzese(esemeny.adat, esemeny.koino);
+    // ⚠️ A vádpontot (vagy elágazásnál a vesztest) a bejelentő mondja be — az ellenőrzés vetette össze.
     if (!vad.rendben) {
       console.log('esemenyMentese - VÉGE (HAMIS VÁD)', { ok: vad.ok });
       return { mentve: false, ok: 'a bizonyíték nem áll meg: ' + vad.ok };
@@ -105,6 +106,14 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // ⭐ D70: a tár mögött az ÍRÓ áll — neki mondjuk meg, ha ez a saját, most aláírt eseményünk.
   await tar.hozzafuz(esemeny, beallitas);
 
+  // ----- 4/b. ⭐ D82: A BIZONYÍTÉK A VÁDOLT ESEMÉNYEIT IS HOZZA — azok is bejönnek -----
+  // Az `Ellentmondas` a vádolt SAJÁT aláírt eseményeit hordozza (az elágazásnál a két ágat). Ha azokat
+  // is bevesszük, minden gép, amelyik a bizonyítékot látja, MINDKÉT ágat látja — és a meglévő választás
+  // (`elagazasokFeloldasa`: a kisebb azonosító) mindenhol ugyanaz lesz. *(Csak a vesztest kihagyni nem
+  // elég: akinél csak az van meg, a nyertest nem ismeri — a villa előtti állapotot számolná.)*
+  // ⚠️ Ugyanazon a kapun mennek át (semmiben nem bízunk), és beágyazott bizonyítékot nem bontunk tovább.
+  if (esemeny.tipus === 'Ellentmondas') await bizonyitekEsemenyeinekMentese(tar, esemeny);
+
   if (utkozo) {
     console.warn('esemenyMentese - ELÁGAZÁS! Ugyanaz a szerző két eseményt írt alá ugyanarról a pontról', {
       szerzo: esemeny.szerzo,
@@ -118,6 +127,16 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
 
   console.log('esemenyMentese - VÉGE (elmentve)');
   return { mentve: true };
+}
+
+/** Egy (a kapun már átment) `Ellentmondas` eseményben hordozott események — ugyanazon a kapun át. */
+async function bizonyitekEsemenyeinekMentese(tar, bizonyitek) {
+  for (const mezo of ['esemeny', 'masik', 'kovetkezo']) {
+    const e = bizonyitek.adat?.[mezo];
+    if (!e || typeof e !== 'object' || e.tipus === 'Ellentmondas') continue;
+    const r = await esemenyMentese(tar, e);
+    if (!r.mentve) console.warn('esemenyMentese - a bizonyíték eseménye nem jött be', { mezo, ok: r.ok });
+  }
 }
 
 // ===================================

@@ -54,6 +54,8 @@ import osszegzoFa from './osszegzoFaProba.js';
 import lancGyoker from './lancGyokerProba.js';
 // ⭐ Az ellentmondás bizonyítéka (D79, D80) — a kapu, a szabály és a bejelentés.
 import ellentmondas from './ellentmondasProba.js';
+// ⭐ Az észlelő (D82) — a beérkezett események körül bizonyítható ellentmondások.
+import eszlelo from './eszleloProba.js';
 
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
@@ -87,7 +89,8 @@ const PROBAK = [
   { nev: 'egyeztetes', futtat: egyeztetes },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
-  { nev: 'ellentmondas', futtat: ellentmondas }
+  { nev: 'ellentmondas', futtat: ellentmondas },
+  { nev: 'eszlelo', futtat: eszlelo }
 ];
 
 const szuro = process.argv[2];

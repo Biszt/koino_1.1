@@ -412,6 +412,8 @@ export function szabalyokErvenyesitese(esemenyek) {
   // Az `Ellentmondas` eseményt a KAPU ellenőrizte (a tartalma önmagát igazolja — `ellentmondas.js`),
   // ahogy az aláírást is: a szabály a tárban lévőt hiszi el. ⭐ Nem ítélet, hanem determinisztikus
   // lépés: aki a bizonyítékot látja, ugyanazt számolja (D17).
+  // ⚠️ Az ELÁGAZÁS bizonyítéka (D82) itt nem szerepel: nincs vádpontja, és a két ágát a kapu már
+  // bevette (`esemenyTar.js`) — a választást az `elagazasokFeloldasa` teszi, mindenhol ugyanúgy.
   const vadpontok = new Map();
   for (const e of esemenyek) {
     if (e.tipus !== 'Ellentmondas') continue;
@@ -435,6 +437,7 @@ export function szabalyokErvenyesitese(esemenyek) {
     for (const e of rendezett) {
       if (e.sorszam !== vartSorszam) folytonos = false;
       vartSorszam = e.sorszam + 1;
+
 
       // ===== 1. SZABÁLY: A TUDATPONT-KERET =====
       // ⭐ Az ítélet a `pontEsemenyMerlege`-ben él — a művelet-réteg UGYANAZT hívja (lent).

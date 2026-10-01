@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D81), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D82), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -79,9 +79,11 @@ változásának ellenőrzése) próbákkal és méréssel (52.) → ✅ ② a `l
 ESEMÉNY ELŐTTI állapot; a szerző gyorsítótára) → ✅ ③/helyi: az ellentmondás bizonyítéka (D80 — esemény a
 vádolt azonosság-szeletébe; a kapu ellenőrzi, a szabály a vádponttól kihagyja a pontjait) → ✅
 D81: a bizonyíték az eseménnyel utazik (a `lancGyoker` maga a két gyökér, a pont-esemény a
-bizonyítékát is hozza; a szabály hézagnál is bizonyítottan ítél) → ⏭️ a folytonosság automatikus
-észlelése és bejelentése, a D79 szúrópróba (a teljes lista kérésre), a kettős lánc a szeletek között
-(⚠️ a következménye döntés), a napló-bizonyíték kiszolgálása (logaritmikusan).
+bizonyítékát is hozza; a szabály hézagnál is bizonyítottan ítél) → ✅
+D82: a kettős lánc nem büntet, a bizonyíték a két ágat egy helyre hozza → ✅ az ÉSZLELŐ (a csere és a
+kézi út után magától; `ellenoriz`) → ⏸️ a D pillér UTÁN: a D79 szúrópróba (a teljes lista kérésre), a
+napló-alapú kettős-lánc észlelés, a napló-bizonyíték kiszolgálása (logaritmikusan). ⭐ **Az A helyben
+elérhető része kész — a következő pillér a B.**
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
@@ -189,3 +191,10 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
 21. **2026-09-27 este · a `lancGyoker` alakja: a két gyökér lenyomata (43 jel)** → **maga a két gyökér**
     · mert így az előkép az aláírt eseményben utazik (nem választható le), és nem kell új mező (egy alak
     marad, a régi események érvényesek) · D81, 53. mérés.
+22. **2026-09-27 este · a kettős lánc következménye: büntetés** → **nem büntet, a két ágat egy helyre
+    hozza (D82)** · mert két offline készülék ártatlanul is elágaztat · D82.
+23. **2026-09-27 este · az elágazás kezelése: a vesztes ág kihagyása** → **a bizonyíték eseményeinek
+    bevétele a kapun** · mert akinél csak a vesztes volt meg, a nyertest nem ismerte — a villa előtti
+    állapotot számolta (próba mérte) · D82, `esemenyTar.js`.
+24. **2026-09-27 este · a D79 szúrópróba és a napló-alapú észlelés** → **a D pillér (kérelmezés) után**
+    · mert mindkettő kérés–válasz, és egy alkalmi üzenet a D-t előzné meg · D82.

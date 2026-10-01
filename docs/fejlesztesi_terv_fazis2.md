@@ -4310,6 +4310,33 @@ hagyná nyitva (a szerző visszatarthatja).
    törés előtti programon fut.
 5. **A D79 teljes listája kérésre marad** (ritka, 5%) — ott a hallgatás „nem ellenőrizhető".
 
+### D82. A KETTŐS LÁNC: nem büntet — a bizonyíték a két ágat egy helyre hozza (2026-09-27, Csaba)
+
+> *„igen."* — Csaba (a javasolt sorrendre és a kettős lánc kezelésére)
+
+**Amiből jött:** az elágazás (a szerző két eseménye ugyanarról a sorszámról) ma szándékosan **nem
+büntet**: a számítás minden sorszámon a kisebb azonosítójú eseményt választja (`elagazasokFeloldasa`),
+mert két offline készülék ártatlanul is elágaztat. A szeletelt világban viszont a két ág könnyen
+**külön készülékekre** kerül: az egyik gép csak az egyik ágat látja, a másik a másikat — és akkor a
+„kisebb azonosító" választás nem működik, **a két gép másképp számol** (D17).
+
+#### A DÖNTÉS
+
+1. ⭐ **Az elágazás továbbra sem büntet** — nincs vádpont, a szerző többi pontja érintetlen.
+2. ⭐ **A bizonyíték a két ágat egy helyre hozza:** egy `Ellentmondas` esemény (*elágazás* fajta) a két
+   aláírt eseménnyel, a szerző azonosság-szeletébe (D80) — és **a kapu a bizonyítékban hordozott
+   eseményeket is beveszi** (ugyanazon a kapun át). Így minden gép, amelyik a bizonyítékot látja,
+   MINDKÉT ágat látja, és a meglévő választás (a kisebb azonosító) **mindenhol ugyanaz**. A csaló nem
+   mutathat két arcot. ⚠️ *(Építés közben: az első változat csak a vesztes ágat hagyta ki — de akinél
+   csak a vesztes volt meg, a nyertest nem ismerte, és a villa előtti állapotot számolta. Próba mérte.)*
+3. **A keretet ez nem veszélyezteti:** a szabály-réteg a kiválasztott eseményekből számolt összegre is
+   ráteszi a keret-ellenőrzést.
+4. ⏸️ **A napló-alapú észlelés** (amikor a két ág eseményei KÜLÖNBÖZŐ sorszámon találkoznak) a szerző
+   napló-bizonyítékát kívánja — kérésre, tehát a **D pillér** (kérelmezés) után.
+
+**A sorrend (Csaba, ugyanitt):** ① a folytonosság (és a helyben látható ellentmondások) AUTOMATIKUS
+észlelése és bejelentése → ② a D79 szúrópróba és a napló-alapú észlelés a D pillér után.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

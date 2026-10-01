@@ -97,13 +97,13 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Harminckét próba-fájl, **801 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminchárom próba-fájl, **809 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
 futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
 a `tarsak` réteget is elindítja.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **203 fájl, 3496,3 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **205 fájl, 3523,4 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -199,6 +199,7 @@ Az eredmények: [`meres/eredmenyek.md`](meres/eredmenyek.md).
 | `js/csere/szeletEgyeztetes.js` | ⭐ **mit egyeztetünk szeletenként** (a C 7–8. pontja): egy szelet halmaza = az érvényes eseményei + a gyerekei **születése** (a gyerek-bejelentés); a „szelet:lenyomat” párok; a fogadó szűrője |
 | `js/csere/tartomany.js` | ⭐ **a tartomány-egyeztetés** (S4, D74): két azonosító-halmaz különbsége az eltérések számával arányos forgalommal — hálózat nélkül; 2026-09-27 óta a párbeszéd ezen fut (két szinten) |
 | `js/esemeny/halmaz.js` | ⭐ az azonosító-halmaz **rendezése és lenyomata egy helyen** (a tár `szeletLenyomata()`-ja és a tartomány-egyeztetés is ezt használja) |
+| `js/allapot/eszlelo.js` | ⭐⭐ **az észlelő** (D82): a beérkezett események szomszédságában bizonyítható ellentmondást keres (elágazás · bemondás · folytonosság) — a csere és a `behoz` után magától, kézzel az `ellenoriz` paranccsal; a bejelentés ismétlés nélkül a vádolt azonosság-szeletébe |
 | `js/allapot/ellentmondas.js` | ⭐⭐ **az ellentmondás bizonyítéka** (D79, D80): a vádolt saját, egymásnak ellentmondó aláírt állításai önmagát igazoló alakban; a kapu ellenőrzi, a szabály-réteg a vádponttól kihagyja a pontjait — becsületes láncra nem állítható össze vád |
 | `js/allapot/lancGyoker.js` | ⭐⭐ **a szerző lánc-gyökere** (D78): minden új saját esemény elköti a szerző esemény előtti naplóját és kiosztását — egy pont-esemény így önmagában ellenőrizhető; gyorsítótár (`lanc.json`), ami a lánchoz kötött és ellenőrző-lenyomattal védett |
 | `js/esemeny/osszegzoFa.js` | ⭐⭐ **az összegző Merkle-fa** (D78): egy csomópont (lenyomat + darab + összeg), két elrendezés — a **napló-fa** (a szerző lánca) és az **állapot-fa** (a kiosztás); bizonyíték a jelenlétre és a hiányra, és a változás a bizonyítékból — hálózat nélkül |

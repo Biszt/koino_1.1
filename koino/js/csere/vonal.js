@@ -231,10 +231,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let kapottTablaKulcs = null;      // a társ tábla-kulcsa — a KÖTÉS azonosítója
   let kapottDhtGepek = [];          // néhány DHT-gép, amit ő ismer (nem bizalom, csak cím)
   let elteroSzeletek = 0, egyeztetoUzenetek = 0;
+  let ujAzonositok = [];            // ⭐ D82: a most beérkezett események (az észlelőnek)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
-    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek
+    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok
   });
 
   // ===== 0. A NYITÁS =====
@@ -537,6 +538,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const atveheto = erkezett.filter((e) => e && typeof e === 'object' && szeletbeTartozik(e, megengedett));
   const beolvasztva = await beolvasztas(tar, atveheto, koino);
   uj += beolvasztva.uj;
+  ujAzonositok = beolvasztva.ujAzonositok;
 
   console.log('parbeszed - VÉGE', {
     uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length

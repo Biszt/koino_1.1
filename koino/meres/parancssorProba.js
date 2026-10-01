@@ -527,6 +527,73 @@ proba('⭐⭐ AZ ELLENTMONDÁS A KÉZI ÚTON — az ép vád a másik készülé
   }
 });
 
+// ===================================
+// ⭐⭐ D82: AZ ÉSZLELŐ AZ ÉLES ÚTON — a kézi út és a csere után MAGÁTÓL jelent (2026-09-27 este)
+// ===================================
+//
+// A modul-próba (`eszleloProba.js`) az észlelőt közvetlenül hívja; ez azt méri, hogy a PROGRAM is
+// meghívja: a `behoz` és a csere után a készülék magától bejelenti a nála bizonyítható ellentmondást
+// (a vádolt azonosság-szeletébe), és az `ellenoriz` nem ismétli. Viselkedés: a lemez.
+
+/** Egy csaló koinója a lemezen: alapítás, egy gondolat, egy pont — és egy hazug bemondás (D81). */
+async function csaloKoino(hely) {
+  const tar = await esemenyTarNyitasa('sajat', hely);
+  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const k = { koino: 'sajat', tar, darabTar: fajlBlobTarolo('sajat', hely), kulcspar,
+    szerzo: Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url') };
+  await koinoLetrehozasa(k, 'Csalo koino');
+  const g = await gondolatLetrehozasa(k, { cim: 'Egy gondolat' });
+  await tudatpontRendezese(k, g.azonosito, 30);
+  const lanc = await sajatLancEsemenyei(tar, k.szerzo);
+  const utolso = lanc[lanc.length - 1];
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, 'sajat', k.szerzo, utolso.sorszam + 1, null, g.azonosito);
+  const hazug = await esemenyLetrehozasa({ koino: 'sajat', tipus: 'TudatpontRendezes', entitas: g.azonosito,
+    entitasSorszam: 9, adat: { entitas: g.azonosito, pont: 80, szerep: 'aktiv', kiosztva: 5, bizonyitek },
+    elozo: utolso.azonosito, sorszam: utolso.sorszam + 1, lancGyoker }, kulcspar);
+  await esemenyMentese(tar, hazug);
+  return { lanc: [...lanc, hazug], hazug };
+}
+
+/** A lemezen álló `Ellentmondas` események. */
+async function ellentmondasokALemezen(hely) {
+  return (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter((x) => x.trim())
+    .map((x) => JSON.parse(x)).filter((e) => e.tipus === 'Ellentmondas');
+}
+
+proba('⭐⭐ AZ ÉSZLELŐ A KÉZI ÚTON — a `behoz` után magától bejelenti, az `ellenoriz` nem ismétli (D82)', async () => {
+  const csalo = await ujKeszulek();
+  const vevo = await ujKeszulek();
+  try {
+    const { lanc, hazug } = await csaloKoino(csalo);
+    const fajl = join(vevo, 'csalo.jsonl');
+    await writeFile(fajl, lanc.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    await fut(vevo, 'behoz', fajl);
+    const utana = await ellentmondasokALemezen(vevo);
+    const ellenoriz = await fut(vevo, 'ellenoriz');
+    const vegul = await ellentmondasokALemezen(vevo);
+    return utana.length === 1 && utana[0].adat.kit === hazug.szerzo && utana[0].adat.fajta === 'bemondas'
+      && utana[0].entitas === lanc[0].azonosito                       // a csaló azonosság-szeletébe (alapító)
+      && vegul.length === 1 && ellenoriz.includes('0 új bejelentés');
+  } finally {
+    await rm(csalo, { recursive: true, force: true });
+    await rm(vevo, { recursive: true, force: true });
+  }
+});
+
+proba('⭐⭐ AZ ÉSZLELŐ A CSERE UTÁN — egy valódi `figyel` + `csere` kör után a fogadó magától jelent (D82)', async () => {
+  const csalo = await ujKeszulek();
+  const vevo = await ujKeszulek();
+  try {
+    await csaloKoino(csalo);
+    await csereKor(csalo, vevo, 7981);
+    const nala = await ellentmondasokALemezen(vevo);
+    return nala.length === 1 && nala[0].adat.fajta === 'bemondas';
+  } finally {
+    await rm(csalo, { recursive: true, force: true });
+    await rm(vevo, { recursive: true, force: true });
+  }
+});
+
 proba('⭐⭐ A BELÉPŐ TÉR KÉZZEL: két koino egy készüléken, mindkettő megjelenik', async () => {
   const hely = await ujKeszulek();
   try {

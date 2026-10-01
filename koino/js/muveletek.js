@@ -171,6 +171,31 @@ export async function ellentmondasBejelentese(kornyezet, adat) {
   return esemenytTeszek(kornyezet, 'Ellentmondas', adat, { entitas: horgony });
 }
 
+/**
+ * ⭐⭐ AZ ÉSZLELT ELLENTMONDÁSOK BEJELENTÉSE (D82 sorrend ①) — az észlelő (`allapot/eszlelo.js`)
+ * leletei, egyenként a vádolt azonosság-szeletébe. ⭐ Nem ismétli magát: ha a szeletben már ott van
+ * ugyanez a bizonyíték (ugyanaz a fajta, ugyanaz a vádpont vagy vesztes), kihagyja — így az őrjárat
+ * minden körben nyugodtan kereshet. Akinek nincs nálunk horgonya, arról most nem jelentünk (a
+ * bizonyíték nem helyezhető el — D80), csak számoljuk.
+ *
+ * @param {Object} kornyezet
+ * @param {Array<Object>} leletek - `Ellentmondas` adatok
+ * @returns {Promise<{bejelentve: number, marVolt: number, nincsHorgony: number}>}
+ */
+export async function ellentmondasokBejelentese(kornyezet, leletek) {
+  let bejelentve = 0, marVolt = 0, nincsHorgony = 0;
+  for (const adat of leletek) {
+    const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, adat.kit);
+    if (!horgony) { nincsHorgony++; continue; }
+    const ugyanaz = (x) => x.tipus === 'Ellentmondas' && x.adat?.kit === adat.kit && x.adat?.fajta === adat.fajta
+      && (adat.fajta === 'elagazas' ? x.adat?.vesztes === adat.vesztes : x.adat?.vadpont === adat.vadpont);
+    if ((await kornyezet.tar.szeletEsemenyei(horgony)).some(ugyanaz)) { marVolt++; continue; }
+    await ellentmondasBejelentese(kornyezet, adat);
+    bejelentve++;
+  }
+  return { bejelentve, marVolt, nincsHorgony };
+}
+
 // ⭐ Ennyiszer próbálunk újra, ha közben más folyamat írt a láncunkba. ⚠️ Nem várt verseny
 // esetén egy-kettő; a korlát csak azért van, hogy semmi ne pörögjön a végtelenségig.
 const ELAVULT_PROBAK = 20;

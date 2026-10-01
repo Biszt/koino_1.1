@@ -110,9 +110,13 @@ import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
   // ⭐ A SZAKASZ 4 HÉT MŰVELETE (2026-09-12) — eddig egyik sem volt elérhető kézzel.
-  belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa
+  belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa,
+  // ⭐ D82: az észlelt ellentmondások bejelentése (ismétlés nélkül).
+  ellentmondasokBejelentese
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
+// ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
+import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
 import { szeletParok } from './js/csere/szeletEgyeztetes.js';
 import { halmazLenyomata } from './js/esemeny/halmaz.js';
@@ -1079,6 +1083,36 @@ async function resAllapotKeszites({ udpElevules = UDP_CIM_ELEVULES } = {}) {
  * @param {Object} allapot - a `resAllapotKeszites` doboza
  * @returns {(halo: Object, tars: {cim: string, port: number}) => Promise<Object>}
  */
+/**
+ * ⭐⭐ AZ ÉSZLELÉS ÉS A BEJELENTÉS (D82 sorrend ①) — a most beérkezett események körül: amit a nálunk
+ * lévő eseményekből be lehet bizonyítani, azt bejelentjük a vádolt azonosság-szeletébe (ismétlés
+ * nélkül). A csere, a kézi út (`behoz`) és az `ellenoriz` parancs közös útja.
+ * ⚠️ A hibája nem dönti el a kört: az észlelés kényelem, nem előfeltétel (a kézi `ellenoriz` pótolja).
+ *
+ * @param {Array<string>} azonositok
+ * @returns {Promise<{leletek: number, bejelentve: number, marVolt: number, nincsHorgony: number}>}
+ */
+async function eszlelesEsBejelentes(azonositok) {
+  try {
+    const esemenyek = [];
+    for (const a of azonositok ?? []) {
+      const e = await tar.esemeny(a);
+      if (e) esemenyek.push(e);
+    }
+    const leletek = await ellentmondasokKeresese(tar, KOINO, esemenyek);
+    if (!leletek.length) return { leletek: 0, bejelentve: 0, marVolt: 0, nincsHorgony: 0 };
+    const b = await ellentmondasokBejelentese(kornyezet, leletek);
+    if (b.bejelentve) {
+      kiir(SZIN.nem + '  ⚠ ' + b.bejelentve + ' bizonyított ellentmondást jelentettem be (D80/D82)' + SZIN.vege
+        + SZIN.halvany + (b.nincsHorgony ? ' · ' + b.nincsHorgony + ' vádoltnak nincs nálunk horgonya' : '') + SZIN.vege);
+    }
+    return { leletek: leletek.length, ...b };
+  } catch (hiba) {
+    console.warn('eszlelesEsBejelentes - nem sikerült (a kör megy tovább)', { hiba: hiba.message });
+    return { leletek: 0, bejelentve: 0, marVolt: 0, nincsHorgony: 0 };
+  }
+}
+
 function resMunkaKeszito(allapot) {
   return async (halo, tars) => {
     // ⛔⛔ ÉS A TÁR IS FRISS (2026-09-26, 43. mérés): amit a futás közben MÁSIK folyamat írt
@@ -1130,6 +1164,9 @@ function resMunkaKeszito(allapot) {
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
       + adatMennyiseg({ bajtKuldott: bajt }) + ')' + SZIN.vege);
+
+    // ⭐ D82: amit most kaptunk, annak a környékén keresünk bizonyítható ellentmondást.
+    if (alap.uj > 0) await eszlelesEsBejelentes(csere.ujAzonositok);
 
     // ⭐⭐ ÉS ITT SZÜLETIK A KÖTÉS: akivel összeértünk, azt feljegyezzük a tábla-kulcsa
     // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
@@ -1683,6 +1720,16 @@ try {
       break;
     }
 
+    // ⭐⭐ D82: A KÉZI ÉSZLELÉS — a TÁR MINDEN eseménye körül (a kézi út párja az automatikusnak).
+    case 'ellenoriz': {
+      const osszes = (await koinoEsemenyei(tar, KOINO)).map((x) => x.azonosito);
+      const e = await eszlelesEsBejelentes(osszes);
+      kiir('Ellenőrizve: ' + osszes.length + ' esemény · ' + e.leletek + ' bizonyítható ellentmondás · '
+        + e.bejelentve + ' új bejelentés · ' + e.marVolt + ' már be volt jelentve'
+        + (e.nincsHorgony ? ' · ' + e.nincsHorgony + ' vádoltnak nincs nálunk horgonya' : ''));
+      break;
+    }
+
     case 'behoz': {
       const honnan = ervek[0];
       if (!honnan) throw new Error('Honnan hozzam? node koino/koino.js behoz <fájl>');
@@ -1694,6 +1741,8 @@ try {
       });
 
       kiir('Behozva: ' + honnan);
+      // ⭐ D82: a kézi úton jöttek környékén is keresünk (ugyanaz, mint a csere után).
+      if (e.uj > 0) await eszlelesEsBejelentes(e.ujAzonositok);
       kiir('  ' + SZIN.jo + e.uj + ' új esemény' + SZIN.vege
         + ' · ' + e.marMegvolt + ' már megvolt · ' + e.szovegDarabok + ' szöveg-darab · '
         + e.sorok + ' sor a fájlban');

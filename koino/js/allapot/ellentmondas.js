@@ -18,6 +18,11 @@
 //   · NEGATÍV LEVÉL — az aláírt kiosztás-fában egy nem pozitív levél (a D78 pontosítása: az útba eső
 //     ellenőrzés ezt nem látja, a teljes lista igen — és a lista egy levele már bizonyíték).
 //
+// ⭐ ÉS EGY NEGYEDIK, AMI NEM VÁD (D82): az ELÁGAZÁS — a szerző két eseménye ugyanarról a sorszámról.
+// Nem büntet (két offline készülék ártatlanul is elágaztat), csak a két ágat egy helyre hozza: a kapu
+// a bizonyíték eseményeit is beveszi, így minden gép, amelyik a bizonyítékot látja, MINDKÉT ágat látja,
+// és a meglévő választás (`elagazasokFeloldasa`: a kisebb azonosító) mindenhol ugyanaz.
+//
 // ⭐ A VÁDPONT: a sorszám, ahonnan a szerző pont-eseményei nem számítanak (D79): a hazug pont-esemény,
 // a hamis gyökeret aláíró következő esemény, illetve a negatív levelet elkötő esemény.
 //
@@ -38,7 +43,7 @@ import {
 import { KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ } from './lancGyoker.js';
 import { pontEsemenyMerlege } from './szabalyok.js';
 
-export const ELLENTMONDAS_FAJTAK = Object.freeze(['bemondas', 'folytonossag', 'negativ']);
+export const ELLENTMONDAS_FAJTAK = Object.freeze(['bemondas', 'folytonossag', 'negativ', 'elagazas']);
 
 const nem = (ok) => ({ rendben: false, ok });
 
@@ -104,7 +109,8 @@ async function utanaKiosztas(e, elotte, bizonyitek) {
  * @param {Object} adat - { kit, fajta, vadpont, esemeny } · folytonosságnál + `kovetkezo` · negatív
  *   levélnél + `kulcs`, `bizonyitek` (a levél bizonyítéka az esemény kiosztás-gyökerében)
  * @param {string} koino - az `Ellentmondas` esemény koinója (a vádolt események is ebből valók)
- * @returns {Promise<{rendben: boolean, ok?: string, vadpont?: number}>}
+ * @returns {Promise<{rendben: boolean, ok?: string, vadpont?: number, vesztes?: string}>}
+ *   elágazásnál `vesztes` (a kihagyandó ág azonosítója), a többinél `vadpont`
  */
 export async function ellentmondasEllenorzese(adat, koino) {
   if (!adat || typeof adat !== 'object' || typeof adat.kit !== 'string') return nem('hiányzik a vádolt (kit)');
@@ -112,6 +118,20 @@ export async function ellentmondasEllenorzese(adat, koino) {
   if (!ELLENTMONDAS_FAJTAK.includes(fajta)) return nem('ismeretlen fajta: ' + fajta);
   const e = adat.esemeny;
   if (!await szerzoEsemenye(e, kit, koino)) return nem('a vádolt esemény nem a vádolt ép, aláírt eseménye');
+
+  // ----- ⭐ D82: AZ ELÁGAZÁS — nem vád: a két ág egy helyre hozása (lánc-gyökér sem kell hozzá) -----
+  if (fajta === 'elagazas') {
+    const m = adat.masik;
+    if (!await szerzoEsemenye(m, kit, koino)) return nem('a másik ág nem a szerző ép, aláírt eseménye');
+    if (m.sorszam !== e.sorszam || m.azonosito === e.azonosito) {
+      return nem('nem elágazás: nem ugyanarról a sorszámról szóló két különböző esemény');
+    }
+    // A vesztes a NAGYOBB azonosító — ugyanaz a szabály, mint az `elagazasokFeloldasa`-é (egy forrás
+    // helyett két helyen: ezért próba őrzi, hogy a kettő ugyanazt választja).
+    const vesztes = e.azonosito < m.azonosito ? m.azonosito : e.azonosito;
+    if (adat.vesztes !== vesztes) return nem('a bemondott vesztes nem a számított');
+    return { rendben: true, vesztes };
+  }
   const elotte = elokepe(e);
   if (!elotte) return nem('a vádolt esemény nem hordozza a lánc-gyökerét');
 
