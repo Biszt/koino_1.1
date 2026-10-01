@@ -4361,6 +4361,43 @@ mert két offline készülék ártatlanul is elágaztat. A szeletelt világban v
    „végtelen" próbáját ez a szakasz NEM állja ki). Az ok: előtte az új készülékek indulása (nincs mit
    tartaniuk, kérni még nem tudnak) és a tagság ellenőrzése (a meghívó azonosság-szeletét senki nem
    tartaná) elakadna. A D72 „nem köztes állapot" mondatától ez tudatos eltérés.
+   ⛔⛔ **VISSZAVONVA (D84/3, 2026-10-01): nincs köztes állapot.** *(És az 1. pont korlátja csak a
+   törzsre vonatkozik — D84/1.)*
+
+### D84. NINCS KÖZTES ÁLLAPOT — és a kiszolgálás korlátja csak a törzsé (2026-10-01, Csaba)
+
+> *„[a D83/1 korlátja] ez csak a body-ra igaz."* · *„a meta adatok, amik megmutatják, hogy mi kinél
+> található, azt több helyen kell tárolni, és biztosítani, hogy az egész hálózat tudja, vagy tudja
+> azt, hogy ki tudhatja."* · *„igen, abban egyeztünk meg, hogy lessz átmeneti mególdás, de most már
+> meggondóltam magam, mert csak bezavarna. szóval mindent, próbáljunk meg készre csinálni, és ha ezért
+> fel kell rugnunk, az eredti fejlesztési sorrendet, akkor rugjuk fel, és foglalkozzunk azzal, ami
+> alapja valaminek, amivel haladnánk."* — Csaba
+
+**Amiből jött:** a B tervezésekor (átnézés, 2026-10-01) kiderült, hogy a D83/1 szó szerint olvasva
+(„alapból csak a tudatpontosat adja tovább") maga kapcsolná be a szigorú (b)-t: egy szelet csak a
+pont-tartóitól mozdulna, és amit a kötéseim közül senki nem tart, az hozzám soha nem érne el — a D83/4
+pedig közben azt mondta, hogy addig „minden szelet mozog". A kettő kétféleképpen volt olvasható.
+
+#### A DÖNTÉS
+
+1. ⭐ **A D83/1 KORLÁTJA CSAK A TÖRZSRE (body) VONATKOZIK** — a szöveg-darabra (D72) és a fájlokra:
+   azt alapból csak a vállaló (a tudatpont-tartó) szolgálja ki, készülékenként „mindent" is
+   beállítható (D83/2). Az ESEMÉNYEKET (a metaadatot) kiszolgálja, akinél megvannak. Ez a D75/3
+   („mindent kiszolgál, a törzs kivételével") megerősítése.
+2. ⭐⭐ **A „MI KINÉL VAN" METAADATA TÖBB HELYEN ÉL**, és a hálózat vagy tudja, vagy ki tudja
+   számolni, ki tudhatja. Ennek a terve a skálázási tervben áll — 4.2 (a címjegyzék az entitáson,
+   Csaba javaslata, név nélkül — SK2) és 5.2–5.3 (a kereső-réteg: elosztva, replikálva; a
+   hash-elhelyezés épp azt adja, hogy bárki kiszámolja, ki tudhatja) —, de az alappillérek között
+   eddig NEM szerepelt; ⭐ mostantól pillér: [`alappillerek.md`](alappillerek.md) **G**. Ma csak egy
+   HELYI, nem terjedő szelet-címjegyzék van (`tarsak.js`, a `hozd` használja). Az alakja nyitott.
+3. ⛔⛔ **A D83/4 KÖZTES ÁLLAPOTA VISSZAVONVA:** nincs átmeneti megoldás („csak bezavarna"). Minden darab
+   a VÉGLEGES alakjában épül; ha ehhez a sorrendet fel kell rúgni, felrúgjuk — az jön előbb, ami
+   alapja annak, amivel haladnánk. A szigorú (b) tehát nem egy köztes viselkedés utáni kapcsoló, hanem
+   a B végleges alakja, és ami az előfeltétele (a címjegyzék — G, a kérelmezés — D, az identitás a
+   szeletelt világban — E), az ELÉ kerül. ⚠️ A program addig a MAI módon cserél: ez nem új köztes
+   állapot, hanem a mai, amit a sorrend végén leváltunk — új, ideiglenes viselkedést (köztes
+   alapértéket, „a nem vállalt az átmenetibe" útvonalat) nem építünk. Az új sorrend:
+   [`alappillerek.md`](alappillerek.md) 4.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 

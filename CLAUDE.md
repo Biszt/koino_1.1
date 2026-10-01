@@ -39,7 +39,8 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   büntet; a bizonyíték a két ágat egy helyre hozza) · **az észlelő** (a csere és a `behoz` után magától;
   `ellenoriz`). ⛔⛔ A garancia: becsületes láncra nem állítható össze vád (próba; két lyukat betömtünk).
 - ✅ **D83 (Csaba, 2026-10-01):** a kiszolgálás (alapból csak a tudatpontos + a saját események;
-  készülékenként „mindent"; a kérő először a tudatpont-tartóktól) és a szigorú (b) időzítése (lent).
+  készülékenként „mindent"; a kérő először a tudatpont-tartóktól) és a szigorú (b) időzítése — ⛔ ez
+  utóbbit a **D84** még aznap visszavonta (lent).
 
 #### ⏭️⏭️ A KÖVETKEZŐ SESSION
 
@@ -49,11 +50,15 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
    a térrel) · a `fajlcsere` az események kézi útja (→ *csere*) · az `iro` a tár rétege (→ *alap*) · a
    `vizsga` nem parancssor-próba (→ *csere*). Az `egyeztetes` neve `tartomany` lett (a fájlé).
 2. ⭐ **A B PILLÉR** (a két tár és az érdeklődés szabálya) — a terv: [`alappillerek.md`](docs/alappillerek.md)
-   B (D75, D83). ⛔⛔ **A szigorú (b) — hogy a bulin csak a vállalt szeletek mozogjanak — a D és az E
-   UTÁN kapcsol: KÖZTES ÁLLAPOT, NEM VÉGLEGES** (D83/4): addig a készülék mindent tárol, mint ma.
-3. Utána: **D** (a kérelmezés) → ⏸️ az A-ból hátralévők (a D79 szúrópróba, a napló-alapú kettős-lánc
-   észlelés, a napló-bizonyíték logaritmikus kiszolgálása — 52.: ma lineáris) → **a szigorú (b)
-   bekapcsolása** az **E**-vel → **F**.
+   B (D75, D83, **D84**). ⛔⛔ **D84 (Csaba, 2026-10-01): NINCS KÖZTES ÁLLAPOT** — a D83/4 visszavonva
+   („csak bezavarna"); minden darab a végleges alakjában épül, és ha kell, a sorrendet felrúgjuk: az
+   jön előbb, ami alapja annak, amivel haladnánk. ⭐ A kiszolgálás korlátja („csak a tudatpontosat")
+   **csak a törzsre** vonatkozik; az eseményeket kiszolgálja, akinél megvannak. ⭐⭐ **Új pillér: G — a
+   címjegyzék** („mi kinél van" — több helyen, és a hálózat tudja, ki tudhatja).
+3. **Az átrendezett sor — JAVASLAT, Csaba megerősítésére vár** ([`alappillerek.md`](docs/alappillerek.md)
+   4.): B/1 (a vállalás) → B/2 (a két tár) → G → D → E → B/3 (a szigorú (b) bekapcsolása) → F + az
+   A-ból hátralévők. ⚠️ **Két nyitott kérdés a B-ben** (alappillérek B): a tartós tár határa (a B/1 előtt
+   kell) és az érintettek bejelentése (a B/3 előtt).
 
 #### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
@@ -150,7 +155,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D83 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D84 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -173,7 +178,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D83**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D84**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

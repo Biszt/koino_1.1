@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D83), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D84), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -87,13 +87,28 @@ elérhető része kész — a következő pillér a B.**
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
-⏭️ **A KÖVETKEZŐ PILLÉR (2026-10-01).** A megépítendő alak (D75, D83): két tár (tartós = vállalt:
-a tudatpontos szeletek és a saját eseményeim szeletei; átmeneti = látott, eldobható — a legrégebben
-megnézett megy, SK11) · a vállalás SZÁMÍTOTT (a tudatpontokból és a saját eseményekből) · a
-„megnézett" feljegyzése (a `hozd` és a felület megnyitásai) · a D14 csak a tartósra (a nem tartott
-entitás „nem tartod" jelzéssel látszik) · a csere `reszvesz`-e a vállalásból · a kiszolgálás D83
-szerint (alapból csak a tudatpontos + a saját események; készülékenként „mindent"). ⛔ **A szigorú (b)
-a D és az E UTÁN kapcsol — köztes állapot, NEM végleges** (D83/4).
+⏭️ **A KÖVETKEZŐ PILLÉR (2026-10-01).** A megépítendő alak (D75, D83, D84): két tár (tartós = vállalt:
+a tudatpontos szeletek és a saját eseményeim szeletei — ⚠️ a pontos határ nyitott kérdés, lásd lent;
+átmeneti = látott, eldobható — a legrégebben megnézett megy, SK11) · a vállalás SZÁMÍTOTT (a
+tudatpontokból és a saját eseményekből) · a „megnézett" feljegyzése (a `hozd` és a felület
+megnyitásai) · a D14 csak a tartósra (a nem tartott entitás „nem tartod" jelzéssel látszik) · a csere
+`reszvesz`-e a vállalásból · a kiszolgálás D83/D84 szerint (az eseményeket kiszolgálja, akinél
+megvannak; a **törzset** alapból csak a vállaló; készülékenként „mindent"). ⛔⛔ **NINCS KÖZTES ÁLLAPOT
+(D84/3):** a szigorú (b) a B végleges alakja, és az előfeltételei (G, D, E) elé kerülnek — a sorrend: 4.
+
+⚠️ **Két nyitott kérdés, ami a B-t érinti (2026-10-01, Csaba döntésére vár):** **(1) a tartós tár
+határa.** A D75/1 „a saját eseményeim szeleteit" is tartósnak mondja, de a pont-rendezésem maga is
+esemény az entitás szeletében — szó szerint a visszavett pontú szelet soha nem kerülne át az
+átmenetibe, holott ugyanez a pont kimondja, hogy átkerül. Tudatpont nélküli saját esemény: a
+visszavett pontú entitás, a meghívás / felhatalmazás / tanúsítás (a MÁSIK azonosság-szeletébe), az
+ellentmondás-bejelentés, az állásfoglalás. *Javaslat:* tartós = a tudatpontos szeletek + a saját
+azonosság-szeletem; a máshová írt saját eseményeimet mindig megtartom és kiszolgálom, de ESEMÉNYKÉNT,
+nem az egész szeletet (a D83/1 szövege); a meghívott szeletéről az E dönt. **(2) az érintettek
+bejelentése.** A javaslat és a szavazatai az ELSŐ érintett szeletébe kerülnek (`muveletek.js`: „a
+szeletnek egyetlen gazdája lehet") — egyesítésnél a második entitás tartói, áthelyezésnél az új szülő
+tartói nem látják (a 6. elágazás ennek a születésre szűkített esete). *Javaslat:* a gyerek-bejelentés
+mintájára a javaslat bejelentése minden érintett szelet egyeztetési halmazába bekerül (nem új
+esemény, csak a szelet halmaza bővül).
 
 A **tartós tár** a vállalt (tudatpontos szeletek, a saját eseményeim szeletei) — itt a csere teljes
 jogú résztvevője vagyok, és a D14 csak erre vonatkozik. Az **átmeneti tár** a látott (megnézett,
@@ -125,6 +140,25 @@ után ezek nem mind vannak meg — addig „nem ellenőrizhető" (D19). A cél: 
 A (b)-ben a nem közös szeletek minden körben „eltérőnek" látszanának. Ha társanként megjegyezzük a
 közös szeleteket és a legutóbbi lenyomatukat, a kör csak a változottakról szól.
 
+### G. ⭐⭐ A CÍMJEGYZÉK — „mi kinél van" (D84/2) — B-re épül, a D alapja
+
+> *„a meta adatok, amik megmutatják, hogy mi kinél található, azt több helyen kell tárolni, és
+> biztosítani, hogy az egész hálózat tudja, vagy tudja azt, hogy ki tudhatja."* — Csaba, 2026-10-01
+
+A szigorú (b) mellett egy szelet csak a tartóitól mozdul — aki kér (D), annak tudnia kell, kitől. Ma
+csak egy **helyi**, nem terjedő szelet-címjegyzék van (`tarsak.js`: név nélkül, a használat tartja
+karban, elévül; a `hozd` használja). A terv a skálázási tervben áll: **4.2** — a címjegyzék az
+entitáson (Csaba javaslata, 2026-09-02): ha minden szelet hozza a tartói címét és a gyerekeit, a
+böngészés a fa bejárása · **5.2–5.3** — a kereső-réteg elosztva és replikálva; a hash-elhelyezés épp
+a „tudja, ki tudhatja" (bárki kiszámolja, mely csomópontok felelnek egy szeletért). Ami eldöntött: a
+cím **név nélkül** (SK2), **bizalom nem jár vele** (3. szabály — hamis cím elérhetetlenséget okoz, nem
+hamisítást), **elhagyható** (2. szabály, 5.7), és **elhalványul**, ha már senki nem tartja (5.7).
+⏸️ **Nyitott:** a terjedés alakja (a `fajlTar.js` megjegyzése szerint aláírt, de mulandó üzenet — a
+tábla-kulcs írhatja alá, nem az azonosság, D6) · a hash-elhelyezés: a meglévő BitTorrent-DHT vagy a
+koinón belüli (SK7: A/B/középút — méréssel, S10: előbb irodalmi átvizsgálás) · ⚠️ csak a VÁLLALT
+szeleteket hirdetjük (a tudatpont úgyis nyilvános esemény), a megnézettet soha (D6: elárulná, mit
+néztem meg).
+
 ### Ami ezekre épül (nem pillér, hanem ház)
 
 A pakli-nézet a felületen (a prototípus láncos-testvéres nézete — ma egyszerűsített lista), később a
@@ -143,6 +177,26 @@ enélkül nem cserél).
 *Miért A előbb, mint B?* Mert a B-vel kezdődik a (b), és a (b) azonnal megnyitja a kettős lánc
 rését (a két ág külön szeletbe esik) — a D63 zárja be. *A sorrend elve (Csaba, 2026-09-15): ne az
 döntsön, mi látszik hamarabb, hanem a függőség.*
+
+⭐ **ÁTRENDEZVE (D84, 2026-10-01) — JAVASLAT, Csaba megerősítésére vár.** Nincs köztes állapot, tehát
+a szigorú (b) csak a végleges alakjában kapcsolhat be, és az előfeltételei elé kerülnek. Az A kész
+(helyben elérhető része); a további sor a függőségek szerint:
+
+1. **B/1 — a vállalás számítása** (tiszta függvény, a SAJÁT láncból: a kiosztás fájának kulcsai, D78 —
+   a terhe a saját tevékenységemmel nő). Ez mindennek az alapja: ezt hirdeti a G, ebből jön a csere
+   részvétele és a törzs kiszolgálása. ⚠️ Előtte kell a B (1) kérdés válasza.
+2. **B/2 — a két tár**: az átmeneti tár, a „megnézett", a D14 csak a tartósra, az eldobás. A csere
+   ekkor még a MAI módon fut (az átmenetibe csak a `hozd` és a D válaszai kerülnek) — új köztes
+   útvonal nélkül.
+3. **G — a címjegyzék** (előbb mérés / átvizsgálás: S10, SK7).
+4. **D — a kérelmezés** (a G-ből tudja, kitől; a válasz az átmeneti tárba megy; először a
+   tudatpont-tartóktól — D83/3).
+5. **E — az identitás a szeletelt világban** (az A-ra és a C-re épül, a G-től és a D-től független —
+   bárhol lehet a 6. előtt).
+6. **B/3 — a szigorú (b) bekapcsolása:** a csere `reszvesz`-e a vállalásból, a törzs kiszolgálása a
+   D84/1 szerint, és benne a B (2) kérdés (az érintettek bejelentése). Innen végleges.
+7. **F — a társankénti emlékezet** (hatékonyság a szigorú (b) alatt, nem helyesség), és az A-ból
+   hátralévők (a 24. elágazás szerint a D után).
 
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
@@ -209,4 +263,14 @@ döntsön, mi látszik hamarabb, hanem a függőség.*
 25. **2026-10-01 · a szigorú (b) bekapcsolása a B-vel együtt** (a D72 szövege: „nem köztes állapot")
     → **a D és az E után; addig KÖZTES ÁLLAPOT, NEM VÉGLEGES** · mert előtte az új készülékek indulása és a
     tagság ellenőrzése elakadna; ⚠️ addig a készülék mindent tárol (a „végtelen" próbáját ez a szakasz
-    nem állja ki) · D83/4.
+    nem állja ki) · D83/4. ⛔ **Visszavonva — lásd 26.**
+26. **2026-10-01 · a köztes állapot (D83/4)** → **visszavonva: nincs köztes állapot**; a szigorú (b) a B
+    végleges alakja, az előfeltételei (G, D, E) elé kerülnek, és ezért a sorrend átrendeződik (4.) ·
+    mert Csaba szerint „csak bezavarna" — és: „ha ezért fel kell rugnunk, az eredti fejlesztési
+    sorrendet, akkor rugjuk fel" · D84/3.
+27. **2026-10-01 · a kiszolgálás korlátja: minden szeletre („csak a tudatpontosat")** → **csak a
+    törzsre**; az eseményeket kiszolgálja, akinél megvannak · mert szó szerint ez már maga a szigorú (b)
+    lett volna (egy szelet csak a tartóitól mozdul) · D84/1.
+28. **2026-10-01 · „mi kinél van": helyi címjegyzék, a skálázási terv későbbi rétege** → **alappillér
+    (G)** · mert a szigorú (b) mellett a kérelmezés (D) enélkül nem tudja, kitől kérjen, és Csaba szerint
+    ezt „több helyen kell tárolni" · D84/2, e dokumentum G.
