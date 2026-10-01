@@ -98,9 +98,12 @@ node koino/meres/mind.js
 ```
 
 Harminchárom próba-fájl, **809 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
-a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is
-futtatható: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő részszóra illeszkedik — a `tar`
-a `tarsak` réteget is elindítja.
+a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy témakör
+(csoport) külön is futtatható: `node koino/meres/mind.js fa` — a csoportok: alap · allapot ·
+felulet · csere · fajl · fa · parancssor (a tagjaik a `mind.js` `CSOPORTOK`-jában). Egy
+próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A
+szűrő pontosan illeszkedik, és új próba-fájlt a `CSOPORTOK`-ba is be kell írni — különben a
+`mind.js` megnevezi és nem fut.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
 ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **205 fájl, 3523,4 KB**, nulla

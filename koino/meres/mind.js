@@ -1,11 +1,15 @@
-﻿// koino/meres/mind.js
+// koino/meres/mind.js
 
-// Felelősség: az ÖSSZES önpróba lefuttatása egy paranccsal.
+// Felelősség: az ÖSSZES önpróba lefuttatása egy paranccsal — vagy csak egy témakörükéi.
 //
-//   node koino/meres/mind.js            → mind, részletesen
-//   node koino/meres/mind.js szabaly    → csak amelyik nevében szerepel a szó
+//   node koino/meres/mind.js               → mind, részletesen
+//   node koino/meres/mind.js fa            → egy CSOPORT (lásd lent: CSOPORTOK)
+//   node koino/meres/mind.js fa csere      → több csoport együtt
+//   node koino/meres/mind.js eszlelo       → egyetlen próba-fájl (ha a neve nem csoport)
+//   node koino/meres/mind.js csak csere    → egyetlen próba-fájl akkor is, ha a neve csoport is
 //
-// A kilépési kód 1, ha bármi bukott — így egy szkript is észreveszi, nem csak a szem.
+// A kilépési kód 1, ha bármi bukott — így egy szkript is észreveszi, nem csak a szem. A 2 azt
+// jelenti, hogy nem is futott semmi (ismeretlen név, vagy hibás a besorolás).
 //
 // Miért nincs teszt-könyvtár? Mert nem kell: a próbák tiszta függvényeket mérnek, és a
 // keretrendszer csak egy újabb dolog lenne, amiben meg kellene bízni.
@@ -13,6 +17,8 @@
 // ⚠️ EZ AZ ELSŐ IMPORT, ÉS EZ FONTOS: elnémítja a naplót, mielőtt a próba-fájlok
 // betöltődnének (az `import` sorok a modul törzse ELŐTT futnak le).
 import { kiir } from './naplo.js';
+
+import { readdirSync } from 'node:fs';
 
 import kanonikus from './kanonikusProba.js';
 // ⭐ A kulcs-réteg lapja 2026-09-15-ig hiányzott — a személyazonosság volt méretlen.
@@ -45,9 +51,9 @@ import udpKapu from './udpKapuProba.js';
 // ⭐ Az író (D70, 2026-09-26) — koinónként és készülékenként egy folyamat fűz a tárhoz.
 import iro from './iroProba.js';
 import szovegDarab from './szovegDarabProba.js';
-// ⭐ A tartomány-egyeztetés (S4, D74, 2026-09-27) — hálózat nélkül. ⚠️ A név NEM „tartomany": a
-// `tar` szűrő részszóra illeszkedik, és a tár-próbákkal együtt indítaná.
-import egyeztetes from './tartomanyProba.js';
+// ⭐ A tartomány-egyeztetés (S4, D74, 2026-09-27) — hálózat nélkül. (2026-10-01-ig „egyeztetes”
+// volt a neve, mert a részszó-szűrő a `tar`-ra a tár-próbákkal együtt indította volna.)
+import tartomany from './tartomanyProba.js';
 // ⭐ Az összegző Merkle-fa (D78, 2026-09-27) — a két elrendezés, a bizonyítékok, a változás.
 import osszegzoFa from './osszegzoFaProba.js';
 // ⭐ A szerző lánc-gyökere (D78, az A pillér 2. lépése) — az új események `lancGyoker`-e.
@@ -57,6 +63,8 @@ import ellentmondas from './ellentmondasProba.js';
 // ⭐ Az észlelő (D82) — a beérkezett események körül bizonyítható ellentmondások.
 import eszlelo from './eszleloProba.js';
 
+// ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
+// próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
 const PROBAK = [
   { nev: 'kanonikus', futtat: kanonikus },
   { nev: 'kulcs', futtat: kulcs },
@@ -86,23 +94,118 @@ const PROBAK = [
   { nev: 'udpkapu', futtat: udpKapu },
   { nev: 'iro', futtat: iro },
   { nev: 'szovegdarab', futtat: szovegDarab },
-  { nev: 'egyeztetes', futtat: egyeztetes },
+  { nev: 'tartomany', futtat: tartomany },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
   { nev: 'ellentmondas', futtat: ellentmondas },
   { nev: 'eszlelo', futtat: eszlelo }
 ];
 
-const szuro = process.argv[2];
-const futtatandok = szuro
-  ? PROBAK.filter((p) => p.nev.includes(szuro.toLowerCase()))
-  : PROBAK;
+// ===== A CSOPORTOK (Csaba, 2026-10-01) =====
+//
+// ⛔⛔ A PRÓBÁK RENDJE: fejlesztés közben a változott témakör csoportja fut; a TELJES sor csak ha
+// KÖZÖS réteg változott (az esemény alakja, a kapu, a tár, a szabály-réteg), vagy egy lépés
+// lezárásakor, commit előtt. *(Miért kell mégis a teljes: a D81 alakváltása egyszerre három
+// csoport próbáit törte el.)*
+//
+// ⭐ A besorolást a próba-fájl TARTALMA döntötte el (amit mér), nem a neve:
+//   · a `fajlcsere` az ESEMÉNYEK kézi útja (`kivisz`/`behoz`, 4. szabály) — a „fájl” ott a
+//     hordozó, nem a kép vagy a csatolmány —, ezért a cseréé;
+//   · az `iro` a tár rétege (`js/tar/iro.js`, D70) — az alapé;
+//   · a `vizsga` két készülék cseréje a programon belül, az UDP-kapun — a cseréé (folyamatot
+//     csak a parancssor-próba indít);
+//   · a `felulet` a felületnek felelő réteg: a helyi kapu, a pakli és a belépő tér.
+//
+// ⛔ A szűrő PONTOSAN illeszkedik: a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is elindította.
+const CSOPORTOK = {
+  // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
+  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro'],
+  // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'felszabaditas', 'identitas'],
+  // a felületnek felelő réteg
+  felulet: ['kapu', 'pakli', 'ter'],
+  // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'udpkapu', 'kotes', 'tabla', 'dht', 'vizsga'],
+  // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
+  fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
+  // az A pillér: az összegző Merkle-fa és ami rá épül
+  fa: ['osszegzofa', 'lancgyoker', 'ellentmondas', 'eszlelo'],
+  // a kézi út a parancssorból, külön folyamatokban (viselkedést mér, nem feliratot)
+  parancssor: ['parancssor']
+};
 
-if (!futtatandok.length) {
-  console.error('Nincs ilyen próba: ' + szuro);
-  console.error('Választható: ' + PROBAK.map((p) => p.nev).join(', '));
+// A `meres/` mappa `*Proba.js` fájljai közül, ami NEM önpróba (nem ide tartozik, külön futtatandó).
+const NEM_ONPROBA = [
+  'ebredes' // mérés két hálózat között, paraméterekkel (`ebredesProba.js fut | res <cím> <port>`)
+];
+
+// ===== A BESOROLÁS-ŐR =====
+//
+// ⛔ Minden próba-fájl PONTOSAN EGY csoportban van, és minden `*Proba.js` fájl itt van — különben
+// semmi nem fut. Egy új próba-fájl így nem maradhat ki némán: a 2026-10-01-i átnézéskor a tervezett
+// csoport-lista a 33-ból egyet (a `kapu`-t, 38 próbával) kihagyott.
+const besorolasHibak = [];
+const csoportja = new Map(); // próba neve → csoport
+for (const [csoport, nevek] of Object.entries(CSOPORTOK)) {
+  for (const nev of nevek) {
+    if (!PROBAK.some((p) => p.nev === nev)) besorolasHibak.push('a „' + csoport + '” csoportban ismeretlen próba: ' + nev);
+    else if (csoportja.has(nev)) besorolasHibak.push(nev + ': két csoportban is (' + csoportja.get(nev) + ', ' + csoport + ')');
+    else csoportja.set(nev, csoport);
+  }
+}
+for (const p of PROBAK) {
+  if (!csoportja.has(p.nev)) besorolasHibak.push(p.nev + ': egyik csoportban sincs');
+}
+const fajlok = readdirSync(new URL('.', import.meta.url))
+  .filter((f) => f.endsWith('Proba.js'))
+  .map((f) => ({ fajl: f, nev: f.slice(0, -'Proba.js'.length).toLowerCase() }));
+for (const { fajl, nev } of fajlok) {
+  if (!NEM_ONPROBA.includes(nev) && !PROBAK.some((p) => p.nev === nev)) {
+    besorolasHibak.push(fajl + ': a mappában van, de a `mind.js` nem futtatja');
+  }
+}
+for (const p of PROBAK) {
+  if (!fajlok.some((f) => f.nev === p.nev)) besorolasHibak.push(p.nev + ': nincs ilyen nevű próba-fájl');
+}
+
+if (besorolasHibak.length) {
+  console.error('⛔ A próbák besorolása hibás (mind.js — PROBAK, CSOPORTOK, NEM_ONPROBA):');
+  for (const h of besorolasHibak) console.error('   · ' + h);
   process.exit(2);
 }
+
+// ===== A VÁLASZTÁS =====
+
+const argok = process.argv.slice(2).map((a) => a.toLowerCase());
+const valasztott = new Set();
+const ismeretlenek = [];
+
+if (argok[0] === 'csak') {
+  // Csak próba-fájl nevek — a csoportnévvel egyező fájl is így érhető el egymagában.
+  if (argok.length < 2) ismeretlenek.push('(a „csak” után próba-fájl neve kell)');
+  for (const nev of argok.slice(1)) {
+    if (csoportja.has(nev)) valasztott.add(nev);
+    else ismeretlenek.push(nev);
+  }
+} else {
+  for (const nev of argok) {
+    if (CSOPORTOK[nev]) for (const p of CSOPORTOK[nev]) valasztott.add(p);
+    else if (csoportja.has(nev)) valasztott.add(nev);
+    else ismeretlenek.push(nev);
+  }
+}
+
+if (ismeretlenek.length) {
+  console.error('Nincs ilyen csoport vagy próba: ' + ismeretlenek.join(', '));
+  console.error('A csoportok (a név pontosan illeszkedik):');
+  for (const [csoport, nevek] of Object.entries(CSOPORTOK)) console.error('   ' + csoport + ': ' + nevek.join(', '));
+  console.error('Egy csoportnévvel egyező próba-fájl egymagában: node koino/meres/mind.js csak <név>');
+  process.exit(2);
+}
+
+const futtatandok = argok.length ? PROBAK.filter((p) => valasztott.has(p.nev)) : PROBAK;
+
+// ===== A FUTÁS =====
 
 let osszes = 0, sikeres = 0;
 const bukottak = [];
@@ -121,6 +224,10 @@ const SZIN = process.stdout.isTTY
   : { jo: '', nem: '', vastag: '', vege: '' };
 
 console.log('\n' + SZIN.vastag + '───── ÖSSZESEN ─────' + SZIN.vege);
+// ⭐ Ha csak egy része futott, azt kimondjuk — a részleges próbaszám ne látsszon a teljes sornak.
+if (argok.length) {
+  kiir('Csak: ' + argok.join(' ') + ' — ' + futtatandok.length + ' próba-fájl a ' + PROBAK.length + '-ből');
+}
 // ⭐ Az ismert hibák ELŐBB, az összegzés UTOLJÁRA — a telefon `tail -3`-ja így is az összegzést
 // látja (lásd `probaFuttato.js`, „AZ ISMERT HIBA").
 if (ismertHibak.length) {

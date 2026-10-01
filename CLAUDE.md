@@ -43,12 +43,11 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
 
 #### ⏭️⏭️ A KÖVETKEZŐ SESSION
 
-1. ⭐ **ELSŐ FELADAT: a próbák témakörök szerinti CSOPORTJAI a `mind.js`-ben** (Csaba, 2026-10-01) —
-   *alap* (kanonikus, kulcs, esemény, tár) · *allapot* (állapot, javaslat, szabály, egyezmény,
-   felszabadítás, identitás, pakli, tér) · *csere* (csere, társak, egyeztetés, udpkapu, kötés, tábla,
-   dht, iro) · *fajl* (fájl, fájligény, fájlkérelem, fájlátvitel, fájlcsere, szövegdarab) · *fa*
-   (összegzőfa, láncgyökér, ellentmondás, észlelő) · *parancssor* (parancssor, vizsga) — a mai részszó-
-   szűrő helyett (a `tar` a `tarsak`-ot is indítja). ⚠️ A pontos besorolást a próba-fájlok tartalma döntse el.
+1. ✅ **KÉSZ (2026-10-01): a próbák témakörök szerinti CSOPORTJAI a `mind.js`-ben** — hét csoport,
+   pontos szűrővel és besorolás-őrrel (lásd *Futtatás → Önpróbák*). ⚠️ A tervezett listától a
+   tartalom szerint négy helyen tér el: a `kapu` kimaradt belőle (→ új *felulet* csoport a paklival és
+   a térrel) · a `fajlcsere` az események kézi útja (→ *csere*) · az `iro` a tár rétege (→ *alap*) · a
+   `vizsga` nem parancssor-próba (→ *csere*). Az `egyeztetes` neve `tartomany` lett (a fájlé).
 2. ⭐ **A B PILLÉR** (a két tár és az érdeklődés szabálya) — a terv: [`alappillerek.md`](docs/alappillerek.md)
    B (D75, D83). ⛔⛔ **A szigorú (b) — hogy a bulin csak a vállalt szeletek mozogjanak — a D és az E
    UTÁN kapcsol: KÖZTES ÁLLAPOT, NEM VÉGLEGES** (D83/4): addig a készülék mindent tárol, mint ma.
@@ -93,7 +92,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   (scratchpad) jó. **Abszolút útvonalak** (a .NET más
   munkakönyvtárból dolgozik: egyszer egy üres `koino/CLAUDE.md` lett belőle).
 - ⛔⛔ **A PRÓBÁK RENDJE (Csaba, 2026-10-01):** session-nyitáskor („nézd át") **NEM futtatunk próbát**;
-  fejlesztés közben **témakörönként** (a csoportok: lásd *A KÖVETKEZŐ SESSION* 1.); **a teljes sor** csak
+  fejlesztés közben **témakörönként** (`node koino/meres/mind.js <csoport>` — lásd *Futtatás → Önpróbák*); **a teljes sor** csak
   ha KÖZÖS réteg változott (az esemény alakja, a kapu, a tár, a szabály-réteg), vagy egy lépés
   lezárásakor, commit előtt. *(Miért kell mégis a teljes: a D81 alakváltása egyszerre három csoport
   próbáit törte el.)*
@@ -325,6 +324,7 @@ node koino/koino.js ellenoriz                       # ⭐ D82: a tár MINDEN ese
                                  # A fájl alakja a táré: a másolt esemenyek.jsonl is behozható.
                                  # ⛔ A kapu UGYANAZ: az átírt esemény itt is elbukik.
 node koino/meres/mind.js         # a 809 önpróba
+node koino/meres/mind.js fa      # ⭐ egy témakör (csoport): alap · allapot · felulet · csere · fajl · fa · parancssor
 node koino/meres/skalaMeres.js   # SKÁLA-MÉRÉS (nem önpróba: számokat ad, nem igen/nem-et)
 node koino/meres/szeletTarMeres.js [darab]  # ⭐ A TÁR ALAKJA (49.): szelet-fájlok vs egy adatfájl + mutató,
                                  # és a valódi tár megnyitása (D73) — alapból 100 000 esemény, ~6 perc
@@ -392,7 +392,7 @@ node koino/koino.js tars 127.0.0.1 7373 "A készülék" && node koino/koino.js c
 ⚠️ **A KOINO NEM BÖNGÉSZŐBEN FUT (D29, 2026-08-28).** Csaba döntése: *„hagyjuk is el a böngészős részt, mert csak bezavar. A tiszta P2P kapcsolatra koncentráljunk."* Indok: a böngésző korlátai nem a koino korlátai — egy lap nem tud portot nyitni, nem fogad kapcsolatot, elrejti a saját címeit, és bezáráskor eltűnik; a P2P-hez emlegetett infrastruktúra (jelzőpont, STUN, továbbító) jórészt EBBŐL következik. A böngésző később lehet egy kliens, de nem ő szabja meg, mire képes a koino.
 
 - **Nincs telepítendő függőség** — a kriptográfia a Node beépített WebCryptójából jön (Ed25519 natívan). Az adat a `koino-adat/` mappában él, **hozzáfűzhető** fájlban (soronként egy aláírt esemény); máshová a `KOINO_ADAT` változóval tehető.
-- **Önpróbák:** `node koino/meres/mind.js` — 809 próba harminchárom fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy réteg külön is: `node koino/meres/mind.js szabaly`. ⚠️ A szűrő **részszóra** illeszkedik: a `tar` a `tarsak`-ot is elindítja (13 + 26 = 39) — ez nem hiba, de a próbaszám olvasásakor félrevezet. Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
+- **Önpróbák:** `node koino/meres/mind.js` — 809 próba harminchárom fájlban (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de a sort nem pirosítja be — ha átmegy, az bukás; ma egy sincs); a kilépési kód 1, ha bármi bukott. ⭐ **Témakörönként (2026-10-01):** `node koino/meres/mind.js <csoport> [<csoport> …]` — **alap** (kanonikus, kulcs, esemény, tár, író) · **allapot** (állapot, javaslat, szabály, egyezmény, felszabadítás, identitás) · **felulet** (kapu, pakli, tér) · **csere** (csere, fájlcsere, társak, tartomány, udpkapu, kötés, tábla, dht, vizsga) · **fajl** (fájl, fájligény, fájlkérelem, fájlátvitel, szövegdarab) · **fa** (összegzőfa, láncgyökér, ellentmondás, észlelő) · **parancssor**. Egy próba-fájl a nevével (`mind.js eszlelo`), és ha a neve csoport is: `mind.js csak csere`. A szűrő **pontosan** illeszkedik (a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is indította), és a részleges futás az összegzésben kimondja magát (`Csak: fa — 4 próba-fájl a 33-ből`). ⛔ **A besorolás-őr:** minden próba-fájl pontosan egy csoportban van, és a `meres/` minden `*Proba.js` fájlja be van kötve (kivétel a `NEM_ONPROBA` listán: az `ebredesProba.js` mérés) — ha nem, a `mind.js` semmit nem futtat (kilépési kód 2), és megnevezi, mi hiányzik. *Új próba-fájlnál tehát a `CSOPORTOK`-ba is be kell írni.* Nincs teszt-könyvtár. A koino részletes naplója alapból néma, `KOINO_NAPLO=1`-gyel kapcsolható be.
 - ⚠️ A `koino/koino.js` **fejlesztői eszköz**, nem a koino felülete — a valódi felület a prototípus pakli-nézetéből öröklődik (lásd [`docs/felulet_terv.md`](docs/felulet_terv.md)).
 
 ### A PROTOTÍPUS (`backend/` + `frontend/` — Fázis 1, befagyasztva)

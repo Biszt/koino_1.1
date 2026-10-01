@@ -8,7 +8,8 @@
 // (4) a teljes tartomány lenyomata UGYANAZ, mint a tár szelet-lenyomata (egy forrásból); (5) a
 // hibás üzenetet megnevezett hibával elutasítjuk.
 //
-// ⚠️ A csere ma még nem hívja (a C lépés 8. pontja köti be) — ez a réteg próbája, nem a bekötésé.
+// ⚠️ Ez a réteg próbája, nem a bekötésé: a párbeszéd (`vonal.js`) a C lépés 8. pontja óta
+// (2026-09-27) ezen fut — a bekötést a `csereProba.js` és a `vizsgaProba.js` méri.
 
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
