@@ -21,6 +21,10 @@
 //
 // Használják: az esemény-réteg (aláírás, azonosító), és minden, ami hash-t számol.
 
+// ⭐ A SZINKRON lenyomathoz (`lenyomatSzinkron`) a Node beépített hash-e kell — nem függőség
+// (6. szabály), ugyanaz a SHA-256, amit a `tar/iro.js` is használ.
+import { createHash } from 'node:crypto';
+
 // ===================================
 // A KANONIKUS ALAK SZABÁLYAI
 // ===================================
@@ -148,6 +152,22 @@ export function kanonikusBajtok(ertek) {
 export async function lenyomat(ertek) {
   const bajtok = kanonikusBajtok(ertek);
   const hash = await crypto.subtle.digest('SHA-256', bajtok);
+  return bajtokBase64Url(new Uint8Array(hash));
+}
+
+/**
+ * ⭐ A lenyomat SZINKRON változata (D85, 2026-10-02) — UGYANAZ a SHA-256 ugyanazokon a kanonikus
+ * bájtokon, tehát ugyanaz az eredmény, mint a `lenyomat`-é (próba őrzi: `kanonikusProba.js`).
+ *
+ * ⚠️ MIÉRT KELL? Mert az állapot-számítás SZINKRON (`allapotSzamitasa`), és a töredékek levezetett
+ * azonosítóját ott kell kiszámolni (`szabalyok.js`, `toredekAzonosito`). Az aszinkron változat a
+ * WebCryptóé; ez a Node beépített hash-éé. *Két út, egy eredmény — és a próba mondja meg, ha nem.*
+ *
+ * @param {*} ertek
+ * @returns {string} 43 karakteres azonosító
+ */
+export function lenyomatSzinkron(ertek) {
+  const hash = createHash('sha256').update(kanonikusBajtok(ertek)).digest();
   return bajtokBase64Url(new Uint8Array(hash));
 }
 

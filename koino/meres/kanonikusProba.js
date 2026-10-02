@@ -4,7 +4,7 @@
 // a különböző adatok lenyomata tényleg különbözik. Ha ez valaha pirosat mutat, a koino két
 // gépe nem fog egyetérteni.
 
-import { kanonikusSzoveg, lenyomat } from '../js/esemeny/kanonikusAlak.js';
+import { kanonikusSzoveg, lenyomat, lenyomatSzinkron } from '../js/esemeny/kanonikusAlak.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A kanonikus alak próbája');
@@ -120,6 +120,23 @@ proba('REGRESSZIÓ: a rögzített lenyomat változatlan', async () => {
     console.warn('A horgony-lenyomat megváltozott! Mostani érték:', most);
   }
   return most === HORGONY_LENYOMAT;
+});
+
+// ===== ⭐ D85: A SZINKRON LENYOMAT UGYANAZ =====
+// A töredékek levezetett azonosítója a szinkron állapot-számításban születik (`szabalyok.js`,
+// `toredekAzonosito`), a WebCrypto viszont csak aszinkron. Ha a kettő valaha eltérne, a töredékre
+// tett pont más entitásra mutatna, mint amit az állapot kiszámol — némán.
+proba('⭐ D85: a SZINKRON lenyomat ugyanazt adja, mint az aszinkron (és a horgonyt is)', async () => {
+  const ertekek = [
+    HORGONY_ADAT,
+    { fajta: 'toredek', javaslat: 'a'.repeat(43), entitas: 'b'.repeat(43) },
+    { b: [3, 1, 2], a: { é: 'é', z: null } },
+    'egyszerű szöveg', 0, [], {}
+  ];
+  for (const ertek of ertekek) {
+    if (lenyomatSzinkron(ertek) !== await lenyomat(ertek)) return false;
+  }
+  return lenyomatSzinkron(HORGONY_ADAT) === HORGONY_LENYOMAT;
 });
 
 export default futtatas;

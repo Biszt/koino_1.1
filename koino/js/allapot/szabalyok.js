@@ -30,6 +30,8 @@
 //
 // Használják: allapotSzamitas.js (és rajta keresztül minden számítás).
 
+import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
+
 // ===================================
 // A TUDATPONT-KERET
 // ===================================
@@ -204,6 +206,54 @@ export function elsoErintett(adat) {
 }
 
 // ===================================
+// ⭐⭐ A TÖREDÉKEK (D85/5, T1 — Csaba, 2026-10-02)
+// ===================================
+//
+// A prototípus egy több gondolatot érintő javaslatot TÖREDÉKEKRE bont: érintettenként egy külön
+// javaslatot (`javaslatService.js`, `toredekCsoportId` · `toredekSorszam` · `toredekDarab`), és
+// mindegyik a SAJÁT érintettje gyereke — így minden érintett gondolat alatt megjelenik.
+//
+// ⭐ A koinóban egy aláírt `Javaslat` esemény van (a döntés érintettenkénti RÉSZEI 2026-09-07 óta
+// számítottak), és a töredék ENTITÁS is számított: esemény nélkül, LEVEZETETT azonosítóval — ahogy
+// a különvált ág is (`szerkesztesiVegrehajtas.js`). Erre kerül a pont, ez a kártya, ez lép
+// egyezmény-fázisba (D85/4).
+// ⛔ T1: több érintettnél a CSOPORTNAK NINCS saját entitása — a szavazók a töredékekre tesznek
+// pontot, így a csoport pont nélkül születne, és a D14 azonnal elfelejtené. A csoport döntése (az
+// ÉS) számított marad (`javaslatSzamitas.js`), a javaslat azonosítója alatt.
+
+/**
+ * Egy töredék levezetett azonosítója. ⚠️ SZINKRON (az állapot-számítás szinkron), és a `fajta`
+ * címke miatt nem ütközhet más levezetéssel (a különváláséval sem).
+ *
+ * @param {string} javaslat - a `Javaslat` esemény azonosítója (a csoport)
+ * @param {string} entitas - az érintett entitás
+ * @returns {string} 43 jeles azonosító
+ */
+export function toredekAzonosito(javaslat, entitas) {
+  return lenyomatSzinkron({ fajta: 'toredek', javaslat, entitas });
+}
+
+/**
+ * Egy `Javaslat` esemény ENTITÁSAI: egy érintettnél maga a javaslat, többnél a töredékei.
+ *
+ * ⭐ EZ AZ EGYETLEN FORRÁS arra, hogy egy javaslatból mely entitás(ok) lesz(nek): az állapot, a
+ * szabály-réteg, a döntés és a művelet (a kezdő pont) mind innen veszi.
+ *
+ * @param {Object} javaslatEsemeny
+ * @returns {Array<{azonosito: string, resz: Object, sorszam: number, darab: number, toredek: boolean}>}
+ */
+export function javaslatEntitasai(javaslatEsemeny) {
+  const kik = erintettek(javaslatEsemeny?.adat);
+  if (kik.length <= 1) {
+    return [{ azonosito: javaslatEsemeny.azonosito, resz: kik[0] ?? null, sorszam: 1, darab: 1, toredek: false }];
+  }
+  return kik.map((resz, i) => ({
+    azonosito: toredekAzonosito(javaslatEsemeny.azonosito, resz.entitas),
+    resz, sorszam: i + 1, darab: kik.length, toredek: true
+  }));
+}
+
+// ===================================
 // ⛔⛔ EGY PONT-ESEMÉNY MÉRLEGE — A SZABÁLY ÉS A MŰVELET KÖZÖS FORRÁSA (2026-09-26, 43. mérés)
 // ===================================
 //
@@ -363,8 +413,16 @@ export function szabalyokErvenyesitese(esemenyek) {
       entitasTipusok.set(e.azonosito, e.adat?.tipus ?? 'Gondolat');
       szulok.set(e.azonosito, e.adat?.szulo ?? null);
     } else if (e.tipus === 'Javaslat') {
+      // ⚠️ A javaslat azonosítója a DÖNTÉSÉ (az egyezményé is) — az állásfoglalás hatóköre ehhez
+      // kötődik, ezért több érintettnél is bejegyezzük (a szülője az első érintett).
       entitasTipusok.set(e.azonosito, 'Javaslat');
       szulok.set(e.azonosito, elsoErintett(e.adat));
+      // ⭐ D85/5: a töredékek is entitások — a saját érintettjük gyerekei.
+      for (const je of javaslatEntitasai(e)) {
+        if (!je.toredek) continue;
+        entitasTipusok.set(je.azonosito, 'Javaslat');
+        szulok.set(je.azonosito, je.resz.entitas);
+      }
     }
   }
 

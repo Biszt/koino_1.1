@@ -21,7 +21,7 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege } from './allapot/szabalyok.js';
+import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege, javaslatEntitasai } from './allapot/szabalyok.js';
 // ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
@@ -702,7 +702,8 @@ export function gondolatTipusLetrehozasa(kornyezet, adatok) {
  *        számoljuk (különben a bemondott összeg elcsúszhatna attól, amit az ellenőrző
  *        kiszámol). A paraméter csak a régi hívások kedvéért maradt meg.
  */
-export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'aktiv', _marKiosztott) {
+export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'aktiv', _marKiosztott,
+                                         beallitas = {}) {
   if (!Number.isInteger(pont) || pont < 0) {
     throw new Error('A tudatpont csak egész szám lehet, és nem lehet negatív.');
   }
@@ -727,7 +728,9 @@ export async function tudatpontRendezese(kornyezet, entitas, pont, szerep = 'akt
     kornyezet,
     'TudatpontRendezes',
     adat,
-    { entitas, horgonyozzunk: true }   // a tudatpont mozgatja a részvételi arányt → a határidőt is
+    // a tudatpont mozgatja a részvételi arányt → a határidőt is. ⭐ D85: a javaslattevő pontja a
+    // javaslat időbélyegét viseli (`beallitas.ido`), hogy a támogató szavazata ELŐTT számítson.
+    { entitas, horgonyozzunk: true, ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}) }
   );
 }
 
@@ -821,6 +824,25 @@ export function ertekJavaslat(kornyezet, entitas, ertekek) {
 // ===================================
 
 /**
+ * ⭐ D85/5: a kezdő pont szétosztása a töredékek között — a prototípus
+ * `elosztottTudatpontokKiszamitasa`-ja szerint: mindegyik kap 1-et, a maradék körbe jár.
+ *
+ * @param {number} osszes - a kezdő pont (legalább annyi, ahány töredék)
+ * @param {number} darab - a töredékek száma
+ * @returns {Array<number>}
+ */
+export function kezdoPontokElosztasa(osszes, darab) {
+  if (osszes < darab) {
+    throw new Error('A kezdő pont kevesebb, mint a töredékek száma (' + osszes + ' < ' + darab
+      + ') — minden töredékre legalább 1 kell.');
+  }
+  const elosztas = new Array(darab).fill(1);
+  let maradek = osszes - darab;
+  for (let i = 0; maradek > 0; i = (i + 1) % darab, maradek--) elosztas[i]++;
+  return elosztas;
+}
+
+/**
  * Javaslatot tesz. A `fajta` dönti el, mi történik elfogadáskor (D27):
  *   'szerkesztesi' → a koino végrehajtja a változást
  *   'altalanos'    → nem történik semmi automatikusan; az egyezmény MAGA az álláspont
@@ -840,12 +862,21 @@ export function ertekJavaslat(kornyezet, entitas, ertekek) {
  * (az aláírás a régi bájtokra szól). Ha a hívó alakja eltérne az esemény alakjától, a kettő
  * előbb-utóbb szétcsúszna.
  *
+ * ===== ⭐⭐ D85 (Csaba, 2026-10-02): LÉTREHOZÁS → PONT A JAVASLATRA → SZAVAZAT, EGY LÉPÉSBEN =====
+ *
+ * A javaslat is entitás (D14: pont nélkül nem létezik), és a szavazati jog a javaslaton tett pontot
+ * is kívánja (D85/2) — ezért a kezdő pont a művelet része, nem a hívóé (2026-10-02-ig az öt hívó
+ * mind külön tette fel, a szavazat UTÁN). Egy érintettnél a javaslatra kerül; többnél a TÖREDÉKEKRE
+ * oszlik (D85/5), a prototípus szerint: mindegyikre legalább 1, a maradék körbe.
+ *
  * @param {Object} kornyezet
- * @param {Object} adatok - { erintettek: [{entitas, muvelet, valtozas}], indoklas, fajta }
- *        vagy a RÉGI alak: { erintett, muvelet, valtozas, indoklas, fajta }
+ * @param {Object} adatok - { erintettek: [{entitas, muvelet, valtozas}], indoklas, fajta, pont }
+ *        vagy a RÉGI alak: { erintett, muvelet, valtozas, indoklas, fajta, pont }
+ *        — a `pont` a kezdő tudatpont (alapból töredékenként 1); több érintettnél ennyi oszlik szét
  */
 export async function javaslatLetrehozasa(kornyezet, adatok) {
   const { erintett, muvelet, valtozas, indoklas, fajta } = adatok;
+  const kezdoPont = Number.isInteger(adatok.pont) && adatok.pont > 0 ? adatok.pont : null;
 
   // A régi, egy-érintettes hívás listává alakul — így egyetlen alak megy az eseménybe.
   const lista = Array.isArray(adatok.erintettek)
@@ -885,6 +916,19 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
     // egyetlen gazdája lehet.
     { entitas: erintettek[0].entitas }
   );
+
+  // ===================================
+  // ⭐⭐ D85: A KEZDŐ PONT A JAVASLATRA (vagy a töredékeire) — A SZAVAZAT ELŐTT
+  // ===================================
+  //
+  // ⚠️ Ugyanaz az időbélyeg, mint a javaslaté (mint a szavazatnál lent): az időrendi számítás így
+  // a saját lánc sorrendjében veszi — előbb a pont, aztán a szavazat.
+  const entitasai = javaslatEntitasai(javaslat);
+  const elosztas = kezdoPontokElosztasa(kezdoPont ?? entitasai.length, entitasai.length);
+  for (let i = 0; i < entitasai.length; i++) {
+    await tudatpontRendezese(kornyezet, entitasai[i].azonosito, elosztas[i], 'aktiv', undefined,
+      { ido: javaslat.ido });
+  }
 
   // ===================================
   // ⭐⭐ ÉS A JAVASLATTEVŐ TÁMOGATÓ SZAVAZATA — UGYANEBBEN A LÉPÉSBEN

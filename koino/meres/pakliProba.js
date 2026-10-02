@@ -23,6 +23,7 @@ import {
 import { ALAP_KUSZOBOK } from '../js/allapot/javaslatSzamitas.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉRDEZHETŐ PAKLI (Szakasz 5 / 5.2)');
 
@@ -849,6 +850,50 @@ proba('⭐⭐ D85/4: elfogadás után a kártya EGYEZMÉNY — ugyanaz az azonos
       && utana?.tipus === 'Egyezmeny' && utana.javaslat.statusz === 'elfogadva'
       && utana.osszesPont === elotte.osszesPont && utana.osszesPont === 100
       && utana.szulo === elotte.szulo;
+  });
+
+// ⭐⭐ D85/5: a több érintettes javaslat MINDEN érintett gondolat alatt megjelenik — a töredéke
+// kártyájaként, a SAJÁT részével (művelet, érintett, „1/2”); elfogadás után mindegyik egyezmény.
+proba('⭐⭐ D85/5: a TÖREDÉK-KÁRTYÁK minden érintett alatt, a saját részükkel — és egyezmény lesz belőlük',
+  async () => {
+    const { tar, anna } = await ujKoino();
+    const kezdet = Date.UTC(2026, 0, 1);
+    const g = [];
+    for (const cim of ['ELSŐ', 'MÁSODIK']) {
+      const x = await anna.tesz('GondolatLetrehozas', { tipus: 'Gondolat', cim, meret: 10 }, kezdet);
+      await esemenyMentese(tar, x);
+      await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: x.azonosito, pont: 200 }, kezdet));
+      await esemenyMentese(tar, await anna.tesz('ErtekJavaslat', { entitas: x.azonosito,
+        ertekek: { elfogadasiKuszob: 51, reszveteliKuszob: 0, minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 } },
+        kezdet));
+      g.push(x);
+    }
+    const j = await anna.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek: [
+      { entitas: g[0].azonosito, muvelet: 'Modositas', valtozas: { cim: 'ÚJ ELSŐ' } },
+      { entitas: g[1].azonosito, muvelet: 'Athelyezes', valtozas: { szulo: g[0].azonosito } }
+    ] }, kezdet + 1000);
+    await esemenyMentese(tar, j);
+    const t = g.map((x) => toredekAzonosito(j.azonosito, x.azonosito));
+    for (const ti of t) {
+      await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: ti, pont: 50 }, kezdet + 1500));
+    }
+    await esemenyMentese(tar, await anna.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' },
+      kezdet + 2000));
+
+    const nyitva = (await pakliOldal(tar, KOINO, { most: kezdet + 3000, szerzo: anna.szerzo })).kartyak;
+    const k = t.map((ti) => nyitva.find((x) => x.azonosito === ti));
+    const reszJo = k.every((x, i) => x !== undefined && x.tipus === 'Javaslat'
+      && x.szulo === g[i].azonosito
+      && x.javaslat.erintett === g[i].azonosito
+      && x.javaslat.toredek?.sorszam === i + 1 && x.javaslat.toredek.darab === 2
+      && x.javaslat.szavazhatok === true);
+    const muveletJo = k[0]?.javaslat.muvelet === 'Modositas' && k[1]?.javaslat.muvelet === 'Athelyezes';
+
+    const lezarva = (await pakliOldal(tar, KOINO, { most: kezdet + 30 * 24 * 3600 * 1000 })).kartyak;
+    const egyezmenyek = t.map((ti) => lezarva.find((x) => x.azonosito === ti));
+    return reszJo && muveletJo
+      && !nyitva.some((x) => x.azonosito === j.azonosito)          // a csoport nem kártya
+      && egyezmenyek.every((x) => x?.tipus === 'Egyezmeny');
   });
 
 proba('⭐ D85/4: az ELVETETT javaslat javaslat marad — egyezmény csak elfogadásból lesz', async () => {

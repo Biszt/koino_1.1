@@ -4448,6 +4448,29 @@ róluk döntenek, és a javaslat élete elszakad a döntéstől. A prototípus m
 mindegyikre legalább 1) · a csomag-javaslat (a prototípusban a létrehozó választ tárhelyet; a P2P-ben még
 nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
 
+#### PONTOSÍTÁS A KÓDBÓL (2026-10-02 este, Csaba döntései — T1–T3)
+
+- ⭐ **T1 (a D85/5 helyett):** több érintettnél a CSOPORTNAK NINCS saját entitása — a töredékek az
+  entitások, és elfogadáskor MINDEGYIK a saját gondolata alatt lép egyezmény-fázisba (mint egy
+  érintettnél maga a javaslat). *Miért:* a szavazók a töredékekre tesznek pontot, így a csoport-entitás
+  pont nélkül születne, és a D14 azonnal elfelejtené az egyezményt. A csoport döntése (az ÉS) számított
+  marad, a javaslat azonosítója alatt. ⚠️ Eltérés a prototípustól: ott egy egyezmény-dokumentum született
+  a tárhelyen.
+- ⭐ **T2 (a D85/2 kiegészítése): a szavazat maga hozza a szavazati jog bizonyítékát** (a D81 mintája):
+  a szavazó kiosztás-fájából rövid bizonyíték, hogy a szavazás pillanatában pontja volt az érintett
+  gondolaton és a javaslaton (töredékén); a kapu ellenőrzi. *Miért:* különben a javaslat pontjai a
+  döntés bemenetévé válnának, és a gondolat nem szavazó tartóinak tartaniuk kellene őket.
+- ⏸️ **T3 (a D85/6 kevés):** a közös lezárás és az ÉS miatt a G1 sorsához a G2-es rész MINDEN bemenete
+  kell (a G2 tulajdonosai és küszöbei a lezárásig) — a G1 nem szavazó tartóinak is. Csaba: *„nem
+  szeretnék átmeneti megoldást. ha a (b) a jobb hosszútávon, akkor legyen a (b)"* — a (b) (ellenőrizhető
+  összegzés) és az (a) (a többi érintett döntési bemenete bejelentésként minden érintettnél) közti
+  választás tisztázásra vár (lásd a session-jegyzőkönyvet: az (a) teljes, nem átmeneti megoldás).
+- **A megépítés állása:** D85/4 (az egyezmény-fázis a kártyán) ✅ `cbb6f19` · a töredékek mint entitások,
+  a pakli töredék-kártyája, a szavazás töredék → csoport fordítása, a javaslattevő lépése (létrehozás →
+  pont → szavazat a művelet-rétegben; a pont a prototípus szerint oszlik: mindegyikre legalább 1, a
+  maradék körbe) ✅ (ez a lépés) · ⏭️ a szavazati jog (pont a javaslaton is) és a T2 bizonyítéka ·
+  ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
+
 ### D86. A TARTÓS TÁR HATÁRA (2026-10-02, Csaba)
 
 **Amiből jött:** a D75/1 „a saját eseményeim szeleteit" is tartósnak mondta, de a pont-rendezésem maga is

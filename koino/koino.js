@@ -517,6 +517,14 @@ async function fajlTanulsag(tarsCimke, fajlokNala) {
  * futás közben lehet váltani. *Enélkül a lap a tér másik koinóján is az indításkori
  * állapotot számolná: némán rossz adatot mutatna, nem hibát.*
  */
+/**
+ * ⭐ D85/5: egy javaslat-entitás DÖNTÉSÉNEK azonosítója — a töredéké a csoportja (a `Javaslat`
+ * esemény), minden másé önmaga. A felület a kártya azonosítóját küldi; a döntés a csoporté.
+ */
+function dontesAzonositoja(allapot, azonosito) {
+  return allapot.entitasok.get(azonosito)?.toredek?.csoport ?? azonosito;
+}
+
 async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO) {
   const esemenyek = await koinoEsemenyei(melyikTar, melyikKoino);
   const allapot = allapotSzamitasa(esemenyek);
@@ -2258,14 +2266,10 @@ try {
       const e = await javaslatLetrehozasa(kornyezet, {
         fajta: 'altalanos',
         erintettek: [{ entitas: hely, muvelet: ALLASPONT_MUVELET, valtozas: { cim } }],
-        indoklas: ervek[2] ?? null
+        indoklas: ervek[2] ?? null,
+        // ⭐ A javaslat is entitás (D27/5) — a kezdő pontot a művelet teszi fel, a szavazat előtt (D85).
+        pont: KEZDO_PONT
       });
-
-      // ⭐ Ugyanaz a lépés, mint a szerkesztésinél: a javaslat is entitás (D27/5), tudatpont
-      // nélkül a D14 szerint nem létezne.
-      const { allapot: kepUtan } = await kepetKeszit();
-      await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
-        szetosztottPontok(kepUtan, szerzo));
 
       kiir('Általános javaslat beadva: ' + e.azonosito.slice(0, 8));
       kiir(SZIN.halvany + 'Helye: „' + (allapot.entitasok.get(hely)?.cim ?? '?')
@@ -2299,12 +2303,10 @@ try {
           erintettek: feloldva.map((entitas, i) => ({
             entitas, muvelet: 'Egyesites', valtozas: i === 0 ? { cim: ujCim } : null
           })),
-          indoklas: ervek[2] ?? null
+          indoklas: ervek[2] ?? null,
+          // ⭐ D85/5: több érintettnél a kezdő pont a TÖREDÉKEKRE oszlik (a művelet teszi fel).
+          pont: KEZDO_PONT
         });
-
-        const { allapot: kepUtan } = await kepetKeszit();
-        await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
-          szetosztottPontok(kepUtan, szerzo));
 
         kiir('Szerkesztési javaslat beadva (Egyesites, ' + feloldva.length + ' forrás): '
           + e.azonosito.slice(0, 8));
@@ -2341,14 +2343,11 @@ try {
       const e = await javaslatLetrehozasa(kornyezet, {
         fajta: 'szerkesztesi',
         erintettek: [{ entitas: erintett, muvelet, valtozas }],
-        indoklas
+        indoklas,
+        // ⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) — tudatpont nélkül a D14 szerint NEM
+        // LÉTEZNE. A pontot a művelet teszi fel, a támogató szavazat ELŐTT (D85).
+        pont: KEZDO_PONT
       });
-
-      // ⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) — tehát tudatpont nélkül a D14 szerint
-      // NEM LÉTEZNE. Ugyanaz a lépés, mint a gondolatnál: aki beadja, az áll mögé.
-      const { allapot: kepUtan } = await kepetKeszit();
-      await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
-        szetosztottPontok(kepUtan, szerzo));
 
       kiir('Szerkesztési javaslat beadva (' + muvelet + '): ' + e.azonosito.slice(0, 8));
       kiir(SZIN.halvany + 'Kapott ' + KEZDO_PONT + ' tudatpontot tőled — a javaslat is '
@@ -3944,21 +3943,17 @@ try {
 
             let e;
             try {
+              // ⛔ A JAVASLAT IS ENTITÁS — tudatpont nélkül a koino elfelejtené (D14). A kezdő
+              // pontot a művelet teszi fel, a szavazat előtt; több érintettnél a töredékekre oszlik (D85).
               e = await javaslatLetrehozasa(kornyezet, {
                 erintettek,
                 indoklas: (Array.isArray(indoklas) && indoklas.length) ? indoklas : null,
-                fajta: 'szerkesztesi'
+                fajta: 'szerkesztesi',
+                pont: Number.isInteger(kezdoTudatpont) && kezdoTudatpont > 0 ? kezdoTudatpont : KEZDO_PONT
               });
             } catch (hiba) {
               return { allapot: 400, adat: { hiba: hiba.message } };
             }
-
-            // ⛔ A JAVASLAT IS ENTITÁS — tudatpont nélkül a koino elfelejtené (D14).
-            const pont = Number.isInteger(kezdoTudatpont) && kezdoTudatpont > 0
-              ? kezdoTudatpont : KEZDO_PONT;
-            const { allapot } = await kepetKeszit(0, tar, KOINO);
-            await tudatpontRendezese(kornyezet, e.azonosito, pont, 'aktiv',
-              szetosztottPontok(allapot, szerzo));
 
             pakliNezet.horgony = null;
             // ⭐ A modal `eredmeny?.javaslat`-ot olvas — a válasz ehhez igazodik.
@@ -3997,15 +3992,12 @@ try {
 
             // ⭐ A javaslattevő TÁMOGATÓ SZAVAZATÁT a művelet maga adja le
             // (`muveletek.js`) — enélkül a saját szerkesztésed 0%-kal, ELVETVE zárna.
+            // ⛔ A JAVASLAT IS ENTITÁS (2026-09-06), tehát tudatpont nélkül a koino elfelejtené
+            // (D14) — a kezdő pontot a művelet teszi fel, a szavazat előtt (D85).
             const e = await javaslatLetrehozasa(kornyezet, {
-              erintett: azonosito, muvelet: 'Modositas', valtozas, fajta: 'szerkesztesi'
+              erintett: azonosito, muvelet: 'Modositas', valtozas, fajta: 'szerkesztesi',
+              pont: KEZDO_PONT
             });
-
-            // ⛔ A JAVASLAT IS ENTITÁS (2026-09-06), tehát tudatpont nélkül a koino
-            // elfelejtené (D14) — ugyanaz, amit a `javaslat` parancs is tesz.
-            const { allapot } = await kepetKeszit(0, tar, KOINO);
-            await tudatpontRendezese(kornyezet, e.azonosito, KEZDO_PONT, 'aktiv',
-              szetosztottPontok(allapot, szerzo));
 
             pakliNezet.horgony = null;
             return { adat: { data: { _id: e.azonosito, javaslat: true } } };
@@ -4084,7 +4076,11 @@ try {
             // 2.1). Amíg nincs, a szavazat nem hordozza a kérést — de ez **hiány, nem
             // döntés**. A régi megjegyzés azt sugallta, hogy a kérdés le van zárva.
 
-            await szavazas(kornyezet, javaslatId, szavazatTipus, kulonvalasIgeny === true);
+            // ⭐ D85/5: a töredék-kártya a SAJÁT azonosítóját küldi, a szavazat viszont a CSOPORTRA
+            // (a javaslatra) szól — a döntés ott van, és egy szavazat minden jogosult részre számít.
+            const { allapot: kepMost } = await kepetKeszit(0, tar, KOINO);
+            const csoport = dontesAzonositoja(kepMost, javaslatId);
+            await szavazas(kornyezet, csoport, szavazatTipus, kulonvalasIgeny === true);
             pakliNezet.horgony = null;
             return { adat: { data: { javaslatId, szavazatTipus } } };
           }
@@ -4300,7 +4296,9 @@ try {
           // állapot-számítás (nincs mögötte gyorsítótár), és 2026-09-12-ig ez a kezelő
           // kétszer hívta meg — ugyanarra a kérdésre, ugyanabban a kérésben.
           const { allapot: kep, javaslatok } = await kepetKeszit(0, tar, KOINO);
-          if (!javaslatok.has(javaslatId)) {
+          // ⭐ D85/5: töredék-kártyáról a csoport szavazatát kérdezzük.
+          const csoport = dontesAzonositoja(kep, javaslatId);
+          if (!javaslatok.has(csoport)) {
             return { allapot: 404, adat: { hiba: 'nincs ilyen javaslat' } };
           }
           // ⚠️ NULL, ha még nem szavaztam — a fül ebből tudja, hogy egyik gomb sem aktív.
@@ -4308,7 +4306,7 @@ try {
           // ⭐ A koinóban a szavazat SOSEM tűnik el, csak felülíródik („az utolsó nyer"),
           // ezért a `sajatSzavazat` mindig a jelenlegi állásomat adja — nem kell külön
           // nyilvántartás róla.
-          const enyem = sajatSzavazat(kep.szamitok, javaslatId, szerzo);
+          const enyem = sajatSzavazat(kep.szamitok, csoport, szerzo);
           return { adat: { data: enyem ? { szavazatTipus: enyem } : null } };
         }
 

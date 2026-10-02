@@ -140,7 +140,20 @@ function kartyaTipusa(entitas, dontes) {
   return entitas.tipus === 'Javaslat' && dontes?.statusz === 'elfogadva' ? 'Egyezmeny' : entitas.tipus;
 }
 
+/**
+ * ⭐ D85/5: egy javaslat-entitás DÖNTÉSE. Egy érintettnél a javaslaté (ugyanaz az azonosító); a
+ * töredéknél a CSOPORTÉ — a döntés a csoport azonosítója alatt van (`javaslatSzamitas.js`), a töredék
+ * csak a saját RÉSZÉT mutatja belőle.
+ */
+function entitasDontese(entitas, javaslatok) {
+  return javaslatok?.get(entitas?.toredek?.csoport ?? entitas?.azonosito) ?? null;
+}
+
 function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
+  // ⭐ D85/5: a töredék kártyája a SAJÁT részét mutatja (művelet, érintett, számok) — a státusz, a
+  // határidő és az egyezmény a csoporté (a csoport egyben dől el, ÉS-sel).
+  const resz = entitas.toredek ? (dontes?.reszek?.[entitas.toredek.sorszam - 1] ?? null) : null;
+  const o = resz ?? dontes;
   return {
     azonosito: entitas.azonosito,
     tipus: kartyaTipusa(entitas, dontes),
@@ -173,9 +186,11 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
     // `allapotSzamitas.js`, a döntést a `javaslatSzamitas.js`.
     javaslat: dontes ? {
       fajta: dontes.fajta,                  // 'szerkesztesi' | 'altalanos' (D27)
-      muvelet: dontes.muvelet,
-      erintett: dontes.erintett,
-      erintettCim: entitasok.get(dontes.erintett)?.cim ?? null,
+      muvelet: o.muvelet,
+      erintett: resz ? resz.entitas : dontes.erintett,
+      erintettCim: entitasok.get(resz ? resz.entitas : dontes.erintett)?.cim ?? null,
+      // ⭐ D85/5: a töredék helye a csoportban (a prototípus „1/6”-ja); egy érintettnél null.
+      toredek: entitas.toredek ?? null,
       // ⭐⭐ MINDEN ÉRINTETT (2026-09-07) — a fenti kettő az ELSŐ érintett összefoglalója,
       // hogy a régi kártya-kód ne törjön; a teljes igazság ez a lista. ⚠️ A művelet
       // entitásonkénti: egy csomagban az egyik módosul, a másik áthelyeződik.
@@ -185,7 +200,7 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
         cim: entitasok.get(r.entitas)?.cim ?? null,
         valtozas: r.valtozas ?? null
       })),
-      valtozas: dontes.valtozas ?? null,
+      valtozas: o.valtozas ?? null,
       indoklas: dontes.indoklas ?? null,
       statusz: dontes.statusz,
       dontesiIdo: dontes.dontesiIdo,
@@ -193,17 +208,17 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
 
       // ⭐ EZRELÉKBEN, mert a koino egész aritmetikával számol (kerekítés soha ne
       // dönthessen el szavazást). A százalékra váltás a felület dolga.
-      tamogatottsagEzrelek: dontes.tamogatottsagEzrelek,
-      ellenzoiEzrelek: dontes.ellenzoiEzrelek,
-      tartozkodoiEzrelek: dontes.tartozkodoiEzrelek,
-      reszveteliEzrelek: dontes.reszveteliEzrelek,
-      bizonyossagiMutato: dontes.bizonyossagiMutato,
+      tamogatottsagEzrelek: o.tamogatottsagEzrelek,
+      ellenzoiEzrelek: o.ellenzoiEzrelek,
+      tartozkodoiEzrelek: o.tartozkodoiEzrelek,
+      reszveteliEzrelek: o.reszveteliEzrelek,
+      bizonyossagiMutato: o.bizonyossagiMutato,
 
-      tamogatok: dontes.tamogatok,
-      ellenzok: dontes.ellenzok,
-      tartozkodok: dontes.tartozkodok,
-      szavazok: dontes.szavazok,
-      nevezo: dontes.nevezo,
+      tamogatok: o.tamogatok,
+      ellenzok: o.ellenzok,
+      tartozkodok: o.tartozkodok,
+      szavazok: o.szavazok,
+      nevezo: o.nevezo,
       kesoiSzavazatok: dontes.kesoiSzavazatok,
 
       // ⭐ SZAVAZHATOK-E? A döntés bemenete az ÉRINTETT entitás tulajdonosainak köre —
@@ -219,6 +234,7 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
       // (`javaslatSzamitas.js`) — a felület a másik gépen nem véd semmitől.
       szavazhatok: (() => {
         if (!en) return false;
+        if (resz) return (entitasok.get(resz.entitas)?.hozzajarulok.get(en)?.pont ?? 0) > 0;
         const kik = (dontes.erintettek ?? []).map((r) => r.entitas);
         const lista = kik.length ? kik : [dontes.erintett];
         return lista.some((az) => (entitasok.get(az)?.hozzajarulok.get(en)?.pont ?? 0) > 0);
@@ -452,7 +468,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
 
   const kartyak = oldal.map((elem) => kartya(
     elem.entitas, agazati.get(elem.azonosito) ?? 0, beallitas.szerzo, kep.entitasok,
-    kep.javaslatok?.get(elem.azonosito) ?? null));
+    entitasDontese(elem.entitas, kep.javaslatok)));
   // ⭐ D72: a javaslat-kártyák változásaiban a szöveg-hivatkozás szöveggé.
   for (const k of kartyak) {
     if (!k.javaslat) continue;
@@ -572,7 +588,7 @@ export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
   const f = await szovegFeloldasa(entitas.szoveg ?? null, beallitas.darabOlvas);
   const eredmeny = {
     azonosito: entitas.azonosito,
-    tipus: kartyaTipusa(entitas, kep.javaslatok?.get(azonosito) ?? null),
+    tipus: kartyaTipusa(entitas, entitasDontese(entitas, kep.javaslatok)),
     cim: entitas.cim,
     szoveg: f.szoveg,
     ...(f.hianyzik ? { szovegHianyzik: true, szovegLenyomat: f.lenyomat } : {})

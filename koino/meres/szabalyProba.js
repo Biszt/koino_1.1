@@ -10,13 +10,14 @@ import { join } from 'node:path';
 
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
-import { szabalyokErvenyesitese, TUDATPONT_KERET } from '../js/allapot/szabalyok.js';
+import { szabalyokErvenyesitese, TUDATPONT_KERET, toredekAzonosito } from '../js/allapot/szabalyok.js';
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import {
   esemenyMentese, lancVege, kovetkezoEntitasSorszam, koinoEsemenyei
 } from '../js/tar/esemenyTar.js';
-import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese } from '../js/muveletek.js';
+import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa,
+  kezdoPontokElosztasa } from '../js/muveletek.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -125,6 +126,53 @@ proba('⛔⛔ EGY ELVETETT PONT-ESEMÉNY UTÁN AZ ÚJ MÉG SZÁMÍT — a művel
       && ujPont.adat.kiosztva === 100                                       // és jól mondja be
       && a.entitasok.get(uj.azonosito)?.osszesPont === 100;                 // a gondolat él
   });
+
+// ⭐⭐ D85 (Csaba, 2026-10-02): A JAVASLATTEVŐ LÉPÉSE — létrehozás → pont a javaslatra → szavazat,
+// egy lépésben, a művelet-rétegben. Egy érintettnél a pont a javaslatra kerül; többnél a TÖREDÉKEKRE
+// oszlik a prototípus szerint (mindegyikre legalább 1, a maradék körbe). ⚠️ A sorrend a lényeg: a
+// pontnak a szavazat ELŐTT kell lennie a láncban, és ugyanazt az időbélyeget kell viselnie.
+proba('⭐⭐ D85: a javaslattevő pontja a javaslatra / a töredékeire kerül — a szavazata ELŐTT', async () => {
+  const tar = await esemenyTarNyitasa(KOINO, await mkdtemp(join(tmpdir(), 'koino-szabaly-')));
+  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url');
+  const kornyezet = { koino: KOINO, kulcspar, szerzo, tar };
+  await koinoLetrehozasa(kornyezet, 'Javaslattevő');
+  const a = await gondolatLetrehozasa(kornyezet, { cim: 'A' });
+  const b = await gondolatLetrehozasa(kornyezet, { cim: 'B' });
+  await tudatpontRendezese(kornyezet, a.azonosito, 100);
+  await tudatpontRendezese(kornyezet, b.azonosito, 100);
+
+  // EGY érintett: a pont a javaslatra.
+  const egy = await javaslatLetrehozasa(kornyezet,
+    { erintett: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'A2' }, pont: 7 });
+  // KÉT érintett: 5 pont a töredékekre (3 + 2).
+  const ketto = await javaslatLetrehozasa(kornyezet, { erintettek: [
+    { entitas: a.azonosito, muvelet: 'Modositas', valtozas: { cim: 'A3' } },
+    { entitas: b.azonosito, muvelet: 'Modositas', valtozas: { cim: 'B3' } }], pont: 5 });
+
+  const sajat = (await koinoEsemenyei(tar, KOINO)).filter((e) => e.szerzo === szerzo)
+    .sort((x, y) => x.sorszam - y.sorszam);
+  const utana = (j) => sajat.filter((e) => e.sorszam > j.sorszam).slice(0, 3);
+  const [p1, sz1] = utana(egy);
+  const [t1, t2, sz2] = utana(ketto);
+  const ta = toredekAzonosito(ketto.azonosito, a.azonosito);
+  const tb = toredekAzonosito(ketto.azonosito, b.azonosito);
+  return p1?.tipus === 'TudatpontRendezes' && p1.adat.entitas === egy.azonosito && p1.adat.pont === 7
+    && p1.ido === egy.ido
+    && sz1?.tipus === 'Szavazat' && sz1.adat.javaslat === egy.azonosito
+    && t1?.adat.entitas === ta && t1.adat.pont === 3 && t2?.adat.entitas === tb && t2.adat.pont === 2
+    && t1.ido === ketto.ido && t2.ido === ketto.ido
+    && sz2?.tipus === 'Szavazat' && sz2.adat.javaslat === ketto.azonosito;
+});
+
+proba('⭐ D85: a kezdő pont elosztása a prototípusé — és kevesebb pont, mint töredék: hiba', async () => {
+  const jo = JSON.stringify(kezdoPontokElosztasa(5, 2)) === '[3,2]'
+    && JSON.stringify(kezdoPontokElosztasa(7, 3)) === '[3,2,2]'
+    && JSON.stringify(kezdoPontokElosztasa(3, 3)) === '[1,1,1]';
+  let dobott = false;
+  try { kezdoPontokElosztasa(1, 2); } catch { dobott = true; }
+  return jo && dobott;
+});
 
 // ===== 2. SZABÁLY: JAVASLATOT CSAK A GAZDA TEHET =====
 

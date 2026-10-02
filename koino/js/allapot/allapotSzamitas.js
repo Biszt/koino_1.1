@@ -29,7 +29,7 @@
 //
 // Használják: koino.js (a parancssori arc) és a javaslat/szavazat számítása.
 
-import { szabalyokErvenyesitese, erintettek, elsoErintett } from './szabalyok.js';
+import { szabalyokErvenyesitese, erintettek, elsoErintett, javaslatEntitasai } from './szabalyok.js';
 
 // ===================================
 // A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
@@ -285,7 +285,7 @@ export function allapotSzamitasa(esemenyek) {
       // Az entitás AZONOSÍTÓJA a létrehozó esemény azonosítója: az entitás neve is a
       // gondolatából származik, nem egy kiosztott sorszám.
       case 'GondolatLetrehozas':
-        letrehozasok.set(e.azonosito, e);
+        letrehozasok.set(e.azonosito, { esemeny: e, toredek: null });
         break;
 
       // ----- ⭐⭐ A JAVASLAT IS ENTITÁS (Csaba, 2026-09-06) -----
@@ -309,8 +309,14 @@ export function allapotSzamitasa(esemenyek) {
       // ⚠️ A DÖNTÉS-RÉTEG VÁLTOZATLAN: a szavazatokat, küszöböket, státuszt továbbra is a
       // `javaslatSzamitas.js` számolja. Ez a sor csak annyit mond, hogy a javaslat **létezik
       // entitásként is** — a kettő ugyanarra az azonosítóra vonatkozik.
+      //
+      // ⭐⭐ D85/5 (T1, 2026-10-02): TÖBB ÉRINTETTNÉL A TÖREDÉKEI AZ ENTITÁSOK — érintettenként egy,
+      // levezetett azonosítóval, a SAJÁT érintettje gyerekeként (a prototípus töredék-modellje). A
+      // csoportnak nincs saját entitása; a döntése a javaslat azonosítója alatt marad.
       case 'Javaslat':
-        letrehozasok.set(e.azonosito, e);
+        for (const je of javaslatEntitasai(e)) {
+          letrehozasok.set(je.azonosito, { esemeny: e, toredek: je.toredek ? je : null });
+        }
         break;
 
       // ----- TUDATPONT-RENDEZÉS -----
@@ -342,16 +348,19 @@ export function allapotSzamitasa(esemenyek) {
   // ----- ÖSSZESÍTÉS ENTITÁSONKÉNT -----
   const entitasok = new Map();
 
-  for (const [entitasAzonosito, letrehozoEsemeny] of letrehozasok) {
+  for (const [entitasAzonosito, { esemeny: letrehozoEsemeny, toredek }] of letrehozasok) {
     // ⭐ A JAVASLAT MÁS MEZŐKBŐL ÉPÜL, mint a gondolat — de ugyanolyan entitás lesz.
     // A címe az, amit javasol; a szövege az indoklás; a szülője az érintett entitás.
+    // ⭐ D85/5: a töredék címe és szülője a SAJÁT részéé (a prototípusban is: a töredék típusa az
+    // adott entitás művelete, a szülője az adott entitás).
     const javaslatE = letrehozoEsemeny.tipus === 'Javaslat';
     const adat = letrehozoEsemeny.adat;
 
     entitasok.set(entitasAzonosito, {
       azonosito: entitasAzonosito,
       tipus: javaslatE ? 'Javaslat' : (adat.tipus ?? 'Gondolat'),
-      cim: javaslatE ? javaslatCime(adat) : adat.cim,
+      cim: toredek ? javaslatCime({ erintettek: [toredek.resz] })
+        : javaslatE ? javaslatCime(adat) : adat.cim,
       szoveg: javaslatE ? (adat.indoklas ?? null) : (adat.szoveg ?? null),
 
       // ----- ⭐ A BESOROLÁS (Szakasz 5.4) -----
@@ -370,7 +379,11 @@ export function allapotSzamitasa(esemenyek) {
       // ⭐⭐ A JAVASLAT SZÜLŐJE AZ ÉRINTETT ENTITÁS (D27/1: „gondolatból ágazik ki").
       // Ettől kerül a gondolata mellé a hierarchikus rendezésben — külön szabály nélkül —,
       // és ettől folyik helyesen felfelé az ágazati tudatpont.
-      szulo: javaslatE ? elsoErintett(adat) : (adat.szulo ?? null),
+      szulo: toredek ? toredek.resz.entitas : javaslatE ? elsoErintett(adat) : (adat.szulo ?? null),
+      // ⭐ D85/5: a töredék tudja, melyik csoporté (a döntés a csoport azonosítója alatt van) és
+      // hányadik — a prototípus `toredekCsoportId` / `toredekSorszam` / `toredekDarab` mezői.
+      ...(toredek ? { toredek: { csoport: letrehozoEsemeny.azonosito, sorszam: toredek.sorszam,
+        darab: toredek.darab } } : {}),
       meret: letrehozoEsemeny.adat.meret ?? 0,       // D26: a tárolási vállalás mértéke
       szerzo: letrehozoEsemeny.szerzo,
       letrehozva: letrehozoEsemeny.ido,

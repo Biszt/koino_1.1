@@ -12,7 +12,7 @@
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from '../js/allapot/allapotSzamitas.js';
 import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
-import { ALLASPONT_MUVELET } from '../js/allapot/szabalyok.js';
+import { ALLASPONT_MUVELET, toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
@@ -341,12 +341,16 @@ async function egyesitesEset({ szulok = [null, null], gyerekhez = null } = {}) {
     }))
   }, KEZDET + 1000);
   esemenyek.push(javaslat);
-  esemenyek.push(await gazda.tesz('TudatpontRendezes',
-    { entitas: javaslat.azonosito, pont: 5 }, KEZDET + 1500));
+  // ⭐ D85/5 (T1): több érintettnél a TÖREDÉKEK az entitások, a pont rájuk kerül (a csoportnak nincs
+  // saját entitása). Töredékenként 5 — mint régen a javaslatra.
+  const toredekek = forrasok.map((f) => toredekAzonosito(javaslat.azonosito, f.azonosito));
+  for (const t of toredekek) {
+    esemenyek.push(await gazda.tesz('TudatpontRendezes', { entitas: t, pont: 5 }, KEZDET + 1500));
+  }
   esemenyek.push(await gazda.tesz('Szavazat',
     { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
 
-  return { esemenyek, forrasok, gyerek, javaslat, gazda, masik };
+  return { esemenyek, forrasok, gyerek, javaslat, toredekek, gazda, masik };
 }
 
 proba('⭐⭐⭐ A TÖBB GAZDÁJÚ FORRÁS NYER — és a pontok EMBERENKÉNT összeadódnak', async () => {
@@ -420,10 +424,33 @@ proba('⛔⛔ A BEOLVASZTOTT FORRÁS NEM „ELAKADT PONT" — a pontja átment, 
 
   return elakadtPontok(k.allapot, e.gazda.szerzo).length === 0
     && elakadtPontok(k.allapot, e.masik.szerzo).length === 0
-    // ⭐ …és a kiosztott összeg is stimmel: a pont ott van, csak az elnyelőn.
+    // ⭐ …és a kiosztott összeg is stimmel: a pont ott van, csak az elnyelőn — és a töredékeken (D85/5).
     && szetosztottPontok(k.allapot, e.gazda.szerzo)
        === k.allapot.entitasok.get(e.forrasok[0].azonosito).hozzajarulok.get(e.gazda.szerzo).pont
-        + k.allapot.entitasok.get(e.javaslat.azonosito).hozzajarulok.get(e.gazda.szerzo).pont;
+        + e.toredekek.reduce((sum, t) => sum
+          + k.allapot.entitasok.get(t).hozzajarulok.get(e.gazda.szerzo).pont, 0);
+});
+
+// ⭐⭐ D85/5 (T1, Csaba, 2026-10-02): több érintettnél a TÖREDÉKEK az entitások — érintettenként egy,
+// levezetett azonosítóval, a SAJÁT érintettje gyerekeként (a prototípus töredék-modellje); a csoportnak
+// nincs saját entitása, a döntése a javaslat azonosítója alatt marad.
+proba('⭐⭐ D85/5: több érintettnél a TÖREDÉKEK az entitások — mindegyik a saját érintettje alatt', async () => {
+  const e = await egyesitesEset({ szulok: [null, null, null] });
+  // ⚠️ A végrehajtás ELŐTTI állapot: a forrásokat még nem olvasztotta be az egyezmény.
+  const allapot = allapotSzamitasa(e.esemenyek);
+  const darab = e.forrasok.length;
+  const jok = e.toredekek.every((t, i) => {
+    const ent = allapot.entitasok.get(t);
+    return ent !== undefined && ent.tipus === 'Javaslat'
+      && ent.szulo === e.forrasok[i].azonosito
+      && ent.toredek?.csoport === e.javaslat.azonosito
+      && ent.toredek.sorszam === i + 1 && ent.toredek.darab === darab
+      && ent.osszesPont === 5;
+  });
+  return jok
+    && new Set(e.toredekek).size === darab                         // mind különböző
+    && !allapot.entitasok.has(e.javaslat.azonosito)               // ⛔ a csoportnak nincs entitása
+    && e.toredekek[0] === toredekAzonosito(e.javaslat.azonosito, e.forrasok[0].azonosito);
 });
 
 proba('⭐ HÁROM FORRÁS is összevonható, egy lépésben', async () => {
