@@ -31,7 +31,7 @@
 import { mkdir, readFile, appendFile, writeFile, readdir, access, rm, stat, open, rename } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
-import { szelet, szuleteseSzuloje } from '../esemeny/esemeny.js';
+import { szelet, bejelentesHelyei } from '../esemeny/esemeny.js';
 import { bajtLenyomat } from '../esemeny/kanonikusAlak.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 
@@ -58,7 +58,7 @@ export const KEP_KUSZOB = 1000;
 
 // A pillanatkép alakjának változata. ⚠️ Ha a mutató mezői változnak, ez nő — a régi képet a tár
 // eldobja, és egyszer a fájlból épít újat (a kép tiszta gyorsítótár).
-const KEP_VALTOZAT = 2;
+const KEP_VALTOZAT = 3;
 
 // ⭐ Ennél több hiányzó testet egyetlen, sorban olvasással hozunk (mint a teljes betöltés);
 // kevesebbet egyenként, a nyitott fájl adott helyéről.
@@ -139,9 +139,10 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
   let azonositoSzerint = new Map();       // azonosító → bejegyzés
   let szerzoSzerint = new Map();          // szerző → bejegyzések
   let szeletSzerint = new Map();          // szelet-kulcs → bejegyzések
-  // ⭐ A C 7. pontja (a gyerek-bejelentés): szülő → a gyerekei SZÜLETÉSE. A legfelső szintű
-  // gondolaté a '' (a gyökér) alatt. Csak a `GondolatLetrehozas` születés.
-  let szuloSzerint = new Map();
+  // ⭐ A C 7. pontja (a gyerek-bejelentés), D85/1, D85/3 óta általánosan: szelet → a hozzá BEJELENTETT
+  // események (a gyerekek születése, a javaslatok, a szavazatok — `bejelentesHelyei`). A legfelső szintű
+  // gondolaté a '' (a gyökér) alatt.
+  let bejelentesSzerint = new Map();
   // ⭐ szerző → (sorszám → bejegyzések; elágazásnál több). KÉRÉSRE épül, szerzőnként: csak az
   // elágazás-keresés kérdezi, és a megnyitáskor 100 000 szöveg-kulcs ~80 ms volt (49. mérés).
   let pontSzerint = new Map();
@@ -177,7 +178,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     // ⭐ A SZELET-KULCS type-független szabálya (`esemeny.js`): vagy meg van mondva, vagy az
     // esemény a saját szeletét nyitja. A tárolónak ennyit kell tudnia a domainről.
     hozza(szeletSzerint, b.s, b);
-    if (b.p !== null) hozza(szuloSzerint, b.p, b);
+    for (const k of b.p) hozza(bejelentesSzerint, k, b);
     const pontjai = pontSzerint.get(b.z);
     if (pontjai) hozza(pontjai, b.n, b);
     lenyomatok.delete(b.s);
@@ -196,7 +197,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
   }
 
   const bejegyzesEsemenybol = (e, o, h) =>
-    ({ o, h, a: e.azonosito, z: e.szerzo, n: e.sorszam, s: szelet(e), p: szuleteseSzuloje(e) });
+    ({ o, h, a: e.azonosito, z: e.szerzo, n: e.sorszam, s: szelet(e), p: bejelentesHelyei(e) });
 
   /**
    * A fájl egy darabjának sorai a mutatóba (és a testek a memóriába). ⚠️ A darab egész
@@ -239,7 +240,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     azonositoSzerint = new Map();
     szerzoSzerint = new Map();
     szeletSzerint = new Map();
-    szuloSzerint = new Map();
+    bejelentesSzerint = new Map();
     pontSzerint = new Map();
     lenyomatok.clear();
     ismertMeret = 0;
@@ -285,12 +286,12 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
 
   /** Érvényes alakú-e a pillanatkép? (Egy gyorsítótárban sem bízunk vakon.) */
   function kepAlakjaRendben(kep) {
-    // ⚠️ A 2. változat (2026-09-27, a C 7. pontja) a születés szülőjét is tartja — az 1. változatot
-    // eldobjuk, és a mutató a fájlból épül újra (egyszer).
+    // ⚠️ A 2. változat (2026-09-27, a C 7. pontja) a születés szülőjét is tartja; a 3. (D85, 2026-10-02)
+    // a bejelentés helyeinek LISTÁJÁT — a régebbit eldobjuk, és a mutató a fájlból épül újra (egyszer).
     if (!kep || kep.v !== KEP_VALTOZAT || !Number.isInteger(kep.fedett) || kep.fedett < 0) return false;
     if (!Array.isArray(kep.szerzok) || !Array.isArray(kep.szeletek) || !Array.isArray(kep.e)) return false;
     return kep.e.every((x) => Array.isArray(x) && x.length === 7
-      && Number.isInteger(x[6]) && x[6] >= -1 && x[6] < kep.szeletek.length
+      && Array.isArray(x[6]) && x[6].every((i) => Number.isInteger(i) && i >= 0 && i < kep.szeletek.length)
       && Number.isInteger(x[0]) && x[0] >= 0 && Number.isInteger(x[1]) && x[1] > 0
       && typeof x[2] === 'string'
       && Number.isInteger(x[3]) && x[3] >= 0 && x[3] < kep.szerzok.length
@@ -337,7 +338,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     mutatoUritese();
     for (const x of kep.e) {
       bejegyez({ o: x[0], h: x[1], a: x[2], z: kep.szerzok[x[3]], n: x[4], s: kep.szeletek[x[5]],
-        p: x[6] === -1 ? null : kep.szeletek[x[6]] });
+        p: x[6].map((i) => kep.szeletek[i]) });
     }
     ismertMeret = kep.fedett;
     return true;
@@ -363,7 +364,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     };
     const e = bejegyzesek.map((b) =>
       [b.o, b.h, b.a, szama(szerzoSzama, szerzok, b.z), b.n, szama(szeletSzama, szeletek, b.s),
-        b.p === null ? -1 : szama(szeletSzama, szeletek, b.p)]);
+        b.p.map((k) => szama(szeletSzama, szeletek, k))]);
     const kep = {
       v: KEP_VALTOZAT,
       fedett: ismertMeret,
@@ -390,7 +391,7 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     try {
       const e = JSON.parse(bajtok.toString('utf8'));
       if (e?.azonosito !== b.a || e.szerzo !== b.z || e.sorszam !== b.n || szelet(e) !== b.s
-          || szuleteseSzuloje(e) !== b.p) {
+          || bejelentesHelyei(e).join('|') !== b.p.join('|')) {
         return false;
       }
       if (!testek.has(b.a)) testek.set(b.a, e);
@@ -536,37 +537,38 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
     },
 
     /**
-     * ⭐ A C 7. pontja: egy szülő közvetlen gyerekeinek SZÜLETÉSE (a `GondolatLetrehozas`
-     * eseményük). A legfelső szintűeké a '' szülő alatt. *A szülő köre ebből tudja meg, hogy
-     * új gondolat született — a szövege nélkül (D72: a szöveg külön darab).*
-     * @param {string} szulo - a szülő szelet-kulcsa, vagy '' (a gyökér)
+     * ⭐ A C 7. pontja, D85/1, D85/3: egy szeletbe BEJELENTETT események — a gyerekei születése, a
+     * javaslatai, a rá szóló szavazatok (`esemeny.js`: `bejelentesHelyei`). A legfelső szintű
+     * gondolatoké a '' alatt. *A szelet köre ebből tudja meg, mi történt körülötte — a saját szeletén
+     * kívül élő eseményekből is (a szöveg nélkül, D72).*
+     * @param {string} s - a szelet-kulcs, vagy '' (a gyökér)
      */
-    async szuletesek(szulo) {
-      return testekKellenek(() => szuloSzerint.get(szulo) ?? []);
+    async bejelentesek(s) {
+      return testekKellenek(() => bejelentesSzerint.get(s) ?? []);
     },
 
     /**
-     * ⭐ Egy szelet VÁLTOZAT-JELE, test nélkül: az eseményszáma és a gyerekei születéseinek száma.
+     * ⭐ Egy szelet VÁLTOZAT-JELE, test nélkül: az eseményszáma és a hozzá bejelentett események száma.
      * Ha ez nem változott, a szelet egyeztetett halmaza sem (a csere gyorsítótára erre épít).
      * ⚠️ Csak hozzáfűzés van, tehát a két szám csak nőhet — egy változás mindig látszik rajta.
      * @param {string} s - szelet-kulcs, vagy '' (a gyökér)
      */
     szeletValtozata(s) {
-      return (szeletSzerint.get(s)?.length ?? 0) + ':' + (szuloSzerint.get(s)?.length ?? 0);
+      return (szeletSzerint.get(s)?.length ?? 0) + ':' + (bejelentesSzerint.get(s)?.length ?? 0);
     },
 
     /**
-     * ⭐ D73: A SZELETEK JEGYZÉKE — test nélkül. Szeletenként az eseményszám (`db`) és a gyerekei
-     * születéseinek száma (`szuletes`, a C 7. pontja). ⭐ Az is benne van, akinek nálunk CSAK
-     * gyereke született (a szülő eseményei nélkül) — és a gyökér (''), ha van legfelső szintű gondolat.
-     * @returns {Promise<Array<{szelet: string, db: number, szuletes: number}>>}
+     * ⭐ D73: A SZELETEK JEGYZÉKE — test nélkül. Szeletenként az eseményszám (`db`) és a hozzá
+     * bejelentett események száma (`bejelentes`; a C 7. pontja, D85). ⭐ Az is benne van, akinek nálunk
+     * CSAK bejelentése van (a saját eseményei nélkül) — és a gyökér (''), ha van legfelső szintű gondolat.
+     * @returns {Promise<Array<{szelet: string, db: number, bejelentes: number}>>}
      */
     async szeletek() {
-      const kulcsok = new Set([...szeletSzerint.keys(), ...szuloSzerint.keys()]);
+      const kulcsok = new Set([...szeletSzerint.keys(), ...bejelentesSzerint.keys()]);
       return [...kulcsok].map((s) => ({
         szelet: s,
         db: szeletSzerint.get(s)?.length ?? 0,
-        szuletes: szuloSzerint.get(s)?.length ?? 0
+        bejelentes: bejelentesSzerint.get(s)?.length ?? 0
       }));
     },
 

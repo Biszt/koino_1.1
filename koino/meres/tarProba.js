@@ -515,10 +515,10 @@ proba('⭐⭐ A SZÜLETÉSEK A SZÜLŐ ALATT (C 7.) — a képből is, és a ré
   for (const e of [szulo, gyerek1, gyerek2, unoka, pont]) await esemenyMentese(t, e);
 
   const valaszok = async (tar) => [
-    (await tar.szuletesek(szulo.azonosito)).map((e) => e.azonosito).sort().join(),
-    (await tar.szuletesek(gyerek1.azonosito)).map((e) => e.azonosito).join(),
-    (await tar.szuletesek('')).map((e) => e.azonosito).join(),
-    (await tar.szuletesek(gyerek2.azonosito)).length
+    (await tar.bejelentesek(szulo.azonosito)).map((e) => e.azonosito).sort().join(),
+    (await tar.bejelentesek(gyerek1.azonosito)).map((e) => e.azonosito).join(),
+    (await tar.bejelentesek('')).map((e) => e.azonosito).join(),
+    (await tar.bejelentesek(gyerek2.azonosito)).length
   ].join('|');
   const vart = [[gyerek1.azonosito, gyerek2.azonosito].sort().join(), unoka.azonosito,
     szulo.azonosito, 0].join('|');
@@ -534,11 +534,20 @@ proba('⭐⭐ A SZÜLETÉSEK A SZÜLŐ ALATT (C 7.) — a képből is, és a ré
   const { writeFile: ir } = await import('node:fs/promises');
   await ir(kepFajl, JSON.stringify({ ...kep, v: 1, e: kep.e.map((x) => x.slice(0, 6)) }));
   const regiKeppel = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 100 });
+  // ⛔ D85: a 2. változatú kép (EGY szülő-index, -1 = nincs) sem hihető el — a 3. a bejelentés helyeinek
+  // LISTÁJA. A tár a fájlból épít újat.
+  await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 1 });     // friss 3. változatú kép
+  const kep3 = JSON.parse(await readFile(kepFajl, 'utf8'));
+  await ir(kepFajl, JSON.stringify({ ...kep3, v: 2, e: kep3.e.map((x) => [...x.slice(0, 6), x[6][0] ?? -1]) }));
+  const ketteskeppel = await esemenyTarNyitasa(KOINO, hely, { kepKuszob: 100 });
 
   return kozvetlen === vart && kepbolValasz === vart
     && kepbol.mutatoAllapota().pillanatkepbol === true
     && regiKeppel.mutatoAllapota().pillanatkepbol === false
-    && await valaszok(regiKeppel) === vart;
+    && await valaszok(regiKeppel) === vart
+    && kep3.v === 3
+    && ketteskeppel.mutatoAllapota().pillanatkepbol === false
+    && await valaszok(ketteskeppel) === vart;
 });
 
 // A próbák után takarítunk: a mappa eldobható

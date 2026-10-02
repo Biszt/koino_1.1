@@ -24,7 +24,7 @@
 //
 // Használja: csere/vonal.js (a párbeszéd), a próbák.
 
-import { alakiHiba, szelet, szuleteseSzuloje, azonositoAlaku } from '../esemeny/esemeny.js';
+import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 
 /**
@@ -45,7 +45,8 @@ export const vonalKulcsa = (s) => (s === '' ? GYOKER_KULCS : s);
 export const ervenyesKulcs = azonositoAlaku;
 
 /**
- * Egy szelet egyeztetett halmazának ESEMÉNYEI (a szelet érvényes eseményei + a gyerekei születése).
+ * Egy szelet egyeztetett halmazának ESEMÉNYEI: a szelet érvényes eseményei + a hozzá bejelentettek (a
+ * gyerekei születése, a javaslatai, a rá szóló szavazatok — D85/1, D85/3, `bejelentesHelyei`).
  * @param {Object} tar
  * @param {string} koino
  * @param {string} kulcs - a vonal kulcsa (a gyökéré: `GYOKER_KULCS`)
@@ -54,10 +55,10 @@ export const ervenyesKulcs = azonositoAlaku;
 export async function egyeztetettEsemenyek(tar, koino, kulcs) {
   const s = tarKulcsa(kulcs);
   const sajat = s === '' ? [] : await tar.szeletEsemenyei(s);
-  const szuletesek = await tar.szuletesek(s);
+  const bejelentettek = await tar.bejelentesek(s);
   const lattuk = new Set();
   const ki = [];
-  for (const e of [...sajat, ...szuletesek]) {
+  for (const e of [...sajat, ...bejelentettek]) {
     if (lattuk.has(e.azonosito) || e.koino !== koino || alakiHiba(e) !== null) continue;
     lattuk.add(e.azonosito);
     ki.push(e);
@@ -136,14 +137,13 @@ export function elteresekSzeletei(kellNekem, kellNeki) {
 }
 
 /**
- * Egy beérkezett esemény a megengedett szeletek egyikébe tartozik-e — a saját szelete, vagy
- * (születésnél) a szülője szerint? ⛔ Amit nem kértünk és nem is közös szeletből jön, azt nem
- * vesszük át (a (b)-ben ez tartja távol a mások érdeklődését a tárunktól).
+ * Egy beérkezett esemény a megengedett szeletek egyikébe tartozik-e — a saját szelete, vagy egy olyan
+ * szelet szerint, ahová be van jelentve (születés, javaslat, szavazat — D85)? ⛔ Amit nem kértünk és nem
+ * is közös szeletből jön, azt nem vesszük át (a (b)-ben ez tartja távol a mások érdeklődését a tárunktól).
  * @param {Object} e
  * @param {Set<string>} kulcsok - vonal-kulcsok
  */
 export function szeletbeTartozik(e, kulcsok) {
   if (kulcsok.has(vonalKulcsa(szelet(e)))) return true;
-  const szulo = szuleteseSzuloje(e);
-  return szulo !== null && kulcsok.has(vonalKulcsa(szulo));
+  return bejelentesHelyei(e).some((k) => kulcsok.has(vonalKulcsa(k)));
 }

@@ -46,7 +46,8 @@
 //
 // Használják: `koino.js` (a `kivisz` és a `behoz` parancs).
 
-import { koinoEsemenyei, sajatLancEsemenyei, entitasEsemenyei } from '../tar/esemenyTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
+import { egyeztetettEsemenyek, vonalKulcsa } from './szeletEgyeztetes.js';
 import { beolvasztas } from './csere.js';
 import { szovegHivatkozasE } from '../esemeny/szovegDarab.js';
 import { bajtLenyomat, bajtokBase64Url, base64UrlBajtok } from '../esemeny/kanonikusAlak.js';
@@ -110,8 +111,10 @@ export async function kivitelSzovege(tar, koino, beallitas = {}) {
     esemenyek = await koinoEsemenyei(tar, koino);
 
   } else {
-    // ⭐ EGY ENTITÁS SZELETE — szintén célzott kérdés, a szelet-mutatóból.
-    esemenyek = await entitasEsemenyei(tar, koino, hatokor);
+    // ⭐ EGY ENTITÁS SZELETE — szintén célzott kérdés, a szelet-mutatóból. ⭐ D85: UGYANAZ a halmaz,
+    // amit a csere egyeztet (a saját események + a hozzá bejelentettek: a gyerekei születése, a javaslatai
+    // és a szavazataik) — különben egy gondolat kivitele a róla szóló döntések nélkül menne.
+    esemenyek = await egyeztetettEsemenyek(tar, koino, vonalKulcsa(hatokor));
   }
 
   // ⭐ A TÁR ALAKJA, BÁJTRA: soronként egy `JSON.stringify(esemeny)`. Ha ez elcsúszna a

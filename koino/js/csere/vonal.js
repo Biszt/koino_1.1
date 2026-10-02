@@ -53,14 +53,14 @@ import { beolvasztas } from './csere.js';
 // ⭐ A C 7–8. pontja (2026-09-27): a csere szeletenként, tartomány-egyeztetéssel (D74).
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
 import {
-  szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs
+  szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs,
+  vonalKulcsa
 } from './szeletEgyeztetes.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
 // képlet a SOROS átvitel alakja volt. Több forrásnál a munkamegosztás mondja meg, melyik
 // szelet következik (D68 / 6.) — a képlet maga viszont megmarad a `fajlAtvitel.js`-ben,
 // mert a szelet-határokat ugyanúgy ő számolja.
 import { SZELET_MERET, szeletEllenorzes, ujMunkamegosztas } from './fajlAtvitel.js';
-import { entitasEsemenyei } from '../tar/esemenyTar.js';
 
 // Egy sor legfeljebb ekkora lehet. Egy esemény ~400 bájt, egy 10 000 fős ÁLLÁS ~1,6 MB —
 // a 8 MB tehát bőven elég, de egy végtelen sor már nem fér bele.
@@ -283,8 +283,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⚠️ A bizalom itt sem más: amit így kapunk, ugyanazon az `esemenyMentese` kapun megy be
   // (3. szabály). A kérés nem ad jogot semmire.
   if (elsoUzenet.uzenet === 'SZELETKEREK') {
+    // ⭐ D85 (2026-10-02): UGYANAZ a halmaz, amit a csere egyeztet — a szelet saját eseményei + a hozzá
+    // bejelentettek (a gyerekei születése, a javaslatai és a szavazataik). Korábban csak a saját
+    // eseményeket küldte: a D85 óta a javaslatok a saját szeletükben élnek, így egy gondolat elkérése
+    // nélkülük hozta volna (a viselkedési próba mérte: `csereProba.js`, „D85: a javaslat és a szavazat").
     const kertek = typeof elsoUzenet.entitas === 'string'
-      ? await entitasEsemenyei(tar, koino, elsoUzenet.entitas)
+      ? await egyeztetettEsemenyek(tar, koino, vonalKulcsa(elsoUzenet.entitas))
       : [];
     // Eseményenként külön üzenet — így egy nagy szelet sem ütközik a sorhossz-korlátba.
     for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });

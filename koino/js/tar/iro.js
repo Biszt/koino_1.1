@@ -296,7 +296,7 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
     szeletek: () => belso.szeletek(),
     szeletLenyomata: (szelet) => belso.szeletLenyomata(szelet),
     // ⭐ A C 7. pontja: egy szülő gyerekeinek születése.
-    szuletesek: (szulo) => belso.szuletesek(szulo),
+    bejelentesek: (s) => belso.bejelentesek(s),
     szeletValtozata: (szelet) => belso.szeletValtozata(szelet),
     mutatoAllapota: () => belso.mutatoAllapota?.(),
     frissit: () => belso.frissit?.() ?? 0,

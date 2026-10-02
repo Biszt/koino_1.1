@@ -222,6 +222,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    lépése (létrehozás → pont → szavazat); (c) a szelet-kulcsok (`Javaslat` saját szelet, `Szavazat` a
    javaslatéba) és a bejelentés TÖBB szülővel (a döntés bemenete minden érintettnél; a tár mutatójában
    a születés-szülő listává válik); (d) az ÉS-szabály: a többi érintett nevezője a javaslat szeletébe.
+   ⭐ **Állás (2026-10-03):** (a) ✅ `cbb6f19`, `ee624d6` · (b) ✅ `6016df7`, `54a4d8e` (a T2 bizonyítékkal) ·
+   (c) ✅ · (d) ⏸️ a T3 tisztázására vár.
    *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
 2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
    betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
@@ -347,3 +349,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 37. **2026-10-02 · a sor: B/1 elsőként** → **előbb a D85 (az entitás-modell), aztán a titkosítás (D89/1),
     utána a B** · mert a D85 megváltoztatja, melyik esemény melyik szeletbe kerül (a B erre épül), és a
     két protokoll-változás egy törésbe fér (a telefon egyszer frissül) · e dokumentum 4.
+38. **2026-10-03 · a szelet-kérés (`hozd`) kiszolgálója: a szelet saját eseményei** → **a csere halmaza**
+    (a saját események + a hozzá bejelentettek) · mert a D85/1 óta a javaslatok és a szavazatok a saját
+    szeletükben élnek, így egy gondolat elkérése nélkülük jött volna; a viselkedési próba mérte (a modul-
+    szintű próbák zöldek voltak) · `vonal.js`, `csereProba.js` „D85: a javaslat és a szavazat”.
+39. **2026-10-03 · a szavazat bejelentése: a bizonyíték minden kulcsánál** → **csak a lánc-gyökeres
+    szavazatnál** · mert a kapu csak akkor ellenőrzi a bizonyítékot; gyökér nélkül bármennyi, bármilyen
+    szeletbe be lehetett volna jelenteni egy szavazatot · `esemeny.js`: `bejelentesHelyei`.

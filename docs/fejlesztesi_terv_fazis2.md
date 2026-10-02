@@ -4475,7 +4475,13 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
   **a T2 bizonyítéka** ✅ — a szavazat a lánc-gyökere mellé részenként két bizonyítékot hoz a saját
   kiosztás-fájából (az érintettre és a javaslat-entitásra); a kapu ellenőrzi (`szavazatOnbizonyitasa`),
   a számítás lánc-gyökeres szavazatnál CSAK ebből dönt a jogról (a régi szavazatnál a pont-eseményekből);
-  ára +0,9–2,4 KB szavazatonként (54. mérés) · ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
+  ára +0,9–2,4 KB szavazatonként (54. mérés) · **a szelet-kulcsok és a bejelentés (D85/1, /3)** ✅ — a
+  `Javaslat` a saját szeletében (`entitas` üres), a `Szavazat` a javaslatéban; egy eseményből olvasható,
+  hova jelentjük be (`esemeny.js`: `bejelentesHelyei` — a születés a szülőnél, a javaslat minden
+  érintettnél, a lánc-gyökeres szavazat a bizonyítéka kulcsainál, legfeljebb 64); a tár mutatója listát
+  tart (`mutato.json` 3. változat), a csere halmaza és a fogadó szűrője ebből dolgozik; ⚠️ a szelet-kérés
+  (`hozd`) kiszolgálója eddig csak a szelet saját eseményeit küldte — mostantól a csere halmazát (a
+  viselkedési próba mérte); az egy entitásos kivitel (`kivisz <azonosító>`) ugyanígy · ⏸️ T3.
 
 ### D86. A TARTÓS TÁR HATÁRA (2026-10-02, Csaba)
 

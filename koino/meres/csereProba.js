@@ -29,6 +29,9 @@ import {
   helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
   felfedezettekOsszefesulese
 } from '../js/csere/helyiFelfedezes.js';
+import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa } from '../js/muveletek.js';
+import { kivitelSzovege } from '../js/csere/fajlCsere.js';
+import { egyeztetettEsemenyek, szeletbeTartozik } from '../js/csere/szeletEgyeztetes.js';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A csere-protokoll próbája');
@@ -1809,6 +1812,52 @@ proba('⭐⭐ A BÖNGÉSZŐ-LEKÉRÉS CSAK A KÉRT SZELETET HOZZA', async () => 
   // …a MÁSIK szeletből viszont SEMMI. Ez a lényeg: a lekérés válogat, nem mindent hoz.
   const nincsMas = !nalunk.some((e) => (e.entitas ?? e.azonosito) === masik);
   return megvan && nincsMas;
+});
+
+// ⭐⭐ D85/1, D85/3 (Csaba, 2026-10-02): A JAVASLAT A SAJÁT SZELETÉBEN, A SZAVAZAT A JAVASLATÉBAN — és
+// mindkettő BEJELENTÉSKÉNT ott van minden érintett gondolat szeleténél. ⛔ Viselkedést mér, a VALÓDI
+// művelettel és a VALÓDI résen: a másik készülék CSAK a második érintett gondolat szeletét kéri, és
+// megkapja a javaslatot és a szavazatot is (a nem szavazó tartó így is ki tudja számolni, mi lesz a
+// gondolatával — D17) — az első gondolat saját eseményeit viszont nem. A kivitel ugyanezt a halmazt viszi.
+proba('⭐⭐ D85: a javaslat és a szavazat a SAJÁT szeletében — és az érintett szeletével együtt érkezik', async () => {
+  const szolgalo = await ujTar();
+  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url');
+  const kornyezet = { koino: KOINO, kulcspar, szerzo, tar: szolgalo };
+  await koinoLetrehozasa(kornyezet, 'Bejelentés');
+  const g1 = await gondolatLetrehozasa(kornyezet, { cim: 'Első' });
+  const g2 = await gondolatLetrehozasa(kornyezet, { cim: 'Második' });
+  await tudatpontRendezese(kornyezet, g1.azonosito, 100);
+  await tudatpontRendezese(kornyezet, g2.azonosito, 100);
+  const j = await javaslatLetrehozasa(kornyezet, { erintettek: [
+    { entitas: g1.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Első 2' } },
+    { entitas: g2.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Második 2' } }], pont: 4 });
+  const sajat = await koinoEsemenyei(szolgalo, KOINO);
+  const szavazat = sajat.find((e) => e.tipus === 'Szavazat' && e.adat.javaslat === j.azonosito);
+
+  // A szelet-kulcsok: a javaslat a sajátja, a szavazat a javaslaté.
+  const kulcsok = j.entitas === null && szavazat?.entitas === j.azonosito;
+  // A csere halmaza és a fogadó szűrője.
+  const halmaz = (await egyeztetettEsemenyek(szolgalo, KOINO, g2.azonosito)).map((e) => e.azonosito);
+  const halmazJo = halmaz.includes(j.azonosito) && halmaz.includes(szavazat.azonosito)
+    && !halmaz.includes(g1.azonosito);
+  const szuro = szeletbeTartozik(szavazat, new Set([g2.azonosito]))
+    && szeletbeTartozik(j, new Set([g1.azonosito]))
+    && !szeletbeTartozik(szavazat, new Set(['X'.repeat(43)]));
+
+  // ⭐ A VONALON: a másik készülék csak a második gondolat szeletét kéri.
+  const kero = await ujTar();
+  await szeletResen(szolgalo, kero, g2.azonosito);
+  const nala = (await koinoEsemenyei(kero, KOINO)).map((e) => e.azonosito);
+  const vonalJo = nala.includes(g2.azonosito) && nala.includes(j.azonosito)
+    && nala.includes(szavazat.azonosito) && !nala.includes(g1.azonosito);
+
+  // ⭐ A KÉZI ÚT: egy entitás kivitele ugyanazt a halmazt viszi.
+  const ki = await kivitelSzovege(szolgalo, KOINO, { hatokor: g2.azonosito });
+  const kivitelJo = ki.szoveg.includes(j.azonosito) && ki.szoveg.includes(szavazat.azonosito)
+    && !ki.szoveg.includes('"azonosito":"' + g1.azonosito + '"');
+
+  return kulcsok && halmazJo && szuro && vonalJo && kivitelJo;
 });
 
 proba('Ismeretlen entitás kérése: nulla esemény, de NEM hiba', async () => {

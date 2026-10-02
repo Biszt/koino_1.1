@@ -3,7 +3,7 @@
 // Azt bizonyítja, hogy egy esemény hamisíthatatlan: bármit írunk át benne, az ellenőrzés
 // bukik — és hogy a kettős cselekvés leleplezhető.
 
-import { esemenyLetrehozasa, esemenyEllenorzese, elagazasE } from '../js/esemeny/esemeny.js';
+import { esemenyLetrehozasa, esemenyEllenorzese, elagazasE, bejelentesHelyei } from '../js/esemeny/esemeny.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az aláírt esemény próbája');
@@ -30,6 +30,32 @@ async function szerzoje(kp) {
 }
 
 // ===== A HELYES ESET =====
+
+// ⭐⭐ D85/1, D85/3 (2026-10-02): HOVA JELENTJÜK BE AZ ESEMÉNYT a saját szeletén kívül — a születést a
+// szülőnél, a javaslatot MINDEN érintettjénél, a szavazatot a jogának bizonyítéka szerint (és csak a
+// lánc-gyökeres szavazatét: azt ellenőrzi a kapu). Csak azonosító alakú kulcs, és a saját szelet nem.
+proba('⭐⭐ D85: a BEJELENTÉS HELYEI — születés a szülőnél, javaslat minden érintettnél, szavazat a bizonyítékánál',
+  async () => {
+    const [A, B, J, T, S] = ['A', 'B', 'J', 'T', 'S'].map((b) => b.repeat(43));
+    const egyenlo = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    const gyoker = bejelentesHelyei({ tipus: 'GondolatLetrehozas', azonosito: A, entitas: null, adat: { cim: 'x' } });
+    const gyerek = bejelentesHelyei({ tipus: 'GondolatLetrehozas', azonosito: B, entitas: null, adat: { szulo: A } });
+    const javaslat = bejelentesHelyei({ tipus: 'Javaslat', azonosito: J, entitas: null,
+      adat: { erintettek: [{ entitas: B }, { entitas: A }, { entitas: A }, { entitas: 'nem-azonosito' }] } });
+    const regiJavaslat = bejelentesHelyei({ tipus: 'Javaslat', azonosito: J, entitas: null, adat: { erintett: A } });
+    const bizonyitek = { [A]: {}, [J]: {}, [T]: {}, rossz: {} };
+    const szavazat = bejelentesHelyei({ tipus: 'Szavazat', azonosito: S, entitas: J, lancGyoker: { naplo: {}, kiosztas: {} },
+      adat: { javaslat: J, bizonyitek } });
+    const gyokerNelkul = bejelentesHelyei({ tipus: 'Szavazat', azonosito: S, entitas: J, lancGyoker: null,
+      adat: { javaslat: J, bizonyitek } });
+    const pont = bejelentesHelyei({ tipus: 'TudatpontRendezes', azonosito: S, entitas: A, adat: { entitas: A } });
+    return egyenlo(gyoker, ['']) && egyenlo(gyerek, [A])
+      && egyenlo(javaslat, [A, B].sort())            // ismétlés és nem-azonosító nélkül
+      && egyenlo(regiJavaslat, [A])                  // a régi (egy-érintettes) alak is
+      && egyenlo(szavazat, [A, T].sort())            // a saját szelete (J) és a „rossz" kulcs nélkül
+      && gyokerNelkul.length === 0                   // ⛔ gyökér nélkül a bizonyíték nem jelent be
+      && pont.length === 0;
+  });
 
 proba('A frissen létrehozott esemény ellenőrzése RENDBEN', async () => {
   const e = await esemenyEllenorzese(esemeny);

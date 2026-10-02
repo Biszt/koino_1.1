@@ -123,6 +123,54 @@ export function szuleteseSzuloje(e) {
   return typeof e.adat?.szulo === 'string' ? e.adat.szulo : '';
 }
 
+/**
+ * ⭐⭐ D85/1, D85/3 (Csaba, 2026-10-02): HOVA JELENTJÜK BE AZ ESEMÉNYT — a saját szeletén KÍVÜL.
+ *
+ * A gyerek-bejelentés (a C 7. pontja) általánosítása. Egy szelet egyeztetett halmazában a saját
+ * eseményei mellett ott van minden, ami az ő entitásáról DÖNT vagy róla hír — így a tartói akkor is
+ * mindent tudnak, ha a hír egy másik szeletben lakik:
+ *
+ *   · `GondolatLetrehozas` → a szülőjénél ('' = a gyökér) — „új gyereke született";
+ *   · `Javaslat` → MINDEN érintettjénél — a javaslat a saját szeletében él (D85/1), de az érintett
+ *     gondolat nem szavazó tartóinak is ki kell tudniuk számolni, megváltozik-e (D17, D85/3);
+ *   · `Szavazat` → azokban a szeletekben, amelyekre a jogának bizonyítékát hozza (D85/2, T2: az érintett
+ *     gondolat és a rész javaslat-entitása) — vagyis ahol számít. ⚠️ Csak a saját kiosztásában szereplő
+ *     kulcs lehet itt (a kapu ellenőrzi), legfeljebb 64.
+ *
+ * ⛔ Csak azonosító alakú kulcs (D77: amit nem lehet a vonalon kimondani, az megakasztaná a cserét), és a
+ * saját szelete nem (az úgyis az övé). ⭐ Az eseményből MAGÁBÓL olvasható — a tár mutatója más esemény
+ * nélkül számolja ki (mint a szelet-kulcsot).
+ *
+ * Használják: tar/fajlTar.js (a mutató), csere/szeletEgyeztetes.js.
+ *
+ * @param {Object} e
+ * @returns {Array<string>} tár-kulcsok ('' = a gyökér), ismétlés nélkül, rendezve
+ */
+export function bejelentesHelyei(e) {
+  const helyek = new Set();
+  const sajat = szelet(e);
+  const hozza = (k) => {
+    if (k === '' || (typeof k === 'string' && AZONOSITO_MINTA.test(k) && k !== sajat)) helyek.add(k);
+  };
+  if (e?.tipus === 'GondolatLetrehozas') {
+    hozza(szuleteseSzuloje(e));
+  } else if (e?.tipus === 'Javaslat') {
+    const lista = Array.isArray(e.adat?.erintettek) ? e.adat.erintettek.map((r) => r?.entitas)
+      : [e.adat?.erintett];
+    for (const k of lista) if (typeof k === 'string' && k !== '') hozza(k);
+  } else if (e?.tipus === 'Szavazat') {
+    // ⛔ CSAK lánc-gyökeres szavazatnál: a kapu csak akkor ellenőrzi a bizonyítékot (legfeljebb 64
+    // azonosító, mind a saját kiosztásából — `szavazatOnbizonyitasa`). Gyökér nélkül a bizonyíték nem
+    // számít (`szavazatSajatPontjai`), és bejelentést sem adhat — különben bármennyi, bármilyen szeletbe
+    // be lehetne jelenteni egy szavazatot.
+    const b = e.adat?.bizonyitek;
+    if (e.lancGyoker && typeof e.lancGyoker === 'object' && b && typeof b === 'object' && !Array.isArray(b)) {
+      for (const k of Object.keys(b)) if (k !== '') hozza(k);
+    }
+  }
+  return [...helyek].sort();
+}
+
 // ===================================
 // SEGÉD: A LENYOMATOLANDÓ RÉSZ KIEMELÉSE
 // ===================================

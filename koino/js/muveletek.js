@@ -21,7 +21,7 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET, elsoErintett, ALLASOK, pontEsemenyMerlege, javaslatEntitasai } from './allapot/szabalyok.js';
+import { TUDATPONT_KERET, ALLASOK, pontEsemenyMerlege, javaslatEntitasai } from './allapot/szabalyok.js';
 // ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
@@ -916,9 +916,11 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
       erintettek,
       indoklas: indoklas || null
     },
-    // ⚠️ A szelet-kulcs az ELSŐ érintett (`szabalyok.js`: `elsoErintett`) — a szeletnek
-    // egyetlen gazdája lehet.
-    { entitas: erintettek[0].entitas }
+    // ⭐⭐ D85/1 (Csaba, 2026-10-02): A JAVASLAT A SAJÁT SZELETÉBEN ÉL, mint egy gondolat (az `entitas`
+    // üres → a saját azonosítója a szelet). Minden érintettjénél BEJELENTÉSKÉNT jelenik meg
+    // (`esemeny.js`: `bejelentesHelyei`) — a gondolat tartói így is mindent tudnak, ami róla dönt.
+    // *(2026-10-02-ig az első érintett szeletébe került: „a szeletnek egyetlen gazdája lehet".)*
+    {}
   );
 
   // ===================================
@@ -964,7 +966,9 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
     // 0%-kal, ELVETVE zárna — mérve, 2026-09-12.
     // ⭐ D85/2 (T2): a szavazati jog bizonyítéka minden részre (az érintettre és a javaslat-entitásra)
     // — a javaslattevőnek mindegyiken van pontja (a szabály-réteg 3. szabálya és a fenti lépés).
-    { entitas: erintettek[0].entitas, horgonyozzunk: true, ido: javaslat.ido,
+    // ⭐ D85/1: a szavazat a JAVASLAT szeletébe kerül (arról szól); az érintettekhez a bizonyítéka
+    // kulcsai szerint jelentődik be.
+    { entitas: javaslat.azonosito, horgonyozzunk: true, ido: javaslat.ido,
       bizonyitekKulcsok: entitasai.flatMap((je) => (je.resz ? [je.resz.entitas, je.azonosito] : [])) }
   );
 
@@ -1008,9 +1012,10 @@ export async function szavazas(kornyezet, javaslat, szavazat, kulonvalasIgeny = 
   if (!javaslatEsemeny) {
     throw new Error('Nem ismerem ezt a javaslatot: ' + javaslat);
   }
-  // ⭐ Az ELSŐ érintett — ugyanaz a szabály, mint a javaslat szelet-kulcsánál. Így a
-  // szavazat oda kerül, ahol a javaslat és a döntés többi bemenete van.
-  const entitas = elsoErintett(javaslatEsemeny.adat);
+  // ⭐ D85/1 (2026-10-02): a szavazat a JAVASLAT szeletébe kerül — arról szól, ahogy a tudatpont-esemény
+  // annak a szeletébe, amire vonatkozik. Az érintett gondolatokhoz a bizonyítéka kulcsai szerint
+  // jelentődik be (`bejelentesHelyei`). *(Korábban: az első érintett szeletébe.)*
+  const entitas = javaslat;
 
   // ⭐⭐ D85/2 (Csaba, 2026-10-02): A SZAVAZATI JOG A JAVASLATON IS PONTOT KÍVÁN. Ahol a szavazó jogosult
   // (pontja van az érintetten), de a rész javaslat-entitásán (a javaslaton / a töredékén) még nincs, a
