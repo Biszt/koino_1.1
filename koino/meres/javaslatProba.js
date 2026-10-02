@@ -9,6 +9,7 @@ import { javaslatokSzamitasa, sajatSzavazat, ALAP_KUSZOBOK } from '../js/allapot
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 import { toredekAzonosito } from '../js/allapot/szabalyok.js';
+import { dontesBemenete, csomagokra } from '../js/allapot/dontesiCsomag.js';
 
 const { proba, futtatas } = probaGyujtemeny('A döntéshozatal próbája');
 
@@ -569,6 +570,41 @@ proba('Érték javaslat nélkül az alapértelmezett küszöbök érvényesek', 
   const eset = await esetFelepitese({ szavazatok: ['Tamogat'] });
   const j = javaslatAllapot(eset, eset.kezdet + 10 * NAP);
   return j.kuszobok.elfogadasiKuszob === ALAP_KUSZOBOK.elfogadasiKuszob;
+});
+
+// ⭐⭐ D85 T3 (a2), Csaba, 2026-10-03: A DÖNTÉSI CSOMAG TARTALMA — ami a több érintettes döntéshez kell, és
+// semmi más: a javaslat, a szavazatai a lezárásig, az érintettek létrehozása, és az érintettek pont- és
+// küszöb-eseményei — a javaslat születése előttiekből szerzőnként csak a legnagyobb sorszámú (a többit
+// felülírta), az ablakból (születés → lezárás) mind; a lezárás után semmi, más entitásról semmi.
+proba('⭐⭐ D85 T3: a döntési csomag tartalma — a döntés bemenete a lezárásig, a felülírt régi nélkül', async () => {
+  const T = Date.UTC(2026, 0, 10), LEZARAS = T + 3600_000;
+  const alapito = await ujEember(), a = await ujEember(), b = await ujEember(), c = await ujEember();
+  const g1 = await alapito.tesz('GondolatLetrehozas', { cim: 'G1', meret: 10 }, T - 1000_000);
+  const g2 = await alapito.tesz('GondolatLetrehozas', { cim: 'G2', meret: 10 }, T - 1000_000);
+  const g3 = await alapito.tesz('GondolatLetrehozas', { cim: 'G3', meret: 10 }, T - 1000_000);
+  const a1 = await a.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 10 }, T - 100_000);
+  const a2 = await a.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 20 }, T - 50_000);
+  const bErtek = await b.tesz('ErtekJavaslat', { entitas: g1.azonosito,
+    ertekek: { elfogadasiKuszob: 60, reszveteliKuszob: 0, minimumDontesiIdo: 60, maximumDontesiIdo: 600 } }, T - 10_000);
+  const cMas = await c.tesz('TudatpontRendezes', { entitas: g3.azonosito, pont: 5 }, T - 10_000);
+  const j = await alapito.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek: [
+    { entitas: g1.azonosito, muvelet: 'Egyesites', valtozas: { cim: 'E' } },
+    { entitas: g2.azonosito, muvelet: 'Egyesites', valtozas: null }] }, T);
+  const masJ = await alapito.tesz('Javaslat', { fajta: 'szerkesztesi', erintett: g3.azonosito, muvelet: 'Torles' }, T);
+  const a3 = await a.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 30 }, T + 10_000);      // ablak
+  const aSz = await a.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' }, T + 20_000);
+  const bMasSz = await b.tesz('Szavazat', { javaslat: masJ.azonosito, szavazat: 'Tamogat' }, T + 20_000);
+  const aKesoi = await a.tesz('TudatpontRendezes', { entitas: g2.azonosito, pont: 40 }, LEZARAS + 1);
+  const bKesoiSz = await b.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Ellenez' }, LEZARAS + 5);
+
+  const minden = [g1, g2, g3, a1, a2, bErtek, cMas, j, masJ, a3, aSz, bMasSz, aKesoi, bKesoiSz];
+  const bemenet = dontesBemenete(minden, j, LEZARAS).map((e) => e.azonosito);
+  const vart = [g1, g2, a2, bErtek, j, a3, aSz].map((e) => e.azonosito).sort();
+  // A darabolás: kis korláttal több csomag, és az uniójuk a teljes bemenet.
+  const darabok = csomagokra(dontesBemenete(minden, j, LEZARAS), 3000);
+  const unio = darabok.flat().map((e) => e.azonosito).sort();
+  return JSON.stringify(bemenet) === JSON.stringify(vart)
+    && darabok.length > 1 && JSON.stringify(unio) === JSON.stringify(vart);
 });
 
 export default futtatas;

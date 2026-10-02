@@ -4460,11 +4460,19 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
   a szavazó kiosztás-fájából rövid bizonyíték, hogy a szavazás pillanatában pontja volt az érintett
   gondolaton és a javaslaton (töredékén); a kapu ellenőrzi. *Miért:* különben a javaslat pontjai a
   döntés bemenetévé válnának, és a gondolat nem szavazó tartóinak tartaniuk kellene őket.
-- ⏸️ **T3 (a D85/6 kevés):** a közös lezárás és az ÉS miatt a G1 sorsához a G2-es rész MINDEN bemenete
-  kell (a G2 tulajdonosai és küszöbei a lezárásig) — a G1 nem szavazó tartóinak is. Csaba: *„nem
-  szeretnék átmeneti megoldást. ha a (b) a jobb hosszútávon, akkor legyen a (b)"* — a (b) (ellenőrizhető
-  összegzés) és az (a) (a többi érintett döntési bemenete bejelentésként minden érintettnél) közti
-  választás tisztázásra vár (lásd a session-jegyzőkönyvet: az (a) teljes, nem átmeneti megoldás).
+- ⭐ **T3 (a D85/6 helyett — Csaba, 2026-10-03: „1. igen 2. (a2)”):** a közös lezárás és az ÉS miatt a G1
+  sorsához a G2-es rész MINDEN bemenete kell (a G2 tulajdonosai és küszöbei a lezárásig) — a G1 nem szavazó
+  tartóinak is. **Az (a) a VÉGLEGES irány** (a valódi adat jut el, mindenki maga számol — D17; a terhe a
+  döntés méretével arányos), **a (b) NEM cél**: egy összegzés teljességéért (hogy egy tulajdonos sem maradt
+  ki) senki nem kezeskedhet — szerző nincs, a tartó olcsó azonosság (D78/14), a szúrópróbához maga az adat
+  kellene. **A forma: (a2) — DÖNTÉSI CSOMAG:** a lezárás után a javaslattevő (minden érintetten pontja van,
+  tehát minden érintett szeletét tartja) kiad egy eseményt a döntés bemenetének aláírt másolataival (a
+  szavazatok és minden érintett pont- és küszöb-eseménye a lezárásig); a csomag minden érintett szeletébe
+  bejelentődik, a benne lévő események ugyanazon a kapun mennek be (3. szabály). Ha egy csomagból hiányzik
+  valami, egy másik teljesebb csomag pótolja — a számítás az unión fut; nagy döntésnél a csomag több
+  eseményre darabolható. A lezárásig a másik rész állása a csak-G1-tartónál „nem ismert” (D19). ⚠️ Az
+  építés előtt mérés: a csomag mérete a résztvevők számával (55. mérés). *(Az (a1) — a csere maga számol
+  határidőt — elvetve: összekötné a csere réteget a döntés-számítással.)*
 - **A megépítés állása:** D85/4 (az egyezmény-fázis a kártyán) ✅ `cbb6f19` · a töredékek mint entitások,
   a pakli töredék-kártyája, a szavazás töredék → csoport fordítása, a javaslattevő lépése (létrehozás →
   pont → szavazat a művelet-rétegben; a pont a prototípus szerint oszlik: mindegyikre legalább 1, a

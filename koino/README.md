@@ -97,7 +97,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Harminchárom próba-fájl, **828 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminchárom próba-fájl, **829 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy témakör
 (csoport) külön is futtatható: `node koino/meres/mind.js fa` — a csoportok: alap · allapot ·
 felulet · csere · fajl · fa · parancssor (a tagjaik a `mind.js` `CSOPORTOK`-jában). Egy
@@ -106,7 +106,7 @@ szűrő pontosan illeszkedik, és új próba-fájlt a `CSOPORTOK`-ba is be kell 
 `mind.js` megnevezi és nem fut.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **205 fájl, 3585,4 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **207 fájl, 3601,9 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*
@@ -154,6 +154,8 @@ find koino -type f -printf '%s\n' | awk '{n++; s+=$1} END {printf "%d fajl, %.1f
   falledőlését is ez mérte: mentés 495 ms → 1,4 ms, állapotszámítás 4 615 ms → 502 ms);
 - `node koino/meres/esemenyMeretMeres.js` — ⭐ **az esemény mérete a bizonyítékkal** (53., D81): a lánc-gyökér
   +~155 B eseményenként, a pont-esemény a bizonyítékával 1,15–1,86 KB (a szerző kiosztásától függően);
+- `node koino/meres/dontesiCsomagMeres.js [N ...]` — ⭐ **a döntési csomag mérete** (55., D85 T3): egy több érintettes
+  döntés bemenete résztvevőnként ~2,5–3 KB; 1000 résztvevőig egy csomag-esemény, 10 000-nél 26 MB, hét esemény;
 - `node koino/meres/osszegzoFaMeres.js` — ⭐ **az összegző Merkle-fa ára** (52., D78): a bizonyíték
   logaritmikus — 10⁵ elemnél ~1,2 KB, egymilliárdnál ~2,0 KB; a teljes kiosztás-lista a keret határán 829 KB;
 - `node koino/meres/csereMeres.js` — ⭐ **a szeletenkénti csere a vonalon** (51.): egy eltérés

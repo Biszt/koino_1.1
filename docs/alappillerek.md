@@ -223,7 +223,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    javaslatéba) és a bejelentés TÖBB szülővel (a döntés bemenete minden érintettnél; a tár mutatójában
    a születés-szülő listává válik); (d) az ÉS-szabály: a többi érintett nevezője a javaslat szeletébe.
    ⭐ **Állás (2026-10-03):** (a) ✅ `cbb6f19`, `ee624d6` · (b) ✅ `6016df7`, `54a4d8e` (a T2 bizonyítékkal) ·
-   (c) ✅ · (d) ⏸️ a T3 tisztázására vár.
+   (c) ✅ `2764cab` · (d) ⭐ T3 eldőlt (2026-10-03): az (a) végleges, formája a **döntési csomag** (a2) — előbb
+   a mérés (55.), aztán az építés.
    *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
 2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
    betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
@@ -356,3 +357,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 39. **2026-10-03 · a szavazat bejelentése: a bizonyíték minden kulcsánál** → **csak a lánc-gyökeres
     szavazatnál** · mert a kapu csak akkor ellenőrzi a bizonyítékot; gyökér nélkül bármennyi, bármilyen
     szeletbe be lehetett volna jelenteni egy szavazatot · `esemeny.js`: `bejelentesHelyei`.
+40. **2026-10-03 · a több érintettes döntés a szeletelt világban (T3): ellenőrizhető összegzés (b)** →
+    **a valódi adat (a), döntési csomagban (a2)** · mert az összegzés teljességéért senki nem kezeskedhet
+    (szerző nincs, a tartó olcsó azonosság), és Csaba nem akar átmeneti megoldást — az (a) teljes és végleges;
+    az (a1)-et (a csere számol határidőt) elvetettük, mert a csere réteget a döntéshez kötné · D85 T3.

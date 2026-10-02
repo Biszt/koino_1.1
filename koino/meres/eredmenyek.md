@@ -4468,3 +4468,34 @@ két bizonyíték).
 javaslat pont-eseményei nélkül is eldönthető (a szigorú (b) alatt a gondolat nem szavazó tartóinál), és
 mindenhol ugyanaz. ⏸️ Ha szűkös lesz: a két bizonyíték közös felső szakasza összevonható (több-kulcsos
 bizonyíték) — ma nem kell.
+
+## 55. ⭐ A DÖNTÉSI CSOMAG MÉRETE — a T3 (a2) ára (2026-10-03, a laptopon)
+
+*A D85 T3 után (a több érintettes döntés bemenete a lezárás után egy csomagban jut el minden érintett
+szeletébe): `dontesiCsomagMeres.js`. Egyesítés (G1 + G2); a G2-nek N tulajdonosa van, a felük a G1-en is;
+mindegyik egyszer átrendezte a pontját; minden ötödik küszöböt javasolt; a felük szavazott. Valódi
+műveletek, valódi aláírt események (lánc-gyökérrel, bizonyítékkal). A csomag-korlát 4 MB (a vonal
+sorkorlátjának fele).*
+
+```
+    N | a koino eseményei | a csomag (válogatva)       | válogatás nélkül          | csomag-esemény | tulajdonosonként
+   10 |                53 |     28 esemény,     29,7 KB |     38 esemény,    37,0 KB |              1 | 3,0 KB
+  100 |               431 |    226 esemény,    272,2 KB |    326 esemény,   345,5 KB |              1 | 2,7 KB
+ 1000 |              4211 |   2206 esemény,  2 538,0 KB |   3206 esemény, 3 270,5 KB |              1 | 2,5 KB
+10000 |             42011 |  22006 esemény, 25 977,6 KB |  32006 esemény, 33 301,8 KB |              7 | 2,6 KB
+```
+
+⭐ **A lelet:** a csomag **lineáris a döntés résztvevőivel** (~2,5–3 KB tulajdonosonként), a koino
+méretétől független — a „végtelen” próbáját kiállja. A válogatás (a felülírt régi pont- és
+küszöb-események nélkül) itt 22–30%-ot spórol (tulajdonosonként egy átrendezésnél; több átrendezésnél
+többet). 1000 résztvevőig egy csomag-esemény elég, felette darabolva megy (a csomagok uniója a bemenet).
+*(A mérés után a csomagba az érintettek létrehozó eseménye is bekerült — érintettenként ~0,8 KB.)*
+
+⚠️ **A mérés alsó becslés:** a tulajdonosok kiosztása itt 1–3 entitás; egy sok entitáson pontot tartó
+szavazó eseménye nagyobb (53–54.: pont +~0,7 KB, szavazat +~1,5 KB) — a valódi ár tulajdonosonként
+inkább 3–5 KB.
+
+⚠️ **Egy kockázat, amit ki kell mondani (Csaba döntésére vár):** a csomag MINDEN érintett szeletébe
+eljut. Aki egy kis gondolatot egy nagyon népszerűvel javasol egyesíteni, az a kis gondolat tartóira a nagy
+gondolat teljes tulajdonosi körét küldi (10 000 tulajdonosnál ~26 MB) — és ehhez csak annyi kell, hogy
+mindkettőn legyen pontja (ez olcsó). Ez erősítés: kis ráfordítással nagy terhet tesz másokra.

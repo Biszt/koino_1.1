@@ -131,7 +131,8 @@ import { TUDATPONT_KERET, javaslatEntitasai } from '../js/allapot/szabalyok.js';
  */
 function szeletKulcs(tipus, adat) {
   if (tipus === 'TudatpontRendezes' || tipus === 'ErtekJavaslat') return adat?.entitas ?? null;
-  if (tipus === 'Javaslat') return adat?.erintett ?? null;
+  // ⭐ D85/1 (2026-10-03): a javaslat a SAJÁT szeletében él (mint a `muveletek.js`-ben), akármelyik alakú.
+  if (tipus === 'Javaslat') return null;
   if (tipus === 'Szavazat') return adat?.javaslat ?? null;
   // ⭐ A MEGHÍVÁS a MEGHÍVOTT szeletébe kerül (D56) — a hívó `beallitas.entitas`-szal adja
   // meg, mert a horgony azonosítója nem vezethető le az adatból.
