@@ -4468,8 +4468,11 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
 - **A megépítés állása:** D85/4 (az egyezmény-fázis a kártyán) ✅ `cbb6f19` · a töredékek mint entitások,
   a pakli töredék-kártyája, a szavazás töredék → csoport fordítása, a javaslattevő lépése (létrehozás →
   pont → szavazat a művelet-rétegben; a pont a prototípus szerint oszlik: mindegyikre legalább 1, a
-  maradék körbe) ✅ (ez a lépés) · ⏭️ a szavazati jog (pont a javaslaton is) és a T2 bizonyítéka ·
-  ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
+  maradék körbe) ✅ `ee624d6` · **a szavazati jog** (pont az érintetten ÉS a javaslaton / a töredékén, a
+  leadás pillanatában; a nevező változatlan) ✅ a számításban (`javaslatSzamitas.js`), és a `szavaz`
+  magától 1 pontot tesz a javaslatra, ha még nincs rajta ✅ · **a különválás csak a gondolatokat osztja
+  szét** (a prototípus `kulonvalasService.js`-e szerint) — az elfogadott egyezmény a főágon marad ✅ ·
+  ⏭️ a T2 bizonyítéka (a szavazat hozza) · ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
 
 ### D86. A TARTÓS TÁR HATÁRA (2026-10-02, Csaba)
 

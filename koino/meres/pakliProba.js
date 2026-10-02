@@ -404,8 +404,8 @@ proba('⭐⭐⭐ A PAKLI a MEGVÁLTOZOTT címet mutatja az egyezmény után', as
     { fajta: 'szerkesztesi', erintett: g.azonosito, muvelet: 'Modositas',
       valtozas: { cim: 'MEGVÁLTOZOTT CÍM' }, indoklas: null }, kezdet + 1000);
   await esemenyMentese(tar, j);
-  await esemenyMentese(tar, await anna.tesz('Szavazat',
-    { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet + 2000));
+  // ⭐ D85/2: a szavazó a javaslatra is pontot tesz — ahogy a művelet.
+  for (const ev of await anna.szavaz(j, { szavazat: 'Tamogat' }, kezdet + 2000)) await esemenyMentese(tar, ev);
 
   // ⚠️ A GONDOLAT kártyáját keressük, nem a nulladikat: az 5.5 óta a JAVASLAT is kártya a
   // pakliban, és a rendezési értéke az érintettével azonos — tehát bármelyik lehet elöl.
@@ -468,8 +468,8 @@ proba('⭐⭐ …és a szöveg is a MEGVÁLTOZOTT alakot adja egyezmény után',
     { fajta: 'szerkesztesi', erintett: g.azonosito, muvelet: 'Modositas',
       valtozas: { szoveg: 'ÚJ SZÖVEG' }, indoklas: null }, kezdet + 1000);
   await esemenyMentese(tar, j);
-  await esemenyMentese(tar, await anna.tesz('Szavazat',
-    { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet + 2000));
+  // ⭐ D85/2: a szavazó a javaslatra is pontot tesz — ahogy a művelet.
+  for (const ev of await anna.szavaz(j, { szavazat: 'Tamogat' }, kezdet + 2000)) await esemenyMentese(tar, ev);
 
   const kesoi = await entitasSzovege(tar, KOINO, g.azonosito,
     { most: kezdet + 30 * 24 * 3600 * 1000 });

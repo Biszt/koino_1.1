@@ -217,6 +217,11 @@ async function leszarmazottakSzetosztasa(allapot, foag, ujAg, kulonvalok, egyezm
   const gyerekek = new Map();
   for (const e of entitasok.values()) {
     if (!e.szulo) continue;
+    // ⛔ CSAK A GONDOLATOK (a prototípus `kulonvalasService.js`-e: `findBySzuloId(…, 'Gondolat')`). A
+    // javaslat és az egyezmény a FŐÁGON marad — nem költözik és nem duplázódik. ⭐ Ez D85/2 óta látszik:
+    // az ellenzőknek is pontjuk van a javaslaton (a szavazati jogukhoz), és enélkül az elfogadott
+    // egyezmény a külön ágra is átmásolódna — arra az ágra, amelyik épp elutasította.
+    if ((e.tipus ?? 'Gondolat') !== 'Gondolat') continue;
     if (!gyerekek.has(e.szulo)) gyerekek.set(e.szulo, []);
     gyerekek.get(e.szulo).push(e);
   }

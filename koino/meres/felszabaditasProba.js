@@ -58,8 +58,7 @@ async function torlesEset({ szavazat = 'Tamogat', masodikGondolat = false } = {}
     erintettek: [{ entitas: g.azonosito, muvelet: 'Torles', valtozas: null }]
   }, KEZDET + 1000);
   esemenyek.push(j);
-  esemenyek.push(await gazda.tesz('Szavazat',
-    { javaslat: j.azonosito, szavazat }, KEZDET + 2000));
+  esemenyek.push(...await gazda.szavaz(j, { szavazat }, KEZDET + 2000));
 
   return { esemenyek, gondolat: g, masodik, javaslat: j, gazda };
 }
@@ -147,10 +146,13 @@ proba('⛔⛔ HA A DÖNTÉS VISSZAFORDUL, AZ ÓRA ÚJRAINDUL — és nem szabad�
   const ellenzo = await ujEember();
   const pont = await ellenzo.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 200, kiosztva: 200 }, KEZDET);
+  // ⭐ D85/2: a szavazati jog a javaslaton is pontot kíván.
+  const jPont = await ellenzo.tesz('TudatpontRendezes',
+    { entitas: e.javaslat.azonosito, pont: 1, kiosztva: 201 }, KEZDET + 2500);
   const ellen = await ellenzo.tesz('Szavazat',
     { javaslat: e.javaslat.azonosito, szavazat: 'Ellenez' }, KEZDET + 2500);
 
-  const a2 = await kep([...e.esemenyek, pont, ellen]);
+  const a2 = await kep([...e.esemenyek, pont, jPont, ellen]);
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
 
   return a2.entitasok.has(e.gondolat.azonosito) === true      // ⭐ a gondolat visszatért
@@ -173,10 +175,13 @@ proba('⛔⛔ HA A DÖNTÉS JELE VÁLTOZIK, A SZÁMLÁLÓ NULLÁRÓL INDUL', asy
   const tamogato = await ujEember();
   const pont = await tamogato.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);
+  // ⭐ D85/2: a szavazati jog a javaslaton is pontot kíván.
+  const jPont = await tamogato.tesz('TudatpontRendezes',
+    { entitas: e.javaslat.azonosito, pont: 1, kiosztva: 11 }, KEZDET + 2500);
   const igen = await tamogato.tesz('Szavazat',
     { javaslat: e.javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2500);
 
-  const a2 = await kep([...e.esemenyek, pont, igen]);
+  const a2 = await kep([...e.esemenyek, pont, jPont, igen]);
   const regiAllas = elakadtPontok(a1, e.gazda.szerzo)[0].allas;
   const ujAllas = elakadtPontok(a2, e.gazda.szerzo)[0].allas;
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
@@ -199,16 +204,17 @@ proba('⭐ A GAZDA MAGÁTÓL IS VISSZAVEHETI — akkor a jegyzetből is kikerül
   let jegyzet = felszabaditasiTerv(a1, e.gazda.szerzo, ujJegyzet()).jegyzet;
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
 
-  // A kézi út (4. szabály): saját kézzel veszi vissza.
+  // A kézi út (4. szabály): saját kézzel veszi vissza. ⭐ D85/2: az 1 pontja a javaslaton (a szavazati
+  // jogához kellett) megmarad — ő tartja a törlési egyezményt.
   const vissza = await e.gazda.tesz('TudatpontRendezes',
-    { entitas: e.gondolat.azonosito, pont: 0, kiosztva: 0 }, KESOBB);
+    { entitas: e.gondolat.azonosito, pont: 0, kiosztva: 1 }, KESOBB);
 
   const a2 = await kep([...e.esemenyek, vissza]);
   const terv = felszabaditasiTerv(a2, e.gazda.szerzo, jegyzet);
 
   return terv.feloldhato.length === 0
     && terv.jegyzet.tetelek[e.gondolat.azonosito] === undefined
-    && szetosztottPontok(a2, e.gazda.szerzo) === 0;
+    && szetosztottPontok(a2, e.gazda.szerzo) === 1;
 });
 
 // ===================================
@@ -223,11 +229,12 @@ proba('⭐⭐ A FELSZABADÍTÓ LÉPÉS BEMONDOTT ÖSSZEGE HELYES — enélkül a
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
   const teljes = felszabaditas(a, e.gazda.szerzo, jegyzet);
 
-  // 100 (törölt) + 40 (marad) = 140 van kiosztva; a felszabadítás után 40 marad.
-  return szetosztottPontok(a, e.gazda.szerzo) === 140
+  // 100 (törölt) + 40 (marad) + 1 (a javaslaton — D85/2: a szavazati jogához) = 141 van kiosztva;
+  // a felszabadítás után 41 marad.
+  return szetosztottPontok(a, e.gazda.szerzo) === 141
     && teljes.lepesek.length === 1
     && teljes.lepesek[0].pont === 0
-    && teljes.lepesek[0].kiosztva === 40;
+    && teljes.lepesek[0].kiosztva === 41;
 });
 
 proba('⭐⭐ ÉS A KÉSZÜLÉK ESEMÉNYE TÉNYLEG ÁTMEGY A SZABÁLY-RÉTEGEN', async () => {
@@ -249,7 +256,7 @@ proba('⭐⭐ ÉS A KÉSZÜLÉK ESEMÉNYE TÉNYLEG ÁTMEGY A SZABÁLY-RÉTEGEN',
 
   const utana = await kep(esemenyek);
   return utana.kivetelek.length === 0
-    && szetosztottPontok(utana, e.gazda.szerzo) === 40
+    && szetosztottPontok(utana, e.gazda.szerzo) === 41      // 40 + 1 a javaslaton (D85/2)
     && elakadtPontok(utana, e.gazda.szerzo).length === 0;
 });
 

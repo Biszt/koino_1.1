@@ -1005,9 +1005,22 @@ export async function szavazas(kornyezet, javaslat, szavazat, kulonvalasIgeny = 
   // szavazat oda kerül, ahol a javaslat és a döntés többi bemenete van.
   const entitas = elsoErintett(javaslatEsemeny.adat);
 
+  // ⭐⭐ D85/2 (Csaba, 2026-10-02): A SZAVAZATI JOG A JAVASLATON IS PONTOT KÍVÁN. Ahol a szavazó jogosult
+  // (pontja van az érintetten), de a rész javaslat-entitásán (a javaslaton / a töredékén) még nincs, a
+  // művelet 1 pontot tesz rá — UGYANAZZAL az időbélyeggel, a szavazat ELŐTT, ahogy a javaslattevőnél is.
+  // ⚠️ A szabály a SZÁMÍTÁSBAN van (`javaslatSzamitas.js`); ez itt csak az, hogy a gomb ne legyen
+  // némán hatástalan.
+  const ido = Date.now();
+  for (const je of javaslatEntitasai(javaslatEsemeny)) {
+    if (!je.resz) continue;
+    if ((await sajatKiosztott(kornyezet, je.resz.entitas)).regi <= 0) continue;   // itt nem jogosult
+    if ((await sajatKiosztott(kornyezet, je.azonosito)).regi > 0) continue;      // már van pontja rajta
+    await tudatpontRendezese(kornyezet, je.azonosito, 1, 'aktiv', undefined, { ido });
+  }
+
   return esemenytTeszek(
     kornyezet, 'Szavazat', { javaslat, szavazat, kulonvalasIgeny: igeny },
-    { entitas, horgonyozzunk: true }
+    { entitas, horgonyozzunk: true, ido }
   );
 }
 

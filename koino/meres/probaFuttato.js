@@ -119,7 +119,7 @@ export function probaGyujtemeny(cim) {
 // másolják — és mert ha a lánc-építés szabálya változik, itt egy helyen kövessük.
 
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
-import { TUDATPONT_KERET } from '../js/allapot/szabalyok.js';
+import { TUDATPONT_KERET, javaslatEntitasai } from '../js/allapot/szabalyok.js';
 
 /**
  * A SZELET-KULCS kitalálása a típusból — ugyanaz a szabály, amit a `muveletek.js` követ.
@@ -166,6 +166,9 @@ export async function ujEember(koino = 'proba') {
   const entitasSorszamok = new Map();   // szelet → hányadik eseményem rajta
   const pontok = new Map();             // entitás → a rá tett pontom
   let kiosztottOsszeg = 0;              // mennyit osztottam ki eddig
+  // ⭐ D85/2: MINDEN pont-eseményem (a kézzel bemondott összegűek is) — a `szavaz` ebből tudja, hol
+  // vagyok jogosult, és mennyi lesz a javaslatra tett pont bemondott összege.
+  const ismertPontok = new Map();
 
   /** A közös rész: a burkolat három mezőjének kitöltése. */
   function burkolat(tipus, adat, beallitas) {
@@ -182,6 +185,8 @@ export async function ujEember(koino = 'proba') {
     }
 
     // ----- A D42 BEMONDOTT ÖSSZEGE -----
+    if (tipus === 'TudatpontRendezes' && Number.isInteger(adat?.pont)) ismertPontok.set(adat.entitas, adat.pont);
+
     let vegsoAdat = adat;
     if (tipus === 'TudatpontRendezes' && adat?.kiosztva === undefined
         && Number.isInteger(adat?.pont)) {
@@ -194,6 +199,12 @@ export async function ujEember(koino = 'proba') {
         kiosztottOsszeg = ujOsszeg;
       }
       vegsoAdat = { ...adat, kiosztva: ujOsszeg };
+    } else if (tipus === 'TudatpontRendezes' && Number.isInteger(adat?.pont)
+               && Number.isInteger(adat?.kiosztva)) {
+      // ⭐ A kézzel bemondott összeg is az új kiindulás — különben a következő, magától kitöltött
+      // pont-esemény egy régi összegre építene (D85/2: a `szavaz` így adja le a javaslat pontját).
+      pontok.set(adat.entitas, adat.pont);
+      kiosztottOsszeg = adat.kiosztva;
     }
 
     return { entitas, entitasSorszam, adat: vegsoAdat };
@@ -222,6 +233,30 @@ export async function ujEember(koino = 'proba') {
       );
       elozo = e.azonosito;
       return e;
+    },
+
+    /**
+     * ⭐ D85/2: SZAVAZAT ÚGY, AHOGY A MŰVELET ADJA LE (`muveletek.js`, `szavazas`). A szavazati jog a
+     * javaslaton (több érintettnél a rész töredékén) is pontot kíván — ahol a szavazó jogosult (pontja
+     * van az érintetten), de ott még nincs pontja, előbb 1 pontot tesz rá, UGYANAZZAL az időbélyeggel.
+     * ⚠️ A szabály ágait NEM ez méri (az kézzel írt eseményekkel megy, `javaslatProba.js`); ez a
+     * többi próba kényelme, hogy a szavazóik úgy szavazzanak, ahogy a program.
+     * @returns {Promise<Array<Object>>} az események sorban — az utolsó a szavazat
+     */
+    async szavaz(javaslatEsemeny, adat, ido, beallitas) {
+      const esemenyek = [];
+      for (const je of javaslatEntitasai(javaslatEsemeny)) {
+        if (!je.resz) continue;
+        if ((ismertPontok.get(je.resz.entitas) ?? 0) <= 0) continue;   // itt nem jogosult
+        if ((ismertPontok.get(je.azonosito) ?? 0) > 0) continue;        // már van pontja rajta
+        // A bemondott összeg az ÖSSZES ismert pontomból (a kézzel bemondottakéból is) + 1.
+        const kiosztva = [...ismertPontok.values()].reduce((a, b) => a + b, 0) + 1;
+        esemenyek.push(await this.tesz('TudatpontRendezes',
+          { entitas: je.azonosito, pont: 1, kiosztva }, ido));
+      }
+      esemenyek.push(await this.tesz('Szavazat', { javaslat: javaslatEsemeny.azonosito, ...adat },
+        ido, beallitas));
+      return esemenyek;
     },
 
     /**

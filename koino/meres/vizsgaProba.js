@@ -180,12 +180,9 @@ async function teljesEset() {
   }, KEZDET + 1000);
   esemenyek.push(javaslat);
 
-  esemenyek.push(await anna.tesz('Szavazat',
-    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
-  esemenyek.push(await bela.tesz('Szavazat',
-    { javaslat: javaslat.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
-  esemenyek.push(await cili.tesz('Szavazat',
-    { javaslat: javaslat.azonosito, szavazat: 'Ellenez' }, KEZDET + 2000));
+  esemenyek.push(...await anna.szavaz(javaslat, { szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(...await bela.szavaz(javaslat, { szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(...await cili.szavaz(javaslat, { szavazat: 'Ellenez' }, KEZDET + 2000));
 
   return { esemenyek, anna, bela, cili, elso, masodik, javaslat };
 }
@@ -226,7 +223,9 @@ proba('⭐ A LISTÁK SORRENDJE is azonos (nem csak az értékek)', async () => {
   const b = (await kep(fordított)).allapot;
   const sorrend = (allapot) => [...allapot.entitasok.keys()].join(',');
 
-  return sorrend(a) === sorrend(b) && a.entitasok.size === 2;
+  // ⭐ D85/2: a szavazók pontot tesznek a javaslatra is (a szavazati jogukhoz) — így a javaslat is
+  // entitás: két gondolat + a javaslat.
+  return sorrend(a) === sorrend(b) && a.entitasok.size === 3;
 });
 
 // ===================================

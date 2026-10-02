@@ -166,7 +166,7 @@ proba('⭐⭐ AZ ELFOGADOTT MÓDOSÍTÁS A SZÖVEG-HIVATKOZÁST VISZI ÁT (D72)'
     await gazda.tesz('ErtekJavaslat', { entitas: g.azonosito, ertekek: KUSZOBOK }, KEZDET)];
   const j = await gazda.tesz('Javaslat', { fajta: 'szerkesztesi', erintett: g.azonosito,
     muvelet: 'Modositas', valtozas: { szoveg: uj }, indoklas: null }, KEZDET + 1000);
-  esemenyek.push(j, await gazda.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' }, KEZDET + 2000));
+  esemenyek.push(j, ...await gazda.szavaz(j, { szavazat: 'Tamogat' }, KEZDET + 2000));
   const k = await kep(esemenyek);
   return azonosSzoveg(k.allapot.entitasok.get(g.azonosito).szoveg, uj) && k.alkalmazottak.length === 1;
 });
@@ -187,11 +187,9 @@ proba('⛔⛔ A KÜLÖNVÁLÓ TÁMOGATÓK A JAVASOLT SZÖVEGET VISZIK — a blok
   }
   const j = await gazda.tesz('Javaslat', { fajta: 'szerkesztesi',
     erintettek: [{ entitas: g.azonosito, muvelet: 'Modositas', valtozas: { szoveg: uj } }] }, KEZDET + 1000);
-  esemenyek.push(j, await gazda.tesz('Szavazat',
-    { javaslat: j.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: true }, KEZDET + 2000));
+  esemenyek.push(j, ...await gazda.szavaz(j, { szavazat: 'Tamogat', kulonvalasIgeny: true }, KEZDET + 2000));
   for (const x of ellenzok) {
-    esemenyek.push(await x.tesz('Szavazat',
-      { javaslat: j.azonosito, szavazat: 'Ellenez', kulonvalasIgeny: false }, KEZDET + 2000));
+    esemenyek.push(...await x.szavaz(j, { szavazat: 'Ellenez', kulonvalasIgeny: false }, KEZDET + 2000));
   }
   const k = await kep(esemenyek);
   const ag = k.allapot.entitasok.get(k.kulonvalasok[0]?.kulonvaltAg);

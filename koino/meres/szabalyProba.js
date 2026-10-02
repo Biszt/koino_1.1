@@ -370,7 +370,7 @@ proba('⭐⭐ AKI CSAK AZ EGYIKEN VAN BENT, CSAK OTT SZAVAZ — a többi rész �
 
   // Mindhárman támogatnak — de gazdaA csak A-ban, gazdaB csak B-ben számít.
   for (const [ki, mit] of [[e.gazdaA, 'Tamogat'], [e.gazdaB, 'Tamogat'], [e.jogos, 'Tamogat']]) {
-    e.esemenyek.push(await ki.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: mit }, e.kezdet));
+    e.esemenyek.push(...await ki.szavaz(e.j, { szavazat: mit }, e.kezdet));
   }
 
   const d = dontes(e);
@@ -388,9 +388,9 @@ proba('⛔⛔ EGY RÉSZ ELBUKÁSA AZ EGÉSZ JAVASLATOT ELVETI (ÉS, nem VAGY)', 
   const e = await csomagEset(Date.UTC(2026, 0, 1));
 
   // A-ban egyöntetű támogatás, B-ben viszont a gazda ellenzi → B megbukik 50%-on.
-  e.esemenyek.push(await e.gazdaA.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
-  e.esemenyek.push(await e.jogos.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
-  e.esemenyek.push(await e.gazdaB.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Ellenez' }, e.kezdet));
+  e.esemenyek.push(...await e.gazdaA.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(...await e.jogos.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(...await e.gazdaB.szavaz(e.j, { szavazat: 'Ellenez' }, e.kezdet));
 
   const d = dontes(e);
   const [reszA, reszB] = d.reszek;
@@ -407,8 +407,8 @@ proba('⭐ A KÖZÖS LEZÁRÁS a LEGHOSSZABB rész-döntési idő (a csoport egy
 
   // Csak A-ban szavaznak → ott nagy a bizonyosság, tehát RÖVID a döntési idő;
   // B-ben senki, tehát ott a maximum marad. A közös lezárás a hosszabbik.
-  e.esemenyek.push(await e.gazdaA.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
-  e.esemenyek.push(await e.jogos.tesz('Szavazat', { javaslat: e.j.azonosito, szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(...await e.gazdaA.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
+  e.esemenyek.push(...await e.jogos.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
 
   const d = dontes(e);
   const [reszA, reszB] = d.reszek;

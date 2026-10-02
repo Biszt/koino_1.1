@@ -32,7 +32,7 @@
 // Használják: koino.js (a parancssori arc) és az önpróbák.
 
 import { median } from './allapotSzamitas.js';
-import { erintettek } from './szabalyok.js';
+import { erintettek, javaslatEntitasai } from './szabalyok.js';
 
 // ===================================
 // ALAPÉRTELMEZETT KÜSZÖBÖK
@@ -369,9 +369,19 @@ function kulonvaloOldal(szavazatok, igenyek, fajta) {
     .sort();
 }
 
-function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek) {
+function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek,
+                         javaslatPontok = []) {
   const entitasok = kik.map((r) => r.entitas);
-  const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek]);
+  const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek, ...javaslatPontok]);
+
+  // ⭐⭐ D85/2 (Csaba, 2026-10-02): A SZAVAZATI JOG A JAVASLATON IS PONTOT KÍVÁN — egy érintettnél a
+  // javaslaton, többnél a rész TÖREDÉKÉN. *„így a javaslat is több helyen lesz tudatpontosan tárolva"*
+  // (D3: a tudatpont tárolási vállalás). ⚠️ A nevező NEM változik: az érintett aktív tulajdonosai
+  // maradnak — különben a részvétel mindig 100% lenne.
+  const reszJavaslata = new Map();     // a javaslat-entitás azonosítója → az érintett (a rész)
+  for (const je of javaslatEntitasai(javaslatEsemeny)) {
+    if (je.resz) reszJavaslata.set(je.azonosito, je.resz.entitas);
+  }
 
   // ----- ENTITÁSONKÉNT KÜLÖN KÖNYVELÉS -----
   // ⭐ Külön térkép entitásonként (nem összetett kulcs): így a „ki tulajdonos ITT?"
@@ -380,6 +390,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   const tulajdonosok = uresen();      // entitás → (szerző → { pont, szerep, sorszam })
   const ertekJavaslatok = uresen();   // entitás → (szerző → { ertekek, sorszam })
   const reszSzavazatok = uresen();    // entitás → (szerző → 'Tamogat' | …)
+  const javaslatTulajdonosok = uresen(); // entitás (a rész) → (szerző → { pont, sorszam }) a javaslat-entitásán
   const kulonAgot = uresen();         // entitás → (szerző → kért-e külön ágat)
   const szavazatSorszam = new Map();  // szerző → az eddig figyelembe vett szavazat-sorszám
 
@@ -494,6 +505,8 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       // épp aktívvá válik.
       for (const entitas of entitasok) {
         if ((tulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
+        // ⭐ D85/2: és a rész javaslat-entitásán (a javaslaton / a töredékén) is pont kell.
+        if ((javaslatTulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
         reszSzavazatok.get(entitas).set(esemeny.szerzo, esemeny.adat.szavazat);
         // ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY IS ELTEVŐDIK (2026-09-08) — a különválás ebből tudja
         // meg, ki lép külön ágra, ha a döntés ellene megy. ⛔ Tartózkodásnál a művelet
@@ -501,6 +514,14 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
         // egy kézzel írt esemény hazudhat.
         kulonAgot.get(entitas).set(esemeny.szerzo, esemeny.adat.kulonvalasIgeny === true);
       }
+
+    } else if (esemeny.tipus === 'TudatpontRendezes' && reszJavaslata.has(esemeny.adat.entitas)) {
+      // ⭐ D85/2: pont a rész javaslat-entitásán — a szavazati jog második feltétele. A nevezőt NEM
+      // mozdítja (az az érintett tulajdonosaié), csak azt, hogy kinek a szavazata számít.
+      const terkep = javaslatTulajdonosok.get(reszJavaslata.get(esemeny.adat.entitas));
+      const eddigi = terkep.get(esemeny.szerzo);
+      if (eddigi !== undefined && esemeny.sorszam <= eddigi.sorszam) continue;
+      terkep.set(esemeny.szerzo, { pont: esemeny.adat.pont, sorszam: esemeny.sorszam });
 
     } else if (esemeny.tipus === 'TudatpontRendezes') {
       const terkep = tulajdonosok.get(esemeny.adat.entitas);
@@ -641,7 +662,9 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       kik,
       szavazatok.get(e.azonosito) ?? [],
       erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
-      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? [])
+      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
+      // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
+      javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? [])
     );
     const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok } = csoport;
 

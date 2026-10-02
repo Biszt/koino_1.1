@@ -208,6 +208,41 @@ proba('⭐ A SZERKESZTÉSI kör kézi útja: javaslat → szavaz → az új cím
   }
 });
 
+// ⭐⭐ D85/2 (Csaba, 2026-10-02): a szavazati jog a javaslaton is pontot kíván — és a `szavaz`
+// parancs ezt MAGÁTÓL teljesíti (1 pont a javaslatra, a szavazat előtt). ⚠️ Ez a próba a MÁSIK
+// készülék szavazatát méri: a javaslattevőét a javaslat-művelet pontozza, tehát az nem mondana
+// semmit. Hálózat nincs, a kézi úton (kivisz → behoz) mennek az események; a döntést a jövőből
+// kérdezzük (`allapot 1`), hogy ne az óra ütemén múljon.
+proba('⭐⭐ D85/2: a MÁSIK készülék parancssori szavazata SZÁMÍT — a `szavaz` a javaslatra is pontot tesz',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    const oda = join(egyik, 'oda.jsonl');
+    const vissza = join(masik, 'vissza.jsonl');
+    try {
+      await fut(egyik, 'koino', 'Próba koinó');
+      const gondolat = azonosito(await fut(egyik, 'gondolat', 'EREDETI CÍM'), 'Létrejött:');
+      await fut(egyik, 'ertek', gondolat, '51', '0', '3600', '3600');
+      const javaslat = azonosito(await fut(egyik, 'javaslat', gondolat, 'ÚJ CÍM'), 'Szerkesztési javaslat beadva');
+      if (!javaslat) return false;
+
+      await fut(egyik, 'kivisz', oda);
+      await fut(masik, 'behoz', oda);
+      await fut(masik, 'pont', gondolat, '10');            // a másik is tulajdonos lesz
+      await fut(masik, 'szavaz', javaslat, 'ellenez');
+      await fut(masik, 'kivisz', vissza);
+      await fut(egyik, 'behoz', vissza);
+
+      // 1 támogató (a javaslattevő) és 1 ellenző: 50% < 51% → ELVETVE. Ha a másik szavazata nem
+      // számítana (nincs pontja a javaslaton), 1/1 támogatással ELFOGADVA lenne.
+      const kep = await fut(egyik, 'allapot', '1');
+      return kep.includes('ELVETVE') && /👍 1 👎 1/.test(kep);
+    } finally {
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ A SZAKASZ 4 KÉZI ÚTJA — az identitás (2026-09-12)
 // ===================================
