@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D88), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D89), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -209,6 +209,41 @@ a szigorú (b) csak a végleges alakjában kapcsolhat be, és az előfeltételei
 7. **F — a társankénti emlékezet** (hatékonyság a szigorú (b) alatt, nem helyesség), és az A-ból
    hátralévők (a 24. elágazás szerint a D után).
 
+⭐⭐ **A VÉGLEGES SOR a D85–D89 után (2026-10-02 — Claude döntése, Csaba kérésére: „akkor most azt döntsd
+el, hogy milyen sorrendben, érdemes folytatni a fejlesztést").** A fenti sor kiegészül két előre kerülő
+lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő session az 1. lépéssel indul.**
+
+1. **D85 — az entitás-modell** (a szelet-szerkezet utolsó hiányzó darabja). *Miért első:* minden további
+   lépés (a vállalás, a két tár, a címjegyzék, a kérelem, a szigorú (b)) szeletekben gondolkodik, és a
+   D85 megváltoztatja, melyik esemény melyik szeletbe kerül. Ha a B előbb épülne, a javaslat
+   áthelyezése után újra kellene írni. Belső sor: (a) a számítás — az egyezmény mint entitás (ugyanaz,
+   mint a javaslat, új fázisban), a töredékek mint számított entitások a saját érintettjük alatt;
+   (b) a szabály — a szavazati jog (pont a gondolaton ÉS a javaslaton / töredékén) és a javaslattevő
+   lépése (létrehozás → pont → szavazat); (c) a szelet-kulcsok (`Javaslat` saját szelet, `Szavazat` a
+   javaslatéba) és a bejelentés TÖBB szülővel (a döntés bemenete minden érintettnél; a tár mutatójában
+   a születés-szülő listává válik); (d) az ÉS-szabály: a többi érintett nevezője a javaslat szeletébe.
+   *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
+2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
+   betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
+   programmal úgyis megszakad a csere (tiszta törés) — a titkosítás ugyanebbe a törésbe kerül, így a
+   telefont EGYSZER kell frissíteni. És minden későbbi üzenet (a kérelem, a címjegyzék) már titkosított
+   csatornán születik.
+3. **B/1 + B/2 — a vállalás és a két tár** (D86): a vállalás a saját láncból (a kiosztás kulcsai + a
+   saját azonosság-szeletem), az átmeneti tár, a „megnézett", a D14 csak a tartósra, az eldobás. A csere
+   még a mai módon fut. ⏸️ Itt kell eldönteni a gyökér tartását (a legfelső szintű gondolatok születése).
+4. **G — a címjegyzék** — ⛔ előbb mérés / átvizsgálás (S10, SK7); a D89/2 szerint a zárt koinó
+   címjegyzéke nem kerülhet kiolvasható nyilvános helyre.
+5. **D — a kérelmezés** (D76, D83/3, D87): a G-ből tudja, kitől; a törzs a kérelem útján, a közvetítő nem
+   tartja meg és nem ismeri a kérdezőt; a válasz az átmeneti tárba.
+6. **E — az identitás a szeletelt világban**, vele a zárt koinó betartatása (a tagság bizonyítása a
+   kézfogásban, D89/2) és a Profil (D28 a D88 alakjában — az azonosság-szeletben él).
+7. **B/3 — a szigorú (b) bekapcsolása:** a csere részvétele a vállalásból, a törzs kiszolgálása a D84/1
+   szerint. Innen végleges.
+8. **F — a társankénti emlékezet** és **az A hátralévői** (a D79 szúrópróba, a napló-alapú kettős-lánc
+   észlelés, a logaritmikus napló-bizonyíték).
+
+*Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat).
+
 ## 5. ⭐ AZ ELÁGAZÁSOK NAPLÓJA — miről ágaztunk le, és miért
 
 *Minden bejegyzés: mikor · miről · mire · miért · hol a részlet. Új elágazás a lista végére.*
@@ -306,3 +341,9 @@ a szigorú (b) csak a végleges alakjában kapcsolhat be, és az előfeltételei
     ne tudja, ki kérdez · D87.
 35. **2026-10-02 · a név a Profil eseményben** → **sózott lenyomat; a név törölhető darab** · mert az
     eseményt nem lehet törölni, és a D6 szerint a láncra csak kriptográfiai bizonyíték kerülhet · D88.
+36. **2026-10-02 · a csere: titkosítatlan, tagság-kérdés nélkül** → **titkosított; a koinó a létrehozásakor
+    zárt vagy nyílt** · mert az úton minden olvasható volt, és aki a koinó azonosítóját ismerte, mindent
+    letölthetett · D89.
+37. **2026-10-02 · a sor: B/1 elsőként** → **előbb a D85 (az entitás-modell), aztán a titkosítás (D89/1),
+    utána a B** · mert a D85 megváltoztatja, melyik esemény melyik szeletbe kerül (a B erre épül), és a
+    két protokoll-változás egy törésbe fér (a telefon egyszer frissül) · e dokumentum 4.

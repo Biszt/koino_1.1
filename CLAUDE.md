@@ -55,18 +55,22 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
    jön előbb, ami alapja annak, amivel haladnánk. ⭐ A kiszolgálás korlátja („csak a tudatpontosat")
    **csak a törzsre** vonatkozik; az eseményeket kiszolgálja, akinél megvannak. ⭐⭐ **Új pillér: G — a
    címjegyzék** („mi kinél van" — több helyen, és a hálózat tudja, ki tudhatja).
-3. **Az átrendezett sor — ✅ Csaba megerősítette (2026-10-02)** ([`alappillerek.md`](docs/alappillerek.md)
-   4.): B/1 (a vállalás) → B/2 (a két tár) → G → D → E → B/3 (a szigorú (b) bekapcsolása) → F + az
-   A-ból hátralévők.
-4. ⭐ **AZ ADATKEZELÉS ÁTBESZÉLÉSE (2026-10-02, fejlesztés nélkül) → D85–D88:** **D85** — a javaslat a
+3. ⭐ **AZ ADATKEZELÉS ÁTBESZÉLÉSE (2026-10-02, fejlesztés nélkül) → D85–D89:** **D85** — a javaslat a
    saját szeletében, mindenestül; a döntés bemenete bejelentésként minden érintettnél; szavazati jog: pont
    a gondolaton ÉS a javaslaton; az egyezmény = ugyanaz az entitás, új fázisban; a töredékek számított
    entitások, a saját érintettjük gyerekei · **D86** — a tartós tár: a tudatpontos szeletek + a saját
    azonosság-szeletem · **D87** — a törzs a kérelem útján, a továbbító nem tartja meg; a közvetítő nem
-   tudja, ki kérdez · **D88** — a Profil: sózott lenyomat + törölhető darab. ⏸️ **Nyitott: K1** (a csere
-   ma titkosítatlan, és nem kérdez tagságot — aki a koinó azonosítóját ismeri, mindent letölthet) és a
-   gyökér tartása a szigorú (b) alatt (B). A rajzos áttekintés: Claude-artifact „Koino adatkezelés”
-   (privát; a lényege a fenti döntésekben és az alappillérekben).
+   tudja, ki kérdez · **D88** — a Profil: sózott lenyomat + törölhető darab · **D89** — a csere
+   titkosított; a koinó a létrehozásakor zárt vagy nyílt (a betartatás az E-vel). A rajzos áttekintés:
+   Claude-artifact „Koino adatkezelés” (privát; a lényege a fenti döntésekben és az alappillérekben).
+4. ⭐⭐ **A VÉGLEGES SOR (2026-10-02 — Claude döntése, Csaba kérésére; részletek és indoklás:
+   [`alappillerek.md`](docs/alappillerek.md) 4., „A VÉGLEGES SOR"):** ① **D85 — az entitás-modell**
+   (egyezmény- és töredék-entitások → szavazati jog → szelet-kulcsok és bejelentés több szülővel → az
+   ÉS-szabály nevezője) → ② **D89/1 — a csere titkosítása** + a zárt/nyílt paraméter (ugyanabba a
+   protokoll-törésbe, mint a D85 — a telefon egyszer frissül) → ③ **B/1 + B/2** (a vállalás, a két tár;
+   itt dől el a gyökér tartása) → ④ **G** (előbb mérés) → ⑤ **D** → ⑥ **E** (+ a zárt koinó betartatása, a
+   Profil) → ⑦ **B/3 — a szigorú (b)** → ⑧ **F** + az A hátralévői. ⭐ **A KÖVETKEZŐ SESSION AZ ①-GYEL
+   INDUL.**
 
 #### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
@@ -163,7 +167,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   mi hiányzik (függőségi sorrendben), és miről ágaztunk le, miért. **Új elágazásnál ide is írj.**
 - **Induláskor, ha a nagy kép kell:** [`docs/utiterv.md`](docs/utiterv.md) (mit építünk, milyen
   sorrendben, és miért) → [`docs/fejlesztesi_terv_fazis2.md`](docs/fejlesztesi_terv_fazis2.md)
-  („HOL TARTUNK" + a D1–D88 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
+  („HOL TARTUNK" + a D1–D89 döntések) → a szakasz-tervek (`docs/szakasz1_terv.md` …
   `szakasz5_terv.md`). A gépezet ábrákon: [`docs/gepezet.md`](docs/gepezet.md).
 - ⚠️ **Új session-váltáskor** a fenti „SESSION-VÁLTÁS" blokkot **cseréld le**, ne fölé írj
   újat — a régit (ha kell) a napló tetejére tedd. *Így maradt 233 KB-os ez a fájl.*
@@ -186,7 +190,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
 
 ⚠️ **Zsákutcák, amiket ne javasolj újra** (mind megmérve): a Duniter-féle távolság-szabály (globális szám) · az „ingyenes elismerés" (D48) · **a gazdaság önmagában nem véd** · a horgony-kör (880 hamis horgony) · ⛔ a *„kevés kapcsolata van, tehát gyanús"* jelzés (31/41/45% téves) · ⛔ **és a `k` tanúsítás + keret vonala** (D44, D51–D53) — **tárgytalan**, a meghívás váltotta ki.
 
-A tervezési döntések (**D1–D88**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
+A tervezési döntések (**D1–D89**; a D48 elvetve, a D64 is, a D44/D51/D53 tárgytalan) a fázis-2 tervben állnak. A milliárdos lépték szerkezete: [`docs/skalazas_terv.md`](docs/skalazas_terv.md) (2026-08-31 — tervjavaslat, kilenc döntést igénylő ponttal). **Az irány két réteg:** a **DAG** a hitelességé és offline is működik · a **kereső-réteg** a megtalálhatóságé, hálózatot kíván, és **elhagyható**. ⭐ *Ami DÖNT valamiről, az soha ne kívánjon élő lekérdezést; csak a MEGTALÁLÁS kívánhat.*
 
 ## 🛠️ NYOLC SZABÁLY, ami MINDEN új kódra érvényes (D30–D32, 2026-08-28)
 

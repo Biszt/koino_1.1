@@ -4503,6 +4503,26 @@ bizonyíték kerül").
 2. ⭐ **A törlés:** a darabot senki nem szolgálja ki tovább, és eldobható; az esemény marad, de semmit nem
    árul el. Az utolsó Profil számít, mint eddig (D28/3).
 
+### D89. KI OLVASHATJA EGY KOINÓ TARTALMÁT: titkosított csere, zárt vagy nyílt koinó (2026-10-02, Csaba)
+
+**Amiből jött:** az adatkezelés átnézése (2026-10-02) két rést talált. A csere titkosítatlan — az úton
+(szolgáltató, nyilvános wifi) minden olvasható —, és a társat nem kérdezi meg, tag-e: csak a koinó
+azonosítóját veti össze (`vonal.js`, a `NYITAS` után), az pedig minden esemény `koino` mezőjében benne
+van, tehát aki egyszer látott egy eseményt, bármelyik tag készülékéről letöltheti az egész koinót.
+
+#### A DÖNTÉS
+
+1. ⭐ **A csere titkosított.** Két kötött társ a tábla-kulcsuk X25519 párjából közös titkot számol, küldés
+   nélkül; az első találkozásnál (még nincs kötés) egy egyszer használatos kulcsot cserélnek a nyitáskor.
+2. ⭐ **A koinó a létrehozásakor megmondja, zárt-e vagy nyílt** (koinó-paraméter a `KoinoLetrehozas`-ban,
+   mint a D28 belépési adatai). A **zárt** koinó tartalmát a készülék csak tagnak adja ki: a társ a
+   kézfogásban bizonyítja a tagságát (aláír a saját kulcsával, és megmutatja a meghívási láncát) — ez az
+   **E** pillérre épül (a P2P-ben a „nem tag" és a „még nem láttam a bizonyítékát" ugyanaz, D19).
+3. A tagok egymás közti láthatósága **nem változik**: a titkosítás és a zártság a KÍVÜLÁLLÓK ellen véd.
+
+⚠️ **A G-re is hat:** egy zárt koinó címjegyzéke nem kerülhet nyilvános helyre (pl. a BitTorrent-DHT-re)
+úgy, hogy kívülálló kiolvashassa belőle, kik a koinó résztvevői.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
