@@ -112,6 +112,8 @@ export function kartyaAdatta(k) {
         statusz: STATUSZ_KIFELE[k.javaslat.statusz] ?? k.javaslat.statusz,
         szavazhat: k.javaslat.szavazhatok,
         dontesiIdo: k.javaslat.dontesiIdo,
+        // ⭐ D85/4: az `EgyezmenyKartya` a döntés dátumát írja ki — ez a lezárás pillanata.
+        ...(k.javaslat.statusz === 'elfogadva' ? { dontesDatum: k.javaslat.lezarasIdeje } : {}),
         // ⚠️ A prototípus kártyája EGY nevet ír ki („módosított gondolat"), a koino
         // viszont **több entitást** is érinthet (2026-09-07). Az elsőt adjuk neki, a
         // teljes listát külön — így a kártya változatlan maradhat, és a részletek-nézet

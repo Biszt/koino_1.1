@@ -123,10 +123,27 @@ function besorolas(entitasok, azonosito) {
   return { azonosito, nev: e.cim ?? null, ikon: e.ikon ?? null };
 }
 
+/**
+ * ⭐⭐ D85/4 (Csaba, 2026-10-02): AZ EGYEZMÉNY UGYANAZ AZ ENTITÁS, MINT A JAVASLAT — ÚJ FÁZISBAN.
+ *
+ * Ugyanaz az azonosító, ugyanazok a pontok, ugyanaz a hely a fában — csak a döntés lezárult.
+ * *(A szabály-réteg már 2026-09-07 óta így kezeli: `szabalyok.js`, `TILTOTT_MUVELETEK`.)* Eddig a
+ * kártya mégis `Javaslat` típust mondott, ezért a felület `EgyezmenyKartya`-ja soha nem jelent
+ * meg. ⚠️ A típust a DÖNTÉS adja (`javaslatSzamitas.js`), nem az entitás: az entitás a
+ * létrehozásakori típusát viszi (`Javaslat`), mert a fázis időfüggő (`most`), az állapot nem.
+ *
+ * @param {Object} entitas
+ * @param {Object|null} dontes - a `javaslatokSzamitasa` eredményének eleme
+ * @returns {string}
+ */
+function kartyaTipusa(entitas, dontes) {
+  return entitas.tipus === 'Javaslat' && dontes?.statusz === 'elfogadva' ? 'Egyezmeny' : entitas.tipus;
+}
+
 function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
   return {
     azonosito: entitas.azonosito,
-    tipus: entitas.tipus,
+    tipus: kartyaTipusa(entitas, dontes),
     cim: entitas.cim,
     szulo: entitas.szulo,
 
@@ -555,7 +572,7 @@ export async function entitasSzovege(tar, koino, azonosito, beallitas = {}) {
   const f = await szovegFeloldasa(entitas.szoveg ?? null, beallitas.darabOlvas);
   const eredmeny = {
     azonosito: entitas.azonosito,
-    tipus: entitas.tipus,
+    tipus: kartyaTipusa(entitas, kep.javaslatok?.get(azonosito) ?? null),
     cim: entitas.cim,
     szoveg: f.szoveg,
     ...(f.hianyzik ? { szovegHianyzik: true, szovegLenyomat: f.lenyomat } : {})

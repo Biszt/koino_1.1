@@ -832,6 +832,66 @@ proba('⭐⭐ AZ EGYEZMÉNY megszületése a kártyán is látszik', async () =>
   return j.statusz === 'elfogadva' && j.egyezmeny !== null;
 });
 
+// ⭐⭐ D85/4 (Csaba, 2026-10-02): az egyezmény UGYANAZ AZ ENTITÁS, mint a javaslat, új fázisban —
+// és a kártya ezt mondja ki: a típusa `Egyezmeny` lesz, a többi változatlan.
+proba('⭐⭐ D85/4: elfogadás után a kártya EGYEZMÉNY — ugyanaz az azonosító, ugyanazok a pontok',
+  async () => {
+    const { tar, anna } = await ujKoino();
+    const { javaslat, kezdet } = await javaslatosEset(tar, anna);
+
+    const elotte = (await pakliOldal(tar, KOINO, { most: kezdet + 3000, szerzo: anna.szerzo }))
+      .kartyak.find((x) => x.azonosito === javaslat.azonosito);
+    const utana = (await pakliOldal(tar, KOINO,
+      { most: kezdet + 30 * 24 * 3600 * 1000, szerzo: anna.szerzo }))
+      .kartyak.find((x) => x.azonosito === javaslat.azonosito);
+
+    return elotte?.tipus === 'Javaslat' && elotte.javaslat.statusz === 'folyamatban'
+      && utana?.tipus === 'Egyezmeny' && utana.javaslat.statusz === 'elfogadva'
+      && utana.osszesPont === elotte.osszesPont && utana.osszesPont === 100
+      && utana.szulo === elotte.szulo;
+  });
+
+proba('⭐ D85/4: az ELVETETT javaslat javaslat marad — egyezmény csak elfogadásból lesz', async () => {
+  const { tar, anna } = await ujKoino();
+  const { javaslat, kezdet } = await javaslatosEset(tar, anna, { szavazat: 'Ellenez' });
+
+  const k = (await pakliOldal(tar, KOINO, { most: kezdet + 30 * 24 * 3600 * 1000 }))
+    .kartyak.find((x) => x.azonosito === javaslat.azonosito);
+  return k?.tipus === 'Javaslat' && k.javaslat.statusz === 'elvetve';
+});
+
+// ⭐ A prototípus „tárhely”-szabálya (`egyezmenyTarhelyId`): törlésnél az egyezmény a törölt entitás
+// SZÜLŐJE alá kerül. Az a) változatban ez magától így alakul: a törölt gondolat gyerekei — köztük az
+// egyezmény — a nagyszülőhöz kerülnek fel (`szerkezetIgazitasa`, 2026-09-07).
+proba('⭐⭐ D85/4: a TÖRLÉSI egyezmény a törölt gondolat szülője alá kerül (a tárhely-szabály)',
+  async () => {
+    const { tar, anna } = await ujKoino();
+    const kezdet = Date.UTC(2026, 0, 1);
+    const szulo = await anna.tesz('GondolatLetrehozas', { tipus: 'Gondolat', cim: 'SZÜLŐ', meret: 10 }, kezdet);
+    await esemenyMentese(tar, szulo);
+    await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+      { entitas: szulo.azonosito, pont: 300 }, kezdet));
+    const g = await anna.tesz('GondolatLetrehozas',
+      { tipus: 'Gondolat', cim: 'TÖRLENDŐ', szulo: szulo.azonosito, meret: 10 }, kezdet + 100);
+    await esemenyMentese(tar, g);
+    await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+      { entitas: g.azonosito, pont: 300 }, kezdet + 100));
+    const j = await anna.tesz('Javaslat',
+      { fajta: 'szerkesztesi', erintett: g.azonosito, muvelet: 'Torles', indoklas: 'Felesleges.' },
+      kezdet + 1000);
+    await esemenyMentese(tar, j);
+    await esemenyMentese(tar, await anna.tesz('TudatpontRendezes',
+      { entitas: j.azonosito, pont: 100 }, kezdet + 1500));
+    await esemenyMentese(tar, await anna.tesz('Szavazat',
+      { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet + 2000));
+
+    const oldal = await pakliOldal(tar, KOINO, { most: kezdet + 30 * 24 * 3600 * 1000 });
+    const k = oldal.kartyak.find((x) => x.azonosito === j.azonosito);
+    return !oldal.kartyak.some((x) => x.azonosito === g.azonosito)   // a gondolat törlődött
+      && k?.tipus === 'Egyezmeny'
+      && k.szulo === szulo.azonosito;                                 // ⭐ a nagyszülőhöz került fel
+  });
+
 // ⚠️⚠️ EZ A PRÓBA MEGFORDULT, ÉS A MODELL FORDÍTOTTA MEG.
 //
 // Amíg a javaslat nem volt entitás, az érintettjével EGYÜTT tűnt el (a rendezési értékét is
