@@ -238,9 +238,13 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   // értékének bizonyítékát is (D81: a bizonyíték az eseménnyel utazik — a bemondott összeg a szerző
   // nélkül is ellenőrizhető, D42). Ha a saját lánc nem ép, null (mint a D78 előtti eseményeké).
   const pontEntitas = tipus === 'TudatpontRendezes' && typeof adat?.entitas === 'string' ? adat.entitas : null;
+  // ⭐ D85/2 (T2): a SZAVAZAT a jogának bizonyítékát hozza — részenként az érintettre és a
+  // javaslat-entitásra (a `szavazas` adja meg a kulcsokat).
+  const szavazatKulcsok = tipus === 'Szavazat' && Array.isArray(beallitas.bizonyitekKulcsok)
+    && beallitas.bizonyitekKulcsok.length ? beallitas.bizonyitekKulcsok : null;
   const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
-    veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas);
-  const vegsoAdat = pontEntitas && bizonyitek ? { ...adat, bizonyitek } : adat;
+    veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas ?? szavazatKulcsok);
+  const vegsoAdat = (pontEntitas || szavazatKulcsok) && bizonyitek ? { ...adat, bizonyitek } : adat;
   return esemenyLetrehozasa(
     { koino: kornyezet.koino, tipus, adat: vegsoAdat, entitas, entitasSorszam, latott, lancGyoker,
       ...(beallitas.ido !== undefined ? { ido: beallitas.ido } : {}), ...veg },
@@ -958,7 +962,10 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
     // ⛔⛔ UGYANAZ AZ IDŐBÉLYEG, mint a javaslaté — lásd az `esemenytTeszek` `ido` ágát.
     // Nélküle nulla döntési időnél a saját szavazatom **késői** lenne, és a javaslat
     // 0%-kal, ELVETVE zárna — mérve, 2026-09-12.
-    { entitas: erintettek[0].entitas, horgonyozzunk: true, ido: javaslat.ido }
+    // ⭐ D85/2 (T2): a szavazati jog bizonyítéka minden részre (az érintettre és a javaslat-entitásra)
+    // — a javaslattevőnek mindegyiken van pontja (a szabály-réteg 3. szabálya és a fenti lépés).
+    { entitas: erintettek[0].entitas, horgonyozzunk: true, ido: javaslat.ido,
+      bizonyitekKulcsok: entitasai.flatMap((je) => (je.resz ? [je.resz.entitas, je.azonosito] : [])) }
   );
 
   // ⭐ A JAVASLAT eseményét adjuk vissza, nem a szavazatét — a hívót az érdekli.
@@ -1011,16 +1018,19 @@ export async function szavazas(kornyezet, javaslat, szavazat, kulonvalasIgeny = 
   // ⚠️ A szabály a SZÁMÍTÁSBAN van (`javaslatSzamitas.js`); ez itt csak az, hogy a gomb ne legyen
   // némán hatástalan.
   const ido = Date.now();
+  const bizonyitekKulcsok = [];
   for (const je of javaslatEntitasai(javaslatEsemeny)) {
     if (!je.resz) continue;
     if ((await sajatKiosztott(kornyezet, je.resz.entitas)).regi <= 0) continue;   // itt nem jogosult
+    // ⭐ T2: a jogosult részek mindkét kulcsára bizonyíték megy a szavazattal.
+    bizonyitekKulcsok.push(je.resz.entitas, je.azonosito);
     if ((await sajatKiosztott(kornyezet, je.azonosito)).regi > 0) continue;      // már van pontja rajta
     await tudatpontRendezese(kornyezet, je.azonosito, 1, 'aktiv', undefined, { ido });
   }
 
   return esemenytTeszek(
     kornyezet, 'Szavazat', { javaslat, szavazat, kulonvalasIgeny: igeny },
-    { entitas, horgonyozzunk: true, ido }
+    { entitas, horgonyozzunk: true, ido, bizonyitekKulcsok }
   );
 }
 

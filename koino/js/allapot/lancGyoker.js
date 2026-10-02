@@ -46,6 +46,7 @@ import {
   allapotBizonyitek, allapotBizonyitekEllenorzese
 } from '../esemeny/osszegzoFa.js';
 import { pontEsemenyMerlege } from './szabalyok.js';
+import { AZONOSITO_MINTA } from '../esemeny/esemeny.js';
 
 export const NAPLO_FAJTA = 'naplo';
 export const KIOSZTAS_FAJTA = 'kiosztas';
@@ -86,6 +87,41 @@ export async function pontEsemenyOnbizonyitasa(e) {
   const b = await allapotBizonyitekEllenorzese(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, e.lancGyoker.kiosztas, entitas, e.adat.bizonyitek);
   return b.rendben ? { rendben: true }
     : { rendben: false, ok: 'a pont-esemény bizonyítéka hiányzik vagy nem illik a saját lánc-gyökeréhez (D81): ' + b.ok };
+}
+
+/**
+ * ⛔ Egy szavazat legfeljebb ennyi bizonyítékot hordozhat (részenként kettőt: az érintettét és a
+ * javaslat-entitásáét). Felső korlát, hogy egy kézzel írt szavazat ne fújhassa fel az eseményt.
+ */
+export const SZAVAZAT_BIZONYITEK_KORLAT = 64;
+
+/**
+ * ⭐⭐ A SZAVAZAT ÖNBIZONYÍTÁSA (D85/2, T2 — Csaba, 2026-10-02) — a kapu hívja. A szavazati jog a
+ * leadás pillanatában pontot kíván az érintett gondolaton ÉS a javaslaton (a töredékén); a szavazat
+ * ezt MAGA bizonyítja a saját aláírt kiosztás-gyökeréből (a D81 mintája). Így a jog akkor is
+ * eldönthető, ha a javaslat pont-eseményei nincsenek meg (a szigorú (b) alatt a gondolat nem szavazó
+ * tartóinál). ⚠️ Nem ítél a jogról — azt a számítás teszi (`javaslatSzamitas.js`); itt csak az, hogy
+ * minden hozott bizonyíték a saját gyökeréhez illik. A HIÁNYZÓ bizonyíték nem hiba: ott a szavazat
+ * egyszerűen nem számít.
+ * @returns {Promise<{rendben: boolean, ok?: string}>}
+ */
+export async function szavazatOnbizonyitasa(e) {
+  if (e?.tipus !== 'Szavazat' || e.lancGyoker === null || e.lancGyoker === undefined) return { rendben: true };
+  const b = e.adat?.bizonyitek;
+  if (b === undefined || b === null) return { rendben: true };
+  if (typeof b !== 'object' || Array.isArray(b)) return { rendben: false, ok: 'a szavazat bizonyítéka nem objektum' };
+  const kulcsok = Object.keys(b);
+  if (kulcsok.length > SZAVAZAT_BIZONYITEK_KORLAT) {
+    return { rendben: false, ok: 'a szavazat túl sok bizonyítékot hoz (' + kulcsok.length + ')' };
+  }
+  for (const kulcs of kulcsok) {
+    if (!AZONOSITO_MINTA.test(kulcs)) return { rendben: false, ok: 'a szavazat bizonyítékának kulcsa nem azonosító' };
+    const v = await allapotBizonyitekEllenorzese(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, e.lancGyoker.kiosztas, kulcs, b[kulcs]);
+    if (!v.rendben) {
+      return { rendben: false, ok: 'a szavazat bizonyítéka nem illik a saját lánc-gyökeréhez (D85/2): ' + v.ok };
+    }
+  }
+  return { rendben: true };
 }
 
 /** Egy saját esemény hatása az állásra — a szabály ítéletével (a `szabalyok.js` ugyanígy lép). */
@@ -266,7 +302,8 @@ async function allapotIg(tar, koino, szerzo, meddig, tarolo) {
  * @param {string} szerzo
  * @param {number} sorszam - az új esemény sorszáma (a lánc vége + 1)
  * @param {Object} [tarolo] - a gyorsítótár fájlja (`lancTarolo`); nélküle csak a memória
- * @param {string|null} [entitas] - pont-eseménynél az entitás: a régi értékének bizonyítéka is kell
+ * @param {string|Array<string>|null} [entitas] - pont-eseménynél az entitás (a régi értékének
+ *        bizonyítéka); szavazatnál a kulcsok listája (D85/2) — kulcsonként egy bizonyíték
  * @returns {Promise<{lancGyoker: Object|null, bizonyitek: Object|null}>} null-ok, ha a saját lánc nem ép
  */
 export async function lancUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo = null, entitas = null) {
@@ -278,6 +315,12 @@ export async function lancUjEsemenyhez(tar, koino, szerzo, sorszam, tarolo = nul
     // A fa a pontokból épül (a fájlból jött állapotnak csak a pontjai vannak meg) — egyszer.
     if (!a.kiosztasFa) a.kiosztasFa = await kiosztasFaja(a.pontok);
     bizonyitek = await allapotBizonyitek(a.kiosztasFa, entitas);
+  } else if (Array.isArray(entitas) && entitas.length) {
+    // ⭐ D85/2: a SZAVAZAT több entitásra hoz bizonyítékot (részenként az érintettére és a
+    // javaslat-entitásáéra) — kulcsonként egyet.
+    if (!a.kiosztasFa) a.kiosztasFa = await kiosztasFaja(a.pontok);
+    bizonyitek = {};
+    for (const kulcs of entitas) bizonyitek[kulcs] = await allapotBizonyitek(a.kiosztasFa, kulcs);
   }
   return { lancGyoker, bizonyitek };
 }

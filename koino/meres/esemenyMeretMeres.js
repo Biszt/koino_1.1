@@ -1,6 +1,6 @@
 // koino/meres/esemenyMeretMeres.js
 
-// Felelősség: AZ ESEMÉNY MÉRETE A LÁNC-GYÖKÉRREL ÉS A BIZONYÍTÉKKAL (53. mérés, D81) — a 6. szabály
+// Felelősség: AZ ESEMÉNY MÉRETE A LÁNC-GYÖKÉRREL ÉS A BIZONYÍTÉKKAL (53. mérés, D81; 54.: a szavazat, D85/2) — a 6. szabály
 // kemény fele (az ADAT-csomag kicsi marad): mennyit ad egy eseményhez, hogy a bizonyíték vele utazik?
 //
 // Nem önpróba: számokat ad. A szerző kiosztásának mérete (hány entitáson van pontja) szerint:
@@ -35,8 +35,15 @@ const pont = (lancGyoker, bizonyitek) => esemenyLetrehozasa({ ...alap, tipus: 'T
   adat: { entitas: azon(3), pont: 40, szerep: 'aktiv', kiosztva: 400, ...(bizonyitek ? { bizonyitek } : {}) },
   lancGyoker }, kulcspar);
 
+// ⭐ 54. mérés (D85/2, T2): a SZAVAZAT a jogának bizonyítékát hozza — részenként kettőt (az érintett
+// gondolatét és a javaslatét); egy érintettnél tehát két bizonyíték a szavazó kiosztás-fájából.
+const szavazat = (lancGyoker, bizonyitek) => esemenyLetrehozasa({ ...alap, tipus: 'Szavazat', entitas: azon(3),
+  adat: { javaslat: azon(9, 'J'), szavazat: 'Tamogat', kulonvalasIgeny: false, ...(bizonyitek ? { bizonyitek } : {}) },
+  lancGyoker }, kulcspar);
+
 kiir('\n===== 53. MÉRÉS — AZ ESEMÉNY MÉRETE A LÁNC-GYÖKÉRREL ÉS A BIZONYÍTÉKKAL (D81) =====\n');
-kiir('Lánc-gyökér nélkül (null):  gondolat ' + bajt(await gondolat(null)) + ' B · pont-esemény ' + bajt(await pont(null)) + ' B');
+kiir('Lánc-gyökér nélkül (null):  gondolat ' + bajt(await gondolat(null)) + ' B · pont-esemény ' + bajt(await pont(null))
+  + ' B · szavazat ' + bajt(await szavazat(null)) + ' B');
 
 for (const n of [10, 100, 1000, 10000]) {
   const fa = ujAllapotFa(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ);
@@ -50,7 +57,14 @@ for (const n of [10, 100, 1000, 10000]) {
     osszeg += bajt(await pont(lancGyoker, b));
     lepes += b.testverek.length;
   }
+  // ⭐ 54.: a szavazat két bizonyítékkal (a gondolatéval és a javaslatéval) — szintén átlag.
+  let szOsszeg = 0;
+  for (let j = 0; j < minta; j++) {
+    const g = azon((j * 7919) % n), jj = azon((j * 104729 + 1) % n);
+    szOsszeg += bajt(await szavazat(lancGyoker, { [g]: await allapotBizonyitek(fa, g), [jj]: await allapotBizonyitek(fa, jj) }));
+  }
   kiir('Kiosztás ' + String(n).padStart(5) + ' entitáson: gondolat ' + bajt(await gondolat(lancGyoker)) + ' B · pont-esemény átlag '
-    + Math.round(osszeg / minta) + ' B (a bizonyíték átlag ' + (lepes / minta).toFixed(1) + ' lépés)');
+    + Math.round(osszeg / minta) + ' B (a bizonyíték átlag ' + (lepes / minta).toFixed(1) + ' lépés) · szavazat átlag '
+    + Math.round(szOsszeg / minta) + ' B');
 }
 kiir('');

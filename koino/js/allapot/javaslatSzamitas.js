@@ -32,7 +32,7 @@
 // Használják: koino.js (a parancssori arc) és az önpróbák.
 
 import { median } from './allapotSzamitas.js';
-import { erintettek, javaslatEntitasai } from './szabalyok.js';
+import { erintettek, javaslatEntitasai, szavazatSajatPontjai } from './szabalyok.js';
 
 // ===================================
 // ALAPÉRTELMEZETT KÜSZÖBÖK
@@ -379,8 +379,11 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   // (D3: a tudatpont tárolási vállalás). ⚠️ A nevező NEM változik: az érintett aktív tulajdonosai
   // maradnak — különben a részvétel mindig 100% lenne.
   const reszJavaslata = new Map();     // a javaslat-entitás azonosítója → az érintett (a rész)
+  const javaslatEntitasa = new Map();  // az érintett (a rész) → a javaslat-entitás azonosítója
   for (const je of javaslatEntitasai(javaslatEsemeny)) {
-    if (je.resz) reszJavaslata.set(je.azonosito, je.resz.entitas);
+    if (!je.resz) continue;
+    reszJavaslata.set(je.azonosito, je.resz.entitas);
+    javaslatEntitasa.set(je.resz.entitas, je.azonosito);
   }
 
   // ----- ENTITÁSONKÉNT KÜLÖN KÖNYVELÉS -----
@@ -503,10 +506,21 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       // ⚠️ A szerep itt NEM számít: a prototípus jogosultság-ellenőrzése csak pontot néz
       // (`eemberHozzajarulasaEntitason`), a passzív figyelő szavazhat — sőt a szavazással
       // épp aktívvá válik.
+      // ⭐⭐ D85/2 (T2): ha a szavazat a saját bizonyítékát hozza (lánc-gyökérrel), a jog ABBÓL dől
+      // el — a szavazó aláírt kiosztásából, a leadás pillanatában —, nem a pont-eseményekből. Így a
+      // gondolat nem szavazó tartói is kiszámolják, akkor is, ha a javaslat pontjai nincsenek meg
+      // náluk; és mindenki ugyanazt (a szavazat ugyanaz mindenhol). A régi (gyökér nélküli) szavazatnál
+      // a pont-események döntenek, mint eddig.
+      const sajat = szavazatSajatPontjai(esemeny);
       for (const entitas of entitasok) {
-        if ((tulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
-        // ⭐ D85/2: és a rész javaslat-entitásán (a javaslaton / a töredékén) is pont kell.
-        if ((javaslatTulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
+        if (sajat) {
+          if ((sajat.get(entitas) ?? 0) <= 0) continue;
+          if ((sajat.get(javaslatEntitasa.get(entitas)) ?? 0) <= 0) continue;
+        } else {
+          if ((tulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
+          // ⭐ D85/2: és a rész javaslat-entitásán (a javaslaton / a töredékén) is pont kell.
+          if ((javaslatTulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
+        }
         reszSzavazatok.get(entitas).set(esemeny.szerzo, esemeny.adat.szavazat);
         // ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY IS ELTEVŐDIK (2026-09-08) — a különválás ebből tudja
         // meg, ki lép külön ágra, ha a döntés ellene megy. ⛔ Tartózkodásnál a művelet

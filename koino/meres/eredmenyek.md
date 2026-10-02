@@ -4443,3 +4443,28 @@ bizonyítékkal **1,15–1,86 KB** — logaritmikus a szerző SAJÁT kiosztásá
 a mérés +~155 B és 1,37 KB (a JSON mezőnevei és a 43 jeles lenyomatok). Ez az ára annak, hogy egy
 pont-esemény a szerző nélkül is ellenőrizhető, és a hazug bemondás hézagos láncnál is bizonyítottan
 elbukik.
+
+## 54. ⭐ A SZAVAZAT MÉRETE A JOGÁNAK BIZONYÍTÉKÁVAL — a D85/2 (T2) ára (2026-10-02, a laptopon)
+
+*A D85/2 T2 után (a szavazat a saját kiosztás-fájából bizonyítja, hogy a leadás pillanatában pontja
+volt az érintett gondolaton ÉS a javaslaton): `esemenyMeretMeres.js` (az 53. mellé). Egy érintettnél két
+bizonyíték; valódi aláírt események, 20 kulcspár átlaga.*
+
+```
+                                   |  szavazat  |  a két bizonyíték nélkül
+lánc-gyökér nélkül (null)          |    553 B   |   —
+kiosztás    10 entitáson           |  1 656 B   |  ~710 B
+kiosztás   100 entitáson           |  2 139 B   |  ~710 B
+kiosztás 1 000 entitáson           |  2 623 B   |  ~710 B
+kiosztás 10 000 entitáson (keret)  |  3 108 B   |  ~710 B
+```
+
+⭐ **A lelet:** a két bizonyíték **+0,9–2,4 KB** szavazatonként, logaritmikus a szavazó SAJÁT
+kiosztásával (a koino méretétől független). Több érintettnél részenként +ennyi (minden jogosult részre
+két bizonyíték).
+
+⚠️ **A becslés alatta maradt:** a T2 döntésekor „kb. 1 KB-tal nagyobb” szavazatot mondtam; a mérés
+100 kiosztott entitásnál +1,4 KB, a keret szélén +2,4 KB. ⭐ Az ára annak, hogy a szavazati jog a
+javaslat pont-eseményei nélkül is eldönthető (a szigorú (b) alatt a gondolat nem szavazó tartóinál), és
+mindenhol ugyanaz. ⏸️ Ha szűkös lesz: a két bizonyíték közös felső szakasza összevonható (több-kulcsos
+bizonyíték) — ma nem kell.

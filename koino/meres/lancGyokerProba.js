@@ -21,8 +21,11 @@ import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar
 import { sajatLancEsemenyei, esemenyMentese } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa, esemenyEllenorzese } from '../js/esemeny/esemeny.js';
 import {
-  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese
+  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa, szavazas
 } from '../js/muveletek.js';
+import { lancVege, kovetkezoEntitasSorszam, koinoEsemenyei } from '../js/tar/esemenyTar.js';
+import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
+import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import {
   lancGyokerLancbol, lancGyokerKetGyokerbol, lancGyokerUjEsemenyhez, lancUjEsemenyhez, azonosLancGyoker,
   KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, NAPLO_FAJTA
@@ -259,6 +262,67 @@ proba('⛔ A KAPU CSAK A KÉT GYÖKERET ENGEDI BE (vagy null-t) — és a pont-e
   const rossz = esetek.filter(([, kapott, vart]) => kapott !== vart).map(([nev]) => nev);
   if (rossz.length) console.log('    (rosszul ítélt esetek: ' + rossz.join(', ') + ')');
   return rossz.length === 0;
+});
+
+// ===================================
+// ⭐⭐ D85/2 (T2, Csaba, 2026-10-02): A SZAVAZAT HOZZA A JOGÁNAK BIZONYÍTÉKÁT
+// ===================================
+//
+// A szavazati jog a leadás pillanatában pontot kíván az érintett gondolaton ÉS a javaslaton. A
+// szavazat ezt a saját aláírt kiosztás-gyökeréből bizonyítja (a D81 mintája) — így a jog akkor is
+// eldönthető, ha a javaslat pont-eseményei nincsenek meg (a szigorú (b) alatt a gondolat nem szavazó
+// tartóinál), és mindenhol ugyanaz.
+
+/** A javaslattevő (A) és egy másik szavazó (B) ugyanazon a táron; A javasol, B tulajdonos lesz. */
+async function ketSzavazo() {
+  const { tar, kornyezet: A } = await ujKornyezet();
+  const kB = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const szB = Buffer.from(await crypto.subtle.exportKey('raw', kB.publicKey)).toString('base64url');
+  const B = { ...A, kulcspar: kB, szerzo: szB, lancTarolo: null };
+  await koinoLetrehozasa(A, 'T2');
+  const g = await gondolatLetrehozasa(A, { cim: 'G' });
+  await tudatpontRendezese(A, g.azonosito, 100);
+  const j = await javaslatLetrehozasa(A, { erintett: g.azonosito, muvelet: 'Modositas',
+    valtozas: { cim: 'G2' }, pont: 5 });
+  await tudatpontRendezese(B, g.azonosito, 100);
+  return { tar, A, B, g, j };
+}
+
+proba('⭐⭐ D85/2 (T2): a szavazat HOZZA a bizonyítékát — és számít akkor is, ha a javaslat pontjai NINCSENEK meg',
+  async () => {
+    const { tar, g, j, B } = await ketSzavazo();
+    const sz = await szavazas(B, j.azonosito, 'Ellenez');
+    const kulcsok = Object.keys(sz.adat.bizonyitek ?? {});
+
+    // ⭐ A szigorú (b) helyzete: a javaslat pont-eseményei (A-é és B-é is) hiányoznak a halmazból.
+    const nelkul = (await koinoEsemenyei(tar, KOINO))
+      .filter((e) => !(e.tipus === 'TudatpontRendezes' && e.adat?.entitas === j.azonosito));
+    const allapot = allapotSzamitasa(nelkul);
+    const d = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + 30 * 86400 * 1000).get(j.azonosito);
+
+    return sz.lancGyoker !== null
+      && kulcsok.includes(g.azonosito) && kulcsok.includes(j.azonosito)
+      && d.szavazok === 2 && d.tamogatok === 1 && d.ellenzok === 1;   // A (javaslattevő) és B is számít
+  });
+
+proba('⛔⛔ D85/2 (T2): a kapu ELUTASÍTJA a szavazatot, ha a bizonyítéka nem illik a saját gyökeréhez', async () => {
+  const { tar, g, j, B } = await ketSzavazo();
+  // B maga tesz pontot a javaslatra, majd KÉZZEL állít össze egy szavazatot, de a két bizonyítékot
+  // FELCSERÉLI (a gondolatét a javaslat kulcsa alá és fordítva).
+  await tudatpontRendezese(B, j.azonosito, 1);
+  const veg = await lancVege(tar, B.szerzo);
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, KOINO, B.szerzo, veg.sorszam, null,
+    [g.azonosito, j.azonosito]);
+  const hamis = { [g.azonosito]: bizonyitek[j.azonosito], [j.azonosito]: bizonyitek[g.azonosito] };
+  const e = await esemenyLetrehozasa({
+    koino: KOINO, tipus: 'Szavazat',
+    adat: { javaslat: j.azonosito, szavazat: 'Tamogat', kulonvalasIgeny: false, bizonyitek: hamis },
+    entitas: g.azonosito,
+    entitasSorszam: await kovetkezoEntitasSorszam(tar, KOINO, B.szerzo, g.azonosito),
+    latott: [], lancGyoker, ...veg
+  }, B.kulcspar);
+  const eredmeny = await esemenyMentese(tar, e);
+  return eredmeny.mentve === false && /D85\/2/.test(eredmeny.ok ?? '');
 });
 
 export default futtatas;

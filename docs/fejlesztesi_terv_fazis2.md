@@ -4472,7 +4472,10 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
   leadás pillanatában; a nevező változatlan) ✅ a számításban (`javaslatSzamitas.js`), és a `szavaz`
   magától 1 pontot tesz a javaslatra, ha még nincs rajta ✅ · **a különválás csak a gondolatokat osztja
   szét** (a prototípus `kulonvalasService.js`-e szerint) — az elfogadott egyezmény a főágon marad ✅ ·
-  ⏭️ a T2 bizonyítéka (a szavazat hozza) · ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
+  **a T2 bizonyítéka** ✅ — a szavazat a lánc-gyökere mellé részenként két bizonyítékot hoz a saját
+  kiosztás-fájából (az érintettre és a javaslat-entitásra); a kapu ellenőrzi (`szavazatOnbizonyitasa`),
+  a számítás lánc-gyökeres szavazatnál CSAK ebből dönt a jogról (a régi szavazatnál a pont-eseményekből);
+  ára +0,9–2,4 KB szavazatonként (54. mérés) · ⏭️ a szelet-kulcsok és a bejelentés (D85/1, /3) · ⏸️ T3.
 
 ### D86. A TARTÓS TÁR HATÁRA (2026-10-02, Csaba)
 

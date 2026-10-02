@@ -286,6 +286,27 @@ export function onbizonyitas(e) {
 }
 
 /**
+ * ⭐ D85/2 (T2): a szavazat SAJÁT bizonyítéka — a leadás pillanatában melyik entitáson mennyi pontja
+ * volt a szavazónak (a hozott bizonyítékok végpontjaiból; ha a végpont nem az a kulcs, ott 0 — ez a
+ * hiány bizonyítéka). ⚠️ A kapu ellenőrizte, hogy a bizonyítékok a gyökérhez illenek
+ * (`szavazatOnbizonyitasa`) — a számítás a tárban lévőt hiszi el, mint az aláírást.
+ * Lánc-gyökér nélküli (régi) szavazatnál null: ott a jog a pont-eseményekből dől el.
+ * @returns {Map<string, number>|null}
+ */
+export function szavazatSajatPontjai(e) {
+  if (!e?.lancGyoker || typeof e.lancGyoker !== 'object') return null;
+  const pontok = new Map();
+  const b = e.adat?.bizonyitek;
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return pontok;
+  for (const [kulcs, bi] of Object.entries(b)) {
+    const vp = bi?.vegpont;
+    const pont = vp && vp.kulcs === kulcs && Array.isArray(vp.osszegek) ? vp.osszegek[0] : 0;
+    pontok.set(kulcs, Number.isSafeInteger(pont) ? pont : 0);
+  }
+  return pontok;
+}
+
+/**
  * Egy `TudatpontRendezes` esemény megítélése a szerző eddig ELFOGADOTT állásához képest.
  *
  * ⚠️ Tiszta függvény: az `allas`-t nem módosítja — elfogadáskor a hívó veszi át az új értéket.
