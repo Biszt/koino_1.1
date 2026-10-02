@@ -7,7 +7,7 @@
 > le, és miért. szóval akkor a merkle-fát se halogassuk, ha már építenénk rá."* — Csaba
 
 **Mi ez a dokumentum?** A [`utiterv.md`](utiterv.md) a **sorrend** helye, a
-[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D84), a
+[`fejlesztesi_terv_fazis2.md`](fejlesztesi_terv_fazis2.md) a **döntéseké** (D1–D88), a
 [`skalazas_terv.md`](skalazas_terv.md) és a [`szeleteles_terv.md`](szeleteles_terv.md) a
 **szerkezeté**. Ez itt a **térkép** közöttük: mely darabok állnak, melyek azok az alapok, amelyekre
 még sok minden épül, és — az 5. szakaszban — **minden elágazás**, amit a munka közben vettünk.
@@ -96,7 +96,15 @@ megnyitásai) · a D14 csak a tartósra (a nem tartott entitás „nem tartod" j
 megvannak; a **törzset** alapból csak a vállaló; készülékenként „mindent"). ⛔⛔ **NINCS KÖZTES ÁLLAPOT
 (D84/3):** a szigorú (b) a B végleges alakja, és az előfeltételei (G, D, E) elé kerülnek — a sorrend: 4.
 
-⚠️ **Két nyitott kérdés, ami a B-t érinti (2026-10-01, Csaba döntésére vár):** **(1) a tartós tár
+✅ **A két kérdés eldőlt (2026-10-02):** (1) → **D86** (a tartós tár: a tudatpontos szeletek + a saját
+azonosság-szeletem; a máshová írt saját eseményeim eseményként); (2) → **D85** (a javaslat a saját
+szeletében, mindenestül; a döntés bemenete bejelentésként minden érintettnél; szavazati jog: pont a
+gondolaton ÉS a javaslaton; az egyezmény ugyanaz az entitás, új fázisban; a töredékek számított
+entitások, mindegyik a saját érintettje gyereke) — ⭐ ez is a B része, a B/3 előtt. ⏸️ **Új nyitott
+kérdés (B):** a gyökérre nem lehet pontot tenni — a szigorú (b) alatt ki tartja a legfelső szintű
+gondolatok születését? *(Az alábbi bekezdés a kérdések eredeti alakja.)*
+
+*(Eredeti, 2026-10-01:)* **Két nyitott kérdés, ami a B-t érinti:** **(1) a tartós tár
 határa.** A D75/1 „a saját eseményeim szeleteit" is tartósnak mondja, de a pont-rendezésem maga is
 esemény az entitás szeletében — szó szerint a visszavett pontú szelet soha nem kerülne át az
 átmenetibe, holott ugyanez a pont kimondja, hogy átkerül. Tudatpont nélküli saját esemény: a
@@ -128,6 +136,9 @@ A felület **nézet-kérdést** tesz fel (első körben a **pakli** hierarchikus
 A kérelem **továbbadható** — a válasz ugyanazon az úton jön vissza, ugrás-korláttal (kiinduló 3),
 azonosítóval (nincs kétszeres továbbadás) és darabkorláttal (a terhelés a koino méretétől
 független). A folytonosság élménye nem fontos: a válasz akár percek múlva jön.
+⭐ **D87 (2026-10-02):** a törzs a kérelem útján jön vissza, a továbbító átengedi, de nem tartja meg és
+nem szolgálja ki; a közvetítő nem tudja, ki a kérdező (a kérelem nem hordozza a címét, a válasz
+lépésenként megy vissza, az ugrás-számláló kezdőértéke véletlen).
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
 
@@ -178,7 +189,7 @@ enélkül nem cserél).
 rését (a két ág külön szeletbe esik) — a D63 zárja be. *A sorrend elve (Csaba, 2026-09-15): ne az
 döntsön, mi látszik hamarabb, hanem a függőség.*
 
-⭐ **ÁTRENDEZVE (D84, 2026-10-01) — JAVASLAT, Csaba megerősítésére vár.** Nincs köztes állapot, tehát
+⭐ **ÁTRENDEZVE (D84, 2026-10-01) — ✅ Csaba megerősítette (2026-10-02).** Nincs köztes állapot, tehát
 a szigorú (b) csak a végleges alakjában kapcsolhat be, és az előfeltételei elé kerülnek. Az A kész
 (helyben elérhető része); a további sor a függőségek szerint:
 
@@ -274,3 +285,24 @@ a szigorú (b) csak a végleges alakjában kapcsolhat be, és az előfeltételei
 28. **2026-10-01 · „mi kinél van": helyi címjegyzék, a skálázási terv későbbi rétege** → **alappillér
     (G)** · mert a szigorú (b) mellett a kérelmezés (D) enélkül nem tudja, kitől kérjen, és Csaba szerint
     ezt „több helyen kell tárolni" · D84/2, e dokumentum G.
+29. **2026-10-02 · a javaslat két szeletben** (a létrehozás és a szavazatok az első érintettnél, a rá tett
+    pont és az állásfoglalás a saját azonosítója alatt) → **a saját szeletében, mindenestül; a döntés
+    bemenete bejelentésként minden érintettnél** · mert a szigorú (b) alatt a második érintett tartói nem
+    látták volna, hogy róluk döntenek, és a gondolat nem szavazó tartói nem tudnák kiszámolni a gondolatuk
+    állapotát (D17) · D85/1, D85/3.
+30. **2026-10-02 · a szavazati jog: pont az érintett gondolaton** → **ÉS a javaslaton is** (Csaba) · mert
+    így a szavazók tudatponttal tartják a javaslatot, külön vállalási szabály nélkül · D85/2.
+31. **2026-10-02 · az egyezmény: a döntés kiszámolt mezője** → **entitás: ugyanaz, mint a javaslat, új
+    fázisban** · mert Csaba szerint ugyanolyan entitásnak kell lennie, és így a javaslat pontjai rajta
+    maradnak (különben a D14 a születésekor elfelejtené) · D85/4.
+32. **2026-10-02 · a töredékek: számított részek egy javaslaton belül** → **számított entitások, a saját
+    érintettjük gyerekei** · mert több gondolat gyermekeként is meg kell jelenniük (Csaba, a prototípus
+    `toredekCsoportId`-ja szerint) · D85/5–6.
+33. **2026-10-02 · a tartós tár: „a saját eseményeim szeletei"** → **a tudatpontos szeletek + a saját
+    azonosság-szeletem; a máshová írt saját eseményeim eseményként** · mert szó szerint a visszavett pontú
+    szelet soha nem kerülne át az átmenetibe · D86.
+34. **2026-10-02 · a kérelem válasza a továbbítón** → **átengedi, nem tartja meg; a kérdezőt nem ismeri** ·
+    mert a törzset alapból csak a vállaló adja ki (D84/1), és Csaba szerint ha nem bonyolult, a közvetítő
+    ne tudja, ki kérdez · D87.
+35. **2026-10-02 · a név a Profil eseményben** → **sózott lenyomat; a név törölhető darab** · mert az
+    eseményt nem lehet törölni, és a D6 szerint a láncra csak kriptográfiai bizonyíték kerülhet · D88.

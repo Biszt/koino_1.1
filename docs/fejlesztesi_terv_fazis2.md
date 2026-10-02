@@ -4399,6 +4399,110 @@ pedig közben azt mondta, hogy addig „minden szelet mozog". A kettő kétféle
    alapértéket, „a nem vállalt az átmenetibe" útvonalat) nem építünk. Az új sorrend:
    [`alappillerek.md`](alappillerek.md) 4.
 
+### D85. A JAVASLAT ÉS AZ EGYEZMÉNY: ugyanolyan entitás, mint a gondolat (2026-10-02, Csaba)
+
+> *„a szavazás feltételét, kiegészíthetjük úgy, hogy nem csak az érintett gondolaton, kell hogy legyen
+> tudatpontja, hanem a javaslaton is, amire szavazni akar. így a javaslat is több helyen lessz
+> tudatpontossan tárólva."* · *„»aki a gondolatot tartja, a javaslatait is tartja« nem akarok ilyen
+> szabályt."* · *„az egyezménynek is, ugyan olyan entitásnak kéne lennie, mint a többi entitásnak."* ·
+> *„gondolnunk kell, a töredék javaslatokra, is ami akkór jön létre, ha több gondolatot is érint egy
+> javaslat, és ezért több gondolat gyermekeként, is meg kell jelennie."* — Csaba
+
+**Amiből jött:** az adatkezelés rétegenkénti átbeszélése (2026-10-02). A javaslat a SZÁMÍTÁSBAN entitás
+(cím, szöveg, szülő = az első érintett, saját tudatpont, D14), a TÁROLÁSBAN viszont két szeletben élt:
+a létrehozása és a szavazatai az első érintett szeletében (`muveletek.js`: „a szeletnek egyetlen gazdája
+lehet"), a rá tett pont és az állásfoglalás a saját azonosítója alatt. Az egyezmény nem volt entitás (a
+döntés kiszámolt mezője). A töredékek (a 2026-09-07 óta számított RÉSZEK) csak az első érintett alatt
+jelentek meg. A szigorú (b) alatt ebből az lett volna, hogy a második érintett tartói nem látják, hogy
+róluk döntenek, és a javaslat élete elszakad a döntéstől. A prototípus mindhármat entitásként kezeli
+(`backend/models/`: `Javaslat`, `Egyezmeny`, a töredékek `toredekCsoportId`-val).
+
+#### A DÖNTÉS
+
+1. ⭐ **A javaslat a SAJÁT szeletében él, mindenestül** (létrehozás, szavazatok, a rá tett pontok,
+   állásfoglalások), ahogy egy gondolat. A `Szavazat` esemény marad (nem entitás, nincs pontja), csak a
+   javaslat szeletébe kerül, mert arról szól.
+2. ⭐ **A szavazati jog: a szavazás pillanatában pont az érintett gondolaton ÉS a javaslaton** (töredéknél:
+   a töredékén). Így minden szavazó tudatponttal tartja a javaslatot (D3), külön vállalási szabály nélkül.
+   Következmények: a javaslattevő lépése *létrehozás → pont a javaslatra → támogató szavazat*, egy
+   lépésben (ma a pont a szavazat UTÁN jön); a részvételi arány nevezője MARAD az érintett aktív
+   tulajdonosai (különben a részvétel mindig 100% lenne); a jog a leadáskor dől el, ahogy ma.
+3. ⭐ **A döntés bemenete bejelentésként minden érintett szeletébe is bekerül** (a javaslat létrehozása és a
+   szavazatok), a gyerek-bejelentés mintájára — mert a gondolat NEM szavazó tartóinak is ki kell tudniuk
+   számolni, megváltozik-e a gondolatuk (D17). ⛔ Ez nem az elvetett „aki a gondolatot tartja, a
+   javaslatait is tartja" szabály: a javaslat saját élete (a rá tett pontok, az állásfoglalások, az
+   egyezmény-fázis) csak a javaslat szeletében van.
+4. ⭐ **Az egyezmény entitás — ugyanaz az entitás, mint a javaslat, új fázisban:** ugyanaz az azonosító, a
+   pontjai rajta maradnak (így a születésekor nem felejtődik el, D14), szülője az első érintett. A
+   prototípus tárhely-szabályából a törlés magától így alakul: a törölt gondolat gyerekei — köztük az
+   egyezmény — a nagyszülőhöz kerülnek fel. Kaphat pontot, vonatkozhat rá javaslat (D8: a hatály a
+   tudatpontot követi).
+5. ⭐ **Töredékek:** több érintettnél érintettenként egy SZÁMÍTOTT entitás, levezetett azonosítóval (mint a
+   különvált ág), mindegyik a SAJÁT érintettje gyereke — ez jelenik meg minden érintett gondolat alatt, és
+   erre kerül a pont. Egy érintettnél nincs töredék. A csoport maga a javaslat; elfogadás után az az
+   egyezmény. A döntés változatlan (2026-09-07): töredékenként a saját küszöbök, közös lezárás, ÉS.
+6. ⭐ **Az ÉS-szabály a szeletelt világban:** a többi érintett nevezője (a pont-eseményeik a lezárásig)
+   bejelentésként a javaslat szeletébe is bekerül — a terhe a döntés méretével arányos, nem a koinóéval.
+
+⏸️ **A megépítéskor eldöntendő:** a beadó kezdő pontjának szétosztása a töredékek között (a prototípusban
+mindegyikre legalább 1) · a csomag-javaslat (a prototípusban a létrehozó választ tárhelyet; a P2P-ben még
+nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
+
+### D86. A TARTÓS TÁR HATÁRA (2026-10-02, Csaba)
+
+**Amiből jött:** a D75/1 „a saját eseményeim szeleteit" is tartósnak mondta, de a pont-rendezésem maga is
+esemény az entitás szeletében — szó szerint a visszavett pontú szelet soha nem kerülne át az átmeneti
+tárba, holott ugyanez a pont kimondja, hogy átkerül.
+
+#### A DÖNTÉS
+
+1. ⭐ **A tartós tár: a tudatpontos szeleteim és a saját azonosság-szeletem.** (A D85 óta a megszavazott
+   javaslat is tudatpontos szelet.)
+2. ⭐ **A máshová írt saját eseményeimet mindig megtartom és kiszolgálom — ESEMÉNYKÉNT, nem az egész
+   szeletet** (a D83/1 szövege). Ilyen: a visszavett pontú entitás régi eseményei, a meghívás /
+   felhatalmazás / tanúsítás (a MÁSIK azonosság-szeletében), az ellentmondás-bejelentés.
+3. A meghívott azonosság-szeletéről (tartsa-e a meghívó) az **E** dönt.
+
+⏸️ **Nyitott (B):** a gyökérre nem lehet pontot tenni — a szigorú (b) alatt ki tartja a legfelső szintű
+gondolatok születését?
+
+### D87. A KÉRELEM ÚTJA: a törzs és a kérdező (2026-10-02, Csaba)
+
+> *„szerintem nem kell titkólni, hogy ki mit néz meg, de lehet hogy ezt mások máshogy gondólják. szóval
+> ha nem bonyolít túlságossan, akkor a közvetítő ne tudja, de ha ez komplikált, akkor tudhatja."* — Csaba
+
+**Amiből jött:** a D76 szerint a kérelem továbbadható, és a válasz ugyanazon az úton jön vissza — az első
+betöltésnél a törzzsel együtt. A törzs így átment volna a továbbítón, és a D84/1 szerint a törzset alapból
+csak a vállaló adja ki.
+
+#### A DÖNTÉS
+
+1. ⭐ **A törzs a kérelem útján jön vissza** (a NAT miatt a közvetlen út nem nyitható meg bármikor). **A
+   továbbító átengedi, de nem tartja meg, és nem szolgálja ki** — a terhe a darabkorláton belül marad, a
+   D84/1 áll.
+2. ⭐ **A közvetítő ne tudja, ki a kérdező** (Csaba feltétele: ha nem bonyolult — nem az): a kérelem NEM
+   hordozza a kérdező címét; a válasz lépésenként megy vissza (minden közvetítő csak azt jegyzi meg a D76
+   azonosítójához, kitől kapta); és az **ugrás-számláló kezdőértéke véletlen** — különben az első közvetítő
+   a teljes kezdőértékből tudná, hogy a szomszédja maga a kérdező. Azt, hogy MIT kérnek, a közvetítő
+   látja (Csaba: ezt nem kell titkolni). ⚠️ Ha a megépítéskor mégis bonyolultnak bizonyul, a közvetítő
+   tudhatja — ez Csaba kimondott tartaléka.
+3. A közvetlen kérés egy vállalóhoz (a G címjegyzékéből) a vállalónak elárulja a kérdezőt — ő nem
+   közvetítő, hanem a válaszoló.
+
+### D88. A NÉV A PROFILBAN: sózott lenyomat, a név törölhető darab (2026-10-02, Csaba)
+
+**Amiből jött:** a D28 terve szerint a nevet és a települést egy `Profil` esemény hordozza, és egy üres
+Profil „leveszi". Ez csak a SZÁMÍTOTT állapotból veszi le: a régi esemény bájtjai minden tartónál
+megmaradnak (eseményt nem törlünk) — ez a D6 szövegével ütközött („a láncra csak kriptográfiai
+bizonyíték kerül").
+
+#### A DÖNTÉS
+
+1. ⭐ **A D72 mintája:** a `Profil` esemény csak a profil-darab **sózott** lenyomatát hordozza (só nélkül
+   egy név kitalálható lenne); a darab (név, település, só) a fájl-tárban él.
+2. ⭐ **A törlés:** a darabot senki nem szolgálja ki tovább, és eldobható; az esemény marad, de semmit nem
+   árul el. Az utolsó Profil számít, mint eddig (D28/3).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a
