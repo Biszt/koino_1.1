@@ -50,6 +50,7 @@
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson UDP-kaput
 //   node koino/koino.js hozd <azonosító>         — EGY entitás elhozása (böngésző-lekérés)
+//   node koino/koino.js cimjegyzek [hirdet|keres|gyoker|hirdetes]  — ⭐ D91: a DHT-n hirdetett címjegyzék
 //   node koino/koino.js csomag [javaslat]        — ⭐ D85 T3: a lezárt, több érintettes döntés csomagja
 //   node koino/koino.js pajzsfuro <cím> <port> [helyi port]  — ⭐ a rés: csere ÉS fájlok
 //   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
@@ -111,6 +112,10 @@ import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVeg
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
 // ⭐ B/1–B/2: a vállalás és az átmeneti tár (D75, D86, D90).
 import { vallalasSzamitasa } from './js/allapot/vallalas.js';
+// ⭐⭐ D91: a címjegyzék (G) — a vakított témák, a gyökér-darab, a hirdetés üteme.
+import {
+  cimjegyzekTema, hirdetendoTemak, gyokerMelysege, gyokerDarabTemaja, sajatGyokerDarabjai, HIRDETES_KOZ
+} from './js/csere/cimjegyzek.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
@@ -835,6 +840,84 @@ async function tablaKliens() {
   const belepok = env === undefined ? ALAP_BELEPOK
     : (env === 'nincs' || env === '' ? [] : env.split(',').map((s) => s.trim()).filter(Boolean));
   return dhtKliens({ belepok, ismertek });
+}
+
+// ===================================
+// ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE ÉS KERESÉSE (a BitTorrent-DHT-n, vakított témával)
+// ===================================
+//
+// Minden készülék a saját gyökér-darabját hirdeti (egy téma, ~20 percenként — az 58. mérés szerint a háló 30–60
+// perc alatt felejt), a vállalt szeletei közül pedig csak annyit, amennyit a KÉSZÜLÉKENKÉNTI beállítás enged
+// (`cimjegyzek.json`, alapból 0). Keresni bárki kereshet. ⚠️ Segédeszköz, nem előfeltétel (2. szabály): ha a
+// DHT nem elérhető, a fa és a raj (D91/1) ugyanúgy működik.
+
+/** A szeletenkénti hirdetés felső korlátja (egy készüléken is — a 6. szabály). */
+const SZELET_HIRDETES_KORLAT = 50;
+
+function cimjegyzekBeallitasFajl() {
+  return join(alapHely(), 'cimjegyzek.json');
+}
+
+/** A készülékenkénti beállítás (helyi, nem esemény, nem terjed — D83/2 mintája). */
+async function cimjegyzekBeallitas() {
+  try {
+    const b = JSON.parse(await readFile(cimjegyzekBeallitasFajl(), 'utf8'));
+    const n = Number.isInteger(b?.szeletHirdetes) && b.szeletHirdetes >= 0 ? b.szeletHirdetes : 0;
+    return { szeletHirdetes: Math.min(n, SZELET_HIRDETES_KORLAT) };
+  } catch {
+    return { szeletHirdetes: 0 };
+  }
+}
+
+/** A legfelső szintű gondolatok száma (a gyökér-darab mélységéhez — `cimjegyzek.js`). */
+function legfelsoGondolatokSzama(allapot) {
+  let n = 0;
+  for (const e of allapot.entitasok.values()) if (!e.szulo && e.tipus !== 'Javaslat') n++;
+  return n;
+}
+
+/** Amit ez a készülék hirdet: a gyökér-darabja és (a beállítás szerint) néhány vállalt szelete. */
+async function sajatHirdetendoTemak() {
+  const { allapot } = await kepetKeszit();
+  const v = await sajatVallalasa(allapot);
+  const tablaKulcs = await tablaKulcsBiztositasa();
+  const vallalt = [...v.pontok.entries()].filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  const legfelso = legfelsoGondolatokSzama(allapot);
+  const { szeletHirdetes } = await cimjegyzekBeallitas();
+  return {
+    temak: hirdetendoTemak({ koino: KOINO, alairo: tablaKulcs.alairoNyilvanos, legfelsoDarab: legfelso,
+      vallaltSzeletek: vallalt, szeletHirdetes }),
+    legfelso, szeletHirdetes
+  };
+}
+
+/** Hirdetés most — a megadott (külső) porttal. */
+async function cimjegyzekHirdetese(port) {
+  const { temak } = await sajatHirdetendoTemak();
+  const kliens = await tablaKliens();
+  try {
+    const eredmeny = [];
+    for (const t of temak) {
+      const be = await kliens.bejelent(t.tema, port);
+      eredmeny.push({ fajta: t.fajta, kulcs: t.kulcs, tarolta: be.tarolta, probalt: be.probalt });
+    }
+    await dhtIsmertekMentese(kliens);
+    return { eredmeny, forgalom: kliens.forgalom() };
+  } finally {
+    kliens.bezar();
+  }
+}
+
+/** Kik hirdették a témát — címek, név nélkül; bizalom nem jár velük (3. szabály). */
+async function cimjegyzekKeresese(tema) {
+  const kliens = await tablaKliens();
+  try {
+    const k = await kliens.tarsakKeresese(tema);
+    await dhtIsmertekMentese(kliens);
+    return k.tarsak;
+  } finally {
+    kliens.bezar();
+  }
 }
 
 /**
@@ -2818,6 +2901,87 @@ try {
       break;
     }
 
+    case 'cimjegyzek': {
+      // ===== ⭐⭐ D91/3: A CÍMJEGYZÉK — mit hirdetek a DHT-n, és ki tartja, amit keresek =====
+      //
+      // A fő út a fa és a raj (a csere viszi); ez a hash-elhelyezés: a saját gyökér-darabom (mindig) és a
+      // beállítás szerinti néhány vállalt szeletem. ⚠️ Segédeszköz (2. szabály), a cím név nélküli (D6).
+      const mit = ervek[0] ?? '';
+      if (mit === 'hirdetes') {
+        const n = parseInt(ervek[1], 10);
+        if (!Number.isInteger(n) || n < 0) {
+          throw new Error('Hány vállalt szeletet hirdessen ez a készülék? (0 = csak a gyökér-darabot)'
+            + '\n  node koino/koino.js cimjegyzek hirdetes <0..' + SZELET_HIRDETES_KORLAT + '>');
+        }
+        const ertek = Math.min(n, SZELET_HIRDETES_KORLAT);
+        await writeFile(cimjegyzekBeallitasFajl(), JSON.stringify({ szeletHirdetes: ertek }), 'utf8');
+        kiir(SZIN.jo + '✓ ez a készülék ' + (ertek ? ertek + ' vállalt szeletet is hirdet' : 'csak a gyökér-darabját hirdeti')
+          + SZIN.vege + SZIN.halvany + '  (helyi beállítás — nem esemény, nem terjed; egy téma ~0,65 MB/nap)'
+          + SZIN.vege);
+        break;
+      }
+      if (mit === 'hirdet') {
+        const port = parseInt(ervek[1], 10) || ALAP_PORT;
+        const h = await cimjegyzekHirdetese(port);
+        kiir(SZIN.vastag + 'HIRDETÉS a DHT-n (port ' + port + ')' + SZIN.vege);
+        for (const e of h.eredmeny) {
+          kiir('  ' + (e.tarolta > 0 ? SZIN.jo + '✓' : SZIN.nem + '✗') + SZIN.vege + ' ' + e.fajta + ' '
+            + (e.fajta === 'szelet' ? e.kulcs.slice(0, 12) + '…' : e.kulcs) + SZIN.halvany + '  · ' + e.tarolta
+            + '/' + e.probalt + ' gép tárolta' + SZIN.vege);
+        }
+        if (!h.eredmeny.some((e) => e.probalt > 0)) {
+          kiir(SZIN.nem + '  A DHT most nem érhető el — egyetlen gép sem felelt (ez nem azt jelenti, hogy senki nem'
+            + ' tárolná).' + SZIN.vege);
+        }
+        kiir(SZIN.halvany + '  forgalom: ' + ((h.forgalom.ki + h.forgalom.be) / 1024).toFixed(1) + ' KB' + SZIN.vege);
+        break;
+      }
+      if (mit === 'keres' || mit === 'gyoker') {
+        // A keresendő témák: egy szelet, vagy a gyökér egy darabja (a szomszédos mélységekkel együtt — a
+        // mélység a legfelső szintű gondolatok számából jön, és ez két gépen eltérhet).
+        let probak;
+        if (mit === 'keres') {
+          const az = ervek[1];
+          if (!az) throw new Error('Melyik szelet tartóit keressem?\n  node koino/koino.js cimjegyzek keres <azonosító>');
+          probak = [{ cimke: 'szelet ' + az.slice(0, 12) + '…', tema: cimjegyzekTema(KOINO, 'szelet', az) }];
+        } else {
+          const { allapot } = await kepetKeszit();
+          const m = gyokerMelysege(legfelsoGondolatokSzama(allapot));
+          const sajat = sajatGyokerDarabjai((await tablaKulcsBiztositasa()).alairoNyilvanos, m, 1)[0];
+          const d = ervek[1] !== undefined ? parseInt(ervek[1], 10) : sajat;
+          if (!Number.isInteger(d) || d < 0 || d >= 2 ** m) {
+            throw new Error('A gyökér-darab sorszáma 0 és ' + (2 ** m - 1) + ' között (mélység: ' + m + ')');
+          }
+          const parok = [[m, d]];
+          if (m > 0) parok.push([m - 1, d >> 1]);
+          if (m < 16) parok.push([m + 1, d * 2], [m + 1, d * 2 + 1]);
+          probak = parok.map(([mm, dd]) => ({ cimke: 'gyökér ' + mm + ':' + dd, tema: gyokerDarabTemaja(KOINO, mm, dd) }));
+        }
+        kiir(SZIN.vastag + 'KERESÉS a DHT-n' + SZIN.vege);
+        for (const pr of probak) {
+          const tarsak = await cimjegyzekKeresese(pr.tema);
+          kiir('  ' + pr.cimke + ': ' + (tarsak.length ? SZIN.jo + tarsak.length + ' hirdető' + SZIN.vege
+            : SZIN.halvany + 'senki' + SZIN.vege));
+          for (const t of tarsak) kiir('    ' + t.cim + ' ' + t.port);
+          if (tarsak.length) break;
+        }
+        kiir(SZIN.halvany + '  (a cím csak jelölt: név nélküli, bizalom nem jár vele — a csere kapuja dönt)' + SZIN.vege);
+        break;
+      }
+      if (mit) throw new Error('Ismeretlen: cimjegyzek ' + mit
+        + '\n  node koino/koino.js cimjegyzek [hirdet [port] | keres <azonosító> | gyoker [darab] | hirdetes <n>]');
+      const { temak, legfelso, szeletHirdetes } = await sajatHirdetendoTemak();
+      kiir(SZIN.vastag + 'CÍMJEGYZÉK (D91)' + SZIN.vege + SZIN.halvany + '  — a fő út a fa és a raj; ez a DHT-rész'
+        + SZIN.vege);
+      kiir('  legfelső szintű gondolatok: ' + legfelso + ' → a gyökér-darab mélysége: ' + gyokerMelysege(legfelso));
+      kiir('  szeletenkénti hirdetés (helyi beállítás): ' + szeletHirdetes);
+      kiir('  amit ' + Math.round(HIRDETES_KOZ / 60000) + ' percenként hirdetek (az őrjárat):');
+      for (const t of temak) {
+        kiir('    ' + t.fajta + ' ' + (t.fajta === 'szelet' ? t.kulcs.slice(0, 12) + '…' : t.kulcs));
+      }
+      break;
+    }
+
     case 'vallalas': {
       // ===== ⭐ B/1–B/2: MIT TARTOK — a vállalásom és az átmeneti tár (4. szabály: bele lehet látni) =====
       const { allapot } = await kepetKeszit();
@@ -2984,6 +3148,9 @@ try {
       // ⚠️ Bukik-e most a külső cím mérése? Csak a VÁLTOZÁST írjuk ki (40. mérés): egy
       // mobilnet nélküli telefonon körönként ugyanaz a sor csak zaj volna.
       let sajatCimMeresBukik = false;
+      // ⭐ D91/3: mikor hirdettük utoljára a címjegyzéket, és fut-e épp (a hirdetés nem tartja fel a kört).
+      let utolsoHirdetes = 0;
+      let hirdetesFut = null;
 
       // ===== ⭐⭐⭐ AZ ÁLLANDÓ UDP-KAPU (D69/3, 2026-09-25) — és 2026-09-26 óta AZ EGYETLEN =====
       //
@@ -3254,6 +3421,27 @@ try {
         // ⚠️ A BÁJTOK 2026-09-26 ÓTA A RÉSEN JÖNNEK, a munkán belül (randevú): a kör utáni
         // TCP-s elhozás kikerült (D69/2). *A buli után fenntartott kapcsolat (Csaba,
         // 2026-09-12) most maga a rés — ugyanazon a foglalaton, amin a csere ment.*
+
+        // ⭐⭐ D91/3: A CÍMJEGYZÉK HIRDETÉSE — ~20 percenként (a háló 30–60 perc alatt felejt, 58. mérés): a saját
+        // gyökér-darabom, és a beállítás szerint néhány vállalt szeletem. ⚠️ Segédeszköz: a hibája nem dönti el a kört.
+        // ⚠️ A HÁTTÉRBEN: egy bejelentés 7–17 mp (58. mérés) — a kört nem tarthatja fel, és egyszerre egy fut.
+        if (!hirdetesFut && Date.now() - utolsoHirdetes >= HIRDETES_KOZ) {
+          utolsoHirdetes = Date.now();
+          hirdetesFut = cimjegyzekHirdetese(res.sajatKulsoUdp?.port ?? port)
+            .then((h) => {
+              // ⚠️ A „nem értem el a DHT-t" és a „senki nem tárolta" két külön dolog (a 40. mérés tanulsága).
+              const tarolt = h.eredmeny.filter((e) => e.tarolta > 0).length;
+              const elerte = h.eredmeny.some((e) => e.probalt > 0);
+              kiir(SZIN.halvany + '  📇 ' + ora() + ' címjegyzék: ' + (elerte
+                ? tarolt + '/' + h.eredmeny.length + ' téma a DHT-n (' + ((h.forgalom.ki + h.forgalom.be) / 1024)
+                  .toFixed(1) + ' KB)'
+                : 'a DHT most nem érhető el (egyetlen gép sem felelt) — a raj ettől még működik') + SZIN.vege);
+            })
+            .catch((hiba) => {
+              kiir(SZIN.halvany + '  ⚠ a címjegyzék hirdetése most nem sikerült: ' + hiba.message + SZIN.vege);
+            })
+            .finally(() => { hirdetesFut = null; });
+        }
 
         // ⭐⭐ ÉS A HÁZTARTÁS: az elakadt tudatpontok visszavétele (2026-09-07).
         // A készülék magától könyvel — de csak megülepedés után, mert egy késve érkező,
@@ -3693,9 +3881,21 @@ try {
         const jegyzek = await jegyzekTarolo.olvas();
         const ismertek = szeletCimei(jegyzek, entitas);
         const tarsak = tarsakSorrendje(await tarolo.olvas());
-        // A szelet-jegyzék ELÖL: ott biztosan megvolt egyszer.
+        // ⭐ D91/3: ha a raj nem ismer tartót, a KÖZVETLEN KERESÉS a DHT-n (gyorsító, elhagyható — ~3 KB):
+        // akik ezt a szeletet hirdetik (a vakított témán). ⚠️ Bizalom nem jár vele (3. szabály).
+        let dhtTalalt = [];
+        if (!ismertek.length) {
+          try {
+            dhtTalalt = (await cimjegyzekKeresese(cimjegyzekTema(KOINO, 'szelet', entitas)))
+              .map((t) => ({ hoszt: t.cim, port: t.port }));
+          } catch { /* a DHT segédeszköz: ha nem elérhető, a társak maradnak */ }
+          if (dhtTalalt.length) {
+            kiir(SZIN.halvany + '  📇 a DHT-n ' + dhtTalalt.length + ' hirdető ennél a szeletnél' + SZIN.vege);
+          }
+        }
+        // A szelet-jegyzék ELÖL: ott biztosan megvolt egyszer; utána a hirdetők, végül az induló címek.
         const volt = new Set();
-        cimek = [...ismertek, ...tarsak]
+        cimek = [...ismertek, ...dhtTalalt, ...tarsak]
           .map((c) => ({ hoszt: c.hoszt, port: Number(c.port) }))
           .filter((c) => !volt.has(c.hoszt + ':' + c.port) && volt.add(c.hoszt + ':' + c.port));
       }
@@ -4604,6 +4804,7 @@ try {
       kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]   (mind UDP-n)');
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
+      kiir('           cimjegyzek [hirdet [port] | keres <az> | gyoker [darab] | hirdetes <n>]   (D91 — a DHT-n)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

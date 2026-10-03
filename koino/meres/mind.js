@@ -66,6 +66,7 @@ import eszlelo from './eszleloProba.js';
 import dontesiCsomag from './dontesiCsomagProba.js';
 // ⭐ A csere titkosítása (D89/1) — a kriptográfia, és hogy a lehallgató semmit nem lát.
 import titkositas from './titkositasProba.js';
+import cimjegyzek from './cimjegyzekProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
 import atmeneti from './atmenetiProba.js';
 
@@ -104,6 +105,7 @@ const PROBAK = [
   { nev: 'szovegdarab', futtat: szovegDarab },
   { nev: 'tartomany', futtat: tartomany },
   { nev: 'titkositas', futtat: titkositas },
+  { nev: 'cimjegyzek', futtat: cimjegyzek },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
   { nev: 'ellentmondas', futtat: ellentmondas },
@@ -134,7 +136,7 @@ const CSOPORTOK = {
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
-  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'vizsga'],
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül

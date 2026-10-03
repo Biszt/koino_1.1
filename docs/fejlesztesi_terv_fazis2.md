@@ -4672,6 +4672,28 @@ DHT-művelet ~50 kérdés ≈ 5–10 KB (mérve), tehát a szeletenkénti, gyako
 ⚠️ **Előbb a mérés:** az 58. (a BEP 5 a valódi DHT-n — hirdetés, keresés, és hogy MEDDIG őrzi a háló a hirdetést) és
 az 59. (a raj kialakulása, szimuláció).
 
+#### D91/3 — KI HIRDET, MILYEN ÜTEMBEN (2026-10-03, Csaba: „igen, jó lessz így”)
+
+Az 58. mérés után: a háló a hirdetést 30–60 perc alatt elfelejti, egy téma 20 percenként ismételve ~0,65 MB/nap.
+
+1. ⭐ **Minden készülék a saját GYÖKÉR-DARABJÁT hirdeti** — egy téma, ~20 percenként (`HIRDETES_KOZ`), az őrjárat
+   a háttérben (a kört nem tartja fel: egy bejelentés 7–17 mp). A darab mélysége a legfelső szintű gondolatok
+   számából jön (`gyokerMelysege`: egy darabba ~256 jusson — kis koinóban 0, és kettőzésenként +1, tehát egy darab
+   mérete nem nő a koinóval); a kereső ugyanabból számol, és a szomszédos mélységet is megpróbálja (a becslés két
+   gépen eltérhet).
+2. ⭐ **A szeletenkénti hirdetés csak KÉSZÜLÉKENKÉNTI beállítással** (`cimjegyzek hirdetes <n>` → `cimjegyzek.json`,
+   helyi, nem esemény; **alapból 0**, legfeljebb 50): egy PC, amelyiknek nem számít a forgalom, néhány vállalt
+   szeletét (a legtöbb pontosat elöl) hirdetheti; egy telefonon 100 szelet ~65 MB/nap volna. ⛔ Csak vállalt szelet
+   (a megnézett soha — D75/3).
+3. ⭐ **Keresni bárki kereshet, igény szerint** (~3 KB): a `hozd`, ha a raj nem ismer tartót, a DHT-n keres (a
+   hirdetők a raj után, az induló címek előtt kerülnek sorra); kézzel: `cimjegyzek keres <az>` / `gyoker [darab]`.
+
+⚠️ A cím NÉV NÉLKÜLI jelölt (D6, 3. szabály): a hamis cím elérhetetlenséget okoz, nem hamisítást — a csere kapuja
+dönt. ⚠️ A port a kapu külső portja (ha a tükör megmérte), különben a helyi — NAT mögött ez csak jelölt, mint a raj
+címei. ✅ **Megépült (2026-10-03):** `cimjegyzek.js` (`gyokerMelysege`, `hirdetendoTemak`), `koino.js` (az őrjárat
+hirdetése, a `cimjegyzek` parancs, a `hozd` tartaléka); próbák: `cimjegyzekProba.js` és a parancssor (hamis DHT-n,
+két készülékkel — a beállítás nélkül nem hirdet szeletet, más koinóból nem található, a `hozd` cím nélkül elhoz).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

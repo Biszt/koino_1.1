@@ -164,8 +164,12 @@ a hash-elhelyezés csak a gyökér darabjaira és a közvetlen keresésre, most 
 (az E után újragondolva). Előbb a mérés: 58. (BEP 5), 59. (a raj). ⭐ **A mérések (2026-10-03):** az 58. szerint a
 DHT a hirdetést 30–60 perc alatt elfelejti (egy téma ~0,65 MB/nap, ha 20 percenként ismételjük) — a gyökér-darabokra
 elmegy, szeletenkénti közvetlen keresésre nem; az 59. szerint a raj L = 8 tartóval, fele friss / fele véletlen
-megtartással egyben marad (a csak-friss szétesik). 🚧 **A raj megépült** (a jegyzék, a csere, a tanulság); a DHT-rész
-(a gyökér-darabok hirdetése, a közvetlen keresés) Csaba döntésére vár (ki hirdessen, milyen ütemben).
+megtartással egyben marad (a csak-friss szétesik). ✅ **A raj megépült** (a jegyzék, a csere, a tanulság), és ✅ **a DHT-rész is
+(D91/3, 2026-10-03):** minden készülék a saját gyökér-darabját hirdeti ~20 percenként; a szeletenkénti hirdetés csak
+készülékenkénti beállítással (alapból 0); keresni bárki kereshet (a `hozd`, ha a raj nem ismer tartót). ⏸️ **Ami a G-ből
+hátravan:** hogy a gyökér-darab tartója a darabot TÉNYLEG tartsa és kiszolgálja (ma mindenki a teljes gyökeret cseréli —
+a D90 szétosztása a B/3-mal, a szigorú (b)-vel válik élessé), és a fa „a szülő tartói a gyerekek tartóit is” ága (a
+raj ma szeletenként tanul).
 
 > *„a meta adatok, amik megmutatják, hogy mi kinél található, azt több helyen kell tárolni, és
 > biztosítani, hogy az egész hálózat tudja, vagy tudja azt, hogy ki tudhatja."* — Csaba, 2026-10-01
@@ -452,3 +456,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     a hash-elhelyezés csak a gyökérre és a közvetlen keresésre, most a BitTorrent-DHT-n vakított témával** · mert egy
     DHT-művelet ~50 kérdés ≈ 5–10 KB (mérve), a szeletenkénti gyakori hirdetés a 6. szabályt sértené; a fa a cserén
     belül marad (zárt koinó), és a terhe a vállalással arányos · Csaba, 2026-10-03 · D91, `g_cimjegyzek_atvizsgalas.md`.
+52. **2026-10-03 · a DHT-n mindenki hirdeti a vállalt szeleteit** → **mindenki csak a gyökér-darabját; a szeletet csak
+    készülékenkénti beállítással (alapból 0)** · mert a háló 30–60 perc alatt felejt (58. mérés): 100 szelet egy
+    telefonon ~65 MB/nap volna, a gyökér-darab egy téma (~0,65 MB/nap); a szeletek fő útja úgyis a raj · Csaba,
+    2026-10-03 · D91/3, `cimjegyzek.js`.

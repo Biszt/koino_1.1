@@ -63,7 +63,8 @@ node koino/koino.js
 | `node koino/koino.js tabla [kiir\|olvas]` | ⭐⭐⭐ **a HIRDETŐTÁBLA** (2026-09-20): a kötéseim · az új címem a társaim **külön rekeszébe**, titkosítva · és hol vannak ŐK most. ⛔ A tábla-kulcs **nem az azonosságod** (D6) |
 | `node koino/koino.js csere <hoszt> <port>` | csere egy megadott készülékkel — rákopog a kapujára. ⚠️ NAT mögött csak akkor megy át, ha a másik is kopog (vagy egy wifin vagytok) — két idegen router között a `pajzsfuro` az út |
 | `node koino/koino.js csere` | ⭐ csere **minden induló címmel**, egyszerre a kapun — egy elérhetetlen társ nem dönti el a kört |
-| `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből és az induló címekből keres, egyszerre kopog |
+| `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből (a raj), ha az nem ismer tartót, a DHT-n hirdetőkből (D91/3), és az induló címekből keres, egyszerre kopog |
+| `node koino/koino.js cimjegyzek [hirdet [port] \| keres <az> \| gyoker [darab] \| hirdetes <n>]` | ⭐⭐ **a címjegyzék a DHT-n** (D91/3): mit hirdetek (a gyökér-darabomat; vállalt szeletet csak a `hirdetes <n>` beállítással), és ki tartja, amit keresek — vakított témán, név nélkül |
 | `node koino/koino.js tarsak` | az **induló címeim** (`indulocimek.json` — 2026-09-26-tól tiszta lap), és melyikkel mikor sikerült |
 | `node koino/koino.js tars <hoszt> [port] [név]` | társ felvétele (levétel: `tars torol <hoszt> [port]`) |
 | `node koino/koino.js tukor <hoszt> [port]` | ⭐ **kívülről hogy látszom UDP-n?** — a másik visszamondja, milyen címről/portról lát (STUN helyett) |
@@ -97,7 +98,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Harminchat próba-fájl, **866 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminchét próba-fájl, **881 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy témakör
 (csoport) külön is futtatható: `node koino/meres/mind.js fa` — a csoportok: alap · allapot ·
 felulet · csere · fajl · fa · parancssor (a tagjaik a `mind.js` `CSOPORTOK`-jában). Egy
@@ -106,7 +107,7 @@ szűrő pontosan illeszkedik, és új próba-fájlt a `CSOPORTOK`-ba is be kell 
 `mind.js` megnevezi és nem fut.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **217 fájl, 3765,4 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **218 fájl, 3790,2 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*

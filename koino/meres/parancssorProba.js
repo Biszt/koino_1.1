@@ -38,6 +38,11 @@ import { toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
+// ⛔ A PRÓBÁK NEM HÍVJÁK A VALÓDI DHT-T (2026-10-03, D91/3): az őrjárat az első körében hirdeti a címjegyzéket —
+// belépő nélkül ez a valódi BitTorrent-DHT-ra menne, és a próba a hálózat hangulatát mérné, nem a kódot (a tábla-
+// próba elve). Alapból tehát „nincs” belépő; a DHT-t mérő próbák a sajátjukat (a hamis hálót) kifejezetten megadják.
+process.env.KOINO_DHT_BELEPOK ??= 'nincs';
+
 // A `koino.js` a `meres/` mappához képest egy szinttel feljebb van.
 const KOINO_JS = new URL('../koino.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
@@ -360,6 +365,83 @@ proba('⭐⭐ D91: a csere után a két tartó egymást jegyzi a raj-jegyzékben
     } finally {
       await rm(egyik, { recursive: true, force: true });
       await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
+// ===================================
+//
+// HAMIS DHT-n (a tábla-próba mintája: a valódi hálózat hangulatát nem mérjük). A gazda vállal egy gondolatot
+// (pontja van rajta), és hirdet. ⭐ Négy ág, hogy a próba ne legyen vak: (1) a beállítás NÉLKÜL a szelet nem
+// megy ki (a vendég nem találja), csak a gyökér-darab; (2) a `cimjegyzek hirdetes 1` után a szelet is kint van;
+// (3) más koinó azonosítójával a vendég SEMMIT nem talál (a vakítás); (4) a `hozd` CÍM ÉS TÁRS NÉLKÜL a DHT-ról
+// tudja meg, kit kérdezzen, és a gondolat TÉNYLEG megérkezik (a vendég lemezén, az átmeneti tárban).
+proba('⭐⭐ D91/3: a címjegyzék a DHT-n — csak a beállítással hirdet szeletet, vakít, és a `hozd` cím nélkül is elhoz',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const halo = await hamisHalozat(12);
+    const port = 7653;
+    const dht = { KOINO_DHT_BELEPOK: halo.belepo(0) };
+    let figyelo = null;
+    try {
+      await fut(gazda, 'koino', 'Címjegyzék-próba');
+      const g = azonosito(await fut(gazda, 'gondolat', 'TAVOLI'), 'Létrejött:');
+      if (!g) return false;
+      await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+      const esemenyek = (await readFile(join(gazda, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const gTeljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
+      await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));      // a vendég csak a koinó születését ismeri
+
+      // (1) Alapból csak a gyökér-darab megy ki.
+      const hirdetes1 = await fut(gazda, 'cimjegyzek', 'hirdet', String(port), dht);
+      const keres1 = await fut(vendeg, 'cimjegyzek', 'keres', gTeljes, dht);
+      const gyoker1 = await fut(vendeg, 'cimjegyzek', 'gyoker', dht);
+      // (2) A beállítás után a vállalt szelet is.
+      await fut(gazda, 'cimjegyzek', 'hirdetes', '1');
+      const hirdetes2 = await fut(gazda, 'cimjegyzek', 'hirdet', String(port), dht);
+      const keres2 = await fut(vendeg, 'cimjegyzek', 'keres', gTeljes, dht);
+      // (3) Más koinó azonosítójával ugyanaz a szelet más téma — nem található.
+      const keresMas = await fut(vendeg, 'cimjegyzek', 'keres', gTeljes, { ...dht, KOINO_AZONOSITO: 'masik-koino' });
+
+      // (4) A `hozd` cím és társ nélkül: a DHT mondja meg, kit kérdezzen.
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' }, stdio: 'ignore'
+      });
+      await varj(2000);
+      const hozva = await fut(vendeg, 'hozd', gTeljes, dht);
+      figyelo.kill();
+      figyelo = null;
+      await varj(800);
+      // ⚠️ NÉV SZERINT (az alapértelmezett koinó, `sajat`): a (3) ág a vendégnél egy `masik-koino` mappát is nyitott.
+      const koinoMappa = join(vendeg, 'sajat');
+      const megjott = (await readdir(join(koinoMappa, 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+
+      const cim = new RegExp('127\\.0\\.0\\.1 ' + port);
+      const jo = {
+        egy: /✓ gyoker 0:0/.test(hirdetes1) && !/szelet/.test(hirdetes1.split('HIRDETÉS')[1] ?? '')
+          && !cim.test(keres1) && cim.test(gyoker1),
+        ketto: /✓ szelet/.test(hirdetes2) && cim.test(keres2),
+        harom: !cim.test(keresMas),
+        negy: /a DHT-n 1 hirdető/.test(hozva) && megjott
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (címjegyzék-próba: ' + JSON.stringify(jo) + ')\n'
+          + (jo.negy ? '' : '    (a `hozd` kimenete: ' + hozva.replace(/\x1b\[[0-9;]*m/g, '').trim().slice(0, 600) + ')\n'));
+        return false;
+      }
+      return true;
+    } finally {
+      if (figyelo) figyelo.kill();
+      halo.bezar();
+      await varj(500);
+      await rm(gazda, { recursive: true, force: true });
+      await rm(vendeg, { recursive: true, force: true });
     }
   });
 
@@ -1592,8 +1674,9 @@ proba('⭐⭐ AZ ŐRJÁRAT A FAL ÓRÁJÁHOZ IGAZODIK — nem az indítás pilla
     // igazít, akkor is, ha a rács közepén indult.
     await varj(26000);
 
-    // A kör-sorok időbélyege: „· HH:MM:SS nincs kire kopognom…" (nincs cél, ez elég).
-    const masodpercek = [...kimenet.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)]
+    // A kör-sorok időbélyege: „· HH:MM:SS nincs kire kopognom…" (nincs cél, ez elég). ⚠️ CSAK a kör-sorok: a
+    // címjegyzék hirdetése (D91/3) a háttérben fut, és a saját sorát a saját idejével írja — az nincs a rácson.
+    const masodpercek = [...kimenet.matchAll(/(\d{1,2}):(\d{2}):(\d{2}) nincs kire kopognom/g)]
       .map((m) => parseInt(m[3], 10));
 
     // Az ELSŐ kör az indításkor fut (még nem igazítva) — azt kihagyjuk.

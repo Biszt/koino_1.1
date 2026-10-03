@@ -69,3 +69,62 @@ export function sajatGyokerDarabjai(alairo, bitek, darab = 1) {
   for (let i = 0; i < Math.min(darab, osszes); i++) ki.push((kezdo + i) % osszes);
   return ki;
 }
+
+// ===================================
+// ⭐⭐ D91/3 (Csaba, 2026-10-03, az 58. mérés után): MIT HIRDET EGY KÉSZÜLÉK
+// ===================================
+//
+// Az 58. mérés: a BitTorrent-DHT a hirdetést 30–60 perc alatt elfelejti — egy téma ~20 percenként ismételve
+// ~0,65 MB/nap. Ezért: (1) MINDEN készülék a saját GYÖKÉR-DARABJÁT hirdeti (egy téma — a csere forgalmának
+// töredéke); (2) a SZELETENKÉNTI hirdetés csak KÉSZÜLÉKENKÉNTI beállítással (alapból 0 — egy PC, amelyiknek nem
+// számít a forgalom, néhányat hirdethet; egy telefonon 100 szelet ~65 MB/nap volna); (3) keresni bárki kereshet,
+// igény szerint (~3 KB).
+
+/** A hirdetés ismétlésének üteme — a háló 30–60 perc alatt felejt (58. mérés). */
+export const HIRDETES_KOZ = 20 * 60 * 1000;
+
+/** Egy gyökér-darabba nagyjából ennyi legfelső szintű gondolat essen. */
+export const GYOKER_DARAB_CEL = 256;
+
+/**
+ * ⭐ A GYÖKÉR-DARAB MÉLYSÉGE a legfelső szintű gondolatok számából: annyi bit, hogy egy darabba ~`GYOKER_DARAB_CEL`
+ * jusson. Kis koinóban 0 („az egész gyökér egy darab”), és logaritmikusan nő (a „végtelen”: egy darab mérete nem
+ * nő a koinóval). ⚠️ A kereső ugyanabból az adatból ugyanazt számolja; ha nem talál, a szomszédos mélységet
+ * próbálja (a becslés két gépen eltérhet).
+ * @param {number} legfelsoDarab
+ * @returns {number} 0..16
+ */
+export function gyokerMelysege(legfelsoDarab) {
+  const n = Number.isFinite(legfelsoDarab) && legfelsoDarab > 0 ? legfelsoDarab : 0;
+  if (n <= GYOKER_DARAB_CEL) return 0;
+  return Math.min(16, Math.ceil(Math.log2(n / GYOKER_DARAB_CEL)));
+}
+
+/** Egy gyökér-darab témája (a mélység is benne van — más mélység, más téma). */
+export function gyokerDarabTemaja(koino, melyseg, darab) {
+  return cimjegyzekTema(koino, 'gyoker', melyseg + ':' + darab);
+}
+
+/**
+ * ⭐ A HIRDETENDŐ TÉMÁK: a saját gyökér-darabom (mindig), és a vállalt szeleteim közül legfeljebb
+ * `szeletHirdetes` darab (a hívó sorrendjében — elöl a legfontosabb). ⛔ Csak vállalt szelet (a megnézett soha).
+ *
+ * @param {Object} b
+ * @param {string} b.koino
+ * @param {string} b.alairo - a tábla-kulcs aláírója (a készülék neve, nem az azonosság — D6)
+ * @param {number} b.legfelsoDarab - a legfelső szintű gondolatok száma (a mélységhez)
+ * @param {Array<string>} [b.vallaltSzeletek] - a vállalt szeletek, fontossági sorrendben
+ * @param {number} [b.szeletHirdetes] - készülékenkénti beállítás (alapból 0)
+ * @returns {Array<{fajta: string, kulcs: string, tema: Buffer}>}
+ */
+export function hirdetendoTemak({ koino, alairo, legfelsoDarab, vallaltSzeletek = [], szeletHirdetes = 0 }) {
+  const melyseg = gyokerMelysege(legfelsoDarab);
+  const [darab] = sajatGyokerDarabjai(alairo, melyseg, 1);
+  const ki = [{ fajta: 'gyoker', kulcs: melyseg + ':' + darab, tema: gyokerDarabTemaja(koino, melyseg, darab) }];
+  const db = Number.isInteger(szeletHirdetes) && szeletHirdetes > 0 ? szeletHirdetes : 0;
+  for (const k of vallaltSzeletek.filter((x) => typeof x === 'string' && x !== '').slice(0, db)) {
+    ki.push({ fajta: 'szelet', kulcs: k, tema: cimjegyzekTema(koino, 'szelet', k) });
+  }
+  return ki;
+}
+
