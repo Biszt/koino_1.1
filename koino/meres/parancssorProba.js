@@ -430,6 +430,79 @@ proba('⭐⭐ D92: a `kerelem fejlecek` az átmeneti tárba hozza a fejlécet (m
   });
 
 // ===================================
+// ⭐⭐ D92/1: A KOPOGTATÁS — a cím nélküli kérés, végig (2026-10-03)
+// ===================================
+//
+// HAMIS DHT-n. A kérő (R) NEM tudja a tartó (H) címét: a `kerelem fejlecek gyoker` csak FÜGGŐ kérelmet vesz fel, és a
+// gyökér-darab kopogtató témáján bejelenti a futó kapuja címét. ⭐ A tartó őrjárata a címjegyzék-körében ránéz a
+// hirdetett darabja párjára, meglátja R-t, és a következő körben FELÉ kopog; R munkája (ismeretlen bekopogó, miközben
+// kopogtatunk) a csere helyett a kérelmet futtatja. Viselkedést mérünk: R lemezén (az átmeneti tárban) ott a H
+// gondolatának létrehozó eseménye, és a függő kérelem kész lett. ⚠️ A hurok-címen nincs NAT — azt, hogy a kopogtatás
+// nélkül ez NEM menne, itt az mutatja meg, hogy R egyáltalán nem ismeri H címét (nincs kire kopognia).
+proba('⭐⭐ D92/1: a KOPOGTATÁS végig — a cím nélküli kérés függő lesz, a tartó a kopogtató témán meglátja és felé kopog, a fejléc megjön',
+  async () => {
+    const { hamisHalozat } = await import('./dhtProba.js');
+    const H = await ujKeszulek();
+    const R = await ujKeszulek();
+    const halo = await hamisHalozat(12);
+    const PH = 7674, PR = 7673;
+    const dht = { KOINO_DHT_BELEPOK: halo.belepo(0), KOINO_TUKOR: '127.0.0.1:9' };
+    const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+      { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...dht }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let h = null, r = null;
+    try {
+      await fut(H, 'koino', 'Kopogtatás-próba');
+      const g = azonosito(await fut(H, 'gondolat', 'KOPOGTATOTT'), 'Létrejött:');
+      if (!g) return false;
+      await fut(H, 'kivisz', join(H, 'mind.jsonl'));
+      const esemenyek = (await readFile(join(H, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const gTeljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(H, 'kivisz', join(H, 'k.jsonl'), koinoTeljes);
+      await fut(R, 'behoz', join(H, 'k.jsonl'));
+
+      // 1. R kapuja fut (az őrjárat felírja a portját), és R felveszi a cím nélküli kérelmet.
+      let rKimenet = '';
+      r = orjarat(R, PR);
+      r.stdout.on('data', (d) => { rKimenet += d; });
+      for (let i = 0; i < 20 && !/ŐRJÁRAT/.test(rKimenet); i++) await varj(250);
+      const felvetel = await fut(R, 'kerelem', 'fejlecek', 'gyoker', dht);
+
+      // 2. H őrjárata: az első címjegyzék-körében ránéz a kopogtató témáira.
+      let hKimenet = '';
+      h = orjarat(H, PH);
+      h.stdout.on('data', (d) => { hKimenet += d; });
+      let megjott = false;
+      for (let i = 0; i < 60 && !megjott; i++) {
+        await varj(500);
+        megjott = (await readdir(join(R, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+      }
+      await varj(1000);
+      const allas = await fut(R, 'kerelem', dht);
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = {
+        fuggo: /FÜGGŐ KÉRELEM: fejlecek a gyökér/.test(felvetel) && /[1-9]\d* kopogtató téma/.test(felvetel),
+        tartoLatta: /kopogtatás: 1 kérő vár rám/.test(tiszta(hKimenet)),
+        megjott,
+        kesz: /megjött: [1-9]\d* fejléc/.test(tiszta(allas)) && /FÜGGŐ KÉRELMEK: 0/.test(tiszta(allas))
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (kopogtatás-próba: ' + JSON.stringify(jo) + ')\n'
+          + '    (H: ' + tiszta(hKimenet).replace(/\s+/g, ' ').slice(-500) + ')\n'
+          + '    (R: ' + tiszta(rKimenet).replace(/\s+/g, ' ').slice(-500) + ')\n');
+        return false;
+      }
+      return true;
+    } finally {
+      for (const f of [h, r]) if (f) f.kill();
+      halo.bezar();
+      await varj(500);
+      await rm(H, { recursive: true, force: true });
+      await rm(R, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //

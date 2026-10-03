@@ -23,6 +23,10 @@ import { parbeszed } from '../js/csere/vonal.js';
 import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen } from '../js/csere/udpVonal.js';
 import { esemenyTarNyitasa, fajlBlobTarolo } from '../js/tar/fajlTar.js';
 import {
+  kerelemFelvetele, lejartakKivetele, tarshozIllo, kerelemLezarasa, probalkozas, fuggoCelok, fuggoKopogtatok,
+  nyilvantartasAlakja, ujNyilvantartas, FUGGO_KORLAT, FUGGO_ELEVULES, CEL_KORLAT
+} from '../js/csere/fuggoKerelmek.js';
+import {
   kerelemAlakja, fejlecekValasza, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
   MELYSEG_KORLAT
 } from '../js/csere/kerelem.js';
@@ -328,6 +332,60 @@ proba('⛔ kiszolgáló nélkül a tartó KESZ-t mond — a kérő nem vár a t�
     p.bezar();
     await rm(hely, { recursive: true, force: true });
   }
+});
+
+// ===================================
+// 5. A FÜGGŐ KÉRELMEK (D92/1) — a cím nélküli kérés nyilvántartása
+// ===================================
+
+const K1 = 'B'.repeat(43), K2 = 'C'.repeat(43);
+const SZ = 'D'.repeat(43);
+
+proba('a függő kérelem felvétele — ugyanaz (fajta + kulcs) nem lesz kétszer: a célok és a kopogtatók összeolvadnak', () => {
+  let r = kerelemFelvetele(ujNyilvantartas(), { fajta: 'fejlecek', kulcs: K1, celok: [{ hoszt: '10.0.0.1', port: 7373, alairo: SZ }],
+    kopogtatok: [{ fajta: 'keszulek', kulcs: SZ }] }, 1000, 'k1');
+  const elso = r;
+  r = kerelemFelvetele(r.nyilvantartas, { fajta: 'fejlecek', kulcs: K1, celok: [{ hoszt: '10.0.0.1', port: 7373 },
+    { hoszt: '10.0.0.2', port: 7373 }], kopogtatok: [{ fajta: 'gyoker', kulcs: '0:0' }] }, 2000, 'k2');
+  const f = r.nyilvantartas.fuggo;
+  return elso.uj && !r.uj && r.az === 'k1' && f.length === 1 && f[0].celok.length === 2 && f[0].celok[0].alairo === SZ
+    && f[0].kopogtatok.length === 2 && fuggoCelok(r.nyilvantartas).length === 2 && fuggoKopogtatok(r.nyilvantartas).length === 2;
+});
+
+proba('a korlát fölött a legrégebbi függő kiesik — és a kész naplóban kimondja (`kiszorult`)', () => {
+  let ny = ujNyilvantartas();
+  for (let i = 0; i <= FUGGO_KORLAT; i++) {
+    ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: String(i).padStart(43, 'E'), celok: [] }, i, 'k' + i).nyilvantartas;
+  }
+  return ny.fuggo.length === FUGGO_KORLAT && ny.fuggo[0].az === 'k1' && ny.kesz.at(-1).az === 'k0'
+    && ny.kesz.at(-1).eredmeny === 'kiszorult';
+});
+
+proba('a lejárt függő kérelem a kész naplóba kerül (`lejart`), a friss marad', () => {
+  let ny = kerelemFelvetele(ujNyilvantartas(), { fajta: 'szelet', kulcs: K1 }, 0, 'regi').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'szelet', kulcs: K2 }, FUGGO_ELEVULES, 'friss').nyilvantartas;
+  ny = lejartakKivetele(ny, FUGGO_ELEVULES + 1);
+  return ny.fuggo.length === 1 && ny.fuggo[0].az === 'friss' && ny.kesz.some((k) => k.az === 'regi' && k.eredmeny === 'lejart');
+});
+
+proba('melyik függő szól a társhoz: a pontos cím előbb, aztán az azonos IP (portváltás); idegen címre semmi', () => {
+  let ny = kerelemFelvetele(ujNyilvantartas(), { fajta: 'fejlecek', kulcs: K1, celok: [{ hoszt: '10.0.0.1', port: 1111 }] }, 1, 'a').nyilvantartas;
+  ny = kerelemFelvetele(ny, { fajta: 'torzs', kulcs: K2, celok: [{ hoszt: '10.0.0.1', port: 2222 }] }, 2, 'b').nyilvantartas;
+  return tarshozIllo(ny, '10.0.0.1', 2222)?.az === 'b' && tarshozIllo(ny, '10.0.0.1', 9999)?.az === 'a'
+    && tarshozIllo(ny, '10.0.0.9', 1111) === null;
+});
+
+proba('a lezárás a kész naplóba teszi, a próbálkozás számol; a hibás bejegyzés és a hibás cél kiesik', () => {
+  let ny = kerelemFelvetele(ujNyilvantartas(), { fajta: 'fejlecek', kulcs: K1, celok: [{ hoszt: '10.0.0.1', port: 1 }] }, 1, 'a').nyilvantartas;
+  ny = probalkozas(ny, 'a');
+  const probalt = ny.fuggo[0].probalt;
+  ny = kerelemLezarasa(ny, 'a', 'megjött: 3 fejléc', 5);
+  const rossz = nyilvantartasAlakja({ fuggo: [{ az: 'x', fajta: 'barmi', kulcs: K1 }, { az: 'y', fajta: 'szelet', kulcs: 'rovid' },
+    { az: 'z', fajta: 'szelet', kulcs: K2, celok: [{ hoszt: '1.2.3.4', port: 0 }, { hoszt: '1.2.3.4', port: 5, alairo: 'nem' },
+      ...Array.from({ length: 20 }, (_, i) => ({ hoszt: '9.9.9.' + i, port: 7 }))] }] });
+  return probalt === 1 && ny.fuggo.length === 0 && ny.kesz[0].eredmeny === 'megjött: 3 fejléc'
+    && rossz.fuggo.length === 1 && rossz.fuggo[0].az === 'z' && rossz.fuggo[0].celok.length === CEL_KORLAT
+    && rossz.fuggo[0].celok[0].port === 5 && rossz.fuggo[0].celok[0].alairo === undefined;
 });
 
 export default futtatas;

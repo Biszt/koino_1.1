@@ -151,8 +151,11 @@ ugrás-számláló, a fejléc = létrehozó esemény + össz-pont, a törzs = sz
 karbantartása, a szúrópróba és az ellenőrzése) · ✅ a kérelem tartalma (`kerelem.js`: az alapkérdések alakja, a fejlécek
 és a minták, a kérdező ellenőrzése, a törzs lenyomatai) · ✅ a menet a vonalon (`KERELEM` → `FEJLECEK`/`MINTAKEREK`/`MINTAK`,
 `TORZS` → fájlok egy kapcsolaton) és a kiszolgálás a kapu munkájában · ✅ a `kerelem fejlecek|torzs` parancs (cím vagy
-induló címek; ellenőriz, az átmeneti tárba ment, a bemondott össz-pontot megjegyzi) · ⏭️ a függő kérelmek és a kopogtatás
-(a cím nélküli út: a raj, a DHT, a randevú) · ⏭️ a továbbadás (K2, K3) · ⏭️ a pakli (a felület a kérelemből tölt).
+induló címek; ellenőriz, az átmeneti tárba ment, a bemondott össz-pontot megjegyzi) · ✅ a függő kérelmek és a KOPOGTATÁS
+(a cím nélküli út: a célok a G-ből, a kopogtató témák — a készüléké és a hirdetett témák párja —, az őrjárat ránéz és
+felé kopog, a kérő munkája a kérelmet futtatja; végig mérve hamis DHT-n) · ⏭️ a továbbadás (K2, K3) · ⏭️ a pakli (a felület
+a kérelemből tölt). ⚠️ **Elágazás 55:** a kopogtató téma nemcsak a készüléké — a hirdetett témák párja is (különben a DHT-n
+talált, csak címmel ismert tartó, pl. egy új készülék gyökér-darabja, elérhetetlen volna).
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
 
@@ -481,3 +484,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 54. **2026-10-03 · a pakli első betöltése egyetlen összetett válasz (D76/2)** → **nézet-független alapkérdések
     (fejlécek, szelet, törzs)** · mert a válaszolónak így nem kell az egész utat tartania (a szeletelt világban nem is
     tartja), és a síkidom, a térkép ugyanazt használja · Csaba, 2026-10-03 · D92/6.
+55. **2026-10-03 · a kopogtató téma a tartó KÉSZÜLÉKÉÉ (D92/1, a tábla-aláírójából)** → **a készüléké ÉS minden hirdetett
+    téma párja** (a gyökér-darabé, a beállítás szerinti szeleteké) · mert a DHT hirdetője csak címmel ismert — egy új
+    készülék, ami a gyökérrel kezd, egyetlen tartó azonosítóját sem tudja; a pár ára témánként ~3 KB / 20 perc · a
+    megépítéskor, Claude (a D92/1 keretén belül) · `cimjegyzek.js`, `fuggoKerelmek.js`.

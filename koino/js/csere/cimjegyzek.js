@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto';
 
 /** A téma fajtái: egy szelet közvetlen keresése, vagy a gyökér egy darabja. */
-export const TEMA_FAJTAK = ['szelet', 'gyoker'];
+export const TEMA_FAJTAK = ['szelet', 'gyoker', 'kopogtato'];
 
 /**
  * A VAKÍTOTT TÉMA — 20 bájt (a BEP 5 `info_hash` mérete): `H("koino-cimjegyzek-1" ‖ koinó ‖ fajta ‖ kulcs)`.
@@ -124,6 +124,48 @@ export function hirdetendoTemak({ koino, alairo, legfelsoDarab, vallaltSzeletek 
   const db = Number.isInteger(szeletHirdetes) && szeletHirdetes > 0 ? szeletHirdetes : 0;
   for (const k of vallaltSzeletek.filter((x) => typeof x === 'string' && x !== '').slice(0, db)) {
     ki.push({ fajta: 'szelet', kulcs: k, tema: cimjegyzekTema(koino, 'szelet', k) });
+  }
+  return ki;
+}
+
+// ===================================
+// ⭐⭐ D92/1 (b): A KOPOGTATÓ TÉMÁK — a randevú a DHT-n
+// ===================================
+//
+// NAT mögött egy idegen kopogása nem jut át (36/d); ha viszont a tartó TUDJA, hogy valaki kér tőle, a következő
+// buliban ő is kopog, és a rés megnyílik (60. mérés: T = 3 tartónál 20% → 76%). A „kérnek tőled” hír a DHT-n jut el:
+// a kérő a BEP 5-tel bejelenti a CÍMÉT egy kopogtató témán, a tartó időnként ránéz. Két fajta téma:
+//   · a KÉSZÜLÉKÉ — `kopogtato | keszulek:<tábla-aláíró>`: ha a kérő ismeri a tartót (a raj-jegyzékből);
+//   · egy HIRDETETT TÉMA PÁRJA — `kopogtato | <fajta>:<kulcs>`: ha csak annyit tud, hogy a gyökér egy darabját (vagy
+//     egy szeletet) valaki hirdeti — a DHT puszta címet ad, azonosítót nem. ⭐ Így egy új készülék is elér egy
+//     gyökér-darab tartót, anélkül hogy tudná, ki az.
+// A tartó a saját készülék-témáján és minden hirdetett témájának párján néz körül (~3 KB témánként, a hirdetés
+// ütemében). ⚠️ A cím név nélküli, bizalom nem jár vele (3. szabály); aki ismeri a koinót és a témát, az látja, hány
+// cím kopogtat (azt nem, mit kér — D92/1).
+
+/** Egy készülék kopogtató témája (a tábla-aláírójából — a készülék neve, nem az azonosság, D6). */
+export function keszulekKopogtatoTemaja(koino, alairo) {
+  return cimjegyzekTema(koino, 'kopogtato', 'keszulek:' + alairo);
+}
+
+/** Egy hirdetett téma párja: ahol a hirdetőit kérni lehet (`fajta` 'gyoker' vagy 'szelet'). */
+export function temaKopogtatoja(koino, fajta, kulcs) {
+  if (fajta !== 'gyoker' && fajta !== 'szelet') throw new Error('ismeretlen hirdetett téma: ' + fajta);
+  return cimjegyzekTema(koino, 'kopogtato', fajta + ':' + kulcs);
+}
+
+/**
+ * Amit egy készülék figyel: a saját kopogtató témája és minden hirdetett témájának párja.
+ * @param {Object} b
+ * @param {string} b.koino
+ * @param {string} b.alairo
+ * @param {Array<{fajta: string, kulcs: string}>} b.hirdetett - `hirdetendoTemak` eredménye
+ * @returns {Array<{fajta: string, kulcs: string, tema: Buffer}>}
+ */
+export function figyelendoKopogtatok({ koino, alairo, hirdetett = [] }) {
+  const ki = [{ fajta: 'keszulek', kulcs: alairo, tema: keszulekKopogtatoTemaja(koino, alairo) }];
+  for (const t of hirdetett) {
+    if (t.fajta === 'gyoker' || t.fajta === 'szelet') ki.push({ fajta: t.fajta, kulcs: t.kulcs, tema: temaKopogtatoja(koino, t.fajta, t.kulcs) });
   }
   return ki;
 }

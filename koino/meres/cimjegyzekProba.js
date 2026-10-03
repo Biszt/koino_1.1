@@ -9,7 +9,7 @@
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
   cimjegyzekTema, gyokerDarabja, sajatGyokerDarabjai, gyokerMelysege, gyokerDarabTemaja, hirdetendoTemak,
-  GYOKER_DARAB_CEL, HIRDETES_KOZ
+  GYOKER_DARAB_CEL, HIRDETES_KOZ, keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok
 } from '../js/csere/cimjegyzek.js';
 
 const { proba, futtatas } = probaGyujtemeny('A CÍMJEGYZÉK — a vakított téma és a hirdetés (G, D91)');
@@ -112,5 +112,21 @@ proba('a gyökér-darab a koinó méretével mélyül (300 legfelső gondolat �
 
 proba('a hirdetés üteme a felejtésnél (30–60 perc, 58. mérés) gyorsabb', () =>
   HIRDETES_KOZ > 0 && HIRDETES_KOZ < 30 * 60 * 1000);
+
+// ===== ⭐ D92/1 (b): A KOPOGTATÓ TÉMÁK =====
+
+proba('⭐ a kopogtató témák: koinónként és készülékenként mások, és egy hirdetett téma párja nem maga a téma', () => {
+  const a = keszulekKopogtatoTemaja('k1', 'alairo-1');
+  return a.length === 20 && !a.equals(keszulekKopogtatoTemaja('k2', 'alairo-1')) && !a.equals(keszulekKopogtatoTemaja('k1', 'alairo-2'))
+    && !temaKopogtatoja('k1', 'gyoker', '0:0').equals(gyokerDarabTemaja('k1', 0, 0))
+    && !temaKopogtatoja('k1', 'gyoker', '0:0').equals(temaKopogtatoja('k1', 'szelet', '0:0'));
+});
+
+proba('amit egy készülék figyel: a saját kopogtató témája + a hirdetett témái párja (csak gyökér és szelet)', () => {
+  const hirdetett = hirdetendoTemak({ koino: 'k1', alairo: 'a1', legfelsoDarab: 10, vallaltSzeletek: [AZ(1)], szeletHirdetes: 1 });
+  const f = figyelendoKopogtatok({ koino: 'k1', alairo: 'a1', hirdetett: [...hirdetett, { fajta: 'mas', kulcs: 'x' }] });
+  return f.length === 3 && f[0].fajta === 'keszulek' && f[0].tema.equals(keszulekKopogtatoTemaja('k1', 'a1'))
+    && f[1].tema.equals(temaKopogtatoja('k1', 'gyoker', '0:0')) && f[2].tema.equals(temaKopogtatoja('k1', 'szelet', AZ(1)));
+});
 
 export default futtatas;
