@@ -19,7 +19,7 @@ Ez a fájl a Claude Code-nak ad útmutatót a koino_1.1 kódbázisához.
 
 ### ▶️ SESSION-VÁLTÁS (2026-10-01) — A KÖVETKEZŐ SESSION INNEN INDUL
 
-**Az állapot:** **927 önpróba zöld** (39 próba-fájl) · 225 fájl / 3957,3 KB (⚠️ CR nélkül mérve — lásd
+**Az állapot:** **927 önpróba zöld** (39 próba-fájl) · 226 fájl / 3964,6 KB (⚠️ CR nélkül mérve — lásd
 a 6. szabályt) · 0 npm-csomag · a munkakönyvtár tiszta. ⛔⛔ **A telefon régi kódon fut** (a tiszta
 törés óta nem cserél a laptoppal; a frissítés parancsa lent) — a frissítéssel a D77 és a D81 is megy.
 
@@ -155,7 +155,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   Egy szeszélyes próba vagy a próba, vagy a program hibáját takarja — **mérni kell, nem zöldre
   hangolni**, és a bukásnak meg kell neveznie magát.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–62.).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–63.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 
@@ -218,7 +218,7 @@ A koino nem támaszkodhat arra, hogy egy platform-tulajdonos (Google, Apple, bö
 
    - ⛔ **KEMÉNY: nulla függőség.** Ma **0 npm-csomag**, és ez nem alkudható. Minden új függőség egy újabb fojtópont — valaki más dönthet arról, fut-e a koino. A kriptográfia is ezért a beépített WebCryptóból jön.
    - ⛔ **KEMÉNY: az ADAT-csomag kicsi marad.** Ez a valódi szűk keresztmetszet: a programot egyszer töltöd le, az adat **minden nap utazik** — a telefonodon, a mért hálózaton, a lassú vonalon. A mai mércék: egy esemény **~400 bájt** · egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés, terepen — TCP-n 334 bájt volt; ⚠️ D89/1 óta titkosítva +~0,4 KB: kézfogás, csomagonként ~18 B, az aláírás — 57. mérés) · a **D21** szerint ~**1 KB/fő** a saját lap (az újjáépítés magja). ⚠️ **Új eseménymezőnél, új protokoll-üzenetnél EZT kell megnézni**, nem a mappa méretét.
-   - 🟡 **LÁGY: a program mérete.** Ma **225 fájl, 3957,3 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
+   - 🟡 **LÁGY: a program mérete.** Ma **226 fájl, 3964,6 KB** — ⚠️ *ebből a `felulet/` 105 fájl / 949,7 KB, ami 2026-09-06-án érkezett: **örökölt, változatlan** kártya-kód és CSS a prototípusból (5.3).* Nem korlát, de érték: ekkora program **elfér egy üzenetben, és bárki újraírhatja** — ez a fojtópont-védelem másik fele. A felülettel (Szakasz 5) nőni fog, és **ez rendben van**; a szám itt attól hasznos, hogy tudjuk, hol tartunk.
 
    ⚠️⚠️ **A PROGRAM-MÉRET MÉRCÉJE: a FÁJLOK BÁJTJAINAK ÖSSZEGE, nem a lemezfoglalás.** A `du -sk koino` **920 KB**-ot mond ugyanerre a mappára, mert lemezblokkokat számol (39 fájl × félig üres utolsó blokk). A kettő nem hiba, hanem két különböző kérdés — de csak az egyik az, ami „elfér egy üzenetben". A mérés:
    ```bash
@@ -383,6 +383,7 @@ node koino/meres/dhtTarsMeres.js [témák] [percek]  # ⭐ A BEP 5 A VALÓDI DHT
 node koino/meres/rajMeres.js [N] [körök] [szabályok]  # ⭐ A RAJ KIALAKULÁSA (59., D91, szimuláció): L = 8, fele friss / fele véletlen → ~99,5% egyben
 node koino/meres/kerelemMeres.js [kérelmek]  # ⭐ A KÉRELEM ÚTJA (60., a D átvizsgálása, szimuláció): az elárasztás nagy koinóban ~semmit nem ad, a kopogtatás (randevú + lyukfúrás) 20% → 76%
 node koino/meres/osszPontMeres.js             # ⭐ AZ ÖSSZ-PONT BIZONYÍTÉKA (62., D92/5): egy minta 0,5–2,6 KB, a fejléc k = 8-cal 5–21 KB, a lebukás 1 − (1 − f)^k
+node koino/meres/tagsagMeres.js               # ⭐ A TAGSÁGI LÁNC (63., az E átvizsgálása): természetesen logaritmikus (1M tagnál ~13 lépés, ~16 KB), lánc-szerűen lineáris
 node koino/meres/felszabaditasMeres.js  # ⭐ A MEGÜLEPEDÉS: hány buli kell? (13. mérés)
 node koino/meres/kuszobMeres.js  # ⭐ AZ ALAPÉRTÉK SÚLYA: számít-e a hallgató tulajdonos? (14.)
 node koino/meres/verzioMeres.js ir|olvas  # ⛔ A PROGRAM-VERZIÓ mint az állapot bemenete (15.)
@@ -419,7 +420,7 @@ node koino/meres/ebredesProba.js res <cím> <port>   # …és KÉT hálózat kö
 
 ⭐ **A valódi üzemmód: `node koino/koino.js orjarat [perc] [port]`** — a készülék **magától dolgozik**: nyitva tartja a kaput (postaláda) ÉS időnként végigmegy a társ-listán. *Csaba vette észre, hogy eddig minden csere kézi indítású volt, pedig a D33 terve erre épül.* Egy „nincs újdonság" csere a résen **1,2–1,7 KB** (43. mérés; TCP-n 334 bájt volt). ⚠️ Két készülék között ma körönként akár **négy** is lemegy (két cím × két irány, 43. mérés; a 45. mérés szétszedte: a két tényező független, és terepen egy címen is két csere megy percenként) — egyperces körrel ez társanként ~8 MB/nap, ötperccel ~1,6 MB. ⭐ A címek tényezőjét a D71 (ii) megszüntette (46. mérés: két címen is 1 csere/ablak); az irányokét a (iii) döntés felezné. ⚠️ Ez NEM sérti az 5. szabályt: a kör végén minden elenged, a készülék alszik a következőig.
 
-📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 225 fájl, 3957,3 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
+📱 **Telefonra telepítés (Termux + Node):** [`docs/telepites_telefon.md`](docs/telepites_telefon.md) — a Szakasz 2 / 4. lépéséhez. `git clone --depth 1` a nyilvános repóból (5,6 MB a 23 helyett). A `koino/` mappa **önmagában futtatható**: 226 fájl, 3964,6 KB (a `tar.gz` csomag ~80 KB), nulla függőség — *ugyanaz a szám, mint a 6. szabálynál; ha az egyik változik, mindkettőt vezesd át.* ⚠️ A mércét a 6. szabály mondja meg: **bájtok összege, nem `du`**.
 
 **Két készülék egy gépen** (Szakasz 2 / 1. lépés — a `KOINO_ADAT` két külön „készüléket" ad, saját kulccsal):
 

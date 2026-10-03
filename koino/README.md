@@ -108,7 +108,7 @@ szűrő pontosan illeszkedik, és új próba-fájlt a `CSOPORTOK`-ba is be kell 
 `mind.js` megnevezi és nem fut.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **225 fájl, 3957,3 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **226 fájl, 3964,6 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*

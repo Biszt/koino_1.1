@@ -4663,3 +4663,29 @@ egy minta ellenőrzése (1 000 szerző): 0,86 ms (az aláírás-ellenőrzés né
 ágat ellenőrzi (k = 8), a testvérek közül a legfelsőket k = 4-gyel, a többit bemondásként (és ezt kimondja); a
 már megvolt pont-eseményt nem kéri el újra.
 
+## 63. ⭐ A TAGSÁGI LÁNC A SZELETELT VILÁGBAN — a meghívási fa mélysége és a bizonyíték mérete (az E átvizsgálása, 2026-10-03)
+
+*`tagsagMeres.js`: a koinó meghívással nő (D56: egy meghívó elég); három növekedési mód — `egyenletes` (véletlen
+meglévő tag hív), `aktiv` (preferenciális: aki sokat hívott, többet hív), `friss` (mindig a legutóbbi 20 belépett
+közül hív valaki — lánc-szerű). Egy lépés a bizonyítékban: a tag `Belepes`-e + a `Meghivas` (valódi aláírt események,
+a lánc-gyökérrel): 521 + 719 = **1240 B**. A gyorsítótár: M véletlen tag ellenőrzése, a közös ősök egyszer.*
+
+```
+mélység (átlag / 95% / max) · a bizonyíték (átlag / 95%):
+N          │ egyenletes              │ aktív                  │ friss (lánc-szerű)
+1 000      │  7,4 / 11 / 13   9/13 KB │ 4,2 / 7 / 11   5/8 KB  │     47,7 /    91 /    96      58/110 KB
+100 000    │ 12,0 / 18 / 25  14/22 KB │ 6,4 / 10 / 17  8/12 KB │  4 807,6 / 9 114 / 9 604   5 822/11 036 KB
+1 000 000  │ 13,4 / 19 / 29  16/23 KB │ 8,2 / 13 / 23 10/16 KB │ 47 593,8 / 90 280 / 95 043  57 633/109 323 KB
+a gyorsítótár (N = 1 000 000), ténylegesen megnézett lépés tagonként:
+  egyenletes: M=10 → 12,9 · M=100 → 9,1 · M=1000 → 6,8 · M=10000 → 4,7
+  aktív:      M=10 →  6,5 · M=100 → 5,4 · M=1000 → 4,0 · M=10000 → 3,0
+  friss:      M=10 → 9 465 · M=100 → 952 · M=1000 → 104 · M=10000 → 16,4
+```
+
+⭐ **A lelet:** természetes növekedésnél a meghívási lánc **logaritmikus** (egymillió tagnál átlag 13 lépés, ~16 KB;
+aktív hívókkal 8, ~10 KB), és a gyorsítótárral tagonként 3–7 lépést kell ténylegesen megnézni. ⛔ **A lánc-szerű
+növekedésnél LINEÁRIS** (egymillió tagnál ~47 600 lépés, ~57 MB) — ezt egy támadó szándékosan is előállíthatja, és ez
+sérti a „végtelent”. ⭐ A válasz a meglévő szabályokban van: több meghívás lehet, a legrövidebb lánc számít, és a D59
+mélység-korlátja (`D`) felülről korlátossá teszi a bizonyítékot — a mélyen ülő becsületes tag egy közelebbi tag
+(ingyenes) meghívásával rövidít. → [`e_identitas_atvizsgalas.md`](../../docs/e_identitas_atvizsgalas.md).
+
