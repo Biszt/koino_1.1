@@ -55,7 +55,7 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton, kerelemKapcsolaton } from './vonal.js';
+import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton, kerelemKapcsolaton, valaszKapcsolaton } from './vonal.js';
 import { KERELEM_KORLAT } from './fajlKerelem.js';
 // ⭐ D89/1: a csere titkosítása — a kézfogás és a csomagok kriptográfiája (hálózat nélkül).
 import {
@@ -1452,6 +1452,7 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
  */
 export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entitas,
                                      beallitas = {}) {
+  // ⭐ D92/1 (c): a továbbadható kérelem azonosítója és ugrás-számlálója (`beallitas.tovabb`).
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   console.log('szeletUdpResen - KEZDÉS', { tarsCim, tarsPort, entitas });
   // ⛔ D89/1: csak védett résen.
@@ -1461,7 +1462,7 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
-    const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas);
+    const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas, beallitas.tovabb ?? {});
     // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
     await kapcsolat.kiurites();
     console.log('szeletUdpResen - VÉGE', eredmeny);
@@ -1490,6 +1491,26 @@ export async function kerelemUdpResen(halo, tarsCim, tarsPort, koino, kerelem, b
     const eredmeny = await kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas);
     await kapcsolat.kiurites();
     console.log('kerelemUdpResen - VÉGE', { fajta: kerelem.fajta, kiszolgalta: eredmeny.kiszolgalta });
+    return eredmeny;
+  } finally {
+    kapcsolat.end();
+    if (sajat) res.zar();
+  }
+}
+
+/**
+ * ⭐⭐ D92/1 (c): EGY VÁLASZ VISSZAVITELE A RÉSEN — annak, akitől a kérelmet kaptuk. ⛔ D89/1: csak védett résen.
+ */
+export async function valaszUdpResen(halo, tarsCim, tarsPort, koino, valasz, beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
+  const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort, { torlodasJel: 'nincs' });
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+  try {
+    const eredmeny = await valaszKapcsolaton(kapcsolat, koino, valasz);
+    await kapcsolat.kiurites();
     return eredmeny;
   } finally {
     kapcsolat.end();

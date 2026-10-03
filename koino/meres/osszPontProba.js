@@ -36,18 +36,19 @@ proba('⭐ az össz-pont = a saját pont + a gyerekek össz-pontja, minden szint
     && [...o.values()].every((x) => x.forras === 'szamolt' && x.bizonytalan === 0);
 });
 
-proba('⭐ a NEM TARTOTT gyerek bemondása számít; ha az sincs, 0 — és a `bizonytalan` kimondja', () => {
+proba('⭐ a NEM TARTOTT gyerek bemondása számít; ha az sincs, a saját pontja 0, az ismert gyerekei számítanak — és a `bizonytalan` kimondja', () => {
   const m = new Map([ent('A', null, 5), ent('B', 'A', 0, { pontokIsmeretlenek: true }), ent('C', 'B', 9), ent('D', 'A', 1)]);
   const bemondva = osszPontokSzamitasa(m, new Map([['B', { osszPont: 40 }]]));
   const nelkule = osszPontokSzamitasa(m);
   // A bemondás a B egész részfáját fedi — a C (amit történetesen tartunk) nem számít kétszer.
   return bemondva.get('A').osszPont === 46 && bemondva.get('B').forras === 'bemondott' && bemondva.get('A').bizonytalan === 0
-    && nelkule.get('A').osszPont === 6 && nelkule.get('B').forras === 'ismeretlen' && nelkule.get('A').bizonytalan === 1
-    && nelkule.get('C').osszPont === 9;
+    && nelkule.get('A').osszPont === 15 && nelkule.get('B').forras === 'ismeretlen' && nelkule.get('B').osszPont === 9
+    && nelkule.get('B').sajat === null && nelkule.get('A').bizonytalan === 1 && nelkule.get('C').osszPont === 9;
 });
 
 proba('⛔ a hibás bemondás (negatív, tört, szöveg) nem számít — ismeretlen marad', () => {
   const m = new Map([ent('A', null, 5), ent('B', 'A', 0, { pontokIsmeretlenek: true })]);
+  // (B-nek nincs ismert gyereke: az össz-pontja 0 marad)
   return [-3, 2.5, '40', null].every((x) => {
     const o = osszPontokSzamitasa(m, new Map([['B', { osszPont: x }]]));
     return o.get('A').osszPont === 5 && o.get('B').forras === 'ismeretlen';

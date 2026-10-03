@@ -503,6 +503,78 @@ proba('⭐⭐ D92/1: a KOPOGTATÁS végig — a cím nélküli kérés függő l
   });
 
 // ===================================
+// ⭐⭐ D92/1 (c), D87: A TOVÁBBADÁS — R → P → H, és a válasz lépésenként vissza (2026-10-03)
+// ===================================
+//
+// Három őrjárat. R csak P-t ismeri (induló cím), P ismeri H-t, a szeletet egyedül H tartja. R a `kerelem szelet`-tel
+// (cím nélkül) függő kérelmet vesz fel; P nem tartja, ÁTVESZI (`ATVESZEM`), a saját körében H-tól elkéri, és a választ
+// R-nek viszi vissza (`VALASZ`). ⭐ Viselkedést mérünk: R lemezén (az átmeneti tárban) ott a szelet, a függő kérelem
+// „megjött továbbadva”, P átvette és visszavitte — és ⛔ D87: a kérelem, amit H kiszolgál, P-től jön, R címéről soha
+// (a tartó nem tudja meg, ki kérdez). ⚠️ Azt NEM állítjuk, hogy H soha nem hallja R címét: a terjedő címjegyzék (a friss
+// UDP-címek, D36–D39) P-n át továbbadja — mérve (a rontás-próbánál); de az nem árulja el, hogy R kért valamit. ⚠️ Hogy P a továbbadott választ NEM teszi a tárába (K2), azt itt nem lehet mérni: a szigorú
+// (b) (B/3) előtt a P–H csere úgyis mindent átvisz (mérve: P a saját cseréjében megkapta a szeletet). A K2 építőköveit
+// (a tár nélküli szelet-kérés, a memóriabeli fájl-tár) a `kerelemProba.js` méri.
+proba('⭐⭐ D92/1 (c): a TOVÁBBADÁS — R → P → H, a válasz lépésenként vissza; H nem tudja, ki kérdez',
+  async () => {
+    const H = await ujKeszulek();
+    const P = await ujKeszulek();
+    const R = await ujKeszulek();
+    const PH = 7675, PP = 7676, PR = 7677;
+    const helyben = { KOINO_DHT_BELEPOK: 'nincs', KOINO_TUKOR: '127.0.0.1:9' };
+    const orjarat = (hely, port) => spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)],
+      { env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...helyben }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const futok = [];
+    try {
+      await fut(H, 'koino', 'Továbbadás-próba');
+      const g = azonosito(await fut(H, 'gondolat', 'MESSZE'), 'Létrejött:');
+      if (!g) return false;
+      await fut(H, 'kivisz', join(H, 'mind.jsonl'));
+      const esemenyek = (await readFile(join(H, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const gTeljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(H, 'kivisz', join(H, 'k.jsonl'), koinoTeljes);
+      await fut(P, 'behoz', join(H, 'k.jsonl'));
+      await fut(R, 'behoz', join(H, 'k.jsonl'));
+      await fut(P, 'tars', '127.0.0.1', String(PH), 'H');
+      await fut(R, 'tars', '127.0.0.1', String(PP), 'P');
+      await fut(R, 'kerelem', 'szelet', gTeljes, helyben);
+
+      const naplo = { H: '', P: '', R: '' };
+      for (const [nev, hely, port] of [['H', H, PH], ['P', P, PP], ['R', R, PR]]) {
+        const f = orjarat(hely, port);
+        f.stdout.on('data', (d) => { naplo[nev] += d; });
+        futok.push(f);
+      }
+      let megjott = false;
+      for (let i = 0; i < 90 && !megjott; i++) {
+        await varj(500);
+        megjott = (await readdir(join(R, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+      }
+      await varj(1000);
+      const allas = await fut(R, 'kerelem', helyben);
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = {
+        megjott,
+        tovabbadva: /megjött továbbadva: [1-9]\d* esemény/.test(tiszta(allas)),
+        atvette: /kérelmet vettem át továbbadásra/.test(tiszta(naplo.P)) && /válaszát visszavittem/.test(tiszta(naplo.P)),
+        hNemLattaR: tiszta(naplo.H).includes('127.0.0.1:' + PP + ' egy szeletet kért tőlem')
+          && !tiszta(naplo.H).includes('127.0.0.1:' + PR + ' egy szeletet kért tőlem')
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (továbbadás-próba: ' + JSON.stringify(jo) + ')\n'
+          + '    (P: ' + tiszta(naplo.P).replace(/\s+/g, ' ').slice(-600) + ')\n'
+          + '    (R: ' + tiszta(naplo.R).replace(/\s+/g, ' ').slice(-400) + ')\n');
+        return false;
+      }
+      return true;
+    } finally {
+      for (const f of futok) f.kill();
+      await varj(500);
+      for (const h of [H, P, R]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //

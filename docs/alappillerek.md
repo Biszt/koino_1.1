@@ -153,8 +153,12 @@ karbantartása, a szúrópróba és az ellenőrzése) · ✅ a kérelem tartalma
 `TORZS` → fájlok egy kapcsolaton) és a kiszolgálás a kapu munkájában · ✅ a `kerelem fejlecek|torzs` parancs (cím vagy
 induló címek; ellenőriz, az átmeneti tárba ment, a bemondott össz-pontot megjegyzi) · ✅ a függő kérelmek és a KOPOGTATÁS
 (a cím nélküli út: a célok a G-ből, a kopogtató témák — a készüléké és a hirdetett témák párja —, az őrjárat ránéz és
-felé kopog, a kérő munkája a kérelmet futtatja; végig mérve hamis DHT-n) · ⏭️ a továbbadás (K2, K3) · ⏭️ a pakli (a felület
-a kérelemből tölt). ⚠️ **Elágazás 55:** a kopogtató téma nemcsak a készüléké — a hirdetett témák párja is (különben a DHT-n
+felé kopog, a kérő munkája a kérelmet futtatja; végig mérve hamis DHT-n) · ✅ a TOVÁBBADÁS (K2, K3: az azonosító és a
+Freenet-féle számláló, az `ATVESZEM`, a `VALASZ` lépésenkénti visszaútja, a továbbító csak a memóriájában tart; a lánc
+R → P → H végig mérve) · ✅ a pakli „ágazati pontja” EGY FORRÁSBÓL (az `osszPont.js`; a felület a bemondásokkal rendez).
+✅ **A D PILLÉR KÉSZ (2026-10-03).** ⏭️ A ház: a pakli-nézet a felületen a kérelemből tölt (a láncos-testvéres nézet).
+⚠️ **Elágazás 56:** a továbbadott fejlécnél nincs
+szúrópróba (az interaktív) — az össz-pont ott bemondás, és ezt kimondja. ⚠️ **Elágazás 55:** a kopogtató téma nemcsak a készüléké — a hirdetett témák párja is (különben a DHT-n
 talált, csak címmel ismert tartó, pl. egy új készülék gyökér-darabja, elérhetetlen volna).
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
@@ -297,7 +301,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 4. **G — a címjegyzék** — ⛔ előbb mérés / átvizsgálás (S10, SK7); a D89/2 szerint a zárt koinó
    címjegyzéke nem kerülhet kiolvasható nyilvános helyre.
 5. **D — a kérelmezés** (D76, D83/3, D87): a G-ből tudja, kitől; a törzs a kérelem útján, a közvetítő nem
-   tartja meg és nem ismeri a kérdezőt; a válasz az átmeneti tárba.
+   tartja meg és nem ismeri a kérdezőt; a válasz az átmeneti tárba. ✅ **KÉSZ (2026-10-03, D92):** az össz-pont és a
+   szúrópróbája, a kérelem alapkérdései a vonalon, a függő kérelmek és a kopogtatás, a továbbadás (60.–62. mérés).
 6. **E — az identitás a szeletelt világban**, vele a zárt koinó betartatása (a tagság bizonyítása a
    kézfogásban, D89/2) és a Profil (D28 a D88 alakjában — az azonosság-szeletben él).
 7. **B/3 — a szigorú (b) bekapcsolása:** a csere részvétele a vállalásból, a törzs kiszolgálása a D84/1
@@ -488,3 +493,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     téma párja** (a gyökér-darabé, a beállítás szerinti szeleteké) · mert a DHT hirdetője csak címmel ismert — egy új
     készülék, ami a gyökérrel kezd, egyetlen tartó azonosítóját sem tudja; a pár ára témánként ~3 KB / 20 perc · a
     megépítéskor, Claude (a D92/1 keretén belül) · `cimjegyzek.js`, `fuggoKerelmek.js`.
+56. **2026-10-03 · minden fejléc szúrópróbával ellenőrzött (D92/5)** → **a továbbadott fejléc össz-pontja bemondás** (a
+    létrehozó események aláírása ott is ellenőrzött) · mert a szúrópróba interaktív (a kérdező a gyökerek bemondása UTÁN
+    választ — különben a tartó addig próbálkozna, amíg a minták el nem kerülik a hamis leveleket), a továbbadás pedig
+    nem élő kapcsolat; a nézet a közvetlen válaszok közül a „legnagyobb ellenőrzöttet” veszi · a megépítéskor, Claude ·
+    `koino.js` (`valaszFogadasa`).

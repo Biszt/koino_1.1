@@ -20,13 +20,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createSocket } from 'node:dgram';
 import { parbeszed } from '../js/csere/vonal.js';
-import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen } from '../js/csere/udpVonal.js';
-import { esemenyTarNyitasa, fajlBlobTarolo } from '../js/tar/fajlTar.js';
+import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen, szeletUdpResen, valaszUdpResen } from '../js/csere/udpVonal.js';
+import { esemenyTarNyitasa, fajlBlobTarolo, memoriaBlobTarolo } from '../js/tar/fajlTar.js';
+import { esemenyMentese } from '../js/tar/esemenyTar.js';
+import { readdir } from 'node:fs/promises';
 import {
   kerelemFelvetele, lejartakKivetele, tarshozIllo, kerelemLezarasa, probalkozas, fuggoCelok, fuggoKopogtatok,
   nyilvantartasAlakja, ujNyilvantartas, FUGGO_KORLAT, FUGGO_ELEVULES, CEL_KORLAT
 } from '../js/csere/fuggoKerelmek.js';
 import {
+  tovabbiUgras, UGRAS_MAX, valaszAlakja,
   kerelemAlakja, fejlecekValasza, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
   MELYSEG_KORLAT
 } from '../js/csere/kerelem.js';
@@ -386,6 +389,116 @@ proba('a lezárás a kész naplóba teszi, a próbálkozás számol; a hibás be
   return probalt === 1 && ny.fuggo.length === 0 && ny.kesz[0].eredmeny === 'megjött: 3 fejléc'
     && rossz.fuggo.length === 1 && rossz.fuggo[0].az === 'z' && rossz.fuggo[0].celok.length === CEL_KORLAT
     && rossz.fuggo[0].celok[0].port === 5 && rossz.fuggo[0].celok[0].alairo === undefined;
+});
+
+// ===================================
+// 6. ⭐⭐ A TOVÁBBADÁS (D92/1 (c), D92/2–3, D87) — a számláló, az átvétel, a visszaút, és a K2 építőkövei
+// ===================================
+
+proba('⭐ a Freenet-féle számláló: a maximumot kapó fele eséllyel csökkenti (így az első továbbító nem tudja, a kérdező-e)', () => {
+  const lattuk = new Set();
+  let x = 1;
+  const v = () => { x = (Math.imul(x, 1664525) + 1013904223) >>> 0; return x / 2 ** 32; };
+  for (let i = 0; i < 200; i++) lattuk.add(tovabbiUgras(UGRAS_MAX, v));
+  return lattuk.has(UGRAS_MAX) && lattuk.has(UGRAS_MAX - 1) && lattuk.size === 2
+    && tovabbiUgras(2) === 1 && tovabbiUgras(1) === 0 && tovabbiUgras(0) === 0 && tovabbiUgras(-1) === 0;
+});
+
+proba('a továbbadható kérelem alakja: az azonosító és a számláló korlátos; a válasz alakja szűr', () => {
+  const k = kerelemAlakja({ fajta: 'szelet', kulcs: AZ, az: 'abcdefgh12', htl: 99 });
+  const nincs = kerelemAlakja({ fajta: 'szelet', kulcs: AZ, az: 'rövid', htl: 2 });
+  const v = valaszAlakja({ az: 'abcdefgh12', fajta: 'torzs', kulcs: AZ,
+    fajlok: [{ lenyomat: 'x', adat: 'AA' }, { lenyomat: 'B'.repeat(43), adat: 'AA' }] });
+  return k.htl === UGRAS_MAX && k.az === 'abcdefgh12' && nincs.az === undefined && nincs.htl === undefined
+    && v.fajlok.length === 1 && valaszAlakja({ az: 'abcdefgh12', fajta: 'barmi', kulcs: AZ }) === null;
+});
+
+proba('⭐⭐ ATVESZEM a résen: aki nem tartja, de vállalja, átveszi — a kérő a kérdező címét nem küldi, csak az azonosítót', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-atvesz-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    let kapott = null;
+    const kiszolgalo = { atvesz: async (k, honnan) => { kapott = { k, honnan }; return true; } };
+    const [, r] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgalo }),
+      szeletUdpResen(p.masik, '127.0.0.1', p.egyikPort, null, 'proba', AZ, { tovabb: { az: 'kerelem-0001', htl: 3 } })
+    ]);
+    return r.atvette === true && r.kapott === 0 && kapott?.k.az === 'kerelem-0001' && kapott.k.htl === 3
+      && !('cim' in kapott.k) && kapott.honnan.port === p.masikPort;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐⭐ a VALASZ visszaútja a résen: a fogadó a válasz alakját kapja, és KESZ zárja', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-valasz-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    let fogadott = null;
+    await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { valaszFogado: async (v) => { fogadott = v; return true; } }),
+      valaszUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { az: 'kerelem-0002', fajta: 'szelet', kulcs: AZ,
+        esemenyek: [{ x: 1 }] })
+    ]);
+    return fogadott?.az === 'kerelem-0002' && fogadott.esemenyek.length === 1 && fogadott.fajta === 'szelet';
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ K2: a TÁR NÉLKÜLI szelet-kérés (a továbbítóé) csak összegyűjti az eseményeket — semmit nem ment', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-k2-'));
+  try {
+    const v = await szovegesVilag(hely);
+    const tar = await esemenyTarNyitasa('proba', hely);
+    for (const e of v.terkep.values()) await esemenyMentese(tar, e);
+    const [, r] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, {}),
+      szeletUdpResen(p.masik, '127.0.0.1', p.egyikPort, null, 'proba', v.g)
+    ]);
+    return r.kapott >= 2 && Array.isArray(r.esemenyek) && r.esemenyek.length === r.kapott && r.uj === 0;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+proba('⭐ K2: a törzs a MEMÓRIABELI fájl-tárba jön (a továbbítóé) — bájtra azonosan, és a lemezre nem kerül', async () => {
+  const p = await udpPar();
+  const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-k2-a-'));
+  const uresHely = await mkdtemp(join(tmpdir(), 'koino-k2-b-'));
+  try {
+    const v = await szovegesVilag(gazdaHely);
+    const tar = await esemenyTarNyitasa('proba', gazdaHely);
+    const memoria = memoriaBlobTarolo();
+    const [, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v, { blob: v.blob }),
+        fajlOlvas: (l) => v.blob.olvas(l) }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'torzs', kulcs: v.g }, { blob: memoria })
+    ]);
+    const mind = memoria.mind();
+    const eredeti = await v.blob.olvas(v.lenyomat);
+    return kapott.fajlok[0]?.kesz === true && mind.length === 1 && mind[0].lenyomat === v.lenyomat
+      && Buffer.from(mind[0].bajtok).equals(Buffer.from(eredeti)) && (await readdir(uresHely)).length === 0;
+  } finally {
+    p.bezar();
+    await rm(gazdaHely, { recursive: true, force: true });
+    await rm(uresHely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ a memóriabeli fájl-tár is ellenőriz: a hamis bájt nem zárul le, és korlátos', async () => {
+  const m = memoriaBlobTarolo(1000);
+  await m.reszlegesIras('B'.repeat(43), 0, new Uint8Array([1, 2, 3]));
+  const lezaras = await m.reszlegesLezaras('B'.repeat(43));
+  let tele = false;
+  try { await m.ir(new Uint8Array(2000)); } catch { tele = true; }
+  return lezaras.rendben === false && lezaras.romlott === true && !(await m.van('B'.repeat(43))) && tele;
 });
 
 export default futtatas;

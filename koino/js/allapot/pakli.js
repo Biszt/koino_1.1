@@ -49,6 +49,7 @@ import { TUDATPONT_KERET } from './szabalyok.js';
 import { javaslatokSzamitasa, ALAP_KUSZOBOK } from './javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './szerkesztesiVegrehajtas.js';
 import { szovegFeloldasa, szovegHivatkozasE } from '../esemeny/szovegDarab.js';
+import { osszPontokSzamitasa } from './osszPont.js';
 
 /**
  * ⭐ D72 (2026-09-26): a javaslatok változásaiban a SZÖVEG-HIVATKOZÁS feloldása — a felület
@@ -283,21 +284,11 @@ function kartya(entitas, agazatiPont, en, entitasok, dontes = null) {
  * de egy hibás vagy rosszindulatú esemény előállíthatja, és egy naiv bejárás **végtelen
  * ciklusba** futna. A látogatott halmaz ezt zárja ki.
  */
-function agazatiPontok(entitasok) {
-  const eredmeny = new Map();
-  for (const e of entitasok.values()) eredmeny.set(e.azonosito, e.osszesPont);
-
-  for (const e of entitasok.values()) {
-    // Felfelé sétálunk, és mindenkinek hozzáadjuk ennek az entitásnak a pontját.
-    const latott = new Set([e.azonosito]);
-    let szulo = e.szulo;
-    while (szulo && entitasok.has(szulo) && !latott.has(szulo)) {
-      latott.add(szulo);
-      eredmeny.set(szulo, eredmeny.get(szulo) + e.osszesPont);
-      szulo = entitasok.get(szulo).szulo;
-    }
-  }
-  return eredmeny;
+function agazatiPontok(entitasok, bemondasok = new Map()) {
+  // ⭐⭐ D92/5 (2026-10-03): EGY FORRÁS — az össz-pont (`osszPont.js`). Eddig a pakli a saját bejárásával számolta;
+  // most ugyanaz a számítás adja, amit a kérelem fejlécei is mondanak (különben a nézet és a kérelem más össz-pontot
+  // mutatna). A nem tartott entitásnál a bemondott össz-pont számít (ha a hívó adja).
+  return new Map([...osszPontokSzamitasa(entitasok, bemondasok)].map(([az, o]) => [az, o.osszPont]));
 }
 
 /**
@@ -428,7 +419,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
 
   // ----- A RENDEZÉSI ÉRTÉK -----
-  const agazati = agazatiPontok(kep.entitasok);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
   const utak = rendezes === 'hierarchikus' ? utvonalak(kep.entitasok) : null;
 
   const ertekhez = (e) => {
@@ -693,7 +684,7 @@ export async function entitasReszletei(tar, koino, azonosito, beallitas = {}) {
   const e = kep.entitasok.get(azonosito);
   if (!e) return null;
 
-  const agazati = agazatiPontok(kep.entitasok);
+  const agazati = agazatiPontok(kep.entitasok, beallitas.bemondasok);
   const en = beallitas.szerzo;
   // ⭐ D72: a szöveg feloldása (lásd `entitasSzovege`).
   const reszletSzoveg = await szovegFeloldasa(e.szoveg ?? null, beallitas.darabOlvas);

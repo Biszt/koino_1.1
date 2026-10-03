@@ -77,8 +77,46 @@ export function kerelemAlakja(u) {
   // ⚠️ A gyökér kulcsa (43 nulla) maga is azonosító alakú — ezért külön: csak fejlécre kérhető.
   if (gyokerE ? u.fajta !== 'fejlecek' : !azonositoAlaku(kulcs)) return null;
   const egesz = (x, alap, max) => (Number.isInteger(x) && x >= 0 ? Math.min(x, max) : alap);
-  return { fajta: u.fajta, kulcs, n: egesz(u.n, 20, FEJLEC_KORLAT), d: egesz(u.d, 0, MELYSEG_KORLAT) };
+  // ⭐ D92/1 (c): a TOVÁBBADHATÓ kérelem azonosítója (nincs kétszeres továbbadás) és ugrás-számlálója (K3). ⚠️ A kérdező
+  // címét SEMMI nem hordozza (D87/2).
+  const tovabb = typeof u.az === 'string' && /^[A-Za-z0-9_-]{8,40}$/.test(u.az) && Number.isInteger(u.htl) && u.htl > 0
+    ? { az: u.az, htl: Math.min(u.htl, UGRAS_MAX) } : {};
+  return { fajta: u.fajta, kulcs, n: egesz(u.n, 20, FEJLEC_KORLAT), d: egesz(u.d, 0, MELYSEG_KORLAT), ...tovabb };
 }
+
+/** Az ugrás-számláló kiinduló (és legnagyobb) értéke — D76/4, D92/3. */
+export const UGRAS_MAX = 3;
+
+/**
+ * ⭐ D92/3 — A FREENET MINTÁJA: a kérő `UGRAS_MAX`-ot küld; aki ennyit kap, FELE ESÉLLYEL csökkenti (így az első
+ * továbbító nem tudja, hogy a szomszédja maga a kérdező-e), egyébként eggyel csökken. 0-nál nem adjuk tovább.
+ * @param {number} htl - amit kaptunk
+ * @param {Function} [veletlen]
+ * @returns {number} amit továbbküldünk
+ */
+export function tovabbiUgras(htl, veletlen = Math.random) {
+  if (!Number.isInteger(htl) || htl <= 0) return 0;
+  if (htl >= UGRAS_MAX) return veletlen() < 0.5 ? UGRAS_MAX : UGRAS_MAX - 1;
+  return htl - 1;
+}
+
+/**
+ * Egy (kívülről jött) VÁLASZ alakja — a továbbadott kérelem visszaútja (D87: lépésenként). Korlátos.
+ * @returns {null|{az: string, fajta: string, kulcs: string, esemenyek: Array, valasz: Object|null, fajlok: Array}}
+ */
+export function valaszAlakja(u) {
+  if (!u || typeof u.az !== 'string' || !/^[A-Za-z0-9_-]{8,40}$/.test(u.az) || !KERELEM_FAJTAK.includes(u.fajta)) return null;
+  if (u.kulcs !== GYOKER_KULCS && !azonositoAlaku(u.kulcs)) return null;
+  const esemenyek = (Array.isArray(u.esemenyek) ? u.esemenyek : []).filter((e) => e && typeof e === 'object').slice(0, VALASZ_ESEMENY_KORLAT);
+  const fajlok = (Array.isArray(u.fajlok) ? u.fajlok : [])
+    .filter((f) => f && typeof f.lenyomat === 'string' && /^[A-Za-z0-9_-]{43}$/.test(f.lenyomat) && typeof f.adat === 'string')
+    .slice(0, TORZS_KORLAT);
+  const valasz = u.valasz && typeof u.valasz === 'object' && !Array.isArray(u.valasz) ? u.valasz : null;
+  return { az: u.az, fajta: u.fajta, kulcs: u.kulcs, esemenyek, valasz, fajlok };
+}
+
+/** Egy továbbadott válaszban legfeljebb ennyi esemény. */
+export const VALASZ_ESEMENY_KORLAT = 4000;
 
 // ===================================
 // A TARTÓ VÁLASZA — a fejlécek

@@ -65,11 +65,14 @@ export function gyerekJegyzek(entitasok) {
   return ki;
 }
 
+const bemondasErvenyes = (b) => !!b && Number.isSafeInteger(b.osszPont) && b.osszPont >= 0;
+
 /**
  * ⭐ AZ ÖSSZ-PONT minden ismert entitásra, felfelé összegezve.
  *
  * Egy entitás SAJÁT pontja akkor ismert, ha a szeletét tartjuk (nincs `pontokIsmeretlenek` jelzése); ha nem, a
- * bemondott össz-pontját vesszük (és a gyerekeit nem járjuk be — azok benne vannak a bemondásban); ha az sincs, 0.
+ * bemondott össz-pontját vesszük (és a gyerekeit nem járjuk be — azok benne vannak a bemondásban); ha az sincs, a saját
+ * pontja 0, de az ISMERT gyerekei számítanak (`bizonytalan` +1).
  * ⚠️ A `szulo`-lánc körbe mutathat (hibás vagy rosszindulatú esemény): a körbe eső entitás csak egyszer számít.
  *
  * @param {Map<string, Object>} entitasok - az állapot entitásai
@@ -95,27 +98,26 @@ export function osszPontokSzamitasa(entitasok, bemondasok = new Map()) {
         if (folyamatban.has(az)) continue;          // kör: ez az ág már a veremben van
         folyamatban.add(az);
         verem.push([az, true]);
-        if (!ismeretlen) for (const g of gyerekek.get(az) ?? []) if (!ki.has(g) && !folyamatban.has(g)) verem.push([g, false]);
+        // A bemondott (nem tartott) entitás gyerekeit nem járjuk be — a bemondás az egész részfát fedi.
+        const bemondott = ismeretlen && bemondasErvenyes(bemondasok.get(az));
+        if (!bemondott) for (const g of gyerekek.get(az) ?? []) if (!ki.has(g) && !folyamatban.has(g)) verem.push([g, false]);
         continue;
       }
       folyamatban.delete(az);
-      if (ismeretlen) {
-        const b = bemondasok.get(az);
-        const ervenyes = b && Number.isSafeInteger(b.osszPont) && b.osszPont >= 0;
-        ki.set(az, ervenyes
-          ? { osszPont: b.osszPont, sajat: null, forras: 'bemondott', bizonytalan: 0 }
-          : { osszPont: 0, sajat: null, forras: 'ismeretlen', bizonytalan: 1 });
+      if (ismeretlen && bemondasErvenyes(bemondasok.get(az))) {
+        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: null, forras: 'bemondott', bizonytalan: 0 });
         continue;
       }
-      let osszPont = e.osszesPont;
-      let bizonytalan = 0;
+      let osszPont = ismeretlen ? 0 : e.osszesPont;
+      let bizonytalan = ismeretlen ? 1 : 0;
       for (const g of gyerekek.get(az) ?? []) {
         const gy = ki.get(g);
         if (!gy) continue;                             // körbe eső gyerek: egyszer már számított
         osszPont += gy.osszPont;
         bizonytalan += gy.bizonytalan;
       }
-      ki.set(az, { osszPont, sajat: e.osszesPont, forras: 'szamolt', bizonytalan });
+      ki.set(az, ismeretlen ? { osszPont, sajat: null, forras: 'ismeretlen', bizonytalan }
+        : { osszPont, sajat: e.osszesPont, forras: 'szamolt', bizonytalan });
     }
   }
   return ki;

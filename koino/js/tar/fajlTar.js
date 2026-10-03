@@ -1588,3 +1588,69 @@ export function udpCimTarolo(hely = alapHely()) {
     }
   };
 }
+
+// ===================================
+// ⭐ D92/1 (c), K2: A MEMÓRIABELI FÁJL-TÁR — a továbbító ide hozza a törzset, és innen viszi vissza
+// ===================================
+//
+// A továbbító a választ CSAK a memóriájában tartja (D87/1, D92/2: nem kerül a tárba, nem szolgálja ki). A fájl-hozatal
+// (`fajlHozatala`) a fájl-tár felületét használja — ez ugyanazt a felületet adja a lemez nélkül, ugyanazzal az
+// ellenőrzéssel (a lezárás újra lenyomatol; a korlát itt is él). ⚠️ Korlátos: legfeljebb `korlat` bájt összesen.
+
+/**
+ * @param {number} [korlat] - az összes tárolt bájt felső határa
+ * @returns {Object} a `fajlBlobTarolo` felülete (ir, olvas, van, reszleges…) + `mind()`
+ */
+export function memoriaBlobTarolo(korlat = 2 * FAJL_KORLAT) {
+  const keszek = new Map();          // lenyomat → Uint8Array
+  const reszek = new Map();          // lenyomat → Map(eltolás → Uint8Array)
+  const nevRendben = (l) => typeof l === 'string' && /^[A-Za-z0-9_-]{43}$/.test(l);
+  const osszes = () => [...keszek.values()].reduce((o, b) => o + b.length, 0)
+    + [...reszek.values()].reduce((o, m) => o + [...m.values()].reduce((x, b) => x + b.length, 0), 0);
+  return {
+    async ir(bajtok) {
+      const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
+      if (nyers.length > FAJL_KORLAT || osszes() + nyers.length > korlat) throw new Error('A memóriabeli tár betelt.');
+      const lenyomat = await bajtLenyomat(nyers);
+      const mar = keszek.has(lenyomat);
+      if (!mar) keszek.set(lenyomat, nyers);
+      return { lenyomat, meret: nyers.length, mar };
+    },
+    async olvas(lenyomat) { return nevRendben(lenyomat) ? (keszek.get(lenyomat) ?? null) : null; },
+    async van(lenyomat) { return nevRendben(lenyomat) && keszek.has(lenyomat); },
+    async reszlegesSzeletek(lenyomat) { return [...(reszek.get(lenyomat)?.keys() ?? [])].sort((a, b) => a - b); },
+    async reszlegesMeret(lenyomat) { return [...(reszek.get(lenyomat)?.values() ?? [])].reduce((o, b) => o + b.length, 0); },
+    async reszlegesIras(lenyomat, eltolas, bajtok) {
+      if (!nevRendben(lenyomat) || !Number.isSafeInteger(eltolas) || eltolas < 0) throw new Error('Érvénytelen részleges írás.');
+      const nyers = bajtok instanceof Uint8Array ? bajtok : new Uint8Array(bajtok);
+      if (eltolas + nyers.length > FAJL_KORLAT || osszes() + nyers.length > korlat) {
+        reszek.delete(lenyomat);
+        throw new Error('A részleges fájl túllépte a határt — eldobva.');
+      }
+      if (!reszek.has(lenyomat)) reszek.set(lenyomat, new Map());
+      reszek.get(lenyomat).set(eltolas, nyers);
+      return nyers.length;
+    },
+    async reszlegesLezaras(lenyomat) {
+      const m = reszek.get(lenyomat);
+      if (!m || !m.size) return { rendben: false, ok: 'nincs részleges fájl' };
+      const darabok = [];
+      let varhato = 0;
+      for (const eltolas of [...m.keys()].sort((a, b) => a - b)) {
+        if (eltolas !== varhato) return { rendben: false, ok: 'hiányzó szelet', hianyzik: varhato };
+        darabok.push(m.get(eltolas));
+        varhato += m.get(eltolas).length;
+      }
+      const bajtok = new Uint8Array(Buffer.concat(darabok));
+      reszek.delete(lenyomat);
+      if ((await bajtLenyomat(bajtok)) !== lenyomat) {
+        return { rendben: false, romlott: true, ok: 'a bájtok nem ezt a lenyomatot adják — eldobva' };
+      }
+      keszek.set(lenyomat, bajtok);
+      return { rendben: true };
+    },
+    async reszlegesEldobas(lenyomat) { reszek.delete(lenyomat); },
+    /** A kész fájlok (a visszaúthoz). */
+    mind() { return [...keszek.entries()].map(([lenyomat, bajtok]) => ({ lenyomat, bajtok })); }
+  };
+}
