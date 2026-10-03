@@ -4652,6 +4652,26 @@ a lista ahhoz kell, hogy valaki felülről böngészhesse a koinót (pl. egy új
    nélküle a program el sem indul a koinóval, és nem nő a koinó méretével. *(Claude javaslata; Csaba a
    gyökér-kérdéssel együtt kapta, külön nem vitatta — visszafordítható.)*
 
+### D91. A CÍMJEGYZÉK (G): A FA ÉS A RAJ, A HASH-ELHELYEZÉS CSAK KÉT HELYEN (2026-10-03, Csaba: „1. igen 2. igen”)
+
+**Amiből jött:** a G átvizsgálása ([`g_cimjegyzek_atvizsgalas.md`](g_cimjegyzek_atvizsgalas.md)) — egy valódi
+DHT-művelet ~50 kérdés ≈ 5–10 KB (mérve), tehát a szeletenkénti, gyakori hirdetés napi több tíz MB volna.
+
+#### A DÖNTÉS
+
+1. ⭐ **A „mi kinél van” fő útja a FA és a RAJ** (a skálázási terv 4.2, Csaba 2026-09-02-i ötlete): aki egy szeletet
+   vállal, valakitől kapta — ismer legalább egy tartót; a tartók a szelet cseréjekor egymás készülék-azonosítóját
+   (tábla-aláíró, név nélkül) és utolsó címét átadják, a szülő tartói a gyerekek tartóit is ismerik — a böngészés a
+   fa bejárása. Mind a titkosított cserén belül (a zárt koinó semmit nem tesz nyilvános helyre), a terhe a saját
+   vállalással arányos.
+2. ⭐ **A hash-elhelyezés CSAK két helyen:** a **gyökér darabjai** (D90) és a **közvetlen keresés azonosító alapján**
+   (gyorsító, elhagyható). **A közege most a BitTorrent-DHT, vakított témával** (C3: a téma a koinó azonosítójával
+   sózott lenyomat — kívülálló nem tudja kiszámolni; cserélhetően és elhagyhatóan, mint a hirdetőtábla); a **belső
+   hash-DHT / a középút (C2 / C4) az E után** kerül újra elő, ha a Sybil-veszély ott valósnak bizonyul.
+
+⚠️ **Előbb a mérés:** az 58. (a BEP 5 a valódi DHT-n — hirdetés, keresés, és hogy MEDDIG őrzi a háló a hirdetést) és
+az 59. (a raj kialakulása, szimuláció).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

@@ -283,6 +283,32 @@ export function tomorCsomopontokBontasa(bajtok) {
   return lista;
 }
 
+/** Egy `get_peers` válasz legfeljebb ennyi hirdetőjét vesszük fel (egy gép nem fújhatja fel). */
+export const TARS_KORLAT = 100;
+
+/**
+ * BEP 5 `values`: 6 bájtos tömör címek listája (IPv4 + port). ⚠️ A rossz hosszú elemet eldobjuk.
+ * @returns {Array<{cim: string, port: number}>}
+ */
+export function tomorTarsakBontasa(lista) {
+  const ki = [];
+  for (const b of Array.isArray(lista) ? lista : []) {
+    if (!Buffer.isBuffer(b) || b.length !== 6) continue;
+    const port = b.readUInt16BE(4);
+    if (port === 0) continue;
+    ki.push({ cim: b[0] + '.' + b[1] + '.' + b[2] + '.' + b[3], port });
+  }
+  return ki;
+}
+
+/** Egy cím tömör alakja (6 bájt) — a hamis hálózatnak és a próbáknak. */
+export function tomorTars(cim, port) {
+  const b = Buffer.alloc(6);
+  cim.split('.').forEach((x, i) => { b[i] = Number(x); });
+  b.writeUInt16BE(port, 4);
+  return b;
+}
+
 export function tomorCsomopontokKeszitese(csomopontok) {
   return Buffer.concat(csomopontok.map((c) => {
     const b = Buffer.alloc(26);
@@ -412,11 +438,14 @@ export async function dhtKliens(beallitas = {}) {
   ];
 
   const fuggo = new Map();
+  // ⭐ A forgalom (a mérésnek — 6. szabály: a G ára bájtban): kiküldött és kapott bájtok.
+  const forgalom = { ki: 0, be: 0 };
   let tSzamlalo = crypto.getRandomValues(new Uint16Array(1))[0];
   const valaszoltak = new Map();   // „cím:port" → { cim, port, id } — a gyorsítótárhoz
   let lezarva = false;
 
   halo.on('message', (adat, felado) => {
+    forgalom.be += adat.length;
     let u;
     try { u = bencodeBont(adat); } catch { return; }
     if (!u || !Buffer.isBuffer(u.t)) return;
@@ -449,6 +478,7 @@ export async function dhtKliens(beallitas = {}) {
       fuggo.set(kulcs, { cim, port, kesz, ora });
       // ⭐ `ro: 1` (BEP 43): csak-olvasó kliens vagyunk, ne vegyenek fel tárolónak.
       const uzenet = bencodeKodol({ t, y: 'q', q, a: { id: sajatId, ...a }, ro: 1 });
+      forgalom.ki += uzenet.length;
       halo.send(uzenet, port, cim, (hiba) => {
         if (hiba && fuggo.has(kulcs)) {
           fuggo.delete(kulcs);
@@ -464,10 +494,15 @@ export async function dhtKliens(beallitas = {}) {
    * kérdezett gépeket, amíg a legközelebbi nyolc mind felelt (vagy a korlát elfogy).
    * ⭐ `get`-tel keresünk: ez a közeli gépeket ÉS a tárolt bejegyzést is visszaadja.
    */
-  function kereses(cel, extraArgumentumok = {}) {
+  function kereses(cel, extraArgumentumok = {}, mod = {}) {
+    // ⭐ D91 (2026-10-03): a kérdés paraméter — a BEP 44 `get` (target) mellett a BEP 5 `get_peers`
+    // (info_hash), ami a „ki hirdette ezt a témát" címeit adja vissza (`values`).
+    const q = mod.q ?? 'get';
+    const celArg = mod.celArg ?? 'target';
     const kezdet = Date.now();
     const jeloltek = new Map();
-    const stat = { kerdes: 0, valasz: 0, lejart: 0, hibak: {}, talalatok: [] };
+    const stat = { kerdes: 0, valasz: 0, lejart: 0, hibak: {}, talalatok: [], tarsak: [] };
+    const tarsKulcsok = new Set();
 
     const felvesz = (c, honnan) => {
       if (!c || !c.cim || !Number.isInteger(c.port)) return;
@@ -543,7 +578,7 @@ export async function dhtKliens(beallitas = {}) {
           folyamatban++;
           stat.kerdes++;
           const kerdezve = Date.now();
-          kerdez(j.cim, j.port, 'get', { target: cel, ...extraArgumentumok }).then((v) => {
+          kerdez(j.cim, j.port, q, { [celArg]: cel, ...extraArgumentumok }).then((v) => {
             folyamatban--;
             if (v.ok) {
               stat.valasz++;
@@ -555,6 +590,16 @@ export async function dhtKliens(beallitas = {}) {
               if (v.r.v !== undefined) {
                 stat.talalatok.push({ r: v.r, cim: j.cim, port: j.port, mikor: Date.now() - kezdet,
                   valaszIdo: Date.now() - kerdezve });
+              }
+              // ⭐ BEP 5: a hirdetők címei (tömör, 6 bájtos IPv4 cím + port). ⚠️ Korlátos és ismétlés
+              // nélkül — egy gép nem fújhatja fel a listát.
+              if (Array.isArray(v.r.values)) {
+                for (const t of tomorTarsakBontasa(v.r.values)) {
+                  const kk = t.cim + ':' + t.port;
+                  if (tarsKulcsok.has(kk) || stat.tarsak.length >= TARS_KORLAT) continue;
+                  tarsKulcsok.add(kk);
+                  stat.tarsak.push({ ...t, mikor: Date.now() - kezdet });
+                }
               }
             } else {
               j.allapot = 'bukott';
@@ -643,6 +688,29 @@ export async function dhtKliens(beallitas = {}) {
     return { kereses: k, cel, legjobb, ervenyesek: ervenyesek.length, ervenytelen, elsoErvenyes };
   }
 
+  /**
+   * ⭐ D91: BEJELENT egy témát (BEP 5 `announce_peer`) — „ezen a címen tartom". A téma egy 20 bájtos
+   * lenyomat (`cimjegyzek.js`: a koinó azonosítójával sózva), a port KIFEJEZETTEN megadva (a kapu külső
+   * portja — a kliens a saját foglalatáról kérdez, tehát a forrásport nem az).
+   */
+  async function bejelent(tema, port) {
+    console.log('dhtKliens.bejelent - KEZDÉS', { port });
+    const k = await kereses(tema, {}, { q: 'get_peers', celArg: 'info_hash' });
+    const tarolok = k.kozeli.filter((j) => j.token);
+    const eredmenyek = await Promise.all(tarolok.map((j) => kerdez(j.cim, j.port, 'announce_peer', {
+      info_hash: tema, port, token: j.token, implied_port: 0
+    })));
+    const tarolta = eredmenyek.filter((e) => e.ok).length;
+    console.log('dhtKliens.bejelent - VÉGE', { tarolta, probalt: tarolok.length });
+    return { kereses: k, tarolta, probalt: tarolok.length };
+  }
+
+  /** ⭐ D91: KIK hirdették a témát (BEP 5 `get_peers`) — címek, név nélkül; bizalom nem jár velük. */
+  async function tarsakKeresese(tema) {
+    const k = await kereses(tema, {}, { q: 'get_peers', celArg: 'info_hash' });
+    return { kereses: k, tarsak: k.tarsak };
+  }
+
   /** Akik ebben a munkamenetben feleltek — a következő induláshoz (belépő nélkül is). */
   function ismertCsomopontok(korlat = 200) {
     return [...valaszoltak.values()].slice(-korlat)
@@ -663,5 +731,6 @@ export async function dhtKliens(beallitas = {}) {
   }
 
   console.log('dhtKliens - VÉGE', { kezdoPontok: kezdoPontok.length });
-  return { sajatId, kezdoPontok: kezdoPontok.length, kozzetesz, keres, kereses, ismertCsomopontok, bezar };
+  return { sajatId, kezdoPontok: kezdoPontok.length, kozzetesz, keres, kereses, bejelent, tarsakKeresese,
+    ismertCsomopontok, bezar, forgalom: () => ({ ...forgalom }) };
 }

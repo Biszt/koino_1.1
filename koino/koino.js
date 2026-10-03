@@ -145,7 +145,7 @@ import { kivitelSzovege, behozatalSzovegbol } from './js/csere/fajlCsere.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, megfigyelesekRavezetese, kopogasMegfigyelesei,
   sajatCimekKiszurese, sajatCimE,
-  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
+  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa, rajTippekBeolvasztasa, rajAjanlat,
   // ⭐ A FRISS UDP-CÍMEK (2026-09-18): külön jegyzék, mert percekig él, nem hetekig.
   udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa, UDP_CIM_ELEVULES
 } from './js/csere/tarsak.js';
@@ -1191,7 +1191,15 @@ function resMunka(allapot, halo, tars) {
     // ⭐ MEGJEGYEZZÜK, MIT KÉRHETNEK TŐLÜNK: ha semmit, a randevú kiszolgáló fázisát
     // nem kell kivárni (a társ sem fog kérni — ugyanezt a listát látja).
     let adhatok = 0;
+    // ⭐⭐ D91: A RAJ — a csere előtt a vállalásom és a jegyzékem: az eltérő szeletek közül a vállaltakat mondom
+    // be, néhány ismert tartójukkal (a megnézettet soha — D75/3).
+    const rajVallalas = await sajatVallalasa(null);
+    const rajJegyzek = await szeletJegyzekTarolo().olvas();
     const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
+      raj: (kulcsok) => {
+        const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k));
+        return { vallal, tippek: rajAjanlat(rajJegyzek, vallal) };
+      },
       udpCimek: allapot.frissUdp,
       sajatUdpCim: allapot.sajatKulsoUdp
         ? { hoszt: allapot.sajatKulsoUdp.cim, port: allapot.sajatKulsoUdp.port } : null,
@@ -1241,6 +1249,26 @@ function resMunka(allapot, halo, tars) {
     // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
     await kotesFeljegyzese(allapot.kotesTar, csere.kapottTablaKulcs,
       { hoszt: tars.cim, port: tars.port });
+
+    // ⭐⭐ D91: A RAJ TANULSÁGA — a társ tartó azokra a szeletekre, amiket ő vállal ÉS engem is érdekelnek
+    // (vállalom, vagy az átmeneti táramban van); a tippjeit a saját vállalt szeleteimhez olvasztom be. A társ
+    // neve a hitelesített tábla-aláírója (D89/1) — név nélkül, csak készülék (D6).
+    if (csere.kapottRaj) {
+      const atmenetiKulcsok = new Set(atmeneti.szeletek().map((x) => x.kulcs));
+      const tarsAlairo = ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null;
+      let j = await szeletJegyzekTarolo().olvas();
+      let valtozott = false;
+      for (const k of csere.kapottRaj.vallal) {
+        if (rajVallalas.szeletek.has(k) || atmenetiKulcsok.has(k)) {
+          j = szeletCimMegjegyzese(j, k, tars.cim, tars.port, Date.now(), tarsAlairo);
+          valtozott = true;
+        }
+      }
+      for (const [k, tippek] of Object.entries(csere.kapottRaj.tippek)) {
+        if (rajVallalas.szeletek.has(k)) { j = rajTippekBeolvasztasa(j, k, tippek); valtozott = true; }
+      }
+      if (valtozott) await szeletJegyzekTarolo().ir(szeletJegyzekTakaritasa(j));
+    }
 
     // ⭐⭐ A LEGJOBB FORRÁS A SAJÁT CÍMÜNKRE A TÁRS (Csaba, 2026-09-17): nem egy tükör
     // mondja meg, hanem az, akivel épp beszélünk — arról a résről, ami tényleg él.

@@ -328,6 +328,42 @@ proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba 
   });
 
 // ===================================
+// ⭐⭐ D91: A RAJ A VALÓDI CSERÉBEN — a két tartó egymást jegyzi meg (2026-10-03)
+// ===================================
+//
+// Mindkét készülék vállalja ugyanazt a gondolatot (pontja van rajta), és mindkettőnél van egy eseménye, ami
+// a másiknál nincs — tehát a szelet eltér. ⭐ A csere után mindkettő a MÁSIKAT jegyzi tartónak a
+// `szeletcimek.json`-ban, a hitelesített készülék-azonosítójával (tábla-aláíró, név nélkül). Viselkedést mérünk:
+// a lemezt.
+proba('⭐⭐ D91: a csere után a két tartó egymást jegyzi a raj-jegyzékben — készülék-azonosítóval, név nélkül',
+  async () => {
+    const egyik = await ujKeszulek();
+    const masik = await ujKeszulek();
+    try {
+      await fut(egyik, 'koino', 'Raj-próba');
+      const g = azonosito(await fut(egyik, 'gondolat', 'KOZOS'), 'Létrejött:');
+      if (!g) return false;
+      await fut(egyik, 'kivisz', join(egyik, 'mind.jsonl'));
+      await fut(masik, 'behoz', join(egyik, 'mind.jsonl'));
+      const gTeljes = (await readFile(join(egyik, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x)).find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      await fut(egyik, 'pont', g, '20');          // mindkettő vállalja, és a pont-eseményük a másiknál nincs meg
+      await fut(masik, 'pont', g, '10');
+      await csereKor(egyik, masik, 7651);
+      const jegyzek = async (hely) => {
+        try { return JSON.parse(await readFile(join(hely, 'szeletcimek.json'), 'utf8')).szeletek ?? []; }
+        catch { return []; }
+      };
+      const jo = (lista) => lista.some((b) => b.entitas === gTeljes && /^[A-Za-z0-9_-]{43}$/.test(b.alairo ?? '')
+        && !('szerzo' in b) && !('nev' in b));
+      return jo(await jegyzek(egyik)) && jo(await jegyzek(masik));
+    } finally {
+      await rm(egyik, { recursive: true, force: true });
+      await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D85 T3, a (B): A DÖNTÉSI CSOMAG A KÉZI ÚTON (2026-10-03)
 // ===================================
 //

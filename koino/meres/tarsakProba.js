@@ -22,8 +22,8 @@ import { probaGyujtemeny } from './probaFuttato.js';
 import {
   tarsHozzaadasa, tarsTorlese, tarsakSorrendje, kopogasMegfigyelesei, megfigyelesekRavezetese,
   cimNormalizalasa, sajatCimE, sajatCimekKiszurese,
-  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa,
-  SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT,
+  szeletCimMegjegyzese, szeletCimei, szeletJegyzekTakaritasa, rajTippekBeolvasztasa, rajAjanlat,
+  SZELET_CIM_ELEVULES, SZELET_CIM_KORLAT, RAJ_ATADAS,
   udpCimMegjegyzese, udpCimek, udpCimekBeolvasztasa, udpJegyzekTakaritasa,
   UDP_CIM_ELEVULES, UDP_CIM_KORLAT
 } from '../js/csere/tarsak.js';
@@ -456,6 +456,62 @@ proba('⚠️ A jegyzék NEM hízik korlátlanul: szeletenként legfeljebb a kor
   return j.length === SZELET_CIM_KORLAT + 10 && tiszta.length === SZELET_CIM_KORLAT
     // A legfrissebbek maradnak meg.
     && tiszta[0].mikor === 1000 + SZELET_CIM_KORLAT + 9;
+});
+
+// ===================================
+// ⭐⭐ D91: A RAJ — a tartók jegyzéke (készülék-azonosító, fele friss / fele véletlen, tippek)
+// ===================================
+
+const ALAIRO = (i) => String(i).padStart(43, 'A');
+
+proba('⭐ D91: a készülék-azonosító szerint EGYSZER szerepel — az új címe felülírja a régit', () => {
+  let j = [];
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.1', 7373, 1000, ALAIRO(1));
+  j = szeletCimMegjegyzese(j, 'E-1', '10.9.9.9', 4444, 2000, ALAIRO(1));    // ugyanaz a készülék, új cím
+  j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.2', 7373, 2000, 'nem-azonosito');
+  const cimek = szeletCimei(j, 'E-1', 3000);
+  return cimek.length === 2 && cimek.find((c) => c.alairo === ALAIRO(1))?.hoszt === '10.9.9.9'
+    && !cimek.some((c) => c.alairo === 'nem-azonosito');
+});
+
+proba('⭐⭐ D91 (59. mérés): a korlát fölött a FELE a legfrissebb, a többi VÉLETLEN a régebbiek közül', () => {
+  let j = [];
+  for (let i = 0; i < 40; i++) j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.' + i, 7373, 1000 + i, ALAIRO(i));
+  // Két különböző véletlen sorrend: a friss fele mindkettőben ugyanaz, a véletlen fele más.
+  let mag = 1;
+  const v1 = () => { mag = (mag * 16807) % 2147483647; return mag / 2147483647; };
+  const a = szeletJegyzekTakaritasa(j, 2000, SZELET_CIM_ELEVULES, v1);
+  mag = 99;
+  const b = szeletJegyzekTakaritasa(j, 2000, SZELET_CIM_ELEVULES, v1);
+  const fele = Math.ceil(SZELET_CIM_KORLAT / 2);
+  const friss = (x) => x.slice(0, fele).map((e) => e.mikor).join(',');
+  const regi = (x) => x.slice(fele).map((e) => e.mikor).sort().join(',');
+  const frissVart = Array.from({ length: fele }, (_, i) => 1039 - i).join(',');
+  return a.length === SZELET_CIM_KORLAT && b.length === SZELET_CIM_KORLAT
+    && friss(a) === frissVart && friss(b) === frissVart
+    && regi(a) !== regi(b) && a.slice(fele).every((e) => e.mikor < 1039 - fele + 1);
+});
+
+proba('⛔ D91: a rossz tippet eldobja, és szeletenként legfeljebb RAJ_ATADAS-t vesz át', () => {
+  const tippek = [
+    { a: ALAIRO(1), h: '10.0.0.1', p: 7373 },
+    { h: 'x'.repeat(65), p: 7373 },                      // túl hosszú cím
+    { a: ALAIRO(2), h: '10.0.0.2', p: 0 },                // rossz port
+    { a: ALAIRO(3), h: '10.0.0.3', p: 7373 },
+    { a: ALAIRO(4), h: '10.0.0.4', p: 7373 },
+    { a: ALAIRO(5), h: '10.0.0.5', p: 7373 }];               // a negyedik jó — már nem fér bele
+  const j = rajTippekBeolvasztasa([], 'E-1', tippek, 1000);
+  return RAJ_ATADAS === 3 && j.length === 3
+    && j.every((b) => [ALAIRO(1), ALAIRO(3), ALAIRO(4)].includes(b.alairo));
+});
+
+proba('⭐ D91: az ajánlat csak a megadott szeletekre megy, a társat kihagyja, és korlátos', () => {
+  let j = [];
+  for (let i = 0; i < 6; i++) j = szeletCimMegjegyzese(j, 'E-1', '10.0.0.' + i, 7373, 1000 + i, ALAIRO(i));
+  j = szeletCimMegjegyzese(j, 'E-2', '10.0.1.1', 7373, 1000, ALAIRO(9));
+  const ajanlat = rajAjanlat(j, ['E-1'], ALAIRO(5), 2000);
+  return Object.keys(ajanlat).join() === 'E-1' && ajanlat['E-1'].length === RAJ_ATADAS
+    && !ajanlat['E-1'].some((t) => t.a === ALAIRO(5)) && ajanlat['E-1'][0].a === ALAIRO(4);
 });
 
 // ===== ⭐⭐ A FRISS UDP-CÍMEK (2026-09-18) — a cím-elévülés válasza =====

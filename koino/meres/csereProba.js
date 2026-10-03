@@ -2266,6 +2266,45 @@ proba('Üres UDP-jegyzékkel sem törik el a csere', async () => {
   return eredmeny.korok >= 1 && (eredmeny.kapottUdpCimek ?? []).length === 0;
 });
 
+// ===================================
+// ⭐⭐ D91: A RAJ A CSERÉBEN — csak az eltérő szeletekről, a „nincs újdonság" cserében semmi
+// ===================================
+
+proba('⭐⭐ D91: a RESZVETEL viszi a vállalást és a raj tippjeit — CSAK az eltérő szeletekről; nincs újdonságnál semmit', async () => {
+  const anna = await ujEember(KOINO);
+  const esemenyek = await lanc(anna, 3);
+  const mienk = await ujTar(); await ment(mienk, esemenyek);
+  const ove = await ujTar(); await ment(ove, esemenyek.slice(0, 2));     // a harmadik gondolat szelete eltér
+  const harmadik = esemenyek[2].azonosito;
+  const tipp = { a: 'B'.repeat(43), h: '10.1.1.1', p: 5555 };
+  // ⚠️ A gyökeret ('') is bemondja — a fogadónak el kell dobnia (D90: a gyökér nem vállalás).
+  const ajanlo = (kulcsok) => ({ vallal: [...kulcsok, 'A'.repeat(43)],      // egy nem eltérő kulcsot is bemond
+    tippek: Object.fromEntries(kulcsok.map((k) => [k, [tipp, { h: 'rossz', p: 0 }]])) });
+  const e = await csereDroton(mienk, ove, '127.0.0.1', { egyikBeallitas: { raj: ajanlo }, masikBeallitas: { raj: ajanlo } });
+  const kapott = e.masikEredmenye.kapottRaj;
+  // utána „nincs újdonság": a RESZVETEL el sem indul
+  const nincs = await csereDroton(mienk, ove, '127.0.0.1', { egyikBeallitas: { raj: ajanlo }, masikBeallitas: { raj: ajanlo } });
+  return kapott.vallal.length === 1 && kapott.vallal[0] === harmadik           // a nem eltérőt eldobta
+    && kapott.tippek[harmadik]?.length === 1 && kapott.tippek[harmadik][0].a === tipp.a   // a rosszat eldobta
+    && !kapott.vallal.includes('0'.repeat(43)) && !('0'.repeat(43) in kapott.tippek)   // a gyökeret eldobta
+    && nincs.kapottRaj.vallal.length === 0 && Object.keys(nincs.kapottRaj.tippek).length === 0;
+});
+
+proba('⛔⛔ D91: az ELLENSÉGES társ raj-üzenetéből csak az marad, ami az eltérő szeletekről szól, jó alakú, és nem a gyökér', async () => {
+  const { rajAlakja } = await import('../js/csere/vonal.js');
+  const k1 = 'K'.repeat(43), idegen = 'I'.repeat(43), gyoker = '0'.repeat(43);
+  const mind = new Set([k1, gyoker]);
+  const r = rajAlakja({
+    vallal: [k1, idegen, gyoker, 42, ''],
+    raj: { [k1]: [{ a: 'B'.repeat(43), h: '10.0.0.1', p: 7373 }, { h: '10.0.0.2', p: 70000 }, { a: 'rossz', h: 'x', p: 1 },
+      { h: '10.0.0.3', p: 3 }, { h: '10.0.0.4', p: 4 }],
+    [idegen]: [{ h: '10.0.0.9', p: 9 }], [gyoker]: [{ h: '10.0.0.8', p: 8 }] }
+  }, mind);
+  return JSON.stringify(r.vallal) === JSON.stringify([k1]) && Object.keys(r.tippek).join() === k1
+    // a két rossz kiesik, a három jó marad (előbb szűr, aztán korlátoz — legfeljebb 3)
+    && r.tippek[k1].length === 3 && r.tippek[k1][0].a === 'B'.repeat(43) && r.tippek[k1][1].h === '10.0.0.3';
+});
+
 export default async function (csendes) {
   const eredmeny = await futtatas(csendes);
   await takaritas();

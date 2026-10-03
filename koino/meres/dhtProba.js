@@ -18,8 +18,10 @@ import {
   bencodeKodol, bencodeBont, alairandoBajtok, valtozoCel, valtozatlanCel,
   bejegyzesKeszitese, bejegyzesEllenorzese, tomorCsomopontokBontasa,
   tomorCsomopontokKeszitese, tavolsagOsszevetes, dhtKliens, ERTEK_KORLAT,
-  gepekHirdetese, gepekBeolvasztasa, GEP_HIRDETES
+  gepekHirdetese, gepekBeolvasztasa, GEP_HIRDETES, tomorTarsakBontasa, tomorTars, TARS_KORLAT
 } from '../js/csere/dht.js';
+// ⭐ D91: a címjegyzék vakított témája.
+import { cimjegyzekTema } from '../js/csere/cimjegyzek.js';
 import { probaGyujtemeny } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A DHT-kliens próbája — a hirdetőtábla (BEP 44)');
@@ -185,6 +187,23 @@ export async function hamisHalozat(n, { hazudo = new Set(), csakFindNode = new S
           ? { k: b.k, seq: b.seq + 1, sig: b.sig, v: 'HAMIS' }
           : { k: b.k, seq: b.seq, sig: b.sig, v: b.v };
         return valasz({ nodes: kozeli(g, a.target), token: Buffer.from('jegy'), ...tarolt });
+      }
+      // ⭐ D91: BEP 5 — a „ki hirdette" tára (témánként a címek), tokennel.
+      if (q === 'get_peers') {
+        const tarsak = g.hirdetok?.get(a.info_hash.toString('hex')) ?? [];
+        return valasz({ nodes: kozeli(g, a.info_hash), token: Buffer.from('jegy'),
+          ...(tarsak.length ? { values: tarsak.map((t) => tomorTars(t.cim, t.port)) } : {}) });
+      }
+      if (q === 'announce_peer') {
+        if (nemaPut) return;
+        if (!Buffer.isBuffer(a.token) || a.token.toString() !== 'jegy') return hiba(203, 'bad token');
+        if (!g.hirdetok) g.hirdetok = new Map();
+        const kulcs = a.info_hash.toString('hex');
+        const lista = g.hirdetok.get(kulcs) ?? [];
+        const port = a.implied_port ? felado.port : Number(a.port);
+        if (!lista.some((t) => t.cim === felado.address && t.port === port)) lista.push({ cim: felado.address, port });
+        g.hirdetok.set(kulcs, lista);
+        return valasz({});
       }
       if (q === 'put') {
         if (nemaPut) return;   // a keresésre felel, a feltevésre soha
@@ -372,6 +391,49 @@ proba('⛔ A ROSSZ ALAKOT ELDOBJUK, és a kapott gépek száma is KORLÁTOS', ()
   const korlatos = gepekBeolvasztasa([], sok);
 
   return semmi.length === 0 && korlatos.length === GEP_HIRDETES;
+});
+
+// ===================================
+// ⭐⭐ D91: A BEP 5 — „ki hirdette ezt a témát" (a címjegyzék közvetlen keresése és a gyökér-darabok)
+// ===================================
+
+proba('⭐ BEP 5: a tömör cím (6 bájt) oda-vissza — a rossz hosszút és a 0-s portot eldobja', () => {
+  const jo = [tomorTars('10.1.2.3', 7373), tomorTars('192.168.0.9', 65535)];
+  const ki = tomorTarsakBontasa([...jo, Buffer.alloc(5), Buffer.alloc(7), tomorTars('1.2.3.4', 0), 'szemét']);
+  return ki.length === 2 && ki[0].cim === '10.1.2.3' && ki[0].port === 7373 && ki[1].port === 65535;
+});
+
+proba('⭐⭐ BEP 5 A HAMIS DHT-N: bejelentjük a témát az egyik belépőn át, és egy MÁSIK belépőn át megtaláljuk a címet', async () => {
+  const h = await hamisHalozat(20);
+  try {
+    const tema = cimjegyzekTema('egy-koino', 'gyoker', 3);
+    const a = await dhtKliens({ belepok: [h.belepo(0)], ...GYORS });
+    const be = await a.bejelent(tema, 7373);
+    a.bezar();
+    const b = await dhtKliens({ belepok: [h.belepo(11)], ...GYORS });
+    const k = await b.tarsakKeresese(tema);
+    const masik = await b.tarsakKeresese(cimjegyzekTema('MASIK-koino', 'gyoker', 3));
+    const forgalom = b.forgalom();
+    b.bezar();
+    return be.tarolta >= 6 && k.tarsak.some((t) => t.cim === '127.0.0.1' && t.port === 7373)
+      && masik.tarsak.length === 0                      // ⭐ más koinó (más só) → más téma, nem találja
+      && forgalom.ki > 0 && forgalom.be > 0;
+  } finally { h.bezar(); }
+});
+
+proba('⛔ BEP 5: egy gép sem fújhatja fel a hirdetők listáját (legfeljebb TARS_KORLAT)', async () => {
+  const h = await hamisHalozat(12);
+  try {
+    const tema = cimjegyzekTema('k', 'szelet', 'x');
+    // Egy gép tárába kézzel 500 „hirdetőt" teszünk — a válasza mind visszaadja.
+    for (const g of h.gepek) {
+      g.hirdetok = new Map([[tema.toString('hex'), Array.from({ length: 500 }, (_, i) => ({ cim: '10.0.' + (i >> 8) + '.' + (i & 255), port: 1000 + i }))]]);
+    }
+    const b = await dhtKliens({ belepok: [h.belepo(0)], ...GYORS });
+    const k = await b.tarsakKeresese(tema);
+    b.bezar();
+    return k.tarsak.length === TARS_KORLAT;
+  } finally { h.bezar(); }
 });
 
 export default futtatas;

@@ -335,8 +335,16 @@ export function megfigyelesekRavezetese(friss, megfigyelesek) {
 /** Meddig hiszünk el egy szelet-címet? Utána elévül — a cím múlandó körülmény, nem igazság. */
 export const SZELET_CIM_ELEVULES = 24 * 60 * 60 * 1000;   // egy nap
 
-/** Legfeljebb ennyi címet tartunk EGY szeletre — a legfrissebbeket. */
-export const SZELET_CIM_KORLAT = 20;
+/**
+ * ⭐⭐ D91 (2026-10-03): A RAJ — legfeljebb ennyi tartót tartunk EGY szeletre, és nem csak a legfrissebbeket.
+ * Az 59. mérés (szimuláció): ha csak a legutóbb látottak maradnak, a nagy rajok szétesnek (100+ tartónál a
+ * legnagyobb összefüggő darab ~10–23%) — az összefésülés ugyanazokat a friss bejegyzéseket terjeszti; ha a FELE
+ * a legfrissebb, a fele VÉLETLEN, 8 bejegyzéssel 5%-os körönkénti lemorzsolódás mellett is ~99,8% egyben marad.
+ */
+export const SZELET_CIM_KORLAT = 8;
+
+/** Egy cserében szeletenként legfeljebb ennyi tartót adunk át a társnak (a raj tippjei). */
+export const RAJ_ATADAS = 3;
 
 /**
  * Megjegyzi, hogy ezen a címen megvan az entitás.
@@ -348,16 +356,60 @@ export const SZELET_CIM_KORLAT = 20;
  * @param {number} [most]
  * @returns {Array<Object>} az ÚJ jegyzék
  */
-export function szeletCimMegjegyzese(jegyzek, entitas, hoszt, port, most = Date.now()) {
+export function szeletCimMegjegyzese(jegyzek, entitas, hoszt, port, most = Date.now(), alairo = null) {
   const normalt = cimNormalizalasa(hoszt);
   if (!normalt || !Number.isInteger(port) || port <= 0 || port >= 65536) return jegyzek;
+  // ⭐ D91: a tartó KÉSZÜLÉK-azonosítója (a tábla-kulcs aláírója — név nélkül, D6), ha tudjuk. ⚠️ Csak
+  // azonosító alakú lehet; ha nem az, nélküle jegyezzük meg.
+  const a = typeof alairo === 'string' && /^[A-Za-z0-9_-]{43}$/.test(alairo) ? alairo : null;
 
-  // Ugyanaz a cím ugyanarra a szeletre csak egyszer szerepel — a friss idő felülírja.
-  const nelkule = jegyzek.filter(
-    (b) => !(b.entitas === entitas && cimNormalizalasa(b.hoszt) === normalt && b.port === port)
-  );
+  // Ugyanaz a cím — vagy ugyanaz a készülék — ugyanarra a szeletre csak egyszer szerepel; a friss felülírja.
+  const nelkule = jegyzek.filter((b) => !(b.entitas === entitas
+    && ((cimNormalizalasa(b.hoszt) === normalt && b.port === port) || (a && b.alairo === a))));
 
-  return [...nelkule, { entitas, hoszt, port, mikor: most }];
+  return [...nelkule, { entitas, hoszt, port, mikor: most, ...(a ? { alairo: a } : {}) }];
+}
+
+/**
+ * ⭐ D91: A RAJ TIPPJEI A TÁRSTÓL — egy szelet néhány tartója (név nélkül), amit a csere hozott. ⚠️ Bizalom nem
+ * jár vele (3. szabály): a rossz alakút eldobjuk, és egy tipp legfeljebb elérhetetlenséget okoz.
+ *
+ * @param {Array<Object>} jegyzek
+ * @param {string} entitas
+ * @param {Array<{a?: string, h: string, p: number}>} tippek
+ * @param {number} [most]
+ * @returns {Array<Object>} az ÚJ jegyzék
+ */
+export function rajTippekBeolvasztasa(jegyzek, entitas, tippek, most = Date.now()) {
+  let j = jegyzek;
+  let felvett = 0;
+  // ⚠️ Előbb szűr, aztán korlátoz (a rossz tipp ne szorítsa ki a jót) — és a feldolgozás is korlátos.
+  for (const t of (Array.isArray(tippek) ? tippek : []).slice(0, 4 * RAJ_ATADAS)) {
+    if (felvett >= RAJ_ATADAS) break;
+    if (!t || typeof t.h !== 'string' || t.h.length > 64) continue;
+    const uj = szeletCimMegjegyzese(j, entitas, t.h, t.p, most, t.a ?? null);
+    if (uj !== j) felvett++;
+    j = uj;
+  }
+  return j;
+}
+
+/**
+ * ⭐ D91: MIT ADUNK ÁT a társnak egy szeletről — legfeljebb `RAJ_ATADAS` tartó (a legfrissebbek), a társ
+ * kivételével. ⛔ Csak a hívó által megadott (vállalt) szeletekre — a megnézettet soha (D75/3).
+ *
+ * @returns {Object} szelet → [{ a?, h, p }]
+ */
+export function rajAjanlat(jegyzek, kulcsok, kiveve = null, most = Date.now(), elevules = SZELET_CIM_ELEVULES) {
+  const ki = {};
+  for (const k of kulcsok) {
+    const lista = szeletCimei(jegyzek, k, most, elevules)
+      .filter((b) => !(kiveve && b.alairo === kiveve))
+      .slice(0, RAJ_ATADAS)
+      .map((b) => ({ ...(b.alairo ? { a: b.alairo } : {}), h: b.hoszt, p: b.port }));
+    if (lista.length) ki[k] = lista;
+  }
+  return ki;
 }
 
 /**
@@ -377,7 +429,7 @@ export function szeletCimei(jegyzek, entitas, most = Date.now(), elevules = SZEL
     .filter((b) => b.entitas === entitas && most - b.mikor <= elevules)
     .sort((a, b) => b.mikor - a.mikor)
     .slice(0, SZELET_CIM_KORLAT)
-    .map((b) => ({ hoszt: b.hoszt, port: b.port, mikor: b.mikor }));
+    .map((b) => ({ hoszt: b.hoszt, port: b.port, mikor: b.mikor, ...(b.alairo ? { alairo: b.alairo } : {}) }));
 }
 
 /**
@@ -392,7 +444,8 @@ export function szeletCimei(jegyzek, entitas, most = Date.now(), elevules = SZEL
  * @param {number} [elevules]
  * @returns {Array<Object>}
  */
-export function szeletJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = SZELET_CIM_ELEVULES) {
+export function szeletJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = SZELET_CIM_ELEVULES,
+                                        veletlen = Math.random) {
   const szeletenkent = new Map();
   for (const b of jegyzek) {
     if (most - b.mikor > elevules) continue;
@@ -400,10 +453,19 @@ export function szeletJegyzekTakaritasa(jegyzek, most = Date.now(), elevules = S
     if (lista) lista.push(b); else szeletenkent.set(b.entitas, [b]);
   }
 
+  // ⭐⭐ D91 (59. mérés): a FELE a legfrissebb, a többi VÉLETLEN a régebbiek közül — különben a nagy rajok
+  // klikkekre esnek szét (a friss bejegyzések ugyanazokat a társakat terjesztik).
   const eredmeny = [];
   for (const lista of szeletenkent.values()) {
     lista.sort((a, b) => b.mikor - a.mikor);
-    eredmeny.push(...lista.slice(0, SZELET_CIM_KORLAT));
+    if (lista.length <= SZELET_CIM_KORLAT) { eredmeny.push(...lista); continue; }
+    const fele = Math.ceil(SZELET_CIM_KORLAT / 2);
+    const tobbi = lista.slice(fele);
+    for (let i = tobbi.length - 1; i > 0; i--) {
+      const j = Math.floor(veletlen() * (i + 1));
+      [tobbi[i], tobbi[j]] = [tobbi[j], tobbi[i]];
+    }
+    eredmeny.push(...lista.slice(0, fele), ...tobbi.slice(0, SZELET_CIM_KORLAT - fele));
   }
   return eredmeny;
 }

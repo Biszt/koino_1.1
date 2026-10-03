@@ -54,7 +54,7 @@ import { beolvasztas } from './csere.js';
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
 import {
   szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs,
-  vonalKulcsa
+  vonalKulcsa, GYOKER_KULCS
 } from './szeletEgyeztetes.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
 // képlet a SOROS átvitel alakja volt. Több forrásnál a munkamegosztás mondja meg, melyik
@@ -232,10 +232,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let kapottDhtGepek = [];          // néhány DHT-gép, amit ő ismer (nem bizalom, csak cím)
   let elteroSzeletek = 0, egyeztetoUzenetek = 0;
   let ujAzonositok = [];            // ⭐ D82: a most beérkezett események (az észlelőnek)
+  let kapottRaj = { vallal: [], tippek: {} };   // ⭐ D91: a társ vállalása és a raj tippjei (a hívóé)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
-    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok
+    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj
   });
 
   // ===== 0. A NYITÁS =====
@@ -453,8 +454,18 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ===== 3. A RÉSZVÉTEL — ki melyik eltérő szeletből marad ki =====
   const mind = new Set([...mindketten, ...csakNalam, ...csakNala]);
   const kimaradok = [...mind].filter((k) => !reszvesz(k)).sort();
-  kuld({ uzenet: 'RESZVETEL', kimarad: kimaradok });
-  const oveKimarad = new Set(kulcsLista((await varj('RESZVETEL')).kimarad));
+  // ⭐⭐ D91: A RAJ — az eltérő szeletek közül melyiket VÁLLALOM (a megnézettet soha — D75/3), és néhány ismert
+  // tartójuk (név nélkül). Csak itt utazik (ha van eltérő szelet), tehát a „nincs újdonság" csere nem drágul.
+  // ⚠️ A hívó dönti el, mit mond (`beallitas.raj` — ez a fájl nem ismeri a vállalást).
+  const sajatRaj = typeof beallitas.raj === 'function' ? (beallitas.raj([...mind].sort()) ?? {}) : {};
+  const sajatVallal = Array.isArray(sajatRaj.vallal) ? sajatRaj.vallal.filter((k) => mind.has(k)) : [];
+  const sajatTippek = sajatRaj.tippek && typeof sajatRaj.tippek === 'object' ? sajatRaj.tippek : {};
+  kuld({ uzenet: 'RESZVETEL', kimarad: kimaradok,
+    ...(sajatVallal.length ? { vallal: sajatVallal } : {}),
+    ...(Object.keys(sajatTippek).length ? { raj: sajatTippek } : {}) });
+  const oveReszvetel = await varj('RESZVETEL');
+  const oveKimarad = new Set(kulcsLista(oveReszvetel.kimarad));
+  kapottRaj = rajAlakja(oveReszvetel, mind);
   const enKimaradok = new Set(kimaradok);
   const egyeztetendo = [...mindketten].filter((k) => !enKimaradok.has(k) && !oveKimarad.has(k)).sort();
   const kuldendoSzeletek = [...csakNalam].filter((k) => !oveKimarad.has(k)).sort();
@@ -886,4 +897,30 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas) {
   };
   console.log('szeletKapcsolaton - VÉGE', eredmeny);
   return eredmeny;
+}
+
+/**
+ * ⭐ D91: a társ RESZVETEL-jéből a raj — CSAK az eltérő szeletekről (amit mindketten láttunk), korlátosan, és a
+ * rossz alakút eldobva (bizalom nem jár vele: egy tipp legfeljebb elérhetetlenséget okoz).
+ */
+export function rajAlakja(u, mind) {
+  // ⛔ A gyökér nem vállalás (D90) — onnan sem vállalást, sem tippet nem fogadunk el (a vonalon a gyökér kulcsa
+  // `GYOKER_KULCS`, a tárban '').
+  const gyoker = (k) => k === '' || k === GYOKER_KULCS;
+  const vallal = (Array.isArray(u.vallal) ? u.vallal : [])
+    .filter((k) => typeof k === 'string' && !gyoker(k) && mind.has(k));
+  const tippek = {};
+  if (u.raj && typeof u.raj === 'object' && !Array.isArray(u.raj)) {
+    for (const [k, lista] of Object.entries(u.raj)) {
+      if (gyoker(k) || !mind.has(k) || !Array.isArray(lista)) continue;
+      // ⚠️ Előbb szűr, aztán korlátoz (a rossz tipp ne szorítsa ki a jót) — és a feldolgozás is korlátos.
+      const jo = lista.slice(0, 12).filter((t) => t && typeof t.h === 'string' && t.h.length <= 64
+        && Number.isInteger(t.p) && t.p > 0 && t.p < 65536
+        && (t.a === undefined || (typeof t.a === 'string' && /^[A-Za-z0-9_-]{43}$/.test(t.a))))
+        .slice(0, 3)
+        .map((t) => ({ ...(t.a ? { a: t.a } : {}), h: t.h, p: t.p }));
+      if (jo.length) tippek[k] = jo;
+    }
+  }
+  return { vallal, tippek };
 }

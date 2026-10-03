@@ -4555,3 +4555,48 @@ Tábla-kulcs nélkül (a gépen belüli csupasz csere) 484 → 684 B (`csereProb
 forgalom nagy része. ⏸️ Ha egyszer szűkösnek bizonyul, a következő lépcső a kötött társaknál az aláírás
 kiváltása (a két tábla-kulcs közös titka a kulcs-származtatásban) — ma nem kell. A fájloknál a többlet ~4%.
 
+## 58. ⭐ A BEP 5 A VALÓDI BITTORRENT-DHT-N — a G hash-elhelyezésének közege (D91, 2026-10-03, a laptopon)
+
+*`dhtTarsMeres.js`: 3 vakított téma (`cimjegyzek.js`) bejelentése (`announce_peer`), MEGISMÉTLÉS NÉLKÜL; utána a
+megadott időpontokban mindig egy FRISS kliens keresi meg őket (`get_peers`). A saját bejegyzést a véletlen port
+azonosítja.*
+
+```
+  BEJELENTÉS 1: 8/8 gép tárolta · 17.1 mp · 41 kérdés (20 felelt) · ki 5,3 KB, be 5,1 KB
+  BEJELENTÉS 2: 8/8 gép tárolta ·  7.2 mp · 29 kérdés (17 felelt) · ki 4,1 KB, be 4,4 KB
+  BEJELENTÉS 3: 5/8 gép tárolta · 13.3 mp · 32 kérdés (15 felelt) · ki 4,4 KB, be 3,7 KB
+     0 perc múlva: 3/3 téma megvan · keresésenként  5.1 mp, 14 kérdés, 2,8 KB
+     5 perc múlva: 3/3 téma megvan · keresésenként  6.7 mp, 16 kérdés, 2,9 KB
+    15 perc múlva: 2/3 téma megvan · keresésenként  4.0 mp, 13 kérdés, 2,3 KB
+    30 perc múlva: 2/3 téma megvan · keresésenként  4.7 mp, 14 kérdés, 2,7 KB
+    60 perc múlva: 0/3 téma megvan · keresésenként 13.4 mp, 22 kérdés, 3,5 KB
+   120 perc múlva: 0/3 téma megvan
+   180 perc múlva: 0/3 téma megvan
+```
+
+⭐ **A lelet:** egy bejelentés **~8–10 KB** (7–17 mp), egy keresés **~2,3–3,5 KB** (4–14 mp) — és ⛔ **a háló a
+bejelentést 30 és 60 perc között elfelejti** (15–30 percnél már egy téma hiányzik). A DHT-ra bízott hirdetést tehát
+~15–20 percenként meg kell ismételni: **egy téma ~0,65 MB/nap** (72 × 9 KB). ⭐ A gyökér-darabokra (készülékenként
+egy-két téma) ez elmegy; ⛔ a SZELETENKÉNTI közvetlen kereséshez nem (100 vállalt szeletnél ~65 MB/nap) — ott a fa és
+a raj (D91/1) a fő út, a DHT legfeljebb kevés, kiválasztott témára.
+
+## 59. ⭐ A RAJ KIALAKULÁSA — szimuláció (D91, 2026-10-03, a laptopon)
+
+*`rajMeres.js`: N készülék (2000 és 5000), átlag 20 vállalás, Zipf-népszerűség; a tartók korlátos listában (`L`)
+ismerik egymást, a lista a „kitől kaptam” úton és a cserében (körönként 25%) frissül; körönként `c` lemorzsolódás
+és ugyanannyi új készülék. Mérve: szeletenként a tartók hány %-a van a legnagyobb összefüggő darabban.*
+
+```
+N = 5000, 60 kör, lemorzsolódás 5%/kör (a 100+ tartós szeletek):
+  csak a legfrissebb L (N = 2000):  L=4 →  5,6% · L=6 →  9,8% · L=8 → 18,8%   — SZÉTESIK
+  véletlen L:                        L=4 → 71,5% · L=6 → 99,0% · L=8 → 99,0%
+  fele friss, fele véletlen:         L=4 →  8,9% · L=6 → 86,0% · L=8 → 99,7%
+  (0,5%/kör lemorzsolódásnál a véletlen és a fele-fele L ≥ 6-tól ~100%; az árva tartó mindenhol ≤ 0,2%)
+```
+
+⭐ **A lelet:** ha a lista csak a legutóbb látott tartókat tartja, a nagy rajok **klikkekre esnek szét** (az
+összefésülés ugyanazokat a friss bejegyzéseket terjeszti) — a véletlen elem a kulcs (a skálázási terv 4.2/b „kellenek
+véletlen társak is” mondata, most számokkal). ⭐ **A választás: L = 8, fele friss / fele véletlen** (a friss fele a
+címek frissességét őrzi) — `tarsak.js`. ⚠️ **A határa:** a szimuláció feltételezi, hogy bármely két tartó közvetlenül
+cserélhet; NAT mögött ez csak a kötéseken, a postaládákon és (a D-vel) a kérelem továbbadásán át megy.
+

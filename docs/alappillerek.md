@@ -159,7 +159,13 @@ szét (lenyomat szerinti darabok, több helyen, bárki kiszámolja, kitől kérd
 ⭐ **Az átvizsgálás (S10, 2026-10-03):** [`g_cimjegyzek_atvizsgalas.md`](g_cimjegyzek_atvizsgalas.md) — a
 követelmények, a NAT valósága („tudni, ki tartja” ≠ „elérni”), az irodalom, négy jelölt (C1 a fa és a raj ·
 C2 belső hash-DHT · C3 a BitTorrent-DHT vakított témával · C4 középút), és a mérés: egy valódi DHT-művelet
-~50 kérdés ≈ 5–10 KB — tehát a DHT csak takarékosan. ⏸️ **A döntés (SK7) Csabáé.**
+~50 kérdés ≈ 5–10 KB — tehát a DHT csak takarékosan. ✅ **Eldőlt (D91, 2026-10-03):** a fő út a fa és a raj;
+a hash-elhelyezés csak a gyökér darabjaira és a közvetlen keresésre, most a BitTorrent-DHT-n vakított témával
+(az E után újragondolva). Előbb a mérés: 58. (BEP 5), 59. (a raj). ⭐ **A mérések (2026-10-03):** az 58. szerint a
+DHT a hirdetést 30–60 perc alatt elfelejti (egy téma ~0,65 MB/nap, ha 20 percenként ismételjük) — a gyökér-darabokra
+elmegy, szeletenkénti közvetlen keresésre nem; az 59. szerint a raj L = 8 tartóval, fele friss / fele véletlen
+megtartással egyben marad (a csak-friss szétesik). 🚧 **A raj megépült** (a jegyzék, a csere, a tanulság); a DHT-rész
+(a gyökér-darabok hirdetése, a közvetlen keresés) Csaba döntésére vár (ki hirdessen, milyen ütemben).
 
 > *„a meta adatok, amik megmutatják, hogy mi kinél található, azt több helyen kell tárolni, és
 > biztosítani, hogy az egész hálózat tudja, vagy tudja azt, hogy ki tudhatja."* — Csaba, 2026-10-01
@@ -442,3 +448,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 50. **2026-10-03 · az átmeneti tár alakja: egy hozzáfűzhető fájl (mint a tartós)** → **szeletenként egy fájl** ·
     mert az eldobás így egy fájl törlése (a hozzáfűzhető fájlból törölni csak újraírással lehetne), és a tár
     korlátos — a 49. mérés ellenérve (100 000 eseménynél lassú a sok fájl) itt nem áll · `atmenetiTar.js`.
+51. **2026-10-03 · a G közege: szeletenkénti hirdetés egy DHT-n (a skálázási terv 5.3 A/B)** → **a fa és a raj a fő út,
+    a hash-elhelyezés csak a gyökérre és a közvetlen keresésre, most a BitTorrent-DHT-n vakított témával** · mert egy
+    DHT-művelet ~50 kérdés ≈ 5–10 KB (mérve), a szeletenkénti gyakori hirdetés a 6. szabályt sértené; a fa a cserén
+    belül marad (zárt koinó), és a terhe a vállalással arányos · Csaba, 2026-10-03 · D91, `g_cimjegyzek_atvizsgalas.md`.
