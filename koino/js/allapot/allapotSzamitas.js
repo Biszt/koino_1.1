@@ -279,6 +279,8 @@ export function allapotSzamitasa(esemenyek) {
       // ----- A KOINO MAGA -----
       case 'KoinoLetrehozas':
         koinoAdatok.nev = e.adat.nev;
+        // ⭐ D89/2: zárt, hacsak ki nem mondta, hogy nyílt (a mező nélküli régi koinó is zárt — D89/5).
+        koinoAdatok.zart = e.adat.zart !== false;
         koinoAdatok.leiras = e.adat.leiras ?? null;
         koinoAdatok.letrehozo = e.szerzo;
         koinoAdatok.letrehozva = e.ido;

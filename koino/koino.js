@@ -15,7 +15,7 @@
 // Használat:
 //   node koino/koino.js                          — mi az állapot
 //   node koino/koino.js kulcs                    — ki vagyok, hol a kulcsom
-//   node koino/koino.js koino "A koino neve"     — koino létrehozása
+//   node koino/koino.js koino "A koino neve" [leírás] [nyilt]  — koino létrehozása (alapból ZÁRT, D89/2)
 //   node koino/koino.js gondolat "Cím" "szöveg"  — új gondolat (+100 tudatpont)
 //   node koino/koino.js pont <azonosító> <pont> [passziv]
 //   node koino/koino.js javaslat <azonosító> "Új cím" ["indoklás"]
@@ -169,7 +169,9 @@ import {
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
-import { csereUdpResen, fajlRandevu, szeletUdpResen } from './js/csere/udpVonal.js';
+import { csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen } from './js/csere/udpVonal.js';
+// ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
+import { kezfogasAlairasa } from './js/csere/titkositas.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import {
@@ -1125,7 +1127,21 @@ async function eszlelesEsBejelentes(azonositok) {
 }
 
 function resMunkaKeszito(allapot) {
-  return async (halo, tars) => {
+  return async (nyersHalo, tars) => {
+    // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
+    // kézfogás munkánként egy; az egyszeri kulcs a munka végén elvész).
+    const halo = await kezfogasUdpResen(nyersHalo, tars.cim, tars.port);
+    try {
+      return await resMunka(allapot, halo, tars);
+    } finally {
+      halo.zar();
+    }
+  };
+}
+
+/** A munka a VÉDETT résen (`resMunkaKeszito`): csere, kötés, tanulás, randevú. */
+function resMunka(allapot, halo, tars) {
+  return (async () => {
     // ⛔⛔ ÉS A TÁR IS FRISS (2026-09-26, 43. mérés): amit a futás közben MÁSIK folyamat írt
     // (a második ablak `gondolat` parancsa, a felület), azt is adjuk tovább. Enélkül a futó
     // őrjárat négy körön át „küldtem 0"-t mondott egy percekkel korábban írt gondolatra.
@@ -1141,6 +1157,9 @@ function resMunkaKeszito(allapot) {
       sajatUdpCim: allapot.sajatKulsoUdp
         ? { hoszt: allapot.sajatKulsoUdp.cim, port: allapot.sajatKulsoUdp.port } : null,
       tablaKulcs: allapot.sajatTablaKulcs,
+      // ⭐ D89/1: a tábla-kulcs a kézfogásra tett aláírásával utazik (ettől nem bemondás).
+      tablaAlairo: allapot.sajatTablaKulcsTeljes
+        ? (atirat) => kezfogasAlairasa(allapot.sajatTablaKulcsTeljes, atirat) : null,
       dhtGepek: allapot.hirdetendoDhtGepek,
       fajlKerelem: fajlok.kerelem,
       fajlValasz: async (kertek) => {
@@ -1229,7 +1248,7 @@ function resMunkaKeszito(allapot) {
         + (randevu.korlatElerve ? ' · a többi a következő körben (kérés-korlát)' : '') + SZIN.vege);
     }
     return { ...alap, fajlMegjott: randevu.kesz ?? 0 };
-  };
+  })();
 }
 
 /**
@@ -1370,7 +1389,8 @@ async function allapotKiirasa(napokMulva) {
   }
 
   kiir(SZIN.vastag + allapot.koino.nev + SZIN.vege
-    + SZIN.halvany + '   (te: ' + rovidAzonosito(szerzo) + ')' + SZIN.vege);
+    + SZIN.halvany + '   (' + (allapot.koino.zart === false ? 'nyílt' : 'zárt') + ' · te: '
+    + rovidAzonosito(szerzo) + ')' + SZIN.vege);
   kiir(SZIN.halvany + 'tudatpontjaid: ' + szetosztottPontok(allapot, szerzo) + ' / ' + TUDATPONT_KERET
     + ' · eseményeid: ' + (await sajatLancEsemenyei(tar, szerzo)).length
     + ' · esemény összesen: ' + esemenyek.length
@@ -1817,8 +1837,12 @@ try {
     case 'koino': {
       const nev = ervek[0];
       if (!nev) throw new Error('Mi legyen a koino neve?');
-      await koinoLetrehozasa(kornyezet, nev, ervek[1]);
-      kiir('A koino létrejött: ' + nev);
+      // ⭐ D89/2: alapból ZÁRT; a nyílthoz ki kell mondani: koino "név" [leírás] nyilt
+      const tobbi = ervek.slice(1);
+      const nyilt = tobbi.includes('nyilt');
+      await koinoLetrehozasa(kornyezet, nev, tobbi.find((x) => x !== 'nyilt'), undefined, { zart: !nyilt });
+      kiir('A koino létrejött: ' + nev + (nyilt ? ' (NYÍLT — bárki olvashatja, aki eljut egy tagjához)'
+        : ' (ZÁRT — a tartalmát csak tagnak adjuk ki; a betartatás az identitás-lépéssel jön)'));
       break;
     }
 
@@ -4432,7 +4456,7 @@ try {
     default:
       kiir('Ismeretlen parancs: ' + parancs);
       kiir('Használat: allapot [napok] · kulcs · mentes <fájl> · visszatolt <fájl> [felulir]');
-    kiir('           koino <név> · gondolat <cím> [szöveg]');
+    kiir('           koino <név> [leírás] [nyilt] · gondolat <cím> [szöveg]');
       kiir('           pont <azonosító> <pont> [passziv] · javaslat <azonosító> <új cím> [indoklás]');
       kiir('           torol <azonosító> [indoklás] · athelyez <mit> <hova|gyoker> [indoklás]');
       kiir('           egyesit <az1>,<az2>[,...] <egyesített cím> [indoklás]');

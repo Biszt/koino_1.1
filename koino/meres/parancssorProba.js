@@ -245,6 +245,24 @@ proba('⭐⭐ D85/2: a MÁSIK készülék parancssori szavazata SZÁMÍT — a `
     }
   });
 
+// ⭐ D89/2: a `koino` parancs alapból ZÁRT koinót hoz létre, a `nyilt` szóval nyíltat — és az állapot
+// fejléce kimondja. *(A betartatás az E-vel jön; itt a parancs és a mező.)*
+proba('⭐ D89/2: a `koino` parancs alapból ZÁRT, `nyilt` szóval NYÍLT koinót hoz létre — a fejléc kimondja',
+  async () => {
+    const zart = await ujKeszulek();
+    const nyilt = await ujKeszulek();
+    try {
+      await fut(zart, 'koino', 'Zárt koinó', 'a leírása');
+      await fut(nyilt, 'koino', 'Nyílt koinó', 'nyilt');
+      const kepZart = await fut(zart, 'allapot');
+      const kepNyilt = await fut(nyilt, 'allapot');
+      return /\(zárt ·/.test(kepZart) && /\(nyílt ·/.test(kepNyilt);
+    } finally {
+      await rm(zart, { recursive: true, force: true });
+      await rm(nyilt, { recursive: true, force: true });
+    }
+  });
+
 // ===================================
 // ⭐⭐ D85 T3, a (B): A DÖNTÉSI CSOMAG A KÉZI ÚTON (2026-10-03)
 // ===================================
@@ -2093,7 +2111,9 @@ proba('⛔⛔ HA A RÉS MEGNYÍLIK, DE A CSERE RAJTA ELBUKIK, A NAPLÓ KIMONDJA 
       // ⚠️ A résen a csere 10 mp várakozás után adja fel — ennyi kell, és egy kis ráhagyás.
       await varj(17000);
 
-      return /rés nyílt \(127\.0\.0\.1:\d+\), de a csere a résen elbukott: A másik fél nem válaszol/.test(kimenet)
+      // ⭐ D89/1 óta a csere kézfogással kezdődik — a hamis társ (kopogásra felel, cserélni nem hajlandó) már
+      // ott elakad, és a napló ezt pontosabban mondja ki: „nem fogott kezet”.
+      return /rés nyílt \(127\.0\.0\.1:\d+\), de a csere a résen elbukott: A társ nem fogott kezet/.test(kimenet)
         && /1 rés nyílt meg, de a csere egyiken sem ment végig/.test(kimenet)
         && !/egyik rés sem nyílt meg/.test(kimenet);
     } finally {

@@ -57,6 +57,11 @@
 
 import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton } from './vonal.js';
 import { KERELEM_KORLAT } from './fajlKerelem.js';
+// ⭐ D89/1: a csere titkosítása — a kézfogás és a csomagok kriptográfiája (hálózat nélkül).
+import {
+  ujEgyszeriKulcs, kezfogasCsomag, kezfogasCsomagbol, munkamenetKulcsai, csomagTitkositasa,
+  csomagKititkositasa, kezfogasAlairasEllenorzese, KF_JEL
+} from './titkositas.js';
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -262,6 +267,144 @@ const TETLENSEG_ALAP = 10000;
 // példányok nem gyűlhetnek ott korlátlanul. *Két másodperc bőven fedi az újraküldés
 // ütemét (RTO), és a következő fájl átvitelénél már csend van.*
 const UTOHANG = 2000;
+
+// ===================================
+// ⭐⭐ D89/1: A KÉZFOGÁS ÉS A VÉDETT RÉS (2026-10-03)
+// ===================================
+//
+// ⛔ A RÉSEN NINCS NYÍLT CSERE. Minden munka-függvény (`csereUdpResen`, `szeletUdpResen`, `fajlRandevu`,
+// `fajlUdpResen`) VÉDETT résen dolgozik: ha nyers foglalatot kap, előbb kezet fog (`vedettResre`). *Az őr a
+// rétegben van — ha a hívóra bíznánk, az egyik út megtenné, a másik elfelejtené.* Egy munkán belül (csere,
+// aztán randevú) a hívó egyszer fog kezet, és a védett rést adja tovább: a kézfogás munkánként EGY.
+//
+// A kézfogás: mindkét fél elküldi a 33 bájtos kézfogás-csomagját (`[KF_JEL][egyszeri kulcs]`), és
+// `KF_ISMETLES`-enként ismétli, amíg a társét meg nem kapja. Ha a mienk elveszett (vagy a társ később indult),
+// ő ismétli a sajátját, és a védett rés minden ilyenre felel — amíg tőle titkosított csomag nem jön (onnan
+// tudjuk, hogy kész). Egyszerre indulva így irányonként egyetlen csomag megy.
+// ⚠️ A titkosítás a `titkositas.js`-ben; itt csak a szállítás.
+
+const KF_ISMETLES = 250;
+// A kézfogás-csomagra adott válaszok közti legkisebb idő — két védett rés ne pingpongozzon egymással.
+const KF_VALASZ_KOZ = 200;
+
+/**
+ * VÉDETT RÉS: a foglalat egy társra szóló, titkosító-kititkosító nézete — a `udpKapcsolat` számára ugyanaz
+ * a felület (`send`, `on('message')`, `off`), mint a nyers foglalaté. Minden kimenő csomag titkosítva megy,
+ * a társtól jött titkosított csomagot kititkosítja; ami nem a mi kulcsunkkal jött, azt eldobja.
+ *
+ * @param {Object} halo - a nyers (átfúrt) foglalat
+ * @param {{kuldo: Buffer, fogado: Buffer, atirat: Buffer}} kulcsok
+ * @param {Buffer} kf - a saját kézfogás-csomagunk (a késve kezet fogó társnak)
+ * @param {{kuldott: number, kapott: number}} [kezdo] - a kézfogás bájtjai (a mérésnek)
+ */
+export function vedettHalo(halo, tarsCim, tarsPort, kulcsok, kf, kezdo = { kuldott: 0, kapott: 0 }) {
+  const figyelok = new Set();
+  let szamlalo = 0, titkosJott = false, utolsoKfValasz = 0, lezarva = false;
+  let kuldott = kezdo.kuldott, kapott = kezdo.kapott;
+  const nyers = (adat, felado) => {
+    if (felado.address !== tarsCim || felado.port !== tarsPort) return;
+    if (adat[0] === KF_JEL) {
+      // ⭐ A társ még nem kapta meg a mienket — felelünk (de csak amíg tőle titkosított nem jött).
+      if (!titkosJott && !lezarva && Date.now() - utolsoKfValasz > KF_VALASZ_KOZ) {
+        utolsoKfValasz = Date.now();
+        kuldott += kf.length;
+        halo.send(kf, tarsPort, tarsCim, () => {});
+      }
+      return;
+    }
+    const ki = csomagKititkositasa(kulcsok.fogado, adat);
+    if (!ki) return;                 // hamis, sérült, más kulcsú vagy nyílt: nem ennek a beszélgetésnek szól
+    titkosJott = true;
+    kapott += adat.length;
+    for (const f of [...figyelok]) f(ki.nyilt, felado);
+  };
+  halo.on('message', nyers);
+  return {
+    vedett: true,
+    atirat: kulcsok.atirat,
+    send(adat, port, cim, visszahivas) {
+      if (cim !== tarsCim || port !== tarsPort) throw new Error('a védett rés csak a társnak küld');
+      const cs = csomagTitkositasa(kulcsok.kuldo, ++szamlalo,
+        Buffer.isBuffer(adat) ? adat : Buffer.from(String(adat)));
+      kuldott += cs.length;
+      halo.send(cs, port, cim, visszahivas);
+    },
+    on(nev, f) { if (nev === 'message') figyelok.add(f); return this; },
+    off(nev, f) { if (nev === 'message') figyelok.delete(f); return this; },
+    address() { return halo.address(); },
+    /** A résen ténylegesen utazott bájtok (a kézfogással) — a mérésnek. */
+    szamlalok() { return { kuldott, kapott }; },
+    /** A munka végén: az utóhang után (a társ késve jövő ismétléseire még felelünk) leválik a foglalatról. */
+    zar() {
+      if (lezarva) return;
+      lezarva = true;
+      setTimeout(() => (halo.off ?? halo.removeListener).call(halo, 'message', nyers), UTOHANG).unref?.();
+    }
+  };
+}
+
+/**
+ * ⭐ A KÉZFOGÁS a nyers résen — a végén védett rés.
+ *
+ * @param {Object} halo - a nyers (átfúrt) foglalat
+ * @param {string} tarsCim
+ * @param {number} tarsPort
+ * @param {Object} [beallitas] - `varakozasiIdo`: ennyi után feladjuk (alap: `TETLENSEG_ALAP`)
+ * @returns {Promise<Object>} a védett rés (`vedettHalo`)
+ */
+export async function kezfogasUdpResen(halo, tarsCim, tarsPort, beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  console.log('kezfogasUdpResen - KEZDÉS', { tarsCim, tarsPort });
+  const sajat = ujEgyszeriKulcs();
+  const kf = kezfogasCsomag(sajat.nyilvanos);
+  const bajtok = { kuldott: 0, kapott: 0 };
+  const kuldKf = () => { bajtok.kuldott += kf.length; halo.send(kf, tarsPort, tarsCim, () => {}); };
+  const tarsE = await new Promise((teljesul, elakad) => {
+    let ismetlo = null, hatar = null;
+    const vege = () => {
+      clearInterval(ismetlo);
+      clearTimeout(hatar);
+      (halo.off ?? halo.removeListener).call(halo, 'message', figyel);
+    };
+    const figyel = (adat, felado) => {
+      if (felado.address !== tarsCim || felado.port !== tarsPort) return;
+      const e = kezfogasCsomagbol(adat);
+      if (!e) return;
+      bajtok.kapott += adat.length;
+      vege();
+      // ⚠️ Nem küldjük újra: ha a társ később indult (a mienk elveszett), ő tovább ismétli a sajátját,
+      // és a védett rés felel rá (`vedettHalo`). Egyszerre indulva így irányonként EGY csomag megy.
+      teljesul(Buffer.from(e));
+    };
+    halo.on('message', figyel);
+    kuldKf();
+    ismetlo = setInterval(kuldKf, KF_ISMETLES);
+    hatar = setTimeout(() => {
+      vege();
+      elakad(new Error('A társ nem fogott kezet (' + varakozasiIdo + ' ms) — régi program, vagy nem felel'));
+    }, varakozasiIdo);
+  });
+  const kulcsok = munkamenetKulcsai(sajat, tarsE);
+  console.log('kezfogasUdpResen - VÉGE', { tarsCim, tarsPort });
+  return vedettHalo(halo, tarsCim, tarsPort, kulcsok, kf, bajtok);
+}
+
+/** Védett rés a munkának: ha már az (a hívó egyszer fogott kezet), azt adjuk; ha nem, most fogunk. */
+async function vedettResre(halo, tarsCim, tarsPort, beallitas) {
+  if (halo?.vedett) return { res: halo, sajat: false };
+  return { res: await kezfogasUdpResen(halo, tarsCim, tarsPort, beallitas), sajat: true };
+}
+
+/**
+ * ⭐ A KÉZFOGÁS HITELESÍTÉSE a csere `CIMEK` üzenetében (`vonal.js` — az nem tud kriptográfiáról): a saját
+ * aláírásunk (ha a hívó ad aláírót), és a társ tábla-kulcsának ellenőrzése az átiraton.
+ */
+function kezfogasHitelesitese(res, beallitas) {
+  return {
+    alairas: typeof beallitas.tablaAlairo === 'function' ? beallitas.tablaAlairo(res.atirat) : null,
+    ellenoriz: (tabla, alairas) => kezfogasAlairasEllenorzese(tabla?.alairo, res.atirat, alairas)
+  };
+}
 
 /**
  * TCP-foglalatnak látszó objektum, ami alatta UDP-t használ.
@@ -1043,8 +1186,10 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
   // elfelejtené.* A fájl-út **definíció szerint** tömeg-forgalom, tehát a jel ide tartozik.
   // ⚠️ Felülírható (a mérés ezzel hasonlítja össze a jelölteket).
   const jel = beallitas.torlodasJel ?? 'vegas';
+  // ⛔ D89/1: csak védett résen.
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
   const nyito = async () => {
-    const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, { ...beallitas, torlodasJel: jel });
+    const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort, { ...beallitas, torlodasJel: jel });
     // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE — ugyanaz az őr, mint a rendes UDP-cserénél.
     kapcsolat.setTimeout(varakozasiIdo, () => {
       kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
@@ -1054,10 +1199,14 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
 
   // ⭐ A HASZNÁLT JELET VISSZAADJUK — hogy a szétválasztás **mérhető tény** legyen, ne
   // ígéret. *Amit nem lehet megmérni, arról egy hét múlva nem tudjuk, igaz-e még.*
-  const eredmeny = { ...(await fajlHozatala(blob, koino, lenyomat, nyito, beallitas)),
-                     torlodasJel: jel };
-  console.log('fajlUdpResen - VÉGE', eredmeny);
-  return eredmeny;
+  try {
+    const eredmeny = { ...(await fajlHozatala(blob, koino, lenyomat, nyito, beallitas)),
+                       torlodasJel: jel };
+    console.log('fajlUdpResen - VÉGE', eredmeny);
+    return eredmeny;
+  } finally {
+    if (sajat) res.zar();
+  }
 }
 
 /**
@@ -1115,7 +1264,7 @@ export async function fajlUdpResen(halo, tarsCim, tarsPort, blob, koino, lenyoma
  *                    szerep: 'kerek-elobb'|'kiszolgalok-elobb'|'nem-tudom',
  *                    korlatElerve: boolean}>}
  */
-export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
+export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) {
   const {
     sajatCim = null, kerhetok = [], blob, tar, koino,
     fajlOlvas = null, korlat = Infinity,
@@ -1148,6 +1297,8 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
   const szerep = !tudjuk ? 'nem-tudom' : (enKezdek ? 'kerek-elobb' : 'kiszolgalok-elobb');
 
   console.log('fajlRandevu - KEZDÉS', { tarsCim, tarsPort, szerep, kerhetok: kerhetok.length });
+  // ⚠️ A fázisok a `halo` néven dolgoznak — a kézfogás után ez a VÉDETT rés (lent).
+  let halo = nyersHalo;
   utana({ mi: 'SZEREP', szerep, sajatCim, tarsCim: ove });
 
   let kesz = 0, bukott = 0, bajt = 0, kiszolgalt = 0;
@@ -1258,12 +1409,30 @@ export async function fajlRandevu(halo, tarsCim, tarsPort, beallitas = {}) {
     return semmi;
   }
 
-  if (enKezdek) {
-    await keroFazis();
-    if (kiszolgalasKell) await kiszolgaloFazis(2 * varakozasiIdo);
-  } else {
-    if (kiszolgalasKell) await kiszolgaloFazis(varakozasiIdo);
-    await keroFazis();
+  // ⛔ D89/1: csak védett résen (a munkán belül a hívó már kezet fogott, és a védett rést adja).
+  // ⚠️ A randevú legjobb-szándékú lépés: ha a kézfogás nem sikerül, nem kivétel — kimondjuk (D19), és nincs
+  // randevú (a következő kör pótolja).
+  let res, sajat;
+  try {
+    ({ res, sajat } = await vedettResre(nyersHalo, tarsCim, tarsPort, beallitas));
+  } catch (hiba) {
+    utana({ mi: 'KEZFOGAS-BUKOTT', ok: hiba.message });
+    const semmi = { kesz: 0, bukott: 0, bajt: 0, kiszolgalt: 0, szerep, torlodasJel: jel,
+      korlatElerve: false, kezfogasBukott: hiba.message };
+    console.log('fajlRandevu - VÉGE (nincs kézfogás)', semmi);
+    return semmi;
+  }
+  halo = res;
+  try {
+    if (enKezdek) {
+      await keroFazis();
+      if (kiszolgalasKell) await kiszolgaloFazis(2 * varakozasiIdo);
+    } else {
+      if (kiszolgalasKell) await kiszolgaloFazis(varakozasiIdo);
+      await keroFazis();
+    }
+  } finally {
+    if (sajat) res.zar();
   }
 
   const eredmeny = { kesz, bukott, bajt, kiszolgalt, szerep, torlodasJel: jel, korlatElerve };
@@ -1285,7 +1454,9 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
                                      beallitas = {}) {
   const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
   console.log('szeletUdpResen - KEZDÉS', { tarsCim, tarsPort, entitas });
-  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort, { torlodasJel: 'nincs' });
+  // ⛔ D89/1: csak védett résen.
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
+  const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort, { torlodasJel: 'nincs' });
   kapcsolat.setTimeout(varakozasiIdo, () => {
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
@@ -1297,6 +1468,7 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
     return eredmeny;
   } finally {
     kapcsolat.end();
+    if (sajat) res.zar();
   }
 }
 
@@ -1309,7 +1481,10 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
   // kör 931 bájt, 38. mérés), tehát **nem ő tölti meg a sort** — ő az, aki a sor mögé kerül.
   // ⭐ *Az engedékenység annak való, aki a vonalat terheli; aki nem terheli, annak a
   // visszafogás csak kár lenne — a késleltetés-érzékeny forgalmat kétszer büntetné.*
-  const kapcsolat = udpKapcsolat(halo, tarsCim, tarsPort,
+  // ⛔ D89/1: csak védett résen — és a tábla-kulcs csak a kézfogásra tett aláírásával számít.
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
+  const elotte = res.szamlalok();
+  const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort,
     { ...beallitas, torlodasJel: beallitas.torlodasJel ?? 'nincs' });
 
   // ⚠️ A NÉMA TÁRS NEM RAGASZTHAT BE. Ha a másik elhallgat (elment, lefagyott, vagy csak
@@ -1320,7 +1495,8 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
   });
 
   try {
-    const eredmeny = await parbeszed(kapcsolat, tar, koino, beallitas);
+    const eredmeny = await parbeszed(kapcsolat, tar, koino,
+      { ...beallitas, kezfogas: kezfogasHitelesitese(res, beallitas) });
 
     // ⭐ ELŐBB KIÜRÍTÉS, CSAK UTÁNA ZÁRÁS. A párbeszéd akkor is véget érhet, amikor a MI
     // utolsó üzenetünk még úton van (a `parbeszed` az utolsó LENYOMAT-ra már nem vár
@@ -1331,10 +1507,12 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
       console.warn('csereUdpResen - az utolsó darab nem lett nyugtázva', { tarsCim, tarsPort });
     }
 
+    // ⭐ A RÉSEN utazott bájtok (titkosítva; ha ez a hívás fogott kezet, a kézfogással együtt).
+    const utana = res.szamlalok();
     const teljes = {
       ...eredmeny,
-      bajtKuldott: kapcsolat.bytesWritten,
-      bajtKapott: kapcsolat.bytesRead,
+      bajtKuldott: utana.kuldott - (sajat ? 0 : elotte.kuldott),
+      bajtKapott: utana.kapott - (sajat ? 0 : elotte.kapott),
       // ⭐ Ugyanúgy megfigyelhető tény, mint a fájl-útnál — a szétválasztás így mérhető.
       torlodasJel: kapcsolat.jelAllapot().jel
     };
@@ -1342,5 +1520,6 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
     return teljes;
   } finally {
     kapcsolat.end();
+    if (sajat) res.zar();
   }
 }

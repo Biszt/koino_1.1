@@ -4524,3 +4524,34 @@ Kiosztás 10000 entitáson:   javaslat átlag        3236 B
 kiosztásával — ugyanaz az ár, mint a szavazat egy bizonyítékáé (54.). A javaslat ritka esemény (egy
 döntéshez egy), ezért ez a 6. szabály mércéjén elhanyagolható; cserébe a jogosultság hézagos láncnál is
 eldönthető, mindenhol ugyanúgy.
+
+## 57. ⭐ A CSERE TITKOSÍTÁSÁNAK ÁRA — a ② (D89/1, 2026-10-03, a laptopon)
+
+*`titkositasMeres.js`: ugyanaz a forgalom a gépen belüli UDP-résen NYÍLTAN (a ② előtti alak) és TITKOSÍTVA
+(ahogy most élesben fut), a dróton utazó bájtok a nyugtákkal; mindkét oldal tábla-kulcsot cserél, ahogy az
+őrjárat. 2000 esemény a tárban.*
+
+**Előbb a mérés (az építés előtt, a szerkezetből számolva):** a csomagonkénti, bináris titkosítás egy
+eltérésnél +6–12%, egy 200 KB-os fájlnál +2–4%; az üzenetenkénti, szöveges (base64 a JSON-ban) +35–42%, a
+fájlnál +33% — ⛔ elvetve. ⛔ És a KÜLÖN, JSON-os kézfogás (két lépés) **692 B** lett volna munkánként, miközben
+egy gépen belüli „nincs újdonság” csere 484 B: a kézfogás többe került volna, mint maga a csere. ⭐ Ezért lett
+a kézfogás egy 33 bájtos bináris csomag irányonként, a hitelesítés (a tábla-kulcs aláírása) pedig a `CIMEK`-be
+került, ami úgyis megy. *(Az első becslésem — „+15–25%” — ezt nem látta.)*
+
+**Utána (a megépített út, valódi forgalom):**
+
+```
+  1 eltérés:       nyíltan    6960 B (42 csomag) · titkosítva    7978 B (44 csomag) · többlet +1018 B (+14,6%)
+  nincs újdonság:  nyíltan     750 B (8 csomag)  · titkosítva    1156 B (10 csomag) · többlet  +406 B (+54,1%)
+  200 KB-os fájl:  nyíltan  281593 B (562 csomag) · titkosítva  292083 B (564 csomag) · többlet +10490 B (+3,7%)
+```
+
+⭐ **A „nincs újdonság” +406 B-ja három részből áll:** a kézfogás 2 × 33 B (66 B), csomagonként ~18 B (jel,
+számláló, GCM-címke — itt 8 csomag, 144 B), és a tábla-kulcs aláírása a `CIMEK`-ben (~2 × 98 B). A terepi
+„nincs újdonság” csere (1,2–1,7 KB, 43. mérés — a fájl-kérelemmel és a címjegyzékkel) így várhatóan **+24–34%**.
+Tábla-kulcs nélkül (a gépen belüli csupasz csere) 484 → 684 B (`csereProba.js`).
+
+⚠️ **Amit kimondunk:** a „nincs újdonság” relatív ára a legnagyobb, mert ott a kézfogás és az aláírás a
+forgalom nagy része. ⏸️ Ha egyszer szűkösnek bizonyul, a következő lépcső a kötött társaknál az aláírás
+kiváltása (a két tábla-kulcs közös titka a kulcs-származtatásban) — ma nem kell. A fájloknál a többlet ~4%.
+

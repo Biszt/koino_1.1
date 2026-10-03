@@ -32,7 +32,8 @@ import {
   fajlKiszolgalas
 } from '../js/csere/vonal.js';
 import { SZELET_MERET, ujMunkamegosztas } from '../js/csere/fajlAtvitel.js';
-import { udpKapcsolat, fajlUdpResen } from '../js/csere/udpVonal.js';
+// ⭐ D89/1: a mérés is TITKOSÍTVA fut — azt mérjük, amit élesben futtatunk.
+import { udpKapcsolat, fajlUdpResen, kezfogasUdpResen } from '../js/csere/udpVonal.js';
 
 // ⚠️ A koino minden metódusa naplóz — a mérés számai csak így olvashatók.
 console.log = () => {};
@@ -376,9 +377,14 @@ async function resenMeres(meret, beallitas = {}) {
     // ⭐ A TORLÓDÁS-JEL A KÜLDŐ OLDALÁN SZÁMÍT (D68 / 2. lépés): a fájl szeleteit a GAZDA
     // küldi, tehát ő tölti a sort. *A kérő oldala keveset küld — rajta a jel alig látszana.*
     const [, eredmeny] = await Promise.all([
-      parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort,
-        { torlodasJel: beallitas.torlodasJel, utemezes: beallitas.utemezes }), gazdaTar, KOINO,
-        { fajlOlvas: (l) => gazda.olvas(l) }),
+      (async () => {
+        const v = await kezfogasUdpResen(p.egyik, '127.0.0.1', p.masikPort, { varakozasiIdo: 120000 });
+        try {
+          return await parbeszed(udpKapcsolat(v, '127.0.0.1', p.masikPort,
+            { torlodasJel: beallitas.torlodasJel, utemezes: beallitas.utemezes }), gazdaTar, KOINO,
+            { fajlOlvas: (l) => gazda.olvas(l) });
+        } finally { v.zar(); }
+      })(),
       fajlUdpResen(p.masik, '127.0.0.1', p.egyikPort, vendeg, KOINO, lenyomat,
         { varakozasiIdo: 120000, torlodasJel: beallitas.torlodasJel,
           utemezes: beallitas.utemezes })
@@ -463,7 +469,13 @@ async function tobbForrasMeres(meret, forrasok, beallitas = {}) {
     const munkak = [];
 
     for (let i = 0; i < forrasok; i++) {
-      const p = parosok[i];
+      const nyersPar = parosok[i];
+      // ⭐ D89/1: forrásonként egy kézfogás — a kiszolgáló és a kérő a VÉDETT résen beszél.
+      const [vEgyik, vMasik] = await Promise.all([
+        kezfogasUdpResen(nyersPar.egyik, '127.0.0.1', nyersPar.masikPort, { varakozasiIdo: 120000 }),
+        kezfogasUdpResen(nyersPar.masik, '127.0.0.1', nyersPar.egyikPort, { varakozasiIdo: 120000 })
+      ]);
+      const p = { ...nyersPar, egyik: vEgyik, masik: vMasik };
 
       // ----- A KISZOLGÁLÓ OLDAL: a VALÓDI éles kód (passzív, nem beszél elsőként) -----
       munkak.push((async () => {

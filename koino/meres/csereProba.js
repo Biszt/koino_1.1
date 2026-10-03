@@ -26,7 +26,7 @@ import {
   csereUdpResen, udpKapcsolat, fajlRandevu, fajlUdpResen, szeletUdpResen
 } from '../js/csere/udpVonal.js';
 import {
-  helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa,
+  helyiFelfedezes, felfedezoValaszolo, felfedezoUzenet, kialtasFeldolgozasa, koinoRejtettJele,
   felfedezettekOsszefesulese
 } from '../js/csere/helyiFelfedezes.js';
 import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa } from '../js/muveletek.js';
@@ -622,7 +622,10 @@ proba('⭐ MÉRÉS: mennyibe kerül egy „nincs újdonság" csere 50 e-emberné
   // annak saját ára van — sorszám, nyugta, JSON-burok darabonként (TCP-n ~334 bájt volt,
   // a résen ~480). ⭐ A lényeg nem változott (2026-09-27 óta a szeletenkénti cserével sem):
   // az egyeztetés el sem indul.
-  return eredmeny.egyeztetoUzenetek === 0 && osszes < 500 && osszes * 15 < allasBajt;
+  // ⚠️ ÉS A KÜSZÖB 500-RÓL 750-RE (2026-10-03, D89/1): a csere azóta TITKOSÍTVA megy — a kézfogás (2 × 33 B)
+  // és csomagonként ~18 B (jel, számláló, GCM-címke); mérve ~480 → 684 B (57. mérés). Ez a titkosítás ára.
+  // Az arány ezért 15×-ről 10×-re: a régi részletes ÁLLÁS még mindig egy nagyságrenddel drágább (8 KB).
+  return eredmeny.egyeztetoUzenetek === 0 && osszes < 750 && osszes * 10 < allasBajt;
 });
 
 // ===================================
@@ -1090,6 +1093,20 @@ async function udpParos(vesztesegAranya = 0, hoszt = '127.0.0.1') {
 // nyitja — ezért **ugyanaz a kód** fut TCP-n és az átfúrt résen. *A fájl-átvitel logikája
 // nem is tudja, melyiken beszél.*
 
+/**
+ * ⭐ D89/1: a párbeszéd a VÉDETT résen — előbb kézfogás (a társ munka-függvénye is kezet fog), aztán a
+ * `parbeszed` a védett rés kapcsolatán. A fájl-próbák gazda oldala így szolgál ki.
+ */
+async function vedettParbeszed(halo, port, tar, beallitas = {}) {
+  const { kezfogasUdpResen } = await import('../js/csere/udpVonal.js');
+  const v = await kezfogasUdpResen(halo, '127.0.0.1', port);
+  try {
+    return await parbeszed(udpKapcsolat(v, '127.0.0.1', port), tar, KOINO, beallitas);
+  } finally {
+    v.zar();
+  }
+}
+
 proba('⭐⭐⭐ A FÁJL ÁTMEGY AZ ÁTFÚRT RÉSEN — bájtra azonosan', async () => {
   const { mkdtemp } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
@@ -1116,9 +1133,7 @@ proba('⭐⭐⭐ A FÁJL ÁTMEGY AZ ÁTFÚRT RÉSEN — bájtra azonosan', async
   try {
     const [, eredmeny] = await Promise.all([
       // A GAZDA a résen kiszolgál (a `parbeszed` a fájl-ágon kilép).
-      parbeszed(udpKapcsolat(p.egyik, '127.0.0.1', p.masikPort), gazdaTar, KOINO, {
-        fajlOlvas: (l) => gazdaBlob.olvas(l)
-      }),
+      vedettParbeszed(p.egyik, p.masikPort, gazdaTar, { fajlOlvas: (l) => gazdaBlob.olvas(l) }),
       // A VENDÉG kér — ugyanazzal a kóddal, mint TCP-n.
       fajlUdpResen(p.masik, '127.0.0.1', p.egyikPort, vendegBlob, KOINO, lenyomat)
     ]);
@@ -1247,8 +1262,7 @@ proba('⭐⭐⭐ A FÁJL-ÚT ENGED, A CSERE NEM — a két forgalom külön jele
     const gazdaTar = await ujTar();
     try {
       const [, e] = await Promise.all([
-        parbeszed(udpKapcsolat(p1.egyik, '127.0.0.1', p1.masikPort), gazdaTar, KOINO,
-          { fajlOlvas: (l) => gazdaBlob.olvas(l) }),
+        vedettParbeszed(p1.egyik, p1.masikPort, gazdaTar, { fajlOlvas: (l) => gazdaBlob.olvas(l) }),
         fajlUdpResen(p1.masik, '127.0.0.1', p1.egyikPort, vendegBlob, KOINO, lenyomat,
           { varakozasiIdo: 3000 })
       ]);
@@ -1596,10 +1610,18 @@ proba('⭐ A UDP-résen is megvan a TÜKÖR és a CÍMJEGYZÉK', async () => {
 // csak címeket szerez. Ezért a bizalom-kérdés itt fel sem merül — de a szűrés igen: ki
 // tartozik ide, mi a saját visszhangunk, és mi a szemét.
 
-proba('A kiáltás alakja: apró és unalmas (koino, port, jel)', () => {
+proba('A kiáltás alakja: apró és unalmas (a koinó rejtett jele, port, jel)', () => {
   const u = JSON.parse(felfedezoUzenet('KOPOGOK', 'proba', 7373, 'abc123'));
-  return u.mi === 'KOPOGOK' && u.koino === 'proba' && u.port === 7373 && u.jel === 'abc123'
+  return u.mi === 'KOPOGOK' && typeof u.k === 'string' && u.port === 7373 && u.jel === 'abc123'
     && Object.keys(u).length === 4;           // semmi több nem szivárog ki rólunk
+});
+
+proba('⭐⭐ D89/7: A KOINÓ AZONOSÍTÓJA NEM HANGZIK EL a wifin — és a rejtett jel kiáltásonként más', () => {
+  const koino = 'zart-csaladi-koino-azonosito';
+  const egy = felfedezoUzenet('KOPOGOK', koino, 7373, 'jel-1');
+  const ketto = felfedezoUzenet('KOPOGOK', koino, 7373, 'jel-2');
+  const sajat = kialtasFeldolgozasa(egy, { address: '192.168.1.7', port: 7374 }, koino, 'enjelem');
+  return !egy.includes(koino) && JSON.parse(egy).k !== JSON.parse(ketto).k && sajat.rendben === true;
 });
 
 proba('⭐ A SAJÁT VISSZHANGUNKAT kihagyjuk (a szórást mi is megkapjuk)', () => {
@@ -1627,7 +1649,7 @@ proba('⭐⭐ A CÍM A FOGLALATBÓL JÖN, a PORT az üzenetből — és ez nem m
   // felfedezés őt írná a listánkra. A foglalat viszont nem hazudik: onnan tényleg
   // megérkezett valami. A portot muszáj az üzenetből venni — a kiáltás a felfedező
   // portról jött, cserélni pedig máshol hallgat.
-  const uzenet = JSON.stringify({ mi: 'KOPOGOK', koino: 'proba', port: 7373, jel: 'x',
+  const uzenet = JSON.stringify({ mi: 'KOPOGOK', k: koinoRejtettJele('proba', 'x'), port: 7373, jel: 'x',
     hoszt: '10.0.0.66' });                    // ⬅ hazug cím az üzenetben
   const e = kialtasFeldolgozasa(uzenet, { address: '192.168.1.9', port: 7374 }, 'proba', 'en');
   return e.rendben && e.tars.hoszt === '192.168.1.9' && e.tars.port === 7373

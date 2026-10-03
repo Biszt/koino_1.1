@@ -4587,6 +4587,51 @@ van, tehát aki egyszer látott egy eseményt, bármelyik tag készülékéről 
 ⚠️ **A G-re is hat:** egy zárt koinó címjegyzéke nem kerülhet nyilvános helyre (pl. a BitTorrent-DHT-re)
 úgy, hogy kívülálló kiolvashassa belőle, kik a koinó résztvevői.
 
+#### PONTOSÍTÁS AZ ÉPÍTÉS ELŐTT (2026-10-03, Csaba: „minden javaslatodat elfogadom”)
+
+1. ⭐ **Egyszeri kulcs minden kapcsolatnál** (az 1. pont „küldés nélkül” alakja helyett): a kézfogásban
+   mindkét fél egy csak erre a munkára szóló X25519 kulcsot küld, a közös titok az egyszeri ÉS az állandó
+   (tábla-) kulcsokból jön. *Miért:* csak az állandókból számolt titoknál egy később ellopott készülék
+   kulcsa minden korábban rögzített forgalmat visszamenőleg kinyitna; az egyszeri kulcsot a munka végén
+   eldobjuk. A tábla-kulcs a második lépésben már titkosítva utazik (a passzív figyelő nem követheti a
+   készüléket hálózatról hálózatra).
+2. **Az első találkozás:** a társ kulcsát elfogadjuk, és a kötés megjegyzi (mint az SSH); később más kulcs
+   ugyanott = „más felelt” (a D71 ellenőrzése a kézfogásba költözik). A legelső kapcsolatot egy aktív
+   közbeékelődő elolvashatja, eseményt hamisítani nem tud. **A személyhez kötés az E-vel jön** a zárt
+   koinóknál: a tag a személyes kulcsával aláírja a kézfogást.
+3. **A kézi út fájlja nyílt marad** (te adod oda, akinek akarod); a jelszavas fájlt az E-vel együtt nézzük.
+4. **Az új koinó alapból ZÁRT** — a nyílthoz ki kell mondani (`koino "név" nyilt`).
+5. **A mező nélküli (régi) koinó zártnak számít** (a biztonságosabb).
+6. **A létrehozáskor dől el, nem változtatható**; ha egyszer kell, az egy közösségi döntés a koinóról
+   (külön téma).
+7. *(A beszélgetésből:)* a **helyi felfedezés** a koinó azonosítóját nem kiáltja ki nyíltan, hanem egy
+   rejtett jelet, amit csak az ismer fel, aki tudja az azonosítót.
+
+⚠️ **Amit kimondunk:** a zártság betartatása az E-vel jön (a végleges sor ⑥) — addig a mező ott van, de nem
+tilt; az úton ülő elől viszont a ②-től minden rejtve van. Ami továbbra is látszik: hogy két cím beszél,
+mikor és nagyjából mennyit, és a kopogás (kb. 60 bájt, véletlen azonosítóval). A tárolt adat titkosítása a
+lemezen nem része a ②-nek.
+
+#### A MEGÉPÍTÉS (2026-10-03) — és amit a mérés megváltoztatott
+
+- ⭐ **A kézfogás formája az 57. mérésből:** a külön, JSON-os kézfogás 692 B lett volna munkánként (egy gépen
+  belüli „nincs újdonság” csere 484 B) — ezért **(1)** egy 33 bájtos bináris csomag irányonként (`[jel][egyszeri
+  X25519 kulcs]`), **(2)** a hitelesítés a már titkosított `CIMEK`-ben: a tábla-kulcs aláírója aláírja a
+  kézfogás átiratát (a kulcs-származtatás HKDF, a csomag AES-256-GCM, irányonként külön kulcs, számláló-nonce).
+  A kézfogás munkánként EGY (a csere és a randevú ugyanazon a védett résen); minden csomag titkosítva megy, a
+  nyugta is. ⚠️ Az egyszeri kulcs nem a kopogásban utazik: a kapu „cím:port” szerint könyvel, a mobil NAT portot
+  vált, a kopogás ismétlődik — ott törékeny volna.
+- **Az ár (57. mérés, valódi forgalom):** „nincs újdonság” 750 → 1156 B (+406 B: kézfogás 66 B, csomagonként
+  ~18 B, az aláírás ~196 B; terepen várhatóan +24–34%), egy eltérés +14,6%, egy 200 KB-os fájl +3,7%. ⚠️ A
+  becslésem (+15–25%) a „nincs újdonság” cserére alacsony volt.
+- **Az őr a rétegben:** minden munka-függvény védett résen dolgozik (ha nyers foglalatot kap, kezet fog) —
+  nyílt csere nincs; a kézfogás nélküli társsal megnevezett hibával áll le („nem fogott kezet”). A társ
+  tábla-kulcsa CSAK érvényes aláírással számít (különben nincs kötés belőle). A kapu a titkosított csomagot
+  adatnak látja (a FOGLALT-szabály ezen múlik).
+- **A felfedezés** a koinó rejtett jelét kiáltja (a koinó azonosítója és a futás jele, lenyomatolva).
+- **A zárt/nyílt mező** a `KoinoLetrehozas`-ban (`zart`), alapból zárt, a mező nélküli régi koinó is zárt, a
+  kapu csak igaz/hamisat enged; `koino "név" [leírás] nyilt`; az állapot fejléce kimondja.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

@@ -234,7 +234,7 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    elkérés feltétele csak ott kap értelmet.
    *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
 2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
-   betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
+   betartatása az E-vel jön). ✅ **KÉSZ (2026-10-03)** — a D89 „A MEGÉPÍTÉS” szakasza, az 57. mérés. *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
    programmal úgyis megszakad a csere (tiszta törés) — a titkosítás ugyanebbe a törésbe kerül, így a
    telefont EGYSZER kell frissíteni. És minden későbbi üzenet (a kérelem, a címjegyzék) már titkosított
    csatornán születik.
@@ -399,3 +399,12 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     mindkettő a részvételtől függ (melyik szeletet vállalom), az pedig a B/1-ben születik; a mai csere
     minden szeletben részt vesz, így ma nincs részleges tudás, csak a kézi úton · a VÉGLEGES SOR 3. és 7.
     pontja.
+45. **2026-10-03 · a csere titkosítása: a két állandó tábla-kulcsból, „küldés nélkül” (D89/1)** → **egyszeri
+    kulcs minden munkánál + az állandó a hitelesítéshez** · mert az állandókból számolt titoknál egy később
+    ellopott kulcs a teljes rögzített múltat kinyitná; az egyszeri kulcs kb. 64 bájtba kerül, és a
+    tábla-kulcs így titkosítva utazhat · Csaba, 2026-10-03 · D89 pontosítás.
+46. **2026-10-03 · a kézfogás formája: külön, JSON-os üzenetváltás két lépésben** → **egy 33 bájtos bináris
+    csomag irányonként, a hitelesítés (a tábla-kulcs aláírása) a már menő `CIMEK`-ben** · mert az 57. mérés
+    szerint a külön kézfogás 692 B lett volna munkánként, egy gépen belüli „nincs újdonság” csere pedig 484 B;
+    az egyszeri kulcs nem a kopogásban utazik, mert a kapu „cím:port” szerint könyvel, a mobil NAT portot vált
+    · `titkositas.js`, `udpVonal.js`: `kezfogasUdpResen`, `eredmenyek.md` 57.

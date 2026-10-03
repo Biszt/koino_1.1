@@ -389,6 +389,11 @@ export function alakiHiba(esemeny) {
   // A gyerek-bejelentés (a C 7. pontja) a születést a SZÜLŐ körében is kimondja (`szuleteseSzuloje`):
   // a szülő tehát ugyanúgy kulcs a vonalon, mint az `entitas`. Hiányzó vagy `null` szülő: legfelső
   // szintű gondolat.
+  // ⭐ D89/2: a koinó zártsága csak igaz/hamis lehet (hiányozhat — a régi koinó: zárt).
+  if (esemeny.tipus === 'KoinoLetrehozas' && esemeny.adat?.zart !== undefined
+      && typeof esemeny.adat.zart !== 'boolean') {
+    return 'a koinó zart mezője csak igaz vagy hamis lehet';
+  }
   if (esemeny.tipus === 'GondolatLetrehozas') {
     const szulo = esemeny.adat?.szulo;
     if (szulo !== undefined && szulo !== null && !azonositoAlaku(szulo)) {

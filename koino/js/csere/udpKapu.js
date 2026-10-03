@@ -48,6 +48,8 @@
 //
 // Használja: koino.js (az őrjárat).
 
+// ⭐ D89/1: a titkosított csomag jele — a munka adata, nem kopogás.
+import { TITKOS_JEL, KF_JEL } from './titkositas.js';
 import { createSocket } from 'node:dgram';
 import { stunValaszE, kulsoCimFoglalaton } from './pajzsfuro.js';
 
@@ -208,6 +210,13 @@ export async function udpKapuNyitasa(beallitas) {
 
   halo.on('message', (adat, felado) => {
     if (lezarva || stunValaszE(adat)) return;
+    // ⭐ D89/1: a munka csomagjai titkosítva jönnek (nem JSON) — a titkosított csomag ADAT: a beszélgetés
+    // már él. ⚠️ A kézfogás-csomag még nem az (a kézfogás szakaszában HALLAK a válasz, lent).
+    if (adat[0] === TITKOS_JEL || adat[0] === KF_JEL) {
+      const t = tarsak.get(felado.address + ':' + felado.port);
+      if (t && t.munka && adat[0] === TITKOS_JEL) t.adatJott = true;
+      return;
+    }
     let u;
     try { u = JSON.parse(adat.toString('utf8')); } catch { return; }
     if (!u || typeof u !== 'object') return;

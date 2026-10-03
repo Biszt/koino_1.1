@@ -6,6 +6,14 @@
 import { allapotSzamitasa, median, szetosztottPontok } from '../js/allapot/allapotSzamitas.js';
 
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+// ⭐ D89/2: a zárt/nyílt koinó — valódi művelettel és a kapuval.
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
+import { esemenyMentese, koinoEsemenyei, lancVege } from '../js/tar/esemenyTar.js';
+import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
+import { koinoLetrehozasa } from '../js/muveletek.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az állapotszámítás próbája');
 
@@ -294,6 +302,43 @@ proba('Az ISMERETLEN esemény-típus nem töri el a számítást', async () => {
 
   const a = allapotSzamitasa([t, p, jovobeli]);
   return a.entitasok.size === 1;
+});
+
+// ===================================
+// ⭐⭐ D89/2 (Csaba, 2026-10-02/03): ZÁRT VAGY NYÍLT KOINÓ
+// ===================================
+//
+// A létrehozáskor dől el (alapból ZÁRT, a nyílthoz ki kell mondani), nem változtatható, és a mező nélküli
+// régi koinó is zártnak számít (D89/5). ⚠️ A betartatás az E-vel jön — itt a mező és a számítás.
+
+async function zartKoino(beallitas) {
+  const tar = await esemenyTarNyitasa('zart-proba', await mkdtemp(join(tmpdir(), 'koino-zart-')));
+  const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url');
+  const k = { koino: 'zart-proba', kulcspar, szerzo, tar, lancTarolo: null };
+  const e = await koinoLetrehozasa(k, 'Próba', null, undefined, beallitas);
+  return { tar, k, e, allapot: allapotSzamitasa(await koinoEsemenyei(tar, 'zart-proba')) };
+}
+
+proba('⭐⭐ D89/2: a koinó alapból ZÁRT, a nyílt kimondható, és a mező nélküli régi koinó is zárt', async () => {
+  const alap = await zartKoino();
+  const nyilt = await zartKoino({ zart: false });
+  // A régi alak: a KoinoLetrehozas `zart` nélkül (kézzel aláírva, ahogy a D89 előtti program írta).
+  const regi = await ujEember(KOINO);
+  const regiKoino = await regi.tesz('KoinoLetrehozas', { nev: 'Régi', leiras: null, alapitok: [] });
+  return alap.e.adat.zart === true && alap.allapot.koino.zart === true
+    && nyilt.e.adat.zart === false && nyilt.allapot.koino.zart === false
+    && allapotSzamitasa([regiKoino]).koino.zart === true;
+});
+
+proba('⛔ D89/2: a nem igaz/hamis zártságot a kapu elveti (egy alak van, nem kettő)', async () => {
+  const { tar, k } = await zartKoino();
+  const veg = await lancVege(tar, k.szerzo);
+  const hamis = await esemenyLetrehozasa({ koino: 'zart-proba', tipus: 'KoinoLetrehozas',
+    adat: { nev: 'X', leiras: null, alapitok: [], zart: 'igen' }, entitas: null, entitasSorszam: 1,
+    latott: [], lancGyoker: null, ...veg }, k.kulcspar);
+  const v = await esemenyMentese(tar, hamis);
+  return v.mentve === false && /zart/.test(v.ok ?? '');
 });
 
 export default futtatas;

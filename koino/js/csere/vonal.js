@@ -373,9 +373,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       ? beallitas.dhtGepek() : beallitas.dhtGepek;
     const dhtGepek = Array.isArray(dhtForras) ? dhtForras : [];
 
+    // ⭐⭐ D89/1: A TÁBLA-KULCS A KÉZFOGÁS ALÁÍRÁSÁVAL utazik (`aa`) — a hívó (a rés-réteg) adja, ez a fájl
+    // nem tud kriptográfiáról. Ettől a tábla-kulcs nem bemondás: aki aláírta, az vett részt EBBEN a
+    // kézfogásban, tehát egy közbeékelődő nem adhatja ki magát a társnak.
+    const kezfogas = beallitas.kezfogas ?? null;
     kuld({
       uzenet: 'CIMEK',
       ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
+      ...(tablaKulcs && typeof kezfogas?.alairas === 'string' ? { aa: kezfogas.alairas } : {}),
       ...(dhtGepek.length ? { dht: dhtGepek } : {}),
       udp: [
         ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
@@ -384,7 +389,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     });
     const ove = await varj('CIMEK');
     // ⚠️ Az alakját itt nem ellenőrizzük, csak továbbadjuk (1. szabály); a hívó ellenőriz.
-    kapottTablaKulcs = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
+    // ⛔ D89/1: a társ tábla-kulcsa CSAK a kézfogásra tett érvényes aláírásával számít — aláírás vagy
+    // kézfogás nélkül (régi program, közbeékelődő) nincs kötés belőle.
+    const bemondott = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
+    kapottTablaKulcs = bemondott && typeof kezfogas?.ellenoriz === 'function'
+      && kezfogas.ellenoriz(bemondott, ove.aa) ? bemondott : null;
     kapottDhtGepek = Array.isArray(ove.dht)
       ? ove.dht.filter((g) => typeof g === 'string').slice(0, IDEGEN_CIM_KORLAT) : [];
     kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])

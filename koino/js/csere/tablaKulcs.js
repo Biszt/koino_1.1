@@ -17,8 +17,8 @@
 //     címmel azonosítani, hiszen épp a cím az, ami elromlik.*
 //   · `titkosito` (X25519) — ebből lesz a TÁRSANKÉNTI közös titok, amivel a kiírt címet
 //     titkosítjuk. ⛔ A titkot SOHA nem küldjük el: mindkét fél a saját titkos kulcsából
-//     és a másik nyilvánosából SZÁMÍTJA ki. *A csere-csatorna nyílt — ami rajta megy, azt
-//     bárki elolvashatja az úton.*
+//     és a másik nyilvánosából SZÁMÍTJA ki. *A közös titok így a hirdetőtáblán is működik, ahol nincs
+//     kézfogás. (A csere 2026-10-03 óta maga is titkosított — D89/1, `titkositas.js`.)*
 //
 // ⛔ MIÉRT KELL TITKOSÍTANI (36. mérés): a bejegyzést nem egy „tábla" őrzi, hanem 7–8
 // VÉLETLEN internetes gép. Nyílt tartalomnál ők látnák az állandó kulcsot és mellette a

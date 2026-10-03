@@ -18,6 +18,8 @@
 import { createSocket } from 'node:dgram';
 import { probaGyujtemeny } from './probaFuttato.js';
 import { udpKapuNyitasa } from '../js/csere/udpKapu.js';
+// ⭐ D89/1: a munka csomagjai titkosítva jönnek — a kapunak azt is adatnak kell látnia.
+import { TITKOS_JEL } from '../js/csere/titkositas.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az állandó UDP-kapu próbája (D69/3)');
 
@@ -34,7 +36,7 @@ const varj = (ms) => new Promise((kesz) => setTimeout(kesz, ms));
  * végén tudja meg a társ tábla-kulcsából (`csere.kapottTablaKulcs`), a hamis ebből olvassa ki,
  * és az eredményében adja vissza (`alairo`).
  */
-async function hamisKapu({ ido = 100, bekopogoKorlat = 3, jegyzekKorlat, nevjegyzek } = {}) {
+async function hamisKapu({ ido = 100, bekopogoKorlat = 3, jegyzekKorlat, nevjegyzek, titkosan = false } = {}) {
   const naplo = { munkak: [], egyszerre: 0, csucs: 0, jelzesek: [] };
   const futo = new Map();
   const kapu = await udpKapuNyitasa({
@@ -47,7 +49,9 @@ async function hamisKapu({ ido = 100, bekopogoKorlat = 3, jegyzekKorlat, nevjegy
       futo.set(kulcs, (futo.get(kulcs) ?? 0) + 1);
       naplo.csucs = Math.max(naplo.csucs, futo.get(kulcs));
       naplo.munkak.push({ ...tars, ido: Date.now() });
-      const beszel = () => halo.send(JSON.stringify({ sz: 1, a: 'x' }), tars.port, tars.cim);
+      // ⭐ D89/1: a valódi munka titkosítva beszél — a hamis is tud (a jel + valami, ami nem JSON).
+      const csomag = titkosan ? Buffer.from([TITKOS_JEL, 1, 2, 3, 4]) : JSON.stringify({ sz: 1, a: 'x' });
+      const beszel = () => halo.send(csomag, tars.port, tars.cim);
       beszel();
       const ora = setInterval(beszel, 50);
       await varj(ido);
@@ -121,6 +125,21 @@ proba('⛔⛔ TÁRSANKÉNT EGYSZERRE EGY MUNKA — a munka alatti kopogás FOGLA
       && b.naplo.munkak.length >= 2                   // ⭐ …de a második kopogás is sorra került
       && a.naplo.jelzesek.some((e) => e.mi === 'FOGLALT')
       && masodik.atfurt === 1;
+  } finally { a.kapu.zar(); b.kapu.zar(); }
+});
+
+proba('⛔⛔ …A TITKOSÍTOTT ADAT IS ADAT (D89/1) — a munka alatti kopogás erre is FOGLALT-at kap', async () => {
+  // ⛔ A kapu a csomagot JSON-ként olvasta: a titkosított (nem JSON) csomagot némán eldobta volna, és nem
+  // tudta volna, hogy a munka már folyik — a második kopogás egy második, összeakadó munkát indított volna.
+  const a = await hamisKapu({ ido: 100, titkosan: true });
+  const b = await hamisKapu({ ido: 1500, titkosan: true });
+  try {
+    const elso = a.kapu.kopog(cel(b), { idokorlat: 800 });
+    await varj(400);
+    await a.kapu.kopog(cel(b), { idokorlat: 4000 });
+    await elso;
+    await varj(1800);
+    return b.naplo.csucs === 1 && a.naplo.jelzesek.some((e) => e.mi === 'FOGLALT');
   } finally { a.kapu.zar(); b.kapu.zar(); }
 });
 

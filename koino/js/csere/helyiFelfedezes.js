@@ -38,6 +38,8 @@
 //
 // Használják: koino.js (`felfedez` parancs) és a csereProba.js.
 
+// ⭐ D89/7: a koinó azonosítója nem hangzik el nyíltan — a rejtett jel lenyomat.
+import { createHash } from 'node:crypto';
 import { createSocket } from 'node:dgram';
 import { randomBytes } from 'node:crypto';
 
@@ -81,9 +83,20 @@ export const VALASZ_KOZ = 1000;
 // ===================================
 
 /**
+ * ⭐⭐ D89/7 (Csaba, 2026-10-03): A KOINÓ REJTETT JELE — a koinó azonosítója és a futás véletlen jele
+ * együtt, lenyomatolva. Aki tudja az azonosítót, ugyanezt kiszámolja és felismeri; aki nem, az a wifin csak
+ * annyit lát, hogy egy koino fut itt — azt nem, hogy MELYIK koinóé (egy zárt koinó tagságát se árulja el).
+ * ⚠️ A futás jele minden kiáltásban más, így két kiáltásból sem lehet összefűzni, hogy ugyanaz a koinó.
+ */
+export function koinoRejtettJele(koino, jel) {
+  return createHash('sha256').update('koino-felfedezes-1').update(String(koino)).update('|')
+    .update(String(jel)).digest('base64url').slice(0, 22);
+}
+
+/**
  * Az üzenet, amit kikiáltunk vagy visszaszólunk.
  *
- * ⚠️ Szándékosan APRÓ és unalmas: egy koino-azonosító, egy port, és egy véletlen jel.
+ * ⚠️ Szándékosan APRÓ és unalmas: a koinó rejtett jele, egy port, és egy véletlen jel.
  * Minden további mező olyasmi lenne, amit egy idegen a wifin ingyen megtudhat rólunk.
  *
  * @param {'KOPOGOK'|'ITT-VAGYOK'} mi
@@ -92,7 +105,7 @@ export const VALASZ_KOZ = 1000;
  * @param {string} jel - a FUTÁS véletlen jele (ettől ismerjük fel a saját visszhangunkat)
  */
 export function felfedezoUzenet(mi, koino, port, jel) {
-  return JSON.stringify({ mi, koino, port, jel });
+  return JSON.stringify({ mi, k: koinoRejtettJele(koino, jel), port, jel });
 }
 
 /**
@@ -125,7 +138,10 @@ export function kialtasFeldolgozasa(nyers, felado, sajatKoino, sajatJel) {
 
   // ⚠️ MÁS KOINO — teljesen rendes dolog egy közös wifin (egy lakásban két koino is futhat).
   // Nem hiba, nem gyanús: egyszerűen nincs miről beszélnünk.
-  if (uzenet.koino !== sajatKoino) return { rendben: false, ok: 'mas-koino' };
+  // ⭐ D89/7: a rejtett jelet a saját azonosítónkból számoljuk újra — ha nem egyezik, más koinóé.
+  if (typeof uzenet.jel !== 'string' || uzenet.k !== koinoRejtettJele(sajatKoino, uzenet.jel)) {
+    return { rendben: false, ok: 'mas-koino' };
+  }
 
   const port = Number(uzenet.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {

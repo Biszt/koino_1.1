@@ -323,7 +323,7 @@ async function sajatKiosztott(kornyezet, entitas) {
  * @param {string} nev
  * @param {string} [leiras]
  */
-export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok) {
+export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {}) {
   // ⭐⭐ AZ ALAPÍTÓ KÖR — és miért nem elég egyetlen alapító.
   //
   // A 2. lépcsőhöz (pénztárca) három tanúsítás kell felhatalmazott tanúsítóktól. Egyetlen
@@ -337,7 +337,11 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok) {
   return esemenytTeszek(kornyezet, 'KoinoLetrehozas', {
     nev,
     leiras: leiras || null,
-    alapitok: Array.isArray(alapitok) ? [...alapitok] : []
+    alapitok: Array.isArray(alapitok) ? [...alapitok] : [],
+    // ⭐⭐ D89/2 (Csaba, 2026-10-02/03): ZÁRT vagy NYÍLT — a létrehozáskor dől el, és nem változtatható.
+    // Alapból ZÁRT (a nyílthoz ki kell mondani). A zárt koinó tartalmát a készülék csak tagnak adja ki —
+    // ⚠️ a betartatás az E-vel jön (a tag a kézfogásban bizonyítja magát); addig a mező ott van, de nem tilt.
+    zart: beallitas.zart !== false
   });
 }
 
