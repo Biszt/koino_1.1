@@ -156,6 +156,11 @@ közös szeleteket és a legutóbbi lenyomatukat, a kör csak a változottakról
 ⭐ **D90 (2026-10-03): a gyökér is ide tartozik** — a legfelső szintű gondolatok születésének listáját a G osztja
 szét (lenyomat szerinti darabok, több helyen, bárki kiszámolja, kitől kérdezze); a vállalásba nem kerül.
 
+⭐ **Az átvizsgálás (S10, 2026-10-03):** [`g_cimjegyzek_atvizsgalas.md`](g_cimjegyzek_atvizsgalas.md) — a
+követelmények, a NAT valósága („tudni, ki tartja” ≠ „elérni”), az irodalom, négy jelölt (C1 a fa és a raj ·
+C2 belső hash-DHT · C3 a BitTorrent-DHT vakított témával · C4 középút), és a mérés: egy valódi DHT-művelet
+~50 kérdés ≈ 5–10 KB — tehát a DHT csak takarékosan. ⏸️ **A döntés (SK7) Csabáé.**
+
 > *„a meta adatok, amik megmutatják, hogy mi kinél található, azt több helyen kell tárolni, és
 > biztosítani, hogy az egész hálózat tudja, vagy tudja azt, hogy ki tudhatja."* — Csaba, 2026-10-01
 
