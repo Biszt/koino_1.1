@@ -139,6 +139,11 @@ független). A folytonosság élménye nem fontos: a válasz akár percek múlva
 ⭐ **D87 (2026-10-02):** a törzs a kérelem útján jön vissza, a továbbító átengedi, de nem tartja meg és
 nem szolgálja ki; a közvetítő nem tudja, ki a kérdező (a kérelem nem hordozza a címét, a válasz
 lépésenként megy vissza, az ugrás-számláló kezdőértéke véletlen).
+🔍 **Az átvizsgálás (2026-10-03):** [`d_kerelmezes_atvizsgalas.md`](d_kerelmezes_atvizsgalas.md) — a 60. mérés
+(szimuláció) szerint a kötés-hálón való elárasztás nagy koinóban szinte semmit nem ad (2 ugrás után semmit), a döntő a
+rés nyitása a tartóhoz: a KOPOGTATÁS (randevú a DHT-n, a buliban mindkét fél kopog) T = 3 tartónál 20% → 76%. Hat
+nyitott kérdés javaslattal (K1–K6: az út, a közvetítő tartása, az ugrás-számláló, a fejléc–törzs határ, az össz-pont
+a szeletelt világban, a kérdés alakja) — Csaba döntésére vár.
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
 

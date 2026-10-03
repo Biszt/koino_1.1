@@ -4600,3 +4600,39 @@ véletlen társak is” mondata, most számokkal). ⭐ **A választás: L = 8, f
 címek frissességét őrzi) — `tarsak.js`. ⚠️ **A határa:** a szimuláció feltételezi, hogy bármely két tartó közvetlenül
 cserélhet; NAT mögött ez csak a kötéseken, a postaládákon és (a D-vel) a kérelem továbbadásán át megy.
 
+## 60. ⭐ A KÉRELEM ÚTJA A NAT-VALÓSÁGBAN — szimuláció (a D pillér átvizsgálása, 2026-10-03, a laptopon)
+
+*`kerelemMeres.js`: N készülék, mindegyiknek K kötése (véletlen gráf), a buliban 70% él, f arányuk fogadóképes
+(bárki eléri, aki tudja a címét); egy szeletnek T tartója van, λ eséllyel a kérő 2 lépéses környékén. A kérő minden
+tartó címét ismeri (a G legjobb esete). Utak: KÖZVETLEN (a tartó a kötésem vagy fogadóképes), ELÁRASZTÁS a
+kötés-hálón h ugrásig (azonosítóval), VÉLETLEN SÉTA, és KOPOGTATÁS (randevú a DHT-n, mindkét fél kopog — a pár
+`lyuk` eséllyel fúrható). Alap: N = 20 000, K = 3, f = 10%, T = 3, λ = 0. 3000 kérelem cellánként.*
+
+```
+T (λ = 0):        közvetlen   elárasztás h=1..5 (+közvetlen)          üzenet h=1..5
+  1                  7,1%      7,1   7,1   7,1   7,1   7,2%            2  7 14 24 37
+  3                 20,5%     20,5  20,5  20,5  20,6  20,6%            2  7 14 24 38
+  10                52,5%     52,5  52,5  52,5  52,6  52,8%
+  30                89,4%     89,4  89,4  89,5  89,6  89,8%
+λ (T = 3):  0       20,5%     20,5  20,5  20,5  20,6  20,6%
+            0,3     34,3%     34,3  51,6  51,6  51,6  51,7%
+            0,6     50,0%     50,0  74,0  74,1  74,1  74,1%
+f (T = 3):  0        0,1%      0,1   0,1   0,1   0,3   0,4%
+            0,25    43,7%     43,7  43,7  43,7  43,8  43,8%
+N (T = 3):  50      27,2%     27,2  38,8  51,9  62,9  72,2%            2  7 14 23 33
+            100000  20,9%     20,9  20,9  20,9  20,9  20,9%            2  7 14 24 38
+K (T = 3):  5       19,7%     19,7  19,7  20,1  21,1  23,5%            3 17 53 156 442
+séta (w = 3, T = 10, λ = 0,3, közvetlen nélkül): 42,9 67,3 68,0 68,7 68,9%  (elárasztás: 49,7 77,5 77,6 77,6 77,7%)
+KOPOGTATÁS (T = 3):  lyuk 0,3 → 59,4% · 0,5 → 75,8% · 0,8 → 92,9%   (közvetlen: ~20%)
+  fogadóképes nélkül (f = 0): lyuk 0,3 → 51,5% · 0,5 → 72,0% · 0,8 → 91,6%   (közvetlen: 0%)
+  + elárasztás h = 2: ugyanannyi (λ = 0); λ = 0,3 mellett 75,8 → 83,2%
+```
+
+⭐ **A lelet:** ⛔ az elárasztás a kötés-hálón nagy koinóban **szinte semmit nem ad** (K = 3, 70% élő: a kérelem alig
+terjed — 5 ugrás ~38 üzenet; K = 5-nél 442 üzenet, ugyanannyi siker); csak közösségi érdeklődésnél (λ) és kis
+koinóban segít, ott is **2 ugrásig**. A közvetlen elérés a fogadóképesek arányán áll (f = 0-nál 0,1%). ⭐⭐ **A döntő
+a rés nyitása a tartóhoz**: a kopogtatással (a tartó tudja, hogy kérnek tőle, és a buliban ő is kopog) T = 3-nál
+20% → 76% (fele fúrható pár), fogadóképes gép nélkül is 72%. ⚠️ **A határa:** a valódi fúrható arány terepmérés (az
+otthon ↔ mobil rés megy, a mobil ↔ mobil — 🅱️ — mérve még nincs); a kötés-háló véletlen gráf (a valódi
+közösségibb, ott a λ nagyobb); a tartó ránézésének késését nem modellezi. → [`d_kerelmezes_atvizsgalas.md`](../../docs/d_kerelmezes_atvizsgalas.md).
+
