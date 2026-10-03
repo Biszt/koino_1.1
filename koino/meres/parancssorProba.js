@@ -272,7 +272,8 @@ proba('⭐ D89/2: a `koino` parancs alapból ZÁRT, `nyilt` szóval NYÍLT koin�
 // csak a G1 szeletét és a G1-es töredékét kapja (ahogy egy G1-es szavazó tartja a szigorú (b) alatt): a
 // csomaggal ő is ELVETVE-t lát. ⭐ A csomagot A ŐRJÁRATA adja ki magától (a bekötés próbája), a `csomag`
 // parancs utána már nem talál pótolnivalót. ⛔ Egy negyedik, D, csak a G1 szeletét kapja — ő a G2-es részből csak A
-// szavazatát látja, ezért NEM jut ugyanarra (ez az, amiért a csomag kell). Viselkedést mérünk: a
+// szavazatát látja, ezért NEM jut ugyanarra — „NEM ISMERT”-et mond, és nem hajt végre semmit (ez az, amiért a
+// csomag kell, és amiért a döntés ismerete). Viselkedést mérünk: a
 // kivitt töredék-szeletben ott a csomag, és a másik készülék ÁLLAPOTA mondja ki a döntést.
 proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a csomaggal ugyanazt a döntést látja',
   async () => {
@@ -335,7 +336,9 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
       const kepD = await fut(D, 'allapot');
       // Az őrjárat kiadta mindkét csomagot (a tárban), a parancs már nem talál pótolnivalót.
       return csomagok === 2 && /1 lezárt döntés · 0 új csomag/.test(kiadas) && toredekben
-        && kepA.includes('ELVETVE') && kepC.includes('ELVETVE') && !kepD.includes('ELVETVE');
+        && kepA.includes('ELVETVE') && kepC.includes('ELVETVE')
+        // ⭐ D85 T3: D a G2-es részt nem ismeri — „NEM ISMERT”, és a G1-e nem olvadt be (a régi címe áll)
+        && kepD.includes('NEM ISMERT') && !kepD.includes('ELVETVE') && kepD.includes('„ELSO"');
     } finally {
       if (orjarat) orjarat.kill();
       await varj(300);

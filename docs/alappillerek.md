@@ -153,6 +153,9 @@ közös szeleteket és a legutóbbi lenyomatukat, a kör csak a változottakról
 
 ### G. ⭐⭐ A CÍMJEGYZÉK — „mi kinél van" (D84/2) — B-re épül, a D alapja
 
+⭐ **D90 (2026-10-03): a gyökér is ide tartozik** — a legfelső szintű gondolatok születésének listáját a G osztja
+szét (lenyomat szerinti darabok, több helyen, bárki kiszámolja, kitől kérdezze); a vállalásba nem kerül.
+
 > *„a meta adatok, amik megmutatják, hogy mi kinél található, azt több helyen kell tárolni, és
 > biztosítani, hogy az egész hálózat tudja, vagy tudja azt, hogy ki tudhatja."* — Csaba, 2026-10-01
 
@@ -240,8 +243,13 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    csatornán születik.
 3. **B/1 + B/2 — a vállalás és a két tár** (D86): a vállalás a saját láncból (a kiosztás kulcsai + a
    saját azonosság-szeletem), az átmeneti tár, a „megnézett", a D14 csak a tartósra, az eldobás. A csere
-   még a mai módon fut. ⏸️ Itt kell eldönteni a gyökér tartását (a legfelső szintű gondolatok születése).
-   ⛔⛔ **ÉS A DÖNTÉS ISMERETE (D85 T3, a (B) építéséből — mérve, `dontesiCsomagProba.js` 1.):** a több
+   még a mai módon fut. ✅ A gyökér tartása eldőlt (**D90**, 2026-10-03, Csaba: „legyen a (B)”): nem vállalás,
+   hanem a G dolga (a legfelső szintű születések listáját a kereső-réteg osztja szét); a koinó születését
+   mindenki tartja.
+   ⛔⛔ **ÉS A DÖNTÉS ISMERETE (D85 T3, a (B) építéséből — mérve, `dontesiCsomagProba.js` 1.):** ✅ **KÉSZ
+   (2026-10-03), de TARTALMI jellel** (a 47. elágazás): egy rész akkor ismert, ha az érintettjének legalább egy
+   pont-eseménye a bemenetben van (a tárból vagy egy csomagból) — nem a vállalásból, így a D17 áll.
+   *(Az eredeti terv szövege:)* a több
    érintettes döntés-számítás a részvételt (a vállalást) is megkapja, és egy rész csak akkor ISMERT, ha a
    szeletét vállalom, vagy egy csomag hozta el. Ha nem ismert, a javaslat nálam „nem ismert” (D19, T3), a
    végrehajtás nem fut, és ha a SAJÁT részem egyszer sem mondott igent, ezt is kimondja. *Miért kell:* a
@@ -408,3 +416,11 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     szerint a külön kézfogás 692 B lett volna munkánként, egy gépen belüli „nincs újdonság” csere pedig 484 B;
     az egyszeri kulcs nem a kopogásban utazik, mert a kapu „cím:port” szerint könyvel, a mobil NAT portot vált
     · `titkositas.js`, `udpVonal.js`: `kezfogasUdpResen`, `eredmenyek.md` 57.
+47. **2026-10-03 · a döntés ismerete a VÁLLALÁSBÓL (a ③ terve)** → **TARTALMI jel: egy rész ismert, ha az
+    érintettjének legalább egy pont-eseménye a bemenetben van (a tárból vagy egy döntési csomagból)** · mert a
+    vállalás-alapú jelnél ugyanazokból az eseményekből két készülék mást számolt volna (a D17 ellen); pont-
+    eseményt semmi nem jelent be máshová, tehát ha egy sincs, a szeletet nem láttuk, és a javaslattevő
+    pont-eseménye mindig létezik — a jel minden helyzetben (mai csere, szigorú (b), kézi út) működik ·
+    `javaslatSzamitas.js`: `ismeretlenReszek`, a `nemIsmert` státusz.
+48. **2026-10-03 · a gyökér tartása (D90)** → **a G dolga, nem vállalás** · Csaba: „legyen a (B)” — az (A)
+    terhe a koinó méretével nőne; a gyökér semmiről nem dönt, csak a megtalálást segíti · D90.

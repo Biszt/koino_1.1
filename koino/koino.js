@@ -1543,15 +1543,18 @@ async function allapotKiirasa(napokMulva) {
   const javaslatKiirasa = (j) => {
     const kik = j.erintettek ?? [];
     const szin = j.statusz === 'elfogadva' ? SZIN.jo : j.statusz === 'elvetve' ? SZIN.nem : '';
+    // ⭐ D85 T3: a „nem ismert” két szó (és nem hajtódik végre semmi — D19).
+    const felirat = j.statusz === 'nemIsmert' ? 'NEM ISMERT' : j.statusz.toUpperCase();
     kiir('  ' + SZIN.halvany + j.azonosito.slice(0, 8) + SZIN.vege
-      + '  ' + szin + j.statusz.toUpperCase() + SZIN.vege
+      + '  ' + szin + felirat + SZIN.vege
       + '  ' + (kik.length > 1 ? kik.length + ' entitás' : j.muvelet + ': „' + (j.valtozas?.cim ?? '—') + '"'));
     // ⭐⭐ MINDEN ÉRINTETT SORONKÉNT, A SAJÁT DÖNTÉSÉVEL — a művelet entitásonkénti, ÉS a
     // döntés is: minden résznek teljesítenie kell a SAJÁT küszöbeit (töredék-modell).
     // Ezért nem lehet egyetlen sorral összefoglalni; a rész-sorok mutatják meg, MELYIK
     // rész buktatja el az egészet.
     for (const r of (j.reszek ?? [])) {
-      const jel = r.kuszobTeljesul ? SZIN.jo + '✔' : SZIN.nem + '✘';
+      // ⭐ D85 T3: a nem ismert rész jele „?” — a számai a nálunk lévő töredékből jönnek, nem a döntésből.
+      const jel = r.ismert === false ? SZIN.halvany + '?' : r.kuszobTeljesul ? SZIN.jo + '✔' : SZIN.nem + '✘';
       // ⚠️ KÉTFÉLE HIÁNY, KÉTFÉLE SZÓ: amit ismertünk és eltűnt (törlés vagy felejtés),
       // az „már nincs"; amiről sosem hallottunk, az „ismeretlen". A kettő összemosása
       // pont azt a különbséget tüntetné el, amit a D19 véd.
@@ -1563,6 +1566,15 @@ async function allapotKiirasa(napokMulva) {
         + '  👍 ' + r.tamogatok + ' 👎 ' + r.ellenzok + ' 🤷 ' + r.tartozkodok
         + ' (' + r.szavazok + '/' + r.nevezo + ')'
         + ' · ' + szazalek(r.tamogatottsagEzrelek) + SZIN.vege);
+    }
+    // ⭐ D85 T3: ha a döntés nem ismert, kimondjuk, miért — és ha az ismert rész(ek) egyszer sem mondtak
+    // igent, azt is: akkor az entitás biztosan nem változott (az ÉS miatt), csak a címke kérdéses.
+    if (j.ismeretlenReszek?.length) {
+      const ismertek = (j.reszek ?? []).filter((r) => r.ismert);
+      kiir('      ' + SZIN.halvany + j.ismeretlenReszek.length + ' rész bemenetét nem ismerem'
+        + ' (a döntési csomag hozza el, vagy a szelete)'
+        + (ismertek.length && !ismertek.some((r) => r.valahaTeljesult)
+          ? ' · az ismert rész eddig nem mondott igent' : '') + SZIN.vege);
     }
     kiir('      ' + SZIN.halvany
       + 'bizonyosság ' + szazalek(j.bizonyossagiMutato) + SZIN.vege);

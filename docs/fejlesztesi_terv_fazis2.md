@@ -4527,8 +4527,8 @@ tárba, holott ugyanez a pont kimondja, hogy átkerül.
    felhatalmazás / tanúsítás (a MÁSIK azonosság-szeletében), az ellentmondás-bejelentés.
 3. A meghívott azonosság-szeletéről (tartsa-e a meghívó) az **E** dönt.
 
-⏸️ **Nyitott (B):** a gyökérre nem lehet pontot tenni — a szigorú (b) alatt ki tartja a legfelső szintű
-gondolatok születését?
+✅ **Eldőlt (D90, 2026-10-03):** a gyökér (a legfelső szintű születések listája) nem vállalás, hanem a G dolga;
+a koinó születését mindenki tartja.
 
 ### D87. A KÉRELEM ÚTJA: a törzs és a kérdező (2026-10-02, Csaba)
 
@@ -4631,6 +4631,26 @@ lemezen nem része a ②-nek.
 - **A felfedezés** a koinó rejtett jelét kiáltja (a koinó azonosítója és a futás jele, lenyomatolva).
 - **A zárt/nyílt mező** a `KoinoLetrehozas`-ban (`zart`), alapból zárt, a mező nélküli régi koinó is zárt, a
   kapu csak igaz/hamisat enged; `koino "név" [leírás] nyilt`; az állapot fejléce kimondja.
+
+### D90. A GYÖKÉR ÉS A KOINÓ SZÜLETÉSE (2026-10-03, Csaba: „legyen a (B)”)
+
+**Amiből jött:** a ③ (B/1 — a vállalás) előtt: a gyökérre nem lehet pontot tenni (nem gondolat, hanem a
+legfelső szintű gondolatok képzeletbeli szülője — nincs eseménye, nincs entitása), ezért a vállalásból nem
+jön ki, ki tartja a legfelső szintű gondolatok SZÜLETÉSÉNEK LISTÁJÁT (a gyökér bejelentés-listáját). A
+legfelső szintű gondolatokat magukat a pont-tartóik tartják (a szeletükben a saját születésük is benne van);
+a lista ahhoz kell, hogy valaki felülről böngészhesse a koinót (pl. egy új tag).
+
+#### A DÖNTÉS
+
+1. ⭐ **A gyökér NEM vállalás, hanem a MEGTALÁLÁS dolga (B):** a legfelső szintű születések listáját a **G**
+   (a címjegyzék / a kereső-réteg) osztja szét lenyomat szerinti darabokban, több helyen — bárki kiszámolja,
+   kitől kérdezze; egy készülék a gyökérből csak egy korlátos darabot tart (a „mindent” beállítású, D83/2,
+   tarthatja az egészet). *Miért:* az (A) („aki legfelső szintű gondolatot tart, a teljes listát is”) terhe a
+   koinó méretével nőne (a „végtelen” ellen); és *ami dönt, ne kívánjon élő lekérdezést — csak a megtalálás
+   kívánhat*: a gyökér semmiről nem dönt.
+2. **A koinó születését (`KoinoLetrehozas`) mindenki tartja** — egyetlen esemény (név, alapítók, zárt/nyílt),
+   nélküle a program el sem indul a koinóval, és nem nő a koinó méretével. *(Claude javaslata; Csaba a
+   gyökér-kérdéssel együtt kapta, külön nem vitatta — visszafordítható.)*
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 

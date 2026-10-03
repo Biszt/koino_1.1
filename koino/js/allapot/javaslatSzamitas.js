@@ -484,6 +484,11 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   let lezarasIdeje = kozosLezaras(reszek);
   let index = 0;
   let kesoiSzavazatok = 0;
+  // ⭐ D85 T3 (B): mely rész mondott VALAHA igent a lezárásig — a „nem ismert” javaslatnál ebből tudjuk
+  // kimondani, hogy az ismert rész(ek) eddig nem engedték (akkor az entitás biztosan nem változott).
+  const valaha = new Set();
+  const valahaJegyez = () => { for (const r of reszek) if (r.allas.kuszobTeljesul) valaha.add(r.entitas); };
+  valahaJegyez();
 
   for (; index < sor.length; index++) {
     const esemeny = sor[index];
@@ -561,6 +566,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
 
     reszek = allasokMost();
     lezarasIdeje = kozosLezaras(reszek);
+    valahaJegyez();
   }
 
   // Hány SZAVAZAT maradt a lezáráson kívül (a késői tudatpont-rendezés nem „szavazat")
@@ -575,7 +581,8 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
     // ⛔⛔ ÉS ITT AZ „ÉS": a csoport csak akkor elfogadott, ha MINDEN rész teljesíti a
     // SAJÁT küszöbeit. Egyetlen elbukó rész az egész javaslatot elveti.
     kuszobTeljesul: reszek.every((r) => r.allas.kuszobTeljesul),
-    kesoiSzavazatok
+    kesoiSzavazatok,
+    valaha
   };
 }
 
@@ -680,7 +687,17 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
       // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
       javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? [])
     );
-    const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok } = csoport;
+    const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok, valaha } = csoport;
+
+    // ⭐⭐ A DÖNTÉS ISMERETE (D85 T3, 2026-10-03): egy rész csak akkor ISMERT, ha az érintettjének legalább
+    // egy pont-eseménye ott van a bemenetben (a tárból vagy egy döntési csomagból). Pont-eseményt semmi nem
+    // jelent be máshová, tehát ha egy sincs, az érintett szeletét nem láttuk — a nevezője (a tulajdonosai)
+    // ismeretlen. ⛔ Ilyenkor a döntést nem mondjuk ki (és nem hajtjuk végre): „nem ismert” (D19). *Mérve: a
+    // csak-G1-nézet csomag nélkül a G2-es részből csak a mindkét részen szavazó szavazatát látta, és
+    // ELFOGADVA-t számolt ott, ahol a teljes tudás ELVETVE-t.* ⭐ A jel TARTALMI, nem a készülék vállalásából
+    // jön: ugyanazokból az eseményekből mindenki ugyanazt számolja (D17). A javaslattevő pont-eseménye mindig
+    // létezik (pont nélkül nem tehetett javaslatot), tehát a teljes tudás mellett minden rész ismert.
+    const ismeretlenReszek = erintettAzonositok.filter((az) => !(tudatpontok.get(az)?.length));
 
     // ⚠️ A FELÜLETNEK ÉS A PARANCSSORNAK EGY SZÁM KELL, a döntésnek viszont N.
     // Az összefoglaló számok az ELSŐ részé — ugyanúgy, ahogy az `erintett` és a
@@ -697,6 +714,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // ----- 2. STÁTUSZ -----
     let statusz;
     if (most < lezarasIdeje) statusz = 'folyamatban';
+    else if (ismeretlenReszek.length) statusz = 'nemIsmert';
     else statusz = kuszobTeljesul ? 'elfogadva' : 'elvetve';
 
     // ----- 3. AZ EGYEZMÉNY -----
@@ -766,8 +784,13 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
         valtozas: r.valtozas,
         kuszobok: r.kuszobok,
         kulonvalok: r.kulonvalok,
-        ...r.allas
+        ...r.allas,
+        // ⭐ D85 T3: ismerjük-e a rész bemenetét, és mondott-e valaha igent (a lezárásig).
+        ismert: !ismeretlenReszek.includes(r.entitas),
+        valahaTeljesult: valaha.has(r.entitas)
       })),
+      // ⭐ D85 T3: a nem ismert részek (az érintettjük egyetlen pont-eseményét sem láttuk).
+      ismeretlenReszek,
 
       dontesiIdo,
       lezarasIdeje,

@@ -22,7 +22,7 @@ import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar
 import { esemenyMentese, lancVege, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa, szelet, bejelentesHelyei } from '../js/esemeny/esemeny.js';
 import {
-  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa, szavazas,
+  koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa, szavazas, ertekJavaslat,
   dontesiCsomagokKiadasa
 } from '../js/muveletek.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
@@ -97,9 +97,45 @@ proba('⭐⭐ a csak-G1-nézet a csomaggal ugyanazt a döntést számolja, mint 
   const csomagNelkul = dontes(nezet(minden.filter((e) => e.tipus !== CSOMAG_TIPUS), g1, j), j);
   const csomaggal = dontes(nezet(minden, g1, j), j);
   const g1Csomag = kiadva.filter((e) => e.adat.cel === g1).length;
+  const g2 = teljes.reszek[1].entitas;
   return teljes.statusz === 'elvetve' && g1Csomag >= 1
-    && reszSzamok(csomagNelkul) !== reszSzamok(teljes)       // nélküle a G2-es részt rosszul látja
-    && csomaggal.statusz === teljes.statusz && reszSzamok(csomaggal) === reszSzamok(teljes);
+    // ⭐ nélküle a G2-es részt nem ismeri — és ezt mondja ki (nem a rossz ELFOGADVA-t számolja)
+    && csomagNelkul.statusz === 'nemIsmert' && JSON.stringify(csomagNelkul.ismeretlenReszek) === JSON.stringify([g2])
+    && csomagNelkul.reszek[0].ismert === true && csomagNelkul.reszek[0].valahaTeljesult === true
+    && csomaggal.statusz === teljes.statusz && reszSzamok(csomaggal) === reszSzamok(teljes)
+    && teljes.ismeretlenReszek.length === 0;
+});
+
+// ===================================
+// ⭐⭐ A DÖNTÉS ISMERETE (D85 T3, 2026-10-03) — a „nem ismert” nem hajt végre, és kimondja a saját részét
+// ===================================
+
+proba('⭐⭐ a NEM ISMERT döntés nem hajtódik végre — és ha az ismert rész sosem mondott igent, az is látszik', async () => {
+  // A G1 részvételi küszöbe 100%, és C ELLENZI a G1-es részt (A támogat): előbb a részvétel kevés (1/2), aztán
+  // a támogatás (1/2 < 51%) — a rész SOHA nem teljesül. A csak-G1-nézet csomag nélkül a G2-t nem ismeri →
+  // „nem ismert”, a G1 változatlan, és az ismert rész (G1) valahaTeljesult = hamis.
+  const mappa = await mkdtemp(join(tmpdir(), 'koino-ismeret-'));
+  const tar = await esemenyTarNyitasa(KOINO, mappa);
+  const A = await ujSzereplo(tar, mappa);
+  const C = await ujSzereplo(tar, mappa, false);
+  await koinoLetrehozasa(A, 'Ismeret');
+  const g1 = (await gondolatLetrehozasa(A, { cim: 'G1' })).azonosito;
+  const g2 = (await gondolatLetrehozasa(A, { cim: 'G2' })).azonosito;
+  await tudatpontRendezese(A, g1, 30);
+  await tudatpontRendezese(A, g2, 30);
+  await tudatpontRendezese(C, g1, 10);
+  await ertekJavaslat(A, g1, { elfogadasiKuszob: 51, reszveteliKuszob: 100, minimumDontesiIdo: 86400,
+    maximumDontesiIdo: 604800 });
+  const j = (await javaslatLetrehozasa(A, { erintettek: [
+    { entitas: g1, muvelet: 'Egyesites', valtozas: { cim: 'EGYESÍTETT' } },
+    { entitas: g2, muvelet: 'Egyesites', valtozas: null }], pont: 2 })).azonosito;
+  await szavazas(C, j, 'Ellenez');
+  const minden = await koinoEsemenyei(tar, KOINO);
+  const nezetE = nezet(minden, g1, j);
+  const allapot = allapotSzamitasa(nezetE);
+  const d = javaslatokSzamitasa(allapot.szamitok, allapot, KESOBB()).get(j);
+  return d.statusz === 'nemIsmert' && d.reszek[0].ismert && !d.reszek[0].valahaTeljesult
+    && allapot.entitasok.get(g1)?.cim === 'G1';           // ⛔ nem hajtódott végre semmi
 });
 
 // ===================================
