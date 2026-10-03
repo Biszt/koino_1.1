@@ -62,6 +62,8 @@ import lancGyoker from './lancGyokerProba.js';
 import ellentmondas from './ellentmondasProba.js';
 // ⭐ Az észlelő (D82) — a beérkezett események körül bizonyítható ellentmondások.
 import eszlelo from './eszleloProba.js';
+// ⭐ A döntési csomag (D85 T3, a (B)) — a csak-G1-nézet a csomaggal ugyanazt számolja.
+import dontesiCsomag from './dontesiCsomagProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -85,6 +87,7 @@ const PROBAK = [
   { nev: 'fajlkerelem', futtat: fajlKerelem },
   { nev: 'fajlatvitel', futtat: fajlAtvitel },
   { nev: 'egyezmeny', futtat: egyezmeny },
+  { nev: 'dontesicsomag', futtat: dontesiCsomag },
   { nev: 'felszabaditas', futtat: felszabaditas },
   { nev: 'parancssor', futtat: parancssor },
   { nev: 'vizsga', futtat: vizsga },
@@ -121,7 +124,7 @@ const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
   alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
-  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'felszabaditas', 'identitas'],
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'felszabaditas', 'identitas'],
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT

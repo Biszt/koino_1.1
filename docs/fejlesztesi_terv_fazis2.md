@@ -4485,6 +4485,15 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
   jogosultságát a szabály-réteg a láncából olvasta — a csak-G1-tartónál hézagos láncból, ami a G2-es pontot
   „nincs”-nek látta; ezért **a javaslat is hozza a jogának bizonyítékát** (érintettenként, a T2 mintája; a
   kapu ellenőrzi, a lánc-gyökeres javaslatnál csak ez dönt) — ára érintettenként +0,5–1,2 KB (56. mérés).
+  ⭐ **A megépült csomag (2026-10-03):** `DontesiCsomag` esemény, `entitas` = a cél töredéke, `adat` =
+  `{ javaslat, cel, esemenyek: [a javaslat, …ami a cél szeletéből hiányzik] }`; a kapu a tartalmát is
+  ellenőrzi (minden belső esemény ugyanazon a próbán, csak a döntés bemenete, a cél saját eseménye nem;
+  egy hamis az egészet elveti); a számítás a bemenetébe bontja, nem a tárba (különben a G1-tartó a G2
+  szeletének egy darabját hirdetné); a `csomag` parancs és az őrjárat adja ki, ismételhetően, darabolva.
+  ⚠️ **A részvételhez kötött két rész a B/1-ben és a B/3-ban jön** (az alappillérek VÉGLEGES SORA): a döntés
+  ISMERETE (egy rész csak akkor ismert, ha a szeletét vállalom vagy csomag hozta — különben „nem ismert”, és
+  a végrehajtás nem fut; mérve: csomag nélkül a csak-G1-nézet ELFOGADVA-t számolt ott, ahol a teljes tudás
+  ELVETVE-t), és a töredék-szelet részvételi szabálya (a saját rész valamikori igenje).
 - **A megépítés állása:** D85/4 (az egyezmény-fázis a kártyán) ✅ `cbb6f19` · a töredékek mint entitások,
   a pakli töredék-kártyája, a szavazás töredék → csoport fordítása, a javaslattevő lépése (létrehozás →
   pont → szavazat a művelet-rétegben; a pont a prototípus szerint oszlik: mindegyikre legalább 1, a

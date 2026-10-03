@@ -31,6 +31,7 @@ import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
 import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from '../allapot/lancGyoker.js';
+import { CSOMAG_TIPUS, dontesiCsomagEllenorzese } from '../allapot/dontesiCsomag.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -73,6 +74,18 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   if (!szavazatBizonyitek.rendben) {
     console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: szavazatBizonyitek.ok });
     return { mentve: false, ok: szavazatBizonyitek.ok };
+  }
+
+  // ----- 1/a2. ⭐ D85 T3: A DÖNTÉSI CSOMAG TARTALMA IS ITT MEGY ÁT -----
+  // A csomag a döntés bemenetének aláírt másolatait hordozza — mindegyik ugyanazon a próbán megy át, mintha
+  // egyenként jött volna, és csak a döntés bemenete lehet benne (`dontesiCsomag.js`). Egy hamis belső
+  // esemény az egész csomagot elveti.
+  if (esemeny.tipus === CSOMAG_TIPUS) {
+    const csomag = await dontesiCsomagEllenorzese(esemeny);
+    if (!csomag.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
+      return { mentve: false, ok: csomag.ok };
+    }
   }
 
   // ----- 1/b. ⭐ D80: AZ ELLENTMONDÁS BIZONYÍTÉKA IS ITT MEGY ÁT -----

@@ -50,6 +50,7 @@
 //   node koino/koino.js cimek                    — a saját címeim (a csere-hez)
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson UDP-kaput
 //   node koino/koino.js hozd <azonosító>         — EGY entitás elhozása (böngésző-lekérés)
+//   node koino/koino.js csomag [javaslat]        — ⭐ D85 T3: a lezárt, több érintettes döntés csomagja
 //   node koino/koino.js pajzsfuro <cím> <port> [helyi port]  — ⭐ a rés: csere ÉS fájlok
 //   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
 //   node koino/koino.js felfedez [mp] [port]     — ki van még ezen a wifin?
@@ -112,7 +113,9 @@ import {
   // ⭐ A SZAKASZ 4 HÉT MŰVELETE (2026-09-12) — eddig egyik sem volt elérhető kézzel.
   belepes, meghivas, felhatalmazas, tanusitas, bemutatkozas, lattam, felhatalmazasVisszavonasa,
   // ⭐ D82: az észlelt ellentmondások bejelentése (ismétlés nélkül).
-  ellentmondasokBejelentese
+  ellentmondasokBejelentese,
+  // ⭐ D85 T3: a lezárt, több érintettes döntések csomagja (a (B): a töredék szeletébe).
+  dontesiCsomagokKiadasa
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
@@ -1728,6 +1731,28 @@ try {
       break;
     }
 
+    case 'csomag': {
+      // ===== ⭐⭐ D85 T3: A DÖNTÉSI CSOMAG KIADÁSA =====
+      //
+      // Egy több érintettes javaslat (egyesítés, csomag) döntéséhez a G1 tartóinak a G2-es rész bemenete
+      // is kell (az ÉS és a közös lezárás miatt). A lezárás után ez egy aláírt csomagban jut el — a (B)
+      // szerint a rész TÖREDÉKÉNEK szeletébe, és csak az, ami onnan hiányzik. Az őrjárat a SAJÁT
+      // javaslataimra magától kiadja; ezzel a paranccsal bárki kiadhatja (vagy pótolhatja), akinél a
+      // bemenet megvan. Ismételhető: ha már minden ott van, nem ír semmit.
+      const { kiadva, javaslatok } = await dontesiCsomagokKiadasa(kornyezet, { javaslat: ervek[0] ?? null });
+      if (!javaslatok) {
+        kiir(SZIN.halvany + (ervek[0]
+          ? 'Ehhez a javaslathoz most nem jár csomag (nincs meg, nem számít, egy érintettes, vagy még nyitva).'
+          : 'Nincs lezárt, több érintettes javaslat.') + SZIN.vege);
+        break;
+      }
+      const esemenyDarab = kiadva.reduce((n, e) => n + e.adat.esemenyek.length - 1, 0);
+      kiir((kiadva.length ? SZIN.jo : SZIN.halvany) + javaslatok + ' lezárt döntés · ' + kiadva.length
+        + ' új csomag (' + esemenyDarab + ' esemény a töredékekbe)' + SZIN.vege
+        + (kiadva.length ? '' : SZIN.halvany + ' — minden ott van már' + SZIN.vege));
+      break;
+    }
+
     // ⭐⭐ D82: A KÉZI ÉSZLELÉS — a TÁR MINDEN eseménye körül (a kézi út párja az automatikusnak).
     case 'ellenoriz': {
       const osszes = (await koinoEsemenyei(tar, KOINO)).map((x) => x.azonosito);
@@ -3109,6 +3134,19 @@ try {
           kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
         }
 
+        // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
+        // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
+        // minden ott van már, nem ír semmit.
+        try {
+          const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
+          if (kiadva.length) {
+            kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
+              + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
+          }
+        } catch (hiba) {
+          kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
+        }
+
         // ===== ⭐⭐⭐ A KÖVETKEZŐ ABLAK A FAL ÓRÁJÁHOZ IGAZODIK (a buli 1. darabja) =====
         //
         // ⛔ MI VOLT A BAJ: a `setTimeout(perc * 60 * 1000)` a kör UTÁN indult, tehát az
@@ -4410,6 +4448,7 @@ try {
       kiir('           fajlok   (mely képek/fájlok hiányoznak erről a készülékről)');
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]   (mind UDP-n)');
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
+      kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           ujjlenyomat kiment|osszevet <fájl> [napok]   (…és MIBEN térünk el)');

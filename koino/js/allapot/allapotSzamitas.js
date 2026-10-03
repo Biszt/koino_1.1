@@ -30,6 +30,7 @@
 // Használják: koino.js (a parancssori arc) és a javaslat/szavazat számítása.
 
 import { szabalyokErvenyesitese, erintettek, elsoErintett, javaslatEntitasai } from './szabalyok.js';
+import { csomagokKibontasa } from './dontesiCsomag.js';
 
 // ===================================
 // A BEMENET RENDEZÉSE — a determinizmus EGYETLEN forrása
@@ -259,7 +260,9 @@ export function allapotSzamitasa(esemenyek) {
   // látható. A koino bejelent, nem büntet (D19).
   // 0. RENDEZÉS: innen lefelé minden felsorolás ezt a sorrendet örökli, tehát két gép
   //    ugyanabból a halmazból ugyanazt a LISTÁT is kapja, nem csak ugyanazokat az értékeket.
-  const rendezettek = rendezettBemenet(esemenyek);
+  // ⭐ D85 T3: a döntési csomagok belső eseményei is a bemenet részei (azonosító szerint egyszer) — a
+  // csak-G1-tartó így a G2-es rész bemenetét is látja, a G2 szeletének tartása nélkül.
+  const rendezettek = rendezettBemenet(csomagokKibontasa(esemenyek));
 
   const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek);
   const { szamitok, kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese(ervenyesek);

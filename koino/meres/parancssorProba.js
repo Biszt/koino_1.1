@@ -33,6 +33,8 @@ import { sajatLancEsemenyei, esemenyMentese } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
 import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese } from '../js/muveletek.js';
 import { lancUjEsemenyhez } from '../js/allapot/lancGyoker.js';
+// ⭐ D85 T3: a töredék azonosítója (a csomag szeletének kulcsa) — a próba maga számolja.
+import { toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végigjárása (4. szabály)');
 
@@ -240,6 +242,86 @@ proba('⭐⭐ D85/2: a MÁSIK készülék parancssori szavazata SZÁMÍT — a `
     } finally {
       await rm(egyik, { recursive: true, force: true });
       await rm(masik, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐ D85 T3, a (B): A DÖNTÉSI CSOMAG A KÉZI ÚTON (2026-10-03)
+// ===================================
+//
+// A egyesítést javasol (G1 + G2), B — a G2 másik tulajdonosa — ellenzi: a G2-es rész elbukik, a javaslat
+// ELVETVE. A `csomag` parancs a lezárás után kiadja a csomagokat a töredékekbe. ⭐ Egy harmadik készülék, C,
+// csak a G1 szeletét és a G1-es töredékét kapja (ahogy egy G1-es szavazó tartja a szigorú (b) alatt): a
+// csomaggal ő is ELVETVE-t lát. ⭐ A csomagot A ŐRJÁRATA adja ki magától (a bekötés próbája), a `csomag`
+// parancs utána már nem talál pótolnivalót. ⛔ Egy negyedik, D, csak a G1 szeletét kapja — ő a G2-es részből csak A
+// szavazatát látja, ezért NEM jut ugyanarra (ez az, amiért a csomag kell). Viselkedést mérünk: a
+// kivitt töredék-szeletben ott a csomag, és a másik készülék ÁLLAPOTA mondja ki a döntést.
+proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a csomaggal ugyanazt a döntést látja',
+  async () => {
+    const A = await ujKeszulek();
+    const B = await ujKeszulek();
+    const C = await ujKeszulek();
+    const D = await ujKeszulek();
+    const f = (nev) => join(A, nev);
+    let orjarat = null;
+    try {
+      await fut(A, 'koino', 'Csomag-próba');
+      const g1 = azonosito(await fut(A, 'gondolat', 'ELSO'), 'Létrejött:');
+      const g2 = azonosito(await fut(A, 'gondolat', 'MASIK'), 'Létrejött:');
+      if (!g1 || !g2) return false;
+      for (const g of [g1, g2]) {
+        await fut(A, 'pont', g, '10');
+        await fut(A, 'ertek', g, '51', '0', '1', '2');     // a döntés 1–2 mp alatt lezárul
+      }
+      const j = azonosito(await fut(A, 'egyesit', g1 + ',' + g2, 'EGYESITETT'), 'Szerkesztési javaslat beadva');
+      if (!j) return false;
+
+      await fut(A, 'kivisz', f('oda.jsonl'));
+      await fut(B, 'behoz', f('oda.jsonl'));
+      await fut(B, 'pont', g2, '10');
+      await fut(B, 'szavaz', j, 'ellenez');
+      await fut(B, 'kivisz', f('vissza.jsonl'));
+      await fut(A, 'behoz', f('vissza.jsonl'));
+      await varj(3000);                                   // a lezárás után
+
+      // ⭐ A ŐRJÁRATA egy kört fut (társ nélkül is lefut a háztartás) — és kiadja a csomagot.
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7611'], {
+        env: { ...process.env, KOINO_ADAT: A, KOINO_NAPLO: '' }
+      });
+      let orKimenet = '';
+      orjarat.stdout.on('data', (d) => { orKimenet += d; });
+      for (let i = 0; i < 40 && !/döntési csomag a töredékekbe/.test(orKimenet); i++) await varj(250);
+      orjarat.kill();
+      orjarat = null;
+      await varj(500);
+      const kiadas = await fut(A, 'csomag');
+      // A teljes azonosítók a kivitt fájlból (a töredék kulcsához kellenek).
+      await fut(A, 'kivisz', f('mind.jsonl'));
+      const esemenyek = (await readFile(f('mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const g1Teljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas' && e.azonosito.startsWith(g1)).azonosito;
+      const jTeljes = esemenyek.find((e) => e.tipus === 'Javaslat' && e.azonosito.startsWith(j)).azonosito;
+      // A koinó születése is (azt minden tag ismeri — a saját szeletében él, nem a G1-ében).
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(A, 'kivisz', f('k.jsonl'), koinoTeljes);
+      await fut(A, 'kivisz', f('g1.jsonl'), g1Teljes);
+      await fut(A, 'kivisz', f('t1.jsonl'), toredekAzonosito(jTeljes, g1Teljes));
+      const toredekben = (await readFile(f('t1.jsonl'), 'utf8')).includes('"DontesiCsomag"');
+      const csomagok = esemenyek.filter((e) => e.tipus === 'DontesiCsomag').length;
+
+      for (const hely of [C, D]) await fut(hely, 'behoz', f('k.jsonl'));
+      await fut(C, 'behoz', f('g1.jsonl'));
+      await fut(C, 'behoz', f('t1.jsonl'));
+      await fut(D, 'behoz', f('g1.jsonl'));
+      const kepA = await fut(A, 'allapot');
+      const kepC = await fut(C, 'allapot');
+      const kepD = await fut(D, 'allapot');
+      // Az őrjárat kiadta mindkét csomagot (a tárban), a parancs már nem talál pótolnivalót.
+      return csomagok === 2 && /1 lezárt döntés · 0 új csomag/.test(kiadas) && toredekben
+        && kepA.includes('ELVETVE') && kepC.includes('ELVETVE') && !kepD.includes('ELVETVE');
+    } finally {
+      if (orjarat) orjarat.kill();
+      await varj(300);
+      for (const hely of [A, B, C, D]) await rm(hely, { recursive: true, force: true });
     }
   });
 

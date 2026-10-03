@@ -21,7 +21,9 @@
 //
 // Használják: koino.js (a parancssori arc).
 
-import { TUDATPONT_KERET, ALLASOK, pontEsemenyMerlege, javaslatEntitasai } from './allapot/szabalyok.js';
+import {
+  TUDATPONT_KERET, ALLASOK, pontEsemenyMerlege, javaslatEntitasai, erintettek, toredekAzonosito
+} from './allapot/szabalyok.js';
 // ⭐ D78 (az A pillér 2. lépése): a lánc-gyökér — a szerző esemény előtti naplója és kiosztása.
 import { lancUjEsemenyhez } from './allapot/lancGyoker.js';
 // ⭐ D80: az ellentmondás bizonyítéka — a bejelentés előtt magunk is ellenőrizzük.
@@ -31,8 +33,13 @@ import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
 import {
   esemenyMentese, lancVege, sajatLancEsemenyei,
-  kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei
+  kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei, koinoEsemenyei
 } from './tar/esemenyTar.js';
+import { allapotSzamitasa } from './allapot/allapotSzamitas.js';
+import { javaslatokSzamitasa } from './allapot/javaslatSzamitas.js';
+import {
+  CSOMAG_TIPUS, CSOMAG_BAJT_KORLAT, dontesBemenete, celbolHianyzik, csomagokra, bajt
+} from './allapot/dontesiCsomag.js';
 
 // ===== A TUDATPONT-KERET =====
 // Mindenkinek UGYANANNYI tudatpontja van: nem elkölthető, csak szétosztható és bármikor
@@ -1042,3 +1049,67 @@ export async function szavazas(kornyezet, javaslat, szavazat, kulonvalasIgeny = 
   );
 }
 
+// ===================================
+// ⭐⭐ D85 T3: A DÖNTÉSI CSOMAG KIADÁSA
+// ===================================
+
+/**
+ * A lezárt, több érintettes javaslatok döntési csomagjainak kiadása (D85 T3, a (B) — Csaba, 2026-10-03).
+ *
+ * Minden lezárt javaslatnál, érintettenként: ami a döntés bemenetéből (`dontesBemenete`) a cél szeletéből
+ * hiányzik (`celbolHianyzik`), és amit még egyetlen meglévő csomag sem hozott oda, az aláírt csomag(ok)ba
+ * kerül, a cél TÖREDÉKÉNEK szeletébe. ⭐ Ismételhető: ha már minden ott van, nem ír semmit (az őrjárat minden
+ * körben hívhatja); ha később több látszik (egy kései szinkron hozott még valamit a lezárás előttről), csak
+ * azt pótolja. ⚠️ Bárki kiadhatja, akinél a bemenet megvan — alapból a javaslattevő teszi (minden érintetten
+ * van pontja, tehát minden érintett szeletét tartja); a kapu a tartalmat nézi, nem a kiadót.
+ *
+ * @param {Object} kornyezet
+ * @param {Object} [beallitas]
+ * @param {string|null} [beallitas.javaslat] - csak ez a javaslat (alapból mind)
+ * @param {boolean} [beallitas.csakSajat] - csak a saját javaslataim (az őrjárat így hívja)
+ * @param {number} [beallitas.most] - az idő (a lezárás eldöntéséhez)
+ * @param {number} [beallitas.korlat] - a darabolás korlátja bájtban (a próbáknak)
+ * @returns {Promise<{kiadva: Array<Object>, javaslatok: number}>}
+ */
+export async function dontesiCsomagokKiadasa(kornyezet, beallitas = {}) {
+  const most = beallitas.most ?? Date.now();
+  const korlat = beallitas.korlat ?? CSOMAG_BAJT_KORLAT;
+  const esemenyek = await koinoEsemenyei(kornyezet.tar, kornyezet.koino);
+  const allapot = allapotSzamitasa(esemenyek);
+
+  // A lezárt, több érintettes javaslatok (a számító eseményekből — ami nem számít, annak nincs döntése).
+  const jelolt = allapot.szamitok.filter((e) => e.tipus === 'Javaslat'
+    && erintettek(e.adat).length > 1
+    && (!beallitas.javaslat || e.azonosito === beallitas.javaslat)
+    && (!beallitas.csakSajat || e.szerzo === kornyezet.szerzo));
+  if (!jelolt.length) return { kiadva: [], javaslatok: 0 };
+  const dontesek = javaslatokSzamitasa(allapot.szamitok, allapot, most);
+
+  // Ami a meglévő csomagok egy-egy töredékébe már eljutott.
+  const vitt = new Map();   // töredék → Set(azonosító)
+  for (const e of esemenyek) {
+    if (e.tipus !== CSOMAG_TIPUS || !Array.isArray(e.adat?.esemenyek)) continue;
+    if (!vitt.has(e.entitas)) vitt.set(e.entitas, new Set());
+    for (const x of e.adat.esemenyek) vitt.get(e.entitas).add(x?.azonosito);
+  }
+
+  const kiadva = [];
+  let javaslatok = 0;
+  for (const j of jelolt) {
+    const d = dontesek.get(j.azonosito);
+    if (!d || most < d.lezarasIdeje) continue;          // még nyitva: a bemenet még változhat
+    javaslatok++;
+    const bemenet = dontesBemenete(allapot.szamitok, j, d.lezarasIdeje);
+    for (const { entitas: cel } of erintettek(j.adat)) {
+      const toredek = toredekAzonosito(j.azonosito, cel);
+      const marOtt = vitt.get(toredek) ?? new Set();
+      const hianyzik = celbolHianyzik(bemenet, cel)
+        .filter((e) => e.azonosito !== j.azonosito && !marOtt.has(e.azonosito));
+      for (const darab of csomagokra(hianyzik, korlat - bajt(j))) {
+        kiadva.push(await esemenytTeszek(kornyezet, CSOMAG_TIPUS,
+          { javaslat: j.azonosito, cel, esemenyek: [j, ...darab] }, { entitas: toredek }));
+      }
+    }
+  }
+  return { kiadva, javaslatok };
+}

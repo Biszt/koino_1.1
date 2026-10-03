@@ -226,7 +226,12 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    (c) ✅ `2764cab` · (d) ⭐ T3 eldőlt (2026-10-03): az (a) végleges, formája a **döntési csomag** (a2); a tartalma
    és a mérés (55.) ✅ `a97fa28`; ⭐ **Csaba: „legyen a (B)”** — a csomag a TÖREDÉK szeletébe kerül (a rész
    szavazói kapják), a nem szavazó tartó csak akkor kéri el, ha a saját része igent mondott; az előfeltétele, a
-   javaslat jogának bizonyítéka (56.) ✅; a csomag kiadása és elkérése 🚧.
+   javaslat jogának bizonyítéka (56.) ✅ `41f59d0`; ⭐ **a csomag maga ✅** — a `DontesiCsomag` esemény a
+   töredék szeletében, célzottan (csak ami a cél szeletéből hiányzik), a kapu a tartalmát is ellenőrzi, a
+   számítás a bemenetébe bontja (nem a tárba), a `csomag` parancs és az őrjárat adja ki (a saját lezárt
+   javaslataimra, ismételhetően). ⭐ **Ami a RÉSZVÉTELHEZ kötődik, az a B/1-be és a B/3-ba kerül** (lent, a
+   VÉGLEGES SOR 3. és 7. pontja): a mai csere minden szeletben részt vesz (`reszvesz` = mind), tehát az
+   elkérés feltétele csak ott kap értelmet.
    *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
 2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
    betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
@@ -236,6 +241,14 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 3. **B/1 + B/2 — a vállalás és a két tár** (D86): a vállalás a saját láncból (a kiosztás kulcsai + a
    saját azonosság-szeletem), az átmeneti tár, a „megnézett", a D14 csak a tartósra, az eldobás. A csere
    még a mai módon fut. ⏸️ Itt kell eldönteni a gyökér tartását (a legfelső szintű gondolatok születése).
+   ⛔⛔ **ÉS A DÖNTÉS ISMERETE (D85 T3, a (B) építéséből — mérve, `dontesiCsomagProba.js` 1.):** a több
+   érintettes döntés-számítás a részvételt (a vállalást) is megkapja, és egy rész csak akkor ISMERT, ha a
+   szeletét vállalom, vagy egy csomag hozta el. Ha nem ismert, a javaslat nálam „nem ismert” (D19, T3), a
+   végrehajtás nem fut, és ha a SAJÁT részem egyszer sem mondott igent, ezt is kimondja. *Miért kell:* a
+   csak-G1-nézet csomag nélkül a G2-es részből csak a mindkét részen szavazó A szavazatát látja (az a G1-be
+   is bejelentődik), a G2 tulajdonosait nem — és ELFOGADVA-t számol ott, ahol a teljes tudás ELVETVE-t
+   (mérve). ⚠️ A létrehozó esemény jelenléte NEM elég jel: a gyökér (vagy a szülő) tartója minden gyerek
+   születését látja, a szeletét mégsem tartja.
 4. **G — a címjegyzék** — ⛔ előbb mérés / átvizsgálás (S10, SK7); a D89/2 szerint a zárt koinó
    címjegyzéke nem kerülhet kiolvasható nyilvános helyre.
 5. **D — a kérelmezés** (D76, D83/3, D87): a G-ből tudja, kitől; a törzs a kérelem útján, a közvetítő nem
@@ -243,7 +256,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 6. **E — az identitás a szeletelt világban**, vele a zárt koinó betartatása (a tagság bizonyítása a
    kézfogásban, D89/2) és a Profil (D28 a D88 alakjában — az azonosság-szeletben él).
 7. **B/3 — a szigorú (b) bekapcsolása:** a csere részvétele a vállalásból, a törzs kiszolgálása a D84/1
-   szerint. Innen végleges.
+   szerint. Innen végleges. ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
+   Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
+   amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
 8. **F — a társankénti emlékezet** és **az A hátralévői** (a D79 szúrópróba, a napló-alapú kettős-lánc
    észlelés, a logaritmikus napló-bizonyíték).
 
@@ -376,3 +391,11 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     javaslat tévesen kiesett volna; a lánc-gyökeres javaslatnál CSAK a bizonyíték dönt, a régi marad a
     bejárásnál · ára érintettenként +0,5–1,2 KB (`eredmenyek.md` 56.) · `lancGyoker.js`:
     `hozottBizonyitekokOnbizonyitasa`, `szabalyok.js`: `hozottSajatPontok`.
+43. **2026-10-03 · a döntési csomag tartalma: a tárba bontva** → **a számítás bemenetébe bontva, a csomag
+    maga marad a tárban** · mert a tárba bontott belső események a G2 szeletének egy darabját tennék a
+    G1-tartóhoz — a csere ezt a szeletet hirdetné, és az egész G2-t áthozná (épp az, amit a (B) elkerül) ·
+    `dontesiCsomag.js`: `csomagokKibontasa`, `allapotSzamitas.js`.
+44. **2026-10-03 · a döntés ismerete és a töredék-részvétel most** → **a B/1-be és a B/3-ba** · mert
+    mindkettő a részvételtől függ (melyik szeletet vállalom), az pedig a B/1-ben születik; a mai csere
+    minden szeletben részt vesz, így ma nincs részleges tudás, csak a kézi úton · a VÉGLEGES SOR 3. és 7.
+    pontja.
