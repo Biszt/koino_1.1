@@ -369,6 +369,67 @@ proba('⭐⭐ D91: a csere után a két tartó egymást jegyzi a raj-jegyzékben
   });
 
 // ===================================
+// ⭐⭐ D92: A KÉRELEM A PARANCSSORBÓL — a fejlécek mintákkal, és a törzs (2026-10-03)
+// ===================================
+//
+// A gazda (`figyel`) egy gondolatot tart, szöveggel; a vendég csak a koinó születését ismeri. ⭐ A `kerelem fejlecek
+// gyoker` után a gondolat létrehozó eseménye a vendég ÁTMENETI tárában van (a lemezén — nem a tartósban), és a
+// mintákkal ellenőrizve; a `kerelem torzs` után a szöveg-darab a vendég FÁJL-TÁRÁBAN van, és az állapot kiírja a
+// szöveget. Viselkedést mérünk: a vendég lemezét.
+proba('⭐⭐ D92: a `kerelem fejlecek` az átmeneti tárba hozza a fejlécet (mintákkal ellenőrizve), a `kerelem torzs` a szöveget',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const port = 7672;
+    let figyelo = null;
+    try {
+      await fut(gazda, 'koino', 'Kérelem-próba');
+      const g = azonosito(await fut(gazda, 'gondolat', 'TAVOLI', 'A TÁVOLI GONDOLAT SZÖVEGE'), 'Létrejött:');
+      if (!g) return false;
+      await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+      const esemenyek = (await readFile(join(gazda, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const gTeljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const szovegLenyomat = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').adat.szoveg?.lenyomat;
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
+      await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));
+
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+      const fejlecek = await fut(vendeg, 'kerelem', 'fejlecek', 'gyoker', '127.0.0.1', String(port));
+      const tartosEsemenyek = await readFile(join(vendeg, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => '');
+      const atmenetiben = (await readdir(join(vendeg, 'sajat', 'atmeneti')).catch(() => [])).includes(gTeljes + '.jsonl');
+      const torzs = await fut(vendeg, 'kerelem', 'torzs', gTeljes, '127.0.0.1', String(port));
+      figyelo.kill();
+      figyelo = null;
+      await varj(800);
+      const blob = fajlBlobTarolo('sajat', vendeg);
+      const szovegMegvan = !!szovegLenyomat && await blob.van(szovegLenyomat);
+      const kep = await fut(vendeg, 'allapot');
+
+      const jo = {
+        fejlec: /TAVOLI/.test(fejlecek) && /✓ ellenőrizve \(\d+ minta\)/.test(fejlecek),
+        atmeneti: atmenetiben && !tartosEsemenyek.includes(gTeljes),
+        torzs: /1\/1 fájl megvan/.test(torzs) && szovegMegvan,
+        allapot: kep.includes('A TÁVOLI GONDOLAT SZÖVEGE') && /nem tartod/.test(kep)
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (kérelem-próba: ' + JSON.stringify(jo) + ')\n');
+        return false;
+      }
+      return true;
+    } finally {
+      if (figyelo) figyelo.kill();
+      await varj(500);
+      await rm(gazda, { recursive: true, force: true });
+      await rm(vendeg, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //

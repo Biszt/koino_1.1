@@ -55,7 +55,7 @@
 //
 // Használják: koino.js (a pajzsfúrás után) és a csereProba.js.
 
-import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton } from './vonal.js';
+import { parbeszed, fajlHozatala, fajlKiszolgalas, szeletKapcsolaton, kerelemKapcsolaton } from './vonal.js';
 import { KERELEM_KORLAT } from './fajlKerelem.js';
 // ⭐ D89/1: a csere titkosítása — a kézfogás és a csomagok kriptográfiája (hálózat nélkül).
 import {
@@ -1444,7 +1444,7 @@ export async function fajlRandevu(nyersHalo, tarsCim, tarsPort, beallitas = {}) 
  * ⭐ EGY SZELET ELKÉRÉSE A RÉSEN (D69/2, 2026-09-26) — a `hozd` parancs UDP-útja.
  *
  * ⭐ A túloldalon a rendes csere-munka fut (a kapu mást nem indít): az ő `parbeszed`-je
- * LENYOMAT-tal kezd, mi viszont `SZELETKEREK`-et küldünk, és ebből látja, hogy nem cserét,
+ * NYITAS-sal kezd, mi viszont `KERELEM`-et (fajta: szelet) küldünk, és ebből látja, hogy nem cserét,
  * hanem egy szeletet kérünk. *Ugyanaz a visszafelé kompatibilis elágazás, amit a TCP-út
  * 2026-09-02 óta használt — csak most a résen.*
  *
@@ -1465,6 +1465,31 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
     // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
     await kapcsolat.kiurites();
     console.log('szeletUdpResen - VÉGE', eredmeny);
+    return eredmeny;
+  } finally {
+    kapcsolat.end();
+    if (sajat) res.zar();
+  }
+}
+
+/**
+ * ⭐⭐ EGY KÉRELEM A RÉSEN (D92/6) — a fejlécek vagy a törzs (a szeletet a `szeletUdpResen` kéri). A túloldalon a
+ * rendes csere-munka fut; a `parbeszed`-je az első üzenetből (`KERELEM`) látja, hogy nem cserét kérünk. ⛔ D89/1:
+ * csak védett résen.
+ * @returns {Promise<Object>} a `kerelemKapcsolaton` eredménye
+ */
+export async function kerelemUdpResen(halo, tarsCim, tarsPort, koino, kerelem, beallitas = {}) {
+  const varakozasiIdo = beallitas.varakozasiIdo ?? TETLENSEG_ALAP;
+  console.log('kerelemUdpResen - KEZDÉS', { tarsCim, tarsPort, fajta: kerelem.fajta });
+  const { res, sajat } = await vedettResre(halo, tarsCim, tarsPort, beallitas);
+  const kapcsolat = udpKapcsolat(res, tarsCim, tarsPort, { torlodasJel: 'nincs' });
+  kapcsolat.setTimeout(varakozasiIdo, () => {
+    kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
+  });
+  try {
+    const eredmeny = await kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas);
+    await kapcsolat.kiurites();
+    console.log('kerelemUdpResen - VÉGE', { fajta: kerelem.fajta, kiszolgalta: eredmeny.kiszolgalta });
     return eredmeny;
   } finally {
     kapcsolat.end();

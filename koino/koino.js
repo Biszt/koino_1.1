@@ -51,6 +51,7 @@
 //   node koino/koino.js kapu [port] [fe80::…]    — megkéri a routert, nyisson UDP-kaput
 //   node koino/koino.js hozd <azonosító>         — EGY entitás elhozása (böngésző-lekérés)
 //   node koino/koino.js cimjegyzek [hirdet|keres|gyoker|hirdetes]  — ⭐ D91: a DHT-n hirdetett címjegyzék
+//   node koino/koino.js kerelem fejlecek|torzs <az> [cím] [port]   — ⭐ D92: a kérelem (fejlécek mintákkal, törzs)
 //   node koino/koino.js csomag [javaslat]        — ⭐ D85 T3: a lezárt, több érintettes döntés csomagja
 //   node koino/koino.js pajzsfuro <cím> <port> [helyi port]  — ⭐ a rés: csere ÉS fájlok
 //   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
@@ -179,7 +180,13 @@ import {
 } from './js/allapot/pakli.js';
 // ⭐ A RANDEVÚ (2026-09-14): a csere ÉS a fájlok is átmennek az átfúrt résen.
 // ⭐ És a szelet-kérés is a résen (D69/2): a `hozd` 2026-09-26 óta ezen megy.
-import { csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen } from './js/csere/udpVonal.js';
+import { csereUdpResen, fajlRandevu, szeletUdpResen, kezfogasUdpResen, kerelemUdpResen } from './js/csere/udpVonal.js';
+// ⭐⭐ D92: a kérelem (az alapkérdések) és az össz-pont.
+import {
+  fejlecekValasza, mintakValasza, mintaKeres, fejlecekEllenorzese, torzsLenyomatai, kerelemAlakja
+} from './js/csere/kerelem.js';
+import { reszfaKarbantarto } from './js/allapot/osszPont.js';
+import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
 // ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
 import { kezfogasAlairasa } from './js/csere/titkositas.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
@@ -1248,6 +1255,71 @@ async function eszlelesEsBejelentes(azonositok) {
   }
 }
 
+// ===================================
+// ⭐⭐ D92: A KÉRELEM KISZOLGÁLÁSA ÉS A BEMONDOTT ÖSSZ-PONTOK
+// ===================================
+//
+// A tartó a kapu munkájában szolgálja ki a kérelmet (a `parbeszed` a kívülről kapott kiszolgálót hívja — a vonal
+// semmit nem tud a koinóról). A fejlécek a két tárból számolt állapotból jönnek; a részfa-fák egy folyamatonként
+// megmaradó karbantartóban élnek (a fa egy változása < 1 ms, a nulláról építés nagy részfánál másodpercek — 62.
+// mérés). ⛔ A törzset csak a vállalt szeletre adjuk, és csak azt, ami tényleg megvan (D84/1).
+
+const kerelemKarbantarto = reszfaKarbantarto();
+
+/** A bemondott össz-pontok helye (helyi gyorsítótár, nem esemény, nem terjed). */
+function bemondasFajl() {
+  return join(alapHely(), KOINO, 'osszpontok.json');
+}
+const BEMONDAS_KORLAT = 10000;
+
+/** A bemondott össz-pontok: azonosító → { osszPont, ido, ellenorzott }. */
+async function bemondasok() {
+  try {
+    const b = JSON.parse(await readFile(bemondasFajl(), 'utf8'));
+    return new Map(Object.entries(b && typeof b === 'object' ? b : {})
+      .filter(([, x]) => x && Number.isSafeInteger(x.osszPont) && x.osszPont >= 0));
+  } catch {
+    return new Map();
+  }
+}
+
+/** Új bemondások beírása (a legrégebbiek esnek ki a korlátnál). */
+async function bemondasokBeirasa(ujak) {
+  if (!ujak.size) return;
+  const m = await bemondasok();
+  for (const [az, x] of ujak) { m.delete(az); m.set(az, x); }
+  const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0)).slice(-BEMONDAS_KORLAT);
+  await writeFile(bemondasFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8');
+}
+
+/** Egy esemény a két tárból (a tartósból, aztán az átmenetiből). */
+async function esemenyKetTarbol(az) {
+  return (await esemenyLekerese(tar, az)) ?? (await atmeneti.esemeny(az)) ?? null;
+}
+
+/** ⭐ A kérelem-kiszolgáló: a fejlécek (mintákkal) és a törzs — a `parbeszed` hívja. */
+function kerelemKiszolgaloja() {
+  return {
+    async fejlecek(k) {
+      const { allapot } = await kepetKeszit();
+      const { valasz, fak } = await fejlecekValasza({ allapot, kulcs: k.kulcs, n: k.n, d: k.d,
+        karbantarto: kerelemKarbantarto, esemenyOlvas: esemenyKetTarbol, bemondasok: await bemondasok() });
+      return { valasz, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: esemenyKetTarbol }) };
+    },
+    async torzs(k) {
+      const { allapot } = await kepetKeszit();
+      const v = await sajatVallalasa(allapot);
+      if (!v.szeletek.has(k.kulcs)) return [];
+      const blob = fajlBlobTarolo(KOINO);
+      const ki = [];
+      for (const l of await torzsLenyomatai(allapot.entitasok.get(k.kulcs), (x) => blob.olvas(x))) {
+        if (await blob.van(l)) ki.push(l);
+      }
+      return ki;
+    }
+  };
+}
+
 function resMunkaKeszito(allapot) {
   return async (nyersHalo, tars) => {
     // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
@@ -1291,6 +1363,8 @@ function resMunka(allapot, halo, tars) {
       tablaAlairo: allapot.sajatTablaKulcsTeljes
         ? (atirat) => kezfogasAlairasa(allapot.sajatTablaKulcsTeljes, atirat) : null,
       dhtGepek: allapot.hirdetendoDhtGepek,
+      // ⭐⭐ D92: a kérelem (fejlécek, törzs) kiszolgálása — ha a társ ezzel nyit.
+      kerelemKiszolgalo: kerelemKiszolgaloja(),
       fajlKerelem: fajlok.kerelem,
       fajlValasz: async (kertek) => {
         const van = await fajlok.valasz(kertek);
@@ -1318,6 +1392,12 @@ function resMunka(allapot, halo, tars) {
       kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port
         + ' egy szeletet kért tőlem (' + csere.kuldott + ' esemény)' + SZIN.vege);
       return alap;
+    }
+    // ⭐ D92: egy kérelem (fejlécek, törzs) — szintén nem csere.
+    if (csere.kerelemKiszolgalva) {
+      kiir(SZIN.halvany + '  · ' + ora() + ' ' + tars.cim + ':' + tars.port + ' kérelem: '
+        + csere.kerelemKiszolgalva.fajta + ' (' + String(csere.kerelemKiszolgalva.kulcs).slice(0, 8) + '…)' + SZIN.vege);
+      return { ...alap, kerelemKiszolgalva: csere.kerelemKiszolgalva };
     }
 
     kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
@@ -2979,6 +3059,108 @@ try {
       for (const t of temak) {
         kiir('    ' + t.fajta + ' ' + (t.fajta === 'szelet' ? t.kulcs.slice(0, 12) + '…' : t.kulcs));
       }
+      break;
+    }
+
+    case 'kerelem': {
+      // ===== ⭐⭐ D92/6: A KÉRELEM — fejlécek (mintákkal ellenőrizve) vagy törzs, egy társtól =====
+      //
+      // node koino/koino.js kerelem fejlecek <azonosító|gyoker> [cím] [port] [n] [d]
+      // node koino/koino.js kerelem torzs <azonosító> [cím] [port]
+      // ⭐ Ami jön, ugyanazon a kapun megy be (3. szabály), az ÁTMENETI tárba (B/2); a bemondott össz-pont a helyi
+      // gyorsítótárba (a nem tartott entitások rendezéséhez). ⚠️ A cím nélküli út (a raj, a DHT, a kopogtatás) a
+      // függő kérelmekkel jön — ma cím vagy induló cím kell.
+      const fajta = ervek[0];
+      const kulcsErv = ervek[1];
+      const kulcs = kulcsErv === 'gyoker' ? GYOKER_KULCS : kulcsErv;
+      const k = kerelemAlakja({ fajta, kulcs, n: parseInt(ervek[4], 10), d: parseInt(ervek[5], 10) });
+      if (!k || k.fajta === 'szelet') {
+        throw new Error('Mit kérjek, és miről?'
+          + '\n  node koino/koino.js kerelem fejlecek <azonosító|gyoker> [cím] [port] [n] [d]'
+          + '\n  node koino/koino.js kerelem torzs <azonosító> [cím] [port]'
+          + '\n  (egy szelet eseményei: node koino/koino.js hozd <azonosító>)');
+      }
+      const cimek = ervek[2]
+        ? [{ hoszt: ervek[2], port: parseInt(ervek[3], 10) || ALAP_PORT }]
+        : tarsakSorrendje(await tarsakTarolo().olvas()).map((c) => ({ hoszt: c.hoszt, port: Number(c.port) }));
+      if (!cimek.length) {
+        kiir(SZIN.nem + 'Nincs kit megkérdezni.' + SZIN.vege + SZIN.halvany
+          + ' Adj meg egy címet, vagy vegyél fel társat: node koino/koino.js tars <cím>' + SZIN.vege);
+        break;
+      }
+      const megvan = k.fajta === 'fejlecek' ? (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000) : [];
+      const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO, k, {
+        mintaValaszto: (valasz) => mintaKeres(valasz), megvan,
+        blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT
+      }));
+      let kor;
+      try {
+        kor = await kapu.kopog(cimek.map((c) => ({ cim: c.hoszt, port: c.port })), { idokorlat: KEZI_KOPOGAS_MS });
+      } finally {
+        kapu.zar();
+      }
+      const siker = kor.eredmenyek.find((e) => e.ok && e.eredmeny?.kiszolgalta);
+      for (const e of kor.eredmenyek) if (!e.ok) kiir(SZIN.halvany + '  · ' + e.cel.cim + ' ' + e.cel.port + ' — ' + e.hiba + SZIN.vege);
+      if (!siker) {
+        kiir(SZIN.nem + 'Senki nem szolgálta ki a kérelmet' + SZIN.vege + SZIN.halvany
+          + ' (nem érhető el, vagy nem tartja — kívülről a kettő nem különböztethető meg).' + SZIN.vege);
+        break;
+      }
+      const r = siker.eredmeny;
+      const adat = adatMennyiseg({ bajtKuldott: (r.bajtKuldott ?? 0) + (r.bajtKapott ?? 0) });
+
+      if (k.fajta === 'torzs') {
+        const megjott = r.fajlok.filter((f) => f.kesz).length;
+        kiir(SZIN.vastag + 'TÖRZS: ' + kulcs.slice(0, 12) + '…' + SZIN.vege + SZIN.halvany + '  (' + siker.cim + ', ' + adat + ')'
+          + SZIN.vege);
+        if (!r.lenyomatok.length) {
+          kiir(SZIN.nem + '  A társ nem adta ki a törzset' + SZIN.vege + SZIN.halvany
+            + ' (D84/1: csak a vállaló adja — ő nem vállalja, vagy nincs meg nála).' + SZIN.vege);
+        } else {
+          kiir('  ' + megjott + '/' + r.lenyomatok.length + ' fájl megvan' + SZIN.halvany
+            + (r.fajlok.some((f) => f.megvolt) ? ' (ebből ' + r.fajlok.filter((f) => f.megvolt).length + ' már megvolt)' : '')
+            + SZIN.vege);
+        }
+        break;
+      }
+
+      // ----- FEJLÉCEK: az ellenőrzés, és ami átment, az átmeneti tárba + a bemondások közé -----
+      const e = await fejlecekEllenorzese({ valasz: r.valasz, kert: r.kert, mintak: r.mintak, esemenyek: r.esemenyek });
+      const jok = [];
+      const ujBemondasok = new Map();
+      const bejar = (v) => { for (const t of v?.lista ?? []) jok.push(t); if (v?.ag) bejar(v.ag); };
+      bejar(r.valasz);
+      let bevett = 0;
+      for (const t of jok) {
+        const ered = e.tetelek.get(t.az);
+        if (!ered?.rendben) continue;
+        const m = await esemenyMentese(atmeneti, t.letrehozo);
+        if (m.mentve && !m.marMegvolt) bevett++;
+        ujBemondasok.set(t.az, { osszPont: t.osszPont, ido: Date.now(), ellenorzott: ered.mintazott ? ered.minta.ellenorzott : 0 });
+      }
+      for (const pe of r.esemenyek) {
+        const m = await esemenyMentese(atmeneti, pe);
+        if (m.mentve && !m.marMegvolt) bevett++;
+      }
+      await bemondasokBeirasa(ujBemondasok);
+
+      kiir(SZIN.vastag + 'FEJLÉCEK: ' + (kulcs === GYOKER_KULCS ? 'a gyökér' : kulcs.slice(0, 12) + '…') + SZIN.vege
+        + SZIN.halvany + '  (' + siker.cim + ', ' + adat + ' · ' + bevett + ' esemény az átmeneti tárba)' + SZIN.vege);
+      const sor = (t, behuz) => {
+        const ered = e.tetelek.get(t.az);
+        const jel = !ered?.rendben ? SZIN.nem + '✗ ' + (ered?.ok ?? 'hibás') + SZIN.vege
+          : ered.mintazott ? SZIN.jo + '✓ ellenőrizve (' + ered.minta.ellenorzott + ' minta)' + SZIN.vege
+            : SZIN.halvany + (t.forras === 'bemondott' ? 'bemondás (a tartója sem tartja)' : 'bemondás') + SZIN.vege;
+        const cim = t.letrehozo?.adat?.cim ?? (t.letrehozo?.tipus === 'Javaslat' ? '(javaslat)' : '');
+        kiir(behuz + SZIN.halvany + t.az.slice(0, 8) + SZIN.vege + '  ' + cim + SZIN.halvany + '  · össz-pont ' + t.osszPont
+          + (t.felkerult ? ' · felkerült' : '') + SZIN.vege + '  ' + jel);
+      };
+      const kiirSzint = (v, behuz) => {
+        for (const t of v?.lista ?? []) sor(t, behuz);
+        if (v?.ag?.lista?.length) { kiir(behuz + SZIN.halvany + '  ↳ a legjobb ág:' + SZIN.vege); kiirSzint(v.ag, behuz + '    '); }
+      };
+      kiirSzint(r.valasz, '  ');
+      if (e.hibas) kiir(SZIN.nem + '  ' + e.hibas + ' tétel nem ment át az ellenőrzésen — nem vettük be.' + SZIN.vege);
       break;
     }
 
@@ -4805,6 +4987,7 @@ try {
       kiir('           orjarat [perc] [port] · figyel [port] · csere [cím] [port]   (mind UDP-n)');
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
       kiir('           cimjegyzek [hirdet [port] | keres <az> | gyoker [darab] | hirdetes <n>]   (D91 — a DHT-n)');
+      kiir('           kerelem fejlecek <az|gyoker> [cím] [port] [n] [d] · kerelem torzs <az> [cím] [port]   (D92)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

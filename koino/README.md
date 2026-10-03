@@ -64,6 +64,7 @@ node koino/koino.js
 | `node koino/koino.js csere <hoszt> <port>` | csere egy megadott készülékkel — rákopog a kapujára. ⚠️ NAT mögött csak akkor megy át, ha a másik is kopog (vagy egy wifin vagytok) — két idegen router között a `pajzsfuro` az út |
 | `node koino/koino.js csere` | ⭐ csere **minden induló címmel**, egyszerre a kapun — egy elérhetetlen társ nem dönti el a kört |
 | `node koino/koino.js hozd <azonosító> [cím] [port]` | ⭐ **böngésző-lekérés** (3.4): „add ide EZT az egy entitást" — a rendes csere mindent hoz, ez **válogat**. A szelet-címjegyzékből (a raj), ha az nem ismer tartót, a DHT-n hirdetőkből (D91/3), és az induló címekből keres, egyszerre kopog |
+| `node koino/koino.js kerelem fejlecek <az\|gyoker> [cím] [port] [n] [d]` · `kerelem torzs <az> [cím] [port]` | ⭐⭐ **a kérelem** (D92): a gyerekek fejlécei össz-pont szerint, a legjobb ággal — a kérő a gyökerek után mintát kér és ellenőriz; a törzs (szöveg-darab, fájlok) csak a vállalótól. Ami jön, az átmeneti tárba |
 | `node koino/koino.js cimjegyzek [hirdet [port] \| keres <az> \| gyoker [darab] \| hirdetes <n>]` | ⭐⭐ **a címjegyzék a DHT-n** (D91/3): mit hirdetek (a gyökér-darabomat; vállalt szeletet csak a `hirdetes <n>` beállítással), és ki tartja, amit keresek — vakított témán, név nélkül |
 | `node koino/koino.js tarsak` | az **induló címeim** (`indulocimek.json` — 2026-09-26-tól tiszta lap), és melyikkel mikor sikerült |
 | `node koino/koino.js tars <hoszt> [port] [név]` | társ felvétele (levétel: `tars torol <hoszt> [port]`) |
@@ -98,7 +99,7 @@ korábbi böngészős nézet is az volt. A valódi felület a prototípus pakli-
 node koino/meres/mind.js
 ```
 
-Harminckilenc próba-fájl, **906 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
+Harminckilenc próba-fájl, **911 önpróba** (egy próba kaphat **ismert hiba** jelet: a javításig bukik, de
 a sort nem pirosítja be — lásd `meres/probaFuttato.js`; ma egy sincs); a kilépési kód 1, ha bármi bukott. Egy témakör
 (csoport) külön is futtatható: `node koino/meres/mind.js fa` — a csoportok: alap · allapot ·
 felulet · csere · fajl · fa · parancssor (a tagjaik a `mind.js` `CSOPORTOK`-jában). Egy
@@ -107,7 +108,7 @@ szűrő pontosan illeszkedik, és új próba-fájlt a `CSOPORTOK`-ba is be kell 
 `mind.js` megnevezi és nem fut.
 
 ⚠️ *Ha új próba kerül be, ezt a számot itt is vezesd át* — a 6. szabály mércéje attól
-ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **224 fájl, 3869,1 KB**, nulla
+ellenőrizhető, hogy friss. *(Ugyanez a mappa mérete: ma **224 fájl, 3895,2 KB**, nulla
 npm-csomag.)* ⛔ 2026-09-21-ig mindhárom szám elavult volt (23 fájl / 647 próba / 2903,6 KB
 a valódi 26 / 672 / 2995,5 helyett) — *egy szám, amit nem vezetünk át, rosszabb a hiányzónál:
 úgy néz ki, mintha mérték volna.*

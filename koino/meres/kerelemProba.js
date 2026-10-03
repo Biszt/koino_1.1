@@ -15,6 +15,13 @@ import { reszfaKarbantarto, OSSZPONT_FA, reszfaLevelei, osszPontokSzamitasa, gye
 import { ujAllapotFa, allapotBeallitas, allapotGyokere } from '../js/esemeny/osszegzoFa.js';
 import { GYOKER_KULCS } from '../js/csere/szeletEgyeztetes.js';
 import { toredekAzonosito } from '../js/allapot/szabalyok.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createSocket } from 'node:dgram';
+import { parbeszed } from '../js/csere/vonal.js';
+import { kezfogasUdpResen, udpKapcsolat, kerelemUdpResen } from '../js/csere/udpVonal.js';
+import { esemenyTarNyitasa, fajlBlobTarolo } from '../js/tar/fajlTar.js';
 import {
   kerelemAlakja, fejlecekValasza, mintaKeres, mintakValasza, fejlecekEllenorzese, torzsLenyomatai, FEJLEC_KORLAT,
   MELYSEG_KORLAT
@@ -185,6 +192,142 @@ proba('a törzs lenyomatai: a szöveg-darab, a szövegben és az ikonban hivatko
   const a = await torzsLenyomatai(ent);
   const b = await torzsLenyomatai(hiv);
   return a.includes(L('I')) && a.includes(L('K')) && a.length === 2 && b.length === 1 && b[0] === L('D');
+});
+
+// ===================================
+// 4. ⭐⭐ A MENET A VÉDETT RÉSEN (`KERELEM` → `FEJLECEK` → `MINTAKEREK` → `MINTAK`; `TORZS` → fájlok)
+// ===================================
+
+async function udpPar() {
+  const egyik = createSocket({ type: 'udp4', reuseAddr: true });
+  const masik = createSocket({ type: 'udp4', reuseAddr: true });
+  await new Promise((t) => egyik.bind(0, '127.0.0.1', t));
+  await new Promise((t) => masik.bind(0, '127.0.0.1', t));
+  return { egyik, masik, egyikPort: egyik.address().port, masikPort: masik.address().port,
+    bezar: () => { egyik.close(); masik.close(); } };
+}
+
+/** A tartó a résen: kézfogás, aztán a `parbeszed` a kapott kiszolgálóval. */
+async function tartoResen(halo, port, tar, beallitas) {
+  const v = await kezfogasUdpResen(halo, '127.0.0.1', port);
+  try {
+    return await parbeszed(udpKapcsolat(v, '127.0.0.1', port), tar, 'proba', beallitas);
+  } finally {
+    v.zar();
+  }
+}
+
+/** A tartó kiszolgálója egy világból — ahogy a `koino.js` is összerakja (a vállalás kívülről). */
+function kiszolgaloVilagbol(v, { vallalom = () => true, blob = null } = {}) {
+  const karbantarto = reszfaKarbantarto();
+  return {
+    async fejlecek(k) {
+      const { valasz, fak } = await fejlecekValasza({ allapot: v.allapot, kulcs: k.kulcs, n: k.n, d: k.d, karbantarto,
+        esemenyOlvas: olvaso(v.terkep) });
+      return { valasz, mintak: (kert, megvan) => mintakValasza({ fak, kert, megvan, esemenyOlvas: olvaso(v.terkep) }) };
+    },
+    async torzs(k) {
+      if (!vallalom(k.kulcs)) return [];
+      const ent = v.allapot.entitasok.get(k.kulcs);
+      const ki = [];
+      for (const l of await torzsLenyomatai(ent, blob ? (x) => blob.olvas(x) : null)) if (await blob?.van(l)) ki.push(l);
+      return ki;
+    }
+  };
+}
+
+proba('⭐⭐ a FEJLÉCEK a védett résen: a kérő a gyökerek UTÁN kér mintát, és a válasz átmegy az ellenőrzésen', async () => {
+  const v = await vilag();
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-kerelem-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    const [, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v) }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS, n: 10, d: 1 },
+        { mintaValaszto: (valasz) => mintaKeres(valasz) })
+    ]);
+    const e = await fejlecekEllenorzese({ valasz: kapott.valasz, kert: kapott.kert, mintak: kapott.mintak,
+      esemenyek: kapott.esemenyek });
+    return kapott.kiszolgalta && kapott.valasz.lista[0].az === v.nagy && kapott.valasz.ag?.kulcs === v.nagy
+      && e.hibas === 0 && e.ellenorzott >= 1 && kapott.esemenyek.length >= 1;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
+/** Egy gondolat szöveg-darabbal: a darab a tartó fájl-tárában. */
+async function szovegesVilag(hely) {
+  const anna = await ujEember('proba');
+  const blob = fajlBlobTarolo('proba', hely);
+  const { lenyomat } = await blob.ir(new TextEncoder().encode(JSON.stringify('A GONDOLAT SZÖVEGE')));
+  const g = await anna.tesz('GondolatLetrehozas', { cim: 'SZOVEGES', meret: 10, szoveg: { lenyomat, bajt: 20 } });
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 5 });
+  const allapot = await allapotSzamitasa([g, pont]);
+  return { allapot, terkep: new Map([[g.azonosito, g], [pont.azonosito, pont]]), g: g.azonosito, lenyomat, blob };
+}
+
+proba('⭐⭐ a TÖRZS a védett résen: a vállaló a szöveg-darabot adja, és a kérő fájl-tárába bájtra azonosan megérkezik', async () => {
+  const p = await udpPar();
+  const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-torzs-a-'));
+  const keroHely = await mkdtemp(join(tmpdir(), 'koino-torzs-b-'));
+  try {
+    const v = await szovegesVilag(gazdaHely);
+    const tar = await esemenyTarNyitasa('proba', gazdaHely);
+    const keroBlob = fajlBlobTarolo('proba', keroHely);
+    const [, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v, { blob: v.blob }),
+        fajlOlvas: (l) => v.blob.olvas(l) }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'torzs', kulcs: v.g }, { blob: keroBlob })
+    ]);
+    const nala = await keroBlob.olvas(v.lenyomat);
+    const eredeti = await v.blob.olvas(v.lenyomat);
+    return kapott.lenyomatok.length === 1 && kapott.fajlok[0]?.kesz === true
+      && nala && Buffer.from(nala).equals(Buffer.from(eredeti));
+  } finally {
+    p.bezar();
+    await rm(gazdaHely, { recursive: true, force: true });
+    await rm(keroHely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ D84/1: aki NEM vállalja, az a törzset nem adja ki — üres lista, és semmi nem érkezik', async () => {
+  const p = await udpPar();
+  const gazdaHely = await mkdtemp(join(tmpdir(), 'koino-torzs-c-'));
+  const keroHely = await mkdtemp(join(tmpdir(), 'koino-torzs-d-'));
+  try {
+    const v = await szovegesVilag(gazdaHely);
+    const tar = await esemenyTarNyitasa('proba', gazdaHely);
+    const keroBlob = fajlBlobTarolo('proba', keroHely);
+    const [, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, { kerelemKiszolgalo: kiszolgaloVilagbol(v, { blob: v.blob, vallalom: () => false }),
+        fajlOlvas: (l) => v.blob.olvas(l) }),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'torzs', kulcs: v.g }, { blob: keroBlob })
+    ]);
+    return kapott.kiszolgalta === true && kapott.lenyomatok.length === 0 && !(await keroBlob.van(v.lenyomat));
+  } finally {
+    p.bezar();
+    await rm(gazdaHely, { recursive: true, force: true });
+    await rm(keroHely, { recursive: true, force: true });
+  }
+});
+
+proba('⛔ kiszolgáló nélkül a tartó KESZ-t mond — a kérő nem vár a tétlenségi óráig', async () => {
+  const p = await udpPar();
+  const hely = await mkdtemp(join(tmpdir(), 'koino-kerelem-x-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', hely);
+    const kezdet = Date.now();
+    const [, kapott] = await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tar, {}),
+      kerelemUdpResen(p.masik, '127.0.0.1', p.egyikPort, 'proba', { fajta: 'fejlecek', kulcs: GYOKER_KULCS })
+    ]);
+    return kapott.kiszolgalta === false && Date.now() - kezdet < 5000;
+  } finally {
+    p.bezar();
+    await rm(hely, { recursive: true, force: true });
+  }
 });
 
 export default futtatas;
