@@ -67,6 +67,8 @@ import dontesiCsomag from './dontesiCsomagProba.js';
 // ⭐ A csere titkosítása (D89/1) — a kriptográfia, és hogy a lehallgató semmit nem lát.
 import titkositas from './titkositasProba.js';
 import cimjegyzek from './cimjegyzekProba.js';
+import osszpont from './osszPontProba.js';
+import kerelem from './kerelemProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
 import atmeneti from './atmenetiProba.js';
 
@@ -106,6 +108,8 @@ const PROBAK = [
   { nev: 'tartomany', futtat: tartomany },
   { nev: 'titkositas', futtat: titkositas },
   { nev: 'cimjegyzek', futtat: cimjegyzek },
+  { nev: 'osszpont', futtat: osszpont },
+  { nev: 'kerelem', futtat: kerelem },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
   { nev: 'ellentmondas', futtat: ellentmondas },
@@ -132,11 +136,11 @@ const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
   alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
-  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'felszabaditas', 'identitas'],
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'osszpont', 'felszabaditas', 'identitas'],
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
-  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'vizsga'],
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül

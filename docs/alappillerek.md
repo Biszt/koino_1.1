@@ -146,7 +146,11 @@ nyitott kérdés javaslattal (K1–K6: az út, a közvetítő tartása, az ugrá
 a szeletelt világban, a kérdés alakja). ✅ **Eldőlt (D92, Csaba, 2026-10-03 — „minden javaslatodat elfogadom”):** a
 kopogtatás a fő út (a közvetlen és a 2–3 ugrásos továbbadás mellett), a közvetítő csak a memóriájában tart, Freenet-féle
 ugrás-számláló, a fejléc = létrehozó esemény + össz-pont, a törzs = szöveg-darab + fájlok, az össz-pont felfelé
-összegződik és szúrópróbával ellenőrizhető (előbb a 62. mérés), nézet-független alapkérdések.
+összegződik és szúrópróbával ellenőrizhető (előbb a 62. mérés), nézet-független alapkérdések. 🚧 **Az építés (2026-10-03):**
+✅ a súlyozott mintavétel az összegző fában (62. mérés) · ✅ az össz-pont (`osszPont.js`: a felfelé összegzés, a részfa-fa
+karbantartása, a szúrópróba és az ellenőrzése) · ✅ a kérelem tartalma (`kerelem.js`: az alapkérdések alakja, a fejlécek
+és a minták, a kérdező ellenőrzése, a törzs lenyomatai) · ⏭️ a menet a vonalon (`KERELEM`) és a kiszolgálás · ⏭️ a függő
+kérelmek és a kopogtatás · ⏭️ a továbbadás (K2, K3) · ⏭️ a parancs és a pakli.
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
 

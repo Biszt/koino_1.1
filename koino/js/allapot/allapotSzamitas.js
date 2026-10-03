@@ -409,10 +409,17 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   // ⭐ MENET KÖZBEN A KIOSZTÁSI FŐKÖNYVET IS VEZETJÜK — az entitás létezésétől
   // függetlenül. Ez a D42 bemondott összegének forrása (lásd `szetosztottPontok`).
   const kiosztasok = new Map();
+  // ⭐ D92/5: melyik ALÁÍRT pont-esemény adja a szerző pontját (a nyertes) — az össz-pont szúrópróbája ehhez köti a
+  // levelet (`osszPont.js`). Külön főkönyv, mint a kiosztás: az entitás `hozzajarulok`-ja az ujjlenyomat része, és az
+  // egyezmény végrehajtása esemény nélkül is visz át pontot (annak itt nincs saját eseménye — D19: kimondjuk).
+  const pontEsemenyek = new Map();
 
   for (const [kulcs, bejegyzes] of pontok.ertekek) {
     const [szerzo, entitasAzonosito] = kulcs.split('|');
-    if (bejegyzes.ertek.pont > 0) kiosztasok.set(kulcs, bejegyzes.ertek.pont);
+    if (bejegyzes.ertek.pont > 0) {
+      kiosztasok.set(kulcs, bejegyzes.ertek.pont);
+      pontEsemenyek.set(kulcs, bejegyzes.esemeny.azonosito);
+    }
 
     const entitas = entitasok.get(entitasAzonosito);
     if (!entitas) continue;                           // olyan entitásra mutat, amit nem ismerünk
@@ -513,6 +520,8 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
     // válaszol, hogy „ki tartja EZT a gondolatot", ez pedig arra, hogy „mit mondtam ki a
     // saját láncomban". *Két kérdés, két válasz.*
     kiosztasok,
+    // ⭐ D92/5: "szerző|entitás" → a nyertes pont-esemény azonosítója (az össz-pont szúrópróbájához).
+    pontEsemenyek,
     // Szabályt sértő események (keret, jogosultság) — szintén jelzés, nem büntetés (D19)
     kivetelek,
     // ⚠️ A HARMADIK KATEGÓRIA: az esemény SZÁMÍT, csak valamit nem tudtunk ellenőrizni
