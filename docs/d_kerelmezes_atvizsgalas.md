@@ -103,5 +103,7 @@ ugyanazt használja, és a válaszolónak nem kell az egész utat tartania. (A D
 
 - ✅ **60.** a kérelem útja (szimuláció) — fent.
 - ⏭️ **61.** a kopogtatás a valódi DHT-n: a bejelentés a kopogtató témán, a tartó ránézése, az idők (a döntés után).
-- ⏭️ **62.** a fejléc és az össz-pont bizonyítékának mérete k mintával (K5).
+- ✅ **62.** az össz-pont bizonyítéka: egy minta 0,5–2,6 KB, a fejléc k = 4-gyel 3–11 KB, k = 8-cal 5–21 KB; a lebukás
+  pontosan 1 − (1 − f)^k; a tartó a részfa-fát folyamatosan tartja karban (egy változás < 1 ms, a nulláról építés
+  10 000 szerzőnél 7 s). → a kiválasztott ág k = 8, a legfelső testvérek k = 4, a többi bemondás (és ezt kimondja).
 - ⏸️ **Terep:** a fúrható NAT-párok aránya (otthon ↔ otthon, otthon ↔ mobil, mobil ↔ mobil — a 🅱️ változat).

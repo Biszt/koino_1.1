@@ -4694,6 +4694,36 @@ címei. ✅ **Megépült (2026-10-03):** `cimjegyzek.js` (`gyokerMelysege`, `hir
 hirdetése, a `cimjegyzek` parancs, a `hozd` tartaléka); próbák: `cimjegyzekProba.js` és a parancssor (hamis DHT-n,
 két készülékkel — a beállítás nélkül nem hirdet szeletet, más koinóból nem található, a `hozd` cím nélkül elhoz).
 
+### D92. A KÉRELMEZÉS ÚTJA ÉS ALAKJA (D): a kopogtatás a fő út, a továbbadás kiegészítő (2026-10-03, Csaba: „minden javaslatodat elfogadom”)
+
+**Amiből jött:** a D átvizsgálása ([`d_kerelmezes_atvizsgalas.md`](d_kerelmezes_atvizsgalas.md)) és a 60. mérés
+(szimuláció): a kötés-hálón való elárasztás nagy koinóban szinte semmit nem ad (K = 3, 70% élő mellett a kérelem
+alig terjed; 2 ugrás után semmi többet), a közvetlen elérés a fogadóképesek arányán áll (nélkülük 0,1%), a döntő
+pedig a rés nyitása a tartóhoz — a kopogtatással T = 3 tartónál 20% → 76% (ha a NAT-párok fele fúrható).
+
+#### A DÖNTÉS
+
+1. ⭐ **Az út (K1) — három, egyszerre indítva:** (a) **közvetlenül** a G-ből ismert tartóhoz, ha a kötésem vagy
+   fogadóképes; (b) ⭐ **KOPOGTATÁS** — a kérő a BEP 5-tel bejelenti a címét a tartó kopogtató témáján
+   (`H(koinó ‖ „kopogtató” ‖ a tartó tábla-aláírója)`, vakítva, mint a D91 témái); minden készülék ~20 percenként
+   ránéz a sajátjára, és a következő buliban a kérők felé is kopog; a rés után a kérés közvetlen (a tartó a
+   válaszoló — D87/3); (c) **továbbadás a kötés-hálón**, 2–3 ugrásig. ⚠️ Ez a D76/4 és a D87 hangsúlyát
+   megfordítja: a továbbadás kiegészítő út (a közösségi és a kis koinókban számít). ⚠️ A kopogtatás csak olyan
+   tartóhoz megy, akinek a tábla-aláíróját ismerem (a raj-jegyzék); és aki ismeri a koinót és a tartó aláíróját, az
+   látja, hány cím kopogtat nála (azt nem, hogy mit kér).
+2. ⭐ **A közvetítő tartása (K2):** a kérelmet és a választ csak a memóriájában őrzi, időkorláttal (két ablak) és
+   darabkorláttal; nem kerül a tárba, nem szolgálja ki — ez a D87/1 „nem tartja meg” értelmezése.
+3. ⭐ **Az ugrás-számláló (K3) — a Freenet mintája:** a kérő 3-at küld; aki 3-at kap, fele eséllyel csökkenti —
+   így az első továbbító nem tudja, hogy a szomszédja maga a kérdező-e (a D87/2 „véletlen kezdőérték” alakja).
+4. ⭐ **A fejléc és a törzs (K4):** a fejléc = a létrehozó esemény (cím, típus, szülő) + az össz-pont; a szelet
+   eseményei bárkitől jöhetnek (D84/1); a törzs = a szöveg-darab (D72) és a fájlok — csak a vállalótól.
+5. ⭐ **Az össz-pont (K5) felfelé összegződik:** minden szelet tartója a saját pontokból és a gyerekek bemondott
+   össz-pontjából számol, a válasz a részletezést is hozza, és a kérő súlyozott szúrópróbával ellenőriz (a szerzők
+   aláírt eseményeivel). ⚠️ Előbb a mérés (62.: a bizonyíték mérete k mintánál, és az összegzés terhe).
+6. ⭐ **A kérdés alakja (K6):** nézet-független alapkérdések — *fejlécek* (X gyerekei össz-pont szerint, legfeljebb
+   n, és ha a válaszoló tartja, a legjobb ág d szintig), *szelet* (X eseményei), *törzs* (X szöveg-darabja,
+   fájljai); a pakli első betöltése (D76/2) ezekből áll össze, és a síkidom, a térkép később ugyanezt használja.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

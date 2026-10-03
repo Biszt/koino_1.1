@@ -525,3 +525,62 @@ export async function allapotValtozasa(fajta, hossz, gyoker, kulcs, bizonyitek, 
   }
   return { rendben: true, gyoker: r };
 }
+
+// ===================================
+// ⭐⭐ A SÚLYOZOTT MINTAVÉTEL — az össz-pont szúrópróbája (D92/5, 2026-10-03)
+// ===================================
+//
+// Az állapot-fa levelei egy-egy összeg-szeletet fednek (a kulcsok sorrendje a fában — a lenyomat bitjei szerint):
+// az r-edik egység (0 ≤ r < a gyökér összege) pontosan egy levélre esik. ⭐ A levél bizonyítékából a levél
+// TARTOMÁNYA is kiszámolható — a bal testvérek összege az út mentén —, tehát aki egy felfújt gyökeret mond be, annak
+// a felfújt rész hamis levelekben van, és egy véletlen r f eséllyel oda esik: k mintából 1 − (1 − f)^k eséllyel
+// lebukik. ⚠️ Az r-t a KÉRDEZŐ választja, a gyökér bemondása UTÁN (különben a fa építője addig próbálkozik, amíg a
+// minták el nem kerülik a hamis leveleket).
+
+/**
+ * Melyik levélre esik az r-edik egység (az `i`-edik összeg szerint) — a levél kulcsa és bizonyítéka.
+ * @param {Object} fa - `ujAllapotFa`
+ * @param {number} r - 0 ≤ r < a gyökér i-edik összege
+ * @param {number} [i] - melyik összeg (alapból az első)
+ * @returns {Promise<null|{kulcs: string, bizonyitek: Object}>} null, ha r a tartományon kívül esik
+ */
+export async function allapotSulyozottKeresese(fa, r, i = 0) {
+  const gyoker = await osszegzese(fa, fa.gyoker);
+  if (!Number.isSafeInteger(r) || r < 0 || i < 0 || i >= fa.hossz || r >= gyoker.o[i]) return null;
+  let cs = fa.gyoker;
+  let maradek = r;
+  while (cs !== null && !cs.level) {
+    const bal = (await osszegzese(fa, cs.bal)).o[i];
+    if (maradek < bal) cs = cs.bal;
+    else { maradek -= bal; cs = cs.jobb; }
+  }
+  if (cs === null) return null;
+  return { kulcs: cs.level.kulcs, bizonyitek: await allapotBizonyitek(fa, cs.level.kulcs) };
+}
+
+/**
+ * ⭐ A súlyozott minta ELLENŐRZÉSE: a bizonyíték a gyökérhez tartozik, a kulcs benne van, és a levél tartománya
+ * — [a bal testvérek összege, + a levél összege) — lefedi r-t. ⛔ Az út mentén minden testvér összege és a levél
+ * összege nem negatív (különben a tartományok átfednék egymást).
+ * @returns {Promise<{rendben: boolean, ok?: string, ertek?: *, osszegek?: Array<number>, tol?: number, ig?: number}>}
+ */
+export async function allapotSulyozottEllenorzese(fajta, hossz, gyoker, kulcs, bizonyitek, r, i = 0) {
+  if (!Number.isSafeInteger(r) || r < 0 || !Number.isInteger(i) || i < 0 || i >= hossz) {
+    return { rendben: false, ok: 'hibás minta-hely' };
+  }
+  const e = await allapotBizonyitekEllenorzese(fajta, hossz, gyoker, kulcs, bizonyitek);
+  if (!e.rendben) return e;
+  if (!e.van) return { rendben: false, ok: 'a kulcs nincs a fában' };
+  const ut = await utja(fajta, kulcs);
+  let tol = 0;
+  for (let m = 0; m < bizonyitek.testverek.length; m++) {
+    const t = bizonyitek.testverek[m];
+    if (t.o[i] < 0) return { rendben: false, ok: 'negatív összeg az úton' };
+    if (bitje(ut, m) === 1) tol += t.o[i];             // jobbra mentünk: a testvér a bal oldalon áll
+  }
+  const sajat = e.osszegek[i];
+  if (sajat < 0) return { rendben: false, ok: 'negatív levél' };
+  const ig = tol + sajat;
+  if (!(tol <= r && r < ig)) return { rendben: false, ok: 'a levél tartománya nem fedi a mintát' };
+  return { rendben: true, ertek: e.ertek, osszegek: e.osszegek, tol, ig };
+}

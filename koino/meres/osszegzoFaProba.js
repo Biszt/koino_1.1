@@ -9,7 +9,9 @@
 // bizonyítékból PONTOSAN azt a gyökeret adja, amit a valódi fa — minden esetre (beszúrás üres helyre,
 // két levél szétválása, felülírás, törlés feljebb csúszással, nem létező törlése); (6) a lenyomat a
 // darabot és az összeget is fedi; (7) ⚠️ és ami a fa HATÁRA (D78 pontosítás): a rejtett negatív
-// levelet az útba eső ellenőrzés nem látja — a teljes lista igen.
+// levelet az útba eső ellenőrzés nem látja — a teljes lista igen; (8) ⭐ a SÚLYOZOTT MINTAVÉTEL (D92/5): minden
+// egység pontosan egy levélre esik, a levél tartománya a bizonyítékból ellenőrizhető, és a felfújt gyökér hamis
+// leveleire a minták rá is esnek.
 //
 // ⚠️ A véletlen MAGVAS (a bukás megismételhető): ugyanaz a mag, ugyanaz a sorozat.
 
@@ -19,7 +21,8 @@ import {
   naploGyokere, naploBizonyitek, naploBizonyitekEllenorzese, ujNaplo, naploHozzafuzes,
   naploCsucsGyokere, naploMerete,
   ujAllapotFa, allapotBeallitas, allapotTorles, allapotGyokere, allapotLista, allapotGyokereListabol,
-  allapotBizonyitek, allapotBizonyitekEllenorzese, allapotValtozasa
+  allapotBizonyitek, allapotBizonyitekEllenorzese, allapotValtozasa,
+  allapotSulyozottKeresese, allapotSulyozottEllenorzese
 } from '../js/esemeny/osszegzoFa.js';
 
 const { proba, futtatas } = probaGyujtemeny('Az összegző Merkle-fa próbája (D78)');
@@ -340,6 +343,102 @@ proba('⚠️ A FA HATÁRA (D78 pontosítás): a rejtett NEGATÍV levelet az út
   const listaIllik = azonosOsszegzes(await allapotGyokereListabol(K, 1, lista), gyoker);
   const negativLatszik = lista.some((e) => e.osszegek[0] < 0);
   return utonAtmegy && listaIllik && negativLatszik;
+});
+
+// ===================================
+// ⭐⭐ A SÚLYOZOTT MINTAVÉTEL (D92/5) — az össz-pont szúrópróbája
+// ===================================
+
+const T = 'tulajdonosok';
+
+/** n levél véletlen (1..20) összeggel — és a fa. */
+async function sulyozottFa(n, mag) {
+  const v = magvas(mag);
+  const fa = ujAllapotFa(T, 1);
+  const ertekek = new Map();
+  for (let i = 0; i < n; i++) {
+    const p = 1 + Math.floor(v() * 20);
+    ertekek.set('szerzo-' + i, p);
+    await allapotBeallitas(fa, 'szerzo-' + i, 'esemeny-' + i, [p]);
+  }
+  return { fa, ertekek };
+}
+
+proba('⭐⭐ A SÚLYOZOTT KERESÉS minden egységet PONTOSAN egy levélre tesz — és a levél tartománya a bizonyítékból ellenőrizhető', async () => {
+  const { fa, ertekek } = await sulyozottFa(30, 92);
+  const gyoker = await allapotGyokere(fa);
+  const talalat = new Map();
+  for (let r = 0; r < gyoker.o[0]; r++) {
+    const m = await allapotSulyozottKeresese(fa, r);
+    const e = await allapotSulyozottEllenorzese(T, 1, gyoker, m.kulcs, m.bizonyitek, r);
+    if (!e.rendben || !(e.tol <= r && r < e.ig)) return false;
+    talalat.set(m.kulcs, (talalat.get(m.kulcs) ?? 0) + 1);
+  }
+  // Minden levél pontosan annyi egységet kapott, amennyi az összege; a tartományon kívül nincs találat.
+  const pontos = [...ertekek].every(([k, p]) => talalat.get(k) === p) && talalat.size === ertekek.size;
+  return pontos && (await allapotSulyozottKeresese(fa, gyoker.o[0])) === null
+    && (await allapotSulyozottKeresese(fa, -1)) === null;
+});
+
+proba('⛔ A SÚLYOZOTT ELLENŐRZÉS elutasít: másik egységre, hamis gyökérre, hiányzó kulcsra — megnevezett okkal', async () => {
+  const { fa } = await sulyozottFa(20, 7);
+  const gyoker = await allapotGyokere(fa);
+  const r = Math.floor(gyoker.o[0] / 2);
+  const m = await allapotSulyozottKeresese(fa, r);
+  const jo = await allapotSulyozottEllenorzese(T, 1, gyoker, m.kulcs, m.bizonyitek, r);
+  // (1) egy másik egység, ami NEM erre a levélre esik
+  const kivul = await allapotSulyozottEllenorzese(T, 1, gyoker, m.kulcs, m.bizonyitek, jo.ig);
+  // (2) felfújt gyökér: a bizonyíték nem hozzá tartozik
+  const hamisGyoker = { ...gyoker, o: [gyoker.o[0] + 50] };
+  const hamis = await allapotSulyozottEllenorzese(T, 1, hamisGyoker, m.kulcs, m.bizonyitek, r);
+  // (3) hiányzó kulcs (a bizonyíték a hiányt mutatja)
+  const nincs = await allapotBizonyitek(fa, 'nincs-ilyen');
+  const hianyzo = await allapotSulyozottEllenorzese(T, 1, gyoker, 'nincs-ilyen', nincs, r);
+  return jo.rendben && !kivul.rendben && /nem fedi/.test(kivul.ok)
+    && !hamis.rendben && !hianyzo.rendben && /nincs a fában/.test(hianyzo.ok);
+});
+
+proba('⭐⭐ A FELFÚJT GYÖKÉR LEBUKIK — a hamis levelekre (a többlet fele) 16 mintából legalább egy rá is esik', async () => {
+  // A becsületes fa 40 szerzővel; a csaló ugyanannyi összeget tesz hozzá hamis levelekben, és a felfújt gyökeret
+  // mondja be. A minták helyét a kérdező választja (magvas véletlen) — a gyökér bemondása UTÁN.
+  const { fa } = await sulyozottFa(40, 3);
+  const valodi = (await allapotGyokere(fa)).o[0];
+  let hamisOsszeg = 0;
+  for (let i = 0; hamisOsszeg < valodi; i++) {
+    await allapotBeallitas(fa, 'hamis-' + i, 'nem-letezik-' + i, [10]);
+    hamisOsszeg += 10;
+  }
+  const gyoker = await allapotGyokere(fa);
+  const v = magvas(1234);
+  let hamisraEsett = 0;
+  for (let k = 0; k < 16; k++) {
+    const r = Math.floor(v() * gyoker.o[0]);
+    const m = await allapotSulyozottKeresese(fa, r);
+    const e = await allapotSulyozottEllenorzese(T, 1, gyoker, m.kulcs, m.bizonyitek, r);
+    if (!e.rendben) return false;                     // a fa maga becsületesen épült — a bizonyíték rendben
+    if (m.kulcs.startsWith('hamis-')) hamisraEsett++;  // a protokollban itt kérné el az aláírt pont-eseményt
+  }
+  return hamisraEsett >= 1;
+});
+
+proba('⛔ A NEGATÍV ÖSSZEG AZ ÚTON elbukik — különben a tartományok átfednék egymást', async () => {
+  const { fa } = await sulyozottFa(12, 5);
+  await allapotBeallitas(fa, 'negativ', 'x', [-7]);
+  const gyoker = await allapotGyokere(fa);
+  // A negatív levél legközelebbi szomszédjának útján a negatív levél maga a testvér.
+  let elbukott = false;
+  for (const { kulcs } of allapotLista(fa)) {
+    if (kulcs === 'negativ') continue;
+    const biz = await allapotBizonyitek(fa, kulcs);
+    if (!biz.testverek.some((t) => t.o[0] < 0)) continue;
+    for (let r = 0; r < Math.max(1, gyoker.o[0]); r++) {
+      const e = await allapotSulyozottEllenorzese(T, 1, gyoker, kulcs, biz, r);
+      if (!e.rendben && /negatív/.test(e.ok)) { elbukott = true; break; }
+      if (e.rendben) return false;                     // egy negatív testvérrel átment: rossz
+    }
+    if (elbukott) break;
+  }
+  return elbukott;
 });
 
 export default futtatas;

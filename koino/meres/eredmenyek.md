@@ -4636,3 +4636,30 @@ a rés nyitása a tartóhoz**: a kopogtatással (a tartó tudja, hogy kérnek t�
 otthon ↔ mobil rés megy, a mobil ↔ mobil — 🅱️ — mérve még nincs); a kötés-háló véletlen gráf (a valódi
 közösségibb, ott a λ nagyobb); a tartó ránézésének késését nem modellezi. → [`d_kerelmezes_atvizsgalas.md`](../../docs/d_kerelmezes_atvizsgalas.md).
 
+## 62. ⭐ AZ ÖSSZ-PONT BIZONYÍTÉKA — a súlyozott szúrópróba ára (D92/5, 2026-10-03, a laptopon)
+
+*`osszPontMeres.js`: az X tartója egy állapot-fát épít X részfájáról — levelenként egy szerző saját pontja (az
+aláírt pont-esemény azonosítójával) és egy gyerek bemondott össz-pontja; a gyökér összege az össz-pont. A kérdező a
+gyökér bemondása UTÁN k véletlen egységet választ (`allapotSulyozottKeresese` / `allapotSulyozottEllenorzese`); egy
+szerzői levélhez az aláírt pont-eseményt is elkéri (53. mérés: ~1,37 KB). A fejléc magja a létrehozó esemény (~0,8 KB).*
+
+```
+n szerző (+10 gyerek) │ építés  │ minta: bizonyíték │ + pont-esemény │ fejléc k=0 │ k=4      │ k=8      │ k=16
+  1                   │    8 ms │       489 B       │      509 B     │  0,86 KB   │  2,85 KB │  4,84 KB │  8,82 KB
+  100                 │   43 ms │       726 B       │    1 534 B     │  0,86 KB   │  6,85 KB │ 12,85 KB │ 24,83 KB
+  1 000               │  471 ms │     1 006 B       │    2 246 B     │  0,86 KB   │  9,64 KB │ 18,41 KB │ 35,96 KB
+  10 000              │ 7024 ms │     1 245 B       │    2 594 B     │  0,87 KB   │ 11,00 KB │ 21,14 KB │ 41,40 KB
+lebukás (elméleti | mérve):  f = 10%: k=4 34|34%  k=8 57|56%  k=16 81|81%
+                             f = 30%: k=4 76|78%  k=8 94|96%  k=16 100|99%
+a fa egy változása: 0,53 ms (100 szerző) · 0,70 ms (1 000) · 0,85 ms (10 000) — logaritmikus
+egy minta ellenőrzése (1 000 szerző): 0,86 ms (az aláírás-ellenőrzés nélkül)
+```
+
+⭐ **A lelet:** egy minta a bizonyítékkal és az aláírt pont-eseménnyel **0,5–2,6 KB**, a fejléc k = 4 mintával
+**3–11 KB**, k = 8-cal **5–21 KB** — logaritmikusan nő a szerzők számával. A lebukás pontosan az elméleti
+1 − (1 − f)^k. ⚠️ **A tartó terhe:** a fa egy változása logaritmikus (< 1 ms), de a nulláról építés 10 000 szerzőnél
+7 s — a tartó a fát **folyamatosan tartja karban** (minden új pont-esemény egy változás), nem kérésenként építi. ⭐
+**A következmény a felületre:** egy 20 kártyás lap mind k = 8-cal ~100–400 KB volna — ezért a pakli a KIVÁLASZTOTT
+ágat ellenőrzi (k = 8), a testvérek közül a legfelsőket k = 4-gyel, a többit bemondásként (és ezt kimondja); a
+már megvolt pont-eseményt nem kéri el újra.
+

@@ -143,7 +143,10 @@ lépésenként megy vissza, az ugrás-számláló kezdőértéke véletlen).
 (szimuláció) szerint a kötés-hálón való elárasztás nagy koinóban szinte semmit nem ad (2 ugrás után semmit), a döntő a
 rés nyitása a tartóhoz: a KOPOGTATÁS (randevú a DHT-n, a buliban mindkét fél kopog) T = 3 tartónál 20% → 76%. Hat
 nyitott kérdés javaslattal (K1–K6: az út, a közvetítő tartása, az ugrás-számláló, a fejléc–törzs határ, az össz-pont
-a szeletelt világban, a kérdés alakja) — Csaba döntésére vár.
+a szeletelt világban, a kérdés alakja). ✅ **Eldőlt (D92, Csaba, 2026-10-03 — „minden javaslatodat elfogadom”):** a
+kopogtatás a fő út (a közvetlen és a 2–3 ugrásos továbbadás mellett), a közvetítő csak a memóriájában tart, Freenet-féle
+ugrás-számláló, a fejléc = létrehozó esemény + össz-pont, a törzs = szöveg-darab + fájlok, az össz-pont felfelé
+összegződik és szúrópróbával ellenőrizhető (előbb a 62. mérés), nézet-független alapkérdések.
 
 ### E. ⭐ AZ IDENTITÁS A SZELETELT VILÁGBAN — A-ra és C-re épül
 
@@ -465,3 +468,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     készülékenkénti beállítással (alapból 0)** · mert a háló 30–60 perc alatt felejt (58. mérés): 100 szelet egy
     telefonon ~65 MB/nap volna, a gyökér-darab egy téma (~0,65 MB/nap); a szeletek fő útja úgyis a raj · Csaba,
     2026-10-03 · D91/3, `cimjegyzek.js`.
+53. **2026-10-03 · a kérelem fő útja a továbbadás a kötés-hálón (D76/4, D87)** → **a kopogtatás (randevú a DHT-n a tartó
+    kopogtató témáján, a buliban mindkét fél kopog); a továbbadás kiegészítő, 2–3 ugrásig** · mert a 60. mérés szerint
+    az elárasztás K = 3 kötés mellett nagy koinóban szinte semmit nem ad, a rés nyitása viszont 20% → 76% · Csaba,
+    2026-10-03 · D92/1, `d_kerelmezes_atvizsgalas.md`.
+54. **2026-10-03 · a pakli első betöltése egyetlen összetett válasz (D76/2)** → **nézet-független alapkérdések
+    (fejlécek, szelet, törzs)** · mert a válaszolónak így nem kell az egész utat tartania (a szeletelt világban nem is
+    tartja), és a síkidom, a térkép ugyanazt használja · Csaba, 2026-10-03 · D92/6.
