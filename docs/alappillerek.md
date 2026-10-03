@@ -245,7 +245,12 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    saját azonosság-szeletem), az átmeneti tár, a „megnézett", a D14 csak a tartósra, az eldobás. A csere
    még a mai módon fut. ✅ A gyökér tartása eldőlt (**D90**, 2026-10-03, Csaba: „legyen a (B)”): nem vállalás,
    hanem a G dolga (a legfelső szintű születések listáját a kereső-réteg osztja szét); a koinó születését
-   mindenki tartja.
+   mindenki tartja. ✅ **A ③ KÉSZ (2026-10-03):** a **vállalás** (`vallalas.js` — a saját láncból: a pozitív
+   pontú szeletek, az azonosság-szelet, a koinó születése; a `vallalas` parancs), az **átmeneti tár**
+   (`atmenetiTar.js` — ugyanaz a kapu, a legrégebben megnézett megy, a „megnézett” a `hozd` és a megnyitott
+   kártya), a **D14 csak a tartósra** (a csak az átmenetiből, pont nélkül ismert entitás jelölve marad), a `hozd`
+   a nem vállaltat az átmenetibe hozza, és az **előléptetés** (a vállalttá vált átmeneti szelet a tartósba). A
+   csere a mai módon fut (a tartósba) — a szigorú (b) a B/3.
    ⛔⛔ **ÉS A DÖNTÉS ISMERETE (D85 T3, a (B) építéséből — mérve, `dontesiCsomagProba.js` 1.):** ✅ **KÉSZ
    (2026-10-03), de TARTALMI jellel** (a 47. elágazás): egy rész akkor ismert, ha az érintettjének legalább egy
    pont-eseménye a bemenetben van (a tárból vagy egy csomagból) — nem a vállalásból, így a D17 áll.
@@ -424,3 +429,11 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     `javaslatSzamitas.js`: `ismeretlenReszek`, a `nemIsmert` státusz.
 48. **2026-10-03 · a gyökér tartása (D90)** → **a G dolga, nem vállalás** · Csaba: „legyen a (B)” — az (A)
     terhe a koinó méretével nőne; a gyökér semmiről nem dönt, csak a megtalálást segíti · D90.
+49. **2026-10-03 · a vállalttá vált átmeneti szelet: az átmenetiben marad** → **ELŐLÉP a tartós tárba** (ugyanazon
+    a kapun, minden parancs indulásakor és az őrjárat körében) · mert különben a vállalt szelet teste az
+    eldobható tárban maradna, és a korlát miatt kieshetne · `koino.js`: `atmenetiElolepetese`. ⚠️ A fordítottja
+    (a visszavett pontú szelet a tartósból az átmenetibe — D75/1) a B/3-mal jön: a mai csere úgyis mindent a
+    tartósba hoz.
+50. **2026-10-03 · az átmeneti tár alakja: egy hozzáfűzhető fájl (mint a tartós)** → **szeletenként egy fájl** ·
+    mert az eldobás így egy fájl törlése (a hozzáfűzhető fájlból törölni csak újraírással lehetne), és a tár
+    korlátos — a 49. mérés ellenérve (100 000 eseménynél lassú a sok fájl) itt nem áll · `atmenetiTar.js`.

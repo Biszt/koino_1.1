@@ -425,7 +425,7 @@ export async function pakliOldal(tar, koino, beallitas = {}) {
   // kártya címét — vagyis a rendezési értékét is. ⚠️ Az „első N esemény" önmagában tehát már
   // nem elég befagyasztott bemenet; a pillanat is kell hozzá.
   const most = honnan?.most ?? beallitas.most ?? Date.now();
-  const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek);
+  const kep = await kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
 
   // ----- A RENDEZÉSI ÉRTÉK -----
   const agazati = agazatiPontok(kep.entitasok);
@@ -548,7 +548,7 @@ async function lapKepe(tar, koino, beallitas) {
   const horgony = Math.max(0, Math.min(kert, teljes));
 
   const most = Number.isInteger(beallitas.most) ? beallitas.most : Date.now();
-  return kepetKerni(nezet, koino, horgony, most, esemenyek);
+  return kepetKerni(nezet, koino, horgony, most, esemenyek, tar.csakAtmeneti?.() ?? null);
 }
 
 // ===================================
@@ -832,14 +832,15 @@ export async function entitasKuszobei(tar, koino, azonosito, beallitas = {}) {
  * történt az öt kártya-végponton. Ezért megy mind az öt a `lapKepe`-n keresztül; ha új
  * kártya-végpont születik, **azt is oda kösd**, ne ide közvetlenül.
  */
-async function kepetKerni(nezet, koino, horgony, most, esemenyek) {
-  const kulcs = koino + '|' + horgony + '|' + most;
+async function kepetKerni(nezet, koino, horgony, most, esemenyek, csakAtmeneti = null) {
+  const kulcs = koino + '|' + horgony + '|' + most + '|' + (csakAtmeneti?.size ?? 0);
   if (nezet.horgony === kulcs && nezet.kep) return nezet.kep;
 
   // ⭐ „Az első N esemény" — és ez azért stabil halmaz, mert a tár HOZZÁFŰZHETŐ: ami egyszer
   // beírt, az ott marad, azon a helyen.
   const bemenet = horgony >= esemenyek.length ? esemenyek : esemenyek.slice(0, horgony);
-  const kep = allapotSzamitasa(bemenet);
+  // ⭐ B/2: ha a tár a két tár nézete (`atmenetiTar.js`), a D14 kivételéhez megmondja, mi van csak az átmenetiben.
+  const kep = allapotSzamitasa(bemenet, { csakAtmeneti });
 
   // ⭐⭐ ÉS A HÁROM FÁZIS HARMADIKA: az elfogadott szerkesztési egyezmények rávezetése.
   // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az

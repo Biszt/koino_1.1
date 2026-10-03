@@ -20,7 +20,7 @@
 
 import { probaGyujtemeny } from './probaFuttato.js';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // ⭐ A néma DHT-gép és a néma tükör próbájához (40. mérés): egy foglalat, ami hall, de nem felel.
@@ -264,6 +264,70 @@ proba('⭐ D89/2: a `koino` parancs alapból ZÁRT, `nyilt` szóval NYÍLT koin�
   });
 
 // ===================================
+// ⭐⭐ B/1–B/2: A `hozd` AZ ÁTMENETI TÁRBA — és a pontom után a tartósba lép elő (2026-10-03)
+// ===================================
+//
+// A gazda `figyel`-lel kiszolgál; a vendég (csak a koinó születését kapta meg) elkér egy gondolatot. ⭐ Mivel
+// nem vállalja, az ÁTMENETI tárba kerül (eldobható) — a tartós tár (`esemenyek.jsonl`) nem tartalmazza, az
+// állapot „nem tartod”-ot mond, a `vallalas` egy átmeneti szeletet mutat. Ha pontot tesz rá, a következő
+// parancs indulásakor ELŐLÉP: a teste a tartós tárba kerül, az átmenetiből elmegy. Viselkedést mérünk (a
+// lemezt és az állapotot), nem feliratot.
+proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba hozza — a pontom után a tartósba lép elő',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const port = 7641;
+    let figyelo = null;
+    try {
+      await fut(gazda, 'koino', 'Hozd-próba');
+      const g = azonosito(await fut(gazda, 'gondolat', 'MESSZI'), 'Létrejött:');
+      if (!g) return false;
+      await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+      const esemenyek = (await readFile(join(gazda, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const gTeljes = esemenyek.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
+      await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));      // a vendég csak a koinó születését ismeri
+
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+        env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
+      });
+      await varj(2000);
+      const hozva = await fut(vendeg, 'hozd', gTeljes, '127.0.0.1', String(port));
+      figyelo.kill();
+      figyelo = null;
+      await varj(800);
+
+      // A koinó mappája a vendégnél (az egyetlen, amiben tár van).
+      const koinoMappa = join(vendeg, (await readdir(vendeg, { withFileTypes: true }))
+        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name)
+        .find(Boolean));
+      const tartosban = async () => (await readFile(join(koinoMappa, 'esemenyek.jsonl'), 'utf8')).includes(gTeljes);
+      const atmenetiben = async () => (await readdir(join(koinoMappa, 'atmeneti'))).includes(gTeljes + '.jsonl');
+
+      const elotte = { tartos: await tartosban(), atmeneti: await atmenetiben() };
+      const kep = await fut(vendeg, 'allapot');
+      const vallalas1 = await fut(vendeg, 'vallalas');
+      await fut(vendeg, 'pont', g, '10');
+      const vallalas2 = await fut(vendeg, 'vallalas');     // az indulásakor lép elő
+      const utana = { tartos: await tartosban(), atmeneti: await atmenetiben() };
+
+      return /átmeneti tárba/.test(hozva)
+        && !elotte.tartos && elotte.atmeneti
+        && kep.includes('MESSZI') && /nem tartod/.test(kep)
+        && /ÁTMENETI TÁR \(csak láttam — eldobható\): 1 szelet/.test(vallalas1)
+        && /1 tudatpontos/.test(vallalas2) && /ÁTMENETI TÁR \(csak láttam — eldobható\): 0 szelet/.test(vallalas2)
+        && utana.tartos && !utana.atmeneti;
+    } finally {
+      if (figyelo) figyelo.kill();
+      await varj(500);
+      await rm(gazda, { recursive: true, force: true });
+      await rm(vendeg, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D85 T3, a (B): A DÖNTÉSI CSOMAG A KÉZI ÚTON (2026-10-03)
 // ===================================
 //
@@ -304,12 +368,21 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
       await varj(3000);                                   // a lezárás után
 
       // ⭐ A ŐRJÁRATA egy kört fut (társ nélkül is lefut a háztartás) — és kiadja a csomagot.
+      // ⚠️ A DHT-belépő nélkül (mint a többi őrjárat-próba): a valódi DHT-ra kopogás a teljes sor terhelése
+      // alatt kitolta az első kört a várakozásból (szeszélyes bukás volt, 2026-10-03).
       orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', '7611'], {
-        env: { ...process.env, KOINO_ADAT: A, KOINO_NAPLO: '' }
+        env: { ...process.env, KOINO_ADAT: A, KOINO_NAPLO: '', KOINO_DHT_BELEPOK: 'nincs' }
       });
       let orKimenet = '';
       orjarat.stdout.on('data', (d) => { orKimenet += d; });
-      for (let i = 0; i < 40 && !/döntési csomag a töredékekbe/.test(orKimenet); i++) await varj(250);
+      const orKezdet = Date.now();
+      for (let i = 0; i < 80 && !/döntési csomag a töredékekbe/.test(orKimenet); i++) await varj(250);
+      // ⭐ A bukás megnevezi magát: ha az őrjárat nem adta ki a csomagot, kimondjuk, mennyi ideig vártunk.
+      if (!/döntési csomag a töredékekbe/.test(orKimenet)) {
+        process.stdout.write('    (az őrjárat ' + Math.round((Date.now() - orKezdet) / 1000)
+          + ' mp alatt nem adta ki a csomagot; utolsó kimenete: '
+          + orKimenet.replace(/\x1b\[[0-9;]*m/g, '').slice(-300) + ')' + String.fromCharCode(10));
+      }
       orjarat.kill();
       orjarat = null;
       await varj(500);

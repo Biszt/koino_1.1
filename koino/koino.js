@@ -101,12 +101,17 @@ import {
   // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
   kulcsparVisszatoltese
 } from './js/kulcs/kulcsTar.js';
-import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese } from './js/tar/esemenyTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese } from './js/tar/esemenyTar.js';
+// ⭐ B/2: a szelet-kulcs (az előléptetéshez).
+import { szelet } from './js/esemeny/esemeny.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from './js/allapot/szerkesztesiVegrehajtas.js';
 import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszabaditas.js';
+// ⭐ B/1–B/2: a vállalás és az átmeneti tár (D75, D86, D90).
+import { vallalasSzamitasa } from './js/allapot/vallalas.js';
+import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from './js/tar/atmenetiTar.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, kategoriaLetrehozasa, gondolatTipusLetrehozasa, tudatpontRendezese, ertekJavaslat,
   javaslatLetrehozasa, szavazas, allasfoglalas, TUDATPONT_KERET,
@@ -298,6 +303,38 @@ async function koinoTaraNyitasa(koino) {
 }
 
 const tar = await koinoTaraNyitasa(KOINO);
+// ⭐⭐ B/2 (D75): AZ ÁTMENETI TÁR — amit csak láttam (a `hozd` válasza): eldobható, a legrégebben megnézett megy.
+const atmeneti = await atmenetiTarNyitasa(KOINO, join(alapHely(), KOINO));
+
+/**
+ * ⭐ B/1 (D75, D86, D90): A VÁLLALÁSOM — mely szeleteket tartom tartósan (a saját láncomból: a tudatpontos
+ * szeleteim, az azonosság-szeletem, és a koinó születése).
+ */
+async function sajatVallalasa(allapot) {
+  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === KOINO);
+  return vallalasSzamitasa(lanc, { koinoSzuletes: allapot?.koino?.azonosito ?? null });
+}
+
+/**
+ * ⭐ B/2: AZ ELŐLÉPTETÉS — ami az átmeneti tárban van, de már VÁLLALOM (pontot tettem rá), az átkerül a
+ * tartós tárba (ugyanazon a kapun át), és az átmenetiből elmegy. Enélkül a vállalt szelet teste az
+ * eldobható tárban maradna, és a korlát miatt kieshetne. ⭐ Olcsó: csak az átmeneti szeleteit veti össze a
+ * vállalással (a saját láncom bejárása) — minden parancs indulásakor és az őrjárat minden körében fut.
+ * @returns {Promise<number>} hány szelet lépett elő
+ */
+async function atmenetiElolepetese() {
+  const kulcsok = atmeneti.szeletek().map((s) => s.kulcs);
+  if (!kulcsok.length) return 0;
+  const v = await sajatVallalasa(null);
+  let db = 0;
+  for (const k of kulcsok) {
+    if (!v.szeletek.has(k)) continue;
+    for (const e of atmeneti.mind().filter((x) => szelet(x) === k)) await esemenyMentese(tar, e);
+    await atmeneti.elhagy(k);
+    db++;
+  }
+  return db;
+}
 
 // ⭐ Az elakadt tudatpontok órája — HELYI feljegyzés, nem esemény (3. szabály).
 const felszabaditasJegyzet = felszabaditasTarolo();
@@ -531,8 +568,10 @@ function dontesAzonositoja(allapot, azonosito) {
 }
 
 async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO) {
-  const esemenyek = await koinoEsemenyei(melyikTar, melyikKoino);
-  const allapot = allapotSzamitasa(esemenyek);
+  // ⭐ B/2: a két tárból (az átmeneti csak a saját koinónké — a belépő tér más koinóinál nincs).
+  const { esemenyek, csakAtmeneti } = await ketTarBemenete(melyikTar, melyikTar === tar ? atmeneti : null,
+    melyikKoino);
+  const allapot = allapotSzamitasa(esemenyek, { csakAtmeneti });
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP);
 
   // ⭐ A HARMADIK FÁZIS (2026-09-06): az elfogadott szerkesztési egyezményeket RÁVEZETJÜK az
@@ -1381,6 +1420,7 @@ const adatMennyiseg = (eredmeny) => {
 
 async function allapotKiirasa(napokMulva) {
   const { allapot, javaslatok, esemenyek } = await kepetKeszit(napokMulva);
+  const vallalas = await sajatVallalasa(allapot);
 
   if (!allapot.koino.nev) {
     kiir('Még nincs koinód. Hozd létre:');
@@ -1524,7 +1564,11 @@ async function allapotKiirasa(napokMulva) {
     const sajat = e.hozzajarulok.get(szerzo)?.pont ?? 0;
     kiir('  ' + SZIN.halvany + e.azonosito.slice(0, 8) + SZIN.vege + '  ' + e.cim);
     kiir('      ' + SZIN.halvany + e.meret + ' bájt · összes pont: ' + e.osszesPont
-      + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size + SZIN.vege);
+      + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size
+      // ⭐ B/1–B/2 (D75/4): amit nem vállalok, az „nem tartod”; ami csak az átmenetiben van, és a pontjait
+      // nem ismerem, az nem tűnt el (a D14 csak a tartósra vonatkozik) — kimondjuk.
+      + (e.pontokIsmeretlenek ? ' · ⚠ a pontjai ismeretlenek (csak az átmeneti tárban)' : '')
+      + (vallalas.szeletek.has(e.azonosito) ? '' : ' · nem tartod') + SZIN.vege);
     if (e.szoveg) {
       // ⭐ D72: a szöveg külön darab lehet — a fájl-tárból oldjuk fel; ha még nincs meg, kimondjuk.
       const f = await szovegFeloldasa(e.szoveg, (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat));
@@ -1678,6 +1722,8 @@ async function allapotKiirasa(napokMulva) {
 }
 
 try {
+  // ⭐ B/2: a vállalttá vált átmeneti szeletek a tartós tárba (pl. ha az előző parancs pontot tett rájuk).
+  await atmenetiElolepetese();
   switch (parancs) {
 
     case undefined:
@@ -2744,6 +2790,30 @@ try {
       break;
     }
 
+    case 'vallalas': {
+      // ===== ⭐ B/1–B/2: MIT TARTOK — a vállalásom és az átmeneti tár (4. szabály: bele lehet látni) =====
+      const { allapot } = await kepetKeszit();
+      const v = await sajatVallalasa(allapot);
+      const pontosak = [...v.pontok.entries()].filter(([, p]) => p > 0);
+      kiir(SZIN.vastag + 'VÁLLALOM (tartós tár): ' + v.szeletek.size + ' szelet' + SZIN.vege);
+      kiir(SZIN.halvany + '  ' + pontosak.length + ' tudatpontos · ' + v.azonossag.length + ' azonosság-szelet'
+        + (v.koinoSzuletes ? ' · a koinó születése' : '') + SZIN.vege);
+      for (const [az, p] of pontosak.sort((a, b) => b[1] - a[1])) {
+        kiir('  ' + SZIN.halvany + az.slice(0, 8) + SZIN.vege + '  ' + (allapot.entitasok.get(az)?.cim ?? '(ismeretlen)')
+          + SZIN.halvany + '  · ' + p + ' pont' + SZIN.vege);
+      }
+      const atm = atmeneti.szeletek().sort((a, b) => (b.megnezve ?? 0) - (a.megnezve ?? 0));
+      kiir();
+      kiir(SZIN.vastag + 'ÁTMENETI TÁR (csak láttam — eldobható): ' + atm.length + ' szelet, '
+        + (atmeneti.meret() / 1024).toFixed(1) + ' KB' + SZIN.vege);
+      for (const s of atm) {
+        kiir('  ' + SZIN.halvany + (s.kulcs || '(gyökér)').slice(0, 8) + SZIN.vege + '  '
+          + (allapot.entitasok.get(s.kulcs)?.cim ?? '(nem gondolat-szelet)') + SZIN.halvany + '  · ' + s.darab
+          + ' esemény · megnézve: ' + (s.megnezve ? new Date(s.megnezve).toLocaleString('hu-HU') : '—') + SZIN.vege);
+      }
+      break;
+    }
+
     case 'tarsak': {
       // ⭐ D33: nem az a kérdés, hogy egy adott gépet elérünk-e, hanem hogy a hálózat
       // összefüggő marad-e. ⭐ A D69/2 óta ez az INDULÓ CÍMEK listája: amit te adtál meg
@@ -3168,6 +3238,11 @@ try {
         } catch (hiba) {
           // Best-effort: a könyvelés hibája NE akassza meg az őrjáratot.
           kiir(SZIN.halvany + '  ⚠ a felszabadítás most nem sikerült: ' + hiba.message + SZIN.vege);
+        }
+
+        // ⭐ B/2: az előléptetés (ami az átmenetiben van, de már vállalom) — körönként.
+        try { await atmenetiElolepetese(); } catch (hiba) {
+          kiir(SZIN.halvany + '  ⚠ az előléptetés most nem sikerült: ' + hiba.message + SZIN.vege);
         }
 
         // ⭐⭐ D85 T3: A SAJÁT LEZÁRT, TÖBB ÉRINTETTES JAVASLATAIM DÖNTÉSI CSOMAGJA (a (B): a töredékekbe).
@@ -3607,8 +3682,11 @@ try {
       kiir(SZIN.vastag + 'HOZOM: ' + entitas.slice(0, 12) + '…' + SZIN.vege
         + SZIN.halvany + '   (' + cimek.length + ' címre kopogok egyszerre)' + SZIN.vege);
 
+      // ⭐⭐ B/2 (D75): amit nem vállalok, az az ÁTMENETI tárba kerül (eldobható) — ugyanazon a kapun át.
+      const vallalas = await sajatVallalasa((await kepetKeszit()).allapot);
+      const celTar = vallalas.szeletek.has(entitas) ? tar : atmeneti;
       const { kapu } = await keziKapuNyitasa((halo, t) =>
-        szeletUdpResen(halo, t.cim, t.port, tar, KOINO, entitas));
+        szeletUdpResen(halo, t.cim, t.port, celTar, KOINO, entitas));
       let kor;
       try {
         kor = await kapu.kopog(cimek.map((c) => ({ cim: c.hoszt, port: c.port })),
@@ -3638,6 +3716,13 @@ try {
         kiir(SZIN.halvany + 'Vagy senki sem tartja már (D14: ami senkinek nem kell, elfelejtődik),'
           + ' vagy a tartói épp alszanak. Kívülről a kettő nem különböztethető meg.' + SZIN.vege);
         break;
+      }
+
+      // ⭐ B/2: hova került — és a megnézése (a „megnézett” ettől marad tovább az átmeneti tárban).
+      if (celTar === atmeneti) {
+        await atmeneti.megnezve(entitas);
+        kiir(SZIN.halvany + '  → az átmeneti tárba (nem vállalod — ha kell a hely, ez megy el elsőként,'
+          + ' ha rég nem nézted meg)' + SZIN.vege);
       }
 
       // ----- ⭐ MEGJEGYEZZÜK, KINÉL VOLT MEG -----
@@ -3823,6 +3908,8 @@ try {
         return nyitottKoinok.get(aktivKoino);
       }
 
+      // ⭐ B/2: az átmeneti tár az INDÍTÁSKORI koinóé — a kezelő árnyékolja a `tar` nevet, ezért itt jegyezzük meg.
+      const sajatKoinoTara = tar;
       const kezelo = async ({ modszer, utvonal, kereses, test }) => {
 
         // ⚠️⚠️ SZÁNDÉKOS ÁRNYÉKOLÁS, és ez a kulcsa az egésznek. A kezelő MINDEN sora az
@@ -3834,6 +3921,9 @@ try {
         const KOINO = aktiv.koino;
         const kornyezet = aktiv.kornyezet;
         const pakliNezet = aktiv.pakliNezet;
+        // ⭐ B/2: az olvasók (a pakli) a két tár nézetét kapják — a saját koinónknál az átmeneti tár is látszik.
+        const sajatKoino = tar === sajatKoinoTara;
+        const olvasoTar = sajatKoino ? ketTarNezet(tar, atmeneti) : tar;
 
         // ===================================
         // ⭐⭐ ÍRÁS (5.5) — itt születik esemény a lapról
@@ -4225,7 +4315,7 @@ try {
           const darab = parseInt(kereses.get('darab'), 10);
           try {
             return {
-              adat: await pakliOldal(tar, KOINO, {
+              adat: await pakliOldal(olvasoTar, KOINO, {
                 rendezes: kereses.get('rendezes') ?? undefined,
                 irany: kereses.get('irany') ?? undefined,
                 kurzor: kereses.get('kurzor') ?? undefined,
@@ -4342,7 +4432,7 @@ try {
           const azonosito = reszek[5];
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás szövege?' } };
 
-          const talalat = await entitasSzovege(tar, KOINO, decodeURIComponent(azonosito),
+          const talalat = await entitasSzovege(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, nezet: pakliNezet,
               darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat) });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
@@ -4356,7 +4446,7 @@ try {
           const azonosito = reszek[5];
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
-          const talalat = await entitasTudatpontja(tar, KOINO, decodeURIComponent(azonosito),
+          const talalat = await entitasTudatpontja(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
@@ -4389,7 +4479,7 @@ try {
           const azonosito = utvonal.split('/')[5];
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás felmenői?' } };
 
-          const talalat = await hianyzoFelmenok(tar, KOINO, decodeURIComponent(azonosito),
+          const talalat = await hianyzoFelmenok(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };
@@ -4405,7 +4495,9 @@ try {
           const azonosito = reszek[3];
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás?' } };
 
-          const talalat = await entitasReszletei(tar, KOINO, decodeURIComponent(azonosito),
+          // ⭐ B/2: a megnyitott kártya „megnézett” — ha az átmeneti tárban van, ettől marad tovább.
+          if (sajatKoino) await atmeneti.megnezve(decodeURIComponent(azonosito));
+          const talalat = await entitasReszletei(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, szerzo, nezet: pakliNezet,
               darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat) });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
@@ -4419,7 +4511,7 @@ try {
           const azonosito = reszek[5];
           if (!azonosito) return { allapot: 400, adat: { hiba: 'melyik entitás küszöbei?' } };
 
-          const talalat = await entitasKuszobei(tar, KOINO, decodeURIComponent(azonosito),
+          const talalat = await entitasKuszobei(olvasoTar, KOINO, decodeURIComponent(azonosito),
             { ...lapHorgonya, szerzo, nezet: pakliNezet });
           if (!talalat) return { allapot: 404, adat: { hiba: 'nincs ilyen entitás' } };
           return { adat: talalat };

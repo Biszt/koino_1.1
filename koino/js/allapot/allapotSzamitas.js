@@ -248,8 +248,12 @@ export function median(szamok) {
  * @param {Array<Object>} esemenyek - egy koino összes ismert eseménye
  * @returns {Object} az állapot
  */
-export function allapotSzamitasa(esemenyek) {
+export function allapotSzamitasa(esemenyek, beallitas = {}) {
   console.log('allapotSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
+  // ⭐ B/2 (D75/4): azok az események, amik CSAK az átmeneti tárban vannak — a D14 kivételéhez (lent).
+  const csakAtmeneti = beallitas.csakAtmeneti instanceof Set ? beallitas.csakAtmeneti : null;
+  // Mely entitásoknak láttuk legalább egy pont-eseményét (a D14 kivétele és a döntés ismerete ugyanez a jel).
+  const pontjaIsmert = new Set();
 
   // ----- KÉT SZŰRŐ, EGYMÁS UTÁN -----
   // 1. ELÁGAZÁS: ha valaki két eseményt írt alá ugyanarról a pontról, determinisztikusan
@@ -279,6 +283,8 @@ export function allapotSzamitasa(esemenyek) {
       // ----- A KOINO MAGA -----
       case 'KoinoLetrehozas':
         koinoAdatok.nev = e.adat.nev;
+        // ⭐ D90/2: a koinó születése mindenki vállalása — ehhez kell az azonosítója (`vallalas.js`).
+        koinoAdatok.azonosito = e.azonosito;
         // ⭐ D89/2: zárt, hacsak ki nem mondta, hogy nyílt (a mező nélküli régi koinó is zárt — D89/5).
         koinoAdatok.zart = e.adat.zart !== false;
         koinoAdatok.leiras = e.adat.leiras ?? null;
@@ -332,6 +338,7 @@ export function allapotSzamitasa(esemenyek) {
       // részvételi arány nevezőjébe csak az AKTÍV tulajdonosok számítanak bele. Aki
       // passzív figyelő, az nem korlátozza a döntést — ez a modell lényege.
       case 'TudatpontRendezes':
+        pontjaIsmert.add(e.adat.entitas);
         pontok.rogzit(e.szerzo + '|' + e.adat.entitas, e, {
           pont: e.adat.pont,
           szerep: e.adat.szerep === 'passziv' ? 'passziv' : 'aktiv'
@@ -457,6 +464,14 @@ export function allapotSzamitasa(esemenyek) {
   const elfelejtettek = [];
   for (const [azonosito, entitas] of entitasok) {
     if (entitas.osszesPont <= 0) {
+      // ⭐⭐ B/2 (D75/4): A D14 CSAK A TARTÓS TÁRRA VONATKOZIK. Ha az entitást csak az átmeneti tárból
+      // ismerjük (pl. a szülője köréből jött a születése), és egyetlen pont-eseményét sem láttuk, akkor a
+      // „nincs pontja” és a „nem tudjuk, van-e” két különböző dolog (D19) — nem tűnik el, hanem jelölve marad.
+      // ⚠️ Ha akár egy pont-eseményét is látjuk, a 0 pont tudás: ott a D14 áll.
+      if (csakAtmeneti?.has(azonosito) && !pontjaIsmert.has(azonosito)) {
+        entitas.pontokIsmeretlenek = true;
+        continue;
+      }
       elfelejtettek.push(azonosito);
       entitasok.delete(azonosito);
     }

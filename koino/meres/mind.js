@@ -66,6 +66,8 @@ import eszlelo from './eszleloProba.js';
 import dontesiCsomag from './dontesiCsomagProba.js';
 // ⭐ A csere titkosítása (D89/1) — a kriptográfia, és hogy a lehallgató semmit nem lát.
 import titkositas from './titkositasProba.js';
+// ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
+import atmeneti from './atmenetiProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -98,6 +100,7 @@ const PROBAK = [
   { nev: 'tabla', futtat: tabla },
   { nev: 'udpkapu', futtat: udpKapu },
   { nev: 'iro', futtat: iro },
+  { nev: 'atmeneti', futtat: atmeneti },
   { nev: 'szovegdarab', futtat: szovegDarab },
   { nev: 'tartomany', futtat: tartomany },
   { nev: 'titkositas', futtat: titkositas },
@@ -125,7 +128,7 @@ const PROBAK = [
 // ⛔ A szűrő PONTOSAN illeszkedik: a régi részszó-szűrő a `tar`-ra a `tarsak`-ot is elindította.
 const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
-  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro'],
+  alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
   allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'felszabaditas', 'identitas'],
   // a felületnek felelő réteg
