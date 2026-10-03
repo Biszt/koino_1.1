@@ -4724,6 +4724,36 @@ pedig a rés nyitása a tartóhoz — a kopogtatással T = 3 tartónál 20% → 
    n, és ha a válaszoló tartja, a legjobb ág d szintig), *szelet* (X eseményei), *törzs* (X szöveg-darabja,
    fájljai); a pakli első betöltése (D76/2) ezekből áll össze, és a síkidom, a térkép később ugyanezt használja.
 
+### D93. AZ IDENTITÁS A SZELETELT VILÁGBAN (E): a tag számít, a bizonyíték a tagnál utazik (2026-10-03, Csaba: „minden javaslatodat elfogadom”)
+
+**Amiből jött:** az E átvizsgálása ([`e_identitas_atvizsgalas.md`](e_identitas_atvizsgalas.md)) és a 63. mérés: a
+meghívási lánc természetes növekedésnél logaritmikus (egymillió tagnál ~13 lépés, ~16 KB), lánc-szerű növekedésnél
+lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárki kulcsot generálhatott és szavazhatott).
+
+#### A DÖNTÉS
+
+1. ⭐ **A döntésben csak az ELLENŐRZÖTT TAG számít (E1):** a pont, a javaslat, a szavazat (és az állásfoglalás) csak
+   akkor, ha a szerző tagsága a számítás bemenetéből bizonyítható; a nem ellenőrizhető szerző eseménye nem számít, de
+   nem tűnik el — kimondjuk (`nemEllenorizhetok`, D19), és amint a bizonyíték megérkezik, számít. ⚠️ A döntési
+   csomagnak (D85 T3) ezért a résztvevők tagsági bizonyítékát is hoznia kell (mérendő — 64.).
+2. ⭐ **A TAGSÁGI CSOMAG (E2):** aki taggá válik, egy aláírt csomagot tesz a SAJÁT azonosság-szeletébe a lánca
+   eseményeinek másolatával az alapítóig (a D85 T3 mintája: a kapu ellenőrzi, a számítás a bemenetébe bontja). A
+   legrövidebb lánc számít; a mélység-korlát **D = 64** (D59 — a „végtelent” őrzi: a bizonyíték felülről korlátos); egy
+   rövidebb láncú meghívás után új csomag váltja a régit. *(Elvetve: a koinó-szintű tagsági gyökér — a tartós maggal
+   és a pénzzel jön, D66; az ősönkénti kérelem — sok kör.)*
+3. ⭐ **A ZÁRT KOINÓ A KÉZFOGÁSBAN (E3):** a társ a SZEMÉLYES kulcsával is aláírja a kézfogás átiratát és megnevezi a
+   horgonyát; ha nálunk még nem ellenőrzött, a tagsági csomagját is elküldi. Aki nem tag (vagy nem ellenőrizhető),
+   annak a zárt koinóból csak a koinó születése és a SAJÁT azonosság-szelete jár. Nyílt koinóban nincs ilyen kapu.
+4. ⭐ **A 2. LÉPCSŐ BIZONYÍTÉKA (E4):** ugyanaz a csomag-forma, a tanúsítások és a felhatalmazások láncával — csak a 2.
+   lépcsősnél; előbb a mérés.
+5. ⭐ **A PROFIL (E5):** a koinó a létrehozásakor megmondja a kötelező mezőit (`KoinoLetrehozas.profil`); a `Profil`
+   esemény az azonosság-szeletben a darab sózott lenyomatát hordozza (D88), a darab a fájl-tárban; ⭐ a meghívás
+   megnevezi a profil lenyomatát (a meghívó ezzel tanúsítja a nevet — D28/2); ahol a koinó mezőket vár, ott a meghívás
+   csak ezzel érvényes.
+6. ⭐ **A KONTRASZT-JELZÉS (E6):** a felhatalmazók számolják, a tanúsítottak azonosság-szeletéből és a láncuk
+   összegzéséből (a lánc-gyökér darabszáma), kérésre, gyorsítótárral; a jelzés nem dönt (D46). A B/3 után válik élessé;
+   az E-ben a bemenete készül el.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

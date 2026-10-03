@@ -169,7 +169,10 @@ után ezek nem mind vannak meg — addig „nem ellenőrizhető" (D19). A cél: 
 🔍 **Az átvizsgálás (2026-10-03):** [`e_identitas_atvizsgalas.md`](e_identitas_atvizsgalas.md) — a 63. mérés szerint a
 meghívási lánc természetesen logaritmikus (1M tagnál ~13 lépés, ~16 KB), lánc-szerű növekedésnél lineáris (a D59
 mélység-korlátja és a rövidítő meghívás kezeli). ⛔ A szabály-réteg ma nem kérdez tagságot (Sybil-rés). Hat kérdés
-(E1–E6) — Csaba döntésére vár.
+(E1–E6). ✅ **Eldőlt (D93, Csaba, 2026-10-03 — „minden javaslatodat elfogadom”):** csak az ellenőrzött tag számít a
+döntésben; a tagsági csomag a saját azonosság-szeletben (D = 64); a zárt koinó a kézfogásban (személyes aláírás +
+csomag); a 2. lépcső ugyanígy (előbb mérés); a Profil kötelező mezőkkel, a meghívás megnevezi a lenyomatát; a
+kontraszt-jelzés bemenete.
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
 

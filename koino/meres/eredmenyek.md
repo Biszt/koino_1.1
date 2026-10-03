@@ -4668,7 +4668,7 @@ már megvolt pont-eseményt nem kéri el újra.
 *`tagsagMeres.js`: a koinó meghívással nő (D56: egy meghívó elég); három növekedési mód — `egyenletes` (véletlen
 meglévő tag hív), `aktiv` (preferenciális: aki sokat hívott, többet hív), `friss` (mindig a legutóbbi 20 belépett
 közül hív valaki — lánc-szerű). Egy lépés a bizonyítékban: a tag `Belepes`-e + a `Meghivas` (valódi aláírt események,
-a lánc-gyökérrel): 521 + 719 = **1240 B**. A gyorsítótár: M véletlen tag ellenőrzése, a közös ősök egyszer.*
+a lánc-gyökérrel): 521 + 716 = **1237 B**. A gyorsítótár: M véletlen tag ellenőrzése, a közös ősök egyszer.*
 
 ```
 mélység (átlag / 95% / max) · a bizonyíték (átlag / 95%):

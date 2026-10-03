@@ -60,6 +60,8 @@
 // láttam a bizonyítékát"* ugyanaz — a koinónak van erre szava (`nemEllenorizhetok`, D19).
 
 import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
+// ⭐ D93: a tagság szabálya EGY helyen él (`tagsag.js`) — a szabály-réteg és ez a tár-alapú kérdés ugyanazt hívja.
+import { tagsagiIndex, horgonyTagsaga, MELYSEG_KORLAT, TAGSAGI_CSOMAG, PROFIL } from './tagsag.js';
 
 // ===================================
 // A PARAMÉTEREK
@@ -333,22 +335,58 @@ async function alapitoE(tar, koino, horgony, esemeny, nezet) {
  *
  * @returns {Promise<{igen: boolean, ok: string, ellenorizheto: boolean}>}
  */
-export function tagE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
-  return kerdes('tag', tar, koino, horgony, nezet, async (esemeny) => {
-    const { db, voltNemEllenorizheto } =
-      await ervenyesAllitok(tar, koino, horgony, esemeny, 'Meghivas', tagE_, nezet);
+export async function tagE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  // ⭐⭐ D93 (2026-10-03): a tárból CSAK ÖSSZEGYŰJTJÜK a lánc eseményeit (a horgonyoktól a meghívókig, a tagsági
+  // csomagokkal együtt), és a döntést a közös, tiszta szabály hozza (`tagsag.js`) — ugyanaz, amit a szabály-réteg.
+  console.log('identitas.tagE - KEZDÉS', { horgony });
+  const gyorsKulcs = 'tag|' + horgony;
+  const kesz = nezet.igenek.get(gyorsKulcs);
+  if (kesz) return kesz;
+  const esemenyek = await tagsagiEsemenyekGyujtese(tar, koino, horgony, nezet);
+  const idx = tagsagiIndex(esemenyek, koino);
+  // ⭐ A GYORSÍTÓTÁR A LÉNYEG (D47, D59): amit egyszer eldöntöttünk, azt a tiszta számítás is kész tagként kapja.
+  for (const [kulcs, ered] of nezet.igenek) if (kulcs.startsWith('tag|') && ered.igen) idx.memo.set(kulcs.slice(4), ered);
+  const r = horgonyTagsaga(idx, horgony);
+  const eredmeny = { igen: r.igen, ok: r.ok, ellenorizheto: r.ellenorizheto, ...(r.igen ? { melyseg: r.melyseg } : {}) };
+  if (eredmeny.igen) nezet.igenek.set(gyorsKulcs, eredmeny);
+  console.log('identitas.tagE - VÉGE', eredmeny);
+  return eredmeny;
+}
 
-    if (db >= nezet.meghivoKell) {
-      return { igen: true, ok: db + ' tag hívta be', ellenorizheto: true };
+/**
+ * A tagsági lánc eseményeinek összegyűjtése a tárból: a horgony, a szeletéből a meghívások, a profilok és a tagsági
+ * csomagok, a meghívók horgonyai (és így tovább, `MELYSEG_KORLAT`-ig), és az alapítás koinó-létrehozása.
+ */
+export async function tagsagiEsemenyekGyujtese(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  const ki = [];
+  const latott = new Set();
+  let sor = [horgony];
+  for (let melyseg = 0; sor.length && melyseg <= MELYSEG_KORLAT + 1; melyseg++) {
+    const kovetkezo = [];
+    for (const h of sor) {
+      if (latott.has(h)) continue;
+      latott.add(h);
+      const e = await esemenyLekerese(tar, h);
+      nezet.olvasasok++;
+      if (!e || e.koino !== koino) continue;
+      ki.push(e);
+      // ⭐ Aki már eldőlt tagként (a nézet gyorsítótárában), annak az ágát nem olvassuk újra (D47).
+      if (h !== horgony && nezet.igenek.get('tag|' + h)?.igen) continue;
+      if (e.tipus === 'Belepes' && typeof e.adat?.alapitas === 'string') {
+        const k = await esemenyLekerese(tar, e.adat.alapitas);
+        if (k) ki.push(k);
+      }
+      const szelet = await entitasEsemenyei(tar, koino, h);
+      nezet.olvasasok += szelet.length;
+      for (const se of szelet) {
+        if (se.tipus !== 'Meghivas' && se.tipus !== PROFIL && se.tipus !== TAGSAGI_CSOMAG) continue;
+        ki.push(se);
+        if (se.tipus === 'Meghivas' && typeof se.adat?.sajatBelepes === 'string') kovetkezo.push(se.adat.sajatBelepes);
+      }
     }
-    return {
-      igen: false,
-      ok: voltNemEllenorizheto
-        ? 'nem ellenőrizhető: a meghívási lánc egy része hiányzik'
-        : 'nincs érvényes meghívása tagtól',
-      ellenorizheto: !voltNemEllenorizheto
-    };
-  });
+    sor = kovetkezo;
+  }
+  return ki;
 }
 
 // ===================================

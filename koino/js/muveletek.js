@@ -31,6 +31,9 @@ import { ellentmondasEllenorzese } from './allapot/ellentmondas.js';
 import { esemenyLetrehozasa } from './esemeny/esemeny.js';
 import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
+// ⭐ D93: a tagság (a csomag kiadásához) és a tár-alapú lánc-gyűjtés.
+import { tagsagiIndex, horgonyTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from './allapot/tagsag.js';
+import { tagsagiEsemenyekGyujtese } from './allapot/identitas.js';
 import {
   esemenyMentese, lancVege, sajatLancEsemenyei,
   kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei, koinoEsemenyei
@@ -366,7 +369,7 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
  * ⚠️ A `kit` mező sem díszlet: enélkül egy idegen szeletébe tett esemény is beszámítana.
  * Az ellenőrzés összeveti a horgony szerzőjével.
  */
-function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }, beallitas = {}) {
+function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil }, beallitas = {}) {
   if (typeof kit !== 'string' || typeof horgonya !== 'string') {
     throw new Error('Kell a másik fél kulcsa és a horgonya.');
   }
@@ -374,8 +377,55 @@ function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes }, beallita
     throw new Error('Meg kell adni a SAJÁT horgonyodat is — enélkül a másik gép nem tudja '
       + 'ellenőrizni, hogy te magad jogosult vagy-e rá.');
   }
-  return esemenytTeszek(kornyezet, tipus, { kit, sajatBelepes },
+  // ⭐ D93/5: a meghívás megnevezheti a meghívott profiljának lenyomatát (a meghívó ezzel tanúsítja a nevet — D28/2).
+  const adat = { kit, sajatBelepes, ...(tipus === 'Meghivas' && typeof profil === 'string' ? { profil } : {}) };
+  return esemenytTeszek(kornyezet, tipus, adat,
     { entitas: horgonya, horgonyozzunk: !!beallitas.horgonySzelet, ...beallitas });
+}
+
+/**
+ * ⭐⭐ D93/5: A PROFIL (D28 a D88 alakjában) — a darab (a koinó kötelező mezői + egy véletlen só) a fájl-tárba kerül,
+ * az esemény (a SAJÁT azonosság-szeletembe) csak a darab lenyomatát hordozza: só nélkül egy név kitalálható volna,
+ * így nem. A törlés: a darabot senki nem szolgálja ki tovább (D88/2); az utolsó Profil számít (D28/3).
+ * @param {Object} kornyezet - { tar, koino, kulcspar, darabTar }
+ * @param {Object} mezok - pl. { nev, telepules }
+ * @returns {Promise<Object>} a Profil esemény
+ */
+export async function profilMegadasa(kornyezet, mezok) {
+  const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, kornyezet.szerzo);
+  if (!horgony) throw new Error('Előbb lépj be (belep) — a profil a saját azonosság-szeletedbe kerül.');
+  if (!kornyezet.darabTar) throw new Error('A profil külön darab (D88) — ehhez darab-tár kell (darabTar).');
+  const tiszta = {};
+  for (const [k, v] of Object.entries(mezok ?? {})) if (/^[a-z]{1,32}$/.test(k) && typeof v === 'string') tiszta[k] = v.normalize('NFC');
+  const so = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64url');
+  const bajtok = kanonikusBajtok({ mezok: tiszta, so });
+  const { lenyomat } = await kornyezet.darabTar.ir(bajtok);
+  return esemenytTeszek(kornyezet, 'Profil', { lenyomat }, { entitas: horgony });
+}
+
+/**
+ * ⭐⭐ D93/2: A TAGSÁGI CSOMAG KIADÁSA — ha tag vagyok, a legrövidebb láncom eseményeinek másolata a SAJÁT
+ * azonosság-szeletembe (a D85 T3 mintája). Ha már van ugyanilyen (vagy rövidebb) csomagom, nem írok újat.
+ * @returns {Promise<{kiadva: boolean, ok: string, melyseg?: number, esemeny?: Object}>}
+ */
+export async function tagsagiCsomagKiadasa(kornyezet) {
+  const szerzo = kornyezet.szerzo;
+  const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, szerzo);
+  if (!horgony) return { kiadva: false, ok: 'nincs horgonyom (belep)' };
+  const esemenyek = await tagsagiEsemenyekGyujtese(kornyezet.tar, kornyezet.koino, horgony);
+  const idx = tagsagiIndex(esemenyek, kornyezet.koino);
+  const r = horgonyTagsaga(idx, horgony);
+  if (!r.igen) return { kiadva: false, ok: r.ok };
+  if (r.melyseg === 0) return { kiadva: false, ok: 'alapító — a láncom maga a koinó létrehozása', melyseg: 0 };
+  const lanc = tagsagiLanc(idx, horgony);
+  // Van-e már legalább ilyen rövid csomagom (a meglévő csomag mélysége a saját láncából számítható)?
+  for (const e of esemenyek) {
+    if (e.tipus !== TAGSAGI_CSOMAG || e.szerzo !== szerzo || e.entitas !== horgony) continue;
+    const m = horgonyTagsaga(tagsagiIndex(e.adat.lanc, kornyezet.koino), horgony);
+    if (m.igen && m.melyseg <= r.melyseg) return { kiadva: false, ok: 'már van csomagom (' + m.melyseg + '. szint)', melyseg: m.melyseg };
+  }
+  const esemeny = await esemenytTeszek(kornyezet, TAGSAGI_CSOMAG, { lanc }, { entitas: horgony });
+  return { kiadva: true, ok: 'kiadva (' + r.melyseg + '. szint, ' + lanc.length + ' esemény)', melyseg: r.melyseg, esemeny };
 }
 
 /**

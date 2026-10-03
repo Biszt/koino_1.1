@@ -211,7 +211,7 @@ export async function ujEember(koino = 'proba') {
     return { entitas, entitasSorszam, adat: vegsoAdat };
   }
 
-  return {
+  const ember = {
     szerzo,
     kulcspar,
 
@@ -276,4 +276,85 @@ export async function ujEember(koino = 'proba') {
       );
     }
   };
+  // ⭐ D93: a próba-segéd nyilvántartja az e-embereit (a `tagokkal` ezekkel írja alá a belépést).
+  EMBEREK.set(szerzo, ember);
+  return ember;
 }
+
+// ===================================
+// ⭐⭐ D93/1: A TAGSÁG A PRÓBÁKBAN — a szerzők VALÓDI tagsága
+// ===================================
+//
+// A szabály-réteg óta (D93/1) a döntésben csak az ellenőrzött tag számít. A próbák szerzői ezért tagok kell legyenek —
+// valódi, aláírt eseményekkel, nem kivétellel: a `tagokkal(esemenyek)` hozzáteszi a koinó létrehozását (ha nincs benne;
+// akkor egy próba-alapító hozza létre), és minden szerzőhöz a SAJÁT aláírású `Belepes`-ét és az alapító `Meghivas`-át
+// (gyorsítótárral: ugyanahhoz a szerzőhöz ugyanazokat). ⚠️ A belépés a szerző láncának VÉGÉRE kerül (a következő
+// sorszám) — a lánc-sorszámot mérő próbákban ezért a láncépítés UTÁN hívandó. A tagságot magát mérő próbák (az
+// `identitasProba`, a `tagsagProba`) a saját eseményeiket építik.
+
+const EMBEREK = new Map();        // szerző → e-ember
+const VILAGOK = new Map();        // koinó + létrehozás → { alapito, letrehozas, tagok: Map(szerző → [események]) }
+
+/**
+ * Az eseménylista a szerzők tagsági eseményeivel (elöl). Ismeretlen kulcs (nem a segéddel készült) nem lesz tag.
+ * @param {Array<Object>} esemenyek
+ * @returns {Promise<Array<Object>>}
+ */
+export async function tagokkal(esemenyek) {
+  const lista = esemenyek.filter(Boolean);
+  const koino = lista.find((e) => e.koino)?.koino ?? 'proba';
+  let letrehozas = lista.find((e) => e.tipus === 'KoinoLetrehozas' && e.koino === koino) ?? null;
+  const kulcs = koino + '|' + (letrehozas?.azonosito ?? '-');
+  let vilag = VILAGOK.get(kulcs);
+  if (!vilag) {
+    let alapito;
+    if (letrehozas) {
+      alapito = EMBEREK.get(letrehozas.szerzo);
+      if (!alapito) throw new Error('tagokkal: a koinó létrehozója nem a próba-segéddel készült');
+    } else {
+      alapito = await ujEember(koino);
+      letrehozas = await alapito.tesz('KoinoLetrehozas', { nev: 'Próba-koinó', leiras: null, alapitok: [], zart: true });
+    }
+    vilag = { alapito, letrehozas, tagok: new Map() };
+    VILAGOK.set(kulcs, vilag);
+  }
+  const elol = [];
+  if (!lista.some((e) => e.azonosito === vilag.letrehozas.azonosito)) elol.push(vilag.letrehozas);
+  const szerzok = new Set(lista.map((e) => e.szerzo));
+  for (const sz of szerzok) {
+    if (sz === vilag.letrehozas.szerzo) continue;
+    // Aki a listában már belépett, annak a tagságát a próba maga építi.
+    if (lista.some((e) => e.tipus === 'Belepes' && e.szerzo === sz)) continue;
+    let tagsag = vilag.tagok.get(sz);
+    if (!tagsag) {
+      const ember = EMBEREK.get(sz);
+      if (!ember) continue;
+      const belepes = await ember.tesz('Belepes', {});
+      const meghivas = await vilag.alapito.tesz('Meghivas', { kit: sz, sajatBelepes: vilag.letrehozas.azonosito }, undefined,
+        { entitas: belepes.azonosito });
+      tagsag = [belepes, meghivas];
+      vilag.tagok.set(sz, tagsag);
+    }
+    elol.push(...tagsag);
+  }
+  return [...elol, ...lista];
+}
+
+/**
+ * Ugyanez egy TÁRRA: a koinó eseményei szerzőinek tagsági eseményei a tárba mentve (ugyanazon a kapun).
+ * @returns {Promise<number>} hány új esemény került a tárba
+ */
+export async function tagokTarba(tar, koino) {
+  const { koinoEsemenyei, esemenyMentese } = await import('../js/tar/esemenyTar.js');
+  const meglevo = await koinoEsemenyei(tar, koino);
+  const teljes = await tagokkal(meglevo);
+  const azonositok = new Set(meglevo.map((e) => e.azonosito));
+  let uj = 0;
+  for (const e of teljes) {
+    if (azonositok.has(e.azonosito)) continue;
+    const m = await esemenyMentese(tar, e);
+    if (m.mentve && !m.marMegvolt) uj++;
+  }
+  return uj;
+}
+

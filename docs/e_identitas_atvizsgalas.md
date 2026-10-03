@@ -36,7 +36,7 @@ betartatás az E-vel jön”). A kontraszt-jelzés (`jelzesek.js`) szintén a t�
 
 *`meres/tagsagMeres.js`: a koinó meghívással nő; három növekedési mód (véletlen hívó · aktív hívók · mindig a
 legutóbb belépettek hívnak); egy lépés a bizonyítékban a tag `Belepes`-e + a `Meghivas` (valódi aláírt események, a
-lánc-gyökérrel): **1240 B**. A teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 63.*
+lánc-gyökérrel): **1237 B**. A teljes jegyzőkönyv: [`eredmenyek.md`](../koino/meres/eredmenyek.md) 63.*
 
 ⭐ **Természetes növekedésnél a lánc logaritmikus:** egymillió tagnál átlagosan 13 lépés (95%: 19), a bizonyíték
 ~16 KB (95%: 23 KB); aktív hívókkal 8 lépés, ~10 KB. A gyorsítótárral (a közös ősöket egyszer nézzük meg) tagonként

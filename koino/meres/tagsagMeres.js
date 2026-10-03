@@ -73,7 +73,7 @@ const alapito = await ujEember('meres');
 const tag = await ujEember('meres');
 const koino = await alapito.tesz('KoinoLetrehozas', { nev: 'Mérés', leiras: null, alapitok: [], zart: true });
 const belepes = await tag.tesz('Belepes', {});
-const meghivas = await alapito.tesz('Meghivas', { kit: tag.szerzo, sajatBelepes: koino.azonosito }, { entitas: belepes.azonosito });
+const meghivas = await alapito.tesz('Meghivas', { kit: tag.szerzo, sajatBelepes: koino.azonosito }, undefined, { entitas: belepes.azonosito });
 const lepesBajt = bajt(belepes) + bajt(meghivas) + 2 * LANC_GYOKER_TOBBLET;
 
 kiir('63. MÉRÉS — A TAGSÁGI LÁNC (a meghívási fa mélysége és a bizonyíték mérete)\n');

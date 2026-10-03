@@ -400,6 +400,23 @@ export function alakiHiba(esemeny) {
       return 'a gondolat szulo-ja csak azonosító vagy null lehet';
     }
   }
+  // ----- ⭐ D93/5: A PROFIL — a koinó kötelező mezői, a Profil esemény, a meghívás tanúsítása -----
+  if (esemeny.tipus === 'KoinoLetrehozas' && esemeny.adat?.profil !== undefined) {
+    const p = esemeny.adat.profil;
+    if (!Array.isArray(p) || p.length > 8 || !p.every((m) => typeof m === 'string' && /^[a-z]{1,32}$/.test(m))) {
+      return 'a koinó profil-mezői: legfeljebb 8 kisbetűs név';
+    }
+  }
+  if (esemeny.tipus === 'Profil' && (!azonositoAlaku(esemeny.adat?.lenyomat) || !azonositoAlaku(esemeny.entitas))) {
+    return 'a Profil esemény a horgonyhoz szól, és a darab lenyomatát hordozza';
+  }
+  if (esemeny.tipus === 'Meghivas' && esemeny.adat?.profil !== undefined && esemeny.adat.profil !== null
+      && !azonositoAlaku(esemeny.adat.profil)) {
+    return 'a meghívás profil-lenyomata csak azonosító alakú lehet';
+  }
+  if (esemeny.tipus === 'TagsagiCsomag' && (!Array.isArray(esemeny.adat?.lanc) || !azonositoAlaku(esemeny.entitas))) {
+    return 'a tagsági csomag a horgonyhoz szól, és a lánc eseményeit hordozza';
+  }
   return null;
 }
 

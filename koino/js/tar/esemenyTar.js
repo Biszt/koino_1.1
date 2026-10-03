@@ -32,6 +32,8 @@ import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
 import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from '../allapot/lancGyoker.js';
 import { CSOMAG_TIPUS, dontesiCsomagEllenorzese } from '../allapot/dontesiCsomag.js';
+// ⭐ D93/2: a tagsági csomag tartalma is a kapun megy át.
+import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -82,6 +84,15 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
   // esemény az egész csomagot elveti.
   if (esemeny.tipus === CSOMAG_TIPUS) {
     const csomag = await dontesiCsomagEllenorzese(esemeny);
+    if (!csomag.rendben) {
+      console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
+      return { mentve: false, ok: csomag.ok };
+    }
+  }
+
+  // ----- 1/a3. ⭐ D93/2: A TAGSÁGI CSOMAG — a lánc másolatai is ugyanazon a próbán, és tagságot kell adniuk -----
+  if (esemeny.tipus === TAGSAGI_CSOMAG) {
+    const csomag = await tagsagiCsomagEllenorzese(esemeny);
     if (!csomag.rendben) {
       console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
       return { mentve: false, ok: csomag.ok };
