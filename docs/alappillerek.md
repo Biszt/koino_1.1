@@ -223,8 +223,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    javaslatéba) és a bejelentés TÖBB szülővel (a döntés bemenete minden érintettnél; a tár mutatójában
    a születés-szülő listává válik); (d) az ÉS-szabály: a többi érintett nevezője a javaslat szeletébe.
    ⭐ **Állás (2026-10-03):** (a) ✅ `cbb6f19`, `ee624d6` · (b) ✅ `6016df7`, `54a4d8e` (a T2 bizonyítékkal) ·
-   (c) ✅ `2764cab` · (d) ⭐ T3 eldőlt (2026-10-03): az (a) végleges, formája a **döntési csomag** (a2) — előbb
-   a mérés (55.), aztán az építés.
+   (c) ✅ `2764cab` · (d) ⭐ T3 eldőlt (2026-10-03): az (a) végleges, formája a **döntési csomag** (a2); a tartalma
+   és a mérés (55.) ✅ `a97fa28`; ⭐ **Csaba: „legyen a (B)”** — a csomag a TÖREDÉK szeletébe kerül (a rész
+   szavazói kapják), a nem szavazó tartó csak akkor kéri el, ha a saját része igent mondott; az előfeltétele, a
+   javaslat jogának bizonyítéka (56.) ✅; a csomag kiadása és elkérése 🚧.
    *(Próbák: allapot → alap + csere; a végén a teljes sor — közös réteg.)*
 2. **D89/1 — a csere titkosítása** és a **zárt / nyílt koinó-paraméter** a `KoinoLetrehozas`-ban (a
    betartatása az E-vel jön). *Miért itt:* a D85 a szeletek halmazát is megváltoztatja, tehát a régi
@@ -361,3 +363,16 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     **a valódi adat (a), döntési csomagban (a2)** · mert az összegzés teljességéért senki nem kezeskedhet
     (szerző nincs, a tartó olcsó azonosság), és Csaba nem akar átmeneti megoldást — az (a) teljes és végleges;
     az (a1)-et (a csere számol határidőt) elvetettük, mert a csere réteget a döntéshez kötné · D85 T3.
+41. **2026-10-03 · a döntési csomag útja: minden érintett szeletébe (A)** → **a töredék szeletébe, és a nem
+    szavazó tartó csak akkor kéri el, ha a saját része igent mondott (B)** · mert az (A) erősítés volt (a kis
+    gondolat tartóira a nagy teljes bemenete — 10 000 tulajdonosnál ~26 MB —, egy pont árán, ismételhetően), és
+    a terhet a nagy gondolat méretéhez kötötte (a „végtelen” ellen); a (B)-ben csak az kapja, aki részt vesz,
+    vagy akinek a közössége igent mondott — és ha nem mondott, az ÉS miatt a gondolata nem változhatott, ezt a
+    saját adatából tudja. A csere réteg továbbra sem számol döntést: az elkérést a készülék indítja, mint a
+    `hozd`-ot · Csaba, 2026-10-03 · `eredmenyek.md` 55., D85 T3.
+42. **2026-10-03 · a javaslattevő jogosultsága a lánc-bejárásból** → **a javaslat hozza a bizonyítékát
+    (érintettenként, a saját kiosztás-fájából — a T2 mintája)** · mert a csak-G1-tartónál a javaslattevő lánca
+    hézagos (a G2-es pontja a G2 szeletében van), és a bejárás a hiányt „nincs”-nek olvasta volna — a
+    javaslat tévesen kiesett volna; a lánc-gyökeres javaslatnál CSAK a bizonyíték dönt, a régi marad a
+    bejárásnál · ára érintettenként +0,5–1,2 KB (`eredmenyek.md` 56.) · `lancGyoker.js`:
+    `hozottBizonyitekokOnbizonyitasa`, `szabalyok.js`: `hozottSajatPontok`.

@@ -289,11 +289,20 @@ export function onbizonyitas(e) {
  * ⭐ D85/2 (T2): a szavazat SAJÁT bizonyítéka — a leadás pillanatában melyik entitáson mennyi pontja
  * volt a szavazónak (a hozott bizonyítékok végpontjaiból; ha a végpont nem az a kulcs, ott 0 — ez a
  * hiány bizonyítéka). ⚠️ A kapu ellenőrizte, hogy a bizonyítékok a gyökérhez illenek
- * (`szavazatOnbizonyitasa`) — a számítás a tárban lévőt hiszi el, mint az aláírást.
+ * (`hozottBizonyitekokOnbizonyitasa`) — a számítás a tárban lévőt hiszi el, mint az aláírást.
  * Lánc-gyökér nélküli (régi) szavazatnál null: ott a jog a pont-eseményekből dől el.
  * @returns {Map<string, number>|null}
  */
 export function szavazatSajatPontjai(e) {
+  return hozottSajatPontok(e);
+}
+
+/**
+ * ⭐ A hozott bizonyítékokból kiolvasott saját pontok — a szavazaté (T2) és a javaslaté (a javaslattevő
+ * jogosultsága, D85 T3 előfeltétele) ugyanaz az alak. Lánc-gyökér nélkül null.
+ * @returns {Map<string, number>|null}
+ */
+export function hozottSajatPontok(e) {
   if (!e?.lancGyoker || typeof e.lancGyoker !== 'object') return null;
   const pontok = new Map();
   const b = e.adat?.bizonyitek;
@@ -631,9 +640,20 @@ export function szabalyokErvenyesitese(esemenyek) {
         // ⚠️ A „MIKORI állapot szerint?" kérdésre változatlan a válasz: a saját lánc, a
         // javaslat ELŐTTI eseményei szerint. A jogosultság a javaslat pillanatában eldőlt,
         // és utólag nem írható át.
-        const hianyzo = kik.find((r) => (pontok.get(r.entitas) ?? 0) <= 0);
+        //
+        // ⭐⭐ D85 T3 előfeltétele (2026-10-03 — a T2 mintája): a LÁNC-GYÖKERES javaslat a jogát MAGA
+        // bizonyítja (a saját kiosztás-fájából, érintettenként — a kapu ellenőrizte), és CSAK ez dönt.
+        // *Miért:* a szigorú (b) alatt a csak-G1-tartó a javaslattevő láncát hézagosan látja — a G2-es
+        // pontja a G2 szeletében van —, és a lánc-bejárás a hiányt „nincs”-nek olvasná. A régi
+        // (gyökér nélküli) javaslatnál marad a lánc-bejárás.
+        const hozott = hozottSajatPontok(e);
+        const hianyzo = hozott
+          ? kik.find((r) => (hozott.get(r.entitas) ?? 0) <= 0)
+          : kik.find((r) => (pontok.get(r.entitas) ?? 0) <= 0);
         if (hianyzo) {
-          kivetel(e, 'a javaslattevőnek nincs tudatpontja az egyik érintett entitáson');
+          kivetel(e, hozott
+            ? 'a javaslattevő nem bizonyította, hogy minden érintett entitáson van tudatpontja'
+            : 'a javaslattevőnek nincs tudatpontja az egyik érintett entitáson');
           continue;
         }
 

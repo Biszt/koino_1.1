@@ -240,7 +240,8 @@ async function esemenyAlairasa(kornyezet, tipus, adat, beallitas) {
   const pontEntitas = tipus === 'TudatpontRendezes' && typeof adat?.entitas === 'string' ? adat.entitas : null;
   // ⭐ D85/2 (T2): a SZAVAZAT a jogának bizonyítékát hozza — részenként az érintettre és a
   // javaslat-entitásra (a `szavazas` adja meg a kulcsokat).
-  const szavazatKulcsok = tipus === 'Szavazat' && Array.isArray(beallitas.bizonyitekKulcsok)
+  // ⭐ D85 T3 előfeltétele: a JAVASLAT is — érintettenként a javaslattevő pontjára.
+  const szavazatKulcsok = (tipus === 'Szavazat' || tipus === 'Javaslat') && Array.isArray(beallitas.bizonyitekKulcsok)
     && beallitas.bizonyitekKulcsok.length ? beallitas.bizonyitekKulcsok : null;
   const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(kornyezet.tar, kornyezet.koino, kornyezet.szerzo,
     veg.sorszam, kornyezet.lancTarolo ?? null, pontEntitas ?? szavazatKulcsok);
@@ -920,7 +921,9 @@ export async function javaslatLetrehozasa(kornyezet, adatok) {
     // üres → a saját azonosítója a szelet). Minden érintettjénél BEJELENTÉSKÉNT jelenik meg
     // (`esemeny.js`: `bejelentesHelyei`) — a gondolat tartói így is mindent tudnak, ami róla dönt.
     // *(2026-10-02-ig az első érintett szeletébe került: „a szeletnek egyetlen gazdája lehet".)*
-    {}
+    // ⭐⭐ D85 T3 előfeltétele (a T2 mintája): a javaslat a jogának bizonyítékát hozza — érintettenként a
+    // javaslattevő pontját a saját kiosztás-fájából. A csak-G1-tartó így a G2-es pontot is ellenőrzi.
+    { bizonyitekKulcsok: erintettek.map((r) => r.entitas) }
   );
 
   // ===================================

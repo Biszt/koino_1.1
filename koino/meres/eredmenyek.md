@@ -4495,7 +4495,32 @@ többet). 1000 résztvevőig egy csomag-esemény elég, felette darabolva megy (
 szavazó eseménye nagyobb (53–54.: pont +~0,7 KB, szavazat +~1,5 KB) — a valódi ár tulajdonosonként
 inkább 3–5 KB.
 
-⚠️ **Egy kockázat, amit ki kell mondani (Csaba döntésére vár):** a csomag MINDEN érintett szeletébe
+⚠️ **Egy kockázat, amit ki kell mondani:** a csomag MINDEN érintett szeletébe
 eljut. Aki egy kis gondolatot egy nagyon népszerűvel javasol egyesíteni, az a kis gondolat tartóira a nagy
 gondolat teljes tulajdonosi körét küldi (10 000 tulajdonosnál ~26 MB) — és ehhez csak annyi kell, hogy
 mindkettőn legyen pontja (ez olcsó). Ez erősítés: kis ráfordítással nagy terhet tesz másokra.
+⭐ **Csaba döntése (2026-10-03, „legyen a (B)”):** a csomag NEM a gondolat szeletébe kerül, hanem a
+TÖREDÉKÉBE — a rész szavazói (pontjuk van a töredéken, D85/2) magától kapják; a gondolat nem szavazó tartója
+csak akkor kéri el, ha a SAJÁT része valamikor igent mondott (különben az ÉS miatt a gondolata nem
+változhatott, és ezt a saját adatából tudja). És minden csomag csak azt hozza, ami a cél-szeletből hiányzik
+(a nagy gondolat tartói nem kapják vissza a saját adatukat).
+
+## 56. ⭐ A JAVASLAT MÉRETE A JOGÁNAK BIZONYÍTÉKÁVAL — a (B) előfeltétele (2026-10-03, a laptopon)
+
+*A (B) építése közben derült ki: a javaslattevő jogosultságát (minden érintetten van pontja) a szabály-réteg
+a javaslattevő láncából olvasta — a csak-G1-tartónál ez a lánc hézagos (a G2-es pont a G2 szeletében van),
+és a javaslat tévesen kiesett volna. A T2 mintájára a javaslat is hozza a bizonyítékát, érintettenként egyet
+a saját kiosztás-fájából: `esemenyMeretMeres.js`, egy kételemű egyesítés.*
+
+```
+Lánc-gyökér nélkül (null):  javaslat (2 érintett)  681 B
+Kiosztás    10 entitáson:   javaslat átlag        1784 B
+Kiosztás   100 entitáson:   javaslat átlag        2267 B
+Kiosztás  1000 entitáson:   javaslat átlag        2751 B
+Kiosztás 10000 entitáson:   javaslat átlag        3236 B
+```
+
+⭐ **A lelet:** érintettenként +0,5–1,2 KB (a lánc-gyökér ~150 B egyszer), logaritmikusan a javaslattevő
+kiosztásával — ugyanaz az ár, mint a szavazat egy bizonyítékáé (54.). A javaslat ritka esemény (egy
+döntéshez egy), ezért ez a 6. szabály mércéjén elhanyagolható; cserébe a jogosultság hézagos láncnál is
+eldönthető, mindenhol ugyanúgy.

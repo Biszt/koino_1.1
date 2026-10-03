@@ -4473,6 +4473,18 @@ nincs). **Helye a sorban:** a B-ben, a szigorú (b) bekapcsolása (B/3) előtt.
   eseményre darabolható. A lezárásig a másik rész állása a csak-G1-tartónál „nem ismert” (D19). ⚠️ Az
   építés előtt mérés: a csomag mérete a résztvevők számával (55. mérés). *(Az (a1) — a csere maga számol
   határidőt — elvetve: összekötné a csere réteget a döntés-számítással.)*
+  ⭐ **A CSOMAG ÚTJA (Csaba, 2026-10-03: „legyen a (B)”):** a „minden érintett szeletébe” erősítés volt (55.
+  mérés: a kis gondolat tartóira a nagy teljes bemenete, egy pont árán, ismételhetően). Ezért: **(1)** a
+  csomag a rész TÖREDÉKÉNEK szeletébe kerül (`entitas` = a töredék azonosítója), nem a gondolatéba — a rész
+  szavazói (pontjuk van a töredéken, D85/2) a cserével magától kapják; **(2)** a gondolat nem szavazó tartója
+  csak akkor kéri el a töredék szeletét, ha a gondolata SAJÁT része valamikor igent mondott — ha egyszer sem,
+  az ÉS miatt a gondolat nem változhatott (ezt a saját adatából tudja), csak a javaslat címkéje „nem ismert”
+  nála (D19); **(3)** minden csomag csak azt hozza, ami a cél-szeletből hiányzik (a nagy gondolat tartói nem
+  kapják vissza a saját adatukat). Az elkérést a készülék a kiszámolt állapotából indítja (mint a `hozd`-ot) —
+  a csere réteg nem számol döntést. ⭐ **Az előfeltétele (2026-10-03, a (B) építése közben):** a javaslattevő
+  jogosultságát a szabály-réteg a láncából olvasta — a csak-G1-tartónál hézagos láncból, ami a G2-es pontot
+  „nincs”-nek látta; ezért **a javaslat is hozza a jogának bizonyítékát** (érintettenként, a T2 mintája; a
+  kapu ellenőrzi, a lánc-gyökeres javaslatnál csak ez dönt) — ára érintettenként +0,5–1,2 KB (56. mérés).
 - **A megépítés állása:** D85/4 (az egyezmény-fázis a kártyán) ✅ `cbb6f19` · a töredékek mint entitások,
   a pakli töredék-kártyája, a szavazás töredék → csoport fordítása, a javaslattevő lépése (létrehozás →
   pont → szavazat a művelet-rétegben; a pont a prototípus szerint oszlik: mindegyikre legalább 1, a

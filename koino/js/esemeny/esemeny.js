@@ -160,7 +160,7 @@ export function bejelentesHelyei(e) {
     for (const k of lista) if (typeof k === 'string' && k !== '') hozza(k);
   } else if (e?.tipus === 'Szavazat') {
     // ⛔ CSAK lánc-gyökeres szavazatnál: a kapu csak akkor ellenőrzi a bizonyítékot (legfeljebb 64
-    // azonosító, mind a saját kiosztásából — `szavazatOnbizonyitasa`). Gyökér nélkül a bizonyíték nem
+    // azonosító, mind a saját kiosztásából — `hozottBizonyitekokOnbizonyitasa`). Gyökér nélkül a bizonyíték nem
     // számít (`szavazatSajatPontjai`), és bejelentést sem adhat — különben bármennyi, bármilyen szeletbe
     // be lehetne jelenteni egy szavazatot.
     const b = e.adat?.bizonyitek;

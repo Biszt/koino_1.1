@@ -30,7 +30,7 @@ import { esemenyEllenorzese, elagazasE, szelet } from '../esemeny/esemeny.js';
 // ⭐ D80: az `Ellentmondas` esemény TARTALMA is a kapun megy át (önmagát igazoló bizonyíték).
 import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
-import { pontEsemenyOnbizonyitasa, szavazatOnbizonyitasa } from '../allapot/lancGyoker.js';
+import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from '../allapot/lancGyoker.js';
 
 // ===================================
 // ESEMÉNY MENTÉSE
@@ -68,8 +68,8 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
     return { mentve: false, ok: onbizonyitas.ok };
   }
 
-  // ⭐ D85/2 (T2): a szavazat hozott bizonyítékai a saját lánc-gyökeréhez illenek-e.
-  const szavazatBizonyitek = await szavazatOnbizonyitasa(esemeny);
+  // ⭐ D85/2 (T2): a szavazat és a javaslat hozott bizonyítékai a saját lánc-gyökeréhez illenek-e.
+  const szavazatBizonyitek = await hozottBizonyitekokOnbizonyitasa(esemeny);
   if (!szavazatBizonyitek.rendben) {
     console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: szavazatBizonyitek.ok });
     return { mentve: false, ok: szavazatBizonyitek.ok };

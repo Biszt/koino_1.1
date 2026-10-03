@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import { probaGyujtemeny } from './probaFuttato.js';
 import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar.js';
 import { sajatLancEsemenyei, esemenyMentese } from '../js/tar/esemenyTar.js';
-import { esemenyLetrehozasa, esemenyEllenorzese } from '../js/esemeny/esemeny.js';
+import { esemenyLetrehozasa, esemenyEllenorzese, szelet, bejelentesHelyei } from '../js/esemeny/esemeny.js';
 import {
   koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa, szavazas
 } from '../js/muveletek.js';
@@ -323,6 +323,80 @@ proba('⛔⛔ D85/2 (T2): a kapu ELUTASÍTJA a szavazatot, ha a bizonyítéka ne
   }, B.kulcspar);
   const eredmeny = await esemenyMentese(tar, e);
   return eredmeny.mentve === false && /D85\/2/.test(eredmeny.ok ?? '');
+});
+
+// ===================================
+// ⭐⭐ D85 T3 ELŐFELTÉTELE (2026-10-03): A JAVASLAT IS HOZZA A JOGÁNAK BIZONYÍTÉKÁT
+// ===================================
+//
+// A javaslattevő jogosultsága: a javaslat ELŐTTI állása szerint minden érintetten van pontja. A szigorú
+// (b) alatt a csak-G1-tartó a javaslattevő láncát hézagosan látja (a G2-es pontja a G2 szeletében van) —
+// a lánc-bejárás a hiányt „nincs”-nek olvasná, és a javaslatot kidobná. Ezért a javaslat a T2 mintájára
+// a saját kiosztás-fájából bizonyítja a pontjait, érintettenként.
+
+/** Két gondolat (G1, G2), A pontot tesz mindkettőre, és egyesítést javasol. */
+async function egyesitoJavaslat() {
+  const { tar, kornyezet: A } = await ujKornyezet();
+  await koinoLetrehozasa(A, 'T3-elofeltetel');
+  const g1 = await gondolatLetrehozasa(A, { cim: 'G1' });
+  const g2 = await gondolatLetrehozasa(A, { cim: 'G2' });
+  await tudatpontRendezese(A, g1.azonosito, 30);
+  await tudatpontRendezese(A, g2.azonosito, 30);
+  const j = await javaslatLetrehozasa(A, { erintettek: [
+    { entitas: g1.azonosito, muvelet: 'Egyesites', valtozas: { cim: 'E' } },
+    { entitas: g2.azonosito, muvelet: 'Egyesites', valtozas: null }], pont: 2 });
+  return { tar, A, g1, g2, j };
+}
+
+/** Amit a csak-G1-tartó lát: a G1 szelete és ami oda bejelentődik (meg a koinó születése). */
+const csakEgyNezete = (esemenyek, g) => esemenyek.filter((e) => e.tipus === 'KoinoLetrehozas'
+  || szelet(e) === g || bejelentesHelyei(e).includes(g));
+
+proba('⭐⭐ D85 T3 előfeltétele: a javaslat HOZZA a jogának bizonyítékát — a csak-G1-tartónál sem esik ki',
+  async () => {
+    const { tar, A, g1, g2, j } = await egyesitoJavaslat();
+    const kulcsok = Object.keys(j.adat.bizonyitek ?? {}).sort();
+    const minden = await koinoEsemenyei(tar, KOINO);
+    const nezet = csakEgyNezete(minden, g1.azonosito);
+    // A nézetből tényleg hiányzik A G2-es pontja (különben a próba nem a hézagot mérné).
+    const hianyzikG2Pont = !nezet.some((e) => e.tipus === 'TudatpontRendezes' && e.adat?.entitas === g2.azonosito);
+    const allapot = allapotSzamitasa(nezet);
+    const kiesett = allapot.kivetelek.some((k) => k.azonosito === j.azonosito);
+    const szamit = allapot.szamitok.some((e) => e.azonosito === j.azonosito);
+    return j.lancGyoker !== null && hianyzikG2Pont
+      && JSON.stringify(kulcsok) === JSON.stringify([g1.azonosito, g2.azonosito].sort())
+      && !kiesett && szamit && A.szerzo === j.szerzo;
+  });
+
+proba('⛔⛔ D85 T3 előfeltétele: a hamis bizonyítékú javaslatot a kapu elutasítja; a pont nélküli kiesik', async () => {
+  const { tar, A, g1, g2 } = await egyesitoJavaslat();
+  // (1) KÉZZEL összeállított javaslat, a két bizonyíték FELCSERÉLVE.
+  const veg = await lancVege(tar, A.szerzo);
+  const { lancGyoker, bizonyitek } = await lancUjEsemenyhez(tar, KOINO, A.szerzo, veg.sorszam, null,
+    [g1.azonosito, g2.azonosito]);
+  const hamis = { [g1.azonosito]: bizonyitek[g2.azonosito], [g2.azonosito]: bizonyitek[g1.azonosito] };
+  const e = await esemenyLetrehozasa({
+    koino: KOINO, tipus: 'Javaslat',
+    adat: { fajta: 'szerkesztesi', indoklas: null, bizonyitek: hamis, erintettek: [
+      { entitas: g1.azonosito, muvelet: 'Torles', valtozas: null },
+      { entitas: g2.azonosito, muvelet: 'Torles', valtozas: null }] },
+    entitas: null, entitasSorszam: 1, latott: [], lancGyoker, ...veg
+  }, A.kulcspar);
+  const kapu = await esemenyMentese(tar, e);
+
+  // (2) B-nek a G2-n NINCS pontja, mégis javasol (a művelet-réteg nem tilt, a szabály dönt): a hozott
+  //     bizonyíték a hiányt bizonyítja → a javaslat kiesik, akkor is, ha minden esemény megvan.
+  const kB = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const szB = Buffer.from(await crypto.subtle.exportKey('raw', kB.publicKey)).toString('base64url');
+  const B = { ...A, kulcspar: kB, szerzo: szB, lancTarolo: null };
+  await tudatpontRendezese(B, g1.azonosito, 10);
+  const jB = await javaslatLetrehozasa(B, { erintettek: [
+    { entitas: g1.azonosito, muvelet: 'Torles', valtozas: null },
+    { entitas: g2.azonosito, muvelet: 'Torles', valtozas: null }] });
+  const allapot = allapotSzamitasa(await koinoEsemenyei(tar, KOINO));
+  const kivetel = allapot.kivetelek.find((k) => k.azonosito === jB.azonosito);
+  return kapu.mentve === false && /T2/.test(kapu.ok ?? '')
+    && !!kivetel && /nem bizonyította/.test(kivetel.ok);
 });
 
 export default futtatas;

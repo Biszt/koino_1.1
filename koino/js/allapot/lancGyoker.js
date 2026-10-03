@@ -90,10 +90,14 @@ export async function pontEsemenyOnbizonyitasa(e) {
 }
 
 /**
- * ⛔ Egy szavazat legfeljebb ennyi bizonyítékot hordozhat (részenként kettőt: az érintettét és a
- * javaslat-entitásáét). Felső korlát, hogy egy kézzel írt szavazat ne fújhassa fel az eseményt.
+ * ⛔ Egy szavazat vagy javaslat legfeljebb ennyi bizonyítékot hordozhat (a szavazat részenként kettőt:
+ * az érintettét és a javaslat-entitásáét; a javaslat érintettenként egyet). Felső korlát, hogy egy
+ * kézzel írt esemény ne fújhassa fel magát.
  */
 export const SZAVAZAT_BIZONYITEK_KORLAT = 64;
+
+/** Mely események hozhatnak kulcsonkénti bizonyítékot a saját kiosztásukból (D85/2 T2, D85 T3). */
+const KULCSOS_BIZONYITEK_TIPUSOK = new Set(['Szavazat', 'Javaslat']);
 
 /**
  * ⭐⭐ A SZAVAZAT ÖNBIZONYÍTÁSA (D85/2, T2 — Csaba, 2026-10-02) — a kapu hívja. A szavazati jog a
@@ -103,22 +107,29 @@ export const SZAVAZAT_BIZONYITEK_KORLAT = 64;
  * tartóinál). ⚠️ Nem ítél a jogról — azt a számítás teszi (`javaslatSzamitas.js`); itt csak az, hogy
  * minden hozott bizonyíték a saját gyökeréhez illik. A HIÁNYZÓ bizonyíték nem hiba: ott a szavazat
  * egyszerűen nem számít.
+ *
+ * ⭐⭐ A JAVASLAT IS (D85 T3 előfeltétele, 2026-10-03 — a T2 mintája): a javaslattevő jogosultsága (minden
+ * érintetten pontja van, a javaslat ELŐTTI állása szerint) ugyanígy a saját kiosztás-fájából bizonyított —
+ * különben a csak-G1-tartó a javaslattevő hézagos láncából ítélne, és a G2-es pontot „nincs”-nek látná.
  * @returns {Promise<{rendben: boolean, ok?: string}>}
  */
-export async function szavazatOnbizonyitasa(e) {
-  if (e?.tipus !== 'Szavazat' || e.lancGyoker === null || e.lancGyoker === undefined) return { rendben: true };
+export async function hozottBizonyitekokOnbizonyitasa(e) {
+  if (!KULCSOS_BIZONYITEK_TIPUSOK.has(e?.tipus) || e.lancGyoker === null || e.lancGyoker === undefined) {
+    return { rendben: true };
+  }
+  const mi = e.tipus === 'Javaslat' ? 'a javaslat' : 'a szavazat';
   const b = e.adat?.bizonyitek;
   if (b === undefined || b === null) return { rendben: true };
-  if (typeof b !== 'object' || Array.isArray(b)) return { rendben: false, ok: 'a szavazat bizonyítéka nem objektum' };
+  if (typeof b !== 'object' || Array.isArray(b)) return { rendben: false, ok: mi + ' bizonyítéka nem objektum' };
   const kulcsok = Object.keys(b);
   if (kulcsok.length > SZAVAZAT_BIZONYITEK_KORLAT) {
-    return { rendben: false, ok: 'a szavazat túl sok bizonyítékot hoz (' + kulcsok.length + ')' };
+    return { rendben: false, ok: mi + ' túl sok bizonyítékot hoz (' + kulcsok.length + ')' };
   }
   for (const kulcs of kulcsok) {
-    if (!AZONOSITO_MINTA.test(kulcs)) return { rendben: false, ok: 'a szavazat bizonyítékának kulcsa nem azonosító' };
+    if (!AZONOSITO_MINTA.test(kulcs)) return { rendben: false, ok: mi + ' bizonyítékának kulcsa nem azonosító' };
     const v = await allapotBizonyitekEllenorzese(KIOSZTAS_FAJTA, KIOSZTAS_HOSSZ, e.lancGyoker.kiosztas, kulcs, b[kulcs]);
     if (!v.rendben) {
-      return { rendben: false, ok: 'a szavazat bizonyítéka nem illik a saját lánc-gyökeréhez (D85/2): ' + v.ok };
+      return { rendben: false, ok: mi + ' bizonyítéka nem illik a saját lánc-gyökeréhez (D85/2, T2): ' + v.ok };
     }
   }
   return { rendben: true };
