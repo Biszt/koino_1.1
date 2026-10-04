@@ -141,6 +141,7 @@ export function szuleteseSzuloje(e) {
  *     (`adat.sajatBelepes`): így „kiről állított?” (kit tanúsított, kinek mutatkozott be) egyetlen szelet-kérdés, a
  *     szerző láncának átfésülése nélkül — a kontraszt-jelzés bemenete. ⚠️ A horgonyt a szerző mondja; a jelzés csak a
  *     szerző saját állításait számolja (egy idegen horgonyra mutató bejelentés nem hamisít semmit).
+ *   · ⭐ D95/1: a `LezarasiOsszegzes` → az érintettjénél (`adat.entitas`).
  *
  * ⛔ Csak azonosító alakú kulcs (D77: amit nem lehet a vonalon kimondani, az megakasztaná a cserét), és a
  * saját szelete nem (az úgyis az övé). ⭐ Az eseményből MAGÁBÓL olvasható — a tár mutatója más esemény
@@ -178,6 +179,10 @@ export function bejelentesHelyei(e) {
     }
   } else if (AZONOSSAG_ALLITASOK.has(e?.tipus)) {
     hozza(e.adat?.sajatBelepes);
+  } else if (e?.tipus === 'LezarasiOsszegzes') {
+    // ⭐ D95/1: a lezárási összegzés a javaslat szeletében él, és az érintettjénél is hír (annak tartói ebből tudják meg
+    // a nagy szeletű rész döntését).
+    hozza(e.adat?.entitas);
   }
   return [...helyek].sort();
 }

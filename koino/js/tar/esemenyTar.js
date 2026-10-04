@@ -32,6 +32,8 @@ import { ellentmondasEllenorzese } from '../allapot/ellentmondas.js';
 // ⭐ D81: a pont-esemény a saját bizonyítékát hozza — a kapu ellenőrzi, hogy illik a lánc-gyökeréhez.
 import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from '../allapot/lancGyoker.js';
 import { CSOMAG_TIPUS, dontesiCsomagEllenorzese } from '../allapot/dontesiCsomag.js';
+// ⭐ D95/1: a lezárási összegzés alakja.
+import { LEZARASI_OSSZEGZES, lezarasiOsszegzesAlakja } from '../allapot/lezarasiOsszegzes.js';
 // ⭐ D93/2: a tagsági csomag tartalma is a kapun megy át.
 import { TAGSAGI_CSOMAG, tagsagiCsomagEllenorzese } from '../allapot/tagsag.js';
 
@@ -88,6 +90,13 @@ export async function esemenyMentese(tar, esemeny, beallitas = {}) {
       console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: csomag.ok });
       return { mentve: false, ok: csomag.ok };
     }
+  }
+
+  // ----- 1/a2b. ⭐ D95/1: A LEZÁRÁSI ÖSSZEGZÉS ALAKJA — a tartalmát a minták ellenőrzik (az összegző tartónál) -----
+  if (esemeny.tipus === LEZARASI_OSSZEGZES
+      && (!lezarasiOsszegzesAlakja(esemeny.adat) || esemeny.entitas !== esemeny.adat.javaslat)) {
+    console.log('esemenyMentese - VÉGE (ELUTASÍTVA)', { ok: 'hibás lezárási összegzés' });
+    return { mentve: false, ok: 'hibás lezárási összegzés (a javaslat szeletébe szól, a számokkal és a gyökerekkel)' };
   }
 
   // ----- 1/a3. ⭐ D93/2: A TAGSÁGI CSOMAG — a lánc másolatai is ugyanazon a próbán, és tagságot kell adniuk -----

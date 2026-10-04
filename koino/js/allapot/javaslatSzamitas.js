@@ -381,7 +381,7 @@ function kulonvaloOldal(szavazatok, igenyek, fajta) {
 }
 
 function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJavaslatEsemenyek,
-                         javaslatPontok = []) {
+                         javaslatPontok = [], lezarasRogzitve = null) {
   const entitasok = kik.map((r) => r.entitas);
   const sor = idorendbe([...szavazatok, ...tudatpontok, ...ertekJavaslatEsemenyek, ...javaslatPontok]);
 
@@ -492,8 +492,11 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   // csoport egyben dől el.
   const kozosLezaras = (reszek) => Math.max(...reszek.map((r) => r.allas.lezarasIdeje));
 
+  // ⭐ D95/1: ha a közös lezárás ISMERT (egy nagy szeletű rész ellenőrzött lezárási összegzéséből), a többi rész ehhez
+  // igazodik — különben a hiányzó rész hozzájárulása nélkül más határidőt számolnánk, és mást vágnánk le.
+  const lezarasa = (reszek) => (lezarasRogzitve ?? kozosLezaras(reszek));
   let reszek = allasokMost();
-  let lezarasIdeje = kozosLezaras(reszek);
+  let lezarasIdeje = lezarasa(reszek);
   let index = 0;
   let kesoiSzavazatok = 0;
   // ⭐ D85 T3 (B): mely rész mondott VALAHA igent a lezárásig — a „nem ismert” javaslatnál ebből tudjuk
@@ -580,7 +583,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
     }
 
     reszek = allasokMost();
-    lezarasIdeje = kozosLezaras(reszek);
+    lezarasIdeje = lezarasa(reszek);
     valahaJegyez();
   }
 
@@ -690,7 +693,7 @@ function hatalyokSzamitasa(esemenyek) {
  * @returns {Map<string, Object>} javaslat azonosító → állapot
  */
 /** Egy javaslat csoport-számítása a begyűjtött bemenetből (a `javaslatokSzamitasa` és a lezárási pillanatkép közös útja). */
-function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }) {
+function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, lezarasRogzitve = null) {
   const erintettAzonositok = kik.map((r) => r.entitas);
   return reszekSzamitasa(
     e,
@@ -699,7 +702,8 @@ function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }) 
     erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
     erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
     // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
-    javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? [])
+    javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? []),
+    lezarasRogzitve
   );
 }
 
@@ -719,7 +723,14 @@ export function lezarasiPillanatkep(esemenyek, javaslatEsemeny) {
   return { reszek, lezarasIdeje, pillanatkepek, dontesiIdo, kuszobTeljesul };
 }
 
-export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
+/**
+ * @param {Object} [beallitas]
+ * @param {Map<string, {osszegzes: Object, allas: Object}>} [beallitas.osszegzesek] - ⭐ D95/1: az ELLENŐRZÖTT lezárási
+ *   összegzések ('javaslat|entitás' → az összegzés és a számaiból számolt állás) — a nagy szeletű rész, amelynek a
+ *   bemenete nincs meg (a két fokú vállalás összegző tartójánál)
+ */
+export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beallitas = {}) {
+  const osszegzesek = beallitas.osszegzesek instanceof Map ? beallitas.osszegzesek : new Map();
   console.log('javaslatokSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
 
   const szavazatok = szavazatokGyujtese(esemenyek);
@@ -747,7 +758,24 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // kialakultak — nem az entitás mai mediánja (az az entitás `kuszobok` mezője, a
     // felületnek). Különben egy utólagos érték javaslat átírná a lezárt döntés
     // szabályát, akár visszamenőleg a döntési idejét is.
-    const csoport = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok });
+    // ⭐⭐ D95/1: A NAGY SZELETŰ RÉSZ AZ ELLENŐRZÖTT LEZÁRÁSI ÖSSZEGZÉSBŐL. Ha egy rész bemenete nincs meg (az érintett egyetlen
+    // pont-eseményét sem látjuk — a két fokú vállalás összegző tartója), de van rá ellenőrzött összegzés, a rész állása a
+    // számaiból jön (UGYANAZZAL a képlettel — `allasSzamokbol`), a többi rész pedig az összegzés KÖZÖS lezárásához igazodik.
+    const reszOsszegzese = (az) => (!(tudatpontok.get(az)?.length) ? osszegzesek.get(e.azonosito + '|' + az) ?? null : null);
+    const osszegzettek = erintettAzonositok.map(reszOsszegzese);
+    const rogzitett = osszegzettek.find(Boolean)?.osszegzes.lezaras ?? null;
+    const csoport0 = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, rogzitett);
+    if (rogzitett !== null) {
+      csoport0.reszek = csoport0.reszek.map((r, i) => {
+        const o = osszegzettek[i];
+        return o ? { ...r, kuszobok: { ...o.osszegzes.kuszobok }, kulonvalok: o.osszegzes.kulonvalok, allas: o.allas,
+          osszegzesbol: true } : r;
+      });
+      csoport0.dontesiIdo = Math.max(...csoport0.reszek.map((r) => r.allas.dontesiIdo));
+      csoport0.kuszobTeljesul = csoport0.reszek.every((r) => r.allas.kuszobTeljesul);
+      for (const r of csoport0.reszek) if (r.osszegzesbol && r.allas.kuszobTeljesul) csoport0.valaha.add(r.entitas);
+    }
+    const csoport = csoport0;
     const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok, valaha } = csoport;
 
     // ⭐⭐ A DÖNTÉS ISMERETE (D85 T3, 2026-10-03): egy rész csak akkor ISMERT, ha az érintettjének legalább
@@ -758,7 +786,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // ELFOGADVA-t számolt ott, ahol a teljes tudás ELVETVE-t.* ⭐ A jel TARTALMI, nem a készülék vállalásából
     // jön: ugyanazokból az eseményekből mindenki ugyanazt számolja (D17). A javaslattevő pont-eseménye mindig
     // létezik (pont nélkül nem tehetett javaslatot), tehát a teljes tudás mellett minden rész ismert.
-    const ismeretlenReszek = erintettAzonositok.filter((az) => !(tudatpontok.get(az)?.length));
+    const ismeretlenReszek = erintettAzonositok.filter((az, i) => !(tudatpontok.get(az)?.length) && !osszegzettek[i]);
 
     // ⚠️ A FELÜLETNEK ÉS A PARANCSSORNAK EGY SZÁM KELL, a döntésnek viszont N.
     // Az összefoglaló számok az ELSŐ részé — ugyanúgy, ahogy az `erintett` és a

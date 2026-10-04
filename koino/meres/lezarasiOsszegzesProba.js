@@ -226,4 +226,82 @@ proba('⛔⛔ a JOGOSULATLAN (pont nélküli) bizonyítékos szavazat a fában e
   }
 });
 
+// ===================================
+// ⭐⭐ A BEKÖTÉS: a döntés-számítás az ellenőrzött összegzésből (az összegző tartó nézete)
+// ===================================
+
+/** Az összegző tartó nézete: az érintett(ek) pont- és érték-eseményei nélkül (a nagy szeletet nem tartja egészében). */
+const osszegzoNezete = (esemenyek, nagyok) => esemenyek.filter((e) =>
+  !((e.tipus === 'TudatpontRendezes' || e.tipus === 'ErtekJavaslat') && nagyok.includes(e.adat?.entitas)));
+
+proba('⭐⭐ az összegző tartó a döntést az ELLENŐRZÖTT összegzésből számolja — ugyanaz, mint a teljes nézet; nélküle „nem ismert”', async () => {
+  const { esemenyek, g, j, olvas } = await vilag();
+  const most = Date.now();
+  const teljes = javaslatokSzamitasa(esemenyek, { entitasok: new Map() }, most).get(j.azonosito);
+  const { osszegzes, epito } = await lezarasiOsszegzesEpitese(esemenyek, j, g.azonosito);
+  const helyek = lezarasiMintaHelyek(osszegzes);
+  const e = await lezarasiOsszegzesEllenorzese({ osszegzes, javaslatEsemeny: j, helyek,
+    mintak: await lezarasiMintakValasza(epito, helyek, olvas), tagE: mindenkiTag });
+  const nezet = osszegzoNezete(esemenyek, [g.azonosito]);
+  const nelkule = javaslatokSzamitasa(nezet, { entitasok: new Map() }, most).get(j.azonosito);
+  const osszegzesek = new Map([[j.azonosito + '|' + g.azonosito, { osszegzes, allas: e.allas }]]);
+  const vele = javaslatokSzamitasa(nezet, { entitasok: new Map() }, most, { osszegzesek }).get(j.azonosito);
+  return e.rendben && nelkule.statusz === 'nemIsmert' && vele.statusz === teljes.statusz
+    && vele.statusz !== 'folyamatban' && vele.reszek[0].tamogatok === teljes.reszek[0].tamogatok
+    && vele.lezarasIdeje === teljes.lezarasIdeje && vele.reszek[0].ismert === true;
+});
+
+proba('⭐⭐ több érintettnél: a NAGY rész az összegzésből, a KIS rész helyben — a közös lezáráshoz igazítva; az „ÉS” ugyanaz', async () => {
+  const emberek = [];
+  for (let i = 0; i < 16; i++) emberek.push(await ujEember());
+  const [a] = emberek;
+  const g = await a.tesz('GondolatLetrehozas', { cim: 'Nagy', meret: 10 }, T0);
+  const h = await a.tesz('GondolatLetrehozas', { cim: 'Kicsi', meret: 10 }, T0);
+  const esemenyek = [g, h];
+  for (let i = 0; i < emberek.length; i++) {
+    esemenyek.push(await emberek[i].tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 5, szerep: 'aktiv' }, T0 + 10 + i));
+    if (i < 6) esemenyek.push(await emberek[i].tesz('TudatpontRendezes', { entitas: h.azonosito, pont: 3, szerep: 'aktiv' }, T0 + 40 + i));
+  }
+  const j = await a.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek: [
+    { entitas: g.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Nagy2' } },
+    { entitas: h.azonosito, muvelet: 'Modositas', valtozas: { cim: 'Kicsi2' } }] }, T0 + 200);
+  esemenyek.push(j);
+  const tipusok = ['Tamogat', 'Tamogat', 'Ellenez'];
+  for (let i = 0; i < 10; i++) esemenyek.push(...await emberek[i].szavaz(j, { szavazat: tipusok[i % 3] }, T0 + 300 + i));
+  const terkep = new Map(esemenyek.map((x) => [x.azonosito, x]));
+  const most = Date.now();
+  const teljes = javaslatokSzamitasa(esemenyek, { entitasok: new Map() }, most).get(j.azonosito);
+  const { osszegzes, epito } = await lezarasiOsszegzesEpitese(esemenyek, j, g.azonosito);
+  const helyek = lezarasiMintaHelyek(osszegzes);
+  const e = await lezarasiOsszegzesEllenorzese({ osszegzes, javaslatEsemeny: j, helyek,
+    mintak: await lezarasiMintakValasza(epito, helyek, async (az) => terkep.get(az) ?? null), tagE: mindenkiTag });
+  const vele = javaslatokSzamitasa(osszegzoNezete(esemenyek, [g.azonosito]), { entitasok: new Map() }, most,
+    { osszegzesek: new Map([[j.azonosito + '|' + g.azonosito, { osszegzes, allas: e.allas }]]) }).get(j.azonosito);
+  const kicsiT = teljes.reszek.find((r) => r.entitas === h.azonosito);
+  const kicsiV = vele.reszek.find((r) => r.entitas === h.azonosito);
+  return e.rendben && vele.statusz === teljes.statusz && vele.kuszobTeljesul === teljes.kuszobTeljesul
+    && kicsiV.tamogatok === kicsiT.tamogatok && kicsiV.nevezo === kicsiT.nevezo && vele.lezarasIdeje === teljes.lezarasIdeje;
+});
+
+proba('⭐ a KAPU: a jó alakú lezárási összegzés bemegy (a javaslat szeletébe) és az érintetthez bejelentődik; a hibás nem', async () => {
+  const { esemenyek, g, j, emberek } = await vilag({ tulajdonos: 8, szavazo: 4, ertek: 3 });
+  const { osszegzes } = await lezarasiOsszegzesEpitese(esemenyek, j, g.azonosito);
+  const { bejelentesHelyei } = await import('../js/esemeny/esemeny.js');
+  const { esemenyMentese } = await import('../js/tar/esemenyTar.js');
+  const mappa = await mkdtemp(join(tmpdir(), 'koino-lezaras-'));
+  try {
+    const tar = await esemenyTarNyitasa('proba', mappa);
+    const ki = emberek[1];
+    const jo = await ki.tesz('LezarasiOsszegzes', osszegzes, undefined, { entitas: j.azonosito });
+    const rosszHely = await ki.tesz('LezarasiOsszegzes', osszegzes, undefined, { entitas: g.azonosito });
+    const rosszAlak = await ki.tesz('LezarasiOsszegzes', { ...osszegzes, fak: null }, undefined, { entitas: j.azonosito });
+    const a1 = await esemenyMentese(tar, jo);
+    const a2 = await esemenyMentese(tar, rosszHely);
+    const a3 = await esemenyMentese(tar, rosszAlak);
+    return a1.mentve === true && a2.mentve === false && a3.mentve === false && bejelentesHelyei(jo).includes(g.azonosito);
+  } finally {
+    await rm(mappa, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;
