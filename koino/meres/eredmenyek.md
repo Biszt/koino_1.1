@@ -4749,3 +4749,33 @@ horgonyokkal) **logaritmikus**: egymillió 2. lépcsősnél 8 út ≈ 890–2 16
 → **D94** (Csaba, 2026-10-04: az (A), a szúrópróba). ⚠️ *Az első kiírásban a modell egy lépést N + 3 eseménynek vett (csak
 a választott tanúsítást), és a tanúsító saját 2. lépcsőjét is kötelezettségnek — az út ára így ~0,4–0,9 MB-nak látszott;
 a javított szám a fenti (a döntés előtt ezt mondtam, a döntés alapja — logaritmikus vs lineáris — nem változott).*
+
+## 66. ⭐ EGY KÉSZÜLÉK TERHE A SZIGORÚ (b) ALATT — és a tömeges entitás (a B/3 átvizsgálása, 2026-10-04, a laptopon)
+
+*`szigoruMeres.js` (szimuláció): N tag, mindenki k entitásra tesz pontot (k egyenletes 3..20); az entitást „a gazdag
+gazdagodik” szabály választja (0,3 eséllyel új vagy véletlen entitás, különben a pont-tartók számával arányosan). A
+szigorú (b) szerint egy készülék a vállalt szeleteit tartja (D75, D86) — a szelet MINDEN eseményét, a többi pont-tartóét
+is —, és a D93/1 óta a szerzőik tagságát is ellenőrizni kell. Egy esemény ~0,55 KB; a tagsági bizonyíték szerzőnként
+~1,2 KB × a lánc mélysége (63. mérés). A KÉT FOKÚ vállalás (a skálázási terv 4.6): 1000 eseménynél nagyobb szeletből csak
+a születés, a saját pont és 8 minta.*
+
+```
+N          a legnépszerűbb   │ tárolt esemény / készülék   │ szerzők tagsága        │ a mai „mindent tárol”
+           entitás tartói    │ (medián · 95% · max)         │ (medián · 95% · max)    │
+1 000          194 (19,4%)   │   447 ·  1 159 ·   1 642     │   346 ·    658 ·    769 │    12 884 (~7 MB)
+10 000       1 051 (10,5%)   │ 1 367 ·  4 074 ·   7 151     │ 1 283 ·  3 274 ·  4 970 │   130 981 (~70 MB)
+100 000      5 407 (5,4%)    │ 2 966 · 11 561 ·  35 879     │ 2 911 · 10 958 · 29 336 │ 1 322 856 (~711 MB)
+1 000 000   26 750 (2,7%)    │ 3 047 · 36 957 · 100 820     │ 3 040 · 36 341 · 95 456 │ 13 227 344 (~7,1 GB)
+a 95% tagsági bizonyítéka: ~6 · 38 · 154 · 571 MB (megosztás nélkül)
+KÉT FOKÚ vállalás (1000 esemény fölött összegző), tárolt esemény · szerzők (95%):
+   10 000: 4 nagy szelet, a készülékek 35%-a tart ilyet → 2 839 · 2 832  (~33 MB tagság)
+  100 000: 42 nagy szelet, 61%                         → 2 445 · 2 427  (~34 MB)
+1 000 000: 361 nagy szelet, 60%                         → 2 305 · 2 286  (~36 MB)
+```
+
+⭐ **A lelet:** a szigorú (b) a tárolást drámaian csökkenti (egymillió tagnál 7,1 GB helyett a készülékek 95%-ánál ~20 MB),
+⛔ **de a farok a népszerű entitások miatt ~√N szerint nő** (a 95% 1 159 → 36 957 esemény három nagyságrend alatt), és a
+D93/1 miatt a vállalt szeletek szerzőinek tagsági bizonyítéka is kell — ez a 95%-nál ~570 MB (a láncok megosztásával
+kevesebb, de ugyanígy nő). A teljes vállalás tehát a „végtelen” próbáján elbukik. ⭐ A **két fokú vállalás** (a nagy szelet
+pont-tartója a gyökeret, a saját eseményeit és mintákat tart; a teljes halmazt az önkéntes) **konstans**: a koinó méretétől
+függetlenül ~2 300–2 800 esemény és ~2 300 szerző tagsága a 95%-nál. → [`b3_szigoru_atvizsgalas.md`](../../docs/b3_szigoru_atvizsgalas.md).

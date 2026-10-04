@@ -327,7 +327,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 6. **E — az identitás a szeletelt világban**, vele a zárt koinó betartatása (a tagság bizonyítása a
    kézfogásban, D89/2) és a Profil (D28 a D88 alakjában — az azonosság-szeletben él).
 7. **B/3 — a szigorú (b) bekapcsolása:** a csere részvétele a vállalásból, a törzs kiszolgálása a D84/1
-   szerint. Innen végleges. ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
+   szerint. Innen végleges. 🔍 **Az átvizsgálás (2026-10-04):** [`b3_szigoru_atvizsgalas.md`](b3_szigoru_atvizsgalas.md) —
+   a 66. mérés szerint a teljes vállalás terhe a népszerű entitások és a szerzők tagsága miatt ~√N szerint nő, a két fokú
+   vállalás (a skálázási terv 4.6) konstans; négy kérdés Csabánál (B1 a tömeges entitás, B2 a tagsági csomag a cserében,
+   B3 a csak küldő részvétel, B4 a gyökér darabjai). ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
 8. **F — a társankénti emlékezet** és **az A hátralévői** (a D79 szúrópróba, a napló-alapú kettős-lánc
