@@ -4779,3 +4779,23 @@ D93/1 miatt a vállalt szeletek szerzőinek tagsági bizonyítéka is kell — e
 kevesebb, de ugyanígy nő). A teljes vállalás tehát a „végtelen” próbáján elbukik. ⭐ A **két fokú vállalás** (a nagy szelet
 pont-tartója a gyökeret, a saját eseményeit és mintákat tart; a teljes halmazt az önkéntes) **konstans**: a koinó méretétől
 függetlenül ~2 300–2 800 esemény és ~2 300 szerző tagsága a 95%-nál. → [`b3_szigoru_atvizsgalas.md`](../../docs/b3_szigoru_atvizsgalas.md).
+
+## 67. ⭐ A LEZÁRÁSI ÖSSZEGZÉS ÁRA — a nagy szeletű érintett döntése az összegző tartónak (D95/1, 2026-10-05, a laptopon)
+
+*`osszegzesMeres.js`: a három fa valódi (`osszegzoFa.js`) — a beszámított szavazatok állapot-fája (az összegek: támogat ·
+ellenez · tartózkodik), a lezáráskori aktív tulajdonosok állapot-fája, és az érték javaslatok érték szerint rendezett
+naplója (a medián a középső index). Az események mérete az 53–54. mérésből (a szavazat a bizonyítékaival ~2,14 KB, a
+pont-esemény ~1,37 KB, az érték javaslat ~0,8 KB), a tagsági csomag a 63.-ból. k = 8 minta fánként.*
+
+```
+résztvevő │ fejléc │ egy minta (bizonyíték + esemény): szavazat · tulajdonos · napló │ k = 8 mintával │ + a minták szerzőinek tagsága
+  1 000   │ 0,6 KB │ 2,93 KB · 2,20 KB · 1,46 KB                                     │     59 KB      │ +216 KB (gyorsítótár nélkül)
+ 10 000   │ 0,6 KB │ 3,27 KB · 2,46 KB · 1,67 KB                                     │     66 KB      │ +288 KB
+100 000   │ 0,6 KB │ 3,58 KB · 2,71 KB · 1,93 KB                                     │     72 KB      │ +336 KB
+a teljes tartó fa-építése a nulláról (két állapot-fa + napló): 1 s · 20 s · 244 s (a valóságban a karbantartó lépésenként vezeti)
+```
+
+⭐ **A lelet:** egy nagy szeletű érintett döntésének ellenőrizhető átadása az összegző tartónak **~60–70 KB**, logaritmikusan
+nő a résztvevők számával; a minták szerzőinek tagsága gyorsítótár nélkül +0,2–0,3 MB (a már ismert szerzőké ingyen).
+Döntésenként EGYSZER — a mai „mindent tárol” (a szelet minden eseménye) helyett. A szelet MOSTANI összegzésének mintái a
+62. mérés szerint k = 8-cal 5–21 KB.

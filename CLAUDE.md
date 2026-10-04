@@ -163,7 +163,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   Egy szeszélyes próba vagy a próba, vagy a program hibáját takarja — **mérni kell, nem zöldre
   hangolni**, és a bukásnak meg kell neveznie magát.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–66.).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–67.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 
@@ -397,6 +397,7 @@ node koino/meres/titkositasMeres.js [darab]  # ⭐ A CSERE TITKOSÍTÁSÁNAK ÁR
 node koino/meres/zartKapuMeres.js       # ⭐ A ZÁRT KOINÓ KAPUJA A DRÓTON (64., D93/3): ismert társnál +0 B; első találkozáskor +0,5 KB, csomaggal ~1,1 KB/lépés
 node koino/meres/lepcsoMeres.js [N] [F0]  # ⭐ A 2. LÉPCSŐ BIZONYÍTÉKA (65., D93/4): a teljes zárvány közel lineáris; a szúrópróba logaritmikus
 node koino/meres/szigoruMeres.js [p] [küszöb]  # ⭐ EGY KÉSZÜLÉK TERHE A SZIGORÚ (b) ALATT (66.): teljes vállalással ~√N, két fokúval konstans
+node koino/meres/osszegzesMeres.js [k]  # ⭐ A LEZÁRÁSI ÖSSZEGZÉS ÁRA (67., D95/1): ~60–70 KB döntésenként, logaritmikus
 node koino/meres/dhtTarsMeres.js [témák] [percek]  # ⭐ A BEP 5 A VALÓDI DHT-N (58., D91): bejelentés ~9 KB, keresés ~3 KB, a háló 30–60 perc alatt felejt
 node koino/meres/rajMeres.js [N] [körök] [szabályok]  # ⭐ A RAJ KIALAKULÁSA (59., D91, szimuláció): L = 8, fele friss / fele véletlen → ~99,5% egyben
 node koino/meres/kerelemMeres.js [kérelmek]  # ⭐ A KÉRELEM ÚTJA (60., a D átvizsgálása, szimuláció): az elárasztás nagy koinóban ~semmit nem ad, a kopogtatás (randevú + lyukfúrás) 20% → 76%
