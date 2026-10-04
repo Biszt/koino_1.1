@@ -62,6 +62,8 @@
 import { esemenyLekerese, entitasEsemenyei, sajatLancEsemenyei } from '../tar/esemenyTar.js';
 // ⭐ D93: a tagság szabálya EGY helyen él (`tagsag.js`) — a szabály-réteg és ez a tár-alapú kérdés ugyanazt hívja.
 import { tagsagiIndex, horgonyTagsaga, MELYSEG_KORLAT, TAGSAGI_CSOMAG, PROFIL } from './tagsag.js';
+// ⭐ D94: a szúrópróba véletlenje — az ELLENŐRZŐ választ, kriptográfiai véletlennel (nem a bizonyító).
+import { randomInt } from 'node:crypto';
 
 // ===================================
 // A PARAMÉTEREK
@@ -87,6 +89,18 @@ export const TANUSITAS_KELL = 3;
 // nélkül.
 export const FELHATALMAZAS_KELL = 5;
 
+// ⭐⭐ D94 (Csaba, 2026-10-04 — a 65. mérés után): A 2. LÉPCSŐ IGAZOLÁSA SZÚRÓPRÓBÁVAL.
+//
+// A teljes bizonyíték (minden tanúsítás és felhatalmazás az alapítókig) közel LINEÁRISAN nő: egymillió 2. lépcsősnél
+// ~290 MB. Ezért: ha a teljes ellenőrzés belefér a KERETBE (ennyi esemény-olvasás — helyi mennyiség, nem a koinó
+// mérete), az fut, és az ítélet pontos; ha nem, a SZÚRÓPRÓBA (`lepcso2Szuroproba`): a helyi rész teljesen, és
+// `SZUROPROBA_SETAK` véletlen út az alapító körig — logaritmikus (~0,9–2,2 MB egymillió 2. lépcsősnél).
+export const LEPCSO_KERET = 1000;
+export const SZUROPROBA_SETAK = 8;
+// ⭐ A 2. LÉPCSŐ BEMONDÁSA (D94, a D47 mintája): a 2. lépcsős a SAJÁT szeletébe aláírva bemondja, mely tanúsításaira
+// támaszkodik. ⛔ A szúrópróba CSAK aláírt bemondásokat követ (ezt, és a tanúsító bemondott felhatalmazásait) — a
+// szeletbe bárki tehet állítást, és ha az út azok közül sorsolna, egy kulcs-gyűrű a becsületest is elbuktathatná.
+export const LEPCSO_BEMONDAS = 'LepcsoBemondas';
 // ===================================
 // A NÉZET — a gyorsítótár, ami a bejárást olcsóvá teszi
 // ===================================
@@ -113,7 +127,14 @@ export function ujIdentitasNezet(beallitas = {}) {
     // Kérdésenként külön gyorsítótár — csak a POZITÍV eredmények.
     igenek: new Map(),       // 'tag|<horgony>' → eredmény
     folyamatban: new Set(),  // a körök elleni védelem (lásd lent)
-    olvasasok: 0             // hány eseményt kellett megnéznünk (a mérésekhez)
+    olvasasok: 0,            // hány eseményt kellett megnéznünk (a mérésekhez)
+
+    // ⭐ D94: a teljes 2. lépcső-ellenőrzés kerete (esemény-olvasás), a szúrópróba útjainak száma, és a választó
+    // (n → 0..n-1; alapból kriptográfiai véletlen — a próbák rögzítettet adhatnak).
+    keret: beallitas.keret ?? LEPCSO_KERET,
+    setak: beallitas.setak ?? SZUROPROBA_SETAK,
+    valaszto: beallitas.valaszto ?? ((n) => randomInt(0, n)),
+    szuroprobak: 0           // hányszor kellett szúrópróbára váltani (a mérésekhez)
   };
 }
 
@@ -129,6 +150,38 @@ export function ujIdentitasNezet(beallitas = {}) {
 //
 // Ugyanaz a mondat háromszor, csak az esemény-típus és a feltétel más. Ezért EGY közös váz
 // írja le mindhármat — ha az ellenőrzés szabálya változik, egy helyen változik.
+
+// ⭐ D94: ha a teljes ellenőrzés kifut a keretből, ezzel lép ki (a `lepcso2E` elkapja, és szúrópróbára vált).
+const KERET_TULLEPVE = Symbol('a 2. lépcső teljes ellenőrzése kifutott a keretből');
+function keretOr(nezet) {
+  if (nezet.keretVege !== undefined && nezet.olvasasok > nezet.keretVege) throw KERET_TULLEPVE;
+}
+
+/**
+ * ⭐ EGY ÁLLÍTÁS HELYI ÉRVÉNYESSÉGE (D94 óta közös: a teljes ellenőrzés és a szúrópróba is ezt hívja): rólam szól, nem
+ * önmagáé, és az állító horgonya — amit az esemény hoz — tényleg az övé.
+ * @returns {Promise<{ervenyes: boolean, hianyzik?: boolean, allitoHorgony?: string}>}
+ */
+async function allitasHelyben(tar, koino, e, horgonyEsemeny, tipus, nezet) {
+  if (!e || e.tipus !== tipus) return { ervenyes: false };
+  // ----- 1. RÓLAM SZÓLJON -----
+  // A `kit` mező a horgony szerzőjére mutasson. Enélkül egy idegen szeletébe tett
+  // esemény is beszámítana.
+  if (e.adat?.kit !== horgonyEsemeny.szerzo) return { ervenyes: false };
+  // ----- 2. ⛔ ÖNMAGÁT SENKI NEM ÁLLÍTHATJA -----
+  // Enélkül bárki bejuthatna egyetlen saját aláírással.
+  if (e.szerzo === horgonyEsemeny.szerzo) return { ervenyes: false };
+  // ----- 3. AZ ÁLLÍTÓ HORGONYA: az esemény HOZZA, nem keressük -----
+  const allitoHorgony = e.adat?.sajatBelepes;
+  if (typeof allitoHorgony !== 'string') return { ervenyes: false };
+  // ⚠️ És ellenőrizzük, hogy a horgony TÉNYLEG az állítóé — különben bárki hivatkozhatna
+  // egy tag horgonyára, és a saját állítása az ő helyzetével igazolódna.
+  const allitoEsemeny = await esemenyLekerese(tar, allitoHorgony);
+  nezet.olvasasok++;
+  if (!allitoEsemeny) return { ervenyes: false, hianyzik: true };
+  if (allitoEsemeny.szerzo !== e.szerzo || allitoEsemeny.koino !== koino) return { ervenyes: false };
+  return { ervenyes: true, allitoHorgony };
+}
 
 /**
  * A közös kérdés: hány KÜLÖNBÖZŐ, ÉRVÉNYES állító van a szeletemben, aki megfelel a
@@ -174,30 +227,17 @@ async function ervenyesAllitok(tar, koino, horgony, horgonyEsemeny, tipus, felte
 
   for (const e of szelet) {
     if (e.tipus !== tipus) continue;
+    keretOr(nezet);
 
     // ⭐ A visszavont felhatalmazás nincs érvényben — kivéve, ha UTÁNA újra megadták.
     if (tipus === 'Felhatalmazas' && visszavonva.has(e.szerzo)
         && (e.entitasSorszam ?? 1) < visszavonva.get(e.szerzo)) continue;
 
-    // ----- 1. RÓLAM SZÓLJON -----
-    // A `kit` mező a horgony szerzőjére mutasson. Enélkül egy idegen szeletébe tett
-    // esemény is beszámítana.
-    if (e.adat?.kit !== horgonyEsemeny.szerzo) continue;
-
-    // ----- 2. ⛔ ÖNMAGÁT SENKI NEM ÁLLÍTHATJA -----
-    // Enélkül bárki bejuthatna egyetlen saját aláírással.
-    if (e.szerzo === horgonyEsemeny.szerzo) continue;
-
-    // ----- 3. AZ ÁLLÍTÓ HORGONYA: az esemény HOZZA, nem keressük -----
-    const allitoHorgony = e.adat?.sajatBelepes;
-    if (typeof allitoHorgony !== 'string') continue;
-
-    // ⚠️ És ellenőrizzük, hogy a horgony TÉNYLEG az állítóé — különben bárki hivatkozhatna
-    // egy tag horgonyára, és a saját állítása az ő helyzetével igazolódna.
-    const allitoEsemeny = await esemenyLekerese(tar, allitoHorgony);
-    nezet.olvasasok++;
-    if (!allitoEsemeny) { voltNemEllenorizheto = true; continue; }
-    if (allitoEsemeny.szerzo !== e.szerzo || allitoEsemeny.koino !== koino) continue;
+    // ----- 1–3. A HELYI SZABÁLY (rólam szól, nem önmagáé, a horgony az állítóé) — `allitasHelyben` -----
+    const helyben = await allitasHelyben(tar, koino, e, horgonyEsemeny, tipus, nezet);
+    if (helyben.hianyzik) { voltNemEllenorizheto = true; continue; }
+    if (!helyben.ervenyes) continue;
+    const allitoHorgony = helyben.allitoHorgony;
 
     // ----- 4. ÉS A REKURZIÓ: megfelel-e az állító a feltételnek? -----
     // ⚠️ A feltétel MEGKAPJA az állítás eseményét is — a tanúsításnál ez dönti el, hogy a
@@ -240,6 +280,7 @@ async function kerdes(kulcs, tar, koino, horgony, nezet, vizsgalat) {
   // ----- 1. AMIT MÁR TUDUNK -----
   const kesz = nezet.igenek.get(gyorsKulcs);
   if (kesz) return vege(kesz, 'gyorsítótárból');
+  keretOr(nezet);
 
   // ----- 2. ⭐ A KÖR ELLENI VÉDELEM -----
   //
@@ -442,7 +483,25 @@ export function tanusithatE(tar, koino, horgony, nezet = ujIdentitasNezet()) {
  * két külön kérdés, és a gyakorlatban a tanúsítást úgyis tag kapja. Aki a felületet írja,
  * mindkettőt megkérdezheti.
  */
-export function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+export async function lepcso2E(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  // ⭐⭐ D94: A KERET. A legfelső hívás megnyitja (ennyi olvasás fér bele a teljes ellenőrzésbe); a belső, rekurzív
+  // hívások ugyanabban a keretben futnak. Ha kifut, a szúrópróba dönt. ⚠️ A keret helyi mennyiség (mennyit olvastam),
+  // nem a koinó mérete: a kis koinó ugyanazt a kódot futtatja, csak belefér.
+  if (nezet.keretVege !== undefined) return lepcso2Teljes(tar, koino, horgony, nezet);
+  nezet.keretVege = nezet.olvasasok + nezet.keret;
+  try {
+    return await lepcso2Teljes(tar, koino, horgony, nezet);
+  } catch (hiba) {
+    if (hiba !== KERET_TULLEPVE) throw hiba;
+    delete nezet.keretVege;
+    return lepcso2Szuroproba(tar, koino, horgony, nezet);
+  } finally {
+    delete nezet.keretVege;
+  }
+}
+
+/** A TELJES ellenőrzés (a D94 előtti alak — pontos, de a zárvány méretével arányos). */
+function lepcso2Teljes(tar, koino, horgony, nezet) {
   return kerdes('lepcso2', tar, koino, horgony, nezet, async (esemeny) => {
     const { db, voltNemEllenorizheto } =
       await ervenyesAllitok(tar, koino, horgony, esemeny, 'Tanusitas', tanusitoJoga, nezet);
@@ -494,25 +553,69 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     return eredmeny;
   };
 
-  const tanusito = await esemenyLekerese(tar, tanusitoHorgony);
-  nezet.olvasasok++;
-  if (!tanusito) {
+  // ⭐ D94: a HELYI rész (a horgony, az alapító kör, a bemondott felhatalmazások és a D61) egy helyen — a szúrópróba is
+  // ezt hívja; itt csak a felhatalmazók 2. lépcsője jön hozzá.
+  const h = await tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny);
+  if (h.nincsTanusito) {
     return vege({ igen: false, ok: 'nem ellenőrizhető: hiányzik a tanúsító horgonya', ellenorizheto: false });
   }
+  if (h.alapito) return vege({ igen: true, ok: 'alapító kör', ellenorizheto: true });
+  if (h.nincsBemondas) {
+    return vege({ igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true });
+  }
+
+  const adok = new Set();
+  let hianyzott = h.hianyzott;
+  const tudottRola = h.tudottRola;
+  for (const { szerzo: adoSzerzo, adoHorgony } of h.adok) {
+    keretOr(nezet);
+    // ⚠️ ÉS A MÁSIK FELTÉTEL: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt
+    // választótestület).
+    const allapota = await lepcso2E(tar, koino, adoHorgony, nezet);
+    if (!allapota.ellenorizheto) hianyzott = true;
+    if (allapota.igen) adok.add(adoSzerzo);
+  }
+
+  if (adok.size >= nezet.felhatalmazasKell) {
+    return vege({ igen: true, ok: adok.size + ' felhatalmazásra támaszkodott', ellenorizheto: true });
+  }
+  return vege({
+    igen: false,
+    ok: tudottRola
+      ? '⛔ visszavont felhatalmazásra hivatkozott, pedig a horgonya szerint tudott róla'
+      : hianyzott
+        ? 'nem ellenőrizhető: a bemondott felhatalmazások egy része hiányzik'
+        : adok.size + ' érvényes felhatalmazást mondott be a szükséges '
+          + nezet.felhatalmazasKell + ' helyett',
+    // ⭐ A bizonyított ellentmondás NEM „nem ellenőrizhető" — az a saját aláírásából
+    // következik, tehát végleges (a D42 mintája).
+    ellenorizheto: tudottRola ? true : !hianyzott
+  });
+}
+
+/**
+ * ⭐ A TANÚSÍTÓ JOGÁNAK HELYI RÉSZE (D94 óta kiemelve — a teljes ellenőrzés és a szúrópróba közös szabálya): a tanúsító
+ * horgonya, az alapító kör, és a tanúsításban BEMONDOTT felhatalmazások, amik helyben érvényesek (rá szólnak, nem
+ * önmagáé, a felhatalmazó horgonya az övé, és a tanúsító nem tudott közbeeső visszavonásról — D61). ⚠️ A felhatalmazók
+ * 2. lépcsőjét NEM nézi (az a rekurzió — a teljes ellenőrzésben mind, a szúrópróbában egy véletlen).
+ * @returns {Promise<{nincsTanusito?: boolean, alapito?: boolean, nincsBemondas?: boolean,
+ *   adok: Array<{szerzo: string, adoHorgony: string}>, hianyzott: boolean, tudottRola: boolean, ervenytelen: number}>}
+ */
+async function tanusitoFelhatalmazoi(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny) {
+  const ures = { adok: [], hianyzott: false, tudottRola: false, ervenytelen: 0 };
+  const tanusito = await esemenyLekerese(tar, tanusitoHorgony);
+  nezet.olvasasok++;
+  if (!tanusito) return { ...ures, nincsTanusito: true };
 
   // ⭐ AZ ALAPÍTÓ KÖR ELŐSZÖR — ő a rekurzió gyökere, és NINCS mire hivatkoznia.
   //
   // ⚠️ Ezt elsőre a bemondás-ellenőrzés MÖGÉ tettem, és három próba azonnal elbukott: az
   // alapítók tanúsítása „nem mondta be, mire támaszkodott" indokkal esett ki. A gyökeret
   // mindig a feltételek ELŐTT kell megnézni — különben a feltétel a gyökérre is vonatkozna.
-  if (await alapitoE(tar, koino, tanusitoHorgony, tanusito, nezet)) {
-    return vege({ igen: true, ok: 'alapító kör', ellenorizheto: true });
-  }
+  if (await alapitoE(tar, koino, tanusitoHorgony, tanusito, nezet)) return { ...ures, alapito: true };
 
   const bemondott = tanusitasEsemeny?.adat?.felhatalmazasok;
-  if (!Array.isArray(bemondott) || !bemondott.length) {
-    return vege({ igen: false, ok: 'a tanúsítás nem mondta be, mire támaszkodott', ellenorizheto: true });
-  }
+  if (!Array.isArray(bemondott) || !bemondott.length) return { ...ures, nincsBemondas: true };
 
   // ⭐⭐ MEDDIG LÁTOTT A TANÚSÍTÓ? — a horgony kiolvasása (9/c 4.5)
   //
@@ -575,29 +678,31 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
     visszavonasok.set(e.szerzo, eddigiek);
   }
 
-  const adok = new Set();
+  const adok = [];
   let hianyzott = false;
   let tudottRola = false;
+  let ervenytelen = 0;
 
   for (const azonosito of bemondott) {
-    if (typeof azonosito !== 'string') continue;
+    keretOr(nezet);
+    if (typeof azonosito !== 'string') { ervenytelen++; continue; }
     const f = await esemenyLekerese(tar, azonosito);
     nezet.olvasasok++;
     if (!f) { hianyzott = true; continue; }
 
     // A bemondott esemény tényleg RÓLA szóló felhatalmazás legyen — nem elég ráhivatkozni.
-    if (f.tipus !== 'Felhatalmazas' || f.koino !== koino) continue;
-    if (f.entitas !== tanusitoHorgony) continue;
-    if (f.adat?.kit !== tanusito.szerzo) continue;
-    if (f.szerzo === tanusito.szerzo) continue;      // magát senki nem hatalmazhatja fel
+    if (f.tipus !== 'Felhatalmazas' || f.koino !== koino) { ervenytelen++; continue; }
+    if (f.entitas !== tanusitoHorgony) { ervenytelen++; continue; }
+    if (f.adat?.kit !== tanusito.szerzo) { ervenytelen++; continue; }
+    if (f.szerzo === tanusito.szerzo) { ervenytelen++; continue; }      // magát senki nem hatalmazhatja fel
 
     // A felhatalmazó horgonya: az esemény hozza magával.
     const adoHorgony = f.adat?.sajatBelepes;
-    if (typeof adoHorgony !== 'string') continue;
+    if (typeof adoHorgony !== 'string') { ervenytelen++; continue; }
     const ado = await esemenyLekerese(tar, adoHorgony);
     nezet.olvasasok++;
     if (!ado) { hianyzott = true; continue; }
-    if (ado.szerzo !== f.szerzo || ado.koino !== koino) continue;
+    if (ado.szerzo !== f.szerzo || ado.koino !== koino) { ervenytelen++; continue; }
 
     // ⛔⛔ ÉS A LÉNYEG: LÁTTA-E A VISSZAVONÁST, MIELŐTT ALÁÍRT?
     //
@@ -625,29 +730,172 @@ async function tanusitoJoga(tar, koino, tanusitoHorgony, nezet, tanusitasEsemeny
       continue;
     }
 
-    // ⚠️ ÉS A MÁSIK FELTÉTEL: a felhatalmazónak 2. LÉPCSŐSNEK kell lennie (zárt
-    // választótestület).
-
-    const allapota = await lepcso2E(tar, koino, adoHorgony, nezet);
-    if (!allapota.ellenorizheto) hianyzott = true;
-    if (allapota.igen) adok.add(f.szerzo);
+    adok.push({ szerzo: f.szerzo, adoHorgony });
   }
+  return { adok, hianyzott, tudottRola, ervenytelen };
+}
 
-  if (adok.size >= nezet.felhatalmazasKell) {
-    return vege({ igen: true, ok: adok.size + ' felhatalmazásra támaszkodott', ellenorizheto: true });
+// ===================================
+// ⭐⭐ D94: A SZÚRÓPRÓBA — a 2. lépcső igazolása, ha a teljes ellenőrzés nem fér a keretbe
+// ===================================
+//
+// A HELYI rész teljesen: X 2. lépcső-bemondásának minden tanúsítása helyben érvényes, legalább `tanusitasKell`
+// különböző tanúsítótól, és mindegyik tanúsító joga helyben áll (alapító, vagy legalább N bemondott, helyben érvényes
+// felhatalmazás — D61-gyel). Utána `setak` VÉLETLEN ÚT: minden lépésen az aktuális ember egy véletlen bemondott
+// tanúsítója, és annak egy véletlen bemondott felhatalmazója lesz a következő ember (akinek a bemondását és a
+// tanúsításait, és a választott tanúsító felhatalmazásait nézzük — 2N + 6 esemény). Az út célba ér az alapító
+// tanúsítónál és a már igazolt (gyorsítótárban lévő) 2. lépcsősnél.
+//
+// ⛔⛔ AMIT A SZÚRÓPRÓBA MEGKÖVETEL — ÉS MIÉRT: minden BEMONDOTT tétel érvényes legyen (a teljes ellenőrzés a
+// többletet átlépi; itt a többlet hamis bemondás, mert különben egy csaló a bemondását hamis tételekkel hígíthatná), és
+// az út CSAK aláírt bemondásokat követ (a 2. lépcsős sajátját és a tanúsítóét) — a szeletbe szórt állítást nem: azt bárki
+// odateheti, és egy kulcs-gyűrű a becsületest is elbuktathatná. ⚠️ A hiány nem vád (D19): a hiányzó esemény, a
+// bemondás hiánya, a kör és a túl mély út „nem ellenőrizhető”; a bizonyított hiba (érvénytelen tétel, kevés tanúsító
+// vagy felhatalmazás, közbeeső visszavonás) bukás.
+
+/** Egy ember legutóbbi 2. lépcső-bemondása a saját szeletében (vagy null). */
+async function lepcsoBemondasa(tar, koino, horgony, horgonyEsemeny, nezet) {
+  const szelet = await entitasEsemenyei(tar, koino, horgony);
+  nezet.olvasasok += szelet.length;
+  let legutobbi = null;
+  for (const e of szelet) {
+    if (e.tipus !== LEPCSO_BEMONDAS || e.szerzo !== horgonyEsemeny.szerzo) continue;
+    if (!legutobbi || e.sorszam > legutobbi.sorszam) legutobbi = e;
   }
-  return vege({
-    igen: false,
-    ok: tudottRola
-      ? '⛔ visszavont felhatalmazásra hivatkozott, pedig a horgonya szerint tudott róla'
-      : hianyzott
-        ? 'nem ellenőrizhető: a bemondott felhatalmazások egy része hiányzik'
-        : adok.size + ' érvényes felhatalmazást mondott be a szükséges '
-          + nezet.felhatalmazasKell + ' helyett',
-    // ⭐ A bizonyított ellentmondás NEM „nem ellenőrizhető" — az a saját aláírásából
-    // következik, tehát végleges (a D42 mintája).
-    ellenorizheto: tudottRola ? true : !hianyzott
-  });
+  return legutobbi;
+}
+
+/** A tanúsító jogának ítélete a szúrópróbában (a helyi rész alapján; a felhatalmazók 2. lépcsője az úté). */
+function jogItelete(jog, nezet) {
+  if (jog.nincsTanusito) return { hianyzik: true, ok: 'hiányzik egy tanúsító horgonya' };
+  if (jog.alapito) return { alapito: true };
+  if (jog.nincsBemondas) return { bukott: true, ok: 'egy tanúsítás nem mondta be, mire támaszkodott' };
+  if (jog.tudottRola) return { bukott: true, ok: 'egy tanúsító visszavont felhatalmazásra hivatkozott, pedig tudott róla' };
+  if (jog.ervenytelen) return { bukott: true, ok: 'egy tanúsító érvénytelen felhatalmazást mondott be' };
+  if (jog.hianyzott) return { hianyzik: true, ok: 'egy bemondott felhatalmazás hiányzik' };
+  if (new Set(jog.adok.map((a) => a.szerzo)).size < nezet.felhatalmazasKell) {
+    return { bukott: true, ok: 'egy tanúsító a szükségesnél kevesebb felhatalmazást mondott be' };
+  }
+  return { rendben: true };
+}
+
+/**
+ * Egy ember a szúrópróba útján: a horgonya, az alapító kör, a gyorsítótár, a bemondása, és a bemondott tanúsításai
+ * (helyben érvényesek, elég különböző tanúsítótól). `teljes`: a tanúsítók jogának helyi részét is mind megnézi (a
+ * kiinduló embernél — a helyi rész).
+ */
+async function setaCsomopont(tar, koino, horgony, nezet, teljes) {
+  keretOr(nezet);
+  const e = await esemenyLekerese(tar, horgony);
+  nezet.olvasasok++;
+  if (!e) return { hianyzik: true, ok: 'hiányzik egy horgony-esemény' };
+  if (e.koino !== koino) return { bukott: true, ok: 'egy horgony más koinóé' };
+  if (await alapitoE(tar, koino, horgony, e, nezet)) return { cel: true, ok: 'alapító kör' };
+  if (e.tipus !== 'Belepes') return { bukott: true, ok: 'egy horgony nem belépés' };
+  if (nezet.igenek.get('lepcso2|' + horgony)?.igen) return { cel: true, ok: 'már igazolt' };
+
+  const b = await lepcsoBemondasa(tar, koino, horgony, e, nezet);
+  if (!b) return { hianyzik: true, ok: 'valakinek nincs 2. lépcső-bemondása (a szúrópróba csak a bemondottat követi)' };
+  const tanusitok = new Map();               // szerző → { tanusitas, tanusitoHorgony }
+  for (const az of b.adat.tanusitasok) {
+    const t = await esemenyLekerese(tar, az);
+    nezet.olvasasok++;
+    if (!t) return { hianyzik: true, ok: 'egy bemondott tanúsítás hiányzik' };
+    if (t.koino !== koino || t.entitas !== horgony) return { bukott: true, ok: 'hamis bemondás: a tanúsítás nem rá szól' };
+    const helyben = await allitasHelyben(tar, koino, t, e, 'Tanusitas', nezet);
+    if (helyben.hianyzik) return { hianyzik: true, ok: 'egy tanúsító horgonya hiányzik' };
+    if (!helyben.ervenyes) return { bukott: true, ok: 'hamis bemondás: érvénytelen tanúsítás' };
+    if (!tanusitok.has(t.szerzo)) tanusitok.set(t.szerzo, { tanusitas: t, tanusitoHorgony: helyben.allitoHorgony });
+  }
+  if (tanusitok.size < nezet.tanusitasKell) {
+    return { bukott: true, ok: 'a bemondás ' + tanusitok.size + ' tanúsítót nevez meg a szükséges ' + nezet.tanusitasKell + ' helyett' };
+  }
+  const lista = [...tanusitok.values()];
+  if (teljes) {
+    for (const t of lista) {
+      t.jog = await tanusitoFelhatalmazoi(tar, koino, t.tanusitoHorgony, nezet, t.tanusitas);
+      const ji = jogItelete(t.jog, nezet);
+      if (ji.bukott || ji.hianyzik) return ji;
+    }
+  }
+  return { tanusitok: lista };
+}
+
+/** Egy véletlen út a kiinduló embertől az alapító körig. */
+async function seta(tar, koino, horgony, kiindulo, nezet) {
+  const ut = new Set([horgony]);
+  let cs = kiindulo;
+  for (let lepes = 0; lepes < MELYSEG_KORLAT; lepes++) {
+    const t = cs.tanusitok[nezet.valaszto(cs.tanusitok.length)];
+    const jog = t.jog ?? await tanusitoFelhatalmazoi(tar, koino, t.tanusitoHorgony, nezet, t.tanusitas);
+    const ji = jogItelete(jog, nezet);
+    if (ji.alapito) return { cel: true };
+    if (ji.bukott || ji.hianyzik) return ji;
+    const jeloltek = jog.adok.filter((a) => !ut.has(a.adoHorgony));
+    if (!jeloltek.length) return { hianyzik: true, ok: 'kör az úton' };
+    const f = jeloltek[nezet.valaszto(jeloltek.length)];
+    ut.add(f.adoHorgony);
+    const kov = await setaCsomopont(tar, koino, f.adoHorgony, nezet, false);
+    if (kov.cel || kov.bukott || kov.hianyzik) return kov;
+    cs = kov;
+  }
+  return { hianyzik: true, ok: 'túl mély út (' + MELYSEG_KORLAT + ' lépés)' };
+}
+
+/**
+ * ⭐⭐ D94: A 2. LÉPCSŐ SZÚRÓPRÓBÁVAL — a helyi rész teljesen, és `nezet.setak` véletlen út az alapító körig.
+ * @returns {Promise<{igen: boolean, ok: string, ellenorizheto: boolean, szuroproba: true}>}
+ */
+export async function lepcso2Szuroproba(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  console.log('identitas.lepcso2Szuroproba - KEZDÉS', { horgony, setak: nezet.setak });
+  nezet.szuroprobak++;
+  const vege = (eredmeny) => {
+    if (eredmeny.igen) nezet.igenek.set('lepcso2|' + horgony, eredmeny);
+    console.log('identitas.lepcso2Szuroproba - VÉGE', { igen: eredmeny.igen, ok: eredmeny.ok });
+    return eredmeny;
+  };
+  const kesz = nezet.igenek.get('lepcso2|' + horgony);
+  if (kesz) return kesz;
+  const ki = await setaCsomopont(tar, koino, horgony, nezet, true);
+  if (ki.cel) return vege({ igen: true, ok: ki.ok, ellenorizheto: true, szuroproba: true });
+  if (ki.bukott) return vege({ igen: false, ok: 'a szúrópróba elbukott: ' + ki.ok, ellenorizheto: true, szuroproba: true });
+  if (ki.hianyzik) return vege({ igen: false, ok: 'nem ellenőrizhető (szúrópróba): ' + ki.ok, ellenorizheto: false, szuroproba: true });
+  let hiany = null;
+  for (let s = 0; s < nezet.setak; s++) {
+    const r = await seta(tar, koino, horgony, ki, nezet);
+    if (r.bukott) {
+      return vege({ igen: false, ok: 'a szúrópróba elbukott (' + (s + 1) + '. út): ' + r.ok, ellenorizheto: true, szuroproba: true });
+    }
+    if (r.hianyzik && !hiany) hiany = r;
+  }
+  if (hiany) return vege({ igen: false, ok: 'nem ellenőrizhető (szúrópróba): ' + hiany.ok, ellenorizheto: false, szuroproba: true });
+  return vege({ igen: true, ok: ki.tanusitok.length + ' tanúsítója van — szúrópróbával (' + nezet.setak + ' út)',
+    ellenorizheto: true, szuroproba: true });
+}
+
+/** ⭐ D94: alapító-e a horgony gazdája (a 2. lépcsője a koinó létrehozásából következik — bemondás nem kell). */
+export async function alapitoHorgony(tar, koino, horgony) {
+  const e = await esemenyLekerese(tar, horgony);
+  return !!e && e.koino === koino && alapitoE(tar, koino, horgony, e, ujIdentitasNezet());
+}
+
+/**
+ * ⭐ D94: a 2. lépcső bemondásának tartalma — a TÉNYLEG érvényes tanúsításaim (tanúsítónként egy), a teljes szabállyal
+ * (a felhatalmazók 2. lépcsője tanúsítónként a keretben vagy szúrópróbával). Ha nincs elég, üres lista.
+ * @returns {Promise<Array<string>>}
+ */
+export async function ervenyesTanusitasaim(tar, koino, horgony, nezet = ujIdentitasNezet()) {
+  const e = await esemenyLekerese(tar, horgony);
+  if (!e || e.tipus !== 'Belepes') return [];
+  const kivalasztott = new Map();
+  for (const t of await entitasEsemenyei(tar, koino, horgony)) {
+    if (t.tipus !== 'Tanusitas' || kivalasztott.has(t.szerzo)) continue;
+    const helyben = await allitasHelyben(tar, koino, t, e, 'Tanusitas', nezet);
+    if (!helyben.ervenyes) continue;
+    const jog = await tanusitoJoga(tar, koino, helyben.allitoHorgony, nezet, t);
+    if (jog.igen) kivalasztott.set(t.szerzo, t.azonosito);
+  }
+  return kivalasztott.size >= nezet.tanusitasKell ? [...kivalasztott.values()].slice(0, 16) : [];
 }
 
 // ----- A közös váznak átadható alakok (a paraméter-sorrend miatt) -----

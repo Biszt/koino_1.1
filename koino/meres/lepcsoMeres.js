@@ -7,7 +7,8 @@
 // aki 2. lépcsős ÉS N felhatalmazása van különböző 2. lépcsősöktől (emberenként egyet adhat — D57/b, D60); a tanúsítás
 // BEMONDJA, mely felhatalmazásokra támaszkodott (D47). A gyökér az alapító kör. ⭐ Tehát a bizonyíték nem egy lánc (mint a
 // tagságé — 63. mérés), hanem egy ŐS-HÁLÓ zárványa: X 3 tanúsítása → a tanúsítók N–N felhatalmazása → a felhatalmazók
-// tanúsításai → … az alapítókig. Itt nincs választás: minden lépcsőn pontosan a szükséges számú állítás van.
+// tanúsításai → … az alapítókig (a tanúsító SAJÁT 2. lépcsője nem kell — D47). Itt nincs választás: minden lépcsőn
+// pontosan a szükséges számú állítás van.
 //
 // A modell (szimuláció, aláírás nélkül — a darabszám a kérdés; egy esemény ~0,9–1,2 KB, a 64. mérés szerint):
 //   · F0 alapító (tanúsíthat, és egymást tanúsítják);
@@ -87,22 +88,25 @@ function zarvany(fel, x) {
   const latott = new Set([x]);
   const verem = [x];
   let tanusitas = 0, felhatalmazas = 0, tanusitokBenne = new Set();
+  const horgonyok = new Set([x]);   // akinek a horgonya kell (a tanúsítóké is), de nem mindenkit kell kibontani
   while (verem.length) {
     const p = verem.pop();
     for (const t of fel.tanusitoi[p]) {
       tanusitas++;
+      horgonyok.add(t);
       if (!tanusitokBenne.has(t)) {
         tanusitokBenne.add(t);
+        // ⚠️ A tanúsítás jogát a bemondott felhatalmazások adják (D47) — a tanúsító SAJÁT 2. lépcsője nem kell.
         for (const f of fel.felhatalmazoi.get(t) ?? []) {
           felhatalmazas++;
+          horgonyok.add(f);
           if (!latott.has(f)) { latott.add(f); verem.push(f); }
         }
       }
-      if (!latott.has(t)) { latott.add(t); verem.push(t); }
     }
   }
-  // események: a személyek horgonyai + a tanúsítások + a bemondott felhatalmazások
-  return { szemely: latott.size, esemeny: latott.size + tanusitas + felhatalmazas };
+  // események: a horgonyok + a tanúsítások + a bemondott felhatalmazások
+  return { szemely: horgonyok.size, esemeny: horgonyok.size + tanusitas + felhatalmazas };
 }
 
 /**
@@ -121,12 +125,12 @@ function korlatos(fel, x, D) {
         esemeny++;                                    // a tanúsítás
         if (!tanusitokLatva.has(t)) {
           tanusitokLatva.add(t);
+          esemeny++;                                  // a tanúsító horgonya
           for (const f of fel.felhatalmazoi.get(t) ?? []) {
             esemeny++;                                // a felhatalmazás
             if (!latott.has(f)) { latott.add(f); esemeny++; kov.push(f); }
           }
         }
-        if (!latott.has(t)) { latott.add(t); esemeny++; kov.push(t); }
       }
     }
     szint = kov;
@@ -136,18 +140,19 @@ function korlatos(fel, x, D) {
 
 /**
  * A SZÚRÓPRÓBA (a D92/5 mintája): egy véletlen út X-től az alapítókig — minden lépésen az aktuális ember egy véletlen
- * tanúsítója, és annak egy véletlen „kötelezettsége” (a saját 2. lépcsője, vagy az N felhatalmazója közül egy). Egy
- * lépésen ellenőrzött események: a tanúsítás, a tanúsító horgonya és N felhatalmazása, a következő ember horgonya
- * (~N + 3). Az út hossza a kérdés.
+ * tanúsítója, és annak egy véletlen felhatalmazója (a tanúsítás jogát a bemondott felhatalmazások adják — D47; a
+ * tanúsító SAJÁT 2. lépcsője nem feltétele, `identitas.js`: `tanusitoJoga`). Egy lépésen ellenőrzött események: az
+ * ember 3 tanúsítása és a tanúsítók horgonyai, a választott tanúsító N felhatalmazása és a felhatalmazók horgonyai
+ * (2N + 6). Az út hossza a kérdés.
  */
 function setaHossz(fel, x, v) {
   let p = x, hossz = 0;
   while (fel.tanusitoi[p].length && hossz < 100000) {
     const t = fel.tanusitoi[p][Math.floor(v() * fel.tanusitoi[p].length)];
     const f = fel.felhatalmazoi.get(t) ?? [];
-    const k = Math.floor(v() * (f.length + 1));
-    p = k < f.length ? f[k] : t;
     hossz++;
+    if (!f.length) break;                        // alapító tanúsító: az út célba ért
+    p = f[Math.floor(v() * f.length)];
   }
   return hossz;
 }
@@ -177,7 +182,7 @@ for (const meret of [1000, 10000, 100000, 1000000]) {
     const setaAtl = setak.reduce((a, b) => a + b, 0) / setak.length;
     setaSorok.push('  ' + String(meret).padEnd(10) + ' ' + mod.padEnd(12) + setaAtl.toFixed(1).padStart(8)
       + String(setak[Math.floor(setak.length * 0.95)]).padStart(8) + String(setak[setak.length - 1]).padStart(8)
-      + '   8 út ≈ ' + (8 * setaAtl * (N_KELL + 3)).toFixed(0).padStart(7) + ' esemény');
+      + '   8 út ≈ ' + (8 * setaAtl * (2 * N_KELL + 6)).toFixed(0).padStart(7) + ' esemény');
     setak.length = 0;
     korlatosSorok.push('  ' + String(meret).padEnd(10) + ' ' + mod.padEnd(12)
       + [1, 2, 3].map((D) => (kor[D] / minta).toFixed(0).padStart(8) + ' esemény').join('   '));

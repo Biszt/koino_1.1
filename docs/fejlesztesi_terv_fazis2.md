@@ -4775,7 +4775,46 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
   a nem tag a MI azonosság-szeletünket is megkapja; ahol a koinó születése ismeretlen, nincs kapu; a korlát a fájlokra
   és a címekre is vonatkozik. ⛔ Protokoll-törés: a régi program a nyitásban nem küld tábla-kulcsot, és a kérésre nem
   felel — a telefont frissíteni kell.
-- ⏸️ **Hátravan:** a 4. (a 2. lépcső — előbb a mérése), a 6.
+- ⏸️ **Hátravan:** a 4. (a 2. lépcső — a 65. mérés után a D94 váltja), a 6.
+
+### D94. A 2. LÉPCSŐ IGAZOLÁSA SZÚRÓPRÓBÁVAL (az E4 — a D93/4 helyett; 2026-10-04, Csaba: „Az (A)-t választom.”)
+
+**Amiből jött:** a 65. mérés. A D93/4 („ugyanaz a csomag-forma, a tanúsítások és a felhatalmazások láncával”) azon a
+feltevésen állt, hogy a 2. lépcső bizonyítéka a tagsági lánchoz hasonlóan kicsi. Nem az: a tagság lánca egy szülős (a
+legrövidebb választható), a 2. lépcsőé minden lépcsőn 3 tanúsítás és tanúsítónként N felhatalmazás — a teljes
+bizonyíték az ős-háló zárványa, és közel LINEÁRISAN nő (egymillió 2. lépcsősnél ~59 000 ember, ~290 MB; lánc-szerű
+növekedésnél a 2. lépcsősök 45%-a). A lehetőségek: [`e_identitas_atvizsgalas.md`](e_identitas_atvizsgalas.md) 6.
+
+#### A DÖNTÉS
+
+⭐ **Szúrópróba.** A 2. lépcső igazolása: a HELYI rész teljesen (X 3 tanúsítása, és mindhárom tanúsító bemondott N
+felhatalmazása — aláírva, különböző emberektől, a D61 szabályaival), és k = 8 VÉLETLEN ÚT az alapító körig: minden
+lépésen az aktuális ember 3 tanúsítása, egy véletlen tanúsítója és annak N felhatalmazása, majd egy véletlen
+felhatalmazója a következő ember (2N + 6 esemény lépésenként). Az utakat az ELLENŐRZŐ választja (kriptográfiai
+véletlen), és a lépések eseményeit maga olvassa (a táraiból, és ami nincs meg, azt a D kérelmével kéri) — nem a
+bizonyító számolja ki előre (egy előre rögzített utat addig sorsolhatna, amíg el nem kerüli a zsákutcákat). Ár:
+egymillió 2. lépcsősnél ~0,9–2,2 MB, személyenként egyszer, **logaritmikus**. A teljesen hamis szerkezet mindig elbukik;
+a részben hamis 8 úttal ~96%-kal; a maradékot a kontraszt-jelzés és a visszacsatolás fogja (D56).
+
+#### A MEGVALÓSÍTÁS (Claude, a D94 keretén belül)
+
+1. **Az út célja:** az alapító tanúsító, vagy egy már igazolt (gyorsítótárban lévő) 2. lépcsős — ami egyszer bizonyított,
+   arra az út nem megy újra (a gyorsítótár itt is a lényeg).
+2. **A kör és a mélység:** az út nem léphet a saját útjára (aki a saját ellenőrzése közben kerül elő, az ezen az ágon nem
+   bizonyít — ugyanaz, mint a teljes ellenőrzésben); a mélység-korlát 64 (D59).
+3. **A keret:** ha a teljes zárvány egy munka-keretbe belefér (alapból 1000 esemény-olvasás — nagyjából annyi, mint 8 út
+   egymillió 2. lépcsősnél), a teljes ellenőrzés fut, és az ítélet pontos; különben a szúrópróba. A keret helyi mennyiség
+   (mennyit olvastam), nem a koinó mérete — a kis koinó ugyanazt a kódot futtatja. *(Alappillérek, elágazás 61.)*
+4. **A hiány nem vád** (D19): ha egy út hiányzó eseménybe ütközik, az ítélet „nem ellenőrizhető”, és megnevezi, mi hiányzik.
+5. **Egy szabály, egy helyen:** a teljes ellenőrzés és a szúrópróba ugyanazokat a helyi szabályokat hívja
+   (`identitas.js`: `allitasHelyben`, `tanusitoFelhatalmazoi`).
+6. ⭐ **Csak aláírt bemondások** (alappillérek, elágazás 62): a 2. lépcsős a saját szeletébe bemondja a tanúsításait
+   (`LepcsoBemondas`, tanúsítónként egy, csak érvényes — `muveletek.js`: `lepcsoBemondasKiadasa`; az őrjárat és a `tagsag`
+   parancs adja ki), a tanúsító a felhatalmazásait (D47 — és csak ellenőrzött 2. lépcsős felhatalmazót); a szúrópróba
+   csak ezeket követi, és minden bemondott tételt megkövetel.
+
+✅ **MEGÉPÜLT (2026-10-04).** ⚠️ Útközben egy régi hiba: a kézi tanúsítás (`allitokRola`) 2026-09 eleje óta nem vitte
+át a felhatalmazás-bemondást, így egy nem alapító tanúsító tanúsítása soha nem számított — javítva, próba őrzi.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 

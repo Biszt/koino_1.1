@@ -417,6 +417,14 @@ export function alakiHiba(esemeny) {
   if (esemeny.tipus === 'TagsagiCsomag' && (!Array.isArray(esemeny.adat?.lanc) || !azonositoAlaku(esemeny.entitas))) {
     return 'a tagsági csomag a horgonyhoz szól, és a lánc eseményeit hordozza';
   }
+  // ⭐ D94: a 2. lépcső bemondása — a saját horgonyhoz szól, és a tanúsítások azonosítóit hordozza (1–16, ismétlés nélkül).
+  if (esemeny.tipus === 'LepcsoBemondas') {
+    const t = esemeny.adat?.tanusitasok;
+    if (!azonositoAlaku(esemeny.entitas) || !Array.isArray(t) || !t.length || t.length > 16
+      || !t.every(azonositoAlaku) || new Set(t).size !== t.length) {
+      return 'a 2. lépcső bemondása a horgonyhoz szól, és 1–16 különböző tanúsítás azonosítóját hordozza';
+    }
+  }
   return null;
 }
 

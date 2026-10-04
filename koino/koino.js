@@ -135,7 +135,9 @@ import {
   // ⭐ D85 T3: a lezárt, több érintettes döntések csomagja (a (B): a töredék szeletébe).
   dontesiCsomagokKiadasa,
   // ⭐ D93: a profil és a tagsági csomag.
-  profilMegadasa, tagsagiCsomagKiadasa
+  profilMegadasa, tagsagiCsomagKiadasa,
+  // ⭐ D94: a 2. lépcső bemondása (a szúrópróba ezt követi).
+  lepcsoBemondasKiadasa
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet, tagsagiEsemenyekGyujtese } from './js/allapot/identitas.js';
 // ⭐ D93/3: a zárt koinó kapuja — a tagság tiszta számítása és a tagsági csomag ellenőrzése.
@@ -3722,6 +3724,12 @@ try {
         kiir(SZIN.halvany + '  tagsági csomag: ' + c.ok + (c.kiadva ? ' — a saját azonosság-szeletedben; aki elkéri, az ősök'
           + ' szeletei nélkül is ellenőrizhet (D93/2)' : '') + SZIN.vege);
       }
+      // ⭐ D94: ha 2. lépcsős vagyok, a tanúsításaim bemondása (a szúrópróba csak a bemondottat követi).
+      const l = await lepcso2E(tar, KOINO, h);
+      if (l.igen) {
+        const b = await lepcsoBemondasKiadasa(kornyezet);
+        kiir(SZIN.halvany + '  2. lépcső: ' + l.ok + ' · bemondás: ' + b.ok + SZIN.vege);
+      }
       break;
     }
 
@@ -4249,6 +4257,9 @@ try {
           try {
             const tc = await tagsagiCsomagKiadasa(kornyezet);
             if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
+            // ⭐ D94: a 2. lépcső bemondása (ha 2. lépcsős lettem, vagy új érvényes tanúsítást kaptam).
+            const lb = await lepcsoBemondasKiadasa(kornyezet);
+            if (lb.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' 2. lépcső-bemondás: ' + lb.ok + SZIN.vege);
           } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
           const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
           if (kiadva.length) {
@@ -5596,7 +5607,7 @@ try {
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
       kiir('           cimjegyzek [hirdet [port] | keres <az> | gyoker [darab] | hirdetes <n>]   (D91 — a DHT-n)');
       kiir('           kerelem fejlecek <az|gyoker> [cím] [port] [n] [d] · kerelem torzs <az> [cím] [port]   (D92)');
-      kiir('           profil nev=... [telepules=...] · tagsag   (D93: a profil, a tagságom és a tagsági csomag)');
+      kiir('           profil nev=... [telepules=...] · tagsag   (D93: a profil, a tagságom és a tagsági csomag; D94: a 2. lépcső bemondása)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

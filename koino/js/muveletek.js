@@ -33,7 +33,11 @@ import { kanonikusBajtok } from './esemeny/kanonikusAlak.js';
 import { szovegDarabra } from './esemeny/szovegDarab.js';
 // ⭐ D93: a tagság (a csomag kiadásához) és a tár-alapú lánc-gyűjtés.
 import { tagsagiIndex, horgonyTagsaga, tagsagiLanc, TAGSAGI_CSOMAG } from './allapot/tagsag.js';
-import { tagsagiEsemenyekGyujtese } from './allapot/identitas.js';
+import {
+  tagsagiEsemenyekGyujtese,
+  // ⭐ D94: a 2. lépcső bemondása, és a tanúsítás bemondásának szűrése.
+  lepcso2E, ervenyesTanusitasaim, alapitoHorgony, ujIdentitasNezet, LEPCSO_BEMONDAS
+} from './allapot/identitas.js';
 import {
   esemenyMentese, lancVege, sajatLancEsemenyei,
   kovetkezoEntitasSorszam, horgonyok, esemenyLekerese, entitasEsemenyei, koinoEsemenyei
@@ -371,7 +375,7 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
  * ⚠️ A `kit` mező sem díszlet: enélkül egy idegen szeletébe tett esemény is beszámítana.
  * Az ellenőrzés összeveti a horgony szerzőjével.
  */
-function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil }, beallitas = {}) {
+function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil, felhatalmazasok }, beallitas = {}) {
   if (typeof kit !== 'string' || typeof horgonya !== 'string') {
     throw new Error('Kell a másik fél kulcsa és a horgonya.');
   }
@@ -380,7 +384,10 @@ function allitokRola(kornyezet, tipus, { kit, horgonya, sajatBelepes, profil }, 
       + 'ellenőrizni, hogy te magad jogosult vagy-e rá.');
   }
   // ⭐ D93/5: a meghívás megnevezheti a meghívott profiljának lenyomatát (a meghívó ezzel tanúsítja a nevet — D28/2).
-  const adat = { kit, sajatBelepes, ...(tipus === 'Meghivas' && typeof profil === 'string' ? { profil } : {}) };
+  const adat = { kit, sajatBelepes, ...(tipus === 'Meghivas' && typeof profil === 'string' ? { profil } : {}),
+    // ⛔ A TANÚSÍTÁS BEMONDÁSA (D47) — 2026-10-04-ig ITT ELVESZETT (a 9/c 4.5 óta csak `{ kit, sajatBelepes }` ment ki), így
+    // egy nem alapító tanúsító kézi tanúsítása soha nem számított („nem mondta be, mire támaszkodott”). A D94 próbája találta.
+    ...(tipus === 'Tanusitas' && Array.isArray(felhatalmazasok) ? { felhatalmazasok } : {}) };
   return esemenytTeszek(kornyezet, tipus, adat,
     { entitas: horgonya, horgonyozzunk: !!beallitas.horgonySzelet, ...beallitas });
 }
@@ -410,6 +417,43 @@ export async function profilMegadasa(kornyezet, mezok) {
  * azonosság-szeletembe (a D85 T3 mintája). Ha már van ugyanilyen (vagy rövidebb) csomagom, nem írok újat.
  * @returns {Promise<{kiadva: boolean, ok: string, melyseg?: number, esemeny?: Object}>}
  */
+/** ⭐ D94: a folyamat emléke — melyik tanúsítás-halmazt néztük már végig (koinó + horgony → az azonosítók). */
+const LEPCSO_BEMONDAS_EMLEK = new Map();
+
+/**
+ * ⭐⭐ D94: A 2. LÉPCSŐ BEMONDÁSA — a 2. lépcsős a SAJÁT azonosság-szeletébe aláírva bemondja, mely tanúsításaira
+ * támaszkodik (a D47 mintája: a tanúsító a felhatalmazásait mondja be). A szúrópróba CSAK ezt követi — a szeletbe
+ * szórt állításokat nem. ⭐ Csak a TÉNYLEG érvényes tanúsítások kerülnek bele (tanúsítónként egy): a szúrópróba minden
+ * bemondott tételt megkövetel. Ha a lista nem változott, nem ad ki újat; az alapítónak nem kell.
+ * @returns {Promise<{kiadva: boolean, ok: string, esemeny?: Object}>}
+ */
+export async function lepcsoBemondasKiadasa(kornyezet) {
+  const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, kornyezet.szerzo);
+  if (!horgony) return { kiadva: false, ok: 'nincs horgonyom (belep)' };
+  if (await alapitoHorgony(kornyezet.tar, kornyezet.koino, horgony)) {
+    return { kiadva: false, ok: 'alapító — a 2. lépcsőm a koinó létrehozásából következik' };
+  }
+  // ⚠️ Az őrjárat minden körben hív: ha a szeletemben lévő tanúsítások halmaza azóta nem változott, nem számolunk újra
+  // (különben egy odaszórt hamis tanúsítás minden körben teljes újraszámolást váltana ki). Folyamatonkénti emlék.
+  const sajatTanusitasok = (await entitasEsemenyei(kornyezet.tar, kornyezet.koino, horgony))
+    .filter((e) => e.tipus === 'Tanusitas').map((e) => e.azonosito).sort().join(',');
+  const emlekKulcs = kornyezet.koino + '|' + horgony;
+  if (LEPCSO_BEMONDAS_EMLEK.get(emlekKulcs) === sajatTanusitasok) {
+    return { kiadva: false, ok: 'a tanúsításaim nem változtak' };
+  }
+  const tanusitasok = await ervenyesTanusitasaim(kornyezet.tar, kornyezet.koino, horgony, ujIdentitasNezet());
+  LEPCSO_BEMONDAS_EMLEK.set(emlekKulcs, sajatTanusitasok);
+  if (!tanusitasok.length) return { kiadva: false, ok: 'még nincs elég érvényes tanúsításom' };
+  const regi = (await entitasEsemenyei(kornyezet.tar, kornyezet.koino, horgony))
+    .filter((e) => e.tipus === LEPCSO_BEMONDAS && e.szerzo === kornyezet.szerzo)
+    .sort((a, b) => b.sorszam - a.sorszam)[0];
+  const ugyanaz = regi && regi.adat.tanusitasok.length === tanusitasok.length
+    && tanusitasok.every((t) => regi.adat.tanusitasok.includes(t));
+  if (ugyanaz) return { kiadva: false, ok: 'már bemondtam (' + tanusitasok.length + ' tanúsítás)' };
+  const esemeny = await esemenytTeszek(kornyezet, LEPCSO_BEMONDAS, { tanusitasok }, { entitas: horgony });
+  return { kiadva: true, ok: 'bemondva (' + tanusitasok.length + ' tanúsítás)', esemeny };
+}
+
 export async function tagsagiCsomagKiadasa(kornyezet) {
   const szerzo = kornyezet.szerzo;
   const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, szerzo);
@@ -635,13 +679,23 @@ async function sajatFelhatalmazasaim(kornyezet, sajatBelepes) {
       utolso.set(e.szerzo, {
         sorszam,
         azonosito: e.azonosito,
+        esemeny: e,
         vissza: e.tipus === 'FelhatalmazasVisszavonasa'
       });
     }
   }
 
   const azonositok = [];
-  for (const [, allapot] of utolso) if (!allapot.vissza) azonositok.push(allapot.azonosito);
+  // ⭐ D94: csak az a felhatalmazás kerül a bemondásba, akinek a felhatalmazója 2. LÉPCSŐS (ellenőrizve) — a szúrópróba
+  // minden bemondott tételt megkövetel, és a szeletembe bárki tehet felhatalmazást.
+  const nezet = ujIdentitasNezet();
+  for (const [, allapot] of utolso) {
+    if (allapot.vissza) continue;
+    const ado = allapot.esemeny.adat?.sajatBelepes;
+    if (typeof ado === 'string' && (await lepcso2E(kornyezet.tar, kornyezet.koino, ado, nezet)).igen) {
+      azonositok.push(allapot.azonosito);
+    }
+  }
   return azonositok;
 }
 

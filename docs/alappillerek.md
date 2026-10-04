@@ -178,9 +178,12 @@ D = 64), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profi
 szavazatát, érték javaslatát és állásfoglalását számolja** — a nem tagé `tagsagFuggoben` (az okával; nem vád, D19), és a
 meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ✅ **Az E3 (2026-10-04): a zárt
 koinó a kézfogásban** — a nem tag csak a koinó születését és a két azonosság-szeletet kapja (fájlt, idegen címet nem); a
-személyt a kapu csak az ismeretlen társtól kéri (a hétköznapi csere nem drágul — 64. mérés; elágazás 57–60). ⛔ **Az E4 (a 65. mérés): a 2. lépcső TELJES
-bizonyítéka közel lineáris** (egymillió 2. lépcsősnél ~300 MB) — a D93/4 így nem tartható; új döntés kell (javaslat: a
-szúrópróba — véletlen utak a gyökérig, ~0,4–0,9 MB, logaritmikus; [`e_identitas_atvizsgalas.md`](e_identitas_atvizsgalas.md) 6.).
+személyt a kapu csak az ismeretlen társtól kéri (a hétköznapi csere nem drágul — 64. mérés; elágazás 57–60). ✅ **Az E4 (D94, Csaba: „Az (A)-t választom.”):** a 65. mérés
+szerint a 2. lépcső TELJES bizonyítéka közel lineáris (egymillió 2. lépcsősnél ~290 MB), ezért a SZÚRÓPRÓBA: ha a teljes
+ellenőrzés nem fér a keretbe (1000 esemény-olvasás), a helyi rész teljesen és 8 véletlen út az alapító körig (~0,9–2,2 MB,
+logaritmikus); az út csak aláírt bemondásokat követ (a 2. lépcsős `LepcsoBemondas`-át és a tanúsító felhatalmazás-
+bemondását); elágazás 61–62. ⚠️ Útközben egy régi hiba: a kézi tanúsítás 2026-09 eleje óta nem mondta be a
+felhatalmazásait, ezért egy nem alapító tanúsító tanúsítása nem számított — javítva.
 ⏸️ Hátravan még: az E6 (a kontraszt-jelzés bemenete).
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
@@ -531,3 +534,13 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 60. **2026-10-04 · a nem tag korlátozása: a szeletek (D93/3)** → **a szeletek, a fájlok ÉS a címek** (a fájl-válasz és a
     randevú nem szolgál ki, a CIMEK csak a saját címünket viszi, DHT-gépet nem) · mert a koinó hálózata (kik vannak benne,
     hol érhetők el) és a fájljai is a koinó tartalma · a megépítéskor, Claude · `vonal.js`, `koino.js`.
+61. **2026-10-04 · a 2. lépcső igazolása mindig szúrópróbával (D94)** → **a teljes ellenőrzés, ha belefér egy keretbe
+    (1000 esemény-olvasás), és csak azon túl a szúrópróba** · mert a kis koinóban így az ítélet pontos (a csalót biztosan
+    elkapja), és a becsületesre a két út ugyanazt mondja; a keret helyi mennyiség (mennyit olvastam), nem a koinó mérete
+    — a kis koinó ugyanazt a kódot futtatja · a megépítéskor, Claude (a D94 keretén belül) · `identitas.js` (`lepcso2E`).
+62. **2026-10-04 · a szúrópróba útja a szelet állításai közül sorsol (D94)** → **csak ALÁÍRT BEMONDÁSOKAT követ: a 2.
+    lépcsős új `LepcsoBemondas` eseményét (mely tanúsításaira támaszkodik) és a tanúsító felhatalmazás-bemondását (D47);
+    minden bemondott tételnek érvényesnek kell lennie, és a tanúsítás csak ellenőrzött 2. lépcsős felhatalmazót mond be**
+    · mert a szeletbe bárki tehet állítást: ha az út azok közül sorsolna, egy kulcs-gyűrű a becsületest is elbuktathatná
+    (szolgáltatás-megtagadás), ha pedig a bemondás többlete megengedett volna, a csaló hamis tételekkel hígíthatná a
+    bemondását · a megépítéskor, Claude · `identitas.js` (`lepcso2Szuroproba`), `muveletek.js` (`lepcsoBemondasKiadasa`).

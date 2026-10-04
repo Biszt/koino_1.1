@@ -102,7 +102,7 @@ A D93/4 („ugyanaz a csomag-forma, a tanúsítások és a felhatalmazások lán
 2. lépcső bizonyítéka a tagsági lánchoz hasonlóan kicsi (az átvizsgálás 17–40 őst említett). ⛔ **A 65. mérés szerint
 nem az:** a tagság lánca egy szülős (a legrövidebb választható), a 2. lépcső viszont minden lépcsőn 3 tanúsítást és
 tanúsítónként N felhatalmazást kíván — a teljes bizonyíték az ős-háló zárványa, és ez közel LINEÁRISAN nő (egymillió
-2. lépcsősnél ~61 000 ember, ~300 MB; lánc-szerű növekedésnél a 2. lépcsősök 45%-a). Ez a „végtelen” elvét sérti.
+2. lépcsősnél ~59 000 ember, ~290 MB; lánc-szerű növekedésnél a 2. lépcsősök 45%-a). Ez a „végtelen” elvét sérti.
 
 **A lehetőségek:**
 
@@ -112,7 +112,8 @@ tanúsítónként N felhatalmazást kíván — a teljes bizonyíték az ős-há
   lépcsője vagy egy felhatalmazója). Az utakat az ELLENŐRZŐ választja, és a lépések eseményeit az azonosság-szeletekből
   kéri (a D kérelmével) — ⚠️ nem a bizonyító számolja ki előre: egy előre rögzített utat addig sorsolhatna, amíg el nem
   kerüli a zsákutcákat (egy hamis ág ~1/3 eséllyel esik útba, 8 útnál ~25 próbálkozás elég volna). Ár: egymillió 2.
-  lépcsősnél ~0,4–0,9 MB, személyenként egyszer (a már igazolt 2. lépcsősök gyorsítótárban), **logaritmikus**. A biztonság:
+  lépcsősnél ~0,9–2,2 MB (lépésenként 2N + 6 esemény — a javított modell; az első kiírás ~0,4–0,9 MB-ot mondott),
+  személyenként egyszer (a már igazolt 2. lépcsősök gyorsítótárban), **logaritmikus**. A biztonság:
   a teljesen hamis szerkezet mindig elbukik (nem ér el a gyökérig); a részben hamis (valódi tanúsítók + egy gyűrű) 8
   úttal ~96%-kal; a maradékot a kontraszt-jelzés és a visszacsatolás fogja — a D56 szerkezete: *a védelem nem a kapu,
   hanem hogy a rossz tanúsító elveszíti a szerepét*. Ugyanaz a minta, mint az össz-pont szúrópróbája (D92/5).
@@ -122,4 +123,6 @@ tanúsítónként N felhatalmazást kíván — a teljes bizonyíték az ős-há
   a tanúsítási jog (és a pénz) erre épül.
 - **(C) A teljes zárvány** (a D93/4 eredeti alakja) — a mérés elveti.
 - **(D) Korlátozott mélység szúrópróba nélkül** — konstans, de D = 1-nél a mélyebb szint bemondása egy kulcs-gyűrűvel
-  ingyen hamisítható, D = 2–3 pedig 0,7–11 MB.
+  ingyen hamisítható, D = 2–3 pedig 0,6–8 MB.
+
+✅ **ELDŐLT — D94 (Csaba, 2026-10-04: „Az (A)-t választom.”):** a szúrópróba.

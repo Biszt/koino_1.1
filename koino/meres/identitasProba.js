@@ -25,9 +25,12 @@ import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import {
-  tagE, tanusithatE, lepcso2E, ujIdentitasNezet,
-  TANUSITAS_KELL, FELHATALMAZAS_KELL
+  tagE, tanusithatE, lepcso2E, ujIdentitasNezet, ervenyesTanusitasaim,
+  TANUSITAS_KELL, FELHATALMAZAS_KELL, LEPCSO_BEMONDAS
 } from '../js/allapot/identitas.js';
+// ⭐ D94: a 2. lépcső bemondásának kiadása a művelet-rétegben.
+import { lepcsoBemondasKiadasa, tanusitas as tanusitasMuvelet } from '../js/muveletek.js';
+import { entitasEsemenyei } from '../js/tar/esemenyTar.js';
 import {
   onalloSzalak, tanusitoiTorlodas, megbizasAllapota, bemutatkozasok
 } from '../js/allapot/jelzesek.js';
@@ -1129,6 +1132,158 @@ proba('⛔ RONTÁS: a MÁSRÓL szóló bemutatkozás nem ad szálat annak, akine
 // ===================================
 // TAKARÍTÁS
 // ===================================
+
+// ===================================
+// ⭐⭐ D94: A 2. LÉPCSŐ SZÚRÓPRÓBÁVAL — ha a teljes ellenőrzés nem fér a keretbe (2026-10-04)
+// ===================================
+//
+// A keretet (ennyi esemény-olvasás) a próba kicsire veszi, hogy a kis szerkezeten is a szúrópróba döntsön; a
+// választót rögzíti, hogy a próba ne legyen szeszélyes (a valóságban kriptográfiai véletlen — az ellenőrzőé).
+
+/** Rögzített választó (n → 0..n-1), egy mag szerint. */
+function rogzitett(mag) {
+  let x = mag >>> 0;
+  return (n) => { x = (Math.imul(x, 1103515245) + 12345) >>> 0; return (x >>> 8) % n; };
+}
+
+/** A 2. lépcső bemondása: a saját szeletembe, a tanúsításaim azonosítóival. */
+function lepcsoBemondas(ki, tanusitasok) {
+  return ki.eember.tesz(LEPCSO_BEMONDAS, { tanusitasok: tanusitasok.map((t) => t.azonosito) }, undefined,
+    { entitas: ki.horgony });
+}
+
+/**
+ * Egy tanúsító, akinek a jogát a megadott felhatalmazók adják (a felhatalmazásaik azonosítóit a tanúsítás bemondja).
+ * @returns {Promise<{t: Object, esemenyek: Array, felhatalmazasok: Array<string>}>}
+ */
+async function tanusitoFelhatalmazokkal(adok, meghivo) {
+  const t = await belepo();
+  const esemenyek = [t.esemeny, await meghivas(meghivo, t)];
+  const felhatalmazasok = [];
+  for (const a of adok) {
+    const f = await felhatalmazas(a, t);
+    esemenyek.push(f);
+    felhatalmazasok.push(f.azonosito);
+  }
+  return { t, esemenyek, felhatalmazasok };
+}
+
+/**
+ * ⭐ A SZÚRÓPRÓBA VILÁGA: 5 alapító; három tanúsító (az alapítók hatalmazták fel őket); X-et ők tanúsították, és X
+ * bemondta a három tanúsítását. `hamis`: a harmadik tanúsító helyett egy kulcs-gyűrű tanúsítója (a felhatalmazói hamis
+ * 2. lépcsősök: a bemondásukban szereplő tanúsítók semmire nem támaszkodnak). `szemet`: még egy hamis tanúsítás X
+ * szeletében, amit X NEM mondott be. `bemondasNelkul`: X nem mondja be a tanúsításait.
+ */
+async function szuroprobaVilag({ hamis = false, szemet = false, bemondasNelkul = false, gyuruKevesTanusito = false } = {}) {
+  const { kor, esemenyek } = await alapitoKor(5);
+  const osszes = [...esemenyek];
+  /** Egy kulcs-gyűrű tanúsítója: 5 hamis felhatalmazóval, akiknek a bemondása hamis tanúsítókra mutat. */
+  const gyuruTanusito = async () => {
+    const gyuru = [];
+    for (let i = 0; i < FELHATALMAZAS_KELL; i++) {
+      const s = await belepo();
+      const zk = [];
+      for (let j = 0; j < TANUSITAS_KELL; j++) { const z = await belepo(); osszes.push(z.esemeny); zk.push(z); }
+      const tk = [];
+      for (const z of zk) { const tz = await tanusitas(z, s); tk.push(tz); }   // semmire nem támaszkodik
+      // `gyuruKevesTanusito`: a hamis felhatalmazó bemondása csak EGY tanúsítást nevez meg (a következő embernél bukik).
+      osszes.push(s.esemeny, ...tk, await lepcsoBemondas(s, gyuruKevesTanusito ? tk.slice(0, 1) : tk));
+      gyuru.push(s);
+    }
+    const r = await tanusitoFelhatalmazokkal(gyuru, kor[0]);
+    osszes.push(...r.esemenyek);
+    return r;
+  };
+  const tanusitok = [];
+  for (let i = 0; i < TANUSITAS_KELL; i++) {
+    if (hamis && i === TANUSITAS_KELL - 1) { tanusitok.push(await gyuruTanusito()); continue; }
+    const r = await tanusitoFelhatalmazokkal(kor, kor[0]);
+    osszes.push(...r.esemenyek);
+    tanusitok.push(r);
+  }
+  const x = await belepo();
+  osszes.push(x.esemeny, await meghivas(kor[0], x));
+  const tk = [];
+  for (const r of tanusitok) tk.push(await tanusitas(r.t, x, { felhatalmazasok: r.felhatalmazasok }));
+  osszes.push(...tk);
+  if (szemet) {
+    const g = await gyuruTanusito();
+    osszes.push(await tanusitas(g.t, x, { felhatalmazasok: g.felhatalmazasok }));
+  }
+  if (!bemondasNelkul) osszes.push(await lepcsoBemondas(x, tk));
+  const tar = await ujTar();
+  await ment(tar, ...osszes);
+  return { tar, x, tk, tanusitok };
+}
+
+proba('⭐⭐ D94: a keret FÖLÖTT a SZÚRÓPRÓBA dönt — a becsületes szerkezet 2. lépcsős; a kereten belül a teljes ellenőrzés, ugyanazzal az ítélettel', async () => {
+  const { tar, x } = await szuroprobaVilag();
+  const kicsi = ujIdentitasNezet({ keret: 3, valaszto: rogzitett(1) });
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, kicsi);
+  const teljes = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet());
+  return szuro.igen === true && szuro.szuroproba === true && /szúrópróbával/.test(szuro.ok) && kicsi.szuroprobak === 1
+    && teljes.igen === true && !teljes.szuroproba;
+});
+
+proba('⛔⛔ D94: a KULCS-GYŰRŰ TANÚSÍTÓJÁNAK ágát a szúrópróba elkapja — bukás, nem „nem ellenőrizhető” (és a teljes ellenőrzés is nemet mond)', async () => {
+  const { tar, x } = await szuroprobaVilag({ hamis: true });
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet({ keret: 3, setak: 40, valaszto: rogzitett(7) }));
+  const teljes = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet());
+  return szuro.igen === false && szuro.ellenorizheto === true && /szúrópróba elbukott/.test(szuro.ok)
+    && teljes.igen === false;
+});
+
+proba('⛔ D94: …és ha a hamis felhatalmazó bemondása kevés tanúsítót nevez meg, a következő lépésen bukik', async () => {
+  const { tar, x } = await szuroprobaVilag({ hamis: true, gyuruKevesTanusito: true });
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet({ keret: 3, setak: 40, valaszto: rogzitett(7) }));
+  return szuro.igen === false && szuro.ellenorizheto === true && /tanúsítót nevez meg/.test(szuro.ok);
+});
+
+proba('⭐⭐ D94: a szeletbe SZÓRT hamis tanúsítás nem buktatja el a becsületest — az út csak a bemondottat követi', async () => {
+  const { tar, x } = await szuroprobaVilag({ szemet: true });
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet({ keret: 3, setak: 40, valaszto: rogzitett(3) }));
+  return szuro.igen === true && szuro.szuroproba === true;
+});
+
+proba('⭐ D94: BEMONDÁS NÉLKÜL a szúrópróba „nem ellenőrizhető” — nem vád (D19)', async () => {
+  const { tar, x } = await szuroprobaVilag({ bemondasNelkul: true });
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet({ keret: 3, valaszto: rogzitett(1) }));
+  return szuro.igen === false && szuro.ellenorizheto === false && /bemondás/.test(szuro.ok);
+});
+
+proba('⭐ D94: a bemondás TARTALMA csak az érvényes tanúsítás — a gyűrű tanúsítója kimarad, és kettővel nincs bemondás', async () => {
+  const jo = await szuroprobaVilag({ bemondasNelkul: true });
+  const rossz = await szuroprobaVilag({ hamis: true, bemondasNelkul: true });
+  const joLista = await ervenyesTanusitasaim(jo.tar, KOINO, jo.x.horgony);
+  const rosszLista = await ervenyesTanusitasaim(rossz.tar, KOINO, rossz.x.horgony);
+  return joLista.length === 3 && jo.tk.every((t) => joLista.includes(t.azonosito)) && rosszLista.length === 0;
+});
+
+proba('⭐ D94: a művelet-réteg KIADJA a bemondást (a saját szeletembe) — és ugyanazt másodszor nem', async () => {
+  const { tar, x, tk } = await szuroprobaVilag({ bemondasNelkul: true });
+  const k = { koino: KOINO, kulcspar: x.eember.kulcspar, szerzo: x.eember.szerzo, tar, lancTarolo: null };
+  const elso = await lepcsoBemondasKiadasa(k);
+  const masodik = await lepcsoBemondasKiadasa(k);
+  const szelet = await entitasEsemenyei(tar, KOINO, x.horgony);
+  const b = szelet.filter((e) => e.tipus === LEPCSO_BEMONDAS);
+  const szuro = await lepcso2E(tar, KOINO, x.horgony, ujIdentitasNezet({ keret: 3, valaszto: rogzitett(5) }));
+  return elso.kiadva === true && masodik.kiadva === false && b.length === 1
+    && tk.every((t) => b[0].adat.tanusitasok.includes(t.azonosito)) && szuro.igen === true;
+});
+
+proba('⭐ D94: a TANÚSÍTÁS csak az ellenőrzött 2. lépcsős felhatalmazóit mondja be — a szeletébe szórt idegen felhatalmazás kimarad', async () => {
+  const { kor, esemenyek } = await alapitoKor(5);
+  const r = await tanusitoFelhatalmazokkal(kor, kor[0]);
+  const idegen = await belepo();                         // tag sem, 2. lépcsős sem — mégis felhatalmazza
+  const x = await belepo();
+  const tar = await ujTar();
+  await ment(tar, ...esemenyek, ...r.esemenyek, idegen.esemeny, await felhatalmazas(idegen, r.t), x.esemeny,
+    await meghivas(kor[0], x));
+  const k = { koino: KOINO, kulcspar: r.t.eember.kulcspar, szerzo: r.t.eember.szerzo, tar, lancTarolo: null };
+  const t = await tanusitasMuvelet(k, { kit: x.eember.szerzo, horgonya: x.horgony, sajatBelepes: r.t.horgony });
+  const bemondott = t.adat.felhatalmazasok;
+  return bemondott.length === FELHATALMAZAS_KELL && r.felhatalmazasok.every((f) => bemondott.includes(f));
+});
 
 export default async function () {
   const eredmeny = await futtatas();
