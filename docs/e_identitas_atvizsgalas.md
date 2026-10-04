@@ -125,4 +125,5 @@ tanúsítónként N felhatalmazást kíván — a teljes bizonyíték az ős-há
 - **(D) Korlátozott mélység szúrópróba nélkül** — konstans, de D = 1-nél a mélyebb szint bemondása egy kulcs-gyűrűvel
   ingyen hamisítható, D = 2–3 pedig 0,6–8 MB.
 
-✅ **ELDŐLT — D94 (Csaba, 2026-10-04: „Az (A)-t választom.”):** a szúrópróba.
+✅ **ELDŐLT — D94 (Csaba, 2026-10-04: „Az (A)-t választom.”):** a szúrópróba. ✅ **Megépült**, és vele az E6 is — az E pillér
+kész (a fázis-2 terv D93 „MEGÉPÜLT” és D94).

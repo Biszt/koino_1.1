@@ -144,7 +144,7 @@ import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet, tagsagiEsemenyekGyujtese
 import { tagsagiIndex, szerzoTagsaga, tagsagiCsomagEllenorzese, TAGSAGI_CSOMAG } from './js/allapot/tagsag.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
 import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
-import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
+import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok, onalloSzalak } from './js/allapot/jelzesek.js';
 import { szeletParok } from './js/csere/szeletEgyeztetes.js';
 import { halmazLenyomata } from './js/esemeny/halmaz.js';
 // ⭐ A BELÉPŐ TÉR (5.6): a koinók FÖLÖTTI nézet — a D25 tere.
@@ -3733,6 +3733,45 @@ try {
       break;
     }
 
+    case 'jelzes': {
+      // ===== ⭐⭐ D93/6 (E6): A KONTRASZT-JELZÉS KÉRÉSRE — bárkiről, a szeleteiből =====
+      // node koino/koino.js jelzes [horgony]
+      // Aki a felhatalmazásáról dönt, ebből látja, kiket tanúsított, és azoknak van-e önálló életük — a tanúsító
+      // azonosság-szeletéből (a hozzá bejelentett tanúsításai) és a tanúsítottak szeleteiből. Ami nincs meg, azt
+      // megnevezi (a `hozd` elhozza). ⛔ SZÁM, nem ítélet (D19, D46): a döntés emberi.
+      const nezoTar = ketTarNezet(tar, atmeneti);
+      let h = null;
+      if (ervek[0] && /^[A-Za-z0-9_-]{43}$/.test(ervek[0])) h = ervek[0];
+      else if (ervek[0]) h = feloldas(ervek[0], await horgonyok());
+      else h = await sajatHorgonyom();
+      if (!h) throw new Error('Kiről? node koino/koino.js jelzes <horgony> (vagy belep, és a sajátodról)');
+      const szal = await onalloSzalak(nezoTar, KOINO, h);
+      kiir(SZIN.vastag + 'JELZÉS' + SZIN.vege + SZIN.halvany + '   ' + h.slice(0, 8) + '…' + SZIN.vege);
+      if (!szal.ellenorizheto) {
+        kiir(SZIN.halvany + '  ? nem ellenőrizhető — a horgonya nincs meg: node koino/koino.js hozd ' + h + SZIN.vege);
+        break;
+      }
+      kiir('  önálló szálai: ' + szal.osszes + SZIN.halvany + '  (róla: ' + szal.rolam + ' · tőle: ' + szal.tole
+        + ' · kölcsönös bemutatkozás: ' + szal.bemutatkozas + ') · legalább ' + szal.aktivitas + ' eseménye' + SZIN.vege);
+      const m = await megbizasAllapota(nezoTar, KOINO, h);
+      kiir('  megbízás: ' + m.felhatalmazasok + '-en bízták rá a tanúsítást' + SZIN.halvany
+        + (m.visszavontak ? ' (' + m.visszavontak + ' visszavonva)' : '') + ' · ' + m.tanusitasok + ' tanúsítást adott · '
+        + m.elismeresek + ' buli-elismerés' + SZIN.vege);
+      const t = await tanusitoiTorlodas(nezoTar, KOINO, h);
+      if (t.tanusitott) {
+        kiir('  akiket tanúsított: ' + t.tanusitott + ' · ebből önálló élet nélkül: ' + t.magukbanAllok
+          + (t.hianyzoSzeletek.length ? SZIN.halvany + ' · ' + t.hianyzoSzeletek.length + ' szelete hiányzik (nem számolva):'
+            + SZIN.vege : ''));
+        for (const az of t.hianyzoSzeletek.slice(0, 5)) {
+          kiir('    ' + SZIN.halvany + 'node koino/koino.js hozd ' + az + SZIN.vege);
+        }
+        if (t.hianyzoSzeletek.length > 5) kiir('    ' + SZIN.halvany + '… és még ' + (t.hianyzoSzeletek.length - 5) + SZIN.vege);
+      }
+      kiir(SZIN.halvany + '  ⚠️ Ez SZÁM, nem ítélet — a koino bejelent, nem bíráskodik (D19); a megbízásról ember dönt (D46).'
+        + SZIN.vege);
+      break;
+    }
+
     case 'vallalas': {
       // ===== ⭐ B/1–B/2: MIT TARTOK — a vállalásom és az átmeneti tár (4. szabály: bele lehet látni) =====
       const { allapot } = await kepetKeszit();
@@ -5608,6 +5647,7 @@ try {
       kiir('           cimjegyzek [hirdet [port] | keres <az> | gyoker [darab] | hirdetes <n>]   (D91 — a DHT-n)');
       kiir('           kerelem fejlecek <az|gyoker> [cím] [port] [n] [d] · kerelem torzs <az> [cím] [port]   (D92)');
       kiir('           profil nev=... [telepules=...] · tagsag   (D93: a profil, a tagságom és a tagsági csomag; D94: a 2. lépcső bemondása)');
+      kiir('           jelzes [horgony]   (D93/6: a kontraszt-jelzés kérésre — kiket tanúsított, van-e önálló életük)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

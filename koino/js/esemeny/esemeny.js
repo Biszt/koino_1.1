@@ -136,6 +136,11 @@ export function szuleteseSzuloje(e) {
  *   · `Szavazat` → azokban a szeletekben, amelyekre a jogának bizonyítékát hozza (D85/2, T2: az érintett
  *     gondolat és a rész javaslat-entitása) — vagyis ahol számít. ⚠️ Csak a saját kiosztásában szereplő
  *     kulcs lehet itt (a kapu ellenőrzi), legfeljebb 64.
+ *   · ⭐ D93/6 (E6, 2026-10-04): az IDENTITÁS-ÁLLÍTÁS (`Meghivas`, `Felhatalmazas`, `FelhatalmazasVisszavonasa`,
+ *     `Tanusitas`, `Bemutatkozas`) — a MÁSIK szeletében él, és a SZERZŐ saját azonosság-szeletébe is bejelentjük
+ *     (`adat.sajatBelepes`): így „kiről állított?” (kit tanúsított, kinek mutatkozott be) egyetlen szelet-kérdés, a
+ *     szerző láncának átfésülése nélkül — a kontraszt-jelzés bemenete. ⚠️ A horgonyt a szerző mondja; a jelzés csak a
+ *     szerző saját állításait számolja (egy idegen horgonyra mutató bejelentés nem hamisít semmit).
  *
  * ⛔ Csak azonosító alakú kulcs (D77: amit nem lehet a vonalon kimondani, az megakasztaná a cserét), és a
  * saját szelete nem (az úgyis az övé). ⭐ Az eseményből MAGÁBÓL olvasható — a tár mutatója más esemény
@@ -146,6 +151,10 @@ export function szuleteseSzuloje(e) {
  * @param {Object} e
  * @returns {Array<string>} tár-kulcsok ('' = a gyökér), ismétlés nélkül, rendezve
  */
+/** ⭐ D93/6: az identitás-állítások — a szerző azonosság-szeletébe is bejelentődnek (`bejelentesHelyei`). */
+export const AZONOSSAG_ALLITASOK = new Set(['Meghivas', 'Felhatalmazas', 'FelhatalmazasVisszavonasa', 'Tanusitas',
+  'Bemutatkozas']);
+
 export function bejelentesHelyei(e) {
   const helyek = new Set();
   const sajat = szelet(e);
@@ -167,6 +176,8 @@ export function bejelentesHelyei(e) {
     if (e.lancGyoker && typeof e.lancGyoker === 'object' && b && typeof b === 'object' && !Array.isArray(b)) {
       for (const k of Object.keys(b)) if (k !== '') hozza(k);
     }
+  } else if (AZONOSSAG_ALLITASOK.has(e?.tipus)) {
+    hozza(e.adat?.sajatBelepes);
   }
   return [...helyek].sort();
 }

@@ -31,6 +31,8 @@ import {
 // ⭐ D94: a 2. lépcső bemondásának kiadása a művelet-rétegben.
 import { lepcsoBemondasKiadasa, tanusitas as tanusitasMuvelet } from '../js/muveletek.js';
 import { entitasEsemenyei } from '../js/tar/esemenyTar.js';
+// ⭐ D93/6: egy szelet egyeztetett halmaza (a saját eseményei + a hozzá bejelentettek) — amit a csere visz.
+import { egyeztetettEsemenyek } from '../js/csere/szeletEgyeztetes.js';
 import {
   onalloSzalak, tanusitoiTorlodas, megbizasAllapota, bemutatkozasok
 } from '../js/allapot/jelzesek.js';
@@ -1283,6 +1285,52 @@ proba('⭐ D94: a TANÚSÍTÁS csak az ellenőrzött 2. lépcsős felhatalmazói
   const t = await tanusitasMuvelet(k, { kit: x.eember.szerzo, horgonya: x.horgony, sajatBelepes: r.t.horgony });
   const bemondott = t.adat.felhatalmazasok;
   return bemondott.length === FELHATALMAZAS_KELL && r.felhatalmazasok.every((f) => bemondott.includes(f));
+});
+
+// ===================================
+// ⭐⭐ D93/6 (E6): A KONTRASZT-JELZÉS BEMENETE A SZELETELT VILÁGBAN (2026-10-04)
+// ===================================
+
+/**
+ * A jelzés világa: az alapító három embert hív be és tanúsít; P1-nek van önálló élete (három embert behív), P2-nek és
+ * P3-nak nincs. A teljes tár, és a szeletek egyeztetett halmazai (amit a csere vinne).
+ */
+async function jelzesVilag() {
+  const a = await alapito();
+  const p = [await belepo(), await belepo(), await belepo()];
+  const esemenyek = [a.esemeny];
+  for (const x of p) esemenyek.push(x.esemeny, await meghivas(a, x), await tanusitas(a, x));
+  for (let i = 0; i < 3; i++) { const q = await belepo(); esemenyek.push(q.esemeny, await meghivas(p[0], q)); }
+  const tar = await ujTar();
+  await ment(tar, ...esemenyek);
+  return { tar, a, p };
+}
+
+proba('⭐⭐ D93/6: a tanúsító azonosság-szeletének egyeztetett halmaza HOZZA a tanúsításait — „kiről állított?” egy szelet', async () => {
+  const { tar, a, p } = await jelzesVilag();
+  const halmaz = await egyeztetettEsemenyek(tar, KOINO, a.horgony);
+  const tanusitasok = halmaz.filter((e) => e.tipus === 'Tanusitas' && e.szerzo === a.eember.szerzo);
+  return tanusitasok.length === 3 && p.every((x) => tanusitasok.some((t) => t.entitas === x.horgony));
+});
+
+proba('⭐⭐ D93/6: a jelzés CSAK SZELETEKBŐL — a tanúsító szelete és a tanúsítottaké elég; ami hiányzik, azt megnevezi (nem vád)', async () => {
+  const { tar, a, p } = await jelzesVilag();
+  // Egy másik készülék: a tanúsító szelete, P1 és P2 szelete — P3-é NINCS meg.
+  const masik = await ujTar();
+  const latott = new Set();
+  for (const k of [a.horgony, p[0].horgony, p[1].horgony]) {
+    for (const e of await egyeztetettEsemenyek(tar, KOINO, k)) {
+      if (latott.has(e.azonosito)) continue;
+      latott.add(e.azonosito);
+      await esemenyMentese(masik, e);
+    }
+  }
+  const t = await tanusitoiTorlodas(masik, KOINO, a.horgony);
+  const sz1 = await onalloSzalak(masik, KOINO, p[0].horgony);
+  const sz2 = await onalloSzalak(masik, KOINO, p[1].horgony);
+  return t.tanusitott === 3 && t.magukbanAllok === 1 && t.ellenorizheto === false
+    && t.hianyzoSzeletek.length === 1 && t.hianyzoSzeletek[0] === p[2].horgony
+    && sz1.tole === 3 && sz1.aktivitas >= 4 && sz2.aktivitas === 1;
 });
 
 export default async function () {

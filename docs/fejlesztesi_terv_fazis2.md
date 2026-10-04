@@ -4754,7 +4754,7 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
    összegzéséből (a lánc-gyökér darabszáma), kérésre, gyorsítótárral; a jelzés nem dönt (D46). A B/3 után válik élessé;
    az E-ben a bemenete készül el.
 
-#### MEGÉPÜLT (2026-10-04): az 1., a 2., a 3. és az 5. pont
+#### MEGÉPÜLT (2026-10-04): mind a hat pont (a 4. a D94 alakjában)
 
 - **Az 1.:** a szabály-réteg (`szabalyok.js`, `TAGSAG_KELL`) a pontot, a javaslatot, a szavazatot, az állásfoglalást ÉS
   az érték javaslatot csak tagtól számolja — ⚠️ az érték javaslat a döntés pontosítása: a küszöb a javaslatok mediánja,
@@ -4775,7 +4775,12 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
   a nem tag a MI azonosság-szeletünket is megkapja; ahol a koinó születése ismeretlen, nincs kapu; a korlát a fájlokra
   és a címekre is vonatkozik. ⛔ Protokoll-törés: a régi program a nyitásban nem küld tábla-kulcsot, és a kérésre nem
   felel — a telefont frissíteni kell.
-- ⏸️ **Hátravan:** a 4. (a 2. lépcső — a 65. mérés után a D94 váltja), a 6.
+- **A 4.:** a 65. mérés után a D94 váltja (szúrópróba).
+- **A 6.:** az identitás-állítás (`Meghivas`, `Felhatalmazas`, `FelhatalmazasVisszavonasa`, `Tanusitas`, `Bemutatkozas`) a
+  szerző SAJÁT azonosság-szeletébe is bejelentődik (`bejelentesHelyei`), és a jelzés (`jelzesek.js`) a szeletekből számol:
+  „kiről állított?” egy szelet, a tanúsítottak önálló élete az ő szeleteikből (+ a lánc összegzése: legalább hány eseménye
+  van), és ami nincs meg, azt megnevezi (`hianyzoSzeletek`). A `jelzes [horgony]` parancs kérésre számol (a két tárból), és
+  a hiányzó szeletekhez a `hozd` parancsot mondja. *(Alappillérek, elágazás 63.)* ⏸️ Az automatikus elhozás a B/3-mal.
 
 ### D94. A 2. LÉPCSŐ IGAZOLÁSA SZÚRÓPRÓBÁVAL (az E4 — a D93/4 helyett; 2026-10-04, Csaba: „Az (A)-t választom.”)
 

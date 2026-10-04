@@ -26,7 +26,7 @@
 
 import { mkdir, readdir, readFile, appendFile, writeFile, unlink, rename } from 'node:fs/promises';
 import { join } from 'node:path';
-import { alakiHiba, szelet, azonositoAlaku } from '../esemeny/esemeny.js';
+import { alakiHiba, szelet, azonositoAlaku, bejelentesHelyei } from '../esemeny/esemeny.js';
 import { koinoEsemenyei } from './esemenyTar.js';
 
 /** Az átmeneti tár mérete — kiinduló érték, készülékenként állítható (nem állapot-befolyásoló, D66). */
@@ -202,7 +202,19 @@ export function ketTarNezet(tartos, atmeneti) {
     /** A legutóbbi betöltésből: ami CSAK az átmeneti tárban van (a D14 kivételéhez — `allapotSzamitas.js`). */
     csakAtmeneti() { return csak; },
     async esemeny(az) { return (await tartos.esemeny(az)) ?? atmeneti.esemeny(az); },
-    async szeletEsemenyei(...ervek) { return tartos.szeletEsemenyei(...ervek); },
+    // ⭐ D93/6 (2026-10-04): a szelet és a hozzá bejelentett események MINDKÉT tárból (addig a szelet csak a tartósból
+    // jött — a `hozd`-dal elhozott, nem vállalt szelet így a nézetben sem látszott). Az átmeneti tár korlátos, a
+    // bejelentéseit végigolvasni olcsó.
+    async szeletEsemenyei(s) {
+      const t = await tartos.szeletEsemenyei(s);
+      const megvan = new Set(t.map((e) => e.azonosito));
+      return [...t, ...atmeneti.mind().filter((e) => szelet(e) === s && !megvan.has(e.azonosito))];
+    },
+    async bejelentesek(s) {
+      const t = typeof tartos.bejelentesek === 'function' ? await tartos.bejelentesek(s) : [];
+      const megvan = new Set(t.map((e) => e.azonosito));
+      return [...t, ...atmeneti.mind().filter((e) => !megvan.has(e.azonosito) && bejelentesHelyei(e).includes(s))];
+    },
     async hozzafuz() { throw new Error('a két tár nézetén át nem lehet írni (a tartós tár íróján át igen)'); }
   };
 }

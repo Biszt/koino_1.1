@@ -747,6 +747,47 @@ proba('⭐⭐ D93/3: A TAGSÁGI CSOMAG A KÉZFOGÁSBAN — két tag, aki a mási
   });
 
 // ===================================
+// ⭐⭐ D93/6: A KONTRASZT-JELZÉS KÉRÉSRE — egy harmadik készülék, aki CSAK a tanúsító szeletét kapta meg (2026-10-04)
+// ===================================
+//
+// Az alapító behív és tanúsít egy embert, akinek nincs önálló élete. ⭐ Egy harmadik készülék csak az alapító
+// azonosság-szeletét kapja meg (`kivisz <horgony>` — a szelet egyeztetett halmaza, a hozzá bejelentett állításokkal):
+// a `jelzes <horgony>` mégis tudja, kit tanúsított (a bejelentésből), és megnevezi, kinek a szelete hiányzik (a `hozd`
+// parancsával). Az alapító a sajátjáról teljes számot lát. Viselkedést mérünk: a parancs kimenetét a két készüléken.
+proba('⭐⭐ D93/6: a `jelzes` a tanúsító szeletéből tudja, kit tanúsított — és megnevezi a hiányzó szeletet',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const harmadik = await ujKeszulek();
+    const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+    try {
+      await fut(gazda, 'koino', 'Jelzés-próba');
+      const gazdaHorgony = teljesAzonosito(await fut(gazda, 'belep'));     // az alapítónál a koinó létrehozása
+      const vHorgony = await taggaTesziKeszulek(gazda, vendeg);
+      await fut(gazda, 'tanusit', vHorgony);
+      const sajat = tiszta(await fut(gazda, 'jelzes'));
+      await fut(gazda, 'kivisz', join(gazda, 'szelet.jsonl'), gazdaHorgony);
+      await fut(harmadik, 'behoz', join(gazda, 'szelet.jsonl'));
+      const masik = tiszta(await fut(harmadik, 'jelzes', gazdaHorgony));
+      const jo = {
+        sajat: /akiket tanúsított: 1 · ebből önálló élet nélkül: 1/.test(sajat),
+        masikTudja: /akiket tanúsított: 1 · ebből önálló élet nélkül: 0/.test(masik) && /1 szelete hiányzik/.test(masik),
+        hozd: masik.includes('hozd ' + vHorgony),
+        nemItelet: /SZÁM, nem ítélet/.test(masik)
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (jelzés-próba: ' + JSON.stringify(jo) + ')\n    (gazda: '
+          + sajat.replace(/\s+/g, ' ').slice(0, 400) + ')\n    (harmadik: '
+          + masik.replace(/\s+/g, ' ').slice(0, 400) + ')\n');
+        return false;
+      }
+      return true;
+    } finally {
+      for (const h of [gazda, vendeg, harmadik]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //

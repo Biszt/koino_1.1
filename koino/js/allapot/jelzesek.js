@@ -37,7 +37,8 @@
 // Két korlátos kérdést tesz fel, egyiket sem a közösségre:
 //
 //   · „ki állított rólam?"        → EGY szelet-lekérdezés (3.2);
-//   · „kiről állítottam én?"      → a SAJÁT láncom, ami a saját tevékenységemmel arányos.
+//   · „kiről állítottam én?"      → a SAJÁT azonosság-szeletem (D93/6 óta a bejelentett állításaim — a saját
+//                                    tevékenységemmel arányos, és a láncom nélkül is megvan).
 //
 // ⭐ És egy szép mellékhatás: a számítás ára **arányos a gyanúval**. Egy becsületes
 // tanúsítónál tíz-húsz olvasás; aki háromszázat tanúsított, annál háromszáz — és épp ez a
@@ -72,6 +73,44 @@ const ALLITASOK = ['Meghivas', 'Felhatalmazas', 'Tanusitas'];
 // (11.6) kiderült, hogy **a küszöb nem részletkérdés**: 1-gyel a jelzés elnémult ott, ahol
 // a támadó két emberhez kötötte a hamisait, 3-mal viszont megszólalt. Ezért 3.
 export const ONALLO_KUSZOB = 3;
+
+// ===================================
+// ⭐⭐ D93/6 (E6, 2026-10-04): „KIRŐL ÁLLÍTOTT?" — a SAJÁT azonosság-szeletéből, nem a láncából
+// ===================================
+//
+// A szeletelt világban egy ember lánca nincs meg egy helyen (az állításai a MÁSIK ember szeletében élnek). Ezért az
+// identitás-állítás a szerző saját azonosság-szeletébe is bejelentődik (`esemeny.js`: `bejelentesHelyei`), és a jelzés
+// innen olvas: „kiről állított?" (kit hívott be, kit tanúsított, kinek mutatkozott be) EGYETLEN szelet — akárhányan
+// vagyunk. ⭐ Aki a felhatalmazásról dönt, a tanúsító szeletéből megtudja, kiket tanúsított, és a tanúsítottak
+// szeleteiből, van-e önálló életük; ami nincs meg, azt megnevezzük (`hianyzoSzeletek` — kérésre elhozható).
+
+/**
+ * Az ember SAJÁT eseményei a SAJÁT azonosság-szeletéből: a hozzá bejelentett állításai és a szeletében álló saját
+ * eseményei (pl. a `Lattam`). ⚠️ Ha a tár-illesztő nem ismeri a bejelentést, a saját láncából.
+ */
+async function sajatAllitasai(tar, koino, horgony, en) {
+  if (typeof tar.bejelentesek !== 'function') {
+    return (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+  }
+  const ki = new Map();
+  for (const e of [...await entitasEsemenyei(tar, koino, horgony), ...await tar.bejelentesek(horgony)]) {
+    if (e.koino === koino && e.szerzo === en) ki.set(e.azonosito, e);
+  }
+  return [...ki.values()];
+}
+
+/**
+ * ⭐ A LÁNC ÖSSZEGZÉSE: legalább hány eseménye van az embernek (a legnagyobb ismert sorszáma, és a lánc-gyökér napló-
+ * darabja — D78) — egy üres azonosságnak alig van, egy élő embernek nő. ⚠️ Alsó becslés (amit ismerünk), nem ítélet.
+ */
+function aktivitasa(esemenyek) {
+  let n = 0;
+  for (const e of esemenyek) {
+    n = Math.max(n, Number.isInteger(e.sorszam) ? e.sorszam : 0,
+      Number.isInteger(e.lancGyoker?.naplo?.d) ? e.lancGyoker.naplo.d + 1 : 0);
+  }
+  return n;
+}
 
 // ===================================
 // 1. AZ ÖNÁLLÓ SZÁLAK — „van-e önálló élete a közösségben?"
@@ -115,8 +154,8 @@ export async function onalloSzalak(tar, koino, horgony) {
     rolam.add(e.szerzo);
   }
 
-  // ----- „KIRŐL ÁLLÍTOTTAM ÉN?" — a saját láncomból -----
-  const sajat = (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+  // ----- „KIRŐL ÁLLÍTOTTAM ÉN?" — ⭐ D93/6: a saját azonosság-szeletemből (a bejelentett állításaim) -----
+  const sajat = await sajatAllitasai(tar, koino, horgony, en);
   const tole = new Set();
   for (const e of sajat) {
     if (!ALLITASOK.includes(e.tipus)) continue;
@@ -151,6 +190,8 @@ export async function onalloSzalak(tar, koino, horgony) {
     tole: tole.size,
     bemutatkozas: kolcsonos.size,
     osszes: new Set([...rolam, ...tole, ...kolcsonos]).size,
+    // ⭐ D93/6: a lánc összegzése (legalább ennyi eseménye van) — megjelenítés, nem küszöb.
+    aktivitas: aktivitasa([horgonyEsemeny, ...sajat]),
     ellenorizheto: true
   };
   console.log('jelzesek.onalloSzalak - VÉGE', eredmeny);
@@ -220,9 +261,9 @@ export async function bemutatkozasok(tar, koino, horgony) {
     if (typeof e.adat?.sajatBelepes === 'string') felem.get(e.szerzo).add(e.adat.sajatBelepes);
   }
 
-  // „Kiről állítottam én ugyanezt?" — a saját láncomból.
+  // „Kiről állítottam én ugyanezt?" — ⭐ D93/6: a saját azonosság-szeletemből.
   const tolem = new Set();
-  for (const e of (await sajatLancEsemenyei(tar, en))) {
+  for (const e of (await sajatAllitasai(tar, koino, horgony, en))) {
     if (e.koino !== koino || e.tipus !== 'Bemutatkozas') continue;
     const kit = e.adat?.kit;
     if (typeof kit === 'string' && kit !== en) tolem.add(kit);
@@ -300,7 +341,8 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
   // ⭐ Ez teszi korlátossá: a saját lánc a saját tevékenységemmel arányos, nem a
   // közösség méretével. ⚠️ Aki elrejti a saját láncát, annál a jelzés „nem ellenőrizhető"
   // lesz — de a hézag maga is jel (`entitasSorszam`), és a csere úgyis hozza.
-  const sajat = (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+  // ⭐ D93/6: a tanúsító azonosság-szeletéből (a hozzá bejelentett tanúsításai) — egy szelet, a lánca nélkül.
+  const sajat = await sajatAllitasai(tar, koino, horgony, en);
 
   const tanusitottak = new Map();   // kit → a tanúsított horgonya
   for (const e of sajat) {
@@ -313,10 +355,11 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
   // ----- ÉS AZ ÉRDEMI KÉRDÉS: HÁNYNAK NINCS MÁS SZÁLA? -----
   let magukbanAllok = 0;
   let hianyzott = false;
+  const hianyzoSzeletek = [];       // ⭐ D93/6: akinek a szelete nincs meg — kérésre elhozható (a hiány nem vád)
 
   for (const [, tanusitottHorgony] of tanusitottak) {
     const szalak = await onalloSzalak(tar, koino, tanusitottHorgony);
-    if (!szalak.ellenorizheto) { hianyzott = true; continue; }
+    if (!szalak.ellenorizheto) { hianyzott = true; hianyzoSzeletek.push(tanusitottHorgony); continue; }
 
     // ⭐ „RAJTAM KÍVÜL": a saját tanúsításom nem számít bele — különben mindenki, akit
     // tanúsítottam, legalább egy szálat mutatna, és a jelzés elnémulna.
@@ -327,6 +370,7 @@ export async function tanusitoiTorlodas(tar, koino, horgony, beallitas = {}) {
   const eredmeny = {
     tanusitott: tanusitottak.size,
     magukbanAllok,
+    hianyzoSzeletek,
     ellenorizheto: !hianyzott
   };
   console.log('jelzesek.tanusitoiTorlodas - VÉGE', eredmeny);
@@ -390,8 +434,8 @@ export async function megbizasAllapota(tar, koino, horgony) {
   let visszavontak = 0;
   for (const [, allapot] of utolso) allapot.vissza ? visszavontak++ : felhatalmazasok++;
 
-  // ----- „HÁNY TANÚSÍTÁST ADTAM?" — a saját láncomból -----
-  const sajat = (await sajatLancEsemenyei(tar, en)).filter((e) => e.koino === koino);
+  // ----- „HÁNY TANÚSÍTÁST ADTAM?" — ⭐ D93/6: a saját azonosság-szeletemből -----
+  const sajat = await sajatAllitasai(tar, koino, horgony, en);
   const tanusitottak = new Set();
   for (const e of sajat) {
     if (e.tipus !== 'Tanusitas') continue;

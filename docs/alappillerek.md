@@ -184,7 +184,9 @@ ellenőrzés nem fér a keretbe (1000 esemény-olvasás), a helyi rész teljesen
 logaritmikus); az út csak aláírt bemondásokat követ (a 2. lépcsős `LepcsoBemondas`-át és a tanúsító felhatalmazás-
 bemondását); elágazás 61–62. ⚠️ Útközben egy régi hiba: a kézi tanúsítás 2026-09 eleje óta nem mondta be a
 felhatalmazásait, ezért egy nem alapító tanúsító tanúsítása nem számított — javítva.
-⏸️ Hátravan még: az E6 (a kontraszt-jelzés bemenete).
+✅ **Az E6 (2026-10-04):** az identitás-állítás a szerző
+azonosság-szeletébe is bejelentődik, a jelzés a szeletekből számol, a `jelzes` parancs kérésre (elágazás 63). ⭐ **AZ E
+PILLÉR KÉSZ** (E1–E6).
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
 
@@ -544,3 +546,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     · mert a szeletbe bárki tehet állítást: ha az út azok közül sorsolna, egy kulcs-gyűrű a becsületest is elbuktathatná
     (szolgáltatás-megtagadás), ha pedig a bemondás többlete megengedett volna, a csaló hamis tételekkel hígíthatná a
     bemondását · a megépítéskor, Claude · `identitas.js` (`lepcso2Szuroproba`), `muveletek.js` (`lepcsoBemondasKiadasa`).
+63. **2026-10-04 · a kontraszt-jelzés bemenete: „kiről állított?” a szerző LÁNCÁBÓL (a D93/6 a tanúsítottak szeleteit és a
+    lánc összegzését nevezte meg)** → **az identitás-állítás a szerző saját azonosság-szeletébe is bejelentődik (a D85
+    bejelentési mintája), és a jelzés innen olvas** · mert a szeletelt világban a lánc nincs meg egy helyen (az állítások a
+    másik ember szeletében élnek), a felhatalmazó viszont a tanúsító szeletét tartja — így egy szelet elég, és a terhe a
+    tanúsító tevékenységével arányos; ⚠️ tiszta törés a szelet-halmazban (a telefon úgyis frissül) · a megépítéskor, Claude
+    (a D93/6 keretén belül) · `esemeny.js` (`bejelentesHelyei`), `jelzesek.js`, `atmenetiTar.js` (a két tár nézete a
+    szeletet és a bejelentéseket is mindkét tárból adja).
