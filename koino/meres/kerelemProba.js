@@ -9,7 +9,7 @@
 // kimondva; (4) a nem tartott entitás bemondott össz-ponttal, gyökér nélkül jön (`forras`); (5) a törzs
 // lenyomatai.
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 import { allapotSzamitasa } from '../js/allapot/allapotSzamitas.js';
 import { reszfaKarbantarto, OSSZPONT_FA, reszfaLevelei, osszPontokSzamitasa, gyerekJegyzek } from '../js/allapot/osszPont.js';
 import { ujAllapotFa, allapotBeallitas, allapotGyokere } from '../js/esemeny/osszegzoFa.js';
@@ -84,7 +84,7 @@ async function vilag() {
   // A töredékek csak pontjukkal léteznek (D14) — a javaslattevő kezdő pontja (D85).
   await pont(bela, toredekAzonosito(j.azonosito, g2), 1);
   await pont(bela, toredekAzonosito(j.azonosito, g3), 1);
-  const allapot = await allapotSzamitasa(es);
+  const allapot = await allapotSzamitasa(await tagokkal(es));
   const terkep = new Map(es.map((e) => [e.azonosito, e]));
   return { allapot, terkep, nagy, kicsi, g1, g2, g3, unoka, j: j.azonosito, es };
 }
@@ -178,7 +178,7 @@ proba('a FELKERÜLT gyerek (a szülőjét a D14 elfelejtette) a nagyszülő fejl
   const c = await anna.tesz('GondolatLetrehozas', { cim: 'UNOKA', meret: 10, szulo: b.azonosito });
   const es = [a, b, c, await anna.tesz('TudatpontRendezes', { entitas: a.azonosito, pont: 5 }),
     await anna.tesz('TudatpontRendezes', { entitas: c.azonosito, pont: 3 })];
-  const allapot = await allapotSzamitasa(es);
+  const allapot = await allapotSzamitasa(await tagokkal(es));
   const terkep = new Map(es.map((e) => [e.azonosito, e]));
   const { valasz } = await fejlecekValasza({ allapot, kulcs: a.azonosito, n: 10, d: 0, karbantarto: reszfaKarbantarto(),
     esemenyOlvas: olvaso(terkep) });
@@ -271,7 +271,7 @@ async function szovegesVilag(hely) {
   const { lenyomat } = await blob.ir(new TextEncoder().encode(JSON.stringify('A GONDOLAT SZÖVEGE')));
   const g = await anna.tesz('GondolatLetrehozas', { cim: 'SZOVEGES', meret: 10, szoveg: { lenyomat, bajt: 20 } });
   const pont = await anna.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 5 });
-  const allapot = await allapotSzamitasa([g, pont]);
+  const allapot = await allapotSzamitasa(await tagokkal([g, pont]));
   return { allapot, terkep: new Map([[g.azonosito, g], [pont.azonosito, pont]]), g: g.azonosito, lenyomat, blob };
 }
 

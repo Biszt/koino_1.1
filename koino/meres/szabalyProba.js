@@ -19,7 +19,7 @@ import {
 import { koinoLetrehozasa, gondolatLetrehozasa, tudatpontRendezese, javaslatLetrehozasa,
   kezdoPontokElosztasa } from '../js/muveletek.js';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A szabály-réteg próbája');
 
@@ -33,7 +33,7 @@ proba('A kereten BELÜLI tudatpont rendben van', async () => {
   const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 });
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: TUDATPONT_KERET });
 
-  const a = allapotSzamitasa([t, p]);
+  const a = allapotSzamitasa(await tagokkal([t, p]));
   return a.kivetelek.length === 0
       && a.entitasok.get(t.azonosito).osszesPont === TUDATPONT_KERET;
 });
@@ -43,7 +43,7 @@ proba('⭐ A keretet TÚLLÉPŐ tudatpont nem számít (a felület megkerülés�
   const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 });
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 999999 });
 
-  const a = allapotSzamitasa([t, p]);
+  const a = allapotSzamitasa(await tagokkal([t, p]));
   // Nincs érvényes pont rajta → az entitás nem is létezik (D14: a közösségi felejtés)
   return a.kivetelek.length === 1
       && a.kivetelek[0].tipus === 'TudatpontRendezes'
@@ -57,7 +57,7 @@ proba('A keret a KIOSZTOTT ÖSSZEGRE vonatkozik, nem egy entitásra', async () =
   const p1 = await anna.tesz('TudatpontRendezes', { entitas: egyik.azonosito, pont: 6000 });
   const p2 = await anna.tesz('TudatpontRendezes', { entitas: masik.azonosito, pont: 6000 });
 
-  const a = allapotSzamitasa([egyik, masik, p1, p2]);
+  const a = allapotSzamitasa(await tagokkal([egyik, masik, p1, p2]));
   // 6000 + 6000 = 12 000 > 10 000 → a MÁSODIK esik ki, az első áll
   return a.kivetelek.length === 1
       && a.entitasok.get(egyik.azonosito).osszesPont === 6000
@@ -71,7 +71,7 @@ proba('⭐ Az ÁTRENDEZÉS nem ütközik a keretbe (a régi érték felszabadul)
   // Ugyanarra az entitásra tesz újra 10 000-et: ez nem 20 000, hanem ugyanaz
   const ujra = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 10000 });
 
-  const a = allapotSzamitasa([t, teljes, ujra]);
+  const a = allapotSzamitasa(await tagokkal([t, teljes, ujra]));
   return a.kivetelek.length === 0
       && a.entitasok.get(t.azonosito).osszesPont === 10000;
 });
@@ -82,7 +82,7 @@ proba('A NEGATÍV és a tört tudatpont sem számít', async () => {
   const jo = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 100 });
   const rossz = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: -50 });
 
-  const a = allapotSzamitasa([t, jo, rossz]);
+  const a = allapotSzamitasa(await tagokkal([t, jo, rossz]));
   return a.kivetelek.length === 1 && a.entitasok.get(t.azonosito).osszesPont === 100;
 });
 
@@ -192,7 +192,7 @@ proba('⭐ AZ IDEGEN KULCS javaslata nem számít — és így nem születik egy
   const sz = await idegen.tesz('Szavazat', { javaslat: j.azonosito, szavazat: 'Tamogat' }, kezdet);
 
   const esemenyek = [t, p, j, sz];
-  const a = allapotSzamitasa(esemenyek);
+  const a = allapotSzamitasa(await tagokkal(esemenyek));
   const javaslatok = javaslatokSzamitasa(a.szamitok, a, kezdet + 10 * NAP);
 
   return javaslatok.size === 0                       // a javaslat nem számít
@@ -210,7 +210,7 @@ proba('A GAZDA javaslata viszont számít', async () => {
     valtozas: { cim: 'Jobb cím' }
   }, kezdet);
 
-  const a = allapotSzamitasa([t, p, j]);
+  const a = allapotSzamitasa(await tagokkal([t, p, j]));
   const javaslatok = javaslatokSzamitasa(a.szamitok, a, kezdet + 10 * NAP);
   return javaslatok.size === 1 && a.kivetelek.length === 0;
 });
@@ -230,7 +230,7 @@ proba('⭐ A jogosultság a SAJÁT LÁNCBAN dől el — az utólagos tudatpont n
   const kesoiPont = await kesolekedo.tesz('TudatpontRendezes',
     { entitas: t.azonosito, pont: 50 }, kezdet);
 
-  const a = allapotSzamitasa([t, p, j, kesoiPont]);
+  const a = allapotSzamitasa(await tagokkal([t, p, j, kesoiPont]));
   // A javaslat kiesett, a tudatpontja viszont ÉRVÉNYES (nem büntetjük, csak nem számít)
   return a.kivetelek.length === 1
       && a.kivetelek[0].tipus === 'Javaslat'
@@ -251,7 +251,7 @@ proba('A pontját ELVEVŐ (0 pontos) sem tehet javaslatot', async () => {
     fajta: 'szerkesztesi', erintett: t.azonosito, valtozas: { cim: 'Más' }
   }, kezdet);
 
-  const a = allapotSzamitasa([t, p, beszall, kiszall, j]);
+  const a = allapotSzamitasa(await tagokkal([t, p, beszall, kiszall, j]));
   return a.kivetelek.length === 1 && a.kivetelek[0].tipus === 'Javaslat';
 });
 
@@ -288,7 +288,7 @@ proba('⛔⛔ CSAK AZ EGYIKEN VAN PONTOM: a két entitást érintő javaslatom N
   const j = await gazdaA.tesz('Javaslat',
     { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
 
-  const all = allapotSzamitasa([...alap, j]);
+  const all = allapotSzamitasa(await tagokkal([...alap, j]));
   return all.kivetelek.length === 1
       && all.kivetelek[0].tipus === 'Javaslat'
       && all.kivetelek[0].ok.includes('tudatpont');
@@ -304,7 +304,7 @@ proba('⭐ …ÉS HA MINDKETTŐN VAN, akkor számít — ez különbözteti meg 
   const j = await gazdaA.tesz('Javaslat',
     { fajta: 'szerkesztesi', erintettek: ketErintett(a, b) }, kezdet);
 
-  const all = allapotSzamitasa([...alap, beszall, j]);
+  const all = allapotSzamitasa(await tagokkal([...alap, beszall, j]));
   const javaslatok = javaslatokSzamitasa(all.szamitok, all, kezdet + 10 * NAP);
   return all.kivetelek.length === 0 && javaslatok.size === 1;
 });
@@ -314,7 +314,7 @@ proba('⛔ ÜRES érintett-lista: nincs miről dönteni', async () => {
   const { gazdaA, alap } = await ketGazda(kezdet);
   const j = await gazdaA.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek: [] }, kezdet);
 
-  const all = allapotSzamitasa([...alap, j]);
+  const all = allapotSzamitasa(await tagokkal([...alap, j]));
   return all.kivetelek.length === 1 && all.kivetelek[0].ok.includes('nem nevezett meg');
 });
 
@@ -329,7 +329,7 @@ proba('⛔ UGYANAZ AZ ENTITÁS KÉTSZER: nem két érintett — a művelet kéts
     ]
   }, kezdet);
 
-  const all = allapotSzamitasa([...alap, j]);
+  const all = allapotSzamitasa(await tagokkal([...alap, j]));
   return all.kivetelek.length === 1 && all.kivetelek[0].ok.includes('többször');
 });
 
@@ -360,8 +360,8 @@ async function csomagEset(kezdet) {
   return { gazdaA, gazdaB, jogos, a, b, j, esemenyek, kezdet };
 }
 
-const dontes = (e) => {
-  const all = allapotSzamitasa(e.esemenyek);
+const dontes = async (e) => {
+  const all = allapotSzamitasa(await tagokkal(e.esemenyek));
   return javaslatokSzamitasa(all.szamitok, all, e.kezdet + 10 * NAP).get(e.j.azonosito);
 };
 
@@ -373,7 +373,7 @@ proba('⭐⭐ AKI CSAK AZ EGYIKEN VAN BENT, CSAK OTT SZAVAZ — a többi rész �
     e.esemenyek.push(...await ki.szavaz(e.j, { szavazat: mit }, e.kezdet));
   }
 
-  const d = dontes(e);
+  const d = await dontes(e);
   const [reszA, reszB] = d.reszek;
 
   return d.reszek.length === 2
@@ -392,7 +392,7 @@ proba('⛔⛔ EGY RÉSZ ELBUKÁSA AZ EGÉSZ JAVASLATOT ELVETI (ÉS, nem VAGY)', 
   e.esemenyek.push(...await e.jogos.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
   e.esemenyek.push(...await e.gazdaB.szavaz(e.j, { szavazat: 'Ellenez' }, e.kezdet));
 
-  const d = dontes(e);
+  const d = await dontes(e);
   const [reszA, reszB] = d.reszek;
 
   return reszA.kuszobTeljesul === true          // A rendben van…
@@ -410,7 +410,7 @@ proba('⭐ A KÖZÖS LEZÁRÁS a LEGHOSSZABB rész-döntési idő (a csoport egy
   e.esemenyek.push(...await e.gazdaA.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
   e.esemenyek.push(...await e.jogos.szavaz(e.j, { szavazat: 'Tamogat' }, e.kezdet));
 
-  const d = dontes(e);
+  const d = await dontes(e);
   const [reszA, reszB] = d.reszek;
 
   return reszA.dontesiIdo < reszB.dontesiIdo
@@ -437,7 +437,7 @@ async function entitas(ki, tipus, cim, kezdet) {
 /** Egy javaslat kivétele (ha van) — a szabály-réteg szerint. */
 async function javaslatKivetel(ki, erintettek, alap, kezdet) {
   const j = await ki.tesz('Javaslat', { fajta: 'szerkesztesi', erintettek }, kezdet);
-  const all = allapotSzamitasa([...alap, j]);
+  const all = allapotSzamitasa(await tagokkal([...alap, j]));
   return all.kivetelek.find((k) => k.tipus === 'Javaslat') ?? null;
 }
 
@@ -537,7 +537,7 @@ proba('⭐⭐ …DE ÁLLÁSPONTOT FEL LEHET VETNI EGY EGYEZMÉNY ALATT (D27/4)',
     fajta: 'altalanos',
     erintettek: [{ entitas: j.azonosito, muvelet: 'Allaspont', valtozas: { cim: 'EZT TARTSUK BE' } }]
   }, kezdet);
-  const kivetel = allapotSzamitasa([...alap, allaspont])
+  const kivetel = allapotSzamitasa(await tagokkal([...alap, allaspont]))
     .kivetelek.find((k) => k.azonosito === allaspont.azonosito) ?? null;
 
   return kivetel === null;
@@ -595,7 +595,7 @@ proba('⚠️ AZ ISMERETLEN TÍPUS NEM VÁD, HANEM JELZÉS (D19)', async () => {
     erintettek: [{ entitas: ismeretlen, muvelet: 'Athelyezes', valtozas: { szulo: null } }]
   }, kezdet);
 
-  const all = allapotSzamitasa([p, j]);
+  const all = allapotSzamitasa(await tagokkal([p, j]));
   return all.kivetelek.length === 0
       && all.nemEllenorizhetok.some((n) => n.tipus === 'Javaslat' && n.ok.includes('típusa ismeretlen'));
 });
@@ -607,12 +607,13 @@ proba('⭐ A szabálysértő esemény NEM tűnik el — a kivételek felsoroljá
   const t = await anna.tesz('GondolatLetrehozas', { cim: 'Alap', meret: 10 });
   const tul = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 999999 });
 
-  const a = allapotSzamitasa([t, tul]);
+  const bemenet = await tagokkal([t, tul]);        // D93/1: a szerző tagsági eseményeivel együtt
+  const a = allapotSzamitasa(bemenet);
   const k = a.kivetelek[0];
   return k.azonosito === tul.azonosito
       && k.szerzo === anna.szerzo
       && typeof k.ok === 'string' && k.ok.length > 0
-      && a.esemenyDarab === 2 && a.szamitoDarab === 1;   // a bemenetből semmi nem veszett el
+      && a.esemenyDarab === bemenet.length && a.szamitoDarab === bemenet.length - 1;   // csak a szabálysértő esik ki
 });
 
 proba('A szabálysértés nem viszi magával a szerző TÖBBI eseményét', async () => {
@@ -621,7 +622,7 @@ proba('A szabálysértés nem viszi magával a szerző TÖBBI eseményét', asyn
   const tul = await anna.tesz('TudatpontRendezes', { entitas: egyik.azonosito, pont: 999999 });
   const jo = await anna.tesz('TudatpontRendezes', { entitas: egyik.azonosito, pont: 100 });
 
-  const a = allapotSzamitasa([egyik, tul, jo]);
+  const a = allapotSzamitasa(await tagokkal([egyik, tul, jo]));
   return a.kivetelek.length === 1 && a.entitasok.get(egyik.azonosito).osszesPont === 100;
 });
 
@@ -645,7 +646,7 @@ proba('⭐ A BEMONDOTT ÖSSZEG EGYETLEN eseményből ellenőrizhető (a lánc t�
     { entitas: t.azonosito, pont: 100, kiosztva: TUDATPONT_KERET + 1 });
 
   // SZÁNDÉKOSAN csak ezt az egy pont-eseményt adjuk oda, lánc nélkül.
-  const { kivetelek } = szabalyokErvenyesitese([p]);
+  const { kivetelek } = szabalyokErvenyesitese(await tagokkal([p]));
   return kivetelek.length === 1 && kivetelek[0].ok.includes('bemondott összeg túllépi');
 });
 
@@ -658,7 +659,7 @@ proba('⭐⭐ A HAZUG BEMONDÁS lelepleződik: két saját aláírt esemény ell
   const p2 = await anna.tesz('TudatpontRendezes',
     { entitas: b.azonosito, pont: 6000, kiosztva: 6000 });
 
-  const { kivetelek } = szabalyokErvenyesitese([a, b, p1, p2]);
+  const { kivetelek } = szabalyokErvenyesitese(await tagokkal([a, b, p1, p2]));
   return kivetelek.length === 1
       && kivetelek[0].azonosito === p2.azonosito
       && kivetelek[0].ok.includes('ellentmond a saját láncának');
@@ -677,7 +678,7 @@ proba('⚠️ DE HÉZAG ESETÉN NEM VÁD, HANEM JELZÉS — a lemaradás nem bü
   // A `p1` HIÁNYZIK a halmazból — vagyis hézag van a láncban a `p2` előtt. A mi
   // számításunk 4000-et adna, ő 7000-et mond — és IGAZAT MOND. Az eltérés a MI
   // lemaradásunk, nem az ő hazugsága. Ilyenkor nem kivétel, hanem „nem ellenőrizhető".
-  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese([a, b, p2]);
+  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese(await tagokkal([a, b, p2]));
   return kivetelek.length === 0
       && nemEllenorizhetok.length === 1
       && nemEllenorizhetok[0].azonosito === p2.azonosito;
@@ -689,7 +690,7 @@ proba('A HIÁNYZÓ bemondott összeg is kivétel (nem lehet kihagyni a mezőt)',
   const p = await anna.tesz('TudatpontRendezes',
     { entitas: t.azonosito, pont: 100, kiosztva: null });
 
-  const { kivetelek } = szabalyokErvenyesitese([p]);
+  const { kivetelek } = szabalyokErvenyesitese(await tagokkal([p]));
   return kivetelek.length === 1 && kivetelek[0].ok.includes('bemondott összeg');
 });
 
@@ -698,7 +699,7 @@ proba('A HELYES bemondás átmegy, és nem kerül a jelzések közé sem', async
   const t = await anna.tesz('GondolatLetrehozas', { cim: 'Rendes', meret: 10 });
   const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 4200 });
 
-  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese([t, p]);
+  const { kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese(await tagokkal([t, p]));
   return kivetelek.length === 0 && nemEllenorizhetok.length === 0
       && p.adat.kiosztva === 4200;
 });
@@ -712,11 +713,35 @@ proba('⭐ A SORREND NEM SZÁMÍT: kevert események, ugyanazok a kivételek', a
   const t2 = await anna.tesz('GondolatLetrehozas', { cim: 'Másik', meret: 10 });
   const p2 = await anna.tesz('TudatpontRendezes', { entitas: t2.azonosito, pont: 9000 });
 
-  const egyenes = szabalyokErvenyesitese([t, p1, t2, p2]);
-  const forditva = szabalyokErvenyesitese([p2, t2, p1, t]);
+  const egyenes = szabalyokErvenyesitese(await tagokkal([t, p1, t2, p2]));
+  const forditva = szabalyokErvenyesitese(await tagokkal([p2, t2, p1, t]));
 
   return JSON.stringify(egyenes.kivetelek) === JSON.stringify(forditva.kivetelek)
       && egyenes.kivetelek.length === 1;
 });
 
+// ===================================
+// ⭐⭐ D93/1: A DÖNTÉSBEN CSAK AZ ELLENŐRZÖTT TAG SZÁMÍT
+// ===================================
+
+proba('⭐⭐ D93/1: a NEM TAG pontja nem számít — függőben (nem vád), és a tagsággal ugyanaz a pont számít; a tagsági csomag is elég', async () => {
+  const anna = await ujEember();
+  const t = await anna.tesz('GondolatLetrehozas', { cim: 'Tagság', meret: 10 });
+  const p = await anna.tesz('TudatpontRendezes', { entitas: t.azonosito, pont: 30 });
+  const nelkule = allapotSzamitasa([t, p]);
+  const vele = await tagokkal([t, p]);
+  const tagkent = allapotSzamitasa(vele);
+  // Csak a tagsági csomag (a koinó születése és a meghívás külön esemény nélkül — a csomag hozza őket):
+  const { tagsagiIndex, tagsagiLanc, TAGSAGI_CSOMAG } = await import('../js/allapot/tagsag.js');
+  const belepes = vele.find((e) => e.tipus === 'Belepes' && e.szerzo === anna.szerzo);
+  const lanc = tagsagiLanc(tagsagiIndex(vele), belepes.azonosito);
+  const csomag = await anna.tesz(TAGSAGI_CSOMAG, { lanc }, undefined, { entitas: belepes.azonosito });
+  const csomaggal = allapotSzamitasa([t, p, csomag]);
+  return !nelkule.entitasok.has(t.azonosito) && nelkule.tagsagFuggoben.some((x) => x.azonosito === p.azonosito)
+    && nelkule.kivetelek.length === 0
+    && tagkent.entitasok.get(t.azonosito)?.osszesPont === 30 && tagkent.tagsagFuggoben.length === 0
+    && csomaggal.entitasok.get(t.azonosito)?.osszesPont === 30;
+});
+
 export default futtatas;
+

@@ -358,3 +358,72 @@ export async function tagokTarba(tar, koino) {
   return uj;
 }
 
+
+/**
+ * ⭐ D93/1: a MŰVELETI RÉTEGGEL dolgozó próbák szereplőjét taggá teszi — a valódi `belepes` / `meghivas` művelettel
+ * (az alapító hívja be). Ha a kettőnek külön tára van, mindkét esemény mindkét tárba kerül (ugyanazon a kapun).
+ * @param {Object} alapito - az alapító környezete (`{ tar, koino, szerzo, kulcspar, ... }`)
+ * @param {Object} k - a szereplő környezete
+ * @returns {Promise<{belepes: Object, meghivas: Object}>}
+ */
+export async function taggaTesz(alapito, k) {
+  const { belepes, meghivas, azonossagHorgonya } = await import('../js/muveletek.js');
+  const { esemenyMentese } = await import('../js/tar/esemenyTar.js');
+  const b = await belepes(k);
+  if (alapito.tar !== k.tar) await esemenyMentese(alapito.tar, b);
+  const sajat = await azonossagHorgonya(alapito.tar, alapito.koino, alapito.szerzo);
+  const m = await meghivas(alapito, { kit: k.szerzo, horgonya: b.azonosito, sajatBelepes: sajat });
+  if (alapito.tar !== k.tar) await esemenyMentese(k.tar, m);
+  return { belepes: b, meghivas: m };
+}
+
+/**
+ * ⭐ D93/1: egy e-ember, aki RÖGTÖN TAG — a belépése a lánca ELEJÉN (1. sorszám, a megadott időben), az alapító
+ * meghívásával; a `tagokkal` ugyanezeket az eseményeket teszi a listába. Az időrendre és a lánc-sorszámra érzékeny
+ * próbák ezt használják (a valóságban is így van: előbb belép, aztán cselekszik).
+ * @param {string} [koino]
+ * @param {number} [ido] - a belépés ideje (alapból: most)
+ */
+export async function ujTag(koino = 'proba', ido) {
+  const ember = await ujEember(koino);
+  const kulcs = koino + '|-';
+  let vilag = VILAGOK.get(kulcs);
+  if (!vilag) {
+    const alapito = await ujEember(koino);
+    const letrehozas = await alapito.tesz('KoinoLetrehozas', { nev: 'Próba-koinó', leiras: null, alapitok: [], zart: true }, 1);
+    vilag = { alapito, letrehozas, tagok: new Map() };
+    VILAGOK.set(kulcs, vilag);
+  }
+  const belepes = await ember.tesz('Belepes', {}, ido);
+  const meghivas = await vilag.alapito.tesz('Meghivas', { kit: ember.szerzo, sajatBelepes: vilag.letrehozas.azonosito }, ido,
+    { entitas: belepes.azonosito });
+  vilag.tagok.set(ember.szerzo, [belepes, meghivas]);
+  return ember;
+}
+
+/**
+ * ⭐ D93/1: egy próba-segéd e-embert tesz taggá egy MŰVELETI alapító koinójában — a belépését ő írja alá, a meghívást
+ * az alapító (a `meghivas` művelettel); mindkettő az alapító tárába kerül (ugyanazon a kapun).
+ * @returns {Promise<{belepes: Object, meghivas: Object}>}
+ */
+export async function emberTaggaTarban(alapito, ember) {
+  const { meghivas, azonossagHorgonya } = await import('../js/muveletek.js');
+  const { esemenyMentese } = await import('../js/tar/esemenyTar.js');
+  const belepes = await ember.tesz('Belepes', {});
+  await esemenyMentese(alapito.tar, belepes);
+  const sajat = await azonossagHorgonya(alapito.tar, alapito.koino, alapito.szerzo);
+  const m = await meghivas(alapito, { kit: ember.szerzo, horgonya: belepes.azonosito, sajatBelepes: sajat });
+  return { belepes, meghivas: m };
+}
+
+/**
+ * Egy (az `ujTag`-gel vagy a `tagokkal`-lal taggá tett) e-ember tagsági eseményei: a koinó létrehozása, a belépése és
+ * a meghívása — egy tárba mentéshez. Ha nem tag, üres lista.
+ */
+export function tagsagiEsemenyei(ember) {
+  for (const vilag of VILAGOK.values()) {
+    const t = vilag.tagok.get(ember.szerzo);
+    if (t) return [vilag.letrehozas, ...t];
+  }
+  return [];
+}

@@ -4754,6 +4754,22 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
    összegzéséből (a lánc-gyökér darabszáma), kérésre, gyorsítótárral; a jelzés nem dönt (D46). A B/3 után válik élessé;
    az E-ben a bemenete készül el.
 
+#### MEGÉPÜLT (2026-10-04): az 1., a 2. és az 5. pont
+
+- **Az 1.:** a szabály-réteg (`szabalyok.js`, `TAGSAG_KELL`) a pontot, a javaslatot, a szavazatot, az állásfoglalást ÉS
+  az érték javaslatot csak tagtól számolja — ⚠️ az érték javaslat a döntés pontosítása: a küszöb a javaslatok mediánja,
+  tehát a kulcs-gyártó azzal is döntést mozdítana. A nem tag eseménye a külön `tagsagFuggoben` listába kerül (az okával;
+  nem a `nemEllenorizhetok`-be, mert az a lánc hézagáé) — és ⭐ akkor is függőben van, ha a szerző biztosan nem tag (pl.
+  belépett, de még senki nem hívta meg): P2P-n a „nem tag” és a „még nem láttam a meghívását” ugyanaz. A döntési csomag a
+  résztvevők tagsági láncát is viszi (a csomag első darabjában). A parancssor kimondja (`pont`, `szavaz`: „Nem vagy
+  (ellenőrzött) tag”; az állapot: a függőben lévő események).
+- **A 2.:** `tagsag.js` (a legrövidebb lánc, körbiztosan, D = 64) — ugyanazt használja az `identitas.js` és a szabály-réteg;
+  a `TagsagiCsomag` a saját azonosság-szeletbe (a kapu ellenőrzi), a `tagsag` parancs és az őrjárat adja ki.
+- **Az 5.:** `koino "név" profil=nev,telepules` · `profil nev=... telepules=...` (a darab sózva a fájl-tárba, az esemény
+  csak a lenyomatot) · a `meghiv` a meghívott legutóbbi profil-lenyomatát teszi a meghívásba, és ha a koinó vár profilt,
+  nélküle nem megy (megnevezi, mit kérj).
+- ⏸️ **Hátravan:** a 3. (a zárt koinó a kézfogásban), a 4. (előbb a 64. mérés), a 6.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

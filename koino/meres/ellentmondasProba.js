@@ -20,7 +20,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { probaGyujtemeny } from './probaFuttato.js';
+import { probaGyujtemeny, taggaTesz } from './probaFuttato.js';
 import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar.js';
 import { sajatLancEsemenyei, esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa } from '../js/esemeny/esemeny.js';
@@ -263,6 +263,7 @@ proba('⭐⭐⭐ A SZABÁLY-RÉTEG: a hazug bemondás MAGA is elbukik (D81, héz
   const utana = await tudatpontRendezese(k, g1.azonosito, 5);
   // Egy másik e-ember is tesz pontot ugyanarra a gondolatra.
   const masik = await ujKornyezet(k.tar);
+  await taggaTesz(k, masik);                     // D93/1: a másik e-ember tag (különben a pontja nem számítana)
   await tudatpontRendezese(masik, g1.azonosito, 8);
 
   const pontja = (a, szerzo) => a.entitasok.get(g1.azonosito)?.hozzajarulok.get(szerzo)?.pont ?? 0;

@@ -31,6 +31,11 @@
 // Használják: allapotSzamitas.js (és rajta keresztül minden számítás).
 
 import { lenyomatSzinkron } from '../esemeny/kanonikusAlak.js';
+// ⭐ D93/1: a tagság (egy forrás — `tagsag.js`).
+import { tagsagiIndex, szerzoTagsaga } from './tagsag.js';
+
+/** A döntés eseményei — csak az ellenőrzött tag szerzőé számít (D93/1). */
+export const TAGSAG_KELL = new Set(['TudatpontRendezes', 'Javaslat', 'Szavazat', 'ErtekJavaslat', 'Allasfoglalas']);
 
 // ===================================
 // A TUDATPONT-KERET
@@ -428,6 +433,9 @@ export function szabalyokErvenyesitese(esemenyek) {
   const kivetelek = [];
   const nemEllenorizhetok = [];
   const kiesettek = new Set();   // az azonosítók, amik nem számítanak
+  // ⭐ D93/1: a döntés eseményei, amiknek a szerzője NEM ELLENŐRIZHETŐ tag — nem számítanak, de nem is vádak: amint a
+  // tagsági bizonyíték megérkezik (a tagsági csomag, a lánc eseményei), számítanak (D19).
+  const tagsagFuggoben = [];
 
   // ----- ⭐ AZ ENTITÁSOK TÍPUSA (a típus-alapú tiltásokhoz) -----
   //
@@ -510,6 +518,26 @@ export function szabalyokErvenyesitese(esemenyek) {
     if (!vadpontok.has(kit) || vadpont < vadpontok.get(kit)) vadpontok.set(kit, vadpont);
   }
 
+  // ----- ⭐⭐ D93/1: A DÖNTÉSBEN CSAK AZ ELLENŐRZÖTT TAG SZÁMÍT -----
+  // A pont, a javaslat, a szavazat, az érték javaslat és az állásfoglalás csak akkor, ha a szerző tagsága a bemenetből
+  // bizonyítható (`tagsag.js` — ugyanaz a szabály, mint az `identitas.js`-ben). ⛔ Különben a kulcs ingyen van, és egy
+  // támadó annyi tudatpont-keretet és szavazatot gyárt, ahány kulcsot. ⚠️ A „nem tag” sem vád, hanem várakozás: P2P-n a
+  // „nem tag” és a „még nem láttam a bizonyítékát” ugyanaz (D19) — a meghívás lehet, hogy csak még nem ért ide. Ezért
+  // mindkettő FÜGGŐBEN marad (az okával), és amint a bizonyíték megérkezik, számít.
+  const tidx = tagsagiIndex(esemenyek);
+  const tagsagok = new Map();
+  for (const [szerzo, lanc] of szerzonkent) {
+    if (!lanc.some((e) => TAGSAG_KELL.has(e.tipus))) continue;
+    const r = szerzoTagsaga(tidx, szerzo);
+    tagsagok.set(szerzo, r);
+    if (r.igen) continue;
+    for (const e of lanc) {
+      if (!TAGSAG_KELL.has(e.tipus)) continue;
+      kiesettek.add(e.azonosito);
+      tagsagFuggoben.push({ azonosito: e.azonosito, szerzo: e.szerzo, tipus: e.tipus, sorszam: e.sorszam, ok: r.ok });
+    }
+  }
+
   for (const lanc of szerzonkent.values()) {
     const rendezett = [...lanc].sort((a, b) => a.sorszam - b.sorszam);
     const pontok = new Map();            // entitás → a szerző jelenlegi pontja rajta
@@ -525,6 +553,8 @@ export function szabalyokErvenyesitese(esemenyek) {
     for (const e of rendezett) {
       if (e.sorszam !== vartSorszam) folytonos = false;
       vartSorszam = e.sorszam + 1;
+      // ⭐ D93/1: ami a tagság miatt már kiesett, azt a többi szabály nem nézi (nem könyveljük, nem vádoljuk kétszer).
+      if (kiesettek.has(e.azonosito)) continue;
 
 
       // ===== 1. SZABÁLY: A TUDATPONT-KERET =====
@@ -772,7 +802,7 @@ export function szabalyokErvenyesitese(esemenyek) {
     nemEllenorizheto: nemEllenorizhetok.length
   });
 
-  return { szamitok, kivetelek, nemEllenorizhetok };
+  return { szamitok, kivetelek, nemEllenorizhetok, tagsagFuggoben, tagsagok };
 }
 
 // ===================================

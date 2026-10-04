@@ -22,7 +22,7 @@ import {
 
 import { ALAP_KUSZOBOK } from '../js/allapot/javaslatSzamitas.js';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, ujTag, tagsagiEsemenyei } from './probaFuttato.js';
 import { toredekAzonosito } from '../js/allapot/szabalyok.js';
 
 const { proba, futtatas } = probaGyujtemeny('A KÉRDEZHETŐ PAKLI (Szakasz 5 / 5.2)');
@@ -37,7 +37,9 @@ const KOINO = 'proba';
 async function ujKoino() {
   const mappa = await mkdtemp(join(tmpdir(), 'koino-pakli-'));
   const tar = await esemenyTarNyitasa(KOINO, mappa);
-  const anna = await ujEember(KOINO);
+  // ⭐ D93/1: anna TAG (a pontja csak így számít) — a koinó születése és a tagsági eseményei a tárban.
+  const anna = await ujTag(KOINO);
+  for (const e of tagsagiEsemenyei(anna)) await esemenyMentese(tar, e);
   return { tar, anna };
 }
 
@@ -673,7 +675,8 @@ proba('⭐ A HIÁNYZÓ FELMENŐK: amelyik ősre nincs pontom, az felsorolódik',
   const nagyszulo = await gondolat(tar, anna, 'Nagyszülő', 100);
 
   // A szülőt MÁSVALAKI tartja — nekem nincs rajta pontom.
-  const bela = await ujEember(KOINO);
+  const bela = await ujTag(KOINO);                 // D93/1: Béla is tag (különben a Szülő pontja nem számítana)
+  for (const e of tagsagiEsemenyei(bela)) await esemenyMentese(tar, e);
   const sz = await bela.tesz('GondolatLetrehozas',
     { tipus: 'Gondolat', cim: 'Szülő', meret: 10, szulo: nagyszulo });
   await esemenyMentese(tar, sz);

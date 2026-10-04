@@ -56,6 +56,8 @@
 import { erintettek, toredekAzonosito } from './szabalyok.js';
 import { esemenyEllenorzese, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
 import { pontEsemenyOnbizonyitasa, hozottBizonyitekokOnbizonyitasa } from './lancGyoker.js';
+// ⭐ D93/1: a résztvevők tagsági bizonyítéka is a csomagba kerül (a cél tartója különben nem ellenőrizhetné őket).
+import { tagsagiIndex, szerzoTagsaga, tagsagiLanc } from './tagsag.js';
 
 /** Az esemény típusa. */
 export const CSOMAG_TIPUS = 'DontesiCsomag';
@@ -69,6 +71,24 @@ export const CSOMAG_JAVASLAT_TARTALEK = 256 * 1024;
 
 /** Ami a döntés bemenete lehet (és semmi más — beágyazott csomag vagy vád sem). */
 const BELSO_TIPUSOK = new Set(['Javaslat', 'Szavazat', 'GondolatLetrehozas', 'TudatpontRendezes', 'ErtekJavaslat']);
+/** ⭐ D93/1: a tagsági lánc eseményei — csak egy résztvevő láncán lehetnek a csomagban. */
+const TAGSAGI_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', 'Profil']);
+
+/**
+ * ⭐ D93/1: a résztvevők (a bemenet szerzőinek) legrövidebb tagsági láncai — azonosító szerint egyszer (a közös ősök
+ * egyszer). A forrás a kiadó tudása; akinek a tagsága onnan nem bizonyítható, annak nem jut lánc (a cél tartójánál
+ * „függőben” marad — D19).
+ */
+function resztvevokLancai(bemenet, tudas, koino) {
+  const idx = tagsagiIndex(tudas, koino);
+  const ki = new Map();
+  for (const sz of new Set(bemenet.map((e) => e.szerzo))) {
+    const r = szerzoTagsaga(idx, sz);
+    if (!r.igen) continue;
+    for (const e of tagsagiLanc(idx, r.horgony) ?? []) ki.set(e.azonosito, e);
+  }
+  return ki;
+}
 
 export const bajt = (e) => Buffer.byteLength(JSON.stringify(e), 'utf8');
 
@@ -105,6 +125,8 @@ export function dontesBemenete(esemenyek, javaslatEsemeny, lezarasIdeje) {
     if (!eddigi || e.sorszam > eddigi.sorszam) elozmeny.set(kulcs, e);
   }
   for (const e of elozmeny.values()) ki.set(e.azonosito, e);
+  // ⭐ D93/1: és a résztvevők tagsági láncai (a döntésben csak az ellenőrzött tag számít).
+  for (const [az, e] of resztvevokLancai([...ki.values()], esemenyek, javaslatEsemeny.koino)) if (!ki.has(az)) ki.set(az, e);
 
   return [...ki.values()].sort((a, b) => (a.azonosito < b.azonosito ? -1 : a.azonosito > b.azonosito ? 1 : 0));
 }
@@ -120,7 +142,11 @@ export function csomagokra(esemenyek, korlat = CSOMAG_BAJT_KORLAT) {
   const csomagok = [];
   let aktualis = [];
   let meret = 0;
-  for (const e of esemenyek) {
+  // ⭐ D93/1: a tagsági láncok EGYBEN maradnak (a kapu darabonként ellenőrzi, hogy egy tag láncán vannak-e) — ezért
+  // mind az első darabba kerülnek, a döntés többi eseménye a korlát szerint oszlik el.
+  const tagsagiak = esemenyek.filter((e) => TAGSAGI_TIPUSOK.has(e.tipus));
+  if (tagsagiak.length) { aktualis = [...tagsagiak]; meret = tagsagiak.reduce((o, e) => o + bajt(e), 0); }
+  for (const e of esemenyek.filter((x) => !TAGSAGI_TIPUSOK.has(x.tipus))) {
     const b = bajt(e);
     if (aktualis.length && meret + b > korlat) {
       csomagok.push(aktualis);
@@ -187,12 +213,27 @@ export async function dontesiCsomagEllenorzese(e) {
   if (e.entitas !== toredekAzonosito(a.javaslat, a.cel)) return hiba('nem a cél töredékének szeletében van');
 
   const masok = new Set(kik.filter((k) => k !== a.cel));
+  // ⭐ D93/1: a tagsági események csak a csomagban lévő TAGOK legrövidebb láncain lehetnek (a csomag saját tartalmából
+  // számolva). ⚠️ Nem csak a csomag döntési eseményeinek szerzőiéin: a cél szeletében lévő résztvevők (pl. a cél
+  // tulajdonosainak szavazata) eseményei kimaradnak a csomagból, a tagsági bizonyítékuk viszont a cél tartójának is kell.
+  const tidx = tagsagiIndex(a.esemenyek, e.koino);
+  const lancokon = new Set();
+  for (const x of a.esemenyek) {
+    if (x?.tipus !== 'Belepes' && x?.tipus !== 'KoinoLetrehozas') continue;
+    for (const l of tagsagiLanc(tidx, x.azonosito) ?? []) lancokon.add(l.azonosito);
+  }
   const latott = new Set();
   for (const x of a.esemenyek) {
     if (!x || typeof x !== 'object' || Array.isArray(x)) return hiba('egy belső eleme nem esemény');
     if (latott.has(x.azonosito)) return hiba('egy eseményt kétszer hoz');
     latott.add(x.azonosito);
     if (x.koino !== e.koino) return hiba('más koinó eseményét hozza');
+    if (TAGSAGI_TIPUSOK.has(x.tipus)) {
+      if (!lancokon.has(x.azonosito)) return hiba('olyan tagsági eseményt hoz, ami egyik résztvevő láncán sincs');
+      const v = await esemenyEllenorzese(x);
+      if (!v.rendben) return hiba('egy belső eseménye nem áll meg: ' + v.ok);
+      continue;
+    }
     if (!BELSO_TIPUSOK.has(x.tipus)) return hiba('nem a döntés bemenetét hozza (' + x.tipus + ')');
     const ide = x.tipus === 'Javaslat' ? x.azonosito === a.javaslat
       : x.tipus === 'Szavazat' ? x.adat?.javaslat === a.javaslat

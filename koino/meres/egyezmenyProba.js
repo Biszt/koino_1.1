@@ -14,7 +14,7 @@ import { javaslatokSzamitasa } from '../js/allapot/javaslatSzamitas.js';
 import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVegrehajtas.js';
 import { ALLASPONT_MUVELET, toredekAzonosito } from '../js/allapot/szabalyok.js';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('AZ EGYEZMÉNY VÉGREHAJTÁSA');
 
@@ -66,7 +66,7 @@ async function eset({ muvelet = 'Modositas', valtozas = { cim: 'ÚJ CÍM' },
 
 /** A három fázis — ugyanaz, amit a `koino.js` és a `pakli.js` futtat. */
 async function kep(esemenyek, most = KESOBB) {
-  const allapot = allapotSzamitasa(esemenyek);
+  const allapot = allapotSzamitasa(await tagokkal(esemenyek));
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
   const eredmeny = await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
   return { allapot, javaslatok, ...eredmeny };
@@ -431,7 +431,7 @@ proba('⛔⛔ A BEOLVASZTOTT FORRÁS NEM „ELAKADT PONT" — a pontja átment, 
 proba('⭐⭐ D85/5: több érintettnél a TÖREDÉKEK az entitások — mindegyik a saját érintettje alatt', async () => {
   const e = await egyesitesEset({ szulok: [null, null, null] });
   // ⚠️ A végrehajtás ELŐTTI állapot: a forrásokat még nem olvasztotta be az egyezmény.
-  const allapot = allapotSzamitasa(e.esemenyek);
+  const allapot = allapotSzamitasa(await tagokkal(e.esemenyek));
   const darab = e.forrasok.length;
   const jok = e.toredekek.every((t, i) => {
     const ent = allapot.entitasok.get(t);

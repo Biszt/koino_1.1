@@ -21,7 +21,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal, emberTaggaTarban } from './probaFuttato.js';
 import {
   szovegDarabra, szovegDarabbol, szovegHivatkozasE, azonosSzoveg
 } from '../js/esemeny/szovegDarab.js';
@@ -132,8 +132,10 @@ proba('⭐⭐⭐ A D72 ÍGÉRETE: az állapot ujjlenyomata UGYANAZ, akár megvan
 });
 
 proba('⭐ A RÉGI (szöveget hordozó) ESEMÉNY UGYANÚGY SZÁMOL — és a megjelenítés darab nélkül is mutatja', async () => {
-  const { tar } = await ujKornyezet();
+  const k = await ujKornyezet();
+  const { tar } = k;
   const anna = await ujEember(KOINO);
+  await emberTaggaTarban(k.kornyezet, anna);    // D93/1: a pontja csak tagként számít
   const e = await anna.tesz('GondolatLetrehozas', { cim: 'Régi', szoveg: 'régi szöveg', meret: 10 });
   await esemenyMentese(tar, e);
   await esemenyMentese(tar, await anna.tesz('TudatpontRendezes', { entitas: e.azonosito, pont: 10 }));
@@ -152,7 +154,7 @@ const KESOBB = KEZDET + 30 * 24 * 3600 * 1000;
 const KUSZOBOK = { elfogadasiKuszob: 51, reszveteliKuszob: 0, minimumDontesiIdo: 3600, maximumDontesiIdo: 7200 };
 
 async function kep(esemenyek) {
-  const allapot = allapotSzamitasa(esemenyek);
+  const allapot = allapotSzamitasa(await tagokkal(esemenyek));
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, KESOBB);
   return { allapot, javaslatok, ...(await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok)) };
 }

@@ -30,7 +30,7 @@ import {
 import { createSocket } from 'node:dgram';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
 import { udpKapuNyitasa } from '../js/csere/udpKapu.js';
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('A Szakasz 2 VIZSGÁJA');
 
@@ -57,7 +57,7 @@ async function ment(tar, esemenyek) {
 
 /** A tár állapota és javaslatai — MINDIG ugyanarra az időpontra. */
 async function kep(tar, most = KESOBB) {
-  const allapot = allapotSzamitasa(await koinoEsemenyei(tar, KOINO));
+  const allapot = allapotSzamitasa(await tagokkal(await koinoEsemenyei(tar, KOINO)));   // D93/1: a szerzők tagsága
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
   return { allapot, javaslatok };
 }

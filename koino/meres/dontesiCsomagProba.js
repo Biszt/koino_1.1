@@ -17,7 +17,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { probaGyujtemeny } from './probaFuttato.js';
+import { probaGyujtemeny, taggaTesz } from './probaFuttato.js';
 import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar.js';
 import { esemenyMentese, lancVege, koinoEsemenyei } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa, szelet, bejelentesHelyei } from '../js/esemeny/esemeny.js';
@@ -51,6 +51,8 @@ async function helyzet() {
   const C = await ujSzereplo(tar, mappa, false);
   const D = await ujSzereplo(tar, mappa, false);
   await koinoLetrehozasa(A, 'Csomag-próba');
+  // ⭐ D93/1: a szereplők TAGOK (különben a pontjuk és a szavazatuk nem számítana).
+  for (const X of [B, C, D]) await taggaTesz(A, X);
   const g1 = (await gondolatLetrehozasa(A, { cim: 'G1' })).azonosito;
   const g2 = (await gondolatLetrehozasa(A, { cim: 'G2' })).azonosito;
   await tudatpontRendezese(A, g1, 30);
@@ -69,10 +71,15 @@ async function helyzet() {
 /** Egy szelet egyeztetett halmaza: a saját eseményei és ami oda bejelentődik. */
 const szeletben = (e, k) => szelet(e) === k || bejelentesHelyei(e).includes(k);
 
-/** A csak-Gi-nézet: a koinó születése, a Gi szelete és a Gi-es töredék szelete. */
+/**
+ * A csak-Gi-nézet: a koinó születése, a Gi szelete és a Gi-es töredék szelete — ⭐ D93: és a tagsági bizonyítékok (a
+ * résztvevők azonosság-szeletei; a tartó a tagsági csomagjukat egy szelet-kérelemmel elhozza — D93/2). A próba a
+ * DÖNTÉS ismeretét méri, nem a tagságét.
+ */
+const TAGSAGI = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', 'Profil', 'TagsagiCsomag']);
 const nezet = (esemenyek, g, j) => {
   const t = toredekAzonosito(j, g);
-  return esemenyek.filter((e) => e.tipus === 'KoinoLetrehozas' || szeletben(e, g) || szeletben(e, t));
+  return esemenyek.filter((e) => TAGSAGI.has(e.tipus) || szeletben(e, g) || szeletben(e, t));
 };
 
 /** A javaslat döntése egy eseményhalmazból, minden döntési időn túl. */
@@ -106,6 +113,24 @@ proba('⭐⭐ a csak-G1-nézet a csomaggal ugyanazt a döntést számolja, mint 
     && teljes.ismeretlenReszek.length === 0;
 });
 
+// ⭐⭐ D93/1: a csomag a résztvevők TAGSÁGI BIZONYÍTÉKÁT is hozza. A csak-G1-nézetben itt egyetlen tagsági esemény
+// sincs (csak a koinó születése, a G1 szelete és a töredéke) — a csomaggal mégis ugyanaz a döntés, mint a teljes
+// tudással; a csomag nélkül a résztvevők „függőben” vannak (a tagságuk nem ellenőrizhető).
+proba('⭐⭐ D93/1: a csomag a résztvevők TAGSÁGI bizonyítékát is hozza — tagsági események nélkül is ugyanaz a döntés', async () => {
+  const { tar, A, g1, j } = await helyzet();
+  await dontesiCsomagokKiadasa(A, { most: KESOBB() });
+  const minden = await koinoEsemenyei(tar, KOINO);
+  const t = toredekAzonosito(j, g1);
+  const csupasz = (es) => es.filter((e) => e.tipus === 'KoinoLetrehozas' || szeletben(e, g1) || szeletben(e, t));
+  const teljes = dontes(minden, j);
+  const csomaggal = dontes(csupasz(minden), j);
+  const csomagNelkulAllapot = allapotSzamitasa(csupasz(minden.filter((e) => e.tipus !== CSOMAG_TIPUS)));
+  const tagsagi = minden.filter((e) => e.tipus === CSOMAG_TIPUS && e.adat.cel === g1)
+    .flatMap((e) => e.adat.esemenyek).filter((x) => x.tipus === 'Belepes' || x.tipus === 'Meghivas');
+  return csomaggal.statusz === teljes.statusz && reszSzamok(csomaggal) === reszSzamok(teljes)
+    && tagsagi.length >= 4 && csomagNelkulAllapot.tagsagFuggoben.length > 0;
+});
+
 // ===================================
 // ⭐⭐ A DÖNTÉS ISMERETE (D85 T3, 2026-10-03) — a „nem ismert” nem hajt végre, és kimondja a saját részét
 // ===================================
@@ -119,6 +144,7 @@ proba('⭐⭐ a NEM ISMERT döntés nem hajtódik végre — és ha az ismert r�
   const A = await ujSzereplo(tar, mappa);
   const C = await ujSzereplo(tar, mappa, false);
   await koinoLetrehozasa(A, 'Ismeret');
+  await taggaTesz(A, C);   // D93/1: C tag (különben a pontja és a szavazata nem számítana)
   const g1 = (await gondolatLetrehozasa(A, { cim: 'G1' })).azonosito;
   const g2 = (await gondolatLetrehozasa(A, { cim: 'G2' })).azonosito;
   await tudatpontRendezese(A, g1, 30);

@@ -269,7 +269,7 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   const rendezettek = rendezettBemenet(csomagokKibontasa(esemenyek));
 
   const { ervenyesek, ellentmondasok } = elagazasokFeloldasa(rendezettek);
-  const { szamitok, kivetelek, nemEllenorizhetok } = szabalyokErvenyesitese(ervenyesek);
+  const { szamitok, kivetelek, nemEllenorizhetok, tagsagFuggoben } = szabalyokErvenyesitese(ervenyesek);
 
   // ----- NYERSANYAG-GYŰJTÉS -----
   const koinoAdatok = { nev: null, leiras: null };
@@ -287,6 +287,8 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
         koinoAdatok.azonosito = e.azonosito;
         // ⭐ D89/2: zárt, hacsak ki nem mondta, hogy nyílt (a mező nélküli régi koinó is zárt — D89/5).
         koinoAdatok.zart = e.adat.zart !== false;
+        // ⭐ D93/5: a koinó kötelező profil-mezői (üres: nem vár profilt).
+        koinoAdatok.profil = Array.isArray(e.adat.profil) ? [...e.adat.profil] : [];
         koinoAdatok.leiras = e.adat.leiras ?? null;
         koinoAdatok.letrehozo = e.szerzo;
         koinoAdatok.letrehozva = e.ido;
@@ -520,6 +522,8 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
     // válaszol, hogy „ki tartja EZT a gondolatot", ez pedig arra, hogy „mit mondtam ki a
     // saját láncomban". *Két kérdés, két válasz.*
     kiosztasok,
+    // ⭐ D93/1: a döntés eseményei, amiknek a szerzője nem ellenőrizhető tag — nem számítanak, de kimondjuk (D19).
+    tagsagFuggoben,
     // ⭐ D92/5: "szerző|entitás" → a nyertes pont-esemény azonosítója (az össz-pont szúrópróbájához).
     pontEsemenyek,
     // Szabályt sértő események (keret, jogosultság) — szintén jelzés, nem büntetés (D19)

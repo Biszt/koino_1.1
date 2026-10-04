@@ -84,6 +84,24 @@ function azonosito(kimenet, elozmeny) {
 
 const varj = (mp) => new Promise((t) => setTimeout(t, mp));
 
+/**
+ * ⭐ D93/1: a vendég készüléket TAGGÁ teszi a parancssorból — belép, a belépése (az azonosság-szelete) a gazdához jut,
+ * a gazda meghívja, és a meghívással együtt az azonosság-szelet visszamegy. Csak azt a szeletet viszi (a próbák
+ * szándéka, hogy ki mit tart, így nem sérül). ⚠️ A vendégnek már ismernie kell a koinót, ha a gazda nem alapító.
+ * @returns {Promise<string>} a vendég horgonya
+ */
+async function taggaTesziKeszulek(gazda, vendeg, nev = 'tag') {
+  const horgony = teljesAzonosito(await fut(vendeg, 'belep'));
+  const be = join(vendeg, nev + '-belepes.jsonl');
+  const vissza = join(gazda, nev + '-meghivas.jsonl');
+  await fut(vendeg, 'kivisz', be, horgony);
+  await fut(gazda, 'behoz', be);
+  await fut(gazda, 'meghiv', horgony);
+  await fut(gazda, 'kivisz', vissza, horgony);
+  await fut(vendeg, 'behoz', vissza);
+  return horgony;
+}
+
 /** A kiírt TELJES (43 karakteres) azonosító — a horgonyokhoz. */
 function teljesAzonosito(kimenet) {
   const talalat = kimenet.match(/[A-Za-z0-9_-]{43}/g);
@@ -235,6 +253,7 @@ proba('⭐⭐ D85/2: a MÁSIK készülék parancssori szavazata SZÁMÍT — a `
 
       await fut(egyik, 'kivisz', oda);
       await fut(masik, 'behoz', oda);
+      await taggaTesziKeszulek(egyik, masik);               // D93/1: a másik TAG (különben a szavazata nem számít)
       await fut(masik, 'pont', gondolat, '10');            // a másik is tulajdonos lesz
       await fut(masik, 'szavaz', javaslat, 'ellenez');
       await fut(masik, 'kivisz', vissza);
@@ -575,6 +594,65 @@ proba('⭐⭐ D92/1 (c): a TOVÁBBADÁS — R → P → H, a válasz lépésenk�
   });
 
 // ===================================
+// ⭐⭐ D93: A TAGSÁG A PARANCSSORBÓL — a nem tag szavazata nem számít, a meghívás után igen (2026-10-04)
+// ===================================
+//
+// A gazda profilt váró koinót hoz létre (`profil=nev`), javasol; a vendég (még nem tag) pontot tesz és ELLENEZ. ⭐ Amíg
+// nem tag: a parancs kimondja, hogy az eseménye nem számít, és a gazda állapota ELFOGADVA-t mutat (egyedül ő számít),
+// és kimondja a várakozó eseményeket. A meghívás profil nélkül NEM megy (a parancs megnevezi, mit kérj); a profil
+// után igen. ⭐ A meghívás után UGYANAZ a korábbi szavazat számít (D19: függőben volt, nem elveszett) → ELVETVE (1:1).
+// A vendég a tagsági csomagját kiadja. Viselkedést mérünk: a gazda állapotát.
+proba('⭐⭐ D93: a NEM TAG szavazata nem számít (és ezt kimondja) — a profilos meghívás után ugyanaz a szavazat számít',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const f = (nev) => join(gazda, nev);
+    try {
+      await fut(gazda, 'koino', 'Tagság-próba', 'profil=nev');
+      const g = azonosito(await fut(gazda, 'gondolat', 'EREDETI'), 'Létrejött:');
+      await fut(gazda, 'ertek', g, '51', '0', '3600', '3600');
+      const j = azonosito(await fut(gazda, 'javaslat', g, 'UJ CIM'), 'Szerkesztési javaslat beadva');
+      if (!g || !j) return false;
+      await fut(gazda, 'kivisz', f('oda.jsonl'));
+      await fut(vendeg, 'behoz', f('oda.jsonl'));
+      const pontKi = await fut(vendeg, 'pont', g, '10');
+      const szavazKi = await fut(vendeg, 'szavaz', j, 'ellenez');
+      const horgony = teljesAzonosito(await fut(vendeg, 'belep'));
+      await fut(vendeg, 'kivisz', join(vendeg, 'v1.jsonl'), 'sajat');
+      await fut(gazda, 'behoz', join(vendeg, 'v1.jsonl'));
+      const elotte = await fut(gazda, 'allapot', '1');
+
+      // A meghívás profil nélkül nem megy — a parancs megnevezi, mit kérj.
+      const profilNelkul = await fut(gazda, 'meghiv', horgony).catch((h) => String(h.message ?? h));
+      await fut(vendeg, 'profil', 'nev=Vendég Vera');
+      await fut(vendeg, 'kivisz', join(vendeg, 'v2.jsonl'), horgony);
+      await fut(gazda, 'behoz', join(vendeg, 'v2.jsonl'));
+      await fut(gazda, 'meghiv', horgony);
+      const utana = await fut(gazda, 'allapot', '1');
+      await fut(gazda, 'kivisz', f('meghivas.jsonl'), horgony);
+      await fut(vendeg, 'behoz', f('meghivas.jsonl'));
+      const tagsag = await fut(vendeg, 'tagsag');
+
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = {
+        figyelmeztet: /Nem vagy \(ellenőrzött\) tag/.test(tiszta(pontKi)) && /Nem vagy \(ellenőrzött\) tag/.test(tiszta(szavazKi)),
+        elotteElfogadva: /ELFOGADVA/.test(elotte) && /nem számít, amíg a szerzője tagsága/.test(tiszta(elotte)),
+        profilKell: /profilt vár/.test(profilNelkul),
+        utanaElvetve: /ELVETVE/.test(utana) && /👍 1 👎 1/.test(utana),
+        tagsag: /✔ tag/.test(tiszta(tagsag)) && /kiadva \(1\. szint/.test(tiszta(tagsag))
+      };
+      if (!Object.values(jo).every(Boolean)) {
+        process.stdout.write('    (D93-próba: ' + JSON.stringify(jo) + ')\n');
+        return false;
+      }
+      return true;
+    } finally {
+      await rm(gazda, { recursive: true, force: true });
+      await rm(vendeg, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //
@@ -673,6 +751,10 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
     let orjarat = null;
     try {
       await fut(A, 'koino', 'Csomag-próba');
+      // ⭐ D93/1: B TAG — a javaslat ELŐTT (a döntés 1–2 mp alatt lezárul); a csomag a tagsági láncát is viszi C-nek.
+      await fut(A, 'kivisz', f('szuletes.jsonl'));
+      await fut(B, 'behoz', f('szuletes.jsonl'));
+      await taggaTesziKeszulek(A, B);
       const g1 = azonosito(await fut(A, 'gondolat', 'ELSO'), 'Létrejött:');
       const g2 = azonosito(await fut(A, 'gondolat', 'MASIK'), 'Létrejött:');
       if (!g1 || !g2) return false;
@@ -2957,7 +3039,10 @@ proba('⭐⭐⭐ ujjlenyomat kiment → osszevet: MEGNEVEZI az eltérést, csere
     const lap = join(egyik, 'lap.json');
     try {
       await fut(egyik, 'koino', 'Vizsga koinó');
-      await fut(masik, 'koino', 'Vizsga koinó');
+      // ⭐ D93: EGY koinó (két külön alapítás két gyökér volna) — a másik a születését kapja meg, és tag lesz.
+      await fut(egyik, 'kivisz', join(egyik, 'szuletes.jsonl'));
+      await fut(masik, 'behoz', join(egyik, 'szuletes.jsonl'));
+      await taggaTesziKeszulek(egyik, masik);
 
       // ⭐ Két KÜLÖNBÖZŐ gondolat a két gépen — tehát az `entitasok` szakasznak el KELL térnie.
       await fut(egyik, 'gondolat', 'CSAK AZ EGYIKEN');

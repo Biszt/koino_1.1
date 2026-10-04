@@ -172,7 +172,12 @@ mélység-korlátja és a rövidítő meghívás kezeli). ⛔ A szabály-réteg 
 (E1–E6). ✅ **Eldőlt (D93, Csaba, 2026-10-03 — „minden javaslatodat elfogadom”):** csak az ellenőrzött tag számít a
 döntésben; a tagsági csomag a saját azonosság-szeletben (D = 64); a zárt koinó a kézfogásban (személyes aláírás +
 csomag); a 2. lépcső ugyanígy (előbb mérés); a Profil kötelező mezőkkel, a meghívás megnevezi a lenyomatát; a
-kontraszt-jelzés bemenete.
+kontraszt-jelzés bemenete. ✅ **Megépült (2026-10-04):** a tagság tiszta számítása (`tagsag.js` — a legrövidebb lánc,
+D = 64), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profil (E5; a koinó `profil=` mezői, a
+`profil` parancs, a meghívás a lenyomatot tanúsítja), és ⭐ **az E1: a szabály-réteg csak a tag pontját, javaslatát,
+szavazatát, érték javaslatát és állásfoglalását számolja** — a nem tagé `tagsagFuggoben` (az okával; nem vád, D19), és a
+meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ⏸️ Hátravan: az E3 (a zárt
+koinó a kézfogásban), az E4 (a 2. lépcső — előbb a 64. mérés), az E6 (a kontraszt-jelzés bemenete).
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
 

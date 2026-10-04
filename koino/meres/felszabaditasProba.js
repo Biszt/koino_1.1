@@ -17,7 +17,7 @@ import { szerkesztesiEgyezmenyekAlkalmazasa } from '../js/allapot/szerkesztesiVe
 import { felszabaditasiTerv, felszabaditoLepesek, felszabaditas, buliVolt, ujJegyzet,
          lancokIgazoljak, MEGULEPEDES_BULIK } from '../js/allapot/felszabaditas.js';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal, ujTag } from './probaFuttato.js';
 
 const { proba, futtatas } = probaGyujtemeny('AZ ELAKADT PONT FELSZABADÍTÁSA');
 
@@ -34,7 +34,7 @@ const KUSZOBOK = {
 
 /** Egy gondolat 100 ponttal + egy elfogadott törlési javaslat. */
 async function torlesEset({ szavazat = 'Tamogat', masodikGondolat = false } = {}) {
-  const gazda = await ujEember();
+  const gazda = await ujTag('proba', KEZDET - 1000);
   const esemenyek = [];
 
   const g = await gazda.tesz('GondolatLetrehozas', { cim: 'TÖRLENDŐ', meret: 10 }, KEZDET);
@@ -65,7 +65,7 @@ async function torlesEset({ szavazat = 'Tamogat', masodikGondolat = false } = {}
 
 /** A három fázis — ugyanaz, amit a `koino.js` és a `pakli.js` futtat. */
 async function kep(esemenyek, most = KESOBB) {
-  const allapot = allapotSzamitasa(esemenyek);
+  const allapot = allapotSzamitasa(await tagokkal(esemenyek));
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, most);
   await szerkesztesiEgyezmenyekAlkalmazasa(allapot, javaslatok);
   return allapot;
@@ -143,7 +143,7 @@ proba('⛔⛔ HA A DÖNTÉS VISSZAFORDUL, AZ ÓRA ÚJRAINDUL — és nem szabad�
   for (let i = 0; i < MEGULEPEDES_BULIK; i++) jegyzet = buliVolt(jegyzet, 1);
 
   // Most megérkezik egy addig HIÁNYZÓ, határidőn belüli ELLENSZAVAZAT (más embertől).
-  const ellenzo = await ujEember();
+  const ellenzo = await ujTag('proba', KEZDET - 1000);
   const pont = await ellenzo.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 200, kiosztva: 200 }, KEZDET);
   // ⭐ D85/2: a szavazati jog a javaslaton is pontot kíván.
@@ -172,7 +172,7 @@ proba('⛔⛔ HA A DÖNTÉS JELE VÁLTOZIK, A SZÁMLÁLÓ NULLÁRÓL INDUL', asy
 
   // Egy TÁMOGATÓ szavazat érkezik későn: a törlés marad, de a bizonyosság — és vele a
   // lezárás ideje — más lesz.
-  const tamogato = await ujEember();
+  const tamogato = await ujTag('proba', KEZDET - 1000);
   const pont = await tamogato.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);
   // ⭐ D85/2: a szavazati jog a javaslaton is pontot kíván.
@@ -299,7 +299,7 @@ proba('⭐⭐⭐ HA MINDEN GAZDA LÁNCÁT ISMEREM A LEZÁRÁS UTÁNIG: azonnal, 
 proba('⛔ EGY NÉMA GAZDA ELÉG A VÁRAKOZÁSHOZ — és megnevezzük, kire várunk', async () => {
   // Két gazda: az egyik megszólalt a lezárás után, a másik nem.
   const e = await torlesEset();
-  const masik = await ujEember();
+  const masik = await ujTag('proba', KEZDET - 1000);
 
   const masikPont = await masik.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);
@@ -317,7 +317,7 @@ proba('⛔ EGY NÉMA GAZDA ELÉG A VÁRAKOZÁSHOZ — és megnevezzük, kire vá
 
 proba('⭐ …ÉS HA A NÉMA IS MEGSZÓLAL, azonnal igazolt lesz — a próba nem vak', async () => {
   const e = await torlesEset();
-  const masik = await ujEember();
+  const masik = await ujTag('proba', KEZDET - 1000);
 
   const masikPont = await masik.tesz('TudatpontRendezes',
     { entitas: e.gondolat.azonosito, pont: 10, kiosztva: 10 }, KEZDET);

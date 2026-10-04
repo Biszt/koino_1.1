@@ -344,7 +344,9 @@ export function koinoLetrehozasa(kornyezet, nev, leiras, alapitok, beallitas = {
     // ⭐⭐ D89/2 (Csaba, 2026-10-02/03): ZÁRT vagy NYÍLT — a létrehozáskor dől el, és nem változtatható.
     // Alapból ZÁRT (a nyílthoz ki kell mondani). A zárt koinó tartalmát a készülék csak tagnak adja ki —
     // ⚠️ a betartatás az E-vel jön (a tag a kézfogásban bizonyítja magát); addig a mező ott van, de nem tilt.
-    zart: beallitas.zart !== false
+    zart: beallitas.zart !== false,
+    // ⭐ D93/5 (D28/3): a koinó kötelező profil-mezői (pl. ['nev', 'telepules']) — ha nincs, a koinó nem vár profilt.
+    ...(Array.isArray(beallitas.profil) && beallitas.profil.length ? { profil: [...beallitas.profil] } : {})
   });
 }
 

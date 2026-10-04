@@ -10,7 +10,7 @@ import { mkdtemp, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { probaGyujtemeny, ujEember } from './probaFuttato.js';
+import { probaGyujtemeny, ujEember, tagokkal } from './probaFuttato.js';
 import { atmenetiTarNyitasa, ketTarBemenete, ketTarNezet } from '../js/tar/atmenetiTar.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { esemenyMentese, koinoEsemenyei } from '../js/tar/esemenyTar.js';
@@ -88,12 +88,12 @@ proba('⭐ a két tár EGY bemenet: a tartós mind, az átmenetiből ami a tart�
 proba('⭐⭐ D75/4: a csak az átmenetiből ismert, pont nélkül látott entitás NEM tűnik el — a tartósban igen (D14)', async () => {
   const { anna, g } = await haromGondolat();
   // (a) csak az átmenetiből, egyetlen pont-esemény sem → marad, jelölve
-  const a = allapotSzamitasa([g[0]], { csakAtmeneti: new Set([g[0].azonosito]) });
+  const a = allapotSzamitasa(await tagokkal([g[0]]), { csakAtmeneti: new Set([g[0].azonosito]) });
   // (b) ugyanez a TARTÓSBÓL → a D14 elfelejti
-  const b = allapotSzamitasa([g[0]]);
+  const b = allapotSzamitasa(await tagokkal([g[0]]));
   // (c) az átmenetiből, de a pont-eseményét látjuk (0-ra vették) → a 0 pont tudás: a D14 áll
   const pont = await anna.tesz('TudatpontRendezes', { entitas: g[0].azonosito, pont: 0, kiosztva: 0 });
-  const c = allapotSzamitasa([g[0], pont], { csakAtmeneti: new Set([g[0].azonosito, pont.azonosito]) });
+  const c = allapotSzamitasa(await tagokkal([g[0], pont]), { csakAtmeneti: new Set([g[0].azonosito, pont.azonosito]) });
   return a.entitasok.get(g[0].azonosito)?.pontokIsmeretlenek === true
     && !b.entitasok.has(g[0].azonosito) && !c.entitasok.has(g[0].azonosito);
 });

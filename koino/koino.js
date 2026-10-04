@@ -104,7 +104,7 @@ import {
   // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
   kulcsparVisszatoltese
 } from './js/kulcs/kulcsTar.js';
-import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese } from './js/tar/esemenyTar.js';
+import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, entitasEsemenyei } from './js/tar/esemenyTar.js';
 // ⭐ B/2: a szelet-kulcs (az előléptetéshez).
 import { szelet } from './js/esemeny/esemeny.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
@@ -133,7 +133,9 @@ import {
   // ⭐ D82: az észlelt ellentmondások bejelentése (ismétlés nélkül).
   ellentmondasokBejelentese,
   // ⭐ D85 T3: a lezárt, több érintettes döntések csomagja (a (B): a töredék szeletébe).
-  dontesiCsomagokKiadasa
+  dontesiCsomagokKiadasa,
+  // ⭐ D93: a profil és a tagsági csomag.
+  profilMegadasa, tagsagiCsomagKiadasa
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
@@ -474,6 +476,33 @@ async function allitasAdatai(horgonyToredek) {
     throw new Error('Előbb neked is be kell lépned ebbe a koinóba: node koino/koino.js belep');
   }
   return { kit: horgonyEsemeny.szerzo, horgonya, sajatBelepes };
+}
+
+/**
+ * ⭐ D93/5: ha a koinó profilt vár, a meghívott LEGUTÓBBI profiljának lenyomata (a meghívás ezt tanúsítja); ha a
+ * koinó nem vár, null. Ha várna, de a meghívottnak nincs profilja, hibát mond (mit kérj tőle).
+ */
+async function meghivottProfilja(adatok) {
+  const { allapot } = await kepetKeszit();
+  const mezok = allapot.koino?.profil ?? [];
+  if (!mezok.length) return null;
+  const profilok = (await entitasEsemenyei(tar, KOINO, adatok.horgonya))
+    .filter((e) => e.tipus === 'Profil' && e.szerzo === adatok.kit)
+    .sort((a, b) => b.sorszam - a.sorszam);
+  if (!profilok.length) {
+    throw new Error('A koinó profilt vár (' + mezok.join(', ') + '), a meghívottnak még nincs — kérd meg:'
+      + '\n  node koino/koino.js profil ' + mezok.map((m) => m + '=...').join(' ') + '\n  és cseréljetek (vagy kivisz/behoz).');
+  }
+  return profilok[0].adat.lenyomat;
+}
+
+/** ⭐ D93/1: figyelmeztetés, ha a saját eseményem a tagságom miatt nem számít (D19: nem vád, hiány). */
+async function tagsagFigyelmeztetes() {
+  const h = await sajatHorgonyom();
+  const r = h ? await tagE(tar, KOINO, h) : { igen: false, ok: 'még nincs belépésed' };
+  if (r.igen) return;
+  kiir(SZIN.nem + '⚠️ Nem vagy (ellenőrzött) tag — ez az eseményed NEM számít a döntésben, amíg nem kapsz meghívást'
+    + ' (D93/1).' + SZIN.vege + SZIN.halvany + ' ' + r.ok + (h ? '' : ' · node koino/koino.js belep') + SZIN.vege);
 }
 
 /**
@@ -2028,6 +2057,12 @@ async function allapotKiirasa(napokMulva) {
       kiir(SZIN.nem + '⚠ nem számít: ' + k.tipus + ' — ' + k.ok + SZIN.vege);
     }
   }
+  // ⭐ D93/1: ami a szerzője tagsága miatt vár (nem vád — a bizonyíték hiányzik; amint megjön, számít).
+  if (allapot.tagsagFuggoben?.length) {
+    const szerzok = new Set(allapot.tagsagFuggoben.map((k) => k.szerzo));
+    kiir(SZIN.halvany + '⏳ ' + allapot.tagsagFuggoben.length + ' esemény nem számít, amíg a szerzője tagsága nem'
+      + ' ellenőrizhető (' + szerzok.size + ' szerző' + (szerzok.has(szerzo) ? ', köztük te' : '') + ' — D93/1)' + SZIN.vege);
+  }
 
   // ----- GONDOLATOK -----
   kiir();
@@ -2379,7 +2414,12 @@ try {
       // ⭐ D89/2: alapból ZÁRT; a nyílthoz ki kell mondani: koino "név" [leírás] nyilt
       const tobbi = ervek.slice(1);
       const nyilt = tobbi.includes('nyilt');
-      await koinoLetrehozasa(kornyezet, nev, tobbi.find((x) => x !== 'nyilt'), undefined, { zart: !nyilt });
+      // ⭐ D93/5: profil=nev,telepules — a koinó kötelező profil-mezői (a meghívás csak a profil lenyomatával érvényes).
+      const profilErv = tobbi.find((x) => x.startsWith('profil='));
+      const profil = profilErv ? profilErv.slice(7).split(',').map((m) => m.trim()).filter(Boolean) : [];
+      await koinoLetrehozasa(kornyezet, nev, tobbi.find((x) => x !== 'nyilt' && !x.startsWith('profil=')), undefined,
+        { zart: !nyilt, profil });
+      if (profil.length) kiir(SZIN.halvany + 'Kötelező profil-mezők: ' + profil.join(', ') + ' (a meghívó tanúsítja — D28/2)' + SZIN.vege);
       kiir('A koino létrejött: ' + nev + (nyilt ? ' (NYÍLT — bárki olvashatja, aki eljut egy tagjához)'
         : ' (ZÁRT — a tartalmát csak tagnak adjuk ki; a betartatás az identitás-lépéssel jön)'));
       break;
@@ -2679,6 +2719,7 @@ try {
       kiir(pont === 0
         ? 'Elvetted a tudatpontodat. Ha senki másnak nincs rajta, a gondolat eltűnik.'
         : 'Tudatpont beállítva: ' + pont + ' (' + szerep + ')');
+      await tagsagFigyelmeztetes();   // ⭐ D93/1
       break;
     }
 
@@ -2787,6 +2828,11 @@ try {
     case 'bemutatkoz':
     case 'visszavon': {
       const adatok = await allitasAdatai(ervek[0]);
+      // ⭐ D93/5: a meghívás a meghívott profiljának lenyomatát is tanúsítja (ha a koinó profilt vár).
+      if (parancs === 'meghiv') {
+        const profil = await meghivottProfilja(adatok);
+        if (profil) adatok.profil = profil;
+      }
 
       const muvelet = {
         meghiv: meghivas,
@@ -2971,6 +3017,7 @@ try {
         kiir(SZIN.halvany + '⚠️ Tartózkodásnál nincs külön ág: aki nem foglal állást, '
           + 'a főágon marad.' + SZIN.vege);
       }
+      await tagsagFigyelmeztetes();   // ⭐ D93/1
       break;
     }
 
@@ -3506,6 +3553,43 @@ try {
       break;
     }
 
+    case 'profil': {
+      // ===== ⭐⭐ D93/5: A PROFIL (D28 a D88 alakjában) — a darab sózva a fájl-tárba, az esemény csak a lenyomatot =====
+      // node koino/koino.js profil nev="Kovács Anna" telepules=Pécs
+      const mezok = {};
+      for (const e of ervek) {
+        const i = e.indexOf('=');
+        if (i > 0) mezok[e.slice(0, i)] = e.slice(i + 1);
+      }
+      const { allapot } = await kepetKeszit();
+      const varja = allapot.koino?.profil ?? [];
+      const hianyzik = varja.filter((m) => !mezok[m]);
+      if (!Object.keys(mezok).length || hianyzik.length) {
+        throw new Error('Mit írjak a profilodba?' + (varja.length ? ' (a koinó ezeket várja: ' + varja.join(', ') + ')' : '')
+          + '\n  node koino/koino.js profil ' + (varja.length ? varja : ['nev']).map((m) => m + '=...').join(' '));
+      }
+      const e = await profilMegadasa(kornyezet, mezok);
+      kiir('A profilod megvan — a lenyomata: ' + e.adat.lenyomat.slice(0, 12) + '…');
+      kiir(SZIN.halvany + 'Az esemény csak a sózott lenyomatot hordozza (D88); a név és a település a fájl-táradban él,'
+        + ' és törölhető. A meghívód ezt a lenyomatot tanúsítja (D28/2).' + SZIN.vege);
+      break;
+    }
+
+    case 'tagsag': {
+      // ===== ⭐⭐ D93: A TAGSÁGOM — a láncom mélysége, és a tagsági csomag kiadása (a saját azonosság-szeletembe) =====
+      const h = await sajatHorgonyom();
+      if (!h) { kiir(SZIN.nem + 'Még nincs belépésed: node koino/koino.js belep' + SZIN.vege); break; }
+      const r = await tagE(tar, KOINO, h);
+      kiir((r.igen ? SZIN.jo + '✔ tag' : (r.ellenorizheto ? SZIN.nem + '✘ nem tag' : SZIN.halvany + '? nem ellenőrizhető'))
+        + SZIN.vege + SZIN.halvany + '  ' + r.ok + SZIN.vege);
+      if (r.igen) {
+        const c = await tagsagiCsomagKiadasa(kornyezet);
+        kiir(SZIN.halvany + '  tagsági csomag: ' + c.ok + (c.kiadva ? ' — a saját azonosság-szeletedben; aki elkéri, az ősök'
+          + ' szeletei nélkül is ellenőrizhet (D93/2)' : '') + SZIN.vege);
+      }
+      break;
+    }
+
     case 'vallalas': {
       // ===== ⭐ B/1–B/2: MIT TARTOK — a vállalásom és az átmeneti tár (4. szabály: bele lehet látni) =====
       const { allapot } = await kepetKeszit();
@@ -4026,6 +4110,11 @@ try {
         // ⚠️ A csere UTÁN, mint a felszabadítás: a friss események már beleszámítanak. Ismételhető — ha
         // minden ott van már, nem ír semmit.
         try {
+          // ⭐ D93/2: a tagsági csomagom (ha tag lettem, vagy rövidebb láncot kaptam) — a saját azonosság-szeletembe.
+          try {
+            const tc = await tagsagiCsomagKiadasa(kornyezet);
+            if (tc.kiadva) kiir(SZIN.halvany + '  🪪 ' + ora() + ' tagsági csomag kiadva (' + tc.melyseg + '. szint)' + SZIN.vege);
+          } catch (hiba) { console.warn('a tagsági csomag kiadása nem sikerült', { ok: hiba.message }); }
           const { kiadva } = await dontesiCsomagokKiadasa(kornyezet, { csakSajat: true });
           if (kiadva.length) {
             kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
@@ -5369,6 +5458,7 @@ try {
       kiir('           hozd <azonosító> [cím] [port]   (EGY entitás elhozása)');
       kiir('           cimjegyzek [hirdet [port] | keres <az> | gyoker [darab] | hirdetes <n>]   (D91 — a DHT-n)');
       kiir('           kerelem fejlecek <az|gyoker> [cím] [port] [n] [d] · kerelem torzs <az> [cím] [port]   (D92)');
+      kiir('           profil nev=... [telepules=...] · tagsag   (D93: a profil, a tagságom és a tagsági csomag)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');

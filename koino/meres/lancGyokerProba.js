@@ -16,7 +16,7 @@ import { mkdtemp, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { probaGyujtemeny } from './probaFuttato.js';
+import { probaGyujtemeny, taggaTesz } from './probaFuttato.js';
 import { esemenyTarNyitasa, fajlBlobTarolo, lancTarolo } from '../js/tar/fajlTar.js';
 import { sajatLancEsemenyei, esemenyMentese } from '../js/tar/esemenyTar.js';
 import { esemenyLetrehozasa, esemenyEllenorzese, szelet, bejelentesHelyei } from '../js/esemeny/esemeny.js';
@@ -280,6 +280,7 @@ async function ketSzavazo() {
   const szB = Buffer.from(await crypto.subtle.exportKey('raw', kB.publicKey)).toString('base64url');
   const B = { ...A, kulcspar: kB, szerzo: szB, lancTarolo: null };
   await koinoLetrehozasa(A, 'T2');
+  await taggaTesz(A, B);                        // D93/1: B tag (különben a pontja és a szavazata nem számítana)
   const g = await gondolatLetrehozasa(A, { cim: 'G' });
   await tudatpontRendezese(A, g.azonosito, 100);
   const j = await javaslatLetrehozasa(A, { erintett: g.azonosito, muvelet: 'Modositas',
@@ -389,6 +390,7 @@ proba('⛔⛔ D85 T3 előfeltétele: a hamis bizonyítékú javaslatot a kapu el
   const kB = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
   const szB = Buffer.from(await crypto.subtle.exportKey('raw', kB.publicKey)).toString('base64url');
   const B = { ...A, kulcspar: kB, szerzo: szB, lancTarolo: null };
+  await taggaTesz(A, B);                        // D93/1: B tag — így a javaslata a JOGÁN bukik, nem a tagságán
   await tudatpontRendezese(B, g1.azonosito, 10);
   const jB = await javaslatLetrehozasa(B, { erintettek: [
     { entitas: g1.azonosito, muvelet: 'Torles', valtozas: null },
