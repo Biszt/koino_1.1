@@ -4689,3 +4689,27 @@ sérti a „végtelent”. ⭐ A válasz a meglévő szabályokban van: több me
 mélység-korlátja (`D`) felülről korlátossá teszi a bizonyítékot — a mélyen ülő becsületes tag egy közelebbi tag
 (ingyenes) meghívásával rövidít. → [`e_identitas_atvizsgalas.md`](../../docs/e_identitas_atvizsgalas.md).
 
+## 64. ⭐ A ZÁRT KOINÓ KAPUJA A DRÓTON — a személy és a tagsági csomag a kézfogásban (D93/3, 2026-10-04, a laptopon)
+
+*`zartKapuMeres.js`: egy „nincs újdonság” csere a gépen belüli UDP-résen, titkosítva, tábla-kulccsal (ahogy az
+őrjárat), és a dróton ténylegesen utazó bájtok (a nyugtákkal együtt). A tagsági csomag valódi: aláírt belépések és
+meghívások lánca az alapítóig. A kapu utánzat (az ítéletet a próbák mérik) — itt csak a forgalom a kérdés.*
+
+```
+nyílt (nincs kapu) — a mérce                                   1671 B    13 csomag
+zárt, ismert társ (a tábla-kulcsáról)                          1671 B    13 csomag     +0 B
+zárt, első találkozás, csomag nélkül                           2159 B    19 csomag   +488 B
+zárt, első találkozás, csomaggal (mélység 1, 1,8 KB)           4318 B    23 csomag  +2647 B
+zárt, első találkozás, csomaggal (mélység 5, 5,5 KB)           8619 B    29 csomag  +6948 B
+zárt, első találkozás, csomaggal (mélység 13, 12,9 KB)        17353 B    45 csomag +15682 B
+zárt, első találkozás, csomaggal (mélység 30, 28,6 KB)        35856 B    77 csomag +34185 B
+zárt, első találkozás, csomaggal (mélység 64, 60,1 KB)        72862 B   141 csomag +71191 B
+kölcsönös első találkozás (2 × mélység 13)                    32871 B    73 csomag +31200 B
+```
+
+⭐ **A lelet:** a hétköznapi csere (a kapu a társat a tábla-kulcsáról ismeri) **bájtra ugyanannyi, mint a nyílt** — a
+kapu ára csak az első találkozáskor jelentkezik, társanként egyszer: csomag nélkül +488 B (a személyes aláírás, a
+horgony és egy kör), csomaggal a lánc mélységével arányosan (~1,1 KB lépésenként a dróton). Egymillió tagnál (a 63.
+mérés szerint ~13 lépés) ~16 KB; a mélység-korlátnál (64) ~71 KB — ez a felső határ. ⭐ Ha minden cserén menne a
+személy (a D93/3 első olvasata), a „nincs újdonság” csere ~+0,4–0,5 KB-tal (~30%-kal) drágult volna — ezért kér a kapu
+csak akkor, ha nem ismeri a társat (alappillérek, elágazás 57).

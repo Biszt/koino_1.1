@@ -60,8 +60,10 @@ import { KERELEM_KORLAT } from './fajlKerelem.js';
 // ⭐ D89/1: a csere titkosítása — a kézfogás és a csomagok kriptográfiája (hálózat nélkül).
 import {
   ujEgyszeriKulcs, kezfogasCsomag, kezfogasCsomagbol, munkamenetKulcsai, csomagTitkositasa,
-  csomagKititkositasa, kezfogasAlairasEllenorzese, KF_JEL
+  csomagKititkositasa, kezfogasAlairasEllenorzese, szemelyesKezfogasEllenorzese, KF_JEL
 } from './titkositas.js';
+
+const AZONOSITO = /^[A-Za-z0-9_-]{43}$/;
 
 // Egy UDP-csomagba ennyi szöveget teszünk. Az 1200 bájt alatti csomag a legtöbb
 // hálózaton darabolás nélkül átmegy — a nagyobb csomag könnyen elvész.
@@ -396,13 +398,20 @@ async function vedettResre(halo, tarsCim, tarsPort, beallitas) {
 }
 
 /**
- * ⭐ A KÉZFOGÁS HITELESÍTÉSE a csere `CIMEK` üzenetében (`vonal.js` — az nem tud kriptográfiáról): a saját
+ * ⭐ A KÉZFOGÁS HITELESÍTÉSE a csere nyitásában (`vonal.js` — az nem tud kriptográfiáról): a saját
  * aláírásunk (ha a hívó ad aláírót), és a társ tábla-kulcsának ellenőrzése az átiraton.
+ * ⭐⭐ D93/3: ÉS A SZEMÉLY — a hívó adja a személyes aláírót (`szemelyesAlairo(atirat) → { sz, h, a }`: a szerző, a
+ * horgony és az aláírás az átiratra, a koinóval együtt), a társét itt ellenőrizzük (`kiEllenoriz`).
  */
-function kezfogasHitelesitese(res, beallitas) {
+function kezfogasHitelesitese(res, beallitas, koino = null) {
   return {
     alairas: typeof beallitas.tablaAlairo === 'function' ? beallitas.tablaAlairo(res.atirat) : null,
-    ellenoriz: (tabla, alairas) => kezfogasAlairasEllenorzese(tabla?.alairo, res.atirat, alairas)
+    ellenoriz: (tabla, alairas) => kezfogasAlairasEllenorzese(tabla?.alairo, res.atirat, alairas),
+    ki: typeof beallitas.szemelyesAlairo === 'function' && typeof koino === 'string'
+      ? beallitas.szemelyesAlairo(res.atirat) : null,
+    kiEllenoriz: (ki) => typeof koino === 'string' && !!ki && typeof ki === 'object'
+      && typeof ki.sz === 'string' && AZONOSITO.test(ki.sz) && (ki.h == null || (typeof ki.h === 'string' && AZONOSITO.test(ki.h)))
+      && szemelyesKezfogasEllenorzese(ki.sz, koino, res.atirat, ki.a)
   };
 }
 
@@ -1462,7 +1471,9 @@ export async function szeletUdpResen(halo, tarsCim, tarsPort, tar, koino, entita
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
-    const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas, beallitas.tovabb ?? {});
+    // ⭐ D93/3: a személyünk (a kézfogás átiratára aláírva) és a tagsági csomagunk — a zárt koinó kapujának.
+    const eredmeny = await szeletKapcsolaton(tar, koino, kapcsolat, entitas, beallitas.tovabb ?? {},
+      { ki: kezfogasHitelesitese(res, beallitas, koino).ki, tagsagiCsomag: beallitas.tagsagiCsomag });
     // ⚠️ Előbb kiürítés — a kérésünk nyugtája még úton lehet (ugyanaz az ok, mint a cserénél).
     await kapcsolat.kiurites();
     console.log('szeletUdpResen - VÉGE', eredmeny);
@@ -1488,7 +1499,8 @@ export async function kerelemUdpResen(halo, tarsCim, tarsPort, koino, kerelem, b
     kapcsolat.destroy(new Error('A másik fél nem válaszol (' + varakozasiIdo + ' ms)'));
   });
   try {
-    const eredmeny = await kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas);
+    const eredmeny = await kerelemKapcsolaton(kapcsolat, koino, kerelem,
+      { ...beallitas, ki: kezfogasHitelesitese(res, beallitas, koino).ki });
     await kapcsolat.kiurites();
     console.log('kerelemUdpResen - VÉGE', { fajta: kerelem.fajta, kiszolgalta: eredmeny.kiszolgalta });
     return eredmeny;
@@ -1542,7 +1554,7 @@ export async function csereUdpResen(halo, tarsCim, tarsPort, tar, koino, beallit
 
   try {
     const eredmeny = await parbeszed(kapcsolat, tar, koino,
-      { ...beallitas, kezfogas: kezfogasHitelesitese(res, beallitas) });
+      { ...beallitas, kezfogas: kezfogasHitelesitese(res, beallitas, koino) });
 
     // ⭐ ELŐBB KIÜRÍTÉS, CSAK UTÁNA ZÁRÁS. A párbeszéd akkor is véget érhet, amikor a MI
     // utolsó üzenetünk még úton van (a `parbeszed` az utolsó LENYOMAT-ra már nem vár

@@ -176,8 +176,10 @@ kontraszt-jelzés bemenete. ✅ **Megépült (2026-10-04):** a tagság tiszta sz
 D = 64), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profil (E5; a koinó `profil=` mezői, a
 `profil` parancs, a meghívás a lenyomatot tanúsítja), és ⭐ **az E1: a szabály-réteg csak a tag pontját, javaslatát,
 szavazatát, érték javaslatát és állásfoglalását számolja** — a nem tagé `tagsagFuggoben` (az okával; nem vád, D19), és a
-meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ⏸️ Hátravan: az E3 (a zárt
-koinó a kézfogásban), az E4 (a 2. lépcső — előbb a 64. mérés), az E6 (a kontraszt-jelzés bemenete).
+meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ✅ **Az E3 (2026-10-04): a zárt
+koinó a kézfogásban** — a nem tag csak a koinó születését és a két azonosság-szeletet kapja (fájlt, idegen címet nem); a
+személyt a kapu csak az ismeretlen társtól kéri (a hétköznapi csere nem drágul — 64. mérés; elágazás 57–60). ⏸️ Hátravan:
+az E4 (a 2. lépcső — előbb a mérése), az E6 (a kontraszt-jelzés bemenete).
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
 
@@ -510,3 +512,20 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     választ — különben a tartó addig próbálkozna, amíg a minták el nem kerülik a hamis leveleket), a továbbadás pedig
     nem élő kapcsolat; a nézet a közvetlen válaszok közül a „legnagyobb ellenőrzöttet” veszi · a megépítéskor, Claude ·
     `koino.js` (`valaszFogadasa`).
+57. **2026-10-04 · a személy minden kézfogásban (D93/3: „a társ a személyes kulcsával is aláírja a kézfogás átiratát és
+    megnevezi a horgonyát”)** → **csak ha a kapu nem ismeri a társat** · a tábla-kulcs a nyitásba került (korábban a
+    CIMEK-ben volt), a kapu ebből (a tábla-kulcshoz megjegyzett személyből — `azonossagok.json`, helyi, korlátos) dönt, és
+    ha nem ismeri, a CIMEK-ben kér; a bizonyítás (a személyes aláírás + a tagsági csomag) egy külön körben jön · mert
+    minden cserén ~0,4 KB volna (a „nincs újdonság” csere ~20%-a — 6. szabály), a tábla-kulcs pedig a kézfogásban már
+    hitelesített (az első találkozáskor a kettőt ugyanaz az átirat köti össze) · a megépítéskor, Claude (a D93/3 keretén
+    belül) · `vonal.js`, `koino.js` (`tarsKapuja`), 64. mérés.
+58. **2026-10-04 · a nem tagnak „csak a koinó születése és a SAJÁT azonosság-szelete jár” (D93/3)** → **és a MIÉNK is** ·
+    mert a belépéshez a két fél azonosság-szelete kell (a meghívás az övébe kerül, a meghívó lánca az enyémben van), és a
+    láncunkat a bizonyításhoz úgyis odaadjuk (a tagsági csomagban) · a megépítéskor, Claude · `koino.js` (`tarsKapuja`).
+59. **2026-10-04 · a zárt koinó kapuja a koinó minden ismerőjénél** → **csak ott, ahol a koinó születése ismert** (ahol nem,
+    nincs kapu) · mert egy tag mindig ismeri (a lánca végén van); aki nem, az vagy még nem tag (a saját belépésén kívül
+    nincs mit adnia), vagy egy születés nélküli, régi koinót tart, amit utólag nem zárhatunk be úgy, hogy senki ne kapjon
+    belőle — az „alapból zárt” (D89/2) a létrehozásé · a megépítéskor, Claude · `koino.js` (`tarsKapuja`).
+60. **2026-10-04 · a nem tag korlátozása: a szeletek (D93/3)** → **a szeletek, a fájlok ÉS a címek** (a fájl-válasz és a
+    randevú nem szolgál ki, a CIMEK csak a saját címünket viszi, DHT-gépet nem) · mert a koinó hálózata (kik vannak benne,
+    hol érhetők el) és a fájljai is a koinó tartalma · a megépítéskor, Claude · `vonal.js`, `koino.js`.

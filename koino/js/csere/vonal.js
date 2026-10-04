@@ -235,17 +235,49 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let elteroSzeletek = 0, egyeztetoUzenetek = 0;
   let ujAzonositok = [];            // ⭐ D82: a most beérkezett események (az észlelőnek)
   let kapottRaj = { vallal: [], tippek: {} };   // ⭐ D91: a társ vállalása és a raj tippjei (a hívóé)
+  let tarsKorlatozva = false;       // ⭐ D93/3: a zárt koinó kapuja a társat nem engedte be (csak a megengedett szeletek)
+  let tarsAzonossaga = null;        // ⭐ D93/3: a társ személye, ha EBBEN a kézfogásban bizonyította ({ sz, h })
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
-    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj
+    kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
+    tarsKorlatozva, tarsAzonossaga
   });
+
+  // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
+  //
+  // A kapu egy ítéletet ad: { szabad } — vagy { szabad: false, kell, szeletek }: a társ nem (ellenőrzött) tag, tehát csak a
+  // megengedett szeleteket (a koinó születése, az ő és a mi azonosság-szeletünk) egyeztetjük vele, fájlt nem adunk, és
+  // idegen címet sem. A `kell` azt mondja: kérjük a bizonyítását (a személyes aláírást és a tagsági csomagot). ⛔ Ha a
+  // kapu maga hibázik, ZÁRVA marad (a hiba nem nyithat ki egy zárt koinót).
+  const zartKapu = typeof beallitas.zartKapu === 'function' ? beallitas.zartKapu : null;
+  const kezfogas = beallitas.kezfogas ?? null;
+  const kapuItelete = async (adatok) => {
+    if (!zartKapu) return { szabad: true };
+    try {
+      const v = await zartKapu(adatok);
+      return v && typeof v === 'object' ? v : { szabad: false, kell: false, szeletek: [] };
+    } catch (hiba) {
+      console.warn('parbeszed - a zárt koinó kapuja hibázott (zárva marad)', { ok: hiba.message });
+      return { szabad: false, kell: false, szeletek: [] };
+    }
+  };
+  /** A társ bemondott személye — csak ha a személyes aláírása EBBEN a kézfogásban érvényes. */
+  const bizonyitottSzemely = (ki) => (ki && typeof ki === 'object' && typeof kezfogas?.kiEllenoriz === 'function'
+    && kezfogas.kiEllenoriz(ki) ? { sz: ki.sz, h: typeof ki.h === 'string' ? ki.h : null } : null);
+  /** Amit a bizonyításunkhoz küldünk: a személyes aláírás és a tagsági csomag (ha van). */
+  const sajatBizonyitek = async () => {
+    let csomag = null;
+    try { csomag = typeof beallitas.tagsagiCsomag === 'function' ? await beallitas.tagsagiCsomag() : null; }
+    catch (hiba) { console.warn('parbeszed - a tagsági csomag nem elérhető', { ok: hiba.message }); }
+    return { ...(kezfogas?.ki ? { ki: kezfogas.ki } : {}), ...(csomag ? { csomag } : {}) };
+  };
 
   // ===== 0. A NYITÁS =====
   //
   // ⭐ Az első szint nyitó lenyomata a résztvevő szeletek párjainak lenyomata: ha a kettőé egyezik,
   // UGYANAZT tudjuk minden közös szeletről, és a kör itt véget ér (a hétköznapi eset).
-  const parok = await szeletParok(tar, koino, reszvesz);
+  let parok = await szeletParok(tar, koino, reszvesz);
   const [[, , sajatLenyomat]] = await egyeztetesNyitasa(parok);
 
   // ===== ⭐⭐ ÉS A FÁJL-KÉRELEM IS ITT UTAZIK (5.7 / a szállítás) =====
@@ -258,10 +290,17 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ⭐ A TÜKÖR (2026-08-29, Csaba nyomán): megmondjuk a másiknak, MILYEN CÍMRŐL LÁTJUK. ⚠️ Ebből
   // semmilyen bizalom nem következik (3. szabály) — megfigyelés, nem igazság.
+  // ⭐⭐ D89/1, D93/3: A TÁBLA-KULCS A KÉZFOGÁS ALÁÍRÁSÁVAL (`aa`) — 2026-10-04 óta a NYITÁSBAN (korábban a
+  // CIMEK-ben): a zárt koinó kapuja ebből tudja meg, ismeri-e már a társat, és ha nem, a CIMEK-ben kéri a
+  // bizonyítását. Ettől a tábla-kulcs nem bemondás: aki aláírta, az vett részt EBBEN a kézfogásban.
+  const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
+    ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
   kuld({
     // ⭐ A változatot maga az üzenet neve jelzi (a régi program LENYOMAT-tal nyit) — külön mező
     // nélkül: az minden cserén utazna (6. szabály; mérve +28 bájt oda-vissza).
     uzenet: 'NYITAS', koino, lenyomat: sajatLenyomat,
+    ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
+    ...(tablaKulcs && typeof kezfogas?.alairas === 'string' ? { aa: kezfogas.alairas } : {}),
     latlak: { cim: kapcsolat.remoteAddress, port: kapcsolat.remotePort },
     // ⚠️ A JELZÉS A KÉPESSÉGRŐL SZÓL, NEM A KÉRELEMRŐL: ennélkül az a fél, akinek
     // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
@@ -276,6 +315,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⏸️ 2026-09-26 ÓTA ÉLESBEN SENKI NEM KEZD ÍGY (a TCP-s több forrás kikerült, D69/2); az ág
   // viszont szállítás-független, és a UDP-s több forrás erre épülhet. A `csereProba.js` méri.
   if (elsoUzenet.uzenet === 'FAJLKEREK' && beallitas.fajlOlvas) {
+    // ⛔ D93/3: ez az ág nem hoz személyt — zárt koinóban nem szolgál ki.
+    if (!(await kapuItelete({})).szabad) {
+      kuld({ uzenet: 'KESZ', tiltva: 'zart' });
+      return { ...eredmeny(), fajlokNala: [], tarsKorlatozva: true };
+    }
     await fajlSzeletekKiszolgalasa(sor, kuld, beallitas.fajlOlvas, elsoUzenet);
     console.log('parbeszed - VÉGE (fájl-átvitel)');
     return { ...eredmeny(), fajlokNala: [] };
@@ -289,6 +333,27 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   if (elsoUzenet.uzenet === 'KERELEM') {
     const k = kerelemAlakja(elsoUzenet);
     const kiszolgalo = beallitas.kerelemKiszolgalo ?? null;
+    // ⛔⛔ D93/3: ZÁRT KOINÓBAN CSAK TAGNAK. A kérő a kérelemben hozza a személyes aláírását (a kézfogás átiratára) és a
+    // horgonyát; ha nálunk nem ellenőrzött, egy körben elkérjük a tagsági csomagját (`KELL` → `TAGSAG`). A nem tag a
+    // megengedett szeleteket kérheti (a koinó születése, a saját és a mi azonosság-szeletünk) — mást nem.
+    if (zartKapu) {
+      const ki = bizonyitottSzemely(elsoUzenet.ki);
+      let v = await kapuItelete({ ki });
+      if (!v.szabad && v.kell && ki) {
+        kuld({ uzenet: 'KELL' });
+        const be = await sor.kovetkezo();
+        const csomag = be.uzenet === 'TAGSAG' && be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
+        v = await kapuItelete({ ki, csomag });
+      }
+      if (ki) tarsAzonossaga = ki;
+      const megengedett = k?.fajta === 'szelet' && Array.isArray(v.szeletek) && v.szeletek.includes(k.kulcs);
+      if (!v.szabad && !megengedett) {
+        kuld({ uzenet: 'KESZ', tiltva: 'zart' });
+        console.log('parbeszed - VÉGE (kérelem: zárt koinó, nem tag)', { fajta: k?.fajta ?? null });
+        return { ...eredmeny(), tarsKorlatozva: true, kerelemKiszolgalva: null, szeletKiszolgalva: null, kerelemTiltva: true };
+      }
+      if (!v.szabad) tarsKorlatozva = true;
+    }
     let kiszolgalva = null;
     // ⭐⭐ D92/1 (c): ha NEM tudjuk kiszolgálni, de a kérelem továbbadható (van még ugrás), és vállaljuk, ÁTVESSZÜK —
     // a válasz később, lépésenként jön vissza (`VALASZ`). A kérdező címét nem kapjuk meg, csak azt, akitől jött (D87).
@@ -385,6 +450,104 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     throw new Error('A társ nyitása hibás (nincs érvényes nyitó lenyomat)');
   }
 
+  // ----- ⭐⭐ D93/3: A TÁRS TÁBLA-KULCSA (a nyitásból) ÉS A ZÁRT KOINÓ KAPUJÁNAK ELSŐ ÍTÉLETE -----
+  //
+  // ⛔ D89/1: a társ tábla-kulcsa CSAK a kézfogásra tett érvényes aláírásával számít — aláírás vagy kézfogás nélkül
+  // (régi program, közbeékelődő) nincs kötés belőle. A kapu ebből (a tábla-kulcshoz megjegyzett személyből) dönt
+  // először; ha nem ismeri a társat, a CIMEK-ben kéri a bizonyítását.
+  {
+    const bemondott = oveNyitas.tabla && typeof oveNyitas.tabla === 'object' ? oveNyitas.tabla : null;
+    kapottTablaKulcs = bemondott && typeof kezfogas?.ellenoriz === 'function'
+      && kezfogas.ellenoriz(bemondott, oveNyitas.aa) ? bemondott : null;
+  }
+  let kapu = await kapuItelete({ tabla: kapottTablaKulcs });
+
+  let oKerte = false;               // ⭐ D93/3: a társ kérte-e a bizonyításunkat (a CIMEK-ben)
+
+  // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — csak UDP-címek -----
+  //
+  // ⭐ Még egy „nincs újdonság" beszélgetés is terjessze a címeket, különben a hálózat nem tudna
+  // magától bővülni. ⚠️ EZEK NEM ESEMÉNYEK: a cím múlandó körülmény, csak a vonalon utazik.
+  // ⭐ D93/3: a címek két részletben is jöhetnek — ha a kapu a társat még nem ismerte, az idegen címeket és a DHT-gépeket
+  // csak az ítélete UTÁN küldi (a bizonyítási kör végén, egy pótló CIMEK-ben); a két részlet összeadódik.
+  let idegenUdpKuldheto = [], dhtKuldheto = [];
+  const cimekBeolvasasa = (ove) => {
+    kapottDhtGepek = [...new Set([...kapottDhtGepek, ...(Array.isArray(ove.dht)
+      ? ove.dht.filter((g) => typeof g === 'string') : [])])].slice(0, IDEGEN_CIM_KORLAT);
+    kapottUdpCimek = [...kapottUdpCimek, ...(Array.isArray(ove.udp) ? ove.udp : [])
+      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
+        && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)]
+      .slice(0, CIM_KORLAT);
+  };
+  {
+    // ⚠️ LEHET FÜGGVÉNY IS: a figyelő (postaláda) hosszan fut, és a friss címek listája
+    // ablakonként más.
+    const udpForras = typeof beallitas.udpCimek === 'function'
+      ? beallitas.udpCimek() : beallitas.udpCimek;
+    const udpCimek = (Array.isArray(udpForras) ? udpForras : [])
+      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port));
+    // ⭐ A SAJÁT CÍM MINDIG ELÖL ÉS MINDIG MEGY, a többiekből legfeljebb három.
+    const sajatUdp = typeof beallitas.sajatUdpCim === 'function'
+      ? beallitas.sajatUdpCim() : (beallitas.sajatUdpCim ?? null);
+    const idegenUdp = udpCimek.filter((c) => !(sajatUdp
+      && c.hoszt === sajatUdp.hoszt && c.port === sajatUdp.port));
+    // ⭐ ÉS NÉHÁNY MEGISMERT DHT-GÉP (Csaba döntése, 2026-09-20). ⛔ D93/3: a zárt koinó nem szabad társának
+    // egyiket sem (csak a saját címünket) — a koinó hálózata is a koinó tartalma.
+    const dhtForras = typeof beallitas.dhtGepek === 'function'
+      ? beallitas.dhtGepek() : beallitas.dhtGepek;
+    const dhtGepek = kapu.szabad && Array.isArray(dhtForras) ? dhtForras : [];
+    if (kapu.kell) {
+      idegenUdpKuldheto = idegenUdp.slice(0, IDEGEN_CIM_KORLAT);
+      dhtKuldheto = Array.isArray(dhtForras) ? dhtForras : [];
+    }
+
+    kuld({
+      uzenet: 'CIMEK',
+      ...(dhtGepek.length ? { dht: dhtGepek } : {}),
+      // ⭐ D93/3: kérjük a társ bizonyítását (a személyes aláírás és a tagsági csomag a következő körben jön).
+      ...(kapu.kell ? { kell: 1 } : {}),
+      udp: [
+        ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
+        ...(kapu.szabad ? idegenUdp.slice(0, IDEGEN_CIM_KORLAT) : [])
+      ]
+    });
+    const ove = await varj('CIMEK');
+    oKerte = ove.kell === 1;
+    // ⚠️ Az alakját itt nem ellenőrizzük, csak továbbadjuk (1. szabály); a hívó ellenőriz.
+    cimekBeolvasasa(ove);
+  }
+
+  // ----- ⭐⭐ D93/3: A BIZONYÍTÁS — ha bármelyik fél kérte, egy kör -----
+  //
+  // Mindkét fél tudja, lesz-e (a két CIMEK-ből). Aki kérte, megkapja a társ személyes aláírását (a kézfogás átiratára,
+  // a koinóval együtt) és horgonyát, és ha van, a tagsági csomagját — ebből a kapu végleg dönt. ⭐ A kapu a tábla-kulcs
+  // és a személy kötését megjegyzi, így a következő cserén már nem kér (a hétköznapi csere nem drágul).
+  if (kapu.kell || oKerte) {
+    kuld({ uzenet: 'TAGSAG', ...(oKerte ? await sajatBizonyitek() : {}) });
+    const be = await varj('TAGSAG');
+    if (kapu.kell) {
+      const ki = bizonyitottSzemely(be.ki);
+      const csomag = be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
+      kapu = await kapuItelete({ tabla: kapottTablaKulcs, ki, csomag });
+      if (ki) tarsAzonossaga = ki;
+      // ⭐ A címek pótlása: ha az ítélet beengedte, most megy a többi címünk (ha nem, üres — a társ vár rá).
+      kuld({ uzenet: 'CIMEK', udp: kapu.szabad ? idegenUdpKuldheto : [],
+        ...(kapu.szabad && dhtKuldheto.length ? { dht: dhtKuldheto } : {}) });
+    }
+    if (oKerte) cimekBeolvasasa(await varj('CIMEK'));
+  }
+
+  // ----- ⛔⛔ D93/3: A KORLÁTOZÁS — a nem szabad társsal csak a megengedett szeleteket egyeztetjük -----
+  //
+  // ⚠️ A nyitó lenyomat (a teljes halmazé) már elment — a két fél ebből dönti el, ki nyit, ezért az marad; az egyeztetés
+  // viszont a megengedett szeletek párjain fut (a társ a mi lenyomatunkat csak „eltér”-jelnek látja).
+  const korlat = kapu.szabad ? null : new Set((Array.isArray(kapu.szeletek) ? kapu.szeletek : []).filter(ervenyesKulcs));
+  if (korlat) {
+    tarsKorlatozva = true;
+    parok = await szeletParok(tar, koino, (k) => korlat.has(k) && reszvesz(k));
+  }
+  const korlatonBelul = (k) => !korlat || korlat.has(k);
+
   // ----- ⭐⭐ A FÁJL-KÉRELEM MEGVÁLASZOLÁSA (5.7) -----
   //
   // ⛔ CSAK AMIT KÉRDEZTEK: a teljes fájl-listám elárulná, **mit néztem meg** (D6).
@@ -392,7 +555,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ugyanúgy lát — itt a két képesség-jelzés együtt (mérve, 2026-09-13).
   if (oveNyitas.fajlCsere && !!beallitas.fajlValasz) {
     try {
-      const van = await beallitas.fajlValasz(oveNyitas.fajlKerek ?? []);
+      // ⛔ D93/3: a zárt koinó nem szabad társának fájlt nem adunk (a kérdés ettől még elhangzik — szimmetria).
+      const van = korlat ? [] : await beallitas.fajlValasz(oveNyitas.fajlKerek ?? []);
       kuld({ uzenet: 'FAJLOK', van });
     } catch (hiba) {
       // ⚠️ A fájl-réteg hibája NE döntse el az esemény-cserét: a két réteg külön él (D3).
@@ -406,59 +570,6 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     fajlokNala = Array.isArray(ove.van)
       ? [...new Set(ove.van)].filter((lenyomat) => kerdeztuk.has(lenyomat))
       : [];
-  }
-
-  // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — csak UDP-címek -----
-  //
-  // ⭐ Még egy „nincs újdonság" beszélgetés is terjessze a címeket, különben a hálózat nem tudna
-  // magától bővülni. ⚠️ EZEK NEM ESEMÉNYEK: a cím múlandó körülmény, csak a vonalon utazik.
-  {
-    // ⚠️ LEHET FÜGGVÉNY IS: a figyelő (postaláda) hosszan fut, és a friss címek listája
-    // ablakonként más.
-    const udpForras = typeof beallitas.udpCimek === 'function'
-      ? beallitas.udpCimek() : beallitas.udpCimek;
-    const udpCimek = (Array.isArray(udpForras) ? udpForras : [])
-      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port));
-    // ⭐ A SAJÁT CÍM MINDIG ELÖL ÉS MINDIG MEGY, a többiekből legfeljebb három.
-    const sajatUdp = typeof beallitas.sajatUdpCim === 'function'
-      ? beallitas.sajatUdpCim() : (beallitas.sajatUdpCim ?? null);
-    const idegenUdp = udpCimek.filter((c) => !(sajatUdp
-      && c.hoszt === sajatUdp.hoszt && c.port === sajatUdp.port));
-    // ⭐⭐⭐ A TÁBLA-KULCS IS ITT UTAZIK (2026-09-20): a KÖTÉS azonosítója — ⛔ nem az azonosságunk.
-    const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
-      ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
-    // ⭐ ÉS NÉHÁNY MEGISMERT DHT-GÉP (Csaba döntése, 2026-09-20).
-    const dhtForras = typeof beallitas.dhtGepek === 'function'
-      ? beallitas.dhtGepek() : beallitas.dhtGepek;
-    const dhtGepek = Array.isArray(dhtForras) ? dhtForras : [];
-
-    // ⭐⭐ D89/1: A TÁBLA-KULCS A KÉZFOGÁS ALÁÍRÁSÁVAL utazik (`aa`) — a hívó (a rés-réteg) adja, ez a fájl
-    // nem tud kriptográfiáról. Ettől a tábla-kulcs nem bemondás: aki aláírta, az vett részt EBBEN a
-    // kézfogásban, tehát egy közbeékelődő nem adhatja ki magát a társnak.
-    const kezfogas = beallitas.kezfogas ?? null;
-    kuld({
-      uzenet: 'CIMEK',
-      ...(tablaKulcs ? { tabla: tablaKulcs } : {}),
-      ...(tablaKulcs && typeof kezfogas?.alairas === 'string' ? { aa: kezfogas.alairas } : {}),
-      ...(dhtGepek.length ? { dht: dhtGepek } : {}),
-      udp: [
-        ...(sajatUdp ? [{ hoszt: sajatUdp.hoszt, port: sajatUdp.port, kor: 0 }] : []),
-        ...idegenUdp.slice(0, IDEGEN_CIM_KORLAT)
-      ]
-    });
-    const ove = await varj('CIMEK');
-    // ⚠️ Az alakját itt nem ellenőrizzük, csak továbbadjuk (1. szabály); a hívó ellenőriz.
-    // ⛔ D89/1: a társ tábla-kulcsa CSAK a kézfogásra tett érvényes aláírásával számít — aláírás vagy
-    // kézfogás nélkül (régi program, közbeékelődő) nincs kötés belőle.
-    const bemondott = ove.tabla && typeof ove.tabla === 'object' ? ove.tabla : null;
-    kapottTablaKulcs = bemondott && typeof kezfogas?.ellenoriz === 'function'
-      && kezfogas.ellenoriz(bemondott, ove.aa) ? bemondott : null;
-    kapottDhtGepek = Array.isArray(ove.dht)
-      ? ove.dht.filter((g) => typeof g === 'string').slice(0, IDEGEN_CIM_KORLAT) : [];
-    kapottUdpCimek = (Array.isArray(ove.udp) ? ove.udp : [])
-      .filter((c) => c && typeof c.hoszt === 'string' && Number.isInteger(c.port)
-        && c.port > 0 && c.port < 65536 && Number.isInteger(c.kor) && c.kor >= 0)
-      .slice(0, CIM_KORLAT);
   }
 
   if (oveNyitas.lenyomat === sajatLenyomat) {
@@ -505,9 +616,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     return lista;
   };
   // ⭐ Az ő „nálam"-ja nálam „nálad", és fordítva.
-  const mindketten = new Set([...sajatLelet.mindketten, ...kulcsLista(oveLelet.mindketten)]);
-  const csakNalam = new Set([...sajatLelet.nalam, ...kulcsLista(oveLelet.nalad)]);
-  const csakNala = new Set([...sajatLelet.nalad, ...kulcsLista(oveLelet.nalam)]);
+  // ⛔ D93/3: a társ által bemondott szelet-kulcsokat is a megengedettekre szűkítjük — különben egy nem tag az ELTERO
+  // `nalad` listájában akármelyik szeletet „kérhetné”.
+  const mindketten = new Set([...sajatLelet.mindketten, ...kulcsLista(oveLelet.mindketten)].filter(korlatonBelul));
+  const csakNalam = new Set([...sajatLelet.nalam, ...kulcsLista(oveLelet.nalad)].filter(korlatonBelul));
+  const csakNala = new Set([...sajatLelet.nalad, ...kulcsLista(oveLelet.nalam)].filter(korlatonBelul));
 
   // ===== 3. A RÉSZVÉTEL — ki melyik eltérő szeletből marad ki =====
   const mind = new Set([...mindketten, ...csakNalam, ...csakNala]);
@@ -937,16 +1050,21 @@ export async function fajlHozatala(blob, koino, lenyomat, kapcsolatNyitas, beall
  * @param {string} entitas
  * @returns {Promise<{entitas: string, kapott: number, uj: number, bajtKuldott: number, bajtKapott: number}>}
  */
-export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb = {}) {
+export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb = {}, azonossag = {}) {
   const sor = uzenetSor(kapcsolat);
+  // ⭐ D93/3: a személyünk (`azonossag.ki` — a rés-réteg írja alá a kézfogás átiratára) — a zárt koinó kapujának.
   kapcsolat.write(JSON.stringify({ uzenet: 'KERELEM', koino, fajta: 'szelet', kulcs: entitas,
-    ...(tovabb.az ? { az: tovabb.az, htl: tovabb.htl } : {}) }) + '\n');
+    ...(tovabb.az ? { az: tovabb.az, htl: tovabb.htl } : {}),
+    ...(azonossag.ki ? { ki: azonossag.ki } : {}) }) + '\n');
 
   const erkezett = [];
   let atvette = false;
+  let tiltva = false;
   for (;;) {
     const uzenet = await sor.kovetkezo();
-    if (uzenet.uzenet === 'KESZ') break;
+    if (uzenet.uzenet === 'KESZ') { tiltva = uzenet.tiltva === 'zart'; break; }
+    // ⭐ D93/3: a társ nem tud ellenőrizni minket — a tagsági csomagunkkal felelünk.
+    if (uzenet.uzenet === 'KELL') { kapcsolat.write(JSON.stringify(await tagsagValasz(azonossag)) + '\n'); continue; }
     if (uzenet.uzenet === 'ESEMENY') erkezett.push(uzenet.esemeny);
     // ⭐ D92/1 (c): a társ nem tartja, de továbbadja — a válasz később, `VALASZ`-ként jön.
     if (uzenet.uzenet === 'ATVESZEM') atvette = true;
@@ -960,6 +1078,7 @@ export async function szeletKapcsolaton(tar, koino, kapcsolat, entitas, tovabb =
   const eredmeny = {
     entitas,
     atvette,
+    ...(tiltva ? { tiltva: true } : {}),
     ...(tar ? {} : { esemenyek: erkezett }),
     kapott: erkezett.length,
     uj: beolvasztva.uj,
@@ -987,11 +1106,13 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   const sor = uzenetSor(kapcsolat);
   const kuld = (u) => kapcsolat.write(JSON.stringify(u) + '\n');
   kuld({ uzenet: 'KERELEM', koino, fajta: kerelem.fajta, kulcs: kerelem.kulcs, n: kerelem.n, d: kerelem.d,
-    ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}) });
-  // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön.
+    ...(kerelem.az ? { az: kerelem.az, htl: kerelem.htl } : {}),
+    ...(beallitas.ki ? { ki: beallitas.ki } : {}) });
+  // A NYITAS-t (és bármi mást) átlépjük, amíg a válasz meg nem jön. ⭐ D93/3: a KELL-re a tagsági csomagunk megy.
   let u;
   for (;;) {
     u = await sor.kovetkezo();
+    if (u.uzenet === 'KELL') { kuld(await tagsagValasz(beallitas)); continue; }
     if (['FEJLECEK', 'TORZS', 'KESZ', 'ATVESZEM'].includes(u.uzenet)) break;
   }
   const bajt = () => ({ bajtKuldott: kapcsolat.bytesWritten, bajtKapott: kapcsolat.bytesRead });
@@ -1000,7 +1121,7 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
     for (;;) { const v = await sor.kovetkezo(); if (v.uzenet === 'KESZ') break; }
     return { kiszolgalta: false, atvette: true, ...bajt() };
   }
-  if (u.uzenet === 'KESZ') return { kiszolgalta: false, ...bajt() };
+  if (u.uzenet === 'KESZ') return { kiszolgalta: false, ...(u.tiltva === 'zart' ? { tiltva: true } : {}), ...bajt() };
 
   if (u.uzenet === 'FEJLECEK') {
     const valasz = u.valasz;
@@ -1027,6 +1148,14 @@ export async function kerelemKapcsolaton(kapcsolat, koino, kerelem, beallitas = 
   }
   try { kuld({ uzenet: 'KESZ' }); } catch { /* zárt */ }
   return { kiszolgalta: true, lenyomatok, fajlok, ...bajt() };
+}
+
+/** ⭐ D93/3: a `KELL`-re adott válasz — a tagsági csomagunk (ha van; ha nincs, üresen — a társ így is dönt). */
+async function tagsagValasz(azonossag) {
+  let csomag = null;
+  try { csomag = typeof azonossag?.tagsagiCsomag === 'function' ? await azonossag.tagsagiCsomag() : null; }
+  catch (hiba) { console.warn('tagsagValasz - a tagsági csomag nem elérhető', { ok: hiba.message }); }
+  return { uzenet: 'TAGSAG', ...(csomag ? { csomag } : {}) };
 }
 
 /**

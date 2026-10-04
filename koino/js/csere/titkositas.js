@@ -19,8 +19,12 @@
 //   2. A HITELESÍTÉS (már titkosítva, a csere `CIMEK` üzenetében — `vonal.js`): a tábla-kulcs mellé az
 //      aláíró (Ed25519) aláírása a kézfogás ÁTIRATÁRA (`kezfogasAlairasa`). Ettől a tábla-kulcs nem bemondás:
 //      aki aláírta, az vett részt EBBEN a kézfogásban — egy közbeékelődő nem tud a társ nevében aláírni.
-//      ⚠️ Az első találkozásnál a kulcsot elfogadjuk és a kötés megjegyzi (mint az SSH); a személyhez kötés
-//      (a személyes kulccsal aláírt kézfogás) az E-vel jön, a zárt koinóknál.
+//      ⚠️ Az első találkozásnál a kulcsot elfogadjuk és a kötés megjegyzi (mint az SSH).
+//   3. ⭐⭐ A SZEMÉLY (D93/3, az E3 — 2026-10-04): zárt koinóban, ha a társ még nem ismert, a SZEMÉLYES kulcsával
+//      (az azonosságával — `kulcs.json`) is aláírja az átiratot, a koinó azonosítójával együtt
+//      (`szemelyesKezfogasAlairasa`), és megnevezi a horgonyát — ettől a „ki vagy” nem bemondás: más nem tudja a
+//      kulcsa nélkül kiadni magát egy tagnak. A tábla-kulcs és a személy kötését a hívó megjegyzi (a következő
+//      cserén már nem kell).
 //
 // ⚠️ MIÉRT NEM A KOPOGÁSBAN UTAZIK AZ EGYSZERI KULCS: a kapu a társat "cím:port" szerint könyveli, a mobil NAT
 // portot vált (32. mérés), a kopogás pedig másodpercenként ismétlődik — a kulcs-könyvelés ott törékeny volna.
@@ -179,17 +183,51 @@ export function kezfogasAlairasa(tablaLeiras, atirat) {
   return sign(null, ALAIRT(atirat), kulcs).toString('base64url');
 }
 
+// ===================================
+// ⭐⭐ A SZEMÉLY — a személyes kulcs aláírja a kézfogás átiratát (D93/3)
+// ===================================
+//
+// ⚠️ Más előtag, mint a tábla-kulcsé, ÉS a koinó azonosítója is benne van: egy aláírás így se másik szerepben
+// (tábla-kulcs, esemény), se másik koinóban nem használható fel újra.
+
+const SZEMELYES = (koino, atirat) => Buffer.concat([Buffer.from('koino-kezfogas-szemely-1|' + koino + '|'), atirat]);
+
+/**
+ * A saját személyes aláírásunk a kézfogás átiratára.
+ * @param {Object} privatJwk - a személyes kulcs titkos fele JWK-ban (`kulcsTar.js`: `kulcsparLeirasa().privatKulcs`)
+ * @param {string} koino
+ * @param {Buffer} atirat
+ * @returns {string} base64url
+ */
+export function szemelyesKezfogasAlairasa(privatJwk, koino, atirat) {
+  const kulcs = createPrivateKey({ key: privatJwk, format: 'jwk' });
+  return sign(null, SZEMELYES(koino, atirat), kulcs).toString('base64url');
+}
+
+/**
+ * A társ személyes aláírása a kézfogás átiratára — a szerző (a nyilvános kulcsa, 43 jel) a bemondás, az aláírás a
+ * bizonyíték.
+ * @returns {boolean}
+ */
+export function szemelyesKezfogasEllenorzese(szerzo, koino, atirat, alairas) {
+  return kezfogasAlairasEllenorzeseNyers(szerzo, SZEMELYES(koino, atirat), alairas);
+}
+
+function kezfogasAlairasEllenorzeseNyers(nyilvanos, uzenet, alairas) {
+  try {
+    if (typeof nyilvanos !== 'string' || typeof alairas !== 'string') return false;
+    const kulcs = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: nyilvanos }, format: 'jwk' });
+    return verify(null, uzenet, kulcs, Buffer.from(alairas, 'base64url'));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A társ aláírása a kézfogás átiratára — az ő bemondott aláíró kulcsával.
  * @param {string} alairoNyilvanos - base64url (43 jel)
  * @returns {boolean}
  */
 export function kezfogasAlairasEllenorzese(alairoNyilvanos, atirat, alairas) {
-  try {
-    if (typeof alairoNyilvanos !== 'string' || typeof alairas !== 'string') return false;
-    const kulcs = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: alairoNyilvanos }, format: 'jwk' });
-    return verify(null, ALAIRT(atirat), kulcs, Buffer.from(alairas, 'base64url'));
-  } catch {
-    return false;
-  }
+  return kezfogasAlairasEllenorzeseNyers(alairoNyilvanos, ALAIRT(atirat), alairas);
 }

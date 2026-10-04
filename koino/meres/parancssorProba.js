@@ -313,6 +313,7 @@ proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba 
       const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
       await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
       await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));      // a vendég csak a koinó születését ismeri
+      await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
       figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
         env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
@@ -369,6 +370,7 @@ proba('⭐⭐ D91: a csere után a két tartó egymást jegyzi a raj-jegyzékben
       if (!g) return false;
       await fut(egyik, 'kivisz', join(egyik, 'mind.jsonl'));
       await fut(masik, 'behoz', join(egyik, 'mind.jsonl'));
+      await taggaTesziKeszulek(egyik, masik);   // ⭐ D93/3: zárt koinó — a masik TAG (különben csak a születést kapná)
       const gTeljes = (await readFile(join(egyik, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean)
         .map((x) => JSON.parse(x)).find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
       await fut(egyik, 'pont', g, '20');          // mindkettő vállalja, és a pont-eseményük a másiknál nincs meg
@@ -413,6 +415,7 @@ proba('⭐⭐ D92: a `kerelem fejlecek` az átmeneti tárba hozza a fejlécet (m
       const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
       await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
       await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));
+      await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
       figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
         env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
@@ -479,6 +482,7 @@ proba('⭐⭐ D92/1: a KOPOGTATÁS végig — a cím nélküli kérés függő l
       const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
       await fut(H, 'kivisz', join(H, 'k.jsonl'), koinoTeljes);
       await fut(R, 'behoz', join(H, 'k.jsonl'));
+      await taggaTesziKeszulek(H, R);   // ⭐ D93/3: zárt koinó — a R TAG (különben csak a születést kapná)
 
       // 1. R kapuja fut (az őrjárat felírja a portját), és R felveszi a cím nélküli kérelmet.
       let rKimenet = '';
@@ -554,6 +558,8 @@ proba('⭐⭐ D92/1 (c): a TOVÁBBADÁS — R → P → H, a válasz lépésenk�
       await fut(H, 'kivisz', join(H, 'k.jsonl'), koinoTeljes);
       await fut(P, 'behoz', join(H, 'k.jsonl'));
       await fut(R, 'behoz', join(H, 'k.jsonl'));
+      await taggaTesziKeszulek(H, P);   // ⭐ D93/3: zárt koinó — a P TAG (különben csak a születést kapná)
+      await taggaTesziKeszulek(H, R);   // ⭐ D93/3: zárt koinó — a R TAG (különben csak a születést kapná)
       await fut(P, 'tars', '127.0.0.1', String(PH), 'H');
       await fut(R, 'tars', '127.0.0.1', String(PP), 'P');
       await fut(R, 'kerelem', 'szelet', gTeljes, helyben);
@@ -653,6 +659,94 @@ proba('⭐⭐ D93: a NEM TAG szavazata nem számít (és ezt kimondja) — a pro
   });
 
 // ===================================
+// ⭐⭐ D93/3: A ZÁRT KOINÓ A KÉZFOGÁSBAN — a nem tag csak a születést és az azonosság-szeleteket kapja (2026-10-04)
+// ===================================
+//
+// A gazda zárt koinót hoz létre (az alapérték) és egy gondolatot; a vendég belép, és egy csere-kört fut vele. ⭐ Amíg nem
+// tag: a koinó születését megkapja, a gondolatot NEM — a gazda viszont megkapja a vendég belépését (az ő azonosság-
+// szelete jár neki), tehát meghívhatja. A meghívás utáni csere-körben a vendég mindent megkap (a gazda a tábla-kulcsáról
+// már ismeri: a személyét az első körben a kézfogásban bizonyította). A gazda ismert címeit is csak tagként kapja meg.
+// ⭐ Ellenpróba: NYÍLT koinóban a belépés nélküli
+// vendég is azonnal mindent megkap — tehát a zártság az, ami visszatart. Viselkedést mérünk: a vendég lemezét.
+proba('⭐⭐ D93/3: ZÁRT KOINÓ — a nem tag csak a születést kapja, a gazda az ő belépését; a meghívás után mindent (nyílt koinóban azonnal)',
+  async () => {
+    const gazda = await ujKeszulek();
+    const vendeg = await ujKeszulek();
+    const nyGazda = await ujKeszulek();
+    const nyVendeg = await ujKeszulek();
+    const lemezen = async (hely, szoveg) => (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .includes(szoveg);
+    try {
+      await fut(gazda, 'koino', 'Zárt próba');
+      await fut(gazda, 'gondolat', 'TITKOS GONDOLAT');
+      // A gazda ismer egy friss címet (mintha az imént fúrt volna) — a koinó hálózata is a koinó tartalma.
+      const idegenCim = () => writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
+        cimek: [{ hoszt: '203.0.113.55', port: 41555, mikor: Date.now() }] }), 'utf8');
+      const cimetKapott = async () => (await readFile(join(vendeg, 'udpcimek.json'), 'utf8').catch(() => ''))
+        .includes('203.0.113.55');
+      await idegenCim();
+      const horgony = teljesAzonosito(await fut(vendeg, 'belep'));
+      await csereKor(gazda, vendeg, 7691);
+      const elotte = {
+        szuletes: await lemezen(vendeg, 'Zárt próba'),
+        gondolat: await lemezen(vendeg, 'TITKOS GONDOLAT'),
+        belepesAGazdanal: await lemezen(gazda, horgony),
+        cimElotte: await cimetKapott()
+      };
+      const meghivas = await fut(gazda, 'meghiv', horgony);
+      await idegenCim();
+      await csereKor(gazda, vendeg, 7691);
+      const utana = await lemezen(vendeg, 'TITKOS GONDOLAT');
+      const cimUtana = await cimetKapott();
+
+      // Ellenpróba: nyílt koinó, belépés nélküli vendég.
+      await fut(nyGazda, 'koino', 'Nyílt próba', 'nyilt');
+      await fut(nyGazda, 'gondolat', 'NYILT GONDOLAT');
+      await csereKor(nyGazda, nyVendeg, 7692);
+      const nyilt = await lemezen(nyVendeg, 'NYILT GONDOLAT');
+
+      const jo = { ...elotte, meghivva: !/Hiba|hiba/.test(meghivas), utana, cimUtana, nyilt };
+      const elvart = jo.szuletes && !jo.gondolat && jo.belepesAGazdanal && !jo.cimElotte && jo.meghivva && jo.utana
+        && jo.cimUtana && jo.nyilt;
+      if (!elvart) process.stdout.write('    (zárt koinó: ' + JSON.stringify(jo) + ')\n');
+      return elvart;
+    } finally {
+      for (const h of [gazda, vendeg, nyGazda, nyVendeg]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ⭐ A TAGSÁGI CSOMAG A KÉZFOGÁSBAN: két tag, akik egymás láncát NEM tartják (mindkettőjüket az alapító hívta be, a kézi úton,
+// csak a saját szeletükkel) — az első csere-körben a tagsági csomagjukkal bizonyítanak, és B gondolata D-hez ér. ⛔ Rontás:
+// csomag nélkül D nem tudná ellenőrizni B-t (és fordítva), és a gondolat nem érne át.
+proba('⭐⭐ D93/3: A TAGSÁGI CSOMAG A KÉZFOGÁSBAN — két tag, aki a másik láncát nem tartja, az első körben bizonyít, és a gondolat átér',
+  async () => {
+    const A = await ujKeszulek();
+    const B = await ujKeszulek();
+    const D = await ujKeszulek();
+    const lemezen = async (hely, szoveg) => (await readFile(join(hely, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => ''))
+      .includes(szoveg);
+    try {
+      await fut(A, 'koino', 'Csomag-próba');
+      await fut(A, 'kivisz', join(A, 'szuletes.jsonl'));          // csak a születés (még semmi más nincs)
+      await fut(B, 'behoz', join(A, 'szuletes.jsonl'));
+      await fut(D, 'behoz', join(A, 'szuletes.jsonl'));
+      await taggaTesziKeszulek(A, B, 'b');
+      await taggaTesziKeszulek(A, D, 'd');
+      const tagsagB = await fut(B, 'tagsag');                       // kiadja a csomagját
+      await fut(D, 'tagsag');
+      await fut(B, 'gondolat', 'B GONDOLATA');
+      await csereKor(B, D, 7693);
+      const atert = await lemezen(D, 'B GONDOLATA');
+      const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+      const jo = { csomag: /kiadva \(1\. szint/.test(tiszta(tagsagB)), atert };
+      if (!(jo.csomag && jo.atert)) process.stdout.write('    (csomag-próba: ' + JSON.stringify(jo) + ')\n');
+      return jo.csomag && jo.atert;
+    } finally {
+      for (const h of [A, B, D]) await rm(h, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91/3: A CÍMJEGYZÉK A DHT-N — a hirdetés, a vakítás, és a `hozd` cím nélkül (2026-10-03)
 // ===================================
 //
@@ -681,6 +775,7 @@ proba('⭐⭐ D91/3: a címjegyzék a DHT-n — csak a beállítással hirdet sz
       const koinoTeljes = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
       await fut(gazda, 'kivisz', join(gazda, 'k.jsonl'), koinoTeljes);
       await fut(vendeg, 'behoz', join(gazda, 'k.jsonl'));      // a vendég csak a koinó születését ismeri
+      await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
       // (1) Alapból csak a gyökér-darab megy ki.
       const hirdetes1 = await fut(gazda, 'cimjegyzek', 'hirdet', String(port), dht);
@@ -1153,12 +1248,12 @@ proba('⭐⭐ AZ ELLENTMONDÁS A KÉZI ÚTON — az ép vád a másik készülé
 // (a vádolt azonosság-szeletébe), és az `ellenoriz` nem ismétli. Viselkedés: a lemez.
 
 /** Egy csaló koinója a lemezen: alapítás, egy gondolat, egy pont — és egy hazug bemondás (D81). */
-async function csaloKoino(hely) {
+async function csaloKoino(hely, beallitas = {}) {
   const tar = await esemenyTarNyitasa('sajat', hely);
   const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
   const k = { koino: 'sajat', tar, darabTar: fajlBlobTarolo('sajat', hely), kulcspar,
     szerzo: Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url') };
-  await koinoLetrehozasa(k, 'Csalo koino');
+  await koinoLetrehozasa(k, 'Csalo koino', undefined, undefined, beallitas);
   const g = await gondolatLetrehozasa(k, { cim: 'Egy gondolat' });
   await tudatpontRendezese(k, g.azonosito, 30);
   const lanc = await sajatLancEsemenyei(tar, k.szerzo);
@@ -1201,7 +1296,8 @@ proba('⭐⭐ AZ ÉSZLELŐ A CSERE UTÁN — egy valódi `figyel` + `csere` kör
   const csalo = await ujKeszulek();
   const vevo = await ujKeszulek();
   try {
-    await csaloKoino(csalo);
+    // ⭐ D93/3: NYÍLT koinó — az észlelő a tárgy, nem a zárt koinó kapuja (a vevő nem tag).
+    await csaloKoino(csalo, { zart: false });
     await csereKor(csalo, vevo, 7981);
     const nala = await ellentmondasokALemezen(vevo);
     return nala.length === 1 && nala[0].adat.fajta === 'bemondas';
@@ -1622,6 +1718,7 @@ proba('⭐⭐⭐ A BULIN KIDERÜL, KINÉL VAN MEG a hiányzó fájl', async () =
   let felulet = null;
   try {
     await fut(gazda, 'koino', 'Próba koinó');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
     // ----- A gazda feltölt egy képet, és készít hozzá egy gondolatot -----
     felulet = await feluletet(gazda, 7522);
@@ -1671,6 +1768,7 @@ proba('⛔ A fájl-kör NEM akasztja meg a rendes cserét (a két réteg külön
   let figyelo = null;
   try {
     await fut(gazda, 'koino', 'Próba koinó');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
     await fut(gazda, 'gondolat', 'KÉP NÉLKÜLI GONDOLAT');
 
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
@@ -1714,6 +1812,7 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
     let felulet = null;
     try {
       await fut(gazda, 'koino', 'Próba koinó');
+      await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
       // ----- Egy TÖBB SZELETNYI kép (150 KB ≈ 3 szelet) -----
       felulet = await feluletet(gazda, 7542);
@@ -1790,6 +1889,7 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT MAGÁTÓL ELHOZZA A KÉPET — kézi parancs nélk
   let figyelo = null, felulet = null, orjarat = null;
   try {
     await fut(gazda, 'koino', 'Próba koinó');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
     // Egy egyszeletnyi kép — a több szeletet a fenti próba méri.
     felulet = await feluletet(gazda, 7547);
@@ -1997,7 +2097,8 @@ proba('⭐⭐⭐ A KÖR ISMÉTLŐDIK, AMÍG VAN ÚJDONSÁG — a hír EGY ablako
 
     try {
       // Közös koino: az eseményeket hálózat nélkül visszük át (4. szabály).
-      await fut(forrasHely, 'koino', 'Ismételt menet');
+      // ⭐ D93/3: NYÍLT koinó — a hír továbbadása a tárgy (három készülék), nem a zárt koinó kapuja.
+      await fut(forrasHely, 'koino', 'Ismételt menet', 'nyilt');
       const vitt = join(forrasHely, 'alap.jsonl');
       await fut(forrasHely, 'kivisz', vitt, 'mind');
       await fut(orjaratHely, 'behoz', vitt);
@@ -2073,6 +2174,7 @@ proba('⛔⛔ A FUTÓ POSTALÁDA TOVÁBBADJA, AMIT KÖZBEN MÁSIK FOLYAMAT ÍRT 
   let figyelo = null;
   try {
     await fut(gazda, 'koino', 'Masik folyamat proba');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
     figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
       env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' }, stdio: 'ignore'
     });
@@ -2153,6 +2255,7 @@ proba('⭐⭐ A FRISS UDP-CÍM ÁTKERÜL A MÁSIK KÉSZÜLÉKRE (a bekötés pr�
   const port = 7451;
 
   await fut(gazda, 'koino', 'Cim proba');
+  await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
   // A gazda jegyzékébe kézzel írunk egy FRISS címet — mintha az imént fúrt volna.
   await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
@@ -2180,6 +2283,7 @@ proba('⛔ Az ELÉVÜLT cím NEM kerül át (a jegyzék nem terjeszt halott cím
   const port = 7452;
 
   await fut(gazda, 'koino', 'Cim proba 2');
+  await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
   // Két cím: az egyik friss, a másik RÉG elévült (két órája).
   await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
@@ -2226,6 +2330,7 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT KOPOGÁSSAL TALÁL ÖSSZE — társ-lista NÉLKÜL
       const vitt = join(egyik, 'alap.jsonl');
       await fut(egyik, 'kivisz', vitt, 'mind');
       await fut(masik, 'behoz', vitt);
+      await taggaTesziKeszulek(egyik, masik);   // ⭐ D93/3: zárt koinó — a masik TAG (különben csak a születést kapná)
 
       // ⭐ AZ ÚJDONSÁG CSAK AZ EGYIKNÉL VAN.
       await fut(egyik, 'gondolat', 'A KOPOGÁSSAL ÉRKEZETT HÍR');
@@ -2290,6 +2395,7 @@ proba('⛔⛔⛔ AZ EGYOLDALÚ RÉS IS CSERÉT HOZ — aki bekopog, azzal a más
       const vitt = join(egyik, 'alap.jsonl');
       await fut(egyik, 'kivisz', vitt, 'mind');
       await fut(masik, 'behoz', vitt);
+      await taggaTesziKeszulek(egyik, masik);   // ⭐ D93/3: zárt koinó — a masik TAG (különben csak a születést kapná)
       await fut(egyik, 'gondolat', 'AZ EGYOLDALU RESEN ATJOTT HIR');
 
       // ⭐ CSAK AZ EGYIK ISMERI A MÁSIKAT. A másiknak egy MÁS című (halott) célja van,
@@ -2523,6 +2629,7 @@ proba('⭐⭐⭐ AZ ÁLLANDÓ KAPU AKKOR IS FELEL, HA A MÁSIKNAK NINCS KIRE KOP
       const vitt = join(egyik, 'alap.jsonl');
       await fut(egyik, 'kivisz', vitt, 'mind');
       await fut(masik, 'behoz', vitt);
+      await taggaTesziKeszulek(egyik, masik);   // ⭐ D93/3: zárt koinó — a masik TAG (különben csak a születést kapná)
       await fut(egyik, 'gondolat', 'AZ ALLANDO KAPUN ATJOTT HIR');
 
       // ⭐ CSAK AZ EGYIKNEK van célja; a másiknak semmi (se társ, se friss cím, se kötés).
@@ -2831,6 +2938,7 @@ proba('⭐⭐ A MEGISMERT DHT-GÉPEK ÁTKERÜLNEK A TÁRSHOZ (a belépő csak ku
     const port = 7465;
 
     await fut(gazda, 'koino', 'Dht gep proba');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
     // A gazda jegyzékébe kézzel írunk két gépet (a jegyzék sima JSON — 4. szabály).
     await writeFile(join(gazda, 'dht-csomopontok.json'), JSON.stringify([
@@ -2866,6 +2974,7 @@ proba('⭐⭐⭐ AZ ŐRJÁRAT is terjeszti a friss címet — MINDKÉT irányban
 
   try {
     await fut(gazda, 'koino', 'Orjarat cim proba');
+    await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
 
     // Mindkét készülék jegyzékébe egy-egy friss cím (a kézi út: sima JSON).
     await writeFile(join(gazda, 'udpcimek.json'), JSON.stringify({
@@ -2923,6 +3032,7 @@ proba('⭐⭐ Az őrjárat POSTALÁDA-ága is hirdeti a friss címet', async () 
 
   try {
     await fut(vendeg, 'koino', 'Postalada cim proba');
+    await taggaTesziKeszulek(vendeg, gazda);   // ⭐ D93/3: zárt koinó — a gazda TAG (különben csak a születést kapná)
     await writeFile(join(vendeg, 'udpcimek.json'), JSON.stringify({
       cimek: [{ hoszt: '198.51.100.33', port: 41033, mikor: Date.now() }]
     }), 'utf8');
@@ -3287,6 +3397,7 @@ proba('⭐⭐⭐ D72: A SZÖVEG KÜLÖN DARAB — az esemény nem hordozza, a m�
     let figyelo = null;
     try {
       await fut(gazda, 'koino', 'Szöveg-darab koinó');
+      await taggaTesziKeszulek(gazda, vendeg);   // ⭐ D93/3: zárt koinó — a vendeg TAG (különben csak a születést kapná)
       await fut(gazda, 'gondolat', 'A CÍM', 'EZ A SZÖVEG KÜLÖN DARAB');
 
       // (1) Az esemény-fájlban NINCS a szöveg — csak a hivatkozás.

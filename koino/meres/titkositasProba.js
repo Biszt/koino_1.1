@@ -14,10 +14,11 @@ import { createSocket } from 'node:dgram';
 import { probaGyujtemeny } from './probaFuttato.js';
 import {
   ujEgyszeriKulcs, kezfogasCsomag, kezfogasCsomagbol, munkamenetKulcsai, csomagTitkositasa,
-  csomagKititkositasa, kezfogasAlairasa, kezfogasAlairasEllenorzese, TITKOS_JEL, KF_JEL
+  csomagKititkositasa, kezfogasAlairasa, kezfogasAlairasEllenorzese, TITKOS_JEL, KF_JEL,
+  szemelyesKezfogasAlairasa, szemelyesKezfogasEllenorzese
 } from '../js/csere/titkositas.js';
 import { ujTablaKulcs, nyilvanosResz } from '../js/csere/tablaKulcs.js';
-import { csereUdpResen, udpKapcsolat } from '../js/csere/udpVonal.js';
+import { csereUdpResen, udpKapcsolat, szeletUdpResen } from '../js/csere/udpVonal.js';
 import { parbeszed } from '../js/csere/vonal.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { koinoLetrehozasa, gondolatLetrehozasa } from '../js/muveletek.js';
@@ -94,16 +95,19 @@ async function udpParos() {
     bezar() { egyik.close(); masik.close(); } };
 }
 
-async function tarGondolattal(cim) {
+async function tarGondolattal(cim, reszlet = null) {
   const mappa = await mkdtemp(join(tmpdir(), 'koino-titkos-'));
   const tar = await esemenyTarNyitasa(KOINO, mappa);
   const kulcspar = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
   const szerzo = Buffer.from(await crypto.subtle.exportKey('raw', kulcspar.publicKey)).toString('base64url');
   const k = { koino: KOINO, kulcspar, szerzo, tar, lancTarolo: null };
   if (cim) {
-    await koinoLetrehozasa(k, 'Titkos koinó');
-    await gondolatLetrehozasa(k, { cim });
+    const szul = await koinoLetrehozasa(k, 'Titkos koinó');
+    const g = await gondolatLetrehozasa(k, { cim });
+    // ⭐ D93/3: a kapu-próbáknak a szeletek neve is kell (a születés és a gondolat).
+    if (reszlet) Object.assign(reszlet, { szuletes: szul.azonosito, gondolat: g.azonosito });
   }
+  if (reszlet) Object.assign(reszlet, { szerzo, jwk: await crypto.subtle.exportKey('jwk', kulcspar.privateKey) });
   return tar;
 }
 
@@ -145,6 +149,130 @@ proba('⛔⛔ A HAMISAN ALÁÍRT TÁBLA-KULCS NEM SZÁMÍT — aki más nevében
     ]);
     return a.kapottTablaKulcs === null;
   } finally { p.bezar(); }
+});
+
+// ===================================
+// ⭐⭐ D93/3: A SZEMÉLY A KÉZFOGÁSBAN ÉS A ZÁRT KOINÓ KAPUJA
+// ===================================
+
+/** Egy személyes aláíró (a rés-réteg hívja az átirattal): a szerző, a horgony és az aláírás. */
+const szemelyesAlairo = (r, horgony = null, kulcsJwk = r.jwk) => (atirat) => ({
+  sz: r.szerzo, ...(horgony ? { h: horgony } : {}), a: szemelyesKezfogasAlairasa(kulcsJwk, KOINO, atirat)
+});
+
+proba('⭐ a személyes aláírás csak a SAJÁT átiratára, a SAJÁT koinójára és a SAJÁT kulcsával igaz', async () => {
+  const r = {};
+  await tarGondolattal(null, r);
+  const masik = {};
+  await tarGondolattal(null, masik);
+  const atirat = Buffer.from('egy kézfogás átirata');
+  const a = szemelyesKezfogasAlairasa(r.jwk, KOINO, atirat);
+  return szemelyesKezfogasEllenorzese(r.szerzo, KOINO, atirat, a)
+    && !szemelyesKezfogasEllenorzese(r.szerzo, KOINO, Buffer.from('másik átirat'), a)
+    && !szemelyesKezfogasEllenorzese(r.szerzo, 'masik-koino', atirat, a)
+    && !szemelyesKezfogasEllenorzese(masik.szerzo, KOINO, atirat, a)
+    // ⛔ a tábla-kulcs aláírása más előtagú: az egyik szerepben adott aláírás a másikban nem használható fel
+    && !kezfogasAlairasEllenorzese(r.szerzo, atirat, a);
+});
+
+proba('⭐⭐ D93/3: A NEM SZABAD TÁRS CSAK A MEGENGEDETT SZELETET KAPJA — a kapu a bizonyítási körben a hitelesített személyt látja', async () => {
+  const p = await udpParos();
+  const tA = await ujTablaKulcs(), tB = await ujTablaKulcs();
+  const ra = {}, rb = {};
+  const tarA = await tarGondolattal(CIM, ra);
+  const tarB = await tarGondolattal(null, rb);
+  const hivasok = [];
+  // A kapuja: senkit nem ismer, csak a koinó születését engedi.
+  const zartKapu = async (x) => { hivasok.push(x); return { szabad: false, kell: true, szeletek: [ra.szuletes] }; };
+  try {
+    const [a, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, { ...oldal(tA), zartKapu }),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO,
+        { ...oldal(tB), szemelyesAlairo: szemelyesAlairo(rb, 'H'.repeat(43)) })
+    ]);
+    const kapott = new Set((await tarB.betolt()).map((e) => e.azonosito));
+    const bizonyitott = hivasok.find((x) => x.ki);
+    return b.uj === 1 && kapott.has(ra.szuletes) && !kapott.has(ra.gondolat)
+      && a.tarsKorlatozva === true && a.tarsAzonossaga?.sz === rb.szerzo
+      // ⭐ az első ítélet a tábla-kulccsal, a második a személlyel (a hitelesített tábla-kulcs mellett)
+      && hivasok.length === 2 && hivasok[0].tabla?.alairo === tB.alairoNyilvanos && !hivasok[0].ki
+      && bizonyitott?.ki.sz === rb.szerzo && bizonyitott.ki.h === 'H'.repeat(43);
+  } finally { p.bezar(); }
+});
+
+proba('⛔⛔ D93/3: A MÁS NEVÉBEN ADOTT SZEMÉLY NEM SZÁMÍT — a kapu személy nélkül ítél (és a korlát marad)', async () => {
+  const p = await udpParos();
+  const tA = await ujTablaKulcs(), tB = await ujTablaKulcs();
+  const ra = {}, aldozat = {}, tamado = {};
+  const tarA = await tarGondolattal(CIM, ra);
+  const tarB = await tarGondolattal(null, tamado);
+  await tarGondolattal(null, aldozat);
+  const hivasok = [];
+  const zartKapu = async (x) => {
+    hivasok.push(x);
+    return x.ki?.sz === aldozat.szerzo ? { szabad: true } : { szabad: false, kell: true, szeletek: [ra.szuletes] };
+  };
+  try {
+    // A támadó az ÁLDOZAT szerzőjét mondja be, de a saját kulcsával ír alá.
+    const [a, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, { ...oldal(tA), zartKapu }),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO,
+        { ...oldal(tB), szemelyesAlairo: (atirat) => ({ ...szemelyesAlairo(tamado)(atirat), sz: aldozat.szerzo }) })
+    ]);
+    return b.uj === 1 && a.tarsKorlatozva === true && a.tarsAzonossaga === null
+      && hivasok.length === 2 && hivasok.every((x) => !x.ki);
+  } finally { p.bezar(); }
+});
+
+proba('⭐ D93/3: AKIT A KAPU A TÁBLA-KULCSÁRÓL ISMER, ATTÓL NEM KÉR BIZONYÍTÁST — és mindent megkap', async () => {
+  const p = await udpParos();
+  const tA = await ujTablaKulcs(), tB = await ujTablaKulcs();
+  const ra = {}, rb = {};
+  const tarA = await tarGondolattal(CIM, ra);
+  const tarB = await tarGondolattal(null, rb);
+  const hivasok = [];
+  const zartKapu = async (x) => {
+    hivasok.push(x);
+    return x.tabla?.alairo === tB.alairoNyilvanos ? { szabad: true } : { szabad: false, kell: true, szeletek: [] };
+  };
+  try {
+    const [a, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, { ...oldal(tA), zartKapu }),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO, { ...oldal(tB), szemelyesAlairo: szemelyesAlairo(rb) })
+    ]);
+    return b.uj >= 2 && a.tarsKorlatozva === false && hivasok.length === 1 && a.tarsAzonossaga === null;
+  } finally { p.bezar(); }
+});
+
+proba('⭐⭐ D93/3: A KÉRELEM A KAPUN — a nem tag a megengedett szeletet megkapja, a többit nem; a tagsági csomag (KELL) után igen', async () => {
+  const ra = {}, rb = {};
+  const tarA = await tarGondolattal(CIM, ra);
+  const kerj = async (tarB, kulcs, tagsagiCsomag) => {
+    const p = await udpParos();
+    const tA = await ujTablaKulcs(), tB = await ujTablaKulcs();
+    const hivasok = [];
+    const zartKapu = async (x) => {
+      hivasok.push(x);
+      return x.csomag?.proba === 'tag' && x.ki?.sz === rb.szerzo
+        ? { szabad: true } : { szabad: false, kell: true, szeletek: [ra.szuletes] };
+    };
+    try {
+      const [, b] = await Promise.all([
+        csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, { ...oldal(tA), zartKapu }),
+        szeletUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO, kulcs,
+          { ...oldal(tB), szemelyesAlairo: szemelyesAlairo(rb), tagsagiCsomag })
+      ]);
+      return { b, hivasok };
+    } finally { p.bezar(); }
+  };
+  const tarB = await tarGondolattal(null, rb);
+  const szul = await kerj(tarB, ra.szuletes, async () => null);
+  const tiltott = await kerj(tarB, ra.gondolat, async () => null);
+  const csomaggal = await kerj(tarB, ra.gondolat, async () => ({ proba: 'tag' }));
+  return szul.b.kapott >= 1 && !szul.b.tiltva
+    && tiltott.b.kapott === 0 && tiltott.b.tiltva === true && tiltott.hivasok.length === 2
+    && csomaggal.b.kapott >= 1 && !csomaggal.b.tiltva && csomaggal.hivasok.length === 2
+    && csomaggal.hivasok[0].ki?.sz === rb.szerzo;
 });
 
 proba('⛔⛔ KÉZFOGÁS NÉLKÜL NINCS CSERE — a nyílt párbeszédet folytató társsal megnevezett hibával áll le', async () => {

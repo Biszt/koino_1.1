@@ -100,13 +100,13 @@ import {
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
 import {
-  kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese,
+  kulcsparBiztositasa, nyilvanosKulcsSzovegesen, rovidAzonosito, kulcsparKimentese, kulcsparLeirasa,
   // ⭐ A KÉZI ÚT MÁSIK FELE (2026-09-15): eddig csak KIMENTENI lehetett a kulcsot.
   kulcsparVisszatoltese
 } from './js/kulcs/kulcsTar.js';
 import { koinoEsemenyei, sajatLancEsemenyei, esemenyLekerese, esemenyMentese, entitasEsemenyei } from './js/tar/esemenyTar.js';
 // ⭐ B/2: a szelet-kulcs (az előléptetéshez).
-import { szelet } from './js/esemeny/esemeny.js';
+import { szelet, esemenyEllenorzese } from './js/esemeny/esemeny.js';
 import { allapotSzamitasa, szetosztottPontok, elakadtPontok } from './js/allapot/allapotSzamitas.js';
 import { ALLASPONT_MUVELET } from './js/allapot/szabalyok.js';
 import { javaslatokSzamitasa, sajatSzavazat } from './js/allapot/javaslatSzamitas.js';
@@ -137,7 +137,9 @@ import {
   // ⭐ D93: a profil és a tagsági csomag.
   profilMegadasa, tagsagiCsomagKiadasa
 } from './js/muveletek.js';
-import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet } from './js/allapot/identitas.js';
+import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet, tagsagiEsemenyekGyujtese } from './js/allapot/identitas.js';
+// ⭐ D93/3: a zárt koinó kapuja — a tagság tiszta számítása és a tagsági csomag ellenőrzése.
+import { tagsagiIndex, szerzoTagsaga, tagsagiCsomagEllenorzese, TAGSAGI_CSOMAG } from './js/allapot/tagsag.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
 import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok } from './js/allapot/jelzesek.js';
@@ -197,7 +199,7 @@ import {
 import { reszfaKarbantarto } from './js/allapot/osszPont.js';
 import { GYOKER_KULCS } from './js/csere/szeletEgyeztetes.js';
 // ⭐ D89/1: a kézfogás hitelesítése — a tábla-kulcs aláírja a kézfogás átiratát.
-import { kezfogasAlairasa } from './js/csere/titkositas.js';
+import { kezfogasAlairasa, szemelyesKezfogasAlairasa } from './js/csere/titkositas.js';
 import { helyiFelfedezes, felfedezoValaszolo } from './js/csere/helyiFelfedezes.js';
 import { sajatIPv6, pcpKapuKerese, upnpKorkerdes } from './js/csere/kapunyitas.js';
 import {
@@ -1450,8 +1452,9 @@ async function fuggoKerelemMunkaja(allapot, halo, tars, fk) {
   let r;
   try {
     r = fk.fajta === 'szelet'
-      ? await szeletUdpResen(halo, tars.cim, tars.port, atmeneti, KOINO, fk.kulcs, { tovabb })
+      ? await szeletUdpResen(halo, tars.cim, tars.port, atmeneti, KOINO, fk.kulcs, { tovabb, ...await azonossagBeallitasa() })
       : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, k, {
+        ...await azonossagBeallitasa(),
         mintaValaszto: (valasz) => mintaKeres(valasz),
         megvan: (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000),
         blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT });
@@ -1587,6 +1590,133 @@ function kerelemKiszolgaloja() {
   };
 }
 
+// ===================================
+// ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a személy a kézfogásban
+// ===================================
+//
+// A zárt koinó tartalmát a készülék csak (ellenőrzött) tagnak adja ki. A tag a kézfogásban bizonyítja magát: a
+// SZEMÉLYES kulcsával aláírja a kézfogás átiratát (a koinóval együtt) és megnevezi a horgonyát; ha nálunk nem
+// ellenőrizhető, a tagsági csomagját is küldi (D93/2 — a lánca az alapítóig, önmagában ellenőrizhető). Aki nem tag (vagy
+// nem ellenőrizhető), annak csak a koinó születése, a SAJÁT azonosság-szelete és a MIÉNK jár — a belépéshez ennyi kell (a
+// meghívása az ő szeletébe kerül; a mi láncunkat a bizonyításhoz úgyis odaadjuk). Nyílt koinóban nincs kapu.
+// ⭐ A tábla-kulcs és a személy kötését megjegyezzük: akit egyszer így láttunk, a következő cserén nem kell újra
+// bizonyítania — a hétköznapi csere nem drágul (6. szabály). ⚠️ Helyi feljegyzés, nem terjed, és korlátos.
+
+/** A személyes kulcs titkos fele (JWK) — a kézfogás aláírásához, szinkron (`node:crypto`). */
+const szemelyesJwk = (await kulcsparLeirasa(kulcspar)).privatKulcs;
+const AZONOSSAG_KORLAT = 256;
+const azonossagFajl = () => join(alapHely(), KOINO, 'azonossagok.json');
+/** Akit a folyamat életében tagnak láttunk (szerző → igaz) — a tagság nem vész el. */
+const tagEmlek = new Map();
+let koinoSzuletesEmlek = null;
+
+async function azonossagokOlvasasa() {
+  try {
+    const j = JSON.parse(await readFile(azonossagFajl(), 'utf8'));
+    return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
+  } catch {
+    return {};
+  }
+}
+
+/** A tábla-kulcs (aláírója) ↔ személy kötés megjegyzése — a legutóbb látott `AZONOSSAG_KORLAT` darab marad. */
+async function azonossagKotese(alairo, sz, h) {
+  const j = await azonossagokOlvasasa();
+  if (j[alairo]?.sz === sz && j[alairo]?.h === h) return;
+  j[alairo] = { sz, h, ido: Date.now() };
+  const lista = Object.entries(j).sort((a, b) => (b[1]?.ido ?? 0) - (a[1]?.ido ?? 0)).slice(0, AZONOSSAG_KORLAT);
+  try { await writeFile(azonossagFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8'); } catch { /* nem végzetes */ }
+}
+
+/**
+ * A koinó születése (`KoinoLetrehozas`) — a kapu ebből tudja, zárt-e, és ez a megengedett szeletek egyike. A saját
+ * tagsági láncom végén van (a terhe a láncom hossza, nem a koinó mérete); ha még nem vagyok tag, a táramban keresem
+ * (a nem tag készülék tára kicsi: a zárt koinó csak a születést és az azonosság-szeleteket adja neki).
+ */
+async function koinoSzuletese() {
+  if (koinoSzuletesEmlek?.esemeny) return koinoSzuletesEmlek.esemeny;
+  // ⚠️ A „nincs” is emlék (10 percig): a táras keresés drága, és a születés ritkán érkezik.
+  if (koinoSzuletesEmlek && Date.now() - koinoSzuletesEmlek.ido < 600_000) return null;
+  let k = null;
+  const h = await sajatHorgonyom();
+  if (h) {
+    const lanc = await tagsagiEsemenyekGyujtese(tar, KOINO, h);
+    k = lanc.find((e) => e.tipus === 'KoinoLetrehozas')
+      ?? lanc.flatMap((e) => (e.tipus === TAGSAGI_CSOMAG && Array.isArray(e.adat?.lanc) ? e.adat.lanc : []))
+        .find((e) => e?.tipus === 'KoinoLetrehozas' && e.koino === KOINO)
+      ?? null;
+  }
+  if (!k) k = (await koinoEsemenyei(tar, KOINO)).find((e) => e.tipus === 'KoinoLetrehozas') ?? null;
+  koinoSzuletesEmlek = { esemeny: k, ido: Date.now() };
+  return k;
+}
+
+/**
+ * ⭐⭐ A KAPU ÍTÉLETE (a vonal hívja: a nyitás után a tábla-kulccsal, a bizonyítás után a személlyel és a csomaggal).
+ * @returns {Promise<{szabad: boolean, kell?: boolean, szeletek?: Array<string>, ok: string}>}
+ */
+async function tarsKapuja({ tabla = null, ki = null, csomag = null } = {}) {
+  const szuletes = await koinoSzuletese();
+  // ⭐ Nyílt koinóban nincs kapu. ⚠️ És ha a koinó születését nem ismerjük, nincs mit betartatnunk: egy tag mindig ismeri
+  // (a tagsági lánca végén van), tehát ilyenkor a készülék vagy még nem tag (a saját belépésén kívül nincs mit adnia),
+  // vagy egy születés nélküli, régi koinót tart — azt nem zárhatjuk be utólag úgy, hogy senki ne kaphasson belőle.
+  if (!szuletes) return { szabad: true, ok: 'a koinó születése ismeretlen' };
+  if (szuletes.adat?.zart === false) return { szabad: true, ok: 'nyílt koinó' };
+  // A társ személye: a most bizonyított, vagy a tábla-kulcsához kötött.
+  let szemely = ki;
+  if (!szemely && typeof tabla?.alairo === 'string') {
+    const k = (await azonossagokOlvasasa())[tabla.alairo];
+    if (k && typeof k.sz === 'string') szemely = { sz: k.sz, h: typeof k.h === 'string' ? k.h : null };
+  }
+  const sajatH = await sajatHorgonyom();
+  const szeletek = [...new Set([szuletes?.azonosito, szemely?.h, sajatH].filter((x) => typeof x === 'string'))];
+  if (!szemely) return { szabad: false, kell: true, szeletek, ok: 'ismeretlen társ' };
+  if (ki && typeof tabla?.alairo === 'string') await azonossagKotese(tabla.alairo, ki.sz, ki.h ?? null);
+  if (tagEmlek.has(szemely.sz)) return { szabad: true, ok: 'tag' };
+  // Tag-e? A láncát a táramból gyűjtöm (a horgonyától), és ha hozott csomagot, azzal együtt. ⛔ A koinó születése (a
+  // MIÉNK) az első: egy hamis koinó-létrehozás a csomagban így nem ad tagságot; és a szerző horgonyai közül csak az
+  // számít, amit ő maga írt alá (`szerzoTagsaga`) — más horgonyát megnevezni nem elég.
+  const lista = szuletes ? [szuletes] : [];
+  if (szemely.h) lista.push(...await tagsagiEsemenyekGyujtese(tar, KOINO, szemely.h));
+  if (csomag && csomag.tipus === TAGSAGI_CSOMAG && csomag.szerzo === szemely.sz && csomag.koino === KOINO
+    && (await esemenyEllenorzese(csomag)).rendben && (await tagsagiCsomagEllenorzese(csomag)).rendben) {
+    lista.push(csomag);
+  }
+  const r = szerzoTagsaga(tagsagiIndex(lista, KOINO), szemely.sz);
+  if (r.igen) {
+    tagEmlek.set(szemely.sz, true);
+    return { szabad: true, ok: r.ok };
+  }
+  // ⭐ Ha csomagot még nem láttunk tőle, kérjük (a következő kör, vagy a kérelemben a `KELL`).
+  return { szabad: false, kell: !csomag, szeletek, ok: r.ok };
+}
+
+/** A tagsági csomagom a bizonyításhoz — ha tag vagyok és még nincs (vagy rövidebb láncot kaptam), most adom ki. */
+async function sajatTagsagiCsomagja() {
+  const h = await sajatHorgonyom();
+  if (!h) return null;
+  const r = await tagsagiCsomagKiadasa(kornyezet).catch(() => null);
+  if (r?.esemeny) return r.esemeny;
+  const sajat = (await entitasEsemenyei(tar, KOINO, h))
+    .filter((e) => e.tipus === TAGSAGI_CSOMAG && e.szerzo === szerzo)
+    .sort((a, b) => b.sorszam - a.sorszam);
+  return sajat[0] ?? null;
+}
+
+/**
+ * ⭐ A SZEMÉLYEM A MUNKÁHOZ: a személyes aláíró (a rés-réteg hívja a kézfogás átiratával), a tagsági csomagom és a kapu.
+ * Minden munka (csere, szelet, kérelem) ezt viszi.
+ */
+async function azonossagBeallitasa() {
+  const h = await sajatHorgonyom();
+  return {
+    szemelyesAlairo: (atirat) => ({ sz: szerzo, ...(h ? { h } : {}),
+      a: szemelyesKezfogasAlairasa(szemelyesJwk, KOINO, atirat) }),
+    tagsagiCsomag: sajatTagsagiCsomagja,
+    zartKapu: tarsKapuja
+  };
+}
+
 function resMunkaKeszito(allapot) {
   return async (nyersHalo, tars) => {
     // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
@@ -1630,9 +1760,9 @@ function resMunka(allapot, halo, tars) {
       const memoria = t.fajta === 'torzs' ? memoriaBlobTarolo() : null;
       try {
         const r = t.fajta === 'szelet'
-          ? await szeletUdpResen(halo, tars.cim, tars.port, null, KOINO, t.kulcs, { tovabb })
+          ? await szeletUdpResen(halo, tars.cim, tars.port, null, KOINO, t.kulcs, { tovabb, ...await azonossagBeallitasa() })
           : await kerelemUdpResen(halo, tars.cim, tars.port, KOINO, { fajta: t.fajta, kulcs: t.kulcs, n: t.n, d: t.d, ...tovabb },
-            { mintaValaszto: (valasz) => mintaKeres(valasz), blob: memoria, korlat: FAJL_KORLAT });
+            { ...await azonossagBeallitasa(), mintaValaszto: (valasz) => mintaKeres(valasz), blob: memoria, korlat: FAJL_KORLAT });
         const kiszolgalta = t.fajta === 'szelet' ? (r.kapott ?? 0) > 0
           : r.kiszolgalta && (t.fajta !== 'torzs' || (memoria?.mind().length ?? 0) > 0)
             && (t.fajta !== 'fejlecek' || (r.valasz?.lista?.length ?? 0) > 0);
@@ -1669,6 +1799,8 @@ function resMunka(allapot, halo, tars) {
     const rajVallalas = await sajatVallalasa(null);
     const rajJegyzek = await szeletJegyzekTarolo().olvas();
     const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
+      // ⭐⭐ D93/3: a személyem (a kézfogás átiratára), a tagsági csomagom és a zárt koinó kapuja.
+      ...await azonossagBeallitasa(),
       raj: (kulcsok) => {
         const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k));
         return { vallal, tippek: rajAjanlat(rajJegyzek, vallal) };
@@ -1783,9 +1915,10 @@ function resMunka(allapot, halo, tars) {
       kerhetok,
       blob: fajlBlobTarolo(KOINO),
       tar, koino: KOINO,
-      fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+      // ⛔ D93/3: a zárt koinó nem szabad társának fájlt nem adunk.
+      fajlOlvas: csere.tarsKorlatozva ? null : (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
       korlat: FAJL_KORLAT,
-      kiszolgalasKell: adhatok > 0,
+      kiszolgalasKell: !csere.tarsKorlatozva && adhatok > 0,
       ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO))
     });
     if (randevu.kesz || randevu.kiszolgalt || randevu.bukott) {
@@ -3495,7 +3628,9 @@ try {
         break;
       }
       const megvan = k.fajta === 'fejlecek' ? (await kepetKeszit()).esemenyek.map((e) => e.azonosito).slice(-5000) : [];
+      const azonossag = await azonossagBeallitasa();
       const { kapu } = await keziKapuNyitasa((halo, t) => kerelemUdpResen(halo, t.cim, t.port, KOINO, k, {
+        ...azonossag,
         mintaValaszto: (valasz) => mintaKeres(valasz), megvan,
         blob: fajlBlobTarolo(KOINO), korlat: FAJL_KORLAT
       }));
@@ -4412,6 +4547,7 @@ try {
         // címeket a friss UDP-jegyzék terjeszti.
         const fajlok = await fajlResz();
         const csere = await csereUdpResen(eredmeny.halo, cim, port, tar, KOINO, {
+          ...await azonossagBeallitasa(),
           // ⭐⭐ A FÁJL-KÖR A RÉSEN IS MEGY (5.7) — enélkül nem tudnánk meg, mi van nála.
           fajlKerelem: fajlok.kerelem,
           fajlValasz: fajlok.valasz,
@@ -4458,7 +4594,8 @@ try {
           kerhetok,
           blob: fajlBlobTarolo(KOINO),
           tar, koino: KOINO,
-          fajlOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+          // ⛔ D93/3: a zárt koinó nem szabad társának fájlt nem adunk.
+          fajlOlvas: csere.tarsKorlatozva ? null : (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
           korlat: FAJL_KORLAT,
           ujKerhetok: szovegKepeiKeresre(fajlBlobTarolo(KOINO)),
           utana: (e) => {
@@ -4563,8 +4700,9 @@ try {
       // ⭐⭐ B/2 (D75): amit nem vállalok, az az ÁTMENETI tárba kerül (eldobható) — ugyanazon a kapun át.
       const vallalas = await sajatVallalasa((await kepetKeszit()).allapot);
       const celTar = vallalas.szeletek.has(entitas) ? tar : atmeneti;
+      const azonossag = await azonossagBeallitasa();
       const { kapu } = await keziKapuNyitasa((halo, t) =>
-        szeletUdpResen(halo, t.cim, t.port, celTar, KOINO, entitas));
+        szeletUdpResen(halo, t.cim, t.port, celTar, KOINO, entitas, azonossag));
       let kor;
       try {
         kor = await kapu.kopog(cimek.map((c) => ({ cim: c.hoszt, port: c.port })),

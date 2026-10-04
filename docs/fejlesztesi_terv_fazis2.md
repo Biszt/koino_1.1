@@ -4754,7 +4754,7 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
    összegzéséből (a lánc-gyökér darabszáma), kérésre, gyorsítótárral; a jelzés nem dönt (D46). A B/3 után válik élessé;
    az E-ben a bemenete készül el.
 
-#### MEGÉPÜLT (2026-10-04): az 1., a 2. és az 5. pont
+#### MEGÉPÜLT (2026-10-04): az 1., a 2., a 3. és az 5. pont
 
 - **Az 1.:** a szabály-réteg (`szabalyok.js`, `TAGSAG_KELL`) a pontot, a javaslatot, a szavazatot, az állásfoglalást ÉS
   az érték javaslatot csak tagtól számolja — ⚠️ az érték javaslat a döntés pontosítása: a küszöb a javaslatok mediánja,
@@ -4768,7 +4768,14 @@ lineáris; és egy régi rés: a szabály-réteg nem kérdezett tagságot (bárk
 - **Az 5.:** `koino "név" profil=nev,telepules` · `profil nev=... telepules=...` (a darab sózva a fájl-tárba, az esemény
   csak a lenyomatot) · a `meghiv` a meghívott legutóbbi profil-lenyomatát teszi a meghívásba, és ha a koinó vár profilt,
   nélküle nem megy (megnevezi, mit kérj).
-- ⏸️ **Hátravan:** a 3. (a zárt koinó a kézfogásban), a 4. (előbb a 64. mérés), a 6.
+- **A 3.:** a tábla-kulcs a nyitásba került; a kapu (`koino.js`: `tarsKapuja`) a tábla-kulcshoz megjegyzett személyből
+  dönt, és ha nem ismeri a társat, a `CIMEK`-ben kér — a bizonyítás (a személyes aláírás az átiratra a koinóval, a
+  horgony, a tagsági csomag) egy `TAGSAG` körben jön, a kérelemnél `KELL` → `TAGSAG`. ⚠️ A pontosítások (alappillérek,
+  elágazás 57–60): a személyt csak az ismeretlen társtól kérjük (a 64. mérés: különben minden csere ~30%-kal drágulna);
+  a nem tag a MI azonosság-szeletünket is megkapja; ahol a koinó születése ismeretlen, nincs kapu; a korlát a fájlokra
+  és a címekre is vonatkozik. ⛔ Protokoll-törés: a régi program a nyitásban nem küld tábla-kulcsot, és a kérésre nem
+  felel — a telefont frissíteni kell.
+- ⏸️ **Hátravan:** a 4. (a 2. lépcső — előbb a mérése), a 6.
 
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
