@@ -1,4 +1,4 @@
-﻿// koino/js/allapot/javaslatSzamitas.js
+// koino/js/allapot/javaslatSzamitas.js
 
 // Felelősség: a javaslatok állapotának KISZÁMÍTÁSA az aláírt eseményekből — és ezzel
 // az EGYEZMÉNY megszületése.
@@ -71,7 +71,7 @@ export const ALAP_KUSZOBOK = {
 };
 
 // A küszöbök nevei — ezekre számolunk mediánt az érték javaslatokból (D4)
-const KUSZOB_NEVEK = Object.keys(ALAP_KUSZOBOK);
+export const KUSZOB_NEVEK = Object.keys(ALAP_KUSZOBOK);
 
 // ===================================
 // SEGÉD: SZAVAZATOK BEGYŰJTÉSE
@@ -207,6 +207,24 @@ function idorendbe(szavazatok) {
  * @returns {Object}
  */
 function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
+  let tamogatok = 0, ellenzok = 0, tartozkodok = 0;
+  for (const tipus of emberenkent.values()) {
+    if (tipus === 'Tamogat') tamogatok++;
+    else if (tipus === 'Ellenez') ellenzok++;
+    else if (tipus === 'Tartozkodik') tartozkodok++;
+  }
+  return allasSzamokbol(javaslatEsemeny, { tamogatok, ellenzok, tartozkodok }, aktivHalmaz.size, kuszobok);
+}
+
+/**
+ * ⭐ D95/1: AZ ÁLLÁS A SZÁMOKBÓL — a fenti magja, külön: a nagy szelet összegző tartója a lezárási összegzés
+ * számaiból UGYANEZZEL a képlettel számol (egy forrás — a kettő nem csúszhat el).
+ * @param {Object} javaslatEsemeny
+ * @param {{tamogatok: number, ellenzok: number, tartozkodok: number}} szavazatSzamok
+ * @param {number} nevezo - az aktív tulajdonosok ∪ a szavazók száma
+ * @param {Object} kuszobok
+ */
+export function allasSzamokbol(javaslatEsemeny, { tamogatok, ellenzok, tartozkodok }, nevezo, kuszobok) {
   // ----- 1. SZAVAZATOK MEGSZÁMOLÁSA -----
   //
   // ⭐ Ide MÁR CSAK JOGOSULT szavazat érkezik: a hívó (`reszekSzamitasa`) a LEADÁS
@@ -215,12 +233,6 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
   // kérdőjelezi meg. ⛔ Ez fontos: ha a lezáráskori állapot döntene, akkor a tudatpontom
   // elvételével **visszavonhatnám a szavazatomat** — pedig a szabály az, hogy
   // *„megváltoztatható, de nem vonható vissza"*.
-  let tamogatok = 0, ellenzok = 0, tartozkodok = 0;
-  for (const tipus of emberenkent.values()) {
-    if (tipus === 'Tamogat') tamogatok++;
-    else if (tipus === 'Ellenez') ellenzok++;
-    else if (tipus === 'Tartozkodik') tartozkodok++;
-  }
   const szavazok = tamogatok + ellenzok + tartozkodok;
 
   // ----- 2. A RÉSZVÉTELI ARÁNY NEVEZŐJE: AKTÍV TULAJDONOSOK ∪ SZAVAZÓK -----
@@ -229,7 +241,6 @@ function allasSzamitasa(javaslatEsemeny, emberenkent, aktivHalmaz, kuszobok) {
   // kétszeresen biztosítja: a szavazás maga **aktívvá billenti** a szavazót minden
   // érintett entitáson (`szerepAktivalasa`: *„minden döntés-alakító tett"*), az unió
   // pedig azt is elkapja, aki a szavazása UTÁN vált passzívra. A halmazt a hívó adja.
-  const nevezo = aktivHalmaz.size;
 
   // ----- 3. AZ ELFOGADÁS FELTÉTELE — EGÉSZ ARITMETIKÁVAL -----
   // Ahelyett, hogy százalékot számolnánk és kerekítenénk, kereszt-szorzunk:
@@ -393,6 +404,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
   const tulajdonosok = uresen();      // entitás → (szerző → { pont, szerep, sorszam })
   const ertekJavaslatok = uresen();   // entitás → (szerző → { ertekek, sorszam })
   const reszSzavazatok = uresen();    // entitás → (szerző → 'Tamogat' | …)
+  const reszSzavazatEsemenyek = uresen(); // ⭐ D95/1: entitás → (szerző → a beszámított szavazat azonosítója)
   const javaslatTulajdonosok = uresen(); // entitás (a rész) → (szerző → { pont, sorszam }) a javaslat-entitásán
   const kulonAgot = uresen();         // entitás → (szerző → kért-e külön ágat)
   const szavazatSorszam = new Map();  // szerző → az eddig figyelembe vett szavazat-sorszám
@@ -527,6 +539,7 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
           if ((javaslatTulajdonosok.get(entitas).get(esemeny.szerzo)?.pont ?? 0) <= 0) continue;
         }
         reszSzavazatok.get(entitas).set(esemeny.szerzo, esemeny.adat.szavazat);
+        reszSzavazatEsemenyek.get(entitas).set(esemeny.szerzo, esemeny.azonosito);
         // ⭐⭐ A KÜLÖNVÁLÁSI IGÉNY IS ELTEVŐDIK (2026-09-08) — a különválás ebből tudja
         // meg, ki lép külön ágra, ha a döntés ellene megy. ⛔ Tartózkodásnál a művelet
         // már hamisra állította (`muveletek.js`), de a SZÁMÍTÁS is ellenőrzi lentebb:
@@ -550,7 +563,8 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       terkep.set(esemeny.szerzo, {
         pont: esemeny.adat.pont,
         szerep: esemeny.adat.szerep === 'passziv' ? 'passziv' : 'aktiv',
-        sorszam: esemeny.sorszam
+        sorszam: esemeny.sorszam,
+        azonosito: esemeny.azonosito
       });
 
     } else {
@@ -560,7 +574,8 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
       if (eddigi !== undefined && esemeny.sorszam <= eddigi.sorszam) continue;
       terkep.set(esemeny.szerzo, {
         ertekek: esemeny.adat.ertekek,
-        sorszam: esemeny.sorszam
+        sorszam: esemeny.sorszam,
+        azonosito: esemeny.azonosito
       });
     }
 
@@ -574,9 +589,33 @@ function reszekSzamitasa(javaslatEsemeny, kik, szavazatok, tudatpontok, ertekJav
     if (sor[i].tipus === 'Szavazat') kesoiSzavazatok++;
   }
 
+  // ⭐ D95/1: A LEZÁRÁSI PILLANATKÉP — érintettenként a lezáráskori bemenet, az esemény-azonosítókkal: a beszámított
+  // szavazatok, a nevező tagjai (az aktív tulajdonosok ∪ a szavazók), és a küszöböt adó érték javaslatok (a pont-tartókéi).
+  // Ebből épül a lezárási összegzés (`lezarasiOsszegzes.js`). ⚠️ Csak olvasás — a fenti számításon nem változtat.
+  const pillanatkepek = new Map();
+  for (const az of entitasok) {
+    const szavazatok = [...reszSzavazatok.get(az)].map(([szerzo, szavazat]) =>
+      ({ szerzo, szavazat, azonosito: reszSzavazatEsemenyek.get(az).get(szerzo) }));
+    const szavazok = new Set(szavazatok.map((x) => x.szerzo));
+    const nevezo = [];
+    for (const [szerzo, adat] of tulajdonosok.get(az)) {
+      if (adat.pont > 0 && adat.szerep === 'aktiv') nevezo.push({ szerzo, azonosito: adat.azonosito, tulajdonos: true });
+    }
+    const aktiv = new Set(nevezo.map((x) => x.szerzo));
+    for (const x of szavazatok) if (!aktiv.has(x.szerzo)) nevezo.push({ szerzo: x.szerzo, azonosito: x.azonosito, tulajdonos: false });
+    const ertekJavaslatai = [];
+    for (const [szerzo, bejegyzes] of ertekJavaslatok.get(az)) {
+      if ((tulajdonosok.get(az).get(szerzo)?.pont ?? 0) > 0) {
+        ertekJavaslatai.push({ szerzo, azonosito: bejegyzes.azonosito, ertekek: bejegyzes.ertekek });
+      }
+    }
+    pillanatkepek.set(az, { szavazatok, nevezo, ertekJavaslatok: ertekJavaslatai, szavazok: szavazok.size });
+  }
+
   return {
     reszek,
     lezarasIdeje,
+    pillanatkepek,
     dontesiIdo: Math.max(...reszek.map((r) => r.allas.dontesiIdo)),
     // ⛔⛔ ÉS ITT AZ „ÉS": a csoport csak akkor elfogadott, ha MINDEN rész teljesíti a
     // SAJÁT küszöbeit. Egyetlen elbukó rész az egész javaslatot elveti.
@@ -650,6 +689,36 @@ function hatalyokSzamitasa(esemenyek) {
  *        óra — így a számítás tiszta függvény marad, és bármely időpontra elvégezhető)
  * @returns {Map<string, Object>} javaslat azonosító → állapot
  */
+/** Egy javaslat csoport-számítása a begyűjtött bemenetből (a `javaslatokSzamitasa` és a lezárási pillanatkép közös útja). */
+function csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }) {
+  const erintettAzonositok = kik.map((r) => r.entitas);
+  return reszekSzamitasa(
+    e,
+    kik,
+    szavazatok.get(e.azonosito) ?? [],
+    erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
+    erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
+    // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
+    javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? [])
+  );
+}
+
+/**
+ * ⭐ D95/1: EGY JAVASLAT LEZÁRÁSI PILLANATKÉPE az eseményekből — a lezárás ideje, a részek állása, és érintettenként a
+ * lezáráskori bemenet (`reszekSzamitasa` pillanatképe). A lezárási összegzés ebből épül.
+ * @returns {{lezarasIdeje: number, reszek: Array<Object>, pillanatkepek: Map<string, Object>}}
+ */
+export function lezarasiPillanatkep(esemenyek, javaslatEsemeny) {
+  const gyujtott = {
+    szavazatok: szavazatokGyujtese(esemenyek),
+    tudatpontok: tudatpontokGyujtese(esemenyek),
+    ertekJavaslatok: ertekJavaslatokGyujtese(esemenyek)
+  };
+  const { reszek, lezarasIdeje, pillanatkepek, dontesiIdo, kuszobTeljesul } =
+    csoportSzamitasa(javaslatEsemeny, erintettek(javaslatEsemeny.adat), gyujtott);
+  return { reszek, lezarasIdeje, pillanatkepek, dontesiIdo, kuszobTeljesul };
+}
+
 export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
   console.log('javaslatokSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
 
@@ -678,15 +747,7 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now()) {
     // kialakultak — nem az entitás mai mediánja (az az entitás `kuszobok` mezője, a
     // felületnek). Különben egy utólagos érték javaslat átírná a lezárt döntés
     // szabályát, akár visszamenőleg a döntési idejét is.
-    const csoport = reszekSzamitasa(
-      e,
-      kik,
-      szavazatok.get(e.azonosito) ?? [],
-      erintettAzonositok.flatMap((az) => tudatpontok.get(az) ?? []),
-      erintettAzonositok.flatMap((az) => ertekJavaslatok.get(az) ?? []),
-      // ⭐ D85/2: a javaslat-entitás(ok) pontjai — a szavazati jog második feltétele.
-      javaslatEntitasai(e).flatMap((je) => tudatpontok.get(je.azonosito) ?? [])
-    );
+    const csoport = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok });
     const { reszek, lezarasIdeje, dontesiIdo, kuszobTeljesul, kesoiSzavazatok, valaha } = csoport;
 
     // ⭐⭐ A DÖNTÉS ISMERETE (D85 T3, 2026-10-03): egy rész csak akkor ISMERT, ha az érintettjének legalább

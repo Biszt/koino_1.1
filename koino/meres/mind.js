@@ -72,6 +72,8 @@ import kerelem from './kerelemProba.js';
 import tagsag from './tagsagProba.js';
 // ⭐ A vállalás és az átmeneti tár (B/1–B/2, D75) — a kapu, az eldobás, a D14 csak a tartósra.
 import atmeneti from './atmenetiProba.js';
+// ⭐ D95/1: a lezárási összegzés — a nagy szeletű érintett döntése az összegző tartónak.
+import lezarasiOsszegzes from './lezarasiOsszegzesProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -96,6 +98,7 @@ const PROBAK = [
   { nev: 'fajlatvitel', futtat: fajlAtvitel },
   { nev: 'egyezmeny', futtat: egyezmeny },
   { nev: 'dontesicsomag', futtat: dontesiCsomag },
+  { nev: 'lezarasiosszegzes', futtat: lezarasiOsszegzes },
   { nev: 'felszabaditas', futtat: felszabaditas },
   { nev: 'parancssor', futtat: parancssor },
   { nev: 'vizsga', futtat: vizsga },
@@ -138,7 +141,7 @@ const CSOPORTOK = {
   // a kanonikus alak, a kulcs, az aláírt esemény és a tár (az íróval)
   alap: ['kanonikus', 'kulcs', 'esemeny', 'tar', 'iro', 'atmeneti'],
   // események → állapot: entitások, döntéshozatal, szabályok, egyezmények, tagság
-  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'osszpont', 'felszabaditas', 'identitas', 'tagsag'],
+  allapot: ['allapot', 'javaslat', 'szabaly', 'egyezmeny', 'dontesicsomag', 'lezarasiosszegzes', 'osszpont', 'felszabaditas', 'identitas', 'tagsag'],
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
