@@ -4821,6 +4821,29 @@ a részben hamis 8 úttal ~96%-kal; a maradékot a kontraszt-jelzés és a vissz
 ✅ **MEGÉPÜLT (2026-10-04).** ⚠️ Útközben egy régi hiba: a kézi tanúsítás (`allitokRola`) 2026-09 eleje óta nem vitte
 át a felhatalmazás-bemondást, így egy nem alapító tanúsító tanúsítása soha nem számított — javítva, próba őrzi.
 
+### D95. A SZIGORÚ (b) ALAKJA (B/3): két fokú vállalás, a tagsági csomag és a saját események a cserében, a gyökér darabjai (2026-10-05, Csaba: „igen, elfogadom a javaslataidat”)
+
+**Amiből jött:** a B/3 átvizsgálása ([`b3_szigoru_atvizsgalas.md`](b3_szigoru_atvizsgalas.md)) és a 66. mérés: a szigorú (b)
+teljes vállalással egymillió tagnál a 95%-nál ~37 000 eseményt és ~36 000 szerző tagsági bizonyítékát (~570 MB) kívánja,
+és ez ~√N szerint nő (a népszerű entitás és a D93/1); a két fokú vállalás konstans (~2 400 esemény a 95%-nál).
+
+#### A DÖNTÉS
+
+1. ⭐ **B1 — KÉT FOKÚ VÁLLALÁS (a skálázási terv 4.6):** a KIS szeletet (a küszöb alatt — kiindulásnak 1000 esemény, helyi
+   mennyiség) a pont-tartó egészében tartja; a NAGY szeletből a születést, a saját eseményeit, a szelet összegző gyökerét és
+   mintákat (a minták szerzőinek tagságával). A teljes nagy szeletet az önkéntes tartja (a „mindent” beállítás, D83/2). A
+   nagy szelet döntéseit a pont-tartó az ellenőrzött összegzésből számolja; a gyökér és a minták a cserében érkeznek és
+   tárolva maradnak (a döntés pillanatában nincs élő lekérdezés). Ha senki nem tartja egészében: „nem ellenőrizhető” (D19).
+2. ⭐ **B2 — A TAGSÁGI CSOMAG A CSERÉBEN, KÍSÉRŐKÉNT:** a szelet cseréje után akinek a tagságát nem tudom, annak a csomagját
+   a társtól kérem; a vállalt szeletek kísérőjeként a tartós tárba kerül. Szerzőnként egyszer.
+3. ⭐ **B3 — CSAK KÜLDŐ RÉSZVÉTEL:** ahol saját eseményem van, de a szeletet nem vállalom, a cserében csak a sajátjaimat
+   küldöm, onnan semmit nem kérek és nem veszek át.
+4. ⭐ **B4 — A GYÖKÉR DARABJAI A CSERÉBEN:** egy darab kulcsa a mélység és a darab lenyomata, a halmaza a gyökérhez
+   bejelentett születések közül a darabba esők; a készülék a darabjában ±1 mélységen is részt vesz.
+
+A megépítés sorrendje: az átvizsgálás 6. pontja (előbb a két fokú vállalás — előtte mérés —, aztán a B2–B3, a B4, a
+bekapcsolás).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

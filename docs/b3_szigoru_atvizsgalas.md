@@ -91,6 +91,9 @@ meghívotthoz, a tanúsítás, az ellentmondás-bejelentés — a címzett szele
 - **(B) A gyökér nem cserélődik**, a darab tartója kérelemmel frissít a raj többi tartójától — de akkor egy új legfelső
   szintű gondolat születése csak a szerzőjénél van meg, amíg valaki nem kérdez.
 
+✅ **ELDŐLT — D95 (Csaba, 2026-10-05: „igen, elfogadom a javaslataidat”):** mind a négy a javaslat szerint (B1/A, B2/A,
+B3/A, B4/A).
+
 ## 5. Ami nem igényel döntést (a megépítés része)
 
 - **A részvétel** a vállalásból (a tudatpontos szeletek, az azonosság-szelet, a koinó születése) + a töredék-szeletek a
@@ -111,3 +114,33 @@ meghívotthoz, a tanúsítás, az ellentmondás-bejelentés — a címzett szele
 3. **A gyökér darabjai** (B4/A).
 4. **A bekapcsolás:** a részvétel a vállalásból, a törzs korlátja, a kérelem az átmenetiből, a visszavett vállalás —
    próbákkal (a „végtelen” próbája: egy készülék terhe a saját érdeklődésével arányos).
+
+## 7. ⭐ A B1 MŰSZAKI TERVE — a két fokú vállalás (a D95/1 keretén belül, 2026-10-05)
+
+A nagy szelet összegző tartójának két dolgot kell tudnia a nyers események nélkül: (1) a szelet MOSTANI állapotát (a
+pont-tartók és pontjaik — a D14, az össz-pont, a pakli), és (2) a szeletet érintő DÖNTÉSEK eredményét (a javaslat-rész
+állása a lezáráskor). Mindkettőre ugyanaz a minta, mint az össz-pontnál (D92/5) és a 2. lépcsőnél (D94): aki a teljes
+halmazt tartja, összegző fát épít; a kérdező a gyökér bemondása UTÁN mintát kér, és ellenőriz.
+
+1. **A szelet összegzése** (a mostani állapot): állapot-fa a szelet pont-tartóiról (`'p:' + szerző` → a legutóbbi aláírt
+   pont-esemény; az összegek: a pont és az aktív jel) — a D92/5 részfa-fájának szelet szintű párja. A gyökér, a darab és
+   az összegek adják a pont-tartók számát, az össz-pontot és az aktív tulajdonosok számát; a minták aláírt pont-események.
+2. **A lezárási összegzés** (a döntés — a döntési csomag nagy bemenetű változata, D85 T3 mintája): ha egy javaslat egy
+   NAGY szeletű érintettet érint, a teljes tartó a lezáráskor (a pontos, időrendi számításból) összegzést ad ki a részről:
+   a végső számok (támogatók, ellenzők, tartózkodók, nevező), a küszöbök és a lezárás ideje, és három fa gyökere — a
+   beszámított szavazatok, a lezáráskori aktív tulajdonosok, és az érték javaslatok érték szerint rendezve (a medián
+   helyét a sorrend bizonyítja). Az összegző tartó a számokból újraszámolja a kimenetet és a határidőt, és mintákkal
+   ellenőrzi a fákat (a szavazat aláírt, a lezárás előtti, jogosult és tagtól jött; a tulajdonos pont-eseménye aláírt és
+   aktív; a medián a rendezett sor közepén áll). Ha a szám és a minták egyeznek, a rész eredménye az övé — és tárolva
+   marad, tehát a döntéshez nincs élő lekérdezés. ⚠️ Az elhallgatást (egy kihagyott szavazat) a kihagyott szavazó veszi
+   észre: a saját aláírt szavazata és a fa hiány-bizonyítéka (a 4.6 elve).
+3. **A két fok:** a vállalt szelet NAGY, ha az eseményszáma a küszöb fölött van (1000; visszalépés 800 alatt — hogy ne
+   billegjen). A teljes tartó (az önkéntes — a „mindent” beállítás, D83/2) a nagy szeletet egészében tartja, és összegzést
+   ad; az összegző tartó a születést, a saját eseményeit, a szelet összegzését és a rá vonatkozó lezárási összegzéseket a
+   mintáikkal.
+4. **A cserében:** a nagy szeletet az összegző tartó nem egyezteti halmazként; a teljes tartótól a gyökeret és a mintákat
+   kéri (ha a gyökér változott), és a lezárási összegzéseket.
+
+**A megépítés lépései:** (a) a szelet összegzése és ellenőrzése · (b) a lezárási összegzés és ellenőrzése, a
+döntés-számítás bekötésével · (c) a két fok a vállalásban és a tárban · (d) a nagy szelet a cserében. Előtte a 67. mérés:
+a gyökér és a minták ára (a szelet összegzése és egy lezárási összegzés), szeletméret szerint.
