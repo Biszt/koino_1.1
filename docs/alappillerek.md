@@ -178,8 +178,10 @@ D = 64), a tagsági csomag (E2; a kapu ellenőrzi, az őrjárat kiadja), a Profi
 szavazatát, érték javaslatát és állásfoglalását számolja** — a nem tagé `tagsagFuggoben` (az okával; nem vád, D19), és a
 meghívás után UGYANAZ az esemény számít. A döntési csomag a résztvevők tagsági láncát is viszi. ✅ **Az E3 (2026-10-04): a zárt
 koinó a kézfogásban** — a nem tag csak a koinó születését és a két azonosság-szeletet kapja (fájlt, idegen címet nem); a
-személyt a kapu csak az ismeretlen társtól kéri (a hétköznapi csere nem drágul — 64. mérés; elágazás 57–60). ⏸️ Hátravan:
-az E4 (a 2. lépcső — előbb a mérése), az E6 (a kontraszt-jelzés bemenete).
+személyt a kapu csak az ismeretlen társtól kéri (a hétköznapi csere nem drágul — 64. mérés; elágazás 57–60). ⛔ **Az E4 (a 65. mérés): a 2. lépcső TELJES
+bizonyítéka közel lineáris** (egymillió 2. lépcsősnél ~300 MB) — a D93/4 így nem tartható; új döntés kell (javaslat: a
+szúrópróba — véletlen utak a gyökérig, ~0,4–0,9 MB, logaritmikus; [`e_identitas_atvizsgalas.md`](e_identitas_atvizsgalas.md) 6.).
+⏸️ Hátravan még: az E6 (a kontraszt-jelzés bemenete).
 
 ### F. A TÁRSANKÉNTI EMLÉKEZET (a D71 (iii) V2-je) — B után
 

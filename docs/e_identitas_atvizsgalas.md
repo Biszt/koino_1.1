@@ -91,4 +91,35 @@ aki a tanúsító felhatalmazásáról dönt (a felhatalmazók), a tanúsította
 ## 5. A mérések
 
 - ✅ **63.** a tagsági lánc mélysége és mérete — fent.
-- ⏭️ **64.** a tagsági csomag a döntési csomagban (E1 ára) és a 2. lépcső csomagja (E4) — a döntés után.
+- ✅ **64.** a zárt koinó kapuja a dróton (E3): az ismert társnál +0 B, az első találkozáskor +0,5 KB, csomaggal ~1,1 KB
+  lépésenként (`eredmenyek.md` 64.).
+- ✅ **65.** a 2. lépcső bizonyítéka (E4): a teljes zárvány közel lineáris — lent, 6.
+- ⏭️ **66.** a tagsági láncok a döntési csomagban (az E1 ára).
+
+## 6. ⭐ Az E4 a 65. mérés után — a D93/4 így nem tartható (2026-10-04)
+
+A D93/4 („ugyanaz a csomag-forma, a tanúsítások és a felhatalmazások láncával”) a mérés előtti feltevésen állt, hogy a
+2. lépcső bizonyítéka a tagsági lánchoz hasonlóan kicsi (az átvizsgálás 17–40 őst említett). ⛔ **A 65. mérés szerint
+nem az:** a tagság lánca egy szülős (a legrövidebb választható), a 2. lépcső viszont minden lépcsőn 3 tanúsítást és
+tanúsítónként N felhatalmazást kíván — a teljes bizonyíték az ős-háló zárványa, és ez közel LINEÁRISAN nő (egymillió
+2. lépcsősnél ~61 000 ember, ~300 MB; lánc-szerű növekedésnél a 2. lépcsősök 45%-a). Ez a „végtelen” elvét sérti.
+
+**A lehetőségek:**
+
+- **(A) ⭐ Szúrópróba — a javaslatom.** A 2. lépcső igazolása két részből áll: a HELYI rész teljesen (X 3 tanúsítása, a
+  tanúsítók bemondott N felhatalmazása — mind aláírva, különböző emberektől; ~37 esemény), és k = 8 VÉLETLEN ÚT az alapító
+  körig: minden lépésen az aktuális ember egy véletlen tanúsítója, és annak egy véletlen kötelezettsége (a saját 2.
+  lépcsője vagy egy felhatalmazója). Az utakat az ELLENŐRZŐ választja, és a lépések eseményeit az azonosság-szeletekből
+  kéri (a D kérelmével) — ⚠️ nem a bizonyító számolja ki előre: egy előre rögzített utat addig sorsolhatna, amíg el nem
+  kerüli a zsákutcákat (egy hamis ág ~1/3 eséllyel esik útba, 8 útnál ~25 próbálkozás elég volna). Ár: egymillió 2.
+  lépcsősnél ~0,4–0,9 MB, személyenként egyszer (a már igazolt 2. lépcsősök gyorsítótárban), **logaritmikus**. A biztonság:
+  a teljesen hamis szerkezet mindig elbukik (nem ér el a gyökérig); a részben hamis (valódi tanúsítók + egy gyűrű) 8
+  úttal ~96%-kal; a maradékot a kontraszt-jelzés és a visszacsatolás fogja — a D56 szerkezete: *a védelem nem a kapu,
+  hanem hogy a rossz tanúsító elveszíti a szerepét*. Ugyanaz a minta, mint az össz-pont szúrópróbája (D92/5).
+- **(B) Halasztás a pénzig (D66).** Ma a 2. lépcsőnek a tanúsítási jogon kívül nincs fogyasztója a döntésben; a forma a
+  tartós maggal együtt dőlne el (pl. egy aláírt, koinó-szintű lépcső-gyökér, logaritmikus bizonyítékkal). Addig a
+  `lepcso2E` a meglévő tárból számol, és ami hiányzik, az „nem ellenőrizhető” (D19). ⚠️ Az alappillér elve ellen szól:
+  a tanúsítási jog (és a pénz) erre épül.
+- **(C) A teljes zárvány** (a D93/4 eredeti alakja) — a mérés elveti.
+- **(D) Korlátozott mélység szúrópróba nélkül** — konstans, de D = 1-nél a mélyebb szint bemondása egy kulcs-gyűrűvel
+  ingyen hamisítható, D = 2–3 pedig 0,7–11 MB.

@@ -4713,3 +4713,36 @@ horgony és egy kör), csomaggal a lánc mélységével arányosan (~1,1 KB lép
 mérés szerint ~13 lépés) ~16 KB; a mélység-korlátnál (64) ~71 KB — ez a felső határ. ⭐ Ha minden cserén menne a
 személy (a D93/3 első olvasata), a „nincs újdonság” csere ~+0,4–0,5 KB-tal (~30%-kal) drágult volna — ezért kér a kapu
 csak akkor, ha nem ismeri a társat (alappillérek, elágazás 57).
+
+## 65. ⭐ A 2. LÉPCSŐ BIZONYÍTÉKA — az ős-háló zárványa, a korlátozott mélység és a szúrópróba (D93/4, 2026-10-04)
+
+*`lepcsoMeres.js` (szimuláció, aláírás nélkül — a darabszám a kérdés; egy esemény ~1 KB): 2. lépcsős, akinek 3
+tanúsítása van különböző tanúsítóktól; tanúsíthat, akinek N = 5 felhatalmazása van különböző 2. lépcsősöktől (emberenként
+egyet adhat); 7 alapító. Az új 2. lépcsős a tanúsítóit `egyenletes` (véletlen) vagy `helyi` módon (a legutóbbi 20
+tanúsító közül) kapja; az egyetlen felhatalmazását súlyozott sorsolással adja (a bizalom koncentrálódik). A minta a
+legutóbbi 2. lépcsősökből (a legmélyebbek).*
+
+```
+a teljes bizonyíték (a zárvány): személy átlag / max · esemény ≈ KB · a 2. lépcsősök %-a
+N          │ egyenletes                          │ helyi (lánc-szerű)
+1 000      │    202 /    305 ·     973 KB · 20%  │    382 /    416 ·     1 872 KB · 38%
+10 000     │  1 444 /  2 009 ·   7 143 KB · 14%  │  4 252 /  4 431 ·    21 111 KB · 43%
+100 000    │  9 588 / 12 727 ·  47 608 KB · 10%  │ 45 015 / 45 219 ·   223 879 KB · 45%
+1 000 000  │ 61 235 / 85 865 · 304 286 KB ·  6%  │454 148 /454 279 · 2 258 567 KB · 45%
+korlátozott mélység (csak D szintig; a mélyebb bemondás), esemény:  D = 1: ~37 · D = 2: ~670 · D = 3: 6 500–11 600
+szúrópróba — egy véletlen út az alapítókig (lépés, átlag / 95%), és 8 út ≈ esemény:
+N          │ egyenletes            │ helyi
+1 000      │  2,7 /  4 ·  175      │  3,8 /  6 ·  240
+10 000     │  4,3 /  6 ·  273      │  6,6 / 10 ·  424
+100 000    │  5,4 /  8 ·  347      │  9,6 / 15 ·  616
+1 000 000  │  6,6 /  9 ·  420      │ 13,5 / 19 ·  862
+```
+
+⛔ **A lelet:** a 2. lépcső TELJES bizonyítéka (minden tanúsítás és felhatalmazás az alapítókig) **nem logaritmikus,
+hanem közel lineáris** — egymillió 2. lépcsősnél egyenletes növekedéssel ~61 000 ember és ~300 MB, lánc-szerűvel a
+2. lépcsősök 45%-a (~2,2 GB). A tagság lánca egy szülős (a legrövidebb lánc választható — 63. mérés); itt minden
+lépcsőn 3 × N kötelező szülő van, és a zárvány szétterül. ⭐ A **korlátozott mélység** konstans (D = 1: ~37 esemény), de
+a mélyebb szint bemondása ingyen hamisítható (egy 8 kulcsos gyűrű elég), D = 2–3 pedig 0,7–11 MB. ⭐ A **szúrópróba**
+(néhány véletlen út a gyökérig, lépésenként csak a választott állítás és a tanúsító N felhatalmazása) **logaritmikus**:
+egymillió 2. lépcsősnél 8 út ≈ 420–860 esemény (~0,4–0,9 MB), egyszer személyenként. → az E4 döntése
+([`e_identitas_atvizsgalas.md`](../../docs/e_identitas_atvizsgalas.md) 6.).
