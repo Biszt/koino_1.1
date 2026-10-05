@@ -115,14 +115,14 @@ function teljesAzonosito(kimenet) {
  * figyelő fut, ugyanarra az adat-mappára indított másik parancs nem feltétlenül látja a
  * frissen érkezett eseményeket. *(Ugyanaz a fajta ütközés, mint két párhuzamos `mind.js`.)*
  */
-async function csereKor(gazda, vendeg, port) {
+async function csereKor(gazda, vendeg, port, kornyezet = {}) {
   const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
-    env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '' },
+    env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '', ...kornyezet },
     stdio: 'ignore'
   });
   try {
     await varj(2000);
-    await fut(vendeg, 'csere', '127.0.0.1', String(port));
+    await fut(vendeg, 'csere', '127.0.0.1', String(port), kornyezet);
     await varj(1000);
   } finally {
     figyelo.kill();
@@ -349,6 +349,99 @@ proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba 
       await varj(500);
       await rm(gazda, { recursive: true, force: true });
       await rm(vendeg, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐ D95/1, D95/3: A KÉT FOKÚ VÁLLALÁS A VALÓDI CSERÉBEN (2026-10-05)
+// ===================================
+//
+// Kicsinyített küszöbbel (4 esemény) három készülék: A a koinó alapítója és „mindent” tart (a teljes tartó, az önkéntes),
+// B és C tag és tulajdonos egy gondolaton (G), amire A javaslatot tesz. A és B szavaz, C nem — de C tulajdonos, tehát a
+// részvétel nevezőjében benne van: 2 / 3 < 70% → a javaslat ELVETVE (ez a teljes tudás). B-hez C pontja nem jut el (G nála
+// NAGY, összegezve tartja), tehát a saját eseményeiből 2 / 2-t látna → ELFOGADVA. ⭐ A lezárás után A kiadja a lezárási
+// összegzést, és egy valódi csere (`figyel` / `csere`, első találkozás, zárt koinó) után B a mintákkal ellenőrzött
+// összegzésből ugyanazt dönti, mint A — miközben G többi eseménye nem jön át hozzá (nem egyezteti halmazként), a SAJÁT új
+// eseménye viszont a csak küldő úton eljut A-hoz. Viselkedést mérünk: a két lemezt és a döntést.
+proba('⭐⭐ D95/1, D95/3: a NAGY szeletet B összegezve tartja — a lezárási összegzésből A-val egyezően dönt, G többi eseménye nem jön át, a sajátja eljut',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const c = await ujKeszulek();
+    const port = 7654;
+    const kf = { KOINO_KETFOK_KUSZOB: '4', KOINO_KETFOK_VISSZA: '3' };
+    const DONTESI_IDO = 14;
+    const lemez = async (hely) => {
+      await fut(hely, 'kivisz', join(hely, 'lemez.jsonl'));
+      return (await readFile(join(hely, 'lemez.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+    };
+    const vitel = async (honnan, hova, ...hatokor) => {
+      const f = join(honnan, 'vitel-' + Math.random().toString(36).slice(2) + '.jsonl');
+      await fut(honnan, 'kivisz', f, ...hatokor);
+      await fut(hova, 'behoz', f);
+    };
+    try {
+      await fut(a, 'koino', 'Két fok');
+      const g = azonosito(await fut(a, 'gondolat', 'NAGY'), 'Létrejött:');
+      if (!g) return false;
+      await fut(a, 'ertek', g, '51', '70', String(DONTESI_IDO), String(DONTESI_IDO));
+      await vitel(a, b);
+      await vitel(a, c);
+      await taggaTesziKeszulek(a, b, 'b');
+      await taggaTesziKeszulek(a, c, 'c');
+      await fut(b, 'pont', g, '5');
+      await vitel(b, a, 'sajat');
+
+      const jKezdet = Date.now();
+      const javaslat = azonosito(await fut(a, 'javaslat', g, 'NAGY2'), 'Szerkesztési javaslat beadva');
+      if (!javaslat) return false;
+      await vitel(a, b);
+      await fut(b, 'szavaz', javaslat, 'tamogat');
+      await vitel(b, a, 'sajat');
+      await fut(c, 'pont', g, '4');          // C tulajdonos (a nevezőben), de nem szavaz — B ezt nem látja
+      await vitel(c, a, 'sajat');
+      await fut(a, 'kiszolgalas', 'mindent');
+
+      // A lezárás után: A kiadja az összegzést; A új pontja (8) és B új pontja (6) — a cserében B-hez nem jöhet A-é.
+      await varj(Math.max(0, jKezdet + (DONTESI_IDO + 2) * 1000 - Date.now()));
+      const kiadas = await fut(a, 'osszegzes', kf);
+      await fut(a, 'pont', g, '8');
+      await fut(b, 'pont', g, '6');
+      const bElotte = await fut(b, 'allapot');
+      await csereKor(a, b, port, kf);
+
+      const aEsemenyek = await lemez(a);
+      const bEsemenyek = await lemez(b);
+      const pontEsemeny = (lista, pont) => lista.some((e) => e.tipus === 'TudatpontRendezes' && e.adat?.pont === pont
+        && e.entitas?.startsWith(g));
+      const koinoMappa = join(b, (await readdir(b, { withFileTypes: true }))
+        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name).find(Boolean));
+      const t = JSON.parse(await readFile(join(koinoMappa, 'osszegzesek.json'), 'utf8'));
+      const gTeljes = Object.keys(t.szeletek).find((k) => k.startsWith(g));
+      const aKep = await fut(a, 'allapot');
+      const bKep = await fut(b, 'allapot');
+      const vallalas = await fut(b, 'vallalas', kf);
+      const ki = {
+        kiadva: /^1 új lezárási összegzés/m.test(kiadas.replace(/\x1b\[[0-9;]*m/g, '')),
+        osszegzo: t.szeletek[gTeljes]?.fok === 'osszegzo' && t.szeletek[gTeljes]?.osszPont > 0,
+        lezaras: Object.keys(t.lezarasok).some((k) => k.endsWith('|' + gTeljes)),
+        aElvetve: aKep.includes('ELVETVE'),
+        bElotteElfogadva: bElotte.includes('ELFOGADVA'),
+        bElvetve: bKep.includes('ELVETVE') && !bKep.includes('ELFOGADVA'),
+        cPontjaNemJott: !pontEsemeny(bEsemenyek, 4),
+        aPontjaNemJott: !pontEsemeny(bEsemenyek, 8),
+        bPontjaEljutott: pontEsemeny(aEsemenyek, 6),
+        vallalas: /összegezve \(ellenőrzött gyökér/.test(vallalas)
+      };
+      // A bukás megnevezi magát (a `console.log` a próbák alatt néma).
+      if (!Object.values(ki).every(Boolean)) {
+        process.stdout.write('  két fok — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+      }
+      return Object.values(ki).every(Boolean);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+      await rm(c, { recursive: true, force: true });
     }
   });
 

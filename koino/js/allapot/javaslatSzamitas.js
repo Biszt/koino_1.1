@@ -727,7 +727,9 @@ export function lezarasiPillanatkep(esemenyek, javaslatEsemeny) {
  * @param {Object} [beallitas]
  * @param {Map<string, {osszegzes: Object, allas: Object}>} [beallitas.osszegzesek] - ⭐ D95/1: az ELLENŐRZÖTT lezárási
  *   összegzések ('javaslat|entitás' → az összegzés és a számaiból számolt állás) — a nagy szeletű rész, amelynek a
- *   bemenete nincs meg (a két fokú vállalás összegző tartójánál)
+ *   bemenetét nem tartjuk egészében (a két fokú vállalás összegző tartójánál). ⚠️ A hívó csak az összegezve tartott
+ *   szeletekét adja (`koino.js` `ellenorzottOsszegzesek`): ahol megvan, az összegzés dönt — a helyben látott részleges
+ *   bemenet (a saját pont-eseményem, a javaslat szavazatai) nem.
  */
 export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beallitas = {}) {
   const osszegzesek = beallitas.osszegzesek instanceof Map ? beallitas.osszegzesek : new Map();
@@ -758,10 +760,12 @@ export function javaslatokSzamitasa(esemenyek, allapot, most = Date.now(), beall
     // kialakultak — nem az entitás mai mediánja (az az entitás `kuszobok` mezője, a
     // felületnek). Különben egy utólagos érték javaslat átírná a lezárt döntés
     // szabályát, akár visszamenőleg a döntési idejét is.
-    // ⭐⭐ D95/1: A NAGY SZELETŰ RÉSZ AZ ELLENŐRZÖTT LEZÁRÁSI ÖSSZEGZÉSBŐL. Ha egy rész bemenete nincs meg (az érintett egyetlen
-    // pont-eseményét sem látjuk — a két fokú vállalás összegző tartója), de van rá ellenőrzött összegzés, a rész állása a
-    // számaiból jön (UGYANAZZAL a képlettel — `allasSzamokbol`), a többi rész pedig az összegzés KÖZÖS lezárásához igazodik.
-    const reszOsszegzese = (az) => (!(tudatpontok.get(az)?.length) ? osszegzesek.get(e.azonosito + '|' + az) ?? null : null);
+    // ⭐⭐ D95/1: A NAGY SZELETŰ RÉSZ AZ ELLENŐRZÖTT LEZÁRÁSI ÖSSZEGZÉSBŐL. Ha egy rész bemenetét nem tartjuk egészében (a két
+    // fokú vállalás összegző tartója), de van rá ellenőrzött összegzés, a rész állása a számaiból jön (UGYANAZZAL a képlettel —
+    // `allasSzamokbol`), a többi rész pedig az összegzés KÖZÖS lezárásához igazodik. ⛔ Nem csak akkor, ha az érintett egyetlen
+    // pont-eseményét sem látjuk: az összegző tartó a SAJÁT pont-eseményét mindig tartja — a részleges bemenetből a nevező
+    // (a tulajdonosok) hamis volna (próba mérte).
+    const reszOsszegzese = (az) => osszegzesek.get(e.azonosito + '|' + az) ?? null;
     const osszegzettek = erintettAzonositok.map(reszOsszegzese);
     const rogzitett = osszegzettek.find(Boolean)?.osszegzes.lezaras ?? null;
     const csoport0 = csoportSzamitasa(e, kik, { szavazatok, tudatpontok, ertekJavaslatok }, rogzitett);

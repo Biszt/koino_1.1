@@ -251,6 +251,30 @@ proba('⭐⭐ az összegző tartó a döntést az ELLENŐRZÖTT összegzésből 
     && vele.lezarasIdeje === teljes.lezarasIdeje && vele.reszek[0].ismert === true;
 });
 
+// ⛔ Az összegző tartó a SAJÁT pont-eseményét mindig tartja (D95/1: a születés, a saját eseményeim, az összegzés) — ha a
+// döntés-számítás csak a „semmit nem látok” esetben venné az összegzést, nála soha nem érvényesülne, és a nevezőt (a
+// tulajdonosokat) a részleges bemenetből számolná. *(Ez a hiba élt: a parancssor-próba írásakor derült ki.)*
+proba('⭐⭐ a SAJÁT pont-eseményével együtt is az összegzés dönt — a részleges bemenetből a nevező hamis volna', async () => {
+  const { esemenyek, g, j, emberek, olvas } = await vilag();
+  const en = emberek[5].szerzo;
+  const most = Date.now();
+  const teljes = javaslatokSzamitasa(esemenyek, { entitasok: new Map() }, most).get(j.azonosito);
+  const { osszegzes, epito } = await lezarasiOsszegzesEpitese(esemenyek, j, g.azonosito);
+  const helyek = lezarasiMintaHelyek(osszegzes);
+  const e = await lezarasiOsszegzesEllenorzese({ osszegzes, javaslatEsemeny: j, helyek,
+    mintak: await lezarasiMintakValasza(epito, helyek, olvas), tagE: mindenkiTag });
+  // Az összegző nézete: G idegen pont- és érték-eseményei nélkül, de a SAJÁT pont-eseményével.
+  const nezet = esemenyek.filter((x) => !((x.tipus === 'TudatpontRendezes' || x.tipus === 'ErtekJavaslat')
+    && x.adat?.entitas === g.azonosito && x.szerzo !== en));
+  const sajatja = nezet.some((x) => x.tipus === 'TudatpontRendezes' && x.adat?.entitas === g.azonosito);
+  const nelkule = javaslatokSzamitasa(nezet, { entitasok: new Map() }, most).get(j.azonosito);
+  const vele = javaslatokSzamitasa(nezet, { entitasok: new Map() }, most,
+    { osszegzesek: new Map([[j.azonosito + '|' + g.azonosito, { osszegzes, allas: e.allas }]]) }).get(j.azonosito);
+  return e.rendben && sajatja && nelkule.reszek[0].nevezo !== teljes.reszek[0].nevezo
+    && vele.reszek[0].nevezo === teljes.reszek[0].nevezo && vele.reszek[0].tamogatok === teljes.reszek[0].tamogatok
+    && vele.statusz === teljes.statusz && vele.lezarasIdeje === teljes.lezarasIdeje;
+});
+
 proba('⭐⭐ több érintettnél: a NAGY rész az összegzésből, a KIS rész helyben — a közös lezáráshoz igazítva; az „ÉS” ugyanaz', async () => {
   const emberek = [];
   for (let i = 0; i < 16; i++) emberek.push(await ujEember());

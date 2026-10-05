@@ -4844,6 +4844,24 @@ teljes vállalással egymillió tagnál a 95%-nál ~37 000 eseményt és ~36 000
 A megépítés sorrendje: az átvizsgálás 6. pontja (előbb a két fokú vállalás — előtte mérés —, aztán a B2–B3, a B4, a
 bekapcsolás).
 
+#### ✅ MEGÉPÜLT — a B1 (2026-10-05)
+
+A 67. mérés után (a lezárási összegzés ~60–70 KB döntésenként, logaritmikus): **(a)** a lezárási összegzés és a szúrópróbája
+(`lezarasiOsszegzes.js` — a végső számok, a küszöbök, a lezárás, és három fa: a beszámított szavazatok, a lezáráskori aktív
+tulajdonosok, az érték javaslatok érték szerint; a medián helye mindig a minták közt; az elhallgatott szavazat a szavazó
+panaszából kiderül) · **(b)** az összegzés eseményként (`LezarasiOsszegzes`, a javaslat szeletébe, az érintetthez
+bejelentve; a kapu az alakját ellenőrzi), és a döntés-számítás: a nagy szeletű rész az ellenőrzött összegzésből, a többi a
+közös lezáráshoz igazítva · **(c)** a két fok (`ketFok.js`: 1000 esemény fölött összegzett, vissza 800 alatt; az
+azonosság-szelet és a koinó születése mindig teljes; a „mindent” beállítás — `kiszolgalas mindent` — mindent egészében
+tart) és a helyi jegyzék (`osszegzesek.json`) · **(d)** a csere (`vonal.js` — `osz`/`kul` a CIMEK-ben, két kör:
+`OSSZEGZESEK`, `OSSZEGZESMINTAKEREK`, `OSSZEGZESMINTAK`; a szerepek: `osszegzoTartas.js`): az összegző tartó a nagy
+szeletet nem egyezteti halmazként, a teljes tartótól a gyökeret (a D92/5 részfa-fája) és az azóta lezárt döntések
+összegzéseit kéri, MAGA sorsol mintát, ellenőriz, és tárol; az össz-pont a tárolt gyökérből (`osszegzett` bemondás); a
+saját eseményei a csak küldő úton mennek (a B3 magja). Az őrjárat a nagy szelet teljes tartójaként kiadja az összegzéseket
+(`osszegzes` parancs kézzel). ⚠️ A minták szerzőinek tagsága ma csak a kapu emlékéből ismert (a többi „nem ellenőrizhető”);
+a teljeset a B2 hozza. ⚠️ A nagy szelet már meglévő eseményei a tartós tárban maradnak — a tár tömörítése a bekapcsolással
+jön (a visszavett vállalással együtt).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

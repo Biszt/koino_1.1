@@ -144,3 +144,22 @@ halmazt tartja, összegző fát épít; a kérdező a gyökér bemondása UTÁN 
 **A megépítés lépései:** (a) a szelet összegzése és ellenőrzése · (b) a lezárási összegzés és ellenőrzése, a
 döntés-számítás bekötésével · (c) a két fok a vállalásban és a tárban · (d) a nagy szelet a cserében. Előtte a 67. mérés:
 a gyökér és a minták ára (a szelet összegzése és egy lezárási összegzés), szeletméret szerint.
+
+✅ **MEGÉPÜLT (2026-10-05) — mind a négy lépés** (a részletek: a fázis-2 terv D95, „MEGÉPÜLT”). Ami közben derült ki:
+
+- ⛔ **A döntés-számítás az összegzést eredetileg csak akkor vette, ha az érintett egyetlen pont-eseményét sem látta** — az
+  összegző tartó viszont a SAJÁT pont-eseményét mindig tartja, tehát nála az összegzés soha nem érvényesült volna, és a
+  nevezőt (a tulajdonosokat) a részleges bemenetből számolta volna. A parancssor-próba írásakor derült ki; a modul-próba
+  azért nem fogta meg, mert a nézete MINDEN pont-eseményt kivett. Most: ahol ellenőrzött összegzés van az összegezve tartott
+  szeletre, az dönt (a hívó csak ezekét adja); a próba a saját pont-eseménnyel együtt mér, és kimondja, hogy nélküle a nevező
+  más volna.
+- ⚠️ **Első találkozáskor a kapu még nem döntött**, amikor a CIMEK megy — az összegző és a küldő lista ezért a bizonyítás
+  utáni CIM-pótlásban is megy (külön kör nélkül).
+- A parancssor-próba (három készülék, kicsinyített küszöb): B a lezárási összegzésből ugyanazt dönti, mint A (a teljes
+  tudás), miközben a saját eseményeiből mást döntene; G többi eseménye nem jön át hozzá, a sajátja eljut A-hoz. Négy
+  rontás-próba (az összegzés nélküli döntés, a halmazként egyeztetett nagy szelet, a csak küldő út nélkül, a pótlás nélkül)
+  mind elbukik.
+
+⏭️ **Hátra van:** a B2 (a tagsági csomag kísérőként — vele a minták szerzőinek tagsága), a B3 a többi szeletre (a mások
+azonosság-szeletébe tett állításaim), a B4, és a bekapcsolás (a részvétel a vállalásból, a törzs korlátja, a kérelem az
+átmenetiből, a visszavett vállalás és a tár tömörítése).

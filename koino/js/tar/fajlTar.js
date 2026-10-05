@@ -861,6 +861,46 @@ export function lancTarolo(koino, hely = alapHely()) {
 }
 
 // ===================================
+// ⭐⭐ D95/1: AZ ÖSSZEGZÉSEK — a két fokú vállalás helyi jegyzéke
+// ===================================
+
+/**
+ * Az összegezve tartott (nagy) szeletek ellenőrzött összegzései és a rájuk vonatkozó, ellenőrzött lezárási összegzések
+ * (`allapot/osszegzoTartas.js`) — koinónként egy JSON-fájl (`osszegzesek.json`): `{ szeletek: { kulcs: { fok, gyoker,
+ * osszPont, darab, mikor, ellenorizve } }, lezarasok: { 'javaslat|entitás': { esemeny, osszegzes, allas, ellenorizve } } }`.
+ * ⚠️ HELYI feljegyzés (nem esemény, nem terjed) — de NEM tiszta gyorsítótár: a lezárási összegzés ellenőrzése (a minták)
+ * a csere közben történt, újra csak a teljes tartótól lehetne. Az írás átnevezéssel kerül a helyére (több folyamat írhatja).
+ * @returns {{olvas: Function, ir: Function, fajl: string}}
+ */
+export function osszegzesTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'osszegzesek.json');
+  return {
+    fajl,
+    /** @returns {Promise<{szeletek: Object, lezarasok: Object}>} */
+    async olvas() {
+      try {
+        const j = JSON.parse(await readFile(fajl, 'utf8'));
+        return { szeletek: j?.szeletek && typeof j.szeletek === 'object' ? j.szeletek : {},
+          lezarasok: j?.lezarasok && typeof j.lezarasok === 'object' ? j.lezarasok : {} };
+      } catch {
+        return { szeletek: {}, lezarasok: {} };
+      }
+    },
+    async ir(adat) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
+    }
+  };
+}
+
+// ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================
 //

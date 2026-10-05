@@ -46,6 +46,17 @@ proba('⭐ a NEM TARTOTT gyerek bemondása számít; ha az sincs, a saját pontj
     && nelkule.get('B').sajat === null && nelkule.get('A').bizonytalan === 1 && nelkule.get('C').osszPont === 9;
 });
 
+// ⭐ D95/1: a NAGY szeletet összegezve tartom — a saját pontom megvan (tehát nem „ismeretlen”), de az össz-pontját a
+// teljes tartótól kapott, ellenőrzött gyökér adja; a jel nélküli bemondás a tartott entitásnál továbbra sem számít.
+proba('⭐ az ÖSSZEGEZVE tartott szelet össz-pontja az ellenőrzött gyökéré (`osszegzett`), a saját pontja megmarad; jel nélkül a számolt', () => {
+  const m = new Map([ent('A', null, 5), ent('B', 'A', 2), ent('C', 'B', 9)]);
+  const vele = osszPontokSzamitasa(m, new Map([['B', { osszPont: 400, osszegzett: true }]]));
+  const jelNelkul = osszPontokSzamitasa(m, new Map([['B', { osszPont: 400 }]]));
+  return vele.get('B').osszPont === 400 && vele.get('B').forras === 'osszegzett' && vele.get('B').sajat === 2
+    && vele.get('A').osszPont === 405 && vele.get('B').bizonytalan === 0
+    && jelNelkul.get('B').osszPont === 11 && jelNelkul.get('B').forras === 'szamolt';
+});
+
 proba('⛔ a hibás bemondás (negatív, tört, szöveg) nem számít — ismeretlen marad', () => {
   const m = new Map([ent('A', null, 5), ent('B', 'A', 0, { pontokIsmeretlenek: true })]);
   // (B-nek nincs ismert gyereke: az össz-pontja 0 marad)

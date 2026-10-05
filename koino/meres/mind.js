@@ -74,6 +74,8 @@ import tagsag from './tagsagProba.js';
 import atmeneti from './atmenetiProba.js';
 // ⭐ D95/1: a lezárási összegzés — a nagy szeletű érintett döntése az összegző tartónak.
 import lezarasiOsszegzes from './lezarasiOsszegzesProba.js';
+// ⭐ D95/1, D95/3: a két fokú vállalás szerepei a valódi cserén.
+import osszegzoTartas from './osszegzoTartasProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -114,6 +116,7 @@ const PROBAK = [
   { nev: 'cimjegyzek', futtat: cimjegyzek },
   { nev: 'osszpont', futtat: osszpont },
   { nev: 'kerelem', futtat: kerelem },
+  { nev: 'osszegzotartas', futtat: osszegzoTartas },
   { nev: 'tagsag', futtat: tagsag },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
@@ -145,7 +148,7 @@ const CSOPORTOK = {
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
-  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'vizsga'],
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül
@@ -248,6 +251,8 @@ console.log('\n' + SZIN.vastag + '───── ÖSSZESEN ─────' + S
 if (argok.length) {
   kiir('Csak: ' + argok.join(' ') + ' — ' + futtatandok.length + ' próba-fájl a ' + PROBAK.length + '-ből');
 }
+// ⭐ …és ha a próbák nevére is szűrtünk (`KOINO_PROBA`, `probaFuttato.js`), azt is.
+if (process.env.KOINO_PROBA) kiir('Szűrve: KOINO_PROBA=„' + process.env.KOINO_PROBA + '” — csak a nevükben ezt tartalmazó próbák futottak');
 // ⭐ Az ismert hibák ELŐBB, az összegzés UTOLJÁRA — a telefon `tail -3`-ja így is az összegzést
 // látja (lásd `probaFuttato.js`, „AZ ISMERT HIBA").
 if (ismertHibak.length) {

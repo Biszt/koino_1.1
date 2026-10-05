@@ -454,6 +454,17 @@ export async function lepcsoBemondasKiadasa(kornyezet) {
   return { kiadva: true, ok: 'bemondva (' + tanusitasok.length + ' tanúsítás)', esemeny };
 }
 
+/**
+ * ⭐ D95/1: A LEZÁRÁSI ÖSSZEGZÉS KIADÁSA — a nagy szelet TELJES tartója (az önkéntes) adja ki egy lezárt döntésről; a
+ * javaslat szeletébe kerül, és az érintetthez bejelentődik (`esemeny.js`). A tartalmát az összegző tartó a mintákkal
+ * ellenőrzi — az aláírás csak azt mondja meg, ki adta ki.
+ * @param {Object} kornyezet
+ * @param {Object} osszegzes - `lezarasiOsszegzesEpitese` összegzése
+ */
+export function lezarasiOsszegzesKiadasa(kornyezet, osszegzes) {
+  return esemenytTeszek(kornyezet, 'LezarasiOsszegzes', osszegzes, { entitas: osszegzes.javaslat });
+}
+
 export async function tagsagiCsomagKiadasa(kornyezet) {
   const szerzo = kornyezet.szerzo;
   const horgony = await azonossagHorgonya(kornyezet.tar, kornyezet.koino, szerzo);

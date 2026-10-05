@@ -90,9 +90,14 @@ export const MAX_DARAB = 100;
  *
  * ⚠️ Egyetlen képet tartunk — a legutóbbit. Egy lapozás végigmegy ugyanazon a horgonyon,
  * tehát ennyi elég; és így nem nő korlátlanul.
+ *
+ * ⭐ D95/1: az `osszegzesek` (ha van) az ellenőrzött lezárási összegzéseket adja a döntés-számításnak — a nagy szeletű
+ * részek döntése az összegző tartónál ebből jön, ugyanúgy, mint a parancssorban (`koino.js` `kepetKeszit`).
+ * @param {Object} [beallitas]
+ * @param {Function|null} [beallitas.osszegzesek] - async () → Map('javaslat|entitás' → { osszegzes, allas })
  */
-export function ujPakliNezet() {
-  return { horgony: null, kep: null, szamitasok: 0 };
+export function ujPakliNezet({ osszegzesek = null } = {}) {
+  return { horgony: null, kep: null, szamitasok: 0, osszegzesek };
 }
 
 // ===================================
@@ -836,7 +841,8 @@ async function kepetKerni(nezet, koino, horgony, most, esemenyek, csakAtmeneti =
   // ⭐⭐ ÉS A HÁROM FÁZIS HARMADIKA: az elfogadott szerkesztési egyezmények rávezetése.
   // ⚠️ Enélkül a pakli **elfogadott egyezmény után is a régi címet mutatná** — pontosan az
   // a hiba, amit a Szakasz 5.3 első órájában mértünk.
-  const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most);
+  const osszegzesek = typeof nezet.osszegzesek === 'function' ? await nezet.osszegzesek() : new Map();
+  const javaslatok = javaslatokSzamitasa(kep.szamitok, kep, most, { osszegzesek });
   await szerkesztesiEgyezmenyekAlkalmazasa(kep, javaslatok);
 
   // ⭐ A javaslatok is kártyák (5.5) — a képpel együtt tartjuk, hogy ne kelljen kétszer

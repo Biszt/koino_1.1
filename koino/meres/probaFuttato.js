@@ -59,13 +59,18 @@ export function probaGyujtemeny(cim) {
      *                    ismertHibak: Array<string>}>}
      */
     async futtatas(csendes = false) {
-      if (!csendes) kiir('\n' + SZIN.vastag + cim + SZIN.vege);
+      // ⭐ EGY PRÓBA A NEVÉBŐL (2026-10-05): `KOINO_PROBA=<részlet>` — csak az a próba fut, amelynek a nevében benne van
+      // (fejlesztés közben, egy hosszú csoportból). ⚠️ A szűrt futás kimondja magát: a fejlécben és az összegzésben.
+      const szuro = process.env.KOINO_PROBA || null;
+      const futok = szuro ? probak.filter((p) => p.nev.includes(szuro)) : probak;
+      if (!csendes) kiir('\n' + SZIN.vastag + cim + SZIN.vege
+        + (szuro ? SZIN.halvany + '  (szűrve: KOINO_PROBA — ' + futok.length + ' a ' + probak.length + '-ből)' + SZIN.vege : ''));
 
       let sikeres = 0;
       const bukottak = [];
       const ismertHibak = [];
 
-      for (const p of probak) {
+      for (const p of futok) {
         let rendben = false, hibaSzoveg = '';
         try {
           rendben = await p.futtat();
@@ -103,10 +108,10 @@ export function probaGyujtemeny(cim) {
         const ismert = ismertHibak.length ? ' · ⚠️ ' + ismertHibak.length + ' ismert hiba nyitva' : '';
         kiir('  ' + (!bukottak.length ? SZIN.jo + '✅ Mind a ' + sikeres + ' próba rendben' + ismert
                                  : SZIN.nem + '❌ ' + bukottak.length + ' próba BUKOTT ('
-                                   + probak.length + '-ből)' + ismert) + SZIN.vege);
+                                   + futok.length + '-ből)' + ismert) + SZIN.vege);
       }
 
-      return { cim, osszes: probak.length, sikeres, bukottak, ismertHibak };
+      return { cim, osszes: futok.length, sikeres, bukottak, ismertHibak };
     }
   };
 }

@@ -94,18 +94,25 @@ export function osszPontokSzamitasa(entitasok, bemondasok = new Map()) {
       if (ki.has(az)) continue;
       const e = entitasok.get(az);
       const ismeretlen = !!e.pontokIsmeretlenek;
+      // ⭐ D95/1: a NAGY szeletet összegezve tartom — a saját pontjaim megvannak, a többi pont-tartóé nem; az össz-pontot a
+      // teljes tartótól kapott, mintákkal ellenőrzött gyökér adja (`osszegzett` jelű bemondás — az egész részfát fedi).
+      const osszegzett = !ismeretlen && bemondasok.get(az)?.osszegzett === true && bemondasErvenyes(bemondasok.get(az));
       if (!kesz) {
         if (folyamatban.has(az)) continue;          // kör: ez az ág már a veremben van
         folyamatban.add(az);
         verem.push([az, true]);
         // A bemondott (nem tartott) entitás gyerekeit nem járjuk be — a bemondás az egész részfát fedi.
-        const bemondott = ismeretlen && bemondasErvenyes(bemondasok.get(az));
+        const bemondott = (ismeretlen && bemondasErvenyes(bemondasok.get(az))) || osszegzett;
         if (!bemondott) for (const g of gyerekek.get(az) ?? []) if (!ki.has(g) && !folyamatban.has(g)) verem.push([g, false]);
         continue;
       }
       folyamatban.delete(az);
       if (ismeretlen && bemondasErvenyes(bemondasok.get(az))) {
         ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: null, forras: 'bemondott', bizonytalan: 0 });
+        continue;
+      }
+      if (osszegzett) {
+        ki.set(az, { osszPont: bemondasok.get(az).osszPont, sajat: e.osszesPont, forras: 'osszegzett', bizonytalan: 0 });
         continue;
       }
       let osszPont = ismeretlen ? 0 : e.osszesPont;

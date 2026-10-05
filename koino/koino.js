@@ -53,6 +53,8 @@
 //   node koino/koino.js cimjegyzek [hirdet|keres|gyoker|hirdetes]  — ⭐ D91: a DHT-n hirdetett címjegyzék
 //   node koino/koino.js kerelem fejlecek|torzs <az> [cím] [port]   — ⭐ D92: a kérelem (fejlécek mintákkal, törzs)
 //   node koino/koino.js csomag [javaslat]        — ⭐ D85 T3: a lezárt, több érintettes döntés csomagja
+//   node koino/koino.js kiszolgalas [mindent|alap] — ⭐ D83/2, D95/1: a nagy szeleteket is egészében tartom?
+//   node koino/koino.js osszegzes                — ⭐ D95/1: a lezárási összegzések (kiadás, és a kapott ellenőrzöttek)
 //   node koino/koino.js pajzsfuro <cím> <port> [helyi port]  — ⭐ a rés: csere ÉS fájlok
 //   node koino/koino.js kulsoport [port]         — kívülről melyik portomat látják?
 //   node koino/koino.js felfedez [mp] [port]     — ki van még ezen a wifin?
@@ -82,7 +84,7 @@
 //
 // A két mappának saját kulcsa van, tehát valóban két e-ember — nem ugyanaz kétszer.
 
-import { writeFile, readFile } from 'node:fs/promises';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -95,7 +97,9 @@ import {
   // ⭐ A FÁJLOK (5.7): tartalom-címzett tár — a név a lenyomat.
   fajlBlobTarolo, fajlTipus, FAJL_KORLAT, fajlJegyzekTarolo, memoriaBlobTarolo,
   // ⭐ D78: a lánc-gyökér gyorsítótára (a napló csúcsai és a kiosztás).
-  lancTarolo
+  lancTarolo,
+  // ⭐ D95/1: az összegzések helyi jegyzéke (a nagy szelet gyökere, a lezárási összegzések).
+  osszegzesTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
@@ -137,11 +141,17 @@ import {
   // ⭐ D93: a profil és a tagsági csomag.
   profilMegadasa, tagsagiCsomagKiadasa,
   // ⭐ D94: a 2. lépcső bemondása (a szúrópróba ezt követi).
-  lepcsoBemondasKiadasa
+  lepcsoBemondasKiadasa,
+  // ⭐ D95/1: a nagy szelet teljes tartója kiadja a lezárt döntések összegzését.
+  lezarasiOsszegzesKiadasa
 } from './js/muveletek.js';
 import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet, tagsagiEsemenyekGyujtese } from './js/allapot/identitas.js';
 // ⭐ D93/3: a zárt koinó kapuja — a tagság tiszta számítása és a tagsági csomag ellenőrzése.
 import { tagsagiIndex, szerzoTagsaga, tagsagiCsomagEllenorzese, TAGSAGI_CSOMAG } from './js/allapot/tagsag.js';
+// ⭐ D95/1, D95/3: a két fokú vállalás — a fokok, a szerepek a cserében, és a lezárási összegzés.
+import { szeletFokai, KETFOK_KUSZOB, KETFOK_VISSZA } from './js/allapot/ketFok.js';
+import { osszegzoKerdo, teljesTarto, sajatKuldo, kuldoFogado } from './js/allapot/osszegzoTartas.js';
+import { lezarasiOsszegzesEpitese, LEZARASI_OSSZEGZES } from './js/allapot/lezarasiOsszegzes.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
 import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok, onalloSzalak } from './js/allapot/jelzesek.js';
@@ -624,7 +634,9 @@ async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO)
   const { esemenyek, csakAtmeneti } = await ketTarBemenete(melyikTar, melyikTar === tar ? atmeneti : null,
     melyikKoino);
   const allapot = allapotSzamitasa(esemenyek, { csakAtmeneti });
-  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP);
+  // ⭐ D95/1: a nagy szeletű részek döntése az ellenőrzött lezárási összegzésekből (az összegző tartónál).
+  const osszegzesek = melyikTar === tar ? await ellenorzottOsszegzesek() : new Map();
+  const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP, { osszegzesek });
 
   // ⭐ A HARMADIK FÁZIS (2026-09-06): az elfogadott szerkesztési egyezményeket RÁVEZETJÜK az
   // entitásokra. ⚠️ Eddig ez hiányzott: a javaslat elfogadódott, az egyezmény megszületett,
@@ -1356,8 +1368,23 @@ function bemondasFajl() {
 }
 const BEMONDAS_KORLAT = 10000;
 
-/** A bemondott össz-pontok: azonosító → { osszPont, ido, ellenorzott }. */
+/**
+ * ⭐ A bemondott össz-pontok a számításnak — a fájlbeliek, és D95/1 óta az összegezve tartott (nagy) szeleteim ellenőrzött
+ * gyökere (`osszegzett` jellel: a szelet tartott, de csak összegezve — `osszPont.js`). ⚠️ Ez utóbbi nem kerül a fájlba.
+ */
 async function bemondasok() {
+  const m = await bemondasokFajlbol();
+  const t = await osszegzesTarolo(KOINO).olvas();
+  for (const [k, x] of Object.entries(t.szeletek)) {
+    if (x?.fok === 'osszegzo' && Number.isSafeInteger(x.osszPont) && x.osszPont >= 0) {
+      m.set(k, { osszPont: x.osszPont, ido: x.ellenorizve ?? 0, ellenorzott: true, osszegzett: true });
+    }
+  }
+  return m;
+}
+
+/** A bemondott össz-pontok a fájlból: azonosító → { osszPont, ido, ellenorzott }. */
+async function bemondasokFajlbol() {
   try {
     const b = JSON.parse(await readFile(bemondasFajl(), 'utf8'));
     return new Map(Object.entries(b && typeof b === 'object' ? b : {})
@@ -1370,7 +1397,7 @@ async function bemondasok() {
 /** Új bemondások beírása (a legrégebbiek esnek ki a korlátnál). */
 async function bemondasokBeirasa(ujak) {
   if (!ujak.size) return;
-  const m = await bemondasok();
+  const m = await bemondasokFajlbol();
   for (const [az, x] of ujak) { m.delete(az); m.set(az, x); }
   const lista = [...m.entries()].sort((a, b) => (a[1].ido ?? 0) - (b[1].ido ?? 0)).slice(-BEMONDAS_KORLAT);
   await writeFile(bemondasFajl(), JSON.stringify(Object.fromEntries(lista)), 'utf8');
@@ -1593,6 +1620,135 @@ function kerelemKiszolgaloja() {
 }
 
 // ===================================
+// ⭐⭐ D95/1, D95/3: A KÉT FOKÚ VÁLLALÁS — a nagy szelet összegezve, a saját eseményeim a csak küldő úton
+// ===================================
+//
+// A vállalt szelet KICSI → egészében tartom (a csere halmazként egyezteti); NAGY (a küszöb fölött) → csak összegezve: a
+// gyökér és a minták, a rá vonatkozó lezárási összegzések, és a saját eseményeim (`ketFok.js`, `osszegzoTartas.js`). A
+// „mindent” beállítású készülék (D83/2 — helyi) mindent egészében tart: ő az önkéntes, aki a nagy szelet döntéseit összegzi.
+// ⚠️ A küszöböt a próbák a környezetből kicsinyítik (`KOINO_KETFOK_KUSZOB`, `KOINO_KETFOK_VISSZA`).
+
+const KETFOK = {
+  kuszob: Number(process.env.KOINO_KETFOK_KUSZOB) > 0 ? Number(process.env.KOINO_KETFOK_KUSZOB) : KETFOK_KUSZOB,
+  vissza: Number(process.env.KOINO_KETFOK_VISSZA) > 0 ? Number(process.env.KOINO_KETFOK_VISSZA) : KETFOK_VISSZA
+};
+/** A lezárási összegzések építői (a lezárás bemenete befagyott — egyszer épül; korlátos). */
+const lezarasEpitoGyorsitotar = new Map();
+const kiszolgalasFajl = () => join(alapHely(), KOINO, 'kiszolgalas.json');
+
+/** ⭐ D83/2: a készülékenkénti kiszolgálási beállítás (helyi, nem esemény, nem terjed). */
+async function kiszolgalasBeallitas() {
+  try {
+    const j = JSON.parse(await readFile(kiszolgalasFajl(), 'utf8'));
+    return { mindent: j?.mindent === true };
+  } catch {
+    return { mindent: false };
+  }
+}
+
+/** A vállalt szeletek foka (a változást a tárolóba írja), és a jegyzék (szelet → az ismert eseményszám). */
+async function ketFokAllapota(allapot = null) {
+  // ⚠️ A teljes állapot nélkül (a csere minden munkájában fut): a koinó születését a tagsági láncom adja.
+  const szuletes = allapot?.koino?.azonosito ?? (await koinoSzuletese())?.azonosito ?? null;
+  const vallalas = vallalasSzamitasa((await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === KOINO),
+    { koinoSzuletes: szuletes });
+  const tarolo = osszegzesTarolo(KOINO);
+  const t = await tarolo.olvas();
+  const jegyzek = new Map((await tar.szeletek()).map((x) => [x.szelet, x.db + x.bejelentes]));
+  const meretek = new Map();
+  for (const k of vallalas.szeletek) {
+    meretek.set(k, Math.max(jegyzek.get(k) ?? 0, t.szeletek[k]?.fok === 'osszegzo' ? (t.szeletek[k].darab ?? 0) : 0));
+  }
+  const fokok = szeletFokai({ szeletek: vallalas.szeletek, meretek,
+    mindigTeljes: [...vallalas.azonossag, vallalas.koinoSzuletes].filter(Boolean),
+    elozo: new Map(Object.entries(t.szeletek).map(([k, x]) => [k, x?.fok])),
+    mindent: (await kiszolgalasBeallitas()).mindent, kuszob: KETFOK.kuszob, vissza: KETFOK.vissza });
+  let valtozott = false;
+  for (const [k, f] of fokok) {
+    if ((t.szeletek[k]?.fok ?? 'teljes') !== f) { t.szeletek[k] = { ...(t.szeletek[k] ?? {}), fok: f }; valtozott = true; }
+  }
+  if (valtozott) await tarolo.ir(t);
+  return { fokok, vallalas, jegyzek, tarolo };
+}
+
+/**
+ * Az ellenőrzött lezárási összegzések a döntés-számításnak ('javaslat|entitás' → { osszegzes, allas }) — ⚠️ csak a MOST
+ * összegezve tartott szeletekéi: ahol a szeletet (újra) egészében tartom, a teljes bemenet dönt.
+ */
+async function ellenorzottOsszegzesek() {
+  const t = await osszegzesTarolo(KOINO).olvas();
+  return new Map(Object.entries(t.lezarasok)
+    .filter(([k, x]) => x?.osszegzes && x?.allas && t.szeletek[k.split('|')[1]]?.fok === 'osszegzo')
+    .map(([k, x]) => [k, { osszegzes: x.osszegzes, allas: x.allas }]));
+}
+
+/** ⭐ A csere beállításai a két fokú vállaláshoz és a csak küldő részvételhez (a `parbeszed` hívja őket). */
+async function ketFokBeallitasai(allapot = null) {
+  const kf = await ketFokAllapota(allapot);
+  const osszegzok = async () => [...kf.fokok].filter(([, f]) => f === 'osszegzo').map(([k]) => k);
+  const kerdo = osszegzoKerdo({ tarolo: kf.tarolo, szeletek: osszegzok,
+    // A minták szerzőinek tagsága: akit a kapu már tagnak látott (`tagEmlek`), az tag; a többi „nem ellenőrizhető” (nem
+    // hiba — D19). ⏸️ A teljes választ a B2 hozza (a tagsági csomag a cserében kísérőként).
+    tagE: async (sz) => (tagEmlek.has(sz) ? true : null),
+    esemenyMentes: (e) => esemenyMentese(tar, e) });
+  let kepEmlek = null;
+  const tarto = teljesTarto({
+    teljesE: async (k) => kf.fokok.get(k) !== 'osszegzo' && (kf.jegyzek.get(k) ?? 0) > 0,
+    // A kép a munkán belül egyszer készül (a minták ugyanarra a gyökérre jönnek, amit bemondtunk).
+    kep: async () => {
+      if (!kepEmlek) {
+        const { allapot: a } = await kepetKeszit();
+        kepEmlek = { allapot: a, szamitok: a.szamitok, bemondasok: await bemondasok() };
+      }
+      return kepEmlek;
+    },
+    karbantarto: kerelemKarbantarto,
+    esemenyOlvas: (az) => esemenyLekerese(tar, az),
+    lezarasiEsemenyek: async (k) => (await tar.bejelentesek(k)).filter((e) => e.tipus === LEZARASI_OSSZEGZES),
+    epitoGyorsitotar: lezarasEpitoGyorsitotar
+  });
+  if (lezarasEpitoGyorsitotar.size > 256) lezarasEpitoGyorsitotar.clear();
+  const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, szeletek: osszegzok });
+  const fogado = kuldoFogado({ tar,
+    fogadhato: async (k) => kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo' });
+  return {
+    reszvesz: (k) => kf.fokok.get(k) !== 'osszegzo',
+    osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
+    osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
+    kuldoSzeletek: kuldo.lista, kuldoKerem: fogado.kerem
+  };
+}
+
+/**
+ * ⭐ D95/1: a NAGY szelet teljes tartója (az önkéntes) kiadja a lezárt döntések összegzését — érintettenként egyszer.
+ * @returns {Promise<number>} hányat adott ki
+ */
+async function lezarasiOsszegzesekKiadasa() {
+  // ⭐ Olcsó előszűrő: ha egyetlen nagy szeletet sem tartok egészében (a „mindent” nélkül ez a rendes eset), nincs mit adni.
+  const elo = await ketFokAllapota();
+  if (![...elo.fokok].some(([k, f]) => f === 'teljes' && (elo.jegyzek.get(k) ?? 0) > KETFOK.kuszob)) return 0;
+  const { allapot, javaslatok } = await kepetKeszit();
+  const kf = await ketFokAllapota(allapot);
+  const kiadott = new Set((await sajatLancEsemenyei(tar, szerzo))
+    .filter((e) => e.koino === KOINO && e.tipus === LEZARASI_OSSZEGZES)
+    .map((e) => e.adat?.javaslat + '|' + e.adat?.entitas));
+  let db = 0;
+  for (const [az, j] of javaslatok) {
+    if (j.statusz !== 'elfogadva' && j.statusz !== 'elvetve') continue;
+    for (const k of new Set((j.reszek ?? []).map((r) => r.entitas))) {
+      if (kf.fokok.get(k) === 'osszegzo' || (kf.jegyzek.get(k) ?? 0) <= KETFOK.kuszob || kiadott.has(az + '|' + k)) continue;
+      const je = await esemenyLekerese(tar, az);
+      const ep = je ? await lezarasiOsszegzesEpitese(allapot.szamitok, je, k) : null;
+      if (!ep) continue;
+      await lezarasiOsszegzesKiadasa(kornyezet, ep.osszegzes);
+      kiadott.add(az + '|' + k);
+      db++;
+    }
+  }
+  return db;
+}
+
+// ===================================
 // ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a személy a kézfogásban
 // ===================================
 //
@@ -1803,6 +1959,8 @@ function resMunka(allapot, halo, tars) {
     const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
       // ⭐⭐ D93/3: a személyem (a kézfogás átiratára), a tagsági csomagom és a zárt koinó kapuja.
       ...await azonossagBeallitasa(),
+      // ⭐⭐ D95/1, D95/3: a két fokú vállalás (a nagy szelet összegezve) és a csak küldő részvétel.
+      ...await ketFokBeallitasai(),
       raj: (kulcsok) => {
         const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k));
         return { vallal, tippek: rajAjanlat(rajJegyzek, vallal) };
@@ -2479,6 +2637,45 @@ try {
       kiir((kiadva.length ? SZIN.jo : SZIN.halvany) + javaslatok + ' lezárt döntés · ' + kiadva.length
         + ' új csomag (' + esemenyDarab + ' esemény a töredékekbe)' + SZIN.vege
         + (kiadva.length ? '' : SZIN.halvany + ' — minden ott van már' + SZIN.vege));
+      break;
+    }
+
+    case 'kiszolgalas': {
+      // ===== ⭐ D83/2: A KÉSZÜLÉKENKÉNTI KISZOLGÁLÁS — „mindent” vagy az alap (helyi beállítás, nem esemény) =====
+      // node koino/koino.js kiszolgalas [mindent|alap]
+      // ⭐ D95/1: a „mindent” beállítású készülék a nagy szeleteket is EGÉSZÉBEN tartja (ő az önkéntes, aki a többinek
+      // összegzi őket); az alap a küszöb fölött összegezve tart.
+      if (ervek[0] === 'mindent' || ervek[0] === 'alap') {
+        await mkdir(dirname(kiszolgalasFajl()), { recursive: true });
+        await writeFile(kiszolgalasFajl(), JSON.stringify({ mindent: ervek[0] === 'mindent' }), 'utf8');
+      } else if (ervek[0]) {
+        throw new Error('Mit állítsak? node koino/koino.js kiszolgalas [mindent|alap]');
+      }
+      const b = await kiszolgalasBeallitas();
+      kiir('Kiszolgálás: ' + (b.mindent ? SZIN.jo + '„mindent”' + SZIN.vege
+        + SZIN.halvany + ' — a nagy szeleteket is egészében tartom, és a lezárt döntéseikről összegzést adok' + SZIN.vege
+        : 'alap' + SZIN.halvany + ' — a ' + KETFOK.kuszob + ' eseménynél nagyobb vállalt szeletet összegezve tartom'
+          + SZIN.vege));
+      break;
+    }
+
+    case 'osszegzes': {
+      // ===== ⭐ D95/1: A LEZÁRÁSI ÖSSZEGZÉSEK — kiadás (a nagy szelet teljes tartójaként) és a kapott, ellenőrzöttek =====
+      // node koino/koino.js osszegzes
+      // Az őrjárat magától kiadja; ezzel kézzel is (ismételhető: érintettenként egyszer ad).
+      const db = await lezarasiOsszegzesekKiadasa();
+      const t = await osszegzesTarolo(KOINO).olvas();
+      const kapott = Object.entries(t.lezarasok);
+      kiir((db ? SZIN.jo : SZIN.halvany) + db + ' új lezárási összegzés kiadva' + SZIN.vege
+        + SZIN.halvany + ' · ' + kapott.length + ' ellenőrzött összegzés a tárolóban' + SZIN.vege);
+      for (const [k, x] of kapott) {
+        const [j, e] = k.split('|');
+        kiir('  ' + SZIN.halvany + j.slice(0, 8) + '… → ' + e.slice(0, 8) + '…' + SZIN.vege + '  '
+          + (x.allas?.kuszobTeljesul ? SZIN.jo + 'teljesült' : SZIN.nem + 'nem teljesült') + SZIN.vege
+          + SZIN.halvany + ' · ' + (x.osszegzes?.szamok?.tamogatok ?? '?') + ' támogató, '
+          + (x.osszegzes?.szamok?.ellenzok ?? '?') + ' ellenző · lezárva ' + new Date(x.osszegzes?.lezaras ?? 0)
+            .toLocaleString('hu-HU') + SZIN.vege);
+      }
       break;
     }
 
@@ -3777,12 +3974,24 @@ try {
       const { allapot } = await kepetKeszit();
       const v = await sajatVallalasa(allapot);
       const pontosak = [...v.pontok.entries()].filter(([, p]) => p > 0);
+      // ⭐ D95/1: a két fok — melyiket tartom egészében, melyiket összegezve.
+      const kf = await ketFokAllapota(allapot);
+      const osszT = await kf.tarolo.olvas();
+      const osszegzoDb = [...kf.fokok.values()].filter((f) => f === 'osszegzo').length;
       kiir(SZIN.vastag + 'VÁLLALOM (tartós tár): ' + v.szeletek.size + ' szelet' + SZIN.vege);
       kiir(SZIN.halvany + '  ' + pontosak.length + ' tudatpontos · ' + v.azonossag.length + ' azonosság-szelet'
-        + (v.koinoSzuletes ? ' · a koinó születése' : '') + SZIN.vege);
+        + (v.koinoSzuletes ? ' · a koinó születése' : '') + ' · ' + osszegzoDb + ' összegezve (nagy, a küszöb: '
+        + KETFOK.kuszob + ' esemény)' + ((await kiszolgalasBeallitas()).mindent ? ' · „mindent” beállítás (D83/2)' : '')
+        + SZIN.vege);
       for (const [az, p] of pontosak.sort((a, b) => b[1] - a[1])) {
+        const o = kf.fokok.get(az) === 'osszegzo' ? osszT.szeletek[az] : null;
         kiir('  ' + SZIN.halvany + az.slice(0, 8) + SZIN.vege + '  ' + (allapot.entitasok.get(az)?.cim ?? '(ismeretlen)')
-          + SZIN.halvany + '  · ' + p + ' pont' + SZIN.vege);
+          + SZIN.halvany + '  · ' + p + ' pont'
+          + (kf.fokok.get(az) === 'osszegzo'
+            ? ' · összegezve' + (o?.gyoker ? ' (ellenőrzött gyökér: ' + o.osszPont + ' össz-pont, ' + o.darab + ' levél)'
+              : ' (még nincs ellenőrzött gyökér)')
+            : ' · ' + (kf.jegyzek.get(az) ?? 0) + ' esemény')
+          + SZIN.vege);
       }
       const atm = atmeneti.szeletek().sort((a, b) => (b.megnezve ?? 0) - (a.megnezve ?? 0));
       kiir();
@@ -4305,6 +4514,9 @@ try {
             kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + kiadva.length + ' döntési csomag a töredékekbe'
               + ' (a lezárt, több érintettes javaslataimhoz)' + SZIN.vege);
           }
+          // ⭐ D95/1: a nagy szelet teljes tartójaként (a „mindent” beállítással) a lezárt döntések összegzése.
+          const lo = await lezarasiOsszegzesekKiadasa();
+          if (lo) kiir(SZIN.halvany + '  📦 ' + ora() + ' ' + lo + ' lezárási összegzés a nagy szeletű döntésekhez' + SZIN.vege);
         } catch (hiba) {
           kiir(SZIN.halvany + '  ⚠ a döntési csomag most nem ment ki: ' + hiba.message + SZIN.vege);
         }
@@ -4968,7 +5180,8 @@ try {
             koino: aktivKoino,
             tar: t,
             kornyezet: { koino: aktivKoino, kulcspar, szerzo, tar: t, darabTar: fajlBlobTarolo(aktivKoino), lancTarolo: lancTarolo(aktivKoino) },
-            pakliNezet: ujPakliNezet()
+            // ⭐ D95/1: a lap is az ellenőrzött lezárási összegzésekből dönt (az indításkori koinóé — azé van tárolója).
+            pakliNezet: ujPakliNezet(aktivKoino === KOINO ? { osszegzesek: ellenorzottOsszegzesek } : {})
           });
         }
         return nyitottKoinok.get(aktivKoino);
@@ -5649,6 +5862,7 @@ try {
       kiir('           profil nev=... [telepules=...] · tagsag   (D93: a profil, a tagságom és a tagsági csomag; D94: a 2. lépcső bemondása)');
       kiir('           jelzes [horgony]   (D93/6: a kontraszt-jelzés kérésre — kiket tanúsított, van-e önálló életük)');
       kiir('           csomag [javaslat]   (a lezárt, több érintettes döntés csomagja — D85 T3)');
+      kiir('           kiszolgalas [mindent|alap] · osszegzes   (D95/1: a két fokú vállalás — a nagy szelet összegezve)');
       kiir('           pajzsfuro <cím> [port] [helyi port] · tukor <cím> [port] · kulsoport [port]');
       kiir('           felfedez [mp] [port] · ujjlenyomat [napok] · cimek · kapu');
       kiir('           ujjlenyomat kiment|osszevet <fájl> [napok]   (…és MIBEN térünk el)');

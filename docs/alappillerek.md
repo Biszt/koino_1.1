@@ -330,7 +330,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    szerint. Innen végleges. 🔍 **Az átvizsgálás (2026-10-04):** [`b3_szigoru_atvizsgalas.md`](b3_szigoru_atvizsgalas.md) —
    a 66. mérés szerint a teljes vállalás terhe a népszerű entitások és a szerzők tagsága miatt ~√N szerint nő, a két fokú
    vállalás (a skálázási terv 4.6) konstans; négy kérdés Csabánál (B1 a tömeges entitás, B2 a tagsági csomag a cserében,
-   B3 a csak küldő részvétel, B4 a gyökér darabjai). ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
+   B3 a csak küldő részvétel, B4 a gyökér darabjai) — ✅ **D95** (Csaba: „igen, elfogadom a javaslataidat”). ✅ **A B1 KÉSZ
+   (2026-10-05):** a két fokú vállalás — a nagy szelet összegezve (a gyökér és a lezárási összegzések mintákkal ellenőrizve,
+   a döntés az összegzésből), a saját eseményeim a csak küldő úton; ⏭️ a B2, a B3 többi része, a B4 és a bekapcsolás jön.
+   ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
 8. **F — a társankénti emlékezet** és **az A hátralévői** (a D79 szúrópróba, a napló-alapú kettős-lánc
@@ -556,3 +559,20 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     tanúsító tevékenységével arányos; ⚠️ tiszta törés a szelet-halmazban (a telefon úgyis frissül) · a megépítéskor, Claude
     (a D93/6 keretén belül) · `esemeny.js` (`bejelentesHelyei`), `jelzesek.js`, `atmenetiTar.js` (a két tár nézete a
     szeletet és a bejelentéseket is mindkét tárból adja).
+64. **2026-10-05 · a nagy szelet döntése: a lezárási összegzés csak ott, ahol az érintett egyetlen pont-eseményét sem látjuk
+    (a D95/1 (b) első alakja)** → **ahol az összegezve tartott szeletre ellenőrzött összegzés van, az dönt** · mert az összegző
+    tartó a saját pont-eseményét mindig tartja: az első alak nála soha nem érvényesült volna, és a nevezőt a részleges
+    bemenetből számolta volna (a parancssor-próba mérte; a modul-próba nézete minden pont-eseményt kivett, ezért nem fogta
+    meg) · a megépítéskor, Claude (a D95/1 keretén belül) · `javaslatSzamitas.js` (`reszOsszegzese`), `koino.js`
+    (`ellenorzottOsszegzesek`: csak a most összegzett szeletekéi), `lezarasiOsszegzesProba.js`.
+65. **2026-10-05 · az összegző és a küldő lista a CIMEK-ben (a B1 terve)** → **ÉS a bizonyítás utáni CIM-pótlásban** · mert
+    első találkozáskor a zárt koinó kapuja a CIMEK idején még nem döntött (a lista csak tagnak megy), és a lépés a második
+    cserére csúszott volna; külön kör nélkül · a megépítéskor, Claude · `vonal.js` (`sajatListak`).
+66. **2026-10-05 · az összegezve tartott szelet össz-pontja (a B1 terve: „a D14, az össz-pont, a pakli”)** → **a tárolt,
+    ellenőrzött gyökér `osszegzett` jelű bemondásként, az egész részfát fedve; a saját pontom megmarad** · mert a részleges
+    bemenetből (a saját pontom) az össz-pont hamisan kicsi volna, a jel nélküli bemondás pedig a tartott entitásnál szándékosan
+    nem számít (D92/5) · a megépítéskor, Claude · `osszPont.js`, `koino.js` (`bemondasok`).
+67. **2026-10-05 · a minták szerzőinek tagsága az összegző tartónál (D95/1: „a minták szerzőinek tagságával”)** → **ma a kapu
+    emlékéből (akit tagnak láttunk); a többi „nem ellenőrizhető” (D19), az összegzést nem veti el** · mert a teljes válasz a
+    tagsági csomag a cserében (B2) — az a következő lépés, és a B1 ellenőrzése már kész a bemenetére (`tagE`) · a megépítéskor,
+    Claude · `koino.js` (`ketFokBeallitasai`), `lezarasiOsszegzes.js`.

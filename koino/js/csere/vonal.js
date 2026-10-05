@@ -84,6 +84,12 @@ const KULCS_KORLAT = 180000;
 // fejenként még egymillió főnél is).
 const CIM_KORLAT = 10;
 
+// ⭐ D95/1, D95/3: egy CIMEK-ben legfeljebb ennyi összegző szelet és ennyi küldő szelet, és egy körben legfeljebb ennyi
+// kért saját esemény (a társ listája és kérése felülről korlátos — 9. szabály).
+const OSZ_KORLAT = 64;
+const KUL_KORLAT = 64;
+const KUL_ESEMENY_KORLAT = 256;
+
 // ⭐⭐⭐ ÉS AMIT MÁSOKRÓL MONDUNK, AZ HÁROM (Csaba döntése, 2026-09-20 — a 34. mérés után).
 //
 // ⛔ A 34. mérés megfordította a kérdést: **nem a cím-szám dönti el, hogy a hír körbeér-e**,
@@ -237,11 +243,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let kapottRaj = { vallal: [], tippek: {} };   // ⭐ D91: a társ vállalása és a raj tippjei (a hívóé)
   let tarsKorlatozva = false;       // ⭐ D93/3: a zárt koinó kapuja a társat nem engedte be (csak a megengedett szeletek)
   let tarsAzonossaga = null;        // ⭐ D93/3: a társ személye, ha EBBEN a kézfogásban bizonyította ({ sz, h })
+  let osszegzesEredmeny = null;     // ⭐ D95/1: a nagy szeletek összegzésének eredménye (a hívóé)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
-    tarsKorlatozva, tarsAzonossaga
+    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -463,6 +470,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let kapu = await kapuItelete({ tabla: kapottTablaKulcs });
 
   let oKerte = false;               // ⭐ D93/3: a társ kérte-e a bizonyításunkat (a CIMEK-ben)
+  // ⭐⭐ D95/1, D95/3: a két fokú vállalás és a csak küldő részvétel listái (a CIMEK-ben mennek, csak ismert tagnak)
+  let sajatOsz = [], sajatKul = [], oveOsz = [], oveKul = [];
+  const lista = (x, korlat) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object' && ervenyesKulcs(e.k)).slice(0, korlat) : []);
+  const sajatListak = async () => {
+    sajatOsz = lista(typeof beallitas.osszegzoSzeletek === 'function' ? await beallitas.osszegzoSzeletek() : [], OSZ_KORLAT);
+    sajatKul = lista(typeof beallitas.kuldoSzeletek === 'function' ? await beallitas.kuldoSzeletek() : [], KUL_KORLAT);
+  };
 
   // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — csak UDP-címek -----
   //
@@ -501,9 +515,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       dhtKuldheto = Array.isArray(dhtForras) ? dhtForras : [];
     }
 
+    // ⭐ D95/1: az összegezve tartott szeleteim (a legutóbb ellenőrzött gyökérrel és időponttal), és D95/3: a csak küldő
+    // szeleteimben a saját eseményeim azonosítói — csak ismert tagnak (a nagy szeletek neve is a koinó tartalma).
+    // ⚠️ Ha a kapu még nem döntött (első találkozás), a bizonyítás utáni pótlásban mennek.
+    if (kapu.szabad) await sajatListak();
     kuld({
       uzenet: 'CIMEK',
       ...(dhtGepek.length ? { dht: dhtGepek } : {}),
+      ...(sajatOsz.length ? { osz: sajatOsz } : {}),
+      ...(sajatKul.length ? { kul: sajatKul } : {}),
       // ⭐ D93/3: kérjük a társ bizonyítását (a személyes aláírás és a tagsági csomag a következő körben jön).
       ...(kapu.kell ? { kell: 1 } : {}),
       udp: [
@@ -515,6 +535,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     oKerte = ove.kell === 1;
     // ⚠️ Az alakját itt nem ellenőrizzük, csak továbbadjuk (1. szabály); a hívó ellenőriz.
     cimekBeolvasasa(ove);
+    oveOsz = lista(ove.osz, OSZ_KORLAT);
+    oveKul = lista(ove.kul, KUL_KORLAT);
   }
 
   // ----- ⭐⭐ D93/3: A BIZONYÍTÁS — ha bármelyik fél kérte, egy kör -----
@@ -530,11 +552,20 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       const csomag = be.csomag && typeof be.csomag === 'object' ? be.csomag : null;
       kapu = await kapuItelete({ tabla: kapottTablaKulcs, ki, csomag });
       if (ki) tarsAzonossaga = ki;
-      // ⭐ A címek pótlása: ha az ítélet beengedte, most megy a többi címünk (ha nem, üres — a társ vár rá).
+      // ⭐ A címek pótlása: ha az ítélet beengedte, most megy a többi címünk (ha nem, üres — a társ vár rá); és D95/1,
+      // D95/3: az összegző és a küldő szeleteim is (az első CIMEK-ben a kapu még nem döntött).
+      if (kapu.szabad) await sajatListak();
       kuld({ uzenet: 'CIMEK', udp: kapu.szabad ? idegenUdpKuldheto : [],
-        ...(kapu.szabad && dhtKuldheto.length ? { dht: dhtKuldheto } : {}) });
+        ...(kapu.szabad && dhtKuldheto.length ? { dht: dhtKuldheto } : {}),
+        ...(sajatOsz.length ? { osz: sajatOsz } : {}),
+        ...(sajatKul.length ? { kul: sajatKul } : {}) });
     }
-    if (oKerte) cimekBeolvasasa(await varj('CIMEK'));
+    if (oKerte) {
+      const potlas = await varj('CIMEK');
+      cimekBeolvasasa(potlas);
+      if (!oveOsz.length) oveOsz = lista(potlas.osz, OSZ_KORLAT);
+      if (!oveKul.length) oveKul = lista(potlas.kul, KUL_KORLAT);
+    }
   }
 
   // ----- ⛔⛔ D93/3: A KORLÁTOZÁS — a nem szabad társsal csak a megengedett szeleteket egyeztetjük -----
@@ -547,6 +578,46 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     parok = await szeletParok(tar, koino, (k) => korlat.has(k) && reszvesz(k));
   }
   const korlatonBelul = (k) => !korlat || korlat.has(k);
+
+  // ----- ⭐⭐ D95/1, D95/3: A NAGY SZELET ÉS A SAJÁT ESEMÉNYEK — két kör, ha bármelyik fél mondott listát -----
+  //
+  // Mindkét fél tudja, lesz-e (a két CIMEK-ből). 1. kör (OSSZEGZESEK): a társ összegző szeleteire a válaszom (ha a szeletet
+  // teljesen tartom: az új gyökér és az azóta lezárt döntések összegzései), és a társ felajánlott saját eseményeiből amit
+  // kérek. 2. kör (OSSZEGZESMINTAKEREK): a kapott gyökerekre és összegzésekre a minta-helyeim (ÉN sorsolom, a gyökér UTÁN),
+  // és a kért saját eseményeim; aztán a minták (OSSZEGZESMINTAK). ⭐ A vonal semmit nem tud a koinóról: a tartalom a
+  // hívóé (`osszegzoTartas.js`). ⛔ A nem szabad társnak (zárt koinó) nem adunk semmit.
+  if (sajatOsz.length || sajatKul.length || oveOsz.length || oveKul.length) {
+    const hivas = async (nev, ...ervek) => {
+      if (typeof beallitas[nev] !== 'function') return null;
+      try { return await beallitas[nev](...ervek); }
+      catch (hiba) { console.warn('parbeszed - ' + nev + ' nem sikerült', { ok: hiba.message }); return null; }
+    };
+    const valaszok = !korlat && oveOsz.length ? (await hivas('osszegzesValasz', oveOsz)) ?? [] : [];
+    const kerem = !korlat && oveKul.length ? (await hivas('kuldoKerem', oveKul)) ?? [] : [];
+    kuld({ uzenet: 'OSSZEGZESEK', valaszok, kerem });
+    const be = await varj('OSSZEGZESEK');
+    const kapottValaszok = Array.isArray(be.valaszok) ? be.valaszok.slice(0, OSZ_KORLAT) : [];
+    const kerdesek = sajatOsz.length && kapottValaszok.length ? await hivas('osszegzesMintaKerdesek', kapottValaszok) : null;
+    const felajanlott = new Set(sajatKul.flatMap((x) => (Array.isArray(x.sajat) ? x.sajat : [])));
+    const kertSajat = (Array.isArray(be.kerem) ? be.kerem : []).filter((az) => felajanlott.has(az)).slice(0, KUL_ESEMENY_KORLAT);
+    const sajatEsemenyek = [];
+    for (const az of kertSajat) { const e = await tar.esemeny(az); if (e) sajatEsemenyek.push(e); }
+    kuld({ uzenet: 'OSSZEGZESMINTAKEREK', kerdesek, esemenyek: sajatEsemenyek });
+    const keres = await varj('OSSZEGZESMINTAKEREK');
+    // A társ saját eseményei, amiket KÉRTEM — ugyanazon a kapun (3. szabály).
+    const kertem = new Set(kerem);
+    const pusholt = (Array.isArray(keres.esemenyek) ? keres.esemenyek : []).filter((e) => e && kertem.has(e.azonosito));
+    if (pusholt.length) {
+      const b = await beolvasztas(tar, pusholt, koino);
+      uj += b.uj;
+      ujAzonositok = [...ujAzonositok, ...b.ujAzonositok];
+    }
+    kuldott += sajatEsemenyek.length;
+    const mintak = !korlat && keres.kerdesek ? await hivas('osszegzesMintak', keres.kerdesek) : null;
+    kuld({ uzenet: 'OSSZEGZESMINTAK', mintak });
+    const bm = await varj('OSSZEGZESMINTAK');
+    if (kerdesek) osszegzesEredmeny = await hivas('osszegzesFogadas', kapottValaszok, kerdesek, bm.mintak);
+  }
 
   // ----- ⭐⭐ A FÁJL-KÉRELEM MEGVÁLASZOLÁSA (5.7) -----
   //
