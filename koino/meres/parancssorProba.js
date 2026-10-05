@@ -497,6 +497,55 @@ proba('⭐⭐ D95/2: az entitás kivitele a szerzők tagsági kísérőit is vis
   });
 
 // ===================================
+// ⭐⭐ D95/3: A CSAK KÜLDŐ ÚT A VALÓDI CSERÉBEN (2026-10-05)
+// ===================================
+//
+// A (az alapító) meghívja B-t: a meghívás B azonosság-szeletébe kerül, amit A nem vállal. Az első cserén (zárt koinó, első
+// találkozás — a kapu még nem döntött) A a csak küldő úton felajánlja, B átveszi, és A feljegyzi, hogy kézbesült
+// (`kezbesites.json`) — a következő cserén már nem ajánlja fel. ⚠️ Mai módban a meghívás a szelet-cserével is átmenne,
+// ezért a megkülönböztető viselkedés a KÉZBESÍTÉS feljegyzése A lemezén (és hogy a második cserén a `vallalas` már nem
+// mutat kézbesítésre várót).
+proba('⭐⭐ D95/3: a meghívás a csak küldő úton megy — A feljegyzi a kézbesítést, és többé nem ajánlja fel',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const port = 7655;
+    const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+    try {
+      await fut(a, 'koino', 'Küldő');
+      const horgony = teljesAzonosito(await fut(b, 'belep'));
+      await fut(b, 'kivisz', join(b, 'be.jsonl'), horgony);
+      await fut(a, 'behoz', join(b, 'be.jsonl'));
+      await fut(a, 'meghiv', horgony);
+      const varoElotte = tiszta(await fut(a, 'vallalas'));
+      await fut(a, 'kivisz', join(a, 'mind.jsonl'));
+      const meghivas = (await readFile(join(a, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+        .find((e) => e.tipus === 'Meghivas').azonosito;
+      await csereKor(a, b, port);
+      const koinoMappa = join(a, (await readdir(a, { withFileTypes: true }))
+        .filter((d) => d.isDirectory() && d.name !== 'fajlok').map((d) => d.name).find(Boolean));
+      let kezbesites = {};
+      try { kezbesites = JSON.parse(await readFile(join(koinoMappa, 'kezbesites.json'), 'utf8')).kezbesitve ?? {}; } catch { /* nincs */ }
+      await fut(b, 'kivisz', join(b, 'mind.jsonl'));
+      const bNal = (await readFile(join(b, 'mind.jsonl'), 'utf8')).includes(meghivas);
+      const varoUtana = tiszta(await fut(a, 'vallalas'));
+      const eredmeny = {
+        vartElotte: /saját eseményem vár kézbesítésre/.test(varoElotte),
+        bNal,
+        feljegyezve: !!kezbesites[meghivas],
+        nemVarUtana: !/saját eseményem vár kézbesítésre/.test(varoUtana)
+      };
+      if (!Object.values(eredmeny).every(Boolean)) {
+        process.stdout.write('  csak küldő — ami bukott: ' + Object.keys(eredmeny).filter((k) => !eredmeny[k]).join(', ') + '\n');
+      }
+      return Object.values(eredmeny).every(Boolean);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91: A RAJ A VALÓDI CSERÉBEN — a két tartó egymást jegyzi meg (2026-10-03)
 // ===================================
 //

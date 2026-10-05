@@ -166,6 +166,23 @@ kézi út kísérői. ⚠️ A cserébeli kör parancssor-próbája a bekapcsol�
 mai mód), a szerző azonosság-szelete a rendes egyeztetéssel is megérkezik, tehát a parancssorból nem különböztethető meg
 — a modul-próba ezért valódi cserét futtat korlátozott részvétellel, a parancssor-próba pedig a kézi utat méri.
 
-⏭️ **Hátra van:** a B3 a többi szeletre (a mások azonosság-szeletébe tett állításaim), a B4, és a bekapcsolás (a részvétel
-a vállalásból, a törzs korlátja, a kérelem az átmenetiből — vele a kérelem kísérői —, a visszavett vállalás és a tár
-tömörítése).
+✅ **A B3 MEGÉPÜLT (2026-10-05)** (a részletek: a fázis-2 terv D95, „MEGÉPÜLT — a B3”): a csak küldő út minden nem
+halmazként egyeztetett szeletre, a kézbesítés nyilvántartásával (`megvan`, `kezbesites.json`), a zárt koinó nem tagjának
+a megengedett szeletekben.
+
+🔍 **ÚJ KÉRDÉS (B5) — a próbák írásakor derült ki:** az alapító horgonya maga a `KoinoLetrehozas`, tehát az alapító
+azonosság-szelete UGYANAZ, mint a koinó születésének szelete. A D93/6 óta az identitás-állítás a szerző azonosság-szeletébe
+is bejelentődik — így az alapító MINDEN meghívása, felhatalmazása és tanúsítása a koinó születésének szeletébe kerül, amit a
+D90/2 szerint mindenki tart. Egy nagyon aktív alapító állításai így minden készüléken ott vannak (az alapító tevékenységével
+nő mindenki terhe — a „végtelen” próbáján ez egy ember tevékenységével korlátos, de mindenkire terhel).
+
+- **(A) ⭐ A koinó születését mindenki tartja — az ESEMÉNYT; a szeletét (a bejelentésekkel) csak aki az alapító azonosságát
+  vállalja** (az alapító maga, és aki a jelzést kéri — mint bárki más azonosság-szeleténél). Az esemény úgyis minden
+  tagsági láncban és csomagban benne van, és soha nem változik. Ha később koinó-szintű paraméter-események lesznek, azok
+  külön szeletbe menjenek. A bekapcsolásnál (a részvétel a vállalásból) dől el, kódváltozás csak ott.
+- **(B) Az alapító is belép** (`belep alapitas` — a tagság a megnevezett alapítót ma is ismeri), és az állításai a saját
+  belépése szeletébe mennek; a koinó születése tiszta marad. Új koinóknál; a meglévő alapítóké vegyes marad.
+- **(C) Marad így** — az alapító egy ember, a terhe korlátos.
+
+⏭️ **Hátra van:** a B4, és a bekapcsolás (a részvétel a vállalásból — előtte a B5 —, a törzs korlátja, a kérelem az
+átmenetiből — vele a kérelem kísérői —, a visszavett vállalás és a tár tömörítése).

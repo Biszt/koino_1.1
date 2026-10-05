@@ -88,7 +88,7 @@ async function csere(v, { bUjEsemeny = null } = {}) {
   const fogado = kuldoFogado({ tar: v.tarA, fogadhato: async (k) => k === v.g.azonosito });
   const kerdo = osszegzoKerdo({ tarolo, szeletek: async () => [v.g.azonosito], tagE: async () => true,
     esemenyMentes: (e) => esemenyMentese(v.tarB, e) });
-  const kuldo = sajatKuldo({ tar: v.tarB, koino: KOINO, szerzo: v.b.szerzo, szeletek: async () => [v.g.azonosito] });
+  const kuldo = sajatKuldo({ tar: v.tarB, koino: KOINO, szerzo: v.b.szerzo, halmazkent: async (k) => k !== v.g.azonosito });
   const p = await udpParos();
   try {
     const [a, b] = await Promise.all([
@@ -97,7 +97,7 @@ async function csere(v, { bUjEsemeny = null } = {}) {
       csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, v.tarB, KOINO, {
         reszvesz: (k) => k !== v.g.azonosito,
         osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
-        kuldoSzeletek: kuldo.lista })
+        kuldoSzeletek: (szabad) => kuldo.lista(szabad) })
     ]);
     return { a, b, tarolo: await tarolo.olvas() };
   } finally { p.bezar(); }
@@ -134,6 +134,97 @@ proba('⛔⛔ a HAZUG teljes tartó összegzését (felfújt szám) az összegz�
   const { b, tarolo } = await csere(v);
   return b.osszegzesEredmeny?.lezarasok === 0 && b.osszegzesEredmeny.elvetve.some((x) => x.mi === 'lezaras')
     && !tarolo.lezarasok[v.j.azonosito + '|' + v.g.azonosito];
+});
+
+// ===================================
+// ⭐⭐ D95/3: A CSAK KÜLDŐ RÉSZVÉTEL — a saját eseményeim a nem vállalt szeletekben
+// ===================================
+
+/**
+ * A meghívás világa: F az alapító, A tag (F hívta meg), és A meghívja B-t és C-t — a meghívás a MEGHÍVOTT szeletébe
+ * kerül (és A saját azonosság-szeletébe bejelentődik), amit B nem vállal; A a meghívottak szeletét nem egyezteti
+ * halmazként, B a sajátját vállalja. ⚠️ A ne az alapító legyen: az alapító azonosság-szelete maga a koinó születése, amit
+ * mindenki egyeztet — az ő meghívásai a bejelentéssel úgyis mindenkihez eljutnak. `regi`: a meghívás 15 napos.
+ */
+async function meghivasVilaga({ bNalMar = false, regi = false } = {}) {
+  const f = await ujEember(KOINO);
+  const a = await ujEember(KOINO);
+  const b = await ujEember(KOINO);
+  const c = await ujEember(KOINO);
+  const letrehozas = await f.tesz('KoinoLetrehozas', { nev: 'Küldő', leiras: null, alapitok: [], zart: true });
+  const belepesA = await a.tesz('Belepes', {});
+  const meghivasA = await f.tesz('Meghivas', { kit: a.szerzo, sajatBelepes: letrehozas.azonosito }, undefined,
+    { entitas: belepesA.azonosito });
+  const belepesB = await b.tesz('Belepes', {});
+  const belepesC = await c.tesz('Belepes', {});
+  const ido = regi ? Date.now() - 15 * 24 * 3600 * 1000 : Date.now();
+  const meghivasB = await a.tesz('Meghivas', { kit: b.szerzo, sajatBelepes: belepesA.azonosito }, ido, { entitas: belepesB.azonosito });
+  const meghivasC = await a.tesz('Meghivas', { kit: c.szerzo, sajatBelepes: belepesA.azonosito }, ido, { entitas: belepesC.azonosito });
+  const tarA = await esemenyTarNyitasa(KOINO, await ujMappa());
+  for (const e of [letrehozas, belepesA, meghivasA, belepesB, belepesC, meghivasB, meghivasC]) await esemenyMentese(tarA, e);
+  // B a koinó születésének szeletét A-val egyezően tudja (F meghívása oda is bejelentődik), és a saját belépését.
+  const tarB = await esemenyTarNyitasa(KOINO, await ujMappa());
+  for (const e of [letrehozas, meghivasA, belepesB, ...(bNalMar ? [meghivasB] : [])]) await esemenyMentese(tarB, e);
+  return { a, b, tarA, tarB, letrehozas, belepesA, belepesB, belepesC, meghivasB, meghivasC };
+}
+
+/** A csere: A a koinó születését és a saját azonosság-szeletét egyezteti halmazként (a meghívottakét nem), B a sajátját. */
+async function kuldoCsere(v, { kezbesitett = new Set(), zart = false, bMindent = false } = {}) {
+  const aVallal = new Set([v.letrehozas.azonosito, v.belepesA.azonosito]);
+  const kuldo = sajatKuldo({ tar: v.tarA, koino: KOINO, szerzo: v.a.szerzo,
+    halmazkent: async (k) => aVallal.has(k), kezbesitett: async () => kezbesitett });
+  const bVallal = new Set([v.letrehozas.azonosito, v.belepesB.azonosito]);
+  const fogado = kuldoFogado({ tar: v.tarB, fogadhato: async (k) => bMindent || bVallal.has(k) });
+  const p = await udpParos();
+  try {
+    const [a, b] = await Promise.all([
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, v.tarA, KOINO, {
+        reszvesz: (k) => aVallal.has(k),
+        kuldoSzeletek: (szabad) => kuldo.lista(szabad),
+        // ⛔ zárt koinó: B nem tag — csak a koinó születése és a két azonosság-szelet jár neki (C-é nem).
+        ...(zart ? { zartKapu: async () => ({ szabad: false, kell: false, ok: 'próba',
+          szeletek: [v.letrehozas.azonosito, v.belepesB.azonosito] }) } : {}) }),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, v.tarB, KOINO, {
+        reszvesz: (k) => bVallal.has(k), kuldoKerem: fogado.kerem })
+    ]);
+    return { a, b, kuldo };
+  } finally { p.bezar(); }
+}
+
+proba('⭐⭐ D95/3: a MEGHÍVÁS (a meghívott szeletében, amit A nem vállal) a csak küldő úton eljut — és kézbesítettnek számít', async () => {
+  const v = await meghivasVilaga();
+  const { a } = await kuldoCsere(v);
+  return !!(await v.tarB.esemeny(v.meghivasB.azonosito)) && a.kezbesitve.includes(v.meghivasB.azonosito)
+    && !a.kezbesitve.includes(v.meghivasC.azonosito);          // C szeletét B nem tartja: nem kérte, nem kézbesült
+});
+
+proba('⭐ a KÉZBESÍTETT saját eseményt többé nem ajánlja fel — a „nincs újdonság” csere nem drágul', async () => {
+  const v = await meghivasVilaga();
+  const sajatSzeletei = new Set([v.letrehozas.azonosito, v.belepesA.azonosito]);
+  const elotte = await sajatKuldo({ tar: v.tarA, koino: KOINO, szerzo: v.a.szerzo,
+    halmazkent: async (k) => sajatSzeletei.has(k) }).lista();
+  const utana = await sajatKuldo({ tar: v.tarA, koino: KOINO, szerzo: v.a.szerzo,
+    halmazkent: async (k) => sajatSzeletei.has(k),
+    kezbesitett: async () => new Set([v.meghivasB.azonosito, v.meghivasC.azonosito]) }).lista();
+  return elotte.length === 2 && utana.length === 0;
+});
+
+proba('⭐ ha a tartónál MÁR MEGVAN, azt is visszamondja — kézbesített, és nem küldi el újra', async () => {
+  const v = await meghivasVilaga({ bNalMar: true });
+  const { a } = await kuldoCsere(v);
+  return a.kezbesitve.includes(v.meghivasB.azonosito) && a.kuldott === 0;
+});
+
+proba('⭐ a RÉGI (15 napos) saját eseményt nem ajánlja fel — a kérelem útján elérhető marad', async () => {
+  const v = await meghivasVilaga({ regi: true });
+  const { a } = await kuldoCsere(v);
+  return !(await v.tarB.esemeny(v.meghivasB.azonosito)) && a.kezbesitve.length === 0;
+});
+
+proba('⛔ zárt koinóban a NEM TAGNAK is felajánlja a saját szeletébe tett meghívást — de más szeletbe tettet nem', async () => {
+  const v = await meghivasVilaga();
+  const { a } = await kuldoCsere(v, { zart: true, bMindent: true });   // B mindent átvenne, ha felajánlanák
+  return a.tarsKorlatozva && !!(await v.tarB.esemeny(v.meghivasB.azonosito)) && !(await v.tarB.esemeny(v.meghivasC.azonosito));
 });
 
 export default async function () {

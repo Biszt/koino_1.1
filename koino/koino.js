@@ -101,7 +101,9 @@ import {
   // ⭐ D95/1: az összegzések helyi jegyzéke (a nagy szelet gyökere, a lezárási összegzések).
   osszegzesTarolo,
   // ⭐ D95/2: a függő tagságok helyi jegyzéke.
-  tagsagFuggoTarolo
+  tagsagFuggoTarolo,
+  // ⭐ D95/3: a csak küldő út kézbesítési jegyzéke.
+  kezbesitesTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
@@ -152,7 +154,7 @@ import { tagE, tanusithatE, lepcso2E, ujIdentitasNezet, tagsagiEsemenyekGyujtese
 import { tagsagiIndex, szerzoTagsaga, tagsagiCsomagEllenorzese, TAGSAGI_CSOMAG } from './js/allapot/tagsag.js';
 // ⭐ D95/1, D95/3: a két fokú vállalás — a fokok, a szerepek a cserében, és a lezárási összegzés.
 import { szeletFokai, KETFOK_KUSZOB, KETFOK_VISSZA } from './js/allapot/ketFok.js';
-import { osszegzoKerdo, teljesTarto, sajatKuldo, kuldoFogado } from './js/allapot/osszegzoTartas.js';
+import { osszegzoKerdo, teljesTarto, sajatKuldo, kuldoFogado, KULDES_ELETTARTAM } from './js/allapot/osszegzoTartas.js';
 import { lezarasiOsszegzesEpitese, LEZARASI_OSSZEGZES } from './js/allapot/lezarasiOsszegzes.js';
 // ⭐ D95/2: a tagsági kísérők — akinek a tagságát nem tudom, annak a csomagját a cserében kérem.
 import { tagsagKerdo, tagsagiKiserok } from './js/allapot/tagsagKisero.js';
@@ -1714,15 +1716,33 @@ async function ketFokBeallitasai(allapot = null) {
     epitoGyorsitotar: lezarasEpitoGyorsitotar
   });
   if (lezarasEpitoGyorsitotar.size > 256) lezarasEpitoGyorsitotar.clear();
-  const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, szeletek: osszegzok });
-  const fogado = kuldoFogado({ tar,
-    fogadhato: async (k) => kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo' });
+  // ⭐ D95/3: a csak küldő út minden olyan szeletre, amit nem egyeztetek halmazként (nem vállalom, vagy csak összegezve
+  // tartom) — a még nem kézbesített, friss saját eseményeimmel.
+  const egeszbenTartom = async (k) => kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo';
+  const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, halmazkent: egeszbenTartom,
+    kezbesitett: async () => new Set(Object.keys((await kezbesitesTarolo(KOINO).olvas()).kezbesitve)) });
+  const fogado = kuldoFogado({ tar, fogadhato: egeszbenTartom });
   return {
     reszvesz: (k) => kf.fokok.get(k) !== 'osszegzo',
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
     osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
-    kuldoSzeletek: kuldo.lista, kuldoKerem: fogado.kerem
+    kuldoSzeletek: (szabad) => kuldo.lista(szabad), kuldoKerem: fogado.kerem
   };
+}
+
+/**
+ * ⭐ D95/3: a csak küldő úton kézbesített saját eseményeim feljegyzése (többé nem ajánlom fel őket). A régi bejegyzések
+ * kiesnek — a felajánlás amúgy is csak a `KULDES_ELETTARTAM`-nál frissebb eseményekre megy.
+ * @param {Array<string>} azonositok
+ */
+async function kezbesitesFeljegyzese(azonositok) {
+  if (!Array.isArray(azonositok) || !azonositok.length) return;
+  const tarolo = kezbesitesTarolo(KOINO);
+  const t = await tarolo.olvas();
+  const most = Date.now();
+  for (const az of azonositok) if (typeof az === 'string') t.kezbesitve[az] = most;
+  for (const [az, mikor] of Object.entries(t.kezbesitve)) if (!(most - mikor < KULDES_ELETTARTAM)) delete t.kezbesitve[az];
+  await tarolo.ir(t);
 }
 
 /**
@@ -2011,6 +2031,8 @@ function resMunka(allapot, halo, tars) {
       fajlOlvas: fajlok.olvas
     });
     const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
+    // ⭐ D95/3: amit egy tartó a csak küldő úton átvett (vagy már tudott), azt többé nem ajánlom fel.
+    await kezbesitesFeljegyzese(csere.kezbesitve);
     // ⭐⭐ KIVEL DOLGOZTUNK? (D71) — a társ tábla-aláírója, ha érvényes tábla-kulcsot hozott. A
     // kopogás-kör ebből erősíti meg (vagy veti el) a hozzárendelést: a cím csak feltevés, ez a név.
     const alairo = ervenyesTablaKulcs(csere.kapottTablaKulcs) ? csere.kapottTablaKulcs.alairo : null;
@@ -4032,6 +4054,15 @@ try {
               : ' (még nincs ellenőrzött gyökér)')
             : ' · ' + (kf.jegyzek.get(az) ?? 0) + ' esemény')
           + SZIN.vege);
+      }
+      // ⭐ D95/3: a saját eseményeim a nem egészében tartott szeletekben, amiket még egy tartó sem vett át (csak küldő út).
+      const varo = await (sajatKuldo({ tar, koino: KOINO, szerzo,
+        halmazkent: async (k) => v.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo',
+        kezbesitett: async () => new Set(Object.keys((await kezbesitesTarolo(KOINO).olvas()).kezbesitve)) })).lista();
+      const varoDb = varo.reduce((n, x) => n + x.sajat.length, 0);
+      if (varoDb) {
+        kiir(SZIN.halvany + '  ' + varoDb + ' saját eseményem vár kézbesítésre ' + varo.length + ' szeletben (amit nem tartok'
+          + ' egészében — a cserében felajánlom, amíg egy tartó át nem veszi; D95/3)' + SZIN.vege);
       }
       const atm = atmeneti.szeletek().sort((a, b) => (b.megnezve ?? 0) - (a.megnezve ?? 0));
       kiir();

@@ -192,25 +192,56 @@ export function teljesTarto({ teljesE, kep, karbantarto, esemenyOlvas, lezarasiE
 // ===================================
 // A KÜLDŐ ÉS A FOGADÓ (D95/3)
 // ===================================
+//
+// Ahol saját eseményem van, de a szeletet nem egyeztetem halmazként (nem vállalom — a meghívás a meghívott szeletében, a
+// tanúsítás, az ellentmondás-bejelentés, a visszavont pontom —, vagy csak összegezve tartom), ott csak a SAJÁTJAIMAT
+// ajánlom fel, és onnan semmit nem kérek. ⭐ A KÉZBESÍTÉS: amit egy tartó (aki a szeletet egészében tartja) átvett, vagy
+// már megvolt nála, azt többé nem ajánlom fel (helyi jegyzék — `fajlTar.js` `kezbesitesTarolo`) — így a felajánlás csak
+// az új eseményeimre utazik, a „nincs újdonság” csere nem drágul. ⚠️ Egy tartó elég: a tartók egymás közt egyeztetnek, és
+// a saját eseményemet én magam is megtartom és kiszolgálom (D86/2). Ami `KULDES_ELETTARTAM`-nál régebbi, azt nem ajánlom
+// fel (a kérelem útján továbbra is elérhető) — különben egy soha nem kézbesíthető esemény örökké utazna.
+
+/** A saját eseményeimet ennyi ideig ajánlom fel (a keletkezésüktől). */
+export const KULDES_ELETTARTAM = 14 * 24 * 3600 * 1000;
+/** A fogadó egy körben legfeljebb ennyit kér és ennyiről mondja, hogy megvan. */
+const FOGADO_KORLAT = 256;
 
 /**
  * @param {Object} b
  * @param {Object} b.tar
  * @param {string} b.koino
  * @param {string} b.szerzo - én
- * @param {Function} b.szeletek - async () → a szeletek, ahol csak küldő vagyok
+ * @param {Function} b.halmazkent - async (szelet) → igaz, ha a szeletet halmazként egyeztetem (ott nem kell felajánlani)
+ * @param {Function} [b.kezbesitett] - async () → Set: a már kézbesített saját eseményeim azonosítói
+ * @param {Function} [b.most]
  */
-export function sajatKuldo({ tar, koino, szerzo, szeletek }) {
+export function sajatKuldo({ tar, koino, szerzo, halmazkent, kezbesitett = async () => new Set(), most = () => Date.now() }) {
   return {
-    /** A CIMEK `kul` listája: szeletenként a saját eseményeim azonosítói (a legutóbbiak). */
-    async lista() {
-      const ki = [];
-      for (const k of (await szeletek()).slice(0, KERDES_KORLAT)) {
-        const sajat = (await tar.szeletEsemenyei(k)).filter((e) => e.koino === koino && e.szerzo === szerzo)
-          .sort((a, b) => a.sorszam - b.sorszam).map((e) => e.azonosito);
-        if (sajat.length) ki.push({ k, sajat: sajat.slice(-SAJAT_KORLAT) });
+    /**
+     * A CIMEK `kul` listája: szeletenként a még nem kézbesített, friss saját eseményeim azonosítói (a legújabb szeletek
+     * előbb, szeletenként a legutóbbiak).
+     * @param {Function} [szabad] - (szelet) → igaz, ha ennek a társnak felajánlható
+     */
+    async lista(szabad = () => true) {
+      const kesz = await kezbesitett();
+      const hatar = most() - KULDES_ELETTARTAM;
+      const sajat = (await tar.szerzoLanca(szerzo))
+        .filter((e) => e.koino === koino && !kesz.has(e.azonosito) && Number.isSafeInteger(e.ido) && e.ido >= hatar)
+        .sort((a, b) => b.sorszam - a.sorszam);
+      const szeletenkent = new Map();       // szelet → a felajánlott azonosítók
+      const kihagyott = new Set();
+      for (const e of sajat) {
+        const k = e.entitas ?? e.azonosito;
+        if (kihagyott.has(k)) continue;
+        let l = szeletenkent.get(k);
+        if (!l) {
+          if (szeletenkent.size >= KERDES_KORLAT || !szabad(k) || await halmazkent(k)) { kihagyott.add(k); continue; }
+          l = [];
+          szeletenkent.set(k, l);
+        }
+        if (l.length < SAJAT_KORLAT) l.push(e.azonosito);
       }
-      return ki;
+      return [...szeletenkent].filter(([, l]) => l.length).map(([k, l]) => ({ k, sajat: l.reverse() }));
     }
   };
 }
@@ -218,20 +249,26 @@ export function sajatKuldo({ tar, koino, szerzo, szeletek }) {
 /**
  * @param {Object} b
  * @param {Object} b.tar
- * @param {Function} b.fogadhato - async (szelet) → átveszem-e (a szeletet tartom)
+ * @param {Function} b.fogadhato - async (szelet) → átveszem-e (a szeletet egészében tartom)
  */
 export function kuldoFogado({ tar, fogadhato }) {
   return {
-    /** A társ felajánlott saját eseményeiből a nálam hiányzók — csak abból a szeletből, amit tartok. */
+    /**
+     * A társ felajánlott saját eseményeiből — csak abból a szeletből, amit egészében tartok — a nálam hiányzókat kérem, és
+     * megmondom, melyik van már meg (a társ így tudja, hogy kézbesült).
+     * @returns {Promise<{kerem: Array<string>, megvan: Array<string>}>}
+     */
     async kerem(oveKul) {
-      const ki = [];
+      const kerem = [], megvan = [];
       for (const x of oveKul.slice(0, KERDES_KORLAT)) {
         if (!(await fogadhato(x.k))) continue;
         for (const az of (Array.isArray(x.sajat) ? x.sajat : []).slice(0, SAJAT_KORLAT)) {
-          if (typeof az === 'string' && !(await tar.esemeny(az))) ki.push(az);
+          if (typeof az !== 'string') continue;
+          if (await tar.esemeny(az)) { if (megvan.length < FOGADO_KORLAT) megvan.push(az); }
+          else if (kerem.length < FOGADO_KORLAT) kerem.push(az);
         }
       }
-      return ki.slice(0, 256);
+      return { kerem, megvan };
     }
   };
 }

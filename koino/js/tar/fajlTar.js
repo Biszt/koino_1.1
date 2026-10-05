@@ -933,6 +933,40 @@ export function tagsagFuggoTarolo(koino, hely = alapHely()) {
   };
 }
 
+/**
+ * ⭐ D95/3: a KÉZBESÍTÉS helyi jegyzéke (`<koino>/kezbesites.json`): a saját eseményeim közül melyiket vette át (vagy tudta
+ * már) egy tartó a csak küldő úton — azt többé nem ajánlom fel (`osszegzoTartas.js` `sajatKuldo`). Helyi feljegyzés, nem
+ * esemény; a régi bejegyzések kiesnek (a felajánlás amúgy is csak a friss eseményekre megy).
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function kezbesitesTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'kezbesites.json');
+  return {
+    fajl,
+    /** @returns {Promise<{kezbesitve: Object}>} azonosító → mikor */
+    async olvas() {
+      try {
+        const j = JSON.parse(await readFile(fajl, 'utf8'));
+        return { kezbesitve: j?.kezbesitve && typeof j.kezbesitve === 'object' && !Array.isArray(j.kezbesitve) ? j.kezbesitve : {} };
+      } catch {
+        return { kezbesitve: {} };
+      }
+    },
+    async ir(adat) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
+    }
+  };
+}
+
 // ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================

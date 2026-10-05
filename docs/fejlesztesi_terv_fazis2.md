@@ -4877,6 +4877,18 @@ kérelem (az átmeneti tárba) még nem kér kísérőt — az átmeneti nézetb
 (a csere-mérés, 1000 eseményes tár, a körrel és nélküle): egy eltérő cserén **+0,3 KB** (5,9 → 6,2 KB), a „nincs újdonság”
 csere változatlan (694 B — a kör csak függő kérdésnél megy le).
 
+#### ✅ MEGÉPÜLT — a B3 (2026-10-05)
+
+A csak küldő út (a B1-ben a nagy szeletekre épült) most minden szeletre él, amit nem egyeztetek halmazként — ahol saját
+eseményem van, de a szeletet nem vállalom (a meghívás a meghívott szeletében, a tanúsítás, az ellentmondás-bejelentés, a
+visszavont pontom), vagy csak összegezve tartom (`osszegzoTartas.js` `sajatKuldo`). ⭐ A KÉZBESÍTÉS: a fogadó (aki a szeletet
+egészében tartja) a hiányzókat kéri, és megmondja, mi van már meg (`megvan`); amit egy tartó átvett vagy tudott, azt
+többé nem ajánlom fel (`kezbesites.json`, helyi) — így a felajánlás csak az új eseményeimre utazik, a „nincs újdonság”
+csere nem drágul. A felajánlás a `KULDES_ELETTARTAM`-nál (14 nap) frissebb eseményekre megy (a régebbi a kérelem útján
+elérhető). A zárt koinó nem tagjának is megy — de csak a neki megengedett szeletekben (a saját azonosság-szeletében: így
+jut el hozzá a meghívása). A `vallalas` parancs kimondja, hány saját esemény vár kézbesítésre. ⚠️ Egy tartó elég (a tartók
+egymás közt egyeztetnek; a saját eseményemet én is megtartom és kiszolgálom — D86/2).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

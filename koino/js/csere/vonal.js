@@ -249,11 +249,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let tarsAzonossaga = null;        // ⭐ D93/3: a társ személye, ha EBBEN a kézfogásban bizonyította ({ sz, h })
   let osszegzesEredmeny = null;     // ⭐ D95/1: a nagy szeletek összegzésének eredménye (a hívóé)
   let tagsagEredmeny = null;        // ⭐ D95/2: a tagsági kísérők köre (a hívóé)
+  let kezbesitve = [];              // ⭐ D95/3: a saját eseményeim, amiket egy tartó átvett vagy már tudott (a hívóé)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
-    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny
+    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -485,9 +486,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⭐⭐ D95/1, D95/3: a két fokú vállalás és a csak küldő részvétel listái (a CIMEK-ben mennek, csak ismert tagnak)
   let sajatOsz = [], sajatKul = [], oveOsz = [], oveKul = [];
   const lista = (x, korlat) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object' && ervenyesKulcs(e.k)).slice(0, korlat) : []);
+  // ⭐ D95/3: a csak küldő felajánlás a nem tagnak (zárt koinó) is megy — de csak a neki megengedett szeletekben (a saját
+  // azonosság-szeletében: így jut el hozzá a meghívása); az összegző lista csak tagnak.
   const sajatListak = async () => {
-    sajatOsz = lista(typeof beallitas.osszegzoSzeletek === 'function' ? await beallitas.osszegzoSzeletek() : [], OSZ_KORLAT);
-    sajatKul = lista(typeof beallitas.kuldoSzeletek === 'function' ? await beallitas.kuldoSzeletek() : [], KUL_KORLAT);
+    const szabadKulcs = (k) => kapu.szabad || (Array.isArray(kapu.szeletek) && kapu.szeletek.includes(k));
+    sajatOsz = kapu.szabad
+      ? lista(typeof beallitas.osszegzoSzeletek === 'function' ? await beallitas.osszegzoSzeletek() : [], OSZ_KORLAT) : [];
+    sajatKul = lista(typeof beallitas.kuldoSzeletek === 'function' ? await beallitas.kuldoSzeletek(szabadKulcs) : [], KUL_KORLAT)
+      .filter((x) => szabadKulcs(x.k));
   };
 
   // ----- A CÍMJEGYZÉK: „kiket ismerek" (D36–D38) — csak UDP-címek -----
@@ -529,8 +535,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
     // ⭐ D95/1: az összegezve tartott szeleteim (a legutóbb ellenőrzött gyökérrel és időponttal), és D95/3: a csak küldő
     // szeleteimben a saját eseményeim azonosítói — csak ismert tagnak (a nagy szeletek neve is a koinó tartalma).
-    // ⚠️ Ha a kapu még nem döntött (első találkozás), a bizonyítás utáni pótlásban mennek.
-    if (kapu.szabad) await sajatListak();
+    // ⚠️ Ha a kapu még nem döntött (első találkozás), a bővebb lista a bizonyítás utáni pótlásban megy.
+    await sajatListak();
     kuld({
       uzenet: 'CIMEK',
       ...(dhtGepek.length ? { dht: dhtGepek } : {}),
@@ -566,6 +572,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       if (ki) tarsAzonossaga = ki;
       // ⭐ A címek pótlása: ha az ítélet beengedte, most megy a többi címünk (ha nem, üres — a társ vár rá); és D95/1,
       // D95/3: az összegző és a küldő szeleteim is (az első CIMEK-ben a kapu még nem döntött).
+      // ⚠️ Csak akkor számoljuk újra, ha a kapu most engedett be (a lista így csak bővülhet — a két fél ugyanazt látja).
       if (kapu.szabad) await sajatListak();
       kuld({ uzenet: 'CIMEK', udp: kapu.szabad ? idegenUdpKuldheto : [],
         ...(kapu.szabad && dhtKuldheto.length ? { dht: dhtKuldheto } : {}),
@@ -575,8 +582,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     if (oKerte) {
       const potlas = await varj('CIMEK');
       cimekBeolvasasa(potlas);
-      if (!oveOsz.length) oveOsz = lista(potlas.osz, OSZ_KORLAT);
-      if (!oveKul.length) oveKul = lista(potlas.kul, KUL_KORLAT);
+      if (Array.isArray(potlas.osz)) oveOsz = lista(potlas.osz, OSZ_KORLAT);
+      if (Array.isArray(potlas.kul)) oveKul = lista(potlas.kul, KUL_KORLAT);
     }
   }
 
@@ -637,8 +644,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       catch (hiba) { console.warn('parbeszed - ' + nev + ' nem sikerült', { ok: hiba.message }); return null; }
     };
     const valaszok = !korlat && oveOsz.length ? (await hivas('osszegzesValasz', oveOsz)) ?? [] : [];
-    const kerem = !korlat && oveKul.length ? (await hivas('kuldoKerem', oveKul)) ?? [] : [];
-    kuld({ uzenet: 'OSSZEGZESEK', valaszok, kerem });
+    // ⭐ D95/3: a fogadó a hiányzókat kéri, és megmondja, mi van már meg (a küldő így tudja, hogy kézbesült).
+    const fogadas = oveKul.length ? (await hivas('kuldoKerem', oveKul)) ?? {} : {};
+    const kerem = Array.isArray(fogadas) ? fogadas : (Array.isArray(fogadas.kerem) ? fogadas.kerem : []);
+    const megvan = Array.isArray(fogadas.megvan) ? fogadas.megvan : [];
+    kuld({ uzenet: 'OSSZEGZESEK', valaszok, kerem, ...(megvan.length ? { megvan } : {}) });
     const be = await varj('OSSZEGZESEK');
     const kapottValaszok = Array.isArray(be.valaszok) ? be.valaszok.slice(0, OSZ_KORLAT) : [];
     const kerdesek = sajatOsz.length && kapottValaszok.length ? await hivas('osszegzesMintaKerdesek', kapottValaszok) : null;
@@ -647,6 +657,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     const sajatEsemenyek = [];
     for (const az of kertSajat) { const e = await tar.esemeny(az); if (e) sajatEsemenyek.push(e); }
     kuld({ uzenet: 'OSSZEGZESMINTAKEREK', kerdesek, esemenyek: sajatEsemenyek });
+    // ⭐ D95/3: KÉZBESÍTVE — amit elküldtem (a társ kérte), és amiről azt mondta, már megvan (csak a felajánlottakból).
+    kezbesitve = [...new Set([...sajatEsemenyek.map((e) => e.azonosito),
+      ...(Array.isArray(be.megvan) ? be.megvan : []).filter((az) => felajanlott.has(az))])];
     const keres = await varj('OSSZEGZESMINTAKEREK');
     // A társ saját eseményei, amiket KÉRTEM — ugyanazon a kapun (3. szabály).
     const kertem = new Set(kerem);

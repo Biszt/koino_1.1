@@ -333,8 +333,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    B3 a csak küldő részvétel, B4 a gyökér darabjai) — ✅ **D95** (Csaba: „igen, elfogadom a javaslataidat”). ✅ **A B1 KÉSZ
    (2026-10-05):** a két fokú vállalás — a nagy szelet összegezve (a gyökér és a lezárási összegzések mintákkal ellenőrizve,
    a döntés az összegzésből), a saját eseményeim a csak küldő úton. ✅ **A B2 KÉSZ (2026-10-05):** a tagsági kísérők — a
-   csere végén akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem; ⏭️ a B3 többi része, a B4 és a
-   bekapcsolás jön.
+   csere végén akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem. ✅ **A B3 KÉSZ (2026-10-05):** a csak
+   küldő út minden nem halmazként egyeztetett szeletre, a kézbesítés nyilvántartásával. 🔍 **Új kérdés (B5, Csabánál):** az
+   alapító azonosság-szelete = a koinó születésének szelete (lásd az átvizsgálást). ⏭️ a B4 és a bekapcsolás jön.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -597,3 +598,13 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     ki, a függők közé — ugyanannak a cserének a tagsági köre kéri** · mert az összegzés lépése a szelet-csere előtt fut,
     a tagsági kör utána: a minta szerzőjének csomagja így ugyanabban a cserében megérkezik (a következő ellenőrzésre) · a
     megépítéskor, Claude · `koino.js` (`ketFokBeallitasai`).
+72. **2026-10-05 · a csak küldő felajánlás (D95/3: „a cserében csak a sajátjaimat küldöm”)** → **csak a még nem
+    KÉZBESÍTETT és friss (14 napnál fiatalabb) saját eseményeim; a fogadó a „megvan”-t is visszamondja** · mert ha minden
+    saját eseményemet minden cserén felajánlanám, egy régi tag felajánlása (pl. több száz meghívás) minden „nincs újdonság”
+    cserét drágítana; egy tartó elég, mert a tartók egymás közt egyeztetnek, és én is megtartom (D86/2) · a megépítéskor,
+    Claude (a D95/3 keretén belül) · `osszegzoTartas.js` (`sajatKuldo`, `kuldoFogado`), `vonal.js`, `fajlTar.js`
+    (`kezbesitesTarolo`), `koino.js` (`kezbesitesFeljegyzese`).
+73. **2026-10-05 · a csak küldő felajánlás a zárt koinó nem tagjának (az E3 csak a születést és a két azonosság-szeletet
+    adja)** → **a felajánlás neki is megy, de csak a megengedett szeletekben** · mert a meghívás épp a meghívott (még nem
+    tag) azonosság-szeletébe kerül: a szigorú (b) alatt a meghívó ezt a szeletet nem egyezteti, tehát enélkül a meghívás
+    nem jutna el · a megépítéskor, Claude · `vonal.js` (`sajatListak`).
