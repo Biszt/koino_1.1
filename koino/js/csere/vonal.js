@@ -90,6 +90,10 @@ const OSZ_KORLAT = 64;
 const KUL_KORLAT = 64;
 const KUL_ESEMENY_KORLAT = 256;
 
+// ⭐ D95/2: a tagsági kísérők köre — egy kérdésben legfeljebb ennyi szerző, egy válaszban legfeljebb ennyi esemény.
+const TAGSAG_SZERZO_KORLAT = 32;
+const TAGSAG_ESEMENY_KORLAT = 512;
+
 // ⭐⭐⭐ ÉS AMIT MÁSOKRÓL MONDUNK, AZ HÁROM (Csaba döntése, 2026-09-20 — a 34. mérés után).
 //
 // ⛔ A 34. mérés megfordította a kérdést: **nem a cím-szám dönti el, hogy a hír körbeér-e**,
@@ -244,11 +248,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let tarsKorlatozva = false;       // ⭐ D93/3: a zárt koinó kapuja a társat nem engedte be (csak a megengedett szeletek)
   let tarsAzonossaga = null;        // ⭐ D93/3: a társ személye, ha EBBEN a kézfogásban bizonyította ({ sz, h })
   let osszegzesEredmeny = null;     // ⭐ D95/1: a nagy szeletek összegzésének eredménye (a hívóé)
+  let tagsagEredmeny = null;        // ⭐ D95/2: a tagsági kísérők köre (a hívóé)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
-    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny
+    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -302,6 +307,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // bizonyítását. Ettől a tábla-kulcs nem bemondás: aki aláírta, az vett részt EBBEN a kézfogásban.
   const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
     ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
+  // ⭐ D95/2: van-e FÜGGŐ tagság-kérdésem (akinek a tagságát a szeleteimben nem tudom)? Ha igen, a tagsági kör akkor is
+  // lemegy, ha a szeletek egyeznek — a társnál lehet meg a csomag. ⚠️ Csak egy jel a nyitásban (1 bájt), ha van.
+  let sajatTk = false;
+  if (typeof beallitas.tagsagFuggo === 'function') {
+    try { sajatTk = (await beallitas.tagsagFuggo()) > 0; } catch { sajatTk = false; }
+  }
   kuld({
     // ⭐ A változatot maga az üzenet neve jelzi (a régi program LENYOMAT-tal nyit) — külön mező
     // nélkül: az minden cserén utazna (6. szabály; mérve +28 bájt oda-vissza).
@@ -312,7 +323,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // ⚠️ A JELZÉS A KÉPESSÉGRŐL SZÓL, NEM A KÉRELEMRŐL: ennélkül az a fél, akinek
     // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
     ...(beallitas.fajlValasz ? { fajlCsere: true } : {}),
-    ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {})
+    ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {}),
+    ...(sajatTk ? { tk: 1 } : {})
   });
 
   const elsoUzenet = await sor.kovetkezo();
@@ -579,6 +591,38 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   }
   const korlatonBelul = (k) => !korlat || korlat.has(k);
 
+  // ----- ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK KÖRE (a szelet-csere végén — lent hívjuk) -----
+  //
+  // A döntésben csak az ellenőrzött tag számít (D93/1), a szerzők azonosság-szeletét viszont a szigorú (b) alatt nem
+  // tartom: akinek a tagságát nem tudom, annak a csomagját a társtól kérem (TAGSAGKEREK — mindkét fél egyszerre), és a
+  // társ a kért szerzők csomagját (vagy ha nincs, a tagsági láncát) küldi (TAGSAGCSOMAGOK); ha egyik fél sem kérdez, a
+  // második üzenet elmarad. A kapott események UGYANAZON a kapun mennek be (a hívó `tagsagFogadas`-a). ⭐ A vonal semmit
+  // nem tud a tagságról (`tagsagKisero.js`). ⛔ A nem szabad társnak (zárt koinó) nem adunk semmit.
+  const tagsagKor = async (ujak) => {
+    const hivas = async (nev, ...ervek) => {
+      if (typeof beallitas[nev] !== 'function') return null;
+      try { return await beallitas[nev](...ervek); }
+      catch (hiba) { console.warn('parbeszed - ' + nev + ' nem sikerült', { ok: hiba.message }); return null; }
+    };
+    const szerzoLista = (x) => (Array.isArray(x) ? [...new Set(x.filter(ervenyesKulcs))].slice(0, TAGSAG_SZERZO_KORLAT) : []);
+    const sajatKert = szerzoLista(await hivas('tagsagKerdesek', ujak));
+    kuld({ uzenet: 'TAGSAGKEREK', szerzok: sajatKert });
+    const oveKert = szerzoLista((await varj('TAGSAGKEREK')).szerzok);
+    if (!sajatKert.length && !oveKert.length) return;
+    const valasz = !korlat && oveKert.length ? (await hivas('tagsagValasz', oveKert)) ?? [] : [];
+    kuld({ uzenet: 'TAGSAGCSOMAGOK', esemenyek: (Array.isArray(valasz) ? valasz : []).slice(0, TAGSAG_ESEMENY_KORLAT) });
+    const be = await varj('TAGSAGCSOMAGOK');
+    if (!sajatKert.length) return;
+    const kapott = (Array.isArray(be.esemenyek) ? be.esemenyek : []).filter((e) => e && typeof e === 'object')
+      .slice(0, TAGSAG_ESEMENY_KORLAT);
+    const r = await hivas('tagsagFogadas', kapott, sajatKert);
+    if (r) {
+      uj += r.uj ?? 0;
+      ujAzonositok = [...ujAzonositok, ...(Array.isArray(r.ujAzonositok) ? r.ujAzonositok : [])];
+      tagsagEredmeny = { kert: sajatKert.length, megtudott: r.megtudott ?? 0, fuggo: r.fuggo ?? null };
+    }
+  };
+
   // ----- ⭐⭐ D95/1, D95/3: A NAGY SZELET ÉS A SAJÁT ESEMÉNYEK — két kör, ha bármelyik fél mondott listát -----
   //
   // Mindkét fél tudja, lesz-e (a két CIMEK-ből). 1. kör (OSSZEGZESEK): a társ összegző szeleteire a válaszom (ha a szeletet
@@ -645,6 +689,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   if (oveNyitas.lenyomat === sajatLenyomat) {
     // ⭐ Ugyanazt tudjuk minden közös szeletről — a hétköznapi eset, egyetlen nyitás-csere.
+    // ⭐ D95/2: ha bármelyik félnek függő tagság-kérdése van (a nyitás jele), a tagsági kör ekkor is lemegy.
+    if (sajatTk || oveNyitas.tk === 1) await tagsagKor([]);
     console.log('parbeszed - VÉGE (egyező nyitó lenyomat, nincs mit egyeztetni)');
     return eredmeny();
   }
@@ -804,7 +850,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const atveheto = erkezett.filter((e) => e && typeof e === 'object' && szeletbeTartozik(e, megengedett));
   const beolvasztva = await beolvasztas(tar, atveheto, koino);
   uj += beolvasztva.uj;
-  ujAzonositok = beolvasztva.ujAzonositok;
+  ujAzonositok = [...ujAzonositok, ...beolvasztva.ujAzonositok];
+
+  // ===== 6. ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK — az új (és a függő) szerzők tagsága =====
+  await tagsagKor(beolvasztva.ujAzonositok);
 
   console.log('parbeszed - VÉGE', {
     uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length

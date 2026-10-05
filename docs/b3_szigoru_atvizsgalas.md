@@ -160,6 +160,12 @@ a gyökér és a minták ára (a szelet összegzése és egy lezárási összegz
   rontás-próba (az összegzés nélküli döntés, a halmazként egyeztetett nagy szelet, a csak küldő út nélkül, a pótlás nélkül)
   mind elbukik.
 
-⏭️ **Hátra van:** a B2 (a tagsági csomag kísérőként — vele a minták szerzőinek tagsága), a B3 a többi szeletre (a mások
-azonosság-szeletébe tett állításaim), a B4, és a bekapcsolás (a részvétel a vállalásból, a törzs korlátja, a kérelem az
-átmenetiből, a visszavett vállalás és a tár tömörítése).
+✅ **A B2 MEGÉPÜLT (2026-10-05)** (a részletek: a fázis-2 terv D95, „MEGÉPÜLT — a B2”): a csere végén a tagsági kör
+(`TAGSAGKEREK` → `TAGSAGCSOMAGOK`), a kérdező és a válaszoló (`tagsagKisero.js`), a függők jegyzéke és a nyitás jele, a
+kézi út kísérői. ⚠️ A cserébeli kör parancssor-próbája a bekapcsolással jön: amíg a csere minden szeletben részt vesz (a
+mai mód), a szerző azonosság-szelete a rendes egyeztetéssel is megérkezik, tehát a parancssorból nem különböztethető meg
+— a modul-próba ezért valódi cserét futtat korlátozott részvétellel, a parancssor-próba pedig a kézi utat méri.
+
+⏭️ **Hátra van:** a B3 a többi szeletre (a mások azonosság-szeletébe tett állításaim), a B4, és a bekapcsolás (a részvétel
+a vállalásból, a törzs korlátja, a kérelem az átmenetiből — vele a kérelem kísérői —, a visszavett vállalás és a tár
+tömörítése).

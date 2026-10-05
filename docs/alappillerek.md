@@ -332,7 +332,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    vállalás (a skálázási terv 4.6) konstans; négy kérdés Csabánál (B1 a tömeges entitás, B2 a tagsági csomag a cserében,
    B3 a csak küldő részvétel, B4 a gyökér darabjai) — ✅ **D95** (Csaba: „igen, elfogadom a javaslataidat”). ✅ **A B1 KÉSZ
    (2026-10-05):** a két fokú vállalás — a nagy szelet összegezve (a gyökér és a lezárási összegzések mintákkal ellenőrizve,
-   a döntés az összegzésből), a saját eseményeim a csak küldő úton; ⏭️ a B2, a B3 többi része, a B4 és a bekapcsolás jön.
+   a döntés az összegzésből), a saját eseményeim a csak küldő úton. ✅ **A B2 KÉSZ (2026-10-05):** a tagsági kísérők — a
+   csere végén akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem; ⏭️ a B3 többi része, a B4 és a
+   bekapcsolás jön.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -575,4 +577,23 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 67. **2026-10-05 · a minták szerzőinek tagsága az összegző tartónál (D95/1: „a minták szerzőinek tagságával”)** → **ma a kapu
     emlékéből (akit tagnak láttunk); a többi „nem ellenőrizhető” (D19), az összegzést nem veti el** · mert a teljes válasz a
     tagsági csomag a cserében (B2) — az a következő lépés, és a B1 ellenőrzése már kész a bemenetére (`tagE`) · a megépítéskor,
-    Claude · `koino.js` (`ketFokBeallitasai`), `lezarasiOsszegzes.js`.
+    Claude · `koino.js` (`ketFokBeallitasai`), `lezarasiOsszegzes.js`. ✅ A B2-vel lezárva: a tagság a tárból jön, ami
+    hiányzik, az a függők közé kerül, és ugyanannak a cserének a tagsági köre kéri (a 71. bejegyzés).
+68. **2026-10-05 · a tagsági kísérő: „a tagsági csomagját a társtól kérem” (D95/2)** → **a csomag, és ha a válaszolónál
+    nincs, a tagsági LÁNC (amennyit ő bizonyítani tud)** · mert az alapítónak és a még csomagot ki nem adott tagnak nincs
+    csomagja, a láncát viszont a társ a saját tárából (a nála lévő csomagok tartalmából is) összerakhatja; a fogadó ugyanazon
+    a kapun veszi át, és csak a kért szerzők csomagját · a megépítéskor, Claude (a D95/2 keretén belül) · `tagsagKisero.js`
+    (`tagsagiKiserok`).
+69. **2026-10-05 · mikor kérdezünk (D95/2: „a szelet cseréje után”)** → **a cserék végén MINDIG egy kis kör, ha volt eltérés;
+    és egyező szeleteknél is, ha bármelyik félnek FÜGGŐ kérdése van (a nyitás `tk` jele)** · mert a szigorú (b) alatt a
+    csomag a társnál épp a nem egyeztetett szeletben (a szerző azonosság-szeletében) van, tehát a szeletek egyezése nem
+    jelenti, hogy nincs mit kérdezni; a függők jegyzéke korlátos és lejár (256 szerző, 6 óra, 30 kérdezés), hogy egy soha ki
+    nem derülő tagság ne drágítsa örökké a cserét; mérve: egy eltérő cserén +0,3 KB, a „nincs újdonság” változatlan · a megépítéskor, Claude · `vonal.js` (`tagsagKor`), `tagsagKisero.js`
+    (`tagsagKerdo`), `fajlTar.js` (`tagsagFuggoTarolo`).
+70. **2026-10-05 · a kézi út (4. szabály) a tagsági kísérőkhöz** → **a `kivisz <entitás>` a döntési események szerzőinek
+    kísérőit is viszi** · mert különben egy fájlba vitt gondolat a túloldalon a szerzői pontjai nélkül számolódna (D93/1) — a
+    csere párja · a megépítéskor, Claude · `fajlCsere.js` (`kivitelSzovege`, `kiserok`), `koino.js`.
+71. **2026-10-05 · a B1 mintáinak szerzői (a 67. bejegyzés)** → **a tagság a tárból (`tagsagKerdo.tagE`), és ami nem derül
+    ki, a függők közé — ugyanannak a cserének a tagsági köre kéri** · mert az összegzés lépése a szelet-csere előtt fut,
+    a tagsági kör utána: a minta szerzőjének csomagja így ugyanabban a cserében megérkezik (a következő ellenőrzésre) · a
+    megépítéskor, Claude · `koino.js` (`ketFokBeallitasai`).

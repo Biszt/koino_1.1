@@ -99,7 +99,9 @@ import {
   // ⭐ D78: a lánc-gyökér gyorsítótára (a napló csúcsai és a kiosztás).
   lancTarolo,
   // ⭐ D95/1: az összegzések helyi jegyzéke (a nagy szelet gyökere, a lezárási összegzések).
-  osszegzesTarolo
+  osszegzesTarolo,
+  // ⭐ D95/2: a függő tagságok helyi jegyzéke.
+  tagsagFuggoTarolo
 } from './js/tar/fajlTar.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
@@ -152,6 +154,10 @@ import { tagsagiIndex, szerzoTagsaga, tagsagiCsomagEllenorzese, TAGSAGI_CSOMAG }
 import { szeletFokai, KETFOK_KUSZOB, KETFOK_VISSZA } from './js/allapot/ketFok.js';
 import { osszegzoKerdo, teljesTarto, sajatKuldo, kuldoFogado } from './js/allapot/osszegzoTartas.js';
 import { lezarasiOsszegzesEpitese, LEZARASI_OSSZEGZES } from './js/allapot/lezarasiOsszegzes.js';
+// ⭐ D95/2: a tagsági kísérők — akinek a tagságát nem tudom, annak a csomagját a cserében kérem.
+import { tagsagKerdo, tagsagiKiserok } from './js/allapot/tagsagKisero.js';
+import { TAGSAG_KELL } from './js/allapot/szabalyok.js';
+import { beolvasztas } from './js/csere/csere.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
 import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok, onalloSzalak } from './js/allapot/jelzesek.js';
@@ -1687,9 +1693,9 @@ async function ketFokBeallitasai(allapot = null) {
   const kf = await ketFokAllapota(allapot);
   const osszegzok = async () => [...kf.fokok].filter(([, f]) => f === 'osszegzo').map(([k]) => k);
   const kerdo = osszegzoKerdo({ tarolo: kf.tarolo, szeletek: osszegzok,
-    // A minták szerzőinek tagsága: akit a kapu már tagnak látott (`tagEmlek`), az tag; a többi „nem ellenőrizhető” (nem
-    // hiba — D19). ⏸️ A teljes választ a B2 hozza (a tagsági csomag a cserében kísérőként).
-    tagE: async (sz) => (tagEmlek.has(sz) ? true : null),
+    // A minták szerzőinek tagsága a táramból (D95/2): ha nem derül ki, „nem ellenőrizhető” (nem hiba — D19), és a szerző a
+    // függők közé kerül — ugyanennek a cserének a tagsági köre kéri a csomagját.
+    tagE: (sz) => tagsagKerdes.tagE(sz),
     esemenyMentes: (e) => esemenyMentese(tar, e) });
   let kepEmlek = null;
   const tarto = teljesTarto({
@@ -1875,6 +1881,24 @@ async function azonossagBeallitasa() {
   };
 }
 
+/**
+ * ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK — akinek a tagságát a vállalt szeleteimben nem tudom, annak a csomagját a cserében kérem
+ * (`tagsagKisero.js`); a kapott csomag ugyanazon a kapun megy be. A jegyzék (`tagsagfuggo.json`) helyi, korlátos, lejár.
+ * ⭐ Az `ismert` a kapu tag-emléke: amit az egyik bizonyított, azt a másik is tudja.
+ */
+const tagsagKerdes = tagsagKerdo({ tar, koino: KOINO, tarolo: tagsagFuggoTarolo(KOINO), koinoSzuletes: koinoSzuletese,
+  mentes: (lista) => beolvasztas(tar, lista, KOINO), ismert: tagEmlek });
+
+/** A csere beállításai a tagsági kísérőkhöz (a `parbeszed` hívja őket). */
+function tagsagBeallitasai() {
+  return {
+    tagsagFuggo: () => tagsagKerdes.fuggoDarab(),
+    tagsagKerdesek: (ujak) => tagsagKerdes.kerdesek(ujak),
+    tagsagValasz: async (szerzok) => tagsagiKiserok(tar, KOINO, szerzok, { koinoSzuletes: await koinoSzuletese() }),
+    tagsagFogadas: (esemenyek, kert) => tagsagKerdes.fogadas(esemenyek, kert)
+  };
+}
+
 function resMunkaKeszito(allapot) {
   return async (nyersHalo, tars) => {
     // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
@@ -1961,6 +1985,8 @@ function resMunka(allapot, halo, tars) {
       ...await azonossagBeallitasa(),
       // ⭐⭐ D95/1, D95/3: a két fokú vállalás (a nagy szelet összegezve) és a csak küldő részvétel.
       ...await ketFokBeallitasai(),
+      // ⭐⭐ D95/2: a szerzők tagsági kísérői.
+      ...tagsagBeallitasai(),
       raj: (kulcsok) => {
         const vallal = kulcsok.filter((k) => rajVallalas.szeletek.has(k));
         return { vallal, tippek: rajAjanlat(rajJegyzek, vallal) };
@@ -2015,6 +2041,12 @@ function resMunka(allapot, halo, tars) {
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
       + adatMennyiseg({ bajtKuldott: bajt }) + ')' + SZIN.vege);
+
+    // ⭐ D95/2: a tagsági kísérők köre — kimondjuk, ha valakinek a tagsága most derült ki.
+    if (csere.tagsagEredmeny?.megtudott) {
+      kiir(SZIN.halvany + '  🪪 ' + ora() + ' ' + csere.tagsagEredmeny.megtudott + ' szerző tagsága kiderült (a tagsági csomagjából)'
+        + (csere.tagsagEredmeny.fuggo ? ' · ' + csere.tagsagEredmeny.fuggo + ' még függőben' : '') + SZIN.vege);
+    }
 
     // ⭐ D82: amit most kaptunk, annak a környékén keresünk bizonyítható ellentmondást.
     if (alap.uj > 0) await eszlelesEsBejelentes(csere.ujAzonositok);
@@ -2582,12 +2614,17 @@ try {
         throw new Error('Hova vigyem? node koino/koino.js kivisz <fájl> [mind|sajat|<azonosító>]');
       }
 
-      const { szoveg, darab, hatokor, bajt, szovegDarabok, hianyzoDarabok } = await kivitelSzovege(
+      const { szoveg, darab, hatokor, bajt, szovegDarabok, hianyzoDarabok, kiserok } = await kivitelSzovege(
         tar, KOINO, {
           hatokor: ervek[1] ?? 'mind',
           szerzo,
           // ⭐ D72: a szöveg külön darab — a kézi út azt is viszi.
-          darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat)
+          darabOlvas: (lenyomat) => fajlBlobTarolo(KOINO).olvas(lenyomat),
+          // ⭐ D95/2: egy entitás kivitele a döntési események szerzőinek tagsági kísérőit is viszi (a csere párja —
+          // 4. szabály): a túloldalon a pontjaik és szavazataik csak így számítanak.
+          kiserok: async (esemenyek) => tagsagiKiserok(tar, KOINO,
+            [...new Set(esemenyek.filter((e) => TAGSAG_KELL.has(e.tipus)).map((e) => e.szerzo))],
+            { koinoSzuletes: await koinoSzuletese(), szerzoKorlat: 256, korlat: 4096 })
         });
 
       if (darab === 0) {
@@ -2600,7 +2637,7 @@ try {
       await writeFile(hova, szoveg, 'utf8');
       kiir('Kivíve: ' + hova);
       kiir('  ' + darab + ' esemény · ' + szovegDarabok + ' szöveg-darab · ' + bajt + ' bájt · hatókör: '
-        + hatokor);
+        + hatokor + (kiserok ? ' · ebből ' + kiserok + ' tagsági kísérő (a szerzők tagsága — D95/2)' : ''));
       // ⚠️ Amit nálunk sincs meg, azt nem visszük — és kimondjuk (D19).
       if (hianyzoDarabok) {
         kiir(SZIN.nem + '  ' + hianyzoDarabok + ' szöveg-darab nálam sincs meg — a fájlban csak a'
@@ -3927,6 +3964,9 @@ try {
         const b = await lepcsoBemondasKiadasa(kornyezet);
         kiir(SZIN.halvany + '  2. lépcső: ' + l.ok + ' · bemondás: ' + b.ok + SZIN.vege);
       }
+      // ⭐ D95/2: akiknek a tagságát a szeleteimben még nem tudom (a cserében kérem a csomagjukat).
+      const fuggo = await tagsagKerdes.fuggoDarab();
+      if (fuggo) kiir(SZIN.halvany + '  ' + fuggo + ' szerző tagsága függőben — a következő cserében kérem a csomagjukat' + SZIN.vege);
       break;
     }
 

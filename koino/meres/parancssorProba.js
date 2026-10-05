@@ -446,6 +446,57 @@ proba('⭐⭐ D95/1, D95/3: a NAGY szeletet B összegezve tartja — a lezárás
   });
 
 // ===================================
+// ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK A KÉZI ÚTON (2026-10-05)
+// ===================================
+//
+// A gondolatot (G) az alapító (A) hozza létre, C tag (A hívta meg), és pontot tesz G-re. A kiviszi G-t (`kivisz <fájl> <G>`),
+// egy friss készülék (D) behozza — semmi mást. ⭐ A kivitel a döntési események szerzőinek tagsági kísérőit is viszi (C
+// tagsági lánca, A-nál nincs csomagja), tehát D-nél C pontja SZÁMÍT: nincs „⏳ … nem számít” sor, és G össz-pontja ugyanaz,
+// mint A-nál. Viselkedést mérünk (D állapotát), nem feliratot.
+proba('⭐⭐ D95/2: az entitás kivitele a szerzők tagsági kísérőit is viszi — a friss készüléken C pontja számít',
+  async () => {
+    const a = await ujKeszulek();
+    const c = await ujKeszulek();
+    const d = await ujKeszulek();
+    const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+    try {
+      await fut(a, 'koino', 'Kísérő');
+      const g = azonosito(await fut(a, 'gondolat', 'KÍSÉRT'), 'Létrejött:');
+      if (!g) return false;
+      await fut(a, 'kivisz', join(a, 'mind.jsonl'));
+      await fut(c, 'behoz', join(a, 'mind.jsonl'));
+      await taggaTesziKeszulek(a, c, 'c');
+      await fut(c, 'pont', g, '7');
+      await fut(c, 'kivisz', join(c, 'sajat.jsonl'), 'sajat');
+      await fut(a, 'behoz', join(c, 'sajat.jsonl'));
+      const esemenyekA = (await readFile(join(a, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const gTeljes = esemenyekA.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const koinoTeljes = esemenyekA.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      // D a koinó születését ismeri (enélkül nem volna mihez mérnie a tagságot), aztán G-t kapja.
+      await fut(a, 'kivisz', join(a, 'k.jsonl'), koinoTeljes);
+      await fut(d, 'behoz', join(a, 'k.jsonl'));
+      const ki = tiszta(await fut(a, 'kivisz', join(a, 'g.jsonl'), gTeljes));
+      await fut(d, 'behoz', join(a, 'g.jsonl'));
+      const pontja = (kep) => Number((tiszta(kep).match(/összes pont: (\d+)/) ?? [])[1] ?? NaN);
+      const aKep = await fut(a, 'allapot');
+      const dKep = await fut(d, 'allapot');
+      const eredmeny = {
+        kiserok: /tagsági kísérő/.test(ki),
+        nincsFuggo: !/nem számít, amíg a szerzője tagsága/.test(tiszta(dKep)),
+        ugyanannyi: pontja(dKep) === pontja(aKep) && pontja(aKep) > 7
+      };
+      if (!Object.values(eredmeny).every(Boolean)) {
+        process.stdout.write('  kísérő — ami bukott: ' + Object.keys(eredmeny).filter((k) => !eredmeny[k]).join(', ') + '\n');
+      }
+      return Object.values(eredmeny).every(Boolean);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(c, { recursive: true, force: true });
+      await rm(d, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91: A RAJ A VALÓDI CSERÉBEN — a két tartó egymást jegyzi meg (2026-10-03)
 // ===================================
 //

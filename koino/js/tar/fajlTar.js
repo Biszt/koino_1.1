@@ -900,6 +900,39 @@ export function osszegzesTarolo(koino, hely = alapHely()) {
   };
 }
 
+/**
+ * ⭐ D95/2: a FÜGGŐ TAGSÁGOK helyi jegyzéke (`<koino>/tagsagfuggo.json`): akiknek a tagságát a vállalt szeleteimben nem
+ * tudom, és a cserében kérdezem (`tagsagKisero.js`). Helyi feljegyzés, nem esemény, nem terjed; korlátos és lejár.
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function tagsagFuggoTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'tagsagfuggo.json');
+  return {
+    fajl,
+    /** @returns {Promise<{szerzok: Object}>} */
+    async olvas() {
+      try {
+        const j = JSON.parse(await readFile(fajl, 'utf8'));
+        return { szerzok: j?.szerzok && typeof j.szerzok === 'object' && !Array.isArray(j.szerzok) ? j.szerzok : {} };
+      } catch {
+        return { szerzok: {} };
+      }
+    },
+    async ir(adat) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
+    }
+  };
+}
+
 // ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================

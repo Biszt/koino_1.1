@@ -4862,6 +4862,21 @@ saját eseményei a csak küldő úton mennek (a B3 magja). Az őrjárat a nagy 
 a teljeset a B2 hozza. ⚠️ A nagy szelet már meglévő eseményei a tartós tárban maradnak — a tár tömörítése a bekapcsolással
 jön (a visszavett vállalással együtt).
 
+#### ✅ MEGÉPÜLT — a B2 (2026-10-05)
+
+A csere végén egy új kör (`vonal.js`, 6. lépés): `TAGSAGKEREK` (mindkét fél egyszerre: akiknek a tagságát nem tudja) →
+`TAGSAGCSOMAGOK` (a kért szerzők legutóbbi tagsági csomagja; ha nincs, a tagsági lánc, amennyit a válaszoló bizonyítani tud
+— így az alapító és a csomag nélküli tag is); ha egyik fél sem kérdez, a második üzenet elmarad. A kérdés forrása
+(`tagsagKisero.js`): az újonnan kapott döntési események szerzői, akiknek a tagsága a tárból nem bizonyítható, és a FÜGGŐK
+helyi jegyzéke (`tagsagfuggo.json` — legfeljebb 256 szerző, 6 óra, 30 kérdezés). Ha függő kérdés van, a NYITÁS egy jelet
+visz (`tk`), és a kör egyező szeleteknél is lemegy. A fogadás csak a kért szerzők csomagját és a lánc-típusú eseményeket
+veszi át, ugyanazon a kapun. A tagság forrása a tár (a szerző saját eseményei a mutatóból, a láncának bejárása) — a terhe
+a lánc mélységével arányos. A B1 mintáinak szerzői is innen (ha nem derül ki: „nem ellenőrizhető”, és a függők közé
+kerülnek). A kézi út párja: a `kivisz <entitás>` a döntési események szerzőinek tagsági kísérőit is viszi. ⚠️ A `hozd` és a
+kérelem (az átmeneti tárba) még nem kér kísérőt — az átmeneti nézetben a nem ismert szerző pontja „függőben”. ⭐ Az ára
+(a csere-mérés, 1000 eseményes tár, a körrel és nélküle): egy eltérő cserén **+0,3 KB** (5,9 → 6,2 KB), a „nincs újdonság”
+csere változatlan (694 B — a kör csak függő kérdésnél megy le).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

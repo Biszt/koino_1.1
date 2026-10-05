@@ -35,7 +35,7 @@ export const PROFIL = 'Profil';
 /** Egy tagsági csomagban legfeljebb ennyi esemény (lépésenként a belépés, a meghívás, a profil + a gyökér). */
 export const CSOMAG_ESEMENY_KORLAT = 3 * (MELYSEG_KORLAT + 1) + 2;
 
-const LANC_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', PROFIL]);
+export const LANC_TIPUSOK = new Set(['KoinoLetrehozas', 'Belepes', 'Meghivas', PROFIL]);
 
 /**
  * A TAGSÁGI INDEX egy esemény-halmazból (egy koinóé): a horgonyok, a horgonyonkénti meghívások és profilok — a

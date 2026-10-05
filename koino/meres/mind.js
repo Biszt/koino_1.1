@@ -76,6 +76,7 @@ import atmeneti from './atmenetiProba.js';
 import lezarasiOsszegzes from './lezarasiOsszegzesProba.js';
 // ⭐ D95/1, D95/3: a két fokú vállalás szerepei a valódi cserén.
 import osszegzoTartas from './osszegzoTartasProba.js';
+import tagsagKisero from './tagsagKiseroProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -117,6 +118,7 @@ const PROBAK = [
   { nev: 'osszpont', futtat: osszpont },
   { nev: 'kerelem', futtat: kerelem },
   { nev: 'osszegzotartas', futtat: osszegzoTartas },
+  { nev: 'tagsagkisero', futtat: tagsagKisero },
   { nev: 'tagsag', futtat: tagsag },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
@@ -148,7 +150,7 @@ const CSOPORTOK = {
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
-  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'vizsga'],
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'tagsagkisero', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül

@@ -117,6 +117,19 @@ export async function kivitelSzovege(tar, koino, beallitas = {}) {
     esemenyek = await egyeztetettEsemenyek(tar, koino, vonalKulcsa(hatokor));
   }
 
+  // ⭐ D95/2: A TAGSÁGI KÍSÉRŐK — egy entitás kivitele a döntési események szerzőinek tagsági csomagját (vagy láncát) is
+  // viszi, különben a túloldalon a pontjaik és szavazataik „függőben” maradnának (D93/1). A hívó adja (`beallitas.kiserok`).
+  let kiserok = 0;
+  if (hatokor !== 'mind' && hatokor !== 'sajat' && typeof beallitas.kiserok === 'function') {
+    const megvan = new Set(esemenyek.map((e) => e.azonosito));
+    for (const e of (await beallitas.kiserok(esemenyek)) ?? []) {
+      if (!e || megvan.has(e.azonosito)) continue;
+      megvan.add(e.azonosito);
+      esemenyek.push(e);
+      kiserok++;
+    }
+  }
+
   // ⭐ A TÁR ALAKJA, BÁJTRA: soronként egy `JSON.stringify(esemeny)`. Ha ez elcsúszna a
   // `fajlTar.js` `hozzafuz`-ától, a lemásolt `esemenyek.jsonl` már nem lenne behozható —
   // és pont az a kézi út veszne el, amit itt ellenőrzötté teszünk.
@@ -143,6 +156,7 @@ export async function kivitelSzovege(tar, koino, beallitas = {}) {
     szovegDarabok,
     hianyzoDarabok,
     hatokor,
+    kiserok,
     bajt: Buffer.byteLength(szoveg, 'utf8')
   };
 }
