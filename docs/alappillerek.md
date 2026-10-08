@@ -336,7 +336,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    csere végén akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem. ✅ **A B3 KÉSZ (2026-10-05):** a csak
    küldő út minden nem halmazként egyeztetett szeletre, a kézbesítés nyilvántartásával. ✅ **D96** (a B5 — Csaba: „rendben,
    elfogadom a javaslatodat”): a koinó születését mindenki az eseményként tartja, a szeletét csak az alapító azonosságát
-   vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. ⏭️ **A bekapcsolás jön.**
+   vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. 🔍 **A bekapcsolás átvizsgálva**
+   ([`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md), 68. mérés): a közös halmaz nélkül a „nincs újdonság” csere
+   6–300 KB, és az őrjárat a rajjal nem cserél — **K1 és K2 Csabánál**.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).

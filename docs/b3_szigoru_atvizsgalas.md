@@ -191,6 +191,8 @@ darab-kulcs, a mélység a saját darabból becsülve (egy forrás a DHT-hirdet�
 nyitó lenyomatban), csak a legsekélyebb közös eltérő darab egyeztetődik; a saját legfelső szintű születés a csak küldő
 úton; mérve +76–100 B egy „nincs újdonság” cserén.
 
+🔍 **A bekapcsolás átvizsgálása:** [`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md) (68. mérés, K1–K2).
+
 ⏭️ **Hátra van: a bekapcsolás** — a részvétel a vállalásból (vele a D96: a koinó születésének szeletében csak az alapító),
 a törzs korlátja a randevúban, a kérelem az átmenetiből (vele a kérelem kísérői), a visszavett vállalás és a tár
 tömörítése; és ekkor a B2–B4 parancssor-próbái a cserében.

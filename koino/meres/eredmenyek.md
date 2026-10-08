@@ -4799,3 +4799,24 @@ a teljes tartó fa-építése a nulláról (két állapot-fa + napló): 1 s · 2
 nő a résztvevők számával; a minták szerzőinek tagsága gyorsítótár nélkül +0,2–0,3 MB (a már ismert szerzőké ingyen).
 Döntésenként EGYSZER — a mai „mindent tárol” (a szelet minden eseménye) helyett. A szelet MOSTANI összegzésének mintái a
 62. mérés szerint k = 8-cal 5–21 KB.
+
+## 68. ⭐ A „NINCS ÚJDONSÁG” CSERE A SZIGORÚ (b) ALATT — a részvétel a saját halmaz (a bekapcsolás átvizsgálása, 2026-10-06, a laptopon)
+
+*`reszvetelMeres.js`: két tár, mindkettő n szeletet vállal, ebből egy hányad közös és egyező, a többi csak az egyiké. A
+valódi párbeszéd (`csereUdpResen`) a gépen belüli UDP-résen, titkosítva. A részvétel a saját halmaz (ahogy a bekapcsolás
+után volna), illetve összevetésül csak a közös szeletek (ha mindkét fél tudná, mi a közös).*
+
+```
+  n │ átfedés 10% │ 50%      │ 90%     │ 100%  │ csak a közös (bármely átfedésnél)
+ 50 │  17,0 KB    │ 13,0 KB  │  6,3 KB │ 702 B │ 702 B
+200 │  58,0 KB    │ 42,1 KB  │ 25,0 KB │ 702 B │ 702 B
+1000│ 298,4 KB    │ 216,5 KB │ 92,5 KB │ 702 B │ 702 B
+```
+
+⭐ **A lelet:** ha a részvétel a saját vállalásból jön, és a két fél mást vállal, a nyitó lenyomat soha nem egyezik, és a
+párbeszéd MINDEN cserén végigfuttatja az első szintet a nem közös szeleteken is (a tartomány-egyeztetés a sok eltérésnél a
+listákig bomlik, az ELTÉRŐ és a RÉSZVÉTEL üzenet a nem közös kulcsokat sorolja): a hétköznapi „nincs újdonság” csere
+**6–300 KB** a 702 B helyett — a vállalt szeletek számával lineárisan nő. ⛔ A szigorú (b) így NEM kapcsolható be: előbb a
+két félnek a KÖZÖS halmazt kell ismernie (a nyitó lenyomat csak azon fusson). A darabos gyökérnél (D95/4) ugyanezt a
+NYITÁS jele oldja meg (a darabokat a társ a tábla-aláíróból számolja) — a vállalt szeleteknél ilyen számítható szabály
+nincs. A bekapcsolás átvizsgálása: [`docs/bekapcsolas_atvizsgalas.md`](../../docs/bekapcsolas_atvizsgalas.md).
