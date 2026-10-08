@@ -4922,6 +4922,34 @@ tagsági láncban és csomagban benne van, és soha nem változik. Ha később k
 külön szeletbe menjenek. A kód a bekapcsolásnál változik (a részvétel a vállalásból: a koinó születésének szeletében
 csak az alapító vesz részt).
 
+### D97. A BEKAPCSOLÁS KÉT KÉRDÉSE: a közös halmaz és a raj a körben (2026-10-08, Csaba: „elfogadom a javaslataidat”)
+
+**Amiből jött:** a bekapcsolás átvizsgálása ([`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md)) és a 68. mérés: ha a
+részvétel a saját vállalásból jön, és két készülék mást vállal, a nyitó lenyomatuk soha nem egyezik — a „nincs újdonság”
+csere 6–300 KB a 702 B helyett; és az őrjárat a raj tartóival nem cserél (véletlen társsal ~n²/S közös szelet).
+
+#### A DÖNTÉS
+
+1. ⭐ **K1 — A KÖZÖS HALMAZ (A):** az első találkozáskor mindkét fél elküldi a részvételi halmazát rövid ujjlenyomatokként
+   (szeletenként 6 bájt); a társ tábla-aláírója alatt megjegyezzük. Utána csak a változatok utaznak, és ha mindkettő
+   stimmel, a nyitó lenyomat a pontos metszeten fut; ha a halmaz változott, csak a változás megy.
+2. ⭐ **K2 — A RAJ A KÖR CÉLJAI KÖZT (A):** körönként néhány (kiindulásnak 2) raj-társ — akik a legtöbb vállalt szeletemet
+   tartják, forgatva —, az utolsó ismert címükön, NAT mögött a kopogtatással. A kötés-háló marad az elérhetőségé.
+
+A sorrend: a közös halmaz → a részvétel a vállalásból (a D96-tal) → a raj a körben (előtte szimuláció) → a többi.
+
+#### ✅ MEGÉPÜLT — a közös halmaz (2026-10-08)
+
+`csere/kozosHalmaz.js` (az ujjlenyomat: 6 bájt, 8 jel; a változat: 11 jel; a napló a legutóbbi 64 változással; a változás
+kiszámolása és alkalmazása változat-ellenőrzéssel; a metszet szűrője) + `vonal.js`: a NYITÁS a saját halmazom változatát
+viszi (`pv`); a CÍMEK a jelet (`kz` = állapot : amit a társ halmazából ismerek : a közös lenyomat 11 jeles eleje — `k` a
+metszetet ki tudom számolni, `s` csere kell, `x` a zárt koinó kapuja korlátoz). Ha mindkettő `k`, a két közös lenyomatot
+vetjük össze; ha valamelyik `s`, a HALMAZ (a változás, vagy a teljes lista; a fogadó a változatot ellenőrzi) és a KOZOS
+üzenet jön; hiba vagy `x` esetén a régi menet. A „minden” részvétel (null) változat nélkül megy — a mai mód változatlan.
+`fajlTar.js` `halmazTarolo` (`halmazok.json`: a saját naplóm és a társak halmazai, legfeljebb 64 társ). ⭐ Mérve (a 68.
+mérés kiegészítése): az első találkozás 2,9 / 7,0 / 28,3 KB 50 / 200 / 1000 vállalt szeletnél, utána a „nincs újdonság”
+1,3 KB (a 6–300 KB helyett). ⚠️ A `koino.js` részvételi halmaza még „minden” — a bekapcsolás tölti ki.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

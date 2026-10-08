@@ -967,6 +967,59 @@ export function kezbesitesTarolo(koino, hely = alapHely()) {
   };
 }
 
+/**
+ * ⭐ D97/1: a KÖZÖS HALMAZ helyi tára (`<koino>/halmazok.json`): a saját részvételi halmazom naplója és amit a társak
+ * halmazáról tudok (a tábla-aláírójuk alatt, a legutóbb látott `HALMAZ_TARS_KORLAT` társé). Ugyanaz a felület, mint a
+ * `kozosHalmaz.js` `memoriaHalmazTar`-é. Helyi feljegyzés, nem esemény, nem terjed.
+ * @param {string} koino
+ * @param {string} [hely]
+ * @param {Function} naploFrissitese - `kozosHalmaz.js` (a réteg itt nem importál a csere rétegéből)
+ */
+export const HALMAZ_TARS_KORLAT = 64;
+export function halmazTarolo(koino, hely = alapHely(), naploFrissitese) {
+  const fajl = join(hely, koino, 'halmazok.json');
+  const olvas = async () => {
+    try {
+      const j = JSON.parse(await readFile(fajl, 'utf8'));
+      return { naplo: j?.naplo ?? null, tarsak: j?.tarsak && typeof j.tarsak === 'object' && !Array.isArray(j.tarsak) ? j.tarsak : {} };
+    } catch {
+      return { naplo: null, tarsak: {} };
+    }
+  };
+  const ir = async (adat) => {
+    await mkdir(dirname(fajl), { recursive: true });
+    const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+    try {
+      await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+      await rename(ideiglenes, fajl);
+    } catch (hiba) {
+      await rm(ideiglenes, { force: true }).catch(() => {});
+      throw hiba;
+    }
+  };
+  return {
+    fajl,
+    async sajatNaplo(kulcsok) {
+      const t = await olvas();
+      const r = naploFrissitese(t.naplo, kulcsok);
+      if (r.valtozott) { t.naplo = r.naplo; await ir(t); }
+      return r.naplo;
+    },
+    async tarsOlvas(alairo) {
+      const x = (await olvas()).tarsak[alairo];
+      return x && typeof x.v === 'string' && Array.isArray(x.ujjak) ? { v: x.v, ujjak: x.ujjak } : null;
+    },
+    async tarsIr(alairo, ismert) {
+      const t = await olvas();
+      if (ismert) t.tarsak[alairo] = { v: ismert.v, ujjak: ismert.ujjak, ido: Date.now() };
+      else delete t.tarsak[alairo];
+      const lista = Object.entries(t.tarsak).sort((a, b) => (b[1]?.ido ?? 0) - (a[1]?.ido ?? 0)).slice(0, HALMAZ_TARS_KORLAT);
+      t.tarsak = Object.fromEntries(lista);
+      await ir(t);
+    }
+  };
+}
+
 // ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================

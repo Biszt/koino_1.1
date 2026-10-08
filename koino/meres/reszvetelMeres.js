@@ -22,6 +22,9 @@ import { createSocket } from 'node:dgram';
 import { ujEember } from './probaFuttato.js';
 import { esemenyTarNyitasa } from '../js/tar/fajlTar.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
+import { ujTablaKulcs, nyilvanosResz } from '../js/csere/tablaKulcs.js';
+import { kezfogasAlairasa } from '../js/csere/titkositas.js';
+import { memoriaHalmazTar } from '../js/csere/kozosHalmaz.js';
 
 const KOINO = 'reszvetelmeres';
 const ATFEDESEK = [0.1, 0.5, 0.9, 1];
@@ -35,13 +38,16 @@ async function udpParos() {
     bezar() { egyik.close(); masik.close(); } };
 }
 
-async function csere(tarA, tarB, reszveszA, reszveszB) {
+async function csere(tarA, tarB, reszveszA, reszveszB, kozos = null) {
   const p = await udpParos();
   const kezdet = Date.now();
+  // ⭐ D97/1: a közös halmaz (ha megadva): a tábla-kulcs és a halmaz-tár mindkét félnél.
+  const oldal = (reszvesz, k) => (k ? { reszvesz, tablaKulcs: nyilvanosResz(k.t), tablaAlairo: (x) => kezfogasAlairasa(k.t, x),
+    reszvetelHalmaz: async () => k.p, halmazTar: k.h } : { reszvesz });
   try {
     const [a, b] = await Promise.all([
-      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, { reszvesz: reszveszA }),
-      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO, { reszvesz: reszveszB })
+      csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, oldal(reszveszA, kozos?.a)),
+      csereUdpResen(p.masik, '127.0.0.1', p.egyikPort, tarB, KOINO, oldal(reszveszB, kozos?.b))
     ]);
     return { bajt: a.bajtKuldott + a.bajtKapott, ms: Date.now() - kezdet,
       uzenetek: a.egyeztetoUzenetek + b.egyeztetoUzenetek };
@@ -76,9 +82,15 @@ async function egyMeret(n, szerzo) {
       await csere(tarA, tarB, (k) => halmazA.has(k), (k) => halmazB.has(k));          // bemelegítés
       const sajat = await csere(tarA, tarB, (k) => halmazA.has(k), (k) => halmazB.has(k));
       const idealis = await csere(tarA, tarB, (k) => kozosHalmaz.has(k), (k) => kozosHalmaz.has(k));
+      // ⭐ D97/1: a közös halmaz — az első találkozás (a halmazok cseréje) és utána a „nincs újdonság”.
+      const kz = { a: { t: await ujTablaKulcs(), p: halmazA, h: memoriaHalmazTar() },
+        b: { t: await ujTablaKulcs(), p: halmazB, h: memoriaHalmazTar() } };
+      const kElso = await csere(tarA, tarB, (k) => halmazA.has(k), (k) => halmazB.has(k), kz);
+      const kMasodik = await csere(tarA, tarB, (k) => halmazA.has(k), (k) => halmazB.has(k), kz);
       kiir('  n = ' + String(n).padStart(4) + ' · átfedés ' + String(Math.round(atfedes * 100)).padStart(3) + '%: '
         + 'saját halmaz ' + kb(sajat.bajt).padStart(8) + ' (' + sajat.uzenetek + ' egyeztető üzenet, ' + sajat.ms + ' ms)'
-        + ' · csak a közös ' + kb(idealis.bajt).padStart(7) + ' (' + idealis.uzenetek + ')');
+        + ' · csak a közös ' + kb(idealis.bajt).padStart(7) + ' (' + idealis.uzenetek + ')'
+        + ' · D97: első ' + kb(kElso.bajt).padStart(7) + ', utána ' + kb(kMasodik.bajt).padStart(7) + ' (' + kMasodik.uzenetek + ')');
     } finally {
       await rm(hely, { recursive: true, force: true });
     }

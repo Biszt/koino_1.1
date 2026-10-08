@@ -4820,3 +4820,9 @@ listákig bomlik, az ELTÉRŐ és a RÉSZVÉTEL üzenet a nem közös kulcsokat 
 két félnek a KÖZÖS halmazt kell ismernie (a nyitó lenyomat csak azon fusson). A darabos gyökérnél (D95/4) ugyanezt a
 NYITÁS jele oldja meg (a darabokat a társ a tábla-aláíróból számolja) — a vállalt szeleteknél ilyen számítható szabály
 nincs. A bekapcsolás átvizsgálása: [`docs/bekapcsolas_atvizsgalas.md`](../../docs/bekapcsolas_atvizsgalas.md).
+
+⭐ **És a D97/1 után (2026-10-08, a laptopon — ugyanaz a mérés, a közös halmazzal):** az első találkozáskor a két fél
+kicseréli a részvételi halmazát (szeletenként 8 jeles ujjlenyomat, mindkét irányban): **2,9 / 7,0 / 28,3 KB** 50 / 200 /
+1000 vállalt szeletnél (az átfedéstől függetlenül); utána a „nincs újdonság” csere minden esetben **1,3 KB** (0 egyeztető
+üzenet) — a 6–300 KB helyett. A többlet a tábla-kulcsos alapcseréhez (~1,15 KB) képest ~150 B (a nyitás `pv` és a CÍMEK
+`kz` jele). A halmaz változása csak a változást viszi (a próba szerint a teljes lista ~2 KB-tal drágább már 200 szeletnél).

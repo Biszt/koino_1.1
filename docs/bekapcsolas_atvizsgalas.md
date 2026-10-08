@@ -63,6 +63,11 @@ függ, hogy a hétköznapi csere 0,7 KB vagy több tíz KB)
 - **(C) Csak a kérelem** (D92): a vállalt szeletet időnként kérelemmel frissítem a raj tartóitól — de a szelet-kérelem a
   teljes szeletet hozza (nincs tartomány-egyeztetés), tehát nagy szeletnél drága.
 
+✅ **ELDŐLT — D97 (Csaba, 2026-10-08: „elfogadom a javaslataidat”):** K1/A és K2/A.
+
+✅ **A KÖZÖS HALMAZ MEGÉPÜLT (2026-10-08)** — a részletek: a fázis-2 terv D97, „MEGÉPÜLT”; mérve: az első találkozás
+2,9–28,3 KB, utána a „nincs újdonság” 1,3 KB. ⏭️ Következik: a részvétel a vállalásból.
+
 ## 5. Ami nem igényel döntést (a megépítés része)
 
 A részvétel a vállalásból (a töredék-részvétellel és a D96-tal), a törzs korlátja, a kérelem az átmenetiből és a
@@ -76,3 +81,19 @@ kísérői, a visszavett vállalás és a tár tömörítése, a B2–B4 parancs
 3. **A raj a kör céljai közt** (K2/A) — előtte szimuláció: hány kör alatt ér körbe egy vállalt szelet változása a rajban.
 4. **A törzs korlátja, a kérelem az átmenetiből és a kísérői, a visszavett vállalás és a tár tömörítése**, a parancssor-
    próbákkal (a „végtelen” próbája: egy készülék terhe a saját érdeklődésével arányos).
+
+## 7. ⭐ A RÉSZVÉTEL MŰSZAKI TERVE (a D97 keretén belül, 2026-10-08)
+
+1. **A részvételi halmaz (P)** a vállalásból: a pozitív pontú szeleteim (a javaslatok és a töredékek is), az
+   azonosság-szeletem; ⛔ a koinó születésének SZELETE csak az alapítónál (D96); a két fokú vállalás összegzett (nagy)
+   szelete nem; a töredék-részvétel (D85 T3): a töredék-szelet, amelyik érintettjét vállalom, és amelyik saját része
+   valamikor igent mondott — a javaslatok állapotából, a tár változata szerint gyorsítótárazva. A gyökér a darabjaival
+   (B4) megy. A „mindent” beállítású készülék (D83/2) P-je „minden” — ő a mai módban cserél.
+2. **A koinó születése mint ESEMÉNY (D96):** egy virtuális kulcs (mint a gyökér-darabé) mindenki részvételében, amelynek
+   halmaza egyedül a `KoinoLetrehozas` (a bejelentései nélkül) — így mindenkihez eljut, a zárt koinó nem tagjához is (a
+   kapu mindig engedi), az alapító állításai viszont nem. A nyitásban nem kerül semmibe (egy pár a párok közt).
+3. **A zárt koinó korlátozott útja** a megengedett szeleteket a saját vállalásomtól függetlenül szolgálja ki (a nem tag
+   azonosság-szeletét a tag nem vállalja — a meghívás a csak küldő úton megy, B3).
+4. **A parancssor-próbák:** a meglévők nagy része arra épül, hogy a csere mindent mindenkihez eljuttat — ezek a
+   „mindent” beállítású készüléken futnak (a próbák alapértéke a környezetből, mint a DHT-belépőké); a szigorú
+   viselkedést külön próbák mérik (a B2–B4-é is itt).

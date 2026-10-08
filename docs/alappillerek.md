@@ -629,3 +629,16 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     kérdez”)** → **a csak küldő úton a darab-kulcsa alatt is felajánlódik, ha nem a saját darabomba esik** · mert a szerző
     nem feltétlenül tartója annak a darabnak, ahová a születése esik · a megépítéskor, Claude · `osszegzoTartas.js`
     (`sajatKuldo` `kulcsai`), `koino.js` (`kuldoKulcsai`).
+78. **2026-10-08 · a közös halmaz jele (D97/1: „a NYITÁS a változatokat viszi”)** → **a NYITÁS csak a saját változatomat
+    (`pv`), a CÍMEK a többit (`kz`: amit a társ halmazából ismerek, és a közös lenyomat eleje)** · mert a társat (a
+    tábla-aláíróját) a NYITÁS-ból tudom meg — előtte nem tudom, kinek a halmazát kell elővennem; a közös lenyomatból 11 jel
+    elég (66 bit; ha eltér, a teljes egyeztetés úgyis a részekre bontással indul) · a megépítéskor, Claude (a D97/1 keretén
+    belül) · `vonal.js`.
+79. **2026-10-08 · a közös halmaz a zárt koinó nem tagjánál** → **nincs (`x`): a régi, korlátozott menet fut, és a nem tag
+    NEM kapja meg a tag halmazának ujjlenyomatait** · mert az a tag érdeklődését mutatná meg egy nem tagnak (a korlátozott
+    egyeztetés amúgy is csak a megengedett szeleteken fut — a próba szerint az `x` nélkül is helyes volna, de szivárogna) ·
+    a megépítéskor, Claude · `vonal.js`, `kozosHalmazProba.js`.
+80. **2026-10-08 · a közös halmazon a nyitó lenyomat** → **a nyitásbeli (teljes részvételi) lenyomat marad a kiindulás, külön
+    közös nyitó üzenet nincs** · mert a tartomány-egyeztetés az eltérő kezdő lenyomatot „eltér” jelnek veszi, és a részekre
+    bontással helyesen halad (a rontás-próba szerint a külön üzenet semmit nem adott hozzá — kivettük) · a megépítéskor,
+    Claude · `vonal.js`.

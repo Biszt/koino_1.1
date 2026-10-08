@@ -103,8 +103,11 @@ import {
   // ⭐ D95/2: a függő tagságok helyi jegyzéke.
   tagsagFuggoTarolo,
   // ⭐ D95/3: a csak küldő út kézbesítési jegyzéke.
-  kezbesitesTarolo
+  kezbesitesTarolo,
+  // ⭐ D97/1: a közös halmaz helyi tára.
+  halmazTarolo
 } from './js/tar/fajlTar.js';
+import { naploFrissitese } from './js/csere/kozosHalmaz.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
 import {
@@ -1756,6 +1759,10 @@ async function ketFokBeallitasai(allapot = null) {
     reszvesz: (k) => kf.fokok.get(k) !== 'osszegzo',
     // ⭐ D95/4: a gyökér darabonként (a vonal a mélységből és a tábla-aláíróból számolja a darabjaimat).
     gyokerMelyseg: gy.melyseg,
+    // ⭐⭐ D97/1: a közös halmaz — a társak halmazát a tábla-aláírójuk alatt jegyezzük meg (`halmazok.json`). ⚠️ A
+    // részvételi halmaz ma még „minden” (null): a bekapcsolás (a részvétel a vállalásból) tölti ki.
+    reszvetelHalmaz: async () => null,
+    halmazTar: halmazTarolo(KOINO, alapHely(), naploFrissitese),
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
     osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
     kuldoSzeletek: (szabad) => kuldo.lista(szabad), kuldoKerem: fogado.kerem
