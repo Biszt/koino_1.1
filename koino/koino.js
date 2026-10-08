@@ -124,8 +124,10 @@ import { felszabaditas, buliVolt, MEGULEPEDES_BULIK } from './js/allapot/felszab
 import { vallalasSzamitasa } from './js/allapot/vallalas.js';
 // ⭐⭐ D91: a címjegyzék (G) — a vakított témák, a gyökér-darab, a hirdetés üteme.
 import {
-  cimjegyzekTema, hirdetendoTemak, gyokerMelysege, gyokerDarabTemaja, sajatGyokerDarabjai, HIRDETES_KOZ,
-  keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok
+  cimjegyzekTema, hirdetendoTemak, gyokerDarabTemaja, sajatGyokerDarabjai, HIRDETES_KOZ,
+  keszulekKopogtatoTemaja, temaKopogtatoja, figyelendoKopogtatok,
+  // ⭐ D95/4: a gyökér darabjai a cserében.
+  gyokerDarabja, gyokerMelysegBecslese, gyokerDarabKulcsai, gyokerDarabKulcsa, gyokerDarabBol, GYOKER_DARAB_CEL
 } from './js/csere/cimjegyzek.js';
 // ⭐⭐ D92/1: a függő kérelmek (a cím nélküli kérés — a kopogtatás).
 import {
@@ -939,11 +941,36 @@ async function cimjegyzekBeallitas() {
   }
 }
 
-/** A legfelső szintű gondolatok száma (a gyökér-darab mélységéhez — `cimjegyzek.js`). */
-function legfelsoGondolatokSzama(allapot) {
-  let n = 0;
-  for (const e of allapot.entitasok.values()) if (!e.szulo && e.tipus !== 'Javaslat') n++;
-  return n;
+
+// ⭐⭐ D95/4: A GYÖKÉR MÉLYSÉGE — a saját darabomból becsülve (`cimjegyzek.js` `gyokerMelysegBecslese`): a szigorú (b) alatt
+// senki nem látja az egész gyökeret. EGY FORRÁS a cserének (a darab-részvétel) és a DHT-hirdetésnek (a gyökér-darab
+// témája) — különben a készülék mást hirdetne, mint amiben részt vesz. A gyökér változata szerint gyorsítótárazva.
+// ⚠️ A próbák a darab célméretét a környezetből kicsinyítik (`KOINO_GYOKER_DARAB_CEL`).
+const GYOKER_CEL = Number(process.env.KOINO_GYOKER_DARAB_CEL) > 0 ? Number(process.env.KOINO_GYOKER_DARAB_CEL) : GYOKER_DARAB_CEL;
+let gyokerBecslesEmlek = null;
+
+/** @returns {Promise<{melyseg: number, becsles: number, alairo: string, darabok: Set<string>}>} */
+async function gyokerMelysegem() {
+  const alairo = (await tablaKulcsBiztositasa()).alairoNyilvanos;
+  const valtozat = tar.szeletValtozata('') + '|' + alairo;
+  if (gyokerBecslesEmlek?.valtozat === valtozat) return gyokerBecslesEmlek.b;
+  const szuletesek = (await tar.bejelentesek('')).filter((e) => e.koino === KOINO).map((e) => gyokerDarabja(e.azonosito, 16));
+  const { melyseg, becsles } = gyokerMelysegBecslese(szuletesek, gyokerDarabja('keszulek|' + alairo, 16), GYOKER_CEL);
+  const b = { melyseg, becsles, alairo, darabok: new Set(gyokerDarabKulcsai(alairo, melyseg)) };
+  gyokerBecslesEmlek = { valtozat, b };
+  return b;
+}
+
+/**
+ * ⭐ D95/4: a csak küldő út kulcsai — a saját legfelső szintű gondolatom születése a gyökér-darabja alatt is felajánlható
+ * (a mélységem szerint): ha nem a saját darabomba esik, csak így jut el a darab tartóihoz.
+ */
+function kuldoKulcsai(gy) {
+  return (e) => {
+    const ki = [e.entitas ?? e.azonosito];
+    if (e.tipus === 'GondolatLetrehozas' && !e.adat?.szulo) ki.push(gyokerDarabKulcsa(gy.melyseg, gyokerDarabja(e.azonosito, gy.melyseg)));
+    return ki;
+  };
 }
 
 /** Amit ez a készülék hirdet: a gyökér-darabja és (a beállítás szerint) néhány vállalt szelete. */
@@ -952,12 +979,12 @@ async function sajatHirdetendoTemak() {
   const v = await sajatVallalasa(allapot);
   const tablaKulcs = await tablaKulcsBiztositasa();
   const vallalt = [...v.pontok.entries()].filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1]).map(([k]) => k);
-  const legfelso = legfelsoGondolatokSzama(allapot);
+  const gy = await gyokerMelysegem();
   const { szeletHirdetes } = await cimjegyzekBeallitas();
   return {
-    temak: hirdetendoTemak({ koino: KOINO, alairo: tablaKulcs.alairoNyilvanos, legfelsoDarab: legfelso,
-      vallaltSzeletek: vallalt, szeletHirdetes }),
-    legfelso, szeletHirdetes
+    temak: hirdetendoTemak({ koino: KOINO, alairo: tablaKulcs.alairoNyilvanos, legfelsoDarab: gy.becsles,
+      melyseg: gy.melyseg, vallaltSzeletek: vallalt, szeletHirdetes }),
+    legfelso: gy.becsles, melyseg: gy.melyseg, szeletHirdetes
   };
 }
 
@@ -1718,12 +1745,17 @@ async function ketFokBeallitasai(allapot = null) {
   if (lezarasEpitoGyorsitotar.size > 256) lezarasEpitoGyorsitotar.clear();
   // ⭐ D95/3: a csak küldő út minden olyan szeletre, amit nem egyeztetek halmazként (nem vállalom, vagy csak összegezve
   // tartom) — a még nem kézbesített, friss saját eseményeimmel.
-  const egeszbenTartom = async (k) => kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo';
-  const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, halmazkent: egeszbenTartom,
+  // ⭐ D95/4: a gyökér-darabjaim is egészében tartott „szeletek” (a csak küldő út ott nem kell, és ott fogadok).
+  const gy = await gyokerMelysegem();
+  const egeszbenTartom = async (k) => (gyokerDarabBol(k) ? gy.darabok.has(k)
+    : kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo');
+  const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, halmazkent: egeszbenTartom, kulcsai: kuldoKulcsai(gy),
     kezbesitett: async () => new Set(Object.keys((await kezbesitesTarolo(KOINO).olvas()).kezbesitve)) });
   const fogado = kuldoFogado({ tar, fogadhato: egeszbenTartom });
   return {
     reszvesz: (k) => kf.fokok.get(k) !== 'osszegzo',
+    // ⭐ D95/4: a gyökér darabonként (a vonal a mélységből és a tábla-aláíróból számolja a darabjaimat).
+    gyokerMelyseg: gy.melyseg,
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
     osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
     kuldoSzeletek: (szabad) => kuldo.lista(szabad), kuldoKerem: fogado.kerem
@@ -3754,8 +3786,7 @@ try {
           if (!az) throw new Error('Melyik szelet tartóit keressem?\n  node koino/koino.js cimjegyzek keres <azonosító>');
           probak = [{ cimke: 'szelet ' + az.slice(0, 12) + '…', tema: cimjegyzekTema(KOINO, 'szelet', az) }];
         } else {
-          const { allapot } = await kepetKeszit();
-          const m = gyokerMelysege(legfelsoGondolatokSzama(allapot));
+          const m = (await gyokerMelysegem()).melyseg;
           const sajat = sajatGyokerDarabjai((await tablaKulcsBiztositasa()).alairoNyilvanos, m, 1)[0];
           const d = ervek[1] !== undefined ? parseInt(ervek[1], 10) : sajat;
           if (!Number.isInteger(d) || d < 0 || d >= 2 ** m) {
@@ -3779,10 +3810,10 @@ try {
       }
       if (mit) throw new Error('Ismeretlen: cimjegyzek ' + mit
         + '\n  node koino/koino.js cimjegyzek [hirdet [port] | keres <azonosító> | gyoker [darab] | hirdetes <n>]');
-      const { temak, legfelso, szeletHirdetes } = await sajatHirdetendoTemak();
+      const { temak, legfelso, melyseg: gyM, szeletHirdetes } = await sajatHirdetendoTemak();
       kiir(SZIN.vastag + 'CÍMJEGYZÉK (D91)' + SZIN.vege + SZIN.halvany + '  — a fő út a fa és a raj; ez a DHT-rész'
         + SZIN.vege);
-      kiir('  legfelső szintű gondolatok: ' + legfelso + ' → a gyökér-darab mélysége: ' + gyokerMelysege(legfelso));
+      kiir('  legfelső szintű gondolatok (becslés a darabomból — D95/4): ' + legfelso + ' → a gyökér-darab mélysége: ' + gyM);
       kiir('  szeletenkénti hirdetés (helyi beállítás): ' + szeletHirdetes);
       kiir('  amit ' + Math.round(HIRDETES_KOZ / 60000) + ' percenként hirdetek (az őrjárat):');
       for (const t of temak) {
@@ -3850,7 +3881,7 @@ try {
           } catch { /* a DHT segédeszköz */ }
         } else {
           // A gyökér: a darab a saját tudásomból (egy friss készüléknél 0), és a szomszédos mélységek (D91/3).
-          const m = gyokerMelysege(legfelsoGondolatokSzama((await kepetKeszit()).allapot));
+          const m = (await gyokerMelysegem()).melyseg;
           const darabok = [[m, 0], ...(m > 0 ? [[m - 1, 0]] : []), [m + 1, 0], [m + 1, 1]];
           for (const [mm, dd] of darabok) {
             kopogtatok.push({ fajta: 'gyoker', kulcs: mm + ':' + dd });
@@ -4056,8 +4087,9 @@ try {
           + SZIN.vege);
       }
       // ⭐ D95/3: a saját eseményeim a nem egészében tartott szeletekben, amiket még egy tartó sem vett át (csak küldő út).
-      const varo = await (sajatKuldo({ tar, koino: KOINO, szerzo,
-        halmazkent: async (k) => v.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo',
+      const gyV = await gyokerMelysegem();
+      const varo = await (sajatKuldo({ tar, koino: KOINO, szerzo, kulcsai: kuldoKulcsai(gyV),
+        halmazkent: async (k) => (gyokerDarabBol(k) ? gyV.darabok.has(k) : v.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo'),
         kezbesitett: async () => new Set(Object.keys((await kezbesitesTarolo(KOINO).olvas()).kezbesitve)) })).lista();
       const varoDb = varo.reduce((n, x) => n + x.sajat.length, 0);
       if (varoDb) {

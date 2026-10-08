@@ -184,5 +184,13 @@ nő mindenki terhe — a „végtelen” próbáján ez egy ember tevékenység�
   belépése szeletébe mennek; a koinó születése tiszta marad. Új koinóknál; a meglévő alapítóké vegyes marad.
 - **(C) Marad így** — az alapító egy ember, a terhe korlátos.
 
-⏭️ **Hátra van:** a B4, és a bekapcsolás (a részvétel a vállalásból — előtte a B5 —, a törzs korlátja, a kérelem az
-átmenetiből — vele a kérelem kísérői —, a visszavett vállalás és a tár tömörítése).
+✅ **ELDŐLT — D96 (Csaba, 2026-10-06: „rendben, elfogadom a javaslatodat”):** az (A).
+
+✅ **A B4 MEGÉPÜLT (2026-10-06)** (a részletek: a fázis-2 terv D95, „MEGÉPÜLT — a B4”): a gyökér darabonként — felismerhető
+darab-kulcs, a mélység a saját darabból becsülve (egy forrás a DHT-hirdetéssel), a darabok a NYITÁS tömör jelében (nem a
+nyitó lenyomatban), csak a legsekélyebb közös eltérő darab egyeztetődik; a saját legfelső szintű születés a csak küldő
+úton; mérve +76–100 B egy „nincs újdonság” cserén.
+
+⏭️ **Hátra van: a bekapcsolás** — a részvétel a vállalásból (vele a D96: a koinó születésének szeletében csak az alapító),
+a törzs korlátja a randevúban, a kérelem az átmenetiből (vele a kérelem kísérői), a visszavett vállalás és a tár
+tömörítése; és ekkor a B2–B4 parancssor-próbái a cserében.

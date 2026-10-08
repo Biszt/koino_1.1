@@ -4889,6 +4889,39 @@ elérhető). A zárt koinó nem tagjának is megy — de csak a neki megengedett
 jut el hozzá a meghívása). A `vallalas` parancs kimondja, hány saját esemény vár kézbesítésre. ⚠️ Egy tartó elég (a tartók
 egymás közt egyeztetnek; a saját eseményemet én is megtartom és kiszolgálom — D86/2).
 
+#### ✅ MEGÉPÜLT — a B4 (2026-10-06)
+
+A gyökér darabonként cserélődik (`cimjegyzek.js`, `szeletEgyeztetes.js`, `vonal.js`). Egy darab KULCSA a vonalon egy
+felismerhető, 43 jeles szöveg (34 nulla, `g`, a mélység és a darab hexában, két nulla) — bárki visszafejti, és a halmazát
+a saját tárából kiszámolja (a gyökérhez bejelentett születések közül a darabba esők); esemény-azonosító nem lehet ilyen.
+A készülék a saját darabjában (a tábla-aláírója szerint) a mélysége −1, 0, +1 szintjén vesz részt. A MÉLYSÉG a saját
+darabjából becsült (`gyokerMelysegBecslese`: minden mélységen a darabomban ismert születések × 2^mélység, ezek maximuma —
+a szigorú (b) alatt senki nem látja az egész gyökeret; a próba szerint a saját darabból ugyanazt adja, mint a teljes
+tudásból), és EGY FORRÁS a cserének és a DHT-hirdetésnek. ⭐ A darabok NEM a nyitó lenyomatban mennek (különben két
+különböző darabú készülék lenyomata soha nem egyezne): a NYITÁS egy tömör jelet visz (`gyd` — a mélység és a darabok
+11 jeles lenyomata), a társ a tábla-aláíróból és a mélységből ugyanazokat a kulcsokat számolja, és csak a legsekélyebb
+KÖZÖS darab egyeztetődik, ha eltér (a darabok egymásba ágyazottak). Ha csak nem közös darab tér el, a csere az első szint
+nélkül véget ér. A teljes gyökér, ha darabonként megy, egészében nem cserélődik. A saját legfelső szintű születésem a
+csak küldő úton a darab-kulcsa alatt is felajánlódik (ha nem a saját darabomba esik). A zárt koinó nem tagjánál a közös
+darab is kimarad (a részvételi lépés kimondja). ⭐ Az ára: egy „nincs újdonság” cserén +76–100 B (1146 → 1222–1246 B; az
+első tömörítetlen alak +136–178 B volt). ⚠️ A parancssor-próbája a bekapcsolással jön (ma a születés a saját szeletével is
+eljut mindenkihez).
+
+### D96. A KOINÓ SZÜLETÉSE ÉS AZ ALAPÍTÓ AZONOSSÁG-SZELETE (2026-10-06, Csaba: „rendben, elfogadom a javaslatodat”)
+
+**Amiből jött:** a B3 próbáinak írásakor derült ki (a B/3 átvizsgálás B5 kérdése): az alapító horgonya maga a
+`KoinoLetrehozas`, tehát az alapító azonosság-szelete UGYANAZ, mint a koinó születésének szelete. A D93/6 óta az
+identitás-állítás a szerző azonosság-szeletébe is bejelentődik — így az alapító minden meghívása, felhatalmazása és
+tanúsítása oda kerül, amit a D90/2 szerint mindenki tart.
+
+#### A DÖNTÉS
+
+**A koinó születését mindenki tartja — az ESEMÉNYT; a szeletét (a bejelentésekkel) csak aki az alapító azonosságát
+vállalja** (az alapító maga, és aki a jelzést kéri — mint bárki más azonosság-szeleténél). Az esemény úgyis minden
+tagsági láncban és csomagban benne van, és soha nem változik. Ha később koinó-szintű paraméter-események lesznek, azok
+külön szeletbe menjenek. A kód a bekapcsolásnál változik (a részvétel a vállalásból: a koinó születésének szeletében
+csak az alapító vesz részt).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

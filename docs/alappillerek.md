@@ -334,8 +334,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    (2026-10-05):** a két fokú vállalás — a nagy szelet összegezve (a gyökér és a lezárási összegzések mintákkal ellenőrizve,
    a döntés az összegzésből), a saját eseményeim a csak küldő úton. ✅ **A B2 KÉSZ (2026-10-05):** a tagsági kísérők — a
    csere végén akinek a tagságát nem tudom, annak a csomagját (vagy láncát) kérem. ✅ **A B3 KÉSZ (2026-10-05):** a csak
-   küldő út minden nem halmazként egyeztetett szeletre, a kézbesítés nyilvántartásával. 🔍 **Új kérdés (B5, Csabánál):** az
-   alapító azonosság-szelete = a koinó születésének szelete (lásd az átvizsgálást). ⏭️ a B4 és a bekapcsolás jön.
+   küldő út minden nem halmazként egyeztetett szeletre, a kézbesítés nyilvántartásával. ✅ **D96** (a B5 — Csaba: „rendben,
+   elfogadom a javaslatodat”): a koinó születését mindenki az eseményként tartja, a szeletét csak az alapító azonosságát
+   vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. ⏭️ **A bekapcsolás jön.**
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -608,3 +609,21 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     adja)** → **a felajánlás neki is megy, de csak a megengedett szeletekben** · mert a meghívás épp a meghívott (még nem
     tag) azonosság-szeletébe kerül: a szigorú (b) alatt a meghívó ezt a szeletet nem egyezteti, tehát enélkül a meghívás
     nem jutna el · a megépítéskor, Claude · `vonal.js` (`sajatListak`).
+74. **2026-10-06 · a gyökér-darab kulcsa (D95/4: „a mélység és a darab lenyomata”)** → **felismerhető, visszafejthető kulcs
+    (34 nulla, `g`, a mélység és a darab hexában)** · mert így bárki kiszámolja a halmazát a kulcsból (nem kell nyilvántartás
+    a lehetséges darabokról), és egyetlen esemény-azonosító sem lehet ilyen (egy lenyomat nem kezdődik 34 nullával) · a
+    megépítéskor, Claude (a D95/4 keretén belül) · `cimjegyzek.js` (`gyokerDarabKulcsa`, `gyokerDarabBol`).
+75. **2026-10-06 · a darabok a cserében (D95/4: „a darab szeletként cserélődik”)** → **nem a nyitó lenyomatban, hanem a NYITÁS
+    tömör jelében (`gyd`: a mélység és a darabok 11 jeles lenyomata); csak a legsekélyebb KÖZÖS eltérő darab egyeztetődik** ·
+    mert két különböző darabú készülék nyitó lenyomata így soha nem egyezne, és minden „nincs újdonság” csere végigfutná az
+    első szintet (több KB); a darabok egymásba ágyazottak, tehát a legsekélyebb közös egyezése a mélyebbekét is jelenti;
+    mérve +76–100 B egy „nincs újdonság” cserén (a tömörítetlen alak +136–178 B volt) · a megépítéskor, Claude · `vonal.js`.
+76. **2026-10-06 · a gyökér mélysége (D91/3: a legfelső szintű gondolatok számából, a teljes állapotból)** → **a SAJÁT
+    darabból becsülve (minden mélységen a darabomban ismert születések × 2^mélység, ezek maximuma), egy forrásként a
+    cserének és a DHT-hirdetésnek** · mert a szigorú (b) alatt senki nem látja az egész gyökeret — a régi számolás a saját
+    darabot mutatná, és a készülék mást hirdetne, mint amiben részt vesz · a megépítéskor, Claude · `cimjegyzek.js`
+    (`gyokerMelysegBecslese`), `koino.js` (`gyokerMelysegem`).
+77. **2026-10-06 · az új legfelső szintű gondolat születése (a B4 (B) kérdése: „csak a szerzőjénél van meg, amíg valaki nem
+    kérdez”)** → **a csak küldő úton a darab-kulcsa alatt is felajánlódik, ha nem a saját darabomba esik** · mert a szerző
+    nem feltétlenül tartója annak a darabnak, ahová a születése esik · a megépítéskor, Claude · `osszegzoTartas.js`
+    (`sajatKuldo` `kulcsai`), `koino.js` (`kuldoKulcsai`).

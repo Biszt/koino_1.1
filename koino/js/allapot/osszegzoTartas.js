@@ -213,9 +213,12 @@ const FOGADO_KORLAT = 256;
  * @param {string} b.szerzo - én
  * @param {Function} b.halmazkent - async (szelet) → igaz, ha a szeletet halmazként egyeztetem (ott nem kell felajánlani)
  * @param {Function} [b.kezbesitett] - async () → Set: a már kézbesített saját eseményeim azonosítói
+ * @param {Function} [b.kulcsai] - (esemény) → mely kulcsok alatt ajánlható fel (alapból a szelete; D95/4: a legfelső szintű
+ *   születés a gyökér-darabja alatt is)
  * @param {Function} [b.most]
  */
-export function sajatKuldo({ tar, koino, szerzo, halmazkent, kezbesitett = async () => new Set(), most = () => Date.now() }) {
+export function sajatKuldo({ tar, koino, szerzo, halmazkent, kezbesitett = async () => new Set(),
+  kulcsai = (e) => [e.entitas ?? e.azonosito], most = () => Date.now() }) {
   return {
     /**
      * A CIMEK `kul` listája: szeletenként a még nem kézbesített, friss saját eseményeim azonosítói (a legújabb szeletek
@@ -231,15 +234,16 @@ export function sajatKuldo({ tar, koino, szerzo, halmazkent, kezbesitett = async
       const szeletenkent = new Map();       // szelet → a felajánlott azonosítók
       const kihagyott = new Set();
       for (const e of sajat) {
-        const k = e.entitas ?? e.azonosito;
-        if (kihagyott.has(k)) continue;
-        let l = szeletenkent.get(k);
-        if (!l) {
-          if (szeletenkent.size >= KERDES_KORLAT || !szabad(k) || await halmazkent(k)) { kihagyott.add(k); continue; }
-          l = [];
-          szeletenkent.set(k, l);
+        for (const k of kulcsai(e)) {
+          if (kihagyott.has(k)) continue;
+          let l = szeletenkent.get(k);
+          if (!l) {
+            if (szeletenkent.size >= KERDES_KORLAT || !szabad(k) || await halmazkent(k)) { kihagyott.add(k); continue; }
+            l = [];
+            szeletenkent.set(k, l);
+          }
+          if (l.length < SAJAT_KORLAT) l.push(e.azonosito);
         }
-        if (l.length < SAJAT_KORLAT) l.push(e.azonosito);
       }
       return [...szeletenkent].filter(([, l]) => l.length).map(([k, l]) => ({ k, sajat: l.reverse() }));
     }

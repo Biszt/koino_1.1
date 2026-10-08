@@ -71,6 +71,82 @@ export function sajatGyokerDarabjai(alairo, bitek, darab = 1) {
 }
 
 // ===================================
+// ⭐⭐ D95/4: A GYÖKÉR DARABJAI A CSERÉBEN
+// ===================================
+//
+// A gyökér (a legfelső szintű gondolatok születése) nem egészében cserélődik, hanem darabonként: egy darab „szeletként”
+// megy a vonalon. A KULCSA egy felismerhető, 43 jeles (a vonal kulcs-mintájának megfelelő) szöveg — 34 nulla, egy `g`,
+// a mélység (2 hex), a darab (4 hex) és két nulla —, amit egyetlen esemény azonosítója sem vehet fel (egy lenyomat nem
+// kezdődik 34 nullával), és amiből bárki visszafejti, mit jelent: a halmazát bárki kiszámolja a saját tárából (a gyökérhez
+// bejelentett születések közül a darabba esők). ⭐ A készülék a saját darabjában a mélysége ±1 szintjén vesz részt — a
+// mélységet ki-ki a maga tudásából becsli, és a szomszédos becslésűek így is találkoznak (a darabok egymásba ágyazottak:
+// a mélyebb darab a sekélyebb fele).
+
+const DARAB_ELOTAG = '0'.repeat(34) + 'g';
+const DARAB_MINTA = /^0{34}g([0-9a-f]{2})([0-9a-f]{4})00$/;
+
+/** Egy gyökér-darab kulcsa a vonalon. */
+export function gyokerDarabKulcsa(melyseg, darab) {
+  if (!Number.isInteger(melyseg) || melyseg < 0 || melyseg > 16) throw new Error('a mélység 0 és 16 között');
+  if (!Number.isInteger(darab) || darab < 0 || darab >= 2 ** melyseg) throw new Error('a darab 0 és 2^mélység között');
+  return DARAB_ELOTAG + melyseg.toString(16).padStart(2, '0') + darab.toString(16).padStart(4, '0') + '00';
+}
+
+/** A kulcsból a mélység és a darab — vagy null, ha nem gyökér-darab kulcs (vagy érvénytelen). */
+export function gyokerDarabBol(kulcs) {
+  const t = typeof kulcs === 'string' ? DARAB_MINTA.exec(kulcs) : null;
+  if (!t) return null;
+  const melyseg = parseInt(t[1], 16);
+  const darab = parseInt(t[2], 16);
+  if (melyseg > 16 || darab >= 2 ** melyseg) return null;
+  return { melyseg, darab };
+}
+
+/** Beleesik-e egy azonosító egy darabba (a 16 bites darab-számából — egy lenyomat, minden mélységre). */
+export function darabbaEsik(azonosito16, melyseg, darab) {
+  return (azonosito16 >> (16 - melyseg)) === darab;
+}
+
+/**
+ * ⭐ A GYÖKÉR MÉLYSÉGÉNEK BECSLÉSE a szeletelt világban: a szigorú (b) alatt senki nem látja az egész gyökeret, csak a
+ * darabjait. Minden s mélységen a becslés: a SAJÁT s-mélységű darabomban ismert születések × 2^s — ahol a darabot egészében
+ * ismerem, ez a teljes szám becslése; sekélyebben (ahol csak a darabomat ismerem) kisebb. Ezért a MAXIMUM, azokon a
+ * mélységeken, ahol legalább fél darabnyi adat van (különben a zaj vinné el); ha egyiken sincs, az ismert születések
+ * száma. Ha mindent tud (a mai csere), a becslés ~ maga a születések száma. ⚠️ Két gép becslése eltérhet — a részvétel
+ * ezért ±1 mélységű.
+ *
+ * @param {Array<number>} szuletesek16 - az ismert gyökér-születések 16 bites darab-száma (`gyokerDarabja(az, 16)`)
+ * @param {number} sajat16 - a készülék 16 bites darab-száma (`gyokerDarabja('keszulek|' + aláíró, 16)`)
+ * @param {number} [cel]
+ * @returns {{melyseg: number, becsles: number}}
+ */
+export function gyokerMelysegBecslese(szuletesek16, sajat16, cel = GYOKER_DARAB_CEL) {
+  const lista = Array.isArray(szuletesek16) ? szuletesek16 : [];
+  const c = Number.isFinite(cel) && cel > 0 ? cel : GYOKER_DARAB_CEL;
+  let becsles = lista.length;
+  for (let s = 1; s <= 16; s++) {
+    const darabban = lista.filter((x) => darabbaEsik(x, s, sajat16 >> (16 - s))).length;
+    if (darabban < c / 2) break;                 // mélyebben már csak kevesebb lesz
+    becsles = Math.max(becsles, darabban * 2 ** s);
+  }
+  return { melyseg: gyokerMelysege(becsles, c), becsles };
+}
+
+/**
+ * A készülék gyökér-darabjainak kulcsai: a saját darabja a mélysége −1, 0, +1 szintjén (0 és 16 között).
+ * @param {string} alairo - a tábla-kulcs aláírója
+ * @param {number} melyseg
+ * @returns {Array<string>}
+ */
+export function gyokerDarabKulcsai(alairo, melyseg) {
+  const ki = [];
+  for (let m = Math.max(melyseg - 1, 0); m <= Math.min(melyseg + 1, 16); m++) {
+    ki.push(gyokerDarabKulcsa(m, sajatGyokerDarabjai(alairo, m, 1)[0]));
+  }
+  return ki;
+}
+
+// ===================================
 // ⭐⭐ D91/3 (Csaba, 2026-10-03, az 58. mérés után): MIT HIRDET EGY KÉSZÜLÉK
 // ===================================
 //
@@ -94,10 +170,11 @@ export const GYOKER_DARAB_CEL = 256;
  * @param {number} legfelsoDarab
  * @returns {number} 0..16
  */
-export function gyokerMelysege(legfelsoDarab) {
+export function gyokerMelysege(legfelsoDarab, cel = GYOKER_DARAB_CEL) {
   const n = Number.isFinite(legfelsoDarab) && legfelsoDarab > 0 ? legfelsoDarab : 0;
-  if (n <= GYOKER_DARAB_CEL) return 0;
-  return Math.min(16, Math.ceil(Math.log2(n / GYOKER_DARAB_CEL)));
+  const c = Number.isFinite(cel) && cel > 0 ? cel : GYOKER_DARAB_CEL;
+  if (n <= c) return 0;
+  return Math.min(16, Math.ceil(Math.log2(n / c)));
 }
 
 /** Egy gyökér-darab témája (a mélység is benne van — más mélység, más téma). */
@@ -117,8 +194,9 @@ export function gyokerDarabTemaja(koino, melyseg, darab) {
  * @param {number} [b.szeletHirdetes] - készülékenkénti beállítás (alapból 0)
  * @returns {Array<{fajta: string, kulcs: string, tema: Buffer}>}
  */
-export function hirdetendoTemak({ koino, alairo, legfelsoDarab, vallaltSzeletek = [], szeletHirdetes = 0 }) {
-  const melyseg = gyokerMelysege(legfelsoDarab);
+export function hirdetendoTemak({ koino, alairo, legfelsoDarab, vallaltSzeletek = [], szeletHirdetes = 0, melyseg: adott = null }) {
+  // ⭐ D95/4: ha a hívó a mélységet a csere becsléséből adja (`gyokerMelysegBecslese`), azt használjuk — egy forrás.
+  const melyseg = Number.isInteger(adott) ? adott : gyokerMelysege(legfelsoDarab);
   const [darab] = sajatGyokerDarabjai(alairo, melyseg, 1);
   const ki = [{ fajta: 'gyoker', kulcs: melyseg + ':' + darab, tema: gyokerDarabTemaja(koino, melyseg, darab) }];
   const db = Number.isInteger(szeletHirdetes) && szeletHirdetes > 0 ? szeletHirdetes : 0;

@@ -22,10 +22,16 @@
 // ⭐ A párokat gyorsítótárban tartjuk, a tár olcsó változat-jele szerint (`szeletValtozata`): egy
 // szelet halmaza csak akkor számolódik újra, ha a szelet vagy a gyerekei születése bővült.
 //
+// ===== ⭐ D95/4: A GYÖKÉR DARABJAI =====
+//
+// A gyökér darabjai „szeletként” mennek a vonalon (a kulcsuk felismerhető — `cimjegyzek.js` `gyokerDarabKulcsa`): a
+// halmazuk a gyökérhez bejelentett születések közül a darabba esők. Itt a halmaz, a változat-jel és a fogadó szűrője.
+//
 // Használja: csere/vonal.js (a párbeszéd), a próbák.
 
 import { alakiHiba, szelet, bejelentesHelyei, azonositoAlaku } from '../esemeny/esemeny.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
+import { gyokerDarabBol, gyokerDarabja, darabbaEsik } from './cimjegyzek.js';
 
 /**
  * A gyökér kulcsa a vonalon (a tárban: ''). ⭐ Egy érvényes alakú, 43 jeles szöveg, amit egyetlen
@@ -53,6 +59,12 @@ export const ervenyesKulcs = azonositoAlaku;
  * @returns {Promise<Array<Object>>}
  */
 export async function egyeztetettEsemenyek(tar, koino, kulcs) {
+  // ⭐ D95/4: egy gyökér-darab halmaza — a gyökérhez bejelentett születések közül a darabba esők.
+  const darab = gyokerDarabBol(kulcs);
+  if (darab) {
+    return (await egyeztetettEsemenyek(tar, koino, GYOKER_KULCS))
+      .filter((e) => darabbaEsik(gyokerDarabja(e.azonosito, 16), darab.melyseg, darab.darab));
+  }
   const s = tarKulcsa(kulcs);
   const sajat = s === '' ? [] : await tar.szeletEsemenyei(s);
   const bejelentettek = await tar.bejelentesek(s);
@@ -84,7 +96,8 @@ const gyorsitotar = new WeakMap();
 export async function szeletPar(tar, koino, kulcs) {
   let tarbeli = gyorsitotar.get(tar);
   if (!tarbeli) { tarbeli = new Map(); gyorsitotar.set(tar, tarbeli); }
-  const valtozat = koino + '|' + tar.szeletValtozata(tarKulcsa(kulcs));
+  // ⭐ D95/4: a gyökér-darab a gyökér változásával változik.
+  const valtozat = koino + '|' + tar.szeletValtozata(gyokerDarabBol(kulcs) ? '' : tarKulcsa(kulcs));
   const kesz = tarbeli.get(kulcs);
   if (kesz && kesz.valtozat === valtozat) return kesz.par;
   const halmaz = await egyeztetesiHalmaz(tar, koino, kulcs);
@@ -145,5 +158,15 @@ export function elteresekSzeletei(kellNekem, kellNeki) {
  */
 export function szeletbeTartozik(e, kulcsok) {
   if (kulcsok.has(vonalKulcsa(szelet(e)))) return true;
-  return bejelentesHelyei(e).some((k) => kulcsok.has(vonalKulcsa(k)));
+  const helyek = bejelentesHelyei(e);
+  if (helyek.some((k) => kulcsok.has(vonalKulcsa(k)))) return true;
+  // ⭐ D95/4: a gyökérhez bejelentett születés abba a gyökér-darabba is tartozik, amelyikbe esik.
+  if (helyek.includes('')) {
+    const d16 = gyokerDarabja(e.azonosito, 16);
+    for (const k of kulcsok) {
+      const d = gyokerDarabBol(k);
+      if (d && darabbaEsik(d16, d.melyseg, d.darab)) return true;
+    }
+  }
+  return false;
 }

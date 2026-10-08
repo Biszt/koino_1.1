@@ -54,8 +54,9 @@ import { beolvasztas } from './csere.js';
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
 import {
   szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs,
-  vonalKulcsa, GYOKER_KULCS
+  vonalKulcsa, GYOKER_KULCS, szeletPar
 } from './szeletEgyeztetes.js';
+import { gyokerDarabBol, gyokerDarabKulcsai } from './cimjegyzek.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
 // képlet a SOROS átvitel alakja volt. Több forrásnál a munkamegosztás mondja meg, melyik
 // szelet következik (D68 / 6.) — a képlet maga viszont megmarad a `fajlAtvitel.js`-ben,
@@ -216,12 +217,31 @@ function uzenetSor(kapcsolat) {
  * @param {string} koino
  * @param {Object} [beallitas]
  * @param {Function} [beallitas.reszvesz] - (szelet-kulcs) → részt veszek-e benne; alapból mind (a)
+ * @param {number} [beallitas.gyokerMelyseg] - ⭐ D95/4: a gyökér becsült mélysége — ha megvan (és a tábla-kulcs is), a gyökér
+ *   darabonként cserélődik
  * @returns {Promise<Object>} { korok, uj, kuldott, masKoino, kivulrolIgyLatszom, … ,
  *   elteroSzeletek, egyeztetoUzenetek }
  */
 export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   console.log('parbeszed - KEZDÉS', { koino });
-  const reszvesz = beallitas.reszvesz ?? (() => true);
+
+  // ===== ⭐⭐ D95/4: A GYÖKÉR DARABJAI =====
+  //
+  // Ha a hívó megadja a gyökér mélységét, a gyökér nem egészében, hanem DARABONKÉNT cserélődik: a darabjaim (a
+  // tábla-aláíróm szerint, a mélységem ±1 szintjén — `cimjegyzek.js`) a NYITÁS-ban mennek a rövid lenyomatukkal, a társ
+  // a tábla-aláírómból és a mélységemből ugyanezeket a kulcsokat számolja ki, és csak a KÖZÖS darabok közül az ELTÉRŐK
+  // kerülnek egyeztetésre. ⛔ A nyitó lenyomatba nem kerülnek: két különböző darabú készülék lenyomata így soha nem
+  // egyezne, és minden „nincs újdonság” csere végigfutná az első szintet (6. szabály).
+  const tablaKulcsElore = typeof beallitas.tablaKulcs === 'function'
+    ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
+  const gyokerMelyseg = Number.isInteger(beallitas.gyokerMelyseg) && beallitas.gyokerMelyseg >= 0
+    && beallitas.gyokerMelyseg <= 16 && typeof tablaKulcsElore?.alairo === 'string' ? beallitas.gyokerMelyseg : null;
+  const sajatDarabKulcsok = gyokerMelyseg === null ? [] : gyokerDarabKulcsai(tablaKulcsElore.alairo, gyokerMelyseg);
+  const sajatDarabSet = new Set(sajatDarabKulcsok);
+  const hivoReszvesz = beallitas.reszvesz ?? (() => true);
+  // A gyökér-darabban a saját darabjaim döntenek; a teljes gyökér pedig, ha darabonként megy, egészében nem cserélődik.
+  const reszvesz = (k) => (gyokerDarabBol(k) ? sajatDarabSet.has(k)
+    : (k === GYOKER_KULCS && sajatDarabSet.size ? false : hivoReszvesz(k)));
 
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
   let fajlokNala = [];
@@ -306,8 +326,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⭐⭐ D89/1, D93/3: A TÁBLA-KULCS A KÉZFOGÁS ALÁÍRÁSÁVAL (`aa`) — 2026-10-04 óta a NYITÁSBAN (korábban a
   // CIMEK-ben): a zárt koinó kapuja ebből tudja meg, ismeri-e már a társat, és ha nem, a CIMEK-ben kéri a
   // bizonyítását. Ettől a tábla-kulcs nem bemondás: aki aláírta, az vett részt EBBEN a kézfogásban.
-  const tablaKulcs = typeof beallitas.tablaKulcs === 'function'
-    ? beallitas.tablaKulcs() : (beallitas.tablaKulcs ?? null);
+  const tablaKulcs = tablaKulcsElore;
+  // ⭐ D95/4: a darabjaim rövid lenyomata (11 jel = 66 bit; az üres darabé üres) a mélységgel, EGY szövegben
+  // (`m:l1:l2:l3` — a kulcsokat a társ számolja). ⚠️ Minden cserén utazik, ezért tömör (6. szabály; mérve).
+  let sajatGyd = null;
+  if (sajatDarabKulcsok.length) {
+    const l = [];
+    for (const k of sajatDarabKulcsok) l.push((await szeletPar(tar, koino, k))?.slice(44, 55) ?? null);
+    sajatGyd = { m: gyokerMelyseg, l, szoveg: gyokerMelyseg + ':' + l.map((x) => x ?? '').join(':') };
+  }
   // ⭐ D95/2: van-e FÜGGŐ tagság-kérdésem (akinek a tagságát a szeleteimben nem tudom)? Ha igen, a tagsági kör akkor is
   // lemegy, ha a szeletek egyeznek — a társnál lehet meg a csomag. ⚠️ Csak egy jel a nyitásban (1 bájt), ha van.
   let sajatTk = false;
@@ -325,7 +352,8 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     // épp nincs mit kérnie, némán kimaradna — és a másik hiába várna rá.
     ...(beallitas.fajlValasz ? { fajlCsere: true } : {}),
     ...(sajatKerelem ? { fajlKerek: sajatKerelem } : {}),
-    ...(sajatTk ? { tk: 1 } : {})
+    ...(sajatTk ? { tk: 1 } : {}),
+    ...(sajatGyd ? { gyd: sajatGyd.szoveg } : {})
   });
 
   const elsoUzenet = await sor.kovetkezo();
@@ -481,6 +509,22 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       && kezfogas.ellenoriz(bemondott, oveNyitas.aa) ? bemondott : null;
   }
   let kapu = await kapuItelete({ tabla: kapottTablaKulcs });
+
+  // ----- ⭐ D95/4: A KÖZÖS GYÖKÉR-DARABOK KÖZÜL AZ ELTÉRŐK (mindkét fél ugyanazt számolja: a két nyitásból) -----
+  const elteroDarabok = [];
+  {
+    const g = typeof oveNyitas.gyd === 'string' && /^\d{1,2}(:[A-Za-z0-9_-]{0,11}){1,3}$/.test(oveNyitas.gyd)
+      ? oveNyitas.gyd.split(':') : null;
+    const gm = g ? parseInt(g[0], 10) : -1;
+    if (sajatGyd && typeof kapottTablaKulcs?.alairo === 'string' && g && gm >= 0 && gm <= 16) {
+      const oveKulcsok = gyokerDarabKulcsai(kapottTablaKulcs.alairo, gm);
+      const oveL = new Map(oveKulcsok.map((k, i) => [k, g[i + 1] ? g[i + 1] : null]));
+      // ⭐ A darabok egymásba ágyazottak (a mélyebb a sekélyebb része): ha a LEGSEKÉLYEBB közös darab egyezik, a
+      // mélyebbek is; ha eltér, elég azt egyeztetni (a mélyebbek benne vannak). A kulcsok mélység szerint jönnek.
+      const i = sajatDarabKulcsok.findIndex((k) => oveL.has(k));
+      if (i >= 0 && oveL.get(sajatDarabKulcsok[i]) !== sajatGyd.l[i]) elteroDarabok.push(sajatDarabKulcsok[i]);
+    }
+  }
 
   let oKerte = false;               // ⭐ D93/3: a társ kérte-e a bizonyításunkat (a CIMEK-ben)
   // ⭐⭐ D95/1, D95/3: a két fokú vállalás és a csak küldő részvétel listái (a CIMEK-ben mennek, csak ismert tagnak)
@@ -700,7 +744,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       : [];
   }
 
-  if (oveNyitas.lenyomat === sajatLenyomat) {
+  if (oveNyitas.lenyomat === sajatLenyomat && !elteroDarabok.length) {
     // ⭐ Ugyanazt tudjuk minden közös szeletről — a hétköznapi eset, egyetlen nyitás-csere.
     // ⭐ D95/2: ha bármelyik félnek függő tagság-kérdése van (a nyitás jele), a tagsági kör ekkor is lemegy.
     if (sajatTk || oveNyitas.tk === 1) await tagsagKor([]);
@@ -708,12 +752,14 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     return eredmeny();
   }
 
-  // ⭐ KI NYIT? A nagyobb lenyomatú; a kisebb felel (mindkettő ugyanazt látja).
-  const enNyitok = sajatLenyomat > oveNyitas.lenyomat;
+  // ⭐ KI NYIT? A nagyobb lenyomatú; a kisebb felel (mindkettő ugyanazt látja). ⭐ D95/4: ha a nyitó lenyomatok egyeznek
+  // (csak egy gyökér-darab tér el), a nagyobb tábla-aláírójú.
+  const enNyitok = oveNyitas.lenyomat !== sajatLenyomat ? sajatLenyomat > oveNyitas.lenyomat
+    : tablaKulcsElore.alairo > kapottTablaKulcs.alairo;
 
-  // ===== 1. AZ ELSŐ SZINT — melyik szelet tér el? =====
+  // ===== 1. AZ ELSŐ SZINT — melyik szelet tér el? (ha a nyitó lenyomatok egyeznek, nincs mit keresni) =====
   const parLelet = { kellNekem: [], kellNeki: [] };
-  {
+  if (oveNyitas.lenyomat !== sajatLenyomat) {
     // A felelő a nyitó lenyomatával kezd (azt a nyitásban már megkapta).
     let bejovo = [[null, 'L', oveNyitas.lenyomat]];
     let enJovok = !enNyitok;
@@ -749,12 +795,15 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⛔ D93/3: a társ által bemondott szelet-kulcsokat is a megengedettekre szűkítjük — különben egy nem tag az ELTERO
   // `nalad` listájában akármelyik szeletet „kérhetné”.
   const mindketten = new Set([...sajatLelet.mindketten, ...kulcsLista(oveLelet.mindketten)].filter(korlatonBelul));
+  // ⭐ D95/4: a közös, eltérő gyökér-darabok — mindkét fél ugyanazokat adja hozzá (a korlátozott társnál a részvételi
+  // lépés kimondja, hogy kimaradnak, így a két fél nem csúszik el).
+  for (const k of elteroDarabok) mindketten.add(k);
   const csakNalam = new Set([...sajatLelet.nalam, ...kulcsLista(oveLelet.nalad)].filter(korlatonBelul));
   const csakNala = new Set([...sajatLelet.nalad, ...kulcsLista(oveLelet.nalam)].filter(korlatonBelul));
 
   // ===== 3. A RÉSZVÉTEL — ki melyik eltérő szeletből marad ki =====
   const mind = new Set([...mindketten, ...csakNalam, ...csakNala]);
-  const kimaradok = [...mind].filter((k) => !reszvesz(k)).sort();
+  const kimaradok = [...mind].filter((k) => !reszvesz(k) || !korlatonBelul(k)).sort();
   // ⭐⭐ D91: A RAJ — az eltérő szeletek közül melyiket VÁLLALOM (a megnézettet soha — D75/3), és néhány ismert
   // tartójuk (név nélkül). Csak itt utazik (ha van eltérő szelet), tehát a „nincs újdonság" csere nem drágul.
   // ⚠️ A hívó dönti el, mit mond (`beallitas.raj` — ez a fájl nem ismeri a vállalást).
