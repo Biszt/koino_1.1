@@ -18,6 +18,7 @@ import { esemenyMentese } from '../js/tar/esemenyTar.js';
 import { csereUdpResen } from '../js/csere/udpVonal.js';
 import { beolvasztas } from '../js/csere/csere.js';
 import { tagsagKerdo, tagsagiKiserok } from '../js/allapot/tagsagKisero.js';
+import { rajKorAllapot, valtozottFeljegyzese, rajKorCeljai, VALTOZOTT_KORLAT } from '../js/csere/rajKor.js';
 
 const { proba, futtatas } = probaGyujtemeny('A bekapcsolás: a részvétel a vállalásból (D96, D97)');
 
@@ -130,6 +131,50 @@ proba('⭐ aki meghívást kapott, de a saját tagsága nem bizonyítható, MAG�
     tarolo: tagsagFuggoTarolo(KOINO, await ujMappa()), koinoSzuletes: async () => v.szuletes,
     mentes: async () => ({ uj: 0, ujAzonositok: [] }) }).kerdesek([]);
   return kert.includes(v.b.szerzo) && r.megtudott === 1 && nelkule.length === 0;
+});
+
+// ===================================
+// ⭐⭐ D97/2: A RAJ A KÖRBEN
+// ===================================
+
+/** Egy raj-jegyzék: szeletenként a megadott tartók (127.0.0.1, port = a tartó száma). */
+const jegyzekBol = (szeletek) => Object.entries(szeletek).flatMap(([s, tartok]) =>
+  tartok.map((t, i) => ({ entitas: s, hoszt: '127.0.0.1', port: 9000 + t, mikor: Date.now() - i, alairo: String(t).padStart(43, 'a') })));
+
+proba('⭐⭐ D97/2: a VÁLTOZOTT szelet tartói jönnek előbb — sorban, változásonként mindegyik egyszer; körönként legfeljebb R', () => {
+  const jegyzek = jegyzekBol({ X: [1, 2, 3, 4, 5], Y: [6, 7] });
+  const a = rajKorAllapot();
+  valtozottFeljegyzese(a, ['X']);
+  const k1 = rajKorCeljai(a, { szeletek: ['X', 'Y'], jegyzek, R: 2 });
+  const k2 = rajKorCeljai(a, { szeletek: ['X', 'Y'], jegyzek, R: 2 });
+  const k3 = rajKorCeljai(a, { szeletek: ['X', 'Y'], jegyzek, R: 2 });
+  const portok = (k) => k.map((c) => c.port - 9000);
+  // X öt tartója 2 + 2 + 1 körben; a harmadik körben a maradék hely a forgatásé.
+  return k1.length === 2 && k1.every((c) => c.ok === 'valtozott') && k2.every((c) => c.ok === 'valtozott')
+    && new Set([...portok(k1), ...portok(k2), portok(k3)[0]]).size === 5 && k3[0].ok === 'valtozott' && k3[1]?.ok === 'forgas'
+    && !a.valtozott.has('X');
+});
+
+proba('⭐ a FORGATÁS a vállalt szeleteimen körbe jár, szeletenként a tartók sorban — idővel mindenki sorra kerül; önmagamat kihagyja', () => {
+  const jegyzek = jegyzekBol({ X: [1, 2], Y: [3, 4], Z: [5, 99] });
+  const a = rajKorAllapot();
+  const lattam = new Set();
+  for (let i = 0; i < 6; i++) {
+    for (const c of rajKorCeljai(a, { szeletek: ['X', 'Y', 'Z'], jegyzek, R: 2, kizart: (c) => c.port === 9099 })) lattam.add(c.port - 9000);
+  }
+  return [1, 2, 3, 4, 5].every((t) => lattam.has(t)) && !lattam.has(99);
+});
+
+proba('⭐ a változott szeletek száma korlátos (a legrégebbi esik ki), és az újra változott elölről kezdi a tartókat', () => {
+  const a = rajKorAllapot();
+  for (let i = 0; i < VALTOZOTT_KORLAT + 10; i++) valtozottFeljegyzese(a, ['s' + i]);
+  const jegyzek = jegyzekBol({ X: [1, 2, 3] });
+  const b = rajKorAllapot();
+  valtozottFeljegyzese(b, ['X']);
+  rajKorCeljai(b, { szeletek: [], jegyzek, R: 2 });
+  valtozottFeljegyzese(b, ['X']);                      // új változás: elölről
+  const k = rajKorCeljai(b, { szeletek: [], jegyzek, R: 1 });
+  return a.valtozott.size === VALTOZOTT_KORLAT && !a.valtozott.has('s0') && k[0]?.port === 9001;
 });
 
 export default async function () {

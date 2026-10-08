@@ -339,8 +339,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. 🔍 **A bekapcsolás átvizsgálva**
    ([`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md), 68. mérés): a közös halmaz nélkül a „nincs újdonság” csere
    6–300 KB, és az őrjárat a rajjal nem cserél. ✅ **D97** (K1/A, K2/A). ✅ **A közös halmaz és a részvétel a vállalásból KÉSZ
-   (2026-10-08)** — a szigorú (b) él. ⏭️ A raj a körben (K2), aztán a törzs korlátja, a kérelem az átmenetiből, a
-   visszavett vállalás és a tár tömörítése.
+   (2026-10-08)** — a szigorú (b) él. ✅ **A raj a körben KÉSZ (2026-10-09, 69. mérés).** ⏭️ A törzs korlátja, a kérelem az
+   átmenetiből, a visszavett vállalás és a tár tömörítése.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -662,3 +662,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     meglévő próbák nagy része más funkciót mér, és arra épül, hogy a csere mindent mindenkihez eljuttat; a „mindent” a
     D83/2 valódi beállítása (az önkéntes teljes tartó), nem próba-kapcsoló · a megépítéskor, Claude · `koino.js`
     (`kiszolgalasBeallitas`), `parancssorProba.js`.
+85. **2026-10-09 · a raj-társ választása (D97/2: „akik a legtöbb vállalt szeletemet tartják, forgatva”)** → **előbb a
+    VÁLTOZOTT szeleteim tartói, sorban (változásonként mindegyik egyszer), aztán a forgatás — a tartók SORBAN, nem átfedés
+    szerint** · mert a 69. mérés szerint az átfedés szerinti választás szeletenként mindig ugyanazt a tartót adja, és a
+    tartók gráfja szétesik (a változások 4–6%-a soha nem ér körbe), a „változott előre” viszont járványszerűen terjed (R = 2:
+    medián 1, 99%-ban 9 kör) — egy csere a két fél összes közös szeletét szinkronba hozza (D97/1) · a megépítéskor, Claude
+    (a mérés alapján, a D97/2 keretén belül; Csabának jelezve) · `rajKor.js`, `koino.js` (`rajKorCeljaim`), 69. mérés.

@@ -4826,3 +4826,30 @@ kicseréli a részvételi halmazát (szeletenként 8 jeles ujjlenyomat, mindkét
 1000 vállalt szeletnél (az átfedéstől függetlenül); utána a „nincs újdonság” csere minden esetben **1,3 KB** (0 egyeztető
 üzenet) — a 6–300 KB helyett. A többlet a tábla-kulcsos alapcseréhez (~1,15 KB) képest ~150 B (a nyitás `pv` és a CÍMEK
 `kz` jele). A halmaz változása csak a változást viszi (a próba szerint a teljes lista ~2 KB-tal drágább már 200 szeletnél).
+
+## 69. ⭐ A RAJ A KÖRBEN — hány kör alatt ér el egy változás egy szelet minden tartójához? (D97/2, 2026-10-09, szimuláció)
+
+*`rajKorMeres.js`: N = 2000 készülék, S = 20 000 szelet (Zipf-népszerűség, a tartók száma szeletenként medián 3, 90% 12, max
+1859), készülékenként átlag V = 50 vállalt szelet; minden készülék szeletenként legfeljebb L = 8 tartót ismer (a
+raj-jegyzék, D91); körönként K = 3 rögzített kötés-társ és R raj-társ; egy csere a két fél KÖZÖS szeleteit hozza szinkronba
+(D97/1). 400 követett változás, 120 kör. Magvas véletlen.*
+
+```
+stratégia                                │ csere/kör │ minden tartóhoz: medián · 90% · 99% │ 10 körön │ 30 körön │ 120 körön
+csak a kötés-társak (K = 3)              │     3     │   —   ·  —  ·  —                    │   0,3%   │   0,3%   │   0,3%
++ 2 raj-társ, átfedés szerint, forgatva  │     5     │  20   ·  55 ·  —                    │  29,5%   │  68,3%   │  96,0%
++ 4 raj-társ, átfedés szerint, forgatva  │     7     │  10   ·  28 ·  —                    │  50,7%   │  92,8%   │  96,0%
++ 2 raj-társ, véletlen                   │     5     │  24   ·  62 ·  98                   │  23,5%   │  57,5%   │ 100,0%
++ 2 raj-társ, forgatva, tartók sorban    │     5     │  21   ·  48 ·  71                   │  25,3%   │  71,3%   │ 100,0%
++ 1 raj-társ, a VÁLTOZOTT előre          │     4     │   2   ·   8 ·  17                   │  95,8%   │ 100,0%   │ 100,0%
++ 2 raj-társ, a VÁLTOZOTT előre          │     5     │   1   ·   4 ·   9                   │ 100,0%   │ 100,0%   │ 100,0%
++ 4 raj-társ, a VÁLTOZOTT előre          │     7     │   1   ·   2 ·   5                   │ 100,0%   │ 100,0%   │ 100,0%
+```
+
+⭐ **A lelet:** (1) a kötés-társakkal a szigorú (b) alatt a vállalt szeletek gyakorlatilag NEM frissülnek (0,3%); (2) az
+átfedés szerinti raj-választás („aki a legtöbb szeletemet tartja”) szeletenként mindig ugyanazt a tartót adja — a tartók
+gráfja szétesik, a változások 4%-a soha nem ér körbe; (3) a döntő a **„VÁLTOZOTT ELŐRE”**: aki egy szeletben újat tud meg,
+annak tartóit sorra felkeresi — járványszerűen terjed, R = 2-vel medián 1, 99%-ban 9 kör alatt minden tartóhoz (a lépések
+a tartók számával logaritmikusan nőnek). 5000 készüléken, 50 000 szeleten ugyanez: átfedés szerint 94% (120 körön), a
+„változott előre” R = 2-vel medián 1, 90% 4, 99% 10 kör. ⭐ Ezért a D97/2 a „változott előre + forgatás (tartók sorban)”
+szabállyal épült.

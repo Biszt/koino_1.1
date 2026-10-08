@@ -4964,6 +4964,17 @@ meghívást kapott, de a saját láncát nem tudja bizonyítani, magát is kérd
 kimondja a részvételt. ⚠️ A parancssor-próbák alapból „mindent” módban futnak (a környezetből — `KOINO_KISZOLGALAS`); a
 szigorú esetek külön próbák (az „alap” készülék csak a vállalt gondolatot kapja; a B2 a cserében).
 
+#### ✅ MEGÉPÜLT — a raj a körben (2026-10-09, a 69. mérés után)
+
+`csere/rajKor.js` + az őrjárat: a szigorú (b) alatt körönként `RAJ_KOR_TARSAK` = 2 raj-társ (a raj-jegyzékből, D91) — ⭐
+előbb a VÁLTOZOTT szeleteim tartói (ahol újat kaptam, vagy magam írtam: a tartók sorban, változásonként mindegyik egyszer),
+aztán a FORGATÁS (a vállalt szeleteimen körben, szeletenként a tartók sorban). ⚠️ **A K2/A választási szabályát a mérés
+felülírta:** az átfedés szerinti választás („aki a legtöbb szeletemet tartja”) szeletenként mindig ugyanazt a tartót adta,
+a tartók gráfja szétesett — a változások 4–6%-a 120 kör után sem ért el minden tartóhoz; a „változott előre” R = 2-vel
+medián 1, 99%-ban 9 kör alatt mindenhová eljut (2000 készüléken; 5000-en ugyanígy). A kör célszáma a vállalással nem nő.
+⚠️ NAT mögött a raj-társ közvetlenül nem mindig érhető el (a kopogtatás a függő kérelmeké) — a buli-ablakban a két fél
+egymást is választhatja; a mérése terepen.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

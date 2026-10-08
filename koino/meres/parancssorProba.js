@@ -643,6 +643,59 @@ proba('⭐⭐ D95/2 a cserében: az „alap” B-nél C pontja számít — a ta
   });
 
 // ===================================
+// ⭐⭐ D97/2: A RAJ A KÖRBEN — az őrjárat a vállalt szeletem tartóját is felkeresi (2026-10-09)
+// ===================================
+//
+// A és B (mindkettő „alap”) vállalja G-t. Egy csere után A a raj-jegyzékében B-t G tartójaként tartja számon; aztán A
+// elfelejti a kötéseit és a friss címeit — B-t CSAK a raj-jegyzékből ismeri. A új pontot tesz G-re, és elindítja az
+// őrjáratot: a kör raj-céljai közt ott B, tehát a változás eljut hozzá. ⭐ Viselkedést mérünk: B lemezén A új eseménye.
+// Rontás: raj-célok nélkül A-nak nincs kire kopognia.
+proba('⭐⭐ D97/2: az őrjárat a vállalt szeletem TARTÓJÁT is felkeresi (a raj-jegyzékből) — a változás eljut hozzá',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const PA = 7660, PB = 7659;
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    let figyelo = null, orjarat = null;
+    try {
+      await fut(a, 'koino', 'Raj-kör', 'próba', 'nyilt');
+      const g = azonosito(await fut(a, 'gondolat', 'GE'), 'Létrejött:');
+      const elso = await lemezen(a);
+      const gT = elso.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const kT = elso.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      await fut(a, 'kivisz', join(a, 'k.jsonl'), kT);
+      await fut(b, 'behoz', join(a, 'k.jsonl'));
+      await fut(a, 'kivisz', join(a, 'g.jsonl'), gT);
+      await fut(b, 'behoz', join(a, 'g.jsonl'));
+      await fut(b, 'pont', g, '5');
+      await csereKor(b, a, PB, kornyezet);              // A hívja B-t (B figyel): A megtanulja B-t G tartójaként
+      const raj = JSON.parse(await readFile(join(a, 'szeletcimek.json'), 'utf8')).szeletek ?? [];
+      const tanulta = raj.some((x) => x.entitas === gT && x.port === PB);
+      for (const f of ['kotesek.json', 'udpcimek.json', 'indulocimek.json']) await rm(join(a, f), { force: true });
+      await fut(a, 'pont', g, '9');
+      const uj = (await lemezen(a)).find((e) => e.tipus === 'TudatpontRendezes' && e.adat?.pont === 9).azonosito;
+      figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(PB)], {
+        env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...kornyezet }, stdio: 'ignore' });
+      await varj(1500);
+      orjarat = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.05', String(PA)], {
+        env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '', ...kornyezet }, stdio: 'ignore' });
+      let megjott = false;
+      for (let i = 0; i < 40 && !megjott; i++) {
+        await varj(500);
+        megjott = (await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8').catch(() => '')).includes(uj);
+      }
+      const ki = { tanulta, megjott };
+      if (!Object.values(ki).every(Boolean)) process.stdout.write('  raj a körben — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+      return Object.values(ki).every(Boolean);
+    } finally {
+      for (const f of [orjarat, figyelo]) if (f) f.kill();
+      await varj(800);
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D91: A RAJ A VALÓDI CSERÉBEN — a két tartó egymást jegyzi meg (2026-10-03)
 // ===================================
 //

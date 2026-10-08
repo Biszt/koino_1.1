@@ -71,6 +71,10 @@ függ, hogy a hétköznapi csere 0,7 KB vagy több tíz KB)
 ✅ **A RÉSZVÉTEL A VÁLLALÁSBÓL MEGÉPÜLT (2026-10-08)** — a 7. pont szerint (a részletek: a fázis-2 terv D97); a szigorú (b) él.
 ⏭️ Következik: a raj a körben (K2/A — előtte szimuláció), aztán a 4. pont.
 
+✅ **A RAJ A KÖRBEN MEGÉPÜLT (2026-10-09)** — a 69. mérés (szimuláció) után, egy változtatással: a raj-társ nem átfedés szerint,
+hanem a VÁLTOZOTT szeleteim tartói sorban, aztán a forgatás (az átfedés szerinti választásnál a tartók gráfja szétesett).
+⏭️ Következik: a 6. sorrend 4. pontja (a törzs korlátja, a kérelem az átmenetiből, a visszavett vállalás és a tömörítés).
+
 ## 5. Ami nem igényel döntést (a megépítés része)
 
 A részvétel a vállalásból (a töredék-részvétellel és a D96-tal), a törzs korlátja, a kérelem az átmenetiből és a

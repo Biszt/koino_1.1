@@ -108,6 +108,8 @@ import {
   halmazTarolo
 } from './js/tar/fajlTar.js';
 import { naploFrissitese } from './js/csere/kozosHalmaz.js';
+// ⭐ D97/2: a raj a körben (69. mérés: a változott szeletek tartói sorban, aztán a forgatás).
+import { rajKorAllapot, valtozottFeljegyzese, rajKorCeljai } from './js/csere/rajKor.js';
 // ⭐ D70: koinónként és készülékenként EGY folyamat fűz a tárhoz — az író.
 import { iroTarNyitasa } from './js/tar/iro.js';
 import {
@@ -1349,8 +1351,31 @@ async function resAllapotKeszites({ udpElevules = UDP_CIM_ELEVULES } = {}) {
     // ⚠️ ÁLLANDÓ-E A KAPU PORTJA? Ha a kézi parancs a rendszer adta portra szorult (mert az
     // alap-portot egy futó őrjárat fogja), a társtól tanult saját címünk ÁLÉ: azt a portot a
     // parancs végén elengedjük. Ilyenkor nem jegyezzük fel — különben halott címet terjesztene.
-    allando: true
+    allando: true,
+    // ⭐ D97/2: a raj a körben — a változott szeletek és a forgatás (memória; az őrjárat életében).
+    rajKor: rajKorAllapot()
   };
+}
+
+/**
+ * ⭐ D97/2: a kör raj-céljai — a szigorú (b) alatt (a „mindent” módban nem kell: ott minden társsal mindent egyeztetek).
+ * Előbb a saját új eseményeim szeleteit is a változottak közé veszem (a láncom vége óta), aztán a `rajKor.js` dönt.
+ * @returns {Promise<Array<{hoszt: string, port: number, alairo: string|null}>>}
+ */
+async function rajKorCeljaim(res) {
+  const kf = await ketFokAllapota();
+  const reszvetel = await reszvetelHalmazom(kf);
+  if (!reszvetel) return [];
+  const lanc = (await sajatLancEsemenyei(tar, szerzo)).filter((e) => e.koino === KOINO);
+  const utolso = lanc.length ? lanc[lanc.length - 1].sorszam : 0;
+  if (res.rajKor.sajatUtolso !== null && utolso > res.rajKor.sajatUtolso) {
+    valtozottFeljegyzese(res.rajKor, lanc.filter((e) => e.sorszam > res.rajKor.sajatUtolso).map((e) => szelet(e))
+      .filter((k) => reszvetel.has(k)));
+  }
+  res.rajKor.sajatUtolso = utolso;
+  const sajatAlairo = res.sajatTablaKulcs?.alairo ?? null;
+  return rajKorCeljai(res.rajKor, { szeletek: reszvetel, jegyzek: await szeletJegyzekTarolo().olvas(),
+    kizart: (c) => !!sajatAlairo && c.alairo === sajatAlairo });
 }
 
 /**
@@ -2153,6 +2178,13 @@ function resMunka(allapot, halo, tars) {
 
     // ⭐ D82: amit most kaptunk, annak a környékén keresünk bizonyítható ellentmondást.
     if (alap.uj > 0) await eszlelesEsBejelentes(csere.ujAzonositok);
+
+    // ⭐ D97/2: amit most kaptunk, abban a szeletben VÁLTOZÁS van — a raj tartóit a következő körökben sorra felkeressük.
+    if (alap.uj > 0 && allapot.rajKor) {
+      const szeletek = [];
+      for (const az of (csere.ujAzonositok ?? []).slice(0, 4096)) { const e = await tar.esemeny(az); if (e) szeletek.push(szelet(e)); }
+      valtozottFeljegyzese(allapot.rajKor, szeletek);
+    }
 
     // ⭐⭐ ÉS ITT SZÜLETIK A KÖTÉS: akivel összeértünk, azt feljegyezzük a tábla-kulcsa
     // alatt — a cím változhat, ez nem. *A kötés nem megállapodás, hanem tény.*
@@ -4382,6 +4414,10 @@ try {
           celok.push({ hoszt, port: cport, alairo });
         };
         for (const c of kopogasCeljai(kotesJegyzek, res.frissUdp)) felvesz(c.cim, c.port, c.alairo);
+        // ⭐⭐ D97/2: A RAJ A KÖRBEN — a szigorú (b) alatt a vállalt szeleteim tartói (előbb a változottaké, aztán a forgatás).
+        try {
+          for (const c of await rajKorCeljaim(res)) felvesz(c.hoszt, c.port, c.alairo);
+        } catch (hiba) { console.warn('a raj-célok összeállítása nem sikerült', { ok: hiba.message }); }
         // ⭐ Az induló címek NEM esnek a kopogás-korlát alá: a listát te töltöd, rövid marad.
         for (const t of induloLista) felvesz(t.hoszt, Number(t.port));
         // ⭐⭐ D92/1: a FÜGGŐ KÉRELMEIM céljai (a tartók, akiktől kérek) — és a KOPOGTATÓK (akik a kopogtató
