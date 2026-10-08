@@ -4950,6 +4950,20 @@ vetjük össze; ha valamelyik `s`, a HALMAZ (a változás, vagy a teljes lista; 
 mérés kiegészítése): az első találkozás 2,9 / 7,0 / 28,3 KB 50 / 200 / 1000 vállalt szeletnél, utána a „nincs újdonság”
 1,3 KB (a 6–300 KB helyett). ⚠️ A `koino.js` részvételi halmaza még „minden” — a bekapcsolás tölti ki.
 
+#### ✅ MEGÉPÜLT — a részvétel a vállalásból (2026-10-08)
+
+**A szigorú (b) élesítve** (`koino.js` `reszvetelHalmazom`): az „alap” készülék csak abban vesz részt, amit vállal — a
+pozitív pontú szeleteiben (a javaslatok és a töredékek is), az azonosság-szeletében; a koinó születésének szeletében csak
+az alapító (D96); az összegzett nagy szeletben nem; a töredék-részvétel (D85 T3) a javaslatok állapotából, a tár
+eseményszáma szerint gyorsítótárazva. A „mindent” beállítás (D83/2) a mai módban cserél. A nyitó lenyomat a közös
+halmazon fut (D97/1). ⭐ **A koinó születése mint ESEMÉNY** (D96): egy virtuális kulcs (`KOINO_SZULETES_KULCS`) mindenki
+részvételében, amelynek halmaza egyedül a `KoinoLetrehozas` — mindenkihez eljut, a zárt koinó nem tagjához is, az alapító
+állításai nem. **A zárt koinó korlátozott útja** a megengedett szeleteket a saját vállalásától függetlenül egyezteti (a
+nem tag azonosság-szeletét a tag nem vállalja — a belépéshez épp ez kell). **A saját tagság a kísérőkből:** aki
+meghívást kapott, de a saját láncát nem tudja bizonyítani, magát is kérdezi (a meghívója összerakja). A `vallalas`
+kimondja a részvételt. ⚠️ A parancssor-próbák alapból „mindent” módban futnak (a környezetből — `KOINO_KISZOLGALAS`); a
+szigorú esetek külön próbák (az „alap” készülék csak a vállalt gondolatot kapja; a B2 a cserében).
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

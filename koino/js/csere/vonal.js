@@ -54,8 +54,9 @@ import { beolvasztas } from './csere.js';
 import { egyeztetesNyitasa, egyeztetesLepese } from './tartomany.js';
 import {
   szeletParok, egyeztetesiHalmaz, egyeztetettEsemenyek, elteresekSzeletei, szeletbeTartozik, ervenyesKulcs,
-  vonalKulcsa, GYOKER_KULCS, szeletPar
+  vonalKulcsa, GYOKER_KULCS, szeletPar, KOINO_SZULETES_KULCS
 } from './szeletEgyeztetes.js';
+import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 import { gyokerDarabBol, gyokerDarabKulcsai } from './cimjegyzek.js';
 // ⭐ D97/1: a közös halmaz (a részvételi halmazok ujjlenyomatai és változatai).
 import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from './kozosHalmaz.js';
@@ -223,6 +224,8 @@ function uzenetSor(kapcsolat) {
  *   darabonként cserélődik
  * @param {Function} [beallitas.reszvetelHalmaz] - ⭐ D97/1: async () → a részvételi halmazom (Set), vagy null („minden”)
  * @param {Object} [beallitas.halmazTar] - ⭐ D97/1: { sajatNaplo(kulcsok), tarsOlvas(aláíró), tarsIr(aláíró, ismert) }
+ * @param {Object} [beallitas.koinoSzuletes] - ⭐ D96: a koinó `KoinoLetrehozas` eseménye (ha ismert) — mindenki részt vesz
+ *   benne, a halmaza egyedül ez az esemény
  * @returns {Promise<Object>} { korok, uj, kuldott, masKoino, kivulrolIgyLatszom, … ,
  *   elteroSzeletek, egyeztetoUzenetek }
  */
@@ -244,8 +247,25 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const sajatDarabSet = new Set(sajatDarabKulcsok);
   const hivoReszvesz = beallitas.reszvesz ?? (() => true);
   // A gyökér-darabban a saját darabjaim döntenek; a teljes gyökér pedig, ha darabonként megy, egészében nem cserélődik.
-  const reszvesz = (k) => (gyokerDarabBol(k) ? sajatDarabSet.has(k)
+  // ⭐ D96: a koinó születésének (esemény-)kulcsában mindenki részt vesz.
+  const reszvesz = (k) => (k === KOINO_SZULETES_KULCS ? true : gyokerDarabBol(k) ? sajatDarabSet.has(k)
     : (k === GYOKER_KULCS && sajatDarabSet.size ? false : hivoReszvesz(k)));
+
+  // ===== ⭐ D96: A KOINÓ SZÜLETÉSE MINT ESEMÉNY — a párok közt mindig, a halmaza egyedül az esemény =====
+  const szuletesEsemeny = beallitas.koinoSzuletes && typeof beallitas.koinoSzuletes === 'object'
+    && beallitas.koinoSzuletes.tipus === 'KoinoLetrehozas' && beallitas.koinoSzuletes.koino === koino
+    && ervenyesKulcs(beallitas.koinoSzuletes.azonosito) ? beallitas.koinoSzuletes : null;
+  const szuletesPar = szuletesEsemeny
+    ? KOINO_SZULETES_KULCS + ':' + await halmazLenyomata(rendezettHalmaz([szuletesEsemeny.azonosito])) : null;
+  /** A résztvevő szeletek párjai (a szűrő szerint) + a koinó születésének párja (ha ismerem). */
+  const parokSzamitasa = async (szuro) => {
+    const p = await szeletParok(tar, koino, szuro);
+    return szuletesPar ? rendezettHalmaz([...p, szuletesPar]) : p;
+  };
+  const halmazOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny.azonosito] : [])
+    : egyeztetesiHalmaz(tar, koino, k));
+  const esemenyekOf = async (k) => (k === KOINO_SZULETES_KULCS ? (szuletesEsemeny ? [szuletesEsemeny] : [])
+    : egyeztetettEsemenyek(tar, koino, k));
 
   // ⭐ Amit a társtól megtudtunk a fájlokról (5.7) — a hívó dolga elrakni.
   let fajlokNala = [];
@@ -314,7 +334,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   //
   // ⭐ Az első szint nyitó lenyomata a résztvevő szeletek párjainak lenyomata: ha a kettőé egyezik,
   // UGYANAZT tudjuk minden közös szeletről, és a kör itt véget ér (a hétköznapi eset).
-  let parok = await szeletParok(tar, koino, reszvesz);
+  let parok = await parokSzamitasa(reszvesz);
   const [[, , sajatLenyomat]] = await egyeztetesNyitasa(parok);
 
   // ===== ⭐⭐ ÉS A FÁJL-KÉRELEM IS ITT UTAZIK (5.7 / a szállítás) =====
@@ -561,7 +581,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   }
   const enIsmerem = !ovePv || tarsIsmert?.v === ovePv;
   const kozosLenyomat = async (szuro) =>
-    (await egyeztetesNyitasa(await szeletParok(tar, koino, (k) => reszvesz(k) && szuro(k))))[0][2];
+    (await egyeztetesNyitasa(await parokSzamitasa((k) => reszvesz(k) && szuro(k))))[0][2];
   const kzSzoveg = async () => {
     if (!kozosMod) return null;
     const ism = ovePv ? (tarsIsmert?.v ?? '') : '';
@@ -693,9 +713,11 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const korlat = kapu.szabad ? null : new Set((Array.isArray(kapu.szeletek) ? kapu.szeletek : []).filter(ervenyesKulcs));
   if (korlat) {
     tarsKorlatozva = true;
-    parok = await szeletParok(tar, koino, (k) => korlat.has(k) && reszvesz(k));
+    // ⭐ A megengedett szeleteket a saját vállalásomtól függetlenül egyeztetjük: a nem tag azonosság-szeletét (ahová a
+    // meghívása kerül) a tag a szigorú (b) alatt nem vállalja — de a belépéshez épp ez kell.
+    parok = await parokSzamitasa((k) => korlat.has(k));
   }
-  const korlatonBelul = (k) => !korlat || korlat.has(k);
+  const korlatonBelul = (k) => !korlat || korlat.has(k) || k === KOINO_SZULETES_KULCS;
 
   // ----- ⭐⭐ D97/1: A KÖZÖS HALMAZ — a döntés, és ha kell, a halmazok cseréje -----
   //
@@ -727,7 +749,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       if (sajatL && oveL) kozos = { sajatL, oveL, szuro };
     }
   }
-  if (kozos) parok = await szeletParok(tar, koino, (k) => reszvesz(k) && kozos.szuro(k));
+  if (kozos) parok = await parokSzamitasa((k) => reszvesz(k) && kozos.szuro(k));
   const nyitoSajat = kozos ? kozos.sajatL : sajatLenyomat;
   const nyitoOve = kozos ? kozos.oveL : oveNyitas.lenyomat;
 
@@ -895,7 +917,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ===== 3. A RÉSZVÉTEL — ki melyik eltérő szeletből marad ki =====
   const mind = new Set([...mindketten, ...csakNalam, ...csakNala]);
-  const kimaradok = [...mind].filter((k) => !reszvesz(k) || !korlatonBelul(k)).sort();
+  // ⭐ Korlátozásnál (zárt koinó) a megengedett szeletekben a saját vállalásomtól függetlenül részt veszek (mint a
+  // párok számolásánál), máshol a részvételem dönt.
+  const kimaradok = [...mind].filter((k) => (korlat ? !korlatonBelul(k) : !reszvesz(k))).sort();
   // ⭐⭐ D91: A RAJ — az eltérő szeletek közül melyiket VÁLLALOM (a megnézettet soha — D75/3), és néhány ismert
   // tartójuk (név nélkül). Csak itt utazik (ha van eltérő szelet), tehát a „nincs újdonság" csere nem drágul.
   // ⚠️ A hívó dönti el, mit mond (`beallitas.raj` — ez a fájl nem ismeri a vállalást).
@@ -916,7 +940,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ===== 4. A MÁSODIK SZINT — a közösen eltérő szeletek eseményei =====
   const halmazok = new Map();
-  for (const k of egyeztetendo) halmazok.set(k, await egyeztetesiHalmaz(tar, koino, k));
+  for (const k of egyeztetendo) halmazok.set(k, await halmazOf(k));
   const kellNekem = new Set();
   const kellNeki = new Set();
   {
@@ -957,7 +981,7 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // (a születéseivel); amit MAGAMNAK hiányzónak találtam, azt kérem.
   const kuldesre = new Map();
   for (const k of kuldendoSzeletek) {
-    for (const e of await egyeztetettEsemenyek(tar, koino, k)) kuldesre.set(e.azonosito, e);
+    for (const e of await esemenyekOf(k)) kuldesre.set(e.azonosito, e);
   }
   for (const a of kellNeki) {
     const e = await tar.esemeny(a);
@@ -1001,7 +1025,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   // ⛔ Csak a közös vagy általunk várt szeletekből vesszük át (a (b)-ben ez tartja távol a mások
   // érdeklődését a tárunktól); a koino-szűrés és az ellenőrzés a `beolvasztas` dolga.
   const megengedett = new Set([...egyeztetendo, ...vartSzeletek]);
-  const atveheto = erkezett.filter((e) => e && typeof e === 'object' && szeletbeTartozik(e, megengedett));
+  // ⭐ D96: a koinó születésének kulcsán csak EZ a koinó létrehozása jöhet.
+  const atveheto = erkezett.filter((e) => e && typeof e === 'object' && (szeletbeTartozik(e, megengedett)
+    || (megengedett.has(KOINO_SZULETES_KULCS) && e.tipus === 'KoinoLetrehozas' && e.koino === koino)));
   const beolvasztva = await beolvasztas(tar, atveheto, koino);
   uj += beolvasztva.uj;
   ujAzonositok = [...ujAzonositok, ...beolvasztva.ujAzonositok];

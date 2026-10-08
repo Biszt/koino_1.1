@@ -42,6 +42,9 @@ const { proba, futtatas } = probaGyujtemeny('A KÉZI ÚT — a parancssor végig
 // belépő nélkül ez a valódi BitTorrent-DHT-ra menne, és a próba a hálózat hangulatát mérné, nem a kódot (a tábla-
 // próba elve). Alapból tehát „nincs” belépő; a DHT-t mérő próbák a sajátjukat (a hamis hálót) kifejezetten megadják.
 process.env.KOINO_DHT_BELEPOK ??= 'nincs';
+// ⭐ D97 (a bekapcsolás): a próbák alapból a „mindent” (a mai, mindent egyeztető) módban futnak — a szigorú (b) eseteit
+// külön próbák mérik, kifejezetten „alap”-pal (`KOINO_KISZOLGALAS` — a készülék saját beállítása felülírja).
+process.env.KOINO_KISZOLGALAS ??= 'mindent';
 
 // A `koino.js` a `meres/` mappához képest egy szinttel feljebb van.
 const KOINO_JS = new URL('../koino.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -369,7 +372,8 @@ proba('⭐⭐ D95/1, D95/3: a NAGY szeletet B összegezve tartja — a lezárás
     const b = await ujKeszulek();
     const c = await ujKeszulek();
     const port = 7654;
-    const kf = { KOINO_KETFOK_KUSZOB: '4', KOINO_KETFOK_VISSZA: '3' };
+    // ⚠️ B a szigorú (b) szerint („alap”); A a `kiszolgalas mindent` beállítással (a fájl felülírja a környezetet).
+    const kf = { KOINO_KETFOK_KUSZOB: '4', KOINO_KETFOK_VISSZA: '3', KOINO_KISZOLGALAS: 'alap' };
     const DONTESI_IDO = 14;
     const lemez = async (hely) => {
       await fut(hely, 'kivisz', join(hely, 'lemez.jsonl'));
@@ -542,6 +546,99 @@ proba('⭐⭐ D95/3: a meghívás a csak küldő úton megy — A feljegyzi a k�
     } finally {
       await rm(a, { recursive: true, force: true });
       await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐ A BEKAPCSOLÁS (D97): A SZIGORÚ (b) A VALÓDI CSERÉBEN (2026-10-08)
+// ===================================
+//
+// „Alap” beállítással egy készülék csak abban vesz részt, amit vállal (a pozitív pontú szeleteiben). A két gondolatot (G,
+// H) A hozza létre; B csak G-re tesz pontot. A csere után B megkapja A új G-beli eseményét, H-ét NEM (H-ból csak a
+// születés jut el hozzá, a gyökér darabján). ⭐ Viselkedést mérünk: B lemezét. Rontás: „mindent” módban H is átjön.
+const tiszta = (x) => x.replace(/\x1b\[[0-9;]*m/g, '');
+const lemezen = async (hely) => {
+  await fut(hely, 'kivisz', join(hely, 'lemez.jsonl'));
+  return (await readFile(join(hely, 'lemez.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+};
+
+proba('⭐⭐ D97: az „alap” készülék csak a VÁLLALT gondolat eseményeit kapja meg — a másikét nem („mindent” módban igen)',
+  async () => {
+    const futas = async (mod, port) => {
+      const a = await ujKeszulek();
+      const b = await ujKeszulek();
+      const kornyezet = { KOINO_KISZOLGALAS: mod };
+      try {
+        await fut(a, 'koino', 'Szigorú', 'próba', 'nyilt');
+        const g = azonosito(await fut(a, 'gondolat', 'GE'), 'Létrejött:');
+        const h = azonosito(await fut(a, 'gondolat', 'HA'), 'Létrejött:');
+        const elso = await lemezen(a);
+        const gT = elso.find((e) => e.tipus === 'GondolatLetrehozas' && e.azonosito.startsWith(g)).azonosito;
+        const kT = elso.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+        await fut(a, 'kivisz', join(a, 'k.jsonl'), kT);
+        await fut(b, 'behoz', join(a, 'k.jsonl'));
+        await fut(a, 'kivisz', join(a, 'g.jsonl'), gT);
+        await fut(b, 'behoz', join(a, 'g.jsonl'));
+        await fut(b, 'pont', g, '5');                       // B csak G-t vállalja
+        await fut(a, 'pont', g, '7');
+        await fut(a, 'pont', h, '7');
+        const ujak = (await lemezen(a)).filter((e) => e.tipus === 'TudatpontRendezes' && e.adat?.pont === 7);
+        const ujG = ujak.find((e) => e.entitas?.startsWith(g)).azonosito;
+        const ujH = ujak.find((e) => e.entitas?.startsWith(h)).azonosito;
+        await csereKor(a, b, port, kornyezet);
+        const bNal = new Set((await lemezen(b)).map((e) => e.azonosito));
+        return { g: bNal.has(ujG), h: bNal.has(ujH) };
+      } finally {
+        await rm(a, { recursive: true, force: true });
+        await rm(b, { recursive: true, force: true });
+      }
+    };
+    const alap = await futas('alap', 7656);
+    const mindent = await futas('mindent', 7657);
+    const ki = { alapG: alap.g, alapNemH: !alap.h, mindentH: mindent.h };
+    if (!Object.values(ki).every(Boolean)) process.stdout.write('  szigorú — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+    return Object.values(ki).every(Boolean);
+  });
+
+// A B2 a valódi cserében: C tag, és pontot tesz G-re; B (alap) csak G-t vállalja — C azonosság-szeletében nem vesz részt.
+// A csere G-ből C pontját hozza, a tagsági kör pedig C tagságát (A-nál C-nek nincs csomagja: a láncát adja). ⭐ B
+// állapotában C pontja SZÁMÍT (nincs „nem számít, amíg a szerzője tagsága…” sor). Rontás: lásd a próba utáni sort.
+proba('⭐⭐ D95/2 a cserében: az „alap” B-nél C pontja számít — a tagsági kör hozza C tagságát (az azonosság-szeletét nem egyezteti)',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const c = await ujKeszulek();
+    const port = 7658;
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    try {
+      await fut(a, 'koino', 'Kísérő-csere', 'próba', 'nyilt');
+      const g = azonosito(await fut(a, 'gondolat', 'GE'), 'Létrejött:');
+      const elso = await lemezen(a);
+      const gT = elso.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      const kT = elso.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      for (const x of [b, c]) {
+        await fut(a, 'kivisz', join(a, 'k.jsonl'), kT);
+        await fut(x, 'behoz', join(a, 'k.jsonl'));
+        await fut(a, 'kivisz', join(a, 'g.jsonl'), gT);
+        await fut(x, 'behoz', join(a, 'g.jsonl'));
+      }
+      await taggaTesziKeszulek(a, b, 'b');
+      await taggaTesziKeszulek(a, c, 'c');
+      await fut(b, 'pont', g, '3');
+      await fut(c, 'pont', g, '4');
+      await fut(c, 'kivisz', join(c, 'sajat.jsonl'), 'sajat');
+      await fut(a, 'behoz', join(c, 'sajat.jsonl'));
+      await csereKor(a, b, port, kornyezet);
+      const bKep = tiszta(await fut(b, 'allapot'));
+      const aKep = tiszta(await fut(a, 'allapot'));
+      const pontja = (kep) => Number((kep.match(/összes pont: (\d+)/) ?? [])[1] ?? NaN);
+      const ki = { nincsFuggo: !/nem számít, amíg a szerzője tagsága/.test(bKep), ugyanannyi: pontja(bKep) === pontja(aKep) };
+      if (!Object.values(ki).every(Boolean)) process.stdout.write('  kísérő a cserében — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+      return Object.values(ki).every(Boolean);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+      await rm(c, { recursive: true, force: true });
     }
   });
 

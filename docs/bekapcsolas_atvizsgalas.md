@@ -68,6 +68,9 @@ függ, hogy a hétköznapi csere 0,7 KB vagy több tíz KB)
 ✅ **A KÖZÖS HALMAZ MEGÉPÜLT (2026-10-08)** — a részletek: a fázis-2 terv D97, „MEGÉPÜLT”; mérve: az első találkozás
 2,9–28,3 KB, utána a „nincs újdonság” 1,3 KB. ⏭️ Következik: a részvétel a vállalásból.
 
+✅ **A RÉSZVÉTEL A VÁLLALÁSBÓL MEGÉPÜLT (2026-10-08)** — a 7. pont szerint (a részletek: a fázis-2 terv D97); a szigorú (b) él.
+⏭️ Következik: a raj a körben (K2/A — előtte szimuláció), aztán a 4. pont.
+
 ## 5. Ami nem igényel döntést (a megépítés része)
 
 A részvétel a vállalásból (a töredék-részvétellel és a D96-tal), a törzs korlátja, a kérelem az átmenetiből és a

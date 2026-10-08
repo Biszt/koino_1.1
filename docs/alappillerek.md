@@ -338,7 +338,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    elfogadom a javaslatodat”): a koinó születését mindenki az eseményként tartja, a szeletét csak az alapító azonosságát
    vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. 🔍 **A bekapcsolás átvizsgálva**
    ([`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md), 68. mérés): a közös halmaz nélkül a „nincs újdonság” csere
-   6–300 KB, és az őrjárat a rajjal nem cserél — **K1 és K2 Csabánál**.
+   6–300 KB, és az őrjárat a rajjal nem cserél. ✅ **D97** (K1/A, K2/A). ✅ **A közös halmaz és a részvétel a vállalásból KÉSZ
+   (2026-10-08)** — a szigorú (b) él. ⏭️ A raj a körben (K2), aztán a törzs korlátja, a kérelem az átmenetiből, a
+   visszavett vállalás és a tár tömörítése.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -642,3 +644,21 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     közös nyitó üzenet nincs** · mert a tartomány-egyeztetés az eltérő kezdő lenyomatot „eltér” jelnek veszi, és a részekre
     bontással helyesen halad (a rontás-próba szerint a külön üzenet semmit nem adott hozzá — kivettük) · a megépítéskor,
     Claude · `vonal.js`.
+81. **2026-10-08 · a koinó születése mint esemény (D96: „az eseményt mindenki tartja”)** → **egy virtuális kulcs a vonalon,
+    amelynek halmaza egyedül a `KoinoLetrehozas`, és mindenki részt vesz benne** · mert a koinó azonosítója egy név, nem a
+    létrehozás lenyomata — a társ nem tudja előre, melyik eseményt kérje; a pár a párok közt csak akkor utazik, ha
+    valakinél hiányzik · a megépítéskor, Claude (a D96/D97 keretén belül) · `szeletEgyeztetes.js`
+    (`KOINO_SZULETES_KULCS`), `vonal.js`.
+82. **2026-10-08 · a zárt koinó korlátozott útja (D93/3: a nem tag a megengedett szeleteket kapja)** → **a megengedett
+    szeleteket a tag a saját vállalásától FÜGGETLENÜL egyezteti** · mert a szigorú (b) alatt a tag a nem tag
+    azonosság-szeletét nem vállalja — a belépés (a belépés és a meghívás egymáshoz jutása) különben elakadna · a
+    megépítéskor, Claude · `vonal.js`.
+83. **2026-10-08 · a saját tagságom a kísérőkből (a D95/2 a szerzők tagságát kérdezte)** → **ha meghívtak, de a láncomat
+    nem tudom bizonyítani, magamat is kérdezem** · mert a szigorú (b) alatt a friss tag a meghívója azonosság-szeletét nem
+    egyezteti, a láncát viszont a meghívója a saját tárából összerakja · a megépítéskor, Claude · `tagsagKisero.js`
+    (`sajatSzerzo`).
+84. **2026-10-08 · a parancssor-próbák a bekapcsolás után** → **alapból „mindent” módban (a környezetből —
+    `KOINO_KISZOLGALAS`; a készülék saját beállítása felülírja), a szigorú esetek kifejezetten „alap”-pal** · mert a
+    meglévő próbák nagy része más funkciót mér, és arra épül, hogy a csere mindent mindenkihez eljuttat; a „mindent” a
+    D83/2 valódi beállítása (az önkéntes teljes tartó), nem próba-kapcsoló · a megépítéskor, Claude · `koino.js`
+    (`kiszolgalasBeallitas`), `parancssorProba.js`.

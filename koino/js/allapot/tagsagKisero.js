@@ -110,10 +110,12 @@ export async function tagsagiKiserok(tar, koino, szerzok, { koinoSzuletes = null
  * @param {Function} [b.koinoSzuletes] - async () → a `KoinoLetrehozas` (vagy null)
  * @param {Function} b.mentes - async (események) → { uj, ujAzonositok } — a kapu (`beolvasztas`)
  * @param {Map} [b.ismert] - szerző → igaz: akiről már tudjuk, hogy tag (a folyamat életében — megosztható a kapuval)
+ * @param {string} [b.sajatSzerzo] - én: ha meghívtak, de a saját tagságom nem bizonyítható, magamat is kérdezem (a
+ *   meghívóm össze tudja rakni a láncomat)
  * @param {Function} [b.most]
  */
 export function tagsagKerdo({ tar, koino, tarolo, koinoSzuletes = async () => null, mentes, ismert = new Map(),
-  most = () => Date.now() }) {
+  sajatSzerzo = null, most = () => Date.now() }) {
   const takaritas = (t) => {
     const n = most();
     for (const [sz, x] of Object.entries(t.szerzok)) {
@@ -159,6 +161,14 @@ export function tagsagKerdo({ tar, koino, tarolo, koinoSzuletes = async () => nu
       for (const az of (Array.isArray(ujAzonositok) ? ujAzonositok : []).slice(0, 4096)) {
         const e = await tar.esemeny(az);
         if (e && e.koino === koino && TAGSAG_KELL.has(e.tipus) && szerzoAlaku(e.szerzo) && !ismert.has(e.szerzo)) jeloltek.add(e.szerzo);
+      }
+      // ⭐ A SAJÁT tagságom: ha van meghívásom (valaki a szeletembe tette), de a láncom nem bizonyítható, kérdezem.
+      if (sajatSzerzo && !ismert.has(sajatSzerzo)) {
+        const sajat = (await sajatLancEsemenyei(tar, sajatSzerzo)).filter((e) => e.koino === koino && e.tipus === 'Belepes');
+        for (const b of sajat) {
+          const meghivott = (await tar.szeletEsemenyei(b.azonosito)).some((e) => e.tipus === 'Meghivas' && e.adat?.kit === sajatSzerzo);
+          if (meghivott) { jeloltek.add(sajatSzerzo); break; }
+        }
       }
       // A függők közül a legrégebben kérdezettek előbb (a probak szerint), aztán az újak.
       const fuggok = Object.entries(t.szerzok).sort((a, b) => (a[1].probak ?? 0) - (b[1].probak ?? 0)).map(([sz]) => sz);

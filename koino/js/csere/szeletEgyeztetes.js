@@ -39,6 +39,14 @@ import { gyokerDarabBol, gyokerDarabja, darabbaEsik } from './cimjegyzek.js';
  */
 export const GYOKER_KULCS = '0'.repeat(43);
 
+/**
+ * ⭐ D96: A KOINÓ SZÜLETÉSE MINT ESEMÉNY a vonalon — egy virtuális kulcs (mint a gyökéré és a gyökér-darabé), amelynek
+ * halmaza egyedül a `KoinoLetrehozas` (a bejelentései nélkül). Mindenki részt vesz benne (a zárt koinó nem tagja is):
+ * így az esemény mindenkihez eljut, az alapító állításai (a valódi szelete bejelentései) viszont nem. A halmazát a vonal
+ * a hívótól kapott eseményből számolja.
+ */
+export const KOINO_SZULETES_KULCS = '0'.repeat(34) + 's' + '0'.repeat(8);
+
 /** A vonal kulcsa → a tár kulcsa. */
 export const tarKulcsa = (kulcs) => (kulcs === GYOKER_KULCS ? '' : kulcs);
 /** A tár kulcsa → a vonal kulcsa. */

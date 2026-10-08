@@ -1680,8 +1680,45 @@ async function kiszolgalasBeallitas() {
     const j = JSON.parse(await readFile(kiszolgalasFajl(), 'utf8'));
     return { mindent: j?.mindent === true };
   } catch {
-    return { mindent: false };
+    // ⚠️ Ha a készüléken nincs beállítás, a környezet adhat alapértéket (`KOINO_KISZOLGALAS` = mindent | alap) — a
+    // parancssor-próbák így futnak a „mindent” (a mai, mindent egyeztető) módban; a szigorú esetek kifejezetten „alap”-pal.
+    return { mindent: process.env.KOINO_KISZOLGALAS === 'mindent' };
   }
+}
+
+// ===================================
+// ⭐⭐ A BEKAPCSOLÁS (D97, a bekapcsolás átvizsgálásának 7. pontja): A RÉSZVÉTEL A VÁLLALÁSBÓL
+// ===================================
+//
+// A szigorú (b): a csere csak abban vesz részt, amit vállalok — a pozitív pontú szeleteimben (a javaslatok és a töredékek
+// is), az azonosság-szeletemben; ⛔ a koinó születésének SZELETÉBEN csak az alapító (D96 — az esemény mindenkihez eljut a
+// vonal születés-kulcsán); az összegzett nagy szeletben nem (a két fokú vállalás); és a töredék-részvétel (D85 T3): a
+// töredék-szelet, amelyik érintettjét vállalom, és amelyik saját része valamikor igent mondott. A gyökér a darabjaival
+// megy (D95/4). A „mindent” beállítás (D83/2) részvétele „minden” (null) — a mai mód. A tár eseményszáma szerint
+// gyorsítótárazva (a töredék-részvételhez a javaslatok állapota kell).
+let reszvetelEmlek = null;
+
+/** @returns {Promise<Set<string>|null>} a részvételi halmazom (null = „minden”) */
+async function reszvetelHalmazom(kf) {
+  if ((await kiszolgalasBeallitas()).mindent) return null;
+  const fokJel = [...kf.fokok].filter(([, f]) => f === 'osszegzo').map(([k]) => k).sort().join(',');
+  const valtozat = (tar.mutatoAllapota?.()?.esemeny ?? 0) + '|' + kf.vallalas.szeletek.size + '|' + fokJel;
+  if (reszvetelEmlek?.valtozat === valtozat) return reszvetelEmlek.p;
+  const p = new Set();
+  for (const k of kf.vallalas.szeletek) {
+    if (kf.fokok.get(k) === 'osszegzo') continue;
+    if (k === kf.vallalas.koinoSzuletes && !kf.vallalas.azonossag.includes(k)) continue;
+    p.add(k);
+  }
+  // ⭐ A töredék-részvétel (D85 T3): a töredékek a javaslatok számított entitásai, a saját érintettjük gyerekei.
+  const { allapot, javaslatok } = await kepetKeszit();
+  for (const e of allapot.entitasok.values()) {
+    if (!e.toredek?.csoport || !e.szulo || !p.has(e.szulo)) continue;
+    const resz = javaslatok.get(e.toredek.csoport)?.reszek?.find((r) => r.entitas === e.szulo);
+    if (resz?.valahaTeljesult) p.add(e.azonosito);
+  }
+  reszvetelEmlek = { valtozat, p };
+  return p;
 }
 
 /** A vállalt szeletek foka (a változást a tárolóba írja), és a jegyzék (szelet → az ismert eseményszám). */
@@ -1750,19 +1787,24 @@ async function ketFokBeallitasai(allapot = null) {
   // tartom) — a még nem kézbesített, friss saját eseményeimmel.
   // ⭐ D95/4: a gyökér-darabjaim is egészében tartott „szeletek” (a csak küldő út ott nem kell, és ott fogadok).
   const gy = await gyokerMelysegem();
+  // ⭐ A bekapcsolás: a részvételi halmazom (null = „minden” — akkor a vállalt, nem összegzett szelet).
+  const reszvetel = await reszvetelHalmazom(kf);
   const egeszbenTartom = async (k) => (gyokerDarabBol(k) ? gy.darabok.has(k)
-    : kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo');
+    : reszvetel ? reszvetel.has(k) : kf.vallalas.szeletek.has(k) && kf.fokok.get(k) !== 'osszegzo');
   const kuldo = sajatKuldo({ tar, koino: KOINO, szerzo, halmazkent: egeszbenTartom, kulcsai: kuldoKulcsai(gy),
     kezbesitett: async () => new Set(Object.keys((await kezbesitesTarolo(KOINO).olvas()).kezbesitve)) });
   const fogado = kuldoFogado({ tar, fogadhato: egeszbenTartom });
   return {
-    reszvesz: (k) => kf.fokok.get(k) !== 'osszegzo',
+    // ⭐⭐ A BEKAPCSOLÁS: csak a részvételi halmazomban (a „mindent” beállítással mindenben, az összegzett kivételével).
+    reszvesz: (k) => (reszvetel ? reszvetel.has(k) : kf.fokok.get(k) !== 'osszegzo'),
     // ⭐ D95/4: a gyökér darabonként (a vonal a mélységből és a tábla-aláíróból számolja a darabjaimat).
     gyokerMelyseg: gy.melyseg,
-    // ⭐⭐ D97/1: a közös halmaz — a társak halmazát a tábla-aláírójuk alatt jegyezzük meg (`halmazok.json`). ⚠️ A
-    // részvételi halmaz ma még „minden” (null): a bekapcsolás (a részvétel a vállalásból) tölti ki.
-    reszvetelHalmaz: async () => null,
+    // ⭐⭐ D97/1: a közös halmaz — a társak halmazát a tábla-aláírójuk alatt jegyezzük meg (`halmazok.json`); a nyitó
+    // lenyomat a két részvételi halmaz metszetén fut.
+    reszvetelHalmaz: async () => reszvetel,
     halmazTar: halmazTarolo(KOINO, alapHely(), naploFrissitese),
+    // ⭐ D96: a koinó születése mint ESEMÉNY — mindenkihez eljut (a szelete csak az alapítóé).
+    koinoSzuletes: await koinoSzuletese(),
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
     osszegzesValasz: tarto.valasz, osszegzesMintak: tarto.mintak,
     kuldoSzeletek: (szabad) => kuldo.lista(szabad), kuldoKerem: fogado.kerem
@@ -1946,7 +1988,7 @@ async function azonossagBeallitasa() {
  * ⭐ Az `ismert` a kapu tag-emléke: amit az egyik bizonyított, azt a másik is tudja.
  */
 const tagsagKerdes = tagsagKerdo({ tar, koino: KOINO, tarolo: tagsagFuggoTarolo(KOINO), koinoSzuletes: koinoSzuletese,
-  mentes: (lista) => beolvasztas(tar, lista, KOINO), ismert: tagEmlek });
+  mentes: (lista) => beolvasztas(tar, lista, KOINO), ismert: tagEmlek, sajatSzerzo: szerzo });
 
 /** A csere beállításai a tagsági kísérőkhöz (a `parbeszed` hívja őket). */
 function tagsagBeallitasai() {
@@ -2752,8 +2794,8 @@ try {
       const b = await kiszolgalasBeallitas();
       kiir('Kiszolgálás: ' + (b.mindent ? SZIN.jo + '„mindent”' + SZIN.vege
         + SZIN.halvany + ' — a nagy szeleteket is egészében tartom, és a lezárt döntéseikről összegzést adok' + SZIN.vege
-        : 'alap' + SZIN.halvany + ' — a ' + KETFOK.kuszob + ' eseménynél nagyobb vállalt szeletet összegezve tartom'
-          + SZIN.vege));
+        : 'alap' + SZIN.halvany + ' — csak abban veszek részt, amit vállalok (a szigorú (b)); a ' + KETFOK.kuszob
+          + ' eseménynél nagyobb vállalt szeletet összegezve tartom' + SZIN.vege));
       break;
     }
 
@@ -4078,11 +4120,15 @@ try {
       const kf = await ketFokAllapota(allapot);
       const osszT = await kf.tarolo.olvas();
       const osszegzoDb = [...kf.fokok.values()].filter((f) => f === 'osszegzo').length;
+      // ⭐ D97: a részvételem a cserében (a szigorú (b) — vagy „mindent”).
+      const reszvetel = await reszvetelHalmazom(kf);
       kiir(SZIN.vastag + 'VÁLLALOM (tartós tár): ' + v.szeletek.size + ' szelet' + SZIN.vege);
       kiir(SZIN.halvany + '  ' + pontosak.length + ' tudatpontos · ' + v.azonossag.length + ' azonosság-szelet'
         + (v.koinoSzuletes ? ' · a koinó születése' : '') + ' · ' + osszegzoDb + ' összegezve (nagy, a küszöb: '
         + KETFOK.kuszob + ' esemény)' + ((await kiszolgalasBeallitas()).mindent ? ' · „mindent” beállítás (D83/2)' : '')
         + SZIN.vege);
+      kiir(SZIN.halvany + '  a cserében: ' + (reszvetel ? reszvetel.size + ' szeletben veszek részt (a szigorú (b) — D97)'
+        : 'mindenben részt veszek („mindent”)') + SZIN.vege);
       for (const [az, p] of pontosak.sort((a, b) => b[1] - a[1])) {
         const o = kf.fokok.get(az) === 'osszegzo' ? osszT.szeletek[az] : null;
         kiir('  ' + SZIN.halvany + az.slice(0, 8) + SZIN.vege + '  ' + (allapot.entitasok.get(az)?.cim ?? '(ismeretlen)')
