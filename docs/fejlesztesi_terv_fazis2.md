@@ -5050,6 +5050,30 @@ NEGATÍV LEVÉL (a lista a fej aláírt kiosztás-gyökerét adja, és van benne
 marad, és az `ellenoriz` kiírja, mióta. Mérve (71.): egy kérdezett eseményre ~0,6–0,8 KB válasz, logaritmikusan nő; a
 gyorsítótárral a szerző a második kérdéstől 9–42 ms. ⭐ **Ezzel a ⑧ — és a VÉGLEGES SOR — kész.**
 
+### D99. TÁRSANKÉNT EGY CSERE A FÉL KÖRÖN BELÜL, HA NINCS ÚJDONSÁG — a D71 (iii) lezárása (2026-10-10, Csaba: „elfogadom a javaslatodat, legyen az (A)”)
+
+**Amiből jött:** a 72. mérés (terep: laptop otthon, telefon a szomszéd wifijén): egy társpár között percenként KÉT csere
+ment (mindkét gép a saját körében hívta a másikat — ~6,5 MB/nap „nincs újdonságra”), és ha a két kör egy másodpercre járt
+egymástól, a második csere az első végébe csúszott, és 10 mp-re elakadt (aznap háromszor). A D71 (iii) „V2” változatát a 47.
+mérés már ártalmatlannak mérte (a hír nem lassul), de a „van-e mondanivalóm” kérdéshez akkor csak a koinó-szintű lenyomat
+lett volna — nagy koinóban soha nem egyezik. A D98/1 (a társankénti emlékezet) óta társanként megmondható.
+
+#### A DÖNTÉS (A)
+
+⭐ Ha egy társsal a legutóbbi fél körön belül már lement egy sikeres csere (bárki kezdte), és azóta NÁLAM nem változott semmi
+(a társankénti emlékezet feljegyzése óta a táramba nem került esemény), a saját körömben nem hívom. Akinek van mondanivalója,
+az hív. ⚠️ Csak a tábla-aláíróval ismert társra (kötés, raj); a névtelen cím a régi módon. *(Elvetve: (B) ablakonként csak az
+egyik fél kezdeményez — a másik újdonsága egy ablakot várna; (C) a mai mód, az ütközés külön javítása.)*
+
+#### ✅ MEGÉPÜLT (2026-10-10)
+
+`koino.js`: a kapu munkája a sikeres csere végén feljegyzi az idejét a társ tábla-aláírója alatt (`utolsoCsereTarssal`, a
+folyamat memóriájában); a kör a célok közül kiveszi azt, akivel a fél körön belül cseréltünk, ha a tár a feljegyzés óta nem
+nőtt (`csereKihagyhato` — `fajlTar.js` `valtozottSzeletek(n, 0)`), és kiírja („N társat most nem hívok … (D99)”). Helyben
+(két őrjárat, 6 mp-es kör, 2 mp-es óra-eltolás): körönként egy csere a kettő helyett, egy sem bukott el; az újdonság a
+következő cserével átment. Parancssor-próba (két valódi őrjárattal, rontással). ⚠️ Az ütközést magát helyben (késleltetés
+nélkül) nem sikerült előidézni — a D99 a második cserét veszi el, ami ütközhetett volna.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

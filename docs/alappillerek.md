@@ -723,3 +723,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     tárba), a D14 eltüntette, és a `pont` sem találta — a szigorú (b) alatt új gondolatot nem lehetett felvenni · a terepi
     mérés után, Claude · `allapotSzamitas.js` (`nemTartott`), `koino.js` (`kepetKeszit` — a vállalásból, nem a részvételből:
     az utóbbi maga is a képet kéri).
+95. **2026-10-10 · a néma kötés keresése a táblán (2026-09-20: „akiről egy ablak óta nem hallottunk, azt a tábláról
+    keressük”)** → **visszalépő ütem: a hallgatás első 4 körében mindig, aztán a 8., 16., 32., 64., és 64 körönként** · mert
+    terepen (72. mérés) a telefon egy rég eltűnt kötést percenként keresett a mobilneten (minden keresés néhány KB DHT); a
+    friss leszakadásnál a gyors visszatalálás marad (43. mérés) · a terepi mérés után, Claude · `kotesek.js`
+    (`tablanKeresendok`).

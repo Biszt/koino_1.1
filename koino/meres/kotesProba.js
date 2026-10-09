@@ -14,7 +14,7 @@ import {
   titkositva, kititkositva, bajtokka
 } from '../js/csere/tablaKulcs.js';
 import {
-  talalkozasFeljegyzese, kotesek, kopogasCeljai, nemaKotesek, jegyzekTakaritasa,
+  talalkozasFeljegyzese, kotesek, kopogasCeljai, nemaKotesek, tablanKeresendok, jegyzekTakaritasa,
   kotesCimei, helyiCimE, cimRangja, KOTES_CEL, KOTES_KORLAT
 } from '../js/csere/kotesek.js';
 
@@ -299,6 +299,19 @@ proba('⭐ A NÉMA KÖTÉS megnevezhető — erről kell majd a TÁBLÁRÓL érd
   // 5 mp-es ablakkal: Anna (1000) néma, Béla (9000) nem.
   const nemak = nemaKotesek(j, 5000, 10000);
   return nemak.length === 1 && nemak[0].alairo === kulcs('anna').alairo;
+});
+
+proba('⭐ A RÉGÓTA NÉMA KÖTÉST VISSZALÉPŐ ÜTEMBEN keressük a táblán (72. mérés) — az első 4 körben mindig, aztán ritkulva', () => {
+  const ablak = 60000;
+  let j = talalkozasFeljegyzese([], kulcs('anna'), { hoszt: '10.0.0.1', port: 1 }, 0);
+  // a hallgatás k-adik köre (a kör közepén nézve): mikor keresünk?
+  const keresunk = (k) => tablanKeresendok(j, ablak, k * ablak + 30000).length === 1;
+  const korok = [];
+  for (let k = 1; k <= 300; k++) if (keresunk(k)) korok.push(k);
+  const egyNap = [];
+  for (let k = 1; k <= 1440; k++) if (keresunk(k)) egyNap.push(k);
+  return JSON.stringify(korok) === JSON.stringify([1, 2, 3, 4, 8, 16, 32, 64, 128, 192, 256])
+    && egyNap.length <= 30 && !keresunk(0);
 });
 
 export default futtatas;

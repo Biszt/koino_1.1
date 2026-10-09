@@ -210,7 +210,7 @@ import { ujTablaKulcs, nyilvanosResz, ervenyesTablaKulcs } from './js/csere/tabl
 import { szovegFeloldasa, szovegDarabbol, szovegHivatkozasE } from './js/esemeny/szovegDarab.js';
 import {
   talalkozasFeljegyzese, kopogasCeljai, jegyzekTakaritasa, kotesek as kotesLista,
-  nemaKotesek, kotesCimei
+  tablanKeresendok, kotesCimei
 } from './js/csere/kotesek.js';
 // ⭐⭐⭐ A HIRDETŐTÁBLA (2026-09-20): a leszakadt készülék KIFELÉ írja ki az új címét, a
 // társai KIFELÉ olvassák ki. A tábla ma a BitTorrent DHT — de cserélhető (2. szabály).
@@ -2196,6 +2196,36 @@ function tagsagBeallitasai() {
   };
 }
 
+// ===================================
+// ⭐⭐ D99 (a D71 (iii) — Csaba: „legyen az (A)”, 2026-10-10): TÁRSANKÉNT EGY CSERE A FÉL KÖRÖN BELÜL, HA NINCS ÚJDONSÁGOM
+// ===================================
+//
+// Terepen (72. mérés) egy társpár között percenként KÉT csere ment (mindkét gép a saját körében hívta a másikat — ~6,5 MB/nap
+// „nincs újdonságra”), és ha a két kör egy másodpercre járt egymástól, a második csere az első végébe csúszott, és 10 mp-re
+// elakadt. ⭐ A szabály: ha egy társsal a legutóbbi fél körön belül már lement egy sikeres csere (bárki kezdte), és azóta
+// NÁLAM nem változott semmi (a társankénti emlékezet feljegyzése óta a táramba nem került esemény — D98/1), a saját körömben
+// nem hívom. Akinek van mondanivalója, az hív (a 47. mérés: így a hír nem lassul). ⚠️ Csak a tábla-aláíróval ismert társra
+// (kötés, raj); a névtelen cím (friss, induló) a régi módon.
+
+/** Tábla-aláíró → a legutóbbi sikeres csere vége (a folyamat memóriájában; újraindításkor üres — akkor a régi mód). */
+const utolsoCsereTarssal = new Map();
+
+/** Kihagyható-e a társ ebben a körben (D99)? */
+async function csereKihagyhato(alairo, felKor) {
+  if (typeof alairo !== 'string') return false;
+  const ido = utolsoCsereTarssal.get(alairo);
+  if (!ido || Date.now() - ido > felKor) return false;
+  try {
+    const f = await emlekezetTarolo(KOINO, alapHely()).olvas(alairo);
+    const a = tar.allas?.();
+    if (!f || !a || f.g !== a.g || !Number.isSafeInteger(f.n) || f.n > a.n) return false;
+    // ⭐ Egyetlen új esemény is „van mondanivalóm” (a korlát 0: a tár vége óta egy sem).
+    return !!tar.valtozottSzeletek?.(f.n, 0);
+  } catch {
+    return false;
+  }
+}
+
 function resMunkaKeszito(allapot) {
   return async (nyersHalo, tars) => {
     // ⭐⭐ D89/1: EGY KÉZFOGÁS A MUNKA ELEJÉN — a csere és a randevú ugyanazon a VÉDETT résen megy (a
@@ -2339,6 +2369,8 @@ function resMunka(allapot, halo, tars) {
       return { ...alap, kerelemKiszolgalva: csere.kerelemKiszolgalva };
     }
 
+    // ⭐ D99: a sikeres csere ideje a társ tábla-aláírója alatt (a kör ebből tudja, hogy ebben a fél körben már beszéltünk).
+    if (alairo) utolsoCsereTarssal.set(alairo, Date.now());
     kiir(SZIN.jo + '  ✓ ' + ora() + ' csere a résen ' + tars.cim + ':' + tars.port
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
@@ -4638,6 +4670,16 @@ try {
             felvesz(k.cim, k.port);
           }
         }
+        // ⭐⭐ D99: akivel a legutóbbi fél körön belül már cseréltünk, és azóta nincs újdonságom, azt most nem hívom.
+        tar.frissit?.();
+        let kihagyott = 0;
+        for (let i = celok.length - 1; i >= 0; i--) {
+          if (await csereKihagyhato(celok[i].alairo, kozMs / 2)) { celok.splice(i, 1); kihagyott++; }
+        }
+        if (kihagyott) {
+          kiir(SZIN.halvany + '  · ' + ora() + ' ' + kihagyott + ' társat most nem hívok — ebben a fél körben már cseréltünk, és'
+            + ' azóta nincs újdonságom (D99)' + SZIN.vege);
+        }
         const udpCelok = celok.filter((c) => {
           // A saját, épp mért külső címünk — pontos pár szerint.
           if (res.sajatKulsoUdp && sajatCimE(c.hoszt, [res.sajatKulsoUdp.cim])
@@ -4648,8 +4690,10 @@ try {
         });
 
         if (!udpCelok.length) {
-          kiir(SZIN.halvany + '  ' + ora() + ' nincs kire kopognom (se kötés, se friss cím,'
-            + ' se induló cím) — csak a kaput tartom nyitva' + SZIN.vege);
+          if (!kihagyott) {
+            kiir(SZIN.halvany + '  ' + ora() + ' nincs kire kopognom (se kötés, se friss cím,'
+              + ' se induló cím) — csak a kaput tartom nyitva' + SZIN.vege);
+          }
         } else {
           // ⭐ A résen végzett munka EBBŐL a körből dolgozik — a bekopogóké is.
           res.korFajlok = await fajlResz();
@@ -4756,8 +4800,9 @@ try {
         try {
           const kotesJegyzekMost = await kotesTar.olvas();
 
-          // (1) OLVASÁS: akiről egy ablak óta nem hallottunk, azt a tábláról keressük.
-          const nemak = nemaKotesek(kotesJegyzekMost, kozMs);
+          // (1) OLVASÁS: akiről egy ablak óta nem hallottunk, azt a tábláról keressük — ⭐ a régóta hallgatót visszalépő
+          // ütemben (72. mérés: percenként keresett egy rég eltűnt kötést, a mobilneten).
+          const nemak = tablanKeresendok(kotesJegyzekMost, kozMs);
           if (nemak.length) {
             const talaltak = await tablarolOlvasas(sajatTablaKulcsTeljes, nemak, (e) => {
               if (e.mi === 'MEGVAN-A-TABLAN') {
@@ -4943,7 +4988,10 @@ try {
         // csak nem élvezi az igazítás hasznát — *romlás, nem törés* (D19).
         // (a `kozMs` a kör elején számolódott — ugyanaz az ütem szabja meg az ablakot
         //  és az alvást; két külön számítás előbb-utóbb szétcsúszna)
-        const most = Date.now();
+        // ⭐ A MÉRÉS KAPCSOLÓJA (72. mérés): `KOINO_ORAELTOLAS` (ms) egy elcsúszott órát utánoz — terepen a telefon órája
+        // ~1 mp-cel tért el, és a két kör ettől ütközött. Élesben 0.
+        const oraEltolas = Number.parseInt(process.env.KOINO_ORAELTOLAS ?? '0', 10) || 0;
+        const most = Date.now() + oraEltolas;
         const kovetkezoAblak = Math.ceil((most + 1) / kozMs) * kozMs;
         await new Promise((teljesites) => setTimeout(teljesites, kovetkezoAblak - most));
       }

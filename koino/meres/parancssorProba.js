@@ -745,6 +745,55 @@ proba('⭐⭐ D98/1: a csere végén a társ alatt feljegyződik a tár állása
   });
 
 // ===================================
+// ⭐⭐ D99: TÁRSANKÉNT EGY CSERE A FÉL KÖRÖN BELÜL, HA NINCS ÚJDONSÁG (2026-10-10)
+// ===================================
+//
+// Két valódi őrjárat, 6 mp-es körrel, B órája 2 mp-cel előbbre jár (a terep alakja: a két kör közel, de nem egyszerre).
+// ⭐ Viselkedést mérünk: A a saját körében kihagyja B-t (B már hívta ebben a fél körben, és A-nak nincs újdonsága) —
+// egyetlen csere sem bukik el; és ha A-nál új gondolat születik, az eljut B lemezére. Rontás: a kihagyás nélkül A minden
+// körében hív (egyetlen „nem hívok” sincs).
+proba('⭐⭐ D99: a társ, akivel a fél körön belül már cseréltünk, és nincs újdonságunk, nem hívódik újra — az újdonság mégis átjut', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const futok = [];
+  try {
+    await fut(a, 'koino', 'D99', 'próba', 'nyilt');
+    await fut(a, 'kivisz', join(a, 'mind.jsonl'));
+    await fut(b, 'behoz', join(a, 'mind.jsonl'));
+    await fut(a, 'tars', '127.0.0.1', '7967', 'B');
+    await fut(b, 'tars', '127.0.0.1', '7966', 'A');
+    const naplo = { a: '', b: '' };
+    const indit = (hely, port, nev, kornyezet = {}) => {
+      const p = spawn(process.execPath, [KOINO_JS, 'orjarat', '0.1', String(port)], {
+        env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...kornyezet }, stdio: ['ignore', 'pipe', 'pipe']
+      });
+      p.stdout.on('data', (d) => { naplo[nev] += d.toString(); });
+      p.stderr.on('data', (d) => { naplo[nev] += d.toString(); });
+      futok.push(p);
+    };
+    indit(a, 7966, 'a');
+    indit(b, 7967, 'b', { KOINO_ORAELTOLAS: '2000' });
+    await varj(26000);
+    const kihagyasA = (naplo.a.match(/nem hívok/g) ?? []).length;
+    const g = azonosito(await fut(a, 'gondolat', 'D99 újdonság'), 'Létrejött:');
+    await varj(14000);
+    const bTar = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+    const elbukott = (naplo.a + naplo.b).match(/elbukott/g)?.length ?? 0;
+    const ki = { kihagy: kihagyasA >= 2, nincsElakadas: elbukott === 0, atjutott: !!g && bTar.includes(g) };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  D99 — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+        + ' · kihagyás A-nál: ' + kihagyasA + ', elbukott: ' + elbukott + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    for (const p of futok) p.kill();
+    await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⛔ A 72. MÉRÉS LELETE: AZ „ALAP” KÉSZÜLÉK A CSAK SZÜLETÉSÉBŐL ISMERT GONDOLATOT IS VÁLLALHATJA (2026-10-09)
 // ===================================
 //
@@ -1475,7 +1524,7 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
     let orjarat = null;
     try {
       await fut(A, 'koino', 'Csomag-próba');
-      // ⭐ D93/1: B TAG — a javaslat ELŐTT (a döntés 1–2 mp alatt lezárul); a csomag a tagsági láncát is viszi C-nek.
+      // ⭐ D93/1: B TAG — a javaslat ELŐTT (a döntés 6–8 mp alatt lezárul); a csomag a tagsági láncát is viszi C-nek.
       await fut(A, 'kivisz', f('szuletes.jsonl'));
       await fut(B, 'behoz', f('szuletes.jsonl'));
       await taggaTesziKeszulek(A, B);
@@ -1484,7 +1533,9 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
       if (!g1 || !g2) return false;
       for (const g of [g1, g2]) {
         await fut(A, 'pont', g, '10');
-        await fut(A, 'ertek', g, '51', '0', '1', '2');     // a döntés 1–2 mp alatt lezárul
+        // ⚠️ A döntés 6–8 mp alatt zárul le (2026-10-10-ig 1–2 mp volt: B négy parancsa — kivisz, behoz, pont, szavaz —
+        // ~2 mp, és B szavazata „késői szavazat” lett: ELFOGADVA az ELVETVE helyett. A próba időzítése volt szoros.)
+        await fut(A, 'ertek', g, '51', '0', '6', '8');
       }
       const j = azonosito(await fut(A, 'egyesit', g1 + ',' + g2, 'EGYESITETT'), 'Szerkesztési javaslat beadva');
       if (!j) return false;
@@ -1495,7 +1546,7 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
       await fut(B, 'szavaz', j, 'ellenez');
       await fut(B, 'kivisz', f('vissza.jsonl'));
       await fut(A, 'behoz', f('vissza.jsonl'));
-      await varj(3000);                                   // a lezárás után
+      await varj(9000);                                   // a lezárás után (legfeljebb 8 mp a javaslattól)
 
       // ⭐ A ŐRJÁRATA egy kört fut (társ nélkül is lefut a háztartás) — és kiadja a csomagot.
       // ⚠️ A DHT-belépő nélkül (mint a többi őrjárat-próba): a valódi DHT-ra kopogás a teljes sor terhelése
@@ -1538,10 +1589,17 @@ proba('⭐⭐ D85 T3 (B): a `csomag` a töredékbe ír, és a csak-G1-tartó a c
       const kepC = await fut(C, 'allapot');
       const kepD = await fut(D, 'allapot');
       // Az őrjárat kiadta mindkét csomagot (a tárban), a parancs már nem talál pótolnivalót.
-      return csomagok === 2 && /1 lezárt döntés · 0 új csomag/.test(kiadas) && toredekben
-        && kepA.includes('ELVETVE') && kepC.includes('ELVETVE')
+      const ki = {
+        ketCsomag: csomagok === 2, nincsPotolnivalo: /1 lezárt döntés · 0 új csomag/.test(kiadas), toredekben,
+        aElvetve: kepA.includes('ELVETVE'), cElvetve: kepC.includes('ELVETVE'),
         // ⭐ D85 T3: D a G2-es részt nem ismeri — „NEM ISMERT”, és a G1-e nem olvadt be (a régi címe áll)
-        && kepD.includes('NEM ISMERT') && !kepD.includes('ELVETVE') && kepD.includes('„ELSO"');
+        dNemIsmert: kepD.includes('NEM ISMERT') && !kepD.includes('ELVETVE'), dRegiCim: kepD.includes('„ELSO"')
+      };
+      if (!Object.values(ki).every(Boolean)) {
+        process.stdout.write('  csomag — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+          + ' · csomagok: ' + csomagok + '\n');
+      }
+      return Object.values(ki).every(Boolean);
     } finally {
       if (orjarat) orjarat.kill();
       await varj(300);

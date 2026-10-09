@@ -202,6 +202,23 @@ export function nemaKotesek(jegyzek, ablak, most = Date.now()) {
 }
 
 /**
+ * ⭐ A NÉMA KÖTÉS KERESÉSE A TÁBLÁN — VISSZALÉPŐ ÜTEMBEN (a 72. mérés terepen, 2026-10-10): a telefon egy régóta hallgató
+ * kötését (egy rég nem látott másik telefont) minden percben kereste a táblán — minden keresés néhány KB DHT-forgalom, a
+ * mobilneten. ⭐ A hallgatás k-adik körében keresünk, ha k ≤ 4 (a friss leszakadás: a gyors visszatalálás a lényeg — 43.
+ * mérés), utána a kettőhatvány körökben (8, 16, 32), és 64 kör fölött 64 körönként. Egy nap alatt percenkénti körrel
+ * ~1440 helyett ~30 keresés. ⚠️ Állapot nélkül: a k a hallgatás hosszából számolódik (a körök a fal órájához igazodnak).
+ * @returns {Array<Object>} a most keresendő néma kötések
+ */
+export function tablanKeresendok(jegyzek, ablak, most = Date.now()) {
+  return nemaKotesek(jegyzek, ablak, most).filter((k) => {
+    const kor = Math.floor((most - (k.utoljara ?? 0)) / Math.max(1, ablak));
+    if (kor <= 4) return true;
+    if (kor < 64) return (kor & (kor - 1)) === 0;
+    return kor % 64 === 0;
+  });
+}
+
+/**
  * A jegyzék karbantartása: a kötés-korláton felüli, LEGRÉGEBBEN HALLOTT tételek kiesnek.
  *
  * ⛔ MIÉRT KELL: e nélkül a jegyzék minden valaha látott készüléket megőrizne — pontosan
