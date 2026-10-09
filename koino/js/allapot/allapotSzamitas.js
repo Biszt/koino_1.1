@@ -252,6 +252,9 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
   console.log('allapotSzamitasa - KEZDÉS', { esemenyDarab: esemenyek.length });
   // ⭐ B/2 (D75/4): azok az események, amik CSAK az átmeneti tárban vannak — a D14 kivételéhez (lent).
   const csakAtmeneti = beallitas.csakAtmeneti instanceof Set ? beallitas.csakAtmeneti : null;
+  // ⭐ A szigorú (b) alatt (D97): mely entitások szeletét NEM tartom (a részvételemen kívül) — azoknak a pontjait nem
+  // láthatom (csak a születésük jön el, a szülő vagy a gyökér-darab bejelentéseként), tehát a D14 rájuk sem ítélhet.
+  const nemTartott = typeof beallitas.nemTartott === 'function' ? beallitas.nemTartott : null;
   // Mely entitásoknak láttuk legalább egy pont-eseményét (a D14 kivétele és a döntés ismerete ugyanez a jel).
   const pontjaIsmert = new Set();
 
@@ -477,7 +480,10 @@ export function allapotSzamitasa(esemenyek, beallitas = {}) {
       // ismerjük (pl. a szülője köréből jött a születése), és egyetlen pont-eseményét sem láttuk, akkor a
       // „nincs pontja” és a „nem tudjuk, van-e” két különböző dolog (D19) — nem tűnik el, hanem jelölve marad.
       // ⚠️ Ha akár egy pont-eseményét is látjuk, a 0 pont tudás: ott a D14 áll.
-      if (csakAtmeneti?.has(azonosito) && !pontjaIsmert.has(azonosito)) {
+      // ⭐⭐ ÉS A NEM TARTOTT SZELET IS (a 72. mérés terepen, 2026-10-09): a telefon a laptop új gondolatának csak a
+      // születését kapta meg (a gyökér-darabján át), a pontjait nem — a D14 ezért eltüntette, és a `pont` sem találta
+      // meg: a szigorú (b) alatt egy új gondolatot nem lehetett felvenni. A D14 tehát csak a TARTOTT szeletre ítél.
+      if ((csakAtmeneti?.has(azonosito) || nemTartott?.(azonosito)) && !pontjaIsmert.has(azonosito)) {
         entitas.pontokIsmeretlenek = true;
         continue;
       }

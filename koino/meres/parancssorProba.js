@@ -745,6 +745,84 @@ proba('⭐⭐ D98/1: a csere végén a társ alatt feljegyződik a tár állása
   });
 
 // ===================================
+// ⛔ A 72. MÉRÉS LELETE: AZ „ALAP” KÉSZÜLÉK A CSAK SZÜLETÉSÉBŐL ISMERT GONDOLATOT IS VÁLLALHATJA (2026-10-09)
+// ===================================
+//
+// Terepen a telefon (alap mód) a laptop új gondolatának csak a születését kapta meg (a gyökér-darabján át), a pontjait nem
+// — és a D14 eltüntette: a `pont` „Nincs ilyen azonosító”-t mondott, a szigorú (b) alatt egy új gondolatot nem lehetett
+// felvenni. ⭐ Viselkedést mérünk: B a cserén csak A gondolatának születését kapja; a `pont` sikerül, és a következő cserén
+// A-nál ott B pontja, B-nél pedig A pontja (a szelet egészében átjött). Rontás: a D14 a nem tartott szeletre is ítél →
+// a `pont` elbukik, A-hoz nem jut el semmi.
+proba('⛔ az „alap” készülék a csak születéséből ismert gondolatot is látja („pontjai ismeretlenek”) és vállalhatja — utána a szelet átjön', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const alap = { KOINO_KISZOLGALAS: 'alap' };
+  try {
+    await fut(a, 'koino', 'Vállalás', 'próba', 'nyilt');
+    const g = azonosito(await fut(a, 'gondolat', 'Csak a születése jön'), 'Létrejött:');
+    await csereKor(a, b, 7965, alap);
+    const olvas = async (m) => (await readFile(join(m, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
+      .map((x) => JSON.parse(x));
+    const bElotte = await olvas(b);
+    const aPontja = (await olvas(a)).find((e) => e.tipus === 'TudatpontRendezes');
+    const allapot = await fut(b, 'allapot', alap);
+    const pont = await fut(b, 'pont', g, '5', alap);
+    await csereKor(a, b, 7965, alap);
+    const aUtana = await olvas(a);
+    const bUtana = await olvas(b);
+    const ki = {
+      csakSzuletes: bElotte.some((e) => e.tipus === 'GondolatLetrehozas' && e.azonosito.startsWith(g))
+        && !bElotte.some((e) => e.azonosito === aPontja?.azonosito),
+      latja: /ismeretlenek/.test(allapot),
+      pontSikerult: !/Nincs ilyen azonosító/.test(pont),
+      aMegkapta: aUtana.some((e) => e.tipus === 'TudatpontRendezes' && e.szerzo !== aPontja?.szerzo && e.adat?.entitas?.startsWith(g)),
+      bMegkapta: bUtana.some((e) => e.azonosito === aPontja?.azonosito)
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  vállalás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⛔ A 72. MÉRÉS LELETE: A HOSSZAN FUTÓ VENDÉG A MEGKAPOTT SZÜLETÉST AZONNAL ISMERI (2026-10-09)
+// ===================================
+//
+// Terepen a telefon (a vendég) őrjárata a „még nem ismerem a koinó születését” választ 10 percig megjegyezte — a
+// cserében megkapott születést addig nem vette figyelembe, és a laptop minden körben (~6 KB-ért) újraküldte. ⭐ Viselkedést
+// mérünk: a vendég `figyel`-je EGY folyamat; a gazda kétszer cserél vele — a második cserén már nem küld semmit.
+// Rontás: a „nincs” emlék a tár változásától függetlenül 10 percig él → a második cserén „küldtem 1”.
+proba('⛔ a hosszan futó vendég a cserében megkapott koinó-születést azonnal ismeri — a gazda nem küldi újra', async () => {
+  const gazda = await ujKeszulek();
+  const vendeg = await ujKeszulek();
+  let figyelo = null;
+  try {
+    await fut(gazda, 'koino', 'Születés', 'próba', 'nyilt');
+    figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7964'], {
+      env: { ...process.env, KOINO_ADAT: vendeg, KOINO_NAPLO: '' }, stdio: 'ignore'
+    });
+    await varj(2000);
+    const elso = await fut(gazda, 'csere', '127.0.0.1', '7964');
+    await varj(500);
+    const masodik = await fut(gazda, 'csere', '127.0.0.1', '7964');
+    const kuldott = (k) => Number((/küldtem (\d+)/.exec(k) ?? [])[1] ?? -1);
+    if (kuldott(elso) !== 1 || kuldott(masodik) !== 0) {
+      process.stdout.write('  születés — küldtem: első ' + kuldott(elso) + ', második ' + kuldott(masodik) + '\n');
+    }
+    return kuldott(elso) === 1 && kuldott(masodik) === 0;
+  } finally {
+    figyelo?.kill();
+    await varj(1000);
+    await rm(gazda, { recursive: true, force: true });
+    await rm(vendeg, { recursive: true, force: true });
+  }
+});
+
+// ===================================
 // ⭐⭐ D98/2–4: A LÁNC-KÖR A VALÓDI CSERÉBEN — a két ágú szerző (2026-10-09)
 // ===================================
 //

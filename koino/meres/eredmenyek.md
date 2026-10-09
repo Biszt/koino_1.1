@@ -4908,3 +4908,75 @@ bizonyítékok gyorsítótár nélkül (a régi `naploBizonyitek` útja).*
 szerzői kulcs) üres kérdéssel. ⭐ A szerző oldala a részfa-gyorsítótárral (D98/4) a második kérdéstől 9–42 ms — nélküle a
 8 bizonyíték 5000-nél 1,9 s (O(n) a bizonyítékonként); az első kérdés ideje a lánc visszafelé bejárása (a testek
 betöltése), ami folyamatonként egyszeri.
+
+## 72. ⭐⭐ TEREPEN A VÉGLEGES SOR UTÁN: LAPTOP OTTHON, TELEFON A SZOMSZÉD WIFIJÉN — zárt koinó, szigorú (b) (2026-10-09, 20:13–20:50)
+
+*A program: `ae4e0ae` (1042 önpróba; a telefonon a frissítés után az `alap` és a `fa` csoport — 142 próba — zöld). Új,
+ZÁRT koinó (`KOINO_AZONOSITO=terep`, a laptop az alapító), mindkét gép a régi adat-mappájával (a 13 napos, még a `sajat`
+koinóban kötött kötés és a tábla-kulcsok), mindkettő `orjarat 1`, „alap” módban (a szigorú (b)). A laptop oldalát Claude
+futtatta (napló fájlba; 20:39-től `KOINO_UZENETMERES=1` — a saját kiküldött üzenetek nyílt bájtjai típusonként), a telefont
+Csaba (Termux, `tee ~/orjarat-T.log`; a napló bemásolva).*
+
+### ✅ A TÁBLÁN ÁT, OTTHONI ISMERKEDÉS NÉLKÜL — a régi kötés másik koinóban is talál
+
+```
+L:  20:13:53 1 címre kopogtam, egyik rés sem nyílt meg           (a telefon régi helyi címe)
+T:  20:24:25 a táblán megvan egy néma társ új címe: 31.46.251.79:40967 (az ő órája szerint 10 perce írta ki)
+T:  20:25:42 az új címemet kiírtam a táblára (2 társ rekeszébe, 14 tároló)
+L:  20:26:26 a táblán megvan egy néma társ új címe: 84.2.81.146:7373 (az ő órája szerint 2 perce írta ki)
+L:  20:27:00 rés nyílt: 84.2.81.146:7373 (218 ms)
+T:  20:26:59 rés nyílt: 31.46.251.79:40967 (58575 ms)
+```
+
+⭐ Mindkét gép címe megváltozott a 43. mérés óta (a laptopé ugyanazon a gépen 31.46.251.115 → .79, a szomszédé
+5.187.184.117 → 84.2.81.146), a telefon a szomszéd routerén megtartotta a 7373-at. A kötés a tábla-kulcshoz kötött, nem a
+koinóhoz: az új koinóban is talált. ⚠️ Ugyanaz, mint a 43.-ban: a telefon egy percig kopogott hiába (58575 ms), amíg a
+laptop ki nem olvasta az ÚJ címét a tábláról — az otthoni router cím-függően szűr, a tábla itt az egyetlen út.
+
+### ✅ A ZÁRT KOINÓ KAPUJA TEREPEN (D93/3)
+
+A nem tag telefon csak a koinó születését kapta meg, a laptop csak a belépését vette át (20:27:00: „1 új esemény, küldtem
+1”). 20:34:00-kor a laptopról meghívtam (`meghiv`), a meghívás átment, 20:34:32-kor a telefon kiadta a tagsági csomagját; a
+`tagsag` a telefonon: „✔ tag — tag hívta be (1. szint)”. ✅ A lánc-kör (D98/2) a laptopon a telefon láncát (a belépését)
+ellenőrizte (`lancellenorzes.json`).
+
+### ⛔ 1. LELET — A HOSSZAN FUTÓ VENDÉG 10 PERCIG NEM VETTE ÉSZRE A MEGKAPOTT SZÜLETÉST (javítva)
+
+20:27–20:33 között a laptop minden körben „küldtem 1”-et írt (5,4–5,9 KB körönként a ~2 helyett). Az ok: a telefon
+őrjárata a „nem ismerem a koinó születését” választ 10 percig megjegyezte (`koinoSzuletese`) — a cserében megkapott
+születést addig nem tette a párjai közé, és a laptop újraküldte. Helyben nem jött elő, mert ott a vendég minden cserét új
+folyamatban futtatott. ✅ Javítva: a „nincs” emlék a tár változásakor elévül; parancssor-próba (a vendég `figyel`-je egy
+folyamat, a második cserén a gazda nem küld semmit — a régi kóddal „küldtem 1”).
+
+### ⭐ A „NINCS ÚJDONSÁG” CSERE TEREPEN — és percenként kettő
+
+```
+L:  20:41:00 csere a résen 84.2.81.146:7373 — 0 új esemény, küldtem 0 (1 kör, 2.4 KB)
+        (nyíltan küldtem: NYITAS 423 B, CIMEK 221 B, FAJLOK 29 B)
+L:  20:41:02 csere a résen 84.2.81.146:7373 — 0 új esemény, küldtem 0 (1 kör, 1.8 KB)      (a telefon kezdeményezte)
+T:  20:41:59 … (1 kör, 1.8 KB)  ·  20:42:01 … (1 kör, 2.3–2.8 KB)
+```
+
+Egy „nincs újdonság” csere 1,8–2,8 KB a vonalon (a kezdeményező többet mér — a kopogás és a kézfogás az övé), nyíltan
+oldalanként ~0,67 KB. A 43. mérés 1,2–1,7 KB-jához képest a titkosítás (+~0,4 KB, 57.) és a gyökér-darab jele (+~0,1 KB)
+adja a különbséget — a várt nagyság. ⚠️ Percenként KÉT csere megy (mindkét irányból egy-egy, a 45. mérés tényezője — a
+(iii) döntés felezné): párosan ~4,5 KB/perc, ~6,5 MB/nap.
+
+### ⛔ 2. LELET — A SZIGORÚ (b) ALATT AZ ÚJ GONDOLATOT NEM LEHETETT FELVENNI (javítva)
+
+A laptop 20:34-kor gondolatot írt; a születése 20:35:00-kor a telefon gyökér-darabján át megérkezett („1 új esemény”), a
+pontjai nem (a telefon a szeletet nem vállalja). A telefonon: `GONDOLATOK (még nincs)`, és a `pont LsAtzEz7 5` → „Nincs
+ilyen azonosító”. Az ok: a D14 („a 0 pontos entitás nem létezik”) a NEM TARTOTT szeletre is ítélt — a telefon egyetlen pontját
+sem láthatta, tehát „0”-nak vette. ✅ Javítva (a D75/4 általánosítása): a D14 csak a tartott (vállalt) szeletre ítél; a többi
+„pontjai ismeretlenek” jelzéssel látszik, és vállalható. Parancssor-próba: az „alap” vendég a cserén csak a születést kapja,
+látja, pontot tesz rá, és a következő cserén mindkét irányban átjön a szelet (rontással mind a négy feltétel bukik).
+
+### ⚠️ AMI NYITVA MARADT
+
+- **A két irány ütközése** (20:49:59): a két gép egy másodpercen belül egyszerre kezdeményezett (a laptop 20:39-es
+  újraindítása óta ilyen közel jár a két kör) — „Várt üzenet: NYITAS, érkezett: CIMEK”, a laptop oldalán „nem válaszol
+  (10000 ms)”; 10 mp múlva magától helyreállt (`foglalt` → újra). Mérendő helyben (két őrjárat, egymáshoz igazított
+  körrel); a (iii) döntés (egy csere ablakonként) megszüntetné.
+- **A néma kötés keresése** a telefonon percenként (`egy néma társ (35oykowL…) nincs a táblán (5–8 DHT-gép felelt)`) — egy
+  régi, rég nem látott kötés (valószínűleg a 40. mérés másik telefonja); minden keresés néhány KB DHT-forgalom. A régóta
+  néma kötést ritkábban kellene keresni (visszalépő ütem).

@@ -717,3 +717,9 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 93. **2026-10-09 · a hallgatás a lánc-körben** → **nincs „megtagadta” állapot, csak FÜGGŐBEN (mióta)** · mert a kérdezett
     társról nem tudni biztosan, hogy ő-e a szerző (a bemondott kulcs nem hitelesített) — egy hamis bemondó hallgatása
     különben becsületes szerzőt bélyegezne meg (D19) · a megépítéskor, Claude · `lancEllenorzes.js`.
+94. **2026-10-09 · a D14 a szigorú (b) alatt (D75/4: „a D14 csak a tartós tárra”)** → **a D14 csak a TARTOTT (vállalt)
+    szeletre ítél; amit nem tartok, és egyetlen pont-eseményét sem láttam, az „pontjai ismeretlenek” jelzéssel látszik** ·
+    mert terepen (72. mérés) a telefon a laptop új gondolatának csak a születését kapta meg (a gyökér-darabján át, a tartós
+    tárba), a D14 eltüntette, és a `pont` sem találta — a szigorú (b) alatt új gondolatot nem lehetett felvenni · a terepi
+    mérés után, Claude · `allapotSzamitas.js` (`nemTartott`), `koino.js` (`kepetKeszit` — a vállalásból, nem a részvételből:
+    az utóbbi maga is a képet kéri).

@@ -673,7 +673,14 @@ async function kepetKeszit(napokMulva = 0, melyikTar = tar, melyikKoino = KOINO)
   // ⭐ B/2: a két tárból (az átmeneti csak a saját koinónké — a belépő tér más koinóinál nincs).
   const { esemenyek, csakAtmeneti } = await ketTarBemenete(melyikTar, melyikTar === tar ? atmeneti : null,
     melyikKoino);
-  const allapot = allapotSzamitasa(esemenyek, { csakAtmeneti });
+  // ⭐ A szigorú (b) alatt (D97): amit nem tartok, annak a pontjai ismeretlenek — a D14 nem tüntetheti el (72. mérés).
+  // ⚠️ A VÁLLALÁSBÓL (a saját láncomból), nem a részvételi halmazból: az utóbbi a töredékekhez maga is ezt a képet kéri.
+  let vallalt = null;
+  if (melyikTar === tar && melyikKoino === KOINO) {
+    try { if (!(await kiszolgalasBeallitas()).mindent) vallalt = (await ketFokAllapota()).vallalas.szeletek; }
+    catch { vallalt = null; }
+  }
+  const allapot = allapotSzamitasa(esemenyek, { csakAtmeneti, ...(vallalt ? { nemTartott: (az) => !vallalt.has(az) } : {}) });
   // ⭐ D95/1: a nagy szeletű részek döntése az ellenőrzött lezárási összegzésekből (az összegző tartónál).
   const osszegzesek = melyikTar === tar ? await ellenorzottOsszegzesek() : new Map();
   const javaslatok = javaslatokSzamitasa(allapot.szamitok, allapot, Date.now() + napokMulva * NAP, { osszegzesek });
@@ -2086,8 +2093,11 @@ async function azonossagKotese(alairo, sz, h) {
  */
 async function koinoSzuletese() {
   if (koinoSzuletesEmlek?.esemeny) return koinoSzuletesEmlek.esemeny;
-  // ⚠️ A „nincs” is emlék (10 percig): a táras keresés drága, és a születés ritkán érkezik.
-  if (koinoSzuletesEmlek && Date.now() - koinoSzuletesEmlek.ido < 600_000) return null;
+  // ⚠️ A „nincs” is emlék (10 percig): a táras keresés drága, és a születés ritkán érkezik. ⛔ DE CSAK AMÍG A TÁR NEM
+  // VÁLTOZOTT (2026-10-09, a 72. mérés terepen): a hosszan futó őrjárat különben a cserében megkapott születést 10 percig
+  // nem vette figyelembe — a társ minden körben újraküldte (~6 KB körönként).
+  const most = tar.allas?.()?.n ?? null;
+  if (koinoSzuletesEmlek && Date.now() - koinoSzuletesEmlek.ido < 600_000 && koinoSzuletesEmlek.n === most) return null;
   let k = null;
   const h = await sajatHorgonyom();
   if (h) {
@@ -2098,7 +2108,7 @@ async function koinoSzuletese() {
       ?? null;
   }
   if (!k) k = (await koinoEsemenyei(tar, KOINO)).find((e) => e.tipus === 'KoinoLetrehozas') ?? null;
-  koinoSzuletesEmlek = { esemeny: k, ido: Date.now() };
+  koinoSzuletesEmlek = { esemeny: k, ido: Date.now(), n: tar.allas?.()?.n ?? null };
   return k;
 }
 
@@ -2267,6 +2277,7 @@ function resMunka(allapot, halo, tars) {
     // be, néhány ismert tartójukkal (a megnézettet soha — D75/3).
     const rajVallalas = await sajatVallalasa(null);
     const rajJegyzek = await szeletJegyzekTarolo().olvas();
+    const uzenetMeres = process.env.KOINO_UZENETMERES === '1' ? new Map() : null;
     const csere = await csereUdpResen(halo, tars.cim, tars.port, tar, KOINO, {
       // ⭐⭐ D93/3: a személyem (a kézfogás átiratára), a tagsági csomagom és a zárt koinó kapuja.
       ...await azonossagBeallitasa(),
@@ -2295,7 +2306,9 @@ function resMunka(allapot, halo, tars) {
         adhatok += Array.isArray(van) ? van.length : 0;
         return van;
       },
-      fajlOlvas: fajlok.olvas
+      fajlOlvas: fajlok.olvas,
+      // ⭐ A terepi mérés műszere (`KOINO_UZENETMERES=1`): a SAJÁT kiküldött üzeneteim nyílt bájtjai típusonként.
+      ...(uzenetMeres ? { uzenetMeres } : {})
     });
     const bajt = (csere.bajtKuldott ?? 0) + (csere.bajtKapott ?? 0);
     // ⭐ D95/3: amit egy tartó a csak küldő úton átvett (vagy már tudott), azt többé nem ajánlom fel.
@@ -2330,6 +2343,10 @@ function resMunka(allapot, halo, tars) {
       + SZIN.vege + SZIN.halvany + ' — ' + alap.uj + ' új esemény, küldtem '
       + alap.kuldott + ' (' + alap.korok + ' kör, '
       + adatMennyiseg({ bajtKuldott: bajt }) + ')' + SZIN.vege);
+    if (uzenetMeres?.size) {
+      kiir(SZIN.halvany + '      (nyíltan küldtem: ' + [...uzenetMeres.entries()].sort((x, y) => y[1] - x[1])
+        .map(([k, b]) => k + ' ' + b + ' B').join(', ') + ')' + SZIN.vege);
+    }
 
     // ⭐ D95/2: a tagsági kísérők köre — kimondjuk, ha valakinek a tagsága most derült ki.
     if (csere.tagsagEredmeny?.megtudott) {
@@ -2704,7 +2721,7 @@ async function allapotKiirasa(napokMulva) {
       + ' · a tiéd: ' + sajat + ' · hozzájárulók: ' + e.hozzajarulok.size
       // ⭐ B/1–B/2 (D75/4): amit nem vállalok, az „nem tartod”; ami csak az átmenetiben van, és a pontjait
       // nem ismerem, az nem tűnt el (a D14 csak a tartósra vonatkozik) — kimondjuk.
-      + (e.pontokIsmeretlenek ? ' · ⚠ a pontjai ismeretlenek (csak az átmeneti tárban)' : '')
+      + (e.pontokIsmeretlenek ? ' · ⚠ a pontjai ismeretlenek (nem tartom a szeletét — csak a születését láttam)' : '')
       + (vallalas.szeletek.has(e.azonosito) ? '' : ' · nem tartod') + SZIN.vege);
     if (e.szoveg) {
       // ⭐ D72: a szöveg külön darab lehet — a fájl-tárból oldjuk fel; ha még nincs meg, kimondjuk.
