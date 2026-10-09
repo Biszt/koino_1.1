@@ -4853,3 +4853,27 @@ annak tartóit sorra felkeresi — járványszerűen terjed, R = 2-vel medián 1
 a tartók számával logaritmikusan nőnek). 5000 készüléken, 50 000 szeleten ugyanez: átfedés szerint 94% (120 körön), a
 „változott előre” R = 2-vel medián 1, 90% 4, 99% 10 kör. ⭐ Ezért a D97/2 a „változott előre + forgatás (tartók sorban)”
 szabállyal épült.
+
+## 70. ⭐ A TÁRSANKÉNTI EMLÉKEZET FELSŐ HATÁRA — mennyi a változott közös szeletek megkeresése? (a ⑧ átvizsgálása, 2026-10-09, a laptopon)
+
+*`tarsEmlekezetMeres.js`: két tár, n közös szelet (mindkettő mindet vállalja, a közös halmaz — D97/1 — már ismert); a B
+tárba v közös szeletbe egy-egy új esemény kerül. A valódi párbeszéd (`csereUdpResen`) a gépen belüli UDP-résen,
+titkosítva. ⭐ Új műszer a párbeszédben (`uzenetMeres`): üzenet-típusonként a kiküldött nyílt bájtok (mindkét fél), így
+látszik, mennyi az ELSŐ SZINT (a `SZELETEK` — a „szelet:lenyomat” párok tartomány-egyeztetése), amit a társankénti
+emlékezet (F) megspórolhatna.*
+
+```
+   n │ v = 0  │ v = 1                       │ v = 5                        │ v = 20
+  50 │ 1,3 KB │  5,1 KB (első szint 1,3 KB) │ 10,3 KB (első szint  2,1 KB) │ 28,8 KB (első szint  4,5 KB)
+1000 │ 1,3 KB │  6,3 KB (első szint 2,3 KB) │ 14,9 KB (első szint  6,5 KB) │ 45,6 KB (első szint 19,1 KB)
+5000 │ 1,3 KB │  7,7 KB (első szint 3,6 KB) │ 21,2 KB (első szint 12,4 KB) │ 70,4 KB (első szint 43,8 KB)
+```
+
+*(Az összeg a vonal bájtja, az „első szint” nyílt JSON-bájt. Az esemény maga változásonként ~0,6 KB, a második szint
+— a változott szeleten belül — ~0,25 KB; a NYITAS 768 B és a CIMEK 122 B minden cserén ott van.)*
+
+⭐ **A lelet:** ha a közös szeletek közül néhány változott, a forgalom legnagyobb része az első szint — az, hogy MELYIK
+szelet tér el: a nyílt forgalom 25–62%-a, változásonként 1000 szeletnél ~1 KB, 5000-nél ~2,2 KB (a felosztások száma
+miatt logaritmikusan nő; a lista-küszöb alatti tartományokban a teljes, 87 jeles párok utaznak). Ha a két fél tudná, hol
+tartott a legutóbbi cseréjükön, a változott szeletek listája változásonként ~0,1 KB volna. A mai alak a „végtelen” elvét
+nem sérti, csak drágább. A ⑧ átvizsgálása: [`docs/f_a_atvizsgalas.md`](../../docs/f_a_atvizsgalas.md).

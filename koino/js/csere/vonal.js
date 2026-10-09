@@ -271,7 +271,13 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let fajlokNala = [];
 
   const sor = uzenetSor(kapcsolat);
-  const kuld = (uzenet) => kapcsolat.write(JSON.stringify(uzenet) + '\n');
+  // ⭐ A MÉRÉSEK műszere (70. mérés): ha a hívó ad egy Map-et, üzenet-típusonként összeadjuk a kiküldött (nyílt) bájtokat.
+  const uzenetMeres = beallitas.uzenetMeres instanceof Map ? beallitas.uzenetMeres : null;
+  const kuld = (uzenet) => {
+    const szoveg = JSON.stringify(uzenet) + '\n';
+    if (uzenetMeres) uzenetMeres.set(uzenet.uzenet, (uzenetMeres.get(uzenet.uzenet) ?? 0) + Buffer.byteLength(szoveg));
+    return kapcsolat.write(szoveg);
+  };
 
   /** A következő üzenet — és ellenőrizzük, hogy azt kaptuk-e, amit vártunk. */
   const varj = async (tipus) => {

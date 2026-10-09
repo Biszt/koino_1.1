@@ -345,7 +345,11 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
 8. **F — a társankénti emlékezet** és **az A hátralévői** (a D79 szúrópróba, a napló-alapú kettős-lánc
-   észlelés, a logaritmikus napló-bizonyíték).
+   észlelés, a logaritmikus napló-bizonyíték). 🔍 **Az átvizsgálás (2026-10-09):** [`f_a_atvizsgalas.md`](f_a_atvizsgalas.md) — a
+   70. mérés szerint a változott közös szeleteknél a forgalom legnagyobb része az első szint (változásonként ~1–2 KB; az F
+   ~0,1 KB-ra vinné); az A-nál a szigorú (b) alatt a szerző teljes láncát csak ő tartja (minden lánc-ellenőrzés kérdés
+   hozzá), de a pont-szerzők a vállalásuk miatt a raj tagjai, tehát a cserében kérdezhetők; az elágazás-bizonyíték (D82) és
+   a negatív levél (D80) új fajta nélkül elég. ⏸️ Csabánál: F1, A1, A2.
 
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat).
 
