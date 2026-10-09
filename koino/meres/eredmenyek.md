@@ -4980,3 +4980,19 @@ látja, pontot tesz rá, és a következő cserén mindkét irányban átjön a 
 - **A néma kötés keresése** a telefonon percenként (`egy néma társ (35oykowL…) nincs a táblán (5–8 DHT-gép felelt)`) — egy
   régi, rég nem látott kötés (valószínűleg a 40. mérés másik telefonja); minden keresés néhány KB DHT-forgalom. A régóta
   néma kötést ritkábban kellene keresni (visszalépő ütem).
+
+### ✅ A MÁSODIK FÉL (21:48–23:18, a javítások után — `61f783e`, a telefon is frissítve)
+
+- **A vállalás terepen** (22:26): a telefonon a laptop gondolata most „pontjai ismeretlenek” jelzéssel látszott, a `pont
+  LsAtzEz7 5` sikerült, és a következő cserén a szelet mindkét irányban átjött (a telefonon „összes pont: 105 ·
+  hozzájárulók: 2”) — **a változott szelet útján** (a laptop bontása: `VALTOZOTTPAROK 110 B`, `TARTOMANYOK 190 B`,
+  `ESEMENY 780 B`, és a lánc-kör: `LANCKEREK 252 B`, `LANCVALASZ 259 B`; a csere 8,0 KB). ⚠️ A telefon ennél a cserénél
+  „0 új esemény”-t írt ki, holott az esemény megérkezett — a második vállalásnál (23:09:59) már helyesen „1 új”; helyben nem
+  jön elő. Egyszeri; nyitva.
+- ⭐ **A szöveg (a törzs, D84/1) a vállalás ELŐTT átjött:** egy szöveges gondolat (`H3VLG5Xb`) születése után a telefon
+  állapota már a szövegét is kiírta, miközben „nem tartod” és „pontjai ismeretlenek” állt mellette — a telefon elkérte a
+  látott gondolat szöveg-darabját, és a laptop (a vállaló) kiadta. A vállalás után a szelet is átjött („1 új esemény”, 8,3 KB).
+- **Az ütközés** még kétszer (22:28:59, 22:30:59): a frissítés óta a telefon köre :59-kor, a laptopé :00-kor indult — egy
+  másodpercre egymástól.
+- **A hazaút** (23:15–23:17): a telefon kiesett a szomszéd hálózatából (a laptop cseréje 23:15:10-kor elbukott), és
+  23:17:00-kor már az otthoni hálózatról kopogott be (`192.168.1.124:7373`, 13 ms) — két perc kiesés, beavatkozás nélkül.

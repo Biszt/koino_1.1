@@ -128,7 +128,11 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
    működik (a meghívás után tag), a „nincs újdonság” 1,8–2,8 KB, percenként kettő. Két lelet javítva: a hosszan futó vendég
    10 percig nem vette észre a megkapott születést; a D14 a nem tartott szeletre is ítélt (a szigorú (b) alatt az új
    gondolatot nem lehetett felvenni — elágazás 94). Nyitva: a két irány ütközése (20:49:59), a néma kötés percenkénti
-   keresése a telefonon. ⏭️ A telefon frissítése (a javításokkal), és a vállalás terepen (`pont LsAtzEz7 5`).
+   keresése a telefonon. ✅ **A második fél (a telefon frissítve, `61f783e`):** a csak születéséből ismert gondolat
+   vállalása terepen végigment (a változott szelet útján, a lánc-körrel), a szöveg (a törzs) már a vállalás ELŐTT átjött (a
+   vállaló kiadja a látott gondolat szövegét), és a hazaút két perc kieséssel, beavatkozás nélkül. ⏭️ **A következő: a két
+   irány ütközése** (a terepen háromszor; ha a két gép köre egy másodpercre jár egymástól, az egyidejű csere 10 mp-re
+   elakad) — helyben reprodukálni, utána a (iii) kérdése (egy csere ablakonként).
 
 #### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
