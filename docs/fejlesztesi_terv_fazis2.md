@@ -4975,6 +4975,18 @@ medián 1, 99%-ban 9 kör alatt mindenhová eljut (2000 készüléken; 5000-en u
 ⚠️ NAT mögött a raj-társ közvetlenül nem mindig érhető el (a kopogtatás a függő kérelmeké) — a buli-ablakban a két fél
 egymást is választhatja; a mérése terepen.
 
+#### ✅ MEGÉPÜLT — a bekapcsolás többi része (2026-10-09)
+
+**A törzs korlátja** (D84/1): a fájl-randevúban a szöveg-darabot és a fájlokat alapból csak a VÁLLALT entitásaimra
+szolgálom ki (`fajlIgeny.js` `vallaltLenyomatok`, `koino.js` `fajlResz`); a „mindent” beállítás mindent kiad. **A kérelem az
+átmenetiből** (D75/3): a szelet-kérelmet a két tárból szolgálom ki (`kerelemKiszolgalo.szelet`), és a szelet döntési
+eseményeinek szerzőihez a tagsági kísérőket is küldöm (a nem tagnak nem). **A visszavett vállalás és a tár tömörítése**
+(D75/1, D73): a tartós tár ritka újraírása (`fajlTar.js` `ujrairas`, csak az író — `iro.js` `tomorites`; a többi folyamat a
+generáció-jelből újraépíti a mutatóját), a kivett események az átmeneti tárba kerülnek; marad a saját minden eseményem,
+a koinó születése, a részvételem szeletei és bejelentései, a vállalt szeletek születése, a gyökér-darabjaim, a tagsági
+láncok és a lezárási összegzések. ⛔ Az összegzett szeletből csak az ellenőrzött gyökér után (különben a két fokú
+vállalás billegne). Az őrjárat naponta egyszer, kézzel a `tomorit [proba]`. ⭐ **A ⑦ (B/3 — a szigorú (b)) ezzel kész.**
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

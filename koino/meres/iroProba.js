@@ -195,4 +195,22 @@ proba('⭐ A KAPOTT IDEGEN ELÁGAZÁST AZ ÍRÓ BIZONYÍTÉKKÉNT ELMENTI (D19) 
   }
 });
 
+proba('⛔ a TÖMÖRÍTÉST csak az író végezheti (D70) — a kliens `NEM-IRO`-t kap, az író elvégzi', async () => {
+  const k = await keszulek();
+  try {
+    const iro = await tarNyitas(k);
+    const kliens = await tarNyitas(k);
+    const g = await gondolatLetrehozasa({ koino: KOINO, kulcspar: k.kulcspar, szerzo: k.szerzo, tar: iro }, { cim: 'Tömör' });
+    await iro.iroLeszek();
+    let kliensHiba = null;
+    try { await kliens.tomorites(() => true); } catch (h) { kliensHiba = h.kod; }
+    const r = await iro.tomorites((e) => e.azonosito !== g.azonosito);
+    await iro.zar();
+    await kliens.zar();
+    return kliensHiba === 'NEM-IRO' && r.kivett.some((e) => e.azonosito === g.azonosito);
+  } finally {
+    await rm(k.hely, { recursive: true, force: true });
+  }
+});
+
 export default futtatas;

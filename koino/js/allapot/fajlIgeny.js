@@ -88,7 +88,8 @@ export function entitasFajljai(entitas) {
  * @param {Function} megvanE - async (lenyomat) → boolean · ⭐ KÍVÜLRŐL JÖN (1. szabály)
  * @param {Object} [beallitas]
  * @param {string} [beallitas.szerzo] - a saját kulcsom (a „vállaltam-e?" kérdéshez)
- * @returns {Promise<Object>} { hianyzok, megvan, osszes }
+ * @returns {Promise<Object>} { hianyzok, megvan, osszes, vallaltLenyomatok } — ⭐ D84/1: a vállalt entitásaim fájljai (és
+ *   szöveg-darabjai): a TÖRZSET alapból csak ezekre szolgálom ki
  */
 export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
   console.log('fajlIgeny.fajlIgenyek - KEZDÉS');
@@ -139,6 +140,7 @@ export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
 
   const hianyzok = [];
   let megvanDb = 0;
+  const vallaltLenyomatok = new Set([...hivatkozasok].filter(([, a]) => a.vallaltam).map(([l]) => l));
 
   for (const [lenyomat, adat] of hivatkozasok) {
     if (await megvanE(lenyomat)) { megvanDb++; continue; }
@@ -160,5 +162,5 @@ export async function fajlIgenyek(allapot, megvanE, beallitas = {}) {
 
   console.log('fajlIgeny.fajlIgenyek - VÉGE',
     { hianyzo: hianyzok.length, megvan: megvanDb });
-  return { hianyzok, megvan: megvanDb, osszes: hivatkozasok.size };
+  return { hianyzok, megvan: megvanDb, osszes: hivatkozasok.size, vallaltLenyomatok };
 }

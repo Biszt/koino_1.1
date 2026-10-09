@@ -15,7 +15,10 @@ import { createSocket } from 'node:dgram';
 import { probaGyujtemeny, ujEember } from './probaFuttato.js';
 import { esemenyTarNyitasa, tagsagFuggoTarolo } from '../js/tar/fajlTar.js';
 import { esemenyMentese } from '../js/tar/esemenyTar.js';
-import { csereUdpResen } from '../js/csere/udpVonal.js';
+import { csereUdpResen, szeletUdpResen, kezfogasUdpResen, udpKapcsolat } from '../js/csere/udpVonal.js';
+import { parbeszed } from '../js/csere/vonal.js';
+import { egyeztetettEsemenyek } from '../js/csere/szeletEgyeztetes.js';
+import { atmenetiTarNyitasa, ketTarNezet } from '../js/tar/atmenetiTar.js';
 import { beolvasztas } from '../js/csere/csere.js';
 import { tagsagKerdo, tagsagiKiserok } from '../js/allapot/tagsagKisero.js';
 import { rajKorAllapot, valtozottFeljegyzese, rajKorCeljai, VALTOZOTT_KORLAT } from '../js/csere/rajKor.js';
@@ -175,6 +178,56 @@ proba('⭐ a változott szeletek száma korlátos (a legrégebbi esik ki), és a
   valtozottFeljegyzese(b, ['X']);                      // új változás: elölről
   const k = rajKorCeljai(b, { szeletek: [], jegyzek, R: 1 });
   return a.valtozott.size === VALTOZOTT_KORLAT && !a.valtozott.has('s0') && k[0]?.port === 9001;
+});
+
+// ===================================
+// ⭐ D75/3 (a bekapcsolás): A KÉRELEM AZ ÁTMENETI TÁRBÓL — és a kísérői
+// ===================================
+
+/** A tartó a résen: kezet fog, és a párbeszédet futtatja a megadott kiszolgálóval. */
+async function tartoResen(halo, port, tarolo, beallitas) {
+  const v = await kezfogasUdpResen(halo, '127.0.0.1', port);
+  try { return await parbeszed(udpKapcsolat(v, '127.0.0.1', port), tarolo, KOINO, beallitas); } finally { v.zar(); }
+}
+
+proba('⭐⭐ D75/3: amit csak LÁTTAM (az átmeneti táramban), azt is kiszolgálom a szelet-kérelemre — a kiszolgáló nélkül (rontás) nem', async () => {
+  const v = await vilag();
+  const g = await v.c.tesz('GondolatLetrehozas', { cim: 'Látott', meret: 10 });
+  const futas = async (kiszolgalo) => {
+    const tartos = await tar([v.szuletes]);
+    const atmeneti = await atmenetiTarNyitasa(KOINO, await ujMappa());
+    await esemenyMentese(atmeneti, g);                       // csak láttam — az átmenetiben
+    const kero = await tar([v.szuletes]);
+    const p = await udpParos();
+    try {
+      await Promise.all([
+        tartoResen(p.egyik, p.masikPort, tartos, kiszolgalo ? { kerelemKiszolgalo: {
+          szelet: async (k) => egyeztetettEsemenyek(ketTarNezet(tartos, atmeneti), KOINO, k) } } : {}),
+        szeletUdpResen(p.masik, '127.0.0.1', p.egyikPort, kero, KOINO, g.azonosito)
+      ]);
+    } finally { p.bezar(); }
+    return !!(await kero.esemeny(g.azonosito));
+  };
+  return (await futas(true)) && !(await futas(false));
+});
+
+proba('⭐ a szelet-kérelemmel a szerzők TAGSÁGI KÍSÉRŐI is jönnek (más szeletből) — a kérő tárába kerülnek', async () => {
+  const v = await vilag();
+  const g = await v.f.tesz('GondolatLetrehozas', { cim: 'Kísért', meret: 10 });
+  const cPont = await v.c.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 4, szerep: 'aktiv' });
+  const tartos = await tar([v.szuletes, v.belepesC, v.meghivasC, g, cPont]);
+  const kero = await tar([v.szuletes]);
+  const p = await udpParos();
+  try {
+    await Promise.all([
+      tartoResen(p.egyik, p.masikPort, tartos, { kerelemKiszolgalo: {
+        kiserok: async (esemenyek) => tagsagiKiserok(tartos, KOINO, [...new Set(esemenyek.filter((e) => e.tipus === 'TudatpontRendezes')
+          .map((e) => e.szerzo))], { koinoSzuletes: v.szuletes }) } }),
+      szeletUdpResen(p.masik, '127.0.0.1', p.egyikPort, kero, KOINO, g.azonosito)
+    ]);
+  } finally { p.bezar(); }
+  return !!(await kero.esemeny(cPont.azonosito)) && !!(await kero.esemeny(v.belepesC.azonosito))
+    && !!(await kero.esemeny(v.meghivasC.azonosito));
 });
 
 export default async function () {

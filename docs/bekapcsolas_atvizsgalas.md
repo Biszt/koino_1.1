@@ -75,6 +75,10 @@ függ, hogy a hétköznapi csere 0,7 KB vagy több tíz KB)
 hanem a VÁLTOZOTT szeleteim tartói sorban, aztán a forgatás (az átfedés szerinti választásnál a tartók gráfja szétesett).
 ⏭️ Következik: a 6. sorrend 4. pontja (a törzs korlátja, a kérelem az átmenetiből, a visszavett vállalás és a tömörítés).
 
+✅ **A 4. PONT MEGÉPÜLT (2026-10-09)** — a törzs korlátja a randevúban, a kérelem az átmenetiből a kísérőkkel, a visszavett
+vállalás és a tár tömörítése (a részletek: a fázis-2 terv D97, „MEGÉPÜLT — a bekapcsolás többi része”). ⭐ **A bekapcsolás
+— és vele a ⑦ (B/3) — kész.**
+
 ## 5. Ami nem igényel döntést (a megépítés része)
 
 A részvétel a vállalásból (a töredék-részvétellel és a D96-tal), a törzs korlátja, a kérelem az átmenetiből és a

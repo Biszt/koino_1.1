@@ -82,6 +82,16 @@ proba('⭐⭐ A hiányzó fájl MEGNEVEZI, melyik entitáshoz tartozik (D19)', a
     && hianyzok[0].entitasok.length === 1 && hianyzok[0].entitasok[0] === 'g1';
 });
 
+proba('⭐⭐ D84/1: a VÁLLALT entitásaim fájljai (a törzs) — megvannak-e vagy sem — külön halmazban; a más gondolatáé nem', async () => {
+  const allapot = allapotbol([
+    entitas('g1', { szoveg: [kep(L1)] }, { en: 5 }),
+    entitas('g2', { szoveg: [kep(L2)] }, { mas: 5 }),
+    entitas('g3', { ikon: '/api/fajl/' + L3 }, { en: 0, mas: 3 })
+  ]);
+  const { vallaltLenyomatok } = await fajlIgenyek(allapot, async (l) => l === L1, { szerzo: 'en' });
+  return vallaltLenyomatok.has(L1) && !vallaltLenyomatok.has(L2) && !vallaltLenyomatok.has(L3) && vallaltLenyomatok.size === 1;
+});
+
 proba('⭐ Ami megvan, az nem hiányzik', async () => {
   const allapot = allapotbol([entitas('g1', { szoveg: [kep(L1), kep(L2)] })]);
   const { hianyzok, megvan } = await fajlIgenyek(allapot, async (l) => l === L1);

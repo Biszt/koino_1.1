@@ -344,6 +344,23 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
     iroE: () => iroVagyok,
 
     /**
+     * ⭐⭐ D75/1, D73: A TÖMÖRÍTÉS — a tár ritka újraírása (`fajlTar.js` `ujrairas`). ⛔ CSAK AZ ÍRÓ: a hozzáfűzésekkel
+     * ugyanabban a sorban fut, tehát közben senki nem fűzhet a fájlhoz (a többi folyamat az írónak adja át az eseményt,
+     * és megvárja). Ha nem mi vagyunk az író, `NEM-IRO` hiba — a hívó a futó írónál (az őrjáratnál) intézi.
+     * @param {Function} megtart
+     */
+    async tomorites(megtart) {
+      if (!iroVagyok || typeof belso.ujrairas !== 'function') throw kodosHiba('NEM-IRO', 'csak az író tömörítheti a tárat (D70)');
+      return sorban(async () => {
+        if (onellenorzesKell && !(await onmagamE())) {
+          lemond('a csatornán már nem mi felelünk');
+          throw kodosHiba('NEM-IRO', 'már nem mi vagyunk az író');
+        }
+        return belso.ujrairas(megtart);
+      });
+    },
+
+    /**
      * ⭐ A HOSSZAN FUTÓ FOLYAMAT INDULÁSKOR JELENTKEZIK (őrjárat, `figyel`, felület — D70 / 3.):
      * ha most senki nem író, ő lesz, és a futása végéig az marad. Ha már van élő író (pl. egy
      * korábban indított felület), kliens marad — ez nem hiba, a szerep annál van, akinél van.

@@ -341,12 +341,16 @@ proba('⭐⭐ B/1–B/2: a `hozd` a nem vállalt gondolatot az ÁTMENETI tárba 
       const vallalas2 = await fut(vendeg, 'vallalas');     // az indulásakor lép elő
       const utana = { tartos: await tartosban(), atmeneti: await atmenetiben() };
 
-      return /átmeneti tárba/.test(hozva)
-        && !elotte.tartos && elotte.atmeneti
-        && kep.includes('MESSZI') && /nem tartod/.test(kep)
-        && /ÁTMENETI TÁR \(csak láttam — eldobható\): 1 szelet/.test(vallalas1)
-        && /1 tudatpontos/.test(vallalas2) && /ÁTMENETI TÁR \(csak láttam — eldobható\): 0 szelet/.test(vallalas2)
-        && utana.tartos && !utana.atmeneti;
+      const ki = {
+        hozva: /átmeneti tárba/.test(hozva),
+        elotte: !elotte.tartos && elotte.atmeneti,
+        kep: kep.includes('MESSZI') && /nem tartod/.test(kep),
+        vallalas1: /ÁTMENETI TÁR \(csak láttam — eldobható\): 1 szelet/.test(vallalas1),
+        vallalas2: /1 tudatpontos/.test(vallalas2) && /ÁTMENETI TÁR \(csak láttam — eldobható\): 0 szelet/.test(vallalas2),
+        utana: utana.tartos && !utana.atmeneti
+      };
+      if (!Object.values(ki).every(Boolean)) process.stdout.write('  hozd — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+      return Object.values(ki).every(Boolean);
     } finally {
       if (figyelo) figyelo.kill();
       await varj(500);
@@ -690,6 +694,59 @@ proba('⭐⭐ D97/2: az őrjárat a vállalt szeletem TARTÓJÁT is felkeresi (a
     } finally {
       for (const f of [orjarat, figyelo]) if (f) f.kill();
       await varj(800);
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
+// ⭐⭐ D75/1, D73 (a bekapcsolás): A VISSZAVETT VÁLLALÁS ÉS A TÁR TÖMÖRÍTÉSE (2026-10-09)
+// ===================================
+//
+// B („alap”) vállalja G-t (megkapja az eseményeit, pontot tesz rá), aztán visszavonja a pontját. A `tomorit` után a
+// tartós tárban NINCS ott A G-re tett pontja (az átmeneti tárba került), de ott marad B saját minden eseménye, a koinó
+// születése és G születése (a gyökér-darabja). ⭐ Viselkedést mérünk: a két tár fájlját. Rontás: a `tomorit proba` nem ír.
+proba('⭐⭐ D75/1: a visszavett vállalás a TÖMÖRÍTÉSSEL az átmeneti tárba kerül — a saját eseményeim és a koinó születése maradnak',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    const kornyezet = { KOINO_KISZOLGALAS: 'alap' };
+    try {
+      await fut(a, 'koino', 'Tömörítés', 'próba', 'nyilt');
+      const g = azonosito(await fut(a, 'gondolat', 'GE'), 'Létrejött:');
+      await fut(a, 'kivisz', join(a, 'mind.jsonl'));
+      await fut(b, 'behoz', join(a, 'mind.jsonl'));
+      const aEsemenyei = (await readFile(join(a, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x));
+      const aPont = aEsemenyei.find((e) => e.tipus === 'TudatpontRendezes').azonosito;
+      const szul = aEsemenyei.find((e) => e.tipus === 'KoinoLetrehozas').azonosito;
+      const gT = aEsemenyei.find((e) => e.tipus === 'GondolatLetrehozas').azonosito;
+      await fut(b, 'pont', g, '5');
+      await fut(b, 'pont', g, '0');                         // a vállalás visszavéve
+      const proba = tiszta(await fut(b, 'tomorit', 'proba', kornyezet));
+      const elotte = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const kesz = tiszta(await fut(b, 'tomorit', kornyezet));
+      const tartos = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const atmeneti = (await readdir(join(b, 'sajat', 'atmeneti')).catch(() => []));
+      let atmenetiTartalom = '';
+      // ⚠️ Fájlonként sortöréssel: a `megnezett.json` végén nincs, és a következő fájl első sora különben hozzáragadna.
+      for (const f of atmeneti) atmenetiTartalom += (await readFile(join(b, 'sajat', 'atmeneti', f), 'utf8')) + '\n';
+      // ⚠️ Azonosító szerint nézzük, nem szövegként: B saját pont-eseményei a `latott` mezőben hivatkoznak A eseményére.
+      const azonositok = (szoveg) => new Set(szoveg.split('\n').filter((x) => x.trim().startsWith('{"'))
+        .map((x) => { try { return JSON.parse(x).azonosito; } catch { return null; } }));
+      const tartosAz = azonositok(tartos);
+      const aSzerzo = aEsemenyei.find((e) => e.azonosito === aPont).szerzo;
+      const sajatPontok = tartos.split('\n').filter(Boolean).map((x) => JSON.parse(x)).filter((e) => e.tipus === 'TudatpontRendezes'
+        && e.entitas === gT && e.szerzo !== aSzerzo).length;
+      const ki = {
+        probaNemIrt: /kerülne az átmenetibe/.test(proba) && azonositok(elotte).has(aPont),
+        kiirta: /Tömörítve/.test(kesz),
+        tartosbolKiment: !tartosAz.has(aPont),
+        atmenetibeKerult: azonositok(atmenetiTartalom).has(aPont),
+        maradt: tartosAz.has(szul) && tartosAz.has(gT) && sajatPontok === 2
+      };
+      if (!Object.values(ki).every(Boolean)) process.stdout.write('  tömörítés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+      return Object.values(ki).every(Boolean);
+    } finally {
       await rm(a, { recursive: true, force: true });
       await rm(b, { recursive: true, force: true });
     }
@@ -2246,6 +2303,54 @@ proba('⭐⭐⭐ A KÉP MEGÉRKEZIK A MÁSIK KÉSZÜLÉKRE — több szeletben, 
       await rm(gazda, { recursive: true, force: true });
       await rm(vendeg, { recursive: true, force: true });
     }
+  });
+
+// ===================================
+// ⭐⭐ D84/1 (a bekapcsolás): A TÖRZS KORLÁTJA — a fájlt csak a vállaló szolgálja ki (2026-10-09)
+// ===================================
+//
+// A gazda képes gondolatot ír (G), a vendég megkapja az eseményeit, és pontot tesz rá (vállalja — kéri a törzsét). Aztán a
+// gazda leveszi a pontját: G-t már nem vállalja. ⭐ „Alap” módban a gazda a törzset (a szöveg-darabot és a képet) NEM adja
+// ki — az a vállalóé; „mindent” módban (D83/2) kiadja. Viselkedést mérünk: a vendég lemezén van-e a kép.
+proba('⭐⭐ D84/1: a TÖRZSET csak a vállaló szolgálja ki — a pontját levevő gazda „alap” módban nem adja, „mindent” módban igen',
+  async () => {
+    const futas = async (mod, port, fport) => {
+      const gazda = await ujKeszulek();
+      const vendeg = await ujKeszulek();
+      let figyelo = null, felulet = null;
+      try {
+        await fut(gazda, 'koino', 'Törzs', 'próba', 'nyilt');
+        felulet = await feluletet(gazda, fport);
+        const fej = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+        const kep = Buffer.concat([fej, Buffer.alloc(4 * 1024, 7), Buffer.from('0000000049454e44ae426082', 'hex')]);
+        const fel = await felulet.hiv('/api/feltoltes/kep', { method: 'POST', body: JSON.stringify({ adat: kep.toString('base64') }) });
+        await felulet.hiv('/api/gondolat', { method: 'POST', body: JSON.stringify({ cim: 'KÉPES', kezdoTudatpont: 50,
+          szoveg: [{ id: 'b1', tipus: 'kep', url: fel.adat.url }] }) });
+        felulet.folyamat.kill(); felulet = null; await varj(500);
+        await fut(gazda, 'kivisz', join(gazda, 'mind.jsonl'));
+        await fut(vendeg, 'behoz', join(gazda, 'mind.jsonl'));
+        const g = (await readFile(join(gazda, 'mind.jsonl'), 'utf8')).split('\n').filter(Boolean).map((x) => JSON.parse(x))
+          .find((e) => e.tipus === 'GondolatLetrehozas').azonosito.slice(0, 8);
+        await fut(vendeg, 'pont', g, '5');                    // a vendég vállalja — kéri a törzsét
+        await fut(gazda, 'pont', g, '0');                     // a gazda már nem vállalja
+        figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', String(port)], {
+          env: { ...process.env, KOINO_ADAT: gazda, KOINO_NAPLO: '', KOINO_KISZOLGALAS: mod }, stdio: 'ignore' });
+        await varj(1500);
+        await fut(vendeg, 'csere', '127.0.0.1', String(port), { KOINO_KISZOLGALAS: 'alap' });
+        await fut(vendeg, 'csere', '127.0.0.1', String(port), { KOINO_KISZOLGALAS: 'alap' });
+        return !!(await readFile(join(vendeg, 'sajat', 'fajlok', fel.adat.lenyomat)).catch(() => null));
+      } finally {
+        if (felulet) felulet.folyamat.kill();
+        if (figyelo) { figyelo.kill(); await varj(800); }
+        await rm(gazda, { recursive: true, force: true });
+        await rm(vendeg, { recursive: true, force: true });
+      }
+    };
+    const alap = await futas('alap', 7680, 7682);
+    const mindent = await futas('mindent', 7681, 7683);
+    const ki = { alapNemAdja: !alap, mindentAdja: mindent };
+    if (!Object.values(ki).every(Boolean)) process.stdout.write('  törzs — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+    return Object.values(ki).every(Boolean);
   });
 
 // ===================================

@@ -130,6 +130,14 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
   await mkdir(mappa, { recursive: true });
   const fajl = join(mappa, 'esemenyek.jsonl');
   const kepFajl = join(mappa, 'mutato.json');
+  // ⭐ D75/1, D73: a tár ritka ÚJRAÍRÁSÁNAK (a tömörítés) jele — ha egy másik folyamat átírta a fájlt, a mi mutatónk
+  // eltolásai érvénytelenek: a `frissit()` ezt a jelből tudja meg, és a mutatót a fájlból újraépíti.
+  const generacioFajl = join(mappa, 'generacio.json');
+  const generacioOlvasasa = async () => {
+    try { const g = JSON.parse(await readFile(generacioFajl, 'utf8'))?.gen; return Number.isInteger(g) ? g : 0; }
+    catch { return 0; }
+  };
+  let ismertGeneracio = await generacioOlvasasa();
 
   // ===== A MUTATÓ — az esemény TESTE NÉLKÜL =====
   // Egy bejegyzés: { o: eltolás, h: hossz (bájt, sorvég nélkül), a: azonosító, z: szerző,
@@ -463,6 +471,17 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
 
   /** Egy frissítés — CSAK a sorból hívjuk. */
   async function frissitesEgyszer() {
+    // ⭐ D75/1: ha egy másik folyamat (az író) közben ÁTÍRTA a fájlt (tömörítés), a mutatót a fájlból újraépítjük — a
+    // régi eltolások már másra mutatnak, és a kivett események testeit is elfelejtjük.
+    const gen = await generacioOlvasasa();
+    if (gen !== ismertGeneracio) {
+      ismertGeneracio = gen;
+      testek.clear();
+      const felvett = await teljesOlvasas();
+      pillanatkepbol = false;
+      console.log('esemenyTar.frissit - a fájlt egy másik folyamat átírta (tömörítés): a mutató újraépült', { felvett });
+      return felvett;
+    }
     let meret;
     try {
       meret = (await stat(fajl)).size;
@@ -629,6 +648,56 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
      */
     frissit() {
       return sorba(frissitesEgyszer);
+    },
+
+    /**
+     * ⭐⭐ D75/1, D73: A TÁR RITKA ÚJRAÍRÁSA (a tömörítés — mint a `git gc`). A `megtart`-nak megfelelő események
+     * maradnak (a fájl sorrendjében), a többi KIKERÜL — a hívó viszi tovább (az átmeneti tárba: amit nem vállalok, azt
+     * csak láttam). Eseményt nem módosítunk: a megmaradók bájtra ugyanazok. ⛔ CSAK AZ ÍRÓ hívhatja (D70 — az
+     * `iro.js` `tomorites`-e): közben senki nem fűzhet a fájlhoz. A mutató sorában fut; a többi folyamat a generáció-jelből
+     * tudja meg, hogy újra kell építenie a mutatóját.
+     * @param {Function} megtart - (esemény) → igaz, ha marad
+     * @returns {Promise<{megtartva: number, kivett: Array<Object>}>}
+     */
+    ujrairas(megtart) {
+      return sorba(async () => {
+        let bajtok;
+        try { bajtok = await readFile(fajl); } catch (hiba) { if (hiba.code !== 'ENOENT') throw hiba; bajtok = Buffer.alloc(0); }
+        const vege = bajtok.lastIndexOf(0x0a) + 1;
+        const maradok = [], kivett = [];
+        const latott = new Set();
+        for (const sor of bajtok.subarray(0, vege).toString('utf8').split('\n')) {
+          if (!sor.trim()) continue;
+          let e;
+          try { e = JSON.parse(sor); } catch { maradok.push(sor); continue; }    // a sérült sort nem dobjuk el
+          if (!e || typeof e.azonosito !== 'string' || latott.has(e.azonosito)) { if (!latott.has(e?.azonosito)) maradok.push(sor); continue; }
+          latott.add(e.azonosito);
+          if (megtart(e)) maradok.push(sor); else kivett.push(e);
+        }
+        if (!kivett.length) return { megtartva: maradok.length, kivett };
+        const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+        await writeFile(ideiglenes, maradok.join('\n') + (maradok.length ? '\n' : ''), 'utf8');
+        // ⚠️ Windowson egy épp (más folyamat által) olvasott fájl nem mindig nevezhető felül — néhányszor újra próbáljuk;
+        // ha nem megy, semmi nem változott (az ideiglenes fájlt eldobjuk).
+        for (let proba = 0; ; proba++) {
+          try { await rename(ideiglenes, fajl); break; } catch (hiba) {
+            if (proba >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes(hiba.code)) {
+              await rm(ideiglenes, { force: true }).catch(() => {});
+              throw hiba;
+            }
+            await new Promise((t) => setTimeout(t, 50));
+          }
+        }
+        ismertGeneracio = (await generacioOlvasasa()) + 1;
+        await writeFile(generacioFajl, JSON.stringify({ gen: ismertGeneracio, ido: Date.now() }), 'utf8');
+        testek.clear();
+        await rm(kepFajl, { force: true }).catch(() => {});
+        const felvett = await teljesOlvasas();
+        pillanatkepbol = false;
+        if (felvett >= kepKuszob) await pillanatkepIrasa();
+        console.log('esemenyTar.ujrairas - a tár tömörítve', { megtartva: maradok.length, kivett: kivett.length });
+        return { megtartva: maradok.length, kivett };
+      });
     },
 
     /** A mutató állapota (a próbáknak és a naplónak) — testet nem tölt be. */

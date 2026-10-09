@@ -550,6 +550,37 @@ proba('⭐⭐ A SZÜLETÉSEK A SZÜLŐ ALATT (C 7.) — a képből is, és a ré
     && await valaszok(ketteskeppel) === vart;
 });
 
+// ===== ⭐⭐ D75/1, D73: A TÁR RITKA ÚJRAÍRÁSA (a tömörítés) =====
+
+proba('⭐⭐ az ÚJRAÍRÁS a megtartandókat hagyja (a sorrendjükben), a többit visszaadja — a mutató, az újranyitás és a második folyamat is követi', async () => {
+  const hely = await mkdtemp(join(tmpdir(), 'koino-ujrairas-'));
+  try {
+    const egy = await ujEember(KOINO);
+    const ketto = await ujEember(KOINO);
+    const t = await esemenyTarNyitasa(KOINO, hely);
+    const g = await egy.tesz('GondolatLetrehozas', { cim: 'Marad', meret: 10 });
+    const h = await ketto.tesz('GondolatLetrehozas', { cim: 'Megy', meret: 10 });
+    const p1 = await egy.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 5, szerep: 'aktiv' });
+    const p2 = await ketto.tesz('TudatpontRendezes', { entitas: h.azonosito, pont: 5, szerep: 'aktiv' });
+    for (const e of [g, h, p1, p2]) await esemenyMentese(t, e);
+    const masik = await esemenyTarNyitasa(KOINO, hely);        // egy második „folyamat” — a régi mutatóval
+    await masik.esemeny(h.azonosito);                         // a teste be is töltve
+    const r = await t.ujrairas((e) => e.szerzo === egy.szerzo);
+    const p3 = await egy.tesz('TudatpontRendezes', { entitas: g.azonosito, pont: 6, szerep: 'aktiv' });
+    await esemenyMentese(t, p3);
+    const ujra = await esemenyTarNyitasa(KOINO, hely);
+    await masik.frissit();
+    const azonositok = async (x) => (await x.betolt()).map((e) => e.azonosito).join(',');
+    const vart = [g.azonosito, p1.azonosito, p3.azonosito].join(',');
+    return r.megtartva === 2 && r.kivett.map((e) => e.azonosito).sort().join() === [h.azonosito, p2.azonosito].sort().join()
+      && await azonositok(t) === vart && await azonositok(ujra) === vart && await azonositok(masik) === vart
+      && !(await t.esemeny(h.azonosito)) && !(await masik.esemeny(h.azonosito))
+      && (await t.szeletek()).every((x) => x.szelet !== h.azonosito);
+  } finally {
+    await rm(hely, { recursive: true, force: true });
+  }
+});
+
 // A próbák után takarítunk: a mappa eldobható
 export async function takaritas() {
   await rm(MAPPA, { recursive: true, force: true });

@@ -339,8 +339,8 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    vállalók. ✅ **A B4 KÉSZ (2026-10-06):** a gyökér darabonként. 🔍 **A bekapcsolás átvizsgálva**
    ([`bekapcsolas_atvizsgalas.md`](bekapcsolas_atvizsgalas.md), 68. mérés): a közös halmaz nélkül a „nincs újdonság” csere
    6–300 KB, és az őrjárat a rajjal nem cserél. ✅ **D97** (K1/A, K2/A). ✅ **A közös halmaz és a részvétel a vállalásból KÉSZ
-   (2026-10-08)** — a szigorú (b) él. ✅ **A raj a körben KÉSZ (2026-10-09, 69. mérés).** ⏭️ A törzs korlátja, a kérelem az
-   átmenetiből, a visszavett vállalás és a tár tömörítése.
+   (2026-10-08)** — a szigorú (b) él. ✅ **A raj a körben KÉSZ (2026-10-09, 69. mérés).** ✅ **A törzs korlátja, a kérelem az
+   átmenetiből (+ kísérők), a visszavett vállalás és a tár tömörítése KÉSZ (2026-10-09).** ⭐ **A ⑦ KÉSZ** — következik a ⑧.
    ⭐ **A részvételbe a döntési csomag (B) szabálya is beletartozik** (D85 T3,
    Csaba, 2026-10-03): a vállalt szeleteken túl azok a TÖREDÉK-szeletek, amelyek érintettjét vállalom, és
    amelyek saját része valamikor igent mondott (a rész szavazói a töredék pontjuk miatt úgyis vállalják).
@@ -668,3 +668,13 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     tartók gráfja szétesik (a változások 4–6%-a soha nem ér körbe), a „változott előre” viszont járványszerűen terjed (R = 2:
     medián 1, 99%-ban 9 kör) — egy csere a két fél összes közös szeletét szinkronba hozza (D97/1) · a megépítéskor, Claude
     (a mérés alapján, a D97/2 keretén belül; Csabának jelezve) · `rajKor.js`, `koino.js` (`rajKorCeljaim`), 69. mérés.
+86. **2026-10-09 · a visszavett vállalás (D75/1: „az átmenetibe kerül”) és a tár ritka újraírása (D73)** → **tömörítés: a
+    tartós tár újraírása (csak az író), a kivettek az átmeneti tárba; a többi folyamat egy generáció-jelből tudja meg,
+    hogy újra kell építenie a mutatóját; az összegzett szeletből csak az ellenőrzött gyökér után; naponta egyszer** · mert
+    a többi folyamat mutatója eltolásokkal dolgozik (átírás után másra mutatna), és az ellenőrzött gyökér nélkül a két fokú
+    vállalás mérete leesne — a szelet teljesre váltana, és a csere mindent visszahozna (billegés) · a megépítéskor, Claude
+    · `fajlTar.js` (`ujrairas`, `generacio.json`), `iro.js` (`tomorites`), `koino.js` (`tomoritesSzabalya`).
+87. **2026-10-09 · a kérelem kísérői (a B2 párja a `hozd`-nál)** → **a szelet-kérelemre a döntési események szerzőinek
+    tagsági kísérői is mennek — a nem tag (zárt koinó) kérőnek nem** · mert az átmeneti nézetben a szerzők pontja különben
+    „függőben” maradna; a nem tagnak a harmadik felek láncát nem adjuk ki · a megépítéskor, Claude · `vonal.js`,
+    `koino.js` (`kerelemKiszolgaloja`).

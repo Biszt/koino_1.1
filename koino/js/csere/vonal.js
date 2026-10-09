@@ -454,12 +454,25 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       return true;
     };
     if (k?.fajta === 'szelet') {
-      // ⭐ D85: UGYANAZ a halmaz, amit a csere egyeztet — a szelet saját eseményei + a hozzá bejelentettek.
-      const kertek = await egyeztetettEsemenyek(tar, koino, vonalKulcsa(k.kulcs));
+      // ⭐ D85: UGYANAZ a halmaz, amit a csere egyeztet — a szelet saját eseményei + a hozzá bejelentettek. ⭐ D75/3 (a
+      // bekapcsolás): ha a hívó adja (`kerelemKiszolgalo.szelet`), az ÁTMENETI tárból is (amit csak láttam, azt is
+      // kiszolgálom — a törzs kivételével).
+      const kertek = kiszolgalo?.szelet ? await kiszolgalo.szelet(vonalKulcsa(k.kulcs))
+        : await egyeztetettEsemenyek(tar, koino, vonalKulcsa(k.kulcs));
       if (!kertek.length && await atvesz()) { /* átvettük */ } else {
         // Eseményenként külön üzenet — így egy nagy szelet sem ütközik a sorhossz-korlátba.
         for (const esemeny of kertek) kuld({ uzenet: 'ESEMENY', esemeny });
-        kuldott = kertek.length;
+        // ⭐ D95/2: a döntési események szerzőinek tagsági kísérői is (a kérő a szerzők azonosság-szeletét nem tartja) —
+        // ⛔ a nem tagnak (zárt koinó) nem: az harmadik felek láncát mutatná meg.
+        const kiserok = kertek.length && !tarsKorlatozva && kiszolgalo?.kiserok ? (await kiszolgalo.kiserok(kertek)) ?? [] : [];
+        const vanMar = new Set(kertek.map((e) => e.azonosito));
+        let kiseroDb = 0;
+        for (const esemeny of kiserok) {
+          if (!esemeny || vanMar.has(esemeny.azonosito)) continue;
+          kuld({ uzenet: 'ESEMENY', esemeny });
+          kiseroDb++;
+        }
+        kuldott = kertek.length + kiseroDb;
         kiszolgalva = 'szelet';
       }
     } else if (k?.fajta === 'fejlecek' && kiszolgalo?.fejlecek) {
