@@ -58,6 +58,10 @@ import {
 } from './szeletEgyeztetes.js';
 import { rendezettHalmaz, halmazLenyomata } from '../esemeny/halmaz.js';
 import { gyokerDarabBol, gyokerDarabKulcsai } from './cimjegyzek.js';
+import {
+  valtozottKulcsok, valtozottAlakja, valtozottUnio, kivulLenyomat, uParjai, parokAlakja, uOsztalyozasa,
+  emlekezetFeljegyzes, VALTOZOTT_KORLAT
+} from './tarsEmlekezet.js';
 // ⭐ D97/1: a közös halmaz (a részvételi halmazok ujjlenyomatai és változatai).
 import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from './kozosHalmaz.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
@@ -874,10 +878,23 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
       : [];
   }
 
+  // ----- ⭐⭐ D98/1 (F): A TÁRSANKÉNTI EMLÉKEZET — a feljegyzés a csere végén (`tarsEmlekezet.js`) -----
+  //
+  // A társ tábla-aláírója alatt a tárom mostani állása és a maradék (a csere végén is eltérő szeletek). ⛔ A zárt koinó
+  // korlátozott útján nem (ott nem a teljes közös halmazon egyeztettünk).
+  const emlekezetTar = beallitas.emlekezetTar && typeof beallitas.emlekezetTar.olvas === 'function'
+    && typeof kapottTablaKulcs?.alairo === 'string' && !korlat ? beallitas.emlekezetTar : null;
+  const emlekezetIrasa = async (maradek) => {
+    if (!emlekezetTar) return;
+    try { await emlekezetTar.ir(kapottTablaKulcs.alairo, emlekezetFeljegyzes(tar, maradek)); }
+    catch (hiba) { console.warn('parbeszed - a társankénti emlékezet nem írható', { ok: hiba.message }); }
+  };
+
   if (nyitoOve === nyitoSajat && !elteroDarabok.length) {
     // ⭐ Ugyanazt tudjuk minden közös szeletről — a hétköznapi eset, egyetlen nyitás-csere.
     // ⭐ D95/2: ha bármelyik félnek függő tagság-kérdése van (a nyitás jele), a tagsági kör ekkor is lemegy.
     if (sajatTk || oveNyitas.tk === 1) await tagsagKor([]);
+    await emlekezetIrasa([]);
     console.log('parbeszed - VÉGE (egyező nyitó lenyomat, nincs mit egyeztetni)');
     return eredmeny();
   }
@@ -887,9 +904,46 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   const enNyitok = nyitoOve !== nyitoSajat ? nyitoSajat > nyitoOve
     : tablaKulcsElore.alairo > kapottTablaKulcs.alairo;
 
+  // ===== ⭐⭐ 1/F. D98/1: A VÁLTOZOTT SZELETEK — az első szint helyett, ha mindkét fél emlékszik a legutóbbi cseréjükre =====
+  //
+  // Mindkét fél elküldi, mi változott NÁLA a legutóbbi közös cserénk óta (VALTOZOTT — null, ha nincs feljegyzése: akkor a
+  // mai menet). A két lista uniója (U) mindkét félnél ugyanaz; a VALTOZOTTPAROK a U-n KÍVÜLI párok lenyomatát és a U párjait
+  // viszi. ⭐ Ha a két kívüli lenyomat egyezik, U-n kívül minden egyezik (ellenőrizve, nem elhitt), és a U a két fél párjaiból
+  // osztályozható — mindkét fél ugyanazt kapja, ezért az ELTERO is elmarad. Ha nem egyezik, a rendes első szint fut (a
+  // két fél ugyanazt a két lenyomatot látja, tehát ugyanúgy dönt). 70. mérés: változásonként ~1–2 KB helyett ~0,1 KB.
+  let fLelet = null;
+  if (nyitoOve !== nyitoSajat) {
+    let sajatV = null;
+    if (emlekezetTar) {
+      try {
+        sajatV = valtozottKulcsok(tar, await emlekezetTar.olvas(kapottTablaKulcs.alairo), {
+          szuletes: szuletesEsemeny?.azonosito ?? null,
+          szuro: (k) => reszvesz(k) && (kozos ? kozos.szuro(k) : true)
+        });
+      } catch (hiba) {
+        console.warn('parbeszed - a társankénti emlékezet nem olvasható', { ok: hiba.message });
+        sajatV = null;
+      }
+    }
+    kuld({ uzenet: 'VALTOZOTT', k: sajatV });
+    egyeztetoUzenetek++;
+    const oveV = valtozottAlakja((await varj('VALTOZOTT')).k);
+    if (sajatV && oveV) {
+      const U = valtozottUnio(sajatV, oveV);
+      if (U.length <= VALTOZOTT_KORLAT) {
+        const sajatL = uParjai(parok, U);
+        const kv = await kivulLenyomat(parok, new Set(U));
+        kuld({ uzenet: 'VALTOZOTTPAROK', kv, l: sajatL });
+        egyeztetoUzenetek++;
+        const be = parokAlakja(await varj('VALTOZOTTPAROK'), U.length);
+        if (be.kv === kv) fLelet = uOsztalyozasa(U, sajatL, be.l);
+      }
+    }
+  }
+
   // ===== 1. AZ ELSŐ SZINT — melyik szelet tér el? (ha a nyitó lenyomatok egyeznek, nincs mit keresni) =====
   const parLelet = { kellNekem: [], kellNeki: [] };
-  if (nyitoOve !== nyitoSajat) {
+  if (nyitoOve !== nyitoSajat && !fLelet) {
     // A felelő a nyitó lenyomatával kezd (azt a nyitásban már megkapta).
     let bejovo = [[null, 'L', oveNyitas.lenyomat]];
     let enJovok = !enNyitok;
@@ -915,9 +969,10 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   }
 
   // ===== 2. AZ ELTÉRŐ SZELETEK — amit én tudok meg, azt a másik is megtudja =====
-  const sajatLelet = elteresekSzeletei(parLelet.kellNekem, parLelet.kellNeki);
-  kuld({ uzenet: 'ELTERO', ...sajatLelet });
-  const oveLelet = await varj('ELTERO');
+  // ⭐ D98/1: a változott szeletek útján mindkét fél ugyanazt a leletet számolta — nincs mit elküldeni (a társé a tükörkép).
+  const sajatLelet = fLelet ?? elteresekSzeletei(parLelet.kellNekem, parLelet.kellNeki);
+  if (!fLelet) kuld({ uzenet: 'ELTERO', ...sajatLelet });
+  const oveLelet = fLelet ? { mindketten: fLelet.mindketten, nalam: fLelet.nalad, nalad: fLelet.nalam } : await varj('ELTERO');
   const kulcsLista = (lista) => {
     if (!Array.isArray(lista) || lista.length > KULCS_KORLAT || !lista.every(ervenyesKulcs)) {
       throw new Error('Hibás ELTERO üzenet (a szelet-kulcsok listája)');
@@ -1053,6 +1108,9 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ===== 6. ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK — az új (és a függő) szerzők tagsága =====
   await tagsagKor(beolvasztva.ujAzonositok);
+
+  // ⭐ D98/1: a feljegyzés — a maradék az, ahol valamelyik fél kimaradt (ott a két fél a csere után is eltér).
+  await emlekezetIrasa([...mind].filter((k) => enKimaradok.has(k) || oveKimarad.has(k)));
 
   console.log('parbeszed - VÉGE', {
     uj, kuldott, elteroSzeletek, egyeztetoUzenetek, kimaradt: erkezett.length - atveheto.length

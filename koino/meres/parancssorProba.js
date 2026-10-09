@@ -700,6 +700,51 @@ proba('⭐⭐ D97/2: az őrjárat a vállalt szeletem TARTÓJÁT is felkeresi (a
   });
 
 // ===================================
+// ⭐⭐ D98/1 (F): A TÁRSANKÉNTI EMLÉKEZET A VALÓDI CSERÉBEN (2026-10-09)
+// ===================================
+//
+// Két készülék kétszer cserél (`figyel` + `csere`), aztán A új gondolatot ír, és harmadszor is cserélnek. ⭐ Viselkedést
+// mérünk: a két készülék lemezén ott a társ alatti feljegyzés (`emlekezet.json` — a tár állása a csere végén: annyi, ahány
+// esemény a saját tárában van), és a harmadik csere után B-nél ott A új gondolata, a feljegyzés pedig előrébb lépett.
+// Rontás: a `koino.js` nem adja át a tárolót → nincs `emlekezet.json`.
+proba('⭐⭐ D98/1: a csere végén a társ alatt feljegyződik a tár állása — és a következő cserén a változás átjön, a feljegyzés előrelép',
+  async () => {
+    const a = await ujKeszulek();
+    const b = await ujKeszulek();
+    try {
+      await fut(a, 'koino', 'Emlékezet', 'próba', 'nyilt');
+      await fut(a, 'kivisz', join(a, 'mind.jsonl'));
+      await fut(b, 'behoz', join(a, 'mind.jsonl'));
+      await csereKor(a, b, 7961);
+      await csereKor(a, b, 7961);
+      const feljegyzes = async (h) => {
+        try { return Object.values(JSON.parse(await readFile(join(h, 'sajat', 'emlekezet.json'), 'utf8')).tarsak ?? {}); }
+        catch { return []; }
+      };
+      const sorok = async (h) => (await readFile(join(h, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean).length;
+      const aElotte = await feljegyzes(a), bElotte = await feljegyzes(b);
+      const g = azonosito(await fut(a, 'gondolat', 'Az emlékezet után'), 'Létrejött:');
+      await csereKor(a, b, 7961);
+      const aUtana = await feljegyzes(a), bUtana = await feljegyzes(b);
+      const bTar = await readFile(join(b, 'sajat', 'esemenyek.jsonl'), 'utf8');
+      const ki = {
+        elotteFeljegyezve: aElotte.length === 1 && bElotte.length === 1 && bElotte[0].n === (await sorok(b)) - 2,
+        megjott: !!g && bTar.includes(g),
+        elorelepett: aUtana.length === 1 && bUtana.length === 1 && bUtana[0].n === await sorok(b) && aUtana[0].n === await sorok(a)
+          && bUtana[0].n > bElotte[0].n
+      };
+      if (!Object.values(ki).every(Boolean)) {
+        process.stdout.write('  emlékezet — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+          + ' · ' + JSON.stringify({ aElotte, bElotte, aUtana, bUtana, sorokA: await sorok(a), sorokB: await sorok(b) }) + '\n');
+      }
+      return Object.values(ki).every(Boolean);
+    } finally {
+      await rm(a, { recursive: true, force: true });
+      await rm(b, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D75/1, D73 (a bekapcsolás): A VISSZAVETT VÁLLALÁS ÉS A TÁR TÖMÖRÍTÉSE (2026-10-09)
 // ===================================
 //

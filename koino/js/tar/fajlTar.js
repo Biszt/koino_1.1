@@ -700,6 +700,35 @@ export async function esemenyTarNyitasa(koino, hely = alapHely(), beallitas = {}
       });
     },
 
+    /**
+     * ⭐ D98/1 (F): a tár ÁLLÁSA — a mutató hossza és a tömörítés generációja. A társankénti emlékezet ezt jegyzi fel a csere
+     * végén (`tarsEmlekezet.js`): ami ezután kerül a mutató végére, az „azóta változott”.
+     * @returns {{n: number, g: number}}
+     */
+    allas() {
+      return { n: sorrend.length, g: ismertGeneracio };
+    },
+
+    /**
+     * ⭐ D98/1 (F): az `n`. bejegyzés UTÁN (a mutató sorrendjében — a fájl sorrendje) felvett események szeletei és
+     * bejelentési helyei, test nélkül. Null, ha az `n` kívül esik, vagy ha több mint `korlat` esemény jött azóta.
+     * @param {number} n
+     * @param {number} [korlat]
+     * @returns {{kulcsok: Set<string>, azonositok: Array<string>}|null}
+     */
+    valtozottSzeletek(n, korlat = 4096) {
+      if (!Number.isSafeInteger(n) || n < 0 || n > sorrend.length || sorrend.length - n > korlat) return null;
+      const kulcsok = new Set();
+      const azonositok = [];
+      for (let i = n; i < sorrend.length; i++) {
+        const b = sorrend[i];
+        kulcsok.add(b.s);
+        for (const k of b.p) kulcsok.add(k);
+        azonositok.push(b.a);
+      }
+      return { kulcsok, azonositok };
+    },
+
     /** A mutató állapota (a próbáknak és a naplónak) — testet nem tölt be. */
     mutatoAllapota() {
       return { pillanatkepbol, esemeny: sorrend.length, betoltottTest: testek.size, fedett: ismertMeret };
@@ -1085,6 +1114,53 @@ export function halmazTarolo(koino, hely = alapHely(), naploFrissitese) {
       const lista = Object.entries(t.tarsak).sort((a, b) => (b[1]?.ido ?? 0) - (a[1]?.ido ?? 0)).slice(0, HALMAZ_TARS_KORLAT);
       t.tarsak = Object.fromEntries(lista);
       await ir(t);
+    }
+  };
+}
+
+/**
+ * ⭐ D98/1 (F): a TÁRSANKÉNTI EMLÉKEZET helyi tára (`<koino>/emlekezet.json`): a társ tábla-aláírója alatt a saját tárom
+ * állása a legutóbbi közös cserénk végén és a maradék (`tarsEmlekezet.js`). Ugyanaz a felület, mint a
+ * `memoriaEmlekezetTar`-é; a legrégebben látott társ esik ki (`EMLEKEZET_TARS_KORLAT`). Helyi feljegyzés, nem esemény,
+ * nem terjed. ⚠️ Csak akkor ír, ha a feljegyzés változott (a „nincs újdonság” csere ne írjon minden körben lemezt).
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export const EMLEKEZET_TARS_KORLAT = 64;
+export function emlekezetTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'emlekezet.json');
+  const olvas = async () => {
+    try {
+      const j = JSON.parse(await readFile(fajl, 'utf8'));
+      return j?.tarsak && typeof j.tarsak === 'object' && !Array.isArray(j.tarsak) ? j.tarsak : {};
+    } catch {
+      return {};
+    }
+  };
+  return {
+    fajl,
+    async olvas(alairo) {
+      const x = (await olvas())[alairo];
+      return x && typeof x === 'object' ? x : null;
+    },
+    async ir(alairo, feljegyzes) {
+      const t = await olvas();
+      const regi = t[alairo];
+      if (feljegyzes && regi && regi.n === feljegyzes.n && regi.g === feljegyzes.g
+        && JSON.stringify(regi.r ?? []) === JSON.stringify(feljegyzes.r ?? [])) return;
+      if (!feljegyzes && !regi) return;
+      if (feljegyzes) t[alairo] = { n: feljegyzes.n, g: feljegyzes.g, r: feljegyzes.r ?? [], ido: Date.now() };
+      else delete t[alairo];
+      const lista = Object.entries(t).sort((a, b) => (b[1]?.ido ?? 0) - (a[1]?.ido ?? 0)).slice(0, EMLEKEZET_TARS_KORLAT);
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify({ tarsak: Object.fromEntries(lista) }), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
     }
   };
 }

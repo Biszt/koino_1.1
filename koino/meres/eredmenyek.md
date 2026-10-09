@@ -4877,3 +4877,10 @@ szelet tér el: a nyílt forgalom 25–62%-a, változásonként 1000 szeletnél 
 miatt logaritmikusan nő; a lista-küszöb alatti tartományokban a teljes, 87 jeles párok utaznak). Ha a két fél tudná, hol
 tartott a legutóbbi cseréjükön, a változott szeletek listája változásonként ~0,1 KB volna. A mai alak a „végtelen” elvét
 nem sérti, csak drágább. A ⑧ átvizsgálása: [`docs/f_a_atvizsgalas.md`](../../docs/f_a_atvizsgalas.md).
+
+⭐ **És a D98/1 után (2026-10-09, a laptopon — ugyanaz a mérés, emlékezettel és nélküle; a második csere végén mindkét fél
+feljegyzi a tára állását, a harmadik a változott szeletekről szól):** emlékezettel a változott közös szeletek cseréje
+**nem függ a szeletek számától** — egy változás 3,8 KB (50, 1000 és 5000 szeletnél is; nélküle 5,3 · 6,5 · 8,0 KB), öt
+változás 8,0–8,5 KB (nélküle 10,0 · 16,0 · 21,5 KB), húsz 25,8 KB (nélküle 27,3 · 46,8 · 73,5 KB); az egyeztető üzenetek
+száma 7 (nélküle 8–9). A változott szeletek útja (VALTOZOTT + VALTOZOTTPAROK) változásonként ~0,15 KB nyíltan. ⚠️ Emlékezet
+nélkül (az első találkozáskor) a VALTOZOTT üres kérdése +64 B. A „nincs újdonság” 1,3 KB maradt.

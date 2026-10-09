@@ -27,6 +27,7 @@ import { csereUdpResen } from '../js/csere/udpVonal.js';
 import { ujTablaKulcs, nyilvanosResz } from '../js/csere/tablaKulcs.js';
 import { kezfogasAlairasa } from '../js/csere/titkositas.js';
 import { memoriaHalmazTar } from '../js/csere/kozosHalmaz.js';
+import { memoriaEmlekezetTar } from '../js/csere/tarsEmlekezet.js';
 
 const KOINO = 'tarsemlekezetmeres';
 const VALTOZASOK = [0, 1, 5, 20];
@@ -40,12 +41,12 @@ async function udpParos() {
     bezar() { egyik.close(); masik.close(); } };
 }
 
-async function csere(tarA, tarB, reszvesz, kz) {
+async function csere(tarA, tarB, reszvesz, kz, emlekezet = false) {
   const p = await udpParos();
   const kezdet = Date.now();
   const meres = new Map();                                 // üzenet-típus → nyílt bájt (mindkét fél küldése)
   const oldal = (k) => ({ reszvesz, tablaKulcs: nyilvanosResz(k.t), tablaAlairo: (x) => kezfogasAlairasa(k.t, x),
-    reszvetelHalmaz: async () => k.p, halmazTar: k.h, uzenetMeres: meres });
+    reszvetelHalmaz: async () => k.p, halmazTar: k.h, uzenetMeres: meres, ...(emlekezet ? { emlekezetTar: k.e } : {}) });
   try {
     const [a, b] = await Promise.all([
       csereUdpResen(p.egyik, '127.0.0.1', p.masikPort, tarA, KOINO, oldal(kz.a)),
@@ -71,34 +72,37 @@ async function egyMeret(n, szerzo, masodik) {
   for (let i = 0; i < n; i++) kozosek.push(await szerzo.tesz('GondolatLetrehozas', { cim: 'S' + i, meret: 10 }));
   const halmaz = new Set(kozosek.map((e) => e.azonosito));
   for (const v of VALTOZASOK) {
-    const hely = join(tmpdir(), 'koino-tarsemlekezet-meres-' + n + '-' + v + '-' + Date.now());
-    try {
-      const tarA = await tarIrasa(join(hely, 'A'), kozosek);
-      const tarB = await tarIrasa(join(hely, 'B'), kozosek);
-      const kz = { a: { t: await ujTablaKulcs(), p: halmaz, h: memoriaHalmazTar() },
-        b: { t: await ujTablaKulcs(), p: halmaz, h: memoriaHalmazTar() } };
-      const reszvesz = (k) => halmaz.has(k);
-      await csere(tarA, tarB, reszvesz, kz);                   // az első találkozás: a közös halmaz kicserélése
-      await csere(tarA, tarB, reszvesz, kz);                   // bemelegítés (a gyorsítótárak)
-      // v közös szeletbe egy-egy új esemény a B tárba (egy másik szerző pontja — a szelet halmaza változik)
-      const lepes = Math.max(1, Math.floor(n / Math.max(1, v)));
-      for (let i = 0; i < v; i++) {
-        const cel = kozosek[(i * lepes) % n];
-        await tarB.hozzafuz(await masodik.tesz('TudatpontRendezes', { entitas: cel.azonosito, pont: 1 }));
+    for (const emlekezet of [false, true]) {
+      const hely = join(tmpdir(), 'koino-tarsemlekezet-meres-' + n + '-' + v + '-' + emlekezet + '-' + Date.now());
+      try {
+        const tarA = await tarIrasa(join(hely, 'A'), kozosek);
+        const tarB = await tarIrasa(join(hely, 'B'), kozosek);
+        const kz = { a: { t: await ujTablaKulcs(), p: halmaz, h: memoriaHalmazTar(), e: memoriaEmlekezetTar() },
+          b: { t: await ujTablaKulcs(), p: halmaz, h: memoriaHalmazTar(), e: memoriaEmlekezetTar() } };
+        const reszvesz = (k) => halmaz.has(k);
+        await csere(tarA, tarB, reszvesz, kz, emlekezet);        // az első találkozás: a közös halmaz kicserélése
+        await csere(tarA, tarB, reszvesz, kz, emlekezet);        // bemelegítés (a gyorsítótárak; és a feljegyzés)
+        // v közös szeletbe egy-egy új esemény a B tárba (egy másik szerző pontja — a szelet halmaza változik)
+        const lepes = Math.max(1, Math.floor(n / Math.max(1, v)));
+        for (let i = 0; i < v; i++) {
+          const cel = kozosek[(i * lepes) % n];
+          await tarB.hozzafuz(await masodik.tesz('TudatpontRendezes', { entitas: cel.azonosito, pont: 1 }));
+        }
+        const r = await csere(tarA, tarB, reszvesz, kz, emlekezet);
+        // ⭐ A bontás: az első szint (SZELETEK) — ezt spórolja meg az F —, a változott szeletek útja (VALTOZOTT…), és az esemény.
+        const m = r.meres;
+        const resz = (...t) => t.reduce((x, k) => x + (m.get(k) ?? 0), 0);
+        kiir('  n = ' + String(n).padStart(5) + ' · ' + String(v).padStart(2) + ' változott szelet · '
+          + (emlekezet ? 'emlékezettel (D98/1)' : 'emlékezet nélkül    ') + ': ' + kb(r.bajt).padStart(8) + ' · '
+          + String(r.uzenetek).padStart(2) + ' egyeztető üzenet · ' + String(r.ms).padStart(4) + ' ms'
+          + ' · nyíltan: első szint ' + kb(resz('SZELETEK', 'ELTERO')) + ', változott ' + kb(resz('VALTOZOTT', 'VALTOZOTTPAROK'))
+          + ', esemény ' + kb(resz('ESEMENY')));
+        if (process.env.KOINO_BONTAS) {
+          kiir('        ' + [...m.entries()].sort((x, y) => y[1] - x[1]).map(([k, b2]) => k + ' ' + kb(b2)).join(', '));
+        }
+      } finally {
+        await rm(hely, { recursive: true, force: true });
       }
-      const r = await csere(tarA, tarB, reszvesz, kz);
-      kiir('  n = ' + String(n).padStart(5) + ' · ' + String(v).padStart(2) + ' változott szelet: '
-        + kb(r.bajt).padStart(8) + ' · ' + String(r.uzenetek).padStart(3) + ' egyeztető üzenet · ' + r.ms + ' ms');
-      // ⭐ A bontás: az első szint (SZELETEK) — ezt spórolhatná meg az F —, a többi egyeztető, és maga az esemény.
-      const m = r.meres;
-      const resz = (...t) => t.reduce((x, k) => x + (m.get(k) ?? 0), 0);
-      const elso = resz('SZELETEK');
-      const esemeny = resz('ESEMENY');
-      const tobbi = [...m.entries()].filter(([k]) => !['SZELETEK', 'ESEMENY'].includes(k))
-        .sort((x, y) => y[1] - x[1]).map(([k, b]) => k + ' ' + kb(b)).join(', ');
-      kiir('        nyíltan: első szint (SZELETEK) ' + kb(elso) + ' · az esemény(ek) ' + kb(esemeny) + ' · a többi: ' + tobbi);
-    } finally {
-      await rm(hely, { recursive: true, force: true });
     }
   }
 }
@@ -106,7 +110,7 @@ async function egyMeret(n, szerzo, masodik) {
 async function fut() {
   const meretek = process.argv.slice(2).map(Number).filter((x) => x > 0);
   kiir('');
-  kiir('A TÁRSANKÉNTI EMLÉKEZET FELSŐ HATÁRA (70.) — Node ' + process.version + ' · ' + process.platform);
+  kiir('A TÁRSANKÉNTI EMLÉKEZET (70.) — Node ' + process.version + ' · ' + process.platform);
   kiir('  (két készülék, n közös szelet, a közös halmaz már ismert; v közös szeletben egy-egy új esemény)');
   const szerzo = await ujEember(KOINO);
   const masodik = await ujEember(KOINO);

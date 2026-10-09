@@ -299,6 +299,9 @@ export function iroTarNyitasa(belso, { mappa, jelez = () => {} }) {
     bejelentesek: (s) => belso.bejelentesek(s),
     szeletValtozata: (szelet) => belso.szeletValtozata(szelet),
     mutatoAllapota: () => belso.mutatoAllapota?.(),
+    // ⭐ D98/1 (F): a tár állása és az azóta változott szeletek — a társankénti emlékezetnek.
+    allas: () => belso.allas?.() ?? null,
+    valtozottSzeletek: (n, korlat) => belso.valtozottSzeletek?.(n, korlat) ?? null,
     frissit: () => belso.frissit?.() ?? 0,
 
     /**

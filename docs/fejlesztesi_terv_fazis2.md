@@ -4987,6 +4987,49 @@ a koinó születése, a részvételem szeletei és bejelentései, a vállalt sze
 láncok és a lezárási összegzések. ⛔ Az összegzett szeletből csak az ellenőrzött gyökér után (különben a két fokú
 vállalás billegne). Az őrjárat naponta egyszer, kézzel a `tomorit [proba]`. ⭐ **A ⑦ (B/3 — a szigorú (b)) ezzel kész.**
 
+### D98. A ⑧: A TÁRSANKÉNTI EMLÉKEZET ÉS A LÁNC-ELLENŐRZÉS A CSERÉBEN (2026-10-09, Csaba: „elfogadom a javaslataidat”)
+
+**Amiből jött:** a ⑧ átvizsgálása ([`f_a_atvizsgalas.md`](f_a_atvizsgalas.md)) és a 70. mérés: ha a közös szeletek közül
+néhány megváltozott, a forgalom legnagyobb része az első szint (melyik szelet tér el — változásonként ~1–2 KB, a nyílt
+forgalom 25–62%-a); és a szigorú (b) alatt a szerző teljes láncát csak ő tartja — a kettős lánc két ága külön tartókhoz
+kerülhet, és ott senki nem látja együtt (a keret kétszer használható).
+
+#### A DÖNTÉS
+
+1. ⭐ **F1 — A TÁRSANKÉNTI KÖZÖS ALAP (A):** a csere végén mindkét fél feljegyzi a társ tábla-aláírója alatt a végső közös
+   lenyomatát és a saját tára akkori állását (eseményszám + a tömörítés generációja; társanként állandó méret, legfeljebb
+   64 társ). A következő NYITÁS a közös alapot is bemondja; ha a kettőé ugyanaz, mindkét fél csak a NÁLA azóta változott
+   közös szeleteket sorolja fel (a rövid lenyomatukkal), és ezek mennek egyenesen a második szintre. A végén a közös
+   lenyomat ellenőriz: ha nem egyezik, ugyanabban a cserében lefut a rendes első szint — a lista nem kíván bizalmat. Közös
+   alap nélkül (első találkozás, tömörítés után, ha a közös halmaz változott, vagy túl hosszú lista) a mai menet.
+2. ⭐ **A1 — A LÁNC-KÖR A CSERÉBEN (A):** a csere végén egy rövid kör: „ezekről a szerzőkről kérek lánc-bizonyítékot” —
+   aki maga az a szerző (vagy „mindent” módban a teljes láncát tartja), felel a napló-bizonyítékokkal és (ha kérték) a teljes
+   kiosztás-listával. A pont-szerzők a vállalásuk miatt a raj tagjai, tehát a raj a körben (D97/2) eléri őket. Új útvonal,
+   DHT, keresés nem kell. A válaszból a meglévő bizonyítékok lesznek: az ELÁGAZÁS (D82 — a napló i. levele egy másik
+   esemény, amit elkérünk) és a NEGATÍV LEVÉL (D80). A hallgatás „nem ellenőrizhető” (D79/3), helyi feljegyzés + jelzés.
+3. ⭐ **A2 — A NAPLÓ-ELLENŐRZÉS GYAKORISÁGA (A):** minden cserében a szerzővel, ha az utolsó ellenőrzés óta új eseménye
+   jött hozzám — szerzőnként feljegyzem, meddig ellenőriztem (helyi, korlátos), egy cserében legfeljebb 8 eseményt
+   kérdezek. A teljes kiosztás-lista a D79 szerint 5% eséllyel egy új kiosztás-gyökérnél.
+4. **A szerző oldala logaritmikus:** a saját napló-fájának részfa-gyökereit gyorsítótárban tartja, egy bizonyíték log n
+   lépés (ma minden levelet újraszámol — 100 000 eseménynél 3,6 s, 52. mérés).
+
+A sorrend: ① F → ② a szerző oldala (a napló gyorsítótára, a lánc-kör kiszolgálója) → ③ a kérdező oldala (az ellenőrzött
+állás, a kérdések, a bizonyítékok, a „nem ellenőrizhető”) → ④ a parancssor-próba (két ágú szerző, három készülék).
+
+#### ✅ MEGÉPÜLT — F, a társankénti emlékezet (2026-10-09)
+
+`csere/tarsEmlekezet.js` + a tár állása (`fajlTar.js` `allas`, `valtozottSzeletek` — a mutatóból, test nélkül) + a fájlos
+tároló (`emlekezetTarolo`, `<koino>/emlekezet.json`, legfeljebb 64 társ, csak változáskor ír) + `vonal.js`: a csere végén
+(a „nincs újdonság” után is) a társ tábla-aláírója alatt feljegyződik a tárom állása (a mutató hossza, a tömörítés
+generációja) és a MARADÉK (a csere végén is eltérő szeletek — ahol valamelyik fél kimaradt). Ha a nyitó lenyomatok
+eltérnek, mindkét fél elküldi, mi változott NÁLA a feljegyzése óta (VALTOZOTT: a tár vége óta hozzáfűzött események szeletei
+és bejelentési helyei, a koinó születése, a maradék — vagy null, ha nincs feljegyzés, más a generáció, vagy túl sok);
+a VALTOZOTTPAROK a U-n KÍVÜLI párok lenyomatát (22 jel) és a U párjait (a teljes lenyomatukkal) viszi. ⭐ Ha a két kívüli
+lenyomat egyezik, a U a két fél párjaiból osztályozható (az ELTERO is elmarad); ha nem, ugyanabban a cserében a rendes
+első szint fut — a lista nem kíván bizalmat (a hazug lista próbája). ⚠️ Két eltérés a döntés szövegétől (elágazás 88–89): a
+közös alap nem a NYITÁS-ban egyeztetődik (mindkét fél a saját feljegyzéséhez mér), és az ellenőrzés a második szint előtt
+van (a kívüli lenyomat), nem a csere végén. A zárt koinó korlátozott útján nincs feljegyzés. Mérve (70.): lásd ott.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

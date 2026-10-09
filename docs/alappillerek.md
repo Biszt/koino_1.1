@@ -349,7 +349,10 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    70. mérés szerint a változott közös szeleteknél a forgalom legnagyobb része az első szint (változásonként ~1–2 KB; az F
    ~0,1 KB-ra vinné); az A-nál a szigorú (b) alatt a szerző teljes láncát csak ő tartja (minden lánc-ellenőrzés kérdés
    hozzá), de a pont-szerzők a vállalásuk miatt a raj tagjai, tehát a cserében kérdezhetők; az elágazás-bizonyíték (D82) és
-   a negatív levél (D80) új fajta nélkül elég. ⏸️ Csabánál: F1, A1, A2.
+   a negatív levél (D80) új fajta nélkül elég. ✅ **D98** (Csaba: „elfogadom a javaslataidat”): F1/A, A1/A, A2/A. ✅ **Az F KÉSZ
+   (2026-10-09):** a társankénti emlékezet (`tarsEmlekezet.js`, a tár `allas`-a, `emlekezet.json`) — a változott közös szelet
+   az első szint nélkül jön (a 70. mérés kiegészítése). ⏭️ Az A hátralévői: a szerző oldala (a napló gyorsítótára, a lánc-kör
+   kiszolgálója), a kérdező oldala, a parancssor-próba.
 
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat).
 
@@ -682,3 +685,14 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     tagsági kísérői is mennek — a nem tag (zárt koinó) kérőnek nem** · mert az átmeneti nézetben a szerzők pontja különben
     „függőben” maradna; a nem tagnak a harmadik felek láncát nem adjuk ki · a megépítéskor, Claude · `vonal.js`,
     `koino.js` (`kerelemKiszolgaloja`).
+88. **2026-10-09 · a társankénti közös alap (D98/1: „a csere végén a közös lenyomat és a tár állása; a NYITÁS a közös
+    alapot is bemondja; a végén a közös lenyomat ellenőriz”)** → **nincs közös alap a NYITÁS-ban: mindkét fél a SAJÁT
+    feljegyzéséhez képest mondja a változásait, és az ellenőrzés a második szint ELŐTT van — a U-n kívüli párok lenyomata (ha
+    eltér, ugyanabban a cserében a rendes első szint fut)** · mert a NYITÁS-kor a társ még ismeretlen (a feljegyzés a
+    tábla-aláírója alatt van), egy régebbi feljegyzéshez mért lista csak bővebb (nem hibás), és a „végén ellenőriz” egy
+    második menetet kívánt volna ugyanabban a cserében; a kívüli lenyomat ugyanazt a garanciát adja egy lépéssel korábban,
+    és mindkét fél ugyanazt a két lenyomatot látja (egyformán dönt) · a megépítéskor, Claude · `tarsEmlekezet.js`, `vonal.js`.
+89. **2026-10-09 · a MARADÉK a feljegyzésben** → **a csere végén is eltérő szeletek (ahol valamelyik fél kimaradt) a
+    feljegyzésbe kerülnek, és a következő lista része** · mert különben ahol az egyik fél tartósan nem vesz részt (a közös
+    halmaz nélküli, „minden” módú társ mellett), a kívüli lenyomat soha nem egyezne, és az F soha nem működne · a megépítéskor
+    (próba mérte), Claude · `tarsEmlekezet.js`.

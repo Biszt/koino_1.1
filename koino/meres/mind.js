@@ -80,6 +80,7 @@ import tagsagKisero from './tagsagKiseroProba.js';
 import gyokerDarab from './gyokerDarabProba.js';
 import kozosHalmaz from './kozosHalmazProba.js';
 import reszvetel from './reszvetelProba.js';
+import tarsEmlekezet from './tarsEmlekezetProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -125,6 +126,7 @@ const PROBAK = [
   { nev: 'gyokerdarab', futtat: gyokerDarab },
   { nev: 'kozoshalmaz', futtat: kozosHalmaz },
   { nev: 'reszvetel', futtat: reszvetel },
+  { nev: 'tarsemlekezet', futtat: tarsEmlekezet },
   { nev: 'tagsag', futtat: tagsag },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
@@ -156,7 +158,7 @@ const CSOPORTOK = {
   // a felületnek felelő réteg
   felulet: ['kapu', 'pakli', 'ter'],
   // két készülék között: a párbeszéd, a kézi út, a társak, a kapu, a kötések, a tábla, a DHT
-  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'tagsagkisero', 'gyokerdarab', 'kozoshalmaz', 'reszvetel', 'vizsga'],
+  csere: ['csere', 'fajlcsere', 'tarsak', 'tartomany', 'titkositas', 'udpkapu', 'kotes', 'tabla', 'dht', 'cimjegyzek', 'kerelem', 'osszegzotartas', 'tagsagkisero', 'gyokerdarab', 'kozoshalmaz', 'reszvetel', 'tarsemlekezet', 'vizsga'],
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül

@@ -105,7 +105,9 @@ import {
   // ⭐ D95/3: a csak küldő út kézbesítési jegyzéke.
   kezbesitesTarolo,
   // ⭐ D97/1: a közös halmaz helyi tára.
-  halmazTarolo
+  halmazTarolo,
+  // ⭐ D98/1 (F): a társankénti emlékezet helyi tára.
+  emlekezetTarolo
 } from './js/tar/fajlTar.js';
 import { naploFrissitese } from './js/csere/kozosHalmaz.js';
 // ⭐ D97/2: a raj a körben (69. mérés: a változott szeletek tartói sorban, aztán a forgatás).
@@ -1928,6 +1930,9 @@ async function ketFokBeallitasai(allapot = null) {
     // lenyomat a két részvételi halmaz metszetén fut.
     reszvetelHalmaz: async () => reszvetel,
     halmazTar: halmazTarolo(KOINO, alapHely(), naploFrissitese),
+    // ⭐⭐ D98/1 (F): a társankénti emlékezet — a csere végén a tárom állása a társ alatt (`emlekezet.json`); a következő
+    // cserén csak a változott közös szeletekről szólunk (az első szint helyett — 70. mérés).
+    emlekezetTar: emlekezetTarolo(KOINO, alapHely()),
     // ⭐ D96: a koinó születése mint ESEMÉNY — mindenkihez eljut (a szelete csak az alapítóé).
     koinoSzuletes: await koinoSzuletese(),
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
