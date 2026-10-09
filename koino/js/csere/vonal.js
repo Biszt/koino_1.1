@@ -62,6 +62,10 @@ import {
   valtozottKulcsok, valtozottAlakja, valtozottUnio, kivulLenyomat, uParjai, parokAlakja, uOsztalyozasa,
   emlekezetFeljegyzes, VALTOZOTT_KORLAT
 } from './tarsEmlekezet.js';
+
+// ⭐ D98/2–3: a lánc-körben egy cserében legfeljebb ennyi szerzőről kérdezünk és felelünk (a `lancEllenorzes.js`
+// `LANC_SZERZO_KORLAT`-ja — a vonal nem importál a számítás rétegéből, ezért itt is áll; a kettő egyezik).
+const LANC_KOR_SZERZOK = 3;
 // ⭐ D97/1: a közös halmaz (a részvételi halmazok ujjlenyomatai és változatai).
 import { ervenyesValtozat, halmazUzenet, halmazAlkalmazasa, kozosSzuro } from './kozosHalmaz.js';
 // ⚠️ A `kovetkezoKeres` 2026-09-15-ig innen jött: az „eddigi méret → következő eltolás"
@@ -304,11 +308,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
   let osszegzesEredmeny = null;     // ⭐ D95/1: a nagy szeletek összegzésének eredménye (a hívóé)
   let tagsagEredmeny = null;        // ⭐ D95/2: a tagsági kísérők köre (a hívóé)
   let kezbesitve = [];              // ⭐ D95/3: a saját eseményeim, amiket egy tartó átvett vagy már tudott (a hívóé)
+  let lancEredmeny = null;          // ⭐ D98/2–3: a lánc-kör eredménye (a hívóé)
 
   const eredmeny = () => ({
     korok: 1, uj, kuldott, reszletesAllasok: 0, masKoino, kivulrolIgyLatszom, kapottUdpCimek,
     kapottTablaKulcs, kapottDhtGepek, fajlokNala, elteroSzeletek, egyeztetoUzenetek, ujAzonositok, kapottRaj,
-    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve
+    tarsKorlatozva, tarsAzonossaga, osszegzesEredmeny, tagsagEredmeny, kezbesitve, lancEredmeny
   });
 
   // ===== ⭐⭐ D93/3: A ZÁRT KOINÓ KAPUJA — a hívóé (`beallitas.zartKapu`), a vonal semmit nem tud a tagságról =====
@@ -808,6 +813,39 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
     }
   };
 
+  // ----- ⭐⭐ D98/2–3: A LÁNC-KÖR (a szelet-csere végén — lent hívjuk) -----
+  //
+  // Mindkét fél bemondja a SAJÁT szerzői kulcsát (`en` — a társ ebből tudja, a következő cserén kit kérdezzen a saját
+  // láncáról), és a kérdéseit (LANCKEREK): a jelölt szerzők (a társ ismert kulcsa és a most kapott események szerzői)
+  // láncáról. Aki a láncot tartja, felel (LANCVALASZ); a válasz önmagát igazolja (a szerző aláírt gyökereihez — a
+  // `lancEllenorzes.js` dönt), a vonal semmit nem tud a láncról. Ha egyik fél sem kérdez, a második üzenet elmarad (a
+  // „nincs újdonság” csere — ami a nyitásnál véget ér — nem drágul).
+  // ⛔ A nem szabad társnak (zárt koinó) nem felelünk.
+  const lancKor = async (ujak) => {
+    const hivas = async (nev, ...ervek) => {
+      if (typeof beallitas[nev] !== 'function') return null;
+      try { return await beallitas[nev](...ervek); }
+      catch (hiba) { console.warn('parbeszed - ' + nev + ' nem sikerült', { ok: hiba.message }); return null; }
+    };
+    const tarsAlairo = typeof kapottTablaKulcs?.alairo === 'string' ? kapottTablaKulcs.alairo : null;
+    const sajatKerdesek = (await hivas('lancKerdesek', ujak, tarsAlairo)) ?? [];
+    const kerdesek = Array.isArray(sajatKerdesek) ? sajatKerdesek.slice(0, LANC_KOR_SZERZOK) : [];
+    const en = typeof beallitas.sajatSzerzo === 'string' && ervenyesKulcs(beallitas.sajatSzerzo) ? beallitas.sajatSzerzo : null;
+    kuld({ uzenet: 'LANCKEREK', ...(en ? { en } : {}), kerdesek });
+    const be = await varj('LANCKEREK');
+    const oveKerdesek = Array.isArray(be.kerdesek) ? be.kerdesek.slice(0, LANC_KOR_SZERZOK) : [];
+    const oveEn = typeof be.en === 'string' && ervenyesKulcs(be.en) ? be.en : null;
+    if (tarsAlairo && oveEn) await hivas('lancTars', tarsAlairo, oveEn);
+    if (!kerdesek.length && !oveKerdesek.length) return;
+    const valaszok = !korlat && oveKerdesek.length ? (await hivas('lancValasz', oveKerdesek)) ?? [] : [];
+    kuld({ uzenet: 'LANCVALASZ', valaszok: Array.isArray(valaszok) ? valaszok.slice(0, LANC_KOR_SZERZOK) : [] });
+    const bv = await varj('LANCVALASZ');
+    if (kerdesek.length) {
+      lancEredmeny = await hivas('lancFogadas', kerdesek,
+        Array.isArray(bv.valaszok) ? bv.valaszok.slice(0, LANC_KOR_SZERZOK) : []);
+    }
+  };
+
   // ----- ⭐⭐ D95/1, D95/3: A NAGY SZELET ÉS A SAJÁT ESEMÉNYEK — két kör, ha bármelyik fél mondott listát -----
   //
   // Mindkét fél tudja, lesz-e (a két CIMEK-ből). 1. kör (OSSZEGZESEK): a társ összegző szeleteire a válaszom (ha a szeletet
@@ -1108,6 +1146,12 @@ export async function parbeszed(kapcsolat, tar, koino, beallitas = {}) {
 
   // ===== 6. ⭐⭐ D95/2: A TAGSÁGI KÍSÉRŐK — az új (és a függő) szerzők tagsága =====
   await tagsagKor(beolvasztva.ujAzonositok);
+
+  // ===== 7. ⭐⭐ D98/2–3: A LÁNC-KÖR — minden cserében, ami nem ért véget a nyitásnál =====
+  // ⛔ A feltétel SZIMMETRIKUS kell legyen: az eltérő szeletek száma a zárt koinó korlátozott útján a két félnél eltérhet (a
+  // korlát csak az egyik félé) — egy első változat ezen akadt el (a teljes próbasor mérte). A nyitásnál véget nem ért csere
+  // viszont mindkét félnél ugyanaz (a két nyitó lenyomat és a gyökér-darabok jele mindkettőnél megvan).
+  await lancKor(beolvasztva.ujAzonositok);
 
   // ⭐ D98/1: a feljegyzés — a maradék az, ahol valamelyik fél kimaradt (ott a két fél a csere után is eltér).
   await emlekezetIrasa([...mind].filter((k) => enKimaradok.has(k) || oveKimarad.has(k)));

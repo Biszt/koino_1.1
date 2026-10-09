@@ -1165,6 +1165,40 @@ export function emlekezetTarolo(koino, hely = alapHely()) {
   };
 }
 
+/**
+ * ⭐ D98/2–3: a LÁNC-ELLENŐRZÉS helyi tára (`<koino>/lancellenorzes.json`): szerzőnként a legutóbb ellenőrzött napló-gyökér
+ * és az ellenőrzött események, és a társak bemondott szerzői kulcsa (a tábla-aláírójuk alatt). A korlátokat a hívó vágja
+ * (`lancEllenorzes.js` `lancJegyzekVagasa`). Helyi feljegyzés, nem esemény, nem terjed.
+ * @param {string} koino
+ * @param {string} [hely]
+ */
+export function lancEllenorzesTarolo(koino, hely = alapHely()) {
+  const fajl = join(hely, koino, 'lancellenorzes.json');
+  return {
+    fajl,
+    async olvas() {
+      try {
+        const j = JSON.parse(await readFile(fajl, 'utf8'));
+        const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
+        return { szerzok: obj(j?.szerzok), tarsak: obj(j?.tarsak) };
+      } catch {
+        return { szerzok: {}, tarsak: {} };
+      }
+    },
+    async ir(adat) {
+      await mkdir(dirname(fajl), { recursive: true });
+      const ideiglenes = fajl + '.' + process.pid + '-' + Math.random().toString(36).slice(2) + '.uj';
+      try {
+        await writeFile(ideiglenes, JSON.stringify(adat), 'utf8');
+        await rename(ideiglenes, fajl);
+      } catch (hiba) {
+        await rm(ideiglenes, { force: true }).catch(() => {});
+        throw hiba;
+      }
+    }
+  };
+}
+
 // ===================================
 // ⭐⭐ A FÁJLOK — tartalom-címzett tár (Szakasz 5.7)
 // ===================================

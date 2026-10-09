@@ -19,7 +19,7 @@ import { probaGyujtemeny } from './probaFuttato.js';
 import {
   levelOsszegzes, csomopontOsszegzes, uresOsszegzes, azonosOsszegzes,
   naploGyokere, naploBizonyitek, naploBizonyitekEllenorzese, ujNaplo, naploHozzafuzes,
-  naploCsucsGyokere, naploMerete,
+  naploCsucsGyokere, naploMerete, naploKovetkezetesseg, naploKovetkezetessegEllenorzese,
   ujAllapotFa, allapotBeallitas, allapotTorles, allapotGyokere, allapotLista, allapotGyokereListabol,
   allapotBizonyitek, allapotBizonyitekEllenorzese, allapotValtozasa,
   allapotSulyozottKeresese, allapotSulyozottEllenorzese
@@ -105,6 +105,66 @@ proba('⛔⛔ A MEGHAMISÍTOTT NAPLÓ-BIZONYÍTÉK ELBUKIK — más levél, más
   const rossz = esetek.filter(([, kapott, vart]) => kapott !== vart).map(([nev]) => nev);
   if (rossz.length) console.log('    (rosszul ítélt esetek: ' + rossz.join(', ') + ')');
   return rossz.length === 0;
+});
+
+// ----- ⭐⭐ D98/2: A KÖVETKEZETESSÉG (RFC 9162, 2.1.4) és a részfa-gyorsítótár (D98/4) -----
+
+proba('⭐⭐ A KÖVETKEZETESSÉG minden (régi, új) méretpárra átmegy 1 és 40 levél között — és legfeljebb ~2⌈log₂ n⌉ lépés', async () => {
+  const L = await naploLevelek(40);
+  const gyokerek = [];
+  for (let n = 0; n <= 40; n++) gyokerek.push(await naploGyokere(N, L.slice(0, n)));
+  for (let n = 1; n <= 40; n++) {
+    for (let m = 1; m <= n; m++) {
+      const b = await naploKovetkezetesseg(N, L.slice(0, n), m);
+      if (b.ut.length > 2 * Math.ceil(Math.log2(n)) + 1) return false;
+      if (!await naploKovetkezetessegEllenorzese(N, gyokerek[m], gyokerek[n], b)) return false;
+    }
+  }
+  return true;
+});
+
+proba('⛔⛔ A HAMIS KÖVETKEZETESSÉG ELBUKIK — más ág (egy levél eltér), átírt lépés, csonka út, felcserélt méretek, hibás alak', async () => {
+  const L = await naploLevelek(21);
+  const masik = [...L.slice(0, 5), await levelOsszegzes(N, 'masik-ag'), ...L.slice(6)];   // a 6. levél másik ágon
+  const regi = await naploGyokere(N, L.slice(0, 9));
+  const masikRegi = await naploGyokere(N, masik.slice(0, 9));
+  const uj = await naploGyokere(N, L);
+  const b = await naploKovetkezetesseg(N, L, 9);
+  const bMasik = await naploKovetkezetesseg(N, masik, 9);
+  const esetek = [
+    ['eredeti', await naploKovetkezetessegEllenorzese(N, regi, uj, b), true],
+    ['a régi gyökér a másik ágé', await naploKovetkezetessegEllenorzese(N, masikRegi, uj, b), false],
+    ['a másik ág bizonyítéka', await naploKovetkezetessegEllenorzese(N, regi, uj, bMasik), false],
+    ['átírt lépés', await naploKovetkezetessegEllenorzese(N, regi, uj, { ...b, ut: b.ut.map((p, i) => (i === 0 ? { ...p, l: L[0].l } : p)) }), false],
+    ['csonka út', await naploKovetkezetessegEllenorzese(N, regi, uj, { ...b, ut: b.ut.slice(0, -1) }), false],
+    ['toldott út', await naploKovetkezetessegEllenorzese(N, regi, uj, { ...b, ut: [...b.ut, L[0]] }), false],
+    ['felcserélt gyökerek', await naploKovetkezetessegEllenorzese(N, uj, regi, b), false],
+    ['más régi méret', await naploKovetkezetessegEllenorzese(N, regi, uj, { ...b, regi: 8 }), false],
+    ['hibás alak', await naploKovetkezetessegEllenorzese(N, regi, uj, { regi: 9, meret: 21, ut: 'x' }), false],
+    ['egyenlő méret, üres út', await naploKovetkezetessegEllenorzese(N, uj, uj, await naploKovetkezetesseg(N, L, 21)), true]
+  ];
+  const rossz = esetek.filter(([, kapott, vart]) => kapott !== vart).map(([nev]) => nev);
+  if (rossz.length) console.log('    (rosszul ítélt esetek: ' + rossz.join(', ') + ')');
+  return rossz.length === 0;
+});
+
+proba('⭐ A RÉSZFA-GYORSÍTÓTÁR (D98/4): ugyanaz a gyökér és bizonyíték, mint nélküle — és a második kérdés már nem számol', async () => {
+  const L = await naploLevelek(300);
+  const memo = new Map();
+  const v = magvas(98);
+  for (let k = 0; k < 20; k++) {
+    const n = 1 + Math.floor(v() * 300);
+    const i = Math.floor(v() * n);
+    const a = await naploBizonyitek(N, L.slice(0, n), i, 0, memo);
+    const b = await naploBizonyitek(N, L.slice(0, n), i);
+    if (JSON.stringify(a) !== JSON.stringify(b)) return false;
+    const m = 1 + Math.floor(v() * n);
+    if (JSON.stringify(await naploKovetkezetesseg(N, L.slice(0, n), m, 0, memo))
+      !== JSON.stringify(await naploKovetkezetesseg(N, L.slice(0, n), m))) return false;
+  }
+  const meret = memo.size;
+  await naploGyokere(N, L.slice(0, 256), 0, memo);
+  return meret > 0 && memo.size >= meret && azonosOsszegzes(await naploGyokere(N, L, 0, memo), await naploGyokere(N, L));
 });
 
 // ===================================

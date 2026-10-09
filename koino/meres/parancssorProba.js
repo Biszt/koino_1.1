@@ -745,6 +745,71 @@ proba('⭐⭐ D98/1: a csere végén a társ alatt feljegyződik a tár állása
   });
 
 // ===================================
+// ⭐⭐ D98/2–4: A LÁNC-KÖR A VALÓDI CSERÉBEN — a két ágú szerző (2026-10-09)
+// ===================================
+//
+// X (az alapító) két készüléken ugyanazzal a kulccsal ír (A1, A2): a közös előtag után A1 a G-re tesz pontot (a 6.
+// esemény), A2 a G2-re (az ő 6.-a) és a G-re (a 7.). H („alap” módban) csak a G-t vállalja: A1-től megkapja X 6. eseményét,
+// A2-től a 7.-et — a két ág eseményei KÜLÖNBÖZŐ sorszámon találkoznak nála (az észlelő ezt nem látja). ⭐ A lánc-kör A2-t
+// kérdezi: a 7. esemény láncán a 6. helyen MÁS áll, mint ami H-nál van — A2 kiadja a sajátját, és H bejelenti az
+// elágazást X azonosság-szeletébe. Viselkedést mérünk: H lemezén ott az `Ellentmondas` (elágazás, X ellen), és a
+// lánc-ellenőrzés feljegyzése. Rontás: a `koino.js` nem köti be a lánc-kört → nincs bizonyíték.
+proba('⭐⭐ D98/2–4: a két ágú szerző eseményei egy harmadik készüléken különböző sorszámon találkoznak — a lánc-kör bizonyítja az elágazást',
+  async () => {
+    const a1 = await ujKeszulek();
+    const a2 = await ujKeszulek();
+    const h = await ujKeszulek();
+    const alap = { KOINO_KISZOLGALAS: 'alap' };
+    try {
+      await fut(a1, 'koino', 'Lánc', 'próba', 'nyilt');
+      const g = azonosito(await fut(a1, 'gondolat', 'G'), 'Létrejött:');
+      const g2 = azonosito(await fut(a1, 'gondolat', 'G2'), 'Létrejött:');
+      await fut(a1, 'pont', g, '5');
+      await fut(a1, 'pont', g2, '5');
+      await fut(a1, 'kivisz', join(a1, 'mind.jsonl'));
+      await fut(a1, 'mentes', join(a1, 'kulcs-mentes.json'));
+      await fut(a2, 'visszatolt', join(a1, 'kulcs-mentes.json'), 'felulir');
+      await fut(a2, 'behoz', join(a1, 'mind.jsonl'));
+      await fut(h, 'behoz', join(a1, 'mind.jsonl'));
+      await fut(h, 'pont', g, '3');                          // H a G-t vállalja (a G2-t nem)
+      await fut(a1, 'pont', g, '7');                         // az A ág: X 6. eseménye
+      await fut(a2, 'pont', g2, '6');                        // a B ág: X 6. eseménye (más)
+      await fut(a2, 'pont', g, '9');                         // a B ág: X 7. eseménye
+      await csereKor(a1, h, 7962, alap);
+      await csereKor(a2, h, 7963, alap);
+      const olvas = async (m) => (await readFile(join(m, 'sajat', 'esemenyek.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        .map((x) => JSON.parse(x));
+      const esemenyek = await olvas(h);
+      const x = esemenyek.find((e) => e.tipus === 'KoinoLetrehozas')?.szerzo;
+      const utolso = (lista) => lista.filter((e) => e.szerzo === x).sort((p, q) => q.sorszam - p.sorszam)[0];
+      const aAg = utolso(await olvas(a1));                     // az A ág utolsója (k)
+      const a2Esemenyei = await olvas(a2);
+      const bFej = utolso(a2Esemenyei.filter((e) => e.koino === aAg.koino && e.szerzo === x && e.adat?.entitas !== undefined
+        && a2Esemenyei.some((f) => f.azonosito === e.elozo && f.sorszam === aAg.sorszam)));        // a B ág k+1.-e
+      const bAg = a2Esemenyei.find((e) => e.szerzo === x && e.sorszam === aAg.sorszam && e.azonosito !== aAg.azonosito);
+      const vad = esemenyek.find((e) => e.tipus === 'Ellentmondas' && e.adat?.fajta === 'elagazas' && e.adat?.kit === x);
+      let feljegyzes = null;
+      try { feljegyzes = JSON.parse(await readFile(join(h, 'sajat', 'lancellenorzes.json'), 'utf8')); } catch { feljegyzes = null; }
+      const ki = {
+        // H-nál X két ágának eseményei KÜLÖNBÖZŐ sorszámon: az A ág k.-a (A1-től) és a B ág k+1.-e (A2-től)
+        kulonSorszamon: !!aAg && !!bFej && !!bAg && bFej.sorszam === aAg.sorszam + 1
+          && esemenyek.some((e) => e.azonosito === aAg.azonosito) && esemenyek.some((e) => e.azonosito === bFej.azonosito),
+        // a bizonyíték a két k. esemény (az A ágé és a B ágé) — a B ág k.-a csak a lánc-körből jöhetett
+        bizonyitek: !!vad && [vad.adat.esemeny?.azonosito, vad.adat.masik?.azonosito].sort().join()
+          === [aAg.azonosito, bAg.azonosito].sort().join(),
+        feljegyezve: !!feljegyzes?.szerzok?.[x]
+      };
+      if (!Object.values(ki).every(Boolean)) {
+        process.stdout.write('  lánc-kör — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ')
+          + ' · ' + JSON.stringify({ aAg: aAg?.sorszam, bFej: bFej?.sorszam, bAg: !!bAg }) + '\n');
+      }
+      return Object.values(ki).every(Boolean);
+    } finally {
+      for (const m of [a1, a2, h]) await rm(m, { recursive: true, force: true });
+    }
+  });
+
+// ===================================
 // ⭐⭐ D75/1, D73 (a bekapcsolás): A VISSZAVETT VÁLLALÁS ÉS A TÁR TÖMÖRÍTÉSE (2026-10-09)
 // ===================================
 //

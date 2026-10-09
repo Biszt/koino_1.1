@@ -137,15 +137,29 @@ function balMeret(n) {
   return k;
 }
 
+// ⭐ D98/4: A RÉSZFA-GYORSÍTÓTÁR — a szerző a saját láncáról sokszor ad bizonyítékot (a cserében kérdezik); a TELJES
+// (kettőhatvány méretű, igazított) részfák gyökere a lánc hozzáfűzésével soha nem változik, tehát megtartható. Csak a
+// `MEMO_MERET`-nél nagyobbakat tartjuk (a lánc hosszának ~1/32-ed része), a kisebbek gyorsan újraszámolódnak: így egy
+// bizonyíték O(log n) részfa-gyökér + néhány kis részfa. ⚠️ A hívó dolga, hogy a memo egy láncé maradjon (a levelek
+// előtagja ne változzon alatta) — a szerzőnél a lánc csak nő.
+const MEMO_MERET = 64;
+
 /** A levelek [a, b) szakaszának gyökere. */
-async function naploResz(fajta, levelek, a, b, hossz) {
+async function naploResz(fajta, levelek, a, b, hossz, memo = null) {
   const n = b - a;
   if (n === 0) return uresOsszegzes(fajta, hossz);
   if (n === 1) return levelek[a];
+  const tarolhato = memo && n >= MEMO_MERET && (n & (n - 1)) === 0;
+  if (tarolhato) {
+    const m = memo.get(a + ':' + n);
+    if (m) return m;
+  }
   const k = balMeret(n);
-  return csomopontOsszegzes(fajta,
-    await naploResz(fajta, levelek, a, a + k, hossz),
-    await naploResz(fajta, levelek, a + k, b, hossz));
+  const r = await csomopontOsszegzes(fajta,
+    await naploResz(fajta, levelek, a, a + k, hossz, memo),
+    await naploResz(fajta, levelek, a + k, b, hossz, memo));
+  if (tarolhato) memo.set(a + ':' + n, r);
+  return r;
 }
 
 /**
@@ -154,31 +168,104 @@ async function naploResz(fajta, levelek, a, b, hossz) {
  * @param {Array<Object>} levelek - összegzések (`levelOsszegzes`)
  * @param {number} [hossz] - az összeg-lista hossza (a naplóban 0)
  */
-export async function naploGyokere(fajta, levelek, hossz = 0) {
-  return naploResz(fajta, levelek, 0, levelek.length, hossz);
+export async function naploGyokere(fajta, levelek, hossz = 0, memo = null) {
+  return naploResz(fajta, levelek, 0, levelek.length, hossz, memo);
 }
 
 /** Az index-edik levél útja a [a, b) szakaszban — a testvérek, a levéltől fölfelé. */
-async function naploUt(fajta, levelek, m, a, b, hossz) {
+async function naploUt(fajta, levelek, m, a, b, hossz, memo = null) {
   const n = b - a;
   if (n === 1) return [];
   const k = balMeret(n);
   if (m < k) {
-    return [...await naploUt(fajta, levelek, m, a, a + k, hossz), await naploResz(fajta, levelek, a + k, b, hossz)];
+    return [...await naploUt(fajta, levelek, m, a, a + k, hossz, memo), await naploResz(fajta, levelek, a + k, b, hossz, memo)];
   }
-  return [...await naploUt(fajta, levelek, m - k, a + k, b, hossz), await naploResz(fajta, levelek, a, a + k, hossz)];
+  return [...await naploUt(fajta, levelek, m - k, a + k, b, hossz, memo), await naploResz(fajta, levelek, a, a + k, hossz, memo)];
 }
 
 /**
  * ⭐ A TAGSÁG BIZONYÍTÉKA: az `index`-edik levél benne van a `levelek` gyökerében.
- * ⚠️ O(n) munka (a testvér-részfákat újraszámolja) — a szerzőé, aki a teljes láncot tartja.
+ * ⚠️ Gyorsítótár nélkül O(n) munka (a testvér-részfákat újraszámolja); a `memo`-val (D98/4) O(log n) részfa-gyökér.
+ * @param {Map} [memo] - a részfa-gyorsítótár (egy láncé — lásd `MEMO_MERET`)
  * @returns {Promise<{index: number, meret: number, ut: Array<Object>}>}
  */
-export async function naploBizonyitek(fajta, levelek, index, hossz = 0) {
+export async function naploBizonyitek(fajta, levelek, index, hossz = 0, memo = null) {
   if (!Number.isSafeInteger(index) || index < 0 || index >= levelek.length) {
     throw new Error('osszegzoFa: a napló-index a fán kívül esik');
   }
-  return { index, meret: levelek.length, ut: await naploUt(fajta, levelek, index, 0, levelek.length, hossz) };
+  return { index, meret: levelek.length, ut: await naploUt(fajta, levelek, index, 0, levelek.length, hossz, memo) };
+}
+
+// ----- ⭐⭐ D98/2: A KÖVETKEZETESSÉG — a régi gyökér a mostaninak előtagja (RFC 9162, 2.1.4) -----
+//
+// A kérdező szerzőnként megjegyzi a legutóbb ellenőrzött napló-gyökeret; ha a szerzőnek újabb eseménye jön (újabb gyökér),
+// ezzel bizonyítható, hogy a régi napló a mostaninak előtagja — így a korábban ellenőrzött eseményeket nem kell újra
+// kérdezni, és a két ág (a kettős lánc) nem adhat következetes bizonyítékot.
+
+/** A SUBPROOF (RFC 9162, 2.1.4.1): az első m levél fája a [a, b) szakasz fájának előtagja. */
+async function kovetkezetessegResz(fajta, levelek, m, a, b, teljes, hossz, memo) {
+  const n = b - a;
+  if (m === n) return teljes ? [] : [await naploResz(fajta, levelek, a, b, hossz, memo)];
+  const k = balMeret(n);
+  if (m <= k) {
+    return [...await kovetkezetessegResz(fajta, levelek, m, a, a + k, teljes, hossz, memo),
+      await naploResz(fajta, levelek, a + k, b, hossz, memo)];
+  }
+  return [...await kovetkezetessegResz(fajta, levelek, m - k, a + k, b, false, hossz, memo),
+    await naploResz(fajta, levelek, a, a + k, hossz, memo)];
+}
+
+/**
+ * ⭐ A KÖVETKEZETESSÉG BIZONYÍTÉKA: az első `regiMeret` levél fája (a régi gyökér) a teljes `levelek` fájának előtagja.
+ * @param {number} regiMeret - 0 < regiMeret ≤ levelek.length
+ * @returns {Promise<{regi: number, meret: number, ut: Array<Object>}>}
+ */
+export async function naploKovetkezetesseg(fajta, levelek, regiMeret, hossz = 0, memo = null) {
+  if (!Number.isSafeInteger(regiMeret) || regiMeret <= 0 || regiMeret > levelek.length) {
+    throw new Error('osszegzoFa: a régi méret a fán kívül esik');
+  }
+  return { regi: regiMeret, meret: levelek.length,
+    ut: await kovetkezetessegResz(fajta, levelek, regiMeret, 0, levelek.length, true, hossz, memo) };
+}
+
+/**
+ * ⭐ A KÖVETKEZETESSÉG ELLENŐRZÉSE (RFC 9162, 2.1.4.2) — a két aláírt gyökér és a bizonyíték ismeretében.
+ * ⛔ A bizonyíték idegen: alakját és méretét is ellenőrizzük; a két gyökér darabja a két fa mérete.
+ * @param {string} fajta
+ * @param {Object} regiGyoker - a régi (kisebb) fa gyökerének összegzése
+ * @param {Object} ujGyoker - az új fa gyökerének összegzése
+ * @param {{regi: number, meret: number, ut: Array<Object>}} bizonyitek
+ * @param {number} [hossz]
+ * @returns {Promise<boolean>}
+ */
+export async function naploKovetkezetessegEllenorzese(fajta, regiGyoker, ujGyoker, bizonyitek, hossz = 0) {
+  const { regi, meret, ut } = bizonyitek ?? {};
+  if (!osszegzesAlakja(regiGyoker, hossz) || !osszegzesAlakja(ujGyoker, hossz)) return false;
+  if (!Number.isSafeInteger(regi) || !Number.isSafeInteger(meret) || regi <= 0 || regi > meret) return false;
+  if (regiGyoker.d !== regi || ujGyoker.d !== meret) return false;
+  if (!Array.isArray(ut) || ut.length > 2 * 64 || !ut.every((p) => osszegzesAlakja(p, hossz))) return false;
+  if (regi === meret) return ut.length === 0 && azonosOsszegzes(regiGyoker, ujGyoker);
+  // 2. Ha a régi méret kettőhatvány, a régi gyökér az út eleje.
+  const c = (regi & (regi - 1)) === 0 ? [regiGyoker, ...ut] : [...ut];
+  if (!c.length) return false;
+  const fel = (x) => Math.floor(x / 2);
+  let fn = regi - 1, sn = meret - 1;
+  while (fn % 2 === 1) { fn = fel(fn); sn = fel(sn); }
+  let fr = c[0], sr = c[0];
+  for (const p of c.slice(1)) {
+    if (sn === 0) return false;
+    if (fn % 2 === 1 || fn === sn) {
+      fr = await csomopontOsszegzes(fajta, p, fr);
+      sr = await csomopontOsszegzes(fajta, p, sr);
+      if (fn % 2 === 0) {
+        while (fn % 2 === 0 && fn !== 0) { fn = fel(fn); sn = fel(sn); }
+      }
+    } else {
+      sr = await csomopontOsszegzes(fajta, sr, p);
+    }
+    fn = fel(fn); sn = fel(sn);
+  }
+  return sn === 0 && azonosOsszegzes(fr, regiGyoker) && azonosOsszegzes(sr, ujGyoker);
 }
 
 /**

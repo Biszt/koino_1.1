@@ -4884,3 +4884,27 @@ feljegyzi a tára állását, a harmadik a változott szeletekről szól):** eml
 változás 8,0–8,5 KB (nélküle 10,0 · 16,0 · 21,5 KB), húsz 25,8 KB (nélküle 27,3 · 46,8 · 73,5 KB); az egyeztető üzenetek
 száma 7 (nélküle 8–9). A változott szeletek útja (VALTOZOTT + VALTOZOTTPAROK) változásonként ~0,15 KB nyíltan. ⚠️ Emlékezet
 nélkül (az első találkozáskor) a VALTOZOTT üres kérdése +64 B. A „nincs újdonság” 1,3 KB maradt.
+
+## 71. ⭐ A LÁNC-KÖR ÁRA — a szerzők lánca a cserében (D98/2–4, 2026-10-09, a laptopon)
+
+*`lancKorMeres.js`: egy szerző n eseményes lánca (gondolatok és pontok, a valódi műveletekkel — lánc-gyökérrel); egy tartó
+a fejet és még k eseményt tart, és a lánc-körben kérdez (`lancEllenorzes.js`). Bájt = a LANCKEREK és a LANCVALASZ
+JSON-hossza (a vonal keret nélkül); idő = a szerző válasza (első és második kérdés), és összevetésül a tagsági
+bizonyítékok gyorsítótár nélkül (a régi `naploBizonyitek` útja).*
+
+```
+     n │ kérdezve      │ kérdés │ válasz │ a szerző (első · második) │ gyorsítótár nélkül a bizonyítékok
+   100 │ fej + 1       │ 253 B  │ 582 B  │  11 ms ·  4 ms            │    3 ms
+   100 │ fej + 8       │ 610 B  │ 3,8 KB │  30 ms · 22 ms            │   28 ms
+  1000 │ fej + 1       │ 255 B  │ 785 B  │ 104 ms ·  6 ms            │   50 ms
+  1000 │ fej + 8       │ 619 B  │ 5,4 KB │ 147 ms · 42 ms            │  406 ms
+  5000 │ fej + 1       │ 257 B  │ 990 B  │ 529 ms ·  9 ms            │  246 ms
+  5000 │ fej + 8       │ 627 B  │ 6,8 KB │ 555 ms · 31 ms            │ 1874 ms
+```
+
+⭐ **A lelet:** a lánc-kör egy kérdezett eseményre ~0,6–0,8 KB választ visz, és ez a lánc hosszával logaritmikusan nő
+(egy tagsági bizonyíték ⌈log₂ n⌉ lépés); egy cserében legfeljebb 3 szerző × (fej + 8 esemény), tehát a felső határ ~20 KB
+— és csak abban a cserében, ami nem ért véget a nyitásnál (a „nincs újdonság” csere nem drágul). A LANCKEREK maga ~60 B (a saját
+szerzői kulcs) üres kérdéssel. ⭐ A szerző oldala a részfa-gyorsítótárral (D98/4) a második kérdéstől 9–42 ms — nélküle a
+8 bizonyíték 5000-nél 1,9 s (O(n) a bizonyítékonként); az első kérdés ideje a lánc visszafelé bejárása (a testek
+betöltése), ami folyamatonként egyszeri.

@@ -5030,6 +5030,26 @@ első szint fut — a lista nem kíván bizalmat (a hazug lista próbája). ⚠�
 közös alap nem a NYITÁS-ban egyeztetődik (mindkét fél a saját feljegyzéséhez mér), és az ellenőrzés a második szint előtt
 van (a kívüli lenyomat), nem a csere végén. A zárt koinó korlátozott útján nincs feljegyzés. Mérve (70.): lásd ott.
 
+#### ✅ MEGÉPÜLT — az A hátralévői: a lánc-ellenőrzés a cserében (2026-10-09)
+
+`allapot/lancEllenorzes.js` + `osszegzoFa.js` (a napló-fa KÖVETKEZETESSÉGE — RFC 9162, 2.1.4: `naploKovetkezetesseg`,
+`naploKovetkezetessegEllenorzese` — és a részfa-gyorsítótár: a 64 levélnél nagyobb teljes részfák gyökere megmarad, egy
+bizonyíték így O(log n)) + a vonal LÁNC-KÖRE (`LANCKEREK` → `LANCVALASZ`, a szelet-csere végén — minden cserében, ami nem
+ért véget a nyitásnál; ⛔ az „eltérő szeletek száma” nem jó feltétel: a zárt koinó korlátozott útján a két félnél eltér, és a
+csere megakadt — a teljes próbasor mérte) + `koino.js` (`lancKerdeseim`, `lancValaszokFogadasa`; a tároló:
+`fajlTar.js` `lancEllenorzesTarolo`, `lancellenorzes.json`). **A kérdező** szerzőnként a nálam lévő legújabb, lánc-gyökeres
+eseményt veszi fejnek, és kérdez: a fej az övé-e (`f`), a nálam lévő többi eseménye benne van-e a fej napló-gyökerében
+(legfeljebb 8 — új fejnél a RÉGI ellenőrzött fej elöl), a régi ellenőrzött gyökér a mostaninak előtagja-e (`r`), és D79
+szerint 5% eséllyel egy új fejnél a teljes kiosztás-lista (`k`). A jelöltek: a társ bemondott szerzői kulcsa (`en`, a
+tábla-aláírója alatt megjegyezve) és a most kapott események szerzői — legfeljebb 3 egy cserében. **A szerző oldala**: aki
+a kérdezett fej láncát tartja (a fejtől `elozo` mutatókon visszafelé — akkor is, ha nála a szerzőnek más ága is van), vagy
+ha a fej nincs nála, a szerző egyetlen láncát; ahol a lánc mást mond, mint a kérdés, ott az ott álló SAJÁT eseményét adja.
+**A válaszból** a meglévő bizonyítékok lesznek (új fajta nem kell): ELÁGAZÁS (két azonos sorszámú aláírt esemény — D82) és
+NEGATÍV LEVÉL (a lista a fej aláírt kiosztás-gyökerét adja, és van benne nem pozitív levél — D80); a bejelentés az
+észlelőével azonos úton (`ellentmondasokBejelentese`). ⚠️ A hallgatás nem vád (D19, D79/3): ami nem igazolódott, függőben
+marad, és az `ellenoriz` kiírja, mióta. Mérve (71.): egy kérdezett eseményre ~0,6–0,8 KB válasz, logaritmikusan nő; a
+gyorsítótárral a szerző a második kérdéstől 9–42 ms. ⭐ **Ezzel a ⑧ — és a VÉGLEGES SOR — kész.**
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

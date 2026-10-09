@@ -83,7 +83,8 @@ bizonyítékát is hozza; a szabály hézagnál is bizonyítottan ítél) → �
 D82: a kettős lánc nem büntet, a bizonyíték a két ágat egy helyre hozza → ✅ az ÉSZLELŐ (a csere és a
 kézi út után magától; `ellenoriz`) → ⏸️ a D pillér UTÁN: a D79 szúrópróba (a teljes lista kérésre), a
 napló-alapú kettős-lánc észlelés, a napló-bizonyíték kiszolgálása (logaritmikusan). ⭐ **Az A helyben
-elérhető része kész — a következő pillér a B.**
+elérhető része kész — a következő pillér a B.** ✅ **A hátralévők is (2026-10-09, D98/2–4):** a lánc-kör a cserében
+(`lancEllenorzes.js`, 71. mérés) — ⭐ **AZ A PILLÉR KÉSZ.**
 
 ### B. ⭐⭐ A KÉT TÁR (D75) ÉS AZ ÉRDEKLŐDÉS SZABÁLYA (a C 9. pontja)
 
@@ -351,8 +352,11 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
    hozzá), de a pont-szerzők a vállalásuk miatt a raj tagjai, tehát a cserében kérdezhetők; az elágazás-bizonyíték (D82) és
    a negatív levél (D80) új fajta nélkül elég. ✅ **D98** (Csaba: „elfogadom a javaslataidat”): F1/A, A1/A, A2/A. ✅ **Az F KÉSZ
    (2026-10-09):** a társankénti emlékezet (`tarsEmlekezet.js`, a tár `allas`-a, `emlekezet.json`) — a változott közös szelet
-   az első szint nélkül jön (a 70. mérés kiegészítése). ⏭️ Az A hátralévői: a szerző oldala (a napló gyorsítótára, a lánc-kör
-   kiszolgálója), a kérdező oldala, a parancssor-próba.
+   az első szint nélkül jön (a 70. mérés kiegészítése). ✅ **Az A hátralévői KÉSZ (2026-10-09, 71. mérés):** a lánc-kör a
+   cserében (`lancEllenorzes.js`) — a napló-fa következetessége (RFC 9162) és részfa-gyorsítótára (logaritmikus kiszolgálás),
+   a kérdező (a fej, a többi esemény, a régi fej, a következetesség, 5%-kal a teljes kiosztás-lista), és a válaszból a meglévő
+   elágazás- és negatív levél bizonyíték; parancssor-próba: a két ágú szerző eseményei egy harmadik készüléken különböző
+   sorszámon találkoznak, és a lánc-kör bizonyítja az elágazást. ⭐ **A ⑧ KÉSZ — A VÉGLEGES SOR VÉGE.**
 
 *Utána a ház:* a pakli-nézet a felületen, a terep (két mobil, a 🅱️ változat).
 
@@ -696,3 +700,20 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
     feljegyzésbe kerülnek, és a következő lista része** · mert különben ahol az egyik fél tartósan nem vesz részt (a közös
     halmaz nélküli, „minden” módú társ mellett), a kívüli lenyomat soha nem egyezne, és az F soha nem működne · a megépítéskor
     (próba mérte), Claude · `tarsEmlekezet.js`.
+90. **2026-10-09 · ki felel a lánc-körben (D98/2: „aki maga az a szerző, vagy »mindent« módban a teljes láncát tartja”)** →
+    **aki a KÉRDEZETT FEJ láncát tartja (a fejtől `elozo` mutatókon visszafelé), vagy ha a fej nincs nála, a szerző egyetlen
+    láncát** · mert a két ágú szerző saját készüléke a cserében a másik ág eseményét is megkapja (a G-t mindketten tartják),
+    és a saját lánca ettől „elágazik” — a sorszám szerinti egyetlen lánc nem állna elő, és épp a bizonyítékot nem adná ki
+    (parancssor-próba mérte); a fej aláírása a láncát úgyis elköti · a megépítéskor, Claude · `lancEllenorzes.js`.
+91. **2026-10-09 · az új fejnél a RÉGI ellenőrzött fej is kérdés (a következetesség mellett)** → **a régi fej az első tétel**
+    · mert a következetesség hiánya csak jelez (a szerző hallgathat), a régi fej helyén álló MÁSIK esemény viszont azonnal
+    bizonyíték — egy fejváltásonként ~1 KB-ért · a megépítéskor (próba mérte), Claude · `lancEllenorzes.js`.
+92. **2026-10-09 · mikor fut a lánc-kör (A2: „minden cserében a szerzővel, ha új eseménye jött”)** → **a szelet-csere végén,
+    minden cserében, ami nem ért véget a nyitásnál (⛔ NEM „ha volt mit cserélni”: az eltérő szeletek száma a zárt koinó
+    korlátozott útján a két félnél eltér — a csere megakadt, a teljes próbasor mérte), a társ bemondott szerzői kulcsa és a
+    most kapott események szerzői közül legfeljebb 3-ról** · mert a vonalnak mindkét félnél ugyanúgy kell döntenie, a
+    „nincs újdonság” csere ne dráguljon, és a szerző saját eseményeit jellemzően ő maga hozza; a társ kulcsa (`en`) bemondás, nem bizalom (a
+    válasz úgyis önmagát igazolja) · a megépítéskor, Claude · `vonal.js`, `koino.js` (`lancKerdeseim`).
+93. **2026-10-09 · a hallgatás a lánc-körben** → **nincs „megtagadta” állapot, csak FÜGGŐBEN (mióta)** · mert a kérdezett
+    társról nem tudni biztosan, hogy ő-e a szerző (a bemondott kulcs nem hitelesített) — egy hamis bemondó hallgatása
+    különben becsületes szerzőt bélyegezne meg (D19) · a megépítéskor, Claude · `lancEllenorzes.js`.

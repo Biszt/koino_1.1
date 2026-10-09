@@ -113,3 +113,15 @@ napló-fa részfa-gyorsítótára (logaritmikus bizonyíték), a lánc-kör kisz
 negatív levél bizonyítéka (a meglévő `Ellentmondas` fajták), a „nem ellenőrizhető” helyi feljegyzése és kiírása. → ④
 **Parancssor-próba:** két ágú szerző, a két ág két készüléken, egy harmadik mindkettőből tart egy-egy eseményt — a csere
 után mindhárom ugyanazt számolja.
+
+## 6. ✅ Megépült (2026-10-09) — D98 (Csaba: „elfogadom a javaslataidat”): F1/A, A1/A, A2/A
+
+- ✅ **① F — a társankénti emlékezet** (`tarsEmlekezet.js`): a változott közös szelet az első szint nélkül jön; a 70. mérés
+  kiegészítése szerint egy változás 3,8 KB 50, 1000 és 5000 szeletnél is (nélküle 5,3 · 6,5 · 8,0 KB). Két eltérés a
+  javaslattól (elágazás 88–89): a közös alap nem a NYITÁS-ban egyeztetődik, és az ellenőrzés a második szint előtt van
+  (a U-n kívüli párok lenyomata); a maradék a feljegyzés része.
+- ✅ **②–④ Az A hátralévői** (`lancEllenorzes.js`, a napló-fa következetessége és részfa-gyorsítótára, a vonal lánc-köre):
+  a 71. mérés szerint egy kérdezett eseményre ~0,6–0,8 KB válasz, a szerző a gyorsítótárral 9–42 ms; a parancssor-próba
+  szerint a két ágú szerző eseményei egy harmadik készüléken különböző sorszámon találkozva is lelepleződnek. Eltérések
+  (elágazás 90–93): a kérdezett fej láncából felel, aki tartja; a régi fej is kérdés; a kör csak változáskor fut; a
+  hallgatás csak függőség. ⭐ **A ⑧ kész.**

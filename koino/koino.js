@@ -107,7 +107,9 @@ import {
   // ⭐ D97/1: a közös halmaz helyi tára.
   halmazTarolo,
   // ⭐ D98/1 (F): a társankénti emlékezet helyi tára.
-  emlekezetTarolo
+  emlekezetTarolo,
+  // ⭐ D98/2–3: a lánc-ellenőrzés helyi tára.
+  lancEllenorzesTarolo
 } from './js/tar/fajlTar.js';
 import { naploFrissitese } from './js/csere/kozosHalmaz.js';
 // ⭐ D97/2: a raj a körben (69. mérés: a változott szeletek tartói sorban, aztán a forgatás).
@@ -171,6 +173,10 @@ import { TAGSAG_KELL } from './js/allapot/szabalyok.js';
 import { beolvasztas } from './js/csere/csere.js';
 // ⭐ D82: az észlelő — a beérkezett események körül bizonyítható ellentmondások.
 import { ellentmondasokKeresese } from './js/allapot/eszlelo.js';
+// ⭐ D98/2–4: a lánc-ellenőrzés a cserében (az A hátralévői).
+import {
+  lancKerdesek, lancValaszokFeldolgozasa, lancKiszolgalo, lancTarsFeljegyzese, lancTarsSzerzoje, lancEllenorzesAllasa
+} from './js/allapot/lancEllenorzes.js';
 import { megbizasAllapota, tanusitoiTorlodas, bemutatkozasok, onalloSzalak } from './js/allapot/jelzesek.js';
 import { szeletParok, egyeztetettEsemenyek } from './js/csere/szeletEgyeztetes.js';
 import { halmazLenyomata } from './js/esemeny/halmaz.js';
@@ -1434,6 +1440,48 @@ async function eszlelesEsBejelentes(azonositok) {
 }
 
 // ===================================
+// ⭐⭐ D98/2–4: A LÁNC-ELLENŐRZÉS A CSERÉBEN (az A hátralévői)
+// ===================================
+//
+// A szigorú (b) alatt egy szerző teljes láncát csak ő tartja: a csere végén a társ láncáról (és a most kapott események
+// szerzőiéről) kérdezünk (`lancEllenorzes.js`), és ha a válaszból bizonyíték lesz (elágazás, negatív levél), bejelentjük
+// a vádolt azonosság-szeletébe — ugyanazon az úton, mint az észlelő leleteit. A hallgatás nem vád: függőben marad.
+
+let lancKiszolgaloPeldany = null;
+/** A lánc-kör kiszolgálója (folyamatonként egy — a részfa-gyorsítótára így megmarad). */
+function lancKiszolgaloja() {
+  lancKiszolgaloPeldany ??= lancKiszolgalo({ tar, koino: KOINO });
+  return lancKiszolgaloPeldany;
+}
+
+/** A kérdéseim egy cserében: a társ ismert szerzői kulcsa elöl, aztán a most kapott események szerzői. */
+async function lancKerdeseim(ujak, tarsAlairo) {
+  const tarolo = lancEllenorzesTarolo(KOINO);
+  const jeloltek = [];
+  const ismert = tarsAlairo ? await lancTarsSzerzoje(tarolo, tarsAlairo) : null;
+  if (ismert) jeloltek.push(ismert);
+  for (const az of Array.isArray(ujak) ? ujak.slice(0, 512) : []) {
+    const e = await tar.esemeny(az);
+    if (typeof e?.szerzo === 'string') jeloltek.push(e.szerzo);
+  }
+  return lancKerdesek({ tar, koino: KOINO, tarolo, sajat: szerzo }, jeloltek);
+}
+
+/** A válaszok feldolgozása és a bizonyítékok bejelentése (ismétlés nélkül — `ellentmondasokBejelentese`). */
+async function lancValaszokFogadasa(kerdesek, valaszok) {
+  const r = await lancValaszokFeldolgozasa({ tar, koino: KOINO, tarolo: lancEllenorzesTarolo(KOINO) }, kerdesek, valaszok);
+  if (r.leletek.length) {
+    const b = await ellentmondasokBejelentese(kornyezet, r.leletek);
+    if (b.bejelentve) {
+      kiir(SZIN.nem + '  ⚠ a lánc-ellenőrzés ' + b.bejelentve + ' bizonyított ellentmondást talált és jelentett be (D98, D82/D80)'
+        + SZIN.vege + SZIN.halvany + (b.nincsHorgony ? ' · ' + b.nincsHorgony + ' vádoltnak nincs nálunk horgonya' : '') + SZIN.vege);
+    }
+    return { ...r, ...b };
+  }
+  return r;
+}
+
+// ===================================
 // ⭐⭐ D92: A KÉRELEM KISZOLGÁLÁSA ÉS A BEMONDOTT ÖSSZ-PONTOK
 // ===================================
 //
@@ -1933,6 +1981,14 @@ async function ketFokBeallitasai(allapot = null) {
     // ⭐⭐ D98/1 (F): a társankénti emlékezet — a csere végén a tárom állása a társ alatt (`emlekezet.json`); a következő
     // cserén csak a változott közös szeletekről szólunk (az első szint helyett — 70. mérés).
     emlekezetTar: emlekezetTarolo(KOINO, alapHely()),
+    // ⭐⭐ D98/2–4: A LÁNC-KÖR — a szerzők lánca a cserében (`lancEllenorzes.js`): a saját kulcsom (a társ ebből tudja, kit
+    // kérdezzen), a kérdéseim (a társ ismert szerzői kulcsa és a most kapott események szerzői), a válaszom (a saját — és
+    // „mindent” módban a nálam épen meglévő — láncokról), és a válaszok feldolgozása (a bizonyíték bejelentése).
+    sajatSzerzo: szerzo,
+    lancKerdesek: (ujak, tarsAlairo) => lancKerdeseim(ujak, tarsAlairo),
+    lancValasz: (kerdesek) => lancKiszolgaloja().valasz(kerdesek),
+    lancFogadas: (kerdesek, valaszok) => lancValaszokFogadasa(kerdesek, valaszok),
+    lancTars: (alairo, sz) => lancTarsFeljegyzese(lancEllenorzesTarolo(KOINO), alairo, sz),
     // ⭐ D96: a koinó születése mint ESEMÉNY — mindenkihez eljut (a szelete csak az alapítóé).
     koinoSzuletes: await koinoSzuletese(),
     osszegzoSzeletek: kerdo.lista, osszegzesMintaKerdesek: kerdo.mintaKerdesek, osszegzesFogadas: kerdo.fogadas,
@@ -2978,6 +3034,17 @@ try {
       kiir('Ellenőrizve: ' + osszes.length + ' esemény · ' + e.leletek + ' bizonyítható ellentmondás · '
         + e.bejelentve + ' új bejelentés · ' + e.marVolt + ' már be volt jelentve'
         + (e.nincsHorgony ? ' · ' + e.nincsHorgony + ' vádoltnak nincs nálunk horgonya' : ''));
+      // ⭐ D98/2–3: a lánc-ellenőrzés állása (a cserében kérdeztük a szerzőket). ⚠️ A függés NEM vád (D19): a szerző
+      // még nem igazolta (nem találkoztunk, vagy nem felelt) — ami ellentmondott, az már bejelentés lett.
+      const lancok = await lancEllenorzesAllasa(lancEllenorzesTarolo(KOINO));
+      if (lancok.length) {
+        const fuggok = lancok.filter((x) => x.fuggoOta !== null);
+        const legregebbi = fuggok.length ? Math.min(...fuggok.map((x) => x.fuggoOta)) : null;
+        kiir('Lánc-ellenőrzés (D98): ' + lancok.filter((x) => x.ellenorzott !== null && x.fuggoOta === null).length
+          + ' szerző lánca ellenőrizve · ' + fuggok.length + ' függőben'
+          + (legregebbi ? SZIN.halvany + ' (a legrégebbi ' + Math.floor((Date.now() - legregebbi) / 86400000)
+            + ' napja — nem vád: még nem igazolta)' + SZIN.vege : ''));
+      }
       break;
     }
 

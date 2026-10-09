@@ -81,6 +81,7 @@ import gyokerDarab from './gyokerDarabProba.js';
 import kozosHalmaz from './kozosHalmazProba.js';
 import reszvetel from './reszvetelProba.js';
 import tarsEmlekezet from './tarsEmlekezetProba.js';
+import lancEllenorzes from './lancEllenorzesProba.js';
 
 // ⚠️ A név a fájl neve, kisbetűvel, a „Proba.js” nélkül — a besorolás-őr ezen méri, hogy minden
 // próba-fájl itt van-e. A sorrend a teljes sor futási sorrendje (egy csoport is ebben fut).
@@ -127,6 +128,7 @@ const PROBAK = [
   { nev: 'kozoshalmaz', futtat: kozosHalmaz },
   { nev: 'reszvetel', futtat: reszvetel },
   { nev: 'tarsemlekezet', futtat: tarsEmlekezet },
+  { nev: 'lancellenorzes', futtat: lancEllenorzes },
   { nev: 'tagsag', futtat: tagsag },
   { nev: 'osszegzofa', futtat: osszegzoFa },
   { nev: 'lancgyoker', futtat: lancGyoker },
@@ -162,7 +164,7 @@ const CSOPORTOK = {
   // a fájl-bájtok és a szöveg-darab: tár, igény, kérelem, átvitel
   fajl: ['fajl', 'fajligeny', 'fajlkerelem', 'fajlatvitel', 'szovegdarab'],
   // az A pillér: az összegző Merkle-fa és ami rá épül
-  fa: ['osszegzofa', 'lancgyoker', 'ellentmondas', 'eszlelo'],
+  fa: ['osszegzofa', 'lancgyoker', 'ellentmondas', 'eszlelo', 'lancellenorzes'],
   // a kézi út a parancssorból, külön folyamatokban (viselkedést mér, nem feliratot)
   parancssor: ['parancssor']
 };
