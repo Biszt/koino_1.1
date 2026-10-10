@@ -138,7 +138,12 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
    visszalépő ütemben (elágazás 95). ✅ **A 73. mérés (terepen a D99-cel):** percenként egy csere (a kettő helyett), három óra
    alatt egyetlen ütközés sincs; a fordított irány is (a telefon gondolata a laptopra, a szöveg vállalás előtt, a vállalás
    után a szelet a változott szelet útján). ⭐ **Csaba: „ha működik pc-mobil között, külön címen, akkor az nekem már elég
-   ahhoz, hogy folytassuk a fejlesztést”** — a két mobilnetes telefon mérése a közeljövőben. ⏸️ Nyitva: egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön elő), és a D71 őrjárat-próba egyszeri bukása a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron is). ⚠️ A D85 T3 csomag-próba időzítése szoros volt (a döntés 1–2 mp, B négy parancsa ~2 mp) — 6–8 mp-re bővítve.
+   ahhoz, hogy folytassuk a fejlesztést”** — a két mobilnetes telefon mérése a közeljövőben.
+   ⭐ **A HÁZ (Csaba: „legyen a ház”, 2026-10-10): a pakli-nézet a felületen, a kérelemből.** 🔍 **Átvizsgálva**
+   ([`haz_pakli_atvizsgalas.md`](docs/haz_pakli_atvizsgalas.md)): a prototípus „láncos-testvéres” nézetéhez (felmenők,
+   bogárlogika, testvérek) a D92 fejléc-kérdése adja az adatot; ma a felület semmit nem kér el, ami hiányzik. ⏸️ **Csabánál:
+   H1** (ki kérdez — javaslat: az őrjárat, függő kérelemként), **H2** (a nem tartott ágak össz-pontja — javaslat: jelölve,
+   honnan jön), **H3** (javaslat: az örökölt `Pakli.js` változatlanul jön át). ⏸️ Nyitva: egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön elő), és a D71 őrjárat-próba egyszeri bukása a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron is). ⚠️ A D85 T3 csomag-próba időzítése szoros volt (a döntés 1–2 mp, B négy parancsa ~2 mp) — 6–8 mp-re bővítve.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
