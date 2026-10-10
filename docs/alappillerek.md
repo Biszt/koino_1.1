@@ -740,3 +740,24 @@ lépéssel (a D85 és a D89/1), a többi változatlan. ⭐ **A következő sessi
 99. **2026-10-10 · a lap frissessége (D100, H1)** → **amit a kérelem 10 percen belül elhozott, azt a lap nem kéri újra** ·
     mert a nem tartott ág gyerekeit a lekérdezés soha nem tekinti biztosnak — e nélkül a lap minden lekéréskor kérne, és
     örökké „betöltés”-t mutatna · a megépítéskor, Claude · `koino.js` (`lapHianyzoinakElkerese`, `LAP_FRISSESSEG`).
+100. **2026-10-10 · a bekopogó és a függő kérelem (D92/1: „ismeretlen bekopogó, miközben kopogtatunk”)** → **csak az a kérelem
+    fut a csere helyett, amelynek egy kopogtató témáján az őrjárat TÉNYLEG jelentkezett (`bejelentettKopogtatok`)** · mert a
+    lap magától ír be kérelmet, és a régi feltétel (bármely kopogtató témájú kérelem) minden új bekopogót — egy csatlakozó
+    készülék kézi cseréjét is — kérelemre fordított, amit az nem tudott kiszolgálni (mérve: a csatlakozó semmit nem kapott); a
+    postaláda (`figyel`) nem is kopogtat · a ház bekötésekor, Claude · `koino.js` (`resMunka`), parancssor-próba.
+101. **2026-10-10 · az átmeneti tár több folyamatból (B/2)** → **a `frissit` beolvassa, amit más folyamat írt bele vagy dobott ki
+    belőle; a `valtozat` jel-fájl dönti el, kell-e végignézni (különben egy olvasás), a félbe írt sort a következő frissítés
+    olvassa** · mert a futó felület nem látta, amit az őrjárat a kérelem válaszaként hozott (a böngészős próba mérte), és a
+    tartós tár `frissit`-je (43. mérés) mintájára itt is kell · a ház bekötésekor, Claude · `atmenetiTar.js`.
+102. **2026-10-10 · hol fordít a lap (H3/A megvalósítása)** → **a `Pakli.js` útvonalait az `apiHelper.js` kérdezi meg a
+    `kartyaAdat.js`-től (`prototipusUtvonala`); a `Pakli.js` által nem tárolt rész egy eseménnyel (`koino:pakliValasz`) megy a
+    `koinoPakli.js` alosztályhoz** · mert a `Pakli.js` bájtra a prototípusé maradjon (a `pakliLekerese` felülírása a
+    gyorsítótár-logikája második példányát szülte volna), és a prototípus teljes szerver-kapcsolata eddig is ezen az egy
+    fájlon ment át (a horgony is) · a megépítéskor, Claude · `kartyaAdat.js`, `apiHelper.js`, `koinoPakli.js`.
+103. **2026-10-10 · „betöltés” vagy „keresés” a lapon (H1)** → **ha a függő kérelmeknek nincs célja (se társ, se ismert tartó),
+    a lap nem betöltést ígér, hanem kimondja, hogy a tartóikat keresi (`kitolKerni`)** · mert egy társ nélküli készüléken a
+    gyökér szintje örökké hiányzik, és a „betöltés” soha nem érkezne meg · a böngészős próbán, Claude · `koino.js`,
+    `koinoPakli.js`.
+104. **2026-10-10 · a „0” a nem látott pontoknál (H2 kiterjesztése)** → **ha a kártya pontjait sem láttuk (csak a születését),
+    a saját pont és a hozzájárulók száma is „?”, nem 0** · mert a 0 állítás, a „?” a tudás határa (D19) — a H2 csak az
+    össz-pontot nevezte meg · a böngészős próbán, Claude · `pakli.js` (`pontokIsmeretlenek`), `koinoPakli.js`.

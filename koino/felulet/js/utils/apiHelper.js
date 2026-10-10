@@ -7,7 +7,7 @@
 // át (`API_ALAP_URL` + 7 `fetch(`). A kártyák, a menük, a szövegmegjelenítő mind
 // változatlanul jöttek.
 //
-// ===== KÉT VÁLTOZÁS A PROTOTÍPUSHOZ KÉPEST =====
+// ===== HÁROM VÁLTOZÁS A PROTOTÍPUSHOZ KÉPEST =====
 //
 // 1. ⭐ **A JWT token helyett a KAPU JELSZAVA.** A **D15** szerint a koinóban nincs
 //    bejelentkezés: a személyazonosság a készülék kulcsa. A jelszó itt nem azonosít, csak
@@ -16,10 +16,14 @@
 //    ⚠️ *A koino kapuja változatlanul az `esemenyMentese` (3. szabály); ez a jelszó
 //    NEM biztonsági réteg a koinón belül.*
 // 2. A hiba-mezők közé bekerült a koino `hiba` mezője.
+// 3. ⭐ (D100, a ház) A `Pakli.js` prototípus-útvonalai a program útvonalaira fordulnak — lásd `apiGet`
+//    (a fordítás maga a `kartyaAdat.js`-é).
 //
 // ⚠️ Az `API_ALAP_URL` **változatlan**: relatív útvonal, ugyanarra az origin-re, ahonnan a
 // lap betöltődött. A prototípusban a backend szolgálta ki a lapot és az `/api`-t; itt a
 // helyi kapu teszi ugyanezt. *Ettől nem kellett hozzányúlni.*
+
+import { prototipusUtvonala } from '../kartyaAdat.js';
 
 export const API_ALAP_URL = '/api/';
 
@@ -56,7 +60,7 @@ export function kapuKulcs() {
 let LAP_HORGONYA = null;
 
 /**
- * A lap horgonyának beállítása — a `PakliNezet` hívja minden oldal megérkezése után.
+ * A lap horgonyának beállítása — minden pakli-válasz után (a `Pakli.js` útvonalain magától, lásd `apiGet`).
  * `null`-lal törli (új lapozás kezdetén), és onnantól a program a mostani állapotot adja.
  *
  * @param {{horgony: number, most: number}|null} horgony
@@ -255,6 +259,21 @@ async function apiPatchFormData(utvonal, formData, token = null) {
 async function apiGet(utvonal, token = null) {
   // Metódus kezdő log
   console.log('apiHelper.apiGet - KEZDÉS', { utvonal });
+
+  // ⭐⭐ A HÁZ (D100): A PROTOTÍPUS PAKLI-ÚTVONALAI. Az örökölt `Pakli.js` a prototípus útvonalait kérdezi; a program
+  // a sajátjait beszéli. A fordítás a `kartyaAdat.js`-é (egy fájl), itt csak a kérés megy máshova, és a válasz
+  // fordítva jön vissza. A pakli válasza egyben a lap új horgonya (a kártyák szövege, tudatpontja ugyanabból a
+  // képből), és a `Pakli.js` által nem tárolt részt (betöltés, hiányzók, lapozás) egy esemény viszi a
+  // `koinoPakli.js`-nek.
+  const proto = prototipusUtvonala(utvonal);
+  if (proto) {
+    const nyers = await apiKeres(proto.utvonal, { method: 'GET' }, token);
+    if (proto.horgonyt) lapHorgonyaBeallitasa({ horgony: nyers?.horgony, most: nyers?.most });
+    document.dispatchEvent(new CustomEvent('koino:pakliValasz', { detail: proto.jel(nyers) }));
+    console.log('apiHelper.apiGet - VÉGE (prototípus-útvonal)', { utvonal, hova: proto.utvonal });
+    return proto.fordit(nyers);
+  }
+
   // ⭐ A LAP HORGONYA: minden olvasás ugyanabból a képből jöjjön, amiből a lista készült.
   const eredmeny = await apiKeres(horgonnyal(utvonal), { method: 'GET' }, token);
   // Metódus vég log

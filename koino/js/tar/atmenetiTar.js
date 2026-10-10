@@ -21,10 +21,12 @@
 //
 // ⚠️ A megnézés HELYI feljegyzés, nem esemény, és nem terjed (a kiszolgálás elárulja, mit néztem meg — D75/3).
 // ⚠️ Egy gyorsítótár: több folyamat is írhat bele, a sérült sort átlépjük (a tartósnál ez hiba volna).
+// ⭐ A ház (D100): és amit MÁS folyamat írt bele (az őrjárat hozza a kérelem válaszát, a felület mutatja), azt a
+// `frissit()` olvassa be — a `valtozat` jel-fájl mondja meg, hogy érdemes-e végignézni (különben egy olvasás).
 //
 // Használják: koino.js (a `hozd`, az állapot két tárból), a próbák.
 
-import { mkdir, readdir, readFile, appendFile, writeFile, unlink, rename } from 'node:fs/promises';
+import { mkdir, readdir, readFile, appendFile, writeFile, unlink, rename, stat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { alakiHiba, szelet, azonositoAlaku, bejelentesHelyei } from '../esemeny/esemeny.js';
 import { koinoEsemenyei } from './esemenyTar.js';
@@ -33,6 +35,8 @@ import { koinoEsemenyei } from './esemenyTar.js';
 export const ATMENETI_KORLAT = 20 * 1024 * 1024;
 
 const GYOKER_FAJL = '_gyoker';
+// A változás jele: minden író a hozzáfűzés és az eldobás után átírja; az olvasó, ha mást lát, mint legutóbb, végignéz.
+const VALTOZAT_FAJL = 'valtozat';
 const fajlNev = (kulcs) => (kulcs === '' ? GYOKER_FAJL : kulcs) + '.jsonl';
 const kulcsFajlbol = (nev) => {
   const k = nev.replace(/\.jsonl$/, '');
@@ -55,7 +59,10 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
   const esemenyek = new Map();      // azonosító → esemény
   const szeletek = new Map();       // kulcs → { azonositok: Set, bajt }
   const sorszamok = new Map();      // "szerző|sorszám" → [esemény]
+  const olvasva = new Map();        // fájlnév → ennyi bájtját olvastuk be (a `frissit` innen folytatja)
   let megnezett = {};
+  let latottValtozat = null;        // a `valtozat` jel legutóbb látott tartalma
+  let frissitesFut = null;
 
   const felvesz = (e, sorBajt) => {
     if (esemenyek.has(e.azonosito)) return false;
@@ -71,21 +78,57 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
     return true;
   };
 
-  // ----- A BETÖLTÉS: minden szelet-fájl; a sérült sort átlépjük (gyorsítótár) -----
-  try { megnezett = JSON.parse(await readFile(join(hely, 'megnezett.json'), 'utf8')) ?? {}; } catch { megnezett = {}; }
-  for (const nev of await readdir(hely)) {
-    if (!nev.endsWith('.jsonl')) continue;
+  /** Egy szelet-fájl sorai a `honnan`-adik bájttól — csak a teljes (sorvéggel lezárt) sorok; visszaadja, meddig ért. */
+  const fajlOlvasasa = async (nev, honnan = 0) => {
     const kulcs = kulcsFajlbol(nev);
-    if (kulcs !== '' && !azonositoAlaku(kulcs)) continue;
-    let szoveg;
-    try { szoveg = await readFile(join(hely, nev), 'utf8'); } catch { continue; }
-    for (const sor of szoveg.split('\n')) {
+    if (kulcs !== '' && !azonositoAlaku(kulcs)) return honnan;
+    let puffer;
+    try {
+      const f = await open(join(hely, nev), 'r');
+      try {
+        const { size } = await f.stat();
+        if (size <= honnan) return honnan;
+        puffer = Buffer.alloc(size - honnan);
+        await f.read(puffer, 0, puffer.length, honnan);
+      } finally { await f.close(); }
+    } catch { return honnan; }
+    // ⚠️ Egy másik folyamat épp írhat: a sorvég nélküli utolsó darabot a következő frissítés olvassa.
+    const utolsoSorveg = puffer.lastIndexOf(0x0a);
+    if (utolsoSorveg < 0) return honnan;
+    for (const sor of puffer.subarray(0, utolsoSorveg).toString('utf8').split('\n')) {
       if (!sor.trim()) continue;
       let e;
       try { e = JSON.parse(sor); } catch { continue; }
       if (alakiHiba(e) || e.koino !== koino || szelet(e) !== kulcs) continue;
       felvesz(e, Buffer.byteLength(sor, 'utf8') + 1);
     }
+    return honnan + utolsoSorveg + 1;
+  };
+
+  /** Egy szelet kivétele a memóriából (a fájlhoz nem nyúl — azt az `elhagy` vagy egy másik folyamat törli). */
+  const kivesz = (kulcs) => {
+    const sz = szeletek.get(kulcs);
+    if (!sz) return;
+    for (const az of sz.azonositok) {
+      const e = esemenyek.get(az);
+      esemenyek.delete(az);
+      const sk = e.szerzo + '|' + e.sorszam;
+      const lista = (sorszamok.get(sk) ?? []).filter((x) => x.azonosito !== az);
+      if (lista.length) sorszamok.set(sk, lista); else sorszamok.delete(sk);
+    }
+    szeletek.delete(kulcs);
+  };
+
+  const valtozatJelzese = async () => {
+    await writeFile(join(hely, VALTOZAT_FAJL), process.pid + ':' + Date.now() + ':' + Math.random()).catch(() => {});
+  };
+
+  // ----- A BETÖLTÉS: minden szelet-fájl; a sérült sort átlépjük (gyorsítótár) -----
+  try { megnezett = JSON.parse(await readFile(join(hely, 'megnezett.json'), 'utf8')) ?? {}; } catch { megnezett = {}; }
+  try { latottValtozat = await readFile(join(hely, VALTOZAT_FAJL), 'utf8'); } catch { latottValtozat = null; }
+  for (const nev of await readdir(hely)) {
+    if (!nev.endsWith('.jsonl')) continue;
+    olvasva.set(nev, await fajlOlvasasa(nev, 0));
   }
 
   const osszBajt = () => [...szeletek.values()].reduce((s, sz) => s + sz.bajt, 0);
@@ -97,20 +140,47 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
 
   /** Egy szelet eldobása — a fájl törlése, a mutatók kitakarítása. */
   const elhagy = async (kulcs) => {
-    const sz = szeletek.get(kulcs);
-    if (!sz) return false;
-    for (const az of sz.azonositok) {
-      const e = esemenyek.get(az);
-      esemenyek.delete(az);
-      const sk = e.szerzo + '|' + e.sorszam;
-      const lista = (sorszamok.get(sk) ?? []).filter((x) => x.azonosito !== az);
-      if (lista.length) sorszamok.set(sk, lista); else sorszamok.delete(sk);
-    }
-    szeletek.delete(kulcs);
+    if (!szeletek.has(kulcs)) return false;
+    kivesz(kulcs);
     delete megnezett[kulcs];
+    olvasva.delete(fajlNev(kulcs));
     await unlink(join(hely, fajlNev(kulcs))).catch(() => {});
     await megnezettIras();
+    await valtozatJelzese();
     return true;
+  };
+
+  /**
+   * ⭐ A ház (D100): amit MÁS folyamat írt az átmeneti tárba — az új sorok, az új szeletek, és ami közben kiesett.
+   * Ha a `valtozat` jel ugyanaz, mint legutóbb, egyetlen olvasás az ára; ha más, a szelet-fájlok mérete szerint
+   * folytatjuk (a tár korlátos — `ATMENETI_KORLAT` —, a végignézés is az).
+   */
+  const frissit = () => {
+    frissitesFut ??= (async () => {
+      let valtozat = null;
+      try { valtozat = await readFile(join(hely, VALTOZAT_FAJL), 'utf8'); } catch { valtozat = null; }
+      if (valtozat === latottValtozat) return;
+      latottValtozat = valtozat;
+      let nevek;
+      try { nevek = new Set((await readdir(hely)).filter((n) => n.endsWith('.jsonl'))); } catch { return; }
+      for (const nev of [...olvasva.keys()]) {
+        if (!nevek.has(nev)) { kivesz(kulcsFajlbol(nev)); olvasva.delete(nev); }
+      }
+      for (const nev of nevek) {
+        const eddig = olvasva.get(nev) ?? 0;
+        let meret;
+        try { meret = (await stat(join(hely, nev))).size; } catch { continue; }
+        if (meret === eddig) continue;
+        if (meret < eddig) { kivesz(kulcsFajlbol(nev)); olvasva.set(nev, await fajlOlvasasa(nev, 0)); }
+        else olvasva.set(nev, await fajlOlvasasa(nev, eddig));
+      }
+      // A megnézés idejét is a lemezről (egy másik folyamat nézhetett meg valamit) — a későbbi nyer.
+      try {
+        const lemez = JSON.parse(await readFile(join(hely, 'megnezett.json'), 'utf8')) ?? {};
+        for (const [k, ido] of Object.entries(lemez)) if (Number.isFinite(ido) && ido > (megnezett[k] ?? 0)) megnezett[k] = ido;
+      } catch { /* gyorsítótár */ }
+    })().finally(() => { frissitesFut = null; });
+    return frissitesFut;
   };
 
   /** ⭐ A korlát fölött a LEGRÉGEBBEN MEGNÉZETT szelet megy (a most írt soha). */
@@ -140,11 +210,14 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
       const sor = JSON.stringify(e);
       if (!felvesz(e, Buffer.byteLength(sor, 'utf8') + 1)) return;
       const kulcs = szelet(e);
-      await appendFile(join(hely, fajlNev(kulcs)), sor + '\n');
+      const nev = fajlNev(kulcs);
+      await appendFile(join(hely, nev), sor + '\n');
+      olvasva.set(nev, (olvasva.get(nev) ?? 0) + Buffer.byteLength(sor, 'utf8') + 1);
       // ⭐ Amit lekértünk, azt megnéztük — és a most írt szelet a korlát miatt nem eshet ki.
       megnezett[kulcs] = most();
       await helyetCsinal(kulcs);
       await megnezettIras();
+      await valtozatJelzese();
     },
 
     // ----- az olvasás -----
@@ -166,7 +239,8 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
       return true;
     },
     elhagy,
-    helyetCsinal
+    helyetCsinal,
+    frissit
   };
 }
 
@@ -179,6 +253,7 @@ export async function atmenetiTarNyitasa(koino, mappa, beallitas = {}) {
 export async function ketTarBemenete(tartos, atmeneti, koino) {
   const tartosak = await koinoEsemenyei(tartos, koino);
   if (!atmeneti) return { esemenyek: tartosak, csakAtmeneti: new Set() };
+  await atmeneti.frissit?.();
   const megvan = new Set(tartosak.map((e) => e.azonosito));
   const csak = atmeneti.mind().filter((e) => e.koino === koino && !megvan.has(e.azonosito));
   return { esemenyek: [...tartosak, ...csak], csakAtmeneti: new Set(csak.map((e) => e.azonosito)) };
@@ -191,7 +266,8 @@ export async function ketTarBemenete(tartos, atmeneti, koino) {
 export function ketTarNezet(tartos, atmeneti) {
   let csak = new Set();
   return {
-    async frissit() { await tartos.frissit?.(); },
+    // ⭐ A ház (D100): mindkét tár — az átmenetibe a futó felület mellett az őrjárat ír (a kérelmek válaszai).
+    async frissit() { await tartos.frissit?.(); await atmeneti.frissit?.(); },
     async betolt() {
       const t = await tartos.betolt();
       const megvan = new Set(t.map((e) => e.azonosito));

@@ -123,3 +123,29 @@
 }
 
 .ter-valto:hover { background: rgba(255, 255, 255, .1); }
+
+/* ===== ⭐ A HÁZ (D100, H2): A PAKLI KOINÓS JELEI =====
+   A kártyák bájtra a prototípuséi; ezeket a jeleket a `koinoPakli.js` teszi rájuk a kirajzolás után.
+   ⚠️ A hiány látszik, de nem vád (D19): halvány és dőlt, nem piros. */
+
+/* A nem tartott kártya (amit csak láttam — az átmeneti tárból vagy egy kérelem válaszából): szaggatott keret. */
+.pakli-kartya--nem-tartott .pakli-kartya__belso {
+  border-style: dashed;
+}
+
+/* Az ágazati pont forrásának jele (✓ ellenőrizve · ≈ bemondás · +? részleges · ? ismeretlen). */
+.pakli-kartya__forras {
+  font-style: italic;
+  color: var(--color-text-faint);
+  cursor: help;
+}
+
+.pakli-kartya__forras--ellenorzott {
+  font-style: normal;
+  color: var(--color-primary);
+}
+
+/* A betöltés az állapot-sorban: az őrjárat hozza, amit a pakli még nem ismer (H1). */
+.allapot.betoltes {
+  font-style: italic;
+}

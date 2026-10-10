@@ -560,12 +560,14 @@ export const BOGAR_MELYSEG = 4;
  */
 function forrasJelolese(e, o, bemondasok, tartott) {
   const tartom = !!tartott(e.azonosito) && !e.pontokIsmeretlenek;
+  // ⭐ Ha a saját pontjait sem láttuk (csak a születését), a kártya saját száma és a hozzájárulók száma is „nem tudom”, nem 0.
+  const pontokIsmeretlenek = e.pontokIsmeretlenek === true;
   let osszPontForras = 'szamolt';
   if (o?.forras === 'bemondott') osszPontForras = bemondasok.get(e.azonosito)?.ellenorzott ? 'ellenorzott' : 'bemondas';
   else if (o?.forras === 'osszegzett') osszPontForras = 'ellenorzott';
   else if (o?.forras === 'ismeretlen' && !(o?.osszPont > 0)) osszPontForras = 'ismeretlen';
   else if ((o?.bizonytalan ?? 0) > 0) osszPontForras = 'reszleges';
-  return { tartom, osszPontForras };
+  return { tartom, osszPontForras, pontokIsmeretlenek };
 }
 
 /**

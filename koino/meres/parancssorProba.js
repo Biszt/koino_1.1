@@ -2076,19 +2076,22 @@ async function feluletet(hely, port) {
 // gondolatot „ismeretlen” össz-ponttal mutatja, a hiányzó részeket (a gyökér szintje, a gondolat gyerekei) függő
 // kérelemként beírja (B lemezén: `kerelmek.json`), és „betöltés”-t jelez; B őrjárata a kérelmeket A-tól elhozza, és utána a
 // lap az össz-pontot ISMERTEN mutatja (A 100 pontja — a kérelem az aláírt pont-mintákat is hozza), betöltés nélkül. Rontás: a lap nem kér el semmit → a kérelmek
-// nincsenek meg, az össz-pont ismeretlen marad.
+// nincsenek meg, az össz-pont ismeretlen marad. ⭐ A felület VÉGIG FUT (mint a valóságban egy nyitott lap mögött): az őrjárat
+// egy MÁSIK folyamat, ami az átmeneti tárba ír — ezt a futó felület is lássa (a böngészős próba mérte, hogy nem látta;
+// rontás: az átmeneti tár `frissit`-je nem olvas → a gondolat gyereke nem jelenik meg).
 proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őrjárat elhozza, és a lap ismert össz-pontot mutat', async () => {
   const a = await ujKeszulek();
   const b = await ujKeszulek();
   const alap = { KOINO_KISZOLGALAS: 'alap' };
   const futok = [];
-  const feluletAlap = async (port) => {
+  let feluletKulcs = null;
+  const feluletInditasa = async (port, hely = b) => {
     const folyamat = spawn(process.execPath, [KOINO_JS, 'felulet', String(port)], {
-      env: { ...process.env, KOINO_ADAT: b, KOINO_NAPLO: '', ...alap }, stdio: ['ignore', 'pipe', 'pipe']
+      env: { ...process.env, KOINO_ADAT: hely, KOINO_NAPLO: '', ...alap }, stdio: ['ignore', 'pipe', 'pipe']
     });
     futok.push(folyamat);
     let kimenet = '';
-    const kulcs = await new Promise((teljesul, elakad) => {
+    feluletKulcs = await new Promise((teljesul, elakad) => {
       const ido = setTimeout(() => elakad(new Error('a felület nem indult el: ' + kimenet)), 15000);
       folyamat.stdout.on('data', (d) => {
         kimenet += d;
@@ -2096,18 +2099,30 @@ proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őr
         if (talalat) { clearTimeout(ido); teljesul(talalat[1]); }
       });
     });
-    const valasz = await fetch('http://127.0.0.1:' + port + '/api/pakli/hierarchikus', { headers: { 'X-Koino-Kulcs': kulcs } });
-    const adat = await valasz.json();
-    folyamat.kill();
-    await varj(500);
-    return adat;
+    return folyamat;
+  };
+  const lekeres = async (port, entitas = null) => {
+    const valasz = await fetch('http://127.0.0.1:' + port + '/api/pakli/hierarchikus' + (entitas ? '?entitas=' + entitas : ''),
+      { headers: { 'X-Koino-Kulcs': feluletKulcs } });
+    return valasz.json();
   };
   try {
     await fut(a, 'koino', 'Ház', 'próba', 'nyilt');
     const g = azonosito(await fut(a, 'gondolat', 'A háztető'), 'Létrejött:');
+    // A háztetőnek egy gyereke is van (A felületéről — a parancssor nem ad szülőt): B lapja ezt csak a kérelem után látja
+    // (a szigorú (b) alatt a csere csak a legfelső szintű születéseket hozza — a gyökér darabjában).
+    const aFelulet = await feluletInditasa(7972, a);
+    const aLista = await (await fetch('http://127.0.0.1:7972/api/pakli', { headers: { 'X-Koino-Kulcs': feluletKulcs } })).json();
+    const gTeljes = (aLista.kartyak ?? []).find((k) => k.azonosito.startsWith(g))?.azonosito;
+    await fetch('http://127.0.0.1:7972/api/gondolat', { method: 'POST',
+      headers: { 'X-Koino-Kulcs': feluletKulcs, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cim: 'A gerenda', szuloId: gTeljes, kezdoTudatpont: 10 }) });
+    aFelulet.kill();
+    await varj(500);
     await fut(b, 'tars', '127.0.0.1', '7968', 'A');
     await csereKor(a, b, 7968, alap);
-    const elotte = await feluletAlap(7970);
+    await feluletInditasa(7970);
+    const elotte = await lekeres(7970);
     const kerelmek = JSON.parse(await readFile(join(b, 'sajat', 'kerelmek.json'), 'utf8').catch(() => '{}'));
     // A figyel, B őrjárata (6 mp-es körrel) elhozza a függő kérelmeket.
     const figyelo = spawn(process.execPath, [KOINO_JS, 'figyel', '7968'], { env: { ...process.env, KOINO_ADAT: a, KOINO_NAPLO: '' }, stdio: 'ignore' });
@@ -2119,14 +2134,17 @@ proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őr
     orjarat.kill();
     figyelo.kill();
     await varj(1000);
-    const utana = await feluletAlap(7971);
+    // ⭐ UGYANAZ a felület-folyamat kérdez, ami az őrjárat előtt is futott.
+    const utana = await lekeres(7970);
     const elsoKartya = (x) => (x?.pakli ?? []).find((k) => k.azonosito.startsWith(g));
     const ki = {
       latja: !!elsoKartya(elotte) && elsoKartya(elotte).tartom === false && elsoKartya(elotte).osszPontForras === 'ismeretlen',
       kerte: elotte.betoltes === true && (kerelmek.fuggo ?? []).some((x) => x.fajta === 'fejlecek'),
       // ⭐ a kérelem a fejlécet és az aláírt pont-mintákat is elhozza — így az össz-pont ismert (számolt), vagy ha csak a
       // bemondás jött, ellenőrzött
-      elhozta: ['szamolt', 'ellenorzott'].includes(elsoKartya(utana)?.osszPontForras) && elsoKartya(utana)?.agazatiPont === 100,
+      elhozta: ['szamolt', 'ellenorzott'].includes(elsoKartya(utana)?.osszPontForras) && elsoKartya(utana)?.agazatiPont === 100 + 10,
+      // ⭐ a gyerek az átmeneti tárba jött (az őrjárat írta) — a futó felület is látja
+      gyerek: !(elotte.pakli ?? []).some((k) => k.cim === 'A gerenda') && (utana.pakli ?? []).some((k) => k.cim === 'A gerenda'),
       kesz: utana.betoltes === false
     };
     if (!Object.values(ki).every(Boolean)) {
@@ -2138,6 +2156,38 @@ proba('⭐⭐ D100: a lap hierarchikus paklija elkéri, ami hiányzik — az őr
   } finally {
     for (const p of futok) p.kill();
     await varj(1000);
+    await rm(a, { recursive: true, force: true });
+    await rm(b, { recursive: true, force: true });
+  }
+});
+
+// ===================================
+// ⭐ A HÁZ (D100): A CSATLAKOZÓ KÉSZÜLÉK KÉZI CSERÉJE CSERE MARAD, ha a gazdánál függő kérelem vár (2026-10-10)
+// ===================================
+//
+// A lap magától ír be függő kérelmet (H1/A). A D92/1 szerint egy ismeretlen bekopogóval a csere helyett a kérelem fut,
+// „miközben kopogtatunk” — de a postaláda (`figyel`) nem kopogtat, és a kérelem témáján senki nem látta, hogy kérünk.
+// Mérve: az új készülék kézi cseréje így semmit nem kapott (a gazda a gyökér-kérelmét futtatta felé). ⭐ Viselkedést
+// mérünk: B lemezén ott a gazda gondolata. Rontás: a régi feltétel (bármely kopogtató témájú kérelem) → B üres marad.
+proba('⭐ D100: a csatlakozó készülék kézi cseréje CSERE marad, ha a gazdánál függő kérelem vár (bekopogóra csak kopogtatás után kérelem)', async () => {
+  const a = await ujKeszulek();
+  const b = await ujKeszulek();
+  const nincsDht = { KOINO_DHT_BELEPOK: 'nincs' };
+  try {
+    await fut(a, 'koino', 'Csatlakozás', 'próba', 'nyilt');
+    await fut(a, 'gondolat', 'A CSATLAKOZÓ LÁSSA');
+    const felvetel = await fut(a, 'kerelem', 'fejlecek', 'gyoker', nincsDht);
+    await fut(b, 'tars', '127.0.0.1', '7976', 'A');
+    await csereKor(a, b, 7976, nincsDht);
+    const ki = {
+      fuggott: /FÜGGŐ KÉRELEM/.test(felvetel),
+      kapta: /A CSATLAKOZÓ LÁSSA/.test(await fut(b))
+    };
+    if (!Object.values(ki).every(Boolean)) {
+      process.stdout.write('  csatlakozás — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + '\n');
+    }
+    return Object.values(ki).every(Boolean);
+  } finally {
     await rm(a, { recursive: true, force: true });
     await rm(b, { recursive: true, force: true });
   }

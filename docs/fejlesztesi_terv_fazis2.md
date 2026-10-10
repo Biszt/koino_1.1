@@ -5106,6 +5106,31 @@ is lezárja a kérelmet — különben a gyerektelen gondolat fejléc-kérése s
 (`pakliProba.js`), és a bekötés parancssor-próbája (két készülék, „alap” mód: a lap elkéri, az őrjárat elhozza, a lap ismert
 össz-pontot mutat — rontással).
 
+#### ✅ MEGÉPÜLT — az örökölt `Pakli.js` a felületen, és a bekötés (2026-10-10) — ⭐ A HÁZ KÉSZ
+
+A `felulet/js/components/Pakli.js`, a `TestverJelzo.js`, a `utils/testverRendezes.js` és a `testverJelzo.css` a prototípusból
+**bájtra változatlanul** jött át (mint a kártyák az 5.3-ban); a régi ideiglenes lista (`pakliNezet.js`) eltűnt. ⭐ **A lap
+fordít (H3/A):** a `Pakli.js` a prototípus útvonalait kérdezi (`pakli?entitasId=…`, `pakli/rendezett?mod=…`), a
+`kartyaAdat.js` `prototipusUtvonala` megmondja, hova menjen a kérés a programban (`/api/pakli/hierarchikus`, `/api/pakli`), és
+a választ a prototípus alakjába fordítja (`hierarchiaAdatta`, `rendezettAdatta`); az `apiHelper.js` (a prototípus teljes
+szerver-kapcsolata ezen az egy fájlon megy át) csak megkérdezi, a pakli válaszát a lap horgonyává teszi, és a `Pakli.js`
+által nem tárolt részt (betöltés, hiányzók, kurzor) egy eseménnyel adja tovább. A koinós többlet a `felulet/js/koinoPakli.js`
+alosztályban, a meglévő metódusok KÖRÉ: ⭐ **a betöltés (H1)** — a lap csendben újrakérdez (4 mp-től 60 mp-ig ritkulva), és
+ha a fa-szelet változott, a kiválasztás helyén újrarajzol; ha nincs kitől kérni (se társ, se ismert tartó), nem „betöltést”
+ígér, hanem kimondja, hogy a tartóit keresi (`kitolKerni`); ⭐ **a forrás (H2)** — az ágazati pont mellé ✓ / ≈ / +? / ?, a
+nem tartott kártya kerete szaggatott, és ha a pontjait sem láttuk, a saját pont és a hozzájárulók száma is „?” (nem 0);
+⭐ **a lapos nézet lapozása (9. szabály)** — a „További kártyák” a kurzorral fűzi a következő oldalt.
+
+⚠️ **Két hiba a bekötésből (a böngészős próba mérte, mindkettő a „réteg kész, az éles út nem hívja” fajtája):** (1) a D92/1
+„ismeretlen bekopogó, miközben kopogtatunk” feltétele bármely kopogtató témájú függő kérelemre igaz volt — a lap magától ír
+be kérelmet, ezért egy csatlakozó készülék kézi cseréje a gazdától a csere helyett egy kérelmet kapott (semmit nem kapott);
+most csak az a kérelem fut, amelynek a témáján az őrjárat TÉNYLEG jelentkezett (`bejelentettKopogtatok`) · (2) az átmeneti tár
+csak megnyitáskor olvasta be a fájljait, ezért a futó felület nem látta, amit az őrjárat (egy másik folyamat) a kérelem
+válaszaként írt bele (a próba eddig minden lekérdezéshez új felületet indított — nem vette észre); most a `frissit` olvassa
+be (a `valtozat` jel-fájl mondja meg, kell-e végignézni), és a két tár nézete ezt is hívja. Próbák: a fordító (modul-próba,
+node alatt), az átmeneti tár két folyamatból, a csatlakozó készülék cseréje, és a D100 bekötés-próbája most EGYETLEN, végig
+futó felülettel (a gyereket csak a kérelem után látja) — mind rontással.
+
 ### D28. A BELÉPÉSI ADATOK — amit a koino elvár (2026-08-27, Csaba)
 
 > „Szeretném, hogy a közösségbe úgy tudna valaki belépni, hogy már megadta azokat a

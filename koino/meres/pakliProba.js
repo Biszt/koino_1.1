@@ -811,6 +811,40 @@ proba('⭐ A MEGNYITOTT KÁRTYA SZÖVEGE: ha a darab hiányzik, kérendő törzs
   return h.hianyzik.some((x) => x.fajta === 'torzs' && x.kulcs === e.azonosito);
 });
 
+// ⭐ A ház (D100, H3): a felület az örökölt `Pakli.js`-t futtatja, ami a PROTOTÍPUS útvonalait kérdezi, és a prototípus
+// alakját várja — a lap fordít (`felulet/js/kartyaAdat.js`). A fordító tiszta függvények, node alatt is futnak: a valódi
+// `pakliHierarchia` válaszából a `Pakli.js` alakja (a kiválasztott a típusával, a mélység és a létrehozás a kártya legfelső
+// szintjén — a testvér-sorrend ebből rendez —, a forrás-jel), és az útvonalak (a fa-szelet, a lapos nézet; a program
+// saját lapos útja nem fordul). Rontás: a fordító a koinó szótárát adná tovább → a `Pakli.js` mezői hiányoznak.
+proba('⭐ D100: a prototípus pakli-útvonalai és alakja — a lap fordít (a `Pakli.js` bájtra a prototípusé)', async () => {
+  const { prototipusUtvonala, hierarchiaAdatta, rendezettAdatta, LAPOS_OLDAL } = await import('../felulet/js/kartyaAdat.js');
+  const { tar, anna } = await ujKoino();
+  const A = await gondolat(tar, anna, 'A', 30);
+  const A1 = await gondolat(tar, anna, 'A1', 20, A);
+  await gondolat(tar, anna, 'A2', 5, A);
+  const h = await pakliHierarchia(tar, KOINO, { entitas: A1 });
+  const p = hierarchiaAdatta(h);
+  const fa = prototipusUtvonala('pakli?entitasId=' + A1 + '&entitasTipus=Gondolat');
+  const gyoker = prototipusUtvonala('pakli');
+  const lapos = prototipusUtvonala('pakli/rendezett?mod=sajatPont&irany=novekvo');
+  const jel = fa.jel({ ...h, betoltes: true, kitolKerni: 1 });
+  const ki = {
+    kivalasztott: p.kivalasztottEntitas?.entitasId === A1 && p.kivalasztottEntitas?.entitasTipus === 'Gondolat',
+    lanc: p.pakli.map((x) => x.entitasId).join() === [A, A1].join() && p.pakli[1].szuloId === A
+      && p.pakli[0].melysegiSzint === 1 && p.pakli[1].melysegiSzint === 2,
+    testver: p.testverek.length === 1 && p.testverek[0].hierarchikusOsszesPont === 5
+      && Number.isFinite(p.testverek[0].letrehozva),
+    forras: p.pakli[1].koinoForras?.osszPontForras === 'szamolt' && p.pakli[1].koinoForras?.tartom === true,
+    utak: fa.utvonal === 'pakli/hierarchikus?entitas=' + encodeURIComponent(A1) && gyoker.utvonal === 'pakli/hierarchikus'
+      && lapos.utvonal === 'pakli?rendezes=sajatPont&irany=novekvo&darab=' + LAPOS_OLDAL
+      && prototipusUtvonala('pakli?rendezes=ido&darab=10') === null && prototipusUtvonala('pakli/szoveg/Gondolat/' + A) === null,
+    jel: jel.fajta === 'hierarchia' && jel.betoltes === true && jel.kitolKerni === 1 && jel.kivalasztott === A1 && jel.kert === A1,
+    laposAlak: rendezettAdatta({ kartyak: h.pakli }).rendezettLista.length === 2
+  };
+  if (!Object.values(ki).every(Boolean)) console.log('    (fordító — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
 proba('⛔ Ismeretlen entitás részletei/küszöbei: null, nem hiba', async () => {
   const { tar, anna } = await ujKoino();
   await gondolat(tar, anna, 'Egy', 100);

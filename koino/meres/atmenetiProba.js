@@ -81,6 +81,40 @@ proba('⭐ a két tár EGY bemenet: a tartós mind, az átmenetiből ami a tart�
     && nezetbol.length === 2 && nezet.csakAtmeneti().has(g[1].azonosito);
 });
 
+// ⭐ A ház (D100): a futó felület és az őrjárat két folyamat — az őrjárat hozza a kérelem válaszát az átmeneti tárba, a
+// felület mutatja. Két példány ugyanazon a mappán: amit az egyik ír (új szelet, új sor egy meglévőbe), amit eldob, azt
+// a másik a `frissit` után (a két tár nézetén át is) látja; a félbe írt sort pedig csak akkor veszi be, ha a sorvég is
+// megérkezett. Rontás: a `frissit` nem olvas → a második példány a megnyitáskori állapotnál ragad.
+proba('⭐ D100: amit egy MÁSIK folyamat írt az átmeneti tárba (vagy eldobott belőle), azt a `frissit` után látjuk — a félbe írt sort nem', async () => {
+  const hely = await mappa();
+  const tartos = await esemenyTarNyitasa(KOINO, hely);
+  const iro = await atmenetiTarNyitasa(KOINO, join(hely, KOINO));
+  const olvaso = await atmenetiTarNyitasa(KOINO, join(hely, KOINO));
+  const { anna, g } = await haromGondolat();
+  await esemenyMentese(iro, g[0]);
+  const nezet = ketTarNezet(tartos, olvaso);
+  const uj = (await koinoEsemenyei(nezet, KOINO)).some((e) => e.azonosito === g[0].azonosito);
+  // Egy második esemény ugyanabba a szeletbe (új sor egy meglévő fájl végén) — és egy félbe írt sor egy harmadikba.
+  const pont = await anna.tesz('TudatpontRendezes', { entitas: g[0].azonosito, pont: 5, kiosztva: 5 });
+  await esemenyMentese(iro, pont);
+  const { appendFile } = await import('node:fs/promises');
+  const fel = JSON.stringify(g[2]);
+  await appendFile(join(hely, KOINO, 'atmeneti', g[2].azonosito + '.jsonl'), fel.slice(0, 40));
+  await esemenyMentese(iro, g[1]);
+  await olvaso.frissit();
+  const ujSor = !!(await olvaso.esemeny(pont.azonosito)) && !!(await olvaso.esemeny(g[1].azonosito));
+  const felbeNem = (await olvaso.esemeny(g[2].azonosito)) === null;
+  // A sor vége megérkezik — és az író eldobja az első szeletet.
+  await appendFile(join(hely, KOINO, 'atmeneti', g[2].azonosito + '.jsonl'), fel.slice(40) + '\n');
+  await iro.elhagy(g[0].azonosito);
+  await olvaso.frissit();
+  const egesz = (await olvaso.esemeny(g[2].azonosito))?.adat?.cim === 'HARMADIK';
+  const eldobva = (await olvaso.esemeny(g[0].azonosito)) === null && (await olvaso.esemeny(pont.azonosito)) === null;
+  const ki = { uj, ujSor, felbeNem, egesz, eldobva };
+  if (!Object.values(ki).every(Boolean)) console.log('    (frissítés — ami bukott: ' + Object.keys(ki).filter((k) => !ki[k]).join(', ') + ')');
+  return Object.values(ki).every(Boolean);
+});
+
 // ===================================
 // 2. A D14 CSAK A TARTÓSRA VONATKOZIK (D75/4)
 // ===================================

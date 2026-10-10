@@ -18,6 +18,10 @@
 
   ⏸️ Ami még hiányzik: a modálok (5.5) — helyükön helyőrző áll, ami megmondja, hogy még
   nem készültek el —, a belépő tér (5.6) és a szövegszerkesztő (5.7).
+
+  ⭐⭐ A HÁZ (D100, 2026-10-10): a pakli is a prototípusé — a `Pakli.js` (láncos-testvéres
+  nézet, kacsacsőrök, húzás, lapos rendezés) bájtra változatlanul jött át; a koinós többlet
+  (a betöltés, a forrás jele, a lapos nézet lapozása) a `js/koinoPakli.js`-ben van.
 -->
 </head>
 <body>
@@ -32,14 +36,17 @@
 <!-- ===== A PAKLI — egy koinón BELÜL ===== -->
 <div class="koino-sav" id="pakli-sav">
   <label for="rendezes">Rendezés</label>
+  <!-- ⭐ A prototípus Rendezés-modáljának módjai és feliratai (D100): a hierarchikus a fa-szelet
+       (a `Pakli.js` láncos-testvéres nézete — az alap), a többi lapos, rendezett lista. -->
   <select id="rendezes">
-    <option value="sajatPont">🌟 Saját tudatpont</option>
-    <option value="agazatiPont">🌿 Ágazati tudatpont</option>
-    <option value="hierarchikus">🌳 Hierarchikus</option>
+    <option value="hierarchikus">🌳 Hierarchikus (kapcsolatok szerint)</option>
     <option value="ido">🕒 Időrend</option>
+    <option value="sajatPont">🌟 Saját tudatpont (közvetlen)</option>
+    <option value="agazatiPont">🌿 Ágazati tudatpont (az egész ág)</option>
   </select>
 
-  <select id="irany">
+  <!-- A hierarchikus nézetnek nincs iránya (mint a prototípusban). -->
+  <select id="irany" disabled>
     <option value="csokkeno">csökkenő</option>
     <option value="novekvo">növekvő</option>
   </select>
@@ -82,27 +89,30 @@
 <div id="modal-kontener"></div>
 
 <script type="module">
-import { PakliNezet } from './js/pakliNezet.js';
+import { KoinoPakli } from './js/koinoPakli.js';
 import { TerNezet } from './js/terNezet.js';
 import GondolatModal from './js/components/modals/GondolatModal.js';
+import { aktivEntitasLekerese } from './js/utils/authHelper.js';
 
-const nezet = new PakliNezet(document.getElementById('pakli'), {
+// ⭐ A HÁZ (D100): az örökölt `Pakli.js` a `#pakli` konténerbe rajzol, a modálok közös konténerébe nyit.
+const pakli = new KoinoPakli('pakli', 'modal-kontener', {
   allapotElem: document.getElementById('allapot'),
   tovabbGomb: document.getElementById('tovabb'),
   azonossagElem: document.getElementById('azonossag')
 });
 
-document.getElementById('tovabb').addEventListener('click', () => nezet.kovetkezoOldal());
-document.getElementById('frissites').addEventListener('click', () => nezet.ujratoltes());
+document.getElementById('tovabb').addEventListener('click', () => pakli.tovabbiKartyak());
+document.getElementById('frissites').addEventListener('click', () => pakli.frissites());
 
-document.getElementById('rendezes').addEventListener('change', (e) => {
-  nezet.rendezes = e.target.value;
-  nezet.ujratoltes();
-});
-document.getElementById('irany').addEventListener('change', (e) => {
-  nezet.irany = e.target.value;
-  nezet.ujratoltes();
-});
+// A rendezés a `Pakli.js` saját útján (`rendezesBeallitasa` — a prototípusban a Rendezés-modal hívta).
+const rendezesAlkalmazasa = () => {
+  const mod = document.getElementById('rendezes').value;
+  const irany = document.getElementById('irany');
+  irany.disabled = (mod === 'hierarchikus');
+  pakli.rendezesBeallitasa(mod, irany.value, null);
+};
+document.getElementById('rendezes').addEventListener('change', rendezesAlkalmazasa);
+document.getElementById('irany').addEventListener('change', rendezesAlkalmazasa);
 
 // ===================================
 // ⭐ A BELÉPŐ TÉR (5.6) — és a váltás a pakli és a tér között
@@ -114,8 +124,9 @@ document.getElementById('irany').addEventListener('change', (e) => {
 const terNezet = new TerNezet(
   document.getElementById('ter'),
   { allapotElem: document.getElementById('allapot') },
-  // ⭐ Belépés után egyből a pakliba visszük — az új koino paklijával.
-  async () => { await mutat('pakli'); }
+  // ⭐ Belépés után egyből a pakliba visszük — az új koino paklijával (a régi koinó fa-szeletei és mentett
+  // kártyája nélkül: egy idegen azonosítóra a program kérelmet írna be).
+  async () => { await mutat('pakli', { ujKoino: true }); }
 );
 
 const elemek = {
@@ -123,7 +134,7 @@ const elemek = {
   ter: [document.getElementById('ter'), document.getElementById('ter-sav')]
 };
 
-async function mutat(melyik) {
+async function mutat(melyik, { ujKoino = false } = {}) {
   for (const [nev, doboz] of Object.entries(elemek)) {
     for (const e of doboz) e.hidden = (nev !== melyik);
   }
@@ -131,8 +142,12 @@ async function mutat(melyik) {
   document.getElementById('tovabb').hidden = true;
   document.getElementById('ter-valto').textContent = melyik === 'ter' ? 'A pakli' : 'A tér';
 
-  if (melyik === 'ter') await terNezet.betoltes();
-  else await nezet.ujratoltes();
+  if (melyik === 'ter') {
+    // ⚠️ A testvér-jelző kacsacsőrei a lap aljára (`body`) kerülnek, nem a pakliba — a tér fölött ne lebegjenek.
+    pakli.testverJelzo.eltavolitas();
+    await terNezet.betoltes();
+  } else if (ujKoino) await pakli.ujKoino();
+  else await pakli.frissites();
 }
 
 // ===================================
@@ -145,8 +160,11 @@ async function mutat(melyik) {
 document.getElementById('uj-gondolat').addEventListener('click', async () => {
   const modal = new GondolatModal('modal-kontener', {
     mod: 'letrehozas',
-    // Létrejött → újratöltjük a paklit, hogy rögtön látszódjon.
-    onSiker: () => nezet.ujratoltes()
+    // Létrejött → újratöltjük a paklit (mint a prototípus FoOldal-a: a mentett kártyától).
+    onSiker: () => {
+      const { entitasId, entitasTipus } = aktivEntitasLekerese();
+      pakli.init(entitasId, entitasTipus);
+    }
   });
   // ⚠️ AZ `init()` ÉPÍTI FEL A MODALT (sablon + szerkesztő); a `megnyitas()` csak
   // megmutatja. Enélkül a `this.modal` null marad, és a megnyitás NÉMÁN nem csinál
@@ -168,7 +186,7 @@ document.getElementById('ter-irany').addEventListener('change', (e) => {
   terNezet.betoltes();
 });
 
-await nezet.init();
+await pakli.indulas();
 </script>
 
 </body>

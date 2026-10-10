@@ -13,6 +13,8 @@
 
 /* ===== A KÁRTYA-RÉTEG ===== */
 @import './components/pakli.css';
+/* ⭐ A TESTVÉR-JELZŐ (D100, a ház): a prototípusból, bájtra változatlanul — a `Pakli.js`-szel jött. */
+@import './components/testverJelzo.css';
 @import './components/hamburgerMenu.css';
 @import './components/fejlesztesreVar.css';
 @import './components/szovegSzerkeszto.css';

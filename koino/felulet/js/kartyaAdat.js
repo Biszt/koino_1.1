@@ -22,7 +22,7 @@
 // **mező-átnevezés nem számítás.** Itt egyetlen érték sem születik: minden mező vagy
 // átkerül, vagy hiányzik.
 //
-// Használják: `pakliNezet.js`.
+// Használják: `koinoPakli.js` (a lapos lapozás), és az `apiHelper.js` (a prototípus pakli-útvonalai — lent, D100).
 
 // ===================================
 // AMI HIÁNYZIK — és ez tudatos
@@ -75,6 +75,17 @@ export function kartyaAdatta(k) {
 
     // A kategória/gondolattípus kártya a szülőt a legfelső szinten olvassa.
     szuloId: k.szulo ?? null,
+
+    // ⭐ A HÁZ (D100): a `Pakli.js` a testvérek sorrendjéhez (`testverRendezes.js`) a LEGFELSŐ szinten olvassa a
+    // létrehozás idejét, és a hierarchikus pakli a mélységet.
+    letrehozva: k.letrehozva ?? null,
+    melysegiSzint: k.melysegiSzint ?? null,
+
+    // ⭐ H2: az össz-pont forrása és hogy tartom-e — a kártya nem olvassa (bájtra a prototípusé), a jelölést a
+    // `koinoPakli.js` teszi rá a kirajzolás után. Csak a hierarchikus paklinál van.
+    koinoForras: k.osszPontForras
+      ? { tartom: k.tartom === true, osszPontForras: k.osszPontForras, pontokIsmeretlenek: k.pontokIsmeretlenek === true }
+      : null,
 
     adatok: {
       cim: k.cim ?? '',
@@ -172,4 +183,96 @@ export function kartyaAdatta(k) {
  */
 export function oldalAdatta(kartyak) {
   return (kartyak ?? []).map(kartyaAdatta);
+}
+
+// ===================================
+// ⭐⭐ A HÁZ (D100, H3): A PROTOTÍPUS PAKLI-ÚTVONALAI
+// ===================================
+//
+// Az örökölt `Pakli.js` bájtra változatlanul jött át, tehát a PROTOTÍPUS útvonalait kérdezi, a prototípus alakjában
+// várja a választ:
+//
+//   · `pakli` / `pakli?entitasId=…&entitasTipus=…` → `{ kivalasztottEntitas, pakli, testverek }` (a fa-szelet)
+//   · `pakli/rendezett?mod=…&irany=…[&agazatId=…]`  → `{ rendezettLista }` (a lapos nézet)
+//
+// A program a saját szótárát beszéli (`/api/pakli/hierarchikus?entitas=…`, `/api/pakli?rendezes=…`). ⭐ Ugyanaz az
+// érv, mint a kártyáknál: a fordítás a lapon, EGY fájlban — itt. Az `apiHelper.js` (a prototípus teljes
+// szerver-kapcsolata ezen az egy fájlon megy át) csak megkérdezi: „ez prototípus-útvonal? hova menjen, és mit kapjon
+// vissza?”.
+//
+// ⚠️ Ami a fordításban NEM fér el, mert a `Pakli.js` nem tárolja (a `betoltes`, a `hianyzik`, a lapos lapozás
+// kurzora), azt a válasz mellett egy jelzés viszi (`jel` → a `koino:pakliValasz` esemény), és a `koinoPakli.js` veszi
+// át. Itt sem születik érték: minden mező átkerül vagy hiányzik.
+
+/** A lapos nézet egy oldala (a program úgyis korlátoz — `MAX_DARAB`; a többit a „További kártyák” hozza). */
+export const LAPOS_OLDAL = 50;
+
+/**
+ * A `/api/pakli/hierarchikus` válasza → a `Pakli.pakliLekerese` alakja.
+ * @param {Object} h - a koino válasza (`pakliHierarchia` + `betoltes`)
+ * @returns {{kivalasztottEntitas: Object|null, pakli: Array<Object>, testverek: Array<Object>}}
+ */
+export function hierarchiaAdatta(h) {
+  const pakli = oldalAdatta(h?.pakli);
+  const kivalasztott = h?.kivalasztott ?? null;
+  const elem = kivalasztott ? pakli.find((p) => p.entitasId === kivalasztott) : null;
+  return {
+    kivalasztottEntitas: elem ? { entitasId: elem.entitasId, entitasTipus: elem.entitasTipus } : null,
+    pakli,
+    testverek: oldalAdatta(h?.testverek)
+  };
+}
+
+/**
+ * A `/api/pakli` (lapos, rendezett oldal) válasza → a `Pakli.rendezettLekerese` alakja.
+ * @param {Object} oldal
+ * @returns {{rendezettLista: Array<Object>}}
+ */
+export function rendezettAdatta(oldal) {
+  return { rendezettLista: oldalAdatta(oldal?.kartyak) };
+}
+
+/**
+ * ⭐ Prototípus-útvonal-e — és ha igen, hova menjen, és mit kapjon vissza a hívó.
+ *
+ * @param {string} utvonal - ahogy a `Pakli.js` kéri (az `/api/` nélkül)
+ * @returns {{utvonal: string, fordit: Function, jel: Function, horgonyt: boolean}|null} null: nem az (megy változatlanul)
+ */
+export function prototipusUtvonala(utvonal) {
+  const [ut, kerdes = ''] = String(utvonal).split('?');
+  const k = new URLSearchParams(kerdes);
+
+  // ----- A fa-szelet: `pakli` (a legerősebb gyökértől) vagy `pakli?entitasId=…` -----
+  // ⚠️ A program saját lapos útja (`pakli?rendezes=…`) NEM ez — azt a `koinoPakli.js` lapozása hívja.
+  if (ut === 'pakli' && !k.has('rendezes')) {
+    const kert = k.get('entitasId') || null;
+    return {
+      utvonal: 'pakli/hierarchikus' + (kert ? '?entitas=' + encodeURIComponent(kert) : ''),
+      fordit: hierarchiaAdatta,
+      // A `betoltes` és a `hianyzik` a lapé (újrakérdez, kiírja) — a `Pakli.js` nem tárolná.
+      jel: (v) => ({ fajta: 'hierarchia', kert, kivalasztott: v?.kivalasztott ?? null, betoltes: v?.betoltes === true,
+        kitolKerni: v?.kitolKerni ?? 0, hianyzik: v?.hianyzik ?? [], pakli: (v?.pakli ?? []).length, testverek: (v?.testverek ?? []).length }),
+      horgonyt: true
+    };
+  }
+
+  // ----- A lapos nézet: `pakli/rendezett?mod=…&irany=…` → a program első oldala -----
+  // ⏸️ Az `agazatId` (a kártya menüjének „ág-szűrt rendezése”) a programban még nincs: a `RendezesModal` helyőrző
+  // (5.8), tehát ma nem is érkezik. Ha egyszer jön, a `pakliOldal`-nak kell részfa-szűrő — itt nem találunk ki listát.
+  if (ut === 'pakli/rendezett') {
+    const q = new URLSearchParams({
+      rendezes: k.get('mod') || 'ido',
+      irany: k.get('irany') || 'csokkeno',
+      darab: String(LAPOS_OLDAL)
+    });
+    return {
+      utvonal: 'pakli?' + q.toString(),
+      fordit: rendezettAdatta,
+      jel: (v) => ({ fajta: 'lapos', kovetkezoKurzor: v?.kovetkezoKurzor ?? null, osszes: v?.osszes ?? 0,
+        darab: (v?.kartyak ?? []).length, rendezes: v?.rendezes, irany: v?.irany,
+        ujdonsag: v?.ujdonsag === true, ujEsemenyek: v?.ujEsemenyek ?? 0 }),
+      horgonyt: true
+    };
+  }
+  return null;
 }

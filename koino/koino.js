@@ -2392,7 +2392,11 @@ function resMunka(allapot, halo, tars) {
       const nemProbalt = (x) => !allapot.kerelemProbaltak.has(x.az + '|' + tars.cim + ':' + tars.port);
       let fk = tarshozIllo(ny, tars.cim, tars.port);
       if (fk && !nemProbalt(fk)) fk = null;
-      if (!fk && tars.bekopogo) fk = ny.fuggo.find((x) => x.kopogtatok.length && nemProbalt(x)) ?? null;
+      // ⭐ A ház (D100): a „miközben kopogtatunk” pontosan — a kérelem egy kopogtató témáján TÉNYLEG jelentkeztünk (az
+      // őrjárat címjegyzék-köre: `bejelentettKopogtatok`). A lap magától ír be kérelmet; e nélkül minden új bekopogó (egy
+      // csatlakozó készülék kézi cseréje is) a csere helyett egy kérelmet kapna, amit nem tud kiszolgálni (mérve).
+      const kopogtattunk = (x) => x.kopogtatok.some((k) => allapot.bejelentettKopogtatok?.has(k.fajta + ':' + k.kulcs));
+      if (!fk && tars.bekopogo) fk = ny.fuggo.find((x) => kopogtattunk(x) && nemProbalt(x)) ?? null;
       if (fk) return await fuggoKerelemMunkaja(allapot, halo, tars, fk);
     }
     // ⭐ A FRISS LISTA MINDEN MUNKA ELEJÉN: a postaláda hosszan fut, és a jegyzék elévül.
