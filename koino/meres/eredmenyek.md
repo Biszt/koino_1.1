@@ -4996,3 +4996,27 @@ látja, pontot tesz rá, és a következő cserén mindkét irányban átjön a 
   másodpercre egymástól.
 - **A hazaút** (23:15–23:17): a telefon kiesett a szomszéd hálózatából (a laptop cseréje 23:15:10-kor elbukott), és
   23:17:00-kor már az otthoni hálózatról kopogott be (`192.168.1.124:7373`, 13 ms) — két perc kiesés, beavatkozás nélkül.
+
+## 73. ✅⭐ TEREPEN A D99-CEL: EGY CSERE PERCENKÉNT, ÜTKÖZÉS NÉLKÜL — és a fordított irány (2026-10-10, 17:46–21:35)
+
+*Ugyanaz a felállás, mint a 72.-ben (laptop otthon, telefon a szomszéd wifijén, a zárt `terep` koinó, „alap” mód), a
+program: `d11e7eb` (a D99 — mindkét gépen). A laptop naplója fájlban (`KOINO_UZENETMERES=1`), a telefoné képernyőképen.*
+
+- **A D99 terepen:** 114 percben pontosan EGY csere percenként, egyetlen percben kettő (21:22 — a telefon új gondolata
+  után a kör az újdonság miatt ismételt egy menetet); a 72. mérésen minden percben kettő. Három óra alatt egyetlen
+  „elbukott” vagy „foglalt” sor sincs (a 72.-en háromszor akadt el). ⚠️ Ezen az estén a laptop köre járt elöl (a telefon
+  órája szerint :59-kor kopogott), és a telefon köre a még futó munkát számolta be — a második csere így nem indult el.
+- **A tábla megint dolgozott:** a laptop külső címe ismét változott (31.46.251.177:35731), a telefon a táblán megtalálta.
+- **A fordított irány:** a telefon a szomszédban szöveges gondolatot írt (21:21); a születése 21:22:01-kor a laptop
+  gyökér-darabján át megjött („1 új esemény”), a szövege (64 bájt) 21:25:01-kor — a VÁLLALÁS ELŐTT („fájlok a résen:
+  1 megjött”), ahogy a 72.-ben a másik irányban. A laptop 21:33-kor vállalta (`pont MaqGt1l5 5`): a 21:34:01-es csere
+  (8,6 KB) a változott szelet útján ment (`VALTOZOTT 75 B`, `VALTOZOTTPAROK 110 B`, `TARTOMANYOK 180 B`, `ESEMENY 892 B`),
+  a lánc-körrel (`LANCKEREK 258 B`, `LANCVALASZ 454 B`), és a laptopon „összes pont: 105 · hozzájárulók: 2”.
+- **A hazaút:** a telefon 21:20 körül az otthoni hálózatra váltott; a laptop 21:23–21:24-ben hiába kopogott, 21:25:01-kor a
+  helyi címén (`192.168.1.124`) újra összeért — két perc kiesés, beavatkozás nélkül (mint a 72.-ben).
+
+⭐ **A lelet:** két külön router mögött (PC és mobil) a koino a szigorú (b) alatt, zárt koinóban, mindkét irányban
+működik: a táblán át találnak egymásra (a változó címek ellenére), a csak születéséből ismert gondolat látszik, a szövege
+már vállalás előtt átjön, a vállalás után a szelet a változott szelet útján (a társankénti emlékezettel) mozdul, a
+lánc-ellenőrzés lefut, és a „nincs újdonság” forgalom a D99-cel percenként egy csere (~2,4 KB). ⏸️ A két mobilnetes
+telefon közötti rés (két cél-függő NAT) még méretlen — Csaba a közeljövőben intéz hozzá telefonokat.

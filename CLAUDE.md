@@ -135,7 +135,10 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
    elakad) — helyben reprodukálni, utána a (iii) kérdése (egy csere ablakonként). ✅ **D99** (Csaba: „legyen az (A)”): ha
    egy társsal a fél körön belül már cseréltünk, és azóta nincs újdonságom, a saját körömben nem hívom — körönként egy csere
    a kettő helyett (a „nincs újdonság” forgalom felére), az ütköző második csere elmarad. ✅ A néma kötés táblán keresése
-   visszalépő ütemben (elágazás 95). ⏸️ Nyitva: egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön elő), és a D71 őrjárat-próba egyszeri bukása a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron is). ⚠️ A D85 T3 csomag-próba időzítése szoros volt (a döntés 1–2 mp, B négy parancsa ~2 mp) — 6–8 mp-re bővítve.
+   visszalépő ütemben (elágazás 95). ✅ **A 73. mérés (terepen a D99-cel):** percenként egy csere (a kettő helyett), három óra
+   alatt egyetlen ütközés sincs; a fordított irány is (a telefon gondolata a laptopra, a szöveg vállalás előtt, a vállalás
+   után a szelet a változott szelet útján). ⭐ **Csaba: „ha működik pc-mobil között, külön címen, akkor az nekem már elég
+   ahhoz, hogy folytassuk a fejlesztést”** — a két mobilnetes telefon mérése a közeljövőben. ⏸️ Nyitva: egy egyszeri téves „0 új esemény” kiírás a telefonon (helyben nem jön elő), és a D71 őrjárat-próba egyszeri bukása a teljes sor terhelése alatt (magában 3/3 zöld, a következő teljes soron is). ⚠️ A D85 T3 csomag-próba időzítése szoros volt (a döntés 1–2 mp, B négy parancsa ~2 mp) — 6–8 mp-re bővítve.
 
 #### ⏭️ UTÁNA — a sorrend Csabáé (változatlanul nyitva)
 
@@ -207,7 +210,7 @@ D77–D83, az [alappillérek](docs/alappillerek.md) A és 5. szakasza, az [eredm
   Egy szeszélyes próba vagy a próba, vagy a program hibáját takarja — **mérni kell, nem zöldre
   hangolni**, és a bukásnak meg kell neveznie magát.
 - ⛔ **Előbb a mérés, aztán az építés** — a mérések jegyzőkönyve:
-  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–72.).
+  [`koino/meres/eredmenyek.md`](koino/meres/eredmenyek.md) (számozott, 1–73.).
 
 #### ⏸️ Régebbi nyitott döntések (mind Csabáé — részletek a naplóban)
 
